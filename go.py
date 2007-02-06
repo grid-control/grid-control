@@ -1,11 +1,16 @@
 #!/usr/bin/env python
-
 import sys, os
 
-root = os.path.realpath(os.path.dirname(sys.argv[0]))
-sys.path.append(os.path.join(root, 'python'))
+# add python subdirectory from where go.py was started to search path
+_root = os.path.dirname(os.path.abspath(os.path.normpath(__file__)))
+sys.path.append(os.path.join(_root, 'python'))
 
+# and include grid_control python module
 from grid_control import *
 
-voms = Voms()
-print voms
+###
+### main program
+###
+if __name__ == '__main__':
+	proxy = Proxy()
+	print proxy
