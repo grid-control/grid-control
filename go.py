@@ -12,5 +12,11 @@ from grid_control import *
 ### main program
 ###
 if __name__ == '__main__':
-	proxy = Proxy()
-	print 'Your proxy has %d seconds left!' % proxy.timeleft()
+	try:
+		proxy = Proxy()
+		print 'Your proxy has %d seconds left!' % proxy.timeleft()
+
+	except GridError, e:
+		e.showMessage()
+		sys.exit(1)
+
