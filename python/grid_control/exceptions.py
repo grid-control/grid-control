@@ -6,9 +6,9 @@ class GridError(Exception):
 		self.message = message
 
 	def showMessage(self):
-		print >> sys.stderr, "An error occured:", self.message
+		print >> sys.stderr, "%s: %s" % (sys.argv[0], self.message)
 
 
 # some error with the Grid installation
 class InstallationError(GridError):
-	pass
+	pass	# just inherit everything from GridError
