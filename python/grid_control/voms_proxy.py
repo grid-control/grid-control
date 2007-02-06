@@ -1,6 +1,6 @@
 import os, popen2
 
-from . import Proxy
+from grid_control import Proxy
 
 class VomsProxy(Proxy):
 	def __init__(self):
