@@ -13,4 +13,4 @@ from grid_control import *
 ###
 if __name__ == '__main__':
 	proxy = Proxy()
-	print proxy
+	print proxy.timeleft()
