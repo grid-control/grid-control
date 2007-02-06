@@ -2,7 +2,7 @@
 import sys, os
 
 # add python subdirectory from where go.py was started to search path
-_root = os.path.dirname(os.path.abspath(os.path.normpath(__file__)))
+_root = os.path.dirname(os.path.abspath(os.path.normpath(sys.argv[0])))
 sys.path.append(os.path.join(_root, 'python'))
 
 # and include grid_control python module
