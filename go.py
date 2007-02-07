@@ -51,7 +51,8 @@ def main(args):
 		f.close()
 
 		# Test grid proxy
-		proxy = Proxy(config.get('grid', 'proxy'))
+		proxy = config.get('grid', 'proxy')
+		proxy = Proxy.open(proxy)
 		print 'Your proxy has %d seconds left!' % proxy.timeleft()
 
 	except GridError, e:
