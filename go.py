@@ -50,6 +50,8 @@ def main(args):
 		config = Config(f)
 		f.close()
 
+		print config.getPath('global', 'workdir')
+
 		# Test grid proxy
 		proxy = config.get('grid', 'proxy')
 		proxy = Proxy.open(proxy)

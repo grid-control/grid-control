@@ -14,6 +14,11 @@ class Config:
 
 		self.parser = parser
 
+		# use the directory of the config file as base directory
+		dir = os.path.dirname(fp.name)
+		dir = os.path.normpath(dir)
+		self.baseDir = os.path.abspath(dir)
+
 	def get(self, section, item, default = None):
 		try:
 			return self.parser.get(section, item)
@@ -35,7 +40,8 @@ class Config:
 		path = self.get(section, item)
 		path = os.path.expanduser(path)	# ~/bla -> /home/user/bla
 		path = os.path.normpath(path)   # xx/../yy -> yy
-		path = os.path.abspath(path)    # ../xxx -> /foo/bar/xxx
+		if not os.path.isabs(path):	# ./lala -> /foo/bar/lala
+			path = os.path.join(self.baseDir, path)
 		return path
 
 	def getInt(self, section, item, default = None):
