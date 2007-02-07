@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-import sys, os, getopt, ConfigParser
+import sys, os, getopt
 
 # add python subdirectory from where go.py was started to search path
 _root = os.path.dirname(os.path.abspath(os.path.normpath(sys.argv[0])))
@@ -47,25 +47,11 @@ def main(args):
 		except IOError, e:
 			raise GridError("Configuration file `%s' not found" % configFile)
 
-		try:
-			# try to parse config file
-			parser = ConfigParser.ConfigParser()
-			parser.readfp(f)
-		except ConfigParser.Error, e:
-			raise GridError("Configuration file `%s' contains an error: %s",
-			                (configFile, e.message))
+		config = Config(f)
 		f.close()
 
-		# dump the config file for debugging
-		for section in parser.sections():
-			print '[%s]' % section
-			for item in parser.options(section):
-				value = parser.get(section, item)
-				print "%s = %s" % (item, value)
-			print
-
 		# Test grid proxy
-		proxy = Proxy()
+		proxy = Proxy(config.get('grid', 'proxy'))
 		print 'Your proxy has %d seconds left!' % proxy.timeleft()
 
 	except GridError, e:

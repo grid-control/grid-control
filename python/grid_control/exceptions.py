@@ -12,3 +12,7 @@ class GridError(Exception):
 # some error with the Grid installation
 class InstallationError(GridError):
 	pass	# just inherit everything from GridError
+
+# some error with the user config file
+class ConfigError(GridError):
+	pass	# just inherit everything from GridError
