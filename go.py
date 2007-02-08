@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-import sys, os, getopt
+import sys, os, signal, time, getopt
 
 # add python subdirectory from where go.py was started to search path
 _root = os.path.dirname(os.path.abspath(os.path.normpath(sys.argv[0])))
@@ -19,6 +19,14 @@ def syntax(out):
 
 
 def main(args):
+	global continuous
+
+	# set up signal handler for interrupts
+	def interrupt(sig, frame):
+		global continuous
+		continuous = False
+	signal.signal(signal.SIGINT, interrupt)
+
 	longOptions = ['help', 'init', 'continuous', 'no-submission']
 	shortOptions = 'hics'
 
@@ -87,14 +95,30 @@ def main(args):
 
 		# Initialise workload management interface
 		wms = config.get('grid', 'wms')
-		wms = WMS.open(wms)
+		wms = WMS.open(wms, config)
+
+		# Load the application module
+		module = config.get('global', 'module')
+		module = Module.open(module, config)
 
 		# Initialise job database
 		jobs = JobDB(workdir, init)
 
-		# Check which module should be used
-		module = config.get('global', 'module')
-		module = Module.open(module, config)
+		nJobs = config.get('jobs', 'jobs')
+		inFlight = config.get('jobs', 'in flight')
+		while continuous:
+			print "Iterating..."
+
+			time.sleep(5)
+			if not continuous:
+				break
+
+			# Retest grid proxy lifetime
+			if jobSubmission and not proxy.check(wallTime * 60 * 60):
+				print >> sys.stderr, "Proxy lifetime (%d seconds) does not meet the walltime requirements of %d hours (%d seconds)!\n" \
+				                     "INFO: Disabling job submission." \
+			                     % (proxy.timeleft(), wallTime, wallTime * 60 * 60)
+			jobSubmission = False
 
 	except GridError, e:
 		e.showMessage()

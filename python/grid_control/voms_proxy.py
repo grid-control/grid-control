@@ -1,26 +1,11 @@
 import os, time, popen2
-from grid_control import InstallationError, Proxy
+from grid_control import InstallationError, Proxy, utils
 
 class VomsProxy(Proxy):
 	def __init__(self):
 		Proxy.__init__(self)
-		self._infoExec = self._find('voms-proxy-info')
+		self._infoExec = utils.searchPathFind('voms-proxy-info')
 		self._info = None
-
-
-	# Look for a program in the PATH environment variable
-	def _find(self,program):
-		try:
-			path = os.environ['PATH'].split(':')
-		except:
-			# Hmm, something really wrong
-			path = ['/bin', '/usr/bin', '/usr/local/bin']
-
-		for dir in path:
-			fname = os.path.join(dir, program)
-			if os.path.exists(fname):
-				return fname
-		raise InstallationError("voms-proxy-info not found")
 
 
 	# Call voms-proxy-info and returns results

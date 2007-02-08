@@ -1,5 +1,5 @@
-import os
-from grid_control import ConfigError
+import os, re, fnmatch
+from grid_control import ConfigError, Job
 
 class JobDB:
 	def __init__(self, workDir, init = False):
@@ -15,5 +15,20 @@ class JobDB:
 
 		self.scan()
 
+		for id, job in self._jobs.items():
+			print "Job %d is %s." % (id, job.states[job.state])
+
+
 	def scan(self):
-		pass
+		filter = re.compile(r'^job_([0-9]+)\.txt$')
+		self._jobs = {}
+		for job in fnmatch.filter(os.listdir(self.dbPath), 'job_*.txt'):
+			match = filter.match(job)
+			try:
+				id = int(match.group(1))
+			except:
+				continue
+
+			fp = open(os.path.join(self.dbPath, job))
+			self._jobs[id] = Job(fp)
+			fp.close()
