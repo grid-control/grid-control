@@ -78,7 +78,7 @@ def main(args):
 			raise UserError('Your proxy only has %d seconds left!' % proxy.timeleft())
 
 		# Test grid proxy lifetime
-		wallTime = config.getInt('jobs', 'wallTime')
+		wallTime = config.getInt('jobs', 'wall time')
 		if not proxy.check(wallTime * 60 * 60):
 			print >> sys.stderr, "Proxy lifetime (%d seconds) does not meet the walltime requirements of %d hours (%d seconds)!\n" \
 			                     "INFO: Disabling job submission." \
