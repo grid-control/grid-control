@@ -45,17 +45,29 @@ def main(args):
 		try:
 			f = open(configFile, 'r')
 		except IOError, e:
-			raise GridError("Configuration file `%s' not found" % configFile)
+			raise GridError("Configuration file '%s' not found" % configFile)
 
 		config = Config(f)
 		f.close()
 
-		print config.getPath('global', 'workdir')
+		# Check work dir validity
+		workdir = config.getPath('global', 'workdir')
+		if os.path.exists(workdir):
+			print "Specified working directory: %s" % workdir
+		else:
+			raise GridError("The specified working directory '%s' does not exist!" % workdir) 
 
 		# Test grid proxy
 		proxy = config.get('grid', 'proxy')
 		proxy = Proxy.open(proxy)
-		print 'Your proxy has %d seconds left!' % proxy.timeleft()
+		proxyLifetime = proxy.timeleft()
+		print 'Your proxy has %d seconds left!' % proxyLifetime
+
+		# Test grid proxy lifetime
+		neededLifetime = config.getInt('jobs', 'walltime')
+		neededLifetimeSeconds = neededLifetime * 60 * 60
+		if proxyLifetime < neededLifetimeSeconds:
+			raise GridError("Proxy lifetime does not meet the walltime requirements of %d hours (%d seconds)!" % (neededLifetime, neededLifetimeSeconds))
 
 	except GridError, e:
 		e.showMessage()
