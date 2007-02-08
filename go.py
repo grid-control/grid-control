@@ -92,6 +92,10 @@ def main(args):
 		# Initialise job database
 		jobs = JobDB(workdir, init)
 
+		# Check which module should be used
+		module = config.get('global', 'module')
+		module = Module.open(module, config)
+
 	except GridError, e:
 		e.showMessage()
 		return 1
