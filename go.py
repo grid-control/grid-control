@@ -12,12 +12,20 @@ def syntax(out):
 	out.write("Syntax: %s [OPTIONS] <config file>\n\n"
 	          "    Options:\n"
 	          "\t-h, --help               Show this helpful message\n"
+	          "\t-i, --init               Initialise working directory\n"
+	          "\t-c, --continuous         Run in continuous mode\n"
+	          "\t-s, --no-submission      Disable job submission\n"
 	          "\n" % sys.argv[0])
 
 
 def main(args):
-	longOptions = ['help']
-	shortOptions = 'h'
+	longOptions = ['help', 'init', 'continuous', 'no-submission']
+	shortOptions = 'hics'
+
+	# global variables
+	continuous = False
+	init = False
+	jobSubmission = True
 
 	# let getopt dig through the options
 	try:
@@ -32,6 +40,12 @@ def main(args):
 		if opt in ('-h', '--help'):
 			syntax(sys.stdout)
 			return 0
+		elif opt in ('-i', '--init'):
+			init = True
+		elif opt in ('-c', '--continuous'):
+			continuous = True
+		elif opt in ('-s', '--no-submission'):
+			jobSubmission = False
 
 	# we need exactly one config file argument
 	if len(args) != 1:
@@ -45,7 +59,7 @@ def main(args):
 		try:
 			f = open(configFile, 'r')
 		except IOError, e:
-			raise GridError("Configuration file '%s' not found" % configFile)
+			raise GridError("Configuration file `%s' not found" % configFile)
 
 		config = Config(f)
 		f.close()
@@ -53,21 +67,30 @@ def main(args):
 		# Check work dir validity
 		workdir = config.getPath('global', 'workdir')
 		if os.path.exists(workdir):
-			print "Specified working directory: %s" % workdir
+			print "Using working directory: %s" % workdir
 		else:
-			raise GridError("The specified working directory '%s' does not exist!" % workdir) 
+			raise UserError("The specified working directory '%s' does not exist!" % workdir) 
 
-		# Test grid proxy
+		# Open grid proxy
 		proxy = config.get('grid', 'proxy')
 		proxy = Proxy.open(proxy)
-		proxyLifetime = proxy.timeleft()
-		print 'Your proxy has %d seconds left!' % proxyLifetime
+		if proxy.critical():
+			raise UserError('Your proxy only has %d seconds left!' % proxy.timeleft())
 
 		# Test grid proxy lifetime
-		neededLifetime = config.getInt('jobs', 'walltime')
-		neededLifetimeSeconds = neededLifetime * 60 * 60
-		if proxyLifetime < neededLifetimeSeconds:
-			raise GridError("Proxy lifetime does not meet the walltime requirements of %d hours (%d seconds)!" % (neededLifetime, neededLifetimeSeconds))
+		wallTime = config.getInt('jobs', 'wallTime')
+		if not proxy.check(wallTime * 60 * 60):
+			print >> sys.stderr, "Proxy lifetime (%d seconds) does not meet the walltime requirements of %d hours (%d seconds)!\n" \
+			                     "INFO: Disabling job submission." \
+			                     % (proxy.timeleft(), wallTime, wallTime * 60 * 60)
+			jobSubmission = False
+
+		# Initialise workload management interface
+		wms = config.get('grid', 'wms')
+		wms = WMS.open(wms)
+
+		# Initialise job database
+		jobs = JobDB(workdir, init)
 
 	except GridError, e:
 		e.showMessage()

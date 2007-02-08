@@ -16,3 +16,7 @@ class InstallationError(GridError):
 # some error with the user config file
 class ConfigError(GridError):
 	pass	# just inherit everything from GridError
+
+# some error with the user (PEBKAC)
+class UserError(GridError):
+	pass	# just inherit everything from GridError
