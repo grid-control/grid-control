@@ -4,10 +4,16 @@ try:
 	enumerate
 except:
 	def enumerate(iterable):
-		i = 0
-		for item in iterable:
-			yield (i, item)
-			i = i + 1
+		class EnumerateIter:
+			def __init__(self, iterable):
+				self.counter = 0
+				self.iterable = iterable
+			def __iter__(self):
+				return self
+			def next(self):
+				return (self.counter, iterable.next())
+		return EnumerateIter(iter(iterable))
+
 
 class Job:
 	states = ('SUBMITTED', 'RUNNING', 'ABORTED', 'FAILED', 'DONE', 'ERROR')
