@@ -1,5 +1,14 @@
 #from grid_control import 
 
+try:
+	enumerate
+except:
+	def enumerate(iterable):
+		i = 0
+		for item in iterable:
+			yield (i, item)
+			i = i + 1
+
 class Job:
 	states = ('SUBMITTED', 'RUNNING', 'ABORTED', 'FAILED', 'DONE', 'ERROR')
 	_stateDict = {}
