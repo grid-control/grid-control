@@ -3,16 +3,16 @@
 try:
 	enumerate
 except:
-	def enumerate(iterable):
-		class EnumerateIter:
-			def __init__(self, iterable):
-				self.counter = 0
-				self.iterable = iterable
-			def __iter__(self):
-				return self
-			def next(self):
-				return (self.counter, iterable.next())
-		return EnumerateIter(iter(iterable))
+	class enumerate:
+		def __init__(self, iterable):
+			self.counter = 0
+			self.iterable = iterable
+		def __iter__(self):
+			return enumerate(iter(self.iterable))
+		def next(self):
+			counter = self.counter
+			self.counter = self.counter + 1
+			return (self.counter, self.iterable.next())
 
 
 class Job:
