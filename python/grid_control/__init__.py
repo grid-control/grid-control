@@ -8,3 +8,4 @@ from job        import *
 from job_db     import *
 from module	import *
 from CMSSW	import *
+from usermod    import *
