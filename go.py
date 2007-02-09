@@ -21,6 +21,15 @@ def syntax(out):
 def main(args):
 	global continuous
 
+	# display the 'grid-control' logo
+	logoFile = os.path.join(_root,'share','logo.txt')
+	try:
+		f = open(logoFile, 'r')
+		print f.read()
+		f.close()
+	except:
+		print ("WARNING: The logofile '%s' could not be read!" % logoFile)
+
 	# set up signal handler for interrupts
 	def interrupt(sig, frame):
 		global continuous
@@ -63,11 +72,12 @@ def main(args):
 
 	# big try... except block to catch exceptions and print error message
 	try:
+
 		# try to open config file
 		try:
 			f = open(configFile, 'r')
 		except IOError, e:
-			raise GridError("Configuration file `%s' not found" % configFile)
+			raise ConfigError("Configuration file '%s' not found!" % configFile)
 
 		config = Config(f)
 		f.close()
