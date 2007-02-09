@@ -93,22 +93,26 @@ def main(args):
 			                     % (proxy.timeleft(), wallTime, wallTime * 60 * 60)
 			jobSubmission = False
 
-		# Initialise workload management interface
-		wms = config.get('grid', 'wms')
-		wms = WMS.open(wms, config)
-
 		# Load the application module
 		module = config.get('global', 'module')
 		module = Module.open(module, config)
+
+		# Initialise workload management interface
+		wms = config.get('grid', 'wms')
+		wms = WMS.open(wms, config, module)
 
 		# Initialise job database
 		jobs = JobDB(workdir, init)
 
 		nJobs = config.get('jobs', 'jobs')
 		inFlight = config.get('jobs', 'in flight')
-		while continuous:
+		while True:
 			print "Iterating..."
 
+			wms.makeJDL(sys.stdout, 0)
+
+			if not continuous:
+				break
 			time.sleep(5)
 			if not continuous:
 				break
