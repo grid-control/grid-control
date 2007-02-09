@@ -1,11 +1,16 @@
 import os
+from fnmatch import fnmatch
 from xml.dom import minidom
-from grid_control import ConfigError, Module
+from grid_control import ConfigError, Module, utils
 
 class CMSSW(Module):
 	def __init__(self, config):
+		Module.__init__(self, config)
+
 		self.projectArea = config.getPath('CMSSW', 'project area')
-		self.configFile  = config.getPath('CMSSW', 'config file')
+		self.configFile = config.getPath('CMSSW', 'config file')
+
+		self.pattern = config.get('CMSSW', 'files').split()
 
 		if os.path.exists(self.projectArea):
 			print "Project area found in: %s" % self.projectArea
@@ -55,9 +60,46 @@ class CMSSW(Module):
 		   self.scramEnv['SCRAM_PROJECTNAME'] != 'CMSSW':
 			raise ConfigError("Project area not a valid CMSSW project area.")
 
+		if not os.path.exists(self.configFile):
+			raise ConfigError("Config file '%s' not found." % self.configFile)
+
+
+	def init(self):
+		# walk directory in project area
+		def walk(dir):
+			for file in os.listdir(os.path.join(self.projectArea, dir)):
+				if len(dir):
+					name = os.path.join(dir, file)
+				else:
+					name = file
+				for match in self.pattern:
+					neg = match[0] == '-'
+					if neg: match = match[1:]
+					if fnmatch(name, match):
+						break
+				else:
+					if os.path.isdir(os.path.join(self.projectArea, name)):
+						walk(name)
+					continue
+
+				if not neg:
+					files.append(name)
+
+		# walk project area subdirectories and find files
+		files = []
+		walk('')
+		utils.genTarball(os.path.join(self.workDir, 'runtime.tar.gz'), 
+		                 self.projectArea, files)
+
+
+	def getInFiles(self):
+		files = ['runtime.tar.gz', 'config.sh', self.configFile]
+		def relocate(path):
+			if not os.path.isabs(path):
+				return os.path.join(self.workDir, path)
+			else:
+				return path
+		return map(relocate, files)
 
 	def getSoftwareMembers(self):
 		return ('VO-cms-%s' % self.scramEnv['SCRAM_PROJECTVERSION'],)
-
-	def getJobArguments(self, job):
-		return "%d" % job

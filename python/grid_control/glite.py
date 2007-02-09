@@ -1,11 +1,13 @@
+import sys, os.path
 from grid_control import WMS
 
 class Glite(WMS):
 	def __init__(self, config, module):
-		self.config = config
-		self.module = module
+		WMS.__init__(self, config, module)
 
-		self.sandboxIn = [ 'run.sh' ]
+		root = sys.modules['__main__']._root
+		self.sandboxIn = [ os.path.join(root, 'share', 'run.sh') ]
+		self.sandboxIn.extend(module.getInFiles())
 		self.sandboxOut = [ 'stdout.txt', 'stderr.txt' ]
 
 		def memberReq(member):
@@ -56,4 +58,5 @@ class Glite(WMS):
 			else:
 				value = jdlRep(value)
 
-			fp.write("%s = %s\n" % (key, value))
+			if value != '':
+				fp.write("%s = %s\n" % (key, value))

@@ -1,19 +1,21 @@
 # Generic base class for job modules
 # instantiates named class instead (default is UserMod)
 
-import sys
-from grid_control import ConfigError
+from grid_control import ConfigError, AbstractObject
 
-class Module:
-	def __init__(self):
+class Module(AbstractObject):
+	def __init__(self, config):
+		self.config = config
+		self.workDir = config.getPath('global', 'workdir')
+
+	def init(self):
 		pass
 
-	def open(name = 'UserMod', *args):
-		try:
-			cls = getattr(sys.modules['grid_control'], name)
-		except:
-			raise ConfigError("Module '%s' does not exist!" % name)
+	def getInFiles(self):
+		return []
 
-		return cls(*args)
+	def getSoftwareMembers(self):
+		return ()
 
-	open = staticmethod(open)
+	def getJobArguments(self, job):
+		return "%d" % job

@@ -1,13 +1,11 @@
 # Generic base class for grid proxies
 # instantiates named class instead (default is VomsProxy)
 
-import sys
+import os
+from grid_control import AbstractObject
 
-class WMS:
-	def __init__(self):
-		pass
-
-	def open(name = 'Glite', *args):
-		cls = getattr(sys.modules['grid_control'], name)
-		return cls(*args)
-	open = staticmethod(open)
+class WMS(AbstractObject):
+	def __init__(self, config, module):
+		self.config = config
+		self.module = module
+		self.workDir = config.getPath('global', 'workdir')

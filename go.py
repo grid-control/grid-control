@@ -22,13 +22,13 @@ def main(args):
 	global continuous
 
 	# display the 'grid-control' logo
-	logoFile = os.path.join(_root,'share','logo.txt')
+	logoFile = os.path.join(_root, 'share', 'logo.txt')
 	try:
 		f = open(logoFile, 'r')
 		print f.read()
 		f.close()
 	except:
-		print ("WARNING: The logofile '%s' could not be read!" % logoFile)
+		print "WARNING: The logofile '%s' could not be read!" % logoFile
 
 	# set up signal handler for interrupts
 	def interrupt(sig, frame):
@@ -111,11 +111,14 @@ def main(args):
 		wms = config.get('grid', 'wms')
 		wms = WMS.open(wms, config, module)
 
-		# Initialise job database
-		jobs = JobDB(workdir, init)
+		if init:
+			module.init()
 
+		# Initialise job database
 		nJobs = config.get('jobs', 'jobs')
 		inFlight = config.get('jobs', 'in flight')
+		jobs = JobDB(workdir, nJobs, inFlight, init)
+
 		while True:
 			print "Iterating..."
 
