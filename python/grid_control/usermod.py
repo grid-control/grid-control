@@ -22,8 +22,5 @@ class UserMod(Module):
 			
 			
 	def getJobArguments(self, job):
-		return "%d %s" % (job, os.path.basename(self.executable))
-
-	def getExeParameter(self)
-	        return self.userParameters
-			
+		return "%d %s %s" % (job, os.path.basename(self.executable),
+		                     self.userParameters)

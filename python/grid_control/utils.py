@@ -64,3 +64,9 @@ class SortedList(list):
 	def has(self, item):
 		pos = bisect.bisect_left(self, item)
 		return pos < len(self) and self[pos] == item
+
+	def remove(self, item):
+		pos = bisect.bisect_left(self, item)
+		if pos < len(self) and self[pos] == item:
+			del self[pos]
+

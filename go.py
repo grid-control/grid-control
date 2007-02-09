@@ -115,14 +115,23 @@ def main(args):
 			module.init()
 
 		# Initialise job database
-		nJobs = config.get('jobs', 'jobs')
-		inFlight = config.get('jobs', 'in flight')
-		jobs = JobDB(workdir, nJobs, inFlight, init)
+		nJobs = config.getInt('jobs', 'jobs')
+		maxInFlight = config.getInt('jobs', 'in flight')
+		jobs = JobDB(workdir, nJobs, init)
+
+		if continuous:
+			print "Running in continuous mode. Press ^C to exit."
 
 		while True:
-			print "Iterating..."
+			# figure out the next thing to do
+			# check for jobs
+			jobs.check(wms)
 
-			wms.makeJDL(sys.stdout, 0)
+			# try submission
+			curInFlight = len(jobs.running)
+			submit = maxInFlight - curInFlight
+			for job in jobs.ready[:submit]:
+				jobs.submit(wms, job)
 
 			if not continuous:
 				break

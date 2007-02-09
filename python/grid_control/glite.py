@@ -1,5 +1,5 @@
-import sys, os.path
-from grid_control import WMS
+import sys, os, tempfile
+from grid_control import WMS, Job
 
 class Glite(WMS):
 	def __init__(self, config, module):
@@ -60,3 +60,24 @@ class Glite(WMS):
 
 			if value != '':
 				fp.write("%s = %s\n" % (key, value))
+
+
+	def checkJobs(self, ids):
+		# FIXME: glite-job-status
+		states = []
+		return states
+
+
+	def submitJob(self, id):
+		fd, jdl = tempfile.mkstemp('.jdl')
+		try:
+			fp = os.fdopen(fd, 'w')
+			self.makeJDL(fp, id)
+			# FIXME: error handling
+			fp.close()
+
+			# FIXME: glite-job-submit
+			return 'foobar_jobid_%d' % id
+
+		finally:
+			os.unlink(jdl)
