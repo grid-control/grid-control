@@ -8,5 +8,6 @@ from wms         import *
 from glite       import *
 from job_db      import *
 from module      import *
-from CMSSW       import *
 from usermod     import *
+from dbs_api     import *
+from CMSSW       import *

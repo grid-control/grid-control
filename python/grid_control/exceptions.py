@@ -20,3 +20,7 @@ class ConfigError(GridError):
 # some error with the user (PEBKAC)
 class UserError(GridError):
 	pass	# just inherit everything from GridError
+
+# some error with the runtime
+class RuntimeError(GridError):
+	pass	# just inherit everything from GridError

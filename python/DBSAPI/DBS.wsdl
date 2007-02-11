@@ -1,0 +1,380 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions name="Service"
+ targetNamespace="http://venom.fnal.gov:27983/Service.wsdl"
+ xmlns:tns="http://venom.fnal.gov:27983/Service.wsdl"
+ xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/"
+ xmlns:SOAP-ENC="http://schemas.xmlsoap.org/soap/encoding/"
+ xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+ xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+ xmlns:DBS="http://tempuri.org/DBS.xsd"
+ xmlns:SOAP="http://schemas.xmlsoap.org/wsdl/soap/"
+ xmlns:MIME="http://schemas.xmlsoap.org/wsdl/mime/"
+ xmlns:DIME="http://schemas.xmlsoap.org/ws/2002/04/dime/wsdl/"
+ xmlns:WSDL="http://schemas.xmlsoap.org/wsdl/"
+ xmlns="http://schemas.xmlsoap.org/wsdl/">
+
+<types>
+
+ <schema targetNamespace="http://tempuri.org/DBS.xsd"
+  xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/"
+  xmlns:SOAP-ENC="http://schemas.xmlsoap.org/soap/encoding/"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+  xmlns:DBS="http://tempuri.org/DBS.xsd"
+  xmlns="http://www.w3.org/2001/XMLSchema"
+  elementFormDefault="unqualified"
+  attributeFormDefault="unqualified">
+  <import namespace="http://schemas.xmlsoap.org/soap/encoding/"/>
+  <complexType name="PrimaryDataset">
+   <sequence>
+     <element name="primaryDatasetId" type="xsd:int" minOccurs="0" maxOccurs="1" nillable="true"/>
+     <element name="name" type="xsd:string" minOccurs="1" maxOccurs="1"/>
+   </sequence>
+  </complexType>
+  <complexType name="Application">
+   <sequence>
+     <element name="applicationId" type="xsd:int" minOccurs="0" maxOccurs="1" nillable="true"/>
+     <element name="executable" type="xsd:string" minOccurs="1" maxOccurs="1"/>
+     <element name="version" type="xsd:string" minOccurs="1" maxOccurs="1"/>
+     <element name="family" type="xsd:string" minOccurs="1" maxOccurs="1"/>
+     <element name="parameterSet" type="xsd:string" minOccurs="1" maxOccurs="1"/>
+   </sequence>
+  </complexType>
+  <complexType name="ProcessingPath">
+   <sequence>
+     <element name="pathId" type="xsd:int" minOccurs="0" maxOccurs="1" nillable="true"/>
+     <element name="parent" type="xsd:string" minOccurs="0" maxOccurs="1"/>
+     <element name="application" type="DBS:Application" minOccurs="1" maxOccurs="1" nillable="false"/>
+     <element name="dataTier" type="xsd:string" minOccurs="1" maxOccurs="1"/>
+   </sequence>
+  </complexType>
+  <complexType name="ProcessedDataset">
+   <sequence>
+     <element name="id" type="xsd:int" minOccurs="0" maxOccurs="1" nillable="true"/>
+     <element name="processedDatasetName" type="xsd:string" minOccurs="1" maxOccurs="1"/>
+     <element name="primaryDatasetName" type="xsd:string" minOccurs="1" maxOccurs="1"/>
+     <element name="processingPath" type="DBS:ProcessingPath" minOccurs="1" maxOccurs="1" nillable="false"/>
+     <element name="isDatasetOpen" type="xsd:boolean" minOccurs="1" maxOccurs="1"/>
+   </sequence>
+  </complexType>
+  <complexType name="File">
+   <sequence>
+     <element name="id" type="xsd:int" minOccurs="0" maxOccurs="1" nillable="true"/>
+     <element name="guid" type="xsd:string" minOccurs="0" maxOccurs="1"/>
+     <element name="logicalFileName" type="xsd:string" minOccurs="1" maxOccurs="1"/>
+     <element name="checksum" type="xsd:string" minOccurs="0" maxOccurs="1"/>
+     <element name="fileSize" type="xsd:int" minOccurs="0" maxOccurs="1" nillable="true"/>
+     <element name="fileStatus" type="xsd:string" minOccurs="1" maxOccurs="1"/>
+     <element name="fileType" type="xsd:string" minOccurs="1" maxOccurs="1"/>
+     <element name="fileBlockId" type="xsd:int" minOccurs="1" maxOccurs="1" nillable="false"/>
+   </sequence>
+  </complexType>
+  <complexType name="EventCollection">
+   <sequence>
+     <element name="collectionId" type="xsd:int" minOccurs="0" maxOccurs="1" nillable="true"/>
+     <element name="collectionIndex" type="xsd:int" minOccurs="1" maxOccurs="1" nillable="false"/>
+     <element name="numberOfEvents" type="xsd:int" minOccurs="0" maxOccurs="1" nillable="true"/>
+     <element name="collectionName" type="xsd:string" minOccurs="1" maxOccurs="1"/>
+     <element name="datasetPathName" type="xsd:string" minOccurs="1" maxOccurs="1"/>
+     <element name="parent" type="DBS:EventCollection" minOccurs="0" maxOccurs="1" nillable="true"/>
+     <element name="parentageType" type="xsd:string" minOccurs="0" maxOccurs="1"/>
+     <element name="fileList" type="DBS:File" minOccurs="0" maxOccurs="unbounded" nillable="true"/>
+   </sequence>
+  </complexType>
+  <complexType name="Block">
+   <sequence>
+     <element name="blockId" type="xsd:int" minOccurs="0" maxOccurs="1" nillable="true"/>
+     <element name="blockStatusName" type="xsd:string" minOccurs="1" maxOccurs="1"/>
+     <element name="blockName" type="xsd:string" minOccurs="0" maxOccurs="1"/>
+     <element name="numberOfFiles" type="xsd:int" minOccurs="1" maxOccurs="1" nillable="false"/>
+     <element name="numberOfBytes" type="xsd:int" minOccurs="1" maxOccurs="1" nillable="false"/>
+     <element name="eventCollectionList" type="DBS:EventCollection" minOccurs="0" maxOccurs="unbounded" nillable="true"/>
+   </sequence>
+  </complexType>
+  <!-- operation request element -->
+  <element name="createPrimaryDataset">
+   <complexType>
+    <sequence>
+     <element name="primaryDataset" type="DBS:PrimaryDataset" minOccurs="0" maxOccurs="1" nillable="true"/>
+    </sequence>
+   </complexType>
+  </element>
+  <!-- operation response element -->
+  <element name="createPrimaryDatasetResponse">
+   <complexType>
+    <sequence>
+     <element name="primaryDatasetId" type="xsd:int" minOccurs="1" maxOccurs="1"/>
+    </sequence>
+   </complexType>
+  </element>
+  <!-- operation request element -->
+  <element name="createProcessedDataset">
+   <complexType>
+    <sequence>
+     <element name="processedDataset" type="DBS:ProcessedDataset" minOccurs="0" maxOccurs="1" nillable="true"/>
+    </sequence>
+   </complexType>
+  </element>
+  <!-- operation response element -->
+  <element name="createProcessedDatasetResponse">
+   <complexType>
+    <sequence>
+     <element name="processedDatasetId" type="xsd:int" minOccurs="1" maxOccurs="1"/>
+    </sequence>
+   </complexType>
+  </element>
+  <!-- operation request element -->
+  <element name="createFileBlock">
+   <complexType>
+    <sequence>
+     <element name="datasetPathName" type="xsd:string" minOccurs="1" maxOccurs="1"/>
+     <element name="block" type="DBS:Block" minOccurs="0" maxOccurs="1" nillable="true"/>
+    </sequence>
+   </complexType>
+  </element>
+  <!-- operation response element -->
+  <element name="createFileBlockResponse">
+   <complexType>
+    <sequence>
+     <element name="fileBlockId" type="xsd:int" minOccurs="1" maxOccurs="1"/>
+    </sequence>
+   </complexType>
+  </element>
+  <!-- operation request element -->
+  <element name="insertEventCollections">
+   <complexType>
+    <sequence>
+     <element name="eventCollectionList" type="DBS:EventCollection" minOccurs="1" maxOccurs="unbounded" nillable="false"/>
+    </sequence>
+   </complexType>
+  </element>
+  <!-- operation response element -->
+  <element name="insertEventCollectionsResponse">
+   <complexType>
+    <sequence>
+     <element name="result" type="xsd:int" minOccurs="1" maxOccurs="1"/>
+    </sequence>
+   </complexType>
+  </element>
+  <!-- operation request element -->
+  <element name="getDatasetContents">
+   <complexType>
+    <sequence>
+     <element name="datasetPathName" type="xsd:string" minOccurs="1" maxOccurs="1"/>
+     <element name="listFiles" type="xsd:boolean" minOccurs="1" maxOccurs="1"/>
+    </sequence>
+   </complexType>
+  </element>
+  <!-- operation response element -->
+  <element name="getDatasetContentsResponse">
+   <complexType>
+    <sequence>
+     <element name="blockList" type="DBS:Block" minOccurs="1" maxOccurs="unbounded"/>
+    </sequence>
+   </complexType>
+  </element>
+  <!-- operation request element -->
+  <element name="getDatasetFileBlocks">
+   <complexType>
+    <sequence>
+     <element name="datasetPathName" type="xsd:string" minOccurs="1" maxOccurs="1"/>
+    </sequence>
+   </complexType>
+  </element>
+  <!-- operation response element -->
+  <element name="getDatasetFileBlocksResponse">
+   <complexType>
+    <sequence>
+     <element name="blockList" type="DBS:Block" minOccurs="1" maxOccurs="unbounded"/>
+    </sequence>
+   </complexType>
+  </element>
+  <!-- operation request element -->
+  <element name="listDataset">
+   <complexType>
+    <sequence>
+     <element name="datasetPathName" type="xsd:string" minOccurs="1" maxOccurs="1"/>
+    </sequence>
+   </complexType>
+  </element>
+  <!-- operation response element -->
+  <element name="listDatasetResponse">
+   <complexType>
+    <sequence>
+     <element name="datasetList" type="xsd:string" minOccurs="1" maxOccurs="unbounded"/>
+    </sequence>
+   </complexType>
+  </element>
+ </schema>
+
+</types>
+
+<message name="createPrimaryDatasetRequest">
+ <part name="parameters" element="DBS:createPrimaryDataset"/>
+</message>
+
+<message name="createPrimaryDatasetResponse">
+ <part name="parameters" element="DBS:createPrimaryDatasetResponse"/>
+</message>
+
+<message name="createProcessedDatasetRequest">
+ <part name="parameters" element="DBS:createProcessedDataset"/>
+</message>
+
+<message name="createProcessedDatasetResponse">
+ <part name="parameters" element="DBS:createProcessedDatasetResponse"/>
+</message>
+
+<message name="createFileBlockRequest">
+ <part name="parameters" element="DBS:createFileBlock"/>
+</message>
+
+<message name="createFileBlockResponse">
+ <part name="parameters" element="DBS:createFileBlockResponse"/>
+</message>
+
+<message name="insertEventCollectionsRequest">
+ <part name="parameters" element="DBS:insertEventCollections"/>
+</message>
+
+<message name="insertEventCollectionsResponse">
+ <part name="parameters" element="DBS:insertEventCollectionsResponse"/>
+</message>
+
+<message name="getDatasetContentsRequest">
+ <part name="parameters" element="DBS:getDatasetContents"/>
+</message>
+
+<message name="getDatasetContentsResponse">
+ <part name="parameters" element="DBS:getDatasetContentsResponse"/>
+</message>
+
+<message name="getDatasetFileBlocksRequest">
+ <part name="parameters" element="DBS:getDatasetFileBlocks"/>
+</message>
+
+<message name="getDatasetFileBlocksResponse">
+ <part name="parameters" element="DBS:getDatasetFileBlocksResponse"/>
+</message>
+
+<message name="listDatasetRequest">
+ <part name="parameters" element="DBS:listDataset"/>
+</message>
+
+<message name="listDatasetResponse">
+ <part name="parameters" element="DBS:listDatasetResponse"/>
+</message>
+
+<portType name="ServicePortType">
+ <operation name="createPrimaryDataset">
+  <documentation>Service definition of function DBS__createPrimaryDataset</documentation>
+  <input message="tns:createPrimaryDatasetRequest"/>
+  <output message="tns:createPrimaryDatasetResponse"/>
+ </operation>
+ <operation name="createProcessedDataset">
+  <documentation>Service definition of function DBS__createProcessedDataset</documentation>
+  <input message="tns:createProcessedDatasetRequest"/>
+  <output message="tns:createProcessedDatasetResponse"/>
+ </operation>
+ <operation name="createFileBlock">
+  <documentation>Service definition of function DBS__createFileBlock</documentation>
+  <input message="tns:createFileBlockRequest"/>
+  <output message="tns:createFileBlockResponse"/>
+ </operation>
+ <operation name="insertEventCollections">
+  <documentation>Service definition of function DBS__insertEventCollections</documentation>
+  <input message="tns:insertEventCollectionsRequest"/>
+  <output message="tns:insertEventCollectionsResponse"/>
+ </operation>
+ <operation name="getDatasetContents">
+  <documentation>Service definition of function DBS__getDatasetContents</documentation>
+  <input message="tns:getDatasetContentsRequest"/>
+  <output message="tns:getDatasetContentsResponse"/>
+ </operation>
+ <operation name="getDatasetFileBlocks">
+  <documentation>Service definition of function DBS__getDatasetFileBlocks</documentation>
+  <input message="tns:getDatasetFileBlocksRequest"/>
+  <output message="tns:getDatasetFileBlocksResponse"/>
+ </operation>
+ <operation name="listDataset">
+  <documentation>Service definition of function DBS__listDataset</documentation>
+  <input message="tns:listDatasetRequest"/>
+  <output message="tns:listDatasetResponse"/>
+ </operation>
+</portType>
+
+<binding name="Service" type="tns:ServicePortType">
+ <SOAP:binding style="document" transport="http://schemas.xmlsoap.org/soap/http"/>
+ <operation name="createPrimaryDataset">
+  <SOAP:operation soapAction=""/>
+  <input>
+     <SOAP:body parts="parameters" use="literal"/>
+  </input>
+  <output>
+     <SOAP:body parts="parameters" use="literal"/>
+  </output>
+ </operation>
+ <operation name="createProcessedDataset">
+  <SOAP:operation soapAction=""/>
+  <input>
+     <SOAP:body parts="parameters" use="literal"/>
+  </input>
+  <output>
+     <SOAP:body parts="parameters" use="literal"/>
+  </output>
+ </operation>
+ <operation name="createFileBlock">
+  <SOAP:operation soapAction=""/>
+  <input>
+     <SOAP:body parts="parameters" use="literal"/>
+  </input>
+  <output>
+     <SOAP:body parts="parameters" use="literal"/>
+  </output>
+ </operation>
+ <operation name="insertEventCollections">
+  <SOAP:operation soapAction=""/>
+  <input>
+     <SOAP:body parts="parameters" use="literal"/>
+  </input>
+  <output>
+     <SOAP:body parts="parameters" use="literal"/>
+  </output>
+ </operation>
+ <operation name="getDatasetContents">
+  <SOAP:operation soapAction=""/>
+  <input>
+     <SOAP:body parts="parameters" use="literal"/>
+  </input>
+  <output>
+     <SOAP:body parts="parameters" use="literal"/>
+  </output>
+ </operation>
+ <operation name="getDatasetFileBlocks">
+  <SOAP:operation soapAction=""/>
+  <input>
+     <SOAP:body parts="parameters" use="literal"/>
+  </input>
+  <output>
+     <SOAP:body parts="parameters" use="literal"/>
+  </output>
+ </operation>
+ <operation name="listDataset">
+  <SOAP:operation soapAction=""/>
+  <input>
+     <SOAP:body parts="parameters" use="literal"/>
+  </input>
+  <output>
+     <SOAP:body parts="parameters" use="literal"/>
+  </output>
+ </operation>
+</binding>
+
+<service name="Service">
+ <documentation>gSOAP 2.7.6e generated service definition</documentation>
+ <port name="Service" binding="tns:Service">
+  <SOAP:address location="http://venom.fnal.gov:27983"/>
+ </port>
+</service>
+
+</definitions>
