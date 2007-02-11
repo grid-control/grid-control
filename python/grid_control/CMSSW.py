@@ -91,6 +91,16 @@ class CMSSW(Module):
 		utils.genTarball(os.path.join(self.workDir, 'runtime.tar.gz'), 
 		                 self.projectArea, files)
 
+		try:
+			fp = open(os.path.join(self.workDir, 'config.sh'), 'w')
+			fp.write('SCRAM_VERSION="scramv1"\n');
+			fp.write('SCRAM_PROJECTVERSION="%s"\n'
+			         % self.scramEnv['SCRAM_PROJECTVERSION'])
+			fp.truncate()
+			fp.close()
+		except IOError, e:
+			raise InstallationError("Could not write config.sh: %s", str(e))
+
 
 	def getInFiles(self):
 		files = ['runtime.tar.gz', 'config.sh', self.configFile]

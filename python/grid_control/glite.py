@@ -1,12 +1,11 @@
 import sys, os, tempfile
-from grid_control import WMS, Job
+from grid_control import WMS, Job, utils
 
 class Glite(WMS):
 	def __init__(self, config, module):
 		WMS.__init__(self, config, module)
 
-		root = sys.modules['__main__']._root
-		self.sandboxIn = [ os.path.join(root, 'share', 'run.sh') ]
+		self.sandboxIn = [ os.path.join(utils.getRoot(), 'share', 'run.sh') ]
 		self.sandboxIn.extend(module.getInFiles())
 		self.sandboxOut = [ 'stdout.txt', 'stderr.txt' ]
 

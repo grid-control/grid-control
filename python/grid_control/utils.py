@@ -1,6 +1,9 @@
 import sys, os, bisect, popen2
 from grid_control import InstallationError, ConfigError
 
+def getRoot():
+	return os.path.dirname(os.path.abspath(os.path.normpath(sys.argv[0])))
+
 def searchPathFind(program):
 	try:
 		path = os.environ['PATH'].split(':')
