@@ -119,7 +119,7 @@ class JobDB:
 			job = Job()
 			self._jobs[id] = job
 
-		wmsId = wms.submitJob(id)
+		wmsId = wms.submitJob(id, job)
 		# FIXME: error handling
 		job.assignId(wmsId)
 		self._update(id, job, Job.SUBMITTED)

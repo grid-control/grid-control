@@ -1,4 +1,4 @@
-import sys, os, tempfile
+import sys, os, tempfile, cStringIO
 from grid_control import WMS, Job, utils
 
 class Glite(WMS):
@@ -27,7 +27,13 @@ class Glite(WMS):
 
 
 	def wallTimeReq(self, wallTime):
-		return '(other.GlueCEPolicyMaxCPUTime >= %d)' % wallTime
+		return '(other.GlueCEPolicyMaxWallClockTime >= %d)' \
+		       % int((wallTime + 59) / 60)
+
+
+	def storageReq(self, sites):
+		print sites
+		return '(' + str.join(' || ', map(lambda x: "Member(%s, other.GlueCESEBindGroupSEUniqueID)", sites)) + ')'
 
 
 	def makeJDL(self, fp, job):
@@ -60,7 +66,7 @@ class Glite(WMS):
 				value = jdlRep(value)
 
 			if value != '':
-				fp.write("%s = %s\n" % (key, value))
+				fp.write("%s = %s;\n" % (key, value))
 
 
 	def checkJobs(self, ids):
@@ -69,7 +75,7 @@ class Glite(WMS):
 		return states
 
 
-	def submitJob(self, id):
+	def submitJob(self, id, job):
 		try:
 			fd, jdl = tempfile.mkstemp('.jdl')
 		except AttributeError:	# Python 2.2 has no tempfile.mkstemp
@@ -82,10 +88,14 @@ class Glite(WMS):
 				break
 
 		try:
-			fp = os.fdopen(fd, 'w')
-			self.makeJDL(fp, id)
+			data = cStringIO.StringIO()
+			self.makeJDL(data, id)
+			data = data.getvalue()
+
+			job.set('jdl', data)
+
+			os.fdopen(fd, 'w').write(data)
 			# FIXME: error handling
-			fp.close()
 
 			# FIXME: glite-job-submit
 			return 'foobar_jobid_%d' % id

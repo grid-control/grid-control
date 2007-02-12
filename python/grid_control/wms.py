@@ -5,7 +5,7 @@ import os
 from grid_control import AbstractObject, RuntimeError, enumerate
 
 class WMS(AbstractObject):
-	reqTypes = ('MEMBER', 'WALLTIME')
+	reqTypes = ('MEMBER', 'WALLTIME', 'STORAGE')
 	_reqTypeDict = {}
 	for id, reqType in enumerate(reqTypes):
 		_reqTypeDict[reqType] = id
@@ -23,6 +23,8 @@ class WMS(AbstractObject):
 			return self.memberReq(*args)
 		elif type == self.WALLTIME:
 			return self.wallTimeReq(*args)
+		elif type == self.STORAGE:
+			return self.storageReq(args)
 		else:
 			raise RuntimeError('unknown request type %d' % type)
 

@@ -73,7 +73,11 @@ class CMSSW(Module):
 		if not os.path.exists(self.configFile):
 			raise ConfigError("Config file '%s' not found." % self.configFile)
 
-		self.requirements.append((WMS.MEMBER, 'VO-cms-%s' % self.scramEnv['SCRAM_PROJECTVERSION']))
+
+	def getRequirements(self):
+		reqs = self.requirements
+		reqs.append((WMS.MEMBER, 'VO-cms-%s' % self.scramEnv['SCRAM_PROJECTVERSION']))
+		reqs.append((WMS.STORAGE, self._getDataSites()))
 
 
 	def init(self):

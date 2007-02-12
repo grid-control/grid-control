@@ -6,11 +6,13 @@ class Job:
 	for id, state in enumerate(states):
 		_stateDict[state] = id
 		locals()[state] = id
+	__internals = ('id', 'status')
 
 
 	def __init__(self, state = INIT):
 		self.state = state
 		self.id = None
+		self.dict = {}
 
 
 	def _escape(value):
@@ -78,7 +80,7 @@ class Job:
 
 	def load(cls, fp):
 		data = {}
-		lineIter = iter(fp.xreadlines())
+		lineIter = iter(fp)
 		while True:
 			try:
 				line = lineIter.next()
@@ -100,22 +102,35 @@ class Job:
 		if data.has_key('id'):
 			job.id = data['id']
 
+		for i in cls.__internals:
+			try:
+				del data[i]
+			except:
+				pass
+		job.dict = data
+
 		return job
 	load = classmethod(load)
 
 
 	def save(self, fp):
-		data = {}
+		data = self.dict
 		data['status'] = self.states[self.state]
 		if self.id != None:
 			data['id'] = self.id
 
 		for key, value in data.items():
-			if type(value) in (int, float):
+			if value == None:
+				continue
+			elif type(value) in (int, float):
 				value = str(value)
 			else:
 				value = self._escape(value)
-			fp.write("%s = %s\n" % (key, value))
+			fp.write("%s=%s\n" % (key, value))
+
+
+	def set(self, key, value):
+		self.dict[key] = value
 
 
 	def update(self, state):
