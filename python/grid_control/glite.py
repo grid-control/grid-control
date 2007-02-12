@@ -32,8 +32,14 @@ class Glite(WMS):
 
 
 	def storageReq(self, sites):
-		print sites
-		return '(' + str.join(' || ', map(lambda x: "Member(%s, other.GlueCESEBindGroupSEUniqueID)", sites)) + ')'
+		def makeMember(member):
+			return "Member(%s, other.GlueCESEBindGroupSEUniqueID)" % self._escape(member)
+		if len(sites) == 0:
+			return None
+		elif len(sites) == 1:
+			return makeMember(sites[0])
+		else:
+			return '(' + str.join(' || ', map(makeMember, sites)) + ')'
 
 
 	def makeJDL(self, fp, job):

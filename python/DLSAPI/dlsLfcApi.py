@@ -81,7 +81,7 @@ class NotAccessibleError(DlsLfcApiError):
   """
 
 #########################################
-# DlsApì class
+# DlsApi class
 #########################################
 
 class DlsLfcApi(dlsApi.DlsApi):

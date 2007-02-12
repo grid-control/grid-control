@@ -24,12 +24,14 @@ class WMS(AbstractObject):
 		elif type == self.WALLTIME:
 			return self.wallTimeReq(*args)
 		elif type == self.STORAGE:
-			return self.storageReq(args)
+			return self.storageReq(*args)
 		else:
-			raise RuntimeError('unknown request type %d' % type)
+			raise RuntimeError('unknown requirement type %d' % type)
 
 
 	def formatRequirements(self, reqs):
+		if len(reqs) == 0:
+			return None
 		return str.join(' && ', map(lambda x: self._formatRequirement(*x), reqs))
 
 

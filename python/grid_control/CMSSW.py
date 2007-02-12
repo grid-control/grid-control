@@ -1,4 +1,4 @@
-import os, gzip, cPickle
+import os, copy, gzip, cPickle
 from fnmatch import fnmatch
 from xml.dom import minidom
 from grid_control import ConfigError, Module, WMS, DBSApi, utils
@@ -75,9 +75,11 @@ class CMSSW(Module):
 
 
 	def getRequirements(self):
-		reqs = self.requirements
+		reqs = copy.copy(self.requirements)
 		reqs.append((WMS.MEMBER, 'VO-cms-%s' % self.scramEnv['SCRAM_PROJECTVERSION']))
 		reqs.append((WMS.STORAGE, self._getDataSites()))
+
+		return reqs
 
 
 	def init(self):
