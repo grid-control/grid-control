@@ -22,13 +22,7 @@ def main(args):
 	global continuous
 
 	# display the 'grid-control' logo
-	logoFile = os.path.join(_root, 'share', 'logo.txt')
-	try:
-		f = open(logoFile, 'r')
-		print f.read()
-		f.close()
-	except:
-		print "WARNING: The logofile '%s' could not be read!" % logoFile
+	print open(utils.atRoot('share', 'logo.txt'), 'r').read()
 
 	# set up signal handler for interrupts
 	def interrupt(sig, frame):

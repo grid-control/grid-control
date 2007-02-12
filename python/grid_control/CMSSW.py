@@ -1,7 +1,7 @@
-import os
+import os, gzip, cPickle
 from fnmatch import fnmatch
 from xml.dom import minidom
-from grid_control import ConfigError, Module, utils
+from grid_control import ConfigError, Module, DBSApi, utils
 
 class CMSSW(Module):
 	def __init__(self, config):
@@ -9,6 +9,16 @@ class CMSSW(Module):
 
 		self.projectArea = config.getPath('CMSSW', 'project area')
 		self.configFile = config.getPath('CMSSW', 'config file')
+		self.dataset = config.get('CMSSW', 'dataset', '')
+		if self.dataset == '':
+			self.dataset = None
+			try:
+				self.eventsPerJob = config.getInt('CMSSW', 'events per job')
+			except:
+				self.eventsPerJob = 0
+		else:
+			self.eventsPerJob = config.getInt('CMSSW', 'events per job')
+		self.dbs = None
 
 		self.pattern = config.get('CMSSW', 'files').split()
 
@@ -65,7 +75,7 @@ class CMSSW(Module):
 
 
 	def init(self):
-		# walk directory in project area
+		# function to walk directory in project area
 		def walk(dir):
 			for file in os.listdir(os.path.join(self.projectArea, dir)):
 				if len(dir):
@@ -91,6 +101,7 @@ class CMSSW(Module):
 		utils.genTarball(os.path.join(self.workDir, 'runtime.tar.gz'), 
 		                 self.projectArea, files)
 
+		# generate config.sh
 		try:
 			fp = open(os.path.join(self.workDir, 'config.sh'), 'w')
 			fp.write('SCRAM_VERSION="scramv1"\n');
@@ -101,9 +112,28 @@ class CMSSW(Module):
 		except IOError, e:
 			raise InstallationError("Could not write config.sh: %s", str(e))
 
+		# find datasets
+		if self.dataset != None:
+			self.dbs = DBSApi(self.dataset)
+			self.dbs.run()
+
+			# and dump to cache file
+			fp = gzip.GzipFile(os.path.join(self.workDir, 'dbscache.dat'), 'wb')
+			cPickle.dump(self.dbs, fp)
+			fp.close()
+
+
+	def _getDataFiles(self, nJobs, firstEvent):
+		if self.dbs == None:
+			fp = gzip.GzipFile(os.path.join(self.workDir, 'dbscache.dat'), 'rb')
+			self.dbs = cPickle.load(fp)
+			fp.close()
+
+		return self.dbs.query(nJobs, self.eventsPerJob, firstEvent)
+
 
 	def getInFiles(self):
-		files = ['runtime.tar.gz', 'config.sh', self.configFile]
+		files = ['runtime.tar.gz', utils.atRoot('share', 'cmssw.sh'), 'config.sh', self.configFile]
 		def relocate(path):
 			if not os.path.isabs(path):
 				return os.path.join(self.workDir, path)
@@ -111,5 +141,19 @@ class CMSSW(Module):
 				return path
 		return map(relocate, files)
 
+
 	def getSoftwareMembers(self):
 		return ('VO-cms-%s' % self.scramEnv['SCRAM_PROJECTVERSION'],)
+
+
+	def getJobArguments(self, job):
+		if self.dataset == None:
+			return "%d %d" % (job, num)
+
+		files = self._getDataFiles(1, job * self.eventsPerJob)
+		try:
+			skip, num, files = iter(files).next()
+		except:
+			raise ConfigError("Job %d out of range for available dataset" % job)
+
+		return "%d %d %d %s" % (job, num, skip, str.join(' ', files))

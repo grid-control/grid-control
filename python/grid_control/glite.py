@@ -5,7 +5,7 @@ class Glite(WMS):
 	def __init__(self, config, module):
 		WMS.__init__(self, config, module)
 
-		self.sandboxIn = [ os.path.join(utils.getRoot(), 'share', 'run.sh') ]
+		self.sandboxIn = [ utils.atRoot('share', 'run.sh') ]
 		self.sandboxIn.extend(module.getInFiles())
 		self.sandboxOut = [ 'stdout.txt', 'stderr.txt' ]
 
@@ -68,7 +68,17 @@ class Glite(WMS):
 
 
 	def submitJob(self, id):
-		fd, jdl = tempfile.mkstemp('.jdl')
+		try:
+			fd, jdl = tempfile.mkstemp('.jdl')
+		except AttributeError:	# Python 2.2 has no tempfile.mkstemp
+			while True:
+				jdl = tempfile.mktemp('.jdl')
+				try:
+					fd = os.open(jdl, os.O_WRONLY | os.O_CREAT | os.O_EXCL)
+				except OSError:
+					continue
+				break
+
 		try:
 			fp = os.fdopen(fd, 'w')
 			self.makeJDL(fp, id)

@@ -22,9 +22,6 @@ class DBSApi:
 		self.dbsInstance = 'MCGlobal/Writer'
 		self.datasetPath = datasetPath
 
-		self.dbs = dbsCgiApi.DbsCgiApi(self.dbsUrl, { 'instance': self.dbsInstance })
-		self.dls = dlsClient.getDlsApi(self.dlsIface, self.dlsEndpoint)
-
 
 	def _splitJobs(collectionList, eventsPerJob, firstEvent):
 		nextEvent = firstEvent
@@ -79,7 +76,10 @@ class DBSApi:
 
 
 	def run(self):
-		datasets = self.dbs.listProcessedDatasets(self.datasetPath)
+		dbs = dbsCgiApi.DbsCgiApi(self.dbsUrl, { 'instance': self.dbsInstance })
+		dls = dlsClient.getDlsApi(self.dlsIface, self.dlsEndpoint)
+
+		datasets = dbs.listProcessedDatasets(self.datasetPath)
 		if len(datasets) == 0:
 			raise RuntimeError('No dataset found')
 		elif len(datasets) > 1:
@@ -87,14 +87,14 @@ class DBSApi:
 
 		datasetPath = datasets[0].get('datasetPathName')
 
-		contents = self.dbs.getDatasetContents(datasetPath)
+		contents = dbs.getDatasetContents(datasetPath)
 
 		self.sites = []
 		self.collections = []
 
 		for fileBlock in contents:
 			blockName = fileBlock.get('blockName')
-			for entry in self.dls.getLocations([ blockName ]):
+			for entry in dls.getLocations([ blockName ]):
 				self.sites.extend(map(lambda x: str(x.host), entry.locations))
 
 			self.collections.extend(fileBlock.get('eventCollectionList'))

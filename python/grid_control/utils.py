@@ -4,6 +4,11 @@ from grid_control import InstallationError, ConfigError
 def getRoot():
 	return os.path.dirname(os.path.abspath(os.path.normpath(sys.argv[0])))
 
+
+def atRoot(*args):
+	return os.path.join(getRoot(), *args)
+
+
 def searchPathFind(program):
 	try:
 		path = os.environ['PATH'].split(':')

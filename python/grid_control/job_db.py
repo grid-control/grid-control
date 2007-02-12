@@ -26,11 +26,11 @@ class JobDB:
 
 		i = 0
 		for j in self.all:
-			self.ready.extend(range(i, max(j, nJobs)))
+			self.ready.extend(xrange(i, max(j, nJobs)))
 			i = j
 			queue = self._findQueue(self._jobs[j])
 			queue.append(j)
-		self.ready.extend(range(i, nJobs))
+		self.ready.extend(xrange(i, nJobs))
 
 
 	def _findQueue(self, job):
