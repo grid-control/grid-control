@@ -27,7 +27,7 @@ def genTarball(outFile, dir, inFiles):
 	tarExec = searchPathFind('tar')
 
 	def _escape(value):
-		repl = { '\"': r'\"', '\$': r'\$' }
+		repl = { '\\': r'\\', '\"': r'\"', '\$': r'\$' }
 		def replace(char):
 			try:
 				return repl[char]

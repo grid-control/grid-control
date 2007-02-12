@@ -19,7 +19,7 @@ class Glite(WMS):
 
 
 	def _escape(value):
-		repl = { '\"': r'\"', '\n': r'\n' }
+		repl = { '\\': r'\\', '\"': r'\"', '\n': r'\n' }
 		def replace(char):
 			try:
 				return repl[char]
