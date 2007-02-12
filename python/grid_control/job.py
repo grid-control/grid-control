@@ -1,16 +1,4 @@
-from __future__ import generators
-from grid_control import RuntimeError
-
-try:
-	enumerate
-except:
-	# stupid python 2.2 doesn't have a builtin enumerator
-	def enumerate(iterable):
-		i = 0
-		for item in iterable:
-			yield (i, item)
-			i += 1
-
+from grid_control import RuntimeError, enumerate
 
 class Job:
 	states = ('INIT', 'SUBMITTED', 'WAITING', 'READY', 'QUEUED', 'RUNNING', 'ABORTED', 'FAILED', 'DONE', 'OK')

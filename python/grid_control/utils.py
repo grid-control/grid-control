@@ -1,5 +1,17 @@
+from __future__ import generators
 import sys, os, bisect, popen2
 from grid_control import InstallationError, ConfigError
+
+try:
+	enumerate = enumerate
+except:
+	# stupid python 2.2 doesn't have a builtin enumerator
+	def enumerate(iterable):
+		i = 0
+		for item in iterable:
+			yield (i, item)
+			i += 1
+
 
 def getRoot():
 	return os.path.dirname(os.path.abspath(os.path.normpath(sys.argv[0])))

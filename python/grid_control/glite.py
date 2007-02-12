@@ -9,14 +9,6 @@ class Glite(WMS):
 		self.sandboxIn.extend(module.getInFiles())
 		self.sandboxOut = [ 'stdout.txt', 'stderr.txt' ]
 
-		def memberReq(member):
-			return 'Member(%s, other.GlueHostApplicationSoftwareRunTimeEnvironment)' \
-			       % self._escape(member)
-
-		reqs = map(memberReq, module.getSoftwareMembers())
-
-		self.requirements = str.join(' && ', reqs)
-
 
 	def _escape(value):
 		repl = { '\\': r'\\', '\"': r'\"', '\n': r'\n' }
@@ -29,6 +21,15 @@ class Glite(WMS):
 	_escape = staticmethod(_escape)
 
 
+	def memberReq(self, member):
+		return 'Member(%s, other.GlueHostApplicationSoftwareRunTimeEnvironment)' \
+		       % self._escape(member)
+
+
+	def wallTimeReq(self, wallTime):
+		return '(other.GlueCEPolicyMaxCPUTime >= %d)' % wallTime
+
+
 	def makeJDL(self, fp, job):
 		contents = {
 			'Executable': 'run.sh',
@@ -37,12 +38,12 @@ class Glite(WMS):
 			'StdOutput': 'stdout.txt',
 			'StdError': 'stderr.txt',
 			'OutputSandbox': self.sandboxOut,
-			'_Requirements': self.requirements,
+			'_Requirements': self.formatRequirements(self.module.getRequirements()),
 			'VirtualOrganisation': self.config.get('grid', 'vo'),
 			'RetryCount': 2
 		}
 
-
+		# JDL parameter formatter
 		def jdlRep(value):
 			if type(value) in (int, long):
 				return str(value)
@@ -51,6 +52,7 @@ class Glite(WMS):
 			else:
 				return self._escape(value)
 
+		# write key <-> formatted parameter pairs
 		for key, value in contents.items():
 			if key[0] == '_':
 				key = key[1:]

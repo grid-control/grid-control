@@ -11,10 +11,6 @@ class UserMod(Module):
 		self.userParameters = config.get('UserMod', 'userparameters')
 		
 
-	def getSoftwareMembers(self):
-		return ('0')
-
-		
 	def getInFiles(self):
 		return self.inFiles
 			

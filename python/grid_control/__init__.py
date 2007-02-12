@@ -1,5 +1,5 @@
 from exceptions  import *
-from utils       import AbstractObject, SortedList
+from utils       import AbstractObject, SortedList, enumerate
 from config      import *
 from proxy       import *
 from voms_proxy  import *

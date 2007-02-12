@@ -101,12 +101,12 @@ def main(args):
 		module = config.get('global', 'module')
 		module = Module.open(module, config)
 
+		if init:
+			module.init()
+
 		# Initialise workload management interface
 		wms = config.get('grid', 'wms')
 		wms = WMS.open(wms, config, module)
-
-		if init:
-			module.init()
 
 		# Initialise job database
 		nJobs = config.getInt('jobs', 'jobs')

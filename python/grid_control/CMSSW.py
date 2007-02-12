@@ -1,7 +1,7 @@
 import os, gzip, cPickle
 from fnmatch import fnmatch
 from xml.dom import minidom
-from grid_control import ConfigError, Module, DBSApi, utils
+from grid_control import ConfigError, Module, WMS, DBSApi, utils
 
 class CMSSW(Module):
 	def __init__(self, config):
@@ -73,6 +73,8 @@ class CMSSW(Module):
 		if not os.path.exists(self.configFile):
 			raise ConfigError("Config file '%s' not found." % self.configFile)
 
+		self.requirements.append((WMS.MEMBER, 'VO-cms-%s' % self.scramEnv['SCRAM_PROJECTVERSION']))
+
 
 	def init(self):
 		# function to walk directory in project area
@@ -123,13 +125,21 @@ class CMSSW(Module):
 			fp.close()
 
 
-	def _getDataFiles(self, nJobs, firstEvent):
+	def _ensureDataCache(self):
 		if self.dbs == None:
 			fp = gzip.GzipFile(os.path.join(self.workDir, 'dbscache.dat'), 'rb')
 			self.dbs = cPickle.load(fp)
 			fp.close()
 
+
+	def _getDataFiles(self, nJobs, firstEvent):
+		self._ensureDataCache()
 		return self.dbs.query(nJobs, self.eventsPerJob, firstEvent)
+
+
+	def _getDataSites(self):
+		self._ensureDataCache()
+		return self.dbs.sites
 
 
 	def getInFiles(self):
@@ -140,10 +150,6 @@ class CMSSW(Module):
 			else:
 				return path
 		return map(relocate, files)
-
-
-	def getSoftwareMembers(self):
-		return ('VO-cms-%s' % self.scramEnv['SCRAM_PROJECTVERSION'],)
 
 
 	def getJobArguments(self, job):
