@@ -65,6 +65,13 @@ except ImportError:
 # from tarfile import *
 __all__ = ["TarFile", "TarInfo", "is_tarfile", "TarError"]
 
+# python 2.2 fix
+try:
+	sum
+except:
+	def sum(list):
+		return reduce(lambda x, y: x + y, list)
+
 #---------------------------------------------------------
 # tar constants
 #---------------------------------------------------------

@@ -7,7 +7,7 @@ class Glite(WMS):
 
 		self._submitExec = utils.searchPathFind('glite-job-submit')
 		self._statusExec = utils.searchPathFind('glite-job-status')
-		self._outputExec = utils.searchPathFind('glite-job-get-output')
+		self._outputExec = utils.searchPathFind('glite-job-output')
 
 
 	def _escape(value):
