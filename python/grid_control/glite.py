@@ -1,13 +1,13 @@
-import sys, os, tempfile, cStringIO
+import sys, os, popen2, tempfile, cStringIO
 from grid_control import WMS, Job, utils
 
 class Glite(WMS):
-	def __init__(self, config, module):
-		WMS.__init__(self, config, module)
+	def __init__(self, config, module, init):
+		WMS.__init__(self, config, module, init)
 
-		self.sandboxIn = [ utils.atRoot('share', 'run.sh') ]
-		self.sandboxIn.extend(module.getInFiles())
-		self.sandboxOut = [ 'stdout.txt', 'stderr.txt' ]
+		self._submitExec = utils.searchPathFind('glite-job-submit')
+		self._statusExec = utils.searchPathFind('glite-job-status')
+		self._outputExec = utils.searchPathFind('glite-job-get-output')
 
 
 	def _escape(value):

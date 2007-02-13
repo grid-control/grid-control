@@ -99,14 +99,11 @@ def main(args):
 
 		# Load the application module
 		module = config.get('global', 'module')
-		module = Module.open(module, config)
-
-		if init:
-			module.init()
+		module = Module.open(module, config, init)
 
 		# Initialise workload management interface
 		wms = config.get('grid', 'wms')
-		wms = WMS.open(wms, config, module)
+		wms = WMS.open(wms, config, module, init)
 
 		# Initialise job database
 		nJobs = config.getInt('jobs', 'jobs')

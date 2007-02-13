@@ -4,14 +4,11 @@
 from grid_control import ConfigError, AbstractObject, WMS
 
 class Module(AbstractObject):
-	def __init__(self, config):
+	def __init__(self, config, init):
 		self.config = config
 		self.workDir = config.getPath('global', 'workdir')
 		wallTime = config.getInt('jobs', 'wall time') * 60 * 60
 		self.requirements = [ (WMS.WALLTIME, wallTime) ]
-
-	def init(self):
-		pass
 
 	def getInFiles(self):
 		return []

@@ -1,11 +1,11 @@
-import os, copy, gzip, cPickle
+import os, copy, gzip, cPickle, cStringIO, StringIO
 from fnmatch import fnmatch
 from xml.dom import minidom
 from grid_control import ConfigError, Module, WMS, DBSApi, utils
 
 class CMSSW(Module):
-	def __init__(self, config):
-		Module.__init__(self, config)
+	def __init__(self, config, init):
+		Module.__init__(self, config, init)
 
 		self.projectArea = config.getPath('CMSSW', 'project area')
 		self.configFile = config.getPath('CMSSW', 'config file')
@@ -73,6 +73,9 @@ class CMSSW(Module):
 		if not os.path.exists(self.configFile):
 			raise ConfigError("Config file '%s' not found." % self.configFile)
 
+		if init:
+			self._init()
+
 
 	def getRequirements(self):
 		reqs = copy.copy(self.requirements)
@@ -82,7 +85,7 @@ class CMSSW(Module):
 		return reqs
 
 
-	def init(self):
+	def _init(self):
 		# function to walk directory in project area
 		def walk(dir):
 			for file in os.listdir(os.path.join(self.projectArea, dir)):
@@ -108,17 +111,6 @@ class CMSSW(Module):
 		walk('')
 		utils.genTarball(os.path.join(self.workDir, 'runtime.tar.gz'), 
 		                 self.projectArea, files)
-
-		# generate config.sh
-		try:
-			fp = open(os.path.join(self.workDir, 'config.sh'), 'w')
-			fp.write('SCRAM_VERSION="scramv1"\n');
-			fp.write('SCRAM_PROJECTVERSION="%s"\n'
-			         % self.scramEnv['SCRAM_PROJECTVERSION'])
-			fp.truncate()
-			fp.close()
-		except IOError, e:
-			raise InstallationError("Could not write config.sh: %s", str(e))
 
 		# find datasets
 		if self.dataset != None:
@@ -148,14 +140,27 @@ class CMSSW(Module):
 		return self.dbs.sites
 
 
+	def _makeConfig(self):
+		# generate config.sh
+		fp = cStringIO.StringIO()
+
+		fp.write('SCRAM_VERSION="scramv1"\n');
+		fp.write('SCRAM_PROJECTVERSION="%s"\n'
+		         % self.scramEnv['SCRAM_PROJECTVERSION'])
+
+		class FileObject(StringIO.StringIO):
+			def __init__(self, value, name):
+				StringIO.StringIO.__init__(self, value)
+				self.name = name
+				self.size = len(value)
+
+		fp = FileObject(fp.getvalue(), 'config.sh')
+		return fp
+
+
 	def getInFiles(self):
-		files = ['runtime.tar.gz', utils.atRoot('share', 'cmssw.sh'), 'config.sh', self.configFile]
-		def relocate(path):
-			if not os.path.isabs(path):
-				return os.path.join(self.workDir, path)
-			else:
-				return path
-		return map(relocate, files)
+		return ['runtime.tar.gz', utils.atRoot('share', 'cmssw.sh'),
+		         self.configFile, self._makeConfig()]
 
 
 	def getJobArguments(self, job):

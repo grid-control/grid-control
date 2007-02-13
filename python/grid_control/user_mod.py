@@ -2,7 +2,7 @@ import os.path
 from grid_control import Module
 
 class UserMod(Module):
-	def __init__(self, config):
+	def __init__(self, config, init):
 		Module.__init__(self, config)
 		self.config = config
 		self.executable = config.getPath('UserMod', 'executable')
