@@ -106,9 +106,11 @@ class JobDB:
 			map[job.id] = (id, job)
 			ids.append(job.id)
 
-		for id, state in wms.checkJobs(ids):
+		for id, state, info in wms.checkJobs(ids):
 			id, job = map[id]
 			if state != job.state:
+				for key, value in info.items():
+					job.set(key, value)
 				self._update(id, job, state)
 
 
@@ -120,6 +122,9 @@ class JobDB:
 			self._jobs[id] = job
 
 		wmsId = wms.submitJob(id, job)
-		# FIXME: error handling
+		if wmsId == None:
+			# FIXME
+			return
+
 		job.assignId(wmsId)
 		self._update(id, job, Job.SUBMITTED)
