@@ -9,13 +9,14 @@ except ImportError:
 
 class Glite(WMS):
 	_statusMap = {
-		'ready': Job.READY,
-		'waiting': Job.WAITING,
-		'queued': Job.QUEUED,
-		'running': Job.RUNNING,
-		'failed': Job.FAILED,
-		'done': Job.DONE,
-		'aborted': Job.ABORTED
+		'ready':	Job.READY,
+		'waiting':	Job.WAITING,
+		'queued':	Job.QUEUED,
+		'scheduled':	Job.QUEUED,
+		'running':	Job.RUNNING,
+		'failed':	Job.FAILED,
+		'done':		Job.DONE,
+		'aborted':	Job.ABORTED
 	}
 
 	def __init__(self, config, module, init):
@@ -25,7 +26,7 @@ class Glite(WMS):
 		self._statusExec = utils.searchPathFind('glite-job-status')
 		self._outputExec = utils.searchPathFind('glite-job-output')
 
-		self._configVO = config.get('glite', 'config-vo', '')
+		self._configVO = config.getPath('glite', 'config-vo', '')
 		if self._configVO != '' and not os.path.exists(self._configVO):
 			raise ConfigError("--config-vo file '%s' does not exist." % self._configVO)
 
@@ -60,6 +61,15 @@ class Glite(WMS):
 			return makeMember(sites[0])
 		else:
 			return '(' + str.join(' || ', map(makeMember, sites)) + ')'
+
+
+	def sitesReq(self, site, neg):
+		if neg:
+			format = '!RegExp(%s, other.GlueCEUniqueID)'
+		else:
+			format = 'RegExp(%s, other.GlueCEUniqueID)'
+
+		return format % self._escape(site)
 
 
 	def makeJDL(self, fp, job):
@@ -255,6 +265,63 @@ class Glite(WMS):
 			if retCode != 0:
 				#FIXME
 				print >> sys.stderr, "WARNING: glite-job-status failed:"
+				for line in open(log, 'r'):
+					sys.stderr.write(line)
+
+		finally:
+			try:
+				os.unlink(jobs)
+			except:
+				pass
+			try:
+				os.unlink(log)
+			except:
+				pass
+
+		return result
+
+
+	def retrieveJobs(self, ids):
+		if len(ids) == 0:
+			return []
+
+		try:
+			fd, jobs = tempfile.mkstemp('.jobids')
+		except AttributeError:	# Python 2.2 has no tempfile.mkstemp
+			while True:
+				jobs = tempfile.mktemp('.jobids')
+				try:
+					fd = os.open(jobs, os.O_WRONLY | os.O_CREAT | os.O_EXCL)
+				except OSError:
+					continue
+				break
+
+		log = tempfile.mktemp('.log')
+
+		result = []
+
+		try:
+			fp = os.fdopen(fd, 'w')
+			for id in ids:
+				fp.write("%s\n" % id)
+			fp.close()
+			# FIXME: error handling
+
+			proc = popen2.Popen3("%s --noint --logfile %s -i %s --dir %s"
+			                     % (self._outputExec,
+			                        self._escape(log),
+			                        self._escape(jobs),
+			                        self._escape(self._outputPath)),
+			                        True)
+
+			for data in proc.fromchild.readlines():
+				# FIXME: moep
+				pass
+
+			retCode = proc.wait()
+			if retCode != 0:
+				#FIXME
+				print >> sys.stderr, "WARNING: glite-job-output failed:"
 				for line in open(log, 'r'):
 					sys.stderr.write(line)
 

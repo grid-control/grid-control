@@ -1,4 +1,4 @@
-import os, copy, gzip, cPickle, cStringIO, StringIO
+import os, copy, gzip, cPickle
 from fnmatch import fnmatch
 from xml.dom import minidom
 from grid_control import ConfigError, Module, WMS, DBSApi, utils
@@ -140,27 +140,19 @@ class CMSSW(Module):
 		return self.dbs.sites
 
 
-	def _makeConfig(self):
-		# generate config.sh
-		fp = cStringIO.StringIO()
-
+	def makeConfig(self, fp):
 		fp.write('SCRAM_VERSION="scramv1"\n');
 		fp.write('SCRAM_PROJECTVERSION="%s"\n'
 		         % self.scramEnv['SCRAM_PROJECTVERSION'])
 
-		class FileObject(StringIO.StringIO):
-			def __init__(self, value, name):
-				StringIO.StringIO.__init__(self, value)
-				self.name = name
-				self.size = len(value)
-
-		fp = FileObject(fp.getvalue(), 'config.sh')
-		return fp
-
 
 	def getInFiles(self):
 		return ['runtime.tar.gz', utils.atRoot('share', 'cmssw.sh'),
-		         self.configFile, self._makeConfig()]
+		         self.configFile]
+
+
+	def getOutFiles(self):
+		return []
 
 
 	def getJobArguments(self, job):

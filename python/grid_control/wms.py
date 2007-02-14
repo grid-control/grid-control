@@ -6,7 +6,7 @@ from grid_control import AbstractObject, RuntimeError, utils, enumerate
 
 class WMS(AbstractObject):
 	INLINE_TAR_LIMIT = 256 * 1024
-	reqTypes = ('MEMBER', 'WALLTIME', 'STORAGE')
+	reqTypes = ('MEMBER', 'WALLTIME', 'STORAGE', 'SITES')
 	_reqTypeDict = {}
 	for id, reqType in enumerate(reqTypes):
 		_reqTypeDict[reqType] = id
@@ -18,15 +18,31 @@ class WMS(AbstractObject):
 		self.module = module
 		self.workDir = config.getPath('global', 'workdir')
 
+		self._sites = config.get('grid', 'sites', '').split()
+
+		self._outputPath = os.path.join(self.workDir, 'output')
+		try:
+			if not os.path.exists(self._outputPath):
+				if init:
+					os.mkdir(self._outputPath)
+				else:
+					raise ConfigError("Not a properly initialized work directory '%s'." % self.workDir)
+		except IOError, e:
+			raise ConfigError("Problem creating work directory '%s': %s" % (self._outputPath, e))
+
 		tarFile = os.path.join(self.workDir, 'sandbox.tar.gz')
 		self.sandboxIn = [ utils.atRoot('share', 'run.sh'), tarFile ]
 
 		self.sandboxOut = [ 'stdout.txt', 'stderr.txt' ]
+		self.sandboxOut.extend(self.module.getOutFiles())
 
 		if init:
 			tar = tarfile.TarFile.open(tarFile, 'w:gz')
 
-		for file in self.module.getInFiles():
+		inFiles = [ self.module.getConfig() ]
+		inFiles.extend(self.module.getInFiles())
+
+		for file in inFiles:
 			if type(file) == str:
 				name = os.path.basename(file)
 				if not os.path.isabs(file):
@@ -70,11 +86,23 @@ class WMS(AbstractObject):
 			return self.wallTimeReq(*args)
 		elif type == self.STORAGE:
 			return self.storageReq(*args)
+		elif type == self.SITES:
+			return self.sitesReq(*args)
 		else:
 			raise RuntimeError('unknown requirement type %d' % type)
 
 
-	def formatRequirements(self, reqs):
+	def formatRequirements(self, reqs_):
+		# add requirements not handled by caller
+		def mangleSite(site):
+			neg = site[0] == '-'
+			if neg:
+				site = site[1:]
+			return (self.SITES, site, neg)
+
+		reqs = map(mangleSite, self._sites)
+		reqs.extend(reqs_)
+
 		if len(reqs) == 0:
 			return None
 		return str.join(' && ', map(lambda x: self._formatRequirement(*x), reqs))

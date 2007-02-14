@@ -37,7 +37,9 @@ class Config:
 			                  % (item, section))
 
 	def getPath(self, section, item, default = None):
-		path = self.get(section, item)
+		path = self.get(section, item, default)
+		if path == '':
+			return ''
 		path = os.path.expanduser(path)	# ~/bla -> /home/user/bla
 		path = os.path.normpath(path)   # xx/../yy -> yy
 		if not os.path.isabs(path):	# ./lala -> /foo/bar/lala
