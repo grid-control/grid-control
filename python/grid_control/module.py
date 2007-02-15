@@ -2,7 +2,7 @@
 # instantiates named class instead (default is UserMod)
 
 import cStringIO, StringIO
-from grid_control import ConfigError, AbstractObject, WMS
+from grid_control import ConfigError, AbstractObject, utils, WMS
 
 class Module(AbstractObject):
 	def __init__(self, config, init):
@@ -13,10 +13,21 @@ class Module(AbstractObject):
 
 
 	def getConfig(self):
+		return {}
+
+
+	def getRequirements(self):
+		return self.requirements
+
+
+	def makeConfig(self):
+		data = self.getConfig()
+		data['MY_RUNTIME'] = self.getCommand()
+		data['MY_OUT'] = str.join(' ', self.getOutFiles())
+
 		fp = cStringIO.StringIO()
-		self.makeConfig(fp)
-		fp.write('MY_RUNTIME="./cmssw.sh \\"\\$@\\""\n');
-		fp.write('MY_OUT="%s"' % str.join(' ', self.getOutFiles()))
+		for key, value in data.items():
+			fp.write("%s=%s\n" % (key, utils.shellEscape(value)))
 
 		class FileObject(StringIO.StringIO):
 			def __init__(self, value, name):
@@ -24,25 +35,19 @@ class Module(AbstractObject):
 				self.name = name
 				self.size = len(value)
 
-		fp = FileObject(fp.getvalue(), 'config.sh')
+		fp = FileObject(fp.getvalue(), '_config.sh')
 		return fp
 
 
-	def makeConfig(self, fp):
-		pass
-
-
 	def getInFiles(self):
-		return []
+		name = self.__class__.__name__
+		return self.config.get(name, 'input files', '').split()
 
 
 	def getOutFiles(self):
-		return []
-
-
-	def getRequirements(self):
-		return self.requirements
+		name = self.__class__.__name__
+		return self.config.get(name, 'output files', '').split()
 
 
 	def getJobArguments(self, job):
-		return "%d" % job
+		return ""

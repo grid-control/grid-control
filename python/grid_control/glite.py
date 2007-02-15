@@ -14,9 +14,10 @@ class Glite(WMS):
 		'queued':	Job.QUEUED,
 		'scheduled':	Job.QUEUED,
 		'running':	Job.RUNNING,
+		'aborted':	Job.ABORTED,
+		'cancelled':	Job.CANCELLED,
 		'failed':	Job.FAILED,
-		'done':		Job.DONE,
-		'aborted':	Job.ABORTED
+		'done':		Job.DONE
 	}
 
 	def __init__(self, config, module, init):
@@ -56,7 +57,7 @@ class Glite(WMS):
 		def makeMember(member):
 			return "Member(%s, other.GlueCESEBindGroupSEUniqueID)" \
 			       % self._jdlEscape(member)
-		if len(sites) == 0:
+		if not len(sites):
 			return None
 		elif len(sites) == 1:
 			return makeMember(sites[0])
@@ -76,7 +77,7 @@ class Glite(WMS):
 	def makeJDL(self, fp, job):
 		contents = {
 			'Executable': 'run.sh',
-			'Arguments': self.module.getJobArguments(job),
+			'Arguments': "%d %s" % (job, self.module.getJobArguments(job)),
 			'InputSandbox': self.sandboxIn,
 			'StdOutput': 'stdout.txt',
 			'StdError': 'stderr.txt',
@@ -230,7 +231,7 @@ class Glite(WMS):
 
 
 	def checkJobs(self, ids):
-		if len(ids) == 0:
+		if not len(ids):
 			return []
 
 		try:
@@ -287,9 +288,16 @@ class Glite(WMS):
 		return result
 
 
-	def retrieveJobs(self, ids):
-		if len(ids) == 0:
+	def getJobsOutput(self, ids):
+		if not len(ids):
 			return []
+
+		tmpPath = os.path.join(self._outputPath, 'tmp')
+		try:
+			if not os.path.exists(tmpPath):
+				os.mkdir(tmpPath)
+		except IOError:
+			raise RuntimeError("Temporary path '%s' could not be created." % tmpPath)
 
 		try:
 			fd, jobs = tempfile.mkstemp('.jobids')
@@ -317,7 +325,7 @@ class Glite(WMS):
 			                     % (self._outputExec,
 			                        utils.shellEscape(log),
 			                        utils.shellEscape(jobs),
-			                        utils.shellEscape(self._outputPath)),
+			                        utils.shellEscape(tmpPath)),
 			                        True)
 
 			for data in proc.fromchild.readlines():
@@ -331,6 +339,11 @@ class Glite(WMS):
 				for line in open(log, 'r'):
 					sys.stderr.write(line)
 
+			for file in os.listdir(tmpPath):
+				path = os.path.join(tmpPath, file)
+				if os.path.isdir(path):
+					result.append(path)
+
 		finally:
 			try:
 				os.unlink(jobs)
@@ -338,6 +351,10 @@ class Glite(WMS):
 				pass
 			try:
 				os.unlink(log)
+			except:
+				pass
+			try:
+				os.rmdir(tmpPath)
 			except:
 				pass
 

@@ -1,7 +1,7 @@
 # Generic base class for grid proxies
 # instantiates named class instead (default is VomsProxy)
 
-import os, time, tarfile
+import os, time, shutil, tarfile
 from grid_control import AbstractObject, ConfigError, RuntimeError, utils, enumerate
 
 class WMS(AbstractObject):
@@ -33,13 +33,13 @@ class WMS(AbstractObject):
 		tarFile = os.path.join(self.workDir, 'sandbox.tar.gz')
 		self.sandboxIn = [ utils.atRoot('share', 'run.sh'), tarFile ]
 
-		self.sandboxOut = [ 'stdout.txt', 'stderr.txt' ]
+		self.sandboxOut = [ 'stdout.txt', 'stderr.txt', 'jobinfo.txt' ]
 		self.sandboxOut.extend(self.module.getOutFiles())
 
 		if init:
 			tar = tarfile.TarFile.open(tarFile, 'w:gz')
 
-		inFiles = [ self.module.getConfig() ]
+		inFiles = [ self.module.makeConfig() ]
 		inFiles.extend(self.module.getInFiles())
 
 		for file in inFiles:
@@ -114,3 +114,47 @@ class WMS(AbstractObject):
 
 	def wallTimeReq(self, *args):
 		raise RuntimeError('wallTimeReq is abstract')
+
+
+	def retrieveJobs(self, ids):
+		dirs = self.getJobsOutput(ids)
+		result = []
+
+		for dir in dirs:
+			info = os.path.join(dir, 'jobinfo.txt')
+			if not os.path.exists(info):
+				continue
+
+			try:
+				data = utils.parseShellDict(open(info, 'r'))
+				id = data['JOBID']
+				retCode = data['EXITCODE']
+			except:
+				print >> sys.stderr, "Warning: '%s' seems broken." % info
+				continue
+
+			dst = os.path.join(self._outputPath, 'job_%d' % id)
+
+			if os.path.exists(dst):
+				try:
+					shutil.rmtree(dst)
+				except IOError, e:
+					print >> sys.stderr, \
+					      "Warning: '%s' cannot be removed: %s" \
+					      % (dst, str(e))
+					continue
+
+			try:
+				try:
+					shutil.move(dir, dst)
+				except AttributeError:
+					os.renames(dir, dst)
+			except IOError, e:
+				print >> sys.stderr, \
+				         "Warning: Error moving job output directory from '%s' to '%s': %s" \
+				          % (dir, dst, str(e))
+				continue
+
+			result.append((id, retCode))
+
+		return result

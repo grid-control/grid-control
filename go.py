@@ -120,16 +120,22 @@ def main(args):
 			print "Running in continuous mode. Press ^C to exit."
 
 		while True:
-			# figure out the next thing to do
+			# idle timeout is one minute
+			timeout = 60
+
+			# retrieve finished jobs
+			if jobs.retrieve(wms):
+				timeout = 10
+
 			# check for jobs
 			if jobs.check(wms):
 				timeout = 10
-			else:
-				timeout = 60
 
 			# try submission
 			curInFlight = len(jobs.running)
 			submit = maxInFlight - curInFlight
+			if submit < 0:
+				submit = 0
 			for job in jobs.ready[:submit]:
 				jobs.submit(wms, job)
 

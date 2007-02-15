@@ -39,7 +39,7 @@ class JobDB:
 		if state in (Job.SUBMITTED, Job.WAITING, Job.READY,
 		             Job.QUEUED, Job.RUNNING):
 			queue = self.running
-		elif state in (Job.INIT, Job.FAILED, Job.ABORTED):
+		elif state in (Job.INIT, Job.FAILED, Job.ABORTED, Job.CANCELLED):
 			queue = self.ready	# resubmit?
 		elif state == Job.DONE:
 			queue = self.done
@@ -132,3 +132,29 @@ class JobDB:
 
 		job.assignId(wmsId)
 		self._update(id, job, Job.SUBMITTED)
+
+
+	def retrieve(self, wms):
+		change = False
+		ids = []
+		for id in self.done:
+			job = self._jobs[id]
+			ids.append(job.id)
+
+		for id, retCode in wms.retrieveJobs(ids):
+			try:
+				job = self._jobs[id]
+			except:
+				continue
+
+			if retCode == 0:
+				state = Job.OK
+			else:
+				state = Job.FAILED
+
+			if state != job.state:
+				change = True
+				job.set('retcode', retCode)
+				self._update(id, job, state)
+
+		return change

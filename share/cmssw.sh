@@ -3,7 +3,7 @@
 echo "CMSSW module starting"
 echo "---------------------"
 
-source config.sh
+source _config.sh
 
 if ! test -f "$MY_SCRATCH/runtime.tar.gz"; then
 	echo "runtime.tar.gz not found" 2>&1

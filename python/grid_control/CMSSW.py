@@ -20,7 +20,7 @@ class CMSSW(Module):
 			self.eventsPerJob = config.getInt('CMSSW', 'events per job')
 		self.dbs = None
 
-		self.pattern = config.get('CMSSW', 'files').split()
+		self.pattern = config.get('CMSSW', 'area files').split()
 
 		if os.path.exists(self.projectArea):
 			print "Project area found in: %s" % self.projectArea
@@ -75,14 +75,6 @@ class CMSSW(Module):
 
 		if init:
 			self._init()
-
-
-	def getRequirements(self):
-		reqs = copy.copy(self.requirements)
-		reqs.append((WMS.MEMBER, 'VO-cms-%s' % self.scramEnv['SCRAM_PROJECTVERSION']))
-		reqs.append((WMS.STORAGE, self._getDataSites()))
-
-		return reqs
 
 
 	def _init(self):
@@ -140,26 +132,37 @@ class CMSSW(Module):
 		return self.dbs.sites
 
 
-	def makeConfig(self, fp):
-		fp.write('CMSSW_CONFIG="%s"\n'
-		         % utils.shellEscape(os.path.basename(self.configFile)));
-		fp.write('SCRAM_VERSION="scramv1"\n');
-		fp.write('SCRAM_PROJECTVERSION="%s"\n'
-		         % utils.shellEscape(self.scramEnv['SCRAM_PROJECTVERSION']))
+	def getRequirements(self):
+		reqs = copy.copy(self.requirements)
+		reqs.append((WMS.MEMBER, 'VO-cms-%s' % self.scramEnv['SCRAM_PROJECTVERSION']))
+		reqs.append((WMS.STORAGE, self._getDataSites()))
+
+		return reqs
+
+
+	def getCommand(self):
+		return './cmssw.sh "$@"'
+
+
+	def getConfig(self):
+		return {
+			'CMSSW_CONFIG': os.path.basename(self.configFile),
+			'SCRAM_VERSION': 'scramv1',
+			'SCRAM_PROJECTVERSION': self.scramEnv['SCRAM_PROJECTVERSION']
+		}
 
 
 	def getInFiles(self):
-		return ['runtime.tar.gz', utils.atRoot('share', 'cmssw.sh'),
-		         self.configFile]
-
-
-	def getOutFiles(self):
-		return []
+		return Module.getInFiles(self) + [
+			'runtime.tar.gz',
+			utils.atRoot('share', 'cmssw.sh'),
+			self.configFile
+		]
 
 
 	def getJobArguments(self, job):
 		if self.dataset == None:
-			return "%d %d" % (job, num)
+			return "%d" % self.eventsPerJob
 
 		files = self._getDataFiles(1, job * self.eventsPerJob)
 		try:
@@ -167,4 +170,4 @@ class CMSSW(Module):
 		except:
 			raise ConfigError("Job %d out of range for available dataset" % job)
 
-		return "%d %d %d %s" % (job, num, skip, str.join(' ', files))
+		return "%d %d %s" % (num, skip, str.join(' ', files))

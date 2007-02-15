@@ -5,8 +5,9 @@ export MY_ID="`whoami`"
 export MY_REAL="`pwd`"
 
 echo "JOBID=$MY_JOB"
+echo
 
-echo -n "Running on: "
+echo -n "grid-control running on: "
 hostname
 
 shift
@@ -47,17 +48,19 @@ echo "---------------------------"
 echo "Unpacking environment"
 tar xvfz "$MY_REAL/sandbox.tar.gz" || exit 3
 
-if ! test -f config.sh; then
-	echo "config.sh missing" 1>&2
+if ! test -f _config.sh; then
+	echo "_config.sh missing" 1>&2
 	exit 1
 fi
 
-source config.sh
+source _config.sh
 
 if ! test -n "$MY_RUNTIME"; then
 	echo "MY_RUNTIME is not set" 1>&2
 	exit 1
 fi
+
+echo "JOBID=$MY_JOB" > jobinfo.txt
 
 eval "$MY_RUNTIME"
 CODE=$?
@@ -65,8 +68,10 @@ CODE=$?
 echo "---------------------------"
 echo "Exit code: $CODE"
 
+echo "EXITCODE=$CODE" >> jobinfo.txt
+
 if [ $MY_MOVED -eq 1 ]; then
-	for i in stderr.txt stdout.txt $MY_OUT; do
+	for i in stderr.txt stdout.txt jobinfo.txt $MY_OUT; do
 		test -f "$i" && cp $i "$MY_REAL/"
 	done
 	cd "$MY_REAL/"
