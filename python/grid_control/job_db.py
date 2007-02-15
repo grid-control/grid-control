@@ -26,8 +26,8 @@ class JobDB:
 
 		i = 0
 		for j in self.all:
-			self.ready.extend(xrange(i, max(j, nJobs)))
-			i = j
+			self.ready.extend(xrange(i, min(j, nJobs)))
+			i = j + 1
 			queue = self._findQueue(self._jobs[j])
 			queue.append(j)
 		self.ready.extend(xrange(i, nJobs))
@@ -39,12 +39,12 @@ class JobDB:
 		if state in (Job.SUBMITTED, Job.WAITING, Job.READY,
 		             Job.QUEUED, Job.RUNNING):
 			queue = self.running
+		elif state in (Job.INIT, Job.FAILED, Job.ABORTED):
+			queue = self.ready	# resubmit?
 		elif state == Job.DONE:
 			queue = self.done
 		elif state == Job.OK:
 			queue = self.ok
-		elif state in (Job.INIT, Job.FAILED, Job.ABORTED):
-			queue = self.ready	# resubmit?
 		else:
 			raise Exception("Internal error: Unexpected job state %s" % Job.states[state])
 
@@ -99,6 +99,7 @@ class JobDB:
 
 
 	def check(self, wms):
+		change = False
 		map = {}
 		ids = []
 		for id in self.running:
@@ -109,9 +110,12 @@ class JobDB:
 		for id, state, info in wms.checkJobs(ids):
 			id, job = map[id]
 			if state != job.state:
+				change = True
 				for key, value in info.items():
 					job.set(key, value)
 				self._update(id, job, state)
+
+		return change
 
 
 	def submit(self, wms, id):

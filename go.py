@@ -83,6 +83,12 @@ def main(args):
 		else:
 			raise UserError("The specified working directory '%s' does not exist!" % workdir) 
 
+		# change to workdir
+		try:
+			os.chdir(workdir)
+		except:
+			raise UserError("The specified working directory '%s' is inaccessible!" % workdir) 
+
 		# Open grid proxy
 		proxy = config.get('grid', 'proxy')
 		proxy = Proxy.open(proxy)
@@ -116,7 +122,10 @@ def main(args):
 		while True:
 			# figure out the next thing to do
 			# check for jobs
-			jobs.check(wms)
+			if jobs.check(wms):
+				timeout = 10
+			else:
+				timeout = 60
 
 			# try submission
 			curInFlight = len(jobs.running)
@@ -126,7 +135,7 @@ def main(args):
 
 			if not continuous:
 				break
-			time.sleep(5)
+			time.sleep(timeout)
 			if not continuous:
 				break
 

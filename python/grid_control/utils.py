@@ -14,7 +14,8 @@ except:
 
 
 def getRoot():
-	return os.path.dirname(os.path.abspath(os.path.normpath(sys.argv[0])))
+	# relies on _root to be set in go.py
+	return sys.modules['__main__']._root
 
 
 def atRoot(*args):
@@ -89,4 +90,3 @@ class SortedList(list):
 		pos = bisect.bisect_left(self, item)
 		if pos < len(self) and self[pos] == item:
 			del self[pos]
-

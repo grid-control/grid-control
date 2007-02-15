@@ -110,7 +110,12 @@ class Glite(WMS):
 
 		def format(data):
 			data = copy.copy(data)
-			data['status'] = self._statusMap[data['status'].lower()]
+			status = data['status'].lower()
+			try:
+				status = status.split()[0]
+			except:
+				pass
+			data['status'] = self._statusMap[status]
 			try:
 				data['timestamp'] = int(time.mktime(parsedate(data['timestamp'])))
 			except:

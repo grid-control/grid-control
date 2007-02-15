@@ -43,6 +43,8 @@ tar xvfz $MY_SCRATCH/runtime.tar.gz
 
 eval `$SCRAM runtime -sh`
 
+echo "---------------------------"
+
 ls -l
 
 exit 0
