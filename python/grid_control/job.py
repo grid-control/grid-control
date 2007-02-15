@@ -1,4 +1,4 @@
-from grid_control import RuntimeError, enumerate
+from grid_control import RuntimeError, utils, enumerate
 
 class Job:
 	states = ('INIT', 'SUBMITTED', 'WAITING', 'READY', 'QUEUED', 'RUNNING', 'ABORTED', 'FAILED', 'DONE', 'OK')
@@ -13,17 +13,6 @@ class Job:
 		self.state = state
 		self.id = None
 		self.dict = {}
-
-
-	def _escape(value):
-		repl = { '\\': r'\\', '\"': r'\"' }
-		def replace(char):
-			try:
-				return repl[char]
-			except:
-				return char
-		return '"' + str.join('', map(replace, value)) + '"'
-	_escape = staticmethod(_escape)
 
 
 	def _getString(value, lineIter):
@@ -125,7 +114,7 @@ class Job:
 			elif type(value) in (int, float):
 				value = str(value)
 			else:
-				value = self._escape(value)
+				value = utils.shellEscape(value)
 			fp.write("%s=%s\n" % (key, value))
 
 

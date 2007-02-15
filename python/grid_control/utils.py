@@ -36,21 +36,22 @@ def searchPathFind(program):
 	raise InstallationError("%s not found" % program)
 
 
+def shellEscape(value):
+	repl = { '\\': r'\\', '\"': r'\"' }
+	def replace(char):
+		try:
+			return repl[char]
+		except:
+			return char
+	return '"' + str.join('', map(replace, value)) + '"'
+
+
 def genTarball(outFile, dir, inFiles):
 	tarExec = searchPathFind('tar')
 
-	def _escape(value):
-		repl = { '\\': r'\\', '\"': r'\"', '\$': r'\$' }
-		def replace(char):
-			try:
-				return repl[char]
-			except:
-				return char
-		return '"' + str.join('', map(replace, value)) + '"'
-
 	cmd = "%s -C %s -f %s -cz %s" % \
-	      (tarExec, _escape(dir), _escape(outFile),
-	       str.join(' ', map(_escape, inFiles)))
+	      (tarExec, shellEscape(dir), shellEscape(outFile),
+	       str.join(' ', map(shellEscape, inFiles)))
 	proc = popen2.Popen3(cmd, True)
 	msg = str.join('', proc.fromchild.readlines())
 	retCode = proc.wait()

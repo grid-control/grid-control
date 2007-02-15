@@ -31,7 +31,7 @@ class Glite(WMS):
 			raise ConfigError("--config-vo file '%s' does not exist." % self._configVO)
 
 
-	def _escape(value):
+	def _jdlEscape(value):
 		repl = { '\\': r'\\', '\"': r'\"', '\n': r'\n' }
 		def replace(char):
 			try:
@@ -39,12 +39,12 @@ class Glite(WMS):
 			except:
 				return char
 		return '"' + str.join('', map(replace, value)) + '"'
-	_escape = staticmethod(_escape)
+	_jdlEscape = staticmethod(_jdlEscape)
 
 
 	def memberReq(self, member):
 		return 'Member(%s, other.GlueHostApplicationSoftwareRunTimeEnvironment)' \
-		       % self._escape(member)
+		       % self._jdlEscape(member)
 
 
 	def wallTimeReq(self, wallTime):
@@ -54,7 +54,8 @@ class Glite(WMS):
 
 	def storageReq(self, sites):
 		def makeMember(member):
-			return "Member(%s, other.GlueCESEBindGroupSEUniqueID)" % self._escape(member)
+			return "Member(%s, other.GlueCESEBindGroupSEUniqueID)" \
+			       % self._jdlEscape(member)
 		if len(sites) == 0:
 			return None
 		elif len(sites) == 1:
@@ -69,7 +70,7 @@ class Glite(WMS):
 		else:
 			format = 'RegExp(%s, other.GlueCEUniqueID)'
 
-		return format % self._escape(site)
+		return format % self._jdlEscape(site)
 
 
 	def makeJDL(self, fp, job):
@@ -92,7 +93,7 @@ class Glite(WMS):
 			elif type(value) in (tuple, list):
 				return '{ ' + str.join(', ', map(jdlRep, value)) + ' }'
 			else:
-				return self._escape(value)
+				return self._jdlEscape(value)
 
 		# write key <-> formatted parameter pairs
 		for key, value in contents.items():
@@ -189,12 +190,12 @@ class Glite(WMS):
 
 			params = ''
 			if self._configVO != '':
-				params += ' --config-vo %s' % self._escape(self._configVO)
+				params += ' --config-vo %s' % utils.shellEscape(self._configVO)
 
 			proc = popen2.Popen3("%s%s --nomsg --noint --logfile %s %s"
 			                     % (self._submitExec, params,
-			                        self._escape(log),
-			                        self._escape(jdl)), True)
+			                        utils.shellEscape(log),
+			                        utils.shellEscape(jdl)), True)
 
 			id = None
 
@@ -256,8 +257,8 @@ class Glite(WMS):
 
 			proc = popen2.Popen3("%s --noint --logfile %s -i %s"
 			                     % (self._statusExec,
-			                        self._escape(log),
-			                        self._escape(jobs)), True)
+			                        utils.shellEscape(log),
+			                        utils.shellEscape(jobs)), True)
 
 			for data in self._parseStatus(proc.fromchild.readlines()):
 				id = data['id']
@@ -314,9 +315,9 @@ class Glite(WMS):
 
 			proc = popen2.Popen3("%s --noint --logfile %s -i %s --dir %s"
 			                     % (self._outputExec,
-			                        self._escape(log),
-			                        self._escape(jobs),
-			                        self._escape(self._outputPath)),
+			                        utils.shellEscape(log),
+			                        utils.shellEscape(jobs),
+			                        utils.shellEscape(self._outputPath)),
 			                        True)
 
 			for data in proc.fromchild.readlines():

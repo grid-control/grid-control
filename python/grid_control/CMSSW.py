@@ -141,9 +141,11 @@ class CMSSW(Module):
 
 
 	def makeConfig(self, fp):
+		fp.write('CMSSW_CONFIG="%s"\n'
+		         % utils.shellEscape(os.path.basename(self.configFile)));
 		fp.write('SCRAM_VERSION="scramv1"\n');
 		fp.write('SCRAM_PROJECTVERSION="%s"\n'
-		         % self.scramEnv['SCRAM_PROJECTVERSION'])
+		         % utils.shellEscape(self.scramEnv['SCRAM_PROJECTVERSION']))
 
 
 	def getInFiles(self):

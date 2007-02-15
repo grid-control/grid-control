@@ -2,7 +2,7 @@
 # instantiates named class instead (default is VomsProxy)
 
 import os, time, tarfile
-from grid_control import AbstractObject, RuntimeError, utils, enumerate
+from grid_control import AbstractObject, ConfigError, RuntimeError, utils, enumerate
 
 class WMS(AbstractObject):
 	INLINE_TAR_LIMIT = 256 * 1024
