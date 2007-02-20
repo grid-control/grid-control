@@ -37,7 +37,7 @@ def searchPathFind(program):
 
 
 def shellEscape(value):
-	repl = { '\\': r'\\', '\"': r'\"' }
+	repl = { '\\': r'\\', '\"': r'\"', '$': r'\$' }
 	def replace(char):
 		try:
 			return repl[char]
