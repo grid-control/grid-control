@@ -26,7 +26,9 @@ if [ ! -f "$VO_CMS_SW_DIR/cmsset_default.sh" ]; then
 	exit 1
 fi
 
+saved_SCRAM_VERSION="$SCRAM_VERSION"
 source "$VO_CMS_SW_DIR/cmsset_default.sh"
+SCRAM_VERSION="$saved_SCRAM_VERSION"
 
 SCRAM="`which \"\$SCRAM_VERSION\"`"
 if [ -z "$SCRAM" ]; then

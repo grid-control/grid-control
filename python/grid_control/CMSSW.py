@@ -20,6 +20,8 @@ class CMSSW(Module):
 			self.eventsPerJob = config.getInt('CMSSW', 'events per job')
 		self.dbs = None
 
+		self.anySites = config.get('CMSSW', 'sites', 'no') == 'any'
+
 		self.pattern = config.get('CMSSW', 'area files').split()
 
 		if os.path.exists(self.projectArea):
@@ -135,7 +137,8 @@ class CMSSW(Module):
 	def getRequirements(self):
 		reqs = copy.copy(self.requirements)
 		reqs.append((WMS.MEMBER, 'VO-cms-%s' % self.scramEnv['SCRAM_PROJECTVERSION']))
-		reqs.append((WMS.STORAGE, self._getDataSites()))
+		if not self.anySites:
+			reqs.append((WMS.STORAGE, self._getDataSites()))
 
 		return reqs
 

@@ -132,12 +132,13 @@ def main(args):
 				timeout = 10
 
 			# try submission
-			curInFlight = len(jobs.running)
-			submit = maxInFlight - curInFlight
-			if submit < 0:
-				submit = 0
-			for job in jobs.ready[:submit]:
-				jobs.submit(wms, job)
+			if jobSubmission:
+				curInFlight = len(jobs.running)
+				submit = maxInFlight - curInFlight
+				if submit < 0:
+					submit = 0
+				for job in jobs.ready[:submit]:
+					jobs.submit(wms, job)
 
 			if not continuous:
 				break
