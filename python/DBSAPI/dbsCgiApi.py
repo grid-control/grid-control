@@ -21,7 +21,9 @@ from dbsProcessing import DbsProcessing
 from dbsParent import DbsParent
 from dbsApi import DbsApi, DbsApiException, InvalidDataTier
 
-DEFAULT_URL = "http://cmsdoc.cern.ch/cms/aprom/DBS/CGIServer/dbsxml"
+#DEFAULT_URL = "http://cmsdoc.cern.ch/cms/aprom/DBS/CGIServer/dbsxml"
+DEFAULT_URL = "http://cmsdbs.cern.ch/cms/prod/comp/DBS/CGIServer/prodquery"
+
 
 ##############################################################################
 # DBS CGI Exceptions

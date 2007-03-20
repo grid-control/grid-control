@@ -18,7 +18,7 @@ class DBSApi:
 	def __init__(self, datasetPath):
 		self.dlsIface = dlsClient.DLS_TYPE_LFC
 		self.dlsEndpoint = 'prod-lfc-cms-central.cern.ch/grid/cms/DLS/LFC'
-		self.dbsUrl = 'http://cmsdoc.cern.ch/cms/test/aprom/DBS/CGIServer/prodquery'
+		self.dbsUrl = 'http://cmsdbs.cern.ch/cms/prod/comp/DBS/CGIServer/prodquery'
 		self.dbsInstance = 'MCGlobal/Writer'
 		self.datasetPath = datasetPath
 
