@@ -59,11 +59,19 @@ for i in "$@"; do
 	FNAMES="$FNAMES, \"$i\""
 done
 
+$SEED_REPLACER=""
+j=0
+for i in $SEEDS; do
+	SEED_REPLACER="$SEED_REPLACER -e s@__SEED_${j}__@$[i+MY_JOB]@"
+	j=$[j+1]
+done
+
 for i in $CMSSW_CONFIG; do
 	echo "*** $i:"
 	sed -e "s@__FILE_NAMES__@$FNAMES@" \
 	    -e "s@__MAX_EVENTS__@$EVENTS@" \
 	    -e "s@__SKIP_EVENTS__@$SKIP@" \
+	    $SEED_REPLACER \
 	    < "`_find $i`"
 done
 

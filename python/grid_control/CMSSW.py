@@ -20,9 +20,15 @@ class CMSSW(Module):
 			self.eventsPerJob = config.getInt('CMSSW', 'events per job')
 		self.dbs = None
 
-		self.anySites = config.get('CMSSW', 'sites', 'no') == 'any'
-
+		self.anySites = config.get('CMSSW', 'sites', 'no') == 'any' or \
+				self.dbs == None
+		
 		self.pattern = config.get('CMSSW', 'area files').split()
+
+		try:
+			self.seeds = map(lambda x: int(x), config.get('CMSSW', 'seeds', '').split())
+		except:
+			raise ConfigError("Invalid CMSSW seeds!")
 
 		if os.path.exists(self.projectArea):
 			print "Project area found in: %s" % self.projectArea
@@ -151,7 +157,8 @@ class CMSSW(Module):
 		return {
 			'CMSSW_CONFIG': os.path.basename(self.configFile),
 			'SCRAM_VERSION': 'scramv1',
-			'SCRAM_PROJECTVERSION': self.scramEnv['SCRAM_PROJECTVERSION']
+			'SCRAM_PROJECTVERSION': self.scramEnv['SCRAM_PROJECTVERSION'],
+			'SEEDS': str.join(' ', map(lambda x: "%d" % x, self.seeds))
 		}
 
 
