@@ -194,6 +194,8 @@ class Glite(WMS):
 			if self._configVO != '':
 				params += ' --config-vo %s' % utils.shellEscape(self._configVO)
 
+			activity = utils.ActivityLog('submitting jobs')
+
 			proc = popen2.Popen3("%s%s --nomsg --noint --logfile %s %s"
 			                     % (self._submitExec, params,
 			                        utils.shellEscape(log),
@@ -206,6 +208,8 @@ class Glite(WMS):
 				if line.startswith('http'):
 					id = line
 			retCode = proc.wait()
+
+			del activity
 
 			if retCode != 0:
 				#FIXME
@@ -257,6 +261,8 @@ class Glite(WMS):
 			fp.close()
 			# FIXME: error handling
 
+			activity = utils.ActivityLog("checking job status")
+
 			proc = popen2.Popen3("%s --noint --logfile %s -i %s"
 			                     % (self._statusExec,
 			                        utils.shellEscape(log),
@@ -270,6 +276,9 @@ class Glite(WMS):
 				result.append((id, status, data))
 
 			retCode = proc.wait()
+
+			del activity
+
 			if retCode != 0:
 				#FIXME
 				print >> sys.stderr, "WARNING: glite-job-status failed:"
@@ -322,6 +331,8 @@ class Glite(WMS):
 			fp.close()
 			# FIXME: error handling
 
+			avtivity = utils.ActivityLog("retrieving job outputs")
+
 			proc = popen2.Popen3("%s --noint --logfile %s -i %s --dir %s"
 			                     % (self._outputExec,
 			                        utils.shellEscape(log),
@@ -334,6 +345,9 @@ class Glite(WMS):
 				pass
 
 			retCode = proc.wait()
+
+			del activity
+
 			if retCode != 0:
 				#FIXME
 				print >> sys.stderr, "WARNING: glite-job-output failed:"

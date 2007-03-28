@@ -52,9 +52,15 @@ def genTarball(outFile, dir, inFiles):
 	cmd = "%s -C %s -f %s -cz %s" % \
 	      (tarExec, shellEscape(dir), shellEscape(outFile),
 	       str.join(' ', map(shellEscape, inFiles)))
+
+	activity = ActivityLog('generating tarball')
+
 	proc = popen2.Popen3(cmd, True)
 	msg = str.join('', proc.fromchild.readlines())
 	retCode = proc.wait()
+
+	del activity
+
 	if retCode != 0:
 		raise InstallationError("Error creating tar file: %s" % msg)
 
@@ -164,3 +170,60 @@ class SortedList(list):
 		pos = bisect.bisect_left(self, item)
 		if pos < len(self) and self[pos] == item:
 			del self[pos]
+
+class ActivityLog:
+	class Activity:
+		def __init__(self, stream, message):
+			self.stream = stream
+			self.message = message
+			self.status = False
+
+		def run(self):
+			if not self.status:
+				self.stream.write('%s...' % self.message)
+				self.stream.flush()
+				self.status = True
+
+		def clear(self):
+			if self.status:
+				self.stream.write('\r%s\r' % \
+					''.ljust(len(self.message) + 3))
+				self.stream.flush()
+				self.status = False
+
+	class WrappedStream:
+		def __init__(self, stream, activity):
+			self.__stream = stream
+			self.__activity = activity
+			self.__activity.run()
+
+		def __del__(self):
+			self.__activity.clear()
+
+		def write(self, data):
+			self.__activity.clear()
+			retVal = self.__stream.write(data)
+			if data.endswith('\n'):
+				self.__activity.run()
+			return retVal
+
+		def __getattr__(self, name):
+			return self.__stream.__getattr__(name)
+
+	def __init__(self, message):
+		self.saved = (sys.stdout, sys.stderr)
+		self.activity = Activity(sys.stdout, message)
+
+		sys.stdout = WrappedStream(sys.stdout, self.activity)
+		sys.stderr = WrappedStream(sys.stderr, self.activity)
+
+	def __del__(self):
+		sys.stdout, sys.stderr = self.saved
+
+
+def activityLog(message, fn, *args, **kwargs):
+	activity = ActivityLog(message)
+	try:
+		return fn(*args, **kwargs)
+	finally:
+		del activity
