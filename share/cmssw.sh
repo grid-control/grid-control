@@ -47,7 +47,9 @@ if ! test -d "$SCRAM_PROJECTVERSION"; then
 fi
 
 cd "$SCRAM_PROJECTVERSION"
-tar xvfz "`_find runtime.tar.gz`"
+if ! [ "$HAS_RUNTIME" = no ]; then
+	tar xvfz "`_find runtime.tar.gz`"
+fi
 
 echo "---------------------------"
 
@@ -59,7 +61,7 @@ for i in "$@"; do
 	FNAMES="$FNAMES, \"$i\""
 done
 
-$SEED_REPLACER=""
+SEED_REPLACER=""
 j=0
 for i in $SEEDS; do
 	SEED_REPLACER="$SEED_REPLACER -e s@__SEED_${j}__@$[i+MY_JOB]@"
@@ -79,10 +81,13 @@ echo "---------------------------"
 
 eval `$SCRAM runtime -sh`
 
-echo "---------------------------"
-
 mkdir -p workdir &> /dev/null
-cd workdir &> /dev/null
+cd workdir
+
+eval "for i in $USER_INFILES; do mv \"\$MY_SCRATCH/\$i\" .; done"
+ls -la
+
+echo "---------------------------"
 
 for i in $CMSSW_CONFIG; do
 	sed -e "s@__FILE_NAMES__@$FNAMES@" \
@@ -91,11 +96,20 @@ for i in $CMSSW_CONFIG; do
 	    < "`_find $i`" > "$i"
 
 	if [ "$GZIP_OUT" = "yes" ]; then
-	   cmsRun "$i" 2>&1 | gzip -9 > cmssw_out.txt.gz
+		rm -f cmssw_out.txt
+		mknod cmssw_out1.txt p
+
+		gzip -9 -c cmssw_out1.txt > cmssw_out.txt.gz &
+		ls -la
+		cat /proc/mounts
+		cmsRun "$i" &> cmssw_out1.txt
+		CODE=$?
+		wait
+		rm -f cmssw_out1.txt
         else 
-	    cmsrun "$i"
+		cmsRun "$i"
+		CODE=$?
 	fi
-	CODE=$?
 
 	if [ $CODE -ne 0 ]; then
 		exit $CODE
@@ -106,8 +120,6 @@ done
 
 ls -la
 
-for i in $MY_OUT; do
-	mv "$i" "$MY_SCRATCH" &> /dev/null
-done
+eval "for i in $MY_OUT; do mv \"\$i\" \"\$MY_SCRATCH\" &> /dev/null; done"
 
 exit 0
