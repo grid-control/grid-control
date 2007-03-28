@@ -90,7 +90,11 @@ for i in $CMSSW_CONFIG; do
 	    -e "s@__SKIP_EVENTS__@$SKIP@" \
 	    < "`_find $i`" > "$i"
 
-	cmsRun "$i"
+	if [ "$GZIP_OUT" = "yes" ]; then
+	   cmsRun "$i" 2>&1 | gzip -9 > cmssw_out.txt.gz
+        else 
+	    cmsrun "$i"
+	fi
 	CODE=$?
 
 	if [ $CODE -ne 0 ]; then
