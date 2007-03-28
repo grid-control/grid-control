@@ -50,4 +50,8 @@ class Config:
 		return int(self.get(section, item, default))
 
 	def getBool(self, section, item, default = None):
-		return bool(self.get(section, item, default))
+		value = self.get(section, item, default)
+		try:
+			return bool(int(value))
+		except:
+			return value.lower() in ('yes', 'y', 'true', 't', 'ok')

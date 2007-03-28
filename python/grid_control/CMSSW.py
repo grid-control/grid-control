@@ -7,7 +7,16 @@ class CMSSW(Module):
 	def __init__(self, config, init):
 		Module.__init__(self, config, init)
 
-		self.projectArea = config.getPath('CMSSW', 'project area')
+		scramProject = config.get('CMSSW', 'scram project', '').split()
+		if size(scramProject):
+			self.projectArea = config.getPath('CMSSW', 'project area', '')
+			if size(self.projectArea):
+				raise ConfigError('Cannot specify both SCRAM project and project area')
+			if size(scramProject) != 2:
+				raise ConfigError('SCRAM project needs exactly 2 arguments: PROJECT VERSION')
+		else:
+			self.projectArea = config.getPath('CMSSW', 'project area')
+
 		self.configFile = config.getPath('CMSSW', 'config file')
 		self.dataset = config.get('CMSSW', 'dataset', '')
 		if self.dataset == '':
@@ -23,55 +32,63 @@ class CMSSW(Module):
 		self.anySites = config.get('CMSSW', 'sites', 'no') == 'any' or \
 				self.dbs == None
 		
-		self.pattern = config.get('CMSSW', 'area files').split()
+		self.gzipOut = config.getBool('CMSSW', 'gzip output', True)
 
 		try:
 			self.seeds = map(lambda x: int(x), config.get('CMSSW', 'seeds', '').split())
 		except:
 			raise ConfigError("Invalid CMSSW seeds!")
 
-		if os.path.exists(self.projectArea):
-			print "Project area found in: %s" % self.projectArea
+		if size(self.projectArea):
+			self.pattern = config.get('CMSSW', 'area files').split()
+
+			if os.path.exists(self.projectArea):
+				print "Project area found in: %s" % self.projectArea
+			else:
+				raise ConfigError("Specified config area '%s' does not exist!" % self.projectArea)
+
+			# check, if the specified project area is a CMSSW project area
+			envFile = os.path.join(self.projectArea, '.SCRAM', 'Environment.xml')
+			if not os.path.exists(envFile):
+				raise ConfigError("Project area is not a SCRAM area.")
+
+			# try to open it
+			try:
+				fp = open(envFile, 'r')
+			except IOError, e:
+				raise ConfigError("Project area .SCRAM/Environment.xml cannot be opened: %s" + str(e))
+
+			# try to parse it
+			try:
+				xml = minidom.parse(fp)
+			except :
+				raise ConfigError("Project area .SCRAM/Environment.xml file invalid.")
+			fp.close()
+
+			# find entries
+			self.scramEnv = {}
+			try:
+				for node in xml.childNodes[0].childNodes:
+					if node.nodeType != minidom.Node.ELEMENT_NODE:
+						continue
+					if node.nodeName != 'environment':
+						continue
+
+					for key, value in node.attributes.items():
+						if type(key) == unicode:
+							key = key.encode('utf-8')
+						if type(value) == unicode:
+							value = value.encode('utf-8')
+
+						self.scramEnv[key] = value
+
+			except:
+				raise ConfigError("Project area .SCRAM/Environment.xml has bad XML structure.")
 		else:
-			raise ConfigError("Specified config area '%s' does not exist!" % self.projectArea)
-
-		# check, if the specified project area is a CMSSW project area
-		envFile = os.path.join(self.projectArea, '.SCRAM', 'Environment.xml')
-		if not os.path.exists(envFile):
-			raise ConfigError("Project area is not a SCRAM area.")
-
-		# try to open it
-		try:
-			fp = open(envFile, 'r')
-		except IOError, e:
-			raise ConfigError("Project area .SCRAM/Environment.xml cannot be opened: %s" + str(e))
-
-		# try to parse it
-		try:
-			xml = minidom.parse(fp)
-		except :
-			raise ConfigError("Project area .SCRAM/Environment.xml file invalid.")
-		fp.close()
-
-		# find entries
-		self.scramEnv = {}
-		try:
-			for node in xml.childNodes[0].childNodes:
-				if node.nodeType != minidom.Node.ELEMENT_NODE:
-					continue
-				if node.nodeName != 'environment':
-					continue
-
-				for key, value in node.attributes.items():
-					if type(key) == unicode:
-						key = key.encode('utf-8')
-					if type(value) == unicode:
-						value = value.encode('utf-8')
-
-					self.scramEnv[key] = value
-
-		except:
-			raise ConfigError("Project area .SCRAM/Environment.xml has bad XML structure.")
+			self.scramEnv = {
+				'SCRAM_PROJECTNAME': scramProject[0],
+				'SCRAM_PROJECTVERSION': scramProject[1]
+			}
 
 		if not self.scramEnv.has_key('SCRAM_PROJECTNAME') or \
 		   not self.scramEnv.has_key('SCRAM_PROJECTVERSION') or \
@@ -158,6 +175,8 @@ class CMSSW(Module):
 			'CMSSW_CONFIG': os.path.basename(self.configFile),
 			'SCRAM_VERSION': 'scramv1',
 			'SCRAM_PROJECTVERSION': self.scramEnv['SCRAM_PROJECTVERSION'],
+			'USER_INFILES': Module.getInFiles(self),
+			'GZIP_OUT': ('no', 'yes')[self.gzipOut],
 			'SEEDS': str.join(' ', map(lambda x: "%d" % x, self.seeds))
 		}
 
