@@ -331,7 +331,7 @@ class Glite(WMS):
 			fp.close()
 			# FIXME: error handling
 
-			avtivity = utils.ActivityLog("retrieving job outputs")
+			activity = utils.ActivityLog("retrieving job outputs")
 
 			proc = popen2.Popen3("%s --noint --logfile %s -i %s --dir %s"
 			                     % (self._outputExec,
