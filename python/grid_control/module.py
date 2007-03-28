@@ -1,7 +1,7 @@
 # Generic base class for job modules
 # instantiates named class instead (default is UserMod)
 
-import cStringIO, StringIO
+import os.path, cStringIO, StringIO
 from grid_control import ConfigError, AbstractObject, utils, WMS
 
 class Module(AbstractObject):
@@ -41,7 +41,13 @@ class Module(AbstractObject):
 
 	def getInFiles(self):
 		name = self.__class__.__name__
-		return self.config.get(name, 'input files', '').split()
+		def fileMap(file):
+			if not os.path.isabs(file):
+				path = os.path.join(self.config.baseDir, file)
+			else:
+				path = file
+			return path
+		return map(fileMap, self.config.get(name, 'input files', '').split())
 
 
 	def getOutFiles(self):

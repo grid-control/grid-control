@@ -117,7 +117,7 @@ class WMS(AbstractObject):
 
 
 	def retrieveJobs(self, ids):
-		dirs = self.getJobOutput(ids)
+		dirs = self.getJobsOutput(ids)
 
 		result = []
 

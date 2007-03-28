@@ -212,10 +212,10 @@ class ActivityLog:
 
 	def __init__(self, message):
 		self.saved = (sys.stdout, sys.stderr)
-		self.activity = Activity(sys.stdout, message)
+		self.activity = self.Activity(sys.stdout, message)
 
-		sys.stdout = WrappedStream(sys.stdout, self.activity)
-		sys.stderr = WrappedStream(sys.stderr, self.activity)
+		sys.stdout = self.WrappedStream(sys.stdout, self.activity)
+		sys.stderr = self.WrappedStream(sys.stderr, self.activity)
 
 	def __del__(self):
 		sys.stdout, sys.stderr = self.saved

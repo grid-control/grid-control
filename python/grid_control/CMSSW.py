@@ -8,11 +8,11 @@ class CMSSW(Module):
 		Module.__init__(self, config, init)
 
 		scramProject = config.get('CMSSW', 'scram project', '').split()
-		if size(scramProject):
+		if len(scramProject):
 			self.projectArea = config.getPath('CMSSW', 'project area', '')
-			if size(self.projectArea):
+			if len(self.projectArea):
 				raise ConfigError('Cannot specify both SCRAM project and project area')
-			if size(scramProject) != 2:
+			if len(scramProject) != 2:
 				raise ConfigError('SCRAM project needs exactly 2 arguments: PROJECT VERSION')
 		else:
 			self.projectArea = config.getPath('CMSSW', 'project area')
@@ -39,7 +39,7 @@ class CMSSW(Module):
 		except:
 			raise ConfigError("Invalid CMSSW seeds!")
 
-		if size(self.projectArea):
+		if len(self.projectArea):
 			self.pattern = config.get('CMSSW', 'area files').split()
 
 			if os.path.exists(self.projectArea):
@@ -123,11 +123,12 @@ class CMSSW(Module):
 				if not neg:
 					files.append(name)
 
-		# walk project area subdirectories and find files
-		files = []
-		walk('')
-		utils.genTarball(os.path.join(self.workDir, 'runtime.tar.gz'), 
-		                 self.projectArea, files)
+		if len(self.projectArea):
+			# walk project area subdirectories and find files
+			files = []
+			walk('')
+			utils.genTarball(os.path.join(self.workDir, 'runtime.tar.gz'), 
+			                 self.projectArea, files)
 
 		# find datasets
 		if self.dataset != None:
@@ -175,18 +176,29 @@ class CMSSW(Module):
 			'CMSSW_CONFIG': os.path.basename(self.configFile),
 			'SCRAM_VERSION': 'scramv1',
 			'SCRAM_PROJECTVERSION': self.scramEnv['SCRAM_PROJECTVERSION'],
-			'USER_INFILES': Module.getInFiles(self),
+			'USER_INFILES': str.join(' ', map(lambda x: utils.shellEscape(os.path.basename(x)), Module.getInFiles(self))),
 			'GZIP_OUT': ('no', 'yes')[self.gzipOut],
-			'SEEDS': str.join(' ', map(lambda x: "%d" % x, self.seeds))
+			'HAS_RUNTIME': ('no', 'yes')[len(self.projectArea) != 0],
+			'SEEDS': str.join(' ', map(lambda x: "%d" % x, self.seeds)),
 		}
 
 
 	def getInFiles(self):
-		return Module.getInFiles(self) + [
-			'runtime.tar.gz',
+		files = Module.getInFiles(self)
+		if len(self.projectArea):
+			files.append('runtime.tar.gz')
+		files.extend([
 			utils.atRoot('share', 'cmssw.sh'),
 			self.configFile
-		]
+		])
+		return files
+
+
+	def getOutFiles(self):
+		files = Module.getOutFiles(self)
+		if self.gzipOut:
+			files.append('cmssw_out.txt.gz')
+		return files
 
 
 	def getJobArguments(self, job):
