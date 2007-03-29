@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 echo "CMSSW module starting"
 echo "---------------------"
@@ -27,8 +27,10 @@ if [ ! -f "$VO_CMS_SW_DIR/cmsset_default.sh" ]; then
 fi
 
 saved_SCRAM_VERSION="$SCRAM_VERSION"
+saved_SCRAM_ARCH="$SCRAM_ARCH"
 source "$VO_CMS_SW_DIR/cmsset_default.sh"
 SCRAM_VERSION="$saved_SCRAM_VERSION"
+export SCRAM_ARCH="$saved_SCRAM_ARCH"
 
 SCRAM="`which \"\$SCRAM_VERSION\"`"
 if [ -z "$SCRAM" ]; then
@@ -96,16 +98,8 @@ for i in $CMSSW_CONFIG; do
 	    < "`_find $i`" > "$i"
 
 	if [ "$GZIP_OUT" = "yes" ]; then
-		rm -f cmssw_out.txt
-		mknod cmssw_out1.txt p
-
-		gzip -9 -c cmssw_out1.txt > cmssw_out.txt.gz &
-		ls -la
-		cat /proc/mounts
-		cmsRun "$i" &> cmssw_out1.txt
+		cmsRun "$i" 2>&1 |gzip -9 >& cmssw_out.txt.gz
 		CODE=$?
-		wait
-		rm -f cmssw_out1.txt
         else 
 		cmsRun "$i"
 		CODE=$?

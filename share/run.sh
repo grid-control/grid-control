@@ -9,6 +9,8 @@ echo
 
 echo -n "grid-control running on: "
 hostname
+uname -a
+cat /etc/redhat-release
 
 shift
 

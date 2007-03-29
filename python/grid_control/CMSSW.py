@@ -17,6 +17,8 @@ class CMSSW(Module):
 		else:
 			self.projectArea = config.getPath('CMSSW', 'project area')
 
+		self.scramArch = config.get('CMSSW', 'scram arch')
+
 		self.configFile = config.getPath('CMSSW', 'config file')
 		self.dataset = config.get('CMSSW', 'dataset', '')
 		if self.dataset == '':
@@ -151,7 +153,7 @@ class CMSSW(Module):
 	def _getDataFiles(self, nJobs, firstEvent):
 		self._ensureDataCache()
 		return self.dbs.query(nJobs, self.eventsPerJob, firstEvent)
-
+    
 
 	def _getDataSites(self):
 		self._ensureDataCache()
@@ -175,6 +177,7 @@ class CMSSW(Module):
 		return {
 			'CMSSW_CONFIG': os.path.basename(self.configFile),
 			'SCRAM_VERSION': 'scramv1',
+			'SCRAM_ARCH': self.scramArch,
 			'SCRAM_PROJECTVERSION': self.scramEnv['SCRAM_PROJECTVERSION'],
 			'USER_INFILES': str.join(' ', map(lambda x: utils.shellEscape(os.path.basename(x)), Module.getInFiles(self))),
 			'GZIP_OUT': ('no', 'yes')[self.gzipOut],
