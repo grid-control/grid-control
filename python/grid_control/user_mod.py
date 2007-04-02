@@ -5,7 +5,7 @@ class UserMod(Module):
 	def __init__(self, config, init):
 		Module.__init__(self, config, init)
 
-		self.executable = config.get('UserMod', 'executable')
+		self.executable = config.getPath('UserMod', 'executable')
 		self.arguments = config.get('UserMod', 'arguments')
 
 
