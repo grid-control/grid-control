@@ -86,6 +86,8 @@ eval `$SCRAM runtime -sh`
 mkdir -p workdir &> /dev/null
 cd workdir
 
+export CMSSW_SEARCH_PATH="$CMSSW_SEARCH_PATH:`pwd`"
+
 eval "for i in $USER_INFILES; do mv \"\$MY_SCRATCH/\$i\" .; done"
 ls -la
 

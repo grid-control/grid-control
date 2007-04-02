@@ -1,5 +1,5 @@
 1. CANCEL JOBS (ALL OR SPECIFIC)
 2. FIX continous mode (-ic)
 3. Run over all Events available automatically
-4. Modules need stdout-compression (esp. cmssw...)
-5. CMSSW-Module inputfile-handling 
+4. std-out compression needs exit-code forwarding
+5. usermod inputfile-handling (falsches dir)
