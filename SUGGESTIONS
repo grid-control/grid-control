@@ -2,4 +2,4 @@
 2. FIX continous mode (-ic)
 3. Run over all Events available automatically
 4. std-out compression needs exit-code forwarding
-5. usermod inputfile-handling (falsches dir)
+5. Advanced Resource-Requesting (CPUtime, MEM...)
