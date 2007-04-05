@@ -3,3 +3,4 @@
 3. Run over all Events available automatically
 4. std-out compression needs exit-code forwarding
 5. Advanced Resource-Requesting (CPUtime, MEM...)
+6. Show location in job-status/ ev. have information output
