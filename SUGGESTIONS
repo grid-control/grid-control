@@ -4,3 +4,5 @@
 4. std-out compression needs exit-code forwarding
 5. Advanced Resource-Requesting (CPUtime, MEM...)
 6. Show location in job-status/ ev. have information output
+7. Fix Done (failed) - issue (no Output Sandbox retrievial)
+8. enable condidtions for job failure (e.g. root-file <1 MB...)
