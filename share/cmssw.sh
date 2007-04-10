@@ -100,8 +100,9 @@ for i in $CMSSW_CONFIG; do
 	    < "`_find $i`" > "$i"
 
 	if [ "$GZIP_OUT" = "yes" ]; then
-		cmsRun "$i" 2>&1 |gzip -9 >& cmssw_out.txt.gz
-		CODE=$?
+		( cmsRun "$i"; echo $? > exitcode.txt ) 2>&1 | gzip -9 > cmssw_out.txt.gz
+		CODE=$(<exitcode.txt)
+		rm -f exitcode.txt
         else 
 		cmsRun "$i"
 		CODE=$?
