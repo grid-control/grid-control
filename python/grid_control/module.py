@@ -9,7 +9,11 @@ class Module(AbstractObject):
 		self.config = config
 		self.workDir = config.getPath('global', 'workdir')
 		wallTime = config.getInt('jobs', 'wall time') * 60 * 60
-		self.requirements = [ (WMS.WALLTIME, wallTime) ]
+		cpuTime = config.getInt('jobs', 'cpu time', 10 * 60)
+		memory = config.getInt('jobs', 'memory', 512)
+		self.requirements = [ (WMS.WALLTIME, wallTime),
+				      (WMS.CPUTIME, cpuTime),
+				      (WMS.MEMORY, memory) ]
 
 
 	def getConfig(self):

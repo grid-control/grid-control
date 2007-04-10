@@ -6,7 +6,7 @@ from grid_control import AbstractObject, ConfigError, RuntimeError, utils, enume
 
 class WMS(AbstractObject):
 	INLINE_TAR_LIMIT = 256 * 1024
-	reqTypes = ('MEMBER', 'WALLTIME', 'STORAGE', 'SITES')
+	reqTypes = ('MEMBER', 'WALLTIME', 'STORAGE', 'SITES', 'CPUTIME', 'MEMORY')
 	_reqTypeDict = {}
 	for id, reqType in enumerate(reqTypes):
 		_reqTypeDict[reqType] = id
@@ -88,6 +88,10 @@ class WMS(AbstractObject):
 			return self.storageReq(*args)
 		elif type == self.SITES:
 			return self.sitesReq(*args)
+		elif type == self.CPUTIME:
+			return self.cpuTimeReq(*args)
+		elif type == self.MEMORY:
+			return self.memoryReq(*args)
 		else:
 			raise RuntimeError('unknown requirement type %d' % type)
 
@@ -114,6 +118,14 @@ class WMS(AbstractObject):
 
 	def wallTimeReq(self, *args):
 		raise RuntimeError('wallTimeReq is abstract')
+
+
+	def cpuTimeReq(self, *args):
+		raise RuntimeError('cpuTimeReq is abstract')
+
+
+	def memoryReq(self, *args):
+		raise RuntimeError('memoryReq is abstract')
 
 
 	def retrieveJobs(self, ids):

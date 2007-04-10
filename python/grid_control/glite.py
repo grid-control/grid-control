@@ -75,6 +75,16 @@ class Glite(WMS):
 		return format % self._jdlEscape(site)
 
 
+	def cpuTimeReq(self, cpuTime):
+		if cpuTime == 0:
+			return None
+		return '(other.GlueCEPolicyMaxCPUTime >= %d)' % cpuTime
+
+	def memoryReq(self, memory):
+		if memory == 0:
+			return None
+		return '(other.GlueHostMainMemoryRAMSize >= %d)' % memory
+
 	def makeJDL(self, fp, job):
 		contents = {
 			'Executable': 'run.sh',
@@ -115,7 +125,10 @@ class Glite(WMS):
 			data = copy.copy(data)
 			status = data['status'].lower()
 			try:
-				status = status.split()[0]
+				if status.find('failed') >=0:
+					status='failed'
+				else:
+					status = status.split()[0]
 			except:
 				pass
 			data['status'] = self._statusMap[status]
