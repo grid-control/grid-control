@@ -110,16 +110,13 @@ for i in $CMSSW_CONFIG; do
 		cmsRun "$i"
 		CODE=$?
 	fi
-
-	if [ $CODE -ne 0 ]; then
-		exit $CODE
-	else
-		echo "---------------------------"
-	fi
 done
+
+echo "---------------------------"
 echo "ls after CMSRUN:"
 ls -la
 
 eval "for i in $MY_OUT; do mv \"\$i\" \"\$MY_SCRATCH\" &> /dev/null; done"
 
-exit 0
+
+exit $CODE
