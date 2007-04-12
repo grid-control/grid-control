@@ -89,6 +89,9 @@ cd workdir
 export CMSSW_SEARCH_PATH="$CMSSW_SEARCH_PATH:`pwd`"
 
 eval "for i in $USER_INFILES; do mv \"\$MY_SCRATCH/\$i\" .; done"
+echo "which cmsRun:"
+which cmsRun
+echo "ls before CMSSW:"
 ls -la
 
 echo "---------------------------"
@@ -114,7 +117,7 @@ for i in $CMSSW_CONFIG; do
 		echo "---------------------------"
 	fi
 done
-
+echo "ls after CMSRUN:"
 ls -la
 
 eval "for i in $MY_OUT; do mv \"\$i\" \"\$MY_SCRATCH\" &> /dev/null; done"
