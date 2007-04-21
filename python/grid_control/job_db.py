@@ -71,6 +71,9 @@ class JobDB:
 			if types == None or job.state in types:
 				yield id
 
+	def get(self, id):
+		return self._jobs[id]
+
 
 	def _saveJob(self, id):
 		job = self._jobs[id]

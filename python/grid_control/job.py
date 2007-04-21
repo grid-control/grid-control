@@ -61,3 +61,8 @@ class Job:
 	def assignId(self, id):
 		self.id = id
 		# FIXME: History or sth.
+
+	def report(self):
+		report = (self.states[self.state], self.dict['dest'], self.id)
+		return report
+
