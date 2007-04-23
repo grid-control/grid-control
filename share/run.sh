@@ -72,7 +72,7 @@ echo "Exit code: $CODE"
 
 echo "EXITCODE=$CODE" >> jobinfo.txt
 
-if [ $SE_OUTPUT_FILES -ne "" ]; then
+if [ -n "$SE_OUTPUT_FILES" ]; then
         echo "---------------------------"
         echo "Copying the following files:"
         echo $SE_OUTPUT_FILES
