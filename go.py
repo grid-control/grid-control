@@ -146,6 +146,7 @@ def main(args):
 			else:
 				lineWidth = maxWidth[0]+maxWidth[2]+6
 			line = "-"*lineWidth
+			print line
 
 			# Calculate spacer width for second row
 			spacer = " "*(maxWidth[0]+5)
