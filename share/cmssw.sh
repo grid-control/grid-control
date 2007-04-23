@@ -16,6 +16,14 @@ _find() {
 	fi
 }
 
+processConfig() {
+	sed -e "s@__FILE_NAMES__@$FNAMES@" \
+	    -e "s@__MAX_EVENTS__@$EVENTS@" \
+	    -e "s@__SKIP_EVENTS__@$SKIP@" \
+	    $SEED_REPLACER \
+	    < "`_find $1`"
+}
+
 if ! [ -n "$VO_CMS_SW_DIR" ]; then
 	echo VO_CMS_SW_DIR undefined 2>&1
 	exit 1
@@ -73,11 +81,7 @@ done
 
 for i in $CMSSW_CONFIG; do
 	echo "*** $i:"
-	sed -e "s@__FILE_NAMES__@$FNAMES@" \
-	    -e "s@__MAX_EVENTS__@$EVENTS@" \
-	    -e "s@__SKIP_EVENTS__@$SKIP@" \
-	    $SEED_REPLACER \
-	    < "`_find $i`"
+	processConfig "$i"
 done
 
 echo "---------------------------"
@@ -98,11 +102,7 @@ ls -la
 echo "---------------------------"
 
 for i in $CMSSW_CONFIG; do
-	sed -e "s@__FILE_NAMES__@$FNAMES@" \
-	    -e "s@__MAX_EVENTS__@$EVENTS@" \
-	    -e "s@__SKIP_EVENTS__@$SKIP@" \
-	    $SEED_REPLACER \
-	    < "`_find $i`" > "$i"
+	processConfig "$i" > "$i"
 
 	if [ "$GZIP_OUT" = "yes" ]; then
 		( cmsRun "$i"; echo $? > exitcode.txt ) 2>&1 | gzip -9 > cmssw_out.txt.gz
