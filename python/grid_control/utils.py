@@ -43,6 +43,7 @@ def shellEscape(value):
 			return repl[char]
 		except:
 			return char
+
 	return '"' + str.join('', map(replace, value)) + '"'
 
 

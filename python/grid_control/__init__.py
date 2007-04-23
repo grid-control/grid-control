@@ -11,3 +11,4 @@ from module      import *
 from user_mod    import *
 from dbs_api     import *
 from CMSSW       import *
+from report	 import *

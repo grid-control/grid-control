@@ -122,73 +122,15 @@ def main(args):
 
 		# If invoked in report mode, scan job database and exit
 		if report:
-			reports = []
-			maxWidth = [0, 0, 0]
-
-			# Get the maximum width of each column
-			for id in jobs.all:
-				job = jobs.get(id)
-				thisreport = job.report()
-				reports.append(thisreport)
-				if maxWidth[0] < len(thisreport[0]):
-					maxWidth[0] = len(thisreport[0])
-				if maxWidth[1] < len(thisreport[1]):
-					maxWidth[1] = len(thisreport[1])
-				if maxWidth[2] < len(thisreport[2]):
-					maxWidth[2] = len(thisreport[2])
-			
-			# Print table header
-			print "\n%4s %*s %s" % ("Job", maxWidth[0], "Status", "Destination / Job ID")
-
-			# Calculate width of horizontal lines
-			if maxWidth[1] > maxWidth[2]:
-				lineWidth = maxWidth[0]+maxWidth[1]+8
-			else:
-				lineWidth = maxWidth[0]+maxWidth[2]+6
-			line = "-"*lineWidth
-			print line
-
-			# Calculate spacer width for second row
-			spacer = " "*(maxWidth[0]+5)
-
-			# Setup dict for the summary report
-			summary = {}
-			for category in job.states:
-				summary[category] = 0.
-
-			# Get information of each job
-			for id in jobs.all:
-				print "%4d %*s %s /" % (id, maxWidth[0], reports[id][0], reports[id][1])
-				print "%s %-*s" % (spacer, maxWidth[0]+maxWidth[2]+6, reports[id][2])
-				for category in job.states:
-					if category == reports[id][0]:
-						summary[category] = summary[category] + 1 
-				
-			print line + "\n"
-
-			# Print report summary
-			print "-----------------------------------------------------------------"
-			print "REPORT SUMMARY:"
-			print "---------------"
-			
-			print "Total number of jobs:      %4d   Number of successful jobs: %4d" % (id+1, summary["OK"])
-			print "Number of unfinished jobs: %4d   Number of failed jobs:     %4d\n" % (summary["INIT"]+summary["READY"]+summary["WAITING"]
-								   			             +summary["QUEUED"]+summary["SUBMITTED"], summary["ABORTED"]
-												     +summary["CANCELLED"]+summary["FAILED"])
-			print "Detailed Information:"
-			for category in job.states:
-				if summary[category] != 0:
-					ratio = (summary[category] / (id + 1))*100
-				else:
-					ratio = 0
-				print "Jobs   %9s: %4d     %3d%%" % (category, summary[category], round(ratio))
-			
-			print "-----------------------------------------------------------------\n"
-		
+			report = Report(jobs)
+			report.details()
+			report.summary()
 			return 0
 
 		# Check if running in continuous mode
 		if continuous:
+			print ""
+			Report(jobs).summary()
 			print "Running in continuous mode. Press ^C to exit."
 
 		while True:

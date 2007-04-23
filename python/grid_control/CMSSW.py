@@ -41,6 +41,11 @@ class CMSSW(Module):
 		except:
 			raise ConfigError("Invalid CMSSW seeds!")
 
+		self.seOutputFiles = config.get('CMSSW', 'se output files', '').split()
+
+		self.sePath = config.get('CMSSW', 'se path')
+
+
 		if len(self.projectArea):
 			self.pattern = config.get('CMSSW', 'area files').split()
 
@@ -183,6 +188,8 @@ class CMSSW(Module):
 			'GZIP_OUT': ('no', 'yes')[self.gzipOut],
 			'HAS_RUNTIME': ('no', 'yes')[len(self.projectArea) != 0],
 			'SEEDS': str.join(' ', map(lambda x: "%d" % x, self.seeds)),
+			'SE_OUTPUT_FILES': str.join(' ', self.seOutputFiles),
+			'SE_PATH': self.sePath,
 		}
 
 

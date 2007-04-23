@@ -63,6 +63,11 @@ class Job:
 		# FIXME: History or sth.
 
 	def report(self):
-		report = (self.states[self.state], self.dict['dest'], self.id)
+		try:
+			status = self.dict['dest']
+		except:
+			status = "N/A"
+
+		report = (self.states[self.state], status, self.id)
 		return report
 

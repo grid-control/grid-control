@@ -66,6 +66,7 @@ done
 SEED_REPLACER=""
 j=0
 for i in $SEEDS; do
+	eval SEED_$j=$[i+MY_JOB]
 	SEED_REPLACER="$SEED_REPLACER -e s@__SEED_${j}__@$[i+MY_JOB]@"
 	j=$[j+1]
 done
@@ -100,6 +101,7 @@ for i in $CMSSW_CONFIG; do
 	sed -e "s@__FILE_NAMES__@$FNAMES@" \
 	    -e "s@__MAX_EVENTS__@$EVENTS@" \
 	    -e "s@__SKIP_EVENTS__@$SKIP@" \
+	    $SEED_REPLACER \
 	    < "`_find $i`" > "$i"
 
 	if [ "$GZIP_OUT" = "yes" ]; then
@@ -117,5 +119,13 @@ echo "ls after CMSRUN:"
 ls -la
 
 eval "for i in $MY_OUT; do mv \"\$i\" \"\$MY_SCRATCH\" &> /dev/null; done"
+
+echo "---------------------------"
+echo "Copying the following files:"
+echo $SE_OUTPUT_FILES
+echo ""
+echo "to the following SE path:"
+echo $SE_PATH
+eval "for i in $SE_OUTPUT_FILES; do globus-url-copy file://`pwd`/\"\$i\" \"\$SE_PATH\"/\"\$i\"; done"
 
 exit $CODE
