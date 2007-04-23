@@ -41,10 +41,16 @@ class CMSSW(Module):
 		except:
 			raise ConfigError("Invalid CMSSW seeds!")
 
-		self.seOutputFiles = config.get('CMSSW', 'se output files', '').split()
+		try:
+			self.seOutputFiles = config.get('CMSSW', 'se output files', '').split()
 
-		self.sePath = config.get('CMSSW', 'se path')
-
+		except:
+			self.seOutputFiles = ""
+	
+		try:
+			self.sePath = config.get('CMSSW', 'se path')
+		except:
+			self.sePath = ""			
 
 		if len(self.projectArea):
 			self.pattern = config.get('CMSSW', 'area files').split()

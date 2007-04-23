@@ -120,12 +120,4 @@ ls -la
 
 eval "for i in $MY_OUT; do mv \"\$i\" \"\$MY_SCRATCH\" &> /dev/null; done"
 
-echo "---------------------------"
-echo "Copying the following files:"
-echo $SE_OUTPUT_FILES
-echo ""
-echo "to the following SE path:"
-echo $SE_PATH
-eval "for i in $SE_OUTPUT_FILES; do globus-url-copy file://`pwd`/\"\$i\" \"\$SE_PATH\"/\"\$i\"; done"
-
 exit $CODE

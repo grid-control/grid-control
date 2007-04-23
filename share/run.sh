@@ -72,6 +72,16 @@ echo "Exit code: $CODE"
 
 echo "EXITCODE=$CODE" >> jobinfo.txt
 
+if [ $SE_OUTPUT_FILES -ne "" ]; then
+        echo "---------------------------"
+        echo "Copying the following files:"
+        echo $SE_OUTPUT_FILES
+        echo ""
+        echo "to the following SE path:"
+        echo $SE_PATH
+        eval "for i in $SE_OUTPUT_FILES; do globus-url-copy file://`pwd`/\"\$i\" \"\$SE_PATH\"/\"\$i\"; done"
+fi
+
 if [ $MY_MOVED -eq 1 ]; then
 	for i in stderr.txt stdout.txt jobinfo.txt $MY_OUT; do
 		test -f "$i" && cp $i "$MY_REAL/"
