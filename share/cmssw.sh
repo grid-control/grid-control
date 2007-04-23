@@ -20,6 +20,7 @@ processConfig() {
 	sed -e "s@__FILE_NAMES__@$FNAMES@" \
 	    -e "s@__MAX_EVENTS__@$EVENTS@" \
 	    -e "s@__SKIP_EVENTS__@$SKIP@" \
+	    -e "s@__MY_JOB__@$MY_JOB@" \
 	    $SEED_REPLACER \
 	    < "`_find $1`"
 }
