@@ -74,8 +74,9 @@ echo "EXITCODE=$CODE" >> jobinfo.txt
 
 if [ -n "$SE_OUTPUT_FILES" ]; then
         echo "---------------------------"
+	echo "Output to storage element enabled!"
         echo "Copying the following files:"
-        echo $SE_OUTPUT_FILES
+        eval "echo $SE_OUTPUT_FILES"
         echo ""
         echo "to the following SE path:"
         echo $SE_PATH

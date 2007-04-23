@@ -119,6 +119,6 @@ echo "---------------------------"
 echo "ls after CMSRUN:"
 ls -la
 
-eval "for i in $MY_OUT; do mv \"\$i\" \"\$MY_SCRATCH\" &> /dev/null; done"
+eval "for i in $MY_OUT $SE_OUTPUT_FILES; do mv \"\$i\" \"\$MY_SCRATCH\" &> /dev/null; done"
 
 exit $CODE
