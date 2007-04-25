@@ -80,7 +80,7 @@ if [ -n "$SE_OUTPUT_FILES" ]; then
         echo ""
         echo "to the following SE path:"
         echo $SE_PATH
-        eval "for i in $SE_OUTPUT_FILES; do globus-url-copy file://`pwd`/\"\$i\" \"\$SE_PATH\"/\"\$i\"; done"
+        eval "for i in $SE_OUTPUT_FILES; do globus-url-copy file://`pwd`/\"\$i\" \"\$SE_PATH\"/job_\"\$MY_JOB\"_\"\$i\"; done"
 fi
 
 if [ $MY_MOVED -eq 1 ]; then
