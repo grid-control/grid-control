@@ -1,0 +1,227 @@
+#!/usr/bin/env python
+
+#
+# $Id: dls-dump,v 1.1 2006/09/06 14:22:22 delgadop Exp $
+#
+# DLS Client. $Name: DLS_0_1_1 $.
+# Antonio Delgado Peris. CIEMAT. CMS.
+# 
+
+#########################################
+# Imports 
+#########################################
+import dlsApi
+DLS_VERB_HIGH = dlsApi.DLS_VERB_HIGH
+DLS_VERB_WARN = dlsApi.DLS_VERB_WARN
+from dlsDataObjects import DlsLocation, DlsFileBlock, DlsEntry
+import dlsClient
+import time
+import os
+import sys
+import commands
+import getopt
+
+
+################## GLOBAL CONSTANTS ########################
+THIS_YEAR = time.localtime()[0]
+
+
+######################### FUNCTIONS ########################
+
+def usage():
+   """
+    Provides usage information
+   """
+   print "Usage: dls-dump [-v, -e, -i, -r] <directory>"
+   print "       dls-dump -u"
+   print "       dls-dump -h"
+
+
+def options():
+   """
+    Provides some information regarding the available options
+   """
+   print """Options summary:
+   -h, --help
+   -u, --usage
+   -v, --verbose <verb_level>
+   -e, --endpoint <endpoint>
+   -i, --interface-type <iface_type>
+   -r, --recursive
+   """
+def example():
+  """
+   Provides with an example of correct use of the script
+  """
+  print """
+  """
+
+def help():
+   """
+    Provides some help information
+   """
+   print """This script will print the DLS entries under the specified directory
+in the FileBlock namespace. The printed information will include both FileBlock
+names and associated locations. In the case of DLS implementations with a flat
+FileBlock namespace, the directory argument -while compulsory- will be ignored
+(i.e.: it will behave as if "/" is specified).
+
+The "-e" option can be used to set the DLS endpoint to use. If not specified,
+the endpoint is retrieved from:
+    - DLS_ENDPOINT environmental variable
+If the DLS endpoint cannot be retrieved in any of these ways, the command fails.
+The endpoint should be of the form: "hname[:port][/path/to/DLS]", where a
+default port is used if not specified, and the path to DLS may be required for
+some DLS implementations (and ignored otherwise).
+
+The "-i" option specifies the type of interface that should be used (which
+depends on the DLS backend to access). If not specified, the interface type
+is retrieved from:
+    - DLS_TYPE environmental variable
+If the interface type cannot be retrieved in any of these ways, the command fails.
+Currently accepted values are:
+    - DLS_TYPE_LFC  =>  DlsLfcApi class (complete API with LFC back-end)
+    - DLS_TYPE_DLI  =>  DlsDliClient class (getLocations only API with LFC back-end)
+    - DLS_TYPE_MYSQL =>  DlsMySQLApi  class (complete API with MySQL proto back-end) 
+
+The "-v" option sets the verbosity level for the command. Accepted values are:
+  -v 0 ==> print nothing else than error messages
+  -v 1 ==> print also warning messages (default)
+  -v 2 ==> print extra debug information
+
+If "-u" is specified, usage information is displayed.
+
+If "-h" is specified, help information is displayed.
+   """
+   options()
+   usage()
+
+
+
+def showEntries(iface, dir, recursive, verbose):
+   """
+    Prints the entries under the specified FileBlock directory.
+    Argument dir is a string, holding the directory name. 
+    Argument recursive indicates if information of subdirectories
+    should be also printed, in a recursive way.
+    
+    Throws DlsLfcApiError if there is a problem in the DLS operation.
+   """
+
+   # Get the Entries (and let the caller deal with the exception...)
+   if(verbose >= 2):
+      print "--DlsApi.dumpEntries(%s, recursive = %s)" % (dir, recursive)
+   entryList = iface.dumpEntries(dir, recursive = recursive, session = True)
+   
+
+   # Print the list
+   for i in entryList:
+      print i.simpleStr()
+
+            
+
+###################### MAIN FUNCTION ########################
+
+def main(pArgs):
+   """
+    Performes the main task of the script (invoked directly).
+    For information on its functionality, please call the help function.
+   """
+
+ # Options and args... 
+ 
+   longoptions=["help", "usage", "endpoint", "interface-type","verbose","recursive"]
+   try:
+      optlist, args = getopt.getopt(pArgs, 'hue:i:v:r', longoptions)
+   except getopt.GetoptError, inst:
+      sys.stderr.write("Bad usage: "+str(inst)+'\n')
+      usage()
+      sys.exit(-1)
+
+   err=0
+   admitted_verb_values = [0, 1, 2]
+   verbose = 1
+   endpoint = None
+   iface_type = None
+   admitted_iface_types = ["DLS_TYPE_LFC", "DLS_TYPE_DLI", "DLS_TYPE_MYSQL"]
+   recursive = False
+   for opt, val in optlist:
+       if opt in ("-h", "--help"):
+           help()
+           return -1
+
+       elif opt in ("-u", "--usage"):
+           usage()
+           return -1
+           
+       elif opt in ("-e","--endpoint"):
+           endpoint = val
+
+       elif opt in ("-i", "--interface-type"):
+           if (not (val in admitted_iface_types)):
+              sys.stderr.write("Unsupported interface type: " + val + "\nSuppported values: %s\n"%admitted_iface_types)
+              return -1
+           if(val == "DLS_TYPE_LFC"):
+              iface_type = dlsClient.DLS_TYPE_LFC
+           if(val == "DLS_TYPE_DLI"):
+              iface_type = dlsClient.DLS_TYPE_DLI
+           if(val == "DLS_TYPE_MYSQL"):
+              iface_type = dlsClient.DLS_TYPE_MYSQL
+
+       elif opt in ("-v", "--verbose"):
+           try: 
+             val = int(val)
+           except ValueError, inst:
+             sys.stderr.write("Unsupported verbosity value: " + val + "\n")
+             return -1
+           if (not (val in admitted_verb_values)):
+              sys.stderr.write("Unsupported verbosity value: " + val + "\n")
+              return -1             
+           verbose = val
+
+       elif opt in ("-r","--recursive"):
+           recursive = True
+
+ # Get the arguments
+   if(len(args)<1):
+      sys.stderr.write("Not enough input arguments\n")
+      usage()
+      return(-1)
+
+   dir = args[0]
+
+ # Create the interface binding
+   try:
+      iface = dlsClient.getDlsApi(iface_type, endpoint)
+      if(verbose == 2):
+         iface.setVerbosity(dlsApi.DLS_VERB_HIGH)
+      else:
+         if(verbose == 0):
+            iface.setVerbosity(dlsApi.DLS_VERB_NONE)
+         else:
+            if(verbose == 1):
+               iface.setVerbosity(dlsApi.DLS_VERB_WARN)
+   except dlsApi.DlsApiError, inst:
+      msg = "Error when binding the DLS interface: " + str(inst)
+      sys.stderr.write(msg+"\n")
+      return -1
+
+   
+ # Do the query (under session)
+   try:
+     showEntries(iface, dir, recursive, verbose)
+   except dlsApi.DlsApiError, inst:         
+      if(inst.rc):  err = inst.rc 
+      else:           err = -1
+      msg = "Error in the DLS query: %s." % str(inst)
+      sys.stderr.write(msg+'\n')
+
+ # Finally, return error code
+   return err
+
+
+
+######################### SCRIPT ###########################
+
+if __name__ == "__main__":
+  sys.exit(main(sys.argv[1:]))

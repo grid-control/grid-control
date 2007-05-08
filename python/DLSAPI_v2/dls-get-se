@@ -1,0 +1,300 @@
+#!/usr/bin/env python
+
+#
+# $Id: dls-get-se,v 1.8 2006/05/10 16:21:55 delgadop Exp $
+#
+# DLS Client. $Name: DLS_0_1_1 $.
+# Antonio Delgado Peris. CIEMAT. CMS.
+# 
+
+#########################################
+# Imports 
+#########################################
+import dlsApi
+DLS_VERB_HIGH = dlsApi.DLS_VERB_HIGH
+DLS_VERB_WARN = dlsApi.DLS_VERB_WARN
+from dlsDataObjects import DlsLocation, DlsFileBlock, DlsEntry
+import dlsClient
+import time
+import sys
+import getopt
+
+
+################## GLOBAL CONSTANTS ########################
+THIS_YEAR = time.localtime()[0]
+
+
+######################### FUNCTIONS ########################
+
+def usage():
+   """
+    Provides usage information
+   """
+   print "Usage: dls-get-se [-v, -e, -i, -l] <fileblock>"
+   print "       dls-get-se [-v, -e, -i, -l] -f <listing_file>"
+   print "       dls-get-se -u"
+   print "       dls-get-se -h"
+
+
+def options():
+   """
+    Provides some information regarding the available options
+   """
+   print """Options summary:
+   -h, --help
+   -u, --usage
+   -v, --verbose <verb_level>
+   -e, --endpoint <endpoint>
+   -i, --interface-type <iface_type>
+   -l, --long
+   -f, --from-file <filename>
+   """
+def example():
+  """
+   Provides with an example of correct use of the script
+  """
+  print """
+  """
+
+def help():
+   """
+    Provides some help information
+   """
+   print """Prints the locations holding a copy of the specified FileBlock. 
+
+If "-l" is specified, some location attributes are printed after the SE name.
+Printed attributes may depend on the DLS implementation. Currently, printed
+attributes (if supported by the implementation) are: accees time, pin time,
+file type ('P' for permanent or 'V' for volatile) and SURL.
+
+The "-f" option can be used to retrieve FileBlock names from a file rather
+than from the given arguments. The file must contain one line per FileBlock
+to be listed.
+
+The "-e" option can be used to set the DLS endpoint to use. If not specified,
+the endpoint is retrieved from:
+    - DLS_ENDPOINT environmental variable
+If the DLS endpoint cannot be retrieved in any of these ways, the command fails.
+The endpoint should be of the form: "hname[:port][/path/to/DLS]", where a
+default port is used if not specified, and the path to DLS may be required for
+some DLS implementations (and ignored otherwise).
+
+The "-i" option specifies the type of interface that should be used (which
+depends on the DLS backend to access). If not specified, the interface type
+is retrieved from:
+    - DLS_TYPE environmental variable
+If the interface type cannot be retrieved in any of these ways, the command fails.
+Currently accepted values are:
+    - DLS_TYPE_LFC  =>  DlsLfcApi class (complete API with LFC back-end)
+    - DLS_TYPE_DLI  =>  DlsDliClient class (getLocations only API with LFC back-end)
+    - DLS_TYPE_MYSQL =>  DlsMySQLApi  class (complete API with MySQL proto back-end) 
+
+The "-v" option sets the verbosity level for the command. Accepted values are:
+  -v 0 ==> print nothing else than error messages
+  -v 1 ==> print also warning messages (default)
+  -v 2 ==> print extra debug information
+
+If "-u" is specified, usage information is displayed.
+
+If "-h" is specified, help information is displayed.
+   """
+   options()
+   usage()
+
+
+
+def showLocations(iface, lineList, longList, verbose):
+   """
+    Prints the locations which hold a copy of the specified
+    FileBlock. lineList is a list of strings, each holding 
+    a FileBlock name. 
+    
+    If longList is True, some attributes are also printed.
+    Currently printed attributes are: atime, ptime, f_type.
+    
+    Throws DlsLfcApiError if there is a problem in the DLS operation.
+   """
+
+   fbList = []
+   for line in lineList:
+
+      # Split
+      line = (line.strip()).split()
+      if(not line):
+         continue
+
+      # Get LFN
+      lfn = line.pop(0)
+
+      # Store all the FileBlocks 
+      fbList.append(lfn)
+
+   if(verbose >= 2):
+      print "--DlsApi.getLocations(",
+      for i in fbList: print i, ";",
+      print ")"
+
+   # Get the locations (and let the caller deal with the exception...)
+   entryList = iface.getLocations(fbList, longList = longList, session = longList)
+
+   # Print the entries
+   for entry in entryList:
+      if (len(entryList) > 1):
+         print "  FileBlock: " + entry.fileBlock.name
+      for loc in entry.locations:
+         print loc.host,
+         if(longList):
+            values = []
+            for i in ["atime", "ptime", "f_type", "sfn"]:
+               try:
+                   values.append(loc.attribs[i])
+               except KeyError, inst:
+                   values.append("UNKNOWN")
+
+            if(not (values[0] == "UNKNOWN")):
+               time_tuple = time.localtime(loc.attribs["atime"])
+               if(time_tuple[0] != THIS_YEAR):
+                  fmt = "%b %d %Y"
+               else:
+                  fmt = "%b %d %H:%M"
+               print '\t', time.strftime(fmt, time_tuple), '\t',
+            else:
+               print '\t', values[1], '\t',
+
+            print values[1], "\t",
+            print values[2], "\t",
+            print values[3],
+         print
+ 
+
+            
+
+###################### MAIN FUNCTION ########################
+
+def main(pArgs):
+   """
+    Performes the main task of the script (invoked directly).
+    For information on its functionality, please call the help function.
+   """
+
+ # Options and args... 
+ 
+   longoptions=["help", "usage", "long", "endpoint", "interface-type", "verbose","from-file"]
+   try:
+      optlist, args = getopt.getopt(pArgs, 'hule:i:v:f:', longoptions)
+   except getopt.GetoptError, inst:
+      sys.stderr.write("Bad usage: "+str(inst)+'\n')
+      usage()
+      sys.exit(-1)
+
+   err=0
+   longList = False
+   admitted_verb_values = [0, 1, 2]
+   verbose = 1
+   endpoint = None
+   iface_type = None
+   admitted_iface_types = ["DLS_TYPE_LFC", "DLS_TYPE_DLI", "DLS_TYPE_MYSQL"]
+   fromFile = False
+   fname=""
+   for opt, val in optlist:
+       if opt in ("-h", "--help"):
+           help()
+           return -1
+
+       elif opt in ("-u", "--usage"):
+           usage()
+           return -1
+           
+       elif opt in ("-l", "--long"):
+           longList = True
+           
+       elif opt in ("-e","--endpoint"):
+           endpoint = val
+
+       elif opt in ("-i", "--interface-type"):
+           if (not (val in admitted_iface_types)):
+              sys.stderr.write("Unsupported interface type: " + val + "\nSuppported values: %s\n"%admitted_iface_types)
+              return -1
+           if(val == "DLS_TYPE_LFC"):
+              iface_type = dlsClient.DLS_TYPE_LFC
+           if(val == "DLS_TYPE_DLI"):
+              iface_type = dlsClient.DLS_TYPE_DLI
+           if(val == "DLS_TYPE_MYSQL"):
+              iface_type = dlsClient.DLS_TYPE_MYSQL
+
+       elif opt in ("-v", "--verbose"):
+           try: 
+             val = int(val)
+           except ValueError, inst:
+             sys.stderr.write("Unsupported verbosity value: " + val + "\n")
+             return -1
+           if (not (val in admitted_verb_values)):
+              sys.stderr.write("Unsupported verbosity value: " + val + "\n")
+              return -1             
+           verbose = val
+
+       elif opt in ("-f","--from-file"):
+           fromFile = True
+           fname = val
+
+  
+ # Build the arguments 
+
+   # From file
+   if(fromFile):
+      try:
+         file=open(fname, 'r')
+      except IOError, inst:
+         msg="The file "+fname+" could not be opened: "+str(inst)+"\n"
+         sys.stderr.write(msg)
+         return -1
+      lineList=file.readlines()
+      
+   # From command line options
+   else:
+      if(len(args)<1):
+         sys.stderr.write("Not enough input arguments\n")
+         usage()
+         return(-1)
+
+      line=""
+      for token in args:
+         line += token +" "
+      lineList = [line]
+
+ # Create the interface binding
+   try:
+      iface = dlsClient.getDlsApi(iface_type, endpoint)
+      if(verbose == 2):
+         iface.setVerbosity(dlsApi.DLS_VERB_HIGH)
+      else:
+         if(verbose == 0):
+            iface.setVerbosity(dlsApi.DLS_VERB_NONE)
+         else:
+            if(verbose == 1):
+               iface.setVerbosity(dlsApi.DLS_VERB_WARN)
+   except dlsApi.DlsApiError, inst:
+      msg = "Error when binding the DLS interface: " + str(inst)
+      sys.stderr.write(msg+"\n")
+      return -1
+
+   
+ # Do the query (under session only for long listing)
+   try:
+     showLocations(iface, lineList, longList, verbose)
+   except dlsApi.DlsApiError, inst:         
+      if(inst.rc):  err = inst.rc 
+      else:           err = -1
+      msg = "Error in the DLS query: %s." % str(inst)
+      sys.stderr.write(msg+'\n')
+
+
+ # Finally, return error code
+   return err
+
+
+
+######################### SCRIPT ###########################
+
+if __name__ == "__main__":
+  sys.exit(main(sys.argv[1:]))

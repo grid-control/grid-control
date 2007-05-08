@@ -1,0 +1,2294 @@
+
+
+***********************insertPrimaryDataset API tests***************************
+
+Type : insertPrimaryDataset
+Done insertPrimaryDataset({'Type': 'test', 'Name': 'TestPrimary_001_20070417_08h45m50s'},)
+Comment      : AN EXCEPTION WAS NOT EXPECTED AND NONE WAS RAISED
+Exception    : None
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 1
+
+Type : insertPrimaryDataset
+Done insertPrimaryDataset({'Type': 'test', 'Name': 'TestPrimary_002_20070417_08h45m50s'},)
+Comment      : AN EXCEPTION WAS NOT EXPECTED AND NONE WAS RAISED
+Exception    : None
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 2
+
+Type : insertPrimaryDataset
+Done insertPrimaryDataset({},)
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadRequest : DBS Server Raised An Error: Missing data, Null Fields. Expected a valid primary_name
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 3
+
+Type : insertPrimaryDataset
+Done insertPrimaryDataset({'Type': 'test', 'Name': 'Test Het'},)
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadRequest : DBS Server Raised An Error: Invalid format, Invalid Characters in Test Het for primary_name Expected a valid primary_name which should satisfy the regular expression [-\w_\.%/]+
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 4
+
+Type : insertPrimaryDataset
+Done insertPrimaryDataset({'Type': 'test', 'Name': 'Test;Het'},)
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadRequest : DBS Server Raised An Error: Invalid format, Invalid Characters in Test;Het for primary_name Expected a valid primary_name which should satisfy the regular expression [-\w_\.%/]+
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 5
+
+Type : insertPrimaryDataset
+Done insertPrimaryDataset({'Type': 'test', 'Name': 'Test*Het'},)
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadRequest : DBS Server Raised An Error: Invalid format, Invalid Characters in Test*Het for primary_name Expected a valid primary_name which should satisfy the regular expression [-\w_\.%/]+
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 6
+
+Type : insertPrimaryDataset
+Done insertPrimaryDataset({'Type': 'test', 'Name': 'Ta/estHet'},)
+Comment      : AN EXCEPTION WAS NOT EXPECTED AND NONE WAS RAISED
+Exception    : None
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 7
+
+Type : insertPrimaryDataset
+Done insertPrimaryDataset({'Type': 'test', 'Name': 'TestPrimary_002_20070417_08h45m50s'}, '')
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : exceptions.TypeError : insertPrimaryDataset() takes exactly 2 arguments (3 given)
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 8
+***********************insertPrimaryDataset API tests***************************
+
+***********************insertAlgorithm API tests***************************
+
+Type : insertAlgorithm
+Done insertAlgorithm({'ExecutableName': 'TestExe01', 'ApplicationVersion': 'TestVersion01_20070417_08h45m50s', 'ParameterSetID': {'Content': 'int a= {}, b={c=1, d=33}, f={}, x, y, x', 'Version': 'V001', 'Hash': '001234565798685', 'Name': 'MyFirstParam01', 'Type': 'test', 'Annotation': 'This is test'}, 'ApplicationFamily': 'AppFamily01'},)
+Comment      : AN EXCEPTION WAS NOT EXPECTED AND NONE WAS RAISED
+Exception    : None
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 1
+
+Type : insertAlgorithm
+Done insertAlgorithm({'ExecutableName': 'TestExe011', 'ApplicationVersion': 'TestVersion011_20070417_08h45m50s', 'ParameterSetID': {'Content': 'int a= {}, b={c=1, d=33}, f={}, x, y, x', 'Hash': '001234565798685', 'Annotation': 'This is test', 'Name': 'MyFirstParam01'}, 'ApplicationFamily': 'AppFamily011'},)
+Comment      : AN EXCEPTION WAS NOT EXPECTED AND NONE WAS RAISED
+Exception    : None
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 2
+
+Type : insertAlgorithm
+Done insertAlgorithm({'ExecutableName': 'TestExe01', 'ApplicationVersion': 'TestVersion01_20070417_08h45m50s', 'ParameterSetID': {'Content': 'int a= {}, b={c=1, d=33}, f={}, x, y, x', 'Version': 'V001', 'Type': 'test', 'Annotation': 'This is test', 'Name': '001234565798685'}, 'ApplicationFamily': 'AppFamily01'},)
+Comment      : AN EXCEPTION WAS NOT EXPECTED AND NONE WAS RAISED
+Exception    : None
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 3
+
+Type : insertAlgorithm
+Done insertAlgorithm({'ApplicationVersion': 'TestVersion01_20070417_08h45m50s', 'ParameterSetID': {'Content': 'int a= {}, b={c=1, d=33}, f={}, x, y, x', 'Version': 'V001', 'Hash': '001234565798685', 'Name': 'MyFirstParam01', 'Type': 'test', 'Annotation': 'This is test'}, 'ExecutableName': 'TestExe01'},)
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadRequest : DBS Server Raised An Error: Missing data, Null Fields. Expected a valid app_family_name
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 4
+
+Type : insertAlgorithm
+Done insertAlgorithm({'ExecutableName': 'TestExe01', 'ParameterSetID': {'Content': 'int a= {}, b={c=1, d=33}, f={}, x, y, x', 'Version': 'V001', 'Hash': '001234565798685', 'Name': 'MyFirstParam01', 'Type': 'test', 'Annotation': 'This is test'}, 'ApplicationFamily': 'AppFamily01'},)
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadRequest : DBS Server Raised An Error: Missing data, Null Fields. Expected a valid app_version
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 5
+
+Type : insertAlgorithm
+Done insertAlgorithm({'ApplicationVersion': 'TestVersion01_20070417_08h45m50s', 'ParameterSetID': {'Content': 'int a= {}, b={c=1, d=33}, f={}, x, y, x', 'Version': 'V001', 'Hash': '001234565798685', 'Name': 'MyFirstParam01', 'Type': 'test', 'Annotation': 'This is test'}, 'ApplicationFamily': 'AppFamily01'},)
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadRequest : DBS Server Raised An Error: Missing data, Null Fields. Expected a valid app_executable_name
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 6
+
+Type : insertAlgorithm
+Done insertAlgorithm({'ExecutableName': 'TestExe01', 'ApplicationVersion': 'TestVersion01_20070417_08h45m50s', 'ApplicationFamily': 'AppFamily01'},)
+Comment      : AN EXCEPTION WAS NOT EXPECTED AND NONE WAS RAISED
+Exception    : None
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 7
+
+Type : insertAlgorithm
+Done insertAlgorithm({'ExecutableName': 'TestE xe01', 'ApplicationVersion': 'TestVersion01_20070417_08h45m50s', 'ParameterSetID': {'Content': 'int a= {}, b={c=1, d=33}, f={}, x, y, x', 'Version': 'V001', 'Hash': '001234565798685', 'Name': 'MyFirstParam01', 'Type': 'test', 'Annotation': 'This is test'}, 'ApplicationFamily': 'AppFamily01'},)
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadRequest : DBS Server Raised An Error: Invalid format, Invalid Characters in TestE xe01 for app_executable_name Expected a valid app_executable_name which should satisfy the regular expression [-\w_\.%/]+
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 8
+
+Type : insertAlgorithm
+Done insertAlgorithm({'ExecutableName': 'TestExe01', 'ApplicationVersion': 'TestVersion01_20070417_08h45m50s', 'ParameterSetID': {'Content': 'int a= {}, b={c=1, d=33}, f={}, x, y, x', 'Version': 'V00/1', 'Hash': '001234565798685', 'Name': 'MyFirstPddaram01', 'Type': 'test', 'Annotation': 'This is test'}, 'ApplicationFamily': 'AppFamily01'},)
+Comment      : AN EXCEPTION WAS NOT EXPECTED AND NONE WAS RAISED
+Exception    : None
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 9
+
+Type : insertAlgorithm
+Done insertAlgorithm({'ExecutableName': 'TestExe01', 'ApplicationVersion': 'TestVersQQQ01_20070417_08h45m50s', 'ParameterSetID': {'Content': 'int a= {}, b={c=1, d=33}, f={}, x, y, x', 'Version': 'V001', 'Hash': '001234565798685', 'Name': 'MyFirstParam01', 'Type': 'test', 'Annotation': 'This is test'}, 'ApplicationFamily': 'AppFami;ly01'},)
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadRequest : DBS Server Raised An Error: Invalid format, Invalid Characters in AppFami;ly01 for app_family_name Expected a valid app_family_name which should satisfy the regular expression [-\w_\.%/]+
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 10
+
+Type : insertAlgorithm
+Done insertAlgorithm({'ExecutableName': 'TestEDDDe01', 'ApplicationVersion': 'TestVersion01_20070417_08h45m50s', 'ParameterSetID': {'Content': 'int a= {}, b={c=1, d=33}, f={}, x, y, x', 'Version': 'V001', 'Hash': '00123 4565798685', 'Name': 'MyaaaaddddffFirstParam01', 'Type': 'test', 'Annotation': 'This is test'}, 'ApplicationFamily': 'AppFamily01'},)
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadRequest : DBS Server Raised An Error: Invalid format, Invalid Characters in 00123 4565798685 for ps_hash Expected a valid ps_hash which should satisfy the regular expression [-\w_\.%/]+
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 11
+
+Type : insertAlgorithm
+Done insertAlgorithm({'ExecutableName': 'Test;Exe01', 'ApplicationVersion': 'Tewwwrsion01_20070417_08h45m50s', 'ParameterSetID': {'Content': 'int a= {}, b={c=1, d=33}, f={}, x, y, x', 'Version': 'V001', 'Hash': '001234565798685', 'Name': 'MyFirstP;aram01', 'Type': 'test', 'Annotation': 'This is test'}, 'ApplicationFamily': 'AppFamily01'},)
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadRequest : DBS Server Raised An Error: Invalid format, Invalid Characters in Test;Exe01 for app_executable_name Expected a valid app_executable_name which should satisfy the regular expression [-\w_\.%/]+
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 12
+
+Type : insertAlgorithm
+Done insertAlgorithm({'ExecutableName': 'Testaae01', 'ApplicationVersion': 'TestVeggrsion01_20070417_08h45m50s', 'ParameterSetID': {'Content': 'int a= {}, b={c=1, d=33}, f={}, x, y, x', 'Version': 'V001', 'Hash': '001234565798685', 'Name': 'MyFirstParam01', 'Type': 'test', 'Annotation': 'This is test'}, 'ApplicationFamily': 'AppFami*ly01'},)
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadRequest : DBS Server Raised An Error: Invalid format, Invalid Characters in AppFami*ly01 for app_family_name Expected a valid app_family_name which should satisfy the regular expression [-\w_\.%/]+
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 13
+
+Type : insertAlgorithm
+Done insertAlgorithm({'ExecutableName': 'TestE01', 'ApplicationVersion': 'TestVn01', 'ParameterSetID': {'Content': 'int a= {}, b={c=1, d=33}, f={}, x, y, x', 'Version': 'V001', 'Hash': '001234a5*5798685', 'Name': 'MyFirstPzzzzaram01', 'Type': 'test', 'Annotation': 'This is test'}, 'ApplicationFamily': 'AppFami1'},)
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadRequest : DBS Server Raised An Error: Invalid format, Invalid Characters in 001234a5*5798685 for ps_hash Expected a valid ps_hash which should satisfy the regular expression [-\w_\.%/]+
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 14
+***********************insertAlgorithm API tests***************************
+
+***********************insertTier API tests***************************
+
+Type : insertTier
+Done insertTier('GEN',)
+Comment      : AN EXCEPTION WAS NOT EXPECTED AND NONE WAS RAISED
+Exception    : None
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 1
+
+Type : insertTier
+Done insertTier('GEN',)
+Comment      : AN EXCEPTION WAS NOT EXPECTED AND NONE WAS RAISED
+Exception    : None
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 2
+
+Type : insertTier
+Done insertTier('SIM',)
+Comment      : AN EXCEPTION WAS NOT EXPECTED AND NONE WAS RAISED
+Exception    : None
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 3
+
+Type : insertTier
+Done insertTier('',)
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadRequest : DBS Server Raised An Error: Missing data, Null Fields. Expected a valid tier_name
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 4
+
+Type : insertTier
+Done insertTier('GENsjhd*lk',)
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadRequest : DBS Server Raised An Error: Invalid format, Invalid Characters in GENsjhd*lk for tier_name Expected a valid tier_name which should satisfy the regular expression [-\w_\.%/]+
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 5
+
+Type : insertTier
+Done insertTier('GENsjhd;lk',)
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadRequest : DBS Server Raised An Error: Invalid format, Invalid Characters in GENsjhd;lk for tier_name Expected a valid tier_name which should satisfy the regular expression [-\w_\.%/]+
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 6
+
+Type : insertTier
+Done insertTier('GENsjhd lk',)
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadRequest : DBS Server Raised An Error: Invalid format, Invalid Characters in GENsjhd lk for tier_name Expected a valid tier_name which should satisfy the regular expression [-\w_\.%/]+
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 7
+
+Type : insertTier
+Done insertTier('GEN', '')
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : exceptions.TypeError : insertTier() takes exactly 2 arguments (3 given)
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 8
+***********************insertTier API tests***************************
+
+***********************insertRun API tests***************************
+
+Type : insertRun
+Done insertRun({'NumberOfEvents': 100, 'TotalLuminosity': 2222, 'EndOfRun': 'never', 'RunNumber': 7651, 'Dataset': [], 'NumberOfLumiSections': 20, 'StartOfRun': 'now', 'StoreNumber': 123},)
+Comment      : AN EXCEPTION WAS NOT EXPECTED AND NONE WAS RAISED
+Exception    : None
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 1
+
+Type : insertRun
+Done insertRun({'NumberOfEvents': 100, 'TotalLuminosity': 2222, 'EndOfRun': 'never', 'RunNumber': 7652, 'Dataset': [], 'NumberOfLumiSections': 20, 'StartOfRun': 'now', 'StoreNumber': 123},)
+Comment      : AN EXCEPTION WAS NOT EXPECTED AND NONE WAS RAISED
+Exception    : None
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 2
+
+Type : insertRun
+Done insertRun({'RunNumber': 7653, 'StartOfRun': 'no*w', 'Dataset': []},)
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadRequest : DBS Server Raised An Error: Missing data, Null Fields. Expected a valid number_of_events
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 3
+
+Type : insertRun
+Done insertRun({'RunNumber': 7653, 'StartOfRun': 'no w', 'Dataset': []},)
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadRequest : DBS Server Raised An Error: Missing data, Null Fields. Expected a valid number_of_events
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 4
+
+Type : insertRun
+Done insertRun({'RunNumber': 7653, 'StartOfRun': 'no;w', 'Dataset': []},)
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadRequest : DBS Server Raised An Error: Missing data, Null Fields. Expected a valid number_of_events
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 5
+
+Type : insertRun
+Done insertRun({'RunNumber': 7653, 'Dataset': [], 'EndOfRun': 'nev*er'},)
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadRequest : DBS Server Raised An Error: Missing data, Null Fields. Expected a valid number_of_events
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 6
+
+Type : insertRun
+Done insertRun({'RunNumber': 7653, 'Dataset': [], 'EndOfRun': 'nev er'},)
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadRequest : DBS Server Raised An Error: Missing data, Null Fields. Expected a valid number_of_events
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 7
+
+Type : insertRun
+Done insertRun({'RunNumber': 7653, 'Dataset': [], 'EndOfRun': 'nev;er'},)
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadRequest : DBS Server Raised An Error: Missing data, Null Fields. Expected a valid number_of_events
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 8
+***********************insertRun API tests***************************
+
+***********************updateRun API tests***************************
+
+Type : updateRun
+Done updateRun({'NumberOfEvents': 9999, 'TotalLuminosity': 2222, 'EndOfRun': 'never', 'RunNumber': 7651, 'Dataset': [], 'NumberOfLumiSections': 20, 'StartOfRun': 'dec', 'StoreNumber': 123},)
+Comment      : AN EXCEPTION WAS NOT EXPECTED AND NONE WAS RAISED
+Exception    : None
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 1
+
+Type : updateRun
+Done updateRun({'RunNumber': 111111, 'Dataset': []},)
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadRequest : DBS Server Raised An Error: Unavailable data, No such Runs : RunNumber : 111111
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 2
+
+***********************updateRun API tests***************************
+
+***********************insertProcessedDataset API tests***************************
+
+Type : insertProcessedDataset
+Done insertProcessedDataset({'Status': 'VALID', 'RunsList': [7651], 'PhysicsGroup': 'BPositive', 'Name': 'TestProcessed_20070417_08h45m50s', 'TierList': ['GEN', 'SIM'], 'ParentList': [], 'PathList': [], 'AlgoList': [{'ExecutableName': 'TestExe01', 'ApplicationVersion': 'TestVersion01_20070417_08h45m50s', 'ParameterSetID': {'Content': 'int a= {}, b={c=1, d=33}, f={}, x, y, x', 'Version': 'V001', 'Hash': '001234565798685', 'Name': 'MyFirstParam01', 'Type': 'test', 'Annotation': 'This is test'}, 'ApplicationFamily': 'AppFamily01'}, {'ExecutableName': 'TestExe011', 'ApplicationVersion': 'TestVersion011_20070417_08h45m50s', 'ParameterSetID': {'Content': 'int a= {}, b={c=1, d=33}, f={}, x, y, x', 'Hash': '001234565798685', 'Annotation': 'This is test', 'Name': 'MyFirstParam01'}, 'ApplicationFamily': 'AppFamily011'}], 'PrimaryDataset': {'Type': 'test', 'Name': 'TestPrimary_001_20070417_08h45m50s'}},)
+Comment      : AN EXCEPTION WAS NOT EXPECTED AND NONE WAS RAISED
+Exception    : None
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 1
+
+Type : insertProcessedDataset
+Done insertProcessedDataset({'Status': 'VALID', 'RunsList': [7651], 'PhysicsGroup': 'BPositive', 'Name': 'TestProcessed_20070417_08h45m50s', 'TierList': ['GEN', 'SIM'], 'ParentList': [], 'PathList': [], 'AlgoList': [{'ExecutableName': 'TestExe01', 'ApplicationVersion': 'TestVersion01_20070417_08h45m50s', 'ParameterSetID': {'Content': 'int a= {}, b={c=1, d=33}, f={}, x, y, x', 'Version': 'V001', 'Hash': '001234565798685', 'Name': 'MyFirstParam01', 'Type': 'test', 'Annotation': 'This is test'}, 'ApplicationFamily': 'AppFamily01'}, {'ExecutableName': 'TestExe011', 'ApplicationVersion': 'TestVersion011_20070417_08h45m50s', 'ParameterSetID': {'Content': 'int a= {}, b={c=1, d=33}, f={}, x, y, x', 'Hash': '001234565798685', 'Annotation': 'This is test', 'Name': 'MyFirstParam01'}, 'ApplicationFamily': 'AppFamily011'}], 'PrimaryDataset': {'Type': 'test', 'Name': 'TestPrimary_002_20070417_08h45m50s'}},)
+Comment      : AN EXCEPTION WAS NOT EXPECTED AND NONE WAS RAISED
+Exception    : None
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 2
+
+Type : insertProcessedDataset
+Done insertProcessedDataset({'Status': 'VALID', 'RunsList': [7651], 'PhysicsGroup': 'BPositive', 'Name': 'TestProcessed_20070417_08h45m50s', 'TierList': ['GEN', 'SIM'], 'ParentList': [], 'PathList': [], 'AlgoList': [{'ExecutableName': 'TestExe01', 'ApplicationVersion': 'TestVersion01_20070417_08h45m50s', 'ParameterSetID': {'Content': 'int a= {}, b={c=1, d=33}, f={}, x, y, x', 'Version': 'V001', 'Hash': '001234565798685', 'Name': 'MyFirstParam01', 'Type': 'test', 'Annotation': 'This is test'}, 'ApplicationFamily': 'AppFamily01'}, {'ExecutableName': 'TestExe011', 'ApplicationVersion': 'TestVersion011_20070417_08h45m50s', 'ParameterSetID': {'Content': 'int a= {}, b={c=1, d=33}, f={}, x, y, x', 'Hash': '001234565798685', 'Annotation': 'This is test', 'Name': 'MyFirstParam01'}, 'ApplicationFamily': 'AppFamily011'}], 'PrimaryDataset': {'Type': 'test', 'Name': 'TestPrimary_002_20070417_08h45m50s'}},)
+Comment      : AN EXCEPTION WAS NOT EXPECTED AND NONE WAS RAISED
+Exception    : None
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 3
+
+Type : insertProcessedDataset
+Done insertProcessedDataset({'AlgoList': [], 'RunsList': [], 'Name': 'TestProcessed1_20070417_08h45m50s', 'PrimaryDataset': {'Type': 'test', 'Name': 'TestPrimary_001_20070417_08h45m50s'}, 'TierList': [], 'ParentList': [], 'PathList': []},)
+Comment      : AN EXCEPTION WAS NOT EXPECTED AND NONE WAS RAISED
+Exception    : None
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 4
+
+Type : insertProcessedDataset
+Done insertProcessedDataset({'AlgoList': [], 'RunsList': [], 'Name': 'TestProcessed2_20070417_08h45m50s', 'PrimaryDataset': {'Type': 'test', 'Name': 'Ta estHet'}, 'TierList': [], 'ParentList': [], 'PathList': []},)
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadRequest : DBS Server Raised An Error: Invalid format, Invalid Characters in Ta estHet for primary_datatset_name Expected a valid primary_datatset_name which should satisfy the regular expression [-\w_\.%/]+
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 5
+
+Type : insertProcessedDataset
+Done insertProcessedDataset({'AlgoList': [], 'RunsList': [], 'Name': 'TestProcessed2_20070417_08h45m50s', 'PrimaryDataset': {'Type': 'test', 'Name': 'Ta*estHet'}, 'TierList': [], 'ParentList': [], 'PathList': []},)
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadRequest : DBS Server Raised An Error: Invalid format, Invalid Characters in Ta*estHet for primary_datatset_name Expected a valid primary_datatset_name which should satisfy the regular expression [-\w_\.%/]+
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 6
+
+Type : insertProcessedDataset
+Done insertProcessedDataset({'AlgoList': [], 'RunsList': [], 'Name': 'TestProcessed2_20070417_08h45m50s', 'PrimaryDataset': {'Type': 'test', 'Name': 'Taes;tHet'}, 'TierList': [], 'ParentList': [], 'PathList': []},)
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadRequest : DBS Server Raised An Error: Invalid format, Invalid Characters in Taes;tHet for primary_datatset_name Expected a valid primary_datatset_name which should satisfy the regular expression [-\w_\.%/]+
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 7
+
+Type : insertProcessedDataset
+Done insertProcessedDataset({'AlgoList': [], 'RunsList': [], 'Name': 'TestProce ssed2_20070417_08h45m50s', 'PrimaryDataset': {'Type': 'test', 'Name': 'TestPrimary_001_20070417_08h45m50s'}, 'TierList': [], 'ParentList': [], 'PathList': []},)
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadRequest : DBS Server Raised An Error: Invalid format, Invalid Characters in TestProce ssed2_20070417_08h45m50s for processed_datatset_name Expected a valid processed_datatset_name which should satisfy the regular expression [-\w_\.%/]+
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 8
+
+Type : insertProcessedDataset
+Done insertProcessedDataset({'AlgoList': [], 'RunsList': [], 'Name': 'TestProce*ssed2_20070417_08h45m50s', 'PrimaryDataset': {'Type': 'test', 'Name': 'TestPrimary_001_20070417_08h45m50s'}, 'TierList': [], 'ParentList': [], 'PathList': []},)
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadRequest : DBS Server Raised An Error: Invalid format, Invalid Characters in TestProce*ssed2_20070417_08h45m50s for processed_datatset_name Expected a valid processed_datatset_name which should satisfy the regular expression [-\w_\.%/]+
+Test ended   : [PASSED]
+Test LAPSED  : [   1.0] seconds
+Test Number : 9
+
+Type : insertProcessedDataset
+Done insertProcessedDataset({'AlgoList': [], 'RunsList': [], 'Name': 'TestProce/ssed2_20070417_08h45m50s', 'PrimaryDataset': {'Type': 'test', 'Name': 'TestPrimary_001_20070417_08h45m50s'}, 'TierList': [], 'ParentList': [], 'PathList': []},)
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadRequest : DBS Server Raised An Error: Invalid format, Expected a path in format /PRIMARY/PROCESSED/TIER1-TIER2 which should satisfy the regular expression ^/([^/]+)/([^/]+)/([^/]+) The given path is /TestPrimary_001_20070417_08h45m50s/TestProce/ssed2_20070417_08h45m50s/nothing
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 10
+
+Type : insertProcessedDataset
+Done insertProcessedDataset({'AlgoList': [], 'RunsList': [], 'Name': 'TestPro;cessed2_20070417_08h45m50s', 'PrimaryDataset': {'Type': 'test', 'Name': 'TestPrimary_001_20070417_08h45m50s'}, 'TierList': [], 'ParentList': [], 'PathList': []},)
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadRequest : DBS Server Raised An Error: Invalid format, Invalid Characters in TestPro;cessed2_20070417_08h45m50s for processed_datatset_name Expected a valid processed_datatset_name which should satisfy the regular expression [-\w_\.%/]+
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 11
+
+Type : insertProcessedDataset
+Done insertProcessedDataset({'AlgoList': [], 'RunsList': [], 'Name': 'TestProcessed2_20070417_08h45m50s', 'TierList': [], 'ParentList': [], 'PathList': []},)
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsApiException : 
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 12
+
+Type : insertProcessedDataset
+Done insertProcessedDataset({'RunsList': [], 'PhysicsGroup': 'BPosit*aive', 'Name': 'TestProcesssssssed_20070417_08h45m50s', 'TierList': [], 'ParentList': [], 'PathList': [], 'AlgoList': [], 'PrimaryDataset': {'Type': 'test', 'Name': 'TestPrimary_001_20070417_08h45m50s'}},)
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadRequest : DBS Server Raised An Error: Invalid format, Invalid Characters in BPosit*aive for physics_group_name Expected a valid physics_group_name which should satisfy the regular expression [-\w_\.% ]+
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 13
+
+Type : insertProcessedDataset
+Done insertProcessedDataset({'RunsList': [], 'PhysicsGroup': 'BPosit;aive', 'Name': 'TestProcewwwwwwwed_20070417_08h45m50s', 'TierList': [], 'ParentList': [], 'PathList': [], 'AlgoList': [], 'PrimaryDataset': {'Type': 'test', 'Name': 'TestPrimary_001_20070417_08h45m50s'}},)
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadRequest : DBS Server Raised An Error: Invalid format, Invalid Characters in BPosit;aive for physics_group_name Expected a valid physics_group_name which should satisfy the regular expression [-\w_\.% ]+
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 14
+
+Type : insertProcessedDataset
+Done insertProcessedDataset({'RunsList': [], 'Name': 'TestProceqqqqqqd_20070417_08h45m50s', 'TierList': [], 'ParentList': [], 'PathList': [], 'AlgoList': [{'ExecutableName': 'TeaaaaaastExe011', 'ApplicationVersion': 'TestVersaaaaaaaaion011_20070417_08h45m50s', 'ParameterSetID': {'Hash': '001234565798685', 'Name': 'MyFirstaaaaaParam01'}, 'ApplicationFamily': 'AppFamilaaaaaaay011'}], 'PrimaryDataset': {'Type': 'test', 'Name': 'TestPrimary_001_20070417_08h45m50s'}},)
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadRequest : DBS Server Raised An Error: Unavailable data, No such algorithm version: TestVersaaaaaaaaion011_20070417_08h45m50s family: AppFamilaaaaaaay011 executable: TeaaaaaastExe011 parameter set: 001234565798685
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 15
+
+Type : insertProcessedDataset
+Done insertProcessedDataset({'RunsList': [], 'Name': 'TestProceqqqqqqd_20070417_08h45m50s', 'TierList': [], 'ParentList': [], 'PathList': [], 'AlgoList': [{'ExecutableName': 'Teaaaaa/tExe011', 'ApplicationVersion': 'TestVersaaaaaaaaion011_20070417_08h45m50s', 'ParameterSetID': {'Hash': '001234565798685', 'Name': 'MyFirstaaaaaParam01'}, 'ApplicationFamily': 'AppFamilaaaaaaay011'}], 'PrimaryDataset': {'Type': 'test', 'Name': 'TestPrimary_001_20070417_08h45m50s'}},)
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadRequest : DBS Server Raised An Error: Unavailable data, No such algorithm version: TestVersaaaaaaaaion011_20070417_08h45m50s family: AppFamilaaaaaaay011 executable: Teaaaaa/tExe011 parameter set: 001234565798685
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 16
+
+Type : insertProcessedDataset
+Done insertProcessedDataset({'RunsList': [], 'Name': 'TestProceqqqqqqd_20070417_08h45m50s', 'TierList': [], 'ParentList': [], 'PathList': [], 'AlgoList': [{'ParameterSetID': {'Hash': '001234565798685', 'Name': 'MyFirstaaaaaParam01'}, 'ExecutableName': 'TeaaaaatExe011'}], 'PrimaryDataset': {'Type': 'test', 'Name': 'TestPrimary_001_20070417_08h45m50s'}},)
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadRequest : DBS Server Raised An Error: Missing data, Null Fields. Expected a valid app_version
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 17
+
+Type : insertProcessedDataset
+Done insertProcessedDataset({'RunsList': [], 'Name': 'TestProceqqqqqqd_20070417_08h45m50s', 'TierList': [], 'ParentList': [], 'PathList': [], 'AlgoList': [{'ExecutableName': 'TeaaaaatExe011', 'ApplicationVersion': 'TestVersaaaaaaaaion011_20070417_08h45m50s', 'ApplicationFamily': 'AppFamilaaaaaaay011'}], 'PrimaryDataset': {'Type': 'test', 'Name': 'TestPrimary_001_20070417_08h45m50s'}},)
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadRequest : DBS Server Raised An Error: Unavailable data, No such algorithm version: TestVersaaaaaaaaion011_20070417_08h45m50s family: AppFamilaaaaaaay011 executable: TeaaaaatExe011 parameter set: NO_PSET_HASH
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 18
+
+Type : insertProcessedDataset
+Done insertProcessedDataset({'RunsList': [], 'Name': 'TestProceqqqqqqd_20070417_08h45m50s', 'TierList': [], 'ParentList': [], 'PathList': [], 'AlgoList': [{'ExecutableName': 'TeaaaaatExe011', 'ApplicationVersion': 'TestVersaaaaaaaaion011_20070417_08h45m50s', 'ApplicationFamily': 'AppFamilaaaaaaay011'}], 'PrimaryDataset': {'Type': 'test', 'Name': 'TestPrimary_001_20070417_08h45m50s'}}, '')
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : exceptions.TypeError : insertProcessedDataset() takes exactly 2 arguments (3 given)
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 19
+***********************insertProcessedDataset API tests***************************
+
+***********************insertTierInPD API tests***************************
+
+Type : insertTierInPD
+Done insertTierInPD({'Status': 'VALID', 'RunsList': [7651], 'PhysicsGroup': 'BPositive', 'Name': 'TestProcessed_20070417_08h45m50s', 'TierList': ['GEN', 'SIM'], 'ParentList': [], 'PathList': [], 'AlgoList': [{'ExecutableName': 'TestExe01', 'ApplicationVersion': 'TestVersion01_20070417_08h45m50s', 'ParameterSetID': {'Content': 'int a= {}, b={c=1, d=33}, f={}, x, y, x', 'Version': 'V001', 'Hash': '001234565798685', 'Name': 'MyFirstParam01', 'Type': 'test', 'Annotation': 'This is test'}, 'ApplicationFamily': 'AppFamily01'}, {'ExecutableName': 'TestExe011', 'ApplicationVersion': 'TestVersion011_20070417_08h45m50s', 'ParameterSetID': {'Content': 'int a= {}, b={c=1, d=33}, f={}, x, y, x', 'Hash': '001234565798685', 'Annotation': 'This is test', 'Name': 'MyFirstParam01'}, 'ApplicationFamily': 'AppFamily011'}], 'PrimaryDataset': {'Type': 'test', 'Name': 'TestPrimary_001_20070417_08h45m50s'}}, 'GEN')
+Comment      : AN EXCEPTION WAS NOT EXPECTED AND NONE WAS RAISED
+Exception    : None
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 1
+
+Type : insertTierInPD
+Done insertTierInPD({'Status': 'VALID', 'RunsList': [7651], 'PhysicsGroup': 'BPositive', 'Name': 'TestProcessed_20070417_08h45m50s', 'TierList': ['GEN', 'SIM'], 'ParentList': [], 'PathList': [], 'AlgoList': [{'ExecutableName': 'TestExe01', 'ApplicationVersion': 'TestVersion01_20070417_08h45m50s', 'ParameterSetID': {'Content': 'int a= {}, b={c=1, d=33}, f={}, x, y, x', 'Version': 'V001', 'Hash': '001234565798685', 'Name': 'MyFirstParam01', 'Type': 'test', 'Annotation': 'This is test'}, 'ApplicationFamily': 'AppFamily01'}, {'ExecutableName': 'TestExe011', 'ApplicationVersion': 'TestVersion011_20070417_08h45m50s', 'ParameterSetID': {'Content': 'int a= {}, b={c=1, d=33}, f={}, x, y, x', 'Hash': '001234565798685', 'Annotation': 'This is test', 'Name': 'MyFirstParam01'}, 'ApplicationFamily': 'AppFamily011'}], 'PrimaryDataset': {'Type': 'test', 'Name': 'TestPrimary_001_20070417_08h45m50s'}}, 'SIM')
+Comment      : AN EXCEPTION WAS NOT EXPECTED AND NONE WAS RAISED
+Exception    : None
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 2
+
+Type : insertTierInPD
+Done insertTierInPD('/TestPrimary_001_20070417_08h45m50s/TestProcessed_20070417_08h45m50s/GEN-SIM', 'GEN')
+Comment      : AN EXCEPTION WAS NOT EXPECTED AND NONE WAS RAISED
+Exception    : None
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 3
+
+Type : insertTierInPD
+Done insertTierInPD('/Does/Not/Exist', 'SIMTEST')
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadRequest : DBS Server Raised An Error: Unavailable data, No such dataset primary : Does processed :Not
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 4
+
+Type : insertTierInPD
+Done insertTierInPD('',)
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : exceptions.TypeError : insertTierInPD() takes exactly 3 arguments (2 given)
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 5
+
+Type : insertTierInPD
+Done insertTierInPD({'Status': 'VALID', 'RunsList': [7651], 'PhysicsGroup': 'BPositive', 'Name': 'TestProcessed_20070417_08h45m50s', 'TierList': ['GEN', 'SIM'], 'ParentList': [], 'PathList': [], 'AlgoList': [{'ExecutableName': 'TestExe01', 'ApplicationVersion': 'TestVersion01_20070417_08h45m50s', 'ParameterSetID': {'Content': 'int a= {}, b={c=1, d=33}, f={}, x, y, x', 'Version': 'V001', 'Hash': '001234565798685', 'Name': 'MyFirstParam01', 'Type': 'test', 'Annotation': 'This is test'}, 'ApplicationFamily': 'AppFamily01'}, {'ExecutableName': 'TestExe011', 'ApplicationVersion': 'TestVersion011_20070417_08h45m50s', 'ParameterSetID': {'Content': 'int a= {}, b={c=1, d=33}, f={}, x, y, x', 'Hash': '001234565798685', 'Annotation': 'This is test', 'Name': 'MyFirstParam01'}, 'ApplicationFamily': 'AppFamily011'}], 'PrimaryDataset': {'Type': 'test', 'Name': 'TestPrimary_001_20070417_08h45m50s'}}, 'GENTESTsjhd*lk')
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadRequest : DBS Server Raised An Error: Invalid format, Invalid Characters in GENTESTSJHD*LK for Name Expected a valid Name which should satisfy the regular expression [-\w_\.%/]+
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 6
+
+Type : insertTierInPD
+Done insertTierInPD({'Status': 'VALID', 'RunsList': [7651], 'PhysicsGroup': 'BPositive', 'Name': 'TestProcessed_20070417_08h45m50s', 'TierList': ['GEN', 'SIM'], 'ParentList': [], 'PathList': [], 'AlgoList': [{'ExecutableName': 'TestExe01', 'ApplicationVersion': 'TestVersion01_20070417_08h45m50s', 'ParameterSetID': {'Content': 'int a= {}, b={c=1, d=33}, f={}, x, y, x', 'Version': 'V001', 'Hash': '001234565798685', 'Name': 'MyFirstParam01', 'Type': 'test', 'Annotation': 'This is test'}, 'ApplicationFamily': 'AppFamily01'}, {'ExecutableName': 'TestExe011', 'ApplicationVersion': 'TestVersion011_20070417_08h45m50s', 'ParameterSetID': {'Content': 'int a= {}, b={c=1, d=33}, f={}, x, y, x', 'Hash': '001234565798685', 'Annotation': 'This is test', 'Name': 'MyFirstParam01'}, 'ApplicationFamily': 'AppFamily011'}], 'PrimaryDataset': {'Type': 'test', 'Name': 'TestPrimary_001_20070417_08h45m50s'}}, 'GENTESTsjhd;lk')
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadRequest : DBS Server Raised An Error: Invalid format, Invalid Characters in GENTESTSJHD;LK for Name Expected a valid Name which should satisfy the regular expression [-\w_\.%/]+
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 7
+
+Type : insertTierInPD
+Done insertTierInPD({'Status': 'VALID', 'RunsList': [7651], 'PhysicsGroup': 'BPositive', 'Name': 'TestProcessed_20070417_08h45m50s', 'TierList': ['GEN', 'SIM'], 'ParentList': [], 'PathList': [], 'AlgoList': [{'ExecutableName': 'TestExe01', 'ApplicationVersion': 'TestVersion01_20070417_08h45m50s', 'ParameterSetID': {'Content': 'int a= {}, b={c=1, d=33}, f={}, x, y, x', 'Version': 'V001', 'Hash': '001234565798685', 'Name': 'MyFirstParam01', 'Type': 'test', 'Annotation': 'This is test'}, 'ApplicationFamily': 'AppFamily01'}, {'ExecutableName': 'TestExe011', 'ApplicationVersion': 'TestVersion011_20070417_08h45m50s', 'ParameterSetID': {'Content': 'int a= {}, b={c=1, d=33}, f={}, x, y, x', 'Hash': '001234565798685', 'Annotation': 'This is test', 'Name': 'MyFirstParam01'}, 'ApplicationFamily': 'AppFamily011'}], 'PrimaryDataset': {'Type': 'test', 'Name': 'TestPrimary_001_20070417_08h45m50s'}}, 'GENTESTsjhd lk')
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadRequest : DBS Server Raised An Error: Invalid format, Invalid Characters in GENTESTSJHD LK for Name Expected a valid Name which should satisfy the regular expression [-\w_\.%/]+
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 8
+
+Type : insertTierInPD
+Done insertTierInPD({'Status': 'VALID', 'RunsList': [7651], 'PhysicsGroup': 'BPositive', 'Name': 'TestProcessed_20070417_08h45m50s', 'TierList': ['GEN', 'SIM'], 'ParentList': [], 'PathList': [], 'AlgoList': [{'ExecutableName': 'TestExe01', 'ApplicationVersion': 'TestVersion01_20070417_08h45m50s', 'ParameterSetID': {'Content': 'int a= {}, b={c=1, d=33}, f={}, x, y, x', 'Version': 'V001', 'Hash': '001234565798685', 'Name': 'MyFirstParam01', 'Type': 'test', 'Annotation': 'This is test'}, 'ApplicationFamily': 'AppFamily01'}, {'ExecutableName': 'TestExe011', 'ApplicationVersion': 'TestVersion011_20070417_08h45m50s', 'ParameterSetID': {'Content': 'int a= {}, b={c=1, d=33}, f={}, x, y, x', 'Hash': '001234565798685', 'Annotation': 'This is test', 'Name': 'MyFirstParam01'}, 'ApplicationFamily': 'AppFamily011'}], 'PrimaryDataset': {'Type': 'test', 'Name': 'TestPrimary_001_20070417_08h45m50s'}}, 'GENTEST')
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadRequest : DBS Server Raised An Error: Unavailable data, No such DataTier : Name : GENTEST
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 9
+***********************insertTierInPD API tests***************************
+
+***********************insertParentInPD API tests***************************
+
+Type : insertParentInPD
+Done insertParentInPD({'Status': 'VALID', 'RunsList': [7651], 'PhysicsGroup': 'BPositive', 'Name': 'TestProcessed_20070417_08h45m50s', 'TierList': ['GEN', 'SIM'], 'ParentList': [], 'PathList': [], 'AlgoList': [{'ExecutableName': 'TestExe01', 'ApplicationVersion': 'TestVersion01_20070417_08h45m50s', 'ParameterSetID': {'Content': 'int a= {}, b={c=1, d=33}, f={}, x, y, x', 'Version': 'V001', 'Hash': '001234565798685', 'Name': 'MyFirstParam01', 'Type': 'test', 'Annotation': 'This is test'}, 'ApplicationFamily': 'AppFamily01'}, {'ExecutableName': 'TestExe011', 'ApplicationVersion': 'TestVersion011_20070417_08h45m50s', 'ParameterSetID': {'Content': 'int a= {}, b={c=1, d=33}, f={}, x, y, x', 'Hash': '001234565798685', 'Annotation': 'This is test', 'Name': 'MyFirstParam01'}, 'ApplicationFamily': 'AppFamily011'}], 'PrimaryDataset': {'Type': 'test', 'Name': 'TestPrimary_001_20070417_08h45m50s'}}, {'Status': 'VALID', 'RunsList': [7651], 'PhysicsGroup': 'BPositive', 'Name': 'TestProcessed_20070417_08h45m50s', 'TierList': ['GEN', 'SIM'], 'ParentList': [], 'PathList': [], 'AlgoList': [{'ExecutableName': 'TestExe01', 'ApplicationVersion': 'TestVersion01_20070417_08h45m50s', 'ParameterSetID': {'Content': 'int a= {}, b={c=1, d=33}, f={}, x, y, x', 'Version': 'V001', 'Hash': '001234565798685', 'Name': 'MyFirstParam01', 'Type': 'test', 'Annotation': 'This is test'}, 'ApplicationFamily': 'AppFamily01'}, {'ExecutableName': 'TestExe011', 'ApplicationVersion': 'TestVersion011_20070417_08h45m50s', 'ParameterSetID': {'Content': 'int a= {}, b={c=1, d=33}, f={}, x, y, x', 'Hash': '001234565798685', 'Annotation': 'This is test', 'Name': 'MyFirstParam01'}, 'ApplicationFamily': 'AppFamily011'}], 'PrimaryDataset': {'Type': 'test', 'Name': 'TestPrimary_002_20070417_08h45m50s'}})
+Comment      : AN EXCEPTION WAS NOT EXPECTED AND NONE WAS RAISED
+Exception    : None
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 1
+
+Type : insertParentInPD
+Done insertParentInPD({'Status': 'VALID', 'RunsList': [7651], 'PhysicsGroup': 'BPositive', 'Name': 'TestProcessed_20070417_08h45m50s', 'TierList': ['GEN', 'SIM'], 'ParentList': [], 'PathList': [], 'AlgoList': [{'ExecutableName': 'TestExe01', 'ApplicationVersion': 'TestVersion01_20070417_08h45m50s', 'ParameterSetID': {'Content': 'int a= {}, b={c=1, d=33}, f={}, x, y, x', 'Version': 'V001', 'Hash': '001234565798685', 'Name': 'MyFirstParam01', 'Type': 'test', 'Annotation': 'This is test'}, 'ApplicationFamily': 'AppFamily01'}, {'ExecutableName': 'TestExe011', 'ApplicationVersion': 'TestVersion011_20070417_08h45m50s', 'ParameterSetID': {'Content': 'int a= {}, b={c=1, d=33}, f={}, x, y, x', 'Hash': '001234565798685', 'Annotation': 'This is test', 'Name': 'MyFirstParam01'}, 'ApplicationFamily': 'AppFamily011'}], 'PrimaryDataset': {'Type': 'test', 'Name': 'TestPrimary_001_20070417_08h45m50s'}}, '')
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadRequest : DBS Server Raised An Error: Mandatory data missing, Null Fields. Expected a valid parent_path
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 2
+
+Type : insertParentInPD
+Done insertParentInPD({'Status': 'VALID', 'RunsList': [7651], 'PhysicsGroup': 'BPositive', 'Name': 'TestProcessed_20070417_08h45m50s', 'TierList': ['GEN', 'SIM'], 'ParentList': [], 'PathList': [], 'AlgoList': [{'ExecutableName': 'TestExe01', 'ApplicationVersion': 'TestVersion01_20070417_08h45m50s', 'ParameterSetID': {'Content': 'int a= {}, b={c=1, d=33}, f={}, x, y, x', 'Version': 'V001', 'Hash': '001234565798685', 'Name': 'MyFirstParam01', 'Type': 'test', 'Annotation': 'This is test'}, 'ApplicationFamily': 'AppFamily01'}, {'ExecutableName': 'TestExe011', 'ApplicationVersion': 'TestVersion011_20070417_08h45m50s', 'ParameterSetID': {'Content': 'int a= {}, b={c=1, d=33}, f={}, x, y, x', 'Hash': '001234565798685', 'Annotation': 'This is test', 'Name': 'MyFirstParam01'}, 'ApplicationFamily': 'AppFamily011'}], 'PrimaryDataset': {'Type': 'test', 'Name': 'TestPrimary_001_20070417_08h45m50s'}}, '/Does/Not/Exist')
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadRequest : DBS Server Raised An Error: Unavailable data, No such dataset primary : Does processed :Not
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 3
+
+Type : insertParentInPD
+Done insertParentInPD('/Does/Not/Exist', {'Status': 'VALID', 'RunsList': [7651], 'PhysicsGroup': 'BPositive', 'Name': 'TestProcessed_20070417_08h45m50s', 'TierList': ['GEN', 'SIM'], 'ParentList': [], 'PathList': [], 'AlgoList': [{'ExecutableName': 'TestExe01', 'ApplicationVersion': 'TestVersion01_20070417_08h45m50s', 'ParameterSetID': {'Content': 'int a= {}, b={c=1, d=33}, f={}, x, y, x', 'Version': 'V001', 'Hash': '001234565798685', 'Name': 'MyFirstParam01', 'Type': 'test', 'Annotation': 'This is test'}, 'ApplicationFamily': 'AppFamily01'}, {'ExecutableName': 'TestExe011', 'ApplicationVersion': 'TestVersion011_20070417_08h45m50s', 'ParameterSetID': {'Content': 'int a= {}, b={c=1, d=33}, f={}, x, y, x', 'Hash': '001234565798685', 'Annotation': 'This is test', 'Name': 'MyFirstParam01'}, 'ApplicationFamily': 'AppFamily011'}], 'PrimaryDataset': {'Type': 'test', 'Name': 'TestPrimary_002_20070417_08h45m50s'}})
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadRequest : DBS Server Raised An Error: Unavailable data, No such dataset primary : Does processed :Not
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 4
+
+Type : insertParentInPD
+Done insertParentInPD({'Status': 'VALID', 'RunsList': [7651], 'PhysicsGroup': 'BPositive', 'Name': 'TestProcessed_20070417_08h45m50s', 'TierList': ['GEN', 'SIM'], 'ParentList': [], 'PathList': [], 'AlgoList': [{'ExecutableName': 'TestExe01', 'ApplicationVersion': 'TestVersion01_20070417_08h45m50s', 'ParameterSetID': {'Content': 'int a= {}, b={c=1, d=33}, f={}, x, y, x', 'Version': 'V001', 'Hash': '001234565798685', 'Name': 'MyFirstParam01', 'Type': 'test', 'Annotation': 'This is test'}, 'ApplicationFamily': 'AppFamily01'}, {'ExecutableName': 'TestExe011', 'ApplicationVersion': 'TestVersion011_20070417_08h45m50s', 'ParameterSetID': {'Content': 'int a= {}, b={c=1, d=33}, f={}, x, y, x', 'Hash': '001234565798685', 'Annotation': 'This is test', 'Name': 'MyFirstParam01'}, 'ApplicationFamily': 'AppFamily011'}], 'PrimaryDataset': {'Type': 'test', 'Name': 'TestPrimary_001_20070417_08h45m50s'}}, 'sjhd lk')
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadRequest : DBS Server Raised An Error: Invalid format, Expected a path in format /PRIMARY/PROCESSED/TIER1-TIER2 which should satisfy the regular expression ^/([^/]+)/([^/]+)/([^/]+) The given path is sjhd lk
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 5
+
+Type : insertParentInPD
+Done insertParentInPD({'Status': 'VALID', 'RunsList': [7651], 'PhysicsGroup': 'BPositive', 'Name': 'TestProcessed_20070417_08h45m50s', 'TierList': ['GEN', 'SIM'], 'ParentList': [], 'PathList': [], 'AlgoList': [{'ExecutableName': 'TestExe01', 'ApplicationVersion': 'TestVersion01_20070417_08h45m50s', 'ParameterSetID': {'Content': 'int a= {}, b={c=1, d=33}, f={}, x, y, x', 'Version': 'V001', 'Hash': '001234565798685', 'Name': 'MyFirstParam01', 'Type': 'test', 'Annotation': 'This is test'}, 'ApplicationFamily': 'AppFamily01'}, {'ExecutableName': 'TestExe011', 'ApplicationVersion': 'TestVersion011_20070417_08h45m50s', 'ParameterSetID': {'Content': 'int a= {}, b={c=1, d=33}, f={}, x, y, x', 'Hash': '001234565798685', 'Annotation': 'This is test', 'Name': 'MyFirstParam01'}, 'ApplicationFamily': 'AppFamily011'}], 'PrimaryDataset': {'Type': 'test', 'Name': 'TestPrimary_001_20070417_08h45m50s'}}, 'abd;def')
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadRequest : DBS Server Raised An Error: Invalid format, Expected a path in format /PRIMARY/PROCESSED/TIER1-TIER2 which should satisfy the regular expression ^/([^/]+)/([^/]+)/([^/]+) The given path is abd;def
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 6
+***********************insertParentInPD API tests***************************
+
+***********************insertAlgoInPD API tests***************************
+
+Type : insertAlgoInPD
+Done insertAlgoInPD({'Status': 'VALID', 'RunsList': [7651], 'PhysicsGroup': 'BPositive', 'Name': 'TestProcessed_20070417_08h45m50s', 'TierList': ['GEN', 'SIM'], 'ParentList': [], 'PathList': [], 'AlgoList': [{'ExecutableName': 'TestExe01', 'ApplicationVersion': 'TestVersion01_20070417_08h45m50s', 'ParameterSetID': {'Content': 'int a= {}, b={c=1, d=33}, f={}, x, y, x', 'Version': 'V001', 'Hash': '001234565798685', 'Name': 'MyFirstParam01', 'Type': 'test', 'Annotation': 'This is test'}, 'ApplicationFamily': 'AppFamily01'}, {'ExecutableName': 'TestExe011', 'ApplicationVersion': 'TestVersion011_20070417_08h45m50s', 'ParameterSetID': {'Content': 'int a= {}, b={c=1, d=33}, f={}, x, y, x', 'Hash': '001234565798685', 'Annotation': 'This is test', 'Name': 'MyFirstParam01'}, 'ApplicationFamily': 'AppFamily011'}], 'PrimaryDataset': {'Type': 'test', 'Name': 'TestPrimary_001_20070417_08h45m50s'}}, {'ExecutableName': 'TestExe01', 'ApplicationVersion': 'TestVersion01_20070417_08h45m50s', 'ParameterSetID': {'Content': 'int a= {}, b={c=1, d=33}, f={}, x, y, x', 'Version': 'V001', 'Hash': '001234565798685', 'Name': 'MyFirstParam01', 'Type': 'test', 'Annotation': 'This is test'}, 'ApplicationFamily': 'AppFamily01'})
+Comment      : AN EXCEPTION WAS NOT EXPECTED AND NONE WAS RAISED
+Exception    : None
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 1
+
+Type : insertAlgoInPD
+Done insertAlgoInPD({'Status': 'VALID', 'RunsList': [7651], 'PhysicsGroup': 'BPositive', 'Name': 'TestProcessed_20070417_08h45m50s', 'TierList': ['GEN', 'SIM'], 'ParentList': [], 'PathList': [], 'AlgoList': [{'ExecutableName': 'TestExe01', 'ApplicationVersion': 'TestVersion01_20070417_08h45m50s', 'ParameterSetID': {'Content': 'int a= {}, b={c=1, d=33}, f={}, x, y, x', 'Version': 'V001', 'Hash': '001234565798685', 'Name': 'MyFirstParam01', 'Type': 'test', 'Annotation': 'This is test'}, 'ApplicationFamily': 'AppFamily01'}, {'ExecutableName': 'TestExe011', 'ApplicationVersion': 'TestVersion011_20070417_08h45m50s', 'ParameterSetID': {'Content': 'int a= {}, b={c=1, d=33}, f={}, x, y, x', 'Hash': '001234565798685', 'Annotation': 'This is test', 'Name': 'MyFirstParam01'}, 'ApplicationFamily': 'AppFamily011'}], 'PrimaryDataset': {'Type': 'test', 'Name': 'TestPrimary_001_20070417_08h45m50s'}}, {'ExecutableName': 'TestExe011', 'ApplicationVersion': 'TestVersion011_20070417_08h45m50s', 'ParameterSetID': {'Content': 'int a= {}, b={c=1, d=33}, f={}, x, y, x', 'Hash': '001234565798685', 'Annotation': 'This is test', 'Name': 'MyFirstParam01'}, 'ApplicationFamily': 'AppFamily011'})
+Comment      : AN EXCEPTION WAS NOT EXPECTED AND NONE WAS RAISED
+Exception    : None
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 2
+
+Type : insertAlgoInPD
+Done insertAlgoInPD('/Does/Not/Exist', {'ExecutableName': 'TestExe01', 'ApplicationVersion': 'TestVersion01_20070417_08h45m50s', 'ParameterSetID': {'Content': 'int a= {}, b={c=1, d=33}, f={}, x, y, x', 'Version': 'V001', 'Hash': '001234565798685', 'Name': 'MyFirstParam01', 'Type': 'test', 'Annotation': 'This is test'}, 'ApplicationFamily': 'AppFamily01'})
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadRequest : DBS Server Raised An Error: Unavailable data, No such dataset primary : Does processed :Not
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 3
+
+Type : insertAlgoInPD
+Done insertAlgoInPD({'Status': 'VALID', 'RunsList': [7651], 'PhysicsGroup': 'BPositive', 'Name': 'TestProcessed_20070417_08h45m50s', 'TierList': ['GEN', 'SIM'], 'ParentList': [], 'PathList': [], 'AlgoList': [{'ExecutableName': 'TestExe01', 'ApplicationVersion': 'TestVersion01_20070417_08h45m50s', 'ParameterSetID': {'Content': 'int a= {}, b={c=1, d=33}, f={}, x, y, x', 'Version': 'V001', 'Hash': '001234565798685', 'Name': 'MyFirstParam01', 'Type': 'test', 'Annotation': 'This is test'}, 'ApplicationFamily': 'AppFamily01'}, {'ExecutableName': 'TestExe011', 'ApplicationVersion': 'TestVersion011_20070417_08h45m50s', 'ParameterSetID': {'Content': 'int a= {}, b={c=1, d=33}, f={}, x, y, x', 'Hash': '001234565798685', 'Annotation': 'This is test', 'Name': 'MyFirstParam01'}, 'ApplicationFamily': 'AppFamily011'}], 'PrimaryDataset': {'Type': 'test', 'Name': 'TestPrimary_001_20070417_08h45m50s'}}, {'ExecutableName': 'Does', 'ApplicationVersion': 'Not_20070417_08h45m50s', 'ParameterSetID': {'Content': 'int a= {}, b={c=1, d=33}, f={}, x, y, x', 'Version': 'V001', 'Type': 'test', 'Annotation': 'This is test', 'Name': '001234565798685'}, 'ApplicationFamily': 'Exist'})
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadRequest : DBS Server Raised An Error: Missing data, Null Fields. Expected a valid ps_hash
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 4
+***********************insertAlgoInPD API tests***************************
+
+***********************insertRunInPD API tests***************************
+
+Type : insertRunInPD
+Done insertRunInPD({'Status': 'VALID', 'RunsList': [7651], 'PhysicsGroup': 'BPositive', 'Name': 'TestProcessed_20070417_08h45m50s', 'TierList': ['GEN', 'SIM'], 'ParentList': [], 'PathList': [], 'AlgoList': [{'ExecutableName': 'TestExe01', 'ApplicationVersion': 'TestVersion01_20070417_08h45m50s', 'ParameterSetID': {'Content': 'int a= {}, b={c=1, d=33}, f={}, x, y, x', 'Version': 'V001', 'Hash': '001234565798685', 'Name': 'MyFirstParam01', 'Type': 'test', 'Annotation': 'This is test'}, 'ApplicationFamily': 'AppFamily01'}, {'ExecutableName': 'TestExe011', 'ApplicationVersion': 'TestVersion011_20070417_08h45m50s', 'ParameterSetID': {'Content': 'int a= {}, b={c=1, d=33}, f={}, x, y, x', 'Hash': '001234565798685', 'Annotation': 'This is test', 'Name': 'MyFirstParam01'}, 'ApplicationFamily': 'AppFamily011'}], 'PrimaryDataset': {'Type': 'test', 'Name': 'TestPrimary_001_20070417_08h45m50s'}}, 7652)
+Comment      : AN EXCEPTION WAS NOT EXPECTED AND NONE WAS RAISED
+Exception    : None
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 1
+
+Type : insertRunInPD
+Done insertRunInPD({'Status': 'VALID', 'RunsList': [7651], 'PhysicsGroup': 'BPositive', 'Name': 'TestProcessed_20070417_08h45m50s', 'TierList': ['GEN', 'SIM'], 'ParentList': [], 'PathList': [], 'AlgoList': [{'ExecutableName': 'TestExe01', 'ApplicationVersion': 'TestVersion01_20070417_08h45m50s', 'ParameterSetID': {'Content': 'int a= {}, b={c=1, d=33}, f={}, x, y, x', 'Version': 'V001', 'Hash': '001234565798685', 'Name': 'MyFirstParam01', 'Type': 'test', 'Annotation': 'This is test'}, 'ApplicationFamily': 'AppFamily01'}, {'ExecutableName': 'TestExe011', 'ApplicationVersion': 'TestVersion011_20070417_08h45m50s', 'ParameterSetID': {'Content': 'int a= {}, b={c=1, d=33}, f={}, x, y, x', 'Hash': '001234565798685', 'Annotation': 'This is test', 'Name': 'MyFirstParam01'}, 'ApplicationFamily': 'AppFamily011'}], 'PrimaryDataset': {'Type': 'test', 'Name': 'TestPrimary_001_20070417_08h45m50s'}}, 7653)
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadRequest : DBS Server Raised An Error: Unavailable data, No such Runs : RunNumber : 7653
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 2
+
+Type : insertRunInPD
+Done insertRunInPD('/Does/Not/Exist', 7651)
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadRequest : DBS Server Raised An Error: Unavailable data, No such dataset primary : Does processed :Not
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 3
+
+Type : insertRunInPD
+Done insertRunInPD({'Status': 'VALID', 'RunsList': [7651], 'PhysicsGroup': 'BPositive', 'Name': 'TestProcessed_20070417_08h45m50s', 'TierList': ['GEN', 'SIM'], 'ParentList': [], 'PathList': [], 'AlgoList': [{'ExecutableName': 'TestExe01', 'ApplicationVersion': 'TestVersion01_20070417_08h45m50s', 'ParameterSetID': {'Content': 'int a= {}, b={c=1, d=33}, f={}, x, y, x', 'Version': 'V001', 'Hash': '001234565798685', 'Name': 'MyFirstParam01', 'Type': 'test', 'Annotation': 'This is test'}, 'ApplicationFamily': 'AppFamily01'}, {'ExecutableName': 'TestExe011', 'ApplicationVersion': 'TestVersion011_20070417_08h45m50s', 'ParameterSetID': {'Content': 'int a= {}, b={c=1, d=33}, f={}, x, y, x', 'Hash': '001234565798685', 'Annotation': 'This is test', 'Name': 'MyFirstParam01'}, 'ApplicationFamily': 'AppFamily011'}], 'PrimaryDataset': {'Type': 'test', 'Name': 'TestPrimary_001_20070417_08h45m50s'}}, '123456')
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadRequest : DBS Server Raised An Error: Unavailable data, No such Runs : RunNumber : 123456
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 4
+
+Type : insertRunInPD
+Done insertRunInPD({'Status': 'VALID', 'RunsList': [7651], 'PhysicsGroup': 'BPositive', 'Name': 'TestProcessed_20070417_08h45m50s', 'TierList': ['GEN', 'SIM'], 'ParentList': [], 'PathList': [], 'AlgoList': [{'ExecutableName': 'TestExe01', 'ApplicationVersion': 'TestVersion01_20070417_08h45m50s', 'ParameterSetID': {'Content': 'int a= {}, b={c=1, d=33}, f={}, x, y, x', 'Version': 'V001', 'Hash': '001234565798685', 'Name': 'MyFirstParam01', 'Type': 'test', 'Annotation': 'This is test'}, 'ApplicationFamily': 'AppFamily01'}, {'ExecutableName': 'TestExe011', 'ApplicationVersion': 'TestVersion011_20070417_08h45m50s', 'ParameterSetID': {'Content': 'int a= {}, b={c=1, d=33}, f={}, x, y, x', 'Hash': '001234565798685', 'Annotation': 'This is test', 'Name': 'MyFirstParam01'}, 'ApplicationFamily': 'AppFamily011'}], 'PrimaryDataset': {'Type': 'test', 'Name': 'TestPrimary_001_20070417_08h45m50s'}}, '123a456')
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadRequest : DBS Server Raised An Error: Unavailable data, No such Runs : RunNumber : 123a456
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 5
+***********************insertRunInPD API tests***************************
+
+***********************updateProcDSStatus API tests***************************
+
+Type : updateProcDSStatus
+Done updateProcDSStatus({'Status': 'VALID', 'RunsList': [7651], 'PhysicsGroup': 'BPositive', 'Name': 'TestProcessed_20070417_08h45m50s', 'TierList': ['GEN', 'SIM'], 'ParentList': [], 'PathList': [], 'AlgoList': [{'ExecutableName': 'TestExe01', 'ApplicationVersion': 'TestVersion01_20070417_08h45m50s', 'ParameterSetID': {'Content': 'int a= {}, b={c=1, d=33}, f={}, x, y, x', 'Version': 'V001', 'Hash': '001234565798685', 'Name': 'MyFirstParam01', 'Type': 'test', 'Annotation': 'This is test'}, 'ApplicationFamily': 'AppFamily01'}, {'ExecutableName': 'TestExe011', 'ApplicationVersion': 'TestVersion011_20070417_08h45m50s', 'ParameterSetID': {'Content': 'int a= {}, b={c=1, d=33}, f={}, x, y, x', 'Hash': '001234565798685', 'Annotation': 'This is test', 'Name': 'MyFirstParam01'}, 'ApplicationFamily': 'AppFamily011'}], 'PrimaryDataset': {'Type': 'test', 'Name': 'TestPrimary_001_20070417_08h45m50s'}}, 'INVALID')
+Comment      : AN EXCEPTION WAS NOT EXPECTED AND NONE WAS RAISED
+Exception    : None
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 1
+
+Type : updateProcDSStatus
+Done updateProcDSStatus('/TestPrimary_001_20070417_08h45m50s/TestProcessed_20070417_08h45m50s/GEN-SIM', 'INVALID')
+Comment      : AN EXCEPTION WAS NOT EXPECTED AND NONE WAS RAISED
+Exception    : None
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 2
+
+Type : updateProcDSStatus
+Done updateProcDSStatus('/aa/does/notexist', 'INVALID')
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadRequest : DBS Server Raised An Error: Unavailable data, No such dataset primary : aa processed :does
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 3
+
+Type : updateProcDSStatus
+Done updateProcDSStatus('/TestPrimary_001_20070417_08h45m50s/TestProcessed_20070417_08h45m50s/GEN-SIM', 'IN;VALID')
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadRequest : DBS Server Raised An Error: Invalid format, Invalid Characters in IN;VALID for Status Expected a valid Status which should satisfy the regular expression [-\w_\.%/]+
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 4
+
+***********************updateProcDSStatus API tests***************************
+
+***********************insertBlock API tests***************************
+
+Type : insertBlock
+Done insertBlock('/TestPrimary_001_20070417_08h45m50s/TestProcessed_20070417_08h45m50s/GEN-SIM',)
+Comment      : AN EXCEPTION WAS NOT EXPECTED AND NONE WAS RAISED
+Exception    : None
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 1
+
+Type : insertBlock
+Done insertBlock('/TestPrimary_001_20070417_08h45m50s/TestProcessed_20070417_08h45m50s/GEN-SIM', '/TestPrimary_001_20070417_08h45m50s/TestProcessed_20070417_08h45m50s/GEN-SIM#016712')
+Comment      : AN EXCEPTION WAS NOT EXPECTED AND NONE WAS RAISED
+Exception    : None
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 2
+
+Type : insertBlock
+Done insertBlock('/TestPrimary_001_20070417_08h45m50s/TestProcessed_20070417_08h45m50s/GEN-SIM', {'StorageElementList': [], 'Name': '/TestPrimary_001_20070417_08h45m50s/TestProcessed_20070417_08h45m50s/GEN-SIM#016713', 'FileList': []})
+Comment      : AN EXCEPTION WAS NOT EXPECTED AND NONE WAS RAISED
+Exception    : None
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 3
+
+Type : insertBlock
+Done insertBlock({'Status': 'VALID', 'RunsList': [7651], 'PhysicsGroup': 'BPositive', 'Name': 'TestProcessed_20070417_08h45m50s', 'TierList': ['GEN', 'SIM'], 'ParentList': [], 'PathList': [], 'AlgoList': [{'ExecutableName': 'TestExe01', 'ApplicationVersion': 'TestVersion01_20070417_08h45m50s', 'ParameterSetID': {'Content': 'int a= {}, b={c=1, d=33}, f={}, x, y, x', 'Version': 'V001', 'Hash': '001234565798685', 'Name': 'MyFirstParam01', 'Type': 'test', 'Annotation': 'This is test'}, 'ApplicationFamily': 'AppFamily01'}, {'ExecutableName': 'TestExe011', 'ApplicationVersion': 'TestVersion011_20070417_08h45m50s', 'ParameterSetID': {'Content': 'int a= {}, b={c=1, d=33}, f={}, x, y, x', 'Hash': '001234565798685', 'Annotation': 'This is test', 'Name': 'MyFirstParam01'}, 'ApplicationFamily': 'AppFamily011'}], 'PrimaryDataset': {'Type': 'test', 'Name': 'TestPrimary_001_20070417_08h45m50s'}}, {'StorageElementList': [], 'Name': '/TestPrimary_001_20070417_08h45m50s/TestProcessed_20070417_08h45m50s/GEN-SIM#016714', 'FileList': []})
+Comment      : AN EXCEPTION WAS NOT EXPECTED AND NONE WAS RAISED
+Exception    : None
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 4
+
+Type : insertBlock
+Done insertBlock('/TestPrimary_001_20070417_08h45m50s/TestProcessed_20070417_08h45m50s/GEN-SIM', '/_20070417_08h45m50sthis/isatestblock016712')
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadRequest : DBS Server Raised An Error: Invalid format, Expected a block_name in format /PRIMARY/PROCESSED/TIER1-TIER2#GUID or /PRIMARY/PROCESSED#GUID which should satisfy the regular expression ^/([^/]+)/([^/]+)/([^/]+)#([^/]+) or ^/([^/]+)/([^/]+)#([^/]+) The given block_name is /_20070417_08h45m50sthis/isatestblock016712
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 5
+
+Type : insertBlock
+Done insertBlock('/absssssssc/dessssssf/hijaaaaaaa',)
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadRequest : DBS Server Raised An Error: Unavailable data, No such dataset primary : absssssssc processed :dessssssf
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 6
+
+Type : insertBlock
+Done insertBlock('/abcaaaa/deaaaaaaf/hiaaaaaaaj', '/this/isatestblock#016712')
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadRequest : DBS Server Raised An Error: Unavailable data, No such dataset primary : abcaaaa processed :deaaaaaaf
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 7
+
+Type : insertBlock
+Done insertBlock('/TestPrimary_001_20070417_08h45m50s/TestProcessed_20070417_08h45m50s/GEN-SIM', '/thisisatestblock#016712')
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadRequest : DBS Server Raised An Error: Invalid format, Expected a block_name in format /PRIMARY/PROCESSED/TIER1-TIER2#GUID or /PRIMARY/PROCESSED#GUID which should satisfy the regular expression ^/([^/]+)/([^/]+)/([^/]+)#([^/]+) or ^/([^/]+)/([^/]+)#([^/]+) The given block_name is /thisisatestblock#016712
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 8
+
+Type : insertBlock
+Done insertBlock('/TestPrimary_001_20070417_08h45m50s/TestProcessed_20070417_08h45m50s/GEN-SIM', '/thisis atestblock#016712')
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadRequest : DBS Server Raised An Error: Invalid format, Expected a block_name in format /PRIMARY/PROCESSED/TIER1-TIER2#GUID or /PRIMARY/PROCESSED#GUID which should satisfy the regular expression ^/([^/]+)/([^/]+)/([^/]+)#([^/]+) or ^/([^/]+)/([^/]+)#([^/]+) The given block_name is /thisis atestblock#016712
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 9
+
+Type : insertBlock
+Done insertBlock('/TestPrimary_001_20070417_08h45m50s/TestProcessed_20070417_08h45m50s/GEN-SIM', 'thisisat/ae/stblock#016712', {'StorageElementList': [], 'Name': '/TestPrimary_001_20070417_08h45m50s/TestProcessed_20070417_08h45m50s/GEN-SIM#016714', 'FileList': []})
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadRequest : DBS Server Raised An Error: Invalid format, Expected a block_name in format /PRIMARY/PROCESSED/TIER1-TIER2#GUID or /PRIMARY/PROCESSED#GUID which should satisfy the regular expression ^/([^/]+)/([^/]+)/([^/]+)#([^/]+) or ^/([^/]+)/([^/]+)#([^/]+) The given block_name is thisisat/ae/stblock#016712
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 10
+
+Type : insertBlock
+Done insertBlock('/ddd/hd*/hdhd',)
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadRequest : DBS Server Raised An Error: Invalid format, Invalid Characters in /ddd/hd*/hdhd for path. Expected a path in format /PRIMARY/PROCESSED/TIER1-TIER2  which should satisfy the regular expression  [-\w_\.%/]+
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 11
+
+Type : insertBlock
+Done insertBlock('/dd d/hd/hdhd',)
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadRequest : DBS Server Raised An Error: Invalid format, Invalid Characters in /dd d/hd/hdhd for path. Expected a path in format /PRIMARY/PROCESSED/TIER1-TIER2  which should satisfy the regular expression  [-\w_\.%/]+
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 12
+
+Type : insertBlock
+Done insertBlock('/ddd/hd/hd;hd',)
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadRequest : DBS Server Raised An Error: Invalid format, Invalid Characters in /ddd/hd/hd;hd for path. Expected a path in format /PRIMARY/PROCESSED/TIER1-TIER2  which should satisfy the regular expression  [-\w_\.%/]+
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 13
+***********************insertBlock API tests***************************
+
+***********************insertLumiSection API tests***************************
+
+Type : insertLumiSection
+Done insertLumiSection({'LumiSectionNumber': 7662, 'EndEventNumber': 200, 'LumiEndTime': 'neverending', 'StartEventNumber': 100, 'RunNumber': 7651, 'LumiStartTime': 'notime'},)
+Comment      : AN EXCEPTION WAS NOT EXPECTED AND NONE WAS RAISED
+Exception    : None
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 1
+
+Type : insertLumiSection
+Done insertLumiSection({'RunNumber': 7651, 'LumiSectionNumber': 7663, 'EndEventNumber': 200, 'StartEventNumber': 100},)
+Comment      : AN EXCEPTION WAS NOT EXPECTED AND NONE WAS RAISED
+Exception    : None
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 2
+
+Type : insertLumiSection
+Done insertLumiSection({'startEventNumber': 100},)
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadRequest : DBS Server Raised An Error: Missing data, Null Fields. Expected a valid lumi_section_number
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 3
+
+Type : insertLumiSection
+Done insertLumiSection({'startEventNumber': '10 0'},)
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadRequest : DBS Server Raised An Error: Missing data, Null Fields. Expected a valid lumi_section_number
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 4
+
+Type : insertLumiSection
+Done insertLumiSection({'RunNumber': 7651, 'LumiSectionNumber': 7664, 'LumiStartTime': 'noti me', 'EndEventNumber': 200, 'StartEventNumber': 100},)
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadRequest : DBS Server Raised An Error: Invalid format, Invalid Characters in noti me for lumi_start_time Expected a valid lumi_start_time which should satisfy the regular expression [-\w_\.%/]+
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 5
+
+Type : insertLumiSection
+Done insertLumiSection({'RunNumber': 7651, 'LumiSectionNumber': 7664, 'LumiStartTime': 'not* me', 'EndEventNumber': 200, 'StartEventNumber': 100},)
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadRequest : DBS Server Raised An Error: Invalid format, Invalid Characters in not* me for lumi_start_time Expected a valid lumi_start_time which should satisfy the regular expression [-\w_\.%/]+
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 6
+
+Type : insertLumiSection
+Done insertLumiSection({'RunNumber': 7651, 'LumiSectionNumber': 7664, 'LumiStartTime': 'no;me', 'EndEventNumber': 200, 'StartEventNumber': 100},)
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadRequest : DBS Server Raised An Error: Invalid format, Invalid Characters in no;me for lumi_start_time Expected a valid lumi_start_time which should satisfy the regular expression [-\w_\.%/]+
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 7
+***********************insertLumiSection API tests***************************
+
+***********************insertFiles API tests***************************
+
+Type : insertFiles
+Done insertFiles({'Status': 'VALID', 'RunsList': [7651], 'PhysicsGroup': 'BPositive', 'Name': 'TestProcessed_20070417_08h45m50s', 'TierList': ['GEN', 'SIM'], 'ParentList': [], 'PathList': [], 'AlgoList': [{'ExecutableName': 'TestExe01', 'ApplicationVersion': 'TestVersion01_20070417_08h45m50s', 'ParameterSetID': {'Content': 'int a= {}, b={c=1, d=33}, f={}, x, y, x', 'Version': 'V001', 'Hash': '001234565798685', 'Name': 'MyFirstParam01', 'Type': 'test', 'Annotation': 'This is test'}, 'ApplicationFamily': 'AppFamily01'}, {'ExecutableName': 'TestExe011', 'ApplicationVersion': 'TestVersion011_20070417_08h45m50s', 'ParameterSetID': {'Content': 'int a= {}, b={c=1, d=33}, f={}, x, y, x', 'Hash': '001234565798685', 'Annotation': 'This is test', 'Name': 'MyFirstParam01'}, 'ApplicationFamily': 'AppFamily011'}], 'PrimaryDataset': {'Type': 'test', 'Name': 'TestPrimary_001_20070417_08h45m50s'}}, [{'Status': 'VALID', 'NumberOfEvents': 10000, 'ParentList': [], 'Checksum': '999', 'FileType': 'EDM', 'TierList': ['GEN', 'SIM'], 'RunsList': [], 'ChildList': [], 'AlgoList': [{'ExecutableName': 'TestExe01', 'ApplicationVersion': 'TestVersion01_20070417_08h45m50s', 'ParameterSetID': {'Content': 'int a= {}, b={c=1, d=33}, f={}, x, y, x', 'Version': 'V001', 'Hash': '001234565798685', 'Name': 'MyFirstParam01', 'Type': 'test', 'Annotation': 'This is test'}, 'ApplicationFamily': 'AppFamily01'}, {'ExecutableName': 'TestExe011', 'ApplicationVersion': 'TestVersion011_20070417_08h45m50s', 'ParameterSetID': {'Content': 'int a= {}, b={c=1, d=33}, f={}, x, y, x', 'Hash': '001234565798685', 'Annotation': 'This is test', 'Name': 'MyFirstParam01'}, 'ApplicationFamily': 'AppFamily011'}], 'BranchList': [], 'FileSize': 12340, 'ValidationStatus': 'VALID', 'LumiList': [{'LumiSectionNumber': 7662, 'EndEventNumber': 200, 'LumiEndTime': 'neverending', 'StartEventNumber': 100, 'RunNumber': 7651, 'LumiStartTime': 'notime'}, {'RunNumber': 7651, 'LumiSectionNumber': 7663, 'EndEventNumber': 200, 'StartEventNumber': 100}], 'LogicalFileName': '1111-0909-9767-8764_20070417_08h45m50s'}, {'Status': 'VALID', 'NumberOfEvents': 10000, 'ParentList': [], 'Checksum': '999', 'FileType': 'EDM', 'TierList': ['GEN', 'SIM'], 'RunsList': [], 'ChildList': [], 'AlgoList': [{'ExecutableName': 'TestExe01', 'ApplicationVersion': 'TestVersion01_20070417_08h45m50s', 'ParameterSetID': {'Content': 'int a= {}, b={c=1, d=33}, f={}, x, y, x', 'Version': 'V001', 'Hash': '001234565798685', 'Name': 'MyFirstParam01', 'Type': 'test', 'Annotation': 'This is test'}, 'ApplicationFamily': 'AppFamily01'}, {'ExecutableName': 'TestExe011', 'ApplicationVersion': 'TestVersion011_20070417_08h45m50s', 'ParameterSetID': {'Content': 'int a= {}, b={c=1, d=33}, f={}, x, y, x', 'Hash': '001234565798685', 'Annotation': 'This is test', 'Name': 'MyFirstParam01'}, 'ApplicationFamily': 'AppFamily011'}], 'BranchList': [], 'FileSize': 12340, 'ValidationStatus': 'VALID', 'LumiList': [{'LumiSectionNumber': 7662, 'EndEventNumber': 200, 'LumiEndTime': 'neverending', 'StartEventNumber': 100, 'RunNumber': 7651, 'LumiStartTime': 'notime'}, {'RunNumber': 7651, 'LumiSectionNumber': 7663, 'EndEventNumber': 200, 'StartEventNumber': 100}], 'LogicalFileName': '1111-0909-9767-876411_20070417_08h45m50s'}], {'StorageElementList': [], 'Name': '/TestPrimary_001_20070417_08h45m50s/TestProcessed_20070417_08h45m50s/GEN-SIM#016712', 'FileList': []})
+Comment      : AN EXCEPTION WAS NOT EXPECTED AND NONE WAS RAISED
+Exception    : None
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 1
+
+Type : insertFiles
+Done insertFiles({'Status': 'VALID', 'RunsList': [7651], 'PhysicsGroup': 'BPositive', 'Name': 'TestProcessed_20070417_08h45m50s', 'TierList': ['GEN', 'SIM'], 'ParentList': [], 'PathList': [], 'AlgoList': [{'ExecutableName': 'TestExe01', 'ApplicationVersion': 'TestVersion01_20070417_08h45m50s', 'ParameterSetID': {'Content': 'int a= {}, b={c=1, d=33}, f={}, x, y, x', 'Version': 'V001', 'Hash': '001234565798685', 'Name': 'MyFirstParam01', 'Type': 'test', 'Annotation': 'This is test'}, 'ApplicationFamily': 'AppFamily01'}, {'ExecutableName': 'TestExe011', 'ApplicationVersion': 'TestVersion011_20070417_08h45m50s', 'ParameterSetID': {'Content': 'int a= {}, b={c=1, d=33}, f={}, x, y, x', 'Hash': '001234565798685', 'Annotation': 'This is test', 'Name': 'MyFirstParam01'}, 'ApplicationFamily': 'AppFamily011'}], 'PrimaryDataset': {'Type': 'test', 'Name': 'TestPrimary_001_20070417_08h45m50s'}}, [{'Status': 'VALID', 'NumberOfEvents': 10000, 'ParentList': [], 'Checksum': '999', 'TierList': [], 'RunsList': [], 'ChildList': [], 'AlgoList': [], 'BranchList': [], 'FileSize': 12340, 'LumiList': [], 'LogicalFileName': '1111-0909-9767-8764222_20070417_08h45m50s'}], {'StorageElementList': [], 'Name': '/TestPrimary_001_20070417_08h45m50s/TestProcessed_20070417_08h45m50s/GEN-SIM#016712', 'FileList': []})
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadRequest : DBS Server Raised An Error: Tier Mismatch, Number of Tiers in file 0 is not equal to the number of tiers 2 in the dataset /TestPrimary_001_20070417_08h45m50s/TestProcessed_20070417_08h45m50s/GEN-SIM#016712
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 2
+
+Type : insertFiles
+Done insertFiles({'Status': 'VALID', 'RunsList': [7651], 'PhysicsGroup': 'BPositive', 'Name': 'TestProcessed_20070417_08h45m50s', 'TierList': ['GEN', 'SIM'], 'ParentList': [], 'PathList': [], 'AlgoList': [{'ExecutableName': 'TestExe01', 'ApplicationVersion': 'TestVersion01_20070417_08h45m50s', 'ParameterSetID': {'Content': 'int a= {}, b={c=1, d=33}, f={}, x, y, x', 'Version': 'V001', 'Hash': '001234565798685', 'Name': 'MyFirstParam01', 'Type': 'test', 'Annotation': 'This is test'}, 'ApplicationFamily': 'AppFamily01'}, {'ExecutableName': 'TestExe011', 'ApplicationVersion': 'TestVersion011_20070417_08h45m50s', 'ParameterSetID': {'Content': 'int a= {}, b={c=1, d=33}, f={}, x, y, x', 'Hash': '001234565798685', 'Annotation': 'This is test', 'Name': 'MyFirstParam01'}, 'ApplicationFamily': 'AppFamily011'}], 'PrimaryDataset': {'Type': 'test', 'Name': 'TestPrimary_001_20070417_08h45m50s'}}, [{'Status': 'VALID', 'NumberOfEvents': 10000, 'ParentList': [], 'Checksum': '999', 'TierList': [], 'RunsList': [], 'ChildList': [], 'AlgoList': [], 'BranchList': [], 'FileSize': 12340, 'LumiList': [], 'LogicalFileName': '1111*-0909-9767-8764222_20070417_08h45m50s'}], {'StorageElementList': [], 'Name': '/TestPrimary_001_20070417_08h45m50s/TestProcessed_20070417_08h45m50s/GEN-SIM#016712', 'FileList': []})
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadRequest : DBS Server Raised An Error: Tier Mismatch, Number of Tiers in file 0 is not equal to the number of tiers 2 in the dataset /TestPrimary_001_20070417_08h45m50s/TestProcessed_20070417_08h45m50s/GEN-SIM#016712
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 3
+
+Type : insertFiles
+Done insertFiles({'Status': 'VALID', 'RunsList': [7651], 'PhysicsGroup': 'BPositive', 'Name': 'TestProcessed_20070417_08h45m50s', 'TierList': ['GEN', 'SIM'], 'ParentList': [], 'PathList': [], 'AlgoList': [{'ExecutableName': 'TestExe01', 'ApplicationVersion': 'TestVersion01_20070417_08h45m50s', 'ParameterSetID': {'Content': 'int a= {}, b={c=1, d=33}, f={}, x, y, x', 'Version': 'V001', 'Hash': '001234565798685', 'Name': 'MyFirstParam01', 'Type': 'test', 'Annotation': 'This is test'}, 'ApplicationFamily': 'AppFamily01'}, {'ExecutableName': 'TestExe011', 'ApplicationVersion': 'TestVersion011_20070417_08h45m50s', 'ParameterSetID': {'Content': 'int a= {}, b={c=1, d=33}, f={}, x, y, x', 'Hash': '001234565798685', 'Annotation': 'This is test', 'Name': 'MyFirstParam01'}, 'ApplicationFamily': 'AppFamily011'}], 'PrimaryDataset': {'Type': 'test', 'Name': 'TestPrimary_001_20070417_08h45m50s'}}, [{'Status': 'VALID', 'NumberOfEvents': 10000, 'ParentList': [], 'Checksum': '999', 'TierList': [], 'RunsList': [], 'ChildList': [], 'AlgoList': [], 'BranchList': [], 'FileSize': 12340, 'LumiList': [], 'LogicalFileName': '1111;-0909-9767-8764222_20070417_08h45m50s'}], {'StorageElementList': [], 'Name': '/TestPrimary_001_20070417_08h45m50s/TestProcessed_20070417_08h45m50s/GEN-SIM#016712', 'FileList': []})
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadRequest : DBS Server Raised An Error: Tier Mismatch, Number of Tiers in file 0 is not equal to the number of tiers 2 in the dataset /TestPrimary_001_20070417_08h45m50s/TestProcessed_20070417_08h45m50s/GEN-SIM#016712
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 4
+
+Type : insertFiles
+Done insertFiles({'Status': 'VALID', 'RunsList': [], 'Name': 'TestProcessxxxxxxxxxxxxx_20070417_08h45m50s', 'TierList': ['GEN', 'SIM'], 'ParentList': [], 'PathList': [], 'AlgoList': [], 'PrimaryDataset': {'Type': 'test', 'Name': 'TestPrimary_001_20070417_08h45m50s'}}, [{'Status': 'VALID', 'NumberOfEvents': 10000, 'ParentList': [], 'Checksum': '999', 'TierList': [], 'RunsList': [], 'ChildList': [], 'AlgoList': [], 'BranchList': [], 'FileSize': 12340, 'LumiList': [], 'LogicalFileName': '1111-0909-9767-876411111_20070417_08h45m50s'}], {'StorageElementList': [], 'Name': '/TestPrimary_001_20070417_08h45m50s/TestProcessed_20070417_08h45m50s/GEN-SIM#016712', 'FileList': []})
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadRequest : DBS Server Raised An Error: Tier Mismatch, Number of Tiers in file 0 is not equal to the number of tiers 2 in the dataset /TestPrimary_001_20070417_08h45m50s/TestProcessed_20070417_08h45m50s/GEN-SIM#016712
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 5
+
+Type : insertFiles
+Done insertFiles({'Status': 'VALID', 'RunsList': [7651], 'PhysicsGroup': 'BPositive', 'Name': 'TestProcessed_20070417_08h45m50s', 'TierList': ['GEN', 'SIM'], 'ParentList': [], 'PathList': [], 'AlgoList': [{'ExecutableName': 'TestExe01', 'ApplicationVersion': 'TestVersion01_20070417_08h45m50s', 'ParameterSetID': {'Content': 'int a= {}, b={c=1, d=33}, f={}, x, y, x', 'Version': 'V001', 'Hash': '001234565798685', 'Name': 'MyFirstParam01', 'Type': 'test', 'Annotation': 'This is test'}, 'ApplicationFamily': 'AppFamily01'}, {'ExecutableName': 'TestExe011', 'ApplicationVersion': 'TestVersion011_20070417_08h45m50s', 'ParameterSetID': {'Content': 'int a= {}, b={c=1, d=33}, f={}, x, y, x', 'Hash': '001234565798685', 'Annotation': 'This is test', 'Name': 'MyFirstParam01'}, 'ApplicationFamily': 'AppFamily011'}], 'PrimaryDataset': {'Type': 'test', 'Name': 'TestPrimary_001_20070417_08h45m50s'}}, [{'Status': 'VALID', 'NumberOfEvents': 10000, 'ParentList': [], 'Checksum': '999', 'TierList': [], 'RunsList': [], 'ChildList': [], 'AlgoList': [], 'BranchList': [], 'FileSize': 12340, 'LumiList': [], 'LogicalFileName': '1111-0909-9767-876411111_20070417_08h45m50s'}], {'StorageElementList': [], 'Name': '/_20070417_08h45m50sxxxxxxxxxxxxxxxxthis/isatestblock#016712', 'FileList': []})
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadRequest : DBS Server Raised An Error: Unavailable data, No such block : name : /_20070417_08h45m50sxxxxxxxxxxxxxxxxthis/isatestblock#016712
+Test ended   : [PASSED]
+Test LAPSED  : [   1.0] seconds
+Test Number : 6
+
+Type : insertFiles
+Done insertFiles({'Status': 'VALID', 'RunsList': [7651], 'PhysicsGroup': 'BPositive', 'Name': 'TestProcessed_20070417_08h45m50s', 'TierList': ['GEN', 'SIM'], 'ParentList': [], 'PathList': [], 'AlgoList': [{'ExecutableName': 'TestExe01', 'ApplicationVersion': 'TestVersion01_20070417_08h45m50s', 'ParameterSetID': {'Content': 'int a= {}, b={c=1, d=33}, f={}, x, y, x', 'Version': 'V001', 'Hash': '001234565798685', 'Name': 'MyFirstParam01', 'Type': 'test', 'Annotation': 'This is test'}, 'ApplicationFamily': 'AppFamily01'}, {'ExecutableName': 'TestExe011', 'ApplicationVersion': 'TestVersion011_20070417_08h45m50s', 'ParameterSetID': {'Content': 'int a= {}, b={c=1, d=33}, f={}, x, y, x', 'Hash': '001234565798685', 'Annotation': 'This is test', 'Name': 'MyFirstParam01'}, 'ApplicationFamily': 'AppFamily011'}], 'PrimaryDataset': {'Type': 'test', 'Name': 'TestPrimary_001_20070417_08h45m50s'}}, [{'Status': 'VALID', 'NumberOfEvents': 10000, 'ParentList': ['1111-0909-9767-8764_20070417_08h45m50s', '1111-0909-9767-876411_20070417_08h45m50s'], 'Checksum': '999', 'TierList': ['GEN', 'SIM'], 'RunsList': [], 'ChildList': [], 'AlgoList': [], 'BranchList': [], 'FileSize': 12340, 'LumiList': [], 'LogicalFileName': '1111-0909-9767-876411111_20070417_08h45m50s'}], {'StorageElementList': [], 'Name': '/TestPrimary_001_20070417_08h45m50s/TestProcessed_20070417_08h45m50s/GEN-SIM#016712', 'FileList': []})
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadRequest : DBS Server Raised An Error: Missing data, Null Fields. Expected a valid type
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 7
+
+Type : insertFiles
+Done insertFiles({'Status': 'VALID', 'RunsList': [7651], 'PhysicsGroup': 'BPositive', 'Name': 'TestProcessed_20070417_08h45m50s', 'TierList': ['GEN', 'SIM'], 'ParentList': [], 'PathList': [], 'AlgoList': [{'ExecutableName': 'TestExe01', 'ApplicationVersion': 'TestVersion01_20070417_08h45m50s', 'ParameterSetID': {'Content': 'int a= {}, b={c=1, d=33}, f={}, x, y, x', 'Version': 'V001', 'Hash': '001234565798685', 'Name': 'MyFirstParam01', 'Type': 'test', 'Annotation': 'This is test'}, 'ApplicationFamily': 'AppFamily01'}, {'ExecutableName': 'TestExe011', 'ApplicationVersion': 'TestVersion011_20070417_08h45m50s', 'ParameterSetID': {'Content': 'int a= {}, b={c=1, d=33}, f={}, x, y, x', 'Hash': '001234565798685', 'Annotation': 'This is test', 'Name': 'MyFirstParam01'}, 'ApplicationFamily': 'AppFamily011'}], 'PrimaryDataset': {'Type': 'test', 'Name': 'TestPrimary_001_20070417_08h45m50s'}}, [{'Status': 'VALID', 'NumberOfEvents': 10000, 'ParentList': ['1111-0909-9767-8764_20070417_08h45m50s', 'doesnotexists'], 'Checksum': '999', 'TierList': ['GEN', 'SIM'], 'RunsList': [], 'ChildList': [], 'AlgoList': [], 'BranchList': [], 'FileSize': 12340, 'LumiList': [], 'LogicalFileName': '1111-0909-9767-87641234545_20070417_08h45m50s'}], {'StorageElementList': [], 'Name': '/TestPrimary_001_20070417_08h45m50s/TestProcessed_20070417_08h45m50s/GEN-SIM#016712', 'FileList': []})
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadRequest : DBS Server Raised An Error: Missing data, Null Fields. Expected a valid type
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 8
+***********************insertFiles API tests***************************
+
+***********************updateFileStatus API tests***************************
+
+Type : updateFileStatus
+Done updateFileStatus('1111-0909-9767-8764_20070417_08h45m50s', 'VALID')
+Comment      : AN EXCEPTION WAS NOT EXPECTED AND NONE WAS RAISED
+Exception    : None
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 1
+
+Type : updateFileStatus
+Done updateFileStatus('1111-0909-9767-8764_20070417_08h45m50s', 'DOESNOTEXIST')
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadRequest : DBS Server Raised An Error: Unavailable data, No such FileStatus : Status : DOESNOTEXIST
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 2
+
+Type : updateFileStatus
+Done updateFileStatus('DOESNOTEXIST', 'VALID')
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadRequest : DBS Server Raised An Error: Unavailable data, No such Files : LogicalFileName : DOESNOTEXIST
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 3
+
+Type : updateFileStatus
+Done updateFileStatus('DO;ESNOTEXIST', 'VALID')
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadRequest : DBS Server Raised An Error: Invalid format, Invalid Characters in DO;ESNOTEXIST for LogicalFileName Expected a valid LogicalFileName which should satisfy the regular expression [-\w_\.%/]+
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 4
+
+Type : updateFileStatus
+Done updateFileStatus('DO/ESNOTEXIST', 'VALID')
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadRequest : DBS Server Raised An Error: Unavailable data, No such Files : LogicalFileName : DO/ESNOTEXIST
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 5
+
+Type : updateFileStatus
+Done updateFileStatus('1111-0909-9767-8764_20070417_08h45m50s', 'VA;LID')
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadRequest : DBS Server Raised An Error: Invalid format, Invalid Characters in VA;LID for Status Expected a valid Status which should satisfy the regular expression [-\w_\.%/]+
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 6
+
+Type : updateFileStatus
+Done updateFileStatus('1111-0909-9767-8764_20070417_08h45m50s', 'VA/LID')
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadRequest : DBS Server Raised An Error: Unavailable data, No such FileStatus : Status : VA/LID
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 7
+
+***********************updateFileStatus API tests***************************
+
+***********************createAnalysisDatasetDefinition API tests***************************
+
+Type : createAnalysisDatasetDefinition
+Done createAnalysisDatasetDefinition({'RunsList': [], 'Description': 'This is a test Analysis Dataset_20070417_08h45m50s', 'TierList': ['GEN', 'SIM'], 'FileList': ['1111-0909-9767-8764_20070417_08h45m50s', '1111-0909-9767-876411_20070417_08h45m50s'], 'LumiList': [], 'AlgoList': [{'ExecutableName': 'TestExe01', 'ApplicationVersion': 'TestVersion01_20070417_08h45m50s', 'ParameterSetID': {'Content': 'int a= {}, b={c=1, d=33}, f={}, x, y, x', 'Version': 'V001', 'Hash': '001234565798685', 'Name': 'MyFirstParam01', 'Type': 'test', 'Annotation': 'This is test'}, 'ApplicationFamily': 'AppFamily01'}, {'ExecutableName': 'TestExe011', 'ApplicationVersion': 'TestVersion011_20070417_08h45m50s', 'ParameterSetID': {'Content': 'int a= {}, b={c=1, d=33}, f={}, x, y, x', 'Hash': '001234565798685', 'Annotation': 'This is test', 'Name': 'MyFirstParam01'}, 'ApplicationFamily': 'AppFamily011'}], 'ProcessedDatasetPath': '/TestPrimary_001_20070417_08h45m50s/TestProcessed_20070417_08h45m50s/GEN-SIM', 'RunRangeList': [('0', '5000'), ('6000', '99999')], 'AnalysisDSList': [], 'LumiRangeList': [('1', '4444'), ('5000', '90000')], 'UserCut': 'get all blah blah from x=1, y=6, z=j, lumi=all', 'Name': 'TestAnalysisDSDef_005_20070417_08h45m50s'},)
+Comment      : AN EXCEPTION WAS NOT EXPECTED AND NONE WAS RAISED
+Exception    : None
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 1
+
+Type : createAnalysisDatasetDefinition
+Done createAnalysisDatasetDefinition({'RunsList': [], 'Description': 'This is a test Analysis Dataset_20070417_08h45m50s', 'TierList': ['GEN', 'SIM'], 'FileList': ['1111-0909-9767-8764_20070417_08h45m50s', '1111-0909-9767-876411_20070417_08h45m50s'], 'LumiList': [], 'AlgoList': [{'ExecutableName': 'TestExe01', 'ApplicationVersion': 'TestVersion01_20070417_08h45m50s', 'ParameterSetID': {'Content': 'int a= {}, b={c=1, d=33}, f={}, x, y, x', 'Version': 'V001', 'Hash': '001234565798685', 'Name': 'MyFirstParam01', 'Type': 'test', 'Annotation': 'This is test'}, 'ApplicationFamily': 'AppFamily01'}, {'ExecutableName': 'TestExe011', 'ApplicationVersion': 'TestVersion011_20070417_08h45m50s', 'ParameterSetID': {'Content': 'int a= {}, b={c=1, d=33}, f={}, x, y, x', 'Hash': '001234565798685', 'Annotation': 'This is test', 'Name': 'MyFirstParam01'}, 'ApplicationFamily': 'AppFamily011'}], 'ProcessedDatasetPath': '/TestPrimary_001_20070417_08h45m50s/TestProcessed_20070417_08h45m50s/GEN-SIM', 'RunRangeList': [('0', '5000'), ('6000', '99999')], 'AnalysisDSList': [], 'LumiRangeList': [('1', '4444'), ('5000', '90000')], 'UserCut': 'get all blah blah from x=1, y=6, z=j, lumi=all', 'Name': 'TestAnalysisDSDef_005_20070417_08h45m50s'},)
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadRequest : DBS Server Raised An Error: Already Exists, Analysis Dataset Defintaion TestAnalysisDSDef_005_20070417_08h45m50s Already Exists
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 2
+
+Type : createAnalysisDatasetDefinition
+Done createAnalysisDatasetDefinition({'RunsList': [], 'Description': 'This is a test Analysis Dataset_20070417_08h45m50s', 'TierList': [], 'FileList': [], 'LumiList': [], 'AlgoList': [], 'ProcessedDatasetPath': '/TestPrimary_001_20070417_08h45m50s/TestProcessed_20070417_08h45m50s/GEN-SIM', 'RunRangeList': [], 'AnalysisDSList': [], 'LumiRangeList': [], 'Name': 'TestAnalysisDSDef_006_20070417_08h45m50s'},)
+Comment      : AN EXCEPTION WAS NOT EXPECTED AND NONE WAS RAISED
+Exception    : None
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 3
+
+Type : createAnalysisDatasetDefinition
+Done createAnalysisDatasetDefinition({'RunsList': [], 'Name': 'TestAnalysisDSDef_007_20070417_08h45m50s', 'TierList': [], 'FileList': [], 'LumiList': [], 'AlgoList': [], 'RunRangeList': [], 'AnalysisDSList': [], 'LumiRangeList': []},)
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadRequest : DBS Server Raised An Error: Missing data, Null Fields. Expected a valid path
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 4
+
+Type : createAnalysisDatasetDefinition
+Done createAnalysisDatasetDefinition({'RunsList': [], 'Name': 'TestAnalysisDSDe  f_006_20070417_08h45m50s', 'TierList': [], 'FileList': [], 'LumiList': [], 'AlgoList': [], 'RunRangeList': [], 'AnalysisDSList': [], 'LumiRangeList': []},)
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadRequest : DBS Server Raised An Error: Invalid format, Invalid Characters in TestAnalysisDSDe  f_006_20070417_08h45m50s for analysisds_def_name Expected a valid analysisds_def_name which should satisfy the regular expression [-\w_\.%/]+
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 5
+***********************createAnalysisDatasetDefinition API tests***************************
+
+***********************createAnalysisDataset API tests***************************
+
+Type : createAnalysisDataset
+Done createAnalysisDataset({'Status': 'NEW', 'Type': 'TEST', 'PhysicsGroup': 'BPositive', 'Annotation': 'testdataset_20070417_08h45m50s', 'Name': 'TestAnalysisDataset005_20070417_08h45m50s'}, 'TestAnalysisDSDef_005_20070417_08h45m50s')
+Comment      : AN EXCEPTION WAS NOT EXPECTED AND NONE WAS RAISED
+Exception    : None
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 1
+
+Type : createAnalysisDataset
+Done createAnalysisDataset({'Status': 'NEW', 'Type': 'TEST', 'PhysicsGroup': 'BPositive', 'Annotation': 'testdataset_20070417_08h45m50s', 'Name': 'TestAnalysisDataset005_20070417_08h45m50s'}, 'TestAnalysisDSDef_005_20070417_08h45m50s')
+Comment      : AN EXCEPTION WAS NOT EXPECTED AND NONE WAS RAISED
+Exception    : None
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 2
+
+Type : createAnalysisDataset
+Done createAnalysisDataset({'PhysicsGroup': 'BPositive', 'Annotation': 'testdataset_20070417_08h45m50s', 'Name': 'TestAnalysisDataset0056_20070417_08h45m50s'}, 'TestAnalysisDSDef_005_20070417_08h45m50s')
+Comment      : AN EXCEPTION WAS NOT EXPECTED AND NONE WAS RAISED
+Exception    : None
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 3
+
+Type : createAnalysisDataset
+Done createAnalysisDataset({'PhysicsGroup': 'BPositive', 'Name': 'TestAnalysisDaaaataset0056_20070417_08h45m50s'}, 'TestAnalysisDSDef_005_20070417_08h45m50s')
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsExecutionError : DBS Server Raised An Error: Database exception, Field  Annotation  doesn t have a default value
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 4
+
+Type : createAnalysisDataset
+Done createAnalysisDataset({'Annotation': 'testdataset_20070417_08h45m50s', 'Name': 'TestAnalysiqqqqsDataset0056_20070417_08h45m50s'}, 'TestAnalysisDSDef_005_20070417_08h45m50s')
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadRequest : DBS Server Raised An Error: Missing data, Null Fields. Expected a valid physics_group_name
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 5
+
+Type : createAnalysisDataset
+Done createAnalysisDataset({'PhysicsGroup': 'BPositive', 'Annotation': 'testdataset_20070417_08h45m50s', 'Name': 'TestAnalysisDataset0  056_20070417_08h45m50s'}, 'TestAnalysisDSDef_005_20070417_08h45m50s')
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadRequest : DBS Server Raised An Error: Invalid format, Invalid Characters in TestAnalysisDataset0  056_20070417_08h45m50s for name Expected a valid name which should satisfy the regular expression [-\w_\.%/]+
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 6
+
+Type : createAnalysisDataset
+Done createAnalysisDataset('TestAnalysisDSDef_005_20070417_08h45m50s',)
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : exceptions.TypeError : createAnalysisDataset() takes exactly 3 arguments (2 given)
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 7
+
+Type : createAnalysisDataset
+Done createAnalysisDataset({'PhysicsGroup': 'BPositive', 'Annotation': 'testdataset_20070417_08h45m50s', 'Name': 'TestAnalysisDataset0  056_20070417_08h45m50s'}, 'Should_not_exists')
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadRequest : DBS Server Raised An Error: Unavailable data, No such analysis dataset definition Should_not_exists
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 8
+***********************createAnalysisDataset API tests***************************
+
+***********************addReplicaToBlock API tests***************************
+
+Type : addReplicaToBlock
+Done addReplicaToBlock({'StorageElementList': [], 'Name': '/TestPrimary_001_20070417_08h45m50s/TestProcessed_20070417_08h45m50s/GEN-SIM#016712', 'FileList': []}, 'MySE1')
+Comment      : AN EXCEPTION WAS NOT EXPECTED AND NONE WAS RAISED
+Exception    : None
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 1
+
+Type : addReplicaToBlock
+Done addReplicaToBlock({'StorageElementList': [], 'Name': '/TestPrimary_001_20070417_08h45m50s/TestProcessed_20070417_08h45m50s/GEN-SIM#016712', 'FileList': []}, 'MySE2')
+Comment      : AN EXCEPTION WAS NOT EXPECTED AND NONE WAS RAISED
+Exception    : None
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 2
+
+Type : addReplicaToBlock
+Done addReplicaToBlock({'StorageElementList': [], 'Name': '/TestPrimary_001_20070417_08h45m50s/TestProcessed_20070417_08h45m50s/GEN-SIM#016712', 'FileList': []}, 'My;SE')
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadRequest : DBS Server Raised An Error: Invalid format, Invalid Characters in My;SE for storage_element_name Expected a valid storage_element_name which should satisfy the regular expression [-\w_\.%/]+
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 3
+
+Type : addReplicaToBlock
+Done addReplicaToBlock('/does/not/eist#1234', 'MySE1')
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadRequest : DBS Server Raised An Error: Unavailable data, No such block : name : /does/not/eist#1234
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 4
+
+***********************addReplicaToBlock API tests***************************
+
+***********************deleteReplicaFromBlock API tests***************************
+
+Type : deleteReplicaFromBlock
+Done deleteReplicaFromBlock({'StorageElementList': [], 'Name': '/TestPrimary_001_20070417_08h45m50s/TestProcessed_20070417_08h45m50s/GEN-SIM#016712', 'FileList': []}, 'MySE1')
+Comment      : AN EXCEPTION WAS NOT EXPECTED AND NONE WAS RAISED
+Exception    : None
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 1
+
+Type : deleteReplicaFromBlock
+Done deleteReplicaFromBlock({'StorageElementList': [], 'Name': '/TestPrimary_001_20070417_08h45m50s/TestProcessed_20070417_08h45m50s/GEN-SIM#016712', 'FileList': []}, 'My;SE')
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadRequest : DBS Server Raised An Error: Invalid format, Invalid Characters in My;SE for storage_element_name Expected a valid storage_element_name which should satisfy the regular expression [-\w_\.%/]+
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 2
+
+Type : deleteReplicaFromBlock
+Done deleteReplicaFromBlock({'StorageElementList': [], 'Name': '/TestPrimary_001_20070417_08h45m50s/TestProcessed_20070417_08h45m50s/GEN-SIM#016712', 'FileList': []}, 'DOESNOTEXIST')
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadRequest : DBS Server Raised An Error: Unavailable data, No such StorageElement : SEName : DOESNOTEXIST
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 3
+
+Type : deleteReplicaFromBlock
+Done deleteReplicaFromBlock('/does/not/eist#1234', 'MySE1')
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadRequest : DBS Server Raised An Error: Unavailable data, No such StorageElement : SEName : MySE1
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 4
+
+***********************deleteReplicaFromBlock API tests***************************
+
+***********************renameSE API tests***************************
+
+Type : renameSE
+Done renameSE('MySE2', 'MySE2New_20070417_08h45m50s')
+Comment      : AN EXCEPTION WAS NOT EXPECTED AND NONE WAS RAISED
+Exception    : None
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 1
+
+Type : renameSE
+Done renameSE('DOESNOTEXIST', 'MySE')
+Comment      : AN EXCEPTION WAS NOT EXPECTED AND NONE WAS RAISED
+Exception    : None
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 2
+
+Type : renameSE
+Done renameSE('abcd;edf', 'ANTHING')
+Comment      : AN EXCEPTION WAS NOT EXPECTED AND NONE WAS RAISED
+Exception    : None
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 3
+
+Type : renameSE
+Done renameSE('/does/no', 'MySE1')
+Comment      : AN EXCEPTION WAS NOT EXPECTED AND NONE WAS RAISED
+Exception    : None
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 4
+
+***********************renameSE API tests***************************
+
+***********************closeBlock API tests***************************
+
+Type : closeBlock
+Done closeBlock({'StorageElementList': [], 'Name': '/TestPrimary_001_20070417_08h45m50s/TestProcessed_20070417_08h45m50s/GEN-SIM#016712', 'FileList': []},)
+Comment      : AN EXCEPTION WAS NOT EXPECTED AND NONE WAS RAISED
+Exception    : None
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 1
+
+Type : closeBlock
+Done closeBlock('DOESNOTEXIST',)
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadRequest : DBS Server Raised An Error: Invalid format, Expected a block_name in format /PRIMARY/PROCESSED/TIER1-TIER2#GUID or /PRIMARY/PROCESSED#GUID which should satisfy the regular expression ^/([^/]+)/([^/]+)/([^/]+)#([^/]+) or ^/([^/]+)/([^/]+)#([^/]+) The given block_name is DOESNOTEXIST
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 2
+
+Type : closeBlock
+Done closeBlock('abcd;edf',)
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadRequest : DBS Server Raised An Error: Invalid format, Expected a block_name in format /PRIMARY/PROCESSED/TIER1-TIER2#GUID or /PRIMARY/PROCESSED#GUID which should satisfy the regular expression ^/([^/]+)/([^/]+)/([^/]+)#([^/]+) or ^/([^/]+)/([^/]+)#([^/]+) The given block_name is abcd;edf
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 3
+
+Type : closeBlock
+Done closeBlock('/does/no/exit#1234',)
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadRequest : DBS Server Raised An Error: Unavailable data, No such block : name : /does/no/exit#1234
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 4
+
+***********************closeBlock API tests***************************
+
+***********************listPrimaryDatasets API tests***************************
+
+Type : listPrimaryDatasets
+Done listPrimaryDatasets('*',)
+Comment      : AN EXCEPTION WAS NOT EXPECTED AND NONE WAS RAISED
+Exception    : None
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 1
+
+Type : listPrimaryDatasets
+Done listPrimaryDatasets('*test*',)
+Comment      : AN EXCEPTION WAS NOT EXPECTED AND NONE WAS RAISED
+Exception    : None
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 2
+
+Type : listPrimaryDatasets
+Done listPrimaryDatasets()
+Comment      : AN EXCEPTION WAS NOT EXPECTED AND NONE WAS RAISED
+Exception    : None
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 3
+
+Type : listPrimaryDatasets
+Done listPrimaryDatasets('',)
+Comment      : AN EXCEPTION WAS NOT EXPECTED AND NONE WAS RAISED
+Exception    : None
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 4
+
+Type : listPrimaryDatasets
+Done listPrimaryDatasets('abc*',)
+Comment      : AN EXCEPTION WAS NOT EXPECTED AND NONE WAS RAISED
+Exception    : None
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 5
+
+Type : listPrimaryDatasets
+Done listPrimaryDatasets('ab;bc',)
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadRequest : DBS Server Raised An Error: Invalid format, Invalid Characters in ab;bc for primary_dataset_name_pattern Expected a valid primary_dataset_name_pattern which should satisfy the regular expression [-\w_\.%/]+
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 6
+
+Type : listPrimaryDatasets
+Done listPrimaryDatasets('ab/bc',)
+Comment      : AN EXCEPTION WAS NOT EXPECTED AND NONE WAS RAISED
+Exception    : None
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 7
+
+Type : listPrimaryDatasets
+Done listPrimaryDatasets('//*/ab/bc',)
+Comment      : AN EXCEPTION WAS NOT EXPECTED AND NONE WAS RAISED
+Exception    : None
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 8
+
+Type : listPrimaryDatasets
+Done listPrimaryDatasets('abc bc',)
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadRequest : DBS Server Raised An Error: Invalid format, Invalid Characters in abc bc for primary_dataset_name_pattern Expected a valid primary_dataset_name_pattern which should satisfy the regular expression [-\w_\.%/]+
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 9
+
+Type : listPrimaryDatasets
+Done listPrimaryDatasets('', '')
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : exceptions.TypeError : listPrimaryDatasets() takes at most 2 arguments (3 given)
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 10
+***********************listPrimaryDatasets API tests***************************
+
+***********************listAlgorithm API tests***************************
+
+Type : listAlgorithms
+Done listAlgorithms('*', '*')
+Comment      : AN EXCEPTION WAS NOT EXPECTED AND NONE WAS RAISED
+Exception    : None
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 1
+
+Type : listAlgorithms
+Done listAlgorithms()
+Comment      : AN EXCEPTION WAS NOT EXPECTED AND NONE WAS RAISED
+Exception    : None
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 2
+
+Type : listAlgorithms
+Done listAlgorithms('MyVersion22', 'sss')
+Comment      : AN EXCEPTION WAS NOT EXPECTED AND NONE WAS RAISED
+Exception    : None
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 3
+
+Type : listAlgorithms
+Done listAlgorithms('MyVersion22', '', '')
+Comment      : AN EXCEPTION WAS NOT EXPECTED AND NONE WAS RAISED
+Exception    : None
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 4
+
+Type : listAlgorithms
+Done listAlgorithms('MyVersion12', 'MyFamily12', 'MyExe12')
+Comment      : AN EXCEPTION WAS NOT EXPECTED AND NONE WAS RAISED
+Exception    : None
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 5
+
+Type : listAlgorithms
+Done listAlgorithms('*', '*12', 'MyExe12', '*')
+Comment      : AN EXCEPTION WAS NOT EXPECTED AND NONE WAS RAISED
+Exception    : None
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 6
+
+Type : listAlgorithms
+Done listAlgorithms('My Version22', 'sss')
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadRequest : DBS Server Raised An Error: Invalid format, Invalid Characters in My Version22 for app_version Expected a valid app_version which should satisfy the regular expression [-\w_\.%/]+
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 7
+
+Type : listAlgorithms
+Done listAlgorithms('ab;2', 'sss')
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadRequest : DBS Server Raised An Error: Invalid format, Invalid Characters in ab;2 for app_version Expected a valid app_version which should satisfy the regular expression [-\w_\.%/]+
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 8
+
+Type : listAlgorithms
+Done listAlgorithms('ab', 's;')
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadRequest : DBS Server Raised An Error: Invalid format, Invalid Characters in s; for app_family_name Expected a valid app_family_name which should satisfy the regular expression [-\w_\.%/]+
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 9
+
+Type : listAlgorithms
+Done listAlgorithms('/*',)
+Comment      : AN EXCEPTION WAS NOT EXPECTED AND NONE WAS RAISED
+Exception    : None
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 10
+
+Type : listAlgorithms
+Done listAlgorithms('*', 'abcd/jdg')
+Comment      : AN EXCEPTION WAS NOT EXPECTED AND NONE WAS RAISED
+Exception    : None
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 11
+
+Type : listAlgorithms
+Done listAlgorithms('*', '*', '', '', '')
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : exceptions.TypeError : listAlgorithms() takes at most 5 arguments (6 given)
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 12
+***********************listAlgorithm API tests***************************
+
+***********************listProcessedDatasets API tests***************************
+
+Type : listProcessedDatasets
+Done listProcessedDatasets('*', '*')
+Comment      : AN EXCEPTION WAS NOT EXPECTED AND NONE WAS RAISED
+Exception    : None
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 1
+
+Type : listProcessedDatasets
+Done listProcessedDatasets()
+Comment      : AN EXCEPTION WAS NOT EXPECTED AND NONE WAS RAISED
+Exception    : None
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 2
+
+Type : listProcessedDatasets
+Done listProcessedDatasets('abc', 'sss')
+Comment      : AN EXCEPTION WAS NOT EXPECTED AND NONE WAS RAISED
+Exception    : None
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 3
+
+Type : listProcessedDatasets
+Done listProcessedDatasets('', '', '', '', '', '*1*', '')
+Comment      : AN EXCEPTION WAS NOT EXPECTED AND NONE WAS RAISED
+Exception    : None
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 4
+
+Type : listProcessedDatasets
+Done listProcessedDatasets('', '', '', '', '', 'MyExe1', '')
+Comment      : AN EXCEPTION WAS NOT EXPECTED AND NONE WAS RAISED
+Exception    : None
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 5
+
+Type : listProcessedDatasets
+Done listProcessedDatasets('', '', '', '', '', 'MyExe1')
+Comment      : AN EXCEPTION WAS NOT EXPECTED AND NONE WAS RAISED
+Exception    : None
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 6
+
+Type : listProcessedDatasets
+Done listProcessedDatasets('*', '*', 'ex;e')
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadRequest : DBS Server Raised An Error: Invalid format, Invalid Characters in ex;e for processed_datatset_name_pattern Expected a valid processed_datatset_name_pattern which should satisfy the regular expression [-\w_\.%/]+
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 7
+
+Type : listProcessedDatasets
+Done listProcessedDatasets('', '', '', '', '', '', '', '')
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : exceptions.TypeError : listProcessedDatasets() takes at most 8 arguments (9 given)
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 8
+***********************	listProcessedDatasets API tests***************************
+
+***********************listBlock API tests***************************
+
+Type : listBlocks
+Done listBlocks('/TestPrimary_001_20070417_08h45m50s/TestProcessed_20070417_08h45m50s/GEN-SIM',)
+Comment      : AN EXCEPTION WAS NOT EXPECTED AND NONE WAS RAISED
+Exception    : None
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 1
+
+Type : listBlocks
+Done listBlocks('',)
+Comment      : AN EXCEPTION WAS NOT EXPECTED AND NONE WAS RAISED
+Exception    : None
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 2
+
+Type : listBlocks
+Done listBlocks('/*/*/anzar-procds-01',)
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadRequest : DBS Server Raised An Error: Invalid format, Invalid Characters in /*/*/anzar-procds-01 for path. Expected a path in format /PRIMARY/PROCESSED/TIER1-TIER2  which should satisfy the regular expression  [-\w_\.%/]+
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 3
+
+Type : listBlocks
+Done listBlocks('/Primaryaaaaa/sdldljd/slkdscds-05',)
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadRequest : DBS Server Raised An Error: Unavailable data, No such dataset primary : Primaryaaaaa processed :sdldljd
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 4
+
+Type : listBlocks
+Done listBlocks('/*/sssjd/slkdscds-05',)
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadRequest : DBS Server Raised An Error: Invalid format, Invalid Characters in /*/sssjd/slkdscds-05 for path. Expected a path in format /PRIMARY/PROCESSED/TIER1-TIER2  which should satisfy the regular expression  [-\w_\.%/]+
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 5
+
+Type : listBlocks
+Done listBlocks('/abd def/sssjd/slkdscds-05',)
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadRequest : DBS Server Raised An Error: Invalid format, Invalid Characters in /abd def/sssjd/slkdscds-05 for path. Expected a path in format /PRIMARY/PROCESSED/TIER1-TIER2  which should satisfy the regular expression  [-\w_\.%/]+
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 6
+
+Type : listBlocks
+Done listBlocks('/Primary;DS_ANZAR_01/test-tier-01/anzar-procds-05',)
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadRequest : DBS Server Raised An Error: Invalid format, Invalid Characters in /Primary;DS_ANZAR_01/test-tier-01/anzar-procds-05 for path. Expected a path in format /PRIMARY/PROCESSED/TIER1-TIER2  which should satisfy the regular expression  [-\w_\.%/]+
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 7
+
+Type : listBlocks
+Done listBlocks('/sjh', '')
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadRequest : DBS Server Raised An Error: Invalid format, Expected a path in format /PRIMARY/PROCESSED/TIER1-TIER2 which should satisfy the regular expression ^/([^/]+)/([^/]+)/([^/]+) The given path is /sjh
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 8
+***********************listBlock API tests***************************
+
+***********************listStorageElements API tests***************************
+
+Type : listStorageElements
+Done listStorageElements('/TestPrimary_001_20070417_08h45m50s/TestProcessed_20070417_08h45m50s/GEN-SIM',)
+Comment      : AN EXCEPTION WAS NOT EXPECTED AND NONE WAS RAISED
+Exception    : None
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 1
+
+Type : listStorageElements
+Done listStorageElements('',)
+Comment      : AN EXCEPTION WAS NOT EXPECTED AND NONE WAS RAISED
+Exception    : None
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 2
+
+Type : listStorageElements
+Done listStorageElements('*',)
+Comment      : AN EXCEPTION WAS NOT EXPECTED AND NONE WAS RAISED
+Exception    : None
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 3
+
+Type : listStorageElements
+Done listStorageElements()
+Comment      : AN EXCEPTION WAS NOT EXPECTED AND NONE WAS RAISED
+Exception    : None
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 4
+
+Type : listStorageElements
+Done listStorageElements('/sdd;/*',)
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadRequest : DBS Server Raised An Error: Invalid format, Invalid Characters in /sdd;/% for storage_element_name Expected a valid storage_element_name which should satisfy the regular expression [-\w_\.%/]+
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 5
+***********************listStorageElements API tests***************************
+
+***********************listRuns API tests***************************
+
+Type : listRuns
+Done listRuns('/TestPrimary_001_20070417_08h45m50s/TestProcessed_20070417_08h45m50s/GEN-SIM',)
+Comment      : AN EXCEPTION WAS NOT EXPECTED AND NONE WAS RAISED
+Exception    : None
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 1
+
+Type : listRuns
+Done listRuns()
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : exceptions.TypeError : listRuns() takes exactly 2 arguments (1 given)
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 2
+
+Type : listRuns
+Done listRuns('',)
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadRequest : DBS Server Raised An Error: Mandatory data missing, Null Fields. Expected a valid path
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 3
+
+Type : listRuns
+Done listRuns('/*/*/anzar-procds-01',)
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadRequest : DBS Server Raised An Error: Invalid format, Invalid Characters in /*/*/anzar-procds-01 for path. Expected a path in format /PRIMARY/PROCESSED/TIER1-TIER2  which should satisfy the regular expression  [-\w_\.%/]+
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 4
+
+Type : listRuns
+Done listRuns('/Primaryaaaaa/sdldljd/slkdscds-05',)
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadRequest : DBS Server Raised An Error: Unavailable data, No such dataset primary : Primaryaaaaa processed :sdldljd
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 5
+
+Type : listRuns
+Done listRuns('/*/sssjd/slkdscds-05',)
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadRequest : DBS Server Raised An Error: Invalid format, Invalid Characters in /*/sssjd/slkdscds-05 for path. Expected a path in format /PRIMARY/PROCESSED/TIER1-TIER2  which should satisfy the regular expression  [-\w_\.%/]+
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 6
+
+Type : listRuns
+Done listRuns('/abd def/sssjd/slkdscds-05',)
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadRequest : DBS Server Raised An Error: Invalid format, Invalid Characters in /abd def/sssjd/slkdscds-05 for path. Expected a path in format /PRIMARY/PROCESSED/TIER1-TIER2  which should satisfy the regular expression  [-\w_\.%/]+
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 7
+
+Type : listRuns
+Done listRuns('/Primary;DS_ANZAR_01/test-tier-01/anzar-procds-05',)
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadRequest : DBS Server Raised An Error: Invalid format, Invalid Characters in /Primary;DS_ANZAR_01/test-tier-01/anzar-procds-05 for path. Expected a path in format /PRIMARY/PROCESSED/TIER1-TIER2  which should satisfy the regular expression  [-\w_\.%/]+
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 8
+
+Type : listRuns
+Done listRuns('/sjh', '')
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : exceptions.TypeError : listRuns() takes exactly 2 arguments (3 given)
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 9
+
+***********************listRuns API tests***************************
+
+***********************listTiers API tests***************************
+
+Type : listTiers
+Done listTiers('/TestPrimary_001_20070417_08h45m50s/TestProcessed_20070417_08h45m50s/GEN-SIM',)
+Comment      : AN EXCEPTION WAS NOT EXPECTED AND NONE WAS RAISED
+Exception    : None
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 1
+
+Type : listTiers
+Done listTiers()
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : exceptions.TypeError : listTiers() takes exactly 2 arguments (1 given)
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 2
+
+Type : listTiers
+Done listTiers('',)
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadRequest : DBS Server Raised An Error: Mandatory data missing, Null Fields. Expected a valid path
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 3
+
+Type : listTiers
+Done listTiers('/*/*/anzar-procds-01',)
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadRequest : DBS Server Raised An Error: Invalid format, Invalid Characters in /*/*/anzar-procds-01 for path. Expected a path in format /PRIMARY/PROCESSED/TIER1-TIER2  which should satisfy the regular expression  [-\w_\.%/]+
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 4
+
+Type : listTiers
+Done listTiers('/Primaryaaaaa/sdldljd/slkdscds-05',)
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadRequest : DBS Server Raised An Error: Unavailable data, No such dataset primary : Primaryaaaaa processed :sdldljd
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 5
+
+Type : listTiers
+Done listTiers('/*/sssjd/slkdscds-05',)
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadRequest : DBS Server Raised An Error: Invalid format, Invalid Characters in /*/sssjd/slkdscds-05 for path. Expected a path in format /PRIMARY/PROCESSED/TIER1-TIER2  which should satisfy the regular expression  [-\w_\.%/]+
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 6
+
+Type : listTiers
+Done listTiers('/abd def/sssjd/slkdscds-05',)
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadRequest : DBS Server Raised An Error: Invalid format, Invalid Characters in /abd def/sssjd/slkdscds-05 for path. Expected a path in format /PRIMARY/PROCESSED/TIER1-TIER2  which should satisfy the regular expression  [-\w_\.%/]+
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 7
+
+Type : listTiers
+Done listTiers('/Primary;DS_ANZAR_01/test-tier-01/anzar-procds-05',)
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadRequest : DBS Server Raised An Error: Invalid format, Invalid Characters in /Primary;DS_ANZAR_01/test-tier-01/anzar-procds-05 for path. Expected a path in format /PRIMARY/PROCESSED/TIER1-TIER2  which should satisfy the regular expression  [-\w_\.%/]+
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 8
+
+Type : listTiers
+Done listTiers('/sjh', '')
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : exceptions.TypeError : listTiers() takes exactly 2 arguments (3 given)
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 9
+
+***********************listTiers API tests***************************
+
+***********************listFiles API tests***************************
+
+Type : listFiles
+Done listFiles('/TestPrimary_001_20070417_08h45m50s/TestProcessed_20070417_08h45m50s/GEN-SIM', '', '', [], '', '', '', '')
+Comment      : AN EXCEPTION WAS NOT EXPECTED AND NONE WAS RAISED
+Exception    : None
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 1
+
+Type : listFiles
+Done listFiles('', '', '', [], '', '/TestPrimary_001_20070417_08h45m50s/TestProcessed_20070417_08h45m50s/GEN-SIM#016712', '', '')
+Comment      : AN EXCEPTION WAS NOT EXPECTED AND NONE WAS RAISED
+Exception    : None
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 2
+
+Type : listFiles
+Done listFiles('/TestPrimary_001_20070417_08h45m50s/TestProcessed_20070417_08h45m50s/GEN-SIM', '', '', [], '', '/TestPrimary_001_20070417_08h45m50s/TestProcessed_20070417_08h45m50s/GEN-SIM#016712', '*', '')
+Comment      : AN EXCEPTION WAS NOT EXPECTED AND NONE WAS RAISED
+Exception    : None
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 3
+
+Type : listFiles
+Done listFiles('', '', '', [], '', '/PrimaryDS_ANZAR_01/anzardjhk', '', '')
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadRequest : DBS Server Raised An Error: Invalid format, Expected a block_name in format /PRIMARY/PROCESSED/TIER1-TIER2#GUID or /PRIMARY/PROCESSED#GUID which should satisfy the regular expression ^/([^/]+)/([^/]+)/([^/]+)#([^/]+) or ^/([^/]+)/([^/]+)#([^/]+) The given block_name is /PrimaryDS_ANZAR_01/anzardjhk
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 4
+
+Type : listFiles
+Done listFiles('', '', '', [], '', '/Pr;imaryDS_ANZAR_01/anzardjhk', '', '')
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadRequest : DBS Server Raised An Error: Invalid format, Expected a block_name in format /PRIMARY/PROCESSED/TIER1-TIER2#GUID or /PRIMARY/PROCESSED#GUID which should satisfy the regular expression ^/([^/]+)/([^/]+)/([^/]+)#([^/]+) or ^/([^/]+)/([^/]+)#([^/]+) The given block_name is /Pr;imaryDS_ANZAR_01/anzardjhk
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 5
+
+Type : listFiles
+Done listFiles('/dsds/', '', '', [], '', '', '', '')
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadRequest : DBS Server Raised An Error: Invalid format, Expected a path in format /PRIMARY/PROCESSED/TIER1-TIER2 which should satisfy the regular expression ^/([^/]+)/([^/]+)/([^/]+) The given path is /dsds/
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 6
+
+Type : listFiles
+Done listFiles('/dsds//', '', '', [], '', '', '')
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadRequest : DBS Server Raised An Error: Invalid format, Expected a path in format /PRIMARY/PROCESSED/TIER1-TIER2 which should satisfy the regular expression ^/([^/]+)/([^/]+)/([^/]+) The given path is /dsds//
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 7
+
+Type : listFiles
+Done listFiles('/dsds//', '', '', [], '', '', '')
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadRequest : DBS Server Raised An Error: Invalid format, Expected a path in format /PRIMARY/PROCESSED/TIER1-TIER2 which should satisfy the regular expression ^/([^/]+)/([^/]+)/([^/]+) The given path is /dsds//
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 8
+
+Type : listFiles
+Done listFiles('/dsds/a b/de', '', '', [], '', '', '')
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadRequest : DBS Server Raised An Error: Invalid format, Invalid Characters in /dsds/a b/de for path. Expected a path in format /PRIMARY/PROCESSED/TIER1-TIER2  which should satisfy the regular expression  [-\w_\.%/]+
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 9
+
+Type : listFiles
+Done listFiles('', '', '', [], '', '', '*')
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadRequest : DBS Server Raised An Error: Missing data, Null Fields. Expected either a (Primary, Processed) Dataset, Analysis Dataset, Block or LFN pattern
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 10
+
+***********************listFiles API tests***************************
+
+***********************listFileParents API tests***************************
+
+Type : listFileParents
+Done listFileParents('1111-0909-9767-876411_20070417_08h45m50s',)
+Comment      : AN EXCEPTION WAS NOT EXPECTED AND NONE WAS RAISED
+Exception    : None
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 1
+
+Type : listFileParents
+Done listFileParents('1111-0909-9767-876411_20070417_08h45m50s.nowaythiswillexist',)
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadRequest : DBS Server Raised An Error: Unavailable data, No such Files : LogicalFileName : 1111-0909-9767-876411_20070417_08h45m50s.nowaythiswillexist
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 2
+
+Type : listFileParents
+Done listFileParents('1111-0909-9767-876411_20070417_08h45m50snoway thiswillexist',)
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadRequest : DBS Server Raised An Error: Invalid format, Invalid Characters in 1111-0909-9767-876411_20070417_08h45m50snoway thiswillexist for LogicalFileName Expected a valid LogicalFileName which should satisfy the regular expression [-\w_\.%/]+
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 3
+
+Type : listFileParents
+Done listFileParents('1111-0909-9767-876411_20070417_08h45m50snoway;thiswillexist',)
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadRequest : DBS Server Raised An Error: Invalid format, Invalid Characters in 1111-0909-9767-876411_20070417_08h45m50snoway;thiswillexist for LogicalFileName Expected a valid LogicalFileName which should satisfy the regular expression [-\w_\.%/]+
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 4
+
+Type : listFileParents
+Done listFileParents('1111-0909-9767-876411_20070417_08h45m50s', '')
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : exceptions.TypeError : listFileParents() takes exactly 2 arguments (3 given)
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 5
+
+***********************listFileParents API tests***************************
+
+***********************listFileTiers API tests***************************
+
+Type : listFileTiers
+Done listFileTiers('1111-0909-9767-876411_20070417_08h45m50s',)
+Comment      : AN EXCEPTION WAS NOT EXPECTED AND NONE WAS RAISED
+Exception    : None
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 1
+
+Type : listFileTiers
+Done listFileTiers('1111-0909-9767-876411_20070417_08h45m50s.nowaythiswillexist',)
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadRequest : DBS Server Raised An Error: Unavailable data, No such Files : LogicalFileName : 1111-0909-9767-876411_20070417_08h45m50s.nowaythiswillexist
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 2
+
+Type : listFileTiers
+Done listFileTiers('1111-0909-9767-876411_20070417_08h45m50snoway thiswillexist',)
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadRequest : DBS Server Raised An Error: Invalid format, Invalid Characters in 1111-0909-9767-876411_20070417_08h45m50snoway thiswillexist for LogicalFileName Expected a valid LogicalFileName which should satisfy the regular expression [-\w_\.%/]+
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 3
+
+Type : listFileTiers
+Done listFileTiers('1111-0909-9767-876411_20070417_08h45m50snoway;thiswillexist',)
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadRequest : DBS Server Raised An Error: Invalid format, Invalid Characters in 1111-0909-9767-876411_20070417_08h45m50snoway;thiswillexist for LogicalFileName Expected a valid LogicalFileName which should satisfy the regular expression [-\w_\.%/]+
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 4
+
+Type : listFileTiers
+Done listFileTiers('1111-0909-9767-876411_20070417_08h45m50s', '')
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : exceptions.TypeError : listFileTiers() takes exactly 2 arguments (3 given)
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 5
+
+***********************listFileTiers API tests***************************
+
+***********************listFileBranches API tests***************************
+
+Type : listFileBranches
+Done listFileBranches('1111-0909-9767-876411_20070417_08h45m50s',)
+Comment      : AN EXCEPTION WAS NOT EXPECTED AND NONE WAS RAISED
+Exception    : None
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 1
+
+Type : listFileBranches
+Done listFileBranches('1111-0909-9767-876411_20070417_08h45m50s.nowaythiswillexist',)
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadRequest : DBS Server Raised An Error: Unavailable data, No such Files : LogicalFileName : 1111-0909-9767-876411_20070417_08h45m50s.nowaythiswillexist
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 2
+
+Type : listFileBranches
+Done listFileBranches('1111-0909-9767-876411_20070417_08h45m50snoway thiswillexist',)
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadRequest : DBS Server Raised An Error: Invalid format, Invalid Characters in 1111-0909-9767-876411_20070417_08h45m50snoway thiswillexist for LogicalFileName Expected a valid LogicalFileName which should satisfy the regular expression [-\w_\.%/]+
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 3
+
+Type : listFileBranches
+Done listFileBranches('1111-0909-9767-876411_20070417_08h45m50snoway;thiswillexist',)
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadRequest : DBS Server Raised An Error: Invalid format, Invalid Characters in 1111-0909-9767-876411_20070417_08h45m50snoway;thiswillexist for LogicalFileName Expected a valid LogicalFileName which should satisfy the regular expression [-\w_\.%/]+
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 4
+
+Type : listFileBranches
+Done listFileBranches('1111-0909-9767-876411_20070417_08h45m50s', '')
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : exceptions.TypeError : listFileBranches() takes exactly 2 arguments (3 given)
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 5
+
+***********************listFileBranches API tests***************************
+
+***********************listFileAlgorithms API tests***************************
+
+Type : listFileAlgorithms
+Done listFileAlgorithms('1111-0909-9767-876411_20070417_08h45m50s',)
+Comment      : AN EXCEPTION WAS NOT EXPECTED AND NONE WAS RAISED
+Exception    : None
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 1
+
+Type : listFileAlgorithms
+Done listFileAlgorithms('1111-0909-9767-876411_20070417_08h45m50s.nowaythiswillexist',)
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadRequest : DBS Server Raised An Error: Unavailable data, No such Files : LogicalFileName : 1111-0909-9767-876411_20070417_08h45m50s.nowaythiswillexist
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 2
+
+Type : listFileAlgorithms
+Done listFileAlgorithms('1111-0909-9767-876411_20070417_08h45m50snoway thiswillexist',)
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadRequest : DBS Server Raised An Error: Invalid format, Invalid Characters in 1111-0909-9767-876411_20070417_08h45m50snoway thiswillexist for LogicalFileName Expected a valid LogicalFileName which should satisfy the regular expression [-\w_\.%/]+
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 3
+
+Type : listFileAlgorithms
+Done listFileAlgorithms('1111-0909-9767-876411_20070417_08h45m50snoway;thiswillexist',)
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadRequest : DBS Server Raised An Error: Invalid format, Invalid Characters in 1111-0909-9767-876411_20070417_08h45m50snoway;thiswillexist for LogicalFileName Expected a valid LogicalFileName which should satisfy the regular expression [-\w_\.%/]+
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 4
+
+Type : listFileAlgorithms
+Done listFileAlgorithms('1111-0909-9767-876411_20070417_08h45m50s', '')
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : exceptions.TypeError : listFileAlgorithms() takes exactly 2 arguments (3 given)
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 5
+
+***********************listFileAlgorithms API tests***************************
+
+***********************listFileLumis API tests***************************
+
+Type : listFileLumis
+Done listFileLumis('1111-0909-9767-876411_20070417_08h45m50s',)
+Comment      : AN EXCEPTION WAS NOT EXPECTED AND NONE WAS RAISED
+Exception    : None
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 1
+
+Type : listFileLumis
+Done listFileLumis('1111-0909-9767-876411_20070417_08h45m50s.nowaythiswillexist',)
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadRequest : DBS Server Raised An Error: Unavailable data, No such Files : LogicalFileName : 1111-0909-9767-876411_20070417_08h45m50s.nowaythiswillexist
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 2
+
+Type : listFileLumis
+Done listFileLumis('1111-0909-9767-876411_20070417_08h45m50snoway thiswillexist',)
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadRequest : DBS Server Raised An Error: Invalid format, Invalid Characters in 1111-0909-9767-876411_20070417_08h45m50snoway thiswillexist for LogicalFileName Expected a valid LogicalFileName which should satisfy the regular expression [-\w_\.%/]+
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 3
+
+Type : listFileLumis
+Done listFileLumis('1111-0909-9767-876411_20070417_08h45m50snoway;thiswillexist',)
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadRequest : DBS Server Raised An Error: Invalid format, Invalid Characters in 1111-0909-9767-876411_20070417_08h45m50snoway;thiswillexist for LogicalFileName Expected a valid LogicalFileName which should satisfy the regular expression [-\w_\.%/]+
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 4
+
+Type : listFileLumis
+Done listFileLumis('1111-0909-9767-876411_20070417_08h45m50s', '')
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : exceptions.TypeError : listFileLumis() takes exactly 2 arguments (3 given)
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 5
+
+***********************listFileLumis API tests***************************
+
+***********************listAnalysisDatasetDefinition API tests***************************
+
+Type : listAnalysisDatasetDefinition
+Done listAnalysisDatasetDefinition()
+Comment      : AN EXCEPTION WAS NOT EXPECTED AND NONE WAS RAISED
+Exception    : None
+Test ended   : [PASSED]
+Test LAPSED  : [   1.0] seconds
+Test Number : 1
+
+Type : listAnalysisDatasetDefinition
+Done listAnalysisDatasetDefinition('*',)
+Comment      : AN EXCEPTION WAS NOT EXPECTED AND NONE WAS RAISED
+Exception    : None
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 2
+
+Type : listAnalysisDatasetDefinition
+Done listAnalysisDatasetDefinition('this;xist',)
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadRequest : DBS Server Raised An Error: Invalid format, Invalid Characters in this;xist for pattern_analysis_dataset_definition_name Expected a valid pattern_analysis_dataset_definition_name which should satisfy the regular expression [-\w_\.%/]+
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 3
+
+Type : listAnalysisDatasetDefinition
+Done listAnalysisDatasetDefinition('ahsdef', '')
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : exceptions.TypeError : listAnalysisDatasetDefinition() takes at most 2 arguments (3 given)
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 4
+
+***********************listAnalysisDatasetDefinition API tests***************************
+
+***********************listAnalysisDataset API tests***************************
+
+Type : listAnalysisDataset
+Done listAnalysisDataset()
+Comment      : AN EXCEPTION WAS NOT EXPECTED AND NONE WAS RAISED
+Exception    : None
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 1
+
+Type : listAnalysisDataset
+Done listAnalysisDataset('*',)
+Comment      : AN EXCEPTION WAS NOT EXPECTED AND NONE WAS RAISED
+Exception    : None
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 2
+
+Type : listAnalysisDataset
+Done listAnalysisDataset('*', '/TestPrimary_001_20070417_08h45m50s/TestProcessed_20070417_08h45m50s/GEN-SIM')
+Comment      : AN EXCEPTION WAS NOT EXPECTED AND NONE WAS RAISED
+Exception    : None
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 3
+
+Type : listAnalysisDataset
+Done listAnalysisDataset('*', '/this/will/notexist')
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadRequest : DBS Server Raised An Error: Unavailable data, No such dataset primary : this processed :will
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 4
+
+Type : listAnalysisDataset
+Done listAnalysisDataset('ahs def', '/TestPrimary_001_20070417_08h45m50s/TestProcessed_20070417_08h45m50s/GEN-SIM')
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadRequest : DBS Server Raised An Error: Invalid format, Invalid Characters in ahs def for analysis_dataset_name_pattern Expected a valid analysis_dataset_name_pattern which should satisfy the regular expression [-\w_\.%/]+
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 5
+
+Type : listAnalysisDataset
+Done listAnalysisDataset('ahs*', '/TestPrimary_001_20070417_08h45m50s/TestProcessed_20070417_08h45m50s/GEN-SIM', '')
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : exceptions.TypeError : listAnalysisDataset() takes at most 3 arguments (4 given)
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 6
+
+***********************listAnalysisDataset API tests***************************
+
+***********************listDatasetParents API tests***************************
+
+Type : listDatasetParents
+Done listDatasetParents('/TestPrimary_001_20070417_08h45m50s/TestProcessed_20070417_08h45m50s/GEN-SIM',)
+Comment      : AN EXCEPTION WAS NOT EXPECTED AND NONE WAS RAISED
+Exception    : None
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 1
+
+Type : listDatasetParents
+Done listDatasetParents('',)
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadRequest : DBS Server Raised An Error: Mandatory data missing, Null Fields. Expected a valid path
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 2
+
+Type : listDatasetParents
+Done listDatasetParents('/this/will/notexist',)
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadRequest : DBS Server Raised An Error: Unavailable data, No such dataset primary : this processed :will
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 3
+
+Type : listDatasetParents
+Done listDatasetParents('ahs def',)
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadRequest : DBS Server Raised An Error: Invalid format, Expected a path in format /PRIMARY/PROCESSED/TIER1-TIER2 which should satisfy the regular expression ^/([^/]+)/([^/]+)/([^/]+) The given path is ahs def
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 4
+
+Type : listDatasetParents
+Done listDatasetParents('ahs*',)
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadRequest : DBS Server Raised An Error: Invalid format, Expected a path in format /PRIMARY/PROCESSED/TIER1-TIER2 which should satisfy the regular expression ^/([^/]+)/([^/]+)/([^/]+) The given path is ahs*
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 5
+
+***********************listDatasetParents API tests***************************
+
+***********************listDatasetContents API tests***************************
+
+Type : listDatasetContents
+Done listDatasetContents('/TestPrimary_001_20070417_08h45m50s/TestProcessed_20070417_08h45m50s/GEN-SIM', '/TestPrimary_001_20070417_08h45m50s/TestProcessed_20070417_08h45m50s/GEN-SIM#016712')
+Comment      : AN EXCEPTION WAS NOT EXPECTED AND NONE WAS RAISED
+Exception    : None
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 1
+
+Type : listDatasetContents
+Done listDatasetContents('/TestPrimary_001_20070417_08h45m50s/TestProcessed_20070417_08h45m50s/GEN-SIM', '')
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadResponse : DBS Server Raised An Error: Missing data, Null Fields. Expected a valid block_name in format /PRIMARY/PROCESSED/TIER1-TIER2#GUID
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 2
+
+Type : listDatasetContents
+Done listDatasetContents('', '/TestPrimary_001_20070417_08h45m50s/TestProcessed_20070417_08h45m50s/GEN-SIM#016712')
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadResponse : DBS Server Raised An Error: Missing data, Null Fields. Expected a valid path in format /PRIMARY/PROCESSED/TIER1-TIER2
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 3
+
+Type : listDatasetContents
+Done listDatasetContents('/this/will/notexist', '/TestPrimary_001_20070417_08h45m50s/TestProcessed_20070417_08h45m50s/GEN-SIM#016712')
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadResponse : DBS Server Raised An Error: Unavailable data, No such dataset primary : this processed :will
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 4
+
+Type : listDatasetContents
+Done listDatasetContents('ahs def', '')
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadResponse : DBS Server Raised An Error: Invalid format, Expected a path in format /PRIMARY/PROCESSED/TIER1-TIER2 which should satisfy the regular expression ^/([^/]+)/([^/]+)/([^/]+) The given path is ahs def
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 5
+
+Type : listDatasetContents
+Done listDatasetContents('ahs*', '/TestPrimary_001_20070417_08h45m50s/TestProcessed_20070417_08h45m50s/GEN-SIM#016712')
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadResponse : DBS Server Raised An Error: Invalid format, Expected a path in format /PRIMARY/PROCESSED/TIER1-TIER2 which should satisfy the regular expression ^/([^/]+)/([^/]+)/([^/]+) The given path is ahs*
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 6
+
+Type : listDatasetContents
+Done listDatasetContents('/TestPrimary_001_20070417_08h45m50s/TestProcessed_20070417_08h45m50s/GEN-SIM', 'noeixts')
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadResponse : DBS Server Raised An Error: Invalid format, Expected a block_name in format /PRIMARY/PROCESSED/TIER1-TIER2#GUID or /PRIMARY/PROCESSED#GUID which should satisfy the regular expression ^/([^/]+)/([^/]+)/([^/]+)#([^/]+) or ^/([^/]+)/([^/]+)#([^/]+) The given block_name is noeixts
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 7
+
+Type : listDatasetContents
+Done listDatasetContents('/TestPrimary_001_20070417_08h45m50s/TestProcessed_20070417_08h45m50s/GEN-SIM', '/no/ei/xts#1234')
+Comment      : AN EXCEPTION WAS EXPECTED AND RAISED. THE EXCEPTION IS
+Exception    : DBSAPI.dbsApiException.DbsBadResponse : DBS Server Raised An Error: Unavailable data, No such block : name : /no/ei/xts#1234
+Test ended   : [PASSED]
+Test LAPSED  : [   0.0] seconds
+Test Number : 8
+
+***********************listDatasetContents API tests***************************

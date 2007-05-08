@@ -1,0 +1,206 @@
+#!/usr/bin/env python
+
+#
+# $Id: dli-list,v 1.3 2006/04/07 09:30:21 delgadop Exp $
+#
+# DliClient. $Name: DLS_0_1_1 $.
+# Antonio Delgado Peris. CIEMAT. CMS.
+#
+
+#
+# This is a testing tool (CLI) of the DliClient.
+#
+
+import sys
+import dliClient 
+import getopt
+
+def usage():
+   """
+    Provides usage information
+   """
+   print "Usage: dli-list [-v] [-e <endpoint>] <fileblock>"
+   print "       dli-list [-v] [-e <endpoint>] -f <listing_file>"
+   print "       dli-list -u"
+   print "       dli-list -h"
+                                                                                                    
+def options():
+   """
+    Provides some information regarding the available options
+   """
+   print """Options summary:
+   -h, --help
+   -u, --usage
+   -v, --verbose
+   -e, --endpoint
+   -f, --from-file
+   """
+                                                                                                    
+def help():
+   """
+    Provides some help information
+   """
+   print """This script will print the locations for which there is a replica of the
+specified fileblock registered. This information is obtained by querying the DLI
+interface of the file catalog.
+
+The "-e" option can be used to set the DLI endpoint to use. If not specified,
+the endpoint is retrieved from the DLI_ENDPOINT environmental variable
+If the DLI endpoint cannot be retrieved in any of this ways, the command fails. 
+
+The "-f" option can be used to retrieve fileblock names from a file rather than from
+the given arguments. The file must contain one line per fileblock to be listed.
+                                                                                                    
+If "-u" is specified, usage information is displayed.
+                                                                                                    
+If "-h" is specified, help information is displayed.
+   """
+   options()
+   usage()
+
+
+def showSEsForOneLFN(dli_iface, lfn, verbose):
+   """
+    Prints the Locations which hold a replica of the specified fileblock.
+   """
+
+   if(verbose):
+      print "--dliClient.listLocations(\""+lfn+"\")"
+
+   try:
+      res = dli_iface.listLocations(lfn, fileType = "lfn")
+      if(res):
+         for i in res:
+           print i
+      else:
+         return -1
+
+   except dliClient.SoapError, inst:
+      msg = "Error in SOAP operation!: " + inst.msg + "."
+      for i in [inst.actor, inst.detail]:
+         if(i):  msg += ". " + str(i)
+      sys.stderr.write(msg +'\n')
+      return -1
+      
+   except dliClient.DliClientError, inst:
+      msg = "Error in operations with DLI!: " + inst.msg + ". "
+      sys.stderr.write(msg +'\n')
+      return -1
+   
+   return 0
+
+
+
+def showSEsForLFNs(dli_iface, lfnList, verbose):
+   """
+    Prints the locations which hold a replica of the specified fileblock.
+   """
+                                                                                                    
+   for lfn in lfnList:
+      lfn = lfn.strip()
+      print "  LFN: "+lfn
+      showSEsForOneLFN(dli_iface, lfn, verbose)
+                                                                                                    
+ # Finally, if no error exited before, exit succesfully
+   return 0
+                                                                                                    
+
+
+
+###################### MAIN FUNCTION ########################
+                                                                                                    
+
+def main(pArgs):
+   """
+    Performes the main task of the script (invoked directly).
+    For information on its functionality, please call the help function.
+   """
+                                                                                                    
+ # Options and args...
+                                                                                                    
+   longoptions=["help", "usage", "verbose", "endpoint", "from-file"]
+   try:
+      optlist, args = getopt.getopt(pArgs, 'hutve:f:', longoptions)
+   except getopt.GetoptError, inst:
+      sys.stderr.write("Bad usage: "+str(inst)+'\n')
+      usage()
+      sys.exit(-1)
+                                                                                                    
+   err=0
+   verbose = False
+   endpoint = None
+   fromFile = False
+   fname=""
+   for opt, val in optlist:
+       if opt in ("-h", "--help"):
+           help()
+           return -1
+ 
+       elif opt in ("-u", "--usage"):
+           usage()
+           return -1
+
+       elif opt in ("-v", "--verbose"):
+           verbose = True
+
+       elif opt in ("-e","--endpoint"):
+           endpoint = val
+
+       elif opt in ("-f","--from-file"):
+           fromFile = True
+           fname = val
+                                                                                                    
+ # Perform the listing
+
+   # Create the binding
+   try:
+      api = dliClient.DliClient(endpoint)
+   except dliClient.SetupError, inst:
+      msg = "The DLI endpoint could not be found! Consider using the -e option.\n"
+      sys.stderr.write(msg)
+      return -1
+   except dliClient.dliClientError, inst:
+      msg = "Error in the DLI interface instantiation: " + str(inst) + "\n"
+      sys.stderr.write(msg)
+      return -1
+
+   # From file
+   if(fromFile):
+      #Open File
+      try:
+         file=open(fname, 'r')
+      except IOError, inst:
+         msg="The file "+fname+" could not be opened: "+str(inst)+"\n"
+         sys.stderr.write(msg)
+         return -1
+                                                                                                    
+      # Read lines
+      lfnList = file.readlines()
+                                                                                                    
+      # Show loop 
+      err = showSEsForLFNs(api, lfnList, verbose)
+                                                                                                    
+   # From command line options
+   else:
+      if(len(args)<1):
+        sys.stderr.write("Not enough input arguments"+'\n')
+        usage()
+        return(-1)
+
+      else:
+         lfn = args[0]
+         if(verbose):
+            print "--LFN: "+lfn
+         err = showSEsForOneLFN(api, lfn, verbose)
+         
+
+ # Finally, if no error exited before, exit succesfully
+   return err
+                                                                                                    
+
+
+######################### MAKE IT CALLABLE ###########################
+
+if __name__ == "__main__":
+  sys.exit(main(sys.argv[1:]))
+
