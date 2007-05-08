@@ -24,7 +24,8 @@ class Glite(WMS):
 	def __init__(self, config, module, init):
 		WMS.__init__(self, config, module, init)
 
-		self._submitExec = utils.searchPathFind('glite-job-submit')
+#		self._submitExec = utils.searchPathFind('glite-job-submit')
+		self._submitExec = utils.searchPathFind('hostname')
 		self._statusExec = utils.searchPathFind('glite-job-status')
 		self._outputExec = utils.searchPathFind('glite-job-output')
 
@@ -97,6 +98,8 @@ class Glite(WMS):
 			'VirtualOrganisation': self.config.get('grid', 'vo'),
 			'RetryCount': 2
 		}
+
+
 
 		# JDL parameter formatter
 		def jdlRep(value):

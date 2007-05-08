@@ -24,3 +24,8 @@ class UserError(GridError):
 # some error with the runtime
 class RuntimeError(GridError):
 	pass	# just inherit everything from GridError
+
+# some error with the dataset
+class DatasetError(GridError):
+	pass	# just inherit everything from GridError
+

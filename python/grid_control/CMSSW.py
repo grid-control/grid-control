@@ -1,7 +1,7 @@
 import os, copy, gzip, cPickle
 from fnmatch import fnmatch
 from xml.dom import minidom
-from grid_control import ConfigError, Module, WMS, DBSApi, utils
+from grid_control import ConfigError, Module, WMS, DataDiscovery, utils
 
 class CMSSW(Module):
 	def __init__(self, config, init):
@@ -20,6 +20,7 @@ class CMSSW(Module):
 		self.scramArch = config.get('CMSSW', 'scram arch')
 
 		self.configFile = config.getPath('CMSSW', 'config file')
+		self.dbsapi = config.get('CMSSW', 'dbsapi')
 		self.dataset = config.get('CMSSW', 'dataset', '')
 		if self.dataset == '':
 			self.dataset = None
@@ -145,8 +146,9 @@ class CMSSW(Module):
 
 		# find datasets
 		if self.dataset != None:
-			self.dbs = DBSApi(self.dataset)
+			self.dbs = DataDiscovery.open(self.dbsapi, self.dataset)
 			self.dbs.run()
+
 
 			# and dump to cache file
 			fp = gzip.GzipFile(os.path.join(self.workDir, 'dbscache.dat'), 'wb')
@@ -168,14 +170,22 @@ class CMSSW(Module):
 
 	def _getDataSites(self):
 		self._ensureDataCache()
-		return self.dbs.sites
+		return self.dbs.datasetBlockInfo['StorageElementList']
+
+
+	def _getDataEventSum(self):
+		self._ensureDataCache()
+		print "AllEventsInDataset: ",self.dbs.datasetBlockInfo['NumberOfEvents']
+		return self.dbs.datasetBlockInfo['NumberOfEvents']
+
 
 
 	def getRequirements(self):
 		reqs = copy.copy(self.requirements)
 		reqs.append((WMS.MEMBER, 'VO-cms-%s' % self.scramEnv['SCRAM_PROJECTVERSION']))
-		if not self.anySites:
-			reqs.append((WMS.STORAGE, self._getDataSites()))
+#		if not self.anySites:
+# VMB Requirements concerning the dataset SE will not be taken into account if sites is set in config file
+       		reqs.append((WMS.STORAGE, self._getDataSites()))
 
 		return reqs
 
