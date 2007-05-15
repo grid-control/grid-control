@@ -24,13 +24,14 @@ class DBSApiv2(DataDiscovery):
 		api = DBSAPI_v2.dbsApi.DbsApi(self.args)
 		listBlockInfo  = api.listBlocks(self.datasetPath)
 
-		if len(listBlockInfo) != 1:
-			raise DatasetError('More than one block for dataset found')
+#		print listBlockInfo
+#		if len(listBlockInfo) != 1:
+#			raise DatasetError('More than one block for dataset found')
 
 
 		self.datasetBlockInfo = {}
-		self.datasetBlockInfo['NumberOfEvents'] = listBlockInfo[0]['NumberOfEvents']
-		self.datasetBlockInfo['NumberOfFiles'] = listBlockInfo[0]['NumberOfFiles']
+#		self.datasetBlockInfo['NumberOfEvents'] = listBlockInfo[0]['NumberOfEvents']
+#		self.datasetBlockInfo['NumberOfFiles'] = listBlockInfo[0]['NumberOfFiles']
 		self.datasetBlockInfo['StorageElementList'] = []
 		for sename in listBlockInfo[0]['StorageElementList']:
 			self.datasetBlockInfo['StorageElementList'].append(sename['Name'])

@@ -173,10 +173,10 @@ class CMSSW(Module):
 		return self.dbs.datasetBlockInfo['StorageElementList']
 
 
-	def _getDataEventSum(self):
-		self._ensureDataCache()
-		print "AllEventsInDataset: ",self.dbs.datasetBlockInfo['NumberOfEvents']
-		return self.dbs.datasetBlockInfo['NumberOfEvents']
+#	def _getDataEventSum(self):
+#		self._ensureDataCache()
+#		print "AllEventsInDataset: ",self.dbs.datasetBlockInfo['NumberOfEvents']
+#		return self.dbs.datasetBlockInfo['NumberOfEvents']
 
 
 
