@@ -1,4 +1,4 @@
-import os, copy, gzip, cPickle
+import os, copy, gzip, cPickle, string, re
 from fnmatch import fnmatch
 from xml.dom import minidom
 from grid_control import ConfigError, Module, WMS, DataDiscovery, utils
@@ -22,6 +22,7 @@ class CMSSW(Module):
 		self.configFile = config.getPath('CMSSW', 'config file')
 		self.dbsapi = config.get('CMSSW', 'dbsapi')
 		self.dataset = config.get('CMSSW', 'dataset', '')
+		
 		if self.dataset == '':
 			self.dataset = None
 			try:
@@ -148,7 +149,7 @@ class CMSSW(Module):
 		if self.dataset != None:
 			self.dbs = DataDiscovery.open(self.dbsapi, self.dataset)
 			self.dbs.run()
-
+			self.dbs.printDataset()
 
 			# and dump to cache file
 			fp = gzip.GzipFile(os.path.join(self.workDir, 'dbscache.dat'), 'wb')
@@ -173,10 +174,9 @@ class CMSSW(Module):
 		return self.dbs.datasetBlockInfo['StorageElementList']
 
 
-#	def _getDataEventSum(self):
-#		self._ensureDataCache()
-#		print "AllEventsInDataset: ",self.dbs.datasetBlockInfo['NumberOfEvents']
-#		return self.dbs.datasetBlockInfo['NumberOfEvents']
+	def _getDataEventSum(self):
+		self._ensureDataCache()
+		return self.dbs.datasetBlockInfo['NumberOfEvents']
 
 
 

@@ -62,7 +62,19 @@ class DataDiscovery(AbstractObject):
 		for job in self._splitJobs(self.filelist, eventsPerJob, firstEvent):
 			if jobNr >= nJobs:
 				break
+			print "Jobinfo"
+			print job
 			yield (job['skip'], job['events'], job['files'])
 			jobNr += 1
 
 
+	def printDataset(self):
+		print "Matching datasets:"
+		for entry in self.filelist:
+			print "LFN:",entry['lfn']
+			print "status: ",entry['status']," , Events: ",entry['events']
+		print "\nSummary:"
+		print "NumberOfEvents: ",self.datasetBlockInfo['NumberOfEvents']
+		print "NumberOfFiles : ",self.datasetBlockInfo['NumberOfFiles']
+		print "SE List       : ",self.datasetBlockInfo['StorageElementList']
+		print "\n\n"

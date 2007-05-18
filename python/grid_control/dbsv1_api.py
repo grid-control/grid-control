@@ -1,5 +1,5 @@
-import sys, os
-from grid_control import DataDiscovery, RuntimeError, utils
+import sys, os, string, re
+from grid_control import DataDiscovery, RuntimeError, DatasetError, utils
 
 __all__ = ['DBSApiv1']
 
@@ -14,21 +14,34 @@ import dbsCgiApi
 
 
 class DBSApiv1(DataDiscovery):
-	def __init__(self, datasetPath):
+	def __init__(self, datasetExpr):
 		self.dlsIface = dlsClient.DLS_TYPE_LFC
 		self.dlsEndpoint = 'prod-lfc-cms-central.cern.ch/grid/cms/DLS/LFC'
 		self.dbsUrl = 'http://cmsdbs.cern.ch/cms/prod/comp/DBS/CGIServer/prodquery'
 		self.dbsInstance = 'MCGlobal/Writer'
-		self.datasetPath = datasetPath
 
 
-
-
+		datasetExprList = string.split(datasetExpr,"#")
+		if len(datasetExprList) != 2:
+			raise ConfigError('dataset must have the format <dataset>#block or <dataset>#OnlySE:<SE-Name>')
+		
+		self.datasetPath  = datasetExprList[0]
+		self.datasetBlock = datasetExprList[1]
 
 
 	def run(self):
 		dbs = dbsCgiApi.DbsCgiApi(self.dbsUrl, { 'instance': self.dbsInstance })
 		dls = dlsClient.getDlsApi(self.dlsIface, self.dlsEndpoint)
+
+
+		testSE = re.compile("OnlySE:")
+		selectionType = ""
+		if testSE.search(self.datasetBlock):
+			selectionType = "SeBased"
+		else:
+			selectionType = "BlockBased"
+
+
 
 		datasets = dbs.listProcessedDatasets(self.datasetPath)
 		if len(datasets) == 0:
@@ -36,29 +49,46 @@ class DBSApiv1(DataDiscovery):
 		elif len(datasets) > 1:
 			raise RuntimeError('Ambiguous dataset name')
 
-		datasetPath = datasets[0].get('datasetPathName')
 
-		contents = dbs.getDatasetContents(datasetPath)
+
+
+		datasetPath = datasets[0].get('datasetPathName')
+      		contents = dbs.getDatasetContents(datasetPath)
+
+
+		if selectionType == "SeBased":
+			targetSE = testSE.sub("",self.datasetBlock)
+
 
 		self.collections = []
 
-
-
-
-
 		self.datasetBlockInfo = {}
-		self.datasetBlockInfo['NumberOfEvents'] = None
-		self.datasetBlockInfo['NumberOfFiles'] = None
+		self.datasetBlockInfo['NumberOfEvents'] = 0
+		self.datasetBlockInfo['NumberOfFiles'] = 0
 		self.datasetBlockInfo['StorageElementList'] = []
 
 
 		for fileBlock in contents:
 			blockName = fileBlock.get('blockName')
-			for entry in dls.getLocations([ blockName ]):
-				self.datasetBlockInfo['StorageElementList'].extend(map(lambda x: str(x.host), entry.locations))
+			if selectionType == "BlockBased":
+				if string.split(blockName,"#")[1] == self.datasetBlock:
+					for entry in dls.getLocations([ blockName ]):
+						self.datasetBlockInfo['StorageElementList'].extend(map(lambda x: str(x.host), entry.locations))
 
-			self.collections.extend(fileBlock.get('eventCollectionList'))
+					self.collections.extend(fileBlock.get('eventCollectionList'))
 
+			elif selectionType == "SeBased":
+				for entry in dls.getLocations([ blockName ]):
+					if map(lambda x: str(x.host), entry.locations).count(targetSE) > 0:
+						self.collections.extend(fileBlock.get('eventCollectionList'))
+					self.datasetBlockInfo['StorageElementList']=[targetSE]
+			else:
+				raise DatasetError('selectionType undefined')
+
+
+				
+		if len(self.collections) == 0:
+			raise DatasetError('Block %s not found in dbs.' % self.datasetExpr)
 
 		self.filelist = [];
                 for entry in self.collections:
@@ -72,7 +102,7 @@ class DBSApiv1(DataDiscovery):
 					      'events' :entry['numberOfEvents']
 					      })
 
-
-		
+			self.datasetBlockInfo['NumberOfEvents']+=entry['numberOfEvents']
+			self.datasetBlockInfo['NumberOfFiles']+=1
 
 
