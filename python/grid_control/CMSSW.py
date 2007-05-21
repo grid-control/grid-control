@@ -158,7 +158,7 @@ class CMSSW(Module):
 
 
 	def _ensureDataCache(self):
-		if self.dbs == None:
+		if self.dbs == None and self.dataset != None:
 			fp = gzip.GzipFile(os.path.join(self.workDir, 'dbscache.dat'), 'rb')
 			self.dbs = cPickle.load(fp)
 			fp.close()
@@ -179,13 +179,14 @@ class CMSSW(Module):
 		return self.dbs.datasetBlockInfo['NumberOfEvents']
 
 
-
 	def getRequirements(self):
 		reqs = copy.copy(self.requirements)
 		reqs.append((WMS.MEMBER, 'VO-cms-%s' % self.scramEnv['SCRAM_PROJECTVERSION']))
 #		if not self.anySites:
 # VMB Requirements concerning the dataset SE will not be taken into account if sites is set in config file
-       		reqs.append((WMS.STORAGE, self._getDataSites()))
+# CMS This is what I probably meant in the first placE:
+		if self.dataset != None:
+	       		reqs.append((WMS.STORAGE, self._getDataSites()))
 
 		return reqs
 
