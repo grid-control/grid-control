@@ -182,6 +182,7 @@ class CMSSW(Module):
 	def getRequirements(self):
 		reqs = copy.copy(self.requirements)
 		reqs.append((WMS.MEMBER, 'VO-cms-%s' % self.scramEnv['SCRAM_PROJECTVERSION']))
+		reqs.append((WMS.MEMBER, 'VO-cms-%s' % self.scramArch))
 #		if not self.anySites:
 # VMB Requirements concerning the dataset SE will not be taken into account if sites is set in config file
 # CMS This is what I probably meant in the first placE:
