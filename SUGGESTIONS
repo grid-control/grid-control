@@ -1,6 +1,6 @@
 1. CANCEL JOBS (ALL OR SPECIFIC)
-2. FIX continous mode (-ic)
+2. FIX continous mode (-ic) (welches Problem)
 3. Run over all Events available automatically
-4. std-out compression needs exit-code forwarding
-6. Show location in job-status/ ev. have information output
-8. enable condidtions for job failure (e.g. root-file <1 MB...)
+4. Show location in job-status/ ev. have information output
+5. enable condidtions for job failure (e.g. root-file <1 MB...)
+6. add timestamp to storage-out-files
