@@ -6,6 +6,7 @@ from voms_proxy     import *
 from job            import *
 from wms            import *
 from glite          import *
+from lcg            import *
 from job_db         import *
 from module         import *
 from user_mod       import *

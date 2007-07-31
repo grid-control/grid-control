@@ -32,6 +32,11 @@ class Glite(WMS):
 		if self._configVO != '' and not os.path.exists(self._configVO):
 			raise ConfigError("--config-vo file '%s' does not exist." % self._configVO)
 
+		try:
+			self._ce = config.get('glite', 'ce')
+		except:
+			self._ce = None
+
 
 	def _jdlEscape(value):
 		repl = { '\\': r'\\', '\"': r'\"', '\n': r'\n' }
@@ -208,6 +213,8 @@ class Glite(WMS):
 			params = ''
 			if self._configVO != '':
 				params += ' --config-vo %s' % utils.shellEscape(self._configVO)
+			if self._ce != None:
+				params += ' -r %s' % utils.shellEscape(self._ce)
 
 			activity = utils.ActivityLog('submitting jobs')
 

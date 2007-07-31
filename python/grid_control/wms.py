@@ -1,7 +1,7 @@
 # Generic base class for grid proxies
 # instantiates named class instead (default is VomsProxy)
 
-import os, time, shutil, tarfile
+import sys, os, time, shutil, tarfile
 from grid_control import AbstractObject, ConfigError, RuntimeError, utils, enumerate
 
 class WMS(AbstractObject):
