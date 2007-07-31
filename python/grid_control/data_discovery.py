@@ -1,6 +1,6 @@
 from __future__ import generators
 import sys, os
-from grid_control import AbstractObject, RuntimeError, utils
+from grid_control import AbstractObject, RuntimeError, utils, ConfigError
 
 
 class DataDiscovery(AbstractObject):
@@ -39,7 +39,7 @@ class DataDiscovery(AbstractObject):
 
 			if not len(job['files']):
 				job['skip'] = curSkip
-
+				
 			job['events'] += int(available)
 			nextEvent += available
 
@@ -57,24 +57,61 @@ class DataDiscovery(AbstractObject):
 
 
 
-	def query(self, nJobs, eventsPerJob, firstEvent):
-		jobNr = 0
-		for job in self._splitJobs(self.filelist, eventsPerJob, firstEvent):
-			if jobNr >= nJobs:
-				break
-			print "Jobinfo"
-			print job
-			yield (job['skip'], job['events'], job['files'])
-			jobNr += 1
+	def run(self, eventsPerJob):
+		blocks = self._getBlocks()
+		
+		self._jobFiles = []
+
+		for block in blocks:
+#			self._jobFiles.extend(self._splitJobs(block['FileList'], eventsPerJob, 0)
+			for job in self._splitJobs(block['FileList'], eventsPerJob, 0):
+				job['StorageElementList']  =  block['StorageElementList']
+##				print job
+				self._jobFiles.append(job)
+
+
+	def GetFilerangeForJob(self, jobNr):
+		if jobNr >= len(self._jobFiles):
+			raise ConfigError("Job %d out of range for available dataset"  % jobNr)	
+
+		return self._jobFiles[jobNr]
+
+
+	def GetSitesForJob(self, jobNr):
+		print jobNr," ",len(self._jobFiles)
+		if jobNr > len(self._jobFiles):
+			raise ConfigError("Job %d out of range for available dataset"  % jobNr)	
+		return self._jobFiles[jobNr]['StorageElementList']
+
+	
+
+
 
 
 	def printDataset(self):
 		print "Matching datasets:"
-		for entry in self.filelist:
-			print "LFN:",entry['lfn']
-			print "status: ",entry['status']," , Events: ",entry['events']
-		print "\nSummary:"
-		print "NumberOfEvents: ",self.datasetBlockInfo['NumberOfEvents']
-		print "NumberOfFiles : ",self.datasetBlockInfo['NumberOfFiles']
-		print "SE List       : ",self.datasetBlockInfo['StorageElementList']
-		print "\n\n"
+		for block in self._getBlocks():
+			print "BlockName: ",block['BlockName']
+			print "NumberOfEvents: ",block['NumberOfEvents']
+			print "NumberOfFiles : ",block['NumberOfFiles']
+			print "SE List       : ",block['StorageElementList']
+			print "Files: "
+			for fileinfo in block['FileList'] :
+				print fileinfo['lfn'],"( status: ",fileinfo['status'],", Events: ",fileinfo['events'],")"
+
+	def printJobInfo(self):
+		jobNum = 0
+		for entry in self._jobFiles:
+			print "Job number: ",jobNum
+			self.printInfoForJob(entry)
+			print "------------"			
+			jobNum += 1
+
+	def printInfoForJob(self, job):
+		print "Events: ",job['events']
+		print "Skip  : ",job['skip']
+		print "SEList: ",job['StorageElementList']
+		print "Files :"
+		for thefile in job['files']:
+			print thefile
+		

@@ -93,7 +93,7 @@ class Glite(WMS):
 			'StdOutput': 'stdout.txt',
 			'StdError': 'stderr.txt',
 			'OutputSandbox': self.sandboxOut,
-			'_Requirements': self.formatRequirements(self.module.getRequirements()),
+			'_Requirements': self.formatRequirements(self.module.getRequirements(job)),
 			'VirtualOrganisation': self.config.get('grid', 'vo'),
 			'RetryCount': 2
 		}

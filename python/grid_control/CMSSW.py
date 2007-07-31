@@ -148,8 +148,9 @@ class CMSSW(Module):
 		# find datasets
 		if self.dataset != None:
 			self.dbs = DataDiscovery.open(self.dbsapi, self.dataset)
-			self.dbs.run()
+			self.dbs.run(self.eventsPerJob)
 			self.dbs.printDataset()
+			self.dbs.printJobInfo()
 
 			# and dump to cache file
 			fp = gzip.GzipFile(os.path.join(self.workDir, 'dbscache.dat'), 'wb')
@@ -164,30 +165,23 @@ class CMSSW(Module):
 			fp.close()
 
 
-	def _getDataFiles(self, nJobs, firstEvent):
+	def _getDataFiles(self, job):
 		self._ensureDataCache()
-		return self.dbs.query(nJobs, self.eventsPerJob, firstEvent)
-    
+		return self.dbs.GetFilerangeForJob(job)
 
-	def _getDataSites(self):
+
+	def _getDataSites(self, job):
 		self._ensureDataCache()
-		return self.dbs.datasetBlockInfo['StorageElementList']
+		return self.dbs.GetSitesForJob(job)
 
 
-	def _getDataEventSum(self):
-		self._ensureDataCache()
-		return self.dbs.datasetBlockInfo['NumberOfEvents']
-
-
-	def getRequirements(self):
+	def getRequirements(self, job):
 		reqs = copy.copy(self.requirements)
 		reqs.append((WMS.MEMBER, 'VO-cms-%s' % self.scramEnv['SCRAM_PROJECTVERSION']))
 		reqs.append((WMS.MEMBER, 'VO-cms-%s' % self.scramArch))
-#		if not self.anySites:
-# VMB Requirements concerning the dataset SE will not be taken into account if sites is set in config file
-# CMS This is what I probably meant in the first placE:
+
 		if self.dataset != None:
-	       		reqs.append((WMS.STORAGE, self._getDataSites()))
+	       		reqs.append((WMS.STORAGE, self._getDataSites(job)))
 
 		return reqs
 
@@ -232,11 +226,10 @@ class CMSSW(Module):
 	def getJobArguments(self, job):
 		if self.dataset == None:
 			return "%d" % self.eventsPerJob
-
-		files = self._getDataFiles(1, job * self.eventsPerJob)
-		try:
-			skip, num, files = iter(files).next()
-		except:
-			raise ConfigError("Job %d out of range for available dataset" % job)
-
-		return "%d %d %s" % (num, skip, str.join(' ', files))
+		
+		print ""
+		print "Job number: ",job
+		files = self._getDataFiles(job)
+		print self.dbs.printInfoForJob(files)
+		return "%d %d %s" % (files['events'], files['skip'], str.join(' ', files['files']))
+		

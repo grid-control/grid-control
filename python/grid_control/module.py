@@ -20,7 +20,7 @@ class Module(AbstractObject):
 		return {}
 
 
-	def getRequirements(self):
+	def getRequirements(self, job):
 		return self.requirements
 
 
