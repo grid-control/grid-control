@@ -11,7 +11,6 @@ from job_db         import *
 from module         import *
 from user_mod       import *
 from data_discovery import *
-from dbsv1_api      import *
 from dbsv2_api      import *
 from CMSSW          import *
 from report	    import *
