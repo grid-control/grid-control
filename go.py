@@ -116,10 +116,15 @@ def main(args):
 		wms = WMS.open(wms, config, module, init)
 
 		# Initialise job database
-		nJobs = config.getInt('jobs', 'jobs')
+		try:
+			nJobs = config.getInt('jobs', 'jobs')
+		except:
+			nJobs = module.getMaxJobs()
+			if nJobs == None:
+				raise
+
 		maxInFlight = config.getInt('jobs', 'in flight')
 		jobs = JobDB(workdir, nJobs, init)
-
 		# If invoked in report mode, scan job database and exit
 		if report:
 			report = Report(jobs)

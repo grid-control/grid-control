@@ -6,7 +6,6 @@ from grid_control import ConfigError, Module, WMS, DataDiscovery, utils
 class CMSSW(Module):
 	def __init__(self, config, init):
 		Module.__init__(self, config, init)
-
 		scramProject = config.get('CMSSW', 'scram project', '').split()
 		if len(scramProject):
 			self.projectArea = config.getPath('CMSSW', 'project area', '')
@@ -150,7 +149,7 @@ class CMSSW(Module):
 			self.dbs = DataDiscovery.open(self.dbsapi, self.dataset)
 			self.dbs.run(self.eventsPerJob)
 			self.dbs.printDataset()
-			self.dbs.printJobInfo()
+##			self.dbs.printJobInfo()
 
 			# and dump to cache file
 			fp = gzip.GzipFile(os.path.join(self.workDir, 'dbscache.dat'), 'wb')
@@ -230,6 +229,10 @@ class CMSSW(Module):
 		print ""
 		print "Job number: ",job
 		files = self._getDataFiles(job)
-		print self.dbs.printInfoForJob(files)
+		self.dbs.printInfoForJob(files)
 		return "%d %d %s" % (files['events'], files['skip'], str.join(' ', files['files']))
+
 		
+	def getMaxJobs(self):
+		self._ensureDataCache()
+		return self.dbs.getNumberOfJobs()

@@ -61,3 +61,7 @@ class Module(AbstractObject):
 
 	def getJobArguments(self, job):
 		return ""
+
+
+	def getMaxJobs(self):
+		return None
