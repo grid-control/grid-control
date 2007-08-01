@@ -1,6 +1,5 @@
 1. CANCEL JOBS (ALL OR SPECIFIC)
 2. FIX continous mode (-ic) (welches Problem)
-3. Run over all Events available automatically
-4. Show location in job-status/ ev. have information output
-5. enable condidtions for job failure (e.g. root-file <1 MB...)
-6. add timestamp to storage-out-files
+3. Show location in job-status/ ev. have information output
+4. enable condidtions for job failure (e.g. root-file <1 MB...)
+5. add timestamp to storage-out-files
