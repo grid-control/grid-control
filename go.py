@@ -15,7 +15,7 @@ def syntax(out):
 	          "\t-i, --init               Initialise working directory\n"
 	          "\t-c, --continuous         Run in continuous mode\n"
 	          "\t-s, --no-submission      Disable job submission\n"
-		  "\t-r, --report	      Show status report of jobs\n"
+		  "\t-r, --report             Show status report of jobs\n"
 	          "\n" % sys.argv[0])
 
 
