@@ -68,20 +68,33 @@ eval "$MY_RUNTIME"
 CODE=$?
 
 echo "---------------------------"
-echo "Exit code: $CODE"
+echo "Job exit code: $CODE"
+
+if [ $CODE -eq 0 ]; then
+	if [ -n "$SE_OUTPUT_FILES" ]; then
+	        echo "---------------------------"
+		echo "Output to storage element enabled!"
+	        echo "Copying the following files:"
+	        eval "echo $SE_OUTPUT_FILES"
+	        echo ""
+	        echo "to the following SE path:"
+	        echo $SE_PATH
+		BADDCOUNT=0
+	        for i in $SE_OUTPUT_FILES; do 
+			if ! eval "globus-url-copy file://`pwd`/\"\$i\" \"\$SE_PATH\"/job_\"\$MY_JOB\"_\"\$i\""; then
+				BADCOUNT=$[$BADCOUNT+1]
+			fi				
+		done
+		if [ $BADCOUNT -ne 0 ]; then
+			CODE=1
+		else
+			CODE=0
+		fi		
+		echo "Copy exit code: $CODE"
+	fi
+fi
 
 echo "EXITCODE=$CODE" >> jobinfo.txt
-
-if [ -n "$SE_OUTPUT_FILES" ]; then
-        echo "---------------------------"
-	echo "Output to storage element enabled!"
-        echo "Copying the following files:"
-        eval "echo $SE_OUTPUT_FILES"
-        echo ""
-        echo "to the following SE path:"
-        echo $SE_PATH
-        eval "for i in $SE_OUTPUT_FILES; do globus-url-copy file://`pwd`/\"\$i\" \"\$SE_PATH\"/job_\"\$MY_JOB\"_\"\$i\"; done"
-fi
 
 if [ $MY_MOVED -eq 1 ]; then
 	for i in stderr.txt stdout.txt jobinfo.txt $MY_OUT; do
