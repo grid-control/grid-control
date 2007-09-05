@@ -24,10 +24,15 @@ class Glite(WMS):
 	def __init__(self, config, module, init):
 		WMS.__init__(self, config, module, init)
 
-		self._submitExec = utils.searchPathFind('glite-job-submit')
-		self._statusExec = utils.searchPathFind('glite-job-status')
-		self._outputExec = utils.searchPathFind('glite-job-output')
-
+		if config.get('glite','usewms') == 'no':
+			self._submitExec = utils.searchPathFind('glite-job-submit')
+			self._statusExec = utils.searchPathFind('glite-job-status')
+			self._outputExec = utils.searchPathFind('glite-job-output')
+		if config.get('glite','usewms') == 'yes':
+			self._submitExec = utils.searchPathFind('glite-wms-job-submit')
+			self._statusExec = utils.searchPathFind('glite-wms-job-status')
+			self._outputExec = utils.searchPathFind('glite-wms-job-output')
+		
 		self._configVO = config.getPath('glite', 'config-vo', '')
 		if self._configVO != '' and not os.path.exists(self._configVO):
 			raise ConfigError("--config-vo file '%s' does not exist." % self._configVO)
@@ -211,6 +216,9 @@ class Glite(WMS):
 			# FIXME: error handling
 
 			params = ''
+			if config.get('glite','usewms') == 'yes':
+				params += ' -a '
+				
 			if self._configVO != '':
 				params += ' --config-vo %s' % utils.shellEscape(self._configVO)
 			if self._ce != None:

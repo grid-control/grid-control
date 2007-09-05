@@ -1,5 +1,5 @@
 import os
-from grid_control import ConfigError, WMS, Glite, utils
+from grid_control import ConfigError, WMS, Glite,  utils
 
 class LCG(Glite):
 
