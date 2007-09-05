@@ -23,7 +23,8 @@ class DBSApiv2(DataDiscovery):
 
 		self.args = {}
 		self.args['url']     = "http://cmsdbsprod.cern.ch/cms_dbs_prod_global/servlet/DBSServlet"
-		self.args['version'] = "v00_00_06"
+		#self.args['version'] = "v00_00_06"
+		self.args['version'] = "DBS_1_0_7"
 		self.args['level']   = "CRITICAL"
 
 
