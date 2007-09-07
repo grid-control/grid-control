@@ -79,7 +79,7 @@ if [ $CODE -eq 0 ]; then
 	        echo ""
 	        echo "to the following SE path:"
 	        echo $SE_PATH
-		BADDCOUNT=0
+		BADCOUNT=0
 	        for i in $SE_OUTPUT_FILES; do 
 			if ! eval "globus-url-copy file://`pwd`/\"\$i\" \"\$SE_PATH\"/job_\"\$MY_JOB\"_\"\$i\""; then
 				BADCOUNT=$[$BADCOUNT+1]
