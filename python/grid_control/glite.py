@@ -219,13 +219,19 @@ class Glite(WMS):
 			# FIXME: error handling
 
 			params = ''
-			if self._configWMS:
-				params += ' -a '
+			
 				
 			if self._configVO != '':
-				params += ' --config-vo %s' % utils.shellEscape(self._configVO)
+				if self._configWMS:
+					params += ' --config %s' % utils.shellEscape(self._configVO)
+				else:
+					params += ' --config-vo %s' % utils.shellEscape(self._configVO)
+					
 			if self._ce != None:
 				params += ' -r %s' % utils.shellEscape(self._ce)
+				
+			if self._configWMS:
+				params += ' -a'
 
 			activity = utils.ActivityLog('submitting jobs')
 
