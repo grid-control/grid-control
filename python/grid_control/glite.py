@@ -368,10 +368,11 @@ class Glite(WMS):
 				fp.write("%s\n" % id)
 			fp.close()
 
-			if self._configWMS and len(ids) < 2:
+			if self._configWMS and len(ids) == 1:
 				wmsExtraDir = md5.md5(ids[0]).hexdigest()
 				outPath = os.path.join(tmpPath, wmsExtraDir)
-				os.mkdir(outPath)
+				if not os.path.exists(outPath):
+					os.mkdir(outPath)
 			else:
 				outPath = tmpPath
 				
