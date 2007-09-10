@@ -1,5 +1,5 @@
 from __future__ import generators
-import sys, os, time, copy, popen2, tempfile, cStringIO
+import sys, os, time, copy, popen2, tempfile, cStringIO, md5
 from grid_control import ConfigError, WMS, Job, utils
 
 try:
@@ -26,14 +26,14 @@ class Glite(WMS):
 
 		self._configWMS = config.getBool('glite','usewms')
 
-		if not self._configWMS:
-			self._submitExec = utils.searchPathFind('glite-job-submit')
-			self._statusExec = utils.searchPathFind('glite-job-status')
-			self._outputExec = utils.searchPathFind('glite-job-output')
-		else:
+		if self._configWMS:
 			self._submitExec = utils.searchPathFind('glite-wms-job-submit')
 			self._statusExec = utils.searchPathFind('glite-wms-job-status')
 			self._outputExec = utils.searchPathFind('glite-wms-job-output')
+		else:
+			self._submitExec = utils.searchPathFind('glite-job-submit')
+			self._statusExec = utils.searchPathFind('glite-job-status')
+			self._outputExec = utils.searchPathFind('glite-job-output')
 
 		
 		self._configVO = config.getPath('glite', 'config-vo', '')
@@ -219,8 +219,7 @@ class Glite(WMS):
 			# FIXME: error handling
 
 			params = ''
-			
-				
+
 			if self._configVO != '':
 				if self._configWMS:
 					params += ' --config %s' % utils.shellEscape(self._configVO)
@@ -368,6 +367,15 @@ class Glite(WMS):
 			for id in ids:
 				fp.write("%s\n" % id)
 			fp.close()
+
+			if self._configWMS and len(ids) < 2:
+				wmsExtraDir = md5.md5(ids[0]).hexdigest()
+				outPath = os.path.join(tmpPath, wmsExtraDir)
+				os.mkdir(outPath)
+			else:
+				outPath = tmpPath
+				
+				
 			# FIXME: error handling
 
 			activity = utils.ActivityLog("retrieving job outputs")
@@ -376,7 +384,7 @@ class Glite(WMS):
 			                     % (self._outputExec,
 			                        utils.shellEscape(log),
 			                        utils.shellEscape(jobs),
-			                        utils.shellEscape(tmpPath)),
+			                        utils.shellEscape(outPath)),
 			                        True)
 
 			for data in proc.fromchild.readlines():
