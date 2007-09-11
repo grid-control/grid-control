@@ -106,7 +106,6 @@ class Glite(WMS):
 
 	def makeJDL(self, fp, job):
 		reqs = self.module.getRequirements(job)
-		print reqs
 		reqs.append((WMS.OTHER, ()))
 		contents = {
 			'Executable': 'run.sh',
