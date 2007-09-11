@@ -93,12 +93,21 @@ class Glite(WMS):
 			return None
 		return '(other.GlueCEPolicyMaxCPUTime >= %d)' % cpuTime
 
+
 	def memoryReq(self, memory):
 		if memory == 0:
 			return None
 		return '(other.GlueHostMainMemoryRAMSize >= %d)' % memory
 
+
+	def otherReq(self, dummyArg):
+		return 'other.GlueHostNetworkAdapterOutboundIP'
+
+
 	def makeJDL(self, fp, job):
+		reqs = self.module.getRequirements(job)
+		print reqs
+		reqs.append((WMS.OTHER, ()))
 		contents = {
 			'Executable': 'run.sh',
 			'Arguments': "%d %s" % (job, self.module.getJobArguments(job)),
@@ -106,12 +115,10 @@ class Glite(WMS):
 			'StdOutput': 'stdout.txt',
 			'StdError': 'stderr.txt',
 			'OutputSandbox': self.sandboxOut,
-			'_Requirements': self.formatRequirements(self.module.getRequirements(job)),
+			'_Requirements': self.formatRequirements(reqs),
 			'VirtualOrganisation': self.config.get('grid', 'vo'),
 			'RetryCount': 2
 		}
-
-
 
 		# JDL parameter formatter
 		def jdlRep(value):
