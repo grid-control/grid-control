@@ -8,10 +8,10 @@ from wms		import *
 from glite		import *
 from glite_wms		import *
 from lcg		import *
+from report		import *
 from job_db		import *
 from module		import *
 from user_mod		import *
 from data_discovery	import *
 from dbsv2_api		import *
 from CMSSW		import *
-from report		import *

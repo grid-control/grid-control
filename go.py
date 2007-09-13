@@ -7,7 +7,6 @@ sys.path.append(os.path.join(_root, 'python'))
 # and include grid_control python module
 from grid_control import *
 
-
 def syntax(out):
 	out.write("Syntax: %s [OPTIONS] <config file>\n\n"
 	          "    Options:\n"
@@ -16,6 +15,9 @@ def syntax(out):
 	          "\t-c, --continuous         Run in continuous mode\n"
 	          "\t-s, --no-submission      Disable job submission\n"
 		  "\t-r, --report             Show status report of jobs\n"
+		  "\t-d, --delete <args>      Delete given jobs, e.g:\n"
+		  "\t                            -d 1,5,9,...  (JobNumbers)\n"
+		  "\t                            -d QUEUED,... (JobStates)\n"
 	          "\n" % sys.argv[0])
 
 
@@ -31,14 +33,15 @@ def main(args):
 		continuous = False
 	signal.signal(signal.SIGINT, interrupt)
 
-	longOptions = ['help', 'init', 'continuous', 'no-submission', 'report']
-	shortOptions = 'hicsr'
+	longOptions = ['help', 'init', 'continuous', 'no-submission', 'report', 'delete']
+	shortOptions = 'hicsrd:'
 
 	# global variables
 	continuous = False
 	init = False
 	jobSubmission = True
 	report = False
+	delete = None
 
 	# let getopt dig through the options
 	try:
@@ -61,6 +64,8 @@ def main(args):
 			jobSubmission = False
 		elif opt in ('-r', '--report'):
 			report = True
+		elif opt in ('-d', '--delete'):
+			delete = arg
 
 	# we need exactly one config file argument
 	if len(args) != 1:
@@ -127,15 +132,20 @@ def main(args):
 		jobs = JobDB(workdir, nJobs, init)
 		# If invoked in report mode, scan job database and exit
 		if report:
-			report = Report(jobs)
+			report = Report(jobs,jobs)
 			report.details()
 			report.summary()
+			return 0
+
+		# Check if jobs have to be deleted and exit
+		if delete != None:
+			jobs.delete(wms, delete)
 			return 0
 
 		# Check if running in continuous mode
 		if continuous:
 			print ""
-			Report(jobs).summary()
+			Report(jobs,jobs).summary()
 			print "Running in continuous mode. Press ^C to exit."
 
 		while True:

@@ -1,4 +1,4 @@
-from grid_control import RuntimeError, utils, enumerate
+from grid_control import RuntimeError, utils, enumerate, UserError
 
 class Job:
 	states = ('INIT', 'SUBMITTED', 'WAITING', 'READY', 'QUEUED', 'RUNNING', 'ABORTED', 'CANCELLED', 'FAILED', 'DONE', 'OK')
@@ -71,3 +71,13 @@ class Job:
 		report = (self.states[self.state], status, self.id)
 		return report
 
+	def filter(self, filter):
+		for state in filter.split(','):
+			try:
+				state = self._stateDict[state]
+			except:
+				raise UserError("Unknown state \"%s\"." % state)
+
+			if self.state == state:
+				return True
+		return False

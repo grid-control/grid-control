@@ -1,6 +1,6 @@
 from __future__ import generators
 import os, re, fnmatch
-from grid_control import SortedList, ConfigError, Job
+from grid_control import SortedList, ConfigError, Job, UserError, Report
 
 class JobDB:
 	def __init__(self, workDir, nJobs, init = False):
@@ -168,3 +168,39 @@ class JobDB:
 				self._update(id, job, state)
 
 		return change
+
+
+	def delete(self, wms, filter):
+		jobs = []
+		if len(filter) and filter[0].isdigit():
+			for jobId in filter.split(","):
+				try:
+					jobs.append(int(jobId))
+				except:
+					raise UserError("Job identifiers must be integers.")
+		else:
+			for jobId in self.all:
+				if self._jobs[jobId].filter(filter):
+					jobs.append(jobId)
+
+		ids = []
+		for id in jobs:
+			job = self._jobs[id]
+			ids.append(job.id)
+
+		print "\nDeleting the following jobs:"
+
+                Report(jobs,self._jobs).details()
+		
+		if not len(jobs) == 0:
+			if raw_input('Do you really want to delete these jobs? [yes]:') == 'yes':
+				if wms.cancel(ids):
+					for id in jobs:
+						try:
+							job = self._jobs[id]
+						except:
+							continue
+
+						self._update(id, job, Job.CANCELLED)
+			else:
+				return 0

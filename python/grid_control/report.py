@@ -2,16 +2,20 @@ from grid_control import Job, RuntimeError, utils, enumerate
 
 class Report:
 
-	def __init__(self, jobs):
-		self.jobs = jobs
+	def __init__(self, jobs, allJobs):
+		self.allJobs = allJobs
+		if hasattr(jobs, "all"):
+			self.jobs = jobs.all
+		else:
+			self.jobs = jobs
 	
 	def details(self):
                 reports = {}
                 maxWidth = [6, 20, 0]
 
                 # Get the maximum width of each column
-                for id in self.jobs.all:
-                        job = self.jobs.get(id)
+                for id in self.jobs:
+                        job = self.allJobs.get(id)
                         thisreport = job.report()
                         reports[id] = thisreport
                         if maxWidth[0] < len(thisreport[0]):
@@ -36,9 +40,11 @@ class Report:
                 spacer = " "*(maxWidth[0]+5)
 
                 # Get information of each job
-		if not len(self.jobs.all):
-			print "No jobs submitted yet!"
-                for id in self.jobs.all:
+
+
+		if not len(self.jobs):
+			print " No jobs found!"
+                for id in self.jobs:
                         print "%4d %-*s %s /" % (id, maxWidth[0], reports[id][0], reports[id][1])
                         print "%s %-*s" % (spacer, maxWidth[0]+maxWidth[2]+6, reports[id][2])
 
@@ -53,15 +59,15 @@ class Report:
 
 		summary = map(lambda x: 0.0, Job.states)
 
-		for id in self.jobs.all:
-			job = self.jobs.get(id)
+		for id in self.allJobs.all:
+			job = self.allJobs.get(id)
 			summary[job.state] += 1
 
 		def makeSum(*states):
 			return reduce(lambda x, y: x + y, map(lambda x: summary[x], states))
 
 		print "Total number of jobs:      %4d   Number of successful jobs: %4d" % \
-			(len(self.jobs.all), summary[Job.OK])
+			(len(self.allJobs.all), summary[Job.OK])
 		print "Number of unfinished jobs: %4d   Number of failed jobs:     %4d\n" % \
 			(makeSum(Job.INIT, Job.READY, Job.WAITING, Job.QUEUED, Job.SUBMITTED, Job.RUNNING),
 			 makeSum(Job.ABORTED, Job.CANCELLED, Job.FAILED))
