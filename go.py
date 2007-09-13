@@ -156,8 +156,10 @@ def main(args):
 				submit = maxInFlight - curInFlight
 				if submit < 0:
 					submit = 0
-				for job in jobs.ready[:submit]:
-					jobs.submit(wms, job)
+				jobList = jobs.ready[:submit]
+				if len(jobList):
+					jobs.submit(wms, jobList)
+				del jobList
 
 			if not continuous:
 				break

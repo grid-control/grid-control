@@ -177,3 +177,11 @@ class WMS(AbstractObject):
 			result.append((id, retCode))
 
 		return result
+
+
+	def bulkSubmissionBegin(self):
+		pass
+
+
+	def bulkSubmissionEnd(self):
+		pass

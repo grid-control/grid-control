@@ -121,21 +121,28 @@ class JobDB:
 		return change
 
 
-	def submit(self, wms, id):
-		try:
-			job = self._jobs[id]
-		except:
-			job = Job()
-			self._jobs[id] = job
-
-		wmsId = wms.submitJob(id, job)
-		if wmsId == None:
-			# FIXME
+	def submit(self, wms, ids):
+		if len(ids) == 0:
 			return
 
-		job.assignId(wmsId)
-		self._update(id, job, Job.SUBMITTED)
+		try:
+			wms.bulkSubmissionBegin()
+			for id in ids:
+				try:
+					job = self._jobs[id]
+				except:
+					job = Job()
+					self._jobs[id] = job
 
+				wmsId = wms.submitJob(id, job)
+				if wmsId == None:
+					# FIXME
+					continue
+
+				job.assignId(wmsId)
+				self._update(id, job, Job.SUBMITTED)
+		finally:
+			wms.bulkSubmissionEnd()
 
 	def retrieve(self, wms):
 		change = False

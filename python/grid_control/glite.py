@@ -1,5 +1,5 @@
 from __future__ import generators
-import sys, os, time, copy, popen2, tempfile, cStringIO, md5
+import sys, os, time, copy, popen2, tempfile, cStringIO
 from grid_control import ConfigError, WMS, Job, utils
 
 try:
@@ -24,17 +24,9 @@ class Glite(WMS):
 	def __init__(self, config, module, init):
 		WMS.__init__(self, config, module, init)
 
-		self._configWMS = config.getBool('glite','usewms')
-
-		if self._configWMS:
-			self._submitExec = utils.searchPathFind('glite-wms-job-submit')
-			self._statusExec = utils.searchPathFind('glite-wms-job-status')
-			self._outputExec = utils.searchPathFind('glite-wms-job-output')
-		else:
-			self._submitExec = utils.searchPathFind('glite-job-submit')
-			self._statusExec = utils.searchPathFind('glite-job-status')
-			self._outputExec = utils.searchPathFind('glite-job-output')
-
+		self._submitExec = utils.searchPathFind('glite-job-submit')
+		self._statusExec = utils.searchPathFind('glite-job-status')
+		self._outputExec = utils.searchPathFind('glite-job-output')
 		
 		self._configVO = config.getPath('glite', 'config-vo', '')
 		if self._configVO != '' and not os.path.exists(self._configVO):
@@ -227,17 +219,11 @@ class Glite(WMS):
 			params = ''
 
 			if self._configVO != '':
-				if self._configWMS:
-					params += ' --config %s' % utils.shellEscape(self._configVO)
-				else:
-					params += ' --config-vo %s' % utils.shellEscape(self._configVO)
+				params += ' --config-vo %s' % utils.shellEscape(self._configVO)
 					
 			if self._ce != None:
 				params += ' -r %s' % utils.shellEscape(self._ce)
 				
-			if self._configWMS:
-				params += ' -a'
-
 			activity = utils.ActivityLog('submitting jobs')
 
 			proc = popen2.Popen3("%s%s --nomsg --noint --logfile %s %s"
@@ -374,15 +360,6 @@ class Glite(WMS):
 				fp.write("%s\n" % id)
 			fp.close()
 
-			if self._configWMS and len(ids) == 1:
-				wmsExtraDir = md5.md5(ids[0]).hexdigest()
-				outPath = os.path.join(tmpPath, wmsExtraDir)
-				if not os.path.exists(outPath):
-					os.mkdir(outPath)
-			else:
-				outPath = tmpPath
-				
-				
 			# FIXME: error handling
 
 			activity = utils.ActivityLog("retrieving job outputs")
@@ -391,7 +368,7 @@ class Glite(WMS):
 			                     % (self._outputExec,
 			                        utils.shellEscape(log),
 			                        utils.shellEscape(jobs),
-			                        utils.shellEscape(outPath)),
+			                        utils.shellEscape(tmpPath)),
 			                        True)
 
 			for data in proc.fromchild.readlines():
