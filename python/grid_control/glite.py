@@ -244,9 +244,9 @@ class Glite(WMS):
 
 			if retCode != 0:
 				#FIXME
-				print >> sys.stderr, "WARNING: glite-job-submit failed:"
+				print >> sys.stderr, "WARNING: %s failed:" % os.path.basename(self._submitExec)
 			elif id == None:
-				print >> sys.stderr, "WARNING: glite-job-submit did not yield job id:"
+				print >> sys.stderr, "WARNING: %s did not yield job id:" % os.path.basename(self._submitExec)
 
 			if id == None:
 				for line in open(log, 'r'):
@@ -312,7 +312,7 @@ class Glite(WMS):
 
 			if retCode != 0:
 				#FIXME
-				print >> sys.stderr, "WARNING: glite-job-status failed:"
+				print >> sys.stderr, "WARNING: %s failed:" % os.path.basename(self._statusExec)
 				for line in open(log, 'r'):
 					sys.stderr.write(line)
 
@@ -382,7 +382,7 @@ class Glite(WMS):
 
 			if retCode != 0:
 				#FIXME
-				print >> sys.stderr, "WARNING: glite-job-output failed:"
+				print >> sys.stderr, "WARNING: %s failed:" % os.path.basename(self._outputExec)
 				for line in open(log, 'r'):
 					sys.stderr.write(line)
 
@@ -447,7 +447,7 @@ class Glite(WMS):
 
 			if retCode != 0:
 				#FIXME
-				print >> sys.stderr, "WARNING: glite-job-cancel failed:"
+				print >> sys.stderr, "WARNING: %s failed:" % os.path.basename(self._cancelExec)
 				for line in open(log, 'r'):
 					sys.stderr.write(line)
 
