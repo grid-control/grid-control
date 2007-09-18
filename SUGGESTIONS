@@ -2,4 +2,3 @@
 2. Show location in job-status/ ev. have information output
 3. enable condidtions for job failure (e.g. root-file <1 MB...)
 4. add timestamp to storage-out-files
-5. lcg.py: seems that there is missing sth.
