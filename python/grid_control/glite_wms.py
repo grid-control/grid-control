@@ -124,6 +124,8 @@ class GliteWMS(Glite):
 
 			activity = utils.ActivityLog('submitting jobs')
 
+			time.sleep(1)
+			
 			proc = popen2.Popen3("%s%s -d %s --nomsg --noint --logfile %s %s"
 			                     % (self._submitExec, params,
 			                        self._jobDelegationID,

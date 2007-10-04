@@ -164,6 +164,7 @@ def main(args):
 			if jobSubmission:
 				curInFlight = len(jobs.running)
 				submit = maxInFlight - curInFlight
+				#print submit
 				if submit < 0:
 					submit = 0
 				jobList = jobs.ready[:submit]

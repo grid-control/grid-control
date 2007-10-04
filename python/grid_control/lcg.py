@@ -20,3 +20,12 @@ class LCG(Glite):
 		except:
 			self._ce = None
 
+
+	def storageReq(self, sites):
+		def makeMember(member):
+			return '(target.GlueSEUniqueID == %s)' \
+			       % self._jdlEscape(member)
+		if not len(sites):
+			return None
+		else:
+			return 'anyMatch(other.storage.CloseSEs, ' + str.join(' || ', map(makeMember, sites)) + ')'

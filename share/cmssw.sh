@@ -2,6 +2,11 @@
 
 echo "CMSSW module starting"
 echo "---------------------"
+if [ -z "$VO_CMS_SW_DIR" -a -n "$OSG_APP" ]; then
+        VO_CMS_SW_DIR="$OSG_APP/cmssoft/cms"
+        export VO_CMS_SW_DIR
+	echo "[OSG-SITE] Using $OSG_APP/cmssoft/cms."
+fi
 
 source _config.sh
 
