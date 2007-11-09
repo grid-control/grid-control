@@ -11,7 +11,7 @@ class UserMod(Module):
 
 
 	def getCommand(self):
-		return './%s "$@"' % os.path.basename(self.executable)
+		return 'chmod u+x %s; ./%s "$@"' %(os.path.basename(self.executable),os.path.basename(self.executable))
 
 
 	def getInFiles(self):
