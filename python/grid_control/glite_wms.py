@@ -41,7 +41,7 @@ class GliteWMS(Glite):
 
 			activity = utils.ActivityLog('creating delegate proxy for job submission')
 
-			proc = popen2.Popen3("%s%s -a --noint --logfile %s"
+			proc = popen2.Popen4("%s%s -a --noint --logfile %s"
 			                     % (self._delegateExec, params,
 			                        utils.shellEscape(log)), True)
 
@@ -126,7 +126,7 @@ class GliteWMS(Glite):
 
 			time.sleep(1)
 			
-			proc = popen2.Popen3("%s%s -d %s --nomsg --noint --logfile %s %s"
+			proc = popen2.Popen4("%s%s -d %s --nomsg --noint --logfile %s %s"
 			                     % (self._submitExec, params,
 			                        self._jobDelegationID,
 			                        utils.shellEscape(log),
@@ -211,19 +211,19 @@ class GliteWMS(Glite):
 
 			activity = utils.ActivityLog("retrieving job outputs")
 
-			proc = popen2.Popen3("%s --noint --logfile %s -i %s --dir %s"
+			proc = popen2.Popen4("%s --noint --logfile %s -i %s --dir %s"
 			                     % (self._outputExec,
 			                        utils.shellEscape(log),
 			                        utils.shellEscape(jobs),
 			                        utils.shellEscape(outPath)),
 			                        True)
-
 			for data in proc.fromchild.readlines():
 				# FIXME: moep
 				pass
 
 			retCode = proc.wait()
 
+			
 			del activity
 
 			if retCode != 0:
