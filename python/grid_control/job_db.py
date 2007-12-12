@@ -202,5 +202,16 @@ class JobDB:
 							continue
 
 						self._update(id, job, Job.CANCELLED)
+				else:
+					print "\nThere was a problem with deleting your jobs!"
+					if raw_input('Do you want to do a forced delete? [yes]:') == 'yes':
+						for id in jobs:
+	                                		try:
+                                                        	job = self._jobs[id]
+                                                	except:
+                                                        	continue
+
+                                                	self._update(id, job, Job.CANCELLED)
+
 			else:
 				return 0
