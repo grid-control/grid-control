@@ -42,17 +42,6 @@ class CMSSW(Module):
 		except:
 			raise ConfigError("Invalid CMSSW seeds!")
 
-		try:
-			self.seOutputFiles = config.get('CMSSW', 'se output files', '').split()
-
-		except:
-			self.seOutputFiles = ""
-	
-		try:
-			self.sePath = config.get('CMSSW', 'se path')
-		except:
-			self.sePath = ""			
-
 		if len(self.projectArea):
 			self.pattern = config.get('CMSSW', 'area files').split()
 
@@ -190,18 +179,16 @@ class CMSSW(Module):
 
 
 	def getConfig(self):
-		return {
-			'CMSSW_CONFIG': os.path.basename(self.configFile),
-			'SCRAM_VERSION': 'scramv1',
-			'SCRAM_ARCH': self.scramArch,
-			'SCRAM_PROJECTVERSION': self.scramEnv['SCRAM_PROJECTVERSION'],
-			'USER_INFILES': str.join(' ', map(lambda x: utils.shellEscape(os.path.basename(x)), Module.getInFiles(self))),
-			'GZIP_OUT': ('no', 'yes')[self.gzipOut],
-			'HAS_RUNTIME': ('no', 'yes')[len(self.projectArea) != 0],
-			'SEEDS': str.join(' ', map(lambda x: "%d" % x, self.seeds)),
-			'SE_OUTPUT_FILES': str.join(' ', self.seOutputFiles),
-			'SE_PATH': self.sePath,
-		}
+		data = Module.getConfig(self)
+		data['CMSSW_CONFIG'] = os.path.basename(self.configFile)
+		data['SCRAM_VERSION'] = 'scramv1'
+		data['SCRAM_ARCH'] = self.scramArch
+		data['SCRAM_PROJECTVERSION'] = self.scramEnv['SCRAM_PROJECTVERSION']
+		data['USER_INFILES'] = str.join(' ', map(lambda x: utils.shellEscape(os.path.basename(x)), Module.getInFiles(self)))
+		data['GZIP_OUT'] = ('no', 'yes')[self.gzipOut]
+		data['HAS_RUNTIME'] = ('no', 'yes')[len(self.projectArea) != 0]
+		data['SEEDS'] = str.join(' ', map(lambda x: "%d" % x, self.seeds))
+		return data
 
 
 	def getInFiles(self):

@@ -15,9 +15,36 @@ class Module(AbstractObject):
 				      (WMS.CPUTIME, cpuTime),
 				      (WMS.MEMORY, memory) ]
 
+		try:
+			self.seInputFiles = config.get('storage', 'se input files', '').split()
+		except:
+			self.seInputFiles = ""
+
+		try:
+			self.seOutputFiles = config.get('storage', 'se output files', '').split()
+		except:
+			# TODO: remove backwards compatibility
+			try:
+				self.seOutputFiles = config.get('CMSSW', 'se output files', '').split()
+			except:
+				self.seOutputFiles = ""
+
+		try:
+			self.sePath = config.get('storage', 'se path')
+		except:
+			# TODO: remove backwards compatibility
+			try:
+				self.sePath = config.get('CMSSW', 'se path')
+			except:
+				self.sePath = ""			
+			self.sePath = ""			
 
 	def getConfig(self):
-		return {}
+		return {
+			'SE_OUTPUT_FILES': str.join(' ', self.seOutputFiles),
+			'SE_INPUT_FILES': str.join(' ', self.seInputFiles),
+			'SE_PATH': self.sePath,
+		}
 
 
 	def getRequirements(self, job):
