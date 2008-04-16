@@ -31,7 +31,7 @@ class WMS(AbstractObject):
 			raise ConfigError("Problem creating work directory '%s': %s" % (self._outputPath, e))
 
 		tarFile = os.path.join(self.workDir, 'sandbox.tar.gz')
-		self.sandboxIn = [ utils.atRoot('share', 'run.sh'), tarFile ]
+		self.sandboxIn = [ utils.atRoot('share', 'run.sh'), utils.atRoot('share', 'run.lib'), tarFile ]
 
 		self.sandboxOut = [ 'stdout.txt', 'stderr.txt', 'jobinfo.txt' ]
 		self.sandboxOut.extend(self.module.getOutFiles())

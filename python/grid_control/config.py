@@ -9,8 +9,7 @@ class Config:
 			parser = ConfigParser.ConfigParser()
 			parser.readfp(fp)
 		except ConfigParser.Error, e:
-			raise GridError("Configuration file `%s' contains an error: %s",
-			                (configFile, e.message))
+			raise ConfigError("Configuration file `%s' contains an error: %s" % (fp, e.message))
 
 		self.parser = parser
 
