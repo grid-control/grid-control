@@ -1,0 +1,238 @@
+#!/bin/sh
+
+# Error codes
+# 101 - file not found
+# 102 - directory not found
+# 103 - executable not found
+# 104 - variable not found
+
+# 105 - env unpacking failed
+
+# 110 - se copy error
+
+# 120 - lower space limit
+# 121 - upper space limit
+# 122 - min size failure
+# >125 - reserved by POSIX
+
+fail() {
+	[ -n "$1" ] && CODE=$1 || CODE=$?
+	cleanup
+	updatejobinfo $CODE
+	exit $CODE
+}
+
+abort() {
+	checkdir "Start directory" "$MY_LANDINGZONE"
+	checkdir "Scratch directory" "$MY_SCRATCH"
+	cleanup
+	updatejobinfo $1
+	kill4sure $$
+}
+
+kill4sure() {
+	(ps -o pid= --ppid $1 2> /dev/null) | while read XPID; do
+		kill4sure $XPID &> /dev/null
+	done
+	echo "Killing process $1" 2>&1
+	kill -9 $1 &> /dev/null
+}
+
+updatejobinfo() {
+	(
+		echo "JOBID=$MY_JOBID"
+		echo "EXITCODE=$1"
+	) > $MY_LANDINGZONE/jobinfo.txt
+}
+
+checkfile() {
+	echo -n "Checking for file $1 ... "
+	if [ ! -f "$1" ]; then
+		echo "FAILED"
+		echo "`basename $1` missing" 1>&2
+		fail 101
+	else
+		echo "OK"
+	fi
+}
+
+checkdir() {
+	echo -e "$1:\n$2"
+	[ ! -d "$2" -o "$2" == "invalid" ] && echo "$1 not found" 1>&2 && fail 102
+	getrealdir $2 && echo "$1 content:" && ls -al $2 && df -hP . && echo
+}
+
+checkbin() {
+	echo -n "Checking for binary $1 ... "
+	if [ ! -x "$1" ]; then
+		echo "FAILED"
+		echo "`basename $1` missing" 1>&2
+		fail 103
+	else
+		echo "OK"
+	fi
+}
+
+checkvar() {
+	echo -n "Checking for variable \$$1 ... "
+	if [ -z "${!1}" ]; then
+		echo "FAILED"
+		echo "$1 not set" 1>&2
+		fail 104
+	else
+		echo "OK"
+	fi
+}
+
+getrealdir() {
+	cd $1 && pwd -P && cd $OLDPWD
+}
+
+getscratch() {
+	# find directory with highest amount of diskspace
+	MY_SCRATCH="invalid"
+	MY_SCRATCHSIZE=-1
+	for DIR in "$SCRATCH_DIRECTORY" "$LOCAL_SCRATCH" "$NODE_SCRATCH" "$USER_SCRATCH" "$MY_LANDINGZONE" "$HOME" "$TMPDIR" "/tmp"; do
+		[ ! -d "$DIR" ] && continue
+		rm -Rf "$DIR/$$" &> /dev/null
+		mkdir -p "$DIR/$$" &> /dev/null
+		if [ -d "$DIR/$$" ]; then
+			SIZE="`getdiskspace $DIR/$$`" &> /dev/null
+			[ "$SIZE" -gt "$MY_SCRATCHSIZE" ] && MY_SCRATCH="$DIR/$$" && MY_SCRATCHSIZE="$SIZE" &> /dev/null
+			rm -rf "$DIR/$$" &> /dev/null
+		fi
+	done
+	mkdir -p "$MY_SCRATCH" &> /dev/null
+	echo $MY_SCRATCH
+}
+
+# Clean up user area
+cleanup() {
+	cd "$MY_LANDINGZONE"
+	[ -f "$MY_MARKER" ] && rm -Rf "$MY_MARKER" &> /dev/null
+	[ -d "$MY_SCRATCH" ] && rm -Rf "$MY_SCRATCH" &> /dev/null
+}
+
+# TODO: choose grid commands
+getcommand() {
+	which $@ 2> /dev/null | head -n 1
+}
+
+my_move() {
+	for file in `cd $1; ls -d $3`; do
+		test -f "$1/$file" && mv "$1/$file" "$2"
+	done
+}
+
+# TODO: Directory operations
+se_copy() {
+	echo "Using storage element!"
+	echo "Copy $3 from $1 to $2"
+	BADCOUNT=0
+	case "$1" in
+		"gsiftp://"*)
+			# copy from SE to site
+			if [[ "$3" == *\** ]]; then
+				# Wildcard used => gridftp-ls
+				GRIDFTP_LS="`getcommand glite-gridftp-ls edg-gridftp-ls`"
+				checkbin ${GRIDFTP_LS:-"glite-gridftp-ls"}
+				echo "$3"
+				for pat1 in "$3"; do
+					pat="`echo $SE_INPUT_PATTERN | var_replacer $pat1`"
+					echo $GRIDFTP_LS $1/$pat
+					$GRIDFTP_LS $1/$pat
+					for file in "`$GRIDFTP_LS $1/$pat`"; do
+						[ -n "$file" ] && SOURCE_FILES="$SOURCE_FILES `basename $file`"
+					done
+				done
+			else
+				echo $SE_OUTPUT_PATTERN | var_replacer $file
+				SOURCE_FILES="`echo $SE_INPUT_PATTERN | var_replacer $3`"
+			fi
+			SOURCE_PATTERN="__X__"
+			TARGET_PATTERN="__X__"
+			;;
+		"file://"*)
+			# copy from site to SE
+			SOURCE_PATTERN="__X__"
+			TARGET_PATTERN="$SE_OUTPUT_PATTERN"
+			SOURCE_FILES="`cd ${1#file://} && ls -d $3`"
+			for file in $SOURCE_FILES; do
+				SOURCE_FN="`echo $SOURCE_PATTERN | var_replacer $file`"
+				[ "`getdiskusage ${1#file://}/$SOURCE_FN`" -lt "$SE_MINFILESIZE" ] && fail 122
+			done
+			;;
+		*)	fail 110
+			;;
+	esac
+	for file in $SOURCE_FILES; do
+		echo Copy file $file
+		SOURCE_FN="`echo $SOURCE_PATTERN | var_replacer $file`"
+		TARGET_FN="`echo $TARGET_PATTERN | var_replacer $file`"
+		echo "globus-url-copy \"$1/$SOURCE_FN\" \"$2/$TARGET_FN\""
+		globus-url-copy "$1/$SOURCE_FN" "$2/$TARGET_FN" || BADCOUNT=$[$BADCOUNT+1]
+	done
+	[ $BADCOUNT -ne 0 ] && echo "$BADCOUNT errors occurred during SE access" && fail 110
+}
+
+var_replacer() {
+	j=0
+	SEED_REPLACER=""
+	for i in $SEEDS; do
+		SEED_REPLACER="$SEED_REPLACER -e s@__SEED_${j}__@$[i+$MY_JOBID]@"
+		j=$[j+1]
+	done
+
+	SEED_ALT=$(echo "(`date +%s` * 100 + `date +%N` / 10000000) % 900000000" | bc)
+	sed \
+		-e "s@__X__@$1@" \
+		-e "s@__FILE_NAMES__@$FILE_NAMES@" \
+		-e "s@__MAX_EVENTS__@$MAX_EVENTS@" \
+		-e "s@__TIMESTAMP__@`date +%s`@" \
+		-e "s@__DATE__@`date +%F`@" \
+		-e "s@__SKIP_EVENTS__@$SKIP_EVENTS@" \
+		-e "s@__SEED_ALT__@$SEED_ALT@" \
+		-e "s@__MY_JOB__@$MY_JOBID@" \
+		$SEED_REPLACER
+}
+
+_find() {
+	if test -f "$MY_SCRATCH/$1"; then
+		echo "$MY_SCRATCH/$1"
+	elif test -f "$MY_LANDINGZONE/$1"; then
+		echo "$MY_LANDINGZONE/$1"
+	else
+		echo "$1 not found" 2>&1
+		fail 101
+	fi
+}
+
+getdiskusage() {
+	TMPVAR="`dsu --block-size=m -s $1 | cut -f 1 | sed -e 's/M//'`"
+	echo ${TMPVAR:-100000000}
+}
+
+getdiskspace() {
+	TMPV="`df --block-size=m -P $1 | tail -n 1 | awk '{print $4}' | sed -e 's/M//'`"
+	echo ${TMPVAR:-0}
+}
+
+# Check for disk usage: <min space left> <max space used> <dir>
+monitordirlimits() {
+	while [ -f $MY_MARKER ]; do
+		XPID="`cat $MY_MARKER`"
+		DISKSPACE="`getdiskspace $3`"
+		if [ $DISKSPACE -lt $2 ]; then
+			echo "Lower space limit reached on $3" >> $MY_LANDINGZONE/stderr.txt
+			[ "$XPID" != "$$" ] && kill4sure "$XPID"
+			abort 121
+		fi
+		DISKUSAGE="`getdiskusage $3`"
+		if [ $DISKUSAGE -gt $1 ]; then
+			echo "Upper space limit reached on $3" >> $MY_LANDINGZONE/stderr.txt
+			[ "$XPID" != "$$" ] && kill4sure "$XPID"
+			abort 120
+		fi
+		sleep 20;
+	done
+}

@@ -183,7 +183,7 @@ def main(args):
 				print >> sys.stderr, "Proxy lifetime (%d seconds) does not meet the walltime requirements of %d hours (%d seconds)!\n" \
 				                     "INFO: Disabling job submission." \
 			                     % (proxy.timeleft(), wallTime, wallTime * 60 * 60)
-			jobSubmission = False
+			# BUGFIX: jobSubmission = False
 
 	except GridError, e:
 		e.showMessage()

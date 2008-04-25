@@ -15,10 +15,16 @@ class Module(AbstractObject):
 				      (WMS.CPUTIME, cpuTime),
 				      (WMS.MEMORY, memory) ]
 
+		# TODO: Convert the following into requirements
 		try:
 			self.seInputFiles = config.get('storage', 'se input files', '').split()
 		except:
 			self.seInputFiles = ""
+
+		try:
+			self.seInputPattern = config.get('storage', 'se input pattern', '')
+		except:
+			self.seInputPattern = "__X__"
 
 		try:
 			self.seOutputFiles = config.get('storage', 'se output files', '').split()
@@ -30,6 +36,36 @@ class Module(AbstractObject):
 				self.seOutputFiles = ""
 
 		try:
+			self.seOutputPattern = config.get('storage', 'se output pattern', '')
+		except:
+			self.seOutputPattern = "job___MY_JOB_____X__"
+
+		try:
+			self.seMinSize = config.getInt('storage', 'se min size', '')
+		except:
+			self.seMinSize = -1
+
+		try:
+			self.seSDUpperLimit = config.getInt('storage', 'scratch space used', '')
+		except:
+			self.seSDUpperLimit = 5000
+
+		try:
+			self.seSDLowerLimit = config.getInt('storage', 'scratch space left', '')
+		except:
+			self.seSDLowerLimit = 1000
+
+		try:
+			self.seLZUpperLimit = config.getInt('storage', 'landing zone space used', '')
+		except:
+			self.seLZUpperLimit = 100
+
+		try:
+			self.seLZLowerLimit = config.getInt('storage', 'landing zone space left', '')
+		except:
+			self.seLZLowerLimit = 50
+
+		try:
 			self.sePath = config.get('storage', 'se path')
 		except:
 			# TODO: remove backwards compatibility
@@ -39,11 +75,19 @@ class Module(AbstractObject):
 				self.sePath = ""			
 			self.sePath = ""			
 
+
 	def getConfig(self):
 		return {
 			'SE_OUTPUT_FILES': str.join(' ', self.seOutputFiles),
 			'SE_INPUT_FILES': str.join(' ', self.seInputFiles),
+			'SE_OUTPUT_PATTERN': self.seOutputPattern,
+			'SE_INPUT_PATTERN': self.seInputPattern,
+			'SE_MINFILESIZE': str(self.seMinSize),
 			'SE_PATH': self.sePath,
+			'SCRATCH_UL': str(self.seSDUpperLimit),
+			'SCRATCH_LL': str(self.seSDLowerLimit),
+			'LANDINGZONE_UL': str(self.seLZUpperLimit),
+			'LANDINGZONE_LL': str(self.seLZLowerLimit),
 		}
 
 

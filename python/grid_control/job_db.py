@@ -161,6 +161,7 @@ class JobDB:
 				state = Job.OK
 			else:
 				state = Job.FAILED
+				print "Errorcode: %d" % retCode
 
 			if state != job.state:
 				change = True
@@ -190,7 +191,7 @@ class JobDB:
 
 		print "\nDeleting the following jobs:"
 
-                Report(jobs,self._jobs).details()
+		Report(jobs,self._jobs).details()
 		
 		if not len(jobs) == 0:
 			if raw_input('Do you really want to delete these jobs? [yes]:') == 'yes':
@@ -206,12 +207,11 @@ class JobDB:
 					print "\nThere was a problem with deleting your jobs!"
 					if raw_input('Do you want to do a forced delete? [yes]:') == 'yes':
 						for id in jobs:
-	                                		try:
-                                                        	job = self._jobs[id]
-                                                	except:
-                                                        	continue
-
-                                                	self._update(id, job, Job.CANCELLED)
+							try:
+								job = self._jobs[id]
+							except:
+								continue
+							self._update(id, job, Job.CANCELLED)
 
 			else:
 				return 0
