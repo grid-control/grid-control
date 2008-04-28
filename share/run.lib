@@ -26,7 +26,7 @@ abort() {
 	checkdir "Start directory" "$MY_LANDINGZONE"
 	checkdir "Scratch directory" "$MY_SCRATCH"
 	cleanup
-	updatejobinfo $1
+	[ -n "$1" ] && updatejobinfo $1
 	kill4sure $$
 }
 
@@ -35,6 +35,8 @@ kill4sure() {
 		kill4sure $XPID &> /dev/null
 	done
 	echo "Killing process $1" 2>&1
+	kill -15 $1 &> /dev/null
+	sleep 1
 	kill -9 $1 &> /dev/null
 }
 
@@ -80,12 +82,12 @@ checkvar() {
 		echo "$1 not set" 1>&2
 		fail 104
 	else
-		echo "OK"
+		echo "OK (\$$1 = ${!1})"
 	fi
 }
 
 getrealdir() {
-	cd $1 && pwd -P && cd $OLDPWD
+	[ -d "$1" ] && cd $1 && pwd -P && cd $OLDPWD
 }
 
 getscratch() {
@@ -126,28 +128,25 @@ my_move() {
 
 # TODO: Directory operations
 se_copy() {
+	#checkbin "globus-url-copy" || fail 103
 	echo "Using storage element!"
 	echo "Copy $3 from $1 to $2"
 	BADCOUNT=0
 	case "$1" in
 		"gsiftp://"*)
-			# copy from SE to site
+			# copy from SE to WN
 			if [[ "$3" == *\** ]]; then
 				# Wildcard used => gridftp-ls
 				GRIDFTP_LS="`getcommand glite-gridftp-ls edg-gridftp-ls`"
-				checkbin ${GRIDFTP_LS:-"glite-gridftp-ls"}
-				echo "$3"
-				for pat1 in "$3"; do
-					pat="`echo $SE_INPUT_PATTERN | var_replacer $pat1`"
-					echo $GRIDFTP_LS $1/$pat
-					$GRIDFTP_LS $1/$pat
+				checkbin ${GRIDFTP_LS:-"glite-gridftp-ls"} || fail 103
+				for pat1 in $3; do
+					pat="`echo ${SE_INPUT_PATTERN:-__X__} | var_replacer $pat1`"
 					for file in "`$GRIDFTP_LS $1/$pat`"; do
 						[ -n "$file" ] && SOURCE_FILES="$SOURCE_FILES `basename $file`"
 					done
 				done
 			else
-				echo $SE_OUTPUT_PATTERN | var_replacer $file
-				SOURCE_FILES="`echo $SE_INPUT_PATTERN | var_replacer $3`"
+				SOURCE_FILES="`echo ${SE_INPUT_PATTERN:-__X__} | var_replacer $3`"
 			fi
 			SOURCE_PATTERN="__X__"
 			TARGET_PATTERN="__X__"
@@ -155,18 +154,18 @@ se_copy() {
 		"file://"*)
 			# copy from site to SE
 			SOURCE_PATTERN="__X__"
-			TARGET_PATTERN="$SE_OUTPUT_PATTERN"
+			TARGET_PATTERN="${SE_OUTPUT_PATTERN:-__X__}"
 			SOURCE_FILES="`cd ${1#file://} && ls -d $3`"
 			for file in $SOURCE_FILES; do
 				SOURCE_FN="`echo $SOURCE_PATTERN | var_replacer $file`"
-				[ "`getdiskusage ${1#file://}/$SOURCE_FN`" -lt "$SE_MINFILESIZE" ] && fail 122
+				[ "`getdiskusage ${1#file://}/$SOURCE_FN`" -lt "${SE_MINFILESIZE:-0}" ] && fail 122
 			done
 			;;
 		*)	fail 110
 			;;
 	esac
+	echo
 	for file in $SOURCE_FILES; do
-		echo Copy file $file
 		SOURCE_FN="`echo $SOURCE_PATTERN | var_replacer $file`"
 		TARGET_FN="`echo $TARGET_PATTERN | var_replacer $file`"
 		echo "globus-url-copy \"$1/$SOURCE_FN\" \"$2/$TARGET_FN\""
@@ -183,7 +182,8 @@ var_replacer() {
 		j=$[j+1]
 	done
 
-	SEED_ALT=$(echo "(`date +%s` * 100 + `date +%N` / 10000000) % 900000000" | bc)
+	TMP_CSEC=$(echo "`date +%s` * 100 + `date +%N` / 10000000" | bc)
+	SEED_ALT=$(echo "$TMP_CSEC % 900000000" | bc)
 	sed \
 		-e "s@__X__@$1@" \
 		-e "s@__FILE_NAMES__@$FILE_NAMES@" \
@@ -207,31 +207,37 @@ _find() {
 	fi
 }
 
+# Get used space in mb
 getdiskusage() {
-	TMPVAR="`dsu --block-size=m -s $1 | cut -f 1 | sed -e 's/M//'`"
+	TMPVAR="`du --block-size=m -s $1 | cut -f 1 | sed -e 's/M//'`"
 	echo ${TMPVAR:-100000000}
 }
 
+# Get free space in mb
 getdiskspace() {
-	TMPV="`df --block-size=m -P $1 | tail -n 1 | awk '{print $4}' | sed -e 's/M//'`"
+	TMPVAR="`df --block-size=m -P $1 | tail -n 1 | awk '{print $4}' | sed -e 's/M//'`"
 	echo ${TMPVAR:-0}
 }
 
-# Check for disk usage: <min space left> <max space used> <dir>
+# Check for disk usage: <env var limit prefix> <dir>
 monitordirlimits() {
-	while [ -f $MY_MARKER ]; do
-		XPID="`cat $MY_MARKER`"
-		DISKSPACE="`getdiskspace $3`"
-		if [ $DISKSPACE -lt $2 ]; then
-			echo "Lower space limit reached on $3" >> $MY_LANDINGZONE/stderr.txt
-			[ "$XPID" != "$$" ] && kill4sure "$XPID"
-			abort 121
+	LIMIT_LL="${1}_LL"
+	LIMIT_UL="${1}_UL"
+	[ "$1" == "SCRATCH" ] && DEFAULT_LL=100 || DEFAULT_LL=1000
+	[ "$1" == "SCRATCH" ] && DEFAULT_UL=50 || DEFAULT_UL=100
+	while [ -f "$MY_MARKER" ]; do
+		[ -z "$MDL_CFG" -a -f "_config.sh" ] && source "_config.sh" && MDL_CFG="set"
+		DISKSPACE="`getdiskspace $2`"
+		if [ $DISKSPACE -lt ${!LIMIT_LL:-$DEFAULT_LL} ]; then
+			echo "Lower space limit reached on $2" >> $MY_LANDINGZONE/stderr.txt
+			updatejobinfo 120
+			kill -SIGTERM $$
 		fi
-		DISKUSAGE="`getdiskusage $3`"
-		if [ $DISKUSAGE -gt $1 ]; then
-			echo "Upper space limit reached on $3" >> $MY_LANDINGZONE/stderr.txt
-			[ "$XPID" != "$$" ] && kill4sure "$XPID"
-			abort 120
+		DISKUSAGE="`getdiskusage $2`"
+		if [ $DISKUSAGE -gt ${!LIMIT_UL:-$DEFAULT_UL} ]; then
+			echo "Upper space limit reached on $2" >> $MY_LANDINGZONE/stderr.txt
+			updatejobinfo 121
+			kill -SIGTERM $$
 		fi
 		sleep 20;
 	done

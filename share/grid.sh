@@ -14,15 +14,15 @@ checkdir "Start directory" "$MY_LANDINGZONE"
 checkdir "Scratch directory" "$MY_SCRATCH"
 
 echo $$ > $MY_MARKER
-if [[ "`getrealdir $MYSCRATCH`" =~ ^"`getrealdir $MY_LANDINGZONE`" ]]; then
+if [[ "`getrealdir $MY_SCRATCH`" =~ ^"`getrealdir $MY_LANDINGZONE`" ]]; then
 	echo "$MYSCRATCH is a subdirectory of $MY_LANDINGZONE"
 	# Landing zone: Used space < 5Gb && Free space > 1Gb (using limits on the scratch directory)
-	monitordirlimits 1000 5000 $MY_LANDINGZONE &
+	monitordirlimits "SCRATCH" $MY_LANDINGZONE &
 else
 	# Landing zone: Used space < 50Mb && Free space > 100Mb
-	monitordirlimits 100 50 $MY_LANDINGZONE &
+	monitordirlimits "LANDINGZONE" "$MY_LANDINGZONE" &
 	# Landing zone: Used space < 5Gb && Free space > 1Gb
-	monitordirlimits 1000 5000 $MY_SCRATCH &
+	monitordirlimits "SCRATCH" "$MY_SCRATCH" &
 fi
 
 checkfile "$MY_LANDINGZONE/sandbox.tar.gz"
@@ -69,7 +69,7 @@ cleanup
 trap - 0 1 2 3 15
 echo "Job finished"
 
-# Wait for the monitoring jobs
+# DEBUG: Wait for the monitoring jobs and make sure everything terminates
 sleep 30
 ps aux
 

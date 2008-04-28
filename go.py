@@ -99,18 +99,19 @@ def main(args):
 			raise UserError("The specified working directory '%s' is inaccessible!" % workdir)
 
 		# Open grid proxy
-		proxy = config.get('grid', 'proxy')
-		proxy = Proxy.open(proxy)
-		if proxy.critical():
-			raise UserError('Your proxy only has %d seconds left!' % proxy.timeleft())
-
-		# Test grid proxy lifetime
-		wallTime = config.getInt('jobs', 'wall time')
-		if not proxy.check(wallTime * 60 * 60):
-			print >> sys.stderr, "Proxy lifetime (%d seconds) does not meet the walltime requirements of %d hours (%d seconds)!\n" \
-			                     "INFO: Disabling job submission." \
-			                     % (proxy.timeleft(), wallTime, wallTime * 60 * 60)
-			jobSubmission = False
+		if config.get('grid','wms')!= 'LSF':
+			proxy = config.get('grid', 'proxy')
+			proxy = Proxy.open(proxy)
+			if proxy.critical():
+				raise UserError('Your proxy only has %d seconds left!' % proxy.timeleft())
+			
+			# Test grid proxy lifetime
+			wallTime = config.getInt('jobs', 'wall time')
+			if not proxy.check(wallTime * 60 * 60):
+				print >> sys.stderr, "Proxy lifetime (%d seconds) does not meet the walltime requirements of %d hours (%d seconds)!\n" \
+				      "INFO: Disabling job submission." \
+				      % (proxy.timeleft(), wallTime, wallTime * 60 * 60)
+				jobSubmission = False
 
 		# Load the application module
 		module = config.get('global', 'module')
@@ -179,10 +180,11 @@ def main(args):
 				break
 
 			# Retest grid proxy lifetime
-			if jobSubmission and not proxy.check(wallTime * 60 * 60):
-				print >> sys.stderr, "Proxy lifetime (%d seconds) does not meet the walltime requirements of %d hours (%d seconds)!\n" \
-				                     "INFO: Disabling job submission." \
-			                     % (proxy.timeleft(), wallTime, wallTime * 60 * 60)
+			if config.get('grid','wms')!= 'LSF':
+				if jobSubmission and not proxy.check(wallTime * 60 * 60):
+					print >> sys.stderr, "Proxy lifetime (%d seconds) does not meet the walltime requirements of %d hours (%d seconds)!\n" \
+					      "INFO: Disabling job submission." \
+					      % (proxy.timeleft(), wallTime, wallTime * 60 * 60)
 			# BUGFIX: jobSubmission = False
 
 	except GridError, e:

@@ -8,6 +8,8 @@ if [ -z "$VO_CMS_SW_DIR" -a -n "$OSG_APP" ]; then
 	echo "[OSG-SITE] Using $OSG_APP/cmssoft/cms."
 fi
 
+[ -z "$VO_CMS_SW_DIR" ] && export VO_CMS_SW_DIR="/afs/cern.ch/cms/sw"
+
 source _config.sh
 
 _find() {
