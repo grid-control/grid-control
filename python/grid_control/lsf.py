@@ -79,8 +79,6 @@ class LSF(WMS):
 					outPath,\
 					utils.shellEscape(executable),argument),
 		                     True)
-
-		
 		
 		id = None
 
@@ -114,8 +112,8 @@ class LSF(WMS):
 			for tid in ids:
 				#print tid
 				proc = popen2.Popen4("%s %s"
-						     % (self._statusExec,tid)
-						     , True)
+						     % (self._statusExec,tid),
+						     True)
 
 				for line in proc.fromchild.readlines():
 					if (line.split(' ')[0]=="No"):
@@ -126,27 +124,27 @@ class LSF(WMS):
 						result.append((tid,status,data))
 					elif (line.split(' ')[0]=="JOBID"):
 					#print "first LINE"
-					        continue
+						continue
 					else:
-					        #print "REAL INFO"
-					        items=line.split()
+						#print "REAL INFO"
+						items=line.split()
 						id=items[0];
-						if (tid!=id):
+						if tid!=id:
 							print "BUH"
 							#print >> sys.stderr, "ERROR: IDS do not MATCH! %s : %s",(tid,id)
 							#raise RunTimeError()
 						status=self._statusMap[items[2]]
 						data={}
 						result.append((tid,status,data))
-					
+
 				retCode = proc.wait()
-		       
+
 				if retCode != 0:
-			        #FIXME
-			           print >> sys.stderr, "WARNING: glite-job-status failed:"
-				   for line in open(log, 'r'):
-				   	   sys.stderr.write(line)
-				       
+				#FIXME
+					print >> sys.stderr, "WARNING: glite-job-status failed:"
+					for line in open(log, 'r'):
+						sys.stderr.write(line)
+
 		finally:
 			try:
 				os.unlink(jobs)
