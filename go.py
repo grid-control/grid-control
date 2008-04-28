@@ -133,7 +133,7 @@ def main(args):
 		jobs = JobDB(workdir, nJobs, init)
 		# If invoked in report mode, scan job database and exit
 		if report:
-			report = Report(jobs,jobs)
+			report = Report(jobs, jobs)
 			report.details()
 			report.summary()
 			return 0
