@@ -16,64 +16,27 @@ class Module(AbstractObject):
 				      (WMS.MEMORY, memory) ]
 
 		# TODO: Convert the following into requirements
-		try:
-			self.seInputFiles = config.get('storage', 'se input files', '').split()
-		except:
-			self.seInputFiles = ""
+		self.seInputFiles = config.get('storage', 'se input files', '').split()
+		self.seInputPattern = config.get('storage', 'se input pattern', '__X__')
 
 		try:
-			self.seInputPattern = config.get('storage', 'se input pattern', '')
-		except:
-			self.seInputPattern = "__X__"
-
-		try:
-			self.seOutputFiles = config.get('storage', 'se output files', '').split()
+			self.seOutputFiles = config.get('storage', 'se output files').split()
 		except:
 			# TODO: remove backwards compatibility
-			try:
-				self.seOutputFiles = config.get('CMSSW', 'se output files', '').split()
-			except:
-				self.seOutputFiles = ""
+			self.seOutputFiles = config.get('CMSSW', 'se output files', '').split()
 
-		try:
-			self.seOutputPattern = config.get('storage', 'se output pattern', '')
-		except:
-			self.seOutputPattern = "job___MY_JOB_____X__"
-
-		try:
-			self.seMinSize = config.getInt('storage', 'se min size', '')
-		except:
-			self.seMinSize = -1
-
-		try:
-			self.seSDUpperLimit = config.getInt('storage', 'scratch space used', '')
-		except:
-			self.seSDUpperLimit = 5000
-
-		try:
-			self.seSDLowerLimit = config.getInt('storage', 'scratch space left', '')
-		except:
-			self.seSDLowerLimit = 1000
-
-		try:
-			self.seLZUpperLimit = config.getInt('storage', 'landing zone space used', '')
-		except:
-			self.seLZUpperLimit = 100
-
-		try:
-			self.seLZLowerLimit = config.getInt('storage', 'landing zone space left', '')
-		except:
-			self.seLZLowerLimit = 50
+		self.seOutputPattern = config.get('storage', 'se output pattern', 'job___MY_JOB_____X__')
+		self.seMinSize = config.getInt('storage', 'se min size', -1)
+		self.seSDUpperLimit = config.getInt('storage', 'scratch space used', 5000)
+		self.seSDLowerLimit = config.getInt('storage', 'scratch space left', 1000)
+		self.seLZUpperLimit = config.getInt('storage', 'landing zone space used', 100)
+		self.seLZLowerLimit = config.getInt('storage', 'landing zone space left', 50)
 
 		try:
 			self.sePath = config.get('storage', 'se path')
 		except:
 			# TODO: remove backwards compatibility
-			try:
-				self.sePath = config.get('CMSSW', 'se path')
-			except:
-				self.sePath = ""			
-			self.sePath = ""			
+			self.sePath = config.get('CMSSW', 'se path', '')
 
 
 	def getConfig(self):
