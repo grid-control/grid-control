@@ -7,15 +7,28 @@
 # 104 - variable not found
 
 # 105 - env unpacking failed
-
-# 110 - se copy error
+# 106 - se copy error
 
 # 120 - lower space limit
 # 121 - upper space limit
 # 122 - min size failure
 # >125 - reserved by POSIX
 
+debug_helper() {
+	echo  -n "$$:shell:" 1>&2
+	i=${#BASH_LINENO[*]}
+	while [ ${i:-0} -gt 0 ]; do
+		i=$[$i - 1]
+		[ -n "${BASH_LINENO[$i]}" ] && echo -n "${BASH_LINENO[$i]} " 1>&2
+		[ -n "${BASH_SOURCE[$i]}" ] && echo -n "`basename ${BASH_SOURCE[$i]}`:" 1>&2
+		[ -n "${FUNCNAME[$i]}" ] && echo -n "${FUNCNAME[$i]}:" 1>&2
+	done
+	echo "$LINENO ($1)" 1>&2
+}
+
 fail() {
+	debug_helper $FUNCNAME $LINENO
+	echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!"
 	[ -n "$1" ] && CODE=$1 || CODE=$?
 	cleanup
 	updatejobinfo $CODE
@@ -23,24 +36,31 @@ fail() {
 }
 
 abort() {
-	checkdir "Start directory" "$MY_LANDINGZONE"
-	checkdir "Scratch directory" "$MY_SCRATCH"
+	debug_helper $FUNCNAME $LINENO
+	[ -d "$MY_LANDINGZONE" ] && checkdir "Start directory" "$MY_LANDINGZONE" >> $MY_LANDINGZONE/stderr.txt
+	[ -d "$MY_SCRATCH" ] && checkdir "Scratch directory" "$MY_SCRATCH" >> $MY_LANDINGZONE/stderr.txt
 	cleanup
 	[ -n "$1" ] && updatejobinfo $1
+	trap - 0 1 2 3 15
 	kill4sure $$
 }
 
 kill4sure() {
-	(ps -o pid= --ppid $1 2> /dev/null) | while read XPID; do
-		kill4sure $XPID &> /dev/null
-	done
-	echo "Killing process $1" 2>&1
+	debug_helper $FUNCNAME $LINENO
+	DEPTH=${2:-0}
+	if [ $DEPTH -lt 5 ]; then
+		(ps -o pid= --ppid $1 2> /dev/null) | while read XPID; do
+			kill4sure $XPID $[$DEPTH + 1] &> /dev/null
+		done
+	fi
+	echo "Killing process $1" 1>&2
 	kill -15 $1 &> /dev/null
 	sleep 1
 	kill -9 $1 &> /dev/null
 }
 
 updatejobinfo() {
+	debug_helper $FUNCNAME $LINENO
 	(
 		echo "JOBID=$MY_JOBID"
 		echo "EXITCODE=$1"
@@ -48,6 +68,7 @@ updatejobinfo() {
 }
 
 checkfile() {
+	debug_helper $FUNCNAME $LINENO
 	echo -n "Checking for file $1 ... "
 	if [ ! -f "$1" ]; then
 		echo "FAILED"
@@ -59,23 +80,29 @@ checkfile() {
 }
 
 checkdir() {
+	debug_helper $FUNCNAME $LINENO
 	echo -e "$1:\n$2"
-	[ ! -d "$2" -o "$2" == "invalid" ] && echo "$1 not found" 1>&2 && fail 102
+	[ ! -d "$2" ] && echo "$1 not found" 1>&2 && fail 102
+	[ "$2" == "invalid" ] && echo "Directory $1" 1>&2 && fail 102
 	getrealdir $2 && echo "$1 content:" && ls -al $2 && df -hP . && echo
 }
 
 checkbin() {
+	debug_helper $FUNCNAME $LINENO
 	echo -n "Checking for binary $1 ... "
-	if [ ! -x "$1" ]; then
+	if [ -x "$1" ]; then
+		echo "OK"
+	elif [ -x "`getcommand $1`" ]; then
+		echo "OK (`getcommand $1`)"
+	else
 		echo "FAILED"
 		echo "`basename $1` missing" 1>&2
 		fail 103
-	else
-		echo "OK"
 	fi
 }
 
 checkvar() {
+	debug_helper $FUNCNAME $LINENO
 	echo -n "Checking for variable \$$1 ... "
 	if [ -z "${!1}" ]; then
 		echo "FAILED"
@@ -87,10 +114,13 @@ checkvar() {
 }
 
 getrealdir() {
-	[ -d "$1" ] && cd $1 && pwd -P && cd $OLDPWD
+	debug_helper $FUNCNAME $LINENO
+	[ -d "$1" ] && cd $1 && pwd -P && cd $OLDPWD && return `true`;
+	return `false`
 }
 
 getscratch() {
+	debug_helper $FUNCNAME $LINENO
 	# find directory with highest amount of diskspace
 	MY_SCRATCH="invalid"
 	MY_SCRATCHSIZE=-1
@@ -104,12 +134,14 @@ getscratch() {
 			rm -rf "$DIR/$$" &> /dev/null
 		fi
 	done
+	echo "Selected as scratch directory: $MY_SCRATCH: $MY_SCRATCHSIZE" 1>&2
 	mkdir -p "$MY_SCRATCH" &> /dev/null
 	echo $MY_SCRATCH
 }
 
 # Clean up user area
 cleanup() {
+	debug_helper $FUNCNAME $LINENO
 	cd "$MY_LANDINGZONE"
 	[ -f "$MY_MARKER" ] && rm -Rf "$MY_MARKER" &> /dev/null
 	[ -d "$MY_SCRATCH" ] && rm -Rf "$MY_SCRATCH" &> /dev/null
@@ -117,17 +149,23 @@ cleanup() {
 
 # TODO: choose grid commands
 getcommand() {
+	debug_helper $FUNCNAME $LINENO
 	which $@ 2> /dev/null | head -n 1
 }
 
 my_move() {
-	for file in `cd $1; ls -d $3`; do
-		test -f "$1/$file" && mv "$1/$file" "$2"
+	debug_helper $FUNCNAME $LINENO
+	[ ! -d "$1" ] && fail 102
+	[ ! -d "$2" ] && fail 102
+	[ -z "$3" ] && return
+	for file in `cd $1 && ls $(eval "echo $3") && cd $OLDPWD`; do
+		test -f "$1/$file" && mv "$1/$file" "$2/$file"
 	done
 }
 
 # TODO: Directory operations
 se_copy() {
+	debug_helper $FUNCNAME $LINENO
 	#checkbin "globus-url-copy" || fail 103
 	echo "Using storage element!"
 	echo "Copy $3 from $1 to $2"
@@ -155,13 +193,13 @@ se_copy() {
 			# copy from site to SE
 			SOURCE_PATTERN="__X__"
 			TARGET_PATTERN="${SE_OUTPUT_PATTERN:-__X__}"
-			SOURCE_FILES="`cd ${1#file://} && ls -d $3`"
+			SOURCE_FILES="`cd ${1#file://} && ls -d $3 && cd $OLDPWD`"
 			for file in $SOURCE_FILES; do
 				SOURCE_FN="`echo $SOURCE_PATTERN | var_replacer $file`"
 				[ "`getdiskusage ${1#file://}/$SOURCE_FN`" -lt "${SE_MINFILESIZE:-0}" ] && fail 122
 			done
 			;;
-		*)	fail 110
+		*)	fail 106
 			;;
 	esac
 	echo
@@ -171,10 +209,11 @@ se_copy() {
 		echo "globus-url-copy \"$1/$SOURCE_FN\" \"$2/$TARGET_FN\""
 		globus-url-copy "$1/$SOURCE_FN" "$2/$TARGET_FN" || BADCOUNT=$[$BADCOUNT+1]
 	done
-	[ $BADCOUNT -ne 0 ] && echo "$BADCOUNT errors occurred during SE access" && fail 110
+	[ $BADCOUNT -ne 0 ] && echo "$BADCOUNT errors occurred during SE access" && fail 106
 }
 
 var_replacer() {
+	debug_helper $FUNCNAME $LINENO
 	j=0
 	SEED_REPLACER=""
 	for i in $SEEDS; do
@@ -197,45 +236,50 @@ var_replacer() {
 }
 
 _find() {
-	if test -f "$MY_SCRATCH/$1"; then
+	debug_helper $FUNCNAME $LINENO
+	if test -f "`pwd`/$1"; then
+		echo "`pwd`/$1"
+	elif test -f "$MY_SCRATCH/$1"; then
 		echo "$MY_SCRATCH/$1"
 	elif test -f "$MY_LANDINGZONE/$1"; then
 		echo "$MY_LANDINGZONE/$1"
 	else
 		echo "$1 not found" 2>&1
-		fail 101
 	fi
 }
 
 # Get used space in mb
 getdiskusage() {
+	debug_helper $FUNCNAME $LINENO
 	TMPVAR="`du --block-size=m -s $1 | cut -f 1 | sed -e 's/M//'`"
 	echo ${TMPVAR:-100000000}
 }
 
 # Get free space in mb
 getdiskspace() {
+	debug_helper $FUNCNAME $LINENO
 	TMPVAR="`df --block-size=m -P $1 | tail -n 1 | awk '{print $4}' | sed -e 's/M//'`"
 	echo ${TMPVAR:-0}
 }
 
 # Check for disk usage: <env var limit prefix> <dir>
 monitordirlimits() {
+	debug_helper $FUNCNAME $LINENO
 	LIMIT_LL="${1}_LL"
 	LIMIT_UL="${1}_UL"
 	[ "$1" == "SCRATCH" ] && DEFAULT_LL=100 || DEFAULT_LL=1000
 	[ "$1" == "SCRATCH" ] && DEFAULT_UL=50 || DEFAULT_UL=100
 	while [ -f "$MY_MARKER" ]; do
-		[ -z "$MDL_CFG" -a -f "_config.sh" ] && source "_config.sh" && MDL_CFG="set"
+		[ -z "$MDL_CFG" -a -f "$MY_SCRATCH/_config.sh" ] && source "$MY_SCRATCH/_config.sh" && MDL_CFG="set"
 		DISKSPACE="`getdiskspace $2`"
 		if [ $DISKSPACE -lt ${!LIMIT_LL:-$DEFAULT_LL} ]; then
-			echo "Lower space limit reached on $2" >> $MY_LANDINGZONE/stderr.txt
+			echo "Lower space limit reached on $2" 1>&2
 			updatejobinfo 120
 			kill -SIGTERM $$
 		fi
 		DISKUSAGE="`getdiskusage $2`"
 		if [ $DISKUSAGE -gt ${!LIMIT_UL:-$DEFAULT_UL} ]; then
-			echo "Upper space limit reached on $2" >> $MY_LANDINGZONE/stderr.txt
+			echo "Upper space limit reached on $2" 1>&2
 			updatejobinfo 121
 			kill -SIGTERM $$
 		fi

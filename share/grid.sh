@@ -14,8 +14,8 @@ checkdir "Start directory" "$MY_LANDINGZONE"
 checkdir "Scratch directory" "$MY_SCRATCH"
 
 echo $$ > $MY_MARKER
-if [[ "`getrealdir $MY_SCRATCH`" =~ ^"`getrealdir $MY_LANDINGZONE`" ]]; then
-	echo "$MYSCRATCH is a subdirectory of $MY_LANDINGZONE"
+if [ -n "$(getrealdir $MY_SCRATCH | grep $(getrealdir $MY_LANDINGZONE))" ]; then
+	echo "\$MY_SCRATCH is a subdirectory of \$MY_LANDINGZONE"
 	# Landing zone: Used space < 5Gb && Free space > 1Gb (using limits on the scratch directory)
 	monitordirlimits "SCRATCH" $MY_LANDINGZONE &
 else
@@ -60,7 +60,7 @@ if [ $CODE -eq 0 -a -n "$SE_OUTPUT_FILES" ]; then
 fi
 
 # Move output into landingzone
-my_move "$MY_SCRATCH" "$MY_LANDINGZONE" "$MY_OUT"
+my_move "$MY_SCRATCH" "$MY_LANDINGZONE" "$SB_OUTPUT_FILES"
 
 checkdir "Start directory" "$MY_LANDINGZONE"
 checkdir "Scratch directory" "$MY_SCRATCH"
