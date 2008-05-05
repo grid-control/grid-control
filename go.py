@@ -9,16 +9,18 @@ from grid_control import *
 
 def syntax(out):
 	out.write("Syntax: %s [OPTIONS] <config file>\n\n"
-	          "    Options:\n"
-	          "\t-h, --help               Show this helpful message\n"
-	          "\t-i, --init               Initialise working directory\n"
-	          "\t-c, --continuous         Run in continuous mode\n"
-	          "\t-s, --no-submission      Disable job submission\n"
-		  "\t-r, --report             Show status report of jobs\n"
-		  "\t-d, --delete <args>      Delete given jobs, e.g:\n"
-		  "\t                            -d 1,5,9,...  (JobNumbers)\n"
-		  "\t                            -d QUEUED,... (JobStates)\n"
-	          "\n" % sys.argv[0])
+			"    Options:\n"
+			"\t-h, --help               Show this helpful message\n"
+			"\t-i, --init               Initialise working directory\n"
+			"\t-c, --continuous         Run in continuous mode\n"
+			"\t-s, --no-submission      Disable job submission\n"
+			"\t-r, --report             Show status report of jobs\n"
+			"\t-d, --delete <args>      Delete given jobs, e.g:\n"
+			"\t                            -d 1,5,9,...  (JobNumbers)\n"
+			"\t                            -d QUEUED,... (JobStates)\n"
+			"\t                            -d TODO (= SUBMITTED,WAITING,READY,QUEUED)\n"
+			"\t                            -d ALL\n"
+			"\n" % sys.argv[0])
 
 
 def main(args):

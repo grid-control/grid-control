@@ -1,11 +1,17 @@
-1. FIX continous mode (-ic) (welches Problem)
-2. Show location in job-status/ ev. have information output
-3. enable condidtions for job failure (e.g. root-file <1 MB...)
-4. add timestamp to storage-out-files
-5. decuple CMSSW-version and grid-requirements. - Die nasen vergessen immer
-die TAGS...
-6. Possibility to use job states in abbreviated form for the -d deletion command.
-   E.g. use first letter up to point where unique in list of all job states. (-d W,RE,Q)
-7. Or: Shorthand for -d deletion of all jobs in WAITING READY or QUEUED state.
-8. Possibility to give time limit after which jobs in WAITING, READY or QUEUED state
+1. Show location in job-status/ ev. have information output
+2. Possibility to give time limit after which jobs in WAITING, READY or QUEUED state
    are automatically cancelled (and the resubmitted in case of -c option).
+
+X. FIX continous mode (-ic) (welches Problem)
+	(fixed?)
+X. enable condidtions for job failure (e.g. root-file <1 MB...)
+	([storage]: se min size)
+X. add timestamp to storage-out-files
+	([storage]: se output pattern)
+X. decuple CMSSW-version and grid-requirements. - Die nasen vergessen immer die TAGS...
+	([CMSSW]: use requirements)
+X. Possibility to use job states in abbreviated form for the -d deletion command.
+   E.g. use first letter up to point where unique in list of all job states. (-d W,RE,Q)
+	(-d R == READY,RUNNING; -d RE == READY; -d R,Q == READY,RUNNING,QUEUED; ...)
+X. Or: Shorthand for -d deletion of all jobs in WAITING READY or QUEUED state.
+	(-d TODO, -d ALL)
