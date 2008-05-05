@@ -1,3 +1,4 @@
+import re
 from grid_control import RuntimeError, utils, enumerate, UserError
 
 class Job:
@@ -62,6 +63,7 @@ class Job:
 		self.id = id
 		# FIXME: History or sth.
 
+
 	def report(self):
 		try:
 			status = self.dict['dest']
@@ -71,13 +73,12 @@ class Job:
 		report = (self.states[self.state], status, self.id)
 		return report
 
+
 	def filter(self, filter):
 		for state in filter.split(','):
-			try:
-				state = self._stateDict[state]
-			except:
-				raise UserError("Unknown state \"%s\"." % state)
-
-			if self.state == state:
-				return True
+			regex = re.compile("^" + state + ".*")
+			for key in self._stateDict.keys():
+				if regex.match(key):
+					if self.state == self._stateDict[key]:
+						return True
 		return False

@@ -173,6 +173,10 @@ class JobDB:
 
 	def delete(self, wms, filter):
 		jobs = []
+		if filter == "TODO":
+			filter = "SUBMITTED,WAITING,READY,QUEUED"
+		if filter == "ALL":
+			filter = "SUBMITTED,WAITING,READY,QUEUED,RUNNING"
 		if len(filter) and filter[0].isdigit():
 			for jobId in filter.split(","):
 				try:
