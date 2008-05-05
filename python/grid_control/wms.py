@@ -184,5 +184,3 @@ class WMS(AbstractObject):
 
 	def bulkSubmissionEnd(self):
 		pass
-
-

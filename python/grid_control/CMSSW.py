@@ -36,6 +36,7 @@ class CMSSW(Module):
 				self.dbs == None
 		
 		self.gzipOut = config.getBool('CMSSW', 'gzip output', True)
+		self.useReqs = config.getBool('CMSSW', 'use requirements', True)
 
 		try:
 			self.seeds = map(lambda x: int(x), config.get('CMSSW', 'seeds', '').split())
@@ -164,13 +165,12 @@ class CMSSW(Module):
 
 
 	def getRequirements(self, job):
-		reqs = copy.copy(self.requirements)
-		reqs.append((WMS.MEMBER, 'VO-cms-%s' % self.scramEnv['SCRAM_PROJECTVERSION']))
-		reqs.append((WMS.MEMBER, 'VO-cms-%s' % self.scramArch))
-
+		reqs = Module.getRequirements(self, job)
+		if self.useReqs:
+			reqs.append((WMS.MEMBER, 'VO-cms-%s' % self.scramEnv['SCRAM_PROJECTVERSION']))
+			reqs.append((WMS.MEMBER, 'VO-cms-%s' % self.scramArch))
 		if self.dataset != None:
-	       		reqs.append((WMS.STORAGE, self._getDataSites(job)))
-
+			reqs.append((WMS.STORAGE, self._getDataSites(job)))
 		return reqs
 
 
@@ -212,14 +212,14 @@ class CMSSW(Module):
 	def getJobArguments(self, job):
 		if self.dataset == None:
 			return "%d" % self.eventsPerJob
-		
+
 		print ""
 		print "Job number: ",job
 		files = self._getDataFiles(job)
 		self.dbs.printInfoForJob(files)
 		return "%d %d %s" % (files['events'], files['skip'], str.join(' ', files['files']))
 
-		
+
 	def getMaxJobs(self):
 		self._ensureDataCache()
 		return self.dbs.getNumberOfJobs()

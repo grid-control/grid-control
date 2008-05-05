@@ -5,15 +5,13 @@ import os.path, cStringIO, StringIO
 from grid_control import ConfigError, AbstractObject, utils, WMS
 
 class Module(AbstractObject):
+	# Read configuration options and init vars
 	def __init__(self, config, init):
 		self.config = config
 		self.workDir = config.getPath('global', 'workdir')
-		wallTime = config.getInt('jobs', 'wall time') * 60 * 60
-		cpuTime = config.getInt('jobs', 'cpu time', 10 * 60)
-		memory = config.getInt('jobs', 'memory', 512)
-		self.requirements = [ (WMS.WALLTIME, wallTime),
-				      (WMS.CPUTIME, cpuTime),
-				      (WMS.MEMORY, memory) ]
+		self.wallTime = config.getInt('jobs', 'wall time') * 60 * 60
+		self.cpuTime = config.getInt('jobs', 'cpu time', 10 * 60)
+		self.memory = config.getInt('jobs', 'memory', 512)
 
 		# TODO: Convert the following into requirements
 		self.seInputFiles = config.get('storage', 'se input files', '').split()
@@ -24,9 +22,10 @@ class Module(AbstractObject):
 		except:
 			# TODO: remove backwards compatibility
 			self.seOutputFiles = config.get('CMSSW', 'se output files', '').split()
-
 		self.seOutputPattern = config.get('storage', 'se output pattern', 'job___MY_JOB_____X__')
+
 		self.seMinSize = config.getInt('storage', 'se min size', -1)
+
 		self.seSDUpperLimit = config.getInt('storage', 'scratch space used', 5000)
 		self.seSDLowerLimit = config.getInt('storage', 'scratch space left', 1000)
 		self.seLZUpperLimit = config.getInt('storage', 'landing zone space used', 100)
@@ -39,29 +38,34 @@ class Module(AbstractObject):
 			self.sePath = config.get('CMSSW', 'se path', '')
 
 
+	# Get environment variables for _config.sh
 	def getConfig(self):
 		return {
-			'SE_OUTPUT_FILES': str.join(' ', self.seOutputFiles),
-			'SE_INPUT_FILES': str.join(' ', self.seInputFiles),
-			'SE_OUTPUT_PATTERN': self.seOutputPattern,
-			'SE_INPUT_PATTERN': self.seInputPattern,
-			'SE_MINFILESIZE': str(self.seMinSize),
-			'SE_PATH': self.sePath,
+			# Space limits
 			'SCRATCH_UL': str(self.seSDUpperLimit),
 			'SCRATCH_LL': str(self.seSDLowerLimit),
 			'LANDINGZONE_UL': str(self.seLZUpperLimit),
 			'LANDINGZONE_LL': str(self.seLZLowerLimit),
+			# Storage element
+			'SE_PATH': self.sePath,
+			'SE_MINFILESIZE': str(self.seMinSize),
+			'SE_OUTPUT_FILES': str.join(' ', self.seOutputFiles),
+			'SE_INPUT_FILES': str.join(' ', self.seInputFiles),
+			'SE_OUTPUT_PATTERN': self.seOutputPattern,
+			'SE_INPUT_PATTERN': self.seInputPattern,
+			# TODO: remove backwards compatibility
+			'MY_OUT': str.join(' ', self.getOutFiles()),
+			# Sandbox
+			'SB_OUTPUT_FILES': str.join(' ', self.getOutFiles()),
+			'SB_INPUT_FILES': str.join(' ', map(lambda x: utils.shellEscape(os.path.basename(x)), self.getInFiles())),
+			# Runtime
+			'MY_RUNTIME': self.getCommand()
 		}
 
 
-	def getRequirements(self, job):
-		return self.requirements
-
-
+	# Create _config.sh from module config
 	def makeConfig(self):
 		data = self.getConfig()
-		data['MY_RUNTIME'] = self.getCommand()
-		data['MY_OUT'] = str.join(' ', self.getOutFiles())
 
 		fp = cStringIO.StringIO()
 		for key, value in data.items():
@@ -75,6 +79,15 @@ class Module(AbstractObject):
 
 		fp = FileObject(fp.getvalue(), '_config.sh')
 		return fp
+
+
+	# Get job requirements
+	def getRequirements(self, job):
+		return [
+			(WMS.WALLTIME, self.wallTime),
+			(WMS.CPUTIME, self.cpuTime),
+			(WMS.MEMORY, self.memory)
+		]
 
 
 	def getInFiles(self):
