@@ -1,6 +1,7 @@
 1. Show location in job-status/ ev. have information output
 2. Possibility to give time limit after which jobs in WAITING, READY or QUEUED state
    are automatically cancelled (and the resubmitted in case of -c option).
+3. Use md5 hash to verify transfer between node <-> se
 
 X. FIX continous mode (-ic) (welches Problem)
 	(fixed?)

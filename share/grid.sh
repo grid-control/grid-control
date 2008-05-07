@@ -42,7 +42,7 @@ fi
 # Execute program
 echo "==========================="
 cd $MY_SCRATCH
-eval "$MY_RUNTIME $@" &
+eval "$MY_RUNTIME" &
 MY_RUNID=$!
 echo $MY_RUNID > $MY_MARKER
 wait $MY_RUNID
@@ -68,9 +68,5 @@ checkdir "Scratch directory" "$MY_SCRATCH"
 cleanup
 trap - 0 1 2 3 15
 echo "Job finished"
-
-# DEBUG: Wait for the monitoring jobs and make sure everything terminates
-sleep 30
-ps aux
 
 exit $CODE
