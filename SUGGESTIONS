@@ -2,6 +2,8 @@
 2. Possibility to give time limit after which jobs in WAITING, READY or QUEUED state
    are automatically cancelled (and the resubmitted in case of -c option).
 3. Use md5 hash to verify transfer between node <-> se
+4. Statistic of done, failed, cancelled not only in total but optionally also per ce
+   including failed and resubmitted jobs (good for blacklisting ...)   
 
 X. FIX continous mode (-ic) (welches Problem)
 	(fixed?)
