@@ -1,17 +1,10 @@
 #!/bin/sh
 
 export MY_JOB="$1"
-if [ $2 == "LSF" ];then  
-    export INDIR="$3"
-    export INBOX="$INDIR/sandbox.tar.gz";
-    export MODE="LSF"
-fi;
 export MY_ID="`whoami`"
 export MY_REAL="`pwd`"
 
 echo "JOBID=$MY_JOB"
-echo "FULL PARAMETER=$@"
-echo "INBOX=$INBOX"
 echo
 
 echo -n "grid-control running on: "
@@ -20,27 +13,13 @@ uname -a
 cat /etc/redhat-release
 
 shift
-if [ $MODE == "LSF" ]; then
-    shift
-    shift
+
+if [ -n "$TMPDIR" ]; then
+	export MY_SCRATCH="$TMPDIR/$$"
+else
+	export MY_SCRATCH="/tmp/$MY_ID/$$"
 fi
-
-sleep 30
-
-#if [ -n "$TMPDIR" ]; then
-#	export MY_SCRATCH="$TMPDIR/$$"
-#else
-#	export MY_SCRATCH="/tmp/$MY_ID/$$"
-#fi
-
-export MY_SCRATCH="$MY_REAL/$MY_ID/$$"
-
 MY_MOVED=0
-
-if [ -n $INBOX ]; then
-    echo "cp $INBOX $MY_REAL"
-    cp $INBOX $MY_REAL
-fi
 
 rm -Rf "$MY_SCRATCH" &> /dev/null
 mkdir -p "$MY_SCRATCH" &> /dev/null
@@ -118,18 +97,12 @@ fi
 echo "EXITCODE=$CODE" >> jobinfo.txt
 
 if [ $MY_MOVED -eq 1 ]; then
-	for i in stderr.txt stdout.txt jobinfo.txt $SB_OUTPUT_FILES; do
+	for i in stderr.txt stdout.txt jobinfo.txt $MY_OUT; do
 		test -f "$i" && cp $i "$MY_REAL/"
 	done
 	cd "$MY_REAL/"
 	rm -Rf "$MY_SCRATCH" &> /dev/null
 	rmdir "/tmp/$MY_ID" &> /dev/null
-fi
-
-if [ $MODE=="LSF" ]; then
-    for i in jobinfo.txt $SB_OUTPUT_FILES; do
-	test -f "$i" && cp $i $INDIR/output/tmp/job_$MY_JOB
-    done;
 fi
 
 exit $CODE

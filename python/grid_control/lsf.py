@@ -12,7 +12,7 @@ class LSF(WMS):
 		'cancelled':	Job.CANCELLED,
 		'EXIT':	Job.FAILED,
 		'DONE':		Job.DONE,
-		'cleared':	Job.SUCCESS
+		'cleared':	Job.OK
 	}
 
 	def __init__(self, config, module, init):

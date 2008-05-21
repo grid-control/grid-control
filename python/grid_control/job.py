@@ -2,7 +2,7 @@ import re
 from grid_control import RuntimeError, utils, enumerate, UserError
 
 class Job:
-	states = ('INIT', 'SUBMITTED', 'WAITING', 'READY', 'QUEUED', 'RUNNING', 'ABORTED', 'CANCELLED', 'FAILED', 'DONE', 'SUCCESS')
+	states = ('INIT', 'SUBMITTED', 'WAITING', 'READY', 'QUEUED', 'RUNNING', 'ABORTED', 'CANCELLED', 'FAILED', 'DONE', 'OK')
 	_stateDict = {}
 	for id, state in enumerate(states):
 		_stateDict[state] = id

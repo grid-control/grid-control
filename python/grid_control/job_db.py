@@ -43,7 +43,7 @@ class JobDB:
 			queue = self.ready	# resubmit?
 		elif state == Job.DONE:
 			queue = self.done
-		elif state == Job.SUCCESS:
+		elif state == Job.OK:
 			queue = self.ok
 		else:
 			raise Exception("Internal error: Unexpected job state %s" % Job.states[state])
@@ -158,7 +158,7 @@ class JobDB:
 				continue
 
 			if retCode == 0:
-				state = Job.SUCCESS
+				state = Job.OK
 			else:
 				state = Job.FAILED
 				print "Errorcode: %d" % retCode

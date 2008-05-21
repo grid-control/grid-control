@@ -18,7 +18,7 @@ class Glite(WMS):
 		'cancelled':	Job.CANCELLED,
 		'failed':	Job.FAILED,
 		'done':		Job.DONE,
-		'cleared':	Job.SUCCESS
+		'cleared':	Job.OK
 	}
 
 	def __init__(self, config, module, init):
@@ -101,7 +101,7 @@ class Glite(WMS):
 		reqs = self.module.getRequirements(job)
 		reqs.append((WMS.OTHER, ()))
 		contents = {
-			'Executable': 'grid.sh',
+			'Executable': 'run.sh',
 			'Arguments': "%d %s" % (job, self.module.getJobArguments(job)),
 			'InputSandbox': self.sandboxIn,
 			'StdOutput': 'stdout.txt',

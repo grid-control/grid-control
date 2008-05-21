@@ -1,34 +1,46 @@
 #!/bin/bash
-# 110 - project area setup failed
-# 111 - CMSSW environment setup failed
-# 112 - CMSSW environment setup failed
-
-source $MY_LANDINGZONE/run.lib || exit 101
 
 echo "CMSSW module starting"
-echo "---------------------------"
-
-MAX_EVENTS="$1"
-SKIP_EVENTS="$2"
-FILE_NAMES="\"$3\""
-shift 3
-for i in "$@"; do
-	FILE_NAMES="$FILE_NAMES, \"$i\""
-done
-
+echo "---------------------"
 if [ -z "$VO_CMS_SW_DIR" -a -n "$OSG_APP" ]; then
-	export VO_CMS_SW_DIR="$OSG_APP/cmssoft/cms"
-	echo "[OSG-SITE] Using $VO_CMS_SW_DIR"
-elif [ -z "$VO_CMS_SW_DIR" -a -d "/afs/cern.ch/cms/sw" ]; then
-	export VO_CMS_SW_DIR="/afs/cern.ch/cms/sw"
-	echo "[AFS-SITE] Using $VO_CMS_SW_DIR"
+        VO_CMS_SW_DIR="$OSG_APP/cmssoft/cms"
+        export VO_CMS_SW_DIR
+	echo "[OSG-SITE] Using $OSG_APP/cmssoft/cms."
 fi
 
-checkfile "$MY_SCRATCH/_config.sh"
-source "$MY_SCRATCH/_config.sh"
+[ -z "$VO_CMS_SW_DIR" ] && export VO_CMS_SW_DIR="/afs/cern.ch/cms/sw"
 
-checkvar "VO_CMS_SW_DIR"
-checkfile "$VO_CMS_SW_DIR/cmsset_default.sh"
+source _config.sh
+
+_find() {
+	if test -f "$MY_SCRATCH/$1"; then
+		echo "$MY_SCRATCH/$1"
+	elif test -f "$MY_REAL/$1"; then
+		echo "$MY_REAL/$1"
+	else
+		echo "$1 not found" 2>&1
+		exit 1
+	fi
+}
+
+processConfig() {
+	sed -e "s@__FILE_NAMES__@$FNAMES@" \
+	    -e "s@__MAX_EVENTS__@$EVENTS@" \
+	    -e "s@__SKIP_EVENTS__@$SKIP@" \
+	    -e "s@__MY_JOB__@$MY_JOB@" \
+	    $SEED_REPLACER \
+	    < "`_find $1`"
+}
+
+if ! [ -n "$VO_CMS_SW_DIR" ]; then
+	echo VO_CMS_SW_DIR undefined 2>&1
+	exit 1
+fi
+
+if [ ! -f "$VO_CMS_SW_DIR/cmsset_default.sh" ]; then
+	echo "$VO_CMS_SW_DIR/cmsset_default.sh" not found 2>&1
+	exit 1
+fi
 
 saved_SCRAM_VERSION="$SCRAM_VERSION"
 saved_SCRAM_ARCH="$SCRAM_ARCH"
@@ -37,62 +49,83 @@ SCRAM_VERSION="$saved_SCRAM_VERSION"
 export SCRAM_ARCH="$saved_SCRAM_ARCH"
 
 SCRAM="`which \"\$SCRAM_VERSION\"`"
-checkbin "$SCRAM"
-
-echo "Installed CMSSW versions:"
-$SCRAM list -c CMSSW | sort | awk '{printf $2" "}'
-echo
+if [ -z "$SCRAM" ]; then
+	echo "$SCRAM_VERSION not found" 2>&1
+	exit 1
+fi
 
 if ! $SCRAM project CMSSW $SCRAM_PROJECTVERSION; then
-	echo "SCRAM project area setup failed" 1>&2
-	fail 110
+	echo "SCRAM project area setup failed" 2>&1
+	exit 1
 fi
 
-checkdir "SCRAM project area" "$SCRAM_PROJECTVERSION"
+if ! test -d "$SCRAM_PROJECTVERSION"; then
+	echo "SCRAM project area not found" 2>&1
+	exit 1
+fi
+
 cd "$SCRAM_PROJECTVERSION"
-
 if ! [ "$HAS_RUNTIME" = no ]; then
-	echo "Unpacking CMSSW environment"
-	tar xvfz "`_find runtime.tar.gz`" || fail 111
+	tar xvfz "`_find runtime.tar.gz`"
 fi
 
-echo "Setup CMSSW environment"
-eval `$SCRAM runtime -sh` || fail 112
-checkvar "CMSSW_BASE"
-checkvar "CMSSW_RELEASE_BASE"
-checkbin "cmsRun"
-
-# additional setup of the CMSSW environment
-if [ -f "`_find setup.sh`" ]; then
-	eval "`_find setup.sh`"
-fi
-
-export MY_WORKDIR="`pwd`/workdir"
-export CMSSW_SEARCH_PATH="$CMSSW_SEARCH_PATH:$MY_WORKDIR"
-mkdir -p "$MY_WORKDIR"
-
-my_move "$MY_SCRATCH" "$MY_WORKDIR" "$SB_INPUT_FILES $SE_INPUT_FILES"
-
-cd "$MY_WORKDIR"
-checkdir "CMSSW working directory" "$MY_WORKDIR"
 echo "---------------------------"
+
+EVENTS="$1"
+SKIP="$2"
+FNAMES="\"$3\""
+shift 3
+for i in "$@"; do
+	FNAMES="$FNAMES, \"$i\""
+done
+
+SEED_REPLACER=""
+j=0
+for i in $SEEDS; do
+	eval SEED_$j=$[i+MY_JOB]
+	SEED_REPLACER="$SEED_REPLACER -e s@__SEED_${j}__@$[i+MY_JOB]@"
+	j=$[j+1]
+done
+
 for i in $CMSSW_CONFIG; do
-	echo -e "\nConfig file: $i"
-	echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~"
-	var_replacer "" < "`_find $i`" | tee "CMSRUN-$i"
+	echo "*** $i:"
+	processConfig "$i"
+done
+
+echo "---------------------------"
+
+eval `$SCRAM runtime -sh`
+
+mkdir -p workdir &> /dev/null
+cd workdir
+
+export CMSSW_SEARCH_PATH="$CMSSW_SEARCH_PATH:`pwd`"
+
+eval "for i in $USER_INFILES; do mv \"\$MY_SCRATCH/\$i\" .; done"
+echo "which cmsRun:"
+which cmsRun
+echo "ls before CMSSW:"
+ls -la
+
+echo "---------------------------"
+
+for i in $CMSSW_CONFIG; do
+	processConfig "$i" > "$i"
+
 	if [ "$GZIP_OUT" = "yes" ]; then
-		( cmsRun "CMSRUN-$i"; echo $? > exitcode.txt ) 2>&1 | gzip -9 > cmssw_out.txt.gz
-		[ -f "exitcode.txt" ] && CODE=$(<exitcode.txt) && rm -f exitcode.txt
-	else 
-		cmsRun "CMSRUN-$i"
+		( cmsRun "$i"; echo $? > exitcode.txt ) 2>&1 | gzip -9 > cmssw_out.txt.gz
+		CODE=$(<exitcode.txt)
+		rm -f exitcode.txt
+        else 
+		cmsRun "$i"
 		CODE=$?
 	fi
 done
 
 echo "---------------------------"
-checkdir "CMSSW working directory after cmsRun" "$MY_WORKDIR"
+echo "ls after CMSRUN:"
+ls -la
 
-# Move output into scratch
-my_move "`pwd`" "$MY_SCRATCH" "$SB_OUTPUT_FILES $SE_OUTPUT_FILES"
+eval "for i in $MY_OUT $SE_OUTPUT_FILES; do mv \"\$i\" \"\$MY_SCRATCH\" &> /dev/null; done"
 
 exit $CODE
