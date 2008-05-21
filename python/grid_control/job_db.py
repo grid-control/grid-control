@@ -198,7 +198,8 @@ class JobDB:
 		Report(jobs,self._jobs).details()
 		
 		if not len(jobs) == 0:
-			if raw_input('Do you really want to delete these jobs? [yes]:') == 'yes':
+			userinput = raw_input('Do you really want to delete these jobs? [yes]:')
+			if userinput == 'yes' or userinput == '':
 				if wms.cancel(ids):
 					for id in jobs:
 						try:
