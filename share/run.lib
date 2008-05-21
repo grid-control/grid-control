@@ -15,6 +15,7 @@
 # >125 - reserved by POSIX
 
 debug_helper() {
+	return
 	echo  -n "$$:shell:" 1>&2
 	i=${#BASH_LINENO[*]}
 	while [ ${i:-0} -gt 0 ]; do
@@ -231,6 +232,7 @@ var_replacer() {
 		-e "s@__DATE__@`date +%F`@" \
 		-e "s@__SKIP_EVENTS__@$SKIP_EVENTS@" \
 		-e "s@__SEED_ALT__@$SEED_ALT@" \
+		-e "s@__MY_JOBID__@$MY_JOBID@" \
 		-e "s@__MY_JOB__@$MY_JOBID@" \
 		$SEED_REPLACER
 }

@@ -4,6 +4,8 @@
 3. Use md5 hash to verify transfer between node <-> se
 4. Statistic of done, failed, cancelled not only in total but optionally also per ce
    including failed and resubmitted jobs (good for blacklisting ...)   
+5. FIX whitelisting
+6. Update job status on site
 
 X. FIX continous mode (-ic) (welches Problem)
 	(fixed?)
