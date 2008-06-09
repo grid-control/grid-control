@@ -6,6 +6,10 @@
    including failed and resubmitted jobs (good for blacklisting ...)   
 5. FIX whitelisting
 6. Update job status on site
+7. Option to "dont retry" - retry count
+8. Local job finish signal (move files from se)
+9. Local disk usage monitoring
+10.Multiple datasets
 
 X. FIX continous mode (-ic) (welches Problem)
 	(fixed?)

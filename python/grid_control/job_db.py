@@ -1,5 +1,6 @@
 from __future__ import generators
 import os, re, fnmatch
+from time import localtime, strftime
 from grid_control import SortedList, ConfigError, Job, UserError, Report
 
 class JobDB:
@@ -96,7 +97,7 @@ class JobDB:
 			old.remove(id)
 			new.add(id)
 
-		print "Job %d state changed to %s" % (id, Job.states[state])
+		print "%s - Job %d state changed to %s" % (strftime("%Y-%m-%d %H:%M:%S", localtime()), id, Job.states[state])
 
 		self._saveJob(id)
 
