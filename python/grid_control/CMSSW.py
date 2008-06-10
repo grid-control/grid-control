@@ -175,7 +175,7 @@ class CMSSW(Module):
 
 
 	def getCommand(self):
-		return './cmssw.sh "$@"'
+		return './run.cmssw.sh "$@"'
 
 
 	def getConfig(self):
@@ -196,7 +196,7 @@ class CMSSW(Module):
 		if len(self.projectArea):
 			files.append('runtime.tar.gz')
 		files.extend([
-			utils.atRoot('share', 'cmssw.sh'),
+			utils.atRoot('share', 'run.cmssw.sh'),
 			self.configFile
 		])
 		return files

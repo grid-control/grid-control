@@ -101,7 +101,7 @@ class Glite(WMS):
 		reqs = self.module.getRequirements(job)
 		reqs.append((WMS.OTHER, ()))
 		contents = {
-			'Executable': 'run.sh',
+			'Executable': 'grid.sh',
 			'Arguments': "%d %s" % (job, self.module.getJobArguments(job)),
 			'InputSandbox': self.sandboxIn,
 			'StdOutput': 'stdout.txt',
