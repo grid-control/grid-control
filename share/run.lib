@@ -122,48 +122,48 @@ getrealdir() {
 
 getscratch() {
 	debug_helper $FUNCNAME $LINENO
-	MY_SCRATCH="invalid"
-	MY_SCRATCHSIZE=-1
 	# find scratch directory with highest amount of diskspace
-	for DIR in \
-"$SCRATCH_DIRECTORY" "$LOCAL_SCRATCH" "$NODE_SCRATCH" "$USER_SCRATCH" \
-"$EDG_WL_SCRATCH" "$OSG_WN_TMP" "$LCG_TMP" "$DG_WL_SCRATCH"; do
-		[ ! -d "$DIR" ] && continue
-		rm -Rf "$DIR/$$" &> /dev/null
-		mkdir -p "$DIR/$$" &> /dev/null
-		if [ -d "$DIR/$$" ]; then
-			SIZE="`getdiskspace $DIR/$$`" &> /dev/null
-			[ "$SIZE" -gt "$MY_SCRATCHSIZE" ] && MY_SCRATCH="$DIR/$$" && MY_SCRATCHSIZE="$SIZE" &> /dev/null
-			rm -rf "$DIR/$$" &> /dev/null
+	MY_SCRATCH="invalid"
+
+	getscratch_internal() {
+		debug_helper $FUNCNAME $LINENO
+		MY_SCRATCH="invalid"
+		MY_SCRATCHSIZE=-1
+		# find scratch directory with highest amount of diskspace
+		while [ -n "$1" ];
+		do
+			echo -n "Scratch directory variable: $1 => \"${!1}\": " 1>&2
+			if [ -n "${!1}" ]; then
+				DIR=${!1}
+				[ ! -d "$DIR" ] && continue
+				rm -Rf "$DIR/$$" &> /dev/null
+				mkdir -p "$DIR/$$" &> /dev/null
+				if [ -d "$DIR/$$" ]; then
+					SIZE="`getdiskspace $DIR/$$`" &> /dev/null
+					echo "$SIZE mb free" 1>&2
+					[ "$SIZE" -gt "$MY_SCRATCHSIZE" ] && MY_SCRATCH="$DIR/$$" && MY_SCRATCHSIZE="$SIZE" &> /dev/null
+					rm -rf "$DIR/$$" &> /dev/null
+				fi
+			else
+				echo "FAILED" 1>&2
+			fi
+			shift
+		done
+		if [ "$MY_SCRATCHSIZE" -gt 0 ]; then
+			echo "Selected as scratch directory: $MY_SCRATCH: $MY_SCRATCHSIZE mb free" 1>&2
+			mkdir -p "$MY_SCRATCH" &> /dev/null
+			echo $MY_SCRATCH
+			return 0;
 		fi
-	done
-	if [ "$MY_SCRATCHSIZE" -gt 0 ]; then
-		echo "Selected as scratch directory: $MY_SCRATCH: $MY_SCRATCHSIZE" 1>&2
-		mkdir -p "$MY_SCRATCH" &> /dev/null
-		echo $MY_SCRATCH
-		return 0;
-	fi
-		
+		return 1;
+	}
+	
+	getscratch_internal SCRATCH_DIRECTORY LOCAL_SCRATCH NODE_SCRATCH USER_SCRATCH EDG_WL_SCRATCH OSG_WN_TMP LCG_TMP DG_WL_SCRATCH && return 0
 	echo "Site doesn't define scratch directory variables! Trying other locations..." 1>&2
-
-	# find directory with highest amount of diskspace
-	for DIR in "$MY_LANDINGZONE" "$HOME" "$TMPDIR" "/tmp"; do
-		[ ! -d "$DIR" ] && continue
-		rm -Rf "$DIR/$$" &> /dev/null
-		mkdir -p "$DIR/$$" &> /dev/null
-		if [ -d "$DIR/$$" ]; then
-			SIZE="`getdiskspace $DIR/$$`" &> /dev/null
-			[ "$SIZE" -gt "$MY_SCRATCHSIZE" ] && MY_SCRATCH="$DIR/$$" && MY_SCRATCHSIZE="$SIZE" &> /dev/null
-			rm -rf "$DIR/$$" &> /dev/null
-		fi
-	done
-
-	if [ "$MY_SCRATCHSIZE" -gt 0 ]; then
-		echo "Selected as scratch directory: $MY_SCRATCH: $MY_SCRATCHSIZE" 1>&2
-		mkdir -p "$MY_SCRATCH" &> /dev/null
-		echo $MY_SCRATCH
-		return 0;
-	fi
+	# FAIL or continue?
+	export
+	export GC_TMP="/tmp"
+	getscratch_internal MY_LANDINGZONE HOME TMPDIR GC_TMP && return 0
 
 	fail 102
 }
