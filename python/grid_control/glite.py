@@ -18,7 +18,7 @@ class Glite(WMS):
 		'cancelled':	Job.CANCELLED,
 		'failed':	Job.FAILED,
 		'done':		Job.DONE,
-		'cleared':	Job.OK
+		'cleared':	Job.SUCCESS
 	}
 
 	def __init__(self, config, module, init):

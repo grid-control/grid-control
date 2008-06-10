@@ -67,7 +67,7 @@ class Report:
 			return reduce(lambda x, y: x + y, map(lambda x: summary[x], states))
 
 		print "Total number of jobs:      %4d   Number of successful jobs: %4d" % \
-			(len(self.allJobs.all), summary[Job.OK])
+			(len(self.allJobs.all), summary[Job.SUCCESS])
 		print "Number of unfinished jobs: %4d   Number of failed jobs:     %4d\n" % \
 			(makeSum(Job.INIT, Job.READY, Job.WAITING, Job.QUEUED, Job.SUBMITTED, Job.RUNNING),
 			 makeSum(Job.ABORTED, Job.CANCELLED, Job.FAILED))
