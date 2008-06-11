@@ -9,7 +9,7 @@ export MY_SCRATCH="`getscratch`"
 shift
 
 # Print job informations
-echo -e "JOBID=$MY_JOBID\ngrid-control running on: `hostname -f; uname -a; cat /etc/redhat-release`"
+echo -e "JOBID=$MY_JOBID\ngrid-control - Version$GC_VERSION \nrunning on: `hostname -f; uname -a; cat /etc/redhat-release`"
 checkdir "Start directory" "$MY_LANDINGZONE"
 checkdir "Scratch directory" "$MY_SCRATCH"
 
