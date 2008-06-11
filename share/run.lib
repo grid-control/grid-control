@@ -14,6 +14,8 @@
 # 122 - min size failure
 # >125 - reserved by POSIX
 
+GC_VERSION="$Revision$"
+
 debug_helper() {
 	return
 	echo  -n "$$:shell:" 1>&2

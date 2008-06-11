@@ -28,6 +28,7 @@ def main(args):
 
 	# display the 'grid-control' logo
 	print open(utils.atRoot('share', 'logo.txt'), 'r').read()
+	print ("Version: $Revision$")
 
 	# set up signal handler for interrupts
 	def interrupt(sig, frame):
