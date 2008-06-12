@@ -137,7 +137,7 @@ getscratch() {
 			echo -n "Scratch directory variable: $1 => \"${!1}\": " 1>&2
 			if [ -n "${!1}" ]; then
 				DIR=${!1}
-				[ ! -d "$DIR" ] && continue
+				[ ! -d "$DIR" ] && shift && continue
 				rm -Rf "$DIR/$$" &> /dev/null
 				mkdir -p "$DIR/$$" &> /dev/null
 				if [ -d "$DIR/$$" ]; then
@@ -159,7 +159,7 @@ getscratch() {
 		fi
 		return 1;
 	}
-	
+
 	getscratch_internal SCRATCH_DIRECTORY LOCAL_SCRATCH NODE_SCRATCH USER_SCRATCH EDG_WL_SCRATCH OSG_WN_TMP LCG_TMP DG_WL_SCRATCH && return 0
 	echo "Site doesn't define scratch directory variables! Trying other locations..." 1>&2
 	# FAIL or continue?
