@@ -1,4 +1,5 @@
 #!/bin/sh
+# Author: Fred Stober <stober@ekp.uni-karlsruhe.de>
 
 # Error codes
 # 101 - file not found
@@ -12,6 +13,9 @@
 # 120 - lower space limit
 # 121 - upper space limit
 # 122 - min size failure
+
+# 123 - user intervention requested
+
 # >125 - reserved by POSIX
 
 GC_VERSION="$Revision$"
@@ -131,9 +135,13 @@ getscratch() {
 		debug_helper $FUNCNAME $LINENO
 		MY_SCRATCH="invalid"
 		MY_SCRATCHSIZE=-1
+		
 		# find scratch directory with highest amount of diskspace
+		LOOPCOUNTER=0
 		while [ -n "$1" ];
 		do
+			LOOPCOUNTER=$[ $LOOPCOUNTER + 1 ];
+			[ $LOOPCOUNTER -gt 20 ] && fail 123
 			echo -n "Scratch directory variable: $1 => \"${!1}\": " 1>&2
 			if [ -n "${!1}" ]; then
 				DIR=${!1}
@@ -162,8 +170,11 @@ getscratch() {
 
 	getscratch_internal SCRATCH_DIRECTORY LOCAL_SCRATCH NODE_SCRATCH USER_SCRATCH EDG_WL_SCRATCH OSG_WN_TMP LCG_TMP DG_WL_SCRATCH && return 0
 	echo "Site doesn't define scratch directory variables! Trying other locations..." 1>&2
-	# FAIL or continue?
 	export
+
+	# FAIL or continue?
+	fail 123
+
 	export GC_TMP="/tmp"
 	getscratch_internal MY_LANDINGZONE HOME TMPDIR GC_TMP && return 0
 

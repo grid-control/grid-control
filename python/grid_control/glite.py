@@ -311,10 +311,15 @@ class Glite(WMS):
 			del activity
 
 			if retCode != 0:
-				#FIXME
-				print >> sys.stderr, "WARNING: %s failed:" % os.path.basename(self._statusExec)
+				ok = False;
 				for line in open(log, 'r'):
-					sys.stderr.write(line)
+					if line.find("No Errors found") != -1:
+						ok = True;
+				if not ok:
+					#FIXME
+					print >> sys.stderr, "WARNING: %s failed:" % os.path.basename(self._statusExec)
+					for line in open(log, 'r'):
+						sys.stderr.write(line)
 
 		finally:
 			try:
