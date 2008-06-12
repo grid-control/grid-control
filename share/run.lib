@@ -23,9 +23,7 @@ GC_VERSION="$Revision$"
 debug_helper() {
 	return
 	echo  -n "$$:shell:" 1>&2
-	i=${#BASH_LINENO[*]}
-	while [ ${i:-0} -gt 0 ]; do
-		i=$[$i - 1]
+	for i in `seq ${#BASH_LINENO[*]} -1 0`; do
 		[ -n "${BASH_LINENO[$i]}" ] && echo -n "${BASH_LINENO[$i]} " 1>&2
 		[ -n "${BASH_SOURCE[$i]}" ] && echo -n "`basename ${BASH_SOURCE[$i]}`:" 1>&2
 		[ -n "${FUNCNAME[$i]}" ] && echo -n "${FUNCNAME[$i]}:" 1>&2
@@ -137,14 +135,11 @@ getscratch() {
 		MY_SCRATCHSIZE=-1
 		
 		# find scratch directory with highest amount of diskspace
-		LOOPCOUNTER=0
-		while [ -n "$1" ];
+		for DIRVAR in $@;
 		do
-			LOOPCOUNTER=$[ $LOOPCOUNTER + 1 ];
-			[ $LOOPCOUNTER -gt 20 ] && fail 123
-			echo -n "Scratch directory variable: $1 => \"${!1}\": " 1>&2
-			if [ -n "${!1}" ]; then
-				DIR=${!1}
+			echo -n "Scratch directory variable: $1 => \"${!DIRVAR}\": " 1>&2
+			if [ -n "${!DIRVAR}" ]; then
+				DIR=${!DIRVAR}
 				[ ! -d "$DIR" ] && shift && continue
 				rm -Rf "$DIR/$$" &> /dev/null
 				mkdir -p "$DIR/$$" &> /dev/null
