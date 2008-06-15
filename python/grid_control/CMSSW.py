@@ -3,7 +3,7 @@ from fnmatch import fnmatch
 from xml.dom import minidom
 from grid_control import ConfigError, Module, WMS, DataDiscovery, utils
 from DashboardAPI import DashboardAPI
-from time import time
+from time import time, localtime, strftime
 
 class CMSSW(Module):
 	def __init__(self, config, init):
@@ -39,11 +39,6 @@ class CMSSW(Module):
 		
 		self.gzipOut = config.getBool('CMSSW', 'gzip output', True)
 		self.useReqs = config.getBool('CMSSW', 'use requirements', True)
-
-		try:
-			self.seeds = map(lambda x: int(x), config.get('CMSSW', 'seeds', '').split())
-		except:
-			raise ConfigError("Invalid CMSSW seeds!")
 
 		if len(self.projectArea):
 			self.pattern = config.get('CMSSW', 'area files').split()
@@ -167,10 +162,11 @@ class CMSSW(Module):
 
 
 	# Called on job submission
-	def onJobSubmit(self, id):
-		dashboard = DashboardAPI(self.taskID, id)
+	def onJobSubmit(self, job, id):
+		Module.onJobSubmit(self, job, id)
+		dashboard = DashboardAPI(self.taskID, job.id)
 		dashboard.publish(
-			taskId=str(self.taskID), jobId=id, sid="%s-%s" % (self.taskID, id),
+			taskId=str(self.taskID), jobId=job.id, sid="%s-%s" % (self.taskID, job.id),
 			application=self.scramEnv['SCRAM_PROJECTVERSION'], exe="cmsRun",
 			nevtJob=self.eventsPerJob, tool="grid-control", GridName=self.username,
 			scheduler="gLite", taskType="analysis", vo=self.config.get('grid', 'vo', ''),
@@ -180,18 +176,24 @@ class CMSSW(Module):
 
 
 	# Called on job status update
-	def onJobUpdate(self, data):
+	def onJobUpdate(self, job, id, data):
+		Module.onJobUpdate(self, job, id, data)
+
+		reason=data['status']
+		if data.has_key('reason'):
+			reason=data['reason']
+		timestamp=strftime("%Y-%m-%d_%H:%M:%S", localtime())
+		if data.has_key('timestamp'):
+			timestamp=data['timestamp']
+		dest=""
+		if data.has_key('dest'):
+			dest=data['dest']
+
 		dashboard = DashboardAPI(self.taskID, id)
 		dashboard.publish(
-			taskId=str(self.taskID), jobId=data['id'], sid="%s-%s" % (self.taskID, data['id']),
-			StatusValue=data['status'], StatusValueReason=data['reason'],
-			StatusEnterTime=data['timestamp'], StatusDestination=data['dest']
+			taskId=str(self.taskID), jobId=job.id, sid="%s-%s" % (self.taskID, job.id),
+			StatusValue=data['status'], StatusValueReason=reason, StatusEnterTime=timestamp, StatusDestination=dest
 		)
-		return None
-
-
-	# Called on job output
-	def onJobOutput(self, id):
 		return None
 
 
@@ -218,7 +220,6 @@ class CMSSW(Module):
 		data['USER_INFILES'] = str.join(' ', map(lambda x: utils.shellEscape(os.path.basename(x)), Module.getInFiles(self)))
 		data['GZIP_OUT'] = ('no', 'yes')[self.gzipOut]
 		data['HAS_RUNTIME'] = ('no', 'yes')[len(self.projectArea) != 0]
-		data['SEEDS'] = str.join(' ', map(lambda x: "%d" % x, self.seeds))
 		return data
 
 

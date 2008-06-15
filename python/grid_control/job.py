@@ -54,6 +54,13 @@ class Job:
 		self.dict[key] = value
 
 
+	def get(self, key):
+		if self.dict.has_key(key):
+			return self.dict[key]
+		else:
+			return None
+
+
 	def update(self, state):
 		self.state = state
 		# FIXME: job history or something

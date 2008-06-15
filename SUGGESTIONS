@@ -5,15 +5,13 @@
 4. Statistic of done, failed, cancelled not only in total but optionally also per ce
    including failed and resubmitted jobs (good for blacklisting ...)   
 5. FIX whitelisting
-6. Random seed as command line argument
+6. Multiple datasets
 7. Option to "dont retry" - retry count
-8. Local job finish signal (move files from se)
-9. Local disk usage monitoring
-10.Multiple datasets
+8. Local disk usage monitoring
 
 X. FIX continous mode (-ic) (welches Problem)
 	(fixed?)
-X. enable condidtions for job failure (e.g. root-file <1 MB...)
+X. enable conditions for job failure (e.g. root-file <1 MB...)
 	([storage]: se min size)
 X. add timestamp to storage-out-files
 	([storage]: se output pattern)
@@ -25,3 +23,8 @@ X. Possibility to use job states in abbreviated form for the -d deletion command
 X. Or: Shorthand for -d deletion of all jobs in WAITING READY or QUEUED state.
 	(-d TODO, -d ALL)
 X. Update job status on dashboard
+	(done)
+X. Random seed as command line argument
+	(-S 1234,423,7856)
+X. Local job finish signal (move files from se)
+	([events]: on status, on submit, on output)

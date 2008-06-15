@@ -171,7 +171,6 @@ class GliteWMS(Glite):
 				os.unlink(log)
 			except:
 				pass
-		self.module.onJobSubmit(id)
 
 
 	def getJobsOutput(self, ids):
@@ -259,7 +258,6 @@ class GliteWMS(Glite):
 			except:
 				pass
 
-		self.module.onJobOutput(id)
 		return result
 
 

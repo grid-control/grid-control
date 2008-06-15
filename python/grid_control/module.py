@@ -1,7 +1,7 @@
 # Generic base class for job modules
 # instantiates named class instead (default is UserMod)
 
-import os.path, cStringIO, StringIO, md5, gzip, cPickle
+import os, os.path, cStringIO, StringIO, md5, gzip, cPickle
 from grid_control import ConfigError, AbstractObject, utils, WMS
 from time import time
 
@@ -13,6 +13,15 @@ class Module(AbstractObject):
 		self.wallTime = config.getInt('jobs', 'wall time') * 60 * 60
 		self.cpuTime = config.getInt('jobs', 'cpu time', 10 * 60)
 		self.memory = config.getInt('jobs', 'memory', 512)
+
+		try:
+			self.seeds = map(lambda x: int(x), config.get('jobs', 'seeds', '').split())
+		except:
+			# TODO: remove backwards compatibility
+			try:
+				self.seeds = map(lambda x: int(x), config.get('CMSSW', 'seeds', '').split())
+			except:
+				raise ConfigError("Invalid CMSSW seeds!")
 
 		# TODO: Convert the following into requirements
 		self.seInputFiles = config.get('storage', 'se input files', '').split()
@@ -43,6 +52,13 @@ class Module(AbstractObject):
 		self.dashboard = config.getBool('jobs', 'monitor job', True)
 		self.username = os.popen3('voms-proxy-info -identity 2> /dev/null | sed "s@.*/CN=@/CN=@"')[1].read().strip()
 
+		self.evtSubmit = config.get('events', 'on submit', '')
+		self.evtStatus = config.get('events', 'on status', '')
+		self.evtOutput = config.get('events', 'on output', '')
+
+
+	def setSeed(self, seeds):
+		self.seeds = map(lambda x: int(x), seeds.split(','))
 
 	# Get persistent task id for monitoring
 	def getTaskID(self):
@@ -61,17 +77,23 @@ class Module(AbstractObject):
 
 
 	# Called on job submission
-	def onJobSubmit(self, id):
+	def onJobSubmit(self, job, id):
+		if self.evtSubmit != '':
+			os.system("%s %d %s" % (self.evtSubmit, id, job.id))
 		return None
 
 
 	# Called on job status update
-	def onJobUpdate(self, data):
+	def onJobUpdate(self, job, id, data):
+		if self.evtStatus != '':
+			os.system("%s %d %s" % (self.evtStatus, id, job.id))
 		return None
 
 
 	# Called on job status update
-	def onJobOutput(self, id):
+	def onJobOutput(self, job, id, retCode):
+		if self.evtOutput != '':
+			os.system("%s %d %s %d" % (self.evtOutput, id, job.id, retCode))
 		return None
 
 
@@ -98,6 +120,8 @@ class Module(AbstractObject):
 			# Runtime
 			'DOBREAK': str(self.dobreak),
 			'MY_RUNTIME': self.getCommand(),
+			# Seeds
+			'SEEDS': str.join(' ', map(lambda x: "%d" % x, self.seeds)),
 			# Task infos
 			'TASK_ID': self.getTaskID(),
 			'TASK_USER': self.username,

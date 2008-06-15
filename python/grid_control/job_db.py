@@ -4,7 +4,7 @@ from time import localtime, strftime
 from grid_control import SortedList, ConfigError, Job, UserError, Report
 
 class JobDB:
-	def __init__(self, workDir, nJobs, init = False):
+	def __init__(self, workDir, nJobs, module, init = False):
 		self._dbPath = os.path.join(workDir, 'jobs')
 		try:
 			if not os.path.exists(self._dbPath):
@@ -32,6 +32,7 @@ class JobDB:
 			queue = self._findQueue(self._jobs[j])
 			queue.append(j)
 		self.ready.extend(xrange(i, nJobs))
+		self.module = module
 
 
 	def _findQueue(self, job):
@@ -98,6 +99,8 @@ class JobDB:
 			new.add(id)
 
 		print "%s - Job %d state changed to %s" % (strftime("%Y-%m-%d %H:%M:%S", localtime()), id, Job.states[state])
+		if (job.get('retcode') != None) and (state == Job.FAILED):
+			print "Errorcode: %d" % job.get('retcode')
 
 		self._saveJob(id)
 
@@ -118,6 +121,7 @@ class JobDB:
 				for key, value in info.items():
 					job.set(key, value)
 				self._update(id, job, state)
+				self.module.onJobUpdate(job, id, info)
 
 		return change
 
@@ -142,6 +146,7 @@ class JobDB:
 
 				job.assignId(wmsId)
 				self._update(id, job, Job.SUBMITTED)
+				self.module.onJobSubmit(job, id)
 		finally:
 			wms.bulkSubmissionEnd()
 
@@ -162,12 +167,12 @@ class JobDB:
 				state = Job.SUCCESS
 			else:
 				state = Job.FAILED
-				print "Errorcode: %d" % retCode
 
 			if state != job.state:
 				change = True
 				job.set('retcode', retCode)
 				self._update(id, job, state)
+				self.module.onJobOutput(job, id, retCode)
 
 		return change
 

@@ -65,6 +65,8 @@ class WMS(AbstractObject):
 				info = tarfile.TarInfo(name)
 				if name.endswith('.sh'):
 					info.mode = 0755
+				elif name.endswith('.py'):
+					info.mode = 0755
 				else:
 					info.mode = 0644
 				info.size = size
