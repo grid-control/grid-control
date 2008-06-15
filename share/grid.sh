@@ -13,6 +13,7 @@ echo -e "JOBID=$MY_JOBID\ngrid-control - Version$GC_VERSION \nrunning on: `hostn
 checkdir "Start directory" "$MY_LANDINGZONE"
 checkdir "Scratch directory" "$MY_SCRATCH"
 
+# Monitor space usage
 echo $$ > $MY_MARKER
 if [ -n "$(getrealdir $MY_SCRATCH | grep $(getrealdir $MY_LANDINGZONE))" ]; then
 	echo "\$MY_SCRATCH is a subdirectory of \$MY_LANDINGZONE"
@@ -31,6 +32,14 @@ tar xvfz "$MY_LANDINGZONE/sandbox.tar.gz" -C "$MY_SCRATCH" || fail 105
 
 checkfile "$MY_SCRATCH/_config.sh"
 source "$MY_SCRATCH/_config.sh"
+
+# Job timeout
+(
+	sleep ${DOBREAK:-1} &&
+	echo "===!Timeout after ${DOBREAK:-1} sec!===" 1>&2 &&
+	updatejobinfo 123 &&
+	kill -SIGTERM $$
+) &
 
 checkvar MY_RUNTIME
 

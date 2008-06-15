@@ -1,8 +1,9 @@
 # Generic base class for job modules
 # instantiates named class instead (default is UserMod)
 
-import os.path, cStringIO, StringIO
+import os.path, cStringIO, StringIO, md5, gzip, cPickle
 from grid_control import ConfigError, AbstractObject, utils, WMS
+from time import time
 
 class Module(AbstractObject):
 	# Read configuration options and init vars
@@ -37,6 +38,42 @@ class Module(AbstractObject):
 			# TODO: remove backwards compatibility
 			self.sePath = config.get('CMSSW', 'se path', '')
 
+		self.taskID = None
+		self.dobreak = config.getInt('jobs', 'do break', self.wallTime)
+		self.dashboard = config.getBool('jobs', 'monitor job', True)
+		self.username = os.popen3('voms-proxy-info -identity 2> /dev/null | sed "s@.*/CN=@/CN=@"')[1].read().strip()
+
+
+	# Get persistent task id for monitoring
+	def getTaskID(self):
+		if self.taskID == None:
+			taskfile = os.path.join(self.workDir, 'task.dat')
+			if os.path.exists(taskfile):
+				fp = gzip.GzipFile(taskfile, 'rb')
+				self.taskID = cPickle.load(fp)
+				fp.close()
+			else:
+				fp = gzip.GzipFile(taskfile, 'wb')
+				self.taskID = md5.md5(str(time())).hexdigest()
+				cPickle.dump(self.taskID, fp)
+				fp.close()
+		return self.taskID
+
+
+	# Called on job submission
+	def onJobSubmit(self, id):
+		return None
+
+
+	# Called on job status update
+	def onJobUpdate(self, data):
+		return None
+
+
+	# Called on job status update
+	def onJobOutput(self, id):
+		return None
+
 
 	# Get environment variables for _config.sh
 	def getConfig(self):
@@ -59,7 +96,12 @@ class Module(AbstractObject):
 			'SB_OUTPUT_FILES': str.join(' ', self.getOutFiles()),
 			'SB_INPUT_FILES': str.join(' ', map(lambda x: utils.shellEscape(os.path.basename(x)), self.getInFiles())),
 			# Runtime
-			'MY_RUNTIME': self.getCommand()
+			'DOBREAK': str(self.dobreak),
+			'MY_RUNTIME': self.getCommand(),
+			# Task infos
+			'TASK_ID': self.getTaskID(),
+			'TASK_USER': self.username,
+			'DASHBOARD': ('no', 'yes')[self.dashboard]
 		}
 
 

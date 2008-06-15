@@ -1,11 +1,11 @@
 1. Show location in job-status/ ev. have information output
 2. Possibility to give time limit after which jobs in WAITING, READY or QUEUED state
-   are automatically cancelled (and the resubmitted in case of -c option).
+   are automatically cancelled (and then resubmitted in case of -c option).
 3. Use md5 hash to verify transfer between node <-> se
 4. Statistic of done, failed, cancelled not only in total but optionally also per ce
    including failed and resubmitted jobs (good for blacklisting ...)   
 5. FIX whitelisting
-6. Update job status on site
+6. Random seed as command line argument
 7. Option to "dont retry" - retry count
 8. Local job finish signal (move files from se)
 9. Local disk usage monitoring
@@ -24,3 +24,4 @@ X. Possibility to use job states in abbreviated form for the -d deletion command
 	(-d R == READY,RUNNING; -d RE == READY; -d R,Q == READY,RUNNING,QUEUED; ...)
 X. Or: Shorthand for -d deletion of all jobs in WAITING READY or QUEUED state.
 	(-d TODO, -d ALL)
+X. Update job status on dashboard

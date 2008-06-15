@@ -2,6 +2,8 @@ import os, copy, gzip, cPickle, string, re
 from fnmatch import fnmatch
 from xml.dom import minidom
 from grid_control import ConfigError, Module, WMS, DataDiscovery, utils
+from DashboardAPI import DashboardAPI
+from time import time
 
 class CMSSW(Module):
 	def __init__(self, config, init):
@@ -164,6 +166,35 @@ class CMSSW(Module):
 		return self.dbs.GetSitesForJob(job)
 
 
+	# Called on job submission
+	def onJobSubmit(self, id):
+		dashboard = DashboardAPI(self.taskID, id)
+		dashboard.publish(
+			taskId=str(self.taskID), jobId=id, sid="%s-%s" % (self.taskID, id),
+			application=self.scramEnv['SCRAM_PROJECTVERSION'], exe="cmsRun",
+			nevtJob=self.eventsPerJob, tool="grid-control", GridName=self.username,
+			scheduler="gLite", taskType="analysis", vo=self.config.get('grid', 'vo', ''),
+			datasetFull=self.dataset, user=os.environ['LOGNAME']
+		)
+		return None
+
+
+	# Called on job status update
+	def onJobUpdate(self, data):
+		dashboard = DashboardAPI(self.taskID, id)
+		dashboard.publish(
+			taskId=str(self.taskID), jobId=data['id'], sid="%s-%s" % (self.taskID, data['id']),
+			StatusValue=data['status'], StatusValueReason=data['reason'],
+			StatusEnterTime=data['timestamp'], StatusDestination=data['dest']
+		)
+		return None
+
+
+	# Called on job output
+	def onJobOutput(self, id):
+		return None
+
+
 	def getRequirements(self, job):
 		reqs = Module.getRequirements(self, job)
 		if self.useReqs:
@@ -197,6 +228,11 @@ class CMSSW(Module):
 			files.append('runtime.tar.gz')
 		files.extend([
 			utils.atRoot('share', 'run.cmssw.sh'),
+			utils.atRoot('python/DashboardAPI', 'DashboardAPI.py'),
+			utils.atRoot('python/DashboardAPI', 'Logger.py'),
+			utils.atRoot('python/DashboardAPI', 'ProcInfo.py'),
+			utils.atRoot('python/DashboardAPI', 'apmon.py'),
+			utils.atRoot('python/DashboardAPI', 'report.py'),
 			self.configFile
 		])
 		return files

@@ -144,7 +144,14 @@ class GliteWMS(Glite):
 
 			if retCode != 0:
 				#FIXME
-				print >> sys.stderr, "WARNING: glite-wms-job-submit failed:"
+				print >> sys.stderr, "WARNING: glite-wms-job-submit failed (%d):" % retCode
+				rberr = False;
+				for line in open(log, 'r'):
+					if line.find("<ErrorCode>1228</ErrorCode>") != -1:
+						rberr = True;
+				if rberr:
+					print >> sys.stderr, "RB is overloaded!"
+					return id
 			elif id == None:
 				print >> sys.stderr, "WARNING: glite-wms-job-submit did not yield job id:"
 
@@ -164,6 +171,7 @@ class GliteWMS(Glite):
 				os.unlink(log)
 			except:
 				pass
+		self.module.onJobSubmit(id)
 
 
 	def getJobsOutput(self, ids):
@@ -228,7 +236,7 @@ class GliteWMS(Glite):
 
 			if retCode != 0:
 				#FIXME
-				print >> sys.stderr, "WARNING: glite-wms-job-output failed:"
+				print >> sys.stderr, "WARNING: glite-wms-job-output failed (%d):" % retCode
 				for line in open(log, 'r'):
 					sys.stderr.write(line)
 
@@ -251,6 +259,7 @@ class GliteWMS(Glite):
 			except:
 				pass
 
+		self.module.onJobOutput(id)
 		return result
 
 

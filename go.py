@@ -1,11 +1,12 @@
 #!/usr/bin/env python
-import sys, os, signal, time, getopt
+import sys, os, signal, getopt
 
 # add python subdirectory from where go.py was started to search path
 _root = os.path.dirname(os.path.abspath(os.path.normpath(sys.argv[0])))
 sys.path.append(os.path.join(_root, 'python'))
 # and include grid_control python module
 from grid_control import *
+import time
 
 def syntax(out):
 	out.write("Syntax: %s [OPTIONS] <config file>\n\n"
@@ -28,7 +29,7 @@ def main(args):
 
 	# display the 'grid-control' logo
 	print open(utils.atRoot('share', 'logo.txt'), 'r').read()
-	print ("Version: $Revision$")
+	print ('$Revision$'.strip('$'))
 
 	# set up signal handler for interrupts
 	def interrupt(sig, frame):

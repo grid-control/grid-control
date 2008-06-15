@@ -1,12 +1,32 @@
 #!/bin/bash
 # 110 - project area setup failed
-# 111 - CMSSW environment setup failed
+# 111 - CMSSW environment unpacking failed
 # 112 - CMSSW environment setup failed
 
 source $MY_LANDINGZONE/run.lib || exit 101
 
 echo "CMSSW module starting"
 echo "---------------------------"
+
+checkfile "$MY_SCRATCH/_config.sh"
+source "$MY_SCRATCH/_config.sh"
+
+if [ "$DASHBOARD" == "yes" ]; then
+	export MY_GUID="$TASK_ID-$GLITE_WMS_JOBID"
+	echo "Update Dashboard: taskId=$TASK_ID jobId=$GLITE_WMS_JOBID"
+	checkfile "$MY_SCRATCH/report.py"
+	chmod u+x "$MY_SCRATCH/report.py"
+	checkbin "$MY_SCRATCH/report.py"
+	export
+	echo $MY_SCRATCH/report.py MonitorID="$TASK_ID" MonitorJobID="$GLITE_WMS_JOBID" \
+		SyncGridJobId="$MY_GUID" SyncGridName="$TASK_USER" SyncCE="$GLOBUS_CE" \
+		WNname="$(hostname -f)" ExeStart="cmsRun"
+	$MY_SCRATCH/report.py MonitorID="$TASK_ID" MonitorJobID="$GLITE_WMS_JOBID" \
+		SyncGridJobId="$MY_GUID" SyncGridName="$TASK_USER" SyncCE="$GLOBUS_CE" \
+		WNname="$(hostname -f)" ExeStart="cmsRun"
+fi
+
+WALL_START="$(date +%s)"
 
 MAX_EVENTS="$1"
 SKIP_EVENTS="$2"
@@ -23,9 +43,6 @@ elif [ -z "$VO_CMS_SW_DIR" -a -d "/afs/cern.ch/cms/sw" ]; then
 	export VO_CMS_SW_DIR="/afs/cern.ch/cms/sw"
 	echo "[AFS-SITE] Using $VO_CMS_SW_DIR"
 fi
-
-checkfile "$MY_SCRATCH/_config.sh"
-source "$MY_SCRATCH/_config.sh"
 
 checkvar "VO_CMS_SW_DIR"
 checkfile "$VO_CMS_SW_DIR/cmsset_default.sh"
@@ -63,15 +80,19 @@ checkvar "CMSSW_RELEASE_BASE"
 checkbin "cmsRun"
 
 # additional setup of the CMSSW environment
-if [ -f "`_find setup.sh`" ]; then
-	eval "`_find setup.sh`"
+SETUP_CMSSW="`_find setup.sh`"
+if [ -f "$SETUP_CMSSW" ]; then
+	echo -e "Found setup script: \"$SETUP_CMSSW\""
+	cat "$SETUP_CMSSW"
+	checkbin "$SETUP_CMSSW"
+	eval "$SETUP_CMSSW"
 fi
 
 export MY_WORKDIR="`pwd`/workdir"
 export CMSSW_SEARCH_PATH="$CMSSW_SEARCH_PATH:$MY_WORKDIR"
 mkdir -p "$MY_WORKDIR"
 
-my_move "$MY_SCRATCH" "$MY_WORKDIR" "$SB_INPUT_FILES $SE_INPUT_FILES"
+my_move "$MY_SCRATCH" "$MY_WORKDIR" "$SE_INPUT_FILES"
 
 cd "$MY_WORKDIR"
 checkdir "CMSSW working directory" "$MY_WORKDIR"
@@ -93,6 +114,17 @@ echo "---------------------------"
 checkdir "CMSSW working directory after cmsRun" "$MY_WORKDIR"
 
 # Move output into scratch
-my_move "`pwd`" "$MY_SCRATCH" "$SB_OUTPUT_FILES $SE_OUTPUT_FILES"
+my_move "$MY_WORKDIR" "$MY_SCRATCH" "$SB_OUTPUT_FILES $SE_OUTPUT_FILES"
+
+if [ "$DASHBOARD" == "yes" ]; then
+	echo "Update Dashboard: taskId=$TASK_ID jobId=$GLITE_WMS_JOBID"
+	checkbin "$MY_SCRATCH/report.py"
+	echo $MY_SCRATCH/report.py MonitorID="$TASK_ID" MonitorJobID="$GLITE_WMS_JOBID" \
+		ExeEnd="cmsRun" WCCPU="$[ $(date +%s) - $WALL_START ]" \
+		ExeExitCode="$CODE" JobExitCode="$CODE" JobExitReason="$CODE"
+	$MY_SCRATCH/report.py MonitorID="$TASK_ID" MonitorJobID="$GLITE_WMS_JOBID" \
+		ExeEnd="cmsRun" WCCPU="$[ $(date +%s) - $WALL_START ]" \
+		ExeExitCode="$CODE" JobExitCode="$CODE" JobExitReason="$CODE"
+fi
 
 exit $CODE

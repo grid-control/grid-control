@@ -300,6 +300,7 @@ class Glite(WMS):
 			                        utils.shellEscape(jobs)), True)
 
 			for data in self._parseStatus(proc.fromchild.readlines()):
+				self.module.onJobUpdate(data)
 				id = data['id']
 				del data['id']
 				status = data['status']
