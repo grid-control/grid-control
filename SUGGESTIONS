@@ -4,10 +4,9 @@
 3. Use md5 hash to verify transfer between node <-> se
 4. Statistic of done, failed, cancelled not only in total but optionally also per ce
    including failed and resubmitted jobs (good for blacklisting ...)   
-5. FIX whitelisting
+5. Local disk usage monitoring
 6. Multiple datasets
 7. Option to "dont retry" - retry count
-8. Local disk usage monitoring
 
 X. FIX continous mode (-ic) (welches Problem)
 	(fixed?)
@@ -28,3 +27,5 @@ X. Random seed as command line argument
 	(-S 1234,423,7856)
 X. Local job finish signal (move files from se)
 	([events]: on status, on submit, on output)
+X. FIX whitelisting
+	(fixed?)

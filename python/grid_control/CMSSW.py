@@ -34,9 +34,6 @@ class CMSSW(Module):
 			self.eventsPerJob = config.getInt('CMSSW', 'events per job')
 		self.dbs = None
 
-		self.anySites = config.get('CMSSW', 'sites', 'no') == 'any' or \
-				self.dbs == None
-		
 		self.gzipOut = config.getBool('CMSSW', 'gzip output', True)
 		self.useReqs = config.getBool('CMSSW', 'use requirements', True)
 
@@ -164,6 +161,7 @@ class CMSSW(Module):
 	# Called on job submission
 	def onJobSubmit(self, job, id):
 		Module.onJobSubmit(self, job, id)
+
 		dashboard = DashboardAPI(self.taskID, job.id)
 		dashboard.publish(
 			taskId=str(self.taskID), jobId=job.id, sid="%s-%s" % (self.taskID, job.id),
@@ -179,20 +177,12 @@ class CMSSW(Module):
 	def onJobUpdate(self, job, id, data):
 		Module.onJobUpdate(self, job, id, data)
 
-		reason=data['status']
-		if data.has_key('reason'):
-			reason=data['reason']
-		timestamp=strftime("%Y-%m-%d_%H:%M:%S", localtime())
-		if data.has_key('timestamp'):
-			timestamp=data['timestamp']
-		dest=""
-		if data.has_key('dest'):
-			dest=data['dest']
-
 		dashboard = DashboardAPI(self.taskID, id)
 		dashboard.publish(
 			taskId=str(self.taskID), jobId=job.id, sid="%s-%s" % (self.taskID, job.id),
-			StatusValue=data['status'], StatusValueReason=reason, StatusEnterTime=timestamp, StatusDestination=dest
+			StatusValue=data['status'], StatusValueReason=data.get('reason', data['status']),
+			StatusEnterTime=data.get('timestamp', strftime("%Y-%m-%d_%H:%M:%S", localtime())),
+			StatusDestination=data.get('dest', "")
 		)
 		return None
 

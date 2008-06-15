@@ -30,7 +30,12 @@ class WMS(AbstractObject):
 			raise ConfigError("Problem creating work directory '%s': %s" % (self._outputPath, e))
 
 		tarFile = os.path.join(self.workDir, 'sandbox.tar.gz')
-		self.sandboxIn = [ utils.atRoot('share', 'grid.sh'), utils.atRoot('share', 'run.sh'), utils.atRoot('share', 'run.lib'), tarFile ]
+		self.sandboxIn = [
+			utils.atRoot('share', 'grid.sh'),
+			utils.atRoot('share', 'run.sh'),
+			utils.atRoot('share', 'run.lib'),
+			tarFile
+		]
 
 		self.sandboxOut = [ 'stdout.txt', 'stderr.txt', 'jobinfo.txt' ]
 		self.sandboxOut.extend(self.module.getOutFiles())
@@ -100,19 +105,12 @@ class WMS(AbstractObject):
 
 
 	def formatRequirements(self, reqs_):
-		# add requirements not handled by caller
-		def mangleSite(site):
-			neg = site[0] == '-'
-			if neg:
-				site = site[1:]
-			return (self.SITES, site, neg)
-
-		reqs = map(mangleSite, self._sites)
-		reqs.extend(reqs_)
-
-		if len(reqs) == 0:
+		# add site requirements
+		if len(self._sites):
+			reqs_.append((self.SITES, self._sites))
+		if len(reqs_) == 0:
 			return None
-		return str.join(' && ', map(lambda x: self._formatRequirement(*x), reqs))
+		return str.join(' && ', map(lambda x: self._formatRequirement(*x), reqs_))
 
 
 	def memberReq(self, *args):

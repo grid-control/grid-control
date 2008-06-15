@@ -72,13 +72,25 @@ class Glite(WMS):
 			return '(' + str.join(' || ', map(makeMember, sites)) + ')'
 
 
-	def sitesReq(self, site, neg):
-		if neg:
-			format = '!RegExp(%s, other.GlueCEUniqueID)'
-		else:
-			format = 'RegExp(%s, other.GlueCEUniqueID)'
+	def sitesReq(self, sites):
+		blacklist = []
+		whitelist = []
+		for site in sites:
+			if site[0] == '-':
+				blacklist.append(site[1:])
+			else:
+				whitelist.append(site)
 
-		return format % self._jdlEscape(site)
+		sitereqs = []
+		formatstring = "RegExp(%s, other.GlueCEUniqueID)"
+		if len(blacklist):
+			sitereqs.extend(map(lambda x: ("!" + formatstring % self._jdlEscape(x)), blacklist))
+		if len(whitelist):
+			sitereqs.append('(' + str.join(' || ', map(lambda x: (formatstring % self._jdlEscape(x)), whitelist)) + ')')
+		if not len(sitereqs):
+			return None
+		else:
+			return '( ' + str.join(' && ', sitereqs) + ' )'
 
 
 	def cpuTimeReq(self, cpuTime):

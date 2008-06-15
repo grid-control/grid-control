@@ -55,10 +55,7 @@ class Job:
 
 
 	def get(self, key):
-		if self.dict.has_key(key):
-			return self.dict[key]
-		else:
-			return None
+		return self.dict.get(key, None)
 
 
 	def update(self, state):
@@ -72,13 +69,7 @@ class Job:
 
 
 	def report(self):
-		try:
-			status = self.dict['dest']
-		except:
-			status = "N/A"
-
-		report = (self.states[self.state], status, self.id)
-		return report
+		return (self.states[self.state], self.dict.get('dest', 'N/A'), self.id)
 
 
 	def filter(self, filter):
