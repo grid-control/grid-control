@@ -49,8 +49,11 @@ class Module(AbstractObject):
 
 		self.taskID = None
 		self.dobreak = config.getInt('jobs', 'do break', self.wallTime)
-		self.dashboard = config.getBool('jobs', 'monitor job', True)
-		self.username = os.popen3('voms-proxy-info -identity 2> /dev/null | sed "s@.*/CN=@/CN=@"')[1].read().strip()
+		self.dashboard = config.getBool('jobs', 'monitor job', False)
+		if self.dashboard:
+			self.username = os.popen3('voms-proxy-info -identity 2> /dev/null | sed "s@.*/CN=@/CN=@"')[1].read().strip()
+		else
+			self.username = "unknown"
 
 		self.evtSubmit = config.get('events', 'on submit', '')
 		self.evtStatus = config.get('events', 'on status', '')
