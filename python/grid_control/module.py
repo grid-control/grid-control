@@ -52,7 +52,7 @@ class Module(AbstractObject):
 		self.dashboard = config.getBool('jobs', 'monitor job', False)
 		if self.dashboard:
 			self.username = os.popen3('voms-proxy-info -identity 2> /dev/null | sed "s@.*/CN=@/CN=@"')[1].read().strip()
-		else
+		else:
 			self.username = "unknown"
 
 		self.evtSubmit = config.get('events', 'on submit', '')
