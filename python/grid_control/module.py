@@ -15,7 +15,7 @@ class Module(AbstractObject):
 		self.memory = config.getInt('jobs', 'memory', 512)
 
 		try:
-			self.seeds = map(lambda x: int(x), config.get('jobs', 'seeds', '').split())
+			self.seeds = map(lambda x: int(x), config.get('jobs', 'seeds').split())
 		except:
 			# TODO: remove backwards compatibility
 			try:

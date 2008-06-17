@@ -163,12 +163,17 @@ class CMSSW(Module):
 		Module.onJobSubmit(self, job, id)
 
 		dashboard = DashboardAPI(self.taskID, job.id)
+		if self.dataset == None:
+			dataset = ""
+		else:
+			dataset = self.dataset
+
 		dashboard.publish(
 			taskId=self.taskID, jobId=job.id, sid="%s-%s" % (self.taskID, job.id),
 			application=self.scramEnv['SCRAM_PROJECTVERSION'], exe="cmsRun",
 			nevtJob=self.eventsPerJob, tool="grid-control", GridName=self.username,
 			scheduler="gLite", taskType="analysis", vo=self.config.get('grid', 'vo', ''),
-			datasetFull=self.dataset, user=os.environ['LOGNAME']
+			datasetFull=dataset, user=os.environ['LOGNAME']
 		)
 		return None
 
