@@ -162,19 +162,20 @@ class CMSSW(Module):
 	def onJobSubmit(self, job, id):
 		Module.onJobSubmit(self, job, id)
 
-		dashboard = DashboardAPI(self.taskID, job.id)
 		if self.dataset == None:
 			dataset = ""
 		else:
 			dataset = self.dataset
 
-		dashboard.publish(
-			taskId=self.taskID, jobId=job.id, sid="%s-%s" % (self.taskID, job.id),
-			application=self.scramEnv['SCRAM_PROJECTVERSION'], exe="cmsRun",
-			nevtJob=self.eventsPerJob, tool="grid-control", GridName=self.username,
-			scheduler="gLite", taskType="analysis", vo=self.config.get('grid', 'vo', ''),
-			datasetFull=dataset, user=os.environ['LOGNAME']
-		)
+		if self.dashboard:
+			dashboard = DashboardAPI(self.taskID, job.id)
+			dashboard.publish(
+				taskId=self.taskID, jobId=job.id, sid="%s-%s" % (self.taskID, job.id),
+				application=self.scramEnv['SCRAM_PROJECTVERSION'], exe="cmsRun",
+				nevtJob=self.eventsPerJob, tool="grid-control", GridName=self.username,
+				scheduler="gLite", taskType="analysis", vo=self.config.get('grid', 'vo', ''),
+				datasetFull=dataset, user=os.environ['LOGNAME']
+			)
 		return None
 
 
@@ -182,14 +183,15 @@ class CMSSW(Module):
 	def onJobUpdate(self, job, id, data):
 		Module.onJobUpdate(self, job, id, data)
 
-		dashboard = DashboardAPI(self.taskID, id)
-		dashboard.publish(
-			taskId=self.taskID, jobId=job.id, sid="%s-%s" % (self.taskID, job.id),
-			StatusValue=data.get('status','pending'),
-			StatusValueReason=data.get('reason', data.get('status', 'pending')),
-			StatusEnterTime=data.get('timestamp', strftime("%Y-%m-%d_%H:%M:%S", localtime())),
-			StatusDestination=data.get('dest', "")
-		)
+		if self.dashboard:
+			dashboard = DashboardAPI(self.taskID, id)
+			dashboard.publish(
+				taskId=self.taskID, jobId=job.id, sid="%s-%s" % (self.taskID, job.id),
+				StatusValue=data.get('status','pending'),
+				StatusValueReason=data.get('reason', data.get('status', 'pending')),
+				StatusEnterTime=data.get('timestamp', strftime("%Y-%m-%d_%H:%M:%S", localtime())),
+				StatusDestination=data.get('dest', "")
+			)
 		return None
 
 

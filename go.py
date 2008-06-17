@@ -18,6 +18,7 @@ def syntax(out):
 			"\t-r, --report             Show status report of jobs\n"
 			"\t-S, --seed <args>        Override seed specified in the config file e.g:\n"
 			"\t                            -S 1234,423,7856\n"
+			"\t                            -S (= generate 10 random seeds)\n"
 			"\t-d, --delete <args>      Delete given jobs, e.g:\n"
 			"\t                            -d 1,5,9,...  (JobNumbers)\n"
 			"\t                            -d QUEUED,... (JobStates)\n"
@@ -48,7 +49,8 @@ def main(args):
 	jobSubmission = True
 	report = False
 	delete = None
-	seed = None
+	seed = False
+	seedarg = None
 
 	# let getopt dig through the options
 	try:
@@ -74,7 +76,8 @@ def main(args):
 		elif opt in ('-d', '--delete'):
 			delete = arg
 		elif opt in ('-S', '--seed'):
-			seed = arg
+			seed = True
+			seedarg = arg
 
 	# we need exactly one config file argument
 	if len(args) != 1:
@@ -125,8 +128,8 @@ def main(args):
 		# Load the application module
 		module = config.get('global', 'module')
 		module = Module.open(module, config, init)
-		if seed != None:
-			module.setSeed(seed)
+		if seed:
+			module.setSeed(seedarg)
 
 		# Initialise workload management interface
 		wms = config.get('grid', 'wms')

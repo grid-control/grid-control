@@ -1,7 +1,7 @@
 # Generic base class for job modules
 # instantiates named class instead (default is UserMod)
 
-import os, os.path, cStringIO, StringIO, md5, gzip, cPickle
+import os, os.path, cStringIO, StringIO, md5, gzip, cPickle, random
 from grid_control import ConfigError, AbstractObject, utils, WMS
 from time import time
 
@@ -47,8 +47,10 @@ class Module(AbstractObject):
 			# TODO: remove backwards compatibility
 			self.sePath = config.get('CMSSW', 'se path', '')
 
+		self.dobreak = config.getInt('jobs', 'do break', self.wallTime - 60)
+
 		self.taskID = None
-		self.dobreak = config.getInt('jobs', 'do break', self.wallTime)
+		self.taskID = self.getTaskID()
 		self.dashboard = config.getBool('jobs', 'monitor job', False)
 		if self.dashboard:
 			self.username = os.popen3('voms-proxy-info -identity 2> /dev/null | sed "s@.*/CN=@/CN=@"')[1].read().strip()
@@ -59,9 +61,12 @@ class Module(AbstractObject):
 		self.evtStatus = config.get('events', 'on status', '')
 		self.evtOutput = config.get('events', 'on output', '')
 
-
 	def setSeed(self, seeds):
-		self.seeds = map(lambda x: int(x), seeds.split(','))
+		if seeds == None:
+			self.seeds = map(lambda x: random.randint(0,10000000), range(1,10))
+		else:
+			self.seeds = map(lambda x: int(x), seeds.split(','))
+
 
 	# Get persistent task id for monitoring
 	def getTaskID(self):
@@ -126,7 +131,7 @@ class Module(AbstractObject):
 			# Seeds
 			'SEEDS': str.join(' ', map(lambda x: "%d" % x, self.seeds)),
 			# Task infos
-			'TASK_ID': self.getTaskID(),
+			'TASK_ID': self.taskID,
 			'TASK_USER': self.username,
 			'DASHBOARD': ('no', 'yes')[self.dashboard]
 		}

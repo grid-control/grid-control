@@ -140,7 +140,7 @@ getscratch() {
 			echo -n "Scratch directory variable: $1 => \"${!DIRVAR}\": " 1>&2
 			if [ -n "${!DIRVAR}" ]; then
 				DIR=${!DIRVAR}
-				[ ! -d "$DIR" ] && shift && continue
+				[ ! -d "$DIR" ] && echo "NOT FOUND" && continue
 				rm -Rf "$DIR/$$" &> /dev/null
 				mkdir -p "$DIR/$$" &> /dev/null
 				if [ -d "$DIR/$$" ]; then
@@ -152,7 +152,6 @@ getscratch() {
 			else
 				echo "FAILED" 1>&2
 			fi
-			shift
 		done
 		if [ "$MY_SCRATCHSIZE" -gt 0 ]; then
 			echo "Selected as scratch directory: $MY_SCRATCH: $MY_SCRATCHSIZE mb free" 1>&2
