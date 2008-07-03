@@ -137,10 +137,10 @@ getscratch() {
 		# find scratch directory with highest amount of diskspace
 		for DIRVAR in $@;
 		do
-			echo -n "Scratch directory variable: $1 => \"${!DIRVAR}\": " 1>&2
+			echo -n "Scratch directory variable: $DIRVAR => \"${!DIRVAR}\": " 1>&2
 			if [ -n "${!DIRVAR}" ]; then
 				DIR=${!DIRVAR}
-				[ ! -d "$DIR" ] && echo "NOT FOUND" && continue
+				[ ! -d "$DIR" ] && echo "NOT FOUND" 1>&2 && continue
 				rm -Rf "$DIR/$$" &> /dev/null
 				mkdir -p "$DIR/$$" &> /dev/null
 				if [ -d "$DIR/$$" ]; then
@@ -164,7 +164,7 @@ getscratch() {
 
 	getscratch_internal SCRATCH_DIRECTORY LOCAL_SCRATCH NODE_SCRATCH USER_SCRATCH EDG_WL_SCRATCH OSG_WN_TMP LCG_TMP DG_WL_SCRATCH && return 0
 	echo "Site doesn't define scratch directory variables! Trying other locations..." 1>&2
-	export
+	export 1>&2
 
 	# FAIL or continue?
 	fail 123
