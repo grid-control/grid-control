@@ -37,9 +37,9 @@ class Module(AbstractObject):
 		self.seMinSize = config.getInt('storage', 'se min size', -1)
 
 		self.seSDUpperLimit = config.getInt('storage', 'scratch space used', 5000)
-		self.seSDLowerLimit = config.getInt('storage', 'scratch space left', 1000)
+		self.seSDLowerLimit = config.getInt('storage', 'scratch space left', 1)
 		self.seLZUpperLimit = config.getInt('storage', 'landing zone space used', 100)
-		self.seLZLowerLimit = config.getInt('storage', 'landing zone space left', 50)
+		self.seLZLowerLimit = config.getInt('storage', 'landing zone space left', 1)
 
 		try:
 			self.sePath = config.get('storage', 'se path')
