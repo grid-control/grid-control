@@ -33,13 +33,13 @@ tar xvfz "$MY_LANDINGZONE/sandbox.tar.gz" -C "$MY_SCRATCH" || fail 105
 checkfile "$MY_SCRATCH/_config.sh"
 source "$MY_SCRATCH/_config.sh"
 
-# Job timeout
-(
-	sleep ${DOBREAK:-1} &&
-	echo "===!Timeout after ${DOBREAK:-1} sec!===" 1>&2 &&
-	updatejobinfo 123 &&
-	kill -SIGTERM $$
-) &
+# Job timeout (for debugging)
+#(
+#	sleep ${DOBREAK:-1} &&
+#	echo "===!Timeout after ${DOBREAK:-1} sec!===" 1>&2 &&
+#	updatejobinfo 123 &&
+#	kill -SIGTERM $$
+#) &
 
 checkvar MY_RUNTIME
 
