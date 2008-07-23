@@ -252,6 +252,7 @@ se_copy() {
 	for file in $SOURCE_FILES; do
 		SOURCE_FN="`echo $SOURCE_PATTERN | var_replacer $file`"
 		TARGET_FN="`echo $TARGET_PATTERN | var_replacer $file`"
+		[ -d "$file" ] && continue
 		echo "globus-url-copy \"$1/$SOURCE_FN\" \"$2/$TARGET_FN\""
 		globus-url-copy "$1/$SOURCE_FN" "$2/$TARGET_FN" || BADCOUNT=$[$BADCOUNT+1]
 	done

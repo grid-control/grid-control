@@ -78,7 +78,7 @@ class DataDiscovery(AbstractObject):
 
 
 	def GetSitesForJob(self, jobNr):
-		if jobNr > len(self._jobFiles):
+		if jobNr >= len(self._jobFiles):
 			raise ConfigError("Job %d out of range for available dataset"  % jobNr)	
 		return self._jobFiles[jobNr]['StorageElementList']
 
