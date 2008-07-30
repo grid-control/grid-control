@@ -260,9 +260,8 @@ class Glite(WMS):
 			elif id == None:
 				print >> sys.stderr, "WARNING: %s did not yield job id:" % os.path.basename(self._submitExec)
 
-			if id == None:
-				for line in open(log, 'r'):
-					sys.stderr.write(line)
+			if id == None and os.path.exists(log):
+				sys.stderr.write(open(log, 'r').read())
 
 			# FIXME: glite-job-submit
 			return id
@@ -323,15 +322,14 @@ class Glite(WMS):
 			del activity
 
 			if retCode != 0:
-				ok = False;
-				for line in open(log, 'r'):
-					if line.find("No Errors found") != -1:
-						ok = True;
-				if not ok:
-					#FIXME
-					print >> sys.stderr, "WARNING: %s failed:" % os.path.basename(self._statusExec)
-					for line in open(log, 'r'):
-						sys.stderr.write(line)
+				ok = False
+				if os.path.exists(log):
+					if open(log, 'r').read().find("No Errors found") != -1:
+						ok = True
+					if not ok:
+						#FIXME
+						print >> sys.stderr, "WARNING: %s failed:" % os.path.basename(self._statusExec)
+						sys.stderr.write(open(log, 'r').read())
 
 		finally:
 			try:
@@ -400,8 +398,8 @@ class Glite(WMS):
 			if retCode != 0:
 				#FIXME
 				print >> sys.stderr, "WARNING: %s failed:" % os.path.basename(self._outputExec)
-				for line in open(log, 'r'):
-					sys.stderr.write(line)
+				if os.path.exists(log):
+					sys.stderr.write(open(log, 'r').read())
 
 			for file in os.listdir(tmpPath):
 				path = os.path.join(tmpPath, file)
@@ -465,9 +463,8 @@ class Glite(WMS):
 			if retCode != 0:
 				#FIXME
 				print >> sys.stderr, "WARNING: %s failed:" % os.path.basename(self._cancelExec)
-				for line in open(log, 'r'):
-					sys.stderr.write(line)
-
+				if os.path.exists(log):
+					sys.stderr.write(open(log, 'r').read())
 				return False
 
 		finally:

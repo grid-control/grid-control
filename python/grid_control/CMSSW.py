@@ -32,6 +32,11 @@ class CMSSW(Module):
 				self.eventsPerJob = 0
 		else:
 			self.eventsPerJob = config.getInt('CMSSW', 'events per job')
+			configFileContent = open(self.configFile, 'r').read()
+			if configFileContent.find("__FILE_NAMES__") == -1 or configFileContent.find("__MAX_EVENTS__") == -1 or configFileContent.find("__SKIP_EVENTS__") == -1:
+				print open(utils.atRoot('share', 'fail.txt'), 'r').read()
+				print "Config file must use __FILE_NAMES__, __MAX_EVENTS__ and __SKIP_EVENTS__ to work properly!"
+
 		self.dbs = None
 
 		self.gzipOut = config.getBool('CMSSW', 'gzip output', True)

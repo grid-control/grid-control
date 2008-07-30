@@ -65,14 +65,10 @@ class GliteWMS(Glite):
 			elif id == None:
 				print >> sys.stderr, "WARNING: glite-wms-job-delegate-proxy did not yield a proxy id:"
 
-			if id == None:
-				for line in open(log, 'r'):
-					sys.stderr.write(line)
+			if id == None and os.path.exists(log):
+				sys.stderr.write(open(log, 'r').read())
 
 			# FIXME: glite-wms-job-delegate-proxy
-
-			
-
 
 		finally:
 			try:
@@ -146,18 +142,17 @@ class GliteWMS(Glite):
 				#FIXME
 				print >> sys.stderr, "WARNING: glite-wms-job-submit failed (%d):" % retCode
 				rberr = False;
-				for line in open(log, 'r'):
-					if line.find("<ErrorCode>1228</ErrorCode>") != -1:
+				if os.path.exists(log):
+					if open(log, 'r').read().find("<ErrorCode>1228</ErrorCode>") != -1:
 						rberr = True;
 				if rberr:
 					print >> sys.stderr, "RB is overloaded!"
 					return id
 			elif id == None:
-				print >> sys.stderr, "WARNING: glite-wms-job-submit did not yield job id:"
+				print >> sys.stderr, "WARNING: glite-wms-job-submit did not yield job id"
 
-			if id == None:
-				for line in open(log, 'r'):
-					sys.stderr.write(line)
+			if id == None and os.path.exists(log):
+				sys.stderr.write(open(log, 'r').read())
 
 			# FIXME: glite-wms-job-submit
 			return id
@@ -236,8 +231,8 @@ class GliteWMS(Glite):
 			if retCode != 0:
 				#FIXME
 				print >> sys.stderr, "WARNING: glite-wms-job-output failed (%d):" % retCode
-				for line in open(log, 'r'):
-					sys.stderr.write(line)
+				if os.path.exists(log):
+					sys.stderr.write(open(log, 'r').read())
 
 			for file in os.listdir(tmpPath):
 				path = os.path.join(tmpPath, file)
