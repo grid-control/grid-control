@@ -12,17 +12,17 @@ checkfile "$MY_SCRATCH/_config.sh"
 source "$MY_SCRATCH/_config.sh"
 
 if [ "$DASHBOARD" == "yes" ]; then
-	export MY_GUID="$TASK_ID-$GLITE_WMS_JOBID"
-	echo "Update Dashboard: taskId=$TASK_ID jobId=$GLITE_WMS_JOBID"
+	export REPORTID="taskId=\"$TASK_ID\" jobId=\"$GLITE_WMS_JOBID\" MonitorID=\"$TASK_ID\" MonitorJobID=\"$GLITE_WMS_JOBID\""
+	echo "Update Dashboard: $REPORTID"
 	checkfile "$MY_SCRATCH/report.py"
 	chmod u+x "$MY_SCRATCH/report.py"
 	checkbin "$MY_SCRATCH/report.py"
 	export
-	echo $MY_SCRATCH/report.py MonitorID="$TASK_ID" MonitorJobID="$GLITE_WMS_JOBID" \
-		SyncGridJobId="$MY_GUID" SyncGridName="$TASK_USER" SyncCE="$GLOBUS_CE" \
+	echo $MY_SCRATCH/report.py $REPORTID \
+		SyncGridJobId="$GLITE_WMS_JOBID" SyncGridName="$TASK_USER" SyncCE="$GLOBUS_CE" \
 		WNname="$(hostname -f)" ExeStart="cmsRun"
-	$MY_SCRATCH/report.py MonitorID="$TASK_ID" MonitorJobID="$GLITE_WMS_JOBID" \
-		SyncGridJobId="$MY_GUID" SyncGridName="$TASK_USER" SyncCE="$GLOBUS_CE" \
+	$MY_SCRATCH/report.py $REPORTID \
+		SyncGridJobId="$GLITE_WMS_JOBID" SyncGridName="$TASK_USER" SyncCE="$GLOBUS_CE" \
 		WNname="$(hostname -f)" ExeStart="cmsRun"
 fi
 
@@ -42,6 +42,9 @@ if [ -z "$VO_CMS_SW_DIR" -a -n "$OSG_APP" ]; then
 elif [ -z "$VO_CMS_SW_DIR" -a -d "/afs/cern.ch/cms/sw" ]; then
 	export VO_CMS_SW_DIR="/afs/cern.ch/cms/sw"
 	echo "[AFS-SITE] Using $VO_CMS_SW_DIR"
+elif [ -z "$VO_CMS_SW_DIR" -a -d "/wlcg/sw/cms" ]; then
+	export VO_CMS_SW_DIR="/wlcg/sw/cms"
+	echo "[WLCG-SITE] Using $VO_CMS_SW_DIR"
 fi
 
 checkvar "VO_CMS_SW_DIR"
@@ -117,12 +120,12 @@ checkdir "CMSSW working directory after cmsRun" "$MY_WORKDIR"
 my_move "$MY_WORKDIR" "$MY_SCRATCH" "$SB_OUTPUT_FILES $SE_OUTPUT_FILES"
 
 if [ "$DASHBOARD" == "yes" ]; then
-	echo "Update Dashboard: taskId=$TASK_ID jobId=$GLITE_WMS_JOBID"
+	echo "Update Dashboard: $REPORTID"
 	checkbin "$MY_SCRATCH/report.py"
-	echo $MY_SCRATCH/report.py MonitorID="$TASK_ID" MonitorJobID="$GLITE_WMS_JOBID" \
+	echo $MY_SCRATCH/report.py $REPORTID \
 		ExeEnd="cmsRun" WCCPU="$[ $(date +%s) - $WALL_START ]" \
 		ExeExitCode="$CODE" JobExitCode="$CODE" JobExitReason="$CODE"
-	$MY_SCRATCH/report.py MonitorID="$TASK_ID" MonitorJobID="$GLITE_WMS_JOBID" \
+	$MY_SCRATCH/report.py $REPORTID \
 		ExeEnd="cmsRun" WCCPU="$[ $(date +%s) - $WALL_START ]" \
 		ExeExitCode="$CODE" JobExitCode="$CODE" JobExitReason="$CODE"
 fi

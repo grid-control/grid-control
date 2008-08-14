@@ -47,7 +47,7 @@ class Module(AbstractObject):
 			# TODO: remove backwards compatibility
 			self.sePath = config.get('CMSSW', 'se path', '')
 
-		self.dobreak = config.getInt('jobs', 'do break', self.wallTime - 60)
+		self.dobreak = config.getInt('jobs', 'do break', -1)
 
 		self.taskID = None
 		self.taskID = self.getTaskID()

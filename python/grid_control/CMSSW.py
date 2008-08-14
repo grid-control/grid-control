@@ -51,7 +51,7 @@ class CMSSW(Module):
 				raise ConfigError("Specified config area '%s' does not exist!" % self.projectArea)
 
 			# check, if the specified project area is a CMSSW project area
-			envFile = os.path.join(self.projectArea, '.SCRAM', 'Environment.xml')
+			envFile = os.path.join(self.projectArea, '.SCRAM', 'Environment')
 			if not os.path.exists(envFile):
 				raise ConfigError("Project area is not a SCRAM area.")
 
@@ -59,34 +59,18 @@ class CMSSW(Module):
 			try:
 				fp = open(envFile, 'r')
 			except IOError, e:
-				raise ConfigError("Project area .SCRAM/Environment.xml cannot be opened: %s" + str(e))
-
-			# try to parse it
-			try:
-				xml = minidom.parse(fp)
-			except :
-				raise ConfigError("Project area .SCRAM/Environment.xml file invalid.")
-			fp.close()
+				raise ConfigError("Project area .SCRAM/Environment cannot be opened: %s" + str(e))
 
 			# find entries
 			self.scramEnv = {}
-			try:
-				for node in xml.childNodes[0].childNodes:
-					if node.nodeType != minidom.Node.ELEMENT_NODE:
-						continue
-					if node.nodeName != 'environment':
-						continue
+			for line in fp:
+				key, value = line.split("=")
+				if type(key) == unicode:
+					key = key.encode('utf-8')
+				if type(value) == unicode:
+					value = value.encode('utf-8')
+				self.scramEnv[key] = value.strip()
 
-					for key, value in node.attributes.items():
-						if type(key) == unicode:
-							key = key.encode('utf-8')
-						if type(value) == unicode:
-							value = value.encode('utf-8')
-
-						self.scramEnv[key] = value
-
-			except:
-				raise ConfigError("Project area .SCRAM/Environment.xml has bad XML structure.")
 		else:
 			self.scramEnv = {
 				'SCRAM_PROJECTNAME': scramProject[0],
