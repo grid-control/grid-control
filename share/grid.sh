@@ -6,6 +6,8 @@ export MY_JOBID="$1"
 export MY_LANDINGZONE="`pwd`"
 export MY_MARKER="$MY_LANDINGZONE/RUNNING.$$"
 export MY_SCRATCH="`getscratch`"
+export MY_SEED=$RANDOM$RANDOM
+
 shift
 
 # Print job informations

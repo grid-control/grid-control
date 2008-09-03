@@ -268,19 +268,27 @@ var_replacer() {
 		j=$[j+1]
 	done
 
-	TMP_CSEC=$(echo "`date +%s` * 100 + `date +%N` / 10000000" | bc)
-	SEED_ALT=$(echo "$TMP_CSEC % 900000000" | bc)
+	TIME_NSEC=`date +%N`
+	MY_EVENTS=${MAX_EVENTS:-100}
 	sed \
 		-e "s@__X__@$1@" \
 		-e "s@__FILE_NAMES__@$FILE_NAMES@" \
 		-e "s@__MAX_EVENTS__@$MAX_EVENTS@" \
-		-e "s@__TIMESTAMP__@`date +%s`@" \
-		-e "s@__DATE__@`date +%F`@" \
 		-e "s@__SKIP_EVENTS__@$SKIP_EVENTS@" \
-		-e "s@__SEED_ALT__@$SEED_ALT@" \
 		-e "s@__MY_JOBID__@$MY_JOBID@" \
 		-e "s@__MY_JOB__@$MY_JOBID@" \
-		$SEED_REPLACER
+		$SEED_REPLACER | \
+	awk 'BEGIN{srand('$MY_SEED')}
+	{
+		LIMIT=900000000
+		TIME_RANDOM=systime() * 1000 + '$TIME_NSEC' / 1000000
+		gsub(/__DATE__/, strftime("%F"))
+		gsub(/__TIMESTAMP__/, strftime("%s"))
+		gsub(/__SEED_ALT__/, int(TIME_RANDOM % LIMIT))
+		gsub(/__SEED_RUN__/, int(TIME_RANDOM % LIMIT / '$MY_EVENTS') * '$MY_EVENTS')
+		gsub(/__RANDOM__/, int(rand() * LIMIT))
+		print
+	}'
 }
 
 _find() {
@@ -299,14 +307,14 @@ _find() {
 # Get used space in mb
 getdiskusage() {
 	debug_helper $FUNCNAME $LINENO
-	TMPVAR="`du --block-size=m -s $1 | cut -f 1 | sed -e 's/M//'`"
+	TMPVAR="`du --block-size=m -s $1 | awk '{gsub("M", "", $1); print $1}'`"
 	echo ${TMPVAR:-100000000}
 }
 
 # Get free space in mb
 getdiskspace() {
 	debug_helper $FUNCNAME $LINENO
-	TMPVAR="`df --block-size=m -P $1 | tail -n 1 | awk '{print $4}' | sed -e 's/M//'`"
+	TMPVAR="`df --block-size=m -P $1 | awk 'END{gsub("M", "", $4); print $4}'`"
 	echo ${TMPVAR:-0}
 }
 
