@@ -81,7 +81,7 @@ class Module(AbstractObject):
 				fp.close()
 			else:
 				fp = gzip.GzipFile(taskfile, 'wb')
-				self.taskID = md5.md5(str(time())).hexdigest()[:8]
+				self.taskID = 'GC' + md5.md5(str(time())).hexdigest()[:12]
 				cPickle.dump(self.taskID, fp)
 				fp.close()
 		return self.taskID

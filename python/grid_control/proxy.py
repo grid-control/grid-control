@@ -1,6 +1,6 @@
 # Generic base class for grid proxies
 # instantiates named class instead (default is VomsProxy)
-
+import sys
 from grid_control import AbstractObject
 
 class Proxy(AbstractObject):
@@ -14,6 +14,12 @@ class Proxy(AbstractObject):
 
 	def critical(self):
 		return not self.check(0)
+
+	def warn(self, hoursleft):
+		print >> sys.stderr, \
+			"Proxy lifetime (%d seconds) does not meet the walltime requirements of %d hours (%d seconds)!\n" \
+			"INFO: Disabling job submission." % (self.timeleft(), hoursleft, hoursleft * 60 * 60)
+
 
 class TrivialProxy(Proxy):
 	def timeleft(self, critical = None):

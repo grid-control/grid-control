@@ -43,7 +43,7 @@ class CMSSW(Module):
 		self.useReqs = config.getBool('CMSSW', 'use requirements', True)
 		self.seRuntime = config.getBool('CMSSW', 'se runtime', False)
 		if self.seRuntime and len(self.projectArea):
-			self.seInputFiles.append(self.getTaskID() + ".tar.gz"),
+			self.seInputFiles.append(self.taskID + ".tar.gz"),
 
 		if len(self.projectArea):
 			self.pattern = config.get('CMSSW', 'area files').split()
@@ -118,10 +118,10 @@ class CMSSW(Module):
 			files = []
 			walk('')
 			if self.seRuntime:
-				utils.genTarball(os.path.join(self.workDir, self.getTaskID() + ".tar.gz"), 
+				utils.genTarball(os.path.join(self.workDir, self.taskID + ".tar.gz"), 
 					self.projectArea, files)
-				source = "file://" + os.path.join(self.workDir, self.getTaskID() + ".tar.gz")
-				target = os.path.join(self.sePath, self.getTaskID() + ".tar.gz")
+				source = "file://" + os.path.join(self.workDir, self.taskID + ".tar.gz")
+				target = os.path.join(self.sePath, self.taskID + ".tar.gz")
 				print 'Copy CMSSW runtime to SE',
 				if os.system('globus-url-copy %s %s' % (source, target)) == 0:
 					print 'finished'
@@ -171,9 +171,9 @@ class CMSSW(Module):
 			dataset = self.dataset
 
 		if self.dashboard:
-			dashboard = DashboardAPI(self.taskID, job.id)
+			dashboard = DashboardAPI(self.taskID, "%s_%s" % (id, job.id))
 			dashboard.publish(
-				taskId=self.taskID, jobId=job.id, sid="%s-%s" % (self.taskID, job.id),
+				taskId=self.taskID, jobId="%s_%s" % (id, job.id), sid="%s_%s" % (id, job.id),
 				application=self.scramEnv['SCRAM_PROJECTVERSION'], exe="cmsRun",
 				nevtJob=self.eventsPerJob, tool="grid-control", GridName=self.username,
 				scheduler="gLite", taskType="analysis", vo=self.config.get('grid', 'vo', ''),
@@ -187,10 +187,10 @@ class CMSSW(Module):
 		Module.onJobUpdate(self, job, id, data)
 
 		if self.dashboard:
-			dashboard = DashboardAPI(self.taskID, id)
+			dashboard = DashboardAPI(self.taskID, "%s_%s" % (id, job.id))
 			dashboard.publish(
-				taskId=self.taskID, jobId=job.id, sid="%s-%s" % (self.taskID, job.id),
-				StatusValue=data.get('status','pending'),
+				taskId=self.taskID, jobId="%s_%s" % (id, job.id), sid="%s_%s" % (id, job.id),
+				StatusValue=data.get('status', 'pending'),
 				StatusValueReason=data.get('reason', data.get('status', 'pending')),
 				StatusEnterTime=data.get('timestamp', strftime("%Y-%m-%d_%H:%M:%S", localtime())),
 				StatusDestination=data.get('dest', "")
@@ -220,7 +220,7 @@ class CMSSW(Module):
 		data['SCRAM_PROJECTVERSION'] = self.scramEnv['SCRAM_PROJECTVERSION']
 		data['USER_INFILES'] = str.join(' ', map(lambda x: utils.shellEscape(os.path.basename(x)), Module.getInFiles(self)))
 		data['GZIP_OUT'] = ('no', 'yes')[self.gzipOut]
-		data['SE_RUNTIME'] = ('no', 'yes')[self.seRuntime]		
+		data['SE_RUNTIME'] = ('no', 'yes')[self.seRuntime]
 		data['HAS_RUNTIME'] = ('no', 'yes')[len(self.projectArea) != 0]
 		return data
 

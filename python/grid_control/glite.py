@@ -71,15 +71,20 @@ class Glite(WMS):
 		else:
 			return '(' + str.join(' || ', map(makeMember, sites)) + ')'
 
+	def appendSiteItem(list, site):
+		if site[0] == ':':
+			list.append(site[1:])
+		else:
+			list.append(site)
 
 	def sitesReq(self, sites):
 		blacklist = []
 		whitelist = []
 		for site in sites:
 			if site[0] == '-':
-				blacklist.append(site[1:])
+				appendSiteItem(blacklist, site[1:])
 			else:
-				whitelist.append(site)
+				appendSiteItem(whitelist, site)
 
 		sitereqs = []
 		formatstring = "RegExp(%s, other.GlueCEUniqueID)"

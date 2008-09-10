@@ -27,7 +27,7 @@ class PBS(WMS):
 		if len(self._queue):
 			params = ' -q %s' % self._queue
 
-		name = 'GC' + self.module.getTaskID()
+		name = self.module.taskID
 		job.set('name', name)
 
 		outPath = os.path.join(self._tmpPath, name + '.stdout.txt')
