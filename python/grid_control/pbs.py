@@ -1,10 +1,8 @@
 from __future__ import generators
-import sys, os, random, popen2
+import sys, os, popen2
 from grid_control import ConfigError, WMS, Job, utils
 
 class PBS(WMS):
-	__rndChars = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'
-
 	def __init__(self, config, module, init):
 		WMS.__init__(self, config, module, init)
 
@@ -14,8 +12,6 @@ class PBS(WMS):
 		self._queue = config.getPath('pbs', 'queue', '')
 
 		self._tmpPath = os.path.join(self._outputPath, 'tmp')
-
-		random.seed()
 
 
 	def submitJob(self, id, job):
@@ -31,9 +27,7 @@ class PBS(WMS):
 		if len(self._queue):
 			params = ' -q %s' % self._queue
 
-		name = 'GCtrl.' + \
-			map(lambda x: random.choice(self.__rndChars),
-			    xrange(0, 8))
+		name = 'GC' + self.module.getTaskID()
 		job.set('name', name)
 
 		outPath = os.path.join(self._tmpPath, name + '.stdout.txt')
@@ -41,7 +35,7 @@ class PBS(WMS):
 		executable = utils.atRoot('share', 'run.sh')
 
 		proc = popen2.Popen3("%s%s -N %s -o %s -e %s %s"
-		                     % (self._submitExec, params, name
+		                     % (self._submitExec, params, name,
 		                        utils.shellEscape(outPath),
 		                        utils.shellEscape(errPath),
 		                        utils.shellEscape(executable)),
@@ -82,6 +76,7 @@ class PBS(WMS):
 		                        utils.shellEscape(log),
 		                        utils.shellEscape(jobs)), True)
 
+		try:
 			for data in self._parseStatus(proc.fromchild.readlines()):
 				id = data['id']
 				del data['id']

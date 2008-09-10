@@ -51,6 +51,8 @@ class Module(AbstractObject):
 
 		self.taskID = None
 		self.taskID = self.getTaskID()
+		print 'Current task ID %s' % (self.getTaskID())
+
 		self.dashboard = config.getBool('jobs', 'monitor job', False)
 		if self.dashboard:
 			self.username = os.popen3('voms-proxy-info -identity 2> /dev/null | sed "s@.*/CN=@/CN=@"')[1].read().strip()
@@ -60,6 +62,7 @@ class Module(AbstractObject):
 		self.evtSubmit = config.get('events', 'on submit', '')
 		self.evtStatus = config.get('events', 'on status', '')
 		self.evtOutput = config.get('events', 'on output', '')
+
 
 	def setSeed(self, seeds):
 		if seeds == None:
@@ -78,7 +81,7 @@ class Module(AbstractObject):
 				fp.close()
 			else:
 				fp = gzip.GzipFile(taskfile, 'wb')
-				self.taskID = md5.md5(str(time())).hexdigest()
+				self.taskID = md5.md5(str(time())).hexdigest()[:8]
 				cPickle.dump(self.taskID, fp)
 				fp.close()
 		return self.taskID

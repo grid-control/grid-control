@@ -8,7 +8,7 @@ from wms		import *
 from glite		import *
 from glite_wms		import *
 from lsf		import *
-#from pbs		import *
+from pbs		import *
 from lcg		import *
 from report		import *
 from job_db		import *

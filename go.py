@@ -110,30 +110,30 @@ def main(args):
 		except:
 			raise UserError("The specified working directory '%s' is inaccessible!" % workdir)
 
-		# Open grid proxy
-		if config.get('grid','wms')!= 'LSF':
-			proxy = config.get('grid', 'proxy')
-			proxy = Proxy.open(proxy)
-			if proxy.critical():
-				raise UserError('Your proxy only has %d seconds left!' % proxy.timeleft())
-			
-			# Test grid proxy lifetime
-			wallTime = config.getInt('jobs', 'wall time')
-			if not proxy.check(wallTime * 60 * 60):
-				print >> sys.stderr, "Proxy lifetime (%d seconds) does not meet the walltime requirements of %d hours (%d seconds)!\n" \
-				      "INFO: Disabling job submission." \
-				      % (proxy.timeleft(), wallTime, wallTime * 60 * 60)
-				jobSubmission = False
-
-		# Load the application module
+		# Initialise application module
 		module = config.get('global', 'module')
 		module = Module.open(module, config, init)
 		if seed:
 			module.setSeed(seedarg)
 
 		# Initialise workload management interface
-		wms = config.get('grid', 'wms')
+		backend = config.get('global', 'backend', 'grid')
+		wms = config.get(backend, 'wms')
 		wms = WMS.open(wms, config, module, init)
+
+		# Initialise proxy
+		proxy = config.get(backend, 'proxy', 'TrivialProxy')
+		proxy = Proxy.open(proxy)
+		if proxy.critical():
+			raise UserError('Your proxy only has %d seconds left!' % proxy.timeleft())
+
+		# Test grid proxy lifetime
+		wallTime = config.getInt('jobs', 'wall time')
+		if not proxy.check(wallTime * 60 * 60):
+			print >> sys.stderr, "Proxy lifetime (%d seconds) does not meet the walltime requirements of %d hours (%d seconds)!\n" \
+		      "INFO: Disabling job submission." \
+		      % (proxy.timeleft(), wallTime, wallTime * 60 * 60)
+			jobSubmission = False
 
 		# Initialise job database
 		try:
@@ -179,7 +179,6 @@ def main(args):
 			if jobSubmission:
 				curInFlight = len(jobs.running)
 				submit = maxInFlight - curInFlight
-				#print submit
 				if submit < 0:
 					submit = 0
 				jobList = jobs.ready[:submit]
@@ -194,12 +193,10 @@ def main(args):
 				break
 
 			# Retest grid proxy lifetime
-			if config.get('grid','wms')!= 'LSF':
-				if jobSubmission and not proxy.check(wallTime * 60 * 60):
-					print >> sys.stderr, "Proxy lifetime (%d seconds) does not meet the walltime requirements of %d hours (%d seconds)!\n" \
-					      "INFO: Disabling job submission." \
-					      % (proxy.timeleft(), wallTime, wallTime * 60 * 60)
-			# BUGFIX: jobSubmission = False
+			if jobSubmission and not proxy.check(wallTime * 60 * 60):
+				print >> sys.stderr, "Proxy lifetime (%d seconds) does not meet the walltime requirements of %d hours (%d seconds)!\n" \
+				      "INFO: Disabling job submission." \
+				      % (proxy.timeleft(), wallTime, wallTime * 60 * 60)
 
 	except GridError, e:
 		e.showMessage()

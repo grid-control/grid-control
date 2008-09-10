@@ -14,3 +14,10 @@ class Proxy(AbstractObject):
 
 	def critical(self):
 		return not self.check(0)
+
+class TrivialProxy(Proxy):
+	def timeleft(self, critical = None):
+		if critical != None:
+			return critical + 1
+		else:
+			return self._critical

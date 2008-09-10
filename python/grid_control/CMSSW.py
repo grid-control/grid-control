@@ -23,7 +23,7 @@ class CMSSW(Module):
 		self.configFile = config.getPath('CMSSW', 'config file')
 		self.dbsapi = config.get('CMSSW', 'dbsapi')
 		self.dataset = config.get('CMSSW', 'dataset', '')
-		
+
 		if self.dataset == '':
 			self.dataset = None
 			try:
@@ -41,6 +41,9 @@ class CMSSW(Module):
 
 		self.gzipOut = config.getBool('CMSSW', 'gzip output', True)
 		self.useReqs = config.getBool('CMSSW', 'use requirements', True)
+		self.seRuntime = config.getBool('CMSSW', 'se runtime', False)
+		if self.seRuntime and len(self.projectArea):
+			self.seInputFiles.append(self.getTaskID() + ".tar.gz"),
 
 		if len(self.projectArea):
 			self.pattern = config.get('CMSSW', 'area files').split()
@@ -114,8 +117,19 @@ class CMSSW(Module):
 			# walk project area subdirectories and find files
 			files = []
 			walk('')
-			utils.genTarball(os.path.join(self.workDir, 'runtime.tar.gz'), 
-			                 self.projectArea, files)
+			if self.seRuntime:
+				utils.genTarball(os.path.join(self.workDir, self.getTaskID() + ".tar.gz"), 
+					self.projectArea, files)
+				source = "file://" + os.path.join(self.workDir, self.getTaskID() + ".tar.gz")
+				target = os.path.join(self.sePath, self.getTaskID() + ".tar.gz")
+				print 'Copy CMSSW runtime to SE',
+				if os.system('globus-url-copy %s %s' % (source, target)) == 0:
+					print 'finished'
+				else:
+					print 'failed'
+			else:
+				utils.genTarball(os.path.join(self.workDir, 'runtime.tar.gz'), 
+					self.projectArea, files)
 
 		# find datasets
 		if self.dataset != None:
@@ -206,23 +220,25 @@ class CMSSW(Module):
 		data['SCRAM_PROJECTVERSION'] = self.scramEnv['SCRAM_PROJECTVERSION']
 		data['USER_INFILES'] = str.join(' ', map(lambda x: utils.shellEscape(os.path.basename(x)), Module.getInFiles(self)))
 		data['GZIP_OUT'] = ('no', 'yes')[self.gzipOut]
+		data['SE_RUNTIME'] = ('no', 'yes')[self.seRuntime]		
 		data['HAS_RUNTIME'] = ('no', 'yes')[len(self.projectArea) != 0]
 		return data
 
 
 	def getInFiles(self):
 		files = Module.getInFiles(self)
-		if len(self.projectArea):
+		if len(self.projectArea) and not self.seRuntime:
 			files.append('runtime.tar.gz')
-		files.extend([
-			utils.atRoot('share', 'run.cmssw.sh'),
-			utils.atRoot('python/DashboardAPI', 'DashboardAPI.py'),
-			utils.atRoot('python/DashboardAPI', 'Logger.py'),
-			utils.atRoot('python/DashboardAPI', 'ProcInfo.py'),
-			utils.atRoot('python/DashboardAPI', 'apmon.py'),
-			utils.atRoot('python/DashboardAPI', 'report.py'),
-			self.configFile
-		])
+		files.append(utils.atRoot('share', 'run.cmssw.sh')),
+		files.extend([self.configFile])
+		if self.dashboard:
+			files.extend([
+				utils.atRoot('python/DashboardAPI', 'DashboardAPI.py'),
+				utils.atRoot('python/DashboardAPI', 'Logger.py'),
+				utils.atRoot('python/DashboardAPI', 'ProcInfo.py'),
+				utils.atRoot('python/DashboardAPI', 'apmon.py'),
+				utils.atRoot('python/DashboardAPI', 'report.py')
+			])
 		return files
 
 

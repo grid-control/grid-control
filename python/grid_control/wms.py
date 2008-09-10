@@ -12,12 +12,12 @@ class WMS(AbstractObject):
 		locals()[reqType] = id
 
 
-	def __init__(self, config, module, init):
+	def __init__(self, config, module, backend, init):
 		self.config = config
 		self.module = module
 		self.workDir = config.getPath('global', 'workdir')
 
-		self._sites = config.get('grid', 'sites', '').split()
+		self._sites = config.get(backend, 'sites', '').split()
 
 		self._outputPath = os.path.join(self.workDir, 'output')
 		try:
@@ -32,7 +32,6 @@ class WMS(AbstractObject):
 		tarFile = os.path.join(self.workDir, 'sandbox.tar.gz')
 		self.sandboxIn = [
 			utils.atRoot('share', 'grid.sh'),
-			utils.atRoot('share', 'run.sh'),
 			utils.atRoot('share', 'run.lib'),
 			tarFile
 		]

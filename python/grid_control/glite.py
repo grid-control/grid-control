@@ -22,7 +22,7 @@ class Glite(WMS):
 	}
 
 	def __init__(self, config, module, init):
-		WMS.__init__(self, config, module, init)
+		WMS.__init__(self, config, module, 'grid', init)
 
 		self._submitExec = utils.searchPathFind('glite-job-submit')
 		self._statusExec = utils.searchPathFind('glite-job-status')

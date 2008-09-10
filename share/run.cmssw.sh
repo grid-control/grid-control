@@ -72,6 +72,12 @@ checkdir "SCRAM project area" "$SCRAM_PROJECTVERSION"
 cd "$SCRAM_PROJECTVERSION"
 
 if ! [ "$HAS_RUNTIME" = no ]; then
+
+	if [ "$SE_RUNTIME" = yes ]; then
+		echo "Rename CMSSW environment package: ${TASK_ID}.tar.gz"
+		mv `_find ${TASK_ID}.tar.gz` runtime.tar.gz || fail 101
+	fi
+	
 	echo "Unpacking CMSSW environment"
 	tar xvfz "`_find runtime.tar.gz`" || fail 111
 fi

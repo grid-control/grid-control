@@ -9,7 +9,7 @@ except ImportError:
 
 class GliteWMS(Glite):
 	def __init__(self, config, module, init):
-		WMS.__init__(self, config, module, init)
+		WMS.__init__(self, config, module, 'grid', init)
 
 		self._delegateExec = utils.searchPathFind('glite-wms-job-delegate-proxy')
 		self._submitExec = utils.searchPathFind('glite-wms-job-submit')
