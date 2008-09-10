@@ -1,5 +1,6 @@
 import re
 from grid_control import RuntimeError, utils, enumerate, UserError
+from time import time
 
 class Job:
 	states = ('INIT', 'SUBMITTED', 'WAITING', 'READY', 'QUEUED', 'RUNNING', 'ABORTED', 'CANCELLED', 'FAILED', 'DONE', 'SUCCESS')
@@ -12,7 +13,10 @@ class Job:
 
 	def __init__(self, state = INIT):
 		self.state = state
+		self.attempt = 0
+		self.history = {}
 		self.id = None
+		self.submitted = 0
 		self.dict = {}
 
 
@@ -22,6 +26,14 @@ class Job:
 
 		if data.has_key('id'):
 			job.id = data['id']
+		if data.has_key('attempt'):
+			job.attempt = data['attempt']
+		if data.has_key('submitted'):
+			job.submitted = data['submitted']
+
+		for key in range(1, job.attempt + 1):
+			if data.has_key(('history_' + str(key)).strip()):
+				job.history[key] = data['history_' + str(key)]
 
 		for i in cls.__internals:
 			try:
@@ -37,9 +49,12 @@ class Job:
 	def save(self, fp):
 		data = self.dict
 		data['status'] = self.states[self.state]
+		data['attempt'] = self.attempt
+		data['submitted'] = self.submitted
+		for key, value in self.history.items():
+			data['history_' + str(key)] = value
 		if self.id != None:
 			data['id'] = self.id
-
 		for key, value in data.items():
 			if value == None:
 				continue
@@ -60,11 +75,15 @@ class Job:
 
 	def update(self, state):
 		self.state = state
+		if self.attempt > 0:
+			self.history[self.attempt] = self.dict.get('dest', 'N/A')
 		# FIXME: job history or something
 
 
 	def assignId(self, id):
 		self.id = id
+		self.attempt = self.attempt + 1
+		self.submitted = time()
 		# FIXME: History or sth.
 
 
@@ -72,11 +91,10 @@ class Job:
 		return (self.states[self.state], self.dict.get('dest', 'N/A'), self.id)
 
 
-	def filter(self, filter):
+	def statefilter(self, filter):
 		for state in filter.split(','):
 			regex = re.compile("^" + state + ".*")
 			for key in self._stateDict.keys():
-				if regex.match(key):
-					if self.state == self._stateDict[key]:
-						return True
+				if regex.match(key) and self.state == self._stateDict[key]:
+					return True
 		return False

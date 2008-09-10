@@ -191,7 +191,7 @@ class JobDB:
 					raise UserError("Job identifiers must be integers.")
 		else:
 			for jobId in self.all:
-				if self._jobs[jobId].filter(filter):
+				if self._jobs[jobId].statefilter(filter):
 					jobs.append(jobId)
 
 		ids = []
