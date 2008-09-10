@@ -3,7 +3,8 @@ import sys, os, signal, getopt
 
 # add python subdirectory from where go.py was started to search path
 _root = os.path.dirname(os.path.abspath(os.path.normpath(sys.argv[0])))
-sys.path.append(os.path.join(_root, 'python'))
+sys.path.insert(0, os.path.join(_root, 'python'))
+
 # and include grid_control python module
 from grid_control import *
 import time
@@ -15,6 +16,10 @@ def syntax(out):
 			"\t-i, --init               Initialise working directory\n"
 			"\t-c, --continuous         Run in continuous mode\n"
 			"\t-s, --no-submission      Disable job submission\n"
+			"\t-m, --max-retry <args>   Set maximum number of job resubmission attempts\n"
+			"\t                         Default is to resubmit indefinitely\n"
+			"\t                            -m 0 (Disable job REsubmission)\n"
+			"\t                            -m 5 (Resubmit jobs up to 5 times)\n"
 			"\t-r, --report             Show status report of jobs\n"
 			"\t-S, --seed <args>        Override seed specified in the config file e.g:\n"
 			"\t                            -S 1234,423,7856\n"
@@ -40,13 +45,14 @@ def main(args):
 		continuous = False
 	signal.signal(signal.SIGINT, interrupt)
 
-	longOptions = ['help', 'init', 'continuous', 'no-submission', 'report', 'delete', 'seed']
-	shortOptions = 'hicsrd:S:'
+	longOptions = ['help', 'init', 'continuous', 'no-submission', 'max-retry', 'report', 'delete', 'seed']
+	shortOptions = 'hicsrm:d:S:'
 
 	# global variables
 	continuous = False
 	init = False
 	jobSubmission = True
+	maxRetry = None
 	report = False
 	delete = None
 	seed = False
@@ -71,6 +77,8 @@ def main(args):
 			continuous = True
 		elif opt in ('-s', '--no-submission'):
 			jobSubmission = False
+		elif opt in ('-m', '--max-retry'):
+			maxRetry = int(arg)
 		elif opt in ('-r', '--report'):
 			report = True
 		elif opt in ('-d', '--delete'):
@@ -130,9 +138,7 @@ def main(args):
 		# Test grid proxy lifetime
 		wallTime = config.getInt('jobs', 'wall time')
 		if not proxy.check(wallTime * 60 * 60):
-			print >> sys.stderr, "Proxy lifetime (%d seconds) does not meet the walltime requirements of %d hours (%d seconds)!\n" \
-		      "INFO: Disabling job submission." \
-		      % (proxy.timeleft(), wallTime, wallTime * 60 * 60)
+			proxy.warn(wallTime)
 			jobSubmission = False
 
 		# Initialise job database
@@ -159,10 +165,10 @@ def main(args):
 
 		# Check if running in continuous mode
 		if continuous:
-			print ""
-			Report(jobs,jobs).summary()
+			Report(jobs, jobs).summary()
 			print "Running in continuous mode. Press ^C to exit."
 
+		# Job submission loop
 		while True:
 			# idle timeout is one minute
 			timeout = 60
@@ -177,11 +183,7 @@ def main(args):
 
 			# try submission
 			if jobSubmission:
-				curInFlight = len(jobs.running)
-				submit = maxInFlight - curInFlight
-				if submit < 0:
-					submit = 0
-				jobList = jobs.ready[:submit]
+				jobList = jobs.getSubmissionJobs(config.getInt('jobs', 'in flight'), maxRetry)
 				if len(jobList):
 					jobs.submit(wms, jobList)
 				del jobList
@@ -194,9 +196,7 @@ def main(args):
 
 			# Retest grid proxy lifetime
 			if jobSubmission and not proxy.check(wallTime * 60 * 60):
-				print >> sys.stderr, "Proxy lifetime (%d seconds) does not meet the walltime requirements of %d hours (%d seconds)!\n" \
-				      "INFO: Disabling job submission." \
-				      % (proxy.timeleft(), wallTime, wallTime * 60 * 60)
+				proxy.warn(wallTime)
 
 	except GridError, e:
 		e.showMessage()

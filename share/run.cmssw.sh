@@ -12,7 +12,7 @@ checkfile "$MY_SCRATCH/_config.sh"
 source "$MY_SCRATCH/_config.sh"
 
 if [ "$DASHBOARD" == "yes" ]; then
-	export REPORTID="taskId=\"$TASK_ID\" jobId=\"$GLITE_WMS_JOBID\" MonitorID=\"$TASK_ID\" MonitorJobID=\"$GLITE_WMS_JOBID\""
+	export REPORTID="taskId=$TASK_ID jobId=${MY_JOBID}_$GLITE_WMS_JOBID MonitorID=$TASK_ID MonitorJobID=${MY_JOBID}_$GLITE_WMS_JOBID"
 	echo "Update Dashboard: $REPORTID"
 	checkfile "$MY_SCRATCH/report.py"
 	chmod u+x "$MY_SCRATCH/report.py"

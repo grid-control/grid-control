@@ -54,10 +54,10 @@ class JobDB:
 
 
 	def _scan(self):
-		filter = re.compile(r'^job_([0-9]+)\.txt$')
+		regexfilter = re.compile(r'^job_([0-9]+)\.txt$')
 		self._jobs = {}
 		for job in fnmatch.filter(os.listdir(self._dbPath), 'job_*.txt'):
-			match = filter.match(job)
+			match = regexfilter.match(job)
 			try:
 				id = int(match.group(1))
 			except:
@@ -72,6 +72,7 @@ class JobDB:
 		for id, job in self._jobs.items():
 			if types == None or job.state in types:
 				yield id
+
 
 	def get(self, id):
 		return self._jobs[id]
@@ -98,11 +99,27 @@ class JobDB:
 			old.remove(id)
 			new.add(id)
 
-		print "%s - Job %d state changed to %s" % (strftime("%Y-%m-%d %H:%M:%S", localtime()), id, Job.states[state])
-		if (job.get('retcode') != None) and (state == Job.FAILED):
-			print "Errorcode: %d" % job.get('retcode')
+		print "%s - Job %d state changed to %s" % (strftime("%Y-%m-%d %H:%M:%S", localtime()), id, Job.states[state]),
+		if state == Job.SUBMITTED and job.attempt > 1:
+			print "(attempt #%s)" % job.attempt
+		elif (job.get('retcode') != None) and (state == Job.FAILED):
+			print "(error code: %d - %s)" % (job.get('retcode'), job.get('dest'))
+		else:
+			print
 
 		self._saveJob(id)
+
+
+	def getSubmissionJobs(self, maxInFlight, maxRetry):
+		curInFlight = len(self.running)
+		submit = maxInFlight - curInFlight
+		if submit < 0:
+			submit = 0
+		if maxRetry:
+			list = filter(lambda x: self._jobs.get(x, Job()).attempt < maxRetry, self.ready)
+		else:
+			list = self.ready
+		return list[:submit]
 
 
 	def check(self, wms):
@@ -150,6 +167,7 @@ class JobDB:
 		finally:
 			wms.bulkSubmissionEnd()
 
+
 	def retrieve(self, wms):
 		change = False
 		ids = []
@@ -177,22 +195,20 @@ class JobDB:
 		return change
 
 
-	def delete(self, wms, filter):
+	def delete(self, wms, jobfilter):
 		jobs = []
-		if filter == "TODO":
-			filter = "SUBMITTED,WAITING,READY,QUEUED"
-		if filter == "ALL":
-			filter = "SUBMITTED,WAITING,READY,QUEUED,RUNNING"
-		if len(filter) and filter[0].isdigit():
-			for jobId in filter.split(","):
+		if jobfilter == "TODO":
+			jobfilter = "SUBMITTED,WAITING,READY,QUEUED"
+		if jobfilter == "ALL":
+			jobfilter = "SUBMITTED,WAITING,READY,QUEUED,RUNNING"
+		if len(jobfilter) and jobfilter[0].isdigit():
+			for jobId in jobfilter.split(","):
 				try:
 					jobs.append(int(jobId))
 				except:
 					raise UserError("Job identifiers must be integers.")
 		else:
-			for jobId in self.all:
-				if self._jobs[jobId].statefilter(filter):
-					jobs.append(jobId)
+			jobs = filter(lambda x: self._jobs[x].statefilter(jobfilter), self._jobs)
 
 		ids = []
 		for id in jobs:
@@ -200,7 +216,6 @@ class JobDB:
 			ids.append(job.id)
 
 		print "\nDeleting the following jobs:"
-
 		Report(jobs,self._jobs).details()
 		
 		if not len(jobs) == 0:
