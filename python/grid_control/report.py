@@ -51,6 +51,9 @@ class Report:
                 print line + "\n"
 
 
+	def siteReport(self):
+		print "-----------------------------------------------------------------"
+
 	def summary(self):
 		# Print report summary
 		print "-----------------------------------------------------------------"

@@ -21,6 +21,7 @@ def syntax(out):
 			"\t                            -m 0 (Disable job REsubmission)\n"
 			"\t                            -m 5 (Resubmit jobs up to 5 times)\n"
 			"\t-r, --report             Show status report of jobs\n"
+			"\t-R, --site-report        Show site report\n"
 			"\t-S, --seed <args>        Override seed specified in the config file e.g:\n"
 			"\t                            -S 1234,423,7856\n"
 			"\t                            -S (= generate 10 random seeds)\n"
@@ -45,8 +46,8 @@ def main(args):
 		continuous = False
 	signal.signal(signal.SIGINT, interrupt)
 
-	longOptions = ['help', 'init', 'continuous', 'no-submission', 'max-retry', 'report', 'delete', 'seed']
-	shortOptions = 'hicsrm:d:S:'
+	longOptions = ['help', 'init', 'continuous', 'no-submission', 'max-retry', 'report', 'site-report', 'delete', 'seed']
+	shortOptions = 'hicsrRm:d:S:'
 
 	# global variables
 	continuous = False
@@ -54,6 +55,7 @@ def main(args):
 	jobSubmission = True
 	maxRetry = None
 	report = False
+	reportSite = False
 	delete = None
 	seed = False
 	seedarg = None
@@ -81,6 +83,8 @@ def main(args):
 			maxRetry = int(arg)
 		elif opt in ('-r', '--report'):
 			report = True
+		elif opt in ('-R', '--site-report'):
+			reportSite = True
 		elif opt in ('-d', '--delete'):
 			delete = arg
 		elif opt in ('-S', '--seed'):
@@ -156,6 +160,10 @@ def main(args):
 			report = Report(jobs, jobs)
 			report.details()
 			report.summary()
+			return 0
+		if reportSite:
+			report = Report(jobs, jobs)
+			report.siteReport()
 			return 0
 
 		# Check if jobs have to be deleted and exit
