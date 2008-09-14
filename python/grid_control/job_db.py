@@ -104,6 +104,8 @@ class JobDB:
 			print "(attempt #%s)" % job.attempt
 		elif (job.get('retcode') != None) and (state == Job.FAILED):
 			print "(error code: %d - %s)" % (job.get('retcode'), job.get('dest'))
+		elif state == Job.QUEUED:
+			print "(%s)" % job.get('dest')
 		else:
 			print
 
@@ -122,16 +124,24 @@ class JobDB:
 		return list[:submit]
 
 
+	def getWmsMap(self, idlist):
+		map = {}
+		for id in idlist:
+			job = self._jobs[id]
+			map[job.id] = (id, job)
+		return map
+
+
 	def check(self, wms):
 		change = False
 		map = {}
-		ids = []
+		wmsIds = []
 		for id in self.running:
 			job = self._jobs[id]
 			map[job.id] = (id, job)
-			ids.append(job.id)
+			wmsIds.append(job.id)
 
-		for id, state, info in wms.checkJobs(ids):
+		for id, state, info in wms.checkJobs(wmsIds):
 			id, job = map[id]
 			if state != job.state:
 				change = True
@@ -143,13 +153,13 @@ class JobDB:
 		return change
 
 
-	def submit(self, wms, ids):
-		if len(ids) == 0:
+	def submit(self, wms, wmsIds):
+		if len(wmsIds) == 0:
 			return
 
 		try:
 			wms.bulkSubmissionBegin()
-			for id in ids:
+			for id in wmsIds:
 				try:
 					job = self._jobs[id]
 				except:
@@ -170,12 +180,12 @@ class JobDB:
 
 	def retrieve(self, wms):
 		change = False
-		ids = []
+		wmsIds = []
 		for id in self.done:
 			job = self._jobs[id]
-			ids.append(job.id)
+			wmsIds.append(job.id)
 
-		for id, retCode in wms.retrieveJobs(ids):
+		for id, retCode in wms.retrieveJobs(wmsIds):
 			try:
 				job = self._jobs[id]
 			except:
@@ -195,6 +205,15 @@ class JobDB:
 		return change
 
 
+	def mark_cancelled(self, jobs):
+		for id in jobs:
+			try:
+				job = self._jobs[id]
+			except:
+				continue
+			self._update(id, job, Job.CANCELLED)
+
+
 	def delete(self, wms, jobfilter):
 		jobs = []
 		if jobfilter == "TODO":
@@ -210,10 +229,10 @@ class JobDB:
 		else:
 			jobs = filter(lambda x: self._jobs[x].statefilter(jobfilter), self._jobs)
 
-		ids = []
+		wmsIds = []
 		for id in jobs:
 			job = self._jobs[id]
-			ids.append(job.id)
+			wmsIds.append(job.id)
 
 		print "\nDeleting the following jobs:"
 		Report(jobs,self._jobs).details()
@@ -221,7 +240,7 @@ class JobDB:
 		if not len(jobs) == 0:
 			userinput = raw_input('Do you really want to delete these jobs? [yes]:')
 			if userinput == 'yes' or userinput == '':
-				if wms.cancel(ids):
+				if wms.cancel(wmsIds):
 					for id in jobs:
 						try:
 							job = self._jobs[id]
