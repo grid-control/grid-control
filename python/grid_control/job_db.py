@@ -153,13 +153,13 @@ class JobDB:
 		return change
 
 
-	def submit(self, wms, wmsIds):
-		if len(wmsIds) == 0:
+	def submit(self, wms, ids):
+		if len(ids) == 0:
 			return
 
 		try:
 			wms.bulkSubmissionBegin()
-			for id in wmsIds:
+			for id in ids:
 				try:
 					job = self._jobs[id]
 				except:
