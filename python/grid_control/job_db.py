@@ -1,10 +1,10 @@
 from __future__ import generators
 import os, re, fnmatch
-from time import localtime, strftime
+from time import time, localtime, strftime
 from grid_control import SortedList, ConfigError, Job, UserError, Report
 
 class JobDB:
-	def __init__(self, workDir, nJobs, module, init = False):
+	def __init__(self, workDir, nJobs, timeout, module, init = False):
 		self._dbPath = os.path.join(workDir, 'jobs')
 		try:
 			if not os.path.exists(self._dbPath):
@@ -25,6 +25,11 @@ class JobDB:
 		self.done = SortedList()
 		self.ok = SortedList()
 
+		if nJobs == -1:
+			nJobs = module.getMaxJobs()
+		if nJobs == None:
+			raise
+
 		i = 0
 		for j in self.all:
 			self.ready.extend(xrange(i, min(j, nJobs)))
@@ -32,6 +37,7 @@ class JobDB:
 			queue = self._findQueue(self._jobs[j])
 			queue.append(j)
 		self.ready.extend(xrange(i, nJobs))
+		self.timeout = timeout
 		self.module = module
 
 
@@ -134,21 +140,29 @@ class JobDB:
 
 	def check(self, wms):
 		change = False
-		map = {}
-		wmsIds = []
-		for id in self.running:
-			job = self._jobs[id]
-			map[job.id] = (id, job)
-			wmsIds.append(job.id)
+		timeoutlist = []
+		wmsMap = self.getWmsMap(self.running)
 
-		for id, state, info in wms.checkJobs(wmsIds):
-			id, job = map[id]
+		for wmsId, state, info in wms.checkJobs(wmsMap.keys()):
+			id, job = wmsMap[wmsId]
 			if state != job.state:
 				change = True
 				for key, value in info.items():
 					job.set(key, value)
 				self._update(id, job, state)
 				self.module.onJobUpdate(job, id, info)
+			else:
+				# If a job stays too long in an inital state, cancel it
+				if job.state in (Job.SUBMITTED, Job.WAITING, Job.READY, Job.QUEUED):
+					if self.timeout > 0 and time() - job.submitted > self.timeout * 60 * 60:
+						timeoutlist.append(id)
+		if len(timeoutlist):
+			change = True
+			print "\nTimeout for the following jobs:"
+			Report(timeoutlist, self._jobs).details()
+			wms.cancel(self.getWmsMap(timeoutlist).keys())
+			self.mark_cancelled(timeoutlist)
+			# Fixme: Error handling
 
 		return change
 
@@ -180,12 +194,9 @@ class JobDB:
 
 	def retrieve(self, wms):
 		change = False
-		wmsIds = []
-		for id in self.done:
-			job = self._jobs[id]
-			wmsIds.append(job.id)
+		wmsIds = self.getWmsMap(self.done).keys()
 
-		for id, retCode in wms.retrieveJobs(wmsIds):
+		for id, retCode, data in wms.retrieveJobs(wmsIds):
 			try:
 				job = self._jobs[id]
 			except:
@@ -229,34 +240,21 @@ class JobDB:
 		else:
 			jobs = filter(lambda x: self._jobs[x].statefilter(jobfilter), self._jobs)
 
-		wmsIds = []
-		for id in jobs:
-			job = self._jobs[id]
-			wmsIds.append(job.id)
+		wmsIds = self.getWmsMap(jobs).keys()
 
 		print "\nDeleting the following jobs:"
-		Report(jobs,self._jobs).details()
+		Report(jobs, self._jobs).details()
 		
 		if not len(jobs) == 0:
-			userinput = raw_input('Do you really want to delete these jobs? [yes]:')
-			if userinput == 'yes' or userinput == '':
-				if wms.cancel(wmsIds):
-					for id in jobs:
-						try:
-							job = self._jobs[id]
-						except:
-							continue
-
-						self._update(id, job, Job.CANCELLED)
-				else:
-					print "\nThere was a problem with deleting your jobs!"
-					if raw_input('Do you want to do a forced delete? [yes]:') == 'yes':
-						for id in jobs:
-							try:
-								job = self._jobs[id]
-							except:
-								continue
-							self._update(id, job, Job.CANCELLED)
-
-			else:
+			userinput = raw_input('Do you really want to delete these jobs? [yes]: ')
+			if userinput != 'yes' and userinput != '':
 				return 0
+
+			if wms.cancel(wmsIds):
+				self.mark_cancelled(jobs)
+			else:
+				print "\nThere was a problem with deleting your jobs!"
+				userinput = raw_input('Do you want to do a forced delete? [yes]: ')
+				if userinput != 'yes' and userinput != '':
+	                                return 0
+				self.mark_cancelled(jobs)

@@ -62,7 +62,7 @@ class Job:
 				value = str(value)
 			else:
 				value = utils.shellEscape(value)
-			fp.write("%s=%s\n" % (key, value))
+			fp.write('%s=%s\n' % (key, value))
 
 
 	def set(self, key, value):
@@ -75,8 +75,7 @@ class Job:
 
 	def update(self, state):
 		self.state = state
-		if self.attempt > 0:
-			self.history[self.attempt] = self.dict.get('dest', 'N/A')
+		self.history[self.attempt] = self.dict.get('dest', 'N/A')
 		# FIXME: job history or something
 
 
@@ -93,7 +92,7 @@ class Job:
 
 	def statefilter(self, filter):
 		for state in filter.split(','):
-			regex = re.compile("^" + state + ".*")
+			regex = re.compile('^' + state + '.*')
 			for key in self._stateDict.keys():
 				if regex.match(key) and self.state == self._stateDict[key]:
 					return True

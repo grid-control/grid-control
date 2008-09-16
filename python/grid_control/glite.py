@@ -162,7 +162,7 @@ class Glite(WMS):
 					status = status.split()[0]
 			except:
 				pass
-			data['status'] = self._statusMap[status]
+			data['status'] = status
 			try:
 				data['timestamp'] = int(time.mktime(parsedate(data['timestamp'])))
 			except:
@@ -317,9 +317,7 @@ class Glite(WMS):
 
 			for data in self._parseStatus(proc.fromchild.readlines()):
 				id = data['id']
-				del data['id']
-				status = data['status']
-				del data['status']
+				status = self._statusMap[data['status']]
 				result.append((id, status, data))
 
 			retCode = proc.wait()

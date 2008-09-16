@@ -172,7 +172,7 @@ class WMS(AbstractObject):
 				          % (dir, dst, str(e))
 				continue
 
-			result.append((id, retCode))
+			result.append((id, retCode, data))
 
 		return result
 

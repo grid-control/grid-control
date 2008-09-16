@@ -33,7 +33,9 @@ class CMSSW(Module):
 		else:
 			self.eventsPerJob = config.getInt('CMSSW', 'events per job')
 			configFileContent = open(self.configFile, 'r').read()
-			if configFileContent.find("__FILE_NAMES__") == -1 or configFileContent.find("__MAX_EVENTS__") == -1 or configFileContent.find("__SKIP_EVENTS__") == -1:
+			if configFileContent.find("__FILE_NAMES__") == -1 \
+			or configFileContent.find("__MAX_EVENTS__") == -1 \
+			or configFileContent.find("__SKIP_EVENTS__") == -1:
 				print open(utils.atRoot('share', 'fail.txt'), 'r').read()
 				print "Config file must use __FILE_NAMES__, __MAX_EVENTS__ and __SKIP_EVENTS__ to work properly!"
 
@@ -117,19 +119,16 @@ class CMSSW(Module):
 			# walk project area subdirectories and find files
 			files = []
 			walk('')
+			utils.genTarball(os.path.join(self.workDir, 'runtime.tar.gz'), 
+				self.projectArea, files)
 			if self.seRuntime:
-				utils.genTarball(os.path.join(self.workDir, self.taskID + ".tar.gz"), 
-					self.projectArea, files)
-				source = "file://" + os.path.join(self.workDir, self.taskID + ".tar.gz")
-				target = os.path.join(self.sePath, self.taskID + ".tar.gz")
+				source = 'file://' + os.path.join(self.workDir, 'runtime.tar.gz')
+				target = os.path.join(self.sePath, self.taskID + '.tar.gz')
 				print 'Copy CMSSW runtime to SE',
 				if os.system('globus-url-copy %s %s' % (source, target)) == 0:
 					print 'finished'
 				else:
 					print 'failed'
-			else:
-				utils.genTarball(os.path.join(self.workDir, 'runtime.tar.gz'), 
-					self.projectArea, files)
 
 		# find datasets
 		if self.dataset != None:
@@ -190,8 +189,8 @@ class CMSSW(Module):
 			dashboard = DashboardAPI(self.taskID, "%s_%s" % (id, job.id))
 			dashboard.publish(
 				taskId=self.taskID, jobId="%s_%s" % (id, job.id), sid="%s_%s" % (id, job.id),
-				StatusValue=data.get('status', 'pending'),
-				StatusValueReason=data.get('reason', data.get('status', 'pending')),
+				StatusValue=data.get('status', 'pending').upper(),
+				StatusValueReason=data.get('reason', data.get('status', 'pending')).upper(),
 				StatusEnterTime=data.get('timestamp', strftime("%Y-%m-%d_%H:%M:%S", localtime())),
 				StatusDestination=data.get('dest', "")
 			)

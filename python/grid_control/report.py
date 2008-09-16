@@ -1,7 +1,6 @@
-from grid_control import Job, RuntimeError, utils, enumerate
+from grid_control import Job, RuntimeError, utils, enumerate, SortedList
 
 class Report:
-
 	def __init__(self, jobs, allJobs):
 		self.allJobs = allJobs
 		if hasattr(jobs, "all"):
@@ -51,8 +50,89 @@ class Report:
                 print line + "\n"
 
 
-	def siteReport(self):
+	def siteReport(self, details = False):
 		print "-----------------------------------------------------------------"
+		print "SITE SUMMARY:"
+		print "---------------"
+		print
+		states = ["QUEUED", "RUNNING", "FAILED", "SUCCESS"]
+		maxlen_site = 25
+
+		def add(x,y): return x+y
+		#def getQueue(x): return x.split(":")[1].split("/")[1]
+		def getSite(x): return str.join(".", x.split(":")[0].split(".")[1:])
+
+		# init wn dictionary
+		wnodes = {}.fromkeys(map(lambda x: x.split(":")[0], reduce(add, map(lambda id: self.allJobs.get(id).history.values(), self.jobs))), {})
+		for node in wnodes:
+			wnodes[node] = {}.fromkeys(states, 0)
+
+		for id in self.jobs:
+			job = self.allJobs.get(id)
+			for attempt in job.history:
+				if job.history[attempt] == "N/A":
+					continue
+				# Extract site from history
+				wn = job.history[attempt].split(":")[0]
+				if details:
+					if len(wn) > maxlen_site:
+						maxlen_site = len(wn)
+				else:
+					if len(getSite(wn)) > maxlen_site:
+						maxlen_site = len(getSite(wn))
+
+				# Sort job into category
+				if attempt == job.attempt:
+					if job.state == Job.SUCCESS:
+						wnodes[wn]["SUCCESS"] += 1
+					elif job.state == Job.FAILED:
+						wnodes[wn]["FAILED"] += 1
+					elif job.state in (Job.RUNNING, Job.DONE):
+						wnodes[wn]["RUNNING"] += 1
+					else:
+						wnodes[wn]["QUEUED"] += 1
+				else:
+					wnodes[wn]["FAILED"] += 1
+
+		def stats(entries):
+			result = map(lambda state: sum(map(lambda x: x[1][state], entries)), states)
+			line = []
+			for x in result:
+				line.extend([x, 100 * x / sum(result)])
+			return line
+
+		# Print header
+		header = tuple(["SITE / WN".ljust(maxlen_site)] + map(lambda x: x.center(12), states))
+		print " %s    | %12s | %12s | %12s | %12s" % header
+		print "=%s====" % (maxlen_site * "=") + 4 * ("+" + 14 * "=")
+		sites = {}.fromkeys(map(lambda x: getSite(x).split(":")[0], wnodes.keys()), {})
+		for site in SortedList(sites.keys()):
+			sitenodes = filter(lambda (wn, info): getSite(wn) == site, wnodes.items())
+
+			# Print per site results
+			if details:
+				print " \33[0;1m%s\33[0m    | %5d (%3d%%) | %5d (%3d%%) | \33[0;91m%5d\33[0m (%3d%%) | \33[0;94m%5d\33[0m (%3d%%)" % \
+					tuple([site.ljust(maxlen_site)] + stats(sitenodes))
+
+				# Print per WN results
+				for wn, info in SortedList(sitenodes):
+					print "    %s | %5d (%3d%%) | %5d (%3d%%) | %5d (%3d%%) | %5d (%3d%%)" % \
+						tuple([wn.ljust(maxlen_site)] + stats([(wn, info)]))
+				print "-%s----" % (maxlen_site * "-") + 4 * ("+" + 14 * "-")
+			else:
+				print " %s    | %5d (%3d%%) | %5d (%3d%%) | %5d (%3d%%) | %5d (%3d%%)" % \
+					tuple([site.ljust(maxlen_site)] + stats(sitenodes))
+
+		if not details:
+			print "-%s----" % (maxlen_site * "-") + 4 * ("+" + 14 * "-")
+			# Print final sum
+			print " %s    | %5d (%3d%%) | %5d (%3d%%) | %5d (%3d%%) | %5d (%3d%%)" % \
+				tuple(["".ljust(maxlen_site)] + stats(wnodes.items()))
+		else:
+			print " \33[0;1m%s\33[0m    | %5d (%3d%%) | %5d (%3d%%) | \33[0;91m%5d\33[0m (%3d%%) | \33[0;94m%5d\33[0m (%3d%%)" % \
+				tuple(["".ljust(maxlen_site)] + stats(wnodes.items()))
+		print
+
 
 	def summary(self):
 		# Print report summary
