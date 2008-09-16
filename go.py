@@ -22,6 +22,7 @@ def syntax(out):
 			"\t                            -m 5 (Resubmit jobs up to 5 times)\n"
 			"\t-r, --report             Show status report of jobs\n"
 			"\t-R, --site-report        Show site report\n"
+			"\t-RR                      Show detailled site report\n"
 			"\t-S, --seed <args>        Override seed specified in the config file e.g:\n"
 			"\t                            -S 1234,423,7856\n"
 			"\t                            -S (= generate 10 random seeds)\n"
@@ -38,7 +39,7 @@ def main(args):
 
 	# display the 'grid-control' logo
 	print open(utils.atRoot('share', 'logo.txt'), 'r').read()
-	print ('$Revision$'.strip('$'))
+	print ('$Revision$'.strip('$')) # Update revision .
 
 	# set up signal handler for interrupts
 	def interrupt(sig, frame):
@@ -55,7 +56,7 @@ def main(args):
 	jobSubmission = True
 	maxRetry = None
 	report = False
-	reportSite = False
+	reportSite = 0
 	delete = None
 	seed = False
 	seedarg = None
@@ -84,7 +85,7 @@ def main(args):
 		elif opt in ('-r', '--report'):
 			report = True
 		elif opt in ('-R', '--site-report'):
-			reportSite = True
+			reportSite += 1
 		elif opt in ('-d', '--delete'):
 			delete = arg
 		elif opt in ('-S', '--seed'):
@@ -146,24 +147,17 @@ def main(args):
 			jobSubmission = False
 
 		# Initialise job database
-		try:
-			nJobs = config.getInt('jobs', 'jobs')
-		except:
-			nJobs = module.getMaxJobs()
-			if nJobs == None:
-				raise
+		jobs = JobDB(workdir, config.getInt('jobs', 'jobs', -1), config.getInt('jobs', 'queue timeout', -1), module, init)
 
-		maxInFlight = config.getInt('jobs', 'in flight')
-		jobs = JobDB(workdir, nJobs, module, init)
 		# If invoked in report mode, scan job database and exit
 		if report:
 			report = Report(jobs, jobs)
 			report.details()
 			report.summary()
-			return 0
 		if reportSite:
 			report = Report(jobs, jobs)
-			report.siteReport()
+			report.siteReport(reportSite > 1)
+		if report or reportSite:
 			return 0
 
 		# Check if jobs have to be deleted and exit
@@ -205,6 +199,7 @@ def main(args):
 			# Retest grid proxy lifetime
 			if jobSubmission and not proxy.check(wallTime * 60 * 60):
 				proxy.warn(wallTime)
+				jobSubmission = False
 
 	except GridError, e:
 		e.showMessage()

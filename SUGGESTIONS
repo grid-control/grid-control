@@ -1,9 +1,8 @@
-1. Show location in job-status/ ev. have information output
-2. Multiple datasets
-3. Use md5 hash to verify transfer between node <-> se
-4. Statistic of done, failed, cancelled not only in total but optionally also per ce
-   including failed and resubmitted jobs (good for blacklisting ...)   
-5. Local disk usage monitoring
+1. Multiple datasets
+2. Use md5 hash to verify transfer between node <-> se
+3. Local disk usage monitoring
+4. Show location in job-status/ ev. have information output
+   (Details?)
 
 X. FIX continous mode (-ic) (welches Problem)
 	(fixed?)
@@ -31,3 +30,6 @@ X. Option to "dont retry" - retry count
 X. Possibility to give time limit after which jobs in WAITING, READY or QUEUED state
    are automatically cancelled (and then resubmitted in case of -c option).
 	([jobs]: queue timeout = x; hours)
+X. Statistic of done, failed, cancelled not only in total but optionally also per ce
+   including failed and resubmitted jobs (good for blacklisting ...)   
+	(-R for site report)

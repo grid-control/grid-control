@@ -30,11 +30,13 @@ WALL_START="$(date +%s)"
 
 MAX_EVENTS="$1"
 SKIP_EVENTS="$2"
-FILE_NAMES="\"$3\""
-shift 3
-for i in "$@"; do
-	FILE_NAMES="$FILE_NAMES, \"$i\""
-done
+if [ -n "$3" ]; then
+	FILE_NAMES="\"$3\""
+	shift 3
+	for i in "$@"; do
+		FILE_NAMES="$FILE_NAMES, \"$i\""
+	done
+fi
 
 if [ -z "$VO_CMS_SW_DIR" -a -n "$OSG_APP" ]; then
 	export VO_CMS_SW_DIR="$OSG_APP/cmssoft/cms"
