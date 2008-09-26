@@ -72,6 +72,8 @@ updatejobinfo $CODE
 
 # Copy files to the SE
 if [ $CODE -eq 0 -a -n "$SE_OUTPUT_FILES" ]; then
+	echo "##MD5-SUMS -- this is a marker line used by verify.py -- do not edit."
+	(cd "$MY_SCRATCH"; md5sum $SE_OUTPUT_FILES)
 	se_copy "file://$MY_SCRATCH" "$SE_PATH" "$SE_OUTPUT_FILES"
 fi
 
