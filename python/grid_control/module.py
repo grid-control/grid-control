@@ -47,7 +47,7 @@ class Module(AbstractObject):
 			# TODO: remove backwards compatibility
 			self.sePath = config.get('CMSSW', 'se path', '')
 
-		self.dobreak = config.getInt('jobs', 'do break', -1)
+		self.nodetimeout = config.getInt('jobs', 'node timeout', -1)
 
 		self.taskID = None
 		self.taskID = self.getTaskID()
@@ -129,7 +129,7 @@ class Module(AbstractObject):
 			'SB_OUTPUT_FILES': str.join(' ', self.getOutFiles()),
 			'SB_INPUT_FILES': str.join(' ', map(lambda x: utils.shellEscape(os.path.basename(x)), self.getInFiles())),
 			# Runtime
-			'DOBREAK': str(self.dobreak),
+			'DOBREAK': str(self.nodetimeout),
 			'MY_RUNTIME': self.getCommand(),
 			# Seeds
 			'SEEDS': str.join(' ', map(lambda x: "%d" % x, self.seeds)),

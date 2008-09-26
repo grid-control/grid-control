@@ -175,6 +175,11 @@ def main(args):
 			# idle timeout is one minute
 			timeout = 60
 
+			# Check free disk space
+			if int(os.popen("df -m /home | tail -1").readline().split()[2]) < 10:
+				print "Not enough space left in working directory"
+				break
+
 			# retrieve finished jobs
 			if jobs.retrieve(wms):
 				timeout = 10
