@@ -10,6 +10,7 @@ except ImportError:
 class Glite(WMS):
 	_statusMap = {
 		'ready':	Job.READY,
+		'submitted':    Job.SUBMITTED,
 		'waiting':	Job.WAITING,
 		'queued':	Job.QUEUED,
 		'scheduled':	Job.QUEUED,
