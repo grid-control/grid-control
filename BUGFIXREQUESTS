@@ -1,0 +1,3 @@
+1. Please check bugfix for SUBMITTED status in glite.py, rev. r763
+2. MaxCPUTime in config files to be give in hours, but not properly translated to jdl requirement in MINUTES!
+   Please make hours and minutes usage in MaxWallTime and MaxCPUTime consistently in hours.
