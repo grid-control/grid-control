@@ -15,10 +15,10 @@ class Proxy(AbstractObject):
 	def critical(self):
 		return not self.check(0)
 
-	def warn(self, hoursleft):
+	def warn(self, secleft):
 		print >> sys.stderr, \
-			"Proxy lifetime (%d seconds) does not meet the walltime requirements of %d hours (%d seconds)!\n" \
-			"INFO: Disabling job submission." % (self.timeleft(), hoursleft, hoursleft * 60 * 60)
+			"Proxy lifetime (%d seconds) does not meet the walltime requirements of %d seconds (%d hours)!\n" \
+			"INFO: Disabling job submission." % (self.timeleft(), secleft, secleft / 60 / 60)
 
 
 class TrivialProxy(Proxy):

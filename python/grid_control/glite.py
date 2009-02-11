@@ -57,8 +57,8 @@ class Glite(WMS):
 
 
 	def wallTimeReq(self, wallTime):
-		return '(other.GlueCEPolicyMaxWallClockTime >= %d)' \
-		       % int((wallTime + 59) / 60)
+		#              GlueCEPolicyMaxWallClockTime: The maximum wall clock time in minutes
+		return '(other.GlueCEPolicyMaxWallClockTime >= %d)' % int((wallTime + 59) / 60)
 
 
 	def storageReq(self, sites):
@@ -102,7 +102,8 @@ class Glite(WMS):
 	def cpuTimeReq(self, cpuTime):
 		if cpuTime == 0:
 			return None
-		return '(other.GlueCEPolicyMaxCPUTime >= %d)' % cpuTime
+		#              GlueCEPolicyMaxCPUTime: The maximum CPU time available to jobs submitted to this queue, in minutes.
+		return '(other.GlueCEPolicyMaxCPUTime >= %d)' % int((cpuTime + 59) / 60)
 
 
 	def memoryReq(self, memory):

@@ -10,8 +10,8 @@ class Module(AbstractObject):
 	def __init__(self, config, init):
 		self.config = config
 		self.workDir = config.getPath('global', 'workdir')
-		self.wallTime = config.getInt('jobs', 'wall time') * 60 * 60
-		self.cpuTime = config.getInt('jobs', 'cpu time', 10 * 60)
+		self.wallTime = parseTime(config.get('jobs', 'wall time'))
+		self.cpuTime = parseTime(config.get('jobs', 'cpu time', '10:00:00'))
 		self.memory = config.getInt('jobs', 'memory', 512)
 
 		try:
@@ -47,7 +47,7 @@ class Module(AbstractObject):
 			# TODO: remove backwards compatibility
 			self.sePath = config.get('CMSSW', 'se path', '')
 
-		self.nodetimeout = config.getInt('jobs', 'node timeout', -1)
+		self.nodetimeout = parseTime(config.get('jobs', 'node timeout', Null))
 
 		self.taskID = None
 		self.taskID = self.getTaskID()

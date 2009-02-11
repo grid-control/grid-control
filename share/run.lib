@@ -66,10 +66,12 @@ kill4sure() {
 
 updatejobinfo() {
 	debug_helper $FUNCNAME $LINENO
-	(
-		echo "JOBID=$MY_JOBID"
-		echo "EXITCODE=$1"
-	) > $MY_LANDINGZONE/jobinfo.txt
+	if [ -d "$MY_LANDINGZONE" ]; then
+		(
+			echo "JOBID=$MY_JOBID"
+			echo "EXITCODE=$1"
+		) > $MY_LANDINGZONE/jobinfo.txt
+	fi
 }
 
 checkfile() {
@@ -188,7 +190,7 @@ getscratch() {
 # Clean up user area
 cleanup() {
 	debug_helper $FUNCNAME $LINENO
-	cd "$MY_LANDINGZONE"
+	[ -d "$MY_LANDINGZONE" ] && cd "$MY_LANDINGZONE"
 	[ -f "$MY_MARKER" ] && rm -Rf "$MY_MARKER" &> /dev/null
 	[ -d "$MY_SCRATCH" ] && rm -Rf "$MY_SCRATCH" &> /dev/null
 }
@@ -204,21 +206,66 @@ my_move() {
 	[ ! -d "$1" ] && fail 102
 	[ ! -d "$2" ] && fail 102
 	[ -z "$3" ] && return
+	echo "Move files from $1 to $2:"
 	for file in `cd $1 && ls $(eval "echo $3") && cd $OLDPWD`; do
+		echo -e " >> $file"
 		test -f "$1/$file" && mv "$1/$file" "$2/$file"
 	done
+}
+
+# Selects best suited copy tool for source -> target
+se_copy_tool() {
+	# TODO: checkbin $TOOL
+	debug_helper $FUNCNAME $LINENO
+	TOOL="globus-url-copy"
+	# TODO: select lcg-cp on non-OSG sites
+	case "$1" in
+		"gsiftp://"*)	;;
+		"file://"*)		;;
+		"srm://"*)		echo "srmcp -2 -debug -streams_num=1" && return;;
+		*)					echo "Unsupported URL: $1" >&2 && fail 106;;
+	esac
+	case "$2" in
+		"gsiftp://"*)	;;
+		"file://"*)		;;
+		"srm://"*)		echo "srmcp -2 -debug -streams_num=1" && return;;
+		*)					echo "Unsupported URL: $1" >&2 && fail 106;;
+	esac
+	echo $TOOL
+}
+
+se_rm_tool() {
+	TOOL="`getcommand glite-gridftp-rm edg-gridftp-rm lcg-rm`"
+	case "$1" in
+		"gsiftp://"*)	;;
+		"file://"*)		;;
+		"srm://"*)		echo "srmcp -2 -debug -streams_num=1" && return;;
+		*)					echo "Unsupported URL: $1" >&2 && fail 106;;
+	esac
+}
+
+# Remove file from storage element
+se_rm() {
+	debug_helper $FUNCNAME $LINENO
+}
+
+# Copy one file at a time (1) -> (2)
+se_copy_single() {
+	debug_helper $FUNCNAME $LINENO
+	echo "`se_copy_tool $1 $2` $1 $2"
+	`se_copy_tool $1 $2` $1 $2
 }
 
 # TODO: Directory operations
 se_copy() {
 	debug_helper $FUNCNAME $LINENO
 	#checkbin "globus-url-copy" || fail 103
-	echo "Using storage element!"
 	echo "Copy $3 from $1 to $2"
 	BADCOUNT=0
 	case "$1" in
 		"gsiftp://"*)
 			# copy from SE to WN
+			TARGET_PATTERN="__X__"
 			if [[ "$3" == *\** ]]; then
 				# Wildcard used => gridftp-ls
 				GRIDFTP_LS="`getcommand glite-gridftp-ls edg-gridftp-ls`"
@@ -232,29 +279,37 @@ se_copy() {
 			else
 				SOURCE_FILES="`echo ${SE_INPUT_PATTERN:-__X__} | var_replacer $3`"
 			fi
-			SOURCE_PATTERN="__X__"
+			;;
+		"srm://"*)
+			# copy from SE to WN
 			TARGET_PATTERN="__X__"
+			if [[ "$3" == *\** ]]; then
+				echo "Wildcards not supported for SRM" && fail 106
+			else
+				SOURCE_FILES="`echo ${SE_INPUT_PATTERN:-__X__} | var_replacer $3`"
+			fi
 			;;
 		"file://"*)
 			# copy from site to SE
-			SOURCE_PATTERN="__X__"
 			TARGET_PATTERN="${SE_OUTPUT_PATTERN:-__X__}"
 			SOURCE_FILES="`cd ${1#file://} && ls -d $3 && cd $OLDPWD`"
+			# Check that file size is larger than SE_MINFILESIZE
 			for file in $SOURCE_FILES; do
-				SOURCE_FN="`echo $SOURCE_PATTERN | var_replacer $file`"
+				[ -d "$file" ] && continue
+				SOURCE_FN="`echo ${SOURCE_PATTERN:-__X__} | var_replacer $file`"
 				[ "`getdiskusage ${1#file://}/$SOURCE_FN`" -lt "${SE_MINFILESIZE:-0}" ] && fail 122
 			done
 			;;
-		*)	fail 106
+		*)
+			echo "Unsupported URL: $1" && fail 106
 			;;
 	esac
-	echo
+
 	for file in $SOURCE_FILES; do
-		SOURCE_FN="`echo $SOURCE_PATTERN | var_replacer $file`"
-		TARGET_FN="`echo $TARGET_PATTERN | var_replacer $file`"
 		[ -d "$file" ] && continue
-		echo "globus-url-copy \"$1/$SOURCE_FN\" \"$2/$TARGET_FN\""
-		globus-url-copy "$1/$SOURCE_FN" "$2/$TARGET_FN" || BADCOUNT=$[$BADCOUNT+1]
+		SOURCE_FN="`echo ${SOURCE_PATTERN:-__X__} | var_replacer $file`"
+		TARGET_FN="`echo ${TARGET_PATTERN:-__X__} | var_replacer $file`"
+		se_copy_single "$1/$SOURCE_FN" "$2/$TARGET_FN" || BADCOUNT=$[$BADCOUNT+1]
 	done
 	[ $BADCOUNT -ne 0 ] && echo "$BADCOUNT errors occurred during SE access" && fail 106
 }

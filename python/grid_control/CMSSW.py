@@ -1,4 +1,4 @@
-import os, copy, gzip, cPickle, string, re
+import os, copy, gzip, cPickle, string, re, shutil
 from fnmatch import fnmatch
 from xml.dom import minidom
 from grid_control import ConfigError, Module, WMS, DataDiscovery, utils
@@ -119,16 +119,21 @@ class CMSSW(Module):
 			# walk project area subdirectories and find files
 			files = []
 			walk('')
-			utils.genTarball(os.path.join(self.workDir, 'runtime.tar.gz'), 
-				self.projectArea, files)
-			if self.seRuntime:
-				source = 'file://' + os.path.join(self.workDir, 'runtime.tar.gz')
-				target = os.path.join(self.sePath, self.taskID + '.tar.gz')
-				print 'Copy CMSSW runtime to SE',
-				if os.system('globus-url-copy %s %s' % (source, target)) == 0:
-					print 'finished'
-				else:
-					print 'failed'
+			utils.genTarball(os.path.join(self.workDir, 'runtime.tar.gz'), self.projectArea, files)
+
+		if self.seRuntime:
+			source = os.path.join(self.workDir, self.taskID + '.tar.gz')
+			os.symlink(os.path.join(self.workDir, 'runtime.tar.gz'), source)
+			source = 'file:///' + source
+			os.unlink(source)
+			target = os.path.join(self.sePath, self.taskID + '.tar.gz')
+			tool = utils.atRoot('share', 'se_copy.sh')
+			print 'Copy CMSSW runtime to SE',
+			if os.system('%s %s %s' % (tool, source, "")) == 0:
+				print 'finished'
+			else:
+				print 'failed'
+				raise ConfigError("Unable to copy runtime!")
 
 		# find datasets
 		if self.dataset != None:
