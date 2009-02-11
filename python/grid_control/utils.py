@@ -47,19 +47,6 @@ def shellEscape(value):
 	return '"' + str.join('', map(replace, value)) + '"'
 
 
-def parseTime(usertime):
-	if usertime == None:
-		return -1
-	tmp = map(int, usertime.split(":"))
-	if len(tmp) > 3:
-		raise ConfigError('Invalid time format: %s' % usertime)
-	while len(tmp) < 3:
-		tmp.append(0)
-	if tmp[2] > 59 or tmp[1] > 59:
-		raise ConfigError('Invalid time format: %s' % usertime)
-	return reduce(lambda x, y: x * 60 + y, tmp)
-
-
 def genTarball(outFile, dir, inFiles):
 	tarExec = searchPathFind('tar')
 

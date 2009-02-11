@@ -154,7 +154,7 @@ class JobDB:
 			else:
 				# If a job stays too long in an inital state, cancel it
 				if job.state in (Job.SUBMITTED, Job.WAITING, Job.READY, Job.QUEUED):
-					if self.timeout > 0 and time() - job.submitted > self.timeout:
+					if self.timeout > 0 and time() - job.submitted > self.timeout * 60 * 60:
 						timeoutlist.append(id)
 		if len(timeoutlist):
 			change = True
@@ -210,7 +210,6 @@ class JobDB:
 			if state != job.state:
 				change = True
 				job.set('retcode', retCode)
-				job.set('runtime', data.get("TIME", -1))
 				self._update(id, job, state)
 				self.module.onJobOutput(job, id, retCode)
 
