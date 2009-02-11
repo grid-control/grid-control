@@ -119,16 +119,17 @@ class CMSSW(Module):
 			# walk project area subdirectories and find files
 			files = []
 			walk('')
-			utils.genTarball(os.path.join(self.workDir, 'runtime.tar.gz'), 
-				self.projectArea, files)
+			utils.genTarball(os.path.join(self.workDir, 'runtime.tar.gz'), self.projectArea, files)
+
 			if self.seRuntime:
-				source = 'file://' + os.path.join(self.workDir, 'runtime.tar.gz')
+				source = 'file:///' + os.path.join(self.workDir, 'runtime.tar.gz')
 				target = os.path.join(self.sePath, self.taskID + '.tar.gz')
 				print 'Copy CMSSW runtime to SE',
 				if os.system('globus-url-copy %s %s' % (source, target)) == 0:
 					print 'finished'
 				else:
 					print 'failed'
+					raise ConfigError("Unable to copy runtime!")
 
 		# find datasets
 		if self.dataset != None:
