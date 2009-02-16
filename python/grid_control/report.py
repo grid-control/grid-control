@@ -97,8 +97,11 @@ class Report:
 		def stats(entries):
 			result = map(lambda state: sum(map(lambda x: x[1][state], entries)), states)
 			line = []
+			all = sum(result)
+			if all == 0:
+				all = 1
 			for x in result:
-				line.extend([x, 100 * x / sum(result)])
+				line.extend([x, 100 * x / all])
 			return line
 
 		# Print header

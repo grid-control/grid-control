@@ -48,7 +48,7 @@ def shellEscape(value):
 
 
 def parseTime(usertime):
-	if usertime == None:
+	if usertime == None or usertime == '':
 		return -1
 	tmp = map(int, usertime.split(":"))
 	if len(tmp) > 3:
