@@ -2,7 +2,6 @@ from __future__ import generators
 import sys, os
 from grid_control import AbstractObject, RuntimeError, utils, ConfigError
 
-
 class DataDiscovery(AbstractObject):
 	def _splitJobs(fileList, eventsPerJob, firstEvent):
 		nextEvent = firstEvent
@@ -56,7 +55,6 @@ class DataDiscovery(AbstractObject):
 	_splitJobs = staticmethod(_splitJobs)
 
 
-
 	def run(self, eventsPerJob):
 		blocks = self._getBlocks()
 		
@@ -73,7 +71,6 @@ class DataDiscovery(AbstractObject):
 	def GetFilerangeForJob(self, jobNr):
 		if jobNr >= len(self._jobFiles):
 			raise ConfigError("Job %d out of range for available dataset"  % jobNr)	
-
 		return self._jobFiles[jobNr]
 
 
@@ -82,7 +79,6 @@ class DataDiscovery(AbstractObject):
 			raise ConfigError("Job %d out of range for available dataset"  % jobNr)	
 		return self._jobFiles[jobNr]['StorageElementList']
 
-	
 
 	def getNumberOfJobs(self):
 		return len(self._jobFiles)
@@ -99,6 +95,7 @@ class DataDiscovery(AbstractObject):
 			for fileinfo in block['FileList'] :
 				print fileinfo['lfn'],"( status: ",fileinfo['status'],", Events: ",fileinfo['events'],")"
 
+
 	def printJobInfo(self):
 		jobNum = 0
 		for entry in self._jobFiles:
@@ -107,6 +104,7 @@ class DataDiscovery(AbstractObject):
 			print "------------"			
 			jobNum += 1
 
+
 	def printInfoForJob(self, job):
 		print "Events: ",job['events']
 		print "Skip  : ",job['skip']
@@ -114,4 +112,3 @@ class DataDiscovery(AbstractObject):
 		print "Files :"
 		for thefile in job['files']:
 			print thefile
-	

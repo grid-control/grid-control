@@ -18,14 +18,11 @@ class DBSApiv2(DataDiscovery):
 			self.datasetBlock = datasetExprList[1]
 		else:
 			self.datasetBlock = "all"
-		
-
 
 		self.args = {}
 		self.args['url']     = "http://cmsdbsprod.cern.ch/cms_dbs_prod_global/servlet/DBSServlet"
 		self.args['version'] = "DBS_1_0_7"
 		self.args['level']   = "CRITICAL"
-
 
 
 	def _getBlocks(self):
@@ -46,28 +43,19 @@ class DBSApiv2(DataDiscovery):
 				for sename in block['StorageElementList']:
 					blockInfo['StorageElementList'].append(sename['Name'])	
 
-
 				blockInfo['FileList'] = []
 
 				for entry in filelistInfo:
-					if self.datasetPath+"#"+blockInfo['BlockName'] == entry['Block']['Name']:
-						blockInfo['FileList'].append({'lfn'    :entry['LogicalFileName'],
-									      'status' :entry['Status'],
-									      'events' :entry['NumberOfEvents']
-									      })
-						
-								
-
+					if self.datasetPath + "#" + blockInfo['BlockName'] == entry['Block']['Name']:
+						blockInfo['FileList'].append({
+							'lfn'		: entry['LogicalFileName'],
+							'status' : entry['Status'],
+							'events' : entry['NumberOfEvents']
+						})
 
 				blocks.append(copy.deepcopy(blockInfo))
-				
 
 		if len(blocks) == 0:
 			raise DatasetError('Block %s not found in dbs.' % self.datasetBlock)
 
-
 		return blocks
-
-
-
-
