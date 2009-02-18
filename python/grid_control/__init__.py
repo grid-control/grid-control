@@ -17,3 +17,4 @@ from user_mod		import *
 from data_discovery	import *
 from dbsv2_api		import *
 from CMSSW		import *
+from pbs_named	import *

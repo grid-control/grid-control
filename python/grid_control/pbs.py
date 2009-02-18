@@ -1,185 +1,172 @@
 from __future__ import generators
-import sys, os, popen2
+import sys, os, popen2, tempfile, shutil
 from grid_control import ConfigError, WMS, Job, utils
 
 class PBS(WMS):
+	_statusMap = {
+		'H':	Job.SUBMITTED,
+		'S':	Job.SUBMITTED,
+		'W':	Job.WAITING,
+		'Q':	Job.QUEUED,
+		'R':	Job.RUNNING,
+		'C':	Job.DONE,
+		'E':	Job.DONE,
+		'T':	Job.DONE,
+		'fail':	Job.FAILED,
+		'success':	Job.SUCCESS
+	}
+
 	def __init__(self, config, module, init):
-		WMS.__init__(self, config, module, init)
+		WMS.__init__(self, config, module, 'local', init)
 
 		self._submitExec = utils.searchPathFind('qsub')
 		self._statusExec = utils.searchPathFind('qstat')
 
-		self._queue = config.getPath('pbs', 'queue', '')
+		self._queue = config.get('pbs', 'queue', '')
+		self._group = config.get('pbs', 'group', '')
+		self._sandPath = config.getPath('local', 'sandbox path', os.path.join(self.workDir, 'sandbox'))
 
-		self._tmpPath = os.path.join(self._outputPath, 'tmp')
+
+	def getJobName(self, taskId, jobId):
+		return taskID[:10] + "." + str(jobId) #.rjust(4, "0")[:4]
 
 
 	def submitJob(self, id, job):
-		try:
-			if not os.path.exists(self._tmpPath):
-				os.mkdir(self._tmpPath)
-		except IOError:
-			raise RuntimeError("Temporary path '%s' could not be created." % self._tmpPath)
+		params = ''
+		if len(self._queue):
+			params += ' -q %s' % self._queue
+		if len(self._group):
+			params += ' -W group_list=%s' % self._group
+		# TODO: fancy job name function
+		jobname = self.getJobName(self.module.taskID, id)
 
 		activity = utils.ActivityLog('submitting jobs')
 
-		params = ''
-		if len(self._queue):
-			params = ' -q %s' % self._queue
+		try:
+			sandbox = tempfile.mkdtemp("." + str(id), self.module.taskID + ".", self._sandPath)
+			for file in self.sandboxIn:
+				shutil.copy(file, sandbox)
+			job.set('sandbox', sandbox)
+		except IOError:
+			raise RuntimeError("Sandbox '%s' could not be prepared." % sandbox)
 
-		name = self.module.taskID
-		job.set('name', name)
+		env_vars = {
+			'ARGS': utils.shellEscape("%d %s" % (id, self.module.getJobArguments(job))),
+			'SANDBOX': sandbox
+		}
+		params += ' -v ' + str.join(",", map(lambda (x,y): x + "=" + y, env_vars.items()))
 
-		outPath = os.path.join(self._tmpPath, name + '.stdout.txt')
-		errPath = os.path.join(self._tmpPath, name + '.stderr.txt')
-		executable = utils.atRoot('share', 'run.sh')
+		proc = popen2.Popen3("%s %s -N %s -o %s -e %s %s" % (
+			self._submitExec, params, jobname,
+			utils.shellEscape(os.path.join(sandbox, 'stdout.txt')),
+			utils.shellEscape(os.path.join(sandbox, 'stderr.txt')),
+			utils.shellEscape(utils.atRoot('share', 'local.sh'))), True)
 
-		proc = popen2.Popen3("%s%s -N %s -o %s -e %s %s"
-		                     % (self._submitExec, params, name,
-		                        utils.shellEscape(outPath),
-		                        utils.shellEscape(errPath),
-		                        utils.shellEscape(executable)),
-		                     True)
-
-		id = None
-
-		lines = proc.child.readlines()
-
-		for line in lines:
-			line = line.strip()
-			if len(line) and id is None:
-				id = line
+		wmsId = proc.fromchild.read().strip()
+		open(os.path.join(sandbox, wmsId), "w")
 		retCode = proc.wait()
 
 		del activity
 
 		if retCode != 0:
 			print >> sys.stderr, "WARNING: qsub failed:"
-		elif id == None:
+		elif wmsId == None:
 			print >> sys.stderr, "WARNING: qsub did not yield job id:"
 
-		if id == None:
-			for line in open(log, 'r'):
-				sys.stderr.write(line)
+		if wmsId == '':
+			sys.stderr.write(proc.childerr)
 
-		return id
+		return wmsId
 
 
-	def checkJobs(self, ids):
-		if not len(ids):
+	def _parseStatus(self, status):
+		current_job = None
+		key = None
+		value = ""
+		result = []
+		jobinfo = {}
+		status.append("Job Id:")
+
+		for line in status:
+			if "Job Id:" in line:
+				if current_job != None:
+					jobinfo['id'] = current_job
+					if jobinfo.has_key('exec_host'):
+						jobinfo['dest'] = jobinfo.get('exec_host') + "." + jobinfo.get('server', '')
+					else:
+						jobinfo['dest'] = 'N/A'
+					jobinfo['status'] = jobinfo.get('job_state')
+					result.append(jobinfo)
+					jobinfo = {}
+				current_job = line.split(":")[1].strip()
+
+			# lines beginning with tab are part of the previous value
+			if line[0] == '\t':
+				value += line.strip()
+			else:
+				# parse key=value pairs
+				if key != None:
+					jobinfo[key] = value
+				tmp = line.split('=', 1)
+				if len(tmp) == 2:
+					key = tmp[0].strip()
+					value = tmp[1].strip()
+				else:
+					key = None
+		return result
+
+
+	def checkJobs(self, wmsIds):
+		if not len(wmsIds):
 			return []
 
 		activity = utils.ActivityLog("checking job status")
+		proc = popen2.Popen3("%s -f %s" % (self._statusExec, str.join(" ", wmsIds)), True)
 
-		proc = popen2.Popen3("%s --noint --logfile %s -i %s"
-		                     % (self._statusExec,
-		                        utils.shellEscape(log),
-		                        utils.shellEscape(jobs)), True)
+		tmp = {}
+		for data in self._parseStatus(proc.fromchild.readlines()):
+			# (job number, status, extra info)
+			tmp[data['id']] = (data['id'], self._statusMap[data['status']], data)
 
-		try:
-			for data in self._parseStatus(proc.fromchild.readlines()):
-				id = data['id']
-				del data['id']
-				status = data['status']
-				del data['status']
-				result.append((id, status, data))
+		result = []
+		for wmsId in wmsIds:
+			if not tmp.has_key(wmsId):
+				result.append((wmsId, Job.DONE, {}))
+			else:
+				result.append(tmp[wmsId])
 
-			retCode = proc.wait()
+		retCode = proc.wait()
+		del activity
 
-			del activity
-
-			if retCode != 0:
-				#FIXME
-				print >> sys.stderr, "WARNING: glite-job-status failed:"
-				for line in open(log, 'r'):
+		if retCode != 0:
+			for line in proc.childerr.readlines():
+				if not "Unknown Job Id" in line:
 					sys.stderr.write(line)
-
-		finally:
-			try:
-				os.unlink(jobs)
-			except:
-				pass
-			try:
-				os.unlink(log)
-			except:
-				pass
 
 		return result
 
 
-	def getJobsOutput(self, ids):
-		if not len(ids):
+	def getJobsOutput(self, wmsIds):
+		if not len(wmsIds):
 			return []
 
-		tmpPath = os.path.join(self._outputPath, 'tmp')
-		try:
-			if not os.path.exists(tmpPath):
-				os.mkdir(tmpPath)
-		except IOError:
-			raise RuntimeError("Temporary path '%s' could not be created." % tmpPath)
-
-		try:
-			fd, jobs = tempfile.mkstemp('.jobids')
-		except AttributeError:	# Python 2.2 has no tempfile.mkstemp
-			while True:
-				jobs = tempfile.mktemp('.jobids')
-				try:
-					fd = os.open(jobs, os.O_WRONLY | os.O_CREAT | os.O_EXCL)
-				except OSError:
-					continue
-				break
-
-		log = tempfile.mktemp('.log')
-
 		result = []
+		activity = utils.ActivityLog("retrieving job outputs")
 
-		try:
-			fp = os.fdopen(fd, 'w')
-			for id in ids:
-				fp.write("%s\n" % id)
-			fp.close()
-			# FIXME: error handling
+		for jobdir in os.listdir(self._sandPath):
+			path = os.path.join(self._sandPath, jobdir)
+			if os.path.isdir(path):
+				for wmsId in wmsIds:
+					sandboxfiles = os.listdir(path)
+					if wmsId in sandboxfiles:
+						# Cleanup sandbox
+						for file in sandboxfiles:
+							if not file in self.sandboxOut:
+								try:
+									os.unlink(os.path.join(path, file))
+								except:
+									pass
+						result.append(path)
 
-			activity = utils.ActivityLog("retrieving job outputs")
-
-			proc = popen2.Popen3("%s --noint --logfile %s -i %s --dir %s"
-			                     % (self._outputExec,
-			                        utils.shellEscape(log),
-			                        utils.shellEscape(jobs),
-			                        utils.shellEscape(tmpPath)),
-			                        True)
-
-			for data in proc.fromchild.readlines():
-				# FIXME: moep
-				pass
-
-			retCode = proc.wait()
-
-			del activity
-
-			if retCode != 0:
-				#FIXME
-				print >> sys.stderr, "WARNING: glite-job-output failed:"
-				for line in open(log, 'r'):
-					sys.stderr.write(line)
-
-			for file in os.listdir(tmpPath):
-				path = os.path.join(tmpPath, file)
-				if os.path.isdir(path):
-					result.append(path)
-
-		finally:
-			try:
-				os.unlink(jobs)
-			except:
-				pass
-			try:
-				os.unlink(log)
-			except:
-				pass
-			try:
-				os.rmdir(tmpPath)
-			except:
-				pass
-
+		del activity
 		return result
