@@ -40,6 +40,13 @@ def main(args):
 	# display the 'grid-control' logo
 	print open(utils.atRoot('share', 'logo.txt'), 'r').read()
 	print ('$Revision$'.strip('$')) # Update revision .
+	pyver = reduce(lambda x,y: x+y/10., sys.version_info[:2])
+	if pyver < 2.3:
+		print open(utils.atRoot('share', 'fail.txt'), 'r').read()
+		print "This python version (%.1f) is not supported anymore" % pyver
+		userinput = raw_input('Do you want to continue? [no]: ')
+		if userinput != 'yes':
+			return 0
 
 	# set up signal handler for interrupts
 	def interrupt(sig, frame):
