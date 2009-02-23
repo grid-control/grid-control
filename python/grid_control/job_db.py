@@ -154,13 +154,13 @@ class JobDB:
 			else:
 				# If a job stays too long in an inital state, cancel it
 				if job.state in (Job.SUBMITTED, Job.WAITING, Job.READY, Job.QUEUED):
-					if self.timeout > 0 and time() - job.submitted > self.timeout * 60 * 60:
+					if self.timeout > 0 and time() - job.submitted > self.timeout:
 						timeoutlist.append(id)
 		if len(timeoutlist):
 			change = True
 			print "\nTimeout for the following jobs:"
 			Report(timeoutlist, self._jobs).details()
-			wms.cancel(self.getWmsMap(timeoutlist).keys())
+			wms.cancelJobs(self.getWmsMap(timeoutlist).keys())
 			self.mark_cancelled(timeoutlist)
 			# Fixme: Error handling
 
@@ -210,6 +210,7 @@ class JobDB:
 			if state != job.state:
 				change = True
 				job.set('retcode', retCode)
+				job.set('runtime', data.get("TIME", -1))
 				self._update(id, job, state)
 				self.module.onJobOutput(job, id, retCode)
 
@@ -250,7 +251,7 @@ class JobDB:
 			if userinput != 'yes' and userinput != '':
 				return 0
 
-			if wms.cancel(wmsIds):
+			if wms.cancelJobs(wmsIds):
 				self.mark_cancelled(jobs)
 			else:
 				print "\nThere was a problem with deleting your jobs!"

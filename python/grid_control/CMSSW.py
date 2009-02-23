@@ -8,6 +8,8 @@ from time import time, localtime, strftime
 class CMSSW(Module):
 	def __init__(self, config, init):
 		Module.__init__(self, config, init)
+
+		# SCRAM info
 		scramProject = config.get('CMSSW', 'scram project', '').split()
 		if len(scramProject):
 			self.projectArea = config.getPath('CMSSW', 'project area', '')
@@ -17,19 +19,15 @@ class CMSSW(Module):
 				raise ConfigError('SCRAM project needs exactly 2 arguments: PROJECT VERSION')
 		else:
 			self.projectArea = config.getPath('CMSSW', 'project area')
-
 		self.scramArch = config.get('CMSSW', 'scram arch')
 
 		self.configFile = config.getPath('CMSSW', 'config file')
-		self.dbsapi = config.get('CMSSW', 'dbsapi')
+
 		self.dataset = config.get('CMSSW', 'dataset', '')
 
 		if self.dataset == '':
 			self.dataset = None
-			try:
-				self.eventsPerJob = config.getInt('CMSSW', 'events per job')
-			except:
-				self.eventsPerJob = 0
+			self.eventsPerJob = config.getInt('CMSSW', 'events per job', 0)
 		else:
 			self.eventsPerJob = config.getInt('CMSSW', 'events per job')
 			configFileContent = open(self.configFile, 'r').read()
@@ -39,11 +37,11 @@ class CMSSW(Module):
 				print open(utils.atRoot('share', 'fail.txt'), 'r').read()
 				print "Config file must use __FILE_NAMES__, __MAX_EVENTS__ and __SKIP_EVENTS__ to work properly!"
 
-		self.dbs = None
 
 		self.gzipOut = config.getBool('CMSSW', 'gzip output', True)
 		self.useReqs = config.getBool('CMSSW', 'use requirements', True)
 		self.seRuntime = config.getBool('CMSSW', 'se runtime', False)
+
 		if self.seRuntime and len(self.projectArea):
 			self.seInputFiles.append(self.taskID + ".tar.gz"),
 
@@ -91,10 +89,17 @@ class CMSSW(Module):
 			raise ConfigError("Config file '%s' not found." % self.configFile)
 
 		if init:
-			self._init()
+			self._initTask(config)
+
+		if self.dataset != None:
+			fp = gzip.GzipFile(os.path.join(self.workDir, 'dbscache.dat'), 'rb')
+			self.dbs = cPickle.load(fp)
+			fp.close()
+		else:
+			self.dbs = None
 
 
-	def _init(self):
+	def _initTask(self, config):
 		# function to walk directory in project area
 		def walk(dir):
 			for file in os.listdir(os.path.join(self.projectArea, dir)):
@@ -125,7 +130,14 @@ class CMSSW(Module):
 				source = 'file:///' + os.path.join(self.workDir, 'runtime.tar.gz')
 				target = os.path.join(self.sePath, self.taskID + '.tar.gz')
 				print 'Copy CMSSW runtime to SE',
-				if os.system('globus-url-copy %s %s' % (source, target)) == 0:
+
+				# kill the runtime on se
+				if config.getBool('CMSSW', 'se runtime force', True):
+					tool = 'se_copy_force.sh'
+				else:
+					tool = 'se_copy.sh'
+
+				if os.system('%s %s %s' % (utils.atRoot('share', tool), source, target)) == 0:
 					print 'finished'
 				else:
 					print 'failed'
@@ -133,32 +145,16 @@ class CMSSW(Module):
 
 		# find datasets
 		if self.dataset != None:
-			self.dbs = DataDiscovery.open(self.dbsapi, self.dataset)
-			self.dbs.run(self.eventsPerJob)
-			self.dbs.printDataset()
-##			self.dbs.printJobInfo()
+			dbsapi = config.get('CMSSW', 'dbsapi')
+			dbs = DataDiscovery.open(dbsapi, self.dataset)
+			dbs.run(self.eventsPerJob)
+			dbs.printDataset()
+##			dbs.printJobInfo()
 
 			# and dump to cache file
 			fp = gzip.GzipFile(os.path.join(self.workDir, 'dbscache.dat'), 'wb')
-			cPickle.dump(self.dbs, fp)
+			cPickle.dump(dbs, fp)
 			fp.close()
-
-
-	def _ensureDataCache(self):
-		if self.dbs == None and self.dataset != None:
-			fp = gzip.GzipFile(os.path.join(self.workDir, 'dbscache.dat'), 'rb')
-			self.dbs = cPickle.load(fp)
-			fp.close()
-
-
-	def _getDataFiles(self, job):
-		self._ensureDataCache()
-		return self.dbs.GetFilerangeForJob(job)
-
-
-	def _getDataSites(self, job):
-		self._ensureDataCache()
-		return self.dbs.GetSitesForJob(job)
 
 
 	# Called on job submission
@@ -203,8 +199,8 @@ class CMSSW(Module):
 		if self.useReqs:
 			reqs.append((WMS.MEMBER, 'VO-cms-%s' % self.scramEnv['SCRAM_PROJECTVERSION']))
 			reqs.append((WMS.MEMBER, 'VO-cms-%s' % self.scramArch))
-		if self.dataset != None:
-			reqs.append((WMS.STORAGE, self._getDataSites(job)))
+		if self.dbs != None:
+			reqs.append((WMS.STORAGE, self.dbs.getSitesForJob(job)))
 		return reqs
 
 
@@ -250,16 +246,17 @@ class CMSSW(Module):
 
 
 	def getJobArguments(self, job):
-		if self.dataset == None:
+		if self.dbs == None:
 			return "%d" % self.eventsPerJob
 
 		print ""
-		print "Job number: ",job
-		files = self._getDataFiles(job)
+		print "Job number: ", job
+		files = self.dbs.getFileRangeForJob(job)
 		self.dbs.printInfoForJob(files)
 		return "%d %d %s" % (files['events'], files['skip'], str.join(' ', files['files']))
 
 
 	def getMaxJobs(self):
-		self._ensureDataCache()
+		if self.dbs == None:
+			raise ConfigError('Must specifiy number of jobs or dataset!')
 		return self.dbs.getNumberOfJobs()

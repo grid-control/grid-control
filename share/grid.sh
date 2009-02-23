@@ -52,7 +52,7 @@ checkvar MY_RUNTIME
 
 # Copy files from the SE
 if [ -n "$SE_INPUT_FILES" ]; then
-	se_copy "$SE_PATH" "file:///$MY_SCRATCH" "$SE_INPUT_FILES"
+	url_copy "$SE_PATH" "file:///$MY_SCRATCH" "$SE_INPUT_FILES"
 fi
 
 # Execute program
@@ -74,7 +74,7 @@ updatejobinfo $CODE
 if [ $CODE -eq 0 -a -n "$SE_OUTPUT_FILES" ]; then
 	echo "##MD5-SUMS -- this is a marker line used by verify.py -- do not edit."
 	(cd "$MY_SCRATCH"; md5sum $SE_OUTPUT_FILES)
-	se_copy "file:///$MY_SCRATCH" "$SE_PATH" "$SE_OUTPUT_FILES"
+	url_copy "file:///$MY_SCRATCH" "$SE_PATH" "$SE_OUTPUT_FILES"
 fi
 
 # Move output into landingzone

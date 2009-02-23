@@ -8,7 +8,6 @@ class GridError(Exception):
 	def showMessage(self):
 		print >> sys.stderr, "%s: %s" % (sys.argv[0], self.message)
 
-
 # some error with the Grid installation
 class InstallationError(GridError):
 	pass	# just inherit everything from GridError
@@ -28,4 +27,3 @@ class RuntimeError(GridError):
 # some error with the dataset
 class DatasetError(GridError):
 	pass	# just inherit everything from GridError
-

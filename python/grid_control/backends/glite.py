@@ -1,6 +1,7 @@
 from __future__ import generators
 import sys, os, time, copy, popen2, tempfile, cStringIO
-from grid_control import ConfigError, WMS, Job, utils
+from grid_control import ConfigError, Job, utils
+from wms import WMS
 
 try:
 	from email.utils import parsedate
@@ -10,7 +11,7 @@ except ImportError:
 class Glite(WMS):
 	_statusMap = {
 		'ready':	Job.READY,
-		'submitted':    Job.SUBMITTED,
+		'submitted':	Job.SUBMITTED,
 		'waiting':	Job.WAITING,
 		'queued':	Job.QUEUED,
 		'scheduled':	Job.QUEUED,
@@ -52,19 +53,17 @@ class Glite(WMS):
 
 
 	def memberReq(self, member):
-		return 'Member(%s, other.GlueHostApplicationSoftwareRunTimeEnvironment)' \
-		       % self._jdlEscape(member)
+		return 'Member(%s, other.GlueHostApplicationSoftwareRunTimeEnvironment)' % self._jdlEscape(member)
 
 
 	def wallTimeReq(self, wallTime):
-		return '(other.GlueCEPolicyMaxWallClockTime >= %d)' \
-		       % int((wallTime + 59) / 60)
+		#              GlueCEPolicyMaxWallClockTime: The maximum wall clock time in minutes
+		return '(other.GlueCEPolicyMaxWallClockTime >= %d)' % int((wallTime + 59) / 60)
 
 
 	def storageReq(self, sites):
 		def makeMember(member):
-			return "Member(%s, other.GlueCESEBindGroupSEUniqueID)" \
-			       % self._jdlEscape(member)
+			return "Member(%s, other.GlueCESEBindGroupSEUniqueID)" % self._jdlEscape(member)
 		if not len(sites):
 			return None
 		elif len(sites) == 1:
@@ -102,7 +101,8 @@ class Glite(WMS):
 	def cpuTimeReq(self, cpuTime):
 		if cpuTime == 0:
 			return None
-		return '(other.GlueCEPolicyMaxCPUTime >= %d)' % cpuTime
+		#              GlueCEPolicyMaxCPUTime: The maximum CPU time available to jobs submitted to this queue, in minutes.
+		return '(other.GlueCEPolicyMaxCPUTime >= %d)' % int((cpuTime + 59) / 60)
 
 
 	def memoryReq(self, memory):
@@ -117,6 +117,7 @@ class Glite(WMS):
 
 	def makeJDL(self, fp, job):
 		reqs = self.module.getRequirements(job)
+		# WMS.OTHER => GlueHostNetworkAdapterOutboundIP
 		reqs.append((WMS.OTHER, ()))
 		contents = {
 			'Executable': 'grid.sh',
@@ -427,7 +428,7 @@ class Glite(WMS):
 		return result
 
 
-	def cancel(self, ids):
+	def cancelJobs(self, ids):
 		if not len(ids):
 			return True
 

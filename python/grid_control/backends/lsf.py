@@ -1,6 +1,7 @@
 from __future__ import generators
 import sys, os, random, popen2, tempfile
-from grid_control import ConfigError, WMS, Job, utils
+from grid_control import ConfigError, Job, utils
+from wms import WMS
 
 class LSF(WMS):
 	__rndChars = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'

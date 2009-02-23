@@ -1,19 +1,20 @@
 BUGS:
 ===================================================
-1. Please check bugfix for SUBMITTED status in glite.py, rev. r763
-2. MaxCPUTime in config files to be give in hours, but not properly translated to jdl requirement in MINUTES!
-   Please make hours and minutes usage in MaxWallTime and MaxCPUTime consistently in hours.
 
 FEATURE REQUESTS:
 ===================================================
 1. Multiple datasets
-2. Show location in job-status/ ev. have information output
-   (Details?)
 3. do "scram b python" to update search paths
-4. override runtime files
 
 DONE:
 ===================================================
+X. Please check bugfix for SUBMITTED status in glite.py, rev. r763
+	(seems ok)
+X. Show location in job-status/ ev. have information output
+   (fixed?)
+X. override runtime files
+X. MaxCPUTime in config files to be give in hours, but not properly translated to jdl requirement in MINUTES!
+   Please make hours and minutes usage in MaxWallTime and MaxCPUTime consistently in hours.
 X. FIX continous mode (-ic) (welches Problem)
 	(fixed?)
 X. enable conditions for job failure (e.g. root-file <1 MB...)

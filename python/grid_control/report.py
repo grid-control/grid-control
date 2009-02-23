@@ -9,45 +9,43 @@ class Report:
 			self.jobs = jobs
 	
 	def details(self):
-                reports = {}
-                maxWidth = [6, 20, 0]
+		reports = {}
+		maxWidth = [6, 20, 0]
 
-                # Get the maximum width of each column
-                for id in self.jobs:
-                        job = self.allJobs.get(id)
-                        thisreport = job.report()
-                        reports[id] = thisreport
-                        if maxWidth[0] < len(thisreport[0]):
-                                maxWidth[0] = len(thisreport[0])
-                        if maxWidth[1] < len(thisreport[1]):
-                                maxWidth[1] = len(thisreport[1])
-                        if maxWidth[2] < len(thisreport[2]):
-                                maxWidth[2] = len(thisreport[2])
+		# Get the maximum width of each column
+		for id in self.jobs:
+			job = self.allJobs.get(id)
+			thisreport = job.report()
+			reports[id] = thisreport
+			if maxWidth[0] < len(thisreport[0]):
+				maxWidth[0] = len(thisreport[0])
+			if maxWidth[1] < len(thisreport[1]):
+				maxWidth[1] = len(thisreport[1])
+			if maxWidth[2] < len(thisreport[2]):
+				maxWidth[2] = len(thisreport[2])
 
-                # Print table header
-                print "\n%4s %-*s %s" % ("Job", maxWidth[0], "Status", "Destination / Job ID")
+		# Print table header
+		print "\n%4s %-*s %s" % ("Job", maxWidth[0], "Status", "Destination / Job ID")
 
-                # Calculate width of horizontal lines
-                if maxWidth[1] > maxWidth[2]:
-                        lineWidth = maxWidth[0]+maxWidth[1]+8
-                else:
-                        lineWidth = maxWidth[0]+maxWidth[2]+6
-                line = "-"*lineWidth
-                print line
+		# Calculate width of horizontal lines
+		if maxWidth[1] > maxWidth[2]:
+		        lineWidth = maxWidth[0]+maxWidth[1]+8
+		else:
+		        lineWidth = maxWidth[0]+maxWidth[2]+6
+		line = "-"*lineWidth
+		print line
 
-                # Calculate spacer width for second row
-                spacer = " "*(maxWidth[0]+5)
+		# Calculate spacer width for second row
+		spacer = " "*(maxWidth[0]+5)
 
-                # Get information of each job
-
-
+		# Get information of each job
 		if not len(self.jobs):
 			print " No jobs found!"
-                for id in self.jobs:
-                        print "%4d %-*s %s /" % (id, maxWidth[0], reports[id][0], reports[id][1])
-                        print "%s %-*s" % (spacer, maxWidth[0]+maxWidth[2]+6, reports[id][2])
+		for id in self.jobs:
+			print "%4d %-*s %s /" % (id, maxWidth[0], reports[id][0], reports[id][1])
+			print "%s %-*s" % (spacer, maxWidth[0]+maxWidth[2]+6, reports[id][2])
 
-                print line + "\n"
+		print line + "\n"
 
 
 	def siteReport(self, details = False):

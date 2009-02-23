@@ -141,13 +141,14 @@ def main(args):
 			raise UserError('Your proxy only has %d seconds left!' % proxy.timeleft())
 
 		# Test grid proxy lifetime
-		wallTime = config.getInt('jobs', 'wall time')
-		if not proxy.check(wallTime * 60 * 60):
+		wallTime = utils.parseTime(config.get('jobs', 'wall time'))
+		if not proxy.check(wallTime):
 			proxy.warn(wallTime)
 			jobSubmission = False
 
 		# Initialise job database
-		jobs = JobDB(workdir, config.getInt('jobs', 'jobs', -1), config.getInt('jobs', 'queue timeout', -1), module, init)
+		queueTimeout = utils.parseTime(config.get('jobs', 'queue timeout', ''))
+		jobs = JobDB(workdir, config.getInt('jobs', 'jobs', -1), queueTimeout, module, init)
 
 		# If invoked in report mode, scan job database and exit
 		if report:
@@ -201,8 +202,8 @@ def main(args):
 			if not continuous:
 				break
 
-			# Retest grid proxy lifetime
-			if jobSubmission and not proxy.check(wallTime * 60 * 60):
+			# Retest proxy lifetime
+			if jobSubmission and not proxy.check(wallTime):
 				proxy.warn(wallTime)
 				jobSubmission = False
 

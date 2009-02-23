@@ -68,13 +68,13 @@ class DataDiscovery(AbstractObject):
 				self._jobFiles.append(job)
 
 
-	def GetFilerangeForJob(self, jobNr):
+	def getFileRangeForJob(self, jobNr):
 		if jobNr >= len(self._jobFiles):
 			raise ConfigError("Job %d out of range for available dataset"  % jobNr)	
 		return self._jobFiles[jobNr]
 
 
-	def GetSitesForJob(self, jobNr):
+	def getSitesForJob(self, jobNr):
 		if jobNr >= len(self._jobFiles):
 			raise ConfigError("Job %d out of range for available dataset"  % jobNr)	
 		return self._jobFiles[jobNr]['StorageElementList']

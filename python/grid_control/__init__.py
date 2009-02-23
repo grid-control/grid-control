@@ -1,20 +1,19 @@
-from exceptions		import *
-from utils		import AbstractObject, SortedList, enumerate
-from config		import *
-from proxy		import *
-from voms_proxy		import *
-from job		import *
-from wms		import *
-from glite		import *
-from glite_wms		import *
-from lsf		import *
-from pbs		import *
-from lcg		import *
-from report		import *
-from job_db		import *
-from module		import *
-from user_mod		import *
+from exceptions	import *
+from utils	import AbstractObject, SortedList, enumerate
+from job	import *
+from backends	import *
+
+from module	import *
 from data_discovery	import *
-from dbsv2_api		import *
-from CMSSW		import *
-from pbs_named	import *
+from CMSSW	import *
+
+from config	import *
+from dbsv2_api	import *
+
+from report	import *
+from job_db	import *
+
+from user_mod	import *
+
+from proxy	import *
+from voms_proxy	import *

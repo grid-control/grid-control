@@ -1,6 +1,8 @@
 from __future__ import generators
 import sys, os, time, copy, popen2, tempfile, cStringIO, md5
-from grid_control import ConfigError, WMS, Glite, Job, utils
+from grid_control import ConfigError, Job, utils
+from wms import WMS
+from glite import Glite
 
 try:
 	from email.utils import parsedate

@@ -1,4 +1,4 @@
-from grid_control import PBS
+from pbs import PBS
 
 class PBS_NAMED(PBS):
 	def __init__(self, config, module, init):
