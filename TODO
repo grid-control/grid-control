@@ -3,11 +3,11 @@ BUGS:
 
 FEATURE REQUESTS:
 ===================================================
-1. Multiple datasets
-3. do "scram b python" to update search paths
+1. do "scram b python" to update search paths
 
 DONE:
 ===================================================
+X. Multiple datasets
 X. Please check bugfix for SUBMITTED status in glite.py, rev. r763
 	(seems ok)
 X. Show location in job-status/ ev. have information output

@@ -209,6 +209,10 @@ var_replacer() {
 	MY_EVENTS=${MAX_EVENTS:-100}
 	sed \
 		-e "s@__X__@$1@" \
+		-e "s@__DATASETID__@$DATASETID@" \
+		-e "s@__DATASETPATH__@$DATASETPATH@" \
+		-e "s@__DATASETNICK__@$DATASETNICK@" \
+		-e "s@__NICK__@$DATASETNICK@" \
 		-e "s@__FILE_NAMES__@$FILE_NAMES@" \
 		-e "s@__MAX_EVENTS__@$MAX_EVENTS@" \
 		-e "s@__SKIP_EVENTS__@$SKIP_EVENTS@" \

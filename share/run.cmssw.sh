@@ -132,10 +132,12 @@ if [ "$DASHBOARD" == "yes" ]; then
 	checkbin "$MY_SCRATCH/report.py"
 	echo $MY_SCRATCH/report.py $REPORTID \
 		ExeEnd="cmsRun" WCCPU="$[ $(date +%s) - $WALL_START ]" \
-		ExeExitCode="$CODE" JobExitCode="$CODE" JobExitReason="$CODE"
+		ExeExitCode="$CODE" JobExitCode="$CODE" JobExitReason="$CODE" \
+		NEventsProcessed="$MAX_EVENTS"
 	$MY_SCRATCH/report.py $REPORTID \
 		ExeEnd="cmsRun" WCCPU="$[ $(date +%s) - $WALL_START ]" \
-		ExeExitCode="$CODE" JobExitCode="$CODE" JobExitReason="$CODE"
+		ExeExitCode="$CODE" JobExitCode="$CODE" JobExitReason="$CODE" \
+		NEventsProcessed="$MAX_EVENTS"
 fi
 
 exit $CODE

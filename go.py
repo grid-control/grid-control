@@ -158,14 +158,13 @@ def main(args):
 		jobs = JobDB(workdir, config.getInt('jobs', 'jobs', -1), queueTimeout, module, init)
 
 		# If invoked in report mode, scan job database and exit
-		if report:
-			report = Report(jobs, jobs)
-			report.details()
-			report.summary()
-		if reportSite:
-			report = Report(jobs, jobs)
-			report.siteReport(reportSite > 1)
 		if report or reportSite:
+			report = Report(jobs, jobs)
+			if report:
+				report.details()
+				report.summary()
+			if reportSite:
+				report.siteReport(reportSite > 1)
 			return 0
 
 		# Check if jobs have to be deleted and exit
@@ -198,7 +197,7 @@ def main(args):
 
 			# try submission
 			if jobSubmission:
-				jobList = jobs.getSubmissionJobs(config.getInt('jobs', 'in flight'), maxRetry)
+				jobList = jobs.getSubmissionJobs(config.getInt('jobs', 'in flight'), maxRetry, True)
 				if len(jobList):
 					jobs.submit(wms, jobList)
 				del jobList
