@@ -1,5 +1,5 @@
 from __future__ import generators
-import os, re, fnmatch
+import os, re, fnmatch, random
 from time import time, localtime, strftime
 from grid_control import SortedList, ConfigError, Job, UserError, Report
 
@@ -118,7 +118,7 @@ class JobDB:
 		self._saveJob(id)
 
 
-	def getSubmissionJobs(self, maxInFlight, maxRetry):
+	def getSubmissionJobs(self, maxInFlight, maxRetry, shuffle):
 		curInFlight = len(self.running)
 		submit = maxInFlight - curInFlight
 		if submit < 0:
@@ -127,6 +127,8 @@ class JobDB:
 			list = filter(lambda x: self._jobs.get(x, Job()).attempt < maxRetry, self.ready)
 		else:
 			list = self.ready
+		if shuffle:
+			random.shuffle(list)
 		return list[:submit]
 
 

@@ -71,13 +71,13 @@ class Glite(WMS):
 		else:
 			return '(' + str.join(' || ', map(makeMember, sites)) + ')'
 
-	def appendSiteItem(self, list, site):
-		if site[0] == ':':
-			list.append(site[1:])
-		else:
-			list.append(site)
 
 	def sitesReq(self, sites):
+		def appendSiteItem(self, list, site):
+			if site[0] == ':':
+				list.append(site[1:])
+			else:
+				list.append(site)
 		blacklist = []
 		whitelist = []
 		for site in sites:
