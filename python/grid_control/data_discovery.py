@@ -87,10 +87,10 @@ class DataDiscovery(AbstractObject):
 	def printDataset(self):
 		print "Matching datasets:"
 		for block in self._getBlocks():
-			print "BlockName: ",block['BlockName']
-			print "NumberOfEvents: ",block['NumberOfEvents']
-			print "NumberOfFiles : ",block['NumberOfFiles']
-			print "SE List       : ",block['StorageElementList']
+			print "BlockName: ", block['BlockName']
+			print "NumberOfEvents: ", block['NumberOfEvents']
+			print "NumberOfFiles : ", block['NumberOfFiles']
+			print "SE List       : ", block['StorageElementList']
 			print "Files: "
 			for fileinfo in block['FileList'] :
 				print fileinfo['lfn'],"( status: ",fileinfo['status'],", Events: ",fileinfo['events'],")"
@@ -99,16 +99,16 @@ class DataDiscovery(AbstractObject):
 	def printJobInfo(self):
 		jobNum = 0
 		for entry in self.jobFiles:
-			print "Job number: ",jobNum
+			print "Job number: ", jobNum
 			self.printInfoForJob(entry)
 			print "------------"			
 			jobNum += 1
 
 
 	def printInfoForJob(self, job):
-		print "Events: ",job['events']
-		print "Skip  : ",job['skip']
-		print "SEList: ",job['StorageElementList']
+		print "Events: ", job['events']
+		print "Skip  : ", job['skip']
+		print "SEList: ", job['StorageElementList']
 		print "Files :"
 		for thefile in job['files']:
 			print thefile
