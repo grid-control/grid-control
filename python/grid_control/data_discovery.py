@@ -106,9 +106,9 @@ class DataDiscovery(AbstractObject):
 
 
 	def printInfoForJob(self, job):
-		print "Events: ", job['events']
-		print "Skip  : ", job['skip']
-		print "SEList: ", job['StorageElementList']
-		print "Files :"
+		print "Events : ", job['events']
+		print "Skip   : ", job['skip']
+		print "SEList : ", job['StorageElementList']
+		print "Files  : "
 		for thefile in job['files']:
 			print thefile
