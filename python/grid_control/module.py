@@ -109,7 +109,7 @@ class Module(AbstractObject):
 
 
 	# Get environment variables for _config.sh
-	def getConfig(self):
+	def getTaskConfig(self):
 		return {
 			# Space limits
 			'SCRATCH_UL': str(self.seSDUpperLimit),
@@ -142,7 +142,7 @@ class Module(AbstractObject):
 
 	# Create _config.sh from module config
 	def makeConfig(self):
-		data = self.getConfig()
+		data = self.getTaskConfig()
 
 		fp = cStringIO.StringIO()
 		for key, value in data.items():

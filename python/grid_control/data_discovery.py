@@ -58,30 +58,30 @@ class DataDiscovery(AbstractObject):
 	def run(self, eventsPerJob):
 		blocks = self._getBlocks()
 		
-		self._jobFiles = []
+		self.jobFiles = []
 
 		for block in blocks:
-#			self._jobFiles.extend(self._splitJobs(block['FileList'], eventsPerJob, 0)
+#			self.jobFiles.extend(self._splitJobs(block['FileList'], eventsPerJob, 0)
 			for job in self._splitJobs(block['FileList'], eventsPerJob, 0):
 				job['StorageElementList']  =  block['StorageElementList']
 ##				print job
-				self._jobFiles.append(job)
+				self.jobFiles.append(job)
 
 
 	def getFileRangeForJob(self, jobNr):
-		if jobNr >= len(self._jobFiles):
+		if jobNr >= len(self.jobFiles):
 			raise ConfigError("Job %d out of range for available dataset"  % jobNr)	
-		return self._jobFiles[jobNr]
+		return self.jobFiles[jobNr]
 
 
 	def getSitesForJob(self, jobNr):
-		if jobNr >= len(self._jobFiles):
+		if jobNr >= len(self.jobFiles):
 			raise ConfigError("Job %d out of range for available dataset"  % jobNr)	
-		return self._jobFiles[jobNr]['StorageElementList']
+		return self.jobFiles[jobNr]['StorageElementList']
 
 
 	def getNumberOfJobs(self):
-		return len(self._jobFiles)
+		return len(self.jobFiles)
 
 
 	def printDataset(self):
@@ -98,7 +98,7 @@ class DataDiscovery(AbstractObject):
 
 	def printJobInfo(self):
 		jobNum = 0
-		for entry in self._jobFiles:
+		for entry in self.jobFiles:
 			print "Job number: ",jobNum
 			self.printInfoForJob(entry)
 			print "------------"			

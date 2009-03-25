@@ -208,8 +208,8 @@ class CMSSW(Module):
 		return './run.cmssw.sh "$@"'
 
 
-	def getConfig(self):
-		data = Module.getConfig(self)
+	def getTaskConfig(self):
+		data = Module.getTaskConfig(self)
 		data['CMSSW_CONFIG'] = os.path.basename(self.configFile)
 		data['SCRAM_VERSION'] = 'scramv1'
 		data['SCRAM_ARCH'] = self.scramArch
