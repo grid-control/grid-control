@@ -140,6 +140,20 @@ class Module(AbstractObject):
 		}
 
 
+	def getJobConfig(self, job):
+		return {
+			'MY_JOBID': str(job)
+		}
+
+
+	def getEnvironment(self, job):
+		result = []
+		for key, value in self.getJobConfig(job).iteritems():
+			if value:
+				result.append("%s=%s" % (key, str(value)))
+		return result
+
+
 	# Create _config.sh from module config
 	def makeConfig(self):
 		data = self.getTaskConfig()
