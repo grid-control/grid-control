@@ -122,6 +122,7 @@ class Glite(WMS):
 		contents = {
 			'Executable': 'grid.sh',
 			'Arguments': "%d %s" % (job, self.module.getJobArguments(job)),
+			'Environment': self.module.getEnvironment(job),
 			'StdOutput': 'stdout.txt',
 			'StdError': 'stderr.txt',
 			'InputSandbox': self.sandboxIn,
