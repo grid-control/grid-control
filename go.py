@@ -197,7 +197,7 @@ def main(args):
 
 			# try submission
 			if jobSubmission:
-				jobList = jobs.getSubmissionJobs(config.getInt('jobs', 'in flight'), maxRetry, True)
+				jobList = jobs.getSubmissionJobs(config.getInt('jobs', 'in flight'), maxRetry, False)
 				if len(jobList):
 					jobs.submit(wms, jobList)
 				del jobList
