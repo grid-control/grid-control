@@ -73,7 +73,7 @@ class Glite(WMS):
 
 
 	def sitesReq(self, sites):
-		def appendSiteItem(self, list, site):
+		def appendSiteItem(list, site):
 			if site[0] == ':':
 				list.append(site[1:])
 			else:
@@ -82,9 +82,9 @@ class Glite(WMS):
 		whitelist = []
 		for site in sites:
 			if site[0] == '-':
-				self.appendSiteItem(blacklist, site[1:])
+				appendSiteItem(blacklist, site[1:])
 			else:
-				self.appendSiteItem(whitelist, site)
+				appendSiteItem(whitelist, site)
 
 		sitereqs = []
 		formatstring = "RegExp(%s, other.GlueCEUniqueID)"
@@ -122,9 +122,9 @@ class Glite(WMS):
 		contents = {
 			'Executable': 'grid.sh',
 			'Arguments': "%d %s" % (job, self.module.getJobArguments(job)),
-			'InputSandbox': self.sandboxIn,
 			'StdOutput': 'stdout.txt',
 			'StdError': 'stderr.txt',
+			'InputSandbox': self.sandboxIn,
 			'OutputSandbox': self.sandboxOut,
 			'_Requirements': self.formatRequirements(reqs),
 			'VirtualOrganisation': self.config.get('grid', 'vo'),

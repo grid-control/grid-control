@@ -120,16 +120,14 @@ class JobDB:
 
 	def getSubmissionJobs(self, maxInFlight, maxRetry, shuffle):
 		curInFlight = len(self.running)
-		submit = maxInFlight - curInFlight
-		if submit < 0:
-			submit = 0
+		submit = max(0, maxInFlight - curInFlight)
 		if maxRetry:
 			list = filter(lambda x: self._jobs.get(x, Job()).attempt < maxRetry, self.ready)
 		else:
-			list = self.ready
+			list = self.ready[:]
 		if shuffle:
 			random.shuffle(list)
-		return list[:submit]
+		return SortedList(list[:submit])
 
 
 	def getWmsMap(self, idlist):
