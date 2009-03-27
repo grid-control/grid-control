@@ -198,7 +198,7 @@ def main(args):
 			# try submission
 			if jobSubmission:
 				inFlight = config.getInt('jobs', 'in flight')
-				doShuffle = config.getInt('jobs', 'shuffle')
+				doShuffle = config.getBool('jobs', 'shuffle', False)
 				jobList = jobs.getSubmissionJobs(inFlight, maxRetry, doShuffle)
 				if len(jobList):
 					jobs.submit(wms, jobList)
