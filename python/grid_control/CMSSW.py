@@ -221,6 +221,15 @@ class CMSSW(Module):
 		return data
 
 
+	def getJobConfig(self, job):
+		data = Module.getJobConfig(self, job)
+		dbsinfo = self.dbs.getFileRangeForJob(job)
+		data['DATASETID'] = dbsinfo.get('DatasetID', None)
+		data['DATASETPATH'] = dbsinfo.get('DatasetPath', None)
+		data['DATASETNICK'] = dbsinfo.get('DatasetNick', None)
+		return data
+
+
 	def getInFiles(self):
 		files = Module.getInFiles(self)
 		if len(self.projectArea) and not self.seRuntime:
@@ -250,7 +259,6 @@ class CMSSW(Module):
 		if self.dbs == None:
 			return "%d" % self.eventsPerJob
 
-		print ""
 		print "Job number: ", job
 		dbsinfo = self.dbs.getFileRangeForJob(job)
 		self.dbs.printInfoForJob(dbsinfo)
