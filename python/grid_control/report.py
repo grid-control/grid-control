@@ -57,14 +57,16 @@ class Report:
 		maxlen_site = 25
 
 		def add(x,y): return x+y
-		#def getQueue(x): return x.split(":")[1].split("/")[1]
 		def getSite(x): return str.join(".", x.split(":")[0].split(".")[1:])
 
 		# init wn dictionary
-		wnodes = {}.fromkeys(map(lambda x: x.split(":")[0], reduce(add, map(lambda id: self.allJobs.get(id).history.values(), self.jobs))), {})
-		for node in wnodes:
-			wnodes[node] = {}.fromkeys(states, 0)
+		wnodes = {}
+		# iterate over flat list of all occuring destinations
+		for destination in reduce(add, map(lambda id: self.allJobs.get(id).history.values(), self.jobs)):
+			wn = destination.split(":")[0]
+			wnodes[wn] = {}.fromkeys(states, 0)
 
+		# fill wn dictionary
 		for id in self.jobs:
 			job = self.allJobs.get(id)
 			for attempt in job.history:
@@ -72,12 +74,7 @@ class Report:
 					continue
 				# Extract site from history
 				wn = job.history[attempt].split(":")[0]
-				if details:
-					if len(wn) > maxlen_site:
-						maxlen_site = len(wn)
-				else:
-					if len(getSite(wn)) > maxlen_site:
-						maxlen_site = len(getSite(wn))
+				maxlen_site = max(maxlen_site, len((lambda x: details and x or getSite(x))(wn)))
 
 				# Sort job into category
 				if attempt == job.attempt:
@@ -91,21 +88,23 @@ class Report:
 						wnodes[wn]["QUEUED"] += 1
 				else:
 					wnodes[wn]["FAILED"] += 1
+		# wnodes = {'wn1.site1': {'FAILED': 0, 'RUNNING': 0, 'QUEUED': 0, 'SUCCESS': 1}, 'wn2.site1': ..., 'wn1.site2': ...}
+		
+		# Print header
+		print " %s    | %12s | %12s | %12s | %12s" % tuple(["SITE / WN".ljust(maxlen_site)] + map(lambda x: x.center(12), states))
+		print "=%s====" % (maxlen_site * "=") + len(states) * ("+" + 14 * "=")
 
 		def stats(entries):
+			# entries = [('wn1.site1', {'FAILED': 0, 'RUNNING': 0, 'QUEUED': 0, 'SUCCESS': 1}), ('wn2.site1', ...)]
+			# map list of (wn, {state info}) to list of summed state info
 			result = map(lambda state: sum(map(lambda x: x[1][state], entries)), states)
 			line = []
-			all = sum(result)
-			if all == 0:
-				all = 1
+			all = max(1, sum(result))
 			for x in result:
 				line.extend([x, 100 * x / all])
+			# return summed state infos in together with the percentage: [state1, percentage1, state2, percentage2, ...]
 			return line
 
-		# Print header
-		header = tuple(["SITE / WN".ljust(maxlen_site)] + map(lambda x: x.center(12), states))
-		print " %s    | %12s | %12s | %12s | %12s" % header
-		print "=%s====" % (maxlen_site * "=") + 4 * ("+" + 14 * "=")
 		sites = {}.fromkeys(map(lambda x: getSite(x).split(":")[0], wnodes.keys()), {})
 		for site in SortedList(sites.keys()):
 			sitenodes = filter(lambda (wn, info): getSite(wn) == site, wnodes.items())

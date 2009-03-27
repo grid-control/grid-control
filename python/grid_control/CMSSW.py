@@ -23,7 +23,7 @@ class CMSSW(Module):
 
 		self.configFile = config.getPath('CMSSW', 'config file')
 
-		self.dataset = config.get('CMSSW', 'dataset', '')
+		self.dataset = config.get('CMSSW', 'dataset', '').strip()
 
 		if self.dataset == '':
 			self.dataset = None
@@ -35,7 +35,7 @@ class CMSSW(Module):
 			or configFileContent.find("__MAX_EVENTS__") == -1 \
 			or configFileContent.find("__SKIP_EVENTS__") == -1:
 				print open(utils.atRoot('share', 'fail.txt'), 'r').read()
-				print "Config file must use __FILE_NAMES__, __MAX_EVENTS__ and __SKIP_EVENTS__ to work properly!"
+				print "Config file must use __FILE_NAMES__, __MAX_EVENTS__ and __SKIP_EVENTS__ to work properly with DBS datasets!"
 
 
 		self.gzipOut = config.getBool('CMSSW', 'gzip output', True)
@@ -227,6 +227,7 @@ class CMSSW(Module):
 			files.append('runtime.tar.gz')
 		files.append(utils.atRoot('share', 'run.cmssw.sh')),
 		files.extend([self.configFile])
+
 		if self.dashboard:
 			files.extend([
 				utils.atRoot('python/DashboardAPI', 'DashboardAPI.py'),
@@ -251,9 +252,9 @@ class CMSSW(Module):
 
 		print ""
 		print "Job number: ", job
-		files = self.dbs.getFileRangeForJob(job)
-		self.dbs.printInfoForJob(files)
-		return "%d %d %s" % (files['events'], files['skip'], str.join(' ', files['files']))
+		dbsinfo = self.dbs.getFileRangeForJob(job)
+		self.dbs.printInfoForJob(dbsinfo)
+		return "%d %d %s" % (dbsinfo['events'], dbsinfo['skip'], str.join(' ', dbsinfo['files']))
 
 
 	def getMaxJobs(self):
