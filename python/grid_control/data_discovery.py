@@ -1,5 +1,5 @@
 from __future__ import generators
-import sys, os
+import sys, os, gzip, cPickle
 from grid_control import AbstractObject, RuntimeError, utils, ConfigError
 
 class DataDiscovery(AbstractObject):
@@ -56,15 +56,14 @@ class DataDiscovery(AbstractObject):
 
 
 	def run(self, eventsPerJob):
-		blocks = self._getBlocks()
-		
 		self.jobFiles = []
+		blocks = self._getBlocks()
 
 		for block in blocks:
 #			self.jobFiles.extend(self._splitJobs(block['FileList'], eventsPerJob, 0)
 			for job in self._splitJobs(block['FileList'], eventsPerJob, 0):
 				job['StorageElementList']  =  block['StorageElementList']
-##				print job
+				job['DatasetPath'] = self.datasetPath
 				self.jobFiles.append(job)
 
 
@@ -93,7 +92,12 @@ class DataDiscovery(AbstractObject):
 			print "SE List       : ", block['StorageElementList']
 			print "Files: "
 			for fileinfo in block['FileList'] :
-				print fileinfo['lfn'],"( status: ",fileinfo['status'],", Events: ",fileinfo['events'],")"
+				print fileinfo['lfn'], "(",
+				infos = []
+				for tag in [('Status', 'status'), ('Events', 'events')]:
+					if not str(fileinfo[tag[1]]) == "":
+						infos.append(tag[0] + ": " + str(fileinfo[tag[1]]))
+				print ", ".join(infos), ")"
 
 
 	def printJobInfo(self):
@@ -106,9 +110,23 @@ class DataDiscovery(AbstractObject):
 
 
 	def printInfoForJob(self, job):
+		if job.get('DatasetPath') != None:
+			print "Dataset: ", job['DatasetPath']
 		print "Events : ", job['events']
 		print "Skip   : ", job['skip']
 		print "SEList : ", job['StorageElementList']
-		print "Files  : "
-		for thefile in job['files']:
-			print thefile
+		print "Files  : ", "\n          ".join(job['files'])
+
+
+	def saveState(self, path):
+		fp = gzip.GzipFile(os.path.join(path, 'dbscache.dat'), 'wb')
+		cPickle.dump(self, fp)
+		fp.close()
+
+
+	def loadState(path):
+		fp = gzip.GzipFile(os.path.join(path, 'dbscache.dat'), 'rb')
+		dbs = cPickle.load(fp)
+		fp.close()
+		return dbs
+	loadState = staticmethod(loadState)
