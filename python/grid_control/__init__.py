@@ -9,6 +9,7 @@ from CMSSW	import *
 
 from config	import *
 from dbsv2_api	import *
+from data_multiplexer import *
 
 from report	import *
 from job_db	import *

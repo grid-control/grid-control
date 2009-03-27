@@ -18,6 +18,8 @@ class Module(AbstractObject):
 			self.seeds = map(lambda x: int(x), config.get('jobs', 'seeds').split())
 		except:
 			# TODO: remove backwards compatibility
+#			print open(utils.atRoot('share', 'fail.txt'), 'r').read()
+			print "[DEPRECATED] Please specify seeds in the [jobs] section"
 			try:
 				self.seeds = map(lambda x: int(x), config.get('CMSSW', 'seeds', '').split())
 			except:
@@ -31,8 +33,10 @@ class Module(AbstractObject):
 			self.seOutputFiles = config.get('storage', 'se output files').split()
 		except:
 			# TODO: remove backwards compatibility
+#			print open(utils.atRoot('share', 'fail.txt'), 'r').read()
+			print "[DEPRECATED] Please specify se output files in the [storage] section"
 			self.seOutputFiles = config.get('CMSSW', 'se output files', '').split()
-		self.seOutputPattern = config.get('storage', 'se output pattern', 'job___MY_JOB_____X__')
+		self.seOutputPattern = config.get('storage', 'se output pattern', 'job___NICK____MY_JOB_____X__')
 
 		self.seMinSize = config.getInt('storage', 'se min size', -1)
 
@@ -123,8 +127,6 @@ class Module(AbstractObject):
 			'SE_INPUT_FILES': str.join(' ', self.seInputFiles),
 			'SE_OUTPUT_PATTERN': self.seOutputPattern,
 			'SE_INPUT_PATTERN': self.seInputPattern,
-			# TODO: remove backwards compatibility
-			'MY_OUT': str.join(' ', self.getOutFiles()),
 			# Sandbox
 			'SB_OUTPUT_FILES': str.join(' ', self.getOutFiles()),
 			'SB_INPUT_FILES': str.join(' ', map(lambda x: utils.shellEscape(os.path.basename(x)), self.getInFiles())),

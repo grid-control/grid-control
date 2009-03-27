@@ -1,4 +1,4 @@
-import os, copy, gzip, cPickle, string, re
+import os, copy, string, re
 from fnmatch import fnmatch
 from xml.dom import minidom
 from grid_control import ConfigError, Module, WMS, DataDiscovery, utils
@@ -92,9 +92,7 @@ class CMSSW(Module):
 			self._initTask(config)
 
 		if self.dataset != None:
-			fp = gzip.GzipFile(os.path.join(self.workDir, 'dbscache.dat'), 'rb')
-			self.dbs = cPickle.load(fp)
-			fp.close()
+			self.dbs = DataDiscovery.loadState(self.workDir)
 		else:
 			self.dbs = None
 
@@ -146,15 +144,14 @@ class CMSSW(Module):
 		# find datasets
 		if self.dataset != None:
 			dbsapi = config.get('CMSSW', 'dbsapi')
-			dbs = DataDiscovery.open(dbsapi, self.dataset)
+			if "\n" in self.dataset:
+				dbs = DataDiscovery.open("DataMultiplexer", self.dataset, dbsapi)
+			else:
+				dbs = DataDiscovery.open(dbsapi, self.dataset)
 			dbs.run(self.eventsPerJob)
 			dbs.printDataset()
 ##			dbs.printJobInfo()
-
-			# and dump to cache file
-			fp = gzip.GzipFile(os.path.join(self.workDir, 'dbscache.dat'), 'wb')
-			cPickle.dump(dbs, fp)
-			fp.close()
+			dbs.saveState(self.workDir)
 
 
 	# Called on job submission
