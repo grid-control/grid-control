@@ -11,19 +11,20 @@ class Module(AbstractObject):
 		self.config = config
 		self.workDir = config.getPath('global', 'workdir')
 		self.wallTime = utils.parseTime(config.get('jobs', 'wall time'))
-		self.cpuTime = utils.parseTime(config.get('jobs', 'cpu time', '10:00:00'))
+		self.cpuTime = utils.parseTime(config.get('jobs', 'cpu time', config.get('jobs', 'wall time')))
 		self.memory = config.getInt('jobs', 'memory', 512)
 
 		try:
-			self.seeds = map(lambda x: int(x), config.get('jobs', 'seeds').split())
+			self.setSeed(",".join(config.get('jobs', 'seeds').split()))
 		except:
 			# TODO: remove backwards compatibility
 #			print open(utils.atRoot('share', 'fail.txt'), 'r').read()
-			print "[DEPRECATED] Please specify seeds in the [jobs] section"
 			try:
-				self.seeds = map(lambda x: int(x), config.get('CMSSW', 'seeds', '').split())
+				self.setSeed(",".join(config.get('CMSSW', 'seeds').split()))
+				print "[DEPRECATED] Please specify seeds in the [jobs] section"
 			except:
-				raise ConfigError("Invalid CMSSW seeds!")
+				print "Creating random seeds..."
+				self.setSeed(None)
 
 		# TODO: Convert the following into requirements
 		self.seInputFiles = config.get('storage', 'se input files', '').split()
@@ -36,7 +37,7 @@ class Module(AbstractObject):
 #			print open(utils.atRoot('share', 'fail.txt'), 'r').read()
 			print "[DEPRECATED] Please specify se output files in the [storage] section"
 			self.seOutputFiles = config.get('CMSSW', 'se output files', '').split()
-		self.seOutputPattern = config.get('storage', 'se output pattern', 'job___NICK____MY_JOB_____X__')
+		self.seOutputPattern = config.get('storage', 'se output pattern', 'job___MY_JOB_____NICK_____X__')
 
 		self.seMinSize = config.getInt('storage', 'se min size', -1)
 

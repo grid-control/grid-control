@@ -143,7 +143,7 @@ class CMSSW(Module):
 
 		# find datasets
 		if self.dataset != None:
-			dbsapi = config.get('CMSSW', 'dbsapi')
+			dbsapi = config.get('CMSSW', 'dbsapi', 'DBSApiv2')
 			if "\n" in self.dataset:
 				dbs = DataDiscovery.open("DataMultiplexer", self.dataset, dbsapi)
 			else:
