@@ -23,6 +23,7 @@ def syntax(out):
 			"\t-r, --report             Show status report of jobs\n"
 			"\t-R, --site-report        Show site report\n"
 			"\t-RR                      Show detailled site report\n"
+			"\t-T, --time-report        Show site report\n"
 			"\t-S, --seed <args>        Override seed specified in the config file e.g:\n"
 			"\t                            -S 1234,423,7856\n"
 			"\t                            -S (= generate 10 random seeds)\n"
@@ -54,8 +55,8 @@ def main(args):
 		continuous = False
 	signal.signal(signal.SIGINT, interrupt)
 
-	longOptions = ['help', 'init', 'continuous', 'no-submission', 'max-retry', 'report', 'site-report', 'delete', 'seed']
-	shortOptions = 'hicsrRm:d:S:'
+	longOptions = ['help', 'init', 'continuous', 'no-submission', 'max-retry', 'report', 'site-report', 'delete', 'seed', 'time-report']
+	shortOptions = 'hicsrTRm:d:S:'
 
 	# global variables
 	continuous = False
@@ -64,6 +65,7 @@ def main(args):
 	maxRetry = None
 	report = False
 	reportSite = 0
+	reportTime = False
 	delete = None
 	seed = False
 	seedarg = None
@@ -93,6 +95,8 @@ def main(args):
 			report = True
 		elif opt in ('-R', '--site-report'):
 			reportSite += 1
+		elif opt in ('-T', '--time-report'):
+			reportTime = True
 		elif opt in ('-d', '--delete'):
 			delete = arg
 		elif opt in ('-S', '--seed'):
@@ -157,13 +161,15 @@ def main(args):
 		jobs = JobDB(workdir, config.getInt('jobs', 'jobs', -1), queueTimeout, module, init)
 
 		# If invoked in report mode, scan job database and exit
-		if report or reportSite:
-			report = Report(jobs, jobs)
+		if report or reportSite or reportTime:
+			reportobj = Report(jobs, jobs)
 			if report:
-				report.details()
-				report.summary()
+				reportobj.details()
+				reportobj.summary()
 			if reportSite:
-				report.siteReport(reportSite > 1)
+				reportobj.siteReport(reportSite > 1)
+			if reportTime:
+				reportobj.timeReport()
 			return 0
 
 		# Check if jobs have to be deleted and exit
