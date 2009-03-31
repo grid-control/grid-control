@@ -138,12 +138,11 @@ def main(args):
 
 		# Initialise workload management interface
 		backend = config.get('global', 'backend', 'grid')
-		wms = config.get(backend, 'wms')
+		wms = config.get(backend, 'wms', 'GliteWMS')
 		wms = WMS.open(wms, config, module, init)
 
 		# Initialise proxy
-		proxy = config.get(backend, 'proxy', 'TrivialProxy')
-		proxy = Proxy.open(proxy)
+		proxy = wms.getProxy()
 		if proxy.critical():
 			raise UserError('Your proxy only has %d seconds left!' % proxy.timeleft())
 
