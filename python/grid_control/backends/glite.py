@@ -25,6 +25,7 @@ class Glite(WMS):
 
 	def __init__(self, config, module, init):
 		WMS.__init__(self, config, module, 'grid', init)
+		self.proxy = config.get('grid', 'proxy', 'VomsProxy')
 
 		self._submitExec = utils.searchPathFind('glite-job-submit')
 		self._statusExec = utils.searchPathFind('glite-job-status')
