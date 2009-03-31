@@ -158,19 +158,15 @@ class CMSSW(Module):
 	def onJobSubmit(self, job, id):
 		Module.onJobSubmit(self, job, id)
 
-		if self.dataset == None:
-			dataset = ""
-		else:
-			dataset = self.dataset
-
 		if self.dashboard:
+			dbsinfo = self.dbs.getFileRangeForJob(job)
 			dashboard = DashboardAPI(self.taskID, "%s_%s" % (id, job.id))
 			dashboard.publish(
 				taskId=self.taskID, jobId="%s_%s" % (id, job.id), sid="%s_%s" % (id, job.id),
 				application=self.scramEnv['SCRAM_PROJECTVERSION'], exe="cmsRun",
 				nevtJob=self.eventsPerJob, tool="grid-control", GridName=self.username,
 				scheduler="gLite", taskType="analysis", vo=self.config.get('grid', 'vo', ''),
-				datasetFull=dataset, user=os.environ['LOGNAME']
+				datasetFull=dbsinfo.get('DatasetPath', ''), user=os.environ['LOGNAME']
 			)
 		return None
 
@@ -235,13 +231,8 @@ class CMSSW(Module):
 		files.extend([self.configFile])
 
 		if self.dashboard:
-			files.extend([
-				utils.atRoot('python/DashboardAPI', 'DashboardAPI.py'),
-				utils.atRoot('python/DashboardAPI', 'Logger.py'),
-				utils.atRoot('python/DashboardAPI', 'ProcInfo.py'),
-				utils.atRoot('python/DashboardAPI', 'apmon.py'),
-				utils.atRoot('python/DashboardAPI', 'report.py')
-			])
+			for file in ('DashboardAPI.py', 'Logger.py', 'ProcInfo.py', 'apmon.py', 'report.py'):
+				files.append(utils.atRoot('python/DashboardAPI', file))
 		return files
 
 
