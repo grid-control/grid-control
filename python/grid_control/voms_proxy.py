@@ -15,7 +15,8 @@ class VomsProxy(Proxy):
 		retCode = proc.wait()
 
 		if retCode != 0:
-			raise InstallationError("voms-proxy-info failed")
+			print lines
+			raise InstallationError("voms-proxy-info failed with return code %d" % retCode)
 
 		data = {}
 		for line in lines:
