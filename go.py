@@ -146,7 +146,7 @@ def main(args):
 		wms = WMS.open(wms, config, module, init)
 
 		# Initialise proxy
-		proxy = wms.getProxy()
+		proxy = Proxy.open('TrivialProxy')
 		if proxy.critical():
 			raise UserError('Your proxy only has %d seconds left!' % proxy.timeleft())
 
