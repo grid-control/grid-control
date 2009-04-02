@@ -13,13 +13,9 @@ except:
 			i += 1
 
 
-def getRoot():
-	# relies on _root to be set in go.py
-	return sys.modules['__main__']._root
-
-
 def atRoot(*args):
-	return os.path.join(getRoot(), *args)
+	# relies on _root to be set in go.py
+	return os.path.join(sys.modules['__main__']._root, *args)
 
 
 def searchPathFind(program):

@@ -88,13 +88,11 @@ class CMSSW(Module):
 		if not os.path.exists(self.configFile):
 			raise ConfigError("Config file '%s' not found." % self.configFile)
 
+		self.dataprovider = None
 		if init:
 			self._initTask(config)
-
-		if self.dataset != None:
-			self.dbs = DataDiscovery.loadState(self.workDir)
-		else:
-			self.dbs = None
+		elif self.dataset != None:
+			self.dataprovider = DataDiscovery.loadState(self.workDir)
 
 
 	def _initTask(self, config):
@@ -145,13 +143,13 @@ class CMSSW(Module):
 		if self.dataset != None:
 			dbsapi = config.get('CMSSW', 'dbsapi', 'DBSApiv2')
 			if "\n" in self.dataset:
-				dbs = DataDiscovery.open("DataMultiplexer", self.dataset, dbsapi)
+				self.dataprovider = DataDiscovery.open("DataMultiplexer", self.dataset, dbsapi)
 			else:
-				dbs = DataDiscovery.open(dbsapi, self.dataset)
-			dbs.run(self.eventsPerJob)
-			dbs.printDataset()
-##			dbs.printJobInfo()
-			dbs.saveState(self.workDir)
+				self.dataprovider = DataDiscovery.open(dbsapi, self.dataset)
+			self.dataprovider.run(self.eventsPerJob)
+			self.dataprovider.printDataset()
+##			self.dataprovider.printJobInfo()
+			self.dataprovider.saveState(self.workDir)
 
 
 	# Called on job submission
@@ -159,7 +157,7 @@ class CMSSW(Module):
 		Module.onJobSubmit(self, job, id)
 
 		if self.dashboard:
-			dbsinfo = self.dbs.getFileRangeForJob(job)
+			dbsinfo = self.dataprovider.getFileRangeForJob(id)
 			dashboard = DashboardAPI(self.taskID, "%s_%s" % (id, job.id))
 			dashboard.publish(
 				taskId=self.taskID, jobId="%s_%s" % (id, job.id), sid="%s_%s" % (id, job.id),
@@ -192,8 +190,8 @@ class CMSSW(Module):
 		if self.useReqs:
 			reqs.append((WMS.MEMBER, 'VO-cms-%s' % self.scramEnv['SCRAM_PROJECTVERSION']))
 			reqs.append((WMS.MEMBER, 'VO-cms-%s' % self.scramArch))
-		if self.dbs != None:
-			reqs.append((WMS.STORAGE, self.dbs.getSitesForJob(job)))
+		if self.dataprovider != None:
+			reqs.append((WMS.STORAGE, self.dataprovider.getSitesForJob(job)))
 		return reqs
 
 
@@ -216,7 +214,7 @@ class CMSSW(Module):
 
 	def getJobConfig(self, job):
 		data = Module.getJobConfig(self, job)
-		dbsinfo = self.dbs.getFileRangeForJob(job)
+		dbsinfo = self.dataprovider.getFileRangeForJob(job)
 		data['DATASETID'] = dbsinfo.get('DatasetID', None)
 		data['DATASETPATH'] = dbsinfo.get('DatasetPath', None)
 		data['DATASETNICK'] = dbsinfo.get('DatasetNick', None)
@@ -244,16 +242,16 @@ class CMSSW(Module):
 
 
 	def getJobArguments(self, job):
-		if self.dbs == None:
+		if self.dataprovider == None:
 			return "%d" % self.eventsPerJob
 
 		print "Job number: ", job
-		dbsinfo = self.dbs.getFileRangeForJob(job)
-		self.dbs.printInfoForJob(dbsinfo)
+		dbsinfo = self.dataprovider.getFileRangeForJob(job)
+		self.dataprovider.printInfoForJob(dbsinfo)
 		return "%d %d %s" % (dbsinfo['events'], dbsinfo['skip'], str.join(' ', dbsinfo['files']))
 
 
 	def getMaxJobs(self):
-		if self.dbs == None:
+		if self.dataprovider == None:
 			raise ConfigError('Must specifiy number of jobs or dataset!')
-		return self.dbs.getNumberOfJobs()
+		return self.dataprovider.getNumberOfJobs()

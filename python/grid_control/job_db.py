@@ -56,7 +56,7 @@ class JobDB:
 		else:
 			raise Exception("Internal error: Unexpected job state %s" % Job.states[state])
 
-		return queue		
+		return queue
 
 
 	def _scan(self):
@@ -260,5 +260,5 @@ class JobDB:
 				print "\nThere was a problem with deleting your jobs!"
 				userinput = raw_input('Do you want to do a forced delete? [yes]: ')
 				if userinput != 'yes' and userinput != '':
-	                                return 0
+					return 0
 				self.mark_cancelled(jobs)

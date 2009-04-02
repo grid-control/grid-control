@@ -21,15 +21,12 @@ class VomsProxy(Proxy):
 		data = {}
 		for line in lines:
 			try:
-				# split at first occurence of ':'
-				# and strip spaces around
-				key, value = map(lambda x: x.strip(), 
-				                 line.split(':', 1))
+				# split at first occurence of ':' and strip spaces around
+				key, value = map(lambda x: x.strip(), line.split(':', 1))
+				data[key.lower()] = value
 			except:
 				# in case no ':' was found
 				continue
-
-			data[key.lower()] = value
 
 		return data
 
@@ -56,11 +53,8 @@ class VomsProxy(Proxy):
 			# multiply from left with 60 and add right component
 			# result is in seconds
 			timeleft = reduce(lambda x, y: x * 60 + y, timeleft)
-
 			# subtract time since last call to voms-proxy-info
-			timeleft -= delta
-			if timeleft < 0:
-				timeleft = 0
+			timeleft = max(0, timeleft - delta)
 
 			# recheck proxy if critical timeleft reached
 			# at most once per minute

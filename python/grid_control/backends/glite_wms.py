@@ -49,8 +49,9 @@ class GliteWMS(Glite):
 			                        utils.shellEscape(log)), True)
 
 			self._jobDelegationID = None
+			lines = proc.fromchild.readlines()
 
-			for line in proc.fromchild.readlines():
+			for line in lines:
 				line = line.strip()
 				try:
 					(left, right) = line.split(':', 1)
@@ -64,7 +65,8 @@ class GliteWMS(Glite):
 
 			if retCode != 0:
 				#FIXME
-				print >> sys.stderr, "WARNING: glite-wms-job-delegate-proxy failed:"
+				print >> sys.stderr, "WARNING: glite-wms-job-delegate-proxy failed (%d)" % retCode
+				print >> sys.stderr, lines
 			elif id == None:
 				print >> sys.stderr, "WARNING: glite-wms-job-delegate-proxy did not yield a proxy id:"
 
