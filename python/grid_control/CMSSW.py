@@ -157,7 +157,9 @@ class CMSSW(Module):
 		Module.onJobSubmit(self, job, id)
 
 		if self.dashboard:
-			dbsinfo = self.dataprovider.getFileRangeForJob(id)
+			dbsinfo = {}
+			if self.dataprovider:
+				dbsinfo = self.dataprovider.getFileRangeForJob(id)
 			dashboard = DashboardAPI(self.taskID, "%s_%s" % (id, job.id))
 			dashboard.publish(
 				taskId=self.taskID, jobId="%s_%s" % (id, job.id), sid="%s_%s" % (id, job.id),
@@ -214,7 +216,9 @@ class CMSSW(Module):
 
 	def getJobConfig(self, job):
 		data = Module.getJobConfig(self, job)
-		dbsinfo = self.dataprovider.getFileRangeForJob(job)
+		dbsinfo = {}
+		if self.dataprovider:
+			dbsinfo = self.dataprovider.getFileRangeForJob(job)
 		data['DATASETID'] = dbsinfo.get('DatasetID', None)
 		data['DATASETPATH'] = dbsinfo.get('DatasetPath', None)
 		data['DATASETNICK'] = dbsinfo.get('DatasetNick', None)
