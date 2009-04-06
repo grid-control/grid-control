@@ -30,6 +30,11 @@ class Job:
 			job.attempt = data['attempt']
 		if data.has_key('submitted'):
 			job.submitted = data['submitted']
+		if not data.has_key('runtime'):
+			if data.has_key('submitted'):
+				data['runtime'] = time() - float(job.submitted)
+			else:
+				data['runtime'] = 0
 
 		for key in range(1, job.attempt + 1):
 			if data.has_key(('history_' + str(key)).strip()):

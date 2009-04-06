@@ -114,7 +114,7 @@ class JobDB:
 			print "(%s)" % job.get('dest')
 		elif state == Job.SUCCESS:
 			runtime = job.get('runtime')
-			print "(runtime %dh %0.2dmin %0.2dsec)" % (runtime / 60 / 60, (runtime / 60) % 60, runtime % 60)
+			print "(runtime %0.2d:%0.2d:%0.2d)" % (runtime / 60 / 60, (runtime / 60) % 60, runtime % 60)
 		else:
 			print
 
