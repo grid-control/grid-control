@@ -179,8 +179,8 @@ class Report:
 		print
 
 
-	def timeReport(self):
-		self.siteReport(True, True)
+	def timeReport(self, details = False):
+		self.siteReport(details, True)
 
 
 	def summary(self):

@@ -65,7 +65,7 @@ def main(args):
 	maxRetry = None
 	report = False
 	reportSite = 0
-	reportTime = False
+	reportTime = 0
 	delete = None
 	seed = False
 	seedarg = None
@@ -96,7 +96,7 @@ def main(args):
 		elif opt in ('-R', '--site-report'):
 			reportSite += 1
 		elif opt in ('-T', '--time-report'):
-			reportTime = True
+			reportTime += 1
 		elif opt in ('-d', '--delete'):
 			delete = arg
 		elif opt in ('-S', '--seed'):
@@ -169,7 +169,7 @@ def main(args):
 			if reportSite:
 				reportobj.siteReport(reportSite > 1)
 			if reportTime:
-				reportobj.timeReport()
+				reportobj.timeReport(reportTime > 1)
 			return 0
 
 		# Check if jobs have to be deleted and exit
