@@ -22,8 +22,9 @@ def syntax(out):
 			"\t                            -m 5 (Resubmit jobs up to 5 times)\n"
 			"\t-r, --report             Show status report of jobs\n"
 			"\t-R, --site-report        Show site report\n"
-			"\t-RR                      Show detailled site report\n"
-			"\t-T, --time-report        Show site report\n"
+			"\t-T, --time-report        Show time report\n"
+			"\t-RR  / -TT               Show report (broken down into site, CE)\n"
+			"\t-RRR / -TTT              Show report (broken down into site, CE, queue)\n"
 			"\t-S, --seed <args>        Override seed specified in the config file e.g:\n"
 			"\t                            -S 1234,423,7856\n"
 			"\t                            -S (= generate 10 random seeds)\n"
@@ -167,9 +168,9 @@ def main(args):
 				reportobj.details()
 				reportobj.summary()
 			if reportSite:
-				reportobj.siteReport(reportSite > 1)
+				reportobj.siteReport(reportSite)
 			if reportTime:
-				reportobj.timeReport(reportTime > 1)
+				reportobj.timeReport(reportTime)
 			return 0
 
 		# Check if jobs have to be deleted and exit

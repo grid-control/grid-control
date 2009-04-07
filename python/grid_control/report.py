@@ -4,7 +4,7 @@ from grid_control import Job, RuntimeError, utils, enumerate, SortedList
 class Report:
 	def __init__(self, jobs, allJobs):
 		self.allJobs = allJobs
-		if hasattr(jobs, "all"):
+		if hasattr(jobs, 'all'):
 			self.jobs = jobs.all
 		else:
 			self.jobs = jobs
@@ -18,105 +18,121 @@ class Report:
 			job = self.allJobs.get(id)
 			thisreport = job.report()
 			reports[id] = thisreport
-			if maxWidth[0] < len(thisreport[0]):
-				maxWidth[0] = len(thisreport[0])
-			if maxWidth[1] < len(thisreport[1]):
-				maxWidth[1] = len(thisreport[1])
-			if maxWidth[2] < len(thisreport[2]):
-				maxWidth[2] = len(thisreport[2])
+			for i in range(3):
+				maxWidth[i] = max(maxWidth[i], len(thisreport[i]))
 
 		# Print table header
-		print "\n%4s %-*s %s" % ("Job", maxWidth[0], "Status", "Destination / Job ID")
+		print '\n%4s %-*s %s' % ('Job', maxWidth[0], 'Status', 'Destination / Job ID')
 
 		# Calculate width of horizontal lines
 		if maxWidth[1] > maxWidth[2]:
 		        lineWidth = maxWidth[0]+maxWidth[1]+8
 		else:
 		        lineWidth = maxWidth[0]+maxWidth[2]+6
-		line = "-"*lineWidth
+		line = '-'*lineWidth
 		print line
 
 		# Calculate spacer width for second row
-		spacer = " "*(maxWidth[0]+5)
+		spacer = ' '*(maxWidth[0]+5)
 
 		# Get information of each job
 		if not len(self.jobs):
-			print " No jobs found!"
+			print ' No jobs found!'
 		for id in self.jobs:
-			print "%4d %-*s %s /" % (id, maxWidth[0], reports[id][0], reports[id][1])
-			print "%s %-*s" % (spacer, maxWidth[0]+maxWidth[2]+6, reports[id][2])
+			print '%4d %-*s %s /' % (id, maxWidth[0], reports[id][0], reports[id][1])
+			print '%s %-*s' % (spacer, maxWidth[0]+maxWidth[2]+6, reports[id][2])
 
-		print line + "\n"
-
-
-	def getSite(x):
-		return str.join(".", x.split(":")[0].split(".")[1:])
-	getSite = staticmethod(getSite)
+		print line + '\n'
 
 
-	def getWNInfos(self, details):
-		states = ["QUEUED", "RUNNING", "FAILED", "SUCCESS"]
-		maxlen_site = 25
+	def getWNInfos(self):
+		states = ['QUEUED', 'RUNNING', 'FAILED', 'SUCCESS']
 
 		def add(x,y): return x+y
+		def getDest(dest):
+			return ('.'.join(dest.split(':')[0].split('.')[1:]), dest.split(':')[0], dest.split('/')[1])
+			# Example: (gridka.de, wn1.gridka.de, job-queue-long)
+		def incstat(dict, L1, L2, L3, STAT, INFO, INC):
+			dict[L1][L2][L3][STAT][INFO] += INC
+			dict[L1][L2][STAT][INFO] += INC
+			dict[L1][STAT][INFO] += INC
+			dict[STAT][INFO] += INC
+		def initdict():
+			tmp = {}.fromkeys(states)
+			for state in states:
+				tmp[state] = {'COUNT': 0, 'TIME': 0}
+			return tmp
 
 		# init wn dictionary
-		wnodes = {}
+		statinfo = initdict()
+		maxlen = [0, 0, 0]
+
 		# iterate over flat list of all occuring destinations
-		for destination in reduce(add, map(lambda id: self.allJobs.get(id).history.values(), self.jobs)):
-			wn = destination.split(":")[0]
-			wnodes[wn] = {}.fromkeys(states)
-			for state in states:
-				wnodes[wn][state] = {"COUNT": 0, "TIME": 0}
+		destinations = reduce(add, map(lambda id: self.allJobs.get(id).history.values(), self.jobs))
+		for dest in map(getDest, destinations):
+			for i in range(3):
+				maxlen[i] = max(maxlen[i], len(dest[i]))
+			(site, wn, queue) = dest
+			if not statinfo.has_key(site):
+				statinfo[site] = initdict()
+			if not statinfo[site].has_key(wn):
+				statinfo[site][wn] = initdict()
+			if not statinfo[site][wn].has_key(queue):
+				statinfo[site][wn][queue] = initdict()
 
 		# fill wn dictionary
 		for id in self.jobs:
 			job = self.allJobs.get(id)
 			for attempt in job.history:
-				if job.history[attempt] == "N/A":
+				if job.history[attempt] == 'N/A':
 					continue
 				# Extract site from history
-				wn = job.history[attempt].split(":")[0]
-				maxlen_site = max(maxlen_site, len((lambda x: details and x or Report.getSite(x))(wn)))
-
+				(site, wn, queue) = getDest(job.history[attempt])
+				
 				# Sort job into category
 				if attempt == job.attempt:
 					if job.state == Job.SUCCESS:
-						wnodes[wn]["SUCCESS"]["COUNT"] += 1
-						wnodes[wn]["SUCCESS"]["TIME"] += int(job.get("runtime"))
+						incstat(statinfo, site, wn, queue, 'SUCCESS', 'COUNT', 1)
+						incstat(statinfo, site, wn, queue, 'SUCCESS', 'TIME', int(job.get('runtime')))
 					elif job.state == Job.FAILED:
-						wnodes[wn]["FAILED"]["COUNT"] += 1
-						wnodes[wn]["FAILED"]["TIME"] += int(job.get("runtime"))
+						incstat(statinfo, site, wn, queue, 'FAILED', 'COUNT', 1)
+						incstat(statinfo, site, wn, queue, 'FAILED', 'TIME', int(job.get('runtime')))
 					elif job.state in (Job.RUNNING, Job.DONE):
-						wnodes[wn]["RUNNING"]["COUNT"] += 1
-						wnodes[wn]["RUNNING"]["TIME"] += int(job.get("runtime"))
+						incstat(statinfo, site, wn, queue, 'RUNNING', 'COUNT', 1)
+						incstat(statinfo, site, wn, queue, 'RUNNING', 'TIME', int(job.get('runtime')))
 					else:
-						wnodes[wn]["QUEUED"]["COUNT"] += 1
-						wnodes[wn]["QUEUED"]["TIME"] += int(job.get("runtime"))
+						incstat(statinfo, site, wn, queue, 'QUEUED', 'COUNT', 1)
+						incstat(statinfo, site, wn, queue, 'QUEUED', 'TIME', int(job.get('runtime')))
 				else:
-					wnodes[wn]["FAILED"]["COUNT"] += 1
-					wnodes[wn]["FAILED"]["TIME"] += int(job.get("runtime"))
-		# wnodes = {'wn1.site1': {'FAILED': 0, 'RUNNING': 0, 'QUEUED': 0, 'SUCCESS': 1}, 'wn2.site1': ..., 'wn1.site2': ...}
-		return (maxlen_site, wnodes)
+					incstat(statinfo, site, wn, queue, 'FAILED', 'COUNT', 1)
+					incstat(statinfo, site, wn, queue, 'FAILED', 'TIME', int(job.get('runtime')))
+		# statinfo = {'site1: {''wn1.site1': {'FAILED': 0, 'RUNNING': 0, 'QUEUED': 0, 'SUCCESS': 1}, 'wn2.site1': ...}, 'site2': {'wn1.site2': ...}}
+		return (maxlen, statinfo)
 
 
-	def siteReport(self, details = False, showtime = False):
-		print "-----------------------------------------------------------------"
-		print "SITE SUMMARY:"
-		print "---------------"
+	def siteReport(self, details = 0, showtime = False):
+		print '-----------------------------------------------------------------'
+		print 'SITE SUMMARY:'
+		print '---------------'
 		print
 
-		states = ["QUEUED", "RUNNING", "FAILED", "SUCCESS"]
-		maxlen_site, wnodes = self.getWNInfos(details)
+		states = ['QUEUED', 'RUNNING', 'FAILED', 'SUCCESS']
+		
+#		maxlen = max(maxlen, len((lambda x: details and x or Report.getSite(x))(wn)))
+		(maxlen_detail, statinfo) = self.getWNInfos()
+		maxlen = 22
+		if details > 2:
+			maxlen = max(maxlen, maxlen_detail[2])
+		if details > 1:
+			maxlen = max(maxlen, maxlen_detail[1])
+		maxlen = max(maxlen, maxlen_detail[0])
 		
 		# Print header
-		print " %s    | %12s | %12s | %12s | %12s" % tuple(["SITE / WN".ljust(maxlen_site)] + map(lambda x: x.center(12), states))
-		print "=%s====" % (maxlen_site * "=") + len(states) * ("+" + 14 * "=")
+		print ' %s       | %12s | %12s | %12s | %12s' % tuple(['SITE / WN'.ljust(maxlen)] + map(lambda x: x.center(12), states))
+		print '=%s=======' % (maxlen * '=') + len(states) * ('+' + 14 * '=')
 
 		def ratestats(entries):
-			# entries = [('wn1.site1', {'FAILED': 0, 'RUNNING': 0, 'QUEUED': 0, 'SUCCESS': 1}), ('wn2.site1', ...)]
-			# map list of (wn, {state info}) to list of summed state info
-			result = map(lambda state: sum(map(lambda x: x[1][state]["COUNT"], entries)), states)
+			result = map(lambda state: entries[state]['COUNT'], states)
 			line = []
 			all = max(1, sum(result))
 			for x in result:
@@ -125,10 +141,8 @@ class Report:
 			return line
 
 		def timestats(entries):
-			# entries = [('wn1.site1', {'FAILED': 0, 'RUNNING': 0, 'QUEUED': 0, 'SUCCESS': 1}), ('wn2.site1', ...)]
-			# map list of (wn, {state info}) to list of summed state info
-			result_count = map(lambda state: sum(map(lambda x: x[1][state]["COUNT"], entries)), states)
-			result_time = map(lambda state: sum(map(lambda x: x[1][state]["TIME"], entries)), states)
+			result_count = map(lambda state: entries[state]['COUNT'], states)
+			result_time = map(lambda state: entries[state]['TIME'], states)
 			line = []
 			all = max(1, sum(result_count))
 			for x in result_time:
@@ -137,57 +151,51 @@ class Report:
 			# return summed state infos in together with the percentage: [state1, percentage1, state2, percentage2, ...]
 			return line
 
-		rateformat1 = "    %s | %5d (%3d%%) | %5d (%3d%%) | %5d (%3d%%) | %5d (%3d%%)"
-		rateformat2 = " %s    | %5d (%3d%%) | %5d (%3d%%) | %5d (%3d%%) | %5d (%3d%%)"
-		ratedetail = " \33[0;1m%s\33[0m    | %5d (%3d%%) | %5d (%3d%%) | \33[0;91m%5d\33[0m (%3d%%) | \33[0;94m%5d\33[0m (%3d%%)"
+#		rate_site = ' %s    | %5d (%3d%%) | %5d (%3d%%) | %5d (%3d%%) | %5d (%3d%%)'
+		rate_site = ' \33[0;1m%s\33[0m       | %5d (%3d%%) | %5d (%3d%%) | \33[0;91m%5d\33[0m (%3d%%) | \33[0;94m%5d\33[0m (%3d%%)'
+		rate_wn = '    %s    | %5d (%3d%%) | %5d (%3d%%) | %5d (%3d%%) | %5d (%3d%%)'
+		rate_queue = '       %s | %5d (%3d%%) | %5d (%3d%%) | %5d (%3d%%) | %5d (%3d%%)'
 
-		timeformat1 = "    %s | %6d:%0.2d:%0.2d | %6d:%0.2d:%0.2d | %6d:%0.2d:%0.2d | %6d:%0.2d:%0.2d"
-		timeformat2 = " %s    | %6d:%0.2d:%0.2d | %6d:%0.2d:%0.2d | %6d:%0.2d:%0.2d | %6d:%0.2d:%0.2d"
-		timedetail = " \33[0;1m%s\33[0m    | %6d:%0.2d:%0.2d | %6d:%0.2d:%0.2d | \33[0;91m%6d:%0.2d:%0.2d\33[0m | \33[0;94m%6d:%0.2d:%0.2d\33[0m"
+#		time_site = ' %s    | %6d:%0.2d:%0.2d | %6d:%0.2d:%0.2d | %6d:%0.2d:%0.2d | %6d:%0.2d:%0.2d'
+		time_site = ' \33[0;1m%s\33[0m       | %6d:%0.2d:%0.2d | %6d:%0.2d:%0.2d | \33[0;91m%6d:%0.2d:%0.2d\33[0m | \33[0;94m%6d:%0.2d:%0.2d\33[0m'
+		time_wn = '    %s    | %6d:%0.2d:%0.2d | %6d:%0.2d:%0.2d | %6d:%0.2d:%0.2d | %6d:%0.2d:%0.2d'
+		time_queue = '       %s | %6d:%0.2d:%0.2d | %6d:%0.2d:%0.2d | %6d:%0.2d:%0.2d | %6d:%0.2d:%0.2d'
 
-		sites = {}.fromkeys(map(lambda x: Report.getSite(x).split(":")[0], wnodes.keys()), {})
-		for site in SortedList(sites.keys()):
-			sitenodes = filter(lambda (wn, info): Report.getSite(wn) == site, wnodes.items())
-
-			# Print per site results
-			if details:
-				print ratedetail % tuple([site.ljust(maxlen_site)] + ratestats(sitenodes))
-				if showtime:
-					print timedetail % tuple(["".ljust(maxlen_site)] + timestats(sitenodes))
-
-				# Print per WN results
-				for wn, info in SortedList(sitenodes):
-					print rateformat1 % tuple([wn.ljust(maxlen_site)] + ratestats([(wn, info)]))
-				if showtime:
-					print timeformat1 % tuple(["".ljust(maxlen_site)] + timestats([(wn, info)]))
-				print "-%s----" % (maxlen_site * "-") + 4 * ("+" + 14 * "-")
-			else:
-				print rateformat2 % tuple([site.ljust(maxlen_site)] + ratestats(sitenodes))
-				if showtime:
-					print timeformat2 % tuple(["".ljust(maxlen_site)] + timestats(sitenodes))
-
-		if not details:
-			print "-%s----" % (maxlen_site * "-") + 4 * ("+" + 14 * "-")
-			# Print final sum
-			print rateformat1 % tuple(["".ljust(maxlen_site)] + ratestats(wnodes.items()))
+		def output_obj(name, dict, maxlen, showtime, rate_fmt, time_fmt):
+			print rate_fmt % tuple([name.ljust(maxlen)] + ratestats(dict))
 			if showtime:
-				print timeformat1 % tuple(["".ljust(maxlen_site)] + timestats(wnodes.items()))
-		else:
-			print ratedetail % tuple(["".ljust(maxlen_site)] + ratestats(wnodes.items()))
-			if showtime:
-				print timedetail % tuple(["".ljust(maxlen_site)] + timestats(wnodes.items()))
-		print
+				print time_fmt % tuple([padding] + timestats(dict))
+
+		padding = ' ' * maxlen
+		
+		sites = SortedList(filter(lambda x: not x in states, statinfo.keys()))
+		sites_num = len(sites) - 1
+		for num, site in enumerate(sites):
+			output_obj(site, statinfo[site], maxlen, showtime, rate_site, time_site)
+
+			if details > 1:
+				for wn in SortedList(filter(lambda x: not x in states, statinfo[site].keys())):
+					output_obj(wn, statinfo[site][wn], maxlen, showtime, rate_wn, time_wn)
+
+					if details > 2:
+						for queue in SortedList(filter(lambda x: not x in states, statinfo[site][wn].keys())):
+							output_obj(queue, statinfo[site][wn][queue], maxlen, showtime, rate_queue, time_queue)
+			if num < sites_num:
+				print '----%s----' % (maxlen * '-') + 4 * ('+' + 14 * '-')
+
+		print '====%s====' % (maxlen * '=') + 4 * ('+' + 14 * '=')
+		output_obj('', statinfo, maxlen, showtime, rate_site, time_site)
 
 
-	def timeReport(self, details = False):
+	def timeReport(self, details):
 		self.siteReport(details, True)
 
 
 	def summary(self):
 		# Print report summary
-		print "-----------------------------------------------------------------"
-		print "REPORT SUMMARY:"
-		print "---------------"
+		print '-----------------------------------------------------------------'
+		print 'REPORT SUMMARY:'
+		print '---------------'
 
 		summary = map(lambda x: 0.0, Job.states)
 
@@ -198,18 +206,18 @@ class Report:
 		def makeSum(*states):
 			return reduce(lambda x, y: x + y, map(lambda x: summary[x], states))
 
-		print "Total number of jobs:      %4d   Number of successful jobs: %4d" % \
+		print 'Total number of jobs:      %4d   Number of successful jobs: %4d' % \
 			(len(self.allJobs.all), summary[Job.SUCCESS])
-		print "Number of unfinished jobs: %4d   Number of failed jobs:     %4d\n" % \
+		print 'Number of unfinished jobs: %4d   Number of failed jobs:     %4d\n' % \
 			(makeSum(Job.INIT, Job.READY, Job.WAITING, Job.QUEUED, Job.SUBMITTED, Job.RUNNING),
 			 makeSum(Job.ABORTED, Job.CANCELLED, Job.FAILED))
-		print "Detailed Information:"
+		print 'Detailed Information:'
 		for state, category in enumerate(Job.states):
 			if summary[state]:
 				ratio = (summary[state] / (id + 1))*100
 			else:
 				ratio = 0
-			print "Jobs   %9s: %4d     %3d%%" % (category, summary[state], round(ratio))
+			print 'Jobs   %9s: %4d     %3d%%' % (category, summary[state], round(ratio))
 
-		print "-----------------------------------------------------------------\n"
+		print '-----------------------------------------------------------------\n'
 		return 0

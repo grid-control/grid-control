@@ -15,7 +15,7 @@ class VomsProxy(Proxy):
 		retCode = proc.wait()
 
 		if retCode != 0:
-			print lines
+			print(lines)
 			raise InstallationError("voms-proxy-info failed with return code %d" % retCode)
 
 		data = {}
@@ -27,7 +27,6 @@ class VomsProxy(Proxy):
 			except:
 				# in case no ':' was found
 				continue
-
 		return data
 
 
@@ -48,13 +47,8 @@ class VomsProxy(Proxy):
 		delta = time.time() - info['time']
 
 		while True:
-			# split ##:##:## into [##, ##, ##] and convert to integers
-			timeleft = map(int, info['timeleft'].split(':'))
-			# multiply from left with 60 and add right component
-			# result is in seconds
-			timeleft = reduce(lambda x, y: x * 60 + y, timeleft)
 			# subtract time since last call to voms-proxy-info
-			timeleft = max(0, timeleft - delta)
+			timeleft = max(0, utils.parseTime(info['timeleft']) - delta)
 
 			# recheck proxy if critical timeleft reached
 			# at most once per minute
