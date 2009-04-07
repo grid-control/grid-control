@@ -39,9 +39,6 @@ class GliteWMS(Glite):
 			if self._configVO != '':
 				params += ' --config %s' % utils.shellEscape(self._configVO)
 
-			if self._ce != None:
-				params += ' -r %s' % utils.shellEscape(self._ce)
-
 			activity = utils.ActivityLog('creating delegate proxy for job submission')
 
 			proc = popen2.Popen4("%s%s -a --noint --logfile %s"
