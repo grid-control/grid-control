@@ -18,6 +18,7 @@ class VomsProxy(Proxy):
 			print(lines)
 			raise InstallationError("voms-proxy-info failed with return code %d" % retCode)
 
+		print lines
 		data = {}
 		for line in lines:
 			try:
@@ -27,11 +28,12 @@ class VomsProxy(Proxy):
 			except:
 				# in case no ':' was found
 				continue
+		print data
 		return data
 
 
 	# return possibly cached information
-	def getInfo(self, recheck = False):
+	def _getInfoCached(self, recheck = False):
 		if self._info == None or recheck:
 			self._info = self._getInfo()
 			self._info['time'] = time.time()
@@ -42,7 +44,7 @@ class VomsProxy(Proxy):
 		if critical == None:
 			critical = self._critical
 
-		info = self.getInfo()
+		info = self._getInfoCached()
 		# time elapsed since last call to voms-proxy-info
 		delta = time.time() - info['time']
 
@@ -59,3 +61,8 @@ class VomsProxy(Proxy):
 			break # leave while loop
 
 		return timeleft
+
+
+	def getUsername(self):
+		info = self._getInfoCached()
+		return '/CN=' + info['identity'].split('CN=')[1].strip()

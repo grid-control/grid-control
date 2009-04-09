@@ -21,7 +21,10 @@ class Job:
 
 
 	def load(cls, fp):
-		data = utils.parseShellDict(fp)
+		try:
+			data = utils.parseShellDict(fp)
+		except:
+			raise ConfigError('Invalid format in %s' % fp.name)
 		job = Job(cls._stateDict[data['status']])
 
 		if data.has_key('id'):

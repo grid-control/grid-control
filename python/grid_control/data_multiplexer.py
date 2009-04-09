@@ -8,28 +8,26 @@ class DataMultiplexer(DataProvider):
 		id = 0
 		print('Using the following datasets:')
 
-		print('%4s | %15s | %s' % ('ID'.center(4), 'Nickname'.center(15), 'Dataset path'))
-		print('%4s=+=%15s=+=%s' % ('=' * 4, '=' * 15, '=' * 50))
+		print(' %6s | %15s | %s' % ('ID'.center(6), 'Nickname'.center(15), 'Dataset path'))
+		print('=%6s=+=%15s=+=%s' % ('=' * 6, '=' * 15, '=' * 50))
 		for datasetentry in datasetExpr.split('\n'):
-			temp = datasetentry.split(':')
+			temp = map(lambda x: x.strip(), datasetentry.split(':'))
+			nickname = None
+			provider = dbsapi
 			if len(temp) == 3:
-				nickname = temp[0].strip()
-				provider = temp[1].strip()
-				dataset = temp[2].strip()
+				(nickname, provider, dataset) = temp
 			elif len(temp) == 2:
-				nickname = temp[0].strip()
-				provider = dbsapi
-				dataset = temp[1].strip()
+				(nickname, dataset) = temp
 			elif len(temp) == 1:
-				nickname = None
-				provider = dbsapi
-				dataset = temp[0].strip()
+				(dataset) = temp
+			if dataset[0] == '/':
+				dataset = '/' + dataset.lstrip('/')
 			if provider.lower() == 'dbs':
 				provider = dbsapi
 			providernice = provider
 			if provider == dbsapi:
 				providernice = 'dbs'
-			print('%4i | %s | %s://%s' % (id, nickname.center(15), providernice, dataset))
+			print(' %6i | %s | %s://%s' % (id, nickname.center(15), providernice, dataset))
 			instance = DataProvider.open(provider, dataset)
 			self.instances.append((id, nickname, instance))
 			id += 1
@@ -49,3 +47,4 @@ class DataMultiplexer(DataProvider):
 	def printDataset(self):
 		for (id, nickname, instance) in self.instances:
 			instance.printDataset()
+			print

@@ -22,7 +22,7 @@ class Module(AbstractObject):
 				utils.deprecated("Please specify seeds in the [jobs] section")
 			except:
 				print "Creating random seeds..."
-				self.setSeed(None)
+				self.setSeed('')
 
 		# TODO: Convert the following into requirements
 		self.seInputFiles = config.get('storage', 'se input files', '').split()
@@ -55,10 +55,7 @@ class Module(AbstractObject):
 		print 'Current task ID %s' % (self.getTaskID())
 
 		self.dashboard = config.getBool('jobs', 'monitor job', False)
-		if self.dashboard:
-			self.username = os.popen3('voms-proxy-info -identity 2> /dev/null | sed "s@.*/CN=@/CN=@"')[1].read().strip()
-		else:
-			self.username = "unknown"
+		self.username = "unknown"
 
 		self.evtSubmit = config.get('events', 'on submit', '')
 		self.evtStatus = config.get('events', 'on status', '')
@@ -66,8 +63,8 @@ class Module(AbstractObject):
 
 
 	def setSeed(self, seeds):
-		if seeds == None:
-			self.seeds = map(lambda x: random.randint(0,10000000), range(1,10))
+		if seeds == '':
+			self.seeds = map(lambda x: random.randint(0, 10000000), range(10))
 		else:
 			self.seeds = map(lambda x: int(x), seeds.split(','))
 

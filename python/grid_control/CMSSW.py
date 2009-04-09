@@ -46,7 +46,7 @@ class CMSSW(Module):
 			self.seInputFiles.append(self.taskID + ".tar.gz"),
 
 		if len(self.projectArea):
-			self.pattern = config.get('CMSSW', 'area files').split()
+			self.pattern = config.get('CMSSW', 'area files', '-.* -config lib module */data *.xml *.sql *.cf[if] *.py').split()
 
 			if os.path.exists(self.projectArea):
 				print "Project area found in: %s" % self.projectArea

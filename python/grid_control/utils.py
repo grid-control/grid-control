@@ -21,6 +21,66 @@ def deprecated(text):
 		sys.exit(0)
 
 
+class DictFormat(object):
+	def __init__(self, delimeter, wrapString = False, types = True):
+		self.delimeter = delimeter
+		self.types = types
+		self.wrapString = wrapString
+
+	def parseType(self, x):
+		try:
+			return float(x) if '.' in x else int(x)
+		except ValueError:
+			return x
+
+	# Parse dictionary lists
+	def parse(self, lines):
+		data = {}
+		currentline = ''
+		doAdd = False
+		for line in lines:
+			if self.wrapString:
+				# Accumulate lines until closing " found
+				if (line.count('"') - line.count('\\"')) % 2:
+					doAdd = not doAdd
+				currentline += line
+				if doAdd:
+					continue
+			else:
+				currentline = line
+			try:
+				# split at first occurence of delimeter and strip spaces around
+				key, value = map(lambda x: x.strip(), currentline.split(self.delimeter, 1))
+				if self.wrapString:
+					value = value.strip('"').replace('\\"', '"')
+				if self.types:
+					value = self.parseType(value)
+				data[key.lower()] = value
+			except:
+				# in case no delimeter was found
+				pass
+			currentline = ''
+		if doAdd:
+			raise ConfigError('Invalid dict format in %s' % fp.name)
+		return data
+
+	# Format dictionary list
+	def format(self, dict, printNone = False, fkt = lambda (x,y,z): (x,y,z), format = '%s%s%s\n'):
+		result = []
+		for key in dict.keys():
+			value = dict[key]
+			if value == None and not printNone:
+				continue
+			if self.wrapString and isinstance(value, str):
+				value = '"%s"' % str(value).replace('"', '\\"')
+				lines = value.split('\n')
+				result.append(format % fkt((key, self.delimeter, lines[0])))
+				result.extend(map(lambda x: x + '\n', lines[1:]))
+			else:
+				result.append(format % fkt((key, self.delimeter, value)))
+		return result
+
+
 def atRoot(*args):
 	# relies on _root to be set in go.py
 	return os.path.join(sys.modules['__main__']._root, *args)

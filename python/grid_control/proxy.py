@@ -20,6 +20,9 @@ class Proxy(AbstractObject):
 			"Proxy lifetime (%d seconds) does not meet the walltime requirements of %d seconds (%d hours)!\n" \
 			"INFO: Disabling job submission." % (self.timeleft(), secleft, secleft / 60 / 60)
 
+	def getUsername(self):
+		pass
+
 
 class TrivialProxy(Proxy):
 	def timeleft(self, critical = None):
@@ -27,3 +30,6 @@ class TrivialProxy(Proxy):
 			return critical + 1
 		else:
 			return self._critical
+
+	def getUsername(self):
+		return os.popen3('whoami')[1].read().strip()
