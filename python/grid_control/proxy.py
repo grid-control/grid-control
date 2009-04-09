@@ -1,6 +1,6 @@
 # Generic base class for grid proxies
 # instantiates named class instead (default is VomsProxy)
-import sys
+import sys, os
 from grid_control import AbstractObject
 
 class Proxy(AbstractObject):

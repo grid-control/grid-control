@@ -29,7 +29,10 @@ class DictFormat(object):
 
 	def parseType(self, x):
 		try:
-			return float(x) if '.' in x else int(x)
+			if '.' in x:
+				return float(x)
+			else:
+				return int(x)
 		except ValueError:
 			return x
 

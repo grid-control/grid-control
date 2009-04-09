@@ -38,7 +38,7 @@ def print_help(*args):
 
 
 def main(args):
-	global opts
+	global opts, log
 
 	# display the 'grid-control' logo
 	print open(utils.atRoot('share', 'logo.txt'), 'r').read()
@@ -69,9 +69,9 @@ def main(args):
 
 	# set up signal handler for interrupts
 	def interrupt(sig, frame):
-		global opts
+		global opts, log
 		opts.continuous = False
-		print "Quitting grid-control! (This can take a few seconds...)"
+		log = utils.ActivityLog('Quitting grid-control! (This can take a few seconds...)')
 	signal.signal(signal.SIGINT, interrupt)
 
 	# big try... except block to catch exceptions and print error message

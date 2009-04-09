@@ -9,7 +9,7 @@ class DataMultiplexer(DataProvider):
 		print('Using the following datasets:')
 
 		print(' %6s | %15s | %s' % ('ID'.center(6), 'Nickname'.center(15), 'Dataset path'))
-		print('=%6s=+=%15s=+=%s' % ('=' * 6, '=' * 15, '=' * 50))
+		print('=%6s=+=%15s=+=%s' % ('=' * 6, '=' * 15, '=' * 59))
 		for datasetentry in datasetExpr.split('\n'):
 			temp = map(lambda x: x.strip(), datasetentry.split(':'))
 			nickname = None
@@ -28,6 +28,7 @@ class DataMultiplexer(DataProvider):
 			if provider == dbsapi:
 				providernice = 'dbs'
 			print(' %6i | %s | %s://%s' % (id, nickname.center(15), providernice, dataset))
+
 			instance = DataProvider.open(provider, dataset)
 			self.instances.append((id, nickname, instance))
 			id += 1
