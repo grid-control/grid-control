@@ -17,11 +17,9 @@ class Module(AbstractObject):
 		try:
 			self.setSeed(",".join(config.get('jobs', 'seeds').split()))
 		except:
-			# TODO: remove backwards compatibility
-#			print open(utils.atRoot('share', 'fail.txt'), 'r').read()
 			try:
 				self.setSeed(",".join(config.get('CMSSW', 'seeds').split()))
-				print "[DEPRECATED] Please specify seeds in the [jobs] section"
+				utils.deprecated("Please specify seeds in the [jobs] section")
 			except:
 				print "Creating random seeds..."
 				self.setSeed(None)
@@ -33,9 +31,7 @@ class Module(AbstractObject):
 		try:
 			self.seOutputFiles = config.get('storage', 'se output files').split()
 		except:
-			# TODO: remove backwards compatibility
-#			print open(utils.atRoot('share', 'fail.txt'), 'r').read()
-			print "[DEPRECATED] Please specify se output files in the [storage] section"
+			utils.deprecated("Please specify se output files in the [storage] section")
 			self.seOutputFiles = config.get('CMSSW', 'se output files', '').split()
 		self.seOutputPattern = config.get('storage', 'se output pattern', 'job___MY_JOB_____NICK_____X__')
 
@@ -49,7 +45,7 @@ class Module(AbstractObject):
 		try:
 			self.sePath = config.get('storage', 'se path')
 		except:
-			# TODO: remove backwards compatibility
+			utils.deprecated("Please specify se path in the [storage] section")
 			self.sePath = config.get('CMSSW', 'se path', '')
 
 		self.nodetimeout = utils.parseTime(config.get('jobs', 'node timeout', ''))

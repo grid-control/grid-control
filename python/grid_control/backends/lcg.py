@@ -6,6 +6,7 @@ from glite import Glite
 class LCG(Glite):
 
 	def __init__(self, config, module, init):
+		utils.deprecated("Please use the GliteWMS backend for grid jobs!")
 		WMS.__init__(self, config, module, 'grid', init)
 		self.proxy = config.get('grid', 'proxy', 'VomsProxy')
 

@@ -78,6 +78,7 @@ if ! [ "$HAS_RUNTIME" = no ]; then
 	if [ "$SE_RUNTIME" = yes ]; then
 		echo "Rename CMSSW environment package: ${TASK_ID}.tar.gz"
 		mv `_find ${TASK_ID}.tar.gz` runtime.tar.gz || fail 101
+		export SE_INPUT_FILES="${SE_INPUT_FILES/${TASK_ID}.tar.gz/}"
 	fi
 	
 	echo "Unpacking CMSSW environment"

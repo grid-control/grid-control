@@ -50,6 +50,8 @@ class Report:
 
 		def add(x,y): return x+y
 		def getDest(dest):
+			if dest == 'N/A':
+				return ('N/A', '', '')
 			return ('.'.join(dest.split(':')[0].split('.')[1:]), dest.split(':')[0], dest.split('/')[1])
 			# Example: (gridka.de, wn1.gridka.de, job-queue-long)
 		def incstat(dict, L1, L2, L3, STAT, INFO, INC):

@@ -24,6 +24,7 @@ class Glite(WMS):
 	}
 
 	def __init__(self, config, module, init):
+		utils.deprecated("Please use the GliteWMS backend for grid jobs!")
 		WMS.__init__(self, config, module, 'grid', init)
 		self.proxy = config.get('grid', 'proxy', 'VomsProxy')
 
@@ -62,6 +63,23 @@ class Glite(WMS):
 		return '(other.GlueCEPolicyMaxWallClockTime >= %d)' % int((wallTime + 59) / 60)
 
 
+	def cpuTimeReq(self, cpuTime):
+		if cpuTime == 0:
+			return None
+		#              GlueCEPolicyMaxCPUTime: The maximum CPU time available to jobs submitted to this queue, in minutes.
+		return '(other.GlueCEPolicyMaxCPUTime >= %d)' % int((cpuTime + 59) / 60)
+
+
+	def memoryReq(self, memory):
+		if memory == 0:
+			return None
+		return '(other.GlueHostMainMemoryRAMSize >= %d)' % memory
+
+
+	def otherReq(self, dummyArg):
+		return 'other.GlueHostNetworkAdapterOutboundIP'
+
+
 	def storageReq(self, sites):
 		def makeMember(member):
 			return "Member(%s, other.GlueCESEBindGroupSEUniqueID)" % self._jdlEscape(member)
@@ -97,23 +115,6 @@ class Glite(WMS):
 			return None
 		else:
 			return '( ' + str.join(' && ', sitereqs) + ' )'
-
-
-	def cpuTimeReq(self, cpuTime):
-		if cpuTime == 0:
-			return None
-		#              GlueCEPolicyMaxCPUTime: The maximum CPU time available to jobs submitted to this queue, in minutes.
-		return '(other.GlueCEPolicyMaxCPUTime >= %d)' % int((cpuTime + 59) / 60)
-
-
-	def memoryReq(self, memory):
-		if memory == 0:
-			return None
-		return '(other.GlueHostMainMemoryRAMSize >= %d)' % memory
-
-
-	def otherReq(self, dummyArg):
-		return 'other.GlueHostNetworkAdapterOutboundIP'
 
 
 	def makeJDL(self, fp, job):

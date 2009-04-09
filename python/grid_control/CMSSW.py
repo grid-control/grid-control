@@ -1,7 +1,7 @@
 import os, copy, string, re
 from fnmatch import fnmatch
 from xml.dom import minidom
-from grid_control import ConfigError, Module, WMS, DataDiscovery, utils
+from grid_control import ConfigError, Module, WMS, DataProvider, utils
 from DashboardAPI import DashboardAPI
 from time import time, localtime, strftime
 
@@ -92,7 +92,7 @@ class CMSSW(Module):
 		if init:
 			self._initTask(config)
 		elif self.dataset != None:
-			self.dataprovider = DataDiscovery.loadState(self.workDir)
+			self.dataprovider = DataProvider.loadState(self.workDir)
 
 
 	def _initTask(self, config):
@@ -143,9 +143,9 @@ class CMSSW(Module):
 		if self.dataset != None:
 			dbsapi = config.get('CMSSW', 'dbsapi', 'DBSApiv2')
 			if "\n" in self.dataset:
-				self.dataprovider = DataDiscovery.open("DataMultiplexer", self.dataset, dbsapi)
+				self.dataprovider = DataProvider.open("DataMultiplexer", self.dataset, dbsapi)
 			else:
-				self.dataprovider = DataDiscovery.open(dbsapi, self.dataset)
+				self.dataprovider = DataProvider.open(dbsapi, self.dataset)
 			self.dataprovider.run(self.eventsPerJob)
 			self.dataprovider.printDataset()
 ##			self.dataprovider.printJobInfo()
@@ -159,7 +159,7 @@ class CMSSW(Module):
 		if self.dashboard:
 			dbsinfo = {}
 			if self.dataprovider:
-				dbsinfo = self.dataprovider.getFileRangeForJob(id)
+				dbsinfo = self.dataprovider.getFilesForJob(id)
 			dashboard = DashboardAPI(self.taskID, "%s_%s" % (id, job.id))
 			dashboard.publish(
 				taskId=self.taskID, jobId="%s_%s" % (id, job.id), sid="%s_%s" % (id, job.id),
@@ -218,7 +218,7 @@ class CMSSW(Module):
 		data = Module.getJobConfig(self, job)
 		dbsinfo = {}
 		if self.dataprovider:
-			dbsinfo = self.dataprovider.getFileRangeForJob(job)
+			dbsinfo = self.dataprovider.getFilesForJob(job)
 		data['DATASETID'] = dbsinfo.get('DatasetID', None)
 		data['DATASETPATH'] = dbsinfo.get('DatasetPath', None)
 		data['DATASETNICK'] = dbsinfo.get('DatasetNick', None)
@@ -250,7 +250,7 @@ class CMSSW(Module):
 			return "%d" % self.eventsPerJob
 
 		print "Job number: ", job
-		dbsinfo = self.dataprovider.getFileRangeForJob(job)
+		dbsinfo = self.dataprovider.getFilesForJob(job)
 		self.dataprovider.printInfoForJob(dbsinfo)
 		return "%d %d %s" % (dbsinfo['events'], dbsinfo['skip'], str.join(' ', dbsinfo['files']))
 

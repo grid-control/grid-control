@@ -2,7 +2,7 @@ from __future__ import generators
 import sys, os, gzip, cPickle
 from grid_control import AbstractObject, RuntimeError, utils, ConfigError
 
-class DataDiscovery(AbstractObject):
+class DataProvider(AbstractObject):
 	def _splitJobs(fileList, eventsPerJob, firstEvent):
 		nextEvent = firstEvent
 		succEvent = nextEvent + eventsPerJob
@@ -67,7 +67,7 @@ class DataDiscovery(AbstractObject):
 				self.jobFiles.append(job)
 
 
-	def getFileRangeForJob(self, jobNr):
+	def getFilesForJob(self, jobNr):
 		if jobNr >= len(self.jobFiles):
 			raise ConfigError("Job %d out of range for available dataset"  % jobNr)	
 		return self.jobFiles[jobNr]

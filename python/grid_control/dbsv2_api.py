@@ -1,13 +1,13 @@
 from __future__ import generators
 import sys, os, string, re, copy
 
-from grid_control import DataDiscovery, RuntimeError, utils, DatasetError
+from grid_control import DataProvider, RuntimeError, utils, DatasetError
 
 import DBSAPI_v2.dbsApi
 from DBSAPI_v2.dbsApiException import *
 from DBSAPI_v2.dbsOptions import DbsOptionParser
 
-class DBSApiv2(DataDiscovery):
+class DBSApiv2(DataProvider):
 	def __init__(self, datasetExpr):
 		datasetExprList = string.split(datasetExpr,"#")
 		if len(datasetExprList) > 2:

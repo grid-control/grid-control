@@ -13,6 +13,14 @@ except:
 			i += 1
 
 
+def deprecated(text):
+	print open(atRoot('share', 'fail.txt'), 'r').read()
+	print("[DEPRECATED] %s" % text)
+	userinput = raw_input('Do you want to continue? [no]: ')
+	if userinput != 'yes':
+		sys.exit(0)
+
+
 def atRoot(*args):
 	# relies on _root to be set in go.py
 	return os.path.join(sys.modules['__main__']._root, *args)

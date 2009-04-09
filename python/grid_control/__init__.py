@@ -1,10 +1,11 @@
 from exceptions	import *
 from utils	import AbstractObject, SortedList, enumerate
+
 from job	import *
 from backends	import *
 
 from module	import *
-from data_discovery	import *
+from data_provider	import *
 from CMSSW	import *
 
 from config	import *
