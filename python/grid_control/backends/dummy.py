@@ -1,28 +1,23 @@
 from __future__ import generators
-import sys, os, time, copy, popen2, tempfile, cStringIO
+import sys, os, time, copy, popen2, tempfile, cStringIO, random
 from grid_control import ConfigError, Job, utils
 from wms import WMS
-
-try:
-	from email.utils import parsedate
-except ImportError:
-	from email.Utils import parsedate
 
 class DummyWMS(WMS):
 	def __init__(self, config, module, init):
 		WMS.__init__(self, config, module, 'grid', init)
-
+		self.jobmap = {}
 
 	def submitJob(self, id, job):
 		print "EVENT [SUBMIT]: ", id, job
-		self.module.getJobArguments(id)
-		print self.module.getEnvironment(id)
+		self.jobmap[id] = random.randint(0, 10000000)
+		return self.jobmap[id]
 
 
 	def checkJobs(self, ids):
 		print "EVENT [CHECK]: ", ids
 #		result.append((id, status, data))
-		return []
+		return map(lambda id: (id, 0, {}), ids)
 
 
 	def getJobsOutput(self, ids):

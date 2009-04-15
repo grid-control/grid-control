@@ -21,7 +21,7 @@ class Proxy(AbstractObject):
 			"INFO: Disabling job submission." % (self.timeleft(), secleft, secleft / 60 / 60)
 
 	def getUsername(self):
-		pass
+		raise AbstractError
 
 
 class TrivialProxy(Proxy):
