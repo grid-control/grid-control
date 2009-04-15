@@ -52,7 +52,7 @@ class Report:
 		def getDest(dest):
 			if dest == 'N/A':
 				return ('N/A', '', '')
-			return ('.'.join(dest.split(':')[0].split('.')[1:]), dest.split(':')[0], dest.split('/')[1])
+			return (str.join('.', dest.split(':')[0].split('.')[1:]), dest.split(':')[0], dest.split('/')[1])
 			# Example: (gridka.de, wn1.gridka.de, job-queue-long)
 		def incstat(dict, L1, L2, L3, STAT, INFO, INC):
 			dict[L1][L2][L3][STAT][INFO] += INC
@@ -60,7 +60,7 @@ class Report:
 			dict[L1][STAT][INFO] += INC
 			dict[STAT][INFO] += INC
 		def initdict():
-			tmp = {}.fromkeys(states)
+			tmp = dict.fromkeys(states)
 			for state in states:
 				tmp[state] = {'COUNT': 0, 'TIME': 0}
 			return tmp
@@ -163,7 +163,7 @@ class Report:
 		time_wn = '    %s    | %6d:%0.2d:%0.2d | %6d:%0.2d:%0.2d | %6d:%0.2d:%0.2d | %6d:%0.2d:%0.2d'
 		time_queue = '       %s | %6d:%0.2d:%0.2d | %6d:%0.2d:%0.2d | %6d:%0.2d:%0.2d | %6d:%0.2d:%0.2d'
 
-		def output_obj(name, dict, maxlen, showtime, rate_fmt, time_fmt):
+		def print_stats(name, dict, maxlen, showtime, rate_fmt, time_fmt):
 			print rate_fmt % tuple([name.ljust(maxlen)] + ratestats(dict))
 			if showtime:
 				print time_fmt % tuple([padding] + timestats(dict))
@@ -173,20 +173,20 @@ class Report:
 		sites = SortedList(filter(lambda x: not x in states, statinfo.keys()))
 		sites_num = len(sites) - 1
 		for num, site in enumerate(sites):
-			output_obj(site, statinfo[site], maxlen, showtime, rate_site, time_site)
+			print_stats(site, statinfo[site], maxlen, showtime, rate_site, time_site)
 
 			if details > 1:
 				for wn in SortedList(filter(lambda x: not x in states, statinfo[site].keys())):
-					output_obj(wn, statinfo[site][wn], maxlen, showtime, rate_wn, time_wn)
+					print_stats(wn, statinfo[site][wn], maxlen, showtime, rate_wn, time_wn)
 
 					if details > 2:
 						for queue in SortedList(filter(lambda x: not x in states, statinfo[site][wn].keys())):
-							output_obj(queue, statinfo[site][wn][queue], maxlen, showtime, rate_queue, time_queue)
+							print_stats(queue, statinfo[site][wn][queue], maxlen, showtime, rate_queue, time_queue)
 			if num < sites_num:
 				print '----%s----' % (maxlen * '-') + 4 * ('+' + 14 * '-')
 
 		print '====%s====' % (maxlen * '=') + 4 * ('+' + 14 * '=')
-		output_obj('', statinfo, maxlen, showtime, rate_site, time_site)
+		print_stats('', statinfo, maxlen, showtime, rate_site, time_site)
 
 
 	def timeReport(self, details):
