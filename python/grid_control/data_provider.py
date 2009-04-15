@@ -55,16 +55,19 @@ class DataProvider(AbstractObject):
 	_splitJobs = staticmethod(_splitJobs)
 
 
-	def run(self, eventsPerJob):
-		self.jobFiles = []
-		blocks = self._getBlocks()
-
+	def splitDataSet(self, blocks, eventsPerJob):
+		result = []
 		for block in blocks:
 #			self.jobFiles.extend(self._splitJobs(block['FileList'], eventsPerJob, 0)
 			for job in self._splitJobs(block['FileList'], eventsPerJob, 0):
-				job['StorageElementList']  =  block['StorageElementList']
+				job['StorageElementList'] = block['StorageElementList']
 				job['DatasetPath'] = self.datasetPath
-				self.jobFiles.append(job)
+				result.append(job)
+		return result
+
+
+	def run(self, eventsPerJob):
+		self.jobFiles = self.splitDataSet(self.getBlocks(), eventsPerJob)
 
 
 	def getFilesForJob(self, jobNr):
@@ -85,7 +88,7 @@ class DataProvider(AbstractObject):
 
 	def printDataset(self):
 		print "Matching datasets:"
-		for block in self._getBlocks():
+		for block in self.getBlocks():
 			print "BlockName: ", block['BlockName']
 			print "NumberOfEvents: ", block['NumberOfEvents']
 			print "NumberOfFiles : ", block['NumberOfFiles']
@@ -97,7 +100,7 @@ class DataProvider(AbstractObject):
 				for tag in [('Status', 'status'), ('Events', 'events')]:
 					if not str(fileinfo[tag[1]]) == "":
 						infos.append(tag[0] + ": " + str(fileinfo[tag[1]]))
-				print ", ".join(infos), ")"
+				print str.join(", ", infos), ")"
 
 
 	def printJobInfo(self):
@@ -115,7 +118,7 @@ class DataProvider(AbstractObject):
 		print "Events : ", job['events']
 		print "Skip   : ", job['skip']
 		print "SEList : ", job['StorageElementList']
-		print "Files  : ", "\n          ".join(job['files'])
+		print "Files  : ", str.join("\n          ", job['files'])
 
 
 	def saveState(self, path):

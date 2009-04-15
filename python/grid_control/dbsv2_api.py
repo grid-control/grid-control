@@ -25,7 +25,7 @@ class DBSApiv2(DataProvider):
 		self.args['level']   = "CRITICAL"
 
 
-	def _getBlocks(self):
+	def getBlocks(self):
 		api = DBSAPI_v2.dbsApi.DbsApi(self.args)
 		listBlockInfo  = api.listBlocks(self.datasetPath)
 		filelistInfo = api.listFiles(self.datasetPath)
