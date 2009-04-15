@@ -1,5 +1,5 @@
 from __future__ import generators
-import sys, os, bisect, popen2
+import sys, os, bisect, popen2, StringIO
 from grid_control import InstallationError, ConfigError
 
 try:
@@ -12,6 +12,17 @@ except:
 			yield (i, item)
 			i += 1
 
+# Python 2.2 has no tempfile.mkstemp
+def mkstemp(ending):
+	while True:
+		fn = tempfile.mktemp(ending)
+		try:
+			fd = os.open(jdl, os.O_WRONLY | os.O_CREAT | os.O_EXCL)
+		except OSError:
+			continue
+		break
+	return (fd, fn)
+
 
 def deprecated(text):
 	print open(atRoot('share', 'fail.txt'), 'r').read()
@@ -21,11 +32,18 @@ def deprecated(text):
 		sys.exit(0)
 
 
+class VirtualFileObject(StringIO.StringIO):
+	def __init__(self, name, lines):
+		StringIO.StringIO.__init__(self, str.join('', lines))
+		self.name = name
+		self.size = len(self.getvalue())
+
+
 class DictFormat(object):
-	def __init__(self, delimeter, wrapString = False, types = True):
+	def __init__(self, delimeter, escapeString = False, types = True):
 		self.delimeter = delimeter
 		self.types = types
-		self.wrapString = wrapString
+		self.escapeString = escapeString
 
 	def parseType(self, x):
 		try:
@@ -37,12 +55,12 @@ class DictFormat(object):
 			return x
 
 	# Parse dictionary lists
-	def parse(self, lines):
+	def parse(self, lines, lowerCaseKey = True):
 		data = {}
 		currentline = ''
 		doAdd = False
 		for line in lines:
-			if self.wrapString:
+			if self.escapeString:
 				# Accumulate lines until closing " found
 				if (line.count('"') - line.count('\\"')) % 2:
 					doAdd = not doAdd
@@ -54,11 +72,13 @@ class DictFormat(object):
 			try:
 				# split at first occurence of delimeter and strip spaces around
 				key, value = map(lambda x: x.strip(), currentline.split(self.delimeter, 1))
-				if self.wrapString:
-					value = value.strip('"').replace('\\"', '"')
+				if self.escapeString:
+					value = value.strip('"').replace('\\"', '"').replace('\\$', '$')
 				if self.types:
 					value = self.parseType(value)
-				data[key.lower()] = value
+				if lowerCaseKey:
+					key = key.lower()
+				data[key] = value
 			except:
 				# in case no delimeter was found
 				pass
@@ -74,8 +94,8 @@ class DictFormat(object):
 			value = dict[key]
 			if value == None and not printNone:
 				continue
-			if self.wrapString and isinstance(value, str):
-				value = '"%s"' % str(value).replace('"', '\\"')
+			if self.escapeString and isinstance(value, str):
+				value = '"%s"' % str(value).replace('"', '\\"').replace('$', '\\$')
 				lines = value.split('\n')
 				result.append(format % fkt((key, self.delimeter, lines[0])))
 				result.extend(map(lambda x: x + '\n', lines[1:]))
