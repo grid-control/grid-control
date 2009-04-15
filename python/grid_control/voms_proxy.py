@@ -13,23 +13,10 @@ class VomsProxy(Proxy):
 		proc = popen2.Popen3(self._infoExec, True)
 		lines = proc.fromchild.readlines()
 		retCode = proc.wait()
-
 		if retCode != 0:
 			print(lines)
 			raise InstallationError("voms-proxy-info failed with return code %d" % retCode)
-
-		print lines
-		data = {}
-		for line in lines:
-			try:
-				# split at first occurence of ':' and strip spaces around
-				key, value = map(lambda x: x.strip(), line.split(':', 1))
-				data[key.lower()] = value
-			except:
-				# in case no ':' was found
-				continue
-		print data
-		return data
+		return utils.DictFormat(':').parse(lines)
 
 
 	# return possibly cached information
@@ -57,9 +44,7 @@ class VomsProxy(Proxy):
 			if timeleft < critical and delta > 60:
 				info = self.getInfo(True)
 				continue
-
 			break # leave while loop
-
 		return timeleft
 
 
