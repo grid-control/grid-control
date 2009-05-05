@@ -17,7 +17,7 @@ if [ "$DASHBOARD" == "yes" ]; then
 	checkfile "$MY_SCRATCH/report.py"
 	chmod u+x "$MY_SCRATCH/report.py"
 	checkbin "$MY_SCRATCH/report.py"
-	export
+
 	echo $MY_SCRATCH/report.py $REPORTID \
 		SyncGridJobId="$GLITE_WMS_JOBID" SyncGridName="$TASK_USER" SyncCE="$GLOBUS_CE" \
 		WNname="$(hostname -f)" ExeStart="cmsRun"
@@ -109,17 +109,21 @@ my_move "$MY_SCRATCH" "$MY_WORKDIR" "$SE_INPUT_FILES"
 cd "$MY_WORKDIR"
 checkdir "CMSSW working directory" "$MY_WORKDIR"
 echo "---------------------------"
-for i in $CMSSW_CONFIG; do
-	echo -e "\nConfig file: $i"
+for CFG in $CMSSW_CONFIG; do
+	echo -e "\nConfig file: $CFG"
 	echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~"
-	var_replacer "" < "`_find $i`" | tee "CMSRUN-$i"
+	CFG_NAME="CMSRUN-$CFG"
+	FWK_NAME="`echo $CFG_NAME | sed -e 's/\.cfg/.xml/;s/\.py/.xml/'`"
+
+	var_replacer "" < "`_find $CFG`" | tee "$CFG_NAME"
 	if [ "$GZIP_OUT" = "yes" ]; then
-		( cmsRun "CMSRUN-$i"; echo $? > exitcode.txt ) 2>&1 | gzip -9 > cmssw_out.txt.gz
+		( cmsRun -j "$FWK_NAME" -e "$CFG_NAME"; echo $? > exitcode.txt ) 2>&1 | gzip -9 > cmssw_out.txt.gz
 		[ -f "exitcode.txt" ] && CODE=$(<exitcode.txt) && rm -f exitcode.txt
 	else 
-		cmsRun "CMSRUN-$i"
+		cmsRun -j "$FWK_NAME" -e "$CFG_NAME"
 		CODE=$?
 	fi
+	[ -f "$FWK_NAME" ] && gzip "$FWK_NAME"
 done
 
 echo "---------------------------"

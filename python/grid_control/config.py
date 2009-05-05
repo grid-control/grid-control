@@ -18,22 +18,21 @@ class Config:
 		dir = os.path.normpath(dir)
 		self.baseDir = os.path.abspath(dir)
 
+
 	def get(self, section, item, default = None):
 		try:
 			return self.parser.get(section, item)
 		except ConfigParser.NoSectionError:
 			if default != None:
 				return default
-			raise ConfigError("No section %s in config file."
-			                  % section)
+			raise ConfigError("No section %s in config file." % section)
 		except ConfigParser.NoOptionError:
 			if default != None:
 				return default
-			raise ConfigError("No option %s in section %s of config file."
-			                  % (item, section))
+			raise ConfigError("No option %s in section %s of config file." % (item, section))
 		except:
-			raise ConfigError("Parse error in option %s of config file section %s."
-			                  % (item, section))
+			raise ConfigError("Parse error in option %s of config file section %s." % (item, section))
+
 
 	def getPath(self, section, item, default = None):
 		path = self.get(section, item, default)
@@ -45,8 +44,10 @@ class Config:
 			path = os.path.join(self.baseDir, path)
 		return path
 
+
 	def getInt(self, section, item, default = None):
 		return int(self.get(section, item, default))
+
 
 	def getBool(self, section, item, default = None):
 		value = self.get(section, item, default)

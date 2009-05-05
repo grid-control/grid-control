@@ -7,52 +7,35 @@ from time import time
 
 class Module(AbstractObject):
 	# Read configuration options and init vars
-	def __init__(self, config, init):
+	def __init__(self, config, init, resync):
 		self.config = config
 		self.workDir = config.getPath('global', 'workdir')
+
 		self.wallTime = utils.parseTime(config.get('jobs', 'wall time'))
 		self.cpuTime = utils.parseTime(config.get('jobs', 'cpu time', config.get('jobs', 'wall time')))
-		self.memory = config.getInt('jobs', 'memory', 512)
+		self.nodeTimeout = utils.parseTime(config.get('jobs', 'node timeout', ''))
 
-		try:
-			self.setSeed(",".join(config.get('jobs', 'seeds').split()))
-		except:
-			try:
-				self.setSeed(",".join(config.get('CMSSW', 'seeds').split()))
-				utils.deprecated("Please specify seeds in the [jobs] section")
-			except:
-				print "Creating random seeds..."
-				self.setSeed('')
+		self.memory = config.getInt('jobs', 'memory', 512)
+		self.setSeed(str.join(",", config.get('jobs', 'seeds', '').split()))
 
 		# TODO: Convert the following into requirements
-		self.seInputFiles = config.get('storage', 'se input files', '').split()
-		self.seInputPattern = config.get('storage', 'se input pattern', '__X__')
-
-		try:
-			self.seOutputFiles = config.get('storage', 'se output files').split()
-		except:
-			utils.deprecated("Please specify se output files in the [storage] section")
-			self.seOutputFiles = config.get('CMSSW', 'se output files', '').split()
-		self.seOutputPattern = config.get('storage', 'se output pattern', 'job___MY_JOB_____NICK_____X__')
-
-		self.seMinSize = config.getInt('storage', 'se min size', -1)
-
 		self.seSDUpperLimit = config.getInt('storage', 'scratch space used', 5000)
 		self.seSDLowerLimit = config.getInt('storage', 'scratch space left', 1)
 		self.seLZUpperLimit = config.getInt('storage', 'landing zone space used', 100)
 		self.seLZLowerLimit = config.getInt('storage', 'landing zone space left', 1)
 
-		try:
-			self.sePath = config.get('storage', 'se path')
-		except:
-			utils.deprecated("Please specify se path in the [storage] section")
-			self.sePath = config.get('CMSSW', 'se path', '')
+		# Storage setup
+		self.sePath = config.get('storage', 'se path')
+		self.seMinSize = config.getInt('storage', 'se min size', -1)
 
-		self.nodetimeout = utils.parseTime(config.get('jobs', 'node timeout', ''))
+		self.seInputFiles = config.get('storage', 'se input files', '').split()
+		self.seInputPattern = config.get('storage', 'se input pattern', '__X__')
+		self.seOutputFiles = config.get('storage', 'se output files').split()
+		self.seOutputPattern = config.get('storage', 'se output pattern', 'job___MY_JOB_____NICK_____X__')
 
 		self.taskID = None
 		self.taskID = self.getTaskID()
-		print 'Current task ID %s' % (self.getTaskID())
+		print 'Current task ID %s' % (self.taskID)
 
 		self.dashboard = config.getBool('jobs', 'monitor job', False)
 		self.username = "unknown"
@@ -61,10 +44,23 @@ class Module(AbstractObject):
 		self.evtStatus = config.get('events', 'on status', '')
 		self.evtOutput = config.get('events', 'on output', '')
 
+		if config.get('CMSSW', 'se output files', 'FAIL') != 'FAIL':
+			utils.deprecated("Please specify se output files only in the [storage] section")
+			self.seOutputFiles = config.get('CMSSW', 'se output files').split()
+		if config.get('CMSSW', 'seeds', 'FAIL') != 'FAIL':
+			utils.deprecated("Please specify seeds only in the [jobs] section")
+			self.setSeed(str.join(',', config.get('CMSSW', 'seeds').split()))
+		if config.get('CMSSW', 'se path', 'FAIL') != 'FAIL':
+			utils.deprecated("Please specify se path only in the [storage] section")
+			self.sePath = config.get('CMSSW', 'se path')
 
+
+	# Set random seeds of module ('' == 10 random seeds)
 	def setSeed(self, seeds):
 		if seeds == '':
+			print "Creating random seeds... ",
 			self.seeds = map(lambda x: random.randint(0, 10000000), range(10))
+			print self.seeds
 		else:
 			self.seeds = map(lambda x: int(x), seeds.split(','))
 
@@ -86,37 +82,37 @@ class Module(AbstractObject):
 
 
 	# Called on job submission
-	def onJobSubmit(self, job, id):
+	def onJobSubmit(self, jobObj, id):
 		if self.evtSubmit != '':
-			os.system("%s %d %s" % (self.evtSubmit, id, job.id))
+			os.system("%s %d %s" % (self.evtSubmit, id, jobObj.id))
 		return None
 
 
 	# Called on job status update
-	def onJobUpdate(self, job, id, data):
+	def onJobUpdate(self, jobObj, id, data):
 		if self.evtStatus != '':
-			os.system("%s %d %s" % (self.evtStatus, id, job.id))
+			os.system("%s %d %s" % (self.evtStatus, id, jobObj.id))
 		return None
 
 
 	# Called on job status update
-	def onJobOutput(self, job, id, retCode):
+	def onJobOutput(self, jobObj, id, retCode):
 		if self.evtOutput != '':
-			os.system("%s %d %s %d" % (self.evtOutput, id, job.id, retCode))
+			os.system("%s %d %s %d" % (self.evtOutput, id, jobObj.id, retCode))
 		return None
 
 
-	# Get environment variables for _config.sh
+	# Get environment variables for gc_config.sh
 	def getTaskConfig(self):
 		return {
 			# Space limits
-			'SCRATCH_UL': str(self.seSDUpperLimit),
-			'SCRATCH_LL': str(self.seSDLowerLimit),
-			'LANDINGZONE_UL': str(self.seLZUpperLimit),
-			'LANDINGZONE_LL': str(self.seLZLowerLimit),
+			'SCRATCH_UL' : self.seSDUpperLimit,
+			'SCRATCH_LL' : self.seSDLowerLimit,
+			'LANDINGZONE_UL': self.seLZUpperLimit,
+			'LANDINGZONE_LL': self.seLZLowerLimit,
 			# Storage element
 			'SE_PATH': self.sePath,
-			'SE_MINFILESIZE': str(self.seMinSize),
+			'SE_MINFILESIZE': self.seMinSize,
 			'SE_OUTPUT_FILES': str.join(' ', self.seOutputFiles),
 			'SE_INPUT_FILES': str.join(' ', self.seInputFiles),
 			'SE_OUTPUT_PATTERN': self.seOutputPattern,
@@ -125,10 +121,10 @@ class Module(AbstractObject):
 			'SB_OUTPUT_FILES': str.join(' ', self.getOutFiles()),
 			'SB_INPUT_FILES': str.join(' ', map(lambda x: utils.shellEscape(os.path.basename(x)), self.getInFiles())),
 			# Runtime
-			'DOBREAK': str(self.nodetimeout),
+			'DOBREAK': self.nodeTimeout,
 			'MY_RUNTIME': self.getCommand(),
 			# Seeds
-			'SEEDS': str.join(' ', map(lambda x: "%d" % x, self.seeds)),
+			'SEEDS': str.join(' ', map(str, self.seeds)),
 			# Task infos
 			'TASK_ID': self.taskID,
 			'TASK_USER': self.username,
@@ -136,40 +132,15 @@ class Module(AbstractObject):
 		}
 
 
-	def getJobConfig(self, job):
+	# Get job dependent environment variables
+	def getJobConfig(self, id):
 		return {
-			'MY_JOBID': str(job)
+			'MY_JOBID': id
 		}
 
 
-	def getEnvironment(self, job):
-		result = []
-		for key, value in self.getJobConfig(job).iteritems():
-			if value:
-				result.append("%s=%s" % (key, str(value)))
-		return result
-
-
-	# Create _config.sh from module config
-	def makeConfig(self):
-		data = self.getTaskConfig()
-
-		fp = cStringIO.StringIO()
-		for key, value in data.items():
-			fp.write("%s=%s\n" % (key, utils.shellEscape(value)))
-
-		class FileObject(StringIO.StringIO):
-			def __init__(self, value, name):
-				StringIO.StringIO.__init__(self, value)
-				self.name = name
-				self.size = len(value)
-
-		fp = FileObject(fp.getvalue(), '_config.sh')
-		return fp
-
-
 	# Get job requirements
-	def getRequirements(self, job):
+	def getRequirements(self, id):
 		return [
 			(WMS.WALLTIME, self.wallTime),
 			(WMS.CPUTIME, self.cpuTime),
@@ -177,6 +148,7 @@ class Module(AbstractObject):
 		]
 
 
+	# Get files for input sandbox
 	def getInFiles(self):
 		name = self.__class__.__name__
 		def fileMap(file):
@@ -188,13 +160,18 @@ class Module(AbstractObject):
 		return map(fileMap, self.config.get(name, 'input files', '').split())
 
 
+	# Get files for output sandbox
 	def getOutFiles(self):
 		name = self.__class__.__name__
 		return self.config.get(name, 'output files', '').split()
 
 
+	def getCommand(self):
+		raise AbstractError
+
+
 	def getJobArguments(self, job):
-		return ""
+		raise AbstractError
 
 
 	def getMaxJobs(self):

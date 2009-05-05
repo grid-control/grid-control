@@ -14,7 +14,7 @@ class VomsProxy(Proxy):
 		lines = proc.fromchild.readlines()
 		retCode = proc.wait()
 		if retCode != 0:
-			print(lines)
+			sys.stderr.write(str.join('', lines))
 			raise InstallationError("voms-proxy-info failed with return code %d" % retCode)
 		return utils.DictFormat(':').parse(lines)
 
@@ -42,7 +42,7 @@ class VomsProxy(Proxy):
 			# recheck proxy if critical timeleft reached
 			# at most once per minute
 			if timeleft < critical and delta > 60:
-				info = self.getInfo(True)
+				info = self._getInfoCached(True)
 				continue
 			break # leave while loop
 		return timeleft

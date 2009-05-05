@@ -19,7 +19,7 @@ class DbsApiException(DbsException):
     msg = "\nCaught API Exception %s: %s "  % (self.getClassName(), self.getErrorMessage() )
     if self.getErrorCode() not in (None, ""):
        msg += "\nDBS Exception Error Code: %s " % str(self.getErrorCode())
-    logging.error(msg)
+    #logging.error(msg)
   
 class InvalidDatasetPathName(DbsApiException):
     
@@ -54,6 +54,10 @@ class DbsBadXMLData(DbsApiException):
     DbsApiException.__init__(self, **kwargs)
 
 class DbsBadData(DbsApiException):
+  def __init__ (self, **kwargs):
+    DbsApiException.__init__(self, **kwargs)
+
+class DbsConfigurationError(DbsApiException):
   def __init__ (self, **kwargs):
     DbsApiException.__init__(self, **kwargs)
 

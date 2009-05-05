@@ -16,121 +16,83 @@ class WMS(AbstractObject):
 		self.config = config
 		self.module = module
 		self.workDir = config.getPath('global', 'workdir')
-		self.proxy = config.get(backend, 'proxy', 'TrivialProxy')
-
+		self._proxy = config.get(backend, 'proxy', 'TrivialProxy')
 		self._sites = config.get(backend, 'sites', '').split()
 
 		self._outputPath = os.path.join(self.workDir, 'output')
-		try:
-			if not os.path.exists(self._outputPath):
-				if init:
+
+		if not os.path.exists(self._outputPath):
+			if init:
+				try:
 					os.mkdir(self._outputPath)
-				else:
-					raise ConfigError("Not a properly initialized work directory '%s'." % self.workDir)
-		except IOError, e:
-			raise ConfigError("Problem creating work directory '%s': %s" % (self._outputPath, e))
+				except IOError, e:
+					raise ConfigError("Problem creating work directory '%s': %s" % (self._outputPath, e))
+			else:
+				raise ConfigError("Not a properly initialized work directory '%s'." % self.workDir)
 
 		tarFile = os.path.join(self.workDir, 'sandbox.tar.gz')
-		self.sandboxIn = [
-			utils.atRoot('share', 'grid.sh'),
-			utils.atRoot('share', 'run.lib'),
-			tarFile
-		]
 
-		self.sandboxOut = [ 'stdout.txt', 'stderr.txt', 'jobinfo.txt' ]
-		self.sandboxOut.extend(self.module.getOutFiles())
+		self.sandboxIn = [ utils.atRoot('share', 'grid.sh'), utils.atRoot('share', 'run.lib'), tarFile ]
+		self.sandboxOut = self.module.getOutFiles() + [ 'stdout.txt', 'stderr.txt', 'jobinfo.txt' ]
 
+		taskConfig = utils.DictFormat(escapeString = True).format(self.module.getTaskConfig())
+		inFiles = self.module.getInFiles() + [ utils.VirtualFile('_config.sh', utils.SortedList(taskConfig)) ]
+
+		utils.vprint("Packing sandbox:")
 		if init:
+			utils.vprint("\t%s" % tarFile)
 			tar = tarfile.TarFile.open(tarFile, 'w:gz')
-
-		inFiles = [ self.module.makeConfig() ]
-		inFiles.extend(self.module.getInFiles())
 
 		for file in inFiles:
 			if type(file) == str:
-				name = os.path.basename(file)
-				if not os.path.isabs(file):
-					path = os.path.join(self.workDir, file)
-				else:
+				# Path to filename given
+				if os.path.isabs(file):
 					path = file
-				file = open(path, 'rb')
-				file.seek(0, 2)
-				size = file.tell()
-				file.seek(0, 0)
-				if size > self.INLINE_TAR_LIMIT and \
-				   name.endswith('.gz') or name.endswith('.bz2'):
-					file.close()
+				else:
+					path = os.path.join(self.workDir, file)
+
+				# Put file in sandbox instead of tar file
+				if os.path.getsize(path) > self.INLINE_TAR_LIMIT and file.endswith('.gz') or file.endswith('.bz2'):
 					self.sandboxIn.append(path)
 					continue
-			else:
-				name = file.name
-				size = file.size
 
 			if init:
-				info = tarfile.TarInfo(name)
-				if name.endswith('.sh'):
+				# Package sandbox tar file
+				if type(file) == str:
+					utils.vprint("\t\t%s" % path)
+					info = tarfile.TarInfo(os.path.basename(file))
+					info.size = os.path.getsize(path)
+					handle = open(path, 'rb')
+				else:
+					utils.vprint("\t\t%s" % file.name)
+					info, handle = file.getTarInfo()
+
+				if info.name.endswith('.sh'):
 					info.mode = 0755
-				elif name.endswith('.py'):
+				elif info.name.endswith('.py'):
 					info.mode = 0755
 				else:
 					info.mode = 0644
-				info.size = size
 				info.mtime = time.time()
 
-				tar.addfile(info, file)
-
-			file.close()
+				tar.addfile(info, handle)
+				handle.close()
 
 		if init:
 			tar.close()
+		for file in self.sandboxIn:
+			if file != tarFile or not init:
+				utils.vprint("\t%s" % file)
 
 
-	def _formatRequirement(self, type, *args):
-		if type == self.MEMBER:
-			return self.memberReq(*args)
-		elif type == self.WALLTIME:
-			return self.wallTimeReq(*args)
-		elif type == self.STORAGE:
-			return self.storageReq(*args)
-		elif type == self.SITES:
-			return self.sitesReq(*args)
-		elif type == self.CPUTIME:
-			return self.cpuTimeReq(*args)
-		elif type == self.MEMORY:
-			return self.memoryReq(*args)
-		elif type == self.OTHER:
-			return self.otherReq(*args)
-		else:
-			raise RuntimeError('unknown requirement type %d' % type)
-
-
-	def formatRequirements(self, reqs_):
+	def getRequirements(self, job):
+		reqs = self.module.getRequirements(job)
 		# add site requirements
 		if len(self._sites):
-			reqs_.append((self.SITES, self._sites))
-		if len(reqs_) == 0:
+			reqs.append((self.SITES, self._sites))
+		if len(reqs) == 0:
 			return None
-		return str.join(' && ', map(lambda x: self._formatRequirement(*x), reqs_))
-
-
-	def memberReq(self, *args):
-		raise RuntimeError('memberReq is abstract')
-
-
-	def wallTimeReq(self, *args):
-		raise RuntimeError('wallTimeReq is abstract')
-
-
-	def cpuTimeReq(self, *args):
-		raise RuntimeError('cpuTimeReq is abstract')
-
-
-	def memoryReq(self, *args):
-		raise RuntimeError('memoryReq is abstract')
-
-
-	def otherReq(self, *args):
-		raise RuntimeError('otherReq is abstract')
+		return reqs
 
 
 	def retrieveJobs(self, ids):
@@ -144,7 +106,7 @@ class WMS(AbstractObject):
 				continue
 
 			try:
-				data = utils.parseShellDict(open(info, 'r'))
+				data = utils.DictFormat().parse(open(info, 'r'), lowerCaseKey = False)
 				id = data['JOBID']
 				retCode = data['EXITCODE']
 			except:
@@ -153,14 +115,12 @@ class WMS(AbstractObject):
 
 			dst = os.path.join(self._outputPath, 'job_%d' % id)
 
-			if os.path.exists(dst):
-				try:
+			try:
+				if os.path.exists(dst):
 					shutil.rmtree(dst)
-				except IOError, e:
-					print >> sys.stderr, \
-					      "Warning: '%s' cannot be removed: %s" \
-					      % (dst, str(e))
-					continue
+			except IOError, e:
+				print >> sys.stderr, "Warning: '%s' cannot be removed: %s" % (dst, str(e))
+				continue
 
 			try:
 				try:
@@ -169,12 +129,11 @@ class WMS(AbstractObject):
 					os.renames(dir, dst)
 			except IOError, e:
 				print >> sys.stderr, \
-				         "Warning: Error moving job output directory from '%s' to '%s': %s" \
-				          % (dir, dst, str(e))
+					"Warning: Error moving job output directory from '%s' to '%s': %s" \
+					% (dir, dst, str(e))
 				continue
 
 			result.append((id, retCode, data))
-
 		return result
 
 
@@ -187,4 +146,4 @@ class WMS(AbstractObject):
 
 
 	def getProxy(self):
-		return proxy.Proxy.open(self.proxy)
+		return proxy.Proxy.open(self._proxy)

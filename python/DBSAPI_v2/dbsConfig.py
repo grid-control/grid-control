@@ -27,12 +27,14 @@ class DbsConfig(object):
     """
  
     uFileName=""
-    iList=['user','password','driver','url','host','port','log','level', 'servlet','version','dbname','dbsDB','dbtype','verbose','mode', 'dbshome', 'javahome' ]
+    iList=['url','alias','log','level', 'version','clienttype','verbose','mode','dbshome','javahome','adshome','retry']
+    #iList=['user','password','driver','url','host','port','log','level', 'servlet','version','dbname','dbsDB','clienttype',	'dbtype','verbose','mode', 'dbshome', 'javahome', 'adshome','retry']
     self.configDict={}
 
-    for item in iList:
-	if iConfig.has_key(item) and iConfig[item]:
-		self.configDict[item] = iConfig[item]
+    #for item in iList:
+	#print item    
+    #	if iConfig.has_key(item) and iConfig[item]:
+    #		self.configDict[item] = iConfig[item]
 
 
     if os.environ.has_key('DBS_CLIENT_CONFIG'):
@@ -46,13 +48,13 @@ class DbsConfig(object):
        self.configFile=uFileName
        if not os.path.isfile(uFileName):
           raise DbsException(args="The DBS_CLIENT_CONFIG='%s' config file does not exists"%uFileName)
-       mode = os.stat(uFileName)[stat.ST_MODE]
-       if mode!=33152:
+       #mode = os.stat(uFileName)[stat.ST_MODE]
+       #if mode!=33152:
           # mode is not -rw-------
           #print "WARNING: permission of %s is set to 0600 mode (-rw-------)"%uFileName
           #os.chmod(uFileName,0600)
           print ""
-       login = masterHost =  masterName = masterPort = masterSocket = admin = ""
+       #login = masterHost =  masterName = masterPort = masterSocket = admin = ""
        for read in open(uFileName).readlines():
            line = string.split(read,"\n")[0]
            line = line.strip()
@@ -61,6 +63,7 @@ class DbsConfig(object):
            for item in iList:
                keyword=string.upper(item)
                if re.search(keyword,line):
+		  #print item, line, keyword     
                   self.configDict[item] = string.split(line,"%s="%keyword)[1]
                #if iConfig.has_key(item) and iConfig[item]:
                #   self.configDict[item] = iConfig[item]
@@ -75,6 +78,48 @@ class DbsConfig(object):
     if not self.configDict.has_key('verbose'):
        return 0
     return 1
+  def mode(self):
+    if not self.configDict.has_key('mode'):
+       raise DbsException(args="DBS configuration missing mode parameter")
+    return self.configDict['mode']
+  def clienttype(self):
+    if not self.configDict.has_key('clienttype'):
+       raise DbsException(args="DBS configuration missing user_type parameter")
+    return self.configDict['clienttype']
+  def dbshome(self):
+    if not self.configDict.has_key('dbshome'):
+       raise DbsException(args="DBS configuration missing mode parameter")
+    return self.configDict['dbshome']
+  def version(self):
+    if not self.configDict.has_key('version'):
+       raise DbsException(args="DBS configuration missing (Clent API) version parameter")
+    return self.configDict['version']
+  def javahome(self):
+    if not self.configDict.has_key('javahome'):
+       raise DbsException(args="DBS configuration missing javahome parameter")
+    return self.configDict['javahome']
+  def url(self):
+    if not self.configDict.has_key('url'):
+       raise DbsException(args="DBS configuration missing url/alias parameter")
+    return self.configDict['url']
+  def log(self):
+    if not self.configDict.has_key('log'):
+       raise DbsException(args="DBS configuration missing log parameter")
+    return self.configDict['log']
+  def loglevel(self):
+    if not self.configDict.has_key('level'):
+       raise DbsException(args="DBS configuration missing log level parameter")
+    return self.configDict['level']
+  def adshome(self):
+    if not self.configDict.has_key('adshome'):
+       raise DbsException(args="DBS configuration missing adshome parameter")
+    return self.configDict['adshome']
+  def retry(self):
+    if not self.configDict.has_key('retry'):
+       raise DbsException(args="DBS configuration missing retry parameter")
+    return self.configDict['retry']
+
+  """
   def host(self):
     if not self.configDict.has_key('host'):
        raise DbsException(args="DBS configuration missing host parameter")
@@ -83,22 +128,10 @@ class DbsConfig(object):
     if not self.configDict.has_key('port'):
        raise DbsException(args="DBS configuration missing port parameter")
     return self.configDict['port']
-  def mode(self):
-    if not self.configDict.has_key('mode'):
-       raise DbsException(args="DBS configuration missing mode parameter")
-    return self.configDict['mode']
-  def dbshome(self):
-    if not self.configDict.has_key('dbshome'):
-       raise DbsException(args="DBS configuration missing mode parameter")
-    return self.configDict['dbshome']
   def servlet(self):
     if not self.configDict.has_key('servlet'):
        raise DbsException(args="DBS configuration missing servlet parameter")
     return self.configDict['servlet']
-  def version(self):
-    if not self.configDict.has_key('version'):
-       raise DbsException(args="DBS configuration missing (Clent API) version parameter")
-    return self.configDict['version']
   def user(self):
     if not self.configDict.has_key('user'):
        raise DbsException(args="DBS configuration missing user parameter")
@@ -119,22 +152,7 @@ class DbsConfig(object):
     if not self.configDict.has_key('dbtype'):
        raise DbsException(args="DBS configuration missing dbtype parameter")
     return self.configDict['dbtype']
-  def javahome(self):
-    if not self.configDict.has_key('javahome'):
-       raise DbsException(args="DBS configuration missing javahome parameter")
-    return self.configDict['javahome']
-  def url(self):
-    if not self.configDict.has_key('url'):
-       raise DbsException(args="DBS configuration missing url parameter")
-    return self.configDict['url']
-  def log(self):
-    if not self.configDict.has_key('log'):
-       raise DbsException(args="DBS configuration missing log parameter")
-    return self.configDict['log']
-  def loglevel(self):
-    if not self.configDict.has_key('level'):
-       raise DbsException(args="DBS configuration missing log level parameter")
-    return self.configDict['level']
+  """
 
 #
 # main

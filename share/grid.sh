@@ -13,6 +13,8 @@ shift
 # Print job informations
 echo -e "JOBID=$MY_JOBID\ngrid-control - Version$GC_VERSION \nrunning on: `hostname -f; uname -a; cat /etc/redhat-release`"
 echo "Job $MY_JOBID started - `date`"
+export
+echo "==========================="
 STARTDATE=`date +%s`
 
 checkdir "Start directory" "$MY_LANDINGZONE"
@@ -42,7 +44,7 @@ source "$MY_SCRATCH/_config.sh"
 if [ ${DOBREAK:-1} -gt 0 ]; then
 (
 	sleep ${DOBREAK} &&
-	echo "===!Timeout after ${DOBREAK} sec!===" 1>&2 &&
+	echo "===! Timeout after ${DOBREAK} sec !===" 1>&2 &&
 	updatejobinfo 123 &&
 	kill -1 $$
 ) &
@@ -87,5 +89,6 @@ cleanup
 trap - 0 1 2 3 15
 echo "Job $MY_JOBID finished - `date`"
 echo "TIME=$[`date +%s` - $STARTDATE]" >> $MY_LANDINGZONE/jobinfo.txt
+cat $MY_LANDINGZONE/jobinfo.txt
 
 exit $CODE

@@ -1,14 +1,13 @@
 import os
 from grid_control import ConfigError, utils
-from wms import WMS
+from grid_wms import GridWMS
 from glite import Glite
 
 class LCG(Glite):
 
 	def __init__(self, config, module, init):
 		utils.deprecated("Please use the GliteWMS backend for grid jobs!")
-		WMS.__init__(self, config, module, 'grid', init)
-		self.proxy = config.get('grid', 'proxy', 'VomsProxy')
+		GridWMS.__init__(self, config, module, init)
 
 		self._submitExec = utils.searchPathFind('edg-job-submit')
 		self._statusExec = utils.searchPathFind('edg-job-status')

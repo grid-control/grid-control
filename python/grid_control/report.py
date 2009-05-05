@@ -219,7 +219,9 @@ class Report:
 				ratio = (summary[state] / (id + 1))*100
 			else:
 				ratio = 0
-			print 'Jobs   %9s: %4d     %3d%%' % (category, summary[state], round(ratio))
-
+			print 'Jobs   %9s: %4d     %3d%%  ' % (category, summary[state], round(ratio)),
+			if state % 2:
+				print
+		print
 		print '-----------------------------------------------------------------\n'
 		return 0

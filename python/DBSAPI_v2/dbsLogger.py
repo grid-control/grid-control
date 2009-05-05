@@ -57,6 +57,7 @@ class DbsLogger:
                     filemode='w+')
     # By default write it on stdout
     else:
-            logging.basicConfig(level=loglevel,
-                    format='%(asctime)s %(levelname)s %(message)s')
+            ###logging.basicConfig(level=loglevel,
+            ###        format='%(asctime)s %(levelname)s %(message)s')
+	    logging.basicConfig()
 

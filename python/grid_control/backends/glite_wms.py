@@ -1,7 +1,7 @@
 from __future__ import generators
 import sys, os, time, copy, popen2, tempfile, cStringIO, md5
 from grid_control import ConfigError, Job, utils
-from wms import WMS
+from grid_wms import GridWMS
 from glite import Glite
 
 try:
@@ -11,8 +11,7 @@ except ImportError:
 
 class GliteWMS(Glite):
 	def __init__(self, config, module, init):
-		WMS.__init__(self, config, module, 'grid', init)
-		self.proxy = config.get('grid', 'proxy', 'VomsProxy')
+		GridWMS.__init__(self, config, module, init)
 
 		self._delegateExec = utils.searchPathFind('glite-wms-job-delegate-proxy')
 		self._submitExec = utils.searchPathFind('glite-wms-job-submit')
@@ -90,13 +89,7 @@ class GliteWMS(Glite):
 		try:
 			fd, jdl = tempfile.mkstemp('.jdl')
 		except AttributeError:	# Python 2.2 has no tempfile.mkstemp
-			while True:
-				jdl = tempfile.mktemp('.jdl')
-				try:
-					fd = os.open(jdl, os.O_WRONLY | os.O_CREAT | os.O_EXCL)
-				except OSError:
-					continue
-				break
+			fd, jdl = utils.mkstemp('.jdl')
 
 		log = tempfile.mktemp('.log')
 
@@ -110,7 +103,6 @@ class GliteWMS(Glite):
 			fp = os.fdopen(fd, 'w')
 			fp.write(data)
 			fp.close()
-			# FIXME: error handling
 
 			params = ''
 
@@ -184,13 +176,7 @@ class GliteWMS(Glite):
 		try:
 			fd, jobs = tempfile.mkstemp('.jobids')
 		except AttributeError:	# Python 2.2 has no tempfile.mkstemp
-			while True:
-				jobs = tempfile.mktemp('.jobids')
-				try:
-					fd = os.open(jobs, os.O_WRONLY | os.O_CREAT | os.O_EXCL)
-				except OSError:
-					continue
-				break
+			fd, jobs = utils.mkstemp('.jobids')
 
 		log = tempfile.mktemp('.log')
 
@@ -256,5 +242,3 @@ class GliteWMS(Glite):
 				pass
 
 		return result
-
-

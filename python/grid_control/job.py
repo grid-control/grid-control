@@ -22,7 +22,7 @@ class Job:
 
 	def load(cls, fp):
 		try:
-			data = utils.DictFormat('=', escapeString = True).parse(fp)
+			data = utils.DictFormat(escapeString = True).parse(fp)
 		except:
 			raise ConfigError('Invalid format in %s' % fp.name)
 		job = Job(cls._stateDict[data['status']])
@@ -63,7 +63,7 @@ class Job:
 			data['history_' + str(key)] = value
 		if self.id != None:
 			data['id'] = self.id
-		fp.writelines(utils.DictFormat('=', escapeString = True).format(data))
+		fp.writelines(utils.DictFormat(escapeString = True).format(data))
 
 
 	def set(self, key, value):

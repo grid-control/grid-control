@@ -18,7 +18,7 @@
 
 # >125 - reserved by POSIX
 
-GC_VERSION="$Revision$"
+GC_VERSION="$Revision: 848$"
 
 debug_helper() {
 	return

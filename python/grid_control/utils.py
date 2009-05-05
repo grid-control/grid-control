@@ -1,5 +1,5 @@
 from __future__ import generators
-import sys, os, bisect, popen2, StringIO
+import sys, os, bisect, popen2, StringIO, tarfile
 from grid_control import InstallationError, ConfigError
 
 try:
@@ -11,6 +11,7 @@ except:
 		for item in iterable:
 			yield (i, item)
 			i += 1
+
 
 # Python 2.2 has no tempfile.mkstemp
 def mkstemp(ending):
@@ -24,23 +25,67 @@ def mkstemp(ending):
 	return (fd, fn)
 
 
+def verbosity():
+	return sys.modules['__main__']._verbosity
+
+
+def vprint(text):
+	if verbosity():
+		print text
+
+
+def boolUserInput(text, default):
+	while True:
+		userinput = raw_input('%s %s: ' % (text, ('[no]', '[yes]')[default]))
+		if userinput == '':
+			return default
+		if userinput.lower() in ('yes', 'y', 'true', 'ok'):
+			return True
+		if userinput.lower() in ('no', 'n', 'false'):
+			return False
+		if userinput != 'yes' and userinput != '':
+			return 0
+		print 'Invalid input! Answer with "yes" or "no"'
+	
+
 def deprecated(text):
 	print open(atRoot('share', 'fail.txt'), 'r').read()
 	print("[DEPRECATED] %s" % text)
-	userinput = raw_input('Do you want to continue? [no]: ')
-	if userinput != 'yes':
+	if not boolUserInput('Do you want to continue?', False):
 		sys.exit(0)
 
 
-class VirtualFileObject(StringIO.StringIO):
+def se_copy(source, target, force = True):
+	# kill the runtime on se
+	if force:
+		tool = 'se_copy_force.sh'
+	else:
+		tool = 'se_copy.sh'
+
+	proc = popen2.Popen4('%s %s %s' % (atRoot('share', tool), source, target), True)
+	result = proc.wait()
+	if sys.modules['__main__']._verbosity or (result != 0):
+		sys.stderr.write(proc.fromchild.read())
+	return result == 0
+
+
+class VirtualFile(StringIO.StringIO):
 	def __init__(self, name, lines):
 		StringIO.StringIO.__init__(self, str.join('', lines))
 		self.name = name
 		self.size = len(self.getvalue())
 
 
+	def getTarInfo(self):
+		info = tarfile.TarInfo(self.name)
+		info.size = self.size
+		return (info, self)
+
+
 class DictFormat(object):
-	def __init__(self, delimeter, escapeString = False, types = True):
+	# escapeString = escape '"', '$'
+	# types = preserve type information
+	def __init__(self, delimeter = '=', escapeString = False, types = True):
 		self.delimeter = delimeter
 		self.types = types
 		self.escapeString = escapeString
@@ -55,7 +100,7 @@ class DictFormat(object):
 			return x
 
 	# Parse dictionary lists
-	def parse(self, lines, lowerCaseKey = True):
+	def parse(self, lines, lowerCaseKey = True, keyRemap = {}):
 		data = {}
 		currentline = ''
 		doAdd = False
@@ -71,14 +116,16 @@ class DictFormat(object):
 				currentline = line
 			try:
 				# split at first occurence of delimeter and strip spaces around
-				key, value = map(lambda x: x.strip(), currentline.split(self.delimeter, 1))
+				key, value = map(str.strip, currentline.split(self.delimeter, 1))
 				if self.escapeString:
 					value = value.strip('"').replace('\\"', '"').replace('\\$', '$')
-				if self.types:
-					value = self.parseType(value)
 				if lowerCaseKey:
 					key = key.lower()
-				data[key] = value
+				if self.types:
+					value = self.parseType(value)
+					key = self.parseType(key)
+				# do .encode('utf-8') ?
+				data[keyRemap.get(key, key)] = value
 			except:
 				# in case no delimeter was found
 				pass
@@ -309,7 +356,10 @@ class ActivityLog:
 			return retVal
 
 		def __getattr__(self, name):
-			return self.__stream.__getattr__(name)
+			try:
+				return self.__stream.__getattr__(name)
+			except:
+				return self.__stream.__getattribute__(name)
 
 	def __init__(self, message):
 		self.saved = (sys.stdout, sys.stderr)
@@ -328,3 +378,60 @@ def activityLog(message, fn, *args, **kwargs):
 		return fn(*args, **kwargs)
 	finally:
 		del activity
+
+
+def DiffLists(oldList, newList, cmpFkt, changedFkt):
+	listAdded = []
+	listMissing = []
+	listChanged = []
+	oldIter = iter(sorted(oldList, cmpFkt))
+	newIter = iter(sorted(newList, cmpFkt))
+	try:
+		new = newIter.next()
+	except:
+		new = None
+	try:
+		old = oldIter.next()
+	except:
+		old = None
+	while True:
+		try:
+			result = cmpFkt(new, old)
+			if result < 0:
+				listAdded.append(new)
+				try:
+					new = newIter.next()
+				except:
+					new = None
+					raise
+			elif result > 0:
+				listMissing.append(old)
+				try:
+					old = oldIter.next()
+				except:
+					old = None
+					raise
+			else:
+				changedFkt(listAdded, listMissing, listChanged, old, new)
+				try:
+					try:
+						new = newIter.next()
+					except:
+						new = None
+						raise
+					old = oldIter.next()
+				except:
+					old = None
+					raise
+		except: #StopIteration:
+			break
+	if new:
+		listAdded.append(new)
+	for new in newIter:
+		listAdded.append(new)
+	if old:
+		listMissing.append(old)
+	for old in oldIter:
+		listMissing.append(old)
+
+	return (listAdded, listMissing, listChanged)

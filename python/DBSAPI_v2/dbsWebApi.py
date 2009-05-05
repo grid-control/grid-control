@@ -45,7 +45,7 @@ class DbsWebApi(DbsApi):
     type is different, it is dictionary.
     """
 
-    path = self._path(dataset)
+    path = get_path(dataset)
     data = self._server._call ({ 'api' : 'listBlocks', 'path' : path }, 'GET')
 
     # Parse the resulting xml output.
@@ -140,7 +140,7 @@ class DbsWebApi(DbsApi):
     May raise an DbsApiException.
 
     """
-    path = self._path(dataset)
+    path = get_path(dataset)
     patternLFN="*"
     # Invoke Server.
     data = self._server._call ({ 'api' : 'listFiles', 'path' : path, 'block_name' : blockName, 'pattern_lfn' : patternLFN }, 'GET')

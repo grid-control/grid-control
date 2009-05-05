@@ -15,6 +15,7 @@ def print_help(*args):
 			"\t-h, --help               Show this helpful message\n"
 			"\t-i, --init               Initialise working directory\n"
 			"\t-v, --verbose            Give detailed information during run\n"
+			"\t-q, --requery            Requery dataset information\n"
 			"\t-c, --continuous         Run in continuous mode\n"
 			"\t-s, --no-submission      Disable job submission\n"
 			"\t-m, --max-retry <args>   Set maximum number of job resubmission attempts\n"
@@ -36,6 +37,7 @@ def print_help(*args):
 			"\t                            -d ALL\n"
 			"\n" % sys.argv[0])
 
+_verbosity = 0
 
 def main(args):
 	global opts, log
@@ -50,16 +52,18 @@ def main(args):
 	parser = optparse.OptionParser(add_help_option=False)
 	parser.add_option("-h", "--help",          action="callback", callback=print_help),
 	parser.add_option("-s", "--no-submission", dest="submission", default=True,  action="store_false")
-	parser.add_option("-v", "--verbose",       dest="verbose",    default=False, action="store_true")
+	parser.add_option("-q", "--requery",       dest="reinit",     default=False, action="store_true")
 	parser.add_option("-i", "--init",          dest="init",       default=False, action="store_true")
 	parser.add_option("-c", "--continuous",    dest="continuous", default=False, action="store_true")
 	parser.add_option("-r", '--report',        dest="report",     default=False, action="store_true")
-	parser.add_option("-R", '--site-report',   dest="reportSite", default=False, action="count")
-	parser.add_option("-T", '--time-report',   dest="reportTime", default=False, action="count")
+	parser.add_option("-v", "--verbose",       dest="verbosity",  default=0,     action="count")
+	parser.add_option("-R", '--site-report',   dest="reportSite", default=0,     action="count")
+	parser.add_option("-T", '--time-report',   dest="reportTime", default=0,     action="count")
 	parser.add_option("-m", '--max-retry',     dest="maxRetry",   default=None,  type="int")
 	parser.add_option("-d", '--delete',        dest="delete",     default=None)
 	parser.add_option("-S", '--seed',          dest="seed",       default=None)
 	(opts, args) = parser.parse_args()
+	sys.modules['__main__']._verbosity = opts.verbosity
 
 	# we need exactly one positional argument (config file)
 	if len(args) != 1:
@@ -94,7 +98,7 @@ def main(args):
 
 		# Initialise application module
 		module = config.get('global', 'module')
-		module = Module.open(module, config, opts.init)
+		module = Module.open(module, config, opts.init, opts.reinit)
 		if opts.seed:
 			module.setSeed(opts.seed.lstrip('S'))
 
@@ -147,9 +151,8 @@ def main(args):
 			timeout = 60
 
 			# Check free disk space
-			if int(os.popen("df -m /home | tail -1").readline().split()[2]) < 10:
-				print "Not enough space left in working directory"
-				break
+			if int(os.popen("df -m %s" % workdir).readlines()[1].split()[2]) < 10:
+				raise RuntimeError("Not enough space left in working directory")
 
 			# retrieve finished jobs
 			if jobs.retrieve(wms):

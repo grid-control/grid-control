@@ -1,5 +1,5 @@
 from __future__ import generators
-import os, re, fnmatch, random
+import os, re, fnmatch, random, utils
 from time import time, localtime, strftime
 from grid_control import SortedList, ConfigError, Job, UserError, Report
 
@@ -25,8 +25,13 @@ class JobDB:
 		self.done = SortedList()
 		self.ok = SortedList()
 
+		maxJobs = module.getMaxJobs()
 		if nJobs == -1:
-			nJobs = module.getMaxJobs()
+			nJobs = maxJobs
+		if nJobs > maxJobs:
+			print "Maximum number of jobs given as %d was truncated to %d" % (nJobs, maxJobs)
+			nJobs = maxJobs
+			
 		if nJobs == None:
 			raise
 
@@ -176,6 +181,7 @@ class JobDB:
 
 		try:
 			wms.bulkSubmissionBegin()
+#			self.module.onJobSubmit(job, id)
 			for id in ids:
 				try:
 					job = self._jobs[id]
@@ -250,15 +256,13 @@ class JobDB:
 		Report(jobs, self._jobs).details()
 		
 		if not len(jobs) == 0:
-			userinput = raw_input('Do you really want to delete these jobs? [yes]: ')
-			if userinput != 'yes' and userinput != '':
+			if not utils.boolUserInput('Do you really want to delete these jobs?', True):
 				return 0
 
 			if wms.cancelJobs(wmsIds):
 				self.mark_cancelled(jobs)
 			else:
 				print "\nThere was a problem with deleting your jobs!"
-				userinput = raw_input('Do you want to do a forced delete? [yes]: ')
-				if userinput != 'yes' and userinput != '':
+				if not utils.boolUserInput('Do you want to do a forced delete?', True):
 					return 0
 				self.mark_cancelled(jobs)

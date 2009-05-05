@@ -165,12 +165,11 @@ class LSF(WMS):
 		if not len(ids):
 			return []
 
-		try:
-			outPath = os.path.join(self._outputPath, 'tmp')
-			if not os.path.exists(outPath):
-				raise RuntimeError("Temporary path '%s' with job output could not be found." % outPath)
+		outPath = os.path.join(self._outputPath, 'tmp')
+		if not os.path.exists(outPath):
+			raise RuntimeError("Temporary path '%s' with job output could not be found." % outPath)
 
-			
+		try:
 			fd, jobs = tempfile.mkstemp('.jobids','',outPath)
 		except AttributeError:	# Python 2.2 has no tempfile.mkstemp
 			while True:
@@ -228,13 +227,7 @@ class LSF(WMS):
 		try:
 			fd, jobs = tempfile.mkstemp('.jobids')
 		except AttributeError:	# Python 2.2 has no tempfile.mkstemp
-			while True:
-				jobs = tempfile.mktemp('.jobids')
-				try:
-					fd = os.open(jobs, os.O_WRONLY | os.O_CREAT | os.O_EXCL)
-				except OSError:
-					continue
-				break
+			fd, jobs = utils.mkstemp('.jobids')
 
 		log = tempfile.mktemp('.log')
 

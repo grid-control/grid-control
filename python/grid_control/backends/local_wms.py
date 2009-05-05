@@ -4,7 +4,6 @@ from grid_control import ConfigError, Job, utils
 from wms import WMS
 
 class LocalWMS(WMS):
-
 	def __init__(self, config, module, init):
 		WMS.__init__(self, config, module, 'local', init)
 
@@ -16,11 +15,11 @@ class LocalWMS(WMS):
 
 
 	def getSubmitArguments(self, id, env_vars, sandbox):
-		raise RuntimeError('getSubmitArguments is abstract')
+		raise AbstractError
 
 
 	def parseSubmitOutput(self, data):
-		raise RuntimeError('parseSubmitOutput is abstract')
+		raise AbstractError
 
 
 	def submitJob(self, id, job):
@@ -150,7 +149,7 @@ class LocalWMS(WMS):
 			return False
 
 		# Wait for jobs to finish
-		time.sleep(1)
+		time.sleep(5)
 		for wmsId in wmsIds:
 			path = self.getSandbox(wmsId)
 			if path == None:

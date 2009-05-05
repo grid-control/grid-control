@@ -2,8 +2,8 @@ import os.path
 from grid_control import Module
 
 class UserMod(Module):
-	def __init__(self, config, init):
-		Module.__init__(self, config, init)
+	def __init__(self, config, init, resync):
+		Module.__init__(self, config, init, resync)
 		self._executable = config.getPath('UserMod', 'executable')
 		self._arguments = config.get('UserMod', 'arguments')
 

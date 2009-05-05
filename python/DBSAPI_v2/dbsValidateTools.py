@@ -25,6 +25,12 @@ def isIntType(inObj) :
      return True
   return False
 
+def isFloatType(inObj) :
+  """ Type Checking for String Type """
+  if type(inObj) ==  type(float(1.1)):
+     return True
+  return False
+
 def isStringType(inObj) :
   """ Type Checking for String Type """
   if type(inObj) ==  type(""):
