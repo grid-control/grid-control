@@ -90,9 +90,9 @@ class GridWMS(WMS):
 			elif type == self.OTHER:
 				result.append('other.GlueHostNetworkAdapterOutboundIP')
 			elif type == self.STORAGE:
-				return self.storageReq(arg)
+				result.append(self.storageReq(arg))
 			elif type == self.SITES:
-				return self.sitesReq(arg)
+				result.append(self.sitesReq(arg))
 			else:
 				raise RuntimeError('unknown requirement type %d' % type)
 		return str.join(' && ', result)

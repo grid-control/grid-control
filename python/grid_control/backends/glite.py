@@ -102,11 +102,7 @@ class Glite(GridWMS):
 
 
 	def submitJob(self, id, job):
-		try:
-			fd, jdl = tempfile.mkstemp('.jdl')
-		except AttributeError:	# Python 2.2 has no tempfile.mkstemp
-			fd, jdl = utils.mkstemp('.jdl')
-
+		fd, jdl = tempfile.mkstemp('.jdl')
 		log = tempfile.mktemp('.log')
 
 		try:
@@ -173,11 +169,7 @@ class Glite(GridWMS):
 		if not len(ids):
 			return []
 
-		try:
-			fd, jobs = tempfile.mkstemp('.jobids')
-		except AttributeError:	# Python 2.2 has no tempfile.mkstemp
-			fd, jobs = utils.mkstemp('.jobids')
-
+		fd, jobs = tempfile.mkstemp('.jobids')
 		log = tempfile.mktemp('.log')
 
 		result = []
@@ -239,11 +231,7 @@ class Glite(GridWMS):
 		except IOError:
 			raise RuntimeError("Temporary path '%s' could not be created." % tmpPath)
 
-		try:
-			fd, jobs = tempfile.mkstemp('.jobids')
-		except AttributeError:	# Python 2.2 has no tempfile.mkstemp
-			fd, jobs = utils.mkstemp('.jobids')
-
+		fd, jobs = tempfile.mkstemp('.jobids')
 		log = tempfile.mktemp('.log')
 
 		result = []
@@ -305,11 +293,7 @@ class Glite(GridWMS):
 		if not len(ids):
 			return True
 
-		try:
-			fd, jobs = tempfile.mkstemp('.jobids')
-		except AttributeError:	# Python 2.2 has no tempfile.mkstemp
-			fd, jobs = utils.mkstemp('.jobids')
-
+		fd, jobs = tempfile.mkstemp('.jobids')
 		log = tempfile.mktemp('.log')
 
 		result = []

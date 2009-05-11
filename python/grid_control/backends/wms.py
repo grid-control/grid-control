@@ -1,7 +1,7 @@
 # Generic base class for workload management systems
 
 import sys, os, time, shutil, tarfile
-from grid_control import AbstractObject, ConfigError, RuntimeError, utils, enumerate, proxy
+from grid_control import AbstractObject, ConfigError, RuntimeError, utils, proxy
 
 class WMS(AbstractObject):
 	INLINE_TAR_LIMIT = 256 * 1024
