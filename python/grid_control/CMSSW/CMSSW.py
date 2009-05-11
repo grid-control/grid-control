@@ -1,5 +1,4 @@
-import os, copy, string, re, sys
-from fnmatch import fnmatch
+import os, copy, string, re, sys, tarfile
 from xml.dom import minidom
 from grid_control import ConfigError, Module, WMS, utils
 from provider_base import DataProvider
@@ -66,6 +65,12 @@ class CMSSW(Module):
 			for key in ['SCRAM_PROJECTNAME', 'SCRAM_PROJECTVERSION']:
 				if not self.scramEnv.has_key(key):
 					raise ConfigError("Installed program in project area can't be recognized.")
+
+			try:
+				fp = open(os.path.join(self.projectArea, '.SCRAM', self.scramArch, 'Environment'), 'r')
+				self.scramEnv.update(utils.DictFormat().parse(fp, lowerCaseKey = False))
+			except:
+				print "Project area file .SCRAM/%s/Environment cannot be parsed!" % self.scramArch
 		else:
 			self.scramEnv = {
 				'SCRAM_PROJECTNAME': scramProject[0],
@@ -90,31 +95,8 @@ class CMSSW(Module):
 
 
 	def _initTask(self, config):
-		# function to walk directory in project area
-		def walk(dir):
-			for file in os.listdir(os.path.join(self.projectArea, dir)):
-				if len(dir):
-					name = os.path.join(dir, file)
-				else:
-					name = file
-				for match in self.pattern:
-					neg = match[0] == '-'
-					if neg: match = match[1:]
-					if fnmatch(name, match):
-						break
-				else:
-					if os.path.isdir(os.path.join(self.projectArea, name)):
-						walk(name)
-					continue
-
-				if not neg:
-					files.append(name)
-
 		if len(self.projectArea):
-			# walk project area subdirectories and find files
-			files = []
-			walk('')
-			utils.genTarball(os.path.join(self.workDir, 'runtime.tar.gz'), self.projectArea, files)
+			utils.genTarball(os.path.join(self.workDir, 'runtime.tar.gz'), self.projectArea, self.pattern)
 
 			if self.seRuntime:
 				print 'Copy CMSSW runtime to SE',
@@ -183,6 +165,7 @@ class CMSSW(Module):
 	def getTaskConfig(self):
 		data = Module.getTaskConfig(self)
 		data['CMSSW_CONFIG'] = os.path.basename(self.configFile)
+		data['CMSSW_RELEASE_BASE_OLD'] = self.scramEnv['RELEASETOP']
 		data['SCRAM_VERSION'] = self.scramVersion
 		data['SCRAM_ARCH'] = self.scramArch
 		data['SCRAM_PROJECTVERSION'] = self.scramEnv['SCRAM_PROJECTVERSION']

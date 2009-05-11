@@ -22,7 +22,7 @@ class DBSApiv2(DataProvider):
 
 		self.args = {}
 		self.args['url']     = "http://cmsdbsprod.cern.ch/cms_dbs_prod_global/servlet/DBSServlet"
-		self.args['version'] = "DBS_1_0_7"
+		self.args['version'] = "DBS_2_0_6"
 		self.args['level']   = "CRITICAL"
 
 

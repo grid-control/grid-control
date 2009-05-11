@@ -1,5 +1,5 @@
 import copy
-from grid_control import Job, RuntimeError, utils, enumerate, SortedList
+from grid_control import Job, RuntimeError, utils, SortedList
 
 class Report:
 	def __init__(self, jobs, allJobs):

@@ -51,8 +51,7 @@ class DataProvider(AbstractObject):
 			if self._datasetExpr != None:
 				log = utils.ActivityLog('Retrieving %s' % self._datasetExpr)
 			self._cache = self.getBlocksInternal()
-			# Validation:
-#			log = utils.ActivityLog('Validating %s' % self._datasetExpr)
+			# Validation & Naming:
 			for block in self._cache:
 				if self._datasetNick:
 					block[DataProvider.Nickname] = self._datasetNick

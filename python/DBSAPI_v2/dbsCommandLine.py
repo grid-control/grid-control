@@ -134,10 +134,10 @@ class showProgress( threading.Thread ):
 	def __init__(self):
 		threading.Thread.__init__(self)
 		self.doIt = 1
-		self.notwril=False
+		self.twril=True
 
 	def run ( self ):
-		if self.notwril:
+		if not self.twril:
 			return
 		sys.stdout.write('Processing ... ')
 		chars = ('|', '/', '-', '\\')
@@ -147,7 +147,7 @@ class showProgress( threading.Thread ):
 				sys.stdout.flush()
 				time.sleep(0.1)
 	def stop(self):
-		if self.notwril:
+		if not self.twril:
 			return
 		if self.doIt == 1: print ""
 		self.doIt = 0
@@ -706,8 +706,11 @@ class DbsOptionParser(optparse.OptionParser):
       self.add_option("--doc", action="store_true", default=False, dest="doc",
            help="Generates a detailed documentation for reference, overrides all other cmdline options (use --wiki_help to produces help document in wiki format [dbs --doc --wiki_help])")
 
-      self.add_option("--notwril", action="store_true", default=False, dest="notwril",
-           help="If provided, tool will not show 'Progressing...' Twril on screen (can be useful when redirecting output to files)")
+      self.add_option("--twril", action="store_true", default=False, dest="twril",
+           help="If provided, tool will show 'Progressing...' Twril on screen (can be useful when running large queries)")
+
+      self.add_option("--noheader", action="store_true", default=False, dest="noheader",
+           help="If provided, tool will NOT display the header information in the result of query (Useful for scripted quries)")
 
       ## Always keep this as the last option in the list
       self.add_option("-c","--command", action="store", type="string", default="notspecified", dest="command",
@@ -807,7 +810,7 @@ class ApiDispatcher:
     #See if Twril needs to be ignored
     if dbsAvailable:
         self.api = DbsApi(opts.__dict__)
-        self.printGREEN( "Using DBS instance at: %s" %self.optdict.get('url', self.api.url()))
+        if not self.optdict['noheader'] : self.printGREEN( "Using DBS instance at: %s" %self.optdict.get('url', self.api.url()))
         self.optdict['url']=self.api.url()
 
   def getApi(self):
@@ -854,7 +857,7 @@ class ApiDispatcher:
 	del(opts.__dict__['alias'])
 
     self.makeApi()
-    self.progress.notwril=self.optdict['notwril']
+    self.progress.twril=self.optdict['twril']
 
     if apiCall in ('', 'notspecified') and self.optdict.has_key('want_help'):
         print_help(self)
@@ -1963,6 +1966,10 @@ class ApiDispatcher:
 
     if self.optdict.has_key('quiet'):
                 quiet=self.optdict.get('quiet')
+   
+    noheader=False 
+    if self.optdict['noheader']:
+		noheader=True
 
     if self.optdict.get('xml'):
 	print data
@@ -2049,8 +2056,9 @@ class ApiDispatcher:
 		if name == 'row':
 			
 			if self.first_time_result:
-				print "-------------------------------------------------------"
-				print self.title+"\n"
+				if not noheader:
+					print "-------------------------------------------------------"
+					print self.title+"\n"
 				self.first_time_result=0
 			print self.printme
                         self.printme=""

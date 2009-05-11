@@ -1,5 +1,5 @@
 import re
-from grid_control import RuntimeError, utils, enumerate, UserError
+from grid_control import RuntimeError, utils, UserError
 from time import time
 
 class Job:

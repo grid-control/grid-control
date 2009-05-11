@@ -1,29 +1,7 @@
 from __future__ import generators
 import sys, os, bisect, popen2, StringIO, tarfile
+from fnmatch import fnmatch
 from grid_control import InstallationError, ConfigError
-
-try:
-	enumerate = enumerate
-except:
-	# stupid python 2.2 doesn't have a builtin enumerator
-	def enumerate(iterable):
-		i = 0
-		for item in iterable:
-			yield (i, item)
-			i += 1
-
-
-# Python 2.2 has no tempfile.mkstemp
-def mkstemp(ending):
-	while True:
-		fn = tempfile.mktemp(ending)
-		try:
-			fd = os.open(jdl, os.O_WRONLY | os.O_CREAT | os.O_EXCL)
-		except OSError:
-			continue
-		break
-	return (fd, fn)
-
 
 def verbosity():
 	return sys.modules['__main__']._verbosity
@@ -194,23 +172,34 @@ def parseTime(usertime):
 	return reduce(lambda x, y: x * 60 + y, tmp)
 
 
-def genTarball(outFile, dir, inFiles):
-	tarExec = searchPathFind('tar')
+def genTarball(outFile, dir, pattern):
+	def walk(tar, root, pattern, dir):
+		if len(dir) > 50:
+			msg = dir[:15] + '...' + dir[len(dir)-32:]
+		else:
+			msg = dir
+		activity = ActivityLog('Generating tarball: %s' % msg)
+		for file in os.listdir(os.path.join(root, dir)):
+			if len(dir):
+				name = os.path.join(dir, file)
+			else:
+				name = file
+			for match in pattern:
+				neg = match[0] == '-'
+				if neg: match = match[1:]
+				if fnmatch(name, match):
+					break
+			else:
+				if os.path.isdir(os.path.join(root, name)):
+					walk(tar, root, pattern, name)
+				continue
+			if not neg:
+				tar.add(os.path.join(root, name), name)
+		del activity
 
-	cmd = "%s -C %s -f %s -cz %s" % \
-	      (tarExec, shellEscape(dir), shellEscape(outFile),
-	       str.join(' ', map(shellEscape, inFiles)))
-
-	activity = ActivityLog('generating tarball')
-
-	proc = popen2.Popen3(cmd, True)
-	msg = str.join('', proc.fromchild.readlines())
-	retCode = proc.wait()
-
-	del activity
-
-	if retCode != 0:
-		raise InstallationError("Error creating tar file: %s" % msg)
+	tar = tarfile.open(outFile, 'w:gz')
+	walk(tar, dir, pattern, '')
+	tar.close()
 
 
 def parseShellDict(fp):

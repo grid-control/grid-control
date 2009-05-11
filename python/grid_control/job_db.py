@@ -117,6 +117,8 @@ class JobDB:
 			print "(error code: %d - %s)" % (job.get('retcode'), job.get('dest'))
 		elif state == Job.QUEUED:
 			print "(%s)" % job.get('dest')
+		elif state == Job.WAITING:
+			print '(%s)' % job.get('reason')
 		elif state == Job.SUCCESS:
 			runtime = job.get('runtime')
 			print "(runtime %dh %0.2dmin %0.2dsec)" % (runtime / 60 / 60, (runtime / 60) % 60, runtime % 60)
