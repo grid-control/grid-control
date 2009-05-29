@@ -119,9 +119,8 @@ class GliteWMS(Glite):
 			                        utils.shellEscape(jdl)), True)
 
 			id = None
-
-			for line in proc.fromchild.readlines():
-				line = line.strip()
+			lines = proc.fromchild.readlines()
+			for line in map(str.strip, lines):
 				if line.startswith('http'):
 					id = line
 			retCode = proc.wait()
@@ -135,6 +134,10 @@ class GliteWMS(Glite):
 				if os.path.exists(log):
 					if open(log, 'r').read().find("<ErrorCode>1228</ErrorCode>") != -1:
 						rberr = True;
+				else:
+					print >> sys.stderr, "No logfile to display!"
+					print >> sys.stderr, str.join('\n', lines)
+					print >> sys.stderr, open(jdl, 'r').read()
 				if rberr:
 					print >> sys.stderr, "RB is overloaded!"
 					return id

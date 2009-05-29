@@ -25,13 +25,17 @@ class JobDB:
 		self.done = SortedList()
 		self.ok = SortedList()
 
-		maxJobs = module.getMaxJobs()
-		if nJobs == -1:
-			nJobs = maxJobs
-		if nJobs > maxJobs:
-			print "Maximum number of jobs given as %d was truncated to %d" % (nJobs, maxJobs)
-			nJobs = maxJobs
-			
+		if nJobs < 0:
+			nJobs = module.getMaxJobs()
+		else:
+			try:
+				maxJobs = module.getMaxJobs()
+				if nJobs > maxJobs:
+					print "Maximum number of jobs given as %d was truncated to %d" % (nJobs, maxJobs)
+					nJobs = maxJobs
+			except:
+				pass
+
 		if nJobs == None:
 			raise
 

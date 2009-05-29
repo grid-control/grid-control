@@ -25,12 +25,12 @@ class Module(AbstractObject):
 		self.seLZLowerLimit = config.getInt('storage', 'landing zone space left', 1)
 
 		# Storage setup
-		self.sePath = config.get('storage', 'se path')
+		self.sePath = config.get('storage', 'se path', '')
 		self.seMinSize = config.getInt('storage', 'se min size', -1)
 
 		self.seInputFiles = config.get('storage', 'se input files', '').split()
 		self.seInputPattern = config.get('storage', 'se input pattern', '__X__')
-		self.seOutputFiles = config.get('storage', 'se output files').split()
+		self.seOutputFiles = config.get('storage', 'se output files', '').split()
 		self.seOutputPattern = config.get('storage', 'se output pattern', 'job___MY_JOB_____NICK_____X__')
 
 		self.taskID = None
