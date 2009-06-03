@@ -328,13 +328,13 @@ url_copy_tool() {
 	case "$1" in
 		"gsiftp://"*)	;;
 		"file://"*)		;;
-		"srm://"*)		echo "srmcp -2 -streams_num=1" && return;;
+		"srm://"*)		echo "srmcp -2 -debug=true -streams_num=1" && return;;
 		*)					echo "Unsupported URL: $1" >&2 && fail 106;;
 	esac
 	case "$2" in
 		"gsiftp://"*)	;;
 		"file://"*)		;;
-		"srm://"*)		echo "srmcp -2 -streams_num=1" && return;;
+		"srm://"*)		echo "srmcp -2 -debug=true -streams_num=1" && return;;
 		*)					echo "Unsupported URL: $1" >&2 && fail 106;;
 	esac
 	echo $TOOL
@@ -359,7 +359,6 @@ url_copy() {
 	debug_helper $FUNCNAME $LINENO
 	#checkbin "globus-url-copy" || fail 103
 	echo "Copy $3 from $1 to $2"
-	BADCOUNT=0
 	case "$1" in
 		"gsiftp://"*)
 			# copy from SE to WN
@@ -403,11 +402,15 @@ url_copy() {
 			;;
 	esac
 
+	BADCOUNT=0
 	for file in $SOURCE_FILES; do
 		[ -d "$file" ] && continue
 		SOURCE_FN="`echo ${SOURCE_PATTERN:-__X__} | var_replacer $file`"
 		TARGET_FN="`echo ${TARGET_PATTERN:-__X__} | var_replacer $file`"
-		url_copy_single "$1/$SOURCE_FN" "$2/$TARGET_FN" || BADCOUNT=$[$BADCOUNT+1]
+		url_copy_single "$1/$SOURCE_FN" "$2/$TARGET_FN"
+		RESULT=$?
+		echo "url_copy_single \"$1/$SOURCE_FN\" \"$2/$TARGET_FN\" returned with $RESULT"
+		[ $RESULT != 0 ] && BADCOUNT=$[$BADCOUNT+1]
 	done
 	[ $BADCOUNT -ne 0 ] && echo "$BADCOUNT errors occurred during SE access" && fail 106
 }
