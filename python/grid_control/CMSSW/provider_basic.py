@@ -6,8 +6,8 @@ from provider_base import DataProvider
 # Provides information about a single file
 # required format: /local/path/to/file|events[@SE1,SE2]
 class FileProvider(DataProvider):
-	def __init__(self, datasetExpr, datasetNick, datasetID = 1):
-		DataProvider.__init__(self, datasetExpr, datasetNick, datasetID)
+	def __init__(self, config, datasetExpr, datasetNick, datasetID = 1):
+		DataProvider.__init__(self, config, datasetExpr, datasetNick, datasetID)
 
 		tmp = datasetExpr.split('@')
 		if len(tmp) == 1:

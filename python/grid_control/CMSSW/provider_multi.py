@@ -4,9 +4,9 @@ from grid_control import AbstractObject, RuntimeError, utils, ConfigError, Datas
 from provider_base import DataProvider
 
 class DataMultiplexer(DataProvider):
-	def __init__(self, datasetExpr, dbsapi, datasetID = None):
+	def __init__(self, config, datasetExpr, dbsapi, datasetID = None):
 		# None, None = Don't override NickName and ID
-		DataProvider.__init__(self, datasetExpr, None, None)
+		DataProvider.__init__(self, config, datasetExpr, None, None)
 		self.subprovider = []
 
 		exprList = datasetExpr.split('\n')

@@ -26,8 +26,6 @@ class CMSSW(Module):
 		self.configFile = config.getPath('CMSSW', 'config file')
 
 		self.dataset = config.get('CMSSW', 'dataset', '').strip()
-		self.dbsapi = config.get('CMSSW', 'dbsapi', 'DBSApiv2')
-
 		if self.dataset == '':
 			self.dataset = None
 			self.eventsPerJob = config.getInt('CMSSW', 'events per job', 0)
@@ -89,7 +87,7 @@ class CMSSW(Module):
 			self.datasplitter = DataSplitter.loadState(self.workDir)
 			if resync:
 				old = DataProvider.loadState(self.workDir)
-				new = DataProvider.create(self.dataset, self.dbsapi)
+				new = DataProvider.create(config)
 				self.datasplitter.resyncMapping(self.workDir, old.getBlocks(), new.getBlocks())
 				#TODO: new.saveState(self.workDir)
 
@@ -111,7 +109,7 @@ class CMSSW(Module):
 
 		# find and split datasets
 		if self.dataset != None:
-			self.dataprovider = DataProvider.create(self.dataset, self.dbsapi)
+			self.dataprovider = DataProvider.create(config)
 			self.dataprovider.saveState(self.workDir)
 			if utils.verbosity() > 0:
 				self.dataprovider.printDataset()
@@ -178,9 +176,10 @@ class CMSSW(Module):
 	# Get job dependent environment variables
 	def getJobConfig(self, job):
 		data = Module.getJobConfig(self, job)
-		dbsinfo = {}
-		if self.datasplitter:
-			dbsinfo = self.datasplitter.getSplitInfo(job)
+		if not self.datasplitter:
+			return data
+
+		dbsinfo = self.datasplitter.getSplitInfo(job)
 		data['DATASETID'] = dbsinfo.get(DataSplitter.DatasetID, None)
 		data['DATASETPATH'] = dbsinfo.get(DataSplitter.Dataset, None)
 		data['DATASETNICK'] = dbsinfo.get(DataSplitter.Nickname, None)

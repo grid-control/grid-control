@@ -7,7 +7,7 @@ class DataProvider(AbstractObject):
 	for id, dataInfo in enumerate(dataInfos):
 		locals()[dataInfo] = id
 
-	def __init__(self, datasetExpr, datasetNick, datasetID):
+	def __init__(self, config, datasetExpr, datasetNick, datasetID):
 		self._datasetExpr = datasetExpr
 		self._datasetNick = datasetNick
 		self._datasetID = datasetID
@@ -36,12 +36,14 @@ class DataProvider(AbstractObject):
 
 
 	# Create a new DataProvider instance
-	def create(dataset, dbsapi):
+	def create(config):
+		dbsapi = config.get('CMSSW', 'dbsapi', 'DBSApiv2')
+		dataset = config.get('CMSSW', 'dataset', '').strip()
 		if "\n" in dataset:
-			return DataProvider.open("DataMultiplexer", dataset, dbsapi)
+			return DataProvider.open("DataMultiplexer", config, dataset, dbsapi)
 		else:
 			(nick, provider, datasetExpr) = DataProvider.parseDatasetExpr(dataset, dbsapi)
-			return DataProvider.open(provider, datasetExpr, nick, 0)
+			return DataProvider.open(provider, config, datasetExpr, nick, 0)
 	create = staticmethod(create)
 
 

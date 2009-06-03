@@ -8,22 +8,34 @@ from DBSAPI_v2.dbsApiException import *
 from DBSAPI_v2.dbsOptions import DbsOptionParser
 
 class DBSApiv2(DataProvider):
-	def __init__(self, datasetExpr, datasetNick, datasetID = 0):
-		DataProvider.__init__(self, datasetExpr, datasetNick, datasetID)
+	def __init__(self, config, datasetExpr, datasetNick, datasetID = 0):
+		DataProvider.__init__(self, config, datasetExpr, datasetNick, datasetID)
+
+		self.args = {}
+		self.args['url']     = config.get('CMSSW', 'dbs instance', "http://cmsdbsprod.cern.ch/cms_dbs_prod_global/servlet/DBSServlet")
+		self.args['version'] = "DBS_2_0_6"
+		self.args['level']   = "CRITICAL"
 
 		datasetExprList = datasetExpr.split("#")
 		if len(datasetExprList) > 2:
-			raise ConfigError('dataset must have the format <dataset>#block or <dataset>')
-		self.datasetPath  = datasetExprList[0]
+			raise ConfigError('dataset must have the format <datasetpath>#block or <datasetpath>')
 		if len(datasetExprList) == 2:
 			self.datasetBlock = datasetExprList[1]
 		else:
 			self.datasetBlock = "all"
 
-		self.args = {}
-		self.args['url']     = "http://cmsdbsprod.cern.ch/cms_dbs_prod_global/servlet/DBSServlet"
-		self.args['version'] = "DBS_2_0_6"
-		self.args['level']   = "CRITICAL"
+		datasetPathList = datasetExprList[0].split("@")
+		if len(datasetPathList) > 2:
+			raise ConfigError('datasetpath must have the format <dataset>@<dbsinstance> or <dataset>')
+		if len(datasetExprList) == 2:
+			self.datasetPath = datasetPathList[0]
+			# Absolute instance ?
+			if 'http://' in datasetPathList[1]:
+				self.args['url'] = datasetPathList[1]
+			else:
+				self.args['url'] = "http://cmsdbsprod.cern.ch/%s/servlet/DBSServlet" % datasetPathList[1]
+		else:
+			self.datasetPath = datasetPathList[0]
 
 
 	def getBlocksInternal(self):
