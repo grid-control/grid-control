@@ -151,7 +151,7 @@ def main(args):
 			timeout = 60
 
 			# Check free disk space
-			if int(os.popen("df -m %s" % workdir).readlines()[1].split()[2]) < 10:
+			if int(os.popen("df -m %s" % workdir).readlines()[-1].split()[2]) < 10:
 				raise RuntimeError("Not enough space left in working directory")
 
 			# retrieve finished jobs
