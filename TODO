@@ -3,7 +3,6 @@ BUGS:
 
 FEATURE REQUESTS:
 ===================================================
-1. do "scram b python" to update search paths
 
 DONE:
 ===================================================
@@ -50,3 +49,5 @@ X. Local disk usage monitoring
 	(break on low disk space)
 X. Use md5 hash to verify transfer between node <-> se
 	(see verify.py)
+X. do "scram b python" to update search paths
+	(fixed by inplace replace in __init__.py files)

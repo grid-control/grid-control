@@ -104,7 +104,8 @@ def main(args):
 
 		# Initialise workload management interface
 		backend = config.get('global', 'backend', 'grid')
-		wms = config.get(backend, 'wms', 'GliteWMS')
+		default_wms = { 'grid': 'GliteWMS', 'local': 'PBS' }
+		wms = config.get(backend, 'wms', default_wms[backend])
 		wms = WMS.open(wms, config, module, opts.init)
 
 		# Initialise proxy

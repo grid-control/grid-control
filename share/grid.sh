@@ -11,7 +11,10 @@ export MY_SEED=$RANDOM$RANDOM
 shift
 
 # Print job informations
-echo -e "JOBID=$MY_JOBID\ngrid-control - Version$GC_VERSION \nrunning on: `hostname -f; uname -a; cat /etc/redhat-release`"
+echo "JOBID=$MY_JOBID"
+echo "grid-control - Version$GC_VERSION"
+echo -e "running on: `hostname -f; uname -a;`\c"
+[ -f /etc/redhat-release ] && cat /etc/redhat-release && echo
 echo "Job $MY_JOBID started - `date`"
 export
 echo "==========================="

@@ -47,6 +47,9 @@ elif [ -z "$VO_CMS_SW_DIR" -a -d "/afs/cern.ch/cms/sw" ]; then
 elif [ -z "$VO_CMS_SW_DIR" -a -d "/wlcg/sw/cms" ]; then
 	export VO_CMS_SW_DIR="/wlcg/sw/cms"
 	echo "[WLCG-SITE] Using $VO_CMS_SW_DIR"
+elif [ -z "$VO_CMS_SW_DIR" -a -d "$CMSSW_RELEASE_BASE_OLD" ]; then
+	export VO_CMS_SW_DIR="$(cd $CMSSW_RELEASE_BASE_OLD/../../../../; pwd)"
+	echo "[LOCAL-SITE] Using $VO_CMS_SW_DIR"
 fi
 
 checkvar "VO_CMS_SW_DIR"
