@@ -1,5 +1,6 @@
 import sys, os, popen2, tempfile, shutil
 from grid_control import ConfigError, Job, utils
+from wms import WMS
 from local_wms import LocalWMS
 
 class LSF(LocalWMS):
@@ -35,7 +36,7 @@ class LSF(LocalWMS):
 		if len(self._queue):
 			params += ' -q %s' % self._queue
 		# Job time
-		reqs = dict(self.getRequirements())
+		reqs = dict(self.getRequirements(jobNum))
 		if reqs.has_key(WMS.WALLTIME):
 			params += ' -c %d' % ((reqs[WMS.WALLTIME] + 59) / 60)
 		# IO paths
@@ -47,7 +48,7 @@ class LSF(LocalWMS):
 
 	def parseSubmitOutput(self, data):
 		#Job <34020017> is submitted to queue <1nh>.
-		return data.split()[1].strip("<>")
+		return "%s.lsf" % str(data.split()[1].strip("<>"))
 
 
 	def parseStatus(self, status):
@@ -56,7 +57,7 @@ class LSF(LocalWMS):
 			try:
 				tmp = jobline.split()
 				jobinfo = {
-					'id': tmp[0],
+					'id': "%s.lsf" % tmp[0],
 					'user': tmp[1],
 					'status': tmp[2],
 					'queue': tmp[3],

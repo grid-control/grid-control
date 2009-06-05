@@ -55,7 +55,11 @@ class LocalWMS(WMS):
 			utils.shellEscape(utils.atRoot('share', 'local.sh')),
 			self.getArguments(jobNum, sandbox)), True)
 
-		wmsId = self.parseSubmitOutput(proc.fromchild.read())
+		wmsIdText = proc.fromchild.read().strip().strip("\n")
+		try:
+			wmsId = self.parseSubmitOutput(wmsIdText)
+		except:
+			wmsId = None
 		retCode = proc.wait()
 
 		del activity
@@ -64,8 +68,9 @@ class LocalWMS(WMS):
 			print >> sys.stderr, "WARNING: %s failed:" % self.submitExec
 		elif wmsId == None:
 			print >> sys.stderr, "WARNING: %s did not yield job id:" % self.submitExec
+			print >> sys.stderr,  wmsIdText
 
-		if wmsId == '':
+		if (wmsId == '') or (wmsId == None):
 			sys.stderr.write(proc.childerr.read())
 		else:
 			open(os.path.join(sandbox, wmsId), "w")
