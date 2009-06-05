@@ -16,7 +16,7 @@ class WMS(AbstractObject):
 		self.config = config
 		self.module = module
 		self.workDir = config.getPath('global', 'workdir')
-		self._proxy = config.get(backend, 'proxy', 'TrivialProxy')
+		self.proxy = config.get(backend, 'proxy', 'TrivialProxy')
 		self._sites = config.get(backend, 'sites', '').split()
 
 		self._outputPath = os.path.join(self.workDir, 'output')
@@ -146,4 +146,4 @@ class WMS(AbstractObject):
 
 
 	def getProxy(self):
-		return proxy.Proxy.open(self._proxy)
+		return proxy.Proxy.open(self.proxy)
