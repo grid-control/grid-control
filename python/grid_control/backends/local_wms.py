@@ -22,6 +22,9 @@ class LocalWMS(WMS):
 	def parseSubmitOutput(self, data):
 		raise AbstractError
 
+	def unknownID(self):
+		raise AbstracError
+
 
 	def submitJob(self, jobNum, jobObj):
 		# TODO: fancy job name function
@@ -103,7 +106,7 @@ class LocalWMS(WMS):
 
 		if retCode != 0:
 			for line in proc.childerr.readlines():
-				if not "Unknown Job Id" in line:
+				if not self.unknownID() in line:
 					sys.stderr.write(line)
 
 		return result
@@ -132,11 +135,14 @@ class LocalWMS(WMS):
 
 			# Cleanup sandbox
 			for file in os.listdir(path):
-				if not file in self.sandboxOut:
-					try:
-						os.unlink(os.path.join(path, file))
-					except:
-						pass
+				if file in self.sandboxOut:
+					continue
+				if file == wmsId:
+					continue
+				try:
+					os.unlink(os.path.join(path, file))
+				except:
+					pass
 			result.append(path)
 
 		del activity
@@ -159,7 +165,7 @@ class LocalWMS(WMS):
 
 		if retCode != 0:
 			for line in proc.childerr.readlines():
-				if not "Unknown Job Id" in line:
+				if not self.unknownID() in line:
 					sys.stderr.write(line)
 
 		del activity

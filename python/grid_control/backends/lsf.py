@@ -4,13 +4,12 @@ from local_wms import LocalWMS
 
 class LSF(LocalWMS):
 	_statusMap = {
-		'PEND':	Job.QUEUED,
-		'RUN':	Job.RUNNING,
-		'aborted':	Job.ABORTED,
-		'cancelled':	Job.CANCELLED,
-		'EXIT':	Job.FAILED,
-		'DONE':		Job.DONE,
-		'cleared':	Job.SUCCESS
+		'PEND':	 Job.QUEUED,  'PSUSP': Job.WAITING,
+		'USUSP': Job.WAITING, 'SSUSP': Job.WAITING,
+		'RUN':   Job.RUNNING, 'DONE':  Job.DONE,
+		'WAIT':  Job.WAITING, 'EXIT':  Job.FAILED,
+		# Better options?
+		'UNKWN':  Job.FAILED, 'ZOMBI':  Job.FAILED,
 	}
 
 	def __init__(self, config, module, init):
@@ -22,6 +21,8 @@ class LSF(LocalWMS):
 
 		self._queue = config.get('lsf', 'queue', '')
 
+	def unknownID(self):
+		return "is not found"
 
 	def getArguments(self, jobNum, sandbox):
 		return sandbox
@@ -34,8 +35,9 @@ class LSF(LocalWMS):
 		if len(self._queue):
 			params += ' -q %s' % self._queue
 		# Job time
-		if len(self._queue):
-			params += ' -c %d' % 20000
+		reqs = dict(self.getRequirements())
+		if reqs.has_key(WMS.WALLTIME):
+			params += ' -c %d' % ((reqs[WMS.WALLTIME] + 59) / 60)
 		# IO paths
 		params += ' -o %s -e %s' % (
 			utils.shellEscape(os.path.join(sandbox, 'stdout.txt')),
@@ -44,30 +46,37 @@ class LSF(LocalWMS):
 
 
 	def parseSubmitOutput(self, data):
-		return data.strip()
+		#Job <34020017> is submitted to queue <1nh>.
+		return data.split()[1].strip("<>")
 
 
 	def parseStatus(self, status):
-		raise RuntimeError('parseStatus not yet implemented!')
 		result = []
-		for section in status.replace("\n\t", "").split("\n\n"):
-			lines = section.split('\n')
+		for jobline in status[1:]:
 			try:
-				jobinfo = DictFormat(' = ').parse(lines[1:])
-				jobinfo['id'] = lines[0].split(":")[1].strip()
+				tmp = jobline.split()
+				jobinfo = {
+					'id': tmp[0],
+					'user': tmp[1],
+					'status': tmp[2],
+					'queue': tmp[3],
+					'from': tmp[4],
+					'dest_host': tmp[5],
+					'job_name': tmp[6],
+					'submit_time': str.join(" ", tmp[7:10]),
+				}
+				if jobinfo['dest_host'] == "-":
+					jobinfo['dest'] = 'N/A'
+				else:
+					jobinfo['dest'] = "%s/%s" % (jobinfo['dest_host'], jobinfo['queue'])
+				result.append(jobinfo)
 			except:
 				continue
-			if jobinfo.has_key('exec_host'):
-				jobinfo['dest'] = jobinfo.get('exec_host') + "." + jobinfo.get('server', '')
-			else:
-				jobinfo['dest'] = 'N/A'
-			jobinfo['status'] = jobinfo.get('job_state')
-			result.append(jobinfo)
 		return result
 
 
 	def getCheckArgument(self, wmsIds):
-		return " -a %s" % str.join(" ", wmsIds)
+		return " -aw %s" % str.join(" ", wmsIds)
 
 
 	def getCancelArgument(self, wmsIds):
