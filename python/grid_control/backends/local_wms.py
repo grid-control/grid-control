@@ -13,38 +13,46 @@ class LocalWMS(WMS):
 	def getJobName(self, taskId, jobId):
 		return taskId[:10] + "." + str(jobId) #.rjust(4, "0")[:4]
 
-
-	def getSubmitArguments(self, id, env_vars, sandbox):
+	def getArguments(self, jobNum, sandbox):
 		raise AbstractError
 
+	def getSubmitArguments(self, jobNum, sandbox):
+		raise AbstractError
 
 	def parseSubmitOutput(self, data):
 		raise AbstractError
 
 
-	def submitJob(self, id, job):
+	def submitJob(self, jobNum, jobObj):
 		# TODO: fancy job name function
 		activity = utils.ActivityLog('submitting jobs')
 
 		try:
-			sandbox = tempfile.mkdtemp("." + str(id), self.module.taskID + ".", self.sandPath)
+			if not os.path.exists(self.sandPath):
+				os.mkdir(self.sandPath)
+			sandbox = tempfile.mkdtemp("." + str(jobNum), self.module.taskID + ".", self.sandPath)
 			for file in self.sandboxIn:
 				shutil.copy(file, sandbox)
-			job.set('sandbox', sandbox)
+			jobObj.set('sandbox', sandbox)
+		except OSError:
+			raise RuntimeError("Sandbox path '%s' is not accessible." % self.sandPath)
 		except IOError:
 			raise RuntimeError("Sandbox '%s' could not be prepared." % sandbox)
 
 		env_vars = {
-			'ARGS': utils.shellEscape("%d %s" % (id, self.module.getJobArguments(job))),
+			'ARGS': utils.shellEscape("%d %s" % (jobNum, self.module.getJobArguments(jobObj))),
 			'SANDBOX': sandbox
 		}
+		env_vars.update(self.module.getJobConfig(jobNum))
 
-		proc = popen2.Popen3("%s %s %s" % (
-			self.submitExec, self.getSubmitArguments(id, env_vars, sandbox),
-			utils.shellEscape(utils.atRoot('share', 'local.sh'))), True)
+		jcfg = open(os.path.join(sandbox, 'jobconfig.sh'), 'w')
+		jcfg.writelines(utils.DictFormat().format(env_vars))
+		proc = popen2.Popen3("%s %s %s %s" % (self.submitExec,
+			self.getSubmitArguments(jobNum, sandbox),
+			utils.shellEscape(utils.atRoot('share', 'local.sh')),
+			self.getArguments(jobNum, sandbox)), True)
 
 		wmsId = self.parseSubmitOutput(proc.fromchild.read())
-		open(os.path.join(sandbox, wmsId), "w")
 		retCode = proc.wait()
 
 		del activity
@@ -55,8 +63,9 @@ class LocalWMS(WMS):
 			print >> sys.stderr, "WARNING: %s did not yield job id:" % self.submitExec
 
 		if wmsId == '':
-			sys.stderr.write(proc.childerr)
-
+			sys.stderr.write(proc.childerr.read())
+		else:
+			open(os.path.join(sandbox, wmsId), "w")
 		return wmsId
 
 
@@ -72,11 +81,13 @@ class LocalWMS(WMS):
 		if not len(wmsIds):
 			return []
 
+		shortWMSIds = map(lambda x: x.split(".")[0], wmsIds)
 		activity = utils.ActivityLog("checking job status")
-		proc = popen2.Popen3("%s %s" % (self.statusExec, self.getCheckArgument(wmsIds)), True)
+		proc = popen2.Popen3("%s %s" % (self.statusExec, self.getCheckArgument(shortWMSIds)), True)
 
 		tmp = {}
-		for data in self.parseStatus(proc.fromchild.readlines()):
+		lines = proc.fromchild.readlines()
+		for data in self.parseStatus(lines):
 			# (job number, status, extra info)
 			tmp[data['id']] = (data['id'], self._statusMap[data['status']], data)
 
@@ -142,23 +153,28 @@ class LocalWMS(WMS):
 
 		activity = utils.ActivityLog("cancelling jobs")
 
-		proc = popen2.Popen3("%s %s" % (self.cancelExec, self.getCancelArgument(wmsIds)), True)
+		shortWMSIds = map(lambda x: x.split(".")[0], wmsIds)
+		proc = popen2.Popen3("%s %s" % (self.cancelExec, self.getCancelArgument(shortWMSIds)), True)
 		retCode = proc.wait()
-		if retCode != 0:
-			print >> sys.stderr, "WARNING: %s failed:" % self.cancelExec
-			return False
 
+		if retCode != 0:
+			for line in proc.childerr.readlines():
+				if not "Unknown Job Id" in line:
+					sys.stderr.write(line)
+
+		del activity
+		activity = utils.ActivityLog("waiting for jobs to finish")
 		# Wait for jobs to finish
 		time.sleep(5)
 		for wmsId in wmsIds:
 			path = self.getSandbox(wmsId)
 			if path == None:
-				raise RuntimeError("Sandbox for wmsId '%s' could not be found" % wmsId)
+				print RuntimeError("Sandbox for wmsId '%s' could not be found" % wmsId)
+				continue
 			try:
-				os.unlink(path)
+				shutil.rmtree(path)
 			except:
 				raise RuntimeError("Sandbox for wmsId '%s' could not be deleted" % wmsId)
-			result.append(path)
 
 		del activity
 		return True
