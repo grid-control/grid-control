@@ -115,7 +115,7 @@ class GridWMS(WMS):
 			'InputSandbox': self.sandboxIn,
 			'OutputSandbox': self.sandboxOut,
 			'_Requirements': self.formatRequirements(self.getRequirements(job)),
-			'VirtualOrganisation': self.config.get('grid', 'vo'),
+			'VirtualOrganisation': self.config.get('grid', 'vo', self.getProxy().getVO()),
 			'RetryCount': 2
 		}
 

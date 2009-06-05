@@ -10,7 +10,7 @@ class VomsProxy(Proxy):
 
 	# Call voms-proxy-info and returns results
 	def _getInfo(self):
-		proc = popen2.Popen3(self._infoExec, True)
+		proc = popen2.Popen3("%s --all" % self._infoExec, True)
 		lines = proc.fromchild.readlines()
 		retCode = proc.wait()
 		if retCode != 0:
@@ -51,3 +51,8 @@ class VomsProxy(Proxy):
 	def getUsername(self):
 		info = self._getInfoCached()
 		return '/CN=' + info['identity'].split('CN=')[1].strip()
+
+
+	def getVO(self):
+		info = self._getInfoCached()
+		return info['vo']
