@@ -15,7 +15,7 @@ class LocalWMS(WMS):
 		for wms, cmd in wmsCmdList:
 			try:
 				utils.searchPathFind(cmd)
-				print "Using batch system: %s" % wms
+				print "Default batch system on this host is: %s" % wms
 				return wms
 			except:
 				pass
