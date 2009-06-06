@@ -54,6 +54,8 @@ class LSF(LocalWMS):
 	def parseStatus(self, status):
 		result = []
 		for jobline in status.split('\n')[1:]:
+			if jobline == '':
+				continue
 			try:
 				tmp = jobline.split()
 				jobinfo = {
