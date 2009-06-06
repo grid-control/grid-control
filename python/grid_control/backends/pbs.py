@@ -63,7 +63,10 @@ class PBS(LocalWMS):
 				jobinfo['status'] = jobinfo.get('job_state')
 				jobinfo['dest'] = 'N/A'
 				if jobinfo.has_key('exec_host'):
-					jobinfo['dest'] = jobinfo.get('exec_host') + "." + jobinfo.get('server', '')
+					jobinfo['dest'] = "%s/%s" % (
+							jobinfo.get('exec_host').replace('/', '.') + "." + jobinfo.get('server', ''),
+							jobinfo.get('queue')
+						)
 			except:
 				print "Error reading job info\n", section
 				raise

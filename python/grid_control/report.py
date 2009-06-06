@@ -54,7 +54,10 @@ class Report:
 				return ('N/A', '', '')
 			host, queue = dest.split('/')
 			host = host.split(':')[0]
-			return (str.join('.', host.split('.')[1:]), host, queue)
+			domain = str.join('.', host.split('.')[1:])
+			if domain == '':
+				domain = 'localhost'
+			return (domain, host, queue)
 			# Example: (gridka.de, wn1.gridka.de, job-queue-long)
 		def incstat(dict, L1, L2, L3, STAT, INFO, INC):
 			dict[L1][L2][L3][STAT][INFO] += INC
