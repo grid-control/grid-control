@@ -24,8 +24,8 @@ class Slurm(LocalWMS):
 		self.statusExec = utils.searchPathFind('job_queue')
 		self.cancelExec = utils.searchPathFind('job_cancel')
 
-		self._queue = config.get('slurm', 'queue', '')
-		self._group = config.get('slurm', 'group', '')
+		self._queue = config.get('local', 'queue', '')
+		self._group = config.get('local', 'group', '')
 
 
 	def getSubmitArguments(self, id, env_vars, sandbox):

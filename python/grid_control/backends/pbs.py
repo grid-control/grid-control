@@ -18,8 +18,8 @@ class PBS(LocalWMS):
 		self.statusExec = utils.searchPathFind('qstat')
 		self.cancelExec = utils.searchPathFind('qdel')
 
-		self._queue = config.get('pbs', 'queue', '')
-		self._group = config.get('pbs', 'group', '')
+		self._queue = config.get('local', 'queue', '')
+		self._group = config.get('local', 'group', '')
 
 	def unknownID(self):
 		return "Unknown Job Id"
@@ -47,23 +47,27 @@ class PBS(LocalWMS):
 
 
 	def parseSubmitOutput(self, data):
+		# 1667161.ekpplusctl.ekpplus.cluster
 		return data.strip()
 
 
 	def parseStatus(self, status):
 		result = []
-		for section in str.join('\n', status).replace("\n\t", "").split("\n\n"):
+		for section in status.replace("\n\t", "").split("\n\n"):
+			if section == '':
+				continue
 			try:
 				lines = section.split('\n')
-				jobinfo = DictFormat(' = ').parse(lines[1:])
+				jobinfo = utils.DictFormat(' = ').parse(lines[1:])
 				jobinfo['id'] = lines[0].split(":")[1].strip()
+				jobinfo['status'] = jobinfo.get('job_state')
 			except:
-				continue
+				print "Error reading job info\n", section
+				raise
 			if jobinfo.has_key('exec_host'):
 				jobinfo['dest'] = jobinfo.get('exec_host') + "." + jobinfo.get('server', '')
 			else:
 				jobinfo['dest'] = 'N/A'
-			jobinfo['status'] = jobinfo.get('job_state')
 			result.append(jobinfo)
 		return result
 

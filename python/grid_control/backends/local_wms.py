@@ -10,6 +10,18 @@ class LocalWMS(WMS):
 		self.sandPath = config.getPath('local', 'sandbox path', os.path.join(self.workDir, 'sandbox'))
 
 
+	def guessWMS():
+		wmsCmdList = [ ('PBS', 'pbs-config'), ('SGE', 'qsub'), ('LSF', 'bsub'), ('SLURM', 'job_slurm'), ('PBS', 'sh') ]
+		for wms, cmd in wmsCmdList:
+			try:
+				utils.searchPathFind(cmd)
+				print "Using batch system: %s" % wms
+				return wms
+			except:
+				pass
+	guessWMS = staticmethod(guessWMS)
+
+
 	def getJobName(self, taskId, jobId):
 		return taskId[:10] + "." + str(jobId) #.rjust(4, "0")[:4]
 
@@ -94,8 +106,8 @@ class LocalWMS(WMS):
 		proc = popen2.Popen3("%s %s" % (self.statusExec, self.getCheckArgument(shortWMSIds)), True)
 
 		tmp = {}
-		lines = proc.fromchild.readlines()
-		for data in self.parseStatus(lines):
+		jobstatusinfo = proc.fromchild.read()
+		for data in self.parseStatus(jobstatusinfo):
 			# (job number, status, extra info)
 			tmp[data['id']] = (data['id'], self._statusMap[data['status']], data)
 

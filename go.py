@@ -104,7 +104,7 @@ def main(args):
 
 		# Initialise workload management interface
 		backend = config.get('global', 'backend', 'grid')
-		default_wms = { 'grid': 'GliteWMS', 'local': 'PBS' }
+		default_wms = { 'grid': 'GliteWMS', 'local': LocalWMS.guessWMS() }
 		wms = config.get(backend, 'wms', default_wms[backend])
 		wms = WMS.open(wms, config, module, opts.init)
 
@@ -152,7 +152,7 @@ def main(args):
 			timeout = 60
 
 			# Check free disk space
-			if int(os.popen("df -m %s" % workdir).readlines()[-1].split()[3]) < 10:
+			if int(os.popen("df -P -m %s" % workdir).readlines()[-1].split()[3]) < 10:
 				raise RuntimeError("Not enough space left in working directory")
 
 			# retrieve finished jobs

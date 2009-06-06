@@ -20,7 +20,7 @@ class LSF(LocalWMS):
 		self.statusExec = utils.searchPathFind('bjobs')
 		self.cancelExec = utils.searchPathFind('bkill')
 
-		self._queue = config.get('lsf', 'queue', '')
+		self._queue = config.get('local', 'queue', '')
 
 	def unknownID(self):
 		return "is not found"
@@ -53,7 +53,7 @@ class LSF(LocalWMS):
 
 	def parseStatus(self, status):
 		result = []
-		for jobline in status[1:]:
+		for jobline in status.split('\n')[1:]:
 			try:
 				tmp = jobline.split()
 				jobinfo = {
@@ -72,7 +72,8 @@ class LSF(LocalWMS):
 					jobinfo['dest'] = "%s/%s" % (jobinfo['dest_host'], jobinfo['queue'])
 				result.append(jobinfo)
 			except:
-				continue
+				print "Error reading job info\n", jobline
+				raise
 		return result
 
 

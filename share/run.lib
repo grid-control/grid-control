@@ -410,7 +410,7 @@ url_copy() {
 		url_copy_single "$1/$SOURCE_FN" "$2/$TARGET_FN"
 		RESULT=$?
 		echo "url_copy_single \"$1/$SOURCE_FN\" \"$2/$TARGET_FN\" returned with $RESULT"
-		[ $RESULT != 0 ] && BADCOUNT=$[$BADCOUNT+1]
+		# [ $RESULT != 0 ] && BADCOUNT=$[$BADCOUNT+1]
 	done
 	[ $BADCOUNT -ne 0 ] && echo "$BADCOUNT errors occurred during SE access" && fail 106
 }
