@@ -115,15 +115,15 @@ class JobDB:
 			new.add(id)
 
 		print "%s - Job %d state changed to %s" % (strftime("%Y-%m-%d %H:%M:%S", localtime()), id, Job.states[state]),
-		if state == Job.SUBMITTED and job.attempt > 1:
+		if (state == Job.SUBMITTED) and (job.attempt > 1):
 			print "(attempt #%s)" % job.attempt
-		elif (job.get('retcode') != None) and (state == Job.FAILED):
+		elif (state == Job.FAILED) and job.get('retcode') and job.get('dest'):
 			print "(error code: %d - %s)" % (job.get('retcode'), job.get('dest'))
-		elif state == Job.QUEUED:
+		elif (state == Job.QUEUED) and job.get('dest'):
 			print "(%s)" % job.get('dest')
-		elif state == Job.WAITING:
+		elif (state == Job.WAITING) and job.get('reason'):
 			print '(%s)' % job.get('reason')
-		elif state == Job.SUCCESS:
+		elif (state == Job.SUCCESS) and job.get('runtime'):
 			runtime = job.get('runtime')
 			print "(runtime %dh %0.2dmin %0.2dsec)" % (runtime / 60 / 60, (runtime / 60) % 60, runtime % 60)
 		else:

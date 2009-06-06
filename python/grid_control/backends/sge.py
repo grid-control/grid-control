@@ -1,14 +1,17 @@
 import sys, os, popen2, tempfile, shutil
+import xml.dom.minidom
 from grid_control import ConfigError, Job, utils
 from local_wms import LocalWMS
 
 class SGE(LocalWMS):
 	_statusMap = {
-		'H': Job.SUBMITTED, 'S': Job.SUBMITTED,
-		'W': Job.WAITING,   'Q': Job.QUEUED,
-		'R': Job.RUNNING,   'C': Job.DONE,
-		'E': Job.DONE,      'T': Job.DONE,
-		'fail':	Job.FAILED, 'success': Job.SUCCESS
+		'qw': Job.QUEUED,
+		'Eqw': Job.WAITING,
+		'h': Job.WAITING,   'w': Job.WAITING,
+		's': Job.QUEUED,    'r': Job.RUNNING,
+		'S': Job.QUEUED,    'R': Job.RUNNING,
+		'T': Job.QUEUED,    't': Job.RUNNING,
+		'd': Job.ABORTED,   'E': Job.DONE,
 	}
 
 	def __init__(self, config, module, init):
@@ -44,32 +47,35 @@ class SGE(LocalWMS):
 
 	def parseSubmitOutput(self, data):
 		# Your job 424992 ("test.sh") has been submitted
-		return data.split()[2]
+		return "%s.sge" % data.split()[2]
 
 
 	def parseStatus(self, status):
 		result = []
-		for section in str.join('\n', status).replace("\n\t", "").split("\n\n"):
-			if section == '':
-				continue
+		dom = xml.dom.minidom.parseString(status)
+		for jobentry in dom.getElementsByTagName('job_list'):
+			jobinfo = {}
 			try:
-				lines = section.split('\n')
-				jobinfo = utils.DictFormat(':').parse(lines[1:])
-				jobinfo['id'] = lines[0].split(":")[1].strip()
-				jobinfo['status'] = jobinfo.get('job_state')
-			except:
-				print "Error reading job info\n", section
-				raise
-			if jobinfo.has_key('exec_host'):
-				jobinfo['dest'] = jobinfo.get('exec_host') + "." + jobinfo.get('server', '')
-			else:
+				for node in jobentry.childNodes:
+					if node.nodeType != xml.dom.minidom.Node.ELEMENT_NODE:
+						continue
+					if node.hasChildNodes():
+						jobinfo[str(node.nodeName)] = str(node.childNodes[0].nodeValue)
+				jobinfo['id'] = "%s.sge" % jobinfo['JB_job_number']
+				jobinfo['status'] = jobinfo['state']
 				jobinfo['dest'] = 'N/A'
+				if jobinfo.has_key('queue_name'):
+					tmp = jobinfo['queue_name'].split("@")
+					jobinfo['dest'] = "%s/%s" % (tmp[1], tmp[0])
+			except:
+				print "Error reading job info\n", jobentry.toxml()
+				raise
 			result.append(jobinfo)
 		return result
 
 
 	def getCheckArgument(self, wmsIds):
-		return " -j %s" % str.join(",", wmsIds)
+		return " -xml"
 
 
 	def getCancelArgument(self, wmsIds):

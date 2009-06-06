@@ -52,7 +52,9 @@ class Report:
 		def getDest(dest):
 			if dest == 'N/A':
 				return ('N/A', '', '')
-			return (str.join('.', dest.split(':')[0].split('.')[1:]), dest.split(':')[0], dest.split('/')[1])
+			host, queue = dest.split('/')
+			host = host.split(':')[0]
+			return (str.join('.', host.split('.')[1:]), host, queue)
 			# Example: (gridka.de, wn1.gridka.de, job-queue-long)
 		def incstat(dict, L1, L2, L3, STAT, INFO, INC):
 			dict[L1][L2][L3][STAT][INFO] += INC

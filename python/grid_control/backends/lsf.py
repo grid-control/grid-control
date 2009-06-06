@@ -67,10 +67,9 @@ class LSF(LocalWMS):
 					'dest_host': tmp[5],
 					'job_name': tmp[6],
 					'submit_time': str.join(" ", tmp[7:10]),
+					'dest': 'N/A',
 				}
-				if jobinfo['dest_host'] == "-":
-					jobinfo['dest'] = 'N/A'
-				else:
+				if jobinfo['dest_host'] != "-":
 					jobinfo['dest'] = "%s/%s" % (jobinfo['dest_host'], jobinfo['queue'])
 				result.append(jobinfo)
 			except:

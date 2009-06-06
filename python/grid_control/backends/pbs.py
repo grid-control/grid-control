@@ -61,13 +61,12 @@ class PBS(LocalWMS):
 				jobinfo = utils.DictFormat(' = ').parse(lines[1:])
 				jobinfo['id'] = lines[0].split(":")[1].strip()
 				jobinfo['status'] = jobinfo.get('job_state')
+				jobinfo['dest'] = 'N/A'
+				if jobinfo.has_key('exec_host'):
+					jobinfo['dest'] = jobinfo.get('exec_host') + "." + jobinfo.get('server', '')
 			except:
 				print "Error reading job info\n", section
 				raise
-			if jobinfo.has_key('exec_host'):
-				jobinfo['dest'] = jobinfo.get('exec_host') + "." + jobinfo.get('server', '')
-			else:
-				jobinfo['dest'] = 'N/A'
 			result.append(jobinfo)
 		return result
 
