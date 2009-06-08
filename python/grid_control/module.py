@@ -2,7 +2,7 @@
 # instantiates named class instead (default is UserMod)
 
 import os, os.path, cStringIO, StringIO, md5, gzip, cPickle, random
-from grid_control import ConfigError, AbstractObject, utils, WMS
+from grid_control import ConfigError, AbstractObject, utils, WMS, Job
 from time import time
 
 class Module(AbstractObject):
@@ -91,7 +91,7 @@ class Module(AbstractObject):
 	# Called on job status update
 	def onJobUpdate(self, jobObj, id, data):
 		if self.evtStatus != '':
-			os.system("%s %d %s" % (self.evtStatus, id, jobObj.id))
+			os.system("%s %d %s %s" % (self.evtStatus, id, jobObj.id, Job.states[jobObj.state]))
 		return None
 
 
