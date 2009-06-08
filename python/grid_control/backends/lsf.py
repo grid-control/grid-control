@@ -79,7 +79,7 @@ class LSF(LocalWMS):
 
 
 	def getCheckArgument(self, wmsIds):
-		return " -aw %s" % str.join(" ", wmsIds)
+		return "-aw %s" % str.join(" ", wmsIds)
 
 
 	def getCancelArgument(self, wmsIds):

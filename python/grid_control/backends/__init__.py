@@ -10,5 +10,6 @@ from lsf	import *
 from pbs	import *
 from pbs_named	import *
 from sge	import *
+from slurm	import *
 
 from dummy import *

@@ -1,21 +1,10 @@
-from __future__ import generators
 import sys, os, popen2, tempfile, shutil
 from grid_control import ConfigError, Job, utils
+from wms import WMS
 from local_wms import LocalWMS
 
-class Slurm(LocalWMS):
-	_statusMap = {
-		'H':	Job.SUBMITTED,
-		'S':	Job.SUBMITTED,
-		'W':	Job.WAITING,
-		'Q':	Job.QUEUED,
-		'R':	Job.RUNNING,
-		'C':	Job.DONE,
-		'E':	Job.DONE,
-		'T':	Job.DONE,
-		'fail':	Job.FAILED,
-		'success':	Job.SUCCESS
-	}
+class SLURM(LocalWMS):
+	_statusMap = { 's': Job.QUEUED, 'r': Job.RUNNING, 'CG': Job.DONE }
 
 	def __init__(self, config, module, init):
 		LocalWMS.__init__(self, config, module, init)
@@ -25,20 +14,30 @@ class Slurm(LocalWMS):
 		self.cancelExec = utils.searchPathFind('job_cancel')
 
 		self._queue = config.get('local', 'queue', '')
-		self._group = config.get('local', 'group', '')
+
+	def unknownID(self):
+		return "not in queue !"
+
+	def getArguments(self, jobNum, sandbox):
+		return sandbox
 
 
-	def getSubmitArguments(self, id, env_vars, sandbox):
+	def getSubmitArguments(self, jobNum, sandbox):
 		# Job name
-		params = ' -N %s' % self.getJobName(self.module.taskID, id)
+		params = ' -J %s' % self.getJobName(self.module.taskID, jobNum)
 		# Job queue
 		if len(self._queue):
-			params += ' -q %s' % self._queue
-		# Job group
-		if len(self._group):
-			params += ' -W group_list=%s' % self._group
-		# Job env
-		params += ' -v ' + str.join(",", map(lambda (x,y): x + "=" + y, env_vars.items()))
+			params += ' -c %s' % self._queue
+		# Job requirements
+		reqs = dict(self.getRequirements(jobNum))
+		if reqs.has_key(WMS.WALLTIME):
+			params += ' -T %d' % ((reqs[WMS.WALLTIME] + 59) / 60)
+		if reqs.has_key(WMS.CPUTIME):
+			params += ' -t %d' % ((reqs[WMS.CPUTIME] + 59) / 60)
+		if reqs.has_key(WMS.MEMORY):
+			params += ' -m %d' % reqs[WMS.MEMORY]
+		# processes
+		params += ' -p 1'
 		# IO paths
 		params += ' -o %s -e %s' % (
 			utils.shellEscape(os.path.join(sandbox, 'stdout.txt')),
@@ -47,48 +46,46 @@ class Slurm(LocalWMS):
 
 
 	def parseSubmitOutput(self, data):
-		return data.strip()
+		# job_submit: Job 121195 has been submitted.
+		return "%s.jms" % data.split()[2]
 
 
 	def parseStatus(self, status):
-		current_job = None
-		key = None
-		value = ""
 		result = []
-		jobinfo = {}
-		status.append("Job Id:")
-
-		for line in status:
-			if "Job Id:" in line:
-				if current_job != None:
-					jobinfo['id'] = current_job
-					if jobinfo.has_key('exec_host'):
-						jobinfo['dest'] = jobinfo.get('exec_host') + "." + jobinfo.get('server', '')
-					else:
-						jobinfo['dest'] = 'N/A'
-					jobinfo['status'] = jobinfo.get('job_state')
-					result.append(jobinfo)
-					jobinfo = {}
-				current_job = line.split(":")[1].strip()
-
-			# lines beginning with tab are part of the previous value
-			if line[0] == '\t':
-				value += line.strip()
-			else:
-				# parse key=value pairs
-				if key != None:
-					jobinfo[key] = value
-				tmp = line.split('=', 1)
-				if len(tmp) == 2:
-					key = tmp[0].strip()
-					value = tmp[1].strip()
-				else:
-					key = None
+		for jobline in status.split('\n')[2:]:
+			if jobline == '':
+				continue
+			try:
+				tmp = jobline.split()
+				jobinfo = {
+					'id': "%s.jms" % tmp[0].strip('\x1b(B\x1b[m'),
+					'user': tmp[1],
+					'group': tmp[2],
+					'job_name': tmp[3],
+					'queue': tmp[4],
+					'partition': tmp[5],
+					'nodes': tmp[6],
+					'cpu_time': tmp[7],
+					'wall_time': tmp[8],
+					'memory': tmp[9],
+					'queue_time': tmp[10],
+					'status': tmp[11],
+					'dest': 'N/A',
+				}
+				if len(tmp) > 12:
+					jobinfo['start_time'] = tmp[12]
+					jobinfo['kill_time'] = tmp[13]
+					jobinfo['dest_hosts'] = tmp[14]
+					jobinfo['dest'] = "%s.localhost/%s" % (jobinfo['dest_hosts'], jobinfo['queue'])
+				result.append(jobinfo)
+			except:
+				print "Error reading job info\n", jobline
+				raise
 		return result
 
 
 	def getCheckArgument(self, wmsIds):
-		return " -f %s" % str.join(" ", wmsIds)
+		return "-l %s" % str.join(" ", wmsIds)
 
 
 	def getCancelArgument(self, wmsIds):

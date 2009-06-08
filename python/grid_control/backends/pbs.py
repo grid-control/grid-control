@@ -75,7 +75,7 @@ class PBS(LocalWMS):
 
 
 	def getCheckArgument(self, wmsIds):
-		return " -f %s" % str.join(" ", wmsIds)
+		return "-f %s" % str.join(" ", wmsIds)
 
 
 	def getCancelArgument(self, wmsIds):

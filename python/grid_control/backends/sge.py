@@ -75,7 +75,7 @@ class SGE(LocalWMS):
 
 
 	def getCheckArgument(self, wmsIds):
-		return " -xml"
+		return "-xml"
 
 
 	def getCancelArgument(self, wmsIds):
