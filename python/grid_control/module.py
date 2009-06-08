@@ -81,24 +81,37 @@ class Module(AbstractObject):
 		return self.taskID
 
 
+	# Get both task and job config / state dicts
+	def setEventEnviron(self, jobObj, jobNum):
+		tmp = {}
+		tmp.update(jobObj.getAll())
+		tmp.update(self.getTaskConfig())
+		tmp.update(self.getJobConfig(id))
+		for key, value in tmp.iteritems():
+			os.environ["GC_%s" % key] = str(value)
+
+
 	# Called on job submission
-	def onJobSubmit(self, jobObj, id):
+	def onJobSubmit(self, jobObj, jobNum):
 		if self.evtSubmit != '':
-			os.system("%s %d %s" % (self.evtSubmit, id, jobObj.id))
+			self.setEventEnviron(jobObj, jobNum)
+			os.system("%s %d %s" % (self.evtSubmit, jobNum, jobObj.id))
 		return None
 
 
 	# Called on job status update
-	def onJobUpdate(self, jobObj, id, data):
+	def onJobUpdate(self, jobObj, jobNum, data):
 		if self.evtStatus != '':
-			os.system("%s %d %s %s" % (self.evtStatus, id, jobObj.id, Job.states[jobObj.state]))
+			self.setEventEnviron(jobObj, jobNum)
+			os.system("%s %d %s %s" % (self.evtStatus, jobNum, jobObj.id, Job.states[jobObj.state]))
 		return None
 
 
 	# Called on job status update
-	def onJobOutput(self, jobObj, id, retCode):
+	def onJobOutput(self, jobObj, jobNum, retCode):
 		if self.evtOutput != '':
-			os.system("%s %d %s %d" % (self.evtOutput, id, jobObj.id, retCode))
+			self.setEventEnviron(jobObj, jobNum)
+			os.system("%s %d %s %d" % (self.evtOutput, jobNum, jobObj.id, retCode))
 		return None
 
 

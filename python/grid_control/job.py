@@ -54,7 +54,7 @@ class Job:
 	load = classmethod(load)
 
 
-	def save(self, fp):
+	def getAll(self):
 		data = self.dict
 		data['status'] = self.states[self.state]
 		data['attempt'] = self.attempt
@@ -63,7 +63,11 @@ class Job:
 			data['history_' + str(key)] = value
 		if self.id != None:
 			data['id'] = self.id
-		fp.writelines(utils.DictFormat(escapeString = True).format(data))
+		return data
+
+
+	def save(self, fp):
+		fp.writelines(utils.DictFormat(escapeString = True).format(self.getAll()))
 
 
 	def set(self, key, value):
