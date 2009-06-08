@@ -86,7 +86,7 @@ class Module(AbstractObject):
 		tmp = {}
 		tmp.update(jobObj.getAll())
 		tmp.update(self.getTaskConfig())
-		tmp.update(self.getJobConfig(id))
+		tmp.update(self.getJobConfig(jobNum))
 		for key, value in tmp.iteritems():
 			os.environ["GC_%s" % key] = str(value)
 
@@ -146,14 +146,14 @@ class Module(AbstractObject):
 
 
 	# Get job dependent environment variables
-	def getJobConfig(self, id):
+	def getJobConfig(self, jobNum):
 		return {
-			'MY_JOBID': id
+			'MY_JOBID': jobNum
 		}
 
 
 	# Get job requirements
-	def getRequirements(self, id):
+	def getRequirements(self, jobNum):
 		return [
 			(WMS.WALLTIME, self.wallTime),
 			(WMS.CPUTIME, self.cpuTime),
