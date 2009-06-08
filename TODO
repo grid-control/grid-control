@@ -6,11 +6,13 @@ FEATURE REQUESTS:
 
 DONE:
 ===================================================
+X. Local batch system support
+	(PBS, LSF, SGE, SLURM)
 X. Multiple datasets
 X. Please check bugfix for SUBMITTED status in glite.py, rev. r763
 	(seems ok)
 X. Show location in job-status/ ev. have information output
-   (fixed?)
+	(fixed?)
 X. override runtime files
 X. MaxCPUTime in config files to be give in hours, but not properly translated to jdl requirement in MINUTES!
    Please make hours and minutes usage in MaxWallTime and MaxCPUTime consistently in hours.

@@ -2,7 +2,7 @@
 
 if [ -z "$1" ]; then
 	echo "Usage: $0 DatasetName"
-	echo "The list of files is taken from stdin"
+	echo "The list of files is taken from stdin. Requires an CMSSW environment!"
 	echo "Example:"
 	echo -e "\tls *.root | $0 MyDataset"
 	exit
