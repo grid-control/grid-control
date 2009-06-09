@@ -40,9 +40,9 @@ class Module(AbstractObject):
 		self.dashboard = config.getBool('jobs', 'monitor job', False)
 		self.username = "unknown"
 
-		self.evtSubmit = config.get('events', 'on submit', '')
-		self.evtStatus = config.get('events', 'on status', '')
-		self.evtOutput = config.get('events', 'on output', '')
+		self.evtSubmit = config.getPath('events', 'on submit', '')
+		self.evtStatus = config.getPath('events', 'on status', '')
+		self.evtOutput = config.getPath('events', 'on output', '')
 
 		if config.get('CMSSW', 'se output files', 'FAIL') != 'FAIL':
 			utils.deprecated("Please specify se output files only in the [storage] section")
