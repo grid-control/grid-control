@@ -95,10 +95,12 @@ checkvar "CMSSW_RELEASE_BASE"
 checkbin "cmsRun"
 
 # patch python path data
-for INITFILE in `find -iname __init__.py`; do
-	echo "Fixing CMSSW path in file: $INITFILE"
-	sed -i -e "s@$CMSSW_RELEASE_BASE_OLD@$CMSSW_RELEASE_BASE@" $INITFILE
-done
+if [ -n "$CMSSW_RELEASE_BASE_OLD" ]; then
+	for INITFILE in `find -iname __init__.py`; do
+		echo "Fixing CMSSW path in file: $INITFILE"
+		sed -i -e "s@$CMSSW_RELEASE_BASE_OLD@$CMSSW_RELEASE_BASE@" $INITFILE
+	done
+fi
 
 # additional setup of the CMSSW environment
 SETUP_CMSSW="`_find setup.sh`"

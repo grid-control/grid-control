@@ -12,6 +12,7 @@ class DataProvider(AbstractObject):
 		self._datasetNick = datasetNick
 		self._datasetID = datasetID
 		self._cache = None
+		self._validated = False
 
 
 	# Parse dataset format [NICK : [PROVIDER : [(/)*]]] DATASET
@@ -53,6 +54,7 @@ class DataProvider(AbstractObject):
 			if self._datasetExpr != None:
 				log = utils.ActivityLog('Retrieving %s' % self._datasetExpr)
 			self._cache = self.getBlocksInternal()
+
 			# Validation & Naming:
 			for block in self._cache:
 				if self._datasetNick:

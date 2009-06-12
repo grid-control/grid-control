@@ -163,7 +163,7 @@ class CMSSW(Module):
 	def getTaskConfig(self):
 		data = Module.getTaskConfig(self)
 		data['CMSSW_CONFIG'] = os.path.basename(self.configFile)
-		data['CMSSW_RELEASE_BASE_OLD'] = self.scramEnv['RELEASETOP']
+		data['CMSSW_RELEASE_BASE_OLD'] = self.scramEnv.get('RELEASETOP', None)
 		data['SCRAM_VERSION'] = self.scramVersion
 		data['SCRAM_ARCH'] = self.scramArch
 		data['SCRAM_PROJECTVERSION'] = self.scramEnv['SCRAM_PROJECTVERSION']

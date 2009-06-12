@@ -22,12 +22,13 @@ class DataMultiplexer(DataProvider):
 		# Allow provider shortcuts
 		for id, entry in enumerate(exprList):
 			(datasetNick, provider, datasetExpr) = DataProvider.parseDatasetExpr(entry.strip(), dbsapi)
-			source = DataProvider.open(provider, datasetExpr, datasetNick, id)
+			source = DataProvider.open(provider, config, datasetExpr, datasetNick, id)
 			self.subprovider.append(source)
 
 			providerNick = reverseMap.get(provider, provider)
 			print(' %6i | %s | %s://%s' % (id, datasetNick.center(15), providerNick, datasetExpr))
 		print
+		self._datasetExpr = None
 
 
 	def getBlocksInternal(self):
