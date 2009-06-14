@@ -84,9 +84,9 @@ class Module(AbstractObject):
 	# Get both task and job config / state dicts
 	def setEventEnviron(self, jobObj, jobNum):
 		tmp = {}
-		tmp.update(jobObj.getAll())
 		tmp.update(self.getTaskConfig())
 		tmp.update(self.getJobConfig(jobNum))
+		tmp.update(jobObj.getAll())
 		for key, value in tmp.iteritems():
 			os.environ["GC_%s" % key] = str(value)
 

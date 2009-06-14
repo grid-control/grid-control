@@ -63,6 +63,8 @@ def main(args):
 	parser.add_option("-d", '--delete',        dest="delete",     default=None)
 	parser.add_option("-S", '--seed',          dest="seed",       default=None)
 	(opts, args) = parser.parse_args()
+#	opts.seed = 
+	(opts, args) = parser.parse_args()
 	sys.modules['__main__']._verbosity = opts.verbosity
 
 	# we need exactly one positional argument (config file)
@@ -76,7 +78,7 @@ def main(args):
 		global opts, log
 		opts.continuous = False
 		log = utils.ActivityLog('Quitting grid-control! (This can take a few seconds...)')
-	signal.signal(signal.SIGINT, interrupt)
+#	signal.signal(signal.SIGINT, interrupt)
 
 	# big try... except block to catch exceptions and print error message
 	try:
@@ -175,11 +177,14 @@ def main(args):
 					jobs.submit(wms, jobList)
 				del jobList
 
+			# avoid timeout if not continuous
 			if not opts.continuous:
 				break
-			time.sleep(timeout)
-			if not opts.continuous:
-				break
+
+			for x in range(0, timeout, 5):
+				log = utils.ActivityLog('next check in %d seconds' % (timeout - x))
+				time.sleep(5)
+				del log
 
 			# Retest proxy lifetime
 			if opts.submission and not proxy.check(wallTime):
