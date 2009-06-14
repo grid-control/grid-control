@@ -38,9 +38,9 @@ def main(args):
 		return 1
 
 	if os.path.exists(args[0]):
-		provider = DataProvider.open('ListProvider', args[0], None)
+		provider = DataProvider.open('ListProvider', None, args[0], None)
 	else:
-		provider = DataProvider.open('DBSListProvider', args[0], None)
+		provider = DataProvider.open('DBSListProvider', None, args[0], None)
 	blocks = provider.getBlocks()
 
 	if opts.list:

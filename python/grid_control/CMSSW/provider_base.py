@@ -117,7 +117,7 @@ class DataProvider(AbstractObject):
 	# Load dataset information using ListProvider
 	def loadState(path):
 		# None, None = Don't override NickName and ID
-		return DataProvider.open('ListProvider', os.path.join(path, 'datacache.dat'), None, None)
+		return DataProvider.open('ListProvider', None, os.path.join(path, 'datacache.dat'), None, None)
 	loadState = staticmethod(loadState)
 
 
