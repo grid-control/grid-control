@@ -55,6 +55,7 @@ class DataProvider(AbstractObject):
 				log = utils.ActivityLog('Retrieving %s' % self._datasetExpr)
 			self._cache = self.getBlocksInternal()
 
+			allEvents = 0
 			# Validation & Naming:
 			for block in self._cache:
 				if self._datasetNick:
@@ -65,9 +66,12 @@ class DataProvider(AbstractObject):
 				events = 0
 				for file in block[DataProvider.FileList]:
 					events += file[DataProvider.NEvents]
+					allEvents += file[DataProvider.NEvents]
 				if events != block[DataProvider.NEvents]:
 					print('Inconsistency in block %s#%s: Number of events doesn\'t match (b:%d != f:%d)'
 						% (block[DataProvider.Dataset], block[DataProvider.BlockName], block[DataProvider.NEvents], events))
+			if utils.verbosity() > 0:
+				print 'Running over %d events split into %d blocks.' % (allEvents, len(self._cache))
 		return self._cache
 
 

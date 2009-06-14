@@ -37,7 +37,7 @@ class FileProvider(DataProvider):
 # Takes dataset information from an configuration file
 class ListProvider(DataProvider):
 	def __init__(self, datasetExpr, datasetNick, datasetID = 0):
-		DataProvider.__init__(self, datasetExpr, datasetNick, datasetID)
+		DataProvider.__init__(self, None, datasetExpr, datasetNick, datasetID)
 		self._filename = datasetExpr
 
 
