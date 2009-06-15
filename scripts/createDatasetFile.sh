@@ -11,5 +11,5 @@ fi
 echo [$1]
 while read FILE; do
 	EVENTS=`edmFileUtil -e file://$FILE | grep "^$FILE" | sed -e "s/.*( \(.*\)events.*/\1/"`
-	echo "$PWD/$FILE = $EVENTS"
+	echo "file://$PWD/$FILE = $EVENTS"
 done

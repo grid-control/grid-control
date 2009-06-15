@@ -8,6 +8,11 @@ class LocalWMS(WMS):
 		WMS.__init__(self, config, module, 'local', init)
 
 		self.sandPath = config.getPath('local', 'sandbox path', os.path.join(self.workDir, 'sandbox'))
+		self._nameFile = config.getPath('local', 'name source', '')
+		self._source = None
+		if self._nameFile != '':
+			tmp = map(str.strip, open(self._nameFile, 'r').readlines())
+			self._source = filter(lambda x: not (x.startswith('#') or x == ''), tmp)
 
 
 	def guessWMS():
@@ -23,6 +28,8 @@ class LocalWMS(WMS):
 
 
 	def getJobName(self, taskId, jobId):
+		if self._source:
+			return self._source[jobId % len(self._source)]
 		return taskId[:10] + "." + str(jobId) #.rjust(4, "0")[:4]
 
 	def getArguments(self, jobNum, sandbox):
@@ -55,7 +62,7 @@ class LocalWMS(WMS):
 			raise RuntimeError("Sandbox '%s' could not be prepared." % sandbox)
 
 		env_vars = {
-			'ARGS': utils.shellEscape("%d %s" % (jobNum, self.module.getJobArguments(jobObj))),
+			'ARGS': utils.shellEscape("%d %s" % (jobNum, self.module.getJobArguments(jobNum))),
 			'SANDBOX': sandbox
 		}
 		env_vars.update(self.module.getJobConfig(jobNum))

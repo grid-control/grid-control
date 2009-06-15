@@ -59,6 +59,8 @@ class ListProvider(DataProvider):
 					blockinfo[DataProvider.Dataset] = blockname[0]
 				if len(blockname) > 1:
 					blockinfo[DataProvider.BlockName] = blockname[1]
+				else:
+					blockinfo[DataProvider.BlockName] = "0"
 				blockinfo[DataProvider.SEList] = []
 				blockinfo[DataProvider.FileList] = []
 			elif line != '':
