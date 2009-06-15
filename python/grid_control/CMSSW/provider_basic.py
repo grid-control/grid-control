@@ -54,9 +54,11 @@ class ListProvider(DataProvider):
 				if blockinfo:
 					result.append(blockinfo)
 				blockinfo = dict()
-				dataset, blockname = line.lstrip('[').rstrip(']').split('#')
-				blockinfo[DataProvider.Dataset] = dataset
-				blockinfo[DataProvider.BlockName] = blockname
+				blockname = line.lstrip('[').rstrip(']').split('#')
+				if len(blockname) > 0:
+					blockinfo[DataProvider.Dataset] = blockname[0]
+				if len(blockname) > 1:
+					blockinfo[DataProvider.BlockName] = blockname[1]
 				blockinfo[DataProvider.SEList] = []
 				blockinfo[DataProvider.FileList] = []
 			elif line != '':
