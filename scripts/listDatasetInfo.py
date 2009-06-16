@@ -11,7 +11,7 @@ import time
 
 _verbosity = 0
 
-def printTabular(head, entries):
+def printTabular(head, entries, format = lambda x: x):
 	maxlen = {}
 	head = [ x for x in head ]
 	entries = [ x for x in entries ]
@@ -25,25 +25,45 @@ def printTabular(head, entries):
 	print("=%s=" % (str.join("=+=", formatlist) % tuple(map(lambda (id, name): '=' * maxlen[id], head))))
 
 	for entry in entries:
-		print(" %s " % (str.join(" | ", formatlist) % tuple(map(lambda (id, name): entry[id], head))))
+		print(" %s " % (str.join(" | ", formatlist) % format(tuple(map(lambda (id, name): entry[id], head)))))
 
 
 def main(args):
 	parser = optparse.OptionParser()
-	parser.add_option("-l", "--list-datasets", dest="list", default=False, action="store_true")
+	parser.add_option("-l", "--list-datasets", dest="listdatasets", default=False, action="store_true")
+	parser.add_option("-s", "--list-storage", dest="liststorage", default=False, action="store_true")
+	parser.add_option("-b", "--list-blocks",   dest="listblocks", default=False, action="store_true")
 	(opts, args) = parser.parse_args()
 
 	# we need exactly one positional argument (config file)
 	if len(args) != 1:
 		return 1
 
+	class ConfigDummy(object):
+		def get(self, x,y,z):
+			return z
+
 	if os.path.exists(args[0]):
+		fromfile = True
 		provider = DataProvider.open('ListProvider', None, args[0], None)
 	else:
-		provider = DataProvider.open('DBSListProvider', None, args[0], None)
+		fromfile = False
+		provider = DataProvider.open('DBSApiv2', ConfigDummy(), args[0], None)
 	blocks = provider.getBlocks()
 
-	if opts.list:
+	def unique(seq): 
+		set = {} 
+		map(set.__setitem__, seq, []) 
+		return set.keys()
+
+	datasets = unique(map(lambda x: x[DataProvider.Dataset], blocks))
+	if len(datasets) > 1:
+		headerbase = [(DataProvider.Dataset, "Dataset")]
+	else:
+		print "Dataset: %s" % blocks[0][DataProvider.Dataset]
+		headerbase = []
+
+	if opts.listdatasets:
 		infos = {}
 		for block in blocks:
 			blockID = block.get(DataProvider.DatasetID, 0)
@@ -54,6 +74,20 @@ def main(args):
 				}
 			infos[blockID][DataProvider.NEvents] += block[DataProvider.NEvents]
 		printTabular([(DataProvider.Dataset, "Dataset"), (DataProvider.NEvents, "Events")], infos.itervalues())
+
+	if opts.liststorage:
+		infos = {}
+		for block in blocks:
+			blockID = block.get(DataProvider.DatasetID, 0)
+			if not infos.get(blockID, None):
+				infos[blockID] = {1:1}
+				if len(headerbase) > 0:
+					print "Dataset: %s" % block[DataProvider.Dataset]
+				for se in block[DataProvider.SEList]:
+					print "\t%s" % se
+
+	if opts.listblocks:
+		printTabular(headerbase + [(DataProvider.BlockName, "Block"), (DataProvider.NEvents, "Events")], blocks)
 
 	# everything seems to be in order
 	return 0

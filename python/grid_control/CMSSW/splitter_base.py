@@ -43,10 +43,13 @@ class DataSplitter(AbstractObject):
 
 
 	def printInfoForJob(job):
-		print "Dataset: ", job[DataSplitter.Dataset], job.get(DataSplitter.Nickname, ''), job.get(DataSplitter.DatasetID, '')
+		print "Dataset: ", job[DataSplitter.Dataset],
+		if job.get(DataSplitter.Nickname, '') != '':
+			print "\tNick: ", job.get(DataSplitter.Nickname, ''),
+		print "\tID: ", job.get(DataSplitter.DatasetID, 0)
 		print "Events : ", job[DataSplitter.NEvents]
 		print "Skip   : ", job[DataSplitter.Skipped]
-		print "SEList : ", job[DataSplitter.SEList]
+		print "SEList : ", str.join(", ", job[DataSplitter.SEList])
 		print "Files  : ", str.join("\n          ", job[DataSplitter.FileList])
 	printInfoForJob = staticmethod(printInfoForJob)
 

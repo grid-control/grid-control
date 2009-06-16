@@ -157,6 +157,7 @@ class JobDB:
 		timeoutlist = []
 		wmsMap = self.getWmsMap(self.running)
 
+		# Update states of jobs
 		for wmsId, state, info in wms.checkJobs(wmsMap.keys()):
 			id, job = wmsMap[wmsId]
 			if state != job.state:
@@ -170,6 +171,8 @@ class JobDB:
 				if job.state in (Job.SUBMITTED, Job.WAITING, Job.READY, Job.QUEUED):
 					if self.timeout > 0 and time() - job.submitted > self.timeout:
 						timeoutlist.append(id)
+
+		# Cancel jobs who took too long
 		if len(timeoutlist):
 			change = True
 			print "\nTimeout for the following jobs:"
@@ -177,6 +180,11 @@ class JobDB:
 			wms.cancelJobs(self.getWmsMap(timeoutlist).keys())
 			self.mark_cancelled(timeoutlist)
 			# Fixme: Error handling
+
+		# Quit when all jobs are finished
+		if (len(self.ready) == 0) and (len(self.running) == 0) and (len(self.done) == 0):
+			print "%s - All jobs are finished. Quitting grid-control!" % strftime("%Y-%m-%d %H:%M:%S", localtime())
+			sys.exit(0)
 
 		return change
 

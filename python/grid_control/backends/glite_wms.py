@@ -215,7 +215,7 @@ class GliteWMS(Glite):
 				#FIXME
 				print >> sys.stderr, "WARNING: glite-wms-job-output failed (%d):" % retCode
 				if os.path.exists(log):
-					sys.stderr.write(open(log, 'r').read())
+					sys.stderr.write(open(log,'r').read().replace("-----------------------------------------\n",""))
 
 			for file in os.listdir(tmpPath):
 				path = os.path.join(tmpPath, file)
