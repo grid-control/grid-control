@@ -180,14 +180,15 @@ def main(args):
 					jobs.submit(wms, jobList)
 				del jobList
 
-			# avoid timeout if not continuous
-			if not opts.continuous:
-				break
-
 			for x in range(0, timeout, 5):
+				# avoid timeout if not continuous
+				if not opts.continuous:
+					break
 				log = utils.ActivityLog('next check in %d seconds' % (timeout - x))
 				time.sleep(5)
 				del log
+			if not opts.continuous:
+				break
 
 			# Retest proxy lifetime
 			if opts.submission and not proxy.check(wallTime):
