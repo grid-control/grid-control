@@ -18,7 +18,7 @@ def printTabular(head, entries, format = lambda x: x):
 
 	for entry in entries:
 		for id, name in head:
-			maxlen[id] = max(maxlen.get(id, 0), len(str(entry[id])))
+			maxlen[id] = max(maxlen.get(id, len(name)), len(str(entry[id])))
 
 	formatlist = map(lambda (id, name): "%%%ds" % maxlen[id], head)
 	print(" %s " % (str.join(" | ", formatlist) % tuple(map(lambda (id, name): name.center(maxlen[id]), head))))
@@ -31,8 +31,10 @@ def printTabular(head, entries, format = lambda x: x):
 def main(args):
 	parser = optparse.OptionParser()
 	parser.add_option("-l", "--list-datasets", dest="listdatasets", default=False, action="store_true")
-	parser.add_option("-s", "--list-storage", dest="liststorage", default=False, action="store_true")
-	parser.add_option("-b", "--list-blocks",   dest="listblocks", default=False, action="store_true")
+	parser.add_option("-f", "--list-files",    dest="listfiles",    default=False, action="store_true")
+	parser.add_option("-s", "--list-storage",  dest="liststorage",  default=False, action="store_true")
+	parser.add_option("-b", "--list-blocks",   dest="listblocks",   default=False, action="store_true")
+	parser.add_option("-S", "--save",          dest="save",         default=False, action="store_true")
 	(opts, args) = parser.parse_args()
 
 	# we need exactly one positional argument (config file)
@@ -75,6 +77,14 @@ def main(args):
 			infos[blockID][DataProvider.NEvents] += block[DataProvider.NEvents]
 		printTabular([(DataProvider.Dataset, "Dataset"), (DataProvider.NEvents, "Events")], infos.itervalues())
 
+	if opts.listfiles:
+		for block in blocks:
+			if len(datasets) > 1:
+				print "Dataset: %s" % block[DataProvider.Dataset]
+			print "Blockname: %s" % block[DataProvider.BlockName]
+			printTabular([(DataProvider.lfn, "Filename"), (DataProvider.NEvents, "Events")], block[DataProvider.FileList])
+			print
+
 	if opts.liststorage:
 		infos = {}
 		for block in blocks:
@@ -88,6 +98,10 @@ def main(args):
 
 	if opts.listblocks:
 		printTabular(headerbase + [(DataProvider.BlockName, "Block"), (DataProvider.NEvents, "Events")], blocks)
+
+	if opts.save:
+		provider.saveState(".")
+		print "Dataset information saved to ./datacache.dat"
 
 	# everything seems to be in order
 	return 0

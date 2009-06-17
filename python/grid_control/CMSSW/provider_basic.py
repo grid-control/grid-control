@@ -38,6 +38,10 @@ class FileProvider(DataProvider):
 class ListProvider(DataProvider):
 	def __init__(self, config, datasetExpr, datasetNick, datasetID = 0):
 		DataProvider.__init__(self, config, datasetExpr, datasetNick, datasetID)
+		datasetExpr = os.path.expanduser(datasetExpr)
+		datasetExpr = os.path.normpath(datasetExpr)
+		if not os.path.isabs(datasetExpr):
+			datasetExpr = utils.atRoot(datasetExpr)
 		self._filename = datasetExpr
 
 
