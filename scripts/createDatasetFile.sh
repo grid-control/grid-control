@@ -9,6 +9,7 @@ if [ -z "$1" ]; then
 fi
 
 echo [$1]
+echo se list = localhost
 while read FILE; do
 	EVENTS=`edmFileUtil -e file://$FILE | grep "^$FILE" | sed -e "s/.*( \(.*\)events.*/\1/"`
 	echo "file://$PWD/$FILE = $EVENTS"

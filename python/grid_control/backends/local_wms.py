@@ -52,7 +52,7 @@ class LocalWMS(WMS):
 		try:
 			if not os.path.exists(self.sandPath):
 				os.mkdir(self.sandPath)
-			sandbox = tempfile.mkdtemp("." + str(jobNum), self.module.taskID + ".", self.sandPath)
+			sandbox = tempfile.mkdtemp("", "%s.%04d." % (self.module.taskID, jobNum), self.sandPath)
 			for file in self.sandboxIn:
 				shutil.copy(file, sandbox)
 			jobObj.set('sandbox', sandbox)
