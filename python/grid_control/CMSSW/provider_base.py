@@ -100,7 +100,7 @@ class DataProvider(AbstractObject):
 
 
 	# Save dataset information in "ini"-style => 10x faster to r/w than cPickle
-	def saveState(self, path):
+	def saveState(self, path, filename = 'datacache.dat'):
 		writer = cStringIO.StringIO()
 		for block in self.getBlocks():
 			writer.write("[%s#%s]\n" % (block[DataProvider.Dataset], block[DataProvider.BlockName]))
@@ -113,13 +113,13 @@ class DataProvider(AbstractObject):
 			for fi in block[DataProvider.FileList]:
 				writer.write('%s = %d\n' % (fi[DataProvider.lfn], fi[DataProvider.NEvents]))
 			writer.write('\n')
-		open(os.path.join(path, 'datacache.dat'), 'wb').write(writer.getvalue())
+		open(os.path.join(path, filename), 'wb').write(writer.getvalue())
 
 
 	# Load dataset information using ListProvider
-	def loadState(path):
+	def loadState(path, filename = 'datacache.dat'):
 		# None, None = Don't override NickName and ID
-		return DataProvider.open('ListProvider', None, os.path.join(path, 'datacache.dat'), None, None)
+		return DataProvider.open('ListProvider', None, os.path.join(path, filename), None, None)
 	loadState = staticmethod(loadState)
 
 

@@ -47,7 +47,8 @@ def main(args):
 
 	if os.path.exists(args[0]):
 		fromfile = True
-		provider = DataProvider.open('ListProvider', None, args[0], None)
+		dir, file = os.path.split(args[0])
+		provider = DataProvider.loadState(dir, file)
 	else:
 		fromfile = False
 		provider = DataProvider.open('DBSApiv2', ConfigDummy(), args[0], None)
@@ -100,7 +101,7 @@ def main(args):
 		printTabular(headerbase + [(DataProvider.BlockName, "Block"), (DataProvider.NEvents, "Events")], blocks)
 
 	if opts.save:
-		provider.saveState(".")
+		provider.saveState(".", "datacache.dat")
 		print "Dataset information saved to ./datacache.dat"
 
 	# everything seems to be in order
