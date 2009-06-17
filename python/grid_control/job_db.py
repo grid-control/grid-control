@@ -1,5 +1,5 @@
 from __future__ import generators
-import os, re, fnmatch, random, utils
+import sys, os, re, fnmatch, random, utils
 from time import time, localtime, strftime
 from grid_control import SortedList, ConfigError, Job, UserError, Report
 
