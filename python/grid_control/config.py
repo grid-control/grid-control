@@ -1,4 +1,4 @@
-import os, ConfigParser
+import os, ConfigParser, utils
 
 from grid_control import ConfigError
 
@@ -11,6 +11,7 @@ class Config:
 		except ConfigParser.Error, e:
 			raise ConfigError("Configuration file `%s' contains an error: %s" % (fp, e.message))
 
+		self.name = fp.name
 		self.parser = parser
 
 		# use the directory of the config file as base directory
@@ -18,16 +19,25 @@ class Config:
 		dir = os.path.normpath(dir)
 		self.baseDir = os.path.abspath(dir)
 
+		includeFile = self.getPath("global", "include", '')
+		if includeFile != '':
+			parser.read(includeFile)
+			parser.read(fp.name)
+
 
 	def get(self, section, item, default = None):
 		try:
 			return self.parser.get(section, item)
 		except ConfigParser.NoSectionError:
 			if default != None:
+				if (utils.verbosity() > 1) and (default != 'FAIL'):
+					print "Using default value [%s] %s = %s" % (section, item, str(default))
 				return default
 			raise ConfigError("No section %s in config file." % section)
 		except ConfigParser.NoOptionError:
 			if default != None:
+				if (utils.verbosity() > 1) and (default != 'FAIL'):
+					print "Using default value [%s] %s = %s" % (section, item, str(default))
 				return default
 			raise ConfigError("No option %s in section %s of config file." % (item, section))
 		except:

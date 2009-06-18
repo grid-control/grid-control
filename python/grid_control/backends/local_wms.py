@@ -4,8 +4,8 @@ from grid_control import ConfigError, Job, utils
 from wms import WMS
 
 class LocalWMS(WMS):
-	def __init__(self, config, module, init):
-		WMS.__init__(self, config, module, 'local', init)
+	def __init__(self, workDir, config, module, init):
+		WMS.__init__(self, workDir, config, module, 'local', init)
 
 		self.sandPath = config.getPath('local', 'sandbox path', os.path.join(self.workDir, 'sandbox'))
 		self._nameFile = config.getPath('local', 'name source', '')

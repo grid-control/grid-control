@@ -13,8 +13,8 @@ class LSF(LocalWMS):
 		'UNKWN':  Job.FAILED, 'ZOMBI':  Job.FAILED,
 	}
 
-	def __init__(self, config, module, init):
-		LocalWMS.__init__(self, config, module, init)
+	def __init__(self, workDir, config, module, init):
+		LocalWMS.__init__(self, workDir, config, module, init)
 
 		self.submitExec = utils.searchPathFind('bsub')
 		self.statusExec = utils.searchPathFind('bjobs')

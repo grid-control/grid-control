@@ -20,8 +20,6 @@ class CMSSW(Module):
 				raise ConfigError('SCRAM project needs exactly 2 arguments: PROJECT VERSION')
 		else:
 			self.projectArea = config.getPath('CMSSW', 'project area')
-		self.scramArch = config.get('CMSSW', 'scram arch')
-		self.scramVersion = config.get('CMSSW', 'scram version', 'scramv1')
 
 		self.configFile = config.getPath('CMSSW', 'config file')
 
@@ -53,9 +51,10 @@ class CMSSW(Module):
 			else:
 				raise ConfigError("Specified config area '%s' does not exist!" % self.projectArea)
 
+			scramPath = os.path.join(self.projectArea, '.SCRAM')
 			# try to open it
 			try:
-				fp = open(os.path.join(self.projectArea, '.SCRAM', 'Environment'), 'r')
+				fp = open(os.path.join(scramPath, 'Environment'), 'r')
 				self.scramEnv = utils.DictFormat().parse(fp, lowerCaseKey = False)
 			except:
 				raise ConfigError("Project area file .SCRAM/Environment cannot be parsed!")
@@ -64,8 +63,10 @@ class CMSSW(Module):
 				if not self.scramEnv.has_key(key):
 					raise ConfigError("Installed program in project area can't be recognized.")
 
+			archs = filter(lambda x: os.path.isdir(os.path.join(scramPath, x)), os.listdir(scramPath))
+			self.scramArch = config.get('CMSSW', 'scram arch', archs[0])
 			try:
-				fp = open(os.path.join(self.projectArea, '.SCRAM', self.scramArch, 'Environment'), 'r')
+				fp = open(os.path.join(scramPath, self.scramArch, 'Environment'), 'r')
 				self.scramEnv.update(utils.DictFormat().parse(fp, lowerCaseKey = False))
 			except:
 				print "Project area file .SCRAM/%s/Environment cannot be parsed!" % self.scramArch
@@ -74,6 +75,9 @@ class CMSSW(Module):
 				'SCRAM_PROJECTNAME': scramProject[0],
 				'SCRAM_PROJECTVERSION': scramProject[1]
 			}
+			self.scramArch = config.get('CMSSW', 'scram arch')
+
+		self.scramVersion = config.get('CMSSW', 'scram version', 'scramv1')
 		if self.scramEnv['SCRAM_PROJECTNAME'] != 'CMSSW':
 			raise ConfigError("Project area not a valid CMSSW project area.")
 
@@ -84,9 +88,12 @@ class CMSSW(Module):
 		if init:
 			self._initTask(config)
 		elif self.dataset != None:
-			self.datasplitter = DataSplitter.loadState(self.workDir)
+			try:
+				self.datasplitter = DataSplitter.loadState(self.workDir)
+			except:
+				raise ConfigError("Not a properly initialized work directory '%s'." % self.workDir)
 			if resync:
-				old = DataProvider.loadState(self.workDir)
+				old = DataProvider.loadState(config, self.workDir)
 				new = DataProvider.create(config)
 				self.datasplitter.resyncMapping(self.workDir, old.getBlocks(), new.getBlocks())
 				#TODO: new.saveState(self.workDir)

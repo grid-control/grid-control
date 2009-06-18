@@ -89,7 +89,7 @@ class DataProvider(AbstractObject):
 		print "Matching blocks:"
 		for block in self.getBlocks():
 			print "ID / Dataset / Nick : ",
-			print block[DataProvider.DatasetID], "/", block[DataProvider.Dataset], "/", block[DataProvider.Nickname]
+			print block.get(DataProvider.DatasetID), "/", block[DataProvider.Dataset], "/", block[DataProvider.Nickname]
 			print "BlockName : ", block[DataProvider.BlockName]
 			print "#Events   : ", block[DataProvider.NEvents]
 			print "SE List   : ", block[DataProvider.SEList]
@@ -117,9 +117,9 @@ class DataProvider(AbstractObject):
 
 
 	# Load dataset information using ListProvider
-	def loadState(path, filename = 'datacache.dat'):
+	def loadState(config, path, filename = 'datacache.dat'):
 		# None, None = Don't override NickName and ID
-		return DataProvider.open('ListProvider', None, os.path.join(path, filename), None, None)
+		return DataProvider.open('ListProvider', config, os.path.join(path, filename), None, None)
 	loadState = staticmethod(loadState)
 
 

@@ -6,8 +6,8 @@ from local_wms import LocalWMS
 class SLURM(LocalWMS):
 	_statusMap = { 's': Job.QUEUED, 'r': Job.RUNNING, 'CG': Job.DONE }
 
-	def __init__(self, config, module, init):
-		LocalWMS.__init__(self, config, module, init)
+	def __init__(self, workDir, config, module, init):
+		LocalWMS.__init__(self, workDir, config, module, init)
 
 		self.submitExec = utils.searchPathFind('job_submit')
 		self.statusExec = utils.searchPathFind('job_queue')

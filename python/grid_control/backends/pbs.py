@@ -11,8 +11,8 @@ class PBS(LocalWMS):
 		'fail':	Job.FAILED, 'success': Job.SUCCESS
 	}
 
-	def __init__(self, config, module, init):
-		LocalWMS.__init__(self, config, module, init)
+	def __init__(self, workDir, config, module, init):
+		LocalWMS.__init__(self, workDir, config, module, init)
 
 		self.submitExec = utils.searchPathFind('qsub')
 		self.statusExec = utils.searchPathFind('qstat')

@@ -9,7 +9,7 @@ class Module(AbstractObject):
 	# Read configuration options and init vars
 	def __init__(self, config, init, resync):
 		self.config = config
-		self.workDir = config.getPath('global', 'workdir')
+		self.workDir = config.getPath('global', 'workdir', config.name.replace(".conf",""))
 
 		self.wallTime = utils.parseTime(config.get('jobs', 'wall time'))
 		self.cpuTime = utils.parseTime(config.get('jobs', 'cpu time', config.get('jobs', 'wall time')))
@@ -17,6 +17,17 @@ class Module(AbstractObject):
 
 		self.memory = config.getInt('jobs', 'memory', 512)
 		self.setSeed(str.join(",", config.get('jobs', 'seeds', '').split()))
+
+		self.taskID = None
+		self.taskID = self.getTaskID()
+		print 'Current task ID %s' % (self.taskID)
+
+		self.dashboard = config.getBool('jobs', 'monitor job', False)
+		self.username = "unknown"
+
+		self.evtSubmit = config.getPath('events', 'on submit', '')
+		self.evtStatus = config.getPath('events', 'on status', '')
+		self.evtOutput = config.getPath('events', 'on output', '')
 
 		# TODO: Convert the following into requirements
 		self.seSDUpperLimit = config.getInt('storage', 'scratch space used', 5000)
@@ -33,16 +44,8 @@ class Module(AbstractObject):
 		self.seOutputFiles = config.get('storage', 'se output files', '').split()
 		self.seOutputPattern = config.get('storage', 'se output pattern', 'job___MY_JOB_____NICK_____X__')
 
-		self.taskID = None
-		self.taskID = self.getTaskID()
-		print 'Current task ID %s' % (self.taskID)
-
-		self.dashboard = config.getBool('jobs', 'monitor job', False)
-		self.username = "unknown"
-
-		self.evtSubmit = config.getPath('events', 'on submit', '')
-		self.evtStatus = config.getPath('events', 'on status', '')
-		self.evtOutput = config.getPath('events', 'on output', '')
+		self.sbInputFiles = config.get(self.__class__.__name__, 'input files', '').split()
+		self.sbOutputFiles = config.get(self.__class__.__name__, 'output files', '').split()
 
 		if config.get('CMSSW', 'se output files', 'FAIL') != 'FAIL':
 			utils.deprecated("Please specify se output files only in the [storage] section")
@@ -69,15 +72,12 @@ class Module(AbstractObject):
 	def getTaskID(self):
 		if self.taskID == None:
 			taskfile = os.path.join(self.workDir, 'task.dat')
-			if os.path.exists(taskfile):
-				fp = gzip.GzipFile(taskfile, 'rb')
-				self.taskID = cPickle.load(fp)
-				fp.close()
-			else:
-				fp = gzip.GzipFile(taskfile, 'wb')
+			try:
+				self.taskID = utils.DictFormat(" = ").parse(open(taskfile))['task id']
+			except:
 				self.taskID = 'GC' + md5.md5(str(time())).hexdigest()[:12]
-				cPickle.dump(self.taskID, fp)
-				fp.close()
+			tmp = { 'task id': self.taskID }
+			open(taskfile, 'w').writelines(utils.DictFormat(" = ").format(tmp))
 		return self.taskID
 
 
@@ -163,20 +163,18 @@ class Module(AbstractObject):
 
 	# Get files for input sandbox
 	def getInFiles(self):
-		name = self.__class__.__name__
 		def fileMap(file):
 			if not os.path.isabs(file):
 				path = os.path.join(self.config.baseDir, file)
 			else:
 				path = file
 			return path
-		return map(fileMap, self.config.get(name, 'input files', '').split())
+		return map(fileMap, self.sbInputFiles)
 
 
 	# Get files for output sandbox
 	def getOutFiles(self):
-		name = self.__class__.__name__
-		return self.config.get(name, 'output files', '').split()
+		return self.sbOutputFiles
 
 
 	def getCommand(self):

@@ -36,6 +36,7 @@ def print_help(*args):
 			"\t                            -d TODO (= SUBMITTED,WAITING,READY,QUEUED)\n"
 			"\t                            -d ALL\n"
 			"\n" % sys.argv[0])
+	sys.exit(0)
 
 _verbosity = 0
 
@@ -95,11 +96,14 @@ def main(args):
 			raise ConfigError("Error while reading configuration file '%s'!" % configFile)
 
 		# Check work dir validity
-		workdir = config.getPath('global', 'workdir')
+		workdir = config.getPath('global', 'workdir', config.name.replace(".conf",""))
 		try:
 			os.chdir(workdir)
 		except:
-			raise UserError("Could not access specified working directory '%s'!" % workdir)
+			if utils.boolUserInput("Do you want to create the working directory %s?" % workdir, True):
+				os.mkdir(workdir)
+			else:
+				raise UserError("Could not access specified working directory '%s'!" % workdir)
 
 		# Initialise application module
 		module = config.get('global', 'module')
@@ -114,7 +118,7 @@ def main(args):
 		except:
 			default_wms = { 'grid': 'GliteWMS', 'local': LocalWMS.guessWMS() }
 			wms = default_wms[backend]
-		wms = WMS.open(wms, config, module, opts.init)
+		wms = WMS.open(wms, workdir, config, module, opts.init)
 
 		# Initialise proxy
 		proxy = wms.getProxy()

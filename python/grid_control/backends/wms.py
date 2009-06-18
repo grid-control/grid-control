@@ -12,10 +12,10 @@ class WMS(AbstractObject):
 		locals()[reqType] = id
 
 
-	def __init__(self, config, module, backend, init):
+	def __init__(self, workDir, config, module, backend, init):
 		self.config = config
 		self.module = module
-		self.workDir = config.getPath('global', 'workdir')
+		self.workDir = workDir
 		self.proxy = config.get(backend, 'proxy', 'TrivialProxy')
 		self._sites = config.get(backend, 'sites', '').split()
 

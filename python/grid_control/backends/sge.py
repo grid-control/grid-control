@@ -14,8 +14,8 @@ class SGE(LocalWMS):
 		'd': Job.ABORTED,   'E': Job.DONE,
 	}
 
-	def __init__(self, config, module, init):
-		LocalWMS.__init__(self, config, module, init)
+	def __init__(self, workDir, config, module, init):
+		LocalWMS.__init__(self, workDir, config, module, init)
 
 		self.submitExec = utils.searchPathFind('qsub')
 		self.statusExec = utils.searchPathFind('qstat')
