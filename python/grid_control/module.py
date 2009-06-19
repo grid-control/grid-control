@@ -9,15 +9,24 @@ class Module(AbstractObject):
 	# Read configuration options and init vars
 	def __init__(self, workDir, config, opts):
 		self.config = config
-		self.workDir = workDir
 
 		self.wallTime = utils.parseTime(config.get('jobs', 'wall time'))
 		self.cpuTime = utils.parseTime(config.get('jobs', 'cpu time', config.get('jobs', 'wall time')))
 		self.nodeTimeout = utils.parseTime(config.get('jobs', 'node timeout', ''))
 
 		self.memory = config.getInt('jobs', 'memory', 512)
-		self.setSeed(str.join(",", config.get('jobs', 'seeds', '').split()))
 
+		# Set random seeds
+		seedarg = config.get('jobs', 'seeds', '')
+		if opts.seed != None:
+			seedarg = opts.seed
+		if seedarg != '':
+			self.seeds = map(lambda x: int(x), seedarg.split(','))
+		else:
+			self.seeds = map(lambda x: random.randint(0, 10000000), range(10))
+			print "Creating random seeds... ", self.seeds
+
+		# Compute / get task ID
 		self.taskID = None
 		self.taskID = self.getTaskID()
 		print 'Current task ID %s' % (self.taskID)
@@ -58,20 +67,10 @@ class Module(AbstractObject):
 			self.sePath = config.get('CMSSW', 'se path')
 
 
-	# Set random seeds of module ('' == 10 random seeds)
-	def setSeed(self, seeds):
-		if seeds == '':
-			print "Creating random seeds... ",
-			self.seeds = map(lambda x: random.randint(0, 10000000), range(10))
-			print self.seeds
-		else:
-			self.seeds = map(lambda x: int(x), seeds.split(','))
-
-
 	# Get persistent task id for monitoring
-	def getTaskID(self):
+	def getTaskID(self, workDir):
 		if self.taskID == None:
-			taskfile = os.path.join(self.workDir, 'task.dat')
+			taskfile = os.path.join(workDir, 'task.dat')
 			try:
 				self.taskID = utils.DictFormat(" = ").parse(open(taskfile))['task id']
 			except:

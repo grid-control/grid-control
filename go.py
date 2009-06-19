@@ -79,8 +79,6 @@ def main(args):
 		# Initialise application module
 		module = config.get('global', 'module')
 		module = Module.open(module, workDir, config, opts)
-		if opts.seed:
-			module.setSeed(opts.seed.lstrip('S'))
 
 		# Initialise workload management interface
 		backend = config.get('global', 'backend', 'grid')
