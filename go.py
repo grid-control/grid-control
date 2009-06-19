@@ -62,9 +62,7 @@ def main(args):
 	try:
 		# try to open config file
 		try:
-			f = open(args[0], 'r')
-			config = Config(f)
-			f.close()
+			config = Config(args[0])
 		except IOError, e:
 			raise ConfigError("Error while reading configuration file '%s'!" % args[0])
 
