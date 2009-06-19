@@ -85,14 +85,14 @@ class CMSSW(Module):
 			raise ConfigError("Config file '%s' not found." % self.configFile)
 
 		self.datasplitter = None
-		if init:
+		if opts.init:
 			self._initTask(config)
 		elif self.dataset != None:
 			try:
 				self.datasplitter = DataSplitter.loadState(self.workDir)
 			except:
 				raise ConfigError("Not a properly initialized work directory '%s'." % self.workDir)
-			if resync:
+			if opts.resync:
 				old = DataProvider.loadState(config, self.workDir)
 				new = DataProvider.create(config)
 				self.datasplitter.resyncMapping(self.workDir, old.getBlocks(), new.getBlocks())
