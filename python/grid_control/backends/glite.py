@@ -23,9 +23,9 @@ class Glite(GridWMS):
 		'cleared':   Job.SUCCESS
 	}
 
-	def __init__(self, workDir, config, module, init):
+	def __init__(self, workDir, config, opts, module):
 		utils.deprecated("Please use the GliteWMS backend for grid jobs!")
-		GridWMS.__init__(self, workDir, config, module, init)
+		GridWMS.__init__(self, workDir, config, opts, module)
 
 		self._submitExec = utils.searchPathFind('glite-job-submit')
 		self._statusExec = utils.searchPathFind('glite-job-status')

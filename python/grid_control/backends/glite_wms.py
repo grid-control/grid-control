@@ -10,8 +10,8 @@ except ImportError:
 	from email.Utils import parsedate
 
 class GliteWMS(Glite):
-	def __init__(self, workDir, config, module, init):
-		GridWMS.__init__(self, workDir, config, module, init)
+	def __init__(self, workDir, config, opts, module):
+		GridWMS.__init__(self, workDir, config, opts, module)
 
 		self._delegateExec = utils.searchPathFind('glite-wms-job-delegate-proxy')
 		self._submitExec = utils.searchPathFind('glite-wms-job-submit')

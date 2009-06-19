@@ -34,7 +34,7 @@ def main(args):
 	parser = optparse.OptionParser(add_help_option=False)
 	parser.add_option("-h", "--help",          action="callback", callback=print_help),
 	parser.add_option("-s", "--no-submission", dest="submission", default=True,  action="store_false")
-	parser.add_option("-q", "--requery",       dest="reinit",     default=False, action="store_true")
+	parser.add_option("-q", "--requery",       dest="resync",     default=False, action="store_true")
 	parser.add_option("-i", "--init",          dest="init",       default=False, action="store_true")
 	parser.add_option("-c", "--continuous",    dest="continuous", default=False, action="store_true")
 	parser.add_option("-r", '--report',        dest="report",     default=False, action="store_true")
