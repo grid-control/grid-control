@@ -1,5 +1,5 @@
 from __future__ import generators
-import sys, os, bisect, popen2, StringIO, tarfile
+import sys, os, bisect, popen2, StringIO, tarfile, time
 from fnmatch import fnmatch
 from grid_control import InstallationError, ConfigError
 
@@ -7,10 +7,10 @@ def verbosity():
 	return sys.modules['__main__']._verbosity
 
 
-def vprint(text, level = 0, time = False):
-	if time:
-		print "%s - " % strftime("%Y-%m-%d %H:%M:%S", localtime()),
+def vprint(text, level = 0, printTime = False):
 	if verbosity() > level:
+		if printTime:
+			print "%s - " % time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()),
 		print text
 
 
@@ -175,7 +175,7 @@ def parseTime(usertime):
 
 
 def strTime(secs):
-	return "%dh %0.2dmin %0.2dsec" % (runtime / 60 / 60, (runtime / 60) % 60, runtime % 60)
+	return "%dh %0.2dmin %0.2dsec" % (secs / 60 / 60, (secs / 60) % 60, secs % 60)
 
 
 def genTarball(outFile, dir, pattern):

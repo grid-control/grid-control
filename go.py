@@ -95,11 +95,14 @@ def main(args):
 
 		# Test grid proxy lifetime
 		wallTime = utils.parseTime(config.get('jobs', 'wall time'))
-		if proxy.critical():
-			raise UserError('Your proxy only has %d seconds left!' % proxy.timeleft())
-		if not proxy.check(wallTime):
-			proxy.warn(wallTime)
-			opts.submission = False
+		def checkProxy():
+			if not proxy.check(0):
+				raise UserError('Your proxy only has %d seconds left!' % proxy.timeleft())
+			if not proxy.check(wallTime) and opts.submission:
+				sys.stderr.write("Proxy lifetime (%s) does not meet the walltime requirements (%s)!\n" \
+					"INFO: Disabling job submission." % (utils.strTime(proxy.timeleft()), utils.strTime(wallTime)))
+				opts.submission = False
+		checkProxy()
 
 		# Initialise job database
 		jobs = JobDB(workDir, config, opts, module)
@@ -153,9 +156,7 @@ def main(args):
 				continue
 
 			# Check proxy lifetime
-			if opts.submission and not proxy.check(wallTime):
-				proxy.warn(wallTime)
-				opts.submission = False
+			checkProxy()
 
 	except GridError, e:
 		e.showMessage()
