@@ -46,6 +46,7 @@ def main(args):
 	parser.add_option("-S", '--seed',          dest="seed",       default=None)
 	(opts, args) = parser.parse_args()
 	sys.modules['__main__']._verbosity = opts.verbosity
+	opts.abort = False
 
 	# we need exactly one positional argument (config file)
 	if len(args) != 1:
@@ -54,7 +55,7 @@ def main(args):
 	# set up signal handler for interrupts
 	def interrupt(sig, frame):
 		global opts, log
-		opts.continuous = False
+		opts.abort = True
 		log = utils.ActivityLog('Quitting grid-control! (This can take a few seconds...)')
 	signal.signal(signal.SIGINT, interrupt)
 
@@ -99,8 +100,9 @@ def main(args):
 			if not proxy.check(0):
 				raise UserError('Your proxy only has %d seconds left!' % proxy.timeleft())
 			if not proxy.check(wallTime) and opts.submission:
-				sys.stderr.write("Proxy lifetime (%s) does not meet the walltime requirements (%s)!\n" \
-					"INFO: Disabling job submission." % (utils.strTime(proxy.timeleft()), utils.strTime(wallTime)))
+				utils.vprint("Proxy lifetime (%s) does not meet the walltime requirements (%s)!"
+					% (utils.strTime(proxy.timeleft()), utils.strTime(wallTime)), printTime = True)
+				utils.vprint("INFO: Disabling job submission.", printTime = True)
 				opts.submission = False
 		checkProxy()
 
@@ -108,7 +110,7 @@ def main(args):
 		jobs = JobDB(workDir, config, opts, module)
 
 		# If invoked in report mode, just show report and exit
-		if Report(opts, jobs, jobs).show():
+		if Report(jobs, jobs).show(opts):
 			return 0
 
 		# Check if jobs have to be deleted and exit
@@ -121,40 +123,34 @@ def main(args):
 			print "Running in continuous mode. Press ^C to exit."
 
 		# Job submission loop
-		timeout = 0
-		while True:
+		def wait(timeout):
 			for x in xrange(0, timeout, 5):
-				# avoid timeout if not continuous
-				if not opts.continuous:
-					break
-				log = utils.ActivityLog('next check in %d seconds' % (timeout - x))
+				if opts.abort:
+					return
+				log = utils.ActivityLog('waiting for %d seconds' % (timeout - x))
 				time.sleep(5)
 				del log
-			if not opts.continuous:
-				break
 
-			# idle timeout is one minute
-			timeout = 60
-
+		while True:
 			# Check free disk space
 			if int(os.popen("df -P -m %s" % workDir).readlines()[-1].split()[3]) < 10:
 				raise RuntimeError("Not enough space left in working directory")
 
 			# try submission
-			if jobs.submit(wms):
-				timeout = 10
-				continue
-
+			if not opts.abort and jobs.submit(wms):
+				wait(10)
 			# retrieve finished jobs
-			if jobs.retrieve(wms):
-				timeout = 10
-				continue
-
+			if not opts.abort and jobs.retrieve(wms):
+				wait(10)
 			# check for jobs
-			if jobs.check(wms):
-				timeout = 10
-				continue
+			if not opts.abort and jobs.check(wms):
+				wait(10)
 
+			# quit if abort flag is set or not in continuous mode
+			if opts.abort or not opts.continuous:
+				break
+			# idle timeout is one minute
+			wait(60)
 			# Check proxy lifetime
 			checkProxy()
 

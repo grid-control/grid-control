@@ -2,26 +2,25 @@ import copy
 from grid_control import Job, RuntimeError, utils, SortedList
 
 class Report:
-	def __init__(self, opts, jobs, allJobs):
+	def __init__(self, jobs, allJobs):
 		self.allJobs = allJobs
 		if hasattr(jobs, 'all'):
 			self.jobs = jobs.all
 		else:
 			self.jobs = jobs
-		self._opts = opts
 
 
-	def show(self):
-		if self._opts.report:
+	def show(self, opts):
+		if opts.report:
 			self.details()
 			self.summary()
-		elif self._opts.continuous:
+		elif opts.continuous:
 			self.summary()
-		if self._opts.reportSite:
+		if opts.reportSite:
 			self.siteReport(opts.reportSite)
-		if self._opts.reportTime:
+		if opts.reportTime:
 			self.timeReport(opts.reportTime)
-		if self._opts.report or self._opts.reportSite or self._opts.reportTime:
+		if opts.report or opts.reportSite or opts.reportTime:
 			return True
 		return False
 

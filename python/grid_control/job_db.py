@@ -274,7 +274,7 @@ class JobDB:
 		wmsIds = self.getWmsMap(jobs).keys()
 
 		print "\nDeleting the following jobs:"
-		Report(opts, jobs, self._jobs).details()
+		Report(jobs, self._jobs).details()
 		
 		if not len(jobs) == 0:
 			if not utils.boolUserInput('Do you really want to delete these jobs?', True):
