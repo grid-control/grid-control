@@ -19,7 +19,7 @@ _verbosity = 0
 def main(args):
 	global opts, log
 
-	# display the 'grid-control' logo
+	# display the 'grid-control' logo and version
 	print open(utils.atRoot('share', 'logo.txt'), 'r').read()
 	try:
 		ver = popen2.popen3('svnversion %s' % _root)[0].read().strip()
@@ -29,7 +29,7 @@ def main(args):
 		pass
 	pyver = reduce(lambda x,y: x+y/10., sys.version_info[:2])
 	if pyver < 2.3:
-		utils.deprecated("This python version (%.1f) is not supported anymore" % pyver)
+		utils.deprecated("This python version (%.1f) is not supported anymore!" % pyver)
 
 	parser = optparse.OptionParser(add_help_option=False)
 	parser.add_option("-h", "--help",          action="callback", callback=print_help),
@@ -50,8 +50,6 @@ def main(args):
 	# we need exactly one positional argument (config file)
 	if len(args) != 1:
 		print_help()
-		return 1
-	configFile = args[0]
 
 	# set up signal handler for interrupts
 	def interrupt(sig, frame):
@@ -62,24 +60,23 @@ def main(args):
 
 	# big try... except block to catch exceptions and print error message
 	try:
-
 		# try to open config file
 		try:
-			f = open(configFile, 'r')
+			f = open(args[0], 'r')
 			config = Config(f)
 			f.close()
 		except IOError, e:
-			raise ConfigError("Error while reading configuration file '%s'!" % configFile)
+			raise ConfigError("Error while reading configuration file '%s'!" % args[0])
 
-		# Check work dir validity
-		workdir = config.getPath('global', 'workdir', config.name.replace(".conf",""))
+		# Check work dir validity (default work directory is the config file name)
+		workDir = config.getPath('global', 'workdir', os.path.basename(args[0]).replace(".conf",""))
+		if not os.path.exists(workDir):
+			if utils.boolUserInput("Do you want to create the working directory %s?" % workDir, True):
+				os.mkdir(workDir)
 		try:
-			os.chdir(workdir)
+			os.chdir(workDir)
 		except:
-			if utils.boolUserInput("Do you want to create the working directory %s?" % workdir, True):
-				os.mkdir(workdir)
-			else:
-				raise UserError("Could not access specified working directory '%s'!" % workdir)
+			raise UserError("Could not access specified working directory '%s'!" % workDir)
 
 		# Initialise application module
 		module = config.get('global', 'module')
@@ -89,12 +86,8 @@ def main(args):
 
 		# Initialise workload management interface
 		backend = config.get('global', 'backend', 'grid')
-		try:
-			wms = config.get(backend, 'wms')
-		except:
-			default_wms = { 'grid': 'GliteWMS', 'local': LocalWMS.guessWMS() }
-			wms = default_wms[backend]
-		wms = WMS.open(wms, workdir, config, module, opts.init)
+		default_wms = { 'grid': 'GliteWMS', 'local': LocalWMS.guessWMS() }
+		wms = WMS.open(config.get(backend, 'wms', default_wms[backend]), workDir, config, module, opts.init)
 
 		# Initialise proxy
 		proxy = wms.getProxy()
@@ -110,7 +103,7 @@ def main(args):
 
 		# Initialise job database
 		queueTimeout = utils.parseTime(config.get('jobs', 'queue timeout', ''))
-		jobs = JobDB(workdir, config.getInt('jobs', 'jobs', -1), queueTimeout, module, opts.init)
+		jobs = JobDB(workDir, config.getInt('jobs', 'jobs', -1), queueTimeout, module, opts.init)
 
 		# If invoked in report mode, just show report and exit
 		if Report(opts, jobs, jobs).show():
@@ -131,16 +124,8 @@ def main(args):
 			timeout = 60
 
 			# Check free disk space
-			if int(os.popen("df -P -m %s" % workdir).readlines()[-1].split()[3]) < 10:
+			if int(os.popen("df -P -m %s" % workDir).readlines()[-1].split()[3]) < 10:
 				raise RuntimeError("Not enough space left in working directory")
-
-			# retrieve finished jobs
-			if jobs.retrieve(wms):
-				timeout = 10
-
-			# check for jobs
-			if jobs.check(wms):
-				timeout = 10
 
 			# try submission
 			if opts.submission:
@@ -151,7 +136,15 @@ def main(args):
 					jobs.submit(wms, jobList)
 				del jobList
 
-			for x in range(0, timeout, 5):
+			# retrieve finished jobs
+			if jobs.retrieve(wms):
+				timeout = 10
+
+			# check for jobs
+			if jobs.check(wms):
+				timeout = 10
+
+			for x in xrange(0, timeout, 5):
 				# avoid timeout if not continuous
 				if not opts.continuous:
 					break
@@ -161,7 +154,7 @@ def main(args):
 			if not opts.continuous:
 				break
 
-			# Retest proxy lifetime
+			# Check proxy lifetime
 			if opts.submission and not proxy.check(wallTime):
 				proxy.warn(wallTime)
 				opts.submission = False
@@ -170,9 +163,7 @@ def main(args):
 		e.showMessage()
 		return 1
 
-	# everything seems to be in order
 	return 0
-
 
 # if go.py is executed from the command line, call main() with the arguments
 if __name__ == '__main__':
