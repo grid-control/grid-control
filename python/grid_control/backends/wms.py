@@ -6,9 +6,7 @@ from grid_control import AbstractObject, ConfigError, RuntimeError, utils, proxy
 class WMS(AbstractObject):
 	INLINE_TAR_LIMIT = 256 * 1024
 	reqTypes = ('MEMBER', 'WALLTIME', 'STORAGE', 'SITES', 'CPUTIME', 'MEMORY', 'OTHER')
-	_reqTypeDict = {}
 	for id, reqType in enumerate(reqTypes):
-		_reqTypeDict[reqType] = id
 		locals()[reqType] = id
 
 
@@ -17,7 +15,6 @@ class WMS(AbstractObject):
 		self.module = module
 		self.workDir = workDir
 		self.proxy = config.get(backend, 'proxy', 'TrivialProxy')
-		self._sites = config.get(backend, 'sites', '').split()
 
 		self._outputPath = os.path.join(self.workDir, 'output')
 
@@ -86,13 +83,7 @@ class WMS(AbstractObject):
 
 
 	def getRequirements(self, job):
-		reqs = self.module.getRequirements(job)
-		# add site requirements
-		if len(self._sites):
-			reqs.append((self.SITES, self._sites))
-		if len(reqs) == 0:
-			return None
-		return reqs
+		return self.module.getRequirements(job)
 
 
 	def retrieveJobs(self, ids):
@@ -110,7 +101,7 @@ class WMS(AbstractObject):
 				id = data['JOBID']
 				retCode = data['EXITCODE']
 			except:
-				print >> sys.stderr, "Warning: '%s' seems broken." % info
+				sys.stderr.write("Warning: '%s' seems broken.\n" % info)
 				continue
 
 			dst = os.path.join(self._outputPath, 'job_%d' % id)
@@ -119,18 +110,14 @@ class WMS(AbstractObject):
 				if os.path.exists(dst):
 					shutil.rmtree(dst)
 			except IOError, e:
-				print >> sys.stderr, "Warning: '%s' cannot be removed: %s" % (dst, str(e))
+				sys.stderr.write("Warning: '%s' cannot be removed: %s" % (dst, str(e)))
 				continue
 
 			try:
-				try:
-					shutil.move(dir, dst)
-				except AttributeError:
-					os.renames(dir, dst)
+				shutil.move(dir, dst)
 			except IOError, e:
-				print >> sys.stderr, \
-					"Warning: Error moving job output directory from '%s' to '%s': %s" \
-					% (dir, dst, str(e))
+				sys.stderr.write("Warning: Error moving job output directory from '%s' to '%s': %s" \
+					% (dir, dst, str(e)))
 				continue
 
 			result.append((id, retCode, data))

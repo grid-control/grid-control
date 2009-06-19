@@ -1,5 +1,5 @@
 from __future__ import generators
-import sys, os, re, fnmatch, random, utils
+import sys, os, re, fnmatch, random, utils, threading
 from time import time, localtime, strftime
 from grid_control import SortedList, ConfigError, Job, UserError, Report
 
@@ -158,7 +158,7 @@ class JobDB:
 				for key, value in info.items():
 					job.set(key, value)
 				self._update(id, job, state)
-				self.module.onJobUpdate(job, id, info)
+				threading.Thread(target = self.module.onJobUpdate, args = (job, id, info,)).start()
 			else:
 				# If a job stays too long in an inital state, cancel it
 				if job.state in (Job.SUBMITTED, Job.WAITING, Job.READY, Job.QUEUED):
@@ -215,7 +215,7 @@ class JobDB:
 
 				job.assignId(wmsId)
 				self._update(id, job, Job.SUBMITTED)
-				self.module.onJobSubmit(job, id)
+				threading.Thread(target = self.module.onJobSubmit, args = (job, id,)).start()
 		finally:
 			wms.bulkSubmissionEnd()
 		return True
@@ -241,7 +241,7 @@ class JobDB:
 				job.set('retcode', retCode)
 				job.set('runtime', data.get("TIME", -1))
 				self._update(id, job, state)
-				self.module.onJobOutput(job, id, retCode)
+				threading.Thread(target = self.module.onJobOutput, args = (job, id, retCode,)).start()
 
 		return change
 

@@ -21,6 +21,7 @@ class GridWMS(WMS):
 	def __init__(self, workDir, config, opts, module):
 		WMS.__init__(self, workDir, config, opts, module, 'grid')
 		self.proxy = config.get('grid', 'proxy', 'VomsProxy')
+		self._sites = config.get('grid', 'sites', '').split()
 		self.vo = config.get('grid', 'vo', self.getProxy().getVO())
 
 
@@ -103,6 +104,9 @@ class GridWMS(WMS):
 		reqs = WMS.getRequirements(self, job)
 		# WMS.OTHER => GlueHostNetworkAdapterOutboundIP
 		reqs.append((WMS.OTHER, ()))
+		# add site requirements
+		if len(self._sites):
+			reqs.append((self.SITES, self._sites))
 		return reqs	
 
 
