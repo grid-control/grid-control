@@ -6,14 +6,14 @@ from local_wms import LocalWMS
 class SLURM(LocalWMS):
 	_statusMap = { 's': Job.QUEUED, 'r': Job.RUNNING, 'CG': Job.DONE }
 
-	def __init__(self, workDir, config, module, init):
-		LocalWMS.__init__(self, workDir, config, module, init)
+	def __init__(self, module):
+		LocalWMS.__init__(self, module)
 
 		self.submitExec = utils.searchPathFind('job_submit')
 		self.statusExec = utils.searchPathFind('job_queue')
 		self.cancelExec = utils.searchPathFind('job_cancel')
 
-		self._queue = config.get('local', 'queue', '')
+		self._queue = module.config.get('local', 'queue', '')
 
 	def unknownID(self):
 		return "not in queue !"

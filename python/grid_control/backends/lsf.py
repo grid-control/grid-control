@@ -13,14 +13,14 @@ class LSF(LocalWMS):
 		'UNKWN':  Job.FAILED, 'ZOMBI':  Job.FAILED,
 	}
 
-	def __init__(self, workDir, config, module, init):
-		LocalWMS.__init__(self, workDir, config, module, init)
+	def __init__(self, module):
+		LocalWMS.__init__(self, module)
 
 		self.submitExec = utils.searchPathFind('bsub')
 		self.statusExec = utils.searchPathFind('bjobs')
 		self.cancelExec = utils.searchPathFind('bkill')
 
-		self._queue = config.get('local', 'queue', '')
+		self._queue = module.config.get('local', 'queue', '')
 
 	def unknownID(self):
 		return "is not found"

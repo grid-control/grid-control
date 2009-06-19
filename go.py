@@ -123,7 +123,6 @@ def main(args):
 
 		# Check if running in continuous mode
 		if opts.continuous:
-			Report(jobs, jobs).summary()
 			print "Running in continuous mode. Press ^C to exit."
 
 		# Job submission loop

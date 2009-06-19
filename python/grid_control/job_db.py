@@ -4,11 +4,11 @@ from time import time, localtime, strftime
 from grid_control import SortedList, ConfigError, Job, UserError, Report
 
 class JobDB:
-	def __init__(self, workDir, nJobs, timeout, module, init = False):
+	def __init__(self, workDir, config, opts, module):
 		self._dbPath = os.path.join(workDir, 'jobs')
 		try:
 			if not os.path.exists(self._dbPath):
-				if init:
+				if opts.init:
 					os.mkdir(self._dbPath)
 				else:
 					raise ConfigError("Not a properly initialized work directory '%s'." % workDir)
@@ -25,6 +25,7 @@ class JobDB:
 		self.done = SortedList()
 		self.ok = SortedList()
 
+		nJobs = config.getInt('jobs', 'jobs', -1)
 		if nJobs < 0:
 			nJobs = module.getMaxJobs()
 		else:
@@ -46,8 +47,12 @@ class JobDB:
 			queue = self._findQueue(self._jobs[j])
 			queue.append(j)
 		self.ready.extend(xrange(i, nJobs))
-		self.timeout = timeout
+
+		self.timeout = utils.parseTime(config.get('jobs', 'queue timeout', ''))
+		self.inFlight = config.getInt('jobs', 'in flight')
+		self.doShuffle = config.getBool('jobs', 'shuffle', False)
 		self.module = module
+		self.opts = opts
 
 
 	def _findQueue(self, job):
@@ -132,18 +137,6 @@ class JobDB:
 		self._saveJob(id)
 
 
-	def getSubmissionJobs(self, maxInFlight, maxRetry, shuffle):
-		curInFlight = len(self.running)
-		submit = max(0, maxInFlight - curInFlight)
-		if maxRetry:
-			list = filter(lambda x: self._jobs.get(x, Job()).attempt < maxRetry, self.ready)
-		else:
-			list = self.ready[:]
-		if shuffle:
-			random.shuffle(list)
-		return SortedList(list[:submit])
-
-
 	def getWmsMap(self, idlist):
 		map = {}
 		for id in idlist:
@@ -189,13 +182,25 @@ class JobDB:
 		return change
 
 
-	def submit(self, wms, ids):
+	def getSubmissionJobs(self):
+		curInFlight = len(self.running)
+		submit = max(0, self.inFlight - curInFlight)
+		if self.opts.maxRetry != None:
+			list = filter(lambda x: self._jobs.get(x, Job()).attempt < self.opts.maxRetry, self.ready)
+		else:
+			list = self.ready[:]
+		if self.doShuffle:
+			random.shuffle(list)
+		return SortedList(list[:submit])
+
+
+	def submit(self, wms):
+		ids = self.getSubmissionJobs()
 		if len(ids) == 0:
 			return
 
 		try:
 			wms.bulkSubmissionBegin()
-#			self.module.onJobSubmit(job, id)
 			for id in ids:
 				try:
 					job = self._jobs[id]
@@ -251,9 +256,9 @@ class JobDB:
 
 	def delete(self, wms, jobfilter):
 		jobs = []
-		if jobfilter == "TODO":
+		if jobfilter.upper() == "TODO":
 			jobfilter = "SUBMITTED,WAITING,READY,QUEUED"
-		if jobfilter == "ALL":
+		if jobfilter.upper() == "ALL":
 			jobfilter = "SUBMITTED,WAITING,READY,QUEUED,RUNNING"
 		if len(jobfilter) and jobfilter[0].isdigit():
 			for jobId in jobfilter.split(","):

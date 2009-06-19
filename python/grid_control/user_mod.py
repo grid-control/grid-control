@@ -2,10 +2,10 @@ import os.path
 from grid_control import Module
 
 class UserMod(Module):
-	def __init__(self, config, init, resync):
-		Module.__init__(self, config, init, resync)
+	def __init__(self, workDir, config, opts):
+		Module.__init__(self, workDir, config, opts)
 		self._executable = config.getPath('UserMod', 'executable')
-		self._arguments = config.get('UserMod', 'arguments')
+		self._arguments = config.get('UserMod', 'arguments', '')
 
 
 	def getInFiles(self):
@@ -17,5 +17,5 @@ class UserMod(Module):
 		return 'chmod u+x %s; ./%s "$@"' % (cmd, cmd)
 
 
-	def getJobArguments(self, job):
+	def getJobArguments(self, jobNum):
 		return self._arguments

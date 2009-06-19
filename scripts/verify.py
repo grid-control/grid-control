@@ -178,11 +178,9 @@ def verify(config, dirname, jobs='success', quiet=False, set_to_failed=False):
 
 	if type(config)==type(""):
 		try:
-			f = open(config, 'r')
+			config = Config(config)
 		except IOError, e:
 			raise ConfigError("Configuration file '%s' not found!" % configFile)
-		config = Config(f)
-		f.close()
 
 	workdir = config.getPath("global", "workdir")
 	#construct job_list containing all job numbers to be verified.

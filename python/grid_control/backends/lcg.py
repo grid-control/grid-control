@@ -5,21 +5,21 @@ from glite import Glite
 
 class LCG(Glite):
 
-	def __init__(self, workDir, config, module, init):
+	def __init__(self, module):
 		utils.deprecated("Please use the GliteWMS backend for grid jobs!")
-		GridWMS.__init__(self, workDir, config, module, init)
+		GridWMS.__init__(self, module)
 
 		self._submitExec = utils.searchPathFind('edg-job-submit')
 		self._statusExec = utils.searchPathFind('edg-job-status')
 		self._outputExec = utils.searchPathFind('edg-job-get-output')
 		self._cancelExec = utils.searchPathFind('edg-job-cancel')
 
-		self._configVO = config.getPath('lcg', 'config-vo', '')
+		self._configVO = module.config.getPath('lcg', 'config-vo', '')
 		if self._configVO != '' and not os.path.exists(self._configVO):
 			raise ConfigError("--config-vo file '%s' does not exist." % self._configVO)
 
 		try:
-			self._ce = config.get('lcg', 'ce')
+			self._ce = module.config.get('lcg', 'ce')
 		except:
 			self._ce = None
 

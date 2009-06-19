@@ -2,10 +2,11 @@ from __future__ import generators
 import sys, os, time, copy, popen2, tempfile, cStringIO, random
 from grid_control import ConfigError, Job, utils
 from wms import WMS
+from grid_wms import GridWMS
 
-class DummyWMS(WMS):
-	def __init__(self, workDir, config, module, init):
-		WMS.__init__(self, workDir, config, module, 'grid', init)
+class DummyWMS(GridWMS):
+	def __init__(self, module):
+		GridWMS.__init__(self, module)
 		self.jobmap = {}
 
 	def submitJob(self, id, job):
