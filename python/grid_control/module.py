@@ -7,9 +7,9 @@ from time import time
 
 class Module(AbstractObject):
 	# Read configuration options and init vars
-	def __init__(self, config, init, resync):
+	def __init__(self, workDir, config, opts):
 		self.config = config
-		self.workDir = config.getPath('global', 'workdir', config.name.replace(".conf",""))
+		self.workDir = workDir
 
 		self.wallTime = utils.parseTime(config.get('jobs', 'wall time'))
 		self.cpuTime = utils.parseTime(config.get('jobs', 'cpu time', config.get('jobs', 'wall time')))

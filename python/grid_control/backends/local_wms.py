@@ -1,9 +1,9 @@
 from __future__ import generators
 import sys, os, popen2, tempfile, shutil, time
-from grid_control import ConfigError, Job, utils
+from grid_control import AbstractObject, ConfigError, Job, utils
 from wms import WMS
 
-class LocalWMSApi(object):
+class LocalWMSApi(AbstractObject):
 	def __init__(self, config, localWMS):
 		self.config = config
 		self.wms = localWMS
@@ -31,10 +31,10 @@ class LocalWMSApi(object):
 
 
 class LocalWMS(WMS):
-	def __init__(self, workDir, config, module, init):
-		WMS.__init__(self, workDir, config, module, 'local', init)
+	def __init__(self, workDir, config, opts, module):
+		WMS.__init__(self, workDir, config, opts, module, 'local')
 
-		self.api = LocalWMSApi.open(config.get('local', 'wms', LocalWMS._guessWMS()), config, self)
+		self.api = LocalWMSApi.open(config.get('local', 'wms', self._guessWMS()), config, self)
 		self.sandPath = config.getPath('local', 'sandbox path', os.path.join(self.workDir, 'sandbox'))
 		self._nameFile = config.getPath('local', 'name source', '')
 		self._source = None
@@ -43,7 +43,7 @@ class LocalWMS(WMS):
 			self._source = filter(lambda x: not (x.startswith('#') or x == ''), tmp)
 
 
-	def _guessWMS():
+	def _guessWMS(self):
 		wmsCmdList = [ ('PBS', 'pbs-config'), ('SGE', 'qsub'), ('LSF', 'bsub'), ('SLURM', 'job_slurm'), ('PBS', 'sh') ]
 		for wms, cmd in wmsCmdList:
 			try:
@@ -52,7 +52,6 @@ class LocalWMS(WMS):
 				return wms
 			except:
 				pass
-	guessWMS = staticmethod(guessWMS)
 
 
 	def getJobName(self, jobNum):
@@ -85,7 +84,7 @@ class LocalWMS(WMS):
 
 		jcfg = open(os.path.join(sandbox, 'jobconfig.sh'), 'w')
 		jcfg.writelines(utils.DictFormat().format(env_vars))
-		proc = popen2.Popen3("%s %s %s %s" % (self.submitExec,
+		proc = popen2.Popen3("%s %s %s %s" % (self.api.submitExec,
 			self.api.getSubmitArguments(jobNum, sandbox),
 			utils.shellEscape(utils.atRoot('share', 'local.sh')),
 			self.api.getArguments(jobNum, sandbox)), True)
@@ -118,13 +117,14 @@ class LocalWMS(WMS):
 
 		shortWMSIds = map(lambda x: x.split(".")[0], wmsIds)
 		activity = utils.ActivityLog("checking job status")
-		proc = popen2.Popen3("%s %s" % (self.statusExec, self.api.getCheckArgument(shortWMSIds)), True)
+		proc = popen2.Popen3("%s %s" % (self.api.statusExec, self.api.getCheckArgument(shortWMSIds)), True)
+		proc.wait()
 
 		tmp = {}
 		jobstatusinfo = proc.fromchild.read()
 		for data in self.api.parseStatus(jobstatusinfo):
 			# (job number, status, extra info)
-			tmp[data['id']] = (data['id'], self._statusMap[data['status']], data)
+			tmp[data['id']] = (data['id'], self.api._statusMap[data['status']], data)
 
 		result = []
 		for wmsId in wmsIds:
@@ -188,7 +188,7 @@ class LocalWMS(WMS):
 		activity = utils.ActivityLog("cancelling jobs")
 
 		shortWMSIds = map(lambda x: x.split(".")[0], wmsIds)
-		proc = popen2.Popen3("%s %s" % (self.cancelExec, self.api.getCancelArgument(shortWMSIds)), True)
+		proc = popen2.Popen3("%s %s" % (self.api.cancelExec, self.api.getCancelArgument(shortWMSIds)), True)
 		retCode = proc.wait()
 
 		if retCode != 0:

@@ -13,14 +13,14 @@ class Report:
 
 	def show(self):
 		if self._opts.report:
-			reportobj.details()
-			reportobj.summary()
+			self.details()
+			self.summary()
 		elif self._opts.continuous:
-			reportobj.summary()
+			self.summary()
 		if self._opts.reportSite:
-			reportobj.siteReport(opts.reportSite)
+			self.siteReport(opts.reportSite)
 		if self._opts.reportTime:
-			reportobj.timeReport(opts.reportTime)
+			self.timeReport(opts.reportTime)
 		if self._opts.report or self._opts.reportSite or self._opts.reportTime:
 			return True
 		return False

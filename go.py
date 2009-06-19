@@ -78,16 +78,16 @@ def main(args):
 
 		# Initialise application module
 		module = config.get('global', 'module')
-		module = Module.open(module, config, opts.init, opts.reinit)
+		module = Module.open(module, workDir, config, opts)
 		if opts.seed:
 			module.setSeed(opts.seed.lstrip('S'))
 
 		# Initialise workload management interface
 		backend = config.get('global', 'backend', 'grid')
 		if backend == 'grid':
-			wms = WMS.open(config.get(backend, 'wms', 'GliteWMS'), workDir, config, module, opts.init)
-		else if backend == 'local':
-			wms = WMS.open('LocalWMS', workDir, config, module, opts.init)
+			wms = WMS.open(config.get(backend, 'wms', 'GliteWMS'), workDir, config, opts, module)
+		elif backend == 'local':
+			wms = WMS.open('LocalWMS', workDir, config, opts, module)
 		else:
 			raise UserError("Invalid backend specified!" % workDir)
 
@@ -113,7 +113,7 @@ def main(args):
 
 		# Check if jobs have to be deleted and exit
 		if opts.delete != None:
-			jobs.delete(wms, opts.delete)
+			jobs.delete(wms, opts)
 			return 0
 
 		# Check if running in continuous mode
@@ -121,7 +121,18 @@ def main(args):
 			print "Running in continuous mode. Press ^C to exit."
 
 		# Job submission loop
+		timeout = 0
 		while True:
+			for x in xrange(0, timeout, 5):
+				# avoid timeout if not continuous
+				if not opts.continuous:
+					break
+				log = utils.ActivityLog('next check in %d seconds' % (timeout - x))
+				time.sleep(5)
+				del log
+			if not opts.continuous:
+				break
+
 			# idle timeout is one minute
 			timeout = 60
 
@@ -136,25 +147,19 @@ def main(args):
 				jobList = jobs.getSubmissionJobs(inFlight, opts.maxRetry, doShuffle)
 				if len(jobList):
 					jobs.submit(wms, jobList)
+					timeout = 10
+					continue
 				del jobList
 
 			# retrieve finished jobs
 			if jobs.retrieve(wms):
 				timeout = 10
+				continue
 
 			# check for jobs
 			if jobs.check(wms):
 				timeout = 10
-
-			for x in xrange(0, timeout, 5):
-				# avoid timeout if not continuous
-				if not opts.continuous:
-					break
-				log = utils.ActivityLog('next check in %d seconds' % (timeout - x))
-				time.sleep(5)
-				del log
-			if not opts.continuous:
-				break
+				continue
 
 			# Check proxy lifetime
 			if opts.submission and not proxy.check(wallTime):

@@ -12,7 +12,7 @@ class WMS(AbstractObject):
 		locals()[reqType] = id
 
 
-	def __init__(self, workDir, config, module, backend, init):
+	def __init__(self, workDir, config, opts, module, backend):
 		self.config = config
 		self.module = module
 		self.workDir = workDir
@@ -22,7 +22,7 @@ class WMS(AbstractObject):
 		self._outputPath = os.path.join(self.workDir, 'output')
 
 		if not os.path.exists(self._outputPath):
-			if init:
+			if opts.init:
 				try:
 					os.mkdir(self._outputPath)
 				except IOError, e:
@@ -39,7 +39,7 @@ class WMS(AbstractObject):
 		inFiles = self.module.getInFiles() + [ utils.VirtualFile('_config.sh', utils.SortedList(taskConfig)) ]
 
 		utils.vprint("Packing sandbox:")
-		if init:
+		if opts.init:
 			utils.vprint("\t%s" % tarFile)
 			tar = tarfile.TarFile.open(tarFile, 'w:gz')
 
@@ -56,7 +56,7 @@ class WMS(AbstractObject):
 					self.sandboxIn.append(path)
 					continue
 
-			if init:
+			if opts.init:
 				# Package sandbox tar file
 				if type(file) == str:
 					utils.vprint("\t\t%s" % path)
@@ -78,10 +78,10 @@ class WMS(AbstractObject):
 				tar.addfile(info, handle)
 				handle.close()
 
-		if init:
+		if opts.init:
 			tar.close()
 		for file in self.sandboxIn:
-			if file != tarFile or not init:
+			if file != tarFile or not opts.init:
 				utils.vprint("\t%s" % file)
 
 

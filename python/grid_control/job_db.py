@@ -249,7 +249,8 @@ class JobDB:
 			self._update(id, job, Job.CANCELLED)
 
 
-	def delete(self, wms, jobfilter):
+	def delete(self, wms, opts):
+		jobfilter = opts.delete
 		jobs = []
 		if jobfilter == "TODO":
 			jobfilter = "SUBMITTED,WAITING,READY,QUEUED"
@@ -267,7 +268,7 @@ class JobDB:
 		wmsIds = self.getWmsMap(jobs).keys()
 
 		print "\nDeleting the following jobs:"
-		Report(jobs, self._jobs).details()
+		Report(opts, jobs, self._jobs).details()
 		
 		if not len(jobs) == 0:
 			if not utils.boolUserInput('Do you really want to delete these jobs?', True):

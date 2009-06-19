@@ -7,8 +7,8 @@ from DashboardAPI import DashboardAPI
 from time import time, localtime, strftime
 
 class CMSSW(Module):
-	def __init__(self, config, init, resync):
-		Module.__init__(self, config, init, resync)
+	def __init__(self, workDir, config, opts):
+		Module.__init__(self, workDir, config, opts)
 
 		# SCRAM info
 		scramProject = config.get('CMSSW', 'scram project', '').split()
