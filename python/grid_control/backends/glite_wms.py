@@ -10,8 +10,8 @@ except ImportError:
 	from email.Utils import parsedate
 
 class GliteWMS(Glite):
-	def __init__(self, module):
-		GridWMS.__init__(self, module)
+	def __init__(self, workDir, config, module, init):
+		GridWMS.__init__(self, workDir, config, module, init)
 
 		self._delegateExec = utils.searchPathFind('glite-wms-job-delegate-proxy')
 		self._submitExec = utils.searchPathFind('glite-wms-job-submit')
@@ -19,12 +19,12 @@ class GliteWMS(Glite):
 		self._outputExec = utils.searchPathFind('glite-wms-job-output')
 		self._cancelExec = utils.searchPathFind('glite-wms-job-cancel')
 
-		self._configVO = module.config.getPath('glite-wms', 'config', '')
+		self._configVO = config.getPath('glite-wms', 'config', '')
 		if self._configVO != '' and not os.path.exists(self._configVO):
 			raise ConfigError("--config file '%s' does not exist." % self._configVO)
 
 		try:
-			self._ce = module.config.get('glite-wms', 'ce')
+			self._ce = config.get('glite-wms', 'ce')
 		except:
 			self._ce = None
 

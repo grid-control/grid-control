@@ -6,18 +6,18 @@ from grid_control import AbstractObject, ConfigError, RuntimeError, utils, proxy
 class WMS(AbstractObject):
 	INLINE_TAR_LIMIT = 256 * 1024
 	reqTypes = ('MEMBER', 'WALLTIME', 'STORAGE', 'SITES', 'CPUTIME', 'MEMORY', 'OTHER')
+	_reqTypeDict = {}
 	for id, reqType in enumerate(reqTypes):
+		_reqTypeDict[reqType] = id
 		locals()[reqType] = id
 
 
-	def __init__(self, module, backend):
+	def __init__(self, workDir, config, module, backend, init):
+		self.config = config
 		self.module = module
-		self.config = module.config
-		self.workDir = module.workDir
-
-		self.proxy = self.config.get(backend, 'proxy', 'TrivialProxy')
-
-		self._sites = self.config.get(backend, 'sites', '').split()
+		self.workDir = workDir
+		self.proxy = config.get(backend, 'proxy', 'TrivialProxy')
+		self._sites = config.get(backend, 'sites', '').split()
 
 		self._outputPath = os.path.join(self.workDir, 'output')
 
@@ -39,7 +39,7 @@ class WMS(AbstractObject):
 		inFiles = self.module.getInFiles() + [ utils.VirtualFile('_config.sh', utils.SortedList(taskConfig)) ]
 
 		utils.vprint("Packing sandbox:")
-		if module.init:
+		if init:
 			utils.vprint("\t%s" % tarFile)
 			tar = tarfile.TarFile.open(tarFile, 'w:gz')
 
@@ -56,7 +56,7 @@ class WMS(AbstractObject):
 					self.sandboxIn.append(path)
 					continue
 
-			if module.init:
+			if init:
 				# Package sandbox tar file
 				if type(file) == str:
 					utils.vprint("\t\t%s" % path)
@@ -78,10 +78,10 @@ class WMS(AbstractObject):
 				tar.addfile(info, handle)
 				handle.close()
 
-		if module.init:
+		if init:
 			tar.close()
 		for file in self.sandboxIn:
-			if file != tarFile or not module.init:
+			if file != tarFile or not init:
 				utils.vprint("\t%s" % file)
 
 

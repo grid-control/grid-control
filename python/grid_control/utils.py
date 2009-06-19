@@ -7,10 +7,8 @@ def verbosity():
 	return sys.modules['__main__']._verbosity
 
 
-def vprint(text, level = 0, time = False):
-	if time:
-		print "%s - " % strftime("%Y-%m-%d %H:%M:%S", localtime()),
-	if verbosity() > level:
+def vprint(text):
+	if verbosity():
 		print text
 
 
@@ -172,10 +170,6 @@ def parseTime(usertime):
 	if tmp[2] > 59 or tmp[1] > 59:
 		raise ConfigError('Invalid time format: %s' % usertime)
 	return reduce(lambda x, y: x * 60 + y, tmp)
-
-
-def strTime(secs):
-	return "%dh %0.2dmin %0.2dsec" % (runtime / 60 / 60, (runtime / 60) % 60, runtime % 60)
 
 
 def genTarball(outFile, dir, pattern):

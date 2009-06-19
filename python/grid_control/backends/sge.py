@@ -14,14 +14,14 @@ class SGE(LocalWMS):
 		'd': Job.ABORTED,   'E': Job.DONE,
 	}
 
-	def __init__(self, module):
-		LocalWMS.__init__(self, module)
+	def __init__(self, workDir, config, module, init):
+		LocalWMS.__init__(self, workDir, config, module, init)
 
 		self.submitExec = utils.searchPathFind('qsub')
 		self.statusExec = utils.searchPathFind('qstat')
 		self.cancelExec = utils.searchPathFind('qdel')
 
-		self._queue = module.config.get('local', 'queue', '')
+		self._queue = config.get('local', 'queue', '')
 
 	def unknownID(self):
 		return "Unknown Job Id"

@@ -10,6 +10,7 @@ from job_db	import *
 
 from backends	import *
 from proxy	import *
+from voms_proxy	import *
 
 from module	import *
 from CMSSW	import *

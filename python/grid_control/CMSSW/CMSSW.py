@@ -7,8 +7,8 @@ from DashboardAPI import DashboardAPI
 from time import time, localtime, strftime
 
 class CMSSW(Module):
-	def __init__(self, workDir, config, opts):
-		Module.__init__(self, workDir, config, opts)
+	def __init__(self, config, init, resync):
+		Module.__init__(self, config, init, resync)
 
 		# SCRAM info
 		scramProject = config.get('CMSSW', 'scram project', '').split()
@@ -85,14 +85,14 @@ class CMSSW(Module):
 			raise ConfigError("Config file '%s' not found." % self.configFile)
 
 		self.datasplitter = None
-		if opts.init:
+		if init:
 			self._initTask(config)
 		elif self.dataset != None:
 			try:
 				self.datasplitter = DataSplitter.loadState(self.workDir)
 			except:
 				raise ConfigError("Not a properly initialized work directory '%s'." % self.workDir)
-			if opts.resync:
+			if resync:
 				old = DataProvider.loadState(config, self.workDir)
 				new = DataProvider.create(config)
 				self.datasplitter.resyncMapping(self.workDir, old.getBlocks(), new.getBlocks())

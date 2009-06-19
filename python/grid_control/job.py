@@ -95,8 +95,8 @@ class Job:
 		return (self.states[self.state], self.dict.get('dest', 'N/A'), self.id)
 
 
-	def statefilter(self, filterExpr):
-		for state in filterExpr.split(','):
+	def statefilter(self, filter):
+		for state in filter.split(','):
 			regex = re.compile('^' + state + '.*')
 			for key in self._stateDict.keys():
 				if regex.match(key) and self.state == self._stateDict[key]:

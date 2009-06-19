@@ -11,15 +11,15 @@ class PBS(LocalWMS):
 		'fail':	Job.FAILED, 'success': Job.SUCCESS
 	}
 
-	def __init__(self, module):
-		LocalWMS.__init__(self, module)
+	def __init__(self, workDir, config, module, init):
+		LocalWMS.__init__(self, workDir, config, module, init)
 
 		self.submitExec = utils.searchPathFind('qsub')
 		self.statusExec = utils.searchPathFind('qstat')
 		self.cancelExec = utils.searchPathFind('qdel')
 
-		self._queue = module.config.get('local', 'queue', '')
-		self._group = module.config.get('local', 'group', '')
+		self._queue = config.get('local', 'queue', '')
+		self._group = config.get('local', 'group', '')
 
 	def unknownID(self):
 		return "Unknown Job Id"

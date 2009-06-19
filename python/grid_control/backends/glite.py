@@ -23,21 +23,21 @@ class Glite(GridWMS):
 		'cleared':   Job.SUCCESS
 	}
 
-	def __init__(self, module):
+	def __init__(self, workDir, config, module, init):
 		utils.deprecated("Please use the GliteWMS backend for grid jobs!")
-		GridWMS.__init__(self, module)
+		GridWMS.__init__(self, workDir, config, module, init)
 
 		self._submitExec = utils.searchPathFind('glite-job-submit')
 		self._statusExec = utils.searchPathFind('glite-job-status')
 		self._outputExec = utils.searchPathFind('glite-job-output')
 		self._cancelExec = utils.searchPathFind('glite-job-cancel')
 		
-		self._configVO = module.config.getPath('glite', 'config-vo', '')
+		self._configVO = config.getPath('glite', 'config-vo', '')
 		if self._configVO != '' and not os.path.exists(self._configVO):
 			raise ConfigError("--config-vo file '%s' does not exist." % self._configVO)
 
 		try:
-			self._ce = module.config.get('glite', 'ce')
+			self._ce = config.get('glite', 'ce')
 		except:
 			self._ce = None
 
