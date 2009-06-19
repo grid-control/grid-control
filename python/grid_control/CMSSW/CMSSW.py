@@ -86,27 +86,27 @@ class CMSSW(Module):
 
 		self.datasplitter = None
 		if opts.init:
-			self._initTask(config)
+			self._initTask(workDir, config)
 		elif self.dataset != None:
 			try:
-				self.datasplitter = DataSplitter.loadState(self.workDir)
+				self.datasplitter = DataSplitter.loadState(workDir)
 			except:
-				raise ConfigError("Not a properly initialized work directory '%s'." % self.workDir)
+				raise ConfigError("Not a properly initialized work directory '%s'." % workDir)
 			if opts.resync:
-				old = DataProvider.loadState(config, self.workDir)
+				old = DataProvider.loadState(config, workDir)
 				new = DataProvider.create(config)
-				self.datasplitter.resyncMapping(self.workDir, old.getBlocks(), new.getBlocks())
-				#TODO: new.saveState(self.workDir)
+				self.datasplitter.resyncMapping(workDir, old.getBlocks(), new.getBlocks())
+				#TODO: new.saveState(workDir)
 
 
-	def _initTask(self, config):
+	def _initTask(self, workDir, config):
 		if len(self.projectArea):
-			utils.genTarball(os.path.join(self.workDir, 'runtime.tar.gz'), self.projectArea, self.pattern)
+			utils.genTarball(os.path.join(workDir, 'runtime.tar.gz'), self.projectArea, self.pattern)
 
 			if self.seRuntime:
 				print 'Copy CMSSW runtime to SE',
 				sys.stdout.flush()
-				source = 'file:///' + os.path.join(self.workDir, 'runtime.tar.gz')
+				source = 'file:///' + os.path.join(workDir, 'runtime.tar.gz')
 				target = os.path.join(self.sePath, self.taskID + '.tar.gz')
 				if utils.se_copy(source, target, config.getBool('CMSSW', 'se runtime force', True)):
 					print 'finished'
@@ -117,14 +117,14 @@ class CMSSW(Module):
 		# find and split datasets
 		if self.dataset != None:
 			self.dataprovider = DataProvider.create(config)
-			self.dataprovider.saveState(self.workDir)
+			self.dataprovider.saveState(workDir)
 			if utils.verbosity() > 0:
 				self.dataprovider.printDataset()
 
 			splitter = config.get('CMSSW', 'dataset splitter', 'DefaultSplitter')
 			self.datasplitter = DataSplitter.open(splitter, { "eventsPerJob": self.eventsPerJob })
 			self.datasplitter.splitDataset(self.dataprovider.getBlocks())
-			self.datasplitter.saveState(self.workDir)
+			self.datasplitter.saveState(workDir)
 			if utils.verbosity() > 1:
 				self.datasplitter.printAllJobInfo()
 

@@ -102,8 +102,7 @@ def main(args):
 			opts.submission = False
 
 		# Initialise job database
-		queueTimeout = utils.parseTime(config.get('jobs', 'queue timeout', ''))
-		jobs = JobDB(workDir, config.getInt('jobs', 'jobs', -1), queueTimeout, module, opts.init)
+		jobs = JobDB(workDir, config, opts, module)
 
 		# If invoked in report mode, just show report and exit
 		if Report(opts, jobs, jobs).show():
@@ -139,15 +138,9 @@ def main(args):
 				raise RuntimeError("Not enough space left in working directory")
 
 			# try submission
-			if opts.submission:
-				inFlight = config.getInt('jobs', 'in flight')
-				doShuffle = config.getBool('jobs', 'shuffle', False)
-				jobList = jobs.getSubmissionJobs(inFlight, opts.maxRetry, doShuffle)
-				if len(jobList):
-					jobs.submit(wms, jobList)
-					timeout = 10
-					continue
-				del jobList
+			if jobs.submit(wms):
+				timeout = 10
+				continue
 
 			# retrieve finished jobs
 			if jobs.retrieve(wms):

@@ -28,7 +28,7 @@ class Module(AbstractObject):
 
 		# Compute / get task ID
 		self.taskID = None
-		self.taskID = self.getTaskID()
+		self.taskID = self.getTaskID(workDir)
 		print 'Current task ID %s' % (self.taskID)
 
 		self.dashboard = config.getBool('jobs', 'monitor job', False)
