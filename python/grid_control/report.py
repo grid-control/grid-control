@@ -2,13 +2,30 @@ import copy
 from grid_control import Job, RuntimeError, utils, SortedList
 
 class Report:
-	def __init__(self, jobs, allJobs):
+	def __init__(self, opts, jobs, allJobs):
 		self.allJobs = allJobs
 		if hasattr(jobs, 'all'):
 			self.jobs = jobs.all
 		else:
 			self.jobs = jobs
-	
+		self._opts = opts
+
+
+	def show(self):
+		if self._opts.report:
+			reportobj.details()
+			reportobj.summary()
+		elif self._opts.continuous:
+			reportobj.summary()
+		if self._opts.reportSite:
+			reportobj.siteReport(opts.reportSite)
+		if self._opts.reportTime:
+			reportobj.timeReport(opts.reportTime)
+		if self._opts.report or self._opts.reportSite or self._opts.reportTime:
+			return True
+		return False
+
+
 	def details(self):
 		reports = {}
 		maxWidth = [6, 20, 0]
@@ -158,12 +175,10 @@ class Report:
 			# return summed state infos in together with the percentage: [state1, percentage1, state2, percentage2, ...]
 			return line
 
-#		rate_site = ' %s    | %5d (%3d%%) | %5d (%3d%%) | %5d (%3d%%) | %5d (%3d%%)'
 		rate_site = ' \33[0;1m%s\33[0m       | %5d (%3d%%) | %5d (%3d%%) | \33[0;91m%5d\33[0m (%3d%%) | \33[0;94m%5d\33[0m (%3d%%)'
 		rate_wn = '    %s    | %5d (%3d%%) | %5d (%3d%%) | %5d (%3d%%) | %5d (%3d%%)'
 		rate_queue = '       %s | %5d (%3d%%) | %5d (%3d%%) | %5d (%3d%%) | %5d (%3d%%)'
 
-#		time_site = ' %s    | %6d:%0.2d:%0.2d | %6d:%0.2d:%0.2d | %6d:%0.2d:%0.2d | %6d:%0.2d:%0.2d'
 		time_site = ' \33[0;1m%s\33[0m       | %6d:%0.2d:%0.2d | %6d:%0.2d:%0.2d | \33[0;91m%6d:%0.2d:%0.2d\33[0m | \33[0;94m%6d:%0.2d:%0.2d\33[0m'
 		time_wn = '    %s    | %6d:%0.2d:%0.2d | %6d:%0.2d:%0.2d | %6d:%0.2d:%0.2d | %6d:%0.2d:%0.2d'
 		time_queue = '       %s | %6d:%0.2d:%0.2d | %6d:%0.2d:%0.2d | %6d:%0.2d:%0.2d | %6d:%0.2d:%0.2d'

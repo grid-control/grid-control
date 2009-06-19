@@ -1,0 +1,25 @@
+    Options:
+	-h, --help               Show this helpful message
+	-i, --init               Initialise working directory
+	-v, --verbose            Give detailed information during run
+	-q, --requery            Requery dataset information
+	-c, --continuous         Run in continuous mode
+	-s, --no-submission      Disable job submission
+	-m, --max-retry <args>   Set maximum number of job resubmission attempts
+	                         Default is to resubmit indefinitely
+	                            -m 0 (Disable job REsubmission)
+	                            -m 5 (Resubmit jobs up to 5 times)
+	-r, --report             Show status report of jobs
+	-R, --site-report        Show site report
+	-T, --time-report        Show time report
+	                            -RR  / -TT  (broken down into site, CE)
+	                            -RRR / -TTT (broken down into site, CE, queue)
+	-S, --seed <args>        Override seed specified in the config file e.g:
+	                            -S 1234,423,7856
+	                            -SS (= generate 10 random seeds)
+	-d, --delete <args>      Delete given jobs, e.g:
+	                            -d 1,5,9,...  (JobNumbers)
+	                            -d QUEUED,... (JobStates)
+	                            -d TODO (= SUBMITTED,WAITING,READY,QUEUED)
+	                            -d ALL
+

@@ -10,32 +10,8 @@ from grid_control import *
 import time
 
 def print_help(*args):
-	sys.stderr.write("Syntax: %s [OPTIONS] <config file>\n\n"
-			"    Options:\n"
-			"\t-h, --help               Show this helpful message\n"
-			"\t-i, --init               Initialise working directory\n"
-			"\t-v, --verbose            Give detailed information during run\n"
-			"\t-q, --requery            Requery dataset information\n"
-			"\t-c, --continuous         Run in continuous mode\n"
-			"\t-s, --no-submission      Disable job submission\n"
-			"\t-m, --max-retry <args>   Set maximum number of job resubmission attempts\n"
-			"\t                         Default is to resubmit indefinitely\n"
-			"\t                            -m 0 (Disable job REsubmission)\n"
-			"\t                            -m 5 (Resubmit jobs up to 5 times)\n"
-			"\t-r, --report             Show status report of jobs\n"
-			"\t-R, --site-report        Show site report\n"
-			"\t-T, --time-report        Show time report\n"
-			"\t                            -RR  / -TT  (broken down into site, CE)\n"
-			"\t                            -RRR / -TTT (broken down into site, CE, queue)\n"
-			"\t-S, --seed <args>        Override seed specified in the config file e.g:\n"
-			"\t                            -S 1234,423,7856\n"
-			"\t                            -SS (= generate 10 random seeds)\n"
-			"\t-d, --delete <args>      Delete given jobs, e.g:\n"
-			"\t                            -d 1,5,9,...  (JobNumbers)\n"
-			"\t                            -d QUEUED,... (JobStates)\n"
-			"\t                            -d TODO (= SUBMITTED,WAITING,READY,QUEUED)\n"
-			"\t                            -d ALL\n"
-			"\n" % sys.argv[0])
+	sys.stderr.write("Syntax: %s [OPTIONS] <config file>\n\n" % sys.argv[0])
+	sys.stderr.write(open(utils.atRoot('share', 'help.txt'), 'r').read())
 	sys.exit(0)
 
 _verbosity = 0
@@ -136,16 +112,8 @@ def main(args):
 		queueTimeout = utils.parseTime(config.get('jobs', 'queue timeout', ''))
 		jobs = JobDB(workdir, config.getInt('jobs', 'jobs', -1), queueTimeout, module, opts.init)
 
-		# If invoked in report mode, scan job database and exit
-		if opts.report or opts.reportSite or opts.reportTime:
-			reportobj = Report(jobs, jobs)
-			if opts.report:
-				reportobj.details()
-				reportobj.summary()
-			if opts.reportSite:
-				reportobj.siteReport(opts.reportSite)
-			if opts.reportTime:
-				reportobj.timeReport(opts.reportTime)
+		# If invoked in report mode, just show report and exit
+		if Report(opts, jobs, jobs).show():
 			return 0
 
 		# Check if jobs have to be deleted and exit
