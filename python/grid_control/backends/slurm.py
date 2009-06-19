@@ -1,13 +1,13 @@
 import sys, os, popen2, tempfile, shutil
 from grid_control import ConfigError, Job, utils
 from wms import WMS
-from local_wms import LocalWMS
+from local_wms import LocalWMSApi
 
-class SLURM(LocalWMS):
+class SLURM(LocalWMSApi):
 	_statusMap = { 's': Job.QUEUED, 'r': Job.RUNNING, 'CG': Job.DONE }
 
-	def __init__(self, workDir, config, module, init):
-		LocalWMS.__init__(self, workDir, config, module, init)
+	def __init__(self, config, wms):
+		LocalWMSApi.__init__(self, config, wms)
 
 		self.submitExec = utils.searchPathFind('job_submit')
 		self.statusExec = utils.searchPathFind('job_queue')
@@ -15,8 +15,10 @@ class SLURM(LocalWMS):
 
 		self._queue = config.get('local', 'queue', '')
 
+
 	def unknownID(self):
 		return "not in queue !"
+
 
 	def getArguments(self, jobNum, sandbox):
 		return sandbox
@@ -24,12 +26,12 @@ class SLURM(LocalWMS):
 
 	def getSubmitArguments(self, jobNum, sandbox):
 		# Job name
-		params = ' -J %s' % self.getJobName(self.module.taskID, jobNum)
+		params = ' -J %s' % self.wms.getJobName(jobNum)
 		# Job queue
 		if len(self._queue):
 			params += ' -c %s' % self._queue
 		# Job requirements
-		reqs = dict(self.getRequirements(jobNum))
+		reqs = dict(self.wms.getRequirements(jobNum))
 		if reqs.has_key(WMS.WALLTIME):
 			params += ' -T %d' % ((reqs[WMS.WALLTIME] + 59) / 60)
 		if reqs.has_key(WMS.CPUTIME):

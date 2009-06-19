@@ -1,9 +1,9 @@
 import sys, os, popen2, tempfile, shutil
 import xml.dom.minidom
 from grid_control import ConfigError, Job, utils
-from local_wms import LocalWMS
+from local_wms import LocalWMSApi
 
-class SGE(LocalWMS):
+class SGE(LocalWMSApi):
 	_statusMap = {
 		'qw': Job.QUEUED,
 		'Eqw': Job.WAITING,
@@ -14,8 +14,8 @@ class SGE(LocalWMS):
 		'd': Job.ABORTED,   'E': Job.DONE,
 	}
 
-	def __init__(self, workDir, config, module, init):
-		LocalWMS.__init__(self, workDir, config, module, init)
+	def __init__(self, config, wms):
+		LocalWMSApi.__init__(self, config, wms)
 
 		self.submitExec = utils.searchPathFind('qsub')
 		self.statusExec = utils.searchPathFind('qstat')
@@ -32,7 +32,7 @@ class SGE(LocalWMS):
 
 	def getSubmitArguments(self, jobNum, sandbox):
 		# Job name
-		params = ' -N %s' % self.getJobName(self.module.taskID, jobNum)
+		params = ' -N %s' % self.wms.getJobName(jobNum)
 		# Job queue
 		if len(self._queue):
 			params += ' -q %s' % self._queue

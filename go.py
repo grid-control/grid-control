@@ -84,8 +84,12 @@ def main(args):
 
 		# Initialise workload management interface
 		backend = config.get('global', 'backend', 'grid')
-		default_wms = { 'grid': 'GliteWMS', 'local': LocalWMS.guessWMS() }
-		wms = WMS.open(config.get(backend, 'wms', default_wms[backend]), workDir, config, module, opts.init)
+		if backend == 'grid':
+			wms = WMS.open(config.get(backend, 'wms', 'GliteWMS'), workDir, config, module, opts.init)
+		else if backend == 'local':
+			wms = WMS.open('LocalWMS', workDir, config, module, opts.init)
+		else:
+			raise UserError("Invalid backend specified!" % workDir)
 
 		# Initialise proxy
 		proxy = wms.getProxy()
