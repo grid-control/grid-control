@@ -21,6 +21,7 @@ class GridWMS(WMS):
 	def __init__(self, workDir, config, opts, module):
 		WMS.__init__(self, workDir, config, opts, module, 'grid')
 		self.proxy = config.get('grid', 'proxy', 'VomsProxy')
+		self.vo = config.get('grid', 'vo', self.getProxy().getVO())
 
 
 	def _jdlEscape(value):
@@ -115,7 +116,7 @@ class GridWMS(WMS):
 			'InputSandbox': self.sandboxIn,
 			'OutputSandbox': self.sandboxOut,
 			'_Requirements': self.formatRequirements(self.getRequirements(job)),
-			'VirtualOrganisation': self.config.get('grid', 'vo', self.getProxy().getVO()),
+			'VirtualOrganisation': self.vo,
 			'RetryCount': 2
 		}
 
