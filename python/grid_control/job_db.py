@@ -1,5 +1,5 @@
 from __future__ import generators
-import sys, os, re, fnmatch, random, utils, threading
+import sys, os, re, fnmatch, random, utils
 from time import time, localtime, strftime
 from grid_control import SortedList, ConfigError, Job, UserError, Report
 
@@ -16,9 +16,9 @@ class JobDB:
 			raise ConfigError("Problem creating work directory '%s': %s" % (self._dbPath, e))
 
 		self.all = SortedList()
-		for id, job in self._scan():
-			self._jobs[id] = job
-			self.all.add(id)
+		for jobNum, jobObj in self._scan():
+			self._jobs[jobNum] = jobObj
+			self.all.add(jobNum)
 
 		self.ready = SortedList()
 		self.running = SortedList()
@@ -76,15 +76,15 @@ class JobDB:
 	def _scan(self):
 		regexfilter = re.compile(r'^job_([0-9]+)\.txt$')
 		self._jobs = {}
-		for job in fnmatch.filter(os.listdir(self._dbPath), 'job_*.txt'):
-			match = regexfilter.match(job)
+		for jobFile in fnmatch.filter(os.listdir(self._dbPath), 'job_*.txt'):
+			match = regexfilter.match(jobFile)
 			try:
-				id = int(match.group(1))
+				jobNum = int(match.group(1))
 			except:
 				continue
 
-			fp = open(os.path.join(self._dbPath, job))
-			yield (id, Job.load(fp))
+			fp = open(os.path.join(self._dbPath, jobFile))
+			yield (jobNum, Job.load(fp))
 			fp.close()
 
 
@@ -107,7 +107,7 @@ class JobDB:
 		# FIXME: Error handling?
 
 
-	def _update(self, id, job, state):
+	def _update(self, jobNum, job, state):
 		if job.state == state:
 			return
 
@@ -116,10 +116,10 @@ class JobDB:
 		new = self._findQueue(job)
 
 		if old != new:
-			old.remove(id)
-			new.add(id)
+			old.remove(jobNum)
+			new.add(jobNum)
 
-		print "%s - Job %d state changed to %s" % (strftime("%Y-%m-%d %H:%M:%S", localtime()), id, Job.states[state]),
+		utils.vprint("Job %d state changed to %s " % (jobNum, Job.states[state]), -1, True, False)
 		if (state == Job.SUBMITTED) and (job.attempt > 1):
 			print "(attempt #%s)" % job.attempt
 		elif (state == Job.FAILED) and job.get('retcode') and job.get('dest'):
@@ -129,12 +129,11 @@ class JobDB:
 		elif (state == Job.WAITING) and job.get('reason'):
 			print '(%s)' % job.get('reason')
 		elif (state == Job.SUCCESS) and job.get('runtime'):
-			runtime = job.get('runtime')
-			print "(runtime %dh %0.2dmin %0.2dsec)" % (runtime / 60 / 60, (runtime / 60) % 60, runtime % 60)
+			print "(runtime %s)" % utils.strTime(job.get('runtime'))
 		else:
 			print
 
-		self._saveJob(id)
+		self._saveJob(jobNum)
 
 
 	def getWmsMap(self, idlist):
@@ -158,7 +157,7 @@ class JobDB:
 				for key, value in info.items():
 					job.set(key, value)
 				self._update(id, job, state)
-				threading.Thread(target = self.module.onJobUpdate, args = (job, id, info,)).start()
+				self.module.onJobUpdate(job, id, info)
 			else:
 				# If a job stays too long in an inital state, cancel it
 				if job.state in (Job.SUBMITTED, Job.WAITING, Job.READY, Job.QUEUED):
@@ -215,7 +214,7 @@ class JobDB:
 
 				job.assignId(wmsId)
 				self._update(id, job, Job.SUBMITTED)
-				threading.Thread(target = self.module.onJobSubmit, args = (job, id,)).start()
+				self.module.onJobSubmit(job, id)
 		finally:
 			wms.bulkSubmissionEnd()
 		return True
@@ -241,7 +240,7 @@ class JobDB:
 				job.set('retcode', retCode)
 				job.set('runtime', data.get("TIME", -1))
 				self._update(id, job, state)
-				threading.Thread(target = self.module.onJobOutput, args = (job, id, retCode,)).start()
+				self.module.onJobOutput(job, id, retCode)
 
 		return change
 

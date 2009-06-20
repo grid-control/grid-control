@@ -19,9 +19,12 @@ class Config:
 		if includeFile != '':
 			self.parser.read(includeFile)
 			self.parser.read(configFile)
+		self.defaults = ConfigParser.ConfigParser()
+
 
 
 	def get(self, section, item, default = None):
+		
 		try:
 			return self.parser.get(section, item)
 		except ConfigParser.NoSectionError:

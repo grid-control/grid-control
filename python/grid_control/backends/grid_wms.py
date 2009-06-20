@@ -18,6 +18,7 @@ class GridWMS(WMS):
 		'cleared':   Job.SUCCESS
 	}
 
+
 	def __init__(self, workDir, config, opts, module):
 		WMS.__init__(self, workDir, config, opts, module, 'grid')
 		self.proxy = config.get('grid', 'proxy', 'VomsProxy')

@@ -7,11 +7,14 @@ def verbosity():
 	return sys.modules['__main__']._verbosity
 
 
-def vprint(text, level = 0, printTime = False):
+def vprint(text, level = 0, printTime = False, newline = True):
 	if verbosity() > level:
 		if printTime:
 			print "%s - " % time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()),
-		print text
+		if newline:
+			print text
+		else:
+			print text,
 
 
 def boolUserInput(text, default):
