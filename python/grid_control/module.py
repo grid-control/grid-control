@@ -1,7 +1,7 @@
 # Generic base class for job modules
 # instantiates named class instead (default is UserMod)
 
-import os, os.path, cStringIO, StringIO, md5, gzip, cPickle, random, threading
+import os, os.path, cStringIO, StringIO, md5, gzip, cPickle, random
 from grid_control import ConfigError, AbstractObject, utils, WMS, Job
 from time import time
 
@@ -12,9 +12,9 @@ class Module(AbstractObject):
 
 		self.wallTime = utils.parseTime(config.get('jobs', 'wall time'))
 		self.cpuTime = utils.parseTime(config.get('jobs', 'cpu time', config.get('jobs', 'wall time')))
-		self.memory = config.getInt('jobs', 'memory', 512)
-
 		self.nodeTimeout = utils.parseTime(config.get('jobs', 'node timeout', ''))
+
+		self.memory = config.getInt('jobs', 'memory', 512)
 
 		# Set random seeds
 		seedarg = config.get('jobs', 'seeds', '')
@@ -38,21 +38,20 @@ class Module(AbstractObject):
 		self.evtStatus = config.getPath('events', 'on status', '')
 		self.evtOutput = config.getPath('events', 'on output', '')
 
+		# TODO: Convert the following into requirements
+		self.seSDUpperLimit = config.getInt('storage', 'scratch space used', 5000)
+		self.seSDLowerLimit = config.getInt('storage', 'scratch space left', 1)
+		self.seLZUpperLimit = config.getInt('storage', 'landing zone space used', 100)
+		self.seLZLowerLimit = config.getInt('storage', 'landing zone space left', 1)
+
+		# Storage setup
 		self.sePath = config.get('storage', 'se path', '').replace('dir://', 'file://')
-		self.storageInfo = {
-			# Space limits (TODO: Convert the following into requirements)
-			'SCRATCH_UL' :       config.getInt('storage', 'scratch space used', 5000),
-			'SCRATCH_LL' :       config.getInt('storage', 'scratch space left', 1),
-			'LANDINGZONE_UL':    config.getInt('storage', 'landing zone space used', 100),
-			'LANDINGZONE_LL':    config.getInt('storage', 'landing zone space left', 1),
-			# Storage element
-			'SE_MINFILESIZE':    config.getInt('storage', 'se min size', -1),
-			'SE_OUTPUT_PATTERN': config.get('storage', 'se output pattern', 'job___MY_JOB_____NICK_____X__'),
-			'SE_INPUT_PATTERN':  config.get('storage', 'se input pattern', '__X__'),
-		}
+		self.seMinSize = config.getInt('storage', 'se min size', -1)
 
 		self.seInputFiles = config.get('storage', 'se input files', '').split()
+		self.seInputPattern = config.get('storage', 'se input pattern', '__X__')
 		self.seOutputFiles = config.get('storage', 'se output files', '').split()
+		self.seOutputPattern = config.get('storage', 'se output pattern', 'job___MY_JOB_____NICK_____X__')
 
 		self.sbInputFiles = config.get(self.__class__.__name__, 'input files', '').split()
 		self.sbOutputFiles = config.get(self.__class__.__name__, 'output files', '').split()
@@ -65,7 +64,7 @@ class Module(AbstractObject):
 			self.setSeed(str.join(',', config.get('CMSSW', 'seeds').split()))
 		if config.get('CMSSW', 'se path', 'FAIL') != 'FAIL':
 			utils.deprecated("Please specify se path only in the [storage] section")
-			self.storageInfo['SE_PATH'] = config.get('CMSSW', 'se path')
+			self.sePath = config.get('CMSSW', 'se path')
 
 
 	# Get persistent task id for monitoring
@@ -95,8 +94,7 @@ class Module(AbstractObject):
 	def onJobSubmit(self, jobObj, jobNum):
 		if self.evtSubmit != '':
 			self.setEventEnviron(jobObj, jobNum)
-			params = "%s %d %s" % (self.evtSubmit, jobNum, jobObj.id)
-			threading.Thread(target = os.system, args = (params,)).start()
+			os.system("%s %d %s" % (self.evtSubmit, jobNum, jobObj.id))
 		return None
 
 
@@ -104,8 +102,7 @@ class Module(AbstractObject):
 	def onJobUpdate(self, jobObj, jobNum, data):
 		if self.evtStatus != '':
 			self.setEventEnviron(jobObj, jobNum)
-			params = "%s %d %s %s" % (self.evtStatus, jobNum, jobObj.id, Job.states[jobObj.state])
-			threading.Thread(target = os.system, args = (params,)).start()
+			os.system("%s %d %s %s" % (self.evtStatus, jobNum, jobObj.id, Job.states[jobObj.state]))
 		return None
 
 
@@ -113,18 +110,25 @@ class Module(AbstractObject):
 	def onJobOutput(self, jobObj, jobNum, retCode):
 		if self.evtOutput != '':
 			self.setEventEnviron(jobObj, jobNum)
-			params = "%s %d %s %d" % (self.evtOutput, jobNum, jobObj.id, retCode)
-			threading.Thread(target = os.system, args = (params,)).start()
+			os.system("%s %d %s %d" % (self.evtOutput, jobNum, jobObj.id, retCode))
 		return None
 
 
 	# Get environment variables for gc_config.sh
 	def getTaskConfig(self):
-		self.storageInfo.update({
-			# SE files
+		return {
+			# Space limits
+			'SCRATCH_UL' : self.seSDUpperLimit,
+			'SCRATCH_LL' : self.seSDLowerLimit,
+			'LANDINGZONE_UL': self.seLZUpperLimit,
+			'LANDINGZONE_LL': self.seLZLowerLimit,
+			# Storage element
 			'SE_PATH': self.sePath,
+			'SE_MINFILESIZE': self.seMinSize,
 			'SE_OUTPUT_FILES': str.join(' ', self.seOutputFiles),
 			'SE_INPUT_FILES': str.join(' ', self.seInputFiles),
+			'SE_OUTPUT_PATTERN': self.seOutputPattern,
+			'SE_INPUT_PATTERN': self.seInputPattern,
 			# Sandbox
 			'SB_OUTPUT_FILES': str.join(' ', self.getOutFiles()),
 			'SB_INPUT_FILES': str.join(' ', map(lambda x: utils.shellEscape(os.path.basename(x)), self.getInFiles())),
@@ -137,8 +141,7 @@ class Module(AbstractObject):
 			'TASK_ID': self.taskID,
 			'TASK_USER': self.username,
 			'DASHBOARD': ('no', 'yes')[self.dashboard]
-		})
-		return self.storageInfo
+		}
 
 
 	# Get job dependent environment variables
