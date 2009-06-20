@@ -110,8 +110,17 @@ class DataProvider(AbstractObject):
 				writer.write('id = %d\n' % block[DataProvider.DatasetID])
 			writer.write('events = %d\n' % block[DataProvider.NEvents])
 			writer.write('se list = %s\n' % str.join(',', block[DataProvider.SEList]))
+
+			commonprefix = os.path.commonprefix(map(lambda x: x[DataProvider.lfn], block[DataProvider.FileList]))
+			commonprefix = str.join('/', commonprefix.split('/')[:-1])
+			if len(commonprefix) > 6:
+				writer.write('prefix = %s\n' % commonprefix)
+				formatter = lambda x: x.replace(commonprefix + '/', '')
+			else:
+				formatter = lambda x: x
+
 			for fi in block[DataProvider.FileList]:
-				writer.write('%s = %d\n' % (fi[DataProvider.lfn], fi[DataProvider.NEvents]))
+				writer.write('%s = %d\n' % (formatter(fi[DataProvider.lfn]), fi[DataProvider.NEvents]))
 			writer.write('\n')
 		open(os.path.join(path, filename), 'wb').write(writer.getvalue())
 

@@ -62,6 +62,7 @@ class ListProvider(DataProvider):
 					blockinfo[DataProvider.BlockName] = "0"
 				blockinfo[DataProvider.SEList] = []
 				blockinfo[DataProvider.FileList] = []
+				commonprefix = None
 			elif line != '':
 				tmp = map(str.strip, line.split('='))
 				if len(tmp) != 2:
@@ -75,7 +76,11 @@ class ListProvider(DataProvider):
 					blockinfo[DataProvider.NEvents] = int(value)
 				elif key.lower() == 'se list':
 					blockinfo[DataProvider.SEList] = value.split(',')
+				elif key.lower() == 'prefix':
+					commonprefix = value
 				else:
+					if commonprefix:
+						key = "%s/%s" % (commonprefix, key)
 					blockinfo[DataProvider.FileList].append({
 						DataProvider.lfn: key,
 						DataProvider.NEvents: int(value)

@@ -143,9 +143,9 @@ class CMSSW(Module):
 				taskId=self.taskID, jobId="%s_%s" % (id, job.id), sid="%s_%s" % (id, job.id),
 				application=self.scramEnv['SCRAM_PROJECTVERSION'], exe="cmsRun",
 				nevtJob=dbsinfo.get(DataSplitter.NEvents, self.eventsPerJob),
-				tool="grid-control", GridName=self.username,
-				scheduler="gLite", taskType="analysis", vo=self.config.get('grid', 'vo', ''),
-				datasetFull=dbsinfo.get('DatasetPath', ''), user=os.environ['LOGNAME']
+				tool="grid-control", GridName=self.proxy.getUsername(),
+				scheduler="gLite", taskType="analysis", vo=self.proxy.getVO(),
+				datasetFull=dbsinfo.get(DataSplitter.Dataset, ''), user=os.environ['LOGNAME']
 			)
 		return None
 
@@ -222,6 +222,7 @@ class CMSSW(Module):
 	def getOutFiles(self):
 		files = Module.getOutFiles(self)
 		cfgFile = os.path.basename(self.configFile)
+		# Add framework report file
 		files.append('CMSRUN-' + cfgFile.replace('.cfg', '.xml.gz').replace('.py', '.xml.gz'))
 		if self.gzipOut:
 			files.append('cmssw_out.txt.gz')

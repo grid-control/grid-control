@@ -4,7 +4,7 @@ from grid_control import AbstractObject, RuntimeError, utils, ConfigError
 from provider_base import DataProvider
 
 class DataSplitter(AbstractObject):
-	splitInfos = ('Dataset', 'SEList', 'NEvents', 'Skipped', 'FileList', 'Nickname', 'DatasetID')
+	splitInfos = ('Dataset', 'SEList', 'NEvents', 'Skipped', 'FileList', 'Nickname', 'DatasetID', 'CommonPrefix')
 	for id, splitInfo in enumerate(splitInfos):
 		locals()[splitInfo] = id
 
@@ -30,6 +30,7 @@ class DataSplitter(AbstractObject):
 			if jobNum >= self.getNumberOfJobs():
 				raise ConfigError("Job %d out of range for available dataset"  % jobNum)	
 			self._jobCacheNum = jobNum
+			del self._jobCache
 			self._jobCache = self._jobFiles[jobNum]
 		return self._jobCache
 
@@ -219,10 +220,22 @@ class DataSplitter(AbstractObject):
 			return (x,y,z)
 
 		tmp = entry.pop(DataSplitter.FileList)
-		for name, data in [('list', str.join('\n', tmp)), ('info', fmt.format(entry, fkt = flat))]:
+
+		commonprefix = os.path.commonprefix(tmp)
+		commonprefix = str.join('/', commonprefix.split('/')[:-1])
+		if len(commonprefix) > 6:
+			entry[DataSplitter.CommonPrefix] = commonprefix
+			savelist = map(lambda x: x.replace(commonprefix + '/', ''), tmp)
+		else:
+			savelist = tmp
+
+		for name, data in [('list', str.join('\n', savelist)), ('info', fmt.format(entry, fkt = flat))]:
 			info, file = utils.VirtualFile(os.path.join(str(jobNum), name), data).getTarInfo()
 			tar.addfile(info, file)
 			file.close()
+
+		if entry.has_key(DataSplitter.CommonPrefix):
+			entry.pop(DataSplitter.CommonPrefix)
 		entry[DataSplitter.FileList] = tmp
 	saveJobMapping = staticmethod(saveJobMapping)
 
@@ -263,6 +276,8 @@ class DataSplitter(AbstractObject):
 				data = self._fmt.parse(self._tar.extractfile('%d/info' % key).readlines())
 				data[DataSplitter.SEList] = data[DataSplitter.SEList].split(',')
 				list = self._tar.extractfile('%d/list' % key).readlines()
+				if data.has_key(DataSplitter.CommonPrefix):
+					list = map(lambda x: "%s/%s" % (data[DataSplitter.CommonPrefix], x), list)
 				data[DataSplitter.FileList] = map(str.strip, list)
 				return data
 
