@@ -1,7 +1,7 @@
 # Generic base class for job modules
 # instantiates named class instead (default is UserMod)
 
-import os, os.path, cStringIO, StringIO, md5, gzip, cPickle, random
+import os, os.path, cStringIO, StringIO, md5, gzip, cPickle, random, threading
 from grid_control import ConfigError, AbstractObject, utils, WMS, Job
 from time import time
 
@@ -94,7 +94,8 @@ class Module(AbstractObject):
 	def onJobSubmit(self, jobObj, jobNum):
 		if self.evtSubmit != '':
 			self.setEventEnviron(jobObj, jobNum)
-			os.system("%s %d %s" % (self.evtSubmit, jobNum, jobObj.id))
+			params = "%s %d %s" % (self.evtSubmit, jobNum, jobObj.id)
+			threading.Thread(target = os.system, args = (params,)).start()
 		return None
 
 
@@ -102,7 +103,8 @@ class Module(AbstractObject):
 	def onJobUpdate(self, jobObj, jobNum, data):
 		if self.evtStatus != '':
 			self.setEventEnviron(jobObj, jobNum)
-			os.system("%s %d %s %s" % (self.evtStatus, jobNum, jobObj.id, Job.states[jobObj.state]))
+			params = "%s %d %s %s" % (self.evtStatus, jobNum, jobObj.id, Job.states[jobObj.state])
+			threading.Thread(target = os.system, args = (params,)).start()
 		return None
 
 
@@ -110,7 +112,8 @@ class Module(AbstractObject):
 	def onJobOutput(self, jobObj, jobNum, retCode):
 		if self.evtOutput != '':
 			self.setEventEnviron(jobObj, jobNum)
-			os.system("%s %d %s %d" % (self.evtOutput, jobNum, jobObj.id, retCode))
+			params = "%s %d %s %d" % (self.evtOutput, jobNum, jobObj.id, retCode)
+			threading.Thread(target = os.system, args = (params,)).start()
 		return None
 
 
