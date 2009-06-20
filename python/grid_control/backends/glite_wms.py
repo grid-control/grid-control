@@ -29,7 +29,7 @@ class GliteWMS(Glite):
 			self._ce = None
 
 
-	def bulkSubmissionBegin(self):
+	def bulkSubmissionBegin(self, jobs):
 		log = tempfile.mktemp('.log')
 
 		try:
@@ -82,7 +82,7 @@ class GliteWMS(Glite):
 				pass
 
 
-	def submitJob(self, id, job):
+	def submitJob(self, jobNum):
 		if self._jobDelegationID == None:
 			return None
 
@@ -91,10 +91,8 @@ class GliteWMS(Glite):
 
 		try:
 			data = cStringIO.StringIO()
-			self.makeJDL(data, id)
+			self.makeJDL(data, jobNum)
 			data = data.getvalue()
-
-			job.set('jdl', data)
 
 			fp = os.fdopen(fd, 'w')
 			fp.write(data)
@@ -140,15 +138,13 @@ class GliteWMS(Glite):
 					print >> sys.stderr, open(jdl, 'r').read()
 				if rberr:
 					print >> sys.stderr, "RB is overloaded!"
-					return id
+					return (jobNum, id, {'jdl': data})
 			elif id == None:
 				print >> sys.stderr, "WARNING: glite-wms-job-submit did not yield job id"
 
 			if id == None and os.path.exists(log):
 				sys.stderr.write(open(log, 'r').read())
-
-			# FIXME: glite-wms-job-submit
-			return id
+			return (jobNum, id, {'jdl': data})
 
 		finally:
 			try:
@@ -159,6 +155,7 @@ class GliteWMS(Glite):
 				os.unlink(log)
 			except:
 				pass
+			# FIXME: glite-wms-job-submit
 
 
 	def getJobsOutput(self, ids):

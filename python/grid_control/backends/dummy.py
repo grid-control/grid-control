@@ -8,10 +8,10 @@ class DummyWMS(WMS):
 		WMS.__init__(self, workDir, config, opts, module, 'grid')
 		self.jobmap = {}
 
-	def submitJob(self, id, job):
-		print "EVENT [SUBMIT]: ", id, job
-		self.jobmap[id] = random.randint(0, 10000000)
-		return self.jobmap[id]
+	def submitJob(self, jobNum):
+		print "EVENT [SUBMIT]: ", jobNum
+		self.jobmap[jobNum] = random.randint(0, 10000000)
+		return (jobNum, self.jobmap[jobNum], {})
 
 
 	def checkJobs(self, ids):

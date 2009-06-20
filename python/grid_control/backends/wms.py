@@ -86,12 +86,18 @@ class WMS(AbstractObject):
 		return self.module.getRequirements(job)
 
 
+	def submitJobs(self, ids):
+		self.bulkSubmissionBegin(len(ids))
+		for jobNum in ids:
+			(jobNum, wmsId, data) = self.submitJob(jobNum)
+			if wmsId == None:
+				continue # FIXME
+			yield (jobNum, wmsId, data)
+		self.bulkSubmissionEnd()
+
+
 	def retrieveJobs(self, ids):
-		dirs = self.getJobsOutput(ids)
-
-		result = []
-
-		for dir in dirs:
+		for dir in self.getJobsOutput(ids):
 			info = os.path.join(dir, 'jobinfo.txt')
 			if not os.path.exists(info):
 				continue
@@ -120,11 +126,10 @@ class WMS(AbstractObject):
 					% (dir, dst, str(e)))
 				continue
 
-			result.append((id, retCode, data))
-		return result
+			yield (id, retCode, data)
 
 
-	def bulkSubmissionBegin(self):
+	def bulkSubmissionBegin(self, jobs):
 		pass
 
 

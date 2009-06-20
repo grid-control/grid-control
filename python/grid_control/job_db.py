@@ -15,38 +15,34 @@ class JobDB:
 		except IOError, e:
 			raise ConfigError("Problem creating work directory '%s': %s" % (self._dbPath, e))
 
-		self.all = SortedList()
-		for jobNum, jobObj in self._scan():
-			self._jobs[jobNum] = jobObj
-			self.all.add(jobNum)
-
-		self.ready = SortedList()
-		self.running = SortedList()
-		self.done = SortedList()
-		self.ok = SortedList()
-
 		nJobs = config.getInt('jobs', 'jobs', -1)
 		if nJobs < 0:
+			# No valid number of jobs given in config file - module has to provide number of jobs
 			nJobs = module.getMaxJobs()
+			if nJobs == None:
+				raise ConfigError("Module doesn't provide max number of Jobs!")
 		else:
+			# Module doesn't have to provide number of jobs
 			try:
 				maxJobs = module.getMaxJobs()
-				if nJobs > maxJobs:
+				if maxJobs and (nJobs > maxJobs):
 					print "Maximum number of jobs given as %d was truncated to %d" % (nJobs, maxJobs)
 					nJobs = maxJobs
 			except:
 				pass
 
-		if nJobs == None:
-			raise
+		self.all = SortedList()
+		self.ready = SortedList()
+		self.running = SortedList()
+		self.done = SortedList()
+		self.ok = SortedList()
+		self.disabled = SortedList()
 
-		i = 0
-		for j in self.all:
-			self.ready.extend(xrange(i, min(j, nJobs)))
-			i = j + 1
-			queue = self._findQueue(self._jobs[j])
-			queue.append(j)
-		self.ready.extend(xrange(i, nJobs))
+		for jobNum, jobObj in self._scan():
+			self._jobs[jobNum] = jobObj
+			self.all.add(jobNum)
+			self._findQueue(jobObj).append(jobNum)
+		self.ready.extend(filter(lambda x: not (x in self.all), xrange(nJobs)))
 
 		self.timeout = utils.parseTime(config.get('jobs', 'queue timeout', ''))
 		self.inFlight = config.getInt('jobs', 'in flight')
@@ -119,7 +115,7 @@ class JobDB:
 			old.remove(jobNum)
 			new.add(jobNum)
 
-		utils.vprint("Job %d state changed to %s " % (jobNum, Job.states[state]), -1, True, False)
+		utils.vprint("Job %d state changed to %s" % (jobNum, Job.states[state]), -1, True, False)
 		if (state == Job.SUBMITTED) and (job.attempt > 1):
 			print "(attempt #%s)" % job.attempt
 		elif (state == Job.FAILED) and job.get('retcode') and job.get('dest'):
@@ -147,7 +143,12 @@ class JobDB:
 	def check(self, wms):
 		change = False
 		timeoutlist = []
-		wmsMap = self.getWmsMap(self.running)
+
+		# TODO: just check running?
+		if self.opts.continuous:
+			wmsMap = self.getWmsMap(random.sample(self.running, min(100, len(self.running))))
+		else:
+			wmsMap = self.getWmsMap(self.running)
 
 		# Update states of jobs
 		for wmsId, state, info in wms.checkJobs(wmsMap.keys()):
@@ -163,13 +164,15 @@ class JobDB:
 				if job.state in (Job.SUBMITTED, Job.WAITING, Job.READY, Job.QUEUED):
 					if self.timeout > 0 and time() - job.submitted > self.timeout:
 						timeoutlist.append(id)
+			if self.opts.abort:
+				return change
 
 		# Cancel jobs who took too long
 		if len(timeoutlist):
 			change = True
 			print "\nTimeout for the following jobs:"
 			Report(timeoutlist, self._jobs).details()
-			wms.cancelJobs(self.getWmsMap(timeoutlist).keys())
+			wms.cancelJobs(map(lambda jobNum: self._jobs[jobNum].id, timeoutlist))
 			self.mark_cancelled(timeoutlist)
 			# Fixme: Error handling
 
@@ -182,14 +185,15 @@ class JobDB:
 
 
 	def getSubmissionJobs(self):
-		curInFlight = len(self.running)
-		submit = max(0, self.inFlight - curInFlight)
+		submit = max(0, self.inFlight - len(self.running))
+		if self.opts.continuous:
+			submit = min(100, submit)
 		if self.opts.maxRetry != None:
 			list = filter(lambda x: self._jobs.get(x, Job()).attempt < self.opts.maxRetry, self.ready)
 		else:
 			list = self.ready[:]
 		if self.doShuffle:
-			random.shuffle(list)
+			return SortedList(random.sample(list, submit))
 		return SortedList(list[:submit])
 
 
@@ -198,31 +202,27 @@ class JobDB:
 		if (len(ids) == 0) or not self.opts.submission:
 			return False
 
-		try:
-			wms.bulkSubmissionBegin()
-			for id in ids:
-				try:
-					job = self._jobs[id]
-				except:
-					job = Job()
-					self._jobs[id] = job
+		for jobNum, wmsId, data in wms.submitJobs(ids):
+			try:
+				job = self._jobs[jobNum]
+			except:
+				job = Job()
+				self._jobs[jobNum] = job
 
-				wmsId = wms.submitJob(id, job)
-				if wmsId == None:
-					# FIXME
-					continue
+			job.assignId(wmsId)
+			for key, value in data.iteritems():
+				job.set(key, value)
 
-				job.assignId(wmsId)
-				self._update(id, job, Job.SUBMITTED)
-				self.module.onJobSubmit(job, id)
-		finally:
-			wms.bulkSubmissionEnd()
+			self._update(jobNum, job, Job.SUBMITTED)
+			self.module.onJobSubmit(job, jobNum)
+			if self.opts.abort:
+				return False
 		return True
 
 
 	def retrieve(self, wms):
 		change = False
-		wmsIds = self.getWmsMap(self.done).keys()
+		wmsIds = map(lambda jobNum: self._jobs[jobNum].id, self.done)
 
 		for id, retCode, data in wms.retrieveJobs(wmsIds):
 			try:
@@ -242,47 +242,41 @@ class JobDB:
 				self._update(id, job, state)
 				self.module.onJobOutput(job, id, retCode)
 
+			if self.opts.abort:
+				return False
 		return change
 
 
 	def mark_cancelled(self, jobs):
-		for id in jobs:
+		for jobNum in jobs:
 			try:
-				job = self._jobs[id]
+				jobObj = self._jobs[jobNum]
 			except:
 				continue
-			self._update(id, job, Job.CANCELLED)
+			self._update(jobNum, jobObj, Job.CANCELLED)
 
 
 	def delete(self, wms, opts):
-		jobfilter = opts.delete
-		jobs = []
-		if jobfilter.upper() == "TODO":
-			jobfilter = "SUBMITTED,WAITING,READY,QUEUED"
-		if jobfilter.upper() == "ALL":
-			jobfilter = "SUBMITTED,WAITING,READY,QUEUED,RUNNING"
+		predefined = { 'TODO': 'SUBMITTED,WAITING,READY,QUEUED', 'ALL': 'SUBMITTED,WAITING,READY,QUEUED,RUNNING'}
+		jobfilter = predefined.get(opts.delete.upper(), opts.delete.upper())
+
 		if len(jobfilter) and jobfilter[0].isdigit():
-			for jobId in jobfilter.split(","):
-				try:
-					jobs.append(int(jobId))
-				except:
-					raise UserError("Job identifiers must be integers.")
+			try:
+				jobs = map(int, jobfilter.split(","))
+			except:
+				raise UserError("Job identifiers must be integers.")
 		else:
 			jobs = filter(lambda x: self._jobs[x].statefilter(jobfilter), self._jobs)
 
-		wmsIds = self.getWmsMap(jobs).keys()
-
 		print "\nDeleting the following jobs:"
 		Report(jobs, self._jobs).details()
-		
-		if not len(jobs) == 0:
-			if not utils.boolUserInput('Do you really want to delete these jobs?', True):
-				return 0
 
-			if wms.cancelJobs(wmsIds):
-				self.mark_cancelled(jobs)
-			else:
-				print "\nThere was a problem with deleting your jobs!"
-				if not utils.boolUserInput('Do you want to do a forced delete?', True):
-					return 0
-				self.mark_cancelled(jobs)
+		if not len(jobs) == 0:
+			if utils.boolUserInput('Do you really want to delete these jobs?', True):
+				wmsIds = map(lambda jobNum: self._jobs[jobNum].id, jobs)
+				if wms.cancelJobs(wmsIds):
+					self.mark_cancelled(jobs)
+				else:
+					print "\nThere was a problem with deleting your jobs!"
+					if utils.boolUserInput('Do you want to mark them as deleted?', True):
+						self.mark_cancelled(jobs)

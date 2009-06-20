@@ -101,16 +101,14 @@ class Glite(GridWMS):
 				pass
 
 
-	def submitJob(self, id, job):
+	def submitJob(self, jobNum):
 		fd, jdl = tempfile.mkstemp('.jdl')
 		log = tempfile.mktemp('.log')
 
 		try:
 			data = cStringIO.StringIO()
-			self.makeJDL(data, id)
+			self.makeJDL(data, jobNum)
 			data = data.getvalue()
-
-			job.set('jdl', data)
 
 			fp = os.fdopen(fd, 'w')
 			fp.write(data)
@@ -132,12 +130,12 @@ class Glite(GridWMS):
 			                        utils.shellEscape(log),
 			                        utils.shellEscape(jdl)), True)
 
-			id = None
+			wmsId = None
 
 			for line in proc.fromchild.readlines():
 				line = line.strip()
 				if line.startswith('http'):
-					id = line
+					wmsId = line
 			retCode = proc.wait()
 
 			del activity
@@ -145,14 +143,14 @@ class Glite(GridWMS):
 			if retCode != 0:
 				#FIXME
 				print >> sys.stderr, "WARNING: %s failed:" % os.path.basename(self._submitExec)
-			elif id == None:
+			elif wmsId == None:
 				print >> sys.stderr, "WARNING: %s did not yield job id:" % os.path.basename(self._submitExec)
 
-			if id == None and os.path.exists(log):
+			if wmsId == None and os.path.exists(log):
 				sys.stderr.write(open(log, 'r').read())
 
 			# FIXME: glite-job-submit
-			return id
+			return (jobNum, wmsId, {'jdl': data})
 
 		finally:
 			try:
@@ -190,6 +188,7 @@ class Glite(GridWMS):
 
 			for data in self._parseStatus(proc.fromchild.readlines()):
 				id = data['id']
+				data['reason'] = data.get('reason', '')
 				status = self._statusMap[data['status']]
 				result.append((id, status, data))
 

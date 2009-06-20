@@ -60,7 +60,7 @@ class LocalWMS(WMS):
 		return self.module.taskID[:10] + "." + str(jobNum) #.rjust(4, "0")[:4]
 
 
-	def submitJob(self, jobNum, jobObj):
+	def submitJob(self, jobNum):
 		# TODO: fancy job name function
 		activity = utils.ActivityLog('submitting jobs')
 
@@ -70,7 +70,7 @@ class LocalWMS(WMS):
 			sandbox = tempfile.mkdtemp("", "%s.%04d." % (self.module.taskID, jobNum), self.sandPath)
 			for file in self.sandboxIn:
 				shutil.copy(file, sandbox)
-			jobObj.set('sandbox', sandbox)
+			jobObj.set()
 		except OSError:
 			raise RuntimeError("Sandbox path '%s' is not accessible." % self.sandPath)
 		except IOError:
@@ -108,7 +108,7 @@ class LocalWMS(WMS):
 			sys.stderr.write(proc.childerr.read())
 		else:
 			open(os.path.join(sandbox, wmsId), "w")
-		return wmsId
+		return (jobNum, wmsId, {'sandbox': sandbox})
 
 
 	def checkJobs(self, wmsIds):
