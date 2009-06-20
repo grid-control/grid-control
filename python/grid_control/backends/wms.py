@@ -86,14 +86,20 @@ class WMS(AbstractObject):
 		return self.module.getRequirements(job)
 
 
+	def bulkSubmissionBegin(self, jobs):
+		pass
+
+
+	def bulkSubmissionEnd(self):
+		pass
+
+
 	def submitJobs(self, ids):
-		self.bulkSubmissionBegin(len(ids))
 		for jobNum in ids:
 			(jobNum, wmsId, data) = self.submitJob(jobNum)
 			if wmsId == None:
 				continue # FIXME
 			yield (jobNum, wmsId, data)
-		self.bulkSubmissionEnd()
 
 
 	def retrieveJobs(self, ids):
@@ -127,14 +133,6 @@ class WMS(AbstractObject):
 				continue
 
 			yield (id, retCode, data)
-
-
-	def bulkSubmissionBegin(self, jobs):
-		pass
-
-
-	def bulkSubmissionEnd(self):
-		pass
 
 
 	def getProxy(self):

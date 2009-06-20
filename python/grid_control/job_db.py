@@ -132,6 +132,46 @@ class JobDB:
 		self._saveJob(jobNum)
 
 
+	def getSubmissionJobs(self):
+		submit = max(0, self.inFlight - len(self.running))
+		if self.opts.continuous:
+			submit = min(100, submit)
+		if self.opts.maxRetry != None:
+			list = filter(lambda x: self._jobs.get(x, Job()).attempt < self.opts.maxRetry, self.ready)
+		else:
+			list = self.ready[:]
+		if self.doShuffle:
+			return SortedList(random.sample(list, submit))
+		return SortedList(list[:submit])
+
+
+	def submit(self, wms):
+		ids = self.getSubmissionJobs()
+		if (len(ids) == 0) or not self.opts.submission:
+			return False
+
+		wms.bulkSubmissionBegin(len(ids))
+		for jobNum, wmsId, data in wms.submitJobs(ids):
+			try:
+				job = self._jobs[jobNum]
+			except:
+				job = Job()
+				self._jobs[jobNum] = job
+
+			job.assignId(wmsId)
+			for key, value in data.iteritems():
+				job.set(key, value)
+
+			self._update(jobNum, job, Job.SUBMITTED)
+			self.module.onJobSubmit(job, jobNum)
+			if self.opts.abort:
+				self.bulkSubmissionEnd()
+				return False
+
+		wms.bulkSubmissionEnd()
+		return True
+
+
 	def getWmsMap(self, idlist):
 		map = {}
 		for id in idlist:
@@ -182,42 +222,6 @@ class JobDB:
 			sys.exit(0)
 
 		return change
-
-
-	def getSubmissionJobs(self):
-		submit = max(0, self.inFlight - len(self.running))
-		if self.opts.continuous:
-			submit = min(100, submit)
-		if self.opts.maxRetry != None:
-			list = filter(lambda x: self._jobs.get(x, Job()).attempt < self.opts.maxRetry, self.ready)
-		else:
-			list = self.ready[:]
-		if self.doShuffle:
-			return SortedList(random.sample(list, submit))
-		return SortedList(list[:submit])
-
-
-	def submit(self, wms):
-		ids = self.getSubmissionJobs()
-		if (len(ids) == 0) or not self.opts.submission:
-			return False
-
-		for jobNum, wmsId, data in wms.submitJobs(ids):
-			try:
-				job = self._jobs[jobNum]
-			except:
-				job = Job()
-				self._jobs[jobNum] = job
-
-			job.assignId(wmsId)
-			for key, value in data.iteritems():
-				job.set(key, value)
-
-			self._update(jobNum, job, Job.SUBMITTED)
-			self.module.onJobSubmit(job, jobNum)
-			if self.opts.abort:
-				return False
-		return True
 
 
 	def retrieve(self, wms):

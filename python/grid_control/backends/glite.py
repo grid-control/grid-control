@@ -101,6 +101,17 @@ class Glite(GridWMS):
 				pass
 
 
+	def cleanup(self, list):
+		for item in list:
+			try:
+				if os.path.isdir(item):
+					os.rmdir(item)
+				elif os.path.isfile(item):
+					os.unlink(item)
+			except:
+				pass
+
+
 	def submitJob(self, jobNum):
 		fd, jdl = tempfile.mkstemp('.jdl')
 		log = tempfile.mktemp('.log')
@@ -153,24 +164,17 @@ class Glite(GridWMS):
 			return (jobNum, wmsId, {'jdl': data})
 
 		finally:
-			try:
-				os.unlink(jdl)
-			except:
-				pass
-			try:
-				os.unlink(log)
-			except:
-				pass
+			self.cleanup([log, jdl])
 
 
 	def checkJobs(self, ids):
 		if not len(ids):
 			return []
-
-		fd, jobs = tempfile.mkstemp('.jobids')
-		log = tempfile.mktemp('.log')
+			#raise StopIteration
 
 		result = []
+		fd, jobs = tempfile.mkstemp('.jobids')
+		log = tempfile.mktemp('.log')
 
 		try:
 			fp = os.fdopen(fd, 'w')
@@ -191,6 +195,7 @@ class Glite(GridWMS):
 				data['reason'] = data.get('reason', '')
 				status = self._statusMap[data['status']]
 				result.append((id, status, data))
+				#yield (id, status, data)
 
 			retCode = proc.wait()
 
@@ -207,16 +212,7 @@ class Glite(GridWMS):
 						sys.stderr.write(open(log, 'r').read())
 
 		finally:
-			try:
-				os.unlink(jobs)
-			except:
-				pass
-			try:
-				os.unlink(log)
-			except:
-				pass
-
-		return result
+			self.cleanup([log, jobs])
 
 
 	def getJobsOutput(self, ids):
@@ -272,19 +268,7 @@ class Glite(GridWMS):
 					result.append(path)
 
 		finally:
-			try:
-				os.unlink(jobs)
-			except:
-				pass
-			try:
-				os.unlink(log)
-			except:
-				pass
-			try:
-				os.rmdir(tmpPath)
-			except:
-				pass
-
+			self.cleanup([log, jobs, tmpPath])
 		return result
 
 
@@ -321,13 +305,5 @@ class Glite(GridWMS):
 				return False
 
 		finally:
-			try:
-				os.unlink(jobs)
-			except:
-				pass
-			try:
-				os.unlink(log)
-			except:
-				pass
-
+			self.cleanup([log, jobs])
 		return True

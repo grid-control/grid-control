@@ -37,7 +37,7 @@ class GridWMS(WMS):
 	_jdlEscape = staticmethod(_jdlEscape)
 
 
-	def storageReq(self, sites):
+	def _storageReq(self, sites):
 		def makeMember(member):
 			return "Member(%s, other.GlueCESEBindGroupSEUniqueID)" % self._jdlEscape(member)
 		if not len(sites):
@@ -48,7 +48,7 @@ class GridWMS(WMS):
 			return '(' + str.join(' || ', map(makeMember, sites)) + ')'
 
 
-	def sitesReq(self, sites):
+	def _sitesReq(self, sites):
 		def appendSiteItem(list, site):
 			if site[0] == ':':
 				list.append(site[1:])
@@ -74,7 +74,7 @@ class GridWMS(WMS):
 			return '( ' + str.join(' && ', sitereqs) + ' )'
 
 
-	def formatRequirements(self, reqs):
+	def _formatRequirements(self, reqs):
 		result = []
 		for type, arg in reqs:
 			if type == self.MEMBER:
@@ -93,9 +93,9 @@ class GridWMS(WMS):
 			elif type == self.OTHER:
 				result.append('other.GlueHostNetworkAdapterOutboundIP')
 			elif type == self.STORAGE:
-				result.append(self.storageReq(arg))
+				result.append(self._storageReq(arg))
 			elif type == self.SITES:
-				result.append(self.sitesReq(arg))
+				result.append(self._sitesReq(arg))
 			else:
 				raise RuntimeError('unknown requirement type %d' % type)
 		return str.join(' && ', result)
@@ -120,7 +120,7 @@ class GridWMS(WMS):
 			'StdError': 'stderr.txt',
 			'InputSandbox': self.sandboxIn,
 			'OutputSandbox': self.sandboxOut,
-			'_Requirements': self.formatRequirements(self.getRequirements(job)),
+			'_Requirements': self._formatRequirements(self.getRequirements(job)),
 			'VirtualOrganisation': self.vo,
 			'RetryCount': 2
 		}

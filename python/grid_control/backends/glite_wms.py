@@ -72,14 +72,7 @@ class GliteWMS(Glite):
 			# FIXME: glite-wms-job-delegate-proxy
 
 		finally:
-			try:
-				os.unlink(jdl)
-			except:
-				pass
-			try:
-				os.unlink(log)
-			except:
-				pass
+			self.cleanup([log, jdl])
 
 
 	def submitJob(self, jobNum):
@@ -147,14 +140,7 @@ class GliteWMS(Glite):
 			return (jobNum, id, {'jdl': data})
 
 		finally:
-			try:
-				os.unlink(jdl)
-			except:
-				pass
-			try:
-				os.unlink(log)
-			except:
-				pass
+			self.cleanup([log, jdl])
 			# FIXME: glite-wms-job-submit
 
 
@@ -190,7 +176,6 @@ class GliteWMS(Glite):
 
 
 			# FIXME: error handling
-
 			activity = utils.ActivityLog("retrieving job outputs")
 
 			proc = popen2.Popen4("%s --noint --logfile %s -i %s --dir %s"
@@ -199,13 +184,12 @@ class GliteWMS(Glite):
 			                        utils.shellEscape(jobs),
 			                        utils.shellEscape(outPath)),
 			                        True)
+
 			for data in proc.fromchild.readlines():
 				# FIXME: moep
 				pass
 
 			retCode = proc.wait()
-
-			
 			del activity
 
 			if retCode != 0:
@@ -220,17 +204,5 @@ class GliteWMS(Glite):
 					result.append(path)
 
 		finally:
-			try:
-				os.unlink(jobs)
-			except:
-				pass
-			try:
-				os.unlink(log)
-			except:
-				pass
-			try:
-				os.rmdir(tmpPath)
-			except:
-				pass
-
+			self.cleanup([log, jobs, tmpPath])
 		return result
