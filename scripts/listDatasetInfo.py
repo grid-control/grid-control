@@ -44,11 +44,13 @@ def main(args):
 	class ConfigDummy(object):
 		def get(self, x,y,z):
 			return z
+		def getPath(self, x,y,z):
+			return z
 
 	if os.path.exists(args[0]):
 		fromfile = True
 		dir, file = os.path.split(args[0])
-		provider = DataProvider.loadState(dir, file)
+		provider = DataProvider.loadState(ConfigDummy(), dir, file)
 	else:
 		fromfile = False
 		provider = DataProvider.open('DBSApiv2', ConfigDummy(), args[0], None)

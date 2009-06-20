@@ -92,16 +92,15 @@ def main(args):
 
 		# Initialise proxy
 		proxy = wms.getProxy()
-		module.username = proxy.getUsername()
+		module.proxy = proxy
 
 		# Test grid proxy lifetime
-		wallTime = utils.parseTime(config.get('jobs', 'wall time'))
 		def checkProxy():
 			if not proxy.check(0):
 				raise UserError('Your proxy only has %d seconds left!' % proxy.timeleft())
-			if not proxy.check(wallTime) and opts.submission:
+			if not proxy.check(module.wallTime) and opts.submission:
 				utils.vprint("Proxy lifetime (%s) does not meet the walltime requirements (%s)!"
-					% (utils.strTime(proxy.timeleft()), utils.strTime(wallTime)), printTime = True)
+					% (utils.strTime(proxy.timeleft()), utils.strTime(module.wallTime)), printTime = True)
 				utils.vprint("INFO: Disabling job submission.", printTime = True)
 				opts.submission = False
 		checkProxy()
