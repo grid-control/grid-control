@@ -213,6 +213,7 @@ class Glite(GridWMS):
 
 		finally:
 			self.cleanup([log, jobs])
+			return result
 
 
 	def getJobsOutput(self, ids):

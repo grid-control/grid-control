@@ -125,31 +125,34 @@ def main(args):
 		def wait(timeout):
 			for x in xrange(0, timeout, 5):
 				if opts.abort:
-					return
+					return False
 				log = utils.ActivityLog('waiting for %d seconds' % (timeout - x))
 				time.sleep(5)
 				del log
+			return True
 
 		while True:
+			didWait = False
 			# Check free disk space
 			if int(os.popen("df -P -m %s" % workDir).readlines()[-1].split()[3]) < 10:
 				raise RuntimeError("Not enough space left in working directory")
 
 			# try submission
 			if not opts.abort and jobs.submit(wms):
-				wait(10)
+				didWait = wait(10)
 			# retrieve finished jobs
 			if not opts.abort and jobs.retrieve(wms):
-				wait(10)
+				didWait = wait(10)
 			# check for jobs
 			if not opts.abort and jobs.check(wms):
-				wait(10)
+				didWait = wait(10)
 
 			# quit if abort flag is set or not in continuous mode
 			if opts.abort or not opts.continuous:
 				break
 			# idle timeout is one minute
-			wait(60)
+			if not didWait:
+				wait(60)
 			# Check proxy lifetime
 			checkProxy()
 

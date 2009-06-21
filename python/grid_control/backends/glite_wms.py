@@ -72,7 +72,7 @@ class GliteWMS(Glite):
 			# FIXME: glite-wms-job-delegate-proxy
 
 		finally:
-			self.cleanup([log, jdl])
+			self.cleanup([log])
 
 
 	def submitJob(self, jobNum):

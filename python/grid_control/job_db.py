@@ -141,7 +141,7 @@ class JobDB:
 		else:
 			list = self.ready[:]
 		if self.doShuffle:
-			return SortedList(random.sample(list, submit))
+			return SortedList(random.sample(list, min(len(list), submit)))
 		return SortedList(list[:submit])
 
 
