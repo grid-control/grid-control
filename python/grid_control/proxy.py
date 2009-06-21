@@ -59,7 +59,7 @@ class VomsProxy(Proxy):
 		if cached and self._cache:
 			return self._cache
 		# Call voms-proxy-info and parse results
-		proc = popen2.Popen3("%s --all" % self._infoExec, True)
+		proc = popen2.Popen4("%s --all" % self._infoExec, True)
 		retCode = proc.wait()
 		if retCode != 0:
 			sys.stderr.write(proc.fromchild.read())

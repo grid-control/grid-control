@@ -45,7 +45,7 @@ class JobDB:
 		self.ready.extend(filter(lambda x: not (x in self.all), xrange(nJobs)))
 
 		self.timeout = utils.parseTime(config.get('jobs', 'queue timeout', ''))
-		self.inFlight = config.getInt('jobs', 'in flight')
+		self.inFlight = config.getInt('jobs', 'in flight', nJobs)
 		self.doShuffle = config.getBool('jobs', 'shuffle', False)
 		self.module = module
 		self.opts = opts

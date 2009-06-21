@@ -10,7 +10,7 @@ def verbosity():
 def vprint(text, level = 0, printTime = False, newline = True):
 	if verbosity() > level:
 		if printTime:
-			print "%s - " % time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()),
+			print "%s -" % time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()),
 		if newline:
 			print text
 		else:

@@ -237,9 +237,10 @@ class CMSSW(Module):
 		if self.datasplitter == None:
 			return str(self.eventsPerJob)
 
-		print "Job number: %d" % job
 		datafiles = self.datasplitter.getSplitInfo(job)
-		DataSplitter.printInfoForJob(datafiles)
+		if utils.verbosity() > 0:
+			print "Job number: %d" % job
+			DataSplitter.printInfoForJob(datafiles)
 		return "%d %d %s" % (
 			datafiles[DataSplitter.NEvents],
 			datafiles[DataSplitter.Skipped],
