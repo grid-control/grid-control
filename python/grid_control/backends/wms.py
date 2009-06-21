@@ -96,7 +96,7 @@ class WMS(AbstractObject):
 
 	def submitJobs(self, ids):
 		for jobNum in ids:
-			jobNum, wmsId, data = self.submitJob(jobNum)
+			(jobNum, wmsId, data) = self.submitJob(jobNum)
 			if wmsId == None:
 				continue # FIXME
 			yield (jobNum, wmsId, data)
