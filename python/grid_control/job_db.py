@@ -115,7 +115,7 @@ class JobDB:
 			old.remove(jobNum)
 			new.add(jobNum)
 
-		jobNumLen = int(math.log10(len(self.all)) + 1)
+		jobNumLen = int(math.log10(max(1, len(self.all))) + 1)
 		utils.vprint("Job %s state changed to %s" % (str(jobNum).ljust(jobNumLen), Job.states[state]), -1, True, False)
 		if (state == Job.SUBMITTED) and (job.attempt > 1):
 			print "(attempt #%s)" % job.attempt
