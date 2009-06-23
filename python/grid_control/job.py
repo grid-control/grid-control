@@ -101,4 +101,8 @@ class Job:
 			for key in self._stateDict.keys():
 				if regex.match(key) and self.state == self._stateDict[key]:
 					return True
+#	TODO: Site selection
+#			regex = re.compile(state + '$')
+#			if self.dict.has_key("dest") and regex.match(self.dict.get("dest")):
+#				return True
 		return False

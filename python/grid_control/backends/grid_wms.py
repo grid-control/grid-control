@@ -37,7 +37,7 @@ class GridWMS(WMS):
 	_jdlEscape = staticmethod(_jdlEscape)
 
 
-	def _storageReq(self, sites):
+	def storageReq(self, sites):
 		def makeMember(member):
 			return "Member(%s, other.GlueCESEBindGroupSEUniqueID)" % self._jdlEscape(member)
 		if not len(sites):
@@ -48,7 +48,7 @@ class GridWMS(WMS):
 			return '(' + str.join(' || ', map(makeMember, sites)) + ')'
 
 
-	def _sitesReq(self, sites):
+	def sitesReq(self, sites):
 		def appendSiteItem(list, site):
 			if site[0] == ':':
 				list.append(site[1:])
@@ -79,23 +79,19 @@ class GridWMS(WMS):
 		for type, arg in reqs:
 			if type == self.MEMBER:
 				result.append('Member(%s, other.GlueHostApplicationSoftwareRunTimeEnvironment)' % self._jdlEscape(arg))
-			elif type == self.WALLTIME:
+			elif (type == self.WALLTIME) and (arg > 0):
 				result.append('(other.GlueCEPolicyMaxWallClockTime >= %d)' % int((arg + 59) / 60))
-			elif type == self.CPUTIME:
-				if arg == 0:
-					continue
+			elif (type == self.CPUTIME) and (arg > 0):
 				result.append('(other.GlueCEPolicyMaxCPUTime >= %d)' % int((arg + 59) / 60))
 				# GlueCEPolicyMaxCPUTime: The maximum CPU time available to jobs submitted to this queue, in minutes.
-			elif type == self.MEMORY:
-				if arg == 0:
-					continue
+			elif (type == self.MEMORY) and (arg > 0):
 				result.append('(other.GlueHostMainMemoryRAMSize >= %d)' % arg)
 			elif type == self.OTHER:
 				result.append('other.GlueHostNetworkAdapterOutboundIP')
 			elif type == self.STORAGE:
-				result.append(self._storageReq(arg))
+				result.append(self.storageReq(arg))
 			elif type == self.SITES:
-				result.append(self._sitesReq(arg))
+				result.append(self.sitesReq(arg))
 			else:
 				raise RuntimeError('unknown requirement type %d' % type)
 		return str.join(' && ', result)
