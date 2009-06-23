@@ -96,7 +96,6 @@ class Module(AbstractObject):
 			self.setEventEnviron(jobObj, jobNum)
 			params = "%s %d %s" % (self.evtSubmit, jobNum, jobObj.id)
 			threading.Thread(target = os.system, args = (params,)).start()
-		return None
 
 
 	# Called on job status update
@@ -105,7 +104,6 @@ class Module(AbstractObject):
 			self.setEventEnviron(jobObj, jobNum)
 			params = "%s %d %s %s" % (self.evtStatus, jobNum, jobObj.id, Job.states[jobObj.state])
 			threading.Thread(target = os.system, args = (params,)).start()
-		return None
 
 
 	# Called on job status update
@@ -114,7 +112,6 @@ class Module(AbstractObject):
 			self.setEventEnviron(jobObj, jobNum)
 			params = "%s %d %s %d" % (self.evtOutput, jobNum, jobObj.id, retCode)
 			threading.Thread(target = os.system, args = (params,)).start()
-		return None
 
 
 	# Get environment variables for gc_config.sh

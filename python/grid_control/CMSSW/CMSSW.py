@@ -147,7 +147,6 @@ class CMSSW(Module):
 				scheduler="gLite", taskType="analysis", vo=self.proxy.getVO(),
 				datasetFull=dbsinfo.get(DataSplitter.Dataset, ''), user=os.environ['LOGNAME']
 			)
-		return None
 
 
 	# Called on job status update
@@ -163,7 +162,6 @@ class CMSSW(Module):
 				StatusEnterTime=data.get('timestamp', strftime("%Y-%m-%d_%H:%M:%S", localtime())),
 				StatusDestination=data.get('dest', "")
 			)
-		return None
 
 
 	# Get environment variables for gc_config.sh
