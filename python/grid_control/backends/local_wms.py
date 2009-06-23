@@ -70,7 +70,6 @@ class LocalWMS(WMS):
 			sandbox = tempfile.mkdtemp("", "%s.%04d." % (self.module.taskID, jobNum), self.sandPath)
 			for file in self.sandboxIn:
 				shutil.copy(file, sandbox)
-			jobObj.set()
 		except OSError:
 			raise RuntimeError("Sandbox path '%s' is not accessible." % self.sandPath)
 		except IOError:
