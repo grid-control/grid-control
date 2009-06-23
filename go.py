@@ -87,6 +87,8 @@ def main(args):
 		defaultproxy = { 'grid': 'VomsProxy', 'local': 'TrivialProxy' }
 		proxy = Proxy.open(config.get(backend, 'proxy', defaultproxy[backend]))
 		module.proxy = proxy
+		if not proxy.canSubmit(module.wallTime, opts.submission):
+			opts.submission = False
 
 		# Initialise workload management interface
 		defaultwms = { 'grid': 'GliteWMS', 'local': 'LocalWMS' }
@@ -96,17 +98,6 @@ def main(args):
 			wms = WMS.open('LocalWMS', workDir, config, opts, module)
 		else:
 			raise UserError("Invalid backend specified!" % workDir)
-
-		# Test grid proxy lifetime
-		def checkProxy():
-			if not proxy.check(0):
-				raise UserError('Your proxy only has %d seconds left!' % proxy.timeleft())
-			if not proxy.check(module.wallTime) and opts.submission:
-				utils.vprint("Proxy lifetime (%s) does not meet the walltime requirements (%s)!"
-					% (utils.strTime(proxy.timeleft()), utils.strTime(module.wallTime)), printTime = True)
-				utils.vprint("INFO: Disabling job submission.", printTime = True)
-				opts.submission = False
-		checkProxy()
 
 		# Initialise job database
 		jobs = JobDB(workDir, config, opts, module)
@@ -157,7 +148,8 @@ def main(args):
 			if not didWait:
 				wait(60)
 			# Check proxy lifetime
-			checkProxy()
+			if not proxy.canSubmit(module.wallTime, opts.submission):
+				opts.submission = False
 
 	except GridError, e:
 		e.showMessage()
