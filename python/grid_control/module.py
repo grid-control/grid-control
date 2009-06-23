@@ -32,7 +32,6 @@ class Module(AbstractObject):
 		print 'Current task ID %s' % (self.taskID)
 
 		self.dashboard = config.getBool('jobs', 'monitor job', False)
-		self.username = "unknown"
 
 		self.evtSubmit = config.getPath('events', 'on submit', '')
 		self.evtStatus = config.getPath('events', 'on status', '')
@@ -139,7 +138,7 @@ class Module(AbstractObject):
 			'SEEDS': str.join(' ', map(str, self.seeds)),
 			# Task infos
 			'TASK_ID': self.taskID,
-			'TASK_USER': self.username,
+			'TASK_USER': self.proxy.getUsername(),
 			'DASHBOARD': ('no', 'yes')[self.dashboard]
 		}
 

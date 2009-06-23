@@ -81,18 +81,21 @@ def main(args):
 		module = config.get('global', 'module')
 		module = Module.open(module, workDir, config, opts)
 
-		# Initialise workload management interface
 		backend = config.get('global', 'backend', 'grid')
+
+		# Initialise proxy
+		defaultproxy = { 'grid': 'VomsProxy', 'local': 'TrivialProxy' }
+		proxy = Proxy.open(config.get(backend, 'proxy', defaultproxy[backend]))
+		module.proxy = proxy
+
+		# Initialise workload management interface
+		defaultwms = { 'grid': 'GliteWMS', 'local': 'LocalWMS' }
 		if backend == 'grid':
 			wms = WMS.open(config.get(backend, 'wms', 'GliteWMS'), workDir, config, opts, module)
 		elif backend == 'local':
 			wms = WMS.open('LocalWMS', workDir, config, opts, module)
 		else:
 			raise UserError("Invalid backend specified!" % workDir)
-
-		# Initialise proxy
-		proxy = wms.getProxy()
-		module.proxy = proxy
 
 		# Test grid proxy lifetime
 		def checkProxy():

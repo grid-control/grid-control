@@ -1,7 +1,7 @@
 # Generic base class for workload management systems
 
 import sys, os, time, shutil, tarfile
-from grid_control import AbstractObject, ConfigError, RuntimeError, utils, proxy
+from grid_control import AbstractObject, ConfigError, RuntimeError, utils
 
 class WMS(AbstractObject):
 	INLINE_TAR_LIMIT = 256 * 1024
@@ -14,7 +14,6 @@ class WMS(AbstractObject):
 		self.config = config
 		self.module = module
 		self.workDir = workDir
-		self.proxy = config.get(backend, 'proxy', 'TrivialProxy')
 
 		self._outputPath = os.path.join(self.workDir, 'output')
 
@@ -145,7 +144,3 @@ class WMS(AbstractObject):
 				continue
 
 			yield (id, retCode, data)
-
-
-	def getProxy(self):
-		return proxy.Proxy.open(self.proxy)
