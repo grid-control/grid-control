@@ -118,14 +118,14 @@ class CMSSW(Module):
 		if self.dataset != None:
 			self.dataprovider = DataProvider.create(config)
 			self.dataprovider.saveState(workDir)
-			if utils.verbosity() > 0:
+			if utils.verbosity() > 2:
 				self.dataprovider.printDataset()
 
 			splitter = config.get('CMSSW', 'dataset splitter', 'DefaultSplitter')
 			self.datasplitter = DataSplitter.open(splitter, { "eventsPerJob": self.eventsPerJob })
 			self.datasplitter.splitDataset(self.dataprovider.getBlocks())
 			self.datasplitter.saveState(workDir)
-			if utils.verbosity() > 1:
+			if utils.verbosity() > 2:
 				self.datasplitter.printAllJobInfo()
 
 

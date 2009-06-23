@@ -1,5 +1,5 @@
 from __future__ import generators
-import sys, os, re, fnmatch, random, utils
+import sys, os, re, fnmatch, random, utils, math
 from time import time, localtime, strftime
 from grid_control import SortedList, ConfigError, Job, UserError, Report
 
@@ -115,7 +115,8 @@ class JobDB:
 			old.remove(jobNum)
 			new.add(jobNum)
 
-		utils.vprint("Job %d state changed to %s" % (jobNum, Job.states[state]), -1, True, False)
+		jobNumLen = int(math.log10(len(self.all)) + 1)
+		utils.vprint("Job %s state changed to %s" % (str(jobNum).ljust(jobNumLen), Job.states[state]), -1, True, False)
 		if (state == Job.SUBMITTED) and (job.attempt > 1):
 			print "(attempt #%s)" % job.attempt
 		elif (state == Job.FAILED) and job.get('retcode') and job.get('dest'):
@@ -141,7 +142,7 @@ class JobDB:
 		else:
 			list = self.ready[:]
 		if self.doShuffle:
-			return SortedList(random.sample(list, min(len(list), submit)))
+			return SortedList(self.sample(list, submit))
 		return SortedList(list[:submit])
 
 
@@ -186,7 +187,7 @@ class JobDB:
 
 		# TODO: just check running?
 		if self.opts.continuous:
-			wmsMap = self.getWmsMap(random.sample(self.running, min(100, len(self.running))))
+			wmsMap = self.getWmsMap(self.sample(self.running, 100))
 		else:
 			wmsMap = self.getWmsMap(self.running)
 
@@ -224,11 +225,20 @@ class JobDB:
 		return change
 
 
+	def sample(self, list, size):
+		return random.sample(list, min(size, len(list)))
+
+
 	def retrieve(self, wms):
 		change = False
-		wmsIds = map(lambda jobNum: self._jobs[jobNum].id, self.done)
 
-		for id, retCode, data in wms.retrieveJobs(wmsIds):
+		if self.opts.continuous:
+			wmsMap = self.getWmsMap(self.sample(self.done, 10))
+		else:
+			wmsMap = self.getWmsMap(self.done)
+
+		retrievedJobs = False
+		for id, retCode, data in wms.retrieveJobs(wmsMap.keys()):
 			try:
 				job = self._jobs[id]
 			except:
@@ -248,6 +258,7 @@ class JobDB:
 
 			if self.opts.abort:
 				return False
+
 		return change
 
 

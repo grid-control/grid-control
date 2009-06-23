@@ -34,6 +34,7 @@ def main(args):
 	parser.add_option("-f", "--list-files",    dest="listfiles",    default=False, action="store_true")
 	parser.add_option("-s", "--list-storage",  dest="liststorage",  default=False, action="store_true")
 	parser.add_option("-b", "--list-blocks",   dest="listblocks",   default=False, action="store_true")
+	parser.add_option("-c", "--config-entry",  dest="configentry",  default=False, action="store_true")
 	parser.add_option("-S", "--save",          dest="save",         default=False, action="store_true")
 	(opts, args) = parser.parse_args()
 
@@ -67,6 +68,22 @@ def main(args):
 	else:
 		print "Dataset: %s" % blocks[0][DataProvider.Dataset]
 		headerbase = []
+
+	if opts.configentry:
+		infos = {}
+		maxnick = 0
+		for block in blocks:
+			blockID = block.get(DataProvider.DatasetID, 0)
+			if not infos.get(blockID, None):
+				infos[blockID] = {
+					DataProvider.Nickname : block[DataProvider.Nickname],
+					DataProvider.Dataset : block[DataProvider.Dataset]
+				}
+				maxnick = max(maxnick, len(block[DataProvider.Nickname]))
+#		printTabular([(DataProvider.Nickname, "Nickname"), (DataProvider.Dataset, "Dataset")], infos.itervalues())
+		for info in infos.itervalues():
+			print "%s: DBS:%s" % (info[DataProvider.Nickname].center(maxnick + 2), info[DataProvider.Dataset])
+		
 
 	if opts.listdatasets:
 		infos = {}
