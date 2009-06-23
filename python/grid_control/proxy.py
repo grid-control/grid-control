@@ -52,11 +52,8 @@ class Proxy(AbstractObject):
 
 
 class TrivialProxy(Proxy):
-	def getTimeleft(self, cached, checkedForTime = None):
-		# Always return more than requested...
-		if checkedForTime != None:
-			return checkedForTime + 1
-		return self.lowerLimit
+	def canSubmit(self, length, flag):
+		return True
 
 
 class VomsProxy(Proxy):
