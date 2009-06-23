@@ -101,17 +101,6 @@ class Glite(GridWMS):
 				pass
 
 
-	def cleanup(self, list):
-		for item in list:
-			try:
-				if os.path.isdir(item):
-					os.rmdir(item)
-				elif os.path.isfile(item):
-					os.unlink(item)
-			except:
-				pass
-
-
 	def submitJob(self, jobNum):
 		fd, jdl = tempfile.mkstemp('.jdl')
 		log = tempfile.mktemp('.log')
@@ -173,14 +162,10 @@ class Glite(GridWMS):
 			#raise StopIteration
 
 		result = []
-		fd, jobs = tempfile.mkstemp('.jobids')
-		log = tempfile.mktemp('.log')
 
 		try:
-			fp = os.fdopen(fd, 'w')
-			for id in ids:
-				fp.write("%s\n" % id)
-			fp.close()
+			log = tempfile.mktemp('.log')
+			jobs = self.writeWMSIds(ids)
 			# FIXME: error handling
 
 			activity = utils.ActivityLog("checking job status")
@@ -227,16 +212,11 @@ class Glite(GridWMS):
 		except IOError:
 			raise RuntimeError("Temporary path '%s' could not be created." % tmpPath)
 
-		fd, jobs = tempfile.mkstemp('.jobids')
-		log = tempfile.mktemp('.log')
-
 		result = []
 
 		try:
-			fp = os.fdopen(fd, 'w')
-			for id in ids:
-				fp.write("%s\n" % id)
-			fp.close()
+			jobs = self.writeWMSIds(ids)
+			log = tempfile.mktemp('.log')
 
 			# FIXME: error handling
 
@@ -277,16 +257,11 @@ class Glite(GridWMS):
 		if not len(ids):
 			return True
 
-		fd, jobs = tempfile.mkstemp('.jobids')
-		log = tempfile.mktemp('.log')
-
 		result = []
 
 		try:
-			fp = os.fdopen(fd, 'w')
-			for id in ids:
-				fp.write("%s\n" % id)
-			fp.close()
+			jobs = self.writeWMSIds(ids)
+			log = tempfile.mktemp('.log')
 			# FIXME: error handling
 
 			activity = utils.ActivityLog("cancelling jobs")

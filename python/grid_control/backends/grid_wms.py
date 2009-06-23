@@ -135,3 +135,26 @@ class GridWMS(WMS):
 				return (key, delim, '"%s"' % value)
 
 		fp.writelines(utils.DictFormat().format(contents, format = '%s %s %s;\n', fkt = jdlRep))
+
+
+	def cleanup(self, list):
+		for item in list:
+			try:
+				if os.path.isdir(item):
+					os.rmdir(item)
+				else:
+					os.unlink(item)
+			except:
+				pass
+
+
+	def writeWMSIds(self, wmsIds):
+		try:
+			fd, jobs = tempfile.mkstemp('.jobids')
+			fp = os.fdopen(fd, 'w')
+			fp.writelines(str.join('\n', wmsIds))
+			fp.close()
+		except:
+			sys.stderr.write("Could not write wms ids to %s." % jobs)
+			raise
+		return jobs

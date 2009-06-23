@@ -155,16 +155,11 @@ class GliteWMS(Glite):
 		except IOError:
 			raise RuntimeError("Temporary path '%s' could not be created." % tmpPath)
 
-		fd, jobs = tempfile.mkstemp('.jobids')
-		log = tempfile.mktemp('.log')
-
 		result = []
 
 		try:
-			fp = os.fdopen(fd, 'w')
-			for id in ids:
-				fp.write("%s\n" % id)
-			fp.close()
+			log = tempfile.mktemp('.log')
+			jobs = self.writeWMSIds(ids)
 
 			if len(ids) == 1:
 				wmsExtraDir = md5.md5(ids[0]).hexdigest()

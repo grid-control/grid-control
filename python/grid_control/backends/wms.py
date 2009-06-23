@@ -96,24 +96,36 @@ class WMS(AbstractObject):
 
 	def submitJobs(self, ids):
 		for jobNum in ids:
-			(jobNum, wmsId, data) = self.submitJob(jobNum)
+			jobNum, wmsId, data = self.submitJob(jobNum)
 			if wmsId == None:
 				continue # FIXME
 			yield (jobNum, wmsId, data)
 
 
 	def retrieveJobs(self, ids):
+		def readJobFile(fp):
+			data = utils.DictFormat().parse(fp, lowerCaseKey = False)
+			return (data['JOBID'], data['EXITCODE'], data)
+
 		for dir in self.getJobsOutput(ids):
 			info = os.path.join(dir, 'jobinfo.txt')
-			if not os.path.exists(info):
-				continue
-
 			try:
-				data = utils.DictFormat().parse(open(info, 'r'), lowerCaseKey = False)
-				id = data['JOBID']
-				retCode = data['EXITCODE']
+				id, retCode, data = readJobFile(open(info, 'r'))
 			except:
 				sys.stderr.write("Warning: '%s' seems broken.\n" % info)
+#				# Try to extract jobinfo from stdout file
+#				if not os.path.exists(dir):
+#					continue
+#				try:
+#					info = os.path.join(dir, 'stdout.txt')
+#					id, retCode, data = readJobFile(open(info, 'r').readlines()[-3:])
+#					sys.stderr.write("Recovered job %d with exit code %d...\n" % (id, retCode))
+#				except:
+					# Move corrupted output to fail directory
+				failpath = os.path.join(self.workDir, 'fail')
+				if not os.path.exists(failpath):
+					os.mkdir(failpath)
+				shutil.move(dir, os.path.join(failpath, os.path.basename(dir)))
 				continue
 
 			dst = os.path.join(self._outputPath, 'job_%d' % id)
