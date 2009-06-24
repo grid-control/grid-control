@@ -50,7 +50,7 @@ class Module(AbstractObject):
 		self.seInputFiles = config.get('storage', 'se input files', '').split()
 		self.seInputPattern = config.get('storage', 'se input pattern', '__X__')
 		self.seOutputFiles = config.get('storage', 'se output files', '').split()
-		self.seOutputPattern = config.get('storage', 'se output pattern', 'job___MY_JOB_____NICK_____X__')
+		self.seOutputPattern = config.get('storage', 'se output pattern', 'job___MY_JOBID_____NICK_____X__')
 
 		self.sbInputFiles = config.get(self.__class__.__name__, 'input files', '').split()
 		self.sbOutputFiles = config.get(self.__class__.__name__, 'output files', '').split()
