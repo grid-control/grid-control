@@ -5,6 +5,7 @@ trap abort 0 1 2 3 15
 export MY_JOBID="$1"
 export MY_LANDINGZONE="`pwd`"
 export MY_MARKER="$MY_LANDINGZONE/RUNNING.$$"
+export MY_DASHBOARDINFO="$MY_LANDINGZONE/Dashboard.report"
 export MY_SCRATCH="`getscratch`"
 export MY_SEED=$RANDOM$RANDOM
 
@@ -60,6 +61,21 @@ if [ -n "$SE_INPUT_FILES" ]; then
 	url_copy "$SE_PATH" "file:///$MY_SCRATCH" "$SE_INPUT_FILES"
 fi
 
+if [ "$DASHBOARD" == "yes" ]; then
+	export REPORTID="taskId=$TASK_ID jobId=${MY_JOBID}_$GLITE_WMS_JOBID MonitorID=$TASK_ID MonitorJobID=${MY_JOBID}_$GLITE_WMS_JOBID"
+	echo "Update Dashboard: $REPORTID"
+	checkfile "$MY_SCRATCH/report.py"
+	chmod u+x "$MY_SCRATCH/report.py"
+	checkbin "$MY_SCRATCH/report.py"
+
+	echo $MY_SCRATCH/report.py $REPORTID \
+		SyncGridJobId="$GLITE_WMS_JOBID" SyncGridName="$TASK_USER" SyncCE="$GLOBUS_CE" \
+		WNname="$(hostname -f)" ExeStart="$DB_EXEC"
+	$MY_SCRATCH/report.py $REPORTID \
+		SyncGridJobId="$GLITE_WMS_JOBID" SyncGridName="$TASK_USER" SyncCE="$GLOBUS_CE" \
+		WNname="$(hostname -f)" ExeStart="$DB_EXEC"
+fi
+
 # Execute program
 echo "==========================="
 cd $MY_SCRATCH
@@ -74,6 +90,19 @@ echo "==========================="
 echo "Job exit code: $CODE"
 echo "==========================="
 updatejobinfo $CODE
+
+if [ "$DASHBOARD" == "yes" ]; then
+	echo "Update Dashboard: $REPORTID"
+	checkbin "$MY_SCRATCH/report.py"
+	[ -f "$MY_DASHBOARDINFO" ] && DASH_EXT="$(< "$MY_DASHBOARDINFO")"
+	cat 
+	echo $MY_SCRATCH/report.py $REPORTID \
+		ExeEnd="$DB_EXEC" WCCPU="$[ $(date +%s) - $STARTDATE ]" \
+		ExeExitCode="$CODE" JobExitCode="$CODE" JobExitReason="$CODE" $DASH_EXT
+	$MY_SCRATCH/report.py $REPORTID \
+		ExeEnd="$DB_EXEC" WCCPU="$[ $(date +%s) - $STARTDATE ]" \
+		ExeExitCode="$CODE" JobExitCode="$CODE" JobExitReason="$CODE" $DASH_EXT
+fi
 
 # Copy files to the SE
 if [ $CODE -eq 0 -a -n "$SE_OUTPUT_FILES" ]; then

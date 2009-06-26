@@ -4,14 +4,14 @@ from time import time, localtime, strftime
 from grid_control import SortedList, ConfigError, Job, UserError, Report
 
 class JobDB:
-	def __init__(self, workDir, config, opts, module):
-		self._dbPath = os.path.join(workDir, 'jobs')
+	def __init__(self, config, opts, module):
+		self._dbPath = os.path.join(opts.workDir, 'jobs')
 		try:
 			if not os.path.exists(self._dbPath):
 				if opts.init:
 					os.mkdir(self._dbPath)
 				else:
-					raise ConfigError("Not a properly initialized work directory '%s'." % workDir)
+					raise ConfigError("Not a properly initialized work directory '%s'." % opts.workDir)
 		except IOError, e:
 			raise ConfigError("Problem creating work directory '%s': %s" % (self._dbPath, e))
 
@@ -38,7 +38,7 @@ class JobDB:
 		self.ok = SortedList()
 		self.disabled = SortedList()
 
-		for jobNum, jobObj in self._scan():
+		for jobNum, jobObj in self._readJobs():
 			self._jobs[jobNum] = jobObj
 			self.all.add(jobNum)
 			self._findQueue(jobObj).append(jobNum)
@@ -51,25 +51,21 @@ class JobDB:
 		self.opts = opts
 
 
+	# Return appropriate queue for given job
 	def _findQueue(self, job):
-		state = job.state
-
-		if state in (Job.SUBMITTED, Job.WAITING, Job.READY,
+		if job.state in (Job.SUBMITTED, Job.WAITING, Job.READY,
 		             Job.QUEUED, Job.RUNNING):
-			queue = self.running
-		elif state in (Job.INIT, Job.FAILED, Job.ABORTED, Job.CANCELLED):
-			queue = self.ready	# resubmit?
-		elif state == Job.DONE:
-			queue = self.done
-		elif state == Job.SUCCESS:
-			queue = self.ok
-		else:
-			raise Exception("Internal error: Unexpected job state %s" % Job.states[state])
-
-		return queue
+			return self.running
+		elif job.state in (Job.INIT, Job.FAILED, Job.ABORTED, Job.CANCELLED):
+			return self.ready	# resubmit?
+		elif job.state == Job.DONE:
+			return self.done
+		elif job.state == Job.SUCCESS:
+			return self.ok
+		raise Exception("Internal error: Unexpected job state %s" % Job.states[state])
 
 
-	def _scan(self):
+	def _readJobs(self):
 		regexfilter = re.compile(r'^job_([0-9]+)\.txt$')
 		self._jobs = {}
 		for jobFile in fnmatch.filter(os.listdir(self._dbPath), 'job_*.txt'):
@@ -78,29 +74,18 @@ class JobDB:
 				jobNum = int(match.group(1))
 			except:
 				continue
-
-			fp = open(os.path.join(self._dbPath, jobFile))
-			yield (jobNum, Job.load(fp))
-			fp.close()
+			yield (jobNum, Job.load(os.path.join(self._dbPath, jobFile)))
 
 
+	# TODO: Is this function called anywhere?
 	def list(self, types = None):
 		for id, job in self._jobs.items():
 			if types == None or job.state in types:
 				yield id
 
 
-	def get(self, id):
-		return self._jobs[id]
-
-
-	def _saveJob(self, id):
-		job = self._jobs[id]
-		fp = open(os.path.join(self._dbPath, "job_%d.txt" % id), 'w')
-		job.save(fp)
-		fp.truncate()
-		fp.close()
-		# FIXME: Error handling?
+	def get(self, jobNum):
+		return self._jobs[jobNum]
 
 
 	def _update(self, jobNum, job, state):
@@ -109,6 +94,7 @@ class JobDB:
 
 		old = self._findQueue(job)
 		job.update(state)
+		job.save(os.path.join(self._dbPath, "job_%d.txt" % jobNum))
 		new = self._findQueue(job)
 
 		if old != new:
@@ -126,11 +112,9 @@ class JobDB:
 		elif (state == Job.WAITING) and job.get('reason'):
 			print '(%s)' % job.get('reason')
 		elif (state == Job.SUCCESS) and job.get('runtime'):
-			print "(runtime %s)" % utils.strTime(job.get('runtime'))
+			print "(error code: %d - runtime %s)" % (job.get('retcode'), utils.strTime(job.get('runtime')))
 		else:
 			print
-
-		self._saveJob(jobNum)
 
 
 	def getSubmissionJobs(self):
@@ -152,25 +136,25 @@ class JobDB:
 			return False
 
 		wms.bulkSubmissionBegin(len(ids))
-		for jobNum, wmsId, data in wms.submitJobs(ids):
-			try:
-				job = self._jobs[jobNum]
-			except:
-				job = Job()
-				self._jobs[jobNum] = job
+		try:
+			for jobNum, wmsId, data in wms.submitJobs(ids):
+				try:
+					job = self._jobs[jobNum]
+				except:
+					job = Job()
+					self._jobs[jobNum] = job
 
-			job.assignId(wmsId)
-			for key, value in data.iteritems():
-				job.set(key, value)
+				job.assignId(wmsId)
+				for key, value in data.iteritems():
+					job.set(key, value)
 
-			self._update(jobNum, job, Job.SUBMITTED)
-			self.module.onJobSubmit(job, jobNum)
-			if self.opts.abort:
-				self.bulkSubmissionEnd()
-				return False
-
-		wms.bulkSubmissionEnd()
-		return True
+				self._update(jobNum, job, Job.SUBMITTED)
+				self.module.onJobSubmit(job, jobNum)
+				if self.opts.abort:
+					return False
+			return True
+		finally:
+			wms.bulkSubmissionEnd()
 
 
 	def getWmsMap(self, idlist):
@@ -219,7 +203,7 @@ class JobDB:
 
 		# Quit when all jobs are finished
 		if (len(self.ready) == 0) and (len(self.running) == 0) and (len(self.done) == 0):
-			print "%s - All jobs are finished. Quitting grid-control!" % strftime("%Y-%m-%d %H:%M:%S", localtime())
+			utils.vprint("All jobs are finished. Quitting grid-control!", -1, True, False)
 			sys.exit(0)
 
 		return change
@@ -238,9 +222,11 @@ class JobDB:
 			wmsMap = self.getWmsMap(self.done)
 
 		retrievedJobs = False
-		for id, retCode, data in wms.retrieveJobs(wmsMap.keys()):
+		for jobNum, retCode, data in wms.retrieveJobs(wmsMap.keys()):
 			try:
-				job = self._jobs[id]
+				job = self._jobs[jobNum]
+				if job.state != Job.DONE:
+					open("/tmp/STRANGE%d" % jobNum, 'w').write("STRANGE THINGS ARE HAPPENING %s" % str(job.__dict__))
 			except:
 				continue
 
@@ -253,8 +239,8 @@ class JobDB:
 				change = True
 				job.set('retcode', retCode)
 				job.set('runtime', data.get("TIME", -1))
-				self._update(id, job, state)
-				self.module.onJobOutput(job, id, retCode)
+				self._update(jobNum, job, state)
+				self.module.onJobOutput(job, jobNum, retCode)
 
 			if self.opts.abort:
 				return False

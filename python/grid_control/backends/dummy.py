@@ -4,8 +4,8 @@ from grid_control import ConfigError, Job, utils
 from wms import WMS
 
 class DummyWMS(WMS):
-	def __init__(self, workDir, config, opts, module):
-		WMS.__init__(self, workDir, config, opts, module, 'grid')
+	def __init__(self, config, opts, module):
+		WMS.__init__(self, config, opts, module, 'grid')
 		self.jobmap = {}
 
 	def submitJob(self, jobNum):

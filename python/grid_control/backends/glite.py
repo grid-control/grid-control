@@ -3,9 +3,9 @@ from grid_wms import GridWMS
 
 class Glite(GridWMS):
 
-	def __init__(self, workDir, config, opts, module):
+	def __init__(self, config, opts, module):
 		utils.deprecated("Please use the GliteWMS backend for grid jobs!")
-		GridWMS.__init__(self, workDir, config, opts, module)
+		GridWMS.__init__(self, config, opts, module)
 
 		self._submitExec = utils.searchPathFind('glite-job-submit')
 		self._statusExec = utils.searchPathFind('glite-job-status')

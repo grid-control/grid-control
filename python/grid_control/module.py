@@ -3,12 +3,14 @@
 
 import os, os.path, cStringIO, StringIO, md5, gzip, cPickle, random, threading
 from grid_control import ConfigError, AbstractObject, utils, WMS, Job
-from time import time
+from time import time, localtime, strftime
+from DashboardAPI import DashboardAPI
 
 class Module(AbstractObject):
 	# Read configuration options and init vars
-	def __init__(self, workDir, config, opts):
+	def __init__(self, config, opts):
 		self.config = config
+		self.opts = opts
 
 		self.wallTime = utils.parseTime(config.get('jobs', 'wall time'))
 		self.cpuTime = utils.parseTime(config.get('jobs', 'cpu time', config.get('jobs', 'wall time')))
@@ -28,7 +30,7 @@ class Module(AbstractObject):
 
 		# Compute / get task ID
 		self.taskID = None
-		self.taskID = self.getTaskID(workDir)
+		self.taskID = self.getTaskID()
 		print 'Current task ID %s' % (self.taskID)
 
 		self.dashboard = config.getBool('jobs', 'monitor job', False)
@@ -49,8 +51,11 @@ class Module(AbstractObject):
 
 		self.seInputFiles = config.get('storage', 'se input files', '').split()
 		self.seInputPattern = config.get('storage', 'se input pattern', '__X__')
+		self.seInputPattern = self.seInputPattern.replace('@', '__').replace('__CONF__', opts.confName)
+
 		self.seOutputFiles = config.get('storage', 'se output files', '').split()
 		self.seOutputPattern = config.get('storage', 'se output pattern', 'job___MY_JOBID_____NICK_____X__')
+		self.seOutputPattern = self.seOutputPattern.replace('@', '__').replace('__CONF__', opts.confName)
 
 		self.sbInputFiles = config.get(self.__class__.__name__, 'input files', '').split()
 		self.sbOutputFiles = config.get(self.__class__.__name__, 'output files', '').split()
@@ -67,9 +72,9 @@ class Module(AbstractObject):
 
 
 	# Get persistent task id for monitoring
-	def getTaskID(self, workDir):
+	def getTaskID(self):
 		if self.taskID == None:
-			taskfile = os.path.join(workDir, 'task.dat')
+			taskfile = os.path.join(self.opts.workDir, 'task.dat')
 			try:
 				self.taskID = utils.DictFormat(" = ").parse(open(taskfile))['task id']
 			except:
@@ -89,20 +94,39 @@ class Module(AbstractObject):
 			os.environ["GC_%s" % key] = str(value)
 
 
+	def publishToDashboard(self, job, id, usermsg):
+		if self.dashboard:
+			dashboard = DashboardAPI(self.taskID, "%s_%s" % (id, job.id))
+			msg = { "taskId": self.taskID, "jobId": "%s_%s" % (id, job.id), "sid": "%s_%s" % (id, job.id) }
+			msg = dict(filter(lambda (x,y): y != None, reduce(lambda x,y: x+y, map(dict.items, [msg] + usermsg))))
+			dashboard.publish(**msg)
+
+
 	# Called on job submission
-	def onJobSubmit(self, jobObj, jobNum):
+	def onJobSubmit(self, jobObj, jobNum, dbmessage = [{}]):
 		if self.evtSubmit != '':
 			self.setEventEnviron(jobObj, jobNum)
 			params = "%s %d %s" % (self.evtSubmit, jobNum, jobObj.id)
 			threading.Thread(target = os.system, args = (params,)).start()
 
+		threading.Thread(target = self.publishToDashboard, args = (jobObj, jobNum, [{
+			"tool": "grid-control", "GridName": self.proxy.getUsername(),
+			"scheduler": "gLite", "taskType": "analysis", "vo": self.proxy.getVO(),
+			"user": os.environ['LOGNAME'] }] + dbmessage,)).start()
+
 
 	# Called on job status update
-	def onJobUpdate(self, jobObj, jobNum, data):
+	def onJobUpdate(self, jobObj, jobNum, data, dbmessage = [{}]):
 		if self.evtStatus != '':
 			self.setEventEnviron(jobObj, jobNum)
 			params = "%s %d %s %s" % (self.evtStatus, jobNum, jobObj.id, Job.states[jobObj.state])
 			threading.Thread(target = os.system, args = (params,)).start()
+
+		threading.Thread(target = self.publishToDashboard, args = (jobObj, jobNum, [{
+			"StatusValue": data.get('status', 'pending').upper(),
+			"StatusValueReason": data.get('reason', data.get('status', 'pending')).upper(),
+			"StatusEnterTime": data.get('timestamp', strftime("%Y-%m-%d_%H:%M:%S", localtime())),
+			"StatusDestination": data.get('dest', "") }] + dbmessage,)).start()
 
 
 	# Called on job status update
@@ -139,7 +163,8 @@ class Module(AbstractObject):
 			# Task infos
 			'TASK_ID': self.taskID,
 			'TASK_USER': self.proxy.getUsername(),
-			'DASHBOARD': ('no', 'yes')[self.dashboard]
+			'DASHBOARD': ('no', 'yes')[self.dashboard],
+			'DB_EXEC': 'shellscript'
 		}
 
 
@@ -167,7 +192,11 @@ class Module(AbstractObject):
 			else:
 				path = file
 			return path
-		return map(fileMap, self.sbInputFiles)
+		files = map(fileMap, self.sbInputFiles)
+		if self.dashboard:
+			for file in ('DashboardAPI.py', 'Logger.py', 'ProcInfo.py', 'apmon.py', 'report.py'):
+				files.append(utils.atRoot('python/DashboardAPI', file))
+		return files
 
 
 	# Get files for output sandbox

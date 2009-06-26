@@ -10,12 +10,12 @@ class WMS(AbstractObject):
 		locals()[reqType] = id
 
 
-	def __init__(self, workDir, config, opts, module, backend):
+	def __init__(self, config, opts, module, backend):
 		self.config = config
 		self.module = module
-		self.workDir = workDir
+		self.opts = opts
 
-		self._outputPath = os.path.join(self.workDir, 'output')
+		self._outputPath = os.path.join(opts.workDir, 'output')
 
 		if not os.path.exists(self._outputPath):
 			if opts.init:
@@ -24,9 +24,9 @@ class WMS(AbstractObject):
 				except IOError, e:
 					raise ConfigError("Problem creating work directory '%s': %s" % (self._outputPath, e))
 			else:
-				raise ConfigError("Not a properly initialized work directory '%s'." % self.workDir)
+				raise ConfigError("Not a properly initialized work directory '%s'." % opts.workDir)
 
-		tarFile = os.path.join(self.workDir, 'sandbox.tar.gz')
+		tarFile = os.path.join(opts.workDir, 'sandbox.tar.gz')
 
 		self.sandboxIn = [ utils.atRoot('share', 'grid.sh'), utils.atRoot('share', 'run.lib'), tarFile ]
 		self.sandboxOut = self.module.getOutFiles() + [ 'stdout.txt', 'stderr.txt', 'jobinfo.txt' ]
@@ -45,7 +45,7 @@ class WMS(AbstractObject):
 				if os.path.isabs(file):
 					path = file
 				else:
-					path = os.path.join(self.workDir, file)
+					path = os.path.join(opts.workDir, file)
 
 				# Put file in sandbox instead of tar file
 				if os.path.getsize(path) > self.INLINE_TAR_LIMIT and file.endswith('.gz') or file.endswith('.bz2'):
@@ -102,14 +102,17 @@ class WMS(AbstractObject):
 
 
 	def retrieveJobs(self, ids):
-		def readJobFile(fp):
-			data = utils.DictFormat().parse(fp, lowerCaseKey = False)
+		def readJobFile(info):
+			data = utils.DictFormat().parse(open(info, 'r'), lowerCaseKey = False)
 			return (data['JOBID'], data['EXITCODE'], data)
 
 		for dir in self.getJobsOutput(ids):
+			accepted = False
 			info = os.path.join(dir, 'jobinfo.txt')
 			try:
-				id, retCode, data = readJobFile(open(info, 'r'))
+				id, retCode, data = readJobFile(info)
+				dst = os.path.join(self._outputPath, 'job_%d' % id)
+				accepted = True
 			except:
 				sys.stderr.write("Warning: '%s' seems broken.\n" % info)
 #				# Try to extract jobinfo from stdout file
@@ -121,13 +124,19 @@ class WMS(AbstractObject):
 #					sys.stderr.write("Recovered job %d with exit code %d...\n" % (id, retCode))
 #				except:
 					# Move corrupted output to fail directory
-				failpath = os.path.join(self.workDir, 'fail')
+
+				try:
+					os.rmdir(dir)
+					# No files were retrieved...
+					continue
+				except:
+					pass
+
+				failpath = os.path.join(self.opts.workDir, 'fail')
 				if not os.path.exists(failpath):
 					os.mkdir(failpath)
-				shutil.move(dir, os.path.join(failpath, os.path.basename(dir)))
-				continue
-
-			dst = os.path.join(self._outputPath, 'job_%d' % id)
+				dst = os.path.join(failpath, os.path.basename(dir))
+				sys.stderr.write("Moving output sandbox to %s\n" % dst)
 
 			try:
 				if os.path.exists(dst):
@@ -139,8 +148,8 @@ class WMS(AbstractObject):
 			try:
 				shutil.move(dir, dst)
 			except IOError, e:
-				sys.stderr.write("Warning: Error moving job output directory from '%s' to '%s': %s" \
-					% (dir, dst, str(e)))
+				sys.stderr.write("Warning: Error moving job output directory from '%s' to '%s': %s" % (dir, dst, str(e)))
 				continue
 
-			yield (id, retCode, data)
+			if accepted:
+				yield (id, retCode, data)

@@ -24,8 +24,8 @@ class GridWMS(WMS):
 	}
 
 
-	def __init__(self, workDir, config, opts, module):
-		WMS.__init__(self, workDir, config, opts, module, 'grid')
+	def __init__(self, config, opts, module):
+		WMS.__init__(self, config, opts, module, 'grid')
 		self._sites = config.get('grid', 'sites', '').split()
 		self.vo = config.get('grid', 'vo', module.proxy.getVO())
 		self._submitParams = {}
@@ -192,6 +192,8 @@ class GridWMS(WMS):
 
 			if (wmsId == None):
 				self.printError(self._submitExec, retCode, proc.childerr.readlines(), log, [jdl])
+			else:
+				self.cleanup([log, jdl])
 		except:
 			self.cleanup([log, jdl])
 			raise

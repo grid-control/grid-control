@@ -31,11 +31,11 @@ class LocalWMSApi(AbstractObject):
 
 
 class LocalWMS(WMS):
-	def __init__(self, workDir, config, opts, module):
-		WMS.__init__(self, workDir, config, opts, module, 'local')
+	def __init__(self, config, opts, module):
+		WMS.__init__(self, config, opts, module, 'local')
 
 		self.api = LocalWMSApi.open(config.get('local', 'wms', self._guessWMS()), config, self)
-		self.sandPath = config.getPath('local', 'sandbox path', os.path.join(self.workDir, 'sandbox'))
+		self.sandPath = config.getPath('local', 'sandbox path', os.path.join(opts.workDir, 'sandbox'))
 		self._nameFile = config.getPath('local', 'name source', '')
 		self._source = None
 		if self._nameFile != '':

@@ -20,9 +20,9 @@ class Job:
 		self.dict = {}
 
 
-	def load(cls, fp):
+	def load(cls, name):
 		try:
-			data = utils.DictFormat(escapeString = True).parse(fp)
+			data = utils.DictFormat(escapeString = True).parse(open(name))
 		except:
 			raise ConfigError('Invalid format in %s' % fp.name)
 		job = Job(cls._stateDict[data['status']])
@@ -66,8 +66,11 @@ class Job:
 		return data
 
 
-	def save(self, fp):
+	def save(self, name):
+		fp = open(name, 'w')
 		fp.writelines(utils.DictFormat(escapeString = True).format(self.getAll()))
+		fp.truncate()
+		fp.close()
 
 
 	def set(self, key, value):

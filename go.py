@@ -51,6 +51,7 @@ def main(args):
 	# we need exactly one positional argument (config file)
 	if len(args) != 1:
 		print_help()
+	opts.confName = os.path.basename(args[0]).replace(".conf","")
 
 	# set up signal handler for interrupts
 	def interrupt(sig, frame):
@@ -68,18 +69,18 @@ def main(args):
 			raise ConfigError("Error while reading configuration file '%s'!" % args[0])
 
 		# Check work dir validity (default work directory is the config file name)
-		workDir = config.getPath('global', 'workdir', os.path.basename(args[0]).replace(".conf",""))
-		if not os.path.exists(workDir):
-			if utils.boolUserInput("Do you want to create the working directory %s?" % workDir, True):
-				os.mkdir(workDir)
+		opts.workDir = config.getPath('global', 'workdir', opts.confName)
+		if not os.path.exists(opts.workDir):
+			if utils.boolUserInput("Do you want to create the working directory %s?" % opts.workDir, True):
+				os.mkdir(opts.workDir)
 		try:
-			os.chdir(workDir)
+			os.chdir(opts.workDir)
 		except:
-			raise UserError("Could not access specified working directory '%s'!" % workDir)
+			raise UserError("Could not access specified working directory '%s'!" % opts.workDir)
 
 		# Initialise application module
 		module = config.get('global', 'module')
-		module = Module.open(module, workDir, config, opts)
+		module = Module.open(module, config, opts)
 
 		backend = config.get('global', 'backend', 'grid')
 
@@ -93,14 +94,14 @@ def main(args):
 		# Initialise workload management interface
 		defaultwms = { 'grid': 'GliteWMS', 'local': 'LocalWMS' }
 		if backend == 'grid':
-			wms = WMS.open(config.get(backend, 'wms', 'GliteWMS'), workDir, config, opts, module)
+			wms = WMS.open(config.get(backend, 'wms', 'GliteWMS'), config, opts, module)
 		elif backend == 'local':
-			wms = WMS.open('LocalWMS', workDir, config, opts, module)
+			wms = WMS.open(defaultwms[backend], config, opts, module)
 		else:
-			raise UserError("Invalid backend specified!" % workDir)
+			raise UserError("Invalid backend specified!" % opts.workDir)
 
 		# Initialise job database
-		jobs = JobDB(workDir, config, opts, module)
+		jobs = JobDB(config, opts, module)
 
 		# If invoked in report mode, just show report and exit
 		if Report(jobs, jobs).show(opts):
@@ -128,17 +129,17 @@ def main(args):
 		while True:
 			didWait = False
 			# Check free disk space
-			if int(os.popen("df -P -m %s" % workDir).readlines()[-1].split()[3]) < 10:
+			if int(os.popen("df -P -m %s" % opts.workDir).readlines()[-1].split()[3]) < 10:
 				raise RuntimeError("Not enough space left in working directory")
 
-			# try submission
-			if not opts.abort and jobs.submit(wms):
+			# check for jobs
+			if not opts.abort and jobs.check(wms):
 				didWait = wait(10)
 			# retrieve finished jobs
 			if not opts.abort and jobs.retrieve(wms):
 				didWait = wait(10)
-			# check for jobs
-			if not opts.abort and jobs.check(wms):
+			# try submission
+			if not opts.abort and jobs.submit(wms):
 				didWait = wait(10)
 
 			# quit if abort flag is set or not in continuous mode

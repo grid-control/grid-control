@@ -5,8 +5,8 @@ from grid_wms import GridWMS
 from glite import Glite
 
 class GliteWMS(Glite):
-	def __init__(self, workDir, config, opts, module):
-		GridWMS.__init__(self, workDir, config, opts, module)
+	def __init__(self, config, opts, module):
+		GridWMS.__init__(self, config, opts, module)
 
 		self._delegateExec = utils.searchPathFind('glite-wms-job-delegate-proxy')
 		self._submitExec = utils.searchPathFind('glite-wms-job-submit')

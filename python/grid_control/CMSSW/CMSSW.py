@@ -7,8 +7,8 @@ from DashboardAPI import DashboardAPI
 from time import time, localtime, strftime
 
 class CMSSW(Module):
-	def __init__(self, workDir, config, opts):
-		Module.__init__(self, workDir, config, opts)
+	def __init__(self, config, opts):
+		Module.__init__(self, config, opts)
 
 		# SCRAM info
 		scramProject = config.get('CMSSW', 'scram project', '').split()
@@ -86,17 +86,17 @@ class CMSSW(Module):
 
 		self.datasplitter = None
 		if opts.init:
-			self._initTask(workDir, config)
+			self._initTask(opts.workDir, config)
 		elif self.dataset != None:
 			try:
-				self.datasplitter = DataSplitter.loadState(workDir)
+				self.datasplitter = DataSplitter.loadState(opts.workDir)
 			except:
-				raise ConfigError("Not a properly initialized work directory '%s'." % workDir)
+				raise ConfigError("Not a properly initialized work directory '%s'." % opts.workDir)
 			if opts.resync:
-				old = DataProvider.loadState(config, workDir)
+				old = DataProvider.loadState(config, opts.workDir)
 				new = DataProvider.create(config)
-				self.datasplitter.resyncMapping(workDir, old.getBlocks(), new.getBlocks())
-				#TODO: new.saveState(workDir)
+				self.datasplitter.resyncMapping(opts.workDir, old.getBlocks(), new.getBlocks())
+				#TODO: new.saveState(opts.workDir)
 
 
 	def _initTask(self, workDir, config):
@@ -130,38 +130,14 @@ class CMSSW(Module):
 
 
 	# Called on job submission
-	def onJobSubmit(self, job, id):
-		Module.onJobSubmit(self, job, id)
-
-		if self.dashboard:
-			dbsinfo = {}
-			if self.datasplitter:
-				dbsinfo = self.datasplitter.getSplitInfo(id)
-
-			dashboard = DashboardAPI(self.taskID, "%s_%s" % (id, job.id))
-			dashboard.publish(
-				taskId=self.taskID, jobId="%s_%s" % (id, job.id), sid="%s_%s" % (id, job.id),
-				application=self.scramEnv['SCRAM_PROJECTVERSION'], exe="cmsRun",
-				nevtJob=dbsinfo.get(DataSplitter.NEvents, self.eventsPerJob),
-				tool="grid-control", GridName=self.proxy.getUsername(),
-				scheduler="gLite", taskType="analysis", vo=self.proxy.getVO(),
-				datasetFull=dbsinfo.get(DataSplitter.Dataset, ''), user=os.environ['LOGNAME']
-			)
-
-
-	# Called on job status update
-	def onJobUpdate(self, job, id, data):
-		Module.onJobUpdate(self, job, id, data)
-
-		if self.dashboard:
-			dashboard = DashboardAPI(self.taskID, "%s_%s" % (id, job.id))
-			dashboard.publish(
-				taskId=self.taskID, jobId="%s_%s" % (id, job.id), sid="%s_%s" % (id, job.id),
-				StatusValue=data.get('status', 'pending').upper(),
-				StatusValueReason=data.get('reason', data.get('status', 'pending')).upper(),
-				StatusEnterTime=data.get('timestamp', strftime("%Y-%m-%d_%H:%M:%S", localtime())),
-				StatusDestination=data.get('dest', "")
-			)
+	def onJobSubmit(self, job, id, dbmessage = [{}]):
+		dbsinfo = {}
+		if self.datasplitter:
+			dbsinfo = self.datasplitter.getSplitInfo(id)
+		Module.onJobSubmit(self, job, id, [{
+			"application": self.scramEnv['SCRAM_PROJECTVERSION'], "exe": "cmsRun",
+			"nevtJob": dbsinfo.get(DataSplitter.NEvents, self.eventsPerJob),
+			"datasetFull": dbsinfo.get(DataSplitter.Dataset, '') }])
 
 
 	# Get environment variables for gc_config.sh
@@ -169,6 +145,7 @@ class CMSSW(Module):
 		data = Module.getTaskConfig(self)
 		data['CMSSW_CONFIG'] = os.path.basename(self.configFile)
 		data['CMSSW_RELEASE_BASE_OLD'] = self.scramEnv.get('RELEASETOP', None)
+		data['DB_EXEC'] = 'cmsRun'
 		data['SCRAM_VERSION'] = self.scramVersion
 		data['SCRAM_ARCH'] = self.scramArch
 		data['SCRAM_PROJECTVERSION'] = self.scramEnv['SCRAM_PROJECTVERSION']
@@ -209,10 +186,6 @@ class CMSSW(Module):
 			files.append('runtime.tar.gz')
 		files.append(utils.atRoot('share', 'run.cmssw.sh')),
 		files.append(self.configFile)
-
-		if self.dashboard:
-			for file in ('DashboardAPI.py', 'Logger.py', 'ProcInfo.py', 'apmon.py', 'report.py'):
-				files.append(utils.atRoot('python/DashboardAPI', file))
 		return files
 
 
