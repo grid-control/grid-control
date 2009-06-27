@@ -24,11 +24,16 @@ class GridWMS(WMS):
 	}
 
 
-	def __init__(self, config, opts, module):
+	def __init__(self, config, opts, module, section):
 		WMS.__init__(self, config, opts, module, 'grid')
 		self._sites = config.get('grid', 'sites', '').split()
 		self.vo = config.get('grid', 'vo', module.proxy.getVO())
+
 		self._submitParams = {}
+		self._ce = config.get(section, 'ce', '')
+		self._configVO = config.getPath(section, 'config', '')
+		if self._configVO != '' and not os.path.exists(self._configVO):
+			raise ConfigError("--config file '%s' does not exist." % self._configVO)
 
 
 	def _jdlEscape(value):

@@ -6,23 +6,14 @@ from glite import Glite
 
 class GliteWMS(Glite):
 	def __init__(self, config, opts, module):
-		GridWMS.__init__(self, config, opts, module)
+		GridWMS.__init__(self, config, opts, module, 'glite-wms')
 
 		self._delegateExec = utils.searchPathFind('glite-wms-job-delegate-proxy')
 		self._submitExec = utils.searchPathFind('glite-wms-job-submit')
 		self._statusExec = utils.searchPathFind('glite-wms-job-status')
 		self._outputExec = utils.searchPathFind('glite-wms-job-output')
 		self._cancelExec = utils.searchPathFind('glite-wms-job-cancel')
-
-		self._ce = config.get('glite-wms', 'ce', '')
-		self._configVO = config.getPath('glite-wms', 'config', '')
-		if self._configVO != '' and not os.path.exists(self._configVO):
-			raise ConfigError("--config file '%s' does not exist." % self._configVO)
-
-		self._submitParams.update({
-			'-r': self._ce,
-			'--config': self._configVO,
-		})
+		self._submitParams.update({'-r': self._ce, '--config': self._configVO })
 
 
 	def bulkSubmissionBegin(self, jobs):
