@@ -84,18 +84,18 @@ class CMSSW(Module):
 		if not os.path.exists(self.configFile):
 			raise ConfigError("Config file '%s' not found." % self.configFile)
 
-		self.datasplitter = None
+		self.dataSplitter = None
 		if opts.init:
 			self._initTask(opts.workDir, config)
 		elif self.dataset != None:
 			try:
-				self.datasplitter = DataSplitter.loadState(opts.workDir)
+				self.dataSplitter = DataSplitter.loadState(opts.workDir)
 			except:
 				raise ConfigError("Not a properly initialized work directory '%s'." % opts.workDir)
 			if opts.resync:
 				old = DataProvider.loadState(config, opts.workDir)
 				new = DataProvider.create(config)
-				self.datasplitter.resyncMapping(opts.workDir, old.getBlocks(), new.getBlocks())
+				self.dataSplitter.resyncMapping(opts.workDir, old.getBlocks(), new.getBlocks())
 				#TODO: new.saveState(opts.workDir)
 
 
@@ -122,22 +122,22 @@ class CMSSW(Module):
 				self.dataprovider.printDataset()
 
 			splitter = config.get('CMSSW', 'dataset splitter', 'DefaultSplitter')
-			self.datasplitter = DataSplitter.open(splitter, { "eventsPerJob": self.eventsPerJob })
-			self.datasplitter.splitDataset(self.dataprovider.getBlocks())
-			self.datasplitter.saveState(workDir)
+			self.dataSplitter = DataSplitter.open(splitter, { "eventsPerJob": self.eventsPerJob })
+			self.dataSplitter.splitDataset(self.dataprovider.getBlocks())
+			self.dataSplitter.saveState(workDir)
 			if utils.verbosity() > 2:
-				self.datasplitter.printAllJobInfo()
+				self.dataSplitter.printAllJobInfo()
 
 
 	# Called on job submission
 	def onJobSubmit(self, job, id, dbmessage = [{}]):
-		dbsinfo = {}
-		if self.datasplitter:
-			dbsinfo = self.datasplitter.getSplitInfo(id)
+		splitInfo = {}
+		if self.dataSplitter:
+			splitInfo = self.dataSplitter.getSplitInfo(id)
 		Module.onJobSubmit(self, job, id, [{
 			"application": self.scramEnv['SCRAM_PROJECTVERSION'], "exe": "cmsRun",
-			"nevtJob": dbsinfo.get(DataSplitter.NEvents, self.eventsPerJob),
-			"datasetFull": dbsinfo.get(DataSplitter.Dataset, '') }])
+			"nevtJob": splitInfo.get(DataSplitter.NEvents, self.eventsPerJob),
+			"datasetFull": splitInfo.get(DataSplitter.Dataset, '') }])
 
 
 	# Get environment variables for gc_config.sh
@@ -158,13 +158,13 @@ class CMSSW(Module):
 	# Get job dependent environment variables
 	def getJobConfig(self, job):
 		data = Module.getJobConfig(self, job)
-		if not self.datasplitter:
+		if not self.dataSplitter:
 			return data
 
-		dbsinfo = self.datasplitter.getSplitInfo(job)
-		data['DATASETID'] = dbsinfo.get(DataSplitter.DatasetID, None)
-		data['DATASETPATH'] = dbsinfo.get(DataSplitter.Dataset, None)
-		data['DATASETNICK'] = dbsinfo.get(DataSplitter.Nickname, None)
+		splitInfo = self.dataSplitter.getSplitInfo(job)
+		data['DATASETID'] = splitInfo.get(DataSplitter.DatasetID, None)
+		data['DATASETPATH'] = splitInfo.get(DataSplitter.Dataset, None)
+		data['DATASETNICK'] = splitInfo.get(DataSplitter.Nickname, None)
 		return data
 
 
@@ -174,8 +174,8 @@ class CMSSW(Module):
 		if self.useReqs:
 			reqs.append((WMS.MEMBER, 'VO-cms-%s' % self.scramEnv['SCRAM_PROJECTVERSION']))
 			reqs.append((WMS.MEMBER, 'VO-cms-%s' % self.scramArch))
-		if self.datasplitter != None:
-			reqs.append((WMS.STORAGE, self.datasplitter.getSitesForJob(job)))
+		if self.dataSplitter != None:
+			reqs.append((WMS.STORAGE, self.dataSplitter.getSitesForJob(job)))
 		return reqs
 
 
@@ -205,21 +205,21 @@ class CMSSW(Module):
 
 
 	def getJobArguments(self, job):
-		if self.datasplitter == None:
+		if self.dataSplitter == None:
 			return str(self.eventsPerJob)
 
-		datafiles = self.datasplitter.getSplitInfo(job)
+		splitInfo = self.dataSplitter.getSplitInfo(job)
 		if utils.verbosity() > 0:
 			print "Job number: %d" % job
-			DataSplitter.printInfoForJob(datafiles)
+			DataSplitter.printInfoForJob(splitInfo)
 		return "%d %d %s" % (
-			datafiles[DataSplitter.NEvents],
-			datafiles[DataSplitter.Skipped],
-			str.join(' ', datafiles[DataSplitter.FileList])
+			splitInfo[DataSplitter.NEvents],
+			splitInfo[DataSplitter.Skipped],
+			str.join(' ', splitInfo[DataSplitter.FileList])
 		)
 
 
 	def getMaxJobs(self):
-		if self.datasplitter == None:
+		if self.dataSplitter == None:
 			raise ConfigError('Must specifiy number of jobs or dataset!')
-		return self.datasplitter.getNumberOfJobs()
+		return self.dataSplitter.getNumberOfJobs()
