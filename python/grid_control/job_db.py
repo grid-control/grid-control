@@ -1,10 +1,11 @@
-from __future__ import generators
 import sys, os, re, fnmatch, random, utils, math
 from time import time, localtime, strftime
 from grid_control import SortedList, ConfigError, Job, UserError, Report
 
 class JobDB:
 	def __init__(self, config, opts, module):
+		self.opts = opts
+		self.module = module
 		self._dbPath = os.path.join(opts.workDir, 'jobs')
 		try:
 			if not os.path.exists(self._dbPath):
@@ -15,19 +16,19 @@ class JobDB:
 		except IOError, e:
 			raise ConfigError("Problem creating work directory '%s': %s" % (self._dbPath, e))
 
-		nJobs = config.getInt('jobs', 'jobs', -1)
-		if nJobs < 0:
+		self.nJobs = config.getInt('jobs', 'jobs', -1)
+		if self.nJobs < 0:
 			# No valid number of jobs given in config file - module has to provide number of jobs
-			nJobs = module.getMaxJobs()
-			if nJobs == None:
+			self.nJobs = module.getMaxJobs()
+			if self.nJobs == None:
 				raise ConfigError("Module doesn't provide max number of Jobs!")
 		else:
 			# Module doesn't have to provide number of jobs
 			try:
 				maxJobs = module.getMaxJobs()
-				if maxJobs and (nJobs > maxJobs):
-					print "Maximum number of jobs given as %d was truncated to %d" % (nJobs, maxJobs)
-					nJobs = maxJobs
+				if maxJobs and (self.nJobs > maxJobs):
+					print "Maximum number of jobs given as %d was truncated to %d" % (self.nJobs, maxJobs)
+					self.nJobs = maxJobs
 			except:
 				pass
 
@@ -36,25 +37,21 @@ class JobDB:
 		self.running = SortedList()
 		self.done = SortedList()
 		self.ok = SortedList()
-		self.disabled = SortedList()
 
 		for jobNum, jobObj in self._readJobs():
 			self._jobs[jobNum] = jobObj
 			self.all.add(jobNum)
 			self._findQueue(jobObj).append(jobNum)
-		self.ready.extend(filter(lambda x: not (x in self.all), xrange(nJobs)))
+		self.ready.extend(filter(lambda x: not (x in self.all), xrange(self.nJobs)))
 
 		self.timeout = utils.parseTime(config.get('jobs', 'queue timeout', ''))
-		self.inFlight = config.getInt('jobs', 'in flight', nJobs)
+		self.inFlight = config.getInt('jobs', 'in flight', self.nJobs)
 		self.doShuffle = config.getBool('jobs', 'shuffle', False)
-		self.module = module
-		self.opts = opts
 
 
 	# Return appropriate queue for given job
 	def _findQueue(self, job):
-		if job.state in (Job.SUBMITTED, Job.WAITING, Job.READY,
-		             Job.QUEUED, Job.RUNNING):
+		if job.state in (Job.SUBMITTED, Job.WAITING, Job.READY, Job.QUEUED, Job.RUNNING):
 			return self.running
 		elif job.state in (Job.INIT, Job.FAILED, Job.ABORTED, Job.CANCELLED):
 			return self.ready	# resubmit?
@@ -77,13 +74,6 @@ class JobDB:
 			yield (jobNum, Job.load(os.path.join(self._dbPath, jobFile)))
 
 
-	# TODO: Is this function called anywhere?
-	def list(self, types = None):
-		for id, job in self._jobs.items():
-			if types == None or job.state in types:
-				yield id
-
-
 	def get(self, jobNum):
 		return self._jobs[jobNum]
 
@@ -101,7 +91,7 @@ class JobDB:
 			old.remove(jobNum)
 			new.add(jobNum)
 
-		jobNumLen = int(math.log10(max(1, len(self.all))) + 1)
+		jobNumLen = int(math.log10(max(1, self.nJobs)) + 1)
 		utils.vprint("Job %s state changed to %s" % (str(jobNum).ljust(jobNumLen), Job.states[state]), -1, True, False)
 		if (state == Job.SUBMITTED) and (job.attempt > 1):
 			print "(attempt #%s)" % job.attempt
@@ -109,7 +99,7 @@ class JobDB:
 			print "(error code: %d - %s)" % (job.get('retcode'), job.get('dest'))
 		elif (state == Job.QUEUED) and job.get('dest'):
 			print "(%s)" % job.get('dest')
-		elif (state == Job.WAITING) and job.get('reason'):
+		elif (state in [Job.WAITING, Job.ABORTED]) and job.get('reason'):
 			print '(%s)' % job.get('reason')
 		elif (state == Job.SUCCESS) and job.get('runtime'):
 			print "(error code: %d - runtime %s)" % (job.get('retcode'), utils.strTime(job.get('runtime')))
@@ -169,7 +159,6 @@ class JobDB:
 		change = False
 		timeoutlist = []
 
-		# TODO: just check running?
 		if self.opts.continuous:
 			wmsMap = self.getWmsMap(self.sample(self.running, 100))
 		else:
@@ -225,6 +214,7 @@ class JobDB:
 		for jobNum, retCode, data in wms.retrieveJobs(wmsMap.keys()):
 			try:
 				job = self._jobs[jobNum]
+				# TODO
 				if job.state != Job.DONE:
 					open("/tmp/STRANGE%d" % jobNum, 'w').write("STRANGE THINGS ARE HAPPENING %s" % str(job.__dict__))
 			except:

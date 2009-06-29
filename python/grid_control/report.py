@@ -1,4 +1,3 @@
-import copy
 from grid_control import Job, RuntimeError, utils, SortedList
 
 class Report:
