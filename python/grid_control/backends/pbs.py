@@ -1,4 +1,4 @@
-import sys, os, popen2, tempfile, shutil
+import sys, os
 from grid_control import ConfigError, Job, utils
 from local_wms import LocalWMSApi
 

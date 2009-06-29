@@ -1,5 +1,4 @@
-import sys, os, popen2, tempfile, shutil
-import xml.dom.minidom
+import sys, os, xml.dom.minidom
 from grid_control import ConfigError, Job, utils
 from local_wms import LocalWMSApi
 
