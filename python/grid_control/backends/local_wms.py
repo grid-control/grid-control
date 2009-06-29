@@ -34,7 +34,9 @@ class LocalWMS(WMS):
 	def __init__(self, config, opts, module):
 		WMS.__init__(self, config, opts, module, 'local')
 
-		self.api = LocalWMSApi.open(config.get('local', 'wms', self._guessWMS()), config, self)
+		wmsapi = config.get('local', 'wms', self._guessWMS())
+		__import__("grid_control.backend.%s" % wmsapi.lower())
+		self.api = LocalWMSApi.open(wmsapi, config, self)
 		self.sandPath = config.getPath('local', 'sandbox path', os.path.join(opts.workDir, 'sandbox'))
 		self._nameFile = config.getPath('local', 'name source', '')
 		self._source = None
@@ -60,6 +62,7 @@ class LocalWMS(WMS):
 		return self.module.taskID[:10] + "." + str(jobNum) #.rjust(4, "0")[:4]
 
 
+	# Submit job and yield (jobNum, WMS ID, other data)
 	def submitJob(self, jobNum):
 		# TODO: fancy job name function
 		activity = utils.ActivityLog('submitting jobs')
@@ -110,6 +113,7 @@ class LocalWMS(WMS):
 		return (jobNum, wmsId, {'sandbox': sandbox})
 
 
+	# Check status of jobs and yield (wmsID, status, other data)
 	def checkJobs(self, wmsIds):
 		if not len(wmsIds):
 			return []

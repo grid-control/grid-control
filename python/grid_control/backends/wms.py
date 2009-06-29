@@ -12,8 +12,8 @@ class WMS(AbstractObject):
 
 	def __init__(self, config, opts, module, backend):
 		self.config = config
-		self.module = module
 		self.opts = opts
+		self.module = module
 
 		self._outputPath = os.path.join(opts.workDir, 'output')
 
@@ -96,6 +96,8 @@ class WMS(AbstractObject):
 	def submitJobs(self, ids):
 		for jobNum in ids:
 			jobNum, wmsId, data = self.submitJob(jobNum)
+			if self.opts.abort:
+				raise StopIteration
 			if wmsId == None:
 				continue # FIXME
 			yield (jobNum, wmsId, data)
