@@ -1,7 +1,7 @@
 # Generic base class for job modules
 # instantiates named class instead (default is UserMod)
 
-import os, os.path, cStringIO, StringIO, md5, gzip, cPickle, random, threading
+import os, md5, random, threading
 from grid_control import ConfigError, AbstractObject, utils, WMS, Job
 from time import time, localtime, strftime
 from DashboardAPI import DashboardAPI
@@ -18,20 +18,34 @@ class Module(AbstractObject):
 
 		self.memory = config.getInt('jobs', 'memory', 512)
 
-		# Set random seeds
-		seedarg = config.get('jobs', 'seeds', '')
-		if opts.seed != None:
-			seedarg = opts.seed
-		if seedarg != '':
-			self.seeds = map(lambda x: int(x), seedarg.split(','))
-		else:
-			self.seeds = map(lambda x: random.randint(0, 10000000), range(10))
-			print "Creating random seeds... ", self.seeds
+		# Try to read task info file
+		try:
+			taskInfoFile = os.path.join(self.opts.workDir, 'task.dat')
+			taskInfo = utils.DictFormat(" = ").parse(open(taskInfoFile))
+		except:
+			taskInfo = {}
 
 		# Compute / get task ID
-		self.taskID = None
-		self.taskID = self.getTaskID()
+		self.taskID = taskInfo.get('task id', 'GC' + md5.md5(str(time())).hexdigest()[:12])
 		print 'Current task ID %s' % (self.taskID)
+
+		# Set random seeds (args override config)
+		seedarg = config.get('jobs', 'seeds', '')
+		if opts.seed != None:
+			seedarg = opts.seed.rstrip('S')
+		if seedarg != '':
+			self.seeds = map(int, seedarg.split(','))
+		else:
+			# args specified => gen seeds
+			if taskInfo.has_key('seeds') and (opts.seed == None):
+				self.seeds = map(int, taskInfo['seeds'].split())
+			else:
+				self.seeds = map(lambda x: random.randint(0, 10000000), range(10))
+				print "Creating random seeds... ", self.seeds
+
+		# Write task info file
+		tmp = { 'task id': self.taskID, 'seeds': str.join(' ', map(str, self.seeds)) }
+		open(taskInfoFile, 'w').writelines(utils.DictFormat(" = ").format(tmp))
 
 		self.dashboard = config.getBool('jobs', 'monitor job', False)
 
@@ -39,7 +53,6 @@ class Module(AbstractObject):
 		self.evtStatus = config.getPath('events', 'on status', '')
 		self.evtOutput = config.getPath('events', 'on output', '')
 
-		# TODO: Convert the following into requirements
 		self.seSDUpperLimit = config.getInt('storage', 'scratch space used', 5000)
 		self.seSDLowerLimit = config.getInt('storage', 'scratch space left', 1)
 		self.seLZUpperLimit = config.getInt('storage', 'landing zone space used', 100)

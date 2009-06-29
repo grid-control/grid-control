@@ -6,7 +6,7 @@ class GridError(Exception):
 		self.message = message
 
 	def showMessage(self):
-		print >> sys.stderr, "%s: %s" % (sys.argv[0], self.message)
+		sys.stderr.write("%s: %s\n" % (sys.argv[0], self.message))
 
 # some error with the Grid installation
 class InstallationError(GridError):
