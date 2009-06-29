@@ -88,8 +88,6 @@ def main(args):
 		defaultproxy = { 'grid': 'VomsProxy', 'local': 'TrivialProxy' }
 		proxy = Proxy.open(config.get(backend, 'proxy', defaultproxy[backend]))
 		module.proxy = proxy
-		if not proxy.canSubmit(module.wallTime, opts.submission):
-			opts.submission = False
 
 		# Initialise workload management interface
 		defaultwms = { 'grid': 'GliteWMS', 'local': 'LocalWMS' }
@@ -112,9 +110,12 @@ def main(args):
 			jobs.delete(wms, opts)
 			return 0
 
+		if not proxy.canSubmit(module.wallTime, opts.submission):
+			opts.submission = False
+
 		# Check if running in continuous mode
 		if opts.continuous:
-			print "Running in continuous mode. Press ^C to exit."
+			print "Running in continuous mode with job submission %s. Press ^C to exit." % ("disabled", "enabled")[opts.submission]
 
 		# Job submission loop
 		def wait(timeout):

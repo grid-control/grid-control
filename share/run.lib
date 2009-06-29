@@ -363,7 +363,7 @@ url_copy_single_force() {
 	url_copy_single $1 $2
 }
 
-# TODO: Directory operations
+# Copy serveral files with specified pattern
 url_copy() {
 	debug_helper $FUNCNAME $LINENO
 	#checkbin "globus-url-copy" || fail 103
