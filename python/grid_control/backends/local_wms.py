@@ -35,8 +35,7 @@ class LocalWMS(WMS):
 		WMS.__init__(self, config, opts, module, 'local')
 
 		wmsapi = config.get('local', 'wms', self._guessWMS())
-		__import__("grid_control.backend.%s" % wmsapi.lower())
-		self.api = LocalWMSApi.open(wmsapi, config, self)
+		self.api = LocalWMSApi.open("grid_control.backends.%s.%s" % (wmsapi.lower(), wmsapi), config, self)
 		self.sandPath = config.getPath('local', 'sandbox path', os.path.join(opts.workDir, 'sandbox'))
 		self._nameFile = config.getPath('local', 'name source', '')
 		self._source = None
@@ -54,6 +53,11 @@ class LocalWMS(WMS):
 				return wms
 			except:
 				pass
+
+
+	# Wait 5 seconds between cycles and 0 seconds between steps
+	def getTimings(self):
+		return (5, 0)
 
 
 	def getJobName(self, jobNum):
@@ -85,7 +89,7 @@ class LocalWMS(WMS):
 		env_vars.update(self.module.getJobConfig(jobNum))
 
 		jcfg = open(os.path.join(sandbox, 'jobconfig.sh'), 'w')
-		jcfg.writelines(utils.DictFormat().format(env_vars))
+		jcfg.writelines(utils.DictFormat().format(env_vars, format = 'export %s%s%s\n'))
 		proc = popen2.Popen3("%s %s %s %s" % (self.api.submitExec,
 			self.api.getSubmitArguments(jobNum, sandbox),
 			utils.shellEscape(utils.atRoot('share', 'local.sh')),
@@ -101,9 +105,9 @@ class LocalWMS(WMS):
 		del activity
 
 		if retCode != 0:
-			print >> sys.stderr, "WARNING: %s failed:" % self.submitExec
+			print >> sys.stderr, "WARNING: %s failed:" % self.api.submitExec
 		elif wmsId == None:
-			print >> sys.stderr, "WARNING: %s did not yield job id:" % self.submitExec
+			print >> sys.stderr, "WARNING: %s did not yield job id:" % self.api.submitExec
 			print >> sys.stderr,  wmsIdText
 
 		if (wmsId == '') or (wmsId == None):

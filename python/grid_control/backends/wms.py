@@ -81,6 +81,10 @@ class WMS(AbstractObject):
 				utils.vprint("\t%s" % file)
 
 
+	def getTimings(self):
+		return (60, 10)
+
+
 	def getRequirements(self, job):
 		return self.module.getRequirements(job)
 

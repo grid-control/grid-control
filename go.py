@@ -64,6 +64,7 @@ def main(args):
 	try:
 		# try to open config file
 		try:
+			open(args[0], 'r')
 			config = Config(args[0])
 		except IOError, e:
 			raise ConfigError("Error while reading configuration file '%s'!" % args[0])
@@ -135,20 +136,20 @@ def main(args):
 
 			# check for jobs
 			if not opts.abort and jobs.check(wms):
-				didWait = wait(10)
+				didWait = wait(wms.getTimings()[1])
 			# retrieve finished jobs
 			if not opts.abort and jobs.retrieve(wms):
-				didWait = wait(10)
+				didWait = wait(wms.getTimings()[1])
 			# try submission
 			if not opts.abort and jobs.submit(wms):
-				didWait = wait(10)
+				didWait = wait(wms.getTimings()[1])
 
 			# quit if abort flag is set or not in continuous mode
 			if opts.abort or not opts.continuous:
 				break
 			# idle timeout is one minute
 			if not didWait:
-				wait(60)
+				wait(wms.getTimings()[0])
 			# Check proxy lifetime
 			if not proxy.canSubmit(module.wallTime, opts.submission):
 				opts.submission = False

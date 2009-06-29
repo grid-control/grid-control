@@ -107,10 +107,10 @@ class JobDB:
 			print
 
 
-	def getSubmissionJobs(self):
+	def getSubmissionJobs(self, maxsample):
 		submit = max(0, self.inFlight - len(self.running))
 		if self.opts.continuous:
-			submit = min(100, submit)
+			submit = min(maxsample, submit)
 		if self.opts.maxRetry != None:
 			list = filter(lambda x: self._jobs.get(x, Job()).attempt < self.opts.maxRetry, self.ready)
 		else:
@@ -120,8 +120,10 @@ class JobDB:
 		return SortedList(list[:submit])
 
 
-	def submit(self, wms):
-		ids = self.getSubmissionJobs()
+	def submit(self, wms, maxsample = 100):
+		utils.dprint(self.ready)
+		ids = self.getSubmissionJobs(maxsample)
+		utils.dprint(ids)
 		if (len(ids) == 0) or not self.opts.submission:
 			return False
 
@@ -155,12 +157,12 @@ class JobDB:
 		return map
 
 
-	def check(self, wms):
+	def check(self, wms, maxsample = 100):
 		change = False
 		timeoutlist = []
 
 		if self.opts.continuous:
-			wmsMap = self.getWmsMap(self.sample(self.running, 100))
+			wmsMap = self.getWmsMap(self.sample(self.running, maxsample))
 		else:
 			wmsMap = self.getWmsMap(self.running)
 
@@ -202,11 +204,11 @@ class JobDB:
 		return random.sample(list, min(size, len(list)))
 
 
-	def retrieve(self, wms):
+	def retrieve(self, wms, maxsample = 10):
 		change = False
 
 		if self.opts.continuous:
-			wmsMap = self.getWmsMap(self.sample(self.done, 10))
+			wmsMap = self.getWmsMap(self.sample(self.done, maxsample))
 		else:
 			wmsMap = self.getWmsMap(self.done)
 

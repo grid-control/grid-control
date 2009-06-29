@@ -48,7 +48,7 @@ class Proxy(AbstractObject):
 		return os.environ['LOGNAME']
 
 	def getVO(self):
-		raise AbstractError
+		return 'None'
 
 
 class TrivialProxy(Proxy):

@@ -4,6 +4,9 @@ from grid_control import InstallationError, ConfigError
 def verbosity():
 	return sys.modules['__main__']._verbosity
 
+def dprint(text):
+	if verbosity() > 0:
+		print text
 
 def vprint(text, level = 0, printTime = False, newline = True):
 	if verbosity() > level:
@@ -214,8 +217,14 @@ class AbstractObject:
 		raise Exception('AbstractObject cannot be instantiated.')
 
 	def open(cls, name, *args, **kwargs):
+		packages = name.split('.')[:-1]
+		for package in range(len(packages)):
+			__import__(str.join(".", packages[:(package + 1)]))
 		try:
-			newcls = getattr(sys.modules['grid_control'], name)
+			if len(name.split('.')) > 1:
+				newcls = getattr(sys.modules[str.join(".", packages)], name.split('.')[-1])
+			else:
+				newcls = getattr(sys.modules['grid_control'], name)
 			if not issubclass(newcls, cls):
 				raise Exception
 		except:

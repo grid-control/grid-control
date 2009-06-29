@@ -84,19 +84,6 @@ class Module(AbstractObject):
 			self.sePath = config.get('CMSSW', 'se path')
 
 
-	# Get persistent task id for monitoring
-	def getTaskID(self):
-		if self.taskID == None:
-			taskfile = os.path.join(self.opts.workDir, 'task.dat')
-			try:
-				self.taskID = utils.DictFormat(" = ").parse(open(taskfile))['task id']
-			except:
-				self.taskID = 'GC' + md5.md5(str(time())).hexdigest()[:12]
-			tmp = { 'task id': self.taskID }
-			open(taskfile, 'w').writelines(utils.DictFormat(" = ").format(tmp))
-		return self.taskID
-
-
 	# Get both task and job config / state dicts
 	def setEventEnviron(self, jobObj, jobNum):
 		tmp = {}
