@@ -1,5 +1,3 @@
-from __future__ import generators
-import sys, os, gzip, cStringIO, copy
 from grid_control import utils, AbstractObject, RuntimeError, ConfigError
 from provider_base import DataProvider
 

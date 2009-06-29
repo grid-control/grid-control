@@ -1,6 +1,3 @@
-from __future__ import generators
-import sys, os, gzip, cPickle, tarfile, time, StringIO
-from grid_control import AbstractObject, RuntimeError, utils, ConfigError
 from splitter_base import DataSplitter
 from provider_base import DataProvider
 

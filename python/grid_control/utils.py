@@ -1,6 +1,4 @@
-from __future__ import generators
-import sys, os, bisect, popen2, StringIO, tarfile, time
-from fnmatch import fnmatch
+import sys, os, bisect, popen2, StringIO, tarfile, time, fnmatch
 from grid_control import InstallationError, ConfigError
 
 def verbosity():
@@ -196,7 +194,7 @@ def genTarball(outFile, dir, pattern):
 			for match in pattern:
 				neg = match[0] == '-'
 				if neg: match = match[1:]
-				if fnmatch(name, match):
+				if fnmatch.fnmatch(name, match):
 					break
 			else:
 				if os.path.isdir(os.path.join(root, name)):
@@ -360,3 +358,18 @@ def DiffLists(oldList, newList, cmpFkt, changedFkt):
 		listMissing.append(old)
 
 	return (listAdded, listMissing, listChanged)
+
+
+def lenSplit(list, maxlen):
+	clen = 0
+	tmp = []
+	for item in list:
+		if clen + len(item) < maxlen:
+			tmp.append(item)
+			clen += len(item)
+		else:
+			tmp.append('')
+			yield tmp
+			tmp = [item]
+			clen = len(item)
+	yield tmp

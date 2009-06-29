@@ -1,4 +1,3 @@
-from __future__ import generators
 import sys, os, string, re, copy
 from grid_control import RuntimeError, utils, DatasetError
 from provider_base import DataProvider

@@ -1,5 +1,4 @@
-from __future__ import generators
-import sys, os, gzip, cPickle, tarfile, time, StringIO, copy
+import os, tarfile, time, copy
 from grid_control import AbstractObject, RuntimeError, utils, ConfigError
 from provider_base import DataProvider
 
@@ -44,14 +43,18 @@ class DataSplitter(AbstractObject):
 
 
 	def printInfoForJob(job):
-		print "Dataset: ", job[DataSplitter.Dataset],
+		print "Dataset:", job[DataSplitter.Dataset],
 		if job.get(DataSplitter.Nickname, '') != '':
-			print "\tNick: ", job.get(DataSplitter.Nickname, ''),
-		print "\tID: ", job.get(DataSplitter.DatasetID, 0)
-		print "Events : ", job[DataSplitter.NEvents]
-		print "Skip   : ", job[DataSplitter.Skipped]
-		print "SEList : ", str.join(", ", job[DataSplitter.SEList])
-		print "Files  : ", str.join("\n          ", job[DataSplitter.FileList])
+			print "\tNick:", job.get(DataSplitter.Nickname, ''),
+		print "\tID:", job.get(DataSplitter.DatasetID, 0)
+		print "Events :", job[DataSplitter.NEvents]
+		print "Skip   :", job[DataSplitter.Skipped]
+		print "SEList :", str.join('\n         ', map(lambda x: str.join(', ', x), utils.lenSplit(job[DataSplitter.SEList], 70)))
+		print "Files  :",
+		if utils.verbosity() > 2:
+			str.join("\n         ", job[DataSplitter.FileList])
+		else:
+			print "%d files selected" % len(job[DataSplitter.FileList])
 	printInfoForJob = staticmethod(printInfoForJob)
 
 

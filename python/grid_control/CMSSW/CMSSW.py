@@ -1,5 +1,4 @@
-import os, copy, string, re, sys, tarfile
-from xml.dom import minidom
+import os, string, re, sys, tarfile
 from grid_control import ConfigError, Module, WMS, utils
 from provider_base import DataProvider
 from splitter_base import DataSplitter

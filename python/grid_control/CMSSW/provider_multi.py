@@ -1,5 +1,3 @@
-from __future__ import generators
-import sys, os, copy
 from grid_control import AbstractObject, RuntimeError, utils, ConfigError, DatasetError, GridError
 from provider_base import DataProvider
 

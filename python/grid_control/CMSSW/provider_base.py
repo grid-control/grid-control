@@ -1,5 +1,4 @@
-from __future__ import generators
-import sys, os, gzip, cStringIO, copy
+import os, gzip, cStringIO, copy
 from grid_control import utils, AbstractObject, RuntimeError, ConfigError
 
 class DataProvider(AbstractObject):
@@ -17,7 +16,7 @@ class DataProvider(AbstractObject):
 
 	# Parse dataset format [NICK : [PROVIDER : [(/)*]]] DATASET
 	def parseDatasetExpr(expression, dbsProvider):
-		temp = map(lambda x: x.strip(), expression.split(':'))
+		temp = map(str.strip, expression.split(':'))
 		nickname = ''
 		provider = dbsProvider
 		providerMap = { 'dbs': dbsProvider, 'file': 'FileProvider', 'list': 'ListProvider' }
