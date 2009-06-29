@@ -1,5 +1,4 @@
-from __future__ import generators
-import sys, os, time, copy, popen2, tempfile, cStringIO, md5, re
+import sys, os, time, copy, popen2, tempfile, cStringIO, md5, re, tarfile, gzip
 from grid_control import ConfigError, Job, utils
 from wms import WMS
 
@@ -59,25 +58,16 @@ class GridWMS(WMS):
 
 
 	def sitesReq(self, sites):
-		def appendSiteItem(list, site):
-			if site[0] == ':':
-				list.append(site[1:])
-			else:
-				list.append(site)
-		blacklist = []
-		whitelist = []
-		for site in sites:
-			if site[0] == '-':
-				appendSiteItem(blacklist, site[1:])
-			else:
-				appendSiteItem(whitelist, site)
-
 		sitereqs = []
 		formatstring = "RegExp(%s, other.GlueCEUniqueID)"
-		if len(blacklist):
-			sitereqs.extend(map(lambda x: ("!" + formatstring % self._jdlEscape(x)), blacklist))
+
+		blacklist = filter(lambda x: x.startswith('-'), sites)
+		sitereqs.extend(map(lambda x: ("!" + formatstring % self._jdlEscape(x[1:])), blacklist))
+
+		whitelist = filter(lambda x: not x.startswith('-'), sites)
 		if len(whitelist):
-			sitereqs.append('(' + str.join(' || ', map(lambda x: (formatstring % self._jdlEscape(x)), whitelist)) + ')')
+			sitereqs.append('(%s)' % str.join(' || ', map(lambda x: (formatstring % self._jdlEscape(x)), whitelist)))
+
 		if not len(sitereqs):
 			return None
 		else:
@@ -85,7 +75,7 @@ class GridWMS(WMS):
 
 
 	def _formatRequirements(self, reqs):
-		result = []
+		result = ['other.GlueHostNetworkAdapterOutboundIP']
 		for type, arg in reqs:
 			if type == self.MEMBER:
 				result.append('Member(%s, other.GlueHostApplicationSoftwareRunTimeEnvironment)' % self._jdlEscape(arg))
@@ -95,8 +85,6 @@ class GridWMS(WMS):
 				result.append('(other.GlueCEPolicyMaxCPUTime >= %d)' % int((arg + 59) / 60))
 			elif (type == self.MEMORY) and (arg > 0):
 				result.append('(other.GlueHostMainMemoryRAMSize >= %d)' % arg)
-			elif type == self.OTHER:
-				result.append('other.GlueHostNetworkAdapterOutboundIP')
 			elif type == self.STORAGE:
 				result.append(self.storageReq(arg))
 			elif type == self.SITES:
@@ -108,8 +96,6 @@ class GridWMS(WMS):
 
 	def getRequirements(self, job):
 		reqs = WMS.getRequirements(self, job)
-		# WMS.OTHER => GlueHostNetworkAdapterOutboundIP
-		reqs.append((WMS.OTHER, ()))
 		# add site requirements
 		if len(self._sites):
 			reqs.append((self.SITES, self._sites))
@@ -157,52 +143,66 @@ class GridWMS(WMS):
 				pass
 
 
-	def printError(self, cmd, retCode, lines, log, cleanup):
-		sys.stderr.write("WARNING: %s failed with code %d\n" % (os.path.basename(cmd), retCode))
-		sys.stderr.writelines(filter(lambda x: (x != '\n') and not x.startswith('----'), lines))
-#		sys.stderr.write("Logfile can be found here: %s\n\n" % log)
-		self.cleanup(cleanup)
-		return False
+	class LoggedProcess(object):
+		def __init__(self, cmd, args):
+			self.cmd = (cmd, args)
+			self.proc = popen2.Popen3("%s %s" % (cmd, args), True)
+			self.stdout = []
+			self.stderr = []
+
+		def getError(self):
+			self.stderr.extend(self.proc.childerr.readlines())
+			return str.join("\n", self.stderr)
+
+		def iter(self, opts):
+			while True:
+				try:
+					line = self.proc.fromchild.readline()
+				except:
+					opts.abort = True
+					break
+				if not line:
+					break
+				self.stdout.append(line)
+				yield line
+
+		def wait(self):
+			return self.proc.wait()
+
+		def getOutput(self):
+			self.stdout.extend(self.proc.fromchild.readline())
+			self.stderr.extend(self.proc.childerr.readlines())
+			return (self.wait(), self.stdout, self.stderr)
 
 
-	def submitJob(self, jobNum):
-		fd, jdl = tempfile.mkstemp('.jdl')
-		log = tempfile.mktemp('.log')
+	def logError(self, proc, log):
+		retCode, stdout, stderr = proc.getOutput()
+		sys.stderr.write("WARNING: %s failed with code %d\n" %
+			(os.path.basename(proc.cmd[0]), retCode))
 
+		now = time.time()
+		entry = "%s.%s" % (time.strftime("%Y-%m-%d_%H:%M:%S", time.localtime(now)), ("%.5f" % (now - int(now)))[2:])
+		data = { 'retCode': retCode, 'exec': proc.cmd[0], 'args': proc.cmd[1] }
+
+		tar = tarfile.TarFile.open(os.path.join(self.opts.workDir, 'error.tar'), 'a')
 		try:
-			try:
-				data = cStringIO.StringIO()
-				self.makeJDL(data, jobNum)
-				data = data.getvalue()
-				fp = os.fdopen(fd, 'w')
-				fp.write(data)
-				fp.close()
-			except:
-				sys.stderr.write("Could not write jdl data to %s." % jdl.name)
-				raise
-
-			tmp = filter(lambda (x,y): y != '', self._submitParams.iteritems())
-			params = str.join(' ', map(lambda (x,y): "%s %s" % (x, y), tmp))
-
-			activity = utils.ActivityLog('submitting jobs')
-			proc = popen2.Popen3("%s %s --nomsg --noint --logfile %s %s" %
-				(self._submitExec, params, utils.shellEscape(log), utils.shellEscape(jdl)), True)
-			retCode = proc.wait()
-
-			wmsId = None
-			for line in map(str.strip, proc.fromchild.readlines()):
-				if line.startswith('http'):
-					wmsId = line
-			del activity
-
-			if (wmsId == None):
-				self.printError(self._submitExec, retCode, proc.childerr.readlines(), log, [jdl])
-			else:
-				self.cleanup([log, jdl])
+			logcontent = open(log, 'r').readlines()
 		except:
-			self.cleanup([log, jdl])
-			raise
-		return (jobNum, wmsId, {'jdl': data})
+			logcontent = []
+		for file in [
+			utils.VirtualFile(os.path.join(entry, "log"), logcontent),
+			utils.VirtualFile(os.path.join(entry, "info"), utils.DictFormat().format(data)),
+			utils.VirtualFile(os.path.join(entry, "stdout"), stdout),
+			utils.VirtualFile(os.path.join(entry, "stderr"), stderr)
+		]:
+			info, handle = file.getTarInfo()
+			tar.addfile(info, handle)
+			handle.close()
+		tar.close()
+
+		sys.stderr.writelines(filter(lambda x: (x != '\n') and not x.startswith('----'), stderr))
+#		sys.stderr.write("Logfile can be found here: %s\n\n" % log)
+		return False
 
 
 	def writeWMSIds(self, wmsIds):
@@ -276,14 +276,72 @@ class GridWMS(WMS):
 				pass
 
 
-	def iterProc(self, stream):
-		while True:
-			line = stream.readline()
-			if not line:
-				break
-			yield line
+	def _parseStatusX(self, lines):
+		buffer = []
+		for line in lines:
+			bline = line.strip("*\n")
+			if bline != '' and ('BOOKKEEPING INFORMATION' not in bline):
+				buffer.append(bline)
+			if line.startswith("****") and len(buffer):
+				remap = { 'destination': 'dest', 'status reason': 'reason',
+					'status info for the job': 'id', 'current status': 'status',
+					'submitted': 'timestamp', 'reached': 'timestamp', 'exit code': 'gridexit'  }
+				data = utils.DictFormat(':').parse(buffer, keyRemap = remap)
+				try:
+					if 'failed' in data['status']:
+						data['status'] = 'failed'
+					else:
+						data['status'] = data['status'].split()[0].lower()
+				except:
+					pass
+				try:
+					data['timestamp'] = int(time.mktime(parsedate(data['timestamp'])))
+				except:
+					pass
+				yield data
+				buffer = []
 
 
+	# Submit job and yield (jobNum, WMS ID, other data)
+	def submitJob(self, jobNum):
+		fd, jdl = tempfile.mkstemp('.jdl')
+		log = tempfile.mktemp('.log')
+
+		try:
+			data = cStringIO.StringIO()
+			self.makeJDL(data, jobNum)
+			data = data.getvalue()
+			fp = os.fdopen(fd, 'w')
+			fp.write(data)
+			fp.close()
+		except:
+			sys.stderr.write("Could not write jdl data to %s." % jdl.name)
+			raise
+
+		tmp = filter(lambda (x,y): y != '', self._submitParams.iteritems())
+		params = str.join(' ', map(lambda (x,y): "%s %s" % (x, y), tmp))
+
+		activity = utils.ActivityLog('submitting jobs')
+		proc = GridWMS.LoggedProcess(self._submitExec, "%s --nomsg --noint --logfile %s %s" %
+			(params, utils.shellEscape(log), utils.shellEscape(jdl)))
+
+		wmsId = None
+		for line in map(str.strip, proc.iter(self.opts)):
+			if line.startswith('http'):
+				wmsId = line
+		retCode = proc.wait()
+		del activity
+
+		if (retCode != 0) or (wmsId == None):
+			if "Keyboard interrupt raised by user" in proc.getError():
+				pass
+			else:
+				self.logError(proc, log)
+		self.cleanup([log, jdl])
+		return (jobNum, wmsId, {'jdl': data})
+
+
+	# Check status of jobs and yield (wmsID, status, other data)
 	def checkJobs(self, ids):
 		if len(ids) == 0:
 			raise StopIteration
@@ -292,10 +350,10 @@ class GridWMS(WMS):
 		log = tempfile.mktemp('.log')
 
 		activity = utils.ActivityLog("checking job status")
-		proc = popen2.Popen3("%s --noint --logfile %s -i %s" %
-			(self._statusExec, utils.shellEscape(log), utils.shellEscape(jobs)), True)
+		proc = GridWMS.LoggedProcess(self._statusExec, "--noint --logfile %s -i %s" %
+			tuple(map(utils.shellEscape, [log, jobs])))
 
-		for data in self._parseStatus(self.iterProc(proc.fromchild)):
+		for data in self._parseStatusX(proc.iter(self.opts)):
 			data['reason'] = data.get('reason', '')
 			yield (data['id'], self._statusMap[data['status']], data)
 
@@ -303,11 +361,14 @@ class GridWMS(WMS):
 		del activity
 
 		if retCode != 0:
-			self.printError(self._statusExec, retCode, proc.childerr.readlines(), log, [jobs])
-			raise StopIteration
+			if "Keyboard interrupt raised by user" in proc.getError():
+				pass
+			else:
+				self.logError(proc, log)
 		self.cleanup([log, jobs])
 
 
+	# Get output of jobs and yield output dirs
 	def getJobsOutput(self, ids):
 		if len(ids) == 0:
 			raise StopIteration
@@ -326,14 +387,13 @@ class GridWMS(WMS):
 
 		jobs = self.writeWMSIds(ids)
 		log = tempfile.mktemp('.log')
-		toclean = [log, jobs, basePath]
 
 		activity = utils.ActivityLog("retrieving job outputs")
-		proc = popen2.Popen3("%s --noint --logfile %s -i %s --dir %s" %
-			tuple([self._outputExec] + map(utils.shellEscape, [log, jobs, tmpPath])), True)
+		proc = GridWMS.LoggedProcess(self._outputExec, "--noint --logfile %s -i %s --dir %s" %
+			tuple(map(utils.shellEscape, [log, jobs, tmpPath])))
 
 		# yield output dirs
-		for line in self.iterProc(proc.fromchild):
+		for line in proc.iter(self.opts):
 			if line.startswith(tmpPath):
 				yield line.strip()
 
@@ -341,42 +401,41 @@ class GridWMS(WMS):
 		del activity
 
 		if retCode != 0:
-			stderr = proc.childerr.readlines()
-			self.printError(self._outputExec, retCode, stderr, log, [])
+			if "Keyboard interrupt raised by user" in proc.getError():
+				self.cleanup([log, jobs, basePath])
+				raise StopIteration
+			else:
+				self.logError(proc, log)
 			print "Trying to recover from error ..."
 			# TODO: Create fake results for lost jobs...
 			# Return leftover (and fake) output directories
 			for dir in os.listdir(basePath):
 				yield os.path.join(basePath, dir)
-			toclean.remove(log)
-		self.cleanup(toclean)
+		self.cleanup([log, jobs, basePath])
 
 
 	def cancelJobs(self, ids):
 		if len(ids) == 0:
 			return True
 
-		try:
-			log = tempfile.mktemp('.log')
-			jobs = self.writeWMSIds(ids)
+		log = tempfile.mktemp('.log')
+		jobs = self.writeWMSIds(ids)
 
-			activity = utils.ActivityLog("cancelling jobs")
-			proc = popen2.Popen4("%s --noint --logfile %s -i %s" %
-				(self._cancelExec, utils.shellEscape(log), utils.shellEscape(jobs)))
-			retCode = proc.wait()
-			del activity
+		activity = utils.ActivityLog("cancelling jobs")
+		proc = GridWMS.LoggedProcess(self._cancelExec, "--noint --logfile %s -i %s" %
+			tuple(map(utils.shellEscape, [log, jobs])))
+		retCode = proc.wait()
+		del activity
 
-			# select cancelled jobs
-			lines = proc.fromchild.readlines()
-			deleted = map(lambda x: x.strip('- \n'), filter(lambda x: x.startswith('- '), lines))
-			deleted.sort()
+		# select cancelled jobs
+		deleted = map(lambda x: x.strip('- \n'), filter(lambda x: x.startswith('- '), proc.iter(self.opts)))
 
-			if (deleted != ids):
-				sys.stderr.write("Could not delete all jobs!\n")
-			if (retCode != 0):
-				return self.printError(self._cancelExec, retCode, lines, log, [jobs])
-		except:
-			self.cleanup([log, jobs])
-			raise
+		if len(deleted) != len(ids):
+			sys.stderr.write("Could not delete all jobs!\n")
+		if retCode != 0:
+			if "Keyboard interrupt raised by user" in proc.getError():
+				pass
+			else:
+				self.logError(proc, log)
 		self.cleanup([log, jobs])
 		return True
