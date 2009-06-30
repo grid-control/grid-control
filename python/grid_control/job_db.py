@@ -127,7 +127,8 @@ class JobDB:
 		if (len(ids) == 0) or not self.opts.submission:
 			return False
 
-		wms.bulkSubmissionBegin(len(ids))
+		if not wms.bulkSubmissionBegin(len(ids)):
+			return False
 		try:
 			for jobNum, wmsId, data in wms.submitJobs(ids):
 				try:
@@ -181,7 +182,7 @@ class JobDB:
 					if self.timeout > 0 and time() - job.submitted > self.timeout:
 						timeoutlist.append(id)
 			if self.opts.abort:
-				return change
+				return False
 
 		# Cancel jobs who took too long
 		if len(timeoutlist):
@@ -201,7 +202,7 @@ class JobDB:
 
 
 	def sample(self, list, size):
-		return random.sample(list, min(size, len(list)))
+		return SortedList(random.sample(list, min(size, len(list))))
 
 
 	def retrieve(self, wms, maxsample = 10):

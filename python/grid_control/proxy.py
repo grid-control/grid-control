@@ -36,7 +36,11 @@ class Proxy(AbstractObject):
 		if (cachedTimeleft < checkedForTime and delta > 60) or delta > 60*60:
 			self._lastUpdate = time.time()
 			result = self.getTimeleft(True, checkedForTime)
-			utils.vprint("The Proxy now has %s left" % utils.strTime(result), printTime = True)
+			if cachedTimeleft < checkedForTime:
+				verbosity = -1
+			else:
+				verbosity = 0
+			utils.vprint("The Proxy now has %s left" % utils.strTime(result), verbosity, printTime = True)
 			return result
 		else:
 			return cachedTimeleft

@@ -6,7 +6,7 @@ def verbosity():
 
 def dprint(text):
 	if verbosity() > 0:
-		print text
+		print "DEBUG:", text
 
 def vprint(text, level = 0, printTime = False, newline = True):
 	if verbosity() > level:

@@ -353,7 +353,7 @@ class GridWMS(WMS):
 		proc = GridWMS.LoggedProcess(self._statusExec, "--noint --logfile %s -i %s" %
 			tuple(map(utils.shellEscape, [log, jobs])))
 
-		for data in self._parseStatusX(proc.iter(self.opts)):
+		for data in self._parseStatus(proc.iter(self.opts)):
 			data['reason'] = data.get('reason', '')
 			yield (data['id'], self._statusMap[data['status']], data)
 

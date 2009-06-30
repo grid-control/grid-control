@@ -90,7 +90,7 @@ class WMS(AbstractObject):
 
 
 	def bulkSubmissionBegin(self, jobs):
-		pass
+		return True
 
 
 	def bulkSubmissionEnd(self):
@@ -99,9 +99,9 @@ class WMS(AbstractObject):
 
 	def submitJobs(self, ids):
 		for jobNum in ids:
-			jobNum, wmsId, data = self.submitJob(jobNum)
 			if self.opts.abort:
 				raise StopIteration
+			jobNum, wmsId, data = self.submitJob(jobNum)
 			if wmsId == None:
 				continue # FIXME
 			yield (jobNum, wmsId, data)
