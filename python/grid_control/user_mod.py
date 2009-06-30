@@ -1,4 +1,4 @@
-import os.path
+import os.path, random
 from grid_control import Module
 
 class UserMod(Module):
@@ -14,7 +14,7 @@ class UserMod(Module):
 
 
 	def getJobArguments(self, jobNum):
-		return self._arguments
+		return self._arguments.replace("__RANDOM__", str(random.randrange(0, 900000000)))
 
 
 	def getInFiles(self):
