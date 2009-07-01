@@ -52,7 +52,7 @@ class DataSplitter(AbstractObject):
 		print "SEList :", str.join('\n         ', map(lambda x: str.join(', ', x), utils.lenSplit(job[DataSplitter.SEList], 70)))
 		print "Files  :",
 		if utils.verbosity() > 2:
-			str.join("\n         ", job[DataSplitter.FileList])
+			print str.join("\n         ", job[DataSplitter.FileList])
 		else:
 			print "%d files selected" % len(job[DataSplitter.FileList])
 	printInfoForJob = staticmethod(printInfoForJob)
