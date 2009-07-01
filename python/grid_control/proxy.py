@@ -40,7 +40,7 @@ class Proxy(AbstractObject):
 				verbosity = -1
 			else:
 				verbosity = 0
-			utils.vprint("The Proxy now has %s left" % utils.strTime(result), verbosity, printTime = True)
+			utils.vprint("The proxy now has %s left" % utils.strTime(result), verbosity, printTime = True)
 			return result
 		else:
 			return cachedTimeleft
