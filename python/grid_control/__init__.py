@@ -1,5 +1,5 @@
 from exceptions	import *
-from utils	import AbstractObject, SortedList
+from utils	import AbstractObject
 from config	import *
 
 from job	import *

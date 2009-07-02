@@ -234,23 +234,6 @@ class AbstractObject:
 	open = classmethod(open)
 
 
-class SortedList(list):
-	def __init__(self, arg = []):
-		for item in arg:
-			self.add(item)
-
-	def add(self, item):
-		bisect.insort(self, item)
-
-	def has(self, item):
-		pos = bisect.bisect_left(self, item)
-		return pos < len(self) and self[pos] == item
-
-	def remove(self, item):
-		pos = bisect.bisect_left(self, item)
-		if pos < len(self) and self[pos] == item:
-			del self[pos]
-
 class ActivityLog:
 	class Activity:
 		def __init__(self, stream, message):

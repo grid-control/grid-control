@@ -1,6 +1,6 @@
 import sys, os, re, fnmatch, random, utils, math
 from time import time, localtime, strftime
-from grid_control import SortedList, ConfigError, Job, UserError, Report
+from grid_control import ConfigError, Job, UserError, Report
 
 class JobDB:
 	def __init__(self, config, opts, module):
@@ -32,17 +32,20 @@ class JobDB:
 			except:
 				pass
 
-		self.all = SortedList()
-		self.ready = SortedList()
-		self.running = SortedList()
-		self.done = SortedList()
-		self.ok = SortedList()
+		self.all = []
+		self.ready = []
+		self.running = []
+		self.done = []
+		self.ok = []
 
 		for jobNum, jobObj in self._readJobs():
 			self._jobs[jobNum] = jobObj
-			self.all.add(jobNum)
+			self.all.append(jobNum)
 			self._findQueue(jobObj).append(jobNum)
-		self.ready.extend(filter(lambda x: not (x in self.all), xrange(self.nJobs)))
+		self.ready.extend(filter(lambda x: not self._jobs.has_key(x), xrange(self.nJobs)))
+
+		for list in (self.all, self.ready, self.running, self.done, self.ok):
+			list.sort()
 
 		self.timeout = utils.parseTime(config.get('jobs', 'queue timeout', ''))
 		self.inFlight = config.getInt('jobs', 'in flight', self.nJobs)
@@ -50,16 +53,16 @@ class JobDB:
 
 
 	# Return appropriate queue for given job
-	def _findQueue(self, job):
-		if job.state in (Job.SUBMITTED, Job.WAITING, Job.READY, Job.QUEUED, Job.RUNNING):
+	def _findQueue(self, jobObj):
+		if jobObj.state in (Job.SUBMITTED, Job.WAITING, Job.READY, Job.QUEUED, Job.RUNNING):
 			return self.running
-		elif job.state in (Job.INIT, Job.FAILED, Job.ABORTED, Job.CANCELLED):
+		elif jobObj.state in (Job.INIT, Job.FAILED, Job.ABORTED, Job.CANCELLED):
 			return self.ready	# resubmit?
-		elif job.state == Job.DONE:
+		elif jobObj.state == Job.DONE:
 			return self.done
-		elif job.state == Job.SUCCESS:
+		elif jobObj.state == Job.SUCCESS:
 			return self.ok
-		raise Exception("Internal error: Unexpected job state %s" % Job.states[state])
+		raise Exception("Internal error: Unexpected job state %s" % Job.states[jobObj.state])
 
 
 	def _readJobs(self):
@@ -82,17 +85,19 @@ class JobDB:
 		if job.state == state:
 			return
 
+		oldState = job.state
 		old = self._findQueue(job)
+		old.remove(jobNum)
+
 		job.update(state)
 		job.save(os.path.join(self._dbPath, "job_%d.txt" % jobNum))
-		new = self._findQueue(job)
 
-		if old != new:
-			old.remove(jobNum)
-			new.add(jobNum)
+		new = self._findQueue(job)
+		new.append(jobNum)
+		new.sort()
 
 		jobNumLen = int(math.log10(max(1, self.nJobs)) + 1)
-		utils.vprint("Job %s state changed to %s" % (str(jobNum).ljust(jobNumLen), Job.states[state]), -1, True, False)
+		utils.vprint("Job %s state changed from %s to %s" % (str(jobNum).ljust(jobNumLen), Job.states[oldState], Job.states[state]), -1, True, False)
 		if (state == Job.SUBMITTED) and (job.attempt > 1):
 			print "(attempt #%s)" % job.attempt
 		elif (state == Job.FAILED) and job.get('retcode') and job.get('dest'):
@@ -102,7 +107,7 @@ class JobDB:
 		elif (state in [Job.WAITING, Job.ABORTED]) and job.get('reason'):
 			print '(%s)' % job.get('reason')
 		elif (state == Job.SUCCESS) and job.get('runtime'):
-			print "(error code: %d - runtime %s)" % (job.get('retcode'), utils.strTime(job.get('runtime')))
+			print "(runtime %s)" % utils.strTime(job.get('runtime'))
 		else:
 			print
 
@@ -116,14 +121,15 @@ class JobDB:
 		else:
 			list = self.ready[:]
 		if self.doShuffle:
-			return SortedList(self.sample(list, submit))
-		return SortedList(list[:submit])
+			list = self.sample(list, submit)
+		else:
+			list = list[:submit]
+		list.sort()
+		return list
 
 
 	def submit(self, wms, maxsample = 100):
-		utils.dprint(self.ready)
 		ids = self.getSubmissionJobs(maxsample)
-		utils.dprint(ids)
 		if (len(ids) == 0) or not self.opts.submission:
 			return False
 
@@ -194,7 +200,7 @@ class JobDB:
 			# Fixme: Error handling
 
 		# Quit when all jobs are finished
-		if (len(self.ready) == 0) and (len(self.running) == 0) and (len(self.done) == 0):
+		if len(self.ok) == self.nJobs:
 			utils.vprint("All jobs are finished. Quitting grid-control!", -1, True, False)
 			sys.exit(0)
 
@@ -202,7 +208,9 @@ class JobDB:
 
 
 	def sample(self, list, size):
-		return SortedList(random.sample(list, min(size, len(list))))
+		list = random.sample(list, min(size, len(list)))
+		list.sort()
+		return list
 
 
 	def retrieve(self, wms, maxsample = 10):
@@ -217,9 +225,6 @@ class JobDB:
 		for jobNum, retCode, data in wms.retrieveJobs(wmsMap.keys()):
 			try:
 				job = self._jobs[jobNum]
-				# TODO
-				if job.state != Job.DONE:
-					open("/tmp/STRANGE%d" % jobNum, 'w').write("STRANGE THINGS ARE HAPPENING %s" % str(job.__dict__))
 			except:
 				continue
 
