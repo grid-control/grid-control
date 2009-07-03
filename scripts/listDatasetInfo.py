@@ -87,6 +87,10 @@ def main(args):
 
 	if opts.listdatasets:
 		infos = {}
+		infos['Sum'] = {
+			DataProvider.NEvents : 0,
+			DataProvider.Dataset : 'Sum'
+		}
 		for block in blocks:
 			blockID = block.get(DataProvider.DatasetID, 0)
 			if not infos.get(blockID, None):
@@ -95,6 +99,7 @@ def main(args):
 					DataProvider.Dataset : block[DataProvider.Dataset]
 				}
 			infos[blockID][DataProvider.NEvents] += block[DataProvider.NEvents]
+			infos['Sum'][DataProvider.NEvents] += block[DataProvider.NEvents]
 		printTabular([(DataProvider.Dataset, "Dataset"), (DataProvider.NEvents, "Events")], infos.itervalues())
 
 	if opts.listfiles:
