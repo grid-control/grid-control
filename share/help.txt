@@ -1,5 +1,6 @@
     Options:
 	-h, --help               Show this helpful message
+	    --help-vars          Show the usable variable placeholders
 	-i, --init               Initialise working directory
 	-v, --verbose            Give detailed information during run
 	-q, --requery            Requery dataset information

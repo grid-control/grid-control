@@ -33,6 +33,7 @@ def main(args):
 
 	parser = optparse.OptionParser(add_help_option=False)
 	parser.add_option("-h", "--help",          action="callback", callback=print_help),
+	parser.add_option(""  , "--help-vars",     dest="help_vars",  default=False, action="store_true")
 	parser.add_option("-s", "--no-submission", dest="submission", default=True,  action="store_false")
 	parser.add_option("-q", "--requery",       dest="resync",     default=False, action="store_true")
 	parser.add_option("-i", "--init",          dest="init",       default=False, action="store_true")
@@ -50,6 +51,7 @@ def main(args):
 
 	# we need exactly one positional argument (config file)
 	if len(args) != 1:
+		print "Config file not specified!"
 		print_help()
 	opts.confName = os.path.basename(args[0]).replace(".conf","")
 
@@ -89,6 +91,11 @@ def main(args):
 		defaultproxy = { 'grid': 'VomsProxy', 'local': 'TrivialProxy' }
 		proxy = Proxy.open(config.get(backend, 'proxy', defaultproxy[backend]))
 		module.proxy = proxy
+
+		# Give help
+		if opts.help_vars:
+			Help().listVars(module)
+			return 0
 
 		# Initialise workload management interface
 		defaultwms = { 'grid': 'GliteWMS', 'local': 'LocalWMS' }
