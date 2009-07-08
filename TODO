@@ -6,6 +6,7 @@ FEATURE REQUESTS:
 1. Castor support
 2. Parameters ?
 3. Variable substitution for arguments
+4. handling of "memory exceeded" errors in local batch system
 
 DONE:
 ===================================================
