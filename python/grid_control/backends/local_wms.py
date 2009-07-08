@@ -125,13 +125,13 @@ class LocalWMS(WMS):
 		shortWMSIds = map(lambda x: x.split(".")[0], wmsIds)
 		activity = utils.ActivityLog("checking job status")
 		proc = popen2.Popen3("%s %s" % (self.api.statusExec, self.api.getCheckArgument(shortWMSIds)), True)
-		proc.wait()
 
 		tmp = {}
 		jobstatusinfo = proc.fromchild.read()
 		for data in self.api.parseStatus(jobstatusinfo):
 			# (job number, status, extra info)
 			tmp[data['id']] = (data['id'], self.api._statusMap[data['status']], data)
+		proc.wait()
 
 		result = []
 		for wmsId in wmsIds:
