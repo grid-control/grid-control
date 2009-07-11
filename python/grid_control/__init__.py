@@ -15,3 +15,5 @@ from module	import *
 from CMSSW	import *
 from user_mod	import *
 from para_mod	import *
+
+from help import *
