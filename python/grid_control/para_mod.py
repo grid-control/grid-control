@@ -3,8 +3,8 @@ from grid_control import Module, AbstractError
 
 # Parameterized Module
 class ParaMod(Module):
-	def __init__(self, config, opts):
-		Module.__init__(self, config, opts)
+	def __init__(self, config, opts, proxy):
+		Module.__init__(self, config, opts, proxy)
 		self.baseMod = Module.open(config.get('ParaMod', 'module'), config, opts)
 		self.paramSpace = None
 
@@ -58,8 +58,8 @@ class ParaMod(Module):
 
 
 class SimpleParaMod(ParaMod):
-	def __init__(self, config, opts):
-		ParaMod.__init__(self, config, opts)
+	def __init__(self, config, opts, proxy):
+		ParaMod.__init__(self, config, opts, proxy)
 		self.paraValues = config.get('ParaMod', 'parameter values').split()
 		self.paraName = config.get('ParaMod', 'parameter name', 'PARAMETER')
 

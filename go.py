@@ -81,16 +81,15 @@ def main(args):
 		except:
 			raise UserError("Could not access specified working directory '%s'!" % opts.workDir)
 
-		# Initialise application module
-		module = config.get('global', 'module')
-		module = Module.open(module, config, opts)
-
 		backend = config.get('global', 'backend', 'grid')
 
 		# Initialise proxy
 		defaultproxy = { 'grid': 'VomsProxy', 'local': 'TrivialProxy' }
 		proxy = Proxy.open(config.get(backend, 'proxy', defaultproxy[backend]))
-		module.proxy = proxy
+
+		# Initialise application module
+		module = config.get('global', 'module')
+		module = Module.open(module, config, opts, proxy)
 
 		# Give help
 		if opts.help_vars:

@@ -8,9 +8,10 @@ from DashboardAPI import DashboardAPI
 
 class Module(AbstractObject):
 	# Read configuration options and init vars
-	def __init__(self, config, opts):
+	def __init__(self, config, opts, proxy):
 		self.config = config
 		self.opts = opts
+		self.proxy = proxy
 
 		self.wallTime = utils.parseTime(config.get('jobs', 'wall time'))
 		self.cpuTime = utils.parseTime(config.get('jobs', 'cpu time', config.get('jobs', 'wall time')))
