@@ -2,6 +2,7 @@
 
 SANDBOX=${SANDBOX:-$1}
 cd $SANDBOX
-export SCRATCH_DIRECTORY="$SANDBOX"
-source jobconfig.sh
+mkdir scratch
+export SCRATCH_DIRECTORY="$SANDBOX/scratch"
+source _jobconfig.sh
 ./grid.sh $ARGS
