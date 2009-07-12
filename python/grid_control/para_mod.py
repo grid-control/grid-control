@@ -6,6 +6,7 @@ class ParaMod(Module):
 	def __init__(self, config, opts, proxy):
 		Module.__init__(self, config, opts, proxy)
 		self.baseMod = Module.open(config.get('ParaMod', 'module'), config, opts)
+		self.baseJobs = config.getInt('ParaMod', 'jobs', 1)
 		self.paramSpace = None
 
 	def onJobSubmit(self, jobObj, jobNum, dbmessage = [{}]):
@@ -50,10 +51,13 @@ class ParaMod(Module):
 		return self.paramSpace
 
 	def getMaxJobs(self):
+		maxJobs = None
 		try:
-			maxJobs = self.paramSpace * self.baseMod.getMaxJobs()
+			maxJobs = self.baseMod.getMaxJobs()
 		except:
-			maxJobs = 1
+			pass
+		if maxJobs == None:
+			maxJobs = self.baseJobs
 		return max(1, maxJobs) * self.getParamSpace()
 
 	def getParams(self):
