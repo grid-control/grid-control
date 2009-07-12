@@ -196,6 +196,19 @@ getcommand() {
 	which $@ 2> /dev/null | head -n 1
 }
 
+_find() {
+	debug_helper $FUNCNAME $LINENO
+	if test -f "`pwd`/$1"; then
+		echo "`pwd`/$1"
+	elif test -f "$MY_SCRATCH/$1"; then
+		echo "$MY_SCRATCH/$1"
+	elif test -f "$MY_LANDINGZONE/$1"; then
+		echo "$MY_LANDINGZONE/$1"
+	else
+		echo "$1 not found" 2>&1
+	fi
+}
+
 var_replacer() {
 	debug_helper $FUNCNAME $LINENO
 	j=0
@@ -230,19 +243,6 @@ var_replacer() {
 		gsub(/__RANDOM__/, int(rand() * LIMIT))
 		print
 	}'
-}
-
-_find() {
-	debug_helper $FUNCNAME $LINENO
-	if test -f "`pwd`/$1"; then
-		echo "`pwd`/$1"
-	elif test -f "$MY_SCRATCH/$1"; then
-		echo "$MY_SCRATCH/$1"
-	elif test -f "$MY_LANDINGZONE/$1"; then
-		echo "$MY_LANDINGZONE/$1"
-	else
-		echo "$1 not found" 2>&1
-	fi
 }
 
 # Get used space in mb
