@@ -34,6 +34,8 @@ def main(args):
 	parser = optparse.OptionParser(add_help_option=False)
 	parser.add_option("-h", "--help",          action="callback", callback=print_help),
 	parser.add_option(""  , "--help-vars",     dest="help_vars",  default=False, action="store_true")
+	parser.add_option(""  , "--help-conf",     dest="help_cfg",   default=False, action="store_true")
+	parser.add_option(""  , "--help-confmin",  dest="help_scfg",  default=False, action="store_true")
 	parser.add_option("-s", "--no-submission", dest="submission", default=True,  action="store_false")
 	parser.add_option("-q", "--requery",       dest="resync",     default=False, action="store_true")
 	parser.add_option("-i", "--init",          dest="init",       default=False, action="store_true")
@@ -53,7 +55,7 @@ def main(args):
 	if len(args) != 1:
 		print "Config file not specified!"
 		print_help()
-	opts.confName = os.path.basename(args[0]).replace(".conf","")
+	opts.confName = str.join("", os.path.basename(args[0]).split(".")[:-1])
 
 	# set up signal handler for interrupts
 	def interrupt(sig, frame):
@@ -91,7 +93,7 @@ def main(args):
 		module = config.get('global', 'module')
 		module = Module.open(module, config, opts, proxy)
 
-		# Give help
+		# Give help about variables
 		if opts.help_vars:
 			Help().listVars(module)
 			return 0
@@ -107,6 +109,11 @@ def main(args):
 
 		# Initialise job database
 		jobs = JobDB(config, opts, module)
+
+		# Give config help
+		if opts.help_cfg or opts.help_scfg:
+			Help().getConfig(config, opts.help_cfg)
+			return 0
 
 		# If invoked in report mode, just show report and exit
 		if Report(jobs, jobs).show(opts):

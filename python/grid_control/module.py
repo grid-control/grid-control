@@ -74,13 +74,13 @@ class Module(AbstractObject):
 		self.sbOutputFiles = config.get(self.__class__.__name__, 'output files', '').split()
 		self.substFiles = config.get(self.__class__.__name__, 'subst files', '').split()
 
-		if config.get('CMSSW', 'se output files', 'FAIL') != 'FAIL':
+		if config.get('CMSSW', 'se output files', 'DEPRECATED') != 'DEPRECATED':
 			utils.deprecated("Please specify se output files only in the [storage] section")
 			self.seOutputFiles = config.get('CMSSW', 'se output files').split()
-		if config.get('CMSSW', 'seeds', 'FAIL') != 'FAIL':
+		if config.get('CMSSW', 'seeds', 'DEPRECATED') != 'DEPRECATED':
 			utils.deprecated("Please specify seeds only in the [jobs] section")
 			self.setSeed(str.join(',', config.get('CMSSW', 'seeds').split()))
-		if config.get('CMSSW', 'se path', 'FAIL') != 'FAIL':
+		if config.get('CMSSW', 'se path', 'DEPRECATED') != 'DEPRECATED':
 			utils.deprecated("Please specify se path only in the [storage] section")
 			self.sePath = config.get('CMSSW', 'se path')
 

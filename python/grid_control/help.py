@@ -40,3 +40,34 @@ class Help(object):
 					print " "*25, " ", "<example for job 3: %s>" % job1
 				except:
 					pass
+
+
+	def getConfig(self, config, printDefault):
+		print
+		if printDefault:
+			print "These are all used config options:"
+		else:
+			print "This is the minimal set of config options necessary:"
+		print
+		print ";", "="*60
+		print ";", "grid-control",
+		if printDefault:
+			print "complete",
+		else:
+			print "reduced",
+		print "config file"
+		print ";", "="*60
+		print
+		for section in config.protocol:
+			header = False
+			for (key, (value, default)) in config.protocol[section].iteritems():
+				if (not printDefault and (str(value) != str(default))) or printDefault:
+					if value == 'DEPRECATED':
+						continue
+					if not header:
+						print "[%s]" % section
+						header = True
+					value = str(value).replace("\n", "\n\t")
+					print "%s = %s" % (key, value)
+			if header:
+				print
