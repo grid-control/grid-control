@@ -88,7 +88,7 @@ class LocalWMS(WMS):
 		}
 		env_vars.update(self.module.getJobConfig(jobNum))
 
-		jcfg = open(os.path.join(sandbox, 'jobconfig.sh'), 'w')
+		jcfg = open(os.path.join(sandbox, '_jobconfig.sh'), 'w')
 		jcfg.writelines(utils.DictFormat().format(env_vars, format = 'export %s%s%s\n'))
 		proc = popen2.Popen3("%s %s %s %s" % (self.api.submitExec,
 			self.api.getSubmitArguments(jobNum, sandbox),

@@ -23,7 +23,7 @@ class Config:
 
 	def get(self, section, item, default = None):
 		try:
-			return self.parser.get(section, item)
+			return self.parser.get(section, item).split(';')[0]
 		except ConfigParser.NoSectionError:
 			if default != None:
 				utils.vprint("Using default value [%s] %s = %s" % (section, item, str(default)), 1)
