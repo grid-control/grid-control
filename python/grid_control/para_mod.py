@@ -30,6 +30,9 @@ class ParaMod(Module):
 	def getOutFiles(self):
 		return self.baseMod.getOutFiles()
 
+	def getSubstFiles(self):
+		return self.baseMod.getSubstFiles()
+
 	def getCommand(self):
 		return self.baseMod.getCommand()
 

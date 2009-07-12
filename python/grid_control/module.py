@@ -73,6 +73,7 @@ class Module(AbstractObject):
 
 		self.sbInputFiles = config.get(self.__class__.__name__, 'input files', '').split()
 		self.sbOutputFiles = config.get(self.__class__.__name__, 'output files', '').split()
+		self.substFiles = config.get(self.__class__.__name__, 'subst files', '').split()
 
 		if config.get('CMSSW', 'se output files', 'FAIL') != 'FAIL':
 			utils.deprecated("Please specify se output files only in the [storage] section")
@@ -159,8 +160,9 @@ class Module(AbstractObject):
 			# Runtime
 			'DOBREAK': self.nodeTimeout,
 			'MY_RUNTIME': self.getCommand(),
-			# Seeds
+			# Seeds and substitutions
 			'SEEDS': str.join(' ', map(str, self.seeds)),
+			'SUBST_FILES': str.join(' ', map(os.path.basename, self.getSubstFiles())),
 			# Task infos
 			'TASK_ID': self.taskID,
 			'TASK_USER': self.proxy.getUsername(),
@@ -171,9 +173,9 @@ class Module(AbstractObject):
 
 	# Get job dependent environment variables
 	def getJobConfig(self, jobNum):
-		return {
-			'MY_JOBID': jobNum
-		}
+		tmp = [('MY_JOBID', jobNum)]
+		tmp += map(lambda (x, seed): ("SEED_%d" % x, seed + jobNum), enumerate(self.seeds))
+		return dict(tmp)
 
 
 	# Get job requirements
@@ -203,6 +205,11 @@ class Module(AbstractObject):
 	# Get files for output sandbox
 	def getOutFiles(self):
 		return self.sbOutputFiles
+
+
+	# Get files whose content will be subject to variable substitution
+	def getSubstFiles(self):
+		return self.substFiles
 
 
 	def getCommand(self):

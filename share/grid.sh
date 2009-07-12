@@ -61,6 +61,13 @@ if [ -n "$SE_INPUT_FILES" ]; then
 	url_copy "$SE_PATH" "file:///$MY_SCRATCH" "$SE_INPUT_FILES"
 fi
 
+# Do variable substitutions
+for SFILE in $SUBST_FILES; do
+	echo "Substitute variables in file $SFILE"
+	var_replacer "$SFILE" < "`_find $SFILE`" | tee "tmp.$SFILE"
+	[ -f "tmp.$SFILE" ] && mv "tmp.$SFILE" "`_find $SFILE`"
+done
+
 if [ "$DASHBOARD" == "yes" ]; then
 	export REPORTID="taskId=$TASK_ID jobId=${MY_JOBID}_$GLITE_WMS_JOBID MonitorID=$TASK_ID MonitorJobID=${MY_JOBID}_$GLITE_WMS_JOBID"
 	echo "Update Dashboard: $REPORTID"
