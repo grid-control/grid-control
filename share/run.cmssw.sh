@@ -80,10 +80,10 @@ checkvar "CMSSW_RELEASE_BASE"
 checkbin "cmsRun"
 
 # patch python path data
-if [ -n "$CMSSW_RELEASE_BASE_OLD" ]; then
+if [ -n "$CMSSW_OLD_RELEASETOP" ]; then
 	for INITFILE in `find -iname __init__.py`; do
 		echo "Fixing CMSSW path in file: $INITFILE"
-		sed -i -e "s@$CMSSW_RELEASE_BASE_OLD@$CMSSW_RELEASE_BASE@" $INITFILE
+		sed -i -e "s@$CMSSW_OLD_RELEASETOP@$CMSSW_RELEASE_BASE@" $INITFILE
 	done
 fi
 
@@ -105,13 +105,11 @@ my_move "$MY_SCRATCH" "$MY_WORKDIR" "$SE_INPUT_FILES"
 cd "$MY_WORKDIR"
 checkdir "CMSSW working directory" "$MY_WORKDIR"
 echo "---------------------------"
-for CFG in $CMSSW_CONFIG; do
+for CFG_NAME in $CMSSW_CONFIG; do
 	echo -e "\nConfig file: $CFG"
 	echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~"
-	CFG_NAME="CMSRUN-$CFG"
 	FWK_NAME="`echo $CFG_NAME | sed -e 's/\.cfg/.xml/;s/\.py/.xml/'`"
 
-	var_replacer "" < "`_find $CFG`" | tee "$CFG_NAME"
 	if [ "$GZIP_OUT" = "yes" ]; then
 		( cmsRun -j "$FWK_NAME" -e "$CFG_NAME"; echo $? > exitcode.txt ) 2>&1 | gzip -9 > cmssw_out.txt.gz
 		[ -f "exitcode.txt" ] && CODE=$(<exitcode.txt) && rm -f exitcode.txt

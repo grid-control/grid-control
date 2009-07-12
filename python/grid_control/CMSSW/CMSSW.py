@@ -143,7 +143,7 @@ class CMSSW(Module):
 	def getTaskConfig(self):
 		data = Module.getTaskConfig(self)
 		data['CMSSW_CONFIG'] = os.path.basename(self.configFile)
-		data['CMSSW_RELEASE_BASE_OLD'] = self.scramEnv.get('RELEASETOP', None)
+		data['CMSSW_OLD_RELEASETOP'] = self.scramEnv.get('RELEASETOP', None)
 		data['DB_EXEC'] = 'cmsRun'
 		data['SCRAM_VERSION'] = self.scramVersion
 		data['SCRAM_ARCH'] = self.scramArch
@@ -190,13 +190,18 @@ class CMSSW(Module):
 
 	# Get files for output sandbox
 	def getOutFiles(self):
-		files = Module.getOutFiles(self)
+		files = Module.getOutFiles(self)[:]
 		cfgFile = os.path.basename(self.configFile)
 		# Add framework report file
-		files.append('CMSRUN-' + cfgFile.replace('.cfg', '.xml.gz').replace('.py', '.xml.gz'))
+		files.append(cfgFile.replace('.cfg', '.xml.gz').replace('.py', '.xml.gz'))
 		if self.gzipOut:
 			files.append('cmssw_out.txt.gz')
 		return files
+
+
+	# Get files whose content will be subject to variable substitution
+	def getSubstFiles(self):
+		return Module.getSubstFiles(self) + [self.configFile]
 
 
 	def getCommand(self):

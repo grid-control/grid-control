@@ -1,4 +1,4 @@
-import os.path, random
+import os.path, random, time
 from grid_control import Module
 
 class UserMod(Module):
@@ -14,7 +14,13 @@ class UserMod(Module):
 
 
 	def getJobArguments(self, jobNum):
-		return self._arguments.replace("__RANDOM__", str(random.randrange(0, 900000000)))
+		args = self._arguments
+		args.replace("__DATE__", time.strftime("%F"))
+		args.replace("__TIMESTAMP__", time.strftime("%s"))
+		args.replace("__RANDOM__", str(random.randrange(0, 900000000)))
+		for key, value in self.getTaskConfig().items() + self.getJobConfig(jobNum).items():
+			args.replace("__%s__" % key, str(value))
+		return args
 
 
 	def getInFiles(self):
