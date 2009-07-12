@@ -218,6 +218,8 @@ var_replacer() {
 		j=$[j+1]
 	done
 
+	MYDATE=`date +%F`
+	MYTIMESTAMP=`date +%s`
 	TIME_NSEC=`date +%N`
 	MY_EVENTS=${MAX_EVENTS:-100}
 	sed \

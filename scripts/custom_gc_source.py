@@ -1,7 +1,7 @@
 import FWCore.ParameterSet.Config as cms
 import random
 
-def customise(process):
+def customise_for_gc(process):
 
 	try:
 		maxevents = __MAX_EVENTS__
@@ -30,4 +30,4 @@ def customise(process):
 
 	return (process)
 
-process = customise(process)
+process = customise_for_gc(process)
