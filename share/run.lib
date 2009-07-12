@@ -212,39 +212,27 @@ _find() {
 var_replacer() {
 	debug_helper $FUNCNAME $LINENO
 	j=0
-	SEED_REPLACER=""
 	for i in $SEEDS; do
-		SEED_REPLACER="$SEED_REPLACER -e s@__SEED_${j}__@$[i+$MY_JOBID]@"
+		eval "export SEED_$j=$[i+$MY_JOBID]"
 		j=$[j+1]
 	done
 
 	MYDATE=`date +%F`
 	MYTIMESTAMP=`date +%s`
-	TIME_NSEC=`date +%N`
-	MY_EVENTS=${MAX_EVENTS:-100}
-	sed \
-		-e "s@__X__@$1@" \
-		-e "s@__DATASETID__@$DATASETID@" \
-		-e "s@__DATASETPATH__@$DATASETPATH@" \
-		-e "s@__DATASETNICK__@$DATASETNICK@" \
-		-e "s@__NICK__@$DATASETNICK@" \
-		-e "s@__FILE_NAMES__@$FILE_NAMES@" \
-		-e "s@__MAX_EVENTS__@$MAX_EVENTS@" \
-		-e "s@__SKIP_EVENTS__@$SKIP_EVENTS@" \
-		-e "s@__MY_JOBID__@$MY_JOBID@" \
-		-e "s@__MY_JOB__@$MY_JOBID@" \
-		$SEED_REPLACER | \
-	awk 'BEGIN{srand('$MY_SEED')}
-	{
-		LIMIT=900000000
-		TIME_RANDOM=systime() * 1000 + '$TIME_NSEC' / 1000000
-		gsub(/__DATE__/, strftime("%F"))
-		gsub(/__TIMESTAMP__/, strftime("%s"))
-		gsub(/__SEED_ALT__/, int(TIME_RANDOM % LIMIT))
-		gsub(/__SEED_RUN__/, int(TIME_RANDOM % LIMIT / '$MY_EVENTS') * '$MY_EVENTS')
-		gsub(/__RANDOM__/, int(rand() * LIMIT))
-		print
-	}'
+	checkfile "$MY_SCRATCH/_varmap.dat"
+	(
+		echo "BEGIN{srand($MY_SEED)}"
+		echo "{"
+		echo "	gsub(\"__X__\", \"$1\")"
+		cat "$MY_SCRATCH/_varmap.dat" | while read USER_VARNAME REAL_VARNAME; do
+			VARVALUE=${!REAL_VARNAME}
+			echo "	gsub(\"__${USER_VARNAME}__\", \"${VARVALUE//\"/\\\"}\")"
+		done
+		echo "	gsub(\"__RANDOM__\", int(rand() * 900000000))"
+		echo "	print"
+		echo "}"
+	) > _replace.awk
+	awk -f _replace.awk
 }
 
 # Get used space in mb
