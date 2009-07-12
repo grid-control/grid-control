@@ -34,7 +34,7 @@ class WMS(AbstractObject):
 		taskConfig = utils.DictFormat(escapeString = True).format(self.module.getTaskConfig())
 		taskConfig.sort()
 
-		varMapping = map(lambda (x,y): "%s %s" % (x,y), self.module.getVarMapping())
+		varMapping = map(lambda (x,y): "%s %s" % (x,y), self.module.getVarMapping().items())
 		varMapping.sort()
 
 		inFiles = self.module.getInFiles() + [ utils.VirtualFile('_config.sh', taskConfig),

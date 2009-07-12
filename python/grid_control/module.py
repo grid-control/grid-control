@@ -186,7 +186,7 @@ class Module(AbstractObject):
 		mapping = [('DATE', 'MYDATE'), ('TIMESTAMP', 'MYTIMESTAMP'),
 			('MY_JOB', 'MY_JOBID'), ('CONF', 'GC_CONF')]
 		mapping += zip(envvars, envvars)
-		return mapping
+		return dict(mapping)
 
 
 	# Get job requirements

@@ -8,7 +8,7 @@ class Help(object):
 		print "Variable".rjust(25), ":", "Value"
 		print "%s=%s" % ("=" * 26, "=" * 26)
 
-		vars = module.getVarMapping()
+		vars = module.getVarMapping().items()
 		vars += [('RANDOM', 'RANDOM')]
 		vars.sort()
 		try:
@@ -34,10 +34,11 @@ class Help(object):
 					elif keyword == 'RANDOM':
 						print '<example: %d>' % random.randrange(0, 900000000)
 					else:
-						print '<not yet determinable>'
+						print '<not determinable>'
+						continue
 				try:
-					job1 = job3cfg[variable]
-					print " "*25, " ", "<example for job 3: %s>" % job1
+					job3 = job3cfg[variable]
+					print " "*25, " ", "<example for job 3: %s>" % job3
 				except:
 					pass
 

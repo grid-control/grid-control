@@ -5,7 +5,7 @@ from grid_control import Module, AbstractError
 class ParaMod(Module):
 	def __init__(self, config, opts, proxy):
 		Module.__init__(self, config, opts, proxy)
-		self.baseMod = Module.open(config.get('ParaMod', 'module'), config, opts)
+		self.baseMod = Module.open(config.get('ParaMod', 'module'), config, opts, proxy)
 		self.baseJobs = config.getInt('ParaMod', 'jobs', 1)
 		self.paramSpace = None
 
@@ -19,7 +19,6 @@ class ParaMod(Module):
 		return self.baseMod.onJobOutput(jobObj, jobNum, retCode)
 
 	def getTaskConfig(self):
-		self.baseMod.proxy = self.proxy
 		return self.baseMod.getTaskConfig()
 
 	def getRequirements(self, jobNum):
@@ -43,7 +42,14 @@ class ParaMod(Module):
 	def getJobConfig(self, jobNum):
 		config = self.baseMod.getJobConfig(jobNum / self.getParamSpace())
 		config.update(self.getParams()[jobNum % self.getParamSpace()])
+		config.update(Module.getJobConfig(self, jobNum))
 		return config
+
+	def getVarMapping(self):
+		mapping = Module.getVarMapping(self)
+		for param in self.getParams():
+			mapping.update(zip(param.keys(), param.keys()))
+		return mapping
 
 	def getParamSpace(self):
 		if self.paramSpace == None:
@@ -73,3 +79,14 @@ class SimpleParaMod(ParaMod):
 	def getParams(self):
 		# returns list of dictionaries
 		return map(lambda x: {self.paraName: x}, self.paraValues)
+
+
+class LinkedParaMod(SimpleParaMod):
+	def __init__(self, config, opts, proxy):
+		SimpleParaMod.__init__(self, config, opts, proxy)
+
+	def getParams(self):
+		result = []
+		for value in self.paraValues:
+			result += [dict(zip(self.paraName.split(":"), value.split(":")))]
+		return result
