@@ -33,7 +33,12 @@ class WMS(AbstractObject):
 
 		taskConfig = utils.DictFormat(escapeString = True).format(self.module.getTaskConfig())
 		taskConfig.sort()
-		inFiles = self.module.getInFiles() + [ utils.VirtualFile('_config.sh', taskConfig) ]
+
+		varMapping = map(lambda (x,y): "%s %s" % (x,y), self.module.getVarMapping())
+		varMapping.sort()
+
+		inFiles = self.module.getInFiles() + [ utils.VirtualFile('_config.sh', taskConfig),
+			utils.VirtualFile('_varmap.dat', str.join('\n', varMapping)) ]
 
 		utils.vprint("Packing sandbox:")
 		if opts.init:

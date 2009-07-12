@@ -167,6 +167,10 @@ class CMSSW(Module):
 		return data
 
 
+	def getVarMapping(self):
+		return Module.getVarMapping(self) + [('NICK', 'DATASETNICK')]
+
+
 	# Get job requirements
 	def getRequirements(self, job):
 		reqs = Module.getRequirements(self, job)

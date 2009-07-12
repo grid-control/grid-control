@@ -65,11 +65,10 @@ class Module(AbstractObject):
 
 		self.seInputFiles = config.get('storage', 'se input files', '').split()
 		self.seInputPattern = config.get('storage', 'se input pattern', '__X__')
-		self.seInputPattern = self.seInputPattern.replace('@', '__').replace('__CONF__', opts.confName)
-
+		self.seInputPattern = self.seInputPattern.replace('@', '__')
 		self.seOutputFiles = config.get('storage', 'se output files', '').split()
-		self.seOutputPattern = config.get('storage', 'se output pattern', 'job___MY_JOBID_____NICK_____X__')
-		self.seOutputPattern = self.seOutputPattern.replace('@', '__').replace('__CONF__', opts.confName)
+		self.seOutputPattern = config.get('storage', 'se output pattern', '@NICK@job_@MY_JOBID@_@X@')
+		self.seOutputPattern = self.seOutputPattern.replace('@', '__')
 
 		self.sbInputFiles = config.get(self.__class__.__name__, 'input files', '').split()
 		self.sbOutputFiles = config.get(self.__class__.__name__, 'output files', '').split()
@@ -165,6 +164,7 @@ class Module(AbstractObject):
 			'SUBST_FILES': str.join(' ', map(os.path.basename, self.getSubstFiles())),
 			# Task infos
 			'TASK_ID': self.taskID,
+			'GC_CONF': self.opts.confName,
 			'TASK_USER': self.proxy.getUsername(),
 			'DASHBOARD': ('no', 'yes')[self.dashboard],
 			'DB_EXEC': 'shellscript'
@@ -176,6 +176,17 @@ class Module(AbstractObject):
 		tmp = [('MY_JOBID', jobNum)]
 		tmp += map(lambda (x, seed): ("SEED_%d" % x, seed + jobNum), enumerate(self.seeds))
 		return dict(tmp)
+
+
+	def getVarMapping(self):
+		# Take task variables and just the variables from the first job
+		envvars = self.getTaskConfig().keys() + self.getJobConfig(0).keys()
+
+		# Map vars: Eg. __MY_JOB__ will access $MY_JOBID
+		mapping = [('DATE', 'MYDATE'), ('TIMESTAMP', 'MYTIMESTAMP'),
+			('MY_JOB', 'MY_JOBID'), ('CONF', 'GC_CONF')]
+		mapping += zip(envvars, envvars)
+		return mapping
 
 
 	# Get job requirements
