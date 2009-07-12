@@ -28,7 +28,7 @@ class Module(AbstractObject):
 
 		# Compute / get task ID
 		self.taskID = taskInfo.get('task id', 'GC' + md5.md5(str(time())).hexdigest()[:12])
-		print 'Current task ID %s' % (self.taskID)
+		utils.vprint('Current task ID %s' % (self.taskID), -1)
 
 		# Set random seeds (args override config)
 		seedarg = config.get('jobs', 'seeds', '')

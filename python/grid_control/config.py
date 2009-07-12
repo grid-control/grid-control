@@ -1,5 +1,4 @@
 import os, ConfigParser, utils
-
 from grid_control import ConfigError
 
 class Config:

@@ -7,7 +7,7 @@ sys.path.insert(0, os.path.join(_root, 'python'))
 
 # and include grid_control python module
 from grid_control import *
-import time
+from time import sleep
 
 def print_help(*args):
 	sys.stderr.write("Syntax: %s [OPTIONS] <config file>\n\n" % sys.argv[0])
@@ -137,7 +137,7 @@ def main(args):
 				if opts.abort:
 					return False
 				log = utils.ActivityLog('waiting for %d seconds' % (timeout - x))
-				time.sleep(5)
+				sleep(5)
 				del log
 			return True
 

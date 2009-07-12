@@ -1,12 +1,23 @@
-import sys, os, bisect, popen2, StringIO, tarfile, time, fnmatch
+import sys, os, popen2, StringIO, tarfile, time, fnmatch, copy
 from grid_control import InstallationError, ConfigError
+
+def sorted(list, comp = None):
+	tmp = list[:]
+	if comp != None:
+		tmp.sort(comp)
+	else:
+		tmp.sort()
+	return tmp
+
 
 def verbosity():
 	return sys.modules['__main__']._verbosity
 
+
 def dprint(text):
 	if verbosity() > 0:
 		print "DEBUG:", text
+
 
 def vprint(text, level = 0, printTime = False, newline = True):
 	if verbosity() > level:

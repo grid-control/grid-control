@@ -1,5 +1,5 @@
 import re
-from grid_control import RuntimeError, utils, UserError
+from utils import DictFormat
 from time import time
 
 class Job:
@@ -22,7 +22,7 @@ class Job:
 
 	def load(cls, name):
 		try:
-			data = utils.DictFormat(escapeString = True).parse(open(name))
+			data = DictFormat(escapeString = True).parse(open(name))
 		except:
 			raise ConfigError('Invalid format in %s' % fp.name)
 		job = Job(cls._stateDict[data['status']])
@@ -68,7 +68,7 @@ class Job:
 
 	def save(self, name):
 		fp = open(name, 'w')
-		fp.writelines(utils.DictFormat(escapeString = True).format(self.getAll()))
+		fp.writelines(DictFormat(escapeString = True).format(self.getAll()))
 		fp.truncate()
 		fp.close()
 

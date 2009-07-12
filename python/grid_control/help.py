@@ -1,4 +1,4 @@
-import os, time, random
+import os, time, random, utils
 
 class Help(object):
 	def listVars(self, module):
@@ -8,9 +8,6 @@ class Help(object):
 		print "Variable".rjust(25), ":", "Value"
 		print "%s=%s" % ("=" * 26, "=" * 26)
 
-		vars = module.getVarMapping().items()
-		vars += [('RANDOM', 'RANDOM')]
-		vars.sort()
 		try:
 			job0cfg = module.getJobConfig(0)
 		except:
@@ -19,7 +16,10 @@ class Help(object):
 			job3cfg = module.getJobConfig(3)
 		except:
 			job3cfg = {}
-		for (keyword, variable) in vars:
+
+		vars = module.getVarMapping().items()
+		vars += [('RANDOM', 'RANDOM')]
+		for (keyword, variable) in utils.sorted(vars):
 			print ("__%s__" % keyword).rjust(25), ":",
 			try:
 				print module.getTaskConfig()[variable]

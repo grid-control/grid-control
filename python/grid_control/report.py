@@ -189,21 +189,18 @@ class Report:
 		padding = ' ' * maxlen
 	
 		sites = filter(lambda x: not x in states, statinfo.keys())
-		sites.sort()
 		sites_num = len(sites) - 1
-		for num, site in enumerate(sites):
+		for num, site in enumerate(utils.sorted(sites)):
 			print_stats(site, statinfo[site], maxlen, showtime, rate_site, time_site)
 
 			if details > 1:
 				wns = filter(lambda x: not x in states, statinfo[site].keys())
-				wns.sort()
-				for wn in wns:
+				for wn in utils.sorted(wns):
 					print_stats(wn, statinfo[site][wn], maxlen, showtime, rate_wn, time_wn)
 
 					if details > 2:
 						queues = filter(lambda x: not x in states, statinfo[site][wn].keys())
-						queues.sort()
-						for queue in queues:
+						for queue in utils.sorted(queues):
 							print_stats(queue, statinfo[site][wn][queue], maxlen, showtime, rate_queue, time_queue)
 			if num < sites_num:
 				print '----%s----' % (maxlen * '-') + 4 * ('+' + 14 * '-')
