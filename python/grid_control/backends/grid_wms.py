@@ -91,7 +91,7 @@ class GridWMS(WMS):
 				result.append(self.sitesReq(arg))
 			else:
 				raise RuntimeError('unknown requirement type %d' % type)
-		return str.join(' && ', result)
+		return str.join(' && ', filter(lambda x: x != None, result))
 
 
 	def getRequirements(self, job):
@@ -315,7 +315,7 @@ class GridWMS(WMS):
 			fp.write(data)
 			fp.close()
 		except:
-			sys.stderr.write("Could not write jdl data to %s." % jdl.name)
+			sys.stderr.write("Could not write jdl data to %s." % jdl)
 			raise
 
 		tmp = filter(lambda (x,y): y != '', self._submitParams.iteritems())

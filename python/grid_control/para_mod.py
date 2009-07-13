@@ -47,8 +47,9 @@ class ParaMod(Module):
 
 	def getVarMapping(self):
 		mapping = Module.getVarMapping(self)
+		mapping.update(self.baseMod.getVarMapping())
 		for param in self.getParams():
-			mapping.update(zip(param.keys(), param.keys()))
+			mapping.update(dict(zip(param.keys(), param.keys())))
 		return mapping
 
 	def getParamSpace(self):
@@ -64,6 +65,7 @@ class ParaMod(Module):
 			pass
 		if maxJobs == None:
 			maxJobs = self.baseJobs
+		print  max(1, maxJobs) * self.getParamSpace()
 		return max(1, maxJobs) * self.getParamSpace()
 
 	def getParams(self):
@@ -73,8 +75,8 @@ class ParaMod(Module):
 class SimpleParaMod(ParaMod):
 	def __init__(self, config, opts, proxy):
 		ParaMod.__init__(self, config, opts, proxy)
-		self.paraValues = config.get('ParaMod', 'parameter values').split()
-		self.paraName = config.get('ParaMod', 'parameter name', 'PARAMETER')
+		self.paraValues = map(str.strip, config.get('ParaMod', 'parameter values').split())
+		self.paraName = config.get('ParaMod', 'parameter name', 'PARAMETER').strip()
 
 	def getParams(self):
 		# returns list of dictionaries
@@ -84,9 +86,10 @@ class SimpleParaMod(ParaMod):
 class LinkedParaMod(SimpleParaMod):
 	def __init__(self, config, opts, proxy):
 		SimpleParaMod.__init__(self, config, opts, proxy)
+		self.paraValues = map(str.strip, config.get('ParaMod', 'parameter values').split('\n'))
 
 	def getParams(self):
 		result = []
-		for value in self.paraValues:
-			result += [dict(zip(self.paraName.split(":"), value.split(":")))]
+		for value in filter(lambda x: x != '', self.paraValues):
+			result += [dict(zip(map(str.strip, self.paraName.split(":")), map(str.strip, value.split(":"))))]
 		return result

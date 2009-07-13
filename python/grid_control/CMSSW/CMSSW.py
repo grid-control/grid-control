@@ -168,7 +168,8 @@ class CMSSW(Module):
 
 
 	def getVarMapping(self):
-		return dict(Module.getVarMapping(self).items() + [('NICK', 'DATASETNICK')])
+		tmp = ['MAX_EVENTS', 'SKIP_EVENTS', 'FILE_NAMES']
+		return dict(Module.getVarMapping(self).items() + zip(tmp, tmp) + [('NICK', 'DATASETNICK')])
 
 
 	# Get job requirements
@@ -201,11 +202,6 @@ class CMSSW(Module):
 		if self.gzipOut:
 			files.append('cmssw_out.txt.gz')
 		return files
-
-
-	# Get files whose content will be subject to variable substitution
-	def getSubstFiles(self):
-		return Module.getSubstFiles(self) + [self.configFile]
 
 
 	def getCommand(self):

@@ -72,6 +72,10 @@ class DataProvider(AbstractObject):
 					print('Inconsistency in block %s#%s: Number of events doesn\'t match (b:%d != f:%d)'
 						% (block[DataProvider.Dataset], block[DataProvider.BlockName], block[DataProvider.NEvents], events))
 			if utils.verbosity() > 0:
+				if self._datasetNick:
+					print "%s:" % self._datasetNick,
+				if self.__class__.__name__ == 'DataMultiplexer':
+					print "Summary:",
 				print 'Running over %d events split into %d blocks.' % (allEvents, len(self._cache))
 		return self._cache
 

@@ -6,6 +6,7 @@
 source $MY_LANDINGZONE/run.lib || exit 101
 
 echo "CMSSW module starting"
+echo
 echo "---------------------------"
 
 checkfile "$MY_SCRATCH/_config.sh"
@@ -32,8 +33,8 @@ elif [ -z "$VO_CMS_SW_DIR" -a -d "/afs/cern.ch/cms/sw" ]; then
 elif [ -z "$VO_CMS_SW_DIR" -a -d "/wlcg/sw/cms" ]; then
 	export VO_CMS_SW_DIR="/wlcg/sw/cms"
 	echo "[WLCG-SITE] Using $VO_CMS_SW_DIR"
-elif [ -z "$VO_CMS_SW_DIR" -a -d "$CMSSW_RELEASE_BASE_OLD" ]; then
-	export VO_CMS_SW_DIR="$(cd $CMSSW_RELEASE_BASE_OLD/../../../../; pwd)"
+elif [ -z "$VO_CMS_SW_DIR" -a -d "$CMSSW_OLD_RELEASETOP" ]; then
+	export VO_CMS_SW_DIR="$(cd $CMSSW_OLD_RELEASETOP/../../../../; pwd)"
 	echo "[LOCAL-SITE] Using $VO_CMS_SW_DIR"
 fi
 
@@ -68,7 +69,7 @@ if ! [ "$HAS_RUNTIME" = no ]; then
 		mv `_find ${TASK_ID}.tar.gz` runtime.tar.gz || fail 101
 		export SE_INPUT_FILES="${SE_INPUT_FILES/${TASK_ID}.tar.gz/}"
 	fi
-	
+
 	echo "Unpacking CMSSW environment"
 	tar xvfz "`_find runtime.tar.gz`" || fail 111
 fi
@@ -103,12 +104,28 @@ mkdir -p "$MY_WORKDIR"
 my_move "$MY_SCRATCH" "$MY_WORKDIR" "$SE_INPUT_FILES"
 
 cd "$MY_WORKDIR"
-checkdir "CMSSW working directory" "$MY_WORKDIR"
+
+echo
 echo "---------------------------"
+echo
+checkdir "CMSSW working directory" "$MY_WORKDIR"
+
+echo "---------------------------"
+# Do variable substitutions
+for SFILE in $CMSSW_CONFIG; do
+	echo
+	echo "Substitute variables in file $SFILE"
+	echo "---------------------------"
+	var_replacer "$SFILE" < "$MY_SCRATCH/$SFILE" | tee "$MY_WORKDIR/$SFILE"
+done
+
+echo
+echo "---------------------------"
+echo
 for CFG_NAME in $CMSSW_CONFIG; do
-	echo -e "\nConfig file: $CFG"
-	echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+	echo -e "Starting cmsRun with config file: $CFG_NAME"
 	FWK_NAME="`echo $CFG_NAME | sed -e 's/\.cfg/.xml/;s/\.py/.xml/'`"
+
 
 	if [ "$GZIP_OUT" = "yes" ]; then
 		( cmsRun -j "$FWK_NAME" -e "$CFG_NAME"; echo $? > exitcode.txt ) 2>&1 | gzip -9 > cmssw_out.txt.gz
@@ -120,10 +137,14 @@ for CFG_NAME in $CMSSW_CONFIG; do
 	[ -f "$FWK_NAME" ] && gzip "$FWK_NAME"
 done
 
+echo
 echo "---------------------------"
+echo
 checkdir "CMSSW working directory after cmsRun" "$MY_WORKDIR"
 
 # Move output into scratch
+echo "---------------------------"
+echo
 my_move "$MY_WORKDIR" "$MY_SCRATCH" "$SB_OUTPUT_FILES $SE_OUTPUT_FILES"
 
 exit $CODE
