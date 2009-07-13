@@ -219,7 +219,6 @@ var_replacer() {
 
 	MYDATE=`date +%F`
 	MYTIMESTAMP=`date +%s`
-	checkfile "$MY_SCRATCH/_varmap.dat"
 	(
 		echo "BEGIN{srand($MY_SEED)}"
 		echo "{"
@@ -231,8 +230,8 @@ var_replacer() {
 		echo "	gsub(\"__RANDOM__\", int(rand() * 900000000))"
 		echo "	print"
 		echo "}"
-	) > _replace.awk
-	awk -f _replace.awk
+	) > "$MY_SCRATCH/_replace.awk"
+	awk -f "$MY_SCRATCH/_replace.awk"
 }
 
 # Get used space in mb

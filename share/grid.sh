@@ -56,6 +56,11 @@ fi
 
 checkvar MY_RUNTIME
 
+echo "Prepare variable substitution"
+checkfile "$MY_SCRATCH/_varmap.dat"
+echo "__DATE__: Variable substitution __X__" | var_replacer "SUCCESSFUL"
+checkfile "$MY_SCRATCH/_replace.awk"
+
 # Copy files from the SE
 if [ -n "$SE_INPUT_FILES" ]; then
 	url_copy "$SE_PATH" "file:///$MY_SCRATCH" "$SE_INPUT_FILES"
