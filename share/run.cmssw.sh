@@ -89,7 +89,7 @@ if [ -n "$CMSSW_OLD_RELEASETOP" ]; then
 fi
 
 # additional setup of the CMSSW environment
-SETUP_CMSSW="`_find setup.sh`"
+SETUP_CMSSW="`_find _setup.sh`"
 if [ -f "$SETUP_CMSSW" ]; then
 	echo -e "Found setup script: \"$SETUP_CMSSW\""
 	cat "$SETUP_CMSSW"
@@ -115,7 +115,7 @@ echo "---------------------------"
 for SFILE in $CMSSW_CONFIG; do
 	echo
 	echo "Substitute variables in file $SFILE"
-	echo "---------------------------"
+	echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~"
 	var_replacer "$SFILE" < "$MY_SCRATCH/$SFILE" | tee "$MY_WORKDIR/$SFILE"
 done
 
@@ -124,8 +124,7 @@ echo "---------------------------"
 echo
 for CFG_NAME in $CMSSW_CONFIG; do
 	echo -e "Starting cmsRun with config file: $CFG_NAME"
-	FWK_NAME="`echo $CFG_NAME | sed -e 's/\.cfg/.xml/;s/\.py/.xml/'`"
-
+	FWK_NAME="`echo $CFG_NAME | sed -e 's/\(.*\)\.\([^\.]*\)/\1.xml/'`"
 
 	if [ "$GZIP_OUT" = "yes" ]; then
 		( cmsRun -j "$FWK_NAME" -e "$CFG_NAME"; echo $? > exitcode.txt ) 2>&1 | gzip -9 > cmssw_out.txt.gz

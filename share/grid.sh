@@ -82,7 +82,7 @@ fi
 # Do variable substitutions
 for SFILE in $SUBST_FILES; do
 	echo "Substitute variables in file $SFILE"
-	echo "---------------------------"
+	echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~"
 	var_replacer "$SFILE" < "`_find $SFILE`" | tee "tmp.$SFILE"
 	[ -f "tmp.$SFILE" ] && mv "tmp.$SFILE" "`_find $SFILE`"
 done
