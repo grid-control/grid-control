@@ -176,8 +176,6 @@ class LocalWMS(WMS):
 			for file in os.listdir(path):
 				if file in self.sandboxOut:
 					continue
-				if file == wmsId:
-					continue
 				try:
 					os.unlink(os.path.join(path, file))
 				except:
