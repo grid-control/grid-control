@@ -1,4 +1,4 @@
-import os.path
+import os.path, copy
 from grid_control import Module, AbstractError
 
 # Parameterized Module
@@ -9,53 +9,25 @@ class ParaMod(Module):
 		self.baseJobs = config.getInt('ParaMod', 'jobs', 1)
 		self.paramSpace = None
 
-	def onJobSubmit(self, jobObj, jobNum, dbmessage = [{}]):
-		return self.baseMod.onJobSubmit(jobObj, jobNum, dbmessage)
-
-	def onJobUpdate(self, jobObj, jobNum, data, dbmessage = [{}]):
-		return self.baseMod.onJobUpdate(jobObj, jobNum, data, dbmessage)
-
-	def onJobOutput(self, jobObj, jobNum, retCode):
-		return self.baseMod.onJobOutput(jobObj, jobNum, retCode)
-
-	def getTaskConfig(self):
-		return self.baseMod.getTaskConfig()
-
-	def getRequirements(self, jobNum):
-		return self.baseMod.getRequirements(jobNum / self.getParamSpace())
-
-	def getInFiles(self):
-		return self.baseMod.getInFiles()
-
-	def getOutFiles(self):
-		return self.baseMod.getOutFiles()
-
-	def getSubstFiles(self):
-		return self.baseMod.getSubstFiles()
-
-	def getCommand(self):
-		return self.baseMod.getCommand()
-
-	def getJobArguments(self, jobNum):
-		return self.baseMod.getJobArguments(jobNum / self.getParamSpace())
+		# adopt functions from basemod
+		for fkt in [ 'getTaskConfig', 'onJobSubmit', 'onJobUpdate', 'onJobOutput',
+			'getInFiles', 'getOutFiles', 'getSubstFiles', 'getCommand' ]:
+			setattr(self, fkt, getattr(self.baseMod, fkt))
+		self.getRequirements = lambda x: self.baseMod.getRequirements(x / self.getParamSpace())
+		self.getJobArguments = lambda x: self.baseMod.getJobArguments(x / self.getParamSpace())
 
 	def getJobConfig(self, jobNum):
 		config = self.baseMod.getJobConfig(jobNum / self.getParamSpace())
-		config.update(self.getParams()[jobNum % self.getParamSpace()])
 		config.update(Module.getJobConfig(self, jobNum))
+		config.update(self.getParams()[jobNum % self.getParamSpace()])
 		return config
 
 	def getVarMapping(self):
-		mapping = Module.getVarMapping(self)
-		mapping.update(self.baseMod.getVarMapping())
+		mapping = self.baseMod.getVarMapping()
+		mapping.update(Module.getVarMapping(self))
 		for param in self.getParams():
 			mapping.update(dict(zip(param.keys(), param.keys())))
 		return mapping
-
-	def getParamSpace(self):
-		if self.paramSpace == None:
-			self.paramSpace = len(self.getParams())
-		return self.paramSpace
 
 	def getMaxJobs(self):
 		maxJobs = None
@@ -65,8 +37,12 @@ class ParaMod(Module):
 			pass
 		if maxJobs == None:
 			maxJobs = self.baseJobs
-		print  max(1, maxJobs) * self.getParamSpace()
 		return max(1, maxJobs) * self.getParamSpace()
+
+	def getParamSpace(self):
+		if self.paramSpace == None:
+			self.paramSpace = len(self.getParams())
+		return self.paramSpace
 
 	def getParams(self):
 		raise AbstractError
@@ -75,21 +51,20 @@ class ParaMod(Module):
 class SimpleParaMod(ParaMod):
 	def __init__(self, config, opts, proxy):
 		ParaMod.__init__(self, config, opts, proxy)
-		self.paraValues = map(str.strip, config.get('ParaMod', 'parameter values').split())
+		self.paraValues = config.get('ParaMod', 'parameter values')
 		self.paraName = config.get('ParaMod', 'parameter name', 'PARAMETER').strip()
 
 	def getParams(self):
 		# returns list of dictionaries
-		return map(lambda x: {self.paraName: x}, self.paraValues)
+		return map(lambda x: {self.paraName: x}, map(str.strip, self.paraValues.split()))
 
 
 class LinkedParaMod(SimpleParaMod):
 	def __init__(self, config, opts, proxy):
 		SimpleParaMod.__init__(self, config, opts, proxy)
-		self.paraValues = map(str.strip, config.get('ParaMod', 'parameter values').split('\n'))
 
 	def getParams(self):
 		result = []
-		for value in filter(lambda x: x != '', self.paraValues):
+		for value in filter(lambda x: x != '', map(str.strip, self.paraValues.split('\n'))):
 			result += [dict(zip(map(str.strip, self.paraName.split(":")), map(str.strip, value.split(":"))))]
 		return result
