@@ -24,6 +24,9 @@ class Config:
 	def get(self, section, item, default = None):
 		if not self.protocol.has_key(section):
 			self.protocol[section] = {}
+		if self.protocol[section].has_key(item):
+			if self.protocol[section][item][1] != default:
+				raise ConfigError("Inconsistent default values: [%s] %s" % (section, item))
 		try:
 			value = self.parser.get(section, item).split(';')[0]
 			self.protocol[section][item] = (value, default)

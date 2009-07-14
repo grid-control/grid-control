@@ -28,7 +28,6 @@ class Module(AbstractObject):
 
 		# Compute / get task ID
 		self.taskID = taskInfo.get('task id', 'GC' + md5.md5(str(time())).hexdigest()[:12])
-		utils.vprint('Current task ID %s' % (self.taskID), -1)
 
 		# Set random seeds (args override config)
 		seedarg = config.get('jobs', 'seeds', '')
@@ -91,6 +90,7 @@ class Module(AbstractObject):
 		tmp.update(self.getTaskConfig())
 		tmp.update(self.getJobConfig(jobNum))
 		tmp.update(jobObj.getAll())
+		tmp.update({'WORKDIR': self.opts.workDir})
 		for key, value in tmp.iteritems():
 			os.environ["GC_%s" % key] = str(value)
 

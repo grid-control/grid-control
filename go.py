@@ -93,6 +93,7 @@ def main(args):
 		# Initialise application module
 		module = config.get('global', 'module')
 		module = Module.open(module, config, opts, proxy)
+		utils.vprint('Current task ID %s' % module.taskID, -1)
 
 		# Give help about variables
 		if opts.help_vars:

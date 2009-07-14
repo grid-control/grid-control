@@ -405,6 +405,7 @@ url_copy() {
 		[ -d "$file" ] && continue
 		SOURCE_FN="`echo ${SOURCE_PATTERN:-__X__} | var_replacer $file`"
 		TARGET_FN="`echo ${TARGET_PATTERN:-__X__} | var_replacer $file`"
+		[ -n "$TRANSFERLOG" ] && echo "$SOURCE_FN $TARGET_FN" >> "$TRANSFERLOG"
 		url_copy_single "$1/$SOURCE_FN" "$2/$TARGET_FN"
 		RESULT=$?
 		echo "url_copy_single \"$1/$SOURCE_FN\" \"$2/$TARGET_FN\" returned with $RESULT"
