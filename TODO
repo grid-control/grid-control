@@ -10,7 +10,7 @@ DONE:
 X. handling of "memory exceeded" errors in local batch system
 	(fixed?)
 X. Parameterized jobs
-	(SimpleParaMod module)
+	(SimpleParaMod, LinkedParaMod module)
 X. Local batch system support
 	(PBS, LSF, SGE, SLURM)
 X. Multiple datasets
