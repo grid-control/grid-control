@@ -12,6 +12,7 @@ class Module(AbstractObject):
 		self.config = config
 		self.opts = opts
 		self.proxy = proxy
+		self.hookenv = None
 
 		self.wallTime = utils.parseTime(config.get('jobs', 'wall time'))
 		self.cpuTime = utils.parseTime(config.get('jobs', 'cpu time', config.get('jobs', 'wall time')))
@@ -91,6 +92,8 @@ class Module(AbstractObject):
 		tmp.update(self.getJobConfig(jobNum))
 		tmp.update(jobObj.getAll())
 		tmp.update({'WORKDIR': self.opts.workDir})
+		if self.hookenv:
+			self.hookenv(tmp, jobNum)
 		for key, value in tmp.iteritems():
 			os.environ["GC_%s" % key] = str(value)
 

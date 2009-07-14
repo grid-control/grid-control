@@ -8,6 +8,7 @@ class ParaMod(Module):
 		self.baseMod = Module.open(config.get('ParaMod', 'module'), config, opts, proxy)
 		self.baseJobs = config.getInt('ParaMod', 'jobs', 1)
 		self.paramSpace = None
+		self.baseMod.hookenv = lambda tmp, jobNum: tmp.update(self.getJobConfig(jobNum))
 
 		# adopt functions from basemod
 		for fkt in [ 'getTaskConfig', 'onJobSubmit', 'onJobUpdate', 'onJobOutput',

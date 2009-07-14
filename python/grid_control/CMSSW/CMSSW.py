@@ -21,6 +21,7 @@ class CMSSW(Module):
 			self.projectArea = config.getPath('CMSSW', 'project area')
 
 		self.configFile = config.getPath('CMSSW', 'config file')
+		self.configFiles = [ self.configFile ]
 
 		self.dataset = config.get('CMSSW', 'dataset', '').strip()
 		if self.dataset == '':
@@ -28,12 +29,12 @@ class CMSSW(Module):
 			self.eventsPerJob = config.getInt('CMSSW', 'events per job', 0)
 		else:
 			self.eventsPerJob = config.getInt('CMSSW', 'events per job')
-			configFileContent = open(self.configFile, 'r').read()
-			for tag in ["__FILE_NAMES__", "__MAX_EVENTS__", "__SKIP_EVENTS__"]:
-				if configFileContent.find(tag) == -1:
-					print open(utils.atRoot('share', 'fail.txt'), 'r').read()
-					print "Config file must use __FILE_NAMES__, __MAX_EVENTS__ and __SKIP_EVENTS__ to work properly with datasets!"
-					break
+			for tag in [ "__FILE_NAMES__", "__MAX_EVENTS__", "__SKIP_EVENTS__" ]:
+				for cfgName in self.configFiles:
+					if open(cfgName, 'r').read().find(tag) == -1:
+						print open(utils.atRoot('share', 'fail.txt'), 'r').read()
+						raise ConfigError("Config file must use __FILE_NAMES__, __MAX_EVENTS__" \
+							" and __SKIP_EVENTS__ to work properly with datasets!")
 
 		self.gzipOut = config.getBool('CMSSW', 'gzip output', True)
 		self.useReqs = config.getBool('CMSSW', 'use requirements', True)
@@ -80,8 +81,9 @@ class CMSSW(Module):
 		if self.scramEnv['SCRAM_PROJECTNAME'] != 'CMSSW':
 			raise ConfigError("Project area not a valid CMSSW project area.")
 
-		if not os.path.exists(self.configFile):
-			raise ConfigError("Config file '%s' not found." % self.configFile)
+		for cfgFile in self.configFiles:
+			if not os.path.exists(cfgFile):
+				raise ConfigError("Config file '%s' not found." % cfgFile)
 
 		self.dataSplitter = None
 		if opts.init:
@@ -142,7 +144,7 @@ class CMSSW(Module):
 	# Get environment variables for gc_config.sh
 	def getTaskConfig(self):
 		data = Module.getTaskConfig(self)
-		data['CMSSW_CONFIG'] = os.path.basename(self.configFile)
+		data['CMSSW_CONFIG'] = str.join(' ', map(os.path.basename, self.configFiles))
 		data['CMSSW_OLD_RELEASETOP'] = self.scramEnv.get('RELEASETOP', None)
 		data['DB_EXEC'] = 'cmsRun'
 		data['SCRAM_VERSION'] = self.scramVersion
@@ -189,16 +191,16 @@ class CMSSW(Module):
 		if len(self.projectArea) and not self.seRuntime:
 			files.append('runtime.tar.gz')
 		files.append(utils.atRoot('share', 'run.cmssw.sh')),
-		files.append(self.configFile)
+		files.extend(self.configFiles)
 		return files
 
 
 	# Get files for output sandbox
 	def getOutFiles(self):
 		files = Module.getOutFiles(self)[:]
-		cfgFile = os.path.basename(self.configFile)
 		# Add framework report file
-		files.append(cfgFile.replace('.cfg', '.xml.gz').replace('.py', '.xml.gz'))
+		renameExt = lambda name: str.join('.', name.split('.')[:-1]) + '.xml.gz'
+		files.extend(map(renameExt, map(os.path.basename, self.configFiles)))
 		if self.gzipOut:
 			files.append('cmssw_out.txt.gz')
 		return files
