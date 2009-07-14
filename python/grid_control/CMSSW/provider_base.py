@@ -103,9 +103,11 @@ class DataProvider(AbstractObject):
 
 
 	# Save dataset information in "ini"-style => 10x faster to r/w than cPickle
-	def saveState(self, path, filename = 'datacache.dat'):
+	def saveState(self, path, filename = 'datacache.dat', dataBlocks = None):
 		writer = cStringIO.StringIO()
-		for block in self.getBlocks():
+		if dataBlocks == None:
+			dataBlocks = self.getBlocks()
+		for block in dataBlocks:
 			writer.write("[%s#%s]\n" % (block[DataProvider.Dataset], block[DataProvider.BlockName]))
 			if block.has_key(DataProvider.Nickname):
 				writer.write('nickname = %s\n' % block[DataProvider.Nickname])

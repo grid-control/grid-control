@@ -20,6 +20,7 @@ class ParaMod(Module):
 		config = self.baseMod.getJobConfig(jobNum / self.getParamSpace())
 		config.update(Module.getJobConfig(self, jobNum))
 		config.update(self.getParams()[jobNum % self.getParamSpace()])
+		config.update({'PARAM_ID': jobNum % self.getParamSpace()})
 		return config
 
 	def getVarMapping(self):
