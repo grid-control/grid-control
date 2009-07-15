@@ -8,14 +8,14 @@ class Job:
 	for id, state in enumerate(states):
 		_stateDict[state] = id
 		locals()[state] = id
-	__internals = ('id', 'status')
+	__internals = ('wmsId', 'status')
 
 
 	def __init__(self, state = INIT):
 		self.state = state
 		self.attempt = 0
 		self.history = {}
-		self.id = None
+		self.wmsId = None
 		self.submitted = 0
 		self.dict = {}
 
@@ -28,7 +28,7 @@ class Job:
 		job = Job(cls._stateDict[data['status']])
 
 		if data.has_key('id'):
-			job.id = data['id']
+			job.wmsId = data['id']
 		if data.has_key('attempt'):
 			job.attempt = data['attempt']
 		if data.has_key('submitted'):
@@ -61,8 +61,8 @@ class Job:
 		data['submitted'] = self.submitted
 		for key, value in self.history.items():
 			data['history_' + str(key)] = value
-		if self.id != None:
-			data['id'] = self.id
+		if self.wmsId != None:
+			data['id'] = self.wmsId
 		return data
 
 
@@ -87,15 +87,15 @@ class Job:
 		# FIXME: job history or something
 
 
-	def assignId(self, id):
-		self.id = id
+	def assignId(self, wmsId):
+		self.wmsId = wmsId
 		self.attempt = self.attempt + 1
 		self.submitted = time()
 		# FIXME: History or sth.
 
 
 	def report(self):
-		return (self.states[self.state], self.dict.get('dest', 'N/A'), self.id)
+		return (self.states[self.state], self.dict.get('dest', 'N/A'), self.wmsId)
 
 
 	def statefilter(self, filterExpr):

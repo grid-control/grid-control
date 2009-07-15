@@ -81,33 +81,33 @@ class JobDB:
 		return self._jobs[jobNum]
 
 
-	def _update(self, jobNum, job, state):
-		if job.state == state:
+	def _update(self, jobObj, jobNum, state):
+		if jobObj.state == state:
 			return
 
-		oldState = job.state
-		old = self._findQueue(job)
+		oldState = jobObj.state
+		old = self._findQueue(jobObj)
 		old.remove(jobNum)
 
-		job.update(state)
-		job.save(os.path.join(self._dbPath, "job_%d.txt" % jobNum))
+		jobObj.update(state)
+		jobObj.save(os.path.join(self._dbPath, "job_%d.txt" % jobNum))
 
-		new = self._findQueue(job)
+		new = self._findQueue(jobObj)
 		new.append(jobNum)
 		new.sort()
 
 		jobNumLen = int(math.log10(max(1, self.nJobs)) + 1)
 		utils.vprint("Job %s state changed from %s to %s" % (str(jobNum).ljust(jobNumLen), Job.states[oldState], Job.states[state]), -1, True, False)
-		if (state == Job.SUBMITTED) and (job.attempt > 1):
-			print "(attempt #%s)" % job.attempt
-		elif (state == Job.FAILED) and job.get('retcode') and job.get('dest'):
-			print "(error code: %d - %s)" % (job.get('retcode'), job.get('dest'))
-		elif (state == Job.QUEUED) and job.get('dest'):
-			print "(%s)" % job.get('dest')
-		elif (state in [Job.WAITING, Job.ABORTED]) and job.get('reason'):
-			print '(%s)' % job.get('reason')
-		elif (state == Job.SUCCESS) and job.get('runtime'):
-			print "(runtime %s)" % utils.strTime(job.get('runtime'))
+		if (state == Job.SUBMITTED) and (jobObj.attempt > 1):
+			print "(attempt #%s)" % jobObj.attempt
+		elif (state == Job.FAILED) and jobObj.get('retcode') and jobObj.get('dest'):
+			print "(error code: %d - %s)" % (jobObj.get('retcode'), jobObj.get('dest'))
+		elif (state == Job.QUEUED) and jobObj.get('dest'):
+			print "(%s)" % jobObj.get('dest')
+		elif (state in [Job.WAITING, Job.ABORTED]) and jobObj.get('reason'):
+			print '(%s)' % jobObj.get('reason')
+		elif (state == Job.SUCCESS) and jobObj.get('runtime'):
+			print "(runtime %s)" % utils.strTime(jobObj.get('runtime'))
 		else:
 			print
 
@@ -138,17 +138,17 @@ class JobDB:
 		try:
 			for jobNum, wmsId, data in wms.submitJobs(ids):
 				try:
-					job = self._jobs[jobNum]
+					jobObj = self._jobs[jobNum]
 				except:
-					job = Job()
-					self._jobs[jobNum] = job
+					jobObj = Job()
+					self._jobs[jobNum] = jobObj
 
-				job.assignId(wmsId)
+				jobObj.assignId(wmsId)
 				for key, value in data.iteritems():
-					job.set(key, value)
+					jobObj.set(key, value)
 
-				self._update(jobNum, job, Job.SUBMITTED)
-				self.module.onJobSubmit(job, jobNum)
+				self._update(jobObj, jobNum, Job.SUBMITTED)
+				self.module.onJobSubmit(jobObj, jobNum)
 				if self.opts.abort:
 					return False
 			return True
@@ -159,8 +159,8 @@ class JobDB:
 	def getWmsMap(self, idlist):
 		map = {}
 		for id in idlist:
-			job = self._jobs[id]
-			map[job.id] = (id, job)
+			jobObj = self._jobs[id]
+			map[jobObj.wmsId] = (id, jobObj)
 		return map
 
 
@@ -175,17 +175,17 @@ class JobDB:
 
 		# Update states of jobs
 		for wmsId, state, info in wms.checkJobs(wmsMap.keys()):
-			id, job = wmsMap[wmsId]
-			if state != job.state:
+			id, jobObj = wmsMap[wmsId]
+			if state != jobObj.state:
 				change = True
 				for key, value in info.items():
-					job.set(key, value)
-				self._update(id, job, state)
-				self.module.onJobUpdate(job, id, info)
+					jobObj.set(key, value)
+				self._update(jobObj, id, state)
+				self.module.onJobUpdate(jobObj, id, info)
 			else:
 				# If a job stays too long in an inital state, cancel it
-				if job.state in (Job.SUBMITTED, Job.WAITING, Job.READY, Job.QUEUED):
-					if self.timeout > 0 and time() - job.submitted > self.timeout:
+				if jobObj.state in (Job.SUBMITTED, Job.WAITING, Job.READY, Job.QUEUED):
+					if self.timeout > 0 and time() - jobObj.submitted > self.timeout:
 						timeoutlist.append(id)
 			if self.opts.abort:
 				return False
@@ -195,7 +195,7 @@ class JobDB:
 			change = True
 			print "\nTimeout for the following jobs:"
 			Report(timeoutlist, self._jobs).details()
-			wms.cancelJobs(map(lambda jobNum: self._jobs[jobNum].id, timeoutlist))
+			wms.cancelJobs(map(lambda jobNum: self._jobs[jobNum].wmsId, timeoutlist))
 			self.mark_cancelled(timeoutlist)
 			# Fixme: Error handling
 
@@ -224,7 +224,7 @@ class JobDB:
 		retrievedJobs = False
 		for jobNum, retCode, data in wms.retrieveJobs(wmsMap.keys()):
 			try:
-				job = self._jobs[jobNum]
+				jobObj = self._jobs[jobNum]
 			except:
 				continue
 
@@ -233,12 +233,12 @@ class JobDB:
 			else:
 				state = Job.FAILED
 
-			if state != job.state:
+			if state != jobObj.state:
 				change = True
-				job.set('retcode', retCode)
-				job.set('runtime', data.get("TIME", -1))
-				self._update(jobNum, job, state)
-				self.module.onJobOutput(job, jobNum, retCode)
+				jobObj.set('retcode', retCode)
+				jobObj.set('runtime', data.get("TIME", -1))
+				self._update(jobObj, jobNum, state)
+				self.module.onJobOutput(jobObj, jobNum, retCode)
 
 			if self.opts.abort:
 				return False
@@ -252,7 +252,7 @@ class JobDB:
 				jobObj = self._jobs[jobNum]
 			except:
 				continue
-			self._update(jobNum, jobObj, Job.CANCELLED)
+			self._update(jobObj, jobNum, Job.CANCELLED)
 
 
 	def delete(self, wms, opts):
@@ -272,7 +272,7 @@ class JobDB:
 
 		if not len(jobs) == 0:
 			if utils.boolUserInput('Do you really want to delete these jobs?', True):
-				wmsIds = map(lambda jobNum: self._jobs[jobNum].id, jobs)
+				wmsIds = map(lambda jobNum: self._jobs[jobNum].wmsId, jobs)
 				if wms.cancelJobs(wmsIds):
 					self.mark_cancelled(jobs)
 				else:

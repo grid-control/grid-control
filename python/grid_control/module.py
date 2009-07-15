@@ -98,10 +98,11 @@ class Module(AbstractObject):
 			os.environ["GC_%s" % key] = str(value)
 
 
-	def publishToDashboard(self, job, id, usermsg):
+	def publishToDashboard(self, jobObj, jobNum, usermsg):
 		if self.dashboard:
-			dashboard = DashboardAPI(self.taskID, "%s_%s" % (id, job.id))
-			msg = { "taskId": self.taskID, "jobId": "%s_%s" % (id, job.id), "sid": "%s_%s" % (id, job.id) }
+			dashId = "%s_%s" % (jobNum, jobObj.wmsId)
+			dashboard = DashboardAPI(self.taskID, dashId)
+			msg = { "taskId": self.taskID, "jobId": dashId, "sid": dashId }
 			msg = dict(filter(lambda (x,y): y != None, reduce(lambda x,y: x+y, map(dict.items, [msg] + usermsg))))
 			dashboard.publish(**msg)
 
@@ -110,7 +111,7 @@ class Module(AbstractObject):
 	def onJobSubmit(self, jobObj, jobNum, dbmessage = [{}]):
 		if self.evtSubmit != '':
 			self.setEventEnviron(jobObj, jobNum)
-			params = "%s %d %s" % (self.evtSubmit, jobNum, jobObj.id)
+			params = "%s %d %s" % (self.evtSubmit, jobNum, jobObj.wmsId)
 			threading.Thread(target = os.system, args = (params,)).start()
 
 		threading.Thread(target = self.publishToDashboard, args = (jobObj, jobNum, [{
@@ -123,7 +124,7 @@ class Module(AbstractObject):
 	def onJobUpdate(self, jobObj, jobNum, data, dbmessage = [{}]):
 		if self.evtStatus != '':
 			self.setEventEnviron(jobObj, jobNum)
-			params = "%s %d %s %s" % (self.evtStatus, jobNum, jobObj.id, Job.states[jobObj.state])
+			params = "%s %d %s %s" % (self.evtStatus, jobNum, jobObj.wmsId, Job.states[jobObj.state])
 			threading.Thread(target = os.system, args = (params,)).start()
 
 		threading.Thread(target = self.publishToDashboard, args = (jobObj, jobNum, [{
@@ -137,7 +138,7 @@ class Module(AbstractObject):
 	def onJobOutput(self, jobObj, jobNum, retCode):
 		if self.evtOutput != '':
 			self.setEventEnviron(jobObj, jobNum)
-			params = "%s %d %s %d" % (self.evtOutput, jobNum, jobObj.id, retCode)
+			params = "%s %d %s %d" % (self.evtOutput, jobNum, jobObj.wmsId, retCode)
 			threading.Thread(target = os.system, args = (params,)).start()
 
 
@@ -230,7 +231,7 @@ class Module(AbstractObject):
 		raise AbstractError
 
 
-	def getJobArguments(self, job):
+	def getJobArguments(self, jobNum):
 		raise AbstractError
 
 
