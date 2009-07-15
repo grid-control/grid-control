@@ -135,7 +135,6 @@ checkdir "Start directory" "$MY_LANDINGZONE"
 checkdir "Scratch directory" "$MY_SCRATCH"
 
 if [ "$DASHBOARD" == "yes" ]; then
-	echo
 	echo "==========================="
 	echo
 	echo "Update Dashboard: $REPORTID"

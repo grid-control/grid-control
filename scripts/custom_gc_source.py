@@ -1,5 +1,5 @@
 import FWCore.ParameterSet.Config as cms
-import random
+from IOMC.RandomEngine.RandomServiceHelper import RandomNumberServiceHelper
 
 def customise_for_gc(process):
 
@@ -7,7 +7,6 @@ def customise_for_gc(process):
 		maxevents = __MAX_EVENTS__
 	except:
 		maxevents = -1
-		print "__MAX_EVENTS__ not specified!"
 
 	process.maxEvents = cms.untracked.PSet(
 		input = cms.untracked.int32(maxevents)
@@ -23,10 +22,8 @@ def customise_for_gc(process):
 		pass
 
 	if hasattr(process, "RandomNumberGeneratorService"):
-		process.RandomNumberGeneratorService.generator = cms.PSet(
-			initialSeed = cms.untracked.uint32(random.randint(0, 900000000 - 1)),
-			engineName = cms.untracked.string('HepJamesRandom')
-		)
+		randSvc = RandomNumberServiceHelper(process.RandomNumberGeneratorService)
+		randSvc.populate()
 
 	return (process)
 
