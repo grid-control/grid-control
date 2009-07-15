@@ -1,4 +1,4 @@
-import sys, os
+import sys, os, random
 from grid_control import ConfigError, Job, utils
 from local_wms import LocalWMSApi
 
@@ -18,7 +18,7 @@ class PBS(LocalWMSApi):
 		self.statusExec = utils.searchPathFind('qstat')
 		self.cancelExec = utils.searchPathFind('qdel')
 
-		self._queue = config.get('local', 'queue', '')
+		self._queue = config.get('local', 'queue', '').split()
 		self._group = config.get('local', 'group', '')
 
 	def unknownID(self):
@@ -33,7 +33,7 @@ class PBS(LocalWMSApi):
 		params = ' -N %s' % self.wms.getJobName(jobNum)
 		# Job queue
 		if len(self._queue):
-			params += ' -q %s' % self._queue
+			params += ' -q %s' % self._queue[random.randint(0, len(self._queue) - 1)]
 		# Job group
 		if len(self._group):
 			params += ' -W group_list=%s' % self._group

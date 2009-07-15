@@ -23,6 +23,9 @@ STARTDATE=`date +%s`
 echo
 echo "==========================="
 echo
+checkvar MY_JOBID
+checkvar MY_LANDINGZONE
+checkvar MY_SCRATCH
 export
 
 echo

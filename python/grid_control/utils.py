@@ -306,6 +306,38 @@ def activityLog(message, fn, *args, **kwargs):
 		del activity
 
 
+class LoggedProcess(object):
+	def __init__(self, cmd, args):
+		self.cmd = (cmd, args)
+		self.proc = popen2.Popen3("%s %s" % (cmd, args), True)
+		self.stdout = []
+		self.stderr = []
+
+	def getError(self):
+		self.stderr.extend(self.proc.childerr.readlines())
+		return str.join("\n", self.stderr)
+
+	def iter(self, opts):
+		while True:
+			try:
+				line = self.proc.fromchild.readline()
+			except:
+				opts.abort = True
+				break
+			if not line:
+				break
+			self.stdout.append(line)
+			yield line
+
+	def wait(self):
+		return self.proc.wait()
+
+	def getOutput(self):
+		self.stdout.extend(self.proc.fromchild.readline())
+		self.stderr.extend(self.proc.childerr.readlines())
+		return (self.wait(), self.stdout, self.stderr)
+
+
 def DiffLists(oldList, newList, cmpFkt, changedFkt):
 	listAdded = []
 	listMissing = []
