@@ -112,6 +112,12 @@ class JobDB:
 			print
 
 
+	def sample(self, list, size):
+		list = random.sample(list, min(size, len(list)))
+		list.sort()
+		return list
+
+
 	def getSubmissionJobs(self, maxsample):
 		submit = max(0, self.inFlight - len(self.running))
 		if self.opts.continuous:
@@ -175,18 +181,18 @@ class JobDB:
 
 		# Update states of jobs
 		for wmsId, state, info in wms.checkJobs(wmsMap.keys()):
-			id, jobObj = wmsMap[wmsId]
+			jobNum, jobObj = wmsMap[wmsId]
 			if state != jobObj.state:
 				change = True
 				for key, value in info.items():
 					jobObj.set(key, value)
-				self._update(jobObj, id, state)
-				self.module.onJobUpdate(jobObj, id, info)
+				self._update(jobObj, jobNum, state)
+				self.module.onJobUpdate(jobObj, jobNum, info)
 			else:
 				# If a job stays too long in an inital state, cancel it
 				if jobObj.state in (Job.SUBMITTED, Job.WAITING, Job.READY, Job.QUEUED):
 					if self.timeout > 0 and time() - jobObj.submitted > self.timeout:
-						timeoutlist.append(id)
+						timeoutlist.append(jobNum)
 			if self.opts.abort:
 				return False
 
@@ -205,12 +211,6 @@ class JobDB:
 			sys.exit(0)
 
 		return change
-
-
-	def sample(self, list, size):
-		list = random.sample(list, min(size, len(list)))
-		list.sort()
-		return list
 
 
 	def retrieve(self, wms, maxsample = 10):
@@ -270,12 +270,14 @@ class JobDB:
 		print "\nDeleting the following jobs:"
 		Report(jobs, self._jobs).details()
 
-		if not len(jobs) == 0:
-			if utils.boolUserInput('Do you really want to delete these jobs?', True):
-				wmsIds = map(lambda jobNum: self._jobs[jobNum].wmsId, jobs)
-				if wms.cancelJobs(wmsIds):
-					self.mark_cancelled(jobs)
-				else:
-					print "\nThere was a problem with deleting your jobs!"
-					if utils.boolUserInput('Do you want to mark them as deleted?', True):
-						self.mark_cancelled(jobs)
+		if len(jobs) == 0:
+			return
+		if not utils.boolUserInput('Do you really want to delete these jobs?', True):
+			return
+		wmsIds = map(lambda jobNum: self._jobs[jobNum].wmsId, jobs)
+		if wms.cancelJobs(wmsIds):
+			self.mark_cancelled(jobs)
+		else:
+			print "\nThere was a problem with deleting your jobs!"
+			if utils.boolUserInput('Do you want to mark them as deleted?', True):
+				self.mark_cancelled(jobs)
