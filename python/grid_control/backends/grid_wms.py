@@ -1,4 +1,4 @@
-import sys, os, time, copy, popen2, tempfile, cStringIO, md5, re, tarfile, gzip
+import sys, os, time, copy, tempfile, cStringIO, md5, re, tarfile, gzip
 from grid_control import ConfigError, Job, utils
 from wms import WMS
 
@@ -143,38 +143,6 @@ class GridWMS(WMS):
 				pass
 
 
-	class LoggedProcess(object):
-		def __init__(self, cmd, args):
-			self.cmd = (cmd, args)
-			self.proc = popen2.Popen3("%s %s" % (cmd, args), True)
-			self.stdout = []
-			self.stderr = []
-
-		def getError(self):
-			self.stderr.extend(self.proc.childerr.readlines())
-			return str.join("\n", self.stderr)
-
-		def iter(self, opts):
-			while True:
-				try:
-					line = self.proc.fromchild.readline()
-				except:
-					opts.abort = True
-					break
-				if not line:
-					break
-				self.stdout.append(line)
-				yield line
-
-		def wait(self):
-			return self.proc.wait()
-
-		def getOutput(self):
-			self.stdout.extend(self.proc.fromchild.readline())
-			self.stderr.extend(self.proc.childerr.readlines())
-			return (self.wait(), self.stdout, self.stderr)
-
-
 	def logError(self, proc, log):
 		retCode, stdout, stderr = proc.getOutput()
 		sys.stderr.write("WARNING: %s failed with code %d\n" %
@@ -205,11 +173,11 @@ class GridWMS(WMS):
 		return False
 
 
-	def writeWMSIds(self, wmsIds):
+	def writeWMSIds(self, ids):
 		try:
 			fd, jobs = tempfile.mkstemp('.jobids')
 			fp = os.fdopen(fd, 'w')
-			fp.writelines(str.join('\n', wmsIds))
+			fp.writelines(str.join('\n', ids))
 			fp.close()
 		except:
 			sys.stderr.write("Could not write wms ids to %s." % jobs)
@@ -322,7 +290,7 @@ class GridWMS(WMS):
 		params = str.join(' ', map(lambda (x,y): "%s %s" % (x, y), tmp))
 
 		activity = utils.ActivityLog('submitting jobs')
-		proc = GridWMS.LoggedProcess(self._submitExec, "%s --nomsg --noint --logfile %s %s" %
+		proc = utils.LoggedProcess(self._submitExec, "%s --nomsg --noint --logfile %s %s" %
 			(params, utils.shellEscape(log), utils.shellEscape(jdl)))
 
 		wmsId = None
@@ -350,7 +318,7 @@ class GridWMS(WMS):
 		log = tempfile.mktemp('.log')
 
 		activity = utils.ActivityLog("checking job status")
-		proc = GridWMS.LoggedProcess(self._statusExec, "--noint --logfile %s -i %s" %
+		proc = utils.LoggedProcess(self._statusExec, "--noint --logfile %s -i %s" %
 			tuple(map(utils.shellEscape, [log, jobs])))
 
 		for data in self._parseStatus(proc.iter(self.opts)):
@@ -389,7 +357,7 @@ class GridWMS(WMS):
 		log = tempfile.mktemp('.log')
 
 		activity = utils.ActivityLog("retrieving job outputs")
-		proc = GridWMS.LoggedProcess(self._outputExec, "--noint --logfile %s -i %s --dir %s" %
+		proc = utils.LoggedProcess(self._outputExec, "--noint --logfile %s -i %s --dir %s" %
 			tuple(map(utils.shellEscape, [log, jobs, tmpPath])))
 
 		# yield output dirs
@@ -422,7 +390,7 @@ class GridWMS(WMS):
 		jobs = self.writeWMSIds(ids)
 
 		activity = utils.ActivityLog("cancelling jobs")
-		proc = GridWMS.LoggedProcess(self._cancelExec, "--noint --logfile %s -i %s" %
+		proc = utils.LoggedProcess(self._cancelExec, "--noint --logfile %s -i %s" %
 			tuple(map(utils.shellEscape, [log, jobs])))
 		retCode = proc.wait()
 		del activity

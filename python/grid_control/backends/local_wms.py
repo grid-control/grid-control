@@ -118,11 +118,11 @@ class LocalWMS(WMS):
 
 
 	# Check status of jobs and yield (wmsID, status, other data)
-	def checkJobs(self, wmsIds):
-		if not len(wmsIds):
+	def checkJobs(self, ids):
+		if not len(ids):
 			return []
 
-		shortWMSIds = map(lambda x: x.split(".")[0], wmsIds)
+		shortWMSIds = map(lambda x: x.split(".")[0], ids)
 		activity = utils.ActivityLog("checking job status")
 		proc = popen2.Popen3("%s %s" % (self.api.statusExec, self.api.getCheckArgument(shortWMSIds)), True)
 
@@ -134,7 +134,7 @@ class LocalWMS(WMS):
 		proc.wait()
 
 		result = []
-		for wmsId in wmsIds:
+		for wmsId in ids:
 			if not tmp.has_key(wmsId):
 				result.append((wmsId, Job.DONE, {}))
 			else:
@@ -160,14 +160,12 @@ class LocalWMS(WMS):
 		return None
 
 
-	def getJobsOutput(self, wmsIds):
-		if not len(wmsIds):
-			return []
+	def getJobsOutput(self, ids):
+		if not len(ids):
+			raise StopIteration
 
-		result = []
 		activity = utils.ActivityLog("retrieving job outputs")
-
-		for wmsId in wmsIds:
+		for wmsId in ids:
 			path = self.getSandbox(wmsId)
 			if path == None:
 				raise RuntimeError("Sandbox for wmsId '%s' could not be found" % wmsId)
@@ -180,19 +178,17 @@ class LocalWMS(WMS):
 					os.unlink(os.path.join(path, file))
 				except:
 					pass
-			result.append(path)
-
+			yield (path)
 		del activity
-		return result
 
 
-	def cancelJobs(self, wmsIds):
-		if not len(wmsIds):
+	def cancelJobs(self, ids):
+		if not len(ids):
 			return True
 
 		activity = utils.ActivityLog("cancelling jobs")
 
-		shortWMSIds = map(lambda x: x.split(".")[0], wmsIds)
+		shortWMSIds = map(lambda x: x.split(".")[0], ids)
 		proc = popen2.Popen3("%s %s" % (self.api.cancelExec, self.api.getCancelArgument(shortWMSIds)), True)
 		retCode = proc.wait()
 
@@ -205,7 +201,7 @@ class LocalWMS(WMS):
 		activity = utils.ActivityLog("waiting for jobs to finish")
 		# Wait for jobs to finish
 		time.sleep(5)
-		for wmsId in wmsIds:
+		for wmsId in ids:
 			path = self.getSandbox(wmsId)
 			if path == None:
 				print RuntimeError("Sandbox for wmsId '%s' could not be found" % wmsId)

@@ -87,11 +87,11 @@ class WMS(AbstractObject):
 		return (60, 10)
 
 
-	def getRequirements(self, job):
-		return self.module.getRequirements(job)
+	def getRequirements(self, jobNum):
+		return self.module.getRequirements(jobNum)
 
 
-	def bulkSubmissionBegin(self, jobs):
+	def bulkSubmissionBegin(self, nJobs):
 		return True
 
 
@@ -99,8 +99,8 @@ class WMS(AbstractObject):
 		pass
 
 
-	def submitJobs(self, ids):
-		for jobNum in ids:
+	def submitJobs(self, jobNumList):
+		for jobNum in jobNumList:
 			if self.opts.abort:
 				raise StopIteration
 			jobNum, wmsId, data = self.submitJob(jobNum)
@@ -115,11 +115,14 @@ class WMS(AbstractObject):
 			return (data['JOBID'], data['EXITCODE'], data)
 
 		for dir in self.getJobsOutput(ids):
+			if dir == None:
+				continue
+
 			accepted = False
 			info = os.path.join(dir, 'jobinfo.txt')
 			try:
-				id, retCode, data = readJobFile(info)
-				dst = os.path.join(self._outputPath, 'job_%d' % id)
+				jobNum, retCode, data = readJobFile(info)
+				dst = os.path.join(self._outputPath, 'job_%d' % jobNum)
 				accepted = True
 			except:
 				sys.stderr.write("Warning: '%s' seems broken.\n" % info)
@@ -160,4 +163,4 @@ class WMS(AbstractObject):
 				continue
 
 			if accepted:
-				yield (id, retCode, data)
+				yield (jobNum, retCode, data)
