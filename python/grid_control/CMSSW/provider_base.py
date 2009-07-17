@@ -92,7 +92,7 @@ class DataProvider(AbstractObject):
 		print "Matching blocks:"
 		for block in self.getBlocks():
 			print "ID / Dataset / Nick : ",
-			print block.get(DataProvider.DatasetID), "/", block[DataProvider.Dataset], "/", block[DataProvider.Nickname]
+			print block.get(DataProvider.DatasetID, 0), "/", block[DataProvider.Dataset], "/", block.get(DataProvider.Nickname, '')
 			print "BlockName : ", block[DataProvider.BlockName]
 			print "#Events   : ", block[DataProvider.NEvents]
 			print "SE List   : ", block[DataProvider.SEList]
