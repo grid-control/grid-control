@@ -24,7 +24,7 @@ class GliteWMS(Glite):
 
 			self._submitParams.update({ '-d': None })
 			activity = utils.ActivityLog('creating delegate proxy for job submission')
-			proc = GridWMS.LoggedProcess(self._delegateExec, "%s -a --noint --logfile %s" %
+			proc = utils.LoggedProcess(self._delegateExec, "%s -a --noint --logfile %s" %
 				(params, utils.shellEscape(log)))
 
 			for line in map(str.strip, proc.iter(self.opts)):
