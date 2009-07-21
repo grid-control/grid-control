@@ -10,17 +10,11 @@ class UserMod(Module):
 
 	def getCommand(self):
 		cmd = os.path.basename(self._executable)
-		return 'chmod u+x %s; ./%s "$@"' % (cmd, cmd)
+		return 'chmod u+x %s; ./%s $@' % (cmd, cmd)
 
 
 	def getJobArguments(self, jobNum):
-		args = self._arguments
-		args.replace("__DATE__", time.strftime("%F"))
-		args.replace("__TIMESTAMP__", time.strftime("%s"))
-		args.replace("__RANDOM__", str(random.randrange(0, 900000000)))
-		for key, value in self.getTaskConfig().items() + self.getJobConfig(jobNum).items():
-			args.replace("__%s__" % key, str(value))
-		return args
+		return self._arguments
 
 
 	def getInFiles(self):

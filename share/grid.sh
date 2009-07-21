@@ -66,8 +66,6 @@ if [ ${DOBREAK:-1} -gt 0 ]; then
 ) &
 fi
 
-checkvar MY_RUNTIME
-
 echo
 echo "==========================="
 echo
@@ -117,7 +115,14 @@ checkdir "Scratch directory" "$MY_SCRATCH"
 # Execute program
 echo "==========================="
 echo
+
 cd $MY_SCRATCH
+(cat << EOF
+${MY_RUNTIME/\$@/$@}
+EOF
+) > $MY_LANDINGZONE/_runtime.sh
+export MY_RUNTIME="$(var_replacer '' < "$MY_LANDINGZONE/_runtime.sh")"
+checkvar MY_RUNTIME
 eval "$MY_RUNTIME" &
 MY_RUNID=$!
 echo $MY_RUNID > $MY_MARKER
@@ -170,12 +175,14 @@ if [ $CODE -eq 0 -a -n "$SE_OUTPUT_FILES" ]; then
 	echo
 fi
 
-echo "==========================="
-echo
-# Move output into landingzone
-my_move "$MY_SCRATCH" "$MY_LANDINGZONE" "$SB_OUTPUT_FILES"
+if [ -n "$SB_OUTPUT_FILES" ]; then
+	echo "==========================="
+	echo
+	# Move output into landingzone
+	my_move "$MY_SCRATCH" "$MY_LANDINGZONE" "$SB_OUTPUT_FILES"
+	echo
+fi
 
-echo
 echo "==========================="
 echo
 checkdir "Start directory" "$MY_LANDINGZONE"

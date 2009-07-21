@@ -53,8 +53,10 @@ def main(args):
 
 	# we need exactly one positional argument (config file)
 	if len(args) != 1:
-		print "Config file not specified!"
-		print_help()
+		sys.stderr.write("Config file not specified!\n")
+		sys.stderr.write("Syntax: %s [OPTIONS] <config file>\n" % sys.argv[0])
+		sys.stderr.write("Use --help to get a list of options!\n")
+		sys.exit(0)
 	opts.confName = str.join("", os.path.basename(args[0]).split(".")[:-1])
 
 	# set up signal handler for interrupts

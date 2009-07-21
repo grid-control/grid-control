@@ -60,7 +60,7 @@ class Module(AbstractObject):
 		self.seLZLowerLimit = config.getInt('storage', 'landing zone space left', 1)
 
 		# Storage setup
-		self.sePath = config.get('storage', 'se path', '').replace('dir://', 'file://')
+		self.sePath = config.get('storage', 'se path', '')
 		self.seMinSize = config.getInt('storage', 'se min size', -1)
 
 		self.seInputFiles = config.get('storage', 'se input files', '').split()
