@@ -287,6 +287,38 @@ url_exists() {
 	esac
 }
 
+url_ls() {
+	case "$1" in
+		"gsiftp://"*)
+			GRIDFTP_LS="`getcommand glite-gridftp-ls edg-gridftp-ls`"
+			checkbin ${GRIDFTP_LS:-"glite-gridftp-ls"} || fail 103
+			${GRIDFTP_LS:-"glite-gridftp-ls"} $1 | while read FILE; do
+				case "$FILE" in
+					$2) echo "$FILE" ;;
+					*) ;;
+				esac
+			done
+			;;
+		"srm://"*)
+			BASE=''
+			srmls $1 | grep -v "WARNING" | while read TMP FILE; do
+				[ -z "$BASE" ] && BASE="$FILE" && continue
+				case "$FILE" in
+					$2) [ "$FILE" == "${FILE%/}" ] && echo "${FILE#$BASE}" ;;
+					*) ;;
+				esac
+			done
+			;;
+		"dir://"*)
+			cd ${1#dir://} && ls -d $2 && cd $OLDPWD
+			;;
+		"file://"*)
+			cd ${1#file://} && ls -d $2 && cd $OLDPWD
+			;;
+		*)	echo "Unsupported URL: $1" >&2 && fail 106;;
+	esac
+}
+
 url_rm_tool() {
 	TOOL="`getcommand glite-gridftp-rm edg-gridftp-rm lcg-rm`"
 	case "$1" in
