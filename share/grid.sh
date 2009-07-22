@@ -158,20 +158,20 @@ if [ "$DASHBOARD" == "yes" ]; then
 	echo
 fi
 
+export LOG_MD5="$MY_LANDINGZONE/SE.log"
 # Copy files to the SE
 if [ $CODE -eq 0 -a -n "$SE_OUTPUT_FILES" ]; then
 	echo "==========================="
 	echo
 	export TRANSFERLOG="$MY_SCRATCH/SE.log"
 	url_copy "file:///$MY_SCRATCH" "$SE_PATH" "$SE_OUTPUT_FILES"
-	export TRANSFERLOG=""
 	(
-	IDX=0
-	cat "$MY_SCRATCH/SE.log" | while read NAME_LOCAL NAME_DEST; do
+	[ -f "$TRANSFERLOG" ] && cat "$TRANSFERLOG" | while read NAME_LOCAL NAME_DEST; do
 		echo "FILE$IDX=\"$(cd "$MY_SCRATCH"; md5sum "$NAME_LOCAL")  $NAME_DEST\""
 		IDX=$[IDX + 1]
 	done
-	) > "$MY_LANDINGZONE/SE.log"
+	) > "$LOG_MD5"
+	export TRANSFERLOG=""
 	echo
 fi
 
@@ -194,7 +194,7 @@ cleanup
 trap - 0 1 2 3 15
 echo "Job $MY_JOBID finished - `date`"
 echo "TIME=$[`date +%s` - $STARTDATE]" >> $MY_LANDINGZONE/jobinfo.txt
-cat "$MY_LANDINGZONE/SE.log" >> $MY_LANDINGZONE/jobinfo.txt
+[ -f "$LOG_MD5" ] && cat "$LOG_MD5" >> $MY_LANDINGZONE/jobinfo.txt
 cat $MY_LANDINGZONE/jobinfo.txt
 
 exit $CODE
