@@ -35,6 +35,7 @@ fail() {
 	debug_helper $FUNCNAME $LINENO
 	echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!"
 	[ -n "$1" ] && CODE=$1 || CODE=$?
+	export
 	cleanup
 	updatejobinfo $CODE
 	exit $CODE
@@ -44,6 +45,7 @@ abort() {
 	debug_helper $FUNCNAME $LINENO
 	[ -d "$MY_LANDINGZONE" ] && checkdir "Start directory" "$MY_LANDINGZONE" >> $MY_LANDINGZONE/stderr.txt
 	[ -d "$MY_SCRATCH" ] && checkdir "Scratch directory" "$MY_SCRATCH" >> $MY_LANDINGZONE/stderr.txt
+	export
 	cleanup
 	[ -n "$1" ] && updatejobinfo $1
 	trap - 0 1 2 3 15
@@ -138,7 +140,6 @@ getscratch() {
 		debug_helper $FUNCNAME $LINENO
 		MY_SCRATCH="invalid"
 		MY_SCRATCHSIZE=-1
-		
 		# find scratch directory with highest amount of disk space
 		for DIRVAR in $@;
 		do
@@ -223,7 +224,8 @@ var_replacer() {
 		echo "BEGIN{srand($MY_SEED)}"
 		echo "{"
 		echo "	gsub(\"__X__\", \"$1\")"
-		cat "$MY_SCRATCH/_varmap.dat" | while read USER_VARNAME REAL_VARNAME; do
+		[ -f "$MY_SCRATCH/_varmap.dat" ] && cat "$MY_SCRATCH/_varmap.dat" |
+		while read USER_VARNAME REAL_VARNAME; do
 			VARVALUE=${!REAL_VARNAME}
 			echo "	gsub(\"__${USER_VARNAME}__\", \"${VARVALUE//\"/\\\"}\")"
 		done
@@ -274,6 +276,7 @@ monitordirlimits() {
 }
 
 url_exists() {
+	debug_helper $FUNCNAME $LINENO
 	case "$1" in
 		"gsiftp://"*)	TOOL="`getcommand glite-gridftp-exists edg-gridftp-exists lcg-ls`"
 							echo "$TOOL $1"
@@ -288,6 +291,7 @@ url_exists() {
 }
 
 url_ls() {
+	debug_helper $FUNCNAME $LINENO
 	case "$1" in
 		"gsiftp://"*)
 			GRIDFTP_LS="`getcommand glite-gridftp-ls edg-gridftp-ls`"
@@ -303,7 +307,7 @@ url_ls() {
 			BASE=''
 			srmls $1 | grep -v "WARNING" | while read TMP FILE; do
 				[ -z "$BASE" ] && BASE="$FILE" && continue
-				case "$FILE" in
+				case "${FILE#$BASE}" in
 					$2) [ "$FILE" == "${FILE%/}" ] && echo "${FILE#$BASE}" ;;
 					*) ;;
 				esac
@@ -320,6 +324,7 @@ url_ls() {
 }
 
 url_rm_tool() {
+	debug_helper $FUNCNAME $LINENO
 	TOOL="`getcommand glite-gridftp-rm edg-gridftp-rm lcg-rm`"
 	case "$1" in
 		"gsiftp://"*)	;;
@@ -365,7 +370,9 @@ url_copy_tool() {
 }
 
 url_copy_tool_file2file() {
+	debug_helper $FUNCNAME $LINENO
 	[ ! -f "${1#file://}" ] && fail 106
+	mkdir -p `dirname ${2#file://}`
 	[ -f "${2#file://}" ] && fail 106
 	cp ${1#file://} ${2#file://}
 }
