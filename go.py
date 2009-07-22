@@ -77,7 +77,7 @@ def main(args):
 			raise ConfigError("Error while reading configuration file '%s'!" % args[0])
 
 		# Check work dir validity (default work directory is the config file name)
-		opts.workDir = config.getPath('global', 'workdir', opts.confName)
+		opts.workDir = config.getPath('global', 'workdir', 'work.%s' % opts.confName)
 		if not os.path.exists(opts.workDir):
 			if utils.boolUserInput("Do you want to create the working directory %s?" % opts.workDir, True):
 				os.mkdir(opts.workDir)
