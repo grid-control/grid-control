@@ -207,7 +207,7 @@ class CMSSW(Module):
 
 
 	def getCommand(self):
-		return './run.cmssw.sh "$@"'
+		return './run.cmssw.sh $@'
 
 
 	def getJobArguments(self, job):
