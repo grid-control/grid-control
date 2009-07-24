@@ -224,10 +224,11 @@ var_replacer() {
 	(
 		echo "BEGIN{srand($MY_SEED)}"
 		echo "{"
-		echo "	gsub(\"__X__\", \"$1\")"
+		[ -n "$1" ] && echo "	gsub(\"__X__\", \"$1\")"
 		[ -f "$MY_SCRATCH/_varmap.dat" ] && cat "$MY_SCRATCH/_varmap.dat" |
 		while read USER_VARNAME REAL_VARNAME; do
 			VARVALUE=${!REAL_VARNAME}
+			echo "	gsub(\"@${USER_VARNAME}@\", \"${VARVALUE//\"/\\\"}\")"
 			echo "	gsub(\"__${USER_VARNAME}__\", \"${VARVALUE//\"/\\\"}\")"
 		done
 		echo "	gsub(\"__RANDOM__\", int(rand() * 900000000))"

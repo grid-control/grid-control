@@ -83,7 +83,7 @@ def main(args):
 #		printTabular([(DataProvider.Nickname, "Nickname"), (DataProvider.Dataset, "Dataset")], infos.itervalues())
 		for info in infos.itervalues():
 			print "%s: DBS:%s" % (info[DataProvider.Nickname].center(maxnick + 2), info[DataProvider.Dataset])
-		
+
 
 	if opts.listdatasets:
 		infos = {}
@@ -92,7 +92,7 @@ def main(args):
 			DataProvider.Dataset : 'Sum'
 		}
 		for block in blocks:
-			blockID = block.get(DataProvider.DatasetID, 0)
+			blockID = block.get(DataProvider.Dataset, '')
 			if not infos.get(blockID, None):
 				infos[blockID] = {
 					DataProvider.NEvents : 0,

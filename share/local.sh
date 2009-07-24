@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # (VO_CMS_SW_DIR == "") => get from CMSSW_OLD_RELEASETOP
-export VO_CMS_SW_DIR=""
+[ -n "$CMSSW_OLD_RELEASETOP" ] && export VO_CMS_SW_DIR=""
 SANDBOX=${SANDBOX:-$1}
 cd $SANDBOX
 mkdir scratch

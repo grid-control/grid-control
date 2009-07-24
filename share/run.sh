@@ -58,6 +58,12 @@ tar xvfz "$MY_LANDINGZONE/sandbox.tar.gz" -C "$MY_SCRATCH" || fail 105
 checkfile "$MY_SCRATCH/_config.sh"
 source "$MY_SCRATCH/_config.sh"
 
+echo "Prepare variable substitution"
+checkfile "$MY_SCRATCH/_varmap.dat"
+echo "__DATE__: Variable substitution in task __TASK_ID__: __X__" | var_replacer "SUCCESSFUL"
+checkfile "$MY_SCRATCH/_replace.awk"
+cat "$MY_SCRATCH/_replace.awk"
+
 # Job timeout (for debugging)
 if [ ${DOBREAK:-1} -gt 0 ]; then
 (
@@ -68,27 +74,24 @@ if [ ${DOBREAK:-1} -gt 0 ]; then
 ) &
 fi
 
-echo
-echo "==========================="
-echo
-echo "Prepare variable substitution"
-checkfile "$MY_SCRATCH/_varmap.dat"
-echo "__DATE__: Variable substitution __X__" | var_replacer "SUCCESSFUL"
-checkfile "$MY_SCRATCH/_replace.awk"
-cat "$MY_SCRATCH/_replace.awk"
-
 # Copy files from the SE
 if [ -n "$SE_INPUT_FILES" ]; then
 	url_copy "$SE_PATH" "file:///$MY_SCRATCH" "$SE_INPUT_FILES"
 fi
 
+echo
+echo "==========================="
+echo
 # Do variable substitutions
-for SFILE in $SUBST_FILES; do
+for SFILE in $SUBST_FILES "_config.sh"; do
 	echo "Substitute variables in file $SFILE"
 	echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~"
-	var_replacer "$SFILE" < "`_find $SFILE`" | tee "tmp.$SFILE"
-	[ -f "tmp.$SFILE" ] && mv "tmp.$SFILE" "`_find $SFILE`"
+	var_replacer "" < "`_find $SFILE`" | tee "$SFILE.tmp"
+	[ -f "$SFILE.tmp" ] && mv "$SFILE.tmp" "`_find $SFILE`"
 done
+
+checkfile "$MY_SCRATCH/_config.sh"
+source "$MY_SCRATCH/_config.sh"
 
 if [ "$DASHBOARD" == "yes" ]; then
 	echo
