@@ -392,44 +392,53 @@ url_copy_single_force() {
 url_copy() {
 	debug_helper $FUNCNAME $LINENO
 	#checkbin "globus-url-copy" || fail 103
-	echo "Copy $3 from $1 to $2"
-	case "$1" in
-		"gsiftp://"*)
-			# copy from SE to WN
-			TARGET_PATTERN="__X__"
-			if [[ "$3" == *\** ]]; then
-				# Wildcard used => gridftp-ls
-				GRIDFTP_LS="`getcommand glite-gridftp-ls edg-gridftp-ls`"
-				checkbin ${GRIDFTP_LS:-"glite-gridftp-ls"} || fail 103
-				for pat1 in $3; do
-					pat="`echo ${SE_INPUT_PATTERN:-__X__} | var_replacer $pat1`"
-					for file in "`$GRIDFTP_LS $1/$pat`"; do
-						[ -n "$file" ] && SOURCE_FILES="$SOURCE_FILES `basename $file`"
-					done
+	FILENAMES="`echo "$3" | var_replacer ''`"
+	echo "Copy $FILENAMES from $1 to $2"
+
+	SOURCE_URL="$1"
+	SOURCE_FILES=""
+	case "$SOURCE_URL" in
+		"gsiftp://"* | "srm://"* | "dir://"*)
+			# copy from SE
+			if [[ "$FILENAMES" == *\** ]]; then
+				# Wildcard used => url_ls
+				for PATTERN_1 in "$FILENAMES"; do
+					PATTERN_2="`echo ${SE_INPUT_PATTERN:-__X__} | var_replacer "$PATTERN_1"`"
+					SOURCE_FILES="$SOURCE_FILES `url_ls "$SOURCE_URL" "$PATTERN_2"`"
 				done
+				SOURCE_PATTERN="__X__"
 			else
-				SOURCE_FILES="`echo ${SE_INPUT_PATTERN:-__X__} | var_replacer $3`"
+				SOURCE_PATTERN="${SE_INPUT_PATTERN:-__X__}"
+				SOURCE_FILES="$FILENAMES"
 			fi
-			;;
-		"srm://"*)
-			# copy from SE to WN
-			TARGET_PATTERN="__X__"
-			if [[ "$3" == *\** ]]; then
-				echo "Wildcards not supported for SRM" && fail 106
-			else
-				SOURCE_FILES="`echo ${SE_INPUT_PATTERN:-__X__} | var_replacer $3`"
-			fi
+			SOURCE_URL="`echo "$SOURCE_URL" | sed -e 's@dir://@file://@'`"
 			;;
 		"file://"*)
-			# copy from site to SE
-			TARGET_PATTERN="${SE_OUTPUT_PATTERN:-__X__}"
-			SOURCE_FILES="`cd ${1#file://} && ls -d $3 && cd $OLDPWD`"
+			# copy from WN
+			SOURCE_PATTERN="__X__"
+			SOURCE_FILES="`cd ${SOURCE_URL#file://} && ls -d $FILENAMES && cd $OLDPWD`"
+
 			# Check that file size is larger than SE_MINFILESIZE
 			for file in $SOURCE_FILES; do
 				[ -d "$file" ] && continue
-				SOURCE_FN="`echo ${SOURCE_PATTERN:-__X__} | var_replacer $file`"
-				[ "`getdiskusage ${1#file://}/$SOURCE_FN`" -lt "${SE_MINFILESIZE:-0}" ] && fail 122
+				[ "`getdiskusage ${SOURCE_URL#file://}/$file`" -lt "${SE_MINFILESIZE:-0}" ] && fail 122
 			done
+			;;
+		*)
+			echo "Unsupported URL: $1" && fail 106
+			;;
+	esac
+
+	TARGET_URL="$2"
+	case "$TARGET_URL" in
+		"gsiftp://"* | "srm://"* | "dir://"*)
+			# copy to SE
+			TARGET_PATTERN="${SE_OUTPUT_PATTERN:-__X__}"
+			TARGET_URL="`echo "$TARGET_URL" | sed -e 's@dir://@file://@'`"
+			;;
+		"file://"*)
+			# copy to WN
+			TARGET_PATTERN="__X__"
 			;;
 		*)
 			echo "Unsupported URL: $1" && fail 106
@@ -442,9 +451,9 @@ url_copy() {
 		SOURCE_FN="`echo ${SOURCE_PATTERN:-__X__} | var_replacer $file`"
 		TARGET_FN="`echo ${TARGET_PATTERN:-__X__} | var_replacer $file`"
 		[ -n "$TRANSFERLOG" ] && echo "$SOURCE_FN $TARGET_FN" >> "$TRANSFERLOG"
-		url_copy_single "$1/$SOURCE_FN" "$2/$TARGET_FN"
+		url_copy_single "$SOURCE_URL/$SOURCE_FN" "$TARGET_URL/$TARGET_FN"
 		RESULT=$?
-		echo "url_copy_single \"$1/$SOURCE_FN\" \"$2/$TARGET_FN\" returned with $RESULT"
+		echo "url_copy_single \"$SOURCE_URL/$SOURCE_FN\" \"$TARGET_URL/$TARGET_FN\" returned with $RESULT"
 		# [ $RESULT != 0 ] && BADCOUNT=$[$BADCOUNT+1]
 	done
 	[ $BADCOUNT -ne 0 ] && echo "$BADCOUNT errors occurred during SE access" && fail 106
