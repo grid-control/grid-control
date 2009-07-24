@@ -351,21 +351,18 @@ url_copy_tool() {
 	debug_helper $FUNCNAME $LINENO
 	TOOL="globus-url-copy"
 	# TODO: select lcg-cp on non-OSG sites
-	FILE1='false'
 	case "$1" in
 		"gsiftp://"*)	;;
-		"file://"*)		FILE1='true';;
+		"file://"*)		FROMFILE='true';;
 		"srm://"*)		echo "srmcp -2 -debug=true -streams_num=1" && return;;
 		*)					echo "Unsupported URL: $1" >&2 && fail 106;;
 	esac
-	FILE2='false'
 	case "$2" in
 		"gsiftp://"*)	;;
-		"file://"*)		FILE2='true';;
+		"file://"*)		[ "$FROMFILE" == "true" ] && TOOL="url_copy_tool_file2file";;
 		"srm://"*)		echo "srmcp -2 -debug=true -streams_num=1" && return;;
 		*)					echo "Unsupported URL: $1" >&2 && fail 106;;
 	esac
-	[ "$FILE1" == "true" -a "$FILE2" == "true" ] && TOOL="url_copy_tool_file2file"
 	echo $TOOL
 }
 
