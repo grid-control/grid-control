@@ -30,7 +30,7 @@ class GliteWMS(Glite):
 			for line in map(str.strip, proc.iter(self.opts)):
 				try:
 					(left, right) = line.split(':', 1)
-					if left.endswith('identifier'):
+					if left.endswith('identifier') and not right.strip().startswith('-'):
 						self._submitParams.update({ '-d': right.strip() })
 				except:
 					pass

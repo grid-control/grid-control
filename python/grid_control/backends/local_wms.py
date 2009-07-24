@@ -122,7 +122,7 @@ class LocalWMS(WMS):
 		if not len(ids):
 			return []
 
-		shortWMSIds = map(lambda x: x.split(".")[0], ids)
+		shortWMSIds = map(lambda (wmsId, jobNum): wmsId.split(".")[0], ids)
 		activity = utils.ActivityLog("checking job status")
 		proc = popen2.Popen3("%s %s" % (self.api.statusExec, self.api.getCheckArgument(shortWMSIds)), True)
 
@@ -134,11 +134,11 @@ class LocalWMS(WMS):
 		proc.wait()
 
 		result = []
-		for wmsId in ids:
+		for wmsId, jobNum in ids:
 			if not tmp.has_key(wmsId):
-				result.append((wmsId, Job.DONE, {}))
+				result.append((jobNum, wmsId, Job.DONE, {}))
 			else:
-				result.append(tmp[wmsId])
+				result.append(tuple([jobNum] + list(tmp[wmsId])))
 
 		retCode = proc.wait()
 		del activity
@@ -165,10 +165,11 @@ class LocalWMS(WMS):
 			raise StopIteration
 
 		activity = utils.ActivityLog("retrieving job outputs")
-		for wmsId in ids:
+		for wmsId, jobNum in ids:
 			path = self.getSandbox(wmsId)
 			if path == None:
-				raise RuntimeError("Sandbox for wmsId '%s' could not be found" % wmsId)
+				yield (jobNum, None)
+				continue
 
 			# Cleanup sandbox
 			for file in os.listdir(path):
@@ -178,7 +179,7 @@ class LocalWMS(WMS):
 					os.unlink(os.path.join(path, file))
 				except:
 					pass
-			yield (path)
+			yield (jobNum, path)
 		del activity
 
 
@@ -188,7 +189,7 @@ class LocalWMS(WMS):
 
 		activity = utils.ActivityLog("cancelling jobs")
 
-		shortWMSIds = map(lambda x: x.split(".")[0], ids)
+		shortWMSIds = map(lambda (wmsId, jobNum): wmsId.split(".")[0], ids)
 		proc = popen2.Popen3("%s %s" % (self.api.cancelExec, self.api.getCancelArgument(shortWMSIds)), True)
 		retCode = proc.wait()
 
@@ -201,15 +202,15 @@ class LocalWMS(WMS):
 		activity = utils.ActivityLog("waiting for jobs to finish")
 		# Wait for jobs to finish
 		time.sleep(5)
-		for wmsId in ids:
+		for wmsId, jobNum in ids:
 			path = self.getSandbox(wmsId)
 			if path == None:
-				print RuntimeError("Sandbox for wmsId '%s' could not be found" % wmsId)
+				print "Sandbox for job %d with wmsId '%s' could not be found" % (jobNum, wmsId)
 				continue
 			try:
 				shutil.rmtree(path)
 			except:
-				raise RuntimeError("Sandbox for wmsId '%s' could not be deleted" % wmsId)
+				raise RuntimeError("Sandbox for job %d with wmsId '%s' could not be deleted" % (jobNum, wmsId))
 
 		del activity
 		return True

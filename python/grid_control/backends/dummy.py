@@ -6,23 +6,21 @@ from wms import WMS
 class DummyWMS(WMS):
 	def __init__(self, config, opts, module):
 		WMS.__init__(self, config, opts, module, 'grid')
-		self.jobmap = {}
+		self.mapNum2ID = {}
 
 	def submitJob(self, jobNum):
 		print "EVENT [SUBMIT]: ", jobNum
-		self.jobmap[jobNum] = random.randint(0, 10000000)
-		return (jobNum, self.jobmap[jobNum], {})
+		self.mapNum2ID[jobNum] = random.randint(0, 10000000)
+		return (jobNum, self.mapNum2ID[jobNum], {})
 
 
 	def checkJobs(self, ids):
 		print "EVENT [CHECK]: ", ids
-#		result.append((id, status, data))
-		return map(lambda id: (id, 0, {}), ids)
+		return map(lambda wmsId, jobNum: (jobNum, wmsId, Job.QUEUED, {}), ids.items())
 
 
 	def getJobsOutput(self, ids):
 		print "EVENT [OUTPUT]: ", ids
-#		result.append(os.path.join(tmpPath, file))
 		return []
 
 

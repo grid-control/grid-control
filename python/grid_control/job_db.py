@@ -162,12 +162,8 @@ class JobDB:
 			wms.bulkSubmissionEnd()
 
 
-	def getWmsMap(self, idlist):
-		map = {}
-		for id in idlist:
-			jobObj = self._jobs[id]
-			map[jobObj.wmsId] = (id, jobObj)
-		return map
+	def wmsArgs(self, ids):
+		return map(lambda jobNum: (self._jobs[jobNum].wmsId, jobNum), ids)
 
 
 	def check(self, wms, maxsample = 100):
@@ -175,13 +171,13 @@ class JobDB:
 		timeoutlist = []
 
 		if self.opts.continuous:
-			wmsMap = self.getWmsMap(self.sample(self.running, maxsample))
+			jobList = self.sample(self.running, maxsample)
 		else:
-			wmsMap = self.getWmsMap(self.running)
+			jobList = self.running
 
 		# Update states of jobs
-		for wmsId, state, info in wms.checkJobs(wmsMap.keys()):
-			jobNum, jobObj = wmsMap[wmsId]
+		for jobNum, wmsId, state, info in wms.checkJobs(self.wmsArgs(jobList)):
+			jobObj = self._jobs[jobNum]
 			if state != jobObj.state:
 				change = True
 				for key, value in info.items():
@@ -201,7 +197,7 @@ class JobDB:
 			change = True
 			print "\nTimeout for the following jobs:"
 			Report(timeoutlist, self._jobs).details()
-			wms.cancelJobs(map(lambda jobNum: self._jobs[jobNum].wmsId, timeoutlist))
+			wms.cancelJobs(self.wmsArgs(timeoutlist))
 			self.mark_cancelled(timeoutlist)
 			# Fixme: Error handling
 
@@ -217,12 +213,12 @@ class JobDB:
 		change = False
 
 		if self.opts.continuous:
-			wmsMap = self.getWmsMap(self.sample(self.done, maxsample))
+			jobList = self.sample(self.done, maxsample)
 		else:
-			wmsMap = self.getWmsMap(self.done)
+			jobList = self.done
 
 		retrievedJobs = False
-		for jobNum, retCode, data in wms.retrieveJobs(wmsMap.keys()):
+		for jobNum, retCode, data in wms.retrieveJobs(self.wmsArgs(jobList)):
 			try:
 				jobObj = self._jobs[jobNum]
 			except:
@@ -274,8 +270,7 @@ class JobDB:
 			return
 		if not utils.boolUserInput('Do you really want to delete these jobs?', True):
 			return
-		wmsIds = map(lambda jobNum: self._jobs[jobNum].wmsId, jobs)
-		if wms.cancelJobs(wmsIds):
+		if wms.cancelJobs(self.wmsArgs(jobs)):
 			self.mark_cancelled(jobs)
 		else:
 			print "\nThere was a problem with deleting your jobs!"

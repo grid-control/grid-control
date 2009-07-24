@@ -114,14 +114,17 @@ class WMS(AbstractObject):
 			data = utils.DictFormat().parse(open(info, 'r'), lowerCaseKey = False)
 			return (data['JOBID'], data['EXITCODE'], data)
 
-		for dir in self.getJobsOutput(ids):
+		for inJobNum, dir in self.getJobsOutput(ids):
 			if dir == None:
+				yield (jobNum, -1, {})
 				continue
 
 			accepted = False
 			info = os.path.join(dir, 'jobinfo.txt')
 			try:
 				jobNum, retCode, data = readJobFile(info)
+				if jobNum != inJobNum:
+					raise RuntimeError("Invalid job id in job file")
 				dst = os.path.join(self._outputPath, 'job_%d' % jobNum)
 				accepted = True
 			except:

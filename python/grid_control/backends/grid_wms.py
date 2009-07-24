@@ -177,7 +177,7 @@ class GridWMS(WMS):
 		try:
 			fd, jobs = tempfile.mkstemp('.jobids')
 			fp = os.fdopen(fd, 'w')
-			fp.writelines(str.join('\n', ids))
+			fp.writelines(str.join('\n', map(lambda (jobNum, wmsId): wmsId, ids)))
 			fp.close()
 		except:
 			sys.stderr.write("Could not write wms ids to %s." % jobs)
@@ -314,7 +314,8 @@ class GridWMS(WMS):
 		if len(ids) == 0:
 			raise StopIteration
 
-		jobs = self.writeWMSIds(ids)
+		idMap = dict(ids)
+		jobs = self.writeWMSIds(idMap)
 		log = tempfile.mktemp('.log')
 
 		activity = utils.ActivityLog("checking job status")
@@ -323,7 +324,7 @@ class GridWMS(WMS):
 
 		for data in self._parseStatus(proc.iter(self.opts)):
 			data['reason'] = data.get('reason', '')
-			yield (data['id'], self._statusMap[data['status']], data)
+			yield (idMap[data['id']], data['id'], self._statusMap[data['status']], data)
 
 		retCode = proc.wait()
 		del activity
@@ -345,7 +346,7 @@ class GridWMS(WMS):
 		try:
 			if len(ids) == 1:
 				# For single jobs create single subdir
-				tmpPath = os.path.join(basePath, md5.md5(ids[0]).hexdigest())
+				tmpPath = os.path.join(basePath, md5.md5(ids[0][0]).hexdigest())
 			else:
 				tmpPath = basePath
 			if not os.path.exists(tmpPath):
@@ -353,6 +354,7 @@ class GridWMS(WMS):
 		except:
 			raise RuntimeError("Temporary path '%s' could not be created." % tmpPath)
 
+		idMap = dict(ids)
 		jobs = self.writeWMSIds(ids)
 		log = tempfile.mktemp('.log')
 
@@ -361,9 +363,14 @@ class GridWMS(WMS):
 			tuple(map(utils.shellEscape, [log, jobs, tmpPath])))
 
 		# yield output dirs
+		currentJobNum = None
 		for line in proc.iter(self.opts):
+			line = line.strip()
 			if line.startswith(tmpPath):
-				yield line.strip()
+				yield (currentJobNum, line.strip())
+				currentJobNum = None
+			else:
+				currentJobNum = idMap.get(line, currentJobNum)
 
 		retCode = proc.wait()
 		del activity
@@ -386,8 +393,9 @@ class GridWMS(WMS):
 		if len(ids) == 0:
 			return True
 
-		log = tempfile.mktemp('.log')
+		idMap = dict(ids)
 		jobs = self.writeWMSIds(ids)
+		log = tempfile.mktemp('.log')
 
 		activity = utils.ActivityLog("cancelling jobs")
 		proc = utils.LoggedProcess(self._cancelExec, "--noint --logfile %s -i %s" %
