@@ -13,8 +13,6 @@ class SLURM(LocalWMSApi):
 		self.statusExec = utils.searchPathFind('job_queue')
 		self.cancelExec = utils.searchPathFind('job_cancel')
 
-		self._queue = config.get('local', 'queue', '')
-
 
 	def unknownID(self):
 		return "not in queue !"
@@ -24,12 +22,11 @@ class SLURM(LocalWMSApi):
 		return sandbox
 
 
-	def getSubmitArguments(self, jobNum, sandbox):
+	def getSubmitArguments(self, jobNum, queue, sandbox):
 		# Job name
 		params = ' -J %s' % self.wms.getJobName(jobNum)
 		# Job queue
-		if len(self._queue):
-			params += ' -c %s' % self._queue
+		params += ' -c %s' % queue
 		# Job requirements
 		reqs = dict(self.wms.getRequirements(jobNum))
 		if reqs.has_key(WMS.WALLTIME):

@@ -20,8 +20,6 @@ class SGE(LocalWMSApi):
 		self.statusExec = utils.searchPathFind('qstat')
 		self.cancelExec = utils.searchPathFind('qdel')
 
-		self._queue = config.get('local', 'queue', '')
-
 	def unknownID(self):
 		return "Unknown Job Id"
 
@@ -29,12 +27,11 @@ class SGE(LocalWMSApi):
 		return ""
 
 
-	def getSubmitArguments(self, jobNum, sandbox):
+	def getSubmitArguments(self, jobNum, queue, sandbox):
 		# Job name
 		params = ' -N %s' % self.wms.getJobName(jobNum)
 		# Job queue
-		if len(self._queue):
-			params += ' -q %s' % self._queue
+		params += ' -q %s' % queue
 		# Sandbox
 		params += ' -v SANDBOX=%s' % sandbox
 		# IO paths

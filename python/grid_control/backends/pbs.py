@@ -18,7 +18,6 @@ class PBS(LocalWMSApi):
 		self.statusExec = utils.searchPathFind('qstat')
 		self.cancelExec = utils.searchPathFind('qdel')
 
-		self._queue = config.get('local', 'queue', '').split()
 		self._group = config.get('local', 'group', '')
 
 	def unknownID(self):
@@ -28,12 +27,11 @@ class PBS(LocalWMSApi):
 		return ""
 
 
-	def getSubmitArguments(self, jobNum, sandbox):
+	def getSubmitArguments(self, jobNum, queue, sandbox):
 		# Job name
 		params = ' -N %s' % self.wms.getJobName(jobNum)
 		# Job queue
-		if len(self._queue):
-			params += ' -q %s' % self._queue[random.randint(0, len(self._queue) - 1)]
+		params += ' -q %s' % queue
 		# Job group
 		if len(self._group):
 			params += ' -W group_list=%s' % self._group

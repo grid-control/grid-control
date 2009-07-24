@@ -8,10 +8,13 @@ class LocalWMSApi(AbstractObject):
 		self.config = config
 		self.wms = localWMS
 
+	def getQueues(self):
+		raise AbstractError
+
 	def getArguments(self, jobNum, sandbox):
 		raise AbstractError
 
-	def getSubmitArguments(self, jobNum, sandbox):
+	def getSubmitArguments(self, jobNum, queue, sandbox):
 		raise AbstractError
 
 	def parseSubmitOutput(self, data):
@@ -42,6 +45,8 @@ class LocalWMS(WMS):
 		if self._nameFile != '':
 			tmp = map(str.strip, open(self._nameFile, 'r').readlines())
 			self._source = filter(lambda x: not (x.startswith('#') or x == ''), tmp)
+
+		self._queue = config.get('local', 'queue', '')
 
 
 	def _guessWMS(self):
@@ -91,7 +96,7 @@ class LocalWMS(WMS):
 		jcfg = open(os.path.join(sandbox, '_jobconfig.sh'), 'w')
 		jcfg.writelines(utils.DictFormat().format(env_vars, format = 'export %s%s%s\n'))
 		proc = popen2.Popen3("%s %s %s %s" % (self.api.submitExec,
-			self.api.getSubmitArguments(jobNum, sandbox),
+			self.api.getSubmitArguments(jobNum, self._queue, sandbox),
 			utils.shellEscape(utils.atRoot('share', 'local.sh')),
 			self.api.getArguments(jobNum, sandbox)), True)
 

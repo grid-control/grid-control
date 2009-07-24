@@ -20,8 +20,6 @@ class LSF(LocalWMSApi):
 		self.statusExec = utils.searchPathFind('bjobs')
 		self.cancelExec = utils.searchPathFind('bkill')
 
-		self._queue = config.get('local', 'queue', '')
-
 	def unknownID(self):
 		return "is not found"
 
@@ -29,12 +27,11 @@ class LSF(LocalWMSApi):
 		return sandbox
 
 
-	def getSubmitArguments(self, jobNum, sandbox):
+	def getSubmitArguments(self, jobNum, queue, sandbox):
 		# Job name
 		params = ' -J %s' % self.wms.getJobName(jobNum)
 		# Job queue
-		if len(self._queue):
-			params += ' -q %s' % self._queue
+		params += ' -q %s' % queue
 		# Job time
 		reqs = dict(self.wms.getRequirements(jobNum))
 		if reqs.has_key(WMS.WALLTIME):
