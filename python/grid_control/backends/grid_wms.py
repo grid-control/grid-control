@@ -177,7 +177,7 @@ class GridWMS(WMS):
 		try:
 			fd, jobs = tempfile.mkstemp('.jobids')
 			fp = os.fdopen(fd, 'w')
-			fp.writelines(str.join('\n', map(lambda (jobNum, wmsId): wmsId, ids)))
+			fp.writelines(str.join('\n', map(lambda (wmsId, jobNum): str(wmsId), ids)))
 			fp.close()
 		except:
 			sys.stderr.write("Could not write wms ids to %s." % jobs)
@@ -315,7 +315,7 @@ class GridWMS(WMS):
 			raise StopIteration
 
 		idMap = dict(ids)
-		jobs = self.writeWMSIds(idMap)
+		jobs = self.writeWMSIds(ids)
 		log = tempfile.mktemp('.log')
 
 		activity = utils.ActivityLog("checking job status")
