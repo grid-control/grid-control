@@ -116,7 +116,7 @@ class WMS(AbstractObject):
 
 		for inJobNum, dir in self.getJobsOutput(ids):
 			if dir == None:
-				yield (jobNum, -1, {})
+				yield (inJobNum, -1, {})
 				continue
 
 			accepted = False
