@@ -1,4 +1,6 @@
 #!/bin/bash
+
+export GC_DOCLEANUP="true"
 source run.lib || exit 101
 
 trap abort 0 1 2 3 15

@@ -185,6 +185,7 @@ getscratch() {
 
 # Clean up user area
 cleanup() {
+	[ -z "$GC_DOCLEANUP" ] && return 0
 	debug_helper $FUNCNAME $LINENO
 	[ -d "$MY_LANDINGZONE" ] && cd "$MY_LANDINGZONE"
 	[ -f "$MY_MARKER" ] && rm -Rf "$MY_MARKER" &> /dev/null
@@ -232,8 +233,8 @@ var_replacer() {
 		echo "	gsub(\"__RANDOM__\", int(rand() * 900000000))"
 		echo "	print"
 		echo "}"
-	) > "$MY_SCRATCH/_replace.awk"
-	awk -f "$MY_SCRATCH/_replace.awk"
+	) > "${MY_SCRATCH:-.}/_replace.awk"
+	awk -f "${MY_SCRATCH:-.}/_replace.awk"
 }
 
 # Get used space in mb
