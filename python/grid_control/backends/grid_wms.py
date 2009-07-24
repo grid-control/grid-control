@@ -104,7 +104,7 @@ class GridWMS(WMS):
 
 	def makeJDL(self, fp, job):
 		contents = {
-			'Executable': 'grid.sh',
+			'Executable': 'run.sh',
 			'Arguments': "%d %s" % (job, self.module.getJobArguments(job)),
 			'Environment': utils.DictFormat().format(self.module.getJobConfig(job), format = '%s%s%s'),
 			'StdOutput': 'stdout.txt',

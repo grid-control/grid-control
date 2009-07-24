@@ -1,10 +1,12 @@
 #!/bin/bash
 
+# (VO_CMS_SW_DIR == "") => get from CMSSW_OLD_RELEASETOP
+export VO_CMS_SW_DIR=""
 SANDBOX=${SANDBOX:-$1}
 cd $SANDBOX
 mkdir scratch
 export SCRATCH_DIRECTORY="$SANDBOX/scratch"
 source _jobconfig.sh
-./grid.sh $ARGS
+./run.sh $ARGS
 cd $SANDBOX
 rmdir scratch

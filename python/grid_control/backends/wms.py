@@ -28,7 +28,7 @@ class WMS(AbstractObject):
 
 		tarFile = os.path.join(opts.workDir, 'sandbox.tar.gz')
 
-		self.sandboxIn = [ utils.atRoot('share', 'grid.sh'), utils.atRoot('share', 'run.lib'), tarFile ]
+		self.sandboxIn = [ utils.atRoot('share', 'run.sh'), utils.atRoot('share', 'run.lib'), tarFile ]
 		self.sandboxOut = self.module.getOutFiles() + [ 'stdout.txt', 'stderr.txt', 'jobinfo.txt' ]
 
 		taskConfig = utils.DictFormat(escapeString = True).format(self.module.getTaskConfig())
