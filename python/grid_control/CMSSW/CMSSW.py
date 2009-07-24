@@ -175,13 +175,13 @@ class CMSSW(Module):
 
 
 	# Get job requirements
-	def getRequirements(self, job):
-		reqs = Module.getRequirements(self, job)
+	def getRequirements(self, jobNum):
+		reqs = Module.getRequirements(self, jobNum)
 		if self.useReqs:
 			reqs.append((WMS.MEMBER, 'VO-cms-%s' % self.scramEnv['SCRAM_PROJECTVERSION']))
 			reqs.append((WMS.MEMBER, 'VO-cms-%s' % self.scramArch))
 		if self.dataSplitter != None:
-			reqs.append((WMS.STORAGE, self.dataSplitter.getSitesForJob(job)))
+			reqs.append((WMS.STORAGE, self.dataSplitter.getSitesForJob(jobNum)))
 		return reqs
 
 
@@ -210,13 +210,13 @@ class CMSSW(Module):
 		return './run.cmssw.sh $@'
 
 
-	def getJobArguments(self, job):
+	def getJobArguments(self, jobNum):
 		if self.dataSplitter == None:
 			return str(self.eventsPerJob)
 
-		splitInfo = self.dataSplitter.getSplitInfo(job)
+		splitInfo = self.dataSplitter.getSplitInfo(jobNum)
 		if utils.verbosity() > 0:
-			print "Job number: %d" % job
+			print "Job number: %d" % jobNum
 			DataSplitter.printInfoForJob(splitInfo)
 		return "%d %d %s" % (
 			splitInfo[DataSplitter.NEvents],
