@@ -277,28 +277,30 @@ monitordirlimits() {
 	done
 }
 
-url_exists() {
-	debug_helper $FUNCNAME $LINENO
-	case "$1" in
-		"gsiftp://"*)	TOOL="`getcommand glite-gridftp-exists edg-gridftp-exists lcg-ls`"
-							echo "$TOOL $1"
-							$TOOL $1 > /dev/null;;
-		"file://"*)		echo "test -f ${1#file://}"
-							test -f ${1#file://};;
-		"srm://"*)		TOOL="srm-check-permissions"
-							echo "$TOOL $1"
-							$TOOL $1 > /dev/null;;
-		*)					echo "Unsupported URL: $1" >&2 && fail 106;;
-	esac
+print_and_eval() {
+	[ "$1" == " " ] && shift || checkbin "$1"
+	CMD="$1"
+	shift
+	echo "`basename $1` $@"
+	eval "$1 $@"
+}
+
+print_and_qeval() {
+	[ "$1" == " " ] && shift || checkbin "$1"
+	CMD="$1"
+	shift
+	echo "`basename $1` $@"
+	eval "$1 $@" > /dev/null 2> /dev/null
 }
 
 url_ls() {
 	debug_helper $FUNCNAME $LINENO
 	case "$1" in
-		"gsiftp://"*)
-			GRIDFTP_LS="`getcommand glite-gridftp-ls edg-gridftp-ls`"
-			checkbin ${GRIDFTP_LS:-"glite-gridftp-ls"} || fail 103
-			${GRIDFTP_LS:-"glite-gridftp-ls"} $1 | while read FILE; do
+		"castor://"* | "gsiftp://"*)
+			[ "$1" == "${1#c}" ] && LSCMD="glite-gridftp-ls edg-gridftp-ls" || LSCMD="nsls"
+			checkbin "`getcommand $LSCMD`" 1>&2
+			eval "`getcommand $LSCMD` ${1#castor://}" | while read FILE; do
+				[ -z "$2" ] && echo $FILE && continue
 				case "$FILE" in
 					$2) echo "$FILE" ;;
 					*) ;;
@@ -307,34 +309,38 @@ url_ls() {
 			;;
 		"srm://"*)
 			BASE=''
-			srmls $1 | grep -v "WARNING" | while read TMP FILE; do
+			LSCMD="`getcommand srmls`"
+			checkbin "$LSCMD" 1>&2
+			eval "$LSCMD $1" | grep -v "WARNING" | while read TMP FILE; do
 				[ -z "$BASE" ] && BASE="$FILE" && continue
+				[ -z "$2" ] && echo ${FILE#$BASE} && continue
 				case "${FILE#$BASE}" in
 					$2) [ "$FILE" == "${FILE%/}" ] && echo "${FILE#$BASE}" ;;
 					*) ;;
 				esac
 			done
 			;;
-		"dir://"*)
-			cd ${1#dir://} && ls -d $2 && cd $OLDPWD
-			;;
 		"file://"*)
-			cd ${1#file://} && ls -d $2 && cd $OLDPWD
+			cd "${1#file://}" && ls -1d ${2:-*} && cd "$OLDPWD"
 			;;
 		*)	echo "Unsupported URL: $1" >&2 && fail 106;;
 	esac
 }
 
-url_rm_tool() {
+url_exists() {
 	debug_helper $FUNCNAME $LINENO
-	TOOL="`getcommand glite-gridftp-rm edg-gridftp-rm lcg-rm`"
 	case "$1" in
-		"gsiftp://"*)	;;
-		"file://"*)		TOOL="rm";;
-		"srm://"*)		TOOL="srmrm -2";;
-		*)					echo "Unsupported URL: $1" >&2 && fail 106;;
+		"castor://"*)
+			print_and_qeval "`getcommand nsgetacl`" "/${1#castor://}";;
+		"gsiftp://"*)
+			print_and_qeval "`getcommand glite-gridftp-exists edg-gridftp-exists lcg-ls`" "$1";;
+		"srm://"*)
+			print_and_qeval "`getcommand srm-check-permissions`" "$1";;
+		"file://"*)
+			print_and_qeval " " "test -f ${1#file://}";;
+		*)
+			echo "Unsupported URL: $1" >&2 && fail 106;;
 	esac
-	echo $TOOL
 }
 
 # Remove file from storage element
@@ -342,48 +348,73 @@ url_rm() {
 	debug_helper $FUNCNAME $LINENO
 	for PARAM in `seq 1 $#`; do
 		FILE=${!PARAM}
-		echo "`url_rm_tool $FILE` ${FILE#file://}"
-		`url_rm_tool $FILE` ${FILE#file://}
+		case "$FILE" in
+			"castor://"*)
+				print_and_eval "`getcommand nsrm`" "/${FILE#castor://}";;
+			"gsiftp://"*)
+				print_and_eval "`getcommand glite-gridftp-rm edg-gridftp-rm lcg-rm`" "$FILE";;
+			"srm://"*)
+				print_and_eval "`getcommand srmrm`" "-2 $FILE";;
+			"file://"*)
+				print_and_eval " " "rm ${FILE#file://}";;
+			*)
+				echo "Unsupported URL: $FILE" >&2 && fail 106;;
+		esac
 	done
 }
 
-# Selects best suited copy tool for source -> target
-url_copy_tool() {
-	# TODO: checkbin $TOOL
-	debug_helper $FUNCNAME $LINENO
-	TOOL="globus-url-copy"
-	# TODO: select lcg-cp on non-OSG sites
-	case "$1" in
-		"gsiftp://"*)	;;
-		"file://"*)		FROMFILE='true';;
-		"srm://"*)		echo "srmcp -2 -debug=true -streams_num=1" && return;;
-		*)					echo "Unsupported URL: $1" >&2 && fail 106;;
-	esac
-	case "$2" in
-		"gsiftp://"*)	;;
-		"file://"*)		[ "$FROMFILE" == "true" ] && TOOL="url_copy_tool_file2file";;
-		"srm://"*)		echo "srmcp -2 -debug=true -streams_num=1" && return;;
-		*)					echo "Unsupported URL: $1" >&2 && fail 106;;
-	esac
-	echo $TOOL
-}
-
-url_copy_tool_file2file() {
-	debug_helper $FUNCNAME $LINENO
-	[ ! -f "${1#file://}" ] && fail 106
-	mkdir -p `dirname ${2#file://}`
-	[ -f "${2#file://}" ] && fail 106
-	cp ${1#file://} ${2#file://}
-}
-
-# Copy one file at a time (1) -> (2)
+# Copy one file at a time (1) -> (2) 
 url_copy_single() {
 	debug_helper $FUNCNAME $LINENO
-	echo "`url_copy_tool $1 $2` $1 $2"
-	`url_copy_tool $1 $2` $1 $2
+	case "$1" in
+		"castor://"*)
+			case "$2" in
+				"file://"*)
+					print_and_eval "`getcommand rfcp`" "${1#castor://} ${2#file://}";;
+				*)
+					echo "Unsupported copy from $1 to $2" >&2 && fail 106;;
+			esac;;
+
+		"gsiftp://"*)
+			case "$2" in
+				"gsiftp://"* | "file://"*)
+					print_and_qeval "`getcommand globus-url-copy`" "$1 $2";;
+				"srm://"*)
+					# TODO: select lcg-cp on non-OSG sites
+					print_and_qeval "`getcommand srmcp`" "-2 -debug=true -streams_num=1 $1 $2";;
+				*)
+					echo "Unsupported copy from $1 to $2" >&2 && fail 106;;
+			esac;;
+
+		"srm://"*)
+			case "$2" in
+				"gsiftp://"* | "srm://"* | "file://"*)
+					# TODO: select lcg-cp on non-OSG sites
+					print_and_qeval "`getcommand srmcp`" "-2 -debug=true -streams_num=1 $1 $2";;
+				*)
+					echo "Unsupported copy from $1 to $2" >&2 && fail 106;;
+			esac;;
+
+		"file://"*)
+			case "$2" in
+				"castor://"*)
+					print_and_qeval "`getcommand rfcp`" "${1#file://} ${2#castor://}";;
+				"gsiftp://"*)
+					print_and_qeval "`getcommand globus-url-copy`" "$1 $2";;
+				"srm://"*)
+					# TODO: select lcg-cp on non-OSG sites
+					print_and_qeval "`getcommand srmcp`" "-2 -debug=true -streams_num=1 $1 $2";;
+				"file://"*)
+					print_and_qeval " " "cp ${1#file://} ${2#file://}";;
+				*)
+					echo "Unsupported copy from $1 to $2" >&2 && fail 106;;
+			esac;;
+		*)
+			echo "Unsupported copy from $1 to $2" >&2 && fail 106;;
+	esac
 }
 
-# Copy one file at a time (1) -> (2) 
+# Copy one file at a time (1) -> (2) (overwrite existing files)
 url_copy_single_force() {
 	debug_helper $FUNCNAME $LINENO
 	url_exists $2 && echo "File exists! Delete $2" && url_rm $2
@@ -393,22 +424,23 @@ url_copy_single_force() {
 # Copy serveral files with specified pattern
 url_copy() {
 	debug_helper $FUNCNAME $LINENO
-	#checkbin "globus-url-copy" || fail 103
+	#checkbin "globus-url-copy"
 	FILENAMES="`echo "$3" | var_replacer ''`"
 	echo "Copy $FILENAMES from $1 to $2"
 
-	SOURCE_URL="$1"
 	SOURCE_FILES=""
+	SOURCE_URL="$1"
 	case "$SOURCE_URL" in
-		"gsiftp://"* | "srm://"* | "dir://"*)
+		"castor://"* | "gsiftp://"* | "srm://"* | "dir://"*)
 			# copy from SE
 			if [[ "$FILENAMES" == *\** ]]; then
 				# Wildcard used => url_ls
+				SOURCE_PATTERN="__X__"
 				for PATTERN_1 in "$FILENAMES"; do
 					PATTERN_2="`echo ${SE_INPUT_PATTERN:-__X__} | var_replacer "$PATTERN_1"`"
-					SOURCE_FILES="$SOURCE_FILES `url_ls "$SOURCE_URL" "$PATTERN_2"`"
+					(url_ls "$SOURCE_URL" "$PATTERN_2" > "$MY_SCRATCH/_url_ls.dat") 2>&1
+					SOURCE_FILES="$SOURCE_FILES $(< "$MY_SCRATCH/_url_ls.dat")"
 				done
-				SOURCE_PATTERN="__X__"
 			else
 				SOURCE_PATTERN="${SE_INPUT_PATTERN:-__X__}"
 				SOURCE_FILES="$FILENAMES"
@@ -433,7 +465,7 @@ url_copy() {
 
 	TARGET_URL="$2"
 	case "$TARGET_URL" in
-		"gsiftp://"* | "srm://"* | "dir://"*)
+		"castor://"* | "gsiftp://"* | "srm://"* | "dir://"*)
 			# copy to SE
 			TARGET_PATTERN="${SE_OUTPUT_PATTERN:-__X__}"
 			TARGET_URL="`echo "$TARGET_URL" | sed -e 's@dir://@file://@'`"
