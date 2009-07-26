@@ -16,9 +16,9 @@ class Report:
 		elif opts.continuous:
 			self.summary()
 		if opts.reportSite:
-			self.siteReport(opts.reportSite)
+			self.siteReport(opts.reportSite, False)
 		if opts.reportTime:
-			self.timeReport(opts.reportTime)
+			self.siteReport(opts.reportTime, True)
 		if opts.report or opts.reportSite or opts.reportTime:
 			return True
 		return False
@@ -112,19 +112,11 @@ class Report:
 				(site, wn, queue) = getDest(job.history[attempt])
 				
 				# Sort job into category
+				cats = {Job.SUCCESS: 'SUCCESS', Job.FAILED: 'FAILED', Job.RUNNING: 'RUNNING', Job.DONE: 'RUNNING'}
 				if attempt == job.attempt:
-					if job.state == Job.SUCCESS:
-						incstat(statinfo, site, wn, queue, 'SUCCESS', 'COUNT', 1)
-						incstat(statinfo, site, wn, queue, 'SUCCESS', 'TIME', int(job.get('runtime')))
-					elif job.state == Job.FAILED:
-						incstat(statinfo, site, wn, queue, 'FAILED', 'COUNT', 1)
-						incstat(statinfo, site, wn, queue, 'FAILED', 'TIME', int(job.get('runtime')))
-					elif job.state in (Job.RUNNING, Job.DONE):
-						incstat(statinfo, site, wn, queue, 'RUNNING', 'COUNT', 1)
-						incstat(statinfo, site, wn, queue, 'RUNNING', 'TIME', int(job.get('runtime')))
-					else:
-						incstat(statinfo, site, wn, queue, 'QUEUED', 'COUNT', 1)
-						incstat(statinfo, site, wn, queue, 'QUEUED', 'TIME', int(job.get('runtime')))
+					jobcat = cats.get(job.state, 'QUEUED')
+					incstat(statinfo, site, wn, queue, jobcat, 'COUNT', 1)
+					incstat(statinfo, site, wn, queue, jobcat, 'TIME', int(job.get('runtime')))
 				else:
 					incstat(statinfo, site, wn, queue, 'FAILED', 'COUNT', 1)
 					incstat(statinfo, site, wn, queue, 'FAILED', 'TIME', int(job.get('runtime')))
@@ -139,8 +131,7 @@ class Report:
 		print
 
 		states = ['QUEUED', 'RUNNING', 'FAILED', 'SUCCESS']
-		
-#		maxlen = max(maxlen, len((lambda x: details and x or Report.getSite(x))(wn)))
+
 		(maxlen_detail, statinfo) = self.getWNInfos()
 		maxlen = 22
 		if details > 2:
@@ -207,10 +198,6 @@ class Report:
 
 		print '====%s====' % (maxlen * '=') + 4 * ('+' + 14 * '=')
 		print_stats('', statinfo, maxlen, showtime, rate_site, time_site)
-
-
-	def timeReport(self, details):
-		self.siteReport(details, True)
 
 
 	def summary(self):

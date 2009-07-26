@@ -3,15 +3,20 @@ BUGS:
 
 FEATURE REQUESTS:
 ===================================================
-1. Castor support
-2. File as parameter source
+1. Run on host
+2. Report from Module
+3. Local queue selection
 
 DONE:
 ===================================================
+X. File as parameter source
+	(FileParaMod)
+X. Castor support
+	(with castor:// prefix)
 X. handling of "memory exceeded" errors in local batch system
 	(fixed?)
 X. Parameterized jobs
-	(SimpleParaMod, LinkedParaMod module)
+	(SimpleParaMod, LinkedParaMod, FileParaMod module)
 X. Local batch system support
 	(PBS, LSF, SGE, SLURM)
 X. Multiple datasets

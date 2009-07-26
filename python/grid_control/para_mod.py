@@ -1,4 +1,4 @@
-import os.path, copy
+import os.path, copy, csv
 from grid_control import Module, AbstractError
 
 # Parameterized Module
@@ -59,6 +59,17 @@ class SimpleParaMod(ParaMod):
 	def getParams(self):
 		# returns list of dictionaries
 		return map(lambda x: {self.paraName: x}, map(str.strip, self.paraValues.split()))
+
+
+class FileParaMod(ParaMod):
+	def __init__(self, config, opts, proxy):
+		ParaMod.__init__(self, config, opts, proxy)
+		self.path = config.getPath('ParaMod', 'parameter source')
+		sniffed = csv.Sniffer().sniff(open(self.path).read(1024))
+		self.dialect = config.get('ParaMod', 'parameter source dialect', sniffed)
+
+	def getParams(self):
+		return list(csv.DictReader(open(self.path), dialect = self.dialect))
 
 
 class LinkedParaMod(SimpleParaMod):
