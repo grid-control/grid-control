@@ -281,16 +281,16 @@ print_and_eval() {
 	[ "$1" == " " ] && shift || checkbin "$1"
 	CMD="$1"
 	shift
-	echo "`basename $1` $@"
-	eval "$1 $@"
+	echo "`basename $CMD` $@"
+	eval "$CMD $@"
 }
 
 print_and_qeval() {
 	[ "$1" == " " ] && shift || checkbin "$1"
 	CMD="$1"
 	shift
-	echo "`basename $1` $@"
-	eval "$1 $@" > /dev/null 2> /dev/null
+	echo "`basename $CMD` $@"
+	eval "$CMD $@" > /dev/null 2> /dev/null
 }
 
 url_ls() {
