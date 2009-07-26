@@ -21,7 +21,7 @@ process.load('Configuration/EventContent/EventContent_cff')
 
 process.configurationMetadata = cms.untracked.PSet(
     version = cms.untracked.string('$Revision: 1.7 $'),
-    annotation = cms.untracked.string('Summer09: Pythia6 generation of QCD events, 10TeV, D6T tune, pthat > 80 GeV'),
+    annotation = cms.untracked.string('Summer09: Pythia6 generation of QCD events, 10TeV, D6T tune, pthat > __PTHAT__ GeV'),
     name = cms.untracked.string('$Source: /cvs_server/repositories/CMSSW/CMSSW/Configuration/GenProduction/python/PYTHIA6_QCD_Pthat.sh,v $')
 )
 process.maxEvents = cms.untracked.PSet(
@@ -34,9 +34,10 @@ process.options = cms.untracked.PSet(
 process.source = cms.Source("EmptySource")
 
 # Output definition
+#process.output = cms.OutputModule("SewerModule", shouldPass = cms.int32(__MAX_EVENTS__), name = cms.string("sewer"),
 process.output = cms.OutputModule("PoolOutputModule",
     outputCommands = process.RAWSIMEventContent.outputCommands,
-    fileName = cms.untracked.string('OUT.root'),
+    fileName = cms.untracked.string('__SE_OUTPUT_FILES__'),
     dataset = cms.untracked.PSet(
         dataTier = cms.untracked.string('GEN'),
         filterName = cms.untracked.string('')
@@ -63,7 +64,7 @@ process.generator = cms.EDFilter("Pythia6GeneratorFilter",
             'PARJ(71)=10 .  ! for which ctau  10 mm', 
             'MSTP(2)=1      ! which order running alphaS', 
             'MSTP(33)=0     ! no K factors in hard cross sections', 
-            'MSTP(51)=10042     ! CTEQ6L1 structure function chosen', 
+            'MSTP(51)=10042 ! CTEQ6L1 structure function chosen', 
             'MSTP(52)=2     ! work with LHAPDF', 
             'MSTP(81)=1     ! multiple parton interactions 1 is Pythia default', 
             'MSTP(82)=4     ! Defines the multi-parton model', 
@@ -73,11 +74,11 @@ process.generator = cms.EDFilter("Pythia6GeneratorFilter",
             'PARP(83)=0.5   ! Multiple interactions: matter distrbn parameter', 
             'PARP(84)=0.4   ! Multiple interactions: matter distribution parameter', 
             'PARP(90)=0.16  ! Multiple interactions: rescaling power', 
-            'PARP(67)=2.5    ! amount of initial-state radiation', 
-            'PARP(85)=1.0  ! gluon prod. mechanism in MI', 
-            'PARP(86)=1.0  ! gluon prod. mechanism in MI', 
-            'PARP(62)=1.25   ! ', 
-            'PARP(64)=0.2    ! ', 
+            'PARP(67)=2.5   ! amount of initial-state radiation', 
+            'PARP(85)=1.0   ! gluon prod. mechanism in MI', 
+            'PARP(86)=1.0   ! gluon prod. mechanism in MI', 
+            'PARP(62)=1.25  ! ', 
+            'PARP(64)=0.2   ! ', 
             'MSTP(91)=1     !', 
             'PARP(91)=2.1   ! kt distribution', 
             'PARP(93)=15.0  ! '),

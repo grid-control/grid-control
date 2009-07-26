@@ -45,7 +45,7 @@ def main(args):
 
 	try:
 		taskInfo = utils.DictFormat(" = ").parse(open(os.path.join(workDir, 'task.dat')))
-		provider = DataProvider.loadState(ConfigDummy(), workDir, 'prod.dbs')
+		provider = DataProvider.loadState(ConfigDummy(), workDir, 'production.dbs')
 		try:
 			blocks = provider.getBlocks()
 		except:
