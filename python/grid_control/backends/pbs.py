@@ -81,19 +81,18 @@ class PBS(LocalWMSApi):
 
 	
 	def getQueues(self):
-		finite = lambda e: e[1] != '--'
+		defined = lambda e: e[1] != '--'
 		identity = lambda e: e
 		
 		keys = ('MEMORY', 'CPUTIME', 'WALLTIME')
-		parser = dict(zip(keys, (identity,
-					 utils.parseTime,
-					 utils.parseTime)))
+		func = (identity, utils.parseTime, utils.parseTime)
+		parser = dict(zip(keys, func))
 		
 		queues = {}
 		output = os.popen('qstat -q').readlines()[5:-2]
 		for line in output:
-			d = map(str.strip, line.split()[:4])
-			queues[d[0]] = dict(
-				map(lambda e: (e[0], parser[e[0]](e[1])),
-				    filter(finite, zip(keys, d[1:]))))
+			fields = map(str.strip, line.split()[:4])
+			queues[fields[0]] = dict(
+				map(lambda key, value: (key, parser[key](value)),
+					filter(defined, zip(keys, fields[1:]))))
 		return queues
