@@ -298,10 +298,10 @@ print_and_qeval() {
 url_ls() {
 	debug_helper $FUNCNAME $LINENO
 	case "$1" in
-		"castor://"* | "gsiftp://"*)
+		"rfio://"* | "gsiftp://"*)
 			[ "$1" == "${1#c}" ] && LSCMD="glite-gridftp-ls edg-gridftp-ls" || LSCMD="nsls"
 			checkbin "`getcommand $LSCMD`" 1>&2
-			eval "`getcommand $LSCMD` ${1#castor://}" | while read FILE; do
+			eval "`getcommand $LSCMD` ${1#rfio://}" | while read FILE; do
 				[ -z "$2" ] && echo $FILE && continue
 				case "$FILE" in
 					$2) echo "$FILE" ;;
@@ -332,8 +332,8 @@ url_ls() {
 url_exists() {
 	debug_helper $FUNCNAME $LINENO
 	case "$1" in
-		"castor://"*)
-			print_and_qeval "`getcommand nsgetacl`" "/${1#castor://}";;
+		"rfio://"*)
+			print_and_qeval "`getcommand nsgetacl`" "/${1#rfio://}";;
 		"gsiftp://"*)
 			print_and_qeval "`getcommand glite-gridftp-exists edg-gridftp-exists lcg-ls`" "$1";;
 		"srm://"*)
@@ -351,8 +351,8 @@ url_rm() {
 	for PARAM in `seq 1 $#`; do
 		FILE=${!PARAM}
 		case "$FILE" in
-			"castor://"*)
-				print_and_eval "`getcommand nsrm`" "/${FILE#castor://}";;
+			"rfio://"*)
+				print_and_eval "`getcommand nsrm`" "/${FILE#rfio://}";;
 			"gsiftp://"*)
 				print_and_eval "`getcommand glite-gridftp-rm edg-gridftp-rm lcg-rm`" "$FILE";;
 			"srm://"*)
@@ -369,10 +369,10 @@ url_rm() {
 url_copy_single() {
 	debug_helper $FUNCNAME $LINENO
 	case "$1" in
-		"castor://"*)
+		"rfio://"*)
 			case "$2" in
 				"file://"*)
-					print_and_eval "`getcommand rfcp`" "${1#castor://} ${2#file://}";;
+					print_and_eval "`getcommand rfcp`" "${1#rfio://} ${2#file://}";;
 				*)
 					echo "Unsupported copy from $1 to $2" >&2 && fail 106;;
 			esac;;
@@ -399,8 +399,8 @@ url_copy_single() {
 
 		"file://"*)
 			case "$2" in
-				"castor://"*)
-					print_and_qeval "`getcommand rfcp`" "${1#file://} ${2#castor://}";;
+				"rfio://"*)
+					print_and_qeval "`getcommand rfcp`" "${1#file://} ${2#rfio://}";;
 				"gsiftp://"*)
 					print_and_qeval "`getcommand globus-url-copy`" "$1 $2";;
 				"srm://"*)
@@ -433,7 +433,7 @@ url_copy() {
 	SOURCE_FILES=""
 	SOURCE_URL="$1"
 	case "$SOURCE_URL" in
-		"castor://"* | "gsiftp://"* | "srm://"* | "dir://"*)
+		"rfio://"* | "gsiftp://"* | "srm://"* | "dir://"*)
 			# copy from SE
 			if [[ "$FILENAMES" == *\** ]]; then
 				# Wildcard used => url_ls
@@ -467,7 +467,7 @@ url_copy() {
 
 	TARGET_URL="$2"
 	case "$TARGET_URL" in
-		"castor://"* | "gsiftp://"* | "srm://"* | "dir://"*)
+		"rfio://"* | "gsiftp://"* | "srm://"* | "dir://"*)
 			# copy to SE
 			TARGET_PATTERN="${SE_OUTPUT_PATTERN:-__X__}"
 			TARGET_URL="`echo "$TARGET_URL" | sed -e 's@dir://@file://@'`"
