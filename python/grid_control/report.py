@@ -46,12 +46,9 @@ class Report:
 
 
 	def modReport(self, details, module):
-		print
-		print '-----------------------------------------------------------------'
-		print 'MODULE SUMMARY:'
-		print '---------------'
 		reports = {}
 		states = ['QUEUED', 'RUNNING', 'FAILED', 'SUCCESS']
+		all = dict(map(lambda x: (x, 0), states))
 		order = []
 		head = []
 		for jobNum in self.jobs:
@@ -66,9 +63,16 @@ class Report:
 						order.append(str(report))
 					if not key in head:
 						head.append(key)
-			reports[str(report)][self.getJobCategory(self.allJobs.get(jobNum))] += 1
+			cat = self.getJobCategory(self.allJobs.get(jobNum))
+			reports[str(report)][cat] += 1
+			all[cat] += 1
 		print
-		utils.printTabular(map(lambda x: (x, x), head + states), map(lambda x: reports[x], order))
+		print '-----------------------------------------------------------------'
+		print 'MODULE SUMMARY:'
+		print '---------------'
+		print
+		infos = map(lambda x: reports[x], order) + [None, all]
+		utils.printTabular(map(lambda x: (x, x), head + states), infos)
 		print
 
 
