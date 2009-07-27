@@ -420,8 +420,8 @@ def printTabular(head, entries, format = lambda x: x):
 			maxlen[id] = max(maxlen.get(id, len(name)), len(str(entry[id])))
 
 	formatlist = map(lambda (id, name): "%%%ds" % maxlen[id], head)
-	print(" %s " % (str.join(" | ", formatlist) % format(tuple(map(lambda (id, name): name.center(maxlen[id]), head)))))
-	for entry in [None] + entries:
+	headentry = dict(map(lambda (id, name): (id, name.center(maxlen[id])), head))
+	for entry in [headentry, None] + entries:
 		if entry == None:
 			print("=%s=" % (str.join("=+=", formatlist) % tuple(map(lambda (id, name): '=' * maxlen[id], head))))
 		else:
