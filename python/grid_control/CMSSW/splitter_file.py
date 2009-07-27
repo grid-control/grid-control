@@ -11,7 +11,7 @@ class FileBoundarySplitter(DataSplitter):
 		result = []
 		for block in blocks:
 			start = 0
-			while start < len(a):
+			while start < len(block[DataProvider.FileList]):
 				job = dict()
 				job[DataSplitter.Skipped] = 0
 				job[DataSplitter.SEList] = block[DataProvider.SEList]
