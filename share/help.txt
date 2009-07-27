@@ -19,6 +19,7 @@
 	-T, --time-report        Show time report
 	                            -RR  / -TT  (broken down into site, CE)
 	                            -RRR / -TTT (broken down into site, CE, queue)
+	-M, --module-report      Show module specific job status report
 	-S, --seed <args>        Override seed specified in the config file e.g:
 	                            -S 1234,423,7856
 	                            -SS (= generate 10 random seeds)

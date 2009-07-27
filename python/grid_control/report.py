@@ -9,7 +9,7 @@ class Report:
 			self.jobs = jobs
 
 
-	def show(self, opts):
+	def show(self, opts, module = None):
 		if opts.report:
 			self.details()
 			self.summary()
@@ -19,7 +19,9 @@ class Report:
 			self.siteReport(opts.reportSite, False)
 		if opts.reportTime:
 			self.siteReport(opts.reportTime, True)
-		if opts.report or opts.reportSite or opts.reportTime:
+		if opts.reportMod:
+			self.modReport(opts.reportMod, module)
+		if opts.report or opts.reportSite or opts.reportTime or opts.reportMod:
 			return True
 		return False
 
