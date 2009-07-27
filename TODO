@@ -3,11 +3,12 @@ BUGS:
 
 FEATURE REQUESTS:
 ===================================================
-1. Report from Module
-2. Local queue selection
+1. Local queue selection
 
 DONE:
 ===================================================
+X. Report from Module
+	(--module-report)
 X. File as parameter source
 	(FileParaMod)
 X. Castor support
