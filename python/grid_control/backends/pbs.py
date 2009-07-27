@@ -31,7 +31,8 @@ class PBS(LocalWMSApi):
 		# Job name
 		params = ' -N %s' % self.wms.getJobName(jobNum)
 		# Job queue
-		params += ' -q %s' % queue
+		if queue != '':
+			params += ' -q %s' % queue
 		# Job group
 		if len(self._group):
 			params += ' -W group_list=%s' % self._group

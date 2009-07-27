@@ -31,7 +31,8 @@ class LSF(LocalWMSApi):
 		# Job name
 		params = ' -J %s' % self.wms.getJobName(jobNum)
 		# Job queue
-		params += ' -q %s' % queue
+		if queue != '':
+			params += ' -q %s' % queue
 		# Job time
 		reqs = dict(self.wms.getRequirements(jobNum))
 		if reqs.has_key(WMS.WALLTIME):

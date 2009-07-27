@@ -31,7 +31,8 @@ class SGE(LocalWMSApi):
 		# Job name
 		params = ' -N %s' % self.wms.getJobName(jobNum)
 		# Job queue
-		params += ' -q %s' % queue
+		if queue != '':
+			params += ' -q %s' % queue
 		# Sandbox
 		params += ' -v SANDBOX=%s' % sandbox
 		# IO paths

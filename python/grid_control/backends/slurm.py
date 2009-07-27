@@ -26,7 +26,8 @@ class SLURM(LocalWMSApi):
 		# Job name
 		params = ' -J %s' % self.wms.getJobName(jobNum)
 		# Job queue
-		params += ' -c %s' % queue
+		if queue != '':
+			params += ' -c %s' % queue
 		# Job requirements
 		reqs = dict(self.wms.getRequirements(jobNum))
 		if reqs.has_key(WMS.WALLTIME):
