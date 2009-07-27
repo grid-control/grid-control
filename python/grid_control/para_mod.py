@@ -41,6 +41,9 @@ class ParaMod(Module):
 			maxJobs = self.baseJobs
 		return max(1, maxJobs) * self.getParamSpace()
 
+	def report(self, jobNum):
+		return self.getParams()[jobNum % self.getParamSpace()]
+
 	def getParamSpace(self):
 		if self.paramSpace == None:
 			self.paramSpace = len(self.getParams())

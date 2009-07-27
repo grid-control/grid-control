@@ -235,3 +235,7 @@ class Module(AbstractObject):
 
 	def getMaxJobs(self):
 		return None
+
+
+	def report(self, jobNum):
+		return {" ": "All jobs"}

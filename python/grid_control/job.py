@@ -95,7 +95,11 @@ class Job:
 
 
 	def report(self):
-		return (self.states[self.state], self.dict.get('dest', 'N/A'), self.wmsId)
+		return {
+			'Status': self.states[self.state],
+			'Destination': self.dict.get('dest', 'N/A'),
+			'Id': self.wmsId
+		}
 
 
 	def statefilter(self, filterExpr):

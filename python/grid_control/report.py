@@ -1,6 +1,7 @@
 from grid_control import Job, RuntimeError, utils
 
 class Report:
+
 	def __init__(self, jobs, allJobs):
 		self.allJobs = allJobs
 		if hasattr(jobs, 'all'):
@@ -27,39 +28,44 @@ class Report:
 
 
 	def details(self):
+		reports = []
+		for jobNum in self.jobs:
+			report = self.allJobs.get(jobNum).report()
+			report.update({'Job': jobNum})
+			reports.append(report)
+			if report["Destination"] != 'N/A':
+				reports.append({"Id": report["Destination"]})
+		print
+		utils.printTabular([("Job", "Job"), ("Status", "Status"), ("Id", "Id / Destination")], reports)
+		print
+
+
+	def getJobCategory(self, job):
+		cats = {Job.SUCCESS: 'SUCCESS', Job.FAILED: 'FAILED', Job.RUNNING: 'RUNNING', Job.DONE: 'RUNNING'}
+		return cats.get(job.state, 'QUEUED')
+
+
+	def modReport(self, details, module):
+		print
+		print '-----------------------------------------------------------------'
+		print 'MODULE SUMMARY:'
+		print '---------------'
 		reports = {}
-		maxWidth = [6, 20, 0]
-
-		# Get the maximum width of each column
-		for id in self.jobs:
-			job = self.allJobs.get(id)
-			thisreport = job.report()
-			reports[id] = thisreport
-			for i in range(3):
-				maxWidth[i] = max(maxWidth[i], len(thisreport[i]))
-
-		# Print table header
-		print '\n%4s %-*s %s' % ('Job', maxWidth[0], 'Status', 'Destination / Job ID')
-
-		# Calculate width of horizontal lines
-		if maxWidth[1] > maxWidth[2]:
-		        lineWidth = maxWidth[0]+maxWidth[1]+8
-		else:
-		        lineWidth = maxWidth[0]+maxWidth[2]+6
-		line = '-'*lineWidth
-		print line
-
-		# Calculate spacer width for second row
-		spacer = ' '*(maxWidth[0]+5)
-
-		# Get information of each job
-		if not len(self.jobs):
-			print ' No jobs found!'
-		for id in self.jobs:
-			print '%4d %-*s %s /' % (id, maxWidth[0], reports[id][0], reports[id][1])
-			print '%s %-*s' % (spacer, maxWidth[0]+maxWidth[2]+6, reports[id][2])
-
-		print line + '\n'
+		states = ['QUEUED', 'RUNNING', 'FAILED', 'SUCCESS']
+		head = {}
+		for jobNum in self.jobs:
+			report = module.report(jobNum)
+			if not reports.has_key(str(report)):
+				reports[str(report)] = dict(map(lambda x: (x, 0), states))
+				for key, value in report.iteritems():
+					if not key:
+						continue
+					reports[str(report)][key] = value
+					head[key] = key
+			reports[str(report)][self.getJobCategory(self.allJobs.get(jobNum))] += 1
+		print
+		utils.printTabular(map(lambda x: (x, x), head.keys() + states), reports.values())
+		print
 
 
 	def getWNInfos(self):
@@ -114,11 +120,9 @@ class Report:
 				(site, wn, queue) = getDest(job.history[attempt])
 				
 				# Sort job into category
-				cats = {Job.SUCCESS: 'SUCCESS', Job.FAILED: 'FAILED', Job.RUNNING: 'RUNNING', Job.DONE: 'RUNNING'}
 				if attempt == job.attempt:
-					jobcat = cats.get(job.state, 'QUEUED')
-					incstat(statinfo, site, wn, queue, jobcat, 'COUNT', 1)
-					incstat(statinfo, site, wn, queue, jobcat, 'TIME', int(job.get('runtime')))
+					incstat(statinfo, site, wn, queue, self.getJobCategory(job), 'COUNT', 1)
+					incstat(statinfo, site, wn, queue, self.getJobCategory(job), 'TIME', int(job.get('runtime')))
 				else:
 					incstat(statinfo, site, wn, queue, 'FAILED', 'COUNT', 1)
 					incstat(statinfo, site, wn, queue, 'FAILED', 'TIME', int(job.get('runtime')))
@@ -182,7 +186,6 @@ class Report:
 		padding = ' ' * maxlen
 	
 		sites = filter(lambda x: not x in states, statinfo.keys())
-		sites_num = len(sites) - 1
 		for num, site in enumerate(utils.sorted(sites)):
 			print_stats(site, statinfo[site], maxlen, showtime, rate_site, time_site)
 
@@ -195,7 +198,7 @@ class Report:
 						queues = filter(lambda x: not x in states, statinfo[site][wn].keys())
 						for queue in utils.sorted(queues):
 							print_stats(queue, statinfo[site][wn][queue], maxlen, showtime, rate_queue, time_queue)
-			if num < sites_num:
+			if num < len(sites) - 1:
 				print '----%s----' % (maxlen * '-') + 4 * ('+' + 14 * '-')
 
 		print '====%s====' % (maxlen * '=') + 4 * ('+' + 14 * '=')
