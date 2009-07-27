@@ -3,9 +3,8 @@ BUGS:
 
 FEATURE REQUESTS:
 ===================================================
-1. Run on host
-2. Report from Module
-3. Local queue selection
+1. Report from Module
+2. Local queue selection
 
 DONE:
 ===================================================
@@ -18,7 +17,7 @@ X. handling of "memory exceeded" errors in local batch system
 X. Parameterized jobs
 	(SimpleParaMod, LinkedParaMod, FileParaMod module)
 X. Local batch system support
-	(PBS, LSF, SGE, SLURM)
+	(PBS, LSF, SGE, SLURM, Host)
 X. Multiple datasets
 X. Please check bugfix for SUBMITTED status in glite.py, rev. r763
 	(seems ok)

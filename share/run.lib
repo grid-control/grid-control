@@ -224,14 +224,15 @@ var_replacer() {
 	(
 		echo "BEGIN{srand($MY_SEED)}"
 		echo "{"
-		[ -n "$1" ] && echo "	gsub(\"__X__\", \"$1\")"
 		[ -n "$1" ] && echo "	gsub(\"@X@\", \"$1\")"
+		[ -n "$1" ] && echo "	gsub(\"__X__\", \"$1\")"
 		[ -f "$MY_SCRATCH/_varmap.dat" ] && cat "$MY_SCRATCH/_varmap.dat" |
 		while read USER_VARNAME REAL_VARNAME; do
 			VARVALUE=${!REAL_VARNAME}
 			echo "	gsub(\"@${USER_VARNAME}@\", \"${VARVALUE//\"/\\\"}\")"
 			echo "	gsub(\"__${USER_VARNAME}__\", \"${VARVALUE//\"/\\\"}\")"
 		done
+		echo "	gsub(\"@RANDOM@\", int(rand() * 900000000))"
 		echo "	gsub(\"__RANDOM__\", int(rand() * 900000000))"
 		echo "	print"
 		echo "}"
@@ -338,7 +339,7 @@ url_exists() {
 		"srm://"*)
 			print_and_qeval "`getcommand srm-check-permissions`" "$1";;
 		"file://"*)
-			print_and_qeval " " "test -f ${1#file://}";;
+			print_and_qeval " " "test" "-f ${1#file://}";;
 		*)
 			echo "Unsupported URL: $1" >&2 && fail 106;;
 	esac
@@ -357,7 +358,7 @@ url_rm() {
 			"srm://"*)
 				print_and_eval "`getcommand srmrm`" "-2 $FILE";;
 			"file://"*)
-				print_and_eval " " "rm ${FILE#file://}";;
+				print_and_eval " " "rm" "${FILE#file://}";;
 			*)
 				echo "Unsupported URL: $FILE" >&2 && fail 106;;
 		esac
@@ -406,7 +407,7 @@ url_copy_single() {
 					# TODO: select lcg-cp on non-OSG sites
 					print_and_qeval "`getcommand srmcp`" "-2 -debug=true -streams_num=1 $1 $2";;
 				"file://"*)
-					print_and_qeval " " "cp ${1#file://} ${2#file://}";;
+					print_and_qeval " " "cp" "-b ${1#file://} ${2#file://}";;
 				*)
 					echo "Unsupported copy from $1 to $2" >&2 && fail 106;;
 			esac;;
