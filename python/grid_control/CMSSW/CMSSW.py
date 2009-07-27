@@ -229,3 +229,12 @@ class CMSSW(Module):
 		if self.dataSplitter == None:
 			raise ConfigError('Must specifiy number of jobs or dataset!')
 		return self.dataSplitter.getNumberOfJobs()
+
+
+	def report(self, jobNum):
+		if self.dataSplitter == None:
+			return Module.report(self, jobNum)
+
+		info = self.dataSplitter.getSplitInfo(jobNum)
+		name = info.get(DataSplitter.Nickname, info.get(DataSplitter.Dataset, None))
+		return { "Dataset": name }

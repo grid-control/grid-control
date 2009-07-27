@@ -52,7 +52,8 @@ class Report:
 		print '---------------'
 		reports = {}
 		states = ['QUEUED', 'RUNNING', 'FAILED', 'SUCCESS']
-		head = {}
+		order = []
+		head = []
 		for jobNum in self.jobs:
 			report = module.report(jobNum)
 			if not reports.has_key(str(report)):
@@ -61,10 +62,13 @@ class Report:
 					if not key:
 						continue
 					reports[str(report)][key] = value
-					head[key] = key
+					if not str(report) in order:
+						order.append(str(report))
+					if not key in head:
+						head.append(key)
 			reports[str(report)][self.getJobCategory(self.allJobs.get(jobNum))] += 1
 		print
-		utils.printTabular(map(lambda x: (x, x), head.keys() + states), reports.values())
+		utils.printTabular(map(lambda x: (x, x), head + states), map(lambda x: reports[x], order))
 		print
 
 
