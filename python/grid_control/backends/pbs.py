@@ -78,3 +78,14 @@ class PBS(LocalWMSApi):
 
 	def getCancelArgument(self, wmsIds):
 		return str.join(" ", wmsIds)
+
+	
+	def getQueues(self):
+		keys = ('MEMORY', 'CPUTIME', 'WALLTIME')
+		finite = lambda e: e[1] != '--'
+		queues = {}
+		output = os.popen('qstat -q').readlines()[5:-2]
+		for line in output:
+			d = map(str.strip, line.split()[:4])
+			queues[d[0]] = dict(filter(finite, zip(keys, d[1:])))
+		return queues
