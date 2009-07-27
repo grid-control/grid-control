@@ -408,3 +408,21 @@ def lenSplit(list, maxlen):
 			tmp = [item]
 			clen = len(item)
 	yield tmp
+
+
+def printTabular(head, entries, format = lambda x: x):
+	maxlen = {}
+	head = [ x for x in head ]
+	entries = [ x for x in entries ]
+
+	for entry in filter(lambda x: x, entries):
+		for id, name in head:
+			maxlen[id] = max(maxlen.get(id, len(name)), len(str(entry[id])))
+
+	formatlist = map(lambda (id, name): "%%%ds" % maxlen[id], head)
+	print(" %s " % (str.join(" | ", formatlist) % format(tuple(map(lambda (id, name): name.center(maxlen[id]), head)))))
+	for entry in [None] + entries:
+		if entry == None:
+			print("=%s=" % (str.join("=+=", formatlist) % tuple(map(lambda (id, name): '=' * maxlen[id], head))))
+		else:
+			print(" %s " % (str.join(" | ", formatlist) % format(tuple(map(lambda (id, name): entry[id], head)))))

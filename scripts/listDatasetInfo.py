@@ -11,23 +11,6 @@ import time
 
 _verbosity = 0
 
-def printTabular(head, entries, format = lambda x: x):
-	maxlen = {}
-	head = [ x for x in head ]
-	entries = [ x for x in entries ]
-
-	for entry in entries:
-		for id, name in head:
-			maxlen[id] = max(maxlen.get(id, len(name)), len(str(entry[id])))
-
-	formatlist = map(lambda (id, name): "%%%ds" % maxlen[id], head)
-	print(" %s " % (str.join(" | ", formatlist) % tuple(map(lambda (id, name): name.center(maxlen[id]), head))))
-	print("=%s=" % (str.join("=+=", formatlist) % tuple(map(lambda (id, name): '=' * maxlen[id], head))))
-
-	for entry in entries:
-		print(" %s " % (str.join(" | ", formatlist) % format(tuple(map(lambda (id, name): entry[id], head)))))
-
-
 def main(args):
 	parser = optparse.OptionParser()
 	parser.add_option("-l", "--list-datasets", dest="listdatasets", default=False, action="store_true")
@@ -87,27 +70,30 @@ def main(args):
 
 	if opts.listdatasets:
 		infos = {}
-		infos['Sum'] = {
+		infosum = {
 			DataProvider.NEvents : 0,
 			DataProvider.Dataset : 'Sum'
 		}
+		order = []
 		for block in blocks:
 			blockID = block.get(DataProvider.Dataset, '')
 			if not infos.get(blockID, None):
+				order.append(blockID)
 				infos[blockID] = {
 					DataProvider.NEvents : 0,
 					DataProvider.Dataset : block[DataProvider.Dataset]
 				}
 			infos[blockID][DataProvider.NEvents] += block[DataProvider.NEvents]
-			infos['Sum'][DataProvider.NEvents] += block[DataProvider.NEvents]
-		printTabular([(DataProvider.Dataset, "Dataset"), (DataProvider.NEvents, "Events")], infos.itervalues())
+			infosum[DataProvider.NEvents] += block[DataProvider.NEvents]
+		utils.printTabular([(DataProvider.Dataset, "Dataset"), (DataProvider.NEvents, "Events")],
+			map(lambda x: infos[x], order) + [None, infosum])
 
 	if opts.listfiles:
 		for block in blocks:
 			if len(datasets) > 1:
 				print "Dataset: %s" % block[DataProvider.Dataset]
 			print "Blockname: %s" % block[DataProvider.BlockName]
-			printTabular([(DataProvider.lfn, "Filename"), (DataProvider.NEvents, "Events")], block[DataProvider.FileList])
+			utils.printTabular([(DataProvider.lfn, "Filename"), (DataProvider.NEvents, "Events")], block[DataProvider.FileList])
 			print
 
 	if opts.liststorage:
@@ -122,7 +108,7 @@ def main(args):
 					print "\t%s" % se
 
 	if opts.listblocks:
-		printTabular(headerbase + [(DataProvider.BlockName, "Block"), (DataProvider.NEvents, "Events")], blocks)
+		utils.printTabular(headerbase + [(DataProvider.BlockName, "Block"), (DataProvider.NEvents, "Events")], blocks)
 
 	if opts.save:
 		provider.saveState(".", "datacache.dat")
