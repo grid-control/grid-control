@@ -225,6 +225,7 @@ var_replacer() {
 		echo "BEGIN{srand($MY_SEED)}"
 		echo "{"
 		[ -n "$1" ] && echo "	gsub(\"__X__\", \"$1\")"
+		[ -n "$1" ] && echo "	gsub(\"@X@\", \"$1\")"
 		[ -f "$MY_SCRATCH/_varmap.dat" ] && cat "$MY_SCRATCH/_varmap.dat" |
 		while read USER_VARNAME REAL_VARNAME; do
 			VARVALUE=${!REAL_VARNAME}
