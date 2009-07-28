@@ -5,6 +5,7 @@ from local_wms import LocalWMSApi
 class SGE(LocalWMSApi):
 	_statusMap = {
 		'qw': Job.QUEUED,
+		'hqw': Job.QUEUED,
 		'Eqw': Job.WAITING,
 		'h': Job.WAITING,   'w': Job.WAITING,
 		's': Job.QUEUED,    'r': Job.RUNNING,
@@ -33,6 +34,17 @@ class SGE(LocalWMSApi):
 		# Job queue
 		if queue != '':
 			params += ' -q %s' % queue
+
+		# Requirement based settings
+		strTime = lambda s: "%02d:%02d:%02d" % (s / 3600, (s / 60) % 60, s % 60)
+		reqs = dict(self.wms.getRequirements(jobNum))
+		if reqs.has_key(WMS.WALLTIME):
+			params += " -l s_rt=%s" % strTime(reqs[WMS.WALLTIME])
+		if reqs.has_key(WMS.CPUTIME):
+			params += " -l h_cpu=%s" % strTime(reqs[WMS.WALLTIME])
+		if reqs.has_key(WMS.MEMORY):
+			params += ' -l s_vmem=%dM' % reqs[WMS.MEMORY]
+
 		# Sandbox
 		params += ' -v SANDBOX=%s' % sandbox
 		# IO paths
