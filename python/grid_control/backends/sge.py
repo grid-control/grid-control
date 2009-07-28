@@ -1,5 +1,6 @@
 import sys, os, xml.dom.minidom
 from grid_control import ConfigError, Job, utils
+from wms import WMS
 from local_wms import LocalWMSApi
 
 class SGE(LocalWMSApi):
