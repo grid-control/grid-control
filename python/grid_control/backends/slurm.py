@@ -22,14 +22,13 @@ class SLURM(LocalWMSApi):
 		return sandbox
 
 
-	def getSubmitArguments(self, jobNum, queue, sandbox):
+	def getSubmitArguments(self, jobNum, sandbox):
 		# Job name
 		params = ' -J %s' % self.wms.getJobName(jobNum)
-		# Job queue
-		if queue != '':
-			params += ' -c %s' % queue
 		# Job requirements
 		reqs = dict(self.wms.getRequirements(jobNum))
+		if reqs.has_key(WMS.SITES):
+			params += ' -c %s' % reqs[WMS.SITES]
 		if reqs.has_key(WMS.WALLTIME):
 			params += ' -T %d' % ((reqs[WMS.WALLTIME] + 59) / 60)
 		if reqs.has_key(WMS.CPUTIME):

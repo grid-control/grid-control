@@ -14,7 +14,7 @@ class LocalWMSApi(AbstractObject):
 	def getArguments(self, jobNum, sandbox):
 		raise AbstractError
 
-	def getSubmitArguments(self, jobNum, queue, sandbox):
+	def getSubmitArguments(self, jobNum, sandbox):
 		raise AbstractError
 
 	def parseSubmitOutput(self, data):
@@ -71,6 +71,13 @@ class LocalWMS(WMS):
 		return self.module.taskID[:10] + "." + str(jobNum) #.rjust(4, "0")[:4]
 
 
+	def getRequirements(self, jobNum):
+		tmp = WMS.getRequirements(self, jobNum)
+		if self._queue != '':
+			tmp.update({WMS.SITES: self._queue})
+		return tmp
+
+
 	# Submit job and yield (jobNum, WMS ID, other data)
 	def submitJob(self, jobNum):
 		# TODO: fancy job name function
@@ -96,7 +103,7 @@ class LocalWMS(WMS):
 		jcfg = open(os.path.join(sandbox, '_jobconfig.sh'), 'w')
 		jcfg.writelines(utils.DictFormat().format(env_vars, format = 'export %s%s%s\n'))
 		proc = popen2.Popen3("%s %s %s %s" % (self.api.submitExec,
-			self.api.getSubmitArguments(jobNum, self._queue, sandbox),
+			self.api.getSubmitArguments(jobNum, sandbox),
 			utils.shellEscape(utils.atRoot('share', 'local.sh')),
 			self.api.getArguments(jobNum, sandbox)), True)
 

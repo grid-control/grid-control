@@ -27,14 +27,13 @@ class LSF(LocalWMSApi):
 		return sandbox
 
 
-	def getSubmitArguments(self, jobNum, queue, sandbox):
+	def getSubmitArguments(self, jobNum, sandbox):
 		# Job name
 		params = ' -J %s' % self.wms.getJobName(jobNum)
-		# Job queue
-		if queue != '':
-			params += ' -q %s' % queue
-		# Job time
+		# Job requirements
 		reqs = dict(self.wms.getRequirements(jobNum))
+		if reqs.has_key(WMS.SITES):
+			params += ' -q %s' % reqs[WMS.SITES]
 		if reqs.has_key(WMS.WALLTIME):
 			params += ' -c %d' % ((reqs[WMS.WALLTIME] + 59) / 60)
 		# IO paths

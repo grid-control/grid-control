@@ -29,16 +29,15 @@ class SGE(LocalWMSApi):
 		return ""
 
 
-	def getSubmitArguments(self, jobNum, queue, sandbox):
+	def getSubmitArguments(self, jobNum, sandbox):
 		# Job name
 		params = ' -N %s' % self.wms.getJobName(jobNum)
-		# Job queue
-		if queue != '':
-			params += ' -q %s' % queue
 
 		# Requirement based settings
 		strTime = lambda s: "%02d:%02d:%02d" % (s / 3600, (s / 60) % 60, s % 60)
 		reqs = dict(self.wms.getRequirements(jobNum))
+		if reqs.has_key(WMS.SITES):
+			params += ' -q %s' % reqs[WMS.SITES]
 		if reqs.has_key(WMS.WALLTIME):
 			params += " -l s_rt=%s" % strTime(reqs[WMS.WALLTIME])
 		if reqs.has_key(WMS.CPUTIME):

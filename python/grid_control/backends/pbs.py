@@ -1,4 +1,4 @@
-import sys, os, random
+import sys, os
 from grid_control import ConfigError, Job, utils
 from local_wms import LocalWMSApi
 
@@ -27,12 +27,13 @@ class PBS(LocalWMSApi):
 		return ""
 
 
-	def getSubmitArguments(self, jobNum, queue, sandbox):
+	def getSubmitArguments(self, jobNum, sandbox):
 		# Job name
 		params = ' -N %s' % self.wms.getJobName(jobNum)
-		# Job queue
-		if queue != '':
-			params += ' -q %s' % queue
+		# Job requirements
+		reqs = dict(self.wms.getRequirements(jobNum))
+		if reqs.has_key(WMS.SITES):
+			params += ' -q %s' % reqs[WMS.SITES]
 		# Job group
 		if len(self._group):
 			params += ' -W group_list=%s' % self._group
@@ -83,12 +84,12 @@ class PBS(LocalWMSApi):
 	
 	def getQueues(self):
 		defined = lambda e: e[1] != '--'
-		identity = lambda e: e
-		
+		toint = lambda e: int(e)
+
 		keys = ('MEMORY', 'CPUTIME', 'WALLTIME')
-		func = (identity, utils.parseTime, utils.parseTime)
+		func = (toint, utils.parseTime, utils.parseTime)
 		parser = dict(zip(keys, func))
-		
+
 		queues = {}
 		output = os.popen('qstat -q').readlines()[5:-2]
 		for line in output:
