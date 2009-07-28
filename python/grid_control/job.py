@@ -25,8 +25,7 @@ class Job:
 			data = DictFormat(escapeString = True).parse(open(name))
 		except:
 			raise ConfigError('Invalid format in %s' % fp.name)
-#		job = Job(cls._stateDict[data['status']])
-		job = Job(cls._stateDict[data.get('status', 'FAILED' ) ])
+		job = Job(cls._stateDict[data.get('status', 'FAILED')])
 
 		if data.has_key('id'):
 			job.wmsId = data['id']
