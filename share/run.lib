@@ -28,11 +28,13 @@ debug_helper() {
 		[ -n "${BASH_SOURCE[$i]}" ] && echo -n "`basename ${BASH_SOURCE[$i]}`:" 1>&2
 		[ -n "${FUNCNAME[$i]}" ] && echo -n "${FUNCNAME[$i]}:" 1>&2
 	done
-	echo "$LINENO ($1)" 1>&2
+	CMD="$1"
+	shift
+	echo "$LINENO - $CMD($@)" 1>&2
 }
 
 fail() {
-	debug_helper $FUNCNAME $LINENO
+	debug_helper $FUNCNAME "$@"
 	echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!"
 	[ -n "$1" ] && CODE=$1 || CODE=$?
 	export
@@ -42,7 +44,7 @@ fail() {
 }
 
 abort() {
-	debug_helper $FUNCNAME $LINENO
+	debug_helper $FUNCNAME "$@"
 	[ -d "$MY_LANDINGZONE" ] && checkdir "Start directory" "$MY_LANDINGZONE" >> $MY_LANDINGZONE/stderr.txt
 	[ -d "$MY_SCRATCH" ] && checkdir "Scratch directory" "$MY_SCRATCH" >> $MY_LANDINGZONE/stderr.txt
 	export
@@ -53,7 +55,7 @@ abort() {
 }
 
 kill4sure() {
-	debug_helper $FUNCNAME $LINENO
+	debug_helper $FUNCNAME "$@"
 	DEPTH=${2:-0}
 	if [ $DEPTH -lt 5 ]; then
 		(ps -o pid= --ppid $1 2> /dev/null) | while read XPID; do
@@ -67,7 +69,7 @@ kill4sure() {
 }
 
 updatejobinfo() {
-	debug_helper $FUNCNAME $LINENO
+	debug_helper $FUNCNAME "$@"
 	if [ -d "$MY_LANDINGZONE" ]; then
 		(
 			echo "JOBID=$MY_JOBID"
@@ -77,7 +79,7 @@ updatejobinfo() {
 }
 
 checkfile() {
-	debug_helper $FUNCNAME $LINENO
+	debug_helper $FUNCNAME "$@"
 	echo -n "Checking for file $1 ... "
 	if [ ! -f "$1" ]; then
 		echo "FAILED"
@@ -89,7 +91,7 @@ checkfile() {
 }
 
 checkdir() {
-	debug_helper $FUNCNAME $LINENO
+	debug_helper $FUNCNAME "$@"
 	echo -e "$1:\n$2"
 	[ ! -d "$2" ] && echo "$1 not found" 1>&2 && fail 102
 	[ "$2" == "invalid" ] && echo "Directory $1" 1>&2 && fail 102
@@ -97,7 +99,7 @@ checkdir() {
 }
 
 checkbin() {
-	debug_helper $FUNCNAME $LINENO
+	debug_helper $FUNCNAME "$@"
 	echo -n "Checking for binary $1 ... "
 	if [ -x "$1" ]; then
 		echo "OK"
@@ -111,7 +113,7 @@ checkbin() {
 }
 
 checkvar() {
-	debug_helper $FUNCNAME $LINENO
+	debug_helper $FUNCNAME "$@"
 	echo -n "Checking for variable \$$1 ... "
 	if [ -z "${!1}" ]; then
 		echo "FAILED"
@@ -123,13 +125,13 @@ checkvar() {
 }
 
 getrealdir() {
-	debug_helper $FUNCNAME $LINENO
+	debug_helper $FUNCNAME "$@"
 	[ -d "$1" ] && cd $1 && pwd -P && cd $OLDPWD && return `true`;
 	return `false`
 }
 
 getscratch() {
-	debug_helper $FUNCNAME $LINENO
+	debug_helper $FUNCNAME "$@"
 	# find scratch directory with highest amount of disk space
 	MY_SCRATCH="invalid"
 
@@ -137,7 +139,7 @@ getscratch() {
 	# it will return with the path pointing at the biggest amount of free space
 	# if no none of the directories exist, it returns 1
 	getscratch_internal() {
-		debug_helper $FUNCNAME $LINENO
+		debug_helper $FUNCNAME "$@"
 		MY_SCRATCH="invalid"
 		MY_SCRATCHSIZE=-1
 		# find scratch directory with highest amount of disk space
@@ -186,7 +188,7 @@ getscratch() {
 # Clean up user area
 cleanup() {
 	[ -z "$GC_DOCLEANUP" ] && return 0
-	debug_helper $FUNCNAME $LINENO
+	debug_helper $FUNCNAME "$@"
 	[ -d "$MY_LANDINGZONE" ] && cd "$MY_LANDINGZONE"
 	[ -f "$MY_MARKER" ] && rm -Rf "$MY_MARKER" &> /dev/null
 	[ -d "$MY_SCRATCH" ] && rm -Rf "$MY_SCRATCH" &> /dev/null
@@ -194,12 +196,12 @@ cleanup() {
 
 # TODO: choose grid commands
 getcommand() {
-	debug_helper $FUNCNAME $LINENO
+	debug_helper $FUNCNAME "$@"
 	which $@ 2> /dev/null | head -n 1
 }
 
 _find() {
-	debug_helper $FUNCNAME $LINENO
+	debug_helper $FUNCNAME "$@"
 	if test -f "`pwd`/$1"; then
 		echo "`pwd`/$1"
 	elif test -f "$MY_SCRATCH/$1"; then
@@ -212,7 +214,7 @@ _find() {
 }
 
 var_replacer() {
-	debug_helper $FUNCNAME $LINENO
+	debug_helper $FUNCNAME "$@"
 	j=0
 	for i in $SEEDS; do
 		eval "export SEED_$j=$[i+$MY_JOBID]"
@@ -242,21 +244,21 @@ var_replacer() {
 
 # Get used space in mb
 getdiskusage() {
-	debug_helper $FUNCNAME $LINENO
+	debug_helper $FUNCNAME "$@"
 	TMPVAR="`du --block-size=m -s $1 | awk '{gsub("M", "", $1); print $1}'`"
 	echo ${TMPVAR:-100000000}
 }
 
 # Get free space in mb
 getdiskspace() {
-	debug_helper $FUNCNAME $LINENO
+	debug_helper $FUNCNAME "$@"
 	TMPVAR="`df --block-size=m -P $1 | awk 'END{gsub("M", "", $4); print $4}'`"
 	echo ${TMPVAR:-0}
 }
 
 # Check for disk usage: <env var limit prefix> <dir>
 monitordirlimits() {
-	debug_helper $FUNCNAME $LINENO
+	debug_helper $FUNCNAME "$@"
 	LIMIT_LL="${1}_LL"
 	LIMIT_UL="${1}_UL"
 	[ "$1" == "SCRATCH" ] && DEFAULT_LL=100 || DEFAULT_LL=1000
@@ -296,7 +298,7 @@ print_and_qeval() {
 }
 
 url_ls() {
-	debug_helper $FUNCNAME $LINENO
+	debug_helper $FUNCNAME "$@"
 	case "$1" in
 		"rfio://"* | "gsiftp://"*)
 			[ "$1" == "${1#c}" ] && LSCMD="glite-gridftp-ls edg-gridftp-ls" || LSCMD="nsls"
@@ -330,7 +332,7 @@ url_ls() {
 }
 
 url_exists() {
-	debug_helper $FUNCNAME $LINENO
+	debug_helper $FUNCNAME "$@"
 	case "$1" in
 		"rfio://"*)
 			print_and_qeval "`getcommand nsgetacl`" "/${1#rfio://}";;
@@ -347,7 +349,7 @@ url_exists() {
 
 # Remove file from storage element
 url_rm() {
-	debug_helper $FUNCNAME $LINENO
+	debug_helper $FUNCNAME "$@"
 	for PARAM in `seq 1 $#`; do
 		FILE=${!PARAM}
 		case "$FILE" in
@@ -365,9 +367,17 @@ url_rm() {
 	done
 }
 
+url_copy_single_local() {
+	debug_helper $FUNCNAME "$@"
+	[ ! -f "${1#file://}" ] && fail 106
+	mkdir -p `dirname ${2#file://}`
+	[ -f "${2#file://}" ] && fail 106
+	cp -b ${1#file://} ${2#file://}
+}
+
 # Copy one file at a time (1) -> (2) 
 url_copy_single() {
-	debug_helper $FUNCNAME $LINENO
+	debug_helper $FUNCNAME "$@"
 	case "$1" in
 		"rfio://"*)
 			case "$2" in
@@ -407,7 +417,7 @@ url_copy_single() {
 					# TODO: select lcg-cp on non-OSG sites
 					print_and_qeval "`getcommand srmcp`" "-2 -debug=true -streams_num=1 $1 $2";;
 				"file://"*)
-					print_and_qeval " " "cp" "-b ${1#file://} ${2#file://}";;
+					print_and_qeval " " "url_copy_single_local $1 $2";;
 				*)
 					echo "Unsupported copy from $1 to $2" >&2 && fail 106;;
 			esac;;
@@ -418,14 +428,14 @@ url_copy_single() {
 
 # Copy one file at a time (1) -> (2) (overwrite existing files)
 url_copy_single_force() {
-	debug_helper $FUNCNAME $LINENO
+	debug_helper $FUNCNAME "$@"
 	url_exists $2 && echo "File exists! Delete $2" && url_rm $2
 	url_copy_single $1 $2
 }
 
 # Copy serveral files with specified pattern
 url_copy() {
-	debug_helper $FUNCNAME $LINENO
+	debug_helper $FUNCNAME "$@"
 	#checkbin "globus-url-copy"
 	FILENAMES="`echo "$3" | var_replacer ''`"
 	echo "Copy $FILENAMES from $1 to $2"
@@ -496,14 +506,14 @@ url_copy() {
 }
 
 url_move() {
-	debug_helper $FUNCNAME $LINENO
+	debug_helper $FUNCNAME "$@"
 	for PARAM in `seq 1 $[$# - 1]`; do
 		echo "move ${!PARAM}"
 	done
 }
 
 my_move() {
-	debug_helper $FUNCNAME $LINENO
+	debug_helper $FUNCNAME "$@"
 	[ ! -d "$1" ] && fail 102
 	[ ! -d "$2" ] && fail 102
 	[ -z "$3" ] && return
