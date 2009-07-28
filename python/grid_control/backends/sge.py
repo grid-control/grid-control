@@ -44,7 +44,7 @@ class SGE(LocalWMSApi):
 		if reqs.has_key(WMS.CPUTIME):
 			params += " -l h_cpu=%s" % strTime(reqs[WMS.WALLTIME])
 		if reqs.has_key(WMS.MEMORY):
-			params += ' -l s_vmem=%dM' % reqs[WMS.MEMORY]
+			params += ' -l h_vmem=%dM' % reqs[WMS.MEMORY]
 
 		# Sandbox
 		params += ' -v SANDBOX=%s' % sandbox
