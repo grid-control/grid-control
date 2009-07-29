@@ -51,8 +51,6 @@ declare +x SCRAM_VERSION
 SCRAM="`which \"\$SCRAM_VERSION\"`"
 checkbin "$SCRAM"
 
-$SCRAM list
-
 echo "Installed CMSSW versions:"
 $SCRAM list -c CMSSW | sort | awk '{printf $2" "}'
 echo

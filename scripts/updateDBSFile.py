@@ -11,7 +11,7 @@ _verbosity = 0
 def main(args):
 	if len(args) == 3:
 		(jobid, wmsid, retcode) = args
-		if retcode != 0:
+		if retcode != '0':
 			sys.exit(0)
 		workDir = os.environ['GC_WORKDIR']
 		pathSE = os.environ['GC_SE_PATH']

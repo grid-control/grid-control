@@ -267,6 +267,7 @@ class DataSplitter(AbstractObject):
 		# TODO: Merge JobFileTarAdaptor into SplitterBase
 		class JobFileTarAdaptor(object):
 			def __init__(self, path):
+				log = utils.ActivityLog('Reading job mapping file')
 				self._fmt = utils.DictFormat()
 				self._path = os.path.join(path, 'jobdatamap.tar')
 				self._tar = tarfile.open(self._path, 'r:')
@@ -274,6 +275,7 @@ class DataSplitter(AbstractObject):
 				self._metadata = self._fmt.parse(metadata, lowerCaseKey = False)
 				self._maxJobs = self._metadata.pop('MaxJobs')
 				self._classname = self._metadata.pop('ClassName')
+				del log
 
 			def __getitem__(self, key):
 				data = self._fmt.parse(self._tar.extractfile('%d/info' % key).readlines())
