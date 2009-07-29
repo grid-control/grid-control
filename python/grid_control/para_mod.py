@@ -96,3 +96,39 @@ class LinkedParaMod(SimpleParaMod):
 		for value in filter(lambda x: x != '', map(str.strip, self.paraValues.split('\n'))):
 			result += [dict(zip(map(str.strip, self.paraName.split(":")), map(str.strip, value.split(":"))))]
 		return result
+
+class UberParaMod(ParaMod):
+	def __init__(self, config, opts, proxy):
+		ParaMod.__init__(self, config, opts, proxy)
+
+		names = map(str.strip,
+			    config.get('ParaMod', 'parameters').split())
+		
+		self.pars = {}
+		for p in names:
+			lines = config.get('ParaMod',
+					   '%s values' % (p,)).split()
+			self.pars[p] = map(str.strip, lines)
+
+	def getParams(self):
+		res = [[]]
+
+		for p in self.pars.keys():
+			m = len(res)
+			n = len(self.pars[p])
+
+			tmp = []
+			if ':' in p:
+				ps = p.split(':')
+				tmp = map(lambda e: [zip(ps, e.split(':'))],
+					  self.pars[p])
+			else:
+				tmp = [[[p, e]] for e in self.pars[p]]
+
+			tmp_ = []
+			for e in tmp:
+				tmp_ += [e] * m
+				
+			res = map(lambda e: e[0] + e[1], zip(tmp_, res * n))
+
+		return map(dict, res)
