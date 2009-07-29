@@ -67,7 +67,7 @@ class LocalWMS(WMS):
 
 	# Wait 5 seconds between cycles and 0 seconds between steps
 	def getTimings(self):
-		return (5, 0)
+		return (5, 3)
 
 
 	def getJobName(self, jobNum):

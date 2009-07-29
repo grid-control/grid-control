@@ -139,11 +139,12 @@ def main(args):
 
 		# Job submission loop
 		def wait(timeout):
-			for x in xrange(0, timeout, 5):
+			shortStep = map(lambda x: (x, 1), xrange(max(timeout - 5, 0), timeout))
+			for x, w in map(lambda x: (x, 5), xrange(0, timeout - 5, 5)) + shortStep:
 				if opts.abort:
 					return False
 				log = utils.ActivityLog('waiting for %d seconds' % (timeout - x))
-				sleep(5)
+				sleep(w)
 				del log
 			return True
 
@@ -166,9 +167,8 @@ def main(args):
 			# quit if abort flag is set or not in continuous mode
 			if opts.abort or not opts.continuous:
 				break
-			# idle timeout is one minute
-			if not didWait:
-				wait(wms.getTimings()[0])
+			# idle timeout
+			wait(wms.getTimings()[0])
 			# Check proxy lifetime
 			if not proxy.canSubmit(module.wallTime, opts.submission):
 				opts.submission = False

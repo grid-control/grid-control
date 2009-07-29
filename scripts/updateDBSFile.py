@@ -9,6 +9,14 @@ from grid_control import *
 _verbosity = 0
 
 def main(args):
+	class DummyStream:
+		def __init__(self, stream):
+			self.__stream = stream
+		def write(self, data):
+			return True
+		def __getattr__(self, name):
+			return self.__stream.__getattribute__(name)
+
 	if len(args) == 3:
 		(jobid, wmsid, retcode) = args
 		if retcode != '0':
@@ -48,8 +56,15 @@ def main(args):
 	try:
 		taskInfo = utils.DictFormat(" = ").parse(open(os.path.join(workDir, 'task.dat')))
 		provider = DataProvider.loadState(ConfigDummy(), workDir, 'production.dbs')
+
+
+
 		try:
+			saved = (sys.stdout, sys.stderr)
+			sys.stdout = DummyStream(sys.stdout)
+			sys.stderr = DummyStream(sys.stderr)
 			blocks = provider.getBlocks()
+			sys.stdout, sys.stderr = saved
 		except:
 			blocks = []
 
