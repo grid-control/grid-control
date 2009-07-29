@@ -298,14 +298,6 @@ class ActivityLog:
 		sys.stdout, sys.stderr = self.saved
 
 
-def activityLog(message, fn, *args, **kwargs):
-	activity = ActivityLog(message)
-	try:
-		return fn(*args, **kwargs)
-	finally:
-		del activity
-
-
 class LoggedProcess(object):
 	def __init__(self, cmd, args):
 		self.cmd = (cmd, args)
@@ -411,7 +403,7 @@ def lenSplit(list, maxlen):
 
 
 def printTabular(head, entries, format = lambda x: x):
-	maxlen = {}
+	maxlen = dict(map(lambda (id, name): (id, len(name)), head))
 	head = [ x for x in head ]
 	entries = [ x for x in entries ]
 

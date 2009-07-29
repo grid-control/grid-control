@@ -102,7 +102,7 @@ class JobDB:
 			print "(attempt #%s)" % jobObj.attempt
 		elif (state == Job.FAILED) and jobObj.get('retcode') and jobObj.get('dest'):
 			print "(error code: %d - %s)" % (jobObj.get('retcode'), jobObj.get('dest'))
-		elif (state == Job.QUEUED) and jobObj.get('dest'):
+		elif (state == Job.QUEUED) and jobObj.get('dest') != 'N/A':
 			print "(%s)" % jobObj.get('dest')
 		elif (state in [Job.WAITING, Job.ABORTED]) and jobObj.get('reason'):
 			print '(%s)' % jobObj.get('reason')

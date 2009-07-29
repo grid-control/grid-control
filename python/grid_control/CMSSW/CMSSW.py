@@ -26,7 +26,7 @@ class CMSSW(Module):
 		self.dataset = config.get('CMSSW', 'dataset', '').strip()
 		if self.dataset == '':
 			self.dataset = None
-			self.eventsPerJob = config.getInt('CMSSW', 'events per job', 0)
+			self.eventsPerJob = config.get('CMSSW', 'events per job', 0)
 		else:
 			self.eventsPerJob = config.getInt('CMSSW', 'events per job')
 			for tag in [ "__FILE_NAMES__", "__MAX_EVENTS__", "__SKIP_EVENTS__" ]:
@@ -135,9 +135,13 @@ class CMSSW(Module):
 		splitInfo = {}
 		if self.dataSplitter:
 			splitInfo = self.dataSplitter.getSplitInfo(id)
+		try:
+			nEvents = int(splitInfo.get(DataSplitter.NEvents, self.eventsPerJob))
+		except:
+			nEvents = 0
 		Module.onJobSubmit(self, job, id, [{
 			"application": self.scramEnv['SCRAM_PROJECTVERSION'], "exe": "cmsRun",
-			"nevtJob": splitInfo.get(DataSplitter.NEvents, self.eventsPerJob),
+			"nevtJob": nEvents,
 			"datasetFull": splitInfo.get(DataSplitter.Dataset, '') }])
 
 

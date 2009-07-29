@@ -65,7 +65,7 @@ class PBS(LocalWMSApi):
 				jobinfo['dest'] = 'N/A'
 				if jobinfo.has_key('exec_host'):
 					jobinfo['dest'] = "%s/%s" % (
-							jobinfo.get('exec_host').replace('/', '.') + "." + jobinfo.get('server', ''),
+							jobinfo.get('exec_host').split('/')[0] + "." + jobinfo.get('server', ''),
 							jobinfo.get('queue')
 						)
 			except:

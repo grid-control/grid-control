@@ -17,7 +17,7 @@ class ParaMod(Module):
 		self.getJobArguments = lambda x: self.baseMod.getJobArguments(x / self.getParamSpace())
 
 	def getRequirements(self, jobNum):
-		reqs = self.baseMod.getRequirements(x / self.getParamSpace())
+		reqs = self.baseMod.getRequirements(jobNum / self.getParamSpace())
 		params = self.getParams()[jobNum % self.getParamSpace()]
 		for key, value in params.items():
 			if key == 'WALLTIME':
