@@ -9,9 +9,6 @@ echo "CMSSW module starting"
 echo
 echo "---------------------------"
 
-checkfile "$MY_SCRATCH/_config.sh"
-source "$MY_SCRATCH/_config.sh"
-
 MAX_EVENTS="$1"
 SKIP_EVENTS="$2"
 if [ -n "$3" ]; then

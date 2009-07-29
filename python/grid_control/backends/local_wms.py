@@ -1,4 +1,4 @@
-import sys, os, popen2, tempfile, shutil, time, random
+import sys, os, popen2, tempfile, shutil, time, random, glob
 from grid_control import AbstractObject, ConfigError, Job, utils
 from wms import WMS
 from broker import Broker
@@ -186,8 +186,11 @@ class LocalWMS(WMS):
 				continue
 
 			# Cleanup sandbox
+			outFiles = []
+			for pat in self.sandboxOut:
+				outFiles += glob.glob(os.path.join(path, pat))
 			for file in os.listdir(path):
-				if file in self.sandboxOut:
+				if os.path.join(path, file) in outFiles:
 					continue
 				try:
 					os.unlink(os.path.join(path, file))

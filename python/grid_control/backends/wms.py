@@ -1,7 +1,7 @@
 # Generic base class for workload management systems
 
 import sys, os, time, shutil, tarfile
-from grid_control import AbstractObject, ConfigError, RuntimeError, utils
+from grid_control import AbstractObject, ConfigError, RuntimeError, UserError, utils
 
 class WMS(AbstractObject):
 	INLINE_TAR_LIMIT = 256 * 1024
@@ -31,7 +31,7 @@ class WMS(AbstractObject):
 		self.sandboxIn = [ utils.atRoot('share', 'run.sh'), utils.atRoot('share', 'run.lib'), tarFile ]
 		self.sandboxOut = self.module.getOutFiles() + [ 'stdout.txt', 'stderr.txt', 'jobinfo.txt' ]
 
-		taskConfig = utils.DictFormat(escapeString = True).format(self.module.getTaskConfig())
+		taskConfig = utils.DictFormat(escapeString = True).format(self.module.getTaskConfig(), format = 'export %s%s%s\n')
 		varMapping = map(lambda (x,y): "%s %s\n" % (x,y), self.module.getVarMapping().items())
 		inFiles = self.module.getInFiles() + [ utils.VirtualFile('_config.sh', utils.sorted(taskConfig)),
 			utils.VirtualFile('_varmap.dat', str.join('', utils.sorted(varMapping))) ]
@@ -44,23 +44,21 @@ class WMS(AbstractObject):
 		for file in inFiles:
 			if type(file) == str:
 				# Path to filename given
-				if os.path.isabs(file):
-					path = file
-				else:
-					path = os.path.join(opts.workDir, file)
+				if not os.path.exists(file):
+					raise UserError("File %s does not exist!" % file)
 
 				# Put file in sandbox instead of tar file
-				if os.path.getsize(path) > self.INLINE_TAR_LIMIT and file.endswith('.gz') or file.endswith('.bz2'):
-					self.sandboxIn.append(path)
+				if os.path.getsize(file) > self.INLINE_TAR_LIMIT and file.endswith('.gz') or file.endswith('.bz2'):
+					self.sandboxIn.append(file)
 					continue
 
 			if opts.init:
 				# Package sandbox tar file
 				if type(file) == str:
-					utils.vprint("\t\t%s" % path)
+					utils.vprint("\t\t%s" % file)
 					info = tarfile.TarInfo(os.path.basename(file))
-					info.size = os.path.getsize(path)
-					handle = open(path, 'rb')
+					info.size = os.path.getsize(file)
+					handle = open(file, 'rb')
 				else:
 					utils.vprint("\t\t%s" % file.name)
 					info, handle = file.getTarInfo()
