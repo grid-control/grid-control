@@ -1,0 +1,52 @@
+####### Summer09QCDParameters #######
+cd /Herwig/MatrixElements/
+insert SimpleQCD:MatrixElements[0] MEQCD2to2
+cd /
+set /Herwig/Cuts/JetKtCut:MinKT @PTHAT@*GeV
+set /Herwig/Cuts/QCDCuts:MHatMin 0.0*GeV
+set /Herwig/UnderlyingEvent/MPIHandler:IdenticalToUE 0
+
+####### cm10TeV #######
+set /Herwig/Generators/LHCGenerator:EventHandler:LuminosityFunction:Energy 10000.0
+set /Herwig/Shower/Evolver:IntrinsicPtGaussian 2.1*GeV
+
+####### pdfMRST2001 #######
+cp /Herwig/Partons/MRST /cmsPDFSet
+
+####### basicSetup #######
+cd /Herwig/Generators
+set LHCGenerator:RandomNumberGenerator:Seed @RANDOM@
+set LHCGenerator:NumberOfEvents 10000000
+set LHCGenerator:DebugLevel 1
+set LHCGenerator:PrintEvent 0
+set LHCGenerator:MaxErrors 10000
+cd /Herwig/Particles
+set p+:PDF /cmsPDFSet
+set pbar-:PDF /cmsPDFSet
+cd /
+
+####### setParticlesStableForDetector #######
+cd /Herwig/Particles
+set mu-:Stable Stable
+set mu+:Stable Stable
+set Sigma-:Stable Stable
+set Sigmabar+:Stable Stable
+set Lambda0:Stable Stable
+set Lambdabar0:Stable Stable
+set Sigma+:Stable Stable
+set Sigmabar-:Stable Stable
+set Xi-:Stable Stable
+set Xibar+:Stable Stable
+set Xi0:Stable Stable
+set Xibar0:Stable Stable
+set Omega-:Stable Stable
+set Omegabar+:Stable Stable
+set pi+:Stable Stable
+set pi-:Stable Stable
+set K+:Stable Stable
+set K-:Stable Stable
+set K_S0:Stable Stable
+set K_L0:Stable Stable
+cd /
+
+saverun LHC /Herwig/Generators/LHCGenerator
