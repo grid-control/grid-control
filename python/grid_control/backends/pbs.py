@@ -1,5 +1,6 @@
 import sys, os
 from grid_control import ConfigError, Job, utils
+from wms import WMS
 from local_wms import LocalWMSApi
 
 class PBS(LocalWMSApi):
@@ -83,10 +84,10 @@ class PBS(LocalWMSApi):
 
 	
 	def getQueues(self):
-		defined = lambda e: e[1] != '--'
+		defined = lambda (k, v): v != '--'
 		toint = lambda e: int(e)
 
-		keys = ('MEMORY', 'CPUTIME', 'WALLTIME')
+		keys = (WMS.MEMORY, WMS.CPUTIME, WMS.WALLTIME)
 		func = (toint, utils.parseTime, utils.parseTime)
 		parser = dict(zip(keys, func))
 
@@ -95,6 +96,6 @@ class PBS(LocalWMSApi):
 		for line in output:
 			fields = map(str.strip, line.split()[:4])
 			queues[fields[0]] = dict(
-				map(lambda key, value: (key, parser[key](value)),
+				map(lambda (key, value): (key, parser[key](value)),
 					filter(defined, zip(keys, fields[1:]))))
 		return queues

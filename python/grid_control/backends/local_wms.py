@@ -1,7 +1,7 @@
-from __future__ import generators
-import sys, os, popen2, tempfile, shutil, time
+import sys, os, popen2, tempfile, shutil, time, random
 from grid_control import AbstractObject, ConfigError, Job, utils
 from wms import WMS
+from broker import Broker
 
 class LocalWMSApi(AbstractObject):
 	def __init__(self, config, localWMS):
@@ -39,14 +39,19 @@ class LocalWMS(WMS):
 
 		wmsapi = config.get('local', 'wms', self._guessWMS())
 		self.api = LocalWMSApi.open("grid_control.backends.%s.%s" % (wmsapi.lower(), wmsapi), config, self)
+
+		try:
+			queues = self.api.getQueues()
+		except:
+			queues = None
+		self.broker = Broker.open(config.get('local', 'broker', 'DummyBroker'), config, queues)
+
 		self.sandPath = config.getPath('local', 'sandbox path', os.path.join(opts.workDir, 'sandbox'))
 		self._nameFile = config.getPath('local', 'name source', '')
 		self._source = None
 		if self._nameFile != '':
 			tmp = map(str.strip, open(self._nameFile, 'r').readlines())
 			self._source = filter(lambda x: not (x.startswith('#') or x == ''), tmp)
-
-		self._queue = config.get('local', 'queue', '')
 
 
 	def _guessWMS(self):
@@ -72,10 +77,7 @@ class LocalWMS(WMS):
 
 
 	def getRequirements(self, jobNum):
-		tmp = WMS.getRequirements(self, jobNum)
-		if self._queue != '':
-			tmp.update({WMS.SITES: self._queue})
-		return tmp
+		return self.broker.matchQueue(WMS.getRequirements(self, jobNum))
 
 
 	# Submit job and yield (jobNum, WMS ID, other data)

@@ -1,6 +1,5 @@
-from __future__ import generators
-import sys, os, time, copy, popen2, tempfile, cStringIO, random
-from grid_control import ConfigError, Job, utils
+import sys, os, random
+from grid_control import Job
 from wms import WMS
 
 class DummyWMS(WMS):
