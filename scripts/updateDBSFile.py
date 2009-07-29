@@ -92,7 +92,7 @@ def main(args):
 				filelist.append({ DataProvider.lfn: lfn, DataProvider.NEvents: nevents })
 				cblock[DataProvider.NEvents] = reduce(lambda x,y: x+y, map(lambda x: x[DataProvider.NEvents], filelist))
 
-		provider.saveState(workDir, "prod.dbs", blocks)
+		provider.saveState(workDir, "production.dbs", blocks)
 
 	finally:
 		fcntl.flock(fd, fcntl.LOCK_UN)
