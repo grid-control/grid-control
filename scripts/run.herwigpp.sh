@@ -6,9 +6,9 @@ echo "---------------------------"
 
 # This script uses the standalone Herwig++ which is distributed
 # together with CMSSW ... so first find the CMSSW directory
-if [ -d "/wlcg/sw/cms/experimental" ]; then
-	export VO_CMS_SW_DIR="/wlcg/sw/cms/experimental"
-	echo "[EKP-SITE] Using $VO_CMS_SW_DIR"
+if [ -z "$VO_CMS_SW_DIR" -a -d "$CMSSW_OLD_RELEASETOP" ]; then
+	export VO_CMS_SW_DIR="$(cd $CMSSW_OLD_RELEASETOP/../../../../; pwd)"
+	echo "[LOCAL-SITE] Using $VO_CMS_SW_DIR"
 elif [ -z "$VO_CMS_SW_DIR" -a -d "/wlcg/sw/cms" ]; then
 	export VO_CMS_SW_DIR="/wlcg/sw/cms"
 	echo "[WLCG-SITE] Using $VO_CMS_SW_DIR"

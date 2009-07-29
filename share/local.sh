@@ -1,7 +1,14 @@
 #!/bin/bash
 
 # (VO_CMS_SW_DIR == "") => get from CMSSW_OLD_RELEASETOP
-[ -n "$CMSSW_OLD_RELEASETOP" ] && export VO_CMS_SW_DIR=""
+if [ -d "/wlcg/sw/cms/experimental" ]; then
+	export VO_CMS_SW_DIR="/wlcg/sw/cms/experimental"
+	echo "[EKP-SITE] Using $VO_CMS_SW_DIR"
+elif [ -d "/software/kit/bd00/CMSSW" ]; then
+	export VO_CMS_SW_DIR="/software/kit/bd00/CMSSW"
+	echo "[IC1-SITE] Using $VO_CMS_SW_DIR"
+fi
+
 SANDBOX=${SANDBOX:-$1}
 cd $SANDBOX
 mkdir scratch
