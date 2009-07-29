@@ -28,7 +28,9 @@ class Config:
 			if self.protocol[section][item][1] != default:
 				raise ConfigError("Inconsistent default values: [%s] %s" % (section, item))
 		try:
-			value = self.parser.get(section, item).split(';')[0]
+			lines = self.parser.get(section, item).splitlines()
+			lines = map(lambda x: x.split(';')[0].strip(), lines)
+			value = str.join("\n", filter(lambda x: x != '', lines))
 			self.protocol[section][item] = (value, default)
 			return value
 		except ConfigParser.NoSectionError:
