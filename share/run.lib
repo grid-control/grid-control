@@ -498,8 +498,8 @@ url_copy() {
 		TARGET_FN="`echo ${TARGET_PATTERN:-__X__} | var_replacer $file`"
 		[ -n "$TRANSFERLOG" ] && echo "$SOURCE_FN $TARGET_FN" >> "$TRANSFERLOG"
 		url_copy_single "$SOURCE_URL/$SOURCE_FN" "$TARGET_URL/$TARGET_FN"
-		RESULT=$?
-		echo "url_copy_single \"$SOURCE_URL/$SOURCE_FN\" \"$TARGET_URL/$TARGET_FN\" returned with $RESULT"
+		echo "url_copy_single \"$SOURCE_URL/$SOURCE_FN\" \"$TARGET_URL/$TARGET_FN\" returned with $?"
+		url_exists "$TARGET_URL/$TARGET_FN" || BADCOUNT=$[$BADCOUNT+1]
 		# [ $RESULT != 0 ] && BADCOUNT=$[$BADCOUNT+1]
 	done
 	[ $BADCOUNT -ne 0 ] && echo "$BADCOUNT errors occurred during SE access" && fail 106
