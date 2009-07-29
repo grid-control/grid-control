@@ -301,7 +301,7 @@ url_ls() {
 	debug_helper $FUNCNAME "$@"
 	case "$1" in
 		"rfio://"* | "gsiftp://"*)
-			[ "$1" == "${1#c}" ] && LSCMD="glite-gridftp-ls edg-gridftp-ls" || LSCMD="nsls"
+			[ "$1" == "${1#r}" ] && LSCMD="glite-gridftp-ls edg-gridftp-ls" || LSCMD="nsls"
 			checkbin "`getcommand $LSCMD`" 1>&2
 			eval "`getcommand $LSCMD` ${1#rfio://}" | while read FILE; do
 				[ -z "$2" ] && echo $FILE && continue
