@@ -41,6 +41,8 @@ class SimpleBroker(Broker):
 
 		if self.queues:
 			match = dict(filter(lambda (x, y): matcher(y), self.queues.items())).keys()
+			if len(match) == 0:
+				match = self.userQueue
 		else:
 			match = self.userQueue
 

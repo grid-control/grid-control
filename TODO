@@ -3,10 +3,11 @@ BUGS:
 
 FEATURE REQUESTS:
 ===================================================
-1. Local queue selection
 
 DONE:
 ===================================================
+X. Local queue selection
+	([local]: broker, DummyBroker, SimpleBroker)
 X. Report from Module
 	(--module-report)
 X. File as parameter source

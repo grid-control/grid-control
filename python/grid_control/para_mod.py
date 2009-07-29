@@ -1,5 +1,5 @@
 import os.path, copy, csv
-from grid_control import Module, AbstractError
+from grid_control import Module, AbstractError, WMS, utils
 
 # Parameterized Module
 class ParaMod(Module):
@@ -14,8 +14,19 @@ class ParaMod(Module):
 		for fkt in [ 'getTaskConfig', 'onJobSubmit', 'onJobUpdate', 'onJobOutput',
 			'getInFiles', 'getOutFiles', 'getSubstFiles', 'getCommand' ]:
 			setattr(self, fkt, getattr(self.baseMod, fkt))
-		self.getRequirements = lambda x: self.baseMod.getRequirements(x / self.getParamSpace())
 		self.getJobArguments = lambda x: self.baseMod.getJobArguments(x / self.getParamSpace())
+
+	def getRequirements(self, jobNum):
+		reqs = self.baseMod.getRequirements(x / self.getParamSpace())
+		params = self.getParams()[jobNum % self.getParamSpace()]
+		for key, value in params.items():
+			if key == 'WALLTIME':
+				reqs.append((WMS.WALLTIME, utils.parseTime(value)))
+			elif key == 'CPUTIME':
+				reqs.append((WMS.CPUTIME, utils.parseTime(value)))
+			elif key == 'MEMORY':
+				reqs.append((WMS.MEMORY, int(value)))
+		return reqs
 
 	def getJobConfig(self, jobNum):
 		config = self.baseMod.getJobConfig(jobNum / self.getParamSpace())
@@ -69,7 +80,8 @@ class FileParaMod(ParaMod):
 		ParaMod.__init__(self, config, opts, proxy)
 		self.path = config.getPath('ParaMod', 'parameter source')
 		sniffed = csv.Sniffer().sniff(open(self.path).read(1024))
-		self.dialect = config.get('ParaMod', 'parameter source dialect', sniffed)
+		csv.register_dialect('sniffed', sniffed)
+		self.dialect = config.get('ParaMod', 'parameter source dialect', 'sniffed')
 
 	def getParams(self):
 		return list(csv.DictReader(open(self.path), dialect = self.dialect))
