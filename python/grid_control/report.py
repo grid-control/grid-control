@@ -1,20 +1,18 @@
 from grid_control import Job, RuntimeError, utils
 
 class Report:
-
 	def __init__(self, jobs, allJobs):
 		self.allJobs = allJobs
-		if hasattr(jobs, 'all'):
-			self.jobs = jobs.all
+		if hasattr(jobs, 'nJobs'):
+			self.jobs = xrange(allJobs.nJobs)
 		else:
 			self.jobs = jobs
 
 
 	def show(self, opts, module = None):
 		if opts.report:
+			print
 			self.details()
-			self.summary()
-		elif opts.continuous:
 			self.summary()
 		if opts.reportSite:
 			self.siteReport(opts.reportSite, False)
@@ -35,7 +33,6 @@ class Report:
 			reports.append(report)
 			if report["Destination"] != 'N/A':
 				reports.append({"Id": report["Destination"]})
-		print
 		utils.printTabular([("Job", "Job"), ("Status", "Status"), ("Id", "Id / Destination")], reports)
 		print
 
@@ -66,7 +63,6 @@ class Report:
 			cat = self.getJobCategory(self.allJobs.get(jobNum))
 			reports[str(report)][cat] += 1
 			all[cat] += 1
-		print
 		print '-----------------------------------------------------------------'
 		print 'MODULE SUMMARY:'
 		print '---------------'
@@ -211,19 +207,22 @@ class Report:
 
 		print '====%s====' % (maxlen * '=') + 4 * ('+' + 14 * '=')
 		print_stats('', statinfo, maxlen, showtime, rate_site, time_site)
+		print
 
 
-	def summary(self):
+	def summary(self, message = ""):
 		# Print report summary
 		print '-----------------------------------------------------------------'
 		print 'REPORT SUMMARY:'
 		print '---------------'
 
 		summary = map(lambda x: 0.0, Job.states)
-
-		for id in self.allJobs.all:
-			job = self.allJobs.get(id)
-			summary[job.state] += 1
+		for jobNum in self.jobs:
+			try:
+				job = self.allJobs.get(jobNum)
+				summary[job.state] += 1
+			except:
+				summary[Job.INIT] += 1
 
 		def makeSum(*states):
 			return reduce(lambda x, y: x + y, map(lambda x: summary[x], states))
@@ -236,12 +235,13 @@ class Report:
 		print 'Detailed Information:'
 		for state, category in enumerate(Job.states):
 			if summary[state]:
-				ratio = (summary[state] / (id + 1))*100
+				ratio = (summary[state] / (self.allJobs.nJobs))*100
 			else:
 				ratio = 0
 			print 'Jobs   %9s: %4d     %3d%%  ' % (category, summary[state], round(ratio)),
 			if state % 2:
 				print
 		print
-		print '-----------------------------------------------------------------\n'
+		print '-----------------------------------------------------------------'
+		print message
 		return 0

@@ -20,7 +20,7 @@ class Host(LocalWMSApi):
 	def getArguments(self, jobNum, sandbox):
 		return ""
 
-	def getSubmitArguments(self, jobNum, queue, sandbox):
+	def getSubmitArguments(self, jobNum, sandbox):
 		return "%d %s %s %s" % (jobNum, sandbox,
 			utils.shellEscape(os.path.join(sandbox, 'stdout.txt')),
 			utils.shellEscape(os.path.join(sandbox, 'stderr.txt')))

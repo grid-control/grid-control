@@ -32,7 +32,6 @@ class JobDB:
 			except:
 				pass
 
-		self.all = []
 		self.ready = []
 		self.running = []
 		self.done = []
@@ -40,11 +39,10 @@ class JobDB:
 
 		for jobNum, jobObj in self._readJobs():
 			self._jobs[jobNum] = jobObj
-			self.all.append(jobNum)
 			self._findQueue(jobObj).append(jobNum)
 		self.ready.extend(filter(lambda x: not self._jobs.has_key(x), xrange(self.nJobs)))
 
-		for list in (self.all, self.ready, self.running, self.done, self.ok):
+		for list in (self.ready, self.running, self.done, self.ok):
 			list.sort()
 
 		self.timeout = utils.parseTime(config.get('jobs', 'queue timeout', ''))

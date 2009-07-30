@@ -18,6 +18,7 @@ _verbosity = 0
 
 def main(args):
 	global opts, log, handler
+	log = None
 
 	# display the 'grid-control' logo and version
 	print open(utils.atRoot('share', 'logo.txt'), 'r').read()
@@ -135,6 +136,8 @@ def main(args):
 
 		# Check if running in continuous mode
 		if opts.continuous:
+			print
+			Report(jobs, jobs).summary()
 			print "Running in continuous mode with job submission %s. Press ^C to exit." % ("disabled", "enabled")[opts.submission]
 
 		# Job submission loop

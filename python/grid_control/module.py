@@ -42,7 +42,7 @@ class Module(AbstractObject):
 				self.seeds = map(int, taskInfo['seeds'].split())
 			else:
 				self.seeds = map(lambda x: random.randint(0, 10000000), range(10))
-				print "Creating random seeds... ", self.seeds
+				print "Creating random seeds...", self.seeds
 
 		# Write task info file
 		tmp = { 'task id': self.taskID, 'seeds': str.join(' ', map(str, self.seeds)) }
