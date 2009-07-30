@@ -197,7 +197,8 @@ cleanup() {
 # TODO: choose grid commands
 getcommand() {
 	debug_helper $FUNCNAME "$@"
-	which $@ 2> /dev/null | head -n 1
+	RESULT="$(which $@ 2> /dev/null | head -n 1)"
+	echo ${RESULT:-$1}
 }
 
 _find() {
