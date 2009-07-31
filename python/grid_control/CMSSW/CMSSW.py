@@ -193,7 +193,7 @@ class CMSSW(Module):
 	def getInFiles(self):
 		files = Module.getInFiles(self)
 		if len(self.projectArea) and not self.seRuntime:
-			files.append(os.path.join(self.workDir, 'runtime.tar.gz'))
+			files.append(os.path.join(self.opts.workDir, 'runtime.tar.gz'))
 		files.append(utils.atRoot('share', 'run.cmssw.sh')),
 		files.extend(self.configFiles)
 		return files
