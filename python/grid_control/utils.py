@@ -245,6 +245,18 @@ class AbstractObject:
 	open = classmethod(open)
 
 
+class CursesStream:
+	def __init__(self, *args):
+		(self.stream, self.screen) = args
+
+	def write(self, data):
+		self.screen.addstr(data)
+		return True
+
+	def __getattr__(self, name):
+		return self.stream.__getattribute__(name)
+
+
 class ActivityLog:
 	class Activity:
 		def __init__(self, stream, message):
