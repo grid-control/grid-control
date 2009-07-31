@@ -183,6 +183,7 @@ def main(args):
 				screen.scrollok(True)
 				screen.attron(curses.A_BOLD)
 
+				# Event handling for resizing
 				def onResize(sig, frame):
 					oldy = screen.getyx()[0]
 					curses.endwin()
@@ -193,6 +194,7 @@ def main(args):
 				onResize(None, None)
 				signal.signal(signal.SIGWINCH, onResize)
 
+				# Wrapping ActivityLog functionality
 				class CursesLog:
 					def __init__(self, message):
 						self.message = "%s..." % message
@@ -208,6 +210,7 @@ def main(args):
 						screen.move(*oldpos)
 						screen.refresh()
 
+				# Main cycle - GUI mode
 				try:
 					utils.ActivityLog = CursesLog
 					saved = (sys.stdout, sys.stderr)
@@ -220,6 +223,7 @@ def main(args):
 					if log: del log
 			curses.wrapper(cursesWrapper)
 		else:
+			# Main cycle - non GUI mode
 			while jobCycle(): pass
 
 	except GridError, e:
