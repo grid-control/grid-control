@@ -46,11 +46,15 @@ for FILE in $SUBST_FILES; do
 	echo
 	echo "Running over file $FILE"
 	echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~"
-	cat $FILE
+	cat $FILE | uniq > tmp.$FILE
+	mv tmp.$FILE $FILE
 	echo
 
+	echo "Reading $FILE"
 	Herwig++ read $FILE
+	echo "Running " *.run
 	Herwig++ run *.run $HW_PARA || exit $?
+	echo
 	rm *.run
 done
 echo

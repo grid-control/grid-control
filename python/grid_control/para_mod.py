@@ -84,7 +84,13 @@ class FileParaMod(ParaMod):
 		self.dialect = config.get('ParaMod', 'parameter source dialect', 'sniffed')
 
 	def getParams(self):
-		return list(csv.DictReader(open(self.path), dialect = self.dialect))
+		def cleanupDict(d):
+			# strip all key value entries
+			tmp = tuple(map(lambda item: map(str.strip, item), d.items()))
+			# filter empty parameters
+			return filter(lambda (k, v): k != '', tmp)
+		tmp = list(csv.DictReader(open(self.path), dialect = self.dialect))
+		return map(lambda d: dict(cleanupDict(d)), tmp)
 
 
 class LinkedParaMod(SimpleParaMod):
@@ -96,6 +102,7 @@ class LinkedParaMod(SimpleParaMod):
 		for value in filter(lambda x: x != '', map(str.strip, self.paraValues.split('\n'))):
 			result += [dict(zip(map(str.strip, self.paraName.split(":")), map(str.strip, value.split(":"))))]
 		return result
+
 
 class UberParaMod(ParaMod):
 	def __init__(self, config, opts, proxy):

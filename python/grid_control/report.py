@@ -60,9 +60,12 @@ class Report:
 						order.append(str(report))
 					if not key in head:
 						head.append(key)
-			cat = self.getJobCategory(self.allJobs.get(jobNum))
-			reports[str(report)][cat] += 1
-			all[cat] += 1
+			try:
+				cat = self.getJobCategory(self.allJobs.get(jobNum))
+				reports[str(report)][cat] += 1
+				all[cat] += 1
+			except:
+				pass
 		print '-----------------------------------------------------------------'
 		print 'MODULE SUMMARY:'
 		print '---------------'
