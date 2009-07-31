@@ -6,6 +6,8 @@ FEATURE REQUESTS:
 
 DONE:
 ===================================================
+X. GUI
+	(done)
 X. Local queue selection
 	([local]: broker, DummyBroker, SimpleBroker)
 X. Report from Module

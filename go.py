@@ -182,7 +182,6 @@ def main(args):
 			def cursesWrapper(screen):
 				screen.scrollok(True)
 				screen.attron(curses.A_BOLD)
-				curses.init_pair(1, curses.COLOR_RED, curses.COLOR_WHITE)
 
 				def onResize(sig, frame):
 					oldy = screen.getyx()[0]
