@@ -57,8 +57,6 @@ def main(args):
 		taskInfo = utils.DictFormat(" = ").parse(open(os.path.join(workDir, 'task.dat')))
 		provider = DataProvider.loadState(ConfigDummy(), workDir, 'production.dbs')
 
-
-
 		try:
 			saved = (sys.stdout, sys.stderr)
 			sys.stdout = DummyStream(sys.stdout)

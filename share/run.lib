@@ -229,12 +229,16 @@ var_replacer() {
 		echo "{"
 		[ -n "$1" ] && echo "	gsub(\"@X@\", \"$1\")"
 		[ -n "$1" ] && echo "	gsub(\"__X__\", \"$1\")"
-		[ -f "$MY_SCRATCH/_varmap.dat" ] && cat "$MY_SCRATCH/_varmap.dat" |
+		[ -f "${MY_SCRATCH:-.}/_varmap.dat" ] && cat "${MY_SCRATCH:-.}/_varmap.dat" |
 		while read USER_VARNAME REAL_VARNAME; do
 			VARVALUE=${!REAL_VARNAME}
+			[ -z "$VARVALUE" ] && echo "	gsub(\"^@IF@${USER_VARNAME}@.*\", \"\")"
+			[ -n "$VARVALUE" ] && echo "	gsub(\"^@IF@${USER_VARNAME}@\", \"\")"
+			echo "	gsub(\"^@IFEQ@${USER_VARNAME}@${VARVALUE//\"/\\\"}@\", \"\")"
 			echo "	gsub(\"@${USER_VARNAME}@\", \"${VARVALUE//\"/\\\"}\")"
 			echo "	gsub(\"__${USER_VARNAME}__\", \"${VARVALUE//\"/\\\"}\")"
 		done
+		echo "	gsub(\"^@IFEQ.*\", \"\")"
 		echo "	gsub(\"@RANDOM@\", int(rand() * 900000000))"
 		echo "	gsub(\"__RANDOM__\", int(rand() * 900000000))"
 		echo "	print"
