@@ -61,6 +61,7 @@ class Help(object):
 		print
 		for section in config.protocol:
 			header = False
+			prevNL = False
 			for (key, (value, default)) in config.protocol[section].iteritems():
 				if (not printDefault and (str(value) != str(default))) or printDefault:
 					if value == 'DEPRECATED':
@@ -69,6 +70,12 @@ class Help(object):
 						print "[%s]" % section
 						header = True
 					value = str(value).replace("\n", "\n\t")
-					print "%s = %s" % (key, value)
-			if header:
+					print "%s = %s" % (str(key), str(value))
+					prevNL = False
+					if default != None and not printDefault:
+						print "; Default setting: %s = %r" % (key, default)
+						print
+						prevNL = True
+						
+			if header and not prevNL:
 				print
