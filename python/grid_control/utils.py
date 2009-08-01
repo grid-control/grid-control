@@ -19,7 +19,12 @@ def dprint(text):
 		print "DEBUG:", text
 
 
-def vprint(text, level = 0, printTime = False, newline = True):
+def vprint(text, level = 0, printTime = False, newline = True, once = False):
+	if once:
+		if text in vprint.log:
+			return
+		else:
+			vprint.log.append(text)
 	if verbosity() > level:
 		if printTime:
 			print "%s -" % time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()),
@@ -27,6 +32,7 @@ def vprint(text, level = 0, printTime = False, newline = True):
 			print text
 		else:
 			print text,
+vprint.log = []
 
 
 def boolUserInput(text, default):
@@ -194,7 +200,7 @@ def strTime(secs):
 
 
 def genTarball(outFile, dir, pattern):
-	def walk(tar, root, pattern, dir):
+	def walk(tar, root, dir):
 		if len(dir) > 50:
 			msg = dir[:15] + '...' + dir[len(dir)-32:]
 		else:
@@ -212,14 +218,14 @@ def genTarball(outFile, dir, pattern):
 					break
 			else:
 				if os.path.isdir(os.path.join(root, name)):
-					walk(tar, root, pattern, name)
+					walk(tar, root, name)
 				continue
 			if not neg:
 				tar.add(os.path.join(root, name), name)
 		del activity
 
 	tar = tarfile.open(outFile, 'w:gz')
-	walk(tar, dir, pattern, '')
+	walk(tar, dir, '')
 	tar.close()
 
 
@@ -248,32 +254,41 @@ class AbstractObject:
 class CursesStream:
 	def __init__(self, *args):
 		(self.stream, self.screen) = args
+		self.logged = True
 
 	def write(self, data):
+		if self.logged:
+			CursesStream.backlog.pop(0)
+			CursesStream.backlog.append(data)
 		self.screen.addstr(data)
 		return True
 
 	def __getattr__(self, name):
 		return self.stream.__getattribute__(name)
 
+	def dump(cls):
+		for data in filter(lambda x: x, CursesStream.backlog):
+			sys.stdout.write(data)
+	dump = classmethod(dump)
+CursesStream.backlog = [None for i in xrange(100)]
+
 
 class ActivityLog:
 	class Activity:
 		def __init__(self, stream, message):
 			self.stream = stream
-			self.message = message
+			self.message = '%s...' % message
 			self.status = False
 
 		def run(self):
 			if not self.status:
-				self.stream.write('%s...' % self.message)
+				self.stream.write(self.message)
 				self.stream.flush()
 				self.status = True
 
 		def clear(self):
 			if self.status:
-				self.stream.write('\r%s\r' % \
-					''.ljust(len(self.message) + 3))
+				self.stream.write('\r%s\r' % (' ' * len(self.message)))
 				self.stream.flush()
 				self.status = False
 
@@ -294,10 +309,7 @@ class ActivityLog:
 			return retVal
 
 		def __getattr__(self, name):
-			try:
-				return self.__stream.__getattr__(name)
-			except:
-				return self.__stream.__getattribute__(name)
+			return self.__stream.__getattribute__(name)
 
 	def __init__(self, message):
 		self.saved = (sys.stdout, sys.stderr)
