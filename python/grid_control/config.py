@@ -13,6 +13,8 @@ class Config:
 
 		# use the directory of the config file as base directory
 		self.baseDir = os.path.abspath(os.path.normpath(os.path.dirname(configFile)))
+		self.confName = str.join("", os.path.basename(configFile).split(".")[:-1])
+		self.workDirDefault = os.path.join(self.baseDir, 'work.%s' % self.confName)
 
 		# Read default values and reread main config file
 		includeFile = self.getPath("global", "include", '')

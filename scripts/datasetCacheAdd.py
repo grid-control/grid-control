@@ -1,21 +1,9 @@
 #!/usr/bin/env python
-import sys, os, fcntl, gzip, xml.dom.minidom
-
-# add python subdirectory from where go.py was started to search path
-_root = os.path.dirname(os.path.abspath(os.path.normpath(sys.argv[0])))
-sys.path.insert(0, os.path.join(_root, "..", 'python'))
+import sys, os, fcntl, gzip, xml.dom.minidom, gcSupport
 from grid_control import *
-
 _verbosity = 0
 
 def main(args):
-	class DummyStream:
-		def __init__(self, stream):
-			self.__stream = stream
-		def write(self, data):
-			return True
-		def __getattr__(self, name):
-			return self.__stream.__getattribute__(name)
 
 	if len(args) == 3:
 		(jobid, wmsid, retcode) = args
@@ -24,30 +12,8 @@ def main(args):
 		workDir = os.environ['GC_WORKDIR']
 		pathSE = os.environ['GC_SE_PATH']
 		jobList = [ jobid ]
-	elif len(args) == 2:
-		(configFile, jobid) = args
-		config = Config(configFile)
-		confName = str.join("", os.path.basename(configFile).split(".")[:-1])
-		workDir = config.getPath('global', 'workdir', 'work.%s' % confName)
-		pathSE = config.get('storage', 'se path', '')
-		jobList = [ jobid ]
-	elif len(args) == 1:
-		configFile = args[0]
-		idregex = re.compile(r'^job_([0-9]+)$')
-		config = Config(configFile)
-		confName = str.join("", os.path.basename(configFile).split(".")[:-1])
-		workDir = config.getPath('global', 'workdir', 'work.%s' % confName)
-		pathSE = config.get('storage', 'se path', '')
-		jobList = map(lambda x: int(idregex.match(x).group(1)), os.listdir(os.path.join(workDir, 'output')))
 	else:
-		sys.stderr.write("Syntax: %s <config file> [<job id>]\n\n" % sys.argv[0])
-		sys.exit(1)
-
-	class ConfigDummy(object):
-		def get(self, x,y,z):
-			return z
-		def getPath(self, x,y,z):
-			return z
+		(workDir, pathSE, jobList) = gcSupport.getWorkSEJobs(args)
 
 	lockfile = os.path.join(workDir, 'prod.lock')
 	fd = open(lockfile, 'w')
@@ -55,12 +21,12 @@ def main(args):
 
 	try:
 		taskInfo = utils.DictFormat(" = ").parse(open(os.path.join(workDir, 'task.dat')))
-		provider = DataProvider.loadState(ConfigDummy(), workDir, 'production.dbs')
+		provider = DataProvider.loadState(gcSupport.ConfigDummy(), workDir, 'production.dbs')
 
 		try:
 			saved = (sys.stdout, sys.stderr)
-			sys.stdout = DummyStream(sys.stdout)
-			sys.stderr = DummyStream(sys.stderr)
+			sys.stdout = gcSupport.DummyStream(sys.stdout)
+			sys.stderr = gcSupport.DummyStream(sys.stderr)
 			blocks = provider.getBlocks()
 			sys.stdout, sys.stderr = saved
 		except:
@@ -114,6 +80,5 @@ def main(args):
 
 	return 0
 
-# if go.py is executed from the command line, call main() with the arguments
 if __name__ == '__main__':
 	sys.exit(main(sys.argv[1:]))

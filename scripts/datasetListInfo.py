@@ -1,14 +1,6 @@
 #!/usr/bin/env python
-import sys, os, signal, optparse
-
-# add python subdirectory from where go.py was started to search path
-_root = os.path.dirname(os.path.abspath(os.path.normpath(sys.argv[0])))
-sys.path.insert(0, os.path.join(_root, "..", 'python'))
-
-# and include grid_control python module
+import sys, os, signal, optparse, gcSupport
 from grid_control import *
-import time
-
 _verbosity = 0
 
 def main(args):
@@ -31,7 +23,7 @@ def main(args):
 		def getPath(self, x,y,z):
 			return z
 
-	if os.path.exists(args[0]):
+	if os.path.exists(args[0].split("%")[0]):
 		fromfile = True
 		dir, file = os.path.split(args[0])
 		provider = DataProvider.loadState(ConfigDummy(), dir, file)
@@ -39,6 +31,8 @@ def main(args):
 		fromfile = False
 		provider = DataProvider.open('DBSApiv2', ConfigDummy(), args[0], None)
 	blocks = provider.getBlocks()
+	if len(blocks) == 0:
+		raise DatasetError("No blocks!")
 
 	def unique(seq): 
 		set = {} 
@@ -53,22 +47,30 @@ def main(args):
 		headerbase = []
 
 	if opts.configentry:
+		print
 		infos = {}
-		maxnick = 0
+		order = []
+		maxnick = 3
 		for block in blocks:
-			blockID = block.get(DataProvider.DatasetID, 0)
-			if not infos.get(blockID, None):
-				infos[blockID] = {
-					DataProvider.Nickname : block[DataProvider.Nickname],
-					DataProvider.Dataset : block[DataProvider.Dataset]
-				}
-				maxnick = max(maxnick, len(block[DataProvider.Nickname]))
-#		printTabular([(DataProvider.Nickname, "Nickname"), (DataProvider.Dataset, "Dataset")], infos.itervalues())
-		for info in infos.itervalues():
-			print "%s: DBS:%s" % (info[DataProvider.Nickname].center(maxnick + 2), info[DataProvider.Dataset])
+			dsName = block[DataProvider.Dataset]
+			if not infos.get(dsName, None):
+				order.append(dsName)
+				infos[dsName] = dict([(DataProvider.Dataset, dsName)])
+				if block.has_key(DataProvider.Nickname):
+					nick = block[DataProvider.Nickname]
+					infos[dsName][DataProvider.Nickname] = nick
+					maxnick = max(maxnick, len(nick))
+		for dsID, dsName in enumerate(order):
+			info = infos[dsName]
+			print "", info.get(DataProvider.Nickname, str(dsID)).center(maxnick), ":",
+			if info[DataProvider.Dataset].startswith('/PRIVATE'):
+				print 'list : %s%%%s' % (args[0].split("%")[0], info[DataProvider.Dataset])
+			else:
+				print 'DBS : %s' % info[DataProvider.Dataset]
 
 
 	if opts.listdatasets:
+		print
 		infos = {}
 		infosum = {
 			DataProvider.NEvents : 0,
@@ -76,19 +78,20 @@ def main(args):
 		}
 		order = []
 		for block in blocks:
-			blockID = block.get(DataProvider.Dataset, '')
-			if not infos.get(blockID, None):
-				order.append(blockID)
-				infos[blockID] = {
+			dsName = block.get(DataProvider.Dataset, '')
+			if not infos.get(dsName, None):
+				order.append(dsName)
+				infos[dsName] = {
 					DataProvider.NEvents : 0,
 					DataProvider.Dataset : block[DataProvider.Dataset]
 				}
-			infos[blockID][DataProvider.NEvents] += block[DataProvider.NEvents]
+			infos[dsName][DataProvider.NEvents] += block[DataProvider.NEvents]
 			infosum[DataProvider.NEvents] += block[DataProvider.NEvents]
 		utils.printTabular([(DataProvider.Dataset, "Dataset"), (DataProvider.NEvents, "Events")],
 			map(lambda x: infos[x], order) + [None, infosum])
 
 	if opts.listfiles:
+		print
 		for block in blocks:
 			if len(datasets) > 1:
 				print "Dataset: %s" % block[DataProvider.Dataset]
@@ -97,26 +100,30 @@ def main(args):
 			print
 
 	if opts.liststorage:
+		print
 		infos = {}
+		print "Storage elements:"
 		for block in blocks:
-			blockID = block.get(DataProvider.DatasetID, 0)
-			if not infos.get(blockID, None):
-				infos[blockID] = {1:1}
+			dsName = block[DataProvider.Dataset]
+			if not infos.get(dsName, None):
+				infos[dsName] = {1:1}
 				if len(headerbase) > 0:
-					print "Dataset: %s" % block[DataProvider.Dataset]
+					print "Dataset: %s" % dsName
 				for se in block[DataProvider.SEList]:
 					print "\t%s" % se
 
 	if opts.listblocks:
+		print
 		utils.printTabular(headerbase + [(DataProvider.BlockName, "Block"), (DataProvider.NEvents, "Events")], blocks)
 
 	if opts.save:
+		print
 		provider.saveState(".", "datacache.dat")
 		print "Dataset information saved to ./datacache.dat"
 
 	# everything seems to be in order
+	print
 	return 0
-
 
 if __name__ == '__main__':
 	sys.exit(main(sys.argv[1:]))
