@@ -2,10 +2,12 @@
 import sys, os, re
 
 # add python subdirectory from where exec was started to search path
-_root = os.path.dirname(os.path.abspath(os.path.normpath(sys.argv[0])))
-sys.path.insert(0, os.path.join(_root, "..", 'python'))
+root = os.path.dirname(os.path.abspath(os.path.normpath(os.path.join(sys.argv[0], '..'))))
+sys.path.insert(0, os.path.join(root, 'python'))
 
 from grid_control import *
+utils.verbosity.setting = 0
+utils.atRoot.root = root
 
 class DummyStream:
 	def __init__(self, stream):
@@ -41,3 +43,14 @@ def getWorkSEJobs(args):
 		sys.stderr.write("Syntax: %s <config file> [<job id>]\n\n" % sys.argv[0])
 		sys.exit(1)
 	return (workDir, pathSE, jobList)
+
+
+def getJobInfo(workDir, jobNum, retCodeFilter = lambda x: True):
+	try:
+		jobInfoPath = os.path.join(workDir, 'output', 'job_%d' % jobNum, 'jobinfo.txt')
+		jobInfo = utils.DictFormat('=').parse(open(jobInfoPath))
+		if retCodeFilter(jobInfo.get('exitcode', -1)):
+			return jobInfo
+	except:
+		print "Unable to read job results from %s!" % jobInfoPath
+	return None

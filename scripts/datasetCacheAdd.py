@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 import sys, os, fcntl, gzip, xml.dom.minidom, gcSupport
 from grid_control import *
-_verbosity = 0
 
 def main(args):
 

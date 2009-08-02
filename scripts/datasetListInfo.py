@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 import sys, os, signal, optparse, gcSupport
 from grid_control import *
-_verbosity = 0
 
 def main(args):
 	parser = optparse.OptionParser()
@@ -15,7 +14,8 @@ def main(args):
 
 	# we need exactly one positional argument (config file)
 	if len(args) != 1:
-		return 1
+		sys.stderr.write("Syntax: %s <DBS dataset path> | <dataset cache file>\n\n" % sys.argv[0])
+		sys.exit(1)
 
 	class ConfigDummy(object):
 		def get(self, x,y,z):

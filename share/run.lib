@@ -34,10 +34,15 @@ debug_helper() {
 }
 
 fail() {
-	debug_helper $FUNCNAME "$@"
-	echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!"
 	[ -n "$1" ] && CODE=$1 || CODE=$?
-	export
+	debug_helper $FUNCNAME "$@"
+	echo
+	echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+	echo "!! FAIL - FAIL - FAIL - FAIL !!"
+	echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+	echo "Error code $CODE"
+	echo
+	set
 	cleanup
 	updatejobinfo $CODE
 	exit $CODE
@@ -342,7 +347,7 @@ url_exists() {
 		"rfio://"*)
 			print_and_qeval "`getcommand nsgetacl`" "/${1#rfio://}";;
 		"gsiftp://"*)
-			print_and_qeval "`getcommand glite-gridftp-exists edg-gridftp-exists lcg-ls`" "$1";;
+			print_and_qeval "`getcommand glite-gridftp-exists edg-gridftp-exists edg-gridftp-ls`" "$1";;
 		"srm://"*)
 			print_and_qeval "`getcommand srm-check-permissions`" "$1";;
 		"file://"*)
@@ -422,7 +427,7 @@ url_copy_single() {
 					# TODO: select lcg-cp on non-OSG sites
 					print_and_qeval "`getcommand srmcp`" "-2 -debug=true -streams_num=1 $1 $2";;
 				"file://"*)
-					print_and_qeval " " "url_copy_single_local $1 $2";;
+					print_and_qeval " " "url_copy_single_local" "$1 $2";;
 				*)
 					echo "Unsupported copy from $1 to $2" >&2 && fail 106;;
 			esac;;
@@ -503,8 +508,9 @@ url_copy() {
 		TARGET_FN="`echo ${TARGET_PATTERN:-__X__} | var_replacer $file`"
 		[ -n "$TRANSFERLOG" ] && echo "$SOURCE_FN $TARGET_FN" >> "$TRANSFERLOG"
 		url_copy_single "$SOURCE_URL/$SOURCE_FN" "$TARGET_URL/$TARGET_FN"
-		echo "url_copy_single \"$SOURCE_URL/$SOURCE_FN\" \"$TARGET_URL/$TARGET_FN\" returned with $?"
-		url_exists "$TARGET_URL/$TARGET_FN" || BADCOUNT=$[$BADCOUNT+1]
+		RESULT="$?"
+		echo "url_copy_single \"$SOURCE_URL/$SOURCE_FN\" \"$TARGET_URL/$TARGET_FN\" returned with $RESULT"
+		[ "$RESULT" != "0" ] && url_exists "$TARGET_URL/$TARGET_FN" || BADCOUNT=$[$BADCOUNT+1]
 		# [ $RESULT != 0 ] && BADCOUNT=$[$BADCOUNT+1]
 	done
 	[ $BADCOUNT -ne 0 ] && echo "$BADCOUNT errors occurred during SE access" && fail 106
