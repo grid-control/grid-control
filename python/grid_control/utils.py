@@ -1,4 +1,4 @@
-import sys, os, popen2, StringIO, tarfile, time, fnmatch, copy
+import sys, os, popen2, StringIO, tarfile, time, fnmatch, copy, re
 from grid_control import InstallationError, ConfigError
 
 def sorted(list, comp = None):
@@ -192,6 +192,18 @@ def parseTime(usertime):
 
 def strTime(secs):
 	return "%dh %0.2dmin %0.2dsec" % (secs / 60 / 60, (secs / 60) % 60, secs % 60)
+
+
+def parseTuples(string):
+	"""Parse a string for keywords and tuples of keywords."""
+	def to_tuple_or_str((t, s)):
+		if len(s) > 0:
+			return s
+		elif len(t.strip()) == 0:
+			return tuple()
+		return tuple(map(str.strip, t.split(',')))
+
+	return map(to_tuple_or_str, re.findall('\(([\w\s,]*)\)|(\w+)', string))
 
 
 def genTarball(outFile, dir, pattern):

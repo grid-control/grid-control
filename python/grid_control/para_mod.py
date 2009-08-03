@@ -108,14 +108,25 @@ class UberParaMod(ParaMod):
 	def __init__(self, config, proxy):
 		ParaMod.__init__(self, config, proxy)
 
-		names = map(str.strip,
-			    config.get('ParaMod', 'parameters').split())
-		
+		lowercase_tuple = lambda t: tuple(map(str.lower, t))
+		option_to_tuple = lambda o: utils.parseTuples(o)[0]
+
+		names = utils.parseTuples(config.get('ParaMod', 'parameters'))
+		options = dict(map(lambda (o, v): (repr(option_to_tuple(o)),
+						   utils.parseTuples(v)),
+				   config.parser.items('ParaMod')))
+
 		self.pars = {}
 		for p in names:
-			lines = config.get('ParaMod',
-					   '%s values' % (p,)).split()
-			self.pars[p] = map(str.strip, lines)
+			if isinstance(p, tuple):
+				p_key = repr(lowercase_tuple(p))
+				if p_key in options:
+					self.pars[repr(p)] = options[p_key]
+				else:
+					self.pars[repr(p)] = []
+			else:
+				self.pars[repr(p)] = map(str.strip,
+					config.get('ParaMod', p).split())
 
 	def getParams(self):
 		res = [[]]
@@ -125,17 +136,17 @@ class UberParaMod(ParaMod):
 			n = len(self.pars[p])
 
 			tmp = []
-			if ':' in p:
-				ps = p.split(':')
-				tmp = map(lambda e: [zip(ps, e.split(':'))],
+			p_ = eval(p)
+			if isinstance(p_, tuple):
+				tmp = map(lambda t: zip(p_, t),
 					  self.pars[p])
 			else:
-				tmp = [[[p, e]] for e in self.pars[p]]
+				tmp = [[[p_, v]] for v in self.pars[p]]
 
 			tmp_ = []
 			for e in tmp:
 				tmp_ += [e] * m
 				
-			res = map(lambda e: e[0] + e[1], zip(tmp_, res * n))
+			res = map(lambda (x, y): x + y, zip(tmp_, res * n))
 
 		return map(dict, res)
