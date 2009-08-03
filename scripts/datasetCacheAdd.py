@@ -60,11 +60,15 @@ def main(args):
 				nevents = 0
 
 				fwkreports = filter(lambda fn: fn.endswith('.xml.gz'), os.listdir(outputDir))
-				for fwkreport in map(lambda fn: gzip.open(os.path.join(outputDir, fn)), fwkreports):
-					for outfile in xml.dom.minidom.parse(fwkreport).getElementsByTagName("File"):
-						pfn = outfile.getElementsByTagName("PFN")[0].childNodes[0].data
-						if pfn == name_local:
-							nevents = int(outfile.getElementsByTagName("TotalEvents")[0].childNodes[0].data)
+				try:
+					for fwkreport in map(lambda fn: gzip.open(os.path.join(outputDir, fn)), fwkreports):
+						for outfile in xml.dom.minidom.parse(fwkreport).getElementsByTagName("File"):
+							pfn = outfile.getElementsByTagName("PFN")[0].childNodes[0].data
+							if pfn == name_local:
+								nevents = int(outfile.getElementsByTagName("TotalEvents")[0].childNodes[0].data)
+				except:
+					print "Error while parsing framework output!"
+					return 0
 
 				filelist = cblock[DataProvider.FileList]
 				filelist.append({ DataProvider.lfn: lfn, DataProvider.NEvents: nevents })

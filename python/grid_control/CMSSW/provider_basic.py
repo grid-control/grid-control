@@ -88,7 +88,7 @@ class ListProvider(DataProvider):
 				elif key.lower() == 'events':
 					blockinfo[DataProvider.NEvents] = int(value)
 				elif key.lower() == 'se list':
-					blockinfo[DataProvider.SEList] = value.split(',')
+					blockinfo[DataProvider.SEList] = map(str.strip, value.split(','))
 				elif key.lower() == 'prefix':
 					commonprefix = value
 				else:
