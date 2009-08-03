@@ -62,7 +62,7 @@ def main(args):
 					maxnick = max(maxnick, len(nick))
 		for dsID, dsName in enumerate(order):
 			info = infos[dsName]
-			print "", info.get(DataProvider.Nickname, str(dsID)).center(maxnick), ":",
+			print "", info.get(DataProvider.Nickname, str(dsID)).rjust(maxnick), ":",
 			if info[DataProvider.Dataset].startswith('/PRIVATE'):
 				print 'list : %s%%%s' % (args[0].split("%")[0], info[DataProvider.Dataset])
 			else:

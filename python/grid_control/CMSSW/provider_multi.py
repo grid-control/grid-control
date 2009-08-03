@@ -22,7 +22,7 @@ class DataMultiplexer(DataProvider):
 
 		print('Using the following datasets:')
 		print
-		utils.printTabular(zip(head, head), self.subprovider)
+		utils.printTabular(zip(head, head), self.subprovider, "rcl")
 		print
 
 

@@ -42,7 +42,7 @@ class Report:
 			reports.append(report)
 			if report["Destination"] != 'N/A':
 				reports.append({"Id": report["Destination"]})
-		utils.printTabular([("Job", "Job"), ("Status", "Status"), ("Id", "Id / Destination")], reports)
+		utils.printTabular([("Job", "Job"), ("Status", "Status"), ("Id", "Id / Destination")], reports, "rcl")
 		print
 
 
@@ -103,7 +103,7 @@ class Report:
 		print '---------------'
 		print
 		infos = map(lambda x: reports[x], order) + [None, all]
-		utils.printTabular(map(lambda x: (x, x), head + Report.states), infos)
+		utils.printTabular(map(lambda x: (x, x), head + Report.states), infos, 'c' * len(head) )
 		print
 
 
