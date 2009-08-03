@@ -201,5 +201,6 @@ echo "Job $MY_JOBID finished - `date`"
 echo "TIME=$[`date +%s` - $STARTDATE]" >> $MY_LANDINGZONE/jobinfo.txt
 [ -f "$LOG_MD5" ] && cat "$LOG_MD5" >> $MY_LANDINGZONE/jobinfo.txt
 cat $MY_LANDINGZONE/jobinfo.txt
+echo
 
 exit $CODE

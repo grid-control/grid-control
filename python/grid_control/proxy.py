@@ -7,22 +7,20 @@ class Proxy(AbstractObject):
 		self.lowerLimit = 300
 		self._lastUpdate = 0
 
-	# check for time left (includes lower time limit)
-	def check(self, checkedForTime):
-		checkedForTime += self.lowerLimit
-		return self.timeleft(checkedForTime) >= checkedForTime
-
-
 	def canSubmit(self, length, flag):
 		if not self.check(0):
 			raise UserError('Your proxy only has %d seconds left!' % self.timeleft())
 		if not self.check(length) and flag:
 			utils.vprint("Proxy lifetime (%s) does not meet the walltime requirements (%s)!"
 				% (utils.strTime(self.timeleft()), utils.strTime(length)), -1, printTime = True)
-			utils.vprint("INFO: Disabling job submission.", -1, printTime = True)
+			utils.vprint("Disabling job submission", -1, printTime = True)
 			return False
 		return True
 
+	# check for time left (includes lower time limit)
+	def check(self, checkedForTime):
+		checkedForTime += self.lowerLimit
+		return self.timeleft(checkedForTime) >= checkedForTime
 
 	# return (possibly cached) time left
 	def timeleft(self, checkedForTime = None):

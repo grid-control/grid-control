@@ -23,8 +23,8 @@ class GridWMS(WMS):
 	}
 
 
-	def __init__(self, config, opts, module, section):
-		WMS.__init__(self, config, opts, module, 'grid')
+	def __init__(self, config, module, section):
+		WMS.__init__(self, config, module, 'grid')
 		self._sites = config.get('grid', 'sites', '').split()
 		self.vo = config.get('grid', 'vo', module.proxy.getVO())
 
@@ -152,7 +152,7 @@ class GridWMS(WMS):
 		entry = "%s.%s" % (time.strftime("%Y-%m-%d_%H:%M:%S", time.localtime(now)), ("%.5f" % (now - int(now)))[2:])
 		data = { 'retCode': retCode, 'exec': proc.cmd[0], 'args': proc.cmd[1] }
 
-		tar = tarfile.TarFile.open(os.path.join(self.opts.workDir, 'error.tar'), 'a')
+		tar = tarfile.TarFile.open(os.path.join(self.config.workDir, 'error.tar'), 'a')
 		try:
 			logcontent = open(log, 'r').readlines()
 		except:
@@ -294,7 +294,7 @@ class GridWMS(WMS):
 			(params, utils.shellEscape(log), utils.shellEscape(jdl)))
 
 		wmsId = None
-		for line in map(str.strip, proc.iter(self.opts)):
+		for line in map(str.strip, proc.iter(self.config.opts)):
 			if line.startswith('http'):
 				wmsId = line
 		retCode = proc.wait()
@@ -322,7 +322,7 @@ class GridWMS(WMS):
 		proc = utils.LoggedProcess(self._statusExec, "--noint --logfile %s -i %s" %
 			tuple(map(utils.shellEscape, [log, jobs])))
 
-		for data in self._parseStatus(proc.iter(self.opts)):
+		for data in self._parseStatus(proc.iter(self.config.opts)):
 			data['reason'] = data.get('reason', '')
 			yield (idMap[data['id']], data['id'], self._statusMap[data['status']], data)
 
@@ -364,7 +364,7 @@ class GridWMS(WMS):
 
 		# yield output dirs
 		currentJobNum = None
-		for line in proc.iter(self.opts):
+		for line in proc.iter(self.config.opts):
 			line = line.strip()
 			if line.startswith(tmpPath):
 				yield (currentJobNum, line.strip())
@@ -404,7 +404,7 @@ class GridWMS(WMS):
 		del activity
 
 		# select cancelled jobs
-		deleted = map(lambda x: x.strip('- \n'), filter(lambda x: x.startswith('- '), proc.iter(self.opts)))
+		deleted = map(lambda x: x.strip('- \n'), filter(lambda x: x.startswith('- '), proc.iter(self.config.opts)))
 
 		if len(deleted) != len(ids):
 			sys.stderr.write("Could not delete all jobs!\n")

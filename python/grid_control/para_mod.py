@@ -3,9 +3,9 @@ from grid_control import Module, AbstractError, WMS, utils
 
 # Parameterized Module
 class ParaMod(Module):
-	def __init__(self, config, opts, proxy):
-		Module.__init__(self, config, opts, proxy)
-		self.baseMod = Module.open(config.get('ParaMod', 'module'), config, opts, proxy)
+	def __init__(self, config, proxy):
+		Module.__init__(self, config, proxy)
+		self.baseMod = Module.open(config.get('ParaMod', 'module'), config, proxy)
 		self.baseJobs = config.getInt('ParaMod', 'jobs', 1)
 		self.paramSpace = None
 		self.baseMod.hookenv = lambda tmp, jobNum: tmp.update(self.getJobConfig(jobNum))
@@ -65,8 +65,8 @@ class ParaMod(Module):
 
 
 class SimpleParaMod(ParaMod):
-	def __init__(self, config, opts, proxy):
-		ParaMod.__init__(self, config, opts, proxy)
+	def __init__(self, config, proxy):
+		ParaMod.__init__(self, config, proxy)
 		self.paraValues = config.get('ParaMod', 'parameter values')
 		self.paraName = config.get('ParaMod', 'parameter name', 'PARAMETER').strip()
 
@@ -76,8 +76,8 @@ class SimpleParaMod(ParaMod):
 
 
 class FileParaMod(ParaMod):
-	def __init__(self, config, opts, proxy):
-		ParaMod.__init__(self, config, opts, proxy)
+	def __init__(self, config, proxy):
+		ParaMod.__init__(self, config, proxy)
 		self.path = config.getPath('ParaMod', 'parameter source')
 		sniffed = csv.Sniffer().sniff(open(self.path).read(1024))
 		csv.register_dialect('sniffed', sniffed)
@@ -94,8 +94,8 @@ class FileParaMod(ParaMod):
 
 
 class LinkedParaMod(SimpleParaMod):
-	def __init__(self, config, opts, proxy):
-		SimpleParaMod.__init__(self, config, opts, proxy)
+	def __init__(self, config, proxy):
+		SimpleParaMod.__init__(self, config, proxy)
 
 	def getParams(self):
 		result = []
@@ -105,8 +105,8 @@ class LinkedParaMod(SimpleParaMod):
 
 
 class UberParaMod(ParaMod):
-	def __init__(self, config, opts, proxy):
-		ParaMod.__init__(self, config, opts, proxy)
+	def __init__(self, config, proxy):
+		ParaMod.__init__(self, config, proxy)
 
 		names = map(str.strip,
 			    config.get('ParaMod', 'parameters').split())

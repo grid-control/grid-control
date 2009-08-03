@@ -6,8 +6,8 @@ from DashboardAPI import DashboardAPI
 from time import time, localtime, strftime
 
 class CMSSW(Module):
-	def __init__(self, config, opts, proxy):
-		Module.__init__(self, config, opts, proxy)
+	def __init__(self, config, proxy):
+		Module.__init__(self, config, proxy)
 
 		# SCRAM info
 		scramProject = config.get('CMSSW', 'scram project', '').split()
@@ -86,18 +86,18 @@ class CMSSW(Module):
 				raise ConfigError("Config file '%s' not found." % cfgFile)
 
 		self.dataSplitter = None
-		if opts.init:
-			self._initTask(opts.workDir, config)
+		if config.opts.init:
+			self._initTask(config.workDir, config)
 		elif self.dataset != None:
 			try:
-				self.dataSplitter = DataSplitter.loadState(opts.workDir)
+				self.dataSplitter = DataSplitter.loadState(config.workDir)
 			except:
-				raise ConfigError("Not a properly initialized work directory '%s'." % opts.workDir)
-			if opts.resync:
-				old = DataProvider.loadState(config, opts.workDir)
+				raise ConfigError("Not a properly initialized work directory '%s'." % config.workDir)
+			if config.opts.resync:
+				old = DataProvider.loadState(config, config.workDir)
 				new = DataProvider.create(config)
-				self.dataSplitter.resyncMapping(opts.workDir, old.getBlocks(), new.getBlocks())
-				#TODO: new.saveState(opts.workDir)
+				self.dataSplitter.resyncMapping(config.workDir, old.getBlocks(), new.getBlocks())
+				#TODO: new.saveState(config.workDir)
 
 
 	def _initTask(self, workDir, config):
@@ -113,6 +113,7 @@ class CMSSW(Module):
 					print 'finished'
 				else:
 					print 'failed'
+					print utils.se_copy.lastlog
 					raise RuntimeError("Unable to copy runtime!")
 
 		# find and split datasets
@@ -193,7 +194,7 @@ class CMSSW(Module):
 	def getInFiles(self):
 		files = Module.getInFiles(self)
 		if len(self.projectArea) and not self.seRuntime:
-			files.append(os.path.join(self.opts.workDir, 'runtime.tar.gz'))
+			files.append(os.path.join(self.config.workDir, 'runtime.tar.gz'))
 		files.append(utils.atRoot('share', 'run.cmssw.sh')),
 		files.extend(self.configFiles)
 		return files

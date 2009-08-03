@@ -4,8 +4,8 @@ from grid_wms import GridWMS
 from glite import Glite
 
 class GliteWMS(Glite):
-	def __init__(self, config, opts, module):
-		GridWMS.__init__(self, config, opts, module, 'glite-wms')
+	def __init__(self, config, module):
+		GridWMS.__init__(self, config, module, 'glite-wms')
 
 		self._delegateExec = utils.searchPathFind('glite-wms-job-delegate-proxy')
 		self._submitExec = utils.searchPathFind('glite-wms-job-submit')
@@ -27,7 +27,7 @@ class GliteWMS(Glite):
 			proc = utils.LoggedProcess(self._delegateExec, "%s -a --noint --logfile %s" %
 				(params, utils.shellEscape(log)))
 
-			for line in map(str.strip, proc.iter(self.opts)):
+			for line in map(str.strip, proc.iter(self.config.opts)):
 				try:
 					(left, right) = line.split(':', 1)
 					if left.endswith('identifier') and not right.strip().startswith('-'):

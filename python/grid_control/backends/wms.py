@@ -10,23 +10,22 @@ class WMS(AbstractObject):
 		locals()[reqType] = id
 
 
-	def __init__(self, config, opts, module, backend):
+	def __init__(self, config, module, backend):
 		self.config = config
-		self.opts = opts
 		self.module = module
 
-		self._outputPath = os.path.join(opts.workDir, 'output')
+		self._outputPath = os.path.join(config.workDir, 'output')
 
 		if not os.path.exists(self._outputPath):
-			if opts.init:
+			if config.opts.init:
 				try:
 					os.mkdir(self._outputPath)
 				except IOError, e:
 					raise ConfigError("Problem creating work directory '%s': %s" % (self._outputPath, e))
 			else:
-				raise ConfigError("Not a properly initialized work directory '%s'." % opts.workDir)
+				raise ConfigError("Not a properly initialized work directory '%s'." % config.workDir)
 
-		tarFile = os.path.join(opts.workDir, 'sandbox.tar.gz')
+		tarFile = os.path.join(config.workDir, 'sandbox.tar.gz')
 
 		self.sandboxIn = [ utils.atRoot('share', 'run.sh'), utils.atRoot('share', 'run.lib'), tarFile ]
 		self.sandboxOut = self.module.getOutFiles() + [ 'stdout.txt', 'stderr.txt', 'jobinfo.txt' ]
@@ -37,7 +36,7 @@ class WMS(AbstractObject):
 			utils.VirtualFile('_varmap.dat', str.join('', utils.sorted(varMapping))) ]
 
 		utils.vprint("Packing sandbox:")
-		if opts.init:
+		if config.opts.init:
 			utils.vprint("\t%s" % tarFile)
 			tar = tarfile.TarFile.open(tarFile, 'w:gz')
 
@@ -52,7 +51,7 @@ class WMS(AbstractObject):
 					self.sandboxIn.append(file)
 					continue
 
-			if opts.init:
+			if config.opts.init:
 				# Package sandbox tar file
 				if type(file) == str:
 					utils.vprint("\t\t%s" % file)
@@ -74,10 +73,10 @@ class WMS(AbstractObject):
 				tar.addfile(info, handle)
 				handle.close()
 
-		if opts.init:
+		if config.opts.init:
 			tar.close()
 		for file in self.sandboxIn:
-			if file != tarFile or not opts.init:
+			if file != tarFile or not config.opts.init:
 				utils.vprint("\t%s" % file)
 
 
@@ -99,7 +98,7 @@ class WMS(AbstractObject):
 
 	def submitJobs(self, jobNumList):
 		for jobNum in jobNumList:
-			if self.opts.abort:
+			if self.config.opts.abort:
 				raise StopIteration
 			jobNum, wmsId, data = self.submitJob(jobNum)
 			if wmsId == None:
@@ -144,7 +143,7 @@ class WMS(AbstractObject):
 				except:
 					pass
 
-				failpath = os.path.join(self.opts.workDir, 'fail')
+				failpath = os.path.join(self.config.workDir, 'fail')
 				if not os.path.exists(failpath):
 					os.mkdir(failpath)
 				dst = os.path.join(failpath, os.path.basename(dir))

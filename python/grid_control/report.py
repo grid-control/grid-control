@@ -1,6 +1,8 @@
 from grid_control import Job, RuntimeError, utils
 
 class Report:
+	states = ['WAITING', 'RUNNING', 'FAILED', 'SUCCESS']
+
 	def __init__(self, jobs, allJobs):
 		self.allJobs = allJobs
 		if hasattr(jobs, 'nJobs'):
@@ -25,10 +27,17 @@ class Report:
 		return False
 
 
+	def getJobCategory(self, job):
+		cats = {Job.SUCCESS: 'SUCCESS', Job.FAILED: 'FAILED', Job.RUNNING: 'RUNNING', Job.DONE: 'RUNNING'}
+		return cats.get(job.state, 'WAITING')
+
+
 	def details(self):
 		reports = []
 		for jobNum in self.jobs:
 			report = self.allJobs.get(jobNum).report()
+			if report["Status"] == 'INIT':
+				continue
 			report.update({'Job': jobNum})
 			reports.append(report)
 			if report["Destination"] != 'N/A':
@@ -37,21 +46,44 @@ class Report:
 		print
 
 
-	def getJobCategory(self, job):
-		cats = {Job.SUCCESS: 'SUCCESS', Job.FAILED: 'FAILED', Job.RUNNING: 'RUNNING', Job.DONE: 'RUNNING'}
-		return cats.get(job.state, 'QUEUED')
+	def summary(self, message = ""):
+		# Print report summary
+		print '-----------------------------------------------------------------'
+		print 'REPORT SUMMARY:'
+		print '---------------'
+
+		summary = map(lambda x: 0.0, Job.states)
+		for jobNum in self.jobs:
+			summary[self.allJobs.get(jobNum).state] += 1
+
+		def makeSum(*states):
+			return reduce(lambda x, y: x + y, map(lambda x: summary[x], states))
+
+		print 'Total number of jobs:      %4d   Number of successful jobs: %4d' % \
+			(self.allJobs.nJobs, summary[Job.SUCCESS])
+		print 'Number of unfinished jobs: %4d   Number of failed jobs:     %4d\n' % \
+			(makeSum(Job.INIT, Job.READY, Job.WAITING, Job.QUEUED, Job.SUBMITTED, Job.RUNNING),
+			 makeSum(Job.ABORTED, Job.CANCELLED, Job.FAILED))
+		print 'Detailed Information:'
+		for state, category in enumerate(Job.states):
+			ratio = summary[state] / self.allJobs.nJobs * 100.0
+			print 'Jobs   %9s: %4d     %3d%%  ' % (category, summary[state], round(ratio)),
+			if state % 2:
+				print
+		print
+		print '-----------------------------------------------------------------'
+		print message
+		return 0
 
 
 	def modReport(self, details, module):
-		reports = {}
-		states = ['QUEUED', 'RUNNING', 'FAILED', 'SUCCESS']
-		all = dict(map(lambda x: (x, 0), states))
-		order = []
-		head = []
+		(order, head, reports) = ([], [], {})
+		all = dict.fromkeys(Report.states, 0)
+
 		for jobNum in self.jobs:
 			report = module.report(jobNum)
 			if not reports.has_key(str(report)):
-				reports[str(report)] = dict(map(lambda x: (x, 0), states))
+				reports[str(report)] = dict(map(lambda x: (x, 0), Report.states))
 				for key, value in report.iteritems():
 					if not key:
 						continue
@@ -71,13 +103,11 @@ class Report:
 		print '---------------'
 		print
 		infos = map(lambda x: reports[x], order) + [None, all]
-		utils.printTabular(map(lambda x: (x, x), head + states), infos)
+		utils.printTabular(map(lambda x: (x, x), head + Report.states), infos)
 		print
 
 
 	def getWNInfos(self):
-		states = ['QUEUED', 'RUNNING', 'FAILED', 'SUCCESS']
-
 		def add(x,y): return x+y
 		def getDest(dest):
 			if dest == 'N/A':
@@ -95,8 +125,8 @@ class Report:
 			dict[L1][STAT][INFO] += INC
 			dict[STAT][INFO] += INC
 		def initdict():
-			tmp = dict.fromkeys(states)
-			for state in states:
+			tmp = dict.fromkeys(Report.states)
+			for state in Report.states:
 				tmp[state] = {'COUNT': 0, 'TIME': 0}
 			return tmp
 
@@ -133,7 +163,7 @@ class Report:
 				else:
 					incstat(statinfo, site, wn, queue, 'FAILED', 'COUNT', 1)
 					incstat(statinfo, site, wn, queue, 'FAILED', 'TIME', int(job.get('runtime')))
-		# statinfo = {'site1: {''wn1.site1': {'FAILED': 0, 'RUNNING': 0, 'QUEUED': 0, 'SUCCESS': 1}, 'wn2.site1': ...}, 'site2': {'wn1.site2': ...}}
+		# statinfo = {'site1: {''wn1.site1': {'FAILED': 0, 'RUNNING': 0, 'WAITING': 0, 'SUCCESS': 1}, 'wn2.site1': ...}, 'site2': {'wn1.site2': ...}}
 		return (maxlen, statinfo)
 
 
@@ -142,8 +172,6 @@ class Report:
 		print 'SITE SUMMARY:'
 		print '---------------'
 		print
-
-		states = ['QUEUED', 'RUNNING', 'FAILED', 'SUCCESS']
 
 		(maxlen_detail, statinfo) = self.getWNInfos()
 		maxlen = 22
@@ -154,11 +182,11 @@ class Report:
 		maxlen = max(maxlen, maxlen_detail[0])
 		
 		# Print header
-		print ' %s       | %12s | %12s | %12s | %12s' % tuple(['SITE / WN'.ljust(maxlen)] + map(lambda x: x.center(12), states))
-		print '=%s=======' % (maxlen * '=') + len(states) * ('+' + 14 * '=')
+		print ' %s       | %12s | %12s | %12s | %12s' % tuple(['SITE / WN'.ljust(maxlen)] + map(lambda x: x.center(12), Report.states))
+		print '=%s=======' % (maxlen * '=') + len(Report.states) * ('+' + 14 * '=')
 
 		def ratestats(entries):
-			result = map(lambda state: entries[state]['COUNT'], states)
+			result = map(lambda state: entries[state]['COUNT'], Report.states)
 			line = []
 			all = max(1, sum(result))
 			for x in result:
@@ -167,8 +195,8 @@ class Report:
 			return line
 
 		def timestats(entries):
-			result_count = map(lambda state: entries[state]['COUNT'], states)
-			result_time = map(lambda state: entries[state]['TIME'], states)
+			result_count = map(lambda state: entries[state]['COUNT'], Report.states)
+			result_time = map(lambda state: entries[state]['TIME'], Report.states)
 			line = []
 			all = max(1, sum(result_count))
 			for x in result_time:
@@ -192,17 +220,17 @@ class Report:
 
 		padding = ' ' * maxlen
 	
-		sites = filter(lambda x: not x in states, statinfo.keys())
+		sites = filter(lambda x: not x in Report.states, statinfo.keys())
 		for num, site in enumerate(utils.sorted(sites)):
 			print_stats(site, statinfo[site], maxlen, showtime, rate_site, time_site)
 
 			if details > 1:
-				wns = filter(lambda x: not x in states, statinfo[site].keys())
+				wns = filter(lambda x: not x in Report.states, statinfo[site].keys())
 				for wn in utils.sorted(wns):
 					print_stats(wn, statinfo[site][wn], maxlen, showtime, rate_wn, time_wn)
 
 					if details > 2:
-						queues = filter(lambda x: not x in states, statinfo[site][wn].keys())
+						queues = filter(lambda x: not x in Report.states, statinfo[site][wn].keys())
 						for queue in utils.sorted(queues):
 							print_stats(queue, statinfo[site][wn][queue], maxlen, showtime, rate_queue, time_queue)
 			if num < len(sites) - 1:
@@ -211,40 +239,3 @@ class Report:
 		print '====%s====' % (maxlen * '=') + 4 * ('+' + 14 * '=')
 		print_stats('', statinfo, maxlen, showtime, rate_site, time_site)
 		print
-
-
-	def summary(self, message = ""):
-		# Print report summary
-		print '-----------------------------------------------------------------'
-		print 'REPORT SUMMARY:'
-		print '---------------'
-
-		summary = map(lambda x: 0.0, Job.states)
-		for jobNum in self.jobs:
-			try:
-				job = self.allJobs.get(jobNum)
-				summary[job.state] += 1
-			except:
-				summary[Job.INIT] += 1
-
-		def makeSum(*states):
-			return reduce(lambda x, y: x + y, map(lambda x: summary[x], states))
-
-		print 'Total number of jobs:      %4d   Number of successful jobs: %4d' % \
-			(self.allJobs.nJobs, summary[Job.SUCCESS])
-		print 'Number of unfinished jobs: %4d   Number of failed jobs:     %4d\n' % \
-			(makeSum(Job.INIT, Job.READY, Job.WAITING, Job.QUEUED, Job.SUBMITTED, Job.RUNNING),
-			 makeSum(Job.ABORTED, Job.CANCELLED, Job.FAILED))
-		print 'Detailed Information:'
-		for state, category in enumerate(Job.states):
-			if summary[state]:
-				ratio = (summary[state] / (self.allJobs.nJobs))*100
-			else:
-				ratio = 0
-			print 'Jobs   %9s: %4d     %3d%%  ' % (category, summary[state], round(ratio)),
-			if state % 2:
-				print
-		print
-		print '-----------------------------------------------------------------'
-		print message
-		return 0

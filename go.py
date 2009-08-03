@@ -2,12 +2,13 @@
 import sys, os, signal, optparse, curses
 
 # add python subdirectory from where go.py was started to search path
-_root = os.path.dirname(os.path.abspath(os.path.normpath(sys.argv[0])))
-sys.path.insert(0, os.path.join(_root, 'python'))
+root = os.path.dirname(os.path.abspath(os.path.normpath(sys.argv[0])))
+sys.path.insert(0, os.path.join(root, 'python'))
 
 # and include grid_control python module
 from grid_control import *
 from time import sleep
+utils.atRoot.root = root
 
 def print_help(*args):
 	sys.stderr.write("Syntax: %s [OPTIONS] <config file>\n\n" % sys.argv[0])
@@ -51,7 +52,7 @@ def main(args):
 	parser.add_option("-d", '--delete',        dest="delete",     default=None)
 	parser.add_option("-S", '--seed',          dest="seed",       default=None)
 	(opts, args) = parser.parse_args()
-	sys.modules['__main__']._verbosity = opts.verbosity
+	utils.verbosity.setting = opts.verbosity
 	opts.abort = False
 
 	# we need exactly one positional argument (config file)
@@ -60,7 +61,6 @@ def main(args):
 		sys.stderr.write("Syntax: %s [OPTIONS] <config file>\n" % sys.argv[0])
 		sys.stderr.write("Use --help to get a list of options!\n")
 		sys.exit(0)
-	opts.confName = str.join("", os.path.basename(args[0]).split(".")[:-1])
 
 	# set up signal handler for interrupts
 	def interrupt(sig, frame):
@@ -76,19 +76,19 @@ def main(args):
 		try:
 			open(args[0], 'r')
 			config = Config(args[0])
+			config.opts = opts
 		except IOError, e:
 			raise ConfigError("Error while reading configuration file '%s'!" % args[0])
 
 		# Check work dir validity (default work directory is the config file name)
-		workDirDefault = os.path.join(config.baseDir, 'work.%s' % opts.confName)
-		opts.workDir = config.getPath('global', 'workdir', workDirDefault)
-		if not os.path.exists(opts.workDir):
-			if utils.boolUserInput("Do you want to create the working directory %s?" % opts.workDir, True):
-				os.mkdir(opts.workDir)
+		config.workDir = config.getPath('global', 'workdir', config.workDirDefault)
+		if not os.path.exists(config.workDir):
+			if utils.boolUserInput("Do you want to create the working directory %s?" % config.workDir, True):
+				os.mkdir(config.workDir)
 		try:
-			os.chdir(opts.workDir)
+			os.chdir(config.workDir)
 		except:
-			raise UserError("Could not access specified working directory '%s'!" % opts.workDir)
+			raise UserError("Could not access specified working directory '%s'!" % config.workDir)
 
 		backend = config.get('global', 'backend', 'grid')
 
@@ -98,8 +98,7 @@ def main(args):
 
 		# Initialise application module
 		module = config.get('global', 'module')
-		module = Module.open(module, config, opts, proxy)
-		utils.vprint('Current task ID %s' % module.taskID, -1)
+		module = Module.open(module, config, proxy)
 
 		# Give help about variables
 		if opts.help_vars:
@@ -109,14 +108,14 @@ def main(args):
 		# Initialise workload management interface
 		defaultwms = { 'grid': 'GliteWMS', 'local': 'LocalWMS' }
 		if backend == 'grid':
-			wms = WMS.open(config.get(backend, 'wms', 'GliteWMS'), config, opts, module)
+			wms = WMS.open(config.get(backend, 'wms', 'GliteWMS'), config, module)
 		elif backend == 'local':
-			wms = WMS.open(defaultwms[backend], config, opts, module)
+			wms = WMS.open(defaultwms[backend], config, module)
 		else:
-			raise UserError("Invalid backend specified!" % opts.workDir)
+			raise UserError("Invalid backend specified!" % config.workDir)
 
 		# Initialise job database
-		jobs = JobDB(config, opts, module)
+		jobs = JobDB(config, module)
 
 		# Give config help
 		if opts.help_cfg or opts.help_scfg:
@@ -129,17 +128,16 @@ def main(args):
 
 		# Check if jobs have to be deleted and exit
 		if opts.delete != None:
-			jobs.delete(wms, opts)
+			jobs.delete(wms, opts.delete)
 			return 0
 
-		if not proxy.canSubmit(module.wallTime, opts.submission):
-			opts.submission = False
-
-		# Check if running in continuous mode
 		if opts.continuous and not opts.gui:
 			print
 			Report(jobs, jobs).summary()
-			print "Running in continuous mode with job submission %s. Press ^C to exit." % ("disabled", "enabled")[opts.submission]
+			print "Running in continuous mode. Press ^C to exit."
+
+		if not proxy.canSubmit(module.wallTime, opts.submission):
+			opts.submission = False
 
 		# Job submission loop
 		def wait(timeout):
@@ -155,7 +153,7 @@ def main(args):
 		def jobCycle():
 			didWait = False
 			# Check free disk space
-			if int(os.popen("df -P -m %s" % opts.workDir).readlines()[-1].split()[3]) < 10:
+			if int(os.popen("df -P -m %s" % config.workDir).readlines()[-1].split()[3]) < 10:
 				raise RuntimeError("Not enough space left in working directory")
 
 			# check for jobs
@@ -206,7 +204,9 @@ def main(args):
 					def show(self, message):
 						oldpos = screen.getyx()
 						screen.move(0, 0)
+						sys.stdout.logged = False
 						Report(jobs, jobs).summary(message)
+						sys.stdout.logged = True
 						screen.move(*oldpos)
 						screen.refresh()
 
@@ -218,10 +218,13 @@ def main(args):
 					sys.stderr = utils.CursesStream(saved[1], screen)
 					while jobCycle(): pass
 				finally:
-					sys.stdout, sys.stderr = saved
 					global log
 					if log: del log
-			curses.wrapper(cursesWrapper)
+					sys.stdout, sys.stderr = saved
+			try:
+				curses.wrapper(cursesWrapper)
+			finally:
+				utils.CursesStream.dump()
 		else:
 			# Main cycle - non GUI mode
 			while jobCycle(): pass

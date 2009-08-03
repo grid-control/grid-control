@@ -7,6 +7,7 @@ class DataProvider(AbstractObject):
 		locals()[dataInfo] = id
 
 	def __init__(self, config, datasetExpr, datasetNick, datasetID):
+		self.config = config
 		self._datasetExpr = datasetExpr
 		self._datasetNick = datasetNick
 		self._datasetID = datasetID

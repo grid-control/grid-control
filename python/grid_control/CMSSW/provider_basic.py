@@ -36,11 +36,26 @@ class FileProvider(DataProvider):
 class ListProvider(DataProvider):
 	def __init__(self, config, datasetExpr, datasetNick, datasetID = 0):
 		DataProvider.__init__(self, config, datasetExpr, datasetNick, datasetID)
-		self._filename = config.getPath("CMSSW", "dataset file", datasetExpr)
+
+		tmp = map(str.strip, datasetExpr.split('%'))
+		self._filename = config.getPath("CMSSW", "dataset file", tmp[0])
+		self._filter = None
+		if len(tmp) == 2:
+			self._filter = tmp[1]
 
 	def getBlocksInternal(self):
 		result = []
 		blockinfo = None
+
+		def doFilter(blockinfo):
+			name = self._filter
+			if self._filter:
+				name = blockinfo[DataProvider.Dataset]
+				if blockinfo.has_key(DataProvider.BlockName):
+					name = "%s#%s" % (name, blockinfo[DataProvider.BlockName])
+			if name == self._filter:
+				return True
+			return False
 
 		for line in open(self._filename, 'rb'):
 			# Found start of block:
@@ -48,7 +63,7 @@ class ListProvider(DataProvider):
 			if line.startswith(';'):
 				continue
 			elif line.startswith('['):
-				if blockinfo:
+				if blockinfo and doFilter(blockinfo):
 					result.append(blockinfo)
 				blockinfo = dict()
 				blockname = line.lstrip('[').rstrip(']').split('#')
@@ -84,6 +99,6 @@ class ListProvider(DataProvider):
 						DataProvider.NEvents: int(value)
 					})
 		else:
-			if blockinfo:
+			if blockinfo and doFilter(blockinfo):
 				result.append(blockinfo)
 		return result

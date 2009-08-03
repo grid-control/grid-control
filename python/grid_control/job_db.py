@@ -3,16 +3,16 @@ from time import time, localtime, strftime
 from grid_control import ConfigError, Job, UserError, Report
 
 class JobDB:
-	def __init__(self, config, opts, module):
-		self.opts = opts
+	def __init__(self, config, module):
+		self.config = config
 		self.module = module
-		self._dbPath = os.path.join(opts.workDir, 'jobs')
+		self._dbPath = os.path.join(config.workDir, 'jobs')
 		try:
 			if not os.path.exists(self._dbPath):
-				if opts.init:
+				if config.opts.init:
 					os.mkdir(self._dbPath)
 				else:
-					raise ConfigError("Not a properly initialized work directory '%s'." % opts.workDir)
+					raise ConfigError("Not a properly initialized work directory '%s'." % config.workDir)
 		except IOError, e:
 			raise ConfigError("Problem creating work directory '%s': %s" % (self._dbPath, e))
 
@@ -76,7 +76,7 @@ class JobDB:
 
 
 	def get(self, jobNum):
-		return self._jobs[jobNum]
+		return self._jobs.get(jobNum, Job())
 
 
 	def _update(self, jobObj, jobNum, state):
@@ -118,10 +118,10 @@ class JobDB:
 
 	def getSubmissionJobs(self, maxsample):
 		submit = max(0, self.inFlight - len(self.running))
-		if self.opts.continuous:
+		if self.config.opts.continuous:
 			submit = min(maxsample, submit)
-		if self.opts.maxRetry != None:
-			list = filter(lambda x: self._jobs.get(x, Job()).attempt < self.opts.maxRetry, self.ready)
+		if self.config.opts.maxRetry != None:
+			list = filter(lambda x: self._jobs.get(x, Job()).attempt < self.config.opts.maxRetry, self.ready)
 		else:
 			list = self.ready[:]
 		if self.doShuffle:
@@ -134,7 +134,7 @@ class JobDB:
 
 	def submit(self, wms, maxsample = 100):
 		ids = self.getSubmissionJobs(maxsample)
-		if (len(ids) == 0) or not self.opts.submission:
+		if (len(ids) == 0) or not self.config.opts.submission:
 			return False
 
 		if not wms.bulkSubmissionBegin(len(ids)):
@@ -153,7 +153,7 @@ class JobDB:
 
 				self._update(jobObj, jobNum, Job.SUBMITTED)
 				self.module.onJobSubmit(jobObj, jobNum)
-				if self.opts.abort:
+				if self.config.opts.abort:
 					return False
 			return True
 		finally:
@@ -168,7 +168,7 @@ class JobDB:
 		change = False
 		timeoutlist = []
 
-		if self.opts.continuous:
+		if self.config.opts.continuous:
 			jobList = self.sample(self.running, maxsample)
 		else:
 			jobList = self.running
@@ -187,7 +187,7 @@ class JobDB:
 				if jobObj.state in (Job.SUBMITTED, Job.WAITING, Job.READY, Job.QUEUED):
 					if self.timeout > 0 and time() - jobObj.submitted > self.timeout:
 						timeoutlist.append(jobNum)
-			if self.opts.abort:
+			if self.config.opts.abort:
 				return False
 
 		# Cancel jobs who took too long
@@ -210,7 +210,7 @@ class JobDB:
 	def retrieve(self, wms, maxsample = 10):
 		change = False
 
-		if self.opts.continuous:
+		if self.config.opts.continuous:
 			jobList = self.sample(self.done, maxsample)
 		else:
 			jobList = self.done
@@ -234,7 +234,7 @@ class JobDB:
 				self._update(jobObj, jobNum, state)
 				self.module.onJobOutput(jobObj, jobNum, retCode)
 
-			if self.opts.abort:
+			if self.config.opts.abort:
 				return False
 
 		return change
@@ -249,9 +249,9 @@ class JobDB:
 			self._update(jobObj, jobNum, Job.CANCELLED)
 
 
-	def delete(self, wms, opts):
+	def delete(self, wms, selector):
 		predefined = { 'TODO': 'SUBMITTED,WAITING,READY,QUEUED', 'ALL': 'SUBMITTED,WAITING,READY,QUEUED,RUNNING'}
-		jobfilter = predefined.get(opts.delete.upper(), opts.delete.upper())
+		jobfilter = predefined.get(selector.upper(), selector.upper())
 
 		if len(jobfilter) and jobfilter[0].isdigit():
 			try:

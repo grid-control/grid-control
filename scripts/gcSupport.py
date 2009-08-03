@@ -12,7 +12,9 @@ utils.atRoot.root = root
 class DummyStream:
 	def __init__(self, stream):
 		self.__stream = stream
+		self.log = []
 	def write(self, data):
+		self.log.append(data)
 		return True
 	def __getattr__(self, name):
 		return self.__stream.__getattribute__(name)

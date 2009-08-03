@@ -8,9 +8,8 @@ from DashboardAPI import DashboardAPI
 
 class Module(AbstractObject):
 	# Read configuration options and init vars
-	def __init__(self, config, opts, proxy):
+	def __init__(self, config, proxy):
 		self.config = config
-		self.opts = opts
 		self.proxy = proxy
 		self.hookenv = None
 
@@ -22,23 +21,24 @@ class Module(AbstractObject):
 
 		# Try to read task info file
 		try:
-			taskInfoFile = os.path.join(self.opts.workDir, 'task.dat')
+			taskInfoFile = os.path.join(self.config.workDir, 'task.dat')
 			taskInfo = utils.DictFormat(" = ").parse(open(taskInfoFile))
 		except:
 			taskInfo = {}
 
 		# Compute / get task ID
 		self.taskID = taskInfo.get('task id', 'GC' + md5.md5(str(time())).hexdigest()[:12])
+		utils.vprint('Current task ID: %s' % self.taskID, -1, once = True)
 
 		# Set random seeds (args override config)
 		seedarg = config.get('jobs', 'seeds', '')
-		if opts.seed != None:
-			seedarg = opts.seed.rstrip('S')
+		if config.opts.seed != None:
+			seedarg = config.opts.seed.rstrip('S')
 		if seedarg != '':
 			self.seeds = map(int, seedarg.split(','))
 		else:
 			# args specified => gen seeds
-			if taskInfo.has_key('seeds') and (opts.seed == None):
+			if taskInfo.has_key('seeds') and (config.opts.seed == None):
 				self.seeds = map(int, taskInfo['seeds'].split())
 			else:
 				self.seeds = map(lambda x: random.randint(0, 10000000), range(10))
@@ -89,7 +89,7 @@ class Module(AbstractObject):
 		tmp.update(self.getTaskConfig())
 		tmp.update(self.getJobConfig(jobNum))
 		tmp.update(jobObj.getAll())
-		tmp.update({'WORKDIR': self.opts.workDir})
+		tmp.update({'WORKDIR': self.config.workDir})
 		if self.hookenv:
 			self.hookenv(tmp, jobNum)
 		for key, value in tmp.iteritems():
@@ -166,7 +166,7 @@ class Module(AbstractObject):
 			'SUBST_FILES': str.join(' ', map(os.path.basename, self.getSubstFiles())),
 			# Task infos
 			'TASK_ID': self.taskID,
-			'GC_CONF': self.opts.confName,
+			'GC_CONF': self.config.confName,
 			'TASK_USER': self.proxy.getUsername(),
 			'DASHBOARD': ('no', 'yes')[self.dashboard],
 			'DB_EXEC': 'shellscript'

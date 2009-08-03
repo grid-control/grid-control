@@ -10,8 +10,12 @@ def sorted(list, comp = None):
 	return tmp
 
 
+def atRoot(*args):
+	return os.path.join(atRoot.root, *args)
+
+
 def verbosity():
-	return sys.modules['__main__']._verbosity
+	return verbosity.setting
 
 
 def dprint(text):
@@ -56,18 +60,14 @@ def deprecated(text):
 		sys.exit(0)
 
 
-def se_copy(source, target, force = True):
-	# kill the runtime on se
-	if force:
-		tool = 'se_copy_force.sh'
-	else:
-		tool = 'se_copy.sh'
-
-	proc = popen2.Popen4('%s %s %s' % (atRoot('share', tool), source, target), True)
-	result = proc.wait()
-	if sys.modules['__main__']._verbosity or (result != 0):
-		sys.stderr.write(proc.fromchild.read())
-	return result == 0
+def se_copy(src, dst, force = True):
+	src = src.replace('dir://', 'file://')
+	dst = dst.replace('dir://', 'file://')
+	lib = atRoot(os.path.join('share', 'run.lib'))
+	cmd = 'print_and_eval "url_copy_single%s" "%s" "%s"' % (('', '_force')[force], src, dst)
+	proc = popen2.Popen4('source %s || exit 1; %s' % (lib, cmd), True)
+	se_copy.lastlog = proc.fromchild.read()
+	return proc.wait() == 0
 
 
 class VirtualFile(StringIO.StringIO):
@@ -150,11 +150,6 @@ class DictFormat(object):
 			else:
 				result.append(format % fkt((key, self.delimeter, value)))
 		return result
-
-
-def atRoot(*args):
-	# relies on _root to be set in go.py
-	return os.path.join(sys.modules['__main__']._root, *args)
 
 
 def searchPathFind(program):
@@ -269,6 +264,7 @@ class CursesStream:
 	def dump(cls):
 		for data in filter(lambda x: x, CursesStream.backlog):
 			sys.stdout.write(data)
+		sys.stdout.write('\n')	
 	dump = classmethod(dump)
 CursesStream.backlog = [None for i in xrange(100)]
 

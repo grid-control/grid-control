@@ -42,7 +42,7 @@ fail() {
 	echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
 	echo "Error code $CODE"
 	echo
-	set
+	set >&2
 	cleanup
 	updatejobinfo $CODE
 	exit $CODE
@@ -105,6 +105,7 @@ checkdir() {
 
 checkbin() {
 	debug_helper $FUNCNAME "$@"
+	[ "$(type -t $1)" == "function" ] && return
 	echo -n "Checking for binary $1 ... "
 	if [ -x "$1" ]; then
 		echo "OK"
@@ -291,20 +292,32 @@ monitordirlimits() {
 	done
 }
 
+# Reserved for high level ops
 print_and_eval() {
-	[ "$1" == " " ] && shift || checkbin "$1"
+	[ "$1" != " " ] && checkbin "$1" || shift
 	CMD="$1"
 	shift
-	echo "`basename $CMD` $@"
+	echo "$PAELEVEL`basename $CMD` $@"
+	export PAELEVEL="$PAELEVEL "
 	eval "$CMD $@"
+	CODE="$?"
+	export PAELEVEL="${PAELEVEL# }"
+	echo "$PAELEVEL returned $CODE"
+	return $CODE
 }
 
+# Reserved for low level ops
 print_and_qeval() {
-	[ "$1" == " " ] && shift || checkbin "$1"
+	[ "$1" != " " ] && checkbin "$1" || shift
 	CMD="$1"
 	shift
-	echo "`basename $CMD` $@"
+	echo "$PAELEVEL`basename $CMD` $@"
+	export PAELEVEL="$PAELEVEL "
 	eval "$CMD $@" > /dev/null 2> /dev/null
+	CODE="$?"
+	export PAELEVEL="${PAELEVEL# }"
+	echo "$PAELEVEL returned $CODE"
+	return $CODE
 }
 
 url_ls() {
@@ -364,13 +377,13 @@ url_rm() {
 		FILE=${!PARAM}
 		case "$FILE" in
 			"rfio://"*)
-				print_and_eval "`getcommand nsrm`" "/${FILE#rfio://}";;
+				print_and_qeval "`getcommand nsrm`" "/${FILE#rfio://}";;
 			"gsiftp://"*)
-				print_and_eval "`getcommand glite-gridftp-rm edg-gridftp-rm lcg-rm`" "$FILE";;
+				print_and_qeval "`getcommand glite-gridftp-rm edg-gridftp-rm lcg-rm`" "$FILE";;
 			"srm://"*)
-				print_and_eval "`getcommand srmrm`" "-2 $FILE";;
+				print_and_qeval "`getcommand srmrm`" "-2 $FILE";;
 			"file://"*)
-				print_and_eval " " "rm" "${FILE#file://}";;
+				print_and_qeval " " "rm" "${FILE#file://}";;
 			*)
 				echo "Unsupported URL: $FILE" >&2 && fail 106;;
 		esac
@@ -379,9 +392,9 @@ url_rm() {
 
 url_copy_single_local() {
 	debug_helper $FUNCNAME "$@"
-	[ ! -f "${1#file://}" ] && fail 106
+	[ ! -f "${1#file://}" ] && return 101
 	mkdir -p `dirname ${2#file://}`
-	[ -f "${2#file://}" ] && fail 106
+	[ -f "${2#file://}" ] && return -101
 	cp -b ${1#file://} ${2#file://}
 }
 
@@ -392,7 +405,7 @@ url_copy_single() {
 		"rfio://"*)
 			case "$2" in
 				"file://"*)
-					print_and_eval "`getcommand rfcp`" "${1#rfio://} ${2#file://}";;
+					print_and_qeval "`getcommand rfcp`" "${1#rfio://} ${2#file://}";;
 				*)
 					echo "Unsupported copy from $1 to $2" >&2 && fail 106;;
 			esac;;
@@ -427,7 +440,7 @@ url_copy_single() {
 					# TODO: select lcg-cp on non-OSG sites
 					print_and_qeval "`getcommand srmcp`" "-2 -debug=true -streams_num=1 $1 $2";;
 				"file://"*)
-					print_and_qeval " " "url_copy_single_local" "$1 $2";;
+					print_and_qeval "url_copy_single_local" "$1 $2";;
 				*)
 					echo "Unsupported copy from $1 to $2" >&2 && fail 106;;
 			esac;;
@@ -439,14 +452,13 @@ url_copy_single() {
 # Copy one file at a time (1) -> (2) (overwrite existing files)
 url_copy_single_force() {
 	debug_helper $FUNCNAME "$@"
-	url_exists $2 && echo "File exists! Delete $2" && url_rm $2
-	url_copy_single $1 $2
+	print_and_eval "url_exists" "$2" && echo "File exists! Delete $2" && print_and_eval "url_rm" "$2"
+	print_and_eval "url_copy_single" "$1 $2"
 }
 
 # Copy serveral files with specified pattern
 url_copy() {
 	debug_helper $FUNCNAME "$@"
-	#checkbin "globus-url-copy"
 	FILENAMES="`echo "$3" | var_replacer ''`"
 	echo "Copy $FILENAMES from $1 to $2"
 
@@ -472,11 +484,11 @@ url_copy() {
 		"file://"*)
 			# copy from WN
 			SOURCE_PATTERN="__X__"
-			SOURCE_FILES="`cd ${SOURCE_URL#file://} && ls -d $FILENAMES && cd $OLDPWD`"
+			SOURCE_FILES="$(cd "${SOURCE_URL#file://}"; echo $FILENAMES; cd "$OLDPWD")"
 
 			# Check that file size is larger than SE_MINFILESIZE
 			for file in $SOURCE_FILES; do
-				[ -d "$file" ] && continue
+				[ ! -f "$file" ] && continue
 				[ "`getdiskusage ${SOURCE_URL#file://}/$file`" -lt "${SE_MINFILESIZE:-0}" ] && fail 122
 			done
 			;;
@@ -507,10 +519,10 @@ url_copy() {
 		SOURCE_FN="`echo ${SOURCE_PATTERN:-__X__} | var_replacer $file`"
 		TARGET_FN="`echo ${TARGET_PATTERN:-__X__} | var_replacer $file`"
 		[ -n "$TRANSFERLOG" ] && echo "$SOURCE_FN $TARGET_FN" >> "$TRANSFERLOG"
-		url_copy_single "$SOURCE_URL/$SOURCE_FN" "$TARGET_URL/$TARGET_FN"
-		RESULT="$?"
-		echo "url_copy_single \"$SOURCE_URL/$SOURCE_FN\" \"$TARGET_URL/$TARGET_FN\" returned with $RESULT"
-		[ "$RESULT" != "0" ] && url_exists "$TARGET_URL/$TARGET_FN" || BADCOUNT=$[$BADCOUNT+1]
+		print_and_eval "url_copy_single" "$SOURCE_URL/$SOURCE_FN $TARGET_URL/$TARGET_FN"
+		if [ "$?" != "0" ]; then
+			print_and_eval "url_exists" "$TARGET_URL/$TARGET_FN" || BADCOUNT=$[$BADCOUNT+1]
+		fi
 		# [ $RESULT != 0 ] && BADCOUNT=$[$BADCOUNT+1]
 	done
 	[ $BADCOUNT -ne 0 ] && echo "$BADCOUNT errors occurred during SE access" && fail 106
@@ -529,7 +541,7 @@ my_move() {
 	[ ! -d "$2" ] && fail 102
 	[ -z "$3" ] && return
 	echo "Move files from $1 to $2:"
-	for file in `cd $1 && ls $(eval "echo $3") && cd $OLDPWD`; do
+	for file in `(cd $1 && ls $(eval "echo $3") && cd $OLDPWD) 2> /dev/null`; do
 		echo -e " >> $file"
 		test -f "$1/$file" && mv "$1/$file" "$2/$file"
 	done

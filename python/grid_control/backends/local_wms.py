@@ -34,8 +34,8 @@ class LocalWMSApi(AbstractObject):
 
 
 class LocalWMS(WMS):
-	def __init__(self, config, opts, module):
-		WMS.__init__(self, config, opts, module, 'local')
+	def __init__(self, config, module):
+		WMS.__init__(self, config, module, 'local')
 
 		wmsapi = config.get('local', 'wms', self._guessWMS())
 		self.api = LocalWMSApi.open("grid_control.backends.%s.%s" % (wmsapi.lower(), wmsapi), config, self)
@@ -46,7 +46,7 @@ class LocalWMS(WMS):
 			queues = None
 		self.broker = Broker.open(config.get('local', 'broker', 'DummyBroker'), config, queues)
 
-		self.sandPath = config.getPath('local', 'sandbox path', os.path.join(opts.workDir, 'sandbox'))
+		self.sandPath = config.getPath('local', 'sandbox path', os.path.join(config.workDir, 'sandbox'))
 		self._nameFile = config.getPath('local', 'name source', '')
 		self._source = None
 		if self._nameFile != '':

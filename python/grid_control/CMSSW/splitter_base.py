@@ -1,4 +1,4 @@
-import os, tarfile, time, copy
+import os, tarfile, time, copy, cStringIO
 from grid_control import AbstractObject, RuntimeError, utils, ConfigError
 from provider_base import DataProvider
 
@@ -49,7 +49,8 @@ class DataSplitter(AbstractObject):
 		print "\tID:", job.get(DataSplitter.DatasetID, 0)
 		print "Events :", job[DataSplitter.NEvents]
 		print "Skip   :", job[DataSplitter.Skipped]
-		print "SEList :", str.join('\n         ', map(lambda x: str.join(', ', x), utils.lenSplit(job[DataSplitter.SEList], 70)))
+		seArray = map(lambda x: str.join(', ', x), utils.lenSplit(job[DataSplitter.SEList], 70))
+		print "SEList :", str.join('\n         ', seArray)
 		print "Files  :",
 		if utils.verbosity() > 2:
 			print str.join("\n         ", job[DataSplitter.FileList])
@@ -233,7 +234,7 @@ class DataSplitter(AbstractObject):
 			savelist = tmp
 
 		for name, data in [('list', str.join('\n', savelist)), ('info', fmt.format(entry, fkt = flat))]:
-			info, file = utils.VirtualFile(os.path.join(str(jobNum), name), data).getTarInfo()
+			info, file = utils.VirtualFile(os.path.join("%05d" % jobNum, name), data).getTarInfo()
 			tar.addfile(info, file)
 			file.close()
 
@@ -245,22 +246,38 @@ class DataSplitter(AbstractObject):
 
 	# Save as tar file to allow random access to mapping data with little memory overhead
 	def saveState(self, path):
-		tar = tarfile.open(os.path.join(path, 'jobdatamap.tar'), 'w:')
+		tar = tarfile.open(os.path.join(path, 'datamap.tar'), 'w:')
 		fmt = utils.DictFormat()
 
 		meta = {
 			'ClassName': self.__class__.__name__,
 			'MaxJobs': len(self._jobFiles),
 		}
-
+		log = None
 		meta.update(dict(filter(lambda (x,y): x != '_jobFiles', self.__dict__.iteritems())))
 		info, file = utils.VirtualFile('Metadata', fmt.format(meta)).getTarInfo()
 		tar.addfile(info, file)
 		file.close()
 
+		subTarFiles = {}
 		for jobNum, entry in enumerate(self._jobFiles):
-			DataSplitter.saveJobMapping(tar, fmt, entry, jobNum)
+			if not subTarFiles.has_key(jobNum / 100):
+				subTarFileObj = cStringIO.StringIO()
+				subTarFile = tarfile.open(mode = "w:gz", fileobj = subTarFileObj)
+				subTarFiles[jobNum / 100] = (subTarFile, subTarFileObj)
+				del log
+				log = utils.ActivityLog('Writing job mapping file [%d / %d]' % (jobNum, len(self._jobFiles)))
+			DataSplitter.saveJobMapping(subTarFiles[jobNum / 100][0], fmt, entry, jobNum)
+
+		for (name, (subTarFile, subTarFileObj)) in subTarFiles.iteritems():
+			subTarFile.close()
+			subTarFileObj.seek(0)
+			subTarFileInfo = tarfile.TarInfo("%03dXX.tgz" % name)
+			subTarFileInfo.size = len(subTarFileObj.getvalue())
+			tar.addfile(subTarFileInfo, subTarFileObj)
+
 		tar.close()
+		del log
 
 
 	def loadState(path):
@@ -269,18 +286,24 @@ class DataSplitter(AbstractObject):
 			def __init__(self, path):
 				log = utils.ActivityLog('Reading job mapping file')
 				self._fmt = utils.DictFormat()
-				self._path = os.path.join(path, 'jobdatamap.tar')
+				self._path = os.path.join(path, 'datamap.tar')
 				self._tar = tarfile.open(self._path, 'r:')
 				metadata = self._tar.extractfile('Metadata').readlines()
 				self._metadata = self._fmt.parse(metadata, lowerCaseKey = False)
 				self._maxJobs = self._metadata.pop('MaxJobs')
 				self._classname = self._metadata.pop('ClassName')
+				self._cacheKey = None
+				self._cacheTar = None
 				del log
 
 			def __getitem__(self, key):
-				data = self._fmt.parse(self._tar.extractfile('%d/info' % key).readlines())
+				if not self._cacheKey == key / 100:
+					self._cacheKey = key / 100
+					subTarFileObj = self._tar.extractfile('%03dXX.tgz' % (key / 100))
+					self._cacheTar = tarfile.open(mode = 'r:gz', fileobj = subTarFileObj)
+				data = self._fmt.parse(self._cacheTar.extractfile('%05d/info' % key).readlines())
 				data[DataSplitter.SEList] = data[DataSplitter.SEList].split(',')
-				list = self._tar.extractfile('%d/list' % key).readlines()
+				list = self._cacheTar.extractfile('%05d/list' % key).readlines()
 				if data.has_key(DataSplitter.CommonPrefix):
 					list = map(lambda x: "%s/%s" % (data[DataSplitter.CommonPrefix], x), list)
 				data[DataSplitter.FileList] = map(str.strip, list)
@@ -290,6 +313,7 @@ class DataSplitter(AbstractObject):
 				return self._maxJobs
 
 			def append(self, entry):
+				# TODO: Fixme
 				self._tar.close()
 				self._tar = tarfile.open(self._path, 'a:')
 				DataSplitter.saveJobMapping(self._tar, self._fmt, entry, self._maxJobs)
