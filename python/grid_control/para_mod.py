@@ -105,6 +105,18 @@ class LinkedParaMod(SimpleParaMod):
 
 
 class UberParaMod(ParaMod):
+	"""This module builds all possible combinations of parameters
+	and/or tuples of parameters.  For example,
+
+		parameters  = spam (ham, eggs)
+		spam        = 0 1
+		(ham, eggs) = (1, 2) (3, 4)
+
+	gives builds the following parameter combinations of (spam, ham,
+	egg):
+
+		(0, 1, 2), (1, 1, 2), (0, 3, 4), (1, 3, 4)
+	"""
 	def __init__(self, config, proxy):
 		ParaMod.__init__(self, config, proxy)
 
