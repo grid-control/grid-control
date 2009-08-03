@@ -434,7 +434,10 @@ def lenSplit(list, maxlen):
 	yield tmp
 
 
-def printTabular(head, entries, format = lambda x: x):
+def printTabular(head, entries, fmtString = ''):
+	justFunDict = { 'l': str.ljust, 'r': str.rjust, 'c': str.center }
+	justFun = dict(map(lambda (idx, x): (idx[0], justFunDict[x]), zip(head, fmtString)))
+
 	maxlen = dict(map(lambda (id, name): (id, len(name)), head))
 	head = [ x for x in head ]
 	entries = [ x for x in entries ]
@@ -443,10 +446,11 @@ def printTabular(head, entries, format = lambda x: x):
 		for id, name in head:
 			maxlen[id] = max(maxlen.get(id, len(name)), len(str(entry.get(id, ''))))
 
-	formatlist = map(lambda (id, name): "%%%ds" % maxlen[id], head)
 	headentry = dict(map(lambda (id, name): (id, name.center(maxlen[id])), head))
 	for entry in [headentry, None] + entries:
+		format = lambda id, x: justFun.get(id, str.rjust)(str(x), maxlen[id])
+		applyFmt = lambda fun: map(lambda (id, name): format(id, fun(id)), head)
 		if entry == None:
-			print("=%s=" % (str.join("=+=", formatlist) % tuple(map(lambda (id, name): '=' * maxlen[id], head))))
+			print("=%s=" % str.join("=+=", applyFmt(lambda id: '=' * maxlen[id])))
 		else:
-			print(" %s " % (str.join(" | ", formatlist) % format(tuple(map(lambda (id, name): entry.get(id, ''), head)))))
+			print(" %s " % str.join(" | ", applyFmt(lambda id: entry.get(id, ''))))
