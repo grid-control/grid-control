@@ -103,7 +103,7 @@ class Report:
 		print '---------------'
 		print
 		infos = map(lambda x: reports[x], order) + [None, all]
-		utils.printTabular(map(lambda x: (x, x), head + Report.states), infos, 'c' * len(head) )
+		utils.printTabular(map(lambda x: (x, x), head + Report.states), infos, 'c' * len(head))
 		print
 
 
