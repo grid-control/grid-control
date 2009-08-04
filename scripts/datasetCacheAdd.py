@@ -14,6 +14,7 @@ def main(args):
 	else:
 		(workDir, pathSE, jobList) = gcSupport.getWorkSEJobs(args)
 
+	# Lock file in case several instances of this program are running
 	lockfile = os.path.join(workDir, 'prod.lock')
 	fd = open(lockfile, 'w')
 	fcntl.flock(fd, fcntl.LOCK_EX)
@@ -22,6 +23,7 @@ def main(args):
 		taskInfo = utils.DictFormat(" = ").parse(open(os.path.join(workDir, 'task.dat')))
 		provider = DataProvider.loadState(gcSupport.ConfigDummy(), workDir, 'production.dbs')
 
+		# Try to read all existing Blocks from production.dbs
 		try:
 			saved = (sys.stdout, sys.stderr)
 			sys.stdout = gcSupport.DummyStream(sys.stdout)
@@ -33,7 +35,11 @@ def main(args):
 
 		for jobid in jobList:
 			outputDir = os.path.join(workDir, 'output', 'job_' + str(jobid))
-			jobInfo = utils.DictFormat('=').parse(open(os.path.join(outputDir, 'jobinfo.txt')))
+
+			# Read specified jobinfo.txt files
+			jobInfo = gcSupport.getJobInfo(workDir, jobNum, lambda retCode: retCode == 0)
+			if not jobInfo:
+				continue
 
 			files = filter(lambda x: x[0].startswith('file'), jobInfo.items())
 			files = map(lambda (x,y): tuple(y.strip('"').split('  ')), files)
@@ -42,10 +48,12 @@ def main(args):
 				dataset = "/PRIVATE/%s" % (name_local.replace('.root', ''))
 				blockname = "%s-%05d" % (taskInfo['task id'][2:], int(os.environ.get('GC_PARAM_ID', 0)))
 
+				# Try to find block with given dataset + blockname
 				cblock = None
 				for block in blocks:
 					if (block[DataProvider.Dataset] == dataset) and (block[DataProvider.BlockName] == blockname):
 						cblock = block
+				# No block found => Create new block
 				if cblock == None:
 					cblock = {
 						DataProvider.Dataset: dataset,
@@ -59,6 +67,7 @@ def main(args):
 				lfn = os.path.join(pathSE, name_dest)
 				nevents = 0
 
+				# Read framework report files to get number of events
 				fwkreports = filter(lambda fn: fn.endswith('.xml.gz'), os.listdir(outputDir))
 				try:
 					for fwkreport in map(lambda fn: gzip.open(os.path.join(outputDir, fn)), fwkreports):
@@ -70,6 +79,10 @@ def main(args):
 					print "Error while parsing framework output!"
 					return 0
 
+				if nevents == 0:
+					continue
+
+				# Add file to filelist of the current block
 				filelist = cblock[DataProvider.FileList]
 				filelist.append({ DataProvider.lfn: lfn, DataProvider.NEvents: nevents })
 				cblock[DataProvider.NEvents] = reduce(lambda x,y: x+y, map(lambda x: x[DataProvider.NEvents], filelist))
