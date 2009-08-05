@@ -36,6 +36,7 @@ class JobDB:
 		self.running = []
 		self.done = []
 		self.ok = []
+		self.disabled = []
 
 		for jobNum, jobObj in self._readJobs():
 			self._jobs[jobNum] = jobObj
@@ -60,6 +61,8 @@ class JobDB:
 			return self.done
 		elif jobObj.state == Job.SUCCESS:
 			return self.ok
+		elif jobObj.state == Job.DISABLED:
+			return self.disabled
 		raise Exception("Internal error: Unexpected job state %s" % Job.states[jobObj.state])
 
 
@@ -102,7 +105,7 @@ class JobDB:
 			print "(error code: %d - %s)" % (jobObj.get('retcode'), jobObj.get('dest'))
 		elif (state == Job.QUEUED) and jobObj.get('dest') != 'N/A':
 			print "(%s)" % jobObj.get('dest')
-		elif (state in [Job.WAITING, Job.ABORTED]) and jobObj.get('reason'):
+		elif (state in [Job.WAITING, Job.ABORTED, JOB.DISABLED]) and jobObj.get('reason'):
 			print '(%s)' % jobObj.get('reason')
 		elif (state == Job.SUCCESS) and jobObj.get('runtime'):
 			print "(runtime %s)" % utils.strTime(jobObj.get('runtime'))

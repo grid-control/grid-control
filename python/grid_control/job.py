@@ -3,7 +3,8 @@ from utils import DictFormat
 from time import time
 
 class Job:
-	states = ('INIT', 'SUBMITTED', 'WAITING', 'READY', 'QUEUED', 'RUNNING', 'ABORTED', 'CANCELLED', 'FAILED', 'DONE', 'SUCCESS')
+	states = ('INIT', 'SUBMITTED', 'DISABLED', 'READY', 'WAITING', 'QUEUED', 'ABORTED',
+		'RUNNING', 'CANCELLED', 'DONE', 'FAILED', 'SUCCESS')
 	_stateDict = {}
 	for id, state in enumerate(states):
 		_stateDict[state] = id

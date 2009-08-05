@@ -48,7 +48,7 @@ class Report:
 
 	def summary(self, message = ""):
 		# Print report summary
-		print '------------------------------------------------------------------------'
+		print '-----------------------------------------------------------------'
 		print 'REPORT SUMMARY:'
 		print '---------------'
 
@@ -58,20 +58,20 @@ class Report:
 
 		def makeSum(*states):
 			return reduce(lambda x, y: x + y, map(lambda x: summary[x], states))
-
-		print 'Total number of jobs:      %7d    Number of successful jobs: %7d' % \
-			(self.allJobs.nJobs, summary[Job.SUCCESS])
-		print 'Number of unfinished jobs: %7d    Number of failed jobs:     %7d\n' % \
-			(makeSum(Job.INIT, Job.READY, Job.WAITING, Job.QUEUED, Job.SUBMITTED, Job.RUNNING),
-			 makeSum(Job.ABORTED, Job.CANCELLED, Job.FAILED))
-		print 'Detailed Information:'
-		for state, category in enumerate(Job.states):
-			ratio = summary[state] / self.allJobs.nJobs * 100.0
-			print 'Jobs %11s: %7d     %3d%%   ' % (category, summary[state], round(ratio)),
-			if state % 2:
+		def makePer(*states):
+			count = makeSum(*states)
+			return [count, round(count / self.allJobs.nJobs * 100.0)]
+		print 'Total number of jobs:%9d     Successful jobs:%8d  %3d%%' % \
+			tuple([self.allJobs.nJobs] + makePer(Job.SUCCESS))
+		print 'Jobs assigned to WMS:%9d        Failing jobs:%8d  %3d%%' % \
+			tuple([makeSum(Job.SUBMITTED, Job.WAITING, Job.READY, Job.QUEUED, Job.RUNNING)] +
+			makePer(Job.ABORTED, Job.CANCELLED, Job.FAILED))
+		print '\nDetailed Status Information:'#\33[0;1m'
+		for stateNum, category in enumerate(Job.states):
+			print 'Jobs  %9s:%8d  %3d%%    ' % tuple([category] + makePer(stateNum)),
+			if stateNum % 2:
 				print
-		print
-		print '------------------------------------------------------------------------'
+		print '-----------------------------------------------------------------'
 		print message
 		return 0
 
