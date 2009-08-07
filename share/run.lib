@@ -362,7 +362,7 @@ url_exists() {
 		"gsiftp://"*)
 			print_and_qeval "`getcommand glite-gridftp-exists edg-gridftp-exists edg-gridftp-ls`" "$1";;
 		"srm://"*)
-			print_and_qeval "`getcommand srm-check-permissions`" "$1";;
+			print_and_qeval "`getcommand lcg-ls srm-check-permissions`" "$1";;
 		"file://"*)
 			print_and_qeval " " "test" "-f ${1#file://}";;
 		*)
@@ -381,7 +381,9 @@ url_rm() {
 			"gsiftp://"*)
 				print_and_qeval "`getcommand glite-gridftp-rm edg-gridftp-rm lcg-rm`" "$FILE";;
 			"srm://"*)
-				print_and_qeval "`getcommand srmrm`" "-2 $FILE";;
+				RM_CMD="`getcommand srmrm lcg-del`"
+				[ "$(basename $RM_CMD)" == "lcg-del" ] && RM_OPTS="" || RM_OPTS="-2"
+				print_and_qeval "$RM_CMD" "${RM_OPTS} $FILE";;
 			"file://"*)
 				print_and_qeval " " "rm" "${FILE#file://}";;
 			*)
@@ -396,6 +398,15 @@ url_copy_single_local() {
 	mkdir -p `dirname ${2#file://}`
 	[ -f "${2#file://}" ] && return -101
 	cp -b ${1#file://} ${2#file://}
+}
+
+url_copy_single_srm() {
+	debug_helper $FUNCNAME "$@"
+	if [ "$(basename `getcommand lcg-cp srmcp`)" == "lcg-cp" ]; then
+		print_and_qeval "lcg-cp" "-v -n 1 $1 $2"
+	else
+		print_and_qeval "srmcp" "-2 -debug=true -streams_num=1 $1 $2"
+	fi
 }
 
 # Copy one file at a time (1) -> (2) 
@@ -415,8 +426,7 @@ url_copy_single() {
 				"gsiftp://"* | "file://"*)
 					print_and_qeval "`getcommand globus-url-copy`" "$1 $2";;
 				"srm://"*)
-					# TODO: select lcg-cp on non-OSG sites
-					print_and_qeval "`getcommand srmcp`" "-2 -debug=true -streams_num=1 $1 $2";;
+					print_and_qeval "url_copy_single_srm" "$1 $2";;
 				*)
 					echo "Unsupported copy from $1 to $2" >&2 && fail 106;;
 			esac;;
@@ -424,8 +434,7 @@ url_copy_single() {
 		"srm://"*)
 			case "$2" in
 				"gsiftp://"* | "srm://"* | "file://"*)
-					# TODO: select lcg-cp on non-OSG sites
-					print_and_qeval "`getcommand srmcp`" "-2 -debug=true -streams_num=1 $1 $2";;
+					print_and_qeval "url_copy_single_srm" "$1 $2";;
 				*)
 					echo "Unsupported copy from $1 to $2" >&2 && fail 106;;
 			esac;;
@@ -437,8 +446,7 @@ url_copy_single() {
 				"gsiftp://"*)
 					print_and_qeval "`getcommand globus-url-copy`" "$1 $2";;
 				"srm://"*)
-					# TODO: select lcg-cp on non-OSG sites
-					print_and_qeval "`getcommand srmcp`" "-2 -debug=true -streams_num=1 $1 $2";;
+					print_and_qeval "url_copy_single_srm" "$1 $2";;
 				"file://"*)
 					print_and_qeval "url_copy_single_local" "$1 $2";;
 				*)

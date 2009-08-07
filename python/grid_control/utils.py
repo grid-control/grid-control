@@ -64,7 +64,7 @@ def se_copy(src, dst, force = True):
 	src = src.replace('dir://', 'file://')
 	dst = dst.replace('dir://', 'file://')
 	lib = atRoot(os.path.join('share', 'run.lib'))
-	cmd = 'print_and_eval "url_copy_single%s" "%s" "%s"' % (('', '_force')[force], src, dst)
+	cmd = 'print_and_%seval "url_copy_single%s" "%s" "%s"' % (('', 'q')[verbosity() == 0], ('', '_force')[force], src, dst)
 	proc = popen2.Popen4('source %s || exit 1; %s' % (lib, cmd), True)
 	se_copy.lastlog = proc.fromchild.read()
 	return proc.wait() == 0
