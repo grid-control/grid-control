@@ -204,6 +204,8 @@ class JobDB:
 
 		# Quit when all jobs are finished
 		if len(self.ok) == self.nJobs:
+			params = "%s %d" % (config.getPath('events', 'on finish', ''), nJobs)
+			threading.Thread(target = os.system, args = (params,)).start()
 			utils.vprint("All jobs are finished. Quitting grid-control!", -1, True, False)
 			sys.exit(0)
 
