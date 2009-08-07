@@ -22,7 +22,8 @@ SANDBOX=${SANDBOX:-$1}
 cd $SANDBOX
 mkdir scratch
 export SCRATCH_DIRECTORY="$SANDBOX/scratch"
-source _jobconfig.sh
+cat "$SANDBOX/_jobconfig.sh"
+source "$SANDBOX/_jobconfig.sh"
 ./run.sh $ARGS
 cd $SANDBOX
 rmdir scratch

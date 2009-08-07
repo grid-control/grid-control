@@ -151,6 +151,7 @@ class GridWMS(WMS):
 		now = time.time()
 		entry = "%s.%s" % (time.strftime("%Y-%m-%d_%H:%M:%S", time.localtime(now)), ("%.5f" % (now - int(now)))[2:])
 		data = { 'retCode': retCode, 'exec': proc.cmd[0], 'args': proc.cmd[1] }
+		sys.stderr.writelines(filter(lambda x: (x != '\n') and not x.startswith('----'), stderr))
 
 		tar = tarfile.TarFile.open(os.path.join(self.config.workDir, 'error.tar'), 'a')
 		try:
@@ -166,10 +167,9 @@ class GridWMS(WMS):
 			info, handle = file.getTarInfo()
 			tar.addfile(info, handle)
 			handle.close()
+			sys.stderr.write(".")
 		tar.close()
-
-		sys.stderr.writelines(filter(lambda x: (x != '\n') and not x.startswith('----'), stderr))
-#		sys.stderr.write("Logfile can be found here: %s\n\n" % log)
+		sys.stderr.write("\nAll logfile were moved to %s." % os.path.join(self.config.workDir, 'error.tar'))
 		return False
 
 
@@ -385,7 +385,7 @@ class GridWMS(WMS):
 			# TODO: Create fake results for lost jobs...
 			# Return leftover (and fake) output directories
 			for dir in os.listdir(basePath):
-				yield os.path.join(basePath, dir)
+				yield (None, os.path.join(basePath, dir))
 		self.cleanup([log, jobs, basePath])
 
 

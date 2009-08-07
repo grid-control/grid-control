@@ -51,7 +51,7 @@ def boolUserInput(text, default):
 		if userinput != 'yes' and userinput != '':
 			return 0
 		print 'Invalid input! Answer with "yes" or "no"'
-	
+
 
 def deprecated(text):
 	print open(atRoot('share', 'fail.txt'), 'r').read()
@@ -256,29 +256,6 @@ class AbstractObject:
 
 		return newcls(*args, **kwargs)
 	open = classmethod(open)
-
-
-class CursesStream:
-	def __init__(self, *args):
-		(self.stream, self.screen) = args
-		self.logged = True
-
-	def write(self, data):
-		if self.logged:
-			CursesStream.backlog.pop(0)
-			CursesStream.backlog.append(data)
-		self.screen.addstr(data)
-		return True
-
-	def __getattr__(self, name):
-		return self.stream.__getattribute__(name)
-
-	def dump(cls):
-		for data in filter(lambda x: x, CursesStream.backlog):
-			sys.stdout.write(data)
-		sys.stdout.write('\n')	
-	dump = classmethod(dump)
-CursesStream.backlog = [None for i in xrange(100)]
 
 
 class ActivityLog:

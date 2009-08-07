@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-import sys, os, signal, optparse, curses
+import sys, os, signal, optparse
 
 # add python subdirectory from where go.py was started to search path
 root = os.path.dirname(os.path.abspath(os.path.normpath(sys.argv[0])))
@@ -151,83 +151,35 @@ def main(args):
 			return True
 
 		def jobCycle():
-			didWait = False
-			# Check free disk space
-			if int(os.popen("df -P -m %s" % config.workDir).readlines()[-1].split()[3]) < 10:
-				raise RuntimeError("Not enough space left in working directory")
+			while True:
+				didWait = False
+				# Check free disk space
+				if int(os.popen("df -P -m %s" % config.workDir).readlines()[-1].split()[3]) < 10:
+					raise RuntimeError("Not enough space left in working directory")
 
-			# check for jobs
-			if not opts.abort and jobs.check(wms):
-				didWait = wait(wms.getTimings()[1])
-			# retrieve finished jobs
-			if not opts.abort and jobs.retrieve(wms):
-				didWait = wait(wms.getTimings()[1])
-			# try submission
-			if not opts.abort and jobs.submit(wms):
-				didWait = wait(wms.getTimings()[1])
+				# check for jobs
+				if not opts.abort and jobs.check(wms):
+					didWait = wait(wms.getTimings()[1])
+				# retrieve finished jobs
+				if not opts.abort and jobs.retrieve(wms):
+					didWait = wait(wms.getTimings()[1])
+				# try submission
+				if not opts.abort and jobs.submit(wms):
+					didWait = wait(wms.getTimings()[1])
 
-			# quit if abort flag is set or not in continuous mode
-			if opts.abort or not opts.continuous:
-				return False
-			# idle timeout
-			wait(wms.getTimings()[0])
-			# Check proxy lifetime
-			if not proxy.canSubmit(module.wallTime, opts.submission):
-				opts.submission = False
-			return True
+				# quit if abort flag is set or not in continuous mode
+				if opts.abort or not opts.continuous:
+					break
+				# idle timeout
+				wait(wms.getTimings()[0])
+				# Check proxy lifetime
+				if not proxy.canSubmit(module.wallTime, opts.submission):
+					opts.submission = False
 
 		if opts.gui:
-			def cursesWrapper(screen):
-				screen.scrollok(True)
-				screen.attron(curses.A_BOLD)
-
-				# Event handling for resizing
-				def onResize(sig, frame):
-					oldy = screen.getyx()[0]
-					curses.endwin()
-					screen.refresh()
-					(sizey, sizex) = screen.getmaxyx()
-					screen.setscrreg(min(15, sizey - 2), sizey - 1)
-					screen.move(min(sizey - 1, max(15, oldy)), 0)
-				onResize(None, None)
-				signal.signal(signal.SIGWINCH, onResize)
-
-				# Wrapping ActivityLog functionality
-				class CursesLog:
-					def __init__(self, message):
-						self.message = "%s..." % message
-						self.show(self.message.center(65))
-
-					def __del__(self):
-						self.show(' ' * len(self.message))
-
-					def show(self, message):
-						oldpos = screen.getyx()
-						screen.move(0, 0)
-						sys.stdout.logged = False
-						Report(jobs, jobs).summary(message)
-						sys.stdout.logged = True
-						screen.move(*oldpos)
-						screen.refresh()
-
-				# Main cycle - GUI mode
-				try:
-					utils.ActivityLog = CursesLog
-					saved = (sys.stdout, sys.stderr)
-					sys.stdout = utils.CursesStream(saved[0], screen)
-					sys.stderr = utils.CursesStream(saved[1], screen)
-					while jobCycle(): pass
-				finally:
-					global log
-					if log: del log
-					sys.stdout, sys.stderr = saved
-			try:
-				curses.wrapper(cursesWrapper)
-			finally:
-				utils.CursesStream.dump()
+			gui.CursesGUI(jobs, jobCycle)
 		else:
-			# Main cycle - non GUI mode
-			while jobCycle(): pass
+			jobCycle()
 
 	except GridError, e:
 		e.showMessage()
