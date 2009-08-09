@@ -1,4 +1,4 @@
-import sys, os, re, fnmatch, random, utils, math
+import sys, os, re, fnmatch, random, utils, math, threading
 from time import time, localtime, strftime
 from grid_control import ConfigError, Job, UserError, Report
 
@@ -204,9 +204,11 @@ class JobDB:
 
 		# Quit when all jobs are finished
 		if len(self.ok) == self.nJobs:
-			params = "%s %d" % (config.getPath('events', 'on finish', ''), nJobs)
-			threading.Thread(target = os.system, args = (params,)).start()
-			utils.vprint("All jobs are finished. Quitting grid-control!", -1, True, False)
+			eventCmd = self.config.getPath('events', 'on finish', '')
+			if eventCmd != '':
+				params = "%s %d" % (eventCmd, self.nJobs)
+				threading.Thread(target = os.system, args = (params,)).start()
+				utils.vprint("All jobs are finished. Quitting grid-control!", -1, True, False)
 			sys.exit(0)
 
 		return change
