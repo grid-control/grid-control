@@ -366,7 +366,7 @@ url_exists() {
 		"srm://"*)
 			print_and_qeval "`getcommand lcg-ls srm-check-permissions`" "$1";;
 		"file://"*)
-			print_and_qeval " " "test" "-f ${1#file://}";;
+			print_and_qeval " " "test" "-s ${1#file://}";;
 		*)
 			echo "Unsupported URL: $1" >&2 && fail 106;;
 	esac
