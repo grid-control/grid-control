@@ -15,8 +15,6 @@ def print_help(*args):
 	sys.stderr.write(open(utils.atRoot('share', 'help.txt'), 'r').read())
 	sys.exit(0)
 
-_verbosity = 0
-
 def main(args):
 	global opts, log, handler
 	log = None

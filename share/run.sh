@@ -140,12 +140,12 @@ echo "==========================="
 echo
 echo "Job exit code: $CODE"
 updatejobinfo $CODE
-
 echo
+
 echo "==========================="
 echo
 checkdir "Start directory" "$MY_LANDINGZONE"
-checkdir "Scratch directory" "$MY_SCRATCH"
+[ -d "$MY_SCRATCH" ] && checkdir "Scratch directory" "$MY_SCRATCH"
 
 if [ "$DASHBOARD" == "yes" ]; then
 	echo "==========================="
@@ -180,7 +180,7 @@ if [ $CODE -eq 0 -a -n "$SE_OUTPUT_FILES" ]; then
 	echo
 fi
 
-if [ -n "$SB_OUTPUT_FILES" ]; then
+if [ -d "$MY_SCRATCH" -a -n "$SB_OUTPUT_FILES" ]; then
 	echo "==========================="
 	echo
 	# Move output into landingzone
@@ -191,7 +191,7 @@ fi
 echo "==========================="
 echo
 checkdir "Start directory" "$MY_LANDINGZONE"
-checkdir "Scratch directory" "$MY_SCRATCH"
+[ -d "$MY_SCRATCH" ] && checkdir "Scratch directory" "$MY_SCRATCH"
 
 echo "==========================="
 echo
