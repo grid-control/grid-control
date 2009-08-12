@@ -208,7 +208,7 @@ class JobDB:
 			if eventCmd != '':
 				params = "%s %d" % (eventCmd, self.nJobs)
 				threading.Thread(target = os.system, args = (params,)).start()
-				utils.vprint("All jobs are finished. Quitting grid-control!", -1, True, False)
+			utils.vprint("All jobs are finished. Quitting grid-control!", -1, True, False)
 			sys.exit(0)
 
 		return change
