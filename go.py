@@ -81,6 +81,9 @@ def main(args):
 		# Check work dir validity (default work directory is the config file name)
 		config.workDir = config.getPath('global', 'workdir', config.workDirDefault)
 		if not os.path.exists(config.workDir):
+			if not opts.init:
+				print "Will force initialization of %s if continued!" % config.workDir
+				opts.init = True
 			if utils.boolUserInput("Do you want to create the working directory %s?" % config.workDir, True):
 				os.mkdir(config.workDir)
 		try:
