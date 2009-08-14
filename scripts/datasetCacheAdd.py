@@ -37,7 +37,7 @@ def main(args):
 			outputDir = os.path.join(workDir, 'output', 'job_' + str(jobid))
 
 			# Read specified jobinfo.txt files
-			jobInfo = gcSupport.getJobInfo(workDir, jobNum, lambda retCode: retCode == 0)
+			jobInfo = gcSupport.getJobInfo(workDir, jobid, lambda retCode: retCode == 0)
 			if not jobInfo:
 				continue
 
