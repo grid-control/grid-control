@@ -51,7 +51,7 @@ class ListProvider(DataProvider):
 			name = self._filter
 			if self._filter:
 				name = blockinfo[DataProvider.Dataset]
-				if blockinfo.has_key(DataProvider.BlockName):
+				if blockinfo.has_key(DataProvider.BlockName) and "#" in self._filter:
 					name = "%s#%s" % (name, blockinfo[DataProvider.BlockName])
 			if name == self._filter:
 				return True
