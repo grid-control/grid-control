@@ -318,7 +318,7 @@ print_and_qeval() {
 	CODE="$?"
 	export PAELEVEL="${PAELEVEL# }"
 	echo "$PAELEVEL returned $CODE"
-	[ "$CODE" != "0" ] && cat $LOGFILE.out $LOGFILE.err
+	[ "$CODE" != "0" ] && (cat $LOGFILE.out; cat $LOGFILE.err)
 	return $CODE
 }
 
