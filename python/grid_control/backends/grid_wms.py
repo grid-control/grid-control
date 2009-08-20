@@ -90,7 +90,7 @@ class GridWMS(WMS):
 			elif type == self.SITES:
 				result.append(self.sitesReq(arg))
 			else:
-				raise RuntimeError('unknown requirement type %d' % type)
+				raise RuntimeError('unknown requirement type %s or argument %r' % (WMS.reqTypes[type], arg))
 		return str.join(' && ', filter(lambda x: x != None, result))
 
 
