@@ -134,7 +134,7 @@ class LocalWMS(WMS):
 	# Check status of jobs and yield (wmsID, status, other data)
 	def checkJobs(self, ids):
 		if not len(ids):
-			return []
+			raise StopIteration
 
 		shortWMSIds = map(lambda (wmsId, jobNum): wmsId.split(".")[0], ids)
 		activity = utils.ActivityLog("checking job status")
