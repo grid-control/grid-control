@@ -79,9 +79,11 @@ class Config:
 
 
 	def needInit(self, saveConfigPath):
-		flag = False
 		saveConfig = ConfigParser.ConfigParser()
+		if not os.path.exists(saveConfigPath):
+			return False
 		saveConfig.read(saveConfigPath)
+		flag = False
 		for section in self.protocol:
 			for (key, (value, default, volatile)) in self.protocol[section].iteritems():
 				try:
