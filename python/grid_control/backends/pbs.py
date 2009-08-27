@@ -53,7 +53,6 @@ class PBS(LocalWMSApi):
 
 
 	def parseStatus(self, status):
-		result = []
 		for section in status.replace("\n\t", "").split("\n\n"):
 			if section == '':
 				continue
@@ -71,8 +70,7 @@ class PBS(LocalWMSApi):
 			except:
 				print "Error reading job info\n", section
 				raise
-			result.append(jobinfo)
-		return result
+			yield jobinfo
 
 
 	def getCheckArgument(self, wmsIds):

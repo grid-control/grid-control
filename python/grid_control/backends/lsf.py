@@ -49,7 +49,6 @@ class LSF(LocalWMSApi):
 
 
 	def parseStatus(self, status):
-		result = []
 		for jobline in status.split('\n')[1:]:
 			if jobline == '':
 				continue
@@ -68,11 +67,10 @@ class LSF(LocalWMSApi):
 				}
 				if jobinfo['dest_host'] != "-":
 					jobinfo['dest'] = "%s/%s" % (jobinfo['dest_host'], jobinfo['queue'])
-				result.append(jobinfo)
+				yield jobinfo
 			except:
 				print "Error reading job info\n", jobline
 				raise
-		return result
 
 
 	def getCheckArgument(self, wmsIds):

@@ -29,7 +29,6 @@ class Host(LocalWMSApi):
 		return "%s.localhost" % data.strip()
 
 	def parseStatus(self, status):
-		result = []
 		lines = status.splitlines()
 		head = map(lambda x: x.strip("%").lower(), lines[0].split())
 		for entry in lines[1:]:
@@ -41,8 +40,7 @@ class Host(LocalWMSApi):
 			except:
 				print "Error reading job info\n", entry
 				raise
-			result.append(jobinfo)
-		return result
+			yield jobinfo
 
 	def getCheckArgument(self, wmsIds):
 		return "wwup %s" % str.join(" ", wmsIds)

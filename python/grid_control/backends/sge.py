@@ -61,7 +61,6 @@ class SGE(LocalWMSApi):
 
 
 	def parseStatus(self, status):
-		result = []
 		dom = xml.dom.minidom.parseString(status)
 		for jobentry in dom.getElementsByTagName('job_list'):
 			jobinfo = {}
@@ -80,8 +79,7 @@ class SGE(LocalWMSApi):
 			except:
 				print "Error reading job info\n", jobentry.toxml()
 				raise
-			result.append(jobinfo)
-		return result
+			yield jobinfo
 
 
 	def getCheckArgument(self, wmsIds):

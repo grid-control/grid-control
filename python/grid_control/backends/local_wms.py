@@ -147,12 +147,11 @@ class LocalWMS(WMS):
 			tmp[data['id']] = (data['id'], self.api._statusMap[data['status']], data)
 		proc.wait()
 
-		result = []
 		for wmsId, jobNum in ids:
 			if not tmp.has_key(wmsId):
-				result.append((jobNum, wmsId, Job.DONE, {}))
+				yield (jobNum, wmsId, Job.DONE, {})
 			else:
-				result.append(tuple([jobNum] + list(tmp[wmsId])))
+				yield tuple([jobNum] + list(tmp[wmsId]))
 
 		retCode = proc.wait()
 		del activity
@@ -161,8 +160,6 @@ class LocalWMS(WMS):
 			for line in proc.childerr.readlines():
 				if not self.api.unknownID() in line:
 					sys.stderr.write(line)
-
-		return result
 
 
 	def getSandbox(self, wmsId):

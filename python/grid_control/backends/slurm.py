@@ -50,7 +50,6 @@ class SLURM(LocalWMSApi):
 
 
 	def parseStatus(self, status):
-		result = []
 		for jobline in status.split('\n')[2:]:
 			if jobline == '':
 				continue
@@ -76,11 +75,10 @@ class SLURM(LocalWMSApi):
 					jobinfo['kill_time'] = tmp[13]
 					jobinfo['dest_hosts'] = tmp[14]
 					jobinfo['dest'] = "%s.localhost/%s" % (jobinfo['dest_hosts'], jobinfo['queue'])
-				result.append(jobinfo)
+				yield jobinfo
 			except:
 				print "Error reading job info\n", jobline
 				raise
-		return result
 
 
 	def getCheckArgument(self, wmsIds):
