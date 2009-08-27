@@ -19,7 +19,7 @@ class PBS(LocalWMSApi):
 		self.statusExec = utils.searchPathFind('qstat')
 		self.cancelExec = utils.searchPathFind('qdel')
 
-		self._group = config.get('local', 'group', '')
+		self._group = config.get('local', 'group', '', volatile=True)
 
 	def unknownID(self):
 		return "Unknown Job Id"

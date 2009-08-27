@@ -13,11 +13,12 @@ class Module(AbstractObject):
 		self.proxy = proxy
 		self.hookenv = None
 
-		self.wallTime = utils.parseTime(config.get('jobs', 'wall time'))
-		self.cpuTime = utils.parseTime(config.get('jobs', 'cpu time', config.get('jobs', 'wall time')))
+		wallTime = config.get('jobs', 'wall time', volatile=True)
+		self.wallTime = utils.parseTime(wallTime)
+		self.cpuTime = utils.parseTime(config.get('jobs', 'cpu time', wallTime, volatile=True))
 		self.nodeTimeout = utils.parseTime(config.get('jobs', 'node timeout', ''))
 
-		self.memory = config.getInt('jobs', 'memory', 512)
+		self.memory = config.getInt('jobs', 'memory', 512, volatile=True)
 
 		# Try to read task info file
 		try:
@@ -48,11 +49,11 @@ class Module(AbstractObject):
 		tmp = { 'task id': self.taskID, 'seeds': str.join(' ', map(str, self.seeds)) }
 		open(taskInfoFile, 'w').writelines(utils.DictFormat(" = ").format(tmp))
 
-		self.dashboard = config.getBool('jobs', 'monitor job', False)
+		self.dashboard = config.getBool('jobs', 'monitor job', False, volatile=True)
 
-		self.evtSubmit = config.getPath('events', 'on submit', '')
-		self.evtStatus = config.getPath('events', 'on status', '')
-		self.evtOutput = config.getPath('events', 'on output', '')
+		self.evtSubmit = config.getPath('events', 'on submit', '', volatile=True)
+		self.evtStatus = config.getPath('events', 'on status', '', volatile=True)
+		self.evtOutput = config.getPath('events', 'on output', '', volatile=True)
 
 		self.seSDUpperLimit = config.getInt('storage', 'scratch space used', 5000)
 		self.seSDLowerLimit = config.getInt('storage', 'scratch space left', 1)
@@ -60,7 +61,7 @@ class Module(AbstractObject):
 		self.seLZLowerLimit = config.getInt('storage', 'landing zone space left', 1)
 
 		# Storage setup
-		self.sePath = config.get('storage', 'se path', '')
+		self.sePath = config.get('storage', 'se path', '').strip()
 		self.seMinSize = config.getInt('storage', 'se min size', -1)
 
 		self.seInputFiles = config.get('storage', 'se input files', '').split()
@@ -71,6 +72,10 @@ class Module(AbstractObject):
 		self.sbInputFiles = config.get(self.__class__.__name__, 'input files', '').split()
 		self.sbOutputFiles = config.get(self.__class__.__name__, 'output files', '').split()
 		self.substFiles = config.get(self.__class__.__name__, 'subst files', '').split()
+
+		self.dependencies = config.get(self.__class__.__name__, 'depends', '').lower().split()
+		if self.sePath and not self.sePath.startswith('dir'):
+			self.dependencies.append('glite')
 
 		if config.get('CMSSW', 'se output files', 'DEPRECATED') != 'DEPRECATED':
 			utils.deprecated("Please specify se output files only in the [storage] section")
@@ -161,6 +166,7 @@ class Module(AbstractObject):
 			# Runtime
 			'DOBREAK': self.nodeTimeout,
 			'MY_RUNTIME': self.getCommand(),
+			'GC_DEPFILES': str.join(' ', self.getDependencies()),
 			# Seeds and substitutions
 			'SEEDS': str.join(' ', map(str, self.seeds)),
 			'SUBST_FILES': str.join(' ', map(os.path.basename, self.getSubstFiles())),
@@ -235,6 +241,10 @@ class Module(AbstractObject):
 
 	def getMaxJobs(self):
 		return None
+
+
+	def getDependencies(self):
+		return self.dependencies
 
 
 	def report(self, jobNum):

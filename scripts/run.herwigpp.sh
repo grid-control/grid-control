@@ -1,22 +1,14 @@
 #!/bin/sh
 
+source $MY_LANDINGZONE/run.lib || exit 101
+
 echo "HERWIG++ module starting"
 echo
 echo "---------------------------"
 
 # This script uses the standalone Herwig++ which is distributed
 # together with CMSSW ... so first find the CMSSW directory
-if [ -z "$VO_CMS_SW_DIR" -a -d "/wlcg/sw/cms" ]; then
-	export VO_CMS_SW_DIR="/wlcg/sw/cms"
-	echo "[WLCG-SITE] Using $VO_CMS_SW_DIR"
-elif [ -z "$VO_CMS_SW_DIR" -a -n "$OSG_APP" ]; then
-	export VO_CMS_SW_DIR="$OSG_APP/cmssoft/cms"
-	echo "[OSG-SITE] Using $VO_CMS_SW_DIR"
-elif [ -z "$VO_CMS_SW_DIR" -a -d "/afs/cern.ch/cms/sw" ]; then
-	export VO_CMS_SW_DIR="/afs/cern.ch/cms/sw"
-	echo "[AFS-SITE] Using $VO_CMS_SW_DIR"
-fi
-
+checkvar "VO_CMS_SW_DIR"
 export SW_CMSSW_EXT="$VO_CMS_SW_DIR/slc4_ia32_gcc345/external"
 
 # Dir shortcuts to all Herwig++ dependencies

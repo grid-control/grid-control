@@ -16,7 +16,7 @@ class JobDB:
 		except IOError, e:
 			raise ConfigError("Problem creating work directory '%s': %s" % (self._dbPath, e))
 
-		self.nJobs = config.getInt('jobs', 'jobs', -1)
+		self.nJobs = config.getInt('jobs', 'jobs', -1, volatile=True)
 		if self.nJobs < 0:
 			# No valid number of jobs given in config file - module has to provide number of jobs
 			self.nJobs = module.getMaxJobs()
@@ -46,9 +46,9 @@ class JobDB:
 		for list in (self.ready, self.running, self.done, self.ok):
 			list.sort()
 
-		self.timeout = utils.parseTime(config.get('jobs', 'queue timeout', ''))
-		self.inFlight = config.getInt('jobs', 'in flight', self.nJobs)
-		self.doShuffle = config.getBool('jobs', 'shuffle', False)
+		self.timeout = utils.parseTime(config.get('jobs', 'queue timeout', '', volatile=True))
+		self.inFlight = config.getInt('jobs', 'in flight', self.nJobs, volatile=True)
+		self.doShuffle = config.getBool('jobs', 'shuffle', False, volatile=True)
 
 
 	# Return appropriate queue for given job
@@ -204,7 +204,7 @@ class JobDB:
 
 		# Quit when all jobs are finished
 		if len(self.ok) == self.nJobs:
-			eventCmd = self.config.getPath('events', 'on finish', '')
+			eventCmd = self.config.getPath('events', 'on finish', '', volatile=True)
 			if eventCmd != '':
 				params = "%s %d" % (eventCmd, self.nJobs)
 				threading.Thread(target = os.system, args = (params,)).start()

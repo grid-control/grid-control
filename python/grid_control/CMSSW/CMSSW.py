@@ -37,7 +37,7 @@ class CMSSW(Module):
 							" and __SKIP_EVENTS__ to work properly with datasets!")
 
 		self.gzipOut = config.getBool('CMSSW', 'gzip output', True)
-		self.useReqs = config.getBool('CMSSW', 'use requirements', True)
+		self.useReqs = config.getBool('CMSSW', 'use requirements', True, volatile=True)
 		self.seRuntime = config.getBool('CMSSW', 'se runtime', False)
 
 		if self.seRuntime and len(self.projectArea):
@@ -228,6 +228,10 @@ class CMSSW(Module):
 			splitInfo[DataSplitter.Skipped],
 			str.join(' ', splitInfo[DataSplitter.FileList])
 		)
+
+
+	def getDependencies(self):
+		return Module.getDependencies(self) + ['cmssw']
 
 
 	def getMaxJobs(self):

@@ -73,13 +73,27 @@ if [ ${DOBREAK:-1} -gt 0 ]; then
 	kill -1 $$
 ) &
 fi
+echo
+
+# Setup dependencies
+if [ -n "$GC_DEPFILES" ]; then
+	echo "==========================="
+	echo
+	for DEPFILE in $GC_DEPFILES; do
+		checkfile "$MY_SCRATCH/env.$DEPFILE.sh"
+		source "$MY_SCRATCH/env.$DEPFILE.sh"
+	done
+	echo
+fi
 
 # Copy files from the SE
 if [ -n "$SE_INPUT_FILES" ]; then
+	echo "==========================="
+	echo
 	url_copy "$SE_PATH" "file:///$MY_SCRATCH" "$SE_INPUT_FILES"
+	echo
 fi
 
-echo
 echo "==========================="
 echo
 # Do variable substitutions

@@ -95,7 +95,7 @@ def main(args):
 
 		# Initialise proxy
 		defaultproxy = { 'grid': 'VomsProxy', 'local': 'TrivialProxy' }
-		proxy = Proxy.open(config.get(backend, 'proxy', defaultproxy[backend]))
+		proxy = Proxy.open(config.get(backend, 'proxy', defaultproxy[backend], volatile=True))
 
 		# Initialise application module
 		module = config.get('global', 'module')
@@ -131,6 +131,16 @@ def main(args):
 		if opts.delete != None:
 			jobs.delete(wms, opts.delete)
 			return 0
+
+		savedConfigPath = os.path.join(config.workDir, 'work.conf')
+		if opts.init:
+			# Save working config file
+			config.parser.write(open(savedConfigPath, 'w'))
+		else:
+			# Compare config files
+			if config.needInit(savedConfigPath):
+				if utils.boolUserInput("Quit grid-control in order to initialize the task again?", False):
+					sys.exit(0)
 
 		if opts.continuous and not opts.gui:
 			print

@@ -44,10 +44,10 @@ class LocalWMS(WMS):
 			queues = self.api.getQueues()
 		except:
 			queues = None
-		self.broker = Broker.open(config.get('local', 'broker', 'DummyBroker'), config, queues)
+		self.broker = Broker.open(config.get('local', 'broker', 'DummyBroker', volatile=True), config, queues)
 
 		self.sandPath = config.getPath('local', 'sandbox path', os.path.join(config.workDir, 'sandbox'))
-		self._nameFile = config.getPath('local', 'name source', '')
+		self._nameFile = config.getPath('local', 'name source', '', volatile=True)
 		self._source = None
 		if self._nameFile != '':
 			tmp = map(str.strip, open(self._nameFile, 'r').readlines())

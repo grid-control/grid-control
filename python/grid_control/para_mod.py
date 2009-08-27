@@ -6,7 +6,7 @@ class ParaMod(Module):
 	def __init__(self, config, proxy):
 		Module.__init__(self, config, proxy)
 		self.baseMod = Module.open(config.get('ParaMod', 'module'), config, proxy)
-		self.baseJobs = config.getInt('ParaMod', 'jobs', 1)
+		self.baseJobs = config.getInt('ParaMod', 'jobs', 1, volatile=True)
 		self.paramSpace = None
 		self.baseMod.hookenv = lambda tmp, jobNum: tmp.update(self.getJobConfig(jobNum))
 

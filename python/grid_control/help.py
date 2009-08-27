@@ -62,7 +62,7 @@ class Help(object):
 		for section in config.protocol:
 			header = False
 			prevNL = False
-			for (key, (value, default)) in config.protocol[section].iteritems():
+			for (key, (value, default, volatile)) in config.protocol[section].iteritems():
 				if (not printDefault and (str(value) != str(default))) or printDefault:
 					if value == 'DEPRECATED':
 						continue

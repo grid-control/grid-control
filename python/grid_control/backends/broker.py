@@ -6,7 +6,7 @@ class Broker(AbstractObject):
 	def __init__(self, config, queues):
 		self.config = config
 		self.queues = queues
-		self.userQueue = config.get('local', 'queue', '').split()
+		self.userQueue = config.get('local', 'queue', '', volatile=True).split()
 
 	def matchQueue(self, reqs):
 		return reqs

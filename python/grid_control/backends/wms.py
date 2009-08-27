@@ -28,12 +28,14 @@ class WMS(AbstractObject):
 		tarFile = os.path.join(config.workDir, 'sandbox.tar.gz')
 
 		self.sandboxIn = [ utils.atRoot('share', 'run.sh'), utils.atRoot('share', 'run.lib'), tarFile ]
-		self.sandboxOut = self.module.getOutFiles() + [ 'stdout.txt', 'stderr.txt', 'jobinfo.txt' ]
+		self.sandboxOut = module.getOutFiles() + [ 'stdout.txt', 'stderr.txt', 'jobinfo.txt' ]
 
-		taskConfig = utils.DictFormat(escapeString = True).format(self.module.getTaskConfig(), format = 'export %s%s%s\n')
-		varMapping = map(lambda (x,y): "%s %s\n" % (x,y), self.module.getVarMapping().items())
-		inFiles = self.module.getInFiles() + [ utils.VirtualFile('_config.sh', utils.sorted(taskConfig)),
-			utils.VirtualFile('_varmap.dat', str.join('', utils.sorted(varMapping))) ]
+		taskConfig = utils.DictFormat(escapeString = True).format(module.getTaskConfig(), format = 'export %s%s%s\n')
+		varMapping = map(lambda (x,y): "%s %s\n" % (x,y), module.getVarMapping().items())
+		inFiles = module.getInFiles()
+		inFiles.append(utils.VirtualFile('_config.sh', utils.sorted(taskConfig)))
+		inFiles.append(utils.VirtualFile('_varmap.dat', str.join('', utils.sorted(varMapping))))
+		inFiles.extend(map(lambda x: utils.atRoot('share', 'env.%s.sh' % x), module.getDependencies()))
 
 		utils.vprint("Packing sandbox:")
 		if config.opts.init:
