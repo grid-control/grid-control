@@ -13,7 +13,7 @@ class SGE(LocalWMSApi):
 		'S': Job.QUEUED,    'R': Job.RUNNING,
 		'T': Job.QUEUED,    't': Job.RUNNING,
 		'd': Job.ABORTED,   'E': Job.DONE,
-		'dr': Job.RUNNING
+		'dr': Job.RUNNING,  'hr': Job.RUNNING
 	}
 
 	def __init__(self, config, wms):
