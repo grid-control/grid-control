@@ -24,11 +24,20 @@ class Config:
 
 
 	def get(self, section, item, default = None, volatile = False):
+		# Make protocol of config queries - flag inconsistencies
 		if not self.protocol.has_key(section):
 			self.protocol[section] = {}
 		if self.protocol[section].has_key(item):
 			if self.protocol[section][item][1] != default:
 				raise ConfigError("Inconsistent default values: [%s] %s" % (section, item))
+		# Default value helper function
+		def tryDefault(errorMessage):
+			if default != None:
+				utils.vprint("Using default value [%s] %s = %s" % (section, item, str(default)), 1)
+				self.protocol[section][item] = (default, default, volatile)
+				return default
+			raise ConfigError(errorMessage)
+		# Read from config file or return default if possible
 		try:
 			lines = self.parser.get(section, item).splitlines()
 			lines = map(lambda x: x.split(';')[0].strip(), lines)
@@ -36,17 +45,9 @@ class Config:
 			self.protocol[section][item] = (value, default, volatile)
 			return value
 		except ConfigParser.NoSectionError:
-			if default != None:
-				utils.vprint("Using default value [%s] %s = %s" % (section, item, str(default)), 1)
-				self.protocol[section][item] = (default, default, volatile)
-				return default
-			raise ConfigError("No section %s in config file." % section)
+			return tryDefault("No section %s in config file." % section)
 		except ConfigParser.NoOptionError:
-			if default != None:
-				utils.vprint("Using default value [%s] %s = %s" % (section, item, str(default)), 1)
-				self.protocol[section][item] = (default, default, volatile)
-				return default
-			raise ConfigError("No option %s in section %s of config file." % (item, section))
+			return tryDefault("No option %s in section %s of config file." % (item, section))
 		except:
 			raise ConfigError("Parse error in option %s of config file section %s." % (item, section))
 
@@ -78,6 +79,8 @@ class Config:
 			return value.lower() in ('yes', 'y', 'true', 't', 'ok')
 
 
+	# Compare this config object to another config file
+	# Return true in case non-volatile parameters are changed
 	def needInit(self, saveConfigPath):
 		saveConfig = ConfigParser.ConfigParser()
 		if not os.path.exists(saveConfigPath):
