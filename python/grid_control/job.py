@@ -85,14 +85,12 @@ class Job:
 	def update(self, state):
 		self.state = state
 		self.history[self.attempt] = self.dict.get('dest', 'N/A')
-		# FIXME: job history or something
 
 
 	def assignId(self, wmsId):
 		self.wmsId = wmsId
 		self.attempt = self.attempt + 1
 		self.submitted = time()
-		# FIXME: History or sth.
 
 
 	def report(self):
