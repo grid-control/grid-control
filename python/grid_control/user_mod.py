@@ -19,7 +19,3 @@ class UserMod(Module):
 
 	def getInFiles(self):
 		return Module.getInFiles(self) + [ self._executable ]
-
-
-	def onJobSubmit(self, job, id, dbmessage = [{}]):
-		Module.onJobSubmit(self, job, id, dbmessage + [dict.fromkeys(["application", "exe"], "shellscript")])

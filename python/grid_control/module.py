@@ -118,9 +118,9 @@ class Module(AbstractObject):
 			threading.Thread(target = os.system, args = (params,)).start()
 
 		threading.Thread(target = self.publishToDashboard, args = (jobObj, jobNum, [{
-			"tool": "grid-control", "GridName": self.proxy.getUsername(),
-			"scheduler": "gLite", "taskType": "analysis", "vo": self.proxy.getVO(),
-			"user": os.environ['LOGNAME'] }] + dbmessage,)).start()
+			"tool": "grid-control", "GridName": self.proxy.getUsername(), "scheduler": "gLite",
+			"taskType": "analysis", "vo": self.proxy.getVO(), "user": os.environ['LOGNAME'] }] +
+			[dict.fromkeys(["application", "exe"], "shellscript")] + dbmessage,)).start()
 
 
 	# Called on job status update
