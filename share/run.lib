@@ -533,7 +533,6 @@ url_copy() {
 		if [ "$?" != "0" ]; then
 			print_and_eval "url_exists" "$TARGET_URL/$TARGET_FN" || BADCOUNT=$[$BADCOUNT+1]
 		fi
-		# [ $RESULT != 0 ] && BADCOUNT=$[$BADCOUNT+1]
 	done
 	[ $BADCOUNT -ne 0 ] && echo "$BADCOUNT errors occurred during SE access" && fail 106
 }
