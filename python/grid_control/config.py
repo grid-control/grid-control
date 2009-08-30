@@ -66,10 +66,7 @@ class Config:
 				else:
 					path = basePath
 			return path
-		tmp = map(formatPath, pathRaw.split('\n'))
-		if len(tmp) == 1:
-			return tmp[0]
-		return tmp
+		return map(formatPath, pathRaw.split('\n'))
 
 
 	def getPath(self, section, item, default = None, volatile = False):
