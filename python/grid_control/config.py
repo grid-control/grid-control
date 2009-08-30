@@ -52,19 +52,31 @@ class Config:
 			raise ConfigError("Parse error in option %s of config file section %s." % (item, section))
 
 
-	def getPath(self, section, item, default = None, volatile = False):
-		path = self.get(section, item, default, volatile)
-		if path == '':
+	def getPaths(self, section, item, default = None, volatile = False):
+		pathRaw = self.get(section, item, default, volatile)
+		if pathRaw == '':
 			return ''
-		path = os.path.expanduser(path)	# ~/bla -> /home/user/bla
-		path = os.path.normpath(path)   # xx/../yy -> yy
-		if not os.path.isabs(path):	# ./lala -> /foo/bar/lala
-			basePath = os.path.join(self.baseDir, path)
-			if not os.path.exists(basePath) and os.path.exists(utils.atRoot(path)):
-				path = utils.atRoot(path)
-			else:
-				path = basePath
-		return path
+		def formatPath(path):
+			path = os.path.expanduser(path.strip())	# ~/bla -> /home/user/bla
+			path = os.path.normpath(path)   # xx/../yy -> yy
+			if not os.path.isabs(path):	# ./lala -> /foo/bar/lala
+				basePath = os.path.join(self.baseDir, path)
+				if not os.path.exists(basePath) and os.path.exists(utils.atRoot(path)):
+					path = utils.atRoot(path)
+				else:
+					path = basePath
+			return path
+		tmp = map(formatPath, pathRaw.split('\n'))
+		if len(tmp) == 1:
+			return tmp[0]
+		return tmp
+
+
+	def getPath(self, section, item, default = None, volatile = False):
+		tmp = self.getPaths(section, item, default, volatile)
+		if len(tmp) == 0:
+			return ''
+		return tmp[0]
 
 
 	def getInt(self, section, item, default = None, volatile = False):

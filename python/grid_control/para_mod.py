@@ -109,13 +109,12 @@ class UberParaMod(ParaMod):
 	and/or tuples of parameters.  For example,
 
 		parameters  = spam (ham, eggs)
-		spam        = 0 1
+		spam        = A B
 		(ham, eggs) = (1, 2) (3, 4)
 
-	gives builds the following parameter combinations of (spam, ham,
-	egg):
+	gives the following parameter combinations of (spam, ham, egg):
 
-		(0, 1, 2), (1, 1, 2), (0, 3, 4), (1, 3, 4)
+		(A, 1, 2), (B, 1, 2), (A, 3, 4), (B, 3, 4)
 	"""
 	def __init__(self, config, proxy):
 		ParaMod.__init__(self, config, proxy)
