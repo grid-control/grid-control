@@ -1,6 +1,5 @@
 import sys, os, string, re, copy
-from grid_control import RuntimeError, utils, DatasetError
-from provider_base import DataProvider
+from grid_control import RuntimeError, utils, DatasetError, DataProvider
 
 import DBSAPI_v2.dbsApi
 from DBSAPI_v2.dbsApiException import *

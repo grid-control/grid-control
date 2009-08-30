@@ -17,8 +17,8 @@ class CMSSW(Module):
 		else:
 			self.projectArea = config.getPath('CMSSW', 'project area')
 
-		self.configFile = config.getPath('CMSSW', 'config file')
-		self.configFiles = [ self.configFile ]
+		self.configFiles = config.getPaths('CMSSW', 'config file')
+		self.defaultProvider = config.get('CMSSW', 'dbsapi', 'DBSApiv2')
 
 		self.dataset = config.get('CMSSW', 'dataset', '').strip()
 		if self.dataset == '':
@@ -92,7 +92,7 @@ class CMSSW(Module):
 				raise ConfigError("Not a properly initialized work directory '%s'." % config.workDir)
 			if config.opts.resync:
 				old = DataProvider.loadState(config, config.workDir)
-				new = DataProvider.create(config)
+				new = DataProvider.create(config, self.dataset, self.defaultProvider)
 				self.dataSplitter.resyncMapping(config.workDir, old.getBlocks(), new.getBlocks())
 				#TODO: new.saveState(config.workDir)
 
@@ -115,7 +115,7 @@ class CMSSW(Module):
 
 		# find and split datasets
 		if self.dataset != None:
-			self.dataprovider = DataProvider.create(config)
+			self.dataprovider = DataProvider.create(config, self.dataset, self.defaultProvider)
 			self.dataprovider.saveState(workDir)
 			if utils.verbosity() > 2:
 				self.dataprovider.printDataset()

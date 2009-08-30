@@ -37,13 +37,11 @@ class DataProvider(AbstractObject):
 
 
 	# Create a new DataProvider instance
-	def create(config):
-		dbsapi = config.get('CMSSW', 'dbsapi', 'DBSApiv2')
-		dataset = config.get('CMSSW', 'dataset', '').strip()
+	def create(config, dataset, defaultProvider):
 		if "\n" in dataset:
-			return DataProvider.open("DataMultiplexer", config, dataset, dbsapi)
+			return DataProvider.open("DataMultiplexer", config, dataset, defaultProvider)
 		else:
-			(nick, provider, datasetExpr) = DataProvider.parseDatasetExpr(dataset, dbsapi)
+			(nick, provider, datasetExpr) = DataProvider.parseDatasetExpr(dataset, defaultProvider)
 			return DataProvider.open(provider, config, datasetExpr, nick, 0)
 	create = staticmethod(create)
 
