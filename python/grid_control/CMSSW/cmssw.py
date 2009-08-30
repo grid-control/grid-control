@@ -1,8 +1,5 @@
 import os, string, re, sys, tarfile
 from grid_control import ConfigError, Module, WMS, utils
-from provider_base import DataProvider
-from splitter_base import DataSplitter
-from DashboardAPI import DashboardAPI
 from time import time, localtime, strftime
 
 class CMSSW(Module):
