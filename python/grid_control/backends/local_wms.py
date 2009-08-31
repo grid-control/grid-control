@@ -34,8 +34,8 @@ class LocalWMSApi(AbstractObject):
 
 
 class LocalWMS(WMS):
-	def __init__(self, config, module):
-		WMS.__init__(self, config, module, 'local')
+	def __init__(self, config, module, monitor):
+		WMS.__init__(self, config, module, monitor, 'local')
 
 		wmsapi = config.get('local', 'wms', self._guessWMS())
 		self.api = LocalWMSApi.open("grid_control.backends.%s.%s" % (wmsapi.lower(), wmsapi), config, self)

@@ -3,9 +3,9 @@ from time import time, localtime, strftime
 from grid_control import ConfigError, Job, UserError, Report
 
 class JobDB:
-	def __init__(self, config, module):
+	def __init__(self, config, module, monitor):
 		self.config = config
-		self.module = module
+		self.monitor = monitor
 		self._dbPath = os.path.join(config.workDir, 'jobs')
 		try:
 			if not os.path.exists(self._dbPath):
@@ -155,7 +155,7 @@ class JobDB:
 					jobObj.set(key, value)
 
 				self._update(jobObj, jobNum, Job.SUBMITTED)
-				self.module.onJobSubmit(jobObj, jobNum)
+				self.monitor.onJobSubmit(wms, jobObj, jobNum)
 				if self.config.opts.abort:
 					return False
 			return True
@@ -184,7 +184,7 @@ class JobDB:
 				for key, value in info.items():
 					jobObj.set(key, value)
 				self._update(jobObj, jobNum, state)
-				self.module.onJobUpdate(jobObj, jobNum, info)
+				self.monitor.onJobUpdate(wms, jobObj, jobNum, info)
 			else:
 				# If a job stays too long in an inital state, cancel it
 				if jobObj.state in (Job.SUBMITTED, Job.WAITING, Job.READY, Job.QUEUED):
@@ -239,7 +239,7 @@ class JobDB:
 				jobObj.set('retcode', retCode)
 				jobObj.set('runtime', data.get("TIME", -1))
 				self._update(jobObj, jobNum, state)
-				self.module.onJobOutput(jobObj, jobNum, retCode)
+				self.monitor.onJobOutput(wms, jobObj, jobNum, retCode)
 
 			if self.config.opts.abort:
 				return False

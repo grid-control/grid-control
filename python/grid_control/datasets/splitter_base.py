@@ -34,10 +34,6 @@ class DataSplitter(AbstractObject):
 		return self._jobCache
 
 
-	def getSitesForJob(self, jobNum):
-		return self.getSplitInfo(jobNum)[DataSplitter.SEList]
-
-
 	def getNumberOfJobs(self):
 		return len(self._jobFiles)
 

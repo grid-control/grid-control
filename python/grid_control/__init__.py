@@ -7,12 +7,13 @@ from job	import *
 from report	import *
 
 from job_db	import *
+from proxy	import *
 
 from backends	import *
+from monitoring	import *
 from module	import *
 
 from datasets	import *
-from proxy	import *
 
 from CMSSW	import *
 from user_mod	import *

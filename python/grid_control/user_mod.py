@@ -2,8 +2,8 @@ import os.path, random, time
 from grid_control import Module
 
 class UserMod(Module):
-	def __init__(self, config, proxy):
-		Module.__init__(self, config, proxy)
+	def __init__(self, config):
+		Module.__init__(self, config)
 		self._executable = config.getPath('UserMod', 'executable')
 		self._arguments = config.get('UserMod', 'arguments', '')
 

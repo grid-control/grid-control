@@ -91,32 +91,33 @@ def main(args):
 		except:
 			raise UserError("Could not access specified working directory '%s'!" % config.workDir)
 
-		backend = config.get('global', 'backend', 'grid')
-
-		# Initialise proxy
-		defaultproxy = { 'grid': 'VomsProxy', 'local': 'TrivialProxy' }
-		proxy = Proxy.open(config.get(backend, 'proxy', defaultproxy[backend], volatile=True))
-
 		# Initialise application module
 		module = config.get('global', 'module')
-		module = Module.open(module, config, proxy)
+		module = Module.open(module, config)
 
 		# Give help about variables
 		if opts.help_vars:
 			Help().listVars(module)
 			return 0
 
+		# Initialise monitoring module
+		if config.getBool('jobs', 'monitor job', False, volatile=True):
+			monitor = DashBoardMonitoring(config, module)
+		else:
+			monitor = Monitoring(config, module)
+
 		# Initialise workload management interface
+		backend = config.get('global', 'backend', 'grid')
 		defaultwms = { 'grid': 'GliteWMS', 'local': 'LocalWMS' }
 		if backend == 'grid':
-			wms = WMS.open(config.get(backend, 'wms', 'GliteWMS'), config, module)
+			wms = WMS.open(config.get(backend, 'wms', 'GliteWMS'), config, module, monitor)
 		elif backend == 'local':
-			wms = WMS.open(defaultwms[backend], config, module)
+			wms = WMS.open(defaultwms[backend], config, module, monitor)
 		else:
 			raise UserError("Invalid backend specified!" % config.workDir)
 
 		# Initialise job database
-		jobs = JobDB(config, module)
+		jobs = JobDB(config, module, monitor)
 
 		# Give config help
 		if opts.help_cfg or opts.help_scfg:
@@ -147,7 +148,7 @@ def main(args):
 			Report(jobs, jobs).summary()
 			print "Running in continuous mode. Press ^C to exit."
 
-		if not proxy.canSubmit(module.wallTime, opts.submission):
+		if not wms.canSubmit(module.wallTime, opts.submission):
 			opts.submission = False
 
 		# Job submission loop
@@ -183,8 +184,8 @@ def main(args):
 					break
 				# idle timeout
 				wait(wms.getTimings()[0])
-				# Check proxy lifetime
-				if not proxy.canSubmit(module.wallTime, opts.submission):
+				# Check whether wms can submit
+				if not wms.canSubmit(module.wallTime, opts.submission):
 					opts.submission = False
 
 		if opts.gui:

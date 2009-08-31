@@ -3,8 +3,8 @@ from grid_control import Job
 from wms import WMS
 
 class DummyWMS(WMS):
-	def __init__(self, config, opts, module):
-		WMS.__init__(self, config, opts, module, 'grid')
+	def __init__(self, config, module, monitor):
+		WMS.__init__(self, config, module, monitor, 'grid')
 		self.mapNum2ID = {}
 
 	def submitJob(self, jobNum):

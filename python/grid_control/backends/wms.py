@@ -1,7 +1,7 @@
 # Generic base class for workload management systems
 
 import sys, os, time, shutil, tarfile
-from grid_control import AbstractObject, ConfigError, RuntimeError, UserError, utils
+from grid_control import AbstractObject, ConfigError, RuntimeError, UserError, utils, Proxy
 
 class WMS(AbstractObject):
 	INLINE_TAR_LIMIT = 256 * 1024
@@ -10,12 +10,14 @@ class WMS(AbstractObject):
 		locals()[reqType] = id
 
 
-	def __init__(self, config, module, backend):
+	def __init__(self, config, module, monitor, backend, defaultproxy = 'TrivialProxy'):
 		self.config = config
 		self.module = module
 
-		self._outputPath = os.path.join(config.workDir, 'output')
+		# Initialise proxy
+		self.proxy = Proxy.open(config.get(backend, 'proxy', defaultproxy, volatile=True))
 
+		self._outputPath = os.path.join(config.workDir, 'output')
 		if not os.path.exists(self._outputPath):
 			if config.opts.init:
 				try:
@@ -30,9 +32,12 @@ class WMS(AbstractObject):
 		self.sandboxIn = [ utils.atRoot('share', 'run.sh'), utils.atRoot('share', 'run.lib'), tarFile ]
 		self.sandboxOut = module.getOutFiles() + [ 'stdout.txt', 'stderr.txt', 'jobinfo.txt' ]
 
-		taskConfig = utils.DictFormat(escapeString = True).format(module.getTaskConfig(), format = 'export %s%s%s\n')
+		taskEnv = module.getTaskConfig()
+		taskEnv.update(monitor.getEnv(self))
+		taskConfig = utils.DictFormat(escapeString = True).format(taskEnv, format = 'export %s%s%s\n')
 		varMapping = map(lambda (x,y): "%s %s\n" % (x,y), module.getVarMapping().items())
 		inFiles = module.getInFiles()
+		inFiles.extend(monitor.getFiles())
 		inFiles.append(utils.VirtualFile('_config.sh', utils.sorted(taskConfig)))
 		inFiles.append(utils.VirtualFile('_varmap.dat', str.join('', utils.sorted(varMapping))))
 		inFiles.extend(map(lambda x: utils.atRoot('share', 'env.%s.sh' % x), module.getDependencies()))
@@ -80,6 +85,10 @@ class WMS(AbstractObject):
 		for file in self.sandboxIn:
 			if file != tarFile or not config.opts.init:
 				utils.vprint("\t%s" % file)
+
+
+	def canSubmit(self, length, flag):
+		return self.proxy.canSubmit(length, flag)
 
 
 	def getTimings(self):

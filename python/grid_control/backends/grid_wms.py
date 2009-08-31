@@ -23,10 +23,10 @@ class GridWMS(WMS):
 	}
 
 
-	def __init__(self, config, module, section):
-		WMS.__init__(self, config, module, 'grid')
+	def __init__(self, config, module, monitor, section):
+		WMS.__init__(self, config, module, monitor, 'grid', 'VomsProxy')
 		self._sites = config.get('grid', 'sites', '', volatile=True).split()
-		self.vo = config.get('grid', 'vo', module.proxy.getVO())
+		self.vo = config.get('grid', 'vo', self.proxy.getVO())
 
 		self._submitParams = {}
 		self._ce = config.get(section, 'ce', '', volatile=True)

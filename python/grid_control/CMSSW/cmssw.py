@@ -3,8 +3,8 @@ from grid_control import ConfigError, Module, WMS, utils
 from time import time, localtime, strftime
 
 class CMSSW(Module):
-	def __init__(self, config, proxy):
-		Module.__init__(self, config, proxy)
+	def __init__(self, config):
+		Module.__init__(self, config)
 
 		# SCRAM info
 		scramProject = config.get('CMSSW', 'scram project', '').split()
@@ -129,18 +129,16 @@ class CMSSW(Module):
 
 
 	# Called on job submission
-	def onJobSubmit(self, job, id, dbmessage = [{}]):
+	def getSubmitInfo(self, jobNum):
 		splitInfo = {}
 		if self.dataSplitter:
-			splitInfo = self.dataSplitter.getSplitInfo(id)
+			splitInfo = self.dataSplitter.getSplitInfo(jobNum)
 		try:
 			nEvents = int(splitInfo.get(DataSplitter.NEvents, self.eventsPerJob))
 		except:
 			nEvents = 0
-		Module.onJobSubmit(self, job, id, [{
-			"application": self.scramEnv['SCRAM_PROJECTVERSION'], "exe": "cmsRun",
-			"nevtJob": nEvents,
-			"datasetFull": splitInfo.get(DataSplitter.Dataset, '') }])
+		return { "application": self.scramEnv['SCRAM_PROJECTVERSION'], "exe": "cmsRun",
+			"nevtJob": nEvents, "datasetFull": splitInfo.get(DataSplitter.Dataset, '') }
 
 
 	# Get environment variables for gc_config.sh
@@ -183,7 +181,8 @@ class CMSSW(Module):
 			reqs.append((WMS.MEMBER, 'VO-cms-%s' % self.scramEnv['SCRAM_PROJECTVERSION']))
 			reqs.append((WMS.MEMBER, 'VO-cms-%s' % self.scramArch))
 		if self.dataSplitter != None:
-			reqs.append((WMS.STORAGE, self.dataSplitter.getSitesForJob(jobNum)))
+			splitInfo = self.dataSplitter.getSplitInfo(jobNum)
+			reqs.append((WMS.STORAGE, splitInfo[DataSplitter.SEList]))
 		return reqs
 
 

@@ -3,16 +3,15 @@ from grid_control import Module, AbstractError, WMS, utils
 
 # Parameterized Module
 class ParaMod(Module):
-	def __init__(self, config, proxy):
-		Module.__init__(self, config, proxy)
-		self.baseMod = Module.open(config.get('ParaMod', 'module'), config, proxy)
+	def __init__(self, config):
+		Module.__init__(self, config)
+		self.baseMod = Module.open(config.get('ParaMod', 'module'), config)
 		self.baseJobs = config.getInt('ParaMod', 'jobs', 1, volatile=True)
 		self.paramSpace = None
-		self.baseMod.hookenv = lambda tmp, jobNum: tmp.update(self.getJobConfig(jobNum))
 
 		# adopt functions from basemod
-		for fkt in [ 'getTaskConfig', 'onJobSubmit', 'onJobUpdate', 'onJobOutput',
-			'getInFiles', 'getOutFiles', 'getSubstFiles', 'getCommand' ]:
+		for fkt in [ 'getInFiles', 'getOutFiles', 'getSubstFiles',
+			'getTaskConfig', 'getCommand', 'getDependencies' ]:
 			setattr(self, fkt, getattr(self.baseMod, fkt))
 		self.getJobArguments = lambda x: self.baseMod.getJobArguments(x / self.getParamSpace())
 
@@ -61,12 +60,14 @@ class ParaMod(Module):
 		return self.paramSpace
 
 	def getParams(self):
+		# [{VAR1:VALUE1, VAR2:VALUE2}, {VAR1:VALUE1}, {VAR3:VALUE3}]
+		# Results in 3 parameter sets with VAR1=VARLUE1,VAR2=VALUE2 in 1st job
 		raise AbstractError
 
 
 class SimpleParaMod(ParaMod):
-	def __init__(self, config, proxy):
-		ParaMod.__init__(self, config, proxy)
+	def __init__(self, config):
+		ParaMod.__init__(self, config)
 		self.paraValues = config.get('ParaMod', 'parameter values')
 		self.paraName = config.get('ParaMod', 'parameter name', 'PARAMETER').strip()
 
@@ -76,8 +77,8 @@ class SimpleParaMod(ParaMod):
 
 
 class FileParaMod(ParaMod):
-	def __init__(self, config, proxy):
-		ParaMod.__init__(self, config, proxy)
+	def __init__(self, config):
+		ParaMod.__init__(self, config)
 		self.path = config.getPath('ParaMod', 'parameter source')
 		sniffed = csv.Sniffer().sniff(open(self.path).read(1024))
 		csv.register_dialect('sniffed', sniffed)
@@ -94,8 +95,8 @@ class FileParaMod(ParaMod):
 
 
 class LinkedParaMod(SimpleParaMod):
-	def __init__(self, config, proxy):
-		SimpleParaMod.__init__(self, config, proxy)
+	def __init__(self, config):
+		SimpleParaMod.__init__(self, config)
 
 	def getParams(self):
 		result = []
@@ -116,8 +117,8 @@ class UberParaMod(ParaMod):
 
 		(A, 1, 2), (B, 1, 2), (A, 3, 4), (B, 3, 4)
 	"""
-	def __init__(self, config, proxy):
-		ParaMod.__init__(self, config, proxy)
+	def __init__(self, config):
+		ParaMod.__init__(self, config)
 
 		lowercase_tuple = lambda t: tuple(map(str.lower, t))
 		option_to_tuple = lambda o: utils.parseTuples(o)[0]

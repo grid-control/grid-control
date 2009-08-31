@@ -4,9 +4,9 @@ from grid_wms import GridWMS
 from glite import Glite
 
 class LCG(Glite):
-	def __init__(self, config, opts, module):
+	def __init__(self, config, module, monitor):
 		utils.deprecated("Please use the GliteWMS backend for grid jobs!")
-		GridWMS.__init__(self, config, opts, module, 'lcg')
+		GridWMS.__init__(self, config, module, monitor, 'lcg')
 
 		self._submitExec = utils.searchPathFind('edg-job-submit')
 		self._statusExec = utils.searchPathFind('edg-job-status')
