@@ -26,7 +26,10 @@ CursesStream.backlog = [None for i in xrange(100)]
 def CursesGUI(jobs, jobCycle):
 	def cursesWrapper(screen):
 		screen.scrollok(True)
-		curses.use_default_colors()
+                try:
+                    curses.use_default_colors()
+                except:
+                    pass
 
 		# Event handling for resizing
 		def onResize(sig, frame):
