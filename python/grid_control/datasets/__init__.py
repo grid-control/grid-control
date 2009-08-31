@@ -5,3 +5,5 @@ from provider_basic	import *
 from splitter_base	import *
 from splitter_default	import *
 from splitter_file	import *
+
+from datamod import *

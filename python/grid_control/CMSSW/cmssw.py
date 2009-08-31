@@ -1,10 +1,10 @@
 import os, string, re, sys, tarfile
-from grid_control import ConfigError, Module, WMS, utils
+from grid_control import ConfigError, Module, WMS, utils, DataMod
 from time import time, localtime, strftime
 
-class CMSSW(Module):
+class CMSSW(DataMod):
 	def __init__(self, config):
-		Module.__init__(self, config)
+		DataMod.__init__(self, config)
 
 		# SCRAM info
 		scramProject = config.get('CMSSW', 'scram project', '').split()
@@ -17,21 +17,22 @@ class CMSSW(Module):
 		else:
 			self.projectArea = config.getPath('CMSSW', 'project area')
 
+		# Get cmssw config files and check their existance
 		self.configFiles = config.getPaths('CMSSW', 'config file')
-		self.defaultProvider = config.get('CMSSW', 'dbsapi', 'DBSApiv2')
+		for cfgFile in self.configFiles:
+			if not os.path.exists(cfgFile):
+				raise ConfigError("Config file '%s' not found." % cfgFile)
 
-		self.dataset = config.get('CMSSW', 'dataset', '').strip()
-		if self.dataset == '':
-			self.dataset = None
-			self.eventsPerJob = config.get('CMSSW', 'events per job', 0)
-		else:
-			self.eventsPerJob = config.getInt('CMSSW', 'events per job')
+		# Check that for dataset jobs the necessary placeholders are in the config file
+		if self.dataSplitter != None:
 			for tag in [ "__FILE_NAMES__", "__MAX_EVENTS__", "__SKIP_EVENTS__" ]:
 				for cfgName in self.configFiles:
 					if open(cfgName, 'r').read().find(tag) == -1:
 						print open(utils.atRoot('share', 'fail.txt'), 'r').read()
 						raise ConfigError("Config file must use __FILE_NAMES__, __MAX_EVENTS__" \
 							" and __SKIP_EVENTS__ to work properly with datasets!")
+		else:
+			self.eventsPerJob = config.get('CMSSW', 'events per job', 0)
 
 		self.gzipOut = config.getBool('CMSSW', 'gzip output', True)
 		self.useReqs = config.getBool('CMSSW', 'use requirements', True, volatile=True)
@@ -78,33 +79,14 @@ class CMSSW(Module):
 		if self.scramEnv['SCRAM_PROJECTNAME'] != 'CMSSW':
 			raise ConfigError("Project area not a valid CMSSW project area.")
 
-		for cfgFile in self.configFiles:
-			if not os.path.exists(cfgFile):
-				raise ConfigError("Config file '%s' not found." % cfgFile)
-
-		self.dataSplitter = None
-		if config.opts.init:
-			self._initTask(config.workDir, config)
-		elif self.dataset != None:
-			try:
-				self.dataSplitter = DataSplitter.loadState(config.workDir)
-			except:
-				raise ConfigError("Not a properly initialized work directory '%s'." % config.workDir)
-			if config.opts.resync:
-				old = DataProvider.loadState(config, config.workDir)
-				new = DataProvider.create(config, self.dataset, self.defaultProvider)
-				self.dataSplitter.resyncMapping(config.workDir, old.getBlocks(), new.getBlocks())
-				#TODO: new.saveState(config.workDir)
-
-
-	def _initTask(self, workDir, config):
-		if len(self.projectArea):
-			utils.genTarball(os.path.join(workDir, 'runtime.tar.gz'), self.projectArea, self.pattern)
+		if config.opts.init and len(self.projectArea):
+			# Generate runtime tarball (and move to SE)
+			utils.genTarball(os.path.join(config.workDir, 'runtime.tar.gz'), self.projectArea, self.pattern)
 
 			if self.seRuntime:
 				print 'Copy CMSSW runtime to SE',
 				sys.stdout.flush()
-				source = 'file:///' + os.path.join(workDir, 'runtime.tar.gz')
+				source = 'file:///' + os.path.join(config.workDir, 'runtime.tar.gz')
 				target = os.path.join(self.sePath, self.taskID + '.tar.gz')
 				if utils.se_copy(source, target, config.getBool('CMSSW', 'se runtime force', True)):
 					print 'finished'
@@ -113,37 +95,24 @@ class CMSSW(Module):
 					print utils.se_copy.lastlog
 					raise RuntimeError("Unable to copy runtime!")
 
-		# find and split datasets
-		if self.dataset != None:
-			self.dataprovider = DataProvider.create(config, self.dataset, self.defaultProvider)
-			self.dataprovider.saveState(workDir)
-			if utils.verbosity() > 2:
-				self.dataprovider.printDataset()
 
-			splitter = config.get('CMSSW', 'dataset splitter', 'DefaultSplitter')
-			self.dataSplitter = DataSplitter.open(splitter, { "eventsPerJob": self.eventsPerJob })
-			self.dataSplitter.splitDataset(self.dataprovider.getBlocks())
-			self.dataSplitter.saveState(workDir)
-			if utils.verbosity() > 2:
-				self.dataSplitter.printAllJobInfo()
+	# Get default dataset provider
+	def getDefaultProvider(self):
+		return 'DBSApiv2'
 
 
 	# Called on job submission
 	def getSubmitInfo(self, jobNum):
-		splitInfo = {}
-		if self.dataSplitter:
-			splitInfo = self.dataSplitter.getSplitInfo(jobNum)
-		try:
-			nEvents = int(splitInfo.get(DataSplitter.NEvents, self.eventsPerJob))
-		except:
-			nEvents = 0
-		return { "application": self.scramEnv['SCRAM_PROJECTVERSION'], "exe": "cmsRun",
-			"nevtJob": nEvents, "datasetFull": splitInfo.get(DataSplitter.Dataset, '') }
+		result = DataMod.getSubmitInfo(self, jobNum)
+		result.update({"application": self.scramEnv['SCRAM_PROJECTVERSION'], "exe": "cmsRun"})
+		if self.dataSplitter == None:
+			result.update({"nevtJob": nEvents})
+		return result
 
 
 	# Get environment variables for gc_config.sh
 	def getTaskConfig(self):
-		data = Module.getTaskConfig(self)
+		data = DataMod.getTaskConfig(self)
 		data['CMSSW_CONFIG'] = str.join(' ', map(os.path.basename, self.configFiles))
 		data['CMSSW_OLD_RELEASETOP'] = self.scramEnv.get('RELEASETOP', None)
 		data['DB_EXEC'] = 'cmsRun'
@@ -156,39 +125,18 @@ class CMSSW(Module):
 		return data
 
 
-	# Get job dependent environment variables
-	def getJobConfig(self, job):
-		data = Module.getJobConfig(self, job)
-		if not self.dataSplitter:
-			return data
-
-		splitInfo = self.dataSplitter.getSplitInfo(job)
-		data['DATASETID'] = splitInfo.get(DataSplitter.DatasetID, None)
-		data['DATASETPATH'] = splitInfo.get(DataSplitter.Dataset, None)
-		data['DATASETNICK'] = splitInfo.get(DataSplitter.Nickname, None)
-		return data
-
-
-	def getVarMapping(self):
-		tmp = ['MAX_EVENTS', 'SKIP_EVENTS', 'FILE_NAMES']
-		return dict(Module.getVarMapping(self).items() + zip(tmp, tmp) + [('NICK', 'DATASETNICK')])
-
-
 	# Get job requirements
 	def getRequirements(self, jobNum):
-		reqs = Module.getRequirements(self, jobNum)
+		reqs = DataMod.getRequirements(self, jobNum)
 		if self.useReqs:
 			reqs.append((WMS.MEMBER, 'VO-cms-%s' % self.scramEnv['SCRAM_PROJECTVERSION']))
 			reqs.append((WMS.MEMBER, 'VO-cms-%s' % self.scramArch))
-		if self.dataSplitter != None:
-			splitInfo = self.dataSplitter.getSplitInfo(jobNum)
-			reqs.append((WMS.STORAGE, splitInfo[DataSplitter.SEList]))
 		return reqs
 
 
 	# Get files for input sandbox
 	def getInFiles(self):
-		files = Module.getInFiles(self)
+		files = DataMod.getInFiles(self)
 		if len(self.projectArea) and not self.seRuntime:
 			files.append(os.path.join(self.config.workDir, 'runtime.tar.gz'))
 		files.append(utils.atRoot('share', 'run.cmssw.sh')),
@@ -198,7 +146,7 @@ class CMSSW(Module):
 
 	# Get files for output sandbox
 	def getOutFiles(self):
-		files = Module.getOutFiles(self)[:]
+		files = DataMod.getOutFiles(self)[:]
 		# Add framework report file
 		renameExt = lambda name: str.join('.', name.split('.')[:-1]) + '.xml.gz'
 		files.extend(map(renameExt, map(os.path.basename, self.configFiles)))
@@ -214,32 +162,8 @@ class CMSSW(Module):
 	def getJobArguments(self, jobNum):
 		if self.dataSplitter == None:
 			return str(self.eventsPerJob)
-
-		splitInfo = self.dataSplitter.getSplitInfo(jobNum)
-		if utils.verbosity() > 0:
-			print "Job number: %d" % jobNum
-			DataSplitter.printInfoForJob(splitInfo)
-		return "%d %d %s" % (
-			splitInfo[DataSplitter.NEvents],
-			splitInfo[DataSplitter.Skipped],
-			str.join(' ', splitInfo[DataSplitter.FileList])
-		)
+		return DataMod.getJobArguments(self, jobNum)
 
 
 	def getDependencies(self):
-		return Module.getDependencies(self) + ['cmssw']
-
-
-	def getMaxJobs(self):
-		if self.dataSplitter == None:
-			raise ConfigError('Must specifiy number of jobs or dataset!')
-		return self.dataSplitter.getNumberOfJobs()
-
-
-	def report(self, jobNum):
-		if self.dataSplitter == None:
-			return Module.report(self, jobNum)
-
-		info = self.dataSplitter.getSplitInfo(jobNum)
-		name = info.get(DataSplitter.Nickname, info.get(DataSplitter.Dataset, None))
-		return { "Dataset": name }
+		return DataMod.getDependencies(self) + ['cmssw']

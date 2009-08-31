@@ -34,7 +34,7 @@ def getWorkSEJobs(args):
 		workDir = config.getPath('global', 'workdir', config.workDirDefault)
 		pathSE = config.get('storage', 'se path', '')
 		jobList = [ jobid ]
-	if len(args) == 1:
+	elif len(args) == 1:
 		configFile = args[0]
 		idregex = re.compile(r'^job_([0-9]+)$')
 		config = Config(configFile)
@@ -48,8 +48,8 @@ def getWorkSEJobs(args):
 
 
 def getJobInfo(workDir, jobNum, retCodeFilter = lambda x: True):
+	jobInfoPath = os.path.join(workDir, 'output', 'job_%d' % jobNum, 'jobinfo.txt')
 	try:
-		jobInfoPath = os.path.join(workDir, 'output', 'job_%d' % jobNum, 'jobinfo.txt')
 		jobInfo = utils.DictFormat('=').parse(open(jobInfoPath))
 		if retCodeFilter(jobInfo.get('exitcode', -1)):
 			return jobInfo

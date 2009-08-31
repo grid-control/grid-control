@@ -13,25 +13,31 @@ def main(args):
 		jobList = [ jobid ]
 	else:
 		(workDir, pathSE, jobList) = gcSupport.getWorkSEJobs(args)
+	jobList = map(int, jobList)
 
 	# Lock file in case several instances of this program are running
 	lockfile = os.path.join(workDir, 'prod.lock')
 	fd = open(lockfile, 'w')
 	fcntl.flock(fd, fcntl.LOCK_EX)
 
+	def unlock():
+		fcntl.flock(fd, fcntl.LOCK_UN)
+		if os.path.exists(lockfile):
+			os.unlink(lockfile)
+
 	try:
 		taskInfo = utils.DictFormat(" = ").parse(open(os.path.join(workDir, 'task.dat')))
 		provider = DataProvider.loadState(gcSupport.ConfigDummy(), workDir, 'production.dbs')
 
 		# Try to read all existing Blocks from production.dbs
+		saved = (sys.stdout, sys.stderr)
 		try:
-			saved = (sys.stdout, sys.stderr)
 			sys.stdout = gcSupport.DummyStream(sys.stdout)
 			sys.stderr = gcSupport.DummyStream(sys.stderr)
 			blocks = provider.getBlocks()
-			sys.stdout, sys.stderr = saved
 		except:
 			blocks = []
+		sys.stdout, sys.stderr = saved
 
 		for jobid in jobList:
 			outputDir = os.path.join(workDir, 'output', 'job_' + str(jobid))
@@ -84,16 +90,15 @@ def main(args):
 
 				# Add file to filelist of the current block
 				filelist = cblock[DataProvider.FileList]
-				filelist.append({ DataProvider.lfn: lfn, DataProvider.NEvents: nevents })
+				if not lfn in map(lambda x: x[DataProvider.lfn], filelist):
+					filelist.append({ DataProvider.lfn: lfn, DataProvider.NEvents: nevents })
 				cblock[DataProvider.NEvents] = reduce(lambda x,y: x+y, map(lambda x: x[DataProvider.NEvents], filelist))
 
 		provider.saveState(workDir, "production.dbs", blocks)
-
-	finally:
-		fcntl.flock(fd, fcntl.LOCK_UN)
-		if os.path.exists(lockfile):
-			os.unlink(lockfile)
-
+	except:
+		unlock()
+		raise
+	unlock()
 	return 0
 
 if __name__ == '__main__':

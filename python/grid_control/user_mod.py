@@ -1,9 +1,9 @@
 import os.path, random, time
-from grid_control import Module
+from grid_control import DataMod
 
-class UserMod(Module):
+class UserMod(DataMod):
 	def __init__(self, config):
-		Module.__init__(self, config)
+		DataMod.__init__(self, config)
 		self._executable = config.getPath('UserMod', 'executable')
 		self._arguments = config.get('UserMod', 'arguments', '')
 
@@ -14,8 +14,10 @@ class UserMod(Module):
 
 
 	def getJobArguments(self, jobNum):
+		if self.dataSplitter != None:
+			return DataMod.getJobArguments(self, jobNum)
 		return self._arguments
 
 
 	def getInFiles(self):
-		return Module.getInFiles(self) + [ self._executable ]
+		return DataMod.getInFiles(self) + [ self._executable ]
