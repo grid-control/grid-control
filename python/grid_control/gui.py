@@ -28,8 +28,8 @@ def CursesGUI(jobs, jobCycle):
 		screen.scrollok(True)
 		try:
 			curses.use_default_colors()
-		finally:
-			pass
+		except:
+			screen.attron(curses.A_BOLD)
 
 		# Event handling for resizing
 		def onResize(sig, frame):
