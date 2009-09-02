@@ -31,7 +31,11 @@ class DataProvider(AbstractObject):
 			(nickname, dataset) = temp
 		elif len(temp) == 1:
 			(dataset) = temp[0]
-
+			if provider == dbsProvider:
+				try:
+					nickname = dataset.split('/')[1]
+				except:
+					pass
 		return (nickname, provider, dataset)
 	parseDatasetExpr = staticmethod(parseDatasetExpr)
 

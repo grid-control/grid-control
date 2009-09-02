@@ -1,5 +1,5 @@
 import os.path, random, time
-from grid_control import Module, utils, WMS
+from grid_control import Module, ConfigError, utils, WMS
 from provider_base import DataProvider
 from splitter_base import DataSplitter
 
@@ -12,7 +12,7 @@ class DataMod(Module):
 		if self.dataset == '':
 			return
 
-		defaultProvider = config.get(self.__class__.__name__, 'dbsapi', self.getDefaultProvider())
+		defaultProvider = config.get(self.__class__.__name__, 'dataset provider', self.getDefaultProvider())
 		if config.opts.init:
 			# find datasets
 			self.dataprovider = DataProvider.create(config, self.dataset, defaultProvider)
@@ -21,7 +21,7 @@ class DataMod(Module):
 				self.dataprovider.printDataset()
 
 			# split datasets
-			splitter = config.get(self.__class__.__name__, 'dataset splitter', 'DefaultSplitter')
+			splitter = config.get(self.__class__.__name__, 'dataset splitter', 'EventBoundarySplitter')
 			eventsPerJob = config.getInt(self.__class__.__name__, 'events per job')
 			self.dataSplitter = DataSplitter.open(splitter, { "eventsPerJob": eventsPerJob })
 			self.dataSplitter.splitDataset(self.dataprovider.getBlocks())

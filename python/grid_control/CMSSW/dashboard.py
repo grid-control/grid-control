@@ -31,7 +31,7 @@ class DashBoardMonitoring(Monitoring):
 		threading.Thread(target = self.publish, args = (jobObj, jobNum, [{
 			"tool": "grid-control", "GridName": wms.proxy.getUsername(),
 			"scheduler": "gLite", "taskType": "analysis", "vo": wms.proxy.getVO(),
-			"user": os.environ['LOGNAME'] }] + self.module.getSubmitInfo(jobNum) +
+			"user": os.environ['LOGNAME'] }] + [self.module.getSubmitInfo(jobNum)] +
 			[dict.fromkeys(["application", "exe"], "shellscript")],)).start()
 
 
@@ -42,4 +42,4 @@ class DashBoardMonitoring(Monitoring):
 			"StatusValue": data.get('status', 'pending').upper(),
 			"StatusValueReason": data.get('reason', data.get('status', 'pending')).upper(),
 			"StatusEnterTime": data.get('timestamp', strftime("%Y-%m-%d_%H:%M:%S", localtime())),
-			"StatusDestination": data.get('dest', "") }] + dbmessage,)).start()
+			"StatusDestination": data.get('dest', "") }],)).start()

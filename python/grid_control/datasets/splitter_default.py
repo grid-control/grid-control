@@ -1,7 +1,7 @@
 from splitter_base import DataSplitter
 from provider_base import DataProvider
 
-class DefaultSplitter(DataSplitter):
+class EventBoundarySplitter(DataSplitter):
 	def __init__(self, parameters):
 		DataSplitter.__init__(self, parameters)
 		self.eventsPerJob = parameters['eventsPerJob']
