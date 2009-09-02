@@ -74,7 +74,8 @@ class VomsProxy(Proxy):
 		retCode = proc.wait()
 		if retCode != 0:
 			sys.stderr.write(proc.fromchild.read())
-			raise InstallationError("voms-proxy-info failed with return code %d" % retCode)
+			if not utils.boolUserInput("Do you want to ignore this error?", True):
+				raise InstallationError("voms-proxy-info failed with return code %d" % retCode)
 		self._cache = utils.DictFormat(':').parse(proc.fromchild.readlines())
 		return self._cache
 
