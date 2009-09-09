@@ -2,6 +2,8 @@
 # Author: Fred Stober <stober@ekp.uni-karlsruhe.de>
 
 # Error codes
+# 100 - unspecified error
+
 # 101 - file not found
 # 102 - directory not found
 # 103 - executable not found
@@ -57,6 +59,7 @@ abort() {
 	export
 	cleanup
 	[ -n "$1" ] && updatejobinfo $1
+	[ -n "$(grep 'EXITCODE=0' $MY_LANDINGZONE/job.info)" ] && updatejobinfo 100
 	trap - 0 1 2 3 15
 	kill4sure $$
 }
