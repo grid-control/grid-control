@@ -4,8 +4,9 @@ from provider_base import DataProvider
 from splitter_base import DataSplitter
 
 class DataMod(Module):
-	def __init__(self, config):
+	def __init__(self, config, includeMap = False):
 		Module.__init__(self, config)
+		self.includeMap = includeMap
 
 		self.dataSplitter = None
 		self.dataset = config.get(self.__class__.__name__, 'dataset', '').strip()
@@ -22,8 +23,7 @@ class DataMod(Module):
 
 			# split datasets
 			splitter = config.get(self.__class__.__name__, 'dataset splitter', 'EventBoundarySplitter')
-			eventsPerJob = config.getInt(self.__class__.__name__, 'events per job')
-			self.dataSplitter = DataSplitter.open(splitter, { "eventsPerJob": eventsPerJob })
+			self.dataSplitter = DataSplitter.open(splitter, config, self.__class__.__name__, {})
 			self.dataSplitter.splitDataset(self.dataprovider.getBlocks())
 			self.dataSplitter.saveState(config.workDir)
 			if utils.verbosity() > 2:
@@ -68,15 +68,34 @@ class DataMod(Module):
 			return data
 
 		splitInfo = self.dataSplitter.getSplitInfo(jobNum)
+		if utils.verbosity() > 0:
+			print "Job number: %d" % jobNum
+			DataSplitter.printInfoForJob(splitInfo)
+
+		data['MAX_EVENTS'] = splitInfo[DataSplitter.NEvents]
+		data['SKIP_EVENTS'] = splitInfo[DataSplitter.Skipped]
+		if not self.includeMap:
+			data['FILE_NAMES'] = self.formatFileList(splitInfo[DataSplitter.FileList])
 		data['DATASETID'] = splitInfo.get(DataSplitter.DatasetID, None)
 		data['DATASETPATH'] = splitInfo.get(DataSplitter.Dataset, None)
 		data['DATASETNICK'] = splitInfo.get(DataSplitter.Nickname, None)
 		return data
 
 
+	def formatFileList(self, filelist):
+		return str.join(" ", filelist)
+
+
+	# Get files for input sandbox
+	def getInFiles(self):
+		files = Module.getInFiles(self)
+		if (self.dataSplitter != None) and self.includeMap:
+			files.append(os.path.join(self.config.workDir, 'datamap.tar'))
+		return files
+
+
 	def getVarMapping(self):
-		tmp = ['MAX_EVENTS', 'SKIP_EVENTS', 'FILE_NAMES']
-		return dict(Module.getVarMapping(self).items() + zip(tmp, tmp) + [('NICK', 'DATASETNICK')])
+		return dict(Module.getVarMapping(self).items() + [('NICK', 'DATASETNICK')])
 
 
 	# Get job requirements
@@ -88,21 +107,6 @@ class DataMod(Module):
 		return reqs
 
 
-	def getJobArguments(self, jobNum):
-		if self.dataSplitter == None:
-			return Module.getJobArguments(self, jobNum)
-
-		splitInfo = self.dataSplitter.getSplitInfo(jobNum)
-		if utils.verbosity() > 0:
-			print "Job number: %d" % jobNum
-			DataSplitter.printInfoForJob(splitInfo)
-		return "%d %d %s" % (
-			splitInfo[DataSplitter.NEvents],
-			splitInfo[DataSplitter.Skipped],
-			str.join(' ', splitInfo[DataSplitter.FileList])
-		)
-
-
 	def getMaxJobs(self):
 		if self.dataSplitter == None:
 			return Module.getMaxJobs(self)
@@ -110,9 +114,9 @@ class DataMod(Module):
 
 
 	def getDependencies(self):
-		if self.dataSplitter == None:
-			return Module.getDependencies(self)
-		return Module.getDependencies(self) + [] # TODO: Dataset env script
+		if (self.dataSplitter != None) and self.includeMap:
+			return Module.getDependencies(self) + ['data']
+		return Module.getDependencies(self)
 
 
 	def report(self, jobNum):

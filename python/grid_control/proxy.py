@@ -1,9 +1,9 @@
 # Generic base class for grid proxies
-import sys, os, time, popen2
+import sys, os, time
 from grid_control import AbstractObject, InstallationError, AbstractError, utils
 
 class Proxy(AbstractObject):
-	def __init__(self):
+	def __init__(self, config):
 		self.lowerLimit = 300
 		self._lastUpdate = 0
 
@@ -59,9 +59,10 @@ class TrivialProxy(Proxy):
 
 
 class VomsProxy(Proxy):
-	def __init__(self):
-		Proxy.__init__(self)
+	def __init__(self, config):
+		Proxy.__init__(self, config)
 		self._infoExec = utils.searchPathFind('voms-proxy-info')
+		self.ignoreWarning = config.getBool('proxy', 'ignore warnings', False, volatile=True)
 		self._info = None
 		self._cache = None
 
@@ -70,20 +71,31 @@ class VomsProxy(Proxy):
 		if cached and self._cache:
 			return self._cache
 		# Call voms-proxy-info and parse results
-		proc = popen2.Popen4("%s --all" % self._infoExec, True)
+		proc = utils.LoggedProcess(self._infoExec, "%s --all")
 		retCode = proc.wait()
-		if retCode != 0:
-			sys.stderr.write(proc.fromchild.read())
-			if not utils.boolUserInput("Do you want to ignore this error?", True):
-				raise InstallationError("voms-proxy-info failed with return code %d" % retCode)
-		self._cache = utils.DictFormat(':').parse(proc.fromchild.readlines())
+		if (retCode != 0) and not self.ignoreWarning:
+			sys.stderr.write("%s\n%s\n" % (proc.getOutput(), proc.getError()))
+			raise InstallationError("voms-proxy-info failed with return code %d" % retCode)
+		self._cache = utils.DictFormat(':').parse(proc.getOutput())
 		return self._cache
 
 	def getTimeleft(self, cached, checkedForTime = None):
-		return utils.parseTime(self._getInfo(cached)['timeleft'])
+		try:
+			return utils.parseTime(self._getInfo(cached)['timeleft'])
+		except:
+			print self._getInfo(cached)
+			raise RuntimeError("Can't parse proxy information!")
 
 	def getUsername(self):
-		return '/CN=%s' % self._getInfo()['identity'].split('CN=')[1].strip()
+		try:
+			return '/CN=%s' % self._getInfo()['identity'].split('CN=')[1].strip()
+		except:
+			print self._getInfo(cached)
+			raise RuntimeError("Can't parse proxy information!")
 
 	def getVO(self):
-		return self._getInfo()['vo']
+		try:
+			return self._getInfo()['vo']
+		except:
+			print self._getInfo(cached)
+			raise RuntimeError("Can't parse proxy information!")

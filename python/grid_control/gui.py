@@ -20,7 +20,7 @@ class CursesStream:
 			sys.stdout.write(data)
 		sys.stdout.write('\n')	
 	dump = classmethod(dump)
-CursesStream.backlog = [None for i in xrange(100)]
+CursesStream.backlog = [None for i in range(100)]
 
 
 def CursesGUI(jobs, jobCycle):

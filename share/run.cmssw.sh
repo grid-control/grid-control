@@ -9,17 +9,7 @@ echo "CMSSW module starting"
 echo
 echo "---------------------------"
 
-MAX_EVENTS="$1"
-SKIP_EVENTS="$2"
-if [ -n "$3" ]; then
-	FILE_NAMES="\"$3\""
-	shift 3
-	for i in "$@"; do
-		FILE_NAMES="$FILE_NAMES, \"$i\""
-	done
-fi
-
-echo "NEventsProcessed=$MAX_EVENTS" > $MY_DASHBOARDINFO
+echo "NEventsProcessed=${MAX_EVENTS:-0}" > $MY_DASHBOARDINFO
 
 checkvar "VO_CMS_SW_DIR"
 checkfile "$VO_CMS_SW_DIR/cmsset_default.sh"

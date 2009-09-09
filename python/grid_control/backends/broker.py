@@ -33,7 +33,7 @@ class SimpleBroker(Broker):
 	def matchQueue(self, reqs):
 		def matcher(props):
 			for key, value in reqs:
-				if not props.has_key(key):
+				if key not in props:
 					continue
 				if value >= props[key]:
 					return False

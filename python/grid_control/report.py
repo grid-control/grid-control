@@ -6,7 +6,7 @@ class Report:
 	def __init__(self, jobs, allJobs):
 		self.allJobs = allJobs
 		if hasattr(jobs, 'nJobs'):
-			self.jobs = xrange(allJobs.nJobs)
+			self.jobs = range(allJobs.nJobs)
 		else:
 			self.jobs = jobs
 
@@ -82,7 +82,7 @@ class Report:
 
 		for jobNum in self.jobs:
 			report = module.report(jobNum)
-			if not reports.has_key(str(report)):
+			if str(report) not in reports:
 				reports[str(report)] = dict(map(lambda x: (x, 0), Report.states))
 				for key, value in report.iteritems():
 					if not key:
@@ -108,7 +108,7 @@ class Report:
 
 
 	def getWNInfos(self):
-		def add(x,y): return x+y
+		def add(x, y): return x+y
 		def getDest(dest):
 			if dest == 'N/A':
 				return ('N/A', '', '')
@@ -140,11 +140,11 @@ class Report:
 			for i in range(3):
 				maxlen[i] = max(maxlen[i], len(dest[i]))
 			(site, wn, queue) = dest
-			if not statinfo.has_key(site):
+			if site not in statinfo:
 				statinfo[site] = initdict()
-			if not statinfo[site].has_key(wn):
+			if wn not in statinfo[site]:
 				statinfo[site][wn] = initdict()
-			if not statinfo[site][wn].has_key(queue):
+			if queue not in statinfo[site][wn]:
 				statinfo[site][wn][queue] = initdict()
 
 		# fill wn dictionary

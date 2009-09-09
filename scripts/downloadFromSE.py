@@ -83,12 +83,12 @@ DEFAULT: The default is to check the files with MD5 hashes.
 			print "All files already downloaded!"
 			continue
 
-		# Read specified jobinfo.txt files
+		# Read specified job info files
 		jobInfo = gcSupport.getJobInfo(workDir, jobNum, lambda retCode: retCode == 0)
 		if not jobInfo:
 			continue
 
-		# Just get the file hash entries from jobinfo.txt
+		# Just get the file hash entries from job info file
 		files = filter(lambda x: x[0].startswith('file'), jobInfo.items())
 		files = map(lambda (x,y): tuple(y.strip('"').split('  ')), files)
 		print "The job wrote %d file%s to the SE" % (len(files), ('s', '')[len(files) == 1])

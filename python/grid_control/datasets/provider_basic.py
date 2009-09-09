@@ -51,7 +51,7 @@ class ListProvider(DataProvider):
 			name = self._filter
 			if self._filter:
 				name = blockinfo[DataProvider.Dataset]
-				if blockinfo.has_key(DataProvider.BlockName) and "#" in self._filter:
+				if DataProvider.BlockName in blockinfo and "#" in self._filter:
 					name = "%s#%s" % (name, blockinfo[DataProvider.BlockName])
 			if name == self._filter:
 				return True
@@ -77,7 +77,7 @@ class ListProvider(DataProvider):
 				blockinfo[DataProvider.FileList] = []
 				commonprefix = None
 			elif line != '':
-				tmp = map(str.strip, line.split('=',1))
+				tmp = map(str.strip, line.split('=', 1))
 				if len(tmp) != 2:
 					raise ConfigError('Malformed dataset configuration line:\n%s' % line)
 				key, value = tmp

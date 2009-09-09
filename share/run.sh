@@ -149,9 +149,7 @@ wait $MY_RUNID
 CODE=$?
 echo $$ > $MY_MARKER
 cd $MY_LANDINGZONE
-echo
-echo "==========================="
-echo
+
 echo "Job exit code: $CODE"
 updatejobinfo $CODE
 echo
@@ -212,9 +210,9 @@ echo
 cleanup
 trap - 0 1 2 3 15
 echo "Job $MY_JOBID finished - `date`"
-echo "TIME=$[`date +%s` - $STARTDATE]" >> $MY_LANDINGZONE/jobinfo.txt
-[ -f "$LOG_MD5" ] && cat "$LOG_MD5" >> $MY_LANDINGZONE/jobinfo.txt
-cat $MY_LANDINGZONE/jobinfo.txt
+echo "TIME=$[`date +%s` - $STARTDATE]" >> $MY_LANDINGZONE/job.info
+[ -f "$LOG_MD5" ] && cat "$LOG_MD5" >> $MY_LANDINGZONE/job.info
+cat $MY_LANDINGZONE/job.info
 echo
 
 exit $CODE

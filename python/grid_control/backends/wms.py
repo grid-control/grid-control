@@ -5,7 +5,7 @@ from grid_control import AbstractObject, ConfigError, RuntimeError, UserError, u
 
 class WMS(AbstractObject):
 	INLINE_TAR_LIMIT = 256 * 1024
-	reqTypes = ('MEMBER', 'WALLTIME', 'STORAGE', 'SITES', 'CPUTIME', 'MEMORY', 'OTHER')
+	reqTypes = ('SOFTWARE', 'WALLTIME', 'STORAGE', 'SITES', 'CPUTIME', 'MEMORY', 'OTHER')
 	for id, reqType in enumerate(reqTypes):
 		locals()[reqType] = id
 
@@ -15,7 +15,7 @@ class WMS(AbstractObject):
 		self.module = module
 
 		# Initialise proxy
-		self.proxy = Proxy.open(config.get(backend, 'proxy', defaultproxy, volatile=True))
+		self.proxy = Proxy.open(config.get(backend, 'proxy', defaultproxy, volatile=True), config)
 
 		self._outputPath = os.path.join(config.workDir, 'output')
 		if not os.path.exists(self._outputPath):
@@ -30,15 +30,17 @@ class WMS(AbstractObject):
 		tarFile = os.path.join(config.workDir, 'sandbox.tar.gz')
 
 		self.sandboxIn = [ utils.atRoot('share', 'run.sh'), utils.atRoot('share', 'run.lib'), tarFile ]
-		self.sandboxOut = module.getOutFiles() + [ 'stdout.txt', 'stderr.txt', 'jobinfo.txt' ]
+		self.sandboxOut = module.getOutFiles() + [ 'gc.stdout', 'gc.stderr', 'job.info' ]
+
+		inFiles = module.getInFiles()
+		inFiles.extend(monitor.getFiles())
 
 		taskEnv = module.getTaskConfig()
 		taskEnv.update(monitor.getEnv(self))
 		taskConfig = utils.DictFormat(escapeString = True).format(taskEnv, format = 'export %s%s%s\n')
-		varMapping = map(lambda (x,y): "%s %s\n" % (x,y), module.getVarMapping().items())
-		inFiles = module.getInFiles()
-		inFiles.extend(monitor.getFiles())
 		inFiles.append(utils.VirtualFile('_config.sh', utils.sorted(taskConfig)))
+
+		varMapping = map(lambda (x, y): "%s %s\n" % (x, y), module.getVarMapping().items())
 		inFiles.append(utils.VirtualFile('_varmap.dat', str.join('', utils.sorted(varMapping))))
 		inFiles.extend(map(lambda x: utils.atRoot('share', 'env.%s.sh' % x), module.getDependencies()))
 
@@ -48,7 +50,7 @@ class WMS(AbstractObject):
 			tar = tarfile.TarFile.open(tarFile, 'w:gz')
 
 		for file in inFiles:
-			if type(file) == str:
+			if isinstance(file, str):
 				# Path to filename given
 				if not os.path.exists(file):
 					raise UserError("File %s does not exist!" % file)
@@ -60,7 +62,7 @@ class WMS(AbstractObject):
 
 			if config.opts.init:
 				# Package sandbox tar file
-				if type(file) == str:
+				if isinstance(file, str):
 					utils.vprint("\t\t%s" % file)
 					info = tarfile.TarInfo(os.path.basename(file))
 					info.size = os.path.getsize(file)
@@ -122,31 +124,24 @@ class WMS(AbstractObject):
 			data = utils.DictFormat().parse(open(info, 'r'), lowerCaseKey = False)
 			return (data['JOBID'], data['EXITCODE'], data)
 
+		retrievedJobs = []
 		for inJobNum, dir in self.getJobsOutput(ids):
 			if dir == None:
-				yield (inJobNum, -1, {})
+				if inJobNum not in retrievedJobs:
+					yield (inJobNum, -1, {})
 				continue
 
 			accepted = False
-			info = os.path.join(dir, 'jobinfo.txt')
+			info = os.path.join(dir, 'job.info')
 			try:
 				jobNum, retCode, data = readJobFile(info)
 				if jobNum != inJobNum:
 					raise RuntimeError("Invalid job id in job file")
 				dst = os.path.join(self._outputPath, 'job_%d' % jobNum)
+				retrievedJobs.append(inJobNum)
 				accepted = True
 			except:
 				sys.stderr.write("Warning: '%s' seems broken.\n" % info)
-#				# Try to extract jobinfo from stdout file
-#				if not os.path.exists(dir):
-#					continue
-#				try:
-#					info = os.path.join(dir, 'stdout.txt')
-#					id, retCode, data = readJobFile(open(info, 'r').readlines()[-3:])
-#					sys.stderr.write("Recovered job %d with exit code %d...\n" % (id, retCode))
-#				except:
-					# Move corrupted output to fail directory
-
 				try:
 					os.rmdir(dir)
 					# No files were retrieved...

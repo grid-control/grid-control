@@ -2,11 +2,11 @@ import sys
 
 # our exception base class
 class GridError(Exception):
-	def __init__(self, message):
-		self.message = message
+	def __init__(self, msg):
+		self.msg = msg
 
 	def showMessage(self):
-		sys.stderr.write("%s: %s\n" % (sys.argv[0], self.message))
+		sys.stderr.write("%s: %s\n" % (sys.argv[0], self.msg))
 
 # some error with the Grid installation
 class InstallationError(GridError):

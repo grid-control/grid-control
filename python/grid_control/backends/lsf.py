@@ -27,19 +27,17 @@ class LSF(LocalWMSApi):
 		return sandbox
 
 
-	def getSubmitArguments(self, jobNum, sandbox):
+	def getSubmitArguments(self, jobNum, sandbox, stdout, stderr):
 		# Job name
 		params = ' -J %s' % self.wms.getJobName(jobNum)
 		# Job requirements
 		reqs = dict(self.wms.getRequirements(jobNum))
-		if reqs.has_key(WMS.SITES):
+		if WMS.SITES in reqs:
 			params += ' -q %s' % reqs[WMS.SITES]
-		if reqs.has_key(WMS.WALLTIME):
+		if WMS.WALLTIME in reqs:
 			params += ' -c %d' % ((reqs[WMS.WALLTIME] + 59) / 60)
 		# IO paths
-		params += ' -o %s -e %s' % (
-			utils.shellEscape(os.path.join(sandbox, 'stdout.txt')),
-			utils.shellEscape(os.path.join(sandbox, 'stderr.txt')))
+		params += ' -o %s -e %s' % (stdout, stderr)
 		return params
 
 
@@ -49,7 +47,8 @@ class LSF(LocalWMSApi):
 
 
 	def parseStatus(self, status):
-		for jobline in status.split('\n')[1:]:
+		status.next()
+		for jobline in status:
 			if jobline == '':
 				continue
 			try:

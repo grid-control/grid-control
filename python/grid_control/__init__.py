@@ -17,7 +17,7 @@ from datasets	import *
 
 from CMSSW	import *
 from user_mod	import *
-from para_mod	import *
+from parameters	import *
 
 from help import *
 from gui import *

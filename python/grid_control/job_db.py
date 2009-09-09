@@ -41,7 +41,7 @@ class JobDB:
 		for jobNum, jobObj in self._readJobs():
 			self._jobs[jobNum] = jobObj
 			self._findQueue(jobObj).append(jobNum)
-		self.ready.extend(filter(lambda x: not self._jobs.has_key(x), xrange(self.nJobs)))
+		self.ready.extend(filter(lambda x: x not in self._jobs, range(self.nJobs)))
 
 		for list in (self.ready, self.running, self.done, self.ok):
 			list.sort()
@@ -222,7 +222,6 @@ class JobDB:
 		else:
 			jobList = self.done
 
-		retrievedJobs = False
 		for jobNum, retCode, data in wms.retrieveJobs(self.wmsArgs(jobList)):
 			try:
 				jobObj = self._jobs[jobNum]

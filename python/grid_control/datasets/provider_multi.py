@@ -10,7 +10,7 @@ class DataMultiplexer(DataProvider):
 
 		exprList = datasetExpr.split('\n')
 		providerMap = { 'dbs': dbsapi, 'file': 'FileProvider', 'list': 'ListProvider' }
-		reverseMap = dict(map(lambda (x,y): (y,x), providerMap.items()))
+		reverseMap = dict(map(lambda (x, y): (y, x), providerMap.items()))
 		head = ["ID", "Nickname", "Dataset path"]
 
 		# Allow provider shortcuts

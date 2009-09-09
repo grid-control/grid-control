@@ -69,7 +69,7 @@ class DataProvider(AbstractObject):
 				for file in block[DataProvider.FileList]:
 					events += file[DataProvider.NEvents]
 					allEvents += file[DataProvider.NEvents]
-				if not block.has_key(DataProvider.NEvents):
+				if DataProvider.NEvents not in block:
 					block[DataProvider.NEvents] = events
 				if events != block[DataProvider.NEvents]:
 					print('Inconsistency in block %s#%s: Number of events doesn\'t match (b:%d != f:%d)'
@@ -112,9 +112,9 @@ class DataProvider(AbstractObject):
 			dataBlocks = self.getBlocks()
 		for block in dataBlocks:
 			writer.write("[%s#%s]\n" % (block[DataProvider.Dataset], block[DataProvider.BlockName]))
-			if block.has_key(DataProvider.Nickname):
+			if DataProvider.Nickname in block:
 				writer.write('nickname = %s\n' % block[DataProvider.Nickname])
-			if block.has_key(DataProvider.DatasetID):
+			if DataProvider.DatasetID in block:
 				writer.write('id = %d\n' % block[DataProvider.DatasetID])
 			writer.write('events = %d\n' % block[DataProvider.NEvents])
 			writer.write('se list = %s\n' % str.join(',', block[DataProvider.SEList]))

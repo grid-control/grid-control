@@ -28,20 +28,20 @@ class Job:
 			raise ConfigError('Invalid format in %s' % fp.name)
 		job = Job(cls._stateDict[data.get('status', 'FAILED')])
 
-		if data.has_key('id'):
+		if 'id' in data:
 			job.wmsId = data['id']
-		if data.has_key('attempt'):
+		if 'attempt' in data:
 			job.attempt = data['attempt']
-		if data.has_key('submitted'):
+		if 'submitted' in data:
 			job.submitted = data['submitted']
-		if not data.has_key('runtime'):
-			if data.has_key('submitted'):
+		if 'runtime' not in data:
+			if 'submitted' in data:
 				data['runtime'] = time() - float(job.submitted)
 			else:
 				data['runtime'] = 0
 
 		for key in range(1, job.attempt + 1):
-			if data.has_key(('history_' + str(key)).strip()):
+			if ('history_' + str(key)).strip() in data:
 				job.history[key] = data['history_' + str(key)]
 
 		for i in cls.__internals:

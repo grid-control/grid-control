@@ -28,12 +28,12 @@ class PBS(LocalWMSApi):
 		return ""
 
 
-	def getSubmitArguments(self, jobNum, sandbox):
+	def getSubmitArguments(self, jobNum, sandbox, stdout, stderr):
 		# Job name
 		params = ' -N %s' % self.wms.getJobName(jobNum)
 		# Job requirements
 		reqs = dict(self.wms.getRequirements(jobNum))
-		if reqs.has_key(WMS.SITES):
+		if WMS.SITES in reqs:
 			params += ' -q %s' % reqs[WMS.SITES]
 		# Job group
 		if len(self._group):
@@ -41,9 +41,7 @@ class PBS(LocalWMSApi):
 		# Sandbox
 		params += ' -v SANDBOX=%s' % sandbox
 		# IO paths
-		params += ' -o %s -e %s' % (
-			utils.shellEscape(os.path.join(sandbox, 'stdout.txt')),
-			utils.shellEscape(os.path.join(sandbox, 'stderr.txt')))
+		params += ' -o %s -e %s' % (stdout, stderr)
 		return params
 
 
@@ -53,20 +51,20 @@ class PBS(LocalWMSApi):
 
 
 	def parseStatus(self, status):
-		for section in status.replace("\n\t", "").split("\n\n"):
+		for section in utils.accumulate(status, '\n'):
 			if section == '':
 				continue
 			try:
-				lines = section.split('\n')
+				lines = section.replace("\n\t", "").split('\n')
 				jobinfo = utils.DictFormat(' = ').parse(lines[1:])
 				jobinfo['id'] = lines[0].split(":")[1].strip()
 				jobinfo['status'] = jobinfo.get('job_state')
 				jobinfo['dest'] = 'N/A'
-				if jobinfo.has_key('exec_host'):
+				if 'exec_host' in jobinfo:
 					jobinfo['dest'] = "%s/%s" % (
-							jobinfo.get('exec_host').split('/')[0] + "." + jobinfo.get('server', ''),
-							jobinfo.get('queue')
-						)
+						jobinfo.get('exec_host').split('/')[0] + "." + jobinfo.get('server', ''),
+						jobinfo.get('queue')
+					)
 			except:
 				print "Error reading job info\n", section
 				raise
@@ -90,7 +88,7 @@ class PBS(LocalWMSApi):
 		parser = dict(zip(keys, func))
 
 		queues = {}
-		output = os.popen('qstat -q').readlines()[5:-2]
+		output = utils.LoggedProcess('qstat', '-q').stdout[5:-2]
 		for line in output:
 			fields = map(str.strip, line.split()[:4])
 			queues[fields[0]] = dict(

@@ -21,7 +21,7 @@ class DashBoardMonitoring(Monitoring):
 		dashId = "%s_%s" % (jobNum, jobObj.wmsId)
 		dashboard = DashboardAPI(self.module.taskID, dashId)
 		msg = { "taskId": self.module.taskID, "jobId": dashId, "sid": dashId }
-		msg = dict(filter(lambda (x,y): y != None, reduce(lambda x,y: x+y, map(dict.items, [msg] + usermsg))))
+		msg = dict(filter(lambda (x, y): y != None, reduce(lambda x, y: x+y, map(dict.items, [msg] + usermsg))))
 		dashboard.publish(**msg)
 
 

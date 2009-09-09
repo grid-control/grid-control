@@ -1,8 +1,8 @@
 # Generic base class for job modules
 # instantiates named class instead (default is UserMod)
 
-import os, md5, random, threading
-from grid_control import ConfigError, AbstractObject, utils, WMS, Job
+import os, random, threading
+from grid_control import ConfigError, AbstractError, AbstractObject, utils, WMS, Job
 from time import time, localtime, strftime
 
 class Module(AbstractObject):
@@ -18,14 +18,10 @@ class Module(AbstractObject):
 		self.memory = config.getInt('jobs', 'memory', 512, volatile=True)
 
 		# Try to read task info file
-		try:
-			taskInfoFile = os.path.join(self.config.workDir, 'task.dat')
-			taskInfo = utils.DictFormat(" = ").parse(open(taskInfoFile))
-		except:
-			taskInfo = {}
+		taskInfo = utils.PersistentDict(os.path.join(self.config.workDir, 'task.dat'), ' = ')
 
 		# Compute / get task ID
-		self.taskID = taskInfo.get('task id', 'GC' + md5.md5(str(time())).hexdigest()[:12])
+		self.taskID = taskInfo.get('task id', 'GC' + utils.md5(str(time())).hexdigest()[:12])
 		utils.vprint('Current task ID: %s' % self.taskID, -1, once = True)
 
 		# Set random seeds (args override config)
@@ -36,15 +32,14 @@ class Module(AbstractObject):
 			self.seeds = map(int, seedarg.split(','))
 		else:
 			# args specified => gen seeds
-			if taskInfo.has_key('seeds') and (config.opts.seed == None):
+			if 'seeds' in taskInfo and (config.opts.seed == None):
 				self.seeds = map(int, taskInfo['seeds'].split())
 			else:
 				self.seeds = map(lambda x: random.randint(0, 10000000), range(10))
 				print "Creating random seeds...", self.seeds
 
 		# Write task info file
-		tmp = { 'task id': self.taskID, 'seeds': str.join(' ', map(str, self.seeds)) }
-		open(taskInfoFile, 'w').writelines(utils.DictFormat(" = ").format(tmp))
+		taskInfo.write({'task id': self.taskID, 'seeds': str.join(' ', map(str, self.seeds))})
 
 		self.seSDUpperLimit = config.getInt('storage', 'scratch space used', 5000)
 		self.seSDLowerLimit = config.getInt('storage', 'scratch space left', 1)
@@ -146,17 +141,17 @@ class Module(AbstractObject):
 			else:
 				path = file
 			return path
-		return map(fileMap, self.sbInputFiles)
+		return map(fileMap, self.sbInputFiles[:])
 
 
 	# Get files for output sandbox
 	def getOutFiles(self):
-		return self.sbOutputFiles
+		return self.sbOutputFiles[:]
 
 
 	# Get files whose content will be subject to variable substitution
 	def getSubstFiles(self):
-		return self.substFiles
+		return self.substFiles[:]
 
 
 	def getCommand(self):
@@ -164,7 +159,7 @@ class Module(AbstractObject):
 
 
 	def getJobArguments(self, jobNum):
-		raise AbstractError
+		return ''
 
 
 	def getMaxJobs(self):
@@ -172,7 +167,7 @@ class Module(AbstractObject):
 
 
 	def getDependencies(self):
-		return self.dependencies
+		return self.dependencies[:]
 
 
 	def report(self, jobNum):

@@ -20,22 +20,24 @@ def main(args):
 	log = None
 
 	# display the 'grid-control' logo and version
-	print open(utils.atRoot('share', 'logo.txt'), 'r').read()
+	print(open(utils.atRoot('share', 'logo.txt'), 'r').read())
 	try:
-		ver = popen2.popen3('svnversion %s' % _root)[0].read().strip()
+		proc = utils.LoggedProcess('svnversion', root)
+		proc.wait()
+		ver = proc.getOutput().strip()
 		if ver != '':
-			print 'Revision: %s' % ver
+			print('Revision: %s' % ver)
 	except:
 		pass
-	pyver = reduce(lambda x,y: x+y/10., sys.version_info[:2])
+	pyver = sys.version_info[0] + sys.version_info[1] / 10.0
 	if pyver < 2.3:
 		utils.deprecated("This python version (%.1f) is not supported anymore!" % pyver)
 
 	parser = optparse.OptionParser(add_help_option=False)
 	parser.add_option("-h", "--help",          action="callback", callback=print_help),
-	parser.add_option(""  , "--help-vars",     dest="help_vars",  default=False, action="store_true")
-	parser.add_option(""  , "--help-conf",     dest="help_cfg",   default=False, action="store_true")
-	parser.add_option(""  , "--help-confmin",  dest="help_scfg",  default=False, action="store_true")
+	parser.add_option("",   "--help-vars",     dest="help_vars",  default=False, action="store_true")
+	parser.add_option("",   "--help-conf",     dest="help_cfg",   default=False, action="store_true")
+	parser.add_option("",   "--help-confmin",  dest="help_scfg",  default=False, action="store_true")
 	parser.add_option("-s", "--no-submission", dest="submission", default=True,  action="store_false")
 	parser.add_option("-q", "--requery",       dest="resync",     default=False, action="store_true")
 	parser.add_option("-i", "--init",          dest="init",       default=False, action="store_true")
@@ -75,14 +77,14 @@ def main(args):
 			open(args[0], 'r')
 			config = Config(args[0])
 			config.opts = opts
-		except IOError, e:
+		except IOError:
 			raise ConfigError("Error while reading configuration file '%s'!" % args[0])
 
 		# Check work dir validity (default work directory is the config file name)
 		config.workDir = config.getPath('global', 'workdir', config.workDirDefault)
 		if not os.path.exists(config.workDir):
 			if not opts.init:
-				print "Will force initialization of %s if continued!" % config.workDir
+				print("Will force initialization of %s if continued!" % config.workDir)
 				opts.init = True
 			if utils.boolUserInput("Do you want to create the working directory %s?" % config.workDir, True):
 				os.mkdir(config.workDir)
@@ -144,17 +146,17 @@ def main(args):
 					sys.exit(0)
 
 		if opts.continuous and not opts.gui:
-			print
+			print('')
 			Report(jobs, jobs).summary()
-			print "Running in continuous mode. Press ^C to exit."
+			print("Running in continuous mode. Press ^C to exit.")
 
 		if not wms.canSubmit(module.wallTime, opts.submission):
 			opts.submission = False
 
 		# Job submission loop
 		def wait(timeout):
-			shortStep = map(lambda x: (x, 1), xrange(max(timeout - 5, 0), timeout))
-			for x, w in map(lambda x: (x, 5), xrange(0, timeout - 5, 5)) + shortStep:
+			shortStep = map(lambda x: (x, 1), range(max(timeout - 5, 0), timeout))
+			for x, w in map(lambda x: (x, 5), range(0, timeout - 5, 5)) + shortStep:
 				if opts.abort:
 					return False
 				log = utils.ActivityLog('waiting for %d seconds' % (timeout - x))

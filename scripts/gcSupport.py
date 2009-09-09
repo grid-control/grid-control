@@ -48,7 +48,7 @@ def getWorkSEJobs(args):
 
 
 def getJobInfo(workDir, jobNum, retCodeFilter = lambda x: True):
-	jobInfoPath = os.path.join(workDir, 'output', 'job_%d' % jobNum, 'jobinfo.txt')
+	jobInfoPath = os.path.join(workDir, 'output', 'job_%d' % jobNum, 'job.info')
 	try:
 		jobInfo = utils.DictFormat('=').parse(open(jobInfoPath))
 		if retCodeFilter(jobInfo.get('exitcode', -1)):

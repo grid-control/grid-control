@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 # Author: Fred Stober <stober@ekp.uni-karlsruhe.de>
 
 # Error codes
@@ -21,7 +21,7 @@
 GC_VERSION="$Revision: 848$"
 
 debug_helper() {
-	return
+	[ -z "$GC_DEBUG" ] && return
 	echo  -n "$$:shell:" 1>&2
 	for i in `seq ${#BASH_LINENO[*]} -1 0`; do
 		[ -n "${BASH_LINENO[$i]}" ] && echo -n "${BASH_LINENO[$i]} " 1>&2
@@ -35,6 +35,7 @@ debug_helper() {
 
 fail() {
 	[ -n "$1" ] && CODE=$1 || CODE=$?
+	GC_DEBUG="true"
 	debug_helper $FUNCNAME "$@"
 	echo
 	echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
@@ -49,9 +50,10 @@ fail() {
 }
 
 abort() {
+	GC_DEBUG="true"
 	debug_helper $FUNCNAME "$@"
-	[ -d "$MY_LANDINGZONE" ] && checkdir "Start directory" "$MY_LANDINGZONE" >> $MY_LANDINGZONE/stderr.txt
-	[ -d "$MY_SCRATCH" ] && checkdir "Scratch directory" "$MY_SCRATCH" >> $MY_LANDINGZONE/stderr.txt
+	[ -d "$MY_LANDINGZONE" ] && checkdir "Start directory" "$MY_LANDINGZONE" >> $MY_LANDINGZONE/gc.stderr
+	[ -d "$MY_SCRATCH" ] && checkdir "Scratch directory" "$MY_SCRATCH" >> $MY_LANDINGZONE/gc.stderr
 	export
 	cleanup
 	[ -n "$1" ] && updatejobinfo $1
@@ -79,7 +81,7 @@ updatejobinfo() {
 		(
 			echo "JOBID=$MY_JOBID"
 			echo "EXITCODE=$1"
-		) > $MY_LANDINGZONE/jobinfo.txt
+		) > $MY_LANDINGZONE/job.info
 	fi
 }
 
@@ -477,6 +479,7 @@ url_copy() {
 	case "$SOURCE_URL" in
 		"rfio://"* | "gsiftp://"* | "srm://"* | "dir://"*)
 			# copy from SE
+			SOURCE_URL="`echo "$SOURCE_URL" | sed -e 's@dir://@file://@'`"
 			if [[ "$FILENAMES" == *\** ]]; then
 				# Wildcard used => url_ls
 				SOURCE_PATTERN="__X__"
@@ -489,7 +492,6 @@ url_copy() {
 				SOURCE_PATTERN="${SE_INPUT_PATTERN:-__X__}"
 				SOURCE_FILES="$FILENAMES"
 			fi
-			SOURCE_URL="`echo "$SOURCE_URL" | sed -e 's@dir://@file://@'`"
 			;;
 		"file://"*)
 			# copy from WN

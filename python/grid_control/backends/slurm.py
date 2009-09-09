@@ -1,4 +1,4 @@
-import sys, os, popen2, tempfile, shutil
+import sys, os, tempfile, shutil
 from grid_control import ConfigError, Job, utils
 from wms import WMS
 from local_wms import LocalWMSApi
@@ -22,25 +22,23 @@ class SLURM(LocalWMSApi):
 		return sandbox
 
 
-	def getSubmitArguments(self, jobNum, sandbox):
+	def getSubmitArguments(self, jobNum, sandbox, stdin, stderr):
 		# Job name
 		params = ' -J %s' % self.wms.getJobName(jobNum)
 		# Job requirements
 		reqs = dict(self.wms.getRequirements(jobNum))
-		if reqs.has_key(WMS.SITES):
+		if WMS.SITES in reqs:
 			params += ' -c %s' % reqs[WMS.SITES]
-		if reqs.has_key(WMS.WALLTIME):
+		if WMS.WALLTIME in reqs:
 			params += ' -T %d' % ((reqs[WMS.WALLTIME] + 59) / 60)
-		if reqs.has_key(WMS.CPUTIME):
+		if WMS.CPUTIME in reqs:
 			params += ' -t %d' % ((reqs[WMS.CPUTIME] + 59) / 60)
-		if reqs.has_key(WMS.MEMORY):
+		if WMS.MEMORY in reqs:
 			params += ' -m %d' % reqs[WMS.MEMORY]
 		# processes
 		params += ' -p 1'
 		# IO paths
-		params += ' -o %s -e %s' % (
-			utils.shellEscape(os.path.join(sandbox, 'stdout.txt')),
-			utils.shellEscape(os.path.join(sandbox, 'stderr.txt')))
+		params += ' -o %s -e %s' % (stdout, stderr)
 		return params
 
 
@@ -50,7 +48,7 @@ class SLURM(LocalWMSApi):
 
 
 	def parseStatus(self, status):
-		for jobline in status.split('\n')[2:]:
+		for jobline in str.join('', list(status)).split('\n')[2:]:
 			if jobline == '':
 				continue
 			try:

@@ -1,4 +1,4 @@
-import sys, os, string, re, copy
+import sys, os
 from grid_control import RuntimeError, utils, DatasetError, DataProvider
 
 import DBSAPI_v2.dbsApi
@@ -52,7 +52,7 @@ class DBSApiv2(DataProvider):
 		def blockFilter(block):
 			if (self.datasetBlock == "all"):
 				return True
-			if (string.split(block['Name'],"#")[1] == self.datasetBlock) :
+			if (str.split(block['Name'], "#")[1] == self.datasetBlock) :
 				return True
 			return False
 
@@ -60,8 +60,8 @@ class DBSApiv2(DataProvider):
 		for block in filter(blockFilter, listBlockInfo):
 			blockInfo = dict()
 			blockInfo[DataProvider.NEvents] = block['NumberOfEvents']
-			blockInfo[DataProvider.Dataset] = string.split(block['Name'],"#")[0]
-			blockInfo[DataProvider.BlockName] = string.split(block['Name'],"#")[1]
+			blockInfo[DataProvider.Dataset] = str.split(block['Name'], "#")[0]
+			blockInfo[DataProvider.BlockName] = str.split(block['Name'], "#")[1]
 
 			blockInfo[DataProvider.SEList] = []
 			for seName in block['StorageElementList']:

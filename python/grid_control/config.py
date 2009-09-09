@@ -25,9 +25,9 @@ class Config:
 
 	def get(self, section, item, default = None, volatile = False):
 		# Make protocol of config queries - flag inconsistencies
-		if not self.protocol.has_key(section):
+		if section not in self.protocol:
 			self.protocol[section] = {}
-		if self.protocol[section].has_key(item):
+		if item in self.protocol[section]:
 			if self.protocol[section][item][1] != default:
 				raise ConfigError("Inconsistent default values: [%s] %s" % (section, item))
 		# Default value helper function

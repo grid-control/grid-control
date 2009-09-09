@@ -58,7 +58,7 @@ class CMSSW(DataMod):
 				raise ConfigError("Project area file .SCRAM/Environment cannot be parsed!")
 
 			for key in ['SCRAM_PROJECTNAME', 'SCRAM_PROJECTVERSION']:
-				if not self.scramEnv.has_key(key):
+				if key not in self.scramEnv:
 					raise ConfigError("Installed program in project area can't be recognized.")
 
 			archs = filter(lambda x: os.path.isdir(os.path.join(scramPath, x)), os.listdir(scramPath))
@@ -129,8 +129,8 @@ class CMSSW(DataMod):
 	def getRequirements(self, jobNum):
 		reqs = DataMod.getRequirements(self, jobNum)
 		if self.useReqs:
-			reqs.append((WMS.MEMBER, 'VO-cms-%s' % self.scramEnv['SCRAM_PROJECTVERSION']))
-			reqs.append((WMS.MEMBER, 'VO-cms-%s' % self.scramArch))
+			reqs.append((WMS.SOFTWARE, 'VO-cms-%s' % self.scramEnv['SCRAM_PROJECTVERSION']))
+			reqs.append((WMS.SOFTWARE, 'VO-cms-%s' % self.scramArch))
 		return reqs
 
 
@@ -146,7 +146,7 @@ class CMSSW(DataMod):
 
 	# Get files for output sandbox
 	def getOutFiles(self):
-		files = DataMod.getOutFiles(self)[:]
+		files = DataMod.getOutFiles(self)
 		# Add framework report file
 		renameExt = lambda name: str.join('.', name.split('.')[:-1]) + '.xml.gz'
 		files.extend(map(renameExt, map(os.path.basename, self.configFiles)))
@@ -159,10 +159,16 @@ class CMSSW(DataMod):
 		return './run.cmssw.sh $@'
 
 
-	def getJobArguments(self, jobNum):
+	def formatFileList(self, filelist):
+		return str.join(', ', map(lambda x: '"%s"' % x, filelist))
+
+
+	# Get job dependent environment variables
+	def getJobConfig(self, jobNum):
+		data = DataMod.getJobConfig(self, jobNum)
 		if self.dataSplitter == None:
-			return str(self.eventsPerJob)
-		return DataMod.getJobArguments(self, jobNum)
+			data['MAX_EVENTS'] = self.eventsPerJob
+		return data
 
 
 	def getDependencies(self):

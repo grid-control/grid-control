@@ -1,4 +1,4 @@
-import sys, os, time, copy, tempfile, cStringIO, md5, re, tarfile, gzip
+import sys, os, time, copy, tempfile, cStringIO, re, tarfile, gzip
 from grid_control import ConfigError, Job, utils
 from wms import WMS
 
@@ -77,7 +77,7 @@ class GridWMS(WMS):
 	def _formatRequirements(self, reqs):
 		result = ['other.GlueHostNetworkAdapterOutboundIP']
 		for type, arg in reqs:
-			if type == self.MEMBER:
+			if type == self.SOFTWARE:
 				result.append('Member(%s, other.GlueHostApplicationSoftwareRunTimeEnvironment)' % self._jdlEscape(arg))
 			elif (type == self.WALLTIME) and (arg > 0):
 				result.append('(other.GlueCEPolicyMaxWallClockTime >= %d)' % int((arg + 59) / 60))
@@ -107,8 +107,8 @@ class GridWMS(WMS):
 			'Executable': 'run.sh',
 			'Arguments': "%d %s" % (job, self.module.getJobArguments(job)),
 			'Environment': utils.DictFormat().format(self.module.getJobConfig(job), format = '%s%s%s'),
-			'StdOutput': 'stdout.txt',
-			'StdError': 'stderr.txt',
+			'StdOutput': 'gc.stdout',
+			'StdError': 'gc.stderr',
 			'InputSandbox': self.sandboxIn,
 			'OutputSandbox': self.sandboxOut,
 			'_Requirements': self._formatRequirements(self.getRequirements(job)),
@@ -121,11 +121,13 @@ class GridWMS(WMS):
 			# _KEY is marker for already formatted text
 			if key[0] == '_':
 				return (key[1:], delim, value)
-			elif type(value) in (int, long):
+			elif type(value) in long:
+				raise RuntimeError("long type found!")
+			elif type(value) in int:
 				return (key, delim, value)
 			elif type(value) in (tuple, list):
 				recursiveResult = map(lambda x: jdlRep((key, delim, x)), value)
-				return (key, delim, '{ ' + str.join(', ', map(lambda (k,d,v): v, recursiveResult)) + ' }')
+				return (key, delim, '{ ' + str.join(', ', map(lambda (k, d, v): v, recursiveResult)) + ' }')
 			else:
 				return (key, delim, '"%s"' % value)
 
@@ -144,7 +146,7 @@ class GridWMS(WMS):
 
 
 	def logError(self, proc, log):
-		retCode, stdout, stderr = proc.getOutput()
+		retCode, stdout, stderr = proc.getAll()
 		sys.stderr.write("WARNING: %s failed with code %d\n" %
 			(os.path.basename(proc.cmd[0]), retCode))
 
@@ -270,6 +272,12 @@ class GridWMS(WMS):
 				buffer = []
 
 
+	def explainError(self, proc, code):
+		if "Keyboard interrupt raised by user" in proc.getError():
+			return True
+		return False
+
+
 	# Submit job and yield (jobNum, WMS ID, other data)
 	def submitJob(self, jobNum):
 		fd, jdl = tempfile.mkstemp('.jdl')
@@ -286,8 +294,8 @@ class GridWMS(WMS):
 			sys.stderr.write("Could not write jdl data to %s." % jdl)
 			raise
 
-		tmp = filter(lambda (x,y): y != '', self._submitParams.iteritems())
-		params = str.join(' ', map(lambda (x,y): "%s %s" % (x, y), tmp))
+		tmp = filter(lambda (x, y): y != '', self._submitParams.iteritems())
+		params = str.join(' ', map(lambda (x, y): "%s %s" % (x, y), tmp))
 
 		activity = utils.ActivityLog('submitting jobs')
 		proc = utils.LoggedProcess(self._submitExec, "%s --nomsg --noint --logfile %s %s" %
@@ -301,7 +309,7 @@ class GridWMS(WMS):
 		del activity
 
 		if (retCode != 0) or (wmsId == None):
-			if "Keyboard interrupt raised by user" in proc.getError():
+			if self.explainError(proc, code):
 				pass
 			else:
 				self.logError(proc, log)
@@ -330,7 +338,7 @@ class GridWMS(WMS):
 		del activity
 
 		if retCode != 0:
-			if "Keyboard interrupt raised by user" in proc.getError():
+			if self.explainError(proc, code):
 				pass
 			else:
 				self.logError(proc, log)
@@ -346,7 +354,7 @@ class GridWMS(WMS):
 		try:
 			if len(ids) == 1:
 				# For single jobs create single subdir
-				tmpPath = os.path.join(basePath, md5.md5(ids[0][0]).hexdigest())
+				tmpPath = os.path.join(basePath, utils.md5(ids[0][0]).hexdigest())
 			else:
 				tmpPath = basePath
 			if not os.path.exists(tmpPath):
@@ -363,15 +371,16 @@ class GridWMS(WMS):
 			tuple(map(utils.shellEscape, [log, jobs, tmpPath])))
 
 		# yield output dirs
+		todo = idMap.values()
 		currentJobNum = None
 		for line in proc.iter(self.config.opts):
 			line = line.strip()
 			if line.startswith(tmpPath):
+				todo.remove(currentJobNum)
 				yield (currentJobNum, line.strip())
 				currentJobNum = None
 			else:
 				currentJobNum = idMap.get(line, currentJobNum)
-
 		retCode = proc.wait()
 		del activity
 
@@ -382,10 +391,13 @@ class GridWMS(WMS):
 			else:
 				self.logError(proc, log)
 			print "Trying to recover from error ..."
-			# TODO: Create fake results for lost jobs...
-			# Return leftover (and fake) output directories
 			for dir in os.listdir(basePath):
 				yield (None, os.path.join(basePath, dir))
+
+		# return unretrievable jobs
+		for jobNum in todo:
+			yield (jobNum, None)
+
 		self.cleanup([log, jobs, basePath])
 
 
@@ -409,9 +421,9 @@ class GridWMS(WMS):
 		if len(deleted) != len(ids):
 			sys.stderr.write("Could not delete all jobs!\n")
 		if retCode != 0:
-			if "Keyboard interrupt raised by user" in proc.getError():
+			if self.explainError(proc, code):
 				pass
 			else:
 				self.logError(proc, log)
 		self.cleanup([log, jobs])
-		return True
+		return deleted

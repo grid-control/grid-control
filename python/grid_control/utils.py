@@ -1,5 +1,12 @@
-import sys, os, popen2, StringIO, tarfile, time, fnmatch, copy, re
-from grid_control import InstallationError, ConfigError
+import sys, os, StringIO, tarfile, time, fnmatch, re, popen2
+from grid_control import InstallationError, ConfigError, RuntimeError
+
+try:
+	import hashlib
+	md5 = hashlib.md5
+except:
+	import md5
+	md5 = md5.md5
 
 def sorted(list, comp = None):
 	tmp = list[:]
@@ -10,17 +17,31 @@ def sorted(list, comp = None):
 	return tmp
 
 
+class PersistentDict(dict):
+	def __init__(self, filename, delimeter = "="):
+		dict.__init__(self)
+		(self.format, self.filename) = (delimeter, filename)
+		try:
+			self.update(DictFormat(self.format).parse(open(filename)))
+		except:
+			pass
+
+	def write(self, newdict = {}, update = True):
+		if not update:
+			self.clear()
+		self.update(newdict)
+		try:
+			open(self.filename, 'w').writelines(DictFormat(self.format).format(self))
+		except:
+			raise RuntimeError('Could not write to file %s' % self.filename)
+
+
 def atRoot(*args):
 	return os.path.join(atRoot.root, *args)
 
 
 def verbosity():
 	return verbosity.setting
-
-
-def dprint(text):
-	if verbosity() > 0:
-		print "DEBUG:", text
 
 
 def vprint(text, level = 0, printTime = False, newline = True, once = False):
@@ -41,7 +62,10 @@ vprint.log = []
 
 def boolUserInput(text, default):
 	while True:
-		userinput = raw_input('%s %s: ' % (text, ('[no]', '[yes]')[default]))
+		try:
+			userinput = raw_input('%s %s: ' % (text, ('[no]', '[yes]')[default]))
+		except:
+			sys.exit(0)
 		if userinput == '':
 			return default
 		if userinput.lower() in ('yes', 'y', 'true', 'ok'):
@@ -136,7 +160,7 @@ class DictFormat(object):
 		return data
 
 	# Format dictionary list
-	def format(self, dict, printNone = False, fkt = lambda (x,y,z): (x,y,z), format = '%s%s%s\n'):
+	def format(self, dict, printNone = False, fkt = lambda (x, y, z): (x, y, z), format = '%s%s%s\n'):
 		result = []
 		for key in dict.keys():
 			value = dict[key]
@@ -191,6 +215,8 @@ def parseTime(usertime):
 
 
 def strTime(secs):
+	if secs < 0:
+		return ""
 	return "%dh %0.2dmin %0.2dsec" % (secs / 60 / 60, (secs / 60) % 60, secs % 60)
 
 
@@ -307,12 +333,29 @@ class ActivityLog:
 		sys.stdout, sys.stderr = self.saved
 
 
+def accumulate(status, marker):
+	(cleared, buffer) = (True, '')
+	for line in status:
+		if line != marker:
+			buffer += line
+			cleared = False
+		else:
+			yield buffer
+			(cleared, buffer) = (True, '')
+	if not cleared:
+		yield buffer
+
+
 class LoggedProcess(object):
-	def __init__(self, cmd, args):
+	def __init__(self, cmd, args = ''):
 		self.cmd = (cmd, args)
 		self.proc = popen2.Popen3("%s %s" % (cmd, args), True)
 		self.stdout = []
 		self.stderr = []
+
+	def getOutput(self):
+		self.stdout.extend(self.proc.fromchild.readlines())
+		return str.join("\n", self.stdout)
 
 	def getError(self):
 		self.stderr.extend(self.proc.childerr.readlines())
@@ -333,7 +376,7 @@ class LoggedProcess(object):
 	def wait(self):
 		return self.proc.wait()
 
-	def getOutput(self):
+	def getAll(self):
 		self.stdout.extend(self.proc.fromchild.readline())
 		self.stderr.extend(self.proc.childerr.readlines())
 		return (self.wait(), self.stdout, self.stderr)

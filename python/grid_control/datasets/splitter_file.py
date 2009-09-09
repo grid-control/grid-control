@@ -2,9 +2,9 @@ from splitter_base import DataSplitter
 from provider_base import DataProvider
 
 class FileBoundarySplitter(DataSplitter):
-	def __init__(self, parameters):
-		DataSplitter.__init__(self, parameters)
-		self.filesPerJob = parameters['eventsPerJob']
+	def __init__(self, config, section, values):
+		DataSplitter.__init__(self, config, section, values)
+		self.set('filesPerJob', config.getInt, 'files per job')
 
 
 	def splitDatasetInternal(self, blocks, firstEvent = 0):
@@ -16,9 +16,9 @@ class FileBoundarySplitter(DataSplitter):
 				job[DataSplitter.Skipped] = 0
 				job[DataSplitter.SEList] = block[DataProvider.SEList]
 				job[DataSplitter.Dataset] = block[DataProvider.Dataset]
-				if block.has_key(DataProvider.Nickname):
+				if DataProvider.Nickname in block:
 					job[DataSplitter.Nickname] = block[DataProvider.Nickname]
-				if block.has_key(DataProvider.DatasetID):
+				if DataProvider.DatasetID in block:
 					job[DataSplitter.DatasetID] = block[DataProvider.DatasetID]
 
 				files = block[DataProvider.FileList][start : start + self.filesPerJob]

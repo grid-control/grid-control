@@ -1,4 +1,4 @@
-import sys, os, popen2, tempfile, shutil, time, random, glob
+import sys, os, tempfile, shutil, time, random, glob
 from grid_control import AbstractObject, ConfigError, Job, utils
 from wms import WMS
 from broker import Broker
@@ -14,7 +14,7 @@ class LocalWMSApi(AbstractObject):
 	def getArguments(self, jobNum, sandbox):
 		raise AbstractError
 
-	def getSubmitArguments(self, jobNum, sandbox):
+	def getSubmitArguments(self, jobNum, sandbox, stdout, stderr):
 		raise AbstractError
 
 	def parseSubmitOutput(self, data):
@@ -97,24 +97,25 @@ class LocalWMS(WMS):
 			raise RuntimeError("Sandbox '%s' could not be prepared." % sandbox)
 
 		env_vars = {
-			'ARGS': utils.shellEscape("%d %s" % (jobNum, self.module.getJobArguments(jobNum))),
+			'ARGS': "%d %s" % (jobNum, self.module.getJobArguments(jobNum)),
 			'SANDBOX': sandbox
 		}
 		env_vars.update(self.module.getJobConfig(jobNum))
 
 		jcfg = open(os.path.join(sandbox, '_jobconfig.sh'), 'w')
-		jcfg.writelines(utils.DictFormat().format(env_vars, format = 'export %s%s%s\n'))
-		proc = popen2.Popen3("%s %s %s %s" % (self.api.submitExec,
-			self.api.getSubmitArguments(jobNum, sandbox),
+		jcfg.writelines(utils.DictFormat(escapeString = True).format(env_vars, format = 'export %s%s%s\n'))
+		stdout = utils.shellEscape(os.path.join(sandbox, 'gc.stdout'))
+		stderr = utils.shellEscape(os.path.join(sandbox, 'gc.stderr'))
+		proc = utils.LoggedProcess(self.api.submitExec, "%s %s %s" % (
+			self.api.getSubmitArguments(jobNum, sandbox, stdout, stderr),
 			utils.shellEscape(utils.atRoot('share', 'local.sh')),
-			self.api.getArguments(jobNum, sandbox)), True)
-
-		wmsIdText = proc.fromchild.read().strip().strip("\n")
+			self.api.getArguments(jobNum, sandbox)))
+		retCode = proc.wait()
+		wmsIdText = proc.getOutput().strip().strip("\n")
 		try:
 			wmsId = self.api.parseSubmitOutput(wmsIdText)
 		except:
 			wmsId = None
-		retCode = proc.wait()
 
 		del activity
 
@@ -125,7 +126,7 @@ class LocalWMS(WMS):
 			print >> sys.stderr,  wmsIdText
 
 		if (wmsId == '') or (wmsId == None):
-			sys.stderr.write(proc.childerr.read())
+			sys.stderr.write(proc.getError())
 		else:
 			open(os.path.join(sandbox, wmsId), "w")
 		return (jobNum, wmsId, {'sandbox': sandbox})
@@ -138,17 +139,15 @@ class LocalWMS(WMS):
 
 		shortWMSIds = map(lambda (wmsId, jobNum): wmsId.split(".")[0], ids)
 		activity = utils.ActivityLog("checking job status")
-		proc = popen2.Popen3("%s %s" % (self.api.statusExec, self.api.getCheckArgument(shortWMSIds)), True)
+		proc = utils.LoggedProcess(self.api.statusExec, self.api.getCheckArgument(shortWMSIds))
 
 		tmp = {}
-		jobstatusinfo = proc.fromchild.read()
-		for data in self.api.parseStatus(jobstatusinfo):
+		for data in self.api.parseStatus(proc.iter(self.config.opts)):
 			# (job number, status, extra info)
 			tmp[data['id']] = (data['id'], self.api._statusMap[data['status']], data)
-		proc.wait()
 
 		for wmsId, jobNum in ids:
-			if not tmp.has_key(wmsId):
+			if wmsId not in tmp:
 				yield (jobNum, wmsId, Job.DONE, {})
 			else:
 				yield tuple([jobNum] + list(tmp[wmsId]))
@@ -157,7 +156,7 @@ class LocalWMS(WMS):
 		del activity
 
 		if retCode != 0:
-			for line in proc.childerr.readlines():
+			for line in proc.getError().splitlines():
 				if not self.api.unknownID() in line:
 					sys.stderr.write(line)
 
@@ -204,11 +203,11 @@ class LocalWMS(WMS):
 		activity = utils.ActivityLog("cancelling jobs")
 
 		shortWMSIds = map(lambda (wmsId, jobNum): wmsId.split(".")[0], ids)
-		proc = popen2.Popen3("%s %s" % (self.api.cancelExec, self.api.getCancelArgument(shortWMSIds)), True)
+		proc = utils.LoggedProcess(self.api.cancelExec, self.api.getCancelArgument(shortWMSIds))
 		retCode = proc.wait()
 
 		if retCode != 0:
-			for line in proc.childerr.readlines():
+			for line in proc.getError().splitlines():
 				if not self.api.unknownID() in line:
 					sys.stderr.write(line)
 
@@ -227,4 +226,4 @@ class LocalWMS(WMS):
 				raise RuntimeError("Sandbox for job %d with wmsId '%s' could not be deleted" % (jobNum, wmsId))
 
 		del activity
-		return True
+		return ids

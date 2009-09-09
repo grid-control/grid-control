@@ -25,4 +25,4 @@ class DummyWMS(WMS):
 
 	def cancelJobs(self, ids):
 		print "EVENT [CANCEL]: ", ids
-		return True
+		return ids

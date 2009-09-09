@@ -1,4 +1,4 @@
-import sys, os, time, copy, popen2, tempfile, cStringIO, md5
+import sys, os, time, tempfile
 from grid_control import ConfigError, Job, utils
 from grid_wms import GridWMS
 from glite import Glite

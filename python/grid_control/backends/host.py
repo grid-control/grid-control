@@ -20,18 +20,15 @@ class Host(LocalWMSApi):
 	def getArguments(self, jobNum, sandbox):
 		return ""
 
-	def getSubmitArguments(self, jobNum, sandbox):
-		return "%d %s %s %s" % (jobNum, sandbox,
-			utils.shellEscape(os.path.join(sandbox, 'stdout.txt')),
-			utils.shellEscape(os.path.join(sandbox, 'stderr.txt')))
+	def getSubmitArguments(self, jobNum, sandbox, stdout, stderr):
+		return "%d %s %s %s" % (jobNum, sandbox, stdout, stderr)
 
 	def parseSubmitOutput(self, data):
 		return "%s.localhost" % data.strip()
 
 	def parseStatus(self, status):
-		lines = status.splitlines()
-		head = map(lambda x: x.strip("%").lower(), lines[0].split())
-		for entry in lines[1:]:
+		head = map(lambda x: x.strip("%").lower(), status.next().split())
+		for entry in status:
 			try:
 				jobinfo = dict(zip(head, filter(lambda x: x != '', entry.split(None, len(head) - 1))))
 				jobinfo['id'] = "%s.localhost" % jobinfo['pid']

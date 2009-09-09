@@ -30,28 +30,24 @@ class SGE(LocalWMSApi):
 		return ""
 
 
-	def getSubmitArguments(self, jobNum, sandbox):
+	def getSubmitArguments(self, jobNum, sandbox, stdout, stderr):
 		# Job name
 		params = ' -N %s' % self.wms.getJobName(jobNum)
 
 		# Requirement based settings
 		strTime = lambda s: "%02d:%02d:%02d" % (s / 3600, (s / 60) % 60, s % 60)
 		reqs = dict(self.wms.getRequirements(jobNum))
-		if reqs.has_key(WMS.SITES):
+		if WMS.SITES in reqs:
 			params += ' -q %s' % reqs[WMS.SITES]
-		if reqs.has_key(WMS.WALLTIME):
+		if WMS.WALLTIME in reqs:
 			params += " -l s_rt=%s" % strTime(reqs[WMS.WALLTIME])
-		if reqs.has_key(WMS.CPUTIME):
+		if WMS.CPUTIME in reqs:
 			params += " -l h_cpu=%s" % strTime(reqs[WMS.WALLTIME])
-		if reqs.has_key(WMS.MEMORY):
+		if WMS.MEMORY in reqs:
 			params += ' -l h_vmem=%dM' % reqs[WMS.MEMORY]
 
-		# Sandbox
-		params += ' -v SANDBOX=%s' % sandbox
-		# IO paths
-		params += ' -o %s -e %s' % (
-			utils.shellEscape(os.path.join(sandbox, 'stdout.txt')),
-			utils.shellEscape(os.path.join(sandbox, 'stderr.txt')))
+		# Sandbox, IO paths
+		params += ' -v SANDBOX=%s -o %s -e %s' % (sandbox, stdout, stderr)
 		return params
 
 
@@ -61,7 +57,7 @@ class SGE(LocalWMSApi):
 
 
 	def parseStatus(self, status):
-		dom = xml.dom.minidom.parseString(status)
+		dom = xml.dom.minidom.parseString(str.join('', status))
 		for jobentry in dom.getElementsByTagName('job_list'):
 			jobinfo = {}
 			try:
@@ -73,7 +69,7 @@ class SGE(LocalWMSApi):
 				jobinfo['id'] = "%s.sge" % jobinfo['JB_job_number']
 				jobinfo['status'] = jobinfo['state']
 				jobinfo['dest'] = 'N/A'
-				if jobinfo.has_key('queue_name'):
+				if 'queue_name' in jobinfo:
 					tmp = jobinfo['queue_name'].split("@")
 					jobinfo['dest'] = "%s/%s" % (tmp[1], tmp[0])
 			except:

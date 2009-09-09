@@ -7,12 +7,19 @@ class DataSplitter(AbstractObject):
 	for id, splitInfo in enumerate(splitInfos):
 		locals()[splitInfo] = id
 
-	def __init__(self, parameters = {}):
+	def __init__(self, config, section, values):
 		self._jobFiles = None
 		self._jobCache = None
 		self._jobCacheNum = None
-		for var, value in parameters.iteritems():
-			setattr(self, var, value)
+		self._section = section
+		self._values = values
+
+
+	def set(self, member, configFun, item, default = None):
+		try:
+			setattr(self, member, configFun(self._section, item))
+		except:
+			setattr(self, member, self._values.get(member, default))
 
 
 	def splitDatasetInternal(self, blocks, firstEvent = 0):
@@ -151,7 +158,7 @@ class DataSplitter(AbstractObject):
 		if blocksChanged:
 			print "="*70
 			# TODO: print statistics (status: completely new / just added files)
-			fileList = reduce(lambda x,y: x+y, map(lambda x: x[DataProvider.FileList], blocksChanged), [])
+			fileList = reduce(lambda x, y: x+y, map(lambda x: x[DataProvider.FileList], blocksChanged), [])
 			affectedJobs = getJobsWithFiles(fileList)
 			print "%d blocks consisting of %d files have changed their length" % (len(blocksChanged), len(fileList))
 			print "This affects the following %d jobs:" % len(affectedJobs), list(affectedJobs)
@@ -159,12 +166,12 @@ class DataSplitter(AbstractObject):
 			# Did the file shrink or expand?
 			shrinkedBlocks, expandedBlocks = splitAndClassifyChanges(blocksChanged, newBlocks)
 
-			shrinkedFiles = reduce(lambda x,y: x+y, map(lambda x: x[0][DataProvider.FileList], shrinkedBlocks), [])
+			shrinkedFiles = reduce(lambda x, y: x+y, map(lambda x: x[0][DataProvider.FileList], shrinkedBlocks), [])
 			print "%d files have decreased in size" % (len(shrinkedFiles))
 			if utils.boolUserInput('Do you want to treat the shrunken files as missing files?', False):
 				blocksMissing.extend(map(lambda x: x[0], shrinkedBlocks))
 
-			expandedFiles = reduce(lambda x,y: x+y, map(lambda x: x[0][DataProvider.FileList], expandedBlocks), [])
+			expandedFiles = reduce(lambda x, y: x+y, map(lambda x: x[0][DataProvider.FileList], expandedBlocks), [])
 			print "%d files have expanded in size" % (len(expandedFiles))
 			if utils.boolUserInput('Do you want exclude these jobs from processing?', False):
 				jobLock = open(os.path.join(path, 'joblock.dat'), 'a')
@@ -193,13 +200,13 @@ class DataSplitter(AbstractObject):
 		if blocksMissing:
 			print "="*70
 			# TODO: print statistics (status: missing)
-			fileList = reduce(lambda x,y: x+y, map(lambda x: x[DataProvider.FileList], blocksMissing))
+			fileList = reduce(lambda x, y: x+y, map(lambda x: x[DataProvider.FileList], blocksMissing))
 			affectedJobs = getJobsWithFiles(fileList)
 			print "%d files in %d blocks are missing." % (NFiles, len(blocksMissing))
 			print "This affects the following %d jobs:" % len(affectedJobs), list(affectedJobs)
 			if utils.boolUserInput('Do you want exclude these jobs from processing?', False):
 				jobLock = open(os.path.join(path, 'joblock.dat'), 'a')
-				jobLock.writelines(map(lambda x: str(x) + '\n',affectedJobs))
+				jobLock.writelines(map(lambda x: str(x) + '\n', affectedJobs))
 
 			for jobNum in affectedJobs:
 				newMap = removeFilesFromMapping(self.getSplitInfo(jobNum), fileList, oldBlocks)
@@ -214,10 +221,10 @@ class DataSplitter(AbstractObject):
 
 
 	def saveJobMapping(tar, fmt, entry, jobNum):
-		def flat((x,y,z)):
+		def flat((x, y, z)):
 			if isinstance(z, list):
-				return (x,y,str.join(',', z))
-			return (x,y,z)
+				return (x, y, str.join(',', z))
+			return (x, y, z)
 
 		tmp = entry.pop(DataSplitter.FileList)
 
@@ -234,7 +241,7 @@ class DataSplitter(AbstractObject):
 			tar.addfile(info, file)
 			file.close()
 
-		if entry.has_key(DataSplitter.CommonPrefix):
+		if DataSplitter.CommonPrefix in entry:
 			entry.pop(DataSplitter.CommonPrefix)
 		entry[DataSplitter.FileList] = tmp
 	saveJobMapping = staticmethod(saveJobMapping)
@@ -250,14 +257,14 @@ class DataSplitter(AbstractObject):
 			'MaxJobs': len(self._jobFiles),
 		}
 		log = None
-		meta.update(dict(filter(lambda (x,y): x != '_jobFiles', self.__dict__.iteritems())))
+		meta.update(dict(filter(lambda (x, y): not x.startswith('_'), self.__dict__.items())))
 		info, file = utils.VirtualFile('Metadata', fmt.format(meta)).getTarInfo()
 		tar.addfile(info, file)
 		file.close()
 
 		subTarFiles = {}
 		for jobNum, entry in enumerate(self._jobFiles):
-			if not subTarFiles.has_key(jobNum / 100):
+			if jobNum / 100 not in subTarFiles:
 				subTarFileObj = cStringIO.StringIO()
 				subTarFile = tarfile.open(mode = "w:gz", fileobj = subTarFileObj)
 				subTarFiles[jobNum / 100] = (subTarFile, subTarFileObj)
@@ -300,7 +307,7 @@ class DataSplitter(AbstractObject):
 				data = self._fmt.parse(self._cacheTar.extractfile('%05d/info' % key).readlines())
 				data[DataSplitter.SEList] = data[DataSplitter.SEList].split(',')
 				list = self._cacheTar.extractfile('%05d/list' % key).readlines()
-				if data.has_key(DataSplitter.CommonPrefix):
+				if DataSplitter.CommonPrefix in data:
 					list = map(lambda x: "%s/%s" % (data[DataSplitter.CommonPrefix], x), list)
 				data[DataSplitter.FileList] = map(str.strip, list)
 				return data
@@ -322,7 +329,18 @@ class DataSplitter(AbstractObject):
 					self.append(x)
 
 			def getDataSplitter(self):
-				instance = DataSplitter.open(self._classname, self._metadata)
+				class ConfigDict(object):
+					def __init__(self, metadata):
+						self.metadata = metadata
+					def get(self, section, item, default = None, volatile = False):
+						return self.metadata.get(item, default)
+					def getPath(self, section, item, default = None, volatile = False):
+						return self.metadata.get(item, default)
+					def getInt(self, section, item, default = None, volatile = False):
+						return int(self.metadata.get(item, default))
+					def getBool(self, section, item, default = None, volatile = False):
+						return self.metadata.get(item, default) == "True"
+				instance = DataSplitter.open(self._classname, ConfigDict(self._metadata), None, self._metadata)
 				instance._jobFiles = self
 				return instance
 

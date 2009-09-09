@@ -22,11 +22,14 @@ def main(args):
 
 	def unlock():
 		fcntl.flock(fd, fcntl.LOCK_UN)
-		if os.path.exists(lockfile):
-			os.unlink(lockfile)
+		try:
+			if os.path.exists(lockfile):
+				os.unlink(lockfile)
+		except:
+			pass
 
 	try:
-		taskInfo = utils.DictFormat(" = ").parse(open(os.path.join(workDir, 'task.dat')))
+		taskInfo = utils.PersistentDict(os.path.join(workDir, 'task.dat'), ' = ')
 		provider = DataProvider.loadState(gcSupport.ConfigDummy(), workDir, 'production.dbs')
 
 		# Try to read all existing Blocks from production.dbs
@@ -42,7 +45,7 @@ def main(args):
 		for jobid in jobList:
 			outputDir = os.path.join(workDir, 'output', 'job_' + str(jobid))
 
-			# Read specified jobinfo.txt files
+			# Read specified job info files
 			jobInfo = gcSupport.getJobInfo(workDir, jobid, lambda retCode: retCode == 0)
 			if not jobInfo:
 				continue
