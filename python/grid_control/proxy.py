@@ -1,6 +1,6 @@
 # Generic base class for grid proxies
 import sys, os, time
-from grid_control import AbstractObject, InstallationError, AbstractError, utils
+from grid_control import AbstractObject, InstallationError, AbstractError, UserError, utils
 
 class Proxy(AbstractObject):
 	def __init__(self, config):
@@ -71,19 +71,21 @@ class VomsProxy(Proxy):
 		if cached and self._cache:
 			return self._cache
 		# Call voms-proxy-info and parse results
-		proc = utils.LoggedProcess(self._infoExec, "%s --all")
+		proc = utils.LoggedProcess(self._infoExec, "--all")
 		retCode = proc.wait()
 		if (retCode != 0) and not self.ignoreWarning:
-			sys.stderr.write("%s\n%s\n" % (proc.getOutput(), proc.getError()))
+			sys.stderr.write(("%s\n%s\n" % (proc.getOutput(), proc.getError())).replace('\n\n', '\n'))
+			sys.stderr.write("If job submission is still possible, you can set [proxy] ignore warnings = True\n")
 			raise InstallationError("voms-proxy-info failed with return code %d" % retCode)
 		self._cache = utils.DictFormat(':').parse(proc.getOutput())
 		return self._cache
 
 	def getTimeleft(self, cached, checkedForTime = None):
+		info = self._getInfo(cached)
 		try:
-			return utils.parseTime(self._getInfo(cached)['timeleft'])
+			return utils.parseTime(info['timeleft'])
 		except:
-			print self._getInfo(cached)
+			print info
 			raise RuntimeError("Can't parse proxy information!")
 
 	def getUsername(self):
@@ -97,5 +99,5 @@ class VomsProxy(Proxy):
 		try:
 			return self._getInfo()['vo']
 		except:
-			print self._getInfo(cached)
+			print self._getInfo()
 			raise RuntimeError("Can't parse proxy information!")

@@ -117,7 +117,8 @@ class DataProvider(AbstractObject):
 			if DataProvider.DatasetID in block:
 				writer.write('id = %d\n' % block[DataProvider.DatasetID])
 			writer.write('events = %d\n' % block[DataProvider.NEvents])
-			writer.write('se list = %s\n' % str.join(',', block[DataProvider.SEList]))
+			if block[DataProvider.SEList] != None:
+				writer.write('se list = %s\n' % str.join(',', block[DataProvider.SEList]))
 
 			commonprefix = os.path.commonprefix(map(lambda x: x[DataProvider.lfn], block[DataProvider.FileList]))
 			commonprefix = str.join('/', commonprefix.split('/')[:-1])
@@ -181,3 +182,5 @@ class DataProvider(AbstractObject):
 
 		return utils.DiffLists(oldBlocks, newBlocks, cmpBlock, changedBlock)
 	resyncSources = staticmethod(resyncSources)
+
+DataProvider.providers = {}

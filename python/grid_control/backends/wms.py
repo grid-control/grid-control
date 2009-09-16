@@ -1,6 +1,6 @@
 # Generic base class for workload management systems
 
-import sys, os, time, shutil, tarfile
+import sys, os, time, shutil, tarfile, glob
 from grid_control import AbstractObject, ConfigError, RuntimeError, UserError, utils, Proxy
 
 class WMS(AbstractObject):
@@ -32,8 +32,15 @@ class WMS(AbstractObject):
 		self.sandboxIn = [ utils.atRoot('share', 'run.sh'), utils.atRoot('share', 'run.lib'), tarFile ]
 		self.sandboxOut = module.getOutFiles() + [ 'gc.stdout', 'gc.stderr', 'job.info' ]
 
-		inFiles = module.getInFiles()
-		inFiles.extend(monitor.getFiles())
+		inFiles = monitor.getFiles()
+		# Resolve wildcards in input files
+		for file in module.getInFiles():
+			if isinstance(file, str):
+				matched = glob.glob(file)
+				if matched != []:
+					inFiles.extend(matched)
+				else:
+					inFiles.append(file)
 
 		taskEnv = module.getTaskConfig()
 		taskEnv.update(monitor.getEnv(self))

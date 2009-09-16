@@ -25,12 +25,23 @@ class CMSSW(DataMod):
 
 		# Check that for dataset jobs the necessary placeholders are in the config file
 		if self.dataSplitter != None:
-			for tag in [ "__FILE_NAMES__", "__MAX_EVENTS__", "__SKIP_EVENTS__" ]:
+			def isInstrumented(cfgName):
+				cfg = open(cfgName, 'r').read()
+				for tag in [ "FILE_NAMES", "MAX_EVENTS", "SKIP_EVENTS" ]:
+					if (not "__%s__" % tag in cfg) or (not "@%s@" % tag in cfg):
+						return False
+				return True
+
+			if not (True in map(isInstrumented, self.configFiles)):
 				for cfgName in self.configFiles:
-					if open(cfgName, 'r').read().find(tag) == -1:
-						print open(utils.atRoot('share', 'fail.txt'), 'r').read()
-						raise ConfigError("Config file must use __FILE_NAMES__, __MAX_EVENTS__" \
-							" and __SKIP_EVENTS__ to work properly with datasets!")
+					if not isInstrumented(cfgName):
+						if boolUserInput('Do you want to prepare %s for running over dataset?', True):
+							fragment = utils.atRoot('scripts', 'fragmentForCMSSW.py')
+							open(cfgName, 'a').write(open(fragment, 'r').read())
+
+			if not (True in map(isInstrumented, self.configFiles)):
+				raise ConfigError("One config file must use __FILE_NAMES__, __MAX_EVENTS__" \
+					" and __SKIP_EVENTS__ to work properly with dataset jobs!")
 		else:
 			self.eventsPerJob = config.get('CMSSW', 'events per job', 0)
 

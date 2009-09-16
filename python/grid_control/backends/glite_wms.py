@@ -1,9 +1,8 @@
 import sys, os, time, tempfile
 from grid_control import ConfigError, Job, utils
 from grid_wms import GridWMS
-from glite import Glite
 
-class GliteWMS(Glite):
+class GliteWMS(GridWMS):
 	def __init__(self, config, module, monitor):
 		GridWMS.__init__(self, config, module, monitor, 'glite-wms')
 

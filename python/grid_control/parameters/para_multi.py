@@ -57,3 +57,7 @@ class UberParaMod(ParaMod):
 			res = map(lambda (x, y): x + y, zip(tmp_, res * n))
 
 		return map(dict, res)
+
+
+class MultiParaMod(UberParaMod):
+	pass

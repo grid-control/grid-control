@@ -8,13 +8,14 @@ from DBSAPI_v2.dbsOptions import DbsOptionParser
 class DBSApiv2(DataProvider):
 	def __init__(self, config, datasetExpr, datasetNick, datasetID = 0):
 		DataProvider.__init__(self, config, datasetExpr, datasetNick, datasetID)
+		DataProvider.providers.update({'DBSApiv2': 'dbs'})
 
 		self.args = {}
 		self.args['url']     = config.get('CMSSW', 'dbs instance', "http://cmsdbsprod.cern.ch/cms_dbs_prod_global/servlet/DBSServlet")
 		self.args['version'] = "DBS_2_0_6"
 		self.args['level']   = "CRITICAL"
 
-		datasetExprList = datasetExpr.split("#")
+		datasetExprList = map(str.strip, datasetExpr.split("#"))
 		if len(datasetExprList) > 2:
 			raise ConfigError('dataset must have the format <datasetpath>#block or <datasetpath>')
 		if len(datasetExprList) == 2:
@@ -22,7 +23,7 @@ class DBSApiv2(DataProvider):
 		else:
 			self.datasetBlock = "all"
 
-		datasetPathList = datasetExprList[0].split("@")
+		datasetPathList = map(str.strip, datasetExprList[0].split("@"))
 		if len(datasetPathList) > 2:
 			raise ConfigError('datasetpath must have the format <dataset>@<dbsinstance> or <dataset>')
 		if len(datasetExprList) == 2:

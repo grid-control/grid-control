@@ -102,8 +102,9 @@ class DataMod(Module):
 	def getRequirements(self, jobNum):
 		reqs = Module.getRequirements(self, jobNum)
 		if self.dataSplitter != None:
-			splitInfo = self.dataSplitter.getSplitInfo(jobNum)
-			reqs.append((WMS.STORAGE, splitInfo.get(DataSplitter.SEList, [])))
+			selist = self.dataSplitter.getSplitInfo(jobNum).get(DataSplitter.SEList, [])
+			if selist != None:
+				reqs.append((WMS.STORAGE, selist))
 		return reqs
 
 

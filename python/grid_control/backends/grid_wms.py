@@ -79,12 +79,15 @@ class GridWMS(WMS):
 		for type, arg in reqs:
 			if type == self.SOFTWARE:
 				result.append('Member(%s, other.GlueHostApplicationSoftwareRunTimeEnvironment)' % self._jdlEscape(arg))
-			elif (type == self.WALLTIME) and (arg > 0):
-				result.append('(other.GlueCEPolicyMaxWallClockTime >= %d)' % int((arg + 59) / 60))
-			elif (type == self.CPUTIME) and (arg > 0):
-				result.append('(other.GlueCEPolicyMaxCPUTime >= %d)' % int((arg + 59) / 60))
-			elif (type == self.MEMORY) and (arg > 0):
-				result.append('(other.GlueHostMainMemoryRAMSize >= %d)' % arg)
+			elif type == self.WALLTIME:
+				if arg > 0:
+					result.append('(other.GlueCEPolicyMaxWallClockTime >= %d)' % int((arg + 59) / 60))
+			elif type == self.CPUTIME:
+				if arg > 0:
+					result.append('(other.GlueCEPolicyMaxCPUTime >= %d)' % int((arg + 59) / 60))
+			elif type == self.MEMORY:
+				if arg > 0:
+					result.append('(other.GlueHostMainMemoryRAMSize >= %d)' % arg)
 			elif type == self.STORAGE:
 				result.append(self.storageReq(arg))
 			elif type == self.SITES:
@@ -103,10 +106,14 @@ class GridWMS(WMS):
 
 
 	def makeJDL(self, fp, job):
+		if '*' in str.join('', self.sandboxOut):
+			raise ConfigError("grid submission with output wildcards is not supported!")
+		environment = self.module.getJobConfig(job)
+		# TODO: fix ticket #18
 		contents = {
 			'Executable': 'run.sh',
 			'Arguments': "%d %s" % (job, self.module.getJobArguments(job)),
-			'Environment': utils.DictFormat().format(self.module.getJobConfig(job), format = '%s%s%s'),
+			'Environment': utils.DictFormat().format(environment, format = '%s%s%s'),
 			'StdOutput': 'gc.stdout',
 			'StdError': 'gc.stderr',
 			'InputSandbox': self.sandboxIn,
@@ -121,9 +128,9 @@ class GridWMS(WMS):
 			# _KEY is marker for already formatted text
 			if key[0] == '_':
 				return (key[1:], delim, value)
-			elif type(value) in long:
+			elif type(value) == long:
 				raise RuntimeError("long type found!")
-			elif type(value) in int:
+			elif type(value) == int:
 				return (key, delim, value)
 			elif type(value) in (tuple, list):
 				recursiveResult = map(lambda x: jdlRep((key, delim, x)), value)
@@ -291,7 +298,7 @@ class GridWMS(WMS):
 			fp.write(data)
 			fp.close()
 		except:
-			sys.stderr.write("Could not write jdl data to %s." % jdl)
+			sys.stderr.write("Could not write jdl data to %s.\n" % jdl)
 			raise
 
 		tmp = filter(lambda (x, y): y != '', self._submitParams.iteritems())
@@ -309,7 +316,7 @@ class GridWMS(WMS):
 		del activity
 
 		if (retCode != 0) or (wmsId == None):
-			if self.explainError(proc, code):
+			if self.explainError(proc, retCode):
 				pass
 			else:
 				self.logError(proc, log)
@@ -338,7 +345,7 @@ class GridWMS(WMS):
 		del activity
 
 		if retCode != 0:
-			if self.explainError(proc, code):
+			if self.explainError(proc, retCode):
 				pass
 			else:
 				self.logError(proc, log)
@@ -421,7 +428,7 @@ class GridWMS(WMS):
 		if len(deleted) != len(ids):
 			sys.stderr.write("Could not delete all jobs!\n")
 		if retCode != 0:
-			if self.explainError(proc, code):
+			if self.explainError(proc, retCode):
 				pass
 			else:
 				self.logError(proc, log)

@@ -2,22 +2,18 @@ from grid_control import AbstractObject, RuntimeError, utils, ConfigError, Datas
 from provider_base import DataProvider
 
 class DataMultiplexer(DataProvider):
-	def __init__(self, config, datasetExpr, dbsapi, datasetID = None):
+	def __init__(self, config, datasetExpr, defaultProvider, datasetID = None):
 		# None, None = Don't override NickName and ID
 		DataProvider.__init__(self, config, datasetExpr, None, None)
 		self._datasetExpr = None
 		self.subprovider = []
 
-		exprList = datasetExpr.split('\n')
-		providerMap = { 'dbs': dbsapi, 'file': 'FileProvider', 'list': 'ListProvider' }
-		reverseMap = dict(map(lambda (x, y): (y, x), providerMap.items()))
-		head = ["ID", "Nickname", "Dataset path"]
-
 		# Allow provider shortcuts
-		for id, entry in enumerate(exprList):
-			(datasetNick, provider, datasetExpr) = DataProvider.parseDatasetExpr(entry, dbsapi)
+		head = ["ID", "Nickname", "Dataset path"]
+		for id, entry in enumerate(datasetExpr.split('\n')):
+			(datasetNick, provider, datasetExpr) = DataProvider.parseDatasetExpr(entry, defaultProvider)
 			source = DataProvider.open(provider, config, datasetExpr, datasetNick, id)
-			dataUrl = "%s://%s" % (reverseMap.get(provider, provider), datasetExpr)
+			dataUrl = "%s://%s" % (DataProvider.providers.get(provider, provider), datasetExpr)
 			self.subprovider.append(dict(zip(["src"] + head, [source, id, datasetNick, dataUrl])))
 
 		print('Using the following datasets:')

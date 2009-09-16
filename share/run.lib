@@ -232,7 +232,7 @@ var_replacer() {
 		eval "export SEED_$j=$[i+$MY_JOBID]"
 		j=$[j+1]
 	done
-
+	REPLACEFILE="${MY_SCRATCH:-.}/_replace.awk"
 	MYDATE=`date +%F`
 	MYTIMESTAMP=`date +%s`
 	(
@@ -254,8 +254,8 @@ var_replacer() {
 		echo "	gsub(\"__RANDOM__\", int(rand() * 900000000))"
 		echo "	print"
 		echo "}"
-	) > "${MY_SCRATCH:-.}/_replace.awk"
-	awk -f "${MY_SCRATCH:-.}/_replace.awk"
+	) > "$REPLACEFILE"
+	awk -f "$REPLACEFILE" | awk -f "$REPLACEFILE"
 }
 
 # Get used space in mb

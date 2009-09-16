@@ -129,6 +129,10 @@ class DictFormat(object):
 		data = {}
 		currentline = ''
 		doAdd = False
+		try:
+			lines = lines.splitlines()
+		except:
+			pass
 		for line in lines:
 			if self.escapeString:
 				# Accumulate lines until closing " found
@@ -355,11 +359,11 @@ class LoggedProcess(object):
 
 	def getOutput(self):
 		self.stdout.extend(self.proc.fromchild.readlines())
-		return str.join("\n", self.stdout)
+		return str.join("", self.stdout)
 
 	def getError(self):
 		self.stderr.extend(self.proc.childerr.readlines())
-		return str.join("\n", self.stderr)
+		return str.join("", self.stderr)
 
 	def iter(self, opts):
 		while True:

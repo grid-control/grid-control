@@ -1,9 +1,8 @@
 import os
 from grid_control import ConfigError, utils
 from grid_wms import GridWMS
-from glite import Glite
 
-class LCG(Glite):
+class LCG(GridWMS):
 	def __init__(self, config, module, monitor):
 		utils.deprecated("Please use the GliteWMS backend for grid jobs!")
 		GridWMS.__init__(self, config, module, monitor, 'lcg')

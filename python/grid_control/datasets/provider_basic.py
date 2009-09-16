@@ -6,15 +6,16 @@ from provider_base import DataProvider
 class FileProvider(DataProvider):
 	def __init__(self, config, datasetExpr, datasetNick, datasetID = 0):
 		DataProvider.__init__(self, config, datasetExpr, datasetNick, datasetID)
+		DataProvider.providers.update({'FileProvider': 'file'})
 
 		tmp = datasetExpr.split('@')
 		if len(tmp) == 1:
-			self._selist = []
+			self._selist = None
 		elif len(tmp) == 2:
-			self._selist = tmp[1].split(',')
+			self._selist = map(str.strip, tmp[1].split(','))
 			datasetExpr = tmp[0]
 		try:
-			self._path, self._events = datasetExpr.split('|')
+			self._path, self._events = map(str.strip, datasetExpr.split('|'))
 		except:
 			raise ConfigError('Invalid dataset expression!\nCorrect: /local/path/to/file|events[@SE1,SE2]')
 
@@ -36,6 +37,7 @@ class FileProvider(DataProvider):
 class ListProvider(DataProvider):
 	def __init__(self, config, datasetExpr, datasetNick, datasetID = 0):
 		DataProvider.__init__(self, config, datasetExpr, datasetNick, datasetID)
+		DataProvider.providers.update({'ListProvider': 'list'})
 
 		tmp = map(str.strip, datasetExpr.split('%'))
 		self._filename = config.getPath("CMSSW", "dataset file", tmp[0])
@@ -73,7 +75,7 @@ class ListProvider(DataProvider):
 					blockinfo[DataProvider.BlockName] = blockname[1]
 				else:
 					blockinfo[DataProvider.BlockName] = "0"
-				blockinfo[DataProvider.SEList] = []
+				blockinfo[DataProvider.SEList] = None
 				blockinfo[DataProvider.FileList] = []
 				commonprefix = None
 			elif line != '':
@@ -88,7 +90,9 @@ class ListProvider(DataProvider):
 				elif key.lower() == 'events':
 					blockinfo[DataProvider.NEvents] = int(value)
 				elif key.lower() == 'se list':
-					blockinfo[DataProvider.SEList] = map(str.strip, value.split(','))
+					if value.lower().strip() != 'none':
+						tmp = filter(lambda x: x != '', map(str.strip, value.split(',')))
+						blockinfo[DataProvider.SEList] = tmp
 				elif key.lower() == 'prefix':
 					commonprefix = value
 				else:

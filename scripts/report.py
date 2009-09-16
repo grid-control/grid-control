@@ -13,8 +13,8 @@ def main(args):
 		try:
 			open(args[0], 'r')
 			config = Config(args[0])
-		except IOError, e:
-			raise ConfigError("Error while reading configuration file '%s'!" % args[0])
+		except:
+			raise ConfigError("Error while reading configuration file!")
 
 		config.opts = config
 		config.opts.seed = '0'

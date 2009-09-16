@@ -50,7 +50,7 @@ process.output = cms.OutputModule("PoolOutputModule",
 # Additional output definition
 
 # Other statements
-process.GlobalTag.globaltag = 'MC_31X_V2::All'
+process.GlobalTag.globaltag = 'MC_31X_V3::All'
 process.generator = cms.EDFilter("Pythia6GeneratorFilter",
     pythiaPylistVerbosity = cms.untracked.int32(0),
     filterEfficiency = cms.untracked.double(1.0),

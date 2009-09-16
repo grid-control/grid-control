@@ -55,7 +55,6 @@ class EventBoundarySplitter(DataSplitter):
 
 
 	def splitDatasetInternal(self, blocks, firstEvent = 0):
-		result = []
 		for block in blocks:
 			for job in self._splitJobs(block[DataProvider.FileList], firstEvent):
 				firstEvent = 0
@@ -65,5 +64,4 @@ class EventBoundarySplitter(DataSplitter):
 					job[DataSplitter.Nickname] = block[DataProvider.Nickname]
 				if DataProvider.DatasetID in block:
 					job[DataSplitter.DatasetID] = block[DataProvider.DatasetID]
-				result.append(job)
-		return result
+				yield job

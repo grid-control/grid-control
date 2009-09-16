@@ -8,7 +8,6 @@ class FileBoundarySplitter(DataSplitter):
 
 
 	def splitDatasetInternal(self, blocks, firstEvent = 0):
-		result = []
 		for block in blocks:
 			start = 0
 			while start < len(block[DataProvider.FileList]):
@@ -25,5 +24,4 @@ class FileBoundarySplitter(DataSplitter):
 				job[DataSplitter.FileList] = map(lambda x: x[DataProvider.lfn], files)
 				job[DataSplitter.NEvents] = sum(map(lambda x: x[DataProvider.NEvents], files))
 				start += self.filesPerJob
-				result.append(job)
-		return result
+				yield job

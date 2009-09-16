@@ -28,7 +28,7 @@ class DataSplitter(AbstractObject):
 
 	def splitDataset(self, blocks):
 		log = utils.ActivityLog('Splitting dataset into jobs')
-		self._jobFiles = self.splitDatasetInternal(blocks)
+		self._jobFiles = list(self.splitDatasetInternal(blocks))
 
 
 	def getSplitInfo(self, jobNum):
@@ -73,6 +73,8 @@ class DataSplitter(AbstractObject):
 
 
 	def resyncMapping(self, path, oldBlocks, newBlocks):
+		print "This function was broken by the redesign of the map file!"
+		raise RuntimeError("FIXME: reimplement JobFileTarAdaptor::append")
 		def addDict(x, y):
 			if x:
 				return x.update(y)
@@ -190,7 +192,7 @@ class DataSplitter(AbstractObject):
 			print "="*70
 			# TODO: print statistics (status: completely new / just added files)
 			NFiles = sum(map(lambda x: len(x[DataProvider.FileList]), blocksAdded))
-			addedJobs = self.splitDatasetInternal(blocksAdded)
+			addedJobs = list(self.splitDatasetInternal(blocksAdded))
 			print "%d files in %d blocks were added." % (NFiles, len(blocksAdded))
 			print "This would result in %d new jobs." % len(addedJobs)
 			if utils.boolUserInput('Do you want submit these jobs with the added blocks/files?', False):
