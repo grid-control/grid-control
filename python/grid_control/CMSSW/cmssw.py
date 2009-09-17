@@ -28,7 +28,7 @@ class CMSSW(DataMod):
 			def isInstrumented(cfgName):
 				cfg = open(cfgName, 'r').read()
 				for tag in [ "FILE_NAMES", "MAX_EVENTS", "SKIP_EVENTS" ]:
-					if (not "__%s__" % tag in cfg) or (not "@%s@" % tag in cfg):
+					if (not "__%s__" % tag in cfg) and (not "@%s@" % tag in cfg):
 						return False
 				return True
 
