@@ -17,6 +17,13 @@ def sorted(list, comp = None):
 	return tmp
 
 
+def safeWriteFile(name, content):
+	fp = open(name, 'w')
+	fp.writelines(content)
+	fp.truncate()
+	fp.close()
+
+
 class PersistentDict(dict):
 	def __init__(self, filename, delimeter = "="):
 		dict.__init__(self)
@@ -31,7 +38,7 @@ class PersistentDict(dict):
 			self.clear()
 		self.update(newdict)
 		try:
-			open(self.filename, 'w').writelines(DictFormat(self.format).format(self))
+			safeWriteFile(self.filename, DictFormat(self.format).format(self))
 		except:
 			raise RuntimeError('Could not write to file %s' % self.filename)
 

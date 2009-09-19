@@ -105,40 +105,29 @@ class GridWMS(WMS):
 		return reqs	
 
 
-	def makeJDL(self, fp, job):
+	def makeJDL(self, fp, jobNum):
 		if '*' in str.join('', self.sandboxOut):
 			raise ConfigError("grid submission with output wildcards is not supported!")
-		environment = self.module.getJobConfig(job)
+
+		cfgPath = os.path.join(self.config.workDir, 'jobs', "job_%d.var" % jobNum)
+		self.writeJobConfig(jobNum, cfgPath)
 		# TODO: fix ticket #18
+
+		def formatStrList(strList):
+			return '{ ' + str.join(', ', map(lambda x: '"%s"' % x, strList)) + ' }'
+
 		contents = {
-			'Executable': 'run.sh',
-			'Arguments': "%d %s" % (job, self.module.getJobArguments(job)),
-			'Environment': utils.DictFormat().format(environment, format = '%s%s%s'),
-			'StdOutput': 'gc.stdout',
-			'StdError': 'gc.stderr',
-			'InputSandbox': self.sandboxIn,
-			'OutputSandbox': self.sandboxOut,
-			'_Requirements': self._formatRequirements(self.getRequirements(job)),
-			'VirtualOrganisation': self.vo,
+			'Executable': '"run.sh"',
+			'Arguments': '"%d"' % jobNum,
+			'StdOutput': '"gc.stdout"',
+			'StdError': '"gc.stderr"',
+			'InputSandbox': formatStrList(self.sandboxIn + [cfgPath]),
+			'OutputSandbox': formatStrList(self.sandboxOut),
+			'Requirements': self._formatRequirements(self.getRequirements(jobNum)),
+			'VirtualOrganisation': '"%s"' % self.vo,
 			'RetryCount': 2
 		}
-
-		# JDL parameter formatter
-		def jdlRep((key, delim, value)):
-			# _KEY is marker for already formatted text
-			if key[0] == '_':
-				return (key[1:], delim, value)
-			elif type(value) == long:
-				raise RuntimeError("long type found!")
-			elif type(value) == int:
-				return (key, delim, value)
-			elif type(value) in (tuple, list):
-				recursiveResult = map(lambda x: jdlRep((key, delim, x)), value)
-				return (key, delim, '{ ' + str.join(', ', map(lambda (k, d, v): v, recursiveResult)) + ' }')
-			else:
-				return (key, delim, '"%s"' % value)
-
-		fp.writelines(utils.DictFormat().format(contents, format = '%s %s %s;\n', fkt = jdlRep))
+		fp.writelines(utils.DictFormat(' = ').format(contents, format = '%s%s%s;\n'))
 
 
 	def cleanup(self, list):
@@ -152,7 +141,7 @@ class GridWMS(WMS):
 				pass
 
 
-	def logError(self, proc, log):
+	def logError(self, proc, log, jdl = None):
 		retCode, stdout, stderr = proc.getAll()
 		sys.stderr.write("WARNING: %s failed with code %d\n" %
 			(os.path.basename(proc.cmd[0]), retCode))
@@ -167,12 +156,16 @@ class GridWMS(WMS):
 			logcontent = open(log, 'r').readlines()
 		except:
 			logcontent = []
-		for file in [
+		
+		files = [
 			utils.VirtualFile(os.path.join(entry, "log"), logcontent),
 			utils.VirtualFile(os.path.join(entry, "info"), utils.DictFormat().format(data)),
 			utils.VirtualFile(os.path.join(entry, "stdout"), stdout),
 			utils.VirtualFile(os.path.join(entry, "stderr"), stderr)
-		]:
+		]
+		if jdl:
+			files.append(utils.VirtualFile(os.path.join(entry, "jdl"), jdl))
+		for file in files:
 			info, handle = file.getTarInfo()
 			tar.addfile(info, handle)
 			handle.close()
@@ -319,7 +312,7 @@ class GridWMS(WMS):
 			if self.explainError(proc, retCode):
 				pass
 			else:
-				self.logError(proc, log)
+				self.logError(proc, log, data)
 		self.cleanup([log, jdl])
 		return (jobNum, wmsId, {'jdl': data})
 

@@ -116,6 +116,19 @@ class WMS(AbstractObject):
 		pass
 
 
+	def writeJobConfig(self, jobNum, cfgPath, extras = {}):
+		jobEnv = self.module.getJobConfig(jobNum)
+		jobEnv['GC_ARGS'] = self.module.getJobArguments(jobNum)
+		jobEnv.update(extras)
+
+		try:
+			content = utils.DictFormat(escapeString = True).format(jobEnv, format = 'export %s%s%s\n')
+			utils.safeWriteFile(cfgPath, content)
+		except:
+			sys.stderr.write("Could not write job config data to %s.\n" % cfgPath)
+			raise
+
+
 	def submitJobs(self, jobNumList):
 		for jobNum in jobNumList:
 			if self.config.opts.abort:

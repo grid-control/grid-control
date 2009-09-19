@@ -28,6 +28,8 @@ echo
 checkvar MY_JOBID
 checkvar MY_LANDINGZONE
 checkvar MY_SCRATCH
+checkfile "$MY_LANDINGZONE/job_${MY_JOBID}.var"
+source "$MY_LANDINGZONE/job_${MY_JOBID}.var"
 export
 
 echo
@@ -137,7 +139,7 @@ echo
 
 cd $MY_SCRATCH
 (cat << EOF
-${MY_RUNTIME/\$@/$@}
+${MY_RUNTIME/\$@/$GC_ARGS}
 EOF
 ) > $MY_LANDINGZONE/_runtime.sh
 export MY_RUNTIME="$(var_replacer '' < "$MY_LANDINGZONE/_runtime.sh")"

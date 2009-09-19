@@ -47,7 +47,7 @@ class SGE(LocalWMSApi):
 			params += ' -l h_vmem=%dM' % reqs[WMS.MEMORY]
 
 		# Sandbox, IO paths
-		params += ' -v SANDBOX=%s -o %s -e %s' % (sandbox, stdout, stderr)
+		params += ' -v GC_SANDBOX=%s -o %s -e %s' % (sandbox, stdout, stderr)
 		return params
 
 

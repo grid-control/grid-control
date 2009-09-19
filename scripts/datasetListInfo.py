@@ -15,7 +15,7 @@ def main(args):
 	parser.add_option("-c", "--config-entry",  dest="configentry",  default=False, action="store_true",
 		help="Gives config file entries to run over given dataset(s)")
 	parser.add_option("-C", "--config-guess",  dest="configguess",  default=False, action="store_true",
-		help="Gives config file entries to run over given dataset(s)." +
+		help="Gives config file entries to run over given dataset(s). " +
 			"Will try to guess where the dataset information was coming from.")
 	parser.add_option("-S", "--save",          dest="save",         default=False, action="store_true",
 		help="Saves dataset information to the file 'datacache.dat'")

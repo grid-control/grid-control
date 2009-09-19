@@ -1,5 +1,5 @@
 import re
-from utils import DictFormat
+from utils import DictFormat, safeWriteFile
 from time import time
 
 class Job:
@@ -68,10 +68,7 @@ class Job:
 
 
 	def save(self, name):
-		fp = open(name, 'w')
-		fp.writelines(DictFormat(escapeString = True).format(self.getAll()))
-		fp.truncate()
-		fp.close()
+		safeWriteFile(name, DictFormat(escapeString = True).format(self.getAll()))
 
 
 	def set(self, key, value):

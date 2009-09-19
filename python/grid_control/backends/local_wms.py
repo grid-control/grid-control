@@ -96,14 +96,9 @@ class LocalWMS(WMS):
 		except IOError:
 			raise RuntimeError("Sandbox '%s' could not be prepared." % sandbox)
 
-		env_vars = {
-			'ARGS': "%d %s" % (jobNum, self.module.getJobArguments(jobNum)),
-			'SANDBOX': sandbox
-		}
-		env_vars.update(self.module.getJobConfig(jobNum))
+		cfgPath = os.path.join(sandbox, '_jobconfig.sh')
+		self.writeJobConfig(jobNum, cfgPath, {'GC_SANDBOX': sandbox})
 
-		jcfg = open(os.path.join(sandbox, '_jobconfig.sh'), 'w')
-		jcfg.writelines(utils.DictFormat(escapeString = True).format(env_vars, format = 'export %s%s%s\n'))
 		stdout = utils.shellEscape(os.path.join(sandbox, 'gc.stdout'))
 		stderr = utils.shellEscape(os.path.join(sandbox, 'gc.stderr'))
 		proc = utils.LoggedProcess(self.api.submitExec, "%s %s %s" % (

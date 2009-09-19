@@ -35,7 +35,7 @@ class CMSSW(DataMod):
 			if not (True in map(isInstrumented, self.configFiles)):
 				for cfgName in self.configFiles:
 					if not isInstrumented(cfgName):
-						if boolUserInput('Do you want to prepare %s for running over dataset?', True):
+						if utils.boolUserInput('Do you want to prepare %s for running over the dataset?' % cfgName, True):
 							fragment = utils.atRoot('scripts', 'fragmentForCMSSW.py')
 							open(cfgName, 'a').write(open(fragment, 'r').read())
 

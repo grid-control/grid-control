@@ -107,7 +107,7 @@ class Config:
 						print "\nFound some changes in the config file, which will only apply"
 						print "to the current task after a reinitialization:\n"
 					print "[%s] %s = %s" % (section, key, value),
-					if len(oldValue) + len(value) > 60:
+					if len(str(oldValue)) + len(str(value)) > 60:
 						print
 					print "  (old value: %s)" % oldValue
 					flag = True

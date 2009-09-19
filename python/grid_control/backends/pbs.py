@@ -38,10 +38,9 @@ class PBS(LocalWMSApi):
 		# Job group
 		if len(self._group):
 			params += ' -W group_list=%s' % self._group
-		# Sandbox
-		params += ' -v SANDBOX=%s' % sandbox
-		# IO paths
-		params += ' -o %s -e %s' % (stdout, stderr)
+
+		# Sandbox, IO paths
+		params += ' -v GC_SANDBOX=%s -o %s -e %s' % (sandbox, stdout, stderr)
 		return params
 
 
