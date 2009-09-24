@@ -34,6 +34,7 @@ class JobDB:
 
 		self.ready = []
 		self.running = []
+		self.queued = []
 		self.done = []
 		self.ok = []
 		self.disabled = []
@@ -43,17 +44,20 @@ class JobDB:
 			self._findQueue(jobObj).append(jobNum)
 		self.ready.extend(filter(lambda x: x not in self._jobs, range(self.nJobs)))
 
-		for list in (self.ready, self.running, self.done, self.ok):
+		for list in (self.ready, self.queued, self.running, self.done, self.ok):
 			list.sort()
 
 		self.timeout = utils.parseTime(config.get('jobs', 'queue timeout', '', volatile=True))
-		self.inFlight = config.getInt('jobs', 'in flight', self.nJobs, volatile=True)
+		self.inFlight = config.getInt('jobs', 'in flight', -1, volatile=True)
+		self.inQueue = config.getInt('jobs', 'in queue', -1, volatile=True)
 		self.doShuffle = config.getBool('jobs', 'shuffle', False, volatile=True)
 
 
 	# Return appropriate queue for given job
 	def _findQueue(self, jobObj):
-		if jobObj.state in (Job.SUBMITTED, Job.WAITING, Job.READY, Job.QUEUED, Job.RUNNING):
+		if jobObj.state in (Job.SUBMITTED, Job.WAITING, Job.READY, Job.QUEUED):
+			return self.queued
+		elif jobObj.state == Job.RUNNING:
 			return self.running
 		elif jobObj.state in (Job.INIT, Job.FAILED, Job.ABORTED, Job.CANCELLED):
 			return self.ready	# resubmit?
@@ -120,9 +124,18 @@ class JobDB:
 
 
 	def getSubmissionJobs(self, maxsample):
-		submit = max(0, self.inFlight - len(self.running))
+		# Determine number of jobs to submit
+		submit = self.nJobs
+		nQueued = len(self.queued)
+		if self.inQueue > 0:
+			submit = min(submit, self.inQueue - nQueued)
+		if self.inFlight > 0:
+			submit = min(submit, self.inFlight - nQueued - len(self.running))
 		if self.config.opts.continuous:
-			submit = min(maxsample, submit)
+			submit = min(submit, maxsample)
+		submit = max(submit, 0)
+
+		# Get list of submittable jobs
 		if self.config.opts.maxRetry != None:
 			list = filter(lambda x: self._jobs.get(x, Job()).attempt < self.config.opts.maxRetry, self.ready)
 		else:
@@ -172,9 +185,9 @@ class JobDB:
 		timeoutlist = []
 
 		if self.config.opts.continuous:
-			jobList = self.sample(self.running, maxsample)
+			jobList = self.sample(self.running + self.queued, maxsample)
 		else:
-			jobList = self.running
+			jobList = self.running + self.queued
 
 		# Update states of jobs
 		for jobNum, wmsId, state, info in wms.checkJobs(self.wmsArgs(jobList)):
