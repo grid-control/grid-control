@@ -13,7 +13,7 @@ export SW_CMSSW_EXT="$VO_CMS_SW_DIR/slc4_ia32_gcc345/external"
 
 # Dir shortcuts to all Herwig++ dependencies
 export SW_HERWIGPP="$SW_CMSSW_EXT/herwigpp/2.3.2-cms"
-export SW_THEPEG="/portal/ekpcms3/home/stober/CMSSW/CMSSW_3_1_2/external/ThePEG"
+export SW_THEPEG="$SW_CMSSW_EXT/thepeg/1.4.2"
 export SW_LHA="$SW_CMSSW_EXT/lhapdf/5.6.0-cms2"
 export SW_GSL="$SW_CMSSW_EXT/gsl/1.10-cms"
 export SW_GCCLIB="$SW_CMSSW_EXT/gcc/3.4.5-CMS19"
