@@ -32,7 +32,7 @@ class WMS(AbstractObject):
 		self.sandboxIn = [ utils.atRoot('share', 'run.sh'), utils.atRoot('share', 'run.lib'), tarFile ]
 		self.sandboxOut = module.getOutFiles() + [ 'gc.stdout', 'gc.stderr', 'job.info' ]
 
-		inFiles = monitor.getFiles()
+		inFiles = list(monitor.getFiles())
 		# Resolve wildcards in input files
 		for file in module.getInFiles():
 			if isinstance(file, str):
