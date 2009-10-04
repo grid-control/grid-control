@@ -6,6 +6,8 @@ from DashboardAPI import DashboardAPI
 class DashBoardMonitoring(Monitoring):
 	def __init__(self, config, module):
 		Monitoring.__init__(self, config, module)
+		self.app = config.get('dashboard', 'application', 'shellscript', volatile=True)
+		self.tasktype = config.get('dashboard', 'task', 'analysis', volatile=True)
 
 
 	def getEnv(self, wms):
@@ -29,10 +31,11 @@ class DashBoardMonitoring(Monitoring):
 	def onJobSubmit(self, wms, jobObj, jobNum):
 		Monitoring.onJobSubmit(self, wms, jobObj, jobNum)
 		threading.Thread(target = self.publish, args = (jobObj, jobNum, [{
-			"tool": "grid-control", "GridName": wms.proxy.getUsername(),
-			"scheduler": "gLite", "taskType": "analysis", "vo": wms.proxy.getVO(),
-			"user": os.environ['LOGNAME'] }] + [self.module.getSubmitInfo(jobNum)] +
-			[dict.fromkeys(["application", "exe"], "shellscript")],)).start()
+			"user": os.environ['LOGNAME'], "GridName": wms.proxy.getUsername(),
+			"tool": "grid-control", "JSToolVersion": utils.getVersion(),
+			"application": self.app, "exe": "shellscript", "taskType": self.tasktype,
+			"scheduler": "gLite", "vo": wms.proxy.getVO()}] +
+			[self.module.getSubmitInfo(jobNum)])).start()
 
 
 	# Called on job status update
