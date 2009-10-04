@@ -21,14 +21,7 @@ def main(args):
 
 	# display the 'grid-control' logo and version
 	print(open(utils.atRoot('share', 'logo.txt'), 'r').read())
-	try:
-		proc = utils.LoggedProcess('svnversion', root)
-		proc.wait()
-		ver = proc.getOutput().strip()
-		if ver != '':
-			print('Revision: %s' % ver)
-	except:
-		pass
+	print('Revision: %s' % utils.getVersion())
 	pyver = sys.version_info[0] + sys.version_info[1] / 10.0
 	if pyver < 2.3:
 		utils.deprecated("This python version (%.1f) is not supported anymore!" % pyver)

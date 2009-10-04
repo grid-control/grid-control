@@ -51,6 +51,31 @@ def verbosity():
 	return verbosity.setting
 
 
+def cached(fun):
+	def funProxy(*args, **kargs):
+		if not kargs.get('cached', True) or funProxy.cache == None:
+			if 'cached' in kargs:
+				kargs.pop('cached')
+			funProxy.cache = funProxy.fun(*args, **kargs)
+		return funProxy.cache
+	funProxy.fun = fun
+	funProxy.cache = None
+	return funProxy
+
+
+def getVersion():
+	try:
+		proc = LoggedProcess('svnversion', atRoot.root)
+		proc.wait()
+		version = proc.getOutput().strip()
+		if version != '':
+			return version
+	except:
+		pass
+	return "unknown"
+getVersion = cached(getVersion)
+
+
 def vprint(text, level = 0, printTime = False, newline = True, once = False):
 	if once:
 		if text in vprint.log:

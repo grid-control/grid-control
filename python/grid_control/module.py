@@ -102,6 +102,7 @@ class Module(AbstractObject):
 			# Task infos
 			'TASK_ID': self.taskID,
 			'GC_CONF': self.config.confName,
+			'GC_VERSION': utils.getVersion(),
 			'DB_EXEC': 'shellscript'
 		}
 
