@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-import sys, os, optparse, popen2, gcSupport
+import gcSupport, sys, os, optparse, popen2
 from grid_control import *
 
 def md5sum(filename):
@@ -28,7 +28,9 @@ def se_rm(target, quiet = False):
 def main(args):
 	help = \
 """
-DEFAULT: The default is to check the files with MD5 hashes.
+DEFAULT: The default is to check the files with MD5 hashes. The default
+         output directory is named "se_output" and located in the work
+         directory of the job
   * For jobs with verified output files, the files are moved to the
     local SE output directory, and the job itself is marked as downloaded.
   * Jobs failing verification are marked as FAILED and their files are
@@ -47,8 +49,10 @@ DEFAULT: The default is to check the files with MD5 hashes.
 		help = "keep files of failed jobs in local directory")
 	parser.add_option("-k", "--keep-se-ok",    dest="rmSEOK",       default=True,  action="store_false",
 		help = "keep files of successful jobs on SE")
-	parser.add_option("-r", "--rm-local-ok",     dest="rmLocalOK",    default=False, action="store_true",
+	parser.add_option("-r", "--rm-local-ok",   dest="rmLocalOK",    default=False, action="store_true",
 		help = "remove files of successful jobs from local directory")
+	parser.add_option("-o", '--output',        dest="output",       default=None,
+		help = "specify the local output directory")
 
 	(opts, args) = parser.parse_args()
 
@@ -62,9 +66,10 @@ DEFAULT: The default is to check the files with MD5 hashes.
 	(workDir, pathSE, jobList) = gcSupport.getWorkSEJobs(args)
 
 	# Create SE output dir
-	seOutputDir = os.path.abspath(os.path.join(workDir, 'se_output'))
-	if not os.path.exists(seOutputDir):
-		os.mkdir(seOutputDir)
+	if not opts.output:
+		opts.output = os.path.abspath(os.path.join(workDir, 'se_output'))
+	if not os.path.exists(opts.output):
+		os.mkdir(opts.output)
 
 	for jobNum in utils.sorted(jobList):
 		print "Job %d:" % jobNum,
@@ -98,7 +103,7 @@ DEFAULT: The default is to check the files with MD5 hashes.
 			print "\t", name_dest,
 
 			# Copy files to local folder
-			outFilePath = os.path.join(seOutputDir, name_dest)
+			outFilePath = os.path.join(opts.output, name_dest)
 			if not utils.se_copy(os.path.join(pathSE, name_dest), "file://%s" % outFilePath):
 				print "\n\t\tUnable to copy file from SE!"
 				sys.stderr.write(utils.se_copy.lastlog)
@@ -124,7 +129,7 @@ DEFAULT: The default is to check the files with MD5 hashes.
 		for (hash, name_local, name_dest) in files:
 			# Remove downloaded files in case of failure
 			if (failJob and opts.rmLocalFail) or (not failJob and opts.rmLocalOK):
-				localPath = os.path.join(seOutputDir, name_dest)
+				localPath = os.path.join(opts.output, name_dest)
 				if os.path.exists(localPath):
 					if not se_rm("file://%s" % localPath):
 						print "\t\tUnable to remove local file!"
