@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-import sys, os, signal, optparse, gcSupport
+import gcSupport, sys, os, signal, optparse
 
 # and include grid_control python module
 from grid_control import *

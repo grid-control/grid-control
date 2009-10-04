@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-import sys, os, signal, optparse, gcSupport
+import gcSupport, sys, os, signal, optparse
 from grid_control import *
 
 def main(args):

@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-import sys, os, fcntl, gzip, xml.dom.minidom, gcSupport
+import gcSupport, sys, os, fcntl, gzip, xml.dom.minidom
 from grid_control import *
 
 def main(args):
