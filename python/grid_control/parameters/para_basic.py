@@ -17,10 +17,8 @@ class LinkedParaMod(SimpleParaMod):
 		SimpleParaMod.__init__(self, config)
 
 	def getParams(self):
-		result = []
 		for value in filter(lambda x: x != '', map(str.strip, self.paraValues.split('\n'))):
-			result += [dict(zip(map(str.strip, self.paraName.split(":")), map(str.strip, value.split(":"))))]
-		return result
+			yield dict(zip(map(str.strip, self.paraName.split(":")), map(str.strip, value.split(":"))))
 
 
 class FileParaMod(ParaMod):

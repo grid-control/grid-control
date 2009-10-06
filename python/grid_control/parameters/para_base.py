@@ -16,7 +16,7 @@ class ParaMod(Module):
 
 	def getRequirements(self, jobNum):
 		reqs = self.baseMod.getRequirements(jobNum / self.getParamSpace())
-		params = self.getParams()[jobNum % self.getParamSpace()]
+		params = self.getParamsExt()[jobNum % self.getParamSpace()]
 		for key, value in params.items():
 			if key == 'WALLTIME':
 				reqs.append((WMS.WALLTIME, utils.parseTime(value)))
@@ -29,14 +29,14 @@ class ParaMod(Module):
 	def getJobConfig(self, jobNum):
 		config = self.baseMod.getJobConfig(jobNum / self.getParamSpace())
 		config.update(Module.getJobConfig(self, jobNum))
-		config.update(self.getParams()[jobNum % self.getParamSpace()])
+		config.update(self.getParamsExt()[jobNum % self.getParamSpace()])
 		config.update({'PARAM_ID': jobNum % self.getParamSpace()})
 		return config
 
 	def getVarMapping(self):
 		mapping = self.baseMod.getVarMapping()
 		mapping.update(Module.getVarMapping(self))
-		for param in self.getParams():
+		for param in self.getParamsExt():
 			mapping.update(dict(zip(param.keys(), param.keys())))
 		return mapping
 
@@ -51,12 +51,22 @@ class ParaMod(Module):
 		return max(1, maxJobs) * self.getParamSpace()
 
 	def report(self, jobNum):
-		return self.getParams()[jobNum % self.getParamSpace()]
+		return self.getParamsExt()[jobNum % self.getParamSpace()]
 
 	def getParamSpace(self):
 		if self.paramSpace == None:
-			self.paramSpace = len(self.getParams())
+			self.paramSpace = len(self.getParamsExt())
 		return self.paramSpace
+
+	def getParamsExt(self):
+		params = []
+		for pset in self.getParams():
+			if 'JOBS' in pset:
+				jobs = int(pset.pop('JOBS'))
+				params.extend([pset] * jobs)
+			else:
+				params.append(pset)
+		return params
 
 	def getParams(self):
 		# [{VAR1:VALUE1, VAR2:VALUE2}, {VAR1:VALUE1}, {VAR3:VALUE3}]
