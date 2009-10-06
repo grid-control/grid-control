@@ -1,12 +1,12 @@
 #!/bin/bash
 
 # (jobNum, sandbox, stdout, stderr) (local.sh) (...)
-export SANDBOX="$2"
-STDOUT="$3"
-STDERR="$4"
+export GC_SANDBOX="$2"
+GC_STDOUT="$3"
+GC_STDERR="$4"
 shift 4
-cd $SANDBOX
+cd $GC_SANDBOX
 (
 	nice $@
-) > "$STDOUT" 2> "$STDERR" &
+) > "$GC_STDOUT" 2> "$GC_STDERR" &
 echo $!
