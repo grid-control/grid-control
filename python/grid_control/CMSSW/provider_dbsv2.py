@@ -26,7 +26,7 @@ class DBSApiv2(DataProvider):
 		datasetPathList = map(str.strip, datasetExprList[0].split("@"))
 		if len(datasetPathList) > 2:
 			raise ConfigError('datasetpath must have the format <dataset>@<dbsinstance> or <dataset>')
-		if len(datasetExprList) == 2:
+		if len(datasetPathList) == 2:
 			self.datasetPath = datasetPathList[0]
 			# Absolute instance ?
 			if 'http://' in datasetPathList[1]:
