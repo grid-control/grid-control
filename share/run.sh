@@ -146,13 +146,14 @@ export MY_RUNTIME="$(var_replacer '' < "$MY_LANDINGZONE/_runtime.sh")"
 checkvar MY_RUNTIME
 eval "$MY_RUNTIME" &
 MY_RUNID=$!
+echo "Process $MY_RUNID is running..."
 echo $MY_RUNID > $MY_MARKER
 wait $MY_RUNID
 CODE=$?
 echo $$ > $MY_MARKER
 cd $MY_LANDINGZONE
 
-echo "Job exit code: $CODE"
+echo "Process $MY_RUNID exit code: $CODE"
 updatejobinfo $CODE
 echo
 

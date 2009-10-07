@@ -36,6 +36,7 @@ debug_helper() {
 }
 
 fail() {
+	trap - 0 1 2 3 15
 	[ -n "$1" ] && CODE=$1 || CODE=$?
 	GC_DEBUG="true"
 	debug_helper $FUNCNAME "$@"
@@ -52,11 +53,15 @@ fail() {
 }
 
 abort() {
+	trap - 0 1 2 3 15
 	GC_DEBUG="true"
 	debug_helper $FUNCNAME "$@"
+	echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" >> $MY_LANDINGZONE/gc.stderr
+	echo "!!     DEBUG INFORMATION     !!" >> $MY_LANDINGZONE/gc.stderr
+	echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" >> $MY_LANDINGZONE/gc.stderr
 	[ -d "$MY_LANDINGZONE" ] && checkdir "Start directory" "$MY_LANDINGZONE" >> $MY_LANDINGZONE/gc.stderr
 	[ -d "$MY_SCRATCH" ] && checkdir "Scratch directory" "$MY_SCRATCH" >> $MY_LANDINGZONE/gc.stderr
-	export
+	export >> $MY_LANDINGZONE/gc.stderr
 	cleanup
 	[ -n "$1" ] && updatejobinfo $1
 	[ -n "$(grep 'EXITCODE=0' $MY_LANDINGZONE/job.info)" ] && updatejobinfo 100
