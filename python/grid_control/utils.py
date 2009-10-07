@@ -32,15 +32,19 @@ class PersistentDict(dict):
 			self.update(DictFormat(self.format).parse(open(filename)))
 		except:
 			pass
+		self.olddict = self.items()
 
 	def write(self, newdict = {}, update = True):
 		if not update:
 			self.clear()
 		self.update(newdict)
+		if self.olddict == self.items():
+			return
 		try:
 			safeWriteFile(self.filename, DictFormat(self.format).format(self))
 		except:
 			raise RuntimeError('Could not write to file %s' % self.filename)
+		self.olddict = self.items()
 
 
 def atRoot(*args):
