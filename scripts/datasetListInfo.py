@@ -33,13 +33,14 @@ def main(args):
 		def getPath(self, x,y,z):
 			return z
 
-	if os.path.exists(args[0].split("%")[0]):
+	dataset = args[0].strip()
+	if os.path.exists(dataset.split("%")[0]):
 		dbsArg = False
-		dir, file = os.path.split(args[0])
+		dir, file = os.path.split(dataset)
 		provider = DataProvider.loadState(ConfigDummy(), dir, file)
 	else:
 		dbsArg = True
-		provider = DataProvider.open('DBSApiv2', ConfigDummy(), args[0], None)
+		provider = DataProvider.open('DBSApiv2', ConfigDummy(), dataset, None)
 	blocks = provider.getBlocks()
 	if len(blocks) == 0:
 		raise DatasetError("No blocks!")
@@ -78,7 +79,7 @@ def main(args):
 			if dbsArg or (opts.configguess and info[DataProvider.lfn].startswith('/store')):
 				print 'DBS : %s' % info[DataProvider.Dataset]
 			else:
-				print 'list : %s%%%s' % (args[0].split("%")[0], info[DataProvider.Dataset])
+				print 'list : %s%%%s' % (dataset.split("%")[0], info[DataProvider.Dataset])
 
 
 	if opts.listdatasets:
