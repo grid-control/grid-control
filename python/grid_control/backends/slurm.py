@@ -35,10 +35,8 @@ class SLURM(LocalWMSApi):
 			params += ' -t %d' % ((reqs[WMS.CPUTIME] + 59) / 60)
 		if WMS.MEMORY in reqs:
 			params += ' -m %d' % reqs[WMS.MEMORY]
-		# processes
-		params += ' -p 1'
-		# IO paths
-		params += ' -o %s -e %s' % (stdout, stderr)
+		# processes and IO paths
+		params += ' -p 1 -o %s -e %s' % (stdout, stderr)
 		return params
 
 
