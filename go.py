@@ -7,7 +7,6 @@ sys.path.insert(0, os.path.join(root, 'python'))
 
 # and include grid_control python module
 from grid_control import *
-from time import sleep
 utils.atRoot.root = root
 
 def print_help(*args):
@@ -147,16 +146,6 @@ def main(args):
 			opts.submission = False
 
 		# Job submission loop
-		def wait(timeout):
-			shortStep = map(lambda x: (x, 1), range(max(timeout - 5, 0), timeout))
-			for x, w in map(lambda x: (x, 5), range(0, timeout - 5, 5)) + shortStep:
-				if opts.abort:
-					return False
-				log = utils.ActivityLog('waiting for %d seconds' % (timeout - x))
-				sleep(w)
-				del log
-			return True
-
 		def jobCycle():
 			while True:
 				didWait = False
@@ -166,19 +155,19 @@ def main(args):
 
 				# check for jobs
 				if not opts.abort and jobs.check(wms):
-					didWait = wait(wms.getTimings()[1])
+					didWait = utils.wait(opts, wms.getTimings()[1])
 				# retrieve finished jobs
 				if not opts.abort and jobs.retrieve(wms):
-					didWait = wait(wms.getTimings()[1])
+					didWait = utils.wait(opts, wms.getTimings()[1])
 				# try submission
 				if not opts.abort and jobs.submit(wms):
-					didWait = wait(wms.getTimings()[1])
+					didWait = utils.wait(opts, wms.getTimings()[1])
 
 				# quit if abort flag is set or not in continuous mode
 				if opts.abort or not opts.continuous:
 					break
 				# idle timeout
-				wait(wms.getTimings()[0])
+				utils.wait(opts, wms.getTimings()[0])
 				# Check whether wms can submit
 				if not wms.canSubmit(module.wallTime, opts.submission):
 					opts.submission = False

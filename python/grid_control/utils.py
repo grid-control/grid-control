@@ -113,6 +113,17 @@ def boolUserInput(text, default):
 		print 'Invalid input! Answer with "yes" or "no"'
 
 
+def wait(opts, timeout):
+	shortStep = map(lambda x: (x, 1), range(max(timeout - 5, 0), timeout))
+	for x, w in map(lambda x: (x, 5), range(0, timeout - 5, 5)) + shortStep:
+		if opts.abort:
+			return False
+		log = ActivityLog('waiting for %d seconds' % (timeout - x))
+		time.sleep(w)
+		del log
+	return True
+
+
 def deprecated(text):
 	print open(atRoot('share', 'fail.txt'), 'r').read()
 	print("[DEPRECATED] %s" % text)
