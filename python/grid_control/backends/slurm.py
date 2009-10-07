@@ -22,7 +22,7 @@ class SLURM(LocalWMSApi):
 		return sandbox
 
 
-	def getSubmitArguments(self, jobNum, sandbox, stdin, stderr):
+	def getSubmitArguments(self, jobNum, sandbox, stdout, stderr):
 		# Job name
 		params = ' -J %s' % self.wms.getJobName(jobNum)
 		# Job requirements
