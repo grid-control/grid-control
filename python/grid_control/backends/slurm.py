@@ -68,7 +68,9 @@ class SLURM(LocalWMSApi):
 				}
 				if len(tmp) > 12:
 					jobinfo['start_time'] = tmp[12]
+				if len(tmp) > 13:
 					jobinfo['kill_time'] = tmp[13]
+				if len(tmp) > 14:
 					jobinfo['dest_hosts'] = tmp[14]
 					jobinfo['dest'] = "%s.localhost/%s" % (jobinfo['dest_hosts'], jobinfo['queue'])
 				yield jobinfo

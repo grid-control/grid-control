@@ -288,13 +288,13 @@ monitordirlimits() {
 		[ -z "$MDL_CFG" -a -f "$MY_SCRATCH/_config.sh" ] && source "$MY_SCRATCH/_config.sh" && MDL_CFG="set"
 		DISKSPACE="`getdiskspace $2`"
 		if [ $DISKSPACE -lt ${!LIMIT_LL:-$DEFAULT_LL} ]; then
-			echo "Lower space limit reached on $2" 1>&2
+			echo "Lower space limit reached on $2 ($DISKSPACE < ${!LIMIT_LL:-$DEFAULT_LL})" 1>&2
 			updatejobinfo 120
 			kill -SIGTERM $$
 		fi
 		DISKUSAGE="`getdiskusage $2`"
 		if [ $DISKUSAGE -gt ${!LIMIT_UL:-$DEFAULT_UL} ]; then
-			echo "Upper space limit reached on $2" 1>&2
+			echo "Upper space limit reached on $2 ($DISKUSAGE > ${!LIMIT_UL:-$DEFAULT_UL})" 1>&2
 			updatejobinfo 121
 			kill -SIGTERM $$
 		fi
