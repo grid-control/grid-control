@@ -117,7 +117,7 @@ class CMSSW(DataMod):
 		result = DataMod.getSubmitInfo(self, jobNum)
 		result.update({"application": self.scramEnv['SCRAM_PROJECTVERSION'], "exe": "cmsRun"})
 		if self.dataSplitter == None:
-			result.update({"nevtJob": nEvents})
+			result.update({"nevtJob": self.eventsPerJob})
 		return result
 
 
