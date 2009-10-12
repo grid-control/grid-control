@@ -374,7 +374,7 @@ url_exists() {
 		"gsiftp://"*)
 			print_and_qeval "`getcommand glite-gridftp-exists edg-gridftp-exists edg-gridftp-ls`" "$1";;
 		"srm://"*)
-			print_and_qeval "`getcommand lcg-ls srm-check-permissions`" "$1";;
+			print_and_qeval "`getcommand srm-check-permissions lcg-ls`" "$1";;
 		"file://"*)
 			print_and_qeval " " "test" "-s ${1#file://}";;
 		*)
