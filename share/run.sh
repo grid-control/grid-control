@@ -88,6 +88,24 @@ if [ -n "$GC_DEPFILES" ]; then
 	echo
 fi
 
+if [ "$DASHBOARD" == "yes" ]; then
+	echo
+	echo "==========================="
+	echo
+	export REPORTID="taskId=$TASK_ID jobId=${MY_JOBID}_$GLITE_WMS_JOBID MonitorID=$TASK_ID MonitorJobID=${MY_JOBID}_$GLITE_WMS_JOBID"
+	echo "Update Dashboard: $REPORTID"
+	checkfile "$MY_SCRATCH/report.py"
+	chmod u+x "$MY_SCRATCH/report.py"
+	checkbin "$MY_SCRATCH/report.py"
+
+	echo $MY_SCRATCH/report.py $REPORTID \
+		SyncGridJobId="$GLITE_WMS_JOBID" SyncGridName="$TASK_USER" SyncCE="$GLOBUS_CE" \
+		WNname="$(hostname -f)" ExeStart="$DB_EXEC"
+	$MY_SCRATCH/report.py $REPORTID \
+		SyncGridJobId="$GLITE_WMS_JOBID" SyncGridName="$TASK_USER" SyncCE="$GLOBUS_CE" \
+		WNname="$(hostname -f)" ExeStart="$DB_EXEC"
+fi
+
 # Copy files from the SE
 if [ -n "$SE_INPUT_FILES" ]; then
 	echo "==========================="
@@ -108,24 +126,6 @@ done
 
 checkfile "$MY_SCRATCH/_config.sh"
 source "$MY_SCRATCH/_config.sh"
-
-if [ "$DASHBOARD" == "yes" ]; then
-	echo
-	echo "==========================="
-	echo
-	export REPORTID="taskId=$TASK_ID jobId=${MY_JOBID}_$GLITE_WMS_JOBID MonitorID=$TASK_ID MonitorJobID=${MY_JOBID}_$GLITE_WMS_JOBID"
-	echo "Update Dashboard: $REPORTID"
-	checkfile "$MY_SCRATCH/report.py"
-	chmod u+x "$MY_SCRATCH/report.py"
-	checkbin "$MY_SCRATCH/report.py"
-
-	echo $MY_SCRATCH/report.py $REPORTID \
-		SyncGridJobId="$GLITE_WMS_JOBID" SyncGridName="$TASK_USER" SyncCE="$GLOBUS_CE" \
-		WNname="$(hostname -f)" ExeStart="$DB_EXEC"
-	$MY_SCRATCH/report.py $REPORTID \
-		SyncGridJobId="$GLITE_WMS_JOBID" SyncGridName="$TASK_USER" SyncCE="$GLOBUS_CE" \
-		WNname="$(hostname -f)" ExeStart="$DB_EXEC"
-fi
 
 echo
 echo "==========================="
@@ -162,22 +162,6 @@ echo
 checkdir "Start directory" "$MY_LANDINGZONE"
 [ -d "$MY_SCRATCH" ] && checkdir "Scratch directory" "$MY_SCRATCH"
 
-if [ "$DASHBOARD" == "yes" ]; then
-	echo "==========================="
-	echo
-	echo "Update Dashboard: $REPORTID"
-	checkbin "$MY_SCRATCH/report.py"
-	[ -f "$MY_DASHBOARDINFO" ] && DASH_EXT="$(< "$MY_DASHBOARDINFO")"
-	cat 
-	echo $MY_SCRATCH/report.py $REPORTID \
-		ExeEnd="$DB_EXEC" WCCPU="$[ $(date +%s) - $STARTDATE ]" \
-		ExeExitCode="$CODE" JobExitCode="$CODE" JobExitReason="$CODE" $DASH_EXT
-	$MY_SCRATCH/report.py $REPORTID \
-		ExeEnd="$DB_EXEC" WCCPU="$[ $(date +%s) - $STARTDATE ]" \
-		ExeExitCode="$CODE" JobExitCode="$CODE" JobExitReason="$CODE" $DASH_EXT
-	echo
-fi
-
 export LOG_MD5="$MY_LANDINGZONE/SE.log"
 # Copy files to the SE
 if [ $CODE -eq 0 -a -n "$SE_OUTPUT_FILES" ]; then
@@ -208,12 +192,31 @@ echo
 checkdir "Start directory" "$MY_LANDINGZONE"
 [ -d "$MY_SCRATCH" ] && checkdir "Scratch directory" "$MY_SCRATCH"
 
+times > "$MY_LANDINGZONE/cputime"
+GC_CPUTIME=`cat "$MY_LANDINGZONE/cputime" | awk '{gsub("s","m"); split($1,x,"m"); SUM+=x[1]*60+x[2]}END{printf "%.0f\n", SUM}'`
+GC_WRAPTIME="$[ $(date +%s) - $STARTDATE ]"
+
+if [ "$DASHBOARD" == "yes" ]; then
+	echo "==========================="
+	echo
+	echo "Update Dashboard: $REPORTID"
+	checkbin "$MY_SCRATCH/report.py"
+	[ -f "$MY_DASHBOARDINFO" ] && DASH_EXT="$(< "$MY_DASHBOARDINFO")"
+	echo $MY_SCRATCH/report.py $REPORTID \
+		ExeEnd="$DB_EXEC" WCCPU="$GC_WRAPTIME" CrabUserCpuTime="$GC_CPUTIME" CrabWrapperTime="$GC_WRAPTIME" \
+		ExeExitCode="$CODE" JobExitCode="$CODE" JobExitReason="$CODE" $DASH_EXT
+	$MY_SCRATCH/report.py $REPORTID \
+		ExeEnd="$DB_EXEC" WCCPU="$GC_WRAPTIME" CrabUserCpuTime="$GC_CPUTIME" CrabWrapperTime="$GC_WRAPTIME" \
+		ExeExitCode="$CODE" JobExitCode="$CODE" JobExitReason="$CODE" $DASH_EXT
+	echo
+fi
+
 echo "==========================="
 echo
 cleanup
 trap - 0 1 2 3 15
 echo "Job $MY_JOBID finished - `date`"
-echo "TIME=$[`date +%s` - $STARTDATE]" >> $MY_LANDINGZONE/job.info
+echo "TIME=$GC_WRAPTIME" >> $MY_LANDINGZONE/job.info
 [ -f "$LOG_MD5" ] && cat "$LOG_MD5" >> $MY_LANDINGZONE/job.info
 cat $MY_LANDINGZONE/job.info
 echo
