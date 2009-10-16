@@ -162,6 +162,14 @@ echo
 checkdir "Start directory" "$MY_LANDINGZONE"
 [ -d "$MY_SCRATCH" ] && checkdir "Scratch directory" "$MY_SCRATCH"
 
+if [ -d "$MY_SCRATCH" -a -n "$SB_OUTPUT_FILES" ]; then
+	echo "==========================="
+	echo
+	# Move output into landingzone
+	my_move "$MY_SCRATCH" "$MY_LANDINGZONE" "$SB_OUTPUT_FILES"
+	echo
+fi
+
 export LOG_MD5="$MY_LANDINGZONE/SE.log"
 # Copy files to the SE
 if [ $CODE -eq 0 -a -n "$SE_OUTPUT_FILES" ]; then
@@ -176,14 +184,6 @@ if [ $CODE -eq 0 -a -n "$SE_OUTPUT_FILES" ]; then
 	done
 	) > "$LOG_MD5"
 	export TRANSFERLOG=""
-	echo
-fi
-
-if [ -d "$MY_SCRATCH" -a -n "$SB_OUTPUT_FILES" ]; then
-	echo "==========================="
-	echo
-	# Move output into landingzone
-	my_move "$MY_SCRATCH" "$MY_LANDINGZONE" "$SB_OUTPUT_FILES"
 	echo
 fi
 
