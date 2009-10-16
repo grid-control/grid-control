@@ -15,16 +15,16 @@ class ParaMod(Module):
 		self.getJobArguments = lambda x: self.baseMod.getJobArguments(x / self.getParamSpace())
 
 	def getRequirements(self, jobNum):
-		reqs = self.baseMod.getRequirements(jobNum / self.getParamSpace())
+		reqs = dict(self.baseMod.getRequirements(jobNum / self.getParamSpace()))
 		params = self.getParamsExt()[jobNum % self.getParamSpace()]
 		for key, value in params.items():
 			if key == 'WALLTIME':
-				reqs.append((WMS.WALLTIME, utils.parseTime(value)))
+				reqs[WMS.WALLTIME] = utils.parseTime(value)
 			elif key == 'CPUTIME':
-				reqs.append((WMS.CPUTIME, utils.parseTime(value)))
+				reqs[WMS.CPUTIME] = utils.parseTime(value)
 			elif key == 'MEMORY':
-				reqs.append((WMS.MEMORY, int(value)))
-		return reqs
+				reqs[WMS.MEMORY] = int(value)
+		return reqs.items()
 
 	def getJobConfig(self, jobNum):
 		config = self.baseMod.getJobConfig(jobNum / self.getParamSpace())
