@@ -97,18 +97,28 @@ echo
 echo "---------------------------"
 echo
 for CFG_NAME in $CMSSW_CONFIG; do
-	echo -e "Starting cmsRun with config file: $CFG_NAME"
+	INTRO="Starting cmsRun with config file: $CFG_NAME"
 	FWK_NAME="`echo $CFG_NAME | sed -e 's/\(.*\)\.\([^\.]*\)/\1.xml/'`"
 
+	echo $INTRO
 	if [ "$GZIP_OUT" = "yes" ]; then
-		( cmsRun -j "$FWK_NAME" -e "$CFG_NAME"; echo $? > exitcode.txt ) 2>&1 | gzip -9 > cmssw_out.txt.gz
+		(
+			echo $INTRO
+			cmsRun -j "$FWK_NAME" -e "$CFG_NAME"
+			echo
+			echo "---------------------------"
+			echo
+			echo $? > exitcode.txt
+		) 2>&1 | gzip -9 > "${FWK_NAME%.xml}.log.gz"
 		[ -f "exitcode.txt" ] && CODE=$(<exitcode.txt) && rm -f exitcode.txt
 	else 
 		cmsRun -j "$FWK_NAME" -e "$CFG_NAME"
 		CODE=$?
 	fi
 	[ -f "$FWK_NAME" ] && gzip "$FWK_NAME"
+	[ "$CODE" != "0" ] && break
 done
+[ "$GZIP_OUT" = "yes" ] && zcat *.log.gz | gzip -9 > "cmssw_out.txt.gz"
 
 echo
 echo "---------------------------"
