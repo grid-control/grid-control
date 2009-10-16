@@ -272,7 +272,11 @@ def strTime(secs):
 
 
 def parseTuples(string):
-	"""Parse a string for keywords and tuples of keywords."""
+	"""Parse a string for keywords and tuples of keywords.
+
+	>>> parseTuples('(4, 8:00), keyword, ()')
+	[('4', '8:00'), 'keyword', ()]
+	"""
 	def to_tuple_or_str((t, s)):
 		if len(s) > 0:
 			return s
@@ -280,7 +284,7 @@ def parseTuples(string):
 			return tuple()
 		return tuple(map(str.strip, t.split(',')))
 
-	return map(to_tuple_or_str, re.findall('\(([\w\s,]*)\)|(\w+)', string))
+	return map(to_tuple_or_str, re.findall('\(([^\)]*)\)|(\w+)', string))
 
 
 def genTarball(outFile, dir, pattern):
