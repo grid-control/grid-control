@@ -56,6 +56,10 @@ class SimpleBroker(Broker):
 				else:
 					diffs.add(1)
 			if len(diffs) > 1:
+				if diffs == set(0, 1):
+					return 1
+				elif diffs == set(0, -1):
+					return -1
 				return 0
 			return diffs.pop()
 
