@@ -87,7 +87,7 @@ class PBS(LocalWMSApi):
 		parser = dict(zip(keys, func))
 
 		queues = {}
-		output = utils.LoggedProcess('qstat', '-q').stdout[5:-2]
+		output = utils.LoggedProcess('qstat', '-q').getAll()[1][5:-2]
 		for line in output:
 			fields = map(str.strip, line.split()[:4])
 			queues[fields[0]] = dict(

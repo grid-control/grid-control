@@ -432,7 +432,7 @@ class LoggedProcess(object):
 		return self.proc.wait()
 
 	def getAll(self):
-		self.stdout.extend(self.proc.fromchild.readline())
+		self.stdout.extend(self.proc.fromchild.readlines())
 		self.stderr.extend(self.proc.childerr.readlines())
 		return (self.wait(), self.stdout, self.stderr)
 
