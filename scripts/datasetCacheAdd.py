@@ -9,10 +9,9 @@ def main(args):
 		if retcode != '0':
 			sys.exit(0)
 		workDir = os.environ['GC_WORKDIR']
-		pathSE = os.environ['GC_SE_PATH']
 		jobList = [ jobid ]
 	else:
-		(workDir, pathSE, jobList) = gcSupport.getWorkSEJobs(args)
+		(workDir, jobList) = gcSupport.getWorkJobs(args)
 	jobList = map(int, jobList)
 
 	# Lock file in case several instances of this program are running
@@ -45,15 +44,9 @@ def main(args):
 		for jobid in jobList:
 			outputDir = os.path.join(workDir, 'output', 'job_' + str(jobid))
 
-			# Read specified job info files
-			jobInfo = gcSupport.getJobInfo(workDir, jobid, lambda retCode: retCode == 0)
-			if not jobInfo:
-				continue
-
-			files = filter(lambda x: x[0].startswith('file'), jobInfo.items())
-			files = map(lambda (x,y): tuple(y.strip('"').split('  ')), files)
-
-			for (hash, name_local, name_dest) in files:
+			# Read the file hash entries from job info file
+			files = gcSupport.getFileInfo(workDir, jobNum, lambda retCode: retCode == 0, rejected = [])
+			for (hash, name_local, name_dest, pathSE) in files:
 				dataset = "/PRIVATE/%s" % (name_local.replace('.root', ''))
 				blockname = "%s-%05d" % (taskInfo['task id'][2:], int(os.environ.get('GC_PARAM_ID', 0)))
 

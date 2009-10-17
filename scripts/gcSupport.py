@@ -27,24 +27,22 @@ class ConfigDummy(object):
 		return z
 
 
-def getWorkSEJobs(args):
+def getWorkJobs(args):
 	if len(args) == 2:
 		(configFile, jobid) = args
 		config = Config(configFile)
 		workDir = config.getPath('global', 'workdir', config.workDirDefault)
-		pathSE = config.get('storage', 'se path', '')
 		jobList = [ jobid ]
 	elif len(args) == 1:
 		configFile = args[0]
 		idregex = re.compile(r'^job_([0-9]+)$')
 		config = Config(configFile)
 		workDir = config.getPath('global', 'workdir', config.workDirDefault)
-		pathSE = config.get('storage', 'se path', '')
 		jobList = map(lambda x: int(idregex.match(x).group(1)), os.listdir(os.path.join(workDir, 'output')))
 	else:
 		sys.stderr.write("Syntax: %s <config file> [<job id>]\n\n" % sys.argv[0])
 		sys.exit(1)
-	return (workDir, pathSE, jobList)
+	return (workDir, jobList)
 
 
 def getJobInfo(workDir, jobNum, retCodeFilter = lambda x: True):
@@ -56,3 +54,12 @@ def getJobInfo(workDir, jobNum, retCodeFilter = lambda x: True):
 	except:
 		print "Unable to read job results from %s!" % jobInfoPath
 	return None
+
+
+def getFileInfo(workDir, jobNum, retCodeFilter = lambda x: True, rejected = None):
+	jobInfo = getJobInfo(workDir, jobNum, retCodeFilter)
+	if not jobInfo:
+		return rejected
+
+	files = filter(lambda x: x[0].startswith('file'), jobInfo.items())
+	return map(lambda (x,y): tuple(y.strip('"').split('  ')), files)

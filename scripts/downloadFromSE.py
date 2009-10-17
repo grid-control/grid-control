@@ -63,7 +63,7 @@ DEFAULT: The default is to check the files with MD5 hashes. The default
 		sys.stderr.write("Use --help to get a list of options!\n")
 		sys.exit(0)
 
-	(workDir, pathSE, jobList) = gcSupport.getWorkSEJobs(args)
+	(workDir, jobList) = gcSupport.getWorkJobs(args)
 
 	# Create SE output dir
 	if not opts.output:
@@ -88,18 +88,14 @@ DEFAULT: The default is to check the files with MD5 hashes. The default
 			print "All files already downloaded!"
 			continue
 
-		# Read specified job info files
-		jobInfo = gcSupport.getJobInfo(workDir, jobNum, lambda retCode: retCode == 0)
-		if not jobInfo:
+		# Read the file hash entries from job info file
+		files = gcSupport.getFileInfo(workDir, jobNum, lambda retCode: retCode == 0)
+		if not files:
 			continue
-
-		# Just get the file hash entries from job info file
-		files = filter(lambda x: x[0].startswith('file'), jobInfo.items())
-		files = map(lambda (x,y): tuple(y.strip('"').split('  ')), files)
 		print "The job wrote %d file%s to the SE" % (len(files), ('s', '')[len(files) == 1])
 
 		failJob = False
-		for (hash, name_local, name_dest) in files:
+		for (hash, name_local, name_dest, pathSE) in files:
 			print "\t", name_dest,
 
 			# Copy files to local folder
@@ -126,7 +122,7 @@ DEFAULT: The default is to check the files with MD5 hashes. The default
 				print
 				print "\t\tRemote site:", hash
 
-		for (hash, name_local, name_dest) in files:
+		for (hash, name_local, name_dest, pathSE) in files:
 			# Remove downloaded files in case of failure
 			if (failJob and opts.rmLocalFail) or (not failJob and opts.rmLocalOK):
 				localPath = os.path.join(opts.output, name_dest)

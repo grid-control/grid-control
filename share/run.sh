@@ -179,7 +179,7 @@ if [ $CODE -eq 0 -a -n "$SE_OUTPUT_FILES" ]; then
 	url_copy "file:///$MY_SCRATCH" "$SE_PATH" "$SE_OUTPUT_FILES"
 	(
 	[ -f "$TRANSFERLOG" ] && cat "$TRANSFERLOG" | while read NAME_LOCAL NAME_DEST; do
-		echo "FILE$IDX=\"$(cd "$MY_SCRATCH"; md5sum "$NAME_LOCAL")  $NAME_DEST\""
+		echo "FILE$IDX=\"$(cd "$MY_SCRATCH"; md5sum "$NAME_LOCAL")  $NAME_DEST  $SE_PATH\""
 		IDX=$[IDX + 1]
 	done
 	) > "$LOG_MD5"
