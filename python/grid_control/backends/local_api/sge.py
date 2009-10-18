@@ -1,7 +1,7 @@
 import sys, os, xml.dom.minidom
 from grid_control import ConfigError, Job, utils
 from wms import WMS
-from local_wms import LocalWMSApi
+from api import LocalWMSApi
 
 class SGE(LocalWMSApi):
 	_statusMap = {

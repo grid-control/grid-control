@@ -1,6 +1,6 @@
 import sys, os, random
 from grid_control import ConfigError, Job, utils
-from local_wms import LocalWMSApi
+from api import LocalWMSApi
 
 class Host(LocalWMSApi):
 	_statusMap = {

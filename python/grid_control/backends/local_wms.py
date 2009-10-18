@@ -2,43 +2,14 @@ import sys, os, tempfile, shutil, time, random, glob
 from grid_control import AbstractObject, ConfigError, Job, utils
 from wms import WMS
 from broker import Broker
-
-class LocalWMSApi(AbstractObject):
-	def __init__(self, config, localWMS):
-		self.config = config
-		self.wms = localWMS
-
-	def getQueues(self):
-		raise AbstractError
-
-	def getArguments(self, jobNum, sandbox):
-		raise AbstractError
-
-	def getSubmitArguments(self, jobNum, sandbox, stdout, stderr):
-		raise AbstractError
-
-	def parseSubmitOutput(self, data):
-		raise AbstractError
-
-	def unknownID(self):
-		raise AbstracError
-
-	def parseStatus(self, status):
-		raise AbstracError
-
-	def getCheckArgument(self, wmsIds):
-		raise AbstracError
-
-	def getCancelArgument(self, wmsIds):
-		return str.join(" ", wmsIds)
-
+from local_api import LocalWMSApi
 
 class LocalWMS(WMS):
 	def __init__(self, config, module, monitor):
 		WMS.__init__(self, config, module, monitor, 'local')
 
 		wmsapi = config.get('local', 'wms', self._guessWMS())
-		self.api = LocalWMSApi.open("grid_control.backends.%s.%s" % (wmsapi.lower(), wmsapi), config, self)
+		self.api = LocalWMSApi.open("grid_control.backends.local_api.%s.%s" % (wmsapi.lower(), wmsapi), config, self)
 
 		try:
 			queues = self.api.getQueues()

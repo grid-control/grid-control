@@ -1,7 +1,7 @@
 import sys, os
 from grid_control import ConfigError, Job, utils
 from wms import WMS
-from local_wms import LocalWMSApi
+from api import LocalWMSApi
 
 class PBS(LocalWMSApi):
 	_statusMap = {
@@ -77,17 +77,17 @@ class PBS(LocalWMSApi):
 	def getCancelArgument(self, wmsIds):
 		return str.join(" ", wmsIds)
 
-	
+
 	def getQueues(self):
-		defined = lambda (k, v): v != '--'
-		toint = lambda e: int(e)
+		defined = lambda (key, value): value != '--'
+		toint = lambda value: int(value)
 
 		keys = (WMS.MEMORY, WMS.CPUTIME, WMS.WALLTIME)
 		func = (toint, utils.parseTime, utils.parseTime)
 		parser = dict(zip(keys, func))
 
 		queues = {}
-		output = utils.LoggedProcess('qstat', '-q').getAll()[1][5:-2]
+		output = utils.LoggedProcess('qstat', '-q').getOutput()[5:-2]
 		for line in output:
 			fields = map(str.strip, line.split()[:4])
 			queues[fields[0]] = dict(

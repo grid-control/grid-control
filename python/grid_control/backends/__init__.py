@@ -6,4 +6,5 @@ from glite_wms import *
 from lcg import *
 
 from broker import *
+from local_api import *
 from local_wms import *

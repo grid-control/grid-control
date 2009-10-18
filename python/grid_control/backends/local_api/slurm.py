@@ -1,7 +1,7 @@
 import sys, os, tempfile, shutil
 from grid_control import ConfigError, Job, utils
 from wms import WMS
-from local_wms import LocalWMSApi
+from api import LocalWMSApi
 
 class SLURM(LocalWMSApi):
 	_statusMap = { 's': Job.QUEUED, 'r': Job.RUNNING, 'CG': Job.DONE }
@@ -85,3 +85,6 @@ class SLURM(LocalWMSApi):
 
 	def getCancelArgument(self, wmsIds):
 		return str.join(" ", wmsIds)
+
+class JMS(SLURM):
+	pass
