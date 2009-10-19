@@ -47,21 +47,23 @@ class SimpleBroker(Broker):
 			return True
 
 		def queue_cmp(a, b):
-			diffs = set()
-			for key in set(a.keys() + b.keys()):
+			# From the doc of cmp: "Return negative if a<b, zero if
+			# a==b, positive if a>b"
+			diff = 0
+			for key in a.keys() + b.keys():
+				current_diff = 0
 				if key in a and key in b:
-					diffs.add(cmp(a[key], b[key]))
+					current_diff = cmp(a[key], b[key])
 				elif key in a:
-					diffs.add(-1)
+					current_diff = -1
 				else:
-					diffs.add(1)
-			if len(diffs) > 1:
-				if diffs == set(0, 1):
-					return 1
-				elif diffs == set(0, -1):
-					return -1
-				return 0
-			return diffs.pop()
+					current_diff = 1
+
+				if diff == 0 and diff != current_diff:
+					diff = current_diff
+				elif diff != current_diff and current_diff != 0:
+					return 0
+			return diff
 
 		sorted_queues = sorted(self.queues.items(), queue_cmp, item(1))
 
