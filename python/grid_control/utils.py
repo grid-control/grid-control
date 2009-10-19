@@ -322,19 +322,20 @@ class AbstractObject:
 		raise Exception('AbstractObject cannot be instantiated.')
 
 	def open(cls, name, *args, **kwargs):
-		packages = name.split('.')[:-1]
-		for package in range(len(packages)):
-			__import__(str.join(".", packages[:(package + 1)]))
+		def loadModules(path):
+			for package in range(path.count('.')):
+				__import__(str.join('.', path.split('.')[:(package + 1)]))
+			return str.join('.', path.split('.')[:-1])
 		try:
-			if len(name.split('.')) > 1:
-				newcls = getattr(sys.modules[str.join(".", packages)], name.split('.')[-1])
-			else:
-				newcls = getattr(sys.modules['grid_control'], name)
-			if not issubclass(newcls, cls):
-				raise Exception
+			modPath = loadModules('grid_control.' + name)
 		except:
-			raise ConfigError("%s '%s' does not exist!" % (cls.__name__, name))
-
+			modPath = loadModules(name)
+		try:
+			newcls = getattr(sys.modules[modPath], name.split('.')[-1])
+		except:
+			raise ConfigError('%s "%s" does not exist!' % (cls.__name__, name))
+		if not issubclass(newcls, cls):
+			raise Exception('%s is not a child of %s' % (newcls, cls))
 		return newcls(*args, **kwargs)
 	open = classmethod(open)
 
@@ -416,16 +417,20 @@ class LoggedProcess(object):
 		self.stderr.extend(self.proc.childerr.readlines())
 		return str.join("", self.stderr)
 
-	def iter(self, opts):
+	def iter(self, opts = None, skip = 0):
 		while True:
 			try:
 				line = self.proc.fromchild.readline()
 			except:
-				opts.abort = True
+				if opts:
+					opts.abort = True
 				break
 			if not line:
 				break
 			self.stdout.append(line)
+			if skip > 0:
+				skip -= 1
+				continue;
 			yield line
 
 	def wait(self):
