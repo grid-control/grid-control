@@ -1,5 +1,6 @@
 import sys, os, random
 from grid_control import AbstractObject
+from grid_control.utils import sorted
 from wms import WMS
 
 class Broker(AbstractObject):
