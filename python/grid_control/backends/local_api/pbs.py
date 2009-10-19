@@ -1,6 +1,6 @@
 import sys, os
 from grid_control import ConfigError, Job, utils
-from wms import WMS
+from grid_control.backends.wms import WMS
 from api import LocalWMSApi
 
 class PBS(LocalWMSApi):
@@ -87,7 +87,7 @@ class PBS(LocalWMSApi):
 		parser = dict(zip(keys, func))
 
 		queues = {}
-		output = utils.LoggedProcess('qstat', '-q').getOutput()[5:-2]
+		output = utils.LoggedProcess('qstat', '-q').getAll()[1][5:-2]
 		for line in output:
 			fields = map(str.strip, line.split()[:4])
 			queues[fields[0]] = dict(
