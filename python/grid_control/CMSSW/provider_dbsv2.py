@@ -10,10 +10,8 @@ class DBSApiv2(DataProvider):
 		DataProvider.__init__(self, config, datasetExpr, datasetNick, datasetID)
 		DataProvider.providers.update({'DBSApiv2': 'dbs'})
 
-		self.args = {}
-		self.args['url']     = config.get('CMSSW', 'dbs instance', "http://cmsdbsprod.cern.ch/cms_dbs_prod_global/servlet/DBSServlet")
-		self.args['version'] = "DBS_2_0_6"
-		self.args['level']   = "CRITICAL"
+		self.args        = {'version': 'DBS_2_0_6', 'level': 'CRITICAL'}
+		self.args['url'] = config.get('CMSSW', 'dbs instance', "http://cmsdbsprod.cern.ch/cms_dbs_prod_global/servlet/DBSServlet")
 
 		datasetExprList = map(str.strip, datasetExpr.split("#"))
 		if len(datasetExprList) > 2:

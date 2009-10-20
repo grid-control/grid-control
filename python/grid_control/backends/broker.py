@@ -6,6 +6,7 @@ from wms import WMS
 class Broker(AbstractObject):
 	def __init__(self, config, queues):
 		self.config = config
+		# Queue info format: {'queue1': {WMS.MEMORY: 123, ...}, 'queue2': {...}}
 		self.queues = queues
 		self.userQueue = config.get('local', 'queue', '', volatile=True).split()
 

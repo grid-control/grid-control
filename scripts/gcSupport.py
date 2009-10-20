@@ -27,6 +27,11 @@ class ConfigDummy(object):
 		return z
 
 
+def getJobs(workDir):
+	idregex = re.compile(r'^job_([0-9]+)$')
+	return map(lambda x: int(idregex.match(x).group(1)), os.listdir(os.path.join(workDir, 'output')))
+
+
 def getWorkJobs(args):
 	if len(args) == 2:
 		(configFile, jobid) = args
@@ -35,10 +40,9 @@ def getWorkJobs(args):
 		jobList = [ jobid ]
 	elif len(args) == 1:
 		configFile = args[0]
-		idregex = re.compile(r'^job_([0-9]+)$')
 		config = Config(configFile)
 		workDir = config.getPath('global', 'workdir', config.workDirDefault)
-		jobList = map(lambda x: int(idregex.match(x).group(1)), os.listdir(os.path.join(workDir, 'output')))
+		jobList = getJobs(workDir)
 	else:
 		sys.stderr.write("Syntax: %s <config file> [<job id>]\n\n" % sys.argv[0])
 		sys.exit(1)
