@@ -12,7 +12,7 @@ def sorted(list, comp=None, key=None):
 	"""Sort list by either using the standard comparison method cmp()
 	or, if supplied, the function comp.  The optional argument key
 	is a function that returns the key to sort by - default is the
-	indentity function.
+	identity function.
 	
 	>>> sorted([4, 3, 1, 5, 2])
 	[1, 2, 3, 4, 5]
