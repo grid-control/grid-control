@@ -3,7 +3,7 @@ import gcSupport, sys, os, optparse, popen2
 from grid_control import *
 
 def md5sum(filename):
-	m = md5.new()
+	m = utils.md5()
 	# use 4M blocksize:
 	blocksize = 4096 * 1024
 	f = open(filename, 'r')
