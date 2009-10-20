@@ -539,10 +539,13 @@ url_copy() {
 		SOURCE_FN="`echo ${SOURCE_PATTERN:-__X__} | var_replacer $file`"
 		TARGET_FN="`echo ${TARGET_PATTERN:-__X__} | var_replacer $file`"
 		[ -n "$TRANSFERLOG" ] && echo "$SOURCE_FN $TARGET_FN" >> "$TRANSFERLOG"
-		print_and_eval "url_copy_single_force" "$SOURCE_URL/$SOURCE_FN $TARGET_URL/$TARGET_FN"
+		print_and_eval "url_copy_single" "$SOURCE_URL/$SOURCE_FN $TARGET_URL/$TARGET_FN"
 		if [ "$?" != "0" ]; then
-			print_and_eval "url_exists" "$TARGET_URL/$TARGET_FN" || BADCOUNT=$[$BADCOUNT+1]
-		fi
+			print_and_eval "url_copy_single_force" "$SOURCE_URL/$SOURCE_FN $TARGET_URL/$TARGET_FN"
+			if [ "$?" != "0" ]; then
+				print_and_eval "url_exists" "$TARGET_URL/$TARGET_FN" || BADCOUNT=$[$BADCOUNT+1]
+			fi
+ 		fi
 	done
 	[ $BADCOUNT -ne 0 ] && echo "$BADCOUNT errors occurred during SE access" && fail 106
 }
