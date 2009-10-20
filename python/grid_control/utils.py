@@ -524,6 +524,10 @@ def DiffLists(oldList, newList, cmpFkt, changedFkt):
 	return (listAdded, listMissing, listChanged)
 
 
+def unique(lst):
+	return dict(map(lambda x: (x, None), lst)).keys()
+
+
 def lenSplit(list, maxlen):
 	clen = 0
 	tmp = []
