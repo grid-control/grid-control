@@ -50,11 +50,12 @@ def safeWriteFile(name, content):
 
 
 class PersistentDict(dict):
-	def __init__(self, filename, delimeter = "="):
+	def __init__(self, filename, delimeter = "=", lowerCaseKey = True):
 		dict.__init__(self)
 		(self.format, self.filename) = (delimeter, filename)
 		try:
-			self.update(DictFormat(self.format).parse(open(filename)))
+			dictObj = DictFormat(self.format)
+			self.update(dictObj.parse(open(filename), lowerCaseKey = lowerCaseKey))
 		except:
 			pass
 		self.olddict = self.items()

@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-import sys, os, re
+import sys, os, re, fcntl
 
 # add python subdirectory from where exec was started to search path
 root = os.path.dirname(os.path.abspath(os.path.normpath(os.path.join(sys.argv[0], '..'))))
@@ -25,6 +25,21 @@ class ConfigDummy(object):
 		return z
 	def getPath(self, x,y,z):
 		return z
+
+
+class FileMutex:
+	def __init__(self, lockfile):
+		self.lockfile = lockfile
+		self.fd = open(self.lockfile, 'w')
+		fcntl.flock(self.fd, fcntl.LOCK_EX)
+
+	def __del__(self):
+		fcntl.flock(self.fd, fcntl.LOCK_UN)
+		try:
+			if os.path.exists(self.lockfile):
+				os.unlink(self.lockfile)
+		except:
+			pass
 
 
 def getJobs(workDir):

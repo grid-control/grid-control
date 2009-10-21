@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-import gcSupport, sys, os, fcntl, gzip, xml.dom.minidom
+import gcSupport, sys, os, gzip, xml.dom.minidom
 from grid_control import *
 
 def main(args):
@@ -15,17 +15,7 @@ def main(args):
 	jobList = map(int, jobList)
 
 	# Lock file in case several instances of this program are running
-	lockfile = os.path.join(workDir, 'prod.lock')
-	fd = open(lockfile, 'w')
-	fcntl.flock(fd, fcntl.LOCK_EX)
-
-	def unlock():
-		fcntl.flock(fd, fcntl.LOCK_UN)
-		try:
-			if os.path.exists(lockfile):
-				os.unlink(lockfile)
-		except:
-			pass
+	mutex = gcSupport.FileMutex(os.path.join(workDir, 'datasetCacheAdd.lock'))
 
 	try:
 		taskInfo = utils.PersistentDict(os.path.join(workDir, 'task.dat'), ' = ')
@@ -92,9 +82,9 @@ def main(args):
 
 		provider.saveState(workDir, "production.dbs", blocks)
 	except:
-		unlock()
+		del mutex
 		raise
-	unlock()
+	del mutex
 	return 0
 
 if __name__ == '__main__':
