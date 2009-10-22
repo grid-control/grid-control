@@ -158,12 +158,9 @@ class CMSSW(DataMod):
 	# Get files for output sandbox
 	def getOutFiles(self):
 		files = DataMod.getOutFiles(self)
-		# Add framework report file
-		renameExt = lambda name: str.join('.', name.split('.')[:-1]) + '.xml.gz'
-		files.extend(map(renameExt, map(os.path.basename, self.configFiles)))
 		if self.gzipOut:
-			files.append('cmssw_out.txt.gz')
-		return files
+			files.append('cmssw.log.gz')
+		return files + ['cmssw.dbs.tar.gz']
 
 
 	def getCommand(self):

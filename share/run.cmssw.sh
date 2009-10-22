@@ -53,6 +53,7 @@ eval `$SCRAM runtime -sh` || fail 112
 checkvar "CMSSW_BASE"
 checkvar "CMSSW_RELEASE_BASE"
 checkbin "cmsRun"
+checkbin "edmConfigHash"
 
 # patch python path data
 if [ -n "$CMSSW_OLD_RELEASETOP" ]; then
@@ -85,40 +86,45 @@ echo
 checkdir "CMSSW working directory" "$MY_WORKDIR"
 
 echo "---------------------------"
-# Do variable substitutions
-for SFILE in $CMSSW_CONFIG; do
-	echo
-	echo "Substitute variables in file $SFILE"
-	echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~"
-	var_replacer "$SFILE" < "$MY_SCRATCH/$SFILE" | tee "$MY_WORKDIR/$SFILE"
-done
-
-echo
-echo "---------------------------"
 echo
 for CFG_NAME in $CMSSW_CONFIG; do
-	INTRO="Starting cmsRun with config file: $CFG_NAME"
-	FWK_NAME="`echo $CFG_NAME | sed -e 's/\(.*\)\.\([^\.]*\)/\1.xml/'`"
+	echo "Config file: $CFG_NAME"
+	echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+	DBSDIR="$MY_WORKDIR/cmssw.dbs/$CFG_NAME"
+	mkdir -p "$DBSDIR"
 
-	echo $INTRO
+	echo "Substituting variables..."
+	cat "$MY_SCRATCH/$CFG_NAME" | var_replacer "$CFG_NAME" | tee "$DBSDIR/config" > "$CFG_NAME"
+
+	echo "Calculating config file hash..."
+	edmConfigHash "$CFG_NAME" > "$DBSDIR/hash"
+
+	echo "Starting cmsRun..."
 	if [ "$GZIP_OUT" = "yes" ]; then
 		(
-			echo $INTRO
-			cmsRun -j "$FWK_NAME" -e "$CFG_NAME"
+			echo "Starting cmsRun with config file: $CFG_NAME"
+			cmsRun -j "$DBSDIR/report.xml" -e "$CFG_NAME"
 			echo
 			echo "---------------------------"
 			echo
 			echo $? > exitcode.txt
-		) 2>&1 | gzip -9 > "${FWK_NAME%.xml}.log.gz"
+		) 2>&1 | gzip -9 > "$CFG_NAME.log.gz"
 		[ -f "exitcode.txt" ] && CODE=$(<exitcode.txt) && rm -f exitcode.txt
 	else 
-		cmsRun -j "$FWK_NAME" -e "$CFG_NAME"
+		cmsRun -j "$DBSDIR/report.xml" -e "$CFG_NAME"
 		CODE=$?
 	fi
-	[ -f "$FWK_NAME" ] && gzip "$FWK_NAME"
 	[ "$CODE" != "0" ] && break
 done
-[ "$GZIP_OUT" = "yes" ] && zcat *.log.gz | gzip -9 > "cmssw_out.txt.gz"
+[ "$GZIP_OUT" = "yes" ] && zcat *.log.gz | gzip -9 > "cmssw.log.gz"
+
+# Calculate hash of output files for DBS
+echo "Calculating output file hash..."
+for OUT_NAME in $SE_OUTPUT_FILES; do
+	cksum "$OUT_NAME" >> "$MY_WORKDIR/cmssw.dbs/files"
+done
+echo $SCRAM_VERSION > "$MY_WORKDIR/cmssw.dbs/version"
+(cd "$MY_WORKDIR/cmssw.dbs"; tar cvzf "$MY_WORKDIR/cmssw.dbs.tar.gz" * )
 
 echo
 echo "---------------------------"
