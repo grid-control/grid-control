@@ -21,10 +21,14 @@ class DummyStream:
 
 
 class ConfigDummy(object):
-	def get(self, x,y,z):
-		return z
-	def getPath(self, x,y,z):
-		return z
+	def __init__(self, cfg = {}):
+		self.cfg = cfg
+	def get(self, x,y,z,volatile=None):
+		return self.cfg.get(x, {}).get(y, z)
+	def getPath(self, x,y,z,volatile=None):
+		return self.cfg.get(x, {}).get(y, z)
+	def getBool(self, x,y,z,volatile=None):
+		return self.cfg.get(x, {}).get(y, z)
 
 
 class FileMutex:

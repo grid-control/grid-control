@@ -17,7 +17,7 @@ class DataProvider(AbstractObject):
 
 	# Parse dataset format [NICK : [PROVIDER : [(/)*]]] DATASET
 	def parseDatasetExpr(expression, dbsProvider):
-		temp = map(str.strip, expression.split(':'))
+		temp = map(str.strip, expression.split(':', 2))
 		nickname = ''
 		provider = dbsProvider
 		providerMap = { 'dbs': dbsProvider, 'file': 'FileProvider', 'list': 'ListProvider' }

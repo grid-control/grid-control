@@ -46,8 +46,10 @@ class Module(AbstractObject):
 		self.seLZUpperLimit = config.getInt('storage', 'landing zone space used', 100)
 		self.seLZLowerLimit = config.getInt('storage', 'landing zone space left', 1)
 
-		# Storage setup
+		# Storage setup - in case a directory is give, prepend dir specifier
 		self.sePath = config.get('storage', 'se path', '').strip()
+		if len(self.sePath) > 0 and self.sePath[0] == "/":
+			self.sePath = "dir:///%s" % self.sePath.lstrip("/")
 		self.seMinSize = config.getInt('storage', 'se min size', -1)
 
 		self.seInputFiles = config.get('storage', 'se input files', '').split()

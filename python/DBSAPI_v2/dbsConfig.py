@@ -27,7 +27,7 @@ class DbsConfig(object):
     """
  
     uFileName=""
-    iList=['url','alias','log','level', 'version','clienttype','verbose','mode','dbshome','javahome','adshome','retry']
+    iList=['url','alias','log','level', 'version','clienttype','verbose','mode','dbshome','javahome','adshome','retry','userID']
     #iList=['user','password','driver','url','host','port','log','level', 'servlet','version','dbname','dbsDB','clienttype',	'dbtype','verbose','mode', 'dbshome', 'javahome', 'adshome','retry']
     self.configDict={}
 

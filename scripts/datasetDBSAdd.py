@@ -11,8 +11,9 @@ class DBS(object):
 		locals()[state] = id
 
 def MakeDBSApi(url):
-	print VomsProxy
-	return DBSAPI_v2.dbsApi.DbsApi({'version': 'DBS_2_0_6', 'level': 'CRITICAL', 'url': url})
+	proxy = VomsProxy(gcSupport.ConfigDummy({"proxy": {"ignore warnings": True}}))
+	return DBSAPI_v2.dbsApi.DbsApi({'version': 'DBS_2_0_6', 'level': 'CRITICAL',
+		'url': url, 'userID': proxy._getInfo()['identity']})
 
 def readDBSJobInfo(workDir, jobNum):
 	# Read general grid-control file infos
@@ -581,11 +582,22 @@ try:
 
 	# Insert blocks into DBS
 	if opts.doImport:
+		errors = 0
 		for (xmlFile, lfns) in filter(xmlChanged, xmlDumps):
 			log = utils.ActivityLog(" * Importing dataset... %s" % os.path.basename(xmlFile))
 			fp = open(xmlFile)
-			targetApi = MakeDBSApi(opts.dbsTarget)
-			targetApi.insertDatasetContents(fp.read())
+			try:
+				MakeDBSApi(opts.dbsTarget).insertDatasetContents(fp.read())
+			except DbsException, e:
+				errors += 1
+				errorMsg = e.getErrorMessage()
+				errorPath = xmlFile.replace(".xml", ".log")
+				for msg in errorMsg.split("\n"):
+					if str(msg) == "":
+						break
+					print "   ! %s" % msg
+				print "   ! The complete error log can be found in:\n   ! %s" % errorPath
+				open(errorPath, "w").write(errorMsg)
 			fp.close()
 			# Mark registered files
 			dbsLog = utils.PersistentDict(os.path.join(opts.workDir, 'dbs.log'), ' = ', False)
