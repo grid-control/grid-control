@@ -33,9 +33,11 @@ class ConfigDummy(object):
 
 class FileMutex:
 	def __init__(self, lockfile):
+		log = utils.ActivityLog('Trying to aquire lock file %s...' % lockfile)
 		self.lockfile = lockfile
 		self.fd = open(self.lockfile, 'w')
 		fcntl.flock(self.fd, fcntl.LOCK_EX)
+		del log
 
 	def __del__(self):
 		fcntl.flock(self.fd, fcntl.LOCK_UN)

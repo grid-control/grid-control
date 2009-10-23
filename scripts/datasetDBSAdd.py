@@ -10,10 +10,12 @@ class DBS(object):
 	for id, state in enumerate(enum):
 		locals()[state] = id
 
+
 def MakeDBSApi(url):
 	proxy = VomsProxy(gcSupport.ConfigDummy({"proxy": {"ignore warnings": True}}))
 	return DBSAPI_v2.dbsApi.DbsApi({'version': 'DBS_2_0_6', 'level': 'CRITICAL',
 		'url': url, 'userID': proxy._getInfo()['identity']})
+
 
 def readDBSJobInfo(workDir, jobNum):
 	# Read general grid-control file infos
@@ -321,13 +323,12 @@ def createDbsBlockDumps(opts, datasets, metadata, datasetPaths, outputData, conf
 		idx, log = (0, None)
 		newPath = datasetPaths[datasetKey]
 		for blockInfo in datasets[datasetKey].items():
-			if idx % 10 == 0:
-				del log
-				log = utils.ActivityLog(' * Creating DBS dump files - [%d / %d]' % (idx, todo))
+			del log
+			log = utils.ActivityLog(' * Creating DBS dump files - [%d / %d]' % (idx, todo))
 			(name, data) = createDbsBlockDump(opts, newPath, blockInfo, metadata, outputData, configData)
 			dumpFile =  os.path.join(xmlDSPath, "%s.xml" % name)
 			fp = open(dumpFile, "w")
-			produced.append((dumpFile, blockInfo[1]))
+			produced.append((newPath, blockInfo[0], dumpFile, blockInfo[1]))
 			fp.write(data)
 			fp.close()
 		del log
@@ -407,49 +408,47 @@ def determineDatasetPaths(opts, taskId, datasets, outputData, configData):
 			return tuple(path.strip("/").split("/"))
 		else:
 			return ()
-	def getTier(dataKey):
-		# Look into first file of block to determine data tier
-		try:
-			lfn = datasets[dataKey].items()[0][1][0]
-			cfgData = configData[outputData[lfn][DBS.CONFIGHASH]][DBS.CONFIG]
-			regex = re.compile('.*dataTier.*=.*cms.untracked.string.*\((.*)\)')
-			result = regex.search(cfgData).group(1).strip('\"\' ')
-			if result == "":
-				raise
-			return result
-		except:
-			pass
-		return "USER"
 
 	datasetPaths = {}
 	for (dataKey, userPath) in dbsUserPath.items():
+		def getTier():
+			# Look into first file of block to determine data tier
+			try:
+				lfn = datasets[dataKey].items()[0][1][0]
+				cfgData = configData[outputData[lfn][DBS.CONFIGHASH]][DBS.CONFIG]
+				regex = re.compile('.*dataTier.*=.*cms.untracked.string.*\((.*)\)')
+				result = regex.search(cfgData).group(1).strip('\"\' ')
+				if result == "":
+					raise
+				return result
+			except:
+				pass
+			return "USER"
+
+		def rndProcName():
+			# Create a new processed dataset name
+			return "Dataset_%s_%s" % (taskId, dataKey[:16])
+
 		# In case of a child dataset, use the parent infos to construct new path
 		parents = getBlockParents(datasets[dataKey].items()[0][1], outputData)
 		userPath = getPathComponents(userPath)
 		(primary, processed, tier) = (None, None, None)
 
-		# User did not specify complete - try to build a dataset name
 		if len(parents) > 0:
 			(primary, processed, tier) = getPathComponents(parents[0][0])
-			if len(userPath) == 2:
-				(processed, tier) = userPath
-			elif len(userPath) == 1:
-				(processed,) = userPath
-				tier = getTier(dataKey)
-			elif len(userPath) == 0:
-				processed = "Dataset_%s_%s" % (taskId, dataKey[:16])
-				tier = getTier(dataKey)
-		else:
-			if not userPath:
-				raise RuntimeError("No dataset name(s) supplied")
-			if len(userPath) == 2:
-				(primary, processed) = userPath
-				tier = getTier(dataKey)
-			elif len(userPath) == 1:
-				(primary,) = userPath
-				(processed, tier) = ("Dataset_%s_%s" % (taskId, dataKey[:16]), getTier(dataKey))
-		if len(userPath) == 3:
-			(primary, processed, tier) = userPath
+			if len(userPath) == 3:
+				(primary, processed, tier) = userPath
+		elif len(userPath) > 0:
+			primary = userPath[0]
+			userPath = userPath[1:]
+
+		if len(userPath) == 2:
+			(processed, tier) = userPath
+		elif len(userPath) == 1:
+			(processed, tier) = (userPath[0], getTier())
+		elif len(userPath) == 0:
+			(processed, tier) = (rndProcName(), getTier())
+
 		if None in (primary, processed, tier):
 			raise RuntimeError("Invalid dataset name(s) supplied")
 		datasetPaths[dataKey] = "/%s/%s/%s" % (primary, processed, tier)
@@ -469,7 +468,7 @@ def registerParent(opts, parentPath):
 
 	if not hasDataset(opts.dbsTarget, parentPath):
 		# Parent dataset has to be moved to target dbs instance
-		text = ' * Migrating parents of dataset... %s (This can take a lot of time!)' % parentPath
+		text = ' * Migrating dataset parents... %s (This can take a lot of time!)' % parentPath
 		log = utils.ActivityLog(text)
 		try:
 			saved = (sys.stdout, sys.stderr)
@@ -487,6 +486,39 @@ def registerParent(opts, parentPath):
 		print " * Migrating parents of dataset - done"
 
 
+# Check whether to insert block into DBS or not
+def xmlChanged(xmlDumpInfo):
+	(dsName, blockName, xmlFile, lfns) = xmlDumpInfo
+	return True
+
+
+# Register datasets at dbs instance
+def registerDataset(opts, dsName, blockName, xmlFile, lfns):
+	print "   * %s#%s" % (dsName, blockName)
+	log = utils.ActivityLog(" * Importing dataset file... %s" % os.path.basename(xmlFile))
+	fp = open(xmlFile)
+	try:
+		MakeDBSApi(opts.dbsTarget).insertDatasetContents(fp.read())
+		# Mark registered files
+		dbsLog = utils.PersistentDict(os.path.join(opts.workDir, 'dbs.log'), ' = ', False)
+		dbsLog.write(dict.fromkeys(lfns, int(time.time())))
+		del log
+		fp.close()
+		return True
+	except DbsException, e:
+		print "   ! Could not import %s/%s" % (dsName, blockName)
+		errorMsg = e.getErrorMessage()
+		errorPath = xmlFile.replace(".xml", ".log")
+		for msg in errorMsg.split("\n"):
+			if str(msg) == "":
+				break
+			print "   ! %s" % msg
+		print "   ! The complete error log can be found in:\n   ! %s" % errorPath
+		open(errorPath, "w").write(errorMsg)
+	fp.close()
+	return False
+
+
 def print_help(*args):
 	sys.stderr.write("Syntax: %s [OPTIONS] <work directory>\n" % sys.argv[0])
 	sys.exit(0)
@@ -497,6 +529,8 @@ try:
 
 	parser = optparse.OptionParser()#add_help_option=False)
 #	parser.add_option("-h", "--help",            action="callback",    callback=print_help)
+	parser.add_option("-b", "--batch",           dest="batch",         default=False, action="store_true",
+		help="Enable non-interactive batch mode [Default: Interactive mode]")
 	parser.add_option("-o", "--open-blocks",     dest="doClose",       default=True,  action="store_false",
 		help="Keep blocks open for addition of further files [Default: Close blocks]")
 	parser.add_option("-l", "--lumi",            dest="doLumi",        default=False, action="store_true",
@@ -525,7 +559,6 @@ try:
 		help="Display information associated with dataset key(s) (accepts 'all')")
 	parser.add_option("-C", "--display-config",  dest="display_cfg",   default=None,
 		help="Display information associated with config hash(es) (accepts 'all')")
-	parser.add_option("-v", "--verbose",         dest="verbosity",     default=0,     action="count")
 	(opts, args) = parser.parse_args()
 
 	# Get work directory, create dbs dump directory
@@ -570,40 +603,38 @@ try:
 		parents = {}
 		os.chdir(opts.xmlPath)
 		for dataKey in datasets:
-			for block in datasets[dataKey]:
-				parents.update(dict(getBlockParents(datasets[dataKey].items()[0][1], outputData)))
-		for parent in parents.keys():
-			registerParent(opts, parent)
-
-	# Check whether to insert block into DBS or not
-	def xmlChanged(xmlDumpInfo):
-		(xmlFile, lfns) = xmlDumpInfo
-		return True
+			for (blockKey, lfns) in datasets[dataKey].items():
+				parents.update(dict(getBlockParents(lfns, outputData)))
+		if len(parents) > 0:
+			print " * The following parents will be needed at the target dbs instance:"
+			print str.join("", map(lambda x: "   * %s\n" % x, parents.keys())),
+			if not (opts.batch or utils.boolUserInput(" * Register needed parents?", True)):
+				sys.exit(0)
+			for parent in parents.keys():
+				registerParent(opts, parent)
 
 	# Insert blocks into DBS
 	if opts.doImport:
-		errors = 0
-		for (xmlFile, lfns) in filter(xmlChanged, xmlDumps):
-			log = utils.ActivityLog(" * Importing dataset... %s" % os.path.basename(xmlFile))
-			fp = open(xmlFile)
-			try:
-				MakeDBSApi(opts.dbsTarget).insertDatasetContents(fp.read())
-			except DbsException, e:
-				errors += 1
-				errorMsg = e.getErrorMessage()
-				errorPath = xmlFile.replace(".xml", ".log")
-				for msg in errorMsg.split("\n"):
-					if str(msg) == "":
-						break
-					print "   ! %s" % msg
-				print "   ! The complete error log can be found in:\n   ! %s" % errorPath
-				open(errorPath, "w").write(errorMsg)
-			fp.close()
-			# Mark registered files
-			dbsLog = utils.PersistentDict(os.path.join(opts.workDir, 'dbs.log'), ' = ', False)
-			dbsLog.write(dict.fromkeys(lfns, int(time.time())))
-			del log
-		print " * Importing dataset - done"
+		todoList = filter(xmlChanged, xmlDumps)
+		if len(todoList) == 0:
+			print " * Nothing to do..."
+			sys.exit(0)
+		print
+		print " => The following datasets will be imported into the target dbs instance:"
+		for dsName in utils.unique(map(lambda x: x[0], todoList)):
+			print "     * \33[0;91m%s\33[0m" % dsName
+			for (d1, blockName, d2, d3) in filter(lambda x: x[0] == dsName, todoList):
+				print "       Block \33[0;94m%s\33[0m" % blockName
+		if not (opts.batch or utils.boolUserInput(" * Start dataset import?", True)):
+			sys.exit(0)
+		fail = False
+		for (dsName, blockName, xmlFile, lfns) in todoList:
+			if not registerDataset(opts, dsName, blockName, xmlFile, lfns):
+				fail = True
+		if fail:
+			print " * Importing datasets - failed"
+		else:
+			print " * Importing datasets - done"
 
 	del mutex
 except GridError, e:
