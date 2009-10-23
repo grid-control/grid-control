@@ -240,11 +240,12 @@ var_replacer() {
 	REPLACEFILE="${MY_SCRATCH:-.}/_replace.awk"
 	MYDATE=`date +%F`
 	MYTIMESTAMP=`date +%s`
-	MYGUID="$(uuidgen 2> /dev/null)"
-	[ -z "$MYGUID" ] && MYGUID=$(echo | awk 'BEGIN{srand($MY_SEED)}
-		{printf "%04x%04x-%04x-%04x-%04x-%04x%04x%04x\n",
-		int(rand()*2**16), int(rand()*2**16), int(rand()*2**16), int(rand()*2**16),
-		int(rand()*2**16), int(rand()*2**16), int(rand()*2**16), int(rand()*2**16)}')
+	MYGUID=`uuidgen 2> /dev/null`
+	if [ -z "$MYGUID" ]; then
+		FMGUID="%04x%04x-%04x-%04x-%04x-%04x%04x%04x"
+		RINT="int(rand()*2**16), int(rand()*2**16), int(rand()*2**16), int(rand()*2**16)"
+		MYGUID=`echo | awk "BEGIN{srand($MY_SEED)}{printf \"$FMGUID\", $RINT, $RINT}"`
+	fi
 
 	(
 		echo "BEGIN{srand($MY_SEED)}"
@@ -536,7 +537,7 @@ url_copy() {
 			TARGET_PATTERN="__X__"
 			;;
 		*)
-			echo "Unsupported URL: $1" && fail 106
+			echo "Unsupported URL: $2" && fail 106
 			;;
 	esac
 

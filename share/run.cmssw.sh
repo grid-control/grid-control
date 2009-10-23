@@ -114,6 +114,8 @@ for CFG_NAME in $CMSSW_CONFIG; do
 		cmsRun -j "$DBSDIR/report.xml" -e "$CFG_NAME"
 		CODE=$?
 	fi
+	echo "cmsRun finished with exit code $CODE"
+	echo
 	[ "$CODE" != "0" ] && break
 done
 [ "$GZIP_OUT" = "yes" ] && zcat *.log.gz | gzip -9 > "cmssw.log.gz"
@@ -124,6 +126,8 @@ for OUT_NAME in $SE_OUTPUT_FILES; do
 	cksum "$OUT_NAME" >> "$MY_WORKDIR/cmssw.dbs/files"
 done
 echo $SCRAM_VERSION > "$MY_WORKDIR/cmssw.dbs/version"
+echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+echo
 (cd "$MY_WORKDIR/cmssw.dbs"; tar cvzf "$MY_WORKDIR/cmssw.dbs.tar.gz" * )
 
 echo
