@@ -240,6 +240,12 @@ var_replacer() {
 	REPLACEFILE="${MY_SCRATCH:-.}/_replace.awk"
 	MYDATE=`date +%F`
 	MYTIMESTAMP=`date +%s`
+	MYGUID="$(uuidgen 2> /dev/null)"
+	[ -z "$MYGUID" ] && MYGUID=$(echo | awk 'BEGIN{srand($MY_SEED)}
+		{printf "%04x%04x-%04x-%04x-%04x-%04x%04x%04x\n",
+		int(rand()*2**16), int(rand()*2**16), int(rand()*2**16), int(rand()*2**16),
+		int(rand()*2**16), int(rand()*2**16), int(rand()*2**16), int(rand()*2**16)}')
+
 	(
 		echo "BEGIN{srand($MY_SEED)}"
 		echo "{"

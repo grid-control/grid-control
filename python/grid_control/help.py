@@ -33,6 +33,9 @@ class Help(object):
 						print '<example: %s>' % time.strftime("%s")
 					elif keyword == 'RANDOM':
 						print '<example: %d>' % random.randrange(0, 900000000)
+					elif keyword == 'GUID':
+						hex = str.join("", map(lambda x: "%02x" % random.randrange(256), range(16)))
+						print '<example: %s-%s-%s-%s-%s>' % (hex[:8], hex[8:12], hex[12:16], hex[16:20], hex[20:])
 					else:
 						print '<not determinable>'
 						continue

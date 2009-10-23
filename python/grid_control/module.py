@@ -122,7 +122,7 @@ class Module(AbstractObject):
 
 		# Map vars: Eg. __MY_JOB__ will access $MY_JOBID
 		mapping = [('DATE', 'MYDATE'), ('TIMESTAMP', 'MYTIMESTAMP'),
-			('MY_JOB', 'MY_JOBID'), ('CONF', 'GC_CONF')]
+			('MY_JOB', 'MY_JOBID'), ('CONF', 'GC_CONF'), ('GUID','MYGUID')]
 		mapping += zip(envvars, envvars)
 		return dict(mapping)
 
