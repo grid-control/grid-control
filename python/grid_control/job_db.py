@@ -40,9 +40,14 @@ class JobDB:
 		self.disabled = []
 
 		for jobNum, jobObj in self._readJobs():
+			if len(self._jobs) >= self.nJobs:
+				print "Stopped reading job infos! The number of job infos in the work directory",
+				print "is larger than the maximum number of jobs (%d)" % self.nJobs
+				break
 			self._jobs[jobNum] = jobObj
 			self._findQueue(jobObj).append(jobNum)
-		self.ready.extend(filter(lambda x: x not in self._jobs, range(self.nJobs)))
+		if len(self._jobs) < self.nJobs:
+			self.ready.extend(filter(lambda x: x not in self._jobs, range(self.nJobs)))
 
 		for list in (self.ready, self.queued, self.running, self.done, self.ok):
 			list.sort()

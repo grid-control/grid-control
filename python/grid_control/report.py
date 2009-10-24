@@ -5,8 +5,8 @@ class Report:
 
 	def __init__(self, jobs, allJobs):
 		self.allJobs = allJobs
-		if hasattr(jobs, 'nJobs'):
-			self.jobs = range(allJobs.nJobs)
+		if hasattr(jobs, '_jobs'):
+			self.jobs = jobs._jobs.keys()
 		else:
 			self.jobs = jobs
 
