@@ -215,10 +215,7 @@ class JobDB:
 		if len(timeoutList):
 			change = True
 			print "\nTimeout for the following jobs:"
-			Report(timeoutList, self._jobs).details()
-			wms.cancelJobs(self.wmsArgs(timeoutList))
-			self.mark_cancelled(timeoutList)
-			# Fixme: Error handling
+			self.cancel(wms, timeoutList)
 
 		# Quit when all jobs are finished
 		if len(self.ok) == self.nJobs:
@@ -261,13 +258,30 @@ class JobDB:
 		return change
 
 
-	def mark_cancelled(self, jobs):
-		for jobNum in jobs:
+	def cancel(self, wms, jobs, interactive = False):
+		if len(jobs) == 0:
+			return
+		Report(jobs, self._jobs).details()
+		if interactive and not utils.boolUserInput('Do you really want to delete these jobs?', True):
+			return
+
+		def mark_cancelled(jobNum):
 			try:
 				jobObj = self._jobs[jobNum]
 			except:
-				continue
+				return
 			self._update(jobObj, jobNum, Job.CANCELLED)
+
+		for (wmsId, jobNum) in wms.cancelJobs(self.wmsArgs(jobs)):
+			# Remove deleted job from todo list and mark as cancelled
+			jobs.remove(jobNum)
+			mark_cancelled(jobNum)
+
+		if len(jobs) > 0:
+			print "\nThere was a problem with deleting the following jobs:"
+			Report(jobs, self._jobs).details()
+			if interactive and utils.boolUserInput('Do you want to mark them as deleted?', True):
+				map(mark_cancelled, jobs)
 
 
 	def delete(self, wms, selector):
@@ -280,18 +294,27 @@ class JobDB:
 			except:
 				raise UserError("Job identifiers must be integers.")
 		else:
-			jobs = filter(lambda x: self._jobs[x].statefilter(jobFilter), self._jobs)
+			def stateFilter(jobObj):
+				for state in jobFilter.split(','):
+					regex = re.compile('^%s.*' % state)
+					for key in filter(regex.match, Job.states):
+						if key == Job.states[jobObj.state]:
+							return True
+				return False
+			def siteFilter(jobObj):
+				dest = jobObj.get("dest").upper()
+				if not dest:
+					return False
+				dest = str.join("/", map(lambda x: x.split(":")[0], dest.split("/")))
+				for site in jobFilter.split(','):
+					regex = re.compile(site)
+					if regex.match(dest) and jobObj.state not in (Job.SUCCESS, Job.FAILED):
+						return True
+				return False
+			# First try matching states, then try to match destinations
+			jobs = filter(lambda x: stateFilter(self._jobs[x]), self._jobs.keys())
+			if jobs == []:
+				jobs = filter(lambda x: siteFilter(self._jobs[x]), self._jobs.keys())
 
 		print "\nDeleting the following jobs:"
-		Report(jobs, self._jobs).details()
-
-		if len(jobs) == 0:
-			return
-		if not utils.boolUserInput('Do you really want to delete these jobs?', True):
-			return
-		if wms.cancelJobs(self.wmsArgs(jobs)):
-			self.mark_cancelled(jobs)
-		else:
-			print "\nThere was a problem with deleting your jobs!"
-			if utils.boolUserInput('Do you want to mark them as deleted?', True):
-				self.mark_cancelled(jobs)
+		self.cancel(wms, jobs, True)

@@ -16,8 +16,9 @@
 	                            -m 0 (Disable job REsubmission)
 	                            -m 5 (Resubmit jobs up to 5 times)
 	-d, --delete <args>      Delete given jobs, e.g:
-	                            -d 1,5,9,...  (JobNumbers)
-	                            -d QUEUED,... (JobStates)
+	                            -d 1,5,9,...  (Job numbers)
+	                            -d CE1,...    (Job sites)
+	                            -d QUEUED,... (Job states)
 	                            -d TODO (= SUBMITTED,WAITING,READY,QUEUED)
 	                            -d ALL
 

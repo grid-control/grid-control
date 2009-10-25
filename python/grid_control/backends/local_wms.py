@@ -164,22 +164,18 @@ class LocalWMS(WMS):
 
 	def cancelJobs(self, ids):
 		if not len(ids):
-			return True
+			raise StopIteration
 
 		activity = utils.ActivityLog("cancelling jobs")
-
 		shortWMSIds = map(lambda (wmsId, jobNum): wmsId.split(".")[0], ids)
 		proc = utils.LoggedProcess(self.api.cancelExec, self.api.getCancelArgument(shortWMSIds))
-		retCode = proc.wait()
-
-		if retCode != 0:
+		if proc.wait() != 0:
 			for line in proc.getError().splitlines():
 				if not self.api.unknownID() in line:
 					sys.stderr.write(line)
-
 		del activity
+
 		activity = utils.ActivityLog("waiting for jobs to finish")
-		# Wait for jobs to finish
 		time.sleep(5)
 		for wmsId, jobNum in ids:
 			path = self.getSandbox(wmsId)
@@ -190,6 +186,5 @@ class LocalWMS(WMS):
 				shutil.rmtree(path)
 			except:
 				raise RuntimeError("Sandbox for job %d with wmsId '%s' could not be deleted" % (jobNum, wmsId))
-
+			yield (wmsId, jobNum)
 		del activity
-		return ids

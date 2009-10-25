@@ -28,7 +28,7 @@ class Host(LocalWMSApi):
 
 	def parseStatus(self, status):
 		head = map(lambda x: x.strip("%").lower(), status.next().split())
-		for entry in status:
+		for entry in map(str.strip, status):
 			try:
 				jobinfo = dict(zip(head, filter(lambda x: x != '', entry.split(None, len(head) - 1))))
 				jobinfo['id'] = "%s.localhost" % jobinfo['pid']

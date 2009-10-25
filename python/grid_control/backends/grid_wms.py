@@ -401,29 +401,35 @@ class GridWMS(WMS):
 		self.cleanup([log, jobs, basePath])
 
 
-	def cancelJobs(self, ids):
-		if len(ids) == 0:
-			return True
+	def cancelJobs(self, allIds):
+		if len(allIds) == 0:
+			raise StopIteration
 
-		idMap = dict(ids)
-		jobs = self.writeWMSIds(ids)
-		log = tempfile.mktemp('.log')
+		waitFlag = False
+		for ids in map(lambda x: allIds[x:x+5], range(0, len(allIds), 5)):
+			# Delete jobs in groups of 5 - with 5 seconds between groups
+			if waitFlag:
+				utils.wait(self.config.opts, 5)
+			waitFlag = True
 
-		activity = utils.ActivityLog("cancelling jobs")
-		proc = utils.LoggedProcess(self._cancelExec, "--noint --logfile %s -i %s" %
-			tuple(map(utils.shellEscape, [log, jobs])))
-		retCode = proc.wait()
-		del activity
+			idMap = dict(ids)
+			jobs = self.writeWMSIds(ids)
+			log = tempfile.mktemp('.log')
 
-		# select cancelled jobs
-		deleted = map(lambda x: x.strip('- \n'), filter(lambda x: x.startswith('- '), proc.iter(self.config.opts)))
+			activity = utils.ActivityLog("cancelling jobs")
+			proc = utils.LoggedProcess(self._cancelExec, "--noint --logfile %s -i %s" %
+				tuple(map(utils.shellEscape, [log, jobs])))
+			retCode = proc.wait()
+			del activity
 
-		if len(deleted) != len(ids):
-			sys.stderr.write("Could not delete all jobs!\n")
-		if retCode != 0:
-			if self.explainError(proc, retCode):
-				pass
-			else:
-				self.logError(proc, log)
-		self.cleanup([log, jobs])
-		return deleted
+			# select cancelled jobs
+			for deleted in filter(lambda x: x.startswith('- '), proc.iter(self.config.opts)):
+				deleted = deleted.strip('- \n')
+				yield (deleted, idMap[deleted])
+
+			if retCode != 0:
+				if self.explainError(proc, retCode):
+					pass
+				else:
+					self.logError(proc, log)
+			self.cleanup([log, jobs])
