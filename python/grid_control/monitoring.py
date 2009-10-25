@@ -10,6 +10,7 @@ class Monitoring(AbstractObject):
 		self.evtSubmit = config.getPath('events', 'on submit', '', volatile=True)
 		self.evtStatus = config.getPath('events', 'on status', '', volatile=True)
 		self.evtOutput = config.getPath('events', 'on output', '', volatile=True)
+		self.evtFinish = config.getPath('events', 'on finish', '', volatile=True)
 
 
 	def getEnv(self, wms):
@@ -48,4 +49,10 @@ class Monitoring(AbstractObject):
 		if self.evtOutput != '':
 			self.setEventEnviron(jobObj, jobNum)
 			params = "%s %d %s %d" % (self.evtOutput, jobNum, jobObj.wmsId, retCode)
+			threading.Thread(target = os.system, args = (params,)).start()
+
+	# Called at the end of the task
+	def onTaskFinish(self, nJobs):
+		if self.evtFinish != '':
+			params = "%s %d" % (self.evtFinish, nJobs)
 			threading.Thread(target = os.system, args = (params,)).start()

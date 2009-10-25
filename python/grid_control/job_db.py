@@ -187,7 +187,7 @@ class JobDB:
 
 	def check(self, wms, maxsample = 100):
 		change = False
-		timeoutlist = []
+		timeoutList = []
 
 		if self.config.opts.continuous:
 			jobList = self.sample(self.running + self.queued, maxsample)
@@ -207,25 +207,22 @@ class JobDB:
 				# If a job stays too long in an inital state, cancel it
 				if jobObj.state in (Job.SUBMITTED, Job.WAITING, Job.READY, Job.QUEUED):
 					if self.timeout > 0 and time() - jobObj.submitted > self.timeout:
-						timeoutlist.append(jobNum)
+						timeoutList.append(jobNum)
 			if self.config.opts.abort:
 				return False
 
 		# Cancel jobs who took too long
-		if len(timeoutlist):
+		if len(timeoutList):
 			change = True
 			print "\nTimeout for the following jobs:"
-			Report(timeoutlist, self._jobs).details()
-			wms.cancelJobs(self.wmsArgs(timeoutlist))
-			self.mark_cancelled(timeoutlist)
+			Report(timeoutList, self._jobs).details()
+			wms.cancelJobs(self.wmsArgs(timeoutList))
+			self.mark_cancelled(timeoutList)
 			# Fixme: Error handling
 
 		# Quit when all jobs are finished
 		if len(self.ok) == self.nJobs:
-			eventCmd = self.config.getPath('events', 'on finish', '', volatile=True)
-			if eventCmd != '':
-				params = "%s %d" % (eventCmd, self.nJobs)
-				threading.Thread(target = os.system, args = (params,)).start()
+			self.monitor.onTaskFinish(self.nJobs)
 			utils.vprint("All jobs are finished. Quitting grid-control!", -1, True, False)
 			sys.exit(0)
 
@@ -275,15 +272,15 @@ class JobDB:
 
 	def delete(self, wms, selector):
 		predefined = { 'TODO': 'SUBMITTED,WAITING,READY,QUEUED', 'ALL': 'SUBMITTED,WAITING,READY,QUEUED,RUNNING'}
-		jobfilter = predefined.get(selector.upper(), selector.upper())
+		jobFilter = predefined.get(selector.upper(), selector.upper())
 
-		if len(jobfilter) and jobfilter[0].isdigit():
+		if len(jobFilter) and jobFilter[0].isdigit():
 			try:
-				jobs = map(int, jobfilter.split(","))
+				jobs = map(int, jobFilter.split(","))
 			except:
 				raise UserError("Job identifiers must be integers.")
 		else:
-			jobs = filter(lambda x: self._jobs[x].statefilter(jobfilter), self._jobs)
+			jobs = filter(lambda x: self._jobs[x].statefilter(jobFilter), self._jobs)
 
 		print "\nDeleting the following jobs:"
 		Report(jobs, self._jobs).details()
