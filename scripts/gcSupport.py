@@ -9,7 +9,7 @@ from grid_control import *
 utils.verbosity.setting = 0
 utils.atRoot.root = root
 
-class DummyStream:
+class DummyStream(object):
 	def __init__(self, stream):
 		self.__stream = stream
 		self.log = []
@@ -18,6 +18,17 @@ class DummyStream:
 		return True
 	def __getattr__(self, name):
 		return self.__stream.__getattribute__(name)
+
+
+class Silencer(object):
+	def __init__(self):
+		self.saved = (sys.stdout, sys.stderr)
+		sys.stdout = DummyStream(sys.stdout)
+		sys.stderr = DummyStream(sys.stderr)
+	def __del__(self):
+		del sys.stdout
+		del sys.stderr
+		(sys.stdout, sys.stderr) = self.saved
 
 
 class ConfigDummy(object):

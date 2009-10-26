@@ -22,17 +22,15 @@ def main(args):
 		provider = DataProvider.loadState(gcSupport.ConfigDummy(), workDir, 'production.dbs')
 
 		# Try to read all existing Blocks from production.dbs
-		saved = (sys.stdout, sys.stderr)
 		try:
-			sys.stdout = gcSupport.DummyStream(sys.stdout)
-			sys.stderr = gcSupport.DummyStream(sys.stderr)
+			quiet = gcSupport.Silencer()
 			blocks = provider.getBlocks()
 		except:
 			blocks = []
-		sys.stdout, sys.stderr = saved
+		del quiet
 
-		for jobid in jobList:
-			outputDir = os.path.join(workDir, 'output', 'job_' + str(jobid))
+		for jobNum in jobList:
+			outputDir = os.path.join(workDir, 'output', 'job_' + str(jobNum))
 
 			# Read the file hash entries from job info file
 			files = gcSupport.getFileInfo(workDir, jobNum, lambda retCode: retCode == 0, rejected = [])
@@ -51,33 +49,34 @@ def main(args):
 						DataProvider.Dataset: dataset,
 						DataProvider.BlockName: blockname,
 						DataProvider.NEvents: 0,
-						DataProvider.SEList: ['localhost'],
+						DataProvider.SEList: None,
 						DataProvider.FileList: []
 					}
 					blocks.append(cblock)
 
 				lfn = os.path.join(pathSE, name_dest)
-				nevents = 0
+				nEvents = 0
 
 				# Read framework report files to get number of events
-				fwkreports = filter(lambda fn: fn.endswith('.xml.gz'), os.listdir(outputDir))
+				tarFile = tarfile.open(os.path.join(outputDir, "cmssw.dbs.tar.gz"), "r:gz")
+				fwkReports = filter(lambda x: os.path.basename(x.name) == 'report.xml', tarFile.getmembers())
 				try:
-					for fwkreport in map(lambda fn: gzip.open(os.path.join(outputDir, fn)), fwkreports):
-						for outfile in xml.dom.minidom.parse(fwkreport).getElementsByTagName("File"):
-							pfn = outfile.getElementsByTagName("PFN")[0].childNodes[0].data
+					for fwkReport in map(lambda fn: tarFile.extractfile(fn), fwkReports):
+						for outFile in xml.dom.minidom.parse(fwkReport).getElementsByTagName("File"):
+							pfn = outFile.getElementsByTagName("PFN")[0].childNodes[0].data
 							if pfn == name_local:
-								nevents = int(outfile.getElementsByTagName("TotalEvents")[0].childNodes[0].data)
+								nEvents = int(outFile.getElementsByTagName("TotalEvents")[0].childNodes[0].data)
 				except:
 					print "Error while parsing framework output!"
 					return 0
 
-				if nevents == 0:
+				if nEvents == 0:
 					continue
 
 				# Add file to filelist of the current block
 				filelist = cblock[DataProvider.FileList]
 				if not lfn in map(lambda x: x[DataProvider.lfn], filelist):
-					filelist.append({ DataProvider.lfn: lfn, DataProvider.NEvents: nevents })
+					filelist.append({ DataProvider.lfn: lfn, DataProvider.NEvents: nEvents })
 				cblock[DataProvider.NEvents] = reduce(lambda x,y: x+y, map(lambda x: x[DataProvider.NEvents], filelist))
 
 		provider.saveState(workDir, "production.dbs", blocks)

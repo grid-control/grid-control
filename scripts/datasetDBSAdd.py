@@ -471,16 +471,14 @@ def registerParent(opts, parentPath):
 		text = ' * Migrating dataset parents... %s (This can take a lot of time!)' % parentPath
 		log = utils.ActivityLog(text)
 		try:
-			saved = (sys.stdout, sys.stderr)
-			sys.stdout = gcSupport.DummyStream(sys.stdout)
-			sys.stderr = gcSupport.DummyStream(sys.stderr)
+			quiet = gcSupport.Silencer()
 			for dbsSourceSelected in map(str.strip, opts.dbsSource.split(",")):
 				if hasDataset(dbsSourceSelected, parentPath):
 					(sApi, tApi) = map(MakeDBSApi, (dbsSourceSelected, opts.dbsTarget))
 					DbsMigrateApi(sApi, tApi, force=True, pBranches=True).migratePath(parentPath)
-			sys.stdout, sys.stderr = saved
+			del quiet
 		except:
-			sys.stdout, sys.stderr = saved
+			del quiet
 			raise RuntimeError("Could not migrate dataset to target!")
 		del log
 		print " * Migrating parents of dataset - done"
