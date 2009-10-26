@@ -137,7 +137,7 @@ checkdir "Scratch directory" "$MY_SCRATCH"
 echo "==========================="
 echo
 
-cd $MY_SCRATCH
+cd "$MY_SCRATCH"
 (cat << EOF
 ${MY_RUNTIME/\$@/$GC_ARGS}
 EOF
@@ -151,7 +151,7 @@ echo $MY_RUNID > $MY_MARKER
 wait $MY_RUNID
 CODE=$?
 echo $$ > $MY_MARKER
-cd $MY_LANDINGZONE
+cd "$MY_LANDINGZONE"
 
 echo "Process $MY_RUNID exit code: $CODE"
 updatejobinfo $CODE
@@ -184,6 +184,16 @@ if [ $CODE -eq 0 -a -n "$SE_OUTPUT_FILES" ]; then
 	done
 	) > "$LOG_MD5"
 	export TRANSFERLOG=""
+	echo
+fi
+
+# Emulate grid wildcard support
+if [ -n "$GC_WC" ]; then
+	echo "==========================="
+	echo
+	echo "Fake grid wildcard support"
+	GC_WCFILES=$(for X in $GC_WC; do echo $X; done | sort | uniq)
+	[ -n "$GC_WCFILES" ] && tar czvf "GC_WC.tar.gz" $GC_WCFILES
 	echo
 fi
 

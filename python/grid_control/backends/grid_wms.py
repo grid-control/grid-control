@@ -106,12 +106,14 @@ class GridWMS(WMS):
 
 
 	def makeJDL(self, fp, jobNum):
-		if '*' in str.join('', self.sandboxOut):
-			raise ConfigError("grid submission with output wildcards is not supported!")
-
 		cfgPath = os.path.join(self.config.workDir, 'jobs', "job_%d.var" % jobNum)
-		self.writeJobConfig(jobNum, cfgPath)
-		# TODO: fix ticket #18
+		wcList = filter(lambda x: '*' in x, self.sandboxOut)
+		if len(wcList):
+			self.writeJobConfig(jobNum, cfgPath, {'GC_WC': str.join(' ', wcList)})
+			sandboxOutJDL = filter(lambda x: x not in wcList, self.sandboxOut) + ['GC_WC.tar.gz']
+		else:
+			self.writeJobConfig(jobNum, cfgPath)
+			sandboxOutJDL = self.sandboxOut
 
 		def formatStrList(strList):
 			return '{ ' + str.join(', ', map(lambda x: '"%s"' % x, strList)) + ' }'
@@ -122,7 +124,7 @@ class GridWMS(WMS):
 			'StdOutput': '"gc.stdout"',
 			'StdError': '"gc.stderr"',
 			'InputSandbox': formatStrList(self.sandboxIn + [cfgPath]),
-			'OutputSandbox': formatStrList(self.sandboxOut),
+			'OutputSandbox': formatStrList(sandboxOutJDL),
 			'Requirements': self._formatRequirements(self.getRequirements(jobNum)),
 			'VirtualOrganisation': '"%s"' % self.vo,
 			'RetryCount': 2
@@ -171,7 +173,7 @@ class GridWMS(WMS):
 			handle.close()
 			sys.stderr.write(".")
 		tar.close()
-		sys.stderr.write("\nAll logfile were moved to %s." % os.path.join(self.config.workDir, 'error.tar'))
+		sys.stderr.write("\nAll logfile were moved to %s.\n" % os.path.join(self.config.workDir, 'error.tar'))
 		return False
 
 
@@ -377,6 +379,11 @@ class GridWMS(WMS):
 			line = line.strip()
 			if line.startswith(tmpPath):
 				todo.remove(currentJobNum)
+				outputDir = line.strip()
+				if 'GC_WC.tar.gz' in os.listdir(outputDir):
+					wildcardTar = os.path.join(outputDir, 'GC_WC.tar.gz')
+					tarfile.TarFile.open(wildcardTar, 'r:gz').extractall(outputDir)
+					os.unlink(wildcardTar)
 				yield (currentJobNum, line.strip())
 				currentJobNum = None
 			else:

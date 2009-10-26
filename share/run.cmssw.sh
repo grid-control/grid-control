@@ -104,10 +104,10 @@ for CFG_NAME in $CMSSW_CONFIG; do
 		(
 			echo "Starting cmsRun with config file: $CFG_NAME"
 			cmsRun -j "$DBSDIR/report.xml" -e "$CFG_NAME"
+			echo $? > exitcode.txt
 			echo
 			echo "---------------------------"
 			echo
-			echo $? > exitcode.txt
 		) 2>&1 | gzip -9 > "$CFG_NAME.log.gz"
 		[ -f "exitcode.txt" ] && CODE=$(<exitcode.txt) && rm -f exitcode.txt
 	else 
