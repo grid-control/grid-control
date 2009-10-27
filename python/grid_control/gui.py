@@ -23,6 +23,36 @@ class CursesStream:
 CursesStream.backlog = [None for i in range(100)]
 
 
+class ProgressBar:
+	def __init__(self, minValue = 0, maxValue = 100, totalWidth=16):
+		(self.min, self.max) = (minValue, maxValue)
+		self.width = totalWidth
+		self.update(0)
+
+	def update(self, newProgress = 0):
+		# Compute variables
+		complete = self.width - 2
+		progress = max(self.min, min(self.max, newProgress))
+		done = int(round(((progress - self.min) / float(self.max - self.min)) * 100.0))
+		blocks = int(round((done / 100.0) * complete))
+
+		# Build progress bar
+		if blocks == 0:
+			self.bar = "[>%s]" % (' '*(complete-1))
+		elif blocks == complete:
+			self.bar = "[%s]" % ('='*complete)
+		else:
+			self.bar = "[%s>%s]" % ('='*(blocks-1), ' '*(complete-blocks))
+
+		# Print percentage
+		text = str(done) + "%"
+		textPos = (self.width - len(text) + 1) / 2
+		self.bar = self.bar[0:textPos] + text + self.bar[textPos+len(text):]
+
+	def __str__(self):
+		return str(self.bar)
+
+
 def CursesGUI(jobs, jobCycle):
 	def cursesWrapper(screen):
 		screen.scrollok(True)
@@ -37,10 +67,11 @@ def CursesGUI(jobs, jobCycle):
 			curses.endwin()
 			screen.refresh()
 			(sizey, sizex) = screen.getmaxyx()
-			screen.setscrreg(min(15, sizey - 2), sizey - 1)
-			screen.move(min(sizey - 1, max(15, oldy)), 0)
+			screen.setscrreg(min(16, sizey - 2), sizey - 1)
+			screen.move(min(sizey - 1, max(16, oldy)), 0)
 		onResize(None, None)
 		signal.signal(signal.SIGWINCH, onResize)
+		bar = ProgressBar(0, jobs.nJobs, 65)
 
 		# Wrapping ActivityLog functionality
 		class CursesLog:
@@ -55,7 +86,8 @@ def CursesGUI(jobs, jobCycle):
 				oldpos = screen.getyx()
 				screen.move(0, 0)
 				sys.stdout.logged = False
-				report.Report(jobs, jobs).summary(message)
+				bar.update(len(jobs.ok))
+				report.Report(jobs, jobs).summary("%s\n%s" % (bar, message))
 				sys.stdout.logged = True
 				screen.move(*oldpos)
 				screen.refresh()
