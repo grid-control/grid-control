@@ -17,7 +17,7 @@ def MakeDBSApi(url):
 		'url': url, 'userID': proxy._getInfo()['identity']})
 
 
-def readDBSJobInfo(workDir, jobNum):
+def readDBSJobInfo(opts, workDir, jobNum):
 	# Read general grid-control file infos
 	fileDictGC = {}
 	try:
@@ -70,8 +70,14 @@ def readDBSJobInfo(workDir, jobNum):
 			toRead = [("DataType", DBS.TYPE), ("TotalEvents", DBS.EVENTS)]
 			tmp = map(lambda (tag, key): (key, readTag(outputFile, tag)), toRead)
 
-			inputs = outputFile.getElementsByTagName("Inputs")[0].getElementsByTagName("Input")
-			tmp.append((DBS.PARENT_FILES, map(lambda x: readTag(x, "LFN"), inputs)))
+			if opts.importParents:
+				try:
+					inputs = outputFile.getElementsByTagName("Inputs")[0].getElementsByTagName("Input")
+					tmp.append((DBS.PARENT_FILES, map(lambda x: readTag(x, "LFN"), inputs)))
+				except:
+					raise RuntimeError("Could not parse lfn of parent!")
+			else:
+				tmp.append((DBS.PARENT_FILES, []))
 
 			lumis = []
 			runs = outputFile.getElementsByTagName("Runs")[0]
@@ -115,7 +121,7 @@ def getOutputDatasets(opts):
 		if jobNum % 10 == 0:
 			del log
 			log = utils.ActivityLog(' * Reading job logs - [%d / %d]' % (jobNum, jobList[-1]))
-		(output, config) = readDBSJobInfo(opts.workDir, jobNum)
+		(output, config) = readDBSJobInfo(opts, opts.workDir, jobNum)
 		# ignore already registed files in incremental mode
 		for lfn in filter(lambda x: not (opts.incremental and x in dbsLog), output):
 			outputData.update({lfn: output[lfn]})
