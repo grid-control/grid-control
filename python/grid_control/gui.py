@@ -1,15 +1,37 @@
-import sys, signal, curses, utils, report
+import re, sys, signal, curses, utils, report
 
 class CursesStream:
 	def __init__(self, *args):
 		(self.stream, self.screen) = args
 		self.logged = True
 
+		curses.init_pair(1, curses.COLOR_RED, -1)
+		curses.init_pair(2, curses.COLOR_GREEN, -1)
+
+		self.attrs = {
+				'FAILED': curses.color_pair(1) | curses.A_BOLD,
+				'SUCCESS': curses.color_pair(2) | curses.A_BOLD
+		}
+
 	def write(self, data):
 		if self.logged:
 			CursesStream.backlog.pop(0)
 			CursesStream.backlog.append(data)
-		self.screen.addstr(data)
+
+		if curses.has_colors():
+			regex = '(%s)' % '|'.join(self.attrs.keys())
+			start = 0
+			match = re.search(regex, data[start:])
+			while match:
+				self.screen.addstr(data[start:match.start()])
+				self.screen.addstr(match.group(0), self.attrs[match.group(0)])
+				start = match.end()
+				match = re.search(regex, data[start:])
+			self.screen.addstr(data[start:])
+			self.screen.refresh()
+		else:
+			self.screen.addstr(data)
+
 		return True
 
 	def __getattr__(self, name):
