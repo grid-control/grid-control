@@ -125,7 +125,7 @@ echo "Calculating output file hash..."
 for OUT_NAME in $SE_OUTPUT_FILES; do
 	cksum "$OUT_NAME" >> "$MY_WORKDIR/cmssw.dbs/files"
 done
-echo $SCRAM_VERSION > "$MY_WORKDIR/cmssw.dbs/version"
+echo "$SCRAM_PROJECTVERSION" > "$MY_WORKDIR/cmssw.dbs/version"
 echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~"
 echo
 (cd "$MY_WORKDIR/cmssw.dbs"; tar cvzf "$MY_WORKDIR/cmssw.dbs.tar.gz" * )

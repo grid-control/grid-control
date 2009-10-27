@@ -461,8 +461,7 @@ def registerParent(opts, parentPath):
 	def hasDataset(url, dataset):
 		try:
 			api = MakeDBSApi(url)
-			api.listBlocks(dataset)
-			return True
+			return len(api.listBlocks(dataset)) > 0
 		except DbsBadRequest:
 			return False
 
@@ -577,6 +576,11 @@ try:
 	if len(datasets) == 0:
 		raise RuntimeError("There aren't any datasets left to process")
 
+	# Display config hash information
+	if opts.display_cfg:
+		displayConfigInfos(opts.display_cfg, configData)
+		sys.exit(0)
+
 	# Determine dataset names
 	datasetPaths = determineDatasetPaths(opts, tid, datasets, outputData, configData)
 
@@ -587,11 +591,6 @@ try:
 
 	if len(datasetPaths) != len(map(lambda (x,y): (y,x), datasetPaths.items())):
 		raise RuntimeError("The same dataset path was assigned to several datasets.")
-
-	# Display config hash information
-	if opts.display_cfg:
-		displayConfigInfos(opts.display_cfg, configData)
-		sys.exit(0)
 
 	# Go over the selected datasets and write out the xml dump
 	xmlDumps = createDbsBlockDumps(opts, datasets, metadata, datasetPaths, outputData, configData)
