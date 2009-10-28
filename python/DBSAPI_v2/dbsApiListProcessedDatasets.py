@@ -76,7 +76,7 @@ def dbsApiImplListProcessedDatasets(self, patternPrim="*", patternDT="*", patter
 
 
     ##logging.log(DBSDEBUG, data)  
-
+    ##print data
     # Parse the resulting xml output.
     try:
       result = []
@@ -89,6 +89,10 @@ def dbsApiImplListProcessedDatasets(self, patternPrim="*", patternDT="*", patter
 	    self.primName = str(attrs['primary_datatset_name'])	  
             ds_status='VALID'
 	    ext_cross_sec=0.0
+	    comment=''
+	    if attrs.has_key('Description'):
+		comment=str(attrs['Description'])
+			    
             if attrs.has_key('status'):
 		ds_status=str(attrs['status'])
 	    try:
@@ -110,6 +114,7 @@ def dbsApiImplListProcessedDatasets(self, patternPrim="*", patternDT="*", patter
                                                 CreatedBy=str(attrs['created_by']),
                                                 LastModificationDate=str(attrs['last_modification_date']),
                                                 LastModifiedBy=str(attrs['last_modified_by']),
+						Description=comment
                                                 )
           if name == 'data_tier':
 		"""

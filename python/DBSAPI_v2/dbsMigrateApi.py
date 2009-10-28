@@ -55,7 +55,7 @@ class DbsMigrateApi:
 		print "parents %s " %pathList				
 		return pathList
 	"""
-	def getParentPathList(self, api, path):
+	def getParentPathList(self, api, path, ignoreDuplicate = True):
 		print 'getting parents for %s' %path
 		self.allPaths.append(path)
 		pathList = []
@@ -70,12 +70,19 @@ class DbsMigrateApi:
 						for proc in api.listProcessedDatasets(patternPrim = \
 								dataset['PrimaryDataset']['Name'],  patternProc = dataset['Name']):
                                         		for aPath in proc['PathList']:
-                                                		if(aPath not in self.allPaths):
-                                                        		pathList.append(aPath)
+                                                		if(ignoreDuplicate) :
+									if(aPath not in self.allPaths):
+        	                                                		pathList.append(aPath)
+								else : pathList.append(aPath)
 					else: 
-						if(aPath not in self.allPaths):
+						if(ignoreDuplicate) :
+							pathList.append(aPath)
+							if(aPath not in self.allPaths):
+								self.allPaths.append(aPath)
+						else:
 							pathList.append(aPath)
 							self.allPaths.append(aPath)
+
 		print "parents %s " %pathList				
 		return pathList
 
@@ -116,13 +123,46 @@ class DbsMigrateApi:
 				 #if aBlock['LastModificationDate'] != blockToCheck['LastModificationDate']: return False
 				 return True
 		return False
-		
+	
+
+	def sortParentPathList(self, pathList):
+		#print 'passed in pathList ', pathList
+		finalList = []
+		tmpList = []
+		for aDataset in pathList:
+			#print 'checking ', aDataset
+			found = False
+			parentsOfDataset = self.getParentPathList(self.apiSrc, aDataset, False)
+			for aParentOfDataset in parentsOfDataset:
+				#print 'aParentOfDataset ' , aParentOfDataset
+				if aParentOfDataset in pathList: 
+					if aParentOfDataset not in finalList : finalList.append(aParentOfDataset)
+					#print 'FOUND ' 
+					found = True
+			if not found: 
+				if aDataset not in finalList : finalList.append(aDataset)
+			else:
+				if aDataset not in tmpList : tmpList.append(aDataset)
+
+		for tmpDataset in tmpList:
+			if tmpDataset not in finalList : finalList.append(tmpDataset)
+		#print 'before retuning ', finalList
+
+		return finalList
+
+
+
 	def migratePath(self, path):
 		
 		#Get the parents of the path
 		self.checkDatasetStatus(path)
 		datasets = self.getParentPathList(self.apiSrc, path)
 		if datasets not in [[], None] :
+			print 'Sorting the parents because they themselves can be parents of each other'
+			tmpDatasets = self.sortParentPathList(datasets)
+			datasets = tmpDatasets[:]
+			#print 'SORTED LIST ', datasets
+			#return
 			for dataset in datasets:
 				#Does the parent exist in dst DBS
 				if not self.doesPathExist(self.apiDst, dataset):
@@ -165,15 +205,57 @@ class DbsMigrateApi:
 			if int(ex.getErrorCode()) != 1008: raise ex
 		#except Exception, ge:
 		#	print 'excpeiton was rasied'
-		for aBlockInSrc in blockInSrc:
-			if not self.isBlockIn(aBlockInSrc, blockInDst):
-				self.migrateBlockBasic(path, aBlockInSrc['Name'])
-			else :
-				print "-----------------------------------------------------------------------------------"
-				print "Ignoring path %s " %path
-				print "            block %s " %aBlockInSrc['Name']
-				print "because it already exist in the destination DBS and has NOT changed in source DBS"
-				print "-----------------------------------------------------------------------------------\n"
+
+		# If no block are found in source dataset
+		# we can just simple migrate the DATASET (Processed Dataset et el) with no files	
+		if len(blockInSrc) <= 0:
+			self.migratePathNoBlocks(path)
+		else:
+			for aBlockInSrc in blockInSrc:
+				if not self.isBlockIn(aBlockInSrc, blockInDst):
+					self.migrateBlockBasic(path, aBlockInSrc['Name'])
+				else :
+					print "-----------------------------------------------------------------------------------"
+					print "Ignoring path %s " %path
+					print "            block %s " %aBlockInSrc['Name']
+					print "because it already exist in the destination DBS and has NOT changed in source DBS"
+					print "-----------------------------------------------------------------------------------\n"
+
+
+	def migratePathNoBlocks(self, path):
+		try:
+    			token = path.split("/")
+			src_ds = self.apiSrc.listProcessedDatasets(token[1], token[3], token[2])
+    			proc = src_ds[0]
+			# List algo details from source and insert then in dest.
+			for algo in proc['AlgoList']:
+				for srcAlgo in self.apiSrc.listAlgorithms(
+								patternVer=algo['ApplicationVersion'], 
+								patternFam=algo['ApplicationFamily'], 
+								patternExe=algo['ExecutableName'], 
+								patternPS=algo['ParameterSetID']['Hash'] ):
+					self.apiDst.insertAlgorithm(srcAlgo)
+
+    			#Grab the parents as well, hopefully the parenats are already migarted, otherwise its naturally n error condition
+    			proc['ParentList'] = self.apiSrc.listDatasetParents(path)
+
+    			#Create the dataset
+    			self.apiDst.insertProcessedDataset (proc)
+
+    			#Lets grab the Runs as well
+    			ds_runs = self.apiSrc.listRuns(path)
+    			#And add the to newly created dataset
+    			for aRun in ds_runs:
+				# Might have to insert the run first
+				self.apiDst.insertRun(aRun)
+				# Associate run to the procDS
+        			self.apiDst.insertRunInPD(proc, aRun['RunNumber'])
+			print "-----------------------------------------------------------------------------------"
+			print " Migrated path : %s without blocks or files (empty) " % path
+			print "-----------------------------------------------------------------------------------"
+		except DbsApiException, ex:
+			print "Unable to migrate the dataset path %s " %path
+			raise ex
 
 	def migratePathROBasic(self, path):
 		for block in self.apiSrc.listBlocks(path):
@@ -230,8 +312,19 @@ class DbsMigrateApi:
 				raise ex
 	
 	def migrateBlock(self, path, blockName):
+		"""
+		migrateBlock, if their are parents, only the parent Block is migrated
+
+		"""
 		#Get the parents of the path
 		self.checkDatasetStatus(path)
+
+		###Here we can get Parents of the Block and then migrate the recurrsively
+		parentblocks = self.apiSrc.listBlockParents(block_name=blockName)
+		if parentblocks not in [[], None] :
+			for ablock in parentblocks:
+				self.migrateBlock(ablock['Path'], ablock['Name'])
+		"""
 		datasets = self.getParentPathList(self.apiSrc, path)
 		if datasets not in [[], None] :
 			for dataset in datasets:
@@ -239,7 +332,8 @@ class DbsMigrateApi:
 				#if not self.doesPathExist(self.apiDst, dataset):
 				#print "calling self.migratePath"
 				self.migratePath( dataset)
-				
+		"""
+		
 		if self.doesPathExistNoForce(self.apiDst, path):
 			 found = False
 			 blockInDst = self.apiDst.listBlocks(path)
@@ -265,15 +359,15 @@ class DbsMigrateApi:
 		#self.migrateBlockBasic(path, blockName)
 		
 		
-	def getDatasetStatus(self, path):
+	def getDatasetStatus(self, api, path):
 		tokens = path.split('/')
-		datasets = self.apiSrc.listProcessedDatasets(patternPrim = tokens[1], patternProc = tokens[2], patternDT = tokens[3])
+		datasets = api.listProcessedDatasets(patternPrim = tokens[1], patternProc = tokens[2], patternDT = tokens[3])
 		for aDataset in datasets:
 			return aDataset['Status']
 		
 	
-	def isDatasetStatusRO(self, path):
-		if self.getDatasetStatus(path) == "RO":
+	def isDatasetStatusRO(self, api, path):
+		if self.getDatasetStatus(api, path) == "VALID-RO":
 			return True
 		else:
 			return False
@@ -290,7 +384,9 @@ class DbsMigrateApi:
 		#dstInstanceName = "GLOBAL"
 		self.checkDatasetStatus(path)
 		self.checkInstances(srcInstanceName, dstInstanceName)
-		if not self.doesPathExist(self.apiDst, path):
+                # ONLY migrate if the dataset is NOT at the destination (NO SHOW of FORCE here !!!)
+                # I hate Read only datasets anyways - AA 10/08/2009
+                if not self.doesPathExistNoForce(self.apiDst, path):
 			if dstInstanceName == "GLOBAL" and srcInstanceName == "LOCAL" :
 				#One level Migration
 				self.migratePathBasic(path)
@@ -300,6 +396,10 @@ class DbsMigrateApi:
 					self.migratePathROBasic(path)
 					#Set dataset status as RO
 					self.setDatasetStatusAsRO(path)
+
+                # If dataset is already there, give up
+                else: raise DbsBadRequest (args = "Dataset already exists at destination, you cannot migrate it as a READ ONLY dataset", code = 1222)
+
 	
 
 	def migrateBlockRO(self, path, blockName):
@@ -322,12 +422,16 @@ class DbsMigrateApi:
 			
 	
 	def setDatasetStatusAsRO(self, path):
-		self.apiDst.updateProcDSStatus(path, "RO")
+		self.apiDst.updateProcDSStatus(path, "VALID-RO")
 	
 	def checkDatasetStatus(self, path):
-		if self.isDatasetStatusRO(path):
-			 raise DbsBadRequest (args = "Read Only dataset " + path + " CANNOT be Migrated.", code = 1222)
-	
+		if self.isDatasetStatusRO(self.apiSrc, path):
+			raise DbsBadRequest (args = "Read Only dataset " + path + " CANNOT be Migrated.", code = 1222)
+
+                # Check the dataset status in Dst first, if it exists and if its status is RO, then we cannot migrate it
+                if self.doesPathExistNoForce(self.apiDst, path):
+                        if self.isDatasetStatusRO(self.apiDst, path):
+                                raise DbsBadRequest (args = "Dataset " + path + " already exists at destination as a Read Only dataset it CANNOT be Re-Migrated.", code = 1225)
 
 	def checkInstances(self, srcInstanceName, dstInstanceName):
 		if dstInstanceName == "LOCAL" and srcInstanceName == "LOCAL" :
@@ -353,8 +457,29 @@ class DbsMigrateApi:
 			return line
 		else:
 			return ""
-		
+
+
+
 """
+from dbsApi import DbsApi
+def makeAPI(url):
+                #args = {}
+                #args['url'] = url
+                args = {}
+                if url.startswith('http'):
+                        args['url'] = url
+                        args['mode'] = 'POST'
+
+                return DbsApi(args)
+
+apiSrc = makeAPI('http://cmsdbsprod.cern.ch/cms_dbs_prod_global/servlet/DBSServlet')
+apiDst  = makeAPI('http://cmssrv48.fnal.gov:8383/DBS/servlet/DBSServlet')
+myList = ['/Cosmics/Commissioning08_CRAFT_ALL_V9_225-v2/RECO', '/Cosmics/Commissioning08-v1/RAW'] 
+#myList = ['/Cosmics/Commissioning08_CRAFT_ALL_V9_225-v2/RECO'] 
+api = DbsMigrateApi(apiSrc, apiDst)
+myList = api.sortParentPathList(myList)
+print myList
+		
 usage = "\n****************************************************************" + \
 	"\npython dbsMigrateRecursive.py source_url targert_url datasetPath blockName" + \
 	"\nIf you do not supply this op parameter then the default is assumed which is both." + \

@@ -84,7 +84,8 @@ ValidationTable = {
          "CreatedBy" : { "Comment" : "User DN, who created this object (AUTO set by DBS, you can over ride, why ?)", "Validator" : isStringType },
          "LastModificationDate" : { "Comment" : "Last Modification, (AUTO set by DBS, you can over ride, why ?)", "Validator" : isStringType },
          "CreatedBy" : { "Comment" : "User DN of who last modified this object (AUTO set by DBS, you can over ride, why ?)", "Validator" : isStringType },
-          },
+         "Description" : {"Comment" : "a short comment to state the purpose of the path", "Validator" : isStringType }, 
+	  },
 "DbsAnalysisDatasetDefinition" : {
          "Name" : { "Comment" : "A required variable, UNIQUE", "Validator" : isStringType },
          #"PhysicsGroup" : { "Comment" : "A required variable", "Validator" : isStringType },

@@ -170,7 +170,7 @@ class DbsHttpService:
    #Set but not found
    if not os.path.exists(proxy) or not os.path.exists(key):
 	raise DbsProxyNotFound(args="Required Proxy for Secure Call \n("+ \
-					self.Url+") not found for user '%s'" %os.getlogin(), code="9999")
+					self.Url+") not found for user '%s'" % os.environ.get("LOGNAME", None), code="9999")
 
    # All looks OK, still doesn't gurantee proxy's validity etc.
    return key, proxy
