@@ -13,8 +13,28 @@ class DBS(object):
 
 def MakeDBSApi(url):
 	proxy = VomsProxy(gcSupport.ConfigDummy({"proxy": {"ignore warnings": True}}))
-	return DBSAPI_v2.dbsApi.DbsApi({'version': 'DBS_2_0_6', 'level': 'CRITICAL',
-		'url': url, 'userID': proxy._getInfo()['identity']})
+	return DBSAPI_v2.dbsApi.DbsApi({'version': 'DBS_2_0_6', 'level': 'CRITICAL', 'url': url})
+
+
+def parseSEUrl(seUrl):
+	# Try to get the SE and LFN from storage url
+	proto, filePath = seUrl.split(":", 1)
+	if proto == "dir":
+		return ("localhost", "/" + filePath.lstrip("/"))
+	elif proto in ["rfio"]:
+		if not "/store/" in seUrl:
+			raise RuntimeError("File path %s did not include /store/!" % seUrl)
+		if "cern.ch" in seUrl:
+			se = "caf.cern.ch"
+		else:
+			se = filePath.lstrip("/").split("/")[1]
+	elif proto in ["srm", "gsiftp"]:
+		if not "/store/" in seUrl:
+			raise RuntimeError("File path %s did not include /store/!" % seUrl)
+		se = filePath.split(":")[0].lstrip("/").split("/")[0]
+	else:
+		raise RuntimeError("Unsupported protocol %s!" % proto)
+	return (se, os.path.join('/store', filePath.split("/store/",1)[-1]))
 
 
 def readDBSJobInfo(opts, workDir, jobNum):
@@ -22,14 +42,13 @@ def readDBSJobInfo(opts, workDir, jobNum):
 	fileDictGC = {}
 	try:
 		files = gcSupport.getFileInfo(workDir, jobNum, lambda retCode: retCode == 0, rejected = None)
-		for (hash, name_local, name_dest, pathSE) in files:
-			seUrl = os.path.join(pathSE, name_dest)
-			se = pathSE.split(":")[1].lstrip("/").split("/")[0]
-			lfn = os.path.join('/store', seUrl.split("/store/",1)[-1])
-			fileDictGC[name_local] = zip((DBS.MD5, DBS.LFN, DBS.SE), (hash, lfn, se))
 	except:
 		raise RuntimeError("Could not read grid-control file infos for job %d!" % jobNum)
 
+	# Get storage element and lfn
+	for (hash, name_local, name_dest, pathSE) in files:
+		(se, lfn) = parseSEUrl(os.path.join(pathSE, name_dest))
+		fileDictGC[name_local] = zip((DBS.MD5, DBS.LFN, DBS.SE), (hash, lfn, se))
 	# Open CMSSW overview file
 	try:
 		tar = tarfile.open(os.path.join(workDir, 'output', 'job_%d' % jobNum, 'cmssw.dbs.tar.gz'), 'r')
@@ -75,7 +94,7 @@ def readDBSJobInfo(opts, workDir, jobNum):
 					inputs = outputFile.getElementsByTagName("Inputs")[0].getElementsByTagName("Input")
 					tmp.append((DBS.PARENT_FILES, map(lambda x: readTag(x, "LFN"), inputs)))
 				except:
-					raise RuntimeError("Could not parse lfn of parent!")
+					raise RuntimeError("Could not parse lfn of parent! (Try --no-parents...)")
 			else:
 				tmp.append((DBS.PARENT_FILES, []))
 
@@ -102,6 +121,17 @@ def readDBSJobInfo(opts, workDir, jobNum):
 		outputData[tmp[DBS.LFN]] = tmp
 
 	return (outputData, configData)
+
+
+def getAnnotation(configKey, configData):
+	regex = re.compile('.*annotation.*=.*cms.untracked.string.*\((.*)\)')
+	try:
+		tmp = regex.search(configData[configKey][DBS.CONFIG]).group(1).strip('\"\' ')
+		if tmp == "":
+			raise
+		return tmp
+	except:
+		return None
 
 
 def getOutputDatasets(opts):
@@ -167,8 +197,12 @@ def getOutputDatasets(opts):
 			# Write summary information:
 			if not dsKey in datasetInfos:
 				if parentDS == []: parentDS = ['None']
-				datasetInfos[dsKey] = ("%15s: %s\n%15s: %s\n" % ("Config hash", fileInfo[DBS.CONFIGHASH],
+				datasetInfos[dsKey] = ("%15s: %s\n%15s: %s\n" % (
+					"Config hash", fileInfo[DBS.CONFIGHASH],
 					"Parent datasets", str.join("\n" + 17*" ", parentDS)))
+				annotation = getAnnotation(fileInfo[DBS.CONFIGHASH], configData)
+				if annotation:
+					datasetInfos[dsKey] += "%15s: %s\n" % ("Annotation", annotation)
 			return dsKey
 
 		# Define block split criteria
@@ -334,7 +368,7 @@ def createDbsBlockDumps(opts, datasets, metadata, datasetPaths, outputData, conf
 			(name, data) = createDbsBlockDump(opts, newPath, blockInfo, metadata, outputData, configData)
 			dumpFile =  os.path.join(xmlDSPath, "%s.xml" % name)
 			fp = open(dumpFile, "w")
-			produced.append((newPath, blockInfo[0], dumpFile, blockInfo[1]))
+			produced.append((datasetKey, blockInfo[0], name, dumpFile))
 			fp.write(data)
 			fp.close()
 		del log
@@ -382,6 +416,9 @@ def displayConfigInfos(keys, configData):
 			print "%15s: %s" % ("Config hash", cfgHash)
 			print "%15s: %s" % ("File name", cfg[DBS.CONFIGNAME])
 			print "%15s: %s" % ("CMSSW version", cfg[DBS.CMSSW_VER])
+			annotation = getAnnotation(cfgHash, configData)
+			if annotation:
+				print "%15s: %s" % ("Annotation", annotation)
 			print 53*"-"
 			sys.stdout.write(cfg[DBS.CONFIG])
 			print
@@ -491,13 +528,13 @@ def registerParent(opts, parentPath):
 
 # Check whether to insert block into DBS or not
 def xmlChanged(xmlDumpInfo):
-	(dsName, blockName, xmlFile, lfns) = xmlDumpInfo
+	(datasetKey, blockKey, blockName, xmlDumpFile) = xmlDumpInfo
 	return True
 
 
 # Register datasets at dbs instance
-def registerDataset(opts, dsName, blockName, xmlFile, lfns):
-	print "   * %s#%s" % (dsName, blockName)
+def registerDataset(opts, fqBlock, xmlFile, lfns):
+	print "   * %s" % fqBlock
 	log = utils.ActivityLog(" * Importing dataset file... %s" % os.path.basename(xmlFile))
 	fp = open(xmlFile)
 	try:
@@ -509,7 +546,7 @@ def registerDataset(opts, dsName, blockName, xmlFile, lfns):
 		fp.close()
 		return True
 	except DbsException, e:
-		print "   ! Could not import %s/%s" % (dsName, blockName)
+		print "   ! Could not import %s" % fqBlock
 		errorMsg = e.getErrorMessage()
 		errorPath = xmlFile.replace(".xml", ".log")
 		for msg in errorMsg.split("\n"):
@@ -528,7 +565,10 @@ def print_help(*args):
 
 
 try:
-	locale.setlocale(locale.LC_ALL, "")
+	try:
+		locale.setlocale(locale.LC_ALL, "")
+	except:
+		pass
 
 	parser = optparse.OptionParser()#add_help_option=False)
 #	parser.add_option("-h", "--help",            action="callback",    callback=print_help)
@@ -578,6 +618,10 @@ try:
 	# Lock file in case several instances of this program are running
 	mutex = gcSupport.FileMutex(os.path.join(opts.xmlPath, 'datasetDBSAdd.lock'))
 	# Read comprehensive output information
+	#  datasets = {datasetKey: {blockKey: [lfns]}}
+	#  metadata = {anyKey: {<metadata: events, size>}}
+	#  outputData = {lfn: {<file data: config hash, md5 hash, ...>}}
+	#  configData = {configHash: {<config data: config content, ...>}}
 	(tid, datasets, metadata, outputData, configData) = getOutputDatasets(opts)
 	if len(datasets) == 0:
 		raise RuntimeError("There aren't any datasets left to process")
@@ -588,6 +632,7 @@ try:
 		sys.exit(0)
 
 	# Determine dataset names
+	#  datasetPaths = {datasetKey: dbs path}
 	datasetPaths = determineDatasetPaths(opts, tid, datasets, outputData, configData)
 
 	# Display dataset information
@@ -599,6 +644,7 @@ try:
 		raise RuntimeError("The same dataset path was assigned to several datasets.")
 
 	# Go over the selected datasets and write out the xml dump
+	#  xmlDumps = [(datasetKey, blockKey, blockName, xmlDumpFile)]
 	xmlDumps = createDbsBlockDumps(opts, datasets, metadata, datasetPaths, outputData, configData)
 
 	# Import any parent datasets needed by the new datasets
@@ -624,21 +670,30 @@ try:
 			sys.exit(0)
 		print
 		print " => The following datasets will be imported into the target dbs instance:"
-		for dsName in utils.unique(map(lambda x: x[0], todoList)):
-			print "     * \33[0;91m%s\33[0m" % dsName
-			for (d1, blockName, d2, d3) in filter(lambda x: x[0] == dsName, todoList):
+		for dsKey in utils.unique(map(lambda x: x[0], todoList)):
+			print "     * \33[0;91m%s\33[0m" % datasetPaths[dsKey]
+			for (d1, blockKey, blockName, d3) in filter(lambda x: x[0] == dsKey, todoList):
+				try:
+					# Look into first file of block to determine annotation
+					cfgHash = outputData[datasets[dsKey][blockKey][0]][DBS.CONFIGHASH]
+					ann = getAnnotation(cfgHash, configData)
+					if ann:
+						print "       Annotation: %s" % ann
+				except:
+					pass
 				print "       Block \33[0;94m%s\33[0m" % blockName
 		if not (opts.batch or utils.boolUserInput(" * Start dataset import?", True)):
 			sys.exit(0)
 		fail = False
-		for (dsName, blockName, xmlFile, lfns) in todoList:
-			if not registerDataset(opts, dsName, blockName, xmlFile, lfns):
+		for (dsKey, blockKey, blockName, xmlFile) in todoList:
+			fqBlock = "%s#%s" % (datasetPaths[dsKey], blockName)
+			if not registerDataset(opts, fqBlock, xmlFile, datasets[dsKey][blockKey]):
 				fail = True
 		if fail:
 			print " * Importing datasets - failed"
 		else:
 			print " * Importing datasets - done"
-
+	print
 	del mutex
 except GridError, e:
 	e.showMessage()
