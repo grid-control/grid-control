@@ -52,11 +52,15 @@ class WMS(AbstractObject):
 		inFiles.extend(map(lambda x: utils.atRoot('share', 'env.%s.sh' % x), module.getDependencies()))
 
 		utils.vprint("Packing sandbox:")
+		def shortName(name):
+			name = name.replace(config.workDir.rstrip("/"), "<WORKDIR>")
+			return name.replace(utils.atRoot("").rstrip("/"), "<GCDIR>")
+
 		if config.opts.init:
-			utils.vprint("\t%s" % tarFile)
+			utils.vprint("\t%s" % shortName(tarFile))
 			tar = tarfile.TarFile.open(tarFile, 'w:gz')
 
-		for file in inFiles:
+		for file in utils.sorted(inFiles):
 			if isinstance(file, str):
 				# Path to filename given
 				if not os.path.exists(file):
@@ -70,12 +74,12 @@ class WMS(AbstractObject):
 			if config.opts.init:
 				# Package sandbox tar file
 				if isinstance(file, str):
-					utils.vprint("\t\t%s" % file)
+					utils.vprint("\t\t%s" % shortName(file))
 					info = tarfile.TarInfo(os.path.basename(file))
 					info.size = os.path.getsize(file)
 					handle = open(file, 'rb')
 				else:
-					utils.vprint("\t\t%s" % file.name)
+					utils.vprint("\t\t%s" % shortName(file.name))
 					info, handle = file.getTarInfo()
 
 				if info.name.endswith('.sh'):
@@ -93,7 +97,7 @@ class WMS(AbstractObject):
 			tar.close()
 		for file in self.sandboxIn:
 			if file != tarFile or not config.opts.init:
-				utils.vprint("\t%s" % file)
+				utils.vprint("\t%s" % shortName(file))
 
 
 	def canSubmit(self, length, flag):

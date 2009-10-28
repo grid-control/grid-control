@@ -5,6 +5,7 @@ from time import time, localtime, strftime
 class CMSSW(DataMod):
 	def __init__(self, config):
 		DataMod.__init__(self, config)
+		self.updateErrorDict(utils.atRoot('share', 'run.cmssw.sh'))
 
 		# SCRAM info
 		scramProject = config.get('CMSSW', 'scram project', '').split()

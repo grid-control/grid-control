@@ -6,6 +6,7 @@ class JobDB:
 	def __init__(self, config, module, monitor):
 		self.config = config
 		self.monitor = monitor
+		self.errorDict = module.errorDict
 		self._dbPath = os.path.join(config.workDir, 'jobs')
 		try:
 			if not os.path.exists(self._dbPath):
@@ -110,14 +111,26 @@ class JobDB:
 		utils.vprint("Job %s state changed from %s to %s" % (str(jobNum).ljust(jobNumLen), Job.states[oldState], Job.states[state]), -1, True, False)
 		if (state == Job.SUBMITTED) and (jobObj.attempt > 1):
 			print "(attempt #%s)" % jobObj.attempt
-		elif (state == Job.FAILED) and jobObj.get('retcode') and jobObj.get('dest'):
-			print "(error code: %d - %s)" % (jobObj.get('retcode'), jobObj.get('dest'))
 		elif (state == Job.QUEUED) and jobObj.get('dest') != 'N/A':
 			print "(%s)" % jobObj.get('dest')
 		elif (state in [Job.WAITING, Job.ABORTED, Job.DISABLED]) and jobObj.get('reason'):
 			print '(%s)' % jobObj.get('reason')
 		elif (state == Job.SUCCESS) and jobObj.get('runtime'):
 			print "(runtime %s)" % utils.strTime(jobObj.get('runtime'))
+		elif (state == Job.FAILED):
+			msg = []
+			if jobObj.get('retcode'):
+				msg.append("error code: %d" % jobObj.get('retcode'))
+				try:
+					if utils.verbosity() > 0:
+						msg.append(self.errorDict[jobObj.get('retcode')])
+				except:
+					pass
+			if jobObj.get('dest'):
+				msg.append(jobObj.get('dest'))
+			if len(msg):
+				print "(%s)" % str.join(" - ", msg),
+			print
 		else:
 			print
 

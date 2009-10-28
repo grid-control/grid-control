@@ -65,6 +65,10 @@ class Module(AbstractObject):
 		if self.sePath and not self.sePath.startswith('dir'):
 			self.dependencies.append('glite')
 
+		# Get error messages from run.lib comments
+		self.errorDict = {}
+		self.updateErrorDict(utils.atRoot('share', 'run.lib'))
+
 		if config.get('CMSSW', 'se output files', 'DEPRECATED') != 'DEPRECATED':
 			utils.deprecated("Please specify se output files only in the [storage] section")
 			self.seOutputFiles = config.get('CMSSW', 'se output files').split()
@@ -74,6 +78,20 @@ class Module(AbstractObject):
 		if config.get('CMSSW', 'se path', 'DEPRECATED') != 'DEPRECATED':
 			utils.deprecated("Please specify se path only in the [storage] section")
 			self.sePath = config.get('CMSSW', 'se path')
+
+
+	# Read comments with error codes at the beginning of file
+	def updateErrorDict(self, fileName):
+		for line in open(fileName, 'r').readlines():
+			if not (line.startswith("#") or line == "\n"):
+				break
+			if " - " not in line:
+				continue
+			try:
+				code, msg = map(str.strip, line.split("-", 1))
+				self.errorDict[int(code.strip("# "))] = msg
+			except:
+				pass
 
 
 	# Get environment variables for gc_config.sh

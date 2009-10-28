@@ -8,6 +8,12 @@ if [ ! -f "$GC_SANDBOX/job_${MY_JOBID}.var" ]; then
 	cp "$GC_JOBCONF" "$GC_SANDBOX/job_${MY_JOBID}.var"
 fi
 
+# Prime job info with error - killed by batch system
+(
+	echo "JOBID=$MY_JOBID"
+	echo "EXITCODE=107"
+) > "$GC_SANDBOX/job.info"
+
 export GC_SCRATCH="$GC_SANDBOX/scratch"
 mkdir "$GC_SCRATCH"
 cd $GC_SANDBOX

@@ -11,9 +11,10 @@
 
 # 105 - env unpacking failed
 # 106 - se copy error
+# 107 - killed by batch system
 
-# 120 - lower space limit
-# 121 - upper space limit
+# 120 - lower space limit reached
+# 121 - upper space limit reached
 # 122 - min size failure
 
 # 123 - user intervention requested
