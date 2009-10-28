@@ -138,59 +138,72 @@ class WMS(AbstractObject):
 			if self.config.opts.abort:
 				raise StopIteration
 			jobNum, wmsId, data = self.submitJob(jobNum)
-			if wmsId == None:
-				continue # FIXME
 			yield (jobNum, wmsId, data)
 
 
 	def retrieveJobs(self, ids):
+		# Function to parse job info file
 		def readJobFile(info):
 			data = utils.DictFormat().parse(open(info, 'r'), lowerCaseKey = False)
 			return (data['JOBID'], data['EXITCODE'], data)
 
+		# Function to force moving a directory
+		def forceMove(source, target):
+			try:
+				if os.path.exists(target):
+					shutil.rmtree(target)
+			except IOError, e:
+				sys.stderr.write("Warning: '%s' cannot be removed: %s\n" % (target, str(e)))
+				return False
+			try:
+				shutil.move(source, target)
+			except IOError, e:
+				sys.stderr.write("Warning: Error moving job output directory from '%s' to '%s': %s\n" % (source, target, str(e)))
+				return False
+			return True
+
 		retrievedJobs = []
+		failPath = os.path.join(self.config.workDir, 'fail')
+
 		for inJobNum, dir in self.getJobsOutput(ids):
+			# inJobNum != None, dir == None => Job could not be retrieved
 			if dir == None:
 				if inJobNum not in retrievedJobs:
 					yield (inJobNum, -1, {})
 				continue
 
-			accepted = False
+			# inJobNum == None, dir != None => Found leftovers of job retrieval
+			if inJobNum == None:
+				continue
+
+			# inJobNum != None, dir != None => Job retrieval from WMS was ok
 			info = os.path.join(dir, 'job.info')
 			try:
 				jobNum, retCode, data = readJobFile(info)
 				if jobNum != inJobNum:
-					raise RuntimeError("Invalid job id in job file")
-				dst = os.path.join(self._outputPath, 'job_%d' % jobNum)
-				retrievedJobs.append(inJobNum)
-				accepted = True
+					raise RuntimeError("Invalid job id in job file %s" % info)
+				if forceMove(dir, os.path.join(self._outputPath, 'job_%d' % jobNum)):
+					retrievedJobs.append(inJobNum)
+					yield (jobNum, retCode, data)
+				else:
+					yield (jobNum, -1, {})
+				continue
 			except:
-				sys.stderr.write("Warning: '%s' seems broken.\n" % info)
+				pass
+
+			# Something went wrong
+			sys.stderr.write("Warning: '%s' seems broken.\n" % info)
+			# Clean empty dirs
+			for subDir in map(lambda x: x[0], os.walk(dir, topdown=False)):
 				try:
 					os.rmdir(dir)
-					# No files were retrieved...
-					continue
 				except:
 					pass
 
-				failpath = os.path.join(self.config.workDir, 'fail')
-				if not os.path.exists(failpath):
-					os.mkdir(failpath)
-				dst = os.path.join(failpath, os.path.basename(dir))
-				sys.stderr.write("Moving output sandbox to %s\n" % dst)
+			if os.path.exists(dir):
+				# Preserve failed job
+				if not os.path.exists(failPath):
+					os.mkdir(failPath)
+				forceMove(dir, os.path.join(failPath, os.path.basename(dir)))
 
-			try:
-				if os.path.exists(dst):
-					shutil.rmtree(dst)
-			except IOError, e:
-				sys.stderr.write("Warning: '%s' cannot be removed: %s" % (dst, str(e)))
-				continue
-
-			try:
-				shutil.move(dir, dst)
-			except IOError, e:
-				sys.stderr.write("Warning: Error moving job output directory from '%s' to '%s': %s" % (dir, dst, str(e)))
-				continue
-
-			if accepted:
-				yield (jobNum, retCode, data)
+			yield (inJobNum, -1, {})

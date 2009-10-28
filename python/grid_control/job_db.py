@@ -181,6 +181,11 @@ class JobDB:
 					jobObj = Job()
 					self._jobs[jobNum] = jobObj
 
+				if wmsId == None:
+					# Could not register at WMS
+					self._update(jobObj, jobNum, Job.FAILED)
+					continue
+
 				jobObj.assignId(wmsId)
 				for key, value in data.iteritems():
 					jobObj.set(key, value)
