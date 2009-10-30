@@ -180,6 +180,16 @@ class VirtualFile(StringIO.StringIO):
 		return (info, self)
 
 
+def parseType(x):
+	try:
+		if '.' in x:
+			return float(x)
+		else:
+			return int(x)
+	except ValueError:
+		return x
+
+
 class DictFormat(object):
 	# escapeString = escape '"', '$'
 	# types = preserve type information
@@ -187,15 +197,6 @@ class DictFormat(object):
 		self.delimeter = delimeter
 		self.types = types
 		self.escapeString = escapeString
-
-	def parseType(self, x):
-		try:
-			if '.' in x:
-				return float(x)
-			else:
-				return int(x)
-		except ValueError:
-			return x
 
 	# Parse dictionary lists
 	def parse(self, lines, lowerCaseKey = True, keyRemap = {}):
@@ -224,8 +225,8 @@ class DictFormat(object):
 				if lowerCaseKey:
 					key = key.lower()
 				if self.types:
-					value = self.parseType(value)
-					key = self.parseType(key)
+					value = parseType(value)
+					key = parseType(key)
 				# do .encode('utf-8') ?
 				data[keyRemap.get(key, key)] = value
 			except:
