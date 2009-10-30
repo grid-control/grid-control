@@ -34,11 +34,11 @@ class Silencer(object):
 class ConfigDummy(object):
 	def __init__(self, cfg = {}):
 		self.cfg = cfg
-	def get(self, x,y,z,volatile=None):
+	def get(self, x,y,z=None,volatile=None):
 		return self.cfg.get(x, {}).get(y, z)
-	def getPath(self, x,y,z,volatile=None):
+	def getPath(self, x,y,z=None,volatile=None):
 		return self.cfg.get(x, {}).get(y, z)
-	def getBool(self, x,y,z,volatile=None):
+	def getBool(self, x,y,z=None,volatile=None):
 		return self.cfg.get(x, {}).get(y, z)
 
 
