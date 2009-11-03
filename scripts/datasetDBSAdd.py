@@ -44,6 +44,8 @@ def readDBSJobInfo(opts, workDir, jobNum):
 		files = gcSupport.getFileInfo(workDir, jobNum, lambda retCode: retCode == 0, rejected = None)
 	except:
 		raise RuntimeError("Could not read grid-control file infos for job %d!" % jobNum)
+	if not files:
+		return ([], {})
 
 	# Get storage element and lfn
 	for (hash, name_local, name_dest, pathSE) in files:

@@ -19,7 +19,7 @@ class GridWMS(WMS):
 		'cancelled': Job.CANCELLED,
 		'failed':    Job.FAILED,
 		'done':      Job.DONE,
-		'cleared':   Job.SUCCESS
+		'cleared':   Job.FAILED
 	}
 
 
