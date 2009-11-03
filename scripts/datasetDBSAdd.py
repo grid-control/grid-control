@@ -570,7 +570,8 @@ try:
 	except:
 		pass
 
-	parser = optparse.OptionParser()#add_help_option=False)
+	usage = "usage: %prog [options] <work directory>"
+	parser = optparse.OptionParser(usage=usage)#add_help_option=False)
 #	parser.add_option("-h", "--help",            action="callback",    callback=print_help)
 	parser.add_option("-b", "--batch",           dest="batch",         default=False, action="store_true",
 		help="Enable non-interactive batch mode [Default: Interactive mode]")
