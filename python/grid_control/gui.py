@@ -7,11 +7,34 @@ class CursesStream:
 
 		curses.init_pair(1, curses.COLOR_RED, -1)
 		curses.init_pair(2, curses.COLOR_GREEN, -1)
+		curses.init_pair(3, curses.COLOR_CYAN, -1)
 
-		self.attrs = {
-				'FAILED': curses.color_pair(1) | curses.A_BOLD,
-				'SUCCESS': curses.color_pair(2) | curses.A_BOLD
-		}
+		# This is a list of (regular expression, curses attributes).  The
+		# attributes are applied to matches of the regular expression in
+		# the output written into this stream.  Lookahead expressions
+		# should not overlap with other regular expressions.
+		self.attrs = [
+				('DONE(?!:)', curses.color_pair(3) | curses.A_BOLD),
+				('FAILED(?!:)', curses.color_pair(1) | curses.A_BOLD),
+				('SUCCESS(?!:)', curses.color_pair(2) | curses.A_BOLD),
+				('(?<=DONE:)\s+[1-9]\d*', curses.color_pair(3) | curses.A_BOLD),
+				('(?<=Failing jobs:)\s+[1-9]\d*', curses.color_pair(1) | curses.A_BOLD),
+				('(?<=FAILED:)\s+[1-9]\d*', curses.color_pair(1) | curses.A_BOLD),
+				('(?<=Successful jobs:)\s+[1-9]\d*', curses.color_pair(2) | curses.A_BOLD),
+				('(?<=SUCCESS:)\s+[1-9]\d*', curses.color_pair(2) | curses.A_BOLD),
+		]
+		self.regex = re.compile('(%s)' % '|'.join(map(lambda (a, b): a,
+			self.attrs)))
+
+	def attributes(self, string, pos):
+		"""Retrieve the attributes for a match in string at position
+		pos.  This is a helper routine for write().
+		"""
+		for (expr, attr) in self.attrs:
+			match = re.search(expr, string)
+			if match and match.start() == pos:
+				return attr
+		return 0
 
 	def write(self, data):
 		if self.logged:
@@ -19,15 +42,15 @@ class CursesStream:
 			CursesStream.backlog.append(data)
 
 		if curses.has_colors():
-			regex = '(%s)' % '|'.join(self.attrs.keys())
-			start = 0
-			match = re.search(regex, data[start:])
+			idx = 0
+			match = self.regex.search(data[idx:])
 			while match:
-				self.screen.addstr(data[start:match.start()])
-				self.screen.addstr(match.group(0), self.attrs[match.group(0)])
-				start = match.end()
-				match = re.search(regex, data[start:])
-			self.screen.addstr(data[start:])
+				self.screen.addstr(data[idx:idx + match.start()])
+				self.screen.addstr(match.group(0),
+						self.attributes(data[idx:], match.start()))
+				idx += match.end()
+				match = self.regex.search(data[idx:])
+			self.screen.addstr(data[idx:])
 			self.screen.refresh()
 		else:
 			self.screen.addstr(data)
