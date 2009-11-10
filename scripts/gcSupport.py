@@ -61,7 +61,7 @@ class FileMutex:
 
 def getJobs(workDir):
 	idregex = re.compile(r'^job_([0-9]+)$')
-	return map(lambda x: int(idregex.match(x).group(1)), os.listdir(os.path.join(workDir, 'output')))
+	return map(lambda x: int(idregex.match(x).group(1)), filter(lambda x: x.startswith('job'),os.listdir(os.path.join(workDir, 'output'))))
 
 
 def getWorkJobs(args):
