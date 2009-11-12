@@ -5,10 +5,6 @@ class CursesStream:
 		(self.stream, self.screen) = args
 		self.logged = True
 
-		curses.init_pair(1, curses.COLOR_RED, -1)
-		curses.init_pair(2, curses.COLOR_GREEN, -1)
-		curses.init_pair(3, curses.COLOR_CYAN, -1)
-
 		# This is a list of (regular expression, curses attributes).  The
 		# attributes are applied to matches of the regular expression in
 		# the output written into this stream.  Lookahead expressions
@@ -48,12 +44,13 @@ class CursesStream:
 				self.screen.addstr(data[idx:idx + match.start()])
 				self.screen.addstr(match.group(0),
 						self.attributes(data[idx:], match.start()))
+				self.screen.refresh()
 				idx += match.end()
 				match = self.regex.search(data[idx:])
 			self.screen.addstr(data[idx:])
-			self.screen.refresh()
 		else:
 			self.screen.addstr(data)
+		self.screen.refresh()
 
 		return True
 
@@ -101,10 +98,17 @@ class ProgressBar:
 def CursesGUI(jobs, jobCycle):
 	def cursesWrapper(screen):
 		screen.scrollok(True)
+
 		try:
 			curses.use_default_colors()
+			curses.init_pair(1, curses.COLOR_RED, -1)
+			curses.init_pair(2, curses.COLOR_GREEN, -1)
+			curses.init_pair(3, curses.COLOR_CYAN, -1)
 		except:
 			screen.attron(curses.A_BOLD)
+			curses.init_pair(1, curses.COLOR_RED, 0)
+			curses.init_pair(2, curses.COLOR_GREEN, 0)
+			curses.init_pair(3, curses.COLOR_CYAN, 0)
 
 		# Event handling for resizing
 		def onResize(sig, frame):
