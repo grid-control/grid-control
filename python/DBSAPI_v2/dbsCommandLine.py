@@ -134,10 +134,10 @@ class showProgress( threading.Thread ):
 	def __init__(self):
 		threading.Thread.__init__(self)
 		self.doIt = 1
-		self.twril=True
+		self.twirl=True
 
 	def run ( self ):
-		if not self.twril:
+		if not self.twirl:
 			return
 		sys.stdout.write('Processing ... ')
 		chars = ('|', '/', '-', '\\')
@@ -147,7 +147,7 @@ class showProgress( threading.Thread ):
 				sys.stdout.flush()
 				time.sleep(0.1)
 	def stop(self):
-		if not self.twril:
+		if not self.twirl:
 			return
 		if self.doIt == 1: print ""
 		self.doIt = 0
@@ -450,7 +450,7 @@ class cmd_doc_writer:
                 print "                    Where QUERYNAME is a Valid Analysis Dataset Definition Name"
                 if self.wiki_help: print "<verbatim>"
                 print "   examples:"
-                print "         dbs search --path=/TAC-TIBTOB-120-DAQ-EDM/CMSSW_1_2_0/RAW --storequery=MYTESTADSDEF"
+                print "         dbs search --query=\"find file, lumi where dataset=/TAC-TIBTOB-120-DAQ-EDM/CMSSW_1_2_0/RAW\" --storequery=MYTESTADSDEF"
                 if self.wiki_help: print "</verbatim>"
 
   def _help_templatestorequery(self):
@@ -463,7 +463,8 @@ class cmd_doc_writer:
 		print "Such queries in DBS are called Template queries, and hence the name"
                 if self.wiki_help: print "<verbatim>"
                 print "   examples:"
-                print "         dbs search --path=/TAC-TIBTOB-120-DAQ-EDM/CMSSW_1_2_0/RAW --storetemplatequery=MYTESTADSDEF"
+                print "         dbs search --query=\"find lumi where run = 1234\" --storetemplatequery=MYTESTADSDEF"
+
                 if self.wiki_help: print "</verbatim>"
 
   def _help_createpads(self):
@@ -670,6 +671,12 @@ class DbsOptionParser(optparse.OptionParser):
       self.add_option("--query", action="store", type="string", dest="query",
            help="Search query used to perform data serach, create ADS Definitions etc ")
 
+      self.add_option("--begin", action="store", type="string", dest="begin", default="",
+           help="Used to specify the begin of the paginated query (you can ask few items from the result)")
+
+      self.add_option("--end", action="store", type="string", dest="end", default="",
+           help="Used to specify the end of the paginated query (you can ask few items from the result) ")
+
       self.add_option("--xml", action="store_true", dest="xml",
            help="If specified XML from DBS Server will be printed (in general used for debugging) ")
 
@@ -707,11 +714,14 @@ class DbsOptionParser(optparse.OptionParser):
       self.add_option("--doc", action="store_true", default=False, dest="doc",
            help="Generates a detailed documentation for reference, overrides all other cmdline options (use --wiki_help to produces help document in wiki format [dbs --doc --wiki_help])")
 
-      self.add_option("--twril", action="store_true", default=False, dest="twril",
+      self.add_option("--twirl", action="store_true", default=False, dest="twirl",
            help="If provided, tool will show 'Progressing...' Twril on screen (can be useful when running large queries)")
 
       self.add_option("--noheader", action="store_true", default=False, dest="noheader",
            help="If provided, tool will NOT display the header information in the result of query (Useful for scripted quries)")
+
+      self.add_option("--production", action="store_true", dest="production", default=False,
+                help="When added to --query, displays ALL datasets regardles of their validity and aviability status")
 
       ## Always keep this as the last option in the list
       self.add_option("-c","--command", action="store", type="string", default="notspecified", dest="command",
@@ -858,7 +868,7 @@ class ApiDispatcher:
 	del(opts.__dict__['alias'])
 
     self.makeApi()
-    self.progress.twril=self.optdict['twril']
+    self.progress.twirl=self.optdict['twirl']
 
     if apiCall in ('', 'notspecified') and self.optdict.has_key('want_help'):
         print_help(self)
@@ -1584,6 +1594,7 @@ class ApiDispatcher:
 
        	else: userInput="find dataset, file, lumi where "+criteria[1]
 	# Craete ADS Def
+
 	try :
 		from DBSAPI.dbsAnalysisDatasetDefinition import DbsAnalysisDatasetDefinition
 
@@ -1937,18 +1948,30 @@ class ApiDispatcher:
                qu="query"
 	
         self.progress.start()
+	if userInput.find("dataset") != -1 and not self.optdict.get('production') :
+		if userInput.strip()=="find dataset" :
+			userInput += " where dataset.status like VALID* "
+		elif len(userInput.split()) == 2:
+			if userInput.split()[1].strip()=="dataset":
+				userInput += " where dataset.status like VALID* "
+		else:
+			if userInput.find("order") != -1 :
+				userInput = userInput.replace("order", " and dataset.status like VALID* order ")	
+			else:
+				userInput += " and dataset.status like VALID* "
+	#print userInput
 	if dbsAvailable: 
-		data=self.getApi().executeQuery(userInput, type=qu)
+		data=self.getApi().executeQuery(query=userInput, type=qu, begin=self.optdict.get('begin'), end=self.optdict.get('end'))
 		self.apiversion=self.getApi().getApiVersion()
 	else : 
-
 		dbsver = self.getDBSversion()
 		
 		if  not dbsver or dbsver >= 'DBS_2_0_6':
 			self.apiversion=dbsver
 		else:
 			self.apiversion='DBS_2_0_5'
-		params = {'apiversion': self.apiversion ,'api':'executeQuery'}
+		params = {'apiversion': self.apiversion ,'api':'executeQuery', 
+					'begin' : self.optdict.get('begin'), 'end' : self.optdict.get('end')}
 		params = dict(params)
 		params['query']=userInput
 		params['type']=qu

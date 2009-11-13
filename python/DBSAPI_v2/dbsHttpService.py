@@ -175,7 +175,7 @@ class DbsHttpService:
    # All looks OK, still doesn't gurantee proxy's validity etc.
    return key, proxy
    
-  def _call(self, args, typ, repeat = 1, delay = 2 ):
+  def _call(self, args, typ, repeat = 3, delay = 2 ):
 	  if self.retry and not self.retry_att:
             self.retry_att=1
             repeat=self.retry
