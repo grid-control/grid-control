@@ -14,6 +14,7 @@ from monitoring	import *
 from module	import *
 
 from datasets	import *
+from plugins	import *
 
 from CMSSW	import *
 from user_mod	import *

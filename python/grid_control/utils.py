@@ -42,6 +42,26 @@ def sorted(list, comp=None, key=None):
 	return tmp
 
 
+def unique(lst):
+	return dict(map(lambda x: (x, None), lst)).keys()
+
+
+def flatten(lists):
+	result = []
+	for x in lists:
+		try:
+			if type(x) == str:
+				raise
+			result.extend(x)
+		except:
+			result.append(x)
+	return result
+
+
+def flatSet(lst):
+	return sorted(unique(flatten(lst)))
+
+
 def safeWriteFile(name, content):
 	fp = open(name, 'w')
 	fp.writelines(content)
@@ -357,9 +377,11 @@ class AbstractObject:
 			modPath = loadModules('grid_control.' + name)
 		except:
 			modPath = loadModules(name)
-		try:
-			newcls = getattr(sys.modules[modPath], name.split('.')[-1])
-		except:
+		className = name.split('.')[-1]
+		newcls = getattr(sys.modules["__main__"], className, None)
+		if newcls == None:
+			newcls = getattr(sys.modules[modPath], className, None)
+		if newcls == None:
 			raise ConfigError('%s "%s" does not exist!' % (cls.__name__, name))
 		if not issubclass(newcls, cls):
 			raise Exception('%s is not a child of %s' % (newcls, cls))
@@ -524,10 +546,6 @@ def DiffLists(oldList, newList, cmpFkt, changedFkt):
 		listMissing.append(old)
 
 	return (listAdded, listMissing, listChanged)
-
-
-def unique(lst):
-	return dict(map(lambda x: (x, None), lst)).keys()
 
 
 def lenSplit(list, maxlen):
