@@ -326,7 +326,7 @@ class JobDB:
 				dest = str.join("/", map(lambda x: x.split(":")[0], dest.split("/")))
 				for site in jobFilter.split(','):
 					regex = re.compile(site)
-					if regex.match(dest) and jobObj.state not in (Job.SUCCESS, Job.FAILED):
+					if regex.search(dest) and jobObj.state not in (Job.SUCCESS, Job.FAILED):
 						return True
 				return False
 			# First try matching states, then try to match destinations
