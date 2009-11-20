@@ -54,7 +54,13 @@ DEFAULT: The default is to check the files with MD5 hashes. The default
 	parser.add_option("-o", '--output',        dest="output",       default=None,
 		help = "specify the local output directory")
 
+	justDownloadOpts = "-d -f -k --keep-se-fail --keep-local-fail"
+	parser.add_option("-j", '--just-download', dest="justDownload", default=False, action="store_true",
+		help = "Just download files - shorthand for %s" % justDownloadOpts)
+
 	(opts, args) = parser.parse_args()
+	if opts.justDownload:
+		parser.parse_args(args = justDownloadOpts.split() + sys.argv[1:], values = opts)
 
 	# we need exactly one positional argument (config file)
 	if len(args) != 1:
@@ -100,7 +106,7 @@ DEFAULT: The default is to check the files with MD5 hashes. The default
 
 			# Copy files to local folder
 			outFilePath = os.path.join(opts.output, name_dest)
-			if not utils.se_copy(os.path.join(pathSE, name_dest), "file://%s" % outFilePath):
+			if not utils.se_copy(os.path.join(pathSE, name_dest), "file:///%s" % outFilePath):
 				print "\n\t\tUnable to copy file from SE!"
 				sys.stderr.write(utils.se_copy.lastlog)
 				failJob = True
