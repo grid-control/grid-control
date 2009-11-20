@@ -57,6 +57,9 @@ class JobDB:
 		self.inFlight = config.getInt('jobs', 'in flight', -1, volatile=True)
 		self.inQueue = config.getInt('jobs', 'in queue', -1, volatile=True)
 		self.doShuffle = config.getBool('jobs', 'shuffle', False, volatile=True)
+		self.maxRetry = config.getInt('jobs', 'max retry', -1, volatile=True)
+		if self.config.opts.maxRetry != None:
+			self.maxRetry = self.config.opts.maxRetry
 
 
 	# Return appropriate queue for given job
@@ -154,15 +157,15 @@ class JobDB:
 		submit = max(submit, 0)
 
 		# Get list of submittable jobs
-		if self.config.opts.maxRetry != None:
-			list = filter(lambda x: self._jobs.get(x, Job()).attempt < self.config.opts.maxRetry, self.ready)
+		if self.maxRetry >= 0:
+			list = filter(lambda x: self._jobs.get(x, Job()).attempt < self.maxRetry, self.ready)
 		else:
 			list = self.ready[:]
 		if self.doShuffle:
 			list = self.sample(list, submit)
 		else:
 			list = list[:submit]
-		list.sort()
+			list.sort()
 		return list
 
 
