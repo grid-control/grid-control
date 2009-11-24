@@ -91,6 +91,23 @@ class CMSSW(DataMod):
 		if self.scramEnv['SCRAM_PROJECTNAME'] != 'CMSSW':
 			raise ConfigError("Project area not a valid CMSSW project area.")
 
+		# Information about search order for software environment
+		taskInfo = utils.PersistentDict(os.path.join(self.config.workDir, 'task.dat'), ' = ')
+		if config.opts.init:
+			if os.environ.get('VO_CMS_SW_DIR', None):
+				taskInfo['CMSSW_DIR_UI'] = os.environ['VO_CMS_SW_DIR']
+			if self.scramEnv.get('RELEASETOP', None):
+				projPath = os.path.normpath("%s/../../../../" % self.scramEnv['RELEASETOP'])
+				taskInfo['CMSSW_DIR_PRO'] = projPath
+			taskInfo.write()
+		self.searchLoc = filter(lambda x: x, map(lambda k: (k.upper(), taskInfo.get(k.lower())),
+			['CMSSW_DIR_UI', 'CMSSW_DIR_PRO']))
+		if len(self.searchLoc):
+			print "Jobs will try to use the CMSSW software located here:"
+			for i, loc in enumerate(self.searchLoc):
+				key, value = loc
+				print " %i) %s" % (i + 1, value)
+
 		if config.opts.init and len(self.projectArea):
 			# Generate runtime tarball (and move to SE)
 			utils.genTarball(os.path.join(config.workDir, 'runtime.tar.gz'), self.projectArea, self.pattern)
@@ -125,11 +142,12 @@ class CMSSW(DataMod):
 	# Get environment variables for gc_config.sh
 	def getTaskConfig(self):
 		data = DataMod.getTaskConfig(self)
+		data.update(dict(self.searchLoc))
 		data['CMSSW_CONFIG'] = str.join(' ', map(os.path.basename, self.configFiles))
 		data['CMSSW_OLD_RELEASETOP'] = self.scramEnv.get('RELEASETOP', None)
 		data['DB_EXEC'] = 'cmsRun'
-		data['SCRAM_VERSION'] = self.scramVersion
 		data['SCRAM_ARCH'] = self.scramArch
+		data['SCRAM_VERSION'] = self.scramVersion
 		data['SCRAM_PROJECTVERSION'] = self.scramEnv['SCRAM_PROJECTVERSION']
 		data['GZIP_OUT'] = ('no', 'yes')[self.gzipOut]
 		data['SE_RUNTIME'] = ('no', 'yes')[self.seRuntime]
