@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-import gcSupport, base64, xml.dom.minidom, optparse, locale, re, time
+import gcSupport, base64, xml.dom.minidom, optparse, locale, re, time, os
 from xml.dom.minidom import parseString
 from grid_control import *
 from DBSAPI_v2.dbsMigrateApi import DbsMigrateApi
@@ -12,7 +12,8 @@ class DBS(object):
 
 
 def MakeDBSApi(url):
-	proxy = VomsProxy(gcSupport.ConfigDummy({"proxy": {"ignore warnings": True}}))
+	if not "X509_USER_PROXY" in os.environ:
+		raise RuntimeError("Environment variable X509_USER_PROXY not set!")
 	return DBSAPI_v2.dbsApi.DbsApi({'version': 'DBS_2_0_6', 'level': 'CRITICAL', 'url': url})
 
 
