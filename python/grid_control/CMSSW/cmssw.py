@@ -100,9 +100,9 @@ class CMSSW(DataMod):
 				projPath = os.path.normpath("%s/../../../../" % self.scramEnv['RELEASETOP'])
 				taskInfo['CMSSW_DIR_PRO'] = projPath
 			taskInfo.write()
-		self.searchLoc = filter(lambda x: x, map(lambda k: (k.upper(), taskInfo.get(k.lower())),
+		self.searchLoc = filter(lambda (k,v): v, map(lambda k: (k.upper(), taskInfo.get(k.lower())),
 			['CMSSW_DIR_UI', 'CMSSW_DIR_PRO']))
-		if len(self.searchLoc):
+		if len(self.searchLoc) and config.get('global', 'backend', 'grid') != 'grid':
 			print "Jobs will try to use the CMSSW software located here:"
 			for i, loc in enumerate(self.searchLoc):
 				key, value = loc
