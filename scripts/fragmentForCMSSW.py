@@ -3,7 +3,6 @@ import FWCore.ParameterSet.Config as cms
 from IOMC.RandomEngine.RandomServiceHelper import RandomNumberServiceHelper
 
 def customise_for_gc(process):
-
 	try:
 		maxevents = __MAX_EVENTS__
 		process.maxEvents = cms.untracked.PSet(
@@ -18,6 +17,18 @@ def customise_for_gc(process):
 			skipEvents = cms.untracked.uint32(__SKIP_EVENTS__),
 			fileNames = cms.untracked.vstring(__FILE_NAMES__)
 		)
+	except:
+		pass
+
+	try:
+		secondary = __FILE_NAMES2__
+		process.source.secondaryFileNames = cms.untracked.vstring(secondary)
+	except:
+		pass
+
+	try:
+		lumirange = __LUMI_RANGE__
+		process.source.lumisToProcess = cms.untracked.VLuminosityBlockRange(lumirange)
 	except:
 		pass
 
