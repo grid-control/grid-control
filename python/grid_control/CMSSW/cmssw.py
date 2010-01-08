@@ -95,10 +95,10 @@ class CMSSW(DataMod):
 		taskInfo = utils.PersistentDict(os.path.join(self.config.workDir, 'task.dat'), ' = ')
 		if config.opts.init:
 			if os.environ.get('VO_CMS_SW_DIR', None):
-				taskInfo['CMSSW_DIR_UI'] = os.environ['VO_CMS_SW_DIR']
+				taskInfo['CMSSW_DIR_UI'.lower()] = os.environ['VO_CMS_SW_DIR']
 			if self.scramEnv.get('RELEASETOP', None):
 				projPath = os.path.normpath("%s/../../../../" % self.scramEnv['RELEASETOP'])
-				taskInfo['CMSSW_DIR_PRO'] = projPath
+				taskInfo['CMSSW_DIR_PRO'.lower()] = projPath
 			taskInfo.write()
 		self.searchLoc = filter(lambda (k,v): v, map(lambda k: (k.upper(), taskInfo.get(k.lower())),
 			['CMSSW_DIR_UI', 'CMSSW_DIR_PRO']))
