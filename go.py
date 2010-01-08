@@ -176,7 +176,11 @@ def main(args):
 					opts.submission = False
 
 		if opts.gui:
-			gui.CursesGUI(jobs, jobCycle)
+			try:
+				gui.CursesGUI(jobs, jobCycle)
+			except:
+				print "GUI mode is not available!"
+				jobCycle()
 		else:
 			jobCycle()
 

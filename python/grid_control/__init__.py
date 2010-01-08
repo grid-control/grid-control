@@ -21,4 +21,8 @@ from user_mod	import *
 from parameters	import *
 
 from help import *
-from gui import *
+try:
+	from gui import *
+except:
+	pass
+
