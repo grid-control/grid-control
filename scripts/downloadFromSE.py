@@ -161,6 +161,12 @@ DEFAULT: The default is to check the files with MD5 hashes. The default
 		# Save new job status infos
 		job.save(jobFile)
 		print
+
+	# Print overview
+	for (state, num) in infos.items():
+		if num > 0:
+			print "%20s: [%d/%d]" % (state, num, len(jobList))
+
 	return 0
 
 if __name__ == '__main__':
