@@ -53,7 +53,7 @@ DEFAULT: The default is to check the files with MD5 hashes. The default
 		help = "remove files of successful jobs from local directory")
 	parser.add_option("-o", '--output',        dest="output",       default=None,
 		help = "specify the local output directory")
-	parser.add_option("-u", '--update',       dest="update",      default=False,  action="store_true",
+	parser.add_option("-u", '--update',        dest="update",       default=False, action="store_true",
 		help = "update, i.e. download only files that do not already exist")
 
 	justDownloadOpts = "-d -f -k --keep-se-fail --keep-local-fail"
@@ -75,7 +75,8 @@ DEFAULT: The default is to check the files with MD5 hashes. The default
 
 	# Create SE output dir
 	if not opts.output:
-		opts.output = os.path.abspath(os.path.join(workDir, 'se_output'))
+		opts.output = os.path.join(workDir, 'se_output')
+	opts.output = os.path.abspath(opts.output)
 	if not os.path.exists(opts.output):
 		os.mkdir(opts.output)
 
