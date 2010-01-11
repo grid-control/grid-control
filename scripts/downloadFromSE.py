@@ -63,7 +63,9 @@ DEFAULT: The default is to check the files with MD5 hashes. The default
 	(opts, args) = parser.parse_args()
 	if opts.justDownload:
 		parser.parse_args(args = justDownloadOpts.split() + sys.argv[1:], values = opts)
+	realmain(opts, args)
 
+def realmain(opts, args):
 	# we need exactly one positional argument (config file)
 	if len(args) != 1:
 		sys.stderr.write("usage: %s [options] <config file>\n\n" % os.path.basename(sys.argv[0]))
@@ -80,6 +82,10 @@ DEFAULT: The default is to check the files with MD5 hashes. The default
 	if not os.path.exists(opts.output):
 		os.mkdir(opts.output)
 
+	infos = {}
+	def incInfo(x):
+		infos[x] = infos.get(x, 0) + 1
+
 	for jobNum in utils.sorted(jobList):
 		print "Job %d:" % jobNum,
 
@@ -92,14 +98,17 @@ DEFAULT: The default is to check the files with MD5 hashes. The default
 			continue
 		if job.state != Job.SUCCESS:
 			print "Job has not yet finished successfully!"
+			incInfo("Processing")
 			continue
 		if job.get('download') == 'True':
 			print "All files already downloaded!"
+			incInfo("Downloaded")
 			continue
 
 		# Read the file hash entries from job info file
 		files = gcSupport.getFileInfo(workDir, jobNum, lambda retCode: retCode == 0)
 		if not files:
+			incInfo("No files")
 			continue
 		print "The job wrote %d file%s to the SE" % (len(files), ('s', '')[len(files) == 1])
 
@@ -150,10 +159,12 @@ DEFAULT: The default is to check the files with MD5 hashes. The default
 					sys.stderr.write(se_rm.lastlog)
 
 		if failJob:
+			incInfo("Failed downloads")
 			if opts.markFailed:
 				# Mark job as failed to trigger resubmission
 				job.state = Job.FAILED
 		else:
+			incInfo("Sucessful download")
 			if opts.markDownload:
 				# Mark as downloaded
 				job.set('download', 'True')
@@ -163,10 +174,12 @@ DEFAULT: The default is to check the files with MD5 hashes. The default
 		print
 
 	# Print overview
+	print
+	print "Status overview:"
 	for (state, num) in infos.items():
 		if num > 0:
 			print "%20s: [%d/%d]" % (state, num, len(jobList))
-
+	print
 	return 0
 
 if __name__ == '__main__':
