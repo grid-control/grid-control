@@ -30,7 +30,7 @@ DEFAULT: The default is to check the files with MD5 hashes. The default
 		help = "remove files of successful jobs from local directory")
 	parser.add_option("-o", '--output',        dest="output",       default=None,
 		help = "specify the local output directory")
-	parser.add_option("-u", '--update',        dest="update",       default=False, action="store_true",
+	parser.add_option("-u", '--update',        dest="skipExisting", default=False, action="store_true",
 		help = "update, i.e. download only files that do not already exist")
 
 	justDownloadOpts = "-d -f -k --keep-se-fail --keep-local-fail"
