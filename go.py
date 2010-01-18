@@ -178,8 +178,12 @@ def main(args):
 		if opts.gui:
 			try:
 				gui.CursesGUI(jobs, jobCycle)
+			except GridError, e:
+				raise
 			except:
-				print "GUI mode is not available!"
+				if utils.verbosity() > 2:
+					raise
+				print "GUI mode is not available! Use -vvv to find out why."
 				jobCycle()
 		else:
 			jobCycle()
