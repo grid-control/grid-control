@@ -28,6 +28,7 @@ def se_rm(target, quiet = False):
 def main(args):
 	help = \
 """
+THIS IS NOT UP-TO-DATE!
 DEFAULT: The default is to check the files with MD5 hashes. The default
          output directory is named "se_output" and located in the work
          directory of the job
@@ -36,40 +37,77 @@ DEFAULT: The default is to check the files with MD5 hashes. The default
   * Jobs failing verification are marked as FAILED and their files are
     deleted from the SE and local SE output directory."""
 	parser = optparse.OptionParser(usage = "%prog [options] <config file>\n" + help)
-	parser.add_option("-v", "--verify-md5",      dest="verify",       default=False, action="store_true",
-		help = "disable MD5 verification of SE files (all jobs are ok)")
-	parser.add_option("",   "--no-mark-dl",      dest="markDL",       default=True,  action="store_false",
-		help = "do not mark sucessfully downloaded jobs as such")
-	parser.add_option("",   "--ignore-mark-dl",  dest="markIgnoreDL", default=False, action="store_true",
-		help = "do not mark sucessfully downloaded jobs as such")
-	parser.add_option("",   "--no-mark-fail",    dest="markFailed",   default=True,  action="store_false",
-		help = "do not mark jobs failing verification as such")
 
-	parser.add_option("",   "--keep-se-fail",    dest="rmSEFail",     default=True,  action="store_false",
-		help = "keep files of failed jobs on the SE")
-	parser.add_option("",   "--keep-local-fail", dest="rmLocalFail",  default=True,  action="store_false",
-		help = "keep files of failed jobs in local directory")
-	parser.add_option("",   "--rm-se-ok",        dest="rmSEOK",       default=False, action="store_true",
-		help = "keep files of successful jobs on SE")
-	parser.add_option("",   "--rm-local-ok",     dest="rmLocalOK",    default=False, action="store_true",
-		help = "remove files of successful jobs from local directory")
-	parser.add_option("",   "--skip-existing",   dest="skipExisting", default=False, action="store_true",
-		help = "skip files whose file name is already on local disk")
-	parser.add_option("-o", "--output",          dest="output",       default=None,
-		help = "specify the local output directory")
+	def addBoolOpt(optList, optPostfix, dest, default, help, optShort=("", ""), optPrefix=("no", ""), helpPrefix=("do not ", "")):
+		def buildLongOpt(prefix, postfix):
+			if prefix and postfix:
+				return "--%s-%s" % (prefix, postfix)
+			elif prefix and not postfix:
+				return "--" + prefix
+			else:
+				return "--" + postfix
+		optList.add_option(optShort[True], buildLongOpt(optPrefix[True], optPostfix), dest=dest,
+			default=default, action="store_true", help=helpPrefix[True] + help + ("", " [Default]")[default])
+		optList.add_option(optShort[False], buildLongOpt(optPrefix[False], optPostfix), dest=dest,
+			default=default, action="store_false", help=helpPrefix[False] + help + (" [Default]", "")[default])
 
-	justDownloadOpts = "-d -f -k --keep-se-fail --keep-local-fail"
-	parser.add_option("",   "--just-download", dest="justDownload", default=False, action="store_true",
-		help = "Just download files - shorthand for %s" % justDownloadOpts)
+	addBoolOpt(parser, "verify-md5", dest="verify",       default=True, optShort=("", "-v"),
+		help="MD5 verification of SE files", helpPrefix=("disable ", "enable "))
+	addBoolOpt(parser, "",           dest="skipExisting", default=False, optPrefix=("overwrite", "skip-existing"),
+		help="files which are already on local disk", helpPrefix=("overwrite ", "skip "))
 
-	justDownloadOpts = "-d -f -k --keep-se-fail --keep-local-fail"
-	parser.add_option("",   "--just-download", dest="justDownload", default=False, action="store_true",
-		help = "Just download files - shorthand for %s" % justDownloadOpts)
+	ogFlags = optparse.OptionGroup(parser, "Job state / flag handling", "")
+	addBoolOpt(ogFlags, "mark-dl",   dest="markDL",       default=True,
+		help="mark sucessfully downloaded jobs as such")
+	addBoolOpt(ogFlags, "mark-dl",   dest="markIgnoreDL", default=False, optPrefix=("use","ignore"),
+		help="mark about sucessfully downloaded jobs", helpPrefix=("use ", "ignore "))
+	addBoolOpt(ogFlags, "mark-fail", dest="markFailed",   default=True,
+		help="mark jobs failing verification as such")
+	parser.add_option_group(ogFlags)
+
+	ogFiles = optparse.OptionGroup(parser, "Local / SE file handling", "")
+	for (optPostfix, dest, help, default) in [
+			('local-ok',   'rmLocalOK',   'files of successful jobs in local directory', False),
+			('local-fail', 'rmLocalFail', 'files of failed jobs in local directory', False),
+			('se-ok',      'rmSEOK',      'files of successful jobs on SE', False),
+			('se-fail',    'rmSEFail',    'files of failed jobs on the SE', False),
+		]:
+		addBoolOpt(ogFiles, optPostfix, dest=dest, default=default, optPrefix=("keep","rm"),
+			help=help, helpPrefix=("keep ", "remove "))
+	parser.add_option_group(ogFiles)
+
+	parser.add_option("-o", "--output", dest="output", default=None,
+		help="specify the local output directory")
+
+	# Shortcut options
+	def withoutDefaults(opts):
+		def isDefault(opt):
+			return (parser.get_option(opt).default and parser.get_option(opt).action == "store_true") or \
+				(not parser.get_option(opt).default and parser.get_option(opt).action == "store_false")
+		return str.join(" ", filter(lambda x: not isDefault(x), opts.split()))
+
+	ogShort = optparse.OptionGroup(parser, "Shortcuts", "")
+	optMove = "--verify-md5 --overwrite --mark-dl --use-mark-dl --mark-fail --rm-se-fail --rm-local-fail --rm-se-ok --keep-local-ok"
+	ogShort.add_option("-m", "--move", dest="shMove", default=None, action="store_const", const=optMove,
+		help = "Move files from SE - shorthand for:".ljust(100) + withoutDefaults(optMove))
+
+	optCopy = "--verify-md5 --overwrite --mark-dl --use-mark-dl --mark-fail --rm-se-fail --rm-local-fail --keep-se-ok --keep-local-ok"
+	ogShort.add_option("-c", "--copy", dest="shCopy", default=None, action="store_const", const=optCopy,
+		help = "Copy files from SE - shorthand for:".ljust(100) + withoutDefaults(optCopy))
+
+	optJCopy = "--verify-md5 --skip-existing --no-mark-dl --ignore-mark-dl --no-mark-fail --keep-se-fail --keep-local-fail --keep-se-ok --keep-local-ok"
+	ogShort.add_option("-j", "--just-copy", dest="shJCopy", default=None, action="store_const", const=optJCopy,
+		help = "Just copy files from SE - shorthand for:".ljust(100) + withoutDefaults(optJCopy))
+	parser.add_option_group(ogShort)
 
 	(opts, args) = parser.parse_args()
-	if opts.justDownload:
-		parser.parse_args(args = justDownloadOpts.split() + sys.argv[1:], values = opts)
-	realmain(opts, args)
+	def processShorthand(optSet):
+		if optSet:
+			parser.parse_args(args = optSet.split() + sys.argv[1:], values = opts)
+	processShorthand(opts.shMove)
+	processShorthand(opts.shCopy)
+	processShorthand(opts.shJCopy)
+#	realmain(opts, args)
 
 def realmain(opts, args):
 	# we need exactly one positional argument (config file)
@@ -127,7 +165,7 @@ def realmain(opts, args):
 			if opts.skipExisting and os.path.exists(outFilePath): 
 				print "skip file as it already exists!"
 				continue
-				
+
 			if not utils.se_copy(os.path.join(pathSE, name_dest), "file:///%s" % outFilePath):
 				print "\n\t\tUnable to copy file from SE!"
 				sys.stderr.write(utils.se_copy.lastlog)
