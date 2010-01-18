@@ -7,7 +7,7 @@ class SGE(LocalWMSApi):
 	_statusMap = {
 		'qw': Job.QUEUED,
 		'hqw': Job.QUEUED,
-		'Eqw': Job.WAITING,
+		'Eqw': Job.WAITING, 'Rr': Job.RUNNING,
 		'h': Job.WAITING,   'w': Job.WAITING,
 		's': Job.QUEUED,    'r': Job.RUNNING,
 		'S': Job.QUEUED,    'R': Job.RUNNING,

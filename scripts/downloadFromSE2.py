@@ -36,28 +36,34 @@ DEFAULT: The default is to check the files with MD5 hashes. The default
   * Jobs failing verification are marked as FAILED and their files are
     deleted from the SE and local SE output directory."""
 	parser = optparse.OptionParser(usage = "%prog [options] <config file>\n" + help)
-	parser.add_option("-m", "--no-md5",        dest="verify",       default=True,  action="store_false",
+	parser.add_option("-v", "--verify-md5",      dest="verify",       default=False, action="store_true",
 		help = "disable MD5 verification of SE files (all jobs are ok)")
-	parser.add_option("-d", "--no-mark-dl",    dest="markDownload", default=True,  action="store_false",
+	parser.add_option("",   "--no-mark-dl",      dest="markDL",       default=True,  action="store_false",
 		help = "do not mark sucessfully downloaded jobs as such")
-	parser.add_option("-f", "--no-mark-fail",  dest="markFailed",   default=True,  action="store_false",
+	parser.add_option("",   "--ignore-mark-dl",  dest="markIgnoreDL", default=False, action="store_true",
+		help = "do not mark sucessfully downloaded jobs as such")
+	parser.add_option("",   "--no-mark-fail",    dest="markFailed",   default=True,  action="store_false",
 		help = "do not mark jobs failing verification as such")
 
-	parser.add_option("", "--keep-se-fail",    dest="rmSEFail",     default=True,  action="store_false",
+	parser.add_option("",   "--keep-se-fail",    dest="rmSEFail",     default=True,  action="store_false",
 		help = "keep files of failed jobs on the SE")
-	parser.add_option("", "--keep-local-fail", dest="rmLocalFail",  default=True,  action="store_false",
+	parser.add_option("",   "--keep-local-fail", dest="rmLocalFail",  default=True,  action="store_false",
 		help = "keep files of failed jobs in local directory")
-	parser.add_option("-k", "--keep-se-ok",    dest="rmSEOK",       default=True,  action="store_false",
+	parser.add_option("",   "--rm-se-ok",        dest="rmSEOK",       default=False, action="store_true",
 		help = "keep files of successful jobs on SE")
-	parser.add_option("-r", "--rm-local-ok",   dest="rmLocalOK",    default=False, action="store_true",
+	parser.add_option("",   "--rm-local-ok",     dest="rmLocalOK",    default=False, action="store_true",
 		help = "remove files of successful jobs from local directory")
-	parser.add_option("-o", '--output',        dest="output",       default=None,
+	parser.add_option("",   "--skip-existing",   dest="skipExisting", default=False, action="store_true",
+		help = "skip files whose file name is already on local disk")
+	parser.add_option("-o", "--output",          dest="output",       default=None,
 		help = "specify the local output directory")
-	parser.add_option("-u", '--update',        dest="skipExisting", default=False, action="store_true",
-		help = "update, i.e. download only files that do not already exist")
 
 	justDownloadOpts = "-d -f -k --keep-se-fail --keep-local-fail"
-	parser.add_option("-j", '--just-download', dest="justDownload", default=False, action="store_true",
+	parser.add_option("",   "--just-download", dest="justDownload", default=False, action="store_true",
+		help = "Just download files - shorthand for %s" % justDownloadOpts)
+
+	justDownloadOpts = "-d -f -k --keep-se-fail --keep-local-fail"
+	parser.add_option("",   "--just-download", dest="justDownload", default=False, action="store_true",
 		help = "Just download files - shorthand for %s" % justDownloadOpts)
 
 	(opts, args) = parser.parse_args()
@@ -100,7 +106,7 @@ def realmain(opts, args):
 			print "Job has not yet finished successfully!"
 			incInfo("Processing")
 			continue
-		if job.get('download') == 'True':
+		if job.get('download') == 'True' and not opt.markIgnoreDL:
 			print "All files already downloaded!"
 			incInfo("Downloaded")
 			continue
@@ -165,7 +171,7 @@ def realmain(opts, args):
 				job.state = Job.FAILED
 		else:
 			incInfo("Sucessful download")
-			if opts.markDownload:
+			if opts.markDL:
 				# Mark as downloaded
 				job.set('download', 'True')
 
