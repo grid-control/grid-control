@@ -8,6 +8,7 @@ class SGE(LocalWMSApi):
 		'qw': Job.QUEUED,
 		'hqw': Job.QUEUED,
 		'Eqw': Job.WAITING, 'Rr': Job.RUNNING,
+		'Rq': Job.QUEUED,
 		'h': Job.WAITING,   'w': Job.WAITING,
 		's': Job.QUEUED,    'r': Job.RUNNING,
 		'S': Job.QUEUED,    'R': Job.RUNNING,
@@ -31,8 +32,8 @@ class SGE(LocalWMSApi):
 
 
 	def getSubmitArguments(self, jobNum, sandbox, stdout, stderr):
-		# Job name
-		params = ' -N %s' % self.wms.getJobName(jobNum)
+		# Restart jobs = no, job name
+		params = ' -r n -N %s' % self.wms.getJobName(jobNum)
 
 		# Requirement based settings
 		strTime = lambda s: "%02d:%02d:%02d" % (s / 3600, (s / 60) % 60, s % 60)
