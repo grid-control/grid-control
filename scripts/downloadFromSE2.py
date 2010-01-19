@@ -107,7 +107,7 @@ DEFAULT: The default is to check the files with MD5 hashes. The default
 	processShorthand(opts.shMove)
 	processShorthand(opts.shCopy)
 	processShorthand(opts.shJCopy)
-#	realmain(opts, args)
+	realmain(opts, args)
 
 def realmain(opts, args):
 	# we need exactly one positional argument (config file)
@@ -144,7 +144,7 @@ def realmain(opts, args):
 			print "Job has not yet finished successfully!"
 			incInfo("Processing")
 			continue
-		if job.get('download') == 'True' and not opt.markIgnoreDL:
+		if job.get('download') == 'True' and not opts.markIgnoreDL:
 			print "All files already downloaded!"
 			incInfo("Downloaded")
 			continue
