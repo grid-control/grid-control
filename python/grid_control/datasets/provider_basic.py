@@ -2,21 +2,17 @@ from grid_control import utils, AbstractObject, RuntimeError, ConfigError
 from provider_base import DataProvider
 
 # Provides information about a single file
-# required format: /local/path/to/file|events[@SE1,SE2]
+# required format: <path to data file>|<number of events>[@SE1,SE2]
 class FileProvider(DataProvider):
 	def __init__(self, config, datasetExpr, datasetNick, datasetID = 0):
 		DataProvider.__init__(self, config, datasetExpr, datasetNick, datasetID)
 		DataProvider.providers.update({'FileProvider': 'file'})
 
-		tmp = datasetExpr.split('@')
-		if len(tmp) == 1:
-			self._selist = None
-		elif len(tmp) == 2:
-			self._selist = map(str.strip, tmp[1].split(','))
-			datasetExpr = tmp[0]
-		try:
-			self._path, self._events = map(str.strip, datasetExpr.split('|'))
-		except:
+		(self._path, self._events, selist) = utils.optSplit(datasetExpr, "|@")
+		self._selist = None
+		if selist:
+			self._selist = map(str.strip, selist.split(','))
+		if not (self._path and self._events):
 			raise ConfigError('Invalid dataset expression!\nCorrect: /local/path/to/file|events[@SE1,SE2]')
 
 
@@ -34,16 +30,14 @@ class FileProvider(DataProvider):
 
 
 # Takes dataset information from an configuration file
+# required format: <path to list of data files>[@<forced prefix>][%<selected dataset>[#<selected block>]]
 class ListProvider(DataProvider):
 	def __init__(self, config, datasetExpr, datasetNick, datasetID = 0):
 		DataProvider.__init__(self, config, datasetExpr, datasetNick, datasetID)
 		DataProvider.providers.update({'ListProvider': 'list'})
 
-		tmp = map(str.strip, datasetExpr.split('%'))
-		self._filename = config.getPath("CMSSW", "dataset file", tmp[0])
-		self._filter = None
-		if len(tmp) == 2:
-			self._filter = tmp[1]
+		(path, self._forcePrefix, self._filter) = utils.optSplit(datasetExpr, "@%")
+		self._filename = config.getPath("CMSSW", "dataset file", path)
 
 	def getBlocksInternal(self):
 		result = []
@@ -77,7 +71,7 @@ class ListProvider(DataProvider):
 					blockinfo[DataProvider.BlockName] = "0"
 				blockinfo[DataProvider.SEList] = None
 				blockinfo[DataProvider.FileList] = []
-				commonprefix = None
+				commonprefix = self._forcePrefix
 			elif line != '':
 				tmp = map(str.strip, line.split('=', 1))
 				if len(tmp) != 2:
@@ -93,7 +87,7 @@ class ListProvider(DataProvider):
 					if value.lower().strip() != 'none':
 						tmp = filter(lambda x: x != '', map(str.strip, value.split(',')))
 						blockinfo[DataProvider.SEList] = tmp
-				elif key.lower() == 'prefix':
+				elif key.lower() == 'prefix' and not self._forcePrefix:
 					commonprefix = value
 				else:
 					if commonprefix:

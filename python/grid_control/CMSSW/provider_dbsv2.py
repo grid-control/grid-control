@@ -5,6 +5,7 @@ import DBSAPI_v2.dbsApi
 from DBSAPI_v2.dbsApiException import *
 from DBSAPI_v2.dbsOptions import DbsOptionParser
 
+# required format: <dataset path>[@<instance>][#<block>]
 class DBSApiv2(DataProvider):
 	def __init__(self, config, datasetExpr, datasetNick, datasetID = 0):
 		DataProvider.__init__(self, config, datasetExpr, datasetNick, datasetID)
@@ -13,26 +14,12 @@ class DBSApiv2(DataProvider):
 		self.args        = {'version': 'DBS_2_0_6', 'level': 'CRITICAL'}
 		self.args['url'] = config.get('CMSSW', 'dbs instance', "http://cmsdbsprod.cern.ch/cms_dbs_prod_global/servlet/DBSServlet")
 
-		datasetExprList = map(str.strip, datasetExpr.split("#"))
-		if len(datasetExprList) > 2:
-			raise ConfigError('dataset must have the format <datasetpath>#block or <datasetpath>')
-		if len(datasetExprList) == 2:
-			self.datasetBlock = datasetExprList[1]
-		else:
+		(self.datasetPath, src, self.datasetBlock) = utils.optSplit(datasetExpr, "@#")
+		if not self.datasetBlock:
 			self.datasetBlock = "all"
-
-		datasetPathList = map(str.strip, datasetExprList[0].split("@"))
-		if len(datasetPathList) > 2:
-			raise ConfigError('datasetpath must have the format <dataset>@<dbsinstance> or <dataset>')
-		if len(datasetPathList) == 2:
-			self.datasetPath = datasetPathList[0]
-			# Absolute instance ?
-			if 'http://' in datasetPathList[1]:
-				self.args['url'] = datasetPathList[1]
-			else:
-				self.args['url'] = "http://cmsdbsprod.cern.ch/%s/servlet/DBSServlet" % datasetPathList[1]
-		else:
-			self.datasetPath = datasetPathList[0]
+		if not 'http://' in src:
+			src = "http://cmsdbsprod.cern.ch/%s/servlet/DBSServlet" % src
+		self.args['url'] = src
 
 
 	def getBlocksInternal(self):
