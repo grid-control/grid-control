@@ -42,28 +42,21 @@ def sorted(list, comp=None, key=None):
 	return tmp
 
 
-def optSplit(opt, prefixList):
+def optSplit(opt, delim):
 	""" Split option strings into fixed tuples
 	>>> optSplit("abc:ghi#def", ["#", ":"])
 	('abc', 'def', 'ghi')
 	>>> optSplit("abcghi#def", ["#", ":"])
 	('abcghi', 'def', '')
 	"""
-	firstMatch = filter(lambda x: x >= 0, map(lambda p: opt.find(p), prefixList))
-	if len(firstMatch) > 0 and min(firstMatch) > -1:
-		first = opt[:min(firstMatch)]
-	else:
-		first = opt[:]
-	def pSubstring(p):
-		start = opt.find(p)
-		if start == -1:
-			return ''
-		posList = map(lambda n: opt.find(n, start + 1), filter(lambda n: n != p, prefixList))
-		end = None
-		if len(prefixList) > 1 and min(posList) > -1:
-			end = min(posList)
-		return opt[start + 1:end]
-	return tuple([first] + map(pSubstring, prefixList))
+	rmPrefix = lambda opt: reduce(lambda x, y: x.split(y)[0], delim, opt)
+	def afterPrefix(prefix):
+		try:
+			return opt.split(prefix, 1)[1]
+		except:
+			return ""
+	tmp = map(lambda p: rmPrefix(afterPrefix(p)), delim)
+	return tuple([rmPrefix(opt)] + tmp)
 
 
 def unique(lst):
