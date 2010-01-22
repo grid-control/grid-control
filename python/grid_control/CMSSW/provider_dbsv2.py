@@ -17,9 +17,10 @@ class DBSApiv2(DataProvider):
 		(self.datasetPath, src, self.datasetBlock) = utils.optSplit(datasetExpr, "@#")
 		if not self.datasetBlock:
 			self.datasetBlock = "all"
-		if not 'http://' in src:
-			src = "http://cmsdbsprod.cern.ch/%s/servlet/DBSServlet" % src
-		self.args['url'] = src
+		if src != '':
+			if not 'http://' in src:
+				src = "http://cmsdbsprod.cern.ch/%s/servlet/DBSServlet" % src
+			self.args['url'] = src
 
 
 	def getBlocksInternal(self):
