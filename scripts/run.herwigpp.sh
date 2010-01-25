@@ -12,12 +12,12 @@ checkvar "VO_CMS_SW_DIR"
 export SW_CMSSW_EXT="$VO_CMS_SW_DIR/slc4_ia32_gcc345/external"
 
 # Dir shortcuts to all Herwig++ dependencies
-export SW_HERWIGPP="$SW_CMSSW_EXT/herwigpp/2.3.2-cms"
-export SW_THEPEG="$SW_CMSSW_EXT/thepeg/1.4.2"
-export SW_LHA="$SW_CMSSW_EXT/lhapdf/5.6.0-cms2"
+export SW_HERWIGPP="$(ls -d $SW_CMSSW_EXT/herwigpp/2.3.2-* | tail -n 1)"
+export SW_THEPEG="$(ls -d $SW_CMSSW_EXT/thepeg/1.4.2-* | tail -n 1)"
+export SW_LHA="$(ls -d $SW_CMSSW_EXT/lhapdf/5.6.0-* | tail -n 1)"
+export SW_HEPMC="$(ls -d $SW_CMSSW_EXT/hepmc/2.03.* | tail -n 1)"
 export SW_GSL="$SW_CMSSW_EXT/gsl/1.10-cms"
 export SW_GCCLIB="$SW_CMSSW_EXT/gcc/3.4.5-CMS19"
-export SW_HEPMC="$SW_CMSSW_EXT/hepmc/2.03.06-cms3"
 
 # Set all the necessary lib paths for Herwig++ 
 export ThePEG_INSTALL_PATH="$SW_THEPEG/lib/ThePEG"
@@ -42,7 +42,7 @@ for FILE in $SUBST_FILES; do
 	echo "Reading $FILE"
 	Herwig++ read $FILE
 	echo "Running " *.run
-	Herwig++ run *.run $HW_PARA || exit $?
+	Herwig++ run --seed $RANDOM *.run $HW_PARA || exit $?
 	echo
 	rm *.run
 done

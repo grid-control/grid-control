@@ -92,19 +92,12 @@ class CMSSW(DataMod):
 			raise ConfigError("Project area not a valid CMSSW project area.")
 
 		# Information about search order for software environment
-		taskInfo = utils.PersistentDict(os.path.join(self.config.workDir, 'task.dat'), ' = ')
+		self.searchLoc = []
 		if config.opts.init:
-			userDir = config.get('CMSSW', 'cmssw dir', '')
-			if userDir:
-				taskInfo['CMSSW_DIR_USER'.lower()] = userDir
-			if os.environ.get('VO_CMS_SW_DIR', None):
-				taskInfo['CMSSW_DIR_UI'.lower()] = os.environ['VO_CMS_SW_DIR']
+			self.searchLoc.append(('CMSSW_DIR_USER', config.get('CMSSW', 'cmssw dir', '')))
 			if self.scramEnv.get('RELEASETOP', None):
 				projPath = os.path.normpath("%s/../../../../" % self.scramEnv['RELEASETOP'])
-				taskInfo['CMSSW_DIR_PRO'.lower()] = projPath
-			taskInfo.write()
-		self.searchLoc = filter(lambda (k,v): v, map(lambda k: (k.upper(), taskInfo.get(k.lower())),
-			['CMSSW_DIR_USER', 'CMSSW_DIR_UI', 'CMSSW_DIR_PRO']))
+				self.searchLoc.append(('CMSSW_DIR_PRO', projPath))
 		if len(self.searchLoc) and config.get('global', 'backend', 'grid') != 'grid':
 			print "Jobs will try to use the CMSSW software located here:"
 			for i, loc in enumerate(self.searchLoc):
