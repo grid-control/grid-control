@@ -28,14 +28,11 @@ def se_rm(target, quiet = False):
 def main(args):
 	help = \
 """
-THIS IS NOT UP-TO-DATE!
-DEFAULT: The default is to check the files with MD5 hashes. The default
-         output directory is named "se_output" and located in the work
-         directory of the job
-  * For jobs with verified output files, the files are moved to the
-    local SE output directory, and the job itself is marked as downloaded.
-  * Jobs failing verification are marked as FAILED and their files are
-    deleted from the SE and local SE output directory."""
+DEFAULT: The default is to download the SE file and check them with MD5 hashes.
+ * In case all files are transferred sucessfully, the job is marked
+   as already downloaded, so that the files are not copied again.
+ * Failed transfer attempts will mark the job as failed, so that it
+   can be resubmitted."""
 	parser = optparse.OptionParser(usage = "%prog [options] <config file>\n" + help)
 
 	def addBoolOpt(optList, optPostfix, dest, default, help, optShort=("", ""), optPrefix=("no", ""), helpPrefix=("do not ", "")):
