@@ -153,7 +153,7 @@ def main(args):
 			while True:
 				didWait = False
 				# Check free disk space
-				if int(os.popen("df -P -m %s" % config.workDir).readlines()[-1].split()[3]) < 10:
+				if int(os.popen("df -P -m '%s'" % config.workDir).readlines()[-1].split()[3]) < 10:
 					raise RuntimeError("Not enough space left in working directory")
 
 				# check for jobs
