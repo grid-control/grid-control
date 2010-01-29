@@ -23,6 +23,13 @@ class Config:
 			self.parser.read(configFile)
 
 
+	def parseLine(self, parser, section, item):
+		# Split into lines, remove comments and return merged result
+		lines = parser.get(section, item).splitlines()
+		lines = map(lambda x: x.split(';')[0].strip(), lines)
+		return str.join("\n", filter(lambda x: x != '', lines))
+
+
 	def get(self, section, item, default = None, volatile = False):
 		# Make protocol of config queries - flag inconsistencies
 		if section not in self.protocol:
@@ -39,9 +46,7 @@ class Config:
 			raise ConfigError(errorMessage)
 		# Read from config file or return default if possible
 		try:
-			lines = self.parser.get(section, item).splitlines()
-			lines = map(lambda x: x.split(';')[0].strip(), lines)
-			value = str.join("\n", filter(lambda x: x != '', lines))
+			value = self.parseLine(self.parser, section, item)
 			self.protocol[section][item] = (value, default, volatile)
 			return value
 		except ConfigParser.NoSectionError:
@@ -49,6 +54,7 @@ class Config:
 		except ConfigParser.NoOptionError:
 			return tryDefault("No option %s in section %s of config file." % (item, section))
 		except:
+			raise
 			raise ConfigError("Parse error in option %s of config file section %s." % (item, section))
 
 
@@ -91,15 +97,15 @@ class Config:
 	# Compare this config object to another config file
 	# Return true in case non-volatile parameters are changed
 	def needInit(self, saveConfigPath):
-		saveConfig = ConfigParser.ConfigParser()
 		if not os.path.exists(saveConfigPath):
 			return False
+		saveConfig = ConfigParser.ConfigParser()
 		saveConfig.read(saveConfigPath)
 		flag = False
 		for section in self.protocol:
 			for (key, (value, default, volatile)) in self.protocol[section].iteritems():
 				try:
-					oldValue = saveConfig.get(section, key)
+					oldValue = self.parseLine(saveConfig, section, key)
 				except:
 					oldValue = default
 				if (str(value).strip() != str(oldValue).strip()) and not volatile:
