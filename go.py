@@ -69,7 +69,7 @@ def main(args):
 			open(args[0], 'r')
 			config = Config(args[0])
 			# Read default command line options from config file
-			defaultCmdLine = config.get("global", "cmdargs", "")
+			defaultCmdLine = config.get("global", "cmdargs", "", volatile=True)
 			parser.parse_args(args = defaultCmdLine.split() + sys.argv[1:], values = opts)
 			config.opts = opts
 		except IOError:

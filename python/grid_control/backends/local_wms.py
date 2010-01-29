@@ -9,7 +9,10 @@ class LocalWMS(WMS):
 		WMS.__init__(self, config, module, monitor, 'local')
 
 		wmsapi = config.get('local', 'wms', self._guessWMS())
+		if wmsapi != self._guessWMS():
+			print "Default batch system on this host is: %s" % self._guessWMS()
 		self.api = LocalWMSApi.open("grid_control.backends.local_api.%s.%s" % (wmsapi.lower(), wmsapi), config, self)
+		print "Using batch system: %s" % self.api.__class__.__name__
 
 		try:
 			queues = self.api.getQueues()
@@ -30,7 +33,6 @@ class LocalWMS(WMS):
 		for wms, cmd in wmsCmdList:
 			try:
 				utils.searchPathFind(cmd)
-				print "Default batch system on this host is: %s" % wms
 				return wms
 			except:
 				pass

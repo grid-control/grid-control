@@ -14,9 +14,7 @@ class UserMod(DataMod):
 
 
 	def getJobArguments(self, jobNum):
-		if self.dataSplitter != None:
-			return DataMod.getJobArguments(self, jobNum)
-		return self._arguments
+		return DataMod.getJobArguments(self, jobNum) + " " + self._arguments
 
 
 	def getInFiles(self):

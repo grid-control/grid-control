@@ -133,10 +133,12 @@ def cached(fun):
 def getVersion():
 	try:
 		proc = LoggedProcess('svnversion', atRoot.root)
-		proc.wait()
-		version = proc.getOutput().strip()
+		version = proc.getOutput(wait = True).strip()
 		if version != '':
-			return version
+			proc = LoggedProcess('svn info', atRoot.root)
+			if 'stable' in proc.getOutput(wait = True):
+				return '%s - stable' % version
+			return '%s - testing' % version
 	except:
 		pass
 	return "unknown"
@@ -475,7 +477,9 @@ class LoggedProcess(object):
 		self.stdout = []
 		self.stderr = []
 
-	def getOutput(self):
+	def getOutput(self, wait = False):
+		if wait:
+			self.wait()
 		self.stdout.extend(self.proc.fromchild.readlines())
 		return str.join("", self.stdout)
 

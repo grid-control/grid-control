@@ -122,7 +122,7 @@ class WMS(AbstractObject):
 
 	def writeJobConfig(self, jobNum, cfgPath, extras = {}):
 		jobEnv = self.module.getJobConfig(jobNum)
-		jobEnv['GC_ARGS'] = self.module.getJobArguments(jobNum)
+		jobEnv['GC_ARGS'] = self.module.getJobArguments(jobNum).strip()
 		jobEnv.update(extras)
 
 		try:
