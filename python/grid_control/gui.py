@@ -115,11 +115,14 @@ def CursesGUI(jobs, jobCycle):
 			oldy = screen.getyx()[0]
 			curses.endwin()
 			screen.refresh()
+			screen.redrawwin()
+			screen.refresh()
 			(sizey, sizex) = screen.getmaxyx()
 			screen.setscrreg(min(16, sizey - 2), sizey - 1)
 			screen.move(min(sizey - 1, max(16, oldy)), 0)
 		onResize(None, None)
 		signal.signal(signal.SIGWINCH, onResize)
+		signal.signal(signal.SIGUSR1, onResize)
 		bar = ProgressBar(0, jobs.nJobs, 65)
 
 		# Wrapping ActivityLog functionality
