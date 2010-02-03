@@ -53,7 +53,8 @@ class UberParaMod(ParaMod):
 			try:
 				return actions[type](param)
 			except:
-				raise ConfigError("Illegal type '%s' in parameter expansion" % type)
+				raise exceptions.ConfigError("Illegal type '%s' in " +
+						"parameter expansion" % type)
 
 		self.pars = {}
 		for p in names:
