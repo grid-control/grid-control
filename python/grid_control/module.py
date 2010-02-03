@@ -69,16 +69,6 @@ class Module(AbstractObject):
 		self.errorDict = {}
 		self.updateErrorDict(utils.atRoot('share', 'run.lib'))
 
-		if config.get('CMSSW', 'se output files', 'DEPRECATED') != 'DEPRECATED':
-			utils.deprecated("Please specify se output files only in the [storage] section")
-			self.seOutputFiles = config.get('CMSSW', 'se output files').split()
-		if config.get('CMSSW', 'seeds', 'DEPRECATED') != 'DEPRECATED':
-			utils.deprecated("Please specify seeds only in the [jobs] section")
-			self.setSeed(str.join(',', config.get('CMSSW', 'seeds').split()))
-		if config.get('CMSSW', 'se path', 'DEPRECATED') != 'DEPRECATED':
-			utils.deprecated("Please specify se path only in the [storage] section")
-			self.sePath = config.get('CMSSW', 'se path')
-
 
 	# Read comments with error codes at the beginning of file
 	def updateErrorDict(self, fileName):
