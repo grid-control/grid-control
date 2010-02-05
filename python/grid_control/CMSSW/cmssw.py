@@ -119,7 +119,7 @@ class CMSSW(DataMod):
 					print 'failed'
 					print utils.se_copy.lastlog
 					print "Unable to copy runtime! You can try to copy CMSSW runtime manually."
-					if utils.boolUserInput('Is runtime available on SE?', False):
+					if not utils.boolUserInput('Is runtime available on SE?', False):
 						raise RuntimeError("No CMSSW runtime on SE!")
 
 
