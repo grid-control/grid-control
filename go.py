@@ -177,7 +177,7 @@ def main(args):
 
 		if opts.gui:
 			try:
-				gui.CursesGUI(jobs, jobCycle)
+				gui.ANSIGUI(jobs, jobCycle)
 			except GridError, e:
 				raise
 			except:

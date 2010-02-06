@@ -1,23 +1,59 @@
-import re, sys, signal, curses, utils, report
+import re, sys, signal, utils, report, termios, array, fcntl
 
-class CursesStream:
+class Console:
+	attr = {"COLOR_BLACK": "30", "COLOR_RED": "31", "COLOR_GREEN": "32",
+		"COLOR_YELLOW": "33", "COLOR_BLUE": "34", "COLOR_MAGENTA": "35",
+		"COLOR_CYAN": "36", "COLOR_WHITE": "37", "BOLD": "1", "RESET": "0"}
+	cmd = {"savePos": "7", "loadPos": "8", "eraseDown": "[J", "erase": "[2J"}
+	for (name, esc) in attr.items():
+		locals()[name] = esc
+
+	def __init__(self):
+		(self.stdout, self.stdin) = (sys.stdout, sys.stdin)
+		def callFactory(x):
+			return lambda: self.esc(x)
+		for (proc, esc) in self.cmd.items():
+			setattr(self, proc, callFactory(esc))
+
+	def esc(self, data):
+		self.stdout.write("\033" + data)
+		self.stdout.flush()
+
+	def getmaxyx(self):
+		size = array.array("B", [0, 0, 0, 0])
+		fcntl.ioctl(0, termios.TIOCGWINSZ, size, True)
+		return (size[0], size[2])
+
+	def move(self, row, col):
+		self.esc("[%d;%dH" % (row, col))
+
+	def setscrreg(self, top = 0, bottom = 0):
+		self.esc("[%d;%dr" % (top, bottom))
+
+	def addstr(self, data, attr = []):
+		self.esc("[%sm" % str.join(";", [Console.RESET] + attr))
+		self.stdout.write(data)
+		self.esc("[%sm" % Console.RESET)
+
+
+class GUIStream:
 	def __init__(self, *args):
 		(self.stream, self.screen) = args
 		self.logged = True
 
-		# This is a list of (regular expression, curses attributes).  The
+		# This is a list of (regular expression, GUI attributes).  The
 		# attributes are applied to matches of the regular expression in
 		# the output written into this stream.  Lookahead expressions
 		# should not overlap with other regular expressions.
 		self.attrs = [
-				('DONE(?!:)', curses.color_pair(3) | curses.A_BOLD),
-				('FAILED(?!:)', curses.color_pair(1) | curses.A_BOLD),
-				('SUCCESS(?!:)', curses.color_pair(2) | curses.A_BOLD),
-				('(?<=DONE:)\s+[1-9]\d*', curses.color_pair(3) | curses.A_BOLD),
-				('(?<=Failing jobs:)\s+[1-9]\d*', curses.color_pair(1) | curses.A_BOLD),
-				('(?<=FAILED:)\s+[1-9]\d*', curses.color_pair(1) | curses.A_BOLD),
-				('(?<=Successful jobs:)\s+[1-9]\d*', curses.color_pair(2) | curses.A_BOLD),
-				('(?<=SUCCESS:)\s+[1-9]\d*', curses.color_pair(2) | curses.A_BOLD),
+			('DONE(?!:)', [Console.COLOR_CYAN, Console.BOLD]),
+			('FAILED(?!:)', [Console.COLOR_RED, Console.BOLD]),
+			('SUCCESS(?!:)', [Console.COLOR_BLUE, Console.BOLD]),
+			('(?<=DONE:)\s+[1-9]\d*', [Console.COLOR_CYAN, Console.BOLD]),
+			('(?<=Failing jobs:)\s+[1-9]\d*', [Console.COLOR_RED, Console.BOLD]),
+			('(?<=FAILED:)\s+[1-9]\d*', [Console.COLOR_RED, Console.BOLD]),
+			('(?<=Successful jobs:)\s+[1-9]\d*', [Console.COLOR_BLUE, Console.BOLD]),
+			('(?<=SUCCESS:)\s+[1-9]\d*', [Console.COLOR_BLUE, Console.BOLD]),
 		]
 		self.regex = re.compile('(%s)' % '|'.join(map(lambda (a, b): a,
 			self.attrs)))
@@ -34,35 +70,30 @@ class CursesStream:
 
 	def write(self, data):
 		if self.logged:
-			CursesStream.backlog.pop(0)
-			CursesStream.backlog.append(data)
+			GUIStream.backlog.pop(0)
+			GUIStream.backlog.append(data)
 
-		if curses.has_colors():
+		if True:
 			idx = 0
 			match = self.regex.search(data[idx:])
 			while match:
 				self.screen.addstr(data[idx:idx + match.start()])
 				self.screen.addstr(match.group(0),
 						self.attributes(data[idx:], match.start()))
-				self.screen.refresh()
 				idx += match.end()
 				match = self.regex.search(data[idx:])
 			self.screen.addstr(data[idx:])
-		else:
-			self.screen.addstr(data)
-		self.screen.refresh()
-
 		return True
 
 	def __getattr__(self, name):
 		return self.stream.__getattribute__(name)
 
 	def dump(cls):
-		for data in filter(lambda x: x, CursesStream.backlog):
+		for data in filter(lambda x: x, GUIStream.backlog):
 			sys.stdout.write(data)
 		sys.stdout.write('\n')	
 	dump = classmethod(dump)
-CursesStream.backlog = [None for i in range(100)]
+GUIStream.backlog = [None for i in range(100)]
 
 
 class ProgressBar:
@@ -95,38 +126,21 @@ class ProgressBar:
 		return str(self.bar)
 
 
-def CursesGUI(jobs, jobCycle):
-	def cursesWrapper(screen):
-		screen.scrollok(True)
-
-		try:
-			curses.use_default_colors()
-			curses.init_pair(1, curses.COLOR_RED, -1)
-			curses.init_pair(2, curses.COLOR_GREEN, -1)
-			curses.init_pair(3, curses.COLOR_CYAN, -1)
-		except:
-			screen.attron(curses.A_BOLD)
-			curses.init_pair(1, curses.COLOR_RED, 0)
-			curses.init_pair(2, curses.COLOR_GREEN, 0)
-			curses.init_pair(3, curses.COLOR_CYAN, 0)
-
+def ANSIGUI(jobs, jobCycle):
+	def wrapper(screen):
 		# Event handling for resizing
 		def onResize(sig, frame):
-			oldy = screen.getyx()[0]
-			curses.endwin()
-			screen.refresh()
-			screen.redrawwin()
-			screen.refresh()
+			screen.savePos()
 			(sizey, sizex) = screen.getmaxyx()
-			screen.setscrreg(min(16, sizey - 2), sizey - 1)
-			screen.move(min(sizey - 1, max(16, oldy)), 0)
+			screen.setscrreg(min(17, sizey), sizey)
+			screen.loadPos()
+		screen.erase()
 		onResize(None, None)
 		signal.signal(signal.SIGWINCH, onResize)
-		signal.signal(signal.SIGUSR1, onResize)
 		bar = ProgressBar(0, jobs.nJobs, 65)
 
 		# Wrapping ActivityLog functionality
-		class CursesLog:
+		class GUILog:
 			def __init__(self, message):
 				self.message = "%s..." % message
 				self.show(self.message.center(65))
@@ -135,26 +149,28 @@ def CursesGUI(jobs, jobCycle):
 				self.show(' ' * len(self.message))
 
 			def show(self, message):
-				oldpos = screen.getyx()
+				screen.savePos()
 				screen.move(0, 0)
 				sys.stdout.logged = False
 				bar.update(len(jobs.ok))
 				report.Report(jobs, jobs).summary("%s\n%s" % (bar, message))
 				sys.stdout.logged = True
-				screen.move(*oldpos)
-				screen.refresh()
+				screen.loadPos()
 
 		# Main cycle - GUI mode
 		saved = (sys.stdout, sys.stderr, utils.ActivityLog)
 		try:
-			utils.ActivityLog = CursesLog
-			sys.stdout = CursesStream(saved[0], screen)
-			sys.stderr = CursesStream(saved[1], screen)
+			utils.ActivityLog = GUILog
+			sys.stdout = GUIStream(saved[0], screen)
+			sys.stderr = GUIStream(saved[1], screen)
 			jobCycle()
 		finally:
 			if sys.modules['__main__'].log: del sys.modules['__main__'].log
 			sys.stdout, sys.stderr, utils.ActivityLog = saved
+			screen.setscrreg()
+			screen.move(16, 0)
+			screen.eraseDown()
 	try:
-		curses.wrapper(cursesWrapper)
+		wrapper(Console())
 	finally:
-		CursesStream.dump()
+		GUIStream.dump()

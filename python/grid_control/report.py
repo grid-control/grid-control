@@ -1,4 +1,5 @@
 from grid_control import Job, RuntimeError, utils
+import sys
 
 class Report:
 	states = ['WAITING', 'RUNNING', 'FAILED', 'SUCCESS']
@@ -49,8 +50,8 @@ class Report:
 	def summary(self, message = ""):
 		# Print report summary
 		print '-----------------------------------------------------------------'
-		print 'REPORT SUMMARY:'
-		print '---------------'
+		print 'REPORT SUMMARY:'.ljust(65)
+		print '---------------'.ljust(65)
 
 		summary = map(lambda x: 0.0, Job.states)
 		for jobNum in self.jobs:
@@ -66,7 +67,7 @@ class Report:
 		print 'Jobs assigned to WMS:%9d        Failing jobs:%8d  %3d%%' % \
 			tuple([makeSum(Job.SUBMITTED, Job.WAITING, Job.READY, Job.QUEUED, Job.RUNNING)] +
 			makePer(Job.ABORTED, Job.CANCELLED, Job.FAILED))
-		print '\nDetailed Status Information:'#\33[0;1m'
+		print ' ' * 65 + '\nDetailed Status Information:'.ljust(65)
 		for stateNum, category in enumerate(Job.states):
 			print 'Jobs  %9s:%8d  %3d%%    ' % tuple([category] + makePer(stateNum)),
 			if stateNum % 2:
