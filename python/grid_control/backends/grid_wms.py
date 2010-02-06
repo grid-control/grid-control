@@ -382,8 +382,12 @@ class GridWMS(WMS):
 				outputDir = line.strip()
 				if 'GC_WC.tar.gz' in os.listdir(outputDir):
 					wildcardTar = os.path.join(outputDir, 'GC_WC.tar.gz')
-					tarfile.TarFile.open(wildcardTar, 'r:gz').extractall(outputDir)
-					os.unlink(wildcardTar)
+					try:
+						tarfile.TarFile.open(wildcardTar, 'r:gz').extractall(outputDir)
+						os.unlink(wildcardTar)
+					except:
+						print "Can't unpack output files contained in %s" % wildcardTar
+						pass
 				yield (currentJobNum, line.strip())
 				currentJobNum = None
 			else:

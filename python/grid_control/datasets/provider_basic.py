@@ -87,8 +87,9 @@ class ListProvider(DataProvider):
 					if value.lower().strip() != 'none':
 						tmp = filter(lambda x: x != '', map(str.strip, value.split(',')))
 						blockinfo[DataProvider.SEList] = tmp
-				elif key.lower() == 'prefix' and not self._forcePrefix:
-					commonprefix = value
+				elif key.lower() == 'prefix':
+					if not self._forcePrefix:
+						commonprefix = value
 				else:
 					if commonprefix:
 						key = "%s/%s" % (commonprefix, key)

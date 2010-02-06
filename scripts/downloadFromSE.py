@@ -15,7 +15,7 @@ DEFAULT: The default is to check the files with MD5 hashes. The default
 	parser = optparse.OptionParser(usage = "%prog [options] <config file>\n" + help)
 	parser.add_option("-m", "--no-md5",        dest="verify",       default=True,  action="store_false",
 		help = "disable MD5 verification of SE files (all jobs are ok)")
-	parser.add_option("-d", "--no-mark-dl",    dest="markDownload", default=True,  action="store_false",
+	parser.add_option("-d", "--no-mark-dl",    dest="markDL",       default=True,  action="store_false",
 		help = "do not mark sucessfully downloaded jobs as such")
 	parser.add_option("",   "--ignore-mark-dl",dest="markIgnoreDL", default=False, action="store_true",
 		help = "do not mark sucessfully downloaded jobs as such")

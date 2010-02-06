@@ -56,7 +56,7 @@ def optSplit(opt, delim):
 		except:
 			return ""
 	tmp = map(lambda p: rmPrefix(afterPrefix(p)), delim)
-	return tuple([rmPrefix(opt)] + tmp)
+	return tuple(map(str.strip, [rmPrefix(opt)] + tmp))
 
 
 def unique(lst):
