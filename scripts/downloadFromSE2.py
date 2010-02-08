@@ -95,6 +95,10 @@ DEFAULT: The default is to download the SE file and check them with MD5 hashes.
 	optJCopy = "--verify-md5 --skip-existing --no-mark-dl --ignore-mark-dl --no-mark-fail --keep-se-fail --keep-local-fail --keep-se-ok --keep-local-ok"
 	ogShort.add_option("-j", "--just-copy", dest="shJCopy", default=None, action="store_const", const=optJCopy,
 		help = "Just copy files from SE - shorthand for:".ljust(100) + withoutDefaults(optJCopy))
+
+	optJVerify = "--verify-md5 --no-mark-dl --keep-se-fail --rm-local-fail --keep-se-ok --rm-local-ok"
+	ogShort.add_option("-V", "--just-verify", dest="shJVerify", default=None, action="store_const", const=optJVerify,
+		help = "Just verify files on SE - shorthand for:".ljust(100) + withoutDefaults(optJVerify))
 	parser.add_option_group(ogShort)
 
 	(opts, args) = parser.parse_args()
@@ -104,6 +108,7 @@ DEFAULT: The default is to download the SE file and check them with MD5 hashes.
 	processShorthand(opts.shMove)
 	processShorthand(opts.shCopy)
 	processShorthand(opts.shJCopy)
+	processShorthand(opts.shJVerify)
 	realmain(opts, args)
 
 def realmain(opts, args):
@@ -114,6 +119,11 @@ def realmain(opts, args):
 		sys.stderr.write("Use --help to get a list of options!\n")
 		sys.exit(0)
 
+	try:
+		proxy = VomsProxy(gcSupport.ConfigDummy({"proxy": {"ignore warnings": True}}))
+	except GridError, e:
+		e.showMessage()
+		sys.exit(1)
 	(workDir, jobList) = gcSupport.getWorkJobs(args)
 
 	# Create SE output dir
@@ -145,6 +155,10 @@ def realmain(opts, args):
 			print "All files already downloaded!"
 			incInfo("Downloaded")
 			continue
+
+		if not proxy.check(60*60):
+			print "Please renew grid proxy!"
+			break
 
 		# Read the file hash entries from job info file
 		files = gcSupport.getFileInfo(workDir, jobNum, lambda retCode: retCode == 0)

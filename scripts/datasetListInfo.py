@@ -61,7 +61,7 @@ def main(args):
 		print
 		infos = {}
 		order = []
-		maxnick = 3
+		maxnick = 5
 		for block in blocks:
 			dsName = block[DataProvider.Dataset]
 			if not infos.get(dsName, None):
@@ -74,7 +74,7 @@ def main(args):
 				infos[dsName][DataProvider.lfn] = block[DataProvider.FileList][0][DataProvider.lfn]
 		for dsID, dsName in enumerate(order):
 			info = infos[dsName]
-			print "", info.get(DataProvider.Nickname, str(dsID)).rjust(maxnick), ":",
+			print "", info.get(DataProvider.Nickname, "nick%d" % dsID).rjust(maxnick), ":",
 
 			if dbsArg or (opts.configguess and info[DataProvider.lfn].startswith('/store')):
 				print 'DBS : %s' % info[DataProvider.Dataset]
