@@ -48,12 +48,12 @@ class GUIStream:
 		self.attrs = [
 			('DONE(?!:)', [Console.COLOR_CYAN, Console.BOLD]),
 			('FAILED(?!:)', [Console.COLOR_RED, Console.BOLD]),
-			('SUCCESS(?!:)', [Console.COLOR_BLUE, Console.BOLD]),
+			('SUCCESS(?!:)', [Console.COLOR_GREEN, Console.BOLD]),
 			('(?<=DONE:)\s+[1-9]\d*', [Console.COLOR_CYAN, Console.BOLD]),
 			('(?<=Failing jobs:)\s+[1-9]\d*', [Console.COLOR_RED, Console.BOLD]),
 			('(?<=FAILED:)\s+[1-9]\d*', [Console.COLOR_RED, Console.BOLD]),
-			('(?<=Successful jobs:)\s+[1-9]\d*', [Console.COLOR_BLUE, Console.BOLD]),
-			('(?<=SUCCESS:)\s+[1-9]\d*', [Console.COLOR_BLUE, Console.BOLD]),
+			('(?<=Successful jobs:)\s+[1-9]\d*', [Console.COLOR_GREEN, Console.BOLD]),
+			('(?<=SUCCESS:)\s+[1-9]\d*', [Console.COLOR_GREEN, Console.BOLD]),
 		]
 		self.regex = re.compile('(%s)' % '|'.join(map(lambda (a, b): a,
 			self.attrs)))
