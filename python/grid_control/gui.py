@@ -46,10 +46,10 @@ class GUIStream:
 		# the output written into this stream.  Lookahead expressions
 		# should not overlap with other regular expressions.
 		self.attrs = [
-			('DONE(?!:)', [Console.COLOR_CYAN, Console.BOLD]),
+			('DONE(?!:)', [Console.COLOR_BLUE, Console.BOLD]),
 			('FAILED(?!:)', [Console.COLOR_RED, Console.BOLD]),
 			('SUCCESS(?!:)', [Console.COLOR_GREEN, Console.BOLD]),
-			('(?<=DONE:)\s+[1-9]\d*', [Console.COLOR_CYAN, Console.BOLD]),
+			('(?<=DONE:)\s+[1-9]\d*', [Console.COLOR_BLUE, Console.BOLD]),
 			('(?<=Failing jobs:)\s+[1-9]\d*', [Console.COLOR_RED, Console.BOLD]),
 			('(?<=FAILED:)\s+[1-9]\d*', [Console.COLOR_RED, Console.BOLD]),
 			('(?<=Successful jobs:)\s+[1-9]\d*', [Console.COLOR_GREEN, Console.BOLD]),
