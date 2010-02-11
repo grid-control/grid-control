@@ -71,7 +71,8 @@ def main(args):
 					nick = block[DataProvider.Nickname]
 					infos[dsName][DataProvider.Nickname] = nick
 					maxnick = max(maxnick, len(nick))
-				infos[dsName][DataProvider.lfn] = block[DataProvider.FileList][0][DataProvider.lfn]
+				if len(block[DataProvider.FileList]):
+					infos[dsName][DataProvider.lfn] = block[DataProvider.FileList][0][DataProvider.lfn]
 		for dsID, dsName in enumerate(order):
 			info = infos[dsName]
 			print "", info.get(DataProvider.Nickname, "nick%d" % dsID).rjust(maxnick), ":",
