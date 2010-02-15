@@ -132,7 +132,7 @@ def cached(fun):
 
 def getVersion():
 	try:
-		proc = LoggedProcess('svnversion', atRoot.root)
+		proc = LoggedProcess('svnversion', "-c %s" % atRoot.root)
 		version = proc.getOutput(wait = True).strip()
 		if version != '':
 			proc = LoggedProcess('svn info', atRoot.root)

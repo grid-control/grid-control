@@ -55,8 +55,7 @@ class GUIStream:
 			('(?<=Successful jobs:)\s+[1-9]\d*', [Console.COLOR_GREEN, Console.BOLD]),
 			('(?<=SUCCESS:)\s+[1-9]\d*', [Console.COLOR_GREEN, Console.BOLD]),
 		]
-		self.regex = re.compile('(%s)' % '|'.join(map(lambda (a, b): a,
-			self.attrs)))
+		self.regex = re.compile('(%s)' % '|'.join(map(lambda (a, b): a, self.attrs)))
 
 	def attributes(self, string, pos):
 		"""Retrieve the attributes for a match in string at position

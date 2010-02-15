@@ -10,9 +10,10 @@ def main(args):
 		pat = args[2]
 
 	print "[%s#%s]" % (args[0], "%.8x" % random.randint(0, 2**32))
-	print "prefix =", args[1].lstrip("/")
+	print "prefix =", os.path.abspath(args[1]).rstrip("/")
 	for path in glob.glob(os.path.join(args[1], pat)):
 		print path.replace(args[1], "").lstrip("/"), "= 1"
+	print
 	return 0
 
 if __name__ == '__main__':

@@ -15,6 +15,10 @@ class DataSplitter(AbstractObject):
 		self._values = values
 
 
+	def neededVars(self):
+		return [DataSplitter.FileList]
+
+
 	def set(self, member, configFun, item, default = None):
 		try:
 			setattr(self, member, configFun(self._section, item))

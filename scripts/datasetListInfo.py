@@ -59,6 +59,7 @@ def main(args):
 
 	if opts.configentry or opts.configguess:
 		print
+		print "dataset ="
 		infos = {}
 		order = []
 		maxnick = 5

@@ -61,6 +61,18 @@ class DataMod(Module):
 			"datasetFull": splitInfo.get(DataSplitter.Dataset, '')}] + dbmessage)
 
 
+	# Returns list of variables needed in config file
+	def neededVars(self):
+		if self.dataSplitter == None:
+			return []
+		varMap = {
+			DataSplitter.NEvents: 'MAX_EVENTS',
+			DataSplitter.Skipped: 'SKIP_EVENTS',
+			DataSplitter.FileList: 'FILE_NAMES'
+		}
+		return map(lambda x: varMap[x], self.dataSplitter.neededVars())
+
+
 	# Get job dependent environment variables
 	def getJobConfig(self, jobNum):
 		data = Module.getJobConfig(self, jobNum)

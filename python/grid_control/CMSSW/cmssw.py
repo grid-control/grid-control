@@ -28,7 +28,7 @@ class CMSSW(DataMod):
 		if self.dataSplitter != None:
 			def isInstrumented(cfgName):
 				cfg = open(cfgName, 'r').read()
-				for tag in [ "FILE_NAMES", "MAX_EVENTS", "SKIP_EVENTS" ]:
+				for tag in self.neededVars():
 					if (not "__%s__" % tag in cfg) and (not "@%s@" % tag in cfg):
 						return False
 				return True
@@ -41,8 +41,8 @@ class CMSSW(DataMod):
 							open(cfgName, 'a').write(open(fragment, 'r').read())
 
 			if not (True in map(isInstrumented, self.configFiles)):
-				raise ConfigError("One config file must use __FILE_NAMES__, __MAX_EVENTS__" \
-					" and __SKIP_EVENTS__ to work properly with dataset jobs!")
+				raise ConfigError("One config file must use %s to work properly with dataset jobs!" %
+					str.join(", ", map(lambda x: "__%s__" % x, self.neededVars())))
 		else:
 			self.eventsPerJob = config.get('CMSSW', 'events per job', 0)
 
