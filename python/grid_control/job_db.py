@@ -241,7 +241,7 @@ class JobDB:
 		# Quit when all jobs are finished
 		if len(self.ok) == self.nJobs:
 			self.monitor.onTaskFinish(self.nJobs)
-			utils.vprint("All jobs are finished. Quitting grid-control!", -1, True, False)
+			utils.vprint("Task successfully completed. Quitting grid-control!", -1, True, False)
 			sys.exit(0)
 
 		return change
