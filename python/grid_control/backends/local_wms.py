@@ -112,7 +112,7 @@ class LocalWMS(WMS):
 		tmp = {}
 		for data in self.api.parseStatus(proc.iter(self.config.opts)):
 			# (job number, status, extra info)
-			tmp[data['id']] = (data['id'], self.api._statusMap[data['status']], data)
+			tmp[data['id']] = (data['id'], self.api.parseJobState(data['status']), data)
 
 		for wmsId, jobNum in ids:
 			if wmsId not in tmp:

@@ -26,5 +26,8 @@ class LocalWMSApi(AbstractObject):
 	def getCheckArgument(self, wmsIds):
 		raise AbstracError
 
+	def parseJobState(self, state):
+		return self._statusmap[state]
+
 	def getCancelArgument(self, wmsIds):
 		return str.join(" ", wmsIds)

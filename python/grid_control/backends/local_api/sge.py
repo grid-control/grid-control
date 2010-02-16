@@ -4,19 +4,6 @@ from grid_control.backends.wms import WMS
 from api import LocalWMSApi
 
 class SGE(LocalWMSApi):
-	_statusMap = {
-		'qw': Job.QUEUED,
-		'hqw': Job.QUEUED,
-		'Eqw': Job.WAITING, 'Rr': Job.RUNNING,
-		'Rq': Job.QUEUED,
-		'h': Job.WAITING,   'w': Job.WAITING,
-		's': Job.QUEUED,    'r': Job.RUNNING,
-		'S': Job.QUEUED,    'R': Job.RUNNING,
-		'T': Job.QUEUED,    't': Job.RUNNING,
-		'd': Job.ABORTED,   'E': Job.DONE,
-		'dr': Job.RUNNING,  'hr': Job.RUNNING
-	}
-
 	def __init__(self, config, wms):
 		LocalWMSApi.__init__(self, config, wms)
 
@@ -77,6 +64,20 @@ class SGE(LocalWMSApi):
 				print "Error reading job info\n", jobentry.toxml()
 				raise
 			yield jobinfo
+
+
+	def parseJobState(self, state):
+		if state in ['s', 'ts', 'S', 'tS', 'qw', 'hqw', 'hRwq',
+			'T', 'tT', 'Rs', 'Rts', 'RS', 'RtS', 'RT', 'RtT']:
+			return Job.QUEUED
+		if state in ['r', 't', 'Rr', 'Rt']:
+			return Job.RUNNING
+		if state in ['dr', 'dt', 'dRr', 'dRt', 'ds', 'dS', 'dT', 'dRs', 'dRS', 'dRT']:
+			return Job.RUNNING
+		if state in ['Eqw', 'Ehqw', 'EhRqw']:
+			return Job.WAITING
+		others = {'Rq': Job.QUEUED, 'h': Job.WAITING,   'w': Job.WAITING, 'hr': Job.RUNNING}
+		return others.get(state, Job.READY)
 
 
 	def getCheckArgument(self, wmsIds):
