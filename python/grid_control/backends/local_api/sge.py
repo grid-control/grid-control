@@ -67,16 +67,10 @@ class SGE(LocalWMSApi):
 
 
 	def parseJobState(self, state):
-		if state in ['s', 'ts', 'S', 'tS', 'qw', 'hqw', 'hRwq',
-			'T', 'tT', 'Rs', 'Rts', 'RS', 'RtS', 'RT', 'RtT']:
+		if True in map(lambda x in state, ['h', 's', 'S', 'T', 'w']):
 			return Job.QUEUED
-		if state in ['r', 't', 'Rr', 'Rt']:
+		if True in map(lambda x in state, ['r', 't']):
 			return Job.RUNNING
-		if state in ['dr', 'dt', 'dRr', 'dRt', 'ds', 'dS', 'dT', 'dRs', 'dRS', 'dRT']:
-			return Job.RUNNING
-		if state in ['Eqw', 'Ehqw', 'EhRqw']:
-			return Job.WAITING
-		others = {'Rq': Job.QUEUED, 'h': Job.WAITING,   'w': Job.WAITING, 'hr': Job.RUNNING}
 		return others.get(state, Job.READY)
 
 

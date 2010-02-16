@@ -3,10 +3,6 @@ from grid_control import ConfigError, Job, utils
 from api import LocalWMSApi
 
 class Host(LocalWMSApi):
-	_statusMap = {
-		'R': Job.RUNNING,   'Q': Job.QUEUED,
-	}
-
 	def __init__(self, config, wms):
 		LocalWMSApi.__init__(self, config, wms)
 
@@ -38,6 +34,9 @@ class Host(LocalWMSApi):
 				print "Error reading job info\n", entry
 				raise
 			yield jobinfo
+
+	def parseJobState(self, state):
+		return Job.RUNNING
 
 	def getCheckArgument(self, wmsIds):
 		return "wwup %s" % str.join(" ", wmsIds)
