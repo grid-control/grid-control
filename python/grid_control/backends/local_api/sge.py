@@ -71,7 +71,7 @@ class SGE(LocalWMSApi):
 			return Job.QUEUED
 		if True in map(lambda x in state, ['r', 't']):
 			return Job.RUNNING
-		return others.get(state, Job.READY)
+		return Job.READY
 
 
 	def getCheckArgument(self, wmsIds):
