@@ -14,7 +14,7 @@ class DataProvider(AbstractObject):
 		self._cache = None
 		self._validated = False
 		sitefilter = config.get('datasets', 'sites', '', volatile=True)
-		self.sitefilter = map(str.strip, sitefilter.split(","))
+		self.sitefilter = map(str.strip, sitefilter.split())
 
 
 	# Parse dataset format [NICK : [PROVIDER : [(/)*]]] DATASET
@@ -74,7 +74,7 @@ class DataProvider(AbstractObject):
 				if DataProvider.NEvents not in block:
 					block[DataProvider.NEvents] = events
 				if events != block[DataProvider.NEvents]:
-					print('Inconsistency in block %s#%s: Number of events doesn\'t match (b:%d != f:%d)'
+					print('WARNING: Inconsistency in block %s#%s: Number of events doesn\'t match (b:%d != f:%d)'
 						% (block[DataProvider.Dataset], block[DataProvider.BlockName], block[DataProvider.NEvents], events))
 
 				# Filter dataset sites
@@ -87,7 +87,7 @@ class DataProvider(AbstractObject):
 					if len(whitelist):
 						sites = filter(lambda x: x in whitelist, sites)
 					if len(sites) == 0:
-						print('Block %s#%s is not available at any site!'
+						print('WARNING: Block %s#%s is not available at any site!'
 							% (block[DataProvider.Dataset], block[DataProvider.BlockName]))
 					block[DataProvider.SEList] = sites
 
