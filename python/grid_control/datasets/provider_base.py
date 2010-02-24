@@ -13,6 +13,8 @@ class DataProvider(AbstractObject):
 		self._datasetID = datasetID
 		self._cache = None
 		self._validated = False
+		sitefilter = config.get('datasets', 'sites', '', volatile=True)
+		self.sitefilter = map(str.strip, sitefilter.split(","))
 
 
 	# Parse dataset format [NICK : [PROVIDER : [(/)*]]] DATASET
@@ -58,7 +60,7 @@ class DataProvider(AbstractObject):
 			self._cache = self.getBlocksInternal()
 
 			allEvents = 0
-			# Validation & Naming:
+			# Validation, Filtering & Naming:
 			for block in self._cache:
 				if self._datasetNick:
 					block[DataProvider.Nickname] = self._datasetNick
@@ -74,6 +76,20 @@ class DataProvider(AbstractObject):
 				if events != block[DataProvider.NEvents]:
 					print('Inconsistency in block %s#%s: Number of events doesn\'t match (b:%d != f:%d)'
 						% (block[DataProvider.Dataset], block[DataProvider.BlockName], block[DataProvider.NEvents], events))
+
+				# Filter dataset sites
+				if block[DataProvider.SEList] != None:
+					sites = block[DataProvider.SEList]
+					blacklist = filter(lambda x: x.startswith('-'), self.sitefilter)
+					sites = filter(lambda x: x not in blacklist, sites)
+					whitelist = filter(lambda x: not x.startswith('-'), self.sitefilter)
+					if len(whitelist):
+						sites = filter(lambda x: x in whitelist, sites)
+					if len(sites) == 0:
+						print('Block %s#%s is not available at any site!'
+							% (block[DataProvider.Dataset], block[DataProvider.BlockName]))
+					block[DataProvider.SEList] = sites
+
 			if utils.verbosity() > 0:
 				if self._datasetNick:
 					print "%s:" % self._datasetNick,
