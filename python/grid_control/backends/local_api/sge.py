@@ -67,9 +67,9 @@ class SGE(LocalWMSApi):
 
 
 	def parseJobState(self, state):
-		if True in map(lambda x in state, ['h', 's', 'S', 'T', 'w']):
+		if True in map(lambda x: x in state, ['h', 's', 'S', 'T', 'w']):
 			return Job.QUEUED
-		if True in map(lambda x in state, ['r', 't']):
+		if True in map(lambda x: x in state, ['r', 't']):
 			return Job.RUNNING
 		return Job.READY
 
