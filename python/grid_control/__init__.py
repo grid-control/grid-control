@@ -1,3 +1,5 @@
+from python_compat import *
+
 from exceptions	import *
 from utils	import AbstractObject
 from config	import *
