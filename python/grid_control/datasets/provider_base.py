@@ -81,6 +81,7 @@ class DataProvider(AbstractObject):
 				if block[DataProvider.SEList] != None:
 					sites = block[DataProvider.SEList]
 					blacklist = filter(lambda x: x.startswith('-'), self.sitefilter)
+					blacklist = map(lambda x: x[1:], blacklist)
 					sites = filter(lambda x: x not in blacklist, sites)
 					whitelist = filter(lambda x: not x.startswith('-'), self.sitefilter)
 					if len(whitelist):
