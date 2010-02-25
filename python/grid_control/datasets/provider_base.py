@@ -86,7 +86,7 @@ class DataProvider(AbstractObject):
 					whitelist = filter(lambda x: not x.startswith('-'), self.sitefilter)
 					if len(whitelist):
 						sites = filter(lambda x: x in whitelist, sites)
-					if len(sites) == 0:
+					if len(sites) == 0 and len(block[DataProvider.FileList]) != 0:
 						print('WARNING: Block %s#%s is not available at any site!'
 							% (block[DataProvider.Dataset], block[DataProvider.BlockName]))
 					block[DataProvider.SEList] = sites
