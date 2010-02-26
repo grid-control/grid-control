@@ -1,5 +1,6 @@
 #!/bin/bash
 # Author: Fred Stober <stober@ekp.uni-karlsruhe.de>
+# grid-control: https://ekptrac.physik.uni-karlsruhe.de/trac/grid-control
 
 # Error codes
 # 100 - unspecified error

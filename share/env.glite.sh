@@ -1,5 +1,7 @@
 #!/bin/bash
 
+# grid-control: https://ekptrac.physik.uni-karlsruhe.de/trac/grid-control
+
 echo "Searching for gLite environment..."
 
 if [ -z "$GLITE_LOCATION" ]; then

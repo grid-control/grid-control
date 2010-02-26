@@ -1,4 +1,7 @@
 #!/bin/bash
+
+# grid-control: https://ekptrac.physik.uni-karlsruhe.de/trac/grid-control
+
 # 110 - project area setup failed
 # 111 - CMSSW environment unpacking failed
 # 112 - CMSSW environment setup failed

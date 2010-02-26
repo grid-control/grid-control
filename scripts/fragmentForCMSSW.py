@@ -43,4 +43,11 @@ def customise_for_gc(process):
 
 	return (process)
 
+	process.AdaptorConfig = cms.Service("AdaptorConfig",
+		enable=cms.untracked.bool(True),
+		stats = cms.untracked.bool(True),
+	)
+
 process = customise_for_gc(process)
+
+# grid-control: https://ekptrac.physik.uni-karlsruhe.de/trac/grid-control

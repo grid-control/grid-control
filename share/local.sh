@@ -1,5 +1,7 @@
 #!/bin/bash
 
+# grid-control: https://ekptrac.physik.uni-karlsruhe.de/trac/grid-control
+
 GC_SANDBOX=${GC_SANDBOX:-$1}
 GC_JOBCONF="$GC_SANDBOX/_jobconfig.sh"
 source "$GC_JOBCONF"

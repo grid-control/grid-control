@@ -1,5 +1,7 @@
 #!/bin/bash
 
+# grid-control: https://ekptrac.physik.uni-karlsruhe.de/trac/grid-control
+
 export GC_DOCLEANUP="true"
 source run.lib || exit 101
 
