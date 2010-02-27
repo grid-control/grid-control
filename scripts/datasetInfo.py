@@ -27,20 +27,14 @@ def main(args):
 		sys.stderr.write("Use --help to get a list of options!\n")
 		sys.exit(1)
 
-	class ConfigDummy(object):
-		def get(self, x,y,z):
-			return z
-		def getPath(self, x,y,z):
-			return z
-
 	dataset = args[0].strip()
 	if os.path.exists(dataset.split("%")[0]):
 		dbsArg = False
 		dir, file = os.path.split(dataset)
-		provider = DataProvider.loadState(ConfigDummy(), dir, file)
+		provider = DataProvider.loadState(gcSupport.ConfigDummy(), dir, file)
 	else:
 		dbsArg = True
-		provider = DataProvider.open('DBSApiv2', ConfigDummy(), dataset, None)
+		provider = DataProvider.open('DBSApiv2', gcSupport.ConfigDummy(), dataset, None)
 	blocks = provider.getBlocks()
 	if len(blocks) == 0:
 		raise DatasetError("No blocks!")
