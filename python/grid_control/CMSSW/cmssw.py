@@ -94,7 +94,9 @@ class CMSSW(DataMod):
 		# Information about search order for software environment
 		self.searchLoc = []
 		if config.opts.init:
-			self.searchLoc.append(('CMSSW_DIR_USER', config.get('CMSSW', 'cmssw dir', '')))
+			userPath = config.get('CMSSW', 'cmssw dir', '')
+			if userPath != '':
+				self.searchLoc.append(('CMSSW_DIR_USER', userPath))
 			if self.scramEnv.get('RELEASETOP', None):
 				projPath = os.path.normpath("%s/../../../../" % self.scramEnv['RELEASETOP'])
 				self.searchLoc.append(('CMSSW_DIR_PRO', projPath))
