@@ -42,12 +42,12 @@ def customise_for_gc(process):
 		randSvc = RandomNumberServiceHelper(process.RandomNumberGeneratorService)
 		randSvc.populate()
 
-	return (process)
-
 	process.AdaptorConfig = cms.Service("AdaptorConfig",
 		enable=cms.untracked.bool(True),
 		stats = cms.untracked.bool(True),
 	)
+
+	return (process)
 
 process = customise_for_gc(process)
 
