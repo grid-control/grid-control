@@ -34,7 +34,7 @@ def customise_for_gc(process):
 	# Generator related setup
 	try:
 		if hasattr(process, "generator"):
-			process.source.firstLuminosityBlock = cms.untracked.uint32(__MY_JOBID__)
+			process.source.firstLuminosityBlock = cms.untracked.uint32(1+__MY_JOBID__)
 	except:
 		pass
 
