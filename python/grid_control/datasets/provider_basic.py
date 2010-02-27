@@ -49,7 +49,7 @@ class ListProvider(DataProvider):
 				name = blockinfo[DataProvider.Dataset]
 				if DataProvider.BlockName in blockinfo and "#" in self._filter:
 					name = "%s#%s" % (name, blockinfo[DataProvider.BlockName])
-			if name == self._filter:
+			if name.startswith(self._filter):
 				return True
 			return False
 
