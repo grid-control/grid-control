@@ -17,3 +17,4 @@ echo
 done
 
 export > output.exp
+rm output.*

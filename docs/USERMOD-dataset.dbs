@@ -2,20 +2,9 @@
 nickname = Dataset1
 /bin/env = 1
 /bin/arch = 1
-/bin/egrep = 1
-/bin/mkdir = 1
-/bin/ping = 1
-/bin/ping6 = 1
-/bin/ps = 1
-/bin/unlink = 1
-/bin/fgrep = 1
-/bin/gawk = 1
 
 [/MY/SKIM#2222]
 nickname = Dataset2
 /bin/gettext = 1
 /bin/grep = 1
 /bin/mail = 1
-/bin/hostname = 1
-/bin/gtar = 1
-/bin/gunzip = 1
