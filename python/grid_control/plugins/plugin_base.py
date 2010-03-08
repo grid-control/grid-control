@@ -46,7 +46,7 @@ class ParameterPlugin(AbstractObject):
 
 	# Get list of processed parameter names
 	def getProcessedNames(self):
-		return utils.flatSet(map(lambda (d,r): d.keys(), self.getProcessedParameters()))
+		return utils.set(utils.flatten(map(lambda (d,r): d.keys(), self.getProcessedParameters())))
 
 	# Get parameters in processed form
 	def getProcessedParameters(self):
@@ -68,7 +68,7 @@ class ParameterPlugin(AbstractObject):
 	def getParameterNames(self):
 		if self.varNames == None:
 			varList = map(lambda meta: meta.data.keys(), self.getParameterMetadata())
-			self.varNames = utils.flatSet(varList)
+			self.varNames = utils.set(utils.flatten(varList))
 		return self.varNames
 
 	# Data serialization functions - override as needed

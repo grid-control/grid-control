@@ -1,6 +1,5 @@
-import os, string, re, sys, tarfile
-from grid_control import ConfigError, Module, WMS, utils, DataMod
-from time import time, localtime, strftime
+import os, sys
+from grid_control import ConfigError, WMS, utils, DataMod
 
 class CMSSW(DataMod):
 	def __init__(self, config):

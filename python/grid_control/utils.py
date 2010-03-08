@@ -19,10 +19,6 @@ def optSplit(opt, delim):
 	return tuple(map(str.strip, [rmPrefix(opt)] + tmp))
 
 
-def unique(lst):
-	return dict(map(lambda x: (x, None), lst)).keys()
-
-
 def flatten(lists):
 	result = []
 	for x in lists:
@@ -33,10 +29,6 @@ def flatten(lists):
 		except:
 			result.append(x)
 	return result
-
-
-def flatSet(lst):
-	return sorted(unique(flatten(lst)))
 
 
 def safeWriteFile(name, content):
@@ -78,18 +70,6 @@ def verbosity():
 	return verbosity.setting
 
 
-def cached(fun):
-	def funProxy(*args, **kargs):
-		if not kargs.get('cached', True) or funProxy.cache == None:
-			if 'cached' in kargs:
-				kargs.pop('cached')
-			funProxy.cache = funProxy.fun(*args, **kargs)
-		return funProxy.cache
-	funProxy.fun = fun
-	funProxy.cache = None
-	return funProxy
-
-
 def getVersion():
 	try:
 		proc = LoggedProcess('svnversion', "-c %s" % atRoot.root)
@@ -102,7 +82,6 @@ def getVersion():
 	except:
 		pass
 	return "unknown"
-getVersion = cached(getVersion)
 
 
 def vprint(text, level = 0, printTime = False, newline = True, once = False):
@@ -254,13 +233,7 @@ class DictFormat(object):
 
 
 def searchPathFind(program):
-	try:
-		path = os.environ['PATH'].split(':')
-	except:
-		# Hmm, something really wrong
-		path = ['/bin', '/usr/bin', '/usr/local/bin']
-
-	for dir in path:
+	for dir in os.environ['PATH'].split(':'):
 		fname = os.path.join(dir, program)
 		if os.path.exists(fname):
 			return fname
@@ -564,6 +537,14 @@ def printTabular(head, entries, fmtString = ''):
 			print("=%s=" % str.join("=+=", applyFmt(lambda id: '=' * maxlen[id])))
 		else:
 			print(" %s " % str.join(" | ", applyFmt(lambda id: entry.get(id, ''))))
+
+
+def exitWithUsage(usage, msg = None):
+	if msg:
+		sys.stderr.write("%s\n" % msg)
+	sys.stderr.write("Syntax: %s\nUse --help to get a list of options!\n" % usage)
+	sys.exit(0)
+
 
 if __name__ == '__main__':
 	import doctest

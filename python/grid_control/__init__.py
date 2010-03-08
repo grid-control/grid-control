@@ -19,7 +19,7 @@ from datasets	import *
 from plugins	import *
 
 from CMSSW	import *
-from user_mod	import *
+from modules	import *
 from parameters	import *
 
 from help import *

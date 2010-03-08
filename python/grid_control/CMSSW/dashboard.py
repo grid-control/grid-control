@@ -1,6 +1,6 @@
 import os, threading
-from grid_control import AbstractObject, utils, WMS, Job, Monitoring
-from time import time, localtime, strftime
+from grid_control import utils, Monitoring
+from time import localtime, strftime
 from DashboardAPI import DashboardAPI
 
 class DashBoardMonitoring(Monitoring):

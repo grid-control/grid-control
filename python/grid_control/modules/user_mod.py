@@ -1,11 +1,11 @@
-import os.path, random, time
+import os.path
 from grid_control import DataMod
 
 class UserMod(DataMod):
 	def __init__(self, config):
 		DataMod.__init__(self, config)
-		self._executable = config.getPath('UserMod', 'executable')
-		self._arguments = config.get('UserMod', 'arguments', '')
+		self._executable = config.getPath(self.__class__.__name__, 'executable')
+		self._arguments = config.get(self.__class__.__name__, 'arguments', '')
 
 
 	def getCommand(self):

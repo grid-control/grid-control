@@ -1,35 +1,38 @@
-import sys, os
-from grid_control import RuntimeError, utils, DatasetError, DataProvider
-
 import DBSAPI_v2.dbsApi
-from DBSAPI_v2.dbsApiException import *
-from DBSAPI_v2.dbsOptions import DbsOptionParser
+from grid_control import utils, DatasetError, DataProvider
+
+def createDBSAPI(url):
+	if url == '':
+		url = 'http://cmsdbsprod.cern.ch/cms_dbs_prod_global/servlet/DBSServlet'
+	if not 'http://' in url:
+		url = 'http://cmsdbsprod.cern.ch/%s/servlet/DBSServlet' % url
+	return DBSAPI_v2.dbsApi.DbsApi({'version': 'DBS_2_0_6', 'level': 'CRITICAL', 'url': url})
 
 # required format: <dataset path>[@<instance>][#<block>]
 class DBSApiv2(DataProvider):
 	def __init__(self, config, datasetExpr, datasetNick, datasetID = 0):
 		DataProvider.__init__(self, config, datasetExpr, datasetNick, datasetID)
 		DataProvider.providers.update({'DBSApiv2': 'dbs'})
+		if config.getBool('CMSSW', 'dbs blacklist T1', True):
+			T1SEs = ["-srmcms.pic.es", "-ccsrm.in2p3.fr", "-storm-fe-cms.cr.cnaf.infn.it",
+				"-srm-cms.gridpp.rl.ac.uk", "-srm.grid.sinica.edu.tw", "-srm2.grid.sinica.edu.tw"]
+			self.sitefilter.extend(T1SEs)
 
-		self.args        = {'version': 'DBS_2_0_6', 'level': 'CRITICAL'}
-		self.args['url'] = config.get('CMSSW', 'dbs instance', "http://cmsdbsprod.cern.ch/cms_dbs_prod_global/servlet/DBSServlet")
-
-		(self.datasetPath, src, self.datasetBlock) = utils.optSplit(datasetExpr, "@#")
+		self.url = config.get('CMSSW', 'dbs instance', '')
+		(self.datasetPath, datasetUrl, self.datasetBlock) = utils.optSplit(datasetExpr, '@#')
 		if not self.datasetBlock:
-			self.datasetBlock = "all"
-		if src != '':
-			if not 'http://' in src:
-				src = "http://cmsdbsprod.cern.ch/%s/servlet/DBSServlet" % src
-			self.args['url'] = src
+			self.datasetBlock = 'all'
+		if datasetUrl != '':
+			self.url = datasetUrl
 
 
 	def getBlocksInternal(self):
-		api = DBSAPI_v2.dbsApi.DbsApi(self.args)
+		api = createDBSAPI(self.url)
 		try:
 			listBlockInfo = api.listBlocks(self.datasetPath)
 			listFileInfo = api.listFiles(self.datasetPath)
-		except DbsException, ex:
-			raise DatasetError("DBS exception\n%s: %s" % (ex.getClassName(), ex.getErrorMessage()))
+		except DBSAPI_v2.dbsApiException.DbsException, ex:
+			raise DatasetError('DBS exception\n%s: %s' % (ex.getClassName(), ex.getErrorMessage()))
 
 		if len(listBlockInfo) == 0:
 			raise DatasetError('Dataset %s has no registered blocks in dbs.' % self.datasetPath)
@@ -37,9 +40,9 @@ class DBSApiv2(DataProvider):
 			raise DatasetError('Dataset %s has no registered files in dbs.' % self.datasetPath)
 
 		def blockFilter(block):
-			if (self.datasetBlock == "all"):
+			if (self.datasetBlock == 'all'):
 				return True
-			if (str.split(block['Name'], "#")[1] == self.datasetBlock) :
+			if (str.split(block['Name'], '#')[1] == self.datasetBlock) :
 				return True
 			return False
 
@@ -47,8 +50,8 @@ class DBSApiv2(DataProvider):
 		for block in filter(blockFilter, listBlockInfo):
 			blockInfo = dict()
 			blockInfo[DataProvider.NEvents] = block['NumberOfEvents']
-			blockInfo[DataProvider.Dataset] = str.split(block['Name'], "#")[0]
-			blockInfo[DataProvider.BlockName] = str.split(block['Name'], "#")[1]
+			blockInfo[DataProvider.Dataset] = str.split(block['Name'], '#')[0]
+			blockInfo[DataProvider.BlockName] = str.split(block['Name'], '#')[1]
 
 			blockInfo[DataProvider.SEList] = []
 			for seName in block['StorageElementList']:

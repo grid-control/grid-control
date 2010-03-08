@@ -35,7 +35,7 @@ class MetaParameter(ParameterPlugin):
 	def getParameterNames(self):
 		if self.varNames == None:
 			allVars = map(lambda x: x.getParameterNames(), self.plugins)
-			self.varNames = utils.flatSet(varFlat)
+			self.varNames = utils.set(utils.flatten(varFlat))
 		return self.varNames
 
 	# For data serialization the plugin information is flattend

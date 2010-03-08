@@ -9,9 +9,9 @@ sys.path.insert(0, os.path.join(root, 'python'))
 from grid_control import *
 utils.atRoot.root = root
 
+usage = "Syntax: %s [OPTIONS] <config file>\n" % sys.argv[0]
 def print_help(*args):
-	sys.stderr.write("Syntax: %s [OPTIONS] <config file>\n\n" % sys.argv[0])
-	sys.stderr.write(open(utils.atRoot('share', 'help.txt'), 'r').read())
+	sys.stderr.write("%s\n%s" % (usage, open(utils.atRoot('share', 'help.txt'), 'r').read()))
 	sys.exit(0)
 
 def main(args):
@@ -49,10 +49,7 @@ def main(args):
 
 	# we need exactly one positional argument (config file)
 	if len(args) != 1:
-		sys.stderr.write("Config file not specified!\n")
-		sys.stderr.write("Syntax: %s [OPTIONS] <config file>\n" % sys.argv[0])
-		sys.stderr.write("Use --help to get a list of options!\n")
-		sys.exit(0)
+		utils.exitWithUsage(usage, "Config file not specified!")
 
 	# set up signal handler for interrupts
 	def interrupt(sig, frame):

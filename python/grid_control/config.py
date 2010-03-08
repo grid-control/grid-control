@@ -54,7 +54,6 @@ class Config:
 		except ConfigParser.NoOptionError:
 			return tryDefault("No option %s in section %s of config file." % (item, section))
 		except:
-			raise
 			raise ConfigError("Parse error in option %s of config file section %s." % (item, section))
 
 
@@ -88,10 +87,7 @@ class Config:
 
 	def getBool(self, section, item, default = None, volatile = False):
 		value = self.get(section, item, default, volatile)
-		try:
-			return bool(int(value))
-		except:
-			return value.lower() in ('yes', 'y', 'true', 't', 'ok')
+		return str(value).lower() in ('yes', 'y', 'true', 't', 'ok', '1')
 
 
 	# Compare this config object to another config file
