@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-import sys, os, re, fcntl
+import sys, os, re, fcntl, time
 
 # add python subdirectory from where exec was started to search path
 root = os.path.dirname(os.path.abspath(os.path.normpath(os.path.join(sys.argv[0], '..'))))
@@ -44,11 +44,15 @@ class ConfigDummy(object):
 
 class FileMutex:
 	def __init__(self, lockfile):
-		#log = utils.ActivityLog('Trying to aquire lock file %s...' % lockfile)
+		first = time.time()
 		self.lockfile = lockfile
+		while os.path.exists(self.lockfile):
+			if first and (time.time() - first > 10):
+				print 'Trying to aquire lock file %s...' % lockfile
+				first = False
+			time.sleep(0.2)
 		self.fd = open(self.lockfile, 'w')
 		fcntl.flock(self.fd, fcntl.LOCK_EX)
-		#del log
 
 	def __del__(self):
 		fcntl.flock(self.fd, fcntl.LOCK_UN)
