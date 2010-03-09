@@ -173,15 +173,7 @@ def main(args):
 					opts.submission = False
 
 		if opts.gui:
-			try:
-				gui.ANSIGUI(jobs, jobCycle)
-			except GridError, e:
-				raise
-			except:
-				if utils.verbosity() > 2:
-					raise
-				print "GUI mode is not available! Use -vvv to find out why."
-				jobCycle()
+			gui.ANSIGUI(jobs, jobCycle)
 		else:
 			jobCycle()
 
