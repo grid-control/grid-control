@@ -79,7 +79,7 @@ def main(args):
 				print("Will force initialization of %s if continued!" % config.workDir)
 				opts.init = True
 			if utils.boolUserInput("Do you want to create the working directory %s?" % config.workDir, True):
-				os.mkdir(config.workDir)
+				os.makedirs(config.workDir)
 		try:
 			os.chdir(config.workDir)
 		except:
