@@ -17,6 +17,8 @@ parser.add_option("-c", "--config-entry",  dest="configentry",  default=False, a
 parser.add_option("-C", "--config-guess",  dest="configguess",  default=False, action="store_true",
 	help="Gives config file entries to run over given dataset(s). " +
 		"Will try to guess where the dataset information was coming from.")
+parser.add_option("-n", "--config-nick",   dest="confignick",  default=False, action="store_true",
+	help="Use dataset path to derive nickname in case it it undefined")
 parser.add_option("-S", "--save",          dest="save",         default=False, action="store_true",
 	help="Saves dataset information to the file 'datacache.dat'")
 (opts, args) = parser.parse_args()
@@ -55,6 +57,11 @@ if opts.configentry or opts.configguess:
 		if not infos.get(dsName, None):
 			order.append(dsName)
 			infos[dsName] = dict([(DataProvider.Dataset, dsName)])
+			if not block.has_key(DataProvider.Nickname) and opts.confignick:
+				try:
+					block[DataProvider.Nickname] = dsName.lstrip("/").split("/")[1]
+				except:
+					pass
 			if block.has_key(DataProvider.Nickname):
 				nick = block[DataProvider.Nickname]
 				infos[dsName][DataProvider.Nickname] = nick

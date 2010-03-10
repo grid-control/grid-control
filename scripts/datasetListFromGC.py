@@ -1,8 +1,8 @@
 #!/usr/bin/env python
-import gcSupport, sys, os, gzip, xml.dom.minidom
+import gcSupport, sys, os, gzip, xml.dom.minidom, optparse
 from grid_control import *
 
-parser = optparse.OptionParser(usage=usage)
+parser = optparse.OptionParser()
 parser.add_option("-m", "--mode", dest="mode", default="CMSSW",
 	help="Specify how to process output files - available: CMSSW")
 parser.add_option("-e", "--events", dest="events", default="0",
