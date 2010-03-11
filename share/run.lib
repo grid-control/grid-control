@@ -48,7 +48,6 @@ fail() {
 	echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
 	echo "Error code $CODE"
 	echo
-	set >&2
 	cleanup
 	updatejobinfo $CODE
 	exit $CODE
@@ -63,7 +62,7 @@ abort() {
 	echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" >> $MY_LANDINGZONE/gc.stderr
 	[ -d "$MY_LANDINGZONE" ] && checkdir "Start directory" "$MY_LANDINGZONE" >> $MY_LANDINGZONE/gc.stderr
 	[ -d "$MY_SCRATCH" ] && checkdir "Scratch directory" "$MY_SCRATCH" >> $MY_LANDINGZONE/gc.stderr
-	export >> $MY_LANDINGZONE/gc.stderr
+	set >> $MY_LANDINGZONE/gc.stderr
 	cleanup
 	[ -n "$1" ] && updatejobinfo $1
 	[ -n "$(grep 'EXITCODE=0' $MY_LANDINGZONE/job.info)" ] && updatejobinfo 100
@@ -332,13 +331,13 @@ print_and_qeval() {
 	shift
 	echo "$PAELEVEL`basename $CMD` $@"
 	export PAELEVEL="$PAELEVEL "
-	LOGFILE=${MY_LANDINGZONE:-/tmp}/paqe.$RANDOM
+	LOGFILE="${MY_LANDINGZONE:-/tmp}/paqe.$RANDOM"
 	eval "$CMD $@" > $LOGFILE.out 2> $LOGFILE.err
 	CODE="$?"
 	export PAELEVEL="${PAELEVEL# }"
 	echo "$PAELEVEL returned $CODE"
-	[ "$CODE" != "0" ] && cat $LOGFILE.out && cat $LOGFILE.err
-	rm -f $LOGFILE.out $LOGFILE.err
+	[ "$CODE" != "0" ] && cat "$LOGFILE.out" && cat "$LOGFILE.err"
+	rm -f "$LOGFILE.out" "$LOGFILE.err"
 	return $CODE
 }
 
@@ -405,7 +404,7 @@ url_rm() {
 			"srm://"*)
 				RM_CMD="`getcommand srmrm lcg-del`"
 				[ "$(basename $RM_CMD)" == "lcg-del" ] && RM_OPTS="" || RM_OPTS="-2"
-				print_and_qeval "$RM_CMD" "${RM_OPTS} $FILE";;
+				print_and_qeval "$RM_CMD" "${RM_OPTS}" "$FILE";;
 			"file://"*)
 				print_and_qeval " " "rm" "${FILE#file://}";;
 			*)
@@ -419,15 +418,15 @@ url_copy_single_local() {
 	[ ! -f "${1#file://}" ] && return 101
 	mkdir -p `dirname ${2#file://}`
 	[ -f "${2#file://}" ] && return -101
-	cp -b ${1#file://} ${2#file://}
+	cp -b "${1#file://}" "${2#file://}"
 }
 
 url_copy_single_srm() {
 	debug_helper $FUNCNAME "$@"
 	if [ "$(basename `getcommand srmcp lcg-cp`)" == "lcg-cp" ]; then
-		print_and_qeval "lcg-cp" "-v -n 1 $1 $2"
+		print_and_qeval "lcg-cp" "-v -n 1" "$1" "$2"
 	else
-		print_and_qeval "srmcp" "-2 -debug=true -streams_num=1 $1 $2"
+		print_and_qeval "srmcp" "-2 -debug=true -streams_num=1" "$1" "$2"
 	fi
 }
 
