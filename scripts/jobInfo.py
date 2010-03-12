@@ -11,9 +11,7 @@ parser.add_option("-s", "--state", dest="state", default="",
 
 # we need exactly one positional argument (config file)
 if len(args) != 1:
-	sys.stderr.write("Syntax: %s <job info file>\n\n" % sys.argv[0])
-	sys.stderr.write("Use --help to get a list of options!\n")
-	sys.exit(1)
+	utils.exitWithUsage("%s <job info file>" % sys.argv[0])
 
 job = Job.load(args[0])
 if opts.jdl:

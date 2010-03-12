@@ -3,8 +3,8 @@ import gcSupport, sys, os, gzip, xml.dom.minidom, optparse
 from grid_control import *
 
 parser = optparse.OptionParser()
-parser.add_option("-m", "--mode", dest="mode", default="CMSSW",
-	help="Specify how to process output files - available: CMSSW")
+parser.add_option("-m", "--mode", dest="mode", default="CMSSW-Out",
+	help="Specify how to process output files - available: CMSSW-Out, CMSSW-In")
 parser.add_option("-e", "--events", dest="events", default="0",
 	help="User defined event number - zero means skipping files without event infos")
 (opts, args) = parser.parse_args()
@@ -63,15 +63,21 @@ try:
 			nEvents = int(opts.events)
 
 			# Read framework report files to get number of events
-			if opts.mode == "CMSSW":
+			if opts.mode.startswith("CMSSW"):
 				tarFile = tarfile.open(os.path.join(outputDir, "cmssw.dbs.tar.gz"), "r:gz")
 				fwkReports = filter(lambda x: os.path.basename(x.name) == 'report.xml', tarFile.getmembers())
 				try:
 					for fwkReport in map(lambda fn: tarFile.extractfile(fn), fwkReports):
-						for outFile in xml.dom.minidom.parse(fwkReport).getElementsByTagName("File"):
-							pfn = outFile.getElementsByTagName("PFN")[0].childNodes[0].data
-							if pfn == name_local:
-								nEvents = int(outFile.getElementsByTagName("TotalEvents")[0].childNodes[0].data)
+						fwkXML = xml.dom.minidom.parse(fwkReport)
+						if opts.mode == "CMSSW-Out":
+							for outFile in fwkXML.getElementsByTagName("File"):
+								pfn = outFile.getElementsByTagName("PFN")[0].childNodes[0].data
+								if pfn == name_local:
+									nEvents = int(outFile.getElementsByTagName("TotalEvents")[0].childNodes[0].data)
+						elif opts.mode == "CMSSW-In":
+							nEvents = 0
+							for inFile in fwkXML.getElementsByTagName("InputFile"):
+								nEvents += int(inFile.getElementsByTagName("EventsRead")[0].childNodes[0].data)
 				except:
 					print "Error while parsing framework output!"
 					continue
