@@ -14,6 +14,7 @@ except:
 	set = sets.Set
 
 try:
+	# sorted = Python 2.4
 	sorted = sorted
 except:
 	def sorted(list, comp=None, key=None):
@@ -52,3 +53,5 @@ except:
 if __name__ == '__main__':
 	import doctest
 	doctest.testmod()
+
+__all__ = ["md5", "set", "sorted"]
