@@ -1,4 +1,5 @@
-import os, time, random, utils
+from python_compat import *
+import os, time, random
 
 class Help(object):
 	def listVars(self, module):
@@ -19,7 +20,7 @@ class Help(object):
 
 		vars = module.getVarMapping().items()
 		vars += [('RANDOM', 'RANDOM')]
-		for (keyword, variable) in utils.sorted(vars):
+		for (keyword, variable) in sorted(vars):
 			print ("__%s__" % keyword).rjust(25), ":",
 			try:
 				print module.getTaskConfig()[variable]

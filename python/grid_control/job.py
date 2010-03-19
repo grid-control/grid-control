@@ -1,6 +1,5 @@
-import re
+import time
 from utils import DictFormat, safeWriteFile
-from time import time
 
 class Job:
 	states = ('INIT', 'SUBMITTED', 'DISABLED', 'READY', 'WAITING', 'QUEUED', 'ABORTED',
@@ -36,7 +35,7 @@ class Job:
 			job.submitted = data['submitted']
 		if 'runtime' not in data:
 			if 'submitted' in data:
-				data['runtime'] = time() - float(job.submitted)
+				data['runtime'] = time.time() - float(job.submitted)
 			else:
 				data['runtime'] = 0
 
@@ -87,7 +86,7 @@ class Job:
 	def assignId(self, wmsId):
 		self.wmsId = wmsId
 		self.attempt = self.attempt + 1
-		self.submitted = time()
+		self.submitted = time.time()
 
 
 	def report(self):

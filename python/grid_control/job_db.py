@@ -1,6 +1,5 @@
-import sys, os, re, fnmatch, random, utils, math, threading
-from time import time, localtime, strftime
-from grid_control import ConfigError, Job, UserError, Report
+import sys, os, re, fnmatch, random, math, time
+from grid_control import ConfigError, UserError, Job, Report, utils
 
 class JobDB:
 	def __init__(self, config, module, monitor):
@@ -227,7 +226,7 @@ class JobDB:
 			else:
 				# If a job stays too long in an inital state, cancel it
 				if jobObj.state in (Job.SUBMITTED, Job.WAITING, Job.READY, Job.QUEUED):
-					if self.timeout > 0 and time() - jobObj.submitted > self.timeout:
+					if self.timeout > 0 and time.time() - jobObj.submitted > self.timeout:
 						timeoutList.append(jobNum)
 			if self.config.opts.abort:
 				return False

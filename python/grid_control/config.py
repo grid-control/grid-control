@@ -1,5 +1,5 @@
-import os, ConfigParser, utils
-from grid_control import ConfigError
+import os, ConfigParser
+from grid_control import *
 
 class Config:
 	def __init__(self, configFile):

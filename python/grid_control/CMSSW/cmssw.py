@@ -1,5 +1,6 @@
 import os, sys
-from grid_control import ConfigError, WMS, utils, DataMod
+from grid_control import ConfigError, WMS, utils, datasets
+from grid_control.datasets import DataMod
 
 class CMSSW(DataMod):
 	def __init__(self, config):

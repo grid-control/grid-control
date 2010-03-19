@@ -1,5 +1,5 @@
+from python_compat import *
 from grid_control import Job, RuntimeError, utils
-import sys
 
 class Report:
 	states = ['WAITING', 'RUNNING', 'FAILED', 'SUCCESS']
@@ -222,17 +222,17 @@ class Report:
 		padding = ' ' * maxlen
 	
 		sites = filter(lambda x: not x in Report.states, statinfo.keys())
-		for num, site in enumerate(utils.sorted(sites)):
+		for num, site in enumerate(sorted(sites)):
 			print_stats(site, statinfo[site], maxlen, showtime, rate_site, time_site)
 
 			if details > 1:
 				wns = filter(lambda x: not x in Report.states, statinfo[site].keys())
-				for wn in utils.sorted(wns):
+				for wn in sorted(wns):
 					print_stats(wn, statinfo[site][wn], maxlen, showtime, rate_wn, time_wn)
 
 					if details > 2:
 						queues = filter(lambda x: not x in Report.states, statinfo[site][wn].keys())
-						for queue in utils.sorted(queues):
+						for queue in sorted(queues):
 							print_stats(queue, statinfo[site][wn][queue], maxlen, showtime, rate_queue, time_queue)
 			if num < len(sites) - 1:
 				print '----%s----' % (maxlen * '-') + 4 * ('+' + 14 * '-')
