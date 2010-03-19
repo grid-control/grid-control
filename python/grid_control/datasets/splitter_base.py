@@ -26,6 +26,16 @@ class DataSplitter(AbstractObject):
 			setattr(self, member, self._values.get(member, default))
 
 
+	def cpBlockToJob(block, job):
+		job[DataSplitter.SEList] = block[DataProvider.SEList]
+		job[DataSplitter.Dataset] = block[DataProvider.Dataset]
+		if DataProvider.Nickname in block:
+			job[DataSplitter.Nickname] = block[DataProvider.Nickname]
+		if DataProvider.DatasetID in block:
+			job[DataSplitter.DatasetID] = block[DataProvider.DatasetID]
+		return job
+
+
 	def splitDatasetInternal(self, blocks, firstEvent = 0):
 		raise AbstractError
 

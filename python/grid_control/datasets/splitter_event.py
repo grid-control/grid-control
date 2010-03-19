@@ -62,10 +62,4 @@ class EventBoundarySplitter(DataSplitter):
 		for block in blocks:
 			for job in self._splitJobs(block[DataProvider.FileList], firstEvent):
 				firstEvent = 0
-				job[DataSplitter.SEList] = block[DataProvider.SEList]
-				job[DataSplitter.Dataset] = block[DataProvider.Dataset]
-				if DataProvider.Nickname in block:
-					job[DataSplitter.Nickname] = block[DataProvider.Nickname]
-				if DataProvider.DatasetID in block:
-					job[DataSplitter.DatasetID] = block[DataProvider.DatasetID]
-				yield job
+				yield self.cpBlockToJob(block, job)
