@@ -1,9 +1,12 @@
 #!/usr/bin/env python
 import gcSupport, sys, optparse
 from grid_control import *
+from grid_control.CMSSW import provider_dbsv2
+from grid_control.CMSSW.provider_dbsv2 import *
 
 parser = optparse.OptionParser()
 parser.add_option("-l", "--list", dest="list", default=None)
+parser.add_option("-L", "--listlumis", dest="listlumis", default=None)
 parser.add_option("-r", "--remove", dest="remove")
 parser.add_option("-w", "--wipe", dest="wipe", default=False, action="store_true")
 parser.add_option("-d", "--dump", dest="dump")
@@ -28,6 +31,10 @@ if opts.remove:
 elif opts.list:
 	for block in api.listBlocks(opts.list):
 		print block["Name"]
+
+elif opts.listlumis:
+	for lfn in opts.listlumis:
+		api.listFileLumis(lfn)
 
 elif opts.dump:
 	print api.listDatasetContents(opts.dump.split("#")[0], opts.dump)

@@ -2,6 +2,8 @@
 import gcSupport, base64, xml.dom.minidom, optparse, locale, re, time, os
 from xml.dom.minidom import parseString
 from grid_control import *
+from grid_control.CMSSW import provider_dbsv2
+from grid_control.CMSSW.provider_dbsv2 import *
 from DBSAPI_v2.dbsMigrateApi import DbsMigrateApi
 
 class DBS(object):
