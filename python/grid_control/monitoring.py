@@ -1,5 +1,5 @@
 import os, threading
-from grid_control import AbstractObject, utils, Job
+from grid_control import AbstractObject, Job
 
 class Monitoring(AbstractObject):
 	# Read configuration options and init vars
@@ -7,17 +7,34 @@ class Monitoring(AbstractObject):
 		self.config = config
 		self.module = module
 
-		self.evtSubmit = config.getPath('events', 'on submit', '', volatile=True)
-		self.evtStatus = config.getPath('events', 'on status', '', volatile=True)
-		self.evtOutput = config.getPath('events', 'on output', '', volatile=True)
-		self.evtFinish = config.getPath('events', 'on finish', '', volatile=True)
-
-
 	def getEnv(self, wms):
 		return {}
 
 	def getFiles(self):
 		return []
+
+	def onJobSubmit(self, wms, jobObj, jobNum):
+		raise AbstractError
+
+	def onJobUpdate(self, wms, jobObj, jobNum, data):
+		raise AbstractError
+
+	def onJobOutput(self, wms, jobObj, jobNum, retCode):
+		raise AbstractError
+
+	def onTaskFinish(self, nJobs):
+		raise AbstractError
+
+Monitoring.dynamicLoaderPath()
+Monitoring.moduleMap["scripts"] = "ScriptMonitoring"
+
+class ScriptMonitoring(Monitoring):
+	def __init__(self, config, module):
+		Monitoring.__init__(self, config, module)
+		self.evtSubmit = config.getPath('events', 'on submit', '', volatile=True)
+		self.evtStatus = config.getPath('events', 'on status', '', volatile=True)
+		self.evtOutput = config.getPath('events', 'on output', '', volatile=True)
+		self.evtFinish = config.getPath('events', 'on finish', '', volatile=True)
 
 	# Get both task and job config / state dicts
 	def setEventEnviron(self, jobObj, jobNum):

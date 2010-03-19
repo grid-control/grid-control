@@ -1,6 +1,6 @@
 import sys, os, random
+from python_compat import *
 from grid_control import AbstractObject
-from grid_control.utils import sorted
 from wms import WMS
 
 class Broker(AbstractObject):
@@ -83,3 +83,5 @@ class SimpleBroker(Broker):
 		else:
 			self.addQueueReq(reqs, match)
 		return reqs
+
+Broker.dynamicLoaderPath()

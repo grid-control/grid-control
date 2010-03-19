@@ -1,5 +1,5 @@
 # Generic base class for grid proxies
-import sys, os, time
+import os, time
 from grid_control import AbstractObject, InstallationError, AbstractError, UserError, utils
 
 class Proxy(AbstractObject):
@@ -52,6 +52,8 @@ class Proxy(AbstractObject):
 	def getVO(self):
 		return 'None'
 
+Proxy.dynamicLoaderPath()
+
 
 class TrivialProxy(Proxy):
 	def canSubmit(self, length, flag):
@@ -74,9 +76,9 @@ class VomsProxy(Proxy):
 		proc = utils.LoggedProcess(self._infoExec, "--all")
 		retCode = proc.wait()
 		if (retCode != 0) and not self.ignoreWarning:
-			sys.stderr.write(("%s\n%s\n" % (proc.getOutput(), proc.getError())).replace('\n\n', '\n'))
-			sys.stderr.write("If job submission is still possible, you can set [proxy] ignore warnings = True\n")
-			raise InstallationError("voms-proxy-info failed with return code %d" % retCode)
+			msg = ("%s\n%s\n" % (proc.getOutput(), proc.getError())).replace('\n\n', '\n')
+			msg += "If job submission is still possible, you can set [proxy] ignore warnings = True\n"
+			raise InstallationError(msg + "voms-proxy-info failed with return code %d" % retCode)
 		self._cache = utils.DictFormat(':').parse(proc.getOutput())
 		return self._cache
 

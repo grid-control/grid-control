@@ -1,6 +1,6 @@
-import sys, os, StringIO, tarfile, time, fnmatch, re, popen2
-from grid_control import InstallationError, ConfigError, RuntimeError
 from python_compat import *
+import sys, os, StringIO, tarfile, time, fnmatch, re, popen2
+from exceptions import *
 
 def optSplit(opt, delim):
 	""" Split option strings into fixed tuples
@@ -318,26 +318,43 @@ def genTarball(outFile, dir, pattern):
 
 class AbstractObject:
 	def __init__(self):
-		raise Exception('AbstractObject cannot be instantiated.')
+		raise AbstractError
+
+	# Modify the module search path for some class
+	def dynamicLoaderPath(cls, path = []):
+		if not hasattr(cls, 'moduleMap'):
+			cls.moduleMap = {}
+			cls.modPath = [str.join('.', cls.__module__.split('.')[:-1])]
+		cls.modPath = path + [cls.__module__] + cls.modPath
+	dynamicLoaderPath = classmethod(dynamicLoaderPath)
 
 	def open(cls, name, *args, **kwargs):
-		def loadModules(path):
-			for package in range(path.count('.')):
-				__import__(str.join('.', path.split('.')[:(package + 1)]))
-			return str.join('.', path.split('.')[:-1])
-		try:
-			modPath = loadModules('grid_control.' + name)
-		except:
-			modPath = loadModules(name)
-		className = name.split('.')[-1]
-		newcls = getattr(sys.modules["__main__"], className, None)
-		if newcls == None:
-			newcls = getattr(sys.modules[modPath], className, None)
-		if newcls == None:
-			raise ConfigError('%s "%s" does not exist!' % (cls.__name__, name))
-		if not issubclass(newcls, cls):
-			raise Exception('%s is not a child of %s' % (newcls, cls))
-		return newcls(*args, **kwargs)
+		# Yield search paths
+		def searchPath(cname):
+			name = cls.moduleMap.get(cname, cname)
+			yield "grid_control.%s" % name
+			for path in cls.modPath:
+				if not '.' in name:
+					yield '%s.%s.%s' % (path, name.lower(), name)
+				yield '%s.%s' % (path, name)
+
+		mjoin = lambda x: str.join('.', x)
+		for modName in searchPath(name):
+			parts = modName.split('.')
+			# Try to import missing modules
+			try:
+				for pkg in map(lambda (i, x): mjoin(parts[:i+1]), enumerate(parts[:-1])):
+					if pkg not in sys.modules:
+						__import__(pkg)
+				newcls = getattr(sys.modules[mjoin(parts[:-1])], parts[-1])
+				assert(type(newcls) != type(sys.modules['grid_control']))
+			except:
+				continue
+			if issubclass(newcls, cls):
+				return newcls(*args, **kwargs)
+			else:
+				raise ConfigError('%s is not of type %s' % (newcls, cls))
+		raise ConfigError('%s "%s" does not exist in %s!' % (cls.__name__, name, str.join(":", searchPath(name))))
 	open = classmethod(open)
 
 

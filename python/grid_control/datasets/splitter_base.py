@@ -353,3 +353,5 @@ class DataSplitter(AbstractObject):
 
 		return JobFileTarAdaptor(path).getDataSplitter()
 	loadState = staticmethod(loadState)
+
+DataSplitter.dynamicLoaderPath()

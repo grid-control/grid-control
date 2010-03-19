@@ -1,5 +1,6 @@
 # Generic base class for workload management systems
 
+from python_compat import *
 import sys, os, time, shutil, tarfile, glob
 from grid_control import AbstractObject, ConfigError, RuntimeError, UserError, utils, Proxy
 
@@ -45,10 +46,10 @@ class WMS(AbstractObject):
 		taskEnv = module.getTaskConfig()
 		taskEnv.update(monitor.getEnv(self))
 		taskConfig = utils.DictFormat(escapeString = True).format(taskEnv, format = 'export %s%s%s\n')
-		inFiles.append(utils.VirtualFile('_config.sh', utils.sorted(taskConfig)))
+		inFiles.append(utils.VirtualFile('_config.sh', sorted(taskConfig)))
 
 		varMapping = map(lambda (x, y): "%s %s\n" % (x, y), module.getVarMapping().items())
-		inFiles.append(utils.VirtualFile('_varmap.dat', str.join('', utils.sorted(varMapping))))
+		inFiles.append(utils.VirtualFile('_varmap.dat', str.join('', sorted(varMapping))))
 		inFiles.extend(map(lambda x: utils.atRoot('share', 'env.%s.sh' % x), module.getDependencies()))
 
 		utils.vprint("Packing sandbox:")
@@ -60,7 +61,7 @@ class WMS(AbstractObject):
 			utils.vprint("\t%s" % shortName(tarFile))
 			tar = tarfile.TarFile.open(tarFile, 'w:gz')
 
-		for file in utils.sorted(inFiles):
+		for file in sorted(inFiles):
 			if isinstance(file, str):
 				# Path to filename given
 				if not os.path.exists(file):
@@ -207,3 +208,5 @@ class WMS(AbstractObject):
 				forceMove(dir, os.path.join(failPath, os.path.basename(dir)))
 
 			yield (inJobNum, -1, {})
+
+WMS.dynamicLoaderPath()

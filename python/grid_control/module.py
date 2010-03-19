@@ -188,3 +188,5 @@ class Module(AbstractObject):
 	# Called on job submission
 	def getSubmitInfo(self, jobNum):
 		return {}
+
+Module.dynamicLoaderPath(["grid_control.modules"])

@@ -1,30 +1,20 @@
-from python_compat import *
-
 from exceptions	import *
 from utils	import AbstractObject
-from config	import *
 
-from job	import *
+from config	import Config
+from job	import Job
+from report	import Report
+from job_db	import JobDB
+from proxy	import Proxy
+from help	import Help
 
-from report	import *
+from backends	import WMS
+from module	import Module
+from monitoring	import Monitoring
 
-from job_db	import *
-from proxy	import *
+# import dynamic repos
+import modules
+import CMSSW
 
-from backends	import *
-from monitoring	import *
-from module	import *
-
-from datasets	import *
-from plugins	import *
-
-from CMSSW	import *
-from modules	import *
 from parameters	import *
-
-from help import *
-try:
-	from gui import *
-except:
-	pass
-
+#import parameters

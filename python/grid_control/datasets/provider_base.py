@@ -201,3 +201,4 @@ class DataProvider(AbstractObject):
 	resyncSources = staticmethod(resyncSources)
 
 DataProvider.providers = {}
+DataProvider.dynamicLoaderPath()

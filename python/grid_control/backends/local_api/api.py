@@ -31,3 +31,5 @@ class LocalWMSApi(AbstractObject):
 
 	def getCancelArgument(self, wmsIds):
 		return str.join(" ", wmsIds)
+
+LocalWMSApi.dynamicLoaderPath()
