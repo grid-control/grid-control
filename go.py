@@ -95,10 +95,14 @@ def main(args):
 			return 0
 
 		# Initialise monitoring module
-		if config.getBool('jobs', 'monitor job', False, volatile=True):
-			monitor = DashBoardMonitoring(config, module)
-		else:
-			monitor = Monitoring(config, module)
+		monitor = config.get('jobs', 'monitor', 'scripts', volatile=True)
+		try:
+			if config.getBool('jobs', 'monitor job', volatile=True):
+				monitor = "dashboard"
+			utils.deprecated("Please use [jobs] monitor = dashboard!")
+		except:
+			pass
+		monitor = Monitoring.open(monitor, config, module)
 
 		# Initialise workload management interface
 		backend = config.get('global', 'backend', 'grid')
