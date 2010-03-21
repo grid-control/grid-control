@@ -12,19 +12,19 @@ class HybridSplitter(DataSplitter):
 			events = 0
 			fileStack = []
 
+			def returnSplit():
+				job = dict()
+				job[DataSplitter.Skipped] = 0
+				job[DataSplitter.FileList] = fileStack
+				job[DataSplitter.NEvents] = events
+				return self.cpBlockToJob(block, job)
+
 			for fileInfo in block[DataProvider.FileList]:
 				nextEvents = events + fileInfo[DataProvider.NEvents]
 				if (len(fileStack) > 0) and (nextEvents > self.eventsPerJob):
-					job[DataSplitter.Skipped] = 0
-					job[DataSplitter.FileList] = fileStack
-					job[DataSplitter.NEvents] = events
-					yield self.cpBlockToJob(block, job)
+					yield returnSplit()
 					fileStack = []
 					events = 0
 				events += fileInfo[DataProvider.NEvents]
 				fileStack += fileInfo
-
-			job[DataSplitter.Skipped] = 0
-			job[DataSplitter.FileList] = fileStack
-			job[DataSplitter.NEvents] = events
-			yield self.cpBlockToJob(block, job)
+			yield returnSplit()

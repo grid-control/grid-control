@@ -1,5 +1,5 @@
 import os, gzip, cStringIO, copy
-from grid_control import utils, AbstractObject, RuntimeError, ConfigError
+from grid_control import utils, AbstractObject, ConfigError
 
 class DataProvider(AbstractObject):
 	dataInfos = ('Dataset', 'BlockName', 'NEvents', 'SEList', 'FileList', 'lfn', 'Nickname', 'DatasetID')

@@ -1,4 +1,5 @@
 from grid_control import datasets, module, monitoring
+from provider_dbsv2 import *
 
 module.Module.dynamicLoaderPath(["grid_control.CMSSW"])
 datasets.DataProvider.dynamicLoaderPath(["grid_control.CMSSW"])

@@ -33,8 +33,8 @@ elif opts.list:
 		print block["Name"]
 
 elif opts.listlumis:
-	for lfn in opts.listlumis:
-		api.listFileLumis(lfn)
+	for lumi in api.listFileLumis(opts.listlumis):
+		print lumi["RunNumber"], lumi["LumiSectionNumber"]
 
 elif opts.dump:
 	print api.listDatasetContents(opts.dump.split("#")[0], opts.dump)

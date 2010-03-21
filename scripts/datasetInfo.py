@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import gcSupport, sys, os, optparse
 from grid_control import *
+from grid_control.datasets import DataProvider
 
 usage = "%s [OPTIONS] <DBS dataset path> | <dataset cache file>" % sys.argv[0]
 parser = optparse.OptionParser(usage=usage)
