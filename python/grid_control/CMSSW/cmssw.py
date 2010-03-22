@@ -150,13 +150,14 @@ class CMSSW(DataMod):
 		data['CMSSW_CONFIG'] = str.join(' ', map(os.path.basename, self.configFiles))
 		data['CMSSW_OLD_RELEASETOP'] = self.scramEnv.get('RELEASETOP', None)
 		data['DB_EXEC'] = 'cmsRun'
-		data['LUMI_RANGE'] = self.selectedLumis
 		data['SCRAM_ARCH'] = self.scramArch
 		data['SCRAM_VERSION'] = self.scramVersion
 		data['SCRAM_PROJECTVERSION'] = self.scramEnv['SCRAM_PROJECTVERSION']
 		data['GZIP_OUT'] = ('no', 'yes')[self.gzipOut]
 		data['SE_RUNTIME'] = ('no', 'yes')[self.seRuntime]
 		data['HAS_RUNTIME'] = ('no', 'yes')[len(self.projectArea) != 0]
+		if self.selectedLumis:
+			data['LUMI_RANGE'] = self.selectedLumis
 		return data
 
 
