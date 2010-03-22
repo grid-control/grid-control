@@ -26,7 +26,7 @@ class DataSplitter(AbstractObject):
 			setattr(self, member, self._values.get(member, default))
 
 
-	def cpBlockToJob(block, job):
+	def cpBlockToJob(self, block, job):
 		job[DataSplitter.SEList] = block[DataProvider.SEList]
 		job[DataSplitter.Dataset] = block[DataProvider.Dataset]
 		if DataProvider.Nickname in block:

@@ -125,7 +125,7 @@ class ProgressBar:
 		return str(self.bar)
 
 
-def ANSIGUI(jobs, jobCycle):
+def ANSIGUI(jobDB, jobCycle):
 	def wrapper(screen):
 		# Event handling for resizing
 		def onResize(sig, frame):
@@ -136,7 +136,7 @@ def ANSIGUI(jobs, jobCycle):
 		screen.erase()
 		onResize(None, None)
 		signal.signal(signal.SIGWINCH, onResize)
-		bar = ProgressBar(0, jobs.nJobs, 65)
+		bar = ProgressBar(0, jobDB.nJobs, 65)
 
 		# Wrapping ActivityLog functionality
 		class GUILog:
@@ -151,8 +151,8 @@ def ANSIGUI(jobs, jobCycle):
 				screen.savePos()
 				screen.move(0, 0)
 				sys.stdout.logged = False
-				bar.update(len(jobs.ok))
-				report.Report(jobs, jobs).summary("%s\n%s" % (bar, message))
+				bar.update(len(jobDB.ok))
+				report.Report(jobDB, jobDB).summary("%s\n%s" % (bar, message))
 				sys.stdout.logged = True
 				screen.loadPos()
 

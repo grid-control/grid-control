@@ -107,12 +107,8 @@ def main(args):
 		# Initialise workload management interface
 		backend = config.get('global', 'backend', 'grid')
 		defaultwms = { 'grid': 'GliteWMS', 'local': 'LocalWMS' }
-		if backend == 'grid':
-			wms = WMS.open(config.get(backend, 'wms', 'GliteWMS'), config, module, monitor)
-		elif backend == 'local':
-			wms = WMS.open(defaultwms[backend], config, module, monitor)
-		else:
-			raise UserError("Invalid backend specified!" % config.workDir)
+		wms = config.get(backend, 'wms', defaultwms[backend])
+		wms = WMS.open(wms, config, module, monitor)
 
 		# Initialise job database
 		jobs = JobDB(config, module, monitor)
@@ -177,6 +173,7 @@ def main(args):
 					opts.submission = False
 
 		if opts.gui:
+			import gui
 			gui.ANSIGUI(jobs, jobCycle)
 		else:
 			jobCycle()

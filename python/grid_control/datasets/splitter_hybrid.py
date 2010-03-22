@@ -26,5 +26,5 @@ class HybridSplitter(DataSplitter):
 					fileStack = []
 					events = 0
 				events += fileInfo[DataProvider.NEvents]
-				fileStack += fileInfo
+				fileStack.append(fileInfo[DataProvider.lfn])
 			yield returnSplit()
