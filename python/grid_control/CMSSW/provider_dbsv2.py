@@ -38,7 +38,7 @@ def parseLumiFilter(lumifilter):
 			return cmp(start_a_lumi, start_b_lumi)
 		else:
 			return cmp(start_a_run, start_b_run)
-	tmp.sort(cmp=cmpLumi)
+	tmp.sort(cmpLumi)
 	return tmp
 
 
