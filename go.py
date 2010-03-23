@@ -173,7 +173,7 @@ def main(args):
 					opts.submission = False
 
 		if opts.gui:
-			import gui
+			from grid_control import gui
 			gui.ANSIGUI(jobs, jobCycle)
 		else:
 			jobCycle()

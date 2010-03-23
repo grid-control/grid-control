@@ -29,7 +29,6 @@ class DashBoardMonitoring(Monitoring):
 
 	# Called on job submission
 	def onJobSubmit(self, wms, jobObj, jobNum):
-		Monitoring.onJobSubmit(self, wms, jobObj, jobNum)
 		threading.Thread(target = self.publish, args = (jobObj, jobNum, [{
 			"user": os.environ['LOGNAME'], "GridName": wms.proxy.getUsername(),
 			"tool": "grid-control", "JSToolVersion": utils.getVersion(),
@@ -40,7 +39,6 @@ class DashBoardMonitoring(Monitoring):
 
 	# Called on job status update
 	def onJobUpdate(self, wms, jobObj, jobNum, data):
-		Monitoring.onJobUpdate(self, wms, jobObj, jobNum, data)
 		threading.Thread(target = self.publish, args = (jobObj, jobNum, [{
 			"StatusValue": data.get('status', 'pending').upper(),
 			"StatusValueReason": data.get('reason', data.get('status', 'pending')).upper(),

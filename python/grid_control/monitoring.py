@@ -14,16 +14,16 @@ class Monitoring(AbstractObject):
 		return []
 
 	def onJobSubmit(self, wms, jobObj, jobNum):
-		raise AbstractError
+		pass
 
 	def onJobUpdate(self, wms, jobObj, jobNum, data):
-		raise AbstractError
+		pass
 
 	def onJobOutput(self, wms, jobObj, jobNum, retCode):
-		raise AbstractError
+		pass
 
 	def onTaskFinish(self, nJobs):
-		raise AbstractError
+		pass
 
 Monitoring.dynamicLoaderPath()
 Monitoring.moduleMap["scripts"] = "ScriptMonitoring"
