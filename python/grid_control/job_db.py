@@ -157,7 +157,7 @@ class JobDB:
 
 		# Get list of submittable jobs
 		if self.maxRetry >= 0:
-			list = filter(lambda x: self._jobs.get(x, Job()).attempt < self.maxRetry, self.ready)
+			list = filter(lambda x: self._jobs.get(x, Job()).attempt - 1 < self.maxRetry, self.ready)
 		else:
 			list = self.ready[:]
 		if self.doShuffle:
