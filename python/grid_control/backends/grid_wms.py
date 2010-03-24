@@ -59,14 +59,14 @@ class GridWMS(WMS):
 
 	def sitesReq(self, sites):
 		sitereqs = []
-		formatstring = "RegExp(%s, other.GlueCEUniqueID)"
+		fmt = lambda x: "RegExp(%s, other.GlueCEUniqueID)" % self._jdlEscape(x)
 
 		blacklist = filter(lambda x: x.startswith('-'), sites)
-		sitereqs.extend(map(lambda x: ("!" + formatstring % self._jdlEscape(x[1:])), blacklist))
+		sitereqs.extend(map(lambda x: "!" + fmt(x[1:]), blacklist))
 
 		whitelist = filter(lambda x: not x.startswith('-'), sites)
 		if len(whitelist):
-			sitereqs.append('(%s)' % str.join(' || ', map(lambda x: (formatstring % self._jdlEscape(x)), whitelist)))
+			sitereqs.append('(%s)' % str.join(' || ', map(fmt, whitelist)))
 
 		if not len(sitereqs):
 			return None

@@ -18,7 +18,7 @@ class Broker(AbstractObject):
 			rIdx = 0
 			if randomize:
 				rIdx = random.randint(0, len(queues) - 1)
-			reqs.append((WMS.SITES, queues[rIdx]))
+			reqs.append((WMS.SITES, (queues[rIdx], None)))
 
 
 class DummyBroker(Broker):

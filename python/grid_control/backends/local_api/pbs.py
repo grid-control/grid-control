@@ -34,7 +34,11 @@ class PBS(LocalWMSApi):
 		# Job requirements
 		reqs = dict(self.wms.getRequirements(jobNum))
 		if WMS.SITES in reqs:
-			params += ' -q %s' % reqs[WMS.SITES]
+			(queue, nodes) = reqs[WMS.SITES]
+			if queue:
+				params += ' -q %s' % queue
+			if nodes:
+				params += ' -l nodes=%s' % str.join("+", nodes)
 		# Job group
 		if len(self._group):
 			params += ' -W group_list=%s' % self._group

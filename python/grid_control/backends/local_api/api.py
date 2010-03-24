@@ -6,7 +6,7 @@ class LocalWMSApi(AbstractObject):
 		self.wms = localWMS
 
 	def getQueues(self):
-		raise AbstractError
+		return None
 
 	def getArguments(self, jobNum, sandbox):
 		raise AbstractError

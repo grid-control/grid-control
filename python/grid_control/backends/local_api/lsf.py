@@ -33,7 +33,7 @@ class LSF(LocalWMSApi):
 		# Job requirements
 		reqs = dict(self.wms.getRequirements(jobNum))
 		if WMS.SITES in reqs:
-			params += ' -q %s' % reqs[WMS.SITES]
+			params += ' -q %s' % reqs[WMS.SITES][0]
 		if WMS.WALLTIME in reqs:
 			params += ' -c %d' % ((reqs[WMS.WALLTIME] + 59) / 60)
 		# IO paths
