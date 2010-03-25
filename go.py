@@ -182,7 +182,7 @@ def main(args):
 		else:
 			jobCycle()
 
-	except GridError, e:
+	except GCError, e:
 		e.showMessage()
 		return 1
 

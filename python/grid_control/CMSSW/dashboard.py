@@ -3,7 +3,7 @@ from grid_control import utils, Monitoring
 from time import localtime, strftime
 from DashboardAPI import DashboardAPI
 
-class DashBoardMonitoring(Monitoring):
+class DashBoard(Monitoring):
 	def __init__(self, config, module):
 		Monitoring.__init__(self, config, module)
 		self.app = config.get('dashboard', 'application', 'shellscript', volatile=True)
