@@ -62,10 +62,12 @@ class DBSApiv2(DataProvider):
 			return False
 
 		def lumiFilter(lfn):
+			if self.selectedLumis == None:
+				return True
 			for lumi in listLumiInfo[lfn]:
 				if selectLumi(lumi, self.selectedLumis):
 					return True
-			return self.selectedLumis == None
+			return False
 
 		result = []
 		for block in filter(blockFilter, listBlockInfo):
