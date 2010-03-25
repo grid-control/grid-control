@@ -15,7 +15,7 @@ class LocalWMS(WMS):
 		print "Using batch system: %s" % self.api.__class__.__name__
 
 		broker = config.get('local', 'broker', 'DummyBroker', volatile=True)
-		self.broker = Broker.open(broker, config, self.api.getQueues())
+		self.broker = Broker.open(broker, config, self.api.getQueues(), self.api.getNodes())
 
 		self.sandPath = config.getPath('local', 'sandbox path', os.path.join(config.workDir, 'sandbox'))
 		self._nameFile = config.getPath('local', 'name source', '', volatile=True)

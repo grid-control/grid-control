@@ -4,10 +4,11 @@ from grid_control import AbstractObject
 from wms import WMS
 
 class Broker(AbstractObject):
-	def __init__(self, config, queues):
+	def __init__(self, config, queues, nodes):
 		self.config = config
 		# Queue info format: {'queue1': {WMS.MEMORY: 123, ...}, 'queue2': {...}}
 		self.queues = queues
+		self.nodes = nodes
 		self.userQueue = config.get('local', 'queue', '', volatile=True).split()
 
 	def matchQueue(self, reqs):

@@ -8,6 +8,9 @@ class LocalWMSApi(AbstractObject):
 	def getQueues(self):
 		return None
 
+	def getNodes(self):
+		return None
+
 	def getArguments(self, jobNum, sandbox):
 		raise AbstractError
 
