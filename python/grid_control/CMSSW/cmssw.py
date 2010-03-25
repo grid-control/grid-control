@@ -1,6 +1,7 @@
 import os, sys
 from grid_control import ConfigError, WMS, utils, datasets
 from grid_control.datasets import DataMod
+from lumi_tools import *
 
 class CMSSW(DataMod):
 	def __init__(self, config):
@@ -157,7 +158,7 @@ class CMSSW(DataMod):
 		data['SE_RUNTIME'] = ('no', 'yes')[self.seRuntime]
 		data['HAS_RUNTIME'] = ('no', 'yes')[len(self.projectArea) != 0]
 		if self.selectedLumis:
-			data['LUMI_RANGE'] = self.selectedLumis
+			data['LUMI_RANGE'] = str.join(',', map(lambda x: '"%s"' % x, formatLumi(self.selectedLumis)))
 		return data
 
 
