@@ -27,14 +27,11 @@ class DBSApiv2(DataProvider):
 			self.datasetBlock = 'all'
 		if datasetUrl != '':
 			self.url = datasetUrl
-		self.selectedLumis = config.get('CMSSW', 'lumi filter', '')
-		if self.selectedLumis != '':
-			self.selectedLumis = parseLumiFilter(self.selectedLumis)
+		self.selectedLumis = parseLumiFilter(config.get('CMSSW', 'lumi filter', ''))
+		if self.selectedLumis:
 			print "The following runs and lumi sections are selected:"
 			for line in map(lambda x: str.join(', ', x), utils.lenSplit(formatLumi(self.selectedLumis), 60)):
 				print "\t", line
-		else:
-			self.selectedLumis = None
 
 
 	def getBlocksInternal(self):

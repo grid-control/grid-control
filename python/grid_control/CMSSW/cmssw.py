@@ -92,9 +92,7 @@ class CMSSW(DataMod):
 		if self.scramEnv['SCRAM_PROJECTNAME'] != 'CMSSW':
 			raise ConfigError("Project area not a valid CMSSW project area.")
 
-		self.selectedLumis = config.get('CMSSW', 'lumi filter', '')
-		if self.selectedLumis == '':
-			self.selectedLumis = None
+		self.selectedLumis = parseLumiFilter(config.get('CMSSW', 'lumi filter', ''))
 
 		# Information about search order for software environment
 		self.searchLoc = []

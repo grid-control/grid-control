@@ -5,6 +5,8 @@ def parseLumiFilter(lumifilter):
 	>>> parseLumiFilter("5:6-7:8,9:10-")
 	[([5, 6], [7, 8]), ([9, 10], [None, None])]
 	"""
+	if lumifilter == '':
+		return None
 	tmp = []
 	for token in map(str.strip, lumifilter.split(",")):
 		def mysplit(x, sep):
