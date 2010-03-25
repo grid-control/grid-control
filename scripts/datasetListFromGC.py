@@ -1,6 +1,7 @@
 #!/usr/bin/env python
-import gcSupport, sys, os, gzip, xml.dom.minidom, optparse
+import gcSupport, sys, os, gzip, xml.dom.minidom, optparse, tarfile
 from grid_control import *
+from grid_control.datasets import DataProvider
 
 parser = optparse.OptionParser()
 parser.add_option("-m", "--mode", dest="mode", default="CMSSW-Out",
