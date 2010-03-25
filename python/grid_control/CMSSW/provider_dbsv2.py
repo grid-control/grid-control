@@ -30,10 +30,10 @@ class DBSApiv2(DataProvider):
 		self.selectedLumis = config.get('CMSSW', 'lumi filter', '')
 		if self.selectedLumis != '':
 			self.selectedLumis = parseLumiFilter(self.selectedLumis)
-			print "You have selected the following runs and lumi sections:"
+			print "The following runs and lumi sections are selected:"
 			for line in map(lambda x: str.join(', ', x), utils.lenSplit(formatLumi(self.selectedLumis), 60)):
 				print "\t", line
-		else
+		else:
 			self.selectedLumis = None
 
 
@@ -98,7 +98,8 @@ class DBSApiv2(DataProvider):
 					% (block['Name'], block['NumberOfFiles'], recordedFiles))
 			if dropped == 0:
 				blockInfo[DataProvider.NEvents] = block['NumberOfEvents']
-			result.append(blockInfo)
+			if len(blockInfo[DataProvider.FileList]) > 0:
+				result.append(blockInfo)
 
 		if len(result) == 0:
 			raise DatasetError('Block %s not found in dbs.' % self.datasetBlock)
