@@ -564,6 +564,16 @@ def exitWithUsage(usage, msg = None):
 	sys.exit(0)
 
 
+def doBlackWhiteList(list, bwfilter):
+	blacklist = filter(lambda x: x.startswith('-'), bwfilter)
+	blacklist = map(lambda x: x[1:], blacklist)
+	list = filter(lambda x: x not in blacklist, list)
+	whitelist = filter(lambda x: not x.startswith('-'), bwfilter)
+	if len(whitelist):
+		return filter(lambda x: x in whitelist, list)
+	return list
+
+
 if __name__ == '__main__':
 	import doctest
 	doctest.testmod()

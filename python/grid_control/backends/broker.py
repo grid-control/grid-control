@@ -1,6 +1,6 @@
 import sys, os, random
 from python_compat import *
-from grid_control import AbstractObject
+from grid_control import AbstractObject, utils
 from wms import WMS
 
 class Broker(AbstractObject):
@@ -8,8 +8,12 @@ class Broker(AbstractObject):
 		self.config = config
 		# Queue info format: {'queue1': {WMS.MEMORY: 123, ...}, 'queue2': {...}}
 		self.queues = queues
-		self.nodes = nodes
 		self.userQueue = config.get('local', 'queue', '', volatile=True).split()
+		self.userNodes = config.get('local', 'sites', '', volatile=True).split()
+		if (len(self.userNodes) == 0) or (nodes == None):
+			self.nodes = None
+		else:
+			self.nodes = utils.doBlackWhiteList(nodes, self.userNodes)
 
 	def matchQueue(self, reqs):
 		return reqs
@@ -19,12 +23,12 @@ class Broker(AbstractObject):
 			rIdx = 0
 			if randomize:
 				rIdx = random.randint(0, len(queues) - 1)
-			reqs.append((WMS.SITES, (queues[rIdx], None)))
+			reqs.append((WMS.SITES, (queues[rIdx], self.nodes)))
 
 
 class DummyBroker(Broker):
-	def __init__(self, config, queues):
-		Broker.__init__(self, config, queues)
+	def __init__(self, config, queues, nodes):
+		Broker.__init__(self, config, queues, nodes)
 
 	def matchQueue(self, reqs):
 		self.addQueueReq(reqs, self.userQueue, True)
@@ -32,8 +36,8 @@ class DummyBroker(Broker):
 
 
 class SimpleBroker(Broker):
-	def __init__(self, config, queues):
-		Broker.__init__(self, config, queues)
+	def __init__(self, config, queues, nodes):
+		Broker.__init__(self, config, queues, nodes)
 
 	def matchQueue(self, reqs):
 		def item(index):

@@ -79,13 +79,7 @@ class DataProvider(AbstractObject):
 
 				# Filter dataset sites
 				if block[DataProvider.SEList] != None:
-					sites = block[DataProvider.SEList]
-					blacklist = filter(lambda x: x.startswith('-'), self.sitefilter)
-					blacklist = map(lambda x: x[1:], blacklist)
-					sites = filter(lambda x: x not in blacklist, sites)
-					whitelist = filter(lambda x: not x.startswith('-'), self.sitefilter)
-					if len(whitelist):
-						sites = filter(lambda x: x in whitelist, sites)
+					sites = utils.doBlackWhiteList(block[DataProvider.SEList], self.sitefilter)
 					if len(sites) == 0 and len(block[DataProvider.FileList]) != 0:
 						print('WARNING: Block %s#%s is not available at any site!'
 							% (block[DataProvider.Dataset], block[DataProvider.BlockName]))
