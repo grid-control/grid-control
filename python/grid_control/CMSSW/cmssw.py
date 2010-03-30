@@ -47,7 +47,6 @@ class CMSSW(DataMod):
 		else:
 			self.eventsPerJob = config.get('CMSSW', 'events per job', 0)
 
-		self.gzipOut = config.getBool('CMSSW', 'gzip output', True)
 		self.useReqs = config.getBool('CMSSW', 'use requirements', True, volatile=True)
 		self.seRuntime = config.getBool('CMSSW', 'se runtime', False)
 

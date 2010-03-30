@@ -59,6 +59,7 @@ class Module(AbstractObject):
 
 		self.sbInputFiles = config.get(self.__class__.__name__, 'input files', '').split()
 		self.sbOutputFiles = config.get(self.__class__.__name__, 'output files', '').split()
+		self.gzipOut = config.getBool(self.__class__.__name__, 'gzip output', True)
 		self.substFiles = config.get(self.__class__.__name__, 'subst files', '').split()
 
 		self.dependencies = config.get(self.__class__.__name__, 'depends', '').lower().split()

@@ -153,6 +153,7 @@ echo $MY_RUNID > $MY_MARKER
 wait $MY_RUNID
 CODE=$?
 echo $$ > $MY_MARKER
+zip_files "$SB_OUTPUT_FILES"
 cd "$MY_LANDINGZONE"
 
 echo "Process $MY_RUNID exit code: $CODE"

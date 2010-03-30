@@ -577,3 +577,14 @@ my_move() {
 		test -f "$1/$file" && mv "$1/$file" "$2/$file"
 	done
 }
+
+zip_files() {
+	debug_helper $FUNCNAME "$@"
+
+	for file in $@; do
+		if [ -f "${file%.gz}" ] && [ ! -f "$file" ]; then
+			echo "Zipping ${file%.gz}..."
+			gzip -9f "${file%.gz}"
+		fi
+	done
+}
