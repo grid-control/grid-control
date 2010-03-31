@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import gcSupport, sys, os, optparse, popen2
 from grid_control import *
+from grid_control.proxy import VomsProxy
 
 def md5sum(filename):
 	m = utils.md5()
