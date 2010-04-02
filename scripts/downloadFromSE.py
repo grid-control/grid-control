@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-import gcSupport, sys, os, optparse, popen2
+import gcSupport, sys, os, optparse, popen2, time
 from grid_control import *
 from grid_control.proxy import VomsProxy
 
@@ -49,8 +49,10 @@ DEFAULT: The default is to download the SE file and check them with MD5 hashes.
 		optList.add_option(optShort[False], buildLongOpt(optPrefix[False], optPostfix), dest=dest,
 			default=default, action="store_false", help=helpPrefix[False] + help + (" [Default]", "")[default])
 
-	addBoolOpt(parser, "verify-md5", dest="verify",       default=True, optShort=("", "-v"),
+	addBoolOpt(parser, "verify-md5", dest="verify",       default=True,  optShort=("", "-v"),
 		help="MD5 verification of SE files", helpPrefix=("disable ", "enable "))
+	addBoolOpt(parser, "loop",       dest="loop",         default=False, optShort=("", "-l"),
+		help="loop over jobs until all files are successfully processed")
 	addBoolOpt(parser, "",           dest="skipExisting", default=False, optPrefix=("overwrite", "skip-existing"),
 		help="files which are already on local disk", helpPrefix=("overwrite ", "skip "))
 
@@ -115,9 +117,13 @@ DEFAULT: The default is to download the SE file and check them with MD5 hashes.
 	processShorthand(opts.shJCopy)
 	processShorthand(opts.shSCopy)
 	processShorthand(opts.shJVerify)
-	realmain(opts, args)
 
-def realmain(opts, args):
+	# Disable loop mode if it is pointless
+	if opts.loop and not opts.skipExisting:
+		if opts.markIgnoreDL or not opts.markDL:
+			sys.stderr.write("Loop mode was disabled to avoid continuously downloading the same files\n")
+			opts.loop = False
+
 	# we need exactly one positional argument (config file)
 	if len(args) != 1:
 		sys.stderr.write("usage: %s [options] <config file>\n\n" % os.path.basename(sys.argv[0]))
@@ -125,11 +131,19 @@ def realmain(opts, args):
 		sys.stderr.write("Use --help to get a list of options!\n")
 		sys.exit(0)
 
+	while True:
+		if realmain(opts, args) or not opts.loop:
+			break
+		time.sleep(60)
+
+
+def realmain(opts, args):
 	try:
 		proxy = VomsProxy(gcSupport.ConfigDummy({"proxy": {"ignore warnings": True}}))
 	except GridError, e:
 		e.showMessage()
 		sys.exit(1)
+
 	(workDir, jobList) = gcSupport.getWorkJobs(args)
 
 	# Create SE output dir
@@ -241,7 +255,10 @@ def realmain(opts, args):
 		if num > 0:
 			print "%20s: [%d/%d]" % (state, num, len(jobList))
 	print
-	return 0
+
+	if infos["Downloaded"] == len(jobList):
+		return True
+	return False
 
 if __name__ == '__main__':
 	sys.exit(main(sys.argv[1:]))
