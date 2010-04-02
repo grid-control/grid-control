@@ -101,5 +101,8 @@ class DBSApiv2(DataProvider):
 				result.append(blockInfo)
 
 		if len(result) == 0:
-			raise DatasetError('Block %s not found in dbs.' % self.datasetBlock)
+			if self.selectedLumis:
+				print "Dataset %s does not contain the requested run/lumi sections!" % self.datasetPath
+			else:
+				raise DatasetError('Block %s not found in dbs.' % self.datasetBlock)
 		return result
