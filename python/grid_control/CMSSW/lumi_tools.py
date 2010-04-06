@@ -44,9 +44,9 @@ def selectLumi(run_lumi, lumifilter):
 	True
 	>>> selectLumi((1,2), [([1, 3], [5, 12])])
 	False
+	>>> selectLumi((2,1), [([1, 3], [5, 12])])
+	True
 	>>> selectLumi((9,2), [([3, 23], [None, None])])
-	False
-	>>> selectLumi((9,26), [([3, 23], [None, None])])
 	True
 	"""
 	(run, lumi) = run_lumi
@@ -54,8 +54,11 @@ def selectLumi(run_lumi, lumifilter):
 		(sel_start_run, sel_start_lumi) = sel_start
 		(sel_end_run, sel_end_lumi) = sel_end
 		if (sel_start_run == None) or (run >= sel_start_run):
-			if (sel_start_lumi == None) or (lumi >= sel_start_lumi):
-				if (sel_end_run == None) or (run <= sel_end_run):
+			if (sel_end_run == None) or (run <= sel_end_run):
+				# At this point, run_lumi is contained in the selected run
+				if (sel_start_run != None) and (run > sel_start_run):
+					sel_start_lumi = None
+				if (sel_start_lumi == None) or (lumi >= sel_start_lumi):
 					if (sel_end_lumi == None) or (lumi <= sel_end_lumi):
 						return True
 	return False
