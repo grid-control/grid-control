@@ -22,6 +22,17 @@ class DataMultiplexer(DataProvider):
 		print
 
 
+	def checkSplitter(self, splitter):
+		for provider in self.subprovider:
+			splitter = provider.checkSplitter(splitter)
+		proposal = splitter
+		for provider in self.subprovider:
+			splitter = provider.checkSplitter(splitter)
+		if proposal != splitter:
+			raise DatasetError('Dataset providers could not agree on valid dataset splitter!')
+		return splitter
+
+
 	def getBlocksInternal(self):
 		result = []
 		exceptions = []

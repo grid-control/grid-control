@@ -34,6 +34,14 @@ class DBSApiv2(DataProvider):
 				print "\t", line
 
 
+	# Check if splitter is valid
+	def checkSplitter(self, splitter):
+		if self.selectedLumis and splitter == 'EventBoundarySplitter':
+			print 'Active lumi section filter forced selection of HybridSplitter'
+			return 'HybridSplitter'
+		return splitter
+
+
 	def getBlocksInternal(self):
 		api = createDBSAPI(self.url)
 		try:

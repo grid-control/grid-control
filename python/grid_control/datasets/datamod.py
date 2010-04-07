@@ -13,7 +13,8 @@ class DataMod(Module):
 		if self.dataset == '':
 			return
 
-		defaultProvider = config.get(self.__class__.__name__, 'dataset provider', self.getDefaultProvider())
+		(defaultProvider, defaultSplitter) = self.getDatasetDefaults(config)
+		defaultProvider = config.get(self.__class__.__name__, 'dataset provider', defaultProvider)
 		if config.opts.init:
 			# find datasets
 			self.dataprovider = DataProvider.create(config, self.dataset, defaultProvider)
@@ -22,7 +23,8 @@ class DataMod(Module):
 				self.dataprovider.printDataset()
 
 			# split datasets
-			splitter = config.get(self.__class__.__name__, 'dataset splitter', 'EventBoundarySplitter')
+			splitter = config.get(self.__class__.__name__, 'dataset splitter', defaultSplitter)
+			splitter = self.dataprovider.checkSplitter(splitter)
 			self.dataSplitter = DataSplitter.open(splitter, config, self.__class__.__name__, {})
 			self.dataSplitter.splitDataset(self.dataprovider.getBlocks())
 			self.dataSplitter.saveState(config.workDir)
@@ -41,9 +43,9 @@ class DataMod(Module):
 				#TODO: new.saveState(config.workDir)
 
 
-	# Get default dataset provider
-	def getDefaultProvider(self):
-		return 'ListProvider'
+	# Get default dataset modules
+	def getDatasetDefaults(self, config):
+		return ('ListProvider', 'FileBoundarySplitter')
 
 
 	# This function is here to allow ParaMod to transform jobNums

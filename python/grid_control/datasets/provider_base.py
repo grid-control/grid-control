@@ -52,6 +52,11 @@ class DataProvider(AbstractObject):
 	create = staticmethod(create)
 
 
+	# Check if splitter is valid
+	def checkSplitter(self, splitter):
+		return splitter
+
+
 	# Cached access to list of block dicts, does also the validation checks
 	def getBlocks(self):
 		if self._cache == None:

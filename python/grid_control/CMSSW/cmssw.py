@@ -127,9 +127,9 @@ class CMSSW(DataMod):
 						raise RuntimeError("No CMSSW runtime on SE!")
 
 
-	# Get default dataset provider
-	def getDefaultProvider(self):
-		return 'DBSApiv2'
+	# Get default dataset modules
+	def getDatasetDefaults(self, config):
+		return ('DBSApiv2', 'EventBoundarySplitter')
 
 
 	# Called on job submission
