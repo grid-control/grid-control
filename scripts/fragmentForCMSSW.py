@@ -24,7 +24,7 @@ def customise_for_gc(process):
 		except:
 			pass
 		try:
-			lumirange = __LUMI_RANGE__
+			lumirange = [__LUMI_RANGE__]
 			process.source.lumisToProcess = cms.untracked.VLuminosityBlockRange(lumirange)
 		except:
 			pass
