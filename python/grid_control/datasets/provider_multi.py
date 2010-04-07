@@ -24,10 +24,10 @@ class DataMultiplexer(DataProvider):
 
 	def checkSplitter(self, splitter):
 		for provider in self.subprovider:
-			splitter = provider.checkSplitter(splitter)
+			splitter = provider['src'].checkSplitter(splitter)
 		proposal = splitter
 		for provider in self.subprovider:
-			splitter = provider.checkSplitter(splitter)
+			splitter = provider['src'].checkSplitter(splitter)
 		if proposal != splitter:
 			raise DatasetError('Dataset providers could not agree on valid dataset splitter!')
 		return splitter
