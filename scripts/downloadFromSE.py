@@ -256,7 +256,7 @@ def realmain(opts, args):
 			print "%20s: [%d/%d]" % (state, num, len(jobList))
 	print
 
-	if infos["Downloaded"] == len(jobList):
+	if ("Downloaded" in infos) and (infos["Downloaded"] == len(jobList)):
 		return True
 	return False
 
