@@ -25,6 +25,8 @@ class CMSSW(DataMod):
 			if not os.path.exists(cfgFile):
 				raise ConfigError("Config file '%s' not found." % cfgFile)
 
+		self.selectedLumis = parseLumiFilter(config.get('CMSSW', 'lumi filter', ''))
+
 		# Check that for dataset jobs the necessary placeholders are in the config file
 		if self.dataSplitter != None:
 			def isInstrumented(cfgName):
@@ -42,7 +44,7 @@ class CMSSW(DataMod):
 							open(cfgName, 'a').write(open(fragment, 'r').read())
 
 			if not (True in map(isInstrumented, self.configFiles)):
-				raise ConfigError("One config file must use %s to work properly with dataset jobs!" %
+				raise ConfigError("A config file must use %s to work properly with dataset jobs!" %
 					str.join(", ", map(lambda x: "__%s__" % x, self.neededVars())))
 		else:
 			self.eventsPerJob = config.get('CMSSW', 'events per job', 0)
@@ -91,8 +93,6 @@ class CMSSW(DataMod):
 		if self.scramEnv['SCRAM_PROJECTNAME'] != 'CMSSW':
 			raise ConfigError("Project area not a valid CMSSW project area.")
 
-		self.selectedLumis = parseLumiFilter(config.get('CMSSW', 'lumi filter', ''))
-
 		# Information about search order for software environment
 		self.searchLoc = []
 		if config.opts.init:
@@ -125,6 +125,13 @@ class CMSSW(DataMod):
 					print "Unable to copy runtime! You can try to copy CMSSW runtime manually."
 					if not utils.boolUserInput('Is runtime available on SE?', False):
 						raise RuntimeError("No CMSSW runtime on SE!")
+
+
+	# Lumi filter need
+	def neededVars(self):
+		if self.selectedLumis:
+			return DataMod.neededVars(self) + ["LUMI_RANGE"]
+		return DataMod.neededVars(self)
 
 
 	# Get default dataset modules
