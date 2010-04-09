@@ -69,23 +69,25 @@ workspaces = server.DataExporter.workspaceReference()
 data = server.DataExporter.export('RUNLUMISECTION', 'GLOBAL', 'json', {'groupName': 'Collisions10'})
 all = []
 runs = eval(data)
-for run in runs:
+print runs
+rkeys = runs.keys()
+rkeys.sort()
+for run in rkeys:
 	print run
 	print "------------"
 	lumis = runs[run]
 	lumis.sort()
-	print lumis
+	print " Long:", lumis
 	for i in range(len(lumis) - 1):
 		if (lumis[i][1] == lumis[i+1][0] - 1):
 			lumis[i][1] = lumis[i+1][1]
 			lumis[i+1] = None
 			lumis.sort()
-	print lumis
 	lumis = filter(lambda x: x, lumis)
 	lumis = map(lambda x: "%d:%d-%d:%d" % (int(run), x[0], int(run), x[1]), lumis)
 	lumis = str.join(", ", lumis)
 	all.append(lumis)
-	print lumis
+	print "Short:", lumis
 	print
 print
 print "lumi filter ="
@@ -106,8 +108,3 @@ def lenSplit(list, maxlen):
 
 for line in map(lambda x: str.join(", ", x), lenSplit(all, 60)):
 	print "\t", line
-
-
-
-
-#print
