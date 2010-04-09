@@ -30,7 +30,7 @@ class SGE(LocalWMSApi):
 		if WMS.WALLTIME in reqs:
 			params += " -l s_rt=%s" % strTime(reqs[WMS.WALLTIME])
 		if WMS.CPUTIME in reqs:
-			params += " -l h_cpu=%s" % strTime(reqs[WMS.WALLTIME])
+			params += " -l h_cpu=%s" % strTime(reqs[WMS.CPUTIME])
 		if WMS.MEMORY in reqs:
 			params += ' -l h_vmem=%dM' % reqs[WMS.MEMORY]
 
