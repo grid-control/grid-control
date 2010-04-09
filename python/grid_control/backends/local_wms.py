@@ -18,6 +18,7 @@ class LocalWMS(WMS):
 		self.broker = Broker.open(broker, config, self.api.getQueues(), self.api.getNodes())
 
 		self.sandPath = config.getPath('local', 'sandbox path', os.path.join(config.workDir, 'sandbox'))
+		self.scratchPath = config.getPath('local', 'scratch path', '')
 		self._nameFile = config.getPath('local', 'name source', '', volatile=True)
 		self._source = None
 		if self._nameFile != '':
@@ -67,7 +68,7 @@ class LocalWMS(WMS):
 			raise RuntimeError("Sandbox '%s' could not be prepared." % sandbox)
 
 		cfgPath = os.path.join(sandbox, '_jobconfig.sh')
-		self.writeJobConfig(jobNum, cfgPath, {'GC_SANDBOX': sandbox})
+		self.writeJobConfig(jobNum, cfgPath, {'GC_SANDBOX': sandbox, 'GC_SCRATCH': self.scratchPath})
 
 		stdout = utils.shellEscape(os.path.join(sandbox, 'gc.stdout'))
 		stderr = utils.shellEscape(os.path.join(sandbox, 'gc.stderr'))
