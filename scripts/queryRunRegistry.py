@@ -1,5 +1,8 @@
 #!/usr/bin/env python
 
+import gcSupport
+from grid_control.CMSSW import formatLumi, parseLumiFromJSON
+
 # include XML-RPC client library
 # RR API uses XML-RPC webservices interface for data access
 import xmlrpclib
@@ -52,6 +55,7 @@ workspaces = server.DataExporter.workspaceReference()
 # note: please test your queries and results in RR GUI (same filter and advanced query syntax)
 #data = server.DataExporter.export('RUN', 'GLOBAL', 'xml_datasets', {'runStartTime': '>= 2009-09-01'}, '{events} > 10000')
 #print data
+#print
 #data = server.DataExporter.export('RUN', 'GLOBAL', 'xml_datasets', {'groupName': 'Collisions10'})
 #print data
 #print
@@ -67,44 +71,8 @@ workspaces = server.DataExporter.workspaceReference()
 # Get lumi section data in CRAB JSON format for the given run range where
 # Physics bit is on.
 data = server.DataExporter.export('RUNLUMISECTION', 'GLOBAL', 'json', {'groupName': 'Collisions10'})
-all = []
-runs = eval(data)
-print runs
-rkeys = runs.keys()
-rkeys.sort()
-for run in rkeys:
-	print run
-	print "------------"
-	lumis = runs[run]
-	lumis.sort()
-	print " Long:", lumis
-	for i in range(len(lumis) - 1):
-		if (lumis[i][1] == lumis[i+1][0] - 1):
-			lumis[i][1] = lumis[i+1][1]
-			lumis[i+1] = None
-			lumis.sort()
-	lumis = filter(lambda x: x, lumis)
-	lumis = map(lambda x: "%d:%d-%d:%d" % (int(run), x[0], int(run), x[1]), lumis)
-	lumis = str.join(", ", lumis)
-	all.append(lumis)
-	print "Short:", lumis
-	print
-print
+
+runs = parseLumiFromJSON(data)
 print "lumi filter ="
-
-def lenSplit(list, maxlen):
-	clen = 0
-	tmp = []
-	for item in list:
-		if clen + len(item) < maxlen:
-			tmp.append(item)
-			clen += len(item)
-		else:
-			tmp.append('')
-			yield tmp
-			tmp = [item]
-			clen = len(item)
-	yield tmp
-
-for line in map(lambda x: str.join(", ", x), lenSplit(all, 60)):
+for line in map(lambda x: str.join(", ", x), gcSupport.utils.lenSplit(formatLumi(runs), 60)):
 	print "\t", line

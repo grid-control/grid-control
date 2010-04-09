@@ -1,14 +1,36 @@
-def parseLumiFilter(lumifilter):
+#from grid_control import ConfigError
+
+def parseLumiFromJSON(data):
+	# Parsing is trivial :)
+	runs = eval(data)
+	# Merge consecutive lumi sections
+	all = []
+	rkeys = runs.keys()
+	rkeys.sort()
+	for run in rkeys:
+		lumis = runs[run]
+		lumis.sort()
+		for i in range(len(lumis) - 1):
+			if (lumis[i][1] == lumis[i+1][0] - 1):
+				lumis[i][1] = lumis[i+1][1]
+				lumis[i+1] = None
+				lumis.sort()
+		for lumi in filter(lambda x: x, lumis):
+			all.append(([run, lumi[0]], [run, lumi[1]]))
+	return all
+
+
+def parseLumiFromString(lumistring):
 	""" Parse user supplied lumi info into easier to handle format
-	>>> parseLumiFilter("1-2,1:3-2,3-4:3")
+	>>> parseLumiString("1-2,1:3-2,3-4:3")
 	[([1, None], [2, None]), ([1, 3], [2, None]), ([3, None], [4, 3])]
-	>>> parseLumiFilter("5:6-7:8,9:10-")
+	>>> parseLumiString("5:6-7:8,9:10-")
 	[([5, 6], [7, 8]), ([9, 10], [None, None])]
 	"""
-	if lumifilter == '':
+	if lumistring == '':
 		return None
 	tmp = []
-	for token in map(str.strip, lumifilter.split(",")):
+	for token in map(str.strip, lumistring.split(",")):
 		def mysplit(x, sep):
 			if x == None:
 				return (None, None)
@@ -26,7 +48,10 @@ def parseLumiFilter(lumifilter):
 			if x:
 				return int(x)
 			return x
-		tmp.append(tuple(map(lambda x: map(makeint, mysplit(x, ":")), mysplit(token, "-"))))
+		if "-" not in token:
+			tmp.append(([int(token), None], [int(token), None]))
+		else:
+			tmp.append(tuple(map(lambda x: map(makeint, mysplit(x, ":")), mysplit(token, "-"))))
 	def cmpLumi(a,b):
 		(start_a_run, start_a_lumi) = a[0]
 		(start_b_run, start_b_lumi) = b[0]
@@ -36,6 +61,18 @@ def parseLumiFilter(lumifilter):
 			return cmp(start_a_run, start_b_run)
 	tmp.sort(cmpLumi)
 	return tmp
+
+
+def parseLumiFilter(lumiexpr):
+	if os.path.exists(lumiexpr):
+		try:
+			return parseLumiFromJSON(open(lumiexpr).read())
+		except:
+			raise ConfigError("Could not process lumi filter file:\n %s" % lumiexpr)
+	try:
+		return parseLumiFromString(lumiexpr)
+	except:
+		raise ConfigError("Could not process lumi filter expression:\n%s" % lumiexpr)
 
 
 def selectLumi(run_lumi, lumifilter):
@@ -59,6 +96,8 @@ def selectLumi(run_lumi, lumifilter):
 				if (sel_start_run != None) and (run > sel_start_run):
 					sel_start_lumi = None
 				if (sel_start_lumi == None) or (lumi >= sel_start_lumi):
+					if (sel_end_run != None) and (run < sel_end_run):
+						sel_end_lumi = None
 					if (sel_end_lumi == None) or (lumi <= sel_end_lumi):
 						return True
 	return False
@@ -78,8 +117,14 @@ def formatLumi(lumifilter):
 			if r or l:
 				return f(r, '') + ":" + f(l, ldef)
 			return ''
+		if run_lumi[0] == run_lumi[1]:
+			return fmtRunLumi(run_lumi[0], None)
 		if not (run_lumi[0][1] or run_lumi[1][1]):
-			return "%d-%d" % (run_lumi[0][0], run_lumi[1][0])
+			def noneFilter(x):
+				if x:
+					return x
+				return ''
+			return "%s-%s" % (noneFilter(run_lumi[0][0]), noneFilter(run_lumi[1][0]))
 		return fmtRunLumi(run_lumi[0], 1) + "-" + fmtRunLumi(run_lumi[1], 9999)
 	return map(fmt, lumifilter)
 
@@ -87,3 +132,7 @@ def formatLumi(lumifilter):
 if __name__ == '__main__':
 	import doctest
 	doctest.testmod()
+
+print parseLumiFromString("123")
+print formatLumi(parseLumiFromString("123"))
+print formatLumi(parseLumiFromString("123"))
