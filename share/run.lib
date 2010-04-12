@@ -312,6 +312,7 @@ monitordirlimits() {
 
 # Reserved for high level ops
 print_and_eval() {
+	debug_helper $FUNCNAME "$@"
 	[ "$1" != " " ] && checkbin "$1" || shift
 	CMD="$1"
 	shift
@@ -326,6 +327,7 @@ print_and_eval() {
 
 # Reserved for low level ops
 print_and_qeval() {
+	debug_helper $FUNCNAME "$@"
 	[ "$1" != " " ] && checkbin "$1" || shift
 	CMD="$1"
 	shift
