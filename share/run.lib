@@ -333,8 +333,8 @@ print_and_qeval() {
 	shift
 	echo "$PAELEVEL`basename $CMD` $@"
 	export PAELEVEL="$PAELEVEL "
-	LOGFILE="${MY_LANDINGZONE:-/tmp}/paqe.$RANDOM"
-	eval "$CMD $@" > $LOGFILE.out 2> $LOGFILE.err
+	LOGFILE="${MY_LANDINGZONE:-/tmp}/paqe.$USER.$RANDOM$RANDOM"
+	eval "$CMD $@" > "$LOGFILE.out" 2> "$LOGFILE.err"
 	CODE="$?"
 	export PAELEVEL="${PAELEVEL# }"
 	echo "$PAELEVEL returned $CODE"
