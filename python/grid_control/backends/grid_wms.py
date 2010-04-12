@@ -127,6 +127,7 @@ class GridWMS(WMS):
 			'OutputSandbox': formatStrList(sandboxOutJDL),
 			'Requirements': self._formatRequirements(self.getRequirements(jobNum)),
 			'VirtualOrganisation': '"%s"' % self.vo,
+			'Rank': '-other.GlueCEStateEstimatedResponseTime',
 			'RetryCount': 2
 		}
 		fp.writelines(utils.DictFormat(' = ').format(contents, format = '%s%s%s;\n'))
