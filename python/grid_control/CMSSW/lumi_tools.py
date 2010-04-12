@@ -1,4 +1,5 @@
-#from grid_control import ConfigError
+import os
+from grid_control import ConfigError
 
 def parseLumiFromJSON(data):
 	# Parsing is trivial :)
@@ -22,9 +23,9 @@ def parseLumiFromJSON(data):
 
 def parseLumiFromString(lumistring):
 	""" Parse user supplied lumi info into easier to handle format
-	>>> parseLumiString("1-2,1:3-2,3-4:3")
+	>>> parseLumiFromString("1-2,1:3-2,3-4:3")
 	[([1, None], [2, None]), ([1, 3], [2, None]), ([3, None], [4, 3])]
-	>>> parseLumiString("5:6-7:8,9:10-")
+	>>> parseLumiFromString("5:6-7:8,9:10-")
 	[([5, 6], [7, 8]), ([9, 10], [None, None])]
 	"""
 	if lumistring == '':
@@ -132,7 +133,3 @@ def formatLumi(lumifilter):
 if __name__ == '__main__':
 	import doctest
 	doctest.testmod()
-
-print parseLumiFromString("123")
-print formatLumi(parseLumiFromString("123"))
-print formatLumi(parseLumiFromString("123"))

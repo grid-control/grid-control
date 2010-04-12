@@ -27,10 +27,7 @@ class DBSApiv2(DataProvider):
 			self.datasetBlock = 'all'
 		if datasetUrl != '':
 			self.url = datasetUrl
-		try:
-			self.selectedLumis = parseLumiFilter(config.get('CMSSW', 'lumi filter', ''))
-		except:
-			raise DatasetError('Could not parse lumi section filter!')
+		self.selectedLumis = parseLumiFilter(config.get('CMSSW', 'lumi filter', ''))
 		if self.selectedLumis:
 			print "The following runs and lumi sections are selected:"
 			for line in map(lambda x: str.join(', ', x), utils.lenSplit(formatLumi(self.selectedLumis), 60)):
