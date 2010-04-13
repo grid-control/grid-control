@@ -6,16 +6,12 @@ def fail(msg):
 	print msg
 	sys.exit(1)
 
-if len(sys.argv) != 2:
-	fail("Usage: %s <JSON file>" % sys.argv[0])
+if len(sys.argv) == 1:
+	fail("Usage: %s <lumi filter expression>" % sys.argv[0])
 try:
-	data = open(sys.argv[1]).read()
+	lumis = parseLumiFilter(str.join(" ", sys.argv[1:]))
 except:
-	fail("Could not open file %s" % sys.argv[1])
-try:
-	lumis = parseLumiFilter(sys.argv[1])
-except:
-	fail("Could not parse file %s" % sys.argv[1])
+	fail("Could not parse: %s" % str.join(" ", sys.argv[1:]))
 try:
 	# Wrap after 60 characters
 	for line in map(lambda x: str.join(", ", x), gcSupport.utils.lenSplit(formatLumi(lumis), 60)):
