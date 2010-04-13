@@ -17,42 +17,55 @@ def parseLumiFromJSON(data):
 				lumis[i+1] = None
 				lumis.sort()
 		for lumi in filter(lambda x: x, lumis):
-			all.append(([run, lumi[0]], [run, lumi[1]]))
+			all.append(([int(run), int(lumi[0])], [int(run), int(lumi[1])]))
 	return all
 
 
-def parseLumiFromString(lumistring):
+def parseLumiFromString(rlrange):
 	""" Parse user supplied lumi info into easier to handle format
-	>>> parseLumiFromString("1-2,1:3-2,3-4:3")
-	[([1, None], [2, None]), ([1, 3], [2, None]), ([3, None], [4, 3])]
-	>>> parseLumiFromString("5:6-7:8,9:10-")
-	[([5, 6], [7, 8]), ([9, 10], [None, None])]
+	>>> map(parseLumiFromString, ['1', '1-', '-1', '1-2'])
+	[([1, None], [1, None]), ([1, None], [None, None]), ([None, None], [1, None]), ([1, None], [2, None])]
+	>>> map(parseLumiFromString, ['1:5', '1:5-', '-1:5', '1:5-2:6'])
+	[([1, 5], [1, 5]), ([1, 5], [None, None]), ([None, None], [1, 5]), ([1, 5], [2, 6])]
+	>>> map(parseLumiFromString, ['1-:5', ':5-1', ':5-:6'])
+	[([1, None], [None, 5]), ([None, 5], [1, None]), ([None, 5], [None, 6])]
+	>>> map(parseLumiFromString, ['1:5-2', '1-2:5'])
+	[([1, 5], [2, None]), ([1, None], [2, 5])]
 	"""
-	if lumistring == '':
-		return None
-	tmp = []
-	for token in map(str.strip, lumistring.split(",")):
-		def mysplit(x, sep):
-			if x == None:
-				return (None, None)
-			parts = map(str.strip, x.split(sep))
-			a = None
-			if len(parts) > 0 and parts[0] != "":
-				a = parts[0]
-			b = None
-			if len(parts) > 1 and parts[1] != "":
-				b = parts[1]
-			if len(parts) > 2:
-				raise
-			return (a, b)
-		def makeint(x):
-			if x:
-				return int(x)
-			return x
-		if "-" not in token:
-			tmp.append(([int(token), None], [int(token), None]))
+	def makeint(x):
+		if x == '':
+			return None
+		return int(x)
+	def parseRunLumi(rl):
+		if ':' in rl:
+			return map(makeint, rl.split(':'))
 		else:
-			tmp.append(tuple(map(lambda x: map(makeint, mysplit(x, ":")), mysplit(token, "-"))))
+			return [makeint(rl), None]
+	if '-' in rlrange:
+		return tuple(map(parseRunLumi, rlrange.split('-')))
+	else:
+		tmp = parseRunLumi(rlrange)
+		return (tmp, tmp)
+
+
+def parseLumiFilter(lumiexpr):
+	if lumiexpr == '':
+		return None
+
+	lumis = []
+	for token in map(str.strip, lumiexpr.split(',')):
+		if os.path.exists(token):
+			try:
+				lumis.extend(parseLumiFromJSON(open(token).read()))
+			except:
+				raise ConfigError('Could not process lumi filter file:\n %s' % token)
+		else:
+			try:
+				lumis.append(parseLumiFromString(token))
+			except:
+				raise ConfigError('Could not process lumi filter expression:\n%s' % token)
+
+	# Sort lumi ranges
 	def cmpLumi(a,b):
 		(start_a_run, start_a_lumi) = a[0]
 		(start_b_run, start_b_lumi) = b[0]
@@ -60,20 +73,8 @@ def parseLumiFromString(lumistring):
 			return cmp(start_a_lumi, start_b_lumi)
 		else:
 			return cmp(start_a_run, start_b_run)
-	tmp.sort(cmpLumi)
-	return tmp
-
-
-def parseLumiFilter(lumiexpr):
-	if os.path.exists(lumiexpr):
-		try:
-			return parseLumiFromJSON(open(lumiexpr).read())
-		except:
-			raise ConfigError("Could not process lumi filter file:\n %s" % lumiexpr)
-	try:
-		return parseLumiFromString(lumiexpr)
-	except:
-		raise ConfigError("Could not process lumi filter expression:\n%s" % lumiexpr)
+	lumis.sort(cmpLumi)
+	return lumis
 
 
 def selectLumi(run_lumi, lumifilter):
@@ -106,28 +107,35 @@ def selectLumi(run_lumi, lumifilter):
 
 def formatLumi(lumifilter):
 	""" Check if lumifilter selects the given run/lumi
-	>>> formatLumi([([1, None], [2, None]), ([1, 3], [2, None]), ([3, None], [4, 3])])
-	['1-2', '1:3-2:9999', '3:1-4:3']
-	>>> formatLumi([([5, 6], [7, 8]), ([9, 1], [None, None])])
-	['5:6-7:8', '9:1-']
+	>>> formatLumi(map(parseLumiFromString, ['1', '1-', '-1', '1-2']))
+	['1', '1-', '-1', '1-2']
+	>>> formatLumi(map(parseLumiFromString, ['1:5', '1:5-', '-1:5', '1:5-2:6']))
+	['1:5', '1:5-', '-1:5', '1:5-2:6']
+	>>> formatLumi(map(parseLumiFromString, ['1-:5', ':5-1', ':5-:6']))
+	['1-:5', ':5-1', ':5-:6']
+	>>> formatLumi(map(parseLumiFromString, ['1:5-2', '1-2:5']))
+	['1:5-2:MAX', '1:1-2:5']
 	"""
-	def fmt(run_lumi):
-		def fmtRunLumi(run_lumi, ldef):
-			f = lambda x, default: str((x, default)[x == None])
-			(r, l) = run_lumi
-			if r or l:
-				return f(r, '') + ":" + f(l, ldef)
-			return ''
-		if run_lumi[0] == run_lumi[1]:
-			return fmtRunLumi(run_lumi[0], None)
-		if not (run_lumi[0][1] or run_lumi[1][1]):
-			def noneFilter(x):
-				if x:
-					return x
-				return ''
-			return "%s-%s" % (noneFilter(run_lumi[0][0]), noneFilter(run_lumi[1][0]))
-		return fmtRunLumi(run_lumi[0], 1) + "-" + fmtRunLumi(run_lumi[1], 9999)
-	return map(fmt, lumifilter)
+	def formatRunLumi(run_lumi):
+		(run, lumi) = run_lumi
+		if run and lumi:
+			return "%s:%s" % tuple(run_lumi)
+		elif run:
+			return "%s" % run
+		elif lumi:
+			return ":%s" % lumi
+		return ""
+	def formatRange(rlrange):
+		(start, end) = rlrange
+		if start == end:
+			return formatRunLumi(start)
+		else:
+			if end[0] and not end[1] and start[0] and start[1]:
+				end = [end[0], 'MAX']
+			if start[0] and not start[1] and end[0] and end[1]:
+				start = [start[0], 1]
+			return str.join("-", map(formatRunLumi, (start, end)))
+	return map(formatRange, lumifilter)
 
 
 if __name__ == '__main__':
