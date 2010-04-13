@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-
 import gcSupport, sys, optparse, os
 from grid_control.CMSSW import formatLumi, parseLumiFilter
 
