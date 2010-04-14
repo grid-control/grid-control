@@ -408,10 +408,10 @@ class ActivityLog:
 		sys.stdout, sys.stderr = self.saved
 
 
-def accumulate(status, marker):
+def accumulate(status, marker, check = lambda (l,m): l != m):
 	(cleared, buffer) = (True, '')
 	for line in status:
-		if line != marker:
+		if check(line, marker):
 			buffer += line
 			cleared = False
 		else:
