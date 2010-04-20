@@ -322,10 +322,10 @@ class JobDB:
 							return True
 				return False
 			def siteFilter(jobObj):
-				dest = jobObj.get("dest").upper()
+				dest = jobObj.get("dest")
 				if not dest:
 					return False
-				dest = str.join("/", map(lambda x: x.split(":")[0], dest.split("/")))
+				dest = str.join("/", map(lambda x: x.split(":")[0], dest.upper().split("/")))
 				for site in jobFilter.split(','):
 					regex = re.compile(site)
 					if regex.search(dest) and jobObj.state not in (Job.SUCCESS, Job.FAILED):
