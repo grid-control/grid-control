@@ -19,7 +19,7 @@ def md5sum(filename):
 # Use url_* functions from run.lib (just like the job did...)
 def se_rm(target, quiet = False):
 	target = target.replace('dir://', 'file://')
-	runLib = utils.atRoot(os.path.join('share', 'run.lib'))
+	runLib = utils.pathGC('share', 'run.lib')
 	cmd = 'print_and_qeval "url_rm" "%s"' % target
 	proc = popen2.Popen4('source %s || exit 1; %s' % (runLib, cmd), True)
 	se_rm.lastlog = proc.fromchild.read()
@@ -207,6 +207,7 @@ def realmain(opts, args):
 			if opts.verify:
 				try:
 					hashLocal = md5sum(outFilePath)
+					print "(%s)" % gcSupport.prettySize(os.path.getsize(outFilePath)),
 				except:
 					print ""
 					hashLocal = None

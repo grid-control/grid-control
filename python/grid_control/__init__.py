@@ -17,4 +17,3 @@ import modules
 import CMSSW
 
 from parameters	import *
-#import parameters

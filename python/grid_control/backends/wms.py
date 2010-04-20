@@ -30,7 +30,7 @@ class WMS(AbstractObject):
 
 		tarFile = os.path.join(config.workDir, 'sandbox.tar.gz')
 
-		self.sandboxIn = [ utils.atRoot('share', 'run.sh'), utils.atRoot('share', 'run.lib'), tarFile ]
+		self.sandboxIn = [ utils.pathGC('share', 'run.sh'), utils.pathGC('share', 'run.lib'), tarFile ]
 		self.sandboxOut = module.getOutFiles() + [ 'gc.stdout', 'gc.stderr', 'job.info' ]
 
 		inFiles = list(monitor.getFiles())
@@ -50,12 +50,12 @@ class WMS(AbstractObject):
 
 		varMapping = map(lambda (x, y): "%s %s\n" % (x, y), module.getVarMapping().items())
 		inFiles.append(utils.VirtualFile('_varmap.dat', str.join('', sorted(varMapping))))
-		inFiles.extend(map(lambda x: utils.atRoot('share', 'env.%s.sh' % x), module.getDependencies()))
+		inFiles.extend(map(lambda x: utils.pathGC('share', 'env.%s.sh' % x), module.getDependencies()))
 
 		utils.vprint("Packing sandbox:")
 		def shortName(name):
 			name = name.replace(config.workDir.rstrip("/"), "<WORKDIR>")
-			return name.replace(utils.atRoot("").rstrip("/"), "<GCDIR>")
+			return name.replace(utils.pathGC().rstrip("/"), "<GCDIR>")
 
 		if config.opts.init:
 			utils.vprint("\t%s" % shortName(tarFile))

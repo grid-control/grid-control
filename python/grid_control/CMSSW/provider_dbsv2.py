@@ -29,9 +29,9 @@ class DBSApiv2(DataProvider):
 			self.url = datasetUrl
 		self.selectedLumis = parseLumiFilter(config.get('CMSSW', 'lumi filter', ''))
 		if self.selectedLumis:
-			print "The following runs and lumi sections are selected:"
-			for line in map(lambda x: str.join(', ', x), utils.lenSplit(formatLumi(self.selectedLumis), 60)):
-				print "\t", line
+			utils.vprint("The following runs and lumi sections are selected:", -1, once = True)
+			for line in map(lambda x: str.join(', ', x), utils.lenSplit(formatLumi(self.selectedLumis), 65)):
+				utils.vprint("\t%s" % line, -1, once = True)
 
 
 	# Check if splitter is valid

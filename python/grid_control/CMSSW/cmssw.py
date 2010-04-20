@@ -6,7 +6,7 @@ from lumi_tools import *
 class CMSSW(DataMod):
 	def __init__(self, config):
 		DataMod.__init__(self, config)
-		self.updateErrorDict(utils.atRoot('share', 'run.cmssw.sh'))
+		self.updateErrorDict(utils.pathGC('share', 'run.cmssw.sh'))
 
 		# SCRAM info
 		scramProject = config.get('CMSSW', 'scram project', '').split()
@@ -40,7 +40,7 @@ class CMSSW(DataMod):
 				for cfgName in self.configFiles:
 					if not isInstrumented(cfgName):
 						if utils.boolUserInput('Do you want to prepare %s for running over the dataset?' % cfgName, True):
-							fragment = utils.atRoot('scripts', 'fragmentForCMSSW.py')
+							fragment = utils.pathGC('scripts', 'fragmentForCMSSW.py')
 							open(cfgName, 'a').write(open(fragment, 'r').read())
 
 			if not (True in map(isInstrumented, self.configFiles)):
@@ -180,7 +180,7 @@ class CMSSW(DataMod):
 		files = DataMod.getInFiles(self)
 		if len(self.projectArea) and not self.seRuntime:
 			files.append(os.path.join(self.config.workDir, 'runtime.tar.gz'))
-		files.append(utils.atRoot('share', 'run.cmssw.sh')),
+		files.append(utils.pathGC('share', 'run.cmssw.sh')),
 		files.extend(self.configFiles)
 		return files
 

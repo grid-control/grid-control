@@ -102,7 +102,7 @@ class GridWMS(WMS):
 		# add site requirements
 		if len(self._sites):
 			reqs.append((self.SITES, self._sites))
-		return reqs	
+		return reqs
 
 
 	def makeJDL(self, fp, jobNum):

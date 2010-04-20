@@ -68,7 +68,7 @@ class Module(AbstractObject):
 
 		# Get error messages from run.lib comments
 		self.errorDict = {}
-		self.updateErrorDict(utils.atRoot('share', 'run.lib'))
+		self.updateErrorDict(utils.pathGC('share', 'run.lib'))
 
 
 	# Read comments with error codes at the beginning of file

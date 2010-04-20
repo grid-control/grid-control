@@ -2,16 +2,14 @@
 import sys, os, signal, optparse
 
 # add python subdirectory from where go.py was started to search path
-root = os.path.dirname(os.path.abspath(os.path.normpath(sys.argv[0])))
-sys.path.insert(0, os.path.join(root, 'python'))
+sys.path.insert(1, os.path.join(sys.path[0], 'python'))
 
 # and include grid_control python module
 from grid_control import *
-utils.atRoot.root = root
 
 usage = "Syntax: %s [OPTIONS] <config file>\n" % sys.argv[0]
 def print_help(*args):
-	sys.stderr.write("%s\n%s" % (usage, open(utils.atRoot('share', 'help.txt'), 'r').read()))
+	sys.stderr.write("%s\n%s" % (usage, open(utils.pathGC('share', 'help.txt'), 'r').read()))
 	sys.exit(0)
 
 def main(args):
@@ -19,7 +17,7 @@ def main(args):
 	log = None
 
 	# display the 'grid-control' logo and version
-	print(open(utils.atRoot('share', 'logo.txt'), 'r').read())
+	print(open(utils.pathGC('share', 'logo.txt'), 'r').read())
 	print('Revision: %s' % utils.getVersion())
 	pyver = sys.version_info[0] + sys.version_info[1] / 10.0
 	if pyver < 2.3:
@@ -67,6 +65,7 @@ def main(args):
 			config = Config(args[0])
 			# Read default command line options from config file
 			defaultCmdLine = config.get("global", "cmdargs", "", volatile=True)
+			(opts.reportSite, opts.reportTime, opts.reportMod) = (0, 0, 0)
 			parser.parse_args(args = defaultCmdLine.split() + sys.argv[1:], values = opts)
 			config.opts = opts
 		except IOError:

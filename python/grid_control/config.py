@@ -66,8 +66,8 @@ class Config:
 			path = os.path.normpath(path)   # xx/../yy -> yy
 			if not os.path.isabs(path):	# ./lala -> /foo/bar/lala
 				basePath = os.path.join(self.baseDir, path)
-				if not os.path.exists(basePath) and os.path.exists(utils.atRoot(path)):
-					path = utils.atRoot(path)
+				if not os.path.exists(basePath) and os.path.exists(utils.pathGC(path)):
+					path = utils.pathGC(path)
 				else:
 					path = basePath
 			return path

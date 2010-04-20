@@ -2,12 +2,10 @@
 import sys, os, re, fcntl, time
 
 # add python subdirectory from where exec was started to search path
-root = os.path.dirname(os.path.abspath(os.path.normpath(os.path.join(sys.argv[0], '..'))))
-sys.path.insert(0, os.path.join(root, 'python'))
+sys.path.insert(1, os.path.join(sys.path[0], '..', 'python'))
 
 from grid_control import *
 utils.verbosity.setting = 0
-utils.atRoot.root = root
 
 class DummyStream(object):
 	def __init__(self, stream):
@@ -104,3 +102,12 @@ def getFileInfo(workDir, jobNum, retCodeFilter = lambda x: True, rejected = None
 
 	files = filter(lambda x: x[0].startswith('file'), jobInfo.items())
 	return map(lambda (x,y): tuple(y.strip('"').split('  ')), files)
+
+
+def prettySize(size):
+	suffixes = [("B", 2**10), ("K", 2**20), ("M", 2**30), ("G", 2**40), ("T", 2**50)]
+	for suf, lim in suffixes:
+		if size > lim:
+			continue
+		else:
+			return str(round(size / float(lim / 2**10), 2)) + suf

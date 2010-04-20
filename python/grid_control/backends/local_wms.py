@@ -74,7 +74,7 @@ class LocalWMS(WMS):
 		stderr = utils.shellEscape(os.path.join(sandbox, 'gc.stderr'))
 		proc = utils.LoggedProcess(self.api.submitExec, "%s %s %s" % (
 			self.api.getSubmitArguments(jobNum, sandbox, stdout, stderr),
-			utils.shellEscape(utils.atRoot('share', 'local.sh')),
+			utils.shellEscape(utils.pathGC('share', 'local.sh')),
 			self.api.getArguments(jobNum, sandbox)))
 		retCode = proc.wait()
 		wmsIdText = proc.getOutput().strip().strip("\n")

@@ -6,7 +6,7 @@ class Host(LocalWMSApi):
 	def __init__(self, config, wms):
 		LocalWMSApi.__init__(self, config, wms)
 
-		self.submitExec = utils.atRoot('share', 'host.sh')
+		self.submitExec = utils.pathGC('share', 'host.sh')
 		self.statusExec = utils.searchPathFind('ps')
 		self.cancelExec = utils.searchPathFind('kill')
 

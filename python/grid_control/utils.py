@@ -62,8 +62,22 @@ class PersistentDict(dict):
 		self.olddict = self.items()
 
 
-def atRoot(*args):
-	return os.path.join(atRoot.root, *args)
+def pathGC(*args):
+	# Convention: sys.path[1] == python dir of gc
+	return os.path.normpath(os.path.join(sys.path[1], '..', *args))
+
+
+def resolvePath(path, userpath = []):
+	searchpaths = [ pathGC() ] + userpath
+	path = os.path.expanduser(path.strip())	# ~/bla -> /home/user/bla
+	path = os.path.normpath(path) # xx/../yy -> yy
+	if not os.path.isabs(path):
+		for spath in searchpaths:
+			if os.path.exists(os.path.join(spath, path)):
+				path = os.path.join(spath, path)
+	if not os.path.isabs(path):
+		path = os.path.join(searchpaths[-1], path)
+	return path
 
 
 def verbosity():
@@ -72,10 +86,10 @@ def verbosity():
 
 def getVersion():
 	try:
-		proc = LoggedProcess('svnversion', "-c %s" % atRoot.root)
+		proc = LoggedProcess('svnversion', "-c %s" % pathGC())
 		version = proc.getOutput(wait = True).strip()
 		if version != '':
-			proc = LoggedProcess('svn info', atRoot.root)
+			proc = LoggedProcess('svn info', pathGC())
 			if 'stable' in proc.getOutput(wait = True):
 				return '%s - stable' % version
 			return '%s - testing' % version
@@ -129,7 +143,7 @@ def wait(opts, timeout):
 
 
 def deprecated(text):
-	print open(atRoot('share', 'fail.txt'), 'r').read()
+	print open(pathGC('share', 'fail.txt'), 'r').read()
 	print("[DEPRECATED] %s" % text)
 	if not boolUserInput('Do you want to continue?', False):
 		sys.exit(0)
@@ -138,7 +152,7 @@ def deprecated(text):
 def se_copy(src, dst, force = True):
 	src = src.replace('dir://', 'file://')
 	dst = dst.replace('dir://', 'file://')
-	lib = atRoot(os.path.join('share', 'run.lib'))
+	lib = pathGC('share', 'run.lib')
 	cmd = 'print_and_%seval "url_copy_single%s" "%s" "%s"' % (('', 'q')[verbosity() == 0], ('', '_force')[force], src, dst)
 	proc = popen2.Popen4('source %s || exit 1; %s' % (lib, cmd), True)
 	se_copy.lastlog = proc.fromchild.read()

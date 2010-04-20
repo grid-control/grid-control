@@ -108,33 +108,20 @@ def selectLumi(run_lumi, lumifilter):
 def formatLumi(lumifilter):
 	""" Check if lumifilter selects the given run/lumi
 	>>> formatLumi(map(parseLumiFromString, ['1', '1-', '-1', '1-2']))
-	['1', '1-', '-1', '1-2']
+	['1:MIN-1:MAX', '1:MIN-9999999:MAX', '1:MIN-1:MAX', '1:MIN-2:MAX']
 	>>> formatLumi(map(parseLumiFromString, ['1:5', '1:5-', '-1:5', '1:5-2:6']))
-	['1:5', '1:5-', '-1:5', '1:5-2:6']
+	['1:5-1:5', '1:5-9999999:MAX', '1:MIN-1:5', '1:5-2:6']
 	>>> formatLumi(map(parseLumiFromString, ['1-:5', ':5-1', ':5-:6']))
-	['1-:5', ':5-1', ':5-:6']
+	['1:MIN-9999999:5', '1:5-1:MAX', '1:5-9999999:6']
 	>>> formatLumi(map(parseLumiFromString, ['1:5-2', '1-2:5']))
-	['1:5-2:MAX', '1:1-2:5']
+	['1:5-2:MAX', '1:MIN-2:5']
 	"""
-	def formatRunLumi(run_lumi):
-		(run, lumi) = run_lumi
-		if run and lumi:
-			return "%s:%s" % tuple(run_lumi)
-		elif run:
-			return "%s" % run
-		elif lumi:
-			return ":%s" % lumi
-		return ""
 	def formatRange(rlrange):
 		(start, end) = rlrange
-		if start == end:
-			return formatRunLumi(start)
-		else:
-			if end[0] and not end[1] and start[0] and start[1]:
-				end = [end[0], 'MAX']
-			if start[0] and not start[1] and end[0] and end[1]:
-				start = [start[0], 1]
-			return str.join("-", map(formatRunLumi, (start, end)))
+		default = lambda x, d: (x, d)[x == None]
+		start = [default(start[0], '1'), default(start[1], 'MIN')]
+		end = [default(end[0], '9999999'), default(end[1], 'MAX')]
+		return str.join("-", map(lambda x: "%s:%s" % tuple(x), (start, end)))
 	return map(formatRange, lumifilter)
 
 

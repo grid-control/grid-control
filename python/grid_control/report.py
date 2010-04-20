@@ -234,8 +234,8 @@ class Report:
 						queues = filter(lambda x: not x in Report.states, statinfo[site][wn].keys())
 						for queue in sorted(queues):
 							print_stats(queue, statinfo[site][wn][queue], maxlen, showtime, rate_queue, time_queue)
-			if num < len(sites) - 1:
-				print '----%s----' % (maxlen * '-') + 4 * ('+' + 14 * '-')
+				if num < len(sites) - 1:
+					print '----%s----' % (maxlen * '-') + 4 * ('+' + 14 * '-')
 
 		print '====%s====' % (maxlen * '=') + 4 * ('+' + 14 * '=')
 		print_stats('', statinfo, maxlen, showtime, rate_site, time_site)

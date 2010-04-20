@@ -61,7 +61,7 @@ if __name__ == '__main__':
 		help="Multi dataset mode - files are sorted into different datasets according to <delimeter>:<start>:<end>")
 	parser.add_option("-s", "--selection", dest="selection", default="*",
 		help="File to include in dataset (Default: *.root)")
-	parser.add_option("-e", "--events", dest="events", default="1", help="Number of events in files")
+	parser.add_option("-e", "--events", dest="events", default="-1", help="Number of events in files")
 	(opts, args) = parser.parse_args()
 
 	# Positional parameters override options
