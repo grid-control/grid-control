@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 import gcSupport, sys, os, optparse
+from python_compat import *
 from grid_control import *
 from grid_control.datasets import DataProvider
 
@@ -40,7 +41,7 @@ blocks = provider.getBlocks()
 if len(blocks) == 0:
 	raise DatasetError("No blocks!")
 
-datasets = utils.set(map(lambda x: x[DataProvider.Dataset], blocks))
+datasets = set(map(lambda x: x[DataProvider.Dataset], blocks))
 if len(datasets) > 1:
 	headerbase = [(DataProvider.Dataset, "Dataset")]
 else:

@@ -1,4 +1,5 @@
 import itertools
+from python_compat import *
 from plugin_base import *
 
 # Meta processing of parameter plugins
@@ -35,7 +36,7 @@ class MetaParameter(ParameterPlugin):
 	def getParameterNames(self):
 		if self.varNames == None:
 			allVars = map(lambda x: x.getParameterNames(), self.plugins)
-			self.varNames = utils.set(utils.flatten(varFlat))
+			self.varNames = set(utils.flatten(varFlat))
 		return self.varNames
 
 	# For data serialization the plugin information is flattend

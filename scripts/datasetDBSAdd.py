@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import gcSupport, base64, xml.dom.minidom, optparse, locale, re, time, os
 from xml.dom.minidom import parseString
+from python_compat import *
 from grid_control import *
 from grid_control.CMSSW import provider_dbsv2
 from grid_control.CMSSW.provider_dbsv2 import *
@@ -248,7 +249,7 @@ def getOutputDatasets(opts):
 
 
 def getBlockParents(lfns, outputData):
-	return utils.set(reduce(lambda x,y: x+y, map(lambda x: outputData[x].get(DBS.PARENT_INFO, []), lfns)))
+	return set(reduce(lambda x,y: x+y, map(lambda x: outputData[x].get(DBS.PARENT_INFO, []), lfns)))
 
 
 def createDbsBlockDump(opts, newPath, blockInfo, metadata, outputData, configData):
@@ -280,7 +281,7 @@ def createDbsBlockDump(opts, newPath, blockInfo, metadata, outputData, configDat
 	newElement(nodeDBS, "dataset", {"block_name": fqBlock, "path": newPath})
 
 	# Primary dataset information
-	dataType = utils.set(map(lambda x: outputData[x][DBS.TYPE], lfns))
+	dataType = set(map(lambda x: outputData[x][DBS.TYPE], lfns))
 	primary = newPath.split("/")[1]
 	if len(dataType) > 1:
 		raise RuntimeException("Data and MC files are mixed!")
@@ -296,7 +297,7 @@ def createDbsBlockDump(opts, newPath, blockInfo, metadata, outputData, configDat
 	newElement(nodeProc, "path", {"dataset_path": newPath})
 	for tier in newPath.split("/")[3].split("-"):
 		newElement(nodeProc, "data_tier", {"name": tier})
-	for cfgHash in utils.set(map(lambda x: outputData[x][DBS.CONFIGHASH], lfns)):
+	for cfgHash in set(map(lambda x: outputData[x][DBS.CONFIGHASH], lfns)):
 		configData[cfgHash]
 		newElement(nodeProc, "algorithm", {"app_version": configData[cfgHash][DBS.CMSSW_VER],
 			"app_family_name": 'cmsRun', "app_executable_name": 'cmsRun', "ps_hash": cfgHash})
@@ -308,7 +309,7 @@ def createDbsBlockDump(opts, newPath, blockInfo, metadata, outputData, configDat
 			newElement(nodeDBS, "processed_dataset_parent", {"path": path})
 
 	# Algorithm describing the job configuration
-	for cfgHash in utils.set(map(lambda x: outputData[x][DBS.CONFIGHASH], lfns)):
+	for cfgHash in set(map(lambda x: outputData[x][DBS.CONFIGHASH], lfns)):
 		cfg = configData[cfgHash]
 		cfgContent = base64.encodestring(cfg[DBS.CONFIG])
 		newElement(nodeDBS, "processed_dataset_algorithm", {
@@ -321,7 +322,7 @@ def createDbsBlockDump(opts, newPath, blockInfo, metadata, outputData, configDat
 	nodeBlock = newElement(nodeDBS, "block", {"name": fqBlock, "path": newPath,
 		"size": metadata[blockKey][DBS.SIZE], "number_of_events": metadata[blockKey][DBS.EVENTS],
 		"number_of_files": len(lfns), "open_for_writing": ("1", "0")[opts.doClose]})
-	for se in utils.set(map(lambda x: outputData[x][DBS.SE], lfns)):
+	for se in set(map(lambda x: outputData[x][DBS.SE], lfns)):
 		newElement(nodeBlock, "storage_element", {"storage_element_name": se})
 
 	# List files in block
@@ -405,7 +406,7 @@ def displayDatasetInfos(keys, datasets, metadata, paths):
 				print "      %s events - %s files - %s bytes " % tuple(map(fmtNum,
 					[metadata[bKey][DBS.EVENTS], len(lfns), metadata[bKey][DBS.SIZE]]))
 				print "      Location:",
-				print str.join(", ", utils.set(map(lambda x: outputData[x][DBS.SE], lfns)))
+				print str.join(", ", set(map(lambda x: outputData[x][DBS.SE], lfns)))
 			print
 		else:
 			print "Config hash %s not found!" % dataKey
@@ -667,7 +668,7 @@ try:
 			sys.exit(0)
 		print
 		print " => The following datasets will be imported into the target dbs instance:"
-		for dsKey in utils.set(map(lambda x: x[0], todoList)):
+		for dsKey in set(map(lambda x: x[0], todoList)):
 			print "     * \33[0;91m%s\33[0m" % datasetPaths[dsKey]
 			for (d1, blockKey, blockName, d3) in filter(lambda x: x[0] == dsKey, todoList):
 				try:

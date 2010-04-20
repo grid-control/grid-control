@@ -1,4 +1,5 @@
 import itertools
+from python_compat import *
 from grid_control import AbstractError, AbstractObject
 
 # Init phase => yield sequentially all parameters, save in file
@@ -46,7 +47,7 @@ class ParameterPlugin(AbstractObject):
 
 	# Get list of processed parameter names
 	def getProcessedNames(self):
-		return utils.set(utils.flatten(map(lambda (d,r): d.keys(), self.getProcessedParameters())))
+		return set(utils.flatten(map(lambda (d,r): d.keys(), self.getProcessedParameters())))
 
 	# Get parameters in processed form
 	def getProcessedParameters(self):
@@ -68,7 +69,7 @@ class ParameterPlugin(AbstractObject):
 	def getParameterNames(self):
 		if self.varNames == None:
 			varList = map(lambda meta: meta.data.keys(), self.getParameterMetadata())
-			self.varNames = utils.set(utils.flatten(varList))
+			self.varNames = set(utils.flatten(varList))
 		return self.varNames
 
 	# Data serialization functions - override as needed
