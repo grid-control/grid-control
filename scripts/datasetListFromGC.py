@@ -18,7 +18,6 @@ if len(args) == 3:
 	jobList = [ jobid ]
 else:
 	(workDir, jobList) = gcSupport.getWorkJobs(args)
-jobList = map(int, jobList)
 
 # Lock file in case several instances of this program are running
 mutex = gcSupport.FileMutex(os.path.join(workDir, 'datasetCacheAdd.lock'))

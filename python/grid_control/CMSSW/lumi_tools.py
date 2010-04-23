@@ -21,6 +21,33 @@ def parseLumiFromJSON(data):
 	return all
 
 
+def cmpLumi(a,b):
+	(start_a_run, start_a_lumi) = a[0]
+	(start_b_run, start_b_lumi) = b[0]
+	if start_a_run == start_b_run:
+		return cmp(start_a_lumi, start_b_lumi)
+	else:
+		return cmp(start_a_run, start_b_run)
+
+
+def mergeLumi(rlrange):
+	""" Merge consecutive lumi sections
+	>>> mergeLumis([([1, 11], [1, 20]), ([1, 1], [1, 10]), ([1, 22], [1, 30])])
+	[([1, 1], [1, 20]), ([1, 22], [1, 30])]
+	>>> mergeLumis([([1, 1], [2, 2]), ([2, 3], [2, 10]), ([2, 11], [4, 30])])
+	[([1, 1], [4, 30])]
+	"""
+	rlrange.sort(cmpLumi)
+	for i in range(len(rlrange) - 1):
+		(end_run, end_lumi) = rlrange[i][1]
+		(start_next_run, start_next_lumi) = rlrange[i+1][0]
+		if (end_run == start_next_run) and (end_lumi == start_next_lumi - 1):
+			rlrange[i] = (rlrange[i][0], rlrange[i + 1][1])
+			rlrange[i+1] = None
+			rlrange.sort()
+	return filter(lambda x: x, rlrange)
+
+
 def parseLumiFromString(rlrange):
 	""" Parse user supplied lumi info into easier to handle format
 	>>> map(parseLumiFromString, ['1', '1-', '-1', '1-2'])
@@ -65,14 +92,6 @@ def parseLumiFilter(lumiexpr):
 			except:
 				raise ConfigError('Could not process lumi filter expression:\n%s' % token)
 
-	# Sort lumi ranges
-	def cmpLumi(a,b):
-		(start_a_run, start_a_lumi) = a[0]
-		(start_b_run, start_b_lumi) = b[0]
-		if start_a_run == start_b_run:
-			return cmp(start_a_lumi, start_b_lumi)
-		else:
-			return cmp(start_a_run, start_b_run)
 	lumis.sort(cmpLumi)
 	return lumis
 

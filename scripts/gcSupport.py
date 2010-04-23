@@ -79,9 +79,9 @@ def getWorkJobs(args):
 		workDir = config.getPath('global', 'workdir', config.workDirDefault)
 		jobList = getJobs(workDir)
 	else:
-		sys.stderr.write("Syntax: %s <config file> [<job id>]\n\n" % sys.argv[0])
+		sys.stderr.write("Syntax: %s <config file> [<job id>, ...]\n\n" % sys.argv[0])
 		sys.exit(1)
-	return (workDir, jobList)
+	return (workDir, map(int, jobList))
 
 
 def getJobInfo(workDir, jobNum, retCodeFilter = lambda x: True):
