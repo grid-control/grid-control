@@ -80,10 +80,10 @@ if opts.save_jobjson or opts.get_events:
 		outputDir = os.path.join(workDir, 'output', 'job_' + str(jobNum))
 		jobInfo = gcSupport.getJobInfo(workDir, jobNum, lambda retCode: retCode == 0)
 		del log
-		log = utils.ActivityLog(' * Reading job logs - [%d / %d]' % (jobNum, jobList[-1]))
+		log = utils.ActivityLog('Reading job logs - [%d / %d]' % (jobNum, jobList[-1]))
 
 		if not jobInfo and not incomplete:
-			print "Not all jobs have finished! Results will not be complete!"
+			print "WARNING: Not all jobs have finished - results will be incomplete!"
 			incomplete = True
 
 		# Read framework report files to get number of events
@@ -107,13 +107,14 @@ if opts.save_jobjson or opts.get_events:
 			print "Error while parsing framework output!"
 			continue
 
-	log = utils.ActivityLog(' * Simplifying lumi sections...')
+	log = utils.ActivityLog('Simplifying lumi sections...')
 	lumis = mergeLumi(lumis)
 	del log
 	if opts.save_jobgc:
 		outputGC(lumis)
 	if opts.save_jobjson:
 		outputJSON(lumis, open(os.path.join(workDir, 'processed.json'), 'w'))
+		print "Saved processed lumi sections in", os.path.join(workDir, 'processed.json')
 	print
 	print "Number of events processed: %12d" % nEvents_read
 	print "  Number of events written: %12d" % sum(nEvents_write.values())

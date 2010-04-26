@@ -2,21 +2,10 @@ import os
 from grid_control import ConfigError
 
 def parseLumiFromJSON(data):
-	# Parsing is trivial :)
 	runs = eval(data)
-	# Merge consecutive lumi sections
 	all = []
-	rkeys = runs.keys()
-	rkeys.sort()
-	for run in rkeys:
-		lumis = runs[run]
-		lumis.sort()
-		for i in range(len(lumis) - 1):
-			if (lumis[i][1] == lumis[i+1][0] - 1):
-				lumis[i][1] = lumis[i+1][1]
-				lumis[i+1] = None
-				lumis.sort()
-		for lumi in filter(lambda x: x, lumis):
+	for run in runs.keys():
+		for lumi in runs[run]:
 			all.append(([int(run), int(lumi[0])], [int(run), int(lumi[1])]))
 	return all
 
@@ -32,20 +21,22 @@ def cmpLumi(a,b):
 
 def mergeLumi(rlrange):
 	""" Merge consecutive lumi sections
-	>>> mergeLumis([([1, 11], [1, 20]), ([1, 1], [1, 10]), ([1, 22], [1, 30])])
+	>>> mergeLumi([([1, 11], [1, 20]), ([1, 1], [1, 10]), ([1, 22], [1, 30])])
 	[([1, 1], [1, 20]), ([1, 22], [1, 30])]
-	>>> mergeLumis([([1, 1], [2, 2]), ([2, 3], [2, 10]), ([2, 11], [4, 30])])
+	>>> mergeLumi([([1, 1], [2, 2]), ([2, 3], [2, 10]), ([2, 11], [4, 30])])
 	[([1, 1], [4, 30])]
 	"""
 	rlrange.sort(cmpLumi)
-	for i in range(len(rlrange) - 1):
+	i = 0
+	while i < len(rlrange) - 1:
 		(end_run, end_lumi) = rlrange[i][1]
 		(start_next_run, start_next_lumi) = rlrange[i+1][0]
 		if (end_run == start_next_run) and (end_lumi == start_next_lumi - 1):
 			rlrange[i] = (rlrange[i][0], rlrange[i + 1][1])
-			rlrange[i+1] = None
-			rlrange.sort()
-	return filter(lambda x: x, rlrange)
+			del rlrange[i+1]
+		else:
+			i += 1
+	return rlrange
 
 
 def parseLumiFromString(rlrange):
@@ -91,9 +82,7 @@ def parseLumiFilter(lumiexpr):
 				lumis.append(parseLumiFromString(token))
 			except:
 				raise ConfigError('Could not process lumi filter expression:\n%s' % token)
-
-	lumis.sort(cmpLumi)
-	return lumis
+	return mergeLumi(lumis)
 
 
 def selectLumi(run_lumi, lumifilter):
