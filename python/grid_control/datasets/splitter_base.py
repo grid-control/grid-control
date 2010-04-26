@@ -322,7 +322,8 @@ class DataSplitter(AbstractObject):
 					self._cacheTar = tarfile.open(mode = 'r:gz', fileobj = subTarFileObj)
 				data = self._fmt.parse(self._cacheTar.extractfile('%05d/info' % key).readlines())
 				if DataSplitter.SEList in data:
-					data[DataSplitter.SEList] = data[DataSplitter.SEList].split(',')
+					tmp = map(str.strip, data[DataSplitter.SEList].split(','))
+					data[DataSplitter.SEList] = filter(lambda x: x != '', tmp)
 				list = self._cacheTar.extractfile('%05d/list' % key).readlines()
 				if DataSplitter.CommonPrefix in data:
 					list = map(lambda x: "%s/%s" % (data[DataSplitter.CommonPrefix], x), list)

@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-import gcSupport, sys, os, optparse, popen2, time
+import gcSupport, sys, os, optparse, popen2, time, random
 from grid_control import *
 from grid_control.proxy import VomsProxy
 
@@ -53,6 +53,8 @@ DEFAULT: The default is to download the SE file and check them with MD5 hashes.
 		help="MD5 verification of SE files", helpPrefix=("disable ", "enable "))
 	addBoolOpt(parser, "loop",       dest="loop",         default=False, optShort=("", "-l"),
 		help="loop over jobs until all files are successfully processed")
+	addBoolOpt(parser, "shuffle",    dest="shuffle",      default=False,
+		help="shuffle download order")
 	addBoolOpt(parser, "",           dest="skipExisting", default=False, optPrefix=("overwrite", "skip-existing"),
 		help="files which are already on local disk", helpPrefix=("overwrite ", "skip "))
 
@@ -157,7 +159,11 @@ def realmain(opts, args):
 	def incInfo(x):
 		infos[x] = infos.get(x, 0) + 1
 
-	for jobNum in utils.sorted(jobList):
+	if opts.shuffle:
+		random.shuffle(jobList)
+	else:
+		jobList.sort()
+	for jobNum in jobList:
 		print "Job %d:" % jobNum,
 
 		# Only run over finished and not yet downloaded jobs

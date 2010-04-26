@@ -45,7 +45,8 @@ def outputJSON(lumis, stream = sys.stdout):
 			tmp[start[0]] = []
 		tmp[start[0]].append([start[1], end[1]])
 	stream.write("{\n")
-	stream.write("%s\n" % str.join(',\n', map(lambda run: '\t"%d": %s' % (run, tmp[run]), sorted(tmp))))
+	entries = map(lambda run: '\t"%d": %s' % (run, tmp[run]), sorted(tmp.keys()))
+	stream.write("%s\n" % str.join(',\n', entries))
 	stream.write("}\n")
 
 # Lumi filter manuipulation
