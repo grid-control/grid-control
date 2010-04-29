@@ -4,11 +4,14 @@ from grid_control import *
 from grid_control.datasets import DataProvider
 
 parser = optparse.OptionParser()
-parser.add_option("-m", "--mode", dest="mode", default="CMSSW-Out",
-	help="Specify how to process output files - available: CMSSW-Out, CMSSW-In")
+parser.add_option("-m", "--mode",   dest="mode",   default="CMSSW-Out",
+	help="Specify how to process output files - available: [CMSSW-Out], CMSSW-In")
 parser.add_option("-e", "--events", dest="events", default="0",
 	help="User defined event number - zero means skipping files without event infos")
+parser.add_option("-s", "--strip",  dest="strip",  default=False,
+    action="store_const", const="/store", help="Strip everything before /store in path")
 (opts, args) = parser.parse_args()
+opts.mode = opts.mode.lower()
 
 if len(args) == 3:
 	(jobid, wmsid, retcode) = args
@@ -63,18 +66,18 @@ try:
 			nEvents = int(opts.events)
 
 			# Read framework report files to get number of events
-			if opts.mode.startswith("CMSSW"):
+			if opts.mode.startswith("cmssw"):
 				tarFile = tarfile.open(os.path.join(outputDir, "cmssw.dbs.tar.gz"), "r:gz")
 				fwkReports = filter(lambda x: os.path.basename(x.name) == 'report.xml', tarFile.getmembers())
 				try:
 					for fwkReport in map(lambda fn: tarFile.extractfile(fn), fwkReports):
 						fwkXML = xml.dom.minidom.parse(fwkReport)
-						if opts.mode == "CMSSW-Out":
+						if opts.mode == "cmssw-out":
 							for outFile in fwkXML.getElementsByTagName("File"):
 								pfn = outFile.getElementsByTagName("PFN")[0].childNodes[0].data
 								if pfn == name_local:
 									nEvents = int(outFile.getElementsByTagName("TotalEvents")[0].childNodes[0].data)
-						elif opts.mode == "CMSSW-In":
+						elif opts.mode == "cmssw-in":
 							nEvents = 0
 							for inFile in fwkXML.getElementsByTagName("InputFile"):
 								nEvents += int(inFile.getElementsByTagName("EventsRead")[0].childNodes[0].data)
@@ -88,6 +91,8 @@ try:
 			# Add file to filelist of the current block
 			filelist = cblock[DataProvider.FileList]
 			if not lfn in map(lambda x: x[DataProvider.lfn], filelist):
+				if opts.strip:
+					lfn = str.join(opts.strip, [''] + lfn.split(opts.strip)[1:])
 				filelist.append({ DataProvider.lfn: lfn, DataProvider.NEvents: nEvents })
 			cblock[DataProvider.NEvents] = reduce(lambda x,y: x+y, map(lambda x: x[DataProvider.NEvents], filelist))
 
