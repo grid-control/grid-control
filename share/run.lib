@@ -249,10 +249,16 @@ var_replacer() {
 	fi
 
 	(
+		XBASE="$(echo $1 | sed -e 's/\(.*\)\(\..*\)$/\1/')"
+		XEXT="$(echo $1 | sed -e 's/\(.*\.\)\(.*\)$/\2/')"
 		echo "BEGIN{srand($MY_SEED)}"
 		echo "{"
 		[ -n "$1" ] && echo "	gsub(\"@X@\", \"$1\")"
 		[ -n "$1" ] && echo "	gsub(\"__X__\", \"$1\")"
+		[ -n "$XBASE" ] && echo "	gsub(\"@XBASE@\", \"$XBASE\")"
+		[ -n "$XBASE" ] && echo "	gsub(\"__XBASE__\", \"$XBASE\")"
+		[ -n "$XEXT" ] && echo "	gsub(\"@XEXT@\", \"$XEXT\")"
+		[ -n "$XEXT" ] && echo "	gsub(\"__XEXT__\", \"$XEXT\")"
 		[ -f "${MY_SCRATCH:-.}/_varmap.dat" ] && cat "${MY_SCRATCH:-.}/_varmap.dat" |
 		while read USER_VARNAME REAL_VARNAME; do
 			VARVALUE=${!REAL_VARNAME}
