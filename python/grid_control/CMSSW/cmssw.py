@@ -209,5 +209,11 @@ class CMSSW(DataMod):
 		return data
 
 
+	def getTaskType(self):
+		if self.dataSplitter == None:
+			return 'analysis'
+		return 'production'
+
+
 	def getDependencies(self):
 		return DataMod.getDependencies(self) + ['cmssw']

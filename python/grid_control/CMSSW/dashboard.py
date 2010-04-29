@@ -7,7 +7,7 @@ class DashBoard(Monitoring):
 	def __init__(self, config, module):
 		Monitoring.__init__(self, config, module)
 		self.app = config.get('dashboard', 'application', 'shellscript', volatile=True)
-		self.tasktype = config.get('dashboard', 'task', 'analysis', volatile=True)
+		self.tasktype = config.get('dashboard', 'task', module.getTaskType(), volatile=True)
 
 
 	def getEnv(self, wms):

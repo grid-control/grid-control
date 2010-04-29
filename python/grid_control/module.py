@@ -182,6 +182,10 @@ class Module(AbstractObject):
 		return self.dependencies[:]
 
 
+	def getTaskType(self):
+		return None
+
+
 	def report(self, jobNum):
 		return {" ": "All jobs"}
 
