@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import gcSupport, sys, os, optparse, popen2, time, random
 from grid_control import *
+from grid_control import se_utils
 from grid_control.proxy import VomsProxy
 
 def md5sum(filename):
@@ -14,16 +15,6 @@ def md5sum(filename):
 		if len(s) != blocksize:
 			break
 	return m.hexdigest()
-
-
-# Use url_* functions from run.lib (just like the job did...)
-def se_rm(target, quiet = False):
-	target = target.replace('dir://', 'file://')
-	runLib = utils.pathGC('share', 'run.lib')
-	cmd = 'print_and_qeval "url_rm" "%s"' % target
-	proc = popen2.Popen4('source %s || exit 1; %s' % (runLib, cmd), True)
-	se_rm.lastlog = proc.fromchild.read()
-	return proc.wait() == 0
 
 
 def main(args):
@@ -203,9 +194,10 @@ def realmain(opts, args):
 				print "skip file as it already exists!"
 				continue
 
-			if not utils.se_copy(os.path.join(pathSE, name_dest), "file:///%s" % outFilePath):
+			procCP = se_utils.se_copy(os.path.join(pathSE, name_dest), "file:///%s" % outFilePath)
+			if procCP.wait() != 0:
 				print "\n\t\tUnable to copy file from SE!"
-				sys.stderr.write(utils.se_copy.lastlog)
+				print proc.getMessage()
 				failJob = True
 				break
 
@@ -231,14 +223,15 @@ def realmain(opts, args):
 			if (failJob and opts.rmLocalFail) or (not failJob and opts.rmLocalOK):
 				localPath = os.path.join(opts.output, name_dest)
 				if os.path.exists(localPath):
-					if not se_rm("file://%s" % localPath):
+					procRM = se_utils.se_rm("file://%s" % localPath)
+					if procRM.wait() != 0:
 						print "\t\tUnable to remove local file!"
-						sys.stderr.write(se_rm.lastlog)
+						sys.stderr.write(se_utils.se_rm.lastlog)
 			# Remove SE files in case of failure
 			if (failJob and opts.rmSEFail)    or (not failJob and opts.rmSEOK):
-				if not se_rm(os.path.join(pathSE, name_dest)):
+				if not se_utils.se_rm(os.path.join(pathSE, name_dest)):
 					print "\t\tUnable to remove SE file!"
-					sys.stderr.write(se_rm.lastlog)
+					sys.stderr.write(se_utils.se_rm.lastlog)
 
 		if failJob:
 			incInfo("Failed downloads")

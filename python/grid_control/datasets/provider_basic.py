@@ -39,6 +39,7 @@ class ListProvider(DataProvider):
 		(path, self._forcePrefix, self._filter) = utils.optSplit(datasetExpr, "@%")
 		self._filename = config.getPath("CMSSW", "dataset file", path)
 
+
 	def getBlocksInternal(self):
 		result = []
 		blockinfo = None

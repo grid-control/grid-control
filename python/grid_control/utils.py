@@ -81,7 +81,10 @@ def resolvePath(path, userpath = []):
 
 
 def verbosity():
-	return verbosity.setting
+	try:
+		return verbosity.setting
+	except:
+		return 0
 
 
 def getVersion():
@@ -147,16 +150,6 @@ def deprecated(text):
 	print("[DEPRECATED] %s" % text)
 	if not boolUserInput('Do you want to continue?', False):
 		sys.exit(0)
-
-
-def se_copy(src, dst, force = True):
-	src = src.replace('dir://', 'file://')
-	dst = dst.replace('dir://', 'file://')
-	lib = pathGC('share', 'run.lib')
-	cmd = 'print_and_%seval "url_copy_single%s" "%s" "%s"' % (('', 'q')[verbosity() == 0], ('', '_force')[force], src, dst)
-	proc = popen2.Popen4('source %s || exit 1; %s' % (lib, cmd), True)
-	se_copy.lastlog = proc.fromchild.read()
-	return proc.wait() == 0
 
 
 class VirtualFile(StringIO.StringIO):
@@ -451,6 +444,9 @@ class LoggedProcess(object):
 	def getError(self):
 		self.stderr.extend(self.proc.childerr.readlines())
 		return str.join("", self.stderr)
+
+	def getMessage(self):
+		return self.getOutput() + "\n" + self.getError()
 
 	def iter(self, opts = None, skip = 0):
 		while True:

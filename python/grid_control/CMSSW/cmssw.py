@@ -1,5 +1,5 @@
 import os, sys
-from grid_control import ConfigError, WMS, utils, datasets
+from grid_control import ConfigError, WMS, utils, se_utils, datasets
 from grid_control.datasets import DataMod
 from lumi_tools import *
 
@@ -117,12 +117,13 @@ class CMSSW(DataMod):
 				sys.stdout.flush()
 				source = 'file:///' + os.path.join(config.workDir, 'runtime.tar.gz')
 				target = os.path.join(self.sePath, self.taskID + '.tar.gz')
-				if utils.se_copy(source, target, config.getBool('CMSSW', 'se runtime force', True)):
+				proc = se_utils.se_copy(source, target, config.getBool('CMSSW', 'se runtime force', True))
+				if proc.wait() == 0:
 					print 'finished'
 				else:
 					print 'failed'
-					print utils.se_copy.lastlog
-					print "Unable to copy runtime! You can try to copy CMSSW runtime manually."
+					print proc.getMessage()
+					print "Unable to copy runtime! You can try to copy the CMSSW runtime manually."
 					if not utils.boolUserInput('Is runtime available on SE?', False):
 						raise RuntimeError("No CMSSW runtime on SE!")
 
@@ -211,8 +212,8 @@ class CMSSW(DataMod):
 
 	def getTaskType(self):
 		if self.dataSplitter == None:
-			return 'analysis'
-		return 'production'
+			return 'production'
+		return 'analysis'
 
 
 	def getDependencies(self):
