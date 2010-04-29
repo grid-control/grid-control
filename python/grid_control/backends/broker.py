@@ -6,6 +6,7 @@ from wms import WMS
 class Broker(AbstractObject):
 	def __init__(self, config, queues, nodes):
 		self.config = config
+		self.allnodes = nodes
 		# Queue info format: {'queue1': {WMS.MEMORY: 123, ...}, 'queue2': {...}}
 		self.queues = queues
 		self.userQueue = config.get('local', 'queue', '', volatile=True).split()
@@ -18,27 +19,37 @@ class Broker(AbstractObject):
 	def matchQueue(self, reqs):
 		return reqs
 
-	def addQueueReq(self, reqs, queues, randomize=False):
+	def addQueueReq(self, reqs, queues, randomize=False, nodes=None):
 		if len(queues) > 0:
 			rIdx = 0
 			if randomize:
 				rIdx = random.randint(0, len(queues) - 1)
-			reqs.append((WMS.SITES, (queues[rIdx], self.nodes)))
+			if nodes == None:
+				nodes = self.nodes
+			reqs.append((WMS.SITES, (queues[rIdx], nodes)))
 
 
 class DummyBroker(Broker):
+	def matchQueue(self, reqs):
+		self.addQueueReq(reqs, self.userQueue, randomize=True)
+		return reqs
+
+
+class CoverageBroker(Broker):
 	def __init__(self, config, queues, nodes):
 		Broker.__init__(self, config, queues, nodes)
+		self.counter = 0
 
 	def matchQueue(self, reqs):
-		self.addQueueReq(reqs, self.userQueue, True)
+		node = None
+		if self.allnodes:
+			node = self.allnodes[self.counter % len(self.allnodes)]
+			self.counter += 1
+		self.addQueueReq(reqs, self.userQueue, nodes = node)
 		return reqs
 
 
 class SimpleBroker(Broker):
-	def __init__(self, config, queues, nodes):
-		Broker.__init__(self, config, queues, nodes)
-
 	def matchQueue(self, reqs):
 		def item(index):
 			def helper(lst):
