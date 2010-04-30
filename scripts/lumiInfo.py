@@ -94,6 +94,8 @@ if opts.save_jobjson or opts.get_events:
 				fwkXML = xml.dom.minidom.parse(fwkReport)
 				for outFile in fwkXML.getElementsByTagName("File"):
 					pfn = outFile.getElementsByTagName("PFN")[0].childNodes[0].data
+					if pfn not in nEvents_write:
+						nEvents_write[pfn] = 0
 					nEvents_write[pfn] += int(outFile.getElementsByTagName("TotalEvents")[0].childNodes[0].data)
 				for inFile in fwkXML.getElementsByTagName("InputFile"):
 					nEvents_read += int(inFile.getElementsByTagName("EventsRead")[0].childNodes[0].data)
