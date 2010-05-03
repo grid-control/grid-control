@@ -138,8 +138,13 @@ class WMS(AbstractObject):
 		for jobNum in jobNumList:
 			if self.config.opts.abort:
 				raise StopIteration
-			jobNum, wmsId, data = self.submitJob(jobNum)
-			yield (jobNum, wmsId, data)
+			validStorage = True
+			for (k, v) in self.module.getRequirements(jobNum):
+				if k == WMS.STORAGE and v == []:
+					validStorage = False
+			if validStorage:
+				jobNum, wmsId, data = self.submitJob(jobNum)
+				yield (jobNum, wmsId, data)
 
 
 	def retrieveJobs(self, ids):
