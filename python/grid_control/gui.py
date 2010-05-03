@@ -52,8 +52,6 @@ class GUIStream:
 			('DONE(?!:)', [Console.COLOR_BLUE, Console.BOLD]),
 			('FAILED(?!:)', [Console.COLOR_RED, Console.BOLD]),
 			('SUCCESS(?!:)', [Console.COLOR_GREEN, Console.BOLD]),
-			('RUNNING(?!:)', [Console.COLOR_YELLOW, Console.BOLD]),
-			('(?<=RUNNING:)\s+[1-9]\d*', [Console.COLOR_YELLOW, Console.BOLD]),
 			('(?<=DONE:)\s+[1-9]\d*', [Console.COLOR_BLUE, Console.BOLD]),
 			('(?<=Failing jobs:)\s+[1-9]\d*', [Console.COLOR_RED, Console.BOLD]),
 			('(?<=FAILED:)\s+[1-9]\d*', [Console.COLOR_RED, Console.BOLD]),
