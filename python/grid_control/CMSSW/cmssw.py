@@ -76,12 +76,15 @@ class CMSSW(DataMod):
 					raise ConfigError("Installed program in project area can't be recognized.")
 
 			archs = filter(lambda x: os.path.isdir(os.path.join(scramPath, x)), os.listdir(scramPath))
-			self.scramArch = config.get('CMSSW', 'scram arch', archs[0])
+			try:
+				self.scramArch = config.get('CMSSW', 'scram arch', archs[0])
+			except:
+				raise ConfigError("%s does not contain architecture information!" % scramPath)
 			try:
 				fp = open(os.path.join(scramPath, self.scramArch, 'Environment'), 'r')
 				self.scramEnv.update(utils.DictFormat().parse(fp, lowerCaseKey = False))
 			except:
-				print "Project area file .SCRAM/%s/Environment cannot be parsed!" % self.scramArch
+				raise ConfigError("Project area file .SCRAM/%s/Environment cannot be parsed!" % self.scramArch)
 		else:
 			self.scramEnv = {
 				'SCRAM_PROJECTNAME': scramProject[0],

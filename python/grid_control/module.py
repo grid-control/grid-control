@@ -48,12 +48,14 @@ class Module(AbstractObject):
 
 		# Storage setup - in case a directory is give, prepend dir specifier
 		self.sePath = config.get('storage', 'se path', '').strip()
+		if (self.sePath.count("@") >= 2) or (self.sePath.count("__") >= 2):
+			raise ConfigError("'se path' may not contain variables. Move variables into appropriate se pattern!")
 		if len(self.sePath) > 0 and self.sePath[0] == "/":
 			self.sePath = "dir:///%s" % self.sePath.lstrip("/")
 		self.seMinSize = config.getInt('storage', 'se min size', -1)
 
 		self.seInputFiles = config.get('storage', 'se input files', '').split()
-		self.seInputPattern = config.get('storage', 'se input pattern', '__X__')
+		self.seInputPattern = config.get('storage', 'se input pattern', '@X@')
 		self.seOutputFiles = config.get('storage', 'se output files', '').split()
 		self.seOutputPattern = config.get('storage', 'se output pattern', '@NICK@job_@MY_JOBID@_@X@')
 

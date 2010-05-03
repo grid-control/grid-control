@@ -79,10 +79,6 @@ def main(args):
 				opts.init = True
 			if utils.boolUserInput("Do you want to create the working directory %s?" % config.workDir, True):
 				os.makedirs(config.workDir)
-		try:
-			os.chdir(config.workDir)
-		except:
-			raise UserError("Could not access specified working directory '%s'!" % config.workDir)
 
 		# Initialise application module
 		module = config.get('global', 'module')
@@ -149,7 +145,7 @@ def main(args):
 			opts.submission = False
 
 		# Job submission loop
-		def jobCycle():
+		def jobCycle(wait = utils.wait):
 			while True:
 				didWait = False
 				# Check free disk space
@@ -158,19 +154,19 @@ def main(args):
 
 				# check for jobs
 				if not opts.abort and jobs.check(wms):
-					didWait = utils.wait(opts, wms.getTimings()[1])
+					didWait = wait(opts, wms.getTimings()[1])
 				# retrieve finished jobs
 				if not opts.abort and jobs.retrieve(wms):
-					didWait = utils.wait(opts, wms.getTimings()[1])
+					didWait = wait(opts, wms.getTimings()[1])
 				# try submission
 				if not opts.abort and jobs.submit(wms):
-					didWait = utils.wait(opts, wms.getTimings()[1])
+					didWait = wait(opts, wms.getTimings()[1])
 
 				# quit if abort flag is set or not in continuous mode
 				if opts.abort or not opts.continuous:
 					break
 				# idle timeout
-				utils.wait(opts, wms.getTimings()[0])
+				wait(opts, wms.getTimings()[0])
 				# Check whether wms can submit
 				if not wms.canSubmit(module.wallTime, opts.submission):
 					opts.submission = False

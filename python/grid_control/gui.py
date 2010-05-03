@@ -8,6 +8,10 @@ class Console:
 	for (name, esc) in attr.items():
 		locals()[name] = esc
 
+	def fmt(cls, data, attr = []):
+		return "\033[%sm%s\033[0m" % (str.join(";", [Console.RESET] + attr), data)
+	fmt = classmethod(fmt)
+
 	def __init__(self):
 		(self.stdout, self.stdin) = (sys.stdout, sys.stdin)
 		def callFactory(x):
@@ -31,9 +35,8 @@ class Console:
 		self.esc("[%d;%dr" % (top, bottom))
 
 	def addstr(self, data, attr = []):
-		self.esc("[%sm" % str.join(";", [Console.RESET] + attr))
-		self.stdout.write(data)
-		self.esc("[%sm" % Console.RESET)
+		self.stdout.write(Console.fmt(data, attr))
+		self.stdout.flush()
 
 
 class GUIStream:

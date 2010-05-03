@@ -1,5 +1,6 @@
 from python_compat import *
 from grid_control import Job, RuntimeError, utils
+from gui import Console
 
 class Report:
 	states = ['WAITING', 'RUNNING', 'FAILED', 'SUCCESS']
@@ -133,13 +134,10 @@ class Report:
 
 		# init wn dictionary
 		statinfo = initdict()
-		maxlen = [0, 0, 0]
 
 		# iterate over flat list of all occuring destinations
 		destinations = reduce(add, map(lambda id: self.allJobs.get(id).history.values(), self.jobs))
 		for dest in map(getDest, destinations):
-			for i in range(3):
-				maxlen[i] = max(maxlen[i], len(dest[i]))
 			(site, wn, queue) = dest
 			if site not in statinfo:
 				statinfo[site] = initdict()
@@ -156,7 +154,6 @@ class Report:
 					continue
 				# Extract site from history
 				(site, wn, queue) = getDest(job.history[attempt])
-				
 				# Sort job into category
 				if attempt == job.attempt:
 					incstat(statinfo, site, wn, queue, self.getJobCategory(job), 'COUNT', 1)
@@ -165,7 +162,7 @@ class Report:
 					incstat(statinfo, site, wn, queue, 'FAILED', 'COUNT', 1)
 					incstat(statinfo, site, wn, queue, 'FAILED', 'TIME', int(job.get('runtime')))
 		# statinfo = {'site1: {''wn1.site1': {'FAILED': 0, 'RUNNING': 0, 'WAITING': 0, 'SUCCESS': 1}, 'wn2.site1': ...}, 'site2': {'wn1.site2': ...}}
-		return (maxlen, statinfo)
+		return statinfo
 
 
 	def siteReport(self, details = 0, showtime = False):
@@ -174,69 +171,45 @@ class Report:
 		print '---------------'
 		print
 
-		(maxlen_detail, statinfo) = self.getWNInfos()
-		maxlen = 22
-		if details > 2:
-			maxlen = max(maxlen, maxlen_detail[2])
-		if details > 1:
-			maxlen = max(maxlen, maxlen_detail[1])
-		maxlen = max(maxlen, maxlen_detail[0])
-		
-		# Print header
-		print ' %s       | %12s | %12s | %12s | %12s' % tuple(['SITE / WN'.ljust(maxlen)] + map(lambda x: x.center(12), Report.states))
-		print '=%s=======' % (maxlen * '=') + len(Report.states) * ('+' + 14 * '=')
+		statinfo = self.getWNInfos()
+		markDict = {'FAILED': [Console.COLOR_RED, Console.BOLD], 'SUCCESS': [Console.COLOR_BLUE, Console.BOLD]}
 
-		def ratestats(entries):
-			result = map(lambda state: entries[state]['COUNT'], Report.states)
-			line = []
-			all = max(1, sum(result))
-			for x in result:
-				line.extend([x, 100 * x / all])
-			# return summed state infos in together with the percentage: [state1, percentage1, state2, percentage2, ...]
-			return line
-
-		def timestats(entries):
-			result_count = map(lambda state: entries[state]['COUNT'], Report.states)
-			result_time = map(lambda state: entries[state]['TIME'], Report.states)
-			line = []
-			all = max(1, sum(result_count))
-			for x in result_time:
-				x /= all
-				line.extend([x / 60 / 60, (x / 60) % 60, x % 60])
-			# return summed state infos in together with the percentage: [state1, percentage1, state2, percentage2, ...]
-			return line
-
-		rate_site = ' \33[0;1m%s\33[0m       | %5d (%3d%%) | %5d (%3d%%) | \33[0;91m%5d\33[0m (%3d%%) | \33[0;94m%5d\33[0m (%3d%%)'
-		rate_wn = '    %s    | %5d (%3d%%) | %5d (%3d%%) | %5d (%3d%%) | %5d (%3d%%)'
-		rate_queue = '       %s | %5d (%3d%%) | %5d (%3d%%) | %5d (%3d%%) | %5d (%3d%%)'
-
-		time_site = ' \33[0;1m%s\33[0m       | %6d:%0.2d:%0.2d | %6d:%0.2d:%0.2d | \33[0;91m%6d:%0.2d:%0.2d\33[0m | \33[0;94m%6d:%0.2d:%0.2d\33[0m'
-		time_wn = '    %s    | %6d:%0.2d:%0.2d | %6d:%0.2d:%0.2d | %6d:%0.2d:%0.2d | %6d:%0.2d:%0.2d'
-		time_queue = '       %s | %6d:%0.2d:%0.2d | %6d:%0.2d:%0.2d | %6d:%0.2d:%0.2d | %6d:%0.2d:%0.2d'
-
-		def print_stats(name, dict, maxlen, showtime, rate_fmt, time_fmt):
-			print rate_fmt % tuple([name.ljust(maxlen)] + ratestats(dict))
+		report = []
+		def addRow(level, stats, pstats, mark = False):
+			fmt = lambda x, state: x
+			if mark:
+				fmt = lambda x, state: Console.fmt(x, markDict.get(state, []))
+				level = Console.fmt(level, [Console.BOLD])
+			def fmtRate(state):
+				all = max(1, sum(map(lambda x: stats[x]['COUNT'], Report.states)))
+				ratio = (100.0 * stats[state]['COUNT']) / all
+				return fmt("%4d" % stats[state]['COUNT'], state) + " (%3d%%)" % ratio
+			def fmtTime(state):
+				secs = stats[state]['TIME'] / max(1, stats[state]['COUNT']*1.0)
+				return fmt(utils.strTime(secs, "%d:%0.2d:%0.2d"), state)
+			report.append(dict([("SITE", level)] + map(lambda x: (x, fmtRate(x)), Report.states)))
 			if showtime:
-				print time_fmt % tuple([padding] + timestats(dict))
+				report.append(dict(map(lambda x: (x, fmtTime(x)), Report.states)))
 
-		padding = ' ' * maxlen
-	
 		sites = filter(lambda x: not x in Report.states, statinfo.keys())
 		for num, site in enumerate(sorted(sites)):
-			print_stats(site, statinfo[site], maxlen, showtime, rate_site, time_site)
+			addRow(site, statinfo[site], statinfo, True)
 
 			if details > 1:
 				wns = filter(lambda x: not x in Report.states, statinfo[site].keys())
 				for wn in sorted(wns):
-					print_stats(wn, statinfo[site][wn], maxlen, showtime, rate_wn, time_wn)
+					addRow(3*" " + wn, statinfo[site][wn], statinfo[site])
 
 					if details > 2:
 						queues = filter(lambda x: not x in Report.states, statinfo[site][wn].keys())
 						for queue in sorted(queues):
-							print_stats(queue, statinfo[site][wn][queue], maxlen, showtime, rate_queue, time_queue)
-				if num < len(sites) - 1:
-					print '----%s----' % (maxlen * '-') + 4 * ('+' + 14 * '-')
+							addRow(6*" " + queue, statinfo[site][wn][queue], statinfo[site][wn])
 
-		print '====%s====' % (maxlen * '=') + 4 * ('+' + 14 * '=')
-		print_stats('', statinfo, maxlen, showtime, rate_site, time_site)
+				if num < len(sites) - 1:
+					report.append('')
+		report.append(None)
+		addRow('', statinfo, statinfo, True)
+
+		header = [("SITE", 'SITE / WN')] + map(lambda x: (x, x), Report.states)
+		utils.printTabular(header, report, "lrrrr")
 		print

@@ -271,10 +271,10 @@ def parseTime(usertime):
 	return reduce(lambda x, y: x * 60 + y, tmp)
 
 
-def strTime(secs):
+def strTime(secs, fmt = "%dh %0.2dmin %0.2dsec"):
 	if secs < 0:
 		return ""
-	return "%dh %0.2dmin %0.2dsec" % (secs / 60 / 60, (secs / 60) % 60, secs % 60)
+	return fmt % (secs / 60 / 60, (secs / 60) % 60, secs % 60)
 
 
 def parseTuples(string):
@@ -547,22 +547,31 @@ def lenSplit(list, maxlen):
 
 def printTabular(head, entries, fmtString = ''):
 	justFunDict = { 'l': str.ljust, 'r': str.rjust, 'c': str.center }
+	# justFun = {id1: str.center, id2: str.rjust, ...}
 	justFun = dict(map(lambda (idx, x): (idx[0], justFunDict[x]), zip(head, fmtString)))
 
 	maxlen = dict(map(lambda (id, name): (id, len(name)), head))
 	head = [ x for x in head ]
 	entries = [ x for x in entries ]
 
+	lenMap = {}
 	for entry in filter(lambda x: x, entries):
 		for id, name in head:
-			maxlen[id] = max(maxlen.get(id, len(name)), len(str(entry.get(id, ''))))
+			value = str(entry.get(id, ''))
+			stripped = re.sub("\33\[\d*(;\d*)*m", "", value)
+			lenMap[value] = len(value) - len(stripped)
+			maxlen[id] = max(maxlen.get(id, len(name)), len(stripped))
+
+	# adjust to maxlen of column (considering escape sequence correction)
+	just = lambda id, x: justFun.get(id, str.rjust)(str(x), maxlen[id] + lenMap.get(x, 0))
 
 	headentry = dict(map(lambda (id, name): (id, name.center(maxlen[id])), head))
 	for entry in [headentry, None] + entries:
-		format = lambda id, x: justFun.get(id, str.rjust)(str(x), maxlen[id])
-		applyFmt = lambda fun: map(lambda (id, name): format(id, fun(id)), head)
+		applyFmt = lambda fun: map(lambda (id, name): just(id, fun(id)), head)
 		if entry == None:
 			print("=%s=" % str.join("=+=", applyFmt(lambda id: '=' * maxlen[id])))
+		elif entry == '':
+			print("-%s-" % str.join("-+-", applyFmt(lambda id: '-' * maxlen[id])))
 		else:
 			print(" %s " % str.join(" | ", applyFmt(lambda id: entry.get(id, ''))))
 
