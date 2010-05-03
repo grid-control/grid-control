@@ -94,16 +94,17 @@ if [ "$DASHBOARD" == "yes" ]; then
 	echo
 	echo "==========================="
 	echo
+	my_move "$MY_SCRATCH" "$MY_LANDINGZONE" "DashboardAPI.py Logger.py ProcInfo.py apmon.py report.py"
 	export REPORTID="taskId=$TASK_ID jobId=${MY_JOBID}_$GLITE_WMS_JOBID MonitorID=$TASK_ID MonitorJobID=${MY_JOBID}_$GLITE_WMS_JOBID"
 	echo "Update Dashboard: $REPORTID"
-	checkfile "$MY_SCRATCH/report.py"
-	chmod u+x "$MY_SCRATCH/report.py"
-	checkbin "$MY_SCRATCH/report.py"
+	checkfile "$MY_LANDINGZONE/report.py"
+	chmod u+x "$MY_LANDINGZONE/report.py"
+	checkbin "$MY_LANDINGZONE/report.py"
 
-	echo $MY_SCRATCH/report.py $REPORTID \
+	echo $MY_LANDINGZONE/report.py $REPORTID \
 		SyncGridJobId="$GLITE_WMS_JOBID" SyncGridName="$TASK_USER" SyncCE="$GLOBUS_CE" \
 		WNname="$(hostname -f)" ExeStart="$DB_EXEC"
-	$MY_SCRATCH/report.py $REPORTID \
+	$MY_LANDINGZONE/report.py $REPORTID \
 		SyncGridJobId="$GLITE_WMS_JOBID" SyncGridName="$TASK_USER" SyncCE="$GLOBUS_CE" \
 		WNname="$(hostname -f)" ExeStart="$DB_EXEC"
 fi
@@ -213,12 +214,12 @@ if [ "$DASHBOARD" == "yes" ]; then
 	echo "==========================="
 	echo
 	echo "Update Dashboard: $REPORTID"
-	checkbin "$MY_SCRATCH/report.py"
+	checkbin "$MY_LANDINGZONE/report.py"
 	[ -f "$MY_DASHBOARDINFO" ] && DASH_EXT="$(< "$MY_DASHBOARDINFO")"
-	echo $MY_SCRATCH/report.py $REPORTID \
+	echo $MY_LANDINGZONE/report.py $REPORTID \
 		ExeEnd="$DB_EXEC" WCCPU="$GC_WRAPTIME" CrabUserCpuTime="$GC_CPUTIME" CrabWrapperTime="$GC_WRAPTIME" \
 		ExeExitCode="$CODE" JobExitCode="$CODE" JobExitReason="$CODE" $DASH_EXT
-	$MY_SCRATCH/report.py $REPORTID \
+	$MY_LANDINGZONE/report.py $REPORTID \
 		ExeEnd="$DB_EXEC" WCCPU="$GC_WRAPTIME" CrabUserCpuTime="$GC_CPUTIME" CrabWrapperTime="$GC_WRAPTIME" \
 		ExeExitCode="$CODE" JobExitCode="$CODE" JobExitReason="$CODE" $DASH_EXT
 	echo
