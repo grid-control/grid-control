@@ -61,7 +61,10 @@ if opts.configentry or opts.configguess:
 			infos[dsName] = dict([(DataProvider.Dataset, dsName)])
 			if not block.has_key(DataProvider.Nickname) and opts.confignick:
 				try:
-					block[DataProvider.Nickname] = dsName.lstrip("/").split("/")[1]
+					if "/" in dsName: 
+						block[DataProvider.Nickname] = dsName.lstrip("/").split("/")[1]
+					else:
+						block[DataProvider.Nickname] = dsName
 				except:
 					pass
 			if block.has_key(DataProvider.Nickname):
