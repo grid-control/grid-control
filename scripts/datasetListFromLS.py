@@ -3,9 +3,14 @@ import os, sys, glob, random, optparse
 
 def iterateFiles():
 	for pattern in opts.selection:
-		for path in glob.glob(os.path.join(opts.path, pattern)):
-			shortPath = os.path.abspath(path).replace(opts.path, "").lstrip("/")
-			yield (shortPath, opts.events)
+		for path in map(os.path.abspath, glob.glob(os.path.join(opts.path, pattern))):
+			shortPath = path.replace(opts.path, "").lstrip("/")
+			if opts.eventscmd:
+				events = int(os.popen("%s %s" % (opts.eventscmd, path)).readlines()[-1])
+				sys.stderr.write("%s %s %s\n" % (opts.eventscmd, path, events))
+				yield (shortPath, events)
+			else:
+				yield (shortPath, opts.events)
 
 def printIntro(dataset, onEmpty, onGiven):
 	if opts.dataset == "":
@@ -59,9 +64,11 @@ if __name__ == '__main__':
 	parser.add_option("-p", "--path", dest="path", default=".", help="Path to dataset files")
 	parser.add_option("-m", "--multi", dest="multi", default=None,
 		help="Multi dataset mode - files are sorted into different datasets according to <delimeter>:<start>:<end>")
-	parser.add_option("-s", "--selection", dest="selection", default="*",
+	parser.add_option("-s", "--selection", dest="selection", default="*.root",
 		help="File to include in dataset (Default: *.root)")
 	parser.add_option("-e", "--events", dest="events", default="-1", help="Number of events in files")
+	parser.add_option("-E", "--events-cmd", dest="eventscmd", default=None,
+		help="Application used to determine number of events in files")
 	(opts, args) = parser.parse_args()
 
 	# Positional parameters override options
