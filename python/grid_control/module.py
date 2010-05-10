@@ -138,6 +138,16 @@ class Module(AbstractObject):
 		return dict(mapping)
 
 
+	def validateVariables(self):
+		keys = self.getVarMapping().keys() + ['X', 'XBASE', 'XEXT']
+		values = self.getTaskConfig().values() + self.getJobConfig(0).values()
+		for i, x in enumerate(values):
+			for tag in keys:
+				x = str(x).replace("__%s__" % tag, " ").replace("@%s@" % tag, " ")
+			if x.count("__") > 1 or x.count("@") > 1:
+				raise ConfigError("'%s' contains invalid variable specifiers" % values[i])
+
+
 	# Get job requirements
 	def getRequirements(self, jobNum):
 		return [

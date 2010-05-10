@@ -48,6 +48,7 @@ class WMS(AbstractObject):
 		taskConfig = utils.DictFormat(escapeString = True).format(taskEnv, format = 'export %s%s%s\n')
 		inFiles.append(utils.VirtualFile('_config.sh', sorted(taskConfig)))
 
+		module.validateVariables()
 		varMapping = map(lambda (x, y): "%s %s\n" % (x, y), module.getVarMapping().items())
 		inFiles.append(utils.VirtualFile('_varmap.dat', str.join('', sorted(varMapping))))
 		inFiles.extend(map(lambda x: utils.pathGC('share', 'env.%s.sh' % x), module.getDependencies()))
