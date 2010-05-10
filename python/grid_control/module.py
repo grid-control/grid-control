@@ -33,7 +33,7 @@ class Module(AbstractObject):
 		else:
 			# args specified => gen seeds
 			if 'seeds' in taskInfo and (config.opts.seed == None):
-				self.seeds = map(int, taskInfo['seeds'].split())
+				self.seeds = map(int, str(taskInfo['seeds']).split())
 			else:
 				self.seeds = map(lambda x: random.randint(0, 10000000), range(10))
 				print "Creating random seeds...", self.seeds

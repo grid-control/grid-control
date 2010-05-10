@@ -174,7 +174,7 @@ class GridWMS(WMS):
 			handle.close()
 			sys.stderr.write(".")
 		tar.close()
-		sys.stderr.write("\nAll logfile were moved to %s\n" % os.path.join(self.config.workDir, 'error.tar'))
+		sys.stderr.write("\nAll logfiles were moved to %s\n" % os.path.join(self.config.workDir, 'error.tar'))
 		return False
 
 

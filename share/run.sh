@@ -87,7 +87,6 @@ if [ -n "$GC_DEPFILES" ]; then
 		checkfile "$MY_SCRATCH/env.$DEPFILE.sh"
 		source "$MY_SCRATCH/env.$DEPFILE.sh"
 	done
-	echo
 fi
 
 if [ "$DASHBOARD" == "yes" ]; then
@@ -107,6 +106,7 @@ if [ "$DASHBOARD" == "yes" ]; then
 	$MY_LANDINGZONE/report.py $REPORTID \
 		SyncGridJobId="$GLITE_WMS_JOBID" SyncGridName="$TASK_USER" SyncCE="$GLOBUS_CE" \
 		WNname="$(hostname -f)" ExeStart="$DB_EXEC"
+	echo
 fi
 
 # Copy files from the SE

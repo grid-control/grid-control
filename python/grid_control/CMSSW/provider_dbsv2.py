@@ -1,9 +1,9 @@
-import DBSAPI_v2.dbsApi
 from grid_control import utils, DatasetError, datasets
 from grid_control.datasets import DataProvider
 from lumi_tools import *
 
 def createDBSAPI(url):
+	import DBSAPI_v2.dbsApi
 	if url == '':
 		url = 'http://cmsdbsprod.cern.ch/cms_dbs_prod_global/servlet/DBSServlet'
 	if not 'http://' in url:
@@ -43,6 +43,7 @@ class DBSApiv2(DataProvider):
 
 
 	def getBlocksInternal(self):
+		import DBSAPI_v2.dbsApiException
 		api = createDBSAPI(self.url)
 		try:
 			listBlockInfo = api.listBlocks(self.datasetPath)

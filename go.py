@@ -34,13 +34,14 @@ def main(args):
 	parser.add_option("-c", "--continuous",    dest="continuous", default=False, action="store_true")
 	parser.add_option("-G", "--gui",           dest="gui",        default=False, action="store_true")
 	parser.add_option("-r", '--report',        dest="report",     default=False, action="store_true")
-	parser.add_option("-v", "--verbose",       dest="verbosity",  default=0,     action="count")
 	parser.add_option("-R", '--site-report',   dest="reportSite", default=0,     action="count")
 	parser.add_option("-T", '--time-report',   dest="reportTime", default=0,     action="count")
 	parser.add_option("-M", '--module-report', dest="reportMod",  default=0,     action="count")
-	parser.add_option("-m", '--max-retry',     dest="maxRetry",   default=None,  type="int")
+	parser.add_option("-J", "--job-report",    dest="reportJob",  default=None)
 	parser.add_option("-d", '--delete',        dest="delete",     default=None)
 	parser.add_option("-S", '--seed',          dest="seed",       default=None)
+	parser.add_option("-m", '--max-retry',     dest="maxRetry",   default=None,  type="int")
+	parser.add_option("-v", "--verbose",       dest="verbosity",  default=0,     action="count")
 	(opts, args) = parser.parse_args()
 	utils.verbosity.setting = opts.verbosity
 	opts.abort = False

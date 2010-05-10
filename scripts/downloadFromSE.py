@@ -197,7 +197,7 @@ def realmain(opts, args):
 			procCP = se_utils.se_copy(os.path.join(pathSE, name_dest), "file:///%s" % outFilePath)
 			if procCP.wait() != 0:
 				print "\n\t\tUnable to copy file from SE!"
-				print proc.getMessage()
+				print procCP.getMessage()
 				failJob = True
 				break
 

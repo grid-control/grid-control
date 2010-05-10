@@ -7,24 +7,26 @@ class Report:
 
 	def __init__(self, jobs, allJobs):
 		self.allJobs = allJobs
-		if hasattr(jobs, '_jobs'):
+		try:
 			self.jobs = jobs._jobs.keys()
-		else:
+		except:
 			self.jobs = jobs
 
 
 	def show(self, opts, module = None):
 		if opts.report:
 			print
-			self.details()
 			self.summary()
+		if opts.reportJob:
+			print
+			self.details(opts.reportJob)
 		if opts.reportSite:
 			self.siteReport(opts.reportSite, False)
 		if opts.reportTime:
 			self.siteReport(opts.reportTime, True)
 		if opts.reportMod:
 			self.modReport(opts.reportMod, module)
-		if opts.report or opts.reportSite or opts.reportTime or opts.reportMod:
+		if opts.report or opts.reportSite or opts.reportTime or opts.reportMod or opts.reportJob:
 			return True
 		return False
 
@@ -34,25 +36,36 @@ class Report:
 		return cats.get(job.state, 'WAITING')
 
 
-	def details(self):
+	def printHeader(self, message):
+		print '-----------------------------------------------------------------'
+		print message.ljust(65)
+		print '---------------'.ljust(65)
+
+
+	def details(self, selector = 'COMPLETE'):
 		reports = []
-		for jobNum in self.jobs:
-			report = self.allJobs.get(jobNum).report()
-			if report["Status"] == 'INIT':
+		for jobNum in self.allJobs.getJobs(selector):
+			jobObj = self.allJobs.get(jobNum)
+			report = jobObj.report()
+			if jobObj.state == Job.INIT:
 				continue
 			report.update({'Job': jobNum})
 			reports.append(report)
-			if report["Destination"] != 'N/A':
-				reports.append({"Id": report["Destination"]})
-		utils.printTabular([("Job", "Job"), ("Status", "Status"), ("Id", "Id / Destination")], reports, "rcl")
+			if utils.verbosity() > 0:
+				history = jobObj.history.items()
+				history.reverse()
+				for at, dest in history:
+					if dest != 'N/A':
+						reports.append({"Status": at, "Id": " -> " + dest})
+			else:
+				reports.append({"Id": " -> " + report["Destination"]})
+		utils.printTabular([("Job", "Job"), ("Status", "Status / Attempt"), ("Id", "Id / Destination")], reports, "rcl")
 		print
 
 
 	def summary(self, message = ""):
 		# Print report summary
-		print '-----------------------------------------------------------------'
-		print 'REPORT SUMMARY:'.ljust(65)
-		print '---------------'.ljust(65)
+		self.printHeader("REPORT SUMMARY:")
 
 		summary = map(lambda x: 0.0, Job.states)
 		for jobNum in self.jobs:
@@ -73,7 +86,7 @@ class Report:
 			print 'Jobs  %9s:%8d  %3d%%    ' % tuple([category] + makePer(stateNum)),
 			if stateNum % 2:
 				print
-		print '-----------------------------------------------------------------'
+		print '-' * 65
 		print message
 		return 0
 
@@ -100,11 +113,9 @@ class Report:
 				all[cat] += 1
 			except:
 				pass
-		print '-----------------------------------------------------------------'
-		print 'MODULE SUMMARY:'
-		print '---------------'
-		print
 		infos = map(lambda x: reports[x], order) + [None, all]
+		self.printHeader("MODULE SUMMARY:")
+		print
 		utils.printTabular(map(lambda x: (x, x), head + Report.states), infos, 'c' * len(head))
 		print
 
@@ -166,11 +177,6 @@ class Report:
 
 
 	def siteReport(self, details = 0, showtime = False):
-		print '-----------------------------------------------------------------'
-		print 'SITE SUMMARY:'
-		print '---------------'
-		print
-
 		statinfo = self.getWNInfos()
 		markDict = {'FAILED': [Console.COLOR_RED, Console.BOLD], 'SUCCESS': [Console.COLOR_BLUE, Console.BOLD]}
 
@@ -209,7 +215,9 @@ class Report:
 					report.append('')
 		report.append(None)
 		addRow('', statinfo, statinfo, True)
-
 		header = [("SITE", 'SITE / WN')] + map(lambda x: (x, x), Report.states)
+
+		self.printHeader("SITE SUMMARY:")
+		print
 		utils.printTabular(header, report, "lrrrr")
 		print

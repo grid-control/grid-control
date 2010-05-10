@@ -31,6 +31,7 @@
 	                         --- Display options ---
 	-G, --gui                Run in GUI mode
 	-v, --verbose            Give detailed information during run
+                                 (use multiple times to increase verbosity)
 
 	                         --- Report options ---
 	-r, --report             Show status report of jobs
@@ -39,4 +40,9 @@
 	-T, --time-report        Show time report
 	                            -RR  / -TT  (broken down into site, CE)
 	                            -RRR / -TTT (broken down into site, CE, queue)
-
+	-J, --job-report <args>  Show report of given jobs, e.g:
+	                            -d 1,5,9,...  (Job numbers)
+	                            -d CE1,...    (Job sites)
+	                            -d QUEUED,... (Job states)
+	                            -d TODO (= SUBMITTED,WAITING,READY,QUEUED)
+	                            -d ALL

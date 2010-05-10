@@ -304,13 +304,14 @@ class JobDB:
 				map(mark_cancelled, jobs)
 
 
-	def delete(self, wms, selector):
-		predefined = { 'TODO': 'SUBMITTED,WAITING,READY,QUEUED', 'ALL': 'SUBMITTED,WAITING,READY,QUEUED,RUNNING'}
+	def getJobs(self, selector):
+		predefined = { 'TODO': 'SUBMITTED,WAITING,READY,QUEUED',
+			'ALL': 'SUBMITTED,WAITING,READY,QUEUED,RUNNING', 'COMPLETE': str.join(',', Job.states)}
 		jobFilter = predefined.get(selector.upper(), selector.upper())
 
 		if len(jobFilter) and jobFilter[0].isdigit():
 			try:
-				jobs = map(int, jobFilter.split(","))
+				jobs = map(int, jobFilter.split(','))
 			except:
 				raise UserError("Job identifiers must be integers.")
 		else:
@@ -335,6 +336,10 @@ class JobDB:
 			jobs = filter(lambda x: stateFilter(self._jobs[x]), self._jobs.keys())
 			if jobs == []:
 				jobs = filter(lambda x: siteFilter(self._jobs[x]), self._jobs.keys())
+		return jobs
 
+
+	def delete(self, wms, selector):
+		jobs = self.getJobs(selector)
 		print "\nDeleting the following jobs:"
 		self.cancel(wms, jobs, True)
