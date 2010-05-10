@@ -41,8 +41,8 @@
 	                            -RR  / -TT  (broken down into site, CE)
 	                            -RRR / -TTT (broken down into site, CE, queue)
 	-J, --job-report <args>  Show report of given jobs, e.g:
-	                            -d 1,5,9,...  (Job numbers)
-	                            -d CE1,...    (Job sites)
-	                            -d QUEUED,... (Job states)
-	                            -d TODO (= SUBMITTED,WAITING,READY,QUEUED)
-	                            -d ALL
+	                            -J 1,5,9,...  (Job numbers)
+	                            -J CE1,...    (Job sites)
+	                            -J QUEUED,... (Job states)
+	                            -J TODO (= SUBMITTED,WAITING,READY,QUEUED)
+	                            -J ALL

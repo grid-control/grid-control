@@ -305,8 +305,7 @@ class JobDB:
 
 
 	def getJobs(self, selector):
-		predefined = { 'TODO': 'SUBMITTED,WAITING,READY,QUEUED',
-			'ALL': 'SUBMITTED,WAITING,READY,QUEUED,RUNNING', 'COMPLETE': str.join(',', Job.states)}
+		predefined = { 'TODO': 'SUBMITTED,WAITING,READY,QUEUED', 'ALL': str.join(',', Job.states)}
 		jobFilter = predefined.get(selector.upper(), selector.upper())
 
 		if len(jobFilter) and jobFilter[0].isdigit():
@@ -328,8 +327,7 @@ class JobDB:
 					return False
 				dest = str.join("/", map(lambda x: x.split(":")[0], dest.upper().split("/")))
 				for site in jobFilter.split(','):
-					regex = re.compile(site)
-					if regex.search(dest) and jobObj.state not in (Job.SUCCESS, Job.FAILED):
+					if re.compile(site).search(dest):
 						return True
 				return False
 			# First try matching states, then try to match destinations
@@ -340,6 +338,7 @@ class JobDB:
 
 
 	def delete(self, wms, selector):
-		jobs = self.getJobs(selector)
+		deleteable = [ Job.SUBMITTED, Job.WAITING, Job.READY, Job.QUEUED, Job.RUNNING ]
+		jobs = filter(lambda x: self._jobs[x].state in deleteable, self.getJobs(selector))
 		print "\nDeleting the following jobs:"
 		self.cancel(wms, jobs, True)
