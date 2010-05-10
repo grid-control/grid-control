@@ -21,4 +21,3 @@ mkdir "$GC_SCRATCH"
 cd $GC_SANDBOX
 ./run.sh ${MY_JOBID}
 rmdir "$GC_SCRATCH"
-set

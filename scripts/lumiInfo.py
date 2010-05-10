@@ -12,6 +12,8 @@ parser = optparse.OptionParser()
 
 usage_le = "Usage: %s <lumi filter expression>" % sys.argv[0]
 ogManip = optparse.OptionGroup(parser, "Manipulate lumi filter expressions", usage_le)
+ogManip.add_option("-d", "--diff", dest="diff",
+	help="Calculate difference between json file and lumi filter expression")
 ogManip.add_option("-G", "--gc", dest="save_exprgc", default=False, action="store_true",
 	help="Output grid-control compatible lumi expression")
 ogManip.add_option("-J", "--expr-json", dest="save_exprjson", default=False, action="store_true",
@@ -49,6 +51,9 @@ def outputJSON(lumis, stream = sys.stdout):
 	stream.write("%s\n" % str.join(',\n', entries))
 	stream.write("}\n")
 
+def setify(x):
+	return set(map(lambda x: ((x[0][0], x[0][1]), (x[1][0], x[1][1])), x))
+
 # Lumi filter manuipulation
 if opts.save_exprgc or opts.save_exprjson:
 	if len(args) == 0:
@@ -57,13 +62,88 @@ if opts.save_exprgc or opts.save_exprjson:
 		lumis = parseLumiFilter(str.join(" ", args))
 	except:
 		fail("Could not parse: %s" % str.join(" ", args))
+
+	if opts.diff:
+		def updateLumiSets(lumis_a, lumis_b, lumis_uc_old):
+			lumis_uc = set.intersection(lumis_a, lumis_b)
+			lumis_uc.update(lumis_uc_old)
+			lumis_uc = set(mergeLumi(list(lumis_uc)))
+			lumis_a.difference_update(lumis_uc)
+			lumis_b.difference_update(lumis_uc)
+			return (lumis_a, lumis_b, lumis_uc)
+
+		def findLumiEdges(x):
+			def addToLumiEdges(r, l):
+				if r not in lumiEdges:
+					lumiEdges[r] = set()
+				lumiEdges[r].add(l)
+			for (s, e) in x:
+				addToLumiEdges(s[0], s[1])
+				addToLumiEdges(e[0], e[1])
+
+		# Split continous lumi sections along lumi edges:
+		def splitLumiRanges(lumis, off = 0, singlemode = False):
+			# Split into single runs
+			(todel, toadd) = (set(), set())
+			for (s, e) in lumis:
+				if s[0] and e[0] and s[0] != e[0]:
+					todel.add((s, e))
+					toadd.add((s, (s[0],None)))
+					toadd.add(((e[0],1),e))
+					for x in range(s[0] + 1, e[0]):
+						toadd.add(((x, 1), (x, None)))
+			lumis.difference_update(todel)
+			lumis.update(toadd)
+
+			# Split along lumi edges
+			(todel, toadd) = (set(), set())
+			for (s, e) in lumis:
+				edges = filter(lambda x: x > s[1] and x < e[1], lumiEdges[s[0]])
+				edges.sort()
+				if edges:
+					todel.add((s, e))
+					edg = map(lambda x: x + off, edges)
+					toadd.update(zip([s] + map(lambda x: (s[0], x + 1), edg), map(lambda x: (s[0], x), edg) + [e]))
+				elif s[1] != e[1] and singlemode:
+					todel.add((s, e))
+					toadd.update([
+						((s[0], s[1]), (s[0], s[1])),
+						((s[0], s[1] + 1), (e[0], e[1] - 1)),
+						((e[0], e[1]), (e[0], e[1]))])
+			lumis.difference_update(todel)
+			lumis.update(toadd)
+
+		lumis_a = setify(lumis)
+		lumis_b = setify(parseLumiFilter(opts.diff))
+		lumis_uc = set()
+		for offset in [0, 1, -1, None]:
+			for singlemode in [True, False]:
+				(lumis_a, lumis_b, lumis_uc) = updateLumiSets(lumis_a, lumis_b, lumis_uc)
+				lumis_a = set(mergeLumi(list(lumis_a)))
+				lumis_b = set(mergeLumi(list(lumis_b)))
+				if offset != None:
+					lumiEdges = {}
+					findLumiEdges(lumis_a)
+					findLumiEdges(lumis_b)
+					splitLumiRanges(lumis_a, offset, singlemode)
+					splitLumiRanges(lumis_b, offset, singlemode)
+
 	try:
-		if opts.save_exprgc:
-			outputGC(lumis)
-		if opts.save_exprjson:
-			outputJSON(lumis)
+		if opts.diff:
+			print "Unchanged:\n", 30 * "="
+			outputGC(mergeLumi(list(lumis_uc)))
+			print "\nOnly in reference file:\n", 30 * "="
+			outputGC(mergeLumi(list(lumis_b)))
+			print "\nNot in reference file:\n", 30 * "="
+			outputGC(mergeLumi(list(lumis_a)))
+		else:
+			if opts.save_exprgc:
+				outputGC(lumis)
+			if opts.save_exprjson:
+				outputJSON(lumis)
 	except:
-		fail("Could format lumi sections!" % args)
+			fail("Could format lumi sections!" % args)
+
 	sys.exit(0)
 
 # Lumi filter calculations
