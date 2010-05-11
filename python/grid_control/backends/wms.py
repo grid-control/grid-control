@@ -146,6 +146,8 @@ class WMS(AbstractObject):
 			if validStorage:
 				jobNum, wmsId, data = self.submitJob(jobNum)
 				yield (jobNum, wmsId, data)
+			else:
+				utils.vprint("Skipped submission of job %s - empty data location list!" % jobNum, printTime=True, once=True)
 
 
 	def retrieveJobs(self, ids):

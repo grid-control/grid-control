@@ -84,7 +84,7 @@ class DataSplitter(AbstractObject):
 			print "Job number: ", jobNum
 			DataSplitter.printInfoForJob(entry)
 			jobNum += 1
-			print "------------"			
+			print "------------"
 
 
 	def resyncMapping(self, path, oldBlocks, newBlocks):
