@@ -281,7 +281,7 @@ class JobDB:
 	def cancel(self, wms, jobs, interactive = False):
 		if len(jobs) == 0:
 			return
-		Report(jobs, self._jobs).details()
+		Report(jobs, self).details()
 		if interactive and not utils.boolUserInput('Do you really want to delete these jobs?', True):
 			return
 

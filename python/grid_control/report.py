@@ -19,7 +19,8 @@ class Report:
 			self.summary()
 		if opts.reportJob:
 			print
-			self.details(opts.reportJob)
+			self.jobs = self.allJobs.getJobs(opts.reportJob)
+			self.details()
 		if opts.reportSite:
 			self.siteReport(opts.reportSite, False)
 		if opts.reportTime:
@@ -42,9 +43,9 @@ class Report:
 		print '---------------'.ljust(65)
 
 
-	def details(self, selector = 'COMPLETE'):
+	def details(self):
 		reports = []
-		for jobNum in self.allJobs.getJobs(selector):
+		for jobNum in self.jobs:
 			jobObj = self.allJobs.get(jobNum)
 			report = jobObj.report()
 			if jobObj.state == Job.INIT:
