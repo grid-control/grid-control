@@ -80,6 +80,14 @@ def resolvePath(path, userpath = []):
 	return path
 
 
+def searchPathFind(program):
+	for dir in os.environ['PATH'].split(':'):
+		fname = os.path.join(dir, program)
+		if os.path.exists(fname):
+			return fname
+	raise InstallationError("%s not found" % program)
+
+
 def verbosity():
 	try:
 		return verbosity.setting
@@ -129,8 +137,6 @@ def boolUserInput(text, default):
 			return True
 		if userinput.lower() in ('no', 'n', 'false'):
 			return False
-		if userinput != 'yes' and userinput != '':
-			return 0
 		print 'Invalid input! Answer with "yes" or "no"'
 
 
@@ -237,14 +243,6 @@ class DictFormat(object):
 			else:
 				result.append(format % fkt((key, self.delimeter, value)))
 		return result
-
-
-def searchPathFind(program):
-	for dir in os.environ['PATH'].split(':'):
-		fname = os.path.join(dir, program)
-		if os.path.exists(fname):
-			return fname
-	raise InstallationError("%s not found" % program)
 
 
 def shellEscape(value):

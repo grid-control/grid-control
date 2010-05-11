@@ -66,7 +66,7 @@ class DataSplitter(AbstractObject):
 		print "\tID:", job.get(DataSplitter.DatasetID, 0)
 		print "Events :", job[DataSplitter.NEvents]
 		print "Skip   :", job[DataSplitter.Skipped]
-		if DataSplitter.SEList in job:
+		if DataSplitter.SEList in job and job[DataSplitter.SEList] != None:
 			seArray = map(lambda x: str.join(', ', x), utils.lenSplit(job[DataSplitter.SEList], 70))
 			print "SEList :", str.join('\n         ', seArray)
 		print "Files  :",

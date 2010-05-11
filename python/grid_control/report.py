@@ -59,7 +59,8 @@ class Report:
 					if dest != 'N/A':
 						reports.append({"Status": at, "Id": " -> " + dest})
 			else:
-				reports.append({"Id": " -> " + report["Destination"]})
+				if report["Destination"] != 'N/A':
+					reports.append({"Id": " -> " + report["Destination"]})
 		utils.printTabular([("Job", "Job"), ("Status", "Status / Attempt"), ("Id", "Id / Destination")], reports, "rcl")
 		print
 

@@ -340,5 +340,6 @@ class JobDB:
 	def delete(self, wms, selector):
 		deleteable = [ Job.SUBMITTED, Job.WAITING, Job.READY, Job.QUEUED, Job.RUNNING ]
 		jobs = filter(lambda x: self._jobs[x].state in deleteable, self.getJobs(selector))
-		print "\nDeleting the following jobs:"
-		self.cancel(wms, jobs, True)
+		if jobs:
+			print "\nDeleting the following jobs:"
+			self.cancel(wms, jobs, True)
