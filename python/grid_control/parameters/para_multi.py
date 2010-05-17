@@ -26,62 +26,52 @@ class UberParaMod(ParaMod):
 	def __init__(self, config):
 		ParaMod.__init__(self, config)
 
-		lowercase_tuple = lambda t: tuple(map(str.lower, t))
-		option_to_tuple = lambda o: utils.parseTuples(o)[0]
-
-		names = utils.parseTuples(config.get('ParaMod', 'parameters'))
-		options = dict(map(lambda (o, v): (repr(option_to_tuple(o)),
-			utils.parseTuples(v)), config.parser.items('ParaMod')))
-
-		def expandParam(param, type='words'):
-			"""Expand param depending on its type.
-
+		def expandParam(param, type = 'words'):
+			""" Expand param depending on its type.
 			>>> expandParam("Where the wild things grow")
 			['Where', 'the', 'wild', 'things', 'grow']
-			
 			>>> expandParam("range(3)", "expr")
 			[0, 1, 2]
-			
 			Possible improvements: enum values to indicate type;  doctest
 			might be wrong (unable to test)"""
 			actions = {
 				'expr': eval,
 				'lines': lambda l: map(str.strip, l.splitlines()),
-				'words': lambda l: map(str.strip, l.split())
+				'words': lambda l: utils.parseTuples(l),
+				'binning': lambda l: zip(l.split(), l.split()[1:])
 			}
-
 			try:
-				return actions[type](param)
+				return actions[type.lower()](param)
 			except:
-				raise exceptions.ConfigError("Illegal type '%s' in " +
-						"parameter expansion" % type)
+				raise exceptions.ConfigError("Illegal type '%s' in parameter expansion" % type)
 
-		self.pars = {}
-		for p in names:
+		# Map between parsed keys and config keys
+		parse_key = lambda x: (str.join(" ", map(repr, utils.parseTuples(x))), x)
+		keymap = dict(map(parse_key, config.parser.options('ParaMod')))
+
+		self.pset = {}
+		for p in utils.parseTuples(config.get('ParaMod', 'parameters')):
+			p_key = repr(p).lower()
 			if isinstance(p, tuple):
-				p_key = repr(lowercase_tuple(p))
-				if p_key in options:
-					self.pars[repr(p)] = options[p_key]
-				else:
-					self.pars[repr(p)] = []
-			else:
-				self.pars[repr(p)] = expandParam(config.get('ParaMod', p),
-						config.get('ParaMod', '%s type' % p, default='words'))
+				p_key = repr(tuple(map(str.lower, p)))
+			expConfigSource = keymap.get("%s 'type'" % p_key, "parameters type")
+			expConfig = config.get('ParaMod', expConfigSource, default = 'words')
+			self.pset[repr(p)] = expandParam(config.get('ParaMod', keymap[p_key]), expConfig)
+
 
 	def getParams(self):
 		res = [[]]
 
-		for p in self.pars.keys():
+		for p in self.pset.keys():
 			m = len(res)
-			n = len(self.pars[p])
+			n = len(self.pset[p])
 
 			tmp = []
 			p_ = eval(p)
 			if isinstance(p_, tuple):
-				tmp = map(lambda t: zip(p_, t),
-					  self.pars[p])
+				tmp = map(lambda t: zip(p_, t), self.pset[p])
 			else:
-				tmp = [[[p_, v]] for v in self.pars[p]]
+				tmp = [[[p_, v]] for v in self.pset[p]]
 
 			tmp_ = []
 			for e in tmp:

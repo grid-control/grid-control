@@ -1,4 +1,4 @@
-import os, sys
+import os, sys, shutil
 from grid_control import ConfigError, WMS, utils, se_utils, datasets
 from grid_control.datasets import DataMod
 from lumi_tools import *
@@ -20,12 +20,24 @@ class CMSSW(DataMod):
 			self.projectArea = config.getPath('CMSSW', 'project area')
 
 		# Get cmssw config files and check their existance
-		self.configFiles = config.getPaths('CMSSW', 'config file')
-		for cfgFile in self.configFiles:
-			if not os.path.exists(cfgFile):
-				raise ConfigError("Config file '%s' not found." % cfgFile)
+		self.configFiles = []
+		for cfgFile in config.getPaths('CMSSW', 'config file'):
+			newPath = os.path.join(config.workDir, os.path.basename(cfgFile))
+			if config.opts.init:
+				if not os.path.exists(cfgFile):
+					raise ConfigError("Config file '%s' not found." % cfgFile)
+				shutil.copyfile(cfgFile, newPath)
+			self.configFiles.append(newPath)
 
 		self.selectedLumis = parseLumiFilter(config.get('CMSSW', 'lumi filter', ''))
+
+		# Prepare (unprepared) cmssw config file for MC production / dataset analysis
+		prepare = config.getBool('CMSSW', 'prepare config', False)
+		def doInstrument(cfgName):
+			if 'customise_for_gc' not in open(cfgName, 'r').read():
+				print "Instrumenting...", os.path.basename(cfgName)
+				fragment = utils.pathGC('scripts', 'fragmentForCMSSW.py')
+				open(cfgName, 'a').write(open(fragment, 'r').read())
 
 		# Check that for dataset jobs the necessary placeholders are in the config file
 		if self.dataSplitter != None:
@@ -38,16 +50,17 @@ class CMSSW(DataMod):
 
 			if not (True in map(isInstrumented, self.configFiles)):
 				for cfgName in self.configFiles:
-					if not isInstrumented(cfgName):
-						if utils.boolUserInput('Do you want to prepare %s for running over the dataset?' % cfgName, True):
-							fragment = utils.pathGC('scripts', 'fragmentForCMSSW.py')
-							open(cfgName, 'a').write(open(fragment, 'r').read())
+					if config.opts.init and not isInstrumented(cfgName):
+						if prepare or utils.boolUserInput('Do you want to prepare %s for running over the dataset?' % cfgName, True):
+							doInstrument(cfgName)
 
 			if not (True in map(isInstrumented, self.configFiles)):
 				raise ConfigError("A config file must use %s to work properly with dataset jobs!" %
 					str.join(", ", map(lambda x: "__%s__" % x, self.neededVars())))
 		else:
 			self.eventsPerJob = config.get('CMSSW', 'events per job', 0)
+			if config.opts.init and prepare:
+				map(doInstrument, self.configFiles)
 
 		self.useReqs = config.getBool('CMSSW', 'use requirements', True, volatile=True)
 		self.seRuntime = config.getBool('CMSSW', 'se runtime', False)

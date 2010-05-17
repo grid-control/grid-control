@@ -1,6 +1,7 @@
 from python_compat import *
 from grid_control import Job, RuntimeError, utils
 from gui import Console
+import time
 
 class Report:
 	states = ['WAITING', 'RUNNING', 'FAILED', 'SUCCESS']
@@ -134,11 +135,13 @@ class Report:
 				domain = 'localhost'
 			return (domain, host, queue)
 			# Example: (gridka.de, wn1.gridka.de, job-queue-long)
-		def incstat(dict, L1, L2, L3, STAT, INFO, INC):
-			dict[L1][L2][L3][STAT][INFO] += INC
-			dict[L1][L2][STAT][INFO] += INC
-			dict[L1][STAT][INFO] += INC
-			dict[STAT][INFO] += INC
+		def incstat(dict, dest, state, time):
+			(site, wn, queue) = getDest(dest)
+			for (key, inc) in zip(['COUNT', 'TIME'], [1, time]):
+				dict[site][wn][queue][state][key] += inc
+				dict[site][wn][state][key] += inc
+				dict[site][state][key] += inc
+				dict[state][key] += inc
 		def initdict():
 			tmp = dict.fromkeys(Report.states)
 			for state in Report.states:
@@ -166,14 +169,16 @@ class Report:
 				if job.history[attempt] == 'N/A':
 					continue
 				# Extract site from history
-				(site, wn, queue) = getDest(job.history[attempt])
+				
 				# Sort job into category
 				if attempt == job.attempt:
-					incstat(statinfo, site, wn, queue, self.getJobCategory(job), 'COUNT', 1)
-					incstat(statinfo, site, wn, queue, self.getJobCategory(job), 'TIME', int(job.get('runtime')))
+					cat = self.getJobCategory(job)
+					if cat == 'SUCCESS':
+						incstat(statinfo, job.history[attempt], cat, float(job.get('runtime')))
+					else:
+						incstat(statinfo, job.history[attempt], cat, time.time() - float(job.submitted))
 				else:
-					incstat(statinfo, site, wn, queue, 'FAILED', 'COUNT', 1)
-					incstat(statinfo, site, wn, queue, 'FAILED', 'TIME', int(job.get('runtime')))
+					incstat(statinfo, job.history[attempt], 'FAILED', float(job.get('runtime')))
 		# statinfo = {'site1: {''wn1.site1': {'FAILED': 0, 'RUNNING': 0, 'WAITING': 0, 'SUCCESS': 1}, 'wn2.site1': ...}, 'site2': {'wn1.site2': ...}}
 		return statinfo
 
