@@ -152,7 +152,7 @@ if opts.save_jobjson or opts.get_events:
 
 	log = None
 	incomplete = False
-	lumis = []
+	runLumiDict = {}
 	nEvents_read = 0
 	nEvents_write = {}
 	jobList = sorted(jobList)
@@ -183,13 +183,19 @@ if opts.save_jobjson or opts.get_events:
 					for lumi in run.getElementsByTagName("LumiSection"):
 						run_id = int(run.getAttribute("ID"))
 						lumi_id = int(lumi.getAttribute("ID"))
-						lumis.append(([run_id, lumi_id], [run_id, lumi_id]))
+						if run_id not in runLumiDict:
+							runLumiDict[run_id] = set()
+						runLumiDict[run_id].add(lumi_id)
 		except:
 			raise
 			print "Error while parsing framework output!"
 			continue
 
 	log = utils.ActivityLog('Simplifying lumi sections...')
+	lumis = []
+	for run in runLumiDict:
+		for lumi in runLumiDict[run]:
+			lumis.append(([run, lumi], [run, lumi]))
 	lumis = mergeLumi(lumis)
 	del log
 	if opts.save_jobgc:
