@@ -62,6 +62,11 @@ class Module(AbstractObject):
 		self.sbInputFiles = config.get(self.__class__.__name__, 'input files', '').split()
 		self.sbOutputFiles = config.get(self.__class__.__name__, 'output files', '').split()
 		self.gzipOut = config.getBool(self.__class__.__name__, 'gzip output', True)
+
+		# Define constants for job
+		self.constants = {}
+		for var in map(str.strip, config.get(self.__class__.__name__, 'constants', '').split()):
+			self.constants[var] = config.get(self.__class__.__name__, var, '').strip()
 		self.substFiles = config.get(self.__class__.__name__, 'subst files', '').split()
 
 		self.dependencies = config.get(self.__class__.__name__, 'depends', '').lower().split()
@@ -89,7 +94,7 @@ class Module(AbstractObject):
 
 	# Get environment variables for gc_config.sh
 	def getTaskConfig(self):
-		return {
+		taskConfig = {
 			# Space limits
 			'SCRATCH_UL' : self.seSDUpperLimit,
 			'SCRATCH_LL' : self.seSDLowerLimit,
@@ -118,6 +123,7 @@ class Module(AbstractObject):
 			'GC_VERSION': utils.getVersion(),
 			'DB_EXEC': 'shellscript'
 		}
+		return dict(taskConfig.items() + self.constants.items())
 
 
 	# Get job dependent environment variables
