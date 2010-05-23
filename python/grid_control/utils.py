@@ -292,31 +292,23 @@ def parseTuples(string):
 
 
 def genTarball(outFile, dir, pattern):
-	def walk(tar, root, dir):
-		if len(dir) > 50:
-			msg = dir[:15] + '...' + dir[len(dir)-32:]
-		else:
-			msg = dir
-		activity = ActivityLog('Generating tarball: %s' % msg)
-		for file in os.listdir(os.path.join(root, dir)):
-			if len(dir):
-				name = os.path.join(dir, file)
-			else:
-				name = file
-			for match in pattern:
-				neg = match[0] == '-'
-				if neg: match = match[1:]
-				if fnmatch.fnmatch(name, match):
-					break
-			else:
-				if os.path.isdir(os.path.join(root, name)):
-					walk(tar, root, name)
-				continue
-			if not neg:
-				tar.add(os.path.join(root, name), name)
-		del activity
-
 	tar = tarfile.open(outFile, 'w:gz')
+	def walk(tar, root, dir):
+		msg = dir
+		if len(msg) > 50:
+			msg = msg[:15] + '...' + msg[len(msg)-32:]
+		activity = ActivityLog('Generating tarball: %s' % msg)
+		for name in map(lambda x: os.path.join(dir, x), os.listdir(os.path.join(root, dir))):
+			match = None
+			for p in pattern:
+				if fnmatch.fnmatch(name, p.lstrip('-')):
+					match = not p.startswith('-')
+			if match != False:
+				if match or os.path.islink(os.path.join(root, name)):
+					tar.add(os.path.join(root, name), name)
+				elif os.path.isdir(os.path.join(root, name)):
+					walk(tar, root, name)
+		del activity
 	walk(tar, dir, '')
 	tar.close()
 
