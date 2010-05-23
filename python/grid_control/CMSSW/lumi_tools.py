@@ -1,12 +1,23 @@
 import os
 from grid_control import ConfigError
 
-def parseLumiFromJSON(data):
+def makeint(x):
+	if x == '':
+		return None
+	return int(x)
+
+
+def parseLumiFromJSON(data, select = ''):
 	runs = eval(data)
 	all = []
-	for run in runs.keys():
-		for lumi in runs[run]:
-			all.append(([int(run), int(lumi[0])], [int(run), int(lumi[1])]))
+	rr = [None, None]
+	if '-' in select:
+		rr = map(makeint, select.split('-'))
+	for run in map(int, runs.keys()):
+		if (rr[0] and run < rr[0]) or (rr[1] and run > rr[1]):
+			continue
+		for lumi in runs[str(run)]:
+			all.append(([run, lumi[0]], [run, lumi[1]]))
 	return all
 
 
@@ -50,10 +61,6 @@ def parseLumiFromString(rlrange):
 	>>> map(parseLumiFromString, ['1:5-2', '1-2:5'])
 	[([1, 5], [2, None]), ([1, None], [2, 5])]
 	"""
-	def makeint(x):
-		if x == '':
-			return None
-		return int(x)
 	def parseRunLumi(rl):
 		if ':' in rl:
 			return map(makeint, rl.split(':'))
@@ -72,16 +79,19 @@ def parseLumiFilter(lumiexpr):
 
 	lumis = []
 	for token in map(str.strip, lumiexpr.split(',')):
-		if os.path.exists(token):
+		token = map(str.strip, token.split('|'))
+		if os.path.exists(token[0]):
 			try:
-				lumis.extend(parseLumiFromJSON(open(token).read()))
+				if len(token) == 1:
+					token.append('')
+				lumis.extend(parseLumiFromJSON(open(token[0]).read(), token[1]))
 			except:
-				raise ConfigError('Could not process lumi filter file:\n %s' % token)
+				raise ConfigError('Could not process lumi filter file:\n%s' % token)
 		else:
 			try:
-				lumis.append(parseLumiFromString(token))
+				lumis.append(parseLumiFromString(token[0]))
 			except:
-				raise ConfigError('Could not process lumi filter expression:\n%s' % token)
+				raise ConfigError('Could not process lumi filter expression:\n%s' % token[0])
 	return mergeLumi(lumis)
 
 
