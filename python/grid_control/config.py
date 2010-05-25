@@ -71,7 +71,7 @@ class Config:
 				else:
 					path = basePath
 			return path
-		return map(formatPath, pathRaw.split('\n'))
+		return map(formatPath, pathRaw.splitlines())
 
 
 	def getPath(self, section, item, default = None, volatile = False):

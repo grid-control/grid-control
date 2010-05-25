@@ -32,12 +32,31 @@ class Silencer(object):
 class ConfigDummy(object):
 	def __init__(self, cfg = {}):
 		self.cfg = cfg
-	def get(self, x,y,z=None,volatile=None):
-		return self.cfg.get(x, {}).get(y, z)
-	def getPath(self, x,y,z=None,volatile=None):
-		return self.cfg.get(x, {}).get(y, z)
-	def getBool(self, x,y,z=None,volatile=None):
-		return self.cfg.get(x, {}).get(y, z)
+	def get(self, s, i, d = None, volatile = False):
+		return self.cfg.get(s, {}).get(i, d)
+	def getPaths(self, s, i, d = None, volatile = False):
+		return self.cfg.get(s, {}).get(i, d)
+	def getPath(self, s, i, d = None, volatile = False):
+		return self.cfg.get(s, {}).get(i, d)
+	def getInt(self, s, i, d = None, volatile = False):
+		return self.cfg.get(s, {}).get(i, d)
+	def getBool(self, s, i, d = None, volatile = False):
+		return self.cfg.get(s, {}).get(i, d)
+
+
+class ConfigOverlay(object):
+	def __init__(self, cfg = {}):
+		self.cfg = cfg
+	def get(self, s, i, d = None, volatile = False):
+		return self.cfg.get(s, {}).get(i, d)
+	def getPaths(self, s, i, d = None, volatile = False):
+		return self.cfg.get(s, {}).get(i, d)
+	def getPath(self, s, i, d = None, volatile = False):
+		return self.cfg.get(s, {}).get(i, d)
+	def getInt(self, s, i, d = None, volatile = False):
+		return self.cfg.get(s, {}).get(i, d)
+	def getBool(self, s, i, d = None, volatile = False):
+		return self.cfg.get(s, {}).get(i, d)
 
 
 class FileMutex:

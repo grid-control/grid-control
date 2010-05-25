@@ -555,7 +555,7 @@ def registerDataset(opts, fqBlock, xmlFile, lfns):
 		print "   ! Could not import %s" % fqBlock
 		errorMsg = e.getErrorMessage()
 		errorPath = xmlFile.replace(".xml", ".log")
-		for msg in errorMsg.split("\n"):
+		for msg in errorMsg.splitlines():
 			if str(msg) == "":
 				break
 			print "   ! %s" % msg

@@ -237,7 +237,7 @@ class DictFormat(object):
 				continue
 			if self.escapeString and isinstance(value, str):
 				value = '"%s"' % str(value).replace('"', '\\"').replace('$', '\\$')
-				lines = value.split('\n')
+				lines = value.splitlines()
 				result.append(format % fkt((key, self.delimeter, lines[0])))
 				result.extend(map(lambda x: x + '\n', lines[1:]))
 			else:

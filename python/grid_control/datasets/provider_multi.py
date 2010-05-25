@@ -10,7 +10,7 @@ class DataMultiplexer(DataProvider):
 
 		# Allow provider shortcuts
 		head = ["ID", "Nickname", "Dataset path"]
-		for id, entry in enumerate(datasetExpr.split('\n')):
+		for id, entry in enumerate(datasetExpr.splitlines()):
 			(datasetNick, provider, datasetExpr) = DataProvider.parseDatasetExpr(entry, defaultProvider)
 			source = DataProvider.open(provider, config, datasetExpr, datasetNick, id)
 			dataUrl = "%s://%s" % (DataProvider.providers.get(provider, provider), datasetExpr)
