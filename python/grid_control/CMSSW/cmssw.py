@@ -9,19 +9,19 @@ class CMSSW(DataMod):
 		self.updateErrorDict(utils.pathGC('share', 'run.cmssw.sh'))
 
 		# SCRAM info
-		scramProject = config.get('CMSSW', 'scram project', '').split()
+		scramProject = config.get(self.__class__.__name__, 'scram project', '').split()
 		if len(scramProject):
-			self.projectArea = config.getPath('CMSSW', 'project area', '')
+			self.projectArea = config.getPath(self.__class__.__name__, 'project area', '')
 			if len(self.projectArea):
 				raise ConfigError('Cannot specify both SCRAM project and project area')
 			if len(scramProject) != 2:
 				raise ConfigError('SCRAM project needs exactly 2 arguments: PROJECT VERSION')
 		else:
-			self.projectArea = config.getPath('CMSSW', 'project area')
+			self.projectArea = config.getPath(self.__class__.__name__, 'project area')
 
 		# Get cmssw config files and check their existance
 		self.configFiles = []
-		for cfgFile in config.getPaths('CMSSW', 'config file'):
+		for cfgFile in config.getPaths(self.__class__.__name__, 'config file'):
 			newPath = os.path.join(config.workDir, os.path.basename(cfgFile))
 			if config.opts.init:
 				if not os.path.exists(cfgFile):
@@ -32,7 +32,7 @@ class CMSSW(DataMod):
 		self.selectedLumis = parseLumiFilter(config.get('CMSSW', 'lumi filter', ''))
 
 		# Prepare (unprepared) cmssw config file for MC production / dataset analysis
-		prepare = config.getBool('CMSSW', 'prepare config', False)
+		prepare = config.getBool(self.__class__.__name__, 'prepare config', False)
 		def doInstrument(cfgName):
 			if 'customise_for_gc' not in open(cfgName, 'r').read():
 				print "Instrumenting...", os.path.basename(cfgName)
@@ -58,18 +58,18 @@ class CMSSW(DataMod):
 				raise ConfigError("A config file must use %s to work properly with dataset jobs!" %
 					str.join(", ", map(lambda x: "__%s__" % x, self.neededVars())))
 		else:
-			self.eventsPerJob = config.get('CMSSW', 'events per job', 0)
+			self.eventsPerJob = config.get(self.__class__.__name__, 'events per job', 0)
 			if config.opts.init and prepare:
 				map(doInstrument, self.configFiles)
 
-		self.useReqs = config.getBool('CMSSW', 'use requirements', True, volatile=True)
-		self.seRuntime = config.getBool('CMSSW', 'se runtime', False)
+		self.useReqs = config.getBool(self.__class__.__name__, 'use requirements', True, volatile=True)
+		self.seRuntime = config.getBool(self.__class__.__name__, 'se runtime', False)
 
 		if self.seRuntime and len(self.projectArea):
 			self.seInputFiles.append(self.taskID + ".tar.gz"),
 
 		if len(self.projectArea):
-			self.pattern = config.get('CMSSW', 'area files', '-.* -config lib python module */data *.xml *.sql *.cf[if] *.py').split()
+			self.pattern = config.get(self.__class__.__name__, 'area files', '-.* -config lib python module */data *.xml *.sql *.cf[if] *.py').split()
 
 			if os.path.exists(self.projectArea):
 				print "Project area found in: %s" % self.projectArea
@@ -90,7 +90,7 @@ class CMSSW(DataMod):
 
 			archs = filter(lambda x: os.path.isdir(os.path.join(scramPath, x)), os.listdir(scramPath))
 			try:
-				self.scramArch = config.get('CMSSW', 'scram arch', archs[0])
+				self.scramArch = config.get(self.__class__.__name__, 'scram arch', archs[0])
 			except:
 				raise ConfigError("%s does not contain architecture information!" % scramPath)
 			try:
@@ -103,16 +103,16 @@ class CMSSW(DataMod):
 				'SCRAM_PROJECTNAME': scramProject[0],
 				'SCRAM_PROJECTVERSION': scramProject[1]
 			}
-			self.scramArch = config.get('CMSSW', 'scram arch')
+			self.scramArch = config.get(self.__class__.__name__, 'scram arch')
 
-		self.scramVersion = config.get('CMSSW', 'scram version', 'scramv1')
+		self.scramVersion = config.get(self.__class__.__name__, 'scram version', 'scramv1')
 		if self.scramEnv['SCRAM_PROJECTNAME'] != 'CMSSW':
 			raise ConfigError("Project area not a valid CMSSW project area.")
 
 		# Information about search order for software environment
 		self.searchLoc = []
 		if config.opts.init:
-			userPath = config.get('CMSSW', 'cmssw dir', '')
+			userPath = config.get(self.__class__.__name__, 'cmssw dir', '')
 			if userPath != '':
 				self.searchLoc.append(('CMSSW_DIR_USER', userPath))
 			if self.scramEnv.get('RELEASETOP', None):
@@ -133,7 +133,7 @@ class CMSSW(DataMod):
 				sys.stdout.flush()
 				source = 'file:///' + os.path.join(config.workDir, 'runtime.tar.gz')
 				target = os.path.join(self.sePath, self.taskID + '.tar.gz')
-				proc = se_utils.se_copy(source, target, config.getBool('CMSSW', 'se runtime force', True))
+				proc = se_utils.se_copy(source, target, config.getBool(self.__class__.__name__, 'se runtime force', True))
 				if proc.wait() == 0:
 					print 'finished'
 				else:
