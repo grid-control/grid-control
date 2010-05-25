@@ -47,11 +47,15 @@ class Module(AbstractObject):
 		self.seLZLowerLimit = config.getInt('storage', 'landing zone space left', 1)
 
 		# Storage setup - in case a directory is give, prepend dir specifier
-		self.sePath = config.get('storage', 'se path', '').strip()
-		if (self.sePath.count("@") >= 2) or (self.sePath.count("__") >= 2):
-			raise ConfigError("'se path' may not contain variables. Move variables into appropriate se pattern!")
-		if len(self.sePath) > 0 and self.sePath[0] == "/":
-			self.sePath = "dir:///%s" % self.sePath.lstrip("/")
+		self.sePaths = []
+		for sePath in map(str.strip, config.get('storage', 'se path', '').splitlines()):
+			if len(sePath) == 0:
+				continue
+			if (sePath.count("@") >= 2) or (sePath.count("__") >= 2):
+				raise ConfigError("'se path' may not contain variables. Move variables into appropriate se pattern!")
+			if sePath[0] == "/":
+				sePath = "dir:///%s" % sePath.lstrip("/")
+			self.sePaths.append(sePath)
 		self.seMinSize = config.getInt('storage', 'se min size', -1)
 
 		self.seInputFiles = config.get('storage', 'se input files', '').split()
@@ -70,7 +74,7 @@ class Module(AbstractObject):
 		self.substFiles = config.get(self.__class__.__name__, 'subst files', '').split()
 
 		self.dependencies = config.get(self.__class__.__name__, 'depends', '').lower().split()
-		if self.sePath and not self.sePath.startswith('dir'):
+		if True in map(lambda x: not x.startswith('dir'), self.sePaths):
 			self.dependencies.append('glite')
 
 		# Get error messages from run.lib comments
@@ -101,7 +105,6 @@ class Module(AbstractObject):
 			'LANDINGZONE_UL': self.seLZUpperLimit,
 			'LANDINGZONE_LL': self.seLZLowerLimit,
 			# Storage element
-			'SE_PATH': self.sePath,
 			'SE_MINFILESIZE': self.seMinSize,
 			'SE_OUTPUT_FILES': str.join(' ', self.seOutputFiles),
 			'SE_INPUT_FILES': str.join(' ', self.seInputFiles),
@@ -123,6 +126,8 @@ class Module(AbstractObject):
 			'GC_VERSION': utils.getVersion(),
 			'DB_EXEC': 'shellscript'
 		}
+		if len(self.sePaths) <= 1:
+			taskConfig['SE_PATH'] = self.sePaths[0]
 		return dict(taskConfig.items() + self.constants.items())
 
 
@@ -130,6 +135,8 @@ class Module(AbstractObject):
 	def getJobConfig(self, jobNum):
 		tmp = [('MY_JOBID', jobNum)]
 		tmp += map(lambda (x, seed): ("SEED_%d" % x, seed + jobNum), enumerate(self.seeds))
+		if len(self.sePaths) > 1:
+			tmp.append(('SE_PATH', random.sample(self.sePaths, 1)[0]))
 		return dict(tmp)
 
 

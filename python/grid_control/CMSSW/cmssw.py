@@ -128,11 +128,11 @@ class CMSSW(DataMod):
 			# Generate runtime tarball (and move to SE)
 			utils.genTarball(os.path.join(config.workDir, 'runtime.tar.gz'), self.projectArea, self.pattern)
 
-			if self.seRuntime:
-				print 'Copy CMSSW runtime to SE',
+			for idx, sePath in enumerate(filter(lambda x: self.seRuntime, self.sePaths)):
+				print 'Copy CMSSW runtime to SE', idx,
 				sys.stdout.flush()
 				source = 'file:///' + os.path.join(config.workDir, 'runtime.tar.gz')
-				target = os.path.join(self.sePath, self.taskID + '.tar.gz')
+				target = os.path.join(sePath, self.taskID + '.tar.gz')
 				proc = se_utils.se_copy(source, target, config.getBool(self.__class__.__name__, 'se runtime force', True))
 				if proc.wait() == 0:
 					print 'finished'
