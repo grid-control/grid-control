@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 import gcSupport, sys, optparse
 from grid_control import *
-from grid_control.CMSSW import provider_dbsv2
+from grid_control.CMSSW import provider_dbsv2, formatLumi, mergeLumi
 from grid_control.CMSSW.provider_dbsv2 import *
 
 parser = optparse.OptionParser()
@@ -27,6 +27,17 @@ if opts.remove:
 		for block in api.listBlocks(opts.remove.split("#")[0]):
 			eraseBlock(block["Name"])
 		api.deleteProcDS(block["Name"].split("#")[0])
+
+elif opts.list and opts.listlumis:
+	for fileInfo in api.listFiles(opts.list):
+		lfn = fileInfo['LogicalFileName']
+		rl = []
+		for lumi in api.listFileLumis(lfn):
+			rl.append(([int(lumi["RunNumber"]), int(lumi["LumiSectionNumber"])], [int(lumi["RunNumber"]), int(lumi["LumiSectionNumber"])]))
+		print lfn
+		for line in map(lambda x: str.join(", ", x), gcSupport.utils.lenSplit(formatLumi(mergeLumi(rl)), 70)):
+			print "\t", line
+		
 
 elif opts.list:
 	for block in api.listBlocks(opts.list):
