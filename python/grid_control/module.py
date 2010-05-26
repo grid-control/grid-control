@@ -126,7 +126,7 @@ class Module(AbstractObject):
 			'GC_VERSION': utils.getVersion(),
 			'DB_EXEC': 'shellscript'
 		}
-		if len(self.sePaths) <= 1:
+		if len(self.sePaths) == 1:
 			taskConfig['SE_PATH'] = self.sePaths[0]
 		return dict(taskConfig.items() + self.constants.items())
 
