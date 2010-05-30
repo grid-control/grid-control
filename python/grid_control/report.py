@@ -22,10 +22,8 @@ class Report:
 			print
 			self.jobs = self.allJobs.getJobs(opts.reportJob)
 			self.details()
-		if opts.reportSite:
-			self.siteReport(opts.reportSite, False)
-		if opts.reportTime:
-			self.siteReport(opts.reportTime, True)
+		if opts.reportSite or opts.reportTime:
+			self.siteReport(opts.reportSite, opts.reportTime)
 		if opts.reportMod:
 			self.modReport(opts.reportMod, module)
 		if opts.report or opts.reportSite or opts.reportTime or opts.reportMod or opts.reportJob:
@@ -124,7 +122,6 @@ class Report:
 
 
 	def getWNInfos(self):
-		def add(x, y): return x+y
 		def getDest(dest):
 			if dest == 'N/A':
 				return ('N/A', '', '')
@@ -135,25 +132,17 @@ class Report:
 				domain = 'localhost'
 			return (domain, host, queue)
 			# Example: (gridka.de, wn1.gridka.de, job-queue-long)
-		def incstat(dict, dest, state, time):
-			(site, wn, queue) = getDest(dest)
-			for (key, inc) in zip(['COUNT', 'TIME'], [1, time]):
-				dict[site][wn][queue][state][key] += inc
-				dict[site][wn][state][key] += inc
-				dict[site][state][key] += inc
-				dict[state][key] += inc
+
+		# init statinfo dictionary
 		def initdict():
 			tmp = dict.fromkeys(Report.states)
 			for state in Report.states:
 				tmp[state] = {'COUNT': 0, 'TIME': 0}
 			return tmp
 
-		# init wn dictionary
 		statinfo = initdict()
-
-		# iterate over flat list of all occuring destinations
-		destinations = reduce(add, map(lambda id: self.allJobs.get(id).history.values(), self.jobs))
-		for dest in map(getDest, destinations):
+		destinations = map(lambda id: self.allJobs.get(id).history.values(), self.jobs)
+		for dest in map(getDest, reduce(lambda x, y: x+y, destinations)):
 			(site, wn, queue) = dest
 			if site not in statinfo:
 				statinfo[site] = initdict()
@@ -163,13 +152,17 @@ class Report:
 				statinfo[site][wn][queue] = initdict()
 
 		# fill wn dictionary
+		def incstat(dict, dest, state, time):
+			(site, wn, queue) = getDest(dest)
+			for (key, inc) in zip(['COUNT', 'TIME'], [1, time]):
+				dict[site][wn][queue][state][key] += inc
+				dict[site][wn][state][key] += inc
+				dict[site][state][key] += inc
+				dict[state][key] += inc
+
 		for id in self.jobs:
 			job = self.allJobs.get(id)
 			for attempt in job.history:
-				if job.history[attempt] == 'N/A':
-					continue
-				# Extract site from history
-				
 				# Sort job into category
 				if attempt == job.attempt:
 					cat = self.getJobCategory(job)
@@ -178,12 +171,14 @@ class Report:
 					else:
 						incstat(statinfo, job.history[attempt], cat, time.time() - float(job.submitted))
 				else:
+					if job.history[attempt] == 'N/A':
+						continue
 					incstat(statinfo, job.history[attempt], 'FAILED', float(job.get('runtime')))
 		# statinfo = {'site1: {''wn1.site1': {'FAILED': 0, 'RUNNING': 0, 'WAITING': 0, 'SUCCESS': 1}, 'wn2.site1': ...}, 'site2': {'wn1.site2': ...}}
 		return statinfo
 
 
-	def siteReport(self, details = 0, showtime = False):
+	def siteReport(self, siteDetails = 0, timeDetails = 0):
 		statinfo = self.getWNInfos()
 		markDict = {'FAILED': [Console.COLOR_RED, Console.BOLD], 'SUCCESS': [Console.COLOR_BLUE, Console.BOLD]}
 
@@ -201,19 +196,19 @@ class Report:
 				secs = stats[state]['TIME'] / max(1, stats[state]['COUNT']*1.0)
 				return fmt(utils.strTime(secs, "%d:%0.2d:%0.2d"), state)
 			report.append(dict([("SITE", level)] + map(lambda x: (x, fmtRate(x)), Report.states)))
-			if showtime:
+			if timeDetails:
 				report.append(dict(map(lambda x: (x, fmtTime(x)), Report.states)))
 
 		sites = filter(lambda x: not x in Report.states, statinfo.keys())
 		for num, site in enumerate(sorted(sites)):
 			addRow(site, statinfo[site], statinfo, True)
 
-			if details > 1:
+			if siteDetails > 1:
 				wns = filter(lambda x: not x in Report.states, statinfo[site].keys())
 				for wn in sorted(wns):
 					addRow(3*" " + wn, statinfo[site][wn], statinfo[site])
 
-					if details > 2:
+					if siteDetails > 2:
 						queues = filter(lambda x: not x in Report.states, statinfo[site][wn].keys())
 						for queue in sorted(queues):
 							addRow(6*" " + queue, statinfo[site][wn][queue], statinfo[site][wn])
