@@ -150,8 +150,41 @@ class DbsMigrateApi:
 
 		return finalList
 
-
-
+	def migrateForNiceBoys(self, path, blockName):
+		"""
+		Migration based on assumption that if parent block(s) are in destination, parent of parent blocks are also there and in good shape !
+		"""
+		# Test and see if dataset is migrateable
+		self.checkDatasetStatus(path)
+		###Here we can get Parents of the Block and then migrate the recurrsively
+		parentblocks = self.apiSrc.listBlockParents(block_name=blockName)
+		if parentblocks not in [[], None] :
+			parentblockNames = [ x['Name'] for x in parentblocks ]   
+			# Check to see if the parent(s) are already in DBS target
+			parent_path=parentblockNames[0].split('#')[0]
+			# See if parent dataset even exists at target, if not we can just migrate it
+			if self.doesPathExist(self.apiDst, parent_path):
+			    parentBlockInDst = self.apiDst.listBlocks(parent_path)
+			    parentBlocksInDstName = [ y['Name'] for y in parentBlockInDst ]
+			    for aLocalBlock in parentblockNames:
+				if aLocalBlock in parentBlocksInDstName :
+				    print "Block %s is already at destination" % aLocalBlock
+				    continue
+				else:
+				    #Migrate This Parent Block
+				    self.migrateForNiceBoys(parent_path, aLocalBlock)
+			else: # if the parent dataset is NOT at target at all, just migrated the darn thing
+			    for aLocalBlock in parentblockNames:
+				self.migrateForNiceBoys(parent_path, aLocalBlock)
+		# migrate this block
+		# if block is not already at destination, only then try to migrate it
+		blockInDst = self.apiDst.listBlocks(block_name=blockName)
+		if len(blockInDst) > 0:
+		    print "Block %s is already at destination" % blockName
+		else :
+		    self.migrateBlockBasic(path, blockName)
+    
+				
 	def migratePath(self, path):
 		
 		#Get the parents of the path

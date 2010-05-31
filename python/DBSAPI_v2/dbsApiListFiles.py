@@ -22,6 +22,7 @@ from dbsLogger import *
 
 from dbsUtil import *
 
+from listPADSFiles import listPADSFiles
 
 def dbsApiImplListFiles(self, path="", primary="", proc="", tier_list=[], analysisDataset="",blockName="", patternLFN="", runNumber="", details=None, retriveList=[], otherDetails = False):
     """
@@ -109,7 +110,15 @@ def dbsApiImplListFiles(self, path="", primary="", proc="", tier_list=[], analys
 		    raise DbsBadRequest (args="The argument " + i + "  is not allowed argument. The allowed values are " + str(allowedRetriveValue) , code=1500)
 	    retrive_list += i + ","
 	
-
+    if analysisDataset:
+	try:
+	    return listPADSFiles(analysisDataset, self)
+	except DbsException, dbsex:
+	    if str(dbsex).find("not found in DBS MART") != -1:
+		pass
+	    else:
+		raise
+	    
     if details not in ("", None, False):
        data = self._server._call ({ 'api' : 'listFiles', 'path' : path, 
 				    'primary_dataset' : primary, 
@@ -171,7 +180,7 @@ def dbsApiImplListFiles(self, path="", primary="", proc="", tier_list=[], analys
                                        Block=DbsFileBlock(Name=str(self.get(attrs, 'block_name'))),
                                        FileType=str(self.get(attrs,'type')),
                                        Checksum=str(attrs['checksum']),
-                                       Adler32=str(self.get(attrs, 'adler32')),
+				       #Adler32=str(self.get(attrs, 'adler32')),
                                        Md5=str(self.get(attrs, 'md5')),
                                        QueryableMetadata=str(attrs['queryable_meta_data']),
 				       AutoCrossSection=auto_x_sec,
@@ -180,6 +189,9 @@ def dbsApiImplListFiles(self, path="", primary="", proc="", tier_list=[], analys
                                        LastModificationDate=str(self.get(attrs,'last_modification_date')),
                                        LastModifiedBy=str(self.get(attrs,'last_modified_by')),
                                        )
+	     Adler32=str(self.get(attrs, 'adler32'))
+	     if Adler32 not in ('', 'NOTSET'):
+		self.currFile['Adler32']=Adler32
 
           if name == 'file_data_tier':
             self.currFile['TierList'].append(str(attrs['name']))
@@ -252,6 +264,7 @@ def dbsApiImplListFiles(self, path="", primary="", proc="", tier_list=[], analys
                                        LastModificationDate=str(attrs['last_modification_date']),
                                        LastModifiedBy=str(attrs['last_modified_by']),
                                        ))
+		
 
           if name == 'file_child':
              self.currFile['ChildList'].append(DbsFile (
