@@ -6,8 +6,9 @@ class DataProvider(AbstractObject):
 	for id, dataInfo in enumerate(dataInfos):
 		locals()[dataInfo] = id
 
-	def __init__(self, config, datasetExpr, datasetNick, datasetID):
+	def __init__(self, config, section, datasetExpr, datasetNick, datasetID):
 		self.config = config
+		self.section = section
 		self._datasetExpr = datasetExpr
 		self._datasetNick = datasetNick
 		self._datasetID = datasetID
@@ -43,12 +44,12 @@ class DataProvider(AbstractObject):
 
 
 	# Create a new DataProvider instance
-	def create(config, dataset, defaultProvider):
+	def create(config, section, dataset, defaultProvider):
 		if "\n" in dataset:
-			return DataProvider.open("DataMultiplexer", config, dataset, defaultProvider)
+			return DataProvider.open("DataMultiplexer", config, section, dataset, defaultProvider)
 		else:
 			(nick, provider, datasetExpr) = DataProvider.parseDatasetExpr(dataset, defaultProvider)
-			return DataProvider.open(provider, config, datasetExpr, nick, 0)
+			return DataProvider.open(provider, config, section, datasetExpr, nick, 0)
 	create = staticmethod(create)
 
 
@@ -153,7 +154,7 @@ class DataProvider(AbstractObject):
 	# Load dataset information using ListProvider
 	def loadState(config, path, filename = 'datacache.dat'):
 		# None, None = Don't override NickName and ID
-		return DataProvider.open('ListProvider', config, os.path.join(path, filename), None, None)
+		return DataProvider.open('ListProvider', config, "", os.path.join(path, filename), None, None)
 	loadState = staticmethod(loadState)
 
 

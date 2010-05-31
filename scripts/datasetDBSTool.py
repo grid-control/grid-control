@@ -6,12 +6,15 @@ from grid_control.CMSSW.provider_dbsv2 import *
 
 parser = optparse.OptionParser()
 parser.add_option("-l", "--list", dest="list", default=None)
+parser.add_option("-f", "--files", dest="files", default=None)
 parser.add_option("-L", "--listlumis", dest="listlumis", default=None)
 parser.add_option("-r", "--remove", dest="remove")
 parser.add_option("-w", "--wipe", dest="wipe", default=False, action="store_true")
 parser.add_option("-d", "--dump", dest="dump")
 parser.add_option("-u", "--url", dest="url", default="http://ekpcms2.physik.uni-karlsruhe.de:8080/DBS/servlet/DBSServlet")
 parser.add_option("-i", "--import", dest="imp")
+parser.add_option("-s", "--se", dest="se")
+parser.add_option("-p", "--parents", dest="parents")
 (opts, args) = parser.parse_args()
 
 api = createDBSAPI(opts.url)
@@ -43,6 +46,11 @@ elif opts.list:
 	for block in api.listBlocks(opts.list):
 		print block["Name"]
 
+elif opts.files:
+	for file in api.listFiles(opts.files, retriveList=['retrive_block', 'retrive_run', 'retrive_lumi']):
+		print file
+		print
+
 elif opts.listlumis:
 	for lumi in api.listFileLumis(opts.listlumis):
 		print lumi["RunNumber"], lumi["LumiSectionNumber"]
@@ -54,6 +62,19 @@ elif opts.imp:
 	f = open(opts.imp);
 	api.insertDatasetContents(f.read())
 	f.close()
+
+elif opts.parents:
+	parents = []
+	for p1 in api.listDatasetParents(opts.parents):
+		for path in p1["PathList"]:
+			parents.append(path)
+	print str.join(",", parents)
+
+elif opts.se:
+	selist = []
+	for block in api.listBlocks(opts.se):
+		selist.extend(map(lambda x: x["Name"], block["StorageElementList"]))
+	print str.join(",", set(selist))
 
 else:
 	print "Abandon all data, ye who tinker here!"

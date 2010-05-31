@@ -17,7 +17,7 @@ class DataMod(Module):
 		defaultProvider = config.get(self.__class__.__name__, 'dataset provider', defaultProvider)
 		if config.opts.init:
 			# find datasets
-			self.dataprovider = DataProvider.create(config, self.dataset, defaultProvider)
+			self.dataprovider = DataProvider.create(config, self.__class__.__name__, self.dataset, defaultProvider)
 			self.dataprovider.saveState(config.workDir)
 			if utils.verbosity() > 2:
 				self.dataprovider.printDataset()
@@ -38,7 +38,7 @@ class DataMod(Module):
 				raise ConfigError("Current dataset splitting not found in '%s'." % config.workDir)
 			if config.opts.resync:
 				old = DataProvider.loadState(config, config.workDir)
-				new = DataProvider.create(config, self.dataset, defaultProvider)
+				new = DataProvider.create(config, self.__class__.__name__, self.dataset, defaultProvider)
 				self.dataSplitter.resyncMapping(config.workDir, old.getBlocks(), new.getBlocks())
 				#TODO: new.saveState(config.workDir)
 

@@ -29,7 +29,8 @@ class CMSSW(DataMod):
 				shutil.copyfile(cfgFile, newPath)
 			self.configFiles.append(newPath)
 
-		self.selectedLumis = parseLumiFilter(config.get('CMSSW', 'lumi filter', ''))
+		# This works in tandem with provider_dbsv2.py !
+		self.selectedLumis = parseLumiFilter(config.get(self.__class__.__name__, 'lumi filter', ''))
 
 		# Prepare (unprepared) cmssw config file for MC production / dataset analysis
 		prepare = config.getBool(self.__class__.__name__, 'prepare config', False)

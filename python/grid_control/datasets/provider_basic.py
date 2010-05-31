@@ -4,8 +4,8 @@ from provider_base import DataProvider
 # Provides information about a single file
 # required format: <path to data file>|<number of events>[@SE1,SE2]
 class FileProvider(DataProvider):
-	def __init__(self, config, datasetExpr, datasetNick, datasetID = 0):
-		DataProvider.__init__(self, config, datasetExpr, datasetNick, datasetID)
+	def __init__(self, config, section, datasetExpr, datasetNick, datasetID = 0):
+		DataProvider.__init__(self, config, section, datasetExpr, datasetNick, datasetID)
 		DataProvider.providers.update({'FileProvider': 'file'})
 
 		(self._path, self._events, selist) = utils.optSplit(datasetExpr, "|@")
@@ -32,12 +32,12 @@ class FileProvider(DataProvider):
 # Takes dataset information from an configuration file
 # required format: <path to list of data files>[@<forced prefix>][%<selected dataset>[#<selected block>]]
 class ListProvider(DataProvider):
-	def __init__(self, config, datasetExpr, datasetNick, datasetID = 0):
-		DataProvider.__init__(self, config, datasetExpr, datasetNick, datasetID)
+	def __init__(self, config, section, datasetExpr, datasetNick, datasetID = 0):
+		DataProvider.__init__(self, config,section, datasetExpr, datasetNick, datasetID)
 		DataProvider.providers.update({'ListProvider': 'list'})
 
 		(path, self._forcePrefix, self._filter) = utils.optSplit(datasetExpr, "@%")
-		self._filename = config.getPath("CMSSW", "dataset file", path)
+		self._filename = config.getPath(section, "dataset file", path)
 
 
 	def getBlocksInternal(self):

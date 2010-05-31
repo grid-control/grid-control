@@ -2,7 +2,7 @@ from grid_control import AbstractObject, RuntimeError, utils, ConfigError, Datas
 from provider_base import DataProvider
 
 class DataMultiplexer(DataProvider):
-	def __init__(self, config, datasetExpr, defaultProvider, datasetID = None):
+	def __init__(self, config, section, datasetExpr, defaultProvider, datasetID = None):
 		# None, None = Don't override NickName and ID
 		DataProvider.__init__(self, config, datasetExpr, None, None)
 		self._datasetExpr = None
@@ -12,7 +12,7 @@ class DataMultiplexer(DataProvider):
 		head = ["ID", "Nickname", "Dataset path"]
 		for id, entry in enumerate(datasetExpr.splitlines()):
 			(datasetNick, provider, datasetExpr) = DataProvider.parseDatasetExpr(entry, defaultProvider)
-			source = DataProvider.open(provider, config, datasetExpr, datasetNick, id)
+			source = DataProvider.open(provider, config, section, datasetExpr, datasetNick, id)
 			dataUrl = "%s://%s" % (DataProvider.providers.get(provider, provider), datasetExpr)
 			self.subprovider.append(dict(zip(["src"] + head, [source, id, datasetNick, dataUrl])))
 

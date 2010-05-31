@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-import gcSupport, base64, xml.dom.minidom, optparse, locale, re, time, os
+import gcSupport, base64, xml.dom.minidom, optparse, locale, re, time, os, tarfile
 from xml.dom.minidom import parseString
 from python_compat import *
 from grid_control import *
@@ -23,7 +23,7 @@ def MakeDBSApi(url):
 def parseSEUrl(seUrl):
 	# Try to get the SE and LFN from storage url
 	proto, filePath = seUrl.split(":", 1)
-	if proto == "dir":
+	if proto in ["dir", "file"]:
 		return ("localhost", "/" + filePath.lstrip("/"))
 	elif proto in ["rfio"]:
 		if not "/store/" in seUrl:
@@ -81,7 +81,6 @@ def readDBSJobInfo(opts, workDir, jobNum):
 			}
 			configReports[cfgHash] = parseString(tar.extractfile("%s/report.xml" % cfg).read())
 		except:
-			raise
 			raise RuntimeError("Could not read config infos about %s in job %d" % (cfg, jobNum))
 
 	# Parse CMSSW framework infos
@@ -98,7 +97,10 @@ def readDBSJobInfo(opts, workDir, jobNum):
 			if opts.importParents:
 				try:
 					inputs = outputFile.getElementsByTagName("Inputs")[0].getElementsByTagName("Input")
-					tmp.append((DBS.PARENT_FILES, map(lambda x: readTag(x, "LFN"), inputs)))
+					if opts.usePFN:
+						tmp.append((DBS.PARENT_FILES, map(lambda x: readTag(x, "PFN"), inputs)))
+					else:
+						tmp.append((DBS.PARENT_FILES, map(lambda x: readTag(x, "LFN"), inputs)))
 				except:
 					raise RuntimeError("Could not parse lfn of parent! (Try --no-parents...)")
 			else:
@@ -272,7 +274,7 @@ def createDbsBlockDump(opts, newPath, blockInfo, metadata, outputData, configDat
 	nodeDBS = newElement(doc, "dbs")
 
 	# Dataset / Block identifier
-	if opts.incremental:
+	if opts.incremental: # and opts.doClose ?
 		hex = str.join("", map(lambda x: "%02x" % random.randrange(256), range(16)))
 	else:
 		hex = blockKey
@@ -286,7 +288,7 @@ def createDbsBlockDump(opts, newPath, blockInfo, metadata, outputData, configDat
 	if len(dataType) > 1:
 		raise RuntimeException("Data and MC files are mixed!")
 	newElement(nodeDBS, "primary_dataset", {"primary_name": primary,
-		"annotation": 'NO ANNOTATION PROVIDED', "type": dataType[0].lower(),
+		"annotation": 'NO ANNOTATION PROVIDED', "type": dataType.pop().lower(),
 		"start_date": 'NO_END_DATE PROVIDED', "end_date": ''})
 
 	# Describes the processed data
@@ -484,9 +486,10 @@ def determineDatasetPaths(opts, taskId, datasets, outputData, configData):
 		(primary, processed, tier) = (None, None, None)
 
 		if len(parents) > 0:
-			(primary, processed, tier) = getPathComponents(parents[0][0])
 			if len(userPath) == 3:
 				(primary, processed, tier) = userPath
+			else:
+				(primary, processed, tier) = getPathComponents(parents.pop()[0])
 		elif len(userPath) > 0:
 			primary = userPath[0]
 			userPath = userPath[1:]
@@ -573,36 +576,54 @@ try:
 
 	usage = "%s [OPTIONS] <work directory>" % sys.argv[0]
 	parser = optparse.OptionParser(usage=usage)
-	parser.add_option("-b", "--batch",           dest="batch",         default=False, action="store_true",
-		help="Enable non-interactive batch mode [Default: Interactive mode]")
-	parser.add_option("-o", "--open-blocks",     dest="doClose",       default=True,  action="store_false",
-		help="Keep blocks open for addition of further files [Default: Close blocks]")
-	parser.add_option("-l", "--lumi",            dest="doLumi",        default=False, action="store_true",
-		help="Include lumi section information [Default: False]")
-	parser.add_option("-p", "--no-parents",      dest="importParents", default=True,  action="store_false",
-		help="Disable import of parent datasets into target DBS instance [Default: Import parents]")
-	parser.add_option("-i", "--no-import",       dest="doImport",      default=True,  action="store_false",
-		help="Disable import of new datasets into target DBS instance [Default: Import datasets]")
-	parser.add_option("-m", "--merge",           dest="doMerge",       default=False,  action="store_true",
-		help="Merge output files from different blocks into a single block [Default: Keep boundaries]")
-	parser.add_option("-r", "--incremental",     dest="incremental",   default=False,  action="store_true",
-		help="Disable import of new datasets into target DBS instance [Default: Import datasets]")
-	parser.add_option("-t", "--target-instance", dest="dbsTarget",
-#		default="http://grid-dcms1.physik.rwth-aachen.de:8081/cms_dbs_prod_local/servlet/DBSServlet"
-#		default="http://cmsdbsprod.cern.ch/cms_dbs_prod_global/servlet/DBSServlet",
-		default="http://ekpcms2.physik.uni-karlsruhe.de:8080/DBS/servlet/DBSServlet",
-		help="Specify target dbs instance url")
-	parser.add_option("-s", "--source-instance", dest="dbsSource",
-		default="http://cmsdbsprod.cern.ch/cms_dbs_prod_global/servlet/DBSServlet",
-		help="Specify source dbs instance url(s), where parent datasets are taken from")
 	parser.add_option("-n", "--name",            dest="dbsPath",       default=None,
 		help="Specify dbs path name(s)")
 	parser.add_option("-d", "--dataset",         dest="dataset",       default=None,
 		help="Specify dataset(s) to process")
-	parser.add_option("-D", "--display-dataset", dest="display_data",  default=None,
+
+	parser.add_option("-l", "--lumi",            dest="doLumi",        default=False, action="store_true",
+		help="Include lumi section information [Default: False]")
+	parser.add_option("-m", "--merge",           dest="doMerge",       default=False,  action="store_true",
+		help="Merge output files from different parent blocks into a single block [Default: Keep boundaries]")
+	parser.add_option("-p", "--no-parents",      dest="importParents", default=True,  action="store_false",
+		help="Disable import of parent datasets into target DBS instance - Warning: this will disconnect the " +
+			"dataset from it's parents [Default: Import parents]")
+	parser.add_option("-P", "--use-pfn",         dest="usePFN",        default=False,  action="store_true",
+		help="Use the pfn instead of the lfn in dataset structrures [Default: Mail @ ekp.physik.uni-karlsruhe]")
+
+	ogMode = optparse.OptionGroup(parser, "Processing mode", "")
+	ogMode.add_option("-b", "--batch",           dest="batch",         default=False, action="store_true",
+		help="Enable non-interactive batch mode [Default: Interactive mode]")
+	ogMode.add_option("-i", "--no-import",       dest="doImport",      default=True,  action="store_false",
+		help="Disable import of new datasets into target DBS instance - only temporary xml files are created, " +
+			"which can be added later via datasetDBSTool.py [Default: Import datasets]")
+	parser.add_option_group(ogMode)
+
+	ogInc = optparse.OptionGroup(parser, "Incremental adding of files to DBS", "")
+	ogInc.add_option("-r", "--incremental",     dest="incremental",   default=False,  action="store_true",
+		help="Skip import of existing files - Warning: this destroys coherent block structure!")
+	ogInc.add_option("-o", "--open-blocks",     dest="doClose",       default=True,  action="store_false",
+		help="Keep blocks open for addition of further files [Default: Close blocks]")
+	parser.add_option_group(ogInc)
+
+	ogInst = optparse.OptionGroup(parser, "DBS instance handling", "")
+	ogInst.add_option("-t", "--target-instance", dest="dbsTarget",
+#		default="http://grid-dcms1.physik.rwth-aachen.de:8081/cms_dbs_prod_local/servlet/DBSServlet"
+#		default="http://cmsdbsprod.cern.ch/cms_dbs_prod_global/servlet/DBSServlet",
+		default="http://ekpcms2.physik.uni-karlsruhe.de:8080/DBS/servlet/DBSServlet",
+		help="Specify target dbs instance url")
+	ogInst.add_option("-s", "--source-instance", dest="dbsSource",
+		default="http://cmsdbsprod.cern.ch/cms_dbs_prod_global/servlet/DBSServlet",
+		help="Specify source dbs instance url(s), where parent datasets are taken from")
+	parser.add_option_group(ogInst)
+
+	ogDbg = optparse.OptionGroup(parser, "Debug options - enables also dryrun", "")
+	ogDbg.add_option("-D", "--display-dataset", dest="display_data",  default=None,
 		help="Display information associated with dataset key(s) (accepts 'all')")
-	parser.add_option("-C", "--display-config",  dest="display_cfg",   default=None,
+	ogDbg.add_option("-C", "--display-config",  dest="display_cfg",   default=None,
 		help="Display information associated with config hash(es) (accepts 'all')")
+	parser.add_option_group(ogDbg)
+
 	(opts, args) = parser.parse_args()
 
 	# Get work directory, create dbs dump directory

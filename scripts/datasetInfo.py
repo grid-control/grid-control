@@ -16,6 +16,8 @@ parser.add_option("-b", "--list-blocks",   dest="listblocks",   default=False, a
 	help="Show list of blocks of the dataset(s)")
 parser.add_option("-c", "--config-entry",  dest="configentry",  default=False, action="store_true",
 	help="Gives config file entries to run over given dataset(s)")
+parser.add_option("-i", "--info",          dest="info",         default=False, action="store_true",
+	help="Gives machine readable info of given dataset(s)")
 parser.add_option("-C", "--config-guess",  dest="configguess",  default=False, action="store_true",
 	help="Gives config file entries to run over given dataset(s). " +
 		"Will try to guess where the dataset information was coming from.")
@@ -36,13 +38,13 @@ if os.path.exists(dataset.split("%")[0]):
 	provider = DataProvider.loadState(gcSupport.ConfigDummy(), dir, file)
 else:
 	dbsArg = True
-	provider = DataProvider.open('DBSApiv2', gcSupport.ConfigDummy(), dataset, None)
+	provider = DataProvider.open('DBSApiv2', gcSupport.ConfigDummy({'dummy': {'dbs blacklist T1': False}}), 'dummy', dataset, None)
 blocks = provider.getBlocks()
 if len(blocks) == 0:
 	raise DatasetError("No blocks!")
 
 datasets = set(map(lambda x: x[DataProvider.Dataset], blocks))
-if len(datasets) > 1:
+if len(datasets) > 1 or opts.info:
 	headerbase = [(DataProvider.Dataset, "Dataset")]
 else:
 	print "Dataset: %s" % blocks[0][DataProvider.Dataset]
@@ -131,6 +133,19 @@ if opts.liststorage:
 			for se in block[DataProvider.SEList]:
 				print "\t%s" % se
 		print
+
+if opts.info:
+	evSum = 0
+	for block in blocks:
+		print block.get(DataProvider.Dataset, '-'),
+		print block.get(DataProvider.BlockName, '-'),
+		if block.get(DataProvider.SEList, None):
+			print str.join(',', block.get(DataProvider.SEList, '-')),
+		else:
+			print "-",
+		print block.get(DataProvider.NEvents, 0),
+		evSum += block.get(DataProvider.NEvents, 0)
+		print evSum
 
 if opts.listblocks:
 	print
