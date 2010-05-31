@@ -47,8 +47,8 @@ elif opts.list:
 		print block["Name"]
 
 elif opts.files:
-	for file in api.listFiles(opts.files, retriveList=['retrive_block', 'retrive_run', 'retrive_lumi']):
-		print file
+	for f in api.listFiles(opts.files, retriveList=['retrive_block', 'retrive_run', 'retrive_lumi']):
+		print f
 		print
 
 elif opts.listlumis:

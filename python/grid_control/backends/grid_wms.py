@@ -1,4 +1,4 @@
-import sys, os, time, copy, tempfile, cStringIO, re, tarfile, gzip
+import sys, os, time, copy, tempfile, cStringIO, tarfile
 from grid_control import ConfigError, Job, utils
 from wms import WMS
 

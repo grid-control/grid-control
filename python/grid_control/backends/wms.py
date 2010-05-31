@@ -2,7 +2,7 @@
 
 from python_compat import *
 import sys, os, time, shutil, tarfile, glob
-from grid_control import AbstractObject, ConfigError, RuntimeError, UserError, utils, Proxy
+from grid_control import AbstractObject, AbstractError, ConfigError, RuntimeError, UserError, utils, Proxy
 
 class WMS(AbstractObject):
 	INLINE_TAR_LIMIT = 256 * 1024
@@ -35,13 +35,13 @@ class WMS(AbstractObject):
 
 		inFiles = list(monitor.getFiles())
 		# Resolve wildcards in input files
-		for file in module.getInFiles():
-			if isinstance(file, str):
-				matched = glob.glob(file)
+		for f in module.getInFiles():
+			if isinstance(f, str):
+				matched = glob.glob(f)
 				if matched != []:
 					inFiles.extend(matched)
 				else:
-					inFiles.append(file)
+					inFiles.append(f)
 
 		taskEnv = module.getTaskConfig()
 		taskEnv.update(monitor.getEnv(self))
@@ -62,27 +62,27 @@ class WMS(AbstractObject):
 			utils.vprint("\t%s" % shortName(tarFile))
 			tar = tarfile.TarFile.open(tarFile, 'w:gz')
 
-		for file in sorted(inFiles):
-			if isinstance(file, str):
+		for f in sorted(inFiles):
+			if isinstance(f, str):
 				# Path to filename given
-				if not os.path.exists(file):
-					raise UserError("File %s does not exist!" % file)
+				if not os.path.exists(f):
+					raise UserError("File %s does not exist!" % f)
 
 				# Put file in sandbox instead of tar file
-				if os.path.getsize(file) > self.INLINE_TAR_LIMIT and file.endswith('.gz') or file.endswith('.bz2'):
-					self.sandboxIn.append(file)
+				if os.path.getsize(f) > self.INLINE_TAR_LIMIT and f.endswith('.gz') or f.endswith('.bz2'):
+					self.sandboxIn.append(f)
 					continue
 
 			if config.opts.init:
 				# Package sandbox tar file
-				if isinstance(file, str):
-					utils.vprint("\t\t%s" % shortName(file))
-					info = tarfile.TarInfo(os.path.basename(file))
-					info.size = os.path.getsize(file)
-					handle = open(file, 'rb')
+				if isinstance(f, str):
+					utils.vprint("\t\t%s" % shortName(f))
+					info = tarfile.TarInfo(os.path.basename(f))
+					info.size = os.path.getsize(f)
+					handle = open(f, 'rb')
 				else:
-					utils.vprint("\t\t%s" % shortName(file.name))
-					info, handle = file.getTarInfo()
+					utils.vprint("\t\t%s" % shortName(f.name))
+					info, handle = f.getTarInfo()
 
 				if info.name.endswith('.sh'):
 					info.mode = 0755
@@ -97,9 +97,9 @@ class WMS(AbstractObject):
 
 		if config.opts.init:
 			tar.close()
-		for file in self.sandboxIn:
-			if file != tarFile or not config.opts.init:
-				utils.vprint("\t%s" % shortName(file))
+		for f in self.sandboxIn:
+			if f != tarFile or not config.opts.init:
+				utils.vprint("\t%s" % shortName(f))
 
 
 	def canSubmit(self, length, flag):
@@ -133,6 +133,10 @@ class WMS(AbstractObject):
 		except:
 			sys.stderr.write("Could not write job config data to %s.\n" % cfgPath)
 			raise
+
+
+	def submitJob(self, jobNum):
+		raise AbstractError
 
 
 	def submitJobs(self, jobNumList):
@@ -205,7 +209,7 @@ class WMS(AbstractObject):
 			# Clean empty dirs
 			for subDir in map(lambda x: x[0], os.walk(dir, topdown=False)):
 				try:
-					os.rmdir(dir)
+					os.rmdir(subDir)
 				except:
 					pass
 

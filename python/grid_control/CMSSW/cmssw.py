@@ -19,6 +19,9 @@ class CMSSW(DataMod):
 		else:
 			self.projectArea = config.getPath(self.__class__.__name__, 'project area')
 
+		# This works in tandem with provider_dbsv2.py !
+		self.selectedLumis = parseLumiFilter(config.get(self.__class__.__name__, 'lumi filter', ''))
+
 		# Get cmssw config files and check their existance
 		self.configFiles = []
 		for cfgFile in config.getPaths(self.__class__.__name__, 'config file'):
@@ -29,45 +32,30 @@ class CMSSW(DataMod):
 				shutil.copyfile(cfgFile, newPath)
 			self.configFiles.append(newPath)
 
-		# This works in tandem with provider_dbsv2.py !
-		self.selectedLumis = parseLumiFilter(config.get(self.__class__.__name__, 'lumi filter', ''))
-
 		# Prepare (unprepared) cmssw config file for MC production / dataset analysis
 		prepare = config.getBool(self.__class__.__name__, 'prepare config', False)
-		def doInstrument(cfgName):
-			if 'customise_for_gc' not in open(cfgName, 'r').read():
-				print "Instrumenting...", os.path.basename(cfgName)
-				fragment = utils.pathGC('scripts', 'fragmentForCMSSW.py')
-				open(cfgName, 'a').write(open(fragment, 'r').read())
 
 		# Check that for dataset jobs the necessary placeholders are in the config file
 		if self.dataSplitter != None:
-			def isInstrumented(cfgName):
-				cfg = open(cfgName, 'r').read()
-				for tag in self.neededVars():
-					if (not "__%s__" % tag in cfg) and (not "@%s@" % tag in cfg):
-						return False
-				return True
-
-			if not (True in map(isInstrumented, self.configFiles)):
+			if not (True in map(self.isInstrumented, self.configFiles)):
 				for cfgName in self.configFiles:
-					if config.opts.init and not isInstrumented(cfgName):
+					if config.opts.init and not self.isInstrumented(cfgName):
 						if prepare or utils.boolUserInput('Do you want to prepare %s for running over the dataset?' % cfgName, True):
-							doInstrument(cfgName)
+							self.doInstrument(cfgName)
 
-			if not (True in map(isInstrumented, self.configFiles)):
+			if not (True in map(self.isInstrumented, self.configFiles)):
 				raise ConfigError("A config file must use %s to work properly with dataset jobs!" %
 					str.join(", ", map(lambda x: "__%s__" % x, self.neededVars())))
 		else:
 			self.eventsPerJob = config.get(self.__class__.__name__, 'events per job', 0)
 			if config.opts.init and prepare:
-				map(doInstrument, self.configFiles)
+				map(self.doInstrument, self.configFiles)
 
 		self.useReqs = config.getBool(self.__class__.__name__, 'use requirements', True, volatile=True)
 		self.seRuntime = config.getBool(self.__class__.__name__, 'se runtime', False)
 
 		if self.seRuntime and len(self.projectArea):
-			self.seInputFiles.append(self.taskID + ".tar.gz"),
+			self.seInputFiles.append(self.taskID + ".tar.gz")
 
 		if len(self.projectArea):
 			self.pattern = config.get(self.__class__.__name__, 'area files', '-.* -config lib python module */data *.xml *.sql *.cf[if] *.py').split()
@@ -145,6 +133,21 @@ class CMSSW(DataMod):
 						raise RuntimeError("No CMSSW runtime on SE!")
 
 
+	def doInstrument(self, cfgName):
+		if 'customise_for_gc' not in open(cfgName, 'r').read():
+			print "Instrumenting...", os.path.basename(cfgName)
+			fragment = utils.pathGC('scripts', 'fragmentForCMSSW.py')
+			open(cfgName, 'a').write(open(fragment, 'r').read())
+
+
+	def isInstrumented(self, cfgName):
+		cfg = open(cfgName, 'r').read()
+		for tag in self.neededVars():
+			if (not "__%s__" % tag in cfg) and (not "@%s@" % tag in cfg):
+				return False
+		return True
+
+
 	# Lumi filter need
 	def neededVars(self):
 		if self.selectedLumis:
@@ -198,7 +201,7 @@ class CMSSW(DataMod):
 		files = DataMod.getInFiles(self)
 		if len(self.projectArea) and not self.seRuntime:
 			files.append(os.path.join(self.config.workDir, 'runtime.tar.gz'))
-		files.append(utils.pathGC('share', 'run.cmssw.sh')),
+		files.append(utils.pathGC('share', 'run.cmssw.sh'))
 		files.extend(self.configFiles)
 		return files
 

@@ -21,13 +21,13 @@ class LocalWMSApi(AbstractObject):
 		raise AbstractError
 
 	def unknownID(self):
-		raise AbstracError
+		raise AbstractError
 
 	def parseStatus(self, status):
-		raise AbstracError
+		raise AbstractError
 
 	def getCheckArgument(self, wmsIds):
-		raise AbstracError
+		raise AbstractError
 
 	def parseJobState(self, state):
 		return self._statusMap[state]

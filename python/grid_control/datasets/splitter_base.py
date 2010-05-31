@@ -1,5 +1,5 @@
 import os, tarfile, time, copy, cStringIO
-from grid_control import AbstractObject, RuntimeError, utils, ConfigError
+from grid_control import AbstractObject, AbstractError, RuntimeError, utils, ConfigError
 from provider_base import DataProvider
 
 class DataSplitter(AbstractObject):

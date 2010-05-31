@@ -1,4 +1,4 @@
-import sys, os, random
+import sys, os
 from grid_control import ConfigError, Job, utils
 from grid_control.backends.wms import WMS
 from api import LocalWMSApi

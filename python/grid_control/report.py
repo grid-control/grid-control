@@ -25,7 +25,7 @@ class Report:
 		if opts.reportSite or opts.reportTime:
 			self.siteReport(opts.reportSite, opts.reportTime)
 		if opts.reportMod:
-			self.modReport(opts.reportMod, module)
+			self.modReport(module)
 		if opts.report or opts.reportSite or opts.reportTime or opts.reportMod or opts.reportJob:
 			return True
 		return False
@@ -73,10 +73,11 @@ class Report:
 			summary[self.allJobs.get(jobNum).state] += 1
 
 		def makeSum(*states):
-			return reduce(lambda x, y: x + y, map(lambda x: summary[x], states))
+			return reduce(lambda x, y: x + y, map(lambda z: summary[z], states))
 		def makePer(*states):
 			count = makeSum(*states)
 			return [count, round(count / self.allJobs.nJobs * 100.0)]
+
 		print 'Total number of jobs:%9d     Successful jobs:%8d  %3d%%' % \
 			tuple([self.allJobs.nJobs] + makePer(Job.SUCCESS))
 		print 'Jobs assigned to WMS:%9d        Failing jobs:%8d  %3d%%' % \
@@ -92,9 +93,9 @@ class Report:
 		return 0
 
 
-	def modReport(self, details, module):
+	def modReport(self, module):
 		(order, head, reports) = ([], [], {})
-		all = dict.fromkeys(Report.states, 0)
+		allStates = dict.fromkeys(Report.states, 0)
 
 		for jobNum in self.jobs:
 			report = module.report(jobNum)
@@ -111,10 +112,10 @@ class Report:
 			try:
 				cat = self.getJobCategory(self.allJobs.get(jobNum))
 				reports[str(report)][cat] += 1
-				all[cat] += 1
+				allStates[cat] += 1
 			except:
 				pass
-		infos = map(lambda x: reports[x], order) + [None, all]
+		infos = map(lambda x: reports[x], order) + [None, allStates]
 		self.printHeader("MODULE SUMMARY:")
 		print
 		utils.printTabular(map(lambda x: (x, x), head + Report.states), infos, 'c' * len(head))
@@ -183,7 +184,7 @@ class Report:
 		markDict = {'FAILED': [Console.COLOR_RED, Console.BOLD], 'SUCCESS': [Console.COLOR_BLUE, Console.BOLD]}
 
 		report = []
-		def addRow(level, stats, pstats, mark = False):
+		def addRow(level, stats, mark = False):
 			fmt = lambda x, state: x
 			if mark:
 				fmt = lambda x, state: Console.fmt(x, markDict.get(state, []))
@@ -201,7 +202,7 @@ class Report:
 
 		sites = filter(lambda x: not x in Report.states, statinfo.keys())
 		for num, site in enumerate(sorted(sites)):
-			addRow(site, statinfo[site], statinfo, True)
+			addRow(site, statinfo[site], True)
 
 			if siteDetails > 1:
 				wns = filter(lambda x: not x in Report.states, statinfo[site].keys())

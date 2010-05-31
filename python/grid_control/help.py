@@ -18,9 +18,9 @@ class Help(object):
 		except:
 			job3cfg = {}
 
-		vars = module.getVarMapping().items()
-		vars += [('RANDOM', 'RANDOM')]
-		for (keyword, variable) in sorted(vars):
+		varList = module.getVarMapping().items()
+		varList += [('RANDOM', 'RANDOM')]
+		for (keyword, variable) in sorted(varList):
 			print ("__%s__" % keyword).rjust(25), ":",
 			try:
 				print module.getTaskConfig()[variable]
@@ -35,8 +35,8 @@ class Help(object):
 					elif keyword == 'RANDOM':
 						print '<example: %d>' % random.randrange(0, 900000000)
 					elif keyword == 'GUID':
-						hex = str.join("", map(lambda x: "%02x" % random.randrange(256), range(16)))
-						print '<example: %s-%s-%s-%s-%s>' % (hex[:8], hex[8:12], hex[12:16], hex[16:20], hex[20:])
+						hx = str.join("", map(lambda x: "%02x" % x, map(random.randrange, [256]*16)))
+						print '<example: %s-%s-%s-%s-%s>' % (hx[:8], hx[8:12], hx[12:16], hx[16:20], hx[20:])
 					else:
 						print '<not determinable>'
 						continue

@@ -24,7 +24,7 @@ def main(args):
 		utils.deprecated("This python version (%.1f) is not supported anymore!" % pyver)
 
 	parser = optparse.OptionParser(add_help_option=False)
-	parser.add_option("-h", "--help",          action="callback", callback=print_help),
+	parser.add_option("-h", "--help",          action="callback", callback=print_help)
 	parser.add_option("",   "--help-vars",     dest="help_vars",  default=False, action="store_true")
 	parser.add_option("",   "--help-conf",     dest="help_cfg",   default=False, action="store_true")
 	parser.add_option("",   "--help-confmin",  dest="help_scfg",  default=False, action="store_true")

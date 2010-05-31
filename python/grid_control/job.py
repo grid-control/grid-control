@@ -1,5 +1,6 @@
 import time
 from utils import DictFormat, safeWriteFile
+from exceptions import ConfigError
 
 class Job:
 	states = ('INIT', 'SUBMITTED', 'DISABLED', 'READY', 'WAITING', 'QUEUED', 'ABORTED',
@@ -24,7 +25,7 @@ class Job:
 		try:
 			data = DictFormat(escapeString = True).parse(open(name))
 		except:
-			raise ConfigError('Invalid format in %s' % fp.name)
+			raise ConfigError('Invalid format in %s' % name)
 		job = Job(cls._stateDict[data.get('status', 'FAILED')])
 
 		if 'id' in data:

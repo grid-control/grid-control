@@ -49,8 +49,8 @@ class JobDB:
 		if len(self._jobs) < self.nJobs:
 			self.ready.extend(filter(lambda x: x not in self._jobs, range(self.nJobs)))
 
-		for list in (self.ready, self.queued, self.running, self.done, self.ok):
-			list.sort()
+		for jobList in (self.ready, self.queued, self.running, self.done, self.ok):
+			jobList.sort()
 
 		self.timeout = utils.parseTime(config.get('jobs', 'queue timeout', '', volatile=True))
 		self.inFlight = config.getInt('jobs', 'in flight', -1, volatile=True)
@@ -137,10 +137,10 @@ class JobDB:
 			print
 
 
-	def sample(self, list, size):
-		list = random.sample(list, min(size, len(list)))
-		list.sort()
-		return list
+	def sample(self, jobList, size):
+		jobList = random.sample(jobList, min(size, len(jobList)))
+		jobList.sort()
+		return jobList
 
 
 	def getSubmissionJobs(self, maxsample):
@@ -157,15 +157,15 @@ class JobDB:
 
 		# Get list of submittable jobs
 		if self.maxRetry >= 0:
-			list = filter(lambda x: self._jobs.get(x, Job()).attempt - 1 < self.maxRetry, self.ready)
+			jobList = filter(lambda x: self._jobs.get(x, Job()).attempt - 1 < self.maxRetry, self.ready)
 		else:
-			list = self.ready[:]
+			jobList = self.ready[:]
 		if self.doShuffle:
-			list = self.sample(list, submit)
+			jobList = self.sample(jobList, submit)
 		else:
-			list = list[:submit]
-			list.sort()
-		return list
+			jobList = jobList[:submit]
+			jobList.sort()
+		return jobList
 
 
 	def submit(self, wms, maxsample = 100):
