@@ -32,21 +32,8 @@ class Silencer(object):
 class ConfigDummy(object):
 	def __init__(self, cfg = {}):
 		self.cfg = cfg
-	def get(self, s, i, d = None, volatile = False):
-		return self.cfg.get(s, {}).get(i, d)
-	def getPaths(self, s, i, d = None, volatile = False):
-		return self.cfg.get(s, {}).get(i, d)
-	def getPath(self, s, i, d = None, volatile = False):
-		return self.cfg.get(s, {}).get(i, d)
-	def getInt(self, s, i, d = None, volatile = False):
-		return self.cfg.get(s, {}).get(i, d)
-	def getBool(self, s, i, d = None, volatile = False):
-		return self.cfg.get(s, {}).get(i, d)
-
-
-class ConfigOverlay(object):
-	def __init__(self, cfg = {}):
-		self.cfg = cfg
+	def options():
+		return cfg.keys()
 	def get(self, s, i, d = None, volatile = False):
 		return self.cfg.get(s, {}).get(i, d)
 	def getPaths(self, s, i, d = None, volatile = False):
