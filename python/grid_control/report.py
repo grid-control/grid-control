@@ -145,7 +145,7 @@ class Report:
 		destinations = map(lambda id: self.allJobs.get(id).history.values(), self.jobs)
 		for dest in map(getDest, reduce(lambda x, y: x+y, destinations)):
 			tmp = statinfo.setdefault(dest[0], initdict()).setdefault(dest[1], initdict())
-			tmp.setdefault(dest[2], initdict()) = initdict()
+			tmp.setdefault(dest[2], initdict())
 
 		# fill wn dictionary
 		def incstat(dict, dest, state, time):
@@ -212,7 +212,7 @@ class Report:
 				if num < len(sites) - 1:
 					report.append('')
 		report.append(None)
-		addRow('', statinfo, statinfo, True)
+		addRow('', statinfo, True)
 		header = [("SITE", 'SITE / WN')] + map(lambda x: (x, x), Report.states)
 
 		self.printHeader("SITE SUMMARY:")

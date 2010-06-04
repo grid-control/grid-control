@@ -27,7 +27,7 @@ mutex = gcSupport.FileMutex(os.path.join(workDir, 'datasetCacheAdd.lock'))
 
 try:
 	taskInfo = utils.PersistentDict(os.path.join(workDir, 'task.dat'), ' = ')
-	provider = DataProvider.loadState(gcSupport.ConfigDummy(), workDir, 'production.dbs')
+	provider = DataProvider.loadState(Config(), workDir, 'production.dbs')
 
 	# Try to read all existing Blocks from production.dbs
 	try:

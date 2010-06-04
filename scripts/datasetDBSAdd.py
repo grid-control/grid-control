@@ -169,7 +169,7 @@ def getOutputDatasets(opts):
 	# Merge parent infos into output file data
 	if os.path.exists(os.path.join(opts.workDir, 'datacache.dat')):
 		# Get parent infos
-		provider = DataProvider.loadState(gcSupport.ConfigDummy(), opts.workDir, 'datacache.dat')
+		provider = DataProvider.loadState(Config(), opts.workDir, 'datacache.dat')
 		log = utils.ActivityLog(' * Processing parent infos...')
 		blocks = provider.getBlocks()
 		parentMap = {}

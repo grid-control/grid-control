@@ -18,6 +18,8 @@ class WMS(AbstractObject):
 		# Initialise proxy
 		self.proxy = Proxy.open(config.get(backend, 'proxy', defaultproxy, volatile=True), config)
 
+		self.checkSE = config.getBool(backend, 'check storage', True, volatile=True)
+
 		self._outputPath = os.path.join(config.workDir, 'output')
 		if not os.path.exists(self._outputPath):
 			if config.opts.init:
@@ -147,7 +149,7 @@ class WMS(AbstractObject):
 			for (k, v) in self.module.getRequirements(jobNum):
 				if k == WMS.STORAGE and v == []:
 					validStorage = False
-			if validStorage:
+			if validStorage or not self.checkSE:
 				jobNum, wmsId, data = self.submitJob(jobNum)
 				yield (jobNum, wmsId, data)
 			else:

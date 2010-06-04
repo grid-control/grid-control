@@ -1,5 +1,5 @@
 import os.path, random, time
-from grid_control import Module, ConfigError, utils, WMS
+from grid_control import Module, Config, ConfigError, utils, WMS
 from provider_base import DataProvider
 from splitter_base import DataSplitter
 

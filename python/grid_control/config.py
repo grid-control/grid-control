@@ -6,10 +6,10 @@ class Config:
 		self.protocol = {}
 		self.parser = ConfigParser.ConfigParser()
 		if configFile:
-			self.parseFile(self.parser, configFile)
 			# use the directory of the config file as base directory
 			self.baseDir = os.path.abspath(os.path.normpath(os.path.dirname(configFile)))
 			self.confName = str.join("", os.path.basename(configFile).split(".")[:-1])
+			self.parseFile(self.parser, configFile)
 		else:
 			(self.baseDir, self.confName) = ('.', 'config')
 		self.workDirDefault = os.path.join(self.baseDir, 'work.%s' % self.confName)
@@ -17,7 +17,7 @@ class Config:
 		# Override config settings via dictionary
 		for section in configDict:
 			for item in configDict[section]:
-				self.parser.set(section, item, configDict[section][item])
+				self.set(section, item, configDict[section][item])
 
 
 	def parseFile(self, parser, configFile):
@@ -42,6 +42,11 @@ class Config:
 		lines = parser.get(section, item).splitlines()
 		lines = map(lambda x: x.split(';')[0].strip(), lines)
 		return str.join("\n", filter(lambda x: x != '', lines))
+
+
+	def set(self, section, item, value = None):
+		utils.vprint("Config option was overridden: [%s] %s = %s" % (section, item, str(value)), 1)
+		self.parser.set(section, item, value)
 
 
 	def get(self, section, item, default = None, volatile = False):
@@ -75,7 +80,7 @@ class Config:
 
 
 	def getPath(self, section, item, default = None, volatile = False):
-		value = self.getPaths(section, item, default, volatile)
+		value = self.getPaths(section, item, default, volatile) + ['']
 		return (value[0], '')[len(value) == 0]
 
 

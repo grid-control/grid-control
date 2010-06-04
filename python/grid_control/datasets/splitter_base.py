@@ -1,5 +1,5 @@
 import os, tarfile, time, copy, cStringIO
-from grid_control import AbstractObject, AbstractError, RuntimeError, utils, ConfigError
+from grid_control import AbstractObject, AbstractError, RuntimeError, utils, ConfigError, Config
 from provider_base import DataProvider
 
 class DataSplitter(AbstractObject):
@@ -348,18 +348,7 @@ class DataSplitter(AbstractObject):
 					self.append(x)
 
 			def getDataSplitter(self):
-				class ConfigDict(object):
-					def __init__(self, metadata):
-						self.metadata = metadata
-					def get(self, section, item, default = None, volatile = False):
-						return self.metadata.get(item, default)
-					def getPath(self, section, item, default = None, volatile = False):
-						return self.metadata.get(item, default)
-					def getInt(self, section, item, default = None, volatile = False):
-						return int(self.metadata.get(item, default))
-					def getBool(self, section, item, default = None, volatile = False):
-						return self.metadata.get(item, default) == "True"
-				instance = DataSplitter.open(self._classname, ConfigDict(self._metadata), None, self._metadata)
+				instance = DataSplitter.open(self._classname, Config(), None, self._metadata)
 				instance._jobFiles = self
 				return instance
 

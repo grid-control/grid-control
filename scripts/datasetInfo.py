@@ -35,10 +35,10 @@ dataset = args[0].strip()
 if os.path.exists(dataset.split("%")[0]):
 	dbsArg = False
 	dir, file = os.path.split(dataset)
-	provider = DataProvider.loadState(gcSupport.ConfigDummy(), dir, file)
+	provider = DataProvider.loadState(Config(), dir, file)
 else:
 	dbsArg = True
-	provider = DataProvider.open('DBSApiv2', gcSupport.ConfigDummy({'dummy': {'dbs blacklist T1': False}}), 'dummy', dataset, None)
+	provider = DataProvider.open('DBSApiv2', Config(configDict={'dummy': {'dbs blacklist T1': False}}), 'dummy', dataset, None)
 blocks = provider.getBlocks()
 if len(blocks) == 0:
 	raise DatasetError("No blocks!")
