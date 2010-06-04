@@ -133,8 +133,8 @@ DEFAULT: The default is to download the SE file and check them with MD5 hashes.
 def realmain(opts, args):
 	try:
 		proxy = VomsProxy(gcSupport.ConfigDummy({"proxy": {"ignore warnings": True}}))
-	except GridError, e:
-		e.showMessage()
+	except GCError:
+		sys.stderr.write(GCError.message)
 		sys.exit(1)
 
 	(workDir, jobList) = gcSupport.getWorkJobs(args)

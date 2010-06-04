@@ -60,17 +60,16 @@ def main(args):
 
 	# big try... except block to catch exceptions and print error message
 	try:
-		# try to open config file
-		try:
-			open(args[0], 'r')
-			config = Config(args[0])
-			# Read default command line options from config file
-			defaultCmdLine = config.get("global", "cmdargs", "", volatile=True)
-			(opts.reportSite, opts.reportTime, opts.reportMod) = (0, 0, 0)
-			parser.parse_args(args = defaultCmdLine.split() + sys.argv[1:], values = opts)
-			config.opts = opts
-		except IOError:
-			raise ConfigError("Error while reading configuration file '%s'!" % args[0])
+		config = Config(args[0])
+		# Read default command line options from config file
+		defaultCmdLine = config.get("global", "cmdargs", "", volatile=True)
+		(opts.reportSite, opts.reportTime, opts.reportMod) = (0, 0, 0)
+		parser.parse_args(args = defaultCmdLine.split() + sys.argv[1:], values = opts)
+		if opts.seed:
+			config.set('jobs', 'seeds', opts.seed.rstrip('S'))
+		if opts.maxRetry:
+			config.set('jobs', 'max retry', str(opts.maxRetry))
+		config.opts = opts
 
 		# Check work dir validity (default work directory is the config file name)
 		config.workDir = config.getPath('global', 'workdir', config.workDirDefault)
@@ -178,8 +177,8 @@ def main(args):
 		else:
 			jobCycle()
 
-	except GCError, e:
-		e.showMessage()
+	except GCError:
+		sys.stderr.write(GCError.message)
 		return 1
 
 	return 0

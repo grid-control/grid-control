@@ -144,13 +144,8 @@ class Report:
 		statinfo = initdict()
 		destinations = map(lambda id: self.allJobs.get(id).history.values(), self.jobs)
 		for dest in map(getDest, reduce(lambda x, y: x+y, destinations)):
-			(site, wn, queue) = dest
-			if site not in statinfo:
-				statinfo[site] = initdict()
-			if wn not in statinfo[site]:
-				statinfo[site][wn] = initdict()
-			if queue not in statinfo[site][wn]:
-				statinfo[site][wn][queue] = initdict()
+			tmp = statinfo.setdefault(dest[0], initdict()).setdefault(dest[1], initdict())
+			tmp.setdefault(dest[2], initdict()) = initdict()
 
 		# fill wn dictionary
 		def incstat(dict, dest, state, time):

@@ -55,17 +55,11 @@ class Help(object):
 			print "This is the minimal set of config options necessary:"
 		print
 		print ";", "="*60
-		print ";", "grid-control",
-		if printDefault:
-			print "complete",
-		else:
-			print "reduced",
-		print "config file"
+		print ";", "grid-control", ("reduced", "complete")[printDefault], "config file"
 		print ";", "="*60
 		print
 		for section in config.protocol:
-			header = False
-			prevNL = False
+			(header, prevNL) = (False, False)
 			for (key, (value, default, volatile)) in config.protocol[section].iteritems():
 				if (not printDefault and (str(value) != str(default))) or printDefault:
 					if value == 'DEPRECATED':
@@ -77,9 +71,7 @@ class Help(object):
 					print "%s = %s" % (str(key), str(value))
 					prevNL = False
 					if default != None and not printDefault:
-						print "; Default setting: %s = %r" % (key, default)
-						print
+						print "; Default setting: %s = %r\n" % (key, default)
 						prevNL = True
-						
 			if header and not prevNL:
 				print

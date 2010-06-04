@@ -7,43 +7,31 @@ class Proxy(AbstractObject):
 		self.lowerLimit = 300
 		self._lastUpdate = 0
 
-	def canSubmit(self, length, flag):
-		if not self.check(0):
+	def canSubmit(self, neededTime, canCurrentlySubmit):
+		if not self._check(self.lowerLimit):
 			raise UserError('Your proxy only has %d seconds left!' % self.timeleft())
-		if not self.check(length) and flag:
+		if not self._check(self.lowerLimit + neededTime) and canCurrentlySubmit:
 			utils.vprint("Proxy lifetime (%s) does not meet the walltime requirements (%s)!"
-				% (utils.strTime(self.timeleft()), utils.strTime(length)), -1, printTime = True)
+				% (utils.strTime(self.timeleft()), utils.strTime(neededTime)), -1, printTime = True)
 			utils.vprint("Disabling job submission", -1, printTime = True)
 			return False
 		return True
 
-	# check for time left (includes lower time limit)
-	def check(self, checkedForTime):
-		checkedForTime += self.lowerLimit
-		return self.timeleft(checkedForTime) >= checkedForTime
-
-	# return (possibly cached) time left
-	def timeleft(self, checkedForTime = None):
-		if not checkedForTime:
-			checkedForTime = self.lowerLimit
+	# check for time left
+	def _check(self, neededTime):
 		delta = time.time() - self._lastUpdate
-		cachedTimeleft = max(0, self.getTimeleft(False, checkedForTime) - delta)
+		timeleft = max(0, self.getTimeleft(cached = True) - delta)
 		# recheck proxy:
-		#  * when time is running out (but at most once per minute)
+		#  * when time is running out (but at most once every 2 minutes)
 		#  * after at least 30min have passed
-		if (cachedTimeleft < checkedForTime and delta > 60) or delta > 60*60:
+		if (timeleft < neededTime and delta > 2 * 60) or delta > 30 * 60:
 			self._lastUpdate = time.time()
-			result = self.getTimeleft(True, checkedForTime)
-			if cachedTimeleft < checkedForTime:
-				verbosity = -1
-			else:
-				verbosity = 0
-			utils.vprint("The proxy now has %s left" % utils.strTime(result), verbosity, printTime = True)
-			return result
-		else:
-			return cachedTimeleft
+			timeleft = self.getTimeleft(cached = False)
+			verbosity = (0, -1)[timeleft < neededTime]
+			utils.vprint("The proxy now has %s left" % utils.strTime(timeleft), verbosity, printTime = True)
+		return timeleft >= neededTime
 
-	def getTimeleft(self, cached, checkedForTime = None):
+	def getTimeleft(self, cached):
 		raise AbstractError
 
 	def getUsername(self):
@@ -56,7 +44,7 @@ Proxy.dynamicLoaderPath()
 
 
 class TrivialProxy(Proxy):
-	def canSubmit(self, length, flag):
+	def canSubmit(self, neededTime, canCurrentlySubmit):
 		return True
 
 
@@ -82,24 +70,19 @@ class VomsProxy(Proxy):
 		self._cache = utils.DictFormat(':').parse(proc.getOutput())
 		return self._cache
 
-	def getTimeleft(self, cached, checkedForTime = None):
+	def get(self, key, parse = lambda x: x, cached = True):
 		info = self._getInfo(cached)
 		try:
-			return utils.parseTime(info['timeleft'])
+			return parse(info[key])
 		except:
 			print info
 			raise RuntimeError("Can't parse proxy information!")
 
+	def getTimeleft(self, cached):
+		return self.get('timeleft', utils.parseTime, cached)
+
 	def getUsername(self):
-		try:
-			return '/CN=%s' % self._getInfo()['identity'].split('CN=')[1].strip()
-		except:
-			print self._getInfo(cached)
-			raise RuntimeError("Can't parse proxy information!")
+		return self.get('identity', lambda x: '/CN=%s' % x.split('CN=')[1].strip())
 
 	def getVO(self):
-		try:
-			return self._getInfo()['vo']
-		except:
-			print self._getInfo()
-			raise RuntimeError("Can't parse proxy information!")
+		return self.get('vo')

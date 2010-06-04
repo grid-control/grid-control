@@ -2,25 +2,39 @@ import os, ConfigParser
 from grid_control import *
 
 class Config:
-	def __init__(self, configFile):
+	def __init__(self, configFile = None, configDict = {}):
 		self.protocol = {}
-		try:
-			# try to parse config file
-			self.parser = ConfigParser.ConfigParser()
-			self.parser.read(configFile)
-		except ConfigParser.Error, e:
-			raise ConfigError("Configuration file `%s' contains an error: %s" % (configFile, e.message))
-
-		# use the directory of the config file as base directory
-		self.baseDir = os.path.abspath(os.path.normpath(os.path.dirname(configFile)))
-		self.confName = str.join("", os.path.basename(configFile).split(".")[:-1])
+		self.parser = ConfigParser.ConfigParser()
+		if configFile:
+			self.parseFile(self.parser, configFile)
+			# use the directory of the config file as base directory
+			self.baseDir = os.path.abspath(os.path.normpath(os.path.dirname(configFile)))
+			self.confName = str.join("", os.path.basename(configFile).split(".")[:-1])
+		else:
+			(self.baseDir, self.confName) = ('.', 'config')
 		self.workDirDefault = os.path.join(self.baseDir, 'work.%s' % self.confName)
 
+		# Override config settings via dictionary
+		for section in configDict:
+			for item in configDict[section]:
+				self.parser.set(section, item, configDict[section][item])
+
+
+	def parseFile(self, parser, configFile):
+		def parseFileInt(fn):
+			try:
+				parser.readfp(open(fn, 'r'))
+			except IOError:
+				raise ConfigError("Error while reading configuration file '%s'!" % fn)
+			except ConfigParser.Error:
+				print "Configuration file `%s' contains an error:" % fn
+				raise
+		parseFileInt(configFile)
 		# Read default values and reread main config file
 		includeFile = self.getPath("global", "include", '')
 		if includeFile != '':
-			self.parser.read(includeFile)
-			self.parser.read(configFile)
+			parseFileInt(includeFile)
+			parseFileInt(configFile)
 
 
 	def parseLine(self, parser, section, item):
@@ -32,9 +46,7 @@ class Config:
 
 	def get(self, section, item, default = None, volatile = False):
 		# Make protocol of config queries - flag inconsistencies
-		if section not in self.protocol:
-			self.protocol[section] = {}
-		if item in self.protocol[section]:
+		if item in self.protocol.setdefault(section, {}):
 			if self.protocol[section][item][1] != default:
 				raise ConfigError("Inconsistent default values: [%s] %s" % (section, item))
 		# Default value helper function
@@ -58,27 +70,13 @@ class Config:
 
 
 	def getPaths(self, section, item, default = None, volatile = False):
-		pathRaw = self.get(section, item, default, volatile)
-		if pathRaw == '':
-			return ''
-		def formatPath(path):
-			path = os.path.expanduser(path.strip())	# ~/bla -> /home/user/bla
-			path = os.path.normpath(path)   # xx/../yy -> yy
-			if not os.path.isabs(path):	# ./lala -> /foo/bar/lala
-				basePath = os.path.join(self.baseDir, path)
-				if not os.path.exists(basePath) and os.path.exists(utils.pathGC(path)):
-					path = utils.pathGC(path)
-				else:
-					path = basePath
-			return path
-		return map(formatPath, pathRaw.splitlines())
+		value = self.get(section, item, default, volatile)
+		return map(lambda x: utils.resolvePath(x, [self.baseDir]), value.splitlines())
 
 
 	def getPath(self, section, item, default = None, volatile = False):
-		tmp = self.getPaths(section, item, default, volatile)
-		if len(tmp) == 0:
-			return ''
-		return tmp[0]
+		value = self.getPaths(section, item, default, volatile)
+		return (value[0], '')[len(value) == 0]
 
 
 	def getInt(self, section, item, default = None, volatile = False):
@@ -87,7 +85,7 @@ class Config:
 
 	def getBool(self, section, item, default = None, volatile = False):
 		value = self.get(section, item, default, volatile)
-		return str(value).lower() in ('yes', 'y', 'true', 't', 'ok', '1')
+		return str(value).lower() in ('yes', 'y', 'true', 't', 'ok', '1', 'on')
 
 
 	# Compare this config object to another config file
@@ -96,7 +94,7 @@ class Config:
 		if not os.path.exists(saveConfigPath):
 			return False
 		saveConfig = ConfigParser.ConfigParser()
-		saveConfig.read(saveConfigPath)
+		self.parseFile(saveConfig, saveConfigPath)
 		flag = False
 		for section in self.protocol:
 			for (key, (value, default, volatile)) in self.protocol[section].iteritems():

@@ -57,8 +57,6 @@ class JobDB:
 		self.inQueue = config.getInt('jobs', 'in queue', -1, volatile=True)
 		self.doShuffle = config.getBool('jobs', 'shuffle', False, volatile=True)
 		self.maxRetry = config.getInt('jobs', 'max retry', -1, volatile=True)
-		if self.config.opts.maxRetry != None:
-			self.maxRetry = self.config.opts.maxRetry
 
 
 	# Return appropriate queue for given job

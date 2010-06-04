@@ -25,14 +25,10 @@ class Module(AbstractObject):
 		utils.vprint('Current task ID: %s' % self.taskID, -1, once = True)
 
 		# Set random seeds (args override config)
-		seedarg = config.get('jobs', 'seeds', '')
-		if config.opts.seed != None:
-			seedarg = config.opts.seed.rstrip('S')
-		if seedarg != '':
-			self.seeds = map(int, seedarg.split(','))
-		else:
+		self.seeds = map(int, config.get('jobs', 'seeds', '').split(','))
+		if len(self.seeds) == 0:
 			# args specified => gen seeds
-			if 'seeds' in taskInfo and (config.opts.seed == None):
+			if 'seeds' in taskInfo:
 				self.seeds = map(int, str(taskInfo['seeds']).split())
 			else:
 				self.seeds = map(lambda x: random.randint(0, 10000000), range(10))

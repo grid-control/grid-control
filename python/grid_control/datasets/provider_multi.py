@@ -22,13 +22,12 @@ class DataMultiplexer(DataProvider):
 		print
 
 
-	def checkSplitter(self, splitter):
-		for provider in self.subprovider:
-			splitter = provider['src'].checkSplitter(splitter)
-		proposal = splitter
-		for provider in self.subprovider:
-			splitter = provider['src'].checkSplitter(splitter)
-		if proposal != splitter:
+	def checkSplitter(self, splitter, first = None):
+		def getProposal(x):
+			for provider in self.subprovider:
+				x = provider['src'].checkSplitter(x)
+			return x
+		if getProposal(splitter) != getProposal(getProposal(splitter)):
 			raise DatasetError('Dataset providers could not agree on valid dataset splitter!')
 		return splitter
 
@@ -39,12 +38,11 @@ class DataMultiplexer(DataProvider):
 		for provider in self.subprovider:
 			try:
 				result.extend(provider["src"].getBlocks())
-			except GridError, e:
-				exceptions.append(e)
+			except GCError:
+				exceptions.append(GCError.message)
 			if self.config.opts.abort:
 				raise DatasetError('Could not retrieve all datasets!')
-		for e in exceptions:
-			e.showMessage()
 		if len(exceptions):
+			sys.stderr.write(str.join("\n", exceptions))
 			raise DatasetError('Could not retrieve all datasets!')
 		return result

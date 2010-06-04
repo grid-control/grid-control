@@ -31,10 +31,10 @@ Monitoring.moduleMap["scripts"] = "ScriptMonitoring"
 class ScriptMonitoring(Monitoring):
 	def __init__(self, config, module):
 		Monitoring.__init__(self, config, module)
-		self.evtSubmit = config.getPath('events', 'on submit', '', volatile=True)
-		self.evtStatus = config.getPath('events', 'on status', '', volatile=True)
-		self.evtOutput = config.getPath('events', 'on output', '', volatile=True)
-		self.evtFinish = config.getPath('events', 'on finish', '', volatile=True)
+		self.evtSubmit = config.get('events', 'on submit', '', volatile=True)
+		self.evtStatus = config.get('events', 'on status', '', volatile=True)
+		self.evtOutput = config.get('events', 'on output', '', volatile=True)
+		self.evtFinish = config.get('events', 'on finish', '', volatile=True)
 
 	# Get both task and job config / state dicts
 	def setEventEnviron(self, jobObj, jobNum):

@@ -714,6 +714,6 @@ try:
 			print " * Importing datasets - done"
 	print
 	del mutex
-except GridError, e:
-	e.showMessage()
+except GCError:
+	sys.stderr.write(GCError.message)
 	del mutex
