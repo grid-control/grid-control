@@ -16,8 +16,10 @@ class Config:
 
 		# Override config settings via dictionary
 		for section in configDict:
+			if section not in self.parser.sections():
+				self.parser.add_section(str(section))
 			for item in configDict[section]:
-				self.set(section, item, configDict[section][item])
+				self.set(str(section), item, str(configDict[section][item]))
 
 
 	def parseFile(self, parser, configFile):
@@ -63,7 +65,7 @@ class Config:
 			raise ConfigError(errorMessage)
 		# Read from config file or return default if possible
 		try:
-			value = self.parseLine(self.parser, section, item)
+			value = self.parseLine(self.parser, str(section), item)
 			self.protocol[section][item] = (value, default, volatile)
 			return value
 		except ConfigParser.NoSectionError:
@@ -80,8 +82,7 @@ class Config:
 
 
 	def getPath(self, section, item, default = None, volatile = False):
-		value = self.getPaths(section, item, default, volatile) + ['']
-		return (value[0], '')[len(value) == 0]
+		return (self.getPaths(section, item, default, volatile) + [''])[0]
 
 
 	def getInt(self, section, item, default = None, volatile = False):

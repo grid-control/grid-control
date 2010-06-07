@@ -48,13 +48,6 @@ class DataMod(Module):
 		return ('ListProvider', 'FileBoundarySplitter')
 
 
-	# This function is here to allow ParaMod to transform jobNums
-	def getTranslatedSplitInfo(self, jobNum):
-		if self.dataSplitter == None:
-			return {}
-		return self.dataSplitter.getSplitInfo(jobNum)
-
-
 	# Called on job submission
 	def onJobSubmit(self, jobObj, jobNum, dbmessage = [{}]):
 		splitInfo = self.getTranslatedSplitInfo(jobNum)

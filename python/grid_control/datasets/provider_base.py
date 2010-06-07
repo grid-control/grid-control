@@ -8,14 +8,11 @@ class DataProvider(AbstractObject):
 
 	def __init__(self, config, section, datasetExpr, datasetNick, datasetID):
 		self.config = config
-		self.section = section
 		self._datasetExpr = datasetExpr
 		self._datasetNick = datasetNick
 		self._datasetID = datasetID
 		self._cache = None
-		self._validated = False
-		sitefilter = config.get('datasets', 'sites', '', volatile=True)
-		self.sitefilter = map(str.strip, sitefilter.split())
+		self.sitefilter = map(str.strip, config.get('datasets', 'sites', '', volatile=True).split())
 
 
 	# Parse dataset format [NICK : [PROVIDER : [(/)*]]] DATASET

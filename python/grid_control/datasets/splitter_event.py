@@ -2,9 +2,9 @@ from splitter_base import DataSplitter
 from provider_base import DataProvider
 
 class EventBoundarySplitter(DataSplitter):
-	def __init__(self, config, section, values):
-		DataSplitter.__init__(self, config, section, values)
-		self.set('eventsPerJob', config.getInt, 'events per job')
+	def __init__(self, config, section = None):
+		DataSplitter.__init__(self, config, section)
+		self.eventsPerJob = self.setup(config.getInt, 'events per job')
 
 
 	def neededVars(self):

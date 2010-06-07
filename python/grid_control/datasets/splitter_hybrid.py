@@ -2,15 +2,14 @@ from splitter_base import DataSplitter
 from provider_base import DataProvider
 
 class HybridSplitter(DataSplitter):
-	def __init__(self, config, section, values):
-		DataSplitter.__init__(self, config, section, values)
-		self.set('eventsPerJob', config.getInt, 'events per job')
+	def __init__(self, config, section = None):
+		DataSplitter.__init__(self, config, section)
+		self.eventsPerJob = self.setup(config.getInt, 'events per job')
 
 
 	def splitDatasetInternal(self, blocks, firstEvent = 0):
 		for block in blocks:
-			events = 0
-			fileStack = []
+			(events, fileStack) = (0, [])
 
 			def returnSplit():
 				job = dict()

@@ -125,19 +125,28 @@ def vprint(text, level = 0, printTime = False, newline = True, once = False):
 vprint.log = []
 
 
-def boolUserInput(text, default):
+def getUserInput(text, default, choices, parser = lambda x: x):
 	while True:
 		try:
-			userinput = raw_input('%s %s: ' % (text, ('[no]', '[yes]')[default]))
+			userinput = raw_input('%s %s: ' % (text, '[%s]' % default))
 		except:
+			print
 			sys.exit(0)
 		if userinput == '':
-			return default
-		if userinput.lower() in ('yes', 'y', 'true', 'ok'):
+			return parser(default)
+		if parser(userinput) != None:
+			return parser(userinput)
+		valid = str.join(", ", map(lambda x: '"%s"' % x, choices[:-1]))
+		print 'Invalid input! Answer with %s or "%s"' % (valid, choices[-1])
+
+
+def boolUserInput(text, default):
+	def boolParse(x):
+		if x.lower() in ('yes', 'y', 'true', 'ok'):
 			return True
-		if userinput.lower() in ('no', 'n', 'false'):
+		if x.lower() in ('no', 'n', 'false'):
 			return False
-		print 'Invalid input! Answer with "yes" or "no"'
+	return getUserInput(text, ('no', 'yes')[default], ['yes', 'no'], boolParse)
 
 
 def wait(opts, timeout):
@@ -535,25 +544,31 @@ def lenSplit(list, maxlen):
 	yield tmp
 
 
-def printTabular(head, entries, fmtString = ''):
+def printTabular(head, data, fmtString = '', fmt = {}):
 	justFunDict = { 'l': str.ljust, 'r': str.rjust, 'c': str.center }
 	# justFun = {id1: str.center, id2: str.rjust, ...}
 	justFun = dict(map(lambda (idx, x): (idx[0], justFunDict[x]), zip(head, fmtString)))
 
 	maxlen = dict(map(lambda (id, name): (id, len(name)), head))
 	head = [ x for x in head ]
-	entries = [ x for x in entries ]
 
 	lenMap = {}
-	for entry in filter(lambda x: x, entries):
-		for id, name in head:
-			value = str(entry.get(id, ''))
-			stripped = re.sub("\33\[\d*(;\d*)*m", "", value)
-			lenMap[value] = len(value) - len(stripped)
-			maxlen[id] = max(maxlen.get(id, len(name)), len(stripped))
+	entries = []
+	for entry in data:
+		if entry:
+			tmp = {}
+			for id, name in head:
+				tmp[id] = str(fmt.get(id, str)(entry.get(id, '')))
+				value = str(fmt.get(id, str)(entry.get(id, '')))
+				stripped = re.sub("\33\[\d*(;\d*)*m", "", value)
+				lenMap[value] = len(value) - len(stripped)
+				maxlen[id] = max(maxlen.get(id, len(name)), len(stripped))
+		else:
+			tmp = entry
+		entries.append(tmp)
 
 	# adjust to maxlen of column (considering escape sequence correction)
-	just = lambda id, x: justFun.get(id, str.rjust)(str(x), maxlen[id] + lenMap.get(x, 0))
+	just = lambda id, x: justFun.get(id, str.rjust)(str(x), maxlen[id] + lenMap.get(str(x), 0))
 
 	headentry = dict(map(lambda (id, name): (id, name.center(maxlen[id])), head))
 	for entry in [headentry, None] + entries:
