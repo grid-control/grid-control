@@ -3,12 +3,12 @@ from grid_control.datasets import DataProvider
 from lumi_tools import *
 
 def createDBSAPI(url):
-	import DBSAPI_v2.dbsApi
+	import DBSAPI.dbsApi
 	if url == '':
 		url = 'http://cmsdbsprod.cern.ch/cms_dbs_prod_global/servlet/DBSServlet'
 	elif (not 'http://' in url) and (not 'https://' in url):
 		url = 'http://cmsdbsprod.cern.ch/%s/servlet/DBSServlet' % url
-	return DBSAPI_v2.dbsApi.DbsApi({'version': 'DBS_2_0_6', 'level': 'CRITICAL', 'url': url})
+	return DBSAPI.dbsApi.DbsApi({'version': 'DBS_2_0_6', 'level': 'CRITICAL', 'url': url})
 
 
 # required format: <dataset path>[@<instance>][#<block>][%<run-lumis>]
@@ -44,7 +44,7 @@ class DBSApiv2(DataProvider):
 
 
 	def getBlocksInternal(self):
-		import DBSAPI_v2.dbsApiException
+		import DBSAPI.dbsApiException
 		api = createDBSAPI(self.url)
 		try:
 			listBlockInfo = api.listBlocks(self.datasetPath)
@@ -52,7 +52,7 @@ class DBSApiv2(DataProvider):
 				listFileInfo = api.listFiles(self.datasetPath, retriveList=['retrive_lumi'])
 			else:
 				listFileInfo = api.listFiles(self.datasetPath)
-		except DBSAPI_v2.dbsApiException.DbsException, ex:
+		except DBSAPI.dbsApiException.DbsException, ex:
 			raise DatasetError('DBS exception\n%s: %s' % (ex.getClassName(), ex.getErrorMessage()))
 
 		if len(listBlockInfo) == 0:
