@@ -161,6 +161,8 @@ def realmain(opts, args):
 		try:
 			jobFile = os.path.join(workDir, 'jobs', 'job_%d.txt' % jobNum)
 			job = Job.load(jobFile)
+		except KeyboardInterrupt:
+			raise
 		except:
 			print "Could not load job status file %s!" % jobFile
 			continue
@@ -173,7 +175,7 @@ def realmain(opts, args):
 			incInfo("Downloaded")
 			continue
 
-		if not proxy.check(60*60):
+		if not proxy.canSubmit(20*60, True):
 			print "Please renew grid proxy!"
 			break
 
@@ -206,6 +208,8 @@ def realmain(opts, args):
 				try:
 					hashLocal = md5sum(outFilePath)
 					print "(%s)" % gcSupport.prettySize(os.path.getsize(outFilePath)),
+				except KeyboardInterrupt:
+					raise
 				except:
 					print ""
 					hashLocal = None

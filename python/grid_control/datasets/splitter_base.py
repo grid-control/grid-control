@@ -3,9 +3,9 @@ from grid_control import AbstractObject, AbstractError, RuntimeError, utils, Con
 from provider_base import DataProvider
 
 class DataSplitter(AbstractObject):
-	splitInfos = ('Dataset', 'SEList', 'NEvents', 'Skipped', 'FileList', 'Nickname', 'DatasetID', 'CommonPrefix', 'Invalid')
-	for id, splitInfo in enumerate(splitInfos):
-		locals()[splitInfo] = id
+	splitInfos = ['Dataset', 'SEList', 'NEvents', 'Skipped', 'FileList', 'Nickname', 'DatasetID', 'CommonPrefix', 'Invalid']
+	for idx, splitInfo in enumerate(splitInfos):
+		locals()[splitInfo] = idx
 
 	def __init__(self, config, section = None):
 		self._jobFiles = None
@@ -16,7 +16,11 @@ class DataSplitter(AbstractObject):
 
 
 	def setup(self, func, item, default = None):
-		self._protocol[item] = func(self._section, item, default)
+		try:
+			self._protocol[item] = func(self._section, item, default)
+		except:
+			# Support for older job mappings
+			self._protocol[item] = func(self._section, item.replace(" ", ""), default)
 		return self._protocol[item]
 
 
@@ -253,7 +257,7 @@ class DataSplitter(AbstractObject):
 		(jobNum, subTarFile, subTarFileObj) = (-1, None, None)
 		for jobNum, entry in enumerate((entries, self._jobFiles)[entries == None]):
 			if jobNum % 100 == 0:
-				closeSubTar(jobNum, subTarFile, subTarFileObj)
+				closeSubTar(jobNum - 1, subTarFile, subTarFileObj)
 				subTarFileObj = cStringIO.StringIO()
 				subTarFile = tarfile.open(mode = "w:gz", fileobj = subTarFileObj)
 				del log
@@ -330,7 +334,10 @@ class DataSplitter(AbstractObject):
 				tmp._jobFiles = self
 				return tmp
 
-		return JobFileTarAdaptor(path).getDataSplitter()
+		try:
+			return JobFileTarAdaptor(path).getDataSplitter()
+		except:
+			raise ConfigError("No valid dataset splitting found in '%s'." % path)
 	loadState = staticmethod(loadState)
 
 DataSplitter.dynamicLoaderPath()

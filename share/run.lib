@@ -189,6 +189,7 @@ getscratch() {
 	}
 
 	getscratch_internal SCRATCH_DIRECTORY LOCAL_SCRATCH NODE_SCRATCH USER_SCRATCH EDG_WL_SCRATCH OSG_WN_TMP LCG_TMP DG_WL_SCRATCH GC_SCRATCH && return 0
+	getscratch_internal GC_LOCALSCRATCH && return 0
 	echo "Site doesn't define scratch directory variables! Trying other locations..." 1>&2
 	export 1>&2
 

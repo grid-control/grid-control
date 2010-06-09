@@ -1,4 +1,4 @@
-from grid_control import AbstractObject, RuntimeError, utils, ConfigError, DatasetError, GridError
+from grid_control import AbstractObject, RuntimeError, utils, ConfigError, DatasetError, GCError
 from provider_base import DataProvider
 
 class DataMultiplexer(DataProvider):

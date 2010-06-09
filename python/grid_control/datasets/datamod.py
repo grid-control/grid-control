@@ -1,5 +1,5 @@
 import os.path, random, time
-from grid_control import Module, Config, ConfigError, utils, WMS
+from grid_control import Module, Config, GCError, ConfigError, utils, WMS
 from provider_base import DataProvider
 from splitter_base import DataSplitter
 
@@ -25,17 +25,14 @@ class DataMod(Module):
 			# split datasets
 			splitter = config.get(self.__class__.__name__, 'dataset splitter', defaultSplitter)
 			splitter = self.dataprovider.checkSplitter(splitter)
-			self.dataSplitter = DataSplitter.open(splitter, config, self.__class__.__name__, {})
+			self.dataSplitter = DataSplitter.open(splitter, config, self.__class__.__name__)
 			self.dataSplitter.splitDataset(self.dataprovider.getBlocks())
 			self.dataSplitter.saveState(config.workDir)
 			if utils.verbosity() > 2:
 				self.dataSplitter.printAllJobInfo()
 		else:
 			# load map between jobnum and dataset files
-			try:
-				self.dataSplitter = DataSplitter.loadState(config.workDir)
-			except:
-				raise ConfigError("Current dataset splitting not found in '%s'." % config.workDir)
+			self.dataSplitter = DataSplitter.loadState(config.workDir)
 			if config.opts.resync:
 				old = DataProvider.loadState(config, config.workDir)
 				new = DataProvider.create(config, self.__class__.__name__, self.dataset, defaultProvider)

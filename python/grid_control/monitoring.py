@@ -73,3 +73,26 @@ class ScriptMonitoring(Monitoring):
 		if self.evtFinish != '':
 			params = "%s %d" % (self.evtFinish, nJobs)
 			threading.Thread(target = os.system, args = (params,)).start()
+
+
+class MonitoringMultiplexer(Monitoring):
+	def __init__(self, config, module, submodules):
+		Monitoring.__init__(self, config, module)
+		submodules = map(str.strip, submodules.split(","))
+		self.submodules = map(lambda x: Monitoring.open(x, config, module), submodules)
+
+	def onJobSubmit(self, wms, jobObj, jobNum):
+		for submodule in self.submodules:
+			submodule.onJobSubmit(wms, jobObj, jobNum)
+
+	def onJobUpdate(self, wms, jobObj, jobNum, data):
+		for submodule in self.submodules:
+			submodule.onJobUpdate(wms, jobObj, jobNum, data)
+
+	def onJobOutput(self, wms, jobObj, jobNum, retCode):
+		for submodule in self.submodules:
+			submodule.onJobOutput(wms, jobObj, jobNum, retCode)
+
+	def onTaskFinish(self, nJobs):
+		for submodule in self.submodules:
+			submodule.onTaskFinish(nJobs)

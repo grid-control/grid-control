@@ -10,7 +10,7 @@ from help	import Help
 
 from backends	import WMS
 from module	import Module
-from monitoring	import Monitoring
+from monitoring	import MonitoringMultiplexer
 
 # import dynamic repos
 import modules

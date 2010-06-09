@@ -68,16 +68,13 @@ def pathGC(*args):
 
 
 def resolvePath(path, userpath = []):
-	searchpaths = [ pathGC() ] + userpath
-	path = os.path.expanduser(path.strip())	# ~/bla -> /home/user/bla
-	path = os.path.normpath(path) # xx/../yy -> yy
+	searchpaths = userpath + [ pathGC() ]
+	cleanPath = lambda x: os.path.normpath(os.path.expanduser(x.strip()))
 	if not os.path.isabs(path):
 		for spath in searchpaths:
 			if os.path.exists(os.path.join(spath, path)):
-				path = os.path.join(spath, path)
-	if not os.path.isabs(path):
-		path = os.path.join(searchpaths[-1], path)
-	return path
+				return cleanPath(os.path.join(spath, path))
+	return cleanPath(os.path.join(searchpaths[-1], path))
 
 
 def searchPathFind(program):

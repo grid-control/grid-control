@@ -93,11 +93,11 @@ def main(args):
 		monitor = config.get('jobs', 'monitor', 'scripts', volatile=True)
 		try:
 			if config.getBool('jobs', 'monitor job', volatile=True):
-				monitor = "dashboard"
+				monitor = "dashboard,scripts"
 			utils.deprecated("Please use [jobs] monitor = dashboard!")
 		except:
 			pass
-		monitor = Monitoring.open(monitor, config, module)
+		monitor = MonitoringMultiplexer(config, module, monitor)
 
 		# Initialise workload management interface
 		backend = config.get('global', 'backend', 'grid')
@@ -134,7 +134,7 @@ def main(args):
 			# Compare config files
 			if config.needInit(savedConfigPath):
 				if utils.boolUserInput("Quit grid-control in order to initialize the task again?", False):
-					sys.exit(0)
+					return 0
 
 		if opts.continuous and not opts.gui:
 			print('')

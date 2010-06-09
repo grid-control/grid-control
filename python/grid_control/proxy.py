@@ -21,10 +21,8 @@ class Proxy(AbstractObject):
 	def _check(self, neededTime):
 		delta = time.time() - self._lastUpdate
 		timeleft = max(0, self.getTimeleft(cached = True) - delta)
-		# recheck proxy:
-		#  * when time is running out (but at most once every 2 minutes)
-		#  * after at least 30min have passed
-		if (timeleft < neededTime and delta > 2 * 60) or delta > 30 * 60:
+		# recheck proxy => after > 30min have passed or when time is running out (max every 2 minutes)
+		if (delta > 30 * 60) or (timeleft < neededTime and delta > 2 * 60):
 			self._lastUpdate = time.time()
 			timeleft = self.getTimeleft(cached = False)
 			verbosity = (0, -1)[timeleft < neededTime]

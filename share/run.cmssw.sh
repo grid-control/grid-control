@@ -121,12 +121,13 @@ for CFG_NAME in $CMSSW_CONFIG; do
 	echo
 	[ "$CODE" != "0" ] && break
 done
-[ "$GZIP_OUT" = "yes" ] && zcat *.log.gz | gzip -9 > "cmssw.log.gz"
+echo -e "CMSSW output on stdout and stderr:\n" | gzip > "00000.log.gz"
+[ "$GZIP_OUT" = "yes" ] && zcat -f *.log.gz | gzip -9 > "cmssw.log.gz"
 
 # Calculate hash of output files for DBS
 echo "Calculating output file hash..."
 for OUT_NAME in $SE_OUTPUT_FILES; do
-	cksum "$OUT_NAME" >> "$MY_WORKDIR/cmssw.dbs/files"
+	[ -s "$OUT_NAME" ] && cksum "$OUT_NAME" >> "$MY_WORKDIR/cmssw.dbs/files"
 done
 echo "$SCRAM_PROJECTVERSION" > "$MY_WORKDIR/cmssw.dbs/version"
 echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~"

@@ -5,7 +5,7 @@ from python_compat import *
 from grid_control import *
 from grid_control.CMSSW import provider_dbsv2
 from grid_control.CMSSW.provider_dbsv2 import *
-from DBSAPI_v2.dbsMigrateApi import DbsMigrateApi
+from DBSAPI.dbsMigrateApi import DbsMigrateApi
 
 class DBS(object):
 	enum = ('CRC32', 'MD5', 'SIZE', 'LFN', 'SE', 'LUMI', 'TYPE', 'EVENTS',
