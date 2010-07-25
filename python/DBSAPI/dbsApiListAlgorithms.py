@@ -11,10 +11,7 @@ from xml.sax import SAXParseException
 from dbsException import DbsException
 from dbsApiException import *
 
-import logging
 import inspect
-
-from dbsLogger import *
 
 from dbsUtil import *
 
@@ -45,7 +42,6 @@ def dbsApiImplListAlgorithms(self, patternVer="*", patternFam="*", patternExe="*
 
     """
     funcInfo = inspect.getframeinfo(inspect.currentframe())
-    ##logging.log(DBSDEBUG, "Api call invoked %s" % str(funcInfo[2]))
 
 
     # Invoke Server.
@@ -55,7 +51,6 @@ def dbsApiImplListAlgorithms(self, patternVer="*", patternFam="*", patternExe="*
 		    'app_executable_name' : patternExe, 
 		    'ps_hash' : patternPS }, 
 		    'GET')
-    ##logging.log(DBSDEBUG, data) 
     # Parse the resulting xml output.
     try:
       result = []

@@ -1,48 +1,69 @@
-import os.path, random, time
-from grid_control import Module, Config, GCError, ConfigError, utils, WMS
+import os, os.path, random, time
+from grid_control import Module, Config, GCError, ConfigError, UserError, utils, WMS
 from provider_base import DataProvider
 from splitter_base import DataSplitter
 
 class DataMod(Module):
 	def __init__(self, config, includeMap = False):
 		Module.__init__(self, config)
-		self.includeMap = includeMap
-
-		self.dataSplitter = None
+		(self.dataSplitter, self.dataChange, self.includeMap) = (None, None, includeMap)
 		self.dataset = config.get(self.__class__.__name__, 'dataset', '').strip()
 		if self.dataset == '':
 			return
 
 		(defaultProvider, defaultSplitter) = self.getDatasetDefaults(config)
-		defaultProvider = config.get(self.__class__.__name__, 'dataset provider', defaultProvider)
-		if config.opts.init:
-			# find datasets
-			self.dataprovider = DataProvider.create(config, self.__class__.__name__, self.dataset, defaultProvider)
-			self.dataprovider.saveState(config.workDir)
-			if utils.verbosity() > 2:
-				self.dataprovider.printDataset()
+		self.defaultProvider = config.get(self.__class__.__name__, 'dataset provider', defaultProvider)
 
+		if os.path.exists(os.path.join(config.workDir, 'datamap.tar')):
+			if config.opts.init and not config.opts.resync:
+				print "Initialization of task with already submitted / finished jobs can result in invalid results!"
+				if utils.boolUserInput("Perform resync of dataset related information instead of re-init?", True):
+					config.opts.resync = True
+		elif config.opts.init and config.opts.resync:
+			config.opts.resync = False
+
+		taskInfo = utils.PersistentDict(os.path.join(config.workDir, 'task.dat'), ' = ')
+		if config.opts.resync:
+			self.dataChange = self.doResync()
+			self.dataSplitter = self.dataChange[0]
+		elif config.opts.init:
+			# get datasets
+			provider = DataProvider.create(config, self.__class__.__name__, self.dataset, self.defaultProvider)
+			taskInfo.write({'max refresh rate': provider.queryLimit()})
+			provider.saveState(config.workDir)
+			if utils.verbosity() > 2:
+				provider.printDataset()
 			# split datasets
-			splitter = config.get(self.__class__.__name__, 'dataset splitter', defaultSplitter)
-			splitter = self.dataprovider.checkSplitter(splitter)
-			self.dataSplitter = DataSplitter.open(splitter, config, self.__class__.__name__)
-			self.dataSplitter.splitDataset(self.dataprovider.getBlocks())
-			self.dataSplitter.saveState(config.workDir)
+			splitterName = config.get(self.__class__.__name__, 'dataset splitter', defaultSplitter)
+			splitterName = provider.checkSplitter(splitterName)
+			self.dataSplitter = DataSplitter.open(splitterName, config, self.__class__.__name__)
+			self.dataSplitter.splitDataset(os.path.join(config.workDir, 'datamap.tar'), provider.getBlocks())
 			if utils.verbosity() > 2:
 				self.dataSplitter.printAllJobInfo()
 		else:
-			# load map between jobnum and dataset files
-			self.dataSplitter = DataSplitter.loadState(config.workDir)
-			if config.opts.resync:
-				old = DataProvider.loadState(config, config.workDir)
-				new = DataProvider.create(config, self.__class__.__name__, self.dataset, defaultProvider)
-				self.dataSplitter.resyncMapping(config.workDir, old.getBlocks(), new.getBlocks())
-				#TODO: new.saveState(config.workDir)
+			# Load map between jobnum and dataset files
+			self.dataSplitter = DataSplitter.loadState(os.path.join(config.workDir, 'datamap.tar'))
+
+		# Select dataset refresh rate
+		dataRefresh = utils.parseTime(config.get(self.__class__.__name__, 'dataset refresh', '', volatile=True))
+		(self.dataRefresh, self.lastRefresh) = (max(dataRefresh, taskInfo.get('max refresh rate', 0)), time.time())
+		if self.dataRefresh > 0:
+			print "Dataset source will be queried every %s" % utils.strTime(self.dataRefresh)
+
+		if self.dataSplitter.getMaxJobs() == 0:
+			raise UserError("There are no events to process")
 
 
 	# Get default dataset modules
 	def getDatasetDefaults(self, config):
 		return ('ListProvider', 'FileBoundarySplitter')
+
+
+	# This function is here to allow ParaMod to transform jobNums
+	def getTranslatedSplitInfo(self, jobNum):
+		if self.dataSplitter == None:
+			return {}
+		return self.dataSplitter.getSplitInfo(jobNum)
 
 
 	# Called on job submission
@@ -115,7 +136,7 @@ class DataMod(Module):
 	def getMaxJobs(self):
 		if self.dataSplitter == None:
 			return Module.getMaxJobs(self)
-		return self.dataSplitter.getNumberOfJobs()
+		return self.dataSplitter.getMaxJobs()
 
 
 	def getDependencies(self):
@@ -145,3 +166,46 @@ class DataMod(Module):
 		result = Module.getSubmitInfo(self, jobNum)
 		result.update({ "nevtJob": nEvents, "datasetFull": splitInfo.get(DataSplitter.Dataset, '') })
 		return result
+
+
+	def doResync(self):
+		# Get old and new dataset information
+		old = DataProvider.loadState(self.config, self.config.workDir).getBlocks()
+		newProvider = DataProvider.create(self.config, self.__class__.__name__, self.dataset, self.defaultProvider)
+		newProvider.saveState(self.config.workDir, 'datacache-new.dat')
+		new = newProvider.getBlocks()
+
+		# Use old splitting information to synchronize with new dataset infos
+		oldDataSplitter = DataSplitter.loadState(os.path.join(self.config.workDir, 'datamap.tar'))
+		newSplitName = os.path.join(self.config.workDir, 'datamap-new.tar')
+		jobChanges = oldDataSplitter.resyncMapping(newSplitName, old, new, self.config)
+
+		# Move current splitting to backup and use the new splitting from now on
+		def backupRename(old, cur, new):
+			os.rename(os.path.join(self.config.workDir, cur), os.path.join(self.config.workDir, old))
+			os.rename(os.path.join(self.config.workDir, new), os.path.join(self.config.workDir, cur))
+		backupRename('datamap-old.tar',   'datamap.tar',   'datamap-new.tar')
+		backupRename('datacache-old.dat', 'datacache.dat', 'datacache-new.dat')
+		newDataSplitter = DataSplitter.loadState(os.path.join(self.config.workDir, 'datamap.tar'))
+		return (oldDataSplitter, newDataSplitter, jobChanges)
+
+
+	# Intervene in job management
+	def getIntervention(self):
+		jobChanges = None
+		if self.dataSplitter:
+			# Perform automatic resync
+			if not self.dataChange and self.dataRefresh > 0:
+				if time.time() - self.lastRefresh > self.dataRefresh:
+					self.lastRefresh = time.time()
+					self.dataChange = self.doResync()
+			# Deal with job changes
+			if self.dataChange:
+				(oldDataSplitter, newDataSplitter, jobChanges) = self.dataChange
+				self.dataSplitter = newDataSplitter
+				self.dataChange = None
+		return jobChanges
+
+
+	def onTaskFinish(self):
+		return self.dataRefresh <= 0

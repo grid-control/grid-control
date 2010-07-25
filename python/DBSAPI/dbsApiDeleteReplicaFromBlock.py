@@ -1,3 +1,6 @@
+# Revision: $"
+# Id: $"
+
 
 import os, re, string, socket, xml.sax, xml.sax.handler
 import base64
@@ -7,10 +10,7 @@ from cStringIO import StringIO
 from dbsException import DbsException
 from dbsApiException import *
 
-import logging
 import inspect
-
-from dbsLogger import *
 
 from dbsUtil import *
 
@@ -36,7 +36,6 @@ def dbsApiImplDeleteReplicaFromBlock(self, block, storage_element):
     """   
 
     funcInfo = inspect.getframeinfo(inspect.currentframe())
-    ###logging.log(DBSDEBUG, "Api call invoked %s" % str(funcInfo[2]))
 
     bname = get_name(block)
     sename = get_name(storage_element)
@@ -46,13 +45,11 @@ def dbsApiImplDeleteReplicaFromBlock(self, block, storage_element):
     xmlinput += "<storage_element storage_element_name='"+ sename +"' block_name='"+ bname +"'/>"
     xmlinput += "</dbs>"
 
-    ###logging.log(DBSDEBUG, xmlinput)
     if self.verbose():
        print "deleteReplicaFromBlock, xmlinput",xmlinput
 
     data = self._server._call ({ 'api' : 'deleteSEFromBlock',
                          'xmlinput' : xmlinput }, 'POST')
-    ###logging.log(DBSDEBUG, data)
 
    # ------------------------------------------------------------
 

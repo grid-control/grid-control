@@ -138,8 +138,13 @@ def ANSIGUI(jobDB, jobCycle):
 			screen.loadPos()
 		screen.erase()
 		onResize(None, None)
-		signal.signal(signal.SIGWINCH, onResize)
 		bar = ProgressBar(0, jobDB.nJobs, 65)
+
+		def guiWait(timeout):
+			onResize(None, None)
+			oldHandler = signal.signal(signal.SIGWINCH, onResize)
+			utils.wait(timeout)
+			signal.signal(signal.SIGWINCH, oldHandler)
 
 		# Wrapping ActivityLog functionality
 		class GUILog:
@@ -165,7 +170,7 @@ def ANSIGUI(jobDB, jobCycle):
 			utils.ActivityLog = GUILog
 			sys.stdout = GUIStream(saved[0], screen)
 			sys.stderr = GUIStream(saved[1], screen)
-			jobCycle()
+			jobCycle(guiWait)
 		finally:
 			if sys.modules['__main__'].log: del sys.modules['__main__'].log
 			sys.stdout, sys.stderr, utils.ActivityLog = saved

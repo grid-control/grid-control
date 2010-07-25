@@ -27,11 +27,11 @@ class SGE(LocalWMSApi):
 		reqs = dict(self.wms.getRequirements(jobNum))
 		if WMS.SITES in reqs:
 			params += ' -q %s' % reqs[WMS.SITES][0]
-		if WMS.WALLTIME in reqs:
+		if self.checkReq(reqs, WMS.WALLTIME):
 			params += " -l s_rt=%s" % strTime(reqs[WMS.WALLTIME])
-		if WMS.CPUTIME in reqs:
+		if self.checkReq(reqs, WMS.CPUTIME):
 			params += " -l h_cpu=%s" % strTime(reqs[WMS.CPUTIME])
-		if WMS.MEMORY in reqs:
+		if self.checkReq(reqs, WMS.MEMORY):
 			params += ' -l h_vmem=%dM' % reqs[WMS.MEMORY]
 
 		# Sandbox, IO paths

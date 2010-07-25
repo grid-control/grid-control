@@ -7,10 +7,7 @@ from cStringIO import StringIO
 from dbsException import DbsException
 from dbsApiException import *
 
-import logging
 import inspect
-
-from dbsLogger import *
 
 from dbsUtil import *
 
@@ -24,7 +21,6 @@ def dbsApiImplUpdateProcDSXtCrossSection(self, dataset, xSection):
     """
 
     funcInfo = inspect.getframeinfo(inspect.currentframe())
-    #logging.log(DBSDEBUG, "Api call invoked %s" % str(funcInfo[2]))
 
     data = self._server._call ({ 'api' : 'updateProcDSXtCrossSection',
                          'path' : get_path(dataset),

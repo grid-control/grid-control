@@ -37,7 +37,7 @@ class ListProvider(DataProvider):
 		DataProvider.providers.update({'ListProvider': 'list'})
 
 		(path, self._forcePrefix, self._filter) = utils.optSplit(datasetExpr, "@%")
-		self._filename = config.getPath(section, "dataset file", path)
+		self._filename = utils.resolvePath(path)
 
 
 	def getBlocksInternal(self):

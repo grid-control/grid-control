@@ -174,7 +174,6 @@ class DbsWebApi(DbsApi):
     returns:  list of DbsApplication objects.  
     """
     funcInfo = inspect.getframeinfo(inspect.currentframe())
-    logging.info("Api call invoked %s" % str(funcInfo[2]))
 
 
     # Invoke Server.
@@ -184,7 +183,6 @@ class DbsWebApi(DbsApi):
 		    'app_executable_name' : patternExe, 
 		    'ps_hash' : patternPS }, 
 		    'GET')
-    logging.info(data) 
     # Parse the resulting xml output.
     try:
       result = []

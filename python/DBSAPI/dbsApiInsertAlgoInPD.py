@@ -1,4 +1,5 @@
-
+# Revision: $
+# Id: $
 import os, re, string, socket, xml.sax, xml.sax.handler
 import base64
 from xml.sax.saxutils import escape
@@ -7,10 +8,7 @@ from cStringIO import StringIO
 from dbsException import DbsException
 from dbsApiException import *
 
-import logging
 import inspect
-
-from dbsLogger import *
 
 from dbsUtil import *
 
@@ -31,7 +29,6 @@ def dbsApiImplInsertAlgoInPD(self, dataset, algorithm):
     """
 
     funcInfo = inspect.getframeinfo(inspect.currentframe())
-    ###logging.log(DBSDEBUG, "Api call invoked %s" % str(funcInfo[2]))
     path = get_path(dataset)
     xmlinput  = "<?xml version='1.0' standalone='yes'?>"
     xmlinput += "<dbs>"
@@ -46,13 +43,11 @@ def dbsApiImplInsertAlgoInPD(self, dataset, algorithm):
     xmlinput += "/>"
     xmlinput += "</dbs>"
 
-    ###logging.log(DBSDEBUG, xmlinput)
     if self.verbose():
        print "insertParent, xmlinput",xmlinput
 
     data = self._server._call ({ 'api' : 'insertAlgoInPD', 
                          'xmlinput' : xmlinput }, 'POST')
-    ###logging.log(DBSDEBUG, data)
 
 
 

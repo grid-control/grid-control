@@ -31,48 +31,55 @@ Monitoring.moduleMap["scripts"] = "ScriptMonitoring"
 class ScriptMonitoring(Monitoring):
 	def __init__(self, config, module):
 		Monitoring.__init__(self, config, module)
+		self.silent = config.getBool('events', 'silent', True, volatile=True)
 		self.evtSubmit = config.get('events', 'on submit', '', volatile=True)
 		self.evtStatus = config.get('events', 'on status', '', volatile=True)
 		self.evtOutput = config.get('events', 'on output', '', volatile=True)
 		self.evtFinish = config.get('events', 'on finish', '', volatile=True)
 
 	# Get both task and job config / state dicts
-	def setEventEnviron(self, jobObj, jobNum):
+	def scriptThread(self, script, jobNum = None, jobObj = None, allDict = {}):
 		tmp = {}
+		if jobNum != None:
+			tmp.update(self.module.getSubmitInfo(jobNum))
+		if jobObj != None:
+			tmp.update(jobObj.getAll())
+		tmp.update({'WORKDIR': self.config.workDir})
+		tmp.update({'CFGFILE': self.config.configFile})
+		script = self.module.substVars(script, jobNum, tmp)
+
 		tmp.update(self.module.getTaskConfig())
 		tmp.update(self.module.getJobConfig(jobNum))
-		tmp.update(self.module.getSubmitInfo(jobNum))
-		tmp.update(jobObj.getAll())
-		tmp.update({'WORKDIR': self.config.workDir})
+		if jobNum != None:
+			tmp.update(self.module.getSubmitInfo(jobNum))
+
+		tmp.update(others)
 		for key, value in tmp.iteritems():
 			os.environ["GC_%s" % key] = str(value)
+		if self.silent:
+			utils.LoggedProcess(script).wait()
+		else:
+			os.system(script)
+
+	def runInBackground(self, script, jobNum = None, jobObj = None, addDict =  {}):
+		if script != '':
+			threading.Thread(target = ScriptMonitoring.scriptThread, args = (self, script, jobNum, jobObj)).start()
 
 	# Called on job submission
 	def onJobSubmit(self, wms, jobObj, jobNum):
-		if self.evtSubmit != '':
-			self.setEventEnviron(jobObj, jobNum)
-			params = "%s %d %s" % (self.evtSubmit, jobNum, jobObj.wmsId)
-			threading.Thread(target = os.system, args = (params,)).start()
+		self.runInBackground(self.evtSubmit, jobNum, jobObj)
 
 	# Called on job status update
 	def onJobUpdate(self, wms, jobObj, jobNum, data):
-		if self.evtStatus != '':
-			self.setEventEnviron(jobObj, jobNum)
-			params = "%s %d %s %s" % (self.evtStatus, jobNum, jobObj.wmsId, Job.states[jobObj.state])
-			threading.Thread(target = os.system, args = (params,)).start()
+		self.runInBackground(self.evtStatus, jobNum, jobObj, {'STATUS': Job.states[jobObj.state]})
 
 	# Called on job status update
 	def onJobOutput(self, wms, jobObj, jobNum, retCode):
-		if self.evtOutput != '':
-			self.setEventEnviron(jobObj, jobNum)
-			params = "%s %d %s %d" % (self.evtOutput, jobNum, jobObj.wmsId, retCode)
-			threading.Thread(target = os.system, args = (params,)).start()
+		self.runInBackground(self.evtOutput, jobNum, jobObj, {'RETCODE': retCode})
 
 	# Called at the end of the task
 	def onTaskFinish(self, nJobs):
-		if self.evtFinish != '':
-			params = "%s %d" % (self.evtFinish, nJobs)
-			threading.Thread(target = os.system, args = (params,)).start()
+		self.runInBackground(self.evtFinish, addDict = {'NJOBS': nJobs})
 
 
 class MonitoringMultiplexer(Monitoring):
@@ -80,6 +87,12 @@ class MonitoringMultiplexer(Monitoring):
 		Monitoring.__init__(self, config, module)
 		submodules = map(str.strip, submodules.split(","))
 		self.submodules = map(lambda x: Monitoring.open(x, config, module), submodules)
+
+	def getEnv(self, wms):
+		return dict(reduce(lambda x, y: x + y, map(lambda m: m.getEnv(wms).items(), self.submodules)))
+
+	def getFiles(self):
+		return reduce(lambda x, y: x + y, map(lambda m: m.getFiles(), self.submodules))
 
 	def onJobSubmit(self, wms, jobObj, jobNum):
 		for submodule in self.submodules:

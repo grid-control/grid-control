@@ -18,6 +18,8 @@ if [ -z "$GLITE_LOCATION" ]; then
 	elif [ -d "/afs/desy.de/project/glite" ]; then
 		source "/afs/desy.de/project/glite/UI/etc/profile.d/grid-env.sh"
 		echo "[AFS-SITE] Using gLite `glite-version`"
+	else
+		echo "[WARNING] No gLite found!"
 	fi
 
 	# We want to keep the local VO environment variables
@@ -31,3 +33,11 @@ if [ -z "$GLITE_LOCATION" ]; then
 	source "$VO_REVERT"
 	rm "$VO_KEEPER" "$VO_REVERT"
 fi
+echo "Using gLite UI $GLITE_LOCATION"
+
+if [ -s "$MY_SCRATCH/_proxy.dat" ]; then
+	mv "$MY_SCRATCH/_proxy.dat" "$MY_LANDINGZONE/_proxy.dat"
+	chmod 400 "$MY_LANDINGZONE/_proxy.dat"
+	[ ! -s "$X509_USER_PROXY" ] && export X509_USER_PROXY="$MY_LANDINGZONE/_proxy.dat"
+fi
+echo "Using grid proxy $X509_USER_PROXY"

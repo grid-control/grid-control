@@ -1,3 +1,5 @@
+# Revision: $"
+# Id: $"
 
 import os, re, string, socket, xml.sax, xml.sax.handler
 import base64
@@ -7,10 +9,7 @@ from cStringIO import StringIO
 from dbsException import DbsException
 from dbsApiException import *
 
-import logging
 import inspect
-
-from dbsLogger import *
 
 from dbsUtil import *
 
@@ -38,7 +37,6 @@ def dbsApiImplAddReplicaToBlock(self, block, storageElement):
     """
 
     funcInfo = inspect.getframeinfo(inspect.currentframe())
-    ###logging.log(DBSDEBUG, "Api call invoked %s" % str(funcInfo[2]))
 
     bname = get_name(block)
     sename = get_name(storageElement)
@@ -49,11 +47,9 @@ def dbsApiImplAddReplicaToBlock(self, block, storageElement):
           xmlinput += " <storage_element block_name='" + bname + "' storage_element_name='"+ sename +"'/>"
     xmlinput += "</dbs>"
 
-    ###logging.log(DBSDEBUG, xmlinput)
 
     data = self._server._call ({ 'api' : 'insertStorageElement',
                          'xmlinput' : xmlinput }, 'POST')
-    ###logging.log(DBSDEBUG, data)
 
 
   # ------------------------------------------------------------

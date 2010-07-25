@@ -11,7 +11,10 @@ parser.add_option("-L", "--listlumis", dest="listlumis", default=None)
 parser.add_option("-r", "--remove", dest="remove")
 parser.add_option("-w", "--wipe", dest="wipe", default=False, action="store_true")
 parser.add_option("-d", "--dump", dest="dump")
-parser.add_option("-u", "--url", dest="url", default="http://ekpcms2.physik.uni-karlsruhe.de:8080/DBS/servlet/DBSServlet")
+parser.add_option("-u", "--url", dest="url",
+#	default="https://cmsdbsprod.cern.ch:8443/cms_dbs_ph_analysis_02_writer/servlet/DBSServlet"
+	default="http://cmsdbsprod.cern.ch/cms_dbs_prod_global/servlet/DBSServlet"
+)
 parser.add_option("-i", "--import", dest="imp")
 parser.add_option("-s", "--se", dest="se")
 parser.add_option("-p", "--parents", dest="parents")
@@ -29,18 +32,23 @@ if opts.remove:
 	else:
 		for block in api.listBlocks(opts.remove.split("#")[0]):
 			eraseBlock(block["Name"])
-		api.deleteProcDS(block["Name"].split("#")[0])
+		api.deleteProcDS(opts.remove.split("#")[0])
 
-elif opts.list and opts.listlumis:
-	for fileInfo in api.listFiles(opts.list):
+elif opts.listlumis:
+	allrl = []
+	for fileInfo in api.listFiles(opts.listlumis, retriveList=['retrive_lumi']):
 		lfn = fileInfo['LogicalFileName']
 		rl = []
-		for lumi in api.listFileLumis(lfn):
+		for lumi in fileInfo['LumiList']:
 			rl.append(([int(lumi["RunNumber"]), int(lumi["LumiSectionNumber"])], [int(lumi["RunNumber"]), int(lumi["LumiSectionNumber"])]))
 		print lfn
 		for line in map(lambda x: str.join(", ", x), gcSupport.utils.lenSplit(formatLumi(mergeLumi(rl)), 70)):
 			print "\t", line
-		
+		allrl.extend(rl)
+	print "\nComplete dataset:"
+	for line in map(lambda x: str.join(", ", x), gcSupport.utils.lenSplit(formatLumi(mergeLumi(allrl)), 70)):
+		print "\t", line
+	
 
 elif opts.list:
 	for block in api.listBlocks(opts.list):

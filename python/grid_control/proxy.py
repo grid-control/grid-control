@@ -9,10 +9,10 @@ class Proxy(AbstractObject):
 
 	def canSubmit(self, neededTime, canCurrentlySubmit):
 		if not self._check(self.lowerLimit):
-			raise UserError('Your proxy only has %d seconds left!' % self.timeleft())
+			raise UserError('Your proxy only has %d seconds left!' % self.getTimeleft(cached = True))
 		if not self._check(self.lowerLimit + neededTime) and canCurrentlySubmit:
 			utils.vprint("Proxy lifetime (%s) does not meet the walltime requirements (%s)!"
-				% (utils.strTime(self.timeleft()), utils.strTime(neededTime)), -1, printTime = True)
+				% (utils.strTime(self.getTimeleft(cached = True)), utils.strTime(neededTime)), -1, printTime = True)
 			utils.vprint("Disabling job submission", -1, printTime = True)
 			return False
 		return True
@@ -21,8 +21,8 @@ class Proxy(AbstractObject):
 	def _check(self, neededTime):
 		delta = time.time() - self._lastUpdate
 		timeleft = max(0, self.getTimeleft(cached = True) - delta)
-		# recheck proxy => after > 30min have passed or when time is running out (max every 2 minutes)
-		if (delta > 30 * 60) or (timeleft < neededTime and delta > 2 * 60):
+		# recheck proxy => after > 30min have passed or when time is running out (max every 5 minutes)
+		if (delta > 30 * 60) or (timeleft < neededTime and delta > 5 * 60):
 			self._lastUpdate = time.time()
 			timeleft = self.getTimeleft(cached = False)
 			verbosity = (0, -1)[timeleft < neededTime]
@@ -37,6 +37,9 @@ class Proxy(AbstractObject):
 
 	def getVO(self):
 		return 'None'
+
+	def getAuthFile(self):
+		return None
 
 Proxy.dynamicLoaderPath()
 
@@ -84,3 +87,6 @@ class VomsProxy(Proxy):
 
 	def getVO(self):
 		return self.get('vo')
+
+	def getAuthFile(self):
+		return self.get('path')

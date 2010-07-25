@@ -13,8 +13,17 @@ def print_help(*args):
 	sys.exit(0)
 
 def main(args):
-	global opts, log, handler
+	global log, handler
+	utils.abort(False)
 	log = None
+
+	# set up signal handler for interrupts
+	def interrupt(sig, frame):
+		global log, handler
+		utils.abort(True)
+		log = utils.ActivityLog('Quitting grid-control! (This can take a few seconds...)')
+		signal.signal(signal.SIGINT, handler)
+	handler = signal.signal(signal.SIGINT, interrupt)
 
 	# display the 'grid-control' logo and version
 	print(open(utils.pathGC('share', 'logo.txt'), 'r').read())
@@ -29,7 +38,7 @@ def main(args):
 	parser.add_option("",   "--help-conf",     dest="help_cfg",   default=False, action="store_true")
 	parser.add_option("",   "--help-confmin",  dest="help_scfg",  default=False, action="store_true")
 	parser.add_option("-s", "--no-submission", dest="submission", default=True,  action="store_false")
-	parser.add_option("-q", "--requery",       dest="resync",     default=False, action="store_true")
+	parser.add_option("-q", "--resync",        dest="resync",     default=False, action="store_true")
 	parser.add_option("-i", "--init",          dest="init",       default=False, action="store_true")
 	parser.add_option("-c", "--continuous",    dest="continuous", default=False, action="store_true")
 	parser.add_option("-G", "--gui",           dest="gui",        default=False, action="store_true")
@@ -44,19 +53,10 @@ def main(args):
 	parser.add_option("-v", "--verbose",       dest="verbosity",  default=0,     action="count")
 	(opts, args) = parser.parse_args()
 	utils.verbosity.setting = opts.verbosity
-	opts.abort = False
 
 	# we need exactly one positional argument (config file)
 	if len(args) != 1:
 		utils.exitWithUsage(usage, "Config file not specified!")
-
-	# set up signal handler for interrupts
-	def interrupt(sig, frame):
-		global opts, log, handler
-		opts.abort = True
-		log = utils.ActivityLog('Quitting grid-control! (This can take a few seconds...)')
-		signal.signal(signal.SIGINT, handler)
-	handler = signal.signal(signal.SIGINT, interrupt)
 
 	# big try... except block to catch exceptions and print error message
 	try:
@@ -65,10 +65,12 @@ def main(args):
 		defaultCmdLine = config.get("global", "cmdargs", "", volatile=True)
 		(opts.reportSite, opts.reportTime, opts.reportMod) = (0, 0, 0)
 		parser.parse_args(args = defaultCmdLine.split() + sys.argv[1:], values = opts)
-		if opts.seed:
-			config.set('jobs', 'seeds', opts.seed.rstrip('S'))
-		if opts.maxRetry:
-			config.set('jobs', 'max retry', str(opts.maxRetry))
+		def setConfigFromOpt(option, section, item, fun = lambda x: str(x)):
+			if option:
+				config.set(section, item, fun(option))
+		setConfigFromOpt(opts.seed, 'jobs', 'seeds', lambda x: x.rstrip('S'))
+		setConfigFromOpt(opts.maxRetry, 'jobs', 'max retry')
+		setConfigFromOpt(opts.continuous, 'jobs', 'continuous')
 		config.opts = opts
 
 		# Check work dir validity (default work directory is the config file name)
@@ -153,20 +155,21 @@ def main(args):
 					raise RuntimeError("Not enough space left in working directory")
 
 				# check for jobs
-				if not opts.abort and jobs.check(wms):
-					didWait = wait(opts, wms.getTimings()[1])
+				if not utils.abort() and jobs.check(wms):
+					didWait = wait(wms.getTimings()[1])
 				# retrieve finished jobs
-				if not opts.abort and jobs.retrieve(wms):
-					didWait = wait(opts, wms.getTimings()[1])
+				if not utils.abort() and jobs.retrieve(wms):
+					didWait = wait(wms.getTimings()[1])
 				# try submission
-				if not opts.abort and jobs.submit(wms):
-					didWait = wait(opts, wms.getTimings()[1])
+				if opts.submission:
+					if not utils.abort() and jobs.submit(wms):
+						didWait = wait(wms.getTimings()[1])
 
 				# quit if abort flag is set or not in continuous mode
-				if opts.abort or not opts.continuous:
+				if utils.abort() or not opts.continuous:
 					break
 				# idle timeout
-				wait(opts, wms.getTimings()[0])
+				wait(wms.getTimings()[0])
 				# Check whether wms can submit
 				if not wms.canSubmit(module.wallTime, opts.submission):
 					opts.submission = False

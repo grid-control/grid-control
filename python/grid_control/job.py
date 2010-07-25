@@ -1,4 +1,4 @@
-import time
+import os, time, fnmatch
 from utils import DictFormat, safeWriteFile
 from exceptions import ConfigError
 
@@ -19,6 +19,16 @@ class Job:
 		self.wmsId = None
 		self.submitted = 0
 		self.dict = {}
+
+
+	def readJobs(path):
+		for jobFile in fnmatch.filter(os.listdir(path), 'job_*.txt'):
+			try: # 2xsplit is faster than regex
+				jobNum = int(jobFile.split(".")[0].split("_")[1])
+			except:
+				continue
+			yield (jobNum, os.path.join(path, jobFile))
+	readJobs = staticmethod(readJobs)
 
 
 	def load(cls, name):
@@ -75,8 +85,8 @@ class Job:
 		self.dict[key] = value
 
 
-	def get(self, key):
-		return self.dict.get(key, None)
+	def get(self, key, default = None):
+		return self.dict.get(key, default)
 
 
 	def update(self, state):
@@ -88,11 +98,3 @@ class Job:
 		self.wmsId = wmsId
 		self.attempt = self.attempt + 1
 		self.submitted = time.time()
-
-
-	def report(self):
-		return {
-			'Status': self.states[self.state],
-			'Destination': self.dict.get('dest', 'N/A'),
-			'Id': self.wmsId
-		}

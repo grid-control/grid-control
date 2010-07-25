@@ -44,14 +44,10 @@ class ParaMod(Module):
 		return mapping
 
 	def getMaxJobs(self):
-		maxJobs = None
-		try:
-			maxJobs = self.baseMod.getMaxJobs()
-		except:
-			pass
-		if maxJobs == None:
-			maxJobs = self.baseJobs
-		return max(1, maxJobs) * self.getParamSpace()
+		modJobs = self.baseMod.getMaxJobs()
+		if modJobs == None:
+			modJobs = 1
+		return modJobs * self.getParamSpace() * self.baseJobs
 
 	def report(self, jobNum):
 		return self.getParamsExt()[jobNum % self.getParamSpace()]
@@ -70,6 +66,11 @@ class ParaMod(Module):
 			else:
 				params.append(pset)
 		return params
+
+	# Intervene in job management
+	def getIntervention(self):
+		if self.baseMod.getIntervention() != None:
+			raise RuntimeError("Intervention in job database requested! This is not supported for parameter based jobs")
 
 	def getParams(self):
 		# [{VAR1:VALUE1, VAR2:VALUE2}, {VAR1:VALUE1}, {VAR3:VALUE3}]

@@ -26,7 +26,7 @@ class GliteWMS(GridWMS):
 			proc = utils.LoggedProcess(self._delegateExec, "%s -a --noint --logfile %s" %
 				(params, utils.shellEscape(log)))
 
-			for line in map(str.strip, proc.iter(self.config.opts)):
+			for line in map(str.strip, proc.iter()):
 				try:
 					(left, right) = line.split(':', 1)
 					if left.endswith('identifier') and not right.strip().startswith('-'):

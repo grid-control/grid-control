@@ -1,3 +1,6 @@
+# Revision: $"
+# Id: $"
+
 
 import os, re, string, socket, xml.sax, xml.sax.handler
 import base64
@@ -7,10 +10,7 @@ from cStringIO import StringIO
 from dbsException import DbsException
 from dbsApiException import *
 
-import logging
 import inspect
-
-from dbsLogger import *
 
 from dbsUtil import *
 
@@ -32,10 +32,8 @@ def dbsApiImplDeleteProcDS(self, dataset):
 
     path = get_path(dataset)
     funcInfo = inspect.getframeinfo(inspect.currentframe())
-    ####logging.log(DBSDEBUG, "Api call invoked %s" % str(funcInfo[2]))
     data = self._server._call ({ 'api' : 'deleteProcDS',
                          'path' : path }, 'POST')
-    ####logging.log(DBSDEBUG, data)
 
    # ------------------------------------------------------------
 
@@ -58,11 +56,9 @@ def dbsApiImplDeleteRecycleBin(self, dataset, block):
 
     path = get_path(dataset)
     funcInfo = inspect.getframeinfo(inspect.currentframe())
-    ####logging.log(DBSDEBUG, "Api call invoked %s" % str(funcInfo[2]))
     data = self._server._call ({ 'api' : 'deleteRecycleBin',
                          'path' : path,
                          'block_name' : block }, 'POST')
-    ####logging.log(DBSDEBUG, data)
 
    # ------------------------------------------------------------
 
@@ -84,10 +80,8 @@ def dbsApiImplUndeleteProcDS(self, dataset):
 
     path = get_path(dataset)
     funcInfo = inspect.getframeinfo(inspect.currentframe())
-    ####logging.log(DBSDEBUG, "Api call invoked %s" % str(funcInfo[2]))
     data = self._server._call ({ 'api' : 'undeleteProcDS',
                          'path' : path }, 'POST')
-    ####logging.log(DBSDEBUG, data)
 
    # ------------------------------------------------------------
 

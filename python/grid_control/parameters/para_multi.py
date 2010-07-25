@@ -1,7 +1,7 @@
 from para_base import ParaMod
 from grid_control import exceptions, utils
 
-class UberParaMod(ParaMod):
+class MultiParaMod(ParaMod):
 	"""This module builds all possible combinations of parameters
 	and/or tuples of parameters.  For example,
 
@@ -28,8 +28,8 @@ class UberParaMod(ParaMod):
 
 		def expandParam(param, type = 'words'):
 			""" Expand param depending on its type.
-			>>> expandParam("Where the wild things grow")
-			['Where', 'the', 'wild', 'things', 'grow']
+			>>> expandParam("Where the wild things roam")
+			['Where', 'the', 'wild', 'things', 'roam']
 			>>> expandParam("range(3)", "expr")
 			[0, 1, 2]
 			Possible improvements: enum values to indicate type;  doctest
@@ -82,5 +82,5 @@ class UberParaMod(ParaMod):
 		return map(dict, res)
 
 
-class MultiParaMod(UberParaMod):
+class UberParaMod(MultiParaMod):
 	pass

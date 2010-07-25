@@ -1,3 +1,4 @@
+from grid_control import DatasetError
 from splitter_base import DataSplitter
 from provider_base import DataProvider
 
@@ -29,6 +30,8 @@ class EventBoundarySplitter(DataSplitter):
 					break
 
 				nEvents = fileList[DataProvider.NEvents]
+				if nEvents < 0:
+					raise DatasetError("EventBoundarySplitter does not support files with a negative number of events!")
 				curEvent = lastEvent
 				lastEvent = curEvent + nEvents
 				curSkip = 0

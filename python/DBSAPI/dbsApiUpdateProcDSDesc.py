@@ -7,10 +7,7 @@ from cStringIO import StringIO
 from dbsException import DbsException
 from dbsApiException import *
 
-import logging
 import inspect
-
-from dbsLogger import *
 
 from dbsUtil import *
 
@@ -24,7 +21,6 @@ def dbsApiImplUpdateProcDSDesc(self, dataset, desc):
     """
 
     funcInfo = inspect.getframeinfo(inspect.currentframe())
-    #logging.log(DBSDEBUG, "Api call invoked %s" % str(funcInfo[2]))
 
     data = self._server._call ({ 'api' : 'updateProcDSDesc',
                          'path' : get_path(dataset),

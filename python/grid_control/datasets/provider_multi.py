@@ -1,3 +1,4 @@
+import sys
 from grid_control import AbstractObject, RuntimeError, utils, ConfigError, DatasetError, GCError
 from provider_base import DataProvider
 
@@ -22,6 +23,10 @@ class DataMultiplexer(DataProvider):
 		print
 
 
+	def queryLimit(self):
+		return max(map(lambda x: x.queryLimit(), self.subprovider))
+
+
 	def checkSplitter(self, splitter, first = None):
 		def getProposal(x):
 			for provider in self.subprovider:
@@ -29,7 +34,7 @@ class DataMultiplexer(DataProvider):
 			return x
 		if getProposal(splitter) != getProposal(getProposal(splitter)):
 			raise DatasetError('Dataset providers could not agree on valid dataset splitter!')
-		return splitter
+		return getProposal(splitter)
 
 
 	def getBlocksInternal(self):
@@ -40,7 +45,7 @@ class DataMultiplexer(DataProvider):
 				result.extend(provider["src"].getBlocks())
 			except GCError:
 				exceptions.append(GCError.message)
-			if self.config.opts.abort:
+			if utils.abort():
 				raise DatasetError('Could not retrieve all datasets!')
 		if len(exceptions):
 			sys.stderr.write(str.join("\n", exceptions))

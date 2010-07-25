@@ -7,10 +7,7 @@ from cStringIO import StringIO
 from dbsException import DbsException
 from dbsApiException import *
 
-import logging
 import inspect
-
-from dbsLogger import *
 
 from dbsUtil import *
 
@@ -30,12 +27,9 @@ def dbsApiImplOpenBlock(self, block=None ):
 
     """
     funcInfo = inspect.getframeinfo(inspect.currentframe())
-    ##logging.log(DBSDEBUG, "Api call invoked %s" % str(funcInfo[2]))
 
     # Invoke Server.
     block_name = get_name(block)
     data = self._server._call ({ 'api' : 'openBlock', 'block_name' : block_name }, 'POST')
-    ##logging.log(DBSDEBUG, data)
-
 
 

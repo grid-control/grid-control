@@ -46,21 +46,18 @@ class Report:
 		reports = []
 		for jobNum in self.jobs:
 			jobObj = self.allJobs.get(jobNum)
-			report = jobObj.report()
 			if jobObj.state == Job.INIT:
 				continue
-			report.update({'Job': jobNum})
-			reports.append(report)
+			reports.append({0: jobNum, 1: Job.states[jobObj.state], 2: jobObj.wmsId})
 			if utils.verbosity() > 0:
 				history = jobObj.history.items()
 				history.reverse()
 				for at, dest in history:
 					if dest != 'N/A':
-						reports.append({"Status": at, "Id": " -> " + dest})
-			else:
-				if report["Destination"] != 'N/A':
-					reports.append({"Id": " -> " + report["Destination"]})
-		utils.printTabular([("Job", "Job"), ("Status", "Status / Attempt"), ("Id", "Id / Destination")], reports, "rcl")
+						reports.append({1: at, 2: " -> " + dest})
+			elif jobObj.get('dest', 'N/A') != 'N/A':
+				reports.append({2: " -> " + jobObj.get('dest')})
+		utils.printTabular(zip(range(3), ["Job", "Status / Attempt", "Id / Destination"]), reports, "rcl")
 		print
 
 

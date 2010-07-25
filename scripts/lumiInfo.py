@@ -1,7 +1,8 @@
 #!/usr/bin/env python
 import gcSupport, sys, optparse, os, tarfile, xml.dom.minidom
 from python_compat import *
-from grid_control import utils
+from grid_control import utils, datasets
+from grid_control.datasets import DataSplitter
 from grid_control.CMSSW import formatLumi, mergeLumi, parseLumiFilter
 
 def fail(msg):
@@ -51,10 +52,92 @@ def outputJSON(lumis, stream = sys.stdout):
 	stream.write("%s\n" % str.join(',\n', entries))
 	stream.write("}\n")
 
-def setify(x):
-	return set(map(lambda x: ((x[0][0], x[0][1]), (x[1][0], x[1][1])), x))
+###########################
+# Lumi filter calculations
+###########################
+if opts.save_jobjson or opts.save_jobgc or opts.get_events:
+	(workDir, jobList) = gcSupport.getWorkJobs(args)
+	(log, incomplete, splitter, splitInfo) = (None, False, {}, None)
+	(lumiDict, readDict, writeDict) = ({}, {}, {})
+	try:
+		splitter = DataSplitter.loadState(workDir)
+	except:
+		pass
+	jobList = sorted(jobList)
 
+	for jobNum in jobList:
+		del log
+		log = utils.ActivityLog('Reading job logs - [%d / %d]' % (jobNum, jobList[-1]))
+		jobInfo = gcSupport.getJobInfo(workDir, jobNum, lambda retCode: retCode == 0)
+		if not jobInfo:
+			if not incomplete:
+				print "WARNING: Not all jobs have finished - results will be incomplete!"
+				incomplete = True
+			continue
+
+		if splitter:
+			splitInfo = splitter.getSplitInfo(jobNum)
+		outputName = splitInfo.get(DataSplitter.Nickname, splitInfo.get(DataSplitter.DatasetID, 0))
+
+		# Read framework report files to get number of events
+		try:
+			outputDir = os.path.join(workDir, 'output', 'job_' + str(jobNum))
+			for fwkXML in gcSupport.getCMSSWInfo(os.path.join(outputDir, "cmssw.dbs.tar.gz")):
+				for run in fwkXML.getElementsByTagName("Run"):
+					for lumi in run.getElementsByTagName("LumiSection"):
+						run_id = int(run.getAttribute("ID"))
+						lumi_id = int(lumi.getAttribute("ID"))
+						lumiDict.setdefault(outputName, {}).setdefault(run_id, set()).add(lumi_id)
+				for outFile in fwkXML.getElementsByTagName("File"):
+					pfn = outFile.getElementsByTagName("PFN")[0].childNodes[0].data
+					if pfn not in writeDict.setdefault(outputName, {}):
+						writeDict[outputName][pfn] = 0
+					writeDict[outputName][pfn] += int(outFile.getElementsByTagName("TotalEvents")[0].childNodes[0].data)
+				for inFile in fwkXML.getElementsByTagName("InputFile"):
+					if outputName not in readDict:
+						readDict[outputName] = 0
+					readDict[outputName] += int(inFile.getElementsByTagName("EventsRead")[0].childNodes[0].data)
+		except KeyboardInterrupt:
+			sys.exit(0)
+		except:
+			raise
+			print "Error while parsing framework output of job %s!" % jobNum
+			continue
+
+	del log
+	log = utils.ActivityLog('Simplifying lumi sections...')
+	lumis = {}
+	for sample in lumiDict:
+		for run in lumiDict[sample]:
+			for lumi in lumiDict[sample][run]:
+				lumis.setdefault(sample, []).append(([run, lumi], [run, lumi]))
+	for sample in lumiDict:
+		lumis[sample] = mergeLumi(lumis[sample])
+	del log
+
+	for sample, lumis in lumis.items():
+		print "Sample:", sample
+		print "========================================="
+		print "Number of events processed: %12d" % readDict[sample]
+		print "  Number of events written: %12d" % sum(writeDict.get(sample, {}).values())
+		if writeDict.get(sample, None):
+			print
+			head = [(0, "          Output filename"), (1, "Events")]
+			utils.printTabular(head, map(lambda pfn: {0: pfn, 1: writeDict[sample][pfn]}, writeDict[sample]))
+		if opts.save_jobjson:
+			outputJSON(lumis, open(os.path.join(workDir, 'processed_%s.json' % sample), 'w'))
+			print "Saved processed lumi sections in", os.path.join(workDir, 'processed_%s.json' % sample)
+		if opts.save_jobgc:
+			print
+			print "List of processed lumisections:"
+			print "-----------------------------------------"
+			outputGC(lumis)
+		print
+
+
+###########################
 # Lumi filter manuipulation
+###########################
 if opts.save_exprgc or opts.save_exprjson:
 	if len(args) == 0:
 		fail()
@@ -62,6 +145,11 @@ if opts.save_exprgc or opts.save_exprjson:
 		lumis = parseLumiFilter(str.join(" ", args))
 	except:
 		fail("Could not parse: %s" % str.join(" ", args))
+
+	if opts.save_exprgc:
+		outputGC(lumis)
+	if opts.save_exprjson:
+		outputJSON(lumis)
 
 	if opts.diff:
 		def updateLumiSets(lumis_a, lumis_b, lumis_uc_old):
@@ -113,6 +201,9 @@ if opts.save_exprgc or opts.save_exprjson:
 			lumis.difference_update(todel)
 			lumis.update(toadd)
 
+		def setify(x):
+			return set(map(lambda x: ((x[0][0], x[0][1]), (x[1][0], x[1][1])), x))
+
 		lumis_a = setify(lumis)
 		lumis_b = setify(parseLumiFilter(opts.diff))
 		lumis_uc = set()
@@ -128,84 +219,9 @@ if opts.save_exprgc or opts.save_exprjson:
 					splitLumiRanges(lumis_a, offset, singlemode)
 					splitLumiRanges(lumis_b, offset, singlemode)
 
-	try:
-		if opts.diff:
-			print "Unchanged:\n", 30 * "="
-			outputGC(mergeLumi(list(lumis_uc)))
-			print "\nOnly in reference file:\n", 30 * "="
-			outputGC(mergeLumi(list(lumis_b)))
-			print "\nNot in reference file:\n", 30 * "="
-			outputGC(mergeLumi(list(lumis_a)))
-		else:
-			if opts.save_exprgc:
-				outputGC(lumis)
-			if opts.save_exprjson:
-				outputJSON(lumis)
-	except:
-			fail("Could format lumi sections!" % args)
-
-	sys.exit(0)
-
-# Lumi filter calculations
-if opts.save_jobjson or opts.get_events:
-	(workDir, jobList) = gcSupport.getWorkJobs(args)
-
-	log = None
-	incomplete = False
-	runLumiDict = {}
-	nEvents_read = 0
-	nEvents_write = {}
-	jobList = sorted(jobList)
-	for jobNum in jobList:
-		outputDir = os.path.join(workDir, 'output', 'job_' + str(jobNum))
-		jobInfo = gcSupport.getJobInfo(workDir, jobNum, lambda retCode: retCode == 0)
-		del log
-		log = utils.ActivityLog('Reading job logs - [%d / %d]' % (jobNum, jobList[-1]))
-
-		if not jobInfo and not incomplete:
-			print "WARNING: Not all jobs have finished - results will be incomplete!"
-			incomplete = True
-
-		# Read framework report files to get number of events
-		tarFile = tarfile.open(os.path.join(outputDir, "cmssw.dbs.tar.gz"), "r:gz")
-		fwkReports = filter(lambda x: os.path.basename(x.name) == 'report.xml', tarFile.getmembers())
-		try:
-			for fwkReport in map(lambda fn: tarFile.extractfile(fn), fwkReports):
-				fwkXML = xml.dom.minidom.parse(fwkReport)
-				for outFile in fwkXML.getElementsByTagName("File"):
-					pfn = outFile.getElementsByTagName("PFN")[0].childNodes[0].data
-					if pfn not in nEvents_write:
-						nEvents_write[pfn] = 0
-					nEvents_write[pfn] += int(outFile.getElementsByTagName("TotalEvents")[0].childNodes[0].data)
-				for inFile in fwkXML.getElementsByTagName("InputFile"):
-					nEvents_read += int(inFile.getElementsByTagName("EventsRead")[0].childNodes[0].data)
-				for run in fwkXML.getElementsByTagName("Run"):
-					for lumi in run.getElementsByTagName("LumiSection"):
-						run_id = int(run.getAttribute("ID"))
-						lumi_id = int(lumi.getAttribute("ID"))
-						if run_id not in runLumiDict:
-							runLumiDict[run_id] = set()
-						runLumiDict[run_id].add(lumi_id)
-		except:
-			raise
-			print "Error while parsing framework output!"
-			continue
-
-	log = utils.ActivityLog('Simplifying lumi sections...')
-	lumis = []
-	for run in runLumiDict:
-		for lumi in runLumiDict[run]:
-			lumis.append(([run, lumi], [run, lumi]))
-	lumis = mergeLumi(lumis)
-	del log
-	if opts.save_jobgc:
-		outputGC(lumis)
-	if opts.save_jobjson:
-		outputJSON(lumis, open(os.path.join(workDir, 'processed.json'), 'w'))
-		print "Saved processed lumi sections in", os.path.join(workDir, 'processed.json')
-	print
-	print "Number of events processed: %12d" % nEvents_read
-	print "  Number of events written: %12d" % sum(nEvents_write.values())
-	for pfn in nEvents_write:
-		print " * %10d - %s" % (nEvents_write[pfn], pfn)
-	print 
+		print "Unchanged:\n", 30 * "="
+		outputGC(mergeLumi(list(lumis_uc)))
+		print "\nOnly in reference file:\n", 30 * "="
+		outputGC(mergeLumi(list(lumis_b)))
+		print "\nNot in reference file:\n", 30 * "="
+		outputGC(mergeLumi(list(lumis_a)))

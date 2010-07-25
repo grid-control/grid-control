@@ -13,10 +13,7 @@ from xml.sax import SAXParseException
 from dbsException import DbsException
 from dbsApiException import *
 
-import logging
 import inspect
-
-from dbsLogger import *
 
 from dbsUtil import *
 
@@ -54,7 +51,6 @@ def dbsApiImplListProcessedDatasets(self, patternPrim="*", patternDT="*", patter
     """
 
     funcInfo = inspect.getframeinfo(inspect.currentframe())
-    ##logging.log(DBSDEBUG, "Api call invoked %s" % str(funcInfo[2]))
 
     api_version=self.getApiVersion()
     if api_version < "DBS_2_0_6":
@@ -75,7 +71,6 @@ def dbsApiImplListProcessedDatasets(self, patternPrim="*", patternDT="*", patter
 		    'GET')
 
 
-    ##logging.log(DBSDEBUG, data)  
     ##print data
     # Parse the resulting xml output.
     try:

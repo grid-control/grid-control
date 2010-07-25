@@ -1495,6 +1495,15 @@ class ApiDispatcher:
        if path in ['/*/*/*', ''] and blockpattern in ['*', ''] and sepattern in ['*', '']:
          self.printRED( "Can not list ALL Blocks of ALL datasets, specify a dataset path (--path=) and/or a block name (--blockpattern=) and/or storage element (--sepattern)")
 	 return
+       if path in ['/*/*/*', ''] and blockpattern in ['*', '']:
+	 self.printRED( "Can not list ALL Blocks , specify a dataset path (--path=) and/or a block name (--blockpattern=) ")
+	 return
+       if (blockpattern.startswith("*") or blockpattern.startswith("/*") or blockpattern.startswith("/*/*")) and blockpattern.find("#") == -1 :
+	 self.printRED( "The blockpattern is too generic")
+	 return
+       if path.startswith("*") or path.startswith("/*") or path.startswith("/*/*") :
+	 self.printRED( "The path is too generic, try to be more specific") 
+	 return 
        else:
          self.printBLUE( "Listing block, please wait..." )
          self.progress.start()

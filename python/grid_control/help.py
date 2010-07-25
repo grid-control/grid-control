@@ -9,6 +9,7 @@ class Help(object):
 		print "Variable".rjust(25), ":", "Value"
 		print "%s=%s" % ("=" * 26, "=" * 26)
 
+		taskcfg = module.getTaskConfig()
 		try:
 			job0cfg = module.getJobConfig(0)
 		except:
@@ -18,33 +19,25 @@ class Help(object):
 		except:
 			job3cfg = {}
 
-		varList = module.getVarMapping().items()
-		varList += [('RANDOM', 'RANDOM')]
+		varList = module.getVarMapping().items() + [('RANDOM', 'RANDOM')]
 		for (keyword, variable) in sorted(varList):
 			print ("__%s__" % keyword).rjust(25), ":",
-			try:
-				print module.getTaskConfig()[variable]
-			except:
-				try:
-					print "<example for job 0: %s>" % job0cfg[variable]
-				except:
-					if keyword == 'DATE':
-						print '<example: %s>' % time.strftime("%F")
-					elif keyword == 'TIMESTAMP':
-						print '<example: %s>' % time.strftime("%s")
-					elif keyword == 'RANDOM':
-						print '<example: %d>' % random.randrange(0, 900000000)
-					elif keyword == 'GUID':
-						hx = str.join("", map(lambda x: "%02x" % x, map(random.randrange, [256]*16)))
-						print '<example: %s-%s-%s-%s-%s>' % (hx[:8], hx[8:12], hx[12:16], hx[16:20], hx[20:])
-					else:
-						print '<not determinable>'
-						continue
-				try:
-					job3 = job3cfg[variable]
-					print " "*25, " ", "<example for job 3: %s>" % job3
-				except:
-					pass
+			if variable in taskcfg:
+				print taskcfg[variable]
+			elif variable in job0cfg:
+				print "<example for job 0: %s>" % job0cfg[variable]
+				if variable in job3cfg:
+					print " "*25, " ", "<example for job 3: %s>" % job3cfg[variable]
+			else:
+				hx = str.join("", map(lambda x: "%02x" % x, map(random.randrange, [256]*16)))
+				adHocVars = {'RANDOM': str(random.randrange(0, 900000000)),
+					'MYDATE': time.strftime("%F"), 'MYTIMESTAMP': time.strftime("%s"),
+					'MYGUID': '%s-%s-%s-%s-%s' % (hx[:8], hx[8:12], hx[12:16], hx[16:20], hx[20:])}
+				tmp = module.substVars("@%s@" % variable, 0, adHocVars)
+				if "@" not in tmp:
+					print '<example: %s>' % tmp
+				else:
+					print '<not determinable>'
 
 
 	def getConfig(self, config, printDefault):

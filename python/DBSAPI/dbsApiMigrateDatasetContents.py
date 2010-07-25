@@ -9,10 +9,7 @@ from dbsMigrateApi import DbsMigrateApi
 from dbsException import DbsException
 from dbsApiException import *
 
-import logging
 import inspect
-
-from dbsLogger import *
 
 from dbsUtil import *
 from dbsApi import DbsApi
@@ -207,7 +204,6 @@ Examples
     """
 
     funcInfo = inspect.getframeinfo(inspect.currentframe())
-    #logging.log(DBSDEBUG, "Api call invoked %s" % str(funcInfo[2]))
 
     try:
        # Invoke Server.

@@ -1,13 +1,12 @@
 #!/usr/bin/env python
 #
 # Revision: 1.3 $"
-# Id: DBSXMLParser.java,v 1.3 2006/10/26 18:26:04 afaq Exp $"
+# Id: $"
 #
 # DBS API exceptions.
 #
 #
 #
-import logging
 #
 from dbsException import DbsException
  
@@ -19,7 +18,6 @@ class DbsApiException(DbsException):
     msg = "\nCaught API Exception %s: %s "  % (self.getClassName(), self.getErrorMessage() )
     if self.getErrorCode() not in (None, ""):
        msg += "\nDBS Exception Error Code: %s " % str(self.getErrorCode())
-    #logging.error(msg)
   
 class InvalidDatasetPathName(DbsApiException):
     

@@ -5,7 +5,6 @@ import sys, os, re, fcntl, time
 sys.path.insert(1, os.path.join(sys.path[0], '..', 'python'))
 
 from grid_control import *
-utils.verbosity.setting = 0
 
 class DummyStream(object):
 	def __init__(self, stream):
@@ -88,9 +87,21 @@ def getFileInfo(workDir, jobNum, retCodeFilter = lambda x: True, rejected = None
 	jobInfo = getJobInfo(workDir, jobNum, retCodeFilter)
 	if not jobInfo:
 		return rejected
-
 	files = filter(lambda x: x[0].startswith('file'), jobInfo.items())
 	return map(lambda (x,y): tuple(y.strip('"').split('  ')), files)
+
+
+def getCMSSWInfo(tarPath):
+	import tarfile, xml.dom.minidom
+	# Read framework report files to get number of events
+	tarFile = tarfile.open(tarPath, "r:gz")
+	fwkReports = filter(lambda x: os.path.basename(x.name) == 'report.xml', tarFile.getmembers())
+	for fwkReport in map(lambda fn: tarFile.extractfile(fn), fwkReports):
+		try:
+			yield xml.dom.minidom.parse(fwkReport)
+		except:
+			print "Error while parsing %s" % tarPath
+			raise
 
 
 def prettySize(size):

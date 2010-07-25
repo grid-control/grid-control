@@ -36,6 +36,13 @@ class LocalWMS(WMS):
 				pass
 
 
+	def getSandboxFiles(self):
+		files = WMS.getSandboxFiles(self)
+		if self.proxy.getAuthFile():
+			files.append(utils.VirtualFile('_proxy.dat', open(self.proxy.getAuthFile(), 'r').read()))
+		return files
+
+
 	# Wait 5 seconds between cycles and 0 seconds between steps
 	def getTimings(self):
 		return (20, 5)
@@ -108,7 +115,7 @@ class LocalWMS(WMS):
 		proc = utils.LoggedProcess(self.api.statusExec, self.api.getCheckArgument(shortWMSIds))
 
 		tmp = {}
-		for data in self.api.parseStatus(proc.iter(self.config.opts)):
+		for data in self.api.parseStatus(proc.iter()):
 			# (job number, status, extra info)
 			tmp[data['id']] = (data['id'], self.api.parseJobState(data['status']), data)
 

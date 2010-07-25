@@ -1,4 +1,5 @@
-
+# Revision: $
+# Id: $
 import os, re, string, socket, xml.sax, xml.sax.handler
 import base64
 from xml.sax.saxutils import escape
@@ -8,10 +9,7 @@ from dbsException import DbsException
 from dbsApiException import *
 from xml.sax import SAXParseException
 
-import logging
 import inspect
-
-from dbsLogger import *
 
 from dbsUtil import *
 
@@ -60,7 +58,6 @@ def dbsApiImplInsertBlock(self, dataset, block=None, storage_element_list=None, 
     """
 
     funcInfo = inspect.getframeinfo(inspect.currentframe())
-    ###logging.log(DBSDEBUG, "Api call invoked %s" % str(funcInfo[2]))
 
     path = get_path(dataset)
     name = get_name(block)
@@ -86,13 +83,11 @@ def dbsApiImplInsertBlock(self, dataset, block=None, storage_element_list=None, 
     xmlinput += "</block>"  
     xmlinput += "</dbs>"
 
-    ###logging.log(DBSDEBUG, xmlinput)
     if self.verbose():
        print "insertBlock, xmlinput",xmlinput
 
     data = self._server._call ({ 'api' : 'insertBlock',
                          'xmlinput' : xmlinput }, 'POST')
-    ###logging.log(DBSDEBUG, data)
 
     # Parse the resulting xml output.
     try:

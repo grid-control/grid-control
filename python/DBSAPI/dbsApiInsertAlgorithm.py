@@ -1,4 +1,5 @@
-
+# Revision: $
+# Id: $
 import os, re, string, socket, xml.sax, xml.sax.handler
 import base64
 from xml.sax.saxutils import escape
@@ -7,10 +8,7 @@ from cStringIO import StringIO
 from dbsException import DbsException
 from dbsApiException import *
 
-import logging
 import inspect
-
-from dbsLogger import *
 
 from dbsUtil import *
 
@@ -48,7 +46,6 @@ def dbsApiImplInsertAlgorithm(self, algorithm):
     """
 
     funcInfo = inspect.getframeinfo(inspect.currentframe())
-    ###logging.log(DBSDEBUG, "Api call invoked %s" % str(funcInfo[2]))
 
 
     # Prepare XML description of the input
@@ -71,14 +68,12 @@ def dbsApiImplInsertAlgorithm(self, algorithm):
        xmlinput += " ps_content='"+base64.binascii.b2a_base64(pset.get('Content', ""))+"'"
     xmlinput += "/>"
     xmlinput += "</dbs>"
-    ###logging.log(DBSDEBUG, xmlinput)
 
     
     if self.verbose():
        print "insertAlgorithm, xmlinput",xmlinput
     data = self._server._call ({ 'api' : 'insertAlgorithm',
                          'xmlinput' : xmlinput }, 'POST')
-    ###logging.log(DBSDEBUG, data)
 
   # ------------------------------------------------------------
 

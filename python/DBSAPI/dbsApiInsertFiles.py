@@ -1,4 +1,5 @@
-
+# Revision: $
+# Id: $
 import os, re, string, socket, xml.sax, xml.sax.handler
 import base64
 from xml.sax.saxutils import escape
@@ -9,10 +10,7 @@ from dbsProcessedDataset import DbsProcessedDataset
 from dbsException import DbsException
 from dbsApiException import *
 
-import logging
 import inspect
-
-from dbsLogger import *
 
 from dbsUtil import *
 
@@ -131,7 +129,6 @@ def dbsApiImplInsertFiles(self, dataset=None, files=[], block=None):
     # Prepare XML description of the input
 
     funcInfo = inspect.getframeinfo(inspect.currentframe())
-    ###logging.log(DBSDEBUG, "Api call invoked %s" % str(funcInfo[2]))
 
     xmlinput  = "<?xml version='1.0' standalone='yes'?>"
     xmlinput += "<dbs>"
@@ -232,7 +229,6 @@ def dbsApiImplInsertFiles(self, dataset=None, files=[], block=None):
     xmlinput += "</processed_datatset>"
     xmlinput += "</dbs>"
 
-    ###logging.log(DBSDEBUG, xmlinput)
     #print xmlinput
     if self.verbose():
        print "insertFiles, xmlinput",xmlinput
@@ -248,13 +244,11 @@ def dbsApiImplInsertFiles(self, dataset=None, files=[], block=None):
         # Call the method
         data = self._server._call ({ 'api' : 'insertFiles',
                          'xmlinput' : xmlinput }, 'POST')
-        ###logging.log(DBSDEBUG, data)
 
   # ------------------------------------------------------------
 
 def dbsApiImplDeleteFileParent(self, file, parentFile):
     funcInfo = inspect.getframeinfo(inspect.currentframe())
-    #logging.log(DBSDEBUG, "Api call invoked %s" % str(funcInfo[2]))
     data = self._server._call ({ 'api' : 'deleteFileParent',
 			  'lfn' : file_name(file),
 			  'parent_lfn' : file_name(parentFile)
@@ -262,7 +256,6 @@ def dbsApiImplDeleteFileParent(self, file, parentFile):
 
 def dbsApiImplInsertFileParent(self, file, parentFile):
     funcInfo = inspect.getframeinfo(inspect.currentframe())
-    #logging.log(DBSDEBUG, "Api call invoked %s" % str(funcInfo[2]))
     xmlinput  = "<?xml version='1.0' standalone='yes'?>"
     xmlinput += "<dbs>"
     xmlinput += " <file lfn='" + file_name(file) + "'/>" 

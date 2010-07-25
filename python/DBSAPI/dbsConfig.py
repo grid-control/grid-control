@@ -27,8 +27,8 @@ class DbsConfig(object):
     """
  
     uFileName=""
-    iList=['url','alias','log','level', 'version','clienttype','verbose','mode','dbshome','javahome','adshome','retry']
-    #iList=['user','password','driver','url','host','port','log','level', 'servlet','version','dbname','dbsDB','clienttype',	'dbtype','verbose','mode', 'dbshome', 'javahome', 'adshome','retry']
+    iList=['url','alias','log', 'version','clienttype','verbose','mode','dbshome','javahome','adshome','retry']
+    #iList=['user','password','driver','url','host','port','log', 'servlet','version','dbname','dbsDB','clienttype',	'dbtype','verbose','mode', 'dbshome', 'javahome', 'adshome','retry']
     self.configDict={}
 
     #for item in iList:
@@ -106,10 +106,6 @@ class DbsConfig(object):
     if not self.configDict.has_key('log'):
        raise DbsException(args="DBS configuration missing log parameter")
     return self.configDict['log']
-  def loglevel(self):
-    if not self.configDict.has_key('level'):
-       raise DbsException(args="DBS configuration missing log level parameter")
-    return self.configDict['level']
   def adshome(self):
     if not self.configDict.has_key('adshome'):
        raise DbsException(args="DBS configuration missing adshome parameter")
@@ -118,42 +114,6 @@ class DbsConfig(object):
     if not self.configDict.has_key('retry'):
        raise DbsException(args="DBS configuration missing retry parameter")
     return self.configDict['retry']
-
-  """
-  def host(self):
-    if not self.configDict.has_key('host'):
-       raise DbsException(args="DBS configuration missing host parameter")
-    return self.configDict['host']
-  def port(self):
-    if not self.configDict.has_key('port'):
-       raise DbsException(args="DBS configuration missing port parameter")
-    return self.configDict['port']
-  def servlet(self):
-    if not self.configDict.has_key('servlet'):
-       raise DbsException(args="DBS configuration missing servlet parameter")
-    return self.configDict['servlet']
-  def user(self):
-    if not self.configDict.has_key('user'):
-       raise DbsException(args="DBS configuration missing user parameter")
-    return self.configDict['user']
-  def password(self):
-    if not self.configDict.has_key('password'):
-       raise DbsException(args="DBS configuration missing password parameter")
-    return self.configDict['password']
-  def dbname(self):
-    if not self.configDict.has_key('dbname'):
-       raise DbsException(args="DBS configuration missing dbname parameter")
-    return self.configDict['dbname']
-  def dbsDB(self):
-    if not self.configDict.has_key('dbsDB'):
-       raise DbsException(args="DBS configuration missing dbsDB parameter")
-    return self.configDict['dbsDB']
-  def dbtype(self):
-    if not self.configDict.has_key('dbtype'):
-       raise DbsException(args="DBS configuration missing dbtype parameter")
-    return self.configDict['dbtype']
-  """
-
 #
 # main
 #

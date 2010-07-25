@@ -5,15 +5,14 @@ import sys, os, time, shutil, tarfile, glob
 from grid_control import AbstractObject, AbstractError, ConfigError, RuntimeError, UserError, utils, Proxy
 
 class WMS(AbstractObject):
-	INLINE_TAR_LIMIT = 256 * 1024
-	reqTypes = ('SOFTWARE', 'WALLTIME', 'STORAGE', 'SITES', 'CPUTIME', 'MEMORY', 'OTHER')
-	for id, reqType in enumerate(reqTypes):
-		locals()[reqType] = id
+	reqTypes = ('SOFTWARE', 'WALLTIME', 'STORAGE', 'SITES', 'CPUTIME', 'MEMORY', 'OTHER', 'CPUS')
+	for idx, reqType in enumerate(reqTypes):
+		locals()[reqType] = idx
 
 
 	def __init__(self, config, module, monitor, backend, defaultproxy = 'TrivialProxy'):
-		self.config = config
-		self.module = module
+		(self.config, self.module, self.monitor) = (config, module, monitor)
+		module.validateVariables()
 
 		# Initialise proxy
 		self.proxy = Proxy.open(config.get(backend, 'proxy', defaultproxy, volatile=True), config)
@@ -31,52 +30,41 @@ class WMS(AbstractObject):
 				raise ConfigError("Not a properly initialized work directory '%s'." % config.workDir)
 
 		tarFile = os.path.join(config.workDir, 'sandbox.tar.gz')
-
 		self.sandboxIn = [ utils.pathGC('share', 'run.sh'), utils.pathGC('share', 'run.lib'), tarFile ]
-		self.sandboxOut = module.getOutFiles() + [ 'gc.stdout', 'gc.stderr', 'job.info' ]
+		self.sandboxOut = [ 'gc.stdout', 'gc.stderr', 'job.info' ] + module.getOutFiles()
 
-		inFiles = list(monitor.getFiles())
-		# Resolve wildcards in input files
+		# Put files into sandbox file
+		inFiles = self.getSandboxFiles()
+		# Resolve wildcards in module input files
 		for f in module.getInFiles():
-			if isinstance(f, str):
-				matched = glob.glob(f)
-				if matched != []:
-					inFiles.extend(matched)
-				else:
-					inFiles.append(f)
+			matched = glob.glob(f)
+			if matched != []:
+				inFiles.extend(matched)
+			else:
+				inFiles.append(f)
 
-		taskEnv = module.getTaskConfig()
-		taskEnv.update(monitor.getEnv(self))
-		taskConfig = utils.DictFormat(escapeString = True).format(taskEnv, format = 'export %s%s%s\n')
-		inFiles.append(utils.VirtualFile('_config.sh', sorted(taskConfig)))
+		# Check file existance / put packed files in sandbox instead of tar file
+		for f in filter(lambda x: isinstance(x, str), inFiles):
+			if not os.path.exists(f):
+				raise UserError("File %s does not exist!" % f)
+			if f.endswith('.gz') or f.endswith('.bz2'):
+				self.sandboxIn.append(f)
+				inFiles.remove(f)
 
-		module.validateVariables()
-		varMapping = map(lambda (x, y): "%s %s\n" % (x, y), module.getVarMapping().items())
-		inFiles.append(utils.VirtualFile('_varmap.dat', str.join('', sorted(varMapping))))
-		inFiles.extend(map(lambda x: utils.pathGC('share', 'env.%s.sh' % x), module.getDependencies()))
-
+		# Package sandbox tar file
 		utils.vprint("Packing sandbox:")
 		def shortName(name):
 			name = name.replace(config.workDir.rstrip("/"), "<WORKDIR>")
 			return name.replace(utils.pathGC().rstrip("/"), "<GCDIR>")
+		for f in sorted(self.sandboxIn):
+			if f != tarFile or not config.opts.init:
+				utils.vprint("\t%s" % shortName(f))
 
-		if config.opts.init:
+		if config.opts.init or not os.path.exists(tarFile):
 			utils.vprint("\t%s" % shortName(tarFile))
 			tar = tarfile.TarFile.open(tarFile, 'w:gz')
 
-		for f in sorted(inFiles):
-			if isinstance(f, str):
-				# Path to filename given
-				if not os.path.exists(f):
-					raise UserError("File %s does not exist!" % f)
-
-				# Put file in sandbox instead of tar file
-				if os.path.getsize(f) > self.INLINE_TAR_LIMIT and f.endswith('.gz') or f.endswith('.bz2'):
-					self.sandboxIn.append(f)
-					continue
-
-			if config.opts.init:
-				# Package sandbox tar file
+			for f in sorted(inFiles):
 				if isinstance(f, str):
 					utils.vprint("\t\t%s" % shortName(f))
 					info = tarfile.TarInfo(os.path.basename(f))
@@ -85,23 +73,27 @@ class WMS(AbstractObject):
 				else:
 					utils.vprint("\t\t%s" % shortName(f.name))
 					info, handle = f.getTarInfo()
-
-				if info.name.endswith('.sh'):
-					info.mode = 0755
-				elif info.name.endswith('.py'):
-					info.mode = 0755
-				else:
-					info.mode = 0644
 				info.mtime = time.time()
-
+				info.mode = 0644
+				if info.name.endswith('.sh') or info.name.endswith('.py'):
+					info.mode = 0755
 				tar.addfile(info, handle)
 				handle.close()
-
-		if config.opts.init:
 			tar.close()
-		for f in self.sandboxIn:
-			if f != tarFile or not config.opts.init:
-				utils.vprint("\t%s" % shortName(f))
+
+
+	def getSandboxFiles(self):
+		files = map(lambda x: utils.pathGC('share', 'env.%s.sh' % x), self.module.getDependencies())
+
+		taskEnv = self.module.getTaskConfig()
+		taskEnv.update(self.monitor.getEnv(self))
+		taskConfig = utils.DictFormat(escapeString = True).format(taskEnv, format = 'export %s%s%s\n')
+		files.append(utils.VirtualFile('_config.sh', sorted(taskConfig)))
+
+		varMapping = map(lambda (x, y): "%s %s\n" % (x, y), self.module.getVarMapping().items())
+		files.append(utils.VirtualFile('_varmap.dat', str.join('', sorted(varMapping))))
+
+		return files + list(self.monitor.getFiles())
 
 
 	def canSubmit(self, length, flag):
@@ -143,7 +135,7 @@ class WMS(AbstractObject):
 
 	def submitJobs(self, jobNumList):
 		for jobNum in jobNumList:
-			if self.config.opts.abort:
+			if utils.abort():
 				raise StopIteration
 			validStorage = True
 			for (k, v) in self.module.getRequirements(jobNum):

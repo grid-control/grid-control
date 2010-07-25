@@ -597,3 +597,17 @@ zip_files() {
 		fi
 	done
 }
+
+get_random_se() {
+	[ $# -gt 0 ] && shift $[ $RANDOM % $# ]
+	echo $1
+}
+
+get_default_se() {
+	export GC_DEFAULT_SE=`hostname | sed 's/.*\.\(.*\)\.\(.*\)$/\1.\2/'`
+	for SE in $1; do
+		export | grep DEFAULT_SE | sed -e "s/.* //;s/=.*//" | while read SE_VAR; do
+			echo $SE | grep "${!SE_VAR}"
+		done
+	done
+}

@@ -2,7 +2,6 @@ from grid_control import AbstractObject, AbstractError
 
 class LocalWMSApi(AbstractObject):
 	def __init__(self, config, localWMS):
-		self.config = config
 		self.wms = localWMS
 
 	def getQueues(self):
@@ -34,5 +33,10 @@ class LocalWMSApi(AbstractObject):
 
 	def getCancelArgument(self, wmsIds):
 		return str.join(" ", wmsIds)
+
+	def checkReq(self, reqs, req, test = lambda x: x > 0):
+		if req in reqs:
+			return test(reqs[req])
+		return False
 
 LocalWMSApi.dynamicLoaderPath()

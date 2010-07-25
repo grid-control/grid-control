@@ -1,4 +1,5 @@
-
+# Revision: $"
+# Id: $"
 import os, re, string, socket, xml.sax, xml.sax.handler
 import base64
 from xml.sax.saxutils import escape
@@ -10,10 +11,7 @@ from xml.sax import SAXParseException
 from dbsException import DbsException
 from dbsApiException import *
 
-import logging
 import inspect
-
-from dbsLogger import *
 
 from dbsUtil import *
 
@@ -33,7 +31,6 @@ def dbsApiImplGetIntegratedLuminosity(self, path, run =  "", runRange = "", tag 
              
     """
     funcInfo = inspect.getframeinfo(inspect.currentframe())
-    ##logging.log(DBSDEBUG, "Api call invoked %s" % str(funcInfo[2]))
  
     # Invoke Server.
     toCall = {}
@@ -55,7 +52,6 @@ def dbsApiImplGetIntegratedLuminosity(self, path, run =  "", runRange = "", tag 
     data = self._server._call (toCall,    'GET')
 
 
-    ##logging.log(DBSDEBUG, data)
     # Parse the resulting xml output.
     try:
       result = {}

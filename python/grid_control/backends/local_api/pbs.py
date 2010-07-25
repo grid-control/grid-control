@@ -21,6 +21,7 @@ class PBS(LocalWMSApi):
 		self.nodesExec = utils.searchPathFind('pbsnodes')
 
 		self._group = config.get('local', 'group', '', volatile=True)
+		self._server = config.get('local', 'server', '', volatile=True)
 
 	def unknownID(self):
 		return "Unknown Job Id"
@@ -40,10 +41,11 @@ class PBS(LocalWMSApi):
 				params += ' -q %s' % queue
 			if nodes:
 				params += ' -l host=%s' % str.join("+", nodes)
+		if self.checkReq(reqs, WMS.MEMORY):
+			params += ' -l pvmem=%smb' % (reqs[WMS.MEMORY])
 		# Job group
 		if len(self._group):
 			params += ' -W group_list=%s' % self._group
-
 		# Sandbox, IO paths
 		params += ' -v GC_SANDBOX=%s -o %s -e %s' % (sandbox, stdout, stderr)
 		return params
@@ -76,10 +78,14 @@ class PBS(LocalWMSApi):
 
 
 	def getCheckArgument(self, wmsIds):
+		if self._server != '':
+			wmsIds = map(lambda x: "%s.%s" % (x, self._server), wmsIds)
 		return "-f %s" % str.join(" ", wmsIds)
 
 
 	def getCancelArgument(self, wmsIds):
+		if self._server != '':
+			wmsIds = map(lambda x: "%s.%s" % (x, self._server), wmsIds)
 		return str.join(" ", wmsIds)
 
 

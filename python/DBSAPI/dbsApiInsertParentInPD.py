@@ -7,10 +7,7 @@ from cStringIO import StringIO
 from dbsException import DbsException
 from dbsApiException import *
 
-import logging
 import inspect
-
-from dbsLogger import *
 
 from dbsUtil import *
 
@@ -31,7 +28,6 @@ def dbsApiImplInsertParentInPD(self, dataset, parentDS):
     """
 
     funcInfo = inspect.getframeinfo(inspect.currentframe())
-    ###logging.log(DBSDEBUG, "Api call invoked %s" % str(funcInfo[2]))
     path = get_path(dataset)
     parentPath = get_path(parentDS)
     xmlinput  = "<?xml version='1.0' standalone='yes'?>"
@@ -39,14 +35,12 @@ def dbsApiImplInsertParentInPD(self, dataset, parentDS):
     xmlinput += "<processed_dataset path='" + path + "'/>"
     xmlinput += "</dbs>"
 
-    ###logging.log(DBSDEBUG, xmlinput)
     if self.verbose():
        print "insertParent, xmlinput",xmlinput
 
     data = self._server._call ({ 'api' : 'insertParentInPD', 
 		         'parent_path' : parentPath,
                          'xmlinput' : xmlinput }, 'POST')
-    ###logging.log(DBSDEBUG, data)
 
 
   # ------------------------------------------------------------

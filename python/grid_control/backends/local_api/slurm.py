@@ -29,11 +29,11 @@ class SLURM(LocalWMSApi):
 		reqs = dict(self.wms.getRequirements(jobNum))
 		if WMS.SITES in reqs:
 			params += ' -c %s' % reqs[WMS.SITES][0]
-		if WMS.WALLTIME in reqs:
+		if self.checkReq(reqs, WMS.WALLTIME):
 			params += ' -T %d' % ((reqs[WMS.WALLTIME] + 59) / 60)
-		if WMS.CPUTIME in reqs:
+		if self.checkReq(reqs, WMS.CPUTIME):
 			params += ' -t %d' % ((reqs[WMS.CPUTIME] + 59) / 60)
-		if WMS.MEMORY in reqs:
+		if self.checkReq(reqs, WMS.MEMORY):
 			params += ' -m %d' % reqs[WMS.MEMORY]
 		# processes and IO paths
 		params += ' -p 1 -o %s -e %s' % (stdout, stderr)

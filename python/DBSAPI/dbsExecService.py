@@ -12,9 +12,6 @@ from xml.sax import SAXParseException
 
 import os, re, string, xml.sax, xml.sax.handler, random
 from xml.sax.saxutils import escape
-import logging
-from dbsLogger import *
-
 
 class DbsExecService:
 
@@ -101,13 +98,11 @@ class DbsExecService:
                 warn  = "\n DBS Raised a warning message"
                 warn += "\n Waring Message: " + attrs['message']
                 warn += "\n Warning Detail: " + attrs['detail']+"\n"
-                ##logging.log(DBSWARNING, warn)
 
 
 	     if name =='info':
                 info = "\n DBS Info Message: %s " %attrs['message']
 		info += "\n Detail: %s " %attrs['detail']+"\n"
-                ##logging.log(DBSINFO, info)
 
         #print data
         xml.sax.parseString (data, Handler ())

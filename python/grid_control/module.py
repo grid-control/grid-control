@@ -15,10 +15,11 @@ class Module(AbstractObject):
 		self.cpuTime = utils.parseTime(config.get('jobs', 'cpu time', wallTime, volatile=True))
 		self.nodeTimeout = utils.parseTime(config.get('jobs', 'node timeout', ''))
 
-		self.memory = config.getInt('jobs', 'memory', 512, volatile=True)
+		self.cpus = config.getInt('jobs', 'cpus', 1, volatile=True)
+		self.memory = config.getInt('jobs', 'memory', -1, volatile=True)
 
 		# Try to read task info file
-		taskInfo = utils.PersistentDict(os.path.join(self.config.workDir, 'task.dat'), ' = ')
+		taskInfo = utils.PersistentDict(os.path.join(config.workDir, 'task.dat'), ' = ')
 
 		# Compute / get task ID
 		self.taskID = taskInfo.get('task id', 'GC' + utils.md5(str(time())).hexdigest()[:12])
@@ -32,7 +33,7 @@ class Module(AbstractObject):
 				self.seeds = map(int, str(taskInfo['seeds']).split())
 			else:
 				self.seeds = map(lambda x: random.randint(0, 10000000), range(10))
-				print "Creating random seeds...", self.seeds
+				print 'Creating random seeds...', self.seeds
 
 		# Write task info file
 		taskInfo.write({'task id': self.taskID, 'seeds': str.join(' ', map(str, self.seeds))})
@@ -47,10 +48,10 @@ class Module(AbstractObject):
 		for sePath in map(str.strip, config.get('storage', 'se path', '').splitlines()):
 			if len(sePath) == 0:
 				continue
-			if (sePath.count("@") >= 2) or (sePath.count("__") >= 2):
+			if (sePath.count('@') >= 2) or (sePath.count('__') >= 2):
 				raise ConfigError("'se path' may not contain variables. Move variables into appropriate se pattern!")
-			if sePath[0] == "/":
-				sePath = "dir:///%s" % sePath.lstrip("/")
+			if sePath[0] == '/':
+				sePath = 'dir:///%s' % sePath.lstrip('/')
 			self.sePaths.append(sePath)
 		self.seMinSize = config.getInt('storage', 'se min size', -1)
 
@@ -65,6 +66,9 @@ class Module(AbstractObject):
 
 		# Define constants for job
 		self.constants = {}
+		if 'constants' in config.parser.sections():
+			for var in config.parser.options('constants'):
+				self.constants[var.upper()] = config.get('constants', var, '').strip()
 		for var in map(str.strip, config.get(self.__class__.__name__, 'constants', '').split()):
 			self.constants[var] = config.get(self.__class__.__name__, var, '').strip()
 		self.substFiles = config.get(self.__class__.__name__, 'subst files', '').split()
@@ -74,20 +78,15 @@ class Module(AbstractObject):
 			self.dependencies.append('glite')
 
 		# Get error messages from run.lib comments
-		self.errorDict = {}
-		self.updateErrorDict(utils.pathGC('share', 'run.lib'))
+		self.errorDict = dict(self.updateErrorDict(utils.pathGC('share', 'run.lib')))
 
 
 	# Read comments with error codes at the beginning of file
 	def updateErrorDict(self, fileName):
-		for line in open(fileName, 'r').readlines():
-			if not (line.startswith("#") or line == "\n"):
-				break
-			if " - " not in line:
-				continue
+		for line in filter(lambda x: x.startswith('#'), open(fileName, 'r').readlines()):
 			try:
-				code, msg = map(str.strip, line.split("-", 1))
-				self.errorDict[int(code.strip("# "))] = msg
+				transform = lambda (x,y): (int(x.strip('# ')), y)
+				yield transform(map(str.strip, line.split(' - ', 1)))
 			except:
 				pass
 
@@ -101,6 +100,7 @@ class Module(AbstractObject):
 			'LANDINGZONE_UL': self.seLZUpperLimit,
 			'LANDINGZONE_LL': self.seLZLowerLimit,
 			# Storage element
+			'SE_PATH': str.join(' ', self.sePaths),
 			'SE_MINFILESIZE': self.seMinSize,
 			'SE_OUTPUT_FILES': str.join(' ', self.seOutputFiles),
 			'SE_INPUT_FILES': str.join(' ', self.seInputFiles),
@@ -122,24 +122,19 @@ class Module(AbstractObject):
 			'GC_VERSION': utils.getVersion(),
 			'DB_EXEC': 'shellscript'
 		}
-		if len(self.sePaths) == 1:
-			taskConfig['SE_PATH'] = self.sePaths[0]
 		return dict(taskConfig.items() + self.constants.items())
+	getTaskConfig = utils.cached(getTaskConfig)
 
 
 	# Get job dependent environment variables
 	def getJobConfig(self, jobNum):
-		tmp = [('MY_JOBID', jobNum)]
-		tmp += map(lambda (x, seed): ("SEED_%d" % x, seed + jobNum), enumerate(self.seeds))
-		if len(self.sePaths) > 1:
-			tmp.append(('SE_PATH', random.sample(self.sePaths, 1)[0]))
-		return dict(tmp)
+		tmp = map(lambda (x, seed): ('SEED_%d' % x, seed + jobNum), enumerate(self.seeds))
+		return dict([('MY_JOBID', jobNum)] + tmp)
 
 
 	def getVarMapping(self):
 		# Take task variables and just the variables from the first job
 		envvars = self.getTaskConfig().keys() + self.getJobConfig(0).keys()
-
 		# Map vars: Eg. __MY_JOB__ will access $MY_JOBID
 		mapping = [('DATE', 'MYDATE'), ('TIMESTAMP', 'MYTIMESTAMP'),
 			('MY_JOB', 'MY_JOBID'), ('CONF', 'GC_CONF'), ('GUID','MYGUID')]
@@ -147,14 +142,26 @@ class Module(AbstractObject):
 		return dict(mapping)
 
 
+	def substVars(self, inp, jobNum = None, addDict = {}, check = True):
+		allVars = {}
+		allVars.update(addDict)
+		allVars.update(self.getTaskConfig())
+		if jobNum != None:
+			allVars.update(self.getJobConfig(jobNum))
+		def substInternal(result):
+			for (virtual, real) in self.getVarMapping().items() + zip(addDict, addDict):
+				for delim in ['@', '__']:
+					result = result.replace(delim + virtual + delim, str(allVars.get(real,'')))
+			return result
+		result = substInternal(substInternal(str(inp)))
+		if check and (result.count('__') > 1 or result.count('@') > 1):
+			raise ConfigError("'%s' contains invalid variable specifiers: '%s'" % (inp, result))
+		return result
+
+
 	def validateVariables(self):
-		keys = self.getVarMapping().keys() + ['X', 'XBASE', 'XEXT']
-		values = self.getTaskConfig().values() + self.getJobConfig(0).values()
-		for i, x in enumerate(values):
-			for tag in keys:
-				x = str(x).replace("__%s__" % tag, " ").replace("@%s@" % tag, " ")
-			if x.count("__") > 1 or x.count("@") > 1:
-				raise ConfigError("'%s' contains invalid variable specifiers" % values[i])
+		for x in self.getTaskConfig().values() + self.getJobConfig(0).values():
+			self.substVars(x, 0, dict.fromkeys(['X', 'XBASE', 'XEXT', 'MYDATE', 'MYTIMESTAMP'], ''))
 
 
 	# Get job requirements
@@ -162,19 +169,14 @@ class Module(AbstractObject):
 		return [
 			(WMS.WALLTIME, self.wallTime),
 			(WMS.CPUTIME, self.cpuTime),
-			(WMS.MEMORY, self.memory)
+			(WMS.MEMORY, self.memory),
+			(WMS.CPUS, self.cpus)
 		]
 
 
 	# Get files for input sandbox
 	def getInFiles(self):
-		def fileMap(file):
-			if not os.path.isabs(file):
-				path = os.path.join(self.config.baseDir, file)
-			else:
-				path = file
-			return path
-		return map(fileMap, self.sbInputFiles[:])
+		return map(lambda p: utils.resolvePath(p, [self.config.baseDir]), self.sbInputFiles)
 
 
 	# Get files for output sandbox
@@ -204,15 +206,24 @@ class Module(AbstractObject):
 
 
 	def getTaskType(self):
-		return None
+		return ''
 
 
 	def report(self, jobNum):
-		return {" ": "All jobs"}
+		return {' ': 'All jobs'}
+
+
+	def onTaskFinish(self):
+		return True
 
 
 	# Called on job submission
 	def getSubmitInfo(self, jobNum):
 		return {}
 
-Module.dynamicLoaderPath(["grid_control.modules"])
+
+	# Intervene in job management
+	def getIntervention(self):
+		return None
+
+Module.dynamicLoaderPath(['grid_control.modules'])

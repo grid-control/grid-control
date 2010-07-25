@@ -7,10 +7,7 @@ from cStringIO import StringIO
 from dbsException import DbsException
 from dbsApiException import *
 
-import logging
 import inspect
-
-from dbsLogger import *
 
 from dbsUtil import *
 
@@ -32,7 +29,6 @@ def dbsApiImplUpdateSEBlock(self, blockName, storage_element_from, storage_eleme
     """
 
     funcInfo = inspect.getframeinfo(inspect.currentframe())
-    ####logging.log(DBSDEBUG, "Api call invoked %s" % str(funcInfo[2]))
 
     seNameFrom = get_name(storage_element_from)
     seNameTo = get_name(storage_element_to)
@@ -43,7 +39,6 @@ def dbsApiImplUpdateSEBlock(self, blockName, storage_element_from, storage_eleme
 		    'block_name' : name,
 		    'storage_element_name_from' : seNameFrom,
 		    'storage_element_name_to' : seNameTo }, 'POST')
-    ####logging.log(DBSDEBUG, data)
 
 def dbsApiImplUpdateSEBlockRole(self, blockName, storage_element, role):
     """
@@ -63,7 +58,6 @@ def dbsApiImplUpdateSEBlockRole(self, blockName, storage_element, role):
     """
 
     funcInfo = inspect.getframeinfo(inspect.currentframe())
-    ####logging.log(DBSDEBUG, "Api call invoked %s" % str(funcInfo[2]))
 
     seNameFrom = get_name(storage_element)
     
@@ -73,5 +67,4 @@ def dbsApiImplUpdateSEBlockRole(self, blockName, storage_element, role):
 		    'block_name' : name,
 		    'storage_element_name' : seNameFrom,
 		    'role' : role}, 'POST')
-    ####logging.log(DBSDEBUG, data)
 

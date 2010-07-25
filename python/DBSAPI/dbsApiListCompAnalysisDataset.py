@@ -10,10 +10,7 @@ from dbsCompositeAnalysisDataset import DbsCompositeAnalysisDataset
 from dbsException import DbsException
 from dbsApiException import *
 from xml.sax import SAXParseException
-import logging
 import inspect
-
-from dbsLogger import *
 
 from dbsUtil import *
 
@@ -37,14 +34,12 @@ def dbsApiImplListCompADS(self, pattern="*"):
     """
 
     funcInfo = inspect.getframeinfo(inspect.currentframe())
-    ##logging.log(DBSDEBUG, "Api call invoked %s" % str(funcInfo[2]))
 
     # Invoke Server.    
     data = self._server._call ({ 'api' : 'listCompADS', 
                                  'pattern' : pattern,
 				}, 'GET')
 
-    ##logging.log(DBSDEBUG, data)
     # Parse the resulting xml output.
 
     try:

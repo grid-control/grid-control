@@ -1,3 +1,6 @@
+# Revision: $"
+# Id: $"
+
 
 import os, re, string, socket, xml.sax, xml.sax.handler
 import base64
@@ -7,10 +10,7 @@ from cStringIO import StringIO
 from dbsException import DbsException
 from dbsApiException import *
 
-import logging
 import inspect
-
-from dbsLogger import *
 
 from dbsUtil import *
 
@@ -41,7 +41,6 @@ def dbsApiImplCreateAnalysisDatasetDefinition(self, analysisDatasetDefinition ):
        return
     
     funcInfo = inspect.getframeinfo(inspect.currentframe())
-    ###logging.log(DBSDEBUG, "Api call invoked %s" % str(funcInfo[2]))
 
     xmlinput  = "<?xml version='1.0' standalone='yes'?>"
     xmlinput += "<dbs>"
@@ -58,7 +57,6 @@ def dbsApiImplCreateAnalysisDatasetDefinition(self, analysisDatasetDefinition ):
 
     xmlinput += "</dbs>"
 
-    ###logging.log(DBSDEBUG, xmlinput)
     print xmlinput
 
     if self.verbose():
@@ -71,7 +69,6 @@ def dbsApiImplCreateAnalysisDatasetDefinition(self, analysisDatasetDefinition ):
     #Just return the name of definition if everything went fine.  
     return defName
 
-    ###logging.log(DBSDEBUG, data)
 
 
   # ------------------------------------------------------------

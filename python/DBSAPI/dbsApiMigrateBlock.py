@@ -9,10 +9,7 @@ from dbsMigrateApi import DbsMigrateApi
 from dbsException import DbsException
 from dbsApiException import *
 
-import logging
 import inspect
-
-from dbsLogger import *
 
 from dbsUtil import *
 from dbsApi import DbsApi

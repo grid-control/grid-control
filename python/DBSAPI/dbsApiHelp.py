@@ -1,3 +1,5 @@
+# Revision: $"
+# Id: $"
 
 import os, re, string, socket, xml.sax, xml.sax.handler
 import base64
@@ -8,16 +10,12 @@ from dbsException import DbsException
 from dbsApiException import *
 
 from xml.sax import SAXParseException
-import logging
 import inspect
-
-from dbsLogger import *
 
 from dbsUtil import *
 
 def dbsApiImplGetHelp(self, entity = ""):
 	funcInfo = inspect.getframeinfo(inspect.currentframe())
-	####logging.log(DBSDEBUG, "Api call invoked %s" % str(funcInfo[2]))
 	data = self._server._call ({ 'api' : 'getHelp',
 			'entity' : entity }, 'GET')
 	#print data

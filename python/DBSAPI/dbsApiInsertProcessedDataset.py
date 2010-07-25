@@ -7,10 +7,7 @@ from cStringIO import StringIO
 from dbsException import DbsException
 from dbsApiException import *
 
-import logging
 import inspect
-
-from dbsLogger import *
 
 from dbsUtil import *
 
@@ -62,7 +59,6 @@ def dbsApiImplInsertProcessedDataset(self, dataset):
     """
 
     funcInfo = inspect.getframeinfo(inspect.currentframe())
-    ###logging.log(DBSDEBUG, "Api call invoked %s" % str(funcInfo[2]))
 
     xmlinput  = "<?xml version='1.0' standalone='yes'?>" 
     xmlinput += "<dbs>" 
@@ -113,14 +109,12 @@ def dbsApiImplInsertProcessedDataset(self, dataset):
     xmlinput += "</processed_dataset>"
     xmlinput += "</dbs>"
 
-    ###logging.log(DBSDEBUG, xmlinput)
     if self.verbose():
        print "insertProcessedDataset, xmlinput",xmlinput
     
     # Call the method
     data = self._server._call ({ 'api' : 'insertProcessedDataset',
                          'xmlinput' : xmlinput }, 'POST')
-    ###logging.log(DBSDEBUG, data)
 
 # ------------------------------------------------------------
 

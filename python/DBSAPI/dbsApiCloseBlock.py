@@ -1,3 +1,6 @@
+# Revision: $"
+# Id: $"
+
 
 import os, re, string, socket, xml.sax, xml.sax.handler
 import base64
@@ -7,10 +10,7 @@ from cStringIO import StringIO
 from dbsException import DbsException
 from dbsApiException import *
 
-import logging
 import inspect
-
-from dbsLogger import *
 
 from dbsUtil import *
 
@@ -30,12 +30,10 @@ def dbsApiImplCloseBlock(self, block=None ):
 
     """
     funcInfo = inspect.getframeinfo(inspect.currentframe())
-    ##logging.log(DBSDEBUG, "Api call invoked %s" % str(funcInfo[2]))
 
     # Invoke Server.
     block_name = get_name(block)
     data = self._server._call ({ 'api' : 'closeBlock', 'block_name' : block_name }, 'POST')
-    ##logging.log(DBSDEBUG, data)
 
     
    # ------------------------------------------------------------

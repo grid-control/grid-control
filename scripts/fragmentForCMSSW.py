@@ -1,8 +1,8 @@
 
-import FWCore.ParameterSet.Config as cms
-from IOMC.RandomEngine.RandomServiceHelper import RandomNumberServiceHelper
-
 def customise_for_gc(process):
+	import FWCore.ParameterSet.Config as cms
+	from IOMC.RandomEngine.RandomServiceHelper import RandomNumberServiceHelper
+
 	try:
 		maxevents = __MAX_EVENTS__
 		process.maxEvents = cms.untracked.PSet(

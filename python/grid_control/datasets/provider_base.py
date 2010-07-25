@@ -7,12 +7,13 @@ class DataProvider(AbstractObject):
 		locals()[dataInfo] = id
 
 	def __init__(self, config, section, datasetExpr, datasetNick, datasetID):
-		self.config = config
 		self._datasetExpr = datasetExpr
 		self._datasetNick = datasetNick
 		self._datasetID = datasetID
 		self._cache = None
-		self.sitefilter = map(str.strip, config.get('datasets', 'sites', '', volatile=True).split())
+		self.sitefilter = map(str.strip, config.get('dataset', 'sites', '').split())
+		self.emptyBlock = config.getBool('dataset', 'remove empty blocks', True)
+		self.emptyFiles = config.getBool('dataset', 'remove empty files', True)
 
 
 	# Parse dataset format [NICK : [PROVIDER : [(/)*]]] DATASET
@@ -50,6 +51,11 @@ class DataProvider(AbstractObject):
 	create = staticmethod(create)
 
 
+	# Define how often the dataprovider can be queried automatically
+	def queryLimit(self):
+		return 60 # 1 minute delay minimum
+
+
 	# Check if splitter is valid
 	def checkSplitter(self, splitter):
 		return splitter
@@ -80,6 +86,10 @@ class DataProvider(AbstractObject):
 					print('WARNING: Inconsistency in block %s#%s: Number of events doesn\'t match (b:%d != f:%d)'
 						% (block[DataProvider.Dataset], block[DataProvider.BlockName], block[DataProvider.NEvents], events))
 
+				# Filter empty files
+				if self.emptyFiles:
+					block[DataProvider.FileList] = filter(lambda x: x[DataProvider.NEvents] != 0, block[DataProvider.FileList])
+
 				# Filter dataset sites
 				if block[DataProvider.SEList] != None:
 					sites = utils.doBlackWhiteList(block[DataProvider.SEList], self.sitefilter)
@@ -87,6 +97,10 @@ class DataProvider(AbstractObject):
 						print('WARNING: Block %s#%s is not available at any site!'
 							% (block[DataProvider.Dataset], block[DataProvider.BlockName]))
 					block[DataProvider.SEList] = sites
+
+			# Filter empty blocks
+			if self.emptyBlock:
+				self._cache = filter(lambda x: x[DataProvider.NEvents] != 0, self._cache)
 
 			if utils.verbosity() > 0:
 				if self._datasetNick:

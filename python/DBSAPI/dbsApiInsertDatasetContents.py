@@ -1,4 +1,5 @@
-
+# Revision: $
+# Id: $
 import os, re, string, socket, xml.sax, xml.sax.handler
 import base64
 from xml.sax.saxutils import escape
@@ -7,10 +8,7 @@ from cStringIO import StringIO
 from dbsException import DbsException
 from dbsApiException import *
 
-import logging
 import inspect
-
-from dbsLogger import *
 
 from dbsUtil import *
 
@@ -46,7 +44,6 @@ def dbsApiImplInsertDatasetContents(self, xmlinput, ignore_parent = False):
 
     """
     funcInfo = inspect.getframeinfo(inspect.currentframe())
-    ##logging.log(DBSDEBUG, "Api call invoked %s" % str(funcInfo[2]))
 
     #try:
     # Invoke Server.
@@ -54,6 +51,5 @@ def dbsApiImplInsertDatasetContents(self, xmlinput, ignore_parent = False):
     if ignore_parent:
 	    ignoreParent = "true"
     data = self._server._call ({ 'api' : 'insertDatasetContents', 'xmlinput' : xmlinput, 'ignore_parent' : ignoreParent }, 'POST')
-    ##logging.log(DBSDEBUG, data)
 
     return data

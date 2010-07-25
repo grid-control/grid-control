@@ -13,10 +13,7 @@ from xml.sax import SAXParseException
 from dbsException import DbsException
 from dbsApiException import *
 
-import logging
 import inspect
-
-from dbsLogger import *
 
 from dbsUtil import *
 
@@ -41,7 +38,6 @@ def dbsApiImplListDatasetParents(self, dataset):
     """
 
     funcInfo = inspect.getframeinfo(inspect.currentframe())
-    ##logging.log(DBSDEBUG, "Api call invoked %s" % str(funcInfo[2]))
 
     path = get_path(dataset)
 
@@ -50,7 +46,6 @@ def dbsApiImplListDatasetParents(self, dataset):
                                  'path' : path  
 				}, 'GET')
 
-    ##logging.log(DBSDEBUG, data)
     # Parse the resulting xml output.
     try:
       result = []

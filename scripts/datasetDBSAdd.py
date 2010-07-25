@@ -6,9 +6,10 @@ from grid_control import *
 from grid_control.CMSSW import provider_dbsv2
 from grid_control.CMSSW.provider_dbsv2 import *
 from DBSAPI.dbsMigrateApi import DbsMigrateApi
+from DBSAPI.dbsApiException import DbsException, DbsBadRequest
 
 class DBS(object):
-	enum = ('CRC32', 'MD5', 'SIZE', 'LFN', 'SE', 'LUMI', 'TYPE', 'EVENTS',
+	enum = ('CRC32', 'MD5', 'SIZE', 'LFN', 'SE', 'LUMI', 'TYPE', 'EVENTS', 'JOBHASH',
 		'PARENT_FILES', 'PARENT_INFO', 'CONFIGHASH', 'CONFIGNAME', 'CONFIG', 'CMSSW_VER')
 	for id, state in enumerate(enum):
 		locals()[state] = id
@@ -87,9 +88,11 @@ def readDBSJobInfo(opts, workDir, jobNum):
 	fileDictReport = {}
 	for cfgHash in configData.keys():
 		dom = configReports[cfgHash]
-		def readTag(base, tag):
-			return str(base.getElementsByTagName(tag)[0].childNodes[0].data)
-		fileDictReport = {}
+		def readTag(base, tag, default = None):
+			try:
+				return str(base.getElementsByTagName(tag)[0].childNodes[0].data)
+			except:
+				return default
 		for outputFile in dom.getElementsByTagName('File'):
 			toRead = [("DataType", DBS.TYPE), ("TotalEvents", DBS.EVENTS)]
 			tmp = map(lambda (tag, key): (key, readTag(outputFile, tag)), toRead)
@@ -113,7 +116,6 @@ def readDBSJobInfo(opts, workDir, jobNum):
 				for lumi in run.getElementsByTagName("LumiSection"):
 					lumis.append((runId, int(lumi.getAttribute("ID"))))
 			tmp.append((DBS.LUMI, lumis))
-
 			tmp.append((DBS.CONFIGHASH, cfgHash))
 			fileDictReport[readTag(outputFile, "PFN")] = tmp
 
@@ -126,8 +128,8 @@ def readDBSJobInfo(opts, workDir, jobNum):
 		tmp = dict(fileDictGC[key])
 		tmp.update(dict(fileDictCMSSW[key]))
 		tmp.update(dict(fileDictReport[key]))
+		tmp[DBS.JOBHASH] = sorted(configData.keys())
 		outputData[tmp[DBS.LFN]] = tmp
-
 	return (outputData, configData)
 
 
@@ -179,7 +181,7 @@ def getOutputDatasets(opts):
 			parentMap.update(dict(lfns))
 		# Insert parentage infos
 		for lfn in outputData.keys():
-			for parentLFN in outputData[lfn][DBS.PARENT_FILES]:
+			for parentLFN in filter(lambda x: x, outputData[lfn][DBS.PARENT_FILES]):
 				if not DBS.PARENT_INFO in outputData[lfn]:
 					outputData[lfn][DBS.PARENT_INFO] = []
 				if not parentMap[parentLFN] in outputData[lfn][DBS.PARENT_INFO]:
@@ -199,9 +201,10 @@ def getOutputDatasets(opts):
 
 		# Define dataset split criteria
 		def generateDatasetKey(fileInfo):
-			# Split by dataset parent and config hash
+			# Split by dataset parent and config hash (+ job config hash)
 			parentDS = map(lambda (ds,b): ds, fileInfo.get(DBS.PARENT_INFO, []))
-			dsKey = utils.md5(str((fileInfo[DBS.CONFIGHASH], parentDS))).hexdigest()
+			jobHash = ('', str(fileInfo[DBS.JOBHASH]))[opts.useJobHash]
+			dsKey = utils.md5(str((fileInfo[DBS.CONFIGHASH], jobHash, parentDS))).hexdigest()
 			# Write summary information:
 			if not dsKey in datasetInfos:
 				if parentDS == []: parentDS = ['None']
@@ -254,7 +257,7 @@ def getBlockParents(lfns, outputData):
 	return set(reduce(lambda x,y: x+y, map(lambda x: outputData[x].get(DBS.PARENT_INFO, []), lfns)))
 
 
-def createDbsBlockDump(opts, newPath, blockInfo, metadata, outputData, configData):
+def createDbsBlockDump(opts, newPath, blockInfo, metadata, outputData, configData, allBlocks):
 	(blockKey, lfns) = blockInfo
 
 	# Helper function to create xml elements
@@ -282,11 +285,19 @@ def createDbsBlockDump(opts, newPath, blockInfo, metadata, outputData, configDat
 	fqBlock = "%s#%s" % (newPath, blockName)
 	newElement(nodeDBS, "dataset", {"block_name": fqBlock, "path": newPath})
 
-	# Primary dataset information
-	dataType = set(map(lambda x: outputData[x][DBS.TYPE], lfns))
+	# Primary dataset information - get datatype from other blocks in dataset in case of eg. 0 event block
 	primary = newPath.split("/")[1]
+	getDataType = lambda lfnList: filter(lambda x: x, map(lambda x: outputData[x][DBS.TYPE], lfnList))
+	dataType = set(getDataType(lfns))
+	if len(dataType) != 1:
+		dataType = set(reduce(lambda x,y: x+y, map(lambda block: getDataType(allBlocks[block]), allBlocks)))
 	if len(dataType) > 1:
 		raise RuntimeException("Data and MC files are mixed!")
+	elif len(dataType) == 0:
+		if opts.datatype:
+			dataType.add(opts.datatype)
+		else:
+			raise RuntimeException("Please supply dataset type via --datatype!")
 	newElement(nodeDBS, "primary_dataset", {"primary_name": primary,
 		"annotation": 'NO ANNOTATION PROVIDED', "type": dataType.pop().lower(),
 		"start_date": 'NO_END_DATE PROVIDED', "end_date": ''})
@@ -373,7 +384,7 @@ def createDbsBlockDumps(opts, datasets, metadata, datasetPaths, outputData, conf
 		for blockInfo in datasets[datasetKey].items():
 			del log
 			log = utils.ActivityLog(' * Creating DBS dump files - [%d / %d]' % (idx, todo))
-			(name, data) = createDbsBlockDump(opts, newPath, blockInfo, metadata, outputData, configData)
+			(name, data) = createDbsBlockDump(opts, newPath, blockInfo, metadata, outputData, configData, datasets[datasetKey])
 			dumpFile =  os.path.join(xmlDSPath, "%s.xml" % name)
 			fp = open(dumpFile, "w")
 			produced.append((datasetKey, blockInfo[0], name, dumpFile))
@@ -525,14 +536,13 @@ def registerParent(opts, parentPath):
 			quiet = gcSupport.Silencer()
 			for dbsSourceSelected in map(str.strip, opts.dbsSource.split(",")):
 				if hasDataset(dbsSourceSelected, parentPath):
-					(sApi, tApi) = map(MakeDBSApi, (dbsSourceSelected, opts.dbsTarget))
-					DbsMigrateApi(sApi, tApi, force=True, pBranches=True).migratePath(parentPath)
+					DbsMigrateApi(dbsSourceSelected, opts.dbsTarget).migrateDataset(parentPath)
 			del quiet
 		except:
 			del quiet
 			raise RuntimeError("Could not migrate dataset to target!")
 		del log
-		print " * Migrating parents of dataset - done"
+		print " * Migrating dataset parents - done"
 
 
 # Check whether to insert block into DBS or not
@@ -581,15 +591,19 @@ try:
 	parser.add_option("-d", "--dataset",         dest="dataset",       default=None,
 		help="Specify dataset(s) to process")
 
-	parser.add_option("-l", "--lumi",            dest="doLumi",        default=False, action="store_true",
-		help="Include lumi section information [Default: False]")
+	parser.add_option("-L", "--no-lumi",         dest="doLumi",        default=True,   action="store_false",
+		help="Do not include lumi section information [Default: Include Lumi information]")
 	parser.add_option("-m", "--merge",           dest="doMerge",       default=False,  action="store_true",
 		help="Merge output files from different parent blocks into a single block [Default: Keep boundaries]")
-	parser.add_option("-p", "--no-parents",      dest="importParents", default=True,  action="store_false",
+	parser.add_option("-p", "--no-parents",      dest="importParents", default=True,   action="store_false",
 		help="Disable import of parent datasets into target DBS instance - Warning: this will disconnect the " +
 			"dataset from it's parents [Default: Import parents]")
 	parser.add_option("-P", "--use-pfn",         dest="usePFN",        default=False,  action="store_true",
-		help="Use the pfn instead of the lfn in dataset structrures [Default: Mail @ ekp.physik.uni-karlsruhe]")
+		help="Use the pfn instead of the lfn in dataset structrures [Default: Use LFN]")
+	parser.add_option("-T", "--datatype",        dest="datatype",      default=None,
+		help="Supply dataset type in case cmssw report did not specify it - valid values: 'mc' or 'data'")
+	parser.add_option("-J", "--jobhash",         dest="useJobHash",    default=False,  action="store_true",
+		help="Use hash of all config files in job for dataset key calculation")
 
 	ogMode = optparse.OptionGroup(parser, "Processing mode", "")
 	ogMode.add_option("-b", "--batch",           dest="batch",         default=False, action="store_true",
@@ -609,8 +623,8 @@ try:
 	ogInst = optparse.OptionGroup(parser, "DBS instance handling", "")
 	ogInst.add_option("-t", "--target-instance", dest="dbsTarget",
 #		default="http://grid-dcms1.physik.rwth-aachen.de:8081/cms_dbs_prod_local/servlet/DBSServlet"
-#		default="http://cmsdbsprod.cern.ch/cms_dbs_prod_global/servlet/DBSServlet",
-		default="http://ekpcms2.physik.uni-karlsruhe.de:8080/DBS/servlet/DBSServlet",
+#		default="https://ekpcms2.physik.uni-karlsruhe.de:8080/DBS/servlet/DBSServlet",
+		default="https://cmsdbsprod.cern.ch:8443/cms_dbs_ph_analysis_02_writer/servlet/DBSServlet",
 		help="Specify target dbs instance url")
 	ogInst.add_option("-s", "--source-instance", dest="dbsSource",
 		default="http://cmsdbsprod.cern.ch/cms_dbs_prod_global/servlet/DBSServlet",

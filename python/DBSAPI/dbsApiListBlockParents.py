@@ -13,10 +13,7 @@ from xml.sax import SAXParseException
 from dbsException import DbsException
 from dbsApiException import *
 
-import logging
 import inspect
-
-from dbsLogger import *
 
 from dbsUtil import *
 
@@ -41,12 +38,10 @@ def dbsApiImplListBlockParents(self, blockname):
     parent_or_child = 'PARENT'
 
     funcInfo = inspect.getframeinfo(inspect.currentframe())
-    ##logging.log(DBSDEBUG, "Api call invoked %s" % str(funcInfo[2]))
  
     # Invoke Server.    
     data = self._server._call ({ 'api' : 'listBlockProvenance', 'block_name' : get_name(blockname), 'parent_or_child': parent_or_child  }, 'GET')
 
-    ##logging.log(DBSDEBUG, data)
 
     # Parse the resulting xml output.
     try:

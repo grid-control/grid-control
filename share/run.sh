@@ -94,7 +94,8 @@ if [ "$DASHBOARD" == "yes" ]; then
 	echo "==========================="
 	echo
 	my_move "$MY_SCRATCH" "$MY_LANDINGZONE" "DashboardAPI.py Logger.py ProcInfo.py apmon.py report.py"
-	export REPORTID="taskId=$TASK_ID jobId=${MY_JOBID}_$GLITE_WMS_JOBID MonitorID=$TASK_ID MonitorJobID=${MY_JOBID}_$GLITE_WMS_JOBID"
+	DASH_ID=$(echo $TASK_NAME | var_replacer "" | sed "s/__/_/g;s/^_//;s/_$//")
+	export REPORTID="taskId=$DASH_ID jobId=${MY_JOBID}_$GLITE_WMS_JOBID MonitorID=$DASH_ID MonitorJobID=${MY_JOBID}_$GLITE_WMS_JOBID"
 	echo "Update Dashboard: $REPORTID"
 	checkfile "$MY_LANDINGZONE/report.py"
 	chmod u+x "$MY_LANDINGZONE/report.py"
@@ -107,6 +108,19 @@ if [ "$DASHBOARD" == "yes" ]; then
 		SyncGridJobId="$GLITE_WMS_JOBID" SyncGridName="$TASK_USER" SyncCE="$GLOBUS_CE" \
 		WNname="$(hostname -f)" ExeStart="$DB_EXEC"
 	echo
+fi
+
+# Select SE:
+if [ -n "$SE_PATH" ]; then
+	echo "Complete SE list:"
+	for SE in $SE_PATH; do echo " * $SE"; done
+	echo "Close SE:"
+	SE_CLOSE="$(get_default_se $SE_PATH)"
+	for SE in $SE_CLOSE; do echo " * $SE"; done
+	[ -n "$SE_CLOSE" ] && export SE_PATH="$SE_CLOSE"
+	echo "Selected SE:"
+	export SE_PATH="$(get_random_se $SE_PATH)"
+	echo " => $SE_PATH"
 fi
 
 # Copy files from the SE
@@ -124,11 +138,14 @@ for SFILE in $SUBST_FILES "_config.sh"; do
 	echo "Substitute variables in file $SFILE"
 	echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~"
 	var_replacer "" < "`_find $SFILE`" | tee "$SFILE.tmp"
-	[ -f "$SFILE.tmp" ] && mv "$SFILE.tmp" "`_find $SFILE`"
+	[ -f "$SFILE.tmp" ] && cat "$SFILE.tmp" > "`_find $SFILE`"
+	[ -f "$SFILE.tmp" ] && rm "$SFILE.tmp"
 done
 
+SAVED_SE_PATH="$SE_PATH"
 checkfile "$MY_SCRATCH/_config.sh"
 source "$MY_SCRATCH/_config.sh"
+export SE_PATH="$SAVED_SE_PATH"
 
 echo
 echo "==========================="

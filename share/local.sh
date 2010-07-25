@@ -16,8 +16,8 @@ fi
 	echo "EXITCODE=107"
 ) > "$GC_SANDBOX/job.info"
 
-[ -d "/tmp" ] && export GC_LOCALSCRATCH="/tmp"
-[ -n "$GC_SCRATCH" ] && mkdir -p "$GC_SCRATCH"
+[ -d "/tmp" ] && export GC_LOCALSCRATCH="/tmp/$RANDOM_${MY_JOBID}"
+[ -n "$GC_LOCALSCRATCH" ] && mkdir -p "$GC_LOCALSCRATCH"
 cd $GC_SANDBOX
 ./run.sh ${MY_JOBID}
-rmdir "$GC_SCRATCH"
+[ -n "$GC_LOCALSCRATCH" ] && rmdir "$GC_LOCALSCRATCH"

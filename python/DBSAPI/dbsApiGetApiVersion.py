@@ -1,3 +1,5 @@
+# Revision: $"
+# Id: $"
 
 import os, re, string, socket, xml.sax, xml.sax.handler
 import base64
@@ -7,10 +9,7 @@ from cStringIO import StringIO
 from dbsException import DbsException
 from dbsApiException import *
 
-import logging
 import inspect
-
-from dbsLogger import *
 
 from dbsUtil import *
 

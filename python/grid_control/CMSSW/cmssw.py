@@ -1,4 +1,5 @@
 import os, sys, shutil
+from python_compat import *
 from grid_control import ConfigError, WMS, utils, se_utils, datasets
 from grid_control.datasets import DataMod
 from lumi_tools import *
@@ -6,7 +7,7 @@ from lumi_tools import *
 class CMSSW(DataMod):
 	def __init__(self, config):
 		DataMod.__init__(self, config)
-		self.updateErrorDict(utils.pathGC('share', 'run.cmssw.sh'))
+		self.errorDict.update(dict(self.updateErrorDict(utils.pathGC('share', 'run.cmssw.sh'))))
 
 		# SCRAM info
 		scramProject = config.get(self.__class__.__name__, 'scram project', '').split()
@@ -49,7 +50,8 @@ class CMSSW(DataMod):
 			self.seInputFiles.append(self.taskID + ".tar.gz")
 
 		if len(self.projectArea):
-			self.pattern = config.get(self.__class__.__name__, 'area files', '-.* -config lib python module */data *.xml *.sql *.cf[if] *.py').split()
+			defaultPattern = '-.* -config lib python module */data *.xml *.sql *.cf[if] *.py -*/.git -*/.svn -/CVS'
+			self.pattern = config.get(self.__class__.__name__, 'area files', defaultPattern).split()
 
 			if os.path.exists(self.projectArea):
 				print "Project area found in: %s" % self.projectArea
@@ -62,7 +64,7 @@ class CMSSW(DataMod):
 				fp = open(os.path.join(scramPath, 'Environment'), 'r')
 				self.scramEnv = utils.DictFormat().parse(fp, lowerCaseKey = False)
 			except:
-				raise ConfigError("Project area file .SCRAM/Environment cannot be parsed!")
+				raise ConfigError("Project area file %s/.SCRAM/Environment cannot be parsed!" % self.projectArea)
 
 			for key in ['SCRAM_PROJECTNAME', 'SCRAM_PROJECTVERSION']:
 				if key not in self.scramEnv:
@@ -108,7 +110,7 @@ class CMSSW(DataMod):
 			# Generate runtime tarball (and move to SE)
 			utils.genTarball(os.path.join(config.workDir, 'runtime.tar.gz'), self.projectArea, self.pattern)
 
-			for idx, sePath in enumerate(filter(lambda x: self.seRuntime, self.sePaths)):
+			for idx, sePath in enumerate(filter(lambda x: self.seRuntime, set(self.sePaths))):
 				print 'Copy CMSSW runtime to SE', idx,
 				sys.stdout.flush()
 				source = 'file:///' + os.path.join(config.workDir, 'runtime.tar.gz')
@@ -122,21 +124,6 @@ class CMSSW(DataMod):
 					print "Unable to copy runtime! You can try to copy the CMSSW runtime manually."
 					if not utils.boolUserInput('Is runtime available on SE?', False):
 						raise RuntimeError("No CMSSW runtime on SE!")
-
-
-	def doInstrument(self, cfgName):
-		if 'customise_for_gc' not in open(cfgName, 'r').read():
-			print "Instrumenting...", os.path.basename(cfgName)
-			fragment = utils.pathGC('scripts', 'fragmentForCMSSW.py')
-			open(cfgName, 'a').write(open(fragment, 'r').read())
-
-
-	def isInstrumented(self, cfgName):
-		cfg = open(cfgName, 'r').read()
-		for tag in self.neededVars():
-			if (not "__%s__" % tag in cfg) and (not "@%s@" % tag in cfg):
-				return False
-		return True
 
 
 	# Lumi filter need
@@ -168,12 +155,12 @@ class CMSSW(DataMod):
 		utils.printTabular([(0, "Config file"), (1, "Instrumented")], cfgStatus, "lc")
 
 		for cfg in cfgFiles:
-			if not isInstrumented(cfg):
+			if self.prepare or not isInstrumented(cfg):
 				if self.prepare or utils.boolUserInput('Do you want to prepare %s for running over the dataset?' % cfg, True):
 					doInstrument(cfg)
 		if mustPrepare and not (True in map(isInstrumented, cfgFiles)):
-			raise ConfigError("A config file must use %s to work properly with dataset jobs!" %
-				str.join(", ", map(lambda x: "__%s__" % x, self.neededVars())))
+			raise ConfigError("A config file must use %s to work properly!" %
+				str.join(", ", map(lambda x: "@%s@" % x, self.neededVars())))
 
 
 	# Get default dataset modules

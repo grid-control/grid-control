@@ -14,7 +14,7 @@ def optSplit(opt, delim):
 		try:
 			return opt.split(prefix, 1)[1]
 		except:
-			return ""
+			return ''
 	tmp = map(lambda p: rmPrefix(afterPrefix(p)), delim)
 	return tuple(map(str.strip, [rmPrefix(opt)] + tmp))
 
@@ -39,7 +39,7 @@ def safeWriteFile(name, content):
 
 
 class PersistentDict(dict):
-	def __init__(self, filename, delimeter = "=", lowerCaseKey = True):
+	def __init__(self, filename, delimeter = '=', lowerCaseKey = True):
 		dict.__init__(self)
 		(self.format, self.filename) = (delimeter, filename)
 		try:
@@ -68,13 +68,15 @@ def pathGC(*args):
 
 
 def resolvePath(path, userpath = []):
-	searchpaths = userpath + [ pathGC() ]
+	searchpaths = [ os.getcwd(), pathGC() ] + userpath
 	cleanPath = lambda x: os.path.normpath(os.path.expanduser(x.strip()))
+	path = cleanPath(path)
 	if not os.path.isabs(path):
 		for spath in searchpaths:
 			if os.path.exists(os.path.join(spath, path)):
 				return cleanPath(os.path.join(spath, path))
-	return cleanPath(os.path.join(searchpaths[-1], path))
+		raise RuntimeError('Could not find file %s in \n\t%s' % (path, str.join("\n\t", searchpaths)))
+	return path
 
 
 def searchPathFind(program):
@@ -85,25 +87,47 @@ def searchPathFind(program):
 	raise InstallationError("%s not found" % program)
 
 
-def verbosity():
+def globalSetupProxy(fun, default, new):
+	if new != None:
+		fun.setting = new
 	try:
-		return verbosity.setting
+		return fun.setting
 	except:
-		return 0
+		return default
+
+
+def verbosity(new = None):
+	return globalSetupProxy(verbosity, 0, new)
+
+
+def abort(new = None):
+	return globalSetupProxy(abort, False, new)
+
+
+def cached(fun): 
+	def funProxy(*args, **kargs):
+		cached = True
+		if 'cached' in kargs:
+			cached = kargs.pop('cached')
+		if not cached or (funProxy.cache[0] == None) or (funProxy.cache[1] != (args, kargs)):
+			funProxy.cache = (funProxy.fun(*args, **kargs), (args, kargs))
+		return funProxy.cache[0]
+	funProxy.fun = fun
+	funProxy.cache = (None, ([], {}))
+	return funProxy
 
 
 def getVersion():
 	try:
-		proc = LoggedProcess('svnversion', "-c %s" % pathGC())
-		version = proc.getOutput(wait = True).strip()
+		version = LoggedProcess('svnversion', '-c %s' % pathGC()).getOutput(True).strip()
 		if version != '':
-			proc = LoggedProcess('svn info', pathGC())
-			if 'stable' in proc.getOutput(wait = True):
+			if 'stable' in LoggedProcess('svn info', pathGC()).getOutput(True):
 				return '%s - stable' % version
 			return '%s - testing' % version
 	except:
 		pass
-	return "unknown"
+	return 'unknown'
+getVersion = cached(getVersion)
 
 
 def vprint(text, level = 0, printTime = False, newline = True, once = False):
@@ -114,7 +138,7 @@ def vprint(text, level = 0, printTime = False, newline = True, once = False):
 			vprint.log.append(text)
 	if verbosity() > level:
 		if printTime:
-			print "%s -" % time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()),
+			print '%s -' % time.strftime('%Y-%m-%d %H:%M:%S', time.localtime()),
 		if newline:
 			print text
 		else:
@@ -146,10 +170,10 @@ def boolUserInput(text, default):
 	return getUserInput(text, ('no', 'yes')[default], ['yes', 'no'], boolParse)
 
 
-def wait(opts, timeout):
+def wait(timeout):
 	shortStep = map(lambda x: (x, 1), range(max(timeout - 5, 0), timeout))
 	for x, w in map(lambda x: (x, 5), range(0, timeout - 5, 5)) + shortStep:
-		if opts.abort:
+		if abort():
 			return False
 		log = ActivityLog('waiting for %d seconds' % (timeout - x))
 		time.sleep(w)
@@ -358,7 +382,7 @@ class AbstractObject:
 				return newcls(*args, **kwargs)
 			else:
 				raise ConfigError('%s is not of type %s' % (newcls, cls))
-		raise ConfigError('%s "%s" does not exist in %s!' % (cls.__name__, name, str.join(":", searchPath(name))))
+		raise ConfigError('%s "%s" does not exist in\n\t%s!' % (cls.__name__, name, str.join("\n\t", searchPath(name))))
 	open = classmethod(open)
 
 
@@ -426,10 +450,8 @@ def accumulate(status, marker, check = lambda l,m: l != m):
 
 class LoggedProcess(object):
 	def __init__(self, cmd, args = ''):
-		self.cmd = (cmd, args)
 		self.proc = popen2.Popen3("%s %s" % (cmd, args), True)
-		self.stdout = []
-		self.stderr = []
+		(self.stdout, self.stderr) = ([], [])
 
 	def getOutput(self, wait = False):
 		if wait:
@@ -444,13 +466,12 @@ class LoggedProcess(object):
 	def getMessage(self):
 		return self.getOutput() + "\n" + self.getError()
 
-	def iter(self, opts = None, skip = 0):
+	def iter(self, skip = 0):
 		while True:
 			try:
 				line = self.proc.fromchild.readline()
 			except:
-				if opts:
-					opts.abort = True
+				abort(True)
 				break
 			if not line:
 				break

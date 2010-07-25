@@ -7,17 +7,13 @@ from cStringIO import StringIO
 from dbsException import DbsException
 from dbsApiException import *
 
-import logging
 import inspect
-
-from dbsLogger import *
 
 from dbsUtil import *
 
 def dbsApiImplInsertRun(self, run):
 
     funcInfo = inspect.getframeinfo(inspect.currentframe())
-    ###logging.log(DBSDEBUG, "Api call invoked %s" % str(funcInfo[2]))
 
     """
     Inserts a new run in the DBS databse. 
@@ -59,13 +55,11 @@ def dbsApiImplInsertRun(self, run):
     xmlinput += " />"
     xmlinput += "</dbs>"
 
-    ###logging.log(DBSDEBUG, xmlinput)
     if self.verbose():
        print "insertRun, xmlinput",xmlinput
        
     data = self._server._call ({ 'api' : 'insertRun',
                          'xmlinput' : xmlinput }, 'POST')
-    ###logging.log(DBSDEBUG, data)
 
 
 # ------------------------------------------------------------

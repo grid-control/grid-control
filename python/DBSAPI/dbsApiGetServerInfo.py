@@ -1,3 +1,5 @@
+# Revision: $"
+# Id: $"
 
 import os, re, string, socket, xml.sax, xml.sax.handler
 import base64
@@ -8,10 +10,7 @@ from dbsException import DbsException
 from dbsApiException import *
 from xml.sax import SAXParseException
 
-import logging
 import inspect
-
-from dbsLogger import *
 
 from dbsUtil import *
 
@@ -20,7 +19,6 @@ def dbsApiImplGetServerInfo(self):
     Retrieves the server parameters, such as Server version, Schema version
     """
     funcInfo = inspect.getframeinfo(inspect.currentframe())
-    ##logging.log(DBSDEBUG, "Api call invoked %s" % str(funcInfo[2]))
 
     # Invoke Server.
     data = self._server._call ({ 'api' : 'getDBSServerVersion' }, 'GET')
@@ -33,7 +31,6 @@ def dbsApiImplGetServerInfo(self):
       	raise DbsBadXMLData(args=msg, code="5999")
     """
 
-    ##logging.log(DBSDEBUG, data)
     # Parse the resulting xml output.
     result = {}
 

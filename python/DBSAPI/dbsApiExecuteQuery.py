@@ -1,3 +1,5 @@
+# Revision: $"
+# Id: $"
 
 import os, re, string, socket, xml.sax, xml.sax.handler
 import base64
@@ -10,10 +12,7 @@ from xml.sax import SAXParseException
 from dbsException import DbsException
 from dbsApiException import *
 
-import logging
 import inspect
-
-from dbsLogger import *
 
 from dbsUtil import *
 
@@ -22,7 +21,6 @@ def dbsApiImplExecuteQuery(self, query="*", begin="", end="", type="exe", ignore
     """
     try: 
       funcInfo = inspect.getframeinfo(inspect.currentframe())
-      ##logging.log(DBSDEBUG, "Api call invoked %s" % str(funcInfo[2]))
 
       # Invoke Server.    
       upper = "True"
@@ -34,7 +32,6 @@ def dbsApiImplExecuteQuery(self, query="*", begin="", end="", type="exe", ignore
 		      'upper':upper
 		      }, 'GET')
 
-      ###logging.log(DBSDEBUG, data)
 
       # No parsing nothing at this point, lets just return the data.
       return data
@@ -49,7 +46,6 @@ def dbsApiImplCountQuery(self, query="*", ignoreCase=True):
     """
     try: 
       funcInfo = inspect.getframeinfo(inspect.currentframe())
-      ##logging.log(DBSDEBUG, "Api call invoked %s" % str(funcInfo[2]))
 
       # Invoke Server.    
       upper = "True"
@@ -58,7 +54,6 @@ def dbsApiImplCountQuery(self, query="*", ignoreCase=True):
 		      'upper':upper
 		      }, 'GET')
 
-      ###logging.log(DBSDEBUG, data)
       result = []
       class Handler (xml.sax.handler.ContentHandler):
 		      def startElement(self, name, attrs):
@@ -82,7 +77,6 @@ def dbsApiImplExecuteSummary(self, query, begin="", end="", sortKey="", sortOrde
     """
     try: 
       funcInfo = inspect.getframeinfo(inspect.currentframe())
-      ##logging.log(DBSDEBUG, "Api call invoked %s" % str(funcInfo[2]))
 
       # Invoke Server.    
       data = self._server._callOriginal ({ 'api' : 'executeSummary', 'query' : query , 
@@ -92,7 +86,6 @@ def dbsApiImplExecuteSummary(self, query, begin="", end="", sortKey="", sortOrde
 		      'sortOrder':sortOrder
 		      }, 'GET')
 
-      ###logging.log(DBSDEBUG, data)
 
       # No parsing nothing at this point, lets just return the data.
       return data

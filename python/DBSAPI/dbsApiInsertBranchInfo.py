@@ -1,4 +1,5 @@
-
+# Revision: $
+# Id: $
 import os, re, string, socket, xml.sax, xml.sax.handler
 import base64
 from xml.sax.saxutils import escape
@@ -7,10 +8,7 @@ from cStringIO import StringIO
 from dbsException import DbsException
 from dbsApiException import *
 
-import logging
 import inspect
-
-from dbsLogger import *
 
 from dbsUtil import *
 
@@ -27,7 +25,6 @@ def dbsApiImplInsertBranchInfo(self, branchInfo):
     """
 
     funcInfo = inspect.getframeinfo(inspect.currentframe())
-    ###logging.log(DBSDEBUG, "Api call invoked %s" % str(funcInfo[2]))
 
     xmlinput  = "<?xml version='1.0' standalone='yes'?>"
     xmlinput += "<dbs>"
@@ -42,13 +39,11 @@ def dbsApiImplInsertBranchInfo(self, branchInfo):
 
     print xmlinput
 
-    ###logging.log(DBSDEBUG, xmlinput)
     if self.verbose():
        print "insertBranchInfo:, xmlinput",xmlinput
 
     data = self._server._call ({ 'api' : 'insertBranchInfo',
                          'xmlinput' : xmlinput }, 'POST')
-    ###logging.log(DBSDEBUG, data)
 
   # ------------------------------------------------------------
 

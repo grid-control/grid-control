@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-import gcSupport, sys, os, gzip, xml.dom.minidom, optparse, tarfile
+import gcSupport, sys, os, optparse
 from grid_control import *
 from grid_control.datasets import DataProvider
 
@@ -8,6 +8,8 @@ parser.add_option("-m", "--mode",   dest="mode",   default="CMSSW-Out",
 	help="Specify how to process output files - available: [CMSSW-Out], CMSSW-In")
 parser.add_option("-e", "--events", dest="events", default="0",
 	help="User defined event number - zero means skipping files without event infos")
+parser.add_option("-E", "--force-events", dest="forceevents", default=False, action="store_true",
+	help="Force usage of user supplied number of events - default: off")
 parser.add_option("-s", "--strip",  dest="strip",  default=False,
     action="store_const", const="/store", help="Strip everything before /store in path")
 (opts, args) = parser.parse_args()
@@ -31,13 +33,15 @@ try:
 
 	# Try to read all existing Blocks from production.dbs
 	try:
-		quiet = gcSupport.Silencer()
 		blocks = provider.getBlocks()
 	except:
 		blocks = []
-	del quiet
 
+	log = None
+	jobList = utils.sorted(jobList)
 	for jobNum in jobList:
+		del log
+		log = utils.ActivityLog('Reading job logs - [%d / %d]' % (jobNum, jobList[-1]))
 		outputDir = os.path.join(workDir, 'output', 'job_' + str(jobNum))
 
 		# Read the file hash entries from job info file
@@ -67,11 +71,8 @@ try:
 
 			# Read framework report files to get number of events
 			if opts.mode.startswith("cmssw"):
-				tarFile = tarfile.open(os.path.join(outputDir, "cmssw.dbs.tar.gz"), "r:gz")
-				fwkReports = filter(lambda x: os.path.basename(x.name) == 'report.xml', tarFile.getmembers())
 				try:
-					for fwkReport in map(lambda fn: tarFile.extractfile(fn), fwkReports):
-						fwkXML = xml.dom.minidom.parse(fwkReport)
+					for fwkXML in gcSupport.getCMSSWInfo(os.path.join(outputDir, "cmssw.dbs.tar.gz")):
 						if opts.mode == "cmssw-out":
 							for outFile in fwkXML.getElementsByTagName("File"):
 								pfn = outFile.getElementsByTagName("PFN")[0].childNodes[0].data
@@ -81,10 +82,14 @@ try:
 							nEvents = 0
 							for inFile in fwkXML.getElementsByTagName("InputFile"):
 								nEvents += int(inFile.getElementsByTagName("EventsRead")[0].childNodes[0].data)
+				except KeyboardInterrupt:
+					sys.exit(0)
 				except:
-					print "Error while parsing framework output!"
+					print "Error while parsing framework output of job %s!" % jobNum
 					continue
 
+			if opts.forceevents:
+				nEvents = int(opts.events)
 			if nEvents == 0:
 				continue
 

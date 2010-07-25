@@ -35,10 +35,15 @@ class DBSApiv2(DataProvider):
 				utils.vprint("\t%s" % line, -1, once = True)
 
 
+	# Define how often the dataprovider can be queried automatically
+	def queryLimit(self):
+		return 2 * 60 * 60 # 2 hour delay minimum
+
+
 	# Check if splitter is valid
 	def checkSplitter(self, splitter):
 		if self.selectedLumis and splitter == 'EventBoundarySplitter':
-			print 'Active lumi section filter forced selection of HybridSplitter'
+			utils.vprint('Active lumi section filter forced selection of HybridSplitter', -1, once = True)
 			return 'HybridSplitter'
 		return splitter
 

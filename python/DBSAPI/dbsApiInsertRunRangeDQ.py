@@ -7,10 +7,7 @@ from cStringIO import StringIO
 from dbsException import DbsException
 from dbsApiException import *
 
-import logging
 import inspect
-
-from dbsLogger import *
 
 from dbsUtil import *
 
@@ -26,7 +23,6 @@ def dbsApiImplInsertRunRangeDQ(self, startRun, endRun, dqFlagList):
     """
 
     funcInfo = inspect.getframeinfo(inspect.currentframe())
-    ###logging.log(DBSDEBUG, "Api call invoked %s" % str(funcInfo[2]))
 
     xmlinput  = "<?xml version='1.0' standalone='yes'?>"
     xmlinput += "<dbs>"
@@ -39,14 +35,12 @@ def dbsApiImplInsertRunRangeDQ(self, startRun, endRun, dqFlagList):
 
     xmlinput += "</dbs>"
 
-    ###logging.log(DBSDEBUG, xmlinput)
 
     data = self._server._call ({ 'api' : 'insertRunRangeDQ',
 					'start_run': str(get_run(startRun)), 
 					'end_run': str(get_run(endRun)),
                          		'xmlinput' : xmlinput }, 'POST')
 
-    ###logging.log(DBSDEBUG, data)
 
   #-------------------------------------------------------------------
 

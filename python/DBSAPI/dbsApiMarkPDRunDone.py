@@ -9,10 +9,7 @@ from dbsApiException import *
 from xml.sax import SAXParseException
 
 
-import logging
 import inspect
-
-from dbsLogger import *
 
 from dbsUtil import *
 

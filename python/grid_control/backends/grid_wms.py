@@ -49,7 +49,7 @@ class GridWMS(WMS):
 	def storageReq(self, sites):
 		def makeMember(member):
 			return "Member(%s, other.GlueCESEBindGroupSEUniqueID)" % self._jdlEscape(member)
-		if len(sites) == 0:
+		if (sites == None) or (len(sites) == 0):
 			return None
 		elif len(sites) == 1:
 			return makeMember(sites[0])
@@ -92,6 +92,8 @@ class GridWMS(WMS):
 				result.append(self.storageReq(arg))
 			elif type == self.SITES:
 				result.append(self.sitesReq(arg))
+			elif type == self.CPUS:
+				pass # Handle number of cpus in makeJDL
 			else:
 				raise RuntimeError('unknown requirement type %s or argument %r' % (WMS.reqTypes[type], arg))
 		return str.join(' && ', filter(lambda x: x != None, result))
@@ -118,6 +120,7 @@ class GridWMS(WMS):
 		def formatStrList(strList):
 			return '{ ' + str.join(', ', map(lambda x: '"%s"' % x, strList)) + ' }'
 
+		reqs = self.getRequirements(jobNum)
 		contents = {
 			'Executable': '"run.sh"',
 			'Arguments': '"%d"' % jobNum,
@@ -125,11 +128,14 @@ class GridWMS(WMS):
 			'StdError': '"gc.stderr"',
 			'InputSandbox': formatStrList(self.sandboxIn + [cfgPath]),
 			'OutputSandbox': formatStrList(sandboxOutJDL),
-			'Requirements': self._formatRequirements(self.getRequirements(jobNum)),
+			'Requirements': self._formatRequirements(reqs),
 			'VirtualOrganisation': '"%s"' % self.vo,
 			'Rank': '-other.GlueCEStateEstimatedResponseTime',
 			'RetryCount': 2
 		}
+		cpus = dict(reqs).get(self.CPUS, 1)
+		if cpus > 1:
+			contents['CpuNumber'] = cpus
 		fp.writelines(utils.DictFormat(' = ').format(contents, format = '%s%s%s;\n'))
 
 
@@ -305,7 +311,7 @@ class GridWMS(WMS):
 			(params, utils.shellEscape(log), utils.shellEscape(jdl)))
 
 		wmsId = None
-		for line in map(str.strip, proc.iter(self.config.opts)):
+		for line in map(str.strip, proc.iter()):
 			if line.startswith('http'):
 				wmsId = line
 		retCode = proc.wait()
@@ -330,10 +336,10 @@ class GridWMS(WMS):
 		log = tempfile.mktemp('.log')
 
 		activity = utils.ActivityLog("checking job status")
-		proc = utils.LoggedProcess(self._statusExec, "--noint --logfile %s -i %s" %
+		proc = utils.LoggedProcess(self._statusExec, "--verbosity 1 --noint --logfile %s -i %s" %
 			tuple(map(utils.shellEscape, [log, jobs])))
 
-		for data in self._parseStatus(proc.iter(self.config.opts)):
+		for data in self._parseStatus(proc.iter()):
 			data['reason'] = data.get('reason', '')
 			yield (idMap[data['id']], data['id'], self._statusMap[data['status']], data)
 
@@ -376,7 +382,7 @@ class GridWMS(WMS):
 		# yield output dirs
 		todo = idMap.values()
 		currentJobNum = None
-		for line in proc.iter(self.config.opts):
+		for line in proc.iter():
 			line = line.strip()
 			if line.startswith(tmpPath):
 				todo.remove(currentJobNum)
@@ -420,8 +426,8 @@ class GridWMS(WMS):
 		waitFlag = False
 		for ids in map(lambda x: allIds[x:x+5], range(0, len(allIds), 5)):
 			# Delete jobs in groups of 5 - with 5 seconds between groups
-			if waitFlag:
-				utils.wait(self.config.opts, 5)
+			if waitFlag and utils.wait(5) == False:
+				break
 			waitFlag = True
 
 			idMap = dict(ids)
@@ -435,7 +441,7 @@ class GridWMS(WMS):
 			del activity
 
 			# select cancelled jobs
-			for deleted in filter(lambda x: x.startswith('- '), proc.iter(self.config.opts)):
+			for deleted in filter(lambda x: x.startswith('- '), proc.iter()):
 				deleted = deleted.strip('- \n')
 				yield (deleted, idMap[deleted])
 

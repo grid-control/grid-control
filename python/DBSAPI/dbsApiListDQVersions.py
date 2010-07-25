@@ -8,10 +8,7 @@ from dbsException import DbsException
 from dbsApiException import *
 from xml.sax import SAXParseException
 
-import logging
 import inspect
-
-from dbsLogger import *
 
 from dbsUtil import *
 
@@ -23,7 +20,6 @@ def dbsApiImplListDQVersions(self):
 
     """
     funcInfo = inspect.getframeinfo(inspect.currentframe())
-    #logging.log(DBSDEBUG, "Api call invoked %s" % str(funcInfo[2]))
 
     data = self._server._call ({ 'api' : 'listDQVersions'}, 'GET')
 
