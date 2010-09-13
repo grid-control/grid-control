@@ -74,17 +74,17 @@ def main(args):
 		config.opts = opts
 
 		# Check work dir validity (default work directory is the config file name)
-		config.workDir = config.getPath('global', 'workdir', config.workDirDefault)
+		config.workDir = config.getPath('global', 'workdir', config.workDirDefault, check = False)
 		if not os.path.exists(config.workDir):
 			if not opts.init:
 				print("Will force initialization of %s if continued!" % config.workDir)
 				opts.init = True
 			if utils.boolUserInput("Do you want to create the working directory %s?" % config.workDir, True):
 				os.makedirs(config.workDir)
+		checkSpace = config.getInt('global', 'workdir space', 10, volatile=True)
 
 		# Initialise application module
-		module = config.get('global', 'module')
-		module = Module.open(module, config)
+		module = Module.open(config.get('global', 'module'), config)
 
 		# Give help about variables
 		if opts.help_vars:
@@ -143,15 +143,16 @@ def main(args):
 			Report(jobs, jobs).summary()
 			print("Running in continuous mode. Press ^C to exit.")
 
-		if not wms.canSubmit(module.wallTime, opts.submission):
-			opts.submission = False
-
 		# Job submission loop
 		def jobCycle(wait = utils.wait):
 			while True:
 				didWait = False
+				# Check whether wms can submit
+				if not wms.canSubmit(module.wallTime, opts.submission):
+					opts.submission = False
 				# Check free disk space
-				if int(os.popen("df -P -m '%s'" % config.workDir).readlines()[-1].split()[3]) < 10:
+				freeSpace = lambda x: x.f_bavail * x.f_bsize / 1024**2
+				if (checkSpace > 0) and freeSpace(os.statvfs(config.workDir)) < checkSpace:
 					raise RuntimeError("Not enough space left in working directory")
 
 				# check for jobs
@@ -169,10 +170,8 @@ def main(args):
 				if utils.abort() or not opts.continuous:
 					break
 				# idle timeout
-				wait(wms.getTimings()[0])
-				# Check whether wms can submit
-				if not wms.canSubmit(module.wallTime, opts.submission):
-					opts.submission = False
+				if not didWait:
+					wait(wms.getTimings()[0])
 
 		if opts.gui:
 			from grid_control import gui

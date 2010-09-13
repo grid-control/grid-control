@@ -8,6 +8,7 @@ class DataMod(Module):
 		Module.__init__(self, config)
 		(self.dataSplitter, self.dataChange, self.includeMap) = (None, None, includeMap)
 		self.dataset = config.get(self.__class__.__name__, 'dataset', '').strip()
+		self.dataRefresh = None
 		if self.dataset == '':
 			return
 
@@ -45,10 +46,11 @@ class DataMod(Module):
 			self.dataSplitter = DataSplitter.loadState(os.path.join(config.workDir, 'datamap.tar'))
 
 		# Select dataset refresh rate
-		dataRefresh = utils.parseTime(config.get(self.__class__.__name__, 'dataset refresh', '', volatile=True))
-		(self.dataRefresh, self.lastRefresh) = (max(dataRefresh, taskInfo.get('max refresh rate', 0)), time.time())
+		self.dataRefresh = utils.parseTime(config.get(self.__class__.__name__, 'dataset refresh', '', volatile=True))
 		if self.dataRefresh > 0:
+			self.dataRefresh = max(self.dataRefresh, taskInfo.get('max refresh rate', 0))
 			print "Dataset source will be queried every %s" % utils.strTime(self.dataRefresh)
+		self.lastRefresh = time.time()
 
 		if self.dataSplitter.getMaxJobs() == 0:
 			raise UserError("There are no events to process")
@@ -184,8 +186,8 @@ class DataMod(Module):
 		def backupRename(old, cur, new):
 			os.rename(os.path.join(self.config.workDir, cur), os.path.join(self.config.workDir, old))
 			os.rename(os.path.join(self.config.workDir, new), os.path.join(self.config.workDir, cur))
-		backupRename('datamap-old.tar',   'datamap.tar',   'datamap-new.tar')
-		backupRename('datacache-old.dat', 'datacache.dat', 'datacache-new.dat')
+		backupRename('datamap-old-%d.tar' % time.time(),   'datamap.tar',   'datamap-new.tar')
+		backupRename('datacache-old-%d.dat' % time.time(), 'datacache.dat', 'datacache-new.dat')
 		newDataSplitter = DataSplitter.loadState(os.path.join(self.config.workDir, 'datamap.tar'))
 		return (oldDataSplitter, newDataSplitter, jobChanges)
 
@@ -208,4 +210,4 @@ class DataMod(Module):
 
 
 	def onTaskFinish(self):
-		return self.dataRefresh <= 0
+		return not (self.dataRefresh > 0)

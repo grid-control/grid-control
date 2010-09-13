@@ -18,7 +18,7 @@ class ParaMod(Module):
 		reqs = self.baseMod.getRequirements(jobNum / self.getParamSpace())
 		params = self.getParamsExt()[jobNum % self.getParamSpace()]
 		def replaceTag(tag, newValue):
-			reqs = filter(lambda (k,v): k != tag, reqs)
+			reqs = filter(lambda (k, v): k != tag, reqs)
 			reqs.append((tag, newValue))
 		for key, value in params.items():
 			if key == 'WALLTIME':

@@ -1,3 +1,4 @@
+from python_compat import *
 from grid_control import utils, ConfigError
 from provider_base import DataProvider
 
@@ -19,7 +20,7 @@ class FileProvider(DataProvider):
 	def getBlocksInternal(self):
 		return [{
 			DataProvider.Dataset: self._path,
-			DataProvider.BlockName: 'fileblock0',
+			DataProvider.BlockName: str(hash(self._path)),
 			DataProvider.NEvents: int(self._events),
 			DataProvider.SEList: self._selist,
 			DataProvider.FileList: [{
@@ -33,7 +34,7 @@ class FileProvider(DataProvider):
 # required format: <path to list of data files>[@<forced prefix>][%<selected dataset>[#<selected block>]]
 class ListProvider(DataProvider):
 	def __init__(self, config, section, datasetExpr, datasetNick, datasetID = 0):
-		DataProvider.__init__(self, config,section, datasetExpr, datasetNick, datasetID)
+		DataProvider.__init__(self, config, section, datasetExpr, datasetNick, datasetID)
 		DataProvider.providers.update({'ListProvider': 'list'})
 
 		(path, self._forcePrefix, self._filter) = utils.optSplit(datasetExpr, "@%")
@@ -74,7 +75,7 @@ class ListProvider(DataProvider):
 				blockinfo[DataProvider.FileList] = []
 				commonprefix = self._forcePrefix
 			elif line != '':
-				tmp = map(str.strip, line.split('=', 1))
+				tmp = map(str.strip, rsplit(line, '=', 1))
 				if len(tmp) != 2:
 					raise ConfigError('Malformed dataset configuration line:\n%s' % line)
 				key, value = tmp
@@ -84,6 +85,8 @@ class ListProvider(DataProvider):
 					blockinfo[DataProvider.DatasetID] = int(value)
 				elif key.lower() == 'events':
 					blockinfo[DataProvider.NEvents] = int(value)
+				elif key.lower() == 'metadata':
+					blockinfo[DataProvider.Metadata] = eval(value)
 				elif key.lower() == 'se list':
 					if value.lower().strip() != 'none':
 						tmp = filter(lambda x: x != '', map(str.strip, value.split(',')))
@@ -94,10 +97,11 @@ class ListProvider(DataProvider):
 				else:
 					if commonprefix:
 						key = "%s/%s" % (commonprefix, key)
-					blockinfo[DataProvider.FileList].append({
-						DataProvider.lfn: key,
-						DataProvider.NEvents: int(value)
-					})
+					value = value.split(" ", 1)
+					data = { DataProvider.lfn: key, DataProvider.NEvents: int(value[0]) }
+					if len(value) > 1:
+						data[DataProvider.Metadata] = eval(value[1])
+					blockinfo[DataProvider.FileList].append(data)
 		else:
 			if blockinfo and doFilter(blockinfo):
 				result.append(blockinfo)

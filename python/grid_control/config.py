@@ -1,10 +1,10 @@
-import os, ConfigParser
+import os, ConfigParser as cp
 from grid_control import *
 
 class Config:
 	def __init__(self, configFile = None, configDict = {}):
 		self.protocol = {}
-		self.parser = ConfigParser.ConfigParser()
+		self.parser = cp.ConfigParser()
 		if configFile:
 			# use the directory of the config file as base directory
 			self.baseDir = os.path.abspath(os.path.normpath(os.path.dirname(configFile)))
@@ -29,7 +29,7 @@ class Config:
 				parser.readfp(open(fn, 'r'))
 			except IOError:
 				raise ConfigError("Error while reading configuration file '%s'!" % fn)
-			except ConfigParser.Error:
+			except cp.Error:
 				print "Configuration file `%s' contains an error:" % fn
 				raise
 		parseFileInt(configFile)
@@ -49,6 +49,8 @@ class Config:
 
 	def set(self, section, item, value = None):
 		utils.vprint("Config option was overridden: [%s] %s = %s" % (section, item, str(value)), 1)
+		if section not in self.parser.sections():
+			self.parser.add_section(str(section))
 		self.parser.set(section, item, value)
 
 
@@ -69,21 +71,21 @@ class Config:
 			value = self.parseLine(self.parser, str(section), item)
 			self.protocol[section][item] = (value, default, volatile)
 			return value
-		except ConfigParser.NoSectionError:
+		except cp.NoSectionError:
 			return tryDefault("No section %s in config file." % section)
-		except ConfigParser.NoOptionError:
+		except cp.NoOptionError:
 			return tryDefault("No option %s in section %s of config file." % (item, section))
 		except:
 			raise ConfigError("Parse error in option %s of config file section %s." % (item, section))
 
 
-	def getPaths(self, section, item, default = None, volatile = False):
+	def getPaths(self, section, item, default = None, volatile = False, check = True):
 		value = self.get(section, item, default, volatile)
-		return map(lambda x: utils.resolvePath(x, [self.baseDir]), value.splitlines())
+		return map(lambda x: utils.resolvePath(x, [self.baseDir], check), value.splitlines())
 
 
-	def getPath(self, section, item, default = None, volatile = False):
-		return (self.getPaths(section, item, default, volatile) + [''])[0]
+	def getPath(self, section, item, default = None, volatile = False, check = True):
+		return (self.getPaths(section, item, default, volatile, check) + [''])[0]
 
 
 	def getInt(self, section, item, default = None, volatile = False):
@@ -100,7 +102,7 @@ class Config:
 	def needInit(self, saveConfigPath):
 		if not os.path.exists(saveConfigPath):
 			return False
-		saveConfig = ConfigParser.ConfigParser()
+		saveConfig = cp.ConfigParser()
 		self.parseFile(saveConfig, saveConfigPath)
 		flag = False
 		for section in self.protocol:

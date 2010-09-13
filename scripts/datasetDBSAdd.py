@@ -39,7 +39,7 @@ def parseSEUrl(seUrl):
 		se = filePath.split(":")[0].lstrip("/").split("/")[0]
 	else:
 		raise RuntimeError("Unsupported protocol %s!" % proto)
-	return (se, os.path.join('/store', filePath.split("/store/",1)[-1]))
+	return (se, os.path.join('/store', filePath.split("/store/", 1)[-1]))
 
 
 def readDBSJobInfo(opts, workDir, jobNum):
@@ -147,7 +147,7 @@ def getAnnotation(configKey, configData):
 def getOutputDatasets(opts):
 	# Get job numbers, task id, ...
 	log = utils.ActivityLog(' * Reading task info...')
-	jobList = utils.sorted(gcSupport.getJobs(opts.workDir))
+	jobList = utils.sorted(map(lambda (jobNum, path): jobNum, Job.readJobs(opts.workDir)))
 	taskInfo = utils.PersistentDict(os.path.join(opts.workDir, 'task.dat'), ' = ')
 	del log
 	print " * Reading task info - done"
@@ -202,7 +202,7 @@ def getOutputDatasets(opts):
 		# Define dataset split criteria
 		def generateDatasetKey(fileInfo):
 			# Split by dataset parent and config hash (+ job config hash)
-			parentDS = map(lambda (ds,b): ds, fileInfo.get(DBS.PARENT_INFO, []))
+			parentDS = map(lambda (ds, b): ds, fileInfo.get(DBS.PARENT_INFO, []))
 			jobHash = ('', str(fileInfo[DBS.JOBHASH]))[opts.useJobHash]
 			dsKey = utils.md5(str((fileInfo[DBS.CONFIGHASH], jobHash, parentDS))).hexdigest()
 			# Write summary information:
@@ -221,7 +221,7 @@ def getOutputDatasets(opts):
 			# Split by SE and block parent (parent is left out in case of merging)
 			key = utils.md5(str(fileInfo[DBS.SE]) + generateDatasetKey(fileInfo))
 			if not opts.doMerge:
-				key.update(str(map(lambda (ds,b): b, fileInfo.get(DBS.PARENT_INFO, []))))
+				key.update(str(map(lambda (ds, b): b, fileInfo.get(DBS.PARENT_INFO, []))))
 			return key.hexdigest()
 
 		dsKey = generateDatasetKey(outputData[lfn])
@@ -254,7 +254,7 @@ def getOutputDatasets(opts):
 
 
 def getBlockParents(lfns, outputData):
-	return set(reduce(lambda x,y: x+y, map(lambda x: outputData[x].get(DBS.PARENT_INFO, []), lfns)))
+	return set(reduce(lambda x, y: x+y, map(lambda x: outputData[x].get(DBS.PARENT_INFO, []), lfns)))
 
 
 def createDbsBlockDump(opts, newPath, blockInfo, metadata, outputData, configData, allBlocks):
@@ -290,7 +290,7 @@ def createDbsBlockDump(opts, newPath, blockInfo, metadata, outputData, configDat
 	getDataType = lambda lfnList: filter(lambda x: x, map(lambda x: outputData[x][DBS.TYPE], lfnList))
 	dataType = set(getDataType(lfns))
 	if len(dataType) != 1:
-		dataType = set(reduce(lambda x,y: x+y, map(lambda block: getDataType(allBlocks[block]), allBlocks)))
+		dataType = set(reduce(lambda x, y: x+y, map(lambda block: getDataType(allBlocks[block]), allBlocks)))
 	if len(dataType) > 1:
 		raise RuntimeException("Data and MC files are mixed!")
 	elif len(dataType) == 0:
@@ -587,7 +587,7 @@ try:
 	usage = "%s [OPTIONS] <work directory>" % sys.argv[0]
 	parser = optparse.OptionParser(usage=usage)
 	parser.add_option("-n", "--name",            dest="dbsPath",       default=None,
-		help="Specify dbs path name(s)")
+		help="Specify dbs path name(s) - Example: DataSetA,DataSetB,DataSetC")
 	parser.add_option("-d", "--dataset",         dest="dataset",       default=None,
 		help="Specify dataset(s) to process")
 
@@ -673,7 +673,7 @@ try:
 		displayDatasetInfos(opts.display_data, datasets, metadata, datasetPaths)
 		sys.exit(0)
 
-	if len(datasetPaths) != len(map(lambda (x,y): (y,x), datasetPaths.items())):
+	if len(datasetPaths) != len(map(lambda (x, y): (y, x), datasetPaths.items())):
 		raise RuntimeError("The same dataset path was assigned to several datasets.")
 
 	# Go over the selected datasets and write out the xml dump

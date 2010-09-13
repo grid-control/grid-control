@@ -3,7 +3,7 @@ import gcSupport, sys, os, optparse
 from grid_control import *
 from grid_control.datasets import DataProvider
 
-parser = optparse.OptionParser()
+parser = optparse.OptionParser(usage="%prog [options] <config file> [<job id>, ...]")
 parser.add_option("-m", "--mode",   dest="mode",   default="CMSSW-Out",
 	help="Specify how to process output files - available: [CMSSW-Out], CMSSW-In")
 parser.add_option("-e", "--events", dest="events", default="0",
@@ -99,7 +99,7 @@ try:
 				if opts.strip:
 					lfn = str.join(opts.strip, [''] + lfn.split(opts.strip)[1:])
 				filelist.append({ DataProvider.lfn: lfn, DataProvider.NEvents: nEvents })
-			cblock[DataProvider.NEvents] = reduce(lambda x,y: x+y, map(lambda x: x[DataProvider.NEvents], filelist))
+			cblock[DataProvider.NEvents] = reduce(lambda x, y: x+y, map(lambda x: x[DataProvider.NEvents], filelist))
 
 	provider.saveState(workDir, "production.dbs", blocks)
 except:

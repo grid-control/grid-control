@@ -1,5 +1,5 @@
-import os, threading
-from grid_control import AbstractObject, Job
+import os, threading, itertools
+from grid_control import AbstractObject, Job, utils
 
 class Monitoring(AbstractObject):
 	# Read configuration options and init vars
@@ -44,8 +44,7 @@ class ScriptMonitoring(Monitoring):
 			tmp.update(self.module.getSubmitInfo(jobNum))
 		if jobObj != None:
 			tmp.update(jobObj.getAll())
-		tmp.update({'WORKDIR': self.config.workDir})
-		tmp.update({'CFGFILE': self.config.configFile})
+		tmp.update({'WORKDIR': self.config.workDir, 'CFGFILE': self.config.configFile})
 		script = self.module.substVars(script, jobNum, tmp)
 
 		tmp.update(self.module.getTaskConfig())
@@ -53,7 +52,7 @@ class ScriptMonitoring(Monitoring):
 		if jobNum != None:
 			tmp.update(self.module.getSubmitInfo(jobNum))
 
-		tmp.update(others)
+		tmp.update(allDict)
 		for key, value in tmp.iteritems():
 			os.environ["GC_%s" % key] = str(value)
 		if self.silent:
@@ -92,7 +91,7 @@ class MonitoringMultiplexer(Monitoring):
 		return dict(reduce(lambda x, y: x + y, map(lambda m: m.getEnv(wms).items(), self.submodules)))
 
 	def getFiles(self):
-		return reduce(lambda x, y: x + y, map(lambda m: m.getFiles(), self.submodules))
+		return reduce(lambda x, y: x + y, map(lambda m: list(m.getFiles()), self.submodules))
 
 	def onJobSubmit(self, wms, jobObj, jobNum):
 		for submodule in self.submodules:

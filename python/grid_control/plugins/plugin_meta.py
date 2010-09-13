@@ -45,7 +45,7 @@ class MetaParameter(ParameterPlugin):
 		for p in self.plugins:
 			head = p.getHeader()
 			# Flatten header information
-			if type(head) is list:
+			if isinstance(head, list):
 				header.extend(head)
 			else:
 				header.append(p.getHeader())
@@ -55,7 +55,7 @@ class MetaParameter(ParameterPlugin):
 		result = []
 		for subMeta in meta.data:
 			data = subMeta.plugin.writeData(subMeta)
-			if type(data) is list:
+			if isinstance(data, list):
 				result.extend(data)
 			else:
 				result.append((subMeta.plugin, data))
@@ -86,7 +86,7 @@ class ZipLongestParameter(MetaParameter):
 			result = []
 			for p in plugins[:]:
 				try:
-					result.append(p.next())
+					result.append(next(p))
 				except StopIteration:
 					# Remove finished generator from plugin list
 					plugins.remove(p)
@@ -136,7 +136,7 @@ class ConnectParameters(MetaParameter):
 class ProcessedConnector(object):
 	def __init__(self, var, eq = str.__eq__):
 		self.var = var
-		self.eq = lambda x,y: eq(str(x), str(y))
+		self.eq = lambda x, y: eq(str(x), str(y))
 
 	def match(self, main, other):
 		(x1, x2, data, x4) = main.plugin.applyTransform(main)

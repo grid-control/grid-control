@@ -2,7 +2,7 @@ import os
 from grid_control import ConfigError
 
 def makeint(x):
-	if x == '':
+	if (x == '') or (x.upper() in ['MAX', 'MIN']):
 		return None
 	return int(x)
 
@@ -21,7 +21,7 @@ def parseLumiFromJSON(data, select = ''):
 	return all
 
 
-def cmpLumi(a,b):
+def cmpLumi(a, b):
 	(start_a_run, start_a_lumi) = a[0]
 	(start_b_run, start_b_lumi) = b[0]
 	if start_a_run == start_b_run:
@@ -140,7 +140,9 @@ def formatLumi(lumifilter):
 		start = [default(start[0], '1'), default(start[1], 'MIN')]
 		end = [default(end[0], '9999999'), default(end[1], 'MAX')]
 		return str.join("-", map(lambda x: "%s:%s" % tuple(x), (start, end)))
-	return map(formatRange, lumifilter)
+	if lumifilter:
+		return map(formatRange, lumifilter)
+	return ''
 
 
 if __name__ == '__main__':

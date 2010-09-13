@@ -2,18 +2,24 @@ import os, gzip, cStringIO, copy
 from grid_control import utils, AbstractObject, AbstractError, ConfigError
 
 class DataProvider(AbstractObject):
-	dataInfos = ('Dataset', 'BlockName', 'NEvents', 'SEList', 'FileList', 'lfn', 'Nickname', 'DatasetID')
+	dataInfos = ('Dataset', 'BlockName', 'NEvents', 'SEList', 'FileList', 'lfn', 'Nickname', 'DatasetID', 'Metadata')
 	for id, dataInfo in enumerate(dataInfos):
 		locals()[dataInfo] = id
 
 	def __init__(self, config, section, datasetExpr, datasetNick, datasetID):
-		self._datasetExpr = datasetExpr
-		self._datasetNick = datasetNick
-		self._datasetID = datasetID
+		(self._datasetExpr, self._datasetNick, self._datasetID) = (datasetExpr, datasetNick, datasetID)
 		self._cache = None
-		self.sitefilter = map(str.strip, config.get('dataset', 'sites', '').split())
-		self.emptyBlock = config.getBool('dataset', 'remove empty blocks', True)
-		self.emptyFiles = config.getBool('dataset', 'remove empty files', True)
+		self.sitefilter = map(str.strip, self.setup(config.get, 'dataset', 'sites', '').split())
+		self.emptyBlock = self.setup(config.getBool, 'dataset', 'remove empty blocks', True)
+		self.emptyFiles = self.setup(config.getBool, 'dataset', 'remove empty files', True)
+		self.limitEvents = self.setup(config.getInt, 'dataset', 'limit events', -1)
+
+
+	def setup(self, func, section, item, default = None):
+		value = func(section, item, default)
+		if self._datasetNick:
+			value = func('dataset %s' % self._datasetNick, item, value)
+		return value
 
 
 	# Parse dataset format [NICK : [PROVIDER : [(/)*]]] DATASET
@@ -79,7 +85,11 @@ class DataProvider(AbstractObject):
 				events = 0
 				for file in block[DataProvider.FileList]:
 					events += file[DataProvider.NEvents]
-					allEvents += file[DataProvider.NEvents]
+				if (self.limitEvents > 0) and (allEvents + events > self.limitEvents):
+					block[DataProvider.NEvents] = 0
+					block[DataProvider.FileList] = []
+					events = 0
+				allEvents += events
 				if DataProvider.NEvents not in block:
 					block[DataProvider.NEvents] = events
 				if events != block[DataProvider.NEvents]:
@@ -105,7 +115,7 @@ class DataProvider(AbstractObject):
 			if utils.verbosity() > 0:
 				if self._datasetNick:
 					print "%s:" % self._datasetNick,
-				if self.__class__.__name__ == 'DataMultiplexer':
+				elif self.__class__.__name__ == 'DataMultiplexer':
 					print "Summary:",
 				print 'Running over %d events split into %d blocks.' % (allEvents, len(self._cache))
 		return self._cache
@@ -147,6 +157,9 @@ class DataProvider(AbstractObject):
 			writer.write('events = %d\n' % block[DataProvider.NEvents])
 			if block[DataProvider.SEList] != None:
 				writer.write('se list = %s\n' % str.join(',', block[DataProvider.SEList]))
+			writeMetadata = DataProvider.Metadata in block
+			if writeMetadata:
+				writer.write('metadata = %s\n' % block[DataProvider.Metadata])
 
 			commonprefix = os.path.commonprefix(map(lambda x: x[DataProvider.lfn], block[DataProvider.FileList]))
 			commonprefix = str.join('/', commonprefix.split('/')[:-1])
@@ -157,7 +170,10 @@ class DataProvider(AbstractObject):
 				formatter = lambda x: x
 
 			for fi in block[DataProvider.FileList]:
-				writer.write('%s = %d\n' % (formatter(fi[DataProvider.lfn]), fi[DataProvider.NEvents]))
+				data = [str(fi[DataProvider.NEvents])]
+				if writeMetadata:
+					data.append(repr(fi[DataProvider.Metadata]))
+				writer.write('%s = %s\n' % (formatter(fi[DataProvider.lfn]), str.join(' ', data)))
 			writer.write('\n')
 		open(os.path.join(path, filename), 'wb').write(writer.getvalue())
 

@@ -26,13 +26,13 @@ class MultiParaMod(ParaMod):
 	def __init__(self, config):
 		ParaMod.__init__(self, config)
 
-		def expandParam(param, type = 'words'):
+		def expandParam(param, mode = 'words'):
 			""" Expand param depending on its type.
 			>>> expandParam("Where the wild things roam")
 			['Where', 'the', 'wild', 'things', 'roam']
 			>>> expandParam("range(3)", "expr")
 			[0, 1, 2]
-			Possible improvements: enum values to indicate type;  doctest
+			Possible improvements: enum values to indicate mode;  doctest
 			might be wrong (unable to test)"""
 			actions = {
 				'expr': eval,
@@ -41,9 +41,9 @@ class MultiParaMod(ParaMod):
 				'binning': lambda l: zip(l.split(), l.split()[1:])
 			}
 			try:
-				return actions[type.lower()](param)
+				return actions[mode.lower()](param)
 			except:
-				raise exceptions.ConfigError("Illegal type '%s' in parameter expansion" % type)
+				raise exceptions.ConfigError("Illegal mode '%s' in parameter expansion" % mode)
 
 		# Map between parsed keys and config keys
 		parse_key = lambda x: (str.join(" ", map(repr, utils.parseTuples(x))), x)

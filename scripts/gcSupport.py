@@ -49,12 +49,6 @@ class FileMutex:
 			pass
 
 
-def getJobs(workDir):
-	idregex = re.compile(r'^job_([0-9]+)$')
-	jobFiles = filter(lambda x: x.startswith('job'), os.listdir(os.path.join(workDir, 'output')))
-	return map(lambda x: int(idregex.match(x).group(1)), jobFiles)
-
-
 def getWorkJobs(args):
 	if len(args) == 2:
 		(configFile, jobid) = args
@@ -65,7 +59,7 @@ def getWorkJobs(args):
 		configFile = args[0]
 		config = Config(configFile)
 		workDir = config.getPath('global', 'workdir', config.workDirDefault)
-		jobList = getJobs(workDir)
+		jobList = map(lambda (jobNum, path): jobNum, Job.readJobs(os.path.join(workDir, "jobs")))
 	else:
 		sys.stderr.write("Syntax: %s <config file> [<job id>, ...]\n\n" % sys.argv[0])
 		sys.exit(1)
@@ -88,7 +82,7 @@ def getFileInfo(workDir, jobNum, retCodeFilter = lambda x: True, rejected = None
 	if not jobInfo:
 		return rejected
 	files = filter(lambda x: x[0].startswith('file'), jobInfo.items())
-	return map(lambda (x,y): tuple(y.strip('"').split('  ')), files)
+	return map(lambda (x, y): tuple(y.strip('"').split('  ')), files)
 
 
 def getCMSSWInfo(tarPath):

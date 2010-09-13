@@ -47,7 +47,7 @@ class LSF(LocalWMSApi):
 
 
 	def parseStatus(self, status):
-		status.next()
+		next(status)
 		for jobline in status:
 			if jobline == '':
 				continue

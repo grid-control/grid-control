@@ -23,7 +23,7 @@ def flatten(lists):
 	result = []
 	for x in lists:
 		try:
-			if type(x) == str:
+			if isinstance(x, str):
 				raise
 			result.extend(x)
 		except:
@@ -67,7 +67,7 @@ def pathGC(*args):
 	return os.path.normpath(os.path.join(sys.path[1], '..', *args))
 
 
-def resolvePath(path, userpath = []):
+def resolvePath(path, userpath = [], check = True):
 	searchpaths = [ os.getcwd(), pathGC() ] + userpath
 	cleanPath = lambda x: os.path.normpath(os.path.expanduser(x.strip()))
 	path = cleanPath(path)
@@ -75,7 +75,8 @@ def resolvePath(path, userpath = []):
 		for spath in searchpaths:
 			if os.path.exists(os.path.join(spath, path)):
 				return cleanPath(os.path.join(spath, path))
-		raise RuntimeError('Could not find file %s in \n\t%s' % (path, str.join("\n\t", searchpaths)))
+		if check:
+			raise RuntimeError('Could not find file %s in \n\t%s' % (path, str.join("\n\t", searchpaths)))
 	return path
 
 
@@ -149,7 +150,7 @@ vprint.log = []
 def getUserInput(text, default, choices, parser = lambda x: x):
 	while True:
 		try:
-			userinput = raw_input('%s %s: ' % (text, '[%s]' % default))
+			userinput = user_input('%s %s: ' % (text, '[%s]' % default))
 		except:
 			print
 			sys.exit(0)
@@ -318,7 +319,7 @@ def parseTuples(string):
 			return tuple()
 		return tuple(map(str.strip, t.split(',')))
 
-	return map(to_tuple_or_str, re.findall('\(([^\)]*)\)|(\w+)', string))
+	return map(to_tuple_or_str, re.findall('\(([^\)]*)\)|([a-zA-Z0-9_\.]+)', string))
 
 
 def genTarball(outFile, dir, pattern):
@@ -358,7 +359,7 @@ class AbstractObject:
 	def open(cls, name, *args, **kwargs):
 		# Yield search paths
 		def searchPath(cname):
-			cls.moduleMap = dict(map(lambda (k,v): (k.lower(),v),cls.moduleMap.items()))
+			cls.moduleMap = dict(map(lambda (k, v): (k.lower(), v), cls.moduleMap.items()))
 			name = cls.moduleMap.get(cname.lower(), cname)
 			yield "grid_control.%s" % name
 			for path in cls.modPath:
@@ -375,7 +376,7 @@ class AbstractObject:
 					if pkg not in sys.modules:
 						__import__(pkg)
 				newcls = getattr(sys.modules[mjoin(parts[:-1])], parts[-1])
-				assert(type(newcls) != type(sys.modules['grid_control']))
+				assert(not isinstance(newcls, type(sys.modules['grid_control'])))
 			except:
 				continue
 			if issubclass(newcls, cls):
@@ -435,7 +436,7 @@ class ActivityLog:
 		sys.stdout, sys.stderr = self.saved
 
 
-def accumulate(status, marker, check = lambda l,m: l != m):
+def accumulate(status, marker, check = lambda l, m: l != m):
 	(cleared, buffer) = (True, '')
 	for line in status:
 		if check(line, marker):
@@ -450,6 +451,7 @@ def accumulate(status, marker, check = lambda l,m: l != m):
 
 class LoggedProcess(object):
 	def __init__(self, cmd, args = ''):
+		self.cmd = (cmd, args) # used in backend error messages
 		self.proc = popen2.Popen3("%s %s" % (cmd, args), True)
 		(self.stdout, self.stderr) = ([], [])
 
@@ -491,19 +493,11 @@ class LoggedProcess(object):
 
 
 def DiffLists(oldList, newList, cmpFkt, changedFkt):
-	listAdded = []
-	listMissing = []
-	listChanged = []
+	(listAdded, listMissing, listChanged) = ([], [], [])
 	oldIter = iter(sorted(oldList, cmpFkt))
 	newIter = iter(sorted(newList, cmpFkt))
-	try:
-		new = newIter.next()
-	except:
-		new = None
-	try:
-		old = oldIter.next()
-	except:
-		old = None
+	new = next(newIter, None)
+	old = next(oldIter, None)
 	while True:
 		try:
 			result = cmpFkt(new, old)

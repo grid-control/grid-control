@@ -35,7 +35,7 @@ class ParameterPlugin(AbstractObject):
 
 	# Schedule parameter transformation on the data part of the meta data
 	def setDataTransform(self, what, where = lambda x: True):
-		self.setTransform(lambda (p,k,d,r): (p,k,what(d),r), where)
+		self.setTransform(lambda (p, k, d, r): (p, k, what(d), r), where)
 
 	# Apply the scheduled transformations sequentially
 	def applyTransform(self, meta):
@@ -47,7 +47,7 @@ class ParameterPlugin(AbstractObject):
 
 	# Get list of processed parameter names
 	def getProcessedNames(self):
-		return set(utils.flatten(map(lambda (d,r): d.keys(), self.getProcessedParameters())))
+		return set(utils.flatten(map(lambda (d, r): d.keys(), self.getProcessedParameters())))
 
 	# Get parameters in processed form
 	def getProcessedParameters(self):
@@ -86,7 +86,7 @@ class ParameterPlugin(AbstractObject):
 		return tuple(map(getWriteValue, self.getParameterNames()))
 	#  Read data back into the plugin
 	def readData(self, data):
-		params = dict(filter(lambda (k,v): v != "", zip(self.getParameterNames(), [data])))
+		params = dict(filter(lambda (k, v): v != "", zip(self.getParameterNames(), [data])))
 		if params:
 			return ParameterMetadata([self, None, params, self.getRequirements(params)])
 		else:
@@ -106,7 +106,7 @@ class IndexedParameter(PersistentParameter):
 		def expandIndex(key):
 			data = self.getByIndex(key)
 			return ParameterMetadata([self, key, data, self.getRequirements(data)])
-		return itertools.imap(expandIndex, itertools.count())
+		return map(expandIndex, itertools.count())
 
 	# Main function which retrieves the data corresponding to a certain key
 	def getByIndex(self, key):

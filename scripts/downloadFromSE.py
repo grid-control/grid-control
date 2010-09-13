@@ -44,6 +44,8 @@ DEFAULT: The default is to download the SE file and check them with MD5 hashes.
 		help="MD5 verification of SE files", helpPrefix=("disable ", "enable "))
 	addBoolOpt(parser, "loop",       dest="loop",         default=False, optShort=("", "-l"),
 		help="loop over jobs until all files are successfully processed")
+	addBoolOpt(parser, "infinite",   dest="infinite",     default=False, optShort=("", "-L"),
+		help="process jobs in an infinite loop")
 	addBoolOpt(parser, "shuffle",    dest="shuffle",      default=False,
 		help="shuffle download order")
 	addBoolOpt(parser, "",           dest="skipExisting", default=False, optPrefix=("overwrite", "skip-existing"),
@@ -52,7 +54,7 @@ DEFAULT: The default is to download the SE file and check them with MD5 hashes.
 	ogFlags = optparse.OptionGroup(parser, "Job state / flag handling", "")
 	addBoolOpt(ogFlags, "mark-dl",   dest="markDL",       default=True,
 		help="mark sucessfully downloaded jobs as such")
-	addBoolOpt(ogFlags, "mark-dl",   dest="markIgnoreDL", default=False, optPrefix=("use","ignore"),
+	addBoolOpt(ogFlags, "mark-dl",   dest="markIgnoreDL", default=False, optPrefix=("use", "ignore"),
 		help="mark about sucessfully downloaded jobs", helpPrefix=("use ", "ignore "))
 	addBoolOpt(ogFlags, "mark-fail", dest="markFailed",   default=True,
 		help="mark jobs failing verification as such")
@@ -65,12 +67,14 @@ DEFAULT: The default is to download the SE file and check them with MD5 hashes.
 			('se-ok',      'rmSEOK',      'files of successful jobs on SE', False),
 			('se-fail',    'rmSEFail',    'files of failed jobs on the SE', False),
 		]:
-		addBoolOpt(ogFiles, optPostfix, dest=dest, default=default, optPrefix=("keep","rm"),
+		addBoolOpt(ogFiles, optPostfix, dest=dest, default=default, optPrefix=("keep", "rm"),
 			help=help, helpPrefix=("keep ", "remove "))
 	parser.add_option_group(ogFiles)
 
 	parser.add_option("-o", "--output", dest="output", default=None,
 		help="specify the local output directory")
+	parser.add_option("-r", "--retry",  dest="retry",  default=0,
+		help="how often should a transfer be attempted [Default: 0]")
 
 	# Shortcut options
 	def withoutDefaults(opts):
@@ -99,6 +103,10 @@ DEFAULT: The default is to download the SE file and check them with MD5 hashes.
 	optJVerify = "--verify-md5 --no-mark-dl --keep-se-fail --rm-local-fail --keep-se-ok --rm-local-ok"
 	ogShort.add_option("-V", "--just-verify", dest="shJVerify", default=None, action="store_const", const=optJVerify,
 		help = "Just verify files on SE - shorthand for:".ljust(100) + withoutDefaults(optJVerify))
+
+	optJDelete = "--skip-existing --rm-se-fail --rm-se-ok --rm-local-fail --keep-local-ok"
+	ogShort.add_option("-D", "--just-delete", dest="shJDelete", default=None, action="store_const", const=optJDelete,
+		help = "Just delete all finished files on SE - shorthand for:".ljust(100) + withoutDefaults(optJDelete))
 	parser.add_option_group(ogShort)
 
 	(opts, args) = parser.parse_args()
@@ -110,12 +118,12 @@ DEFAULT: The default is to download the SE file and check them with MD5 hashes.
 	processShorthand(opts.shJCopy)
 	processShorthand(opts.shSCopy)
 	processShorthand(opts.shJVerify)
+	processShorthand(opts.shJDelete)
 
 	# Disable loop mode if it is pointless
-	if opts.loop and not opts.skipExisting:
-		if opts.markIgnoreDL or not opts.markDL:
-			sys.stderr.write("Loop mode was disabled to avoid continuously downloading the same files\n")
-			opts.loop = False
+	if (opts.loop and not opts.skipExisting) and (opts.markIgnoreDL or not opts.markDL):
+		sys.stderr.write("Loop mode was disabled to avoid continuously downloading the same files\n")
+		(opts.loop, opts.infinite) = (False, False)
 
 	# we need exactly one positional argument (config file)
 	if len(args) != 1:
@@ -125,7 +133,7 @@ DEFAULT: The default is to download the SE file and check them with MD5 hashes.
 		sys.exit(0)
 
 	while True:
-		if realmain(opts, args) or not opts.loop:
+		if (realmain(opts, args) or not opts.loop) and not opts.infinite:
 			break
 		time.sleep(60)
 
@@ -174,6 +182,7 @@ def realmain(opts, args):
 			print "All files already downloaded!"
 			incInfo("Downloaded")
 			continue
+		retry = int(job.get('download attempt', 0))
 
 		if not proxy.canSubmit(20*60, True):
 			print "Please renew grid proxy!"
@@ -195,6 +204,8 @@ def realmain(opts, args):
 			if opts.skipExisting and os.path.exists(outFilePath): 
 				print "skip file as it already exists!"
 				continue
+			if not os.path.exists(os.path.dirname(outFilePath)):
+				os.makedirs(os.path.dirname(outFilePath))
 
 			procCP = se_utils.se_copy(os.path.join(pathSE, name_dest), "file:///%s" % outFilePath)
 			if procCP.wait() != 0:
@@ -222,6 +233,14 @@ def realmain(opts, args):
 				print
 				print "\t\tRemote site:", hash
 
+		# Ignore the first opts.retry number of failed jobs
+		if failJob and opts.retry and (retry < opts.retry):
+			print "\t\tDownload attempt #%d failed!" % (retry + 1)
+			job.set('download attempt', str(retry + 1))
+			incInfo("Download attempts")
+			job.save(jobFile)
+			continue
+
 		for (hash, name_local, name_dest, pathSE) in files:
 			# Remove downloaded files in case of failure
 			if (failJob and opts.rmLocalFail) or (not failJob and opts.rmLocalOK):
@@ -243,7 +262,7 @@ def realmain(opts, args):
 				# Mark job as failed to trigger resubmission
 				job.state = Job.FAILED
 		else:
-			incInfo("Sucessful download")
+			incInfo("Successful download")
 			if opts.markDL:
 				# Mark as downloaded
 				job.set('download', 'True')
@@ -253,12 +272,12 @@ def realmain(opts, args):
 		print
 
 	# Print overview
-	print
-	print "Status overview:"
-	for (state, num) in infos.items():
-		if num > 0:
-			print "%20s: [%d/%d]" % (state, num, len(jobList))
-	print
+	if infos:
+		print "\nStatus overview:"
+		for (state, num) in infos.items():
+			if num > 0:
+				print "%20s: [%d/%d]" % (state, num, len(jobList))
+		print
 
 	if ("Downloaded" in infos) and (infos["Downloaded"] == len(jobList)):
 		return True

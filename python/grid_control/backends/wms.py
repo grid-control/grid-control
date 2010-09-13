@@ -1,7 +1,7 @@
 # Generic base class for workload management systems
 
 from python_compat import *
-import sys, os, time, shutil, tarfile, glob
+import sys, os, time, stat, shutil, tarfile, glob
 from grid_control import AbstractObject, AbstractError, ConfigError, RuntimeError, UserError, utils, Proxy
 
 class WMS(AbstractObject):
@@ -12,7 +12,8 @@ class WMS(AbstractObject):
 
 	def __init__(self, config, module, monitor, backend, defaultproxy = 'TrivialProxy'):
 		(self.config, self.module, self.monitor) = (config, module, monitor)
-		module.validateVariables()
+		if config.opts.init:
+			module.validateVariables()
 
 		# Initialise proxy
 		self.proxy = Proxy.open(config.get(backend, 'proxy', defaultproxy, volatile=True), config)
@@ -74,9 +75,9 @@ class WMS(AbstractObject):
 					utils.vprint("\t\t%s" % shortName(f.name))
 					info, handle = f.getTarInfo()
 				info.mtime = time.time()
-				info.mode = 0644
+				info.mode = stat.S_IRUSR + stat.S_IWUSR + stat.S_IRGRP + stat.S_IROTH
 				if info.name.endswith('.sh') or info.name.endswith('.py'):
-					info.mode = 0755
+					info.mode += stat.S_IXUSR + stat.S_IXGRP + stat.S_IXOTH
 				tar.addfile(info, handle)
 				handle.close()
 			tar.close()
@@ -145,7 +146,7 @@ class WMS(AbstractObject):
 				jobNum, wmsId, data = self.submitJob(jobNum)
 				yield (jobNum, wmsId, data)
 			else:
-				utils.vprint("Skipped submission of job %s - empty data location list!" % jobNum, printTime=True, once=True)
+				utils.vprint("Skipped submission of job %s - empty data location list!" % jobNum, -1, printTime=True, once=True)
 
 
 	def retrieveJobs(self, ids):

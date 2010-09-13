@@ -9,6 +9,6 @@ data = server.DataExporter.export('RUNLUMISECTION', 'GLOBAL', 'json', {'groupNam
 runs = parseLumiFromJSON(data)
 runs.sort(cmpLumi)
 
-print "lumi filter ="
+print("lumi filter =")
 for line in map(lambda x: str.join(", ", x), gcSupport.utils.lenSplit(formatLumi(runs), 60)):
-	print "\t", line
+	print("\t%s" % line)

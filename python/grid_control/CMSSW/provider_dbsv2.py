@@ -1,6 +1,7 @@
 from grid_control import utils, DatasetError, datasets
 from grid_control.datasets import DataProvider
 from lumi_tools import *
+from python_compat import *
 
 def createDBSAPI(url):
 	import DBSAPI.dbsApi
@@ -11,24 +12,25 @@ def createDBSAPI(url):
 	return DBSAPI.dbsApi.DbsApi({'version': 'DBS_2_0_6', 'level': 'CRITICAL', 'url': url})
 
 
-# required format: <dataset path>[@<instance>][#<block>][%<run-lumis>]
+# required format: <dataset path>[@<instance>][#<block>]
 class DBSApiv2(DataProvider):
 	def __init__(self, config, section, datasetExpr, datasetNick, datasetID = 0):
 		DataProvider.__init__(self, config, section, datasetExpr, datasetNick, datasetID)
 		DataProvider.providers.update({'DBSApiv2': 'dbs'})
-		if config.getBool(section, 'dbs blacklist T1', True):
+		if self.setup(config.getBool, section, 'dbs blacklist T1', True):
 			T1SEs = ["-srmcms.pic.es", "-ccsrm.in2p3.fr", "-storm-fe-cms.cr.cnaf.infn.it",
 				"-srm-cms.gridpp.rl.ac.uk", "-srm.grid.sinica.edu.tw", "-srm2.grid.sinica.edu.tw"]
 			self.sitefilter.extend(T1SEs)
 
-		self.url = config.get(section, 'dbs instance', '')
+		self.url = self.setup(config.get, section, 'dbs instance', '')
 		(self.datasetPath, datasetUrl, self.datasetBlock) = utils.optSplit(datasetExpr, '@#')
 		if not self.datasetBlock:
 			self.datasetBlock = 'all'
 		if datasetUrl != '':
 			self.url = datasetUrl
-		# This works in tandem with cmssw.py !
-		self.selectedLumis = parseLumiFilter(config.get(section, 'lumi filter', ''))
+		# This works in tandem with active job module (cmssy.py supports only [section] lumi filter!)
+		self.selectedLumis = parseLumiFilter(self.setup(config.get, section, 'lumi filter', ''))
+
 		if self.selectedLumis:
 			utils.vprint("The following runs and lumi sections are selected:", -1, once = True)
 			for line in map(lambda x: str.join(', ', x), utils.lenSplit(formatLumi(self.selectedLumis), 65)):
@@ -92,12 +94,15 @@ class DBSApiv2(DataProvider):
 
 			dropped = 0
 			blockInfo[DataProvider.FileList] = []
+			if self.selectedLumis:
+				blockInfo[DataProvider.Metadata] = ['Runs']
 			for entry in listFileInfo:
 				if block['Name'] == entry['Block']['Name']:
 					if lumiFilter(entry['LumiList']):
 						blockInfo[DataProvider.FileList].append({
-							DataProvider.lfn     : entry['LogicalFileName'],
-							DataProvider.NEvents : entry['NumberOfEvents']
+							DataProvider.lfn      : entry['LogicalFileName'],
+							DataProvider.NEvents  : entry['NumberOfEvents'],
+							DataProvider.Metadata : [list(set(map(lambda x: int(x["RunNumber"]), entry['LumiList'])))]
 						})
 					else:
 						dropped += 1

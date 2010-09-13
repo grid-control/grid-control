@@ -67,7 +67,7 @@ def processFiles():
 
 
 if __name__ == '__main__':
-	usage = "%s [OPTIONS] <dataset name> <data path> <pattern (*.root) / files>" % sys.argv[0]
+	usage = "%prog [options] <dataset name> <data path> <pattern (*.root) / files>"
 	parser = optparse.OptionParser(usage=usage)
 	parser.add_option("-d", "--dataset", dest="dataset", default="", help="Name of dataset")
 	parser.add_option("-p", "--path", dest="path", default=".", help="Path to dataset files")

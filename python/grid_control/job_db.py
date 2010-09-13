@@ -1,5 +1,6 @@
 import sys, os, re, fnmatch, random, math, time
 from grid_control import ConfigError, UserError, RuntimeError, Job, Report, utils
+from python_compat import *
 
 class JobDB:
 	def __init__(self, config, module, monitor):
@@ -136,8 +137,7 @@ class JobDB:
 	def sample(self, jobList, size):
 		if size >= 0:
 			jobList = random.sample(jobList, min(size, len(jobList)))
-		jobList.sort()
-		return jobList
+		return sorted(jobList)
 
 
 	def getSubmissionJobs(self, maxsample):
@@ -158,11 +158,9 @@ class JobDB:
 		else:
 			jobList = self.ready[:]
 		if self.doShuffle:
-			jobList = self.sample(jobList, submit)
+			return self.sample(jobList, submit)
 		else:
-			jobList = jobList[:submit]
-			jobList.sort()
-		return jobList
+			return sorted(jobList[:submit])
 
 
 	def submit(self, wms, maxsample = 100):

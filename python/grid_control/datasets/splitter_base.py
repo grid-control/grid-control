@@ -94,6 +94,13 @@ class DataSplitter(AbstractObject):
 	def resyncMapping(self, newSplitPath, oldBlocks, newBlocks, config):
 		log = utils.ActivityLog('Resynchronization of dataset blocks')
 		(blocksAdded, blocksMissing, blocksChanged) = DataProvider.resyncSources(oldBlocks, newBlocks)
+		debug = open("%d" % time.time(), 'w')
+		debug.write("\n\nADDED\n")
+		debug.write(repr(blocksAdded))
+		debug.write("\n\nMISSING\n")
+		debug.write(repr(blocksMissing))
+		debug.write("\n\nCHANGED\n")
+		debug.write(repr(blocksChanged))
 		del log
 
 		# Variables for later
@@ -103,7 +110,7 @@ class DataSplitter(AbstractObject):
 			for idx, var in enumerate(enum):
 				locals()[var] = idx
 
-		interactive = config.getBool('dataset', 'resync interactive', True)
+		interactive = config.getBool('dataset', 'resync interactive', True, volatile = True)
 
 		# Get processing mode (interactively)
 		def getMode(item, default, desc):
@@ -112,7 +119,7 @@ class DataSplitter(AbstractObject):
 					if (x.lower() == Resync.enum[opt]) or (x.lower() == Resync.enum[opt][0]):
 						return opt
 			if not interactive:
-				value = Resync.__dict__[config.get('dataset', 'resync mode %s' % item, Resync.enum[default]).lower()]
+				value = Resync.__dict__[config.get('dataset', 'resync mode %s' % item, Resync.enum[default], volatile = True).lower()]
 				if value in desc.keys():
 					return value
 			print
@@ -255,15 +262,22 @@ class DataSplitter(AbstractObject):
 			shrinkJobs = getChangeOverview(blocksExpanded, 'Expanded')
 			addSplitProc(shrinkJobs, getMode('shrink', Resync.append, descBuilder('shrunken')))
 
-		if interactive:
+		if interactive and (splitAdded or splitProcList):
 			preserve = utils.boolUserInput("Preserve unchanged splittings with changed files?", True)
 			reorder = utils.boolUserInput("Reorder jobs to close gaps?", True)
 		else:
-			preserve = config.getBool('dataset', 'resync preserve', True)
-			reorder = config.getBool('dataset', 'resync reorder', False)
+			preserve = config.getBool('dataset', 'resync preserve', True, volatile = True)
+			reorder = config.getBool('dataset', 'resync reorder', False, volatile = True)
 
 		# ^^ Still not sure about the degrees of freedom ^^
 		#     User setup is finished starting from here
+
+		debug.write("\n\nADD\n")
+		debug.write(repr(splitAdded))
+		debug.write("\n\nPROC\n")
+		debug.write(repr(splitProcList))
+		debug.write("\n\nMODE\n")
+		debug.write(repr(splitProcMode))
 
 		# Process job modifications
 		(result, resultRedo, resultDisable) = ([], [], [])
@@ -429,6 +443,11 @@ class DataSplitter(AbstractObject):
 
 		for splitInfo in splitAdded:
 			result.append(splitInfo)
+
+		debug.write("\n\nREDO\n")
+		debug.write(repr(resultRedo))
+		debug.write("\n\nDISABLE\n")
+		debug.write(repr(resultDisable))
 
 		self.saveState(newSplitPath, result)
 		return (resultRedo, resultDisable)

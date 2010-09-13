@@ -57,7 +57,7 @@ def outputJSON(lumis, stream = sys.stdout):
 ###########################
 if opts.save_jobjson or opts.save_jobgc or opts.get_events:
 	(workDir, jobList) = gcSupport.getWorkJobs(args)
-	(log, incomplete, splitter, splitInfo) = (None, False, {}, None)
+	(log, incomplete, splitter, splitInfo) = (None, False, None, {})
 	(lumiDict, readDict, writeDict) = ({}, {}, {})
 	try:
 		splitter = DataSplitter.loadState(workDir)
@@ -176,8 +176,8 @@ if opts.save_exprgc or opts.save_exprjson:
 			for (s, e) in lumis:
 				if s[0] and e[0] and s[0] != e[0]:
 					todel.add((s, e))
-					toadd.add((s, (s[0],None)))
-					toadd.add(((e[0],1),e))
+					toadd.add((s, (s[0], None)))
+					toadd.add(((e[0], 1), e))
 					for x in range(s[0] + 1, e[0]):
 						toadd.add(((x, 1), (x, None)))
 			lumis.difference_update(todel)
@@ -186,8 +186,7 @@ if opts.save_exprgc or opts.save_exprjson:
 			# Split along lumi edges
 			(todel, toadd) = (set(), set())
 			for (s, e) in lumis:
-				edges = filter(lambda x: x > s[1] and x < e[1], lumiEdges[s[0]])
-				edges.sort()
+				edges = sorted(filter(lambda x: x > s[1] and x < e[1], lumiEdges[s[0]]))
 				if edges:
 					todel.add((s, e))
 					edg = map(lambda x: x + off, edges)

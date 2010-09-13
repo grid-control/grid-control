@@ -262,7 +262,7 @@ var_replacer() {
 		[ -n "$XEXT" ] && echo "	gsub(\"__XEXT__\", \"$XEXT\")"
 		[ -f "${MY_SCRATCH:-.}/_varmap.dat" ] && cat "${MY_SCRATCH:-.}/_varmap.dat" |
 		while read USER_VARNAME REAL_VARNAME; do
-			VARVALUE=${!REAL_VARNAME}
+			VARVALUE="${!REAL_VARNAME}"
 			[ -z "$VARVALUE" ] && echo "	gsub(\"^@IF@${USER_VARNAME}@.*\", \"\")"
 			[ -n "$VARVALUE" ] && echo "	gsub(\"^@IF@${USER_VARNAME}@\", \"\")"
 			echo "	gsub(\"^@IFEQ@${USER_VARNAME}@${VARVALUE//\"/\\\"}@\", \"\")"

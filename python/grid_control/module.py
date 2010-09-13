@@ -85,7 +85,7 @@ class Module(AbstractObject):
 	def updateErrorDict(self, fileName):
 		for line in filter(lambda x: x.startswith('#'), open(fileName, 'r').readlines()):
 			try:
-				transform = lambda (x,y): (int(x.strip('# ')), y)
+				transform = lambda (x, y): (int(x.strip('# ')), y)
 				yield transform(map(str.strip, line.split(' - ', 1)))
 			except:
 				pass
@@ -137,7 +137,7 @@ class Module(AbstractObject):
 		envvars = self.getTaskConfig().keys() + self.getJobConfig(0).keys()
 		# Map vars: Eg. __MY_JOB__ will access $MY_JOBID
 		mapping = [('DATE', 'MYDATE'), ('TIMESTAMP', 'MYTIMESTAMP'),
-			('MY_JOB', 'MY_JOBID'), ('CONF', 'GC_CONF'), ('GUID','MYGUID')]
+			('MY_JOB', 'MY_JOBID'), ('CONF', 'GC_CONF'), ('GUID', 'MYGUID')]
 		mapping += zip(envvars, envvars)
 		return dict(mapping)
 
@@ -151,7 +151,7 @@ class Module(AbstractObject):
 		def substInternal(result):
 			for (virtual, real) in self.getVarMapping().items() + zip(addDict, addDict):
 				for delim in ['@', '__']:
-					result = result.replace(delim + virtual + delim, str(allVars.get(real,'')))
+					result = result.replace(delim + virtual + delim, str(allVars.get(real, '')))
 			return result
 		result = substInternal(substInternal(str(inp)))
 		if check and (result.count('__') > 1 or result.count('@') > 1):
@@ -176,7 +176,7 @@ class Module(AbstractObject):
 
 	# Get files for input sandbox
 	def getInFiles(self):
-		return map(lambda p: utils.resolvePath(p, [self.config.baseDir]), self.sbInputFiles)
+		return map(lambda p: utils.resolvePath(p, [self.config.baseDir], False), self.sbInputFiles)
 
 
 	# Get files for output sandbox

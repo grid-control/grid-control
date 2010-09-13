@@ -28,7 +28,7 @@ class CSVParameter(ZipLongestParameter):
 		self.plugins = []
 		reader = csv.reader(open(self.fileName, "r"), dialect = self.dialect)
 		# Instantiate plugins as defined in file header
-		for idx, col in enumerate(reader.next()):
+		for idx, col in enumerate(next(reader)):
 			if col.startswith("!"):
 				(plugin, args, kargs) = col[1:].split("|")
 				(args, kargs) = map(eval, (args, kargs))

@@ -13,7 +13,7 @@ def main(args):
 		for (hash, name_local, name_dest, pathSE) in files:
 			pathSE = pathSE.replace("file://", "")
 			pathSE = pathSE.replace("dir://", "")
-			print "%s  %s/%s" % (hash, pathSE, name_dest)
+			print("%s  %s/%s" % (hash, pathSE, name_dest))
 
 	return 0
 

@@ -50,7 +50,7 @@ class CMSSW(DataMod):
 			self.seInputFiles.append(self.taskID + ".tar.gz")
 
 		if len(self.projectArea):
-			defaultPattern = '-.* -config lib python module */data *.xml *.sql *.cf[if] *.py -*/.git -*/.svn -/CVS'
+			defaultPattern = '-.* -config lib python module */data *.xml *.sql *.cf[if] *.py -*/.git -*/.svn -*/CVS -*/work.*'
 			self.pattern = config.get(self.__class__.__name__, 'area files', defaultPattern).split()
 
 			if os.path.exists(self.projectArea):
@@ -107,6 +107,9 @@ class CMSSW(DataMod):
 				print " %i) %s" % (i + 1, value)
 
 		if config.opts.init and len(self.projectArea):
+			if os.path.exists(os.path.join(config.workDir, 'runtime.tar.gz')):
+				if not utils.boolUserInput('Runtime already exists! Do you want to regenerate CMSSW tarball?', True):
+					return
 			# Generate runtime tarball (and move to SE)
 			utils.genTarball(os.path.join(config.workDir, 'runtime.tar.gz'), self.projectArea, self.pattern)
 

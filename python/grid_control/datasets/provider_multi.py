@@ -24,7 +24,7 @@ class DataMultiplexer(DataProvider):
 
 
 	def queryLimit(self):
-		return max(map(lambda x: x.queryLimit(), self.subprovider))
+		return max(map(lambda x: x['src'].queryLimit(), self.subprovider))
 
 
 	def checkSplitter(self, splitter, first = None):
