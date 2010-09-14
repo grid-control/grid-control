@@ -109,7 +109,7 @@ class DBSApiv2(DataProvider):
 
 			recordedFiles = len(blockInfo[DataProvider.FileList]) + dropped
 			if recordedFiles != block['NumberOfFiles']:
-				print('Inconsistency in dbs block %s: Number of files doesn\'t match (b:%d != f:%d)'
+				utils.eprint('Inconsistency in dbs block %s: Number of files doesn\'t match (b:%d != f:%d)'
 					% (block['Name'], block['NumberOfFiles'], recordedFiles))
 			if dropped == 0:
 				blockInfo[DataProvider.NEvents] = block['NumberOfEvents']
@@ -118,7 +118,7 @@ class DBSApiv2(DataProvider):
 
 		if len(result) == 0:
 			if self.selectedLumis:
-				print "Dataset %s does not contain the requested run/lumi sections!" % self.datasetPath
+				utils.eprint("Dataset %s does not contain the requested run/lumi sections!" % self.datasetPath)
 			else:
 				raise DatasetError('Block %s not found in dbs.' % self.datasetBlock)
 		return result

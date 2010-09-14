@@ -91,7 +91,7 @@ class CMSSW_Advanced(cmssw.CMSSW):
 		lumifilter = self.fromNM(self.nmLumi, nick, '')
 		if lumifilter:
 			data['LUMI_RANGE'] = str.join(',', map(lambda x: '"%s"' % x, lumifilter))
-		print "Job:", jobNum, "Nickname:", nick
-		print "Configfile:", data['CMSSW_CONFIG'], "Constants:", constants
-		print "Lumi filter:", lumifilter
+		utils.vprint('Nickname: %s' % nickname, 1)
+		utils.vprint(' * Config files: %s' % map(os.path.basename, cfg), 1)
+		utils.vprint(' *    Variables: %s' % self.nickMapConstants.get(nickname, {}), 1)
 		return data

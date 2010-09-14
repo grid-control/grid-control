@@ -54,7 +54,7 @@ class CMSSW(DataMod):
 			self.pattern = config.get(self.__class__.__name__, 'area files', defaultPattern).split()
 
 			if os.path.exists(self.projectArea):
-				print "Project area found in: %s" % self.projectArea
+				utils.vprint("Project area found in: %s" % self.projectArea, -1)
 			else:
 				raise ConfigError("Specified config area '%s' does not exist!" % self.projectArea)
 
@@ -101,10 +101,10 @@ class CMSSW(DataMod):
 				projPath = os.path.normpath("%s/../../../../" % self.scramEnv['RELEASETOP'])
 				self.searchLoc.append(('CMSSW_DIR_PRO', projPath))
 		if len(self.searchLoc) and config.get('global', 'backend', 'grid') != 'grid':
-			print "Jobs will try to use the CMSSW software located here:"
+			utils.vprint("Jobs will try to use the CMSSW software located here:", -1)
 			for i, loc in enumerate(self.searchLoc):
 				key, value = loc
-				print " %i) %s" % (i + 1, value)
+				utils.vprint(" %i) %s" % (i + 1, value), -1)
 
 		if config.opts.init and len(self.projectArea):
 			if os.path.exists(os.path.join(config.workDir, 'runtime.tar.gz')):
@@ -114,17 +114,17 @@ class CMSSW(DataMod):
 			utils.genTarball(os.path.join(config.workDir, 'runtime.tar.gz'), self.projectArea, self.pattern)
 
 			for idx, sePath in enumerate(filter(lambda x: self.seRuntime, set(self.sePaths))):
-				print 'Copy CMSSW runtime to SE', idx,
+				utils.vprint('Copy CMSSW runtime to SE %d' % idx, -1, newline = False)
 				sys.stdout.flush()
 				source = 'file:///' + os.path.join(config.workDir, 'runtime.tar.gz')
 				target = os.path.join(sePath, self.taskID + '.tar.gz')
 				proc = se_utils.se_copy(source, target, config.getBool(self.__class__.__name__, 'se runtime force', True))
 				if proc.wait() == 0:
-					print 'finished'
+					utils.vprint('finished', -1)
 				else:
-					print 'failed'
-					print proc.getMessage()
-					print "Unable to copy runtime! You can try to copy the CMSSW runtime manually."
+					utils.vprint('failed', -1)
+					utils.eprint('%s' % proc.getMessage())
+					utils.eprint('Unable to copy runtime! You can try to copy the CMSSW runtime manually.')
 					if not utils.boolUserInput('Is runtime available on SE?', False):
 						raise RuntimeError("No CMSSW runtime on SE!")
 
@@ -145,11 +145,11 @@ class CMSSW(DataMod):
 			return True
 		def doInstrument(cfgName):
 			if not isInstrumented(cfgName) or 'customise_for_gc' not in open(cfgName, 'r').read():
-				print "Instrumenting...", os.path.basename(cfgName)
+				utils.vprint("Instrumenting...", os.path.basename(cfgName), -1)
 				fragment = utils.pathGC('scripts', 'fragmentForCMSSW.py')
 				open(cfgName, 'a').write(open(fragment, 'r').read())
 			else:
-				print os.path.basename(cfgName), "already contains customise_for_gc and all needed variables"
+				utils.vprint("%s already contains customise_for_gc and all needed variables" % os.path.basename(cfgName), -1)
 
 		cfgStatus = []
 		comPath = os.path.dirname(os.path.commonprefix(cfgFiles))
