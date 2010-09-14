@@ -1,3 +1,4 @@
+from python_compat import *
 from grid_control import DatasetError
 from splitter_base import DataSplitter
 from provider_base import DataProvider
