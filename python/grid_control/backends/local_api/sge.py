@@ -26,7 +26,10 @@ class SGE(LocalWMSApi):
 		strTime = lambda s: "%02d:%02d:%02d" % (s / 3600, (s / 60) % 60, s % 60)
 		reqs = dict(self.wms.getRequirements(jobNum))
 		if WMS.SITES in reqs:
-			params += ' -q %s' % reqs[WMS.SITES][0]
+			(queue, nodes) = reqs[WMS.SITES]
+			params += ' -q %s' % queue
+			if nodes:
+				params += ' -l site=%s' % str.join(",", nodes)
 		if self.checkReq(reqs, WMS.WALLTIME):
 			params += " -l s_rt=%s" % strTime(reqs[WMS.WALLTIME])
 		if self.checkReq(reqs, WMS.CPUTIME):
