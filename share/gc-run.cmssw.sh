@@ -6,7 +6,7 @@
 # 111 - CMSSW environment unpacking failed
 # 112 - CMSSW environment setup failed
 
-source $MY_LANDINGZONE/run.lib || exit 101
+source $MY_LANDINGZONE/gc-run.lib || exit 101
 
 echo "CMSSW module starting"
 echo

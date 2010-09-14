@@ -1,9 +1,9 @@
 import utils
 
-# All functions use url_* functions from run.lib (just like the job did...)
+# All functions use url_* functions from gc-run.lib (just like the job did...)
 
 def getRunLibCmd(*cmds):
-	runLib = utils.pathGC('share', 'run.lib')
+	runLib = utils.pathGC('share', 'gc-run.lib')
 	cmd = 'print_and_%seval %s' % (('', 'q')[utils.verbosity() == 0], str.join(' ', cmds))
 	return 'source %s || exit 1; %s' % (runLib, cmd)
 

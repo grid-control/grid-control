@@ -19,5 +19,5 @@ fi
 [ -d "/tmp" ] && export GC_LOCALSCRATCH="/tmp/$RANDOM_${MY_JOBID}"
 [ -n "$GC_LOCALSCRATCH" ] && mkdir -p "$GC_LOCALSCRATCH"
 cd $GC_SANDBOX
-./run.sh ${MY_JOBID}
+./gc-run.sh ${MY_JOBID}
 [ -n "$GC_LOCALSCRATCH" ] && rmdir "$GC_LOCALSCRATCH"

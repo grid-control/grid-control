@@ -3,7 +3,7 @@
 # grid-control: https://ekptrac.physik.uni-karlsruhe.de/trac/grid-control
 
 export GC_DOCLEANUP="true"
-source run.lib || exit 101
+source gc-run.lib || exit 101
 
 trap abort 0 1 2 3 15
 export MY_JOBID="$1"

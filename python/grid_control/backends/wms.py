@@ -31,7 +31,7 @@ class WMS(AbstractObject):
 				raise ConfigError("Not a properly initialized work directory '%s'." % config.workDir)
 
 		tarFile = os.path.join(config.workDir, 'sandbox.tar.gz')
-		self.sandboxIn = [ utils.pathGC('share', 'run.sh'), utils.pathGC('share', 'run.lib'), tarFile ]
+		self.sandboxIn = [ utils.pathGC('share', 'gc-run.sh'), utils.pathGC('share', 'gc-run.lib'), tarFile ]
 		self.sandboxOut = [ 'gc.stdout', 'gc.stderr', 'job.info' ] + module.getOutFiles()
 
 		# Put files into sandbox file

@@ -7,7 +7,7 @@ from lumi_tools import *
 class CMSSW(DataMod):
 	def __init__(self, config):
 		DataMod.__init__(self, config)
-		self.errorDict.update(dict(self.updateErrorDict(utils.pathGC('share', 'run.cmssw.sh'))))
+		self.errorDict.update(dict(self.updateErrorDict(utils.pathGC('share', 'gc-run.cmssw.sh'))))
 
 		# SCRAM info
 		scramProject = config.get(self.__class__.__name__, 'scram project', '').split()
@@ -212,7 +212,7 @@ class CMSSW(DataMod):
 		files = DataMod.getInFiles(self)
 		if len(self.projectArea) and not self.seRuntime:
 			files.append(os.path.join(self.config.workDir, 'runtime.tar.gz'))
-		files.append(utils.pathGC('share', 'run.cmssw.sh'))
+		files.append(utils.pathGC('share', 'gc-run.cmssw.sh'))
 		files.extend(self.configFiles)
 		return files
 
@@ -226,7 +226,7 @@ class CMSSW(DataMod):
 
 
 	def getCommand(self):
-		return './run.cmssw.sh $@'
+		return './gc-run.cmssw.sh $@'
 
 
 	def formatFileList(self, filelist):

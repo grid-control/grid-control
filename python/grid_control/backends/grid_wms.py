@@ -122,7 +122,7 @@ class GridWMS(WMS):
 
 		reqs = self.getRequirements(jobNum)
 		contents = {
-			'Executable': '"run.sh"',
+			'Executable': '"gc-run.sh"',
 			'Arguments': '"%d"' % jobNum,
 			'StdOutput': '"gc.stdout"',
 			'StdError': '"gc.stderr"',

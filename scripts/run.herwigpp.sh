@@ -1,6 +1,6 @@
 #!/bin/sh
 
-source $MY_LANDINGZONE/run.lib || exit 101
+source $MY_LANDINGZONE/gc-run.lib || exit 101
 
 echo "HERWIG++ module starting"
 echo

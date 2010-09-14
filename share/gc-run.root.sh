@@ -4,7 +4,7 @@
 
 # 110 - ROOT area not found
 
-source $MY_LANDINGZONE/run.lib || exit 101
+source $MY_LANDINGZONE/gc-run.lib || exit 101
 
 echo "ROOT module starting"
 echo

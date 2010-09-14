@@ -77,8 +77,8 @@ class Module(AbstractObject):
 		if True in map(lambda x: not x.startswith('dir'), self.sePaths):
 			self.dependencies.append('glite')
 
-		# Get error messages from run.lib comments
-		self.errorDict = dict(self.updateErrorDict(utils.pathGC('share', 'run.lib')))
+		# Get error messages from gc-run.lib comments
+		self.errorDict = dict(self.updateErrorDict(utils.pathGC('share', 'gc-run.lib')))
 
 
 	# Read comments with error codes at the beginning of file
