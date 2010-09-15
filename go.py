@@ -66,7 +66,7 @@ def main(args):
 		(opts.reportSite, opts.reportTime, opts.reportMod) = (0, 0, 0)
 		parser.parse_args(args = defaultCmdLine.split() + sys.argv[1:], values = opts)
 		def setConfigFromOpt(option, section, item, fun = lambda x: str(x)):
-			if option:
+			if option != None:
 				config.set(section, item, fun(option))
 		setConfigFromOpt(opts.seed, 'jobs', 'seeds', lambda x: x.rstrip('S'))
 		setConfigFromOpt(opts.maxRetry, 'jobs', 'max retry')
