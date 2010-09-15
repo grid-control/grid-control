@@ -75,7 +75,9 @@ class ListProvider(DataProvider):
 				blockinfo[DataProvider.FileList] = []
 				commonprefix = self._forcePrefix
 			elif line != '':
-				tmp = map(str.strip, rsplit(line, '=', 1))
+				# the following line is just a temporary hack:
+				tmp = map(str.strip, [i[::-1] for i in line[::-1].split("=",1)[::-1]])
+				#tmp = map(str.strip, rsplit(line, '=', 1))
 				if len(tmp) != 2:
 					raise ConfigError('Malformed dataset configuration line:\n%s' % line)
 				key, value = tmp
