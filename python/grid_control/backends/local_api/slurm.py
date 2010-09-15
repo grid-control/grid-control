@@ -50,9 +50,9 @@ class SLURM(LocalWMSApi):
 			if jobline == '':
 				continue
 			try:
-				tmp = jobline.split()
+				tmp = jobline.replace("\x1b[m", "").split()
 				jobinfo = {
-					'id': "%s.jms" % tmp[0].strip('\x1b(B\x1b[m'),
+					'id': "%s.jms" % tmp[0].strip('\x1b(B'),
 					'user': tmp[1],
 					'group': tmp[2],
 					'job_name': tmp[3],
@@ -85,6 +85,7 @@ class SLURM(LocalWMSApi):
 
 	def getCancelArgument(self, wmsIds):
 		return str.join(" ", wmsIds)
+
 
 class JMS(SLURM):
 	pass
