@@ -3,7 +3,7 @@ from grid_control import ConfigError, Job, utils
 from grid_control.backends.wms import WMS
 from api import LocalWMSApi
 
-class SLURM(LocalWMSApi):
+class JMS(LocalWMSApi):
 	_statusMap = { 's': Job.QUEUED, 'r': Job.RUNNING, 'CG': Job.DONE, 'w': Job.WAITING }
 
 	def __init__(self, config, wms):
@@ -87,5 +87,5 @@ class SLURM(LocalWMSApi):
 		return str.join(" ", wmsIds)
 
 
-class JMS(SLURM):
+class SLURM(JMS):
 	pass
