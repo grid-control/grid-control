@@ -1,3 +1,14 @@
+try:	# rsplit >= Python 2.3
+	rsplit = str.rsplit
+except:
+	def rsplit(x, sep, maxsplit = None):
+		""" Split from the right side
+		>>> rsplit("a.b.c.d.e.f.g", ".", 2)
+		['a.b.c.d.e', 'f', 'g']
+		"""
+		tmp = x.split(sep)
+		return [str.join(sep, tmp[:len(tmp)-maxsplit])] + tmp[len(tmp)-maxsplit:]
+
 try:	# set >= Python 2.4
 	set = set
 except:
@@ -67,4 +78,4 @@ if __name__ == '__main__':
 	import doctest
 	doctest.testmod()
 
-__all__ = ["set", "sorted", "md5", "next", "user_input"]
+__all__ = ["rsplit", "set", "sorted", "md5", "next", "user_input"]
