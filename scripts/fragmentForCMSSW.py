@@ -13,14 +13,14 @@ def customise_for_gc(process):
 
 	# Dataset related setup
 	try:
-		tmp = __SKIP_EVENTS__
+		primaryFiles = [__FILE_NAMES__]
 		process.source = cms.Source("PoolSource",
 			skipEvents = cms.untracked.uint32(__SKIP_EVENTS__),
-			fileNames = cms.untracked.vstring(__FILE_NAMES__)
+			fileNames = cms.untracked.vstring(primaryFiles)
 		)
 		try:
-			secondary = __FILE_NAMES2__
-			process.source.secondaryFileNames = cms.untracked.vstring(secondary)
+			secondaryFiles = [__FILE_NAMES2__]
+			process.source.secondaryFileNames = cms.untracked.vstring(secondaryFiles)
 		except:
 			pass
 		try:
