@@ -123,7 +123,7 @@ class Report:
 		def getDest(dest):
 			if dest == 'N/A':
 				return ('N/A', '', '')
-			host, queue = dest.split('/')
+			host, queue = rsplit(dest, '/', 1)
 			host = host.split(':')[0]
 			domain = str.join('.', host.split('.')[1:])
 			if domain == '':
