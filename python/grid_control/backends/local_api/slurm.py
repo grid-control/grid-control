@@ -22,7 +22,7 @@ class JMS(LocalWMSApi):
 		return sandbox
 
 
-	def getSubmitArguments(self, jobNum, sandbox, stdout, stderr):
+	def getSubmitArguments(self, jobNum, sandbox, stdout, stderr, addAttr):
 		# Job name
 		params = ' -J %s' % self.wms.getJobName(jobNum)
 		# Job requirements

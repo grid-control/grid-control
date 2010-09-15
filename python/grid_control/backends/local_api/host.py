@@ -15,7 +15,7 @@ class Host(LocalWMSApi):
 	def getArguments(self, jobNum, sandbox):
 		return ""
 
-	def getSubmitArguments(self, jobNum, sandbox, stdout, stderr):
+	def getSubmitArguments(self, jobNum, sandbox, stdout, stderr, addAttr):
 		return "%d %s %s %s" % (jobNum, sandbox, stdout, stderr)
 
 	def parseSubmitOutput(self, data):

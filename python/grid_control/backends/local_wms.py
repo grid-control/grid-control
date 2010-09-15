@@ -13,6 +13,7 @@ class LocalWMS(WMS):
 			print "Default batch system on this host is: %s" % self._guessWMS()
 		self.api = LocalWMSApi.open(wmsapi, config, self)
 		print "Using batch system: %s" % self.api.__class__.__name__
+		self.addAttr = dict(map(lambda item: (item, config.get(wmsapi, item)), config.parser.options(wmsapi)))
 
 		broker = config.get('local', 'broker', 'DummyBroker', volatile=True)
 		self.broker = Broker.open(broker, config, self.api.getQueues(), self.api.getNodes())
@@ -81,7 +82,7 @@ class LocalWMS(WMS):
 		stdout = utils.shellEscape(os.path.join(sandbox, 'gc.stdout'))
 		stderr = utils.shellEscape(os.path.join(sandbox, 'gc.stderr'))
 		proc = utils.LoggedProcess(self.api.submitExec, "%s %s %s" % (
-			self.api.getSubmitArguments(jobNum, sandbox, stdout, stderr),
+			self.api.getSubmitArguments(jobNum, sandbox, stdout, stderr, self.addAttr),
 			utils.shellEscape(utils.pathGC('share', 'local.sh')),
 			self.api.getArguments(jobNum, sandbox)))
 		retCode = proc.wait()

@@ -18,7 +18,7 @@ class SGE(LocalWMSApi):
 		return ""
 
 
-	def getSubmitArguments(self, jobNum, sandbox, stdout, stderr):
+	def getSubmitArguments(self, jobNum, sandbox, stdout, stderr, addAttr):
 		# Restart jobs = no, job name
 		params = ' -r n -N %s' % self.wms.getJobName(jobNum)
 
@@ -39,7 +39,7 @@ class SGE(LocalWMSApi):
 
 		# Sandbox, IO paths
 		params += ' -v GC_SANDBOX=%s -o %s -e %s' % (sandbox, stdout, stderr)
-		return params
+		return params + str.join(' ', map(lambda kv: ' -l %s=%s' % kv, addAttr.items()))
 
 
 	def parseSubmitOutput(self, data):
