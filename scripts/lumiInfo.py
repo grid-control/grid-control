@@ -60,7 +60,7 @@ if opts.save_jobjson or opts.save_jobgc or opts.get_events:
 	(log, incomplete, splitter, splitInfo) = (None, False, None, {})
 	(lumiDict, readDict, writeDict) = ({}, {}, {})
 	try:
-		splitter = DataSplitter.loadState(workDir)
+		splitter = DataSplitter.loadState(os.path.join(workDir, 'datamap.tar'))
 	except:
 		pass
 	jobList = sorted(jobList)
