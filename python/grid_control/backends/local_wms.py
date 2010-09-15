@@ -18,7 +18,8 @@ class LocalWMS(WMS):
 		self.broker = Broker.open(broker, config, self.api.getQueues(), self.api.getNodes())
 
 		self.sandPath = config.getPath('local', 'sandbox path', os.path.join(config.workDir, 'sandbox'))
-		self.scratchPath = config.getPath('local', 'scratch path', '')
+		self.sandCache = []
+		self.scratchPath = config.getPath('local', 'scratch path', '', volatile=True)
 		self._nameFile = config.getPath('local', 'name source', '', volatile=True)
 		self._source = None
 		if self._nameFile != '':
@@ -135,12 +136,18 @@ class LocalWMS(WMS):
 
 
 	def getSandbox(self, wmsId):
-		for jobdir in os.listdir(self.sandPath):
-			path = os.path.join(self.sandPath, jobdir)
-			if os.path.isdir(path):
-				if wmsId in os.listdir(path):
+		# Speed up function by caching result of listdir
+		def searchSandbox(source):
+			for jobdir in source:
+				path = os.path.join(self.sandPath, jobdir)
+				if os.path.exists(os.path.join(path, wmsId)):
 					return path
-		return None
+		result = searchSandbox(self.sandCache)
+		if result:
+			return result
+		oldCache = self.sandCache[:]
+		self.sandCache = filter(lambda x: os.path.isdir(os.path.join(self.sandPath, x)), os.listdir(self.sandPath))
+		return searchSandbox(filter(lambda x: x not in oldCache, self.sandCache))
 
 
 	def getJobsOutput(self, ids):
