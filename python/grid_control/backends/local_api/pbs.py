@@ -48,7 +48,7 @@ class PBS(LocalWMSApi):
 			params += ' -W group_list=%s' % self._group
 		# Sandbox, IO paths
 		params += ' -v GC_SANDBOX=%s -o %s -e %s' % (sandbox, stdout, stderr)
-		return params + str.join(' ', map(lambda kv: ' -W %s=%s' % kv, addAttr.items()))
+		return params + str.join(' ', map(lambda kv: ' -l %s=%s' % kv, addAttr.items()))
 
 
 	def parseSubmitOutput(self, data):
