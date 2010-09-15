@@ -100,8 +100,7 @@ GUIStream.backlog = [None for i in range(100)]
 
 class ProgressBar:
 	def __init__(self, minValue = 0, maxValue = 100, totalWidth=16):
-		(self.min, self.max) = (minValue, maxValue)
-		self.width = totalWidth
+		(self.min, self.max, self.width) = (minValue, maxValue, totalWidth)
 		self.update(0)
 
 	def update(self, newProgress = 0):
