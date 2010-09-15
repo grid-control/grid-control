@@ -452,6 +452,7 @@ def accumulate(status, marker, check = lambda l, m: l != m):
 class LoggedProcess(object):
 	def __init__(self, cmd, args = ''):
 		self.cmd = (cmd, args) # used in backend error messages
+		vprint("External programm called: %s %s" % self.cmd, level=3)
 		self.proc = popen2.Popen3("%s %s" % (cmd, args), True)
 		(self.stdout, self.stderr) = ([], [])
 
