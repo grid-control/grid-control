@@ -114,7 +114,7 @@ class JobDB:
 			print "(%s)" % jobObj.get('dest')
 		elif (state in [Job.WAITING, Job.ABORTED, Job.DISABLED]) and jobObj.get('reason'):
 			print '(%s)' % jobObj.get('reason')
-		elif (state == Job.SUCCESS) and jobObj.get('runtime'):
+		elif (state == Job.SUCCESS) and jobObj.get('runtime', None) != None:
 			print "(runtime %s)" % utils.strTime(jobObj.get('runtime'))
 		elif (state == Job.FAILED):
 			msg = []
