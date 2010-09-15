@@ -29,7 +29,7 @@ class Config:
 			except cp.Error:
 				print "Configuration file `%s' contains an error:" % fn
 				raise
-		userDefaultsFile = resolvePath("~/.grid-control.conf", check = False)
+		userDefaultsFile = utils.resolvePath("~/.grid-control.conf", check = False)
 		if os.path.exists(userDefaultsFile):
 			parseFileInt(userDefaultsFile)
 		parseFileInt(configFile)
