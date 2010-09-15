@@ -2,7 +2,7 @@
 import gcSupport, sys, os, optparse, popen2, time, random
 from grid_control import *
 from grid_control import se_utils
-from grid_control.proxy import VomsProxy
+from grid_control.proxy import Proxy
 
 def md5sum(filename):
 	m = utils.md5()
@@ -58,6 +58,8 @@ DEFAULT: The default is to download the SE file and check them with MD5 hashes.
 		help="mark about sucessfully downloaded jobs", helpPrefix=("use ", "ignore "))
 	addBoolOpt(ogFlags, "mark-fail", dest="markFailed",   default=True,
 		help="mark jobs failing verification as such")
+	addBoolOpt(ogFlags, "mark-empty-fail", dest="markEmptyFailed", default=False,
+		help="mark jobs without any files as failed")
 	parser.add_option_group(ogFlags)
 
 	ogFiles = optparse.OptionGroup(parser, "Local / SE file handling", "")
@@ -73,6 +75,8 @@ DEFAULT: The default is to download the SE file and check them with MD5 hashes.
 
 	parser.add_option("-o", "--output", dest="output", default=None,
 		help="specify the local output directory")
+	parser.add_option("-P", "--proxy",  dest="proxy",  default="VomsProxy",
+		help="specify the proxy type used to determine ability to download - VomsProxy or TrivialProxy")
 	parser.add_option("-r", "--retry",  dest="retry",  default=0,
 		help="how often should a transfer be attempted [Default: 0]")
 
@@ -140,7 +144,7 @@ DEFAULT: The default is to download the SE file and check them with MD5 hashes.
 
 def realmain(opts, args):
 	try:
-		proxy = VomsProxy(Config(configDict={"proxy": {"ignore warnings": True}}))
+		proxy = Proxy.open(opts.proxy, Config(configDict={"proxy": {"ignore warnings": True}}))
 	except GCError:
 		sys.stderr.write(GCError.message)
 		sys.exit(1)
@@ -184,6 +188,8 @@ def realmain(opts, args):
 			continue
 		retry = int(job.get('download attempt', 0))
 
+		failJob = False
+
 		if not proxy.canSubmit(20*60, True):
 			print "Please renew grid proxy!"
 			break
@@ -191,11 +197,13 @@ def realmain(opts, args):
 		# Read the file hash entries from job info file
 		files = gcSupport.getFileInfo(workDir, jobNum, lambda retCode: retCode == 0)
 		if not files:
-			incInfo("No files")
-			continue
+			if opts.markEmptyFailed:
+				failJob = True
+			else:
+				incInfo("No files")
+				continue
 		print "The job wrote %d file%s to the SE" % (len(files), ('s', '')[len(files) == 1])
 
-		failJob = False
 		for (hash, name_local, name_dest, pathSE) in files:
 			print "\t", name_dest,
 
