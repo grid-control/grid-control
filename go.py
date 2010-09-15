@@ -130,7 +130,8 @@ def main(args):
 
 		savedConfigPath = os.path.join(config.workDir, 'work.conf')
 		if opts.init:
-			# Save working config file
+			# Save working config file - no runtime config file changes should happen after this point
+			config.allowSet = False
 			config.parser.write(open(savedConfigPath, 'w'))
 		else:
 			# Compare config files

@@ -3,8 +3,7 @@ from grid_control import *
 
 class Config:
 	def __init__(self, configFile = None, configDict = {}):
-		self.protocol = {}
-		self.parser = cp.ConfigParser()
+		(self.allowSet, self.protocol, self.parser) = (True, {}, cp.ConfigParser())
 		if configFile:
 			# use the directory of the config file as base directory
 			self.baseDir = os.path.abspath(os.path.normpath(os.path.dirname(configFile)))
@@ -17,8 +16,6 @@ class Config:
 
 		# Override config settings via dictionary
 		for section in configDict:
-			if section not in self.parser.sections():
-				self.parser.add_section(str(section))
 			for item in configDict[section]:
 				self.set(str(section), item, str(configDict[section][item]))
 
@@ -48,10 +45,12 @@ class Config:
 
 
 	def set(self, section, item, value = None):
+		if not self.allowSet:
+			raise APIError("Invalid runtime config override: [%s] %s = %s" % (section, item, str(value)))
 		utils.vprint("Config option was overridden: [%s] %s = %s" % (section, item, str(value)), 1)
-		if section not in self.parser.sections():
+		if str(section) not in self.parser.sections():
 			self.parser.add_section(str(section))
-		self.parser.set(section, item, value)
+		self.parser.set(str(section), str(item), str(value))
 
 
 	def get(self, section, item, default = None, volatile = False):
