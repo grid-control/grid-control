@@ -42,7 +42,7 @@ class LSF(LocalWMSApi):
 
 
 	def parseSubmitOutput(self, data):
-		#Job <34020017> is submitted to queue <1nh>.
+		# Job <34020017> is submitted to queue <1nh>.
 		return "%s.lsf" % str(data.split()[1].strip("<>"))
 
 
