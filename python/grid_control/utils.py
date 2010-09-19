@@ -131,19 +131,22 @@ def getVersion():
 getVersion = cached(getVersion)
 
 
-def vprint(text, level = 0, printTime = False, newline = True, once = False):
+def eprint(text = '', level = -1, printTime = False, newline = True):
+	if verbosity() > level:
+		if printTime:
+			sys.stderr.write('%s - ' % time.strftime('%Y-%m-%d %H:%M:%S', time.localtime()))
+		sys.stderr.write('%s%s' % (text, ('', '\n')[newline]))
+
+
+def vprint(text = '', level = 0, printTime = False, newline = True, once = False):
 	if once:
 		if text in vprint.log:
 			return
-		else:
-			vprint.log.append(text)
+		vprint.log.append(text)
 	if verbosity() > level:
 		if printTime:
-			print '%s -' % time.strftime('%Y-%m-%d %H:%M:%S', time.localtime()),
-		if newline:
-			print text
-		else:
-			print text,
+			sys.stdout.write('%s - ' % time.strftime('%Y-%m-%d %H:%M:%S', time.localtime()))
+		sys.stdout.write('%s%s' % (text, ('', '\n')[newline]))
 vprint.log = []
 
 
@@ -152,14 +155,14 @@ def getUserInput(text, default, choices, parser = lambda x: x):
 		try:
 			userinput = user_input('%s %s: ' % (text, '[%s]' % default))
 		except:
-			print
+			eprint()
 			sys.exit(0)
 		if userinput == '':
 			return parser(default)
 		if parser(userinput) != None:
 			return parser(userinput)
 		valid = str.join(", ", map(lambda x: '"%s"' % x, choices[:-1]))
-		print 'Invalid input! Answer with %s or "%s"' % (valid, choices[-1])
+		eprint('Invalid input! Answer with %s or "%s"' % (valid, choices[-1]))
 
 
 def boolUserInput(text, default):
@@ -183,8 +186,7 @@ def wait(timeout):
 
 
 def deprecated(text):
-	print open(pathGC('share', 'fail.txt'), 'r').read()
-	print("[DEPRECATED] %s" % text)
+	eprint("%s\n[DEPRECATED] %s" % (open(pathGC('share', 'fail.txt'), 'r').read(), text))
 	if not boolUserInput('Do you want to continue?', False):
 		sys.exit(0)
 
@@ -557,7 +559,7 @@ def lenSplit(list, maxlen):
 	yield tmp
 
 
-def printTabular(head, data, fmtString = '', fmt = {}):
+def printTabular(head, data, fmtString = '', fmt = {}, level = -1):
 	justFunDict = { 'l': str.ljust, 'r': str.rjust, 'c': str.center }
 	# justFun = {id1: str.center, id2: str.rjust, ...}
 	justFun = dict(map(lambda (idx, x): (idx[0], justFunDict[x]), zip(head, fmtString)))
@@ -587,11 +589,11 @@ def printTabular(head, data, fmtString = '', fmt = {}):
 	for entry in [headentry, None] + entries:
 		applyFmt = lambda fun: map(lambda (id, name): just(id, fun(id)), head)
 		if entry == None:
-			print("=%s=" % str.join("=+=", applyFmt(lambda id: '=' * maxlen[id])))
+			vprint("=%s=" % str.join("=+=", applyFmt(lambda id: '=' * maxlen[id])), level)
 		elif entry == '':
-			print("-%s-" % str.join("-+-", applyFmt(lambda id: '-' * maxlen[id])))
+			vprint("-%s-" % str.join("-+-", applyFmt(lambda id: '-' * maxlen[id])), level)
 		else:
-			print(" %s " % str.join(" | ", applyFmt(lambda id: entry.get(id, ''))))
+			vprint(" %s " % str.join(" | ", applyFmt(lambda id: entry.get(id, ''))), level)
 
 
 def exitWithUsage(usage, msg = None):
