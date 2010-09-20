@@ -107,7 +107,7 @@ class JobDB:
 		new.sort()
 
 		jobNumLen = int(math.log10(max(1, self.nJobs)) + 1)
-		utils.vprint("Job %s state changed from %s to %s" % (str(jobNum).ljust(jobNumLen), Job.states[oldState], Job.states[state]), -1, True, False)
+		utils.vprint("Job %s state changed from %s to %s " % (str(jobNum).ljust(jobNumLen), Job.states[oldState], Job.states[state]), -1, True, False)
 		if (state == Job.SUBMITTED) and (jobObj.attempt > 1):
 			print "(retry #%s)" % (jobObj.attempt - 1)
 		elif (state == Job.QUEUED) and jobObj.get('dest') != 'N/A':

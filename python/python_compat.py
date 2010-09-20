@@ -1,4 +1,4 @@
-try:	# rsplit >= Python 2.3
+try:	# rsplit >= Python 2.4
 	rsplit = str.rsplit
 except:
 	def rsplit(x, sep, maxsplit = None):
