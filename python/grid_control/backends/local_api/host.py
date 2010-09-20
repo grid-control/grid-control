@@ -30,7 +30,7 @@ class Host(LocalWMSApi):
 				jobinfo['status'] = 'R'
 				jobinfo['dest'] = 'localhost/localqueue'
 			except:
-				raise RethrowError("Error reading job info:\n%s\n" % entry)
+				raise RethrowError("Error reading job info:\n%s" % entry)
 			yield jobinfo
 
 	def parseJobState(self, state):

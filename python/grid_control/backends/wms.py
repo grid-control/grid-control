@@ -126,7 +126,7 @@ class WMS(AbstractObject):
 			content = utils.DictFormat(escapeString = True).format(jobEnv, format = 'export %s%s%s\n')
 			utils.safeWriteFile(cfgPath, content)
 		except:
-			raise RethrowError("Could not write job config data to %s.\n" % cfgPath)
+			raise RethrowError("Could not write job config data to %s." % cfgPath)
 
 
 	def submitJob(self, jobNum):

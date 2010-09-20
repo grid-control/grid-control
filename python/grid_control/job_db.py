@@ -283,7 +283,7 @@ class JobDB:
 		if len(jobs) == 0:
 			return
 		Report(jobs, self).details()
-		if interactive and not utils.boolUserInput('Do you really want to delete these jobs?', True):
+		if interactive and not utils.getUserBool('Do you really want to delete these jobs?', True):
 			return
 
 		def mark_cancelled(jobNum):
@@ -301,7 +301,7 @@ class JobDB:
 		if len(jobs) > 0:
 			print "\nThere was a problem with deleting the following jobs:"
 			Report(jobs, self._jobs).details()
-			if interactive and utils.boolUserInput('Do you want to mark them as deleted?', True):
+			if interactive and utils.getUserBool('Do you want to mark them as deleted?', True):
 				map(mark_cancelled, jobs)
 
 

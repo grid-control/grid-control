@@ -24,11 +24,8 @@ class Config:
 		def parseFileInt(fn):
 			try:
 				parser.readfp(open(fn, 'r'))
-			except IOError:
-				raise ConfigError("Error while reading configuration file '%s'!" % fn)
-			except cp.Error:
-				utils.eprint("Configuration file `%s' contains an error:" % fn)
-				raise
+			except:
+				raise RethrowError("Error while reading configuration file '%s'!" % fn)
 		userDefaultsFile = utils.resolvePath("~/.grid-control.conf", check = False)
 		if os.path.exists(userDefaultsFile):
 			parseFileInt(userDefaultsFile)

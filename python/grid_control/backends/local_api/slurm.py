@@ -75,7 +75,7 @@ class JMS(LocalWMSApi):
 					jobinfo['dest'] = "%s.localhost/%s" % (jobinfo['dest_hosts'], jobinfo['queue'])
 				yield jobinfo
 			except:
-				raise RethrowError("Error reading job info:\n%s\n" % jobline)
+				raise RethrowError("Error reading job info:\n%s" % jobline)
 
 
 	def getCheckArgument(self, wmsIds):

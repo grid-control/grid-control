@@ -108,7 +108,7 @@ class CMSSW(DataMod):
 
 		if config.opts.init and len(self.projectArea):
 			if os.path.exists(os.path.join(config.workDir, 'runtime.tar.gz')):
-				if not utils.boolUserInput('Runtime already exists! Do you want to regenerate CMSSW tarball?', True):
+				if not utils.getUserBool('Runtime already exists! Do you want to regenerate CMSSW tarball?', True):
 					return
 			# Generate runtime tarball (and move to SE)
 			utils.genTarball(os.path.join(config.workDir, 'runtime.tar.gz'), self.projectArea, self.pattern)
@@ -125,7 +125,7 @@ class CMSSW(DataMod):
 					utils.vprint('failed', -1)
 					utils.eprint('%s' % proc.getMessage())
 					utils.eprint('Unable to copy runtime! You can try to copy the CMSSW runtime manually.')
-					if not utils.boolUserInput('Is runtime available on SE?', False):
+					if not utils.getUserBool('Is runtime available on SE?', False):
 						raise RuntimeError("No CMSSW runtime on SE!")
 
 
@@ -159,7 +159,7 @@ class CMSSW(DataMod):
 
 		for cfg in cfgFiles:
 			if self.prepare or not isInstrumented(cfg):
-				if self.prepare or utils.boolUserInput('Do you want to prepare %s for running over the dataset?' % cfg, True):
+				if self.prepare or utils.getUserBool('Do you want to prepare %s for running over the dataset?' % cfg, True):
 					doInstrument(cfg)
 		if mustPrepare and not (True in map(isInstrumented, cfgFiles)):
 			raise ConfigError("A config file must use %s to work properly!" %

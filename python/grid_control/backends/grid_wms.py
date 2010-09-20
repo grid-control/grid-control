@@ -1,5 +1,5 @@
 import sys, os, time, copy, tempfile, cStringIO, tarfile
-from grid_control import ConfigError, Job, utils
+from grid_control import ConfigError, RethrowError, Job, utils
 from wms import WMS
 
 try:
@@ -299,7 +299,7 @@ class GridWMS(WMS):
 			fp.write(data)
 			fp.close()
 		except:
-			raise RethrowError("Could not write jdl data to %s.\n" % jdl)
+			raise RethrowError("Could not write jdl data to %s." % jdl)
 
 		tmp = filter(lambda (x, y): y != '', self._submitParams.iteritems())
 		params = str.join(' ', map(lambda (x, y): "%s %s" % (x, y), tmp))

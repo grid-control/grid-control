@@ -165,7 +165,7 @@ def getUserInput(text, default, choices, parser = lambda x: x):
 		eprint('Invalid input! Answer with %s or "%s"' % (valid, choices[-1]))
 
 
-def boolUserInput(text, default):
+def getUserBool(text, default):
 	def boolParse(x):
 		if x.lower() in ('yes', 'y', 'true', 'ok'):
 			return True
@@ -187,7 +187,7 @@ def wait(timeout):
 
 def deprecated(text):
 	eprint("%s\n[DEPRECATED] %s" % (open(pathGC('share', 'fail.txt'), 'r').read(), text))
-	if not boolUserInput('Do you want to continue?', False):
+	if not getUserBool('Do you want to continue?', False):
 		sys.exit(0)
 
 

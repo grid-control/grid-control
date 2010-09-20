@@ -68,7 +68,7 @@ class LSF(LocalWMSApi):
 					jobinfo['dest'] = "%s/%s" % (jobinfo['dest_host'], jobinfo['queue'])
 				yield jobinfo
 			except:
-				raise RethrowError("Error reading job info:\n%s\n" % jobline)
+				raise RethrowError("Error reading job info:\n%s" % jobline)
 
 
 	def getCheckArgument(self, wmsIds):

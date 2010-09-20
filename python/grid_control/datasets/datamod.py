@@ -18,7 +18,7 @@ class DataMod(Module):
 		if os.path.exists(os.path.join(config.workDir, 'datamap.tar')):
 			if config.opts.init and not config.opts.resync:
 				print "Initialization of task with already submitted / finished jobs can result in invalid results!"
-				if utils.boolUserInput("Perform resync of dataset related information instead of re-init?", True):
+				if utils.getUserBool("Perform resync of dataset related information instead of re-init?", True):
 					config.opts.resync = True
 		elif config.opts.init and config.opts.resync:
 			config.opts.resync = False

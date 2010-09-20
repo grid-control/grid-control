@@ -72,7 +72,7 @@ class PBS(LocalWMSApi):
 						jobinfo.get('queue')
 					)
 			except:
-				raise RethrowError("Error reading job info:\n%s\n" % section)
+				raise RethrowError("Error reading job info:\n%s" % section)
 			yield jobinfo
 
 

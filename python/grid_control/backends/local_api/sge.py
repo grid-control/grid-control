@@ -64,7 +64,7 @@ class SGE(LocalWMSApi):
 					tmp = jobinfo['queue_name'].split("@")
 					jobinfo['dest'] = "%s/%s" % (tmp[1], tmp[0])
 			except:
-				raise RethrowError("Error reading job info:\n%s\n" % jobentry.toxml())
+				raise RethrowError("Error reading job info:\n%s" % jobentry.toxml())
 			yield jobinfo
 
 
