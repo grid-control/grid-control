@@ -497,50 +497,30 @@ class LoggedProcess(object):
 
 def DiffLists(oldList, newList, cmpFkt, changedFkt):
 	(listAdded, listMissing, listChanged) = ([], [], [])
-	oldIter = iter(sorted(oldList, cmpFkt))
-	newIter = iter(sorted(newList, cmpFkt))
+	oldIter = iter(sorted(oldList, cmpFkt)) # old[0] < old[1] < ...
+	newIter = iter(sorted(newList, cmpFkt)) # new[0] < new[1] < ...
 	new = next(newIter, None)
 	old = next(oldIter, None)
 	while True:
-		try:
-			result = cmpFkt(new, old)
-			if result < 0:
-				listAdded.append(new)
-				try:
-					new = newIter.next()
-				except:
-					new = None
-					raise
-			elif result > 0:
-				listMissing.append(old)
-				try:
-					old = oldIter.next()
-				except:
-					old = None
-					raise
-			else:
-				changedFkt(listAdded, listMissing, listChanged, old, new)
-				try:
-					try:
-						new = newIter.next()
-					except:
-						new = None
-						raise
-					old = oldIter.next()
-				except:
-					old = None
-					raise
-		except: #StopIteration:
+		if (new == None) or (old == None):
 			break
-	if new:
+		result = cmpFkt(new, old)
+		if result < 0: # new[npos] < old[opos]
+			listAdded.append(new)
+			new = next(newIter, None)
+		elif result > 0: # new[npos] > old[opos]
+			listMissing.append(old)
+			old = next(oldIter, None)
+		else: # new[npos] == old[opos] according to *active* comparison
+			changedFkt(listAdded, listMissing, listChanged, old, new)
+			new = next(newIter, None)
+			old = next(oldIter, None)
+	while new != None:
 		listAdded.append(new)
-	for new in newIter:
-		listAdded.append(new)
-	if old:
+		new = next(newIter, None)
+	while old != None:
 		listMissing.append(old)
-	for old in oldIter:
-		listMissing.append(old)
-
+		old = next(oldIter, None)
 	return (listAdded, listMissing, listChanged)
 
 
