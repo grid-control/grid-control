@@ -7,8 +7,8 @@ class Config:
 		if configFile:
 			# use the directory of the config file as base directory
 			self.baseDir = os.path.abspath(os.path.normpath(os.path.dirname(configFile)))
-			self.confName = str.join("", os.path.basename(configFile).split(".")[:-1])
 			self.configFile = os.path.join(self.baseDir, os.path.basename(configFile))
+			self.confName = str.join("", os.path.basename(configFile).split(".")[:-1])
 			self.parseFile(self.parser, configFile)
 		else:
 			(self.baseDir, self.configFile, self.confName) = ('.', 'gc.conf', 'gc')
@@ -17,7 +17,7 @@ class Config:
 		# Override config settings via dictionary
 		for section in configDict:
 			for item in configDict[section]:
-				self.set(str(section), item, str(configDict[section][item]))
+				self.set(section, item, configDict[section][item])
 
 
 	def parseFile(self, parser, configFile):
@@ -27,7 +27,7 @@ class Config:
 			except IOError:
 				raise ConfigError("Error while reading configuration file '%s'!" % fn)
 			except cp.Error:
-				print "Configuration file `%s' contains an error:" % fn
+				utils.eprint("Configuration file `%s' contains an error:" % fn)
 				raise
 		userDefaultsFile = utils.resolvePath("~/.grid-control.conf", check = False)
 		if os.path.exists(userDefaultsFile):
@@ -49,8 +49,8 @@ class Config:
 
 	def set(self, section, item, value = None):
 		if not self.allowSet:
-			raise APIError("Invalid runtime config override: [%s] %s = %s" % (section, item, str(value)))
-		utils.vprint("Config option was overridden: [%s] %s = %s" % (section, item, str(value)), 1)
+			raise APIError("Invalid runtime config override: [%s] %s = %s" % (str(section), str(item), str(value)))
+		utils.vprint("Config option was overridden: [%s] %s = %s" % (str(section), str(item), str(value)), 1)
 		if str(section) not in self.parser.sections():
 			self.parser.add_section(str(section))
 		self.parser.set(str(section), str(item), str(value))
@@ -115,13 +115,13 @@ class Config:
 					oldValue = default
 				if (str(value).strip() != str(oldValue).strip()) and not volatile:
 					if not flag:
-						print "\nFound some changes in the config file, which will only apply"
-						print "to the current task after a reinitialization:\n"
-					print "[%s] %s = %s" % (section, key, value),
+						utils.eprint("\nFound some changes in the config file, which will only apply")
+						utils.eprint("to the current task after a reinitialization:\n")
+					utils.eprint("[%s] %s = %s" % (section, key, value), newline = False)
 					if len(str(oldValue)) + len(str(value)) > 60:
-						print
-					print "  (old value: %s)" % oldValue
+						utils.eprint()
+					utils.eprint("  (old value: %s)" % oldValue)
 					flag = True
 		if flag:
-			print
+			utils.eprint()
 		return flag

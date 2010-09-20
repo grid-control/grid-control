@@ -2,7 +2,7 @@
 
 from python_compat import *
 import sys, os, time, stat, shutil, tarfile, glob
-from grid_control import AbstractObject, AbstractError, ConfigError, RuntimeError, UserError, utils, Proxy
+from grid_control import AbstractObject, AbstractError, ConfigError, RuntimeError, RethrowError, UserError, utils, Proxy
 
 class WMS(AbstractObject):
 	reqTypes = ('SOFTWARE', 'WALLTIME', 'STORAGE', 'SITES', 'CPUTIME', 'MEMORY', 'OTHER', 'CPUS')
@@ -25,8 +25,8 @@ class WMS(AbstractObject):
 			if config.opts.init:
 				try:
 					os.mkdir(self._outputPath)
-				except IOError, e:
-					raise ConfigError("Problem creating work directory '%s': %s" % (self._outputPath, e))
+				except:
+					raise RethrowError("Problem creating work directory '%s'" % self._outputPath)
 			else:
 				raise ConfigError("Not a properly initialized work directory '%s'." % config.workDir)
 
@@ -126,8 +126,7 @@ class WMS(AbstractObject):
 			content = utils.DictFormat(escapeString = True).format(jobEnv, format = 'export %s%s%s\n')
 			utils.safeWriteFile(cfgPath, content)
 		except:
-			sys.stderr.write("Could not write job config data to %s.\n" % cfgPath)
-			raise
+			raise RethrowError("Could not write job config data to %s.\n" % cfgPath)
 
 
 	def submitJob(self, jobNum):

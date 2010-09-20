@@ -32,6 +32,13 @@ class AbstractError(APIError):
 	def __init__(self):
 		APIError.__init__(self, "%s is an abstract function!" % sys._getframe(1).f_code.co_name)
 
+# rethrow error message
+class RethrowError(GCError):
+	def __init__(self, msg):
+		GCError.__init__(self, msg)
+		import traceback
+		traceback.print_exception(*sys.exc_info())
+
 # some error with the dataset
 class DatasetError(GridError):
 	pass	# just inherit everything from GridError

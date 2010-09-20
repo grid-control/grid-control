@@ -45,14 +45,14 @@ class CMSSW_Advanced(cmssw.CMSSW):
 			config.set(self.__class__.__name__, 'lumi filter', str.join(",", self.nmLumi.get(None, [])))
 			head.append((2, "Lumi filter"))
 
-		print "Mapping between nickname and other settings:\n"
+		utils.vprint("Mapping between nickname and other settings:\n", -1)
 		def report():
 			for nick in sorted(set(self.nmCfg.keys() + self.nmConst.keys() + self.nmLumi.keys())):
 				tmp = {0: nick, 1: str.join(', ', map(os.path.basename, self.nmCfg.get(nick, ''))), 2: str.join(",", (self.nmLumi.get(nick, '')))}
 				tmp.update(self.nmConst.get(nick, {}))
 				yield tmp
 		utils.printTabular(head, report(), "cl")
-		print
+		utils.vprint(level = -1)
 		cmssw.CMSSW.__init__(self, config)
 
 

@@ -10,9 +10,9 @@ class LocalWMS(WMS):
 
 		wmsapi = config.get('local', 'wms', self._guessWMS())
 		if wmsapi != self._guessWMS():
-			print "Default batch system on this host is: %s" % self._guessWMS()
+			utils.vprint("Default batch system on this host is: %s" % self._guessWMS(), -1, once = True)
 		self.api = LocalWMSApi.open(wmsapi, config, self)
-		print "Using batch system: %s" % self.api.__class__.__name__
+		utils.vprint("Using batch system: %s" % self.api.__class__.__name__, -1)
 		self.addAttr = {}
 		if wmsapi in config.parser.sections():
 			self.addAttr = dict(map(lambda item: (item, config.get(wmsapi, item)), config.parser.options(wmsapi)))
@@ -90,18 +90,16 @@ class LocalWMS(WMS):
 		retCode = proc.wait()
 		wmsIdText = proc.getOutput().strip().strip("\n")
 		try:
-			wmsId = self.api.parseSubmitOutput(wmsIdText)
+			wmsId = "%s.%s" % (self.api.parseSubmitOutput(wmsIdText), self.api.__class__.__name__)
 		except:
 			wmsId = None
 
 		del activity
 
 		if retCode != 0:
-			print >> sys.stderr, "WARNING: %s failed:" % self.api.submitExec
+			utils.eprint("WARNING: %s failed:" % self.api.submitExec)
 		elif wmsId == None:
-			print >> sys.stderr, "WARNING: %s did not yield job id:" % self.api.submitExec
-			print >> sys.stderr,  wmsIdText
-
+			utils.eprint("WARNING: %s did not yield job id:\n%s" % (self.api.submitExec, wmsIdText))
 		if (wmsId == '') or (wmsId == None):
 			sys.stderr.write(proc.getError())
 		else:
@@ -197,7 +195,7 @@ class LocalWMS(WMS):
 		for wmsId, jobNum in ids:
 			path = self.getSandbox(wmsId)
 			if path == None:
-				print "Sandbox for job %d with wmsId '%s' could not be found" % (jobNum, wmsId)
+				utils.eprint("Sandbox for job %d with wmsId '%s' could not be found" % (jobNum, wmsId))
 				continue
 			try:
 				shutil.rmtree(path)

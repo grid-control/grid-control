@@ -1,5 +1,5 @@
 import sys, os, shutil
-from grid_control import ConfigError, Job, utils
+from grid_control import ConfigError, RethrowError, Job, utils
 from grid_control.backends.wms import WMS
 from api import LocalWMSApi
 
@@ -42,7 +42,7 @@ class JMS(LocalWMSApi):
 
 	def parseSubmitOutput(self, data):
 		# job_submit: Job 121195 has been submitted.
-		return "%s.jms" % data.split()[2]
+		return data.split()[2].strip()
 
 
 	def parseStatus(self, status):
@@ -75,8 +75,7 @@ class JMS(LocalWMSApi):
 					jobinfo['dest'] = "%s.localhost/%s" % (jobinfo['dest_hosts'], jobinfo['queue'])
 				yield jobinfo
 			except:
-				print "Error reading job info\n", jobline
-				raise
+				raise RethrowError("Error reading job info:\n%s\n" % jobline)
 
 
 	def getCheckArgument(self, wmsIds):

@@ -191,8 +191,7 @@ class GridWMS(WMS):
 			fp.writelines(str.join('\n', map(lambda (wmsId, jobNum): str(wmsId), ids)))
 			fp.close()
 		except:
-			sys.stderr.write("Could not write wms ids to %s." % jobs)
-			raise
+			raise RethrowError("Could not write wms ids to %s." % jobs)
 		return jobs
 
 
@@ -300,8 +299,7 @@ class GridWMS(WMS):
 			fp.write(data)
 			fp.close()
 		except:
-			sys.stderr.write("Could not write jdl data to %s.\n" % jdl)
-			raise
+			raise RethrowError("Could not write jdl data to %s.\n" % jdl)
 
 		tmp = filter(lambda (x, y): y != '', self._submitParams.iteritems())
 		params = str.join(' ', map(lambda (x, y): "%s %s" % (x, y), tmp))
@@ -393,7 +391,7 @@ class GridWMS(WMS):
 						tarfile.TarFile.open(wildcardTar, 'r:gz').extractall(outputDir)
 						os.unlink(wildcardTar)
 					except:
-						print "Can't unpack output files contained in %s" % wildcardTar
+						utils.eprint("Can't unpack output files contained in %s" % wildcardTar)
 						pass
 				yield (currentJobNum, line.strip())
 				currentJobNum = None
@@ -408,7 +406,7 @@ class GridWMS(WMS):
 				raise StopIteration
 			else:
 				self.logError(proc, log)
-			print "Trying to recover from error ..."
+			utils.eprint("Trying to recover from error ...")
 			for dir in os.listdir(basePath):
 				yield (None, os.path.join(basePath, dir))
 

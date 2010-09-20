@@ -1,5 +1,5 @@
 import sys, os, xml.dom.minidom
-from grid_control import ConfigError, Job, utils
+from grid_control import ConfigError, RethrowError, Job, utils
 from grid_control.backends.wms import WMS
 from api import LocalWMSApi
 
@@ -44,7 +44,7 @@ class SGE(LocalWMSApi):
 
 	def parseSubmitOutput(self, data):
 		# Your job 424992 ("test.sh") has been submitted
-		return "%s.sge" % data.split()[2]
+		return data.split()[2].strip()
 
 
 	def parseStatus(self, status):
@@ -64,8 +64,7 @@ class SGE(LocalWMSApi):
 					tmp = jobinfo['queue_name'].split("@")
 					jobinfo['dest'] = "%s/%s" % (tmp[1], tmp[0])
 			except:
-				print "Error reading job info\n", jobentry.toxml()
-				raise
+				raise RethrowError("Error reading job info:\n%s\n" % jobentry.toxml())
 			yield jobinfo
 
 

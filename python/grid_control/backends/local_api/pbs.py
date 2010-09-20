@@ -1,5 +1,5 @@
 import sys, os
-from grid_control import ConfigError, Job, utils
+from grid_control import ConfigError, RethrowError, Job, utils
 from grid_control.backends.wms import WMS
 from api import LocalWMSApi
 
@@ -53,7 +53,7 @@ class PBS(LocalWMSApi):
 
 	def parseSubmitOutput(self, data):
 		# 1667161.ekpplusctl.ekpplus.cluster
-		return data.strip()
+		return data.split('.')[0].strip()
 
 
 	def parseStatus(self, status):
@@ -72,8 +72,7 @@ class PBS(LocalWMSApi):
 						jobinfo.get('queue')
 					)
 			except:
-				print "Error reading job info\n", section
-				raise
+				raise RethrowError("Error reading job info:\n%s\n" % section)
 			yield jobinfo
 
 

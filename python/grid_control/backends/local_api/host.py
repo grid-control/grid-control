@@ -1,4 +1,4 @@
-from grid_control import ConfigError, Job, utils
+from grid_control import ConfigError, RethrowError, Job, utils
 from api import LocalWMSApi
 
 class Host(LocalWMSApi):
@@ -19,7 +19,7 @@ class Host(LocalWMSApi):
 		return "%d %s %s %s" % (jobNum, sandbox, stdout, stderr)
 
 	def parseSubmitOutput(self, data):
-		return "%s.localhost" % data.strip()
+		return data.strip()
 
 	def parseStatus(self, status):
 		head = map(lambda x: x.strip("%").lower(), status.next().split())
@@ -30,8 +30,7 @@ class Host(LocalWMSApi):
 				jobinfo['status'] = 'R'
 				jobinfo['dest'] = 'localhost/localqueue'
 			except:
-				print "Error reading job info\n", entry
-				raise
+				raise RethrowError("Error reading job info:\n%s\n" % entry)
 			yield jobinfo
 
 	def parseJobState(self, state):

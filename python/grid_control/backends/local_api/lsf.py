@@ -1,5 +1,5 @@
 import sys, os
-from grid_control import ConfigError, Job, utils
+from grid_control import ConfigError, RethrowError, Job, utils
 from grid_control.backends.wms import WMS
 from api import LocalWMSApi
 
@@ -43,7 +43,7 @@ class LSF(LocalWMSApi):
 
 	def parseSubmitOutput(self, data):
 		# Job <34020017> is submitted to queue <1nh>.
-		return "%s.lsf" % str(data.split()[1].strip("<>"))
+		return data.split()[1].strip("<>").strip()
 
 
 	def parseStatus(self, status):
@@ -68,8 +68,7 @@ class LSF(LocalWMSApi):
 					jobinfo['dest'] = "%s/%s" % (jobinfo['dest_host'], jobinfo['queue'])
 				yield jobinfo
 			except:
-				print "Error reading job info\n", jobline
-				raise
+				raise RethrowError("Error reading job info:\n%s\n" % jobline)
 
 
 	def getCheckArgument(self, wmsIds):
