@@ -47,14 +47,11 @@ class GridWMS(WMS):
 
 
 	def storageReq(self, sites):
-		def makeMember(member):
-			return "Member(%s, other.GlueCESEBindGroupSEUniqueID)" % self._jdlEscape(member)
+		fmt = lambda x: "Member(%s, other.GlueCESEBindGroupSEUniqueID)" % self._jdlEscape(x)
 		if (sites == None) or (len(sites) == 0):
 			return None
-		elif len(sites) == 1:
-			return makeMember(sites[0])
 		else:
-			return '(' + str.join(' || ', map(makeMember, sites)) + ')'
+			return '( %s )' % str.join(' || ', map(fmt, sites))
 
 
 	def sitesReq(self, sites):
@@ -71,7 +68,7 @@ class GridWMS(WMS):
 		if not len(sitereqs):
 			return None
 		else:
-			return '( ' + str.join(' && ', sitereqs) + ' )'
+			return '( %s )' % str.join(' && ', sitereqs)
 
 
 	def _formatRequirements(self, reqs):
@@ -231,8 +228,7 @@ class GridWMS(WMS):
 				key = 'reason'
 			elif key.startswith('destination'):
 				key = 'dest'
-			elif key.startswith('reached') or \
-			     key.startswith('submitted'):
+			elif key.startswith('reached') or key.startswith('submitted'):
 				key = 'timestamp'
 			else:
 				continue

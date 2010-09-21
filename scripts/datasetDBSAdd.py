@@ -690,7 +690,7 @@ try:
 		if len(parents) > 0:
 			print " * The following parents will be needed at the target dbs instance:"
 			print str.join("", map(lambda x: "   * %s\n" % x, parents.keys())),
-			if not (opts.batch or utils.boolUserInput(" * Register needed parents?", True)):
+			if not (opts.batch or utils.getUserBool(" * Register needed parents?", True)):
 				sys.exit(0)
 			for parent in parents.keys():
 				registerParent(opts, parent)
@@ -715,7 +715,7 @@ try:
 				except:
 					pass
 				print "       Block \33[0;94m%s\33[0m" % blockName
-		if not (opts.batch or utils.boolUserInput(" * Start dataset import?", True)):
+		if not (opts.batch or utils.getUserBool(" * Start dataset import?", True)):
 			sys.exit(0)
 		fail = False
 		for (dsKey, blockKey, blockName, xmlFile) in todoList:

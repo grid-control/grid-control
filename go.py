@@ -79,7 +79,7 @@ def main(args):
 			if not opts.init:
 				print("Will force initialization of %s if continued!" % config.workDir)
 				opts.init = True
-			if utils.boolUserInput("Do you want to create the working directory %s?" % config.workDir, True):
+			if utils.getUserBool("Do you want to create the working directory %s?" % config.workDir, True):
 				os.makedirs(config.workDir)
 		checkSpace = config.getInt('global', 'workdir space', 10, volatile=True)
 
@@ -136,7 +136,7 @@ def main(args):
 		else:
 			# Compare config files
 			if config.needInit(savedConfigPath):
-				if utils.boolUserInput("Quit grid-control in order to initialize the task again?", False):
+				if utils.getUserBool("Quit grid-control in order to initialize the task again?", False):
 					return 0
 
 		if opts.continuous and not opts.gui:
