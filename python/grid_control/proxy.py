@@ -76,8 +76,7 @@ class VomsProxy(Proxy):
 		try:
 			return parse(info[key])
 		except:
-			print info
-			raise RuntimeError("Can't parse proxy information!")
+			raise RuntimeError("Can't parse proxy information:\n%s" % info)
 
 	def getTimeleft(self, cached):
 		return self.get('timeleft', utils.parseTime, cached)

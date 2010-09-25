@@ -16,10 +16,10 @@ class Report:
 
 	def show(self, opts, module = None):
 		if opts.report:
-			print
+			utils.vprint(level = -1)
 			self.summary()
 		if opts.reportJob:
-			print
+			utils.vprint(level = -1)
 			self.jobs = self.allJobs.getJobs(opts.reportJob)
 			self.details()
 		if opts.reportSite or opts.reportTime:
@@ -36,10 +36,10 @@ class Report:
 		return cats.get(job.state, 'WAITING')
 
 
-	def printHeader(self, message):
-		print '-----------------------------------------------------------------'
-		print message.ljust(65)
-		print '---------------'.ljust(65)
+	def printHeader(self, message, level = -1):
+		utils.vprint('-'*65, level)
+		utils.vprint(message.ljust(65), level)
+		utils.vprint(('-'*15).ljust(65), level)
 
 
 	def details(self):
@@ -54,39 +54,38 @@ class Report:
 				history.reverse()
 				for at, dest in history:
 					if dest != 'N/A':
-						reports.append({1: at, 2: " -> " + dest})
+						reports.append({1: at, 2: ' -> ' + dest})
 			elif jobObj.get('dest', 'N/A') != 'N/A':
-				reports.append({2: " -> " + jobObj.get('dest')})
-		utils.printTabular(zip(range(3), ["Job", "Status / Attempt", "Id / Destination"]), reports, "rcl")
-		print
+				reports.append({2: ' -> ' + jobObj.get('dest')})
+		utils.printTabular(zip(range(3), ['Job', 'Status / Attempt', 'Id / Destination']), reports, 'rcl')
+		utils.vprint(level = -1)
 
 
-	def summary(self, message = ""):
+	def summary(self, message = '', level = -1):
 		# Print report summary
-		self.printHeader("REPORT SUMMARY:")
+		self.printHeader('REPORT SUMMARY:')
 
 		summary = map(lambda x: 0.0, Job.states)
 		for jobNum in self.jobs:
 			summary[self.allJobs.get(jobNum).state] += 1
 
 		def makeSum(*states):
-			return reduce(lambda x, y: x + y, map(lambda z: summary[z], states))
+			return sum(map(lambda z: summary[z], states))
 		def makePer(*states):
 			count = makeSum(*states)
 			return [count, round(count / self.allJobs.nJobs * 100.0)]
 
-		print 'Total number of jobs:%9d     Successful jobs:%8d  %3d%%' % \
-			tuple([self.allJobs.nJobs] + makePer(Job.SUCCESS))
-		print 'Jobs assigned to WMS:%9d        Failing jobs:%8d  %3d%%' % \
+		utils.vprint('Total number of jobs:%9d     Successful jobs:%8d  %3d%%' % \
+			tuple([self.allJobs.nJobs] + makePer(Job.SUCCESS)), -1)
+		utils.vprint('Jobs assigned to WMS:%9d        Failing jobs:%8d  %3d%%' % \
 			tuple([makeSum(Job.SUBMITTED, Job.WAITING, Job.READY, Job.QUEUED, Job.RUNNING)] +
-			makePer(Job.ABORTED, Job.CANCELLED, Job.FAILED))
-		print ' ' * 65 + '\nDetailed Status Information:'.ljust(65)
+			makePer(Job.ABORTED, Job.CANCELLED, Job.FAILED)))
+		utils.vprint(' ' * 65 + '\nDetailed Status Information:'.ljust(65), level)
 		for stateNum, category in enumerate(Job.states):
-			print 'Jobs  %9s:%8d  %3d%%    ' % tuple([category] + makePer(stateNum)),
-			if stateNum % 2:
-				print
-		print '-' * 65
-		print message
+			utils.vprint('Jobs  %9s:%8d  %3d%%     ' % tuple([category] + makePer(stateNum)), \
+				level, newline = stateNum % 2)
+		utils.vprint('-' * 65, level)
+		utils.vprint(message, level)
 		return 0
 
 
@@ -113,10 +112,10 @@ class Report:
 			except:
 				pass
 		infos = map(lambda x: reports[x], order) + [None, allStates]
-		self.printHeader("MODULE SUMMARY:")
-		print
+		self.printHeader('MODULE SUMMARY:')
+		utils.vprint(level = -1)
 		utils.printTabular(map(lambda x: (x, x), head + Report.states), infos, 'c' * len(head))
-		print
+		utils.vprint(level = -1)
 
 
 	def getWNInfos(self):
@@ -140,7 +139,7 @@ class Report:
 
 		statinfo = initdict()
 		destinations = map(lambda id: self.allJobs.get(id).history.values(), self.jobs)
-		for dest in map(getDest, reduce(lambda x, y: x+y, destinations)):
+		for dest in map(getDest, reduce(lambda x, y: x+y, destinations, [])):
 			tmp = statinfo.setdefault(dest[0], initdict()).setdefault(dest[1], initdict())
 			tmp.setdefault(dest[2], initdict())
 
@@ -184,11 +183,11 @@ class Report:
 			def fmtRate(state):
 				all = max(1, sum(map(lambda x: stats[x]['COUNT'], Report.states)))
 				ratio = (100.0 * stats[state]['COUNT']) / all
-				return fmt("%4d" % stats[state]['COUNT'], state) + " (%3d%%)" % ratio
+				return fmt('%4d' % stats[state]['COUNT'], state) + ' (%3d%%)' % ratio
 			def fmtTime(state):
 				secs = stats[state]['TIME'] / max(1, stats[state]['COUNT']*1.0)
-				return fmt(utils.strTime(secs, "%d:%0.2d:%0.2d"), state)
-			report.append(dict([("SITE", level)] + map(lambda x: (x, fmtRate(x)), Report.states)))
+				return fmt(utils.strTime(secs, '%d:%0.2d:%0.2d'), state)
+			report.append(dict([('SITE', level)] + map(lambda x: (x, fmtRate(x)), Report.states)))
 			if timeDetails:
 				report.append(dict(map(lambda x: (x, fmtTime(x)), Report.states)))
 
@@ -199,20 +198,20 @@ class Report:
 			if siteDetails > 1:
 				wns = filter(lambda x: not x in Report.states, statinfo[site].keys())
 				for wn in sorted(wns):
-					addRow(3*" " + wn, statinfo[site][wn], statinfo[site])
+					addRow(3*' ' + wn, statinfo[site][wn], statinfo[site])
 
 					if siteDetails > 2:
 						queues = filter(lambda x: not x in Report.states, statinfo[site][wn].keys())
 						for queue in sorted(queues):
-							addRow(6*" " + queue, statinfo[site][wn][queue], statinfo[site][wn])
+							addRow(6*' ' + queue, statinfo[site][wn][queue], statinfo[site][wn])
 
 				if num < len(sites) - 1:
 					report.append('')
 		report.append(None)
 		addRow('', statinfo, True)
-		header = [("SITE", 'SITE / WN')] + map(lambda x: (x, x), Report.states)
+		header = [('SITE', 'SITE / WN')] + map(lambda x: (x, x), Report.states)
 
-		self.printHeader("SITE SUMMARY:")
-		print
-		utils.printTabular(header, report, "lrrrr")
-		print
+		self.printHeader('SITE SUMMARY:')
+		utils.vprint(level = -1)
+		utils.printTabular(header, report, 'lrrrr')
+		utils.vprint(level = -1)

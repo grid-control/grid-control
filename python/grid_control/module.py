@@ -33,7 +33,7 @@ class Module(AbstractObject):
 				self.seeds = map(int, str(taskInfo['seeds']).split())
 			else:
 				self.seeds = map(lambda x: random.randint(0, 10000000), range(10))
-				print 'Creating random seeds...', self.seeds
+				utils.vprint('Creating random seeds... %s' % self.seeds, -1, once = True)
 
 		# Write task info file
 		taskInfo.write({'task id': self.taskID, 'seeds': str.join(' ', map(str, self.seeds))})
@@ -66,7 +66,7 @@ class Module(AbstractObject):
 
 		# Define constants for job
 		self.constants = {}
-		if 'constants' in config.parser.sections():
+		if config.parser.has_section('constants'):
 			for var in config.parser.options('constants'):
 				self.constants[var.upper()] = config.get('constants', var, '').strip()
 		for var in map(str.strip, config.get(self.__class__.__name__, 'constants', '').split()):

@@ -14,7 +14,7 @@ class DataMod(Module):
 
 		if os.path.exists(os.path.join(config.workDir, 'datamap.tar')):
 			if config.opts.init and not config.opts.resync:
-				print "Initialization of task with already submitted / finished jobs can result in invalid results!"
+				utils.eprint("Initialization of task with already submitted / finished jobs can cause invalid results!")
 				if utils.getUserBool("Perform resync of dataset related information instead of re-init?", True):
 					config.opts.resync = True
 		elif config.opts.init and config.opts.resync:
@@ -47,7 +47,7 @@ class DataMod(Module):
 		self.dataRefresh = utils.parseTime(config.get(self.__class__.__name__, 'dataset refresh', '', volatile=True))
 		if self.dataRefresh > 0:
 			self.dataRefresh = max(self.dataRefresh, taskInfo.get('max refresh rate', 0))
-			print "Dataset source will be queried every %s" % utils.strTime(self.dataRefresh)
+			utils.vprint("Dataset source will be queried every %s" % utils.strTime(self.dataRefresh), -1)
 		self.lastRefresh = time.time()
 
 		if self.dataSplitter.getMaxJobs() == 0:
