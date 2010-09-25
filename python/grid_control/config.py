@@ -44,13 +44,14 @@ class Config:
 		return str.join("\n", filter(lambda x: x != '', lines))
 
 
-	def set(self, section, item, value = None):
+	def set(self, section, item, value = None, override = True):
 		if not self.allowSet:
 			raise APIError("Invalid runtime config override: [%s] %s = %s" % (str(section), str(item), str(value)))
 		utils.vprint("Config option was overridden: [%s] %s = %s" % (str(section), str(item), str(value)), 1)
-		if str(section) not in self.parser.sections():
+		if not self.parser.has_section(str(section)):
 			self.parser.add_section(str(section))
-		self.parser.set(str(section), str(item), str(value))
+		if (not self.parser.has_option(str(section), str(item))) or override:
+			self.parser.set(str(section), str(item), str(value))
 
 
 	def get(self, section, item, default = None, volatile = False):

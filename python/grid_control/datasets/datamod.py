@@ -12,9 +12,6 @@ class DataMod(Module):
 		if self.dataset == '':
 			return
 
-		(defaultProvider, defaultSplitter) = self.getDatasetDefaults(config)
-		self.defaultProvider = config.get(self.__class__.__name__, 'dataset provider', defaultProvider)
-
 		if os.path.exists(os.path.join(config.workDir, 'datamap.tar')):
 			if config.opts.init and not config.opts.resync:
 				print "Initialization of task with already submitted / finished jobs can result in invalid results!"
@@ -24,6 +21,7 @@ class DataMod(Module):
 			config.opts.resync = False
 
 		taskInfo = utils.PersistentDict(os.path.join(config.workDir, 'task.dat'), ' = ')
+		self.defaultProvider = config.get(self.__class__.__name__, 'dataset provider', 'ListProvider')
 		if config.opts.resync:
 			self.dataChange = self.doResync()
 			self.dataSplitter = self.dataChange[0]
@@ -35,7 +33,7 @@ class DataMod(Module):
 			if utils.verbosity() > 2:
 				provider.printDataset()
 			# split datasets
-			splitterName = config.get(self.__class__.__name__, 'dataset splitter', defaultSplitter)
+			splitterName = config.get(self.__class__.__name__, 'dataset splitter', 'FileBoundarySplitter')
 			splitterName = provider.checkSplitter(splitterName)
 			self.dataSplitter = DataSplitter.open(splitterName, config, self.__class__.__name__)
 			self.dataSplitter.splitDataset(os.path.join(config.workDir, 'datamap.tar'), provider.getBlocks())
@@ -54,11 +52,6 @@ class DataMod(Module):
 
 		if self.dataSplitter.getMaxJobs() == 0:
 			raise UserError("There are no events to process")
-
-
-	# Get default dataset modules
-	def getDatasetDefaults(self, config):
-		return ('ListProvider', 'FileBoundarySplitter')
 
 
 	# This function is here to allow ParaMod to transform jobNums

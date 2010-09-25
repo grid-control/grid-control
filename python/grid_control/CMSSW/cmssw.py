@@ -6,6 +6,8 @@ from lumi_tools import *
 
 class CMSSW(DataMod):
 	def __init__(self, config):
+		config.set(self.__class__.__name__, 'dataset provider', 'DBSApiv2', override = False)
+		config.set(self.__class__.__name__, 'dataset splitter', 'EventBoundarySplitter', override = False)
 		DataMod.__init__(self, config)
 		self.errorDict.update(dict(self.updateErrorDict(utils.pathGC('share', 'gc-run.cmssw.sh'))))
 
@@ -164,11 +166,6 @@ class CMSSW(DataMod):
 		if mustPrepare and not (True in map(isInstrumented, cfgFiles)):
 			raise ConfigError("A config file must use %s to work properly!" %
 				str.join(", ", map(lambda x: "@%s@" % x, self.neededVars())))
-
-
-	# Get default dataset modules
-	def getDatasetDefaults(self, config):
-		return ('DBSApiv2', 'EventBoundarySplitter')
 
 
 	# Called on job submission
