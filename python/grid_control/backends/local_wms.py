@@ -14,7 +14,7 @@ class LocalWMS(WMS):
 		self.api = LocalWMSApi.open(wmsapi, config, self)
 		utils.vprint("Using batch system: %s" % self.api.__class__.__name__, -1)
 		self.addAttr = {}
-		if wmsapi in config.parser.sections():
+		if config.parser.has_section(wmsapi):
 			self.addAttr = dict(map(lambda item: (item, config.get(wmsapi, item)), config.parser.options(wmsapi)))
 
 		broker = config.get('local', 'broker', 'DummyBroker', volatile=True)
