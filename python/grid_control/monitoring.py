@@ -87,7 +87,7 @@ class ScriptMonitoring(Monitoring):
 class MonitoringMultiplexer(Monitoring):
 	def __init__(self, config, module, submodules):
 		Monitoring.__init__(self, config, module)
-		submodules = map(str.strip, submodules.split(","))
+		submodules = filter(lambda x: x != '', map(str.strip, submodules.split(",")))
 		self.submodules = map(lambda x: Monitoring.open(x, config, module), submodules)
 
 	def getEnv(self, wms):
