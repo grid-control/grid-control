@@ -39,26 +39,29 @@ class ScriptMonitoring(Monitoring):
 
 	# Get both task and job config / state dicts
 	def scriptThread(self, script, jobNum = None, jobObj = None, allDict = {}):
-		tmp = {}
-		if jobNum != None:
-			tmp.update(self.module.getSubmitInfo(jobNum))
-		if jobObj != None:
-			tmp.update(jobObj.getAll())
-		tmp.update({'WORKDIR': self.config.workDir, 'CFGFILE': self.config.configFile})
-		script = self.module.substVars(script, jobNum, tmp)
+		try:
+			tmp = {}
+			if jobNum != None:
+				tmp.update(self.module.getSubmitInfo(jobNum))
+			if jobObj != None:
+				tmp.update(jobObj.getAll())
+			tmp.update({'WORKDIR': self.config.workDir, 'CFGFILE': self.config.configFile})
+			script = self.module.substVars(script, jobNum, tmp)
 
-		tmp.update(self.module.getTaskConfig())
-		tmp.update(self.module.getJobConfig(jobNum))
-		if jobNum != None:
-			tmp.update(self.module.getSubmitInfo(jobNum))
+			tmp.update(self.module.getTaskConfig())
+			tmp.update(self.module.getJobConfig(jobNum))
+			if jobNum != None:
+				tmp.update(self.module.getSubmitInfo(jobNum))
 
-		tmp.update(allDict)
-		for key, value in tmp.iteritems():
-			os.environ["GC_%s" % key] = str(value)
-		if self.silent:
-			utils.LoggedProcess(script).wait()
-		else:
-			os.system(script)
+			tmp.update(allDict)
+			for key, value in tmp.iteritems():
+				os.environ["GC_%s" % key] = str(value)
+			if self.silent:
+				utils.LoggedProcess(script).wait()
+			else:
+				os.system(script)
+		except GCError:
+			sys.stderr.write(GCError.message)
 
 	def runInBackground(self, script, jobNum = None, jobObj = None, addDict =  {}):
 		if script != '':
