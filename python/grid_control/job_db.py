@@ -238,7 +238,7 @@ class JobDB:
 				utils.vprint("Please refer to %s for a complete list." % self.disableLog, -1, True)
 			self.monitor.onTaskFinish(self.nJobs)
 			if self.module.onTaskFinish():
-				utils.vprint("Task successfully completed. Quitting grid-control!", -1, True, False)
+				utils.vprint("Task successfully completed. Quitting grid-control!", -1, True)
 				sys.exit(0)
 
 		return change

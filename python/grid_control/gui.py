@@ -174,8 +174,9 @@ def ANSIGUI(jobDB, jobCycle):
 			if sys.modules['__main__'].log: del sys.modules['__main__'].log
 			sys.stdout, sys.stderr, utils.ActivityLog = saved
 			screen.setscrreg()
-			screen.move(16, 0)
+			screen.move(1, 0)
 			screen.eraseDown()
+			report.Report(jobDB, jobDB).summary()
 	try:
 		wrapper(Console())
 	finally:

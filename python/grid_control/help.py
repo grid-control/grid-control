@@ -5,7 +5,7 @@ class Help(object):
 	def listVars(self, module):
 		print "\nIn these files:\n\t",
 		print str.join(', ', map(os.path.basename, module.getSubstFiles()))
-		print "\nthe following expressions will be substituted:\n"
+		print "the following expressions will be substituted:\n"
 		print "Variable".rjust(25), ":", "Value"
 		print "%s=%s" % ("=" * 26, "=" * 26)
 
@@ -64,7 +64,7 @@ class Help(object):
 					print "%s = %s" % (str(key), str(value))
 					prevNL = False
 					if default != None and not printDefault:
-						print "; Default setting: %s = %r\n" % (key, default)
+						print "; Default setting: %s = %s\n" % (key, default)
 						prevNL = True
 			if header and not prevNL:
 				print

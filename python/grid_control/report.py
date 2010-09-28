@@ -79,7 +79,7 @@ class Report:
 			tuple([self.allJobs.nJobs] + makePer(Job.SUCCESS)), -1)
 		utils.vprint('Jobs assigned to WMS:%9d        Failing jobs:%8d  %3d%%' % \
 			tuple([makeSum(Job.SUBMITTED, Job.WAITING, Job.READY, Job.QUEUED, Job.RUNNING)] +
-			makePer(Job.ABORTED, Job.CANCELLED, Job.FAILED)))
+			makePer(Job.ABORTED, Job.CANCELLED, Job.FAILED)), -1)
 		utils.vprint(' ' * 65 + '\nDetailed Status Information:'.ljust(65), level)
 		for stateNum, category in enumerate(Job.states):
 			utils.vprint('Jobs  %9s:%8d  %3d%%     ' % tuple([category] + makePer(stateNum)), \
