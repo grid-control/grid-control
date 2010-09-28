@@ -46,26 +46,15 @@ class JMS(LocalWMSApi):
 
 
 	def parseStatus(self, status):
+		tmpHead = ['id', 'user', 'group', 'job_name', 'queue', 'partition',
+			'nodes', 'cpu_time', 'wall_time', 'memory', 'queue_time', 'status']
 		for jobline in str.join('', list(status)).split('\n')[2:]:
 			if jobline == '':
 				continue
 			try:
-				tmp = jobline.replace("\x1b[m", "").split()
-				jobinfo = {
-					'id': "%s.jms" % tmp[0].strip('\x1b(B'),
-					'user': tmp[1],
-					'group': tmp[2],
-					'job_name': tmp[3],
-					'queue': tmp[4],
-					'partition': tmp[5],
-					'nodes': tmp[6],
-					'cpu_time': tmp[7],
-					'wall_time': tmp[8],
-					'memory': tmp[9],
-					'queue_time': tmp[10],
-					'status': tmp[11],
-					'dest': 'N/A',
-				}
+				tmp = map(lambda x: x.strip('\x1b(B'), jobline.replace("\x1b[m", "").split())
+				jobinfo = dict(zip(tmpHead, tmp[:12]))
+				jobinfo['dest'] = 'N/A'
 				if len(tmp) > 12:
 					jobinfo['start_time'] = tmp[12]
 				if len(tmp) > 13:

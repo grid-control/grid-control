@@ -23,8 +23,10 @@ class PBS(LocalWMSApi):
 		self._group = config.get('local', 'group', '', volatile=True)
 		self._server = config.get('local', 'server', '', volatile=True)
 
+
 	def unknownID(self):
 		return "Unknown Job Id"
+
 
 	def getArguments(self, jobNum, sandbox):
 		return ""

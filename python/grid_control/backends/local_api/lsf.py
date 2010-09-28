@@ -20,8 +20,10 @@ class LSF(LocalWMSApi):
 		self.statusExec = utils.searchPathFind('bjobs')
 		self.cancelExec = utils.searchPathFind('bkill')
 
+
 	def unknownID(self):
 		return "is not found"
+
 
 	def getArguments(self, jobNum, sandbox):
 		return sandbox
@@ -48,22 +50,15 @@ class LSF(LocalWMSApi):
 
 	def parseStatus(self, status):
 		next(status)
+		tmpHead = ['id', 'user', 'status', 'queue', 'from', 'dest_host', 'job_name']
 		for jobline in status:
 			if jobline == '':
 				continue
 			try:
 				tmp = jobline.split()
-				jobinfo = {
-					'id': "%s.lsf" % tmp[0],
-					'user': tmp[1],
-					'status': tmp[2],
-					'queue': tmp[3],
-					'from': tmp[4],
-					'dest_host': tmp[5],
-					'job_name': tmp[6],
-					'submit_time': str.join(" ", tmp[7:10]),
-					'dest': 'N/A',
-				}
+				jobinfo = dict(zip(tmpHead, tmp[:7]))
+				jobinfo['submit_time'] = str.join(" ", tmp[7:10])
+				jobinfo['dest'] = 'N/A'
 				if jobinfo['dest_host'] != "-":
 					jobinfo['dest'] = "%s/%s" % (jobinfo['dest_host'], jobinfo['queue'])
 				yield jobinfo

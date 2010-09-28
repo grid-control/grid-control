@@ -11,8 +11,10 @@ class SGE(LocalWMSApi):
 		self.statusExec = utils.searchPathFind('qstat')
 		self.cancelExec = utils.searchPathFind('qdel')
 
+
 	def unknownID(self):
 		return "Unknown Job Id"
+
 
 	def getArguments(self, jobNum, sandbox):
 		return ""
@@ -57,7 +59,7 @@ class SGE(LocalWMSApi):
 						continue
 					if node.hasChildNodes():
 						jobinfo[str(node.nodeName)] = str(node.childNodes[0].nodeValue)
-				jobinfo['id'] = "%s.sge" % jobinfo['JB_job_number']
+				jobinfo['id'] = jobinfo['JB_job_number']
 				jobinfo['status'] = jobinfo['state']
 				jobinfo['dest'] = 'N/A'
 				if 'queue_name' in jobinfo:

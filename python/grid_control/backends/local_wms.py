@@ -118,10 +118,14 @@ class LocalWMS(WMS):
 
 		tmp = {}
 		for data in self.api.parseStatus(proc.iter()):
+			print data
 			# (job number, status, extra info)
-			tmp[data['id']] = (data['id'], self.api.parseJobState(data['status']), data)
+			wmsId = "%s.%s" % (data['id'], self.api.__class__.__name__)
+			tmp[wmsId] = (wmsId, self.api.parseJobState(data['status']), data)
+			print tmp
 
 		for wmsId, jobNum in ids:
+			print wmsId, jobNum
 			if wmsId not in tmp:
 				yield (jobNum, wmsId, Job.DONE, {})
 			else:
