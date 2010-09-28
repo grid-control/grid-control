@@ -1,6 +1,6 @@
 import os, re, cmssw
 from python_compat import *
-from grid_control import datasets, utils
+from grid_control import datasets, utils, ConfigError
 from grid_control.datasets import DataSplitter, DataProvider
 from lumi_tools import *
 
@@ -18,6 +18,8 @@ class CMSSW_Advanced(cmssw.CMSSW):
 		head = [(0, "Nickname")]
 
 		# Mapping between nickname and config files:
+		if 'config file' in config.parser.options(self.__class__.__name__):
+			raise ConfigError("Please use 'nickname config' instead of 'config file'")
 		cfgList = config.get(self.__class__.__name__, 'nickname config', '')
 		self.nmCfg = parseMap(cfgList, lambda x: map(str.strip, x.split(',')))
 		if cfgList:
@@ -36,6 +38,8 @@ class CMSSW_Advanced(cmssw.CMSSW):
 			head.append((var, var))
 
 		# Mapping between nickname and lumi filter:
+		if config.get(self.__class__.__name__, 'lumi filter', '') != '':
+			raise ConfigError("Please use 'nickname lumi filter' instead of 'lumi filter'")
 		lumiParse = lambda x: formatLumi(parseLumiFilter(x))
 		self.nmLumi = parseMap(config.get(self.__class__.__name__, 'nickname lumi filter', ''), lumiParse)
 		if self.nmLumi:
