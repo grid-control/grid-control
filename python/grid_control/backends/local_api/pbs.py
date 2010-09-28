@@ -65,7 +65,7 @@ class PBS(LocalWMSApi):
 			try:
 				lines = section.replace("\n\t", "").split('\n')
 				jobinfo = utils.DictFormat(' = ').parse(lines[1:])
-				jobinfo['id'] = lines[0].split(":")[1].strip()
+				jobinfo['id'] = lines[0].split(":")[1].split('.')[0].strip()
 				jobinfo['status'] = jobinfo.get('job_state')
 				jobinfo['dest'] = 'N/A'
 				if 'exec_host' in jobinfo:
