@@ -18,11 +18,11 @@ class CMSSW_Advanced(cmssw.CMSSW):
 		head = [(0, "Nickname")]
 
 		# Mapping between nickname and config files:
-		if 'config file' in config.parser.options(self.__class__.__name__):
-			raise ConfigError("Please use 'nickname config' instead of 'config file'")
 		cfgList = config.get(self.__class__.__name__, 'nickname config', '')
 		self.nmCfg = parseMap(cfgList, lambda x: map(str.strip, x.split(',')))
 		if cfgList:
+			if 'config file' in config.parser.options(self.__class__.__name__):
+				raise ConfigError("Please use 'nickname config' instead of 'config file'")
 			allConfigFiles = utils.flatten(self.nmCfg.values())
 			config.set(self.__class__.__name__, 'config file', str.join('\n', allConfigFiles))
 			head.append((1, "Config file"))
@@ -91,11 +91,13 @@ class CMSSW_Advanced(cmssw.CMSSW):
 		data['CMSSW_CONFIG'] = str.join(' ', map(os.path.basename, self.fromNM(self.nmCfg, nick, '')))
 		constants = self.fromNM(self.nmConst, None, {})
 		constants.update(self.fromNM(self.nmConst, nick, {}))
-		data.update(dict(map(lambda var: (var, constants.get(var, '')), self.nmCName)))
+		constants = dict(map(lambda var: (var, constants.get(var, '')), self.nmCName))
+		data.update(constants)
 		lumifilter = self.fromNM(self.nmLumi, nick, '')
 		if lumifilter:
 			data['LUMI_RANGE'] = str.join(',', map(lambda x: '"%s"' % x, lumifilter))
 		utils.vprint('Nickname: %s' % nick, 1)
 		utils.vprint(' * Config files: %s' % data['CMSSW_CONFIG'], 1)
-		utils.vprint(' *    Variables: %s' % constants.get(nick, {}), 1)
+		utils.vprint(' *    Variables: %s' % constants, 1)
+		utils.vprint(' *   Lumi range: %s' % str.join(',', lumifilter), 1)
 		return data
