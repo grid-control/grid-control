@@ -47,7 +47,7 @@ class Config:
 	def set(self, section, item, value = None, override = True):
 		if not self.allowSet:
 			raise APIError("Invalid runtime config override: [%s] %s = %s" % (str(section), str(item), str(value)))
-		utils.vprint("Config option was overridden: [%s] %s = %s" % (str(section), str(item), str(value)), 1)
+		utils.vprint("Config option was overridden: [%s] %s = %s" % (str(section), str(item), str(value)), 2)
 		if not self.parser.has_section(str(section)):
 			self.parser.add_section(str(section))
 		if (not self.parser.has_option(str(section), str(item))) or override:
@@ -62,7 +62,7 @@ class Config:
 		# Default value helper function
 		def tryDefault(errorMessage):
 			if default != None:
-				utils.vprint("Using default value [%s] %s = %s" % (section, item, str(default)), 1)
+				utils.vprint("Using default value [%s] %s = %s" % (section, item, str(default)), 3)
 				self.protocol[section][item] = (default, default, volatile)
 				return default
 			raise ConfigError(errorMessage)
