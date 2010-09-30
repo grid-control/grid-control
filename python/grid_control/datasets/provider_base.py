@@ -93,7 +93,7 @@ class DataProvider(AbstractObject):
 				if DataProvider.NEvents not in block:
 					block[DataProvider.NEvents] = events
 				if events != block[DataProvider.NEvents]:
-					print('WARNING: Inconsistency in block %s#%s: Number of events doesn\'t match (b:%d != f:%d)'
+					utils.eprint('WARNING: Inconsistency in block %s#%s: Number of events doesn\'t match (b:%d != f:%d)'
 						% (block[DataProvider.Dataset], block[DataProvider.BlockName], block[DataProvider.NEvents], events))
 
 				# Filter empty files
@@ -104,7 +104,7 @@ class DataProvider(AbstractObject):
 				if block[DataProvider.SEList] != None:
 					sites = utils.doBlackWhiteList(block[DataProvider.SEList], self.sitefilter)
 					if len(sites) == 0 and len(block[DataProvider.FileList]) != 0:
-						print('WARNING: Block %s#%s is not available at any site!'
+						utils.eprint('WARNING: Block %s#%s is not available at any site!'
 							% (block[DataProvider.Dataset], block[DataProvider.BlockName]))
 					block[DataProvider.SEList] = sites
 
@@ -112,12 +112,11 @@ class DataProvider(AbstractObject):
 			if self.emptyBlock:
 				self._cache = filter(lambda x: x[DataProvider.NEvents] != 0, self._cache)
 
-			if utils.verbosity() > 0:
-				if self._datasetNick:
-					print "%s:" % self._datasetNick,
-				elif self.__class__.__name__ == 'DataMultiplexer':
-					print "Summary:",
-				print 'Running over %d events split into %d blocks.' % (allEvents, len(self._cache))
+			if self._datasetNick:
+				utils.vprint('%s:' % self._datasetNick, newline = False)
+			elif self.__class__.__name__ == 'DataMultiplexer':
+				utils.vprint('Summary:', newline = False)
+			utils.vprint('Running over %d events split into %d blocks.' % (allEvents, len(self._cache)))
 		return self._cache
 
 
@@ -133,7 +132,7 @@ class DataProvider(AbstractObject):
 		print "Matching blocks:"
 		for block in self.getBlocks():
 			print "ID / Dataset / Nick : ",
-			print block.get(DataProvider.DatasetID, 0), "/", block[DataProvider.Dataset], "/", block.get(DataProvider.Nickname, '')
+			print str.join(' / ', [block.get(DataProvider.DatasetID, 0), block[DataProvider.Dataset], block.get(DataProvider.Nickname, '')])
 			print "BlockName : ", block[DataProvider.BlockName]
 			print "#Events   : ", block[DataProvider.NEvents]
 			print "SE List   : ", block[DataProvider.SEList]
