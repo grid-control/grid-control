@@ -9,7 +9,7 @@ from grid_control import *
 
 usage = "Syntax: %s [OPTIONS] <config file>\n" % sys.argv[0]
 def print_help(*args):
-	sys.stderr.write("%s\n%s" % (usage, open(utils.pathGC('share', 'help.txt'), 'r').read()))
+	utils.eprint("%s\n%s" % (usage, open(utils.pathGC('share', 'help.txt'), 'r').read()))
 	sys.exit(0)
 
 def main(args):
@@ -26,8 +26,8 @@ def main(args):
 	handler = signal.signal(signal.SIGINT, interrupt)
 
 	# display the 'grid-control' logo and version
-	print(open(utils.pathGC('share', 'logo.txt'), 'r').read())
-	print('Revision: %s' % utils.getVersion())
+	utils.vprint(open(utils.pathGC('share', 'logo.txt'), 'r').read(), -1)
+	utils.vprint('Revision: %s' % utils.getVersion(), -1)
 	pyver = sys.version_info[0] + sys.version_info[1] / 10.0
 	if pyver < 2.3:
 		utils.deprecated("This python version (%.1f) is not supported anymore!" % pyver)
@@ -77,7 +77,7 @@ def main(args):
 		config.workDir = config.getPath('global', 'workdir', config.workDirDefault, check = False)
 		if not os.path.exists(config.workDir):
 			if not opts.init:
-				print("Will force initialization of %s if continued!" % config.workDir)
+				utils.vprint("Will force initialization of %s if continued!" % config.workDir, -1)
 				opts.init = True
 			if utils.getUserBool("Do you want to create the working directory %s?" % config.workDir, True):
 				os.makedirs(config.workDir)
@@ -109,7 +109,7 @@ def main(args):
 		elif backend == 'local':
 			wms = WMS.open(defaultwms[backend], config, module, monitor)
 		else:
-			raise UserError("Invalid backend specified!" % config.workDir)
+			raise ConfigError("Invalid backend specified!" % config.workDir)
 
 		# Initialise job database
 		jobs = JobDB(config, module, monitor)
@@ -140,9 +140,9 @@ def main(args):
 					return 0
 
 		if opts.continuous and not opts.gui:
-			print('')
+			utils.vprint(level = -1)
 			Report(jobs, jobs).summary()
-			print("Running in continuous mode. Press ^C to exit.")
+			utils.vprint("Running in continuous mode. Press ^C to exit.", -1)
 
 		# Job submission loop
 		def jobCycle(wait = utils.wait):
