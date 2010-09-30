@@ -89,7 +89,7 @@ class DataMod(Module):
 
 		splitInfo = self.dataSplitter.getSplitInfo(jobNum)
 		if utils.verbosity() > 0:
-			print "Job number: %d" % jobNum
+			utils.vprint("Job number: %d" % jobNum)
 			DataSplitter.printInfoForJob(splitInfo)
 
 		data['MAX_EVENTS'] = splitInfo[DataSplitter.NEvents]

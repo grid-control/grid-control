@@ -17,10 +17,10 @@ class DataMultiplexer(DataProvider):
 			dataUrl = "%s://%s" % (DataProvider.providers.get(provider, provider), datasetExpr)
 			self.subprovider.append(dict(zip(["src"] + head, [source, id, datasetNick, dataUrl])))
 
-		print('Using the following datasets:')
-		print
+		utils.vprint('Using the following datasets:', -1)
+		utils.vprint(level = -1)
 		utils.printTabular(zip(head, head), self.subprovider, "rcl")
-		print
+		utils.vprint(level = -1)
 
 
 	def queryLimit(self):
