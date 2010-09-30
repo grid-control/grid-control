@@ -100,9 +100,9 @@ DEFAULT: The default is to download the SE file and check them with MD5 hashes.
 	ogShort.add_option("-j", "--just-copy", dest="shJCopy", default=None, action="store_const", const=optJCopy,
 		help = "Just copy files from SE - shorthand for:".ljust(100) + withoutDefaults(optJCopy))
 
-	optSCopy = "--verify-md5 --skip-existing --mark-dl --no-mark-fail --keep-se-fail --keep-local-fail --keep-se-ok --keep-local-ok"
+	optSCopy = "--verify-md5 --skip-existing --mark-dl --mark-fail --rm-se-fail --rm-local-fail --keep-se-ok --keep-local-ok"
 	ogShort.add_option("-s", "--smart-copy", dest="shSCopy", default=None, action="store_const", const=optSCopy,
-		help = "Just copy files from SE, but remember already downloaded files - shorthand for:".ljust(100) + withoutDefaults(optSCopy))
+		help = "Copy correct files from SE, but remember already downloaded files and delete corrupt files - shorthand for:".ljust(100) + withoutDefaults(optSCopy))
 
 	optJVerify = "--verify-md5 --no-mark-dl --keep-se-fail --rm-local-fail --keep-se-ok --rm-local-ok"
 	ogShort.add_option("-V", "--just-verify", dest="shJVerify", default=None, action="store_const", const=optJVerify,
