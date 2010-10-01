@@ -122,7 +122,7 @@ class ConnectParameters(MetaParameter):
 				return x
 		self.matchList = map(tryMatchObj, connectors)
 		if len(self.plugins) - 1 != len(self.matchList):
-			raise RuntimeError("Invalid parameters %s" % repr(args))
+			raise RuntimeError('Invalid parameters %s' % repr(args))
 
 	def tool(self, *args):
 		for main in self.plugins[0].getParameterMetadata():

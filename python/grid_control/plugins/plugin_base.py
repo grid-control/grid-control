@@ -82,11 +82,11 @@ class ParameterPlugin(AbstractObject):
 			value = meta.data.get(name)
 			if value != None:
 				return str(value)
-			return ""
+			return ''
 		return tuple(map(getWriteValue, self.getParameterNames()))
 	#  Read data back into the plugin
 	def readData(self, data):
-		params = dict(filter(lambda (k, v): v != "", zip(self.getParameterNames(), [data])))
+		params = dict(filter(lambda (k, v): v != '', zip(self.getParameterNames(), [data])))
 		if params:
 			return ParameterMetadata([self, None, params, self.getRequirements(params)])
 		else:
@@ -97,7 +97,7 @@ class ParameterPlugin(AbstractObject):
 class PersistentParameter(ParameterPlugin):
 	def getHeader(self):
 		data = [self.__class__.__name__, self.args, self.kargs]
-		return (self, ["!%s" % str.join("|", map(str, data))])
+		return (self, ['!%s' % str.join('|', map(str, data))])
 
 
 # Base class for indexed parameters where only a key is saved
@@ -116,7 +116,7 @@ class IndexedParameter(PersistentParameter):
 		return meta.key
 
 	def readData(self, data):
-		if data != "":
+		if data != '':
 			idx = int(data)
 			data = self.getByIndex(idx)
 			return ParameterMetadata([self, idx, data, self.getRequirements(data)])

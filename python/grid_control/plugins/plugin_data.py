@@ -15,9 +15,9 @@ class DatasetPlugin(IndexedParameter):
 		self._metadata = self._fmt.parse(metadata, lowerCaseKey = False)
 
 		self.setTransform(self.infoLoader)
-		self.setDataTransform(varTransform(DataSplitter.Dataset, "DATASETPATH"))
-		self.setDataTransform(varTransform(DataSplitter.DatasetID, "DATASETID"))
-		self.setDataTransform(varTransform(DataSplitter.Nickname, "DATASETNICK"))
+		self.setDataTransform(varTransform(DataSplitter.Dataset, 'DATASETPATH'))
+		self.setDataTransform(varTransform(DataSplitter.DatasetID, 'DATASETID'))
+		self.setDataTransform(varTransform(DataSplitter.Nickname, 'DATASETNICK'))
 
 	# Loading dataset info files is expensive - cache last opened subfile
 	def infoLoader(self, meta):
@@ -41,11 +41,11 @@ class DatasetPlugin(IndexedParameter):
 	def getParameterNames(self):
 		return []
 	def getProcessedNames(self):
-		return ["DATASETPATH", "DATASETID", "DATASETNICK"]
+		return ['DATASETPATH', 'DATASETID', 'DATASETNICK']
 
 	# Access to data is delayed
 	def getByIndex(self, key):
-		if key >= int(self._metadata["MaxJobs"]):
+		if key >= int(self._metadata['MaxJobs']):
 			raise StopIteration
 		return {}
 
@@ -53,11 +53,11 @@ class DatasetPlugin(IndexedParameter):
 class DatasetEventPlugin(DatasetPlugin):
 	def __init__(self, fileName):
 		DatasetPlugin.__init__(self, fileName)
-		self.setDataTransform(varTransform(DataSplitter.NEvents, "MAX_EVENTS"))
-		self.setDataTransform(varTransform(DataSplitter.Skipped, "SKIP_EVENTS"))
+		self.setDataTransform(varTransform(DataSplitter.NEvents, 'MAX_EVENTS'))
+		self.setDataTransform(varTransform(DataSplitter.Skipped, 'SKIP_EVENTS'))
 
 	def getProcessedNames(self):
-		return DatasetPlugin.getProcessedNames(self) + ["MAX_EVENTS", "SKIP_EVENTS"]
+		return DatasetPlugin.getProcessedNames(self) + ['MAX_EVENTS', 'SKIP_EVENTS']
 
 
 # TODO: Use run / lumi section in file

@@ -9,7 +9,7 @@ class CSVParameter(ZipLongestParameter):
 		self.fileName = fileName
 		self.transformQueue = []
 
-		self.dialect = "excel"
+		self.dialect = 'excel'
 		if os.path.exists(fileName):
 			try:
 				sniffed = csv.Sniffer().sniff(open(self.fileName).read(1024))
@@ -26,11 +26,11 @@ class CSVParameter(ZipLongestParameter):
 
 	def loadFile(self):
 		self.plugins = []
-		reader = csv.reader(open(self.fileName, "r"), dialect = self.dialect)
+		reader = csv.reader(open(self.fileName, 'r'), dialect = self.dialect)
 		# Instantiate plugins as defined in file header
 		for idx, col in enumerate(next(reader)):
-			if col.startswith("!"):
-				(plugin, args, kargs) = col[1:].split("|")
+			if col.startswith('!'):
+				(plugin, args, kargs) = col[1:].split('|')
 				(args, kargs) = map(eval, (args, kargs))
 				self.plugins.append(ParameterPlugin.open(plugin, *args, **kargs))
 			else:
