@@ -13,24 +13,24 @@ class MultiParaMod(ParaMod):
 
 		(A, 1, 2), (B, 1, 2), (A, 3, 4), (B, 3, 4)
 
-	Values of single parameters (e.g. "spam" in the example above) can
-	either be "words", span "lines" or be an "expr"ession that gets
-	evaluated.  To let "foo" go from 0 to 9, the following can be used:
+	Values of single parameters (e.g. 'spam' in the example above) can
+	either be 'words', span 'lines' or be an 'expr'ession that gets
+	evaluated.  To let 'foo' go from 0 to 9, the following can be used:
 
 		paramters = foo
 		foo       = range(10)
 		foo type  = expr
 
-	The default type is "words" - the parameter value gets split on
+	The default type is 'words' - the parameter value gets split on
 	whitespace."""
 	def __init__(self, config):
 		ParaMod.__init__(self, config)
 
 		def expandParam(param, mode = 'words'):
 			""" Expand param depending on its type.
-			>>> expandParam("Where the wild things roam")
+			>>> expandParam('Where the wild things roam')
 			['Where', 'the', 'wild', 'things', 'roam']
-			>>> expandParam("range(3)", "expr")
+			>>> expandParam('range(3)', 'expr')
 			[0, 1, 2]
 			Possible improvements: enum values to indicate mode;  doctest
 			might be wrong (unable to test)"""
@@ -46,7 +46,7 @@ class MultiParaMod(ParaMod):
 				raise exceptions.ConfigError("Illegal mode '%s' in parameter expansion" % mode)
 
 		# Map between parsed keys and config keys
-		parse_key = lambda x: (str.join(" ", map(repr, utils.parseTuples(x))), x)
+		parse_key = lambda x: (str.join(' ', map(repr, utils.parseTuples(x))), x)
 		keymap = dict(map(parse_key, config.parser.options('ParaMod')))
 
 		self.pset = {}
@@ -54,7 +54,7 @@ class MultiParaMod(ParaMod):
 			p_key = repr(p).lower()
 			if isinstance(p, tuple):
 				p_key = repr(tuple(map(str.lower, p)))
-			expConfigSource = keymap.get("%s 'type'" % p_key, "parameters type")
+			expConfigSource = keymap.get("%s 'type'" % p_key, 'parameters type')
 			expConfig = config.get('ParaMod', expConfigSource, default = 'words')
 			self.pset[repr(p)] = expandParam(config.get('ParaMod', keymap[p_key]), expConfig)
 
