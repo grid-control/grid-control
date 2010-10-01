@@ -139,7 +139,7 @@ def formatLumi(lumifilter):
 		default = lambda x, d: (x, d)[x == None]
 		start = [default(start[0], '1'), default(start[1], 'MIN')]
 		end = [default(end[0], '9999999'), default(end[1], 'MAX')]
-		return str.join("-", map(lambda x: "%s:%s" % tuple(x), (start, end)))
+		return str.join('-', map(lambda x: '%s:%s' % tuple(x), (start, end)))
 	if lumifilter:
 		return map(formatRange, lumifilter)
 	return ''

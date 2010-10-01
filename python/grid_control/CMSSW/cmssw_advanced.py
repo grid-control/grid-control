@@ -9,13 +9,13 @@ class CMSSW_Advanced(cmssw.CMSSW):
 		def parseMap(x, parser):
 			result = {}
 			for entry in x.split('\n'):
-				if "=>" in entry:
+				if '=>' in entry:
 					nick, value = map(str.strip, entry.split('=>'))
 				else:
 					nick, value = (None, entry)
 				result[nick] = filter(lambda x: x, parser(value.strip()))
 			return result
-		head = [(0, "Nickname")]
+		head = [(0, 'Nickname')]
 
 		# Mapping between nickname and config files:
 		cfgList = config.get(self.__class__.__name__, 'nickname config', '')
@@ -25,7 +25,7 @@ class CMSSW_Advanced(cmssw.CMSSW):
 				raise ConfigError("Please use 'nickname config' instead of 'config file'")
 			allConfigFiles = utils.flatten(self.nmCfg.values())
 			config.set(self.__class__.__name__, 'config file', str.join('\n', allConfigFiles))
-			head.append((1, "Config file"))
+			head.append((1, 'Config file'))
 
 		# Mapping between nickname and constants:
 		self.nmCName = map(str.strip, config.get(self.__class__.__name__, 'nickname constants', '').split())
@@ -47,17 +47,17 @@ class CMSSW_Advanced(cmssw.CMSSW):
 		if self.nmLumi:
 			for dataset in config.get(self.__class__.__name__, 'dataset', '').splitlines():
 				(datasetNick, datasetProvider, datasetExpr) = DataProvider.parseDatasetExpr(dataset, None)
-				config.set('dataset %s' % datasetNick, 'lumi filter', str.join(",", self.fromNM(self.nmLumi, datasetNick, [])))
-			config.set(self.__class__.__name__, 'lumi filter', str.join(",", self.nmLumi.get(None, [])))
-			head.append((2, "Lumi filter"))
+				config.set('dataset %s' % datasetNick, 'lumi filter', str.join(',', self.fromNM(self.nmLumi, datasetNick, [])))
+			config.set(self.__class__.__name__, 'lumi filter', str.join(',', self.nmLumi.get(None, [])))
+			head.append((2, 'Lumi filter'))
 
-		utils.vprint("Mapping between nickname and other settings:\n", -1)
+		utils.vprint('Mapping between nickname and other settings:\n', -1)
 		def report():
 			for nick in sorted(set(self.nmCfg.keys() + self.nmConst.keys() + self.nmLumi.keys())):
-				tmp = {0: nick, 1: str.join(', ', map(os.path.basename, self.nmCfg.get(nick, ''))), 2: str.join(",", (self.nmLumi.get(nick, '')))}
+				tmp = {0: nick, 1: str.join(', ', map(os.path.basename, self.nmCfg.get(nick, ''))), 2: str.join(',', (self.nmLumi.get(nick, '')))}
 				tmp.update(self.nmConst.get(nick, {}))
 				yield tmp
-		utils.printTabular(head, report(), "cl")
+		utils.printTabular(head, report(), 'cl')
 		utils.vprint(level = -1)
 		cmssw.CMSSW.__init__(self, config)
 
@@ -70,7 +70,7 @@ class CMSSW_Advanced(cmssw.CMSSW):
 
 	def neededVars(self):
 		if self.nmLumi:
-			return cmssw.CMSSW.neededVars(self) + ["LUMI_RANGE"]
+			return cmssw.CMSSW.neededVars(self) + ['LUMI_RANGE']
 		return cmssw.CMSSW.neededVars(self)
 
 

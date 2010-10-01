@@ -18,8 +18,8 @@ class DBSApiv2(DataProvider):
 		DataProvider.__init__(self, config, section, datasetExpr, datasetNick, datasetID)
 		DataProvider.providers.update({'DBSApiv2': 'dbs'})
 		if self.setup(config.getBool, section, 'dbs blacklist T1', True):
-			T1SEs = ["-srmcms.pic.es", "-ccsrm.in2p3.fr", "-storm-fe-cms.cr.cnaf.infn.it",
-				"-srm-cms.gridpp.rl.ac.uk", "-srm.grid.sinica.edu.tw", "-srm2.grid.sinica.edu.tw"]
+			T1SEs = ['-srmcms.pic.es', '-ccsrm.in2p3.fr', '-storm-fe-cms.cr.cnaf.infn.it',
+				'-srm-cms.gridpp.rl.ac.uk', '-srm.grid.sinica.edu.tw', '-srm2.grid.sinica.edu.tw']
 			self.sitefilter.extend(T1SEs)
 
 		self.url = self.setup(config.get, section, 'dbs instance', '')
@@ -32,9 +32,9 @@ class DBSApiv2(DataProvider):
 		self.selectedLumis = parseLumiFilter(self.setup(config.get, section, 'lumi filter', ''))
 
 		if self.selectedLumis:
-			utils.vprint("The following runs and lumi sections are selected:", -1, once = True)
+			utils.vprint('The following runs and lumi sections are selected:', -1, once = True)
 			for line in map(lambda x: str.join(', ', x), utils.lenSplit(formatLumi(self.selectedLumis), 65)):
-				utils.vprint("\t%s" % line, -1, once = True)
+				utils.vprint('\t%s' % line, -1, once = True)
 
 
 	# Define how often the dataprovider can be queried automatically
@@ -55,6 +55,7 @@ class DBSApiv2(DataProvider):
 		api = createDBSAPI(self.url)
 		try:
 			listBlockInfo = api.listBlocks(self.datasetPath)
+			# TODO: nosite=True
 			if self.selectedLumis:
 				listFileInfo = api.listFiles(self.datasetPath, retriveList=['retrive_lumi'])
 			else:
@@ -78,7 +79,7 @@ class DBSApiv2(DataProvider):
 			if self.selectedLumis == None:
 				return True
 			for lumi in lumilist:
-				if selectLumi((lumi["RunNumber"], lumi["LumiSectionNumber"]), self.selectedLumis):
+				if selectLumi((lumi['RunNumber'], lumi['LumiSectionNumber']), self.selectedLumis):
 					return True
 			return False
 
@@ -102,7 +103,7 @@ class DBSApiv2(DataProvider):
 						blockInfo[DataProvider.FileList].append({
 							DataProvider.lfn      : entry['LogicalFileName'],
 							DataProvider.NEvents  : entry['NumberOfEvents'],
-							DataProvider.Metadata : [list(set(map(lambda x: int(x["RunNumber"]), entry['LumiList'])))]
+							DataProvider.Metadata : [list(set(map(lambda x: int(x['RunNumber']), entry['LumiList'])))]
 						})
 					else:
 						dropped += 1
@@ -118,7 +119,7 @@ class DBSApiv2(DataProvider):
 
 		if len(result) == 0:
 			if self.selectedLumis:
-				utils.eprint("Dataset %s does not contain the requested run/lumi sections!" % self.datasetPath)
+				utils.eprint('Dataset %s does not contain the requested run/lumi sections!' % self.datasetPath)
 			else:
 				raise DatasetError('Block %s not found in dbs.' % self.datasetBlock)
 		return result

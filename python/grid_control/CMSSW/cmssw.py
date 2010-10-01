@@ -49,14 +49,14 @@ class CMSSW(DataMod):
 		self.seRuntime = config.getBool(self.__class__.__name__, 'se runtime', False)
 
 		if self.seRuntime and len(self.projectArea):
-			self.seInputFiles.append(self.taskID + ".tar.gz")
+			self.seInputFiles.append(self.taskID + '.tar.gz')
 
 		if len(self.projectArea):
 			defaultPattern = '-.* -config lib python module */data *.xml *.sql *.cf[if] *.py -*/.git -*/.svn -*/CVS -*/work.*'
 			self.pattern = config.get(self.__class__.__name__, 'area files', defaultPattern).split()
 
 			if os.path.exists(self.projectArea):
-				utils.vprint("Project area found in: %s" % self.projectArea, -1)
+				utils.vprint('Project area found in: %s' % self.projectArea, -1)
 			else:
 				raise ConfigError("Specified config area '%s' does not exist!" % self.projectArea)
 
@@ -66,7 +66,7 @@ class CMSSW(DataMod):
 				fp = open(os.path.join(scramPath, 'Environment'), 'r')
 				self.scramEnv = utils.DictFormat().parse(fp, lowerCaseKey = False)
 			except:
-				raise ConfigError("Project area file %s/.SCRAM/Environment cannot be parsed!" % self.projectArea)
+				raise ConfigError('Project area file %s/.SCRAM/Environment cannot be parsed!' % self.projectArea)
 
 			for key in ['SCRAM_PROJECTNAME', 'SCRAM_PROJECTVERSION']:
 				if key not in self.scramEnv:
@@ -76,12 +76,12 @@ class CMSSW(DataMod):
 			try:
 				self.scramArch = config.get(self.__class__.__name__, 'scram arch', archs[0])
 			except:
-				raise ConfigError("%s does not contain architecture information!" % scramPath)
+				raise ConfigError('%s does not contain architecture information!' % scramPath)
 			try:
 				fp = open(os.path.join(scramPath, self.scramArch, 'Environment'), 'r')
 				self.scramEnv.update(utils.DictFormat().parse(fp, lowerCaseKey = False))
 			except:
-				raise ConfigError("Project area file .SCRAM/%s/Environment cannot be parsed!" % self.scramArch)
+				raise ConfigError('Project area file .SCRAM/%s/Environment cannot be parsed!' % self.scramArch)
 		else:
 			self.scramEnv = {
 				'SCRAM_PROJECTNAME': scramProject[0],
@@ -91,7 +91,7 @@ class CMSSW(DataMod):
 
 		self.scramVersion = config.get(self.__class__.__name__, 'scram version', 'scramv1')
 		if self.scramEnv['SCRAM_PROJECTNAME'] != 'CMSSW':
-			raise ConfigError("Project area not a valid CMSSW project area.")
+			raise ConfigError('Project area not a valid CMSSW project area.')
 
 		# Information about search order for software environment
 		self.searchLoc = []
@@ -100,13 +100,13 @@ class CMSSW(DataMod):
 			if userPath != '':
 				self.searchLoc.append(('CMSSW_DIR_USER', userPath))
 			if self.scramEnv.get('RELEASETOP', None):
-				projPath = os.path.normpath("%s/../../../../" % self.scramEnv['RELEASETOP'])
+				projPath = os.path.normpath('%s/../../../../' % self.scramEnv['RELEASETOP'])
 				self.searchLoc.append(('CMSSW_DIR_PRO', projPath))
 		if len(self.searchLoc) and config.get('global', 'backend', 'grid') != 'grid':
-			utils.vprint("Jobs will try to use the CMSSW software located here:", -1)
+			utils.vprint('Jobs will try to use the CMSSW software located here:', -1)
 			for i, loc in enumerate(self.searchLoc):
 				key, value = loc
-				utils.vprint(" %i) %s" % (i + 1, value), -1)
+				utils.vprint(' %i) %s' % (i + 1, value), -1)
 
 		if config.opts.init and len(self.projectArea):
 			if os.path.exists(os.path.join(config.workDir, 'runtime.tar.gz')):
@@ -128,13 +128,13 @@ class CMSSW(DataMod):
 					utils.eprint('%s' % proc.getMessage())
 					utils.eprint('Unable to copy runtime! You can try to copy the CMSSW runtime manually.')
 					if not utils.getUserBool('Is runtime available on SE?', False):
-						raise RuntimeError("No CMSSW runtime on SE!")
+						raise RuntimeError('No CMSSW runtime on SE!')
 
 
 	# Lumi filter need
 	def neededVars(self):
 		if self.selectedLumis:
-			return DataMod.neededVars(self) + ["LUMI_RANGE"]
+			return DataMod.neededVars(self) + ['LUMI_RANGE']
 		return DataMod.neededVars(self)
 
 
@@ -142,38 +142,38 @@ class CMSSW(DataMod):
 		def isInstrumented(cfgName):
 			cfg = open(cfgName, 'r').read()
 			for tag in self.neededVars():
-				if (not "__%s__" % tag in cfg) and (not "@%s@" % tag in cfg):
+				if (not '__%s__' % tag in cfg) and (not '@%s@' % tag in cfg):
 					return False
 			return True
 		def doInstrument(cfgName):
 			if not isInstrumented(cfgName) or 'customise_for_gc' not in open(cfgName, 'r').read():
-				utils.vprint("Instrumenting...", os.path.basename(cfgName), -1)
+				utils.vprint('Instrumenting...', os.path.basename(cfgName), -1)
 				fragment = utils.pathGC('scripts', 'fragmentForCMSSW.py')
 				open(cfgName, 'a').write(open(fragment, 'r').read())
 			else:
-				utils.vprint("%s already contains customise_for_gc and all needed variables" % os.path.basename(cfgName), -1)
+				utils.vprint('%s already contains customise_for_gc and all needed variables' % os.path.basename(cfgName), -1)
 
 		cfgStatus = []
 		comPath = os.path.dirname(os.path.commonprefix(cfgFiles))
 		for cfg in cfgFiles:
-			cfgStatus.append({0: cfg.split(comPath, 1)[1].lstrip("/"), 1: str(isInstrumented(cfg)), 2: cfg})
-		utils.printTabular([(0, "Config file"), (1, "Instrumented")], cfgStatus, "lc")
+			cfgStatus.append({0: cfg.split(comPath, 1)[1].lstrip('/'), 1: str(isInstrumented(cfg)), 2: cfg})
+		utils.printTabular([(0, 'Config file'), (1, 'Instrumented')], cfgStatus, 'lc')
 
 		for cfg in cfgFiles:
 			if self.prepare or not isInstrumented(cfg):
 				if self.prepare or utils.getUserBool('Do you want to prepare %s for running over the dataset?' % cfg, True):
 					doInstrument(cfg)
 		if mustPrepare and not (True in map(isInstrumented, cfgFiles)):
-			raise ConfigError("A config file must use %s to work properly!" %
-				str.join(", ", map(lambda x: "@%s@" % x, self.neededVars())))
+			raise ConfigError('A config file must use %s to work properly!' %
+				str.join(', ', map(lambda x: '@%s@' % x, self.neededVars())))
 
 
 	# Called on job submission
 	def getSubmitInfo(self, jobNum):
 		result = DataMod.getSubmitInfo(self, jobNum)
-		result.update({"application": self.scramEnv['SCRAM_PROJECTVERSION'], "exe": "cmsRun"})
+		result.update({'application': self.scramEnv['SCRAM_PROJECTVERSION'], 'exe': 'cmsRun'})
 		if self.dataSplitter == None:
-			result.update({"nevtJob": self.eventsPerJob})
+			result.update({'nevtJob': self.eventsPerJob})
 		return result
 
 
