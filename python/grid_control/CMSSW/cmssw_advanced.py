@@ -35,6 +35,8 @@ class CMSSW_Advanced(cmssw.CMSSW):
 			for (nick, value) in tmp.items():
 				if value:
 					self.nmConst.setdefault(nick, {})[var] = value[0]
+				else:
+					self.nmConst.setdefault(nick, {})[var] = ''
 			head.append((var, var))
 
 		# Mapping between nickname and lumi filter:
