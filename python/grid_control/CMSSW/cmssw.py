@@ -31,7 +31,7 @@ class CMSSW(DataMod):
 			newPath = os.path.join(config.workDir, os.path.basename(cfgFile))
 			if config.opts.init:
 				if not os.path.exists(cfgFile):
-					raise ConfigError("Config file '%s' not found." % cfgFile)
+					raise ConfigError('Config file %r not found.' % cfgFile)
 				shutil.copyfile(cfgFile, newPath)
 			self.configFiles.append(newPath)
 
@@ -58,7 +58,7 @@ class CMSSW(DataMod):
 			if os.path.exists(self.projectArea):
 				utils.vprint('Project area found in: %s' % self.projectArea, -1)
 			else:
-				raise ConfigError("Specified config area '%s' does not exist!" % self.projectArea)
+				raise ConfigError('Specified config area %r does not exist!' % self.projectArea)
 
 			scramPath = os.path.join(self.projectArea, '.SCRAM')
 			# try to open it
@@ -70,7 +70,7 @@ class CMSSW(DataMod):
 
 			for key in ['SCRAM_PROJECTNAME', 'SCRAM_PROJECTVERSION']:
 				if key not in self.scramEnv:
-					raise ConfigError("Installed program in project area can't be recognized.")
+					raise ConfigError('Installed program in project area not recognized.')
 
 			archs = filter(lambda x: os.path.isdir(os.path.join(scramPath, x)), os.listdir(scramPath))
 			try:
