@@ -21,7 +21,7 @@ class DataSplitter(AbstractObject):
 			self._protocol[item] = func(self._section, item, default)
 		except:
 			# Support for older job mappings
-			self._protocol[item] = func(self._section, item.replace(" ", ""), default)
+			self._protocol[item] = func(self._section, item.replace(' ', ''), default)
 		return self._protocol[item]
 
 
@@ -57,7 +57,7 @@ class DataSplitter(AbstractObject):
 			return self._job0Cache
 		if self._jobCache[0] != jobNum:
 			if jobNum >= self.getMaxJobs():
-				raise ConfigError("Job %d out of range for available dataset"  % jobNum)
+				raise ConfigError('Job %d out of range for available dataset'  % jobNum)
 			self._jobCache = (jobNum, self.splitSource[jobNum])
 		return self._jobCache[1]
 
@@ -67,39 +67,39 @@ class DataSplitter(AbstractObject):
 
 
 	def printInfoForJob(job):
-		print "Dataset:", job[DataSplitter.Dataset],
+		utils.vprint('Dataset: %s' % job[DataSplitter.Dataset], -1, newline = False)
 		if job.get(DataSplitter.Nickname, '') != '':
-			print "\tNick:", job[DataSplitter.Nickname],
-		print "\tID:", job.get(DataSplitter.DatasetID, 0)
-		print "Events :", job[DataSplitter.NEvents]
-		print "Skip   :", job[DataSplitter.Skipped]
+			utils.vprint('\tNick: %s' % job[DataSplitter.Nickname], -1, newline = False)
+		utils.vprint('\tID: %s' % job.get(DataSplitter.DatasetID, 0), -1)
+		utils.vprint('Events : %s' % job[DataSplitter.NEvents], -1)
+		utils.vprint('Skip   : %s' % job[DataSplitter.Skipped], -1)
 		if job.get(DataSplitter.SEList, None) != None:
 			seArray = map(lambda x: str.join(', ', x), utils.lenSplit(job[DataSplitter.SEList], 70))
-			print "SEList :", str.join('\n         ', seArray)
-		print "Files  :",
+			utils.vprint('SEList : %s' % str.join('\n         ', seArray), -1)
+		utils.vprint('Files  :', -1, newline = False)
 		if utils.verbosity() > 2:
-			print str.join("\n         ", job[DataSplitter.FileList])
+			utils.vprint(str.join('\n         ', job[DataSplitter.FileList]), -1)
 		else:
-			print "%d files selected" % len(job[DataSplitter.FileList])
+			utils.vprint('%d files selected' % len(job[DataSplitter.FileList]), -1)
 	printInfoForJob = staticmethod(printInfoForJob)
 
 
 	def printAllJobInfo(self):
 		for jobNum in range(self.getMaxJobs()):
-			print "Job number: ", jobNum
+			utils.vprint('Job number: %d' % jobNum, -1)
 			DataSplitter.printInfoForJob(self.getSplitInfo(jobNum))
-			print "------------"
+			utils.vprint('------------', -1)
 
 
 	def resyncMapping(self, newSplitPath, oldBlocks, newBlocks, config):
 		log = utils.ActivityLog('Resynchronization of dataset blocks')
 		(blocksAdded, blocksMissing, blocksChanged) = DataProvider.resyncSources(oldBlocks, newBlocks)
-		debug = open("%d" % time.time(), 'w')
-		debug.write("\n\nADDED\n")
+		debug = open('%d' % time.time(), 'w')
+		debug.write('\n\nADDED\n')
 		debug.write(repr(blocksAdded))
-		debug.write("\n\nMISSING\n")
+		debug.write('\n\nMISSING\n')
 		debug.write(repr(blocksMissing))
-		debug.write("\n\nCHANGED\n")
+		debug.write('\n\nCHANGED\n')
 		debug.write(repr(blocksChanged))
 		del log
 
@@ -122,10 +122,10 @@ class DataSplitter(AbstractObject):
 				value = Resync.__dict__[config.get('dataset', 'resync mode %s' % item, Resync.enum[default], volatile = True).lower()]
 				if value in desc.keys():
 					return value
-			print
+			utils.vprint(level = -1)
 			for choice in desc:
-				print "  %s)" % Resync.enum[choice].rjust(max(map(lambda x: len(Resync.enum[x]), desc.keys()))), desc[choice]
-			return utils.getUserInput("\nPlease select how to proceed!", Resync.enum[default], desc.keys(), parser)
+				utils.vprint('  %s)' % Resync.enum[choice].rjust(max(map(lambda x: len(Resync.enum[x]), desc.keys()))), desc[choice], -1)
+			return utils.getUserInput('\nPlease select how to proceed!', Resync.enum[default], desc.keys(), parser)
 
 		# Select processing mode for job (disable > append > replace) [ie. disable overrides all]
 		setMode = min
@@ -151,7 +151,7 @@ class DataSplitter(AbstractObject):
 					splitProcMode[jobNum] = setMode(splitProcMode.get(jobNum, mode), mode)
 					if mode != Resync.disable:
 						splitProcList.setdefault(jobNum, []).append(jobDict[jobNum])
-			print
+			utils.vprint(level = -1)
 
 		# Function for fast access to file infos via lfn
 		def getFileDict(blocks):
@@ -171,7 +171,7 @@ class DataSplitter(AbstractObject):
 					if blockA[DataProvider.Dataset] == blockB[DataProvider.Dataset] and \
 						blockA[DataProvider.BlockName] == blockB[DataProvider.BlockName]:
 						return blockB
-				raise RuntimeError("Block %s not found!" % str(blockA))
+				raise RuntimeError('Block %s not found!' % str(blockA))
 
 			(shrunken, expanded) = ([], [])
 			for changedBlock in changedBlocks:
@@ -194,68 +194,67 @@ class DataSplitter(AbstractObject):
 			return (shrunken, expanded)
 
 		def descBuilder(x, y = 'with', ignore = True):
-			desc = { Resync.disable: "Disable jobs with %s files" % x,
-				Resync.replace: "Replace existing jobs with jobs %s %s files" % (y, x),
-				Resync.append: "Disable existing jobs and append these jobs %s %s files" % (y, x) }
+			desc = { Resync.disable: 'Disable jobs with %s files' % x,
+				Resync.replace: 'Replace existing jobs with jobs %s %s files' % (y, x),
+				Resync.append: 'Disable existing jobs and append these jobs %s %s files' % (y, x) }
 			if ignore:
-				desc[Resync.ignore] = "Ignore %s parts of files" % x
+				desc[Resync.ignore] = 'Ignore %s parts of files' % x
 			return desc
 
 		# User overview and setup starts here
 		if blocksAdded or blocksMissing or blocksChanged:
-			print "The following changes in the dataset information were detected:"
-			print
+			utils.vprint('The following changes in the dataset information were detected:\n', -1)
 
-		head = [(DataProvider.Dataset, "Dataset"), (DataProvider.BlockName, "Block"),
-			(DataProvider.NEvents, "Events"), (DataProvider.FileList, "Files")]
+		head = [(DataProvider.Dataset, 'Dataset'), (DataProvider.BlockName, 'Block'),
+			(DataProvider.NEvents, 'Events'), (DataProvider.FileList, 'Files')]
 
 		if blocksAdded:
-			print "=" * 15, "Added files".center(15), "=" * 15, "\n"
-			utils.printTabular(head, blocksAdded, "rlcc", {DataProvider.FileList: lambda x: len(x)})
+			utils.vprint('=' * 15 + 'Added files'.center(15) + '=' * 15, -1)
+			utils.printTabular(head, blocksAdded, 'rlcc', {DataProvider.FileList: lambda x: len(x)})
 			NFiles = sum(map(lambda x: len(x[DataProvider.FileList]), blocksAdded))
 			addedJobs = list(self.splitDatasetInternal(blocksAdded))
 			output = (NFiles, len(blocksAdded), len(addedJobs))
-			print "\n%d files in %d blocks were added, which corresponds to %d new jobs" % output
-			desc = {Resync.ignore: "Ignore these new jobs", Resync.append: "Append new jobs to existing task"}
+			utils.vprint('\n%d files in %d blocks were added, which corresponds to %d new jobs' % output, -1)
+			desc = {Resync.ignore: 'Ignore these new jobs', Resync.append: 'Append new jobs to existing task'}
 			if getMode('new', Resync.append, desc) == Resync.append:
 				splitAdded.extend(addedJobs)
-			print
+			utils.vprint(level = -1)
 
 		if blocksMissing:
-			print "=" * 15, "Missing files".center(15), "=" * 15, "\n"
-			utils.printTabular(head, blocksMissing, "rlcc", {DataProvider.FileList: lambda x: len(x)})
+			utils.vprint('=' * 15 + 'Missing files'.center(15) + '=' * 15, -1)
+			utils.printTabular(head, blocksMissing, 'rlcc', {DataProvider.FileList: lambda x: len(x)})
 			(removeJobs, NFiles) = getAffectedJobs(map(lambda x: (x, {}), blocksMissing))
-			print "\n%d files in %d blocks are missing." % (NFiles, len(blocksMissing))
-			print "This affects the following %d jobs:" % len(removeJobs), sorted(removeJobs.keys())
+			utils.vprint('\n%d files in %d blocks are missing.' % (NFiles, len(blocksMissing)), -1)
+			utils.vprint('This affects the following %d jobs:' % len(removeJobs), sorted(removeJobs.keys()), -1)
 			addSplitProc(removeJobs, getMode('removed', Resync.append, descBuilder('missing', 'without', False)))
 
 		if blocksChanged:
-			print "=" * 15, "Changed files".center(15), "=" * 15, "\n"
+			utils.vprint('=' * 15 + 'Changed files'.center(15) + '=' * 15, -1)
 			(changedJobs, NFiles) = getAffectedJobs(map(lambda x: (x, {}), blocksChanged))
-			print "%d files in %d blocks have changed their length" % (NFiles, len(blocksChanged))
-			print "This affects the following %d jobs:" % len(changedJobs), sorted(changedJobs.keys())
-			print
+			utils.vprint('%d files in %d blocks have changed their length' % (NFiles, len(blocksChanged)), -1)
+			utils.vprint('This affects the following %d jobs:' % len(changedJobs), sorted(changedJobs.keys()), -1)
+			utils.vprint(level = -1)
 
 		# Did the file shrink or expand?
 		blocksShrunken, blocksExpanded = splitAndClassifyChanges(blocksChanged)
 
 		def getChangeOverview(blocks, title):
-			print "-" * 15, ("%s files" % title).center(15), "-" * 15, "\n"
+			utils.vprint('-' * 15 + ('%s files' % title).center(15) + '-' * 15, -1)
 			(changedJobs, NFiles) = getAffectedJobs(blocksExpanded)
-			print "%d files have %s in size:" % (NFiles, title.lower())
-			print "This affects the following %d jobs:" % len(changedJobs), sorted(changedJobs.keys())
-			print
-			head = [(DataProvider.Dataset, "Dataset"), (DataProvider.BlockName, "Block"),
-				(None, "Events (old)"), (DataProvider.NEvents, "Events (new)"), (DataProvider.FileList, "Files")]
+			utils.vprint('%d files have %s in size:' % (NFiles, title.lower()), -1)
+			utils.vprint('This affects the following %d jobs: %s' % (len(changedJobs), sorted(changedJobs.keys())), -1)
+			utils.vprint(level = -1)
+			head = [(DataProvider.Dataset, 'Dataset'), (DataProvider.BlockName, 'Block'),
+				(None, 'Events (old)'), (DataProvider.NEvents, 'Events (new)'), (DataProvider.FileList, 'Files')]
 			utils.printTabular(head, map(lambda x: dict(x[0].items() + [(None, x[1][DataProvider.NEvents])]),
-				blocks), "rlcc", {DataProvider.FileList: lambda x: len(x)})
+				blocks), 'rlcc', {DataProvider.FileList: lambda x: len(x)})
 			return changedJobs
 
 		if blocksExpanded:
 			expandJobs = getChangeOverview(blocksExpanded, 'Expanded')
 			desc = descBuilder('expanded')
 			if DataSplitter.Skipped in self.neededVars():
-				desc[Resync.append] += " (Try to append expanded parts as new jobs)"
+				desc[Resync.append] += ' (Try to append expanded parts as new jobs)'
 			addSplitProc(expandJobs, getMode('expand', Resync.append, desc))
 
 		if blocksShrunken:
@@ -263,8 +262,8 @@ class DataSplitter(AbstractObject):
 			addSplitProc(shrinkJobs, getMode('shrink', Resync.append, descBuilder('shrunken')))
 
 		if interactive and (splitAdded or splitProcList):
-			preserve = utils.getUserBool("Preserve unchanged splittings with changed files?", True)
-			reorder = utils.getUserBool("Reorder jobs to close gaps?", True)
+			preserve = utils.getUserBool('Preserve unchanged splittings with changed files?', True)
+			reorder = utils.getUserBool('Reorder jobs to close gaps?', True)
 		else:
 			preserve = config.getBool('dataset', 'resync preserve', True, volatile = True)
 			reorder = config.getBool('dataset', 'resync reorder', False, volatile = True)
@@ -272,11 +271,11 @@ class DataSplitter(AbstractObject):
 		# ^^ Still not sure about the degrees of freedom ^^
 		#     User setup is finished starting from here
 
-		debug.write("\n\nADD\n")
+		debug.write('\n\nADD\n')
 		debug.write(repr(splitAdded))
-		debug.write("\n\nPROC\n")
+		debug.write('\n\nPROC\n')
 		debug.write(repr(splitProcList))
-		debug.write("\n\nMODE\n")
+		debug.write('\n\nMODE\n')
 		debug.write(repr(splitProcMode))
 
 		# Process job modifications
@@ -342,7 +341,7 @@ class DataSplitter(AbstractObject):
 								sizeInfo[idx] = add[DataProvider.NEvents]
 						else:
 							# Change of first file ending in current splitting - One could try to
-							# "reverse fix" expanding files to allow expansion via adding only the expanding part
+							# 'reverse fix' expanding files to allow expansion via adding only the expanding part
 							replaceCompleteFile()
 					else:
 						# Removal of first file from current splitting
@@ -444,9 +443,9 @@ class DataSplitter(AbstractObject):
 		for splitInfo in splitAdded:
 			result.append(splitInfo)
 
-		debug.write("\n\nREDO\n")
+		debug.write('\n\nREDO\n')
 		debug.write(repr(resultRedo))
-		debug.write("\n\nDISABLE\n")
+		debug.write('\n\nDISABLE\n')
 		debug.write(repr(resultDisable))
 
 		self.saveState(newSplitPath, result)
@@ -464,7 +463,7 @@ class DataSplitter(AbstractObject):
 			if subTarFile:
 				subTarFile.close()
 				subTarFileObj.seek(0)
-				subTarFileInfo = tarfile.TarInfo("%03dXX.tgz" % (jobNum / 100))
+				subTarFileInfo = tarfile.TarInfo('%03dXX.tgz' % (jobNum / 100))
 				subTarFileInfo.size = len(subTarFileObj.getvalue())
 				tar.addfile(subTarFileInfo, subTarFileObj)
 		# Write the splitting info grouped into subtarfiles
@@ -474,7 +473,7 @@ class DataSplitter(AbstractObject):
 			if jobNum % 100 == 0:
 				closeSubTar(jobNum - 1, subTarFile, subTarFileObj)
 				subTarFileObj = cStringIO.StringIO()
-				subTarFile = tarfile.open(mode = "w:gz", fileobj = subTarFileObj)
+				subTarFile = tarfile.open(mode = 'w:gz', fileobj = subTarFileObj)
 				del log
 				log = utils.ActivityLog('Writing job mapping file [%d / %d]' % (jobNum, len(source)))
 			# Determine shortest way to store file list
@@ -492,7 +491,7 @@ class DataSplitter(AbstractObject):
 					return (x, y, str.join(',', z))
 				return (x, y, z)
 			for name, data in [('list', str.join('\n', savelist)), ('info', fmt.format(entry, fkt = flat))]:
-				info, file = utils.VirtualFile(os.path.join("%05d" % jobNum, name), data).getTarInfo()
+				info, file = utils.VirtualFile(os.path.join('%05d' % jobNum, name), data).getTarInfo()
 				subTarFile.addfile(info, file)
 				file.close()
 			# Remove common prefix from info
@@ -535,7 +534,7 @@ class DataSplitter(AbstractObject):
 					data[DataSplitter.SEList] = filter(lambda x: x != '', tmp)
 				fileList = self._cacheTar.extractfile('%05d/list' % key).readlines()
 				if DataSplitter.CommonPrefix in data:
-					fileList = map(lambda x: "%s/%s" % (data[DataSplitter.CommonPrefix], x), fileList)
+					fileList = map(lambda x: '%s/%s' % (data[DataSplitter.CommonPrefix], x), fileList)
 				data[DataSplitter.FileList] = map(str.strip, fileList)
 				return data
 

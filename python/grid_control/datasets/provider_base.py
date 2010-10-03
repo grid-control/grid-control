@@ -49,8 +49,8 @@ class DataProvider(AbstractObject):
 
 	# Create a new DataProvider instance
 	def create(config, section, dataset, defaultProvider):
-		if "\n" in dataset:
-			return DataProvider.open("DataMultiplexer", config, section, dataset, defaultProvider)
+		if '\n' in dataset:
+			return DataProvider.open('DataMultiplexer', config, section, dataset, defaultProvider)
 		else:
 			(nick, provider, datasetExpr) = DataProvider.parseDatasetExpr(dataset, defaultProvider)
 			return DataProvider.open(provider, config, section, datasetExpr, nick, 0)
@@ -128,27 +128,27 @@ class DataProvider(AbstractObject):
 
 
 	# Print information about datasets
-	def printDataset(self):
-		print "Matching blocks:"
+	def printDataset(self, level = 2):
+		utils.vprint('Provided datasets:', level)
+		idDict = {DataProvider.DatasetID: 0, DataProvider.Dataset: None, DataProvider.Nickname: ''}
 		for block in self.getBlocks():
-			print "ID / Dataset / Nick : ",
-			print str.join(' / ', [block.get(DataProvider.DatasetID, 0), block[DataProvider.Dataset], block.get(DataProvider.Nickname, '')])
-			print "BlockName : ", block[DataProvider.BlockName]
-			print "#Events   : ", block[DataProvider.NEvents]
-			print "SE List   : ", block[DataProvider.SEList]
-			print "Files     : "
+			utils.vprint('ID / Dataset / Nick : %s / %s / %s' % map(lambda k,d: block.get(k, d), idDict.items()), level)
+			utils.vprint('BlockName : %s' % block[DataProvider.BlockName], level)
+			utils.vprint('#Events   : %s' % block[DataProvider.NEvents], level)
+			utils.vprint('SE List   : %s' % block[DataProvider.SEList], level)
+			utils.vprint('Files     : ', level)
 			for fi in block[DataProvider.FileList]:
-				print "%s (Events: %d)" % (fi[DataProvider.lfn], fi[DataProvider.NEvents])
-			print
+				utils.vprint('%s (Events: %d)' % (fi[DataProvider.lfn], fi[DataProvider.NEvents]), level)
+			utils.vprint(level = level)
 
 
-	# Save dataset information in "ini"-style => 10x faster to r/w than cPickle
+	# Save dataset information in 'ini'-style => 10x faster to r/w than cPickle
 	def saveState(self, path, filename = 'datacache.dat', dataBlocks = None):
 		writer = cStringIO.StringIO()
 		if dataBlocks == None:
 			dataBlocks = self.getBlocks()
 		for block in dataBlocks:
-			writer.write("[%s#%s]\n" % (block[DataProvider.Dataset], block[DataProvider.BlockName]))
+			writer.write('[%s#%s]\n' % (block[DataProvider.Dataset], block[DataProvider.BlockName]))
 			if DataProvider.Nickname in block:
 				writer.write('nickname = %s\n' % block[DataProvider.Nickname])
 			if DataProvider.DatasetID in block:
@@ -180,7 +180,7 @@ class DataProvider(AbstractObject):
 	# Load dataset information using ListProvider
 	def loadState(config, path, filename = 'datacache.dat'):
 		# None, None = Don't override NickName and ID
-		return DataProvider.open('ListProvider', config, "", os.path.join(path, filename), None, None)
+		return DataProvider.open('ListProvider', config, '', os.path.join(path, filename), None, None)
 	loadState = staticmethod(loadState)
 
 

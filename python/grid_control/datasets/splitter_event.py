@@ -32,7 +32,7 @@ class EventBoundarySplitter(DataSplitter):
 
 				nEvents = fileList[DataProvider.NEvents]
 				if nEvents < 0:
-					raise DatasetError("EventBoundarySplitter does not support files with a negative number of events!")
+					raise DatasetError('EventBoundarySplitter does not support files with a negative number of events!')
 				curEvent = lastEvent
 				lastEvent = curEvent + nEvents
 				curSkip = 0

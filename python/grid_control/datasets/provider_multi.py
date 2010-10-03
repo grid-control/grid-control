@@ -10,16 +10,16 @@ class DataMultiplexer(DataProvider):
 		self.subprovider = []
 
 		# Allow provider shortcuts
-		head = ["ID", "Nickname", "Dataset path"]
+		head = ['ID', 'Nickname', 'Dataset path']
 		for id, entry in enumerate(datasetExpr.splitlines()):
 			(datasetNick, provider, datasetExpr) = DataProvider.parseDatasetExpr(entry, defaultProvider)
 			source = DataProvider.open(provider, config, section, datasetExpr, datasetNick, id)
-			dataUrl = "%s://%s" % (DataProvider.providers.get(provider, provider), datasetExpr)
-			self.subprovider.append(dict(zip(["src"] + head, [source, id, datasetNick, dataUrl])))
+			dataUrl = '%s://%s' % (DataProvider.providers.get(provider, provider), datasetExpr)
+			self.subprovider.append(dict(zip(['src'] + head, [source, id, datasetNick, dataUrl])))
 
 		utils.vprint('Using the following datasets:', -1)
 		utils.vprint(level = -1)
-		utils.printTabular(zip(head, head), self.subprovider, "rcl")
+		utils.printTabular(zip(head, head), self.subprovider, 'rcl')
 		utils.vprint(level = -1)
 
 
@@ -42,12 +42,12 @@ class DataMultiplexer(DataProvider):
 		exceptions = []
 		for provider in self.subprovider:
 			try:
-				result.extend(provider["src"].getBlocks())
+				result.extend(provider['src'].getBlocks())
 			except GCError:
 				exceptions.append(GCError.message)
 			if utils.abort():
 				raise DatasetError('Could not retrieve all datasets!')
 		if len(exceptions):
-			sys.stderr.write(str.join("\n", exceptions))
+			sys.stderr.write(str.join('\n', exceptions))
 			raise DatasetError('Could not retrieve all datasets!')
 		return result

@@ -9,7 +9,7 @@ class FileProvider(DataProvider):
 		DataProvider.__init__(self, config, section, datasetExpr, datasetNick, datasetID)
 		DataProvider.providers.update({'FileProvider': 'file'})
 
-		(self._path, self._events, selist) = utils.optSplit(datasetExpr, "|@")
+		(self._path, self._events, selist) = utils.optSplit(datasetExpr, '|@')
 		self._selist = None
 		if selist:
 			self._selist = map(str.strip, selist.split(','))
@@ -37,7 +37,7 @@ class ListProvider(DataProvider):
 		DataProvider.__init__(self, config, section, datasetExpr, datasetNick, datasetID)
 		DataProvider.providers.update({'ListProvider': 'list'})
 
-		(path, self._forcePrefix, self._filter) = utils.optSplit(datasetExpr, "@%")
+		(path, self._forcePrefix, self._filter) = utils.optSplit(datasetExpr, '@%')
 		self._filename = utils.resolvePath(path)
 
 
@@ -49,8 +49,8 @@ class ListProvider(DataProvider):
 			name = self._filter
 			if self._filter:
 				name = blockinfo[DataProvider.Dataset]
-				if DataProvider.BlockName in blockinfo and "#" in self._filter:
-					name = "%s#%s" % (name, blockinfo[DataProvider.BlockName])
+				if DataProvider.BlockName in blockinfo and '#' in self._filter:
+					name = '%s#%s' % (name, blockinfo[DataProvider.BlockName])
 			if name.startswith(self._filter):
 				return True
 			return False
@@ -70,7 +70,7 @@ class ListProvider(DataProvider):
 				if len(blockname) > 1:
 					blockinfo[DataProvider.BlockName] = blockname[1]
 				else:
-					blockinfo[DataProvider.BlockName] = "0"
+					blockinfo[DataProvider.BlockName] = '0'
 				blockinfo[DataProvider.SEList] = None
 				blockinfo[DataProvider.FileList] = []
 				commonprefix = self._forcePrefix
@@ -96,8 +96,8 @@ class ListProvider(DataProvider):
 						commonprefix = value
 				else:
 					if commonprefix:
-						key = "%s/%s" % (commonprefix, key)
-					value = value.split(" ", 1)
+						key = '%s/%s' % (commonprefix, key)
+					value = value.split(' ', 1)
 					data = { DataProvider.lfn: key, DataProvider.NEvents: int(value[0]) }
 					if len(value) > 1:
 						data[DataProvider.Metadata] = eval(value[1])

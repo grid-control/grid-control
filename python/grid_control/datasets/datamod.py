@@ -14,8 +14,8 @@ class DataMod(Module):
 
 		if os.path.exists(os.path.join(config.workDir, 'datamap.tar')):
 			if config.opts.init and not config.opts.resync:
-				utils.eprint("Initialization of task with already submitted / finished jobs can cause invalid results!")
-				if utils.getUserBool("Perform resync of dataset related information instead of re-init?", True):
+				utils.eprint('Initialization of task with already submitted / finished jobs can cause invalid results!')
+				if utils.getUserBool('Perform resync of dataset related information instead of re-init?', True):
 					config.opts.resync = True
 		elif config.opts.init and config.opts.resync:
 			config.opts.resync = False
@@ -47,11 +47,11 @@ class DataMod(Module):
 		self.dataRefresh = utils.parseTime(config.get(self.__class__.__name__, 'dataset refresh', '', volatile=True))
 		if self.dataRefresh > 0:
 			self.dataRefresh = max(self.dataRefresh, taskInfo.get('max refresh rate', 0))
-			utils.vprint("Dataset source will be queried every %s" % utils.strTime(self.dataRefresh), -1)
+			utils.vprint('Dataset source will be queried every %s' % utils.strTime(self.dataRefresh), -1)
 		self.lastRefresh = time.time()
 
 		if self.dataSplitter.getMaxJobs() == 0:
-			raise UserError("There are no events to process")
+			raise UserError('There are no events to process')
 
 
 	# This function is here to allow ParaMod to transform jobNums
@@ -65,8 +65,8 @@ class DataMod(Module):
 	def onJobSubmit(self, jobObj, jobNum, dbmessage = [{}]):
 		splitInfo = self.getTranslatedSplitInfo(jobNum)
 		Module.onJobSubmit(self, jobObj, jobNum, [{
-			"nevtJob": splitInfo.get(DataSplitter.NEvents, 0),
-			"datasetFull": splitInfo.get(DataSplitter.Dataset, '')}] + dbmessage)
+			'nevtJob': splitInfo.get(DataSplitter.NEvents, 0),
+			'datasetFull': splitInfo.get(DataSplitter.Dataset, '')}] + dbmessage)
 
 
 	# Returns list of variables needed in config file
@@ -89,7 +89,7 @@ class DataMod(Module):
 
 		splitInfo = self.dataSplitter.getSplitInfo(jobNum)
 		if utils.verbosity() > 0:
-			utils.vprint("Job number: %d" % jobNum)
+			utils.vprint('Job number: %d' % jobNum)
 			DataSplitter.printInfoForJob(splitInfo)
 
 		data['MAX_EVENTS'] = splitInfo[DataSplitter.NEvents]
@@ -103,7 +103,7 @@ class DataMod(Module):
 
 
 	def formatFileList(self, filelist):
-		return str.join(" ", filelist)
+		return str.join(' ', filelist)
 
 
 	# Get files for input sandbox
@@ -146,7 +146,7 @@ class DataMod(Module):
 
 		info = self.dataSplitter.getSplitInfo(jobNum)
 		name = info.get(DataSplitter.Nickname, info.get(DataSplitter.Dataset, None))
-		return { "Dataset": name }
+		return { 'Dataset': name }
 
 
 	# Called on job submission
@@ -159,7 +159,7 @@ class DataMod(Module):
 		except:
 			nEvents = 0
 		result = Module.getSubmitInfo(self, jobNum)
-		result.update({ "nevtJob": nEvents, "datasetFull": splitInfo.get(DataSplitter.Dataset, '') })
+		result.update({ 'nevtJob': nEvents, 'datasetFull': splitInfo.get(DataSplitter.Dataset, '') })
 		return result
 
 
