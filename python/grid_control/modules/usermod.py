@@ -21,7 +21,7 @@ class UserMod(DataMod):
 
 
 	def getJobArguments(self, jobNum):
-		return DataMod.getJobArguments(self, jobNum) + " " + self._arguments
+		return DataMod.getJobArguments(self, jobNum) + ' ' + self._arguments
 
 
 	def getInFiles(self):
