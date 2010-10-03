@@ -1,9 +1,9 @@
 import sys, os
 from grid_control import ConfigError, RethrowError, Job, utils
 from grid_control.backends.wms import WMS
-from api import LocalWMSApi
+from pbsge import PBSGECommon
 
-class PBS(LocalWMSApi):
+class PBS(PBSGECommon):
 	_statusMap = {
 		'H': Job.SUBMITTED, 'S': Job.SUBMITTED,
 		'W': Job.WAITING,   'Q': Job.QUEUED,
@@ -13,44 +13,19 @@ class PBS(LocalWMSApi):
 	}
 
 	def __init__(self, config, wms):
-		LocalWMSApi.__init__(self, config, wms)
-
-		self.submitExec = utils.searchPathFind('qsub')
-		self.statusExec = utils.searchPathFind('qstat')
-		self.cancelExec = utils.searchPathFind('qdel')
+		PBSGECommon.__init__(self, config, wms)
 		self.nodesExec = utils.searchPathFind('pbsnodes')
-
-		self._group = config.get('local', 'group', '', volatile=True)
 		self._server = config.get('local', 'server', '', volatile=True)
 
 
-	def unknownID(self):
-		return "Unknown Job Id"
-
-
-	def getArguments(self, jobNum, sandbox):
-		return ""
-
-
 	def getSubmitArguments(self, jobNum, sandbox, stdout, stderr, addAttr):
-		# Job name
-		params = ' -N %s' % self.wms.getJobName(jobNum)
+		reqMap = { WMS.MEMORY: ("pvmem", lambda m: "%dmb" % m) }
+		params = PBSGE.getSubmitArguments(self, jobNum, sandbox, stdout, stderr, addAttr, reqMap)
 		# Job requirements
 		reqs = dict(self.wms.getRequirements(jobNum))
-		if WMS.SITES in reqs:
-			(queue, nodes) = reqs[WMS.SITES]
-			if queue:
-				params += ' -q %s' % queue
-			if nodes:
-				params += ' -l host=%s' % str.join("+", nodes)
-		if self.checkReq(reqs, WMS.MEMORY):
-			params += ' -l pvmem=%smb' % (reqs[WMS.MEMORY])
-		# Job group
-		if len(self._group):
-			params += ' -W group_list=%s' % self._group
-		# Sandbox, IO paths
-		params += ' -v GC_SANDBOX=%s -o %s -e %s' % (sandbox, stdout, stderr)
-		return params + str.join(' ', map(lambda kv: ' -l %s=%s' % kv, addAttr.items()))
+		if reqs.get(WMS.SITES, (None, None))[1]:
+			params += ' -l host=%s' % str.join("+", reqs[WMS.SITES][1])
+		return params
 
 
 	def parseSubmitOutput(self, data):

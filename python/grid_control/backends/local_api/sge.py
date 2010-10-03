@@ -1,47 +1,15 @@
 import sys, os, xml.dom.minidom
 from grid_control import ConfigError, RethrowError, Job, utils
 from grid_control.backends.wms import WMS
-from api import LocalWMSApi
+from pbsge import PBSGECommon
 
-class SGE(LocalWMSApi):
-	def __init__(self, config, wms):
-		LocalWMSApi.__init__(self, config, wms)
-
-		self.submitExec = utils.searchPathFind('qsub')
-		self.statusExec = utils.searchPathFind('qstat')
-		self.cancelExec = utils.searchPathFind('qdel')
-
-
-	def unknownID(self):
-		return "Unknown Job Id"
-
-
-	def getArguments(self, jobNum, sandbox):
-		return ""
-
-
+class SGE(PBSGECommon):
 	def getSubmitArguments(self, jobNum, sandbox, stdout, stderr, addAttr):
-		# Restart jobs = no, job name
-		params = ' -r n -N %s' % self.wms.getJobName(jobNum)
-
-		# Requirement based settings
-		strTime = lambda s: "%02d:%02d:%02d" % (s / 3600, (s / 60) % 60, s % 60)
-		reqs = dict(self.wms.getRequirements(jobNum))
-		if WMS.SITES in reqs:
-			(queue, nodes) = reqs[WMS.SITES]
-			params += ' -q %s' % queue
-			if nodes:
-				params += ' -l site=%s' % str.join(",", nodes)
-		if self.checkReq(reqs, WMS.WALLTIME):
-			params += " -l s_rt=%s" % strTime(reqs[WMS.WALLTIME])
-		if self.checkReq(reqs, WMS.CPUTIME):
-			params += " -l h_cpu=%s" % strTime(reqs[WMS.CPUTIME])
-		if self.checkReq(reqs, WMS.MEMORY):
-			params += ' -l h_vmem=%dM' % reqs[WMS.MEMORY]
-
-		# Sandbox, IO paths
-		params += ' -v GC_SANDBOX=%s -o %s -e %s' % (sandbox, stdout, stderr)
-		return params + str.join(' ', map(lambda kv: ' -l %s=%s' % kv, addAttr.items()))
+		timeStr = lambda s: "%02d:%02d:%02d" % (s / 3600, (s / 60) % 60, s % 60)
+		reqMap = { WMS.MEMORY: ("h_vmem", lambda m: "%dM" % m),
+			WMS.WALLTIME: ("s_rt", timeStr), WMS.CPUTIME: ("h_cpu", timeStr) }
+		# Restart jobs = no
+		return ' -r n' + PBSGE.getSubmitArguments(self, jobNum, sandbox, stdout, stderr, addAttr, reqMap)
 
 
 	def parseSubmitOutput(self, data):
