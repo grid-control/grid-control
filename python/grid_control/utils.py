@@ -310,7 +310,6 @@ def strTime(secs, fmt = "%dh %0.2dmin %0.2dsec"):
 
 def parseTuples(string):
 	"""Parse a string for keywords and tuples of keywords.
-
 	>>> parseTuples('(4, 8:00), keyword, ()')
 	[('4', '8:00'), 'keyword', ()]
 	"""
@@ -584,12 +583,17 @@ def exitWithUsage(usage, msg = None):
 
 
 def doBlackWhiteList(list, bwfilter):
+	""" Apply black-whitelisting to input list
+	>>> doBlackWhiteList(['T2_US_MIT', 'T1_DE_KIT_MSS', 'T1_US_FNAL'], ['T1', '-T1_DE_KIT'])
+	['T1_US_FNAL']
+	"""
 	blacklist = filter(lambda x: x.startswith('-'), bwfilter)
 	blacklist = map(lambda x: x[1:], blacklist)
-	list = filter(lambda x: x not in blacklist, list)
+	checkMatch = lambda item, list: True in map(lambda x: item.startswith(x), list)
+	list = filter(lambda x: not checkMatch(x, blacklist), list)
 	whitelist = filter(lambda x: not x.startswith('-'), bwfilter)
 	if len(whitelist):
-		return filter(lambda x: x in whitelist, list)
+		return filter(lambda x: checkMatch(x, whitelist), list)
 	return list
 
 
