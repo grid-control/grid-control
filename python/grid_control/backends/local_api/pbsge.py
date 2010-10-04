@@ -37,7 +37,7 @@ class PBSGECommon(LocalWMSApi):
 		# Process job requirements
 		for req in reqMap:
 			if self.checkReq(reqs, req):
-			params += ' -l %s=%s' % (reqMap[req][0], reqMap[req][1](reqs[req]))
+				params += ' -l %s=%s' % (reqMap[req][0], reqMap[req][1](reqs[req]))
 		# Sandbox, IO paths
 		params += ' -v GC_SANDBOX=%s -o %s -e %s' % (sandbox, stdout, stderr)
 		return params + str.join(' ', map(lambda kv: ' -l %s=%s' % kv, addAttr.items()))
