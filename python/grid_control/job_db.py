@@ -29,8 +29,8 @@ class JobDB:
 				del log
 				log = utils.ActivityLog('Reading job infos ... %d [%d%%]' % (idx, (100.0 * idx) / maxJobs))
 			if len(self._jobs) >= self.nJobs:
-				print "Stopped reading job infos! The number of job infos in the work directory",
-				print "is larger than the maximum number of jobs (%d)" % self.nJobs
+				print 'Stopped reading job infos! The number of job infos in the work directory',
+				print 'is larger than the maximum number of jobs (%d)' % self.nJobs
 				break
 			jobObj = Job.load(jobFile)
 			self._jobs[jobNum] = jobObj
@@ -63,7 +63,7 @@ class JobDB:
 			try:
 				maxJobs = module.getMaxJobs()
 				if maxJobs and (nJobs > maxJobs):
-					print "Maximum number of jobs given as %d was truncated to %d" % (nJobs, maxJobs)
+					print 'Maximum number of jobs given as %d was truncated to %d' % (nJobs, maxJobs)
 					nJobs = maxJobs
 			except:
 				pass
@@ -84,7 +84,7 @@ class JobDB:
 			return self.ok
 		elif jobObj.state == Job.DISABLED:
 			return self.disabled
-		raise Exception("Internal error: Unexpected job state %s" % Job.states[jobObj.state])
+		raise Exception('Internal error: Unexpected job state %s' % Job.states[jobObj.state])
 
 
 	def get(self, jobNum, create = False):
@@ -102,26 +102,26 @@ class JobDB:
 		old.remove(jobNum)
 
 		jobObj.update(state)
-		jobObj.save(os.path.join(self._dbPath, "job_%d.txt" % jobNum))
+		jobObj.save(os.path.join(self._dbPath, 'job_%d.txt' % jobNum))
 
 		new = self._findQueue(jobObj)
 		new.append(jobNum)
 		new.sort()
 
 		jobNumLen = int(math.log10(max(1, self.nJobs)) + 1)
-		utils.vprint("Job %s state changed from %s to %s " % (str(jobNum).ljust(jobNumLen), Job.states[oldState], Job.states[state]), -1, True, False)
+		utils.vprint('Job %s state changed from %s to %s ' % (str(jobNum).ljust(jobNumLen), Job.states[oldState], Job.states[state]), -1, True, False)
 		if (state == Job.SUBMITTED) and (jobObj.attempt > 1):
-			print "(retry #%s)" % (jobObj.attempt - 1)
+			print '(retry #%s)' % (jobObj.attempt - 1)
 		elif (state == Job.QUEUED) and jobObj.get('dest') != 'N/A':
-			print "(%s)" % jobObj.get('dest')
+			print '(%s)' % jobObj.get('dest')
 		elif (state in [Job.WAITING, Job.ABORTED, Job.DISABLED]) and jobObj.get('reason'):
 			print '(%s)' % jobObj.get('reason')
 		elif (state == Job.SUCCESS) and jobObj.get('runtime', None) != None:
-			print "(runtime %s)" % utils.strTime(jobObj.get('runtime'))
+			print '(runtime %s)' % utils.strTime(jobObj.get('runtime'))
 		elif (state == Job.FAILED):
 			msg = []
 			if jobObj.get('retcode'):
-				msg.append("error code: %d" % jobObj.get('retcode'))
+				msg.append('error code: %d' % jobObj.get('retcode'))
 				try:
 					if utils.verbosity() > 0:
 						msg.append(self.errorDict[jobObj.get('retcode')])
@@ -130,7 +130,7 @@ class JobDB:
 			if jobObj.get('dest'):
 				msg.append(jobObj.get('dest'))
 			if len(msg):
-				print "(%s)" % str.join(" - ", msg),
+				print '(%s)' % str.join(' - ', msg),
 			print
 		else:
 			print
@@ -226,7 +226,7 @@ class JobDB:
 		# Cancel jobs who took too long
 		if len(timeoutList):
 			change = True
-			print "\nTimeout for the following jobs:"
+			print '\nTimeout for the following jobs:'
 			self.cancel(wms, timeoutList)
 
 		# Process module interventions
@@ -236,11 +236,11 @@ class JobDB:
 		if len(self.ok) + len(self.disabled) == self.nJobs:
 			self.logDisabled()
 			if len(self.disabled) > 0:
-				utils.vprint("There are %d disabled jobs in this task!" % len(self.disabled), -1, True)
-				utils.vprint("Please refer to %s for a complete list." % self.disableLog, -1, True)
+				utils.vprint('There are %d disabled jobs in this task!' % len(self.disabled), -1, True)
+				utils.vprint('Please refer to %s for a complete list.' % self.disableLog, -1, True)
 			self.monitor.onTaskFinish(self.nJobs)
 			if self.module.onTaskFinish():
-				utils.vprint("Task successfully completed. Quitting grid-control!", -1, True)
+				utils.vprint('Task successfully completed. Quitting grid-control!', -1, True)
 				sys.exit(0)
 
 		return change
@@ -248,9 +248,9 @@ class JobDB:
 
 	def logDisabled(self):
 		try:
-			open(self.disableLog, 'w').write(str.join("\n", map(str, self.disabled)))
+			open(self.disableLog, 'w').write(str.join('\n', map(str, self.disabled)))
 		except:
-			raise RuntimeError("Could not write disabled jobs to file %s!" % (jobNum, self.disableLog))
+			raise RuntimeError('Could not write disabled jobs to file %s!' % (jobNum, self.disableLog))
 
 
 	def retrieve(self, wms, maxsample = 10):
@@ -271,7 +271,7 @@ class JobDB:
 			if state != jobObj.state:
 				change = True
 				jobObj.set('retcode', retCode)
-				jobObj.set('runtime', data.get("TIME", -1))
+				jobObj.set('runtime', data.get('TIME', -1))
 				self._update(jobObj, jobNum, state)
 				self.monitor.onJobOutput(wms, jobObj, jobNum, retCode)
 
@@ -301,7 +301,7 @@ class JobDB:
 			mark_cancelled(jobNum)
 
 		if len(jobs) > 0:
-			print "\nThere was a problem with deleting the following jobs:"
+			print '\nThere was a problem with deleting the following jobs:'
 			Report(jobs, self._jobs).details()
 			if interactive and utils.getUserBool('Do you want to mark them as deleted?', True):
 				map(mark_cancelled, jobs)
@@ -320,7 +320,7 @@ class JobDB:
 			try:
 				jobs = map(int, jobFilter.split(','))
 			except:
-				raise UserError("Job identifiers must be integers.")
+				raise UserError('Job identifiers must be integers.')
 		else:
 			def stateFilter(jobObj):
 				for state in jobFilter.split(','):
@@ -330,10 +330,10 @@ class JobDB:
 							return True
 				return False
 			def siteFilter(jobObj):
-				dest = jobObj.get("dest")
+				dest = jobObj.get('dest')
 				if not dest:
 					return False
-				dest = str.join("/", map(lambda x: x.split(":")[0], dest.upper().split("/")))
+				dest = str.join('/', map(lambda x: x.split(':')[0], dest.upper().split('/')))
 				for site in jobFilter.split(','):
 					if re.compile(site).search(dest):
 						return True
@@ -348,7 +348,7 @@ class JobDB:
 	def delete(self, wms, selector):
 		jobs = self.getCancelJobs(self.getJobs(selector))
 		if jobs:
-			print "\nDeleting the following jobs:"
+			print '\nDeleting the following jobs:'
 			self.cancel(wms, jobs, True)
 
 
@@ -364,17 +364,17 @@ class JobDB:
 					jobSet.remove(jobNum)
 					jobObj.attempt = 0
 			if len(jobSet) > 0:
-				output = (Job.states[newState], str.join(", ", jobSet))
-				raise RuntimeError("For the following jobs it was not possible to reset the state to %s:\n%s" % output)
+				output = (Job.states[newState], str.join(', ', jobSet))
+				raise RuntimeError('For the following jobs it was not possible to reset the state to %s:\n%s' % output)
 
 		if jobChanges:
 			(redo, disable) = jobChanges
 			newMaxJobs = self.getMaxJobs(self.module)
 			if (redo == []) and (disable == []) and (self.nJobs == newMaxJobs):
 				return
-			utils.vprint("The job module has requested changes to the job database", -1, True)
+			utils.vprint('The job module has requested changes to the job database', -1, True)
 			if self.nJobs != newMaxJobs:
-				utils.vprint("Number of jobs changed from %d to %d" % (self.nJobs, newMaxJobs), -1, True)
+				utils.vprint('Number of jobs changed from %d to %d' % (self.nJobs, newMaxJobs), -1, True)
 				self.nJobs = newMaxJobs
 				if len(self._jobs) < self.nJobs:
 					self.ready.extend(filter(lambda x: x not in self._jobs, range(self.nJobs)))
@@ -382,5 +382,5 @@ class JobDB:
 			self.cancel(wms, self.getCancelJobs(redo))
 			resetState(disable, Job.DISABLED)
 			resetState(redo, Job.INIT)
-			utils.vprint("All requested changes are applied", -1, True)
+			utils.vprint('All requested changes are applied', -1, True)
 			self.logDisabled()
