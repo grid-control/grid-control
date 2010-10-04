@@ -42,7 +42,6 @@ class ListProvider(DataProvider):
 
 
 	def getBlocksInternal(self):
-		result = []
 		blockinfo = None
 
 		def doFilter(blockinfo):
@@ -62,7 +61,7 @@ class ListProvider(DataProvider):
 				continue
 			elif line.startswith('['):
 				if blockinfo and doFilter(blockinfo):
-					result.append(blockinfo)
+					yield blockinfo
 				blockinfo = dict()
 				blockname = line.lstrip('[').rstrip(']').split('#')
 				if len(blockname) > 0:
@@ -104,5 +103,4 @@ class ListProvider(DataProvider):
 					blockinfo[DataProvider.FileList].append(data)
 		else:
 			if blockinfo and doFilter(blockinfo):
-				result.append(blockinfo)
-		return result
+				yield blockinfo

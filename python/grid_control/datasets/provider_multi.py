@@ -38,11 +38,11 @@ class DataMultiplexer(DataProvider):
 
 
 	def getBlocksInternal(self):
-		result = []
 		exceptions = []
 		for provider in self.subprovider:
 			try:
-				result.extend(provider['src'].getBlocks())
+				for block in provider['src'].getBlocks():
+					yield block
 			except GCError:
 				exceptions.append(GCError.message)
 			if utils.abort():
@@ -50,4 +50,3 @@ class DataMultiplexer(DataProvider):
 		if len(exceptions):
 			sys.stderr.write(str.join('\n', exceptions))
 			raise DatasetError('Could not retrieve all datasets!')
-		return result

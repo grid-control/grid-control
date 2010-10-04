@@ -72,7 +72,7 @@ class DataProvider(AbstractObject):
 		if self._cache == None:
 			if self._datasetExpr != None:
 				log = utils.ActivityLog('Retrieving %s' % self._datasetExpr)
-			self._cache = self.getBlocksInternal()
+			self._cache = list(self.getBlocksInternal())
 
 			allEvents = 0
 			# Validation, Filtering & Naming:
