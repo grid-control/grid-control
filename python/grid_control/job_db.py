@@ -87,8 +87,10 @@ class JobDB:
 		raise Exception("Internal error: Unexpected job state %s" % Job.states[jobObj.state])
 
 
-	def get(self, jobNum):
-		return self._jobs.get(jobNum, Job())
+	def get(self, jobNum, create = False):
+		if create:
+			return self._jobs.get(jobNum, Job())
+		return self._jobs[jobNum]
 
 
 	def _update(self, jobObj, jobNum, state):
@@ -154,7 +156,7 @@ class JobDB:
 
 		# Get list of submittable jobs
 		if self.maxRetry >= 0:
-			jobList = filter(lambda x: self._jobs.get(x, Job()).attempt - 1 < self.maxRetry, self.ready)
+			jobList = filter(lambda x: self.get(x, create = True).attempt - 1 < self.maxRetry, self.ready)
 		else:
 			jobList = self.ready[:]
 		if self.doShuffle:
@@ -173,7 +175,7 @@ class JobDB:
 		try:
 			for jobNum, wmsId, data in wms.submitJobs(jobList):
 				try:
-					jobObj = self._jobs[jobNum]
+					jobObj = self.get(jobNum)
 				except:
 					jobObj = Job()
 					self._jobs[jobNum] = jobObj
@@ -197,7 +199,7 @@ class JobDB:
 
 
 	def wmsArgs(self, jobList):
-		return map(lambda jobNum: (self._jobs[jobNum].wmsId, jobNum), jobList)
+		return map(lambda jobNum: (self.get(jobNum).wmsId, jobNum), jobList)
 
 
 	def check(self, wms, maxsample = 100):
@@ -206,7 +208,7 @@ class JobDB:
 
 		# Update states of jobs
 		for jobNum, wmsId, state, info in wms.checkJobs(self.wmsArgs(jobList)):
-			jobObj = self._jobs[jobNum]
+			jobObj = self.get(jobNum)
 			if state != jobObj.state:
 				change = True
 				for key, value in info.items():
@@ -257,7 +259,7 @@ class JobDB:
 
 		for jobNum, retCode, data in wms.retrieveJobs(self.wmsArgs(jobList)):
 			try:
-				jobObj = self._jobs[jobNum]
+				jobObj = self.get(jobNum)
 			except:
 				continue
 
@@ -288,7 +290,7 @@ class JobDB:
 
 		def mark_cancelled(jobNum):
 			try:
-				jobObj = self._jobs[jobNum]
+				jobObj = self.get(jobNum)
 			except:
 				return
 			self._update(jobObj, jobNum, Job.CANCELLED)
@@ -307,7 +309,7 @@ class JobDB:
 
 	def getCancelJobs(self, jobs):
 		deleteable = [ Job.SUBMITTED, Job.WAITING, Job.READY, Job.QUEUED, Job.RUNNING ]
-		return filter(lambda x: self._jobs[x].state in deleteable, jobs)
+		return filter(lambda x: self.get(x).state in deleteable, jobs)
 
 
 	def getJobs(self, selector):
@@ -337,9 +339,9 @@ class JobDB:
 						return True
 				return False
 			# First try matching states, then try to match destinations
-			jobs = filter(lambda x: stateFilter(self._jobs[x]), self._jobs.keys())
+			jobs = filter(lambda x: stateFilter(self.get(x)), self._jobs.keys())
 			if jobs == []:
-				jobs = filter(lambda x: siteFilter(self._jobs[x]), self._jobs.keys())
+				jobs = filter(lambda x: siteFilter(self.get(x)), self._jobs.keys())
 		return jobs
 
 
@@ -355,7 +357,7 @@ class JobDB:
 		def resetState(jobs, newState):
 			jobSet = utils.set(jobs)
 			for jobNum in jobs:
-				jobObj = self._jobs[jobNum]
+				jobObj = self.get(jobNum)
 				if jobObj.state in [ Job.INIT, Job.DISABLED, Job.ABORTED, Job.CANCELLED, Job.DONE, Job.FAILED, Job.SUCCESS ]:
 					self._update(jobObj, jobNum, newState)
 					self.monitor.onJobUpdate(wms, jobObj, jobNum, {})
