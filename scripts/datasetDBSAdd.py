@@ -147,7 +147,7 @@ def getAnnotation(configKey, configData):
 def getOutputDatasets(opts):
 	# Get job numbers, task id, ...
 	log = utils.ActivityLog(' * Reading task info...')
-	jobList = utils.sorted(map(lambda (jobNum, path): jobNum, Job.readJobs(opts.workDir)))
+	jobList = utils.sorted(map(lambda (jobNum, path): jobNum, Job.readJobs(os.path.join(opts.workDir, 'jobs'))))
 	taskInfo = utils.PersistentDict(os.path.join(opts.workDir, 'task.dat'), ' = ')
 	del log
 	print " * Reading task info - done"
