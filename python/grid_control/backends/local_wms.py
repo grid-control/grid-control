@@ -90,7 +90,7 @@ class LocalWMS(WMS):
 		retCode = proc.wait()
 		wmsIdText = proc.getOutput().strip().strip("\n")
 		try:
-			wmsId = "%s.%s" % (self.api.parseSubmitOutput(wmsIdText), self.api.__class__.__name__)
+			wmsId = self.api.parseSubmitOutput(wmsIdText)
 		except:
 			wmsId = None
 
@@ -101,8 +101,10 @@ class LocalWMS(WMS):
 		elif wmsId == None:
 			utils.eprint("WARNING: %s did not yield job id:\n%s" % (self.api.submitExec, wmsIdText))
 		if (wmsId == '') or (wmsId == None):
+			wmsId = None
 			sys.stderr.write(proc.getError())
 		else:
+			wmsId = "%s.%s" % (wmsId, self.api.__class__.__name__)
 			open(os.path.join(sandbox, wmsId), "w")
 		return (jobNum, wmsId, {'sandbox': sandbox})
 
