@@ -317,7 +317,6 @@ monitordirlimits() {
 	done
 }
 
-# Reserved for high level ops
 print_and_eval() {
 	debug_helper $FUNCNAME "$@"
 	[ "$1" != " " ] && checkbin "$1" || shift
@@ -325,27 +324,12 @@ print_and_eval() {
 	shift
 	echo "$PAELEVEL`basename $CMD` $@"
 	export PAELEVEL="$PAELEVEL "
-	eval "$CMD $@"
-	CODE="$?"
-	export PAELEVEL="${PAELEVEL# }"
-	echo "$PAELEVEL returned $CODE"
-	return $CODE
-}
-
-# Reserved for low level ops
-print_and_qeval() {
-	debug_helper $FUNCNAME "$@"
-	[ "$1" != " " ] && checkbin "$1" || shift
-	CMD="$1"
-	shift
-	echo "$PAELEVEL`basename $CMD` $@"
-	export PAELEVEL="$PAELEVEL "
-	LOGFILE="${MY_LANDINGZONE:-/tmp}/paqe.$USER.$RANDOM$RANDOM"
+	LOGFILE="${MY_LANDINGZONE:-/tmp}/paqe.$USER.${#BASH_LINENO[*]}.$RANDOM$RANDOM"
 	( eval "$CMD $@" > "$LOGFILE.out" 2> "$LOGFILE.err" )
 	CODE="$?"
 	export PAELEVEL="${PAELEVEL# }"
 	echo "$PAELEVEL returned $CODE"
-	[ "$CODE" != "0" ] && cat "$LOGFILE.out" && cat "$LOGFILE.err"
+	[ "$CODE" != "0" ] && echo "===" && cat "$LOGFILE.out" && cat "$LOGFILE.err" && echo "==="
 	rm -f "$LOGFILE.out" "$LOGFILE.err"
 	return $CODE
 }
@@ -388,13 +372,13 @@ url_exists() {
 	debug_helper $FUNCNAME "$@"
 	case "$1" in
 		"rfio://"*)
-			print_and_qeval "`getcommand nsgetacl`" "/${1#rfio://}";;
+			print_and_eval "`getcommand nsgetacl`" "/${1#rfio://}";;
 		"gsiftp://"*)
-			print_and_qeval "`getcommand glite-gridftp-exists edg-gridftp-exists edg-gridftp-ls`" "$1";;
+			print_and_eval "`getcommand glite-gridftp-exists edg-gridftp-exists edg-gridftp-ls`" "$1";;
 		"srm://"*)
-			print_and_qeval "`getcommand srm-check-permissions lcg-ls`" "$1";;
+			print_and_eval "`getcommand srm-check-permissions lcg-ls`" "$1";;
 		"file://"*)
-			print_and_qeval " " "test" "-s ${1#file://}";;
+			print_and_eval " " "test" "-s ${1#file://}";;
 		*)
 			echo "Unsupported URL: $1" >&2 && fail 106;;
 	esac
@@ -407,15 +391,15 @@ url_rm() {
 		FILE=${!PARAM}
 		case "$FILE" in
 			"rfio://"*)
-				print_and_qeval "`getcommand nsrm`" "/${FILE#rfio://}";;
+				print_and_eval "`getcommand nsrm`" "/${FILE#rfio://}";;
 			"gsiftp://"*)
-				print_and_qeval "`getcommand glite-gridftp-rm edg-gridftp-rm lcg-rm`" "$FILE";;
+				print_and_eval "`getcommand glite-gridftp-rm edg-gridftp-rm lcg-rm`" "$FILE";;
 			"srm://"*)
 				RM_CMD="`getcommand srmrm lcg-del`"
 				[ "$(basename $RM_CMD)" == "lcg-del" ] && RM_OPTS="" || RM_OPTS="-2"
-				print_and_qeval "$RM_CMD" "${RM_OPTS}" "$FILE";;
+				print_and_eval "$RM_CMD" "${RM_OPTS}" "$FILE";;
 			"file://"*)
-				print_and_qeval " " "rm" "${FILE#file://}";;
+				print_and_eval " " "rm" "${FILE#file://}";;
 			*)
 				echo "Unsupported URL: $FILE" >&2 && fail 106;;
 		esac
@@ -433,9 +417,9 @@ url_copy_single_local() {
 url_copy_single_srm() {
 	debug_helper $FUNCNAME "$@"
 	if [ "$(basename `getcommand srmcp lcg-cp`)" == "lcg-cp" ]; then
-		print_and_qeval "lcg-cp" "-v -n 1" "$1" "$2"
+		print_and_eval "lcg-cp" "-v -n 1" "$1" "$2"
 	else
-		print_and_qeval "srmcp" "-2 -debug=true -streams_num=1" "$1" "$2"
+		print_and_eval "srmcp" "-2 -debug=true -streams_num=1" "$1" "$2"
 	fi
 }
 
@@ -446,7 +430,7 @@ url_copy_single() {
 		"rfio://"*)
 			case "$2" in
 				"file://"*)
-					print_and_qeval "`getcommand rfcp`" "${1#rfio://} ${2#file://}";;
+					print_and_eval "`getcommand rfcp`" "${1#rfio://} ${2#file://}";;
 				*)
 					echo "Unsupported copy from $1 to $2" >&2 && fail 106;;
 			esac;;
@@ -454,9 +438,9 @@ url_copy_single() {
 		"gsiftp://"*)
 			case "$2" in
 				"gsiftp://"* | "file://"*)
-					print_and_qeval "`getcommand globus-url-copy`" "$1 $2";;
+					print_and_eval "`getcommand globus-url-copy`" "$1 $2";;
 				"srm://"*)
-					print_and_qeval "url_copy_single_srm" "$1 $2";;
+					print_and_eval "url_copy_single_srm" "$1 $2";;
 				*)
 					echo "Unsupported copy from $1 to $2" >&2 && fail 106;;
 			esac;;
@@ -464,7 +448,7 @@ url_copy_single() {
 		"srm://"*)
 			case "$2" in
 				"gsiftp://"* | "srm://"* | "file://"*)
-					print_and_qeval "url_copy_single_srm" "$1 $2";;
+					print_and_eval "url_copy_single_srm" "$1 $2";;
 				*)
 					echo "Unsupported copy from $1 to $2" >&2 && fail 106;;
 			esac;;
@@ -472,13 +456,13 @@ url_copy_single() {
 		"file://"*)
 			case "$2" in
 				"rfio://"*)
-					print_and_qeval "`getcommand rfcp`" "${1#file://} ${2#rfio://}";;
+					print_and_eval "`getcommand rfcp`" "${1#file://} ${2#rfio://}";;
 				"gsiftp://"*)
-					print_and_qeval "`getcommand globus-url-copy`" "$1 $2";;
+					print_and_eval "`getcommand globus-url-copy`" "$1 $2";;
 				"srm://"*)
-					print_and_qeval "url_copy_single_srm" "$1 $2";;
+					print_and_eval "url_copy_single_srm" "$1 $2";;
 				"file://"*)
-					print_and_qeval "url_copy_single_local" "$1 $2";;
+					print_and_eval "url_copy_single_local" "$1 $2";;
 				*)
 					echo "Unsupported copy from $1 to $2" >&2 && fail 106;;
 			esac;;

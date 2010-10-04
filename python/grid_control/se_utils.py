@@ -2,19 +2,13 @@ import utils
 
 # All functions use url_* functions from gc-run.lib (just like the job did...)
 
-def getRunLibCmd(*cmds):
+def se_runcmd(cmd, urls):
 	runLib = utils.pathGC('share', 'gc-run.lib')
-	cmd = 'print_and_%seval %s' % (('', 'q')[utils.verbosity() == 0], str.join(' ', cmds))
-	return 'source %s || exit 1; %s' % (runLib, cmd)
+	urlargs = str.join(' ', map(lambda x: '"%s"' % x.replace('dir://', 'file://'), urls))
+	return 'source %s || exit 1; print_and_eval "%s" %s' % (runLib, cmd, urlargs)
 
-
-def se_rm(target):
-	target = target.replace('dir://', 'file://')
-	return utils.LoggedProcess(getRunLibCmd('"url_rm" "%s"' % target))
-
+lambda se_rm(target) = utils.LoggedProcess(se_runcmd("url_rm", se_url(target)))
 
 def se_copy(src, dst, force = True):
-	src = src.replace('dir://', 'file://')
-	dst = dst.replace('dir://', 'file://')
-	cmd = "url_copy_single%s" % (('', '_force')[force])
-	return utils.LoggedProcess(getRunLibCmd('"%s" "%s" "%s"' % (cmd, src, dst)))
+	cmd = 'url_copy_single%s' % (('', '_force')[force])
+	return utils.LoggedProcess(se_runcmd(cmd, se_url(src), se_url(dst)))
