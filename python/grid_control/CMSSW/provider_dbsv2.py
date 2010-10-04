@@ -1,4 +1,4 @@
-from grid_control import utils, DatasetError, datasets
+from grid_control import utils, DatasetError, RethrowError, datasets
 from grid_control.datasets import DataProvider
 from lumi_tools import *
 from python_compat import *
@@ -17,10 +17,10 @@ class DBSApiv2(DataProvider):
 	def __init__(self, config, section, datasetExpr, datasetNick, datasetID = 0):
 		DataProvider.__init__(self, config, section, datasetExpr, datasetNick, datasetID)
 		DataProvider.providers.update({'DBSApiv2': 'dbs'})
-		if self.setup(config.getBool, section, 'dbs blacklist T1', True):
-			T1SEs = ['-srmcms.pic.es', '-ccsrm.in2p3.fr', '-storm-fe-cms.cr.cnaf.infn.it',
-				'-srm-cms.gridpp.rl.ac.uk', '-srm.grid.sinica.edu.tw', '-srm2.grid.sinica.edu.tw']
-			self.sitefilter.extend(T1SEs)
+		# PhEDex blacklist: '-T1_DE_KIT', '-T1_US_FNAL' allow user jobs
+		phedexBL = ['-T0_CH_CERN', '-T1_CH_CERN', '-T1_ES_PIC', '-T1_FR_CCIN2P3', '-T1_IT_CNAF', '-T1_TW_ASGC', '-T1_UK_RAL']
+		self.phedexBL = map(str.strip, self.setup(config.get, section, 'phedex sites', str.join(' ', phedexBL)).split())
+		self.onlyComplete = self.setup(config.getBool, section, 'phedex only complete', True)
 
 		self.url = self.setup(config.get, section, 'dbs instance', '')
 		(self.datasetPath, datasetUrl, self.datasetBlock) = utils.optSplit(datasetExpr, '@#')
@@ -51,17 +51,31 @@ class DBSApiv2(DataProvider):
 
 
 	def getBlocksInternal(self):
-		import DBSAPI.dbsApiException
+		import urllib2, threading
 		api = createDBSAPI(self.url)
 		try:
-			listBlockInfo = api.listBlocks(self.datasetPath)
-			# TODO: nosite=True
-			if self.selectedLumis:
-				listFileInfo = api.listFiles(self.datasetPath, retriveList=['retrive_lumi'])
-			else:
-				listFileInfo = api.listFiles(self.datasetPath)
-		except DBSAPI.dbsApiException.DbsException, ex:
-			raise DatasetError('DBS exception\n%s: %s' % (ex.getClassName(), ex.getErrorMessage()))
+			listBlockInfo = api.listBlocks(self.datasetPath, nosite=True)
+			# Start thread to retrieve list of files
+			(listFileInfo, seList) = ([], {})
+			def listFileInfoThread(self, result):
+				result.extend(api.listFiles(self.datasetPath, retriveList=([], ['retrive_lumi'])[self.selectedLumis]))
+			tFile = threading.Thread(target = listFileInfoThread, args = (self, listFileInfo))
+			tFile.start()
+			# Get dataset list from PhEDex (concurrent with listFiles)
+			phedexArgFmt = lambda x: ('block=%s' % x['Name']).replace('/', '%2F').replace('#', '%23')
+			phedexArg = str.join('&', map(phedexArgFmt, listBlockInfo))
+			phedexData = urllib2.urlopen('https://cmsweb.cern.ch/phedex/datasvc/json/prod/blockreplicas', phedexArg).read()
+			if str(phedexData).lower().find('error') != -1:
+				raise DatasetError("Phedex error '%s'" % phedexData)
+			phedexDict = eval(compile(phedexData.replace('null','None'), '<string>', 'eval'))['phedex']['block']
+			for phedexBlock in phedexDict:
+				phedexSelector = lambda x: (x['complete'] == 'y') or not self.onlyComplete
+				phedexSites = dict(map(lambda x: (x['node'], x['se']), filter(phedexSelector, phedexBlock['replica'])))
+				phedexSitesOK = utils.doBlackWhiteList(phedexSites.keys(), self.phedexBL)
+				seList[phedexBlock['name']] = map(lambda x: phedexSites[x], phedexSitesOK)
+			tFile.join()
+		except:
+			raise RethrowError('DBS exception')
 
 		if len(listBlockInfo) == 0:
 			raise DatasetError('Dataset %s has no registered blocks in dbs.' % self.datasetPath)
@@ -69,11 +83,7 @@ class DBSApiv2(DataProvider):
 			raise DatasetError('Dataset %s has no registered files in dbs.' % self.datasetPath)
 
 		def blockFilter(block):
-			if self.datasetBlock == 'all':
-				return True
-			if str.split(block['Name'], '#')[1] == self.datasetBlock:
-				return True
-			return False
+			return (self.datasetBlock == 'all') or (str.split(block['Name'], '#')[1] == self.datasetBlock)
 
 		def lumiFilter(lumilist):
 			if self.selectedLumis == None:
@@ -88,10 +98,7 @@ class DBSApiv2(DataProvider):
 			blockInfo = dict()
 			blockInfo[DataProvider.Dataset] = str.split(block['Name'], '#')[0]
 			blockInfo[DataProvider.BlockName] = str.split(block['Name'], '#')[1]
-
-			blockInfo[DataProvider.SEList] = []
-			for seName in block['StorageElementList']:
-				blockInfo[DataProvider.SEList].append(seName['Name'])
+			blockInfo[DataProvider.SEList] = seList.get(block['Name'], [])
 
 			dropped = 0
 			blockInfo[DataProvider.FileList] = []
