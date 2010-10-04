@@ -48,7 +48,6 @@ elif opts.listlumis:
 	print "\nComplete dataset:"
 	for line in map(lambda x: str.join(", ", x), gcSupport.utils.lenSplit(formatLumi(mergeLumi(allrl)), 70)):
 		print "\t", line
-	
 
 elif opts.list:
 	for block in api.listBlocks(opts.list):
