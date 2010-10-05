@@ -257,12 +257,13 @@ def realmain(opts, args):
 					procRM = se_utils.se_rm("file://%s" % localPath)
 					if procRM.wait() != 0:
 						print "\t\tUnable to remove local file!"
-						sys.stderr.write(se_utils.se_rm.lastlog)
+						utils.eprint(procRM.getMessage())
 			# Remove SE files in case of failure
 			if (failJob and opts.rmSEFail)    or (not failJob and opts.rmSEOK):
-				if not se_utils.se_rm(os.path.join(pathSE, name_dest)):
+				procRM = se_utils.se_rm(os.path.join(pathSE, name_dest))
+				if procRM.wait() != 0:
 					print "\t\tUnable to remove SE file!"
-					sys.stderr.write(se_utils.se_rm.lastlog)
+					utils.eprint(procRM.getMessage())
 
 		if failJob:
 			incInfo("Failed downloads")
