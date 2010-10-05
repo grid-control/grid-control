@@ -7,8 +7,8 @@ def se_runcmd(cmd, urls):
 	urlargs = str.join(' ', map(lambda x: '"%s"' % x.replace('dir://', 'file://'), urls))
 	return 'source %s || exit 1; print_and_eval "%s" %s' % (runLib, cmd, urlargs)
 
-se_rm = lambda target: utils.LoggedProcess(se_runcmd("url_rm", se_url(target)))
+se_rm = lambda target: utils.LoggedProcess(se_runcmd("url_rm", target))
 
 def se_copy(src, dst, force = True):
 	cmd = 'url_copy_single%s' % (('', '_force')[force])
-	return utils.LoggedProcess(se_runcmd(cmd, se_url(src), se_url(dst)))
+	return utils.LoggedProcess(se_runcmd(cmd, src, dst))
