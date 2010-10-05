@@ -91,7 +91,7 @@ class CMSSW_Advanced(cmssw.CMSSW):
 		# Put nick dependent variables into job specific settings
 		data = cmssw.CMSSW.getJobConfig(self, jobNum)
 		data['CMSSW_CONFIG'] = str.join(' ', map(os.path.basename, self.fromNM(self.nmCfg, nick, '')))
-		constants = self.fromNM(self.nmConst, None, {})
+		constants = dict(self.fromNM(self.nmConst, None, {}))
 		constants.update(self.fromNM(self.nmConst, nick, {}))
 		constants = dict(map(lambda var: (var, constants.get(var, '')), self.nmCName))
 		data.update(constants)
