@@ -29,12 +29,10 @@ class Config:
 		userDefaultsFile = utils.resolvePath("~/.grid-control.conf", check = False)
 		if os.path.exists(userDefaultsFile):
 			parseFileInt(userDefaultsFile)
-		parseFileInt(configFile)
 		# Read default values and reread main config file
-		includeFile = self.getPath("global", "include", '')
-		if includeFile != '':
+		for includeFile in self.getPaths("global", "include", ''):
 			parseFileInt(includeFile)
-			parseFileInt(configFile)
+		parseFileInt(configFile)
 
 
 	def parseLine(self, parser, section, item):
