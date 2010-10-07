@@ -5,6 +5,10 @@ def iterateFiles():
 	for pattern in opts.selection:
 		for path in map(os.path.abspath, glob.glob(os.path.join(opts.path, pattern))):
 			shortPath = path.replace(opts.path, "").lstrip("/")
+			if opts.nDelim:
+				tmp = opts.nDelim.split(":")
+				if shortPath.count(tmp[0]) != int(tmp[-1]):
+					continue
 			if opts.eventscmd:
 				events = int(os.popen("%s %s" % (opts.eventscmd, path)).readlines()[-1])
 				sys.stderr.write("%s %s %s\n" % (opts.eventscmd, path, events))
@@ -73,6 +77,7 @@ if __name__ == '__main__':
 	parser.add_option("-p", "--path", dest="path", default=".", help="Path to dataset files")
 	parser.add_option("-m", "--multi", dest="multi", default=None,
 		help="Multi dataset mode - files are sorted into different datasets according to <delimeter>:<start>:<end>")
+	parser.add_option("-S", "--select-delimeter", dest="nDelim", default=None, help="<delimeter>:<number of required delimeters> - only used with -m/-M")
 	parser.add_option("-M", "--multiblock", dest="multiblock", default=None,
 		help="Multi block mode - files are sorted into different blocks according to <delimeter>:<start>:<end>")
 	parser.add_option("-s", "--selection", dest="selection", default="*.root",

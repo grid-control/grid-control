@@ -364,7 +364,7 @@ class JobDB:
 					jobSet.remove(jobNum)
 					jobObj.attempt = 0
 			if len(jobSet) > 0:
-				output = (Job.states[newState], str.join(', ', jobSet))
+				output = (Job.states[newState], str.join(', ', map(str,jobSet)))
 				raise RuntimeError('For the following jobs it was not possible to reset the state to %s:\n%s' % output)
 
 		if jobChanges:
