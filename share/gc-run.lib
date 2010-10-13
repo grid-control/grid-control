@@ -416,10 +416,6 @@ url_mkdir() {
 				print_and_eval "`getcommand nsmkdir`" "-p" "/${FILE#rfio://}";;
 			"gsiftp://"*)
 				print_and_eval "`getcommand edg-gridftp-mkdir`" "$FILE";;
-			"srm://"*)
-				print_and_eval "url_rm" "$FILE/dummy";;
-			"sftp://"*)
-				print_and_eval "url_sftp_helper" "`dirname ${1#sftp://}`" "mkdir `basename ${1#sftp://}`";;
 			"file://"*)
 				print_and_eval " " "mkdir" "-p" "${FILE#file://}";;
 			*)
