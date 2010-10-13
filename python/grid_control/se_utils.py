@@ -8,6 +8,8 @@ def se_runcmd(cmd, *urls):
 	return 'source %s || exit 1; print_and_eval "%s" %s' % (runLib, cmd, urlargs)
 
 se_rm = lambda target: utils.LoggedProcess(se_runcmd("url_rm", target))
+se_mkdir = lambda target: utils.LoggedProcess(se_runcmd("url_mkdir", target))
+se_exists = lambda target: utils.LoggedProcess(se_runcmd("url_exists", target))
 
 def se_copy(src, dst, force = True):
 	cmd = 'url_copy_single%s' % (('', '_force')[force])

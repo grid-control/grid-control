@@ -154,9 +154,8 @@ def realmain(opts, args):
 	# Create SE output dir
 	if not opts.output:
 		opts.output = os.path.join(workDir, 'se_output')
-	opts.output = os.path.abspath(opts.output)
-	if not os.path.exists(opts.output):
-		os.mkdir(opts.output)
+	if "://" not in opts.output:
+		opts.output = "file:///%s" % os.path.abspath(opts.output)
 
 	infos = {}
 	def incInfo(x):
@@ -209,13 +208,13 @@ def realmain(opts, args):
 
 			# Copy files to local folder
 			outFilePath = os.path.join(opts.output, name_dest)
-			if opts.skipExisting and os.path.exists(outFilePath): 
+			if opts.skipExisting and (se_utils.se_exists(outFilePath) == 0):
 				print "skip file as it already exists!"
 				continue
-			if not os.path.exists(os.path.dirname(outFilePath)):
-				os.makedirs(os.path.dirname(outFilePath))
+			if se_utils.se_exists(os.path.dirname(outFilePath)).wait() != 0:
+				se_utils.se_mkdir(os.path.dirname(outFilePath)).wait()
 
-			procCP = se_utils.se_copy(os.path.join(pathSE, name_dest), "file:///%s" % outFilePath)
+			procCP = se_utils.se_copy(os.path.join(pathSE, name_dest), outFilePath)
 			if procCP.wait() != 0:
 				print "\n\t\tUnable to copy file from SE!"
 				print procCP.getMessage()
@@ -253,15 +252,14 @@ def realmain(opts, args):
 			# Remove downloaded files in case of failure
 			if (failJob and opts.rmLocalFail) or (not failJob and opts.rmLocalOK):
 				localPath = os.path.join(opts.output, name_dest)
-				if os.path.exists(localPath):
+				if se_utils.se_exists(localPath).wait() == 0:
 					procRM = se_utils.se_rm("file://%s" % localPath)
 					if procRM.wait() != 0:
 						print "\t\tUnable to remove local file!"
-						utils.eprint(procRM.getMessage())
+						sys.stderr.write(se_utils.se_rm.lastlog)
 			# Remove SE files in case of failure
 			if (failJob and opts.rmSEFail)    or (not failJob and opts.rmSEOK):
-				procRM = se_utils.se_rm(os.path.join(pathSE, name_dest))
-				if procRM.wait() != 0:
+				if se_utils.se_rm(os.path.join(pathSE, name_dest)).wait() != 0:
 					print "\t\tUnable to remove SE file!"
 					utils.eprint(procRM.getMessage())
 

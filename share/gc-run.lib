@@ -406,6 +406,28 @@ url_rm() {
 	done
 }
 
+# Create directories on storage element
+url_mkdir() {
+	debug_helper $FUNCNAME "$@"
+	for PARAM in `seq 1 $#`; do
+		FILE=${!PARAM}
+		case "$FILE" in
+			"rfio://"*)
+				print_and_eval "`getcommand nsmkdir`" "-p" "/${FILE#rfio://}";;
+			"gsiftp://"*)
+				print_and_eval "`getcommand edg-gridftp-mkdir`" "$FILE";;
+			"srm://"*)
+				print_and_eval "url_rm" "$FILE/dummy";;
+			"sftp://"*)
+				print_and_eval "url_sftp_helper" "`dirname ${1#sftp://}`" "mkdir `basename ${1#sftp://}`";;
+			"file://"*)
+				print_and_eval " " "mkdir" "-p" "${FILE#file://}";;
+			*)
+				echo "Unsupported URL: $FILE" >&2 && fail 106;;
+		esac
+	done
+}
+
 url_copy_single_local() {
 	debug_helper $FUNCNAME "$@"
 	[ ! -f "${1#file://}" ] && return 101
