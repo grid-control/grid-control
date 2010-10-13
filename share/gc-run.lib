@@ -362,8 +362,7 @@ url_ls() {
 			done
 			;;
 		"file://"*)
-			cd "${1#file://}" && ls -1d ${2:-*} && cd "$OLDPWD"
-			;;
+			cd "${1#file://}" && ls -1d ${2:-*} && cd "$OLDPWD";;
 		*)	echo "Unsupported URL: $1" >&2 && fail 106;;
 	esac
 }
@@ -441,7 +440,15 @@ url_copy_single_srm() {
 	fi
 }
 
-# Copy one file at a time (1) -> (2) 
+url_copy_connector() {
+	debug_helper $FUNCNAME "$@"
+	TMPCP="file://${MY_SCRATCH:-/tmp}/ucc.$USER.$RANDOM$RANDOM"
+	print_and_eval "url_copy_single" "$1" "$TMPCP" || fail 106
+	print_and_eval "url_copy_single" "$TMPCP" "$2" || fail 106
+	url_rm "$TMPCP"
+}
+
+# Copy one file at a time (1) -> (2)
 url_copy_single() {
 	debug_helper $FUNCNAME "$@"
 	case "$1" in
@@ -450,7 +457,7 @@ url_copy_single() {
 				"file://"*)
 					print_and_eval "`getcommand rfcp`" "${1#rfio://} ${2#file://}";;
 				*)
-					echo "Unsupported copy from $1 to $2" >&2 && fail 106;;
+					print_and_eval "url_copy_connector" "$1" "$2";;
 			esac;;
 
 		"gsiftp://"*)
@@ -460,7 +467,7 @@ url_copy_single() {
 				"srm://"*)
 					print_and_eval "url_copy_single_srm" "$1 $2";;
 				*)
-					echo "Unsupported copy from $1 to $2" >&2 && fail 106;;
+					print_and_eval "url_copy_connector" "$1" "$2";;
 			esac;;
 
 		"srm://"*)
@@ -468,7 +475,7 @@ url_copy_single() {
 				"gsiftp://"* | "srm://"* | "file://"*)
 					print_and_eval "url_copy_single_srm" "$1 $2";;
 				*)
-					echo "Unsupported copy from $1 to $2" >&2 && fail 106;;
+					print_and_eval "url_copy_connector" "$1" "$2";;
 			esac;;
 
 		"file://"*)
@@ -568,13 +575,6 @@ url_copy() {
  		fi
 	done
 	[ $BADCOUNT -ne 0 ] && echo "$BADCOUNT errors occurred during SE access" && fail 106
-}
-
-url_move() {
-	debug_helper $FUNCNAME "$@"
-	for PARAM in `seq 1 $[$# - 1]`; do
-		echo "move ${!PARAM}"
-	done
 }
 
 my_move() {
