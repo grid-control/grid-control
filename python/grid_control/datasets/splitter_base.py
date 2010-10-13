@@ -4,7 +4,8 @@ from grid_control import AbstractObject, AbstractError, RuntimeError, utils, Con
 from provider_base import DataProvider
 
 class DataSplitter(AbstractObject):
-	splitInfos = ['Dataset', 'SEList', 'NEvents', 'Skipped', 'FileList', 'Nickname', 'DatasetID', 'CommonPrefix', 'Invalid']
+	splitInfos = ['Dataset', 'SEList', 'NEvents', 'Skipped', 'FileList', 'Nickname', 'DatasetID',
+		'CommonPrefix', 'Invalid', 'BlockName', 'MetadataHeader', 'Metadata']
 	for idx, splitInfo in enumerate(splitInfos):
 		locals()[splitInfo] = idx
 
@@ -29,13 +30,12 @@ class DataSplitter(AbstractObject):
 		return [DataSplitter.FileList]
 
 
-	def cpBlockToJob(self, block, job):
-		job[DataSplitter.SEList] = block[DataProvider.SEList]
-		job[DataSplitter.Dataset] = block[DataProvider.Dataset]
-		if DataProvider.Nickname in block:
-			job[DataSplitter.Nickname] = block[DataProvider.Nickname]
-		if DataProvider.DatasetID in block:
-			job[DataSplitter.DatasetID] = block[DataProvider.DatasetID]
+	def cpBlockInfoToJob(self, block, job):
+		for prop in ['Dataset', 'BlockName', 'DatasetID', 'Nickname', 'SEList']:
+			if getattr(DataProvider, prop) in block:
+				job[getattr(DataSplitter, prop)] = block[getattr(DataProvider, prop)]
+		if DataProvider.Metadata in block:
+			job[DataSplitter.MetadataHeader] = block[DataProvider.Metadata]
 		return job
 
 
@@ -67,16 +67,21 @@ class DataSplitter(AbstractObject):
 
 
 	def printInfoForJob(job):
-		utils.vprint('Dataset: %s' % job[DataSplitter.Dataset], -1, newline = False)
+		utils.vprint(('Dataset: %s' % job[DataSplitter.Dataset]).ljust(50), -1, newline = False)
+		utils.vprint(('Events: %d' % job[DataSplitter.NEvents]).ljust(20), -1, newline = False)
+		utils.vprint('  ID: %s' % job.get(DataSplitter.DatasetID, 0), -1)
+		utils.vprint(('  Block: %s' % job[DataSplitter.BlockName]).ljust(50), -1, newline = False)
+		utils.vprint(('  Skip: %d' % job[DataSplitter.Skipped]).ljust(20), -1, newline = False)
 		if job.get(DataSplitter.Nickname, '') != '':
-			utils.vprint('\tNick: %s' % job[DataSplitter.Nickname], -1, newline = False)
-		utils.vprint('\tID: %s' % job.get(DataSplitter.DatasetID, 0), -1)
-		utils.vprint('Events : %s' % job[DataSplitter.NEvents], -1)
-		utils.vprint('Skip   : %s' % job[DataSplitter.Skipped], -1)
+			utils.vprint('Nick: %s' % job[DataSplitter.Nickname], -1)
 		if job.get(DataSplitter.SEList, None) != None:
 			seArray = map(lambda x: str.join(', ', x), utils.lenSplit(job[DataSplitter.SEList], 70))
-			utils.vprint('SEList : %s' % str.join('\n         ', seArray), -1)
-		utils.vprint('Files  :', -1, newline = False)
+			utils.vprint(' SEList: %s' % str.join('\n         ', seArray), -1)
+		for idx, head in enumerate(job.get(DataSplitter.MetadataHeader, [])):
+			oneFileMetadata = map(lambda x: repr(x[idx]), job[DataSplitter.Metadata])
+			metadataArray = map(lambda x: str.join(', ', x), utils.lenSplit(oneFileMetadata, 70))
+			utils.vprint('%7s: %s' % (head, str.join('\n         ', metadataArray)), -1)
+		utils.vprint('  Files: ', -1, newline = False)
 		if utils.verbosity() > 2:
 			utils.vprint(str.join('\n         ', job[DataSplitter.FileList]), -1)
 		else:
@@ -487,8 +492,10 @@ class DataSplitter(AbstractObject):
 				savelist = tmp
 			# Write files with infos / filelist
 			def flat((x, y, z)):
-				if isinstance(z, list):
-					return (x, y, str.join(',', z))
+				if x in [DataSplitter.Metadata, DataSplitter.MetadataHeader]:
+					return (x, y, repr(z))
+				elif isinstance(z, list):
+					return (x, y, str.join(",", z))
 				return (x, y, z)
 			for name, data in [('list', str.join('\n', savelist)), ('info', fmt.format(entry, fkt = flat))]:
 				info, file = utils.VirtualFile(os.path.join('%05d' % jobNum, name), data).getTarInfo()
@@ -532,6 +539,9 @@ class DataSplitter(AbstractObject):
 				if DataSplitter.SEList in data:
 					tmp = map(str.strip, data[DataSplitter.SEList].split(','))
 					data[DataSplitter.SEList] = filter(lambda x: x != '', tmp)
+				if DataSplitter.MetadataHeader in data:
+					data[DataSplitter.MetadataHeader] = eval(data[DataSplitter.MetadataHeader])
+					data[DataSplitter.Metadata] = eval(data[DataSplitter.Metadata])
 				fileList = self._cacheTar.extractfile('%05d/list' % key).readlines()
 				if DataSplitter.CommonPrefix in data:
 					fileList = map(lambda x: '%s/%s' % (data[DataSplitter.CommonPrefix], x), fileList)

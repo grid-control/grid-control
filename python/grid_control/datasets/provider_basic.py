@@ -5,9 +5,9 @@ from provider_base import DataProvider
 # Provides information about a single file
 # required format: <path to data file>|<number of events>[@SE1,SE2]
 class FileProvider(DataProvider):
+	DataProvider.providers.update({'FileProvider': 'file'})
 	def __init__(self, config, section, datasetExpr, datasetNick, datasetID = 0):
 		DataProvider.__init__(self, config, section, datasetExpr, datasetNick, datasetID)
-		DataProvider.providers.update({'FileProvider': 'file'})
 
 		(self._path, self._events, selist) = utils.optSplit(datasetExpr, '|@')
 		self._selist = None
@@ -33,9 +33,9 @@ class FileProvider(DataProvider):
 # Takes dataset information from an configuration file
 # required format: <path to list of data files>[@<forced prefix>][%<selected dataset>[#<selected block>]]
 class ListProvider(DataProvider):
+	DataProvider.providers.update({'ListProvider': 'list'})
 	def __init__(self, config, section, datasetExpr, datasetNick, datasetID = 0):
 		DataProvider.__init__(self, config, section, datasetExpr, datasetNick, datasetID)
-		DataProvider.providers.update({'ListProvider': 'list'})
 
 		(path, self._forcePrefix, self._filter) = utils.optSplit(datasetExpr, '@%')
 		self._filename = utils.resolvePath(path)

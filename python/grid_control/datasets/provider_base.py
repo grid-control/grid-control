@@ -2,7 +2,8 @@ import os, gzip, cStringIO, copy
 from grid_control import utils, AbstractObject, AbstractError, ConfigError
 
 class DataProvider(AbstractObject):
-	dataInfos = ('Dataset', 'BlockName', 'NEvents', 'SEList', 'FileList', 'lfn', 'Nickname', 'DatasetID', 'Metadata')
+	# To uncover errors, the enums of DataProvider / DataSplitter do *NOT* match
+	dataInfos = ['NEvents', 'BlockName', 'Dataset', 'SEList', 'lfn', 'FileList', 'Nickname', 'DatasetID', 'Metadata']
 	for id, dataInfo in enumerate(dataInfos):
 		locals()[dataInfo] = id
 
@@ -23,11 +24,10 @@ class DataProvider(AbstractObject):
 
 
 	# Parse dataset format [NICK : [PROVIDER : [(/)*]]] DATASET
-	def parseDatasetExpr(expression, dbsProvider):
+	def parseDatasetExpr(expression, defaultProvider):
+		(nickname, provider, dataset) = ('', defaultProvider, None)
 		temp = map(str.strip, expression.split(':', 2))
-		nickname = ''
-		provider = dbsProvider
-		providerMap = { 'dbs': dbsProvider, 'file': 'FileProvider', 'list': 'ListProvider' }
+		providerMap = dict(map(lambda (x, y): (y, x), DataProvider.providers.items()))
 
 		if len(temp) == 3:
 			(nickname, provider, dataset) = temp
@@ -38,7 +38,7 @@ class DataProvider(AbstractObject):
 			(nickname, dataset) = temp
 		elif len(temp) == 1:
 			(dataset) = temp[0]
-			if provider == dbsProvider:
+			if provider == defaultProvider:
 				try:
 					nickname = dataset.split('/')[1]
 				except:

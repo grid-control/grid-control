@@ -55,6 +55,8 @@ class EventBoundarySplitter(DataSplitter):
 			nextEvent += available
 
 			job[DataSplitter.FileList].append(fileList[DataProvider.lfn])
+			if DataProvider.Metadata in block:
+				job.setdefault(DataSplitter.Metadata, []).append(fileList[DataProvider.Metadata])
 
 			if nextEvent >= succEvent:
 				succEvent += self.eventsPerJob
@@ -66,4 +68,4 @@ class EventBoundarySplitter(DataSplitter):
 		for block in blocks:
 			for job in self._splitJobs(block[DataProvider.FileList], firstEvent):
 				firstEvent = 0
-				yield self.cpBlockToJob(block, job)
+				yield self.cpBlockInfoToJob(block, job)

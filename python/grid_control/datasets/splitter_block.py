@@ -9,4 +9,6 @@ class BlockBoundarySplitter(DataSplitter):
 			files = block[DataProvider.FileList]
 			job[DataSplitter.FileList] = map(lambda x: x[DataProvider.lfn], files)
 			job[DataSplitter.NEvents] = sum(map(lambda x: x[DataProvider.NEvents], files))
-			yield self.cpBlockToJob(block, job)
+			if DataProvider.Metadata in block:
+				job[DataSplitter.Metadata] = map(lambda x: x[DataProvider.Metadata], files)
+			yield self.cpBlockInfoToJob(block, job)

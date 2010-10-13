@@ -9,21 +9,24 @@ class HybridSplitter(DataSplitter):
 
 	def splitDatasetInternal(self, blocks, firstEvent = 0):
 		for block in blocks:
-			(events, fileStack) = (0, [])
+			(events, fileStack, metaStack) = (0, [], [])
 
 			def returnSplit():
 				job = dict()
 				job[DataSplitter.Skipped] = 0
 				job[DataSplitter.FileList] = fileStack
 				job[DataSplitter.NEvents] = events
-				return self.cpBlockToJob(block, job)
+				if DataProvider.Metadata in block:
+					job[DataSplitter.Metadata] = metaStack
+				return self.cpBlockInfoToJob(block, job)
 
 			for fileInfo in block[DataProvider.FileList]:
 				nextEvents = events + fileInfo[DataProvider.NEvents]
 				if (len(fileStack) > 0) and (nextEvents > self.eventsPerJob):
 					yield returnSplit()
-					fileStack = []
-					events = 0
+					(events, fileStack, metaStack) = (0, [], [])
 				events += fileInfo[DataProvider.NEvents]
 				fileStack.append(fileInfo[DataProvider.lfn])
+				if DataProvider.Metadata in block:
+					metaStack.append(fileInfo[DataProvider.Metadata])
 			yield returnSplit()
