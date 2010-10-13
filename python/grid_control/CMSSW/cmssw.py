@@ -190,8 +190,6 @@ class CMSSW(DataMod):
 		data['GZIP_OUT'] = ('no', 'yes')[self.gzipOut]
 		data['SE_RUNTIME'] = ('no', 'yes')[self.seRuntime]
 		data['HAS_RUNTIME'] = ('no', 'yes')[len(self.projectArea) != 0]
-		if self.selectedLumis:
-			data['LUMI_RANGE'] = str.join(',', map(lambda x: '"%s"' % x, formatLumi(self.selectedLumis)))
 		return data
 
 
@@ -235,6 +233,13 @@ class CMSSW(DataMod):
 		data = DataMod.getJobConfig(self, jobNum)
 		if self.dataSplitter == None:
 			data['MAX_EVENTS'] = self.eventsPerJob
+
+		if self.selectedLumis:
+			runTag = splitInfo[DataSplitter.MetadataHeader].index("Runs")
+			runList = reduce(lambda x,y: x+y, map(lambda w: w[runTag], splitInfo[DataSplitter.Metadata]), [])
+			filterList = formatLumi(filterLumiFilter(runList, self.selectedLumis))
+			data['LUMI_RANGE'] = str.join(',', map(lambda x: '"%s"' % x, filterList))
+
 		return data
 
 

@@ -95,6 +95,21 @@ def parseLumiFilter(lumiexpr):
 	return mergeLumi(lumis)
 
 
+def filterLumiFilter(runs, lumifilter):
+	""" Check if lumifilter selects the given run/lumi
+	>>> formatLumi(filterLumiFilter([2,3,6], [([1, None], [2, None]), ([4, 1], [4, None]), ([5, 1], [None,3])]))
+	['1:MIN-2:MAX', '5:1-9999999:3']
+	>>> formatLumi(filterLumiFilter([2,3,6], [([1, 1], [2, 2]), ([3, 1], [5, 2]), ([5, 2], [7,3])]))
+	['1:1-2:2', '3:1-5:2', '5:2-7:3']
+	"""
+	for filterEntry in lumifilter:
+		(sel_start, sel_end) = (filterEntry[0][0], filterEntry[1][0])
+		for run in runs:
+			if (sel_start == None) or (run >= sel_start):
+				if (sel_end == None) or (run <= sel_end):
+					yield filterEntry
+
+
 def selectLumi(run_lumi, lumifilter):
 	""" Check if lumifilter selects the given run/lumi
 	>>> selectLumi((1,2), [([1, None], [2, None])])

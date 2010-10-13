@@ -14,9 +14,9 @@ def createDBSAPI(url):
 
 # required format: <dataset path>[@<instance>][#<block>]
 class DBSApiv2(DataProvider):
+	DataProvider.providers.update({'DBSApiv2': 'dbs'})
 	def __init__(self, config, section, datasetExpr, datasetNick, datasetID = 0):
 		DataProvider.__init__(self, config, section, datasetExpr, datasetNick, datasetID)
-		DataProvider.providers.update({'DBSApiv2': 'dbs'})
 		# PhEDex blacklist: '-T1_DE_KIT', '-T1_US_FNAL' allow user jobs
 		phedexBL = ['-T0_CH_CERN', '-T1_CH_CERN', '-T1_ES_PIC', '-T1_FR_CCIN2P3', '-T1_IT_CNAF', '-T1_TW_ASGC', '-T1_UK_RAL']
 		self.phedexBL = map(str.strip, self.setup(config.get, section, 'phedex sites', str.join(' ', phedexBL)).split())

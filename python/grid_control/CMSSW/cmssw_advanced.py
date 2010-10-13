@@ -78,8 +78,6 @@ class CMSSW_Advanced(cmssw.CMSSW):
 		# Remove config file variable from the global settings
 		data = cmssw.CMSSW.getTaskConfig(self)
 		data.pop('CMSSW_CONFIG')
-		if self.nmLumi and 'LUMI_RANGE' in data:
-			data.pop('LUMI_RANGE')
 		return data
 
 
