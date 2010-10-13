@@ -92,14 +92,7 @@ def main(args):
 			return 0
 
 		# Initialise monitoring module
-		monitor = config.get('jobs', 'monitor', 'scripts', volatile=True)
-		try:
-			if config.getBool('jobs', 'monitor job', volatile=True):
-				monitor = "dashboard,scripts"
-			utils.deprecated("Please use [jobs] monitor = dashboard!")
-		except:
-			pass
-		monitor = MonitoringMultiplexer(config, module, monitor)
+		monitor = MonitoringMultiplexer(config, module, config.get('jobs', 'monitor', 'scripts'))
 
 		# Initialise workload management interface
 		backend = config.get('global', 'backend', 'grid')
