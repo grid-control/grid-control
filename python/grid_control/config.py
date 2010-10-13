@@ -21,24 +21,35 @@ class Config:
 
 
 	def parseFile(self, parser, configFile):
-		def parseFileInt(fn):
+		def parseFileInt(fn, doExpansion = True):
 			try:
 				parser.readfp(open(fn, 'r'))
+				# Expand config option extensions with "+="
+				for section in parser.sections():
+					for option in filter(lambda x: x.endswith("+"), parser.options(section)):
+						if doExpansion:
+							if parser.has_option(section, option.rstrip("+").strip()):
+								value = self.parseLine(parser, section, option.rstrip("+").strip()) + "\n"
+							else:
+								value = ''
+							value += self.parseLine(parser, section, option)
+							self.set(section, option.rstrip("+").strip(), value)
+						parser.remove_option(section, option)
 			except:
 				raise RethrowError("Error while reading configuration file '%s'!" % fn)
 		userDefaultsFile = utils.resolvePath("~/.grid-control.conf", check = False)
 		if os.path.exists(userDefaultsFile):
 			parseFileInt(userDefaultsFile)
-		parseFileInt(configFile)
+		parseFileInt(configFile, False)
 		# Read default values and reread main config file
 		for includeFile in self.getPaths("global", "include", ''):
 			parseFileInt(includeFile)
 		parseFileInt(configFile)
 
 
-	def parseLine(self, parser, section, item):
+	def parseLine(self, parser, section, option):
 		# Split into lines, remove comments and return merged result
-		lines = parser.get(section, item).splitlines()
+		lines = parser.get(section, option).splitlines()
 		lines = map(lambda x: x.split(';')[0].strip(), lines)
 		return str.join("\n", filter(lambda x: x != '', lines))
 
