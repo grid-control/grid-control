@@ -58,10 +58,6 @@ elif opts.files:
 		print f
 		print
 
-elif opts.listlumis:
-	for lumi in api.listFileLumis(opts.listlumis):
-		print lumi["RunNumber"], lumi["LumiSectionNumber"]
-
 elif opts.dump:
 	print api.listDatasetContents(opts.dump.split("#")[0], opts.dump)
 
