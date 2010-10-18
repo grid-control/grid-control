@@ -1,5 +1,24 @@
-import os, gzip, cStringIO, copy
+import os, gzip, cStringIO, copy, random
 from grid_control import utils, AbstractObject, AbstractError, ConfigError
+
+class NickNameProducer(AbstractObject):
+	def __init__(self, config):
+		pass
+
+	def getName(self, oldnick, dataset):
+		return oldnick
+NickNameProducer.dynamicLoaderPath()
+
+
+class SimpleNickNameProducer(NickNameProducer):
+	def getName(self, oldnick, dataset):
+		if oldnick == '':
+			try:
+				return dataset.split('/')[1]
+			except:
+				pass
+		return oldnick
+
 
 class DataProvider(AbstractObject):
 	# To uncover errors, the enums of DataProvider / DataSplitter do *NOT* match
@@ -24,7 +43,7 @@ class DataProvider(AbstractObject):
 
 
 	# Parse dataset format [NICK : [PROVIDER : [(/)*]]] DATASET
-	def parseDatasetExpr(expression, defaultProvider):
+	def parseDatasetExpr(config, expression, defaultProvider):
 		(nickname, provider, dataset) = ('', defaultProvider, None)
 		temp = map(str.strip, expression.split(':', 2))
 		providerMap = dict(map(lambda (x, y): (y, x), DataProvider.providers.items()))
@@ -37,12 +56,10 @@ class DataProvider(AbstractObject):
 		elif len(temp) == 2:
 			(nickname, dataset) = temp
 		elif len(temp) == 1:
-			(dataset) = temp[0]
-			if provider == defaultProvider:
-				try:
-					nickname = dataset.split('/')[1]
-				except:
-					pass
+			dataset = temp[0]
+
+		nickProducer = config.get('dataset', 'nickname source', 'SimpleNickNameProducer')
+		nickname = NickNameProducer.open(nickProducer, config).getName(nickname, dataset)
 		return (nickname, provider, dataset)
 	parseDatasetExpr = staticmethod(parseDatasetExpr)
 
@@ -52,8 +69,8 @@ class DataProvider(AbstractObject):
 		if '\n' in dataset:
 			return DataProvider.open('DataMultiplexer', config, section, dataset, defaultProvider)
 		else:
-			(nick, provider, datasetExpr) = DataProvider.parseDatasetExpr(dataset, defaultProvider)
-			return DataProvider.open(provider, config, section, datasetExpr, nick, 0)
+			(dsNick, dsProv, dsExpr) = DataProvider.parseDatasetExpr(config, dataset, defaultProvider)
+			return DataProvider.open(dsProv, config, section, dsExpr, dsNick, 0)
 	create = staticmethod(create)
 
 
@@ -77,10 +94,10 @@ class DataProvider(AbstractObject):
 			allEvents = 0
 			# Validation, Filtering & Naming:
 			for block in self._cache:
-				if self._datasetNick:
-					block[DataProvider.Nickname] = self._datasetNick
 				if self._datasetID:
 					block[DataProvider.DatasetID] = self._datasetID
+				if self._datasetNick:
+					block[DataProvider.Nickname] = self._datasetNick
 
 				events = 0
 				for file in block[DataProvider.FileList]:

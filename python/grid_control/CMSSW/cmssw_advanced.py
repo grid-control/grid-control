@@ -46,7 +46,7 @@ class CMSSW_Advanced(cmssw.CMSSW):
 		self.nmLumi = parseMap(config.get(self.__class__.__name__, 'nickname lumi filter', ''), lumiParse)
 		if self.nmLumi:
 			for dataset in config.get(self.__class__.__name__, 'dataset', '').splitlines():
-				(datasetNick, datasetProvider, datasetExpr) = DataProvider.parseDatasetExpr(dataset, None)
+				(datasetNick, datasetProvider, datasetExpr) = DataProvider.parseDatasetExpr(config, dataset, None)
 				config.set('dataset %s' % datasetNick, 'lumi filter', str.join(',', self.fromNM(self.nmLumi, datasetNick, [])))
 			config.set(self.__class__.__name__, 'lumi filter', str.join(',', self.nmLumi.get(None, [])))
 			head.append((2, 'Lumi filter'))

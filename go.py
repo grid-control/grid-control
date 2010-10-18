@@ -3,7 +3,7 @@ import sys, os, signal, optparse
 
 # add python subdirectory from where go.py was started to search path
 sys.path.insert(1, os.path.join(sys.path[0], 'python'))
-
+sys.path.append(os.getcwd())
 # and include grid_control python module
 from grid_control import *
 

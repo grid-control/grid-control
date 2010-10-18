@@ -1,4 +1,4 @@
-import os, os.path, random, time
+import os, os.path, time
 from grid_control import Module, Config, GCError, ConfigError, UserError, utils, WMS
 from provider_base import DataProvider
 from splitter_base import DataSplitter

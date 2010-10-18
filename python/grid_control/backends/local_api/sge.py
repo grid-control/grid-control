@@ -9,7 +9,7 @@ class SGE(PBSGECommon):
 		reqMap = { WMS.MEMORY: ("h_vmem", lambda m: "%dM" % m),
 			WMS.WALLTIME: ("s_rt", timeStr), WMS.CPUTIME: ("h_cpu", timeStr) }
 		# Restart jobs = no
-		return ' -r n' + PBSGE.getSubmitArguments(self, jobNum, sandbox, stdout, stderr, addAttr, reqMap)
+		return ' -r n' + PBSGECommon.getSubmitArguments(self, jobNum, sandbox, stdout, stderr, addAttr, reqMap)
 
 
 	def parseSubmitOutput(self, data):

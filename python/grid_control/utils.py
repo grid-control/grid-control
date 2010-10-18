@@ -362,6 +362,7 @@ class AbstractObject:
 		def searchPath(cname):
 			cls.moduleMap = dict(map(lambda (k, v): (k.lower(), v), cls.moduleMap.items()))
 			name = cls.moduleMap.get(cname.lower(), cname)
+			yield name
 			yield "grid_control.%s" % name
 			for path in cls.modPath:
 				if not '.' in name:

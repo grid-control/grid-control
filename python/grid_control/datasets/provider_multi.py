@@ -12,7 +12,7 @@ class DataMultiplexer(DataProvider):
 		# Allow provider shortcuts
 		head = ['ID', 'Nickname', 'Dataset path']
 		for id, entry in enumerate(datasetExpr.splitlines()):
-			(datasetNick, provider, datasetExpr) = DataProvider.parseDatasetExpr(entry, defaultProvider)
+			(datasetNick, provider, datasetExpr) = DataProvider.parseDatasetExpr(config, entry, defaultProvider)
 			source = DataProvider.open(provider, config, section, datasetExpr, datasetNick, id)
 			dataUrl = '%s://%s' % (DataProvider.providers.get(provider, provider), datasetExpr)
 			self.subprovider.append(dict(zip(['src'] + head, [source, id, datasetNick, dataUrl])))

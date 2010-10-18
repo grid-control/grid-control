@@ -24,13 +24,13 @@ class EventBoundarySplitter(DataSplitter):
 		while True:
 			if curEvent >= lastEvent:
 				try:
-					fileList = next(fileListIter);
+					fileObj = next(fileListIter);
 				except StopIteration:
 					if len(job[DataSplitter.FileList]):
 						yield job
 					break
 
-				nEvents = fileList[DataProvider.NEvents]
+				nEvents = fileObj[DataProvider.NEvents]
 				if nEvents < 0:
 					raise DatasetError('EventBoundarySplitter does not support files with a negative number of events!')
 				curEvent = lastEvent
@@ -54,9 +54,9 @@ class EventBoundarySplitter(DataSplitter):
 			job[DataSplitter.NEvents] += available
 			nextEvent += available
 
-			job[DataSplitter.FileList].append(fileList[DataProvider.lfn])
-			if DataProvider.Metadata in block:
-				job.setdefault(DataSplitter.Metadata, []).append(fileList[DataProvider.Metadata])
+			job[DataSplitter.FileList].append(fileObj[DataProvider.lfn])
+			if DataProvider.Metadata in fileObj:
+				job.setdefault(DataSplitter.Metadata, []).append(fileObj[DataProvider.Metadata])
 
 			if nextEvent >= succEvent:
 				succEvent += self.eventsPerJob
