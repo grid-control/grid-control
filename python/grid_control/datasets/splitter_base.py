@@ -268,7 +268,7 @@ class DataSplitter(AbstractObject):
 
 		if interactive and (splitAdded or splitProcList):
 			preserve = utils.getUserBool('Preserve unchanged splittings with changed files?', True)
-			reorder = utils.getUserBool('Reorder jobs to close gaps?', True)
+			reorder = utils.getUserBool('Reorder jobs to close gaps?', False)
 		else:
 			preserve = config.getBool('dataset', 'resync preserve', True, volatile = True)
 			reorder = config.getBool('dataset', 'resync reorder', False, volatile = True)

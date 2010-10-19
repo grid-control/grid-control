@@ -442,10 +442,11 @@ url_copy_single_srm() {
 
 url_copy_connector() {
 	debug_helper $FUNCNAME "$@"
-	TMPCP="file://${MY_SCRATCH:-/tmp}/ucc.$USER.$RANDOM$RANDOM"
+	TMPCP="$GC_KEEPTMP"
+	[ -z "$GC_KEEPTMP" ] && TMPCP="file://${MY_SCRATCH:-/tmp}/ucc.$USER.$RANDOM$RANDOM"
 	print_and_eval "url_copy_single" "$1" "$TMPCP" || fail 106
 	print_and_eval "url_copy_single" "$TMPCP" "$2" || fail 106
-	url_rm "$TMPCP"
+	[ -z "$GC_KEEPTMP" ] && url_rm "$TMPCP"
 }
 
 # Copy one file at a time (1) -> (2)

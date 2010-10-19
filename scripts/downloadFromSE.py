@@ -142,6 +142,13 @@ DEFAULT: The default is to download the SE file and check them with MD5 hashes.
 		time.sleep(60)
 
 
+def dlfs_rm(path, msg):
+	procRM = se_utils.se_rm(path)
+	if procRM.wait() != 0:
+		print "\t\tUnable to remove %s!" % msg
+		utils.eprint(procRM.getMessage())
+
+
 def realmain(opts, args):
 	try:
 		proxy = Proxy.open(opts.proxy, Config(configDict={"proxy": {"ignore warnings": True}}))
@@ -214,6 +221,9 @@ def realmain(opts, args):
 			if se_utils.se_exists(os.path.dirname(outFilePath)).wait() != 0:
 				se_utils.se_mkdir(os.path.dirname(outFilePath)).wait()
 
+			checkPath = 'file:///tmp/dlfs.%s' % name_dest
+			if 'file://' in outFilePath:
+				checkPath = outFilePath
 			procCP = se_utils.se_copy(os.path.join(pathSE, name_dest), outFilePath)
 			if procCP.wait() != 0:
 				print "\n\t\tUnable to copy file from SE!"
@@ -224,13 +234,15 @@ def realmain(opts, args):
 			# Verify => compute md5hash
 			if opts.verify:
 				try:
-					hashLocal = md5sum(outFilePath)
-					print "(%s)" % gcSupport.prettySize(os.path.getsize(outFilePath)),
+					checkPath = checkPath.replace('file://', '')
+					print "(%s)" % gcSupport.prettySize(os.path.getsize(checkPath)),
+					hashLocal = md5sum(checkPath)
+					dlfs_rm('file://%s' % checkPath, 'SE file')
 				except KeyboardInterrupt:
 					raise
 				except:
-					print ""
 					hashLocal = None
+					print ""
 				print "=>", ('\33[0;91mFAIL\33[0m', '\33[0;92mMATCH\33[0m')[hash == hashLocal]
 				print "\t\tRemote site:", hash
 				print "\t\t Local site:", hashLocal
@@ -251,17 +263,12 @@ def realmain(opts, args):
 		for (hash, name_local, name_dest, pathSE) in files:
 			# Remove downloaded files in case of failure
 			if (failJob and opts.rmLocalFail) or (not failJob and opts.rmLocalOK):
-				localPath = os.path.join(opts.output, name_dest)
-				if se_utils.se_exists(localPath).wait() == 0:
-					procRM = se_utils.se_rm("file://%s" % localPath)
-					if procRM.wait() != 0:
-						print "\t\tUnable to remove local file!"
-						sys.stderr.write(se_utils.se_rm.lastlog)
+				outFilePath = os.path.join(opts.output, name_dest)
+				if se_utils.se_exists(outFilePath).wait() == 0:
+					dlfs_rm(outFilePath, 'local file')
 			# Remove SE files in case of failure
 			if (failJob and opts.rmSEFail)    or (not failJob and opts.rmSEOK):
-				if se_utils.se_rm(os.path.join(pathSE, name_dest)).wait() != 0:
-					print "\t\tUnable to remove SE file!"
-					utils.eprint(procRM.getMessage())
+				dlfs_rm(os.path.join(pathSE, name_dest), 'SE file')
 
 		if failJob:
 			incInfo("Failed downloads")
