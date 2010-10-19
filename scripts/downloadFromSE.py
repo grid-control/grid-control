@@ -168,11 +168,7 @@ def realmain(opts, args):
 	def incInfo(x):
 		infos[x] = infos.get(x, 0) + 1
 
-	if opts.shuffle:
-		random.shuffle(jobList)
-	else:
-		jobList.sort()
-	for jobNum in jobList:
+	def processSingleJob(jobNum):
 		print "Job %d:" % jobNum,
 
 		# Only run over finished and not yet downloaded jobs
@@ -183,22 +179,20 @@ def realmain(opts, args):
 			raise
 		except:
 			print "Could not load job status file %s!" % jobFile
-			continue
+			return
 		if job.state != Job.SUCCESS:
 			print "Job has not yet finished successfully!"
-			incInfo("Processing")
-			continue
+			return incInfo("Processing")
 		if job.get('download') == 'True' and not opts.markIgnoreDL:
 			print "All files already downloaded!"
-			incInfo("Downloaded")
-			continue
+			return incInfo("Downloaded")
 		retry = int(job.get('download attempt', 0))
 
 		failJob = False
 
 		if not proxy.canSubmit(20*60, True):
 			print "Please renew grid proxy!"
-			break
+			sys.exit(1)
 
 		# Read the file hash entries from job info file
 		files = gcSupport.getFileInfo(workDir, jobNum, lambda retCode: retCode == 0)
@@ -206,8 +200,7 @@ def realmain(opts, args):
 			if opts.markEmptyFailed:
 				failJob = True
 			else:
-				incInfo("No files")
-				continue
+				return incInfo("No files")
 		print "The job wrote %d file%s to the SE" % (len(files), ('s', '')[len(files) == 1])
 
 		for (hash, name_local, name_dest, pathSE) in files:
@@ -217,7 +210,7 @@ def realmain(opts, args):
 			outFilePath = os.path.join(opts.output, name_dest)
 			if opts.skipExisting and (se_utils.se_exists(outFilePath) == 0):
 				print "skip file as it already exists!"
-				continue
+				return
 			if se_utils.se_exists(os.path.dirname(outFilePath)).wait() != 0:
 				se_utils.se_mkdir(os.path.dirname(outFilePath)).wait()
 
@@ -237,7 +230,8 @@ def realmain(opts, args):
 					checkPath = checkPath.replace('file://', '')
 					print "(%s)" % gcSupport.prettySize(os.path.getsize(checkPath)),
 					hashLocal = md5sum(checkPath)
-					dlfs_rm('file://%s' % checkPath, 'SE file')
+					if 'file://' not in outFilePath:
+						dlfs_rm('file://%s' % checkPath, 'SE file')
 				except KeyboardInterrupt:
 					raise
 				except:
@@ -258,7 +252,7 @@ def realmain(opts, args):
 			job.set('download attempt', str(retry + 1))
 			incInfo("Download attempts")
 			job.save(jobFile)
-			continue
+			return
 
 		for (hash, name_local, name_dest, pathSE) in files:
 			# Remove downloaded files in case of failure
@@ -284,6 +278,13 @@ def realmain(opts, args):
 		# Save new job status infos
 		job.save(jobFile)
 		print
+
+	if opts.shuffle:
+		random.shuffle(jobList)
+	else:
+		jobList.sort()
+	for jobNum in jobList:
+		processSingleJob(jobNum) # could be done in parallel
 
 	# Print overview
 	if infos:
