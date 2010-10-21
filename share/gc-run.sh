@@ -30,8 +30,6 @@ echo
 checkvar MY_JOBID
 checkvar MY_LANDINGZONE
 checkvar MY_SCRATCH
-checkfile "$MY_LANDINGZONE/job_${MY_JOBID}.var"
-source "$MY_LANDINGZONE/job_${MY_JOBID}.var"
 export
 
 echo
@@ -59,7 +57,9 @@ checkfile "$MY_LANDINGZONE/sandbox.tar.gz"
 echo "Unpacking environment"
 tar xvfz "$MY_LANDINGZONE/sandbox.tar.gz" -C "$MY_SCRATCH" || fail 105
 
+checkfile "$MY_LANDINGZONE/job_${MY_JOBID}.var"
 checkfile "$MY_SCRATCH/_config.sh"
+cat "$MY_LANDINGZONE/job_${MY_JOBID}.var" >> "$MY_SCRATCH/_config.sh"
 source "$MY_SCRATCH/_config.sh"
 
 echo "Prepare variable substitution"

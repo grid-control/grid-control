@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-import gcSupport, sys, os, optparse, popen2, time, random
+import gcSupport, sys, os, optparse, popen2, time, random, threading
 from grid_control import *
 from grid_control import se_utils
 from grid_control.proxy import Proxy
@@ -137,16 +137,20 @@ DEFAULT: The default is to download the SE file and check them with MD5 hashes.
 		sys.exit(0)
 
 	while True:
-		if (realmain(opts, args) or not opts.loop) and not opts.infinite:
-			break
-		time.sleep(60)
+		try:
+			if (realmain(opts, args) or not opts.loop) and not opts.infinite:
+				break
+			time.sleep(60)
+		except KeyboardInterrupt:
+			print "\n\nDownload aborted!\n"
+			sys.exit(1)
 
 
 def dlfs_rm(path, msg):
 	procRM = se_utils.se_rm(path)
 	if procRM.wait() != 0:
 		print "\t\tUnable to remove %s!" % msg
-		utils.eprint(procRM.getMessage())
+		utils.eprint("%s\n\n" % procRM.getMessage())
 
 
 def realmain(opts, args):
@@ -205,6 +209,7 @@ def realmain(opts, args):
 
 		for (hash, name_local, name_dest, pathSE) in files:
 			print "\t", name_dest,
+			sys.stdout.flush()
 
 			# Copy files to local folder
 			outFilePath = os.path.join(opts.output, name_dest)
@@ -217,8 +222,28 @@ def realmain(opts, args):
 			checkPath = 'file:///tmp/dlfs.%s' % name_dest
 			if 'file://' in outFilePath:
 				checkPath = outFilePath
-			procCP = se_utils.se_copy(os.path.join(pathSE, name_dest), outFilePath)
-			if procCP.wait() != 0:
+
+			myGetSize = lambda x: "(%7s)" % gcSupport.prettySize(os.path.getsize(x.replace('file://', '')))
+			def monitorFile(path, lock):
+				while not lock.acquire(False):
+					try:
+						print "\r\t", name_dest, myGetSize(path),
+						sys.stdout.flush()
+					except:
+						pass
+					time.sleep(1)
+				lock.release()
+			monitorLock = threading.Lock()
+			monitorLock.acquire()
+			monitor = threading.Thread(target = monitorFile, args = (checkPath, monitorLock))
+			monitor.start()
+			try:
+				procCP = se_utils.se_copy(os.path.join(pathSE, name_dest), outFilePath, tmp = checkPath)
+				result = procCP.wait()
+			finally:
+				monitorLock.release()
+				monitor.join()
+			if result != 0:
 				print "\n\t\tUnable to copy file from SE!"
 				print procCP.getMessage()
 				failJob = True
@@ -227,10 +252,8 @@ def realmain(opts, args):
 			# Verify => compute md5hash
 			if opts.verify:
 				try:
-					checkPath = checkPath.replace('file://', '')
-					print "(%s)" % gcSupport.prettySize(os.path.getsize(checkPath)),
-					hashLocal = md5sum(checkPath)
-					if 'file://' not in outFilePath:
+					hashLocal = md5sum(checkPath.replace('file://', ''))
+					if not ('file://' in outFilePath):
 						dlfs_rm('file://%s' % checkPath, 'SE file')
 				except KeyboardInterrupt:
 					raise
@@ -257,12 +280,15 @@ def realmain(opts, args):
 		for (hash, name_local, name_dest, pathSE) in files:
 			# Remove downloaded files in case of failure
 			if (failJob and opts.rmLocalFail) or (not failJob and opts.rmLocalOK):
+				sys.stdout.write("\tDeleting file %s from local...\r" % name_dest)
 				outFilePath = os.path.join(opts.output, name_dest)
 				if se_utils.se_exists(outFilePath).wait() == 0:
 					dlfs_rm(outFilePath, 'local file')
 			# Remove SE files in case of failure
 			if (failJob and opts.rmSEFail)    or (not failJob and opts.rmSEOK):
+				sys.stdout.write("\tDeleting file %s...\r" % name_dest)
 				dlfs_rm(os.path.join(pathSE, name_dest), 'SE file')
+			print "%s\r" % (' ' * len("\tDeleting file %s from SE...\r" % name_dest))
 
 		if failJob:
 			incInfo("Failed downloads")
