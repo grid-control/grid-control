@@ -92,10 +92,10 @@ class DataMod(Module):
 			utils.vprint('Job number: %d' % jobNum)
 			DataSplitter.printInfoForJob(splitInfo)
 
-		data['MAX_EVENTS'] = splitInfo[DataSplitter.NEvents]
-		data['SKIP_EVENTS'] = splitInfo[DataSplitter.Skipped]
 		if not self.includeMap:
 			data['FILE_NAMES'] = self.formatFileList(splitInfo[DataSplitter.FileList])
+		data['MAX_EVENTS'] = splitInfo[DataSplitter.NEvents]
+		data['SKIP_EVENTS'] = splitInfo.get(DataSplitter.Skipped, 0)
 		data['DATASETID'] = splitInfo.get(DataSplitter.DatasetID, None)
 		data['DATASETPATH'] = splitInfo.get(DataSplitter.Dataset, None)
 		data['DATASETNICK'] = splitInfo.get(DataSplitter.Nickname, None)

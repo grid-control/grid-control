@@ -233,13 +233,15 @@ class CMSSW(DataMod):
 		data = DataMod.getJobConfig(self, jobNum)
 		if self.dataSplitter == None:
 			data['MAX_EVENTS'] = self.eventsPerJob
-
 		if self.selectedLumis:
-			runTag = splitInfo[DataSplitter.MetadataHeader].index("Runs")
-			runList = reduce(lambda x,y: x+y, map(lambda w: w[runTag], splitInfo[DataSplitter.Metadata]), [])
-			filterList = formatLumi(filterLumiFilter(runList, self.selectedLumis))
-			data['LUMI_RANGE'] = str.join(',', map(lambda x: '"%s"' % x, filterList))
-
+			getLR = lambda x: str.join(',', map(lambda x: '"%s"' % x, formatLumi(x)))
+			if self.dataSplitter == None:
+				data['LUMI_RANGE'] = getLR(self.selectedLumis)
+			else:
+				splitInfo = self.dataSplitter.getSplitInfo(jobNum)
+				runTag = splitInfo[DataSplitter.MetadataHeader].index("Runs")
+				runList = reduce(lambda x,y: x+y, map(lambda w: w[runTag], splitInfo[DataSplitter.Metadata]), [])
+				data['LUMI_RANGE'] = getLR(filterLumiFilter(runList, self.selectedLumis))
 		return data
 
 

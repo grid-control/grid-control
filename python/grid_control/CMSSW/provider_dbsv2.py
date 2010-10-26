@@ -58,7 +58,7 @@ class DBSApiv2(DataProvider):
 			# Start thread to retrieve list of files
 			(listFileInfo, seList) = ([], {})
 			def listFileInfoThread(self, result):
-				result.extend(api.listFiles(self.datasetPath, retriveList=(['retrive_lumi'], [])[self.selectedLumis == '' ]))
+				result.extend(api.listFiles(self.datasetPath, retriveList=(['retrive_lumi'], [])[self.selectedLumis == None]))
 			tFile = threading.Thread(target = listFileInfoThread, args = (self, listFileInfo))
 			tFile.start()
 			# Get dataset list from PhEDex (concurrent with listFiles)

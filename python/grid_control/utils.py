@@ -185,12 +185,6 @@ def wait(timeout):
 	return True
 
 
-def deprecated(text):
-	eprint("%s\n[DEPRECATED] %s" % (open(pathGC('share', 'fail.txt'), 'r').read(), text))
-	if not getUserBool('Do you want to continue?', False):
-		sys.exit(0)
-
-
 class VirtualFile(StringIO.StringIO):
 	def __init__(self, name, lines):
 		StringIO.StringIO.__init__(self, str.join('', lines))
@@ -214,6 +208,10 @@ def parseType(x):
 		return x
 
 
+def parseList(x, delimeter = ',', doFilter = lambda x: True):
+	return filter(doFilter, map(str.strip, x.split(delimeter)))
+
+
 class DictFormat(object):
 	# escapeString = escape '"', '$'
 	# types = preserve type information
@@ -223,7 +221,7 @@ class DictFormat(object):
 		self.escapeString = escapeString
 
 	# Parse dictionary lists
-	def parse(self, lines, lowerCaseKey = True, keyRemap = {}):
+	def parse(self, lines, lowerCaseKey = True, keyRemap = {}, valueParser = {}):
 		data = {}
 		currentline = ''
 		doAdd = False
@@ -252,7 +250,7 @@ class DictFormat(object):
 					value = parseType(value)
 					key = parseType(key)
 				# do .encode('utf-8') ?
-				data[keyRemap.get(key, key)] = value
+				data[keyRemap.get(key, key)] = valueParser.get(key, lambda x: x)(value)
 			except:
 				# in case no delimeter was found
 				pass
@@ -280,13 +278,7 @@ class DictFormat(object):
 
 def shellEscape(value):
 	repl = { '\\': r'\\', '\"': r'\"', '$': r'\$' }
-	def replace(char):
-		try:
-			return repl[char]
-		except:
-			return char
-
-	return '"' + str.join('', map(replace, value)) + '"'
+	return '"' + str.join('', map(lambda x: repl.get(x, x), value)) + '"'
 
 
 def parseTime(usertime):
@@ -574,6 +566,12 @@ def printTabular(head, data, fmtString = '', fmt = {}, level = -1):
 			vprint("-%s-" % str.join("-+-", applyFmt(lambda id: '-' * maxlen[id])), level)
 		else:
 			vprint(" %s " % str.join(" | ", applyFmt(lambda id: entry.get(id, ''))), level)
+
+
+def deprecated(text):
+	eprint("%s\n[DEPRECATED] %s" % (open(pathGC('share', 'fail.txt'), 'r').read(), text))
+	if not getUserBool('Do you want to continue?', False):
+		sys.exit(0)
 
 
 def exitWithUsage(usage, msg = None):

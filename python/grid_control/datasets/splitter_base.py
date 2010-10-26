@@ -18,11 +18,7 @@ class DataSplitter(AbstractObject):
 
 
 	def setup(self, func, item, default = None):
-		try:
-			self._protocol[item] = func(self._section, item, default)
-		except:
-			# Support for older job mappings
-			self._protocol[item] = func(self._section, item.replace(' ', ''), default)
+		self._protocol[item] = func(self._section, item, default)
 		return self._protocol[item]
 
 
@@ -30,7 +26,14 @@ class DataSplitter(AbstractObject):
 		return [DataSplitter.FileList]
 
 
-	def cpBlockInfoToJob(self, block, job):
+	def finaliseJobSplitting(self, block, job, files = None):
+		# Helper for very simple splitter
+		if files:
+			job[DataSplitter.FileList] = map(lambda x: x[DataProvider.lfn], files)
+			job[DataSplitter.NEvents] = sum(map(lambda x: x[DataProvider.NEvents], files))
+			if DataProvider.Metadata in block:
+				job[DataSplitter.Metadata] = map(lambda x: x[DataProvider.Metadata], files)
+		# Copy infos from block
 		for prop in ['Dataset', 'BlockName', 'DatasetID', 'Nickname', 'SEList']:
 			if getattr(DataProvider, prop) in block:
 				job[getattr(DataSplitter, prop)] = block[getattr(DataProvider, prop)]
@@ -166,6 +169,7 @@ class DataSplitter(AbstractObject):
 					result[fileInfo[DataProvider.lfn]] = fileInfo
 			return result
 		oldFileInfoMap = getFileDict(oldBlocks)
+		newFileInfoMap = getFileDict(newBlocks)
 
 		# Return lists with expanded / shrunk files
 		# Input is the affected set taken from newBlocks
@@ -245,7 +249,7 @@ class DataSplitter(AbstractObject):
 
 		def getChangeOverview(blocks, title):
 			utils.vprint('-' * 15 + ('%s files' % title).center(15) + '-' * 15, -1)
-			(changedJobs, NFiles) = getAffectedJobs(blocksExpanded)
+			(changedJobs, NFiles) = getAffectedJobs(blocks)
 			utils.vprint('%d files have %s in size:' % (NFiles, title.lower()), -1)
 			utils.vprint('This affects the following %d jobs: %s' % (len(changedJobs), sorted(changedJobs.keys())), -1)
 			utils.vprint(level = -1)
@@ -263,7 +267,7 @@ class DataSplitter(AbstractObject):
 			addSplitProc(expandJobs, getMode('expand', Resync.append, desc))
 
 		if blocksShrunken:
-			shrinkJobs = getChangeOverview(blocksExpanded, 'Expanded')
+			shrinkJobs = getChangeOverview(blocksShrunken, 'Shrunken')
 			addSplitProc(shrinkJobs, getMode('shrink', Resync.append, descBuilder('shrunken')))
 
 		if interactive and (splitAdded or splitProcList):
@@ -390,11 +394,15 @@ class DataSplitter(AbstractObject):
 
 			return newSplit
 
-		firstFileSELookup = {}
+		blockFQN = lambda src, x: (x[src.Dataset], x[src.BlockName])
+		seBlockMap = dict(map(lambda x: (blockFQN(DataProvider, x), x[DataProvider.SEList]), newBlocks))
 
 		# Iterate over existing job splittings and modifiy them as specified
 		doExpandOutside = DataSplitter.Skipped in self.neededVars()
+		log = None
 		for jobNum in range(self.getMaxJobs()):
+			del log
+			log = utils.ActivityLog('Resynchronization of job splittings [%d/%d]' % (jobNum, self.getMaxJobs()))
 			splitInfo = self.getSplitInfo(jobNum)
 			mode = splitProcMode.get(jobNum, None)
 			if mode:
@@ -432,18 +440,13 @@ class DataSplitter(AbstractObject):
 					resultDisable.append(jobNum)
 					splitInfo[DataSplitter.Invalid] = True
 
+			# Update metadata
+			if DataSplitter.Metadata in splitInfo:
+				getMetadata = lambda x: newFileInfoMap[x][DataSplitter.Metadata]
+				splitInfo[DataSplitter.Metadata] = map(getMetadata, splitInfo[DataSplitter.FileList])
+			# Update SE list of jobs
+			splitInfo[DataSplitter.SEList] = seBlockMap[blockFQN(DataSplitter, splitInfo)]
 			result.append(splitInfo)
-
-			# To update SE list: Create mapping between first filename and splitting
-			if len(splitInfo[DataSplitter.FileList]) > 0:
-				firstFileSELookup[splitInfo[DataSplitter.FileList][0]] = splitInfo
-
-		# Update SE list of jobs
-		for block in newBlocks:
-			for fileInfo in block[DataProvider.FileList]:
-				if fileInfo[DataProvider.lfn] in firstFileSELookup:
-					firstFileSELookup[fileInfo[DataProvider.lfn]][DataSplitter.SEList] = block.get(DataProvider.SEList, None)
-					break
 
 		for splitInfo in splitAdded:
 			result.append(splitInfo)
@@ -524,8 +527,7 @@ class DataSplitter(AbstractObject):
 				self._tar = tarfile.open(path, 'r:')
 				(self._cacheKey, self._cacheTar) = (None, None)
 
-				metadata = self._tar.extractfile('Metadata').readlines()
-				self.metadata = self._fmt.parse(metadata, lowerCaseKey = False)
+				self.metadata = self._fmt.parse(self._tar.extractfile('Metadata').readlines(), lowerCaseKey = False)
 				self.maxJobs = self.metadata.pop('MaxJobs')
 				self.classname = self.metadata.pop('ClassName')
 				del log
@@ -535,13 +537,9 @@ class DataSplitter(AbstractObject):
 					self._cacheKey = key / 100
 					subTarFileObj = self._tar.extractfile('%03dXX.tgz' % (key / 100))
 					self._cacheTar = tarfile.open(mode = 'r:gz', fileobj = subTarFileObj)
-				data = self._fmt.parse(self._cacheTar.extractfile('%05d/info' % key).readlines())
-				if DataSplitter.SEList in data:
-					tmp = map(str.strip, data[DataSplitter.SEList].split(','))
-					data[DataSplitter.SEList] = filter(lambda x: x != '', tmp)
-				if DataSplitter.MetadataHeader in data:
-					data[DataSplitter.MetadataHeader] = eval(data[DataSplitter.MetadataHeader])
-					data[DataSplitter.Metadata] = eval(data[DataSplitter.Metadata])
+				parserMap = { DataSplitter.SEList: utils.parseList,
+					DataSplitter.MetadataHeader: eval, DataSplitter.Metadata: lambda x: eval(x.strip("'")) }
+				data = self._fmt.parse(self._cacheTar.extractfile('%05d/info' % key).readlines(), valueParser=parserMap)
 				fileList = self._cacheTar.extractfile('%05d/list' % key).readlines()
 				if DataSplitter.CommonPrefix in data:
 					fileList = map(lambda x: '%s/%s' % (data[DataSplitter.CommonPrefix], x), fileList)
