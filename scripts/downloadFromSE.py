@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 import gcSupport, sys, os, optparse, popen2, time, random, threading
 from grid_control import *
-from grid_control import se_utils
+from grid_control import storage
 from grid_control.proxy import Proxy
 
 def md5sum(filename):
@@ -147,7 +147,7 @@ DEFAULT: The default is to download the SE file and check them with MD5 hashes.
 
 
 def dlfs_rm(path, msg):
-	procRM = se_utils.se_rm(path)
+	procRM = storage.se_rm(path)
 	if procRM.wait() != 0:
 		print "\t\tUnable to remove %s!" % msg
 		utils.eprint("%s\n\n" % procRM.getMessage())
@@ -213,11 +213,11 @@ def realmain(opts, args):
 
 			# Copy files to local folder
 			outFilePath = os.path.join(opts.output, name_dest)
-			if opts.skipExisting and (se_utils.se_exists(outFilePath) == 0):
+			if opts.skipExisting and (storage.se_exists(outFilePath) == 0):
 				print "skip file as it already exists!"
 				return
-			if se_utils.se_exists(os.path.dirname(outFilePath)).wait() != 0:
-				se_utils.se_mkdir(os.path.dirname(outFilePath)).wait()
+			if storage.se_exists(os.path.dirname(outFilePath)).wait() != 0:
+				storage.se_mkdir(os.path.dirname(outFilePath)).wait()
 
 			checkPath = 'file:///tmp/dlfs.%s' % name_dest
 			if 'file://' in outFilePath:
@@ -238,7 +238,7 @@ def realmain(opts, args):
 			monitor = threading.Thread(target = monitorFile, args = (checkPath, monitorLock))
 			monitor.start()
 			try:
-				procCP = se_utils.se_copy(os.path.join(pathSE, name_dest), outFilePath, tmp = checkPath)
+				procCP = storage.se_copy(os.path.join(pathSE, name_dest), outFilePath, tmp = checkPath)
 				result = procCP.wait()
 			finally:
 				monitorLock.release()
@@ -282,7 +282,7 @@ def realmain(opts, args):
 			if (failJob and opts.rmLocalFail) or (not failJob and opts.rmLocalOK):
 				sys.stdout.write("\tDeleting file %s from local...\r" % name_dest)
 				outFilePath = os.path.join(opts.output, name_dest)
-				if se_utils.se_exists(outFilePath).wait() == 0:
+				if storage.se_exists(outFilePath).wait() == 0:
 					dlfs_rm(outFilePath, 'local file')
 			# Remove SE files in case of failure
 			if (failJob and opts.rmSEFail)    or (not failJob and opts.rmSEOK):

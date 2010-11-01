@@ -1,6 +1,6 @@
 import os, sys, shutil
 from python_compat import *
-from grid_control import ConfigError, WMS, utils, se_utils, datasets
+from grid_control import ConfigError, WMS, utils, storage, datasets
 from grid_control.datasets import DataMod
 from lumi_tools import *
 
@@ -120,7 +120,7 @@ class CMSSW(DataMod):
 				sys.stdout.flush()
 				source = 'file:///' + os.path.join(config.workDir, 'runtime.tar.gz')
 				target = os.path.join(sePath, self.taskID + '.tar.gz')
-				proc = se_utils.se_copy(source, target, config.getBool(self.__class__.__name__, 'se runtime force', True))
+				proc = storage.se_copy(source, target, config.getBool(self.__class__.__name__, 'se runtime force', True))
 				if proc.wait() == 0:
 					utils.vprint('finished', -1)
 				else:
@@ -235,7 +235,7 @@ class CMSSW(DataMod):
 			data['MAX_EVENTS'] = self.eventsPerJob
 		if self.selectedLumis:
 			getLR = lambda x: str.join(',', map(lambda x: '"%s"' % x, formatLumi(x)))
-			if self.dataSplitter == None:
+			if True or (self.dataSplitter == None):
 				data['LUMI_RANGE'] = getLR(self.selectedLumis)
 			else:
 				splitInfo = self.dataSplitter.getSplitInfo(jobNum)

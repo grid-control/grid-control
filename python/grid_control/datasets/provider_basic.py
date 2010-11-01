@@ -10,24 +10,19 @@ class FileProvider(DataProvider):
 		DataProvider.__init__(self, config, section, datasetExpr, datasetNick, datasetID)
 
 		(self._path, self._events, selist) = utils.optSplit(datasetExpr, '|@')
-		self._selist = None
-		if selist:
-			self._selist = map(str.strip, selist.split(','))
+		self._selist = utils.parseList(selist, onEmpty = None)
 		if not (self._path and self._events):
 			raise ConfigError('Invalid dataset expression!\nCorrect: /local/path/to/file|events[@SE1,SE2]')
 
 
 	def getBlocksInternal(self):
-		return [{
+		yield {
 			DataProvider.Dataset: self._path,
-			DataProvider.BlockName: str(hash(self._path)),
-			DataProvider.NEvents: int(self._events),
 			DataProvider.SEList: self._selist,
 			DataProvider.FileList: [{
-				DataProvider.lfn: self._path,
-				DataProvider.NEvents: int(self._events)
+				DataProvider.lfn: self._path, DataProvider.NEvents: int(self._events)
 			}]
-		}]
+		}
 
 
 # Takes dataset information from an configuration file
@@ -44,15 +39,11 @@ class ListProvider(DataProvider):
 	def getBlocksInternal(self):
 		blockinfo = None
 
-		def doFilter(blockinfo):
-			name = self._filter
+		def doFilter(block):
 			if self._filter:
-				name = blockinfo[DataProvider.Dataset]
-				if DataProvider.BlockName in blockinfo and '#' in self._filter:
-					name = '%s#%s' % (name, blockinfo[DataProvider.BlockName])
-			if name.startswith(self._filter):
-				return True
-			return False
+				name = '%s#%s' % (block[DataProvider.Dataset], block.get(DataProvider.BlockName, ''))
+				return self._filter in name
+			return True
 
 		for line in open(self._filename, 'rb'):
 			# Found start of block:
@@ -62,16 +53,12 @@ class ListProvider(DataProvider):
 			elif line.startswith('['):
 				if blockinfo and doFilter(blockinfo):
 					yield blockinfo
-				blockinfo = dict()
+				blockinfo = { DataProvider.SEList: None, DataProvider.FileList: [] }
 				blockname = line.lstrip('[').rstrip(']').split('#')
 				if len(blockname) > 0:
 					blockinfo[DataProvider.Dataset] = blockname[0]
 				if len(blockname) > 1:
 					blockinfo[DataProvider.BlockName] = blockname[1]
-				else:
-					blockinfo[DataProvider.BlockName] = '0'
-				blockinfo[DataProvider.SEList] = None
-				blockinfo[DataProvider.FileList] = []
 				commonprefix = self._forcePrefix
 			elif line != '':
 				tmp = map(str.strip, rsplit(line, '=', 1))
@@ -87,9 +74,7 @@ class ListProvider(DataProvider):
 				elif key.lower() == 'metadata':
 					blockinfo[DataProvider.Metadata] = eval(value)
 				elif key.lower() == 'se list':
-					if value.lower().strip() != 'none':
-						tmp = filter(lambda x: x != '', map(str.strip, value.split(',')))
-						blockinfo[DataProvider.SEList] = tmp
+					blockinfo[DataProvider.SEList] = utils.parseList(value)
 				elif key.lower() == 'prefix':
 					if not self._forcePrefix:
 						commonprefix = value

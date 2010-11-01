@@ -51,7 +51,7 @@ class DBSApiv2(DataProvider):
 
 
 	def getBlocksInternal(self):
-		import urllib2, threading
+		import urllib2
 		api = createDBSAPI(self.url)
 		try:
 			listBlockInfo = api.listBlocks(self.datasetPath, nosite=True)
@@ -59,8 +59,7 @@ class DBSApiv2(DataProvider):
 			(listFileInfo, seList) = ([], {})
 			def listFileInfoThread(self, result):
 				result.extend(api.listFiles(self.datasetPath, retriveList=(['retrive_lumi'], [])[self.selectedLumis == None]))
-			tFile = threading.Thread(target = listFileInfoThread, args = (self, listFileInfo))
-			tFile.start()
+			tFile = utils.gcStartThread(listFileInfoThread, self, listFileInfo)
 			# Get dataset list from PhEDex (concurrent with listFiles)
 			phedexArgFmt = lambda x: ('block=%s' % x['Name']).replace('/', '%2F').replace('#', '%23')
 			phedexArg = str.join('&', map(phedexArgFmt, listBlockInfo))

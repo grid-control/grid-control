@@ -29,7 +29,5 @@ class UserMod(DataMod):
 
 
 	def getOutFiles(self):
-		stdfiles = [ 'job.stdout', 'job.stderr' ]
-		if self.gzipOut:
-			stdfiles = map(lambda s: s + '.gz', stdfiles)
-		return DataMod.getOutFiles(self) + stdfiles
+		tmp = map(lambda s: s + ('', '.gz')[self.gzipOut], ['job.stdout', 'job.stderr'])
+		return DataMod.getOutFiles(self) + tmp

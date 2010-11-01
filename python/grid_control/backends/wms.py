@@ -1,7 +1,7 @@
 # Generic base class for workload management systems
 
 from python_compat import *
-import sys, os, time, stat, shutil, tarfile, glob
+import sys, os, time, stat, shutil, tarfile, glob, itertools
 from grid_control import AbstractObject, AbstractError, ConfigError, RuntimeError, RethrowError, UserError, utils, Proxy
 
 class WMS(AbstractObject):
@@ -18,8 +18,6 @@ class WMS(AbstractObject):
 		# Initialise proxy
 		self.proxy = Proxy.open(config.get(backend, 'proxy', defaultproxy, volatile=True), config)
 
-		self.checkSE = config.getBool(backend, 'check storage', True, volatile=True)
-
 		self._outputPath = os.path.join(config.workDir, 'output')
 		if not os.path.exists(self._outputPath):
 			if config.opts.init:
@@ -32,17 +30,26 @@ class WMS(AbstractObject):
 
 		tarFile = os.path.join(config.workDir, 'sandbox.tar.gz')
 		self.sandboxIn = [ utils.pathGC('share', 'gc-run.sh'), utils.pathGC('share', 'gc-run.lib'), tarFile ]
-		self.sandboxOut = [ 'gc.stdout', 'gc.stderr', 'job.info' ] + module.getOutFiles()
+		self.sandboxOut = itertools.chain(['gc.stdout', 'gc.stderr', 'job.info'], module.getOutFiles())
 
-		# Put files into sandbox file
-		inFiles = self.getSandboxFiles()
+		# Prepare all input files
+		taskEnv = utils.mergeDicts([self.monitor.getEnv(self), self.module.getTaskConfig()])
+		taskConfig = sorted(utils.DictFormat(escapeString = True).format(taskEnv, format = 'export %s%s%s\n'))
+		varMapping = sorted(utils.DictFormat(' ').format(self.module.getVarMapping(), format = '%s%s%s\n'))
+		depFiles = map(lambda x: utils.pathGC('share', 'env.%s.sh' % x), self.module.getDependencies())
 		# Resolve wildcards in module input files
-		for f in module.getInFiles():
-			matched = glob.glob(f)
-			if matched != []:
-				inFiles.extend(matched)
-			else:
-				inFiles.append(f)
+		def getModuleFiles():
+			for f in module.getInFiles():
+				matched = glob.glob(f)
+				if matched != []:
+					for match in matched:
+						yield match
+				else:
+					yield f
+
+		inFiles = itertools.chain(self.monitor.getFiles(), depFiles, getModuleFiles(),
+			[utils.VirtualFile('_config.sh', taskConfig),
+			utils.VirtualFile('_varmap.dat', varMapping)])
 
 		# Check file existance / put packed files in sandbox instead of tar file
 		for f in filter(lambda x: isinstance(x, str), inFiles):
@@ -81,20 +88,6 @@ class WMS(AbstractObject):
 				tar.addfile(info, handle)
 				handle.close()
 			tar.close()
-
-
-	def getSandboxFiles(self):
-		files = map(lambda x: utils.pathGC('share', 'env.%s.sh' % x), self.module.getDependencies())
-
-		taskEnv = self.module.getTaskConfig()
-		taskEnv.update(self.monitor.getEnv(self))
-		taskConfig = utils.DictFormat(escapeString = True).format(taskEnv, format = 'export %s%s%s\n')
-		files.append(utils.VirtualFile('_config.sh', sorted(taskConfig)))
-
-		varMapping = map(lambda (x, y): "%s %s\n" % (x, y), self.module.getVarMapping().items())
-		files.append(utils.VirtualFile('_varmap.dat', str.join('', sorted(varMapping))))
-
-		return files + list(self.monitor.getFiles())
 
 
 	def canSubmit(self, length, flag):
@@ -137,15 +130,7 @@ class WMS(AbstractObject):
 		for jobNum in jobNumList:
 			if utils.abort():
 				raise StopIteration
-			validStorage = True
-			for (k, v) in self.module.getRequirements(jobNum):
-				if k == WMS.STORAGE and v == []:
-					validStorage = False
-			if validStorage or not self.checkSE:
-				jobNum, wmsId, data = self.submitJob(jobNum)
-				yield (jobNum, wmsId, data)
-			else:
-				utils.vprint("Skipped submission of job %s - empty data location list!" % jobNum, -1, printTime=True, once=True)
+			yield self.submitJob(jobNum)
 
 
 	def retrieveJobs(self, ids):

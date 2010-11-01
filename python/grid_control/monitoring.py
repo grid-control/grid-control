@@ -1,4 +1,4 @@
-import os, threading, itertools
+import os, itertools
 from grid_control import AbstractObject, Job, utils
 
 class Monitoring(AbstractObject):
@@ -65,7 +65,7 @@ class ScriptMonitoring(Monitoring):
 
 	def runInBackground(self, script, jobNum = None, jobObj = None, addDict =  {}):
 		if script != '':
-			threading.Thread(target = ScriptMonitoring.scriptThread, args = (self, script, jobNum, jobObj)).start()
+			utils.gcStartThread(ScriptMonitoring.scriptThread, self, script, jobNum, jobObj)
 
 	# Called on job submission
 	def onJobSubmit(self, wms, jobObj, jobNum):
@@ -87,14 +87,14 @@ class ScriptMonitoring(Monitoring):
 class MonitoringMultiplexer(Monitoring):
 	def __init__(self, config, module, submodules):
 		Monitoring.__init__(self, config, module)
-		submodules = filter(lambda x: x != '', map(str.strip, submodules.split(",")))
+		submodules = utils.parseList(submodules)
 		self.submodules = map(lambda x: Monitoring.open(x, config, module), submodules)
 
 	def getEnv(self, wms):
-		return dict(reduce(lambda x, y: x + y, map(lambda m: m.getEnv(wms).items(), self.submodules)))
+		return utils.mergeDicts(map(lambda m: m.getEnv(wms), self.submodules))
 
 	def getFiles(self):
-		return reduce(lambda x, y: x + y, map(lambda m: list(m.getFiles()), self.submodules))
+		return itertools.chain(map(lambda m: m.getFiles(), self.submodules))
 
 	def onJobSubmit(self, wms, jobObj, jobNum):
 		for submodule in self.submodules:

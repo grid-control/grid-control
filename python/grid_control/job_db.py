@@ -159,6 +159,7 @@ class JobDB:
 			jobList = filter(lambda x: self.get(x, create = True).attempt - 1 < self.maxRetry, self.ready)
 		else:
 			jobList = self.ready[:]
+		jobList = filter(self.module.canSubmit, jobList)
 		if self.doShuffle:
 			return self.sample(jobList, submit)
 		else:

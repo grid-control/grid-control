@@ -86,14 +86,12 @@ class DataProvider(AbstractObject):
 
 	# Cached access to list of block dicts, does also the validation checks
 	def getBlocks(self):
-		if self._cache == None:
-			if self._datasetExpr != None:
-				log = utils.ActivityLog('Retrieving %s' % self._datasetExpr)
-			self._cache = list(self.getBlocksInternal())
-
-			allEvents = 0
+		self.allEvents = 0
+		def processBlocks():
 			# Validation, Filtering & Naming:
-			for block in self._cache:
+			for block in self.getBlocksInternal():
+				if DataProvider.BlockName not in block:
+					block[DataProvider.BlockName] = '0'
 				if self._datasetID:
 					block[DataProvider.DatasetID] = self._datasetID
 				if self._datasetNick:
@@ -102,11 +100,11 @@ class DataProvider(AbstractObject):
 				events = 0
 				for file in block[DataProvider.FileList]:
 					events += file[DataProvider.NEvents]
-				if (self.limitEvents > 0) and (allEvents + events > self.limitEvents):
+				if (self.limitEvents > 0) and (self.allEvents + events > self.limitEvents):
 					block[DataProvider.NEvents] = 0
 					block[DataProvider.FileList] = []
 					events = 0
-				allEvents += events
+				self.allEvents += events
 				if DataProvider.NEvents not in block:
 					block[DataProvider.NEvents] = events
 				if events != block[DataProvider.NEvents]:
@@ -125,15 +123,19 @@ class DataProvider(AbstractObject):
 							% (block[DataProvider.Dataset], block[DataProvider.BlockName]))
 					block[DataProvider.SEList] = sites
 
-			# Filter empty blocks
-			if self.emptyBlock:
-				self._cache = filter(lambda x: x[DataProvider.NEvents] != 0, self._cache)
+				# Filter empty blocks
+				if not (self.emptyBlock and events == 0):
+					yield block
 
+		if self._cache == None:
+			if self._datasetExpr != None:
+				log = utils.ActivityLog('Retrieving %s' % self._datasetExpr)
+			self._cache = list(processBlocks())
 			if self._datasetNick:
 				utils.vprint('%s:' % self._datasetNick, newline = False)
 			elif self.__class__.__name__ == 'DataMultiplexer':
 				utils.vprint('Summary:', newline = False)
-			utils.vprint('Running over %d events split into %d blocks.' % (allEvents, len(self._cache)))
+			utils.vprint('Running over %d events split into %d blocks.' % (self.allEvents, len(self._cache)))
 		return self._cache
 
 

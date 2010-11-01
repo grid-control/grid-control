@@ -28,10 +28,9 @@ class Config:
 				for section in parser.sections():
 					for option in filter(lambda x: x.endswith("+"), parser.options(section)):
 						if doExpansion:
+							value = ''
 							if parser.has_option(section, option.rstrip("+").strip()):
 								value = self.parseLine(parser, section, option.rstrip("+").strip()) + "\n"
-							else:
-								value = ''
 							value += self.parseLine(parser, section, option)
 							self.set(section, option.rstrip("+").strip(), value)
 						parser.remove_option(section, option)
@@ -64,7 +63,7 @@ class Config:
 			self.parser.set(str(section), str(item), str(value))
 
 
-	def get(self, section, item, default = None, volatile = False):
+	def get(self, section, item, default = None, volatile = False, noVar = True):
 		# Make protocol of config queries - flag inconsistencies
 		if item in self.protocol.setdefault(section, {}):
 			if self.protocol[section][item][1] != default:
@@ -80,30 +79,32 @@ class Config:
 		try:
 			value = self.parseLine(self.parser, str(section), item)
 			self.protocol[section][item] = (value, default, volatile)
-			return value
 		except cp.NoSectionError:
 			return tryDefault("No section %s in config file." % section)
 		except cp.NoOptionError:
 			return tryDefault("No option %s in section %s of config file." % (item, section))
 		except:
 			raise ConfigError("Parse error in option %s of config file section %s." % (item, section))
+		if noVar and ((value.count('@') >= 2) or (value.count('__') >= 2)):
+			raise ConfigError("Option %s in section %s of config file may not contain variables." % (item, section))
+		return value
 
 
-	def getPaths(self, section, item, default = None, volatile = False, check = True):
-		value = self.get(section, item, default, volatile)
+	def getPaths(self, section, item, default = None, volatile = False, noVar = False, check = True):
+		value = self.get(section, item, default, volatile, noVar)
 		return map(lambda x: utils.resolvePath(x, [self.baseDir], check), value.splitlines())
 
 
-	def getPath(self, section, item, default = None, volatile = False, check = True):
-		return (self.getPaths(section, item, default, volatile, check) + [''])[0]
+	def getPath(self, section, item, default = None, volatile = False, noVar = False, check = True):
+		return (self.getPaths(section, item, default, volatile, noVar, check) + [''])[0]
 
 
-	def getInt(self, section, item, default = None, volatile = False):
-		return int(self.get(section, item, default, volatile))
+	def getInt(self, section, item, default = None, volatile = False, noVar = False):
+		return int(self.get(section, item, default, volatile, noVar))
 
 
-	def getBool(self, section, item, default = None, volatile = False):
-		value = self.get(section, item, default, volatile)
+	def getBool(self, section, item, default = None, volatile = False, noVar = False):
+		value = self.get(section, item, default, volatile, noVar)
 		return str(value).lower() in ('yes', 'y', 'true', 't', 'ok', '1', 'on')
 
 

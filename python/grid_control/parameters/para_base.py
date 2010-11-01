@@ -70,7 +70,7 @@ class ParaMod(Module):
 	# Intervene in job management
 	def getIntervention(self):
 		if self.baseMod.getIntervention() != None:
-			raise RuntimeError('Intervention in job database requested! This is not supported for parameter based jobs')
+			raise RuntimeError('Intervention in job database requested! This is not yet supported for parameter based jobs')
 
 	def getParams(self):
 		# [{VAR1:VALUE1, VAR2:VALUE2}, {VAR1:VALUE1}, {VAR3:VALUE3}]

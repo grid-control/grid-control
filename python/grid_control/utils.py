@@ -1,6 +1,20 @@
 from python_compat import *
-import sys, os, StringIO, tarfile, time, fnmatch, re, popen2
+import sys, os, StringIO, tarfile, time, fnmatch, re, popen2, threading
 from exceptions import *
+
+def gcStartThread(fun, *args, **kargs):
+	thread = threading.Thread(target = fun, args = args, kwargs = kargs)
+	thread.setDaemon(True)
+	thread.start()
+	return thread
+
+
+def mergeDicts(dicts):
+	tmp = dict()
+	for x in dicts:
+		tmp.update(x)
+	return tmp
+
 
 def optSplit(opt, delim):
 	""" Split option strings into fixed tuples
@@ -208,8 +222,10 @@ def parseType(x):
 		return x
 
 
-def parseList(x, delimeter = ',', doFilter = lambda x: True):
-	return filter(doFilter, map(str.strip, x.split(delimeter)))
+def parseList(value, delimeter = ',', doFilter = lambda x: x != '', onEmpty = []):
+	if value:
+		return filter(doFilter, map(str.strip, value.split(delimeter)))
+	return onEmpty
 
 
 class DictFormat(object):

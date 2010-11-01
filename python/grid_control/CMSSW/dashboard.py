@@ -1,4 +1,4 @@
-import os, threading
+import os
 from grid_control import utils, Monitoring
 from time import localtime, strftime
 from DashboardAPI import DashboardAPI
@@ -22,27 +22,26 @@ class DashBoard(Monitoring):
 
 	def publish(self, jobObj, jobNum, taskId, usermsg):
 		dashId = '%s_%s' % (jobNum, jobObj.wmsId)
-		msg = { 'taskId': taskId, 'jobId': dashId, 'sid': dashId }
-		msg = dict(filter(lambda (x, y): y != None, reduce(lambda x, y: x+y, map(dict.items, [msg] + usermsg))))
+		msg = utils.mergeDicts([{ 'taskId': taskId, 'jobId': dashId, 'sid': dashId }] + usermsg)
+		msg = dict(filter(lambda (x, y): y != None, msg.items()))
 		DashboardAPI(taskId, dashId).publish(**msg)
 
 
 	# Called on job submission
 	def onJobSubmit(self, wms, jobObj, jobNum):
 		taskId = self.module.substVars(self.taskname, jobNum).strip('_')
-		threading.Thread(target = self.publish, args = (jobObj, jobNum, taskId, [{
+		utils.gcStartThread(self.publish, jobObj, jobNum, taskId, [{
 			'user': os.environ['LOGNAME'], 'GridName': wms.proxy.getUsername(),
 			'tool': 'grid-control', 'JSToolVersion': utils.getVersion(),
 			'application': self.app, 'exe': 'shellscript', 'taskType': self.tasktype,
-			'scheduler': 'gLite', 'vo': wms.proxy.getVO()}] +
-			[self.module.getSubmitInfo(jobNum)])).start()
+			'scheduler': 'gLite', 'vo': wms.proxy.getVO()}, self.module.getSubmitInfo(jobNum)])
 
 
 	# Called on job status update
 	def onJobUpdate(self, wms, jobObj, jobNum, data):
 		taskId = self.module.substVars(self.taskname, jobNum).strip('_')
-		threading.Thread(target = self.publish, args = (jobObj, jobNum, taskId, [{
+		utils.gcStartThread(self.publish, jobObj, jobNum, taskId, [{
 			'StatusValue': data.get('status', 'pending').upper(),
 			'StatusValueReason': data.get('reason', data.get('status', 'pending')).upper(),
 			'StatusEnterTime': data.get('timestamp', strftime('%Y-%m-%d_%H:%M:%S', localtime())),
-			'StatusDestination': data.get('dest', '') }],)).start()
+			'StatusDestination': data.get('dest', '') }])

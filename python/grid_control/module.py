@@ -1,7 +1,7 @@
 # Generic base class for job modules
 # instantiates named class instead (default is UserMod)
 
-import os, random, threading
+import os, random
 from grid_control import ConfigError, AbstractError, AbstractObject, utils, WMS, Job
 from time import time, localtime, strftime
 
@@ -38,27 +38,23 @@ class Module(AbstractObject):
 		# Write task info file
 		taskInfo.write({'task id': self.taskID, 'seeds': str.join(' ', map(str, self.seeds))})
 
-		self.seSDUpperLimit = config.getInt('storage', 'scratch space used', 5000)
-		self.seSDLowerLimit = config.getInt('storage', 'scratch space left', 1)
-		self.seLZUpperLimit = config.getInt('storage', 'landing zone space used', 100)
-		self.seLZLowerLimit = config.getInt('storage', 'landing zone space left', 1)
-
 		# Storage setup - in case a directory is give, prepend dir specifier
-		self.sePaths = []
-		for sePath in map(str.strip, config.get('storage', 'se path', '').splitlines()):
-			if len(sePath) == 0:
-				continue
-			if (sePath.count('@') >= 2) or (sePath.count('__') >= 2):
-				raise ConfigError("'se path' may not contain variables. Move variables into appropriate se pattern!")
-			if sePath[0] == '/':
-				sePath = 'dir:///%s' % sePath.lstrip('/')
-			self.sePaths.append(sePath)
+		self.sePaths = utils.parseList(config.get('storage', 'se path', '', noVar=True), None, onEmpty = [])
+		self.sePaths = map(lambda x: (x, 'dir:///%s' % x.lstrip('/'))[x[0] == '/'], self.sePaths)
 		self.seMinSize = config.getInt('storage', 'se min size', -1)
 
-		self.seInputFiles = config.get('storage', 'se input files', '').split()
-		self.seInputPattern = config.get('storage', 'se input pattern', '@X@')
-		self.seOutputFiles = config.get('storage', 'se output files', '').split()
-		self.seOutputPattern = config.get('storage', 'se output pattern', '@NICK@job_@MY_JOBID@_@X@')
+		self.taskVariables = {
+			# Space limits
+			'SCRATCH_UL' : config.getInt('storage', 'scratch space used', 5000),
+			'SCRATCH_LL' : config.getInt('storage', 'scratch space left', 1),
+			'LANDINGZONE_UL': config.getInt('storage', 'landing zone space used', 100),
+			'LANDINGZONE_LL': config.getInt('storage', 'landing zone space left', 1),
+		}
+
+		self.seInputFiles = config.get('storage', 'se input files', '', noVar=False).split()
+		self.seInputPattern = config.get('storage', 'se input pattern', '@X@', noVar=False)
+		self.seOutputFiles = config.get('storage', 'se output files', '', noVar=False).split()
+		self.seOutputPattern = config.get('storage', 'se output pattern', '@NICK@job_@MY_JOBID@_@X@', noVar=False)
 
 		self.sbInputFiles = config.get(self.__class__.__name__, 'input files', '').split()
 		self.sbOutputFiles = config.get(self.__class__.__name__, 'output files', '').split()
@@ -68,7 +64,7 @@ class Module(AbstractObject):
 		self.constants = {}
 		if config.parser.has_section('constants'):
 			for var in config.parser.options('constants'):
-				self.constants[var.upper()] = config.get('constants', var, '').strip()
+				self.constants[var] = config.get('constants', var, '').strip()
 		for var in map(str.strip, config.get(self.__class__.__name__, 'constants', '').split()):
 			self.constants[var] = config.get(self.__class__.__name__, var, '').strip()
 		self.substFiles = config.get(self.__class__.__name__, 'subst files', '').split()
@@ -94,11 +90,6 @@ class Module(AbstractObject):
 	# Get environment variables for gc_config.sh
 	def getTaskConfig(self):
 		taskConfig = {
-			# Space limits
-			'SCRATCH_UL' : self.seSDUpperLimit,
-			'SCRATCH_LL' : self.seSDLowerLimit,
-			'LANDINGZONE_UL': self.seLZUpperLimit,
-			'LANDINGZONE_LL': self.seLZLowerLimit,
 			# Storage element
 			'SE_PATH': str.join(' ', self.sePaths),
 			'SE_MINFILESIZE': self.seMinSize,
@@ -122,7 +113,7 @@ class Module(AbstractObject):
 			'GC_VERSION': utils.getVersion(),
 			'DB_EXEC': 'shellscript'
 		}
-		return dict(taskConfig.items() + self.constants.items())
+		return utils.mergeDicts([taskConfig, self.taskVariables, self.constants])
 	getTaskConfig = utils.cached(getTaskConfig)
 
 
@@ -138,14 +129,11 @@ class Module(AbstractObject):
 		# Map vars: Eg. __MY_JOB__ will access $MY_JOBID
 		mapping = [('DATE', 'MYDATE'), ('TIMESTAMP', 'MYTIMESTAMP'),
 			('MY_JOB', 'MY_JOBID'), ('CONF', 'GC_CONF'), ('GUID', 'MYGUID')]
-		mapping += zip(envvars, envvars)
-		return dict(mapping)
+		return dict(mapping + zip(envvars, envvars))
 
 
 	def substVars(self, inp, jobNum = None, addDict = {}, check = True):
-		allVars = {}
-		allVars.update(addDict)
-		allVars.update(self.getTaskConfig())
+		allVars = utils.mergeDicts([addDict, self.getTaskConfig()])
 		if jobNum != None:
 			allVars.update(self.getJobConfig(jobNum))
 		def substInternal(result):
@@ -161,7 +149,7 @@ class Module(AbstractObject):
 
 	def validateVariables(self):
 		for x in self.getTaskConfig().values() + self.getJobConfig(0).values():
-			self.substVars(x, 0, dict.fromkeys(['X', 'XBASE', 'XEXT', 'MYDATE', 'MYTIMESTAMP'], ''))
+			self.substVars(x, 0, dict.fromkeys(['X', 'XBASE', 'XEXT', 'MYDATE', 'MYTIMESTAMP', 'RANDOM'], ''))
 
 
 	# Get job requirements
@@ -214,6 +202,10 @@ class Module(AbstractObject):
 
 
 	def onTaskFinish(self):
+		return True
+
+
+	def canSubmit(self, jobNum):
 		return True
 
 

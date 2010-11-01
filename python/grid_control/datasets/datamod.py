@@ -8,6 +8,7 @@ class DataMod(Module):
 		Module.__init__(self, config)
 		(self.dataSplitter, self.dataChange, self.includeMap) = (None, None, includeMap)
 		self.dataset = config.get(self.__class__.__name__, 'dataset', '').strip()
+		self.checkSE = config.getBool(self.__class__.__name__, 'dataset storage check', True, volatile=True)
 		self.dataRefresh = None
 		if self.dataset == '':
 			return
@@ -115,7 +116,7 @@ class DataMod(Module):
 
 
 	def getVarMapping(self):
-		return dict(Module.getVarMapping(self).items() + [('NICK', 'DATASETNICK')])
+		return utils.mergeDicts([Module.getVarMapping(self), {'NICK': 'DATASETNICK'}])
 
 
 	# Get job requirements
@@ -143,10 +144,8 @@ class DataMod(Module):
 	def report(self, jobNum):
 		if self.dataSplitter == None:
 			return Module.report(self, jobNum)
-
 		info = self.dataSplitter.getSplitInfo(jobNum)
-		name = info.get(DataSplitter.Nickname, info.get(DataSplitter.Dataset, None))
-		return { 'Dataset': name }
+		return { 'Dataset': info.get(DataSplitter.Nickname, info.get(DataSplitter.Dataset, None)) }
 
 
 	# Called on job submission
@@ -154,13 +153,9 @@ class DataMod(Module):
 		splitInfo = {}
 		if self.dataSplitter:
 			splitInfo = self.dataSplitter.getSplitInfo(jobNum)
-		try:
-			nEvents = int(splitInfo.get(DataSplitter.NEvents))
-		except:
-			nEvents = 0
-		result = Module.getSubmitInfo(self, jobNum)
-		result.update({ 'nevtJob': nEvents, 'datasetFull': splitInfo.get(DataSplitter.Dataset, '') })
-		return result
+		info = {'nevtJob': splitInfo.get(DataSplitter.NEvents, 0),
+			'datasetFull': splitInfo.get(DataSplitter.Dataset, '')}
+		return utils.mergeDicts([Module.getSubmitInfo(self, jobNum), info])
 
 
 	def doResync(self):
@@ -204,3 +199,10 @@ class DataMod(Module):
 
 	def onTaskFinish(self):
 		return not (self.dataRefresh > 0)
+
+
+	def canSubmit(self, jobNum):
+		if self.checkSE and (self.dataSplitter != None):
+			selist = self.dataSplitter.getSplitInfo(jobNum).get(DataSplitter.SEList)
+			return selist != []
+		return True
