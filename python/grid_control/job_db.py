@@ -295,6 +295,7 @@ class JobDB:
 			except:
 				return
 			self._update(jobObj, jobNum, Job.CANCELLED)
+			self.monitor.onJobUpdate(wms, jobObj, jobNum, {'status': 'cancelled'})
 
 		for (wmsId, jobNum) in wms.cancelJobs(self.wmsArgs(jobs)):
 			# Remove deleted job from todo list and mark as cancelled
@@ -361,7 +362,6 @@ class JobDB:
 				jobObj = self.get(jobNum)
 				if jobObj.state in [ Job.INIT, Job.DISABLED, Job.ABORTED, Job.CANCELLED, Job.DONE, Job.FAILED, Job.SUCCESS ]:
 					self._update(jobObj, jobNum, newState)
-					self.monitor.onJobUpdate(wms, jobObj, jobNum, {})
 					jobSet.remove(jobNum)
 					jobObj.attempt = 0
 			if len(jobSet) > 0:

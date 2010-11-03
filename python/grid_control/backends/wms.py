@@ -30,7 +30,7 @@ class WMS(AbstractObject):
 
 		tarFile = os.path.join(config.workDir, 'sandbox.tar.gz')
 		self.sandboxIn = [ utils.pathGC('share', 'gc-run.sh'), utils.pathGC('share', 'gc-run.lib'), tarFile ]
-		self.sandboxOut = itertools.chain(['gc.stdout', 'gc.stderr', 'job.info'], module.getOutFiles())
+		self.sandboxOut = ['gc.stdout', 'gc.stderr', 'job.info'] + list(module.getOutFiles())
 
 		# Prepare all input files
 		taskEnv = utils.mergeDicts([self.monitor.getEnv(self), self.module.getTaskConfig()])

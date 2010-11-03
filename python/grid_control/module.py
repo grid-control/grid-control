@@ -26,7 +26,7 @@ class Module(AbstractObject):
 		utils.vprint('Current task ID: %s' % self.taskID, -1, once = True)
 
 		# Set random seeds (args override config)
-		self.seeds = map(int, filter(lambda x: x != '', config.get('jobs', 'seeds', '').split(',')))
+		self.seeds = map(int, utils.parseList(config.get('jobs', 'seeds', '')))
 		if len(self.seeds) == 0:
 			# args specified => gen seeds
 			if 'seeds' in taskInfo:
