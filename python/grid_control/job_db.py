@@ -1,5 +1,5 @@
 import sys, os, re, fnmatch, random, math, time
-from grid_control import ConfigError, UserError, RuntimeError, Job, Report, utils
+from grid_control import QM, ConfigError, UserError, RuntimeError, Job, Report, utils
 from python_compat import *
 
 class JobDB:

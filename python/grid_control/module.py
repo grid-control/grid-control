@@ -2,7 +2,8 @@
 # instantiates named class instead (default is UserMod)
 
 import os, random
-from grid_control import ConfigError, AbstractError, AbstractObject, utils, WMS, Job
+from python_compat import *
+from grid_control import ConfigError, AbstractError, AbstractObject, QM, utils, WMS, Job
 from time import time, localtime, strftime
 
 class Module(AbstractObject):
@@ -22,7 +23,7 @@ class Module(AbstractObject):
 		taskInfo = utils.PersistentDict(os.path.join(config.workDir, 'task.dat'), ' = ')
 
 		# Compute / get task ID
-		self.taskID = taskInfo.get('task id', 'GC' + utils.md5(str(time())).hexdigest()[:12])
+		self.taskID = taskInfo.get('task id', 'GC' + md5(str(time())).hexdigest()[:12])
 		utils.vprint('Current task ID: %s' % self.taskID, -1, once = True)
 
 		# Set random seeds (args override config)

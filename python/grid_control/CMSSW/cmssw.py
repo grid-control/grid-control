@@ -1,6 +1,6 @@
 import os, sys, shutil
 from python_compat import *
-from grid_control import ConfigError, WMS, utils, storage, datasets
+from grid_control import QM, ConfigError, WMS, utils, storage, datasets
 from grid_control.datasets import DataMod
 from lumi_tools import *
 

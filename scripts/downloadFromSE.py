@@ -1,11 +1,12 @@
 #!/usr/bin/env python
 import gcSupport, sys, os, optparse, popen2, time, random, threading
+from python_compat import *
 from grid_control import *
 from grid_control import storage
 from grid_control.proxy import Proxy
 
 def md5sum(filename):
-	m = utils.md5()
+	m = md5()
 	# use 4M blocksize:
 	blocksize = 4096 * 1024
 	f = open(filename, 'r')

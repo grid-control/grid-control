@@ -204,7 +204,7 @@ def getOutputDatasets(opts):
 			# Split by dataset parent and config hash (+ job config hash)
 			parentDS = map(lambda (ds, b): ds, fileInfo.get(DBS.PARENT_INFO, []))
 			jobHash = ('', str(fileInfo[DBS.JOBHASH]))[opts.useJobHash]
-			dsKey = utils.md5(str((fileInfo[DBS.CONFIGHASH], jobHash, parentDS))).hexdigest()
+			dsKey = md5(str((fileInfo[DBS.CONFIGHASH], jobHash, parentDS))).hexdigest()
 			# Write summary information:
 			if not dsKey in datasetInfos:
 				if parentDS == []: parentDS = ['None']
@@ -219,7 +219,7 @@ def getOutputDatasets(opts):
 		# Define block split criteria
 		def generateBlockKey(fileInfo):
 			# Split by SE and block parent (parent is left out in case of merging)
-			key = utils.md5(str(fileInfo[DBS.SE]) + generateDatasetKey(fileInfo))
+			key = md5(str(fileInfo[DBS.SE]) + generateDatasetKey(fileInfo))
 			if not opts.doMerge:
 				key.update(str(map(lambda (ds, b): b, fileInfo.get(DBS.PARENT_INFO, []))))
 			return key.hexdigest()

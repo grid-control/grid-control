@@ -1,6 +1,6 @@
 from python_compat import *
 import os, tarfile, time, copy, cStringIO
-from grid_control import AbstractObject, AbstractError, RuntimeError, utils, ConfigError, Config
+from grid_control import QM, AbstractObject, AbstractError, RuntimeError, utils, ConfigError, Config
 from provider_base import DataProvider
 
 class DataSplitter(AbstractObject):

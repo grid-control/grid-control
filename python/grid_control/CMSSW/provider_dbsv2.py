@@ -1,4 +1,4 @@
-from grid_control import utils, DatasetError, RethrowError, datasets
+from grid_control import QM, utils, DatasetError, RethrowError, datasets
 from grid_control.datasets import DataProvider
 from lumi_tools import *
 from python_compat import *

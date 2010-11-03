@@ -1,3 +1,4 @@
+from python_compat import *
 import sys, os, time, copy, tempfile, cStringIO, tarfile
 from grid_control import ConfigError, RethrowError, Job, utils
 from wms import WMS
@@ -357,7 +358,7 @@ class GridWMS(WMS):
 		try:
 			if len(ids) == 1:
 				# For single jobs create single subdir
-				tmpPath = os.path.join(basePath, utils.md5(ids[0][0]).hexdigest())
+				tmpPath = os.path.join(basePath, md5(ids[0][0]).hexdigest())
 			else:
 				tmpPath = basePath
 			if not os.path.exists(tmpPath):

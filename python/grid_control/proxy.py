@@ -1,6 +1,6 @@
 # Generic base class for grid proxies
 import os, time
-from grid_control import AbstractObject, InstallationError, AbstractError, UserError, utils
+from grid_control import QM, AbstractObject, InstallationError, AbstractError, UserError, utils
 
 class Proxy(AbstractObject):
 	def __init__(self, config):

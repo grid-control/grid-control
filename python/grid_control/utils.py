@@ -1,4 +1,4 @@
-#from python_compat import *
+from python_compat import *
 import sys, os, StringIO, tarfile, time, fnmatch, re, popen2, threading, operator
 from exceptions import *
 
@@ -45,7 +45,7 @@ def mergeDicts(dicts):
 	return tmp
 
 
-def accumulate(iterable, doEmit = lambda x, buf: x == '\n', start = '', opAdd = operator.iadd, addCause = True):
+def accumulate(iterable, doEmit = lambda x, buf: x == '\n', start = '', opAdd = operator.add, addCause = True):
 	buffer = start
 	for item in iterable:
 		if doEmit(item, buffer):
