@@ -9,7 +9,6 @@ trap abort 0 1 2 3 15
 export MY_JOBID="$1"
 export MY_LANDINGZONE="`pwd`"
 export MY_MARKER="$MY_LANDINGZONE/RUNNING.$$"
-export MY_DASHBOARDINFO="$MY_LANDINGZONE/Dashboard.report"
 export MY_SCRATCH="`getscratch`"
 export MY_SEED=$RANDOM$RANDOM
 
@@ -89,25 +88,17 @@ if [ -n "$GC_DEPFILES" ]; then
 	done
 fi
 
-if [ "$DASHBOARD" == "yes" ]; then
+# Notify monitoring about job start
+if [ -n "$GC_MONITORING" ]; then
 	echo
 	echo "==========================="
 	echo
-	my_move "$MY_SCRATCH" "$MY_LANDINGZONE" "DashboardAPI.py Logger.py ProcInfo.py apmon.py report.py"
-	DASH_ID=$(echo $TASK_NAME | var_replacer "" | sed "s/__/_/g;s/^_//;s/_$//")
-	export REPORTID="taskId=$DASH_ID jobId=${MY_JOBID}_$GLITE_WMS_JOBID MonitorID=$DASH_ID MonitorJobID=${MY_JOBID}_$GLITE_WMS_JOBID"
-	echo "Update Dashboard: $REPORTID"
-	checkfile "$MY_LANDINGZONE/report.py"
-	chmod u+x "$MY_LANDINGZONE/report.py"
-	checkbin "$MY_LANDINGZONE/report.py"
-
-	echo $MY_LANDINGZONE/report.py $REPORTID \
-		SyncGridJobId="$GLITE_WMS_JOBID" SyncGridName="$TASK_USER" SyncCE="$GLOBUS_CE" \
-		WNname="$(hostname -f)" ExeStart="$DB_EXEC"
-	$MY_LANDINGZONE/report.py $REPORTID \
-		SyncGridJobId="$GLITE_WMS_JOBID" SyncGridName="$TASK_USER" SyncCE="$GLOBUS_CE" \
-		WNname="$(hostname -f)" ExeStart="$DB_EXEC"
+	my_move "$MY_SCRATCH" "$MY_LANDINGZONE" "$GC_MONITORING"
 	echo
+	for MON_APP in $GC_MONITORING; do
+		checkfile "$MY_LANDINGZONE/$MON_APP"
+		source "$MY_LANDINGZONE/$MON_APP" "start"
+	done
 fi
 
 # Select SE:
@@ -223,23 +214,19 @@ echo
 checkdir "Start directory" "$MY_LANDINGZONE"
 [ -d "$MY_SCRATCH" ] && checkdir "Scratch directory" "$MY_SCRATCH"
 
-times > "$MY_LANDINGZONE/cputime"
-GC_CPUTIME=`cat "$MY_LANDINGZONE/cputime" | awk '{gsub("s","m"); split($1,x,"m"); SUM+=x[1]*60+x[2]}END{printf "%.0f\n", SUM}'`
-GC_WRAPTIME="$[ $(date +%s) - $STARTDATE ]"
-
-if [ "$DASHBOARD" == "yes" ]; then
+# Notify monitoring about job stop
+if [ -n "$GC_MONITORING" ]; then
 	echo "==========================="
 	echo
-	echo "Update Dashboard: $REPORTID"
-	checkbin "$MY_LANDINGZONE/report.py"
-	[ -f "$MY_DASHBOARDINFO" ] && DASH_EXT="$(< "$MY_DASHBOARDINFO")"
-	echo $MY_LANDINGZONE/report.py $REPORTID \
-		ExeEnd="$DB_EXEC" WCCPU="$GC_WRAPTIME" CrabUserCpuTime="$GC_CPUTIME" CrabWrapperTime="$GC_WRAPTIME" \
-		ExeExitCode="$CODE" JobExitCode="$CODE" JobExitReason="$CODE" $DASH_EXT
-	$MY_LANDINGZONE/report.py $REPORTID \
-		ExeEnd="$DB_EXEC" WCCPU="$GC_WRAPTIME" CrabUserCpuTime="$GC_CPUTIME" CrabWrapperTime="$GC_WRAPTIME" \
-		ExeExitCode="$CODE" JobExitCode="$CODE" JobExitReason="$CODE" $DASH_EXT
-	echo
+	times > "$MY_LANDINGZONE/cputime"
+	GC_CPUTIMEPARSER='{gsub("s","m"); split($1,x,"m"); SUM+=x[1]*60+x[2]}END{printf "%.0f\n", SUM}'
+	export GC_CPUTIME=`cat "$MY_LANDINGZONE/cputime" | awk "$GC_CPUTIMEPARSER"`
+	export GC_WRAPTIME="$[ $(date +%s) - $STARTDATE ]"
+
+	for MON_APP in $GC_MONITORING; do
+		checkfile "$MY_LANDINGZONE/mon.$MON_APP.sh"
+		source "$MY_LANDINGZONE/mon.$MON_APP.sh" "stop"
+	done
 fi
 
 echo "==========================="

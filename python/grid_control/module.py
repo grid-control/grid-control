@@ -112,7 +112,6 @@ class Module(AbstractObject):
 			'TASK_ID': self.taskID,
 			'GC_CONF': self.config.confName,
 			'GC_VERSION': utils.getVersion(),
-			'DB_EXEC': 'shellscript'
 		}
 		return utils.mergeDicts([taskConfig, self.taskVariables, self.constants])
 	getTaskConfig = utils.cached(getTaskConfig)

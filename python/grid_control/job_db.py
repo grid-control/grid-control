@@ -1,5 +1,5 @@
 import sys, os, re, fnmatch, random, math, time
-from grid_control import QM, ConfigError, UserError, RuntimeError, Job, Report, utils
+from grid_control import QM, ConfigError, UserError, RuntimeError, RethrowError, Job, Report, utils
 from python_compat import *
 
 class JobDB:
@@ -14,8 +14,8 @@ class JobDB:
 					os.mkdir(self._dbPath)
 				else:
 					raise ConfigError("Not a properly initialized work directory '%s'." % config.workDir)
-		except IOError, e:
-			raise ConfigError("Problem creating work directory '%s': %s" % (self._dbPath, e))
+		except IOError:
+			raise RethrowError("Problem creating work directory '%s'" % self._dbPath)
 
 		self._jobs = {}
 		self.jobLimit = config.getInt('jobs', 'jobs', -1, volatile=True)

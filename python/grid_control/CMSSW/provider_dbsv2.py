@@ -24,13 +24,13 @@ class DBSApiv2(DataProvider):
 
 		self.url = self.setup(config.get, section, 'dbs instance', '')
 		(self.datasetPath, datasetUrl, self.datasetBlock) = utils.optSplit(datasetExpr, '@#')
-		if not self.datasetBlock:
-			self.datasetBlock = 'all'
 		if datasetUrl != '':
 			self.url = datasetUrl
+		if not self.datasetBlock:
+			self.datasetBlock = 'all'
+
 		# This works in tandem with active job module (cmssy.py supports only [section] lumi filter!)
 		self.selectedLumis = parseLumiFilter(self.setup(config.get, section, 'lumi filter', ''))
-
 		if self.selectedLumis:
 			utils.vprint('The following runs and lumi sections are selected:', -1, once = True)
 			utils.vprint(utils.wrapList(formatLumi(self.selectedLumis), 65, ',\n\t'), -1, once = True)
@@ -84,12 +84,11 @@ class DBSApiv2(DataProvider):
 			return (self.datasetBlock == 'all') or (str.split(block['Name'], '#')[1] == self.datasetBlock)
 
 		def lumiFilter(lumilist):
-			if self.selectedLumis == None:
-				return True
-			for lumi in lumilist:
-				if selectLumi((lumi['RunNumber'], lumi['LumiSectionNumber']), self.selectedLumis):
-					return True
-			return False
+			if self.selectedLumis:
+				for lumi in lumilist:
+					if selectLumi((lumi['RunNumber'], lumi['LumiSectionNumber']), self.selectedLumis):
+						return True
+			return self.selectedLumis == None
 
 		result = []
 		for block in filter(blockFilter, listBlockInfo):

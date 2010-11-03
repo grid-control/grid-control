@@ -1,5 +1,5 @@
-import sys, os, time, tempfile
-from grid_control import ConfigError, Job, utils
+import tempfile
+from grid_control import utils
 from grid_wms import GridWMS
 
 class GliteWMS(GridWMS):
@@ -20,12 +20,11 @@ class GliteWMS(GridWMS):
 			params = ''
 			if self._configVO != '':
 				params += ' --config %s' % utils.shellEscape(self._configVO)
-
 			self._submitParams.update({ '-d': None })
+
 			activity = utils.ActivityLog('creating delegate proxy for job submission')
 			proc = utils.LoggedProcess(self._delegateExec, "%s -a --noint --logfile %s" %
 				(params, utils.shellEscape(log)))
-
 			for line in map(str.strip, proc.iter()):
 				try:
 					(left, right) = line.split(':', 1)
@@ -33,14 +32,11 @@ class GliteWMS(GridWMS):
 						self._submitParams.update({ '-d': right.strip() })
 				except:
 					pass
-
 			retCode = proc.wait()
 			del activity
 
 			if retCode != 0:
 				self.logError(proc, log)
-			if self._submitParams.get('-d', None) != None:
-				return True
-			return False
+			return (self._submitParams.get('-d', None) != None)
 		finally:
 			self.cleanup([log])

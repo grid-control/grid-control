@@ -47,9 +47,8 @@ class WMS(AbstractObject):
 				else:
 					yield f
 
-		inFiles = itertools.chain(self.monitor.getFiles(), depFiles, getModuleFiles(),
-			[utils.VirtualFile('_config.sh', taskConfig),
-			utils.VirtualFile('_varmap.dat', varMapping)])
+		inFiles = list(itertools.chain(self.monitor.getFiles(), depFiles, getModuleFiles(),
+			[utils.VirtualFile('_config.sh', taskConfig), utils.VirtualFile('_varmap.dat', varMapping)]))
 
 		# Check file existance / put packed files in sandbox instead of tar file
 		for f in filter(lambda x: isinstance(x, str), inFiles):
@@ -71,7 +70,6 @@ class WMS(AbstractObject):
 		if config.opts.init or not os.path.exists(tarFile):
 			utils.vprint("\t%s" % shortName(tarFile))
 			tar = tarfile.TarFile.open(tarFile, 'w:gz')
-
 			for f in sorted(inFiles):
 				if isinstance(f, str):
 					utils.vprint("\t\t%s" % shortName(f))

@@ -8,22 +8,22 @@ class DummyWMS(WMS):
 		self.mapNum2ID = {}
 
 	def submitJob(self, jobNum):
-		utils.eprint("EVENT [SUBMIT]: %d" % jobNum)
+		utils.eprint('EVENT [SUBMIT]: %d' % jobNum)
 		self.mapNum2ID[jobNum] = random.randint(0, 10000000)
-		self.writeJobConfig(jobNum, os.path.join(self.config.workDir, "%s.info" % jobNum))
+		self.writeJobConfig(jobNum, os.path.join(self.config.workDir, '%s.info' % jobNum))
 		return (jobNum, self.mapNum2ID[jobNum], {})
 
 
 	def checkJobs(self, ids):
-		utils.eprint("EVENT [CHECK]: %s" % ids)
+		utils.eprint('EVENT [CHECK]: %s' % ids)
 		return map(lambda (wmsId, jobNum): (jobNum, wmsId, Job.QUEUED, {}), ids)
 
 
 	def getJobsOutput(self, ids):
-		utils.eprint("EVENT [OUTPUT]: %s" % ids)
+		utils.eprint('EVENT [OUTPUT]: %s' % ids)
 		return []
 
 
 	def cancelJobs(self, ids):
-		utils.eprint("EVENT [CANCEL]: %s" % ids)
+		utils.eprint('EVENT [CANCEL]: %s' % ids)
 		return ids

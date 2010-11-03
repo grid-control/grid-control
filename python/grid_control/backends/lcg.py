@@ -1,10 +1,9 @@
-import os
-from grid_control import ConfigError, utils
+from grid_control import utils
 from grid_wms import GridWMS
 
 class LCG(GridWMS):
 	def __init__(self, config, module, monitor):
-		utils.deprecated("Please use the GliteWMS backend for grid jobs!")
+		utils.deprecated('Please use the GliteWMS backend for grid jobs!')
 		GridWMS.__init__(self, config, module, monitor, 'lcg')
 
 		self._submitExec = utils.resolveInstallPath('edg-job-submit')
@@ -15,10 +14,8 @@ class LCG(GridWMS):
 
 
 	def storageReq(self, sites):
-		def makeMember(member):
-			return '(target.GlueSEUniqueID == %s)' \
-			       % self._jdlEscape(member)
-		if not len(sites):
+		fmt = lambda x: '(target.GlueSEUniqueID == %s)' % self._jdlEscape(member)
+		if (sites == None) or (len(sites) == 0):
 			return None
 		else:
-			return 'anyMatch(other.storage.CloseSEs, ' + str.join(' || ', map(makeMember, sites)) + ')'
+			return 'anyMatch(other.storage.CloseSEs, ' + str.join(' || ', map(fmt, sites)) + ')'

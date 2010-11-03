@@ -9,8 +9,8 @@ class UserMod(DataMod):
 		if self._sendexec:
 			self._executable = config.getPath(self.__class__.__name__, 'executable')
 		else:
-			self._executable = config.get(self.__class__.__name__, 'executable')
-		self._arguments = config.get(self.__class__.__name__, 'arguments', '')
+			self._executable = config.get(self.__class__.__name__, 'executable', noVar = False)
+		self._arguments = config.get(self.__class__.__name__, 'arguments', '', noVar = False)
 
 
 	def getCommand(self):

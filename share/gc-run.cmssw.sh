@@ -106,7 +106,7 @@ for CFG_NAME in $CMSSW_CONFIG; do
 	if [ "$GZIP_OUT" = "yes" ]; then
 		(
 			echo "Starting cmsRun with config file: $CFG_NAME"
-			cmsRun -j "$DBSDIR/report.xml" -e "$CFG_NAME"
+			cmsRun -j "$DBSDIR/report.xml" -e "$CFG_NAME" $@
 			echo $? > "$MY_LANDINGZONE/exitcode.txt"
 			echo
 			echo "---------------------------"
@@ -114,7 +114,7 @@ for CFG_NAME in $CMSSW_CONFIG; do
 		) 2>&1 | gzip -9 > "$CFG_NAME.log.gz"
 		[ -f "$MY_LANDINGZONE/exitcode.txt" ] && CODE=$(< "$MY_LANDINGZONE/exitcode.txt") && rm -f "$MY_LANDINGZONE/exitcode.txt"
 	else 
-		cmsRun -j "$DBSDIR/report.xml" -e "$CFG_NAME"
+		cmsRun -j "$DBSDIR/report.xml" -e "$CFG_NAME" $@
 		CODE=$?
 	fi
 	[ "$CODE" == "" ] && export CODE="-2"
@@ -138,7 +138,7 @@ echo
 echo
 echo "---------------------------"
 echo
-checkdir "CMSSW working directory after cmsRun" "$MY_WORKDIR"
+checkdir "CMSSW working directory after processing" "$MY_WORKDIR"
 
 # Move output into scratch
 echo "---------------------------"

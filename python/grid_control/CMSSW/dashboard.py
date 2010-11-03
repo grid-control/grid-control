@@ -11,8 +11,12 @@ class DashBoard(Monitoring):
 		self.taskname = config.get('dashboard', 'task name', '@TASK_ID@_@NICK@', volatile=True)
 
 
+	def getScript(self):
+		yield utils.pathGC('python', 'grid_control', 'CMSSW', 'mon.dashboard.sh')
+
+
 	def getEnv(self, wms):
-		return { 'TASK_NAME': self.taskname, 'TASK_USER': wms.proxy.getUsername(), 'DASHBOARD': 'yes' }
+		return { 'TASK_NAME': self.taskname, 'TASK_USER': wms.proxy.getUsername(), 'DB_EXEC': 'shellscript' }
 
 
 	def getFiles(self):

@@ -1,9 +1,9 @@
-from grid_control import ConfigError, Job, utils
+from grid_control import utils
 from grid_wms import GridWMS
 
 class Glite(GridWMS):
 	def __init__(self, config, module, monitor):
-		utils.deprecated("Please use the GliteWMS backend for grid jobs!")
+		utils.deprecated('Please use the GliteWMS backend for grid jobs!')
 		GridWMS.__init__(self, config, module, monitor, 'glite')
 
 		self._submitExec = utils.resolveInstallPath('glite-job-submit')
