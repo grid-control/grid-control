@@ -78,12 +78,10 @@ class DataSplitter(AbstractObject):
 		if job.get(DataSplitter.Nickname, '') != '':
 			utils.vprint('Nick: %s' % job[DataSplitter.Nickname], -1)
 		if job.get(DataSplitter.SEList, None) != None:
-			seArray = map(lambda x: str.join(', ', x), utils.lenSplit(job[DataSplitter.SEList], 70))
-			utils.vprint(' SEList: %s' % str.join('\n         ', seArray), -1)
+			utils.vprint(' SEList: %s' % utils.wrapList(job[DataSplitter.SEList], 70, ',\n         '), -1)
 		for idx, head in enumerate(job.get(DataSplitter.MetadataHeader, [])):
 			oneFileMetadata = map(lambda x: repr(x[idx]), job[DataSplitter.Metadata])
-			metadataArray = map(lambda x: str.join(', ', x), utils.lenSplit(oneFileMetadata, 70))
-			utils.vprint('%7s: %s' % (head, str.join('\n         ', metadataArray)), -1)
+			utils.vprint('%7s: %s' % (head, utils.wrapList(oneFileMetadata, 70, ',\n         ')), -1)
 		utils.vprint('  Files: ', -1, newline = False)
 		if utils.verbosity() > 2:
 			utils.vprint(str.join('\n         ', job[DataSplitter.FileList]), -1)
@@ -464,7 +462,7 @@ class DataSplitter(AbstractObject):
 	def saveState(self, path, entries = None):
 		tar = tarfile.open(path, 'w:')
 		fmt = utils.DictFormat()
-		source = (list(entries), self.splitSource)[entries == None] # list(): for status display
+		source = QM(entries == None, self.splitSource, list(entries)) # list(): for status display
 
 		# Function to close all tarfiles
 		def closeSubTar(jobNum, subTarFile, subTarFileObj):

@@ -7,10 +7,10 @@ class LCG(GridWMS):
 		utils.deprecated("Please use the GliteWMS backend for grid jobs!")
 		GridWMS.__init__(self, config, module, monitor, 'lcg')
 
-		self._submitExec = utils.searchPathFind('edg-job-submit')
-		self._statusExec = utils.searchPathFind('edg-job-status')
-		self._outputExec = utils.searchPathFind('edg-job-get-output')
-		self._cancelExec = utils.searchPathFind('edg-job-cancel')
+		self._submitExec = utils.resolveInstallPath('edg-job-submit')
+		self._statusExec = utils.resolveInstallPath('edg-job-status')
+		self._outputExec = utils.resolveInstallPath('edg-job-get-output')
+		self._cancelExec = utils.resolveInstallPath('edg-job-cancel')
 		self._submitParams.update({'-r': self._ce, '--config-vo': self._configVO })
 
 

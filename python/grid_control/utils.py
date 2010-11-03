@@ -1,6 +1,35 @@
-from python_compat import *
-import sys, os, StringIO, tarfile, time, fnmatch, re, popen2, threading
+#from python_compat import *
+import sys, os, StringIO, tarfile, time, fnmatch, re, popen2, threading, operator
 from exceptions import *
+
+# "question mark" function
+QM = lambda cond, a, b: (a, b)[cond != True]
+
+################################################################
+# Path helper functions
+
+def pathGC(*args):
+	# Convention: sys.path[1] == python dir of gc
+	return os.path.normpath(os.path.join(sys.path[1], '..', *args))
+
+
+def resolvePath(path, userpath = [], check = True, ErrorClass = RuntimeError):
+	searchpaths = [ os.getcwd(), pathGC() ] + userpath
+	cleanPath = lambda x: os.path.normpath(os.path.expanduser(x.strip()))
+	path = cleanPath(path)
+	if not os.path.isabs(path):
+		for spath in searchpaths:
+			if os.path.exists(os.path.join(spath, path)):
+				return cleanPath(os.path.join(spath, path))
+		if check:
+			raise ErrorClass('Could not find file %s in \n\t%s' % (path, str.join("\n\t", searchpaths)))
+	return path
+
+
+def resolveInstallPath(path):
+	return resolvePath(path, os.environ['PATH'].split(':'), True, InstallationError)
+
+################################################################
 
 def gcStartThread(fun, *args, **kargs):
 	thread = threading.Thread(target = fun, args = args, kwargs = kargs)
@@ -14,6 +43,26 @@ def mergeDicts(dicts):
 	for x in dicts:
 		tmp.update(x)
 	return tmp
+
+
+def accumulate(iterable, doEmit = lambda x, buf: x == '\n', start = '', opAdd = operator.iadd, addCause = True):
+	buffer = start
+	for item in iterable:
+		if doEmit(item, buffer):
+			if addCause:
+				buffer = opAdd(buffer, item)
+			yield buffer
+			buffer = start
+			if addCause:
+				continue
+		buffer = opAdd(buffer, item)
+	yield buffer
+
+
+def wrapList(value, length, delimLines = ',\n', delimEntries = ', '):
+	counter = lambda item, buffer: len(item) + sum(map(len, buffer)) >= length
+	wrapped = accumulate(value, counter, [], lambda x, y: x + [y], False)
+	return str.join(delimLines, map(lambda x: str.join(delimEntries, x), wrapped))
 
 
 def optSplit(opt, delim):
@@ -75,33 +124,6 @@ class PersistentDict(dict):
 			raise RuntimeError('Could not write to file %s' % self.filename)
 		self.olddict = self.items()
 
-
-def pathGC(*args):
-	# Convention: sys.path[1] == python dir of gc
-	return os.path.normpath(os.path.join(sys.path[1], '..', *args))
-
-
-def resolvePath(path, userpath = [], check = True):
-	searchpaths = [ os.getcwd(), pathGC() ] + userpath
-	cleanPath = lambda x: os.path.normpath(os.path.expanduser(x.strip()))
-	path = cleanPath(path)
-	if not os.path.isabs(path):
-		for spath in searchpaths:
-			if os.path.exists(os.path.join(spath, path)):
-				return cleanPath(os.path.join(spath, path))
-		if check:
-			raise RuntimeError('Could not find file %s in \n\t%s' % (path, str.join("\n\t", searchpaths)))
-	return path
-
-
-def searchPathFind(program):
-	for dir in os.environ['PATH'].split(':'):
-		fname = os.path.join(dir, program)
-		if os.path.exists(fname):
-			return fname
-	raise InstallationError("%s not found" % program)
-
-
 def globalSetupProxy(fun, default, new):
 	if new != None:
 		fun.setting = new
@@ -149,7 +171,7 @@ def eprint(text = '', level = -1, printTime = False, newline = True):
 	if verbosity() > level:
 		if printTime:
 			sys.stderr.write('%s - ' % time.strftime('%Y-%m-%d %H:%M:%S', time.localtime()))
-		sys.stderr.write('%s%s' % (text, ('', '\n')[newline]))
+		sys.stderr.write('%s%s' % (text, QM(newline, '\n', '')))
 
 
 def vprint(text = '', level = 0, printTime = False, newline = True, once = False):
@@ -160,7 +182,7 @@ def vprint(text = '', level = 0, printTime = False, newline = True, once = False
 	if verbosity() > level:
 		if printTime:
 			sys.stdout.write('%s - ' % time.strftime('%Y-%m-%d %H:%M:%S', time.localtime()))
-		sys.stdout.write('%s%s' % (text, ('', '\n')[newline]))
+		sys.stdout.write('%s%s' % (text, QM(newline, '\n', '')))
 vprint.log = []
 
 
@@ -185,7 +207,7 @@ def getUserBool(text, default):
 			return True
 		if x.lower() in ('no', 'n', 'false'):
 			return False
-	return getUserInput(text, ('no', 'yes')[default], ['yes', 'no'], boolParse)
+	return getUserInput(text, QM(default, 'yes', 'no'), ['yes', 'no'], boolParse)
 
 
 def wait(timeout):
@@ -226,6 +248,40 @@ def parseList(value, delimeter = ',', doFilter = lambda x: x != '', onEmpty = []
 	if value:
 		return filter(doFilter, map(str.strip, value.split(delimeter)))
 	return onEmpty
+
+
+def parseTuples(string):
+	"""Parse a string for keywords and tuples of keywords.
+	>>> parseTuples('(4, 8:00), keyword, ()')
+	[('4', '8:00'), 'keyword', ()]
+	"""
+	def to_tuple_or_str((t, s)):
+		if len(s) > 0:
+			return s
+		elif len(t.strip()) == 0:
+			return tuple()
+		return tuple(map(str.strip, t.split(',')))
+
+	return map(to_tuple_or_str, re.findall('\(([^\)]*)\)|([a-zA-Z0-9_\.]+)', string))
+
+
+def parseTime(usertime):
+	if usertime == None or usertime == '':
+		return -1
+	tmp = map(int, usertime.split(":"))
+	if len(tmp) > 3:
+		raise ConfigError('Invalid time format: %s' % usertime)
+	while len(tmp) < 3:
+		tmp.append(0)
+	if tmp[2] > 59 or tmp[1] > 59:
+		raise ConfigError('Invalid time format: %s' % usertime)
+	return reduce(lambda x, y: x * 60 + y, tmp)
+
+
+def strTime(secs, fmt = "%dh %0.2dmin %0.2dsec"):
+	if secs < 0:
+		return ""
+	return fmt % (secs / 60 / 60, (secs / 60) % 60, secs % 60)
 
 
 class DictFormat(object):
@@ -295,40 +351,6 @@ class DictFormat(object):
 def shellEscape(value):
 	repl = { '\\': r'\\', '\"': r'\"', '$': r'\$' }
 	return '"' + str.join('', map(lambda x: repl.get(x, x), value)) + '"'
-
-
-def parseTime(usertime):
-	if usertime == None or usertime == '':
-		return -1
-	tmp = map(int, usertime.split(":"))
-	if len(tmp) > 3:
-		raise ConfigError('Invalid time format: %s' % usertime)
-	while len(tmp) < 3:
-		tmp.append(0)
-	if tmp[2] > 59 or tmp[1] > 59:
-		raise ConfigError('Invalid time format: %s' % usertime)
-	return reduce(lambda x, y: x * 60 + y, tmp)
-
-
-def strTime(secs, fmt = "%dh %0.2dmin %0.2dsec"):
-	if secs < 0:
-		return ""
-	return fmt % (secs / 60 / 60, (secs / 60) % 60, secs % 60)
-
-
-def parseTuples(string):
-	"""Parse a string for keywords and tuples of keywords.
-	>>> parseTuples('(4, 8:00), keyword, ()')
-	[('4', '8:00'), 'keyword', ()]
-	"""
-	def to_tuple_or_str((t, s)):
-		if len(s) > 0:
-			return s
-		elif len(t.strip()) == 0:
-			return tuple()
-		return tuple(map(str.strip, t.split(',')))
-
-	return map(to_tuple_or_str, re.findall('\(([^\)]*)\)|([a-zA-Z0-9_\.]+)', string))
 
 
 def genTarball(outFile, dir, pattern):
@@ -446,19 +468,6 @@ class ActivityLog:
 		sys.stdout, sys.stderr = self.saved
 
 
-def accumulate(status, marker, check = lambda l, m: l != m):
-	(cleared, buffer) = (True, '')
-	for line in status:
-		if check(line, marker):
-			buffer += line
-			cleared = False
-		else:
-			yield buffer
-			(cleared, buffer) = (True, '')
-	if not cleared:
-		yield buffer
-
-
 class LoggedProcess(object):
 	def __init__(self, cmd, args = ''):
 		self.cmd = (cmd, args) # used in backend error messages
@@ -530,21 +539,6 @@ def DiffLists(oldList, newList, cmpFkt, changedFkt):
 		listMissing.append(old)
 		old = next(oldIter, None)
 	return (listAdded, listMissing, listChanged)
-
-
-def lenSplit(list, maxlen):
-	clen = 0
-	tmp = []
-	for item in list:
-		if clen + len(item) < maxlen:
-			tmp.append(item)
-			clen += len(item)
-		else:
-			tmp.append('')
-			yield tmp
-			tmp = [item]
-			clen = len(item)
-	yield tmp
 
 
 def printTabular(head, data, fmtString = '', fmt = {}, level = -1):

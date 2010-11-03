@@ -6,8 +6,8 @@ class Host(LocalWMSApi):
 		LocalWMSApi.__init__(self, config, wms)
 
 		self.submitExec = utils.pathGC('share', 'host.sh')
-		self.statusExec = utils.searchPathFind('ps')
-		self.cancelExec = utils.searchPathFind('kill')
+		self.statusExec = utils.resolveInstallPath('ps')
+		self.cancelExec = utils.resolveInstallPath('kill')
 
 
 	def unknownID(self):

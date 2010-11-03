@@ -40,7 +40,7 @@ class Module(AbstractObject):
 
 		# Storage setup - in case a directory is give, prepend dir specifier
 		self.sePaths = utils.parseList(config.get('storage', 'se path', '', noVar=True), None, onEmpty = [])
-		self.sePaths = map(lambda x: (x, 'dir:///%s' % x.lstrip('/'))[x[0] == '/'], self.sePaths)
+		self.sePaths = map(lambda x: QM(x[0] == '/', 'dir:///%s' % x.lstrip('/'), x), self.sePaths)
 		self.seMinSize = config.getInt('storage', 'se min size', -1)
 
 		self.taskVariables = {
@@ -130,6 +130,13 @@ class Module(AbstractObject):
 		mapping = [('DATE', 'MYDATE'), ('TIMESTAMP', 'MYTIMESTAMP'),
 			('MY_JOB', 'MY_JOBID'), ('CONF', 'GC_CONF'), ('GUID', 'MYGUID')]
 		return dict(mapping + zip(envvars, envvars))
+
+
+	def getTransientVars(self):
+		hx = str.join("", map(lambda x: "%02x" % x, map(random.randrange, [256]*16)))
+		return {'MYDATE': time.strftime("%F"), 'MYTIMESTAMP': time.strftime("%s"),
+			'MYGUID': '%s-%s-%s-%s-%s' % (hx[:8], hx[8:12], hx[12:16], hx[16:20], hx[20:]),
+			'RANDOM': str(random.randrange(0, 900000000))}
 
 
 	def substVars(self, inp, jobNum = None, addDict = {}, check = True):

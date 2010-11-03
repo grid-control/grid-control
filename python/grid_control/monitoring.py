@@ -1,34 +1,39 @@
 import os, itertools
 from grid_control import AbstractObject, Job, utils
 
+# Monitoring base class with submodule support
 class Monitoring(AbstractObject):
-	# Read configuration options and init vars
-	def __init__(self, config, module):
+	def __init__(self, config, module, submodules = ""):
 		self.config = config
 		self.module = module
+		self.submodules = submodules
 
 	def getEnv(self, wms):
-		return {}
+		return utils.mergeDicts(map(lambda m: m.getEnv(wms), self.submodules))
 
 	def getFiles(self):
-		return []
+		return itertools.chain(map(lambda m: m.getFiles(), self.submodules))
 
 	def onJobSubmit(self, wms, jobObj, jobNum):
-		pass
+		for submodule in self.submodules:
+			submodule.onJobSubmit(wms, jobObj, jobNum)
 
 	def onJobUpdate(self, wms, jobObj, jobNum, data):
-		pass
+		for submodule in self.submodules:
+			submodule.onJobUpdate(wms, jobObj, jobNum, data)
 
 	def onJobOutput(self, wms, jobObj, jobNum, retCode):
-		pass
+		for submodule in self.submodules:
+			submodule.onJobOutput(wms, jobObj, jobNum, retCode)
 
 	def onTaskFinish(self, nJobs):
-		pass
+		for submodule in self.submodules:
+			submodule.onTaskFinish(nJobs)
 
 Monitoring.dynamicLoaderPath()
-Monitoring.moduleMap["scripts"] = "ScriptMonitoring"
 
 class ScriptMonitoring(Monitoring):
+	Monitoring.moduleMap["scripts"] = "ScriptMonitoring"
 	def __init__(self, config, module):
 		Monitoring.__init__(self, config, module)
 		self.silent = config.getBool('events', 'silent', True, volatile=True)
@@ -82,32 +87,3 @@ class ScriptMonitoring(Monitoring):
 	# Called at the end of the task
 	def onTaskFinish(self, nJobs):
 		self.runInBackground(self.evtFinish, addDict = {'NJOBS': nJobs})
-
-
-class MonitoringMultiplexer(Monitoring):
-	def __init__(self, config, module, submodules):
-		Monitoring.__init__(self, config, module)
-		submodules = utils.parseList(submodules)
-		self.submodules = map(lambda x: Monitoring.open(x, config, module), submodules)
-
-	def getEnv(self, wms):
-		return utils.mergeDicts(map(lambda m: m.getEnv(wms), self.submodules))
-
-	def getFiles(self):
-		return itertools.chain(map(lambda m: m.getFiles(), self.submodules))
-
-	def onJobSubmit(self, wms, jobObj, jobNum):
-		for submodule in self.submodules:
-			submodule.onJobSubmit(wms, jobObj, jobNum)
-
-	def onJobUpdate(self, wms, jobObj, jobNum, data):
-		for submodule in self.submodules:
-			submodule.onJobUpdate(wms, jobObj, jobNum, data)
-
-	def onJobOutput(self, wms, jobObj, jobNum, retCode):
-		for submodule in self.submodules:
-			submodule.onJobOutput(wms, jobObj, jobNum, retCode)
-
-	def onTaskFinish(self, nJobs):
-		for submodule in self.submodules:
-			submodule.onTaskFinish(nJobs)

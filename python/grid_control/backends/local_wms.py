@@ -34,7 +34,7 @@ class LocalWMS(WMS):
 		wmsCmdList = [ ('PBS', 'pbs-config'), ('SGE', 'qsub'), ('LSF', 'bsub'), ('SLURM', 'job_slurm'), ('PBS', 'sh') ]
 		for wms, cmd in wmsCmdList:
 			try:
-				utils.searchPathFind(cmd)
+				utils.resolveInstallPath(cmd)
 				return wms
 			except:
 				pass

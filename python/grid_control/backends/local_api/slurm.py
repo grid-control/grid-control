@@ -9,9 +9,9 @@ class JMS(LocalWMSApi):
 	def __init__(self, config, wms):
 		LocalWMSApi.__init__(self, config, wms)
 
-		self.submitExec = utils.searchPathFind('job_submit')
-		self.statusExec = utils.searchPathFind('job_queue')
-		self.cancelExec = utils.searchPathFind('job_cancel')
+		self.submitExec = utils.resolveInstallPath('job_submit')
+		self.statusExec = utils.resolveInstallPath('job_queue')
+		self.cancelExec = utils.resolveInstallPath('job_cancel')
 
 
 	def unknownID(self):

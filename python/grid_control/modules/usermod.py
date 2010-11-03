@@ -1,5 +1,5 @@
 import os.path
-from grid_control import datasets
+from grid_control import QM, datasets
 from grid_control.datasets import DataMod
 
 class UserMod(DataMod):
@@ -25,9 +25,9 @@ class UserMod(DataMod):
 
 
 	def getInFiles(self):
-		return DataMod.getInFiles(self) + ([], [self._executable])[self._sendexec]
+		return DataMod.getInFiles(self) + QM(self._sendexec, [self._executable], [])
 
 
 	def getOutFiles(self):
-		tmp = map(lambda s: s + ('', '.gz')[self.gzipOut], ['job.stdout', 'job.stderr'])
+		tmp = map(lambda s: s + QM(self.gzipOut, '.gz', ''), ['job.stdout', 'job.stderr'])
 		return DataMod.getOutFiles(self) + tmp

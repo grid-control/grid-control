@@ -32,8 +32,7 @@ class MultiParaMod(ParaMod):
 			['Where', 'the', 'wild', 'things', 'roam']
 			>>> expandParam('range(3)', 'expr')
 			[0, 1, 2]
-			Possible improvements: enum values to indicate mode;  doctest
-			might be wrong (unable to test)"""
+			"""
 			actions = {
 				'expr': eval,
 				'lines': lambda l: map(str.strip, l.splitlines()),
@@ -60,26 +59,19 @@ class MultiParaMod(ParaMod):
 
 
 	def getParams(self):
-		res = [[]]
-
-		for p in self.pset.keys():
-			m = len(res)
-			n = len(self.pset[p])
+		result = [[]]
+		for (p_key, p_value) in self.pset.items():
+			p_var = eval(p_key)
+			if isinstance(p_var, tuple):
+				protoDict = map(lambda t: zip(p_var, t), p_value)
+			else:
+				protoDict = map(lambda v: [[p_var, v]], p_value)
 
 			tmp = []
-			p_ = eval(p)
-			if isinstance(p_, tuple):
-				tmp = map(lambda t: zip(p_, t), self.pset[p])
-			else:
-				tmp = [[[p_, v]] for v in self.pset[p]]
-
-			tmp_ = []
-			for e in tmp:
-				tmp_ += [e] * m
-				
-			res = map(lambda (x, y): x + y, zip(tmp_, res * n))
-
-		return map(dict, res)
+			for entry in protoDict:
+				tmp += [entry] * len(result)
+			result = map(lambda (x, y): x + y, zip(tmp, result * len(p_value)))
+		return map(dict, result)
 
 
 class UberParaMod(MultiParaMod):

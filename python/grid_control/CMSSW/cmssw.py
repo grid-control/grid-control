@@ -116,7 +116,7 @@ class CMSSW(DataMod):
 			utils.genTarball(os.path.join(config.workDir, 'runtime.tar.gz'), self.projectArea, self.pattern)
 
 			for idx, sePath in enumerate(filter(lambda x: self.seRuntime, set(self.sePaths))):
-				utils.vprint('Copy CMSSW runtime to SE %d ' % (idx+1), -1, newline = False)
+				utils.vprint('Copy CMSSW runtime to SE %d ' % (idx + 1), -1, newline = False)
 				sys.stdout.flush()
 				source = 'file:///' + os.path.join(config.workDir, 'runtime.tar.gz')
 				target = os.path.join(sePath, self.taskID + '.tar.gz')
@@ -187,9 +187,9 @@ class CMSSW(DataMod):
 		data['SCRAM_ARCH'] = self.scramArch
 		data['SCRAM_VERSION'] = self.scramVersion
 		data['SCRAM_PROJECTVERSION'] = self.scramEnv['SCRAM_PROJECTVERSION']
-		data['GZIP_OUT'] = ('no', 'yes')[self.gzipOut]
-		data['SE_RUNTIME'] = ('no', 'yes')[self.seRuntime]
-		data['HAS_RUNTIME'] = ('no', 'yes')[len(self.projectArea) != 0]
+		data['GZIP_OUT'] = QM(self.gzipOut, 'yes', 'no')
+		data['SE_RUNTIME'] = QM(self.seRuntime, 'yes', 'no')
+		data['HAS_RUNTIME'] = QM(len(self.projectArea) != 0, 'yes', 'no')
 		return data
 
 
@@ -228,27 +228,30 @@ class CMSSW(DataMod):
 		return str.join(', ', map(lambda x: '"%s"' % x, filelist))
 
 
+	def getActiveLumiFilter(self, lumifilter):
+		getLR = lambda x: str.join(',', map(lambda x: '"%s"' % x, formatLumi(x)))
+		return getLR(lumifilter) # TODO: Validate subset selection
+		try:
+			splitInfo = self.dataSplitter.getSplitInfo(jobNum)
+			runTag = splitInfo[DataSplitter.MetadataHeader].index("Runs")
+			runList = reduce(lambda x,y: x+y, map(lambda w: w[runTag], splitInfo[DataSplitter.Metadata]), [])
+			return getLR(filterLumiFilter(runList, lumifilter))
+		except:
+			return getLR(lumifilter)
+
+
 	# Get job dependent environment variables
 	def getJobConfig(self, jobNum):
 		data = DataMod.getJobConfig(self, jobNum)
 		if self.dataSplitter == None:
 			data['MAX_EVENTS'] = self.eventsPerJob
 		if self.selectedLumis:
-			getLR = lambda x: str.join(',', map(lambda x: '"%s"' % x, formatLumi(x)))
-			if True or (self.dataSplitter == None):
-				data['LUMI_RANGE'] = getLR(self.selectedLumis)
-			else:
-				splitInfo = self.dataSplitter.getSplitInfo(jobNum)
-				runTag = splitInfo[DataSplitter.MetadataHeader].index("Runs")
-				runList = reduce(lambda x,y: x+y, map(lambda w: w[runTag], splitInfo[DataSplitter.Metadata]), [])
-				data['LUMI_RANGE'] = getLR(filterLumiFilter(runList, self.selectedLumis))
+			data['LUMI_RANGE'] = self.getActiveLumiFilter(self.selectedLumis)
 		return data
 
 
 	def getTaskType(self):
-		if self.dataSplitter == None:
-			return 'production'
-		return 'analysis'
+		return QM(self.dataSplitter == None, 'production', 'analysis')
 
 
 	def getDependencies(self):

@@ -1,5 +1,5 @@
 import os
-from grid_control import utils
+from grid_control import QM, utils
 from usermod import UserMod
 
 class ROOTMod(UserMod):
@@ -12,11 +12,10 @@ class ROOTMod(UserMod):
 		taskInfo.write({'root path': self._rootpath})
 
 		# Special handling for executables bundled with ROOT
-		self.builtIn = False
 		exe = config.get(self.__class__.__name__, 'executable')
 		exeFull = os.path.join(self._rootpath, 'bin', exe)
-		if os.path.exists(exeFull):
-			self.builtIn = True
+		self.builtIn = os.path.exists(exeFull)
+		if self.builtIn:
 			config.set(self.__class__.__name__, 'send executable', 'False')
 			config.set(self.__class__.__name__, 'executable', exeFull)
 
@@ -29,14 +28,12 @@ class ROOTMod(UserMod):
 
 
 	def getTaskConfig(self):
-		data = UserMod.getTaskConfig(self)
-		data['MY_ROOTSYS'] = self._rootpath
-		return data
+		return utils.mergeDicts([UserMod.getTaskConfig(self), {'MY_ROOTSYS': self._rootpath}])
 
 
 	def getCommand(self):
 		cmd = './gc-run.root.sh %s $@ > job.stdout 2> job.stderr' % self._executable
-		return ('chmod u+x %s; ' % self._executable, '')[self.builtIn] + cmd
+		return QM(self.builtIn, '', 'chmod u+x %s; ' % self._executable) + cmd
 
 
 	def getInFiles(self):

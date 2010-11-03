@@ -34,9 +34,7 @@ parser.add_option_group(ogCalc)
 (opts, args) = parser.parse_args()
 
 def outputGC(lumis, stream = sys.stdout):
-	# Wrap after 60 characters
-	for line in map(lambda x: str.join(", ", x), gcSupport.utils.lenSplit(formatLumi(lumis), 65)):
-		stream.write("%s\n" % line)
+	stream.write("%s\n" % gcSupport.utils.wrapList(formatLumi(lumis), 60, ',\n'))
 
 def outputJSON(lumis, stream = sys.stdout):
 	tmp = {}

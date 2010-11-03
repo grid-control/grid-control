@@ -6,8 +6,8 @@ class Glite(GridWMS):
 		utils.deprecated("Please use the GliteWMS backend for grid jobs!")
 		GridWMS.__init__(self, config, module, monitor, 'glite')
 
-		self._submitExec = utils.searchPathFind('glite-job-submit')
-		self._statusExec = utils.searchPathFind('glite-job-status')
-		self._outputExec = utils.searchPathFind('glite-job-output')
-		self._cancelExec = utils.searchPathFind('glite-job-cancel')
+		self._submitExec = utils.resolveInstallPath('glite-job-submit')
+		self._statusExec = utils.resolveInstallPath('glite-job-status')
+		self._outputExec = utils.resolveInstallPath('glite-job-output')
+		self._cancelExec = utils.resolveInstallPath('glite-job-cancel')
 		self._submitParams.update({'-r': self._ce, '--config-vo': self._configVO })

@@ -14,7 +14,7 @@ class PBS(PBSGECommon):
 
 	def __init__(self, config, wms):
 		PBSGECommon.__init__(self, config, wms)
-		self.nodesExec = utils.searchPathFind('pbsnodes')
+		self.nodesExec = utils.resolveInstallPath('pbsnodes')
 		self._server = config.get('local', 'server', '', volatile=True)
 
 
@@ -34,7 +34,7 @@ class PBS(PBSGECommon):
 
 
 	def parseStatus(self, status):
-		for section in utils.accumulate(status, '\n'):
+		for section in utils.accumulate(status):
 			if section == '':
 				continue
 			try:

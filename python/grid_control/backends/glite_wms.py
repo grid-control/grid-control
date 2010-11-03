@@ -6,11 +6,11 @@ class GliteWMS(GridWMS):
 	def __init__(self, config, module, monitor):
 		GridWMS.__init__(self, config, module, monitor, 'glite-wms')
 
-		self._delegateExec = utils.searchPathFind('glite-wms-job-delegate-proxy')
-		self._submitExec = utils.searchPathFind('glite-wms-job-submit')
-		self._statusExec = utils.searchPathFind('glite-wms-job-status')
-		self._outputExec = utils.searchPathFind('glite-wms-job-output')
-		self._cancelExec = utils.searchPathFind('glite-wms-job-cancel')
+		self._delegateExec = utils.resolveInstallPath('glite-wms-job-delegate-proxy')
+		self._submitExec = utils.resolveInstallPath('glite-wms-job-submit')
+		self._statusExec = utils.resolveInstallPath('glite-wms-job-status')
+		self._outputExec = utils.resolveInstallPath('glite-wms-job-output')
+		self._cancelExec = utils.resolveInstallPath('glite-wms-job-cancel')
 		self._submitParams.update({'-r': self._ce, '--config': self._configVO })
 
 

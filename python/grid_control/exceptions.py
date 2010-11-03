@@ -11,34 +11,27 @@ class GridError(GCError):
 class ConfigError(GCError):
 	pass
 
-# some error with the Grid installation
-class InstallationError(GridError):
-	pass	# just inherit everything from GridError
+class InstallationError(GCError):
+	pass	# some error with installed programs
 
-# some error with the user (PEBKAC)
-class UserError(GridError):
-	pass	# just inherit everything from GridError
+class UserError(GCError):
+	pass	# some error with the user (PEBKAC)
 
-# some error with the runtime
-class RuntimeError(GridError):
-	pass	# just inherit everything from GridError
+class RuntimeError(GCError):
+	pass	# some error with the runtime
 
-# some error in using the API
-class APIError(GridError):
-	pass	# just inherit everything from GridError
+class APIError(GCError):
+	pass	# some error in using the API
 
-# some error with the runtime
+class DatasetError(GCError):
+	pass	# some error with the dataset
+
 class AbstractError(APIError):
 	def __init__(self):
 		APIError.__init__(self, "%s is an abstract function!" % sys._getframe(1).f_code.co_name)
 
-# rethrow error message
-class RethrowError(GCError):
+class RethrowError(GCError):	# rethrow error message
 	def __init__(self, msg):
 		GCError.__init__(self, msg)
 		import traceback
 		traceback.print_exception(*sys.exc_info())
-
-# some error with the dataset
-class DatasetError(GridError):
-	pass	# just inherit everything from GridError

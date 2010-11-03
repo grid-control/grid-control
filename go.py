@@ -92,7 +92,8 @@ def main(args):
 			return 0
 
 		# Initialise monitoring module
-		monitor = MonitoringMultiplexer(config, module, config.get('jobs', 'monitor', 'scripts'))
+		monitor = utils.parseList(config.get('jobs', 'monitor', 'scripts'))
+		monitor = Monitoring(config, module, map(lambda x: Monitoring.open(x, config, module), monitor))
 
 		# Initialise workload management interface
 		backend = config.get('global', 'backend', 'grid')

@@ -16,9 +16,9 @@ class LSF(LocalWMSApi):
 	def __init__(self, config, wms):
 		LocalWMSApi.__init__(self, config, wms)
 
-		self.submitExec = utils.searchPathFind('bsub')
-		self.statusExec = utils.searchPathFind('bjobs')
-		self.cancelExec = utils.searchPathFind('bkill')
+		self.submitExec = utils.resolveInstallPath('bsub')
+		self.statusExec = utils.resolveInstallPath('bjobs')
+		self.cancelExec = utils.resolveInstallPath('bkill')
 
 
 	def unknownID(self):

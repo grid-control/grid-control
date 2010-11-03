@@ -25,7 +25,7 @@ class Proxy(AbstractObject):
 		if (delta > 30 * 60) or (timeleft < neededTime and delta > 5 * 60):
 			self._lastUpdate = time.time()
 			timeleft = self.getTimeleft(cached = False)
-			verbosity = (0, -1)[timeleft < neededTime]
+			verbosity = QM(timeleft < neededTime, -1, 0)
 			utils.vprint("The proxy now has %s left" % utils.strTime(timeleft), verbosity, printTime = True)
 		return timeleft >= neededTime
 
@@ -52,7 +52,7 @@ class TrivialProxy(Proxy):
 class VomsProxy(Proxy):
 	def __init__(self, config):
 		Proxy.__init__(self, config)
-		self._infoExec = utils.searchPathFind('voms-proxy-info')
+		self._infoExec = utils.resolveInstallPath('voms-proxy-info')
 		self.ignoreWarning = config.getBool('proxy', 'ignore warnings', False, volatile=True)
 		self._info = None
 		self._cache = None

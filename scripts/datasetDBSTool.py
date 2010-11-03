@@ -42,12 +42,10 @@ elif opts.listlumis:
 		for lumi in fileInfo['LumiList']:
 			rl.append(([int(lumi["RunNumber"]), int(lumi["LumiSectionNumber"])], [int(lumi["RunNumber"]), int(lumi["LumiSectionNumber"])]))
 		print lfn
-		for line in map(lambda x: str.join(", ", x), gcSupport.utils.lenSplit(formatLumi(mergeLumi(rl)), 70)):
-			print "\t", line
+		print gcSupport.utils.wrapList(formatLumi(mergeLumi(rl)), 70, ',\n\t')
 		allrl.extend(rl)
 	print "\nComplete dataset:"
-	for line in map(lambda x: str.join(", ", x), gcSupport.utils.lenSplit(formatLumi(mergeLumi(allrl)), 70)):
-		print "\t", line
+	print gcSupport.utils.wrapList(formatLumi(mergeLumi(allrl)), 70, ',\n\t')
 
 elif opts.list:
 	for block in api.listBlocks(opts.list):

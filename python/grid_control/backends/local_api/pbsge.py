@@ -7,9 +7,9 @@ class PBSGECommon(LocalWMSApi):
 	def __init__(self, config, wms):
 		LocalWMSApi.__init__(self, config, wms)
 
-		self.submitExec = utils.searchPathFind('qsub')
-		self.statusExec = utils.searchPathFind('qstat')
-		self.cancelExec = utils.searchPathFind('qdel')
+		self.submitExec = utils.resolveInstallPath('qsub')
+		self.statusExec = utils.resolveInstallPath('qstat')
+		self.cancelExec = utils.resolveInstallPath('qdel')
 
 		self._group = config.get('local', 'group', '', volatile=True)
 

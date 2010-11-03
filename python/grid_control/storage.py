@@ -13,5 +13,5 @@ se_mkdir = lambda target: utils.LoggedProcess(se_runcmd("url_mkdir", {}, target)
 se_exists = lambda target: utils.LoggedProcess(se_runcmd("url_exists", {}, target))
 
 def se_copy(src, dst, force = True, tmp = ''):
-	cmd = 'url_copy_single%s' % (('', '_force')[force])
+	cmd = 'url_copy_single%s' % QM(force, '_force', '')
 	return utils.LoggedProcess(se_runcmd(cmd, {'GC_KEEPTMP': tmp}, src, dst))

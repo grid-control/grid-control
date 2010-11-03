@@ -29,11 +29,7 @@ class Help(object):
 				if variable in job3cfg:
 					print " "*25, " ", "<example for job 3: %s>" % job3cfg[variable]
 			else:
-				hx = str.join("", map(lambda x: "%02x" % x, map(random.randrange, [256]*16)))
-				adHocVars = {'RANDOM': str(random.randrange(0, 900000000)),
-					'MYDATE': time.strftime("%F"), 'MYTIMESTAMP': time.strftime("%s"),
-					'MYGUID': '%s-%s-%s-%s-%s' % (hx[:8], hx[8:12], hx[12:16], hx[16:20], hx[20:])}
-				tmp = module.substVars("@%s@" % variable, 0, adHocVars)
+				tmp = module.substVars("@%s@" % variable, 0, module.getTransientVars())
 				if "@" not in tmp:
 					print '<example: %s>' % tmp
 				else:
@@ -48,15 +44,13 @@ class Help(object):
 			print "This is the minimal set of config options necessary:"
 		print
 		print ";", "="*60
-		print ";", "grid-control", ("reduced", "complete")[printDefault], "config file"
+		print ";", "grid-control", QM(printDefault, "complete", "reduced"), "config file"
 		print ";", "="*60
 		print
 		for section in config.protocol:
 			(header, prevNL) = (False, False)
 			for (key, (value, default, volatile)) in config.protocol[section].iteritems():
 				if (not printDefault and (str(value) != str(default))) or printDefault:
-					if value == 'DEPRECATED':
-						continue
 					if not header:
 						print "[%s]" % section
 						header = True

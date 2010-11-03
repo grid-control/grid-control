@@ -1,5 +1,5 @@
 from exceptions	import *
-from utils	import AbstractObject
+from utils	import AbstractObject, QM
 
 from config	import Config
 from job	import Job
@@ -10,7 +10,7 @@ from help	import Help
 
 from backends	import WMS
 from module	import Module
-from monitoring	import Monitoring, MonitoringMultiplexer
+from monitoring	import Monitoring
 
 # import dynamic repos
 import modules

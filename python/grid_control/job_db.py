@@ -205,7 +205,7 @@ class JobDB:
 
 	def check(self, wms, maxsample = 100):
 		(change, timeoutList) = (False, [])
-		jobList = self.sample(self.running + self.queued, (-1, maxsample)[self.continuous])
+		jobList = self.sample(self.running + self.queued, QM(self.continuous, maxsample, -1))
 
 		# Update states of jobs
 		for jobNum, wmsId, state, info in wms.checkJobs(self.wmsArgs(jobList)):
@@ -256,7 +256,7 @@ class JobDB:
 
 	def retrieve(self, wms, maxsample = 10):
 		change = False
-		jobList = self.sample(self.done, (-1, maxsample)[self.continuous])
+		jobList = self.sample(self.done, QM(self.continuous, maxsample, -1))
 
 		for jobNum, retCode, data in wms.retrieveJobs(self.wmsArgs(jobList)):
 			try:

@@ -33,8 +33,7 @@ class DBSApiv2(DataProvider):
 
 		if self.selectedLumis:
 			utils.vprint('The following runs and lumi sections are selected:', -1, once = True)
-			for line in map(lambda x: str.join(', ', x), utils.lenSplit(formatLumi(self.selectedLumis), 65)):
-				utils.vprint('\t%s' % line, -1, once = True)
+			utils.vprint(utils.wrapList(formatLumi(self.selectedLumis), 65, ',\n\t'), -1, once = True)
 
 
 	# Define how often the dataprovider can be queried automatically
@@ -58,7 +57,7 @@ class DBSApiv2(DataProvider):
 			# Start thread to retrieve list of files
 			(listFileInfo, seList) = ([], {})
 			def listFileInfoThread(self, result):
-				result.extend(api.listFiles(self.datasetPath, retriveList=(['retrive_lumi'], [])[self.selectedLumis == None]))
+				result.extend(api.listFiles(self.datasetPath, retriveList=QM(self.selectedLumis == None, [], ['retrive_lumi'])))
 			tFile = utils.gcStartThread(listFileInfoThread, self, listFileInfo)
 			# Get dataset list from PhEDex (concurrent with listFiles)
 			phedexArgFmt = lambda x: ('block=%s' % x['Name']).replace('/', '%2F').replace('#', '%23')

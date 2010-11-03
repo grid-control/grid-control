@@ -4,6 +4,12 @@ from grid_control import datasets, utils, ConfigError
 from grid_control.datasets import DataSplitter, DataProvider
 from lumi_tools import *
 
+def fromNM(nm, nickname, default):
+	for pattern in filter(lambda p: p and nickname and re.search(p, nickname), nm):
+		return nm[pattern]
+	return nm.get(None, default)
+
+
 class CMSSW_Advanced(cmssw.CMSSW):
 	def __init__(self, config):
 		def parseMap(x, parser):
@@ -47,7 +53,7 @@ class CMSSW_Advanced(cmssw.CMSSW):
 		if self.nmLumi:
 			for dataset in config.get(self.__class__.__name__, 'dataset', '').splitlines():
 				(datasetNick, datasetProvider, datasetExpr) = DataProvider.parseDatasetExpr(config, dataset, None)
-				config.set('dataset %s' % datasetNick, 'lumi filter', str.join(',', self.fromNM(self.nmLumi, datasetNick, [])))
+				config.set('dataset %s' % datasetNick, 'lumi filter', str.join(',', fromNM(self.nmLumi, datasetNick, [])))
 			config.set(self.__class__.__name__, 'lumi filter', str.join(',', self.nmLumi.get(None, [])))
 			head.append((2, 'Lumi filter'))
 
@@ -55,17 +61,10 @@ class CMSSW_Advanced(cmssw.CMSSW):
 		def report():
 			for nick in sorted(set(self.nmCfg.keys() + self.nmConst.keys() + self.nmLumi.keys())):
 				tmp = {0: nick, 1: str.join(', ', map(os.path.basename, self.nmCfg.get(nick, ''))), 2: str.join(',', (self.nmLumi.get(nick, '')))}
-				tmp.update(self.nmConst.get(nick, {}))
-				yield tmp
+				yield utils.mergeDicts([tmp, self.nmConst.get(nick, {})])
 		utils.printTabular(head, report(), 'cl')
 		utils.vprint(level = -1)
 		cmssw.CMSSW.__init__(self, config)
-
-
-	def fromNM(self, nm, nickname, default):
-		for pattern in filter(lambda p: p and nickname and re.search(p, nickname), nm):
-			return nm[pattern]
-		return nm.get(None, default)
 
 
 	def neededVars(self):
@@ -88,14 +87,13 @@ class CMSSW_Advanced(cmssw.CMSSW):
 		nick = splitInfo.get(DataSplitter.Nickname, None)
 		# Put nick dependent variables into job specific settings
 		data = cmssw.CMSSW.getJobConfig(self, jobNum)
-		data['CMSSW_CONFIG'] = str.join(' ', map(os.path.basename, self.fromNM(self.nmCfg, nick, '')))
-		constants = dict(self.fromNM(self.nmConst, None, {}))
-		constants.update(self.fromNM(self.nmConst, nick, {}))
+		data['CMSSW_CONFIG'] = str.join(' ', map(os.path.basename, fromNM(self.nmCfg, nick, '')))
+		constants = utils.mergeDicts(fromNM(self.nmConst, None, {}), fromNM(self.nmConst, nick, {}))
 		constants = dict(map(lambda var: (var, constants.get(var, '')), self.nmCName))
 		data.update(constants)
-		lumifilter = self.fromNM(self.nmLumi, nick, '')
+		lumifilter = fromNM(self.nmLumi, nick, '')
 		if lumifilter:
-			data['LUMI_RANGE'] = str.join(',', map(lambda x: '"%s"' % x, lumifilter))
+			data['LUMI_RANGE'] = self.getActiveLumiFilter(lumifilter)
 		utils.vprint('Nickname: %s' % nick, 1)
 		utils.vprint(' * Config files: %s' % data['CMSSW_CONFIG'], 1)
 		utils.vprint(' *    Variables: %s' % constants, 1)
