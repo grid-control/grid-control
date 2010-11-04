@@ -1,5 +1,5 @@
 import os, time, fnmatch
-from utils import DictFormat, safeWriteFile
+from utils import DictFormat, safeWrite
 from exceptions import ConfigError
 
 class Job:
@@ -78,7 +78,7 @@ class Job:
 
 
 	def save(self, name):
-		safeWriteFile(name, DictFormat(escapeString = True).format(self.getAll()))
+		safeWrite(open(name, 'w'), DictFormat(escapeString = True).format(self.getAll()))
 
 
 	def set(self, key, value):

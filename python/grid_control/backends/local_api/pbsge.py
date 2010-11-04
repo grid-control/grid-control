@@ -18,7 +18,7 @@ class PBSGECommon(LocalWMSApi):
 		return "Unknown Job Id"
 
 
-	def getArguments(self, jobNum, sandbox):
+	def getJobArguments(self, jobNum, sandbox):
 		return ""
 
 

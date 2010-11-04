@@ -86,11 +86,11 @@ if [ -n "$GC_DEPFILES" ]; then
 		checkfile "$MY_SCRATCH/env.$DEPFILE.sh"
 		source "$MY_SCRATCH/env.$DEPFILE.sh"
 	done
+	echo
 fi
 
 # Notify monitoring about job start
 if [ -n "$GC_MONITORING" ]; then
-	echo
 	echo "==========================="
 	echo
 	my_move "$MY_SCRATCH" "$MY_LANDINGZONE" "$GC_MONITORING"
@@ -99,10 +99,13 @@ if [ -n "$GC_MONITORING" ]; then
 		checkfile "$MY_LANDINGZONE/$MON_APP"
 		source "$MY_LANDINGZONE/$MON_APP" "start"
 	done
+	echo
 fi
 
 # Select SE:
 if [ -n "$SE_PATH" ]; then
+	echo "==========================="
+	echo
 	echo "Complete SE list:"
 	for SE in $SE_PATH; do echo " * $SE"; done
 	echo "Close SE:"
@@ -112,6 +115,7 @@ if [ -n "$SE_PATH" ]; then
 	echo "Selected SE:"
 	export SE_PATH="$(get_random_se $SE_PATH)"
 	echo " => $SE_PATH"
+	echo
 fi
 
 # Copy files from the SE
@@ -215,18 +219,19 @@ checkdir "Start directory" "$MY_LANDINGZONE"
 [ -d "$MY_SCRATCH" ] && checkdir "Scratch directory" "$MY_SCRATCH"
 
 # Notify monitoring about job stop
+export GC_WRAPTIME="$[ $(date +%s) - $STARTDATE ]"
 if [ -n "$GC_MONITORING" ]; then
 	echo "==========================="
 	echo
 	times > "$MY_LANDINGZONE/cputime"
 	GC_CPUTIMEPARSER='{gsub("s","m"); split($1,x,"m"); SUM+=x[1]*60+x[2]}END{printf "%.0f\n", SUM}'
 	export GC_CPUTIME=`cat "$MY_LANDINGZONE/cputime" | awk "$GC_CPUTIMEPARSER"`
-	export GC_WRAPTIME="$[ $(date +%s) - $STARTDATE ]"
 
 	for MON_APP in $GC_MONITORING; do
 		checkfile "$MY_LANDINGZONE/$MON_APP"
 		source "$MY_LANDINGZONE/$MON_APP" "stop"
 	done
+	echo
 fi
 
 echo "==========================="

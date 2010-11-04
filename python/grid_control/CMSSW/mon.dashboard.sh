@@ -21,7 +21,6 @@ case "$1" in
 		$MY_LANDINGZONE/report.py $REPORTID \
 			SyncGridJobId="$GLITE_WMS_JOBID" SyncGridName="$TASK_USER" SyncCE="$GLOBUS_CE" \
 			WNname="$(hostname -f)" ExeStart="$DB_EXEC"
-		echo
 		;;
 	"stop")
 		echo "Update Dashboard: $REPORTID"
@@ -33,6 +32,5 @@ case "$1" in
 		$MY_LANDINGZONE/report.py $REPORTID \
 			ExeEnd="$DB_EXEC" WCCPU="$GC_WRAPTIME" CrabUserCpuTime="$GC_CPUTIME" CrabWrapperTime="$GC_WRAPTIME" \
 			ExeExitCode="$CODE" JobExitCode="$CODE" JobExitReason="$CODE" $DASH_EXT
-		echo
 		;;
 esac

@@ -10,7 +10,7 @@ class LocalWMSApi(AbstractObject):
 	def getNodes(self):
 		return None
 
-	def getArguments(self, jobNum, sandbox):
+	def getJobArguments(self, jobNum, sandbox):
 		raise AbstractError
 
 	def getSubmitArguments(self, jobNum, sandbox, stdout, stderr, addAttr):

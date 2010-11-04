@@ -50,6 +50,10 @@ class JobDB:
 		self.maxRetry = config.getInt('jobs', 'max retry', -1, volatile=True)
 		self.continuous = config.getBool('jobs', 'continuous', False, volatile=True)
 
+		# Job offender heuristic (not persistent!) - remove jobs, which do not report their status
+		self.kickOffender = config.getInt('jobs', 'kick offender', 10, volatile=True)
+		(self.offender, self.raster) = ({}, 0)
+
 
 	def getMaxJobs(self, module):
 		nJobs = self.jobLimit
@@ -207,8 +211,16 @@ class JobDB:
 		(change, timeoutList) = (False, [])
 		jobList = self.sample(self.running + self.queued, QM(self.continuous, maxsample, -1))
 
-		# Update states of jobs
+		if self.kickOffender:
+			nOffender = len(self.offender) # Waiting list gets larger in case reported == []
+			waitList = self.sample(self.offender, nOffender - max(1, nOffender / 2**self.raster))
+			jobList = filter(lambda x: x not in waitList, jobList)
+
+		reported = []
 		for jobNum, wmsId, state, info in wms.checkJobs(self.wmsArgs(jobList)):
+			if jobNum in self.offender:
+				self.offender.pop(jobNum)
+			reported.append(jobNum)
 			jobObj = self.get(jobNum)
 			if state != jobObj.state:
 				change = True
@@ -223,6 +235,15 @@ class JobDB:
 						timeoutList.append(jobNum)
 			if utils.abort():
 				return False
+
+		if self.kickOffender:
+			self.raster = QM(reported, 1, self.raster + 1) # make "raster" iteratively smaller
+			for jobNum in filter(lambda x: x not in reported, jobList):
+				self.offender[jobNum] = self.offender.get(jobNum, 0) + 1
+			kickList = filter(lambda jobNum: self.offender[jobNum] >= self.kickOffender, self.offender)
+			for jobNum in set(list(kickList) + QM(len(jobList) == 1, jobList, [])):
+				timeoutList.append(jobNum)
+				self.offender.pop(jobNum)
 
 		# Cancel jobs who took too long
 		if len(timeoutList):
@@ -305,7 +326,7 @@ class JobDB:
 		if len(jobs) > 0:
 			print '\nThere was a problem with deleting the following jobs:'
 			Report(jobs, self._jobs).details()
-			if interactive and utils.getUserBool('Do you want to mark them as deleted?', True):
+			if (interactive and utils.getUserBool('Do you want to mark them as deleted?', True)) or not interactive:
 				map(mark_cancelled, jobs)
 
 

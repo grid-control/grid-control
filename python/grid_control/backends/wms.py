@@ -71,12 +71,12 @@ class WMS(AbstractObject):
 			utils.vprint("\t%s" % shortName(tarFile))
 			tar = tarfile.TarFile.open(tarFile, 'w:gz')
 			for f in sorted(inFiles):
-				if isinstance(f, str):
+				if isinstance(f, str): # file path
 					utils.vprint("\t\t%s" % shortName(f))
 					info = tarfile.TarInfo(os.path.basename(f))
 					info.size = os.path.getsize(f)
 					handle = open(f, 'rb')
-				else:
+				else: # file handle
 					utils.vprint("\t\t%s" % shortName(f.name))
 					info, handle = f.getTarInfo()
 				info.mtime = time.time()
@@ -109,13 +109,11 @@ class WMS(AbstractObject):
 
 
 	def writeJobConfig(self, jobNum, cfgPath, extras = {}):
-		jobEnv = self.module.getJobConfig(jobNum)
-		jobEnv['GC_ARGS'] = self.module.getJobArguments(jobNum).strip()
-		jobEnv.update(extras)
-
 		try:
+			jobEnv = utils.mergeDicts([self.module.getJobConfig(jobNum), extras])
+			jobEnv['GC_ARGS'] = self.module.getJobArguments(jobNum).strip()
 			content = utils.DictFormat(escapeString = True).format(jobEnv, format = 'export %s%s%s\n')
-			utils.safeWriteFile(cfgPath, content)
+			utils.safeWrite(open(cfgPath, 'w'), content)
 		except:
 			raise RethrowError("Could not write job config data to %s." % cfgPath)
 
@@ -143,12 +141,12 @@ class WMS(AbstractObject):
 				if os.path.exists(target):
 					shutil.rmtree(target)
 			except IOError, e:
-				sys.stderr.write("Warning: '%s' cannot be removed: %s\n" % (target, str(e)))
+				utils.eprint("Warning: '%s' cannot be removed: %s" % (target, str(e)))
 				return False
 			try:
 				shutil.move(source, target)
 			except IOError, e:
-				sys.stderr.write("Warning: Error moving job output directory from '%s' to '%s': %s\n" % (source, target, str(e)))
+				utils.eprint("Warning: Error moving job output directory from '%s' to '%s': %s" % (source, target, str(e)))
 				return False
 			return True
 

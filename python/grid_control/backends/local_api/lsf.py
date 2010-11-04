@@ -26,7 +26,7 @@ class LSF(LocalWMSApi):
 		return "is not found"
 
 
-	def getArguments(self, jobNum, sandbox):
+	def getJobArguments(self, jobNum, sandbox):
 		return sandbox
 
 

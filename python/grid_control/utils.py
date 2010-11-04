@@ -101,8 +101,7 @@ def flatten(lists):
 	return result
 
 
-def safeWriteFile(name, content):
-	fp = open(name, 'w')
+def safeWrite(fp, content):
 	fp.writelines(content)
 	fp.truncate()
 	fp.close()
@@ -196,7 +195,7 @@ class PersistentDict(dict):
 		if self.olddict == self.items():
 			return
 		try:
-			safeWriteFile(self.filename, DictFormat(self.format).format(self))
+			safeWrite(open(self.filename, 'w'), DictFormat(self.format).format(self))
 		except:
 			raise RuntimeError('Could not write to file %s' % self.filename)
 		self.olddict = self.items()

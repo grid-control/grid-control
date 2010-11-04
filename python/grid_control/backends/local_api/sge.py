@@ -14,6 +14,8 @@ class SGE(PBSGECommon):
 
 	def parseSubmitOutput(self, data):
 		# Your job 424992 ("test.sh") has been submitted
+		print data
+		print data.split()[2].strip()
 		return data.split()[2].strip()
 
 

@@ -18,7 +18,7 @@ class JMS(LocalWMSApi):
 		return "not in queue !"
 
 
-	def getArguments(self, jobNum, sandbox):
+	def getJobArguments(self, jobNum, sandbox):
 		return sandbox
 
 

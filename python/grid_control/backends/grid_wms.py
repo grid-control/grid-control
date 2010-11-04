@@ -105,7 +105,7 @@ class GridWMS(WMS):
 		return reqs
 
 
-	def makeJDL(self, fp, jobNum):
+	def makeJDL(self, jobNum):
 		cfgPath = os.path.join(self.config.workDir, 'jobs', "job_%d.var" % jobNum)
 		wcList = filter(lambda x: '*' in x, self.sandboxOut)
 		if len(wcList):
@@ -134,7 +134,7 @@ class GridWMS(WMS):
 		cpus = dict(reqs).get(self.CPUS, 1)
 		if cpus > 1:
 			contents['CpuNumber'] = cpus
-		fp.writelines(utils.DictFormat(' = ').format(contents, format = '%s%s%s;\n'))
+		return utils.DictFormat(' = ').format(contents, format = '%s%s%s;\n')
 
 
 	def cleanup(self, list):
@@ -148,10 +148,10 @@ class GridWMS(WMS):
 				pass
 
 
-	def logError(self, proc, log, jdl = None):
+	def logError(self, proc, **kwargs):
 		retCode, stdout, stderr = proc.getAll()
-		sys.stderr.write("WARNING: %s failed with code %d\n" %
-			(os.path.basename(proc.cmd[0]), retCode))
+		kwargs.update({'stdout': stdout, 'stderr': stderr})
+		utils.eprint("WARNING: %s failed with code %d" % (os.path.basename(proc.cmd[0]), retCode))
 
 		now = time.time()
 		entry = "%s.%s" % (time.strftime("%Y-%m-%d_%H:%M:%S", time.localtime(now)), ("%.5f" % (now - int(now)))[2:])
@@ -159,19 +159,14 @@ class GridWMS(WMS):
 		sys.stderr.writelines(filter(lambda x: (x != '\n') and not x.startswith('----'), stderr))
 
 		tar = tarfile.TarFile.open(os.path.join(self.config.workDir, 'error.tar'), 'a')
-		try:
-			logcontent = open(log, 'r').readlines()
-		except:
-			logcontent = []
 		
-		files = [
-			utils.VirtualFile(os.path.join(entry, "log"), logcontent),
-			utils.VirtualFile(os.path.join(entry, "info"), utils.DictFormat().format(data)),
-			utils.VirtualFile(os.path.join(entry, "stdout"), stdout),
-			utils.VirtualFile(os.path.join(entry, "stderr"), stderr)
-		]
-		if jdl:
-			files.append(utils.VirtualFile(os.path.join(entry, "jdl"), jdl))
+		files = [utils.VirtualFile(os.path.join(entry, "info"), utils.DictFormat().format(data))]
+		for name, path in kwargs.items():
+			try:
+				content = open(path, 'r').readlines()
+			except:
+				content = []
+			files.append(utils.VirtualFile(os.path.join(entry, name), content))
 		for file in files:
 			info, handle = file.getTarInfo()
 			tar.addfile(info, handle)
@@ -185,9 +180,7 @@ class GridWMS(WMS):
 	def writeWMSIds(self, ids):
 		try:
 			fd, jobs = tempfile.mkstemp('.jobids')
-			fp = os.fdopen(fd, 'w')
-			fp.writelines(str.join('\n', map(lambda (wmsId, jobNum): str(wmsId), ids)))
-			fp.close()
+			utils.safeWrite(os.fdopen(fd, 'w'), str.join('\n', map(lambda (wmsId, jobNum): str(wmsId), ids)))
 		except:
 			raise RethrowError("Could not write wms ids to %s." % jobs)
 		return jobs
@@ -289,35 +282,32 @@ class GridWMS(WMS):
 		log = tempfile.mktemp('.log')
 
 		try:
-			data = cStringIO.StringIO()
-			self.makeJDL(data, jobNum)
-			data = data.getvalue()
-			fp = os.fdopen(fd, 'w')
-			fp.write(data)
-			fp.close()
+			data = self.makeJDL(jobNum)
+			utils.safeWrite(os.fdopen(fd, 'w'), data)
 		except:
 			raise RethrowError("Could not write jdl data to %s." % jdl)
 
-		tmp = filter(lambda (x, y): y != '', self._submitParams.iteritems())
-		params = str.join(' ', map(lambda (x, y): "%s %s" % (x, y), tmp))
+		tmp = utils.filterDict(self._submitParams, vF = lambda v: v != '')
+		params = str.join(' ', map(lambda (x, y): "%s %s" % (x, y), tmp.items()))
 
-		activity = utils.ActivityLog('submitting jobs')
-		proc = utils.LoggedProcess(self._submitExec, "%s --nomsg --noint --logfile %s %s" %
-			(params, utils.shellEscape(log), utils.shellEscape(jdl)))
+		try:
+			activity = utils.ActivityLog('submitting jobs')
+			proc = utils.LoggedProcess(self._submitExec, '%s --nomsg --noint --logfile "%s" "%s"' % (params, log, jdl))
 
-		wmsId = None
-		for line in map(str.strip, proc.iter()):
-			if line.startswith('http'):
-				wmsId = line
-		retCode = proc.wait()
-		del activity
+			wmsId = None
+			for line in map(str.strip, proc.iter()):
+				if line.startswith('http'):
+					wmsId = line
+			retCode = proc.wait()
+			del activity
 
-		if (retCode != 0) or (wmsId == None):
-			if self.explainError(proc, retCode):
-				pass
-			else:
-				self.logError(proc, log, data)
-		self.cleanup([log, jdl])
+			if (retCode != 0) or (wmsId == None):
+				if self.explainError(proc, retCode):
+					pass
+				else:
+					self.logError(proc, log = log, jdl = jdl)
+		finally:
+			self.cleanup([log, jdl])
 		return (jobNum, wmsId, {'jdl': data})
 
 
@@ -345,7 +335,7 @@ class GridWMS(WMS):
 			if self.explainError(proc, retCode):
 				pass
 			else:
-				self.logError(proc, log)
+				self.logError(proc, log = log, jobs = jobs)
 		self.cleanup([log, jobs])
 
 
@@ -402,7 +392,7 @@ class GridWMS(WMS):
 				self.cleanup([log, jobs, basePath])
 				raise StopIteration
 			else:
-				self.logError(proc, log)
+				self.logError(proc, log = log)
 			utils.eprint("Trying to recover from error ...")
 			for dir in os.listdir(basePath):
 				yield (None, os.path.join(basePath, dir))
@@ -444,5 +434,5 @@ class GridWMS(WMS):
 				if self.explainError(proc, retCode):
 					pass
 				else:
-					self.logError(proc, log)
+					self.logError(proc, log = log)
 			self.cleanup([log, jobs])
