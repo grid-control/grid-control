@@ -1,4 +1,5 @@
 import sys, os
+from python_compat import *
 from grid_control import ConfigError, RethrowError, Job, utils
 from grid_control.backends.wms import WMS
 from api import LocalWMSApi
@@ -37,7 +38,9 @@ class LSF(LocalWMSApi):
 		if WMS.SITES in reqs:
 			params += ' -q %s' % reqs[WMS.SITES][0]
 		if WMS.WALLTIME in reqs:
-			params += ' -c %d' % ((reqs[WMS.WALLTIME] + 59) / 60)
+			params += ' -W %d' % ((reqs[WMS.WALLTIME] + 59) / 60)
+		if WMS.CPUTIME in reqs:
+			params += ' -c %d' % ((reqs[WMS.CPUTIME] + 59) / 60)
 		# IO paths
 		params += ' -o %s -e %s' % (stdout, stderr)
 		return params
