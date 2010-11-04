@@ -93,7 +93,7 @@ class CMSSW_Advanced(cmssw.CMSSW):
 		data.update(constants)
 		lumifilter = fromNM(self.nmLumi, nick, '')
 		if lumifilter:
-			data['LUMI_RANGE'] = self.getActiveLumiFilter(lumifilter)
+			data['LUMI_RANGE'] = self.getActiveLumiFilter(parseLumiFilter(str.join(",", lumifilter)))
 		utils.vprint('Nickname: %s' % nick, 1)
 		utils.vprint(' * Config files: %s' % data['CMSSW_CONFIG'], 1)
 		utils.vprint(' *    Variables: %s' % constants, 1)
