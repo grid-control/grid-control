@@ -3,7 +3,10 @@ import sys, os, StringIO, tarfile, time, fnmatch, re, popen2, threading, operato
 from exceptions import *
 
 # "question mark" function
-QM = lambda cond, a, b: (a, b)[cond != True]
+def QM(cond, a, b):
+	if cond:
+		return a
+	return b
 
 ################################################################
 # Path helper functions
@@ -22,7 +25,7 @@ def resolvePath(path, userpath = [], check = True, ErrorClass = RuntimeError):
 			if os.path.exists(os.path.join(spath, path)):
 				return cleanPath(os.path.join(spath, path))
 		if check:
-			raise ErrorClass('Could not find file %s in \n\t%s' % (path, str.join("\n\t", searchpaths)))
+			raise ErrorClass('Could not find file %s in \n\t%s' % (path, str.join('\n\t', searchpaths)))
 	return path
 
 
@@ -43,6 +46,10 @@ def mergeDicts(dicts):
 	for x in dicts:
 		tmp.update(x)
 	return tmp
+
+
+def filterDict(dictType, kF = lambda k: True, vF = lambda v: True):
+	return dict(filter(lambda (k, v): kF(k) and vF(v), dictType.iteritems()))
 
 
 def accumulate(iterable, doEmit = lambda x, buf: x == '\n', start = '', opAdd = operator.add, addCause = True):
@@ -67,9 +74,9 @@ def wrapList(value, length, delimLines = ',\n', delimEntries = ', '):
 
 def optSplit(opt, delim):
 	""" Split option strings into fixed tuples
-	>>> optSplit("abc:ghi#def", ["#", ":"])
+	>>> optSplit('abc:ghi#def', ['#', ':'])
 	('abc', 'def', 'ghi')
-	>>> optSplit("abcghi#def", ["#", ":"])
+	>>> optSplit('abcghi#def', ['#', ':'])
 	('abcghi', 'def', '')
 	"""
 	rmPrefix = lambda opt: reduce(lambda x, y: x.split(y)[0], delim, opt)
@@ -104,22 +111,22 @@ def safeWriteFile(name, content):
 class LoggedProcess(object):
 	def __init__(self, cmd, args = ''):
 		self.cmd = (cmd, args) # used in backend error messages
-		vprint("External programm called: %s %s" % self.cmd, level=3)
-		self.proc = popen2.Popen3("%s %s" % (cmd, args), True)
+		vprint('External programm called: %s %s' % self.cmd, level=3)
+		self.proc = popen2.Popen3('%s %s' % (cmd, args), True)
 		(self.stdout, self.stderr) = ([], [])
 
 	def getOutput(self, wait = False):
 		if wait:
 			self.wait()
 		self.stdout.extend(self.proc.fromchild.readlines())
-		return str.join("", self.stdout)
+		return str.join('', self.stdout)
 
 	def getError(self):
 		self.stderr.extend(self.proc.childerr.readlines())
-		return str.join("", self.stderr)
+		return str.join('', self.stderr)
 
 	def getMessage(self):
-		return self.getOutput() + "\n" + self.getError()
+		return self.getOutput() + '\n' + self.getError()
 
 	def iter(self, skip = 0):
 		while True:
@@ -293,7 +300,7 @@ def parseTuples(value):
 def parseTime(usertime):
 	if usertime == None or usertime == '':
 		return -1
-	tmp = map(int, usertime.split(":"))
+	tmp = map(int, usertime.split(':'))
 	if len(tmp) > 3:
 		raise ConfigError('Invalid time format: %s' % usertime)
 	while len(tmp) < 3:
@@ -303,7 +310,7 @@ def parseTime(usertime):
 	return reduce(lambda x, y: x * 60 + y, tmp)
 
 
-def strTime(secs, fmt = "%dh %0.2dmin %0.2dsec"):
+def strTime(secs, fmt = '%dh %0.2dmin %0.2dsec'):
 	return QM(secs >= 0, fmt % (secs / 60 / 60, (secs / 60) % 60, secs % 60), '')
 
 
@@ -414,7 +421,7 @@ class AbstractObject:
 			cls.moduleMap = dict(map(lambda (k, v): (k.lower(), v), cls.moduleMap.items()))
 			name = cls.moduleMap.get(cname.lower(), cname)
 			yield name
-			yield "grid_control.%s" % name
+			yield 'grid_control.%s' % name
 			for path in cls.modPath:
 				if not '.' in name:
 					yield '%s.%s.%s' % (path, name.lower(), name)
@@ -435,7 +442,7 @@ class AbstractObject:
 			if issubclass(newcls, cls):
 				return newcls(*args, **kwargs)
 			raise ConfigError('%s is not of type %s' % (newcls, cls))
-		raise ConfigError('%s "%s" does not exist in\n\t%s!' % (cls.__name__, name, str.join("\n\t", searchPath(name))))
+		raise ConfigError('%s "%s" does not exist in\n\t%s!' % (cls.__name__, name, str.join('\n\t', searchPath(name))))
 	open = classmethod(open)
 
 
@@ -547,7 +554,7 @@ def printTabular(head, data, fmtString = '', fmt = {}, level = -1):
 			for id, name in head:
 				tmp[id] = str(fmt.get(id, str)(entry.get(id, '')))
 				value = str(fmt.get(id, str)(entry.get(id, '')))
-				stripped = re.sub("\33\[\d*(;\d*)*m", "", value)
+				stripped = re.sub('\33\[\d*(;\d*)*m', '', value)
 				lenMap[value] = len(value) - len(stripped)
 				maxlen[id] = max(maxlen.get(id, len(name)), len(stripped))
 		else:
@@ -561,11 +568,11 @@ def printTabular(head, data, fmtString = '', fmt = {}, level = -1):
 	for entry in [headentry, None] + entries:
 		applyFmt = lambda fun: map(lambda (id, name): just(id, fun(id)), head)
 		if entry == None:
-			vprint("=%s=" % str.join("=+=", applyFmt(lambda id: '=' * maxlen[id])), level)
+			vprint('=%s=' % str.join('=+=', applyFmt(lambda id: '=' * maxlen[id])), level)
 		elif entry == '':
-			vprint("-%s-" % str.join("-+-", applyFmt(lambda id: '-' * maxlen[id])), level)
+			vprint('-%s-' % str.join('-+-', applyFmt(lambda id: '-' * maxlen[id])), level)
 		else:
-			vprint(" %s " % str.join(" | ", applyFmt(lambda id: entry.get(id, ''))), level)
+			vprint(' %s ' % str.join(' | ', applyFmt(lambda id: entry.get(id, ''))), level)
 
 
 def getUserInput(text, default, choices, parser = lambda x: x):
@@ -579,7 +586,7 @@ def getUserInput(text, default, choices, parser = lambda x: x):
 			return parser(default)
 		if parser(userinput) != None:
 			return parser(userinput)
-		valid = str.join(", ", map(lambda x: '"%s"' % x, choices[:-1]))
+		valid = str.join(', ', map(lambda x: '"%s"' % x, choices[:-1]))
 		eprint('Invalid input! Answer with %s or "%s"' % (valid, choices[-1]))
 
 
@@ -588,14 +595,14 @@ def getUserBool(text, default):
 
 
 def deprecated(text):
-	eprint("%s\n[DEPRECATED] %s" % (open(pathGC('share', 'fail.txt'), 'r').read(), text))
+	eprint('%s\n[DEPRECATED] %s' % (open(pathGC('share', 'fail.txt'), 'r').read(), text))
 	if not getUserBool('Do you want to continue?', False):
 		sys.exit(0)
 
 
 def exitWithUsage(usage, msg = None):
-	sys.stderr.write(QM(msg != None, "%s\n" % msg, ''))
-	sys.stderr.write("Syntax: %s\nUse --help to get a list of options!\n" % usage)
+	sys.stderr.write(QM(msg, '%s\n' % msg, ''))
+	sys.stderr.write('Syntax: %s\nUse --help to get a list of options!\n' % usage)
 	sys.exit(0)
 
 

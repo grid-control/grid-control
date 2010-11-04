@@ -90,8 +90,7 @@ class DataProvider(AbstractObject):
 		def processBlocks():
 			# Validation, Filtering & Naming:
 			for block in self.getBlocksInternal():
-				if DataProvider.BlockName not in block:
-					block[DataProvider.BlockName] = '0'
+				block.setdefault(DataProvider.BlockName, '0')
 				if self._datasetID:
 					block[DataProvider.DatasetID] = self._datasetID
 				if self._datasetNick:
@@ -116,7 +115,7 @@ class DataProvider(AbstractObject):
 					block[DataProvider.FileList] = filter(lambda x: x[DataProvider.NEvents] != 0, block[DataProvider.FileList])
 
 				# Filter dataset sites
-				if block.get(DataProvider.SEList, None) != None:
+				if block.setdefault(DataProvider.SEList, None) != None:
 					sites = utils.doBlackWhiteList(block[DataProvider.SEList], self.sitefilter)
 					if len(sites) == 0 and len(block[DataProvider.FileList]) != 0:
 						utils.eprint('WARNING: Block %s#%s is not available at any site!'
@@ -173,7 +172,7 @@ class DataProvider(AbstractObject):
 			if DataProvider.DatasetID in block:
 				writer.write('id = %d\n' % block[DataProvider.DatasetID])
 			writer.write('events = %d\n' % block[DataProvider.NEvents])
-			if block.get(DataProvider.SEList, None) != None:
+			if block[DataProvider.SEList] != None:
 				writer.write('se list = %s\n' % str.join(',', block[DataProvider.SEList]))
 			writeMetadata = DataProvider.Metadata in block
 			if writeMetadata:

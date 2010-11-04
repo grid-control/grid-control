@@ -139,7 +139,7 @@ class CMSSW_Base(DataMod):
 		data['SCRAM_PROJECTVERSION'] = self.scramEnv['SCRAM_PROJECTVERSION']
 		data['GZIP_OUT'] = QM(self.gzipOut, 'yes', 'no')
 		data['SE_RUNTIME'] = QM(self.seRuntime, 'yes', 'no')
-		data['HAS_RUNTIME'] = QM(len(self.projectArea) != 0, 'yes', 'no')
+		data['HAS_RUNTIME'] = QM(len(self.projectArea), 'yes', 'no')
 		return data
 
 
@@ -200,7 +200,7 @@ class CMSSW_Base(DataMod):
 
 
 	def getTaskType(self):
-		return QM(self.dataSplitter == None, 'production', 'analysis')
+		return QM(self.dataSplitter, 'analysis', 'production')
 
 
 	def getDependencies(self):

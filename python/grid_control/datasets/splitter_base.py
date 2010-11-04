@@ -73,11 +73,11 @@ class DataSplitter(AbstractObject):
 		utils.vprint(('Dataset: %s' % job[DataSplitter.Dataset]).ljust(50), -1, newline = False)
 		utils.vprint(('Events: %d' % job[DataSplitter.NEvents]).ljust(20), -1, newline = False)
 		utils.vprint('  ID: %s' % job.get(DataSplitter.DatasetID, 0), -1)
-		utils.vprint(('  Block: %s' % job[DataSplitter.BlockName]).ljust(50), -1, newline = False)
+		utils.vprint(('  Block: %s' % job.get(DataSplitter.BlockName, 0)).ljust(50), -1, newline = False)
 		utils.vprint(('  Skip: %d' % job[DataSplitter.Skipped]).ljust(20), -1, newline = False)
 		if job.get(DataSplitter.Nickname, '') != '':
 			utils.vprint('Nick: %s' % job[DataSplitter.Nickname], -1)
-		if job.get(DataSplitter.SEList, None) != None:
+		if job[DataSplitter.SEList] != None:
 			utils.vprint(' SEList: %s' % utils.wrapList(job[DataSplitter.SEList], 70, ',\n         '), -1)
 		for idx, head in enumerate(job.get(DataSplitter.MetadataHeader, [])):
 			oneFileMetadata = map(lambda x: repr(x[idx]), job[DataSplitter.Metadata])
@@ -176,7 +176,7 @@ class DataSplitter(AbstractObject):
 			def getCorrespondingBlock(blockA, allBlocks):
 				for blockB in allBlocks:
 					if blockA[DataProvider.Dataset] == blockB[DataProvider.Dataset] and \
-						blockA[DataProvider.BlockName] == blockB[DataProvider.BlockName]:
+						blockA.get(DataProvider.BlockName) == blockB.get(DataProvider.BlockName):
 						return blockB
 				raise RuntimeError('Block %s not found!' % str(blockA))
 
@@ -392,8 +392,18 @@ class DataSplitter(AbstractObject):
 
 			return newSplit
 
-		blockFQN = lambda src, x: (x[src.Dataset], x[src.BlockName])
-		seBlockMap = dict(map(lambda x: (blockFQN(DataProvider, x), x[DataProvider.SEList]), newBlocks))
+		# To support old splittings: create lfn<->SE list map
+		if self.getSplitInfo(0).get(DataSplitter.BlockName, None) == None:
+			utils.deprecated('You are using an old data splitting format - only the slow resync is possible!')
+			def blockFQN(src, x):
+				if len(x[DataSplitter.FileList]):
+					return x[DataSplitter.FileList][0]
+			getSEMapBlock = lambda b: dict(map(lambda fi: (fi[DataProvider.lfn], b[DataProvider.SEList]), b[DataProvider.FileList]))
+			seBlockMap = utils.mergeDicts(map(getSEMapBlock, newBlocks))
+		else:
+			sys.exit(9)
+			blockFQN = lambda src, x: (x[src.Dataset], x[src.BlockName])
+			seBlockMap = dict(map(lambda x: (blockFQN(DataProvider, x), x[DataProvider.SEList]), newBlocks))
 
 		# Iterate over existing job splittings and modifiy them as specified
 		doExpandOutside = DataSplitter.Skipped in self.neededVars()

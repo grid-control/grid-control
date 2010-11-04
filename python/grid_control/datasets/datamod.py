@@ -123,10 +123,14 @@ class DataMod(Module):
 	def getRequirements(self, jobNum):
 		reqs = Module.getRequirements(self, jobNum)
 		if self.dataSplitter != None:
-			selist = self.dataSplitter.getSplitInfo(jobNum).get(DataSplitter.SEList, False)
-			if selist != False:
-				reqs.append((WMS.STORAGE, selist))
+			reqs.append((WMS.STORAGE, self.dataSplitter.getSplitInfo(jobNum)[DataSplitter.SEList]))
 		return reqs
+
+
+	def canSubmit(self, jobNum):
+		if self.checkSE and (self.dataSplitter != None):
+			return self.dataSplitter.getSplitInfo(jobNum)[DataSplitter.SEList] != []
+		return True
 
 
 	def getMaxJobs(self):
@@ -199,10 +203,3 @@ class DataMod(Module):
 
 	def onTaskFinish(self):
 		return not (self.dataRefresh > 0)
-
-
-	def canSubmit(self, jobNum):
-		if self.checkSE and (self.dataSplitter != None):
-			selist = self.dataSplitter.getSplitInfo(jobNum).get(DataSplitter.SEList)
-			return selist != []
-		return True

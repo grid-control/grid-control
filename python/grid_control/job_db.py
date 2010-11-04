@@ -117,7 +117,7 @@ class JobDB:
 		elif (state in [Job.WAITING, Job.ABORTED, Job.DISABLED]) and jobObj.get('reason'):
 			print '(%s)' % jobObj.get('reason')
 		elif (state == Job.SUCCESS) and jobObj.get('runtime', None) != None:
-			print '(runtime %s)' % utils.strTime(jobObj.get('runtime'))
+			print '(runtime %s)' % utils.strTime(QM(jobObj.get('runtime') != '', jobObj.get('runtime'), 0))
 		elif (state == Job.FAILED):
 			msg = []
 			if jobObj.get('retcode'):
