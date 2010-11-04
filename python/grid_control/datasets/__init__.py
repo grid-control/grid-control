@@ -1,6 +1,6 @@
 from provider_base	import *
 from provider_basic	import *
-from provider_multi import *
+from provider_multi	import *
 
 from splitter_base	import *
 from splitter_basic	import *

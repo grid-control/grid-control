@@ -35,8 +35,8 @@ class DataProvider(AbstractObject):
 		self.limitEvents = self.setup(config.getInt, 'dataset', 'limit events', -1)
 
 
-	def setup(self, func, section, item, default = None):
-		value = func(section, item, default)
+	def setup(self, func, section, item, default = None, **kwargs):
+		value = func(section, item, default, **kwargs)
 		if self._datasetNick:
 			value = func('dataset %s' % self._datasetNick, item, value)
 		return value
@@ -116,7 +116,7 @@ class DataProvider(AbstractObject):
 					block[DataProvider.FileList] = filter(lambda x: x[DataProvider.NEvents] != 0, block[DataProvider.FileList])
 
 				# Filter dataset sites
-				if block[DataProvider.SEList] != None:
+				if block.get(DataProvider.SEList, None) != None:
 					sites = utils.doBlackWhiteList(block[DataProvider.SEList], self.sitefilter)
 					if len(sites) == 0 and len(block[DataProvider.FileList]) != 0:
 						utils.eprint('WARNING: Block %s#%s is not available at any site!'
@@ -173,7 +173,7 @@ class DataProvider(AbstractObject):
 			if DataProvider.DatasetID in block:
 				writer.write('id = %d\n' % block[DataProvider.DatasetID])
 			writer.write('events = %d\n' % block[DataProvider.NEvents])
-			if block[DataProvider.SEList] != None:
+			if block.get(DataProvider.SEList, None) != None:
 				writer.write('se list = %s\n' % str.join(',', block[DataProvider.SEList]))
 			writeMetadata = DataProvider.Metadata in block
 			if writeMetadata:

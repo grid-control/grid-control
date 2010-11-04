@@ -1,5 +1,5 @@
 from python_compat import *
-from grid_control import Job, RuntimeError, utils
+from grid_control import QM, Job, RuntimeError, utils
 from gui import Console
 import time
 
@@ -156,16 +156,17 @@ class Report:
 			job = self.allJobs.get(id)
 			for attempt in job.history:
 				# Sort job into category
+				rt = job.get('runtime', 0)
 				if attempt == job.attempt:
 					cat = self.getJobCategory(job)
 					if cat == 'SUCCESS':
-						incstat(statinfo, job.history[attempt], cat, float(job.get('runtime')))
+						incstat(statinfo, job.history[attempt], cat, QM(rt == '', 0, rt))
 					else:
 						incstat(statinfo, job.history[attempt], cat, time.time() - float(job.submitted))
 				else:
 					if job.history[attempt] == 'N/A':
 						continue
-					incstat(statinfo, job.history[attempt], 'FAILED', float(job.get('runtime')))
+					incstat(statinfo, job.history[attempt], 'FAILED', QM(rt == '', 0, rt))
 		# statinfo = {'site1: {''wn1.site1': {'FAILED': 0, 'RUNNING': 0, 'WAITING': 0, 'SUCCESS': 1}, 'wn2.site1': ...}, 'site2': {'wn1.site2': ...}}
 		return statinfo
 

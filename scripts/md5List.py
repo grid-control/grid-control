@@ -11,8 +11,7 @@ def main(args):
 	for jobNum in utils.sorted(jobList):
 		files = gcSupport.getFileInfo(workDir, jobNum, lambda retCode: retCode == 0)
 		for (hash, name_local, name_dest, pathSE) in files:
-			pathSE = pathSE.replace("file://", "")
-			pathSE = pathSE.replace("dir://", "")
+			pathSE = pathSE.replace("file://", "").replace("dir://", "")
 			print("%s  %s/%s" % (hash, pathSE, name_dest))
 
 	return 0

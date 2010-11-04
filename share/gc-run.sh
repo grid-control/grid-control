@@ -224,8 +224,8 @@ if [ -n "$GC_MONITORING" ]; then
 	export GC_WRAPTIME="$[ $(date +%s) - $STARTDATE ]"
 
 	for MON_APP in $GC_MONITORING; do
-		checkfile "$MY_LANDINGZONE/mon.$MON_APP.sh"
-		source "$MY_LANDINGZONE/mon.$MON_APP.sh" "stop"
+		checkfile "$MY_LANDINGZONE/$MON_APP"
+		source "$MY_LANDINGZONE/$MON_APP" "stop"
 	done
 fi
 

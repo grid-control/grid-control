@@ -37,14 +37,13 @@ class ListProvider(DataProvider):
 
 
 	def getBlocksInternal(self):
-		blockinfo = None
-
 		def doFilter(block):
 			if self._filter:
 				name = '%s#%s' % (block[DataProvider.Dataset], block.get(DataProvider.BlockName, ''))
 				return self._filter in name
 			return True
 
+		blockinfo = None
 		for line in open(self._filename, 'rb'):
 			# Found start of block:
 			line = line.strip()

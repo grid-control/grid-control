@@ -101,6 +101,76 @@ def safeWriteFile(name, content):
 	fp.close()
 
 
+class LoggedProcess(object):
+	def __init__(self, cmd, args = ''):
+		self.cmd = (cmd, args) # used in backend error messages
+		vprint("External programm called: %s %s" % self.cmd, level=3)
+		self.proc = popen2.Popen3("%s %s" % (cmd, args), True)
+		(self.stdout, self.stderr) = ([], [])
+
+	def getOutput(self, wait = False):
+		if wait:
+			self.wait()
+		self.stdout.extend(self.proc.fromchild.readlines())
+		return str.join("", self.stdout)
+
+	def getError(self):
+		self.stderr.extend(self.proc.childerr.readlines())
+		return str.join("", self.stderr)
+
+	def getMessage(self):
+		return self.getOutput() + "\n" + self.getError()
+
+	def iter(self, skip = 0):
+		while True:
+			try:
+				line = self.proc.fromchild.readline()
+			except:
+				abort(True)
+				break
+			if not line:
+				break
+			self.stdout.append(line)
+			if skip > 0:
+				skip -= 1
+				continue;
+			yield line
+
+	def wait(self):
+		return self.proc.wait()
+
+	def getAll(self):
+		self.stdout.extend(self.proc.fromchild.readlines())
+		self.stderr.extend(self.proc.childerr.readlines())
+		return (self.wait(), self.stdout, self.stderr)
+
+
+def DiffLists(oldList, newList, cmpFkt, changedFkt):
+	(listAdded, listMissing, listChanged) = ([], [], [])
+	(newIter, oldIter) = (iter(sorted(newList, cmpFkt)), iter(sorted(oldList, cmpFkt)))
+	(new, old) = (next(newIter, None), next(oldIter, None))
+	while True:
+		if (new == None) or (old == None):
+			break
+		result = cmpFkt(new, old)
+		if result < 0: # new[npos] < old[opos]
+			listAdded.append(new)
+			new = next(newIter, None)
+		elif result > 0: # new[npos] > old[opos]
+			listMissing.append(old)
+			old = next(oldIter, None)
+		else: # new[npos] == old[opos] according to *active* comparison
+			changedFkt(listAdded, listMissing, listChanged, old, new)
+			(new, old) = (next(newIter, None), next(oldIter, None))
+	while new != None:
+		listAdded.append(new)
+		new = next(newIter, None)
+	while old != None:
+		listMissing.append(old)
+		old = next(oldIter, None)
+	return (listAdded, listMissing, listChanged)
+
+
 class PersistentDict(dict):
 	def __init__(self, filename, delimeter = '=', lowerCaseKey = True):
 		dict.__init__(self)
@@ -124,7 +194,8 @@ class PersistentDict(dict):
 			raise RuntimeError('Could not write to file %s' % self.filename)
 		self.olddict = self.items()
 
-def globalSetupProxy(fun, default, new):
+
+def globalSetupProxy(fun, default, new = None):
 	if new != None:
 		fun.setting = new
 	try:
@@ -154,73 +225,6 @@ def cached(fun):
 	return funProxy
 
 
-def getVersion():
-	try:
-		version = LoggedProcess('svnversion', '-c %s' % pathGC()).getOutput(True).strip()
-		if version != '':
-			if 'stable' in LoggedProcess('svn info', pathGC()).getOutput(True):
-				return '%s - stable' % version
-			return '%s - testing' % version
-	except:
-		pass
-	return 'unknown'
-getVersion = cached(getVersion)
-
-
-def eprint(text = '', level = -1, printTime = False, newline = True):
-	if verbosity() > level:
-		if printTime:
-			sys.stderr.write('%s - ' % time.strftime('%Y-%m-%d %H:%M:%S', time.localtime()))
-		sys.stderr.write('%s%s' % (text, QM(newline, '\n', '')))
-
-
-def vprint(text = '', level = 0, printTime = False, newline = True, once = False):
-	if once:
-		if text in vprint.log:
-			return
-		vprint.log.append(text)
-	if verbosity() > level:
-		if printTime:
-			sys.stdout.write('%s - ' % time.strftime('%Y-%m-%d %H:%M:%S', time.localtime()))
-		sys.stdout.write('%s%s' % (text, QM(newline, '\n', '')))
-vprint.log = []
-
-
-def getUserInput(text, default, choices, parser = lambda x: x):
-	while True:
-		try:
-			userinput = user_input('%s %s: ' % (text, '[%s]' % default))
-		except:
-			eprint()
-			sys.exit(0)
-		if userinput == '':
-			return parser(default)
-		if parser(userinput) != None:
-			return parser(userinput)
-		valid = str.join(", ", map(lambda x: '"%s"' % x, choices[:-1]))
-		eprint('Invalid input! Answer with %s or "%s"' % (valid, choices[-1]))
-
-
-def getUserBool(text, default):
-	def boolParse(x):
-		if x.lower() in ('yes', 'y', 'true', 'ok'):
-			return True
-		if x.lower() in ('no', 'n', 'false'):
-			return False
-	return getUserInput(text, QM(default, 'yes', 'no'), ['yes', 'no'], boolParse)
-
-
-def wait(timeout):
-	shortStep = map(lambda x: (x, 1), range(max(timeout - 5, 0), timeout))
-	for x, w in map(lambda x: (x, 5), range(0, timeout - 5, 5)) + shortStep:
-		if abort():
-			return False
-		log = ActivityLog('waiting for %d seconds' % (timeout - x))
-		time.sleep(w)
-		del log
-	return True
-
-
 class VirtualFile(StringIO.StringIO):
 	def __init__(self, name, lines):
 		StringIO.StringIO.__init__(self, str.join('', lines))
@@ -234,14 +238,36 @@ class VirtualFile(StringIO.StringIO):
 		return (info, self)
 
 
-def parseType(x):
+def doBlackWhiteList(list, bwfilter):
+	""" Apply black-whitelisting to input list
+	>>> doBlackWhiteList(['T2_US_MIT', 'T1_DE_KIT_MSS', 'T1_US_FNAL'], ['T1', '-T1_DE_KIT'])
+	['T1_US_FNAL']
+	"""
+	blacklist = filter(lambda x: x.startswith('-'), bwfilter)
+	blacklist = map(lambda x: x[1:], blacklist)
+	checkMatch = lambda item, list: True in map(lambda x: item.startswith(x), list)
+	list = filter(lambda x: not checkMatch(x, blacklist), list)
+	whitelist = filter(lambda x: not x.startswith('-'), bwfilter)
+	if len(whitelist):
+		return filter(lambda x: checkMatch(x, whitelist), list)
+	return list
+
+
+def parseType(value):
 	try:
-		if '.' in x:
-			return float(x)
+		if '.' in value:
+			return float(value)
 		else:
-			return int(x)
+			return int(value)
 	except ValueError:
-		return x
+		return value
+
+
+def parseBool(x):
+	if x.lower() in ('yes', 'y', 'true', 'ok'):
+		return True
+	if x.lower() in ('no', 'n', 'false'):
+		return False
 
 
 def parseList(value, delimeter = ',', doFilter = lambda x: x != '', onEmpty = []):
@@ -250,7 +276,7 @@ def parseList(value, delimeter = ',', doFilter = lambda x: x != '', onEmpty = []
 	return onEmpty
 
 
-def parseTuples(string):
+def parseTuples(value):
 	"""Parse a string for keywords and tuples of keywords.
 	>>> parseTuples('(4, 8:00), keyword, ()')
 	[('4', '8:00'), 'keyword', ()]
@@ -260,9 +286,8 @@ def parseTuples(string):
 			return s
 		elif len(t.strip()) == 0:
 			return tuple()
-		return tuple(map(str.strip, t.split(',')))
-
-	return map(to_tuple_or_str, re.findall('\(([^\)]*)\)|([a-zA-Z0-9_\.]+)', string))
+		return tuple(parseList(t))
+	return map(to_tuple_or_str, re.findall('\(([^\)]*)\)|([a-zA-Z0-9_\.]+)', value))
 
 
 def parseTime(usertime):
@@ -279,9 +304,7 @@ def parseTime(usertime):
 
 
 def strTime(secs, fmt = "%dh %0.2dmin %0.2dsec"):
-	if secs < 0:
-		return ""
-	return fmt % (secs / 60 / 60, (secs / 60) % 60, secs % 60)
+	return QM(secs >= 0, fmt % (secs / 60 / 60, (secs / 60) % 60, secs % 60), '')
 
 
 class DictFormat(object):
@@ -356,9 +379,7 @@ def shellEscape(value):
 def genTarball(outFile, dir, pattern):
 	tar = tarfile.open(outFile, 'w:gz')
 	def walk(tar, root, dir):
-		msg = dir
-		if len(msg) > 50:
-			msg = msg[:15] + '...' + msg[len(msg)-32:]
+		msg = QM(len(dir) > 50, dir[:15] + '...' + dir[len(dir)-32:], dir)
 		activity = ActivityLog('Generating tarball: %s' % msg)
 		for name in map(lambda x: os.path.join(dir, x), os.listdir(os.path.join(root, dir))):
 			match = None
@@ -413,10 +434,52 @@ class AbstractObject:
 				continue
 			if issubclass(newcls, cls):
 				return newcls(*args, **kwargs)
-			else:
-				raise ConfigError('%s is not of type %s' % (newcls, cls))
+			raise ConfigError('%s is not of type %s' % (newcls, cls))
 		raise ConfigError('%s "%s" does not exist in\n\t%s!' % (cls.__name__, name, str.join("\n\t", searchPath(name))))
 	open = classmethod(open)
+
+
+def vprint(text = '', level = 0, printTime = False, newline = True, once = False):
+	if once:
+		if text in vprint.log:
+			return
+		vprint.log.append(text)
+	if verbosity() > level:
+		if printTime:
+			sys.stdout.write('%s - ' % time.strftime('%Y-%m-%d %H:%M:%S', time.localtime()))
+		sys.stdout.write('%s%s' % (text, QM(newline, '\n', '')))
+vprint.log = []
+
+
+def eprint(text = '', level = -1, printTime = False, newline = True):
+	if verbosity() > level:
+		if printTime:
+			sys.stderr.write('%s - ' % time.strftime('%Y-%m-%d %H:%M:%S', time.localtime()))
+		sys.stderr.write('%s%s' % (text, QM(newline, '\n', '')))
+
+
+def getVersion():
+	try:
+		version = LoggedProcess('svnversion', '-c %s' % pathGC()).getOutput(True).strip()
+		if version != '':
+			if 'stable' in LoggedProcess('svn info', pathGC()).getOutput(True):
+				return '%s - stable' % version
+			return '%s - testing' % version
+	except:
+		pass
+	return 'unknown'
+getVersion = cached(getVersion)
+
+
+def wait(timeout):
+	shortStep = map(lambda x: (x, 1), range(max(timeout - 5, 0), timeout))
+	for x, w in map(lambda x: (x, 5), range(0, timeout - 5, 5)) + shortStep:
+		if abort():
+			return False
+		log = ActivityLog('waiting for %d seconds' % (timeout - x))
+		time.sleep(w)
+		del log
+	return True
 
 
 class ActivityLog:
@@ -468,79 +531,6 @@ class ActivityLog:
 		sys.stdout, sys.stderr = self.saved
 
 
-class LoggedProcess(object):
-	def __init__(self, cmd, args = ''):
-		self.cmd = (cmd, args) # used in backend error messages
-		vprint("External programm called: %s %s" % self.cmd, level=3)
-		self.proc = popen2.Popen3("%s %s" % (cmd, args), True)
-		(self.stdout, self.stderr) = ([], [])
-
-	def getOutput(self, wait = False):
-		if wait:
-			self.wait()
-		self.stdout.extend(self.proc.fromchild.readlines())
-		return str.join("", self.stdout)
-
-	def getError(self):
-		self.stderr.extend(self.proc.childerr.readlines())
-		return str.join("", self.stderr)
-
-	def getMessage(self):
-		return self.getOutput() + "\n" + self.getError()
-
-	def iter(self, skip = 0):
-		while True:
-			try:
-				line = self.proc.fromchild.readline()
-			except:
-				abort(True)
-				break
-			if not line:
-				break
-			self.stdout.append(line)
-			if skip > 0:
-				skip -= 1
-				continue;
-			yield line
-
-	def wait(self):
-		return self.proc.wait()
-
-	def getAll(self):
-		self.stdout.extend(self.proc.fromchild.readlines())
-		self.stderr.extend(self.proc.childerr.readlines())
-		return (self.wait(), self.stdout, self.stderr)
-
-
-def DiffLists(oldList, newList, cmpFkt, changedFkt):
-	(listAdded, listMissing, listChanged) = ([], [], [])
-	oldIter = iter(sorted(oldList, cmpFkt)) # old[0] < old[1] < ...
-	newIter = iter(sorted(newList, cmpFkt)) # new[0] < new[1] < ...
-	new = next(newIter, None)
-	old = next(oldIter, None)
-	while True:
-		if (new == None) or (old == None):
-			break
-		result = cmpFkt(new, old)
-		if result < 0: # new[npos] < old[opos]
-			listAdded.append(new)
-			new = next(newIter, None)
-		elif result > 0: # new[npos] > old[opos]
-			listMissing.append(old)
-			old = next(oldIter, None)
-		else: # new[npos] == old[opos] according to *active* comparison
-			changedFkt(listAdded, listMissing, listChanged, old, new)
-			new = next(newIter, None)
-			old = next(oldIter, None)
-	while new != None:
-		listAdded.append(new)
-		new = next(newIter, None)
-	while old != None:
-		listMissing.append(old)
-		old = next(oldIter, None)
-	return (listAdded, listMissing, listChanged)
-
-
 def printTabular(head, data, fmtString = '', fmt = {}, level = -1):
 	justFunDict = { 'l': str.ljust, 'r': str.rjust, 'c': str.center }
 	# justFun = {id1: str.center, id2: str.rjust, ...}
@@ -578,6 +568,25 @@ def printTabular(head, data, fmtString = '', fmt = {}, level = -1):
 			vprint(" %s " % str.join(" | ", applyFmt(lambda id: entry.get(id, ''))), level)
 
 
+def getUserInput(text, default, choices, parser = lambda x: x):
+	while True:
+		try:
+			userinput = user_input('%s %s: ' % (text, '[%s]' % default))
+		except:
+			eprint()
+			sys.exit(0)
+		if userinput == '':
+			return parser(default)
+		if parser(userinput) != None:
+			return parser(userinput)
+		valid = str.join(", ", map(lambda x: '"%s"' % x, choices[:-1]))
+		eprint('Invalid input! Answer with %s or "%s"' % (valid, choices[-1]))
+
+
+def getUserBool(text, default):
+	return getUserInput(text, QM(default, 'yes', 'no'), ['yes', 'no'], parseBool)
+
+
 def deprecated(text):
 	eprint("%s\n[DEPRECATED] %s" % (open(pathGC('share', 'fail.txt'), 'r').read(), text))
 	if not getUserBool('Do you want to continue?', False):
@@ -585,25 +594,9 @@ def deprecated(text):
 
 
 def exitWithUsage(usage, msg = None):
-	if msg:
-		sys.stderr.write("%s\n" % msg)
+	sys.stderr.write(QM(msg != None, "%s\n" % msg, ''))
 	sys.stderr.write("Syntax: %s\nUse --help to get a list of options!\n" % usage)
 	sys.exit(0)
-
-
-def doBlackWhiteList(list, bwfilter):
-	""" Apply black-whitelisting to input list
-	>>> doBlackWhiteList(['T2_US_MIT', 'T1_DE_KIT_MSS', 'T1_US_FNAL'], ['T1', '-T1_DE_KIT'])
-	['T1_US_FNAL']
-	"""
-	blacklist = filter(lambda x: x.startswith('-'), bwfilter)
-	blacklist = map(lambda x: x[1:], blacklist)
-	checkMatch = lambda item, list: True in map(lambda x: item.startswith(x), list)
-	list = filter(lambda x: not checkMatch(x, blacklist), list)
-	whitelist = filter(lambda x: not x.startswith('-'), bwfilter)
-	if len(whitelist):
-		return filter(lambda x: checkMatch(x, whitelist), list)
-	return list
 
 
 if __name__ == '__main__':
