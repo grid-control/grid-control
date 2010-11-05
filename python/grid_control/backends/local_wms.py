@@ -109,7 +109,7 @@ class LocalWMS(WMS):
 		return (jobNum, wmsId, {'sandbox': sandbox})
 
 
-	# Check status of jobs and yield (wmsID, status, other data)
+	# Check status of jobs and yield (jobNum, wmsID, status, other data)
 	def checkJobs(self, ids):
 		if not len(ids):
 			raise StopIteration

@@ -97,8 +97,8 @@ class GridWMS(WMS):
 		return str.join(' && ', filter(lambda x: x != None, result))
 
 
-	def getRequirements(self, job):
-		reqs = WMS.getRequirements(self, job)
+	def getRequirements(self, jobNum):
+		reqs = WMS.getRequirements(self, jobNum)
 		# add site requirements
 		if len(self._sites):
 			reqs.append((self.SITES, self._sites))
@@ -308,15 +308,15 @@ class GridWMS(WMS):
 					self.logError(proc, log = log, jdl = jdl)
 		finally:
 			self.cleanup([log, jdl])
-		return (jobNum, wmsId, {'jdl': data})
+		return (jobNum, wmsId, {'jdl': str.join('', data)})
 
 
-	# Check status of jobs and yield (wmsID, status, other data)
+	# Check status of jobs and yield (jobNum, wmsID, status, other data)
 	def checkJobs(self, ids):
 		if len(ids) == 0:
 			raise StopIteration
 
-		idMap = dict(ids)
+		jobNumMap = dict(ids)
 		jobs = self.writeWMSIds(ids)
 		log = tempfile.mktemp('.log')
 
@@ -326,7 +326,7 @@ class GridWMS(WMS):
 
 		for data in self._parseStatus(proc.iter()):
 			data['reason'] = data.get('reason', '')
-			yield (idMap[data['id']], data['id'], self._statusMap[data['status']], data)
+			yield (jobNumMap[data['id']], data['id'], self._statusMap[data['status']], data)
 
 		retCode = proc.wait()
 		del activity
@@ -356,7 +356,7 @@ class GridWMS(WMS):
 		except:
 			raise RuntimeError("Temporary path '%s' could not be created." % tmpPath)
 
-		idMap = dict(ids)
+		jobNumMap = dict(ids)
 		jobs = self.writeWMSIds(ids)
 		log = tempfile.mktemp('.log')
 
@@ -365,10 +365,9 @@ class GridWMS(WMS):
 			tuple(map(utils.shellEscape, [log, jobs, tmpPath])))
 
 		# yield output dirs
-		todo = idMap.values()
+		todo = jobNumMap.values()
 		currentJobNum = None
-		for line in proc.iter():
-			line = line.strip()
+		for line in map(str.strip, proc.iter()):
 			if line.startswith(tmpPath):
 				todo.remove(currentJobNum)
 				outputDir = line.strip()
@@ -383,7 +382,7 @@ class GridWMS(WMS):
 				yield (currentJobNum, line.strip())
 				currentJobNum = None
 			else:
-				currentJobNum = idMap.get(line, currentJobNum)
+				currentJobNum = jobNumMap.get(line, currentJobNum)
 		retCode = proc.wait()
 		del activity
 
@@ -415,7 +414,7 @@ class GridWMS(WMS):
 				break
 			waitFlag = True
 
-			idMap = dict(ids)
+			jobNumMap = dict(ids)
 			jobs = self.writeWMSIds(ids)
 			log = tempfile.mktemp('.log')
 
@@ -426,9 +425,9 @@ class GridWMS(WMS):
 			del activity
 
 			# select cancelled jobs
-			for deleted in filter(lambda x: x.startswith('- '), proc.iter()):
-				deleted = deleted.strip('- \n')
-				yield (deleted, idMap[deleted])
+			for deletedWMSId in filter(lambda x: x.startswith('- '), proc.iter()):
+				deletedWMSId = deletedWMSId.strip('- \n')
+				yield (deletedWMSId, jobNumMap[deletedWMSId])
 
 			if retCode != 0:
 				if self.explainError(proc, retCode):
