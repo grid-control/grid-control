@@ -1,4 +1,4 @@
-import sys
+import os, sys, shutil
 from python_compat import *
 from grid_control import QM, ConfigError, WMS, utils, storage, datasets
 from grid_control.datasets import DataMod
@@ -110,9 +110,13 @@ class CMSSW(DataMod):
 					if not utils.getUserBool('Is runtime available on SE?', False):
 						raise RuntimeError('No CMSSW runtime on SE!')
 
+		# In case of non-cmsRun job:
+		self.executable = config.getPaths(self.__class__.__name__, 'executable', '')
+		self.arguments = config.get(self.__class__.__name__, 'arguments', '', noVar = False)
+
 		# Get cmssw config files and check their existance
 		self.configFiles = []
-		for cfgFile in config.getPaths(self.__class__.__name__, 'config file'):
+		for cfgFile in config.getPaths(self.__class__.__name__, 'config file', QM(self.executable, '', None)):
 			newPath = os.path.join(config.workDir, os.path.basename(cfgFile))
 			if config.opts.init:
 				if not os.path.exists(cfgFile):
@@ -129,9 +133,6 @@ class CMSSW(DataMod):
 			self.eventsPerJob = config.get(self.__class__.__name__, 'events per job', 0)
 			if config.opts.init and self.prepare:
 				self.instrumentCfgQueue(self.configFiles)
-
-		# In case of non-cmsRun job:
-		self.arguments = config.get(self.__class__.__name__, 'arguments', '', noVar = False)
 
 
 	def instrumentCfgQueue(self, cfgFiles, mustPrepare = False):
@@ -193,6 +194,7 @@ class CMSSW(DataMod):
 		data['SE_RUNTIME'] = QM(self.seRuntime, 'yes', 'no')
 		data['HAS_RUNTIME'] = QM(len(self.projectArea), 'yes', 'no')
 		data['CMSSW_CONFIG'] = str.join(' ', map(os.path.basename, self.configFiles))
+		data['CMSSW_EXEC'] = str.join(' ', map(os.path.basename, self.executable))
 		return data
 
 
@@ -207,7 +209,7 @@ class CMSSW(DataMod):
 
 	# Get files for input sandbox
 	def getInFiles(self):
-		files = DataMod.getInFiles(self) + self.configFiles
+		files = DataMod.getInFiles(self) + self.configFiles + self.executable
 		if len(self.projectArea) and not self.seRuntime:
 			files.append(os.path.join(self.config.workDir, 'runtime.tar.gz'))
 		return files + [utils.pathGC('share', 'gc-run.cmssw.sh')]

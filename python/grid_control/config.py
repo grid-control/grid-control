@@ -64,30 +64,31 @@ class Config:
 
 
 	def get(self, section, item, default = None, volatile = False, noVar = True):
-		# Make protocol of config queries - flag inconsistencies
-		if item in self.protocol.setdefault(section, {}):
-			if self.protocol[section][item][1] != default:
-				raise ConfigError('Inconsistent default values: [%s] %s' % (section, item))
+		# Check result, Make protocol of config queries and flag inconsistencies
+		def checkResult(value):
+			if noVar and ((str(value).count('@') >= 2) or (str(value).count('__') >= 2)):
+				raise ConfigError('[%s] %s may not contain variables.' % (section, item))
+			if item in self.protocol.setdefault(section, {}):
+				if self.protocol[section][item][1] != default:
+					raise ConfigError('Inconsistent default values: [%s] %s' % (section, item))
+			self.protocol[section][item] = (value, default, volatile)
+			return value
 		# Default value helper function
 		def tryDefault(errorMessage):
 			if default != None:
 				utils.vprint('Using default value [%s] %s = %s' % (section, item, str(default)), 3)
-				self.protocol[section][item] = (default, default, volatile)
-				return default
+				return checkResult(default)
 			raise ConfigError(errorMessage)
 		# Read from config file or return default if possible
 		try:
 			value = self.parseLine(self.parser, str(section), item)
-			self.protocol[section][item] = (value, default, volatile)
 		except cp.NoSectionError:
 			return tryDefault('No section [%s] in config file!' % section)
 		except cp.NoOptionError:
 			return tryDefault('[%s] %s does not exist!' % (section, item))
 		except:
 			raise ConfigError('[%s] %s could not be parsed!' % (section, item))
-		if noVar and ((value.count('@') >= 2) or (value.count('__') >= 2)):
-			raise ConfigError('[%s] %s may not contain variables.' % (section, item))
-		return value
+		return checkResult(value)
 
 
 	def getPaths(self, section, item, default = None, volatile = False, noVar = True, check = True):

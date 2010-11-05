@@ -6,8 +6,8 @@ echo "Searching for gLite environment..."
 
 if [ -z "$GLITE_LOCATION" ]; then
 	# Save local VO environment variables
-	VO_KEEPER="$MY_LANDINGZONE/env.glite.old"
-	VO_REVERT="$MY_LANDINGZONE/env.glite.new"
+	VO_KEEPER="${MY_LANDINGZONE:-/tmp}/env.glite.old"
+	VO_REVERT="${MY_LANDINGZONE:-/tmp}/env.glite.new"
 	export | grep VO_ | sed -e "s/^.*VO_/VO_/" > "$VO_KEEPER"
 
 	cat $VO_KEEPER

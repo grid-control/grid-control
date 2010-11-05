@@ -29,7 +29,7 @@ echo
 checkvar MY_JOBID
 checkvar MY_LANDINGZONE
 checkvar MY_SCRATCH
-export
+export | display_short
 
 echo
 echo "==========================="
@@ -65,7 +65,7 @@ echo "Prepare variable substitution"
 checkfile "$MY_SCRATCH/_varmap.dat"
 echo "__DATE__: Variable substitution in task __TASK_ID__: __X__" | var_replacer "SUCCESSFUL"
 checkfile "$MY_SCRATCH/_replace.awk"
-cat "$MY_SCRATCH/_replace.awk"
+cat "$MY_SCRATCH/_replace.awk" | display_short
 
 # Job timeout (for debugging)
 if [ ${DOBREAK:-1} -gt 0 ]; then

@@ -614,3 +614,14 @@ get_default_se() {
 		done
 	done
 }
+
+display_short() {
+	BASEAPP=$(which base64 2> /dev/null)
+	if [ -n "$BASEAPP" ]; then
+		echo -n "(B64) "
+		gzip -9 | $BASEAPP -w 0
+		echo
+	else
+		cat
+	fi
+}

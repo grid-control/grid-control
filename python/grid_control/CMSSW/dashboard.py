@@ -8,7 +8,7 @@ class DashBoard(Monitoring):
 		Monitoring.__init__(self, config, module)
 		self.app = config.get('dashboard', 'application', 'shellscript', volatile=True)
 		self.tasktype = config.get('dashboard', 'task', module.getTaskType(), volatile=True)
-		self.taskname = config.get('dashboard', 'task name', '@TASK_ID@_@NICK@', volatile=True)
+		self.taskname = config.get('dashboard', 'task name', '@TASK_ID@_@NICK@', volatile=True, noVar=False)
 
 
 	def getScript(self):
@@ -16,7 +16,7 @@ class DashBoard(Monitoring):
 
 
 	def getEnv(self, wms):
-		return { 'TASK_NAME': self.taskname, 'TASK_USER': wms.proxy.getUsername(), 'DB_EXEC': 'shellscript' }
+		return { 'TASK_NAME': self.taskname, 'TASK_USER': wms.proxy.getUsername(), 'DB_EXEC': self.app }
 
 
 	def getFiles(self):
