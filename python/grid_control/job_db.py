@@ -241,7 +241,7 @@ class JobDB:
 			for jobNum in filter(lambda x: x not in reported, jobList):
 				self.offender[jobNum] = self.offender.get(jobNum, 0) + 1
 			kickList = filter(lambda jobNum: self.offender[jobNum] >= self.kickOffender, self.offender)
-			for jobNum in set(list(kickList) + QM(len(jobList) == 1, jobList, [])):
+			for jobNum in set(list(kickList) + QM((len(reported) == 0) and (len(jobList) == 1), jobList, [])):
 				timeoutList.append(jobNum)
 				self.offender.pop(jobNum)
 

@@ -401,7 +401,6 @@ class DataSplitter(AbstractObject):
 			getSEMapBlock = lambda b: dict(map(lambda fi: (fi[DataProvider.lfn], b[DataProvider.SEList]), b[DataProvider.FileList]))
 			seBlockMap = utils.mergeDicts(map(getSEMapBlock, newBlocks))
 		else:
-			sys.exit(9)
 			blockFQN = lambda src, x: (x[src.Dataset], x[src.BlockName])
 			seBlockMap = dict(map(lambda x: (blockFQN(DataProvider, x), x[DataProvider.SEList]), newBlocks))
 
