@@ -69,16 +69,16 @@ fi
 export MY_WORKDIR="`pwd`/workdir"
 export CMSSW_SEARCH_PATH="$CMSSW_SEARCH_PATH:$MY_WORKDIR"
 mkdir -p "$MY_WORKDIR"; cd "$MY_WORKDIR"
-my_move "$MY_SCRATCH" "$MY_WORKDIR" "$SE_INPUT_FILES"
+my_move "$MY_SCRATCH" "$MY_WORKDIR" "$SE_INPUT_FILES $CMSSW_EXEC"
 echo
 
 # Additional executables in the CMSSW environment
 for CMSSW_BIN in $CMSSW_EXEC; do
 	echo "---------------------------"
 	echo
-	echo "Starting $SETUP_CMSSW with arguments: $@"
+	echo "Starting $CMSSW_BIN with arguments: $@"
 	checkbin "$CMSSW_BIN"
-	eval "$CMSSW_BIN $@"
+	eval "./$CMSSW_BIN $@"
 	echo
 done
 
