@@ -25,14 +25,14 @@ class LocalWMSApi(AbstractObject):
 	def parseStatus(self, status):
 		raise AbstractError
 
-	def getCheckArgument(self, wmsIds):
+	def getCheckArguments(self, wmsIds):
 		raise AbstractError
 
 	def parseJobState(self, state):
 		return self._statusMap[state]
 
-	def getCancelArgument(self, wmsIds):
-		return str.join(" ", wmsIds)
+	def getCancelArgumentss(self, wmsIds):
+		return str.join(' ', wmsIds)
 
 	def checkReq(self, reqs, req, test = lambda x: x > 0):
 		if req in reqs:

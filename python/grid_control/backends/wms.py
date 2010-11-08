@@ -5,7 +5,7 @@ import sys, os, time, stat, shutil, tarfile, glob, itertools
 from grid_control import AbstractObject, AbstractError, ConfigError, RuntimeError, RethrowError, UserError, utils, Proxy
 
 class WMS(AbstractObject):
-	reqTypes = ('SOFTWARE', 'WALLTIME', 'STORAGE', 'SITES', 'CPUTIME', 'MEMORY', 'OTHER', 'CPUS')
+	reqTypes = ('SOFTWARE', 'WALLTIME', 'STORAGE', 'SITES', 'CPUTIME', 'MEMORY', 'CPUS')
 	for idx, reqType in enumerate(reqTypes):
 		locals()[reqType] = idx
 
@@ -53,31 +53,31 @@ class WMS(AbstractObject):
 		# Check file existance / put packed files in sandbox instead of tar file
 		for f in filter(lambda x: isinstance(x, str), inFiles):
 			if not os.path.exists(f):
-				raise UserError("File %s does not exist!" % f)
+				raise UserError('File %s does not exist!' % f)
 			if f.endswith('.gz') or f.endswith('.bz2'):
 				self.sandboxIn.append(f)
 				inFiles.remove(f)
 
 		# Package sandbox tar file
-		utils.vprint("Packing sandbox:")
+		utils.vprint('Packing sandbox:')
 		def shortName(name):
-			name = name.replace(config.workDir.rstrip("/"), "<WORKDIR>")
-			return name.replace(utils.pathGC().rstrip("/"), "<GCDIR>")
+			name = name.replace(config.workDir.rstrip('/'), '<WORKDIR>')
+			return name.replace(utils.pathGC().rstrip('/'), '<GCDIR>')
 		for f in sorted(self.sandboxIn):
 			if f != tarFile or not config.opts.init:
-				utils.vprint("\t%s" % shortName(f))
+				utils.vprint('\t%s' % shortName(f))
 
 		if config.opts.init or not os.path.exists(tarFile):
-			utils.vprint("\t%s" % shortName(tarFile))
+			utils.vprint('\t%s' % shortName(tarFile))
 			tar = tarfile.TarFile.open(tarFile, 'w:gz')
 			for f in sorted(inFiles):
 				if isinstance(f, str): # file path
-					utils.vprint("\t\t%s" % shortName(f))
+					utils.vprint('\t\t%s' % shortName(f))
 					info = tarfile.TarInfo(os.path.basename(f))
 					info.size = os.path.getsize(f)
 					handle = open(f, 'rb')
 				else: # file handle
-					utils.vprint("\t\t%s" % shortName(f.name))
+					utils.vprint('\t\t%s' % shortName(f.name))
 					info, handle = f.getTarInfo()
 				info.mtime = time.time()
 				info.mode = stat.S_IRUSR + stat.S_IWUSR + stat.S_IRGRP + stat.S_IROTH
@@ -115,7 +115,7 @@ class WMS(AbstractObject):
 			content = utils.DictFormat(escapeString = True).format(jobEnv, format = 'export %s%s%s\n')
 			utils.safeWrite(open(cfgPath, 'w'), content)
 		except:
-			raise RethrowError("Could not write job config data to %s." % cfgPath)
+			raise RethrowError('Could not write job config data to %s.' % cfgPath)
 
 
 	def submitJob(self, jobNum):
@@ -169,7 +169,7 @@ class WMS(AbstractObject):
 			try:
 				jobNum, retCode, data = readJobFile(info)
 				if jobNum != inJobNum:
-					raise RuntimeError("Invalid job id in job file %s" % info)
+					raise RuntimeError('Invalid job id in job file %s' % info)
 				if forceMove(dir, os.path.join(self._outputPath, 'job_%d' % jobNum)):
 					retrievedJobs.append(inJobNum)
 					yield (jobNum, retCode, data)

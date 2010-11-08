@@ -11,15 +11,15 @@ class Host(LocalWMSApi):
 
 
 	def unknownID(self):
-		return "Unknown Job Id"
+		return 'Unknown Job Id'
 
 
 	def getJobArguments(self, jobNum, sandbox):
-		return ""
+		return ''
 
 
 	def getSubmitArguments(self, jobNum, sandbox, stdout, stderr, addAttr):
-		return "%d %s %s %s" % (jobNum, sandbox, stdout, stderr)
+		return '%d "%s" "%s" "%s"' % (jobNum, sandbox, stdout, stderr)
 
 
 	def parseSubmitOutput(self, data):
@@ -27,13 +27,13 @@ class Host(LocalWMSApi):
 
 
 	def parseStatus(self, status):
-		head = map(lambda x: x.strip("%").lower(), status.next().split())
+		head = map(lambda x: x.strip('%').lower(), status.next().split())
 		for entry in map(str.strip, status):
 			try:
 				jobinfo = dict(zip(head, filter(lambda x: x != '', entry.split(None, len(head) - 1))))
 				jobinfo.update(zip(['id', 'status', 'dest'], [jobinfo['pid'], 'R', 'localhost/localqueue']))
 			except:
-				raise RethrowError("Error reading job info:\n%s" % entry)
+				raise RethrowError('Error reading job info:\n%s' % entry)
 			yield jobinfo
 
 
@@ -41,9 +41,9 @@ class Host(LocalWMSApi):
 		return Job.RUNNING
 
 
-	def getCheckArgument(self, wmsIds):
-		return "wwup %s" % str.join(" ", wmsIds)
+	def getCheckArguments(self, wmsIds):
+		return 'wwup %s' % str.join(' ', wmsIds)
 
 
-	def getCancelArgument(self, wmsIds):
-		return "-9 %s" % str.join(" ", wmsIds)
+	def getCancelArgumentss(self, wmsIds):
+		return '-9 %s' % str.join(' ', wmsIds)

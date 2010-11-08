@@ -48,27 +48,23 @@ class GridWMS(WMS):
 
 
 	def storageReq(self, sites):
-		fmt = lambda x: "Member(%s, other.GlueCESEBindGroupSEUniqueID)" % self._jdlEscape(x)
-		if (sites == None) or (len(sites) == 0):
-			return None
-		else:
+		fmt = lambda x: 'Member(%s, other.GlueCESEBindGroupSEUniqueID)' % self._jdlEscape(x)
+		if sites:
 			return '( %s )' % str.join(' || ', map(fmt, sites))
 
 
 	def sitesReq(self, sites):
 		sitereqs = []
-		fmt = lambda x: "RegExp(%s, other.GlueCEUniqueID)" % self._jdlEscape(x)
+		fmt = lambda x: 'RegExp(%s, other.GlueCEUniqueID)' % self._jdlEscape(x)
 
 		blacklist = filter(lambda x: x.startswith('-'), sites)
-		sitereqs.extend(map(lambda x: "!" + fmt(x[1:]), blacklist))
+		sitereqs.extend(map(lambda x: '!' + fmt(x[1:]), blacklist))
 
 		whitelist = filter(lambda x: not x.startswith('-'), sites)
 		if len(whitelist):
 			sitereqs.append('(%s)' % str.join(' || ', map(fmt, whitelist)))
 
-		if not len(sitereqs):
-			return None
-		else:
+		if sitereqs:
 			return '( %s )' % str.join(' && ', sitereqs)
 
 
@@ -106,7 +102,7 @@ class GridWMS(WMS):
 
 
 	def makeJDL(self, jobNum):
-		cfgPath = os.path.join(self.config.workDir, 'jobs', "job_%d.var" % jobNum)
+		cfgPath = os.path.join(self.config.workDir, 'jobs', 'job_%d.var' % jobNum)
 		wcList = filter(lambda x: '*' in x, self.sandboxOut)
 		if len(wcList):
 			self.writeJobConfig(jobNum, cfgPath, {'GC_WC': str.join(' ', wcList)})
@@ -151,16 +147,16 @@ class GridWMS(WMS):
 	def logError(self, proc, **kwargs):
 		retCode, stdout, stderr = proc.getAll()
 		kwargs.update({'stdout': stdout, 'stderr': stderr})
-		utils.eprint("WARNING: %s failed with code %d" % (os.path.basename(proc.cmd[0]), retCode))
+		utils.eprint('WARNING: %s failed with code %d' % (os.path.basename(proc.cmd[0]), retCode))
 
 		now = time.time()
-		entry = "%s.%s" % (time.strftime("%Y-%m-%d_%H:%M:%S", time.localtime(now)), ("%.5f" % (now - int(now)))[2:])
+		entry = '%s.%s' % (time.strftime('%Y-%m-%d_%H:%M:%S', time.localtime(now)), ('%.5f' % (now - int(now)))[2:])
 		data = { 'retCode': retCode, 'exec': proc.cmd[0], 'args': proc.cmd[1] }
 		sys.stderr.writelines(filter(lambda x: (x != '\n') and not x.startswith('----'), stderr))
 
 		tar = tarfile.TarFile.open(os.path.join(self.config.workDir, 'error.tar'), 'a')
 		
-		files = [utils.VirtualFile(os.path.join(entry, "info"), utils.DictFormat().format(data))]
+		files = [utils.VirtualFile(os.path.join(entry, 'info'), utils.DictFormat().format(data))]
 		for name, path in kwargs.items():
 			try:
 				content = open(path, 'r').readlines()
@@ -171,9 +167,9 @@ class GridWMS(WMS):
 			info, handle = file.getTarInfo()
 			tar.addfile(info, handle)
 			handle.close()
-			sys.stderr.write(".")
+			sys.stderr.write('.')
 		tar.close()
-		sys.stderr.write("\nAll logfiles were moved to %s\n" % os.path.join(self.config.workDir, 'error.tar'))
+		sys.stderr.write('\nAll logfiles were moved to %s\n' % os.path.join(self.config.workDir, 'error.tar'))
 		return False
 
 
@@ -182,7 +178,7 @@ class GridWMS(WMS):
 			fd, jobs = tempfile.mkstemp('.jobids')
 			utils.safeWrite(os.fdopen(fd, 'w'), str.join('\n', map(lambda (wmsId, jobNum): str(wmsId), ids)))
 		except:
-			raise RethrowError("Could not write wms ids to %s." % jobs)
+			raise RethrowError('Could not write wms ids to %s.' % jobs)
 		return jobs
 
 
@@ -247,10 +243,10 @@ class GridWMS(WMS):
 	def _parseStatusX(self, lines):
 		buffer = []
 		for line in lines:
-			bline = line.strip("*\n")
+			bline = line.strip('*\n')
 			if bline != '' and ('BOOKKEEPING INFORMATION' not in bline):
 				buffer.append(bline)
-			if line.startswith("****") and len(buffer):
+			if line.startswith('****') and len(buffer):
 				remap = { 'destination': 'dest', 'status reason': 'reason',
 					'status info for the job': 'id', 'current status': 'status',
 					'submitted': 'timestamp', 'reached': 'timestamp', 'exit code': 'gridexit'  }
@@ -271,7 +267,7 @@ class GridWMS(WMS):
 
 
 	def explainError(self, proc, code):
-		if "Keyboard interrupt raised by user" in proc.getError():
+		if 'Keyboard interrupt raised by user' in proc.getError():
 			return True
 		return False
 
@@ -285,10 +281,10 @@ class GridWMS(WMS):
 			data = self.makeJDL(jobNum)
 			utils.safeWrite(os.fdopen(fd, 'w'), data)
 		except:
-			raise RethrowError("Could not write jdl data to %s." % jdl)
+			raise RethrowError('Could not write jdl data to %s.' % jdl)
 
 		tmp = utils.filterDict(self._submitParams, vF = lambda v: v != '')
-		params = str.join(' ', map(lambda (x, y): "%s %s" % (x, y), tmp.items()))
+		params = str.join(' ', map(lambda (x, y): '%s %s' % (x, y), tmp.items()))
 
 		try:
 			activity = utils.ActivityLog('submitting jobs')
@@ -320,8 +316,8 @@ class GridWMS(WMS):
 		jobs = self.writeWMSIds(ids)
 		log = tempfile.mktemp('.log')
 
-		activity = utils.ActivityLog("checking job status")
-		proc = utils.LoggedProcess(self._statusExec, "--verbosity 1 --noint --logfile %s -i %s" %
+		activity = utils.ActivityLog('checking job status')
+		proc = utils.LoggedProcess(self._statusExec, '--verbosity 1 --noint --logfile %s -i %s' %
 			tuple(map(utils.shellEscape, [log, jobs])))
 
 		for data in self._parseStatus(proc.iter()):
@@ -360,8 +356,8 @@ class GridWMS(WMS):
 		jobs = self.writeWMSIds(ids)
 		log = tempfile.mktemp('.log')
 
-		activity = utils.ActivityLog("retrieving job outputs")
-		proc = utils.LoggedProcess(self._outputExec, "--noint --logfile %s -i %s --dir %s" %
+		activity = utils.ActivityLog('retrieving job outputs')
+		proc = utils.LoggedProcess(self._outputExec, '--noint --logfile %s -i %s --dir %s' %
 			tuple(map(utils.shellEscape, [log, jobs, tmpPath])))
 
 		# yield output dirs
@@ -387,12 +383,12 @@ class GridWMS(WMS):
 		del activity
 
 		if retCode != 0:
-			if "Keyboard interrupt raised by user" in proc.getError():
+			if 'Keyboard interrupt raised by user' in proc.getError():
 				self.cleanup([log, jobs, basePath])
 				raise StopIteration
 			else:
 				self.logError(proc, log = log)
-			utils.eprint("Trying to recover from error ...")
+			utils.eprint('Trying to recover from error ...')
 			for dir in os.listdir(basePath):
 				yield (None, os.path.join(basePath, dir))
 
@@ -418,8 +414,8 @@ class GridWMS(WMS):
 			jobs = self.writeWMSIds(ids)
 			log = tempfile.mktemp('.log')
 
-			activity = utils.ActivityLog("cancelling jobs")
-			proc = utils.LoggedProcess(self._cancelExec, "--noint --logfile %s -i %s" %
+			activity = utils.ActivityLog('cancelling jobs')
+			proc = utils.LoggedProcess(self._cancelExec, '--noint --logfile %s -i %s' %
 				tuple(map(utils.shellEscape, [log, jobs])))
 			retCode = proc.wait()
 			del activity

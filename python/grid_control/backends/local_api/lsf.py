@@ -23,7 +23,7 @@ class LSF(LocalWMSApi):
 
 
 	def unknownID(self):
-		return "is not found"
+		return 'is not found'
 
 
 	def getJobArguments(self, jobNum, sandbox):
@@ -42,13 +42,13 @@ class LSF(LocalWMSApi):
 		if WMS.CPUTIME in reqs:
 			params += ' -c %d' % ((reqs[WMS.CPUTIME] + 59) / 60)
 		# IO paths
-		params += ' -o %s -e %s' % (stdout, stderr)
+		params += ' -o "%s" -e "%s"' % (stdout, stderr)
 		return params
 
 
 	def parseSubmitOutput(self, data):
 		# Job <34020017> is submitted to queue <1nh>.
-		return data.split()[1].strip("<>").strip()
+		return data.split()[1].strip('<>').strip()
 
 
 	def parseStatus(self, status):
@@ -60,18 +60,18 @@ class LSF(LocalWMSApi):
 			try:
 				tmp = jobline.split()
 				jobinfo = dict(zip(tmpHead, tmp[:7]))
-				jobinfo['submit_time'] = str.join(" ", tmp[7:10])
+				jobinfo['submit_time'] = str.join(' ', tmp[7:10])
 				jobinfo['dest'] = 'N/A'
-				if jobinfo['dest_host'] != "-":
-					jobinfo['dest'] = "%s/%s" % (jobinfo['dest_host'], jobinfo['queue'])
+				if jobinfo['dest_host'] != '-':
+					jobinfo['dest'] = '%s/%s' % (jobinfo['dest_host'], jobinfo['queue'])
 				yield jobinfo
 			except:
-				raise RethrowError("Error reading job info:\n%s" % jobline)
+				raise RethrowError('Error reading job info:\n%s' % jobline)
 
 
-	def getCheckArgument(self, wmsIds):
-		return "-aw %s" % str.join(" ", wmsIds)
+	def getCheckArguments(self, wmsIds):
+		return '-aw %s' % str.join(' ', wmsIds)
 
 
-	def getCancelArgument(self, wmsIds):
-		return str.join(" ", wmsIds)
+	def getCancelArgumentss(self, wmsIds):
+		return str.join(' ', wmsIds)

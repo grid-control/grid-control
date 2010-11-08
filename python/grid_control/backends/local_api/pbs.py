@@ -19,12 +19,12 @@ class PBS(PBSGECommon):
 
 
 	def getSubmitArguments(self, jobNum, sandbox, stdout, stderr, addAttr):
-		reqMap = { WMS.MEMORY: ("pvmem", lambda m: "%dmb" % m) }
+		reqMap = { WMS.MEMORY: ('pvmem', lambda m: '%dmb' % m) }
 		params = PBSGECommon.getSubmitArguments(self, jobNum, sandbox, stdout, stderr, addAttr, reqMap)
 		# Job requirements
 		reqs = dict(self.wms.getRequirements(jobNum))
 		if reqs.get(WMS.SITES, (None, None))[1]:
-			params += ' -l host=%s' % str.join("+", reqs[WMS.SITES][1])
+			params += ' -l host=%s' % str.join('+', reqs[WMS.SITES][1])
 		return params
 
 
@@ -38,31 +38,31 @@ class PBS(PBSGECommon):
 			if section == '':
 				continue
 			try:
-				lines = section.replace("\n\t", "").split('\n')
+				lines = section.replace('\n\t', '').split('\n')
 				jobinfo = utils.DictFormat(' = ').parse(lines[1:])
-				jobinfo['id'] = lines[0].split(":")[1].split('.')[0].strip()
+				jobinfo['id'] = lines[0].split(':')[1].split('.')[0].strip()
 				jobinfo['status'] = jobinfo.get('job_state')
 				jobinfo['dest'] = 'N/A'
 				if 'exec_host' in jobinfo:
-					jobinfo['dest'] = "%s/%s" % (
-						jobinfo.get('exec_host').split('/')[0] + "." + jobinfo.get('server', ''),
+					jobinfo['dest'] = '%s/%s' % (
+						jobinfo.get('exec_host').split('/')[0] + '.' + jobinfo.get('server', ''),
 						jobinfo.get('queue')
 					)
 			except:
-				raise RethrowError("Error reading job info:\n%s" % section)
+				raise RethrowError('Error reading job info:\n%s' % section)
 			yield jobinfo
 
 
-	def getCheckArgument(self, wmsIds):
+	def getCheckArguments(self, wmsIds):
 		if self._server != '':
-			wmsIds = map(lambda x: "%s.%s" % (x, self._server), wmsIds)
-		return "-f %s" % str.join(" ", wmsIds)
+			wmsIds = map(lambda x: '%s.%s' % (x, self._server), wmsIds)
+		return '-f %s' % str.join(' ', wmsIds)
 
 
-	def getCancelArgument(self, wmsIds):
+	def getCancelArgumentss(self, wmsIds):
 		if self._server != '':
-			wmsIds = map(lambda x: "%s.%s" % (x, self._server), wmsIds)
-		return str.join(" ", wmsIds)
+			wmsIds = map(lambda x: '%s.%s' % (x, self._server), wmsIds)
+		return str.join(' ', wmsIds)
 
 
 	def getQueues(self):
@@ -86,7 +86,7 @@ class PBS(PBSGECommon):
 	def getNodes(self):
 		result = []
 		for line in utils.LoggedProcess(self.nodesExec).iter():
-			if not line.startswith(" ") and len(line) > 1:
+			if not line.startswith(' ') and len(line) > 1:
 				result.append(line.strip())
 		if len(result) > 0:
 			return result

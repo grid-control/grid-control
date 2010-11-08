@@ -5,17 +5,15 @@ from pbsge import PBSGECommon
 
 class SGE(PBSGECommon):
 	def getSubmitArguments(self, jobNum, sandbox, stdout, stderr, addAttr):
-		timeStr = lambda s: "%02d:%02d:%02d" % (s / 3600, (s / 60) % 60, s % 60)
-		reqMap = { WMS.MEMORY: ("h_vmem", lambda m: "%dM" % m),
-			WMS.WALLTIME: ("s_rt", timeStr), WMS.CPUTIME: ("h_cpu", timeStr) }
+		timeStr = lambda s: '%02d:%02d:%02d' % (s / 3600, (s / 60) % 60, s % 60)
+		reqMap = { WMS.MEMORY: ('h_vmem', lambda m: '%dM' % m),
+			WMS.WALLTIME: ('s_rt', timeStr), WMS.CPUTIME: ('h_cpu', timeStr) }
 		# Restart jobs = no
 		return ' -r n' + PBSGECommon.getSubmitArguments(self, jobNum, sandbox, stdout, stderr, addAttr, reqMap)
 
 
 	def parseSubmitOutput(self, data):
 		# Your job 424992 ("test.sh") has been submitted
-		print data
-		print data.split()[2].strip()
 		return data.split()[2].strip()
 
 
@@ -33,10 +31,10 @@ class SGE(PBSGECommon):
 				jobinfo['status'] = jobinfo['state']
 				jobinfo['dest'] = 'N/A'
 				if 'queue_name' in jobinfo:
-					tmp = jobinfo['queue_name'].split("@")
-					jobinfo['dest'] = "%s/%s" % (tmp[1], tmp[0])
+					queue, node = jobinfo['queue_name'].split('@')
+					jobinfo['dest'] = '%s/%s' % (node, queue)
 			except:
-				raise RethrowError("Error reading job info:\n%s" % jobentry.toxml())
+				raise RethrowError('Error reading job info:\n%s' % jobentry.toxml())
 			yield jobinfo
 
 
@@ -48,9 +46,9 @@ class SGE(PBSGECommon):
 		return Job.READY
 
 
-	def getCheckArgument(self, wmsIds):
-		return "-xml"
+	def getCheckArguments(self, wmsIds):
+		return '-xml'
 
 
-	def getCancelArgument(self, wmsIds):
-		return str.join(",", wmsIds)
+	def getCancelArgumentss(self, wmsIds):
+		return str.join(',', wmsIds)

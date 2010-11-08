@@ -15,7 +15,7 @@ class JMS(LocalWMSApi):
 
 
 	def unknownID(self):
-		return "not in queue !"
+		return 'not in queue !'
 
 
 	def getJobArguments(self, jobNum, sandbox):
@@ -52,7 +52,7 @@ class JMS(LocalWMSApi):
 			if jobline == '':
 				continue
 			try:
-				tmp = map(lambda x: x.strip('\x1b(B'), jobline.replace("\x1b[m", "").split())
+				tmp = map(lambda x: x.strip('\x1b(B'), jobline.replace('\x1b[m', '').split())
 				jobinfo = dict(zip(tmpHead, tmp[:12]))
 				jobinfo['dest'] = 'N/A'
 				if len(tmp) > 12:
@@ -61,18 +61,18 @@ class JMS(LocalWMSApi):
 					jobinfo['kill_time'] = tmp[13]
 				if len(tmp) > 14:
 					jobinfo['dest_hosts'] = tmp[14]
-					jobinfo['dest'] = "%s.localhost/%s" % (jobinfo['dest_hosts'], jobinfo['queue'])
+					jobinfo['dest'] = '%s.localhost/%s' % (jobinfo['dest_hosts'], jobinfo['queue'])
 				yield jobinfo
 			except:
-				raise RethrowError("Error reading job info:\n%s" % jobline)
+				raise RethrowError('Error reading job info:\n%s' % jobline)
 
 
-	def getCheckArgument(self, wmsIds):
-		return "-l %s" % str.join(" ", wmsIds)
+	def getCheckArguments(self, wmsIds):
+		return '-l %s' % str.join(' ', wmsIds)
 
 
-	def getCancelArgument(self, wmsIds):
-		return str.join(" ", wmsIds)
+	def getCancelArgumentss(self, wmsIds):
+		return str.join(' ', wmsIds)
 
 
 class SLURM(JMS):

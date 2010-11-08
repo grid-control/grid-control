@@ -15,11 +15,11 @@ class PBSGECommon(LocalWMSApi):
 
 
 	def unknownID(self):
-		return "Unknown Job Id"
+		return 'Unknown Job Id'
 
 
 	def getJobArguments(self, jobNum, sandbox):
-		return ""
+		return ''
 
 
 	def getSubmitArguments(self, jobNum, sandbox, stdout, stderr, addAttr, reqMap):
@@ -40,4 +40,4 @@ class PBSGECommon(LocalWMSApi):
 				params += ' -l %s=%s' % (reqMap[req][0], reqMap[req][1](reqs[req]))
 		# Sandbox, IO paths
 		params += ' -v GC_SANDBOX=%s -o %s -e %s' % (sandbox, stdout, stderr)
-		return params + str.join(' ', map(lambda kv: ' -l %s=%s' % kv, addAttr.items()))
+		return params + str.join('', map(lambda kv: ' -l %s=%s' % kv, addAttr.items()))

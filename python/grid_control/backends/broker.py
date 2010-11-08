@@ -51,11 +51,6 @@ class CoverageBroker(Broker):
 
 class SimpleBroker(Broker):
 	def matchQueue(self, reqs):
-		def item(index):
-			def helper(lst):
-				return lst[index]
-			return helper
-
 		def matcher(props):
 			for key, value in reqs:
 				if key not in props:
@@ -65,11 +60,10 @@ class SimpleBroker(Broker):
 			return True
 
 		def queue_cmp(a, b):
-			# From the doc of cmp: "Return negative if a<b, zero if
-			# a==b, positive if a>b"
+			# From the doc of cmp: 'Return negative if a<b, zero if
+			# a==b, positive if a>b'
 			diff = 0
 			for key in a.keys() + b.keys():
-				current_diff = 0
 				if key in a and key in b:
 					current_diff = cmp(a[key], b[key])
 				elif key in a:
@@ -83,10 +77,10 @@ class SimpleBroker(Broker):
 					return 0
 			return diff
 
-		sorted_queues = sorted(self.queues.items(), queue_cmp, item(1))
+		sorted_queues = sorted(self.queues.items(), queue_cmp, lambda x: x[1])
 
 		if self.queues:
-			match = map(item(0), (filter(lambda (x, y): matcher(y), sorted_queues)))
+			match = map(lambda x: x[0], filter(lambda (x, y): matcher(y), sorted_queues))
 			if len(match) == 0:
 				match = self.userQueue
 		else:
