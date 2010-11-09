@@ -123,13 +123,13 @@ class DataMod(Module):
 	def getRequirements(self, jobNum):
 		reqs = Module.getRequirements(self, jobNum)
 		if self.dataSplitter != None:
-			reqs.append((WMS.STORAGE, self.dataSplitter.getSplitInfo(jobNum)[DataSplitter.SEList]))
+			reqs.append((WMS.STORAGE, self.dataSplitter.getSplitInfo(jobNum).get(DataSplitter.SEList)))
 		return reqs
 
 
 	def canSubmit(self, jobNum):
 		if self.checkSE and (self.dataSplitter != None):
-			return self.dataSplitter.getSplitInfo(jobNum)[DataSplitter.SEList] != []
+			return self.dataSplitter.getSplitInfo(jobNum).get(DataSplitter.SEList) != []
 		return True
 
 
