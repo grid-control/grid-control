@@ -22,12 +22,10 @@ class DBSApiv2(DataProvider):
 		self.phedexBL = map(str.strip, self.setup(config.get, section, 'phedex sites', str.join(' ', phedexBL)).split())
 		self.onlyComplete = self.setup(config.getBool, section, 'phedex only complete', True)
 
-		self.url = self.setup(config.get, section, 'dbs instance', '')
-		(self.datasetPath, datasetUrl, self.datasetBlock) = utils.optSplit(datasetExpr, '@#')
-		if datasetUrl != '':
-			self.url = datasetUrl
-		if not self.datasetBlock:
-			self.datasetBlock = 'all'
+		(self.datasetPath, self.url, self.datasetBlock) = utils.optSplit(datasetExpr, '@#')
+		self.url = QM(self.url, self.url, self.setup(config.get, section, 'dbs instance', ''))
+		self.datasetBlock = QM(self.datasetBlock, self.datasetBlock, 'all')
+		self.phedex = self.setup(config.getBool, section, 'use phedex', self.url == '')
 		self.phedex = self.setup(config.getBool, section, 'use phedex', self.url == '')
 
 		# This works in tandem with active job module (cmssy.py supports only [section] lumi filter!)

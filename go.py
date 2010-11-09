@@ -12,9 +12,8 @@ def print_help(*args):
 	utils.eprint("%s\n%s" % (usage, open(utils.pathGC('share', 'help.txt'), 'r').read()))
 	sys.exit(0)
 
-def main(args):
+if __name__ == '__main__':
 	global log, handler
-	utils.abort(False)
 	log = None
 
 	# set up signal handler for interrupts
@@ -52,7 +51,7 @@ def main(args):
 	parser.add_option("-m", '--max-retry',     dest="maxRetry",   default=None,  type="int")
 	parser.add_option("-v", "--verbose",       dest="verbosity",  default=0,     action="count")
 	(opts, args) = parser.parse_args()
-	utils.verbosity.setting = opts.verbosity
+	utils.verbosity(opts.verbosity)
 
 	# we need exactly one positional argument (config file)
 	if len(args) != 1:
@@ -89,7 +88,7 @@ def main(args):
 		# Give help about variables
 		if opts.help_vars:
 			Help().listVars(module)
-			return 0
+			sys.exit(0)
 
 		# Initialise monitoring module
 		monitor = utils.parseList(config.get('jobs', 'monitor', 'scripts'))
@@ -111,27 +110,27 @@ def main(args):
 		# Give config help
 		if opts.help_cfg or opts.help_scfg:
 			Help().getConfig(config, opts.help_cfg)
-			return 0
+			sys.exit(0)
 
 		# If invoked in report mode, just show report and exit
 		if Report(jobs, jobs).show(opts, module):
-			return 0
+			sys.exit(0)
 
 		# Check if jobs have to be deleted and exit
 		if opts.delete != None:
 			jobs.delete(wms, opts.delete)
-			return 0
+			sys.exit(0)
 
 		savedConfigPath = os.path.join(config.workDir, 'work.conf')
-		if opts.init:
-			# Save working config file - no runtime config file changes should happen after this point
-			config.allowSet = False
-			config.parser.write(open(savedConfigPath, 'w'))
-		else:
+		if not opts.init:
 			# Compare config files
 			if config.needInit(savedConfigPath):
-				if utils.getUserBool("Quit grid-control in order to initialize the task again?", False):
-					return 0
+				if utils.getUserBool("\nQuit grid-control in order to initialize the task again?", False):
+					sys.exit(0)
+		else:
+			# Save working config file - no runtime config file changes should happen after this point
+			config.parser.write(open(savedConfigPath, 'w'))
+		config.allowSet = False
 
 		if opts.continuous and not opts.gui:
 			utils.vprint(level = -1)
@@ -176,10 +175,6 @@ def main(args):
 
 	except GCError:
 		sys.stderr.write(GCError.message)
-		return 1
+		sys.exit(1)
 
-	return 0
-
-# if go.py is executed from the command line, call main() with the arguments
-if __name__ == '__main__':
-	sys.exit(main(sys.argv[1:]))
+	sys.exit(0)

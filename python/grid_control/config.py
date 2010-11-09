@@ -66,13 +66,11 @@ class Config:
 	def get(self, section, item, default = None, volatile = False, noVar = True):
 		# Check result, Make protocol of config queries and flag inconsistencies
 		def checkResult(value):
-			if noVar and ((str(value).count('@') >= 2) or (str(value).count('__') >= 2)):
-				raise ConfigError('[%s] %s may not contain variables.' % (section, item))
 			if item in self.protocol.setdefault(section, {}):
 				if self.protocol[section][item][1] != default:
 					raise ConfigError('Inconsistent default values: [%s] %s' % (section, item))
 			self.protocol[section][item] = (value, default, volatile)
-			return value
+			return utils.checkVar(value, '[%s] %s may not contain variables.' % (section, item), noVar)
 		# Default value helper function
 		def tryDefault(errorMessage):
 			if default != None:
@@ -105,8 +103,7 @@ class Config:
 
 
 	def getBool(self, section, item, default = None, volatile = False, noVar = True):
-		value = self.get(section, item, default, volatile, noVar)
-		return str(value).lower() in ('yes', 'y', 'true', 't', 'ok', '1', 'on')
+		return utils.parseBool(self.get(section, item, default, volatile, noVar))
 
 
 	# Compare this config object to another config file

@@ -34,6 +34,13 @@ def resolveInstallPath(path):
 
 ################################################################
 
+
+def checkVar(value, message, check = True):
+	if check and ((str(value).count('@') >= 2) or (str(value).count('__') >= 2)):
+		raise ConfigError(message)
+	return value
+
+
 def gcStartThread(fun, *args, **kargs):
 	thread = threading.Thread(target = fun, args = args, kwargs = kargs)
 	thread.setDaemon(True)
@@ -218,19 +225,6 @@ def abort(new = None):
 	return globalSetupProxy(abort, False, new)
 
 
-def cached(fun): 
-	def funProxy(*args, **kargs):
-		cached = True
-		if 'cached' in kargs:
-			cached = kargs.pop('cached')
-		if not cached or (funProxy.cache[0] == None) or (funProxy.cache[1] != (args, kargs)):
-			funProxy.cache = (funProxy.fun(*args, **kargs), (args, kargs))
-		return funProxy.cache[0]
-	funProxy.fun = fun
-	funProxy.cache = (None, ([], {}))
-	return funProxy
-
-
 class VirtualFile(StringIO.StringIO):
 	def __init__(self, name, lines):
 		StringIO.StringIO.__init__(self, str.join('', lines))
@@ -270,9 +264,9 @@ def parseType(value):
 
 
 def parseBool(x):
-	if x.lower() in ('yes', 'y', 'true', 'ok'):
+	if x.lower() in ('yes', 'y', 'true', 't', 'ok', '1', 'on'):
 		return True
-	if x.lower() in ('no', 'n', 'false'):
+	if x.lower() in ('no', 'n', 'false', 'f', 'fail', '0', 'off'):
 		return False
 
 
@@ -446,11 +440,11 @@ class AbstractObject:
 
 
 def vprint(text = '', level = 0, printTime = False, newline = True, once = False):
-	if once:
-		if text in vprint.log:
-			return
-		vprint.log.append(text)
 	if verbosity() > level:
+		if once:
+			if text in vprint.log:
+				return
+			vprint.log.append(text)
 		if printTime:
 			sys.stdout.write('%s - ' % time.strftime('%Y-%m-%d %H:%M:%S', time.localtime()))
 		sys.stdout.write('%s%s' % (text, QM(newline, '\n', '')))
@@ -474,7 +468,7 @@ def getVersion():
 	except:
 		pass
 	return 'unknown'
-getVersion = cached(getVersion)
+getVersion = lru_cache(getVersion)
 
 
 def wait(timeout):

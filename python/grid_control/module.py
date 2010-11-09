@@ -114,13 +114,20 @@ class Module(AbstractObject):
 			'GC_VERSION': utils.getVersion(),
 		}
 		return utils.mergeDicts([taskConfig, self.taskVariables, self.constants])
-	getTaskConfig = utils.cached(getTaskConfig)
+	getTaskConfig = lru_cache(getTaskConfig)
 
 
 	# Get job dependent environment variables
 	def getJobConfig(self, jobNum):
 		tmp = map(lambda (x, seed): ('SEED_%d' % x, seed + jobNum), enumerate(self.seeds))
 		return dict([('MY_JOBID', jobNum)] + tmp)
+
+
+	def getTransientVars(self):
+		hx = str.join("", map(lambda x: "%02x" % x, map(random.randrange, [256]*16)))
+		return {'MYDATE': time.strftime("%F"), 'MYTIMESTAMP': time.strftime("%s"),
+			'MYGUID': '%s-%s-%s-%s-%s' % (hx[:8], hx[8:12], hx[12:16], hx[16:20], hx[20:]),
+			'RANDOM': str(random.randrange(0, 900000000))}
 
 
 	def getVarMapping(self):
@@ -130,13 +137,6 @@ class Module(AbstractObject):
 		mapping = [('DATE', 'MYDATE'), ('TIMESTAMP', 'MYTIMESTAMP'),
 			('MY_JOB', 'MY_JOBID'), ('CONF', 'GC_CONF'), ('GUID', 'MYGUID')]
 		return dict(mapping + zip(envvars, envvars))
-
-
-	def getTransientVars(self):
-		hx = str.join("", map(lambda x: "%02x" % x, map(random.randrange, [256]*16)))
-		return {'MYDATE': time.strftime("%F"), 'MYTIMESTAMP': time.strftime("%s"),
-			'MYGUID': '%s-%s-%s-%s-%s' % (hx[:8], hx[8:12], hx[12:16], hx[16:20], hx[20:]),
-			'RANDOM': str(random.randrange(0, 900000000))}
 
 
 	def substVars(self, inp, jobNum = None, addDict = {}, check = True):
@@ -149,9 +149,7 @@ class Module(AbstractObject):
 					result = result.replace(delim + virtual + delim, str(allVars.get(real, '')))
 			return result
 		result = substInternal(substInternal(str(inp)))
-		if check and (result.count('__') > 1 or result.count('@') > 1):
-			raise ConfigError("'%s' contains invalid variable specifiers: '%s'" % (inp, result))
-		return result
+		return utils.checkVar(result, "'%s' contains invalid variable specifiers: '%s'" % (inp, result), check)
 
 
 	def validateVariables(self):

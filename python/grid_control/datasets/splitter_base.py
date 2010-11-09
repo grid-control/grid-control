@@ -10,15 +10,13 @@ class DataSplitter(AbstractObject):
 		locals()[splitInfo] = idx
 
 	def __init__(self, config, section = None):
+		(self.config, self.section) = (config, section)
 		self.splitSource = None
-		self._section = section
 		self._protocol = {}
-		self._job0Cache = None
-		self._jobCache = (None, None)
 
 
 	def setup(self, func, item, default = None):
-		self._protocol[item] = func(self._section, item, default)
+		self._protocol[item] = func(self.section, item, default)
 		return self._protocol[item]
 
 
@@ -53,16 +51,10 @@ class DataSplitter(AbstractObject):
 
 
 	def getSplitInfo(self, jobNum):
-		# Special handling of job 0 - most wanted jobinfo ever
-		if jobNum == 0:
-			if self._job0Cache == None:
-				self._job0Cache = self.splitSource[jobNum]
-			return self._job0Cache
-		if self._jobCache[0] != jobNum:
-			if jobNum >= self.getMaxJobs():
-				raise ConfigError('Job %d out of range for available dataset'  % jobNum)
-			self._jobCache = (jobNum, self.splitSource[jobNum])
-		return self._jobCache[1]
+		if jobNum >= self.getMaxJobs():
+			raise ConfigError('Job %d out of range for available dataset' % jobNum)
+		return self.splitSource[jobNum]
+	getSplitInfo = lru_cache(getSplitInfo)
 
 
 	def getMaxJobs(self):

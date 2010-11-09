@@ -1,13 +1,14 @@
-import utils
+import os, utils
 
 # All functions use url_* functions from gc-run.lib (just like the job did...)
 
+ensurePrefix = lambda fn = QM('://' in fn, fn, 'file://%s' % os.path.abspath(fn).lstrip('/'))
+
 def se_runcmd(cmd, varDict = {}, *urls):
 	runLib = utils.pathGC('share', 'gc-run.lib')
-	mkUrl = lambda fn: utils.QM(fn[0] == '/', "file:///%s" % fn.lstrip('/'), fn)
-	urlargs = str.join(' ', map(lambda x: '"%s"' % mkUrl(x).replace('dir://', 'file://'), urls))
+	args = str.join(' ', map(lambda x: '"%s"' % ensurePrefix(x).replace('dir://', 'file://'), urls))
 	varString = str.join(' ', map(lambda x: 'export %s="%s";' % (x, varDict[x]), varDict))
-	return utils.LoggedProcess('source %s || exit 1; %s %s %s' % (runLib, varString, cmd, urlargs))
+	return utils.LoggedProcess('source %s || exit 1; %s %s %s' % (runLib, varString, cmd, args))
 
 se_ls = lambda target: se_runcmd('url_ls', {}, target)
 se_rm = lambda target: se_runcmd('print_and_eval "url_rm"', {}, target)

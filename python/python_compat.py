@@ -3,7 +3,7 @@ try:	# rsplit >= Python 2.4
 except:
 	def rsplit(x, sep, maxsplit = None):
 		""" Split from the right side
-		>>> rsplit("a.b.c.d.e.f.g", ".", 2)
+		>>> rsplit('a.b.c.d.e.f.g', '.', 2)
 		['a.b.c.d.e', 'f', 'g']
 		"""
 		tmp = x.split(sep)
@@ -74,8 +74,38 @@ try:	# raw_input < Python 3.0
 except:
 	user_input = input
 
+try:	# Queue < Python 3.0
+	import Queue as queue
+except:
+	import queue
+
+try:	# functools.lru_cache >= Python 3.2
+	import functools
+	lru_cache = functools.lru_cache
+except:
+	def lru_cache(fun, maxsize = 10): # Implementation causes CPU performance hit to avoid I/O
+		def funProxy(*args, **kargs):
+			(item, tmp) = (None, queue.Queue(maxsize))
+			while not funProxy.cache.empty():
+				((cargs, ckargs), value) = funProxy.cache.get()
+				if (cargs, ckargs) != (args, kargs):
+					tmp.put(((cargs, ckargs), value))
+				else:
+					item = ((args, kargs), value)
+			if item == None:
+				item = ((args, kargs), funProxy.fun(*args, **kargs))
+				if tmp.full():
+					tmp.get()
+			while not tmp.empty(): # restore old order
+				funProxy.cache.put(tmp.get())
+			funProxy.cache.put(item)
+			return item[1]
+		funProxy.fun = fun
+		funProxy.cache = queue.Queue(maxsize)
+		return funProxy
+
 if __name__ == '__main__':
 	import doctest
 	doctest.testmod()
 
-__all__ = ["rsplit", "set", "sorted", "md5", "next", "user_input"]
+__all__ = ['rsplit', 'set', 'sorted', 'md5', 'next', 'user_input', 'lru_cache']

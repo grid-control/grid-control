@@ -40,7 +40,8 @@ class GliteWMSDirect(GliteWMS):
 		for (wmsId, jobNum) in ids:
 			try:
 				data = utils.filterDict(dict(getStatus(wmsId)), vF = lambda v: (v != '') and (v != '0'))
-				data['id'] = data['jobid']
+				data['id'] = data.get('jobid', wmsId)
+				data['dest'] = data.get('destination', 'N/A')
 				yield (jobNum, data['id'], self._statusMap[data['status'].lower()], data)
 			except:
 				errors.append(repr(sys.exc_info()[1]))
