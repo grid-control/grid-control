@@ -5,13 +5,13 @@
 export GC_DOCLEANUP="true"
 source gc-run.lib || exit 101
 
+set +f
 trap abort 0 1 2 3 15
 export MY_JOBID="$1"
 export MY_LANDINGZONE="`pwd`"
 export MY_MARKER="$MY_LANDINGZONE/RUNNING.$$"
 export MY_SCRATCH="`getscratch`"
 export MY_SEED=$RANDOM$RANDOM
-
 shift
 
 # Print job informations

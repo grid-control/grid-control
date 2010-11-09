@@ -582,7 +582,7 @@ my_move() {
 	debug_helper $FUNCNAME "$@"
 	[ ! -d "$1" ] && fail 102
 	[ ! -d "$2" ] && fail 102
-	[ -z "$3" ] && return
+	[ -z $3 ] && return
 	echo "Move files from $1 to $2:"
 	for file in `(cd $1 && ls $(eval "echo $3") && cd $OLDPWD) 2> /dev/null`; do
 		echo -e " >> $file"

@@ -65,7 +65,10 @@ if [ -n "$CMSSW_OLD_RELEASETOP" ]; then
 		sed -i -e "s@$CMSSW_OLD_RELEASETOP@$CMSSW_RELEASE_BASE@" $INITFILE
 	done
 fi
+echo
 
+echo "---------------------------"
+echo
 export MY_WORKDIR="`pwd`/workdir"
 export CMSSW_SEARCH_PATH="$CMSSW_SEARCH_PATH:$MY_WORKDIR"
 mkdir -p "$MY_WORKDIR"; cd "$MY_WORKDIR"

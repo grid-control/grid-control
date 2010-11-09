@@ -321,7 +321,6 @@ class GridWMS(WMS):
 			tuple(map(utils.shellEscape, [log, jobs])))
 
 		for data in self._parseStatus(proc.iter()):
-			data['reason'] = data.get('reason', '')
 			yield (jobNumMap[data['id']], data['id'], self._statusMap[data['status']], data)
 
 		retCode = proc.wait()
