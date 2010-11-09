@@ -28,6 +28,7 @@ class DBSApiv2(DataProvider):
 			self.url = datasetUrl
 		if not self.datasetBlock:
 			self.datasetBlock = 'all'
+		self.phedex = self.setup(config.getBool, section, 'use phedex', self.url == '')
 
 		# This works in tandem with active job module (cmssy.py supports only [section] lumi filter!)
 		self.selectedLumis = parseLumiFilter(self.setup(config.get, section, 'lumi filter', ''))
@@ -52,13 +53,7 @@ class DBSApiv2(DataProvider):
 	def getBlocksInternal(self):
 		import urllib2
 		api = createDBSAPI(self.url)
-		try:
-			listBlockInfo = api.listBlocks(self.datasetPath, nosite=True)
-			# Start thread to retrieve list of files
-			(listFileInfo, seList) = ([], {})
-			def listFileInfoThread(self, result):
-				result.extend(api.listFiles(self.datasetPath, retriveList=QM(self.selectedLumis, ['retrive_lumi'], [])))
-			tFile = utils.gcStartThread(listFileInfoThread, self, listFileInfo)
+		def getWithPhedex(listBlockInfo, seList):
 			# Get dataset list from PhEDex (concurrent with listFiles)
 			phedexArgFmt = lambda x: ('block=%s' % x['Name']).replace('/', '%2F').replace('#', '%23')
 			phedexArg = str.join('&', map(phedexArgFmt, listBlockInfo))
@@ -71,6 +66,15 @@ class DBSApiv2(DataProvider):
 				phedexSites = dict(map(lambda x: (x['node'], x['se']), filter(phedexSelector, phedexBlock['replica'])))
 				phedexSitesOK = utils.doBlackWhiteList(phedexSites.keys(), self.phedexBL)
 				seList[phedexBlock['name']] = map(lambda x: phedexSites[x], phedexSitesOK)
+		try:
+			listBlockInfo = api.listBlocks(self.datasetPath, nosite = self.phedex)
+			# Start thread to retrieve list of files
+			(listFileInfo, seList) = ([], {})
+			def listFileInfoThread(self, result):
+				result.extend(api.listFiles(self.datasetPath, retriveList=QM(self.selectedLumis, ['retrive_lumi'], [])))
+			tFile = utils.gcStartThread(listFileInfoThread, self, listFileInfo)
+			if self.phedex:
+				getWithPhedex(listBlockInfo, seList)
 			tFile.join()
 		except:
 			raise RethrowError('DBS exception')
@@ -95,7 +99,10 @@ class DBSApiv2(DataProvider):
 			blockInfo = dict()
 			blockInfo[DataProvider.Dataset] = str.split(block['Name'], '#')[0]
 			blockInfo[DataProvider.BlockName] = str.split(block['Name'], '#')[1]
-			blockInfo[DataProvider.SEList] = seList.get(block['Name'], [])
+			if self.phedex:
+				blockInfo[DataProvider.SEList] = seList.get(block['Name'], [])
+			else:
+				blockInfo[DataProvider.SEList] = map(lambda x: x['Name'], block['StorageElementList'])
 
 			dropped = 0
 			blockInfo[DataProvider.FileList] = []
