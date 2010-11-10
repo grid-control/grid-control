@@ -1,67 +1,51 @@
-import sys, os, random
+import sys, os, random, itertools
 from python_compat import *
-from grid_control import AbstractObject, utils
+from grid_control import QM, AbstractObject, utils
 from wms import WMS
 
 class Broker(AbstractObject):
-	def __init__(self, config, queues, nodes):
-		self.config = config
-		self.allnodes = nodes
+	def __init__(self, config, section, bic): # backend information class
+		(self.config, nodes, self.queues) = (config, bic.getNodes(), bic.getQueues())
 		# Queue info format: {'queue1': {WMS.MEMORY: 123, ...}, 'queue2': {...}}
-		self.queues = queues
-		self.userQueue = config.get('local', 'queue', '', volatile=True).split()
-		self.userNodes = config.get('local', 'sites', '', volatile=True).split()
-		if (len(self.userNodes) == 0) or (nodes == None):
-			self.nodes = None
-		else:
-			self.nodes = utils.doBlackWhiteList(nodes, self.userNodes)
+		userNodes = config.getList(section, 'sites', [], volatile=True)
+		self.userQueue = config.getList(section, 'queue', [], volatile=True)
+		self.nodes = None
+		if nodes and userNodes:
+			self.nodes = utils.doBlackWhiteList(nodes, userNodes)
 
 	def matchQueue(self, reqs):
 		return reqs
 
-	def addQueueReq(self, reqs, queues, randomize=False, nodes=None):
-		if len(queues) > 0:
-			rIdx = 0
-			if randomize:
-				rIdx = random.randint(0, len(queues) - 1)
-			if nodes == None:
-				nodes = self.nodes
-			reqs.append((WMS.SITES, (queues[rIdx], nodes)))
+	# Add request for first / random queue on given nodes to job requirements
+	def _addQueueReq(self, reqs, queues, reqNodes, randomize=False):
+		reqQueue = None
+		if queues:
+			reqQueue = queues[QM(randomize, random.randint(0, len(queues) - 1), 0)]
+		if reqQueue or reqNodes:
+			reqs.append((WMS.SITES, (reqQueue, reqNodes)))
+		return reqs
 
 
 class DummyBroker(Broker):
 	def matchQueue(self, reqs):
-		self.addQueueReq(reqs, self.userQueue, randomize=True)
-		return reqs
+		return self._addQueueReq(reqs, self.userQueue, self.nodes, True)
 
 
 class CoverageBroker(Broker):
-	def __init__(self, config, queues, nodes):
-		Broker.__init__(self, config, queues, nodes)
-		self.counter = 0
+	def __init__(self, config, section, bic):
+		Broker.__init__(self, config, section, bic)
+		self.cover = itertools.cycle(QM(self.nodes, self.nodes, []))
 
 	def matchQueue(self, reqs):
-		node = None
-		if self.allnodes:
-			node = self.allnodes[self.counter % len(self.allnodes)]
-			self.counter += 1
-		self.addQueueReq(reqs, self.userQueue, nodes = node)
-		return reqs
+		reqNode = QM(self.nodes, [next(self.cover, None)], None)
+		return self._addQueueReq(reqs, self.userQueue, reqNode, True)
 
 
 class SimpleBroker(Broker):
 	def matchQueue(self, reqs):
-		def matcher(props):
-			for key, value in reqs:
-				if key not in props:
-					continue
-				if value >= props[key]:
-					return False
-			return True
-
+		# Sort queues according to requirements
 		def queue_cmp(a, b):
-			# From the doc of cmp: 'Return negative if a<b, zero if
-			# a==b, positive if a>b'
+			# Return negative if a<b, zero if a==b, positive if a>b
 			diff = 0
 			for key in a.keys() + b.keys():
 				if key in a and key in b:
@@ -76,22 +60,24 @@ class SimpleBroker(Broker):
 				elif diff != current_diff and current_diff != 0:
 					return 0
 			return diff
-
-		sorted_queues = sorted(self.queues.items(), queue_cmp, lambda x: x[1])
-
+		sorted_queues = []
 		if self.queues:
-			match = map(lambda x: x[0], filter(lambda (x, y): matcher(y), sorted_queues))
-			if len(match) == 0:
-				match = self.userQueue
-		else:
-			match = self.userQueue
+			sorted_queues = sorted(self.queues.items(), queue_cmp, lambda x: x[1])
 
-		if len(self.userQueue) > 0:
-			# Submit job with the first queue that matches the requirements
-			# and the user specified in the configuration file
-			self.addQueueReq(reqs, filter(lambda x: x in match, self.userQueue))
-		else:
-			self.addQueueReq(reqs, match)
-		return reqs
+		# Match queues which fulfill the requirements (still sorted)
+		def matcher(props):
+			for key, value in reqs:
+				if key not in props:
+					continue
+				if value >= props[key]:
+					return False
+			return True
+		match = map(lambda x: x[0], filter(lambda (x, y): matcher(y), sorted_queues))
+
+		# Combine matched queues and user supplied queues
+		selected = self.userQueue
+		if match:
+			selected = QM(self.userQueue, filter(lambda x: x in match, self.userQueue), match)
+		return self._addQueueReq(reqs, selected, self.nodes)
 
 Broker.dynamicLoaderPath()

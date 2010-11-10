@@ -37,16 +37,13 @@ class Help(object):
 
 
 	def getConfig(self, config, printDefault):
-		print
 		if printDefault:
-			print "These are all used config options:"
+			print "\nThese are all used config options:"
 		else:
-			print "This is the minimal set of config options necessary:"
-		print
-		print ";", "="*60
+			print "\nThis is the minimal set of config options necessary:"
+		print '\n; %s' % "="*60
 		print ";", "grid-control", QM(printDefault, "complete", "reduced"), "config file"
-		print ";", "="*60
-		print
+		print '; %s\n' % "="*60
 		for section in config.protocol:
 			(header, prevNL) = (False, False)
 			for (key, (value, default, volatile)) in config.protocol[section].iteritems():

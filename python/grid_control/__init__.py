@@ -4,7 +4,7 @@ from utils	import AbstractObject, QM
 from config	import Config
 from job	import Job
 from report	import Report
-from job_db	import JobDB
+from job_db	import JobManager
 from proxy	import Proxy
 from help	import Help
 

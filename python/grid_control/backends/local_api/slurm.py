@@ -8,7 +8,6 @@ class JMS(LocalWMSApi):
 
 	def __init__(self, config, wms):
 		LocalWMSApi.__init__(self, config, wms)
-
 		self.submitExec = utils.resolveInstallPath('job_submit')
 		self.statusExec = utils.resolveInstallPath('job_queue')
 		self.cancelExec = utils.resolveInstallPath('job_cancel')
@@ -19,12 +18,12 @@ class JMS(LocalWMSApi):
 
 
 	def getJobArguments(self, jobNum, sandbox):
-		return sandbox
+		return repr(sandbox)
 
 
 	def getSubmitArguments(self, jobNum, sandbox, stdout, stderr, addAttr):
 		# Job name
-		params = ' -J %s' % self.wms.getJobName(jobNum)
+		params = ' -J "%s"' % self.wms.getJobName(jobNum)
 		# Job requirements
 		reqs = dict(self.wms.getRequirements(jobNum))
 		if WMS.SITES in reqs:
@@ -36,7 +35,7 @@ class JMS(LocalWMSApi):
 		if self.checkReq(reqs, WMS.MEMORY):
 			params += ' -m %d' % reqs[WMS.MEMORY]
 		# processes and IO paths
-		params += ' -p 1 -o %s -e %s' % (stdout, stderr)
+		params += ' -p 1 -o "%s" -e "%s"' % (stdout, stderr)
 		return params
 
 
@@ -71,7 +70,7 @@ class JMS(LocalWMSApi):
 		return '-l %s' % str.join(' ', wmsIds)
 
 
-	def getCancelArgumentss(self, wmsIds):
+	def getCancelArguments(self, wmsIds):
 		return str.join(' ', wmsIds)
 
 

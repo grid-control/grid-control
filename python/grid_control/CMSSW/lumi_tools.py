@@ -2,23 +2,18 @@ import os
 from grid_control import ConfigError
 
 def makeint(x):
-	if (x == '') or (x.upper() in ['MAX', 'MIN']):
-		return None
-	return int(x)
+	if x.strip().upper() not in ['', 'MAX', 'MIN']:
+		return int(x)
 
 
 def parseLumiFromJSON(data, select = ''):
 	runs = eval(data)
-	all = []
-	rr = [None, None]
-	if '-' in select:
-		rr = map(makeint, select.split('-'))
+	rr = map(makeint, select.split('-') + [''])[:2]
 	for run in map(int, runs.keys()):
 		if (rr[0] and run < rr[0]) or (rr[1] and run > rr[1]):
 			continue
 		for lumi in runs[str(run)]:
-			all.append(([run, lumi[0]], [run, lumi[1]]))
-	return all
+			yield ([run, lumi[0]], [run, lumi[1]])
 
 
 def cmpLumi(a, b):
@@ -26,8 +21,7 @@ def cmpLumi(a, b):
 	(start_b_run, start_b_lumi) = b[0]
 	if start_a_run == start_b_run:
 		return cmp(start_a_lumi, start_b_lumi)
-	else:
-		return cmp(start_a_run, start_b_run)
+	return cmp(start_a_run, start_b_run)
 
 
 def mergeLumi(rlrange):

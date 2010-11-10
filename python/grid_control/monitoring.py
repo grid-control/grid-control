@@ -4,9 +4,7 @@ from grid_control import AbstractObject, Job, utils
 # Monitoring base class with submodule support
 class Monitoring(AbstractObject):
 	def __init__(self, config, module, submodules = ""):
-		self.config = config
-		self.module = module
-		self.submodules = submodules
+		(self.config, self.module, self.submodules) = (config, module, submodules)
 
 	# Script to call later on
 	def getScript(self):
@@ -56,16 +54,15 @@ class ScriptMonitoring(Monitoring):
 			if jobObj != None:
 				tmp.update(jobObj.getAll())
 			tmp.update({'WORKDIR': self.config.workDir, 'CFGFILE': self.config.configFile})
-			script = self.module.substVars(script, jobNum, tmp)
-
 			tmp.update(self.module.getTaskConfig())
 			tmp.update(self.module.getJobConfig(jobNum))
 			if jobNum != None:
 				tmp.update(self.module.getSubmitInfo(jobNum))
-
 			tmp.update(allDict)
 			for key, value in tmp.iteritems():
 				os.environ["GC_%s" % key] = str(value)
+
+			script = self.module.substVars(script, jobNum, tmp)
 			if self.silent:
 				utils.LoggedProcess(script).wait()
 			else:

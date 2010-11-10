@@ -31,7 +31,7 @@ class LocalWMSApi(AbstractObject):
 	def parseJobState(self, state):
 		return self._statusMap[state]
 
-	def getCancelArgumentss(self, wmsIds):
+	def getCancelArguments(self, wmsIds):
 		return str.join(' ', wmsIds)
 
 	def checkReq(self, reqs, req, test = lambda x: x > 0):

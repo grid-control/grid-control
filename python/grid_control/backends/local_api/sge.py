@@ -4,6 +4,11 @@ from grid_control.backends.wms import WMS
 from pbsge import PBSGECommon
 
 class SGE(PBSGECommon):
+	def __init__(self, config, wms):
+		PBSGECommon.__init__(self, config, wms)
+		self.configExec = utils.resolveInstallPath('qconf')
+
+
 	def getSubmitArguments(self, jobNum, sandbox, stdout, stderr, addAttr):
 		timeStr = lambda s: '%02d:%02d:%02d' % (s / 3600, (s / 60) % 60, s % 60)
 		reqMap = { WMS.MEMORY: ('h_vmem', lambda m: '%dM' % m),
@@ -50,5 +55,31 @@ class SGE(PBSGECommon):
 		return '-xml'
 
 
-	def getCancelArgumentss(self, wmsIds):
+	def getCancelArguments(self, wmsIds):
 		return str.join(',', wmsIds)
+
+
+	def getQueues(self):
+		queues = {}
+		tags = ['h_vmem', 'h_cpu', 's_rt']
+		reqs = dict(zip(tags, [WMS.MEMORY, WMS.CPUTIME, WMS.WALLTIME]))
+		parser = dict(zip(tags, [int, utils.parseTime, utils.parseTime]))
+
+		for queue in map(str.strip, utils.LoggedProcess(self.configExec, '-sql').iter()):
+			queues[queue] = dict()
+			for line in utils.LoggedProcess(self.configExec, '-sq %s' % queue).iter():
+				attr, value = map(str.strip, line.split(" ", 1))
+				if (attr in tags) and (value != 'INFINITY'):
+					queues[queue][reqs[attr]] = parser[attr](value)
+		return queues
+
+
+	def getNodes(self):
+		(result, active) = ([], False)
+		for line in utils.LoggedProcess(self.configExec, '-sep').iter():
+			if line.startswith('===='):
+				active = not active
+			elif active:
+				result.append(line.split()[0])
+		if len(result) > 0:
+			return result

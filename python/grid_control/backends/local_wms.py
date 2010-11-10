@@ -18,15 +18,15 @@ class LocalWMS(WMS):
 			self.addAttr = dict(map(lambda item: (item, config.get(wmsapi, item)), config.parser.options(wmsapi)))
 
 		broker = config.get('local', 'broker', 'DummyBroker', volatile=True)
-		self.broker = Broker.open(broker, config, self.api.getQueues(), self.api.getNodes())
+		self.broker = Broker.open(broker, config, 'local', self.api)
 
 		self.sandPath = config.getPath('local', 'sandbox path', os.path.join(config.workDir, 'sandbox'))
 		self.sandCache = []
 		self.scratchPath = config.getPath('local', 'scratch path', '', volatile=True)
-		self._nameFile = config.getPath('local', 'name source', '', volatile=True)
 		self._source = None
-		if self._nameFile != '':
-			tmp = map(str.strip, open(self._nameFile, 'r').readlines())
+		nameFile = config.getPath('local', 'name source', '', volatile=True)
+		if nameFile != '':
+			tmp = map(str.strip, open(nameFile, 'r').readlines())
 			self._source = filter(lambda x: not (x.startswith('#') or x == ''), tmp)
 
 
@@ -140,8 +140,7 @@ class LocalWMS(WMS):
 	def getSandbox(self, wmsId):
 		# Speed up function by caching result of listdir
 		def searchSandbox(source):
-			for jobdir in source:
-				path = os.path.join(self.sandPath, jobdir)
+			for path in map(lambda sbox: os.path.join(self.sandPath, sbox), source):
 				if os.path.exists(os.path.join(path, wmsId)):
 					return path
 		result = searchSandbox(self.sandCache)

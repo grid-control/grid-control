@@ -54,10 +54,9 @@ class VomsProxy(Proxy):
 		Proxy.__init__(self, config)
 		self._infoExec = utils.resolveInstallPath('voms-proxy-info')
 		self.ignoreWarning = config.getBool('proxy', 'ignore warnings', False, volatile=True)
-		self._info = None
 		self._cache = None
 
-	def _getInfo(self, cached = True):
+	def parseProxy(self, cached = True):
 		# Return cached results if requested
 		if cached and self._cache:
 			return self._cache
@@ -72,7 +71,7 @@ class VomsProxy(Proxy):
 		return self._cache
 
 	def get(self, key, parse = lambda x: x, cached = True):
-		info = self._getInfo(cached)
+		info = self.parseProxy(cached)
 		try:
 			return parse(info[key])
 		except:

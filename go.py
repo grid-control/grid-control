@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-import sys, os, signal, optparse
+import sys, os, signal, optparse, time
 
 # add python subdirectory from where go.py was started to search path
 sys.path.insert(1, os.path.join(sys.path[0], 'python'))
@@ -105,7 +105,7 @@ if __name__ == '__main__':
 			raise ConfigError("Invalid backend specified!" % config.workDir)
 
 		# Initialise job database
-		jobs = JobDB(config, module, monitor)
+		jobs = JobManager(config, module, monitor)
 
 		# Give config help
 		if opts.help_cfg or opts.help_scfg:
@@ -140,25 +140,27 @@ if __name__ == '__main__':
 		# Job submission loop
 		def jobCycle(wait = utils.wait):
 			while True:
-				didWait = False
+				(didWait, lastSpaceMsg) = (False, 0)
 				# Check whether wms can submit
 				if not wms.canSubmit(module.wallTime, opts.submission):
 					opts.submission = False
 				# Check free disk space
 				freeSpace = lambda x: x.f_bavail * x.f_bsize / 1024**2
 				if (checkSpace > 0) and freeSpace(os.statvfs(config.workDir)) < checkSpace:
-					raise RuntimeError("Not enough space left in working directory")
-
-				# check for jobs
-				if not utils.abort() and jobs.check(wms):
-					didWait = wait(wms.getTimings()[1])
-				# retrieve finished jobs
-				if not utils.abort() and jobs.retrieve(wms):
-					didWait = wait(wms.getTimings()[1])
-				# try submission
-				if opts.submission:
-					if not utils.abort() and jobs.submit(wms):
+					if time.time() - lastSpaceMsg > 5 * 60:
+						utils.vprint("Not enough space left in working directory", -1, True)
+						lastSpaceMsg = time.time()
+				else:
+					# check for jobs
+					if not utils.abort() and jobs.check(wms):
 						didWait = wait(wms.getTimings()[1])
+					# retrieve finished jobs
+					if not utils.abort() and jobs.retrieve(wms):
+						didWait = wait(wms.getTimings()[1])
+					# try submission
+					if opts.submission:
+						if not utils.abort() and jobs.submit(wms):
+							didWait = wait(wms.getTimings()[1])
 
 				# quit if abort flag is set or not in continuous mode
 				if utils.abort() or not opts.continuous:

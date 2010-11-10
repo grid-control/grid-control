@@ -317,8 +317,7 @@ class GridWMS(WMS):
 		log = tempfile.mktemp('.log')
 
 		activity = utils.ActivityLog('checking job status')
-		proc = utils.LoggedProcess(self._statusExec, '--verbosity 1 --noint --logfile %s -i %s' %
-			tuple(map(utils.shellEscape, [log, jobs])))
+		proc = utils.LoggedProcess(self._statusExec, '--verbosity 1 --noint --logfile "%s" -i "%s"' % (log, jobs))
 
 		for data in self._parseStatus(proc.iter()):
 			yield (jobNumMap[data['id']], data['id'], self._statusMap[data['status']], data)
@@ -356,8 +355,8 @@ class GridWMS(WMS):
 		log = tempfile.mktemp('.log')
 
 		activity = utils.ActivityLog('retrieving job outputs')
-		proc = utils.LoggedProcess(self._outputExec, '--noint --logfile %s -i %s --dir %s' %
-			tuple(map(utils.shellEscape, [log, jobs, tmpPath])))
+		proc = utils.LoggedProcess(self._outputExec,
+			'--noint --logfile "%s" -i "%s" --dir "%s"' % (log, jobs, tmpPath))
 
 		# yield output dirs
 		todo = jobNumMap.values()
@@ -414,8 +413,7 @@ class GridWMS(WMS):
 			log = tempfile.mktemp('.log')
 
 			activity = utils.ActivityLog('cancelling jobs')
-			proc = utils.LoggedProcess(self._cancelExec, '--noint --logfile %s -i %s' %
-				tuple(map(utils.shellEscape, [log, jobs])))
+			proc = utils.LoggedProcess(self._cancelExec, '--noint --logfile "%s" -i "%s"' % (log, jobs))
 			retCode = proc.wait()
 			del activity
 

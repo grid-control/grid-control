@@ -1,5 +1,5 @@
 import sys, os
-from grid_control import ConfigError, RethrowError, Job, utils
+from grid_control import QM, ConfigError, RethrowError, Job, utils
 from grid_control.backends.wms import WMS
 from pbsge import PBSGECommon
 
@@ -16,6 +16,7 @@ class PBS(PBSGECommon):
 		PBSGECommon.__init__(self, config, wms)
 		self.nodesExec = utils.resolveInstallPath('pbsnodes')
 		self._server = config.get('local', 'server', '', volatile=True)
+		self.fqid = lambda wmsId: QM(self._server, '%s.%s' % (wmsId, self._server), wmsId)
 
 
 	def getSubmitArguments(self, jobNum, sandbox, stdout, stderr, addAttr):
@@ -54,32 +55,26 @@ class PBS(PBSGECommon):
 
 
 	def getCheckArguments(self, wmsIds):
-		if self._server != '':
-			wmsIds = map(lambda x: '%s.%s' % (x, self._server), wmsIds)
-		return '-f %s' % str.join(' ', wmsIds)
+		return '-f %s' % str.join(' ', map(self.fqid, wmsIds))
 
 
-	def getCancelArgumentss(self, wmsIds):
-		if self._server != '':
-			wmsIds = map(lambda x: '%s.%s' % (x, self._server), wmsIds)
-		return str.join(' ', wmsIds)
+	def getCancelArguments(self, wmsIds):
+		return str.join(' ', map(self.fqid, wmsIds))
 
 
 	def getQueues(self):
-		defined = lambda (key, value): value != '--'
-		toint = lambda value: int(value)
-
-		keys = (WMS.MEMORY, WMS.CPUTIME, WMS.WALLTIME)
-		func = (toint, utils.parseTime, utils.parseTime)
-		parser = dict(zip(keys, func))
-
-		queues = {}
-		output = utils.LoggedProcess(self.statusExec, '-q').getAll()[1][5:-2]
-		for line in output:
-			fields = map(str.strip, line.split()[:4])
-			queues[fields[0]] = dict(
-				map(lambda (key, value): (key, parser[key](value)),
-					filter(defined, zip(keys, fields[1:]))))
+		(queues, active) = ({}, False)
+		keys = [WMS.MEMORY, WMS.CPUTIME, WMS.WALLTIME]
+		parser = dict(zip(keys, [int, utils.parseTime, utils.parseTime]))
+		for line in utils.LoggedProcess(self.statusExec, '-q').iter():
+			if line.startswith('-'):
+				active = True
+			elif line.startswith(' '):
+				active = False
+			elif active:
+				fields = map(str.strip, line.split()[:4])
+				props = filter(lambda (k, v): not v.startswith('-'), zip(keys, fields[1:]))
+				queues[fields[0]] = dict(map(lambda (k, v): (k, parser[k](v)), props))
 		return queues
 
 
@@ -87,7 +82,8 @@ class PBS(PBSGECommon):
 		result = []
 		for line in utils.LoggedProcess(self.nodesExec).iter():
 			if not line.startswith(' ') and len(line) > 1:
-				result.append(line.strip())
+				node = line.strip()
+			if ('state = ' in line) and ('down' not in line) and ('offline' not in line):
+				result.append(node)
 		if len(result) > 0:
 			return result
-		return None

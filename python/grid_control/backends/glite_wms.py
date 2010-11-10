@@ -19,12 +19,12 @@ class GliteWMS(GridWMS):
 		try:
 			params = ''
 			if self._configVO != '':
-				params += ' --config %s' % utils.shellEscape(self._configVO)
+				params += ' --config "%s"' % self._configVO
 			self._submitParams.update({ '-d': None })
 
 			activity = utils.ActivityLog('creating delegate proxy for job submission')
-			proc = utils.LoggedProcess(self._delegateExec, '%s -a --noint --logfile %s' %
-				(params, utils.shellEscape(log)))
+			proc = utils.LoggedProcess(self._delegateExec,
+				'%s -a --noint --logfile "%s"' % (params, log))
 			for line in map(str.strip, proc.iter()):
 				try:
 					(left, right) = line.split(':', 1)

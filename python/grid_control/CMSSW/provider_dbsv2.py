@@ -26,7 +26,6 @@ class DBSApiv2(DataProvider):
 		self.url = QM(self.url, self.url, self.setup(config.get, section, 'dbs instance', ''))
 		self.datasetBlock = QM(self.datasetBlock, self.datasetBlock, 'all')
 		self.phedex = self.setup(config.getBool, section, 'use phedex', self.url == '')
-		self.phedex = self.setup(config.getBool, section, 'use phedex', self.url == '')
 
 		# This works in tandem with active job module (cmssy.py supports only [section] lumi filter!)
 		self.selectedLumis = parseLumiFilter(self.setup(config.get, section, 'lumi filter', ''))

@@ -1,4 +1,4 @@
-import sys, os
+import sys, os, itertools
 from python_compat import *
 from grid_control import ConfigError, RethrowError, Job, utils
 from grid_control.backends.wms import WMS
@@ -16,7 +16,6 @@ class LSF(LocalWMSApi):
 
 	def __init__(self, config, wms):
 		LocalWMSApi.__init__(self, config, wms)
-
 		self.submitExec = utils.resolveInstallPath('bsub')
 		self.statusExec = utils.resolveInstallPath('bjobs')
 		self.cancelExec = utils.resolveInstallPath('bkill')
@@ -54,9 +53,7 @@ class LSF(LocalWMSApi):
 	def parseStatus(self, status):
 		next(status)
 		tmpHead = ['id', 'user', 'status', 'queue', 'from', 'dest_host', 'job_name']
-		for jobline in status:
-			if jobline == '':
-				continue
+		for jobline in itertools.ifilter(lambda x: x != '', status):
 			try:
 				tmp = jobline.split()
 				jobinfo = dict(zip(tmpHead, tmp[:7]))
@@ -73,5 +70,5 @@ class LSF(LocalWMSApi):
 		return '-aw %s' % str.join(' ', wmsIds)
 
 
-	def getCancelArgumentss(self, wmsIds):
+	def getCancelArguments(self, wmsIds):
 		return str.join(' ', wmsIds)

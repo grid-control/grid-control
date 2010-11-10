@@ -106,6 +106,10 @@ class Config:
 		return utils.parseBool(self.get(section, item, default, volatile, noVar))
 
 
+	def getList(self, section, item, default = [], volatile = False, noVar = True):
+		return utils.parseList(self.get(section, item, '', volatile, noVar), onEmpty = default)
+
+
 	# Compare this config object to another config file
 	# Return true in case non-volatile parameters are changed
 	def needInit(self, saveConfigPath):

@@ -16,7 +16,7 @@ class Console:
 		(self.stdout, self.stdin) = (sys.stdout, sys.stdin)
 		def callFactory(x):
 			return lambda: self.esc(x)
-		for (proc, esc) in self.cmd.items():
+		for (proc, esc) in Console.cmd.items():
 			setattr(self, proc, callFactory(esc))
 
 	def esc(self, data):
@@ -74,17 +74,15 @@ class GUIStream:
 		if self.logged:
 			GUIStream.backlog.pop(0)
 			GUIStream.backlog.append(data)
-
-		if True:
-			idx = 0
+		idx = 0
+		match = self.regex.search(data[idx:])
+		while match:
+			self.screen.addstr(data[idx:idx + match.start()])
+			self.screen.addstr(match.group(0),
+					self.attributes(data[idx:], match.start()))
+			idx += match.end()
 			match = self.regex.search(data[idx:])
-			while match:
-				self.screen.addstr(data[idx:idx + match.start()])
-				self.screen.addstr(match.group(0),
-						self.attributes(data[idx:], match.start()))
-				idx += match.end()
-				match = self.regex.search(data[idx:])
-			self.screen.addstr(data[idx:])
+		self.screen.addstr(data[idx:])
 		return True
 
 	def __getattr__(self, name):
@@ -93,13 +91,13 @@ class GUIStream:
 	def dump(cls):
 		for data in filter(lambda x: x, GUIStream.backlog):
 			sys.stdout.write(data)
-		sys.stdout.write('\n')	
+		sys.stdout.write('\n')
 	dump = classmethod(dump)
 GUIStream.backlog = [None for i in range(100)]
 
 
 class ProgressBar:
-	def __init__(self, minValue = 0, maxValue = 100, totalWidth=16):
+	def __init__(self, minValue = 0, maxValue = 100, totalWidth = 16):
 		(self.min, self.max, self.width) = (minValue, maxValue, totalWidth)
 		self.update(0)
 

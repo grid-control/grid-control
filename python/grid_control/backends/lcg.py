@@ -15,7 +15,5 @@ class LCG(GridWMS):
 
 	def storageReq(self, sites):
 		fmt = lambda x: '(target.GlueSEUniqueID == %s)' % self._jdlEscape(member)
-		if (sites == None) or (len(sites) == 0):
-			return None
-		else:
+		if sites:
 			return 'anyMatch(other.storage.CloseSEs, ' + str.join(' || ', map(fmt, sites)) + ')'

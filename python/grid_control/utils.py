@@ -33,19 +33,80 @@ def resolveInstallPath(path):
 	return resolvePath(path, os.environ['PATH'].split(':'), True, InstallationError)
 
 ################################################################
-
-
-def checkVar(value, message, check = True):
-	if check and ((str(value).count('@') >= 2) or (str(value).count('__') >= 2)):
-		raise ConfigError(message)
-	return value
-
+# Process management functions
 
 def gcStartThread(fun, *args, **kargs):
 	thread = threading.Thread(target = fun, args = args, kwargs = kargs)
 	thread.setDaemon(True)
 	thread.start()
 	return thread
+
+
+class LoggedProcess(object):
+	def __init__(self, cmd, args = ''):
+		self.cmd = (cmd, args) # used in backend error messages
+		vprint('External programm called: %s %s' % self.cmd, level=3)
+		self.proc = popen2.Popen3('%s %s' % (cmd, args), True)
+		(self.stdout, self.stderr) = ([], [])
+
+	def getOutput(self, wait = False):
+		if wait:
+			self.wait()
+		self.stdout.extend(self.proc.fromchild.readlines())
+		return str.join('', self.stdout)
+
+	def getError(self):
+		self.stderr.extend(self.proc.childerr.readlines())
+		return str.join('', self.stderr)
+
+	def getMessage(self):
+		return self.getOutput() + '\n' + self.getError()
+
+	def iter(self):
+		while True:
+			try:
+				line = self.proc.fromchild.readline()
+			except:
+				abort(True)
+				break
+			if not line:
+				break
+			self.stdout.append(line)
+			yield line
+
+	def wait(self):
+		return self.proc.wait()
+
+	def getAll(self):
+		self.stdout.extend(self.proc.fromchild.readlines())
+		self.stderr.extend(self.proc.childerr.readlines())
+		return (self.wait(), self.stdout, self.stderr)
+
+################################################################
+# Path helper functions
+
+def globalSetupProxy(fun, default, new = None):
+	if new != None:
+		fun.setting = new
+	try:
+		return fun.setting
+	except:
+		return default
+
+
+def verbosity(new = None):
+	return globalSetupProxy(verbosity, 0, new)
+
+
+def abort(new = None):
+	return globalSetupProxy(abort, False, new)
+
+################################################################
+
+def checkVar(value, message, check = True):
+	if check and ((str(value).count('@') >= 2) or (str(value).count('__') >= 2)):
+		raise ConfigError(message)
+	return value
 
 
 def mergeDicts(dicts):
@@ -114,50 +175,6 @@ def safeWrite(fp, content):
 	fp.close()
 
 
-class LoggedProcess(object):
-	def __init__(self, cmd, args = ''):
-		self.cmd = (cmd, args) # used in backend error messages
-		vprint('External programm called: %s %s' % self.cmd, level=3)
-		self.proc = popen2.Popen3('%s %s' % (cmd, args), True)
-		(self.stdout, self.stderr) = ([], [])
-
-	def getOutput(self, wait = False):
-		if wait:
-			self.wait()
-		self.stdout.extend(self.proc.fromchild.readlines())
-		return str.join('', self.stdout)
-
-	def getError(self):
-		self.stderr.extend(self.proc.childerr.readlines())
-		return str.join('', self.stderr)
-
-	def getMessage(self):
-		return self.getOutput() + '\n' + self.getError()
-
-	def iter(self, skip = 0):
-		while True:
-			try:
-				line = self.proc.fromchild.readline()
-			except:
-				abort(True)
-				break
-			if not line:
-				break
-			self.stdout.append(line)
-			if skip > 0:
-				skip -= 1
-				continue;
-			yield line
-
-	def wait(self):
-		return self.proc.wait()
-
-	def getAll(self):
-		self.stdout.extend(self.proc.fromchild.readlines())
-		self.stderr.extend(self.proc.childerr.readlines())
-		return (self.wait(), self.stdout, self.stderr)
-
-
 def DiffLists(oldList, newList, cmpFkt, changedFkt):
 	(listAdded, listMissing, listChanged) = ([], [], [])
 	(newIter, oldIter) = (iter(sorted(newList, cmpFkt)), iter(sorted(oldList, cmpFkt)))
@@ -208,23 +225,6 @@ class PersistentDict(dict):
 		self.olddict = self.items()
 
 
-def globalSetupProxy(fun, default, new = None):
-	if new != None:
-		fun.setting = new
-	try:
-		return fun.setting
-	except:
-		return default
-
-
-def verbosity(new = None):
-	return globalSetupProxy(verbosity, 0, new)
-
-
-def abort(new = None):
-	return globalSetupProxy(abort, False, new)
-
-
 class VirtualFile(StringIO.StringIO):
 	def __init__(self, name, lines):
 		StringIO.StringIO.__init__(self, str.join('', lines))
@@ -238,27 +238,25 @@ class VirtualFile(StringIO.StringIO):
 		return (info, self)
 
 
-def doBlackWhiteList(list, bwfilter):
+def doBlackWhiteList(value, bwfilter):
 	""" Apply black-whitelisting to input list
 	>>> doBlackWhiteList(['T2_US_MIT', 'T1_DE_KIT_MSS', 'T1_US_FNAL'], ['T1', '-T1_DE_KIT'])
 	['T1_US_FNAL']
 	"""
-	blacklist = filter(lambda x: x.startswith('-'), bwfilter)
-	blacklist = map(lambda x: x[1:], blacklist)
-	checkMatch = lambda item, list: True in map(lambda x: item.startswith(x), list)
-	list = filter(lambda x: not checkMatch(x, blacklist), list)
+	blacklist = map(lambda x: x[1:], filter(lambda x: x.startswith('-'), bwfilter))
+	checkMatch = lambda item, matchList: True in map(lambda x: item.startswith(x), matchList)
+	value = filter(lambda x: not checkMatch(x, blacklist), value)
 	whitelist = filter(lambda x: not x.startswith('-'), bwfilter)
 	if len(whitelist):
-		return filter(lambda x: checkMatch(x, whitelist), list)
-	return list
+		return filter(lambda x: checkMatch(x, whitelist), value)
+	return value
 
 
 def parseType(value):
 	try:
 		if '.' in value:
 			return float(value)
-		else:
-			return int(value)
+		return int(value)
 	except ValueError:
 		return value
 
@@ -280,6 +278,8 @@ def parseTuples(value):
 	"""Parse a string for keywords and tuples of keywords.
 	>>> parseTuples('(4, 8:00), keyword, ()')
 	[('4', '8:00'), 'keyword', ()]
+	>>> parseTuples('(4, 8:00), keyword, ()')
+	[('4', '8:00'), 'keyword', ()]
 	"""
 	def to_tuple_or_str((t, s)):
 		if len(s) > 0:
@@ -294,11 +294,9 @@ def parseTime(usertime):
 	if usertime == None or usertime == '':
 		return -1
 	tmp = map(int, usertime.split(':'))
-	if len(tmp) > 3:
-		raise ConfigError('Invalid time format: %s' % usertime)
 	while len(tmp) < 3:
 		tmp.append(0)
-	if tmp[2] > 59 or tmp[1] > 59:
+	if tmp[2] > 59 or tmp[1] > 59 or len(tmp) > 3:
 		raise ConfigError('Invalid time format: %s' % usertime)
 	return reduce(lambda x, y: x * 60 + y, tmp)
 
@@ -369,11 +367,6 @@ class DictFormat(object):
 			else:
 				result.append(format % fkt((key, self.delimeter, value)))
 		return result
-
-
-def shellEscape(value):
-	repl = { '\\': r'\\', '\"': r'\"', '$': r'\$' }
-	return '"' + str.join('', map(lambda x: repl.get(x, x), value)) + '"'
 
 
 def genTarball(outFile, dir, pattern):

@@ -1,10 +1,10 @@
+from python_compat import *
 from grid_control import ConfigError, RethrowError, Job, utils
 from api import LocalWMSApi
 
 class Host(LocalWMSApi):
 	def __init__(self, config, wms):
 		LocalWMSApi.__init__(self, config, wms)
-
 		self.submitExec = utils.pathGC('share', 'host.sh')
 		self.statusExec = utils.resolveInstallPath('ps')
 		self.cancelExec = utils.resolveInstallPath('kill')
@@ -27,7 +27,7 @@ class Host(LocalWMSApi):
 
 
 	def parseStatus(self, status):
-		head = map(lambda x: x.strip('%').lower(), status.next().split())
+		head = map(lambda x: x.strip('%').lower(), next(status).split())
 		for entry in map(str.strip, status):
 			try:
 				jobinfo = dict(zip(head, filter(lambda x: x != '', entry.split(None, len(head) - 1))))
@@ -45,5 +45,5 @@ class Host(LocalWMSApi):
 		return 'wwup %s' % str.join(' ', wmsIds)
 
 
-	def getCancelArgumentss(self, wmsIds):
+	def getCancelArguments(self, wmsIds):
 		return '-9 %s' % str.join(' ', wmsIds)

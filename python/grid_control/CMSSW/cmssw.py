@@ -98,7 +98,7 @@ class CMSSW(DataMod):
 			for idx, sePath in enumerate(filter(lambda x: self.seRuntime, set(self.sePaths))):
 				utils.vprint('Copy CMSSW runtime to SE %d ' % (idx + 1), -1, newline = False)
 				sys.stdout.flush()
-				source = 'file:///' + os.path.join(config.workDir, 'runtime.tar.gz')
+				source = os.path.join(config.workDir, 'runtime.tar.gz')
 				target = os.path.join(sePath, self.taskID + '.tar.gz')
 				proc = storage.se_copy(source, target, config.getBool(self.__class__.__name__, 'se runtime force', True))
 				if proc.wait() == 0:

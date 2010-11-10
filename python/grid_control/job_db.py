@@ -2,7 +2,7 @@ import sys, os, re, fnmatch, random, math, time
 from grid_control import QM, ConfigError, UserError, RuntimeError, RethrowError, Job, Report, utils
 from python_compat import *
 
-class JobDB:
+class JobManager:
 	def __init__(self, config, module, monitor):
 		(self.module, self.monitor) = (module, monitor)
 		self.errorDict = module.errorDict

@@ -19,7 +19,7 @@ try:
 	module = Module.open(module, config)
 
 	# Initialise job database
-	jobs = JobDB(config, module, None)
+	jobs = JobManager(config, module, None)
 	Report(jobs, jobs).summary()
 
 except GCError:
