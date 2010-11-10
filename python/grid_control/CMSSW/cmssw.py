@@ -130,7 +130,7 @@ class CMSSW(DataMod):
 			if config.opts.init:
 				self.instrumentCfgQueue(self.configFiles, mustPrepare = True)
 		else:
-			self.eventsPerJob = config.get(self.__class__.__name__, 'events per job', 0)
+			self.eventsPerJob = config.get(self.__class__.__name__, 'events per job', 0, noVar = False)
 			if config.opts.init and self.prepare:
 				self.instrumentCfgQueue(self.configFiles)
 

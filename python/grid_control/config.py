@@ -103,7 +103,7 @@ class Config:
 
 
 	def getBool(self, section, item, default = None, volatile = False, noVar = True):
-		return utils.parseBool(self.get(section, item, default, volatile, noVar))
+		return utils.parseBool(self.get(section, item, QM(default, 'true', 'false'), volatile, noVar))
 
 
 	def getList(self, section, item, default = [], volatile = False, noVar = True):

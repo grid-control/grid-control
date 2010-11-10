@@ -2,7 +2,7 @@ import os, utils
 
 # All functions use url_* functions from gc-run.lib (just like the job did...)
 
-ensurePrefix = lambda fn = QM('://' in fn, fn, 'file://%s' % os.path.abspath(fn).lstrip('/'))
+ensurePrefix = lambda fn: utils.QM('://' in fn, fn, 'file://%s' % os.path.abspath(fn).lstrip('/'))
 
 def se_runcmd(cmd, varDict = {}, *urls):
 	runLib = utils.pathGC('share', 'gc-run.lib')

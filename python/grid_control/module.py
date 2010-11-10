@@ -100,7 +100,7 @@ class Module(AbstractObject):
 			'SE_INPUT_PATTERN': self.seInputPattern,
 			# Sandbox
 			'SB_OUTPUT_FILES': str.join(' ', self.getOutFiles()),
-			'SB_INPUT_FILES': str.join(' ', map(path.basename, self.getInFiles())),
+			'SB_INPUT_FILES': str.join(' ', map(os.path.basename, self.getInFiles())),
 			# Runtime
 			'DOBREAK': self.nodeTimeout,
 			'MY_RUNTIME': self.getCommand(),
