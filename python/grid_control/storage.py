@@ -2,11 +2,11 @@ import os, utils
 
 # All functions use url_* functions from gc-run.lib (just like the job did...)
 
-ensurePrefix = lambda fn: utils.QM('://' in fn, fn, 'file://%s' % os.path.abspath(fn).lstrip('/'))
+ensurePrefix = lambda fn: utils.QM('://' in fn, fn, 'file:////%s' % os.path.abspath(fn).lstrip('/'))
 
 def se_runcmd(cmd, varDict = {}, *urls):
 	runLib = utils.pathGC('share', 'gc-run.lib')
-	args = str.join(' ', map(lambda x: '"%s"' % ensurePrefix(x).replace('dir://', 'file:////'), urls))
+	args = str.join(' ', map(lambda x: '"%s"' % ensurePrefix(x).replace('dir://', 'file://'), urls))
 	varString = str.join(' ', map(lambda x: 'export %s="%s";' % (x, varDict[x]), varDict))
 	return utils.LoggedProcess('source %s || exit 1; %s %s %s' % (runLib, varString, cmd, args))
 
