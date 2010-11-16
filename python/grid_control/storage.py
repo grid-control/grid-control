@@ -6,7 +6,7 @@ ensurePrefix = lambda fn: utils.QM('://' in fn, fn, 'file://%s' % os.path.abspat
 
 def se_runcmd(cmd, varDict = {}, *urls):
 	runLib = utils.pathGC('share', 'gc-run.lib')
-	args = str.join(' ', map(lambda x: '"%s"' % ensurePrefix(x).replace('dir://', 'file://'), urls))
+	args = str.join(' ', map(lambda x: '"%s"' % ensurePrefix(x).replace('dir://', 'file:////'), urls))
 	varString = str.join(' ', map(lambda x: 'export %s="%s";' % (x, varDict[x]), varDict))
 	return utils.LoggedProcess('source %s || exit 1; %s %s %s' % (runLib, varString, cmd, args))
 
