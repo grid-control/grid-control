@@ -19,11 +19,10 @@ class PBS(PBSGECommon):
 		self.fqid = lambda wmsId: QM(self._server, '%s.%s' % (wmsId, self._server), wmsId)
 
 
-	def getSubmitArguments(self, jobNum, sandbox, stdout, stderr, addAttr):
+	def getSubmitArguments(self, jobNum, reqs, sandbox, stdout, stderr, addAttr):
 		reqMap = { WMS.MEMORY: ('pvmem', lambda m: '%dmb' % m) }
-		params = PBSGECommon.getSubmitArguments(self, jobNum, sandbox, stdout, stderr, addAttr, reqMap)
+		params = PBSGECommon.getSubmitArguments(self, jobNum, reqs, sandbox, stdout, stderr, addAttr, reqMap)
 		# Job requirements
-		reqs = dict(self.wms.getRequirements(jobNum))
 		if reqs.get(WMS.SITES, (None, None))[1]:
 			params += ' -l host=%s' % str.join('+', reqs[WMS.SITES][1])
 		return params
@@ -36,8 +35,6 @@ class PBS(PBSGECommon):
 
 	def parseStatus(self, status):
 		for section in utils.accumulate(status):
-			if section == '':
-				continue
 			try:
 				lines = section.replace('\n\t', '').split('\n')
 				jobinfo = utils.DictFormat(' = ').parse(lines[1:])

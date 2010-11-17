@@ -20,7 +20,7 @@ try:
 
 	# Initialise job database
 	jobs = JobManager(config, module, None)
-	Report(jobs, jobs).summary()
+	Report(jobs).summary()
 
 except GCError:
 	sys.stderr.write(GCError.message)

@@ -20,14 +20,13 @@ class PBSGECommon(LocalWMSApi):
 		return ''
 
 
-	def getSubmitArguments(self, jobNum, sandbox, stdout, stderr, addAttr, reqMap):
+	def getSubmitArguments(self, jobNum, reqs, sandbox, stdout, stderr, addAttr, reqMap):
 		# Job name
 		params = ' -N "%s"' % self.wms.getJobName(jobNum)
 		# Job group
 		if len(self._group):
 			params += ' -W group_list=%s' % self._group
 		# Job requirements
-		reqs = dict(self.wms.getRequirements(jobNum))
 		if WMS.SITES in reqs:
 			(queue, nodes) = reqs[WMS.SITES]
 			if queue:

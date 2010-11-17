@@ -37,7 +37,7 @@ except:
 		['cheese', 'spam', 'ham']
 		"""
 
-		tmp = list(unsortedList)[:]
+		tmp = list(unsortedList)
 		tmp_cmp = comp
 
 		if key and comp:
@@ -85,23 +85,19 @@ try:	# functools.lru_cache >= Python 3.2
 except:
 	def lru_cache(fun, maxsize = 10): # Implementation causes CPU performance hit to avoid I/O
 		def funProxy(*args, **kargs):
-			(item, tmp) = (None, queue.Queue(maxsize))
-			while not funProxy.cache.empty():
-				((cargs, ckargs), value) = funProxy.cache.get()
-				if (cargs, ckargs) != (args, kargs):
-					tmp.put(((cargs, ckargs), value))
-				else:
-					item = ((args, kargs), value)
-			if item == None:
-				item = ((args, kargs), funProxy.fun(*args, **kargs))
-				if tmp.full():
-					tmp.get()
-			while not tmp.empty(): # restore old order
-				funProxy.cache.put(tmp.get())
-			funProxy.cache.put(item)
-			return item[1]
-		funProxy.fun = fun
-		funProxy.cache = queue.Queue(maxsize)
+			idx = None
+			for (i, value) in enumerate(funProxy.cache):
+				if value[0] == (args, kargs):
+					idx = i
+			if idx != None:
+				(key, item) = funProxy.cache.pop(idx)
+			else:
+				item = funProxy.fun(*args, **kargs)
+			funProxy.cache.insert(0, ((args, kargs), item))
+			while len(funProxy.cache) > maxsize:
+				funProxy.cache.pop()
+			return item
+		(funProxy.fun, funProxy.cache) = (fun, [])
 		return funProxy
 
 if __name__ == '__main__':

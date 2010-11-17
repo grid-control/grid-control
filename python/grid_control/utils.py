@@ -2,7 +2,6 @@ from python_compat import *
 import sys, os, StringIO, tarfile, time, fnmatch, re, popen2, threading, operator
 from exceptions import *
 
-# "question mark" function
 def QM(cond, a, b):
 	if cond:
 		return a
@@ -13,20 +12,18 @@ def QM(cond, a, b):
 
 def pathGC(*args):
 	# Convention: sys.path[1] == python dir of gc
-	return os.path.normpath(os.path.join(sys.path[1], '..', *args))
+	return os.path.abspath(os.path.normpath(os.path.join(sys.path[1], '..', *args)))
 
 
 def resolvePath(path, userpath = [], check = True, ErrorClass = RuntimeError):
 	searchpaths = [ os.getcwd(), pathGC() ] + userpath
 	cleanPath = lambda x: os.path.normpath(os.path.expanduser(x.strip()))
-	path = cleanPath(path)
-	if not os.path.isabs(path):
-		for spath in searchpaths:
-			if os.path.exists(os.path.join(spath, path)):
-				return cleanPath(os.path.join(spath, path))
-		if check:
-			raise ErrorClass('Could not find file %s in \n\t%s' % (path, str.join('\n\t', searchpaths)))
-	return path
+	for spath in searchpaths:
+		if os.path.exists(os.path.join(spath, path)):
+			return cleanPath(os.path.join(spath, path))
+	if check:
+		raise ErrorClass('Could not find file %s in \n\t%s' % (path, str.join('\n\t', searchpaths)))
+	return cleanPath(path)
 
 
 def resolveInstallPath(path):
@@ -44,7 +41,7 @@ def gcStartThread(fun, *args, **kargs):
 
 class LoggedProcess(object):
 	def __init__(self, cmd, args = ''):
-		self.cmd = (cmd, args) # used in backend error messages
+		self.cmd = (cmd, args)
 		vprint('External programm called: %s %s' % self.cmd, level=3)
 		self.proc = popen2.Popen3('%s %s' % (cmd, args), True)
 		(self.stdout, self.stderr) = ([], [])
@@ -82,6 +79,32 @@ class LoggedProcess(object):
 		self.stderr.extend(self.proc.childerr.readlines())
 		return (self.wait(), self.stdout, self.stderr)
 
+	def logError(self, target, **kwargs): # Can also log content of additional files via kwargs
+		retCode, stdout, stderr = self.getAll()
+		kwargs.update({'stdout': stdout, 'stderr': stderr})
+		eprint('WARNING: %s failed with code %d' % (os.path.basename(self.cmd[0]), retCode))
+
+		now = time.time()
+		entry = '%s.%s' % (time.strftime('%Y-%m-%d_%H:%M:%S', time.localtime(now)), ('%.5f' % (now - int(now)))[2:])
+		data = { 'retCode': retCode, 'exec': self.cmd[0], 'args': self.cmd[1] }
+		eprint(str.join('', filter(lambda x: (x != '\n') and not x.startswith('----'), stderr)))
+
+		tar = tarfile.TarFile.open(target, 'a')
+		files = [VirtualFile(os.path.join(entry, 'info'), DictFormat().format(data))]
+		for name, path in kwargs.items():
+			try:
+				content = open(path, 'r').readlines()
+			except:
+				content = []
+			files.append(VirtualFile(os.path.join(entry, name), content))
+		for fileObj in files:
+			info, handle = fileObj.getTarInfo()
+			tar.addfile(info, handle)
+			handle.close()
+		tar.close()
+		eprint('All logfiles were moved to %s' % target)
+
+
 ################################################################
 # Path helper functions
 
@@ -102,6 +125,17 @@ def abort(new = None):
 	return globalSetupProxy(abort, False, new)
 
 ################################################################
+
+def removeFiles(args):
+	for item in args:
+		try:
+			if os.path.isdir(item):
+				os.rmdir(item)
+			else:
+				os.unlink(item)
+		except:
+			pass
+
 
 def checkVar(value, message, check = True):
 	if check and ((str(value).count('@') >= 2) or (str(value).count('__') >= 2)):
@@ -238,18 +272,28 @@ class VirtualFile(StringIO.StringIO):
 		return (info, self)
 
 
-def doBlackWhiteList(value, bwfilter):
+def splitBlackWhiteList(bwfilter):
+	blacklist = map(lambda x: x[1:], filter(lambda x: x.startswith('-'), QM(bwfilter, bwfilter, [])))
+	whitelist = filter(lambda x: not x.startswith('-'), QM(bwfilter, bwfilter, []))
+	return (blacklist, whitelist)
+
+
+def doBlackWhiteList(value, bwfilter, matcher = str.startswith, onEmpty = None):
 	""" Apply black-whitelisting to input list
-	>>> doBlackWhiteList(['T2_US_MIT', 'T1_DE_KIT_MSS', 'T1_US_FNAL'], ['T1', '-T1_DE_KIT'])
-	['T1_US_FNAL']
+	>>> (il, f) = (['T2_US_MIT', 'T1_DE_KIT_MSS', 'T1_US_FNAL'], ['T1', '-T1_DE_KIT'])
+	>>> (doBlackWhiteList(il,    f), doBlackWhiteList([],    f), doBlackWhiteList(None,    f))
+	(['T1_US_FNAL'], ['T1'], ['T1'])
+	>>> (doBlackWhiteList(il,   []), doBlackWhiteList([],   []), doBlackWhiteList(None,   []))
+	(['T2_US_MIT', 'T1_DE_KIT_MSS', 'T1_US_FNAL'], None, None)
+	>>> (doBlackWhiteList(il, None), doBlackWhiteList([], None), doBlackWhiteList(None, None))
+	(['T2_US_MIT', 'T1_DE_KIT_MSS', 'T1_US_FNAL'], None, None)
 	"""
-	blacklist = map(lambda x: x[1:], filter(lambda x: x.startswith('-'), bwfilter))
-	checkMatch = lambda item, matchList: True in map(lambda x: item.startswith(x), matchList)
-	value = filter(lambda x: not checkMatch(x, blacklist), value)
-	whitelist = filter(lambda x: not x.startswith('-'), bwfilter)
+	(blacklist, whitelist) = splitBlackWhiteList(bwfilter)
+	checkMatch = lambda item, matchList: True in map(lambda x: matcher(item, x), matchList)
+	value = filter(lambda x: not checkMatch(x, blacklist), QM(value, value, whitelist))
 	if len(whitelist):
 		return filter(lambda x: checkMatch(x, whitelist), value)
-	return value
+	return QM(value or bwfilter, value, onEmpty)
 
 
 def parseType(value):
@@ -268,7 +312,7 @@ def parseBool(x):
 		return False
 
 
-def parseList(value, delimeter = ',', doFilter = lambda x: x != '', onEmpty = []):
+def parseList(value, delimeter = ',', doFilter = lambda x: x not in ['', '\n'], onEmpty = []):
 	if value:
 		return filter(doFilter, map(str.strip, value.split(delimeter)))
 	return onEmpty

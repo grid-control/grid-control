@@ -306,7 +306,7 @@ class JobManager:
 	def cancel(self, wms, jobs, interactive = False):
 		if len(jobs) == 0:
 			return
-		Report(jobs, self).details()
+		Report(self, jobs).details()
 		if interactive and not utils.getUserBool('Do you really want to delete these jobs?', True):
 			return
 
@@ -325,7 +325,7 @@ class JobManager:
 
 		if len(jobs) > 0:
 			print '\nThere was a problem with deleting the following jobs:'
-			Report(jobs, self._jobs).details()
+			Report(self, jobs).details()
 			if (interactive and utils.getUserBool('Do you want to mark them as deleted?', True)) or not interactive:
 				map(mark_cancelled, jobs)
 

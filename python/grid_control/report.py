@@ -6,12 +6,10 @@ import time
 class Report:
 	states = ['WAITING', 'RUNNING', 'FAILED', 'SUCCESS']
 
-	def __init__(self, jobs, allJobs):
-		self.allJobs = allJobs
-		try:
-			self.jobs = jobs._jobs.keys()
-		except:
-			self.jobs = jobs
+	def __init__(self, jobDB, jobs = None):
+		(self.jobDB, self.jobs) = (jobDB, jobs)
+		if jobs == None:
+			self.jobs = self.jobDB._jobs.keys()
 
 
 	def show(self, opts, module = None):
@@ -20,7 +18,7 @@ class Report:
 			self.summary()
 		if opts.reportJob:
 			utils.vprint(level = -1)
-			self.jobs = self.allJobs.getJobs(opts.reportJob)
+			self.jobs = self.jobDB.getJobs(opts.reportJob)
 			self.details()
 		if opts.reportSite or opts.reportTime:
 			self.siteReport(opts.reportSite, opts.reportTime)
@@ -45,7 +43,7 @@ class Report:
 	def details(self):
 		reports = []
 		for jobNum in self.jobs:
-			jobObj = self.allJobs.get(jobNum)
+			jobObj = self.jobDB.get(jobNum)
 			if jobObj.state == Job.INIT:
 				continue
 			reports.append({0: jobNum, 1: Job.states[jobObj.state], 2: jobObj.wmsId})
@@ -67,16 +65,16 @@ class Report:
 
 		summary = map(lambda x: 0.0, Job.states)
 		for jobNum in self.jobs:
-			summary[self.allJobs.get(jobNum).state] += 1
+			summary[self.jobDB.get(jobNum).state] += 1
 
 		def makeSum(*states):
 			return sum(map(lambda z: summary[z], states))
 		def makePer(*states):
 			count = makeSum(*states)
-			return [count, round(count / self.allJobs.nJobs * 100.0)]
+			return [count, round(count / self.jobDB.nJobs * 100.0)]
 
 		utils.vprint('Total number of jobs:%9d     Successful jobs:%8d  %3d%%' % \
-			tuple([self.allJobs.nJobs] + makePer(Job.SUCCESS)), -1)
+			tuple([self.jobDB.nJobs] + makePer(Job.SUCCESS)), -1)
 		utils.vprint('Jobs assigned to WMS:%9d        Failing jobs:%8d  %3d%%' % \
 			tuple([makeSum(Job.SUBMITTED, Job.WAITING, Job.READY, Job.QUEUED, Job.RUNNING)] +
 			makePer(Job.ABORTED, Job.CANCELLED, Job.FAILED)), -1)
@@ -106,7 +104,7 @@ class Report:
 					if not key in head:
 						head.append(key)
 			try:
-				cat = self.getJobCategory(self.allJobs.get(jobNum))
+				cat = self.getJobCategory(self.jobDB.get(jobNum))
 				reports[str(report)][cat] += 1
 				allStates[cat] += 1
 			except:
@@ -138,7 +136,7 @@ class Report:
 			return tmp
 
 		statinfo = initdict()
-		destinations = map(lambda id: self.allJobs.get(id).history.values(), self.jobs)
+		destinations = map(lambda id: self.jobDB.get(id).history.values(), self.jobs)
 		for dest in map(getDest, reduce(lambda x, y: x+y, destinations, [])):
 			tmp = statinfo.setdefault(dest[0], initdict()).setdefault(dest[1], initdict())
 			tmp.setdefault(dest[2], initdict())
@@ -153,7 +151,7 @@ class Report:
 				dict[state][key] += inc
 
 		for id in self.jobs:
-			job = self.allJobs.get(id)
+			job = self.jobDB.get(id)
 			for attempt in job.history:
 				# Sort job into category
 				rt = job.get('runtime', 0)

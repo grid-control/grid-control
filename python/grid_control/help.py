@@ -1,5 +1,5 @@
 from python_compat import *
-import os, time, random
+import os, time, random, utils
 
 class Help(object):
 	def listVars(self, module):
@@ -37,16 +37,13 @@ class Help(object):
 
 
 	def getConfig(self, config, printDefault):
-		if printDefault:
-			print "\nThese are all used config options:"
-		else:
-			print "\nThis is the minimal set of config options necessary:"
-		print '\n; %s' % "="*60
-		print ";", "grid-control", QM(printDefault, "complete", "reduced"), "config file"
-		print '; %s\n' % "="*60
-		for section in config.protocol:
+		print "\n; %s\n; This is the %s set of used config options:\n; %s\n" % \
+			("="*60, utils.QM(printDefault, 'complete', 'minimal'), "="*60)
+		for section in sorted(config.protocol):
 			(header, prevNL) = (False, False)
-			for (key, (value, default, volatile)) in config.protocol[section].iteritems():
+			for (key, (value, default, volatile)) in sorted(config.protocol[section].iteritems()):
+				if (section == 'global') and (key == 'include'):
+					continue # included statements are already in the protocol
 				if (not printDefault and (str(value) != str(default))) or printDefault:
 					if not header:
 						print "[%s]" % section

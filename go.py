@@ -113,7 +113,7 @@ if __name__ == '__main__':
 			sys.exit(0)
 
 		# If invoked in report mode, just show report and exit
-		if Report(jobs, jobs).show(opts, module):
+		if Report(jobs).show(opts, module):
 			sys.exit(0)
 
 		# Check if jobs have to be deleted and exit
@@ -134,7 +134,7 @@ if __name__ == '__main__':
 
 		if opts.continuous and not opts.gui:
 			utils.vprint(level = -1)
-			Report(jobs, jobs).summary()
+			Report(jobs).summary()
 			utils.vprint("Running in continuous mode. Press ^C to exit.", -1)
 
 		# Job submission loop

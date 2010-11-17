@@ -21,11 +21,10 @@ class JMS(LocalWMSApi):
 		return repr(sandbox)
 
 
-	def getSubmitArguments(self, jobNum, sandbox, stdout, stderr, addAttr):
+	def getSubmitArguments(self, jobNum, reqs, sandbox, stdout, stderr, addAttr):
 		# Job name
 		params = ' -J "%s"' % self.wms.getJobName(jobNum)
 		# Job requirements
-		reqs = dict(self.wms.getRequirements(jobNum))
 		if WMS.SITES in reqs:
 			params += ' -c %s' % reqs[WMS.SITES][0]
 		if self.checkReq(reqs, WMS.WALLTIME):
@@ -50,20 +49,17 @@ class JMS(LocalWMSApi):
 		for jobline in str.join('', list(status)).split('\n')[2:]:
 			if jobline == '':
 				continue
-			try:
-				tmp = map(lambda x: x.strip('\x1b(B'), jobline.replace('\x1b[m', '').split())
-				jobinfo = dict(zip(tmpHead, tmp[:12]))
-				jobinfo['dest'] = 'N/A'
-				if len(tmp) > 12:
-					jobinfo['start_time'] = tmp[12]
-				if len(tmp) > 13:
-					jobinfo['kill_time'] = tmp[13]
-				if len(tmp) > 14:
-					jobinfo['dest_hosts'] = tmp[14]
-					jobinfo['dest'] = '%s.localhost/%s' % (jobinfo['dest_hosts'], jobinfo['queue'])
-				yield jobinfo
-			except:
-				raise RethrowError('Error reading job info:\n%s' % jobline)
+			tmp = map(lambda x: x.strip('\x1b(B'), jobline.replace('\x1b[m', '').split())
+			jobinfo = dict(zip(tmpHead, tmp[:12]))
+			jobinfo['dest'] = 'N/A'
+			if len(tmp) > 12:
+				jobinfo['start_time'] = tmp[12]
+			if len(tmp) > 13:
+				jobinfo['kill_time'] = tmp[13]
+			if len(tmp) > 14:
+				jobinfo['dest_hosts'] = tmp[14]
+				jobinfo['dest'] = '%s.localhost/%s' % (jobinfo['dest_hosts'], jobinfo['queue'])
+			yield jobinfo
 
 
 	def getCheckArguments(self, wmsIds):

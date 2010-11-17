@@ -13,7 +13,7 @@ class LocalWMSApi(AbstractObject):
 	def getJobArguments(self, jobNum, sandbox):
 		raise AbstractError
 
-	def getSubmitArguments(self, jobNum, sandbox, stdout, stderr, addAttr):
+	def getSubmitArguments(self, jobNum, reqs, sandbox, stdout, stderr, addAttr):
 		raise AbstractError
 
 	def parseSubmitOutput(self, data):

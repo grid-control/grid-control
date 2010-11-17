@@ -26,14 +26,13 @@ class LSF(LocalWMSApi):
 
 
 	def getJobArguments(self, jobNum, sandbox):
-		return sandbox
+		return repr(sandbox)
 
 
-	def getSubmitArguments(self, jobNum, sandbox, stdout, stderr, addAttr):
+	def getSubmitArguments(self, jobNum, reqs, sandbox, stdout, stderr, addAttr):
 		# Job name
 		params = ' -J %s' % self.wms.getJobName(jobNum)
 		# Job requirements
-		reqs = dict(self.wms.getRequirements(jobNum))
 		if WMS.SITES in reqs:
 			params += ' -q %s' % reqs[WMS.SITES][0]
 		if WMS.WALLTIME in reqs:

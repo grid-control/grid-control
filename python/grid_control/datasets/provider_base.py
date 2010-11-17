@@ -29,7 +29,7 @@ class DataProvider(AbstractObject):
 	def __init__(self, config, section, datasetExpr, datasetNick, datasetID):
 		(self._datasetExpr, self._datasetNick, self._datasetID) = (datasetExpr, datasetNick, datasetID)
 		self._cache = None
-		self.sitefilter = map(str.strip, self.setup(config.get, 'dataset', 'sites', '').split())
+		self.sitefilter = self.setup(config.getList, 'dataset', 'sites', [])
 		self.emptyBlock = self.setup(config.getBool, 'dataset', 'remove empty blocks', True)
 		self.emptyFiles = self.setup(config.getBool, 'dataset', 'remove empty files', True)
 		self.limitEvents = self.setup(config.getInt, 'dataset', 'limit events', -1)
@@ -150,7 +150,7 @@ class DataProvider(AbstractObject):
 		utils.vprint('Provided datasets:', level)
 		idDict = {DataProvider.DatasetID: 0, DataProvider.Dataset: None, DataProvider.Nickname: ''}
 		for block in self.getBlocks():
-			utils.vprint('ID / Dataset / Nick : %s / %s / %s' % map(lambda k,d: block.get(k, d), idDict.items()), level)
+			utils.vprint('ID / Dataset / Nick : %s / %s / %s' % tuple(map(lambda (k,d): block.get(k, d), idDict.items())), level)
 			utils.vprint('BlockName : %s' % block[DataProvider.BlockName], level)
 			utils.vprint('#Events   : %s' % block[DataProvider.NEvents], level)
 			utils.vprint('SE List   : %s' % block[DataProvider.SEList], level)

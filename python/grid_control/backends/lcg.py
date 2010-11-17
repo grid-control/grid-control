@@ -1,5 +1,5 @@
 from grid_control import utils
-from grid_wms import GridWMS
+from grid_wms import GridWMS, jdlEscape
 
 class LCG(GridWMS):
 	def __init__(self, config, module, monitor):
@@ -14,6 +14,6 @@ class LCG(GridWMS):
 
 
 	def storageReq(self, sites):
-		fmt = lambda x: '(target.GlueSEUniqueID == %s)' % self._jdlEscape(member)
+		fmt = lambda x: '(target.GlueSEUniqueID == %s)' % jdlEscape(x)
 		if sites:
 			return 'anyMatch(other.storage.CloseSEs, ' + str.join(' || ', map(fmt, sites)) + ')'

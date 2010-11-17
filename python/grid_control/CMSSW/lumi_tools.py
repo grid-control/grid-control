@@ -1,6 +1,3 @@
-import os
-from grid_control import ConfigError
-
 def makeint(x):
 	if x.strip().upper() not in ['', 'MAX', 'MIN']:
 		return int(x)
@@ -72,6 +69,7 @@ def parseLumiFilter(lumiexpr):
 		return None
 
 	lumis = []
+	import os, grid_control
 	for token in map(str.strip, lumiexpr.split(',')):
 		token = map(str.strip, token.split('|'))
 		if os.path.exists(token[0]):
@@ -80,12 +78,12 @@ def parseLumiFilter(lumiexpr):
 					token.append('')
 				lumis.extend(parseLumiFromJSON(open(token[0]).read(), token[1]))
 			except:
-				raise ConfigError('Could not process lumi filter file:\n%s' % token)
+				raise grid_control.ConfigError('Could not process lumi filter file:\n%s' % token)
 		else:
 			try:
 				lumis.append(parseLumiFromString(token[0]))
 			except:
-				raise ConfigError('Could not process lumi filter expression:\n%s' % token[0])
+				raise grid_control.ConfigError('Could not process lumi filter expression:\n%s' % token[0])
 	return mergeLumi(lumis)
 
 

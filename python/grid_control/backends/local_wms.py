@@ -1,13 +1,10 @@
 import sys, os, tempfile, shutil, time, random, glob
 from grid_control import AbstractObject, ConfigError, Job, utils
 from wms import WMS
-from broker import Broker
 from local_api import LocalWMSApi
 
 class LocalWMS(WMS):
 	def __init__(self, config, module, monitor):
-		WMS.__init__(self, config, module, monitor, 'local')
-
 		wmsapi = config.get('local', 'wms', self._guessWMS())
 		if wmsapi != self._guessWMS():
 			utils.vprint('Default batch system on this host is: %s' % self._guessWMS(), -1, once = True)
@@ -17,8 +14,8 @@ class LocalWMS(WMS):
 		if config.parser.has_section(wmsapi):
 			self.addAttr = dict(map(lambda item: (item, config.get(wmsapi, item)), config.parser.options(wmsapi)))
 
-		broker = config.get('local', 'broker', 'DummyBroker', volatile=True)
-		self.broker = Broker.open(broker, config, 'local', self.api)
+		config.set('local', 'broker', 'RandomBroker', override = False)
+		WMS.__init__(self, config, module, monitor, 'local', wmsapi)
 
 		self.sandPath = config.getPath('local', 'sandbox path', os.path.join(config.workDir, 'sandbox'))
 		self.sandCache = []
@@ -31,7 +28,7 @@ class LocalWMS(WMS):
 
 
 	def _guessWMS(self):
-		wmsCmdList = [ ('PBS', 'pbs-config'), ('SGE', 'qsub'), ('LSF', 'bsub'), ('SLURM', 'job_slurm'), ('PBS', 'sh') ]
+		wmsCmdList = [ ('PBS', 'pbs-config'), ('OGE', 'qsub'), ('LSF', 'bsub'), ('SLURM', 'job_slurm'), ('PBS', 'sh') ]
 		for wms, cmd in wmsCmdList:
 			try:
 				utils.resolveInstallPath(cmd)
@@ -58,21 +55,16 @@ class LocalWMS(WMS):
 		return self.module.taskID[:10] + '.' + str(jobNum) #.rjust(4, '0')[:4]
 
 
-	def getRequirements(self, jobNum):
-		return self.broker.matchQueue(WMS.getRequirements(self, jobNum))
-
-
 	# Submit job and yield (jobNum, WMS ID, other data)
 	def submitJob(self, jobNum):
-		# TODO: fancy job name function
 		activity = utils.ActivityLog('submitting jobs')
 
 		try:
 			if not os.path.exists(self.sandPath):
 				os.mkdir(self.sandPath)
 			sandbox = tempfile.mkdtemp('', '%s.%04d.' % (self.module.taskID, jobNum), self.sandPath)
-			for file in self.sandboxIn:
-				shutil.copy(file, sandbox)
+			for fileName in self.sandboxIn:
+				shutil.copy(fileName, sandbox)
 		except OSError:
 			raise RuntimeError('Sandbox path "%s" is not accessible.' % self.sandPath)
 		except IOError:
@@ -80,10 +72,11 @@ class LocalWMS(WMS):
 
 		cfgPath = os.path.join(sandbox, '_jobconfig.sh')
 		self.writeJobConfig(jobNum, cfgPath, {'GC_SANDBOX': sandbox, 'GC_SCRATCH': self.scratchPath})
+		reqs = dict(self.broker.brokerSites(self.module.getRequirements(jobNum)))
 
 		(stdout, stderr) = (os.path.join(sandbox, 'gc.stdout'), os.path.join(sandbox, 'gc.stderr'))
 		proc = utils.LoggedProcess(self.api.submitExec, '%s "%s" %s' % (
-			self.api.getSubmitArguments(jobNum, sandbox, stdout, stderr, self.addAttr),
+			self.api.getSubmitArguments(jobNum, reqs, sandbox, stdout, stderr, self.addAttr),
 			utils.pathGC('share', 'local.sh'), self.api.getJobArguments(jobNum, sandbox)))
 		retCode = proc.wait()
 		wmsIdText = proc.getOutput().strip().strip('\n')
@@ -98,13 +91,12 @@ class LocalWMS(WMS):
 			utils.eprint('WARNING: %s failed:' % self.api.submitExec)
 		elif wmsId == None:
 			utils.eprint('WARNING: %s did not yield job id:\n%s' % (self.api.submitExec, wmsIdText))
-		if (wmsId == '') or (wmsId == None):
-			wmsId = None
-			sys.stderr.write(proc.getError())
-		else:
+		if wmsId:
 			wmsId = '%s.%s' % (wmsId, self.api.__class__.__name__)
 			open(os.path.join(sandbox, wmsId), 'w')
-		return (jobNum, wmsId, {'sandbox': sandbox})
+		else:
+			proc.logError(self.errorLog)
+		return (jobNum, utils.QM(wmsId, wmsId, None), {'sandbox': sandbox})
 
 
 	# Check status of jobs and yield (jobNum, wmsID, status, other data)
@@ -134,7 +126,7 @@ class LocalWMS(WMS):
 		if retCode != 0:
 			for line in proc.getError().splitlines():
 				if not self.api.unknownID() in line:
-					sys.stderr.write(line)
+					utils.eprint(line)
 
 
 	def getSandbox(self, wmsId):
@@ -169,6 +161,7 @@ class LocalWMS(WMS):
 			for file in os.listdir(path):
 				if os.path.join(path, file) in outFiles:
 					continue
+				utils.removeFiles([os.path.join(path, file)])
 				try:
 					os.unlink(os.path.join(path, file))
 				except:

@@ -18,7 +18,7 @@ class Host(LocalWMSApi):
 		return ''
 
 
-	def getSubmitArguments(self, jobNum, sandbox, stdout, stderr, addAttr):
+	def getSubmitArguments(self, jobNum, reqs, sandbox, stdout, stderr, addAttr):
 		return '%d "%s" "%s" "%s"' % (jobNum, sandbox, stdout, stderr)
 
 
@@ -27,13 +27,10 @@ class Host(LocalWMSApi):
 
 
 	def parseStatus(self, status):
-		head = map(lambda x: x.strip('%').lower(), next(status).split())
+		head = map(lambda x: x.strip('%').lower(), next(status, '').split())
 		for entry in map(str.strip, status):
-			try:
-				jobinfo = dict(zip(head, filter(lambda x: x != '', entry.split(None, len(head) - 1))))
-				jobinfo.update(zip(['id', 'status', 'dest'], [jobinfo['pid'], 'R', 'localhost/localqueue']))
-			except:
-				raise RethrowError('Error reading job info:\n%s' % entry)
+			jobinfo = dict(zip(head, filter(lambda x: x != '', entry.split(None, len(head) - 1))))
+			jobinfo.update(zip(['id', 'status', 'dest'], [jobinfo.get('pid'), 'R', 'localhost/localqueue']))
 			yield jobinfo
 
 

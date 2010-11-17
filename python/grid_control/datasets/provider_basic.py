@@ -10,7 +10,7 @@ class FileProvider(DataProvider):
 		DataProvider.__init__(self, config, section, datasetExpr, datasetNick, datasetID)
 
 		(self._path, self._events, selist) = utils.optSplit(datasetExpr, '|@')
-		self._selist = utils.parseList(selist, onEmpty = None)
+		self._selist = utils.parseList(selist, delimeter = ',', onEmpty = None)
 		if not (self._path and self._events):
 			raise ConfigError('Invalid dataset expression!\nCorrect: /local/path/to/file|events[@SE1,SE2]')
 

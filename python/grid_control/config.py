@@ -68,7 +68,7 @@ class Config:
 		def checkResult(value):
 			if item in self.protocol.setdefault(section, {}):
 				if self.protocol[section][item][1] != default:
-					raise ConfigError('Inconsistent default values: [%s] %s' % (section, item))
+					raise APIError('Inconsistent default values: [%s] %s' % (section, item))
 			self.protocol[section][item] = (value, default, volatile)
 			return utils.checkVar(value, '[%s] %s may not contain variables.' % (section, item), noVar)
 		# Default value helper function
@@ -91,7 +91,7 @@ class Config:
 
 	def getPaths(self, section, item, default = None, volatile = False, noVar = True, check = True):
 		value = self.get(section, item, default, volatile, noVar)
-		return map(lambda x: utils.resolvePath(x, [self.baseDir], check), value.splitlines())
+		return map(lambda x: utils.resolvePath(x, [self.baseDir], check, ConfigError), value.splitlines())
 
 
 	def getPath(self, section, item, default = None, volatile = False, noVar = True, check = True):
@@ -106,8 +106,8 @@ class Config:
 		return utils.parseBool(self.get(section, item, QM(default, 'true', 'false'), volatile, noVar))
 
 
-	def getList(self, section, item, default = [], volatile = False, noVar = True):
-		return utils.parseList(self.get(section, item, '', volatile, noVar), onEmpty = default)
+	def getList(self, section, item, default = [], volatile = False, noVar = True, delim = None):
+		return utils.parseList(self.get(section, item, '', volatile, noVar), delim, onEmpty = default)
 
 
 	# Compare this config object to another config file

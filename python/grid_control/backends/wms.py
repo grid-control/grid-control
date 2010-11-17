@@ -3,6 +3,7 @@
 from python_compat import *
 import sys, os, time, stat, shutil, tarfile, glob, itertools
 from grid_control import AbstractObject, AbstractError, ConfigError, RuntimeError, RethrowError, UserError, utils, Proxy
+from broker import Broker
 
 class WMS(AbstractObject):
 	reqTypes = ('SOFTWARE', 'WALLTIME', 'STORAGE', 'SITES', 'CPUTIME', 'MEMORY', 'CPUS')
@@ -10,13 +11,15 @@ class WMS(AbstractObject):
 		locals()[reqType] = idx
 
 
-	def __init__(self, config, module, monitor, backend, defaultproxy = 'TrivialProxy'):
+	def __init__(self, config, module, monitor, backend, brokerSrc):
 		(self.config, self.module, self.monitor) = (config, module, monitor)
+		self.errorLog = os.path.join(self.config.workDir, 'error.tar')
 		if config.opts.init:
 			module.validateVariables()
 
-		# Initialise proxy
-		self.proxy = Proxy.open(config.get(backend, 'proxy', defaultproxy, volatile=True), config)
+		# Initialise proxy and broker
+		self.proxy = Proxy.open(config.get(backend, 'proxy', 'TrivialProxy', volatile=True), config)
+		self.broker = Broker.open(config.get(backend, 'broker', 'DummyBroker', volatile=True), config, backend, brokerSrc)
 
 		self._outputPath = os.path.join(config.workDir, 'output')
 		if not os.path.exists(self._outputPath):
@@ -24,31 +27,14 @@ class WMS(AbstractObject):
 				try:
 					os.mkdir(self._outputPath)
 				except:
-					raise RethrowError("Problem creating work directory '%s'" % self._outputPath)
+					raise RethrowError('Problem creating work directory "%s"' % self._outputPath)
 			else:
-				raise ConfigError("Not a properly initialized work directory '%s'." % config.workDir)
+				raise ConfigError('Not a properly initialized work directory "%s".' % config.workDir)
 
 		tarFile = os.path.join(config.workDir, 'sandbox.tar.gz')
 		self.sandboxIn = [ utils.pathGC('share', 'gc-run.sh'), utils.pathGC('share', 'gc-run.lib'), tarFile ]
 		self.sandboxOut = ['gc.stdout', 'gc.stderr', 'job.info'] + list(module.getOutFiles())
-
-		# Prepare all input files
-		taskEnv = utils.mergeDicts([self.monitor.getEnv(self), self.module.getTaskConfig()])
-		taskConfig = sorted(utils.DictFormat(escapeString = True).format(taskEnv, format = 'export %s%s%s\n'))
-		varMapping = sorted(utils.DictFormat(' ').format(self.module.getVarMapping(), format = '%s%s%s\n'))
-		depFiles = map(lambda x: utils.pathGC('share', 'env.%s.sh' % x), self.module.getDependencies())
-		# Resolve wildcards in module input files
-		def getModuleFiles():
-			for f in module.getInFiles():
-				matched = glob.glob(f)
-				if matched != []:
-					for match in matched:
-						yield match
-				else:
-					yield f
-
-		inFiles = list(itertools.chain(self.monitor.getFiles(), depFiles, getModuleFiles(),
-			[utils.VirtualFile('_config.sh', taskConfig), utils.VirtualFile('_varmap.dat', varMapping)]))
+		inFiles = self.getSandboxFiles()
 
 		# Check file existance / put packed files in sandbox instead of tar file
 		for f in filter(lambda x: isinstance(x, str), inFiles):
@@ -88,16 +74,31 @@ class WMS(AbstractObject):
 			tar.close()
 
 
+	def getSandboxFiles(self):
+		# Prepare all input files
+		taskEnv = utils.mergeDicts([self.monitor.getEnv(self), self.module.getTaskConfig()])
+		taskConfig = sorted(utils.DictFormat(escapeString = True).format(taskEnv, format = 'export %s%s%s\n'))
+		varMapping = sorted(utils.DictFormat(' ').format(self.module.getVarMapping(), format = '%s%s%s\n'))
+		depFiles = map(lambda x: utils.pathGC('share', 'env.%s.sh' % x), self.module.getDependencies())
+		# Resolve wildcards in module input files
+		def getModuleFiles():
+			for f in self.module.getInFiles():
+				matched = glob.glob(f)
+				if matched != []:
+					for match in matched:
+						yield match
+				else:
+					yield f
+		return list(itertools.chain(self.monitor.getFiles(), depFiles, getModuleFiles(),
+			[utils.VirtualFile('_config.sh', taskConfig), utils.VirtualFile('_varmap.dat', varMapping)]))
+
+
 	def canSubmit(self, length, flag):
 		return self.proxy.canSubmit(length, flag)
 
 
 	def getTimings(self):
 		return (60, 10)
-
-
-	def getRequirements(self, jobNum):
-		return self.module.getRequirements(jobNum)
 
 
 	def bulkSubmissionBegin(self, nJobs):
@@ -141,12 +142,12 @@ class WMS(AbstractObject):
 				if os.path.exists(target):
 					shutil.rmtree(target)
 			except IOError, e:
-				utils.eprint("Warning: '%s' cannot be removed: %s" % (target, str(e)))
+				utils.eprint('Warning: "%s" cannot be removed: %s' % (target, str(e)))
 				return False
 			try:
 				shutil.move(source, target)
 			except IOError, e:
-				utils.eprint("Warning: Error moving job output directory from '%s' to '%s': %s" % (source, target, str(e)))
+				utils.eprint('Warning: Error moving job output directory from "%s" to "%s": %s' % (source, target, str(e)))
 				return False
 			return True
 
@@ -180,7 +181,7 @@ class WMS(AbstractObject):
 				pass
 
 			# Something went wrong
-			sys.stderr.write("Warning: '%s' seems broken.\n" % info)
+			sys.stderr.write('Warning: "%s" seems broken.\n' % info)
 			# Clean empty dirs
 			for subDir in map(lambda x: x[0], os.walk(dir, topdown=False)):
 				try:

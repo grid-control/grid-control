@@ -52,7 +52,7 @@ class DataSplitter(AbstractObject):
 
 	def getSplitInfo(self, jobNum):
 		if jobNum >= self.getMaxJobs():
-			raise ConfigError('Job %d out of range for available dataset' % jobNum)
+			raise RuntimeError('Job %d out of range for available dataset' % jobNum)
 		return self.splitSource[jobNum]
 	getSplitInfo = lru_cache(getSplitInfo)
 
@@ -66,10 +66,10 @@ class DataSplitter(AbstractObject):
 		utils.vprint(('Events: %d' % job[DataSplitter.NEvents]).ljust(20), -1, newline = False)
 		utils.vprint('  ID: %s' % job.get(DataSplitter.DatasetID, 0), -1)
 		utils.vprint(('  Block: %s' % job.get(DataSplitter.BlockName, 0)).ljust(50), -1, newline = False)
-		utils.vprint(('  Skip: %d' % job[DataSplitter.Skipped]).ljust(20), -1, newline = False)
-		if job.get(DataSplitter.Nickname, '') != '':
+		utils.vprint(('  Skip: %d' % job.get(DataSplitter.Skipped, 0)).ljust(20), -1, newline = False)
+		if job.get(DataSplitter.Nickname):
 			utils.vprint('Nick: %s' % job[DataSplitter.Nickname], -1)
-		if job[DataSplitter.SEList] != None:
+		if job.get(DataSplitter.SEList):
 			utils.vprint(' SEList: %s' % utils.wrapList(job[DataSplitter.SEList], 70, ',\n         '), -1)
 		for idx, head in enumerate(job.get(DataSplitter.MetadataHeader, [])):
 			oneFileMetadata = map(lambda x: repr(x[idx]), job[DataSplitter.Metadata])
@@ -325,9 +325,9 @@ class DataSplitter(AbstractObject):
 
 				if idx == 0:
 					# First file is affected
-					if add and (add[DataSplitter.NEvents] > newSplit[DataSplitter.Skipped]):
+					if add and (add[DataProvider.NEvents] > newSplit.get(DataSplitter.Skipped, 0)):
 						# First file changes and still lives in new splitting
-						following = sizeInfo[0] - newSplit[DataSplitter.Skipped] - newSplit[DataProvider.NEvents]
+						following = sizeInfo[0] - newSplit.get(DataSplitter.Skipped, 0) - newSplit[DataSplitter.NEvents]
 						shrinkage = rm[DataProvider.NEvents] - add[DataProvider.NEvents]
 						if following > 0:
 							# First file not completely covered by current splitting
@@ -344,15 +344,15 @@ class DataSplitter(AbstractObject):
 							replaceCompleteFile()
 					else:
 						# Removal of first file from current splitting
-						newSplit[DataSplitter.NEvents] += max(0, sizeInfo[idx] - newSplit[DataSplitter.Skipped] - newSplit[DataSplitter.NEvents])
-						newSplit[DataSplitter.NEvents] += newSplit[DataSplitter.Skipped]
+						newSplit[DataSplitter.NEvents] += max(0, sizeInfo[idx] - newSplit.get(DataSplitter.Skipped, 0) - newSplit[DataSplitter.NEvents])
+						newSplit[DataSplitter.NEvents] += newSplit.get(DataSplitter.Skipped, 0)
 						newSplit[DataSplitter.Skipped] = 0
 						removeCompleteFile()
 
 				elif idx == len(newSplit[DataSplitter.FileList]) - 1:
 					# Last file is affected
 					if add:
-						coverLast = newSplit[DataSplitter.Skipped] + newSplit[DataProvider.NEvents] - sum(sizeInfo[:-1])
+						coverLast = newSplit.get(DataSplitter.Skipped, 0) + newSplit[DataSplitter.NEvents] - sum(sizeInfo[:-1])
 						if coverLast == rm[DataProvider.NEvents]:
 							# Change of last file, which ends in current splitting
 							if doExpandOutside and (rm[DataProvider.NEvents] < add[DataProvider.NEvents]):
@@ -369,7 +369,7 @@ class DataSplitter(AbstractObject):
 							sizeInfo[idx] = add[DataProvider.NEvents]
 					else:
 						# Removal of last file from current splitting
-						newSplit[DataSplitter.NEvents] = sum(sizeInfo) - newSplit[DataSplitter.Skipped]
+						newSplit[DataSplitter.NEvents] = sum(sizeInfo) - newSplit.get(DataSplitter.Skipped, 0)
 						removeCompleteFile()
 
 				else:
@@ -444,7 +444,7 @@ class DataSplitter(AbstractObject):
 				getMetadata = lambda x: newFileInfoMap[x].get(DataSplitter.Metadata, None)
 				splitInfo[DataSplitter.Metadata] = map(getMetadata, splitInfo[DataSplitter.FileList])
 			# Update SE list of jobs
-			splitInfo[DataSplitter.SEList] = seBlockMap[blockFQN(DataSplitter, splitInfo)]
+			splitInfo[DataSplitter.SEList] = seBlockMap.get(blockFQN(DataSplitter, splitInfo), [])
 			result.append(splitInfo)
 
 		for splitInfo in splitAdded:

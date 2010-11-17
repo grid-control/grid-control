@@ -126,16 +126,17 @@ class CMSSW(DataMod):
 
 		# Check that for dataset jobs the necessary placeholders are in the config file
 		self.prepare = config.getBool(self.__class__.__name__, 'prepare config', False)
+		fragment = config.getPath(self.__class__.__name__, 'instrumentation fragment', utils.pathGC('scripts', 'fragmentForCMSSW.py'))
 		if self.dataSplitter != None:
 			if config.opts.init:
-				self.instrumentCfgQueue(self.configFiles, mustPrepare = True)
+				self.instrumentCfgQueue(self.configFiles, fragment, mustPrepare = True)
 		else:
 			self.eventsPerJob = config.get(self.__class__.__name__, 'events per job', 0, noVar = False)
 			if config.opts.init and self.prepare:
-				self.instrumentCfgQueue(self.configFiles)
+				self.instrumentCfgQueue(self.configFiles, fragment)
 
 
-	def instrumentCfgQueue(self, cfgFiles, mustPrepare = False):
+	def instrumentCfgQueue(self, cfgFiles, fragment, mustPrepare = False):
 		def isInstrumented(cfgName):
 			cfg = open(cfgName, 'r').read()
 			for tag in self.neededVars():
@@ -145,7 +146,6 @@ class CMSSW(DataMod):
 		def doInstrument(cfgName):
 			if not isInstrumented(cfgName) or 'customise_for_gc' not in open(cfgName, 'r').read():
 				utils.vprint('Instrumenting...', os.path.basename(cfgName), -1)
-				fragment = utils.pathGC('scripts', 'fragmentForCMSSW.py')
 				open(cfgName, 'a').write(open(fragment, 'r').read())
 			else:
 				utils.vprint('%s already contains customise_for_gc and all needed variables' % os.path.basename(cfgName), -1)

@@ -35,7 +35,7 @@ class GliteWMSDirect(GliteWMS):
 		if len(ids) == 0:
 			raise StopIteration
 
-		activity = utils.ActivityLog("checking job status")
+		activity = utils.ActivityLog('checking job status')
 		errors = []
 		for (wmsId, jobNum) in ids:
 			try:
@@ -49,4 +49,4 @@ class GliteWMSDirect(GliteWMS):
 					break
 		del activity
 		if errors:
-			utils.eprint("The following glite errors have occured:\n%s" % str.join('\n', errors))
+			utils.eprint('The following glite errors have occured:\n%s' % str.join('\n', errors))

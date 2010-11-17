@@ -3,18 +3,18 @@ from grid_control import ConfigError, RethrowError, Job, utils
 from grid_control.backends.wms import WMS
 from pbsge import PBSGECommon
 
-class SGE(PBSGECommon):
+class OGE(PBSGECommon):
 	def __init__(self, config, wms):
 		PBSGECommon.__init__(self, config, wms)
 		self.configExec = utils.resolveInstallPath('qconf')
 
 
-	def getSubmitArguments(self, jobNum, sandbox, stdout, stderr, addAttr):
+	def getSubmitArguments(self, jobNum, reqs, sandbox, stdout, stderr, addAttr):
 		timeStr = lambda s: '%02d:%02d:%02d' % (s / 3600, (s / 60) % 60, s % 60)
 		reqMap = { WMS.MEMORY: ('h_vmem', lambda m: '%dM' % m),
 			WMS.WALLTIME: ('s_rt', timeStr), WMS.CPUTIME: ('h_cpu', timeStr) }
 		# Restart jobs = no
-		return ' -r n' + PBSGECommon.getSubmitArguments(self, jobNum, sandbox, stdout, stderr, addAttr, reqMap)
+		return ' -r n' + PBSGECommon.getSubmitArguments(self, jobNum, reqs, sandbox, stdout, stderr, addAttr, reqMap)
 
 
 	def parseSubmitOutput(self, data):
@@ -68,7 +68,7 @@ class SGE(PBSGECommon):
 		for queue in map(str.strip, utils.LoggedProcess(self.configExec, '-sql').iter()):
 			queues[queue] = dict()
 			for line in utils.LoggedProcess(self.configExec, '-sq %s' % queue).iter():
-				attr, value = map(str.strip, line.split(" ", 1))
+				attr, value = map(str.strip, line.split(' ', 1))
 				if (attr in tags) and (value != 'INFINITY'):
 					queues[queue][reqs[attr]] = parser[attr](value)
 		return queues
@@ -83,3 +83,7 @@ class SGE(PBSGECommon):
 				result.append(line.split()[0])
 		if len(result) > 0:
 			return result
+
+
+class SGE(OGE):
+	pass
