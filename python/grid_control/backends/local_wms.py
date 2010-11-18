@@ -17,7 +17,7 @@ class LocalWMS(WMS):
 		config.set('local', 'broker', 'RandomBroker', override = False)
 		WMS.__init__(self, config, module, monitor, 'local', wmsapi)
 
-		self.sandPath = config.getPath('local', 'sandbox path', os.path.join(config.workDir, 'sandbox'))
+		self.sandPath = config.getPath('local', 'sandbox path', os.path.join(config.workDir, 'sandbox'), check=False)
 		self.sandCache = []
 		self.scratchPath = config.getPath('local', 'scratch path', '', volatile=True)
 		self._source = None
