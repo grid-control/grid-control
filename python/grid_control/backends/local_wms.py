@@ -15,7 +15,7 @@ class LocalWMS(WMS):
 			self.addAttr = dict(map(lambda item: (item, config.get(wmsapi, item)), config.parser.options(wmsapi)))
 
 		config.set('local', 'broker', 'RandomBroker', override = False)
-		WMS.__init__(self, config, module, monitor, 'local', wmsapi)
+		WMS.__init__(self, config, module, monitor, 'local', self.api)
 
 		self.sandPath = config.getPath('local', 'sandbox path', os.path.join(config.workDir, 'sandbox'), check=False)
 		self.sandCache = []
