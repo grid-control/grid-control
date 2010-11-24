@@ -4,7 +4,8 @@ from lumi_tools import *
 from python_compat import *
 
 def createDBSAPI(url):
-	import DBSAPI.dbsApi
+	import DBSAPI.dbsApi, sys, os
+	sys.path.append(os.path.dirname(__file__))
 	if url == '':
 		url = 'http://cmsdbsprod.cern.ch/cms_dbs_prod_global/servlet/DBSServlet'
 	elif (not 'http://' in url) and (not 'https://' in url):
@@ -14,7 +15,6 @@ def createDBSAPI(url):
 
 # required format: <dataset path>[@<instance>][#<block>]
 class DBSApiv2(DataProvider):
-	DataProvider.providers.update({'DBSApiv2': 'dbs'})
 	def __init__(self, config, section, datasetExpr, datasetNick, datasetID = 0):
 		DataProvider.__init__(self, config, section, datasetExpr, datasetNick, datasetID)
 		# PhEDex blacklist: '-T1_DE_KIT', '-T1_US_FNAL' allow user jobs

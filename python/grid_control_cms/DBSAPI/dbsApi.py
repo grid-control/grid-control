@@ -29,7 +29,7 @@ import inspect
 from dbsUtil import *
 
 #DBS Api version, set from the CVS checkout tag, for HEAD version, set it in dbs.config
-__version__ = "$Name: DBS_2_0_9_patch_6 $"
+
 
 class DbsApi(DbsConfig):
   """
@@ -236,11 +236,11 @@ class DbsApi(DbsConfig):
         else:
                 raise DbsApiException(args="Unhandled Exception: "+str(ex), code="5991")
   #------------------------------------------------------------
-  def listRuns(self, dataset):
+  def listRuns(self, dataset="", block=""):
      try:
        #Calling the Implementation function
        from dbsApiListRuns import dbsApiImplListRuns
-       return  dbsApiImplListRuns(self, dataset)
+       return  dbsApiImplListRuns(self, dataset, block)
      except Exception, ex:
         if (isinstance(ex,DbsApiException) or isinstance(ex,SAXParseException)):
                 raise ex
@@ -415,6 +415,18 @@ class DbsApi(DbsConfig):
         else:
                 raise DbsApiException(args="Unhandled Exception: "+str(ex), code="5991")
   #------------------------------------------------------------
+  def getSummary(self, dataset="", block=""):
+     try:
+       #Calling the Implementation function
+       from dbsApiGetSummary import dbsApiImplGetSummary
+       return  dbsApiImplGetSummary(self, dataset, block)
+     except Exception, ex:
+        if (isinstance(ex,DbsApiException) or isinstance(ex,SAXParseException)):
+                raise ex
+        else:
+                raise DbsApiException(args="Unhandled Exception: "+str(ex), code="5991")
+  #------------------------------------------------------------
+
   def listDatasetSummary(self, path):
      try:
        #Calling the Implementation function
@@ -870,6 +882,7 @@ class DbsApi(DbsConfig):
 from dbsException import *
 from dbsApiException import *
 from dbsOptions import DbsOptionParser
+import time
 
 if __name__ == "__main__":
 
@@ -1061,6 +1074,7 @@ if __name__ == "__main__":
     url_list.extend(url_list_t0_95)
     url_list.extend(url_list_t0_96)
 
+    
     args['mode']='POST'
     args['version']='DBS_2_0_8'
     args['level']='DBSINFO'
@@ -1070,11 +1084,13 @@ if __name__ == "__main__":
        args['url']=aurl
        print aurl
        api = DbsApi(args) 
+       t1=time.time()   
        serverInfo = api.getServerInfo()
+       t2=time.time()   
        print api.getServerUrl()
        print "Server Version : ", serverInfo['ServerVersion']
        print "Schema Version : ", serverInfo['SchemaVersion']
-
+       print "Time taken by call : %s seconds" %(t2-t1)
       #print api.listSubSystems()
       #print api.listDQVersions()
 

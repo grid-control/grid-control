@@ -16,7 +16,7 @@ import inspect
 
 from dbsUtil import *
 
-def dbsApiImplListRuns(self, dataset):
+def dbsApiImplListRuns(self, dataset, block):
     """
     Retrieve list of runs inside a Processed Dataset.
 
@@ -56,7 +56,7 @@ def dbsApiImplListRuns(self, dataset):
 
     path = get_path(dataset)
     # Invoke Server.
-    data = self._server._call ({ 'api' : 'listRuns', 'path' : path }, 'GET')
+    data = self._server._call ({ 'api' : 'listRuns', 'path' : path, 'block' : block }, 'GET')
 
     # Parse the resulting xml output.
     try:
