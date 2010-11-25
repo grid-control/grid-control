@@ -67,9 +67,10 @@ class DBSApiv2(DataProvider):
 			listBlockInfo = api.listBlocks(self.datasetPath, nosite = self.phedex)
 			# Start thread to retrieve list of files
 			(listFileInfo, seList) = ([], {})
-			def listFileInfoThread(self, result):
+			def listFileInfoThread(self, api, result):
 				result.extend(api.listFiles(self.datasetPath, retriveList=QM(self.selectedLumis, ['retrive_lumi'], [])))
-			tFile = utils.gcStartThread(listFileInfoThread, self, listFileInfo)
+			tFile = utils.gcStartThread("Retrieval of file infos for %s" % self.datasetPath,
+				listFileInfoThread, self, api, listFileInfo)
 			if self.phedex:
 				getWithPhedex(listBlockInfo, seList)
 			tFile.join()

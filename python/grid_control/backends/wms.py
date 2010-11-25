@@ -79,7 +79,8 @@ class WMS(AbstractObject):
 		taskEnv = utils.mergeDicts([self.monitor.getEnv(self), self.module.getTaskConfig()])
 		taskConfig = sorted(utils.DictFormat(escapeString = True).format(taskEnv, format = 'export %s%s%s\n'))
 		varMapping = sorted(utils.DictFormat(' ').format(self.module.getVarMapping(), format = '%s%s%s\n'))
-		depFiles = map(lambda x: utils.pathGC('share', 'env.%s.sh' % x), self.module.getDependencies())
+		depPaths = map(lambda p: os.path.join(utils.pathGC('python'), p, 'share'), os.listdir(utils.pathGC('python')))
+		depFiles = map(lambda dep: utils.resolvePath('env.%s.sh' % dep, depPaths), self.module.getDependencies())
 		# Resolve wildcards in module input files
 		def getModuleFiles():
 			for f in self.module.getInFiles():
@@ -181,7 +182,7 @@ class WMS(AbstractObject):
 				pass
 
 			# Something went wrong
-			sys.stderr.write('Warning: "%s" seems broken.\n' % info)
+			utils.eprint('Warning: "%s" seems broken.' % info)
 			# Clean empty dirs
 			for subDir in map(lambda x: x[0], os.walk(dir, topdown=False)):
 				try:

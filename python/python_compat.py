@@ -1,4 +1,4 @@
-try:	# rsplit >= Python 2.4
+try:	# str.rsplit >= Python 2.4
 	rsplit = str.rsplit
 except:
 	def rsplit(x, sep, maxsplit = None):
@@ -18,7 +18,7 @@ except:
 try:	# sorted >= Python 2.4
 	sorted = sorted
 except:
-	def sorted(unsortedList, comp=None, key=None):
+	def sorted(unsortedList, comp = None, key = None):
 		"""Sort list by either using the standard comparison method cmp()
 		or, if supplied, the function comp.  The optional argument key
 		is a function that returns the key to sort by - default is the
@@ -73,11 +73,6 @@ try:	# raw_input < Python 3.0
 	user_input = raw_input
 except:
 	user_input = input
-
-try:	# Queue < Python 3.0
-	import Queue as queue
-except:
-	import queue
 
 try:	# functools.lru_cache >= Python 3.2
 	import functools

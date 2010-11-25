@@ -14,6 +14,5 @@ from monitoring	import Monitoring
 
 # import dynamic repos
 import modules
-import CMSSW
 
 from parameters	import *

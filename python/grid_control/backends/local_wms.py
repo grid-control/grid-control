@@ -180,7 +180,7 @@ class LocalWMS(WMS):
 		if proc.wait() != 0:
 			for line in proc.getError().splitlines():
 				if not self.api.unknownID() in line:
-					sys.stderr.write(line)
+					utils.eprint(line.strip())
 		del activity
 
 		activity = utils.ActivityLog('waiting for jobs to finish')

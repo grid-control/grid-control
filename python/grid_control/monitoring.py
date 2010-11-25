@@ -68,11 +68,12 @@ class ScriptMonitoring(Monitoring):
 			else:
 				os.system(script)
 		except GCError:
-			sys.stderr.write(GCError.message)
+			utils.eprint(GCError.message)
 
 	def runInBackground(self, script, jobNum = None, jobObj = None, addDict =  {}):
 		if script != '':
-			utils.gcStartThread(ScriptMonitoring.scriptThread, self, script, jobNum, jobObj)
+			utils.gcStartThread("Running monitoring script %s" % script,
+				ScriptMonitoring.scriptThread, self, script, jobNum, jobObj)
 
 	# Called on job submission
 	def onJobSubmit(self, wms, jobObj, jobNum):

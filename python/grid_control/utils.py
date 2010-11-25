@@ -32,7 +32,7 @@ def resolveInstallPath(path):
 ################################################################
 # Process management functions
 
-def gcStartThread(fun, *args, **kargs):
+def gcStartThread(desc, fun, *args, **kargs):
 	thread = threading.Thread(target = fun, args = args, kwargs = kargs)
 	thread.setDaemon(True)
 	thread.start()
@@ -80,23 +80,20 @@ class LoggedProcess(object):
 		return (self.wait(), self.stdout, self.stderr)
 
 	def logError(self, target, **kwargs): # Can also log content of additional files via kwargs
-		retCode, stdout, stderr = self.getAll()
-		kwargs.update({'stdout': stdout, 'stderr': stderr})
-		eprint('WARNING: %s failed with code %d' % (os.path.basename(self.cmd[0]), retCode))
-
 		now = time.time()
 		entry = '%s.%s' % (time.strftime('%Y-%m-%d_%H:%M:%S', time.localtime(now)), ('%.5f' % (now - int(now)))[2:])
-		data = { 'retCode': retCode, 'exec': self.cmd[0], 'args': self.cmd[1] }
-		eprint(str.join('', filter(lambda x: (x != '\n') and not x.startswith('----'), stderr)))
+		eprint('WARNING: %s failed with code %d\n%s' % (os.path.basename(self.cmd[0]), self.wait(), self.getError()))
 
 		tar = tarfile.TarFile.open(target, 'a')
+		data = { 'retCode': self.wait(), 'exec': self.cmd[0], 'args': self.cmd[1] }
 		files = [VirtualFile(os.path.join(entry, 'info'), DictFormat().format(data))]
-		for name, path in kwargs.items():
+		kwargs.update({'stdout': self.getOutput(), 'stderr': self.getError()})
+		for key, value in kwargs.items():
 			try:
-				content = open(path, 'r').readlines()
+				content = open(value, 'r').readlines()
 			except:
-				content = []
-			files.append(VirtualFile(os.path.join(entry, name), content))
+				content = [value]
+			files.append(VirtualFile(os.path.join(entry, key), content))
 		for fileObj in files:
 			info, handle = fileObj.getTarInfo()
 			tar.addfile(info, handle)
@@ -106,7 +103,7 @@ class LoggedProcess(object):
 
 
 ################################################################
-# Path helper functions
+# Global state functions
 
 def globalSetupProxy(fun, default, new = None):
 	if new != None:
@@ -125,6 +122,50 @@ def abort(new = None):
 	return globalSetupProxy(abort, False, new)
 
 ################################################################
+# Dictionary tools
+
+def mergeDicts(dicts):
+	tmp = dict()
+	for x in dicts:
+		tmp.update(x)
+	return tmp
+
+
+def filterDict(dictType, kF = lambda k: True, vF = lambda v: True):
+	return dict(filter(lambda (k, v): kF(k) and vF(v), dictType.iteritems()))
+
+
+class PersistentDict(dict):
+	def __init__(self, filename, delimeter = '=', lowerCaseKey = True):
+		dict.__init__(self)
+		(self.format, self.filename) = (delimeter, filename)
+		try:
+			dictObj = DictFormat(self.format)
+			self.update(dictObj.parse(open(filename), lowerCaseKey = lowerCaseKey))
+		except:
+			pass
+		self.olddict = self.items()
+
+	def write(self, newdict = {}, update = True):
+		if not update:
+			self.clear()
+		self.update(newdict)
+		if self.olddict == self.items():
+			return
+		try:
+			safeWrite(open(self.filename, 'w'), DictFormat(self.format).format(self))
+		except:
+			raise RuntimeError('Could not write to file %s' % self.filename)
+		self.olddict = self.items()
+
+################################################################
+# File IO helper
+
+def safeWrite(fp, content):
+	fp.writelines(content)
+	fp.truncate()
+	fp.close()
+
 
 def removeFiles(args):
 	for item in args:
@@ -137,21 +178,24 @@ def removeFiles(args):
 			pass
 
 
+class VirtualFile(StringIO.StringIO):
+	def __init__(self, name, lines):
+		StringIO.StringIO.__init__(self, str.join('', lines))
+		self.name = name
+		self.size = len(self.getvalue())
+
+
+	def getTarInfo(self):
+		info = tarfile.TarInfo(self.name)
+		info.size = self.size
+		return (info, self)
+
+################################################################
+
 def checkVar(value, message, check = True):
 	if check and ((str(value).count('@') >= 2) or (str(value).count('__') >= 2)):
 		raise ConfigError(message)
 	return value
-
-
-def mergeDicts(dicts):
-	tmp = dict()
-	for x in dicts:
-		tmp.update(x)
-	return tmp
-
-
-def filterDict(dictType, kF = lambda k: True, vF = lambda v: True):
-	return dict(filter(lambda (k, v): kF(k) and vF(v), dictType.iteritems()))
 
 
 def accumulate(iterable, doEmit = lambda x, buf: x == '\n', start = '', opAdd = operator.add, addCause = True):
@@ -203,12 +247,6 @@ def flatten(lists):
 	return result
 
 
-def safeWrite(fp, content):
-	fp.writelines(content)
-	fp.truncate()
-	fp.close()
-
-
 def DiffLists(oldList, newList, cmpFkt, changedFkt):
 	(listAdded, listMissing, listChanged) = ([], [], [])
 	(newIter, oldIter) = (iter(sorted(newList, cmpFkt)), iter(sorted(oldList, cmpFkt)))
@@ -233,43 +271,6 @@ def DiffLists(oldList, newList, cmpFkt, changedFkt):
 		listMissing.append(old)
 		old = next(oldIter, None)
 	return (listAdded, listMissing, listChanged)
-
-
-class PersistentDict(dict):
-	def __init__(self, filename, delimeter = '=', lowerCaseKey = True):
-		dict.__init__(self)
-		(self.format, self.filename) = (delimeter, filename)
-		try:
-			dictObj = DictFormat(self.format)
-			self.update(dictObj.parse(open(filename), lowerCaseKey = lowerCaseKey))
-		except:
-			pass
-		self.olddict = self.items()
-
-	def write(self, newdict = {}, update = True):
-		if not update:
-			self.clear()
-		self.update(newdict)
-		if self.olddict == self.items():
-			return
-		try:
-			safeWrite(open(self.filename, 'w'), DictFormat(self.format).format(self))
-		except:
-			raise RuntimeError('Could not write to file %s' % self.filename)
-		self.olddict = self.items()
-
-
-class VirtualFile(StringIO.StringIO):
-	def __init__(self, name, lines):
-		StringIO.StringIO.__init__(self, str.join('', lines))
-		self.name = name
-		self.size = len(self.getvalue())
-
-
-	def getTarInfo(self):
-		info = tarfile.TarInfo(self.name)
-		info.size = self.size
-		return (info, self)
 
 
 def splitBlackWhiteList(bwfilter):
@@ -437,31 +438,29 @@ class AbstractObject:
 	def __init__(self):
 		raise AbstractError
 
-	# Modify the module search path for some class
+	# Modify the module search path for the class
 	def dynamicLoaderPath(cls, path = []):
 		if not hasattr(cls, 'moduleMap'):
-			cls.moduleMap = {}
-			cls.modPath = [str.join('.', cls.__module__.split('.')[:-1])]
-		cls.modPath = path + [cls.__module__] + cls.modPath
+			(cls.moduleMap, cls.modPaths) = ({}, [])
+		splitUpFun = lambda x: str.rsplit(cls.__module__, ".", x)[0]
+		cls.modPaths = path + cls.modPaths + map(splitUpFun, range(cls.__module__.count(".") + 1))
 	dynamicLoaderPath = classmethod(dynamicLoaderPath)
 
 	def open(cls, name, *args, **kwargs):
+		mjoin = lambda x: str.join('.', x)
 		# Yield search paths
 		def searchPath(cname):
 			cls.moduleMap = dict(map(lambda (k, v): (k.lower(), v), cls.moduleMap.items()))
-			name = cls.moduleMap.get(cname.lower(), cname)
+			name = cls.moduleMap.get(cname.lower(), cname) # resolve module mapping
 			yield name
-			yield 'grid_control.%s' % name
-			for path in cls.modPath:
+			for path in cls.modPaths + AbstractObject.pkgPaths:
 				if not '.' in name:
-					yield '%s.%s.%s' % (path, name.lower(), name)
-				yield '%s.%s' % (path, name)
+					yield mjoin([path, name.lower(), name])
+				yield mjoin([path, name])
 
-		mjoin = lambda x: str.join('.', x)
 		for modName in searchPath(name):
 			parts = modName.split('.')
-			# Try to import missing modules
-			try:
+			try: # Try to import missing modules
 				for pkg in map(lambda (i, x): mjoin(parts[:i+1]), enumerate(parts[:-1])):
 					if pkg not in sys.modules:
 						__import__(pkg)
@@ -474,6 +473,7 @@ class AbstractObject:
 			raise ConfigError('%s is not of type %s' % (newcls, cls))
 		raise ConfigError('%s "%s" does not exist in\n\t%s!' % (cls.__name__, name, str.join('\n\t', searchPath(name))))
 	open = classmethod(open)
+AbstractObject.pkgPaths = []
 
 
 def vprint(text = '', level = 0, printTime = False, newline = True, once = False):

@@ -3,10 +3,10 @@ import gcSupport, base64, xml.dom.minidom, optparse, locale, re, time, os, tarfi
 from xml.dom.minidom import parseString
 from python_compat import *
 from grid_control import *
-from grid_control.CMSSW import provider_dbsv2
-from grid_control.CMSSW.provider_dbsv2 import *
-from DBSAPI.dbsMigrateApi import DbsMigrateApi
-from DBSAPI.dbsApiException import DbsException, DbsBadRequest
+from grid_control_cms import provider_dbsv2
+from grid_control_cms.provider_dbsv2 import *
+from grid_control_cms.DBSAPI.dbsMigrateApi import DbsMigrateApi
+from grid_control_cms.DBSAPI.dbsApiException import DbsException, DbsBadRequest
 
 class DBS(object):
 	enum = ('CRC32', 'MD5', 'SIZE', 'LFN', 'SE', 'LUMI', 'TYPE', 'EVENTS', 'JOBHASH',

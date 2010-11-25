@@ -1,11 +1,9 @@
 #!/usr/bin/env python
 import sys, os, signal, optparse, time
 
-# add python subdirectory from where go.py was started to search path
+# Load grid-control package
 sys.path.insert(1, os.path.join(sys.path[0], 'python'))
-sys.path.append(os.getcwd())
-# and include grid_control python module
-from grid_control import *
+from gcPackage import *
 
 usage = "Syntax: %s [OPTIONS] <config file>\n" % sys.argv[0]
 def print_help(*args):
@@ -109,7 +107,7 @@ if __name__ == '__main__':
 
 		# Give config help
 		if opts.help_cfg or opts.help_scfg:
-			Help().getConfig(config, opts.help_cfg)
+			config.prettyPrint(sys.stdout, opts.help_cfg)
 			sys.exit(0)
 
 		# If invoked in report mode, just show report and exit
@@ -129,7 +127,7 @@ if __name__ == '__main__':
 					sys.exit(0)
 		else:
 			# Save working config file - no runtime config file changes should happen after this point
-			config.parser.write(open(savedConfigPath, 'w'))
+			config.prettyPrint(open(savedConfigPath, 'w'), True)
 		config.allowSet = False
 
 		if opts.continuous and not opts.gui:

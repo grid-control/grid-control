@@ -48,5 +48,5 @@ class DataMultiplexer(DataProvider):
 			if utils.abort():
 				raise DatasetError('Could not retrieve all datasets!')
 		if len(exceptions):
-			sys.stderr.write(str.join('\n', exceptions))
+			utils.eprint(str.join('\n', exceptions))
 			raise DatasetError('Could not retrieve all datasets!')

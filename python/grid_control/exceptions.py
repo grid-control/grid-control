@@ -4,6 +4,7 @@ import sys
 class GCError(Exception):
 	def __init__(self, msg):
 		GCError.message = "%s: %s\n" % (sys.argv[0], msg)
+		Exception.__init__(self, GCError.message)
 
 class GridError(GCError):
 	pass

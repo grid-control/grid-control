@@ -83,9 +83,9 @@ class Config:
 		except cp.NoSectionError:
 			return tryDefault('No section [%s] in config file!' % section)
 		except cp.NoOptionError:
-			return tryDefault('[%s] %s does not exist!' % (section, item))
+			return tryDefault('[%s] "%s" does not exist!' % (section, item))
 		except:
-			raise ConfigError('[%s] %s could not be parsed!' % (section, item))
+			raise ConfigError('[%s] "%s" could not be parsed!' % (section, item))
 		return checkResult(value)
 
 
@@ -136,3 +136,25 @@ class Config:
 		if flag:
 			utils.eprint()
 		return flag
+
+
+	def prettyPrint(self, stream, printDefault):
+		stream.write("\n; %s\n; This is the %s set of used config options:\n; %s\n\n" % \
+			("="*60, utils.QM(printDefault, 'complete', 'minimal'), "="*60))
+		for section in sorted(self.protocol):
+			(header, prevNL) = (False, False)
+			for (key, (value, default, volatile)) in sorted(self.protocol[section].iteritems()):
+				if (section == 'global') and (key == 'include'):
+					continue # included statements are already in the protocol
+				if (not printDefault and (str(value) != str(default))) or printDefault:
+					if not header:
+						stream.write("[%s]\n" % section)
+						header = True
+					value = str(value).replace("\n", "\n\t")
+					stream.write("%s = %s\n" % (str(key), str(value)))
+					prevNL = False
+					if default != None and not printDefault:
+						stream.write("; Default setting: %s = %s\n" % (key, default))
+						prevNL = True
+			if header and not prevNL:
+				stream.write("\n")

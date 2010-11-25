@@ -21,13 +21,13 @@ class GliteWMS(GridWMS):
 			activity = utils.ActivityLog('creating delegate proxy for job submission')
 			proc = utils.LoggedProcess(self._delegateExec, '%s -d %s --noint --logfile "%s"' %
 				(utils.QM(self._configVO, '--config "%s"' % self._configVO, ''), self.module.taskID, log))
-			retCode, output, error = proc.getAll()
-			output = str.join('', output)
+
+			output = proc.getOutput(wait = True)
 			if ('glite-wms-job-delegate-proxy Success' in output) and (self.module.taskID in output):
 				self._submitParams.update({ '-d': self.module.taskID })
 			del activity
 
-			if retCode != 0:
+			if proc.wait() != 0:
 				proc.logError(self.errorLog, log = log)
 			return (self._submitParams.get('-d', None) != None)
 		finally:

@@ -34,25 +34,3 @@ class Help(object):
 					print '<example: %s>' % tmp
 				else:
 					print '<not determinable>'
-
-
-	def getConfig(self, config, printDefault):
-		print "\n; %s\n; This is the %s set of used config options:\n; %s\n" % \
-			("="*60, utils.QM(printDefault, 'complete', 'minimal'), "="*60)
-		for section in sorted(config.protocol):
-			(header, prevNL) = (False, False)
-			for (key, (value, default, volatile)) in sorted(config.protocol[section].iteritems()):
-				if (section == 'global') and (key == 'include'):
-					continue # included statements are already in the protocol
-				if (not printDefault and (str(value) != str(default))) or printDefault:
-					if not header:
-						print "[%s]" % section
-						header = True
-					value = str(value).replace("\n", "\n\t")
-					print "%s = %s" % (str(key), str(value))
-					prevNL = False
-					if default != None and not printDefault:
-						print "; Default setting: %s = %s\n" % (key, default)
-						prevNL = True
-			if header and not prevNL:
-				print

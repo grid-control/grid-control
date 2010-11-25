@@ -28,6 +28,11 @@ parser.add_option('-S', '--save',          dest='save',
 if len(args) != 1:
 	utils.exitWithUsage(usage)
 
+def noThread(desc, fun, *args, **kargs):
+	fun(*args, **kargs)
+	return type("DummyThread", (), {"join": lambda self: None})()
+utils.gcStartThread = noThread
+
 dataset = args[0].strip()
 if os.path.exists(dataset.split('%')[0]):
 	dir, file = os.path.split(dataset)

@@ -34,7 +34,8 @@ class DashBoard(Monitoring):
 	# Called on job submission
 	def onJobSubmit(self, wms, jobObj, jobNum):
 		taskId = self.module.substVars(self.taskname, jobNum).strip('_')
-		utils.gcStartThread(self.publish, jobObj, jobNum, taskId, [{
+		utils.gcStartThread("Notifying dashboard about job submission %d" % jobNum,
+			self.publish, jobObj, jobNum, taskId, [{
 			'user': os.environ['LOGNAME'], 'GridName': wms.proxy.getUsername(),
 			'tool': 'grid-control', 'JSToolVersion': utils.getVersion(),
 			'application': self.app, 'exe': 'shellscript', 'taskType': self.tasktype,
@@ -44,7 +45,8 @@ class DashBoard(Monitoring):
 	# Called on job status update
 	def onJobUpdate(self, wms, jobObj, jobNum, data):
 		taskId = self.module.substVars(self.taskname, jobNum).strip('_')
-		utils.gcStartThread(self.publish, jobObj, jobNum, taskId, [{
+		utils.gcStartThread("Notifying dashboard about status of job %d" % jobNum,
+			self.publish, jobObj, jobNum, taskId, [{
 			'StatusValue': data.get('status', 'pending').upper(),
 			'StatusValueReason': data.get('reason', data.get('status', 'pending')).upper(),
 			'StatusEnterTime': data.get('timestamp', strftime('%Y-%m-%d_%H:%M:%S', localtime())),

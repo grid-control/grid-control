@@ -92,9 +92,9 @@ class SimpleBroker(Broker):
 					current_diff = cmp(a[key], b[key])
 				elif key in a:
 					current_diff = -1
-				if diff == 0 and diff != current_diff:
+				if (diff != current_diff) and (diff == 0):
 					diff = current_diff
-				elif diff != current_diff and current_diff != 0:
+				elif (diff != current_diff) and (current_diff != 0):
 					return 0
 			return diff
 		sorted_queues = []
