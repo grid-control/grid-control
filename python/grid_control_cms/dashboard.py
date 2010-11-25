@@ -12,7 +12,7 @@ class DashBoard(Monitoring):
 
 
 	def getScript(self):
-		yield utils.pathGC('python', __package__, 'share', 'mon.dashboard.sh')
+		yield utils.pathGC('python', 'grid_control_cms', 'share', 'mon.dashboard.sh')
 
 
 	def getEnv(self, wms):
@@ -21,7 +21,7 @@ class DashBoard(Monitoring):
 
 	def getFiles(self):
 		for file in ('DashboardAPI.py', 'Logger.py', 'ProcInfo.py', 'apmon.py', 'report.py'):
-			yield utils.pathGC('python', __package__, 'share', 'DashboardAPI', file)
+			yield utils.pathGC('python', 'grid_control_cms', 'share', 'DashboardAPI', file)
 
 
 	def publish(self, jobObj, jobNum, taskId, usermsg):

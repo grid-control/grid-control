@@ -64,16 +64,23 @@ class DBSApiv2(DataProvider):
 				phedexSitesOK = utils.doBlackWhiteList(phedexSites.keys(), self.phedexBL)
 				seList[phedexBlock['name']] = map(lambda x: phedexSites[x], phedexSitesOK)
 		try:
-			listBlockInfo = api.listBlocks(self.datasetPath, nosite = self.phedex)
+			toProcess = [self.datasetPath]
+			if '*' in self.datasetPath:
+				pd, sd, dt = (self.datasetPath.lstrip("/") + "/*/*/*").split("/")[:3]
+				toProcess = map(lambda x: x.get("PathList", [])[-1], api.listProcessedDatasets(pd, dt, sd))
+				utils.vprint("DBS dataset wildcard selected:\n\t%s\n" % str.join("\n\t", toProcess), -1)
 			# Start thread to retrieve list of files
-			(listFileInfo, seList) = ([], {})
-			def listFileInfoThread(self, api, result):
-				result.extend(api.listFiles(self.datasetPath, retriveList=QM(self.selectedLumis, ['retrive_lumi'], [])))
-			tFile = utils.gcStartThread("Retrieval of file infos for %s" % self.datasetPath,
-				listFileInfoThread, self, api, listFileInfo)
-			if self.phedex:
-				getWithPhedex(listBlockInfo, seList)
-			tFile.join()
+			(listBlockInfo, listFileInfo, seList) = ([], [], {})
+			def listFileInfoThread(self, api, path, result):
+				result.extend(api.listFiles(path, retriveList=QM(self.selectedLumis, ['retrive_lumi'], [])))
+			for datasetPath in toProcess:
+				thisBlockInfo = api.listBlocks(datasetPath, nosite = self.phedex)
+				tFile = utils.gcStartThread("Retrieval of file infos for %s" % datasetPath,
+					listFileInfoThread, self, api, datasetPath, listFileInfo)
+				if self.phedex:
+					getWithPhedex(thisBlockInfo, seList)
+				tFile.join()
+				listBlockInfo.extend(thisBlockInfo)
 		except:
 			raise RethrowError('DBS exception')
 
