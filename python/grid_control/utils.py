@@ -209,7 +209,8 @@ def accumulate(iterable, doEmit = lambda x, buf: x == '\n', start = '', opAdd = 
 			if addCause:
 				continue
 		buffer = opAdd(buffer, item)
-	yield buffer
+	if buffer != start:
+		yield buffer
 
 
 def wrapList(value, length, delimLines = ',\n', delimEntries = ', '):

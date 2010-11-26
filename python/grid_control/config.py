@@ -3,7 +3,7 @@ from grid_control import *
 
 class Config:
 	def __init__(self, configFile = None, configDict = {}):
-		(self.allowSet, self.protocol, self.parser) = (True, {}, cp.ConfigParser())
+		(self.allowSet, self.protoValue, self.protoSet, self.parser) = (True, {}, [], cp.ConfigParser())
 		if configFile:
 			# use the directory of the config file as base directory
 			self.baseDir = os.path.abspath(os.path.normpath(os.path.dirname(configFile)))
@@ -61,15 +61,16 @@ class Config:
 			self.parser.add_section(str(section))
 		if (not self.parser.has_option(str(section), str(item))) or override:
 			self.parser.set(str(section), str(item), str(value))
+			self.protoSet.append((str(section), str(item)))
 
 
 	def get(self, section, item, default = None, volatile = False, noVar = True):
 		# Check result, Make protocol of config queries and flag inconsistencies
 		def checkResult(value):
-			if item in self.protocol.setdefault(section, {}):
-				if self.protocol[section][item][1] != default:
+			if item in self.protoValue.setdefault(section, {}):
+				if self.protoValue[section][item][1] != default:
 					raise APIError('Inconsistent default values: [%s] %s' % (section, item))
-			self.protocol[section][item] = (value, default, volatile)
+			self.protoValue[section][item] = (value, default, volatile)
 			return utils.checkVar(value, '[%s] %s may not contain variables.' % (section, item), noVar)
 		# Default value helper function
 		def tryDefault(errorMessage):
@@ -118,8 +119,8 @@ class Config:
 		saveConfig = cp.ConfigParser()
 		self.parseFile(saveConfig, saveConfigPath)
 		flag = False
-		for section in self.protocol:
-			for (key, (value, default, volatile)) in self.protocol[section].iteritems():
+		for section in self.protoValue:
+			for (key, (value, default, volatile)) in self.protoValue[section].iteritems():
 				try:
 					oldValue = self.parseLine(saveConfig, section, key)
 				except:
@@ -128,33 +129,24 @@ class Config:
 					if not flag:
 						utils.eprint('\nFound some changes in the config file, which will only apply')
 						utils.eprint('to the current task after a reinitialization:\n')
-					utils.eprint('[%s] %s = %s' % (section, key, value), newline = False)
-					if len(str(oldValue)) + len(str(value)) > 60:
-						utils.eprint()
-					utils.eprint('  (old value: %s)' % oldValue)
+					outputLine = '[%s] %s = %s' % (section, key, value)
+					outputLine += QM(len(outputLine) > 60, '\n', '') + '  (old value: %s)' % oldValue
+					utils.eprint(outputLine)
 					flag = True
-		if flag:
-			utils.eprint()
 		return flag
 
 
 	def prettyPrint(self, stream, printDefault):
 		stream.write("\n; %s\n; This is the %s set of used config options:\n; %s\n\n" % \
 			("="*60, utils.QM(printDefault, 'complete', 'minimal'), "="*60))
-		for section in sorted(self.protocol):
-			(header, prevNL) = (False, False)
-			for (key, (value, default, volatile)) in sorted(self.protocol[section].iteritems()):
-				if (section == 'global') and (key == 'include'):
-					continue # included statements are already in the protocol
+		output = {} # {'section1': [output1, output2, ...], 'section2': [...output...], ...}
+		for section in self.protoValue:
+			for (key, (value, default, volatile)) in sorted(self.protoValue[section].iteritems()):
+				if ((section == 'global') and (key == 'include')) or ((str(section), str(key)) in self.protoSet):
+					continue # included statements are already in the protocol & skip runtime settings
 				if (not printDefault and (str(value) != str(default))) or printDefault:
-					if not header:
-						stream.write("[%s]\n" % section)
-						header = True
-					value = str(value).replace("\n", "\n\t")
-					stream.write("%s = %s\n" % (str(key), str(value)))
-					prevNL = False
+					value = str(value).replace("\n", "\n\t") # format multi-line options
+					output.setdefault(section.lower(), ["[%s]" % section]).append("%s = %s" % (key, value))
 					if default != None and not printDefault:
-						stream.write("; Default setting: %s = %s\n" % (key, default))
-						prevNL = True
-			if header and not prevNL:
-				stream.write("\n")
+						output[section.lower()].append("; Default setting: %s = %s" % (key, default))
+		stream.write("%s\n" % str.join('\n\n', map(lambda s: str.join('\n', output[s]), sorted(output))))
