@@ -16,10 +16,10 @@ def pathGC(*args):
 
 
 def resolvePath(path, userpath = [], check = True, ErrorClass = RuntimeError):
-	searchpaths = [ os.getcwd(), pathGC() ] + userpath
+	searchpaths = [ '', os.getcwd(), pathGC() ] + userpath
 	cleanPath = lambda x: os.path.normpath(os.path.expanduser(x.strip()))
 	for spath in searchpaths:
-		if os.path.exists(os.path.join(spath, path)):
+		if os.path.exists(cleanPath(os.path.join(spath, path))):
 			return cleanPath(os.path.join(spath, path))
 	if check:
 		raise ErrorClass('Could not find file %s in \n\t%s' % (path, str.join('\n\t', searchpaths)))

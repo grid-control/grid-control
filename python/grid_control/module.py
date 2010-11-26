@@ -125,7 +125,7 @@ class Module(AbstractObject):
 
 	def getTransientVars(self):
 		hx = str.join("", map(lambda x: "%02x" % x, map(random.randrange, [256]*16)))
-		return {'MYDATE': time.strftime("%F"), 'MYTIMESTAMP': time.strftime("%s"),
+		return {'MYDATE': strftime("%F"), 'MYTIMESTAMP': strftime("%s"),
 			'MYGUID': '%s-%s-%s-%s-%s' % (hx[:8], hx[8:12], hx[12:16], hx[16:20], hx[20:]),
 			'RANDOM': str(random.randrange(0, 900000000))}
 
