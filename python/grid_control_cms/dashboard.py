@@ -21,7 +21,7 @@ class DashBoard(Monitoring):
 
 	def getFiles(self):
 		for file in ('DashboardAPI.py', 'Logger.py', 'ProcInfo.py', 'apmon.py', 'report.py'):
-			yield utils.pathGC('python', 'grid_control_cms', 'share', 'DashboardAPI', file)
+			yield utils.pathGC('python', 'grid_control_cms', 'DashboardAPI', file)
 
 
 	def publish(self, jobObj, jobNum, taskId, usermsg):
