@@ -626,7 +626,7 @@ def getUserBool(text, default):
 
 
 def deprecated(text):
-	eprint('%s\n[DEPRECATED] %s' % (open(pathGC('share', 'fail.txt'), 'r').read(), text))
+	eprint('%s\n[DEPRECATED] %s' % (open(pathGC('python', 'grid_control', 'share', 'fail.txt'), 'r').read(), text))
 	if not getUserBool('Do you want to continue?', False):
 		sys.exit(0)
 

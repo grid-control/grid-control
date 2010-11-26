@@ -5,6 +5,7 @@
 # 110 - project area setup failed
 # 111 - CMSSW environment unpacking failed
 # 112 - CMSSW environment setup failed
+# 113 - Problem while hashing config file
 
 source $MY_LANDINGZONE/gc-run.lib || exit 101
 
@@ -103,7 +104,7 @@ if [ -n "$CMSSW_CONFIG" ]; then
 		cat "$MY_SCRATCH/$CFG_NAME" | var_replacer "$CFG_NAME" | tee "$DBSDIR/config" > "$CFG_NAME"
 
 		echo "Calculating config file hash..."
-		edmConfigHash "$CFG_NAME" > "$DBSDIR/hash"
+		edmConfigHash "$CFG_NAME" > "$DBSDIR/hash" || fail 113
 
 		echo "Starting cmsRun..."
 		if [ "$GZIP_OUT" = "yes" ]; then

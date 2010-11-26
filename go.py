@@ -7,7 +7,7 @@ from gcPackage import *
 
 usage = "Syntax: %s [OPTIONS] <config file>\n" % sys.argv[0]
 def print_help(*args):
-	utils.eprint("%s\n%s" % (usage, open(utils.pathGC('share', 'help.txt'), 'r').read()))
+	utils.eprint("%s\n%s" % (usage, open(utils.pathGC('python', 'grid_control', 'share', 'help.txt'), 'r').read()))
 	sys.exit(0)
 
 if __name__ == '__main__':
@@ -23,7 +23,7 @@ if __name__ == '__main__':
 	handler = signal.signal(signal.SIGINT, interrupt)
 
 	# display the 'grid-control' logo and version
-	utils.vprint(open(utils.pathGC('share', 'logo.txt'), 'r').read(), -1)
+	utils.vprint(open(utils.pathGC('python', 'grid_control', 'share', 'logo.txt'), 'r').read(), -1)
 	utils.vprint('Revision: %s' % utils.getVersion(), -1)
 	pyver = sys.version_info[0] + sys.version_info[1] / 10.0
 	if pyver < 2.3:
@@ -103,7 +103,7 @@ if __name__ == '__main__':
 			raise ConfigError("Invalid backend specified!" % config.workDir)
 
 		# Initialise job database
-		jobs = JobManager(config, module, monitor)
+		jobManager = JobManager(config, module, monitor)
 
 		# Give config help
 		if opts.help_cfg or opts.help_scfg:
@@ -111,12 +111,12 @@ if __name__ == '__main__':
 			sys.exit(0)
 
 		# If invoked in report mode, just show report and exit
-		if Report(jobs).show(opts, module):
+		if Report(jobManager.jobDB).show(opts, module):
 			sys.exit(0)
 
 		# Check if jobs have to be deleted and exit
 		if opts.delete != None:
-			jobs.delete(wms, opts.delete)
+			jobManager.delete(wms, opts.delete)
 			sys.exit(0)
 
 		savedConfigPath = os.path.join(config.workDir, 'work.conf')
@@ -132,7 +132,7 @@ if __name__ == '__main__':
 
 		if opts.continuous and not opts.gui:
 			utils.vprint(level = -1)
-			Report(jobs).summary()
+			Report(jobManager.jobDB).summary()
 			utils.vprint("Running in continuous mode. Press ^C to exit.", -1)
 
 		# Job submission loop
@@ -150,14 +150,14 @@ if __name__ == '__main__':
 						lastSpaceMsg = time.time()
 				else:
 					# check for jobs
-					if not utils.abort() and jobs.check(wms):
+					if not utils.abort() and jobManager.check(wms):
 						didWait = wait(wms.getTimings()[1])
 					# retrieve finished jobs
-					if not utils.abort() and jobs.retrieve(wms):
+					if not utils.abort() and jobManager.retrieve(wms):
 						didWait = wait(wms.getTimings()[1])
 					# try submission
 					if opts.submission:
-						if not utils.abort() and jobs.submit(wms):
+						if not utils.abort() and jobManager.submit(wms):
 							didWait = wait(wms.getTimings()[1])
 
 				# quit if abort flag is set or not in continuous mode
@@ -169,7 +169,7 @@ if __name__ == '__main__':
 
 		if opts.gui:
 			from grid_control import gui
-			gui.ANSIGUI(jobs, jobCycle)
+			gui.ANSIGUI(jobManager, jobCycle)
 		else:
 			jobCycle()
 

@@ -41,7 +41,7 @@ class Config:
 			parseFileInt(userDefaultsFile)
 		parseFileInt(configFile, False)
 		# Read default values and reread main config file
-		for includeFile in self.getPaths('global', 'include', ''):
+		for includeFile in self.getPaths('global', 'include', '', volatile = True):
 			parseFileInt(includeFile)
 		parseFileInt(configFile)
 

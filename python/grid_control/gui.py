@@ -157,7 +157,7 @@ def ANSIGUI(jobDB, jobCycle):
 				screen.move(0, 0)
 				sys.stdout.logged = False
 				bar.update(len(jobDB.ok))
-				report.Report(jobDB).summary("%s\n%s" % (bar, message))
+				report.Report(jobDB.jobDB).summary("%s\n%s" % (bar, message))
 				sys.stdout.logged = True
 				screen.loadPos()
 
@@ -174,7 +174,7 @@ def ANSIGUI(jobDB, jobCycle):
 			screen.setscrreg()
 			screen.move(1, 0)
 			screen.eraseDown()
-			report.Report(jobDB).summary()
+			report.Report(jobDB.jobDB).summary()
 	try:
 		wrapper(Console())
 	finally:
