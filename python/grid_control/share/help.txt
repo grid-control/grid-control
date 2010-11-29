@@ -41,7 +41,7 @@
 	                         The following job selectors are supported:
 	  <sel> = "expr1 expr2"     id:1,5,9,...       (Job numbers)
 	                ^-- or      site:CE1,...       (Destination sites)
-	                            queue:long,...     (Destination queues)
-	  <sel> = "expr1 + expr2"   state:QUEUED,...   (Job states)
-	                 ^-- and    state:TODO         (= SUBMITTED,WAITING,READY,QUEUED)
-	                            state:ALL
+	  <sel> = "expr1 + expr2"   queue:long,...     (Destination queues)
+	                 ^-- and    state:QUEUED,...   (Job states)
+	  <sel> = "~expr1"          state:TODO         (= SUBMITTED,WAITING,READY,QUEUED)
+	           ^-- not          state:ALL

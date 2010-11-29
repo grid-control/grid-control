@@ -22,7 +22,7 @@ class JobDB:
 		self._jobs[jobNum] = jobObj
 
 
-	def getMissing(self, nJobs):
+	def extendJobDB(self, nJobs):
 		self.nJobs = nJobs
 		if len(self._jobs) < nJobs:
 			return filter(lambda x: x not in self._jobs, range(nJobs))
@@ -32,9 +32,15 @@ class JobDB:
 	def getJobs(self, selector):
 		def selectByID(jobNum, jobObj, arg):
 			try:
-				return jobNum in map(int, arg.split(","))
+				def checkID(idArg):
+					(start, end) = (idArg.split('-')[0], idArg.split('-')[-1])
+					if (start == '') or jobNum >= int(start):
+						if (end == '') or jobNum <= int(end):
+							return True
+					return False
+				return reduce(operator.or_, map(checkID, arg.split(",")))
 			except:
-				raise UserError('Job identifiers must be integers.')
+				raise UserError('Job identifiers must be integers or ranges.')
 		def selectByState(jobNum, jobObj, arg):
 			predefined = {'TODO': 'SUBMITTED,WAITING,READY,QUEUED', 'ALL': str.join(',', Job.states)}
 			for state in arg.split(','):
@@ -57,11 +63,14 @@ class JobDB:
 		}
 
 		def select(jobNum, jobObj):
-			def selectSpecific(specific):
-				selectorType = QM(sepcific.isdigit(), 'id', 'state')
+			def selectSpecific(specific): # parse a single expression (expr := type:selector | selector)
+				cmpValue = QM(specific[0] == '~', False, True)
+				specific = specific.lstrip('~')
+				selectorType = QM(specific[0].isdigit(), 'id', 'state')
 				if ':' in specific:
 					selectorType = specific.split(':', 1)[0].lower()
-				return selectorMap[selectorType](jobNum, jobObj, specific.split(':', 1)[-1])
+				return selectorMap[selectorType](jobNum, jobObj, specific.split(':', 1)[-1]) == cmpValue
+			# combine or (== expr1 expr2) with and (== expr1 + expr2) expressions
 			resolveAND = lambda x: reduce(operator.and_, map(selectSpecific, x.split('+')))
 			selectorOR = str.join('+', map(str.strip, selector.split('+'))).split()
 			return reduce(operator.or_, map(resolveAND, selectorOR))
@@ -102,7 +111,7 @@ class JobManager:
 			self.jobDB.set(jobNum, jobObj)
 			self._findQueue(jobObj).append(jobNum)
 
-		self.ready.extend(self.jobDB.getMissing(self.nJobs))
+		self.ready.extend(self.jobDB.extendJobDB(self.nJobs))
 		for jobList in (self.ready, self.queued, self.running, self.done, self.ok, self.disabled):
 			jobList.sort()
 		self.logDisabled()
@@ -419,7 +428,7 @@ class JobManager:
 			if self.nJobs != newMaxJobs:
 				utils.vprint('Number of jobs changed from %d to %d' % (self.nJobs, newMaxJobs), -1, True)
 				self.nJobs = newMaxJobs
-				self.ready.extend(self.jobDB.getMissing(self.nJobs))
+				self.ready.extend(self.jobDB.extendJobDB(self.nJobs))
 			self.cancel(wms, self.getCancelJobs(disable))
 			self.cancel(wms, self.getCancelJobs(redo))
 			resetState(disable, Job.DISABLED)
