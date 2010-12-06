@@ -72,7 +72,7 @@ class Module(AbstractObject):
 			self.dependencies.append('glite')
 
 		# Get error messages from gc-run.lib comments
-		self.errorDict = dict(self.updateErrorDict(utils.pathGC('share', 'gc-run.lib')))
+		self.errorDict = dict(self.updateErrorDict(utils.pathShare('gc-run.lib')))
 
 
 	# Read comments with error codes at the beginning of file

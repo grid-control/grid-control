@@ -19,5 +19,11 @@ fi
 [ -d "/tmp" ] && export GC_LOCALSCRATCH="/tmp/$RANDOM_${MY_JOBID}"
 [ -n "$GC_LOCALSCRATCH" ] && mkdir -p "$GC_LOCALSCRATCH"
 cd "$GC_SANDBOX"
-./gc-run.sh ${MY_JOBID}
+if [ -n "$GC_DELAY_OUTPUT" ]; then
+	./gc-run.sh ${MY_JOBID} > "$GC_LOCALSCRATCH/gc.stdout.tmp" 2> "$GC_LOCALSCRATCH/gc.stderr.tmp"
+	mv "$GC_LOCALSCRATCH/gc.stdout.tmp" "$GC_DELAY_OUTPUT"
+	mv "$GC_LOCALSCRATCH/gc.stderr.tmp" "$GC_DELAY_ERROR"
+else
+	./gc-run.sh ${MY_JOBID}
+fi
 [ -n "$GC_LOCALSCRATCH" ] && rmdir "$GC_LOCALSCRATCH"

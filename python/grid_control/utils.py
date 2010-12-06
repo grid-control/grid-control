@@ -12,10 +12,9 @@ def QM(cond, a, b):
 
 cleanPath = lambda x: os.path.abspath(os.path.normpath(os.path.expanduser(x.strip())))
 
-def pathGC(*args):
-	# Convention: sys.path[1] == python dir of gc
-	return cleanPath(os.path.join(sys.path[1], '..', *args))
-
+# Convention: sys.path[1] == python dir of gc
+pathGC = lambda *args: cleanPath(os.path.join(sys.path[1], '..', *args))
+pathShare = lambda *args, **kw: cleanPath(os.path.join(sys.path[1], kw.get('pkg', 'grid_control'), 'share', *args))
 
 def resolvePath(path, userpath = [], check = True, ErrorClass = RuntimeError):
 	searchpaths = [ '', os.getcwd(), pathGC() ] + userpath
@@ -625,7 +624,7 @@ def getUserBool(text, default):
 
 
 def deprecated(text):
-	eprint('%s\n[DEPRECATED] %s' % (open(pathGC('python', 'grid_control', 'share', 'fail.txt'), 'r').read(), text))
+	eprint('%s\n[DEPRECATED] %s' % (open(pathShare('fail.txt'), 'r').read(), text))
 	if not getUserBool('Do you want to continue?', False):
 		sys.exit(0)
 

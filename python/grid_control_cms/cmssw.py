@@ -9,7 +9,7 @@ class CMSSW(DataMod):
 		config.set(self.__class__.__name__, 'dataset provider', 'DBSApiv2', override = False)
 		config.set(self.__class__.__name__, 'dataset splitter', 'EventBoundarySplitter', override = False)
 		DataMod.__init__(self, config)
-		self.errorDict.update(dict(self.updateErrorDict(utils.pathGC('python', 'grid_control_cms', 'share', 'gc-run.cmssw.sh'))))
+		self.errorDict.update(dict(self.updateErrorDict(utils.pathShare('gc-run.cmssw.sh', pkg = 'grid_control_cms'))))
 
 		# SCRAM info
 		scramProject = config.getList(self.__class__.__name__, 'scram project', [])
@@ -127,7 +127,7 @@ class CMSSW(DataMod):
 		# Check that for dataset jobs the necessary placeholders are in the config file
 		self.prepare = config.getBool(self.__class__.__name__, 'prepare config', False)
 		fragment = config.getPath(self.__class__.__name__, 'instrumentation fragment',
-			utils.pathGC('python', 'grid_control_cms', 'share', 'fragmentForCMSSW.py'))
+			os.path.join('python', 'grid_control_cms', 'share', 'fragmentForCMSSW.py'))
 		if self.dataSplitter != None:
 			if config.opts.init:
 				self.instrumentCfgQueue(self.configFiles, fragment, mustPrepare = True)
@@ -213,7 +213,7 @@ class CMSSW(DataMod):
 		files = DataMod.getInFiles(self) + self.configFiles + self.executable
 		if len(self.projectArea) and not self.seRuntime:
 			files.append(os.path.join(self.config.workDir, 'runtime.tar.gz'))
-		return files + [utils.pathGC('python', 'grid_control_cms', 'share', 'gc-run.cmssw.sh')]
+		return files + [utils.pathShare('gc-run.cmssw.sh', pkg = 'grid_control_cms')]
 
 
 	# Get files for output sandbox

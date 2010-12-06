@@ -77,7 +77,7 @@ class LocalWMS(WMS):
 		(stdout, stderr) = (os.path.join(sandbox, 'gc.stdout'), os.path.join(sandbox, 'gc.stderr'))
 		proc = utils.LoggedProcess(self.api.submitExec, '%s "%s" %s' % (
 			self.api.getSubmitArguments(jobNum, reqs, sandbox, stdout, stderr, self.addAttr),
-			utils.pathGC('share', 'local.sh'), self.api.getJobArguments(jobNum, sandbox)))
+			utils.pathShare('local.sh'), self.api.getJobArguments(jobNum, sandbox)))
 		retCode = proc.wait()
 		wmsIdText = proc.getOutput().strip().strip('\n')
 		try:

@@ -32,7 +32,7 @@ class WMS(AbstractObject):
 				raise ConfigError('Not a properly initialized work directory "%s".' % config.workDir)
 
 		tarFile = os.path.join(config.workDir, 'sandbox.tar.gz')
-		self.sandboxIn = [ utils.pathGC('share', 'gc-run.sh'), utils.pathGC('share', 'gc-run.lib'), tarFile ]
+		self.sandboxIn = [ utils.pathShare('gc-run.sh'), utils.pathShare('gc-run.lib'), tarFile ]
 		self.sandboxOut = ['gc.stdout', 'gc.stderr', 'job.info'] + list(module.getOutFiles())
 		inFiles = self.getSandboxFiles()
 
@@ -79,7 +79,7 @@ class WMS(AbstractObject):
 		taskEnv = utils.mergeDicts([self.monitor.getEnv(self), self.module.getTaskConfig()])
 		taskConfig = sorted(utils.DictFormat(escapeString = True).format(taskEnv, format = 'export %s%s%s\n'))
 		varMapping = sorted(utils.DictFormat(' ').format(self.module.getVarMapping(), format = '%s%s%s\n'))
-		depPaths = map(lambda p: os.path.join(utils.pathGC('python'), p, 'share'), os.listdir(utils.pathGC('python')))
+		depPaths = map(lambda pkg: utils.pathShare('', pkg = pkg), os.listdir(utils.pathGC('python')))
 		depFiles = map(lambda dep: utils.resolvePath('env.%s.sh' % dep, depPaths), self.module.getDependencies())
 		# Resolve wildcards in module input files
 		def getModuleFiles():

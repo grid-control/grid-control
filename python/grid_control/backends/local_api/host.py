@@ -5,7 +5,7 @@ from api import LocalWMSApi
 class Host(LocalWMSApi):
 	def __init__(self, config, wms):
 		LocalWMSApi.__init__(self, config, wms)
-		self.submitExec = utils.pathGC('share', 'host.sh')
+		self.submitExec = utils.pathShare('host.sh')
 		self.statusExec = utils.resolveInstallPath('ps')
 		self.cancelExec = utils.resolveInstallPath('kill')
 

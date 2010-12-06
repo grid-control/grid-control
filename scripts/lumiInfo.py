@@ -31,7 +31,7 @@ parser.add_option_group(ogCalc)
 (opts, args) = parser.parse_args()
 
 def outputGC(lumis, stream = sys.stdout):
-	stream.write("%s\n" % gcSupport.utils.wrapList(formatLumi(lumis), 60, ',\n'))
+	stream.write("%s\n" % utils.wrapList(formatLumi(lumis), 60, ',\n'))
 
 def outputJSON(lumis, stream = sys.stdout):
 	tmp = {}
@@ -51,7 +51,7 @@ def outputJSON(lumis, stream = sys.stdout):
 # Lumi filter calculations
 ###########################
 if opts.save_jobjson or opts.save_jobgc or opts.get_events:
-	(workDir, jobList) = gcSupport.getWorkJobs(args)
+	(workDir, jobList) = getWorkJobs(args)
 	(log, incomplete, splitter, splitInfo) = (None, False, None, {})
 	(lumiDict, readDict, writeDict) = ({}, {}, {})
 	try:
@@ -63,7 +63,7 @@ if opts.save_jobjson or opts.save_jobgc or opts.get_events:
 	for jobNum in jobList:
 		del log
 		log = utils.ActivityLog('Reading job logs - [%d / %d]' % (jobNum, jobList[-1]))
-		jobInfo = gcSupport.getJobInfo(workDir, jobNum, lambda retCode: retCode == 0)
+		jobInfo = getJobInfo(workDir, jobNum, lambda retCode: retCode == 0)
 		if not jobInfo:
 			if not incomplete:
 				print "WARNING: Not all jobs have finished - results will be incomplete!"
@@ -77,7 +77,7 @@ if opts.save_jobjson or opts.save_jobgc or opts.get_events:
 		# Read framework report files to get number of events
 		try:
 			outputDir = os.path.join(workDir, 'output', 'job_' + str(jobNum))
-			for fwkXML in gcSupport.getCMSSWInfo(os.path.join(outputDir, "cmssw.dbs.tar.gz")):
+			for fwkXML in getCMSSWInfo(os.path.join(outputDir, "cmssw.dbs.tar.gz")):
 				for run in fwkXML.getElementsByTagName("Run"):
 					for lumi in run.getElementsByTagName("LumiSection"):
 						run_id = int(run.getAttribute("ID"))
@@ -100,7 +100,7 @@ if opts.save_jobjson or opts.save_jobgc or opts.get_events:
 			continue
 
 	del log
-	log = utils.ActivityLog('Simplifying lumi sections...')
+	log = utils.ActivityLog('Simplifying lumi sections')
 	lumis = {}
 	for sample in lumiDict:
 		for run in lumiDict[sample]:

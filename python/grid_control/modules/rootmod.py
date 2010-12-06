@@ -21,7 +21,7 @@ class ROOTMod(UserMod):
 
 		# Apply default handling from UserMod
 		UserMod.__init__(self, config)
-		self.updateErrorDict(utils.pathGC('share', 'gc-run.root.sh'))
+		self.updateErrorDict(utils.pathShare('gc-run.root.sh'))
 
 		# Collect lib files needed by executable
 		self.libFiles = []
@@ -37,4 +37,4 @@ class ROOTMod(UserMod):
 
 
 	def getInFiles(self):
-		return UserMod.getInFiles(self) + self.libFiles + [utils.pathGC('share', 'gc-run.root.sh')]
+		return UserMod.getInFiles(self) + self.libFiles + [utils.pathShare('gc-run.root.sh')]

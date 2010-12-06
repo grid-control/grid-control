@@ -62,7 +62,7 @@ class StateSelector(RegExSelector):
 
 class VarSelector(JobSelector):
 	def __init__(self, arg, **kwargs):
-		self.rxDict = map(lambda x: (x.split('=',1)[0], re.compile(x.split('=',1)[1])), arg.split(','))
+		self.rxDict = map(lambda x: (x.split('=', 1)[0], re.compile(x.split('=', 1)[1])), arg.split(','))
 		self.jobCfg = lambda jobNum, var: str(kwargs['module'].getJobConfig(jobNum).get(var, ''))
 
 	def select(self, jobNum, jobObj):
