@@ -10,6 +10,7 @@ class PBSGECommon(LocalWMSApi):
 		self.statusExec = utils.resolveInstallPath('qstat')
 		self.cancelExec = utils.resolveInstallPath('qdel')
 		self._group = config.get('local', 'group', '', volatile=True)
+		self.delayOutput = config.getBool('local', 'delay output', False, volatile=True)
 
 
 	def unknownID(self):
@@ -36,5 +37,9 @@ class PBSGECommon(LocalWMSApi):
 			if self.checkReq(reqs, req):
 				params += ' -l %s=%s' % (reqMap[req][0], reqMap[req][1](reqs[req]))
 		# Sandbox, IO paths
-		params += ' -v GC_SANDBOX="%s" -o "%s" -e "%s"' % (sandbox, stdout, stderr)
+		params += ' -v GC_SANDBOX="%s"' % sandbox
+		if self.delayOutput:
+			params += ' -v GC_DELAY_OUTPUT="%s" -v GC_DELAY_ERROR="%s" -j y -o /dev/null' % (stdout, stderr)
+		else:
+			params += ' -o "%s" -e "%s"' % (stdout, stderr)
 		return params + str.join('', map(lambda kv: ' -l %s=%s' % kv, addAttr.items()))

@@ -1,9 +1,8 @@
 #!/usr/bin/env python
-import gcSupport, sys, optparse
-from grid_control import *
-from grid_control_cms import provider_dbsv2, lumi_tools
+import sys, optparse
+from gcSupport import *
 from grid_control_cms.lumi_tools import formatLumi, mergeLumi
-from grid_control_cms.provider_dbsv2 import *
+from grid_control_cms.provider_dbsv2 import createDBSAPI
 
 parser = optparse.OptionParser()
 parser.add_option("-l", "--list", dest="list", default=None)

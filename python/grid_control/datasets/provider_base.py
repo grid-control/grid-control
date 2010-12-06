@@ -13,10 +13,7 @@ NickNameProducer.dynamicLoaderPath()
 class SimpleNickNameProducer(NickNameProducer):
 	def getName(self, oldnick, dataset):
 		if oldnick == '':
-			try:
-				return dataset.split('/')[1]
-			except:
-				pass
+			return dataset.replace('/PRIVATE/', '').lstrip('/').split('/')[0].split('#')[0]
 		return oldnick
 
 

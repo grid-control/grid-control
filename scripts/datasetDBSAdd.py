@@ -1,8 +1,7 @@
 #!/usr/bin/env python
-import gcSupport, base64, xml.dom.minidom, optparse, locale, re, time, os, tarfile
+import base64, xml.dom.minidom, optparse, locale, re, time, os, tarfile
 from xml.dom.minidom import parseString
-from python_compat import *
-from grid_control import *
+from gcSupport import *
 from grid_control_cms import provider_dbsv2
 from grid_control_cms.provider_dbsv2 import *
 from grid_control_cms.DBSAPI.dbsMigrateApi import DbsMigrateApi

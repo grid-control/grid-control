@@ -3,8 +3,9 @@ from utils	import AbstractObject, QM
 
 from config	import Config
 from job	import Job
+from job_selector	import MultiJobSelector
 from report	import Report
-from job_db	import JobManager
+from job_db	import JobDB, JobManager
 from proxy	import Proxy
 from help	import Help
 

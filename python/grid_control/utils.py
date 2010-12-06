@@ -10,14 +10,15 @@ def QM(cond, a, b):
 ################################################################
 # Path helper functions
 
+cleanPath = lambda x: os.path.abspath(os.path.normpath(os.path.expanduser(x.strip())))
+
 def pathGC(*args):
 	# Convention: sys.path[1] == python dir of gc
-	return os.path.abspath(os.path.normpath(os.path.join(sys.path[1], '..', *args)))
+	return cleanPath(os.path.join(sys.path[1], '..', *args))
 
 
 def resolvePath(path, userpath = [], check = True, ErrorClass = RuntimeError):
 	searchpaths = [ '', os.getcwd(), pathGC() ] + userpath
-	cleanPath = lambda x: os.path.normpath(os.path.expanduser(x.strip()))
 	for spath in searchpaths:
 		if os.path.exists(cleanPath(os.path.join(spath, path))):
 			return cleanPath(os.path.join(spath, path))
@@ -41,10 +42,9 @@ def gcStartThread(desc, fun, *args, **kargs):
 
 class LoggedProcess(object):
 	def __init__(self, cmd, args = ''):
-		self.cmd = (cmd, args)
-		vprint('External programm called: %s %s' % self.cmd, level=3)
+		(self.stdout, self.stderr, self.cmd, self.args) = ([], [], cmd, args)
+		vprint('External programm called: %s %s' % (cmd, args), level=3)
 		self.proc = popen2.Popen3('%s %s' % (cmd, args), True)
-		(self.stdout, self.stderr) = ([], [])
 
 	def getOutput(self, wait = False):
 		if wait:
@@ -82,10 +82,10 @@ class LoggedProcess(object):
 	def logError(self, target, **kwargs): # Can also log content of additional files via kwargs
 		now = time.time()
 		entry = '%s.%s' % (time.strftime('%Y-%m-%d_%H:%M:%S', time.localtime(now)), ('%.5f' % (now - int(now)))[2:])
-		eprint('WARNING: %s failed with code %d\n%s' % (os.path.basename(self.cmd[0]), self.wait(), self.getError()))
+		eprint('WARNING: %s failed with code %d\n%s' % (os.path.basename(self.cmd), self.wait(), self.getError()))
 
 		tar = tarfile.TarFile.open(target, 'a')
-		data = { 'retCode': self.wait(), 'exec': self.cmd[0], 'args': self.cmd[1] }
+		data = {'retCode': self.wait(), 'exec': self.cmd, 'args': self.args}
 		files = [VirtualFile(os.path.join(entry, 'info'), DictFormat().format(data))]
 		kwargs.update({'stdout': self.getOutput(), 'stderr': self.getError()})
 		for key, value in kwargs.items():
@@ -100,7 +100,6 @@ class LoggedProcess(object):
 			handle.close()
 		tar.close()
 		eprint('All logfiles were moved to %s' % target)
-
 
 ################################################################
 # Global state functions
@@ -193,7 +192,7 @@ class VirtualFile(StringIO.StringIO):
 ################################################################
 
 def checkVar(value, message, check = True):
-	if check and reduce(lambda x,y: max(x,y), map(lambda x: max(x.count('@'), x.count('__')), str(value).split('\n'))) >= 2:
+	if check and ((str(value).count('@') >= 2) or (str(value).count('__') >= 2)):
 		raise ConfigError(message)
 	return value
 
@@ -631,9 +630,9 @@ def deprecated(text):
 		sys.exit(0)
 
 
-def exitWithUsage(usage, msg = None):
+def exitWithUsage(usage, msg = None, helpOpt = True):
 	sys.stderr.write(QM(msg, '%s\n' % msg, ''))
-	sys.stderr.write('Syntax: %s\nUse --help to get a list of options!\n' % usage)
+	sys.stderr.write('Syntax: %s\n%s' % (usage, QM(helpOpt, 'Use --help to get a list of options!\n', '')))
 	sys.exit(0)
 
 

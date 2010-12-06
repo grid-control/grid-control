@@ -1,6 +1,3 @@
-# Generic base class for job modules
-# instantiates named class instead (default is UserMod)
-
 import os, random
 from python_compat import *
 from grid_control import ConfigError, AbstractError, AbstractObject, QM, utils, WMS, Job

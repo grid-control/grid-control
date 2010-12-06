@@ -1,86 +1,9 @@
 import sys, os, re, fnmatch, random, math, time, operator
-from grid_control import QM, ConfigError, UserError, RuntimeError, RethrowError, Job, Report, utils
+from grid_control import QM, ConfigError, UserError, RuntimeError, RethrowError, Job, Report, utils, MultiJobSelector
 from python_compat import *
 
 class JobDB:
-	def __init__(self, nJobs):
-		self._jobs = {}
-		self.nJobs = nJobs
-
-
-	def get(self, jobNum, create = False):
-		if create:
-			return self._jobs.get(jobNum, Job())
-		return self._jobs[jobNum]
-
-
-	def __len__(self):
-		return len(self._jobs)
-
-
-	def set(self, jobNum, jobObj):
-		self._jobs[jobNum] = jobObj
-
-
-	def extendJobDB(self, nJobs):
-		self.nJobs = nJobs
-		if len(self._jobs) < nJobs:
-			return filter(lambda x: x not in self._jobs, range(nJobs))
-		return []
-
-
-	def getJobs(self, selector):
-		def selectByID(jobNum, jobObj, arg):
-			try:
-				def checkID(idArg):
-					(start, end) = (idArg.split('-')[0], idArg.split('-')[-1])
-					if (start == '') or jobNum >= int(start):
-						if (end == '') or jobNum <= int(end):
-							return True
-					return False
-				return reduce(operator.or_, map(checkID, arg.split(",")))
-			except:
-				raise UserError('Job identifiers must be integers or ranges.')
-		def selectByState(jobNum, jobObj, arg):
-			predefined = {'TODO': 'SUBMITTED,WAITING,READY,QUEUED', 'ALL': str.join(',', Job.states)}
-			for state in arg.split(','):
-				state = predefined.get(state.upper(), state).upper()
-				regex = re.compile('^%s.*' % state)
-				for key in filter(regex.match, Job.states):
-					if key == Job.states[jobObj.state]:
-						return True
-			return False
-		def selectByRegex(prop, jobNum, jobObj, arg):
-			if prop:
-				for pat in selector.split(','):
-					if re.compile(pat).search(prop):
-						return True
-			return False
-
-		selectorMap = {'id': selectByID, 'state': selectByState,
-			'site': lambda *args: selectByRegex(args[1].get('dest', '').split('/')[0].split(':')[0], *args),
-			'queue': lambda *args: selectByRegex(args[1].get('dest', '').split('/')[-1].split(':')[0], *args),
-		}
-
-		def select(jobNum, jobObj):
-			def selectSpecific(specific): # parse a single expression (expr := type:selector | selector)
-				cmpValue = QM(specific[0] == '~', False, True)
-				specific = specific.lstrip('~')
-				selectorType = QM(specific[0].isdigit(), 'id', 'state')
-				if ':' in specific:
-					selectorType = specific.split(':', 1)[0].lower()
-				return selectorMap[selectorType](jobNum, jobObj, specific.split(':', 1)[-1]) == cmpValue
-			# combine or (== expr1 expr2) with and (== expr1 + expr2) expressions
-			resolveAND = lambda x: reduce(operator.and_, map(selectSpecific, x.split('+')))
-			selectorOR = str.join('+', map(str.strip, selector.split('+'))).split()
-			return reduce(operator.or_, map(resolveAND, selectorOR))
-		return filter(lambda (jobNum, jobObj): select(jobNum, jobObj), self._jobs.iteritems())
-
-
-class JobManager:
-	def __init__(self, config, module, monitor):
-		(self.module, self.monitor) = (module, monitor)
-		self.errorDict = module.errorDict
+	def __init__(self, config, jobLimit = -1):
 		self._dbPath = os.path.join(config.workDir, 'jobs')
 		self.disableLog = os.path.join(config.workDir, 'disabled')
 		try:
@@ -92,29 +15,68 @@ class JobManager:
 		except IOError:
 			raise RethrowError("Problem creating work directory '%s'" % self._dbPath)
 
-		self.jobLimit = config.getInt('jobs', 'jobs', -1, volatile=True)
-		self.nJobs = self.getMaxJobs(self.module)
-		(self.ready, self.running, self.queued, self.done, self.ok, self.disabled) = ([], [], [], [], [], [])
-		self.jobDB = JobDB(self.nJobs)
-
-		# Read job infos from files
-		(log, maxJobs) = (None, len(fnmatch.filter(os.listdir(self._dbPath), 'job_*.txt')))
-		for idx, (jobNum, jobFile) in enumerate(Job.readJobs(self._dbPath)):
+		candidates = fnmatch.filter(os.listdir(self._dbPath), 'job_*.txt')
+		(self._jobs, log, maxJobs) = ({}, None, len(candidates))
+		for idx, jobFile in enumerate(candidates):
+			if (jobLimit >= 0) and (len(self._jobs) >= jobLimit):
+				print 'Stopped reading job infos! The number of job infos in the work directory (%d)' % len(self._jobs),
+				print 'is larger than the maximum number of jobs (%d)' % jobLimit
+				break
+			try: # 2xsplit is faster than regex
+				jobNum = int(jobFile.split(".")[0].split("_")[1])
+			except:
+				continue
+			jobObj = Job.load(os.path.join(self._dbPath, jobFile))
+			self._jobs[jobNum] = jobObj
 			if idx % 100 == 0:
 				del log
 				log = utils.ActivityLog('Reading job infos ... %d [%d%%]' % (idx, (100.0 * idx) / maxJobs))
-			if len(self.jobDB) >= self.nJobs:
-				print 'Stopped reading job infos! The number of job infos in the work directory',
-				print 'is larger than the maximum number of jobs (%d)' % self.nJobs
-				break
-			jobObj = Job.load(jobFile)
-			self.jobDB.set(jobNum, jobObj)
-			self._findQueue(jobObj).append(jobNum)
 
-		self.ready.extend(self.jobDB.extendJobDB(self.nJobs))
+
+	def get(self, jobNum, create = False):
+		if create:
+			return self._jobs.get(jobNum, Job())
+		return self._jobs[jobNum]
+
+
+	def getJobs(self, select = None):
+		if select:
+			return filter(lambda jobNum: select(jobNum, self.get(jobNum)), self._jobs.keys())
+		return self._jobs.keys()
+
+
+	def commit(self, jobNum, jobObj):
+		jobObj.save(os.path.join(self._dbPath, 'job_%d.txt' % jobNum))
+#		if jobObj.state == Job.DISABLED:
+			
+
+
+	def logDisabled(self):
+		try:
+			open(self.disableLog, 'w').write(str.join('\n', map(str, self.disabled)))
+		except:
+			raise RuntimeError('Could not write disabled jobs to file %s!' % (jobNum, self.disableLog))
+
+
+	def getMissing(self, jobLimit):
+		if len(self._jobs) < jobLimit:
+			return filter(lambda x: x not in self._jobs, range(jobLimit))
+		return []
+
+
+class JobManager:
+	def __init__(self, config, module, monitor):
+		(self.module, self.monitor) = (module, monitor)
+		self.jobLimit = config.getInt('jobs', 'jobs', -1, volatile=True)
+		self.nJobs = self.getMaxJobs(self.module)
+		(self.ready, self.running, self.queued, self.done, self.ok, self.disabled) = ([], [], [], [], [], [])
+		self.jobDB = JobDB(config, self.nJobs)
+		for jobNum in self.jobDB.getJobs():
+			self._findQueue(self.jobDB.get(jobNum)).append(jobNum)
+
+		self.ready.extend(self.jobDB.getMissing(self.nJobs))
 		for jobList in (self.ready, self.queued, self.running, self.done, self.ok, self.disabled):
 			jobList.sort()
-		self.logDisabled()
 
 		self.timeout = utils.parseTime(config.get('jobs', 'queue timeout', '', volatile=True))
 		self.inFlight = config.getInt('jobs', 'in flight', -1, volatile=True)
@@ -173,7 +135,7 @@ class JobManager:
 		old.remove(jobNum)
 
 		jobObj.update(state)
-		jobObj.save(os.path.join(self._dbPath, 'job_%d.txt' % jobNum))
+		self.jobDB.commit(jobNum, jobObj)
 
 		new = self._findQueue(jobObj)
 		new.append(jobNum)
@@ -195,7 +157,7 @@ class JobManager:
 				msg.append('error code: %d' % jobObj.get('retcode'))
 				try:
 					if utils.verbosity() > 0:
-						msg.append(self.errorDict[jobObj.get('retcode')])
+						msg.append(self.module.errorDict[jobObj.get('retcode')])
 				except:
 					pass
 			if jobObj.get('dest'):
@@ -319,7 +281,6 @@ class JobManager:
 
 		# Quit when all jobs are finished
 		if len(self.ok) + len(self.disabled) == self.nJobs:
-			self.logDisabled()
 			if len(self.disabled) > 0:
 				utils.vprint('There are %d disabled jobs in this task!' % len(self.disabled), -1, True)
 				utils.vprint('Please refer to %s for a complete list.' % self.disableLog, -1, True)
@@ -329,13 +290,6 @@ class JobManager:
 				sys.exit(0)
 
 		return change
-
-
-	def logDisabled(self):
-		try:
-			open(self.disableLog, 'w').write(str.join('\n', map(str, self.disabled)))
-		except:
-			raise RuntimeError('Could not write disabled jobs to file %s!' % (jobNum, self.disableLog))
 
 
 	def retrieve(self, wms, maxsample = 10):
@@ -398,8 +352,8 @@ class JobManager:
 		return filter(lambda x: self.jobDB.get(x).state in deleteable, jobs)
 
 
-	def delete(self, wms, selector):
-		jobs = self.getCancelJobs(self.jobDB.getJobs(selector))
+	def delete(self, wms, select):
+		jobs = self.getCancelJobs(self.jobDB.getJobs(MultiJobSelector(select).select))
 		if jobs:
 			print '\nDeleting the following jobs:'
 			self.cancel(wms, jobs, True)
@@ -408,7 +362,7 @@ class JobManager:
 	# Process changes of job states requested by job module
 	def processIntervention(self, wms, jobChanges):
 		def resetState(jobs, newState):
-			jobSet = utils.set(jobs)
+			jobSet = set(jobs)
 			for jobNum in jobs:
 				jobObj = self.jobDB.get(jobNum)
 				if jobObj.state in [ Job.INIT, Job.DISABLED, Job.ABORTED, Job.CANCELLED, Job.DONE, Job.FAILED, Job.SUCCESS ]:
@@ -428,10 +382,9 @@ class JobManager:
 			if self.nJobs != newMaxJobs:
 				utils.vprint('Number of jobs changed from %d to %d' % (self.nJobs, newMaxJobs), -1, True)
 				self.nJobs = newMaxJobs
-				self.ready.extend(self.jobDB.extendJobDB(self.nJobs))
+				self.ready.extend(self.jobDB.getMissing(self.nJobs))
 			self.cancel(wms, self.getCancelJobs(disable))
 			self.cancel(wms, self.getCancelJobs(redo))
 			resetState(disable, Job.DISABLED)
 			resetState(redo, Job.INIT)
 			utils.vprint('All requested changes are applied', -1, True)
-			self.logDisabled()

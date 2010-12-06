@@ -21,16 +21,6 @@ class Job:
 		self.dict = {}
 
 
-	def readJobs(path):
-		for jobFile in fnmatch.filter(os.listdir(path), 'job_*.txt'):
-			try: # 2xsplit is faster than regex
-				jobNum = int(jobFile.split(".")[0].split("_")[1])
-			except:
-				continue
-			yield (jobNum, os.path.join(path, jobFile))
-	readJobs = staticmethod(readJobs)
-
-
 	def load(cls, name):
 		try:
 			data = DictFormat(escapeString = True).parse(open(name))

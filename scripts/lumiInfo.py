@@ -1,7 +1,6 @@
 #!/usr/bin/env python
-import gcSupport, sys, optparse, os, tarfile, xml.dom.minidom
-from python_compat import *
-from grid_control import utils, datasets
+import sys, optparse, os, tarfile, xml.dom.minidom
+from gcSupport import *
 from grid_control.datasets import DataSplitter
 from grid_control_cms.lumi_tools import formatLumi, mergeLumi, parseLumiFilter
 

@@ -12,7 +12,7 @@ class CMSSW(DataMod):
 		self.errorDict.update(dict(self.updateErrorDict(utils.pathGC('python', 'grid_control_cms', 'share', 'gc-run.cmssw.sh'))))
 
 		# SCRAM info
-		scramProject = config.get(self.__class__.__name__, 'scram project', '').split()
+		scramProject = config.getList(self.__class__.__name__, 'scram project', [])
 		if len(scramProject):
 			self.projectArea = config.getPath(self.__class__.__name__, 'project area', '')
 			if len(self.projectArea):
@@ -33,7 +33,7 @@ class CMSSW(DataMod):
 
 		if len(self.projectArea):
 			defaultPattern = '-.* -config lib python module */data *.xml *.sql *.cf[if] *.py -*/.git -*/.svn -*/CVS -*/work.*'
-			self.pattern = config.get(self.__class__.__name__, 'area files', defaultPattern).split()
+			self.pattern = config.getList(self.__class__.__name__, 'area files', defaultPattern.split())
 
 			if os.path.exists(self.projectArea):
 				utils.vprint('Project area found in: %s' % self.projectArea, -1)
@@ -52,7 +52,7 @@ class CMSSW(DataMod):
 				if key not in self.scramEnv:
 					raise ConfigError('Installed program in project area not recognized.')
 
-			archs = filter(lambda x: os.path.isdir(os.path.join(scramPath, x)), os.listdir(scramPath))
+			archs = filter(lambda x: os.path.isdir(os.path.join(scramPath, x)) and not x.startswith('.'), os.listdir(scramPath))
 			try:
 				self.scramArch = config.get(self.__class__.__name__, 'scram arch', archs[0])
 			except:

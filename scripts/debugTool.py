@@ -1,6 +1,5 @@
 #!/usr/bin/env python
-import gcSupport, os, sys, optparse
-from grid_control import *
+from gcSupport import *
 from grid_control.datasets import DataSplitter
 
 parser = optparse.OptionParser()

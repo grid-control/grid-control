@@ -1,7 +1,5 @@
 #!/usr/bin/env python
-import gcSupport, sys, os, optparse
-from python_compat import *
-from grid_control import *
+from gcSupport import *
 from grid_control.datasets import DataProvider
 
 usage = '%s [OPTIONS] <DBS dataset path> | <dataset cache file>' % sys.argv[0]

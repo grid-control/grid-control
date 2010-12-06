@@ -1,5 +1,5 @@
 from python_compat import *
-from grid_control import QM, Job, RuntimeError, utils
+from grid_control import QM, Job, RuntimeError, utils, MultiJobSelector
 from gui import Console
 import time
 
@@ -9,22 +9,35 @@ class Report:
 	def __init__(self, jobDB, jobs = None):
 		(self.jobDB, self.jobs) = (jobDB, jobs)
 		if jobs == None:
-			self.jobs = self.jobDB._jobs.keys()
+			self.jobs = jobDB.getJobs()
+
+
+	def addOptions(parser):
+		parser.add_option('-r', '--report',        dest='report',     default=False, action='store_true',
+			help='Print job status overview')
+		parser.add_option('-R', '--site-report',   dest='reportSite', default=0,     action='count',
+			help='Print site specific job information - use several times to increase verbosity')
+		parser.add_option('-T', '--time-report',   dest='reportTime', default=0,     action='count',
+			help='Print time specific job information - use several times to increase verbosity')
+		parser.add_option('-M', '--module-report', dest='reportMod',  default=0,     action='count',
+			help='Print module specific job information')
+		parser.add_option('-D', '--detail-report', dest='reportMore', default=False, action='store_true',
+			help='Print detailed job information')
+	addOptions = staticmethod(addOptions)
 
 
 	def show(self, opts, module = None):
 		if opts.report:
 			utils.vprint(level = -1)
 			self.summary()
-		if opts.reportJob:
+		if opts.reportMore:
 			utils.vprint(level = -1)
-			self.jobs = self.jobDB.getJobs(opts.reportJob)
 			self.details()
 		if opts.reportSite or opts.reportTime:
 			self.siteReport(opts.reportSite, opts.reportTime)
 		if opts.reportMod:
 			self.modReport(module)
-		if opts.report or opts.reportSite or opts.reportTime or opts.reportMod or opts.reportJob:
+		if opts.report or opts.reportMore or opts.reportSite or opts.reportTime or opts.reportMod:
 			return True
 		return False
 
@@ -60,21 +73,16 @@ class Report:
 
 
 	def summary(self, message = '', level = -1):
-		# Print report summary
-		self.printHeader('REPORT SUMMARY:')
-
 		summary = map(lambda x: 0.0, Job.states)
 		for jobNum in self.jobs:
 			summary[self.jobDB.get(jobNum).state] += 1
+		makeSum = lambda *states: sum(map(lambda z: summary[z], states))
+		makePer = lambda *states: [makeSum(*states), round(makeSum(*states) / sum(summary) * 100.0)]
 
-		def makeSum(*states):
-			return sum(map(lambda z: summary[z], states))
-		def makePer(*states):
-			count = makeSum(*states)
-			return [count, round(count / self.jobDB.nJobs * 100.0)]
-
+		# Print report summary
+		self.printHeader('REPORT SUMMARY:')
 		utils.vprint('Total number of jobs:%9d     Successful jobs:%8d  %3d%%' % \
-			tuple([self.jobDB.nJobs] + makePer(Job.SUCCESS)), -1)
+			tuple([sum(summary)] + makePer(Job.SUCCESS)), -1)
 		utils.vprint('Jobs assigned to WMS:%9d        Failing jobs:%8d  %3d%%' % \
 			tuple([makeSum(Job.SUBMITTED, Job.WAITING, Job.READY, Job.QUEUED, Job.RUNNING)] +
 			makePer(Job.ABORTED, Job.CANCELLED, Job.FAILED)), -1)
@@ -82,8 +90,7 @@ class Report:
 		for stateNum, category in enumerate(Job.states):
 			utils.vprint('Jobs  %9s:%8d  %3d%%     ' % tuple([category] + makePer(stateNum)), \
 				level, newline = stateNum % 2)
-		utils.vprint('-' * 65, level)
-		utils.vprint(message, level)
+		utils.vprint('-' * 65 + '\n%s' % message, level)
 		return 0
 
 

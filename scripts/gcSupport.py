@@ -1,10 +1,10 @@
 #!/usr/bin/env python
-import sys, os, re, fcntl, time
+import sys, os, re, fcntl, time, optparse
 
 # add python subdirectory from where exec was started to search path
 sys.path.insert(1, os.path.join(sys.path[0], '..', 'python'))
-
-from grid_control import *
+from gcPackage import *
+from python_compat import *
 
 class DummyStream(object):
 	def __init__(self, stream):
@@ -50,20 +50,16 @@ class FileMutex:
 
 
 def getWorkJobs(args):
-	if len(args) == 2:
-		(configFile, jobid) = args
-		config = Config(configFile)
-		workDir = config.getPath('global', 'workdir', config.workDirDefault)
-		jobList = [ jobid ]
-	elif len(args) == 1:
+	if len(args) > 0:
 		configFile = args[0]
 		config = Config(configFile)
-		workDir = config.getPath('global', 'workdir', config.workDirDefault)
-		jobList = map(lambda (jobNum, path): jobNum, Job.readJobs(os.path.join(workDir, "jobs")))
-	else:
-		sys.stderr.write("Syntax: %s <config file> [<job id>, ...]\n\n" % sys.argv[0])
-		sys.exit(1)
-	return (workDir, map(int, jobList))
+		config.workDir = config.getPath('global', 'workdir', config.workDirDefault)
+		selector = None
+		if len(args) != 1:
+			selector = MultiJobSelector(args[1]).select
+		return (config.workDir, JobDB(config).getJobs(selector))
+	sys.stderr.write("Syntax: %s <config file> [<job id>, ...]\n\n" % sys.argv[0])
+	sys.exit(1)
 
 
 def getJobInfo(workDir, jobNum, retCodeFilter = lambda x: True):
