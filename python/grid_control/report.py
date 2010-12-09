@@ -76,7 +76,7 @@ class Report:
 		for jobNum in self.jobs:
 			summary[self.jobDB.get(jobNum).state] += 1
 		makeSum = lambda *states: sum(map(lambda z: summary[z], states))
-		makePer = lambda *states: [makeSum(*states), round(makeSum(*states) / sum(summary) * 100.0)]
+		makePer = lambda *states: [makeSum(*states), round(makeSum(*states) / max(1, sum(summary)) * 100.0)]
 
 		# Print report summary
 		self.printHeader('REPORT SUMMARY:')

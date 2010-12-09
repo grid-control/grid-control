@@ -1,5 +1,6 @@
 import os, ConfigParser as cp
 from grid_control import *
+from python_compat import *
 
 noDefault = cp.NoOptionError
 

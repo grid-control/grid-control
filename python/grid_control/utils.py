@@ -448,7 +448,7 @@ class AbstractObject:
 	def dynamicLoaderPath(cls, path = []):
 		if not hasattr(cls, 'moduleMap'):
 			(cls.moduleMap, cls.modPaths) = ({}, [])
-		splitUpFun = lambda x: str.rsplit(cls.__module__, ".", x)[0]
+		splitUpFun = lambda x: rsplit(cls.__module__, ".", x)[0]
 		cls.modPaths = path + cls.modPaths + map(splitUpFun, range(cls.__module__.count(".") + 1))
 	dynamicLoaderPath = classmethod(dynamicLoaderPath)
 

@@ -60,7 +60,7 @@ class StateSelector(RegExSelector):
 		predef = {'TODO': 'SUBMITTED,WAITING,READY,QUEUED', 'ALL': str.join(',', Job.states)}
 		RegExSelector.__init__(self, arg, None, lambda x: '^%s.*' % predef.get(x.upper(), x).upper())
 		stateList = reduce(operator.add, map(lambda x: list(filter(x.match, Job.states)), self.rxList))
-		self.states = map(lambda x: Job.states.index(x), stateList)
+		self.states = map(lambda x: list(Job.states).index(x), stateList)
 
 	def select(self, jobNum, jobObj):
 		return jobObj.state in self.states
