@@ -19,7 +19,7 @@ try:	# sorted >= Python 2.4
 	sorted = sorted
 except:
 	def sorted(unsortedList, comp = None, key = None):
-		"""Sort list by either using the standard comparison method cmp()
+		""" Sort list by either using the standard comparison method cmp()
 		or, if supplied, the function comp.  The optional argument key
 		is a function that returns the key to sort by - default is the
 		identity function.

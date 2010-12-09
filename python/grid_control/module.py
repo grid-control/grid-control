@@ -36,11 +36,6 @@ class Module(AbstractObject):
 		# Write task info file
 		taskInfo.write({'task id': self.taskID, 'seeds': str.join(' ', map(str, self.seeds))})
 
-		# Storage setup - in case a directory is give, prepend dir specifier
-		self.sePaths = utils.parseList(config.get('storage', 'se path', '', noVar=True), None, onEmpty = [])
-		self.sePaths = map(lambda x: QM(x[0] == '/', 'dir:///%s' % x.lstrip('/'), x), self.sePaths)
-		self.seMinSize = config.getInt('storage', 'se min size', -1)
-
 		self.taskVariables = {
 			# Space limits
 			'SCRATCH_UL' : config.getInt('storage', 'scratch space used', 5000),
@@ -49,13 +44,18 @@ class Module(AbstractObject):
 			'LANDINGZONE_LL': config.getInt('storage', 'landing zone space left', 1),
 		}
 
-		self.seInputFiles = config.get('storage', 'se input files', '', noVar=False).split()
+		# Storage setup - in case a directory is give, prepend dir specifier
+		self.sePaths = utils.parseList(config.get('storage', 'se path', '', noVar=True), None, onEmpty = [])
+		self.sePaths = map(lambda x: QM(x[0] == '/', 'dir:///%s' % x.lstrip('/'), x), self.sePaths)
+		self.seMinSize = config.getInt('storage', 'se min size', -1)
+
+		self.seInputFiles = config.getList('storage', 'se input files', [], noVar=False)
 		self.seInputPattern = config.get('storage', 'se input pattern', '@X@', noVar=False)
-		self.seOutputFiles = config.get('storage', 'se output files', '', noVar=False).split()
+		self.seOutputFiles = config.getList('storage', 'se output files', [], noVar=False)
 		self.seOutputPattern = config.get('storage', 'se output pattern', '@NICK@job_@MY_JOBID@_@X@', noVar=False)
 
-		self.sbInputFiles = config.get(self.__class__.__name__, 'input files', '').split()
-		self.sbOutputFiles = config.get(self.__class__.__name__, 'output files', '').split()
+		self.sbInputFiles = config.getList(self.__class__.__name__, 'input files', [])
+		self.sbOutputFiles = config.getList(self.__class__.__name__, 'output files', [])
 		self.gzipOut = config.getBool(self.__class__.__name__, 'gzip output', True)
 
 		# Define constants for job
@@ -63,11 +63,11 @@ class Module(AbstractObject):
 		if config.parser.has_section('constants'):
 			for var in config.parser.options('constants'):
 				self.constants[var] = config.get('constants', var, '').strip()
-		for var in map(str.strip, config.get(self.__class__.__name__, 'constants', '').split()):
+		for var in map(str.strip, config.getList(self.__class__.__name__, 'constants', [])):
 			self.constants[var] = config.get(self.__class__.__name__, var, '').strip()
-		self.substFiles = config.get(self.__class__.__name__, 'subst files', '').split()
+		self.substFiles = config.getList(self.__class__.__name__, 'subst files', [])
 
-		self.dependencies = config.get(self.__class__.__name__, 'depends', '').lower().split()
+		self.dependencies = map(str.lower, config.getList(self.__class__.__name__, 'depends', []))
 		if True in map(lambda x: not x.startswith('dir'), self.sePaths):
 			self.dependencies.append('glite')
 
@@ -140,12 +140,8 @@ class Module(AbstractObject):
 		allVars = utils.mergeDicts([addDict, self.getTaskConfig()])
 		if jobNum != None:
 			allVars.update(self.getJobConfig(jobNum))
-		def substInternal(result):
-			for (virtual, real) in self.getVarMapping().items() + zip(addDict, addDict):
-				for delim in ['@', '__']:
-					result = result.replace(delim + virtual + delim, str(allVars.get(real, '')))
-			return result
-		result = substInternal(substInternal(str(inp)))
+		subst = lambda x: utils.replaceDict(x, allVars, self.getVarMapping().items() + zip(addDict, addDict))
+		result = subst(subst(str(inp)))
 		return utils.checkVar(result, "'%s' contains invalid variable specifiers: '%s'" % (inp, result), check)
 
 

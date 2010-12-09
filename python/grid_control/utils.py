@@ -129,6 +129,13 @@ def mergeDicts(dicts):
 	return tmp
 
 
+def replaceDict(result, allVars, varMapping = None):
+	for (virtual, real) in QM(varMapping, varMapping, zip(allVars.keys(), allVars.keys())):
+		for delim in ['@', '__']:
+			result = result.replace(delim + virtual + delim, str(allVars.get(real, '')))
+	return result
+
+
 def filterDict(dictType, kF = lambda k: True, vF = lambda v: True):
 	return dict(filter(lambda (k, v): kF(k) and vF(v), dictType.iteritems()))
 
@@ -278,7 +285,7 @@ def splitBlackWhiteList(bwfilter):
 	return (blacklist, whitelist)
 
 
-def doBlackWhiteList(value, bwfilter, matcher = str.startswith, onEmpty = None):
+def doBlackWhiteList(value, bwfilter, matcher = str.startswith, onEmpty = None, preferWL = True):
 	""" Apply black-whitelisting to input list
 	>>> (il, f) = (['T2_US_MIT', 'T1_DE_KIT_MSS', 'T1_US_FNAL'], ['T1', '-T1_DE_KIT'])
 	>>> (doBlackWhiteList(il,    f), doBlackWhiteList([],    f), doBlackWhiteList(None,    f))
@@ -290,7 +297,7 @@ def doBlackWhiteList(value, bwfilter, matcher = str.startswith, onEmpty = None):
 	"""
 	(blacklist, whitelist) = splitBlackWhiteList(bwfilter)
 	checkMatch = lambda item, matchList: True in map(lambda x: matcher(item, x), matchList)
-	value = filter(lambda x: not checkMatch(x, blacklist), QM(value, value, whitelist))
+	value = filter(lambda x: not checkMatch(x, blacklist), QM(value or not preferWL, value, whitelist))
 	if len(whitelist):
 		return filter(lambda x: checkMatch(x, whitelist), value)
 	return QM(value or bwfilter, value, onEmpty)
@@ -558,10 +565,10 @@ class ActivityLog:
 
 	def __init__(self, message):
 		self.saved = (sys.stdout, sys.stderr)
-		self.activity = self.Activity(sys.stdout, message)
-
-		sys.stdout = self.WrappedStream(sys.stdout, self.activity)
-		sys.stderr = self.WrappedStream(sys.stderr, self.activity)
+		if sys.stdout.isatty():
+			self.activity = self.Activity(sys.stdout, message)
+			sys.stdout = self.WrappedStream(sys.stdout, self.activity)
+			sys.stderr = self.WrappedStream(sys.stderr, self.activity)
 
 	def __del__(self):
 		sys.stdout, sys.stderr = self.saved

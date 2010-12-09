@@ -53,10 +53,7 @@ class CMSSW(DataMod):
 					raise ConfigError('Installed program in project area not recognized.')
 
 			archs = filter(lambda x: os.path.isdir(os.path.join(scramPath, x)) and not x.startswith('.'), os.listdir(scramPath))
-			try:
-				self.scramArch = config.get(self.__class__.__name__, 'scram arch', archs[0])
-			except:
-				raise ConfigError('%s does not contain architecture information!' % scramPath)
+			self.scramArch = config.get(self.__class__.__name__, 'scram arch', (archs + [None])[0])
 			try:
 				fp = open(os.path.join(scramPath, self.scramArch, 'Environment'), 'r')
 				self.scramEnv.update(utils.DictFormat().parse(fp, lowerCaseKey = False))

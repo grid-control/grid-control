@@ -38,7 +38,7 @@ def outputJSON(lumis, stream = sys.stdout):
 	for rlrange in lumis:
 		start, end = rlrange
 		if start[0] != end[0]:
-			raise
+			raise RuntimeError("Can't transform lumirange %s into JSON format" % repr(rlrange))
 		if start[0] not in tmp:
 			tmp[start[0]] = []
 		tmp[start[0]].append([start[1], end[1]])

@@ -1,21 +1,16 @@
 def initGC():
-	import os, sys
-	cleanPath = lambda *args: os.path.normpath(os.path.expanduser(os.path.join(*args)))
-	sys.path.insert(1, cleanPath(os.path.dirname(__file__)))
-	sys.path.append(cleanPath(os.getcwd()))
+	import os, sys, grid_control.utils
+	sys.path.insert(1, grid_control.utils.cleanPath(os.path.dirname(__file__)))
+	sys.path.append(grid_control.utils.cleanPath(os.getcwd()))
 
 	# Package discovery
-	pkgList = []
 	for pkgName in os.listdir(os.path.dirname(__file__)):
 		if os.path.isdir(os.path.join(os.path.dirname(__file__), pkgName)) and not pkgName.startswith('.'):
-			pkgList.append(pkgName)
+			grid_control.utils.AbstractObject.pkgPaths.append(pkgName)
 
-	for pkgName in pkgList:
+	for pkgName in grid_control.utils.AbstractObject.pkgPaths:
 		sys.path.insert(2, os.path.join(os.path.dirname(__file__), pkgName))
 		yield pkgName
 
-	utils.AbstractObject.pkgPaths.extend(pkgList)
-
-
 for pkgName in initGC():
-	exec 'from %s import *' % pkgName
+	exec('from %s import *' % pkgName)

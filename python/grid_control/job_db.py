@@ -1,32 +1,33 @@
 import sys, os, re, fnmatch, random, math, time, operator
-from grid_control import QM, ConfigError, UserError, RuntimeError, RethrowError, Job, Report, utils, MultiJobSelector
+from grid_control import QM, ConfigError, UserError, RuntimeError, RethrowError, Job, Report, utils, JobSelector
 from python_compat import *
 
 class JobDB:
-	def __init__(self, config, jobLimit = -1):
-		self._dbPath = os.path.join(config.workDir, 'jobs')
+	def __init__(self, config, jobLimit = -1, jobSelector = None):
+		self.alwaysSelector = jobSelector
+		self.dbPath = os.path.join(config.workDir, 'jobs')
 		self.disableLog = os.path.join(config.workDir, 'disabled')
 		try:
-			if not os.path.exists(self._dbPath):
+			if not os.path.exists(self.dbPath):
 				if config.opts.init:
-					os.mkdir(self._dbPath)
+					os.mkdir(self.dbPath)
 				else:
 					raise ConfigError("Not a properly initialized work directory '%s'." % config.workDir)
 		except IOError:
-			raise RethrowError("Problem creating work directory '%s'" % self._dbPath)
+			raise RethrowError("Problem creating work directory '%s'" % self.dbPath)
 
-		candidates = fnmatch.filter(os.listdir(self._dbPath), 'job_*.txt')
+		candidates = fnmatch.filter(os.listdir(self.dbPath), 'job_*.txt')
 		(self._jobs, log, maxJobs) = ({}, None, len(candidates))
 		for idx, jobFile in enumerate(candidates):
 			if (jobLimit >= 0) and (len(self._jobs) >= jobLimit):
-				print 'Stopped reading job infos! The number of job infos in the work directory (%d)' % len(self._jobs),
-				print 'is larger than the maximum number of jobs (%d)' % jobLimit
+				utils.eprint('Stopped reading job infos! The number of job infos in the work directory (%d)' % len(self._jobs), newLine = False)
+				utils.eprint('is larger than the maximum number of jobs (%d)' % jobLimit)
 				break
 			try: # 2xsplit is faster than regex
 				jobNum = int(jobFile.split(".")[0].split("_")[1])
 			except:
 				continue
-			jobObj = Job.load(os.path.join(self._dbPath, jobFile))
+			jobObj = Job.load(os.path.join(self.dbPath, jobFile))
 			self._jobs[jobNum] = jobObj
 			if idx % 100 == 0:
 				del log
@@ -39,14 +40,18 @@ class JobDB:
 		return self._jobs[jobNum]
 
 
-	def getJobs(self, select = None):
-		if select:
-			return filter(lambda jobNum: select(jobNum, self.get(jobNum)), self._jobs.keys())
-		return self._jobs.keys()
+	def getJobs(self, jobSelector = None):
+		if jobSelector and self.alwaysSelector:
+			select = lambda *args: jobSelector(*args) and self.alwaysSelector(*args)
+		elif jobSelector or self.alwaysSelector:
+			select = QM(jobSelector, jobSelector, self.alwaysSelector)
+		else:
+			return self._jobs.keys()
+		return filter(lambda jobNum: select(jobNum, self.get(jobNum)), self._jobs.keys())
 
 
 	def commit(self, jobNum, jobObj):
-		jobObj.save(os.path.join(self._dbPath, 'job_%d.txt' % jobNum))
+		jobObj.save(os.path.join(self.dbPath, 'job_%d.txt' % jobNum))
 #		if jobObj.state == Job.DISABLED:
 			
 
@@ -70,7 +75,8 @@ class JobManager:
 		self.jobLimit = config.getInt('jobs', 'jobs', -1, volatile=True)
 		self.nJobs = self.getMaxJobs(self.module)
 		(self.ready, self.running, self.queued, self.done, self.ok, self.disabled) = ([], [], [], [], [], [])
-		self.jobDB = JobDB(config, self.nJobs)
+		selected = JobSelector.create(config.get('jobs', 'selected', '', volatile=True))
+		self.jobDB = JobDB(config, self.nJobs, selected)
 		for jobNum in self.jobDB.getJobs():
 			self._findQueue(self.jobDB.get(jobNum)).append(jobNum)
 
@@ -353,7 +359,7 @@ class JobManager:
 
 
 	def delete(self, wms, select):
-		jobs = self.getCancelJobs(self.jobDB.getJobs(MultiJobSelector(select).select))
+		jobs = self.getCancelJobs(self.jobDB.getJobs(JobSelector.create(select)))
 		if jobs:
 			print '\nDeleting the following jobs:'
 			self.cancel(wms, jobs, True)

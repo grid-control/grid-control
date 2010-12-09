@@ -8,7 +8,7 @@ class BlockBoundarySplitter(DataSplitter):
 			yield self.finaliseJobSplitting(block, dict(), block[DataProvider.FileList])
 
 
-# Split dataset along block boundaries into jobs with "files per job" files
+# Split dataset along block boundaries into jobs with 'files per job' files
 class FileBoundarySplitter(DataSplitter):
 	def __init__(self, config, section = None):
 		DataSplitter.__init__(self, config, section)
@@ -24,8 +24,8 @@ class FileBoundarySplitter(DataSplitter):
 				yield self.finaliseJobSplitting(block, dict(), files)
 
 
-# Split dataset along block and file boundaries into jobs with ~ "events per job" events
-# In case of file with #events > "events per job", use just the single file (=> job has more events!)
+# Split dataset along block and file boundaries into jobs with ~ 'events per job' events
+# In case of file with #events > 'events per job', use just the single file (=> job has more events!)
 class HybridSplitter(DataSplitter):
 	def __init__(self, config, section = None):
 		DataSplitter.__init__(self, config, section)

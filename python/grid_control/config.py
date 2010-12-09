@@ -119,6 +119,23 @@ class Config:
 		return utils.parseList(self.get(section, item, default, volatile, noVar), delim, onEmpty = empty)
 
 
+	def getDict(self, section, item, default = noDefault, volatile = False, noVar = True, parser = lambda x: x):
+		if default != noDefault:
+			default = str.join('\n', map(lambda kv: "\t%s => %s" % kv, default.items()))
+		(result, order) = ({}, [])
+		for entry in self.get(section, item, default, volatile, noVar).split('\n'):
+			if '=>' in entry:
+				key, value = map(str.strip, entry.split('=>'))
+			elif entry:
+				key, value = (None, entry)
+			else:
+				continue
+			result[key] = parser(value.strip())
+			if key and (key not in order):
+				order.append(key)
+		return (result, order)
+
+
 	# Compare this config object to another config file
 	# Return true in case non-volatile parameters are changed
 	def needInit(self, saveConfigPath):

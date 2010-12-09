@@ -9,7 +9,9 @@ class Console:
 		locals()[name] = esc
 
 	def fmt(cls, data, attr = []):
-		return "\033[%sm%s\033[0m" % (str.join(";", [Console.RESET] + attr), data)
+		if sys.stdout.isatty():
+			return "\033[%sm%s\033[0m" % (str.join(";", [Console.RESET] + attr), data)
+		return data
 	fmt = classmethod(fmt)
 
 	def __init__(self):
@@ -61,9 +63,7 @@ class GUIStream:
 		self.regex = re.compile('(%s)' % '|'.join(map(lambda (a, b): a, self.attrs)))
 
 	def attributes(self, string, pos):
-		"""Retrieve the attributes for a match in string at position
-		pos.  This is a helper routine for write().
-		"""
+		""" Retrieve the attributes for a match in string at position pos. """
 		for (expr, attr) in self.attrs:
 			match = re.search(expr, string)
 			if match and match.start() == pos:

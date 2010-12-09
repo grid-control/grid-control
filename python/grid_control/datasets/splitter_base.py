@@ -497,7 +497,7 @@ class DataSplitter(AbstractObject):
 				if x in [DataSplitter.Metadata, DataSplitter.MetadataHeader]:
 					return (x, y, repr(z))
 				elif isinstance(z, list):
-					return (x, y, str.join(",", z))
+					return (x, y, str.join(',', z))
 				return (x, y, z)
 			for name, data in [('list', str.join('\n', savelist)), ('info', fmt.format(entry, fkt = flat))]:
 				info, file = utils.VirtualFile(os.path.join('%05d' % jobNum, name), data).getTarInfo()

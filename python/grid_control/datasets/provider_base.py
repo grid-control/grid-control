@@ -35,7 +35,7 @@ class DataProvider(AbstractObject):
 	def setup(self, func, section, item, default = None, **kwargs):
 		value = func(section, item, default, **kwargs)
 		if self._datasetNick:
-			value = func('dataset %s' % self._datasetNick, item, value)
+			value = func('dataset %s' % self._datasetNick, item, value, **kwargs)
 		return value
 
 
@@ -94,16 +94,14 @@ class DataProvider(AbstractObject):
 					block[DataProvider.Nickname] = self._datasetNick
 
 				events = 0
-				for file in block[DataProvider.FileList]:
-					events += file[DataProvider.NEvents]
+				for fileInfo in block[DataProvider.FileList]:
+					events += fileInfo[DataProvider.NEvents]
 				if (self.limitEvents > 0) and (self.allEvents + events > self.limitEvents):
 					block[DataProvider.NEvents] = 0
 					block[DataProvider.FileList] = []
 					events = 0
 				self.allEvents += events
-				if DataProvider.NEvents not in block:
-					block[DataProvider.NEvents] = events
-				if events != block[DataProvider.NEvents]:
+				if block.setdefault(DataProvider.NEvents, events) != events:
 					utils.eprint('WARNING: Inconsistency in block %s#%s: Number of events doesn\'t match (b:%d != f:%d)'
 						% (block[DataProvider.Dataset], block[DataProvider.BlockName], block[DataProvider.NEvents], events))
 
@@ -113,7 +111,7 @@ class DataProvider(AbstractObject):
 
 				# Filter dataset sites
 				if block.setdefault(DataProvider.SEList, None) != None:
-					sites = utils.doBlackWhiteList(block[DataProvider.SEList], self.sitefilter)
+					sites = utils.doBlackWhiteList(block[DataProvider.SEList], self.sitefilter, onEmpty = [], preferWL = False)
 					if len(sites) == 0 and len(block[DataProvider.FileList]) != 0:
 						utils.eprint('WARNING: Block %s#%s is not available at any site!'
 							% (block[DataProvider.Dataset], block[DataProvider.BlockName]))

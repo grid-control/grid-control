@@ -1,19 +1,19 @@
-from exceptions	import *
-from utils	import AbstractObject, QM
+from grid_control.exceptions	import *
+from grid_control.utils	import AbstractObject, QM
 
-from config	import Config
-from job	import Job
-from job_selector	import MultiJobSelector
-from report	import Report
-from job_db	import JobDB, JobManager
-from proxy	import Proxy
-from help	import Help
+from grid_control.config	import Config
+from grid_control.job	import Job
+from grid_control.job_selector	import JobSelector
+from grid_control.report	import Report
+from grid_control.job_db	import JobDB, JobManager
+from grid_control.proxy	import Proxy
+from grid_control.help	import Help
 
-from backends	import WMS
-from module	import Module
-from monitoring	import Monitoring
+from grid_control.backends	import WMS
+from grid_control.module	import Module
+from grid_control.monitoring	import Monitoring
 
 # import dynamic repos
-import modules
+import grid_control.modules
 
-from parameters	import *
+from grid_control.parameters	import *

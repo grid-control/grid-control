@@ -2,6 +2,12 @@ import re, operator
 from grid_control import QM, UserError, Job, utils, AbstractError, AbstractObject
 
 class JobSelector(AbstractObject):
+	def create(arg, **kwargs):
+		if arg:
+			return MultiJobSelector(arg, **kwargs).select
+		return None
+	create = staticmethod(create)
+
 	def select(self, jobNum, jobObj):
 		raise AbstractError
 JobSelector.dynamicLoaderPath()

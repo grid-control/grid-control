@@ -1,6 +1,5 @@
 from python_compat import *
-from grid_control import QM, Job, RuntimeError, utils, MultiJobSelector
-from gui import Console
+from grid_control import QM, Job, RuntimeError, utils
 import time
 
 class Report:
@@ -177,6 +176,7 @@ class Report:
 
 
 	def siteReport(self, siteDetails = 0, timeDetails = 0):
+		from gui import Console
 		statinfo = self.getWNInfos()
 		markDict = {'FAILED': [Console.COLOR_RED, Console.BOLD], 'SUCCESS': [Console.COLOR_BLUE, Console.BOLD]}
 
