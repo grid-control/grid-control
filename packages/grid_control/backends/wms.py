@@ -79,7 +79,7 @@ class WMS(AbstractObject):
 		taskEnv = utils.mergeDicts([self.monitor.getEnv(self), self.module.getTaskConfig()])
 		taskConfig = sorted(utils.DictFormat(escapeString = True).format(taskEnv, format = 'export %s%s%s\n'))
 		varMapping = sorted(utils.DictFormat(' ').format(self.module.getVarMapping(), format = '%s%s%s\n'))
-		depPaths = map(lambda pkg: utils.pathShare('', pkg = pkg), os.listdir(utils.pathGC('python')))
+		depPaths = map(lambda pkg: utils.pathShare('', pkg = pkg), os.listdir(utils.pathGC('packages')))
 		depFiles = map(lambda dep: utils.resolvePath('env.%s.sh' % dep, depPaths), self.module.getDependencies())
 		# Resolve wildcards in module input files
 		def getModuleFiles():

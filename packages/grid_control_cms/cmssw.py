@@ -124,7 +124,7 @@ class CMSSW(DataMod):
 		# Check that for dataset jobs the necessary placeholders are in the config file
 		self.prepare = config.getBool(self.__class__.__name__, 'prepare config', False)
 		fragment = config.getPath(self.__class__.__name__, 'instrumentation fragment',
-			os.path.join('python', 'grid_control_cms', 'share', 'fragmentForCMSSW.py'))
+			os.path.join('packages', 'grid_control_cms', 'share', 'fragmentForCMSSW.py'))
 		if self.dataSplitter != None:
 			if config.opts.init:
 				self.instrumentCfgQueue(self.configFiles, fragment, mustPrepare = True)

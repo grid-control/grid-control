@@ -2,7 +2,7 @@
 import sys, os, signal, optparse, time
 
 # Load grid-control package
-sys.path.insert(1, os.path.join(sys.path[0], 'python'))
+sys.path.insert(1, os.path.join(sys.path[0], 'packages'))
 from gcPackage import *
 
 usage = "Syntax: %s [OPTIONS] <config file>\n" % sys.argv[0]
