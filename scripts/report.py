@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 import sys, optparse
-from gcSupport import utils, Config, Module, JobDB, JobSelector, Report, GCError
+from gcSupport import utils, Config, Module, JobManager, JobSelector, Report, GCError
 
 parser = optparse.OptionParser()
 parser.add_option('-J', '--job-selector', dest='selector', default=None)
@@ -22,7 +22,7 @@ try:
 	module = Module.open(config.get('global', 'module'), config)
 
 	# Initialise job database
-	jobs = JobDB(config)
+	jobs = JobManager(config, module, None).jobDB
 	log = utils.ActivityLog('Filtering job entries')
 	selected = jobs.getJobs(JobSelector.create(opts.selector, module=module))
 	del log

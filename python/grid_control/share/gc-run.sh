@@ -103,18 +103,19 @@ if [ -n "$GC_MONITORING" ]; then
 fi
 
 # Select SE:
-if [ -n "$SE_PATH" ]; then
+if [ -n "$SE_INPUT_PATH" -o -n "$SE_OUTPUT_PATH" ]; then
 	echo "==========================="
 	echo
-	echo "Complete SE list:"
-	for SE in $SE_PATH; do echo " * $SE"; done
+	echo "Complete SE list:";
+	for SE in $SE_INPUT_PATH; do echo " < $SE"; done
+	for SE in $SE_OUTPUT_PATH; do echo " > $SE"; done
 	echo "Close SE:"
-	SE_CLOSE="$(get_default_se $SE_PATH)"
-	for SE in $SE_CLOSE; do echo " * $SE"; done
-	[ -n "$SE_CLOSE" ] && export SE_PATH="$SE_CLOSE"
+	for SE in $(get_default_se "$SE_INPUT_PATH"); do echo " < $SE"; done
+	for SE in $(get_default_se "$SE_OUTPUT_PATH"); do echo " > $SE"; done
 	echo "Selected SE:"
-	export SE_PATH="$(get_random_se $SE_PATH)"
-	echo " => $SE_PATH"
+	export SE_INPUT_PATH="$(get_best_se "SE_INPUT_PATH")"
+	export SE_OUTPUT_PATH="$(get_best_se "SE_OUTPUT_PATH")"
+	echo " * $SE_INPUT_PATH => ... => $SE_OUTPUT_PATH * "
 	echo
 fi
 

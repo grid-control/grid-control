@@ -39,7 +39,7 @@ class Config:
 						parser.remove_option(section, option)
 			except:
 				raise RethrowError("Error while reading configuration file '%s'!" % fn)
-		defaultCfg = ['/etc/grid-control.conf', '~/.grid-control.conf']
+		defaultCfg = ['/etc/grid-control.conf', '~/.grid-control.conf', utils.pathGC('default.conf')]
 		for cfgFile in filter(os.path.exists, map(lambda p: utils.resolvePath(p, check = False), defaultCfg)):
 			parseFileInt(cfgFile)
 		parseFileInt(configFile, False)

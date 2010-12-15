@@ -196,6 +196,93 @@ class VirtualFile(StringIO.StringIO):
 		return (info, self)
 
 ################################################################
+# String manipulation
+
+def optSplit(opt, delim):
+	""" Split option strings into fixed tuples
+	>>> optSplit('abc : ghi # def', ['#', ':'])
+	('abc', 'def', 'ghi')
+	>>> optSplit('abc:def', '::')
+	('abc', 'def', '')
+	"""
+	def getDelimeterPart(oldResult, prefix):
+		try:
+			tmp = oldResult[0].split(prefix)
+			new = tmp.pop(1)
+			try: # Find position of other delimeters in string
+				otherDelim = min(filter(lambda idx: idx >= 0, map(lambda x: new.find(x), delim)))
+				tmp[0] += new[otherDelim:]
+			except:
+				otherDelim = None
+			return [str.join(prefix, tmp)] + oldResult[1:] + [new[:otherDelim]]
+		except:
+			return oldResult + ['']
+	return tuple(map(str.strip, reduce(getDelimeterPart, delim, [opt])))
+
+
+def parseInt(value, default = None):
+	try:
+		return int(value)
+	except:
+		return default
+
+
+def parseType(value):
+	try:
+		if '.' in value:
+			return float(value)
+		return int(value)
+	except ValueError:
+		return value
+
+
+def parseBool(x):
+	if x.lower() in ('yes', 'y', 'true', 't', 'ok', '1', 'on'):
+		return True
+	if x.lower() in ('no', 'n', 'false', 'f', 'fail', '0', 'off'):
+		return False
+
+
+def parseList(value, delimeter = ',', doFilter = lambda x: x not in ['', '\n'], onEmpty = []):
+	if value:
+		return filter(doFilter, map(str.strip, value.split(delimeter)))
+	return onEmpty
+
+
+def parseTuples(value):
+	"""Parse a string for keywords and tuples of keywords.
+	>>> parseTuples('(4, 8:00), keyword, ()')
+	[('4', '8:00'), 'keyword', ()]
+	>>> parseTuples('(4, 8:00), keyword, ()')
+	[('4', '8:00'), 'keyword', ()]
+	"""
+	def to_tuple_or_str((t, s)):
+		if len(s) > 0:
+			return s
+		elif len(t.strip()) == 0:
+			return tuple()
+		return tuple(parseList(t))
+	return map(to_tuple_or_str, re.findall('\(([^\)]*)\)|([a-zA-Z0-9_\.]+)', value))
+
+
+def parseTime(usertime):
+	if usertime == None or usertime == '':
+		return -1
+	tmp = map(int, usertime.split(':'))
+	while len(tmp) < 3:
+		tmp.append(0)
+	if tmp[2] > 59 or tmp[1] > 59 or len(tmp) > 3:
+		raise ConfigError('Invalid time format: %s' % usertime)
+	return reduce(lambda x, y: x * 60 + y, tmp)
+
+
+def strTime(secs, fmt = '%dh %0.2dmin %0.2dsec'):
+	return QM(secs >= 0, fmt % (secs / 60 / 60, (secs / 60) % 60, secs % 60), '')
+
+
+strGuid = lambda guid: '%s-%s-%s-%s-%s' % (guid[:8], guid[8:12], guid[12:16], guid[16:20], guid[20:])
+
+################################################################
 
 def checkVar(value, message, check = True):
 	if check and ((str(value).count('@') >= 2) or (str(value).count('__') >= 2)):
@@ -222,23 +309,6 @@ def wrapList(value, length, delimLines = ',\n', delimEntries = ', '):
 	counter = lambda item, buffer: len(item) + sum(map(len, buffer)) >= length
 	wrapped = accumulate(value, counter, [], lambda x, y: x + [y], False)
 	return str.join(delimLines, map(lambda x: str.join(delimEntries, x), wrapped))
-
-
-def optSplit(opt, delim):
-	""" Split option strings into fixed tuples
-	>>> optSplit('abc:ghi#def', ['#', ':'])
-	('abc', 'def', 'ghi')
-	>>> optSplit('abcghi#def', ['#', ':'])
-	('abcghi', 'def', '')
-	"""
-	rmPrefix = lambda opt: reduce(lambda x, y: x.split(y)[0], delim, opt)
-	def afterPrefix(prefix):
-		try:
-			return opt.split(prefix, 1)[1]
-		except:
-			return ''
-	tmp = map(lambda p: rmPrefix(afterPrefix(p)), delim)
-	return tuple(map(str.strip, [rmPrefix(opt)] + tmp))
 
 
 def flatten(lists):
@@ -301,59 +371,6 @@ def doBlackWhiteList(value, bwfilter, matcher = str.startswith, onEmpty = None, 
 	if len(whitelist):
 		return filter(lambda x: checkMatch(x, whitelist), value)
 	return QM(value or bwfilter, value, onEmpty)
-
-
-def parseType(value):
-	try:
-		if '.' in value:
-			return float(value)
-		return int(value)
-	except ValueError:
-		return value
-
-
-def parseBool(x):
-	if x.lower() in ('yes', 'y', 'true', 't', 'ok', '1', 'on'):
-		return True
-	if x.lower() in ('no', 'n', 'false', 'f', 'fail', '0', 'off'):
-		return False
-
-
-def parseList(value, delimeter = ',', doFilter = lambda x: x not in ['', '\n'], onEmpty = []):
-	if value:
-		return filter(doFilter, map(str.strip, value.split(delimeter)))
-	return onEmpty
-
-
-def parseTuples(value):
-	"""Parse a string for keywords and tuples of keywords.
-	>>> parseTuples('(4, 8:00), keyword, ()')
-	[('4', '8:00'), 'keyword', ()]
-	>>> parseTuples('(4, 8:00), keyword, ()')
-	[('4', '8:00'), 'keyword', ()]
-	"""
-	def to_tuple_or_str((t, s)):
-		if len(s) > 0:
-			return s
-		elif len(t.strip()) == 0:
-			return tuple()
-		return tuple(parseList(t))
-	return map(to_tuple_or_str, re.findall('\(([^\)]*)\)|([a-zA-Z0-9_\.]+)', value))
-
-
-def parseTime(usertime):
-	if usertime == None or usertime == '':
-		return -1
-	tmp = map(int, usertime.split(':'))
-	while len(tmp) < 3:
-		tmp.append(0)
-	if tmp[2] > 59 or tmp[1] > 59 or len(tmp) > 3:
-		raise ConfigError('Invalid time format: %s' % usertime)
-	return reduce(lambda x, y: x * 60 + y, tmp)
-
-
-def strTime(secs, fmt = '%dh %0.2dmin %0.2dsec'):
-	return QM(secs >= 0, fmt % (secs / 60 / 60, (secs / 60) % 60, secs % 60), '')
 
 
 class DictFormat(object):
@@ -420,23 +437,29 @@ class DictFormat(object):
 		return result
 
 
-def genTarball(outFile, dir, pattern):
+def matchFileName(fn, patList):
+	match = None
+	for p in patList:
+		if fnmatch.fnmatch(fn, p.lstrip('-')):
+			match = not p.startswith('-')
+	return match
+
+
+def genTarball(outFile, dirName, pattern):
 	tar = tarfile.open(outFile, 'w:gz')
 	def walk(tar, root, dir):
 		msg = QM(len(dir) > 50, dir[:15] + '...' + dir[len(dir)-32:], dir)
 		activity = ActivityLog('Generating tarball: %s' % msg)
 		for name in map(lambda x: os.path.join(dir, x), os.listdir(os.path.join(root, dir))):
-			match = None
-			for p in pattern:
-				if fnmatch.fnmatch(name, p.lstrip('-')):
-					match = not p.startswith('-')
-			if match != False:
-				if match or os.path.islink(os.path.join(root, name)):
-					tar.add(os.path.join(root, name), name)
-				elif os.path.isdir(os.path.join(root, name)):
-					walk(tar, root, name)
+			match = matchFileName(name, pattern)
+			if match:
+				tar.add(os.path.join(root, name), name)
+			elif (match != False) and os.path.isdir(os.path.join(root, name)):
+				walk(tar, root, name)
+			elif (match != False) and os.path.islink(os.path.join(root, name)):
+				tar.add(os.path.join(root, name), name)
 		del activity
-	walk(tar, dir, '')
+	walk(tar, dirName, '')
 	tar.close()
 
 

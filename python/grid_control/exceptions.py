@@ -1,4 +1,4 @@
-import sys
+import sys, exceptions
 
 # our exception base class
 class GCError(Exception):
@@ -33,6 +33,9 @@ class AbstractError(APIError):
 
 class RethrowError(GCError):	# rethrow error message
 	def __init__(self, msg):
-		GCError.__init__(self, msg)
-		import traceback
-		traceback.print_exception(*sys.exc_info())
+		if isinstance(sys.exc_info()[1], KeyboardInterrupt):
+			GCError.__init__(self, 'Aborted by user')
+		else:
+			GCError.__init__(self, msg)
+			import traceback
+			traceback.print_exception(*sys.exc_info())

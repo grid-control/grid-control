@@ -39,7 +39,7 @@ class PBSGECommon(LocalWMSApi):
 		# Sandbox, IO paths
 		params += ' -v GC_SANDBOX="%s"' % sandbox
 		if self.delayOutput:
-			params += ' -v GC_DELAY_OUTPUT="%s" -v GC_DELAY_ERROR="%s" -j y -o /dev/null' % (stdout, stderr)
+			params += ' -v GC_DELAY_OUTPUT="%s" -v GC_DELAY_ERROR="%s" -o /dev/null -e /dev/null' % (stdout, stderr)
 		else:
 			params += ' -o "%s" -e "%s"' % (stdout, stderr)
 		return params + str.join('', map(lambda kv: ' -l %s=%s' % kv, addAttr.items()))

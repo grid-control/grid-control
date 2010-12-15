@@ -4,7 +4,7 @@ from python_compat import *
 
 class JobDB:
 	def __init__(self, config, jobLimit = -1, jobSelector = None):
-		self.alwaysSelector = jobSelector
+		(self.jobLimit, self.alwaysSelector) = (jobLimit, jobSelector)
 		self.dbPath = os.path.join(config.workDir, 'jobs')
 		self.disableLog = os.path.join(config.workDir, 'disabled')
 		try:
@@ -32,12 +32,13 @@ class JobDB:
 			if idx % 100 == 0:
 				del log
 				log = utils.ActivityLog('Reading job infos ... %d [%d%%]' % (idx, (100.0 * idx) / maxJobs))
+		self.jobLimit = max(self.jobLimit, len(self._jobs))
 
 
-	def get(self, jobNum, create = False):
+	def get(self, jobNum, default = None, create = False):
 		if create:
-			return self._jobs.get(jobNum, Job())
-		return self._jobs[jobNum]
+			self._jobs[jobNum] = self._jobs.get(jobNum, Job())
+		return self._jobs.get(jobNum, default)
 
 
 	def getJobs(self, jobSelector = None):
@@ -55,6 +56,9 @@ class JobDB:
 #		if jobObj.state == Job.DISABLED:
 			
 
+	def __len__(self):
+		return self.jobLimit
+
 
 	def logDisabled(self):
 		try:
@@ -64,6 +68,7 @@ class JobDB:
 
 
 	def getMissing(self, jobLimit):
+		self.jobLimit = jobLimit
 		if len(self._jobs) < jobLimit:
 			return filter(lambda x: x not in self._jobs, range(jobLimit))
 		return []
@@ -195,7 +200,7 @@ class JobManager:
 
 		# Get list of submittable jobs
 		if self.maxRetry >= 0:
-			jobList = filter(lambda x: self.jobDB.get(x, create = True).attempt - 1 < self.maxRetry, self.ready)
+			jobList = filter(lambda x: self.jobDB.get(x, Job()).attempt - 1 < self.maxRetry, self.ready)
 		else:
 			jobList = self.ready[:]
 		jobList = filter(self.module.canSubmit, jobList)
@@ -303,9 +308,8 @@ class JobManager:
 		jobList = self.sample(self.done, QM(self.continuous, maxsample, -1))
 
 		for jobNum, retCode, data in wms.retrieveJobs(self.wmsArgs(jobList)):
-			try:
-				jobObj = self.jobDB.get(jobNum)
-			except:
+			jobObj = self.jobDB.get(jobNum)
+			if jobObj == None:
 				continue
 
 			if retCode == 0:
@@ -334,9 +338,8 @@ class JobManager:
 			return
 
 		def mark_cancelled(jobNum):
-			try:
-				jobObj = self.jobDB.get(jobNum)
-			except:
+			jobObj = self.jobDB.get(jobNum)
+			if jobObj == None:
 				return
 			self._update(jobObj, jobNum, Job.CANCELLED)
 			self.monitor.onJobUpdate(wms, jobObj, jobNum, {'status': 'cancelled'})
@@ -355,7 +358,7 @@ class JobManager:
 
 	def getCancelJobs(self, jobs):
 		deleteable = [ Job.SUBMITTED, Job.WAITING, Job.READY, Job.QUEUED, Job.RUNNING ]
-		return filter(lambda x: self.jobDB.get(x).state in deleteable, jobs)
+		return filter(lambda x: self.jobDB.get(x, Job()).state in deleteable, jobs)
 
 
 	def delete(self, wms, select):
@@ -371,7 +374,7 @@ class JobManager:
 			jobSet = set(jobs)
 			for jobNum in jobs:
 				jobObj = self.jobDB.get(jobNum)
-				if jobObj.state in [ Job.INIT, Job.DISABLED, Job.ABORTED, Job.CANCELLED, Job.DONE, Job.FAILED, Job.SUCCESS ]:
+				if jobObj and jobObj.state in [ Job.INIT, Job.DISABLED, Job.ABORTED, Job.CANCELLED, Job.DONE, Job.FAILED, Job.SUCCESS ]:
 					self._update(jobObj, jobNum, newState)
 					jobSet.remove(jobNum)
 					jobObj.attempt = 0

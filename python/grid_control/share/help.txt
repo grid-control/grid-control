@@ -15,6 +15,7 @@
 	                         Default is to resubmit indefinitely
 	                            -m 0 (Disable job REsubmission)
 	                            -m 5 (Resubmit jobs up to 5 times)
+	-J, --job-selector <sel> Operate only on specified jobs
 	-d, --delete <sel>       Delete selected jobs
 
 	                         --- Module options ---

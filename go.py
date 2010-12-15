@@ -7,7 +7,7 @@ from gcPackage import *
 
 usage = "Syntax: %s [OPTIONS] <config file>\n" % sys.argv[0]
 def print_help(*args):
-	utils.eprint("%s\n%s" % (usage, open(utils.pathGC('python', 'grid_control', 'share', 'help.txt'), 'r').read()))
+	utils.eprint("%s\n%s" % (usage, open(utils.pathShare('help.txt'), 'r').read()))
 	sys.exit(0)
 
 if __name__ == '__main__':
@@ -23,7 +23,7 @@ if __name__ == '__main__':
 	handler = signal.signal(signal.SIGINT, interrupt)
 
 	# display the 'grid-control' logo and version
-	utils.vprint(open(utils.pathGC('python', 'grid_control', 'share', 'logo.txt'), 'r').read(), -1)
+	utils.vprint(open(utils.pathShare('logo.txt'), 'r').read(), -1)
 	utils.vprint('Revision: %s' % utils.getVersion(), -1)
 	pyver = sys.version_info[0] + sys.version_info[1] / 10.0
 	if pyver < 2.3:
@@ -65,6 +65,7 @@ if __name__ == '__main__':
 		setConfigFromOpt(opts.seed, 'jobs', 'seeds', lambda x: x.rstrip('S'))
 		setConfigFromOpt(opts.maxRetry, 'jobs', 'max retry')
 		setConfigFromOpt(opts.continuous, 'jobs', 'continuous')
+		setConfigFromOpt(opts.selector, 'jobs', 'selected')
 		config.opts = opts
 
 		# Check work dir validity (default work directory is the config file name)

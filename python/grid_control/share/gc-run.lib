@@ -601,11 +601,6 @@ zip_files() {
 	done
 }
 
-get_random_se() {
-	[ $# -gt 0 ] && shift $[ $RANDOM % $# ]
-	echo $1
-}
-
 get_default_se() {
 	export GC_DEFAULT_SE=`hostname | sed 's/.*\.\(.*\)\.\(.*\)$/\1.\2/'`
 	for SE in $1; do
@@ -613,6 +608,20 @@ get_default_se() {
 			echo $SE | grep "${!SE_VAR}"
 		done
 	done
+}
+
+get_random_se() {
+	[ $# -gt 0 ] && shift $[ $RANDOM % $# ]
+	echo $1
+}
+
+get_best_se() {
+	SE_PATH_VAR="$1"
+	if [ -n "${!SE_PATH_VAR}" ]; then
+		SE_CLOSE="$(get_default_se "${!SE_PATH_VAR}")"
+		[ -n "$SE_CLOSE" ] && export SE_PATH_VAR="SE_CLOSE"
+		echo "$(get_random_se ${!SE_PATH_VAR})"
+	fi
 }
 
 display_short() {

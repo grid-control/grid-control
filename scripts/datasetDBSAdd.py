@@ -20,276 +20,61 @@ def MakeDBSApi(url):
 	return createDBSAPI(url)
 
 
-def parseSEUrl(seUrl):
-	# Try to get the SE and LFN from storage url
-	proto, filePath = seUrl.split(":", 1)
-	if proto in ["dir", "file"]:
-		return ("localhost", "/" + filePath.lstrip("/"))
-	elif proto in ["rfio"]:
-		if not "/store/" in seUrl:
-			raise RuntimeError("File path %s did not include /store/!" % seUrl)
-		if "cern.ch" in seUrl:
-			se = "caf.cern.ch"
-		else:
-			se = filePath.lstrip("/").split("/")[1]
-	elif proto in ["srm", "gsiftp"]:
-		if not "/store/" in seUrl:
-			raise RuntimeError("File path %s did not include /store/!" % seUrl)
-		se = filePath.split(":")[0].lstrip("/").split("/")[0]
-	else:
-		raise RuntimeError("Unsupported protocol %s!" % proto)
-	return (se, os.path.join('/store', filePath.split("/store/", 1)[-1]))
+class DBSInfoProvider(datasets.GCProvider):
+	def __init__(self, config, section, datasetExpr, datasetNick, datasetID = 0):
+		# Override scan modules, other settings setup by GCProvider
+		tmp = QM(os.path.isdir(datasetExpr), ['OutputDirsFromWork'], ['OutputDirsFromConfig', 'MetadataFromModule'])
+		config.set(section, 'scanner', str.join(tmp + ['ObjectsFromCMSSW', 'FilesFromJobInfo',
+			'MetadataFromCMSSW', 'SEListFromPath', 'LFNFromPath', 'DetermineEvents']))
+		config.set(section, 'events ignore empty', 'False')
+		config.set(section, 'include parent infos', 'True')
+		config.set(section, 'include config infos', 'True')
+		GCProvider.__init__(self, config, section, dbsScanner, datasetNick, datasetID)
 
 
-def readDBSJobInfo(opts, workDir, jobNum):
-	# Read general grid-control file infos
-	fileDictGC = {}
-	try:
-		files = gcSupport.getFileInfo(workDir, jobNum, lambda retCode: retCode == 0, rejected = None)
-	except:
-		raise RuntimeError("Could not read grid-control file infos for job %d!" % jobNum)
-	if not files:
-		return ([], {})
+class XMLWriter: # xml.dom.minidom needs a lot of memory - could be replaced by something simpler...
+	def __init__(self):
+		self.doc = xml.dom.minidom.Document()
+		self.doc.appendChild(self.doc.createComment(" DBS Version 1 "))
 
-	# Get storage element and lfn
-	for (hash, name_local, name_dest, pathSE) in files:
-		(se, lfn) = parseSEUrl(os.path.join(pathSE, name_dest))
-		fileDictGC[name_local] = zip((DBS.MD5, DBS.LFN, DBS.SE), (hash, lfn, se))
-	# Open CMSSW overview file
-	try:
-		tar = tarfile.open(os.path.join(workDir, 'output', 'job_%d' % jobNum, 'cmssw.dbs.tar.gz'), 'r')
-	except:
-		raise RuntimeError("Could not open CMSSW file infos for job %d!" % jobNum)
-
-	# Read CMSSW file infos
-	fileDictCMSSW = {}
-	try:
-		for rawdata in map(str.split, tar.extractfile('files').readlines()):
-			fileDictCMSSW[rawdata[2]] = zip((DBS.CRC32, DBS.SIZE), rawdata[:-1])
-	except:
-		raise RuntimeError("Could not read CMSSW file infos for job %d!" % jobNum)
-
-	# Read CMSSW config infos
-	configData = {}
-	configReports = {}
-	cmsswVersion = tar.extractfile("version").read().strip()
-	for cfg in filter(lambda x: not '/' in x and x not in ['version', 'files'], tar.getnames()):
-		try:
-			cfgHash = tar.extractfile("%s/hash" % cfg).readlines()[-1].strip()
-			configData[cfgHash] = { DBS.CONFIGNAME: cfg, DBS.CMSSW_VER: cmsswVersion,
-				DBS.CONFIG: tar.extractfile("%s/config" % cfg).read()
-			}
-			configReports[cfgHash] = parseString(tar.extractfile("%s/report.xml" % cfg).read())
-		except:
-			raise RuntimeError("Could not read config infos about %s in job %d" % (cfg, jobNum))
-
-	# Parse CMSSW framework infos
-	fileDictReport = {}
-	for cfgHash in configData.keys():
-		dom = configReports[cfgHash]
-		def readTag(base, tag, default = None):
-			try:
-				return str(base.getElementsByTagName(tag)[0].childNodes[0].data)
-			except:
-				return default
-		for outputFile in dom.getElementsByTagName('File'):
-			toRead = [("DataType", DBS.TYPE), ("TotalEvents", DBS.EVENTS)]
-			tmp = map(lambda (tag, key): (key, readTag(outputFile, tag)), toRead)
-
-			if opts.importParents:
-				try:
-					inputs = outputFile.getElementsByTagName("Inputs")[0].getElementsByTagName("Input")
-					if opts.usePFN:
-						tmp.append((DBS.PARENT_FILES, map(lambda x: readTag(x, "PFN"), inputs)))
-					else:
-						tmp.append((DBS.PARENT_FILES, map(lambda x: readTag(x, "LFN"), inputs)))
-				except:
-					raise RuntimeError("Could not parse lfn of parent! (Try --no-parents...)")
-			else:
-				tmp.append((DBS.PARENT_FILES, []))
-
-			lumis = []
-			runs = outputFile.getElementsByTagName("Runs")[0]
-			for run in runs.getElementsByTagName("Run"):
-				runId = int(run.getAttribute("ID"))
-				for lumi in run.getElementsByTagName("LumiSection"):
-					lumis.append((runId, int(lumi.getAttribute("ID"))))
-			tmp.append((DBS.LUMI, lumis))
-			tmp.append((DBS.CONFIGHASH, cfgHash))
-			fileDictReport[readTag(outputFile, "PFN")] = tmp
-
-	# Cleanup & checks
-	tar.close()
-
-	# Combine file infos, include only framework files, other transferred files are ignored
-	outputData = {}
-	for key in fileDictReport.keys():
-		tmp = dict(fileDictGC[key])
-		tmp.update(dict(fileDictCMSSW[key]))
-		tmp.update(dict(fileDictReport[key]))
-		tmp[DBS.JOBHASH] = sorted(configData.keys())
-		outputData[tmp[DBS.LFN]] = tmp
-	return (outputData, configData)
-
-
-def getAnnotation(configKey, configData):
-	regex = re.compile('.*annotation.*=.*cms.untracked.string.*\((.*)\)')
-	try:
-		tmp = regex.search(configData[configKey][DBS.CONFIG]).group(1).strip('\"\' ')
-		if tmp == "":
-			raise
-		return tmp
-	except:
-		return None
-
-
-def getOutputDatasets(opts):
-	# Get job numbers, task id, ...
-	log = utils.ActivityLog(' * Reading task info...')
-	jobList = utils.sorted(map(lambda (jobNum, path): jobNum, Job.readJobs(os.path.join(opts.workDir, 'jobs'))))
-	taskInfo = utils.PersistentDict(os.path.join(opts.workDir, 'task.dat'), ' = ')
-	del log
-	print " * Reading task info - done"
-
-	# Get all config and output data
-	log = None
-	configData = {}
-	outputData = {}
-	dbsLog = utils.PersistentDict(os.path.join(opts.workDir, 'dbs.log'), ' = ', False)
-	for jobNum in jobList:
-		if jobNum % 10 == 0:
-			del log
-			log = utils.ActivityLog(' * Reading job logs - [%d / %d]' % (jobNum, jobList[-1]))
-		(output, config) = readDBSJobInfo(opts, opts.workDir, jobNum)
-		# ignore already registed files in incremental mode
-		for lfn in filter(lambda x: not (opts.incremental and x in dbsLog), output):
-			outputData.update({lfn: output[lfn]})
-		configData.update(config)
-	print " * Reading job logs - done"
-
-	# Merge parent infos into output file data
-	if os.path.exists(os.path.join(opts.workDir, 'datacache.dat')):
-		# Get parent infos
-		provider = DataProvider.loadState(Config(), opts.workDir, 'datacache.dat')
-		log = utils.ActivityLog(' * Processing parent infos...')
-		blocks = provider.getBlocks()
-		parentMap = {}
-		for block in blocks:
-			blockInfo = (block[DataProvider.Dataset], block[DataProvider.BlockName])
-			lfns = map(lambda x: (x[DataProvider.lfn], blockInfo), block[DataProvider.FileList])
-			parentMap.update(dict(lfns))
-		# Insert parentage infos
-		for lfn in outputData.keys():
-			for parentLFN in filter(lambda x: x, outputData[lfn][DBS.PARENT_FILES]):
-				if not DBS.PARENT_INFO in outputData[lfn]:
-					outputData[lfn][DBS.PARENT_INFO] = []
-				if not parentMap[parentLFN] in outputData[lfn][DBS.PARENT_INFO]:
-					outputData[lfn][DBS.PARENT_INFO].append(parentMap[parentLFN])
-		del log
-		print " * Processing parent infos - done"
-
-	# Sort output files into blocks
-	log = None
-	metadata = {}
-	datasets = {}
-	datasetInfos = {}
-	for idx, lfn in enumerate(outputData):
-		if idx % 10 == 0:
-			del log
-			log = utils.ActivityLog(' * Dividing output into blocks - [%d / %d]' % (idx, len(outputData)))
-
-		# Define dataset split criteria
-		def generateDatasetKey(fileInfo):
-			# Split by dataset parent and config hash (+ job config hash)
-			parentDS = map(lambda (ds, b): ds, fileInfo.get(DBS.PARENT_INFO, []))
-			jobHash = ('', str(fileInfo[DBS.JOBHASH]))[opts.useJobHash]
-			dsKey = md5(str((fileInfo[DBS.CONFIGHASH], jobHash, parentDS))).hexdigest()
-			# Write summary information:
-			if not dsKey in datasetInfos:
-				if parentDS == []: parentDS = ['None']
-				datasetInfos[dsKey] = ("%15s: %s\n%15s: %s\n" % (
-					"Config hash", fileInfo[DBS.CONFIGHASH],
-					"Parent datasets", str.join("\n" + 17*" ", parentDS)))
-				annotation = getAnnotation(fileInfo[DBS.CONFIGHASH], configData)
-				if annotation:
-					datasetInfos[dsKey] += "%15s: %s\n" % ("Annotation", annotation)
-			return dsKey
-
-		# Define block split criteria
-		def generateBlockKey(fileInfo):
-			# Split by SE and block parent (parent is left out in case of merging)
-			key = md5(str(fileInfo[DBS.SE]) + generateDatasetKey(fileInfo))
-			if not opts.doMerge:
-				key.update(str(map(lambda (ds, b): b, fileInfo.get(DBS.PARENT_INFO, []))))
-			return key.hexdigest()
-
-		dsKey = generateDatasetKey(outputData[lfn])
-		blockKey = generateBlockKey(outputData[lfn])
-		if not dsKey in datasets:
-			datasets[dsKey] = {}
-			metadata[dsKey] = {DBS.SIZE: 0, DBS.EVENTS: 0}
-		if not blockKey in datasets[dsKey]:
-			datasets[dsKey][blockKey] = []
-			metadata[blockKey] = {DBS.SIZE: 0, DBS.EVENTS: 0}
-
-		# Calculate 
-		def incStats(x, info):
-			x[DBS.SIZE] += int(info[DBS.SIZE])
-			x[DBS.EVENTS] += int(info[DBS.EVENTS])
-		incStats(metadata[dsKey], outputData[lfn])
-		incStats(metadata[blockKey], outputData[lfn])
-
-		datasets[dsKey][blockKey].append(lfn)
-	print " * Dividing output into blocks - done"
-
-	# Display dataset information
-	print
-	print " => Identified the following output datasets:"
-	for ds in datasets.keys():
-		print "%4s * Key %s [%d block(s), %d file(s)]" % ("", ds, len(datasets[ds]), sum(map(len, datasets[ds].values())))
-		print 7*" " + datasetInfos[ds].replace("\n", "\n" + 7*" ")
-
-	return (taskInfo['task id'], datasets, metadata, outputData, configData)
-
-
-def getBlockParents(lfns, outputData):
-	return set(reduce(lambda x, y: x+y, map(lambda x: outputData[x].get(DBS.PARENT_INFO, []), lfns)))
-
-
-def createDbsBlockDump(opts, newPath, blockInfo, metadata, outputData, configData, allBlocks):
-	(blockKey, lfns) = blockInfo
-
-	# Helper function to create xml elements
-	def newElement(root, name = None, att = {}, text = ""):
-		if name == None:
-			new = doc.createTextNode(str(text))
-		else:
-			new = doc.createElement(name)
-			for key, value in att.items():
-				new.setAttribute(key, str(value))
-		root.appendChild(new)
+	def newElement(self, root, name, att = {}):
+		new = self.doc.createElement(name)
+		for key, value in att.items():
+			new.setAttribute(key, str(value))
+		QM(root, root, self.doc).appendChild(new)
 		return new
 
+	def finish(self):
+		return self.doc.toprettyxml(indent="\t").replace('<?xml version="1.0" ?>', "<?xml version='1.0' standalone='yes'?>")
+
+
+def getDBSXML(opts, block, allBlocks):
+	def collectVar(key, src):
+		idx = block[DataProvider.Metadata].index(key)
+		return filter(lambda x: x, map(lambda fi: fi[DataProvider.Metadata][idx], src))
+	def collectDict(key, valueKeys, src):
+		idxKey = block[DataProvider.Metadata].index(key)
+		idxList = map(lambda k: block[DataProvider.Metadata].index(k), valueKeys)
+		result = {}
+		for fi in src:
+			result[fi[DataProvider.Metadata][idxKey]] = map(lambda idx: fi[DataProvider.Metadata][idx], idxList)
+		return result
+
 	# Create DBS dump file
-	doc = xml.dom.minidom.Document()
-	doc.appendChild(doc.createComment(" DBS Version 1 "))
-	nodeDBS = newElement(doc, "dbs")
+	writer = XMLWriter()
+	nodeDBS = writer.newElement(None, "dbs")
 
 	# Dataset / Block identifier
-	if opts.incremental: # and opts.doClose ?
-		hex = str.join("", map(lambda x: "%02x" % random.randrange(256), range(16)))
-	else:
-		hex = blockKey
-	blockName = '%s-%s-%s-%s-%s' % (hex[:8], hex[8:12], hex[12:16], hex[16:20], hex[20:])
-	fqBlock = "%s#%s" % (newPath, blockName)
-	newElement(nodeDBS, "dataset", {"block_name": fqBlock, "path": newPath})
+	fqBlock = "%s#%s" % (block[DataProvider.Dataset], block[DataProvider.BlockName])
+	writer.newElement(nodeDBS, "dataset", {"block_name": fqBlock, "path": block[DataProvider.Dataset]})
 
 	# Primary dataset information - get datatype from other blocks in dataset in case of eg. 0 event block
-	primary = newPath.split("/")[1]
-	getDataType = lambda lfnList: filter(lambda x: x, map(lambda x: outputData[x][DBS.TYPE], lfnList))
-	dataType = set(getDataType(lfns))
-	if len(dataType) != 1:
-		dataType = set(reduce(lambda x, y: x+y, map(lambda block: getDataType(allBlocks[block]), allBlocks)))
+	primary = block[DataProvider.Dataset].split("/")[1]
+	dataType = set(collectVar('CMSSW_DATATYPE', block[DataProvider.FileList]))
+	if len(dataType) == 0: # Try to recover type from all blocks
+		allDataTypes = map(lambda b: set(collectVar('CMSSW_DATATYPE', b[DataProvider.FileList])), allBlocks)
+		for t in allDataTypes:
+			dataType.update(t)
 	if len(dataType) > 1:
 		raise RuntimeException("Data and MC files are mixed!")
 	elif len(dataType) == 0:
@@ -297,284 +82,85 @@ def createDbsBlockDump(opts, newPath, blockInfo, metadata, outputData, configDat
 			dataType.add(opts.datatype)
 		else:
 			raise RuntimeException("Please supply dataset type via --datatype!")
-	newElement(nodeDBS, "primary_dataset", {"primary_name": primary,
+	writer.newElement(nodeDBS, "primary_dataset", {"primary_name": primary,
 		"annotation": 'NO ANNOTATION PROVIDED', "type": dataType.pop().lower(),
 		"start_date": 'NO_END_DATE PROVIDED', "end_date": ''})
 
 	# Describes the processed data
-	nodeProc = newElement(nodeDBS, "processed_dataset", {"primary_datatset_name": primary,
-		"processed_datatset_name": newPath.split("/")[2],
+	nodeProc = writer.newElement(nodeDBS, "processed_dataset", {"primary_datatset_name": primary,
+		"processed_datatset_name": block[DataProvider.Dataset].split("/")[2],
 		"status": 'VALID', "physics_group_name": 'NoGroup', "physics_group_convener": 'NO_CONVENOR',
 	})
-	newElement(nodeProc, "path", {"dataset_path": newPath})
-	for tier in newPath.split("/")[3].split("-"):
-		newElement(nodeProc, "data_tier", {"name": tier})
-	for cfgHash in set(map(lambda x: outputData[x][DBS.CONFIGHASH], lfns)):
-		configData[cfgHash]
-		newElement(nodeProc, "algorithm", {"app_version": configData[cfgHash][DBS.CMSSW_VER],
-			"app_family_name": 'cmsRun', "app_executable_name": 'cmsRun', "ps_hash": cfgHash})
+	writer.newElement(nodeProc, "path", {"dataset_path": block[DataProvider.Dataset]})
+	for tier in block[DataProvider.Dataset].split("/")[3].split("-"):
+		writer.newElement(nodeProc, "data_tier", {"name": tier})
+
+	# Harvest config infos
+	configInfos = {}
+	for fi in block[DataProvider.FileList]:
+		tmp = {}
+		def setVar(key, format = lambda x: x):
+			tmp[key] = format(fi[DataProvider.Metadata][block[DataProvider.Metadata].index(key)])
+		setVar('CMSSW_CONFIG_CONTENT', base64.encodestring)
+		for key in ['CMSSW_CONFIG_FILE', 'CMSSW_CONFIG_HASH', 'CMSSW_ANNOTATION', 'CMSSW_VERSION']:
+			setVar(key)
+		configInfos[fi[DataProvider.Metadata][block[DataProvider.Metadata].index('CMSSW_CONFIG_HASH')]] = tmp
+
+	for cfgIdx in configInfos:
+		writer.newElement(nodeProc, "algorithm", {"app_version": configInfos[cfgIdx]['CMSSW_VERSION'],
+			"app_family_name": 'cmsRun', "app_executable_name": 'cmsRun',
+			"ps_hash": configInfos[cfgIdx]['CMSSW_CONFIG_HASH']})
 
 	# List dataset parents
 	if opts.importParents:
-		parents = getBlockParents(lfns, outputData)
-		for (path, block) in parents:
-			newElement(nodeDBS, "processed_dataset_parent", {"path": path})
+		for path in set(collectVar('PARENT_DATASET', block[DataProvider.FileList])):
+			writer.newElement(nodeDBS, "processed_dataset_parent", {"path": path})
 
 	# Algorithm describing the job configuration
-	for cfgHash in set(map(lambda x: outputData[x][DBS.CONFIGHASH], lfns)):
-		cfg = configData[cfgHash]
-		cfgContent = base64.encodestring(cfg[DBS.CONFIG])
-		newElement(nodeDBS, "processed_dataset_algorithm", {
-			"app_version": cfg[DBS.CMSSW_VER], "app_family_name": "cmsRun", "app_executable_name": "cmsRun",
-			"ps_content": cfgContent, "ps_hash": cfgHash, "ps_name": cfg[DBS.CONFIGNAME],
+	for cfgIdx in configInfos:
+		writer.newElement(nodeDBS, "processed_dataset_algorithm", {
+			"app_version": configInfos[cfgIdx]['CMSSW_VERSION'], "app_family_name": "cmsRun",
+			"app_executable_name": "cmsRun", "ps_content": configInfos[cfgIdx]['CMSSW_CONFIG_CONTENT'],
+			"ps_hash": configInfos[cfgIdx]['CMSSW_CONFIG_HASH'], "ps_name": configInfos[cfgIdx]['CMSSW_CONFIG_HASH'],
 			"ps_version": "private version", "ps_type": "user", "ps_annotation": base64.encodestring("user cfg")
 		})
 
 	# Give information about List files in block
-	nodeBlock = newElement(nodeDBS, "block", {"name": fqBlock, "path": newPath,
-		"size": metadata[blockKey][DBS.SIZE], "number_of_events": metadata[blockKey][DBS.EVENTS],
-		"number_of_files": len(lfns), "open_for_writing": ("1", "0")[opts.doClose]})
-	for se in set(map(lambda x: outputData[x][DBS.SE], lfns)):
-		newElement(nodeBlock, "storage_element", {"storage_element_name": se})
+	nodeBlock = writer.newElement(nodeDBS, "block", {"name": fqBlock, "path": block[DataProvider.Dataset],
+		"size": sum(collectVar('SE_OUTPUT_SIZE', block[DataProvider.FileList])),
+		"number_of_events": block[DataProvider.NEvents], "number_of_files": len(block[DataProvider.FileList]),
+		"open_for_writing": QM(opts.doClose, '0', "1")})
+	for se in block[DataProvider.SEList]:
+		writer.newElement(nodeBlock, "storage_element", {"storage_element_name": se})
 
 	# List files in block
-	for lfn in lfns:
-		fileInfo = outputData[lfn]
-		nodeFile = newElement(nodeDBS, "file", {"lfn": lfn,
+	for fi in block[DataProvider.FileList]:
+		getM = lambda key: fi[DataProvider.Metadata][block[DataProvider.Metadata].index(key)]
+
+		nodeFile = writer.newElement(nodeDBS, "file", {"lfn": fi[DataProvider.lfn],
 			"queryable_meta_data": 'NOTSET', "validation_status": 'VALID', "status": 'VALID', "type": 'EDM',
-			"checksum": fileInfo[DBS.CRC32], "adler32": 'NOTSET', "md5": fileInfo[DBS.MD5],
-			"size": fileInfo[DBS.SIZE], "number_of_events": fileInfo[DBS.EVENTS], "block_name": fqBlock})
+			"checksum": getM('SE_OUTPUT_HASH_CRC32'), "adler32": 'NOTSET', "md5": getM('SE_OUTPUT_HASH_MD5'),
+			"size": getM('SE_OUTPUT_SIZE'), "number_of_events": fi[DataProvider.NEvents], "block_name": fqBlock})
 
 		# List algos in file
-		cfgHash = fileInfo[DBS.CONFIGHASH]
-		newElement(nodeFile, "file_algorithm", {"app_version": configData[cfgHash][DBS.CMSSW_VER],
-			"app_family_name": 'cmsRun', "app_executable_name": 'cmsRun', "ps_hash": cfgHash})
+		writer.newElement(nodeFile, "file_algorithm", {"app_version": getM('CMSSW_VERSION'),
+			"app_family_name": 'cmsRun', "app_executable_name": 'cmsRun', "ps_hash": getM('CMSSW_CONFIG_HASH')})
 
 		# List parents of file
 		if opts.importParents:
-			for parentLFN in fileInfo[DBS.PARENT_FILES]:
-				newElement(nodeFile, "file_parent", {"lfn": parentLFN})
+			for parentLFN in getM('CMSSW_PARENT_LFN'):
+				writer.newElement(nodeFile, "file_parent", {"lfn": parentLFN})
 
 		# List lumi sections
-		if not opts.doLumi:
-			continue
-		for (run, lumi) in fileInfo[DBS.LUMI]:
-			newElement(nodeFile, "file_lumi_section", {"run_number": run, "lumi_section_number": lumi,
-				"start_event_number": '0', "end_event_number": '0', "lumi_start_time": '0', "lumi_end_time": '0'
-			})
+		if opts.doLumi:
+			for (run, lumi) in getM('CMSSW_LUMIS'):
+				writer.newElement(nodeFile, "file_lumi_section", {"run_number": run, "lumi_section_number": lumi,
+					"start_event_number": '0', "end_event_number": '0', "lumi_start_time": '0', "lumi_end_time": '0'
+				})
 
 	# Finish xml file
-	newElement(nodeDBS, "SUCCESS")
-	data = doc.toprettyxml(indent="\t").replace('<?xml version="1.0" ?>', "<?xml version='1.0' standalone='yes'?>")
-	return (blockName, data)
-
-
-def createDbsBlockDumps(opts, datasets, metadata, datasetPaths, outputData, configData):
-	produced = []
-	selectedDS = filter(lambda x: not opts.dataset or x in opts.dataset, datasets)
-	todo = sum(map(lambda x: len(datasets[x]), selectedDS))
-	for datasetKey in selectedDS:
-		xmlDSPath = os.path.join(opts.xmlPath, datasetKey)
-		if not os.path.exists(xmlDSPath):
-			os.mkdir(xmlDSPath)
-
-		idx, log = (0, None)
-		newPath = datasetPaths[datasetKey]
-		for blockInfo in datasets[datasetKey].items():
-			del log
-			log = utils.ActivityLog(' * Creating DBS dump files - [%d / %d]' % (idx, todo))
-			(name, data) = createDbsBlockDump(opts, newPath, blockInfo, metadata, outputData, configData, datasets[datasetKey])
-			dumpFile =  os.path.join(xmlDSPath, "%s.xml" % name)
-			fp = open(dumpFile, "w")
-			produced.append((datasetKey, blockInfo[0], name, dumpFile))
-			fp.write(data)
-			fp.close()
-		del log
-	print " * Creating DBS dump files - done"
-	return produced
-
-
-def displayDatasetInfos(keys, datasets, metadata, paths):
-	def fmtNum(x):
-		return locale.format("%d", x, True)
-	print 53*"=", "\n"
-	if keys.lower() == "all":
-		keys = str.join(",", datasets.keys())
-	for dataKey in map(str.strip, keys.split(",")):
-		if dataKey in datasets:
-			# Display dataset overview
-			print " * %s: %s" % ("Dataset key", dataKey)
-			print "   %s: %s" % ("Dataset path", paths[dataKey])
-			print "   %s events - %s files - %s bytes " % tuple(map(fmtNum,
-				[metadata[dataKey][DBS.EVENTS],
-				sum(map(len, datasets[dataKey].values())), metadata[dataKey][DBS.SIZE]]))
-			print
-
-			# Display block infos
-			for bKey in datasets[dataKey]:
-				lfns = datasets[dataKey][bKey]
-				uuid = '%s-%s-%s-%s-%s' % (bKey[:8], bKey[8:12], bKey[12:16], bKey[16:20], bKey[20:])
-				print "    * Block:", uuid
-				print "      %s events - %s files - %s bytes " % tuple(map(fmtNum,
-					[metadata[bKey][DBS.EVENTS], len(lfns), metadata[bKey][DBS.SIZE]]))
-				print "      Location:",
-				print str.join(", ", set(map(lambda x: outputData[x][DBS.SE], lfns)))
-			print
-		else:
-			print "Config hash %s not found!" % dataKey
-
-
-def displayConfigInfos(keys, configData):
-	if keys.lower() == "all":
-		keys = str.join(",", configData.keys())
-	for cfgHash in map(str.strip, keys.split(",")):
-		cfg = configData.get(cfgHash, None)
-		if cfg:
-			print 53*"="
-			print "%15s: %s" % ("Config hash", cfgHash)
-			print "%15s: %s" % ("File name", cfg[DBS.CONFIGNAME])
-			print "%15s: %s" % ("CMSSW version", cfg[DBS.CMSSW_VER])
-			annotation = getAnnotation(cfgHash, configData)
-			if annotation:
-				print "%15s: %s" % ("Annotation", annotation)
-			print 53*"-"
-			sys.stdout.write(cfg[DBS.CONFIG])
-			print
-		else:
-			print "Config hash %s not found!" % cfgHash
-
-
-def determineDatasetPaths(opts, taskId, datasets, outputData, configData):
-	if opts.dbsPath:
-		dbsUserPath = map(str.strip, opts.dbsPath.split(","))
-		if len(datasets) == len(dbsUserPath):
-			dbsUserPath = dict(zip(datasets.keys(), dbsUserPath))
-		elif len(datasets) < len(dbsUserPath):
-			raise RuntimeError("Too many dataset name(s) supplied")
-		elif len(dbsUserPath) > 1:
-			raise RuntimeError("Invalid dataset name(s) supplied")
-		else:
-			if dbsUserPath[0].strip("/").count("/") == 1:
-				# Increment processed dataset number to avoid collisions
-				tmp = map(lambda x: dbsUserPath[0] + "_%02x" % x, range(len(datasets.keys())))
-				dbsUserPath = dict(zip(datasets.keys(), tmp))
-			else:
-				dbsUserPath = dict.fromkeys(datasets.keys(), dbsUserPath[0])
-	else:
-		dbsUserPath = dict.fromkeys(datasets.keys(), None)
-	# dbsUserPath contains mapping between datasetKeys and user input
-
-	def getPathComponents(path):
-		if path:
-			return tuple(path.strip("/").split("/"))
-		else:
-			return ()
-
-	datasetPaths = {}
-	for (dataKey, userPath) in dbsUserPath.items():
-		def getTier():
-			# Look into first file of block to determine data tier
-			try:
-				lfn = datasets[dataKey].items()[0][1][0]
-				cfgData = configData[outputData[lfn][DBS.CONFIGHASH]][DBS.CONFIG]
-				regex = re.compile('.*dataTier.*=.*cms.untracked.string.*\((.*)\)')
-				result = regex.search(cfgData).group(1).strip('\"\' ')
-				if result == "":
-					raise
-				return result
-			except:
-				pass
-			return "USER"
-
-		def rndProcName():
-			# Create a new processed dataset name
-			return "Dataset_%s_%s" % (taskId, dataKey[:16])
-
-		# In case of a child dataset, use the parent infos to construct new path
-		parents = getBlockParents(datasets[dataKey].items()[0][1], outputData)
-		userPath = getPathComponents(userPath)
-		(primary, processed, tier) = (None, None, None)
-
-		if len(parents) > 0:
-			if len(userPath) == 3:
-				(primary, processed, tier) = userPath
-			else:
-				(primary, processed, tier) = getPathComponents(parents.pop()[0])
-		elif len(userPath) > 0:
-			primary = userPath[0]
-			userPath = userPath[1:]
-
-		if len(userPath) == 2:
-			(processed, tier) = userPath
-		elif len(userPath) == 1:
-			(processed, tier) = (userPath[0], getTier())
-		elif len(userPath) == 0:
-			(processed, tier) = (rndProcName(), getTier())
-
-		if None in (primary, processed, tier):
-			raise RuntimeError("Invalid dataset name(s) supplied")
-		datasetPaths[dataKey] = "/%s/%s/%s" % (primary, processed, tier)
-	return datasetPaths
-
-
-# Currently depends on the whole dataset being registered at the DBS instance
-def registerParent(opts, parentPath):
-	# Check the existance of an dataset
-	def hasDataset(url, dataset):
-		try:
-			api = MakeDBSApi(url)
-			return len(api.listBlocks(dataset)) > 0
-		except DbsBadRequest:
-			return False
-
-	if not hasDataset(opts.dbsTarget, parentPath):
-		# Parent dataset has to be moved to target dbs instance
-		text = ' * Migrating dataset parents... %s (This can take a lot of time!)' % parentPath
-		log = utils.ActivityLog(text)
-		try:
-			quiet = gcSupport.Silencer()
-			for dbsSourceSelected in map(str.strip, opts.dbsSource.split(",")):
-				if hasDataset(dbsSourceSelected, parentPath):
-					DbsMigrateApi(dbsSourceSelected, opts.dbsTarget).migrateDataset(parentPath)
-			del quiet
-		except:
-			del quiet
-			raise RuntimeError("Could not migrate dataset to target!")
-		del log
-		print " * Migrating dataset parents - done"
-
-
-# Check whether to insert block into DBS or not
-def xmlChanged(xmlDumpInfo):
-	(datasetKey, blockKey, blockName, xmlDumpFile) = xmlDumpInfo
-	return True
-
-
-# Register datasets at dbs instance
-def registerDataset(opts, fqBlock, xmlFile, lfns):
-	print "   * %s" % fqBlock
-	log = utils.ActivityLog(" * Importing dataset file... %s" % os.path.basename(xmlFile))
-	fp = open(xmlFile)
-	try:
-		MakeDBSApi(opts.dbsTarget).insertDatasetContents(fp.read())
-		# Mark registered files
-		dbsLog = utils.PersistentDict(os.path.join(opts.workDir, 'dbs.log'), ' = ', False)
-		dbsLog.write(dict.fromkeys(lfns, int(time.time())))
-		del log
-		fp.close()
-		return True
-	except DbsException, e:
-		print "   ! Could not import %s" % fqBlock
-		errorMsg = e.getErrorMessage()
-		errorPath = xmlFile.replace(".xml", ".log")
-		for msg in errorMsg.splitlines():
-			if str(msg) == "":
-				break
-			print "   ! %s" % msg
-		print "   ! The complete error log can be found in:\n   ! %s" % errorPath
-		open(errorPath, "w").write(errorMsg)
-	fp.close()
-	return False
+	writer.newElement(nodeDBS, "SUCCESS")
+	return writer.finish()
 
 
 try:
@@ -621,8 +207,6 @@ try:
 
 	ogInst = optparse.OptionGroup(parser, "DBS instance handling", "")
 	ogInst.add_option("-t", "--target-instance", dest="dbsTarget",
-#		default="http://grid-dcms1.physik.rwth-aachen.de:8081/cms_dbs_prod_local/servlet/DBSServlet"
-#		default="https://ekpcms2.physik.uni-karlsruhe.de:8080/DBS/servlet/DBSServlet",
 		default="https://cmsdbsprod.cern.ch:8443/cms_dbs_ph_analysis_02_writer/servlet/DBSServlet",
 		help="Specify target dbs instance url")
 	ogInst.add_option("-s", "--source-instance", dest="dbsSource",
@@ -639,94 +223,8 @@ try:
 
 	(opts, args) = parser.parse_args()
 
-	# Get work directory, create dbs dump directory
-	if len(args) != 1:
-		utils.exitWithUsage(usage, "Work directory not specified!")
-	opts.workDir = os.path.abspath(os.path.normpath(args[0]))
-	opts.xmlPath = os.path.join(opts.workDir, "dbs")
-	if not os.path.exists(opts.xmlPath):
-		os.mkdir(opts.xmlPath)
-
-	# Lock file in case several instances of this program are running
-	mutex = gcSupport.FileMutex(os.path.join(opts.xmlPath, 'datasetDBSAdd.lock'))
-	# Read comprehensive output information
-	#  datasets = {datasetKey: {blockKey: [lfns]}}
-	#  metadata = {anyKey: {<metadata: events, size>}}
-	#  outputData = {lfn: {<file data: config hash, md5 hash, ...>}}
-	#  configData = {configHash: {<config data: config content, ...>}}
-	(tid, datasets, metadata, outputData, configData) = getOutputDatasets(opts)
-	if len(datasets) == 0:
-		raise RuntimeError("There aren't any datasets left to process")
-
-	# Display config hash information
-	if opts.display_cfg:
-		displayConfigInfos(opts.display_cfg, configData)
-		sys.exit(0)
-
-	# Determine dataset names
-	#  datasetPaths = {datasetKey: dbs path}
-	datasetPaths = determineDatasetPaths(opts, tid, datasets, outputData, configData)
-
-	# Display dataset information
-	if opts.display_data:
-		displayDatasetInfos(opts.display_data, datasets, metadata, datasetPaths)
-		sys.exit(0)
-
-	if len(datasetPaths) != len(map(lambda (x, y): (y, x), datasetPaths.items())):
-		raise RuntimeError("The same dataset path was assigned to several datasets.")
-
-	# Go over the selected datasets and write out the xml dump
-	#  xmlDumps = [(datasetKey, blockKey, blockName, xmlDumpFile)]
-	xmlDumps = createDbsBlockDumps(opts, datasets, metadata, datasetPaths, outputData, configData)
-
-	# Import any parent datasets needed by the new datasets
-	if opts.doImport and opts.importParents:
-		parents = {}
-		os.chdir(opts.xmlPath)
-		for dataKey in datasets:
-			for (blockKey, lfns) in datasets[dataKey].items():
-				parents.update(dict(getBlockParents(lfns, outputData)))
-		if len(parents) > 0:
-			print " * The following parents will be needed at the target dbs instance:"
-			print str.join("", map(lambda x: "   * %s\n" % x, parents.keys())),
-			if not (opts.batch or utils.getUserBool(" * Register needed parents?", True)):
-				sys.exit(0)
-			for parent in parents.keys():
-				registerParent(opts, parent)
-
-	# Insert blocks into DBS
-	if opts.doImport:
-		todoList = filter(xmlChanged, xmlDumps)
-		if len(todoList) == 0:
-			print " * Nothing to do..."
-			sys.exit(0)
-		print
-		print " => The following datasets will be imported into the target dbs instance:"
-		for dsKey in set(map(lambda x: x[0], todoList)):
-			print "     * \33[0;91m%s\33[0m" % datasetPaths[dsKey]
-			for (d1, blockKey, blockName, d3) in filter(lambda x: x[0] == dsKey, todoList):
-				try:
-					# Look into first file of block to determine annotation
-					cfgHash = outputData[datasets[dsKey][blockKey][0]][DBS.CONFIGHASH]
-					ann = getAnnotation(cfgHash, configData)
-					if ann:
-						print "       Annotation: %s" % ann
-				except:
-					pass
-				print "       Block \33[0;94m%s\33[0m" % blockName
-		if not (opts.batch or utils.getUserBool(" * Start dataset import?", True)):
-			sys.exit(0)
-		fail = False
-		for (dsKey, blockKey, blockName, xmlFile) in todoList:
-			fqBlock = "%s#%s" % (datasetPaths[dsKey], blockName)
-			if not registerDataset(opts, fqBlock, xmlFile, datasets[dsKey][blockKey]):
-				fail = True
-		if fail:
-			print " * Importing datasets - failed"
-		else:
-			print " * Importing datasets - done"
-	print
-	del mutex
+	allBlocks = DataProvider.loadState(Config(), '.', args[0]).getBlocks()
+	for block in allBlocks:
+		open(block[DataProvider.BlockName], 'w').write(getDBSXML(opts, block, allBlocks))
 except GCError:
 	sys.stderr.write(GCError.message)
-	del mutex

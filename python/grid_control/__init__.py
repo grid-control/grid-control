@@ -1,7 +1,7 @@
 from grid_control.exceptions	import *
 from grid_control.utils	import AbstractObject, QM
 
-from grid_control.config	import Config
+from grid_control.config	import Config, noDefault
 from grid_control.job	import Job
 from grid_control.job_selector	import JobSelector
 from grid_control.report	import Report

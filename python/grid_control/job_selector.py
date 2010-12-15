@@ -58,7 +58,7 @@ class QueueSelector(RegExSelector):
 class StateSelector(RegExSelector):
 	def __init__(self, arg, **kwargs):
 		predef = {'TODO': 'SUBMITTED,WAITING,READY,QUEUED', 'ALL': str.join(',', Job.states)}
-		RegExSelector.__init__(self, arg, None, lambda x: '^%s.*' % predef.get(x.upper(), x).upper())
+		RegExSelector.__init__(self, predef.get(arg.upper(), arg), None, lambda x: '^%s.*' % x.upper())
 		stateList = reduce(operator.add, map(lambda x: list(filter(x.match, Job.states)), self.rxList))
 		self.states = map(lambda x: list(Job.states).index(x), stateList)
 

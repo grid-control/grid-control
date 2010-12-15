@@ -1,5 +1,5 @@
 from python_compat import *
-from grid_control import utils, ConfigError
+from grid_control import QM, utils, ConfigError
 from provider_base import DataProvider
 
 # Provides information about a single file
@@ -43,7 +43,7 @@ class ListProvider(DataProvider):
 				return self._filter in name
 			return True
 
-		blockinfo = None
+		(blockinfo, commonMetadata) = (None, [])
 		for line in open(self._filename, 'rb'):
 			# Found start of block:
 			line = line.strip()
@@ -60,9 +60,9 @@ class ListProvider(DataProvider):
 					blockinfo[DataProvider.BlockName] = blockname[1]
 				commonprefix = self._forcePrefix
 			elif line != '':
-				tmp = map(str.strip, rsplit(line, '=', 1))
+				tmp = map(str.strip, QM('[' in line, line.split(' = ', 1), rsplit(line, '=', 1)))
 				if len(tmp) != 2:
-					raise ConfigError('Malformed dataset configuration line:\n%s' % line)
+					raise ConfigError('Malformed entry in dataset file:\n%s' % line)
 				key, value = tmp
 				if key.lower() == 'nickname':
 					blockinfo[DataProvider.Nickname] = value
@@ -72,6 +72,8 @@ class ListProvider(DataProvider):
 					blockinfo[DataProvider.NEvents] = int(value)
 				elif key.lower() == 'metadata':
 					blockinfo[DataProvider.Metadata] = eval(value)
+				elif key.lower() == 'metadata common':
+					commonMetadata = eval(value)
 				elif key.lower() == 'se list':
 					blockinfo[DataProvider.SEList] = utils.parseList(value)
 				elif key.lower() == 'prefix':
@@ -83,7 +85,7 @@ class ListProvider(DataProvider):
 					value = value.split(' ', 1)
 					data = { DataProvider.lfn: key, DataProvider.NEvents: int(value[0]) }
 					if len(value) > 1:
-						data[DataProvider.Metadata] = eval(value[1])
+						data[DataProvider.Metadata] = commonMetadata + eval(value[1])
 					blockinfo[DataProvider.FileList].append(data)
 		else:
 			if blockinfo and doFilter(blockinfo):

@@ -24,7 +24,7 @@ class Module(AbstractObject):
 		utils.vprint('Current task ID: %s' % self.taskID, -1, once = True)
 
 		# Set random seeds (args override config)
-		self.seeds = map(int, utils.parseList(config.get('jobs', 'seeds', '')))
+		self.seeds = map(int, config.getList('jobs', 'seeds', []))
 		if len(self.seeds) == 0:
 			# args specified => gen seeds
 			if 'seeds' in taskInfo:
@@ -45,12 +45,14 @@ class Module(AbstractObject):
 		}
 
 		# Storage setup - in case a directory is give, prepend dir specifier
-		self.sePaths = utils.parseList(config.get('storage', 'se path', '', noVar=True), None, onEmpty = [])
-		self.sePaths = map(lambda x: QM(x[0] == '/', 'dir:///%s' % x.lstrip('/'), x), self.sePaths)
+		normSEPaths = lambda seList: map(lambda x: QM(x[0] == '/', 'dir:///%s' % x.lstrip('/'), x), seList)
+		self.sePaths = normSEPaths(config.getList('storage', 'se path', [], noVar=True))
 		self.seMinSize = config.getInt('storage', 'se min size', -1)
 
+		self.seInputPaths = normSEPaths(config.getList('storage', 'se input path', self.sePaths, noVar=True))
 		self.seInputFiles = config.getList('storage', 'se input files', [], noVar=False)
 		self.seInputPattern = config.get('storage', 'se input pattern', '@X@', noVar=False)
+		self.seOutputPaths = normSEPaths(config.getList('storage', 'se output path', self.sePaths, noVar=True))
 		self.seOutputFiles = config.getList('storage', 'se output files', [], noVar=False)
 		self.seOutputPattern = config.get('storage', 'se output pattern', '@NICK@job_@MY_JOBID@_@X@', noVar=False)
 
@@ -89,8 +91,9 @@ class Module(AbstractObject):
 	def getTaskConfig(self):
 		taskConfig = {
 			# Storage element
-			'SE_PATH': str.join(' ', self.sePaths),
 			'SE_MINFILESIZE': self.seMinSize,
+			'SE_INPUT_PATH': str.join(' ', self.seInputPaths),
+			'SE_OUTPUT_PATH': str.join(' ', self.seOutputPaths),
 			'SE_OUTPUT_FILES': str.join(' ', self.seOutputFiles),
 			'SE_INPUT_FILES': str.join(' ', self.seInputFiles),
 			'SE_OUTPUT_PATTERN': self.seOutputPattern,

@@ -1,5 +1,5 @@
 from python_compat import *
-import os, time, random, utils
+import os, utils
 
 class Help(object):
 	def listVars(self, module):

@@ -48,7 +48,7 @@ class DBSApiv2(DataProvider):
 
 
 	def getBlocksInternal(self):
-		import urllib2
+		import urllib2, DBSAPI.dbsApi
 		api = createDBSAPI(self.url)
 		def getWithPhedex(listBlockInfo, seList):
 			# Get dataset list from PhEDex (concurrent with listFiles)

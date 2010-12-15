@@ -76,12 +76,12 @@ class Report:
 		for jobNum in self.jobs:
 			summary[self.jobDB.get(jobNum).state] += 1
 		makeSum = lambda *states: sum(map(lambda z: summary[z], states))
-		makePer = lambda *states: [makeSum(*states), round(makeSum(*states) / max(1, sum(summary)) * 100.0)]
+		makePer = lambda *states: [makeSum(*states), round(makeSum(*states) / len(self.jobDB) * 100.0)]
 
 		# Print report summary
 		self.printHeader('REPORT SUMMARY:')
 		utils.vprint('Total number of jobs:%9d     Successful jobs:%8d  %3d%%' % \
-			tuple([sum(summary)] + makePer(Job.SUCCESS)), -1)
+			tuple([len(self.jobDB)] + makePer(Job.SUCCESS)), -1)
 		utils.vprint('Jobs assigned to WMS:%9d        Failing jobs:%8d  %3d%%' % \
 			tuple([makeSum(Job.SUBMITTED, Job.WAITING, Job.READY, Job.QUEUED, Job.RUNNING)] +
 			makePer(Job.ABORTED, Job.CANCELLED, Job.FAILED)), -1)
@@ -126,12 +126,9 @@ class Report:
 		def getDest(dest):
 			if dest == 'N/A':
 				return ('N/A', '', '')
-			host, queue = rsplit(dest, '/', 1)
-			host = host.split(':')[0]
+			host, port, queue = utils.optSplit(dest, ':/')
 			domain = str.join('.', host.split('.')[1:])
-			if domain == '':
-				domain = 'localhost'
-			return (domain, host, queue)
+			return (QM(domain, domain, 'localhost'), host, queue)
 			# Example: (gridka.de, wn1.gridka.de, job-queue-long)
 
 		# init statinfo dictionary

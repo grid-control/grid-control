@@ -1,5 +1,5 @@
 import os, gzip, cStringIO, copy, random
-from grid_control import utils, AbstractObject, AbstractError, ConfigError
+from grid_control import utils, AbstractObject, AbstractError, ConfigError, noDefault
 
 class NickNameProducer(AbstractObject):
 	def __init__(self, config):
@@ -32,11 +32,11 @@ class DataProvider(AbstractObject):
 		self.limitEvents = self.setup(config.getInt, 'dataset', 'limit events', -1)
 
 
-	def setup(self, func, section, item, default = None, **kwargs):
+	def setup(self, func, section, item, default = noDefault, **kwargs):
 		value = func(section, item, default, **kwargs)
 		if self._datasetNick:
 			value = func('dataset %s' % self._datasetNick, item, value, **kwargs)
-		return value
+		return copy.deepcopy(value)
 
 
 	# Parse dataset format [NICK : [PROVIDER : [(/)*]]] DATASET
@@ -167,22 +167,32 @@ class DataProvider(AbstractObject):
 			writer.write('events = %d\n' % block[DataProvider.NEvents])
 			if block[DataProvider.SEList] != None:
 				writer.write('se list = %s\n' % str.join(',', block[DataProvider.SEList]))
-			writeMetadata = (DataProvider.Metadata in block) and not stripMetadata
-			if writeMetadata:
-				writer.write('metadata = %s\n' % block[DataProvider.Metadata])
-
-			commonprefix = os.path.commonprefix(map(lambda x: x[DataProvider.lfn], block[DataProvider.FileList]))
-			commonprefix = str.join('/', commonprefix.split('/')[:-1])
-			if len(commonprefix) > 6:
-				writer.write('prefix = %s\n' % commonprefix)
-				formatter = lambda x: x.replace(commonprefix + '/', '')
+			cPrefix = os.path.commonprefix(map(lambda x: x[DataProvider.lfn], block[DataProvider.FileList]))
+			cPrefix = str.join('/', cPrefix.split('/')[:-1])
+			if len(cPrefix) > 6:
+				writer.write('prefix = %s\n' % cPrefix)
+				formatter = lambda x: x.replace(cPrefix + '/', '')
 			else:
 				formatter = lambda x: x
 
+			writeMetadata = (DataProvider.Metadata in block) and not stripMetadata
+			if writeMetadata:
+				buildMetadata = lambda v, fun: zip(block[DataProvider.Metadata], map(fun, v[DataProvider.Metadata]))
+				cMetadataSet = {} # Using dict to allow setdefault usage and avoid intersection bootstrap issue
+				for mSet in map(lambda fi: set(buildMetadata(fi, repr)), block[DataProvider.FileList]):
+					cMetadataSet.setdefault(None, set(mSet)).intersection_update(mSet)
+				cMetadataKeys = map(lambda (k, v): k, cMetadataSet.get(None, set()))
+				filterC = lambda inc: filter(lambda k: (k in cMetadataKeys) == inc, sorted(block[DataProvider.Metadata]))
+				writer.write('metadata = %s\n' % (filterC(True) + filterC(False)))
+				if cMetadataKeys:
+					cMetadataDict = dict(buildMetadata(block[DataProvider.FileList][0], lambda x: x))
+					writer.write('metadata common = %s\n' % map(lambda k: cMetadataDict[k], filterC(True)))
+					writeMetadata = len(cMetadataKeys) != len(block[DataProvider.Metadata])
 			for fi in block[DataProvider.FileList]:
 				data = [str(fi[DataProvider.NEvents])]
 				if writeMetadata:
-					data.append(repr(fi[DataProvider.Metadata]))
+					fileMetadata = dict(buildMetadata(fi, lambda x: x))
+					data.append(repr(map(lambda k: fileMetadata[k], filterC(False))))
 				writer.write('%s = %s\n' % (formatter(fi[DataProvider.lfn]), str.join(' ', data)))
 			writer.write('\n')
 		stream.write(writer.getvalue())
