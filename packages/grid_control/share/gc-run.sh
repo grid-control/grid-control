@@ -123,7 +123,7 @@ fi
 if [ -n "$SE_INPUT_FILES" ]; then
 	echo "==========================="
 	echo
-	url_copy "$SE_PATH" "file:///$MY_SCRATCH" "$SE_INPUT_FILES"
+	url_copy "$SE_INPUT_PATH" "file:///$MY_SCRATCH" "$SE_INPUT_FILES"
 	echo
 fi
 
@@ -138,10 +138,12 @@ for SFILE in $SUBST_FILES "_config.sh"; do
 	[ -f "$SFILE.tmp" ] && rm "$SFILE.tmp"
 done
 
-SAVED_SE_PATH="$SE_PATH"
+SAVED_SE_INPUT_PATH="$SE_INPUT_PATH"
+SAVED_SE_OUTPUT_PATH="$SE_OUTPUT_PATH"
 checkfile "$MY_SCRATCH/_config.sh"
 source "$MY_SCRATCH/_config.sh"
-export SE_PATH="$SAVED_SE_PATH"
+export SE_INPUT_PATH="$SAVED_SE_INPUT_PATH"
+export SE_OUTPUT_PATH="$SAVED_SE_OUTPUT_PATH"
 
 echo
 echo "==========================="
@@ -193,10 +195,10 @@ if [ $CODE -eq 0 -a -n "$SE_OUTPUT_FILES" ]; then
 	echo "==========================="
 	echo
 	export TRANSFERLOG="$MY_SCRATCH/SE.log"
-	url_copy "file:///$MY_SCRATCH" "$SE_PATH" "$SE_OUTPUT_FILES"
+	url_copy "file:///$MY_SCRATCH" "$SE_OUTPUT_PATH" "$SE_OUTPUT_FILES"
 	(
 	[ -f "$TRANSFERLOG" ] && cat "$TRANSFERLOG" | while read NAME_LOCAL NAME_DEST; do
-		echo "FILE$IDX=\"$(cd "$MY_SCRATCH"; md5sum "$NAME_LOCAL")  $NAME_DEST  $SE_PATH\""
+		echo "FILE$IDX=\"$(cd "$MY_SCRATCH"; md5sum "$NAME_LOCAL")  $NAME_DEST  $SE_OUTPUT_PATH\""
 		IDX=$[IDX + 1]
 	done
 	) > "$LOG_MD5"
