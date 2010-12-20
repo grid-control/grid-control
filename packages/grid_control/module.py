@@ -38,8 +38,8 @@ class Module(AbstractObject):
 
 		self.taskVariables = {
 			# Space limits
-			'SCRATCH_UL' : config.getInt('storage', 'scratch space used', 5000),
-			'SCRATCH_LL' : config.getInt('storage', 'scratch space left', 1),
+			'SCRATCH_UL': config.getInt('storage', 'scratch space used', 5000),
+			'SCRATCH_LL': config.getInt('storage', 'scratch space left', 1),
 			'LANDINGZONE_UL': config.getInt('storage', 'landing zone space used', 100),
 			'LANDINGZONE_LL': config.getInt('storage', 'landing zone space left', 1),
 		}

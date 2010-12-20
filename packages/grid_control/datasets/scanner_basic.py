@@ -1,5 +1,6 @@
 import os, sys
 from grid_control import QM, utils, ConfigError, storage, JobSelector, AbstractObject, Config, Module, JobDB, JobSelector, Job, RethrowError
+from grid_control.datasets import DataProvider
 from python_compat import *
 
 def splitParse(opt):
@@ -53,10 +54,14 @@ class OutputDirsFromWork(InfoScanner):
 		self.extOutputDir = os.path.join(self.extWorkDir, 'output')
 
 	def getEntries(self, path, metadata, events, seList, objStore):
-		for dirName in filter(lambda fn: fn.startswith('job_'), sorted(os.listdir(self.extOutputDir))):
+		log = None
+		allDirs = filter(lambda fn: fn.startswith('job_'), os.listdir(self.extOutputDir))
+		for idx, dirName in enumerate(allDirs):
 			try:
 				metadata['GC_JOBNUM'] = int(dirName.split('_')[1])
 				objStore['GC_WORKDIR'] = self.extWorkDir
+				del log
+				log = utils.ActivityLog('Reading job logs - [%d / %d]' % (idx, len(allDirs)))
 				yield (os.path.join(self.extOutputDir, dirName), metadata, events, seList, objStore)
 			except:
 				pass
@@ -77,6 +82,8 @@ class MetadataFromModule(InfoScanner):
 			tmp = objStore['GC_MODULE'].getTaskConfig()
 			if 'GC_JOBNUM' in metadata:
 				tmp.update(objStore['GC_MODULE'].getJobConfig(metadata['GC_JOBNUM']))
+			for (newKey, oldKey) in objStore['GC_MODULE'].getVarMapping().items():
+				tmp[newKey] = tmp.get(oldKey)
 			metadata.update(utils.filterDict(tmp, kF = lambda k: k not in self.ignoreVars))
 		yield (path, metadata, events, seList, objStore)
 
@@ -87,8 +94,12 @@ class FilesFromLS(InfoScanner):
 
 	def getEntries(self, path, metadata, events, seList, objStore):
 		metadata['GC_SOURCE_DIR'] = self.path
+		(log, counter) = (None, 0)
 		for fn in storage.se_ls(self.path).iter():
+			del log
+			log = utils.ActivityLog('Reading source directory - [%d]' % counter)
 			yield (os.path.join(self.path, fn.strip()), metadata, events, seList, objStore)
+			counter += 1
 
 
 class FilesFromJobInfo(InfoScanner):
@@ -138,6 +149,37 @@ class MatchDelimeter(InfoScanner):
 			metadata['DELIMETER_DS'] = getVar(splitParse(self.delimDS))
 		if self.delimB:
 			metadata['DELIMETER_B'] = getVar(splitParse(self.delimB))
+		yield (path, metadata, events, seList, objStore)
+
+
+class ParentLookup(InfoScanner):
+	def __init__(self, setup, config, section):
+		self.parentKeys = setup(config.getList, section, 'parent keys', [])
+		self.looseMatch = setup(config.getInt, section, 'parent match level', 1)
+		self.source = setup(config.get, section, 'parent source', '')
+		self.merge = setup(config.getBool, section, 'merge parents', False)
+		self.lfnMap = {}
+
+	def getGuards(self):
+		return ([], QM(self.merge, [], ['PARENT_PATH']))
+
+	def lfnTrans(self, lfn):
+		if lfn and self.looseMatch:
+			trunkPath = lambda x, y: (lambda s: (s[0], os.path.join(x[1], s[1])))(os.path.split(x[0]))
+			return reduce(trunkPath, range(self.looseMatch), (lfn, ''))[1]
+		return lfn
+
+	def getEntries(self, path, metadata, events, seList, objStore):
+		datacachePath = os.path.join(objStore.get('GC_WORKDIR', ''), 'datacache.dbs')
+		source = QM((self.source == '') and os.path.exists(datacachePath), datacachePath, self.source)
+		if source and (source not in self.lfnMap):
+			pSource = DataProvider.create(Config(), None, self.source, 'ListProvider')
+			for (n, fl) in map(lambda b: (b[DataProvider.Dataset], b[DataProvider.FileList]), pSource.getBlocks()):
+				self.lfnMap.setdefault(source, {}).update(dict(map(lambda fi: (self.lfnTrans(fi[DataProvider.lfn]), n), fl)))
+		pList = set()
+		for key in filter(lambda k: k in metadata, self.parentKeys):
+			pList.update(map(lambda pPath: self.lfnMap.get(source, {}).get(self.lfnTrans(pPath)), metadata[key]))
+		metadata['PARENT_PATH'] = filter(lambda x: x, pList)
 		yield (path, metadata, events, seList, objStore)
 
 

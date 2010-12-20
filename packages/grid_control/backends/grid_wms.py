@@ -179,7 +179,7 @@ class GridWMS(WMS):
 
 
 	def _parseStatusX(self, lines):
-		adder = lambda a,b: utils.QM('=====' not in b and b != '\n', a+b, a)
+		adder = lambda a, b: utils.QM('=====' not in b and b != '\n', a + b, a)
 		remap = { 'destination': 'dest', 'status reason': 'reason',
 			'status info for the job': 'id', 'current status': 'status',
 			'submitted': 'timestamp', 'reached': 'timestamp', 'exit code': 'gridexit'  }

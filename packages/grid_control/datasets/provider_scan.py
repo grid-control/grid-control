@@ -7,12 +7,12 @@ from scanner_basic import *
 class ScanProviderBase(DataProvider):
 	def __init__(self, config, section, datasetExpr, datasetNick, datasetID = 0):
 		DataProvider.__init__(self, config, section, '', datasetNick, datasetID)
-		self.nameDS = self.setup(config.get, section, 'dataset name pattern', '', noVar = False)
-		self.nameB = self.setup(config.get, section, 'block name pattern', '', noVar = False)
-		self.kUserDS = self.setup(config.getList, section, 'dataset hash keys', [])
-		self.kUserB = self.setup(config.getList, section, 'block hash keys', [])
-		self.kGuardDS = self.setup(config.getList, section, 'dataset guard override', [])
-		self.kGuardB = self.setup(config.getList, section, 'block guard override', [])
+		DSB = lambda cFun, n, *args, **kargs: (self.setup(cFun, section, 'dataset %s' % n, *args, **kargs),
+			self.setup(cFun, section, 'block %s' % n, *args, **kargs))
+		(self.nameDS, self.nameB) = DSB(config.get, 'name pattern', '', noVar = False)
+		(self.kUserDS, self.kUserB) = DSB(config.getList, 'hash keys', [])
+		(self.kGuardDS, self.kGuardB) = DSB(config.getList, 'guard override', [])
+		self.kSelectDS = self.setup(config.getList, section, 'dataset key select', [])
 		scanList = self.setup(config.getList, section, 'scanner', datasetExpr)
 		self.scanner = map(lambda cls: InfoScanner.open(cls, self.setup, config, section), scanList)
 
@@ -33,14 +33,12 @@ class ScanProviderBase(DataProvider):
 
 
 	def generateDatasetName(self, key, data):
-		data['DS_KEY'] = key
 		if 'SE_OUTPUT_BASE' in data:
 			return utils.replaceDict(QM(self.nameDS, self.nameDS, '/PRIVATE/@SE_OUTPUT_BASE@'), data)
 		return utils.replaceDict(QM(self.nameDS, self.nameDS, '/PRIVATE/Dataset_%s' % key), data)
 
 
 	def generateBlockName(self, key, data):
-		data['BLOCK_KEY'] = key
 		return utils.replaceDict(QM(self.nameB, self.nameB, key[:8]), data)
 
 
@@ -51,20 +49,27 @@ class ScanProviderBase(DataProvider):
 			return kUser + QM(kGuard, kGuard, reduce(operator.add, map(lambda x: x.getGuards()[gIdx], self.scanner)))
 		keysDS = getActiveKeys(self.kUserDS, self.kGuardDS, 0)
 		keysB = getActiveKeys(self.kUserB, self.kGuardB, 1)
+		def intersectDict(dictA, dictB):
+			for keyA in dictA.keys():
+				if (keyA in dictB) and (dictA[keyA] != dictB[keyA]):
+					dictA.pop(keyA)
 		for fileInfo in self.collectFiles():
 			hashDS = self.generateKey(keysDS, None, *fileInfo)
 			hashB = self.generateKey(keysB, hashDS, *fileInfo)
+			if self.kSelectDS and (hashDS not in self.kSelectDS):
+				print "AAAAH", self.kSelectDS
+				continue
+			fileInfo[1].update({'DS_KEY': hashDS, 'BLOCK_KEY': hashB})
 			protoBlocks.setdefault(hashDS, {}).setdefault(hashB, []).append(fileInfo)
-			infoSet = set(utils.filterDict(fileInfo[1], vF = lambda v: isinstance(v, str)).items())
-			commonDS.setdefault(hashDS, set(infoSet)).intersection_update(infoSet)
-			commonB.setdefault(hashDS, {}).setdefault(hashB, set(infoSet)).intersection_update(infoSet)
+			intersectDict(commonDS.setdefault(hashDS, dict(fileInfo[1])), fileInfo[1])
+			intersectDict(commonB.setdefault(hashDS, {}).setdefault(hashB, dict(fileInfo[1])), fileInfo[1])
 
 		# Generate names for blocks/datasets using common metadata
 		(hashNameDictDS, hashNameDictB) = ({}, {})
 		for hashDS in protoBlocks:
-			hashNameDictDS[hashDS] = self.generateDatasetName(hashDS, dict(commonDS[hashDS]))
+			hashNameDictDS[hashDS] = self.generateDatasetName(hashDS, commonDS[hashDS])
 			for hashB in protoBlocks[hashDS]:
-				hashNameDictB[hashB] = (hashDS, self.generateBlockName(hashB, dict(commonB[hashDS][hashB])))
+				hashNameDictB[hashB] = (hashDS, self.generateBlockName(hashB, commonB[hashDS][hashB]))
 
 		# Find name <-> key collisions
 		def findCollision(tName, nameDict, varDict, hashKeys, keyFmt = lambda x: x):
@@ -78,7 +83,7 @@ class ScanProviderBase(DataProvider):
 					for key in nameDict:
 						if nameDict[key] == name:
 							utils.eprint('\t%s hash %s using:' % (tName, keyFmt(key)))
-							for x in filter(lambda (k,v): k in hashKeys, varDict[keyFmt(key)]):
+							for x in filter(lambda (k, v): k in hashKeys, varDict[keyFmt(key)]):
 								utils.eprint('\t\t%s = %s' % x)
 					if ask and not utils.getUserBool('Do you want to continue?', False):
 						exit(0)
@@ -128,7 +133,9 @@ class GCProvider(ScanProviderBase):
 			datasetExpr = os.path.join(datasetExpr, 'work.conf')
 		else:
 			GCProvider.stageDir[None] = ['OutputDirsFromConfig', 'MetadataFromModule']
+			datasetExpr, selector = utils.optSplit(datasetExpr, '%')
 			config.set(section, 'source config', datasetExpr)
+			config.set(section, 'source job selector', selector)
 		extConfig = Config(datasetExpr)
 		extModule = extConfig.get('global', 'module')
 		if 'ParaMod' in extModule:

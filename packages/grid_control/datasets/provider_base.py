@@ -143,12 +143,12 @@ class DataProvider(AbstractObject):
 	# Print information about datasets
 	def printDataset(self, level = 2):
 		utils.vprint('Provided datasets:', level)
-		idDict = {DataProvider.DatasetID: 0, DataProvider.Dataset: None, DataProvider.Nickname: ''}
+		idList = [(DataProvider.DatasetID, 0), (DataProvider.Dataset, None), (DataProvider.Nickname, '""')]
 		for block in self.getBlocks():
-			utils.vprint('ID / Dataset / Nick : %s / %s / %s' % tuple(map(lambda (k,d): block.get(k, d), idDict.items())), level)
+			utils.vprint('ID - Dataset - Nick : %s - %s - %s' % tuple(map(lambda (k, d): block.get(k, d), idList)), level)
 			utils.vprint('BlockName : %s' % block[DataProvider.BlockName], level)
 			utils.vprint('#Events   : %s' % block[DataProvider.NEvents], level)
-			utils.vprint('SE List   : %s' % block[DataProvider.SEList], level)
+			utils.vprint('SE List   : %s' % str.join(', ', block[DataProvider.SEList]), level)
 			utils.vprint('Files     : ', level)
 			for fi in block[DataProvider.FileList]:
 				utils.vprint('%s (Events: %d)' % (fi[DataProvider.lfn], fi[DataProvider.NEvents]), level)

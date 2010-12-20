@@ -1,4 +1,4 @@
-import os, re, tarfile, xml.dom.minidom
+import os, re, tarfile, operator, xml.dom.minidom
 from grid_control import QM, RethrowError
 from grid_control.datasets import InfoScanner
 
@@ -6,7 +6,6 @@ class ObjectsFromCMSSW(InfoScanner):
 	def __init__(self, setup, config, section):
 		self.importParents = setup(config.getBool, section, 'include parent infos', False)
 		self.mergeConfigs = setup(config.getBool, section, 'merge config infos', True)
-		self.annRegex = re.compile('.*annotation.*=.*cms.untracked.string.*\((.*)\)')
 		self.cfgStore = {}
 
 	def getEntries(self, path, metadata, events, seList, objStore):
@@ -32,14 +31,18 @@ class ObjectsFromCMSSW(InfoScanner):
 			try:
 				cfgContent = tar.extractfile('%s/config' % cfg).read()
 				cfgHash = tar.extractfile('%s/hash' % cfg).readlines()[-1].strip()
+				metadata.setdefault('CMSSW_CONFIG_JOBHASH', []).append(cfgHash)
 				tmpCfg[cfg] = {'CMSSW_CONFIG_FILE': cfg, 'CMSSW_CONFIG_HASH': cfgHash, 'CMSSW_VERSION': cmsswVersion}
 				tmpCfg[cfg]['CMSSW_CONFIG_CONTENT'] = self.cfgStore.setdefault(QM(self.mergeConfigs, cfgHash, cfg), cfgContent)
 				# Get annotation from config content
-				try:
-					tmp = self.annRegex.search(cfgContent.group(1).strip('\"\' '))
-					tmpCfg[cfg]['CMSSW_ANNOTATION'] = QM(tmp, tmp, None)
-				except:
-					tmpCfg[cfg]['CMSSW_ANNOTATION'] = None
+				def searchConfigFile(key, regex, default):
+					try:
+						tmp = re.compile(regex).search(cfgContent.group(1).strip('\"\' '))
+						tmpCfg[cfg][key] = QM(tmp, tmp, default)
+					except:
+						tmpCfg[cfg][key] = default
+				searchConfigFile('CMSSW_ANNOTATION', '.*annotation.*=.*cms.untracked.string.*\((.*)\)', None)
+				searchConfigFile('CMSSW_DATATIER', '.*dataTier.*=.*cms.untracked.string.*\((.*)\)', 'USER')
 				cfgReport = xml.dom.minidom.parseString(tar.extractfile('%s/report.xml' % cfg).read())
 				evRead = sum(map(lambda x: int(readTag(x, 'EventsRead')), cfgReport.getElementsByTagName('InputFile')))
 			except:
@@ -53,10 +56,10 @@ class ObjectsFromCMSSW(InfoScanner):
 				if self.importParents:
 					try:
 						inputs = outputFile.getElementsByTagName('Inputs')[0].getElementsByTagName('Input')
-						tmpOut['CMSSW_PARENT_PFN'] = map(lambda x: readTag(x, 'PFN'), inputs)
-						tmpOut['CMSSW_PARENT_LFN'] = map(lambda x: readTag(x, 'LFN'), inputs)
 					except:
-						raise RethrowError('Could not parse input information about %s in job %d!' % (outputFile, jobNum))
+						inputs = []
+					tmpOut['CMSSW_PARENT_PFN'] = map(lambda x: readTag(x, 'PFN'), inputs)
+					tmpOut['CMSSW_PARENT_LFN'] = map(lambda x: readTag(x, 'LFN'), inputs)
 
 				# Read lumisection infos
 				lumis = []
