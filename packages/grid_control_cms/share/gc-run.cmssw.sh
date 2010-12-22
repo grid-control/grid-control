@@ -115,7 +115,7 @@ if [ -n "$CMSSW_CONFIG" ]; then
 				echo
 				echo "---------------------------"
 				echo
-			) 2>&1 | gzip -9 > "$CFG_NAME.log.gz"
+			) 2>&1 | gzip -9 > "$CFG_NAME.rawlog.gz"
 			[ -f "$MY_LANDINGZONE/exitcode.txt" ] && CODE=$(< "$MY_LANDINGZONE/exitcode.txt") && rm -f "$MY_LANDINGZONE/exitcode.txt"
 		else 
 			cmsRun -j "$DBSDIR/report.xml" -e "$CFG_NAME" $@
@@ -126,8 +126,8 @@ if [ -n "$CMSSW_CONFIG" ]; then
 		echo
 		[ "$CODE" != "0" ] && break
 	done
-	echo -e "CMSSW output on stdout and stderr:\n" | gzip > "00000.log.gz"
-	[ "$GZIP_OUT" = "yes" ] && zcat -f *.log.gz | gzip -9 > "cmssw.log.gz"
+	echo -e "CMSSW output on stdout and stderr:\n" | gzip > "00000.rawlog.gz"
+	[ "$GZIP_OUT" = "yes" ] && zcat -f *.rawlog.gz | gzip -9 > "cmssw.log.gz"
 
 	# Calculate hash of output files for DBS
 	echo "Calculating output file hash..."

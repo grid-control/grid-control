@@ -20,7 +20,7 @@ class JobDB:
 		(self._jobs, log, maxJobs) = ({}, None, len(candidates))
 		for idx, jobFile in enumerate(candidates):
 			if (jobLimit >= 0) and (len(self._jobs) >= jobLimit):
-				utils.eprint('Stopped reading job infos! The number of job infos in the work directory (%d)' % len(self._jobs), newLine = False)
+				utils.eprint('Stopped reading job infos! The number of job infos in the work directory (%d)' % len(self._jobs), newline = False)
 				utils.eprint('is larger than the maximum number of jobs (%d)' % jobLimit)
 				break
 			try: # 2xsplit is faster than regex

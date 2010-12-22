@@ -150,7 +150,7 @@ class Config:
 				try:
 					oldValue = self.parseLine(saveConfig, section, key)
 				except:
-					oldValue = default
+					oldValue = QM((str(section), str(key)) in self.protoSet, value, default)
 				if (str(value).strip() != str(oldValue).strip()) and not volatile:
 					if not flag:
 						utils.eprint('\nFound some changes in the config file, which will only apply')

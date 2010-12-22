@@ -17,6 +17,11 @@ class SimpleNickNameProducer(NickNameProducer):
 		return oldnick
 
 
+class InlineNickNameProducer(NickNameProducer):
+	def __init__(self, config):
+		self.getName = eval('lambda oldnick, dataset: %s' % config.get('dataset', 'nickname expr', '""'))
+
+
 class DataProvider(AbstractObject):
 	# To uncover errors, the enums of DataProvider / DataSplitter do *NOT* match
 	dataInfos = ['NEvents', 'BlockName', 'Dataset', 'SEList', 'lfn', 'FileList', 'Nickname', 'DatasetID', 'Metadata']

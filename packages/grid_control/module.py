@@ -64,7 +64,7 @@ class Module(AbstractObject):
 		self.constants = {}
 		if config.parser.has_section('constants'):
 			for var in config.parser.options('constants'):
-				self.constants[var] = config.get('constants', var, '').strip()
+				self.constants[var.upper()] = config.get('constants', var, '').strip()
 		for var in map(str.strip, config.getList(self.__class__.__name__, 'constants', [])):
 			self.constants[var] = config.get(self.__class__.__name__, var, '').strip()
 		self.substFiles = config.getList(self.__class__.__name__, 'subst files', [])
