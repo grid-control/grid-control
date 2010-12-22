@@ -162,10 +162,6 @@ class LocalWMS(WMS):
 				if os.path.join(path, file) in outFiles:
 					continue
 				utils.removeFiles([os.path.join(path, file)])
-				try:
-					os.unlink(os.path.join(path, file))
-				except:
-					pass
 			yield (jobNum, path)
 		del activity
 

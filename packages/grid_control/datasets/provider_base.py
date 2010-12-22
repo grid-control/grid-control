@@ -1,5 +1,5 @@
 import os, gzip, cStringIO, copy, random
-from grid_control import utils, AbstractObject, AbstractError, ConfigError, noDefault
+from grid_control import QM, utils, AbstractObject, AbstractError, ConfigError, noDefault
 
 class NickNameProducer(AbstractObject):
 	def __init__(self, config):
@@ -35,6 +35,8 @@ class DataProvider(AbstractObject):
 		self.emptyBlock = self.setup(config.getBool, 'dataset', 'remove empty blocks', True)
 		self.emptyFiles = self.setup(config.getBool, 'dataset', 'remove empty files', True)
 		self.limitEvents = self.setup(config.getInt, 'dataset', 'limit events', -1)
+		nickProducer = self.setup(config.get, 'dataset', 'nickname source', 'SimpleNickNameProducer')
+		self.nProd = NickNameProducer.open(nickProducer, config)
 
 
 	def setup(self, func, section, item, default = noDefault, **kwargs):
@@ -62,6 +64,7 @@ class DataProvider(AbstractObject):
 
 		nickProducer = config.get('dataset', 'nickname source', 'SimpleNickNameProducer')
 		nickname = NickNameProducer.open(nickProducer, config).getName(nickname, dataset)
+		nickname = QM('*' in dataset, '---', nickname)
 		return (nickname, provider, dataset)
 	parseDatasetExpr = staticmethod(parseDatasetExpr)
 
@@ -97,6 +100,7 @@ class DataProvider(AbstractObject):
 					block[DataProvider.DatasetID] = self._datasetID
 				if self._datasetNick:
 					block[DataProvider.Nickname] = self._datasetNick
+				block[DataProvider.Nickname] = self.nProd.getName(block[DataProvider.Nickname].strip('-'), block[DataProvider.Dataset])
 
 				events = 0
 				for fileInfo in block[DataProvider.FileList]:

@@ -117,6 +117,8 @@ class Config:
 			(default, empty) = ('', None)
 		elif default != noDefault:
 			default = str.join(QM(delim, delim, ' '), map(str, default))
+		if empty != None:
+			empty = list(empty)
 		return utils.parseList(self.get(section, item, default, volatile, noVar), delim, onEmpty = empty)
 
 

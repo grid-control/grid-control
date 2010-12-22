@@ -18,7 +18,7 @@ class Broker(AbstractObject):
 			if result != None:
 				return (result, msgOK % len(result))
 			return (result, msgFail)
-		(msgQ, msgN) = ('', '')
+		(msgQ, msgN) = ('an unknown number of', 'an unknown number of')
 		if doQueues:
 			(self.queues, msgQ) = doDiscover(self.bic.getQueues)
 		if doNodes:
