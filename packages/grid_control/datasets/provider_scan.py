@@ -46,7 +46,7 @@ class ScanProviderBase(DataProvider):
 		# Split files into blocks/datasets via key functions and determine metadata intersection
 		(protoBlocks, commonDS, commonB) = ({}, {}, {})
 		def getActiveKeys(kUser, kGuard, gIdx):
-			return kUser + QM(kGuard, kGuard, reduce(operator.add, map(lambda x: x.getGuards()[gIdx], self.scanner)))
+			return kUser + QM(kGuard, kGuard, utils.listMapReduce(lambda x: x.getGuards()[gIdx], self.scanner))
 		keysDS = getActiveKeys(self.kUserDS, self.kGuardDS, 0)
 		keysB = getActiveKeys(self.kUserB, self.kGuardB, 1)
 		def intersectDict(dictA, dictB):
@@ -57,7 +57,6 @@ class ScanProviderBase(DataProvider):
 			hashDS = self.generateKey(keysDS, None, *fileInfo)
 			hashB = self.generateKey(keysB, hashDS, *fileInfo)
 			if self.kSelectDS and (hashDS not in self.kSelectDS):
-				print "AAAAH", self.kSelectDS
 				continue
 			fileInfo[1].update({'DS_KEY': hashDS, 'BLOCK_KEY': hashB})
 			protoBlocks.setdefault(hashDS, {}).setdefault(hashB, []).append(fileInfo)

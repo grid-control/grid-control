@@ -320,8 +320,8 @@ class GridWMS(WMS):
 			else:
 				proc.logError(self.errorLog, log = log)
 			utils.eprint('Trying to recover from error ...')
-			for dir in os.listdir(basePath):
-				yield (None, os.path.join(basePath, dir))
+			for dirName in os.listdir(basePath):
+				yield (None, os.path.join(basePath, dirName))
 
 		# return unretrievable jobs
 		for jobNum in todo:

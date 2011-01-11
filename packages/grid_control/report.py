@@ -140,7 +140,7 @@ class Report:
 
 		statinfo = initdict()
 		destinations = map(lambda id: self.jobDB.get(id).history.values(), self.jobs)
-		for dest in map(getDest, reduce(lambda x, y: x+y, destinations, [])):
+		for dest in utils.listMapReduce(getDest, destinations):
 			tmp = statinfo.setdefault(dest[0], initdict()).setdefault(dest[1], initdict())
 			tmp.setdefault(dest[2], initdict())
 

@@ -9,8 +9,9 @@ class EventBoundarySplitter(DataSplitter):
 		self.eventsPerJob = self.setup(config.getInt, 'events per job')
 
 
-	def neededVars(self):
+	def neededVars(cls):
 		return [DataSplitter.FileList, DataSplitter.Skipped, DataSplitter.NEvents]
+	neededVars = classmethod(neededVars)
 
 
 	def _splitJobs(self, fileList, firstEvent):

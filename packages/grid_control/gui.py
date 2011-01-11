@@ -78,8 +78,7 @@ class GUIStream:
 		match = self.regex.search(data[idx:])
 		while match:
 			self.screen.addstr(data[idx:idx + match.start()])
-			self.screen.addstr(match.group(0),
-					self.attributes(data[idx:], match.start()))
+			self.screen.addstr(match.group(0), self.attributes(data[idx:], match.start()))
 			idx += match.end()
 			match = self.regex.search(data[idx:])
 		self.screen.addstr(data[idx:])

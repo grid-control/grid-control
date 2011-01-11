@@ -26,9 +26,8 @@ class DashBoard(Monitoring):
 
 	def publish(self, jobObj, jobNum, taskId, usermsg):
 		dashId = '%s_%s' % (jobNum, jobObj.wmsId)
-		msg = utils.mergeDicts([{ 'taskId': taskId, 'jobId': dashId, 'sid': dashId }] + usermsg)
-		msg = dict(filter(lambda (x, y): y != None, msg.items()))
-		DashboardAPI(taskId, dashId).publish(**msg)
+		msg = utils.mergeDicts([{'taskId': taskId, 'jobId': dashId, 'sid': dashId}] + usermsg)
+		DashboardAPI(taskId, dashId).publish(**utils.filterDict(msg, vF = lambda v: v != None))
 
 
 	# Called on job submission

@@ -284,6 +284,9 @@ strGuid = lambda guid: '%s-%s-%s-%s-%s' % (guid[:8], guid[8:12], guid[12:16], gu
 
 ################################################################
 
+listMapReduce = lambda fun, lst, start = []: reduce(operator.add, map(fun, lst), start)
+
+
 def checkVar(value, message, check = True):
 	if check and ((str(value).count('@') >= 2) or (str(value).count('__') >= 2)):
 		raise ConfigError(message)
@@ -475,7 +478,7 @@ class AbstractObject:
 		cls.modPaths = path + cls.modPaths + map(splitUpFun, range(cls.__module__.count(".") + 1))
 	dynamicLoaderPath = classmethod(dynamicLoaderPath)
 
-	def open(cls, name, *args, **kwargs):
+	def getClass(cls, name):
 		mjoin = lambda x: str.join('.', x)
 		# Yield search paths
 		def searchPath(cname):
@@ -498,10 +501,15 @@ class AbstractObject:
 			except:
 				continue
 			if issubclass(newcls, cls):
-				return newcls(*args, **kwargs)
+				return newcls
 			raise ConfigError('%s is not of type %s' % (newcls, cls))
 		raise ConfigError('%s "%s" does not exist in\n\t%s!' % (cls.__name__, name, str.join('\n\t', searchPath(name))))
+	getClass = classmethod(getClass)
+
+	def open(cls, name, *args, **kwargs):
+		return cls.getClass(name)(*args, **kwargs)
 	open = classmethod(open)
+
 AbstractObject.pkgPaths = []
 
 

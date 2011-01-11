@@ -155,13 +155,9 @@ class LocalWMS(WMS):
 				continue
 
 			# Cleanup sandbox
-			outFiles = []
-			for pat in self.sandboxOut:
-				outFiles += glob.glob(os.path.join(path, pat))
-			for file in os.listdir(path):
-				if os.path.join(path, file) in outFiles:
-					continue
-				utils.removeFiles([os.path.join(path, file)])
+			outFiles = utils.listMapReduce(lambda pat: glob.glob(os.path.join(path, pat)), self.sandboxOut)
+			utils.removeFiles(filter(lambda x: x not in outFiles, map(lambda fn: os.path.join(path, fn), os.listdir(path))))
+
 			yield (jobNum, path)
 		del activity
 

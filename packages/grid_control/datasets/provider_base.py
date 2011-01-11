@@ -100,7 +100,7 @@ class DataProvider(AbstractObject):
 					block[DataProvider.DatasetID] = self._datasetID
 				if self._datasetNick:
 					block[DataProvider.Nickname] = self._datasetNick
-				block[DataProvider.Nickname] = self.nProd.getName(block[DataProvider.Nickname].strip('-'), block[DataProvider.Dataset])
+				block[DataProvider.Nickname] = self.nProd.getName(block.get(DataProvider.Nickname, '').strip('-'), block[DataProvider.Dataset])
 
 				events = 0
 				for fileInfo in block[DataProvider.FileList]:
@@ -157,7 +157,8 @@ class DataProvider(AbstractObject):
 			utils.vprint('ID - Dataset - Nick : %s - %s - %s' % tuple(map(lambda (k, d): block.get(k, d), idList)), level)
 			utils.vprint('BlockName : %s' % block[DataProvider.BlockName], level)
 			utils.vprint('#Events   : %s' % block[DataProvider.NEvents], level)
-			utils.vprint('SE List   : %s' % str.join(', ', block[DataProvider.SEList]), level)
+			seList = QM(block[DataProvider.SEList] != None, block[DataProvider.SEList], ['Not specified'])
+			utils.vprint('SE List   : %s' % str.join(', ',  seList), level)
 			utils.vprint('Files     : ', level)
 			for fi in block[DataProvider.FileList]:
 				utils.vprint('%s (Events: %d)' % (fi[DataProvider.lfn], fi[DataProvider.NEvents]), level)

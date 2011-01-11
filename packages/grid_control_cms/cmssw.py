@@ -236,7 +236,7 @@ class CMSSW(DataMod):
 		try:
 			splitInfo = self.dataSplitter.getSplitInfo(jobNum)
 			runTag = splitInfo[DataSplitter.MetadataHeader].index("Runs")
-			runList = reduce(lambda x,y: x+y, map(lambda w: w[runTag], splitInfo[DataSplitter.Metadata]), [])
+			runList = utils.listMapReduce(lambda m: m[runTag], splitInfo[DataSplitter.Metadata])
 			return getLR(filterLumiFilter(runList, lumifilter))
 		except:
 			return getLR(lumifilter)
