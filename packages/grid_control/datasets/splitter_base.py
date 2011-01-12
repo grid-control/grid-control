@@ -441,7 +441,7 @@ class DataSplitter(AbstractObject):
 
 			# Update metadata
 			if DataSplitter.Metadata in splitInfo:
-				getMetadata = lambda x: newFileInfoMap[x].get(DataSplitter.Metadata, None)
+				getMetadata = lambda x: newFileInfoMap.get(x, {}).get(DataSplitter.Metadata, None)
 				splitInfo[DataSplitter.Metadata] = map(getMetadata, splitInfo[DataSplitter.FileList])
 			# Update SE list of jobs
 			splitInfo[DataSplitter.SEList] = seBlockMap.get(blockFQN(DataSplitter, splitInfo), [])
