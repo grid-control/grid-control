@@ -8,14 +8,14 @@ class Monitoring(AbstractObject):
 
 	# Script to call later on
 	def getScript(self):
-		return utils.listMapReduce(lambda m: m.getScript(), self.submodules)
+		return utils.listMapReduce(lambda m: list(m.getScript()), self.submodules)
 
 	def getEnv(self, wms):
 		tmp = {'GC_MONITORING': str.join(" ", map(os.path.basename, self.getScript()))}
 		return utils.mergeDicts(map(lambda m: m.getEnv(wms), self.submodules) + [tmp])
 
 	def getFiles(self):
-		return utils.listMapReduce(lambda m: m.getFiles(), self.submodules, self.getScript())
+		return utils.listMapReduce(lambda m: list(m.getFiles()), self.submodules, self.getScript())
 
 	def onJobSubmit(self, wms, jobObj, jobNum):
 		for submodule in self.submodules:
