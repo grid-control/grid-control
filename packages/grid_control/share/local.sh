@@ -16,7 +16,7 @@ fi
 	echo "EXITCODE=107"
 ) > "$GC_SANDBOX/job.info"
 
-[ -d "/tmp" ] && export GC_LOCALSCRATCH="/tmp/$RANDOM_${MY_JOBID}"
+[ -d "/tmp" ] && export GC_LOCALSCRATCH="/tmp/${RANDOM}_${MY_JOBID}"
 [ -n "$GC_LOCALSCRATCH" ] && mkdir -p "$GC_LOCALSCRATCH"
 cd "$GC_SANDBOX"
 if [ -n "$GC_DELAY_OUTPUT" ]; then

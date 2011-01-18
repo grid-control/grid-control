@@ -37,6 +37,7 @@ class DataProvider(AbstractObject):
 		self.limitEvents = self.setup(config.getInt, 'dataset', 'limit events', -1)
 		nickProducer = self.setup(config.get, 'dataset', 'nickname source', 'SimpleNickNameProducer')
 		self.nProd = NickNameProducer.open(nickProducer, config)
+		self.ignoreLFN = self.setup(config.getList, 'dataset', 'ignore files', [])
 
 
 	def setup(self, func, section, item, default = noDefault, **kwargs):
@@ -114,7 +115,8 @@ class DataProvider(AbstractObject):
 					utils.eprint('WARNING: Inconsistency in block %s#%s: Number of events doesn\'t match (b:%d != f:%d)'
 						% (block[DataProvider.Dataset], block[DataProvider.BlockName], block[DataProvider.NEvents], events))
 
-				# Filter empty files
+				# Filter ignored and empty files
+				block[DataProvider.FileList] = filter(lambda x: x[DataProvider.lfn] not in self.ignoreLFN, block[DataProvider.FileList])
 				if self.emptyFiles:
 					block[DataProvider.FileList] = filter(lambda x: x[DataProvider.NEvents] != 0, block[DataProvider.FileList])
 

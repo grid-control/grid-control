@@ -139,8 +139,8 @@ class Report:
 			return tmp
 
 		statinfo = initdict()
-		destinations = map(lambda id: self.jobDB.get(id).history.values(), self.jobs)
-		for dest in utils.listMapReduce(getDest, destinations):
+		destinations = map(lambda jobNum: self.jobDB.get(jobNum).history.values(), self.jobs)
+		for dest in utils.listMapReduce(lambda dList: map(getDest, dList), destinations):
 			tmp = statinfo.setdefault(dest[0], initdict()).setdefault(dest[1], initdict())
 			tmp.setdefault(dest[2], initdict())
 

@@ -1,4 +1,4 @@
-import os, os.path, time
+import os, os.path, time, signal
 from grid_control import Module, Config, GCError, ConfigError, UserError, utils, WMS
 from provider_base import DataProvider
 from splitter_base import DataSplitter
@@ -35,8 +35,8 @@ class DataMod(Module):
 				provider.printDataset()
 			# split datasets
 			splitterName = config.get(self.__class__.__name__, 'dataset splitter', 'FileBoundarySplitter')
-			splitterName = provider.checkSplitter(splitterName)
-			self.dataSplitter = DataSplitter.open(splitterName, config, self.__class__.__name__)
+			splitterClass = provider.checkSplitter(DataSplitter.getClass(splitterName))
+			self.dataSplitter = splitterClass(config, self.__class__.__name__)
 			self.dataSplitter.splitDataset(os.path.join(config.workDir, 'datamap.tar'), provider.getBlocks())
 			if utils.verbosity() > 2:
 				self.dataSplitter.printAllJobInfo()
@@ -50,6 +50,9 @@ class DataMod(Module):
 			self.dataRefresh = max(self.dataRefresh, taskInfo.get('max refresh rate', 0))
 			utils.vprint('Dataset source will be queried every %s' % utils.strTime(self.dataRefresh), -1)
 		self.lastRefresh = time.time()
+		def externalRefresh(sig, frame):
+			self.lastRefresh = 0
+		signal.signal(signal.SIGUSR2, externalRefresh)
 
 		if self.dataSplitter.getMaxJobs() == 0:
 			raise UserError('There are no events to process')

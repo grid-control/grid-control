@@ -27,14 +27,14 @@ class DataMultiplexer(DataProvider):
 		return max(map(lambda x: x['src'].queryLimit(), self.subprovider))
 
 
-	def checkSplitter(self, splitter, first = None):
+	def checkSplitter(self, splitterClass, first = None):
 		def getProposal(x):
 			for provider in self.subprovider:
 				x = provider['src'].checkSplitter(x)
 			return x
-		if getProposal(splitter) != getProposal(getProposal(splitter)):
+		if getProposal(splitterClass) != getProposal(getProposal(splitterClass)):
 			raise DatasetError('Dataset providers could not agree on valid dataset splitter!')
-		return getProposal(splitter)
+		return getProposal(splitterClass)
 
 
 	def getBlocksInternal(self):

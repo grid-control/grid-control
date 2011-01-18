@@ -1,5 +1,5 @@
 from grid_control import QM, utils, DatasetError, RethrowError, datasets
-from grid_control.datasets import DataProvider
+from grid_control.datasets import DataProvider, HybridSplitter
 from lumi_tools import *
 from python_compat import *
 
@@ -39,12 +39,12 @@ class DBSApiv2(DataProvider):
 		return 2 * 60 * 60 # 2 hour delay minimum
 
 
-	# Check if splitter is valid
-	def checkSplitter(self, splitter):
-		if self.selectedLumis and splitter == 'EventBoundarySplitter':
+	# Check if splitterClass is valid
+	def checkSplitter(self, splitterClass):
+		if self.selectedLumis and (DataSplitter.Skipped in splitterClass.neededVars()):
 			utils.vprint('Active lumi section filter forced selection of HybridSplitter', -1, once = True)
-			return 'HybridSplitter'
-		return splitter
+			return HybridSplitter
+		return splitterClass
 
 
 	def getBlocksInternal(self):
