@@ -18,7 +18,7 @@ class DBSApiv2(DataProvider):
 	def __init__(self, config, section, datasetExpr, datasetNick, datasetID = 0):
 		DataProvider.__init__(self, config, section, datasetExpr, datasetNick, datasetID)
 		# PhEDex blacklist: '-T1_DE_KIT', '-T1_US_FNAL' allow user jobs
-		phedexBL = ['-T0_CH_CERN', '-T1_CH_CERN', '-T1_ES_PIC', '-T1_FR_CCIN2P3', '-T1_IT_CNAF', '-T1_TW_ASGC', '-T1_UK_RAL']
+		phedexBL = ['-T0_CH_CERN', '-T1_CH_CERN', '-T1_ES_PIC', '-T1_FR_CCIN2P3', '-T1_IT_CNAF', '-T1_TW_ASGC', '-T1_UK_RAL', '-T3_US_FNALLPC']
 		self.phedexBL = self.setup(config.getList, section, 'phedex sites', phedexBL)
 		self.onlyComplete = self.setup(config.getBool, section, 'phedex only complete', True)
 
