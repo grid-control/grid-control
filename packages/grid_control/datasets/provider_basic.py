@@ -26,7 +26,7 @@ class FileProvider(DataProvider):
 
 
 # Takes dataset information from an configuration file
-# required format: <path to list of data files>[@<forced prefix>][%<selected dataset>[#<selected block>]]
+# required format: <path to list of data files>[@<forced prefix>][%[/]<selected dataset>[#<selected block>][#]]
 class ListProvider(DataProvider):
 	DataProvider.providers.update({'ListProvider': 'list'})
 	def __init__(self, config, section, datasetExpr, datasetNick, datasetID = 0):
@@ -39,7 +39,7 @@ class ListProvider(DataProvider):
 	def getBlocksInternal(self):
 		def doFilter(block):
 			if self._filter:
-				name = '%s#%s' % (block[DataProvider.Dataset], block.get(DataProvider.BlockName, ''))
+				name = '/%s#%s#' % (block[DataProvider.Dataset], block.get(DataProvider.BlockName, ''))
 				return self._filter in name
 			return True
 
