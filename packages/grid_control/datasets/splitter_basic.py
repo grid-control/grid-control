@@ -41,4 +41,4 @@ class HybridSplitter(DataSplitter):
 					yield self.finaliseJobSplitting(block, dict(), fileStack)
 					(events, fileStack) = (0, [])
 				fileStack.append(fileInfo)
-			yield self.finaliseJobSplitting(block, dict(), fileStack)
+			yield self.finaliseJobSplitting(block, dict(), fileStack, -1)

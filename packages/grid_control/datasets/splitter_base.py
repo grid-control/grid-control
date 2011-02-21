@@ -25,7 +25,7 @@ class DataSplitter(AbstractObject):
 	neededVars = classmethod(neededVars)
 
 
-	def finaliseJobSplitting(self, block, job, files = None):
+	def finaliseJobSplitting(self, block, job, files = None, events = None):
 		# Copy infos from block
 		for prop in ['Dataset', 'BlockName', 'DatasetID', 'Nickname', 'SEList']:
 			if getattr(DataProvider, prop) in block:
@@ -35,7 +35,8 @@ class DataSplitter(AbstractObject):
 		# Helper for very simple splitter
 		if files:
 			job[DataSplitter.FileList] = map(lambda x: x[DataProvider.lfn], files)
-			job[DataSplitter.NEvents] = sum(map(lambda x: x[DataProvider.NEvents], files))
+			if events == None:
+				job[DataSplitter.NEvents] = sum(map(lambda x: x[DataProvider.NEvents], files))
 			if DataProvider.Metadata in block:
 				job[DataSplitter.Metadata] = map(lambda x: x[DataProvider.Metadata], files)
 		return job
