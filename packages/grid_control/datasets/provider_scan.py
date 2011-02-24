@@ -111,7 +111,7 @@ class ScanProviderBase(DataProvider):
 # Get dataset information from storage url
 # required format: <storage url>
 class ScanProvider(ScanProviderBase):
-	DataProvider.providers.update({'ScanProvider': 'gc'})
+	DataProvider.providers.update({'ScanProvider': 'scan'})
 	def __init__(self, config, section, datasetExpr, datasetNick, datasetID = 0):
 		config.set(section, 'source directory', datasetExpr)
 		defScanner = ['FilesFromLS', 'MatchOnFilename', 'MatchDelimeter', 'DetermineEvents']

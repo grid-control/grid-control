@@ -96,8 +96,8 @@ class Config:
 
 
 	def getPaths(self, section, item, default = noDefault, volatile = False, noVar = True, check = True):
-		value = self.get(section, item, default, volatile, noVar)
-		return map(lambda x: utils.resolvePath(x, [self.baseDir], check, ConfigError), value.splitlines())
+		value = self.getList(section, item, default, volatile, noVar)
+		return map(lambda x: utils.resolvePath(x, [self.baseDir], check, ConfigError), value)
 
 
 	def getPath(self, section, item, default = noDefault, volatile = False, noVar = True, check = True):

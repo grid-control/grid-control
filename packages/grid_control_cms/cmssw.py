@@ -92,6 +92,8 @@ class CMSSW(DataMod):
 			# Generate runtime tarball (and move to SE)
 			utils.genTarball(os.path.join(config.workDir, 'runtime.tar.gz'), self.projectArea, self.pattern)
 
+			if self.seRuntime and not self.seInputPaths:
+				raise ConfigError('Either "se path" or "se input path" has to be set for transfer of SE runtime.')
 			for idx, sePath in enumerate(filter(lambda x: self.seRuntime, set(self.seInputPaths))):
 				utils.vprint('Copy CMSSW runtime to SE %d ' % (idx + 1), -1, newline = False)
 				sys.stdout.flush()

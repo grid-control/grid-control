@@ -156,10 +156,7 @@ echo "==========================="
 echo
 
 cd "$MY_SCRATCH"
-(cat << EOF
-${MY_RUNTIME/\$@/$GC_ARGS}
-EOF
-) > $MY_LANDINGZONE/_runtime.sh
+echo "${MY_RUNTIME/\$@/$GC_ARGS}" > $MY_LANDINGZONE/_runtime.sh
 export MY_RUNTIME="$(var_replacer '' < "$MY_LANDINGZONE/_runtime.sh")"
 checkvar MY_RUNTIME
 eval "$MY_RUNTIME" &

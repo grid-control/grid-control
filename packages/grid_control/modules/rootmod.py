@@ -1,5 +1,5 @@
 import os
-from grid_control import QM, utils
+from grid_control import QM, utils, ConfigError
 from usermod import UserMod
 
 class ROOTMod(UserMod):
@@ -8,6 +8,8 @@ class ROOTMod(UserMod):
 		taskInfo = utils.PersistentDict(os.path.join(config.workDir, 'task.dat'), ' = ')
 		self._rootpath = taskInfo.get('root path', os.environ.get('ROOTSYS', None))
 		self._rootpath = config.get(self.__class__.__name__, 'root path', self._rootpath)
+		if not self._rootpath:
+			raise ConfigError('Either set environment variable "ROOTSYS" or set option "root path"!')
 		utils.vprint('Using the following ROOT path: %s' % self._rootpath, -1)
 		taskInfo.write({'root path': self._rootpath})
 
