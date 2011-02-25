@@ -18,14 +18,14 @@ class ScanProviderBase(DataProvider):
 
 
 	def collectFiles(self):
-		def recurse(collectorList, args):
+		def recurse(level, collectorList, args):
 			if len(collectorList):
-				for data in recurse(collectorList[:-1], args):
-					for (path, metadata, nEvents, seList, objStore) in collectorList[-1](*data):
+				for data in recurse(level - 1, collectorList[:-1], args):
+					for (path, metadata, nEvents, seList, objStore) in collectorList[-1](level, *data):
 						yield (path, dict(metadata), nEvents, seList, objStore)
 			else:
 				yield args
-		return recurse(map(lambda x: x.getEntriesVerbose, self.scanner), (None, {}, None, None, {}))
+		return recurse(len(self.scanner), map(lambda x: x.getEntriesVerbose, self.scanner), (None, {}, None, None, {}))
 
 
 	def generateKey(self, keys, base, path, metadata, events, seList, objStore):
@@ -114,7 +114,7 @@ class ScanProvider(ScanProviderBase):
 	DataProvider.providers.update({'ScanProvider': 'scan'})
 	def __init__(self, config, section, datasetExpr, datasetNick, datasetID = 0):
 		config.set(section, 'source directory', datasetExpr)
-		defScanner = ['FilesFromLS', 'MatchOnFilename', 'MatchDelimeter', 'DetermineEvents']
+		defScanner = ['FilesFromLS', 'MatchOnFilename', 'MatchDelimeter', 'DetermineEvents', 'AddFilePrefix']
 		ScanProviderBase.__init__(self, config, section, defScanner, datasetNick, datasetID)
 
 
@@ -140,5 +140,5 @@ class GCProvider(ScanProviderBase):
 		if 'ParaMod' in extModule:
 			extModule = extConfig.get('ParaMod', 'module')
 		sGet = lambda scannerDict: scannerDict.get(None) + scannerDict.get(extModule, [])
-		sList = sGet(GCProvider.stageDir) + ['FilesFromJobInfo'] + sGet(GCProvider.stageFile) + ['DetermineEvents']
+		sList = sGet(GCProvider.stageDir) + ['FilesFromJobInfo'] + sGet(GCProvider.stageFile) + ['DetermineEvents', 'AddFilePrefix']
 		ScanProviderBase.__init__(self, config, section, sList, datasetNick, datasetID)

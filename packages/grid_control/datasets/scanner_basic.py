@@ -15,8 +15,10 @@ class InfoScanner(AbstractObject):
 	def getGuards(self):
 		return ([], [])
 
-	def getEntriesVerbose(self, *args):
-		utils.vprint('%s: Collecting information with %s' % (self.__class__.__name__, args), 3)
+	def getEntriesVerbose(self, level, *args):
+		utils.vprint('    ' * level + 'Collecting information with %s...' % self.__class__.__name__, -1)
+		for c, n, l in zip(args, ['Path', 'Metadata', 'SE list', 'Events', 'Objects'], [0, 1, 1, 0, 1]):
+			utils.vprint('    ' * level + '  %s: %s' % (n, c), l)
 		return self.getEntries(*args)
 
 	def getEntries(self, path, metadata, events, seList, objStore):
@@ -129,6 +131,14 @@ class MatchOnFilename(InfoScanner):
 	def getEntries(self, path, metadata, events, seList, objStore):
 		if utils.matchFileName(path, self.match):
 			yield (path, metadata, events, seList, objStore)
+
+
+class AddFilePrefix(InfoScanner):
+	def __init__(self, setup, config, section):
+		self.prefix = setup(config.get, section, 'filename prefix', '')
+
+	def getEntries(self, path, metadata, events, seList, objStore):
+		yield (self.prefix + path, metadata, events, seList, objStore)
 
 
 class MatchDelimeter(InfoScanner):

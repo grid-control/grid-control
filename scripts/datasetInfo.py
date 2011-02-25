@@ -20,11 +20,14 @@ parser.add_option('-n', '--config-nick',   dest='confignick',   default=False, a
 	help='Use dataset path to derive nickname in case it it undefined')
 parser.add_option('-S', '--save',          dest='save',
 	help='Saves dataset information to specified file')
+parser.add_option("-v", "--verbose",       dest="verbosity",    default=-1,     action="count",
+	help='Increase verbosity')
 (opts, args) = parser.parse_args()
 
 # we need exactly one positional argument (dataset path)
 if len(args) != 1:
 	utils.exitWithUsage(usage)
+utils.verbosity(opts.verbosity)
 
 def noThread(desc, fun, *args, **kargs):
 	fun(*args, **kargs)

@@ -101,7 +101,7 @@ class Config:
 
 
 	def getPath(self, section, item, default = noDefault, volatile = False, noVar = True, check = True):
-		return (self.getPaths(section, item, default, volatile, noVar, check) + [''])[0]
+		return (self.getPaths(section, item, [default], volatile, noVar, check) + [''])[0]
 
 
 	def getInt(self, section, item, default = noDefault, volatile = False, noVar = True):
