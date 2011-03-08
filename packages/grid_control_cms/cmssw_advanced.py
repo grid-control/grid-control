@@ -5,27 +5,18 @@ from grid_control.datasets import DataSplitter, DataProvider
 from lumi_tools import *
 
 def fromNM(nm, nickname, default):
-	for pattern in filter(lambda p: p and nickname and re.search(p, nickname), nm):
-		return nm[pattern]
-	return nm.get(None, default)
-
+	tmp = filter(lambda p: p and nickname and re.search(p, nickname), nm)
+	if len(tmp)>0:
+		return map(lambda pattern: nm[pattern], tmp)
+	return [nm.get(None, default)]
 
 class CMSSW_Advanced(cmssw.CMSSW):
 	def __init__(self, config):
-		def parseMap(x, parser):
-			result = {}
-			for entry in x.split('\n'):
-				if '=>' in entry:
-					nick, value = map(str.strip, entry.split('=>'))
-				else:
-					nick, value = (None, entry)
-				result[nick] = filter(lambda x: x, parser(value.strip()))
-			return result
 		head = [(0, 'Nickname')]
 
 		# Mapping between nickname and config files:
 		cfgList = config.get(self.__class__.__name__, 'nickname config', '')
-		self.nmCfg = parseMap(cfgList, lambda x: map(str.strip, x.split(',')))
+		self.nmCfg = config.getDict(self.__class__.__name__, 'nickname config', default={}, parser = lambda x: map(str.strip, x.split(',')))[0]
 		if cfgList:
 			if 'config file' in config.parser.options(self.__class__.__name__):
 				raise ConfigError("Please use 'nickname config' instead of 'config file'")
@@ -37,10 +28,10 @@ class CMSSW_Advanced(cmssw.CMSSW):
 		self.nmCName = map(str.strip, config.get(self.__class__.__name__, 'nickname constants', '').split())
 		self.nmConst = {}
 		for var in self.nmCName:
-			tmp = parseMap(config.get(self.__class__.__name__, var, ''), lambda x: [x.strip()])
+			tmp = config.getDict(self.__class__.__name__, var, default={})[0]
 			for (nick, value) in tmp.items():
 				if value:
-					self.nmConst.setdefault(nick, {})[var] = value[0]
+					self.nmConst.setdefault(nick, {})[var] = value
 				else:
 					self.nmConst.setdefault(nick, {})[var] = ''
 			head.append((var, var))
@@ -49,7 +40,7 @@ class CMSSW_Advanced(cmssw.CMSSW):
 		if config.get(self.__class__.__name__, 'lumi filter', '') != '':
 			raise ConfigError("Please use 'nickname lumi filter' instead of 'lumi filter'")
 		lumiParse = lambda x: formatLumi(parseLumiFilter(x))
-		self.nmLumi = parseMap(config.get(self.__class__.__name__, 'nickname lumi filter', ''), lumiParse)
+		self.nmLumi = config.getDict(self.__class__.__name__, 'nickname lumi filter', default={}, parser = lumiParse)[0]
 		if self.nmLumi:
 			for dataset in config.get(self.__class__.__name__, 'dataset', '').splitlines():
 				(datasetNick, datasetProvider, datasetExpr) = DataProvider.parseDatasetExpr(config, dataset, None)
@@ -87,11 +78,11 @@ class CMSSW_Advanced(cmssw.CMSSW):
 		nick = splitInfo.get(DataSplitter.Nickname, None)
 		# Put nick dependent variables into job specific settings
 		data = cmssw.CMSSW.getJobConfig(self, jobNum)
-		data['CMSSW_CONFIG'] = str.join(' ', map(os.path.basename, fromNM(self.nmCfg, nick, '')))
-		constants = utils.mergeDicts([fromNM(self.nmConst, None, {}), fromNM(self.nmConst, nick, {})])
+		data['CMSSW_CONFIG'] = str.join(' ', map(os.path.basename, utils.flatten(fromNM(self.nmCfg, nick, ''))))
+		constants = utils.mergeDicts(fromNM(self.nmConst, None, {}) + fromNM(self.nmConst, nick, {}))
 		constants = dict(map(lambda var: (var, constants.get(var, '')), self.nmCName))
 		data.update(constants)
-		lumifilter = fromNM(self.nmLumi, nick, '')
+		lumifilter = utils.flatten(fromNM(self.nmLumi, nick, ''))
 		if lumifilter:
 			data['LUMI_RANGE'] = self.getActiveLumiFilter(parseLumiFilter(str.join(",", lumifilter)))
 		utils.vprint('Nickname: %s' % nick, 1)
