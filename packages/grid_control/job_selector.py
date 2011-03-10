@@ -12,7 +12,7 @@ class JobSelector(AbstractObject):
 		raise AbstractError
 JobSelector.dynamicLoaderPath()
 JobSelector.moduleMap.update({'id': 'IDSelector', 'state': 'StateSelector',
-	'site': 'SiteSelector', 'queue': 'QueueSelector', 'var': 'VarSelector'})
+	'site': 'SiteSelector', 'queue': 'QueueSelector', 'var': 'VarSelector', 'nick': 'NickSelector'})
 
 
 class IDSelector(JobSelector):
@@ -74,6 +74,9 @@ class VarSelector(JobSelector):
 	def select(self, jobNum, jobObj):
 		return reduce(operator.and_, map(lambda (var, rx): rx.search(self.jobCfg(jobNum, var)) != None, self.rxDict))
 
+class NickSelector(JobSelector):
+	def __init__(self, arg, **kwargs):
+		self.select = lambda jobNum, jobObj: str(kwargs['module'].getJobConfig(jobNum).get("DATASETNICK", '')) == arg
 
 class MultiJobSelector(JobSelector):
 	def __init__(self, arg, **kwargs):

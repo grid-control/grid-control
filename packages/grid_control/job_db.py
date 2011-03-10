@@ -80,7 +80,7 @@ class JobManager:
 		self.jobLimit = config.getInt('jobs', 'jobs', -1, volatile=True)
 		self.nJobs = self.getMaxJobs(self.module)
 		(self.ready, self.running, self.queued, self.done, self.ok, self.disabled) = ([], [], [], [], [], [])
-		selected = JobSelector.create(config.get('jobs', 'selected', '', volatile=True))
+		selected = JobSelector.create(config.get('jobs', 'selected', '', volatile=True), module=module)
 		self.jobDB = JobDB(config, self.nJobs, selected)
 		for jobNum in self.jobDB.getJobs():
 			self._findQueue(self.jobDB.get(jobNum)).append(jobNum)
@@ -362,7 +362,7 @@ class JobManager:
 
 
 	def delete(self, wms, select):
-		jobs = self.getCancelJobs(self.jobDB.getJobs(JobSelector.create(select)))
+		jobs = self.getCancelJobs(self.jobDB.getJobs(JobSelector.create(select, module=module)))
 		if jobs:
 			print '\nDeleting the following jobs:'
 			self.cancel(wms, jobs, True)

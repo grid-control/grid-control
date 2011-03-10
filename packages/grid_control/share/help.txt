@@ -46,4 +46,5 @@
 	  <sel> = "expr1 + expr2"   state:QUEUED,...   (Job states)
 	                 ^-- and    state:TODO         (= SUBMITTED,WAITING,READY,QUEUED)
 	  <sel> = "~expr1"          state:ALL
-	           ^-- not          var:KEY=VALUE,...  (key = Variable, value = regular expression)
+	           ^-- not          nick:myNick        (Dataset nickname)
+	                            var:KEY=VALUE,...  (key = Variable, value = regular expression)
