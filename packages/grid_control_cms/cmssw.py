@@ -1,6 +1,6 @@
 import os, sys, shutil
 from python_compat import *
-from grid_control import QM, ConfigError, WMS, utils, storage, datasets
+from grid_control import QM, ConfigError, WMS, utils, storage, datasets, noDefault
 from grid_control.datasets import DataMod
 from lumi_tools import *
 
@@ -110,12 +110,12 @@ class CMSSW(DataMod):
 						raise RuntimeError('No CMSSW runtime on SE!')
 
 		# In case of non-cmsRun job:
-		self.executable = config.getPaths(self.__class__.__name__, 'executable', '')
+		self.executable = config.getPaths(self.__class__.__name__, 'executable', [])
 		self.arguments = config.get(self.__class__.__name__, 'arguments', '', noVar = False)
 
 		# Get cmssw config files and check their existance
 		self.configFiles = []
-		for cfgFile in config.getPaths(self.__class__.__name__, 'config file', QM(self.executable, '', None)):
+		for cfgFile in config.getPaths(self.__class__.__name__, 'config file', QM(self.executable, [], noDefault)):
 			newPath = os.path.join(config.workDir, os.path.basename(cfgFile))
 			if config.opts.init:
 				if not os.path.exists(cfgFile):

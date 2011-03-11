@@ -55,7 +55,7 @@ class DataProvider(AbstractObject):
 
 		if len(temp) == 3:
 			(nickname, provider, dataset) = temp
-			if dataset[0] == '/':
+			if dataset.startswith('/'):
 				dataset = '/' + dataset.lstrip('/')
 			provider = providerMap.get(provider.lower(), provider)
 		elif len(temp) == 2:

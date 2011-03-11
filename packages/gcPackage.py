@@ -5,7 +5,7 @@ def initGC():
 
 	# Package discovery
 	for pkgName in os.listdir(os.path.dirname(__file__)):
-		if os.path.isdir(os.path.join(os.path.dirname(__file__), pkgName)) and not pkgName.startswith('.'):
+		if os.path.exists(os.path.join(os.path.dirname(__file__), pkgName, '__init__.py')):
 			grid_control.utils.AbstractObject.pkgPaths.append(pkgName)
 
 	for pkgName in grid_control.utils.AbstractObject.pkgPaths:
