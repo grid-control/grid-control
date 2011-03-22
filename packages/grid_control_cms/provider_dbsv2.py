@@ -1,5 +1,5 @@
 from grid_control import QM, utils, DatasetError, RethrowError, datasets
-from grid_control.datasets import DataProvider, HybridSplitter
+from grid_control.datasets import DataProvider, HybridSplitter, DataSplitter
 from lumi_tools import *
 from python_compat import *
 
