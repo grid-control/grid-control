@@ -104,7 +104,18 @@ if [ -n "$CMSSW_CONFIG" ]; then
 		cat "$MY_SCRATCH/$CFG_NAME" | var_replacer "$CFG_NAME" | tee "$DBSDIR/config" > "$CFG_NAME"
 
 		echo "Calculating config file hash..."
-		edmConfigHash "$CFG_NAME" > "$DBSDIR/hash" || fail 113
+		edmConfigHash "$CFG_NAME" > "$DBSDIR/hash"
+		EDMCONFIGCODE=$?
+		if [ EDMCONFIGCODE != 0 ]; then
+			echo "Problem in edmConfigHash <config name>, dumping config..."
+			echo "---------------------------"
+			cat "$CFG_NAME"
+			echo "---------------------------"
+			echo "Executing python <config name>..."
+			python "$CFG_NAME" 2>&1
+			echo "---------------------------"
+			fail 113
+		fi
 
 		echo "Starting cmsRun..."
 		if [ "$GZIP_OUT" = "yes" ]; then
