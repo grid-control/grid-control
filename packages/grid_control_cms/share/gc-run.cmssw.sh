@@ -106,7 +106,7 @@ if [ -n "$CMSSW_CONFIG" ]; then
 		echo "Calculating config file hash..."
 		edmConfigHash "$CFG_NAME" > "$DBSDIR/hash"
 		EDMCONFIGCODE=$?
-		if [ EDMCONFIGCODE != 0 ]; then
+		if [ $EDMCONFIGCODE != 0 ]; then
 			echo "Problem in edmConfigHash <config name>, dumping config..."
 			echo "---------------------------"
 			cat "$CFG_NAME"
