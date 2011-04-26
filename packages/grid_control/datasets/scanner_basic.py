@@ -16,7 +16,7 @@ class InfoScanner(AbstractObject):
 		return ([], [])
 
 	def getEntriesVerbose(self, level, *args):
-		utils.vprint('    ' * level + 'Collecting information with %s...' % self.__class__.__name__, -1)
+		utils.vprint('    ' * level + 'Collecting information with %s...' % self.__class__.__name__, 3)
 		for c, n, l in zip(args, ['Path', 'Metadata', 'SE list', 'Events', 'Objects'], [0, 1, 1, 0, 1]):
 			utils.vprint('    ' * level + '  %s: %s' % (n, c), l)
 		return self.getEntries(*args)
