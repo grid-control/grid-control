@@ -288,7 +288,7 @@ listMapReduce = lambda fun, lst, start = []: reduce(operator.add, map(fun, lst),
 
 
 def checkVar(value, message, check = True):
-	if check and ((str(value).count('@') >= 2) or (str(value).count('__') >= 2)):
+	if check and reduce(lambda x,y: max(x,y), map(lambda x: max(x.count('@'), x.count('__')), str(value).split('\n'))) >= 2:
 		raise ConfigError(message)
 	return value
 
