@@ -25,8 +25,9 @@ def customise_for_gc(process):
 			pass
 		try:
 			lumirange = [__LUMI_RANGE__]
-			process.source.lumisToProcess = cms.untracked.VLuminosityBlockRange(lumirange)
-			process.maxEvents = cms.untracked.PSet(input = cms.untracked.int32(-1))
+			if len(lumirange)>0:
+				process.source.lumisToProcess = cms.untracked.VLuminosityBlockRange(lumirange)
+				process.maxEvents = cms.untracked.PSet(input = cms.untracked.int32(-1))
 		except:
 			pass
 	except:
