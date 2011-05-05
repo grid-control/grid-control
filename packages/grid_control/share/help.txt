@@ -22,7 +22,8 @@
 	-q, --requery            Requery dataset information
 	-S, --seed <args>        Override seed specified in the config file e.g:
 	                            -S 1234,423,7856
-	                            -SS (= generate 10 random seeds)
+	-N, --nseeds <arg>       Generate <arg> random seeds if not explicitly specified
+                                 via previous option (default=10)
 
 	                         --- Display options ---
 	-G, --gui                Run in GUI mode

@@ -42,6 +42,7 @@ if __name__ == '__main__':
 	parser.add_option("-d", '--delete',        dest="delete",     default=None)
 	parser.add_option('-J', '--job-selector',  dest='selector',   default=None)
 	parser.add_option("-S", '--seed',          dest="seed",       default=None)
+	parser.add_option("-N", '--nseeds',        dest="nseeds",     default=None,  type="int")
 	parser.add_option("-m", '--max-retry',     dest="maxRetry",   default=None,  type="int")
 	parser.add_option("-v", "--verbose",       dest="verbosity",  default=0,     action="count")
 	Report.addOptions(parser)
@@ -63,6 +64,7 @@ if __name__ == '__main__':
 			if option != None:
 				config.set(section, item, fun(option))
 		setConfigFromOpt(opts.seed, 'jobs', 'seeds', lambda x: x.rstrip('S'))
+		setConfigFromOpt(opts.nseeds, 'jobs', 'nseeds')
 		setConfigFromOpt(opts.maxRetry, 'jobs', 'max retry')
 		setConfigFromOpt(opts.continuous, 'jobs', 'continuous')
 		setConfigFromOpt(opts.selector, 'jobs', 'selected')

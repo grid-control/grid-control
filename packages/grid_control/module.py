@@ -23,15 +23,16 @@ class Module(AbstractObject):
 		self.taskID = taskInfo.get('task id', 'GC' + md5(str(time())).hexdigest()[:12])
 		utils.vprint('Current task ID: %s' % self.taskID, -1, once = True)
 
-		# Set random seeds (args override config)
-		self.seeds = map(int, config.getList('jobs', 'seeds', []))
+		# Set random seeds (args override config, explicit seeds override generation via nseeds)
+		self.seeds  = map(int, config.getList('jobs', 'seeds', []))
+		self.nseeds = config.getInt('jobs', 'nseeds', -1, volatile=True)
 		if len(self.seeds) == 0:
 			# args specified => gen seeds
 			if 'seeds' in taskInfo:
 				self.seeds = map(int, str(taskInfo['seeds']).split())
 			else:
-				self.seeds = map(lambda x: random.randint(0, 10000000), range(10))
-				utils.vprint('Creating random seeds... %s' % self.seeds, -1, once = True)
+				self.seeds = map(lambda x: random.randint(0, 10000000), range(self.nseeds))
+		utils.vprint('Creating random seeds... %s' % self.seeds, -1, once = True)
 
 		# Write task info file
 		taskInfo.write({'task id': self.taskID, 'seeds': str.join(' ', map(str, self.seeds))})
