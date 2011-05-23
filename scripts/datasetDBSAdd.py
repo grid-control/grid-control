@@ -9,16 +9,19 @@ from grid_control_cms.DBSAPI.dbsApiException import DbsException, DbsBadRequest
 
 class DBSInfoProvider(datasets.GCProvider):
 	def __init__(self, config, section, datasetExpr, datasetNick, datasetID = 0):
-		# Override scan modules, other settings setup by GCProvider
 		tmp = QM(os.path.isdir(datasetExpr), ['OutputDirsFromWork'], ['OutputDirsFromConfig', 'MetadataFromModule'])
 		config.set(section, 'scanner', str.join(' ', tmp + ['ObjectsFromCMSSW', 'FilesFromJobInfo',
-			'MetadataFromCMSSW', 'ParentLookup', 'SEListFromPath', 'LFNFromPath', 'DetermineEvents']))
+			'MetadataFromCMSSW', 'ParentLookup', 'SEListFromPath', 'LFNFromPath', 'DetermineEvents',
+			'FilterEDMFiles']))
 		config.set(section, 'include config infos', 'True')
 		config.set(section, 'parent keys', 'CMSSW_PARENT_LFN CMSSW_PARENT_PFN')
 		config.set(section, 'events key', 'CMSSW_EVENTS_WRITE')
 		datasets.GCProvider.__init__(self, config, section, datasetExpr, datasetNick, datasetID)
+		self.discovery = self.setup(config.getBool, section, 'discovery', False)
 
 	def generateDatasetName(self, key, data):
+		if self.discovery:
+			return datasets.GCProvider.generateDatasetName(self, key, data)
 		if 'CMSSW_DATATIER' not in data:
 			raise RuntimeError('Incompatible data tiers in dataset: %s' % data)
 		getPathComponents = lambda path: QM(path, tuple(path.strip('/').split('/')), ())
@@ -45,9 +48,10 @@ class DBSInfoProvider(datasets.GCProvider):
 		elif len(userPath) == 0:
 			(processed, tier) = ('Dataset_%s' % key, data['CMSSW_DATATIER'])
 
+		rawDS = '/%s/%s/%s' % (primary, processed, tier)
 		if None in (primary, processed, tier):
-			raise RuntimeError('Invalid dataset name supplied: %s' % repr(self.nameDS))
-		return utils.replaceDict('/%s/%s/%s' % (primary, processed, tier), data)
+			raise RuntimeError('Invalid dataset name supplied: %r\nresulting in %s' % (self.nameDS, rawDS))
+		return utils.replaceDict(rawDS, data)
 
 	def generateBlockName(self, key, data):
 		return utils.strGuid(key)
@@ -70,16 +74,13 @@ class XMLWriter: # xml.dom.minidom needs a lot of memory - could be replaced by 
 
 
 def getDBSXML(opts, block, dsBlocks):
-	getM = lambda idx, fi: fi[DataProvider.Metadata][idx]
-	getAllM = lambda idx, fiList = block[DataProvider.FileList]: filter(lambda x: x, map(lambda fi: getM(idx, fi), fiList))
-	getOutsideM = lambda key, outside: getAllM(outside[DataProvider.Metadata].index(key), outside[DataProvider.FileList])
-
+	fqBlock = '%s#%s' % (block[DataProvider.Dataset], block[DataProvider.BlockName])
 	# Check validity of input dataset
 	def getKey(k):
 		try:
 			return block[DataProvider.Metadata].index(k)
 		except:
-			raise RethrowError('Could not find metadata %s' % k)
+			raise RethrowError('Could not find metadata %s in %s' % (k, fqBlock))
 	DBS = type('EnumDBS', (), dict(map(lambda (n, k): (n, getKey(k)), {'CONFIG_FILE': 'CMSSW_CONFIG_FILE',
 		'CONFIG_HASH': 'CMSSW_CONFIG_HASH', 'TYPE': 'CMSSW_DATATYPE', 'ANNOTATION': 'CMSSW_ANNOTATION',
 		'VERSION': 'CMSSW_VERSION', 'CONFIG_CONTENT': 'CMSSW_CONFIG_CONTENT', 'SIZE': 'SE_OUTPUT_SIZE',
@@ -89,6 +90,12 @@ def getDBSXML(opts, block, dsBlocks):
 			setattr(DBS, n, getKey(k))
 	if opts.importLumi:
 		DBS.LUMIS = getKey('CMSSW_LUMIS')
+	def getM(idx, fi):
+		if opts.uniqueCfg and (idx == DBS.CONFIG_HASH):
+			return md5(fi[DataProvider.Metadata][idx] + block[DataProvider.BlockName]).hexdigest()
+		return fi[DataProvider.Metadata][idx]
+	getAllM = lambda idx, fiList = block[DataProvider.FileList]: filter(lambda x: x, map(lambda fi: getM(idx, fi), fiList))
+	getOutsideM = lambda key, outside: getAllM(outside[DataProvider.Metadata].index(key), outside[DataProvider.FileList])
 
 	if block[DataProvider.Dataset].count('/') != 3:
 		raise RuntimeError('Invalid dataset name: %s' % block[DataProvider.Dataset])
@@ -113,7 +120,6 @@ def getDBSXML(opts, block, dsBlocks):
 	nodeDBS = writer.newElement(None, 'dbs')
 
 	# Dataset / Block identifier
-	fqBlock = '%s#%s' % (block[DataProvider.Dataset], block[DataProvider.BlockName])
 	writer.newElement(nodeDBS, 'dataset', {'block_name': fqBlock, 'path': block[DataProvider.Dataset]})
 
 	# Primary dataset information - get datatype from other blocks in dataset in case of eg. 0 event block
@@ -195,15 +201,13 @@ def createDBSXMLDumps(opts, allBlocks):
 	produced = []
 	for idx, block in enumerate(allBlocks):
 		log = utils.ActivityLog(' * Creating DBS dump files - [%d / %d]' % (idx, len(allBlocks)))
-		dsBlocks = filter(lambda b: block[DataProvider.Dataset] == b[DataProvider.Dataset], allBlocks)
+		fqBlock, dump = getDBSXML(opts, block, allBlocks)
 		xmlDSPath = os.path.join(opts.tmpDir, utils.strGuid(md5(block[DataProvider.Dataset]).hexdigest()))
 		if not os.path.exists(xmlDSPath):
-			os.mkdir(xmlDSPath)
-		for block in allBlocks:
-			fqBlock, dump = getDBSXML(opts, block, allBlocks)
-			xmlBPath = os.path.join(xmlDSPath, block[DataProvider.BlockName])
-			open(xmlBPath, 'w').write(dump)
-			produced.append((fqBlock, xmlBPath))
+			os.makedirs(xmlDSPath)
+		xmlPath = os.path.join(xmlDSPath, block[DataProvider.BlockName])
+		open(xmlPath, 'w').write(dump)
+		produced.append((fqBlock, xmlPath))
 		del log
 	utils.vprint(' * Creating DBS dump files - done', -1)
 	return produced
@@ -291,8 +295,12 @@ try:
 		help='Merge output files from different parent blocks into a single block [Default: Keep boundaries]')
 	ogDiscover.add_option('-j', '--jobhash',     dest='useJobHash',    default=False,  action='store_true',
 		help='Use hash of all config files in job for dataset key calculation')
+	ogDiscover.add_option('-u', '--unique-cfg',  dest='uniqueCfg',     default=False,  action='store_true',
+		help='Cirumvent edmConfigHash collisions so each dataset is stored with unique config information')
 	ogDiscover.add_option('-P', '--parent',      dest='parent source', default='',
 		help='Override parent information source - to bootstrap a reprocessing on local files')
+	ogDiscover.add_option('-H', '--hash-keys',   dest='dataset hash keys', default='',
+		help='Included additional variables in dataset hash calculation')
 	parser.add_option_group(ogDiscover)
 
 	ogDiscover2 = optparse.OptionGroup(parser, 'Discovery options II - only available when config file is used', '')
@@ -303,6 +311,8 @@ try:
 	ogMode = optparse.OptionGroup(parser, 'Processing mode', '')
 	ogMode.add_option('-b', '--batch',           dest='batch',         default=False, action='store_true',
 		help='Enable non-interactive batch mode [Default: Interactive mode]')
+	ogMode.add_option('-d', '--discovery',       dest='discovery',     default=False, action='store_true',
+		help='Enable discovery mode - just collect file information and exit')
 	ogMode.add_option('-i', '--no-import',       dest='doImport',      default=True,  action='store_false',
 		help='Disable import of new datasets into target DBS instance - only temporary xml files are created, ' +
 			'which can be added later via datasetDBSTool.py [Default: Import datasets]')
@@ -329,9 +339,13 @@ try:
 		help='Display information associated with dataset key(s) (accepts "all")')
 	ogDbg.add_option('-C', '--display-config',  dest='display_cfg',   default=None,
 		help='Display information associated with config hash(es) (accepts "all")')
+	ogDbg.add_option('-v', '--verbose',         dest='verbosity',     default=-1, action='count',
+		help='Increase verbosity')
 	parser.add_option_group(ogDbg)
 
 	(opts, args) = parser.parse_args()
+	utils.verbosity(opts.verbosity)
+	setattr(opts, 'dataset hash keys', getattr(opts, 'dataset hash keys').replace(',', ' '))
 	if opts.useJobHash:
 		setattr(opts, 'dataset hash keys', getattr(opts, 'dataset hash keys') + ' CMSSW_CONFIG_JOBHASH')
 
@@ -351,10 +365,16 @@ try:
 
 	# 1) Get dataset information
 	if opts.inputFile:
-		provider = ListProvider(Config(), None, opts.inputFile, None)
+		provider = datasets.ListProvider(Config(), None, opts.inputFile, None)
 	else:
-		provider = DBSInfoProvider(Config(configDict = {None: dict(parser.values.__dict__)}), None, args[0], None)
+		config = Config(configDict = {None: dict(parser.values.__dict__)})
+		if opts.discovery:
+			config.set(None, 'dataset name pattern', '@DS_KEY@')
+		provider = DBSInfoProvider(config, None, args[0], None)
+
 	provider.saveState(opts.tmpDir)
+	if opts.discovery:
+		sys.exit(0)
 	blocks = provider.getBlocks()
 
 	# 2) Filter datasets
@@ -377,10 +397,8 @@ try:
 		blocks = blocksAdded
 
 	# 3) Display dataset properties
-	if opts.display_data:
-		displayDatasetInfos(opts.display_data, blocks)
-	if opts.display_cfg:
-		displayConfigInfos(opts.display_cfg, blocks)
+	if opts.display_data or opts.display_cfg:
+		raise APIError('Not yet reimplemented')
 
 	# 4) Translate into DBSXML
 	xmlFiles = createDBSXMLDumps(opts, blocks)
@@ -404,12 +422,12 @@ try:
 				registerParent(opts, parent)
 
 	# 6) Insert blocks into DBS
-	if opts.batch or utils.getUserBool(" * Start dataset import?", True):
+	if opts.batch or utils.getUserBool(' * Start dataset import?', True):
 		fail = False
 		for (fqBlock, xmlBPath) in produced:
 			if not registerDataset(fqBlock, xmlBPath):
 				fail = True
-		utils.vprint(" * Importing datasets - %s\n" % QM(fail, 'failed', 'done'), -1)
+		utils.vprint(' * Importing datasets - %s\n' % QM(fail, 'failed', 'done'), -1)
 	del mutex
 except GCError:
 	sys.stderr.write(GCError.message)

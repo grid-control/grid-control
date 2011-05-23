@@ -90,14 +90,14 @@ class SEListFromPath(InfoScanner):
 	def getEntries(self, path, metadata, events, seList, objStore):
 		proto, fn = path.split(':', 1)
 		if proto in ['dir', 'file']:
-			yield (path, metadata, events, 'localhost', objStore)
+			yield (path, metadata, events, ['localhost'], objStore)
 		elif proto in ['rfio']:
 			if 'cern.ch' in seUrl:
-				yield (path, metadata, events, 'caf.cern.ch', objStore)
+				yield (path, metadata, events, ['caf.cern.ch'], objStore)
 			else:
-				yield (path, metadata, events, fn.lstrip('/').split('/')[1], objStore)
+				yield (path, metadata, events, [fn.lstrip('/').split('/')[1]], objStore)
 		elif proto in ['srm', 'gsiftp']:
-			yield (path, metadata, events, fn.split(':')[0].lstrip('/').split('/')[0], objStore)
+			yield (path, metadata, events, [fn.split(':')[0].lstrip('/').split('/')[0]], objStore)
 		else:
 			yield (path, metadata, events, seList, objStore)
 
@@ -110,4 +110,10 @@ class LFNFromPath(InfoScanner):
 		if self.stripPath and self.stripPath in path:
 			yield (self.stripPath + path.split(self.stripPath, 1)[1], metadata, events, seList, objStore)
 		else:
+			yield (path, metadata, events, seList, objStore)
+
+
+class FilterEDMFiles(InfoScanner):
+	def getEntries(self, path, metadata, events, seList, objStore):
+		if not (False in map(lambda x: x in metadata, ['CMSSW_EVENTS_WRITE', 'CMSSW_CONFIG_FILE'])):
 			yield (path, metadata, events, seList, objStore)

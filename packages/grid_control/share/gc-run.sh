@@ -11,7 +11,6 @@ export MY_JOBID="$1"
 export MY_LANDINGZONE="`pwd`"
 export MY_MARKER="$MY_LANDINGZONE/RUNNING.$$"
 export MY_SCRATCH="`getscratch`"
-export MY_SEED=$RANDOM$RANDOM
 shift
 
 # Print job informations
@@ -110,8 +109,8 @@ if [ -n "$SE_INPUT_PATH" -o -n "$SE_OUTPUT_PATH" ]; then
 	for SE in $SE_INPUT_PATH; do echo " < $SE"; done
 	for SE in $SE_OUTPUT_PATH; do echo " > $SE"; done
 	echo "Close SE:"
-	for SE in $(get_default_se "$SE_INPUT_PATH"); do echo " < $SE"; done
-	for SE in $(get_default_se "$SE_OUTPUT_PATH"); do echo " > $SE"; done
+	for SE in $(get_default_se "$SE_INPUT_PATH"); do echo " < $SE"; done | sort | uniq
+	for SE in $(get_default_se "$SE_OUTPUT_PATH"); do echo " > $SE"; done | sort | uniq
 	echo "Selected SE:"
 	export SE_INPUT_PATH="$(get_best_se "SE_INPUT_PATH")"
 	export SE_OUTPUT_PATH="$(get_best_se "SE_OUTPUT_PATH")"

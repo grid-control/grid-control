@@ -18,9 +18,13 @@ parser.add_option('-i', '--info',          dest='info',         default=False, a
 	help='Gives machine readable info of given dataset(s)')
 parser.add_option('-n', '--config-nick',   dest='confignick',   default=False, action='store_true',
 	help='Use dataset path to derive nickname in case it it undefined')
+parser.add_option('-m', '--metadata',      dest='metadata',     default=False, action='store_true',
+	help='Get metadata infomation of dataset files')
+parser.add_option('-M', '--block-metadata', dest='blockmetadata', default=False, action='store_true',
+	help='Get common metadata infomation of dataset blocks')
 parser.add_option('-S', '--save',          dest='save',
 	help='Saves dataset information to specified file')
-parser.add_option("-v", "--verbose",       dest="verbosity",    default=-1,     action="count",
+parser.add_option("-v", "--verbose",       dest="verbosity",    default=0,     action="count",
 	help='Increase verbosity')
 (opts, args) = parser.parse_args()
 
@@ -113,6 +117,36 @@ if opts.listfiles:
 		print 'Blockname: %s' % block[DataProvider.BlockName]
 		utils.printTabular([(DataProvider.lfn, 'Filename'), (DataProvider.NEvents, 'Events')], block[DataProvider.FileList])
 		print
+
+def printMetadata(src, maxlen):
+	for (mk, mv) in src:
+		if len(str(mv)) > 200:
+			mv = '<metadata entry size: %s> %s...' % (len(str(mv)), repr(mv)[:200])
+		print '\t%s: %s' % (mk.rjust(maxlen), mv)
+	print
+
+if opts.metadata:
+	print
+	for block in blocks:
+		if len(datasets) > 1:
+			print 'Dataset: %s' % block[DataProvider.Dataset]
+		print 'Blockname: %s' % block[DataProvider.BlockName]
+		mk_len = max(map(len, block[DataProvider.Metadata]))
+		for f in block[DataProvider.FileList]:
+			print '%s [%d events]' % (f[DataProvider.lfn], f[DataProvider.NEvents])
+			printMetadata(zip(block[DataProvider.Metadata], f[DataProvider.Metadata]), mk_len)
+		print
+
+if opts.blockmetadata:
+	for block in blocks:
+		if len(datasets) > 1:
+			print 'Dataset: %s' % block[DataProvider.Dataset]
+		print 'Blockname: %s' % block[DataProvider.BlockName]
+		mkdict = lambda x: dict(zip(block[DataProvider.Metadata], x[DataProvider.Metadata]))
+		metadata = QM(block[DataProvider.FileList], mkdict(block[DataProvider.FileList][0]), {})
+		for fileInfo in block[DataProvider.FileList]:
+			utils.intersectDict(metadata, mkdict(fileInfo))
+		printMetadata(metadata.items(), max(map(len, metadata.keys())))
 
 if opts.liststorage:
 	print

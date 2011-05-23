@@ -129,6 +129,12 @@ def mergeDicts(dicts):
 	return tmp
 
 
+def intersectDict(dictA, dictB):
+	for keyA in dictA.keys():
+		if (keyA in dictB) and (dictA[keyA] != dictB[keyA]):
+			dictA.pop(keyA)
+
+
 def replaceDict(result, allVars, varMapping = None):
 	for (virtual, real) in QM(varMapping, varMapping, zip(allVars.keys(), allVars.keys())):
 		for delim in ['@', '__']:
@@ -288,7 +294,7 @@ listMapReduce = lambda fun, lst, start = []: reduce(operator.add, map(fun, lst),
 
 
 def checkVar(value, message, check = True):
-	if check and reduce(lambda x,y: max(x,y), map(lambda x: max(x.count('@'), x.count('__')), str(value).split('\n'))) >= 2:
+	if check and max(map(lambda x: max(x.count('@'), x.count('__')), str(value).split('\n'))) >= 2:
 		raise ConfigError(message)
 	return value
 

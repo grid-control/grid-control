@@ -63,7 +63,7 @@ if __name__ == '__main__':
 		def setConfigFromOpt(option, section, item, fun = lambda x: str(x)):
 			if option != None:
 				config.set(section, item, fun(option))
-		setConfigFromOpt(opts.seed, 'jobs', 'seeds', lambda x: x.rstrip('S'))
+		setConfigFromOpt(opts.seed, 'jobs', 'seeds', lambda x: x.replace(',', ' '))
 		setConfigFromOpt(opts.nseeds, 'jobs', 'nseeds')
 		setConfigFromOpt(opts.maxRetry, 'jobs', 'max retry')
 		setConfigFromOpt(opts.continuous, 'jobs', 'continuous')
@@ -80,7 +80,20 @@ if __name__ == '__main__':
 				os.makedirs(config.workDir)
 		checkSpace = config.getInt('global', 'workdir space', 10, volatile=True)
 
+		class InitSentinel:
+			def __init__(self, config):
+				(self.config, self.userInit) = (config, config.opts.init)
+				self.log = utils.PersistentDict(os.path.join(config.workDir, 'initlog'))
+				self.log.write(update = not self.userInit)
+
+			def checkpoint(self, name):
+				self.log.write()
+				self.config.opts.init = QM(self.userInit, self.userInit, self.log.get(name) != 'done')
+				self.log[name] = 'done'
+		initSentinel = InitSentinel(config)
+
 		# Initialise application module
+		initSentinel.checkpoint('module')
 		module = Module.open(config.get('global', 'module'), config)
 
 		# Give help about variables
@@ -89,10 +102,12 @@ if __name__ == '__main__':
 			sys.exit(0)
 
 		# Initialise monitoring module
+		initSentinel.checkpoint('monitoring')
 		monitor = utils.parseList(config.get('jobs', 'monitor', 'scripts'))
 		monitor = Monitoring(config, module, map(lambda x: Monitoring.open(x, config, module), monitor))
 
 		# Initialise workload management interface
+		initSentinel.checkpoint('backend')
 		backend = config.get('global', 'backend', 'grid')
 		defaultwms = { 'grid': 'GliteWMS', 'local': 'LocalWMS' }
 		if backend == 'grid':
@@ -103,6 +118,7 @@ if __name__ == '__main__':
 			raise ConfigError("Invalid backend specified!" % config.workDir)
 
 		# Initialise job database
+		initSentinel.checkpoint('jobmanager')
 		jobManager = JobManager(config, module, monitor)
 
 		# Give config help
@@ -119,6 +135,7 @@ if __name__ == '__main__':
 			jobManager.delete(wms, opts.delete)
 			sys.exit(0)
 
+		initSentinel.checkpoint('config')
 		savedConfigPath = os.path.join(config.workDir, 'work.conf')
 		if not opts.init:
 			# Compare config files
@@ -136,6 +153,7 @@ if __name__ == '__main__':
 			utils.vprint("Running in continuous mode. Press ^C to exit.", -1)
 
 		# Job submission loop
+		initSentinel.checkpoint('loop')
 		def jobCycle(wait = utils.wait):
 			while True:
 				(didWait, lastSpaceMsg) = (False, 0)

@@ -49,10 +49,6 @@ class ScanProviderBase(DataProvider):
 			return kUser + QM(kGuard, kGuard, utils.listMapReduce(lambda x: x.getGuards()[gIdx], self.scanner))
 		keysDS = getActiveKeys(self.kUserDS, self.kGuardDS, 0)
 		keysB = getActiveKeys(self.kUserB, self.kGuardB, 1)
-		def intersectDict(dictA, dictB):
-			for keyA in dictA.keys():
-				if (keyA in dictB) and (dictA[keyA] != dictB[keyA]):
-					dictA.pop(keyA)
 		for fileInfo in self.collectFiles():
 			hashDS = self.generateKey(keysDS, None, *fileInfo)
 			hashB = self.generateKey(keysB, hashDS, *fileInfo)
@@ -60,8 +56,8 @@ class ScanProviderBase(DataProvider):
 				continue
 			fileInfo[1].update({'DS_KEY': hashDS, 'BLOCK_KEY': hashB})
 			protoBlocks.setdefault(hashDS, {}).setdefault(hashB, []).append(fileInfo)
-			intersectDict(commonDS.setdefault(hashDS, dict(fileInfo[1])), fileInfo[1])
-			intersectDict(commonB.setdefault(hashDS, {}).setdefault(hashB, dict(fileInfo[1])), fileInfo[1])
+			utils.intersectDict(commonDS.setdefault(hashDS, dict(fileInfo[1])), fileInfo[1])
+			utils.intersectDict(commonB.setdefault(hashDS, {}).setdefault(hashB, dict(fileInfo[1])), fileInfo[1])
 
 		# Generate names for blocks/datasets using common metadata
 		(hashNameDictDS, hashNameDictB) = ({}, {})
@@ -93,8 +89,12 @@ class ScanProviderBase(DataProvider):
 		# Return named dataset
 		for hashDS in protoBlocks:
 			for hashB in protoBlocks[hashDS]:
-				seList = list(set(map(lambda x: x[3], protoBlocks[hashDS][hashB])))
-				seList = QM(seList == [None], None, seList)
+				blockSEList = None
+				for seList in filter(lambda s: s != None, map(lambda x: x[3], protoBlocks[hashDS][hashB])):
+					blockSEList = QM(blockSEList == None, [], blockSEList)
+					blockSEList.extend(seList)
+				if blockSEList != None:
+					blockSEList = list(set(blockSEList))
 				metaKeys = protoBlocks[hashDS][hashB][0][1].keys()
 				fnProps = lambda (path, metadata, events, seList, objStore): {
 					DataProvider.lfn: path, DataProvider.NEvents: events,
@@ -102,7 +102,7 @@ class ScanProviderBase(DataProvider):
 				yield {
 					DataProvider.Dataset: hashNameDictDS[hashDS],
 					DataProvider.BlockName: hashNameDictB[hashB][1],
-					DataProvider.SEList: seList,
+					DataProvider.SEList: blockSEList,
 					DataProvider.Metadata: metaKeys,
 					DataProvider.FileList: map(fnProps, protoBlocks[hashDS][hashB])
 				}

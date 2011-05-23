@@ -344,6 +344,7 @@ class JobManager:
 			self._update(jobObj, jobNum, Job.CANCELLED)
 			self.monitor.onJobUpdate(wms, jobObj, jobNum, {'status': 'cancelled'})
 
+		jobs.reverse()
 		for (wmsId, jobNum) in wms.cancelJobs(self.wmsArgs(jobs)):
 			# Remove deleted job from todo list and mark as cancelled
 			jobs.remove(jobNum)

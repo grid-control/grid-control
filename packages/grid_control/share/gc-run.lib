@@ -188,8 +188,11 @@ getscratch() {
 		return 1;
 	}
 
-	getscratch_internal LOCAL_SCRATCH NODE_SCRATCH USER_SCRATCH EDG_WL_SCRATCH OSG_WN_TMP LCG_TMP DG_WL_SCRATCH GC_SCRATCH && return 0
-	getscratch_internal SCRATCH_DIRECTORY GC_LOCALSCRATCH && return 0
+	getscratch_internal GC_SCRATCH && return 0
+	getscratch_internal GC_LOCALSCRATCH && return 0
+	getscratch_internal MY_LANDINGZONE && return 0
+	getscratch_internal LOCAL_SCRATCH NODE_SCRATCH USER_SCRATCH EDG_WL_SCRATCH OSG_WN_TMP LCG_TMP DG_WL_SCRATCH && return 0
+
 	echo "Site doesn't define scratch directory variables! Trying other locations..." 1>&2
 	export 1>&2
 
@@ -246,13 +249,13 @@ var_replacer() {
 	if [ -z "$MYGUID" ]; then
 		FMGUID="%04x%04x-%04x-%04x-%04x-%04x%04x%04x"
 		RINT="int(rand()*2**16), int(rand()*2**16), int(rand()*2**16), int(rand()*2**16)"
-		MYGUID=`echo | awk "BEGIN{srand($MY_SEED)}{printf \"$FMGUID\", $RINT, $RINT}"`
+		MYGUID=`echo | awk "BEGIN{srand($JOB_RANDOM)}{printf \"$FMGUID\", $RINT, $RINT}"`
 	fi
 
 	(
 		XBASE="$(echo $1 | sed -e 's/\(.*\)\(\..*\)$/\1/')"
 		XEXT="$(echo $1 | sed -e 's/\(.*\.\)\(.*\)$/\2/')"
-		echo "BEGIN{srand($MY_SEED)}"
+		echo "BEGIN{srand($JOB_RANDOM)}"
 		echo "{"
 		[ -n "$1" ] && echo "	gsub(\"@X@\", \"$1\")"
 		[ -n "$1" ] && echo "	gsub(\"__X__\", \"$1\")"

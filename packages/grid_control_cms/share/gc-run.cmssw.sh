@@ -105,16 +105,15 @@ if [ -n "$CMSSW_CONFIG" ]; then
 
 		echo "Calculating config file hash..."
 		edmConfigHash "$CFG_NAME" > "$DBSDIR/hash"
-		EDMCONFIGCODE=$?
-		if [ $EDMCONFIGCODE != 0 ]; then
-			echo "Problem in edmConfigHash <config name>, dumping config..."
+		CODE=$?
+		if [ "$CODE" != "0" ]; then
+			echo "Problem while hashing config file:"
 			echo "---------------------------"
-			cat "$CFG_NAME"
-			echo "---------------------------"
-			echo "Executing python <config name>..."
+			echo "Executing python $CFG_NAME..."
 			python "$CFG_NAME" 2>&1
 			echo "---------------------------"
-			fail 113
+			CODE=113
+			break
 		fi
 
 		echo "Starting cmsRun..."

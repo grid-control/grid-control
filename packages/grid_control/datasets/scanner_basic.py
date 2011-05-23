@@ -16,7 +16,7 @@ class InfoScanner(AbstractObject):
 		return ([], [])
 
 	def getEntriesVerbose(self, level, *args):
-		utils.vprint('    ' * level + 'Collecting information with %s...' % self.__class__.__name__, 3)
+		utils.vprint('    ' * level + 'Collecting information with %s...' % self.__class__.__name__, 2)
 		for c, n, l in zip(args, ['Path', 'Metadata', 'SE list', 'Events', 'Objects'], [0, 1, 1, 0, 1]):
 			utils.vprint('    ' * level + '  %s: %s' % (n, c), l)
 		return self.getEntries(*args)
@@ -80,13 +80,15 @@ class MetadataFromModule(InfoScanner):
 		self.ignoreVars = setup(config.getList, section, 'ignore module vars', ignoreDef)
 
 	def getEntries(self, path, metadata, events, seList, objStore):
+		newVerbosity = utils.verbosity(utils.verbosity() - 3)
 		if 'GC_MODULE' in objStore:
-			tmp = objStore['GC_MODULE'].getTaskConfig()
+			tmp = dict(objStore['GC_MODULE'].getTaskConfig())
 			if 'GC_JOBNUM' in metadata:
 				tmp.update(objStore['GC_MODULE'].getJobConfig(metadata['GC_JOBNUM']))
 			for (newKey, oldKey) in objStore['GC_MODULE'].getVarMapping().items():
 				tmp[newKey] = tmp.get(oldKey)
 			metadata.update(utils.filterDict(tmp, kF = lambda k: k not in self.ignoreVars))
+		utils.verbosity(newVerbosity + 3)
 		yield (path, metadata, events, seList, objStore)
 
 
@@ -122,6 +124,19 @@ class FilesFromJobInfo(InfoScanner):
 			sys.exit(0)
 		except:
 			raise RethrowError('Unable to read job results from %s!' % jobInfoPath)
+
+
+class FilesFromDataProvider(InfoScanner):
+	def __init__(self, setup, config, section):
+		dsPath = setup(config.get, section, 'source dataset path')
+		self.source = DataProvider.create(config, None, dsPath, 'ListProvider')
+
+	def getEntries(self, path, metadata, events, seList, objStore):
+		for block in self.source.getBlocks():
+			for fi in block[DataProvider.FileList]:
+				metadata.update({'SRC_DATASET': block[DataProvider.Dataset], 'SRC_BLOCK': block[DataProvider.BlockName]})
+				metadata.update(dict(zip(block.get(DataProvider.Metadata, []), fi.get(DataProvider.Metadata, []))))
+				yield (fi[DataProvider.lfn], metadata, fi[DataProvider.NEvents], block[DataProvider.SEList], objStore)
 
 
 class MatchOnFilename(InfoScanner):
