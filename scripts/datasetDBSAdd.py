@@ -14,6 +14,7 @@ class DBSInfoProvider(datasets.GCProvider):
 			'MetadataFromCMSSW', 'ParentLookup', 'SEListFromPath', 'LFNFromPath', 'DetermineEvents',
 			'FilterEDMFiles']))
 		config.set(section, 'include config infos', 'True')
+		config.set(section, 'include parent infos', opts.importParents)
 		config.set(section, 'parent keys', 'CMSSW_PARENT_LFN CMSSW_PARENT_PFN')
 		config.set(section, 'events key', 'CMSSW_EVENTS_WRITE')
 		datasets.GCProvider.__init__(self, config, section, datasetExpr, datasetNick, datasetID)
