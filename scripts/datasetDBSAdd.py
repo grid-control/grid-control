@@ -14,7 +14,6 @@ class DBSInfoProvider(datasets.GCProvider):
 			'MetadataFromCMSSW', 'ParentLookup', 'SEListFromPath', 'LFNFromPath', 'DetermineEvents',
 			'FilterEDMFiles']))
 		config.set(section, 'include config infos', 'True')
-		config.set(section, 'include parent infos', opts.importParents)
 		config.set(section, 'parent keys', 'CMSSW_PARENT_LFN CMSSW_PARENT_PFN')
 		config.set(section, 'events key', 'CMSSW_EVENTS_WRITE')
 		datasets.GCProvider.__init__(self, config, section, datasetExpr, datasetNick, datasetID)
@@ -340,12 +339,13 @@ try:
 		help='Display information associated with dataset key(s) (accepts "all")')
 	ogDbg.add_option('-C', '--display-config',  dest='display_cfg',   default=None,
 		help='Display information associated with config hash(es) (accepts "all")')
-	ogDbg.add_option('-v', '--verbose',         dest='verbosity',     default=-1, action='count',
+	ogDbg.add_option('-v', '--verbose',         dest='verbosity',     default=0, action='count',
 		help='Increase verbosity')
 	parser.add_option_group(ogDbg)
 
 	(opts, args) = parser.parse_args()
 	utils.verbosity(opts.verbosity)
+	setattr(opts, 'include parent infos', opts.importParents)
 	setattr(opts, 'dataset hash keys', getattr(opts, 'dataset hash keys').replace(',', ' '))
 	if opts.useJobHash:
 		setattr(opts, 'dataset hash keys', getattr(opts, 'dataset hash keys') + ' CMSSW_CONFIG_JOBHASH')
@@ -386,15 +386,15 @@ try:
 		oldBlocks = reduce(operator.add, map(lambda ds: DBSApiv2(config, None, ds, None).getBlocks(), dNames), [])
 		(blocksAdded, blocksMissing, blocksChanged) = DataProvider.resyncSources(oldBlocks, blocks)
 		if len(blocksMissing) or len(blocksChanged):
-			if utils.getUserBool(' * WARNING: Block structure has changed! Continue?', False):
+			if not utils.getUserBool(' * WARNING: Block structure has changed! Continue?', False):
 				sys.exit(0)
-		setOldBlocks = set(map(lambda x: x[DataProvider.Blockname], oldBlocks))
-		setAddedBlocks = set(map(lambda x: x[DataProvider.Blockname], blocksAdded))
+		setOldBlocks = set(map(lambda x: x[DataProvider.BlockName], oldBlocks))
+		setAddedBlocks = set(map(lambda x: x[DataProvider.BlockName], blocksAdded))
 		blockCollision = set.intersection(setOldBlocks, setAddedBlocks)
 		if blockCollision and opts.closeBlock: # Block are closed and contents have changed
 			for block in blocksAdded:
-				if block[DataProvider.Blockname] in blockCollision:
-					block[DataProvider.Blockname] = utils.strGuid(md5(str(time.time())).hexdigest())
+				if block[DataProvider.BlockName] in blockCollision:
+					block[DataProvider.BlockName] = utils.strGuid(md5(str(time.time())).hexdigest())
 		blocks = blocksAdded
 
 	# 3) Display dataset properties
@@ -411,12 +411,12 @@ try:
 		os.chdir(opts.tmpDir)
 		def getBlockM(block):
 			getFileM = lambda fi: fi[DataProvider.Metadata][block[DataProvider.Metadata].index('PARENT_PATH')]
-			getFileListM = lambda fl: reduce(operator.add, map(getFileM, fl))
-			return reduce(operator.add, map(getFileListM, block[DataProvider.FileList]))
+			return reduce(operator.add, map(getFileM, block[DataProvider.FileList]))
+
 		parents = set(reduce(operator.add, map(getBlockM, blocks), []))
 		if len(parents) > 0:
 			utils.vprint(' * The following parents will be needed at the target dbs instance:', -1)
-			utils.vprint(str.join('', map(lambda x: '   * %s\n' % x, parents)), -1)
+			utils.vprint(str.join('\n', map(lambda x: '   * %s' % x, parents)), -1)
 			if not (opts.batch or utils.getUserBool(' * Register these parents?', True)):
 				sys.exit(0)
 			for parent in parents:
@@ -425,8 +425,8 @@ try:
 	# 6) Insert blocks into DBS
 	if opts.batch or utils.getUserBool(' * Start dataset import?', True):
 		fail = False
-		for (fqBlock, xmlBPath) in produced:
-			if not registerDataset(fqBlock, xmlBPath):
+		for (fqBlock, xmlBPath) in xmlFiles:
+			if not registerDataset(opts, fqBlock, xmlBPath):
 				fail = True
 		utils.vprint(' * Importing datasets - %s\n' % QM(fail, 'failed', 'done'), -1)
 	del mutex
