@@ -31,20 +31,13 @@ class DataProvider(AbstractObject):
 	def __init__(self, config, section, datasetExpr, datasetNick, datasetID):
 		(self._datasetExpr, self._datasetNick, self._datasetID) = (datasetExpr, datasetNick, datasetID)
 		self._cache = None
-		self.sitefilter = self.setup(config.getList, 'dataset', 'sites', [])
-		self.emptyBlock = self.setup(config.getBool, 'dataset', 'remove empty blocks', True)
-		self.emptyFiles = self.setup(config.getBool, 'dataset', 'remove empty files', True)
-		self.limitEvents = self.setup(config.getInt, 'dataset', 'limit events', -1)
-		nickProducer = self.setup(config.get, 'dataset', 'nickname source', 'SimpleNickNameProducer')
+		self.ignoreLFN = config.getList(('dataset', datasetNick), 'ignore files', [])
+		self.sitefilter = config.getList(('dataset', datasetNick), 'sites', [])
+		self.emptyBlock = config.getBool(('dataset', datasetNick), 'remove empty blocks', True)
+		self.emptyFiles = config.getBool(('dataset', datasetNick), 'remove empty files', True)
+		self.limitEvents = config.getInt(('dataset', datasetNick), 'limit events', -1)
+		nickProducer = config.get(('dataset', datasetNick), 'nickname source', 'SimpleNickNameProducer')
 		self.nProd = NickNameProducer.open(nickProducer, config)
-		self.ignoreLFN = self.setup(config.getList, 'dataset', 'ignore files', [])
-
-
-	def setup(self, func, section, item, default = noDefault, **kwargs):
-		value = func(section, item, default, **kwargs)
-		if self._datasetNick:
-			value = func('dataset %s' % self._datasetNick, item, value, **kwargs)
-		return copy.deepcopy(value)
 
 
 	# Parse dataset format [NICK : [PROVIDER : [(/)*]]] DATASET

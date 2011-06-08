@@ -1,6 +1,6 @@
 from python_compat import *
 import os, tarfile, time, copy, cStringIO
-from grid_control import QM, AbstractObject, AbstractError, RuntimeError, utils, ConfigError, Config
+from grid_control import QM, AbstractObject, AbstractError, RuntimeError, utils, ConfigError, Config, noDefault
 from provider_base import DataProvider
 
 class DataSplitter(AbstractObject):
@@ -15,9 +15,15 @@ class DataSplitter(AbstractObject):
 		self._protocol = {}
 
 
-	def setup(self, func, item, default = None):
-		self._protocol[item] = func(self.section, item, default)
-		return self._protocol[item]
+	def setup(self, func, block, item, default = noDefault):
+		skey = block.get(DataProvider.Nickname, '')
+		# make sure non-specific default value is specified (for metadata and resyncs)
+		if item not in self._protocol:
+			self._protocol[item] = func(self.section, item, default)
+		pkey = ('[%s] %s' % (skey, item)).strip()
+		if pkey not in self._protocol:
+			self._protocol[pkey] = func((self.section, skey), item, default)
+		return self._protocol[pkey]
 
 
 	def neededVars(cls):
@@ -93,13 +99,6 @@ class DataSplitter(AbstractObject):
 	def resyncMapping(self, newSplitPath, oldBlocks, newBlocks, config):
 		log = utils.ActivityLog('Resynchronization of dataset blocks')
 		(blocksAdded, blocksMissing, blocksChanged) = DataProvider.resyncSources(oldBlocks, newBlocks)
-		debug = open('%d' % time.time(), 'w')
-		debug.write('\n\nADDED\n')
-		debug.write(repr(blocksAdded))
-		debug.write('\n\nMISSING\n')
-		debug.write(repr(blocksMissing))
-		debug.write('\n\nCHANGED\n')
-		debug.write(repr(blocksChanged))
 		del log
 
 		# Variables for later
@@ -270,13 +269,6 @@ class DataSplitter(AbstractObject):
 
 		# ^^ Still not sure about the degrees of freedom ^^
 		#     User setup is finished starting from here
-
-		debug.write('\n\nADD\n')
-		debug.write(repr(splitAdded))
-		debug.write('\n\nPROC\n')
-		debug.write(repr(splitProcList))
-		debug.write('\n\nMODE\n')
-		debug.write(repr(splitProcMode))
 
 		# Process job modifications
 		(result, resultRedo, resultDisable) = ([], [], [])
@@ -451,11 +443,6 @@ class DataSplitter(AbstractObject):
 		for splitInfo in splitAdded:
 			result.append(splitInfo)
 
-		debug.write('\n\nREDO\n')
-		debug.write(repr(resultRedo))
-		debug.write('\n\nDISABLE\n')
-		debug.write(repr(resultDisable))
-
 		self.saveState(newSplitPath, result)
 		return (resultRedo, resultDisable)
 
@@ -527,9 +514,12 @@ class DataSplitter(AbstractObject):
 				self._tar = tarfile.open(path, 'r:')
 				(self._cacheKey, self._cacheTar) = (None, None)
 
-				self.metadata = self._fmt.parse(self._tar.extractfile('Metadata').readlines(), lowerCaseKey = False)
-				self.maxJobs = self.metadata.pop('MaxJobs')
-				self.classname = self.metadata.pop('ClassName')
+				metadata = self._fmt.parse(self._tar.extractfile('Metadata').readlines(), lowerCaseKey = False)
+				self.maxJobs = metadata.pop('MaxJobs')
+				self.classname = metadata.pop('ClassName')
+				self.metadata = {None: dict(filter(lambda (k, v): not k.startswith('['), metadata.items()))}
+				for (k, v) in filter(lambda (k, v): k.startswith('['), metadata.items()):
+					self.metadata.setdefault('None %s' % k.split(']')[0].lstrip('['), {})[k.split(']')[1].strip()] = v
 				del log
 
 			def __getitem__(self, key):
@@ -555,9 +545,14 @@ class DataSplitter(AbstractObject):
 
 	def loadState(path):
 		src = DataSplitter.loadStateInternal(path)
-		cfg = Config(configDict={None: src.metadata})
+		cfg = Config(configDict=src.metadata)
 		splitter = DataSplitter.open(src.classname, cfg, section = None)
 		splitter.splitSource = src
+		# Transfer config protocol (in case no split function is called)
+		splitter._protocol = src.metadata[None]
+		for section in filter(lambda x: x, src.metadata):
+			meta2prot = lambda (k, v): ('[%s] %s' % (section.replace('None ', ''), k), v)
+			splitter._protocol.update(dict(map(meta2prot, src.metadata[section].items())))
 		return splitter
 	loadState = staticmethod(loadState)
 

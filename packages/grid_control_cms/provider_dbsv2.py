@@ -19,16 +19,16 @@ class DBSApiv2(DataProvider):
 		DataProvider.__init__(self, config, section, datasetExpr, datasetNick, datasetID)
 		# PhEDex blacklist: '-T1_DE_KIT', '-T1_US_FNAL' allow user jobs
 		phedexBL = ['-T0_CH_CERN', '-T1_CH_CERN', '-T1_ES_PIC', '-T1_FR_CCIN2P3', '-T1_IT_CNAF', '-T1_TW_ASGC', '-T1_UK_RAL', '-T3_US_FNALLPC']
-		self.phedexBL = self.setup(config.getList, section, 'phedex sites', phedexBL)
-		self.onlyComplete = self.setup(config.getBool, section, 'phedex only complete', True)
+		self.phedexBL = config.getList((section, datasetNick), 'phedex sites', phedexBL)
+		self.onlyComplete = config.getBool((section, datasetNick), 'phedex only complete', True)
 
 		(self.datasetPath, self.url, self.datasetBlock) = utils.optSplit(datasetExpr, '@#')
-		self.url = QM(self.url, self.url, self.setup(config.get, section, 'dbs instance', ''))
+		self.url = QM(self.url, self.url, config.get((section, datasetNick), 'dbs instance', ''))
 		self.datasetBlock = QM(self.datasetBlock, self.datasetBlock, 'all')
-		self.phedex = self.setup(config.getBool, section, 'use phedex', self.url == '')
+		self.phedex = config.getBool((section, datasetNick), 'use phedex', self.url == '')
 
 		# This works in tandem with active job module (cmssy.py supports only [section] lumi filter!)
-		self.selectedLumis = parseLumiFilter(self.setup(config.get, section, 'lumi filter', ''))
+		self.selectedLumis = parseLumiFilter(config.get((section, datasetNick), 'lumi filter', ''))
 		if self.selectedLumis:
 			utils.vprint('The following runs and lumi sections are selected:', -1, once = True)
 			utils.vprint(utils.wrapList(formatLumi(self.selectedLumis), 65, ',\n\t'), -1, once = True)

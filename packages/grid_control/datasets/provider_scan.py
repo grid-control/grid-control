@@ -7,14 +7,14 @@ from scanner_basic import *
 class ScanProviderBase(DataProvider):
 	def __init__(self, config, section, datasetExpr, datasetNick, datasetID = 0):
 		DataProvider.__init__(self, config, section, '', datasetNick, datasetID)
-		DSB = lambda cFun, n, *args, **kargs: (self.setup(cFun, section, 'dataset %s' % n, *args, **kargs),
-			self.setup(cFun, section, 'block %s' % n, *args, **kargs))
+		DSB = lambda cFun, n, *args, **kargs: (cFun((section, datasetNick), 'dataset %s' % n, *args, **kargs),
+			cFun((section, datasetNick), 'block %s' % n, *args, **kargs))
 		(self.nameDS, self.nameB) = DSB(config.get, 'name pattern', '', noVar = False)
 		(self.kUserDS, self.kUserB) = DSB(config.getList, 'hash keys', [])
 		(self.kGuardDS, self.kGuardB) = DSB(config.getList, 'guard override', [])
-		self.kSelectDS = self.setup(config.getList, section, 'dataset key select', [])
-		scanList = self.setup(config.getList, section, 'scanner', datasetExpr)
-		self.scanner = map(lambda cls: InfoScanner.open(cls, self.setup, config, section), scanList)
+		self.kSelectDS = config.getList((section, datasetNick), 'dataset key select', [])
+		scanList = config.getList((section, datasetNick), 'scanner', datasetExpr)
+		self.scanner = map(lambda cls: InfoScanner.open(cls, config, section, datasetNick), scanList)
 
 
 	def collectFiles(self):

@@ -85,6 +85,32 @@ class CMSSW(DataMod):
 				key, value = loc
 				utils.vprint(' %i) %s' % (i + 1, value), -1)
 
+		# In case of non-cmsRun job:
+		self.executable = config.getPaths(self.__class__.__name__, 'executable', [])
+		self.arguments = config.get(self.__class__.__name__, 'arguments', '', noVar = False)
+
+		# Get cmssw config files and check their existance
+		self.configFiles = []
+		for cfgFile in config.getPaths(self.__class__.__name__, 'config file', QM(self.executable, [], noDefault), check = False):
+			newPath = os.path.join(config.workDir, os.path.basename(cfgFile))
+			if config.opts.init:
+				if not os.path.exists(cfgFile):
+					raise ConfigError('Config file %r not found.' % cfgFile)
+				shutil.copyfile(cfgFile, newPath)
+			self.configFiles.append(newPath)
+
+		# Check that for dataset jobs the necessary placeholders are in the config file
+		self.prepare = config.getBool(self.__class__.__name__, 'prepare config', False)
+		fragment = config.getPath(self.__class__.__name__, 'instrumentation fragment',
+			os.path.join('packages', 'grid_control_cms', 'share', 'fragmentForCMSSW.py'))
+		if self.dataSplitter != None:
+			if config.opts.init:
+				self.instrumentCfgQueue(self.configFiles, fragment, mustPrepare = True)
+		else:
+			self.eventsPerJob = config.get(self.__class__.__name__, 'events per job', 0, noVar = False)
+			if config.opts.init and self.prepare:
+				self.instrumentCfgQueue(self.configFiles, fragment)
+
 		if config.opts.init and len(self.projectArea):
 			if os.path.exists(os.path.join(config.workDir, 'runtime.tar.gz')):
 				if not utils.getUserBool('Runtime already exists! Do you want to regenerate CMSSW tarball?', True):
@@ -108,32 +134,6 @@ class CMSSW(DataMod):
 					utils.eprint('Unable to copy runtime! You can try to copy the CMSSW runtime manually.')
 					if not utils.getUserBool('Is runtime available on SE?', False):
 						raise RuntimeError('No CMSSW runtime on SE!')
-
-		# In case of non-cmsRun job:
-		self.executable = config.getPaths(self.__class__.__name__, 'executable', [])
-		self.arguments = config.get(self.__class__.__name__, 'arguments', '', noVar = False)
-
-		# Get cmssw config files and check their existance
-		self.configFiles = []
-		for cfgFile in config.getPaths(self.__class__.__name__, 'config file', QM(self.executable, [], noDefault)):
-			newPath = os.path.join(config.workDir, os.path.basename(cfgFile))
-			if config.opts.init:
-				if not os.path.exists(cfgFile):
-					raise ConfigError('Config file %r not found.' % cfgFile)
-				shutil.copyfile(cfgFile, newPath)
-			self.configFiles.append(newPath)
-
-		# Check that for dataset jobs the necessary placeholders are in the config file
-		self.prepare = config.getBool(self.__class__.__name__, 'prepare config', False)
-		fragment = config.getPath(self.__class__.__name__, 'instrumentation fragment',
-			os.path.join('packages', 'grid_control_cms', 'share', 'fragmentForCMSSW.py'))
-		if self.dataSplitter != None:
-			if config.opts.init:
-				self.instrumentCfgQueue(self.configFiles, fragment, mustPrepare = True)
-		else:
-			self.eventsPerJob = config.get(self.__class__.__name__, 'events per job', 0, noVar = False)
-			if config.opts.init and self.prepare:
-				self.instrumentCfgQueue(self.configFiles, fragment)
 
 
 	def instrumentCfgQueue(self, cfgFiles, fragment, mustPrepare = False):

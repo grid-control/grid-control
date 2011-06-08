@@ -17,7 +17,7 @@ class DBSInfoProvider(datasets.GCProvider):
 		config.set(section, 'parent keys', 'CMSSW_PARENT_LFN CMSSW_PARENT_PFN')
 		config.set(section, 'events key', 'CMSSW_EVENTS_WRITE')
 		datasets.GCProvider.__init__(self, config, section, datasetExpr, datasetNick, datasetID)
-		self.discovery = self.setup(config.getBool, section, 'discovery', False)
+		self.discovery = config.getBool((section, datasetNick), 'discovery', False)
 
 	def generateDatasetName(self, key, data):
 		if self.discovery:

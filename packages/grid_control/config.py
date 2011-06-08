@@ -68,6 +68,10 @@ class Config:
 
 
 	def get(self, section, item, default = noDefault, volatile = False, noVar = True):
+		if isinstance(section, tuple):
+			if self.parser.has_section('%s %s' % section):
+				return self.get('%s %s' % section, item, default, volatile, noVar)
+			return self.get(section[0], item, default, volatile, noVar)
 		# Check result, Make protocol of config queries and flag inconsistencies
 		def checkResult(value):
 			if item in self.protoValue.setdefault(section, {}):
