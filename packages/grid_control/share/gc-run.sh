@@ -122,7 +122,15 @@ fi
 if [ -n "$SE_INPUT_FILES" ]; then
 	echo "==========================="
 	echo
+	(
+	sleep $SE_INPUT_TIMEOUT &&
+	echo "===! SE download timeout after $SE_INPUT_TIMEOUT !===" 1>&2 &&
+	updatejobinfo 106 &&
+	kill -1 $$
+        ) &
+        killing_pid=$!
 	url_copy "$SE_INPUT_PATH" "file:///$MY_SCRATCH" "$SE_INPUT_FILES"
+	kill $killing_pid
 	echo
 fi
 
@@ -190,8 +198,16 @@ export LOG_MD5="$MY_LANDINGZONE/SE.log"
 if [ $CODE -eq 0 -a -n "$SE_OUTPUT_FILES" ]; then
 	echo "==========================="
 	echo
+	(
+	sleep $SE_OUTPUT_TIMEOUT &&
+	echo "===! SE output timeout after $SE_OUTPUT_TIMEOUT !===" 1>&2 &&
+	updatejobinfo 106 &&
+	kill -1 $$
+        ) &
+        killing_pid=$!
 	export TRANSFERLOG="$MY_SCRATCH/SE.log"
 	url_copy "file:///$MY_SCRATCH" "$SE_OUTPUT_PATH" "$SE_OUTPUT_FILES"
+	kill $killing_pid
 	(
 	[ -f "$TRANSFERLOG" ] && cat "$TRANSFERLOG" | while read NAME_LOCAL NAME_DEST; do
 		echo "FILE$IDX=\"$(cd "$MY_SCRATCH"; md5sum "$NAME_LOCAL")  $NAME_DEST  $SE_OUTPUT_PATH\""

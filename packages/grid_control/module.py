@@ -53,6 +53,10 @@ class Module(AbstractObject):
 		self.seInputPaths = normSEPaths(config.getList('storage', 'se input path', self.sePaths, noVar=True))
 		self.seInputFiles = config.getList('storage', 'se input files', [], noVar=False)
 		self.seInputPattern = config.get('storage', 'se input pattern', '@X@', noVar=False)
+		timeout = config.get('storage', 'se input timeout', '0:10')
+		self.seInputTimeout = utils.parseTime(timeout)
+		timeout = config.get('storage', 'se output timeout', '1:00')
+		self.seOutputTimeout = utils.parseTime(timeout)
 		self.seOutputPaths = normSEPaths(config.getList('storage', 'se output path', self.sePaths, noVar=True))
 		self.seOutputFiles = config.getList('storage', 'se output files', [], noVar=False)
 		self.seOutputPattern = config.get('storage', 'se output pattern', '@NICK@job_@MY_JOBID@_@X@', noVar=False)
@@ -99,6 +103,8 @@ class Module(AbstractObject):
 			'SE_INPUT_FILES': str.join(' ', self.seInputFiles),
 			'SE_OUTPUT_PATTERN': self.seOutputPattern,
 			'SE_INPUT_PATTERN': self.seInputPattern,
+			'SE_INPUT_TIMEOUT': self.seInputTimeout,
+			'SE_OUTPUT_TIMEOUT': self.seOutputTimeout,
 			# Sandbox
 			'SB_OUTPUT_FILES': str.join(' ', self.getOutFiles()),
 			'SB_INPUT_FILES': str.join(' ', map(os.path.basename, self.getInFiles())),
