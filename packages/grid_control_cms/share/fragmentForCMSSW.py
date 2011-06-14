@@ -25,7 +25,7 @@ def customise_for_gc(process):
 			pass
 		try:
 			lumirange = [__LUMI_RANGE__]
-			if len(lumirange)>0:
+			if len(lumirange) > 0:
 				process.source.lumisToProcess = cms.untracked.VLuminosityBlockRange(lumirange)
 				process.maxEvents = cms.untracked.PSet(input = cms.untracked.int32(-1))
 		except:
@@ -44,8 +44,8 @@ def customise_for_gc(process):
 
 	# Generator related setup
 	try:
-		if hasattr(process, "generator"):
-			process.source.firstLuminosityBlock = cms.untracked.uint32(1+__MY_JOBID__)
+		if hasattr(process, "generator") and process.source.type_() != "PoolSource":
+			process.source.firstLuminosityBlock = cms.untracked.uint32(1 + __MY_JOBID__)
 			print "Generator random seed:", process.RandomNumberGeneratorService.generator.initialSeed
 	except:
 		pass
