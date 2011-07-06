@@ -19,16 +19,16 @@ class DBSApiv2(DataProvider):
 		DataProvider.__init__(self, config, section, datasetExpr, datasetNick, datasetID)
 		# PhEDex blacklist: '-T1_DE_KIT', '-T1_US_FNAL' allow user jobs
 		phedexBL = ['-T0_CH_CERN', '-T1_CH_CERN', '-T1_ES_PIC', '-T1_FR_CCIN2P3', '-T1_IT_CNAF', '-T1_TW_ASGC', '-T1_UK_RAL', '-T3_US_FNALLPC']
-		self.phedexBL = config.getList((section, datasetNick), 'phedex sites', phedexBL)
-		self.onlyComplete = config.getBool((section, datasetNick), 'phedex only complete', True)
+		self.phedexBL = config.getList(section, 'phedex sites', phedexBL)
+		self.onlyComplete = config.getBool(section, 'phedex only complete', True)
 
 		(self.datasetPath, self.url, self.datasetBlock) = utils.optSplit(datasetExpr, '@#')
-		self.url = QM(self.url, self.url, config.get((section, datasetNick), 'dbs instance', ''))
+		self.url = QM(self.url, self.url, config.get(section, 'dbs instance', ''))
 		self.datasetBlock = QM(self.datasetBlock, self.datasetBlock, 'all')
-		self.phedex = config.getBool((section, datasetNick), 'use phedex', self.url == '')
+		self.phedex = config.getBool(section, 'use phedex', self.url == '')
 
 		# This works in tandem with active job module (cmssy.py supports only [section] lumi filter!)
-		self.selectedLumis = parseLumiFilter(config.get((section, datasetNick), 'lumi filter', ''))
+		self.selectedLumis = parseLumiFilter(config.get(section, 'lumi filter', ''))
 		if self.selectedLumis:
 			utils.vprint('The following runs and lumi sections are selected:', -1, once = True)
 			utils.vprint(utils.wrapList(formatLumi(self.selectedLumis), 65, ',\n\t'), -1, once = True)
@@ -47,7 +47,7 @@ class DBSApiv2(DataProvider):
 		return splitterClass
 
 
-	def getBlocksInternal(self):
+	def getBlocksInternal(self, noFiles):
 		import urllib2, DBSAPI.dbsApi
 		api = createDBSAPI(self.url)
 		def getWithPhedex(listBlockInfo, seList):
@@ -75,18 +75,19 @@ class DBSApiv2(DataProvider):
 				result.extend(api.listFiles(path, retriveList=QM(self.selectedLumis, ['retrive_lumi'], [])))
 			for datasetPath in toProcess:
 				thisBlockInfo = api.listBlocks(datasetPath, nosite = self.phedex)
-				tFile = utils.gcStartThread("Retrieval of file infos for %s" % datasetPath,
-					listFileInfoThread, self, api, datasetPath, listFileInfo)
-				if self.phedex:
-					getWithPhedex(thisBlockInfo, seList)
-				tFile.join()
+				if not noFiles:
+					tFile = utils.gcStartThread("Retrieval of file infos for %s" % datasetPath,
+						listFileInfoThread, self, api, datasetPath, listFileInfo)
+					if self.phedex:
+						getWithPhedex(thisBlockInfo, seList)
+					tFile.join()
 				listBlockInfo.extend(thisBlockInfo)
 		except:
 			raise RethrowError('DBS exception')
 
 		if len(listBlockInfo) == 0:
 			raise DatasetError('Dataset %s has no registered blocks in dbs.' % self.datasetPath)
-		if len(listFileInfo) == 0:
+		if len(listFileInfo) == 0 and not noFiles:
 			raise DatasetError('Dataset %s has no registered files in dbs.' % self.datasetPath)
 
 		def blockFilter(block):
@@ -125,12 +126,12 @@ class DBSApiv2(DataProvider):
 						dropped += 1
 
 			recordedFiles = len(blockInfo[DataProvider.FileList]) + dropped
-			if recordedFiles != block['NumberOfFiles']:
+			if recordedFiles != block['NumberOfFiles'] and not noFiles:
 				utils.eprint('Inconsistency in dbs block %s: Number of files doesn\'t match (b:%d != f:%d)'
 					% (block['Name'], block['NumberOfFiles'], recordedFiles))
 			if dropped == 0:
 				blockInfo[DataProvider.NEvents] = block['NumberOfEvents']
-			if len(blockInfo[DataProvider.FileList]) > 0:
+			if len(blockInfo[DataProvider.FileList]) > 0 or noFiles:
 				result.append(blockInfo)
 
 		if len(result) == 0:

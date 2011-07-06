@@ -614,38 +614,89 @@ class ActivityLog:
 def printTabular(head, data, fmtString = '', fmt = {}, level = -1):
 	justFunDict = { 'l': str.ljust, 'r': str.rjust, 'c': str.center }
 	# justFun = {id1: str.center, id2: str.rjust, ...}
+	head = list(head)
 	justFun = dict(map(lambda (idx, x): (idx[0], justFunDict[x]), zip(head, fmtString)))
 
-	maxlen = dict(map(lambda (id, name): (id, len(name)), head))
-	head = [ x for x in head ]
+	# adjust to lendict of column (considering escape sequence correction)
+	strippedlen = lambda x: len(re.sub('\33\[\d*(;\d*)*m', '', x))
+	just = lambda key, x: justFun.get(key, str.rjust)(x, lendict[key] + len(x) - strippedlen(x))
 
-	lenMap = {}
-	entries = []
+	lendict = {}
+	entries = [] # formatted, but not yet aligned entries
 	for entry in data:
-		if entry:
+		if isinstance(entry, dict):
 			tmp = {}
-			for id, name in head:
-				tmp[id] = str(fmt.get(id, str)(entry.get(id, '')))
-				value = str(fmt.get(id, str)(entry.get(id, '')))
-				stripped = re.sub('\33\[\d*(;\d*)*m', '', value)
-				lenMap[value] = len(value) - len(stripped)
-				maxlen[id] = max(maxlen.get(id, len(name)), len(stripped))
+			for key, name in head:
+				tmp[key] = str(fmt.get(key, str)(entry.get(key, '')))
+				lendict[key] = max(lendict.get(key, len(name)), strippedlen(tmp[key]))
+			entries.append(tmp)
 		else:
-			tmp = entry
-		entries.append(tmp)
+			entries.append(entry)
 
-	# adjust to maxlen of column (considering escape sequence correction)
-	just = lambda id, x: justFun.get(id, str.rjust)(str(x), maxlen[id] + lenMap.get(str(x), 0))
+	def getGoodPartition(keys, lendict, maxlen): # BestPartition => NP complete
+		def getFitting(leftkeys):
+			current = 0
+			for key in leftkeys:
+				if current + lendict[key] <= maxlen:
+					current += lendict[key]
+					yield key
+			if current == 0:
+				yield leftkeys[0]
+		unused = list(keys)
+		while len(unused) != 0:
+			for key in list(getFitting(unused)): # list(...) => get fitting keys at once!
+				unused.remove(key)
+				yield key
+			yield None
 
-	headentry = dict(map(lambda (id, name): (id, name.center(maxlen[id])), head))
-	for entry in [headentry, None] + entries:
-		applyFmt = lambda fun: map(lambda (id, name): just(id, fun(id)), head)
-		if entry == None:
-			vprint('=%s=' % str.join('=+=', applyFmt(lambda id: '=' * maxlen[id])), level)
-		elif entry == '':
-			vprint('-%s-' % str.join('-+-', applyFmt(lambda id: '-' * maxlen[id])), level)
+	def getAlignedDict(keys, lendict, maxlen):
+		edges = []
+		while len(keys):
+			offset = 2
+			(tmp, keys) = (keys[:keys.index(None)], keys[keys.index(None)+1:])
+			for key in tmp:
+				left = max(0, maxlen - sum(map(lambda k: lendict[k] + 3, tmp)))
+				for edge in edges:
+					if (edge > offset + lendict[key]) and (edge - (offset + lendict[key]) < left):
+						lendict[key] += edge - (offset + lendict[key])
+						left -= edge - (offset + lendict[key])
+				edges.append(offset + lendict[key])
+				offset += lendict[key] + 3
+		return lendict
+
+	# Wrap and align columns
+	headwrap = list(getGoodPartition(map(lambda (key, name): key, head),
+		dict(map(lambda (k,v): (k, v + 2), lendict.items())), printTabular.wraplen))
+	lendict = getAlignedDict(headwrap, lendict, printTabular.wraplen)
+
+	headentry = dict(map(lambda (id, name): (id, name.center(lendict[id])), head))
+	# Wrap rows
+	def wrapentries(entries):
+		for idx, entry in enumerate(entries):
+			def doEntry(entry):
+				tmp = []
+				for key in headwrap:
+					if key == None:
+						yield (tmp, entry)
+						tmp = []
+					else:
+						tmp.append(key)
+			if not isinstance(entry, str):
+				for x in doEntry(entry):
+					yield x
+				if (idx != 0) and (idx != len(entries) - 1):
+					if None in headwrap[:-1]:
+						yield list(doEntry("~"))[0]
+			else:
+				yield list(doEntry(entry))[0]
+
+	for (keys, entry) in wrapentries([headentry, "="] + entries):
+		if isinstance(entry, str):
+			decor = lambda x: "%s%s%s" % (entry, x, entry)
+			vprint(decor(str.join(decor('+'), map(lambda key: entry * lendict[key], keys))), level)
 		else:
-			vprint(' %s ' % str.join(' | ', applyFmt(lambda id: entry.get(id, ''))), level)
+			vprint(' %s ' % str.join(' | ', map(lambda key: just(key, entry.get(key, '')), keys)), level)
+printTabular.wraplen = 100
 
 
 def getUserInput(text, default, choices, parser = lambda x: x):

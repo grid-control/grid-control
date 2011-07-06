@@ -232,7 +232,7 @@ class CMSSW(DataMod):
 		return str.join(', ', map(lambda x: '"%s"' % x, filelist))
 
 
-	def getActiveLumiFilter(self, lumifilter):
+	def getActiveLumiFilter(self, lumifilter, jobNum = None):
 		getLR = lambda x: str.join(',', map(lambda x: '"%s"' % x, formatLumi(x)))
 		return getLR(lumifilter) # TODO: Validate subset selection
 		try:

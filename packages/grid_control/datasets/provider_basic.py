@@ -15,7 +15,7 @@ class FileProvider(DataProvider):
 			raise ConfigError('Invalid dataset expression!\nCorrect: /local/path/to/file|events[@SE1,SE2]')
 
 
-	def getBlocksInternal(self):
+	def getBlocksInternal(self, noFiles):
 		yield {
 			DataProvider.Dataset: self._path,
 			DataProvider.SEList: self._selist,
@@ -36,7 +36,7 @@ class ListProvider(DataProvider):
 		self._filename = utils.resolvePath(path)
 
 
-	def getBlocksInternal(self):
+	def getBlocksInternal(self, noFiles):
 		def doFilter(block):
 			if self._filter:
 				name = '/%s#%s#' % (block[DataProvider.Dataset], block.get(DataProvider.BlockName, ''))
@@ -59,6 +59,7 @@ class ListProvider(DataProvider):
 				if len(blockname) > 1:
 					blockinfo[DataProvider.BlockName] = blockname[1]
 				commonprefix = self._forcePrefix
+				commonMetadata = []
 			elif line != '':
 				tmp = map(str.strip, QM('[' in line, line.split(' = ', 1), rsplit(line, '=', 1)))
 				if len(tmp) != 2:
@@ -80,13 +81,16 @@ class ListProvider(DataProvider):
 					if not self._forcePrefix:
 						commonprefix = value
 				else:
-					if commonprefix:
-						key = '%s/%s' % (commonprefix, key)
-					value = value.split(' ', 1)
-					data = { DataProvider.lfn: key, DataProvider.NEvents: int(value[0]) }
-					if len(value) > 1:
-						data[DataProvider.Metadata] = commonMetadata + eval(value[1])
-					blockinfo[DataProvider.FileList].append(data)
+					if not noFiles:
+						if commonprefix:
+							key = '%s/%s' % (commonprefix, key)
+						value = value.split(' ', 1)
+						data = { DataProvider.lfn: key, DataProvider.NEvents: int(value[0]) }
+						if commonMetadata:
+							data[DataProvider.Metadata] = commonMetadata
+						if len(value) > 1:
+							data[DataProvider.Metadata] = data.get(DataProvider.Metadata, []) + eval(value[1])
+						blockinfo[DataProvider.FileList].append(data)
 		else:
 			if blockinfo and doFilter(blockinfo):
 				yield blockinfo

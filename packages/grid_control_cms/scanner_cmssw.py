@@ -3,9 +3,9 @@ from grid_control import QM, RethrowError
 from grid_control.datasets import InfoScanner
 
 class ObjectsFromCMSSW(InfoScanner):
-	def __init__(self, config, section, nick):
-		self.importParents = config.getBool((section, nick), 'include parent infos', False)
-		self.mergeConfigs = config.getBool((section, nick), 'merge config infos', True)
+	def __init__(self, config, section):
+		self.importParents = config.getBool(section, 'include parent infos', False)
+		self.mergeConfigs = config.getBool(section, 'merge config infos', True)
 		self.cfgStore = {}
 
 	def getEntries(self, path, metadata, events, seList, objStore):
@@ -76,8 +76,8 @@ class ObjectsFromCMSSW(InfoScanner):
 
 
 class MetadataFromCMSSW(InfoScanner):
-	def __init__(self, config, section, nick):
-		self.includeConfig = config.getBool((section, nick), 'include config infos', False)
+	def __init__(self, config, section):
+		self.includeConfig = config.getBool(section, 'include config infos', False)
 
 	def getEntries(self, path, metadata, events, seList, objStore):
 		metadata.update(objStore['CMSSW_FILES'].get(metadata.get('SE_OUTPUT_FILE')))
@@ -103,8 +103,8 @@ class SEListFromPath(InfoScanner):
 
 
 class LFNFromPath(InfoScanner):
-	def __init__(self, config, section, nick):
-		self.stripPath = config.get((section, nick), 'lfn marker', '/store/')
+	def __init__(self, config, section):
+		self.stripPath = config.get(section, 'lfn marker', '/store/')
 
 	def getEntries(self, path, metadata, events, seList, objStore):
 		if self.stripPath and self.stripPath in path:

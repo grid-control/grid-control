@@ -115,7 +115,7 @@ class Report:
 				allStates[cat] += 1
 			except:
 				pass
-		infos = map(lambda x: reports[x], order) + [None, allStates]
+		infos = map(lambda x: reports[x], order) + ["=", allStates]
 		self.printHeader('MODULE SUMMARY:')
 		utils.vprint(level = -1)
 		utils.printTabular(map(lambda x: (x, x), head + Report.states), infos, 'c' * len(head))
@@ -209,8 +209,8 @@ class Report:
 							addRow(6*' ' + queue, statinfo[site][wn][queue], statinfo[site][wn])
 
 				if num < len(sites) - 1:
-					report.append('')
-		report.append(None)
+					report.append('-')
+		report.append("=")
 		addRow('', statinfo, True)
 		header = [('SITE', 'SITE / WN')] + map(lambda x: (x, x), Report.states)
 

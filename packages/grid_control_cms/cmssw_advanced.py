@@ -58,6 +58,34 @@ class CMSSW_Advanced(cmssw.CMSSW):
 		cmssw.CMSSW.__init__(self, config)
 
 
+	def getVarsForNick(self, nick):
+		data = {'CMSSW_CONFIG': str.join(' ', map(os.path.basename, utils.flatten(fromNM(self.nmCfg, nick, ''))))}
+		constants = utils.mergeDicts(fromNM(self.nmConst, None, {}) + fromNM(self.nmConst, nick, {}))
+		constants = dict(map(lambda var: (var, constants.get(var, '')), self.nmCName))
+		data.update(constants)
+		lumifilter = utils.flatten(fromNM(self.nmLumi, nick, ''))
+		if lumifilter:
+			data['LUMI_RANGE'] = parseLumiFilter(str.join(",", lumifilter))
+		return data
+
+
+	def getDatasetOverviewInfo(self, blocks):
+		(head, blockInfos, fmt) = cmssw.CMSSW.getDatasetOverviewInfo(self, blocks)
+		head.extend([('CMSSW_CONFIG', 'Config file'), ('LUMI_RANGE', 'Lumi filter')])
+		def fmtLR(x):
+			if x:
+				return str.join(", ", formatLumi(x))
+			return x
+		fmt['LUMI_RANGE'] = fmtLR
+		for blockInfo in blockInfos:
+			data = self.getVarsForNick(blockInfo.get(DataProvider.Nickname, None))
+			for key in filter(lambda k: k not in ['CMSSW_CONFIG', 'LUMI_RANGE'], data.keys()):
+				if (key, key) not in head:
+					head.append((key, key))
+			blockInfo.update(data)
+		return (head, blockInfos, fmt)
+
+
 	def neededVars(self):
 		if self.nmLumi:
 			return cmssw.CMSSW.neededVars(self) + ['LUMI_RANGE']
@@ -76,17 +104,11 @@ class CMSSW_Advanced(cmssw.CMSSW):
 		if self.dataSplitter:
 			splitInfo = self.dataSplitter.getSplitInfo(jobNum)
 		nick = splitInfo.get(DataSplitter.Nickname, None)
-		# Put nick dependent variables into job specific settings
-		data = cmssw.CMSSW.getJobConfig(self, jobNum)
-		data['CMSSW_CONFIG'] = str.join(' ', map(os.path.basename, utils.flatten(fromNM(self.nmCfg, nick, ''))))
-		constants = utils.mergeDicts(fromNM(self.nmConst, None, {}) + fromNM(self.nmConst, nick, {}))
-		constants = dict(map(lambda var: (var, constants.get(var, '')), self.nmCName))
-		data.update(constants)
-		lumifilter = utils.flatten(fromNM(self.nmLumi, nick, ''))
-		if lumifilter:
-			data['LUMI_RANGE'] = self.getActiveLumiFilter(parseLumiFilter(str.join(",", lumifilter)))
-		utils.vprint('Nickname: %s' % nick, 1)
-		utils.vprint(' * Config files: %s' % data['CMSSW_CONFIG'], 1)
-		utils.vprint(' *    Variables: %s' % constants, 1)
-		utils.vprint(' *   Lumi range: %s' % str.join(',', lumifilter), 1)
-		return data
+		data = self.getVarsForNick(nick)
+		data['LUMI_RANGE'] = self.getActiveLumiFilter(data['LUMI_RANGE'], jobNum)
+		if utils.verbosity() > 0:
+			utils.vprint('Nickname: %s' % nick, 1)
+			utils.vprint(' * Config files: %s' % data['CMSSW_CONFIG'], 1)
+			utils.vprint(' *   Lumi range: %s' % data['LUMI_RANGE'], 1)
+			utils.vprint(' *    Variables: %s' % filterDict(data, lambda k: k not in ['CMSSW_CONFIG', 'LUMI_RANGE']), 1)
+		return utils.mergeDicts([cmssw.CMSSW.getJobConfig(self, jobNum), data])

@@ -45,7 +45,7 @@ if os.path.exists(dataset.split('%')[0]):
 else:
 	dummyConfig = Config(configDict={'dummy': {'lumi filter': '-', 'dbs blacklist T1': False}})
 	provider = DataProvider.create(dummyConfig, 'dummy', dataset, 'DBSApiv2')
-blocks = provider.getBlocks()
+blocks = provider.getBlocks(True)
 if len(blocks) == 0:
 	raise DatasetError('No blocks!')
 
@@ -107,7 +107,7 @@ if opts.listdatasets:
 		infos[dsName][DataProvider.NEvents] += block[DataProvider.NEvents]
 		infosum[DataProvider.NEvents] += block[DataProvider.NEvents]
 	utils.printTabular([(DataProvider.Dataset, 'Dataset'), (DataProvider.NEvents, 'Events')],
-		map(lambda x: infos[x], order) + [None, infosum])
+		map(lambda x: infos[x], order) + ["=", infosum])
 
 if opts.listfiles:
 	print

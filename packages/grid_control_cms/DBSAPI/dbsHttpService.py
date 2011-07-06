@@ -253,7 +253,7 @@ class DbsHttpService:
        if typ == 'POST':
           result = self.conn.request(typ, request_string, params, headers)  
        else:
-          result = self.conn.request(typ, request_string, {}, headers )
+          result = self.conn.request(typ, request_string, headers=headers)
 
        response = self.conn.getresponse() 
 

@@ -5,13 +5,13 @@ class NickNameProducer(AbstractObject):
 	def __init__(self, config):
 		pass
 
-	def getName(self, oldnick, dataset):
+	def getName(self, oldnick, dataset, block):
 		return oldnick
 NickNameProducer.dynamicLoaderPath()
 
 
 class SimpleNickNameProducer(NickNameProducer):
-	def getName(self, oldnick, dataset):
+	def getName(self, oldnick, dataset, block):
 		if oldnick == '':
 			return dataset.replace('/PRIVATE/', '').lstrip('/').split('/')[0].split('#')[0]
 		return oldnick
@@ -24,19 +24,20 @@ class InlineNickNameProducer(NickNameProducer):
 
 class DataProvider(AbstractObject):
 	# To uncover errors, the enums of DataProvider / DataSplitter do *NOT* match
-	dataInfos = ['NEvents', 'BlockName', 'Dataset', 'SEList', 'lfn', 'FileList', 'Nickname', 'DatasetID', 'Metadata']
+	dataInfos = ['NEvents', 'BlockName', 'Dataset', 'SEList', 'lfn', 'FileList', 'Nickname', 'DatasetID', 'Metadata', 'Provider']
 	for id, dataInfo in enumerate(dataInfos):
 		locals()[dataInfo] = id
 
 	def __init__(self, config, section, datasetExpr, datasetNick, datasetID):
 		(self._datasetExpr, self._datasetNick, self._datasetID) = (datasetExpr, datasetNick, datasetID)
 		self._cache = None
-		self.ignoreLFN = config.getList(('dataset', datasetNick), 'ignore files', [])
-		self.sitefilter = config.getList(('dataset', datasetNick), 'sites', [])
-		self.emptyBlock = config.getBool(('dataset', datasetNick), 'remove empty blocks', True)
-		self.emptyFiles = config.getBool(('dataset', datasetNick), 'remove empty files', True)
-		self.limitEvents = config.getInt(('dataset', datasetNick), 'limit events', -1)
-		nickProducer = config.get(('dataset', datasetNick), 'nickname source', 'SimpleNickNameProducer')
+		self.ignoreLFN = config.getList(section, 'ignore files', [])
+		self.sitefilter = config.getList(section, 'sites', [])
+		self.emptyBlock = config.getBool(section, 'remove empty blocks', True)
+		self.emptyFiles = config.getBool(section, 'remove empty files', True)
+		self.limitEvents = config.getInt(section, 'limit events', -1)
+		self.limitFiles = config.getInt(section, 'limit files', -1)
+		nickProducer = config.get(section, 'nickname source', 'SimpleNickNameProducer')
 		self.nProd = NickNameProducer.open(nickProducer, config)
 
 
@@ -55,21 +56,18 @@ class DataProvider(AbstractObject):
 			(nickname, dataset) = temp
 		elif len(temp) == 1:
 			dataset = temp[0]
-
-		nickProducer = config.get('dataset', 'nickname source', 'SimpleNickNameProducer')
-		nickname = NickNameProducer.open(nickProducer, config).getName(nickname, dataset)
-		nickname = QM('*' in dataset, '---', nickname)
 		return (nickname, provider, dataset)
 	parseDatasetExpr = staticmethod(parseDatasetExpr)
 
 
 	# Create a new DataProvider instance
-	def create(config, section, dataset, defaultProvider):
+	def create(config, section, dataset, defaultProvider, dsId = 0):
 		if '\n' in dataset:
 			return DataProvider.open('DataMultiplexer', config, section, dataset, defaultProvider)
 		else:
 			(dsNick, dsProv, dsExpr) = DataProvider.parseDatasetExpr(config, dataset, defaultProvider)
-			return DataProvider.open(dsProv, config, section, dsExpr, dsNick, 0)
+			section = ['dataset %s' % dsNick, 'dataset %s' % dsId, 'dataset', section, 'dataset'] # last => help
+			return DataProvider.open(dsProv, config, section, dsExpr, dsNick, dsId)
 	create = staticmethod(create)
 
 
@@ -84,27 +82,25 @@ class DataProvider(AbstractObject):
 
 
 	# Cached access to list of block dicts, does also the validation checks
-	def getBlocks(self):
+	def getBlocks(self, noFiles = False):
 		self.allEvents = 0
 		def processBlocks():
 			# Validation, Filtering & Naming:
-			for block in self.getBlocksInternal():
+			for block in self.getBlocksInternal(noFiles):
 				block.setdefault(DataProvider.BlockName, '0')
+				block.setdefault(DataProvider.Provider, self.__class__.__name__)
 				if self._datasetID:
 					block[DataProvider.DatasetID] = self._datasetID
 				if self._datasetNick:
 					block[DataProvider.Nickname] = self._datasetNick
-				block[DataProvider.Nickname] = self.nProd.getName(block.get(DataProvider.Nickname, '').strip('-'), block[DataProvider.Dataset])
+				else:
+					block[DataProvider.Nickname] = self.nProd.getName(block.get(DataProvider.Nickname, ''), block[DataProvider.Dataset], block)
+				if noFiles:
+					yield block
 
-				events = 0
-				for fileInfo in block[DataProvider.FileList]:
-					events += fileInfo[DataProvider.NEvents]
-				if (self.limitEvents > 0) and (self.allEvents + events > self.limitEvents):
-					block[DataProvider.NEvents] = 0
-					block[DataProvider.FileList] = []
-					events = 0
-				self.allEvents += events
-				if block.setdefault(DataProvider.NEvents, events) != events:
+				# Filter file list
+				events = sum(map(lambda x: x[DataProvider.NEvents], block[DataProvider.FileList]))
+				if block.setdefault(DataProvider.NEvents, events) != events and not noFiles:
 					utils.eprint('WARNING: Inconsistency in block %s#%s: Number of events doesn\'t match (b:%d != f:%d)'
 						% (block[DataProvider.Dataset], block[DataProvider.BlockName], block[DataProvider.NEvents], events))
 
@@ -121,12 +117,29 @@ class DataProvider(AbstractObject):
 							% (block[DataProvider.Dataset], block[DataProvider.BlockName]))
 					block[DataProvider.SEList] = sites
 
+				# Filter by number of files
+				block[DataProvider.FileList] = block[DataProvider.FileList][:QM(self.limitFiles < 0, None, self.limitFiles)]
+
+				# Filter by event count
+				class EventCounter:
+					def __init__(self, start, limit):
+						(self.counter, self.limit) = (start, limit)
+					def accept(self, fi):
+						if (self.limit < 0) or (self.counter + fi[DataProvider.NEvents] <= self.limit):
+							self.counter += fi[DataProvider.NEvents]
+							return True
+						return False
+				eventCounter = EventCounter(self.allEvents, self.limitEvents)
+				block[DataProvider.FileList] = filter(eventCounter.accept, block[DataProvider.FileList])
+				block[DataProvider.NEvents] = eventCounter.counter - self.allEvents
+				self.allEvents = eventCounter.counter
+
 				# Filter empty blocks
-				if not (self.emptyBlock and events == 0):
+				if not (self.emptyBlock and block[DataProvider.NEvents] == 0):
 					yield block
 
 		if self._cache == None:
-			if self._datasetExpr != None:
+			if self._datasetExpr:
 				log = utils.ActivityLog('Retrieving %s' % self._datasetExpr)
 			self._cache = list(processBlocks())
 			if self._datasetNick:
@@ -140,7 +153,7 @@ class DataProvider(AbstractObject):
 	# List of block dicts with format
 	# { NEvents: 123, Dataset: '/path/to/data', Block: 'abcd-1234', SEList: ['site1','site2'],
 	#   Filelist: [{lfn: '/path/to/file1', NEvents: 100}, {lfn: '/path/to/file2', NEvents: 23}]}
-	def getBlocksInternal(self):
+	def getBlocksInternal(self, noFiles):
 		raise AbstractError
 
 

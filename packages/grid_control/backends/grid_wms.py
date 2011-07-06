@@ -128,7 +128,7 @@ class GridWMS(WMS):
 			status = data['status'].lower()
 			try:
 				if status.find('failed') >=0:
-					status='failed'
+					status = 'failed'
 				else:
 					status = status.split()[0]
 			except:

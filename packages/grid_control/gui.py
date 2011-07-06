@@ -131,6 +131,7 @@ def ANSIGUI(jobDB, jobCycle):
 			screen.savePos()
 			(sizey, sizex) = screen.getmaxyx()
 			screen.setscrreg(min(17, sizey), sizey)
+			utils.printTabular.wraplen = sizex - 5
 			screen.loadPos()
 		screen.erase()
 		onResize(None, None)

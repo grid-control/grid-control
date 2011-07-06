@@ -29,10 +29,6 @@ from grid_control import utils, GridError
 from glite_wms import GliteWMS
 
 class GliteWMSDirect(GliteWMS):
-	def __init__(self, config, module, monitor):
-		GliteWMS.__init__(self, config, module, monitor)
-
-
 	# Check status of jobs and yield (jobNum, wmsID, status, other data)
 	def checkJobs(self, ids):
 		if getStatusDirect:

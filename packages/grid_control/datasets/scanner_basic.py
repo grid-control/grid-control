@@ -9,15 +9,15 @@ def splitParse(opt):
 
 
 class InfoScanner(AbstractObject):
-	def __init__(self, config, section, nick):
+	def __init__(self, config, section):
 		pass
 
 	def getGuards(self):
 		return ([], [])
 
 	def getEntriesVerbose(self, level, *args):
-		utils.vprint('    ' * level + 'Collecting information with %s...' % self.__class__.__name__, 2)
-		for c, n, l in zip(args, ['Path', 'Metadata', 'SE list', 'Events', 'Objects'], [0, 1, 1, 0, 1]):
+		utils.vprint('    ' * level + 'Collecting information with %s...' % self.__class__.__name__, 1)
+		for c, n, l in zip(args, ['Path', 'Metadata', 'Events', 'SE list', 'Objects'], [1, 2, 1, 2, 2]):
 			utils.vprint('    ' * level + '  %s: %s' % (n, c), l)
 		return self.getEntries(*args)
 
@@ -28,14 +28,14 @@ InfoScanner.dynamicLoaderPath()
 
 # Get output directories from external config file
 class OutputDirsFromConfig(InfoScanner):
-	def __init__(self, config, section, nick):
+	def __init__(self, config, section):
 		newVerbosity = utils.verbosity(utils.verbosity() - 3)
-		extConfig = Config(config.getPath((section, nick), 'source config'))
+		extConfig = Config(config.getPath(section, 'source config'))
 		self.extWorkDir = extConfig.getPath('global', 'workdir', extConfig.workDirDefault)
 		extConfig.opts = type('DummyType', (), {'init': False, 'resync': False})
 		extConfig.workDir = self.extWorkDir
 		self.extModule = Module.open(extConfig.get('global', 'module'), extConfig)
-		selector = config.get((section, nick), 'source job selector', '')
+		selector = config.get(section, 'source job selector', '')
 		extJobDB = JobDB(extConfig, jobSelector = lambda jobNum, jobObj: jobObj.state == Job.SUCCESS)
 		self.selected = sorted(extJobDB.getJobs(JobSelector.create(selector, module = self.extModule)))
 		utils.verbosity(newVerbosity + 3)
@@ -51,8 +51,8 @@ class OutputDirsFromConfig(InfoScanner):
 
 
 class OutputDirsFromWork(InfoScanner):
-	def __init__(self, config, section, nick):
-		self.extWorkDir = config.get((section, nick), 'source directory')
+	def __init__(self, config, section):
+		self.extWorkDir = config.get(section, 'source directory')
 		self.extOutputDir = os.path.join(self.extWorkDir, 'output')
 
 	def getEntries(self, path, metadata, events, seList, objStore):
@@ -70,14 +70,14 @@ class OutputDirsFromWork(InfoScanner):
 
 
 class MetadataFromModule(InfoScanner):
-	def __init__(self, config, section, nick):
+	def __init__(self, config, section):
 		ignoreDef = map(lambda x: 'SEED_%d' % x, range(10)) + ['FILE_NAMES',
 			'SB_INPUT_FILES', 'SE_INPUT_FILES', 'SE_INPUT_PATH', 'SE_INPUT_PATTERN',
 			'SB_OUTPUT_FILES', 'SE_OUTPUT_FILES', 'SE_OUTPUT_PATH', 'SE_OUTPUT_PATTERN',
 			'SE_MINFILESIZE', 'DOBREAK', 'MY_RUNTIME', 'MY_JOBID',
 			'GC_VERSION', 'GC_DEPFILES', 'SUBST_FILES', 'SEEDS',
 			'SCRATCH_LL', 'SCRATCH_UL', 'LANDINGZONE_LL', 'LANDINGZONE_UL']
-		self.ignoreVars = config.getList((section, nick), 'ignore module vars', ignoreDef)
+		self.ignoreVars = config.getList(section, 'ignore module vars', ignoreDef)
 
 	def getEntries(self, path, metadata, events, seList, objStore):
 		newVerbosity = utils.verbosity(utils.verbosity() - 3)
@@ -93,8 +93,8 @@ class MetadataFromModule(InfoScanner):
 
 
 class FilesFromLS(InfoScanner):
-	def __init__(self, config, section, nick):
-		self.path = config.getPath((section, nick), 'source directory', '.')
+	def __init__(self, config, section):
+		self.path = config.getPath(section, 'source directory', '.')
 
 	def getEntries(self, path, metadata, events, seList, objStore):
 		metadata['GC_SOURCE_DIR'] = self.path
@@ -127,8 +127,8 @@ class FilesFromJobInfo(InfoScanner):
 
 
 class FilesFromDataProvider(InfoScanner):
-	def __init__(self, config, section, nick):
-		dsPath = config.get((section, nick), 'source dataset path')
+	def __init__(self, config, section):
+		dsPath = config.get(section, 'source dataset path')
 		self.source = DataProvider.create(config, None, dsPath, 'ListProvider')
 
 	def getEntries(self, path, metadata, events, seList, objStore):
@@ -140,8 +140,8 @@ class FilesFromDataProvider(InfoScanner):
 
 
 class MatchOnFilename(InfoScanner):
-	def __init__(self, config, section, nick):
-		self.match = config.getList((section, nick), 'filename filter', ['*.root'])
+	def __init__(self, config, section):
+		self.match = config.getList(section, 'filename filter', ['*.root'])
 
 	def getEntries(self, path, metadata, events, seList, objStore):
 		if utils.matchFileName(path, self.match):
@@ -149,18 +149,18 @@ class MatchOnFilename(InfoScanner):
 
 
 class AddFilePrefix(InfoScanner):
-	def __init__(self, config, section, nick):
-		self.prefix = config.get((section, nick), 'filename prefix', '')
+	def __init__(self, config, section):
+		self.prefix = config.get(section, 'filename prefix', '')
 
 	def getEntries(self, path, metadata, events, seList, objStore):
 		yield (self.prefix + path, metadata, events, seList, objStore)
 
 
 class MatchDelimeter(InfoScanner):
-	def __init__(self, config, section, nick):
-		self.matchDelim = config.get((section, nick), 'delimeter match', '').split(':')
-		self.delimDS = config.get((section, nick), 'delimeter dataset key', '')
-		self.delimB = config.get((section, nick), 'delimeter block key', '')
+	def __init__(self, config, section):
+		self.matchDelim = config.get(section, 'delimeter match', '').split(':')
+		self.delimDS = config.get(section, 'delimeter dataset key', '')
+		self.delimB = config.get(section, 'delimeter block key', '')
 
 	def getGuards(self):
 		return (QM(self.delimDS, ['DELIMETER_DS'], []), QM(self.delimB, ['DELIMETER_B'], []))
@@ -178,11 +178,11 @@ class MatchDelimeter(InfoScanner):
 
 
 class ParentLookup(InfoScanner):
-	def __init__(self, config, section, nick):
-		self.parentKeys = config.getList((section, nick), 'parent keys', [])
-		self.looseMatch = config.getInt((section, nick), 'parent match level', 1)
-		self.source = config.get((section, nick), 'parent source', '')
-		self.merge = config.getBool((section, nick), 'merge parents', False)
+	def __init__(self, config, section):
+		self.parentKeys = config.getList(section, 'parent keys', [])
+		self.looseMatch = config.getInt(section, 'parent match level', 1)
+		self.source = config.get(section, 'parent source', '')
+		self.merge = config.getBool(section, 'merge parents', False)
 		self.lfnMap = {}
 
 	def getGuards(self):
@@ -209,18 +209,16 @@ class ParentLookup(InfoScanner):
 
 
 class DetermineEvents(InfoScanner):
-	def __init__(self, config, section, nick):
-		self.eventsCmd = config.get((section, nick), 'events command', '')
-		self.eventsKey = config.get((section, nick), 'events key', '')
-		self.ignoreEmpty = config.getBool((section, nick), 'events ignore empty', True)
-		self.eventsDefault = config.get((section, nick), 'events default', -1)
+	def __init__(self, config, section):
+		self.eventsCmd = config.get(section, 'events command', '')
+		self.eventsKey = config.get(section, 'events key', '')
+		self.eventsDefault = config.get(section, 'events default', -1)
 
 	def getEntries(self, path, metadata, events, seList, objStore):
 		events = int(metadata.get(self.eventsKey, QM(events >= 0, events, self.eventsDefault)))
-		try:
-			if opts.eventsCmd:
-				events = int(os.popen('%s %s' % (opts.eventsCmd, path)).readlines()[-1])
-		except:
-			pass
-		if (not self.ignoreEmpty) or events != 0:
-			yield (path, metadata, events, seList, objStore)
+		if self.eventsCmd:
+			try:
+				events = int(os.popen('%s %s' % (self.eventsCmd, path)).readlines()[-1])
+			except:
+				pass
+		yield (path, metadata, events, seList, objStore)

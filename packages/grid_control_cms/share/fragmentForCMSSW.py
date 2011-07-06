@@ -14,7 +14,7 @@ def customise_for_gc(process):
 	# Dataset related setup
 	try:
 		primaryFiles = [__FILE_NAMES__]
-		process.source = cms.Source("PoolSource",
+		process.source = cms.Source('PoolSource',
 			skipEvents = cms.untracked.uint32(__SKIP_EVENTS__),
 			fileNames = cms.untracked.vstring(primaryFiles)
 		)
@@ -33,20 +33,20 @@ def customise_for_gc(process):
 	except:
 		pass
 
-	if hasattr(process, "RandomNumberGeneratorService"):
+	if hasattr(process, 'RandomNumberGeneratorService'):
 		randSvc = RandomNumberServiceHelper(process.RandomNumberGeneratorService)
 		randSvc.populate()
 
-	process.AdaptorConfig = cms.Service("AdaptorConfig",
+	process.AdaptorConfig = cms.Service('AdaptorConfig',
 		enable = cms.untracked.bool(True),
 		stats = cms.untracked.bool(True),
 	)
 
 	# Generator related setup
 	try:
-		if hasattr(process, "generator") and process.source.type_() != "PoolSource":
+		if hasattr(process, 'generator') and process.source.type_() != 'PoolSource':
 			process.source.firstLuminosityBlock = cms.untracked.uint32(1 + __MY_JOBID__)
-			print "Generator random seed:", process.RandomNumberGeneratorService.generator.initialSeed
+			print 'Generator random seed:', process.RandomNumberGeneratorService.generator.initialSeed
 	except:
 		pass
 

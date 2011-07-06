@@ -57,21 +57,24 @@ class Config:
 
 
 	def set(self, section, item, value = None, override = True, append = False):
+		if isinstance(section, list):
+			section = section[0] # set most specific setting
+		(section, item) = tuple(map(lambda x: str(x).strip(), [section, item]))
 		if not self.allowSet:
-			raise APIError('Invalid runtime config override: [%s] %s = %s' % (str(section), str(item), str(value)))
-		utils.vprint('Config option was overridden: [%s] %s = %s' % (str(section), str(item), str(value)), 2)
-		if not self.parser.has_section(str(section)):
-			self.parser.add_section(str(section))
-		if (not self.parser.has_option(str(section), str(item))) or override:
-			self.parser.set(str(section), str(item), str(value))
-			self.protoSet[(str(section), str(item))] = append
+			raise APIError('Invalid runtime config override: [%s] %s = %s' % (section, item, str(value)))
+		utils.vprint('Config option was overridden: [%s] %s = %s' % (section, item, str(value)), 2)
+		if not self.parser.has_section(section):
+			self.parser.add_section(section)
+		if (not self.parser.has_option(section, item)) or override:
+			self.parser.set(section, item, str(value))
+			self.protoSet[(section, item)] = append
 
 
 	def get(self, section, item, default = noDefault, volatile = False, noVar = True):
-		if isinstance(section, tuple):
-			if self.parser.has_section('%s %s' % section):
-				return self.get('%s %s' % section, item, default, volatile, noVar)
-			return self.get(section[0], item, default, volatile, noVar)
+		if isinstance(section, list):
+			for specific in filter(lambda x: self.parser.has_option(x, item), section):
+				return self.get(specific, item, default, volatile, noVar)
+			return self.get(section[-1], item, default, volatile, noVar)
 		# Check result, Make protocol of config queries and flag inconsistencies
 		def checkResult(value):
 			if item in self.protoValue.setdefault(section, {}):

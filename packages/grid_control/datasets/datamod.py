@@ -15,8 +15,8 @@ class DataMod(Module):
 
 		if os.path.exists(os.path.join(config.workDir, 'datamap.tar')):
 			if config.opts.init and not config.opts.resync:
-				utils.eprint('Initialization of task with already submitted / finished jobs can cause invalid results!')
-				if utils.getUserBool('Perform resync of dataset related information instead of re-init?', True):
+				utils.eprint('Initialization of task will overwrite the current mapping between jobs and dataset content, which can lead to invalid results!')
+				if utils.getUserBool('Do you want to perform a syncronization between the current mapping and the new one to avoid this?', True):
 					config.opts.resync = True
 		elif config.opts.init and config.opts.resync:
 			config.opts.resync = False
@@ -37,7 +37,9 @@ class DataMod(Module):
 			splitterName = config.get(self.__class__.__name__, 'dataset splitter', 'FileBoundarySplitter')
 			splitterClass = provider.checkSplitter(DataSplitter.getClass(splitterName))
 			self.dataSplitter = splitterClass(config, self.__class__.__name__)
-			self.dataSplitter.splitDataset(os.path.join(config.workDir, 'datamap.tar'), provider.getBlocks())
+			blocks = provider.getBlocks()
+			self.dataSplitter.splitDataset(os.path.join(config.workDir, 'datamap.tar'), blocks)
+			self.printDatasetOverview(blocks)
 			if utils.verbosity() > 2:
 				self.dataSplitter.printAllJobInfo()
 		else:
@@ -56,6 +58,27 @@ class DataMod(Module):
 
 		if self.dataSplitter.getMaxJobs() == 0:
 			raise UserError('There are no events to process')
+
+
+	def getDatasetOverviewInfo(self,blocks):
+		head = [(DataProvider.DatasetID, 'ID'), (DataProvider.Nickname, 'Nickname'), (DataProvider.Dataset, 'Dataset path')]
+		blockInfos = []
+		for block in blocks:
+			shortProvider = DataProvider.providers.get(block[DataProvider.Provider], block[DataProvider.Provider])
+			value = {DataProvider.DatasetID: block.get(DataProvider.DatasetID, 0),
+				DataProvider.Nickname: block.get(DataProvider.Nickname, ''),
+				DataProvider.Dataset: '%s://%s' % (shortProvider, block[DataProvider.Dataset])}
+			if value not in blockInfos:
+				blockInfos.append(value)
+		return (head, blockInfos, {})
+
+
+	def printDatasetOverview(self, blocks):
+		(head, blockInfos, fmt) = self.getDatasetOverviewInfo(blocks)
+		utils.vprint('Using the following datasets:', -1)
+		utils.vprint(level = -1)
+		utils.printTabular(head, blockInfos, 'rcl', fmt = fmt)
+		utils.vprint(level = -1)
 
 
 	# This function is here to allow ParaMod to transform jobNums
@@ -171,6 +194,7 @@ class DataMod(Module):
 		newProvider = DataProvider.create(self.config, self.__class__.__name__, self.dataset, self.defaultProvider)
 		newProvider.saveState(self.config.workDir, 'datacache-new.dat')
 		new = newProvider.getBlocks()
+		self.printDatasetOverview(new)
 
 		# Use old splitting information to synchronize with new dataset infos
 		oldDataSplitter = DataSplitter.loadState(os.path.join(self.config.workDir, 'datamap.tar'))

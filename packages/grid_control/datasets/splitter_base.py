@@ -22,7 +22,7 @@ class DataSplitter(AbstractObject):
 			self._protocol[item] = func(self.section, item, default)
 		pkey = ('[%s] %s' % (skey, item)).strip()
 		if pkey not in self._protocol:
-			self._protocol[pkey] = func((self.section, skey), item, default)
+			self._protocol[pkey] = func(['dataset %s' % skey, self.section], item, default)
 		return self._protocol[pkey]
 
 
