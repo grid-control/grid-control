@@ -45,6 +45,9 @@ class DataMod(Module):
 		else:
 			# Load map between jobnum and dataset files
 			self.dataSplitter = DataSplitter.loadState(os.path.join(config.workDir, 'datamap.tar'))
+			if utils.verbosity() > 0:
+				oldBlocks = DataProvider.loadState(self.config, self.config.workDir).getBlocks()
+				self.printDatasetOverview(oldBlocks)
 
 		# Select dataset refresh rate
 		self.dataRefresh = utils.parseTime(config.get(self.__class__.__name__, 'dataset refresh', '', volatile=True))
@@ -60,7 +63,7 @@ class DataMod(Module):
 			raise UserError('There are no events to process')
 
 
-	def getDatasetOverviewInfo(self,blocks):
+	def getDatasetOverviewInfo(self, blocks):
 		head = [(DataProvider.DatasetID, 'ID'), (DataProvider.Nickname, 'Nickname'), (DataProvider.Dataset, 'Dataset path')]
 		blockInfos = []
 		for block in blocks:

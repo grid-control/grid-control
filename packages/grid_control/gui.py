@@ -1,4 +1,5 @@
 import re, sys, signal, utils, report, termios, array, fcntl
+from job_db import ClassSelector, JobClass
 
 class Console:
 	attr = {"COLOR_BLACK": "30", "COLOR_RED": "31", "COLOR_GREEN": "32",
@@ -124,7 +125,7 @@ class ProgressBar:
 		return str(self.bar)
 
 
-def ANSIGUI(jobDB, jobCycle):
+def ANSIGUI(jobMgr, jobCycle):
 	def wrapper(screen):
 		# Event handling for resizing
 		def onResize(sig, frame):
@@ -135,7 +136,7 @@ def ANSIGUI(jobDB, jobCycle):
 			screen.loadPos()
 		screen.erase()
 		onResize(None, None)
-		bar = ProgressBar(0, jobDB.nJobs, 65)
+		bar = ProgressBar(0, len(jobMgr.jobDB), 65)
 
 		def guiWait(timeout):
 			onResize(None, None)
@@ -150,14 +151,15 @@ def ANSIGUI(jobDB, jobCycle):
 				self.show(self.message.center(65))
 
 			def __del__(self):
-				self.show(' ' * len(self.message))
+				if hasattr(sys.stdout, "logged"):
+					self.show(' ' * len(self.message))
 
 			def show(self, message):
 				screen.savePos()
 				screen.move(0, 0)
 				sys.stdout.logged = False
-				bar.update(len(jobDB.ok))
-				report.Report(jobDB.jobDB).summary("%s\n%s" % (bar, message))
+				bar.update(len(jobMgr.jobDB.getJobs(ClassSelector(JobClass.SUCCESS))))
+				report.Report(jobMgr.jobDB).summary("%s\n%s" % (bar, message))
 				sys.stdout.logged = True
 				screen.loadPos()
 
@@ -174,7 +176,7 @@ def ANSIGUI(jobDB, jobCycle):
 			screen.setscrreg()
 			screen.move(1, 0)
 			screen.eraseDown()
-			report.Report(jobDB.jobDB).summary()
+			report.Report(jobMgr.jobDB).summary()
 	try:
 		wrapper(Console())
 	finally:

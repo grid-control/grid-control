@@ -3,6 +3,7 @@ from grid_control import *
 from python_compat import *
 
 noDefault = cp.NoOptionError
+mkDef = lambda default, fmtDefault: QM(default == noDefault, noDefault, fmtDefault)
 
 class Config:
 	def __init__(self, configFile = None, configDict = {}):
@@ -107,8 +108,9 @@ class Config:
 		return map(lambda x: utils.resolvePath(x, [self.baseDir], check, ConfigError), value)
 
 
+
 	def getPath(self, section, item, default = noDefault, volatile = False, noVar = True, check = True):
-		return (self.getPaths(section, item, [default], volatile, noVar, check) + [''])[0]
+		return (self.getPaths(section, item, mkDef(default, [default]), volatile, noVar, check) + [''])[0]
 
 
 	def getInt(self, section, item, default = noDefault, volatile = False, noVar = True):
@@ -116,7 +118,7 @@ class Config:
 
 
 	def getBool(self, section, item, default = noDefault, volatile = False, noVar = True):
-		return utils.parseBool(self.get(section, item, QM(default, 'true', 'false'), volatile, noVar))
+		return utils.parseBool(self.get(section, item, mkDef(default, QM(default, 'true', 'false')), volatile, noVar))
 
 
 	def getList(self, section, item, default = noDefault, volatile = False, noVar = True, delim = None, empty = []):
@@ -164,8 +166,8 @@ class Config:
 					if not flag:
 						utils.eprint('\nFound some changes in the config file, which will only apply')
 						utils.eprint('to the current task after a reinitialization:\n')
-					outputLine = '[%s] %s = %s' % (section, key, value)
-					outputLine += QM(len(outputLine) > 60, '\n', '') + '  (old value: %s)' % oldValue
+					outputLine = '[%s] %s = %s' % (section, key, value.replace('\n', '\n\t'))
+					outputLine += QM(len(outputLine) > 60, '\n', '') + '  (old value: %s)' % oldValue.replace('\n', '\n\t')
 					utils.eprint(outputLine)
 					flag = True
 		return flag

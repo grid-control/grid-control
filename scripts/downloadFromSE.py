@@ -78,6 +78,8 @@ DEFAULT: The default is to download the SE file and check them with MD5 hashes.
 		help="specify the local output directory")
 	parser.add_option("-P", "--proxy",  dest="proxy",  default="VomsProxy",
 		help="specify the proxy type used to determine ability to download - VomsProxy or TrivialProxy")
+	parser.add_option("-S", "--selectSE", dest="selectSE",  default=None, action="append",
+		help="specify the SE paths to process")
 	parser.add_option("-r", "--retry",  dest="retry",  default=0,
 		help="how often should a transfer be attempted [Default: 0]")
 
@@ -214,6 +216,10 @@ def realmain(opts, args):
 
 			# Copy files to local folder
 			outFilePath = os.path.join(opts.output, name_dest)
+			if opts.selectSE:
+				if not (True in map(lambda s: s in pathSE, opts.selectSE)):
+					print "skip file because it is not located on selected SE!"
+					return
 			if opts.skipExisting and (storage.se_exists(outFilePath) == 0):
 				print "skip file as it already exists!"
 				return

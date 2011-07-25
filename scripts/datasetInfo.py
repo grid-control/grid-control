@@ -22,6 +22,8 @@ parser.add_option('-m', '--metadata',      dest='metadata',     default=False, a
 	help='Get metadata infomation of dataset files')
 parser.add_option('-M', '--block-metadata', dest='blockmetadata', default=False, action='store_true',
 	help='Get common metadata infomation of dataset blocks')
+parser.add_option('-P', '--parseable',     dest='parseable',    default=False, action='store_true',
+	help='Get common metadata infomation of dataset blocks')
 parser.add_option('-S', '--save',          dest='save',
 	help='Saves dataset information to specified file')
 parser.add_option("-v", "--verbose",       dest="verbosity",    default=0,     action="count",
@@ -32,7 +34,9 @@ parser.add_option("-v", "--verbose",       dest="verbosity",    default=0,     a
 if len(args) != 1:
 	utils.exitWithUsage(usage)
 utils.verbosity(opts.verbosity)
+utils.printTabular.parseable = opts.parseable
 
+# Disable threaded queries
 def noThread(desc, fun, *args, **kargs):
 	fun(*args, **kargs)
 	return type("DummyThread", (), {"join": lambda self: None})()
@@ -45,7 +49,7 @@ if os.path.exists(dataset.split('%')[0]):
 else:
 	dummyConfig = Config(configDict={'dummy': {'lumi filter': '-', 'dbs blacklist T1': False}})
 	provider = DataProvider.create(dummyConfig, 'dummy', dataset, 'DBSApiv2')
-blocks = provider.getBlocks(True)
+blocks = provider.getBlocks()
 if len(blocks) == 0:
 	raise DatasetError('No blocks!')
 
@@ -108,6 +112,10 @@ if opts.listdatasets:
 		infosum[DataProvider.NEvents] += block[DataProvider.NEvents]
 	utils.printTabular([(DataProvider.Dataset, 'Dataset'), (DataProvider.NEvents, 'Events')],
 		map(lambda x: infos[x], order) + ["=", infosum])
+
+if opts.listblocks:
+	print
+	utils.printTabular(headerbase + [(DataProvider.BlockName, 'Block'), (DataProvider.NEvents, 'Events')], blocks)
 
 if opts.listfiles:
 	print
@@ -179,10 +187,6 @@ if opts.info:
 		print block.get(DataProvider.NEvents, 0),
 		evSum += block.get(DataProvider.NEvents, 0)
 		print evSum
-
-if opts.listblocks:
-	print
-	utils.printTabular(headerbase + [(DataProvider.BlockName, 'Block'), (DataProvider.NEvents, 'Events')], blocks)
 
 if opts.save:
 	print

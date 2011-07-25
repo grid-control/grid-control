@@ -1,6 +1,34 @@
 import sys, os, re, fnmatch, random, math, time, operator
-from grid_control import QM, ConfigError, UserError, RuntimeError, RethrowError, Job, Report, utils, JobSelector
+from grid_control import QM, ConfigError, RuntimeError, RethrowError, Job, Report, utils, JobSelector
 from python_compat import *
+
+class JobClass:
+	mkJobClass = lambda *fList: (reduce(operator.add, map(lambda f: 1 << f, fList)), fList)
+	ATWMS = mkJobClass(Job.SUBMITTED, Job.WAITING, Job.READY, Job.QUEUED)
+	RUNNING = mkJobClass(Job.RUNNING)
+	PROCESSING = mkJobClass(Job.SUBMITTED, Job.WAITING, Job.READY, Job.QUEUED, Job.RUNNING)
+	READY = mkJobClass(Job.INIT, Job.FAILED, Job.ABORTED, Job.CANCELLED)
+	DONE = mkJobClass(Job.DONE)
+	SUCCESS = mkJobClass(Job.SUCCESS)
+	DISABLED = mkJobClass(Job.DISABLED)
+	ENDSTATE = mkJobClass(Job.SUCCESS, Job.DISABLED)
+
+
+class AndJobSelector: # Internally used
+	def __init__(self, *args):
+		self.selectors = args
+
+	def __call__(self, jobNum, jobObj):
+		return reduce(operator.and_, map(lambda selector: selector(jobNum, jobObj), self.selectors))
+
+
+class ClassSelector(JobSelector):
+	def __init__(self, arg, **kwargs):
+		self.states = arg[1]
+
+	def __call__(self, jobNum, jobObj):
+		return jobObj.state in self.states
+
 
 class JobDB:
 	def __init__(self, config, jobLimit = -1, jobSelector = None):
@@ -41,20 +69,37 @@ class JobDB:
 		return self._jobs.get(jobNum, default)
 
 
-	def getJobs(self, jobSelector = None):
+	def getJobsIter(self, jobSelector = None, subset = None):
+		if subset == None:
+			subset = range(self.jobLimit)
 		if jobSelector and self.alwaysSelector:
 			select = lambda *args: jobSelector(*args) and self.alwaysSelector(*args)
 		elif jobSelector or self.alwaysSelector:
 			select = QM(jobSelector, jobSelector, self.alwaysSelector)
 		else:
-			return self._jobs.keys()
-		return filter(lambda jobNum: select(jobNum, self.get(jobNum)), self._jobs.keys())
+			for jobNum in subset:
+				yield jobNum
+			raise StopIteration
+		for jobNum in subset:
+			if select(jobNum, self.get(jobNum, Job())):
+				yield jobNum
+
+
+	def getJobs(self, jobSelector = None, subset = None):
+		return list(self.getJobsIter(jobSelector))
+
+
+	def getJobsN(self, jobSelector = None, subset = None):
+		counter = 0
+		for jobNum in self.getJobsIter(jobSelector):
+			counter += 1
+		return counter
 
 
 	def commit(self, jobNum, jobObj):
 		jobObj.save(os.path.join(self.dbPath, 'job_%d.txt' % jobNum))
 #		if jobObj.state == Job.DISABLED:
-			
+
 
 	def __len__(self):
 		return self.jobLimit
@@ -67,27 +112,12 @@ class JobDB:
 			raise RuntimeError('Could not write disabled jobs to file %s!' % (jobNum, self.disableLog))
 
 
-	def getMissing(self, jobLimit):
-		self.jobLimit = jobLimit
-		if len(self._jobs) < jobLimit:
-			return filter(lambda x: x not in self._jobs, range(jobLimit))
-		return []
-
-
 class JobManager:
 	def __init__(self, config, module, monitor):
 		(self.module, self.monitor) = (module, monitor)
 		self.jobLimit = config.getInt('jobs', 'jobs', -1, volatile=True)
-		self.nJobs = self.getMaxJobs(self.module)
-		(self.ready, self.running, self.queued, self.done, self.ok, self.disabled) = ([], [], [], [], [], [])
 		selected = JobSelector.create(config.get('jobs', 'selected', '', volatile=True), module = self.module)
-		self.jobDB = JobDB(config, self.nJobs, selected)
-		for jobNum in self.jobDB.getJobs():
-			self._findQueue(self.jobDB.get(jobNum)).append(jobNum)
-
-		self.ready.extend(self.jobDB.getMissing(self.nJobs))
-		for jobList in (self.ready, self.queued, self.running, self.done, self.ok, self.disabled):
-			jobList.sort()
+		self.jobDB = JobDB(config, self.getMaxJobs(self.module), selected)
 
 		self.timeout = utils.parseTime(config.get('jobs', 'queue timeout', '', volatile=True))
 		self.inFlight = config.getInt('jobs', 'in flight', -1, volatile=True)
@@ -120,39 +150,15 @@ class JobManager:
 		return nJobs
 
 
-	# Return appropriate queue for given job
-	def _findQueue(self, jobObj):
-		if jobObj.state in (Job.SUBMITTED, Job.WAITING, Job.READY, Job.QUEUED):
-			return self.queued
-		elif jobObj.state == Job.RUNNING:
-			return self.running
-		elif jobObj.state in (Job.INIT, Job.FAILED, Job.ABORTED, Job.CANCELLED):
-			return self.ready	# resubmit?
-		elif jobObj.state == Job.DONE:
-			return self.done
-		elif jobObj.state == Job.SUCCESS:
-			return self.ok
-		elif jobObj.state == Job.DISABLED:
-			return self.disabled
-		raise Exception('Internal error: Unexpected job state %s' % Job.states[jobObj.state])
-
-
 	def _update(self, jobObj, jobNum, state):
 		if jobObj.state == state:
 			return
 
 		oldState = jobObj.state
-		old = self._findQueue(jobObj)
-		old.remove(jobNum)
-
 		jobObj.update(state)
 		self.jobDB.commit(jobNum, jobObj)
 
-		new = self._findQueue(jobObj)
-		new.append(jobNum)
-		new.sort()
-
-		jobNumLen = int(math.log10(max(1, self.nJobs)) + 1)
+		jobNumLen = int(math.log10(max(1, len(self.jobDB))) + 1)
 		utils.vprint('Job %s state changed from %s to %s ' % (str(jobNum).ljust(jobNumLen), Job.states[oldState], Job.states[state]), -1, True, False)
 		if (state == Job.SUBMITTED) and (jobObj.attempt > 1):
 			print '(retry #%s)' % (jobObj.attempt - 1)
@@ -186,24 +192,30 @@ class JobManager:
 		return sorted(jobList)
 
 
-	def getSubmissionJobs(self, maxsample):
+	def getSubmissionJobs(self, maxsample, static = {"showBlocker": True}):
+		# Get list of submittable jobs
+		jobList = self.jobDB.getJobs(ClassSelector(JobClass.READY))
+		sizeWithoutFilter = len(jobList)
+		if self.maxRetry >= 0:
+			jobList = filter(lambda x: self.jobDB.get(x, Job()).attempt - 1 < self.maxRetry, jobList)
+		if static["showBlocker"] and sizeWithoutFilter > 0 and len(jobList) == 0:
+			utils.vprint('All remaining jobs have hit their maximum number of retries!', -1, True)
+		sizeWithoutModFilter = len(jobList)
+		jobList = filter(self.module.canSubmit, jobList)
+		if static["showBlocker"] and sizeWithoutModFilter > 0 and len(jobList) == 0:
+			utils.vprint('All remaining jobs are vetoed by the job module!', -1, True)
+
 		# Determine number of jobs to submit
-		submit = self.nJobs
-		nQueued = len(self.queued)
+		submit = len(jobList)
+		static["showBlocker"] = (len(jobList) > 0) or (sizeWithoutFilter == 0)
 		if self.inQueue > 0:
-			submit = min(submit, self.inQueue - nQueued)
+			submit = min(submit, self.inQueue - len(self.jobDB.getJobs(ClassSelector(JobClass.ATWMS))))
 		if self.inFlight > 0:
-			submit = min(submit, self.inFlight - nQueued - len(self.running))
+			submit = min(submit, self.inFlight - len(self.jobDB.getJobs(ClassSelector(JobClass.PROCESSING))))
 		if self.continuous:
 			submit = min(submit, maxsample)
 		submit = max(submit, 0)
 
-		# Get list of submittable jobs
-		if self.maxRetry >= 0:
-			jobList = filter(lambda x: self.jobDB.get(x, Job()).attempt - 1 < self.maxRetry, self.ready)
-		else:
-			jobList = self.ready[:]
-		jobList = filter(self.module.canSubmit, jobList)
 		if self.doShuffle:
 			return self.sample(jobList, submit)
 		else:
@@ -245,7 +257,7 @@ class JobManager:
 
 	def check(self, wms, maxsample = 100):
 		(change, timeoutList) = (False, [])
-		jobList = self.sample(self.running + self.queued, QM(self.continuous, maxsample, -1))
+		jobList = self.sample(self.jobDB.getJobs(ClassSelector(JobClass.PROCESSING)), QM(self.continuous, maxsample, -1))
 
 		if self.kickOffender:
 			nOffender = len(self.offender) # Waiting list gets larger in case reported == []
@@ -291,11 +303,11 @@ class JobManager:
 		self.processIntervention(wms, self.module.getIntervention())
 
 		# Quit when all jobs are finished
-		if len(self.ok) + len(self.disabled) == self.nJobs:
+		if len(self.jobDB.getJobs(ClassSelector(JobClass.ENDSTATE))) == len(self.jobDB):
 			if len(self.disabled) > 0:
 				utils.vprint('There are %d disabled jobs in this task!' % len(self.disabled), -1, True)
 				utils.vprint('Please refer to %s for a complete list.' % self.disableLog, -1, True)
-			self.monitor.onTaskFinish(self.nJobs)
+			self.monitor.onTaskFinish(len(self.jobDB))
 			if self.module.onTaskFinish():
 				utils.vprint('Task successfully completed. Quitting grid-control!', -1, True)
 				sys.exit(0)
@@ -305,7 +317,7 @@ class JobManager:
 
 	def retrieve(self, wms, maxsample = 10):
 		change = False
-		jobList = self.sample(self.done, QM(self.continuous, maxsample, -1))
+		jobList = self.sample(self.jobDB.getJobs(ClassSelector(JobClass.DONE)), QM(self.continuous, maxsample, -1))
 
 		for jobNum, retCode, data in wms.retrieveJobs(self.wmsArgs(jobList)):
 			jobObj = self.jobDB.get(jobNum)
@@ -334,7 +346,7 @@ class JobManager:
 		if len(jobs) == 0:
 			return
 		Report(self.jobDB, jobs).details()
-		if interactive and not utils.getUserBool('Do you really want to delete these jobs?', True):
+		if interactive and not utils.getUserBool('Do you really want to cancel these jobs?', True):
 			return
 
 		def mark_cancelled(jobNum):
@@ -351,21 +363,17 @@ class JobManager:
 			mark_cancelled(jobNum)
 
 		if len(jobs) > 0:
-			print '\nThere was a problem with deleting the following jobs:'
+			print '\nThere was a problem with cancelling the following jobs:'
 			Report(self.jobDB, jobs).details()
-			if (interactive and utils.getUserBool('Do you want to mark them as deleted?', True)) or not interactive:
+			if (interactive and utils.getUserBool('Do you want to mark them as cancelled?', True)) or not interactive:
 				map(mark_cancelled, jobs)
 
 
-	def getCancelJobs(self, jobs):
-		deleteable = [ Job.SUBMITTED, Job.WAITING, Job.READY, Job.QUEUED, Job.RUNNING ]
-		return filter(lambda x: self.jobDB.get(x, Job()).state in deleteable, jobs)
-
-
 	def delete(self, wms, select):
-		jobs = self.getCancelJobs(self.jobDB.getJobs(JobSelector.create(select, module = self.module)))
+		selector = AndJobSelector(ClassSelector(JobClass.PROCESSING), JobSelector.create(select, module = self.module))
+		jobs = self.jobDB.getJobs(selector)
 		if jobs:
-			print '\nDeleting the following jobs:'
+			print '\nCancelling the following jobs:'
 			self.cancel(wms, jobs, True)
 
 
@@ -386,15 +394,14 @@ class JobManager:
 		if jobChanges:
 			(redo, disable) = jobChanges
 			newMaxJobs = self.getMaxJobs(self.module)
-			if (redo == []) and (disable == []) and (self.nJobs == newMaxJobs):
+			if (redo == []) and (disable == []) and (len(self.jobDB) == newMaxJobs):
 				return
 			utils.vprint('The job module has requested changes to the job database', -1, True)
-			if self.nJobs != newMaxJobs:
-				utils.vprint('Number of jobs changed from %d to %d' % (self.nJobs, newMaxJobs), -1, True)
-				self.nJobs = newMaxJobs
-				self.ready.extend(self.jobDB.getMissing(self.nJobs))
-			self.cancel(wms, self.getCancelJobs(disable))
-			self.cancel(wms, self.getCancelJobs(redo))
-			resetState(disable, Job.DISABLED)
+			if len(self.jobDB) != newMaxJobs:
+				utils.vprint('Number of jobs changed from %d to %d' % (len(self.jobDB), newMaxJobs), -1, True)
+				self.jobDB.jobLimit = newMaxJobs
+			self.cancel(wms, self.jobDB.getJobs(ClassSelector(JobClass.PROCESSING), redo))
 			resetState(redo, Job.INIT)
+			self.cancel(wms, self.jobDB.getJobs(ClassSelector(JobClass.PROCESSING), disable))
+			resetState(disable, Job.DISABLED)
 			utils.vprint('All requested changes are applied', -1, True)

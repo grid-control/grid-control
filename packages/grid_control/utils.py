@@ -257,18 +257,18 @@ def parseList(value, delimeter = ',', doFilter = lambda x: x not in ['', '\n'], 
 
 def parseTuples(value):
 	"""Parse a string for keywords and tuples of keywords.
-	>>> parseTuples('(4, 8:00), keyword, ()')
-	[('4', '8:00'), 'keyword', ()]
-	>>> parseTuples('(4, 8:00), keyword, ()')
-	[('4', '8:00'), 'keyword', ()]
+	>>> parseTuples('(x,y,z) spam (ham, eggs)')
+	[('x', 'y', 'z'), 'spam', ('ham', 'eggs')]
+	>>> parseTuples('(4, 8:00), keyword, (), /pat h/to/file,+1.2e3 ,	(-.,;:=!^"x",[]{}), (1,2,),,')
+	[('4', '8:00'), 'keyword', (), '/pat h/to/file', '+1.2e3', ('-.', ';:=!^"x"', '[]{}'), ('1', '2', '')]
 	"""
 	def to_tuple_or_str((t, s)):
 		if len(s) > 0:
-			return s
+			return s.strip()
 		elif len(t.strip()) == 0:
 			return tuple()
-		return tuple(parseList(t))
-	return map(to_tuple_or_str, re.findall('\(([^\)]*)\)|([a-zA-Z0-9_\.]+)', value))
+		return tuple(parseList(t, doFilter = lambda x: True))
+	return map(to_tuple_or_str, re.findall('[ ]*\(([^\)]*)\)[ ]*|[ ]*([^,(]+)[ ]*', value))
 
 
 def parseTime(usertime):
@@ -612,6 +612,11 @@ class ActivityLog:
 
 
 def printTabular(head, data, fmtString = '', fmt = {}, level = -1):
+	if printTabular.parseable:
+		vprint(str.join("|", map(lambda x: x[1], head)), level)
+		for entry in data:
+			vprint(str.join("|", map(lambda x: str(entry.get(x[0], '')), head)), level)
+		return
 	justFunDict = { 'l': str.ljust, 'r': str.rjust, 'c': str.center }
 	# justFun = {id1: str.center, id2: str.rjust, ...}
 	head = list(head)
@@ -660,6 +665,7 @@ def printTabular(head, data, fmtString = '', fmt = {}, level = -1):
 					if (edge > offset + lendict[key]) and (edge - (offset + lendict[key]) < left):
 						lendict[key] += edge - (offset + lendict[key])
 						left -= edge - (offset + lendict[key])
+						break
 				edges.append(offset + lendict[key])
 				offset += lendict[key] + 3
 		return lendict
@@ -697,6 +703,7 @@ def printTabular(head, data, fmtString = '', fmt = {}, level = -1):
 		else:
 			vprint(' %s ' % str.join(' | ', map(lambda key: just(key, entry.get(key, '')), keys)), level)
 printTabular.wraplen = 100
+printTabular.parseable = False
 
 
 def getUserInput(text, default, choices, parser = lambda x: x):

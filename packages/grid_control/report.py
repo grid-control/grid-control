@@ -56,7 +56,7 @@ class Report:
 		reports = []
 		for jobNum in self.jobs:
 			jobObj = self.jobDB.get(jobNum)
-			if jobObj.state == Job.INIT:
+			if not jobObj or (jobObj.state == Job.INIT):
 				continue
 			reports.append({0: jobNum, 1: Job.states[jobObj.state], 2: jobObj.wmsId})
 			if utils.verbosity() > 0:
@@ -74,7 +74,7 @@ class Report:
 	def summary(self, message = '', level = -1):
 		summary = map(lambda x: 0.0, Job.states)
 		for jobNum in self.jobs:
-			summary[self.jobDB.get(jobNum).state] += 1
+			summary[self.jobDB.get(jobNum, Job()).state] += 1
 		makeSum = lambda *states: sum(map(lambda z: summary[z], states))
 		makePer = lambda *states: [makeSum(*states), round(makeSum(*states) / len(self.jobDB) * 100.0)]
 
@@ -139,7 +139,7 @@ class Report:
 			return tmp
 
 		statinfo = initdict()
-		destinations = map(lambda jobNum: self.jobDB.get(jobNum).history.values(), self.jobs)
+		destinations = map(lambda jobNum: self.jobDB.get(jobNum, Job()).history.values(), self.jobs)
 		for dest in utils.listMapReduce(lambda dList: map(getDest, dList), destinations):
 			tmp = statinfo.setdefault(dest[0], initdict()).setdefault(dest[1], initdict())
 			tmp.setdefault(dest[2], initdict())
@@ -155,19 +155,20 @@ class Report:
 
 		for id in self.jobs:
 			job = self.jobDB.get(id)
-			for attempt in job.history:
-				# Sort job into category
-				rt = job.get('runtime', 0)
-				if attempt == job.attempt:
-					cat = self.getJobCategory(job)
-					if cat == 'SUCCESS':
-						incstat(statinfo, job.history[attempt], cat, QM(rt == '', 0, rt))
+			if job:
+				for attempt in job.history:
+					# Sort job into category
+					rt = job.get('runtime', 0)
+					if attempt == job.attempt:
+						cat = self.getJobCategory(job)
+						if cat == 'SUCCESS':
+							incstat(statinfo, job.history[attempt], cat, QM(rt == '', 0, rt))
+						else:
+							incstat(statinfo, job.history[attempt], cat, time.time() - float(job.submitted))
 					else:
-						incstat(statinfo, job.history[attempt], cat, time.time() - float(job.submitted))
-				else:
-					if job.history[attempt] == 'N/A':
-						continue
-					incstat(statinfo, job.history[attempt], 'FAILED', QM(rt == '', 0, rt))
+						if job.history[attempt] == 'N/A':
+							continue
+						incstat(statinfo, job.history[attempt], 'FAILED', QM(rt == '', 0, rt))
 		# statinfo = {'site1: {''wn1.site1': {'FAILED': 0, 'RUNNING': 0, 'WAITING': 0, 'SUCCESS': 1}, 'wn2.site1': ...}, 'site2': {'wn1.site2': ...}}
 		return statinfo
 

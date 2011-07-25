@@ -104,7 +104,7 @@ if __name__ == '__main__':
 		# Initialise monitoring module
 		initSentinel.checkpoint('monitoring')
 		monitor = Monitoring(config, module, map(lambda x: Monitoring.open(x, config, module),
-			config.getList('jobs', 'monitor', 'scripts')))
+			config.getList('jobs', 'monitor', ['scripts'])))
 
 		# Initialise workload management interface
 		initSentinel.checkpoint('backend')

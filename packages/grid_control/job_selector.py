@@ -4,11 +4,11 @@ from grid_control import QM, UserError, Job, utils, AbstractError, AbstractObjec
 class JobSelector(AbstractObject):
 	def create(arg, **kwargs):
 		if arg:
-			return MultiJobSelector(arg, **kwargs).select
+			return MultiJobSelector(arg, **kwargs)
 		return None
 	create = staticmethod(create)
 
-	def select(self, jobNum, jobObj):
+	def __call__(self, jobNum, jobObj):
 		raise AbstractError
 JobSelector.dynamicLoaderPath()
 JobSelector.moduleMap.update({'id': 'IDSelector', 'state': 'StateSelector',
@@ -24,7 +24,7 @@ class IDSelector(JobSelector):
 		except:
 			raise UserError('Job identifiers must be integers or ranges.')
 
-	def select(self, jobNum, jobObj):
+	def __call__(self, jobNum, jobObj):
 		def checkID(jobRange):
 			if (jobRange[0] == '') or (jobNum >= jobRange[0]):
 				if (jobRange[1] == '') or (jobNum <= jobRange[1]):
@@ -38,7 +38,7 @@ class RegExSelector(JobSelector):
 		self.rxList = map(lambda x: re.compile(regexParser(x)), arg.split(','))
 		self.objParser = objParser
 
-	def select(self, jobNum, jobObj):
+	def __call__(self, jobNum, jobObj):
 		for regex in self.rxList:
 			if regex.search(self.objParser(jobObj)):
 				return True
@@ -62,7 +62,7 @@ class StateSelector(RegExSelector):
 		stateList = reduce(operator.add, map(lambda x: list(filter(x.match, Job.states)), self.rxList))
 		self.states = map(lambda x: list(Job.states).index(x), stateList)
 
-	def select(self, jobNum, jobObj):
+	def __call__(self, jobNum, jobObj):
 		return jobObj.state in self.states
 
 
@@ -71,13 +71,13 @@ class VarSelector(JobSelector):
 		self.rxDict = map(lambda x: (x.split('=', 1)[0], re.compile(x.split('=', 1)[1])), arg.split(','))
 		self.jobCfg = lambda jobNum, var: str(kwargs['module'].getJobConfig(jobNum).get(var, ''))
 
-	def select(self, jobNum, jobObj):
+	def __call__(self, jobNum, jobObj):
 		return reduce(operator.and_, map(lambda (var, rx): rx.search(self.jobCfg(jobNum, var)) != None, self.rxDict))
 
 
 class NickSelector(JobSelector):
 	def __init__(self, arg, **kwargs):
-		self.select = lambda jobNum, jobObj: kwargs['module'].getJobConfig(jobNum).get('DATASETNICK', '') == arg
+		self.__call__ = lambda jobNum, jobObj: kwargs['module'].getJobConfig(jobNum).get('DATASETNICK', '') == arg
 
 
 class MultiJobSelector(JobSelector):
@@ -89,10 +89,10 @@ class MultiJobSelector(JobSelector):
 			if ':' in term:
 				selectorType = term.split(':', 1)[0]
 			selector = JobSelector.open(selectorType, term.split(':', 1)[-1], **kwargs)
-			return lambda jobNum, jobObj: selector.select(jobNum, jobObj) == cmpValue
+			return lambda jobNum, jobObj: selector.__call__(jobNum, jobObj) == cmpValue
 		orTerms = str.join('+', map(str.strip, arg.split('+'))).split()
 		self.js = map(lambda orTerm: map(parseTerm, orTerm.split('+')), orTerms)
 
-	def select(self, jobNum, jobObj):
+	def __call__(self, jobNum, jobObj):
 		onTerm = lambda term: term(jobNum, jobObj) # [[f1], [f2,f3]] => f1(...) || (f2(...) && f3(...))
 		return reduce(operator.or_, map(lambda andTerm: reduce(operator.and_, map(onTerm, andTerm)), self.js))
