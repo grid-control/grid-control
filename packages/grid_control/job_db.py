@@ -86,12 +86,12 @@ class JobDB:
 
 
 	def getJobs(self, jobSelector = None, subset = None):
-		return list(self.getJobsIter(jobSelector))
+		return list(self.getJobsIter(jobSelector, subset))
 
 
 	def getJobsN(self, jobSelector = None, subset = None):
 		counter = 0
-		for jobNum in self.getJobsIter(jobSelector):
+		for jobNum in self.getJobsIter(jobSelector, subset):
 			counter += 1
 		return counter
 
@@ -106,10 +106,14 @@ class JobDB:
 
 
 	def logDisabled(self):
+		disabled = self.jobDB.getJobs(ClassSelector(JobClass.DISABLED))
 		try:
-			open(self.disableLog, 'w').write(str.join('\n', map(str, self.disabled)))
+			open(self.disableLog, 'w').write(str.join('\n', map(str, disabled)))
 		except:
 			raise RuntimeError('Could not write disabled jobs to file %s!' % (jobNum, self.disableLog))
+		if len(disabled) > 0:
+			utils.vprint('There are %d disabled jobs in this task!' % len(disabled), -1, True)
+			utils.vprint('Please refer to %s for a complete list.' % self.disableLog, -1, True)
 
 
 class JobManager:
@@ -192,22 +196,24 @@ class JobManager:
 		return sorted(jobList)
 
 
-	def getSubmissionJobs(self, maxsample, static = {"showBlocker": True}):
+	def getSubmissionJobs(self, maxsample, static = {'showBlocker': True}):
 		# Get list of submittable jobs
-		jobList = self.jobDB.getJobs(ClassSelector(JobClass.READY))
-		sizeWithoutFilter = len(jobList)
+		readyList = self.jobDB.getJobs(ClassSelector(JobClass.READY))
+		retryOK = readyList
 		if self.maxRetry >= 0:
-			jobList = filter(lambda x: self.jobDB.get(x, Job()).attempt - 1 < self.maxRetry, jobList)
-		if static["showBlocker"] and sizeWithoutFilter > 0 and len(jobList) == 0:
-			utils.vprint('All remaining jobs have hit their maximum number of retries!', -1, True)
-		sizeWithoutModFilter = len(jobList)
-		jobList = filter(self.module.canSubmit, jobList)
-		if static["showBlocker"] and sizeWithoutModFilter > 0 and len(jobList) == 0:
-			utils.vprint('All remaining jobs are vetoed by the job module!', -1, True)
+			retryOK = filter(lambda x: self.jobDB.get(x, Job()).attempt - 1 < self.maxRetry, readyList)
+		modOK = filter(self.module.canSubmit, readyList)
+		jobList = set.intersection(set(retryOK), set(modOK))
+
+		if static['showBlocker'] and len(readyList) > 0 and len(jobList) == 0: # No submission but ready jobs
+			err = []
+			err += QM(len(retryOK) > 0 and len(modOK) == 0, [], ['have hit their maximum number of retries'])
+			err += QM(len(retryOK) == 0 and len(modOK) > 0, [], ['are vetoed by the job module'])
+			utils.vprint('All remaining jobs %s!' % str.join(QM(retryOK or modOK, ' or ', ' and '), err), -1, True)
+		static['showBlocker'] = not (len(readyList) > 0 and len(jobList) == 0)
 
 		# Determine number of jobs to submit
 		submit = len(jobList)
-		static["showBlocker"] = (len(jobList) > 0) or (sizeWithoutFilter == 0)
 		if self.inQueue > 0:
 			submit = min(submit, self.inQueue - len(self.jobDB.getJobs(ClassSelector(JobClass.ATWMS))))
 		if self.inFlight > 0:
@@ -304,9 +310,7 @@ class JobManager:
 
 		# Quit when all jobs are finished
 		if len(self.jobDB.getJobs(ClassSelector(JobClass.ENDSTATE))) == len(self.jobDB):
-			if len(self.disabled) > 0:
-				utils.vprint('There are %d disabled jobs in this task!' % len(self.disabled), -1, True)
-				utils.vprint('Please refer to %s for a complete list.' % self.disableLog, -1, True)
+			self.jobDB.logDisabled()
 			self.monitor.onTaskFinish(len(self.jobDB))
 			if self.module.onTaskFinish():
 				utils.vprint('Task successfully completed. Quitting grid-control!', -1, True)

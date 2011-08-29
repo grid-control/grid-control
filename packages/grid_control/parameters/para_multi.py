@@ -48,12 +48,16 @@ class MultiParaMod(ParaMod):
 		keymap = dict(map(lambda x: (repr(utils.parseTuples(x)), x), config.parser.options('ParaMod')))
 
 		self.pset = {}
-		for p in utils.parseTuples(config.get('ParaMod', 'parameters')):
-			km_key = repr([p, 'type']).lower()
-			if isinstance(p, str):
-				km_key = repr(['%s type' % p]).lower()
-			expConfig = config.get('ParaMod', keymap.get(km_key, 'parameters type'), default = 'words')
-			self.pset[repr(p)] = expandParam(config.get('ParaMod', keymap[repr([p]).lower()]), expConfig)
+		for p_raw in utils.parseTuples(config.get('ParaMod', 'parameters')):
+			def getParamConfig(p, key):
+				km_key = repr(key).lower()
+				expConfig = config.get('ParaMod', keymap.get(km_key, 'parameters type'), default = 'words')
+				self.pset[repr(p)] = expandParam(config.get('ParaMod', keymap[repr([p]).lower()]), expConfig)
+			if isinstance(p_raw, str):
+				for p in p_raw.split():
+					getParamConfig(p, ['%s type' % p])
+			else:
+				getParamConfig(p_raw, [p_raw, 'type'])
 
 
 	def getParams(self):

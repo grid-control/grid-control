@@ -15,7 +15,7 @@ class DataMod(Module):
 
 		if os.path.exists(os.path.join(config.workDir, 'datamap.tar')):
 			if config.opts.init and not config.opts.resync:
-				utils.eprint('Initialization of task will overwrite the current mapping between jobs and dataset content, which can lead to invalid results!')
+				utils.eprint('Re-Initialization of task will overwrite the current mapping between jobs and dataset content, which can lead to invalid results!')
 				if utils.getUserBool('Do you want to perform a syncronization between the current mapping and the new one to avoid this?', True):
 					config.opts.resync = True
 		elif config.opts.init and config.opts.resync:

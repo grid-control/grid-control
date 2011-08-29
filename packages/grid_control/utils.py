@@ -257,10 +257,10 @@ def parseList(value, delimeter = ',', doFilter = lambda x: x not in ['', '\n'], 
 
 def parseTuples(value):
 	"""Parse a string for keywords and tuples of keywords.
-	>>> parseTuples('(x,y,z) spam (ham, eggs)')
-	[('x', 'y', 'z'), 'spam', ('ham', 'eggs')]
+	>>> parseTuples('(w x,y,z) spam (ham, eggs)')
+	[('w x', 'y', 'z'), 'spam', ('ham', 'eggs')]
 	>>> parseTuples('(4, 8:00), keyword, (), /pat h/to/file,+1.2e3 ,	(-.,;:=!^"x",[]{}), (1,2,),,')
-	[('4', '8:00'), 'keyword', (), '/pat h/to/file', '+1.2e3', ('-.', ';:=!^"x"', '[]{}'), ('1', '2', '')]
+	[('4', '8:00'), 'keyword', (), '/pat', 'h/to/file', '+1.2e3', ('-.', ';:=!^"x"', '[]{}'), ('1', '2', '')]
 	"""
 	def to_tuple_or_str((t, s)):
 		if len(s) > 0:
@@ -268,7 +268,7 @@ def parseTuples(value):
 		elif len(t.strip()) == 0:
 			return tuple()
 		return tuple(parseList(t, doFilter = lambda x: True))
-	return map(to_tuple_or_str, re.findall('[ ]*\(([^\)]*)\)[ ]*|[ ]*([^,(]+)[ ]*', value))
+	return map(to_tuple_or_str, re.findall('[ ]*\(([^\)]*)\)[ ]*|[ ]*([^,( ]+)[ ]*', value))
 
 
 def parseTime(usertime):
@@ -642,8 +642,8 @@ def printTabular(head, data, fmtString = '', fmt = {}, level = -1):
 		def getFitting(leftkeys):
 			current = 0
 			for key in leftkeys:
-				if current + lendict[key] <= maxlen:
-					current += lendict[key]
+				if current + lendict.get(key, 0) <= maxlen:
+					current += lendict.get(key, 0)
 					yield key
 			if current == 0:
 				yield leftkeys[0]

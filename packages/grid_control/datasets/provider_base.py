@@ -3,7 +3,7 @@ from grid_control import QM, utils, AbstractObject, AbstractError, ConfigError, 
 
 class NickNameProducer(AbstractObject):
 	def __init__(self, config):
-		pass
+		self.config = config
 
 	def getName(self, oldnick, dataset, block):
 		return oldnick
@@ -18,8 +18,9 @@ class SimpleNickNameProducer(NickNameProducer):
 
 
 class InlineNickNameProducer(NickNameProducer):
-	def __init__(self, config):
-		self.getName = eval('lambda oldnick, dataset: %s' % config.get('dataset', 'nickname expr', '""'))
+	def getName(self, oldnick, dataset, block):
+		cfgSections = ['dataset %s' % block.get(DataProvider.Dataset, ''), 'dataset']
+		return eval(config.get(cfgSections, 'nickname expr', '""'))
 
 
 class DataProvider(AbstractObject):

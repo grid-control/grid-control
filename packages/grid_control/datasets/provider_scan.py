@@ -42,7 +42,7 @@ class ScanProviderBase(DataProvider):
 		return utils.replaceDict(QM(self.nameB, self.nameB, key[:8]), data)
 
 
-	def getBlocksInternal(self):
+	def getBlocksInternal(self, noFiles):
 		# Split files into blocks/datasets via key functions and determine metadata intersection
 		(protoBlocks, commonDS, commonB) = ({}, {}, {})
 		def getActiveKeys(kUser, kGuard, gIdx):

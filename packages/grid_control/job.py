@@ -14,6 +14,7 @@ class Job:
 
 	def __init__(self, state = INIT):
 		self.state = state
+		self.nextstate = None
 		self.attempt = 0
 		self.history = {}
 		self.wmsId = None
