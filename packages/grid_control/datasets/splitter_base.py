@@ -16,10 +16,10 @@ class DataSplitter(AbstractObject):
 
 
 	def setup(self, func, block, item, default = noDefault):
-		skey = block.get(DataProvider.Nickname, '')
 		# make sure non-specific default value is specified (for metadata and resyncs)
 		if item not in self._protocol:
 			self._protocol[item] = func(self.section, item, default)
+		skey = block.get(DataProvider.Nickname, 'unknown')
 		pkey = ('[%s] %s' % (skey, item)).strip()
 		if pkey not in self._protocol:
 			self._protocol[pkey] = func(['dataset %s' % skey, self.section], item, default)

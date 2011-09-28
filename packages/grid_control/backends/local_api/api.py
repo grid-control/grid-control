@@ -1,8 +1,8 @@
 from grid_control import AbstractObject, AbstractError
 
 class LocalWMSApi(AbstractObject):
-	def __init__(self, config, localWMS):
-		self.wms = localWMS
+	def __init__(self, config):
+		pass
 
 	def getQueues(self):
 		return None
@@ -13,7 +13,7 @@ class LocalWMSApi(AbstractObject):
 	def getJobArguments(self, jobNum, sandbox):
 		raise AbstractError
 
-	def getSubmitArguments(self, jobNum, reqs, sandbox, stdout, stderr, addAttr):
+	def getSubmitArguments(self, jobNum, jobName, reqs, sandbox, stdout, stderr, addAttr):
 		raise AbstractError
 
 	def parseSubmitOutput(self, data):

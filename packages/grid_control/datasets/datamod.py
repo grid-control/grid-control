@@ -128,6 +128,7 @@ class DataMod(Module):
 		data['SKIP_EVENTS'] = splitInfo.get(DataSplitter.Skipped, 0)
 		data['DATASETID'] = splitInfo.get(DataSplitter.DatasetID, None)
 		data['DATASETPATH'] = splitInfo.get(DataSplitter.Dataset, None)
+		data['DATASETBLOCK'] = splitInfo.get(DataSplitter.BlockName, None)
 		data['DATASETNICK'] = splitInfo.get(DataSplitter.Nickname, None)
 		return data
 

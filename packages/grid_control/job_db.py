@@ -60,7 +60,8 @@ class JobDB:
 			if idx % 100 == 0:
 				del log
 				log = utils.ActivityLog('Reading job infos ... %d [%d%%]' % (idx, (100.0 * idx) / maxJobs))
-		self.jobLimit = max(self.jobLimit, len(self._jobs))
+		if jobLimit < 0 and len(self._jobs) > 0:
+			self.jobLimit = max(self._jobs) + 1
 
 
 	def get(self, jobNum, default = None, create = False):
@@ -106,7 +107,7 @@ class JobDB:
 
 
 	def logDisabled(self):
-		disabled = self.jobDB.getJobs(ClassSelector(JobClass.DISABLED))
+		disabled = self.getJobs(ClassSelector(JobClass.DISABLED))
 		try:
 			open(self.disableLog, 'w').write(str.join('\n', map(str, disabled)))
 		except:
@@ -225,7 +226,7 @@ class JobManager:
 		if self.doShuffle:
 			return self.sample(jobList, submit)
 		else:
-			return sorted(jobList[:submit])
+			return sorted(jobList)[:submit]
 
 
 	def submit(self, wms, maxsample = 100):

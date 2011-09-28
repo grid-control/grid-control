@@ -6,8 +6,9 @@ from DashboardAPI import DashboardAPI
 class DashBoard(Monitoring):
 	def __init__(self, config, module):
 		Monitoring.__init__(self, config, module)
+		(taskName, jobName, jobType) = module.getDescription(None) # TODO: use the other variables for monitoring
 		self.app = config.get('dashboard', 'application', 'shellscript', volatile=True)
-		self.tasktype = config.get('dashboard', 'task', module.getTaskType(), volatile=True)
+		self.tasktype = config.get('dashboard', 'task', jobType, volatile=True)
 		self.taskname = config.get('dashboard', 'task name', '@TASK_ID@_@NICK@', volatile=True, noVar=False)
 
 

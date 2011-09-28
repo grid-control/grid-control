@@ -6,8 +6,8 @@ from api import LocalWMSApi
 class JMS(LocalWMSApi):
 	_statusMap = { 's': Job.QUEUED, 'r': Job.RUNNING, 'CG': Job.DONE, 'w': Job.WAITING }
 
-	def __init__(self, config, wms):
-		LocalWMSApi.__init__(self, config, wms)
+	def __init__(self, config):
+		LocalWMSApi.__init__(self, config)
 		self.submitExec = utils.resolveInstallPath('job_submit')
 		self.statusExec = utils.resolveInstallPath('job_queue')
 		self.cancelExec = utils.resolveInstallPath('job_cancel')
@@ -21,9 +21,9 @@ class JMS(LocalWMSApi):
 		return repr(sandbox)
 
 
-	def getSubmitArguments(self, jobNum, reqs, sandbox, stdout, stderr, addAttr):
+	def getSubmitArguments(self, jobNum, jobName, reqs, sandbox, stdout, stderr, addAttr):
 		# Job name
-		params = ' -J "%s"' % self.wms.getJobName(jobNum)
+		params = ' -J "%s"' % jobName
 		# Job requirements
 		if WMS.SITES in reqs:
 			params += ' -c %s' % reqs[WMS.SITES][0]

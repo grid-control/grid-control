@@ -47,7 +47,10 @@ if os.path.exists(dataset.split('%')[0]):
 	dir, file = os.path.split(dataset)
 	provider = DataProvider.loadState(Config(), dir, file)
 else:
-	dummyConfig = Config(configDict={'dummy': {'lumi filter': '-', 'dbs blacklist T1': False}})
+	cfgSettings = {'dbs blacklist T1': False, 'remove empty blocks': False, 'remove empty files': False}
+	if opts.save or opts.metadata or opts.blockmetadata:
+		cfgSettings['lumi filter'] = '-'
+	dummyConfig = Config(configDict={'dummy': cfgSettings})
 	provider = DataProvider.create(dummyConfig, 'dummy', dataset, 'DBSApiv2')
 blocks = provider.getBlocks()
 if len(blocks) == 0:

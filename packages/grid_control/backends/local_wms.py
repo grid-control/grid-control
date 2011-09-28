@@ -8,7 +8,7 @@ class LocalWMS(WMS):
 		wmsapi = config.get('local', 'wms', self._guessWMS())
 		if wmsapi != self._guessWMS():
 			utils.vprint('Default batch system on this host is: %s' % self._guessWMS(), -1, once = True)
-		self.api = LocalWMSApi.open(wmsapi, config, self)
+		self.api = LocalWMSApi.open(wmsapi, config)
 		utils.vprint('Using batch system: %s' % self.api.__class__.__name__, -1)
 		self.addAttr = {}
 		if config.parser.has_section(wmsapi):
@@ -17,14 +17,9 @@ class LocalWMS(WMS):
 		config.set('local', 'broker', 'RandomBroker', override = False)
 		WMS.__init__(self, config, module, monitor, 'local', self.api)
 
-		self.sandPath = config.getPath('local', 'sandbox path', os.path.join(config.workDir, 'sandbox'), check=False)
 		self.sandCache = []
+		self.sandPath = config.getPath('local', 'sandbox path', os.path.join(config.workDir, 'sandbox'), check=False)
 		self.scratchPath = config.getPath('local', 'scratch path', '', volatile=True)
-		self._source = None
-		nameFile = config.getPath('local', 'name source', '', volatile=True)
-		if nameFile != '':
-			tmp = map(str.strip, open(nameFile, 'r').readlines())
-			self._source = filter(lambda x: not (x.startswith('#') or x == ''), tmp)
 
 
 	def _guessWMS(self):
@@ -44,15 +39,16 @@ class LocalWMS(WMS):
 		return files
 
 
-	# Wait 5 seconds between cycles and 0 seconds between steps
 	def getTimings(self):
-		return (20, 5)
+		return (20, 5) # Wait 20 seconds between cycles and 5 seconds between steps
 
 
-	def getJobName(self, jobNum):
-		if self._source:
-			return self._source[jobNum % len(self._source)]
-		return self.module.taskID[:10] + '.' + str(jobNum) #.rjust(4, '0')[:4]
+	def getRawIDs(self, ids):
+		return map(lambda (wmsId, jobNum): str(max(map(lambda x: utils.parseInt(x, 0), wmsId.split('.')))), ids)
+
+
+	def getGCID(self, wmsId):
+		return 'WMSID.%s.%s' % (self.api.__class__.__name__, wmsId)
 
 
 	# Submit job and yield (jobNum, WMS ID, other data)
@@ -75,8 +71,9 @@ class LocalWMS(WMS):
 		reqs = dict(self.broker.brokerSites(self.module.getRequirements(jobNum)))
 
 		(stdout, stderr) = (os.path.join(sandbox, 'gc.stdout'), os.path.join(sandbox, 'gc.stderr'))
+		(taskName, jobName, jobType) = self.module.getDescription(jobNum)
 		proc = utils.LoggedProcess(self.api.submitExec, '%s "%s" %s' % (
-			self.api.getSubmitArguments(jobNum, reqs, sandbox, stdout, stderr, self.addAttr),
+			self.api.getSubmitArguments(jobNum, jobName, reqs, sandbox, stdout, stderr, self.addAttr),
 			utils.pathShare('local.sh'), self.api.getJobArguments(jobNum, sandbox)))
 		retCode = proc.wait()
 		wmsIdText = proc.getOutput().strip().strip('\n')
@@ -92,7 +89,7 @@ class LocalWMS(WMS):
 		elif wmsId == None:
 			utils.eprint('WARNING: %s did not yield job id:\n%s' % (self.api.submitExec, wmsIdText))
 		if wmsId:
-			wmsId = '%s.%s' % (wmsId, self.api.__class__.__name__)
+			wmsId = self.getGCID(wmsId)
 			open(os.path.join(sandbox, wmsId), 'w')
 		else:
 			proc.logError(self.errorLog)
@@ -104,14 +101,12 @@ class LocalWMS(WMS):
 		if not len(ids):
 			raise StopIteration
 
-		shortWMSIds = map(lambda (wmsId, jobNum): wmsId.split('.')[0], ids)
 		activity = utils.ActivityLog('checking job status')
-		proc = utils.LoggedProcess(self.api.statusExec, self.api.getCheckArguments(shortWMSIds))
+		proc = utils.LoggedProcess(self.api.statusExec, self.api.getCheckArguments(self.getRawIDs(ids)))
 
 		tmp = {}
 		for data in self.api.parseStatus(proc.iter()):
-			# (job number, status, extra info)
-			wmsId = '%s.%s' % (data['id'], self.api.__class__.__name__)
+			wmsId = self.getGCID(data['id'])
 			tmp[wmsId] = (wmsId, self.api.parseJobState(data['status']), data)
 
 		for wmsId, jobNum in ids:
@@ -167,8 +162,7 @@ class LocalWMS(WMS):
 			raise StopIteration
 
 		activity = utils.ActivityLog('cancelling jobs')
-		shortWMSIds = map(lambda (wmsId, jobNum): wmsId.split('.')[0], ids)
-		proc = utils.LoggedProcess(self.api.cancelExec, self.api.getCancelArguments(shortWMSIds))
+		proc = utils.LoggedProcess(self.api.cancelExec, self.api.getCancelArguments(self.getRawIDs(ids)))
 		if proc.wait() != 0:
 			for line in proc.getError().splitlines():
 				if not self.api.unknownID() in line:

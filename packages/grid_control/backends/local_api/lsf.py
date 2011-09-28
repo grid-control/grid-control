@@ -14,8 +14,8 @@ class LSF(LocalWMSApi):
 		'UNKWN':  Job.FAILED, 'ZOMBI':  Job.FAILED,
 	}
 
-	def __init__(self, config, wms):
-		LocalWMSApi.__init__(self, config, wms)
+	def __init__(self, config):
+		LocalWMSApi.__init__(self, config)
 		self.submitExec = utils.resolveInstallPath('bsub')
 		self.statusExec = utils.resolveInstallPath('bjobs')
 		self.cancelExec = utils.resolveInstallPath('bkill')
@@ -29,9 +29,9 @@ class LSF(LocalWMSApi):
 		return repr(sandbox)
 
 
-	def getSubmitArguments(self, jobNum, reqs, sandbox, stdout, stderr, addAttr):
+	def getSubmitArguments(self, jobNum, jobName, reqs, sandbox, stdout, stderr, addAttr):
 		# Job name
-		params = ' -J %s' % self.wms.getJobName(jobNum)
+		params = ' -J %s' % jobName
 		# Job requirements
 		if WMS.SITES in reqs:
 			params += ' -q %s' % reqs[WMS.SITES][0]

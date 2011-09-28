@@ -40,6 +40,7 @@ if __name__ == '__main__':
 	parser.add_option("-q", "--resync",        dest="resync",     default=False, action="store_true")
 	parser.add_option("-s", "--no-submission", dest="submission", default=True,  action="store_false")
 	parser.add_option("-d", '--delete',        dest="delete",     default=None)
+	parser.add_option("-a", '--action',        dest="action",     default=None)
 	parser.add_option('-J', '--job-selector',  dest='selector',   default=None)
 	parser.add_option("-S", '--seed',          dest="seed",       default=None)
 	parser.add_option("-N", '--nseeds',        dest="nseeds",     default=None,  type="int")
@@ -63,11 +64,10 @@ if __name__ == '__main__':
 		def setConfigFromOpt(option, section, item, fun = lambda x: str(x)):
 			if option != None:
 				config.set(section, item, fun(option))
+		for (cfgopt, cmdopt) in {'nseeds': opts.nseeds, 'max retry': opts.maxRetry,
+			'action': opts.action, 'continuous': opts.continuous, 'selected': opts.selector}.items():
+			setConfigFromOpt(cmdopt, 'jobs', cfgopt)
 		setConfigFromOpt(opts.seed, 'jobs', 'seeds', lambda x: x.replace(',', ' '))
-		setConfigFromOpt(opts.nseeds, 'jobs', 'nseeds')
-		setConfigFromOpt(opts.maxRetry, 'jobs', 'max retry')
-		setConfigFromOpt(opts.continuous, 'jobs', 'continuous')
-		setConfigFromOpt(opts.selector, 'jobs', 'selected')
 		config.opts = opts
 
 		# Check work dir validity (default work directory is the config file name)
@@ -142,6 +142,8 @@ if __name__ == '__main__':
 			if config.needInit(savedConfigPath):
 				if utils.getUserBool("\nQuit grid-control in order to initialize the task again?", False):
 					sys.exit(0)
+				if utils.getUserBool("\nOverwrite currently saved configuration to remove warning in the future?", False):
+					config.prettyPrint(open(savedConfigPath, 'w'), True)
 		else:
 			# Save working config file - no runtime config file changes should happen after this point
 			config.prettyPrint(open(savedConfigPath, 'w'), True)
@@ -167,16 +169,17 @@ if __name__ == '__main__':
 						utils.vprint("Not enough space left in working directory", -1, True)
 						lastSpaceMsg = time.time()
 				else:
-					# check for jobs
-					if not utils.abort() and jobManager.check(wms):
-						didWait = wait(wms.getTimings()[1])
-					# retrieve finished jobs
-					if not utils.abort() and jobManager.retrieve(wms):
-						didWait = wait(wms.getTimings()[1])
-					# try submission
-					if opts.submission:
-						if not utils.abort() and jobManager.submit(wms):
-							didWait = wait(wms.getTimings()[1])
+					for action in map(str.lower, config.getList('jobs', 'action', ['check', 'retrieve', 'submit'])):
+						if action.startswith('c'):   # check for jobs
+							if not utils.abort() and jobManager.check(wms):
+								didWait = wait(wms.getTimings()[1])
+						elif action.startswith('r'): # retrieve finished jobs
+							if not utils.abort() and jobManager.retrieve(wms):
+								didWait = wait(wms.getTimings()[1])
+						elif action.startswith('s'): # try submission
+							if opts.submission:
+								if not utils.abort() and jobManager.submit(wms):
+									didWait = wait(wms.getTimings()[1])
 
 				# quit if abort flag is set or not in continuous mode
 				if utils.abort() or not opts.continuous:

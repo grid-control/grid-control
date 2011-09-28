@@ -2,12 +2,13 @@
 import sys, optparse
 from gcSupport import *
 from grid_control_cms.lumi_tools import formatLumi, mergeLumi
-from grid_control_cms.provider_dbsv2 import createDBSAPI
+from grid_control_cms.provider_dbsv2 import DataProvider, createDBSAPI
 
 parser = optparse.OptionParser()
 parser.add_option("-l", "--list", dest="list", default=None)
 parser.add_option("-f", "--files", dest="files", default=None)
 parser.add_option("-L", "--listlumis", dest="listlumis", default=None)
+parser.add_option("-R", "--lumiranges", dest="lumiranges", default=None)
 parser.add_option("-r", "--remove", dest="remove")
 parser.add_option("-w", "--wipe", dest="wipe", default=False, action="store_true")
 parser.add_option("-d", "--dump", dest="dump")
@@ -19,6 +20,23 @@ parser.add_option("-i", "--import", dest="imp")
 parser.add_option("-s", "--se", dest="se")
 parser.add_option("-p", "--parents", dest="parents")
 (opts, args) = parser.parse_args()
+
+if opts.lumiranges:
+	dummyConfig = Config(configDict={'dummy': {'lumi filter': '-', 'dbs blacklist T1': False,
+		'remove empty blocks': False, 'remove empty files': False}})
+	provider = DataProvider.create(dummyConfig, 'dummy', opts.lumiranges, 'DBSApiv2')
+	blocks = provider.getBlocks()
+	lrInfo = {}
+	for block in blocks[:-1]:
+		ds = block[DataProvider.Dataset]
+		for fi in block[DataProvider.FileList]:
+			runList = fi[DataProvider.Metadata][block[DataProvider.Metadata].index('Runs')]
+			f = lambda fun, idx: fun(fun(runList), lrInfo.get(ds, (9999999, 0))[idx])
+			lrInfo[ds] = (f(min, 0), f(max, 1))
+	mkDict = lambda (ds, min_max): {0: ds, 1: min_max[0], 2: min_max[1]}
+	print
+	utils.printTabular([(0, 'Dataset'), (1, 'MinRun'), (2, 'MaxRun')], map(mkDict, lrInfo.items()))
+	sys.exit(0)
 
 api = createDBSAPI(opts.url)
 

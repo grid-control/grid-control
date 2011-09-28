@@ -4,17 +4,17 @@ from grid_control.backends.wms import WMS
 from pbsge import PBSGECommon
 
 class OGE(PBSGECommon):
-	def __init__(self, config, wms):
-		PBSGECommon.__init__(self, config, wms)
+	def __init__(self, config):
+		PBSGECommon.__init__(self, config)
 		self.configExec = utils.resolveInstallPath('qconf')
 
 
-	def getSubmitArguments(self, jobNum, reqs, sandbox, stdout, stderr, addAttr):
+	def getSubmitArguments(self, jobNum, jobName, reqs, sandbox, stdout, stderr, addAttr):
 		timeStr = lambda s: '%02d:%02d:%02d' % (s / 3600, (s / 60) % 60, s % 60)
 		reqMap = { WMS.MEMORY: ('h_vmem', lambda m: '%dM' % m),
 			WMS.WALLTIME: ('s_rt', timeStr), WMS.CPUTIME: ('h_cpu', timeStr) }
 		# Restart jobs = no
-		return ' -r n' + PBSGECommon.getSubmitArguments(self, jobNum, reqs, sandbox, stdout, stderr, addAttr, reqMap)
+		return ' -r n' + PBSGECommon.getSubmitArguments(self, jobNum, jobName, reqs, sandbox, stdout, stderr, addAttr, reqMap)
 
 
 	def parseSubmitOutput(self, data):

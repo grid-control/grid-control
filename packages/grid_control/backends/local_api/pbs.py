@@ -12,16 +12,16 @@ class PBS(PBSGECommon):
 		'fail':	Job.FAILED, 'success': Job.SUCCESS
 	}
 
-	def __init__(self, config, wms):
-		PBSGECommon.__init__(self, config, wms)
+	def __init__(self, config):
+		PBSGECommon.__init__(self, config)
 		self.nodesExec = utils.resolveInstallPath('pbsnodes')
 		self._server = config.get('local', 'server', '', volatile=True)
 		self.fqid = lambda wmsId: QM(self._server, '%s.%s' % (wmsId, self._server), wmsId)
 
 
-	def getSubmitArguments(self, jobNum, reqs, sandbox, stdout, stderr, addAttr):
+	def getSubmitArguments(self, jobNum, jobName, reqs, sandbox, stdout, stderr, addAttr):
 		reqMap = { WMS.MEMORY: ('pvmem', lambda m: '%dmb' % m) }
-		params = PBSGECommon.getSubmitArguments(self, jobNum, reqs, sandbox, stdout, stderr, addAttr, reqMap)
+		params = PBSGECommon.getSubmitArguments(self, jobNum, jobName, reqs, sandbox, stdout, stderr, addAttr, reqMap)
 		# Job requirements
 		if reqs.get(WMS.SITES, (None, None))[1]:
 			params += ' -l host=%s' % str.join('+', reqs[WMS.SITES][1])

@@ -254,8 +254,9 @@ class CMSSW(DataMod):
 		return data
 
 
-	def getTaskType(self):
-		return QM(self.dataSplitter, 'analysis', 'production')
+	def getDescription(self, jobNum): # (task name, job name, type)
+		(taskName, jobName, jobType) = DataMod.getDescription(self, jobNum)
+		return (taskName, jobName, QM(jobType, jobType, QM(self.dataSplitter, 'analysis', 'production')))
 
 
 	def getDependencies(self):

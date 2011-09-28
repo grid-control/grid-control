@@ -17,6 +17,8 @@ parser.add_option("-R", "--findremoved", dest="findrm", default=False, action="s
 	help="Find removed blocks")
 parser.add_option("-C", "--checksplitting", dest="checkSplitting", default="",
 	help="Check splitting of dataset")
+parser.add_option("-d", "--decode", dest="decode", default="",
+	help="Decode log files")
 (opts, args) = parser.parse_args()
 
 # we need exactly one positional argument (config file)
@@ -100,3 +102,10 @@ if opts.splitting:
 			except:
 				print "Job %d was never initialized!" % jobNum
 		print str.join("\n", map(str, fail))
+
+if opts.decode:
+	import base64, gzip, StringIO
+	for line in open(opts.decode, 'r').readlines():
+		if line.startswith('(B64) '):
+			line = gzip.GzipFile(fileobj = StringIO.StringIO(base64.b64decode(line.replace('(B64) ', '')))).read()
+		print line.rstrip()

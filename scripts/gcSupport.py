@@ -49,15 +49,15 @@ class FileMutex:
 			pass
 
 
-def getWorkJobs(args):
+def getWorkJobs(args, selector = None):
 	if len(args) > 0:
 		configFile = args[0]
 		config = Config(configFile)
 		config.workDir = config.getPath('global', 'workdir', config.workDirDefault)
-		selector = None
+		userSelector = None
 		if len(args) != 1:
-			selector = MultiJobSelector(args[1]).select
-		return (config.workDir, JobDB(config).getJobs(selector))
+			userSelector = MultiJobSelector(args[1])
+		return (config.workDir, JobDB(config, jobSelector = userSelector).getJobs(selector))
 	sys.stderr.write("Syntax: %s <config file> [<job id>, ...]\n\n" % sys.argv[0])
 	sys.exit(1)
 

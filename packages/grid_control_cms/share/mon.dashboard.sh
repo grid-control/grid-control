@@ -6,9 +6,14 @@ source $MY_LANDINGZONE/gc-run.lib || exit 101
 
 case "$1" in
 	"start")
+		if [ -n "$GLITE_WMS_JOBID" ]; then
+			export GC_WMS_ID="$GLITE_WMS_JOBID"
+			export GC_CE_NAME="$GLOBUS_CE"
+		fi
+
 		my_move "$MY_SCRATCH" "$MY_LANDINGZONE" "DashboardAPI.py Logger.py ProcInfo.py apmon.py report.py"
 		DASH_ID=$(echo $TASK_NAME | var_replacer "" | sed "s/__/_/g;s/^_//;s/_$//")
-		export REPORTID="taskId=$DASH_ID jobId=${MY_JOBID}_$GLITE_WMS_JOBID MonitorID=$DASH_ID MonitorJobID=${MY_JOBID}_$GLITE_WMS_JOBID"
+		export REPORTID="taskId=$DASH_ID jobId=${MY_JOBID}_$GC_WMS_ID MonitorID=$DASH_ID MonitorJobID=${MY_JOBID}_$GC_WMS_ID"
 		export MY_DASHBOARDINFO="$MY_LANDINGZONE/Dashboard.report"
 
 		echo "Update Dashboard: $REPORTID"
@@ -16,10 +21,10 @@ case "$1" in
 		chmod u+x "$MY_LANDINGZONE/report.py"
 		checkbin "$MY_LANDINGZONE/report.py"
 		echo $MY_LANDINGZONE/report.py $REPORTID \
-			SyncGridJobId="$GLITE_WMS_JOBID" SyncGridName="$TASK_USER" SyncCE="$GLOBUS_CE" \
+			SyncGridJobId="$GC_WMS_ID" SyncGridName="$TASK_USER" SyncCE="$GC_CE_NAME" \
 			WNname="$(hostname -f)" ExeStart="$DB_EXEC"
 		$MY_LANDINGZONE/report.py $REPORTID \
-			SyncGridJobId="$GLITE_WMS_JOBID" SyncGridName="$TASK_USER" SyncCE="$GLOBUS_CE" \
+			SyncGridJobId="$GC_WMS_ID" SyncGridName="$TASK_USER" SyncCE="$GC_CE_NAME" \
 			WNname="$(hostname -f)" ExeStart="$DB_EXEC"
 		;;
 	"stop")

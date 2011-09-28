@@ -4,8 +4,8 @@ from grid_control.backends.wms import WMS
 from api import LocalWMSApi
 
 class PBSGECommon(LocalWMSApi):
-	def __init__(self, config, wms):
-		LocalWMSApi.__init__(self, config, wms)
+	def __init__(self, config):
+		LocalWMSApi.__init__(self, config)
 		self.submitExec = utils.resolveInstallPath('qsub')
 		self.statusExec = utils.resolveInstallPath('qstat')
 		self.cancelExec = utils.resolveInstallPath('qdel')
@@ -22,9 +22,9 @@ class PBSGECommon(LocalWMSApi):
 		return ''
 
 
-	def getSubmitArguments(self, jobNum, reqs, sandbox, stdout, stderr, addAttr, reqMap):
+	def getSubmitArguments(self, jobNum, jobName, reqs, sandbox, stdout, stderr, addAttr, reqMap):
 		# Job name
-		params = ' -N "%s"' % self.wms.getJobName(jobNum)
+		params = ' -N "%s"' % jobName
 		# Job shell
 		if self.shell:
 			params += ' -S %s' % self.shell

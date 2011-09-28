@@ -85,7 +85,12 @@ class Report:
 		utils.vprint('Jobs assigned to WMS:%9d        Failing jobs:%8d  %3d%%' % \
 			tuple([makeSum(Job.SUBMITTED, Job.WAITING, Job.READY, Job.QUEUED, Job.RUNNING)] +
 			makePer(Job.ABORTED, Job.CANCELLED, Job.FAILED)), -1)
-		utils.vprint(' ' * 65 + '\nDetailed Status Information:'.ljust(65), level)
+		utils.vprint(' ' * 65 + '\nDetailed Status Information:      ', level, newline = False)
+		ignored = len(self.jobDB) - sum(summary)
+		if ignored:
+			utils.vprint('(Jobs    IGNORED:%8d  %3d%%)' % (ignored, ignored / len(self.jobDB) * 100.0), level)
+		else:
+			utils.vprint(' ' * 31, level)
 		for stateNum, category in enumerate(Job.states):
 			utils.vprint('Jobs  %9s:%8d  %3d%%     ' % tuple([category] + makePer(stateNum)), \
 				level, newline = stateNum % 2)

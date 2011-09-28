@@ -2,7 +2,7 @@
 import gcSupport, sys, os, optparse, popen2, time, random, threading
 from python_compat import *
 from grid_control import *
-from grid_control import storage
+from grid_control import job_db, storage
 from grid_control.proxy import Proxy
 
 def md5sum(filename):
@@ -163,7 +163,7 @@ def realmain(opts, args):
 		sys.stderr.write(GCError.message)
 		sys.exit(1)
 
-	(workDir, jobList) = gcSupport.getWorkJobs(args)
+	(workDir, jobList) = gcSupport.getWorkJobs(args, job_db.ClassSelector(job_db.JobClass.SUCCESS))
 
 	# Create SE output dir
 	if not opts.output:

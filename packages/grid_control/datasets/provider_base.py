@@ -6,7 +6,7 @@ class NickNameProducer(AbstractObject):
 		self.config = config
 
 	def getName(self, oldnick, dataset, block):
-		return oldnick
+		raise AbstractError
 NickNameProducer.dynamicLoaderPath()
 
 
@@ -20,7 +20,7 @@ class SimpleNickNameProducer(NickNameProducer):
 class InlineNickNameProducer(NickNameProducer):
 	def getName(self, oldnick, dataset, block):
 		cfgSections = ['dataset %s' % block.get(DataProvider.Dataset, ''), 'dataset']
-		return eval(config.get(cfgSections, 'nickname expr', '""'))
+		return eval(self.config.get(cfgSections, 'nickname expr', 'oldnick'))
 
 
 class DataProvider(AbstractObject):

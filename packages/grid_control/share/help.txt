@@ -10,6 +10,8 @@
 	                         --- Job management functions ---
 	-i, --init               Initialise working directory
 	-c, --continuous         Run in continuous mode
+	-a, --action             Specify job management actions and order
+	                            -a CHECK,RETRIEVAL,SUBMIT (default)
 	-s, --no-submission      Disable job submission
 	-m, --max-retry <args>   Set maximum number of job resubmission attempts
 	                         Default is to resubmit indefinitely

@@ -3,8 +3,8 @@ from grid_control import ConfigError, RethrowError, Job, utils
 from api import LocalWMSApi
 
 class Host(LocalWMSApi):
-	def __init__(self, config, wms):
-		LocalWMSApi.__init__(self, config, wms)
+	def __init__(self, config):
+		LocalWMSApi.__init__(self, config)
 		self.submitExec = utils.pathShare('host.sh')
 		self.statusExec = utils.resolveInstallPath('ps')
 		self.cancelExec = utils.resolveInstallPath('kill')
@@ -18,7 +18,7 @@ class Host(LocalWMSApi):
 		return ''
 
 
-	def getSubmitArguments(self, jobNum, reqs, sandbox, stdout, stderr, addAttr):
+	def getSubmitArguments(self, jobNum, jobName, reqs, sandbox, stdout, stderr, addAttr):
 		return '%d "%s" "%s" "%s"' % (jobNum, sandbox, stdout, stderr)
 
 

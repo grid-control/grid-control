@@ -273,6 +273,7 @@ try:
 	except:
 		pass
 
+	mutex = None
 	usage = '%s [OPTIONS] <config file / work directory>' % sys.argv[0]
 	parser = optparse.OptionParser(usage=usage)
 	parser.add_option('-F', '--input',           dest='inputFile',          default=None,
@@ -380,6 +381,7 @@ try:
 
 	# 2) Filter datasets
 	if opts.incremental:
+		# Query target DBS for all found datasets and perform dataset resync with "supposed" state
 		dNames = set(map(lambda b: b[DataProvider.Dataset], blocks))
 		dNames = filter(lambda ds: hasDataset(opts.dbsTarget, ds), dNames)
 		config = Config(configDict = {None: {'dbs instance': opts.dbsTarget}})
@@ -388,6 +390,7 @@ try:
 		if len(blocksMissing) or len(blocksChanged):
 			if not utils.getUserBool(' * WARNING: Block structure has changed! Continue?', False):
 				sys.exit(0)
+		# Search for blocks which were partially added and generate "pseudo"-blocks with left over files
 		setOldBlocks = set(map(lambda x: x[DataProvider.BlockName], oldBlocks))
 		setAddedBlocks = set(map(lambda x: x[DataProvider.BlockName], blocksAdded))
 		blockCollision = set.intersection(setOldBlocks, setAddedBlocks)

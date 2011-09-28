@@ -1,4 +1,4 @@
-from para_base import ParaMod
+from para_base import ParaMod, utils
 import csv
 
 class SimpleParaMod(ParaMod):
@@ -19,6 +19,21 @@ class LinkedParaMod(SimpleParaMod):
 	def getParams(self):
 		for value in filter(lambda x: x != '', map(str.strip, self.paraValues.splitlines())):
 			yield dict(zip(map(str.strip, self.paraName.split(':')), map(str.strip, value.split(':'))))
+
+
+class ErrorParaMod(SimpleParaMod):
+	def __init__(self, config):
+		ParaMod.__init__(self, config)
+		self.paramDict = {}
+		for param in config.getList('ParaMod', 'parameters', ['PARAMETER']):
+			self.paramDict[param] = config.getList('ParaMod', param)
+
+	def getParams(self):
+		centralDict = dict(map(lambda (k, v): (k, v[0]), self.paramDict.items()))
+		yield centralDict
+		for param in self.paramDict:
+			for value in self.paramDict[param][1:]:
+				yield utils.mergeDicts([centralDict, {param: value}])
 
 
 class FileParaMod(ParaMod):
