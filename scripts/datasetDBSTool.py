@@ -11,6 +11,7 @@ parser.add_option("-L", "--listlumis", dest="listlumis", default=None)
 parser.add_option("-R", "--lumiranges", dest="lumiranges", default=None)
 parser.add_option("-r", "--remove", dest="remove")
 parser.add_option("-w", "--wipe", dest="wipe", default=False, action="store_true")
+parser.add_option("-v", "--invalidate", dest="invalidate")
 parser.add_option("-d", "--dump", dest="dump")
 parser.add_option("-u", "--url", dest="url",
 #	default="https://cmsdbsprod.cern.ch:8443/cms_dbs_ph_analysis_02_writer/servlet/DBSServlet"
@@ -94,6 +95,9 @@ elif opts.se:
 	for block in api.listBlocks(opts.se):
 		selist.extend(map(lambda x: x["Name"], block["StorageElementList"]))
 	print str.join(",", set(selist))
+
+elif opts.invalidate:
+	api.updateProcDSStatus(opts.invalidate, "INVALID")
 
 else:
 	print "Abandon all data, ye who tinker here!"
