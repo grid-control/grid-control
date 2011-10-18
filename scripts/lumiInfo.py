@@ -51,7 +51,7 @@ def outputJSON(lumis, stream = sys.stdout):
 # Lumi filter calculations
 ###########################
 if opts.save_jobjson or opts.save_jobgc or opts.get_events:
-	(workDir, jobList) = getWorkJobs(args)
+	(workDir, nJobs, jobList) = getWorkJobs(args)
 	(log, incomplete, splitter, splitInfo) = (None, False, None, {})
 	(lumiDict, readDict, writeDict) = ({}, {}, {})
 	try:

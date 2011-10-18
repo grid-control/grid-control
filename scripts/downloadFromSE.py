@@ -163,7 +163,7 @@ def realmain(opts, args):
 		sys.stderr.write(GCError.message)
 		sys.exit(1)
 
-	(workDir, jobList) = gcSupport.getWorkJobs(args, job_db.ClassSelector(job_db.JobClass.SUCCESS))
+	(workDir, nJobs, jobList) = gcSupport.getWorkJobs(args, job_db.ClassSelector(job_db.JobClass.SUCCESS))
 
 	# Create SE output dir
 	if not opts.output:
@@ -327,7 +327,7 @@ def realmain(opts, args):
 				print "%20s: [%d/%d]" % (state, num, len(jobList))
 		print
 
-	if ("Downloaded" in infos) and (infos["Downloaded"] == len(jobList)):
+	if ("Downloaded" in infos) and (infos["Downloaded"] == nJobs):
 		return True
 	return False
 

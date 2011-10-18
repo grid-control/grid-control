@@ -57,7 +57,8 @@ def getWorkJobs(args, selector = None):
 		userSelector = None
 		if len(args) != 1:
 			userSelector = MultiJobSelector(args[1])
-		return (config.workDir, JobDB(config, jobSelector = userSelector).getJobs(selector))
+		jobDB = JobDB(config, jobSelector = userSelector)
+		return (config.workDir, len(jobDB), jobDB.getJobs(selector))
 	sys.stderr.write("Syntax: %s <config file> [<job id>, ...]\n\n" % sys.argv[0])
 	sys.exit(1)
 

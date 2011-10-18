@@ -2,7 +2,7 @@
 import sys
 from gcSupport import *
 
-(workDir, jobList) = getWorkJobs(sys.argv[1:])
+(workDir, nJobs, jobList) = getWorkJobs(sys.argv[1:])
 for jobNum in sorted(jobList):
 	files = getFileInfo(workDir, jobNum, lambda retCode: retCode == 0)
 	if files:
