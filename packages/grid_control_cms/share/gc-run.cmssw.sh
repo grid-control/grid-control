@@ -76,13 +76,13 @@ mkdir -p "$MY_WORKDIR"; cd "$MY_WORKDIR"
 my_move "$MY_SCRATCH" "$MY_WORKDIR" "$SE_INPUT_FILES $CMSSW_EXEC"
 echo
 
-# Additional executables in the CMSSW environment
-for CMSSW_BIN in $CMSSW_EXEC; do
+# Additional prolog scripts in the CMSSW environment
+for CMSSW_BIN in $CMSSW_PROLOG_EXEC; do
 	echo "---------------------------"
 	echo
-	echo "Starting $CMSSW_BIN with arguments: $@"
+	echo "Starting $CMSSW_BIN with arguments: $CMSSW_PROLOG_ARGS"
 	checkbin "$CMSSW_BIN"
-	eval "./$CMSSW_BIN $@"
+	eval "./$CMSSW_BIN $CMSSW_PROLOG_ARGS"
 	echo
 done
 
@@ -149,6 +149,16 @@ if [ -n "$CMSSW_CONFIG" ]; then
 	echo
 	(cd "$MY_WORKDIR/cmssw.dbs"; tar cvzf "$MY_WORKDIR/cmssw.dbs.tar.gz" * )
 fi
+
+# Additional epilog scripts in the CMSSW environment
+for CMSSW_BIN in $CMSSW_EPILOG_EXEC; do
+	echo "---------------------------"
+	echo
+	echo "Starting $CMSSW_BIN with arguments: $CMSSW_EPILOG_ARGS"
+	checkbin "$CMSSW_BIN"
+	eval "./$CMSSW_BIN $CMSSW_EPILOG_ARGS"
+	echo
+done
 
 echo
 echo "---------------------------"

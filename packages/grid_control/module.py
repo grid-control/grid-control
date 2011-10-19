@@ -64,10 +64,8 @@ class Module(AbstractObject):
 		self.gzipOut = config.getBool(self.__class__.__name__, 'gzip output', True)
 
 		# Define constants for job
-		self.constants = {}
-		if config.parser.has_section('constants'):
-			for var in config.parser.options('constants'):
-				self.constants[var.upper()] = config.get('constants', var, '').strip()
+		self.constants = dict(map(lambda var: (var.upper(), config.get('constants', var, '').strip()),
+			config.getOptions('constants')))
 		for var in map(str.strip, config.getList(self.__class__.__name__, 'constants', [])):
 			self.constants[var] = config.get(self.__class__.__name__, var, '').strip()
 		self.substFiles = config.getList(self.__class__.__name__, 'subst files', [])

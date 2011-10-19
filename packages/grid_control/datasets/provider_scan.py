@@ -78,10 +78,10 @@ class ScanProviderBase(DataProvider):
 					for key in nameDict:
 						if nameDict[key] == name:
 							utils.eprint('\t%s hash %s using:' % (tName, keyFmt(key)))
-							for x in filter(lambda (k, v): k in hashKeys, varDict[keyFmt(key)]):
+							for x in filter(lambda (k, v): k in hashKeys, varDict[keyFmt(key)].items()):
 								utils.eprint('\t\t%s = %s' % x)
 					if ask and not utils.getUserBool('Do you want to continue?', False):
-						exit(0)
+						sys.exit(0)
 					ask = False
 		findCollision('dataset', hashNameDictDS, commonDS, keysDS)
 		findCollision('block', hashNameDictB, commonB, keysB, lambda x: x[1])

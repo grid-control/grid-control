@@ -45,7 +45,7 @@ class MultiParaMod(ParaMod):
 				raise exceptions.ConfigError("Illegal mode '%s' in parameter expansion" % mode)
 
 		# Map between parsed keys and config keys
-		keymap = dict(map(lambda x: (repr(utils.parseTuples(x)), x), config.parser.options('ParaMod')))
+		keymap = dict(map(lambda x: (repr(utils.parseTuples(x)), x), config.getOptions('ParaMod')))
 
 		self.pset = {}
 		for p_raw in utils.parseTuples(config.get('ParaMod', 'parameters')):

@@ -4,16 +4,35 @@ from python_compat import *
 
 noDefault = cp.NoOptionError
 mkDef = lambda default, fmtDefault: QM(default == noDefault, noDefault, fmtDefault)
+def cleanSO(section, option):
+	strStrip = lambda x: str(x).strip()
+	def uniqueReverseList(iter):
+		iter.reverse()
+		tmpSet, result = (set(), [])
+		for x in iter:
+			if x not in tmpSet:
+				result.append(x)
+				tmpSet.add(x)
+		result.reverse()
+		return result
+	if isinstance(section, list):
+		return (uniqueReverseList(map(strStrip, section)), strStrip(option))
+	return (strStrip(section), strStrip(option))
 
 class Config:
 	def __init__(self, configFile = None, configDict = {}):
-		(self.allowSet, self.protoValue, self.protoSet, self.parser) = (True, {}, {}, cp.ConfigParser())
+		self.allowSet = True
+		(self.content, self.apicheck, self.append, self.runtime, self.accessed) = ({}, {}, {}, {}, {})
+
+		defaultCfg = ['/etc/grid-control.conf', '~/.grid-control.conf', utils.pathGC('default.conf')]
+		for cfgFile in filter(os.path.exists, map(lambda p: utils.resolvePath(p, check = False), defaultCfg)):
+			self.parseFile(cfgFile)
 		if configFile:
 			# use the directory of the config file as base directory
 			self.baseDir = utils.cleanPath(os.path.dirname(configFile))
 			self.configFile = os.path.join(self.baseDir, os.path.basename(configFile))
 			self.confName = str.join('', os.path.basename(configFile).split('.')[:-1])
-			self.parseFile(self.parser, configFile)
+			self.parseFile(configFile)
 		else:
 			(self.baseDir, self.configFile, self.confName) = ('.', 'gc.conf', 'gc')
 		self.workDirDefault = os.path.join(self.baseDir, 'work.%s' % self.confName)
@@ -21,92 +40,84 @@ class Config:
 		# Override config settings via dictionary
 		for section in configDict:
 			for item in configDict[section]:
-				self.set(section, item, configDict[section][item])
+				self.setInternal(section, item, str(configDict[section][item]), False)
+		self.set('global', 'include', '', default = '')
 
 
-	def parseFile(self, parser, configFile):
-		def parseFileInt(fn, doExpansion = True):
-			try:
-				parser.readfp(open(fn, 'r'))
-				# Expand config option extensions with '+='
-				for section in parser.sections():
-					for option in filter(lambda x: x.endswith('+'), parser.options(section)):
-						if doExpansion:
-							value = ''
-							if parser.has_option(section, option.rstrip('+').strip()):
-								value = self.parseLine(parser, section, option.rstrip('+').strip()) + '\n'
-							value += self.parseLine(parser, section, option)
-							self.set(section, option.rstrip('+').strip(), value, append = True)
-						parser.remove_option(section, option)
-			except:
-				raise RethrowError("Error while reading configuration file '%s'!" % fn)
-		defaultCfg = ['/etc/grid-control.conf', '~/.grid-control.conf', utils.pathGC('default.conf')]
-		for cfgFile in filter(os.path.exists, map(lambda p: utils.resolvePath(p, check = False), defaultCfg)):
-			parseFileInt(cfgFile)
-		parseFileInt(configFile, False)
-		# Read default values and reread main config file
-		for includeFile in self.getPaths('global', 'include', [], volatile = True):
-			parseFileInt(includeFile)
-		parseFileInt(configFile)
+	def setInternal(self, section, option, value, append):
+		section_option = cleanSO(section, option)
+		if append and (section_option in self.content):
+			self.content[section_option] += '\n%s' % value
+			self.append[section_option] = False
+		else:
+			self.content[section_option] = value
+			self.append[section_option] = append
 
 
-	def parseLine(self, parser, section, option):
-		# Split into lines, remove comments and return merged result
-		lines = parser.get(section, option).splitlines()
-		lines = map(lambda x: x.split(';')[0].strip(), lines)
-		return str.join('\n', filter(lambda x: x != '', lines))
+	def parseFile(self, configFile):
+		try:
+			parser = cp.ConfigParser()
+			parser.readfp(open(configFile, 'r'))
+			if parser.has_section('global') and parser.has_option('global', 'include'):
+				self.setInternal('global', 'include', parser.get('global', 'include'), False)
+				for includeFile in self.getPaths('global', 'include', [], volatile = True):
+					self.parseFile(includeFile)
+			for section in parser.sections():
+				for option in parser.options(section):
+					value = parser.get(section, option).splitlines()
+					try:
+						# Split into lines, remove comments and return merged result
+						value = map(lambda x: utils.rsplit(x, ';', 1)[0].strip(), value)
+						value = str.join('\n', filter(lambda x: x != '', value))
+						self.setInternal(section, option.rstrip('+'), value, option.endswith('+'))
+					except:
+						raise ConfigError('[%s] "%s" could not be parsed!' % (section, item))
+			self.setInternal('global', 'include', '', False)
+		except:
+			raise RethrowError("Error while reading configuration file '%s'!" % configFile)
 
 
-	def set(self, section, item, value = None, override = True, append = False):
+	def set(self, section, item, value = None, override = True, append = False, default = noDefault):
+		(section, item) = cleanSO(section, item)
 		if isinstance(section, list):
 			section = section[0] # set most specific setting
-		(section, item) = tuple(map(lambda x: str(x).strip(), [section, item]))
 		if not self.allowSet:
-			raise APIError('Invalid runtime config override: [%s] %s = %s' % (section, item, str(value)))
-		utils.vprint('Config option was overridden: [%s] %s = %s' % (section, item, str(value)), 2)
-		if not self.parser.has_section(section):
-			self.parser.add_section(section)
-		if (not self.parser.has_option(section, item)) or override:
-			self.parser.set(section, item, str(value))
-			self.protoSet[(section, item)] = append
+			raise APIError('Invalid runtime config override: [%s] %s = %s' % (section, item, value))
+		utils.vprint('Config option was overridden: [%s] %s = %s' % (section, item, value), 2)
+		if ((section, item) not in self.content) or override:
+			self.setInternal(section, item, value, append)
+			self.runtime[(section, item)] = self.content[(section, item)]
+			self.accessed[(section, item)] = (value, default)
 
 
 	def get(self, section, item, default = noDefault, volatile = False, noVar = True):
+		(section, item) = cleanSO(section, item)
+		# Handle multi section get calls, use least specific setting for error message
 		if isinstance(section, list):
-			for specific in filter(lambda x: self.parser.has_option(x, item), section):
+			for specific in filter(lambda s: item in self.getOptions(s), section):
 				return self.get(specific, item, default, volatile, noVar)
-			return self.get(section[-1], item, default, volatile, noVar)
-		# Check result, Make protocol of config queries and flag inconsistencies
-		def checkResult(value):
-			if item in self.protoValue.setdefault(section, {}):
-				if self.protoValue[section][item][1] != default:
-					raise APIError('Inconsistent default values: [%s] %s' % (section, item))
-			self.protoValue[section][item] = (value, default, volatile)
-			return utils.checkVar(value, '[%s] %s may not contain variables.' % (section, item), noVar)
-		# Default value helper function
-		def tryDefault(errorMessage):
-			if default != noDefault:
-				utils.vprint('Using default value [%s] %s = %s' % (section, item, str(default)), 3)
-				return checkResult(default)
-			raise ConfigError(errorMessage)
-		# Read from config file or return default if possible
-		try:
-			value = self.parseLine(self.parser, str(section), item)
-			if self.protoSet.get((str(section), str(item)), False) and default != noDefault:
-				value = default + '\n' + value
-		except cp.NoSectionError:
-			return tryDefault('No section [%s] in config file!' % section)
-		except cp.NoOptionError:
-			return tryDefault('[%s] "%s" does not exist!' % (section, item))
-		except:
-			raise ConfigError('[%s] "%s" could not be parsed!' % (section, item))
-		return checkResult(value)
+			return self.get(section[-1], item, default, volatile, noVar) # will trigger error message
+		# API check: Keep track of used default values
+		if self.apicheck.setdefault((section, item), (default, volatile))[0] != default:
+			raise APIError('Inconsistent default values: [%s] "%s"' % (section, item))
+		self.apicheck[(section, item)] = (default, volatile and self.apicheck[(section, item)][1])
+		# Get config option value and protocol access
+		if (section, item) in self.content:
+			value = self.content[(section, item)]
+			if self.append.get((section, item), False) and default != noDefault:
+				value = '%s\n%s' % (default, value)
+		else:
+			if default == noDefault:
+				raise ConfigError('[%s] "%s" does not exist!' % (section, item))
+			utils.vprint('Using default value [%s] %s = %s' % (section, item, default), 3)
+			value = default
+		self.accessed[(section, item)] = (value, default)
+		return utils.checkVar(value, '[%s] "%s" may not contain variables.' % (section, item), noVar)
 
 
 	def getPaths(self, section, item, default = noDefault, volatile = False, noVar = True, check = True):
 		value = self.getList(section, item, default, volatile, noVar)
 		return map(lambda x: utils.resolvePath(x, [self.baseDir], check, ConfigError), value)
-
 
 
 	def getPath(self, section, item, default = noDefault, volatile = False, noVar = True, check = True):
@@ -133,7 +144,7 @@ class Config:
 
 	def getDict(self, section, item, default = noDefault, volatile = False, noVar = True, parser = lambda x: x):
 		if default != noDefault:
-			default = str.join('\n', map(lambda kv: "\t%s => %s" % kv, default.items()))
+			default = str.join('\n\t', map(lambda kv: '%s => %s' % kv, default.items()))
 		(result, order) = ({}, [])
 		for entry in self.get(section, item, default, volatile, noVar).split('\n'):
 			if '=>' in entry:
@@ -148,42 +159,50 @@ class Config:
 		return (result, order)
 
 
+	def getOptions(self, section):
+		return map(lambda (s, i): i, filter(lambda (s, i): s == section, self.content.keys()))
+
+
 	# Compare this config object to another config file
 	# Return true in case non-volatile parameters are changed
 	def needInit(self, saveConfigPath):
 		if not os.path.exists(saveConfigPath):
 			return False
-		saveConfig = cp.ConfigParser()
-		self.parseFile(saveConfig, saveConfigPath)
+		savedConfig = Config(saveConfigPath)
 		flag = False
-		for section in self.protoValue:
-			for (key, (value, default, volatile)) in self.protoValue[section].iteritems():
-				try:
-					oldValue = self.parseLine(saveConfig, section, key)
-				except:
-					oldValue = QM((str(section), str(key)) in self.protoSet, value, default)
-				if (str(value).strip() != str(oldValue).strip()) and not volatile:
-					if not flag:
-						utils.eprint('\nFound some changes in the config file, which will only apply')
-						utils.eprint('to the current task after a reinitialization:\n')
-					outputLine = '[%s] %s = %s' % (section, key, value.replace('\n', '\n\t'))
-					outputLine += QM(len(outputLine) > 60, '\n', '') + '  (old value: %s)' % oldValue.replace('\n', '\n\t')
-					utils.eprint(outputLine)
-					flag = True
+		for (section, option) in self.accessed:
+			default, volatile = self.apicheck.get((section, option), (None, False))
+			value, default = self.accessed[(section, option)]
+			try:
+				oldValue = savedConfig.get(section, option, default)
+			except:
+				oldValue = '<not specified>'
+			if (str(value).strip() != str(oldValue).strip()) and not volatile:
+				if not flag:
+					utils.eprint('\nFound some changes in the config file, which will only apply')
+					utils.eprint('to the current task after a reinitialization:\n')
+				outputLine = '[%s] %s = %s' % (section, option, value.replace('\n', '\n\t'))
+				outputLine += QM(len(outputLine) > 60, '\n', '') + '  (old value: %s)' % oldValue.replace('\n', '\n\t')
+				utils.eprint(outputLine)
+				flag = True
 		return flag
 
 
-	def prettyPrint(self, stream, printDefault):
-		stream.write('\n; %s\n; This is the %s set of used config options:\n; %s\n\n' % \
-			('='*60, utils.QM(printDefault, 'complete', 'minimal'), '='*60))
+	def prettyPrint(self, stream, printDefault = True, printUnused = True, printHeader = True):
+		if printHeader:
+			stream.write('\n; %s\n; This is the %s set of %sconfig options:\n; %s\n\n' % \
+				('='*60, utils.QM(printDefault, 'complete', 'minimal'), utils.QM(printUnused, '', 'used '), '='*60))
 		output = {} # {'section1': [output1, output2, ...], 'section2': [...output...], ...}
-		for section in self.protoValue:
-			for (key, (value, default, volatile)) in sorted(self.protoValue[section].iteritems()):
-				if ((section == 'global') and (key == 'include')) or ((str(section), str(key)) in self.protoSet):
-					continue # included statements are already in the protocol & skip runtime settings
-				if (str(value) != str(default)) or printDefault: # print default options
-					value = str(value).replace('\n', '\n\t') # format multi-line options
-					output.setdefault(section.lower(), ['[%s]' % section]).append('%s = %s' % (key, value))
-					if (str(value) != str(default)) and (default != noDefault):
-						output[section.lower()].append('; Default setting: %s = %s' % (key, default))
+		def addToOutput(section, value, prefix = '\t'):
+			value = str(value).replace('\n', '\n' + prefix) # format multi-line options
+			output.setdefault(section.lower(), ['[%s]' % section]).append(value)
+		for (section, option) in sorted(self.accessed):
+			value, default = self.accessed[(section, option)]
+			if (value != default) or printDefault:
+				addToOutput(section, '%s = %s' % (option, value))
+				if (value != default) and (default != noDefault):
+					addToOutput(section, '; Default setting: %s = %s' % (option, default), ';\t')
+		if printUnused:
+			for (section, option) in sorted(filter(lambda x: x not in self.accessed, self.content)):
+				addToOutput(section, '%s = %s' % (option, self.content[(section, option)]))
 		stream.write('%s\n' % str.join('\n\n', map(lambda s: str.join('\n', output[s]), sorted(output))))

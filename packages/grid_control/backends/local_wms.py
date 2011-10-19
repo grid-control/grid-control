@@ -10,9 +10,7 @@ class LocalWMS(WMS):
 			utils.vprint('Default batch system on this host is: %s' % self._guessWMS(), -1, once = True)
 		self.api = LocalWMSApi.open(wmsapi, config)
 		utils.vprint('Using batch system: %s' % self.api.__class__.__name__, -1)
-		self.addAttr = {}
-		if config.parser.has_section(wmsapi):
-			self.addAttr = dict(map(lambda item: (item, config.get(wmsapi, item)), config.parser.options(wmsapi)))
+		self.addAttr = dict(map(lambda item: (item, config.get(wmsapi, item)), config.getOptions(wmsapi)))
 
 		config.set('local', 'broker', 'RandomBroker', override = False)
 		WMS.__init__(self, config, module, monitor, 'local', self.api)
@@ -74,7 +72,7 @@ class LocalWMS(WMS):
 		(taskName, jobName, jobType) = self.module.getDescription(jobNum)
 		proc = utils.LoggedProcess(self.api.submitExec, '%s "%s" %s' % (
 			self.api.getSubmitArguments(jobNum, jobName, reqs, sandbox, stdout, stderr, self.addAttr),
-			utils.pathShare('local.sh'), self.api.getJobArguments(jobNum, sandbox)))
+			utils.pathShare('gc-local.sh'), self.api.getJobArguments(jobNum, sandbox)))
 		retCode = proc.wait()
 		wmsIdText = proc.getOutput().strip().strip('\n')
 		try:

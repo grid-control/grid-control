@@ -292,7 +292,6 @@ strGuid = lambda guid: '%s-%s-%s-%s-%s' % (guid[:8], guid[8:12], guid[12:16], gu
 
 listMapReduce = lambda fun, lst, start = []: reduce(operator.add, map(fun, lst), start)
 
-
 def checkVar(value, message, check = True):
 	if check and max(map(lambda x: max(x.count('@'), x.count('__')), str(value).split('\n'))) >= 2:
 		raise ConfigError(message)

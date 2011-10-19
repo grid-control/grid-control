@@ -2,6 +2,7 @@ from grid_control import QM, utils, DatasetError, RethrowError, datasets
 from grid_control.datasets import DataProvider, HybridSplitter, DataSplitter
 from lumi_tools import *
 from python_compat import *
+from cms_ws import *
 
 def createDBSAPI(url):
 	import DBSAPI.dbsApi, sys, os
@@ -25,7 +26,7 @@ class DBSApiv2(DataProvider):
 		(self.datasetPath, self.url, self.datasetBlock) = utils.optSplit(datasetExpr, '@#')
 		self.url = QM(self.url, self.url, config.get(section, 'dbs instance', ''))
 		self.datasetBlock = QM(self.datasetBlock, self.datasetBlock, 'all')
-		self.phedex = config.getBool(section, 'use phedex', self.url == '')
+		self.phedex = config.getBool(section, 'use phedex', True) and (self.url == '')
 
 		# This works in tandem with active job module (cmssy.py supports only [section] lumi filter!)
 		self.selectedLumis = parseLumiFilter(config.get(section, 'lumi filter', ''))
@@ -48,16 +49,11 @@ class DBSApiv2(DataProvider):
 
 
 	def getBlocksInternal(self, noFiles):
-		import urllib2, DBSAPI.dbsApi
 		api = createDBSAPI(self.url)
 		def getWithPhedex(listBlockInfo, seList):
 			# Get dataset list from PhEDex (concurrent with listFiles)
-			phedexArgFmt = lambda x: ('block=%s' % x['Name']).replace('/', '%2F').replace('#', '%23')
-			phedexArg = str.join('&', map(phedexArgFmt, listBlockInfo))
-			phedexData = urllib2.urlopen('https://cmsweb.cern.ch/phedex/datasvc/json/prod/blockreplicas', phedexArg).read()
-			if str(phedexData).lower().find('error') != -1:
-				raise DatasetError("Phedex error '%s'" % phedexData)
-			phedexDict = eval(compile(phedexData.replace('null','None'), '<string>', 'eval'))['phedex']['block']
+			phedexDict = readJSON('https://cmsweb.cern.ch/phedex/datasvc/json/prod/blockreplicas',
+				map(lambda b: ('block', b['Name']), listBlockInfo))['phedex']['block']
 			for phedexBlock in phedexDict:
 				phedexSelector = lambda x: (x['complete'] == 'y') or not self.onlyComplete
 				phedexSites = dict(map(lambda x: (x['node'], x['se']), filter(phedexSelector, phedexBlock['replica'])))

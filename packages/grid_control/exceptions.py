@@ -1,4 +1,4 @@
-import sys, exceptions
+import sys
 
 # our exception base class
 class GCError(Exception):

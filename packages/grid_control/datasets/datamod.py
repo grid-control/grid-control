@@ -4,9 +4,9 @@ from provider_base import DataProvider
 from splitter_base import DataSplitter
 
 class DataMod(Module):
-	def __init__(self, config, includeMap = False):
+	def __init__(self, config):
 		Module.__init__(self, config)
-		(self.dataSplitter, self.dataChange, self.includeMap) = (None, None, includeMap)
+		(self.dataSplitter, self.dataChange) = (None, None)
 		self.dataset = config.get(self.__class__.__name__, 'dataset', '').strip()
 		self.checkSE = config.getBool(self.__class__.__name__, 'dataset storage check', True, volatile=True)
 		self.dataRefresh = None
@@ -122,8 +122,7 @@ class DataMod(Module):
 			utils.vprint('Job number: %d' % jobNum)
 			DataSplitter.printInfoForJob(splitInfo)
 
-		if not self.includeMap:
-			data['FILE_NAMES'] = self.formatFileList(splitInfo[DataSplitter.FileList])
+		data['FILE_NAMES'] = self.formatFileList(splitInfo[DataSplitter.FileList])
 		data['MAX_EVENTS'] = splitInfo[DataSplitter.NEvents]
 		data['SKIP_EVENTS'] = splitInfo.get(DataSplitter.Skipped, 0)
 		data['DATASETID'] = splitInfo.get(DataSplitter.DatasetID, None)
@@ -135,14 +134,6 @@ class DataMod(Module):
 
 	def formatFileList(self, filelist):
 		return str.join(' ', filelist)
-
-
-	# Get files for input sandbox
-	def getInFiles(self):
-		files = Module.getInFiles(self)
-		if (self.dataSplitter != None) and self.includeMap:
-			files.append(os.path.join(self.config.workDir, 'datamap.tar'))
-		return files
 
 
 	def getVarMapping(self):
@@ -167,12 +158,6 @@ class DataMod(Module):
 		if self.dataSplitter == None:
 			return Module.getMaxJobs(self)
 		return self.dataSplitter.getMaxJobs()
-
-
-	def getDependencies(self):
-		if (self.dataSplitter != None) and self.includeMap:
-			return Module.getDependencies(self) + ['data']
-		return Module.getDependencies(self)
 
 
 	def report(self, jobNum):

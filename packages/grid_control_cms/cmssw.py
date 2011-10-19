@@ -4,6 +4,20 @@ from grid_control import QM, ConfigError, WMS, utils, storage, datasets, noDefau
 from grid_control.datasets import DataMod
 from lumi_tools import *
 
+class ExecutableWrapper:
+	def __init__(self, config, section, prefix, varPrefix):
+		(self.prefix, self.varPrefix) = (prefix, varPrefix)
+		self.executable = config.getPaths(section, '%s executable' % prefix, [])
+		self.arguments = config.get(section, '%s arguments' % prefix, '', noVar = False)
+
+	def getTaskConfig(self):
+		return { "%s_ARGS" % varPrefix: self.arguments,
+			"%s_EXEC" % varPrefix: str.join(' ', map(os.path.basename, self.executable)) }
+
+	def getInFiles(self):
+		return self.executable
+
+
 class CMSSW(DataMod):
 	def __init__(self, config):
 		config.set(self.__class__.__name__, 'dataset provider', 'DBSApiv2', override = False)
@@ -85,13 +99,19 @@ class CMSSW(DataMod):
 				key, value = loc
 				utils.vprint(' %i) %s' % (i + 1, value), -1)
 
-		# In case of non-cmsRun job:
-		self.executable = config.getPaths(self.__class__.__name__, 'executable', [])
-		self.arguments = config.get(self.__class__.__name__, 'arguments', '', noVar = False)
+		# Prolog / Epilog script support - warn about old syntax
+		self.prolog = ExecutableWrapper(config, self.__class__.__name__, 'prolog', 'CMSSW_PROLOG')
+		self.epilog = ExecutableWrapper(config, self.__class__.__name__, 'epilog', 'CMSSW_EPILOG')
+		if config.getPaths(self.__class__.__name__, 'executable', []) != []:
+			raise ConfigError('Prefix executable and argument options with either prolog or epilog!')
+		self.arguments = config.get(section, 'arguments', '', noVar = False)
 
 		# Get cmssw config files and check their existance
 		self.configFiles = []
-		for cfgFile in config.getPaths(self.__class__.__name__, 'config file', QM(self.executable, [], noDefault), check = False):
+		cfgDefault = noDefault
+		if self.prolog.executable or self.epilog.executable:
+			cfgDefault = []
+		for cfgFile in config.getPaths(self.__class__.__name__, 'config file', cfgDefault, check = False):
 			newPath = os.path.join(config.workDir, os.path.basename(cfgFile))
 			if config.opts.init:
 				if not os.path.exists(cfgFile):
@@ -194,8 +214,7 @@ class CMSSW(DataMod):
 		data['SE_RUNTIME'] = QM(self.seRuntime, 'yes', 'no')
 		data['HAS_RUNTIME'] = QM(len(self.projectArea), 'yes', 'no')
 		data['CMSSW_CONFIG'] = str.join(' ', map(os.path.basename, self.configFiles))
-		data['CMSSW_EXEC'] = str.join(' ', map(os.path.basename, self.executable))
-		return data
+		return utils.mergeDicts([data, self.prolog.getTaskConfig(), self.epilog.getTaskConfig()])
 
 
 	# Get job requirements
@@ -209,7 +228,7 @@ class CMSSW(DataMod):
 
 	# Get files for input sandbox
 	def getInFiles(self):
-		files = DataMod.getInFiles(self) + self.configFiles + self.executable
+		files = DataMod.getInFiles(self) + self.configFiles + self.prolog.getInFiles() + self.epilog.getInFiles()
 		if len(self.projectArea) and not self.seRuntime:
 			files.append(os.path.join(self.config.workDir, 'runtime.tar.gz'))
 		return files + [utils.pathShare('gc-run.cmssw.sh', pkg = 'grid_control_cms')]

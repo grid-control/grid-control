@@ -1,4 +1,4 @@
-from grid_control import datasets, monitoring
+from grid_control import datasets, monitoring, overlay
 
 datasets.DataProvider.providers.update({'DBSApiv2': 'dbs'})
 datasets.DataProvider.moduleMap['DBSApiv2'] = 'provider_dbsv2.DBSApiv2'
@@ -9,3 +9,5 @@ datasets.InfoScanner.moduleMap.update(dict(map(lambda x: (x, 'scanner_cmssw.%s' 
 datasets.GCProvider.stageDir.update({'CMSSW': ['ObjectsFromCMSSW'], 'CMSSW_Advanced': ['ObjectsFromCMSSW']})
 datasets.GCProvider.stageFile.update({'CMSSW': ['MetadataFromCMSSW', 'SEListFromPath', 'LFNFromPath'],
 	'CMSSW_Advanced': ['MetadataFromCMSSW', 'SEListFromPath', 'LFNFromPath']})
+
+overlay.ConfigOverlay.moduleMap["cms"] = "CMSOverlay"

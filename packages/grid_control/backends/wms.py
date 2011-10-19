@@ -6,7 +6,7 @@ from grid_control import AbstractObject, AbstractError, ConfigError, RuntimeErro
 from broker import Broker
 
 class WMS(AbstractObject):
-	reqTypes = ('SOFTWARE', 'WALLTIME', 'STORAGE', 'SITES', 'CPUTIME', 'MEMORY', 'CPUS')
+	reqTypes = ('SOFTWARE', 'WALLTIME', 'STORAGE', 'SITES', 'CPUTIME', 'MEMORY', 'CPUS', 'BACKEND')
 	for idx, reqType in enumerate(reqTypes):
 		locals()[reqType] = idx
 

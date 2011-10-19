@@ -76,7 +76,7 @@ class DataSplitter(AbstractObject):
 		utils.vprint(('  Skip: %d' % job.get(DataSplitter.Skipped, 0)).ljust(20), -1, newline = False)
 		if job.get(DataSplitter.Nickname):
 			utils.vprint('Nick: %s' % job[DataSplitter.Nickname], -1)
-		if job.get(DataSplitter.SEList):
+		if job.get(DataSplitter.SEList) != None:
 			utils.vprint(' SEList: %s' % utils.wrapList(job[DataSplitter.SEList], 70, ',\n         '), -1)
 		for idx, head in enumerate(job.get(DataSplitter.MetadataHeader, [])):
 			oneFileMetadata = map(lambda x: repr(x[idx]), job[DataSplitter.Metadata])
@@ -527,7 +527,7 @@ class DataSplitter(AbstractObject):
 					self._cacheKey = key / 100
 					subTarFileObj = self._tar.extractfile('%03dXX.tgz' % (key / 100))
 					self._cacheTar = tarfile.open(mode = 'r:gz', fileobj = subTarFileObj)
-				parserMap = { DataSplitter.SEList: utils.parseList,
+				parserMap = { DataSplitter.SEList: utils.parseList, DataSplitter.BlockName: str,
 					DataSplitter.MetadataHeader: eval, DataSplitter.Metadata: lambda x: eval(x.strip("'")) }
 				data = self._fmt.parse(self._cacheTar.extractfile('%05d/info' % key).readlines(), valueParser=parserMap)
 				fileList = self._cacheTar.extractfile('%05d/list' % key).readlines()

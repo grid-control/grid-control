@@ -18,7 +18,7 @@ class CMSSW_Advanced(cmssw.CMSSW):
 		cfgList = config.get(self.__class__.__name__, 'nickname config', '')
 		self.nmCfg = config.getDict(self.__class__.__name__, 'nickname config', default={}, parser = lambda x: map(str.strip, x.split(',')))[0]
 		if cfgList:
-			if 'config file' in config.parser.options(self.__class__.__name__):
+			if 'config file' in config.getOptions(self.__class__.__name__):
 				raise ConfigError("Please use 'nickname config' instead of 'config file'")
 			allConfigFiles = utils.flatten(self.nmCfg.values())
 			config.set(self.__class__.__name__, 'config file', str.join('\n', allConfigFiles))
