@@ -41,7 +41,6 @@ if __name__ == '__main__':
 	parser.add_option('-s', '--no-submission', dest='submission', default=True,  action='store_false')
 	parser.add_option('-d', '--delete',        dest='delete',     default=None)
 	parser.add_option('-a', '--action',        dest='action',     default=None)
-	parser.add_option("-a", '--action',        dest="action",     default=None)
 	parser.add_option('-J', '--job-selector',  dest='selector',   default=None)
 	parser.add_option('-S', '--seed',          dest='seed',       default=None)
 	parser.add_option('-N', '--nseeds',        dest='nseeds',     default=None,  type='int')
@@ -144,7 +143,7 @@ if __name__ == '__main__':
 			if config.needInit(savedConfigPath):
 				if utils.getUserBool('\nQuit grid-control in order to initialize the task again?', False):
 					sys.exit(0)
-				if utils.getUserBool("\nOverwrite currently saved configuration to remove warning in the future?", False):
+				if utils.getUserBool('\nOverwrite currently saved configuration to remove warning in the future?', False):
 					config.prettyPrint(open(savedConfigPath, 'w'))
 		else:
 			# Save working config file - no runtime config file changes should happen after this point

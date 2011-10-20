@@ -5,7 +5,7 @@ from python_compat import *
 noDefault = cp.NoOptionError
 mkDef = lambda default, fmtDefault: QM(default == noDefault, noDefault, fmtDefault)
 def cleanSO(section, option):
-	strStrip = lambda x: str(x).strip()
+	strStrip = lambda x: str(x).strip().lower()
 	def uniqueReverseList(iter):
 		iter.reverse()
 		tmpSet, result = (set(), [])
@@ -174,7 +174,7 @@ class Config:
 			default, volatile = self.apicheck.get((section, option), (None, False))
 			value, default = self.accessed[(section, option)]
 			try:
-				oldValue = savedConfig.get(section, option, default)
+				oldValue = savedConfig.get(section, option, default, noVar = False)
 			except:
 				oldValue = '<not specified>'
 			if (str(value).strip() != str(oldValue).strip()) and not volatile:
@@ -185,6 +185,10 @@ class Config:
 				outputLine += QM(len(outputLine) > 60, '\n', '') + '  (old value: %s)' % oldValue.replace('\n', '\n\t')
 				utils.eprint(outputLine)
 				flag = True
+		unused = sorted(filter(lambda x: x not in self.accessed, self.content))
+		utils.vprint('There are %s unused config options!' % len(unused))
+		for (section, option) in unused:
+			utils.vprint('\t[%s] %s = %s' % (section, option, self.content[(section, option)]), 1)
 		return flag
 
 

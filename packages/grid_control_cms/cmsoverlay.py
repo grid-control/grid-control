@@ -1,7 +1,7 @@
-#from grid_control import ConfigOverlay
+from grid_control import ConfigOverlay
 import sys
 
-class CMSOverlay(AbstractObject):
+class CMSOverlay(ConfigOverlay):
 	def __init__(self, config):
 		config.set('jobs', 'monitor', 'dashboard', override = False)
 

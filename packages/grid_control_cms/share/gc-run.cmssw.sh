@@ -73,7 +73,7 @@ echo
 export MY_WORKDIR="`pwd`/workdir"
 export CMSSW_SEARCH_PATH="$CMSSW_SEARCH_PATH:$MY_WORKDIR"
 mkdir -p "$MY_WORKDIR"; cd "$MY_WORKDIR"
-my_move "$MY_SCRATCH" "$MY_WORKDIR" "$SE_INPUT_FILES $CMSSW_EXEC"
+my_move "$MY_SCRATCH" "$MY_WORKDIR" "$SE_INPUT_FILES $CMSSW_PROLOG_EXEC $CMSSW_EPILOG_EXEC"
 echo
 
 # Additional prolog scripts in the CMSSW environment

@@ -11,8 +11,8 @@ class ExecutableWrapper:
 		self.arguments = config.get(section, '%s arguments' % prefix, '', noVar = False)
 
 	def getTaskConfig(self):
-		return { "%s_ARGS" % varPrefix: self.arguments,
-			"%s_EXEC" % varPrefix: str.join(' ', map(os.path.basename, self.executable)) }
+		return { "%s_ARGS" % self.varPrefix: self.arguments,
+			"%s_EXEC" % self.varPrefix: str.join(' ', map(os.path.basename, self.executable)) }
 
 	def getInFiles(self):
 		return self.executable
@@ -104,7 +104,7 @@ class CMSSW(DataMod):
 		self.epilog = ExecutableWrapper(config, self.__class__.__name__, 'epilog', 'CMSSW_EPILOG')
 		if config.getPaths(self.__class__.__name__, 'executable', []) != []:
 			raise ConfigError('Prefix executable and argument options with either prolog or epilog!')
-		self.arguments = config.get(section, 'arguments', '', noVar = False)
+		self.arguments = config.get(self.__class__.__name__, 'arguments', '', noVar = False)
 
 		# Get cmssw config files and check their existance
 		self.configFiles = []
