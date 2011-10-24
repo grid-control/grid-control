@@ -227,22 +227,51 @@ def hasDataset(url, dataset):
 	except DbsBadRequest:
 		return False
 
+# Checks whether the given dataset at targetUrl contains the same data as
+# the ones from sourceUrls
+def checkDatasets(sourceUrls, targetUrl, dataset):
+	try:
+		api = makeDBSAPI(targetUrl)
+		blocks = set(map(lambda x: x['Name'], api.listBlocks(dataset, nosite = True)))
+	except DbsBadRequest:
+		return False
+
+	if len(blocks) == 0:
+		 return False
+
+	for dbsSourceSelected in sourceUrls:
+		try:
+			sourceApi = makeDBSAPI(dbsSourceSelected)
+			sourceBlocks = set(map(lambda x: x['Name'], sourceApi.listBlocks(dataset, nosite = True)))
+			if len(sourceBlocks) == 0:
+				 continue
+
+			# Return whether some blocks from the source are missing or not
+			return len(sourceBlocks.difference(blocks)) == 0
+		except DbsBadRequest:
+			# dataset not available at this source, try next
+			pass
+
+	# No sources, or dataset not available at any source
+	return False
 
 # Currently depends on the whole dataset being registered at the DBS instance
 def registerParent(opts, parentPath):
-	if not hasDataset(opts.dbsTarget, parentPath):
+	dbsSources = map(str.strip, opts.dbsSource.split(','))
+	if not checkDatasets(dbsSources, opts.dbsTarget, parentPath):
 		# Parent dataset has to be moved to target dbs instance
 		text = ' * Migrating dataset parent... %s (This can take a lot of time!)' % parentPath
 		log = utils.ActivityLog(text)
 		try:
 			quiet = Silencer()
-			for dbsSourceSelected in map(str.strip, opts.dbsSource.split(',')):
+			for dbsSourceSelected in dbsSources:
 				if hasDataset(dbsSourceSelected, parentPath):
 					DbsMigrateApi(dbsSourceSelected, opts.dbsTarget).migrateDataset(parentPath)
+					break
 			del quiet
-		except:
+		except Exception, ex:
 			del quiet
-			raise RuntimeError('Could not migrate dataset %s to target!' % parentPath)
+			raise RuntimeError('Could not migrate dataset %s to target: %s' % (parentPath, str(ex)))
 		del log
 		utils.vprint(' * Migrating dataset parent %s - done' % parentPath, -1)
 
