@@ -40,19 +40,19 @@ class RegExSelector(JobSelector):
 
 	def __call__(self, jobNum, jobObj):
 		for regex in self.rxList:
-			if regex.search(self.objParser(jobObj)):
+			if regex.search(self.objParser(jobNum, jobObj)):
 				return True
 		return False
 
 
 class SiteSelector(RegExSelector):
 	def __init__(self, arg, **kwargs):
-		RegExSelector.__init__(self, arg, lambda obj: obj.get('dest', '').split('/')[0].split(':')[0])
+		RegExSelector.__init__(self, arg, lambda num, obj: obj.get('dest', '').split('/')[0].split(':')[0])
 
 
 class QueueSelector(RegExSelector):
 	def __init__(self, arg, **kwargs):
-		RegExSelector.__init__(self, arg, lambda obj: obj.get('dest', '').split('/')[-1].split(':')[0])
+		RegExSelector.__init__(self, arg, lambda num, obj: obj.get('dest', '').split('/')[-1].split(':')[0])
 
 
 class StateSelector(RegExSelector):
@@ -74,11 +74,9 @@ class VarSelector(JobSelector):
 	def __call__(self, jobNum, jobObj):
 		return reduce(operator.and_, map(lambda (var, rx): rx.search(self.jobCfg(jobNum, var)) != None, self.rxDict))
 
-
-class NickSelector(JobSelector):
+class NickSelector(RegExSelector):
 	def __init__(self, arg, **kwargs):
-		self.__call__ = lambda jobNum, jobObj: kwargs['module'].getJobConfig(jobNum).get('DATASETNICK', '') == arg
-
+		RegExSelector.__init__(self, arg, lambda jobNum, jobObj: kwargs['module'].getJobConfig(jobNum).get('DATASETNICK', ''))
 
 class MultiJobSelector(JobSelector):
 	def __init__(self, arg, **kwargs):
