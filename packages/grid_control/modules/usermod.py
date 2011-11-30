@@ -24,10 +24,10 @@ class UserMod(DataMod):
 		return DataMod.getJobArguments(self, jobNum) + ' ' + self._arguments
 
 
-	def getInFiles(self):
-		return DataMod.getInFiles(self) + QM(self._sendexec, [self._executable], [])
+	def getSBInFiles(self):
+		return DataMod.getSBInFiles(self) + QM(self._sendexec, [self._executable], [])
 
 
-	def getOutFiles(self):
+	def getSBOutFiles(self):
 		tmp = map(lambda s: s + QM(self.gzipOut, '.gz', ''), ['job.stdout', 'job.stderr'])
-		return DataMod.getOutFiles(self) + tmp
+		return DataMod.getSBOutFiles(self) + tmp

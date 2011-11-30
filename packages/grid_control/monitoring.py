@@ -1,21 +1,9 @@
 import os
 from grid_control import AbstractObject, Job, utils
 
-# Monitoring base class with submodule support
-class Monitoring(AbstractObject):
-	def __init__(self, config, module, submodules = ""):
+class EventHandler(AbstractObject):
+	def __init__(self, config, module, submodules = []):
 		(self.config, self.module, self.submodules) = (config, module, submodules)
-
-	# Script to call later on
-	def getScript(self):
-		return utils.listMapReduce(lambda m: list(m.getScript()), self.submodules)
-
-	def getEnv(self, wms):
-		tmp = {'GC_MONITORING': str.join(" ", map(os.path.basename, self.getScript()))}
-		return utils.mergeDicts(map(lambda m: m.getEnv(wms), self.submodules) + [tmp])
-
-	def getFiles(self):
-		return utils.listMapReduce(lambda m: list(m.getFiles()), self.submodules, self.getScript())
 
 	def onJobSubmit(self, wms, jobObj, jobNum):
 		for submodule in self.submodules:
@@ -32,6 +20,23 @@ class Monitoring(AbstractObject):
 	def onTaskFinish(self, nJobs):
 		for submodule in self.submodules:
 			submodule.onTaskFinish(nJobs)
+
+EventHandler.dynamicLoaderPath()
+
+
+# Monitoring base class with submodule support
+class Monitoring(EventHandler):
+
+	# Script to call later on
+	def getScript(self):
+		return utils.listMapReduce(lambda m: list(m.getScript()), self.submodules)
+
+	def getEnv(self, wms):
+		tmp = {'GC_MONITORING': str.join(" ", map(os.path.basename, self.getScript()))}
+		return utils.mergeDicts(map(lambda m: m.getEnv(wms), self.submodules) + [tmp])
+
+	def getFiles(self):
+		return utils.listMapReduce(lambda m: list(m.getFiles()), self.submodules, self.getScript())
 
 Monitoring.dynamicLoaderPath()
 

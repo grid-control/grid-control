@@ -21,7 +21,7 @@ class Help(object):
 
 		varList = module.getVarMapping().items() + [('RANDOM', 'RANDOM')]
 		for (keyword, variable) in sorted(varList):
-			print ("__%s__" % keyword).rjust(25), ":",
+			print ("@%s@" % keyword).rjust(25), ":",
 			if variable in taskcfg:
 				print taskcfg[variable]
 			elif variable in job0cfg:

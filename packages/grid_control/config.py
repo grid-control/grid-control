@@ -1,8 +1,15 @@
-import os, ConfigParser as cp
+import os, inspect, ConfigParser as cp
 from grid_control import *
 from python_compat import *
 
 noDefault = cp.NoOptionError
+def fmtStack(stack):
+	for frame in stack:
+		caller = frame[0].f_locals.get('self', None)
+		if caller and caller.__class__.__name__ != 'Config':
+			return frame[0].f_locals.get('self', None).__class__.__name__
+	return 'main'
+
 mkDef = lambda default, fmtDefault: QM(default == noDefault, noDefault, fmtDefault)
 def cleanSO(section, option):
 	strStrip = lambda x: str(x).strip().lower()
@@ -54,14 +61,14 @@ class Config:
 			self.append[section_option] = append
 
 
-	def parseFile(self, configFile):
+	def parseFile(self, configFile, defaults = None):
 		try:
-			parser = cp.ConfigParser()
+			parser = cp.ConfigParser(defaults)
 			parser.readfp(open(configFile, 'r'))
 			if parser.has_section('global') and parser.has_option('global', 'include'):
 				self.setInternal('global', 'include', parser.get('global', 'include'), False)
 				for includeFile in self.getPaths('global', 'include', [], volatile = True):
-					self.parseFile(includeFile)
+					self.parseFile(includeFile, parser.defaults())
 			for section in parser.sections():
 				for option in parser.options(section):
 					value = parser.get(section, option).splitlines()
@@ -78,12 +85,13 @@ class Config:
 
 
 	def set(self, section, item, value = None, override = True, append = False, default = noDefault):
+		utils.vprint('{%s}: ' % fmtStack(inspect.stack()), 4, newline=False)
 		(section, item) = cleanSO(section, item)
 		if isinstance(section, list):
 			section = section[0] # set most specific setting
 		if not self.allowSet:
 			raise APIError('Invalid runtime config override: [%s] %s = %s' % (section, item, value))
-		utils.vprint('Config option was overridden: [%s] %s = %s' % (section, item, value), 2)
+		utils.vprint('Overwrite of option [%s] %s = %s' % (section, item, value), 2)
 		if ((section, item) not in self.content) or override:
 			self.setInternal(section, item, value, append)
 			self.runtime[(section, item)] = self.content[(section, item)]
@@ -97,6 +105,7 @@ class Config:
 			for specific in filter(lambda s: item in self.getOptions(s), section):
 				return self.get(specific, item, default, volatile, noVar)
 			return self.get(section[-1], item, default, volatile, noVar) # will trigger error message
+		utils.vprint('{%s}: ' % fmtStack(inspect.stack()), 4, newline=False)
 		# API check: Keep track of used default values
 		if self.apicheck.setdefault((section, item), (default, volatile))[0] != default:
 			raise APIError('Inconsistent default values: [%s] "%s"' % (section, item))
@@ -106,6 +115,7 @@ class Config:
 			value = self.content[(section, item)]
 			if self.append.get((section, item), False) and default != noDefault:
 				value = '%s\n%s' % (default, value)
+			utils.vprint('Using user supplied [%s] %s = %s' % (section, item, value), 3)
 		else:
 			if default == noDefault:
 				raise ConfigError('[%s] "%s" does not exist!' % (section, item))
@@ -148,7 +158,7 @@ class Config:
 		(result, order) = ({}, [])
 		for entry in self.get(section, item, default, volatile, noVar).split('\n'):
 			if '=>' in entry:
-				key, value = map(str.strip, entry.split('=>'))
+				key, value = map(str.strip, entry.split('=>', 1))
 			elif entry:
 				key, value = (None, entry)
 			else:

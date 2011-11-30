@@ -124,7 +124,7 @@ if __name__ == '__main__':
 
 		# Give config help
 		if opts.help_cfg or opts.help_scfg:
-			config.prettyPrint(sys.stdout, printDefaults = opts.help_cfg, printUnused = False)
+			config.prettyPrint(sys.stdout, printDefault = opts.help_cfg, printUnused = False)
 			sys.exit(0)
 
 		# If invoked in report mode, just show report and exit
@@ -135,6 +135,8 @@ if __name__ == '__main__':
 		if opts.delete != None:
 			jobManager.delete(wms, opts.delete)
 			sys.exit(0)
+
+		actionList = config.getList('jobs', 'action', ['check', 'retrieve', 'submit'], volatile=True)
 
 		initSentinel.checkpoint('config')
 		savedConfigPath = os.path.join(config.workDir, 'work.conf')
@@ -170,7 +172,7 @@ if __name__ == '__main__':
 						utils.vprint('Not enough space left in working directory', -1, True)
 						lastSpaceMsg = time.time()
 				else:
-					for action in map(str.lower, config.getList('jobs', 'action', ['check', 'retrieve', 'submit'])):
+					for action in map(str.lower, actionList):
 						if action.startswith('c'):   # check for jobs
 							if not utils.abort() and jobManager.check(wms):
 								didWait = wait(wms.getTimings()[1])
@@ -197,6 +199,8 @@ if __name__ == '__main__':
 
 	except GCError:
 		sys.stderr.write(GCError.message)
+		if utils.verbosity() > 2:
+			raise RethrowError('')
 		sys.exit(1)
 
 	sys.exit(0)

@@ -9,6 +9,7 @@ from grid_control.report	import Report
 from grid_control.job_db	import JobDB, JobManager
 from grid_control.proxy	import Proxy
 from grid_control.help	import Help
+from grid_control.storage	import StorageManager
 
 from grid_control.backends	import WMS
 from grid_control.module	import Module

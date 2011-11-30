@@ -5,21 +5,29 @@ from grid_control.datasets import DataMod
 from lumi_tools import *
 
 class ExecutableWrapper:
-	def __init__(self, config, section, prefix, varPrefix):
+	def __init__(self, config, section, prefix = '', varPrefix = 'GC', exeDefault = noDefault):
 		(self.prefix, self.varPrefix) = (prefix, varPrefix)
-		self.executable = config.getPaths(section, '%s executable' % prefix, [])
+		self.sendexec = config.getBool(section, '%s send executable' % prefix, True)
+		if self.sendexec:
+			self.executable = config.getPath(section, '%s executable' % prefix, exeDefault)
+		else:
+			self.executable = config.get(section, '%s executable' % prefix, exeDefault, noVar = False)
 		self.arguments = config.get(section, '%s arguments' % prefix, '', noVar = False)
+
+	def isActive(self):
+		return self.executable
 
 	def getTaskConfig(self):
 		return { "%s_ARGS" % self.varPrefix: self.arguments,
-			"%s_EXEC" % self.varPrefix: str.join(' ', map(os.path.basename, self.executable)) }
+			"%s_EXEC" % self.varPrefix: os.path.basename(self.executable) }
 
-	def getInFiles(self):
-		return self.executable
+	def getSBInFiles(self):
+		return QM(self.sendexec and self.executable, [self.executable], [])
 
 
 class CMSSW(DataMod):
 	def __init__(self, config):
+		config.set('storage', 'se input timeout', '0:30', override = False)
 		config.set(self.__class__.__name__, 'dataset provider', 'DBSApiv2', override = False)
 		config.set(self.__class__.__name__, 'dataset splitter', 'EventBoundarySplitter', override = False)
 		DataMod.__init__(self, config)
@@ -41,9 +49,6 @@ class CMSSW(DataMod):
 
 		self.useReqs = config.getBool(self.__class__.__name__, 'software requirements', True, volatile = True)
 		self.seRuntime = config.getBool(self.__class__.__name__, 'se runtime', False)
-
-		if self.seRuntime and len(self.projectArea):
-			self.seInputFiles.append(self.taskID + '.tar.gz')
 
 		if len(self.projectArea):
 			defaultPattern = '-.* -config lib python module */data *.xml *.sql *.cf[if] *.py -*/.git -*/.svn -*/CVS -*/work.*'
@@ -100,17 +105,15 @@ class CMSSW(DataMod):
 				utils.vprint(' %i) %s' % (i + 1, value), -1)
 
 		# Prolog / Epilog script support - warn about old syntax
-		self.prolog = ExecutableWrapper(config, self.__class__.__name__, 'prolog', 'CMSSW_PROLOG')
-		self.epilog = ExecutableWrapper(config, self.__class__.__name__, 'epilog', 'CMSSW_EPILOG')
+		self.prolog = ExecutableWrapper(config, self.__class__.__name__, 'prolog', 'CMSSW_PROLOG', '')
+		self.epilog = ExecutableWrapper(config, self.__class__.__name__, 'epilog', 'CMSSW_EPILOG', '')
 		if config.getPaths(self.__class__.__name__, 'executable', []) != []:
 			raise ConfigError('Prefix executable and argument options with either prolog or epilog!')
 		self.arguments = config.get(self.__class__.__name__, 'arguments', '', noVar = False)
 
 		# Get cmssw config files and check their existance
 		self.configFiles = []
-		cfgDefault = noDefault
-		if self.prolog.executable or self.epilog.executable:
-			cfgDefault = []
+		cfgDefault = QM(self.prolog.isActive() or self.epilog.isActive(), [], noDefault)
 		for cfgFile in config.getPaths(self.__class__.__name__, 'config file', cfgDefault, check = False):
 			newPath = os.path.join(config.workDir, os.path.basename(cfgFile))
 			if config.opts.init:
@@ -137,23 +140,6 @@ class CMSSW(DataMod):
 					return
 			# Generate runtime tarball (and move to SE)
 			utils.genTarball(os.path.join(config.workDir, 'runtime.tar.gz'), self.projectArea, self.pattern)
-
-			if self.seRuntime and not self.seInputPaths:
-				raise ConfigError('Either "se path" or "se input path" has to be set for transfer of SE runtime.')
-			for idx, sePath in enumerate(filter(lambda x: self.seRuntime, set(self.seInputPaths))):
-				utils.vprint('Copy CMSSW runtime to SE %d ' % (idx + 1), -1, newline = False)
-				sys.stdout.flush()
-				source = os.path.join(config.workDir, 'runtime.tar.gz')
-				target = os.path.join(sePath, self.taskID + '.tar.gz')
-				proc = storage.se_copy(source, target, config.getBool(self.__class__.__name__, 'se runtime force', True))
-				if proc.wait() == 0:
-					utils.vprint('finished', -1)
-				else:
-					utils.vprint('failed', -1)
-					utils.eprint('%s' % proc.getMessage())
-					utils.eprint('Unable to copy runtime! You can try to copy the CMSSW runtime manually.')
-					if not utils.getUserBool('Is runtime available on SE?', False):
-						raise RuntimeError('No CMSSW runtime on SE!')
 
 
 	def instrumentCfgQueue(self, cfgFiles, fragment, mustPrepare = False):
@@ -226,17 +212,25 @@ class CMSSW(DataMod):
 		return reqs
 
 
+	# Get files to be transfered via SE (description, source, target)
+	def getSEInFiles(self):
+		files = DataMod.getSEInFiles(self)
+		if len(self.projectArea) and self.seRuntime:
+			return files + [('CMSSW runtime', os.path.join(self.config.workDir, 'runtime.tar.gz'), self.taskID + '.tar.gz')]
+		return files
+
+
 	# Get files for input sandbox
-	def getInFiles(self):
-		files = DataMod.getInFiles(self) + self.configFiles + self.prolog.getInFiles() + self.epilog.getInFiles()
+	def getSBInFiles(self):
+		files = DataMod.getSBInFiles(self) + self.configFiles + self.prolog.getSBInFiles() + self.epilog.getSBInFiles()
 		if len(self.projectArea) and not self.seRuntime:
 			files.append(os.path.join(self.config.workDir, 'runtime.tar.gz'))
 		return files + [utils.pathShare('gc-run.cmssw.sh', pkg = 'grid_control_cms')]
 
 
 	# Get files for output sandbox
-	def getOutFiles(self):
-		return DataMod.getOutFiles(self) + QM(self.gzipOut, ['cmssw.log.gz'], []) + ['cmssw.dbs.tar.gz']
+	def getSBOutFiles(self):
+		return DataMod.getSBOutFiles(self) + QM(self.gzipOut, ['cmssw.log.gz'], []) + ['cmssw.dbs.tar.gz']
 
 
 	def getCommand(self):

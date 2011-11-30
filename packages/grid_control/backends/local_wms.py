@@ -30,8 +30,8 @@ class LocalWMS(WMS):
 				pass
 
 
-	def getSandboxFiles(self):
-		files = WMS.getSandboxFiles(self)
+	def getSandboxFiles(self, smList):
+		files = WMS.getSandboxFiles(self, smList)
 		if self.proxy.getAuthFile():
 			files.append(utils.VirtualFile('_proxy.dat', open(self.proxy.getAuthFile(), 'r').read()))
 		return files

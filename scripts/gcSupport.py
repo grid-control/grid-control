@@ -102,3 +102,14 @@ def prettySize(size):
 			continue
 		else:
 			return str(round(size / float(lim / 2**10), 2)) + suf
+
+
+def parseOptions(parser):
+	parser.add_option('-P', '--parseable',         dest='parseable',             default=False, action='store_true',
+		help='Output tabular data in parseable format')
+	parser.add_option("-v", "--verbose",           dest="verbosity",             default=0,     action="count",
+		help='Increase verbosity')
+	(opts, args) = parser.parse_args()
+	utils.verbosity(opts.verbosity)
+	utils.printTabular.parseable = opts.parseable
+	return (opts, args)

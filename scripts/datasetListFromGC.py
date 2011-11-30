@@ -14,7 +14,7 @@ parser.add_option('-c', '--config',       dest='include config infos',  default=
 parser.add_option('-p', '--parents',      dest='include parent infos',  default='False', 
 	help='CMSSW specific: Add parent infos to metadata',       action='store_const', const='True')
 datasetListFromX.addOptions(parser)
-(opts, args) = parser.parse_args()
+(opts, args) = gcSupport.parseOptions(parser)
 
 # Positional parameters override options
 if len(args) == 0:

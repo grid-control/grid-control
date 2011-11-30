@@ -2,7 +2,7 @@
 
 from python_compat import *
 import sys, os, time, stat, shutil, tarfile, glob, itertools
-from grid_control import AbstractObject, AbstractError, ConfigError, RuntimeError, RethrowError, UserError, utils, Proxy
+from grid_control import AbstractObject, AbstractError, ConfigError, RuntimeError, RethrowError, UserError, utils, Proxy, StorageManager
 from broker import Broker
 
 class WMS(AbstractObject):
@@ -31,10 +31,17 @@ class WMS(AbstractObject):
 			else:
 				raise ConfigError('Not a properly initialized work directory "%s".' % config.workDir)
 
+		smCfgSections = ['storage %s' % self.__class__.__name__, 'storage %s' % backend, 'storage']
+		smSEIn = StorageManager.open('SEStorageManager', config, smCfgSections, 'se', 'se input', 'SE_INPUT')
+		smSEOut = StorageManager.open('SEStorageManager', config, smCfgSections, 'se', 'se output', 'SE_OUTPUT')
+		if config.opts.init:
+			smSEIn.doTransfer(module.getSEInFiles())
+		smSEIn.addFiles(map(lambda (d, s, t): t, module.getSEInFiles()))
+
 		tarFile = os.path.join(config.workDir, 'sandbox.tar.gz')
 		self.sandboxIn = [ utils.pathShare('gc-run.sh'), utils.pathShare('gc-run.lib'), tarFile ]
-		self.sandboxOut = ['gc.stdout', 'gc.stderr', 'job.info'] + list(module.getOutFiles())
-		inFiles = self.getSandboxFiles()
+		self.sandboxOut = ['gc.stdout', 'gc.stderr', 'job.info'] + list(module.getSBOutFiles())
+		inFiles = self.getSandboxFiles([smSEIn, smSEOut])
 
 		# Check file existance / put packed files in sandbox instead of tar file
 		for f in filter(lambda x: isinstance(x, str), inFiles):
@@ -74,16 +81,17 @@ class WMS(AbstractObject):
 			tar.close()
 
 
-	def getSandboxFiles(self):
+	def getSandboxFiles(self, smList):
 		# Prepare all input files
-		taskEnv = utils.mergeDicts([self.monitor.getEnv(self), self.module.getTaskConfig()])
-		taskConfig = sorted(utils.DictFormat(escapeString = True).format(taskEnv, format = 'export %s%s%s\n'))
-		varMapping = sorted(utils.DictFormat(' ').format(self.module.getVarMapping(), format = '%s%s%s\n'))
+		taskEnv = [self.monitor.getEnv(self), self.module.getTaskConfig()] + map(lambda sm: sm.getTaskConfig(), smList)
+		taskConfig = sorted(utils.DictFormat(escapeString = True).format(utils.mergeDicts(taskEnv), format = 'export %s%s%s\n'))
+		varMapping = sorted(utils.DictFormat(delimeter = ' ').format(self.module.getVarMapping(), format = '%s%s%s\n'))
+		depList = itertools.chain(self.module.getDependencies(), *map(lambda sm: sm.getDependencies(), smList))
 		depPaths = map(lambda pkg: utils.pathShare('', pkg = pkg), os.listdir(utils.pathGC('packages')))
-		depFiles = map(lambda dep: utils.resolvePath('env.%s.sh' % dep, depPaths), self.module.getDependencies())
+		depFiles = map(lambda dep: utils.resolvePath('env.%s.sh' % dep, depPaths), depList)
 		# Resolve wildcards in module input files
 		def getModuleFiles():
-			for f in self.module.getInFiles():
+			for f in self.module.getSBInFiles():
 				matched = glob.glob(f)
 				if matched != []:
 					for match in matched:
@@ -100,14 +108,6 @@ class WMS(AbstractObject):
 
 	def getTimings(self):
 		return (60, 10)
-
-
-	def bulkSubmissionBegin(self, nJobs):
-		return True
-
-
-	def bulkSubmissionEnd(self):
-		pass
 
 
 	def writeJobConfig(self, jobNum, cfgPath, extras = {}):

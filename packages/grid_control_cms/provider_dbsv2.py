@@ -27,6 +27,7 @@ class DBSApiv2(DataProvider):
 		self.url = QM(self.url, self.url, config.get(section, 'dbs instance', ''))
 		self.datasetBlock = QM(self.datasetBlock, self.datasetBlock, 'all')
 		self.phedex = config.getBool(section, 'use phedex', True) and (self.url == '')
+		self.onlyValid = config.getBool(section, 'only valid', True)
 
 		# This works in tandem with active job module (cmssy.py supports only [section] lumi filter!)
 		self.selectedLumis = parseLumiFilter(config.get(section, 'lumi filter', ''))
@@ -52,9 +53,11 @@ class DBSApiv2(DataProvider):
 		api = createDBSAPI(self.url)
 		def getWithPhedex(listBlockInfo, seList):
 			# Get dataset list from PhEDex (concurrent with listFiles)
-			phedexDict = readJSON('https://cmsweb.cern.ch/phedex/datasvc/json/prod/blockreplicas',
-				map(lambda b: ('block', b['Name']), listBlockInfo))['phedex']['block']
-			for phedexBlock in phedexDict:
+			phedexQuery = []
+			for block in listBlockInfo:
+				phedexQuery.extend(readJSON('https://cmsweb.cern.ch/phedex/datasvc/json/prod/blockreplicas',
+					{'block': block['Name']})['phedex']['block'])
+			for phedexBlock in phedexQuery:
 				phedexSelector = lambda x: (x['complete'] == 'y') or not self.onlyComplete
 				phedexSites = dict(map(lambda x: (x['node'], x['se']), filter(phedexSelector, phedexBlock['replica'])))
 				phedexSitesOK = utils.doBlackWhiteList(phedexSites.keys(), self.phedexBL)
@@ -68,7 +71,7 @@ class DBSApiv2(DataProvider):
 			# Start thread to retrieve list of files
 			(listBlockInfo, listFileInfo, seList) = ([], [], {})
 			def listFileInfoThread(self, api, path, result):
-				result.extend(api.listFiles(path, retriveList=QM(self.selectedLumis, ['retrive_lumi'], [])))
+				result.extend(api.listFiles(path, retriveList=['retrive_status'] + QM(self.selectedLumis, ['retrive_lumi'], [])))
 			for datasetPath in toProcess:
 				thisBlockInfo = api.listBlocks(datasetPath, nosite = self.phedex)
 				if not noFiles:
@@ -112,7 +115,7 @@ class DBSApiv2(DataProvider):
 				blockInfo[DataProvider.Metadata] = ['Runs']
 			for entry in listFileInfo:
 				if block['Name'] == entry['Block']['Name']:
-					if lumiFilter(entry['LumiList']):
+					if lumiFilter(entry['LumiList']) and (entry['Status'] == 'VALID' or not self.onlyValid):
 						blockInfo[DataProvider.FileList].append({
 							DataProvider.lfn      : entry['LogicalFileName'],
 							DataProvider.NEvents  : entry['NumberOfEvents'],

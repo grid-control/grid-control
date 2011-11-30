@@ -9,7 +9,7 @@ class ParaMod(Module):
 		self.paramSpace = None
 
 		# adopt functions from basemod
-		for fkt in [ 'getInFiles', 'getOutFiles', 'getSubstFiles',
+		for fkt in [ 'getSEInFiles', 'getSBInFiles', 'getSBOutFiles', 'getSubstFiles',
 			'getTaskConfig', 'getCommand', 'getDependencies' ]:
 			setattr(self, fkt, getattr(self.baseMod, fkt))
 		self.getJobArguments = lambda x: self.baseMod.getJobArguments(x / self.getParamSpace())

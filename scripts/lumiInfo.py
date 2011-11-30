@@ -28,7 +28,7 @@ ogCalc.add_option("-e", "--job-events", dest="get_events", default=False, action
 	help="Get number of events processed")
 parser.add_option_group(ogCalc)
 
-(opts, args) = parser.parse_args()
+(opts, args) = parseOptions(parser)
 
 def outputGC(lumis, stream = sys.stdout):
 	stream.write("%s\n" % utils.wrapList(formatLumi(lumis), 60, ',\n'))

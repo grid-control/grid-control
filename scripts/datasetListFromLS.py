@@ -4,7 +4,7 @@ import gcSupport, sys, optparse, datasetListFromX
 parser = optparse.OptionParser('%prog [options] <data path> <dataset name> <pattern (*.root) / files>')
 parser.add_option('-p', '--path', dest='path', default='.', help='Path to dataset files')
 datasetListFromX.addOptions(parser)
-(opts, args) = parser.parse_args()
+(opts, args) = gcSupport.parseOptions(parser)
 
 # Positional parameters override options
 if len(args) > 0:

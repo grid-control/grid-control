@@ -38,5 +38,5 @@ class ROOTMod(UserMod):
 		return QM(self.builtIn, '', 'chmod u+x %s; ' % self._executable) + cmd
 
 
-	def getInFiles(self):
-		return UserMod.getInFiles(self) + self.libFiles + [utils.pathShare('gc-run.root.sh')]
+	def getSBInFiles(self):
+		return UserMod.getSBInFiles(self) + self.libFiles + [utils.pathShare('gc-run.root.sh')]

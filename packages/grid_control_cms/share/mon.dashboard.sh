@@ -4,16 +4,19 @@
 
 source $MY_LANDINGZONE/gc-run.lib || exit 101
 
+DASH_ID=$(echo $TASK_NAME | var_replacer "" | sed "s/__/_/g;s/^_//;s/_$//")
+if [ -n "$GLITE_WMS_JOBID" ]; then
+	GC_WMS_ID="$GLITE_WMS_JOBID"
+	GC_CE_NAME="$GLOBUS_CE"
+else
+	GC_WMS_ID="https://sge:/${JOB_ID}"
+	GC_CE_NAME="$(hostname -f)"
+fi
+export REPORTID="taskId=$DASH_ID jobId=${MY_JOBID}_$GC_WMS_ID MonitorID=$DASH_ID MonitorJobID=${MY_JOBID}_$GC_WMS_ID"
+
 case "$1" in
 	"start")
-		if [ -n "$GLITE_WMS_JOBID" ]; then
-			export GC_WMS_ID="$GLITE_WMS_JOBID"
-			export GC_CE_NAME="$GLOBUS_CE"
-		fi
-
 		my_move "$MY_SCRATCH" "$MY_LANDINGZONE" "DashboardAPI.py Logger.py ProcInfo.py apmon.py report.py"
-		DASH_ID=$(echo $TASK_NAME | var_replacer "" | sed "s/__/_/g;s/^_//;s/_$//")
-		export REPORTID="taskId=$DASH_ID jobId=${MY_JOBID}_$GC_WMS_ID MonitorID=$DASH_ID MonitorJobID=${MY_JOBID}_$GC_WMS_ID"
 		export MY_DASHBOARDINFO="$MY_LANDINGZONE/Dashboard.report"
 
 		echo "Update Dashboard: $REPORTID"

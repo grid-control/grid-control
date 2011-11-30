@@ -4,6 +4,7 @@
 
 echo "Searching for gLite environment..."
 
+export _JAVA_OPTIONS="-Xms128m -Xmx512m"
 if [ -z "$GLITE_LOCATION" ]; then
 	# Save local VO environment variables
 	VO_KEEPER="${MY_LANDINGZONE:-/tmp}/env.glite.old"

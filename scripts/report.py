@@ -1,11 +1,11 @@
 #!/usr/bin/env python
 import sys, optparse
-from gcSupport import utils, Config, Module, JobManager, JobSelector, Report, GCError
+from gcSupport import utils, Config, Module, JobManager, JobSelector, Report, GCError, parseOptions
 
 parser = optparse.OptionParser()
 parser.add_option('-J', '--job-selector', dest='selector', default=None)
 Report.addOptions(parser)
-(opts, args) = parser.parse_args()
+(opts, args) = parseOptions(parser)
 
 if len(args) != 1:
 	utils.exitWithUsage('%s [options] <config file>' % sys.argv[0])

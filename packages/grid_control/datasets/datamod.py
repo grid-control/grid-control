@@ -12,6 +12,7 @@ class DataMod(Module):
 		self.dataRefresh = None
 		if self.dataset == '':
 			return
+		config.set('storage', 'se output pattern', '@NICK@_job_@MY_JOBID@_@X@', override=False)
 
 		if os.path.exists(os.path.join(config.workDir, 'datamap.tar')):
 			if config.opts.init and not config.opts.resync:

@@ -118,8 +118,8 @@ class JobDB:
 
 
 class JobManager:
-	def __init__(self, config, module, monitor):
-		(self.module, self.monitor) = (module, monitor)
+	def __init__(self, config, module, eventhandler):
+		(self.module, self.eventhandler) = (module, eventhandler)
 		self.jobLimit = config.getInt('jobs', 'jobs', -1, volatile=True)
 		selected = JobSelector.create(config.get('jobs', 'selected', '', volatile=True), module = self.module)
 		self.jobDB = JobDB(config, self.getMaxJobs(self.module), selected)
@@ -234,28 +234,25 @@ class JobManager:
 		if len(jobList) == 0:
 			return False
 
-		if not wms.bulkSubmissionBegin(len(jobList)):
-			return False
-		try:
-			for jobNum, wmsId, data in wms.submitJobs(jobList):
-				jobObj = self.jobDB.get(jobNum, create = True)
+		submitted = []
+		for jobNum, wmsId, data in wms.submitJobs(jobList):
+			submitted.append(jobNum)
+			jobObj = self.jobDB.get(jobNum, create = True)
 
-				if wmsId == None:
-					# Could not register at WMS
-					self._update(jobObj, jobNum, Job.FAILED)
-					continue
+			if wmsId == None:
+				# Could not register at WMS
+				self._update(jobObj, jobNum, Job.FAILED)
+				continue
 
-				jobObj.assignId(wmsId)
-				for key, value in data.iteritems():
-					jobObj.set(key, value)
+			jobObj.assignId(wmsId)
+			for key, value in data.iteritems():
+				jobObj.set(key, value)
 
-				self._update(jobObj, jobNum, Job.SUBMITTED)
-				self.monitor.onJobSubmit(wms, jobObj, jobNum)
-				if utils.abort():
-					return False
-			return True
-		finally:
-			wms.bulkSubmissionEnd()
+			self._update(jobObj, jobNum, Job.SUBMITTED)
+			self.eventhandler.onJobSubmit(wms, jobObj, jobNum)
+			if utils.abort():
+				return False
+		return len(submitted) != 0
 
 
 	def wmsArgs(self, jobList):
@@ -282,7 +279,7 @@ class JobManager:
 				for key, value in info.items():
 					jobObj.set(key, value)
 				self._update(jobObj, jobNum, state)
-				self.monitor.onJobUpdate(wms, jobObj, jobNum, info)
+				self.eventhandler.onJobUpdate(wms, jobObj, jobNum, info)
 			else:
 				# If a job stays too long in an inital state, cancel it
 				if jobObj.state in (Job.SUBMITTED, Job.WAITING, Job.READY, Job.QUEUED):
@@ -312,7 +309,7 @@ class JobManager:
 		# Quit when all jobs are finished
 		if len(self.jobDB.getJobs(ClassSelector(JobClass.ENDSTATE))) == len(self.jobDB):
 			self.jobDB.logDisabled()
-			self.monitor.onTaskFinish(len(self.jobDB))
+			self.eventhandler.onTaskFinish(len(self.jobDB))
 			if self.module.onTaskFinish():
 				utils.vprint('Task successfully completed. Quitting grid-control!', -1, True)
 				sys.exit(0)
@@ -339,7 +336,7 @@ class JobManager:
 				jobObj.set('retcode', retCode)
 				jobObj.set('runtime', data.get('TIME', -1))
 				self._update(jobObj, jobNum, state)
-				self.monitor.onJobOutput(wms, jobObj, jobNum, retCode)
+				self.eventhandler.onJobOutput(wms, jobObj, jobNum, retCode)
 
 			if utils.abort():
 				return False
@@ -359,7 +356,7 @@ class JobManager:
 			if jobObj == None:
 				return
 			self._update(jobObj, jobNum, Job.CANCELLED)
-			self.monitor.onJobUpdate(wms, jobObj, jobNum, {'status': 'cancelled'})
+			self.eventhandler.onJobUpdate(wms, jobObj, jobNum, {'status': 'cancelled'})
 
 		jobs.reverse()
 		for (wmsId, jobNum) in wms.cancelJobs(self.wmsArgs(jobs)):

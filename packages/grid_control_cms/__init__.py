@@ -10,4 +10,4 @@ datasets.GCProvider.stageDir.update({'CMSSW': ['ObjectsFromCMSSW'], 'CMSSW_Advan
 datasets.GCProvider.stageFile.update({'CMSSW': ['MetadataFromCMSSW', 'SEListFromPath', 'LFNFromPath'],
 	'CMSSW_Advanced': ['MetadataFromCMSSW', 'SEListFromPath', 'LFNFromPath']})
 
-overlay.ConfigOverlay.moduleMap["cms"] = "CMSOverlay"
+overlay.ConfigOverlay.moduleMap["cms"] = "cmsoverlay.CMSOverlay"

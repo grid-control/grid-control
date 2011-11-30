@@ -3,10 +3,7 @@ from python_compat import *
 """JSON token scanner
 """
 import re
-try:
-    from _json import make_scanner as c_make_scanner
-except ImportError:
-    c_make_scanner = None
+c_make_scanner = None
 
 NUMBER_RE = re.compile(
     r'(-?(?:0|[1-9]\d*))(\.\d+)?([eE][-+]?\d+)?',
@@ -72,10 +69,7 @@ import re
 import sys
 import struct
 
-try:
-    from _json import scanstring as c_scanstring
-except ImportError:
-    c_scanstring = None
+c_scanstring = None
 
 FLAGS = re.VERBOSE | re.MULTILINE | re.DOTALL
 
@@ -433,14 +427,8 @@ class JSONDecoder(object):
 """
 import re
 
-try:
-    from _json import encode_basestring_ascii as c_encode_basestring_ascii
-except ImportError:
-    c_encode_basestring_ascii = None
-try:
-    from _json import make_encoder as c_make_encoder
-except ImportError:
-    c_make_encoder = None
+c_encode_basestring_ascii = None
+c_make_encoder = None
 
 ESCAPE = re.compile(r'[\x00-\x1f\\"\b\f\n\r\t]')
 ESCAPE_ASCII = re.compile(r'([\\"]|[^\ -~])')

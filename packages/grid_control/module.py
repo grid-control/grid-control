@@ -46,19 +46,8 @@ class Module(AbstractObject):
 		}
 
 		# Storage setup - in case a directory is give, prepend dir specifier
-		normSEPaths = lambda seList: map(lambda x: QM(x[0] == '/', 'dir:///%s' % x.lstrip('/'), x), seList)
-		self.sePaths = normSEPaths(config.getList('storage', 'se path', [], noVar=True))
+		config.set('storage', 'se output pattern', 'job_@MY_JOBID@_@X@', override=False)
 		self.seMinSize = config.getInt('storage', 'se min size', -1)
-
-		self.seInputPaths = normSEPaths(config.getList('storage', 'se input path', self.sePaths, noVar=True))
-		self.seInputFiles = config.getList('storage', 'se input files', [], noVar=False)
-		self.seInputPattern = config.get('storage', 'se input pattern', '@X@', noVar=False)
-		self.seInputTimeout = utils.parseTime(config.get('storage', 'se input timeout', '0:30'))
-		self.seOutputPaths = normSEPaths(config.getList('storage', 'se output path', self.sePaths, noVar=True))
-		self.seOutputFiles = config.getList('storage', 'se output files', [], noVar=False)
-		self.seOutputPattern = config.get('storage', 'se output pattern', '@NICK@job_@MY_JOBID@_@X@', noVar=False)
-		self.seOutputTimeout = utils.parseTime(config.get('storage', 'se output timeout', '2:00'))
-
 		self.sbInputFiles = config.getList(self.__class__.__name__, 'input files', [])
 		self.sbOutputFiles = config.getList(self.__class__.__name__, 'output files', [])
 		self.gzipOut = config.getBool(self.__class__.__name__, 'gzip output', True)
@@ -71,8 +60,6 @@ class Module(AbstractObject):
 		self.substFiles = config.getList(self.__class__.__name__, 'subst files', [])
 
 		self.dependencies = map(str.lower, config.getList(self.__class__.__name__, 'depends', []))
-		if True in map(lambda x: not x.startswith('dir'), self.sePaths):
-			self.dependencies.append('glite')
 
 		# Get error messages from gc-run.lib comments
 		self.errorDict = dict(self.updateErrorDict(utils.pathShare('gc-run.lib')))
@@ -93,17 +80,9 @@ class Module(AbstractObject):
 		taskConfig = {
 			# Storage element
 			'SE_MINFILESIZE': self.seMinSize,
-			'SE_INPUT_PATH': str.join(' ', self.seInputPaths),
-			'SE_OUTPUT_PATH': str.join(' ', self.seOutputPaths),
-			'SE_OUTPUT_FILES': str.join(' ', self.seOutputFiles),
-			'SE_INPUT_FILES': str.join(' ', self.seInputFiles),
-			'SE_OUTPUT_PATTERN': self.seOutputPattern,
-			'SE_INPUT_PATTERN': self.seInputPattern,
-			'SE_INPUT_TIMEOUT': self.seInputTimeout,
-			'SE_OUTPUT_TIMEOUT': self.seOutputTimeout,
 			# Sandbox
-			'SB_OUTPUT_FILES': str.join(' ', self.getOutFiles()),
-			'SB_INPUT_FILES': str.join(' ', map(os.path.basename, self.getInFiles())),
+			'SB_OUTPUT_FILES': str.join(' ', self.getSBOutFiles()),
+			'SB_INPUT_FILES': str.join(' ', map(os.path.basename, self.getSBInFiles())),
 			# Runtime
 			'DOBREAK': self.nodeTimeout,
 			'MY_RUNTIME': self.getCommand(),
@@ -166,13 +145,17 @@ class Module(AbstractObject):
 		]
 
 
+	def getSEInFiles(self):
+		return []
+
+
 	# Get files for input sandbox
-	def getInFiles(self):
+	def getSBInFiles(self):
 		return map(lambda p: utils.resolvePath(p, [self.config.baseDir], False), self.sbInputFiles)
 
 
 	# Get files for output sandbox
-	def getOutFiles(self):
+	def getSBOutFiles(self):
 		return self.sbOutputFiles[:]
 
 

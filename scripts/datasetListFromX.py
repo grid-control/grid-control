@@ -22,6 +22,7 @@ def addOptions(parser):
 	parser.add_option('-B', '--delimeter-block',   dest='delimeter block key',   default='',
 		help='Multi block mode - files are sorted into different blocks according to <delimeter>:<start>:<end>')
 
+
 def discoverDataset(opts, parser, providerName, datasetExpr):
 	try:
 		config = gcSupport.config.Config(configDict = {None: dict(parser.values.__dict__)})

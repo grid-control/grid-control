@@ -22,19 +22,13 @@ parser.add_option('-m', '--metadata',      dest='metadata',     default=False, a
 	help='Get metadata infomation of dataset files')
 parser.add_option('-M', '--block-metadata', dest='blockmetadata', default=False, action='store_true',
 	help='Get common metadata infomation of dataset blocks')
-parser.add_option('-P', '--parseable',     dest='parseable',    default=False, action='store_true',
-	help='Get common metadata infomation of dataset blocks')
 parser.add_option('-S', '--save',          dest='save',
 	help='Saves dataset information to specified file')
-parser.add_option("-v", "--verbose",       dest="verbosity",    default=0,     action="count",
-	help='Increase verbosity')
-(opts, args) = parser.parse_args()
+(opts, args) = parseOptions(parser)
 
 # we need exactly one positional argument (dataset path)
 if len(args) != 1:
 	utils.exitWithUsage(usage)
-utils.verbosity(opts.verbosity)
-utils.printTabular.parseable = opts.parseable
 
 # Disable threaded queries
 def noThread(desc, fun, *args, **kargs):

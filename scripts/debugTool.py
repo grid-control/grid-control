@@ -8,7 +8,9 @@ parser.add_option("-j", "--jdl", dest="jdl", default=False, action="store_true",
 parser.add_option("-s", "--state", dest="state", default="",
 	help="Force new job state")
 parser.add_option("-S", "--splitting", dest="splitting", default="",
-	help="Show splitting of dataset")
+	help="Show splitting information dataset")
+parser.add_option("", "--splitting-infos", dest="splittingInfos", default="",
+	help="Select displayed splitting information")
 parser.add_option("-i", "--invalid", dest="invalid", default="",
 	help="List invalidated dataset splittings")
 parser.add_option("-D", "--diffdata", dest="diff", default=False, action="store_true",
@@ -16,10 +18,10 @@ parser.add_option("-D", "--diffdata", dest="diff", default=False, action="store_
 parser.add_option("-R", "--findremoved", dest="findrm", default=False, action="store_true",
 	help="Find removed blocks")
 parser.add_option("-C", "--checksplitting", dest="checkSplitting", default="",
-	help="Check splitting of dataset")
+	help="Check splitting of dataset in specified work directory")
 parser.add_option("-d", "--decode", dest="decode", default="",
 	help="Decode log files")
-(opts, args) = parser.parse_args()
+(opts, args) = parseOptions(parser)
 
 # we need exactly one positional argument (config file)
 if opts.jdl or opts.state:
@@ -74,9 +76,20 @@ if opts.state:
 
 if opts.splitting:
 	splitter = DataSplitter.loadState(opts.splitting)
-	utils.verbosity(10)
 	if not opts.checkSplitting:
-		splitter.printAllJobInfo()
+		if opts.splittingInfos:
+			keyStrings = opts.splittingInfos.split(',')
+			keyList = map(lambda k: getattr(DataSplitter, k), keyStrings)
+			def getInfos():
+				for jobNum in range(splitter.getMaxJobs()):
+					splitInfo = splitter.getSplitInfo(jobNum)
+					tmp = map(lambda k: (k, splitInfo.get(k, '')), keyList)
+					yield dict([('jobNum', jobNum)] + tmp)
+			utils.printTabular([('jobNum', 'Job')] + zip(keyList, keyStrings), getInfos())
+		else:
+			utils.verbosity(10)
+			splitter.printAllJobInfo()
+			splittingInfos
 	else:
 		print "Checking %d jobs..." % splitter.getMaxJobs()
 		fail = utils.set()

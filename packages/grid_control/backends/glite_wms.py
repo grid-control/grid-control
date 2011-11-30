@@ -14,7 +14,7 @@ class GliteWMS(GridWMS):
 		self._submitParams.update({'-r': self._ce, '--config': self._configVO })
 
 
-	def bulkSubmissionBegin(self, jobs):
+	def bulkSubmissionBegin(self):
 		self._submitParams.update({ '-d': None })
 		log = tempfile.mktemp('.log')
 		try:
@@ -32,3 +32,9 @@ class GliteWMS(GridWMS):
 			return (self._submitParams.get('-d', None) != None)
 		finally:
 			utils.removeFiles([log])
+
+
+	def submitJobs(self, jobNumList):
+		if self.bulkSubmissionBegin():
+			for submitInfo in GridWMS.submitJobs(self, jobNumList):
+				yield submitInfo

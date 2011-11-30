@@ -177,7 +177,7 @@ class ApMon:
 		self.configRecheck = True           # enabled by default
 		self.performBgMonitoring = True     # by default, perform background monitoring
 		self.monitoredJobs = {}	            # Monitored jobs; key = pid; value = hash with
-		self.maxMsgRate = 100		    # Maximum number of messages allowed to be sent per second
+		self.maxMsgRate = 10		    # Maximum number of messages allowed to be sent per second
 		self.__defaultSenderRef = {'INSTANCE_ID': random.randint(0,0x7FFFFFFE), 'SEQ_NR': 0};
 		self.__defaultUserCluster = "ApMon_UserSend";
 		self.__defaultUserNode = socket.getfqdn();
@@ -199,7 +199,7 @@ class ApMon:
 		self.__prvDrop = 0;
 		self.__crtSent = 0;
 		self.__crtDrop = 0;
-		self.__hWeight = 0.95;              # in (0,1) increase to wait more time before maxMsgRate kicks-in
+		self.__hWeight = 0.92;
 		self.logger = Logger.Logger(defaultLogLevel)
 		self.setDestinations(initValue)
 		self.__udpSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -693,10 +693,8 @@ class ApMon:
 	def __directSendParams (self, destination, clusterName, nodeName, timeStamp, params):
 		
 		if self.__shouldSend() == False:
-#			self.logger.log(Logger.ERROR, "Dropping packet since rate is too fast!");
-			self.logger.log(Logger.INFO, "Pausing 1sec since rate is too fast!");
-			time.sleep(1.0)
-#			return;
+			self.logger.log(Logger.DEBUG, "Dropping packet since rate is too fast!");
+			return;
 		
 		if destination == None:
 			self.logger.log(Logger.WARNING, "Destination is None");

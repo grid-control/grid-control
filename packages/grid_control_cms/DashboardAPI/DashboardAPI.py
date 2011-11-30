@@ -20,12 +20,12 @@ apmonInstance = None
 apmonInit = False
 
 # Monalisa configuration
-#apmonUrlList = ["http://lxgate35.cern.ch:40808/ApMonConf?app=dashboard", \
-#                "http://monalisa.cacr.caltech.edu:40808/ApMonConf?app=dashboard"]
+apmonUrlList = ["http://lxgate35.cern.ch:40808/ApMonConf?app=dashboard", \
+                "http://monalisa.cacr.caltech.edu:40808/ApMonConf?app=dashboard"]
 apmonConf = {'cms-jobmon.cern.ch:8884': {'sys_monitoring' : 0, \
                                     'general_info'   : 0, \
                                     'job_monitoring' : 0} }
-apmonLoggingLevel = apmon.Logger.ERROR
+apmonLoggingLevel = apmon.Logger.FATAL
 
 #
 # Method to create a single apmon instance at a time
@@ -222,17 +222,13 @@ class DashboardAPI :
 ## MAIN PROGRAM (FOR TEST)
 ##
 if __name__ == '__main__' :
-    dashboard = DashboardAPI('julia_test_1111','1_https://sbgrb1.in2p3.fr:9000/xxxx')
-    dashboard.sendValues({'SubmissionType':'Direct','application':'CMSSW_1_3_6','taskType':'analysis'})
-    dashboard.free()
+    args = sys.argv[1:]
+    if len(args) > 0 and args[0] == 'TEST' :
+        dashboard = DashboardAPI('Test')
+        for i in range(100) :
+            #print 'Test', 'testjob_' + `i`, {'testparam':i}
+            dashboard.sendValues({'testparam':i}, 'testjob_' + `i`)
+        dashboard.free()
+        sys.exit(0)
+    report(args)
     sys.exit(0)
-#    args = sys.argv[1:]
-#    if len(args) > 0 and args[0] == 'TEST' :
-#        dashboard = DashboardAPI('Test')
-#        for i in range(100) :
-#            #print 'Test', 'testjob_' + `i`, {'testparam':i}
-#            dashboard.sendValues({'testparam':i}, 'testjob_' + `i`)
-#        dashboard.free()
-#        sys.exit(0)
-#    report(args)
-#    sys.exit(0)

@@ -110,5 +110,5 @@ class CMSSW_Advanced(cmssw.CMSSW):
 			utils.vprint('Nickname: %s' % nick, 1)
 			utils.vprint(' * Config files: %s' % data['CMSSW_CONFIG'], 1)
 			utils.vprint(' *   Lumi range: %s' % data['LUMI_RANGE'], 1)
-			utils.vprint(' *    Variables: %s' % filterDict(data, lambda k: k not in ['CMSSW_CONFIG', 'LUMI_RANGE']), 1)
+			utils.vprint(' *    Variables: %s' % utils.filterDict(data, lambda k: k not in ['CMSSW_CONFIG', 'LUMI_RANGE']), 1)
 		return utils.mergeDicts([cmssw.CMSSW.getJobConfig(self, jobNum), data])

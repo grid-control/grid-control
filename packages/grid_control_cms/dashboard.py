@@ -27,7 +27,11 @@ class DashBoard(Monitoring):
 
 	def publish(self, jobObj, jobNum, taskId, usermsg):
 		dashId = '%s_%s' % (jobNum, jobObj.wmsId)
-		msg = utils.mergeDicts([{'taskId': taskId, 'jobId': dashId, 'sid': dashId}] + usermsg)
+		rawId = jobObj.wmsId
+		if "WMSID." in jobObj.wmsId:
+			(header, backend, rawId) = utils.optSplit(jobObj.wmsId, '..')
+			dashId = '%s_https://%s:/%s' % (jobNum, backend, rawId)
+		msg = utils.mergeDicts([{'taskId': taskId, 'jobId': dashId, 'sid': rawId}] + usermsg)
 		DashboardAPI(taskId, dashId).publish(**utils.filterDict(msg, vF = lambda v: v != None))
 
 
