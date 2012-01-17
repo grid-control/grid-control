@@ -19,6 +19,7 @@
 	                            -m 5 (Resubmit jobs up to 5 times)
 	-J, --job-selector <sel> Operate only on specified jobs
 	-d, --delete <sel>       Delete selected jobs
+	    --reset <sel>        Delete & reset selected jobs - resets also successful jobs
 
 	                         --- Module options ---
 	-q, --requery            Requery dataset information

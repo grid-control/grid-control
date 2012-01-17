@@ -23,8 +23,12 @@ class PBS(PBSGECommon):
 		reqMap = { WMS.MEMORY: ('pvmem', lambda m: '%dmb' % m) }
 		params = PBSGECommon.getSubmitArguments(self, jobNum, jobName, reqs, sandbox, stdout, stderr, addAttr, reqMap)
 		# Job requirements
-		if reqs.get(WMS.SITES, (None, None))[1]:
-			params += ' -l host=%s' % str.join('+', reqs[WMS.SITES][1])
+		if WMS.SITES in reqs:
+			(queue, nodes) = reqs[WMS.SITES]
+			if queue:
+				params += ' -q %s' % queue
+			if nodes:
+				params += ' -l host=%s' % str.join('+', nodes)
 		return params
 
 

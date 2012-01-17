@@ -40,6 +40,7 @@ if __name__ == '__main__':
 	parser.add_option('-q', '--resync',        dest='resync',     default=False, action='store_true')
 	parser.add_option('-s', '--no-submission', dest='submission', default=True,  action='store_false')
 	parser.add_option('-d', '--delete',        dest='delete',     default=None)
+	parser.add_option('',   '--reset',         dest='reset',      default=None)
 	parser.add_option('-a', '--action',        dest='action',     default=None)
 	parser.add_option('-J', '--job-selector',  dest='selector',   default=None)
 	parser.add_option('-S', '--seed',          dest='seed',       default=None)
@@ -131,9 +132,12 @@ if __name__ == '__main__':
 		if Report(jobManager.jobDB).show(opts, module):
 			sys.exit(0)
 
-		# Check if jobs have to be deleted and exit
-		if opts.delete != None:
+		# Check if jobs have to be deleted / reset and exit
+		if opts.delete:
 			jobManager.delete(wms, opts.delete)
+			sys.exit(0)
+		if opts.reset:
+			jobManager.reset(wms, opts.reset)
 			sys.exit(0)
 
 		actionList = config.getList('jobs', 'action', ['check', 'retrieve', 'submit'], volatile=True)
@@ -173,16 +177,15 @@ if __name__ == '__main__':
 						lastSpaceMsg = time.time()
 				else:
 					for action in map(str.lower, actionList):
-						if action.startswith('c'):   # check for jobs
-							if not utils.abort() and jobManager.check(wms):
+						if action.startswith('c') and not utils.abort():   # check for jobs
+							if jobManager.check(wms):
 								didWait = wait(wms.getTimings()[1])
-						elif action.startswith('r'): # retrieve finished jobs
-							if not utils.abort() and jobManager.retrieve(wms):
+						elif action.startswith('r') and not utils.abort(): # retrieve finished jobs
+							if jobManager.retrieve(wms):
 								didWait = wait(wms.getTimings()[1])
-						elif action.startswith('s'): # try submission
-							if opts.submission:
-								if not utils.abort() and jobManager.submit(wms):
-									didWait = wait(wms.getTimings()[1])
+						elif action.startswith('s') and not utils.abort() and opts.submission:
+							if jobManager.submit(wms):
+								didWait = wait(wms.getTimings()[1])
 
 				# quit if abort flag is set or not in continuous mode
 				if utils.abort() or not opts.continuous:

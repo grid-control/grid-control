@@ -94,16 +94,19 @@ class MetadataFromModule(InfoScanner):
 
 class FilesFromLS(InfoScanner):
 	def __init__(self, config, section):
-		self.path = config.getPath(section, 'source directory', '.')
+		self.path = config.get(section, 'source directory', '.')
+		self.path = QM('://' in self.path, self.path, utils.cleanPath(self.path))
 
 	def getEntries(self, path, metadata, events, seList, objStore):
 		metadata['GC_SOURCE_DIR'] = self.path
 		(log, counter) = (None, 0)
-		for fn in storage.se_ls(self.path).iter():
-			del log
+		proc = storage.se_ls(self.path)
+		for fn in proc.iter():
 			log = utils.ActivityLog('Reading source directory - [%d]' % counter)
 			yield (os.path.join(self.path, fn.strip()), metadata, events, seList, objStore)
 			counter += 1
+		if proc.wait():
+			utils.eprint(proc.getError())
 
 
 class FilesFromJobInfo(InfoScanner):

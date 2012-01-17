@@ -18,4 +18,4 @@ def conditionalSet(name, source, sourceKey):
 		setattr(opts, name, sourceKey)
 conditionalSet('dataset name pattern', 'delimeter dataset key', '/PRIVATE/@DELIMETER_DS@')
 conditionalSet('block name pattern', 'delimeter block key', '@DELIMETER_B@')
-datasetListFromX.discoverDataset(opts, parser, 'ScanProvider', gcSupport.utils.cleanPath(opts.path))
+datasetListFromX.discoverDataset(opts, parser, 'ScanProvider', opts.path)

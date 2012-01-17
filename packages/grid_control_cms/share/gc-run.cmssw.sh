@@ -73,7 +73,7 @@ echo
 export MY_WORKDIR="`pwd`/workdir"
 export CMSSW_SEARCH_PATH="$CMSSW_SEARCH_PATH:$MY_WORKDIR"
 mkdir -p "$MY_WORKDIR"; cd "$MY_WORKDIR"
-my_move "$MY_SCRATCH" "$MY_WORKDIR" "$SE_INPUT_FILES $CMSSW_PROLOG_EXEC $CMSSW_EPILOG_EXEC"
+my_move "$MY_SCRATCH" "$MY_WORKDIR" "$SB_INPUT_FILES $SE_INPUT_FILES $CMSSW_PROLOG_EXEC $CMSSW_EPILOG_EXEC"
 echo
 
 # Additional prolog scripts in the CMSSW environment
@@ -97,11 +97,13 @@ if [ -n "$CMSSW_CONFIG" ]; then
 	for CFG_NAME in $CMSSW_CONFIG; do
 		echo "Config file: $CFG_NAME"
 		echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+		checkfile "$CFG_NAME"
 		DBSDIR="$MY_WORKDIR/cmssw.dbs/$CFG_NAME"
 		mkdir -p "$DBSDIR"
 
 		echo "Substituting variables..."
-		cat "$MY_SCRATCH/$CFG_NAME" | var_replacer "$CFG_NAME" | tee "$DBSDIR/config" > "$CFG_NAME"
+		cat "$CFG_NAME" | var_replacer "$CFG_NAME" > "$DBSDIR/config"
+		cp "$DBSDIR/config" "$CFG_NAME"
 
 		echo "Calculating config file hash..."
 		edmConfigHash "$CFG_NAME" > "$DBSDIR/hash"

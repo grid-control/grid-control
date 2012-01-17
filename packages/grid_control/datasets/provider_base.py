@@ -147,7 +147,8 @@ class DataProvider(AbstractObject):
 				utils.vprint('%s:' % self._datasetNick, newline = False)
 			elif self.__class__.__name__ == 'DataMultiplexer':
 				utils.vprint('Summary:', newline = False)
-			utils.vprint('Running over %d events split into %d blocks.' % (self.allEvents, len(self._cache)))
+			units = QM(self.allEvents < 0, '%d files' % -self.allEvents, '%d events' % self.allEvents)
+			utils.vprint('Running over %s split into %d blocks.' % (units, len(self._cache)))
 		return self._cache
 
 

@@ -16,8 +16,8 @@ class DashBoard(Monitoring):
 		yield utils.pathShare('mon.dashboard.sh', pkg = 'grid_control_cms')
 
 
-	def getEnv(self, wms):
-		return { 'TASK_NAME': self.taskname, 'TASK_USER': wms.proxy.getUsername(), 'DB_EXEC': self.app }
+	def getTaskConfig(self):
+		return { 'TASK_NAME': self.taskname, 'DB_EXEC': self.app }
 
 
 	def getFiles(self):

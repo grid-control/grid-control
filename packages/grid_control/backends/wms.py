@@ -83,12 +83,13 @@ class WMS(AbstractObject):
 
 	def getSandboxFiles(self, smList):
 		# Prepare all input files
-		taskEnv = [self.monitor.getEnv(self), self.module.getTaskConfig()] + map(lambda sm: sm.getTaskConfig(), smList)
-		taskConfig = sorted(utils.DictFormat(escapeString = True).format(utils.mergeDicts(taskEnv), format = 'export %s%s%s\n'))
-		varMapping = sorted(utils.DictFormat(delimeter = ' ').format(self.module.getVarMapping(), format = '%s%s%s\n'))
-		depList = itertools.chain(self.module.getDependencies(), *map(lambda sm: sm.getDependencies(), smList))
+		depList = set(itertools.chain(*map(lambda x: x.getDependencies(), [self.module] + smList)))
 		depPaths = map(lambda pkg: utils.pathShare('', pkg = pkg), os.listdir(utils.pathGC('packages')))
 		depFiles = map(lambda dep: utils.resolvePath('env.%s.sh' % dep, depPaths), depList)
+		taskEnv = list(itertools.chain(map(lambda x: x.getTaskConfig(), [self.module, self.monitor] + smList)))
+		taskEnv.append({'GC_DEPFILES': str.join(' ', depList), 'GC_USERNAME': self.proxy.getUsername()})
+		taskConfig = sorted(utils.DictFormat(escapeString = True).format(utils.mergeDicts(taskEnv), format = 'export %s%s%s\n'))
+		varMapping = sorted(utils.DictFormat(delimeter = ' ').format(self.module.getVarMapping(), format = '%s%s%s\n'))
 		# Resolve wildcards in module input files
 		def getModuleFiles():
 			for f in self.module.getSBInFiles():

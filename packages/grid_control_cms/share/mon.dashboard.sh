@@ -24,10 +24,10 @@ case "$1" in
 		chmod u+x "$MY_LANDINGZONE/report.py"
 		checkbin "$MY_LANDINGZONE/report.py"
 		echo $MY_LANDINGZONE/report.py $REPORTID \
-			SyncGridJobId="$GC_WMS_ID" SyncGridName="$TASK_USER" SyncCE="$GC_CE_NAME" \
+			SyncGridJobId="$GC_WMS_ID" SyncGridName="$GC_USERNAME" SyncCE="$GC_CE_NAME" \
 			WNname="$(hostname -f)" ExeStart="$DB_EXEC"
 		$MY_LANDINGZONE/report.py $REPORTID \
-			SyncGridJobId="$GC_WMS_ID" SyncGridName="$TASK_USER" SyncCE="$GC_CE_NAME" \
+			SyncGridJobId="$GC_WMS_ID" SyncGridName="$GC_USERNAME" SyncCE="$GC_CE_NAME" \
 			WNname="$(hostname -f)" ExeStart="$DB_EXEC"
 		;;
 	"stop")

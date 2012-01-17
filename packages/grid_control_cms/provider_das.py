@@ -1,26 +1,11 @@
 from grid_control import QM, utils, DatasetError, RethrowError, datasets
-from grid_control.datasets import DataProvider
+from grid_control.datasets import DataProvider, HybridSplitter, DataSplitter
 from provider_cms import CMSProvider
 from python_compat import *
 from cms_ws import *
 
-def createDBSAPI(url):
-	import DBSAPI.dbsApi, sys, os
-	sys.path.append(os.path.dirname(__file__))
-	if url == '':
-		url = 'http://cmsdbsprod.cern.ch/cms_dbs_prod_global/servlet/DBSServlet'
-	elif (not 'http://' in url) and (not 'https://' in url):
-		url = 'http://cmsdbsprod.cern.ch/%s/servlet/DBSServlet' % url
-	return DBSAPI.dbsApi.DbsApi({'version': 'DBS_2_0_6', 'level': 'CRITICAL', 'url': url})
-
-
 # required format: <dataset path>[@<instance>][#<block>]
-class DBSApiv2(CMSProvider):
-	def __init__(self, config, section, datasetExpr, datasetNick, datasetID = 0):
-		CMSProvider.__init__(self, config, section, datasetExpr, datasetNick, datasetID)
-		self.phedex = config.getBool(section, 'use phedex', True) and (self.url == '')
-
-
+class DASProvider(CMSProvider):
 	def getBlocksInternal(self, noFiles):
 		api = createDBSAPI(self.url)
 		def getWithPhedex(listBlockInfo, seList):
@@ -61,8 +46,18 @@ class DBSApiv2(CMSProvider):
 		if len(listFileInfo) == 0 and not noFiles:
 			raise DatasetError('Dataset %s has no registered files in dbs.' % self.datasetPath)
 
+		def blockFilter(block):
+			return (self.datasetBlock == 'all') or (str.split(block['Name'], '#')[1] == self.datasetBlock)
+
+		def lumiFilter(lumilist):
+			if self.selectedLumis:
+				for lumi in lumilist:
+					if selectLumi((lumi['RunNumber'], lumi['LumiSectionNumber']), self.selectedLumis):
+						return True
+			return self.selectedLumis == None
+
 		result = []
-		for block in filter(lambda b: self.blockFilter(b['Name']), listBlockInfo):
+		for block in filter(lambda xblockFilter, listBlockInfo):
 			blockInfo = dict()
 			blockInfo[DataProvider.Dataset] = str.split(block['Name'], '#')[0]
 			blockInfo[DataProvider.BlockName] = str.split(block['Name'], '#')[1]
@@ -77,7 +72,7 @@ class DBSApiv2(CMSProvider):
 				blockInfo[DataProvider.Metadata] = ['Runs']
 			for entry in listFileInfo:
 				if block['Name'] == entry['Block']['Name']:
-					if self.lumiFilter(entry['LumiList'], 'RunNumber', 'LumiSectionNumber') and (entry['Status'] == 'VALID' or not self.onlyValid):
+					if lumiFilter(entry['LumiList']) and (entry['Status'] == 'VALID' or not self.onlyValid):
 						blockInfo[DataProvider.FileList].append({
 							DataProvider.lfn      : entry['LogicalFileName'],
 							DataProvider.NEvents  : entry['NumberOfEvents'],

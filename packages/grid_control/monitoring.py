@@ -26,14 +26,13 @@ EventHandler.dynamicLoaderPath()
 
 # Monitoring base class with submodule support
 class Monitoring(EventHandler):
-
 	# Script to call later on
 	def getScript(self):
 		return utils.listMapReduce(lambda m: list(m.getScript()), self.submodules)
 
-	def getEnv(self, wms):
+	def getTaskConfig(self):
 		tmp = {'GC_MONITORING': str.join(" ", map(os.path.basename, self.getScript()))}
-		return utils.mergeDicts(map(lambda m: m.getEnv(wms), self.submodules) + [tmp])
+		return utils.mergeDicts(map(lambda m: m.getTaskConfig(), self.submodules) + [tmp])
 
 	def getFiles(self):
 		return utils.listMapReduce(lambda m: list(m.getFiles()), self.submodules, self.getScript())

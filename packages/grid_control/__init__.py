@@ -3,10 +3,10 @@ from grid_control.utils	import AbstractObject, QM
 
 from grid_control.config	import Config, noDefault
 from grid_control.overlay	import ConfigOverlay
-from grid_control.job	import Job
+from grid_control.job_db	import Job, JobClass, JobDB
 from grid_control.job_selector	import JobSelector
 from grid_control.report	import Report
-from grid_control.job_db	import JobDB, JobManager
+from grid_control.job_manager	import JobManager
 from grid_control.proxy	import Proxy
 from grid_control.help	import Help
 from grid_control.storage	import StorageManager

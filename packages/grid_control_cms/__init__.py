@@ -1,7 +1,9 @@
 from grid_control import datasets, monitoring, overlay
 
-datasets.DataProvider.providers.update({'DBSApiv2': 'dbs'})
+datasets.DataProvider.providers.update({'DASProvider': 'das', 'DBSApiv2': 'dbs'})
+datasets.DataProvider.moduleMap['DASProvider'] = 'provider_das.DASProvider'
 datasets.DataProvider.moduleMap['DBSApiv2'] = 'provider_dbsv2.DBSApiv2'
+
 monitoring.Monitoring.moduleMap['dashboard'] = 'dashboard.DashBoard'
 
 datasets.InfoScanner.moduleMap.update(dict(map(lambda x: (x, 'scanner_cmssw.%s' % x),

@@ -31,11 +31,6 @@ class PBSGECommon(LocalWMSApi):
 		# Job group
 		if len(self.group):
 			params += ' -W group_list=%s' % self.group
-		# Job requirements
-		if WMS.SITES in reqs:
-			(queue, nodes) = reqs[WMS.SITES]
-			if queue:
-				params += ' -q %s' % queue
 		# Process job requirements
 		for req in reqMap:
 			if self.checkReq(reqs, req):

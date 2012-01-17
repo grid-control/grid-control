@@ -1,11 +1,13 @@
 import sys, os, xml.dom.minidom
-from grid_control import ConfigError, RethrowError, Job, utils
+from grid_control import QM, ConfigError, RethrowError, Job, utils
 from grid_control.backends.wms import WMS
 from pbsge import PBSGECommon
+from python_compat import *
 
 class OGE(PBSGECommon):
 	def __init__(self, config):
 		PBSGECommon.__init__(self, config)
+		self.user = config.get('local', 'user', os.environ.get('LOGNAME', ''), volatile=True)
 		self.configExec = utils.resolveInstallPath('qconf')
 
 
@@ -14,7 +16,17 @@ class OGE(PBSGECommon):
 		reqMap = { WMS.MEMORY: ('h_vmem', lambda m: '%dM' % m),
 			WMS.WALLTIME: ('s_rt', timeStr), WMS.CPUTIME: ('h_cpu', timeStr) }
 		# Restart jobs = no
-		return ' -r n' + PBSGECommon.getSubmitArguments(self, jobNum, jobName, reqs, sandbox, stdout, stderr, addAttr, reqMap)
+		params = ' -r n'
+		# Job requirements
+		if WMS.SITES in reqs:
+			(queue, nodes) = reqs[WMS.SITES]
+			if not nodes and queue:
+				params += ' -q %s' % queue
+			elif nodes and queue:
+				params += ' -q %s' % str.join(',', map(lambda node: '%s@%s' % (queue, node), nodes))
+			elif nodes:
+				raise ConfigError('Please also specify queue when selecting nodes!')
+		return params + PBSGECommon.getSubmitArguments(self, jobNum, jobName, reqs, sandbox, stdout, stderr, addAttr, reqMap)
 
 
 	def parseSubmitOutput(self, data):
@@ -23,7 +35,10 @@ class OGE(PBSGECommon):
 
 
 	def parseStatus(self, status):
-		dom = xml.dom.minidom.parseString(str.join('', status))
+		try:
+			dom = xml.dom.minidom.parseString(str.join('', status))
+		except:
+			raise RethrowError("Couldn't parse qstat XML output!")
 		for jobentry in dom.getElementsByTagName('job_list'):
 			jobinfo = {}
 			try:
@@ -52,7 +67,7 @@ class OGE(PBSGECommon):
 
 
 	def getCheckArguments(self, wmsIds):
-		return '-xml'
+		return '-xml' + QM(self.user, ' -u %s' % self.user, '')
 
 
 	def getCancelArguments(self, wmsIds):
@@ -75,14 +90,13 @@ class OGE(PBSGECommon):
 
 
 	def getNodes(self):
-		(result, active) = ([], False)
-		for line in utils.LoggedProcess(self.configExec, '-sep').iter():
-			if line.startswith('===='):
-				active = not active
-			elif active:
-				result.append(line.split()[0])
+		(result, active) = (set(), False)
+		for group in utils.LoggedProcess(self.configExec, '-shgrpl').iter():
+			result.add(group.strip())
+			for host in utils.LoggedProcess(self.configExec, '-shgrp_resolved %s' % group).iter():
+				result.update(host.split())
 		if len(result) > 0:
-			return result
+			return list(result)
 
 
 class SGE(OGE):

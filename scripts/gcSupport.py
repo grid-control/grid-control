@@ -49,7 +49,7 @@ class FileMutex:
 			pass
 
 
-def getWorkJobs(args, selector = None):
+def initGC(args):
 	if len(args) > 0:
 		configFile = args[0]
 		config = Config(configFile)
@@ -57,10 +57,14 @@ def getWorkJobs(args, selector = None):
 		userSelector = None
 		if len(args) != 1:
 			userSelector = MultiJobSelector(args[1])
-		jobDB = JobDB(config, jobSelector = userSelector)
-		return (config.workDir, len(jobDB), jobDB.getJobs(selector))
+		return (config.workDir, config, JobDB(config, jobSelector = userSelector))
 	sys.stderr.write("Syntax: %s <config file> [<job id>, ...]\n\n" % sys.argv[0])
 	sys.exit(1)
+
+
+def getWorkJobs(args, selector = None):
+	(workDir, config, jobDB) = initGC(args)
+	return (workDir, len(jobDB), jobDB.getJobs(selector))
 
 
 def getJobInfo(workDir, jobNum, retCodeFilter = lambda x: True):

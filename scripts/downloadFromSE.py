@@ -1,9 +1,7 @@
 #!/usr/bin/env python
 import gcSupport, sys, os, optparse, popen2, time, random, threading
 from python_compat import *
-from grid_control import *
-from grid_control import job_db, storage
-from grid_control.proxy import Proxy
+from grid_control import Job, JobDB, GCError, Config, Proxy, job_selector, job_db, storage
 
 def md5sum(filename):
 	m = md5()
@@ -82,6 +80,8 @@ DEFAULT: The default is to download the SE file and check them with MD5 hashes.
 		help="specify the SE paths to process")
 	parser.add_option("-r", "--retry",  dest="retry",  default=0,
 		help="how often should a transfer be attempted [Default: 0]")
+	parser.add_option("-t", "--threads",  dest="threads",  default=0, type=int,
+		help="how many parallel download threads should be used to download files [Default: no multithreading]")
 
 	# Shortcut options
 	def withoutDefaults(opts):
@@ -145,6 +145,7 @@ DEFAULT: The default is to download the SE file and check them with MD5 hashes.
 				break
 			time.sleep(60)
 		except KeyboardInterrupt:
+			raise
 			print "\n\nDownload aborted!\n"
 			sys.exit(1)
 
@@ -163,7 +164,8 @@ def realmain(opts, args):
 		sys.stderr.write(GCError.message)
 		sys.exit(1)
 
-	(workDir, nJobs, jobList) = gcSupport.getWorkJobs(args, job_db.ClassSelector(job_db.JobClass.SUCCESS))
+	(workDir, config, jobDB) = gcSupport.initGC(args)
+	jobList = jobDB.getJobs(job_selector.ClassSelector(job_db.JobClass.SUCCESS))
 
 	# Create SE output dir
 	if not opts.output:
@@ -175,53 +177,44 @@ def realmain(opts, args):
 	def incInfo(x):
 		infos[x] = infos.get(x, 0) + 1
 
-	def processSingleJob(jobNum):
-		print "Job %d:" % jobNum,
-
+	def processSingleJob(jobNum, output):
+		output.init(jobNum)
+		job = jobDB.get(jobNum)
 		# Only run over finished and not yet downloaded jobs
-		try:
-			jobFile = os.path.join(workDir, 'jobs', 'job_%d.txt' % jobNum)
-			job = Job.load(jobFile)
-		except KeyboardInterrupt:
-			raise
-		except:
-			print "Could not load job status file %s!" % jobFile
-			return
 		if job.state != Job.SUCCESS:
-			print "Job has not yet finished successfully!"
+			output.error("Job has not yet finished successfully!")
 			return incInfo("Processing")
 		if job.get('download') == 'True' and not opts.markIgnoreDL:
-			print "All files already downloaded!"
+			output.error("All files already downloaded!")
 			return incInfo("Downloaded")
 		retry = int(job.get('download attempt', 0))
-
 		failJob = False
 
 		if not proxy.canSubmit(20*60, True):
-			print "Please renew grid proxy!"
+			sys.stderr.write("Please renew grid proxy!")
 			sys.exit(1)
 
 		# Read the file hash entries from job info file
 		files = gcSupport.getFileInfo(workDir, jobNum, lambda retCode: retCode == 0)
+		output.files(files)
 		if not files:
 			if opts.markEmptyFailed:
 				failJob = True
 			else:
 				return incInfo("No files")
-		print "The job wrote %d file%s to the SE" % (len(files), ('s', '')[len(files) == 1])
 
-		for (hash, name_local, name_dest, pathSE) in files:
-			print "\t", name_dest,
-			sys.stdout.flush()
+		for (fileIdx, fileInfo) in enumerate(files):
+			(hash, name_local, name_dest, pathSE) = fileInfo
+			output.file(fileIdx)
 
 			# Copy files to local folder
 			outFilePath = os.path.join(opts.output, name_dest)
 			if opts.selectSE:
 				if not (True in map(lambda s: s in pathSE, opts.selectSE)):
-					print "skip file because it is not located on selected SE!"
+					output.error("skip file because it is not located on selected SE!")
 					return
 			if opts.skipExisting and (storage.se_exists(outFilePath) == 0):
-				print "skip file as it already exists!"
+				output.error("skip file as it already exists!")
 				return
 			if storage.se_exists(os.path.dirname(outFilePath)).wait() != 0:
 				storage.se_mkdir(os.path.dirname(outFilePath)).wait()
@@ -230,29 +223,48 @@ def realmain(opts, args):
 			if 'file://' in outFilePath:
 				checkPath = outFilePath
 
-			myGetSize = lambda x: "(%7s)" % gcSupport.prettySize(os.path.getsize(x.replace('file://', '')))
-			def monitorFile(path, lock):
-				while not lock.acquire(False):
-					try:
-						print "\r\t", name_dest, myGetSize(path),
-						sys.stdout.flush()
-					except:
-						pass
-					time.sleep(1)
+			def monitorFile(path, lock, abort):
+				path = path.replace('file://', '')
+				(csize, osize, stime, otime, lttime) = (0, 0, time.time(), time.time(), time.time())
+				while not lock.acquire(False): # Loop until monitor lock is available
+					print csize, osize, stime, otime, lttime, time.time() - lttime
+					if csize != osize:
+						lttime = time.time()
+					if time.time() - lttime > 60: # No size change in the last 5min!
+						output.error("Hit copy timeout!")
+						abort.acquire()
+						break
+					if os.path.exists(path):
+						csize = os.path.getsize(path)
+						output.file(fileIdx, csize, osize, stime, otime)
+						(osize, otime) = (csize, time.time())
+					else:
+						stime = time.time()
+					time.sleep(0.1)
 				lock.release()
+
+			copyAbortLock = threading.Lock()
 			monitorLock = threading.Lock()
 			monitorLock.acquire()
-			monitor = threading.Thread(target = monitorFile, args = (checkPath, monitorLock))
-			monitor.start()
-			try:
-				procCP = storage.se_copy(os.path.join(pathSE, name_dest), outFilePath, tmp = checkPath)
-				result = procCP.wait()
-			finally:
-				monitorLock.release()
-				monitor.join()
+			monitor = utils.gcStartThread('Download monitor %s' % jobNum,
+				monitorFile, checkPath, monitorLock, copyAbortLock)
+			result = -1
+			procCP = storage.se_copy(os.path.join(pathSE, name_dest), outFilePath, tmp = checkPath)
+			while True:
+				if not copyAbortLock.acquire(False):
+					monitor.join()
+					print "ABORT"
+					break
+				copyAbortLock.release()
+				result = procCP.poll()
+				if result != -1:
+					monitorLock.release()
+					monitor.join()
+					break
+				time.sleep(0.02)
 			if result != 0:
-				print "\n\t\tUnable to copy file from SE!"
-				print procCP.getMessage()
+				output.error("Unable to copy file from SE!")
+				output.error(procCP.getMessage())
 				failJob = True
 				break
 
@@ -266,36 +278,32 @@ def realmain(opts, args):
 					raise
 				except:
 					hashLocal = None
-					print ""
-				print "=>", ('\33[0;91mFAIL\33[0m', '\33[0;92mMATCH\33[0m')[hash == hashLocal]
-				print "\t\tRemote site:", hash
-				print "\t\t Local site:", hashLocal
+				output.hash(fileIdx, hashLocal)
 				if hash != hashLocal:
 					failJob = True
 			else:
-				print
-				print "\t\tRemote site:", hash
+				output.hash(fileIdx)
 
 		# Ignore the first opts.retry number of failed jobs
 		if failJob and opts.retry and (retry < opts.retry):
-			print "\t\tDownload attempt #%d failed!" % (retry + 1)
+			output.error("Download attempt #%d failed!" % (retry + 1))
 			job.set('download attempt', str(retry + 1))
 			incInfo("Download attempts")
-			job.save(jobFile)
+			jobDB.commit(jobNum, job)
 			return
 
 		for (hash, name_local, name_dest, pathSE) in files:
 			# Remove downloaded files in case of failure
 			if (failJob and opts.rmLocalFail) or (not failJob and opts.rmLocalOK):
-				sys.stdout.write("\tDeleting file %s from local...\r" % name_dest)
+				output.write("\tDeleting file %s from local...\r" % name_dest)
 				outFilePath = os.path.join(opts.output, name_dest)
 				if storage.se_exists(outFilePath).wait() == 0:
 					dlfs_rm(outFilePath, 'local file')
 			# Remove SE files in case of failure
 			if (failJob and opts.rmSEFail)    or (not failJob and opts.rmSEOK):
-				sys.stdout.write("\tDeleting file %s...\r" % name_dest)
+				output.write("\tDeleting file %s...\r" % name_dest)
 				dlfs_rm(os.path.join(pathSE, name_dest), 'SE file')
-			print "%s\r" % (' ' * len("\tDeleting file %s from SE...\r" % name_dest))
+			output.write("%s\r" % (' ' * len("\tDeleting file %s from SE...\r" % name_dest)))
 
 		if failJob:
 			incInfo("Failed downloads")
@@ -309,15 +317,106 @@ def realmain(opts, args):
 				job.set('download', 'True')
 
 		# Save new job status infos
-		job.save(jobFile)
-		print
+		jobDB.commit(jobNum, job)
+		output.finish()
 
 	if opts.shuffle:
 		random.shuffle(jobList)
 	else:
 		jobList.sort()
-	for jobNum in jobList:
-		processSingleJob(jobNum) # could be done in parallel
+
+	if opts.threads:
+		from grid_control import gui
+		class ThreadDisplay:
+			def __init__(self):
+				self.output = []
+			def init(self, jobNum):
+				self.jobNum = jobNum
+				self.output = ['Job %5d' % jobNum, '']
+			def infoline(self, fileIdx, msg = ''):
+				return 'Job %5d [%i/%i] %s %s' % (self.jobNum, fileIdx + 1, len(self.files), self.files[fileIdx][2], msg)
+			def files(self, files):
+				(self.files, self.output, self.tr) = (files, self.output[1:], ['']*len(files))
+				for x in range(len(files)):
+					self.output.insert(2*x, self.infoline(x))
+					self.output.insert(2*x+1, '')
+			def file(self, idx, csize = None, osize = None, stime = None, otime = None):
+				(hash, name_local, name_dest, pathSE) = self.files[idx]
+				if otime:
+					trfun = lambda sref, tref: gcSupport.prettySize(((csize - sref) / max(1, time.time() - tref)))
+					self.tr[idx] = '%7s - %7s/s' % (gcSupport.prettySize(csize), trfun(0, stime))
+					self.output[2*idx] = self.infoline(idx, "(%s - %7s/s)" % (self.tr[idx], trfun(osize, otime)))
+			def hash(self, idx, hashLocal = None):
+				(hash, name_local, name_dest, pathSE) = self.files[idx]
+				if hashLocal:
+					if hash == hashLocal:
+						result = gui.Console.fmt('MATCH', [gui.Console.COLOR_GREEN])
+					else:
+						result = gui.Console.fmt('FAIL', [gui.Console.COLOR_RED])
+					msg = '(R:%s L:%s) => %s' % (hash, hashLocal, result)
+				else:
+					msg = ''
+				self.output[2*idx] = self.infoline(idx, "(%s)" % self.tr[idx])
+				self.output[2*idx+1] = msg
+			def error(self, msg):
+				self.output.append(msg)
+			def write(self, msg):
+				self.output.append(msg)
+			def finish(self):
+#				self.output.append(str(self.jobNum) + "FINISHED")
+				pass
+
+		(active, todo) = ([], list(jobList))
+		todo.reverse()
+		screen = gui.Console()
+		screen.erase()
+		screen.move(0, 0)
+		screen.savePos()
+		while True:
+#			screen.loadPos()
+			active = filter(lambda (t, d): t.isAlive(), active)
+			while len(active) < opts.threads and len(todo):
+				display = ThreadDisplay()
+				active.append((utils.gcStartThread('Download %s' % todo[-1],
+					processSingleJob, todo.pop(), display), display))
+			for (t, d) in active:
+				sys.stdout.write(str.join('\n', d.output))
+			sys.stdout.flush()
+			if len(active) == 0:
+				break
+			time.sleep(0.01)
+#			screen.erase()
+	else:
+		class DefaultDisplay:
+			def init(self, jobNum):
+				sys.stdout.write('Job %d: ' % jobNum)
+			def files(self, files):
+				self.files = files
+				sys.stdout.write("The job wrote %d file%s to the SE\n" % (len(files), ('s', '')[len(files) == 1]))
+			def file(self, idx, csize = None, osize = None, stime = None, otime = None):
+				(hash, name_local, name_dest, pathSE) = self.files[idx]
+				if otime:
+					tr = lambda sref, tref: gcSupport.prettySize(((csize - sref) / max(1, time.time() - tref)))
+					self.write("\r\t%s (%7s - %7s/s - %7s/s)" % (name_dest,
+					gcSupport.prettySize(csize), tr(0, stime), tr(osize, otime)))
+					sys.stdout.flush()
+				else:
+					self.write("\t%s" % name_dest)
+					sys.stdout.flush()
+			def hash(self, idx, hashLocal = None):
+				(hash, name_local, name_dest, pathSE) = self.files[idx]
+				self.write(" => %s\n" % ('\33[0;91mFAIL\33[0m', '\33[0;92mMATCH\33[0m')[hash == hashLocal])
+				self.write("\t\tRemote site: %s\n" % hash)
+				self.write("\t\t Local site: %s\n" % hashLocal)
+			def error(self, msg):
+				sys.stdout.write('Job %d: %s' % (jobNum, msg))
+			def write(self, msg):
+				sys.stdout.write(msg)
+			def finish(self):
+				sys.stdout.write("\n")
+
+		for jobNum in jobList:
+			processSingleJob(jobNum, DefaultDisplay())
 
 	# Print overview
 	if infos:

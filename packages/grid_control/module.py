@@ -86,7 +86,6 @@ class Module(AbstractObject):
 			# Runtime
 			'DOBREAK': self.nodeTimeout,
 			'MY_RUNTIME': self.getCommand(),
-			'GC_DEPFILES': str.join(' ', self.getDependencies()),
 			# Seeds and substitutions
 			'SEEDS': str.join(' ', map(str, self.seeds)),
 			'SUBST_FILES': str.join(' ', map(os.path.basename, self.getSubstFiles())),

@@ -7,6 +7,7 @@ class Broker(AbstractObject):
 	def __init__(self, config, section, bic, forceQ = False, forceN = False): # backend information class
 		(self.config, self.bic, self.queues, self.nodes) = (config, bic, None, None)
 		# Queue info format: {'queue1': {WMS.MEMORY: 123, ...}, 'queue2': {...}}
+		# None => not specified / not available - [] => empty
 		self.userNodes = config.getList(section, 'sites', None, volatile=True)
 		self.userQueues = config.getList(section, 'queue', None, volatile=True)
 		if bic:

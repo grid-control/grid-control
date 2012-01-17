@@ -1,5 +1,5 @@
-import re, operator
-from grid_control import QM, UserError, Job, utils, AbstractError, AbstractObject
+import re, operator, time
+from grid_control import QM, UserError, AbstractError, AbstractObject, Job, utils
 
 class JobSelector(AbstractObject):
 	def create(arg, **kwargs):
@@ -11,8 +11,32 @@ class JobSelector(AbstractObject):
 	def __call__(self, jobNum, jobObj):
 		raise AbstractError
 JobSelector.dynamicLoaderPath()
-JobSelector.moduleMap.update({'id': 'IDSelector', 'state': 'StateSelector',
-	'site': 'SiteSelector', 'queue': 'QueueSelector', 'var': 'VarSelector', 'nick': 'NickSelector'})
+JobSelector.moduleMap.update({'id': 'IDSelector', 'state': 'StateSelector', 'site': 'SiteSelector',
+	'queue': 'QueueSelector', 'var': 'VarSelector', 'nick': 'NickSelector', 'stuck': 'StuckSelector'})
+
+
+class AndJobSelector(JobSelector): # Internally used
+	def __init__(self, *args):
+		self.selectors = args
+
+	def __call__(self, jobNum, jobObj):
+		return reduce(operator.and_, map(lambda selector: selector(jobNum, jobObj), self.selectors))
+
+
+class ClassSelector(JobSelector):
+	def __init__(self, arg, **kwargs):
+		self.states = arg[1]
+
+	def __call__(self, jobNum, jobObj):
+		return jobObj.state in self.states
+
+
+class StuckSelector(JobSelector):
+	def __init__(self, arg, **kwargs):
+		self.time_threshold = utils.parseTime(arg)
+
+	def __call__(self, jobNum, jobObj):
+		return (jobObj.changed > 0) and (time.time() - jobObj.changed) > self.time_threshold
 
 
 class IDSelector(JobSelector):
@@ -74,9 +98,11 @@ class VarSelector(JobSelector):
 	def __call__(self, jobNum, jobObj):
 		return reduce(operator.and_, map(lambda (var, rx): rx.search(self.jobCfg(jobNum, var)) != None, self.rxDict))
 
+
 class NickSelector(RegExSelector):
 	def __init__(self, arg, **kwargs):
 		RegExSelector.__init__(self, arg, lambda jobNum, jobObj: kwargs['module'].getJobConfig(jobNum).get('DATASETNICK', ''))
+
 
 class MultiJobSelector(JobSelector):
 	def __init__(self, arg, **kwargs):

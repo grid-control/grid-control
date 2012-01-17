@@ -1,5 +1,6 @@
 import re, sys, signal, utils, report, termios, array, fcntl
-from job_db import ClassSelector, JobClass
+from job_db import JobClass
+from job_selector import ClassSelector
 
 class Console:
 	attr = {"COLOR_BLACK": "30", "COLOR_RED": "31", "COLOR_GREEN": "32",
@@ -43,9 +44,8 @@ class Console:
 
 
 class GUIStream:
-	def __init__(self, *args):
-		(self.stream, self.screen) = args
-		self.logged = True
+	def __init__(self, stream, screen):
+		(self.stream, self.screen, self.logged) = (stream, screen, True)
 
 		# This is a list of (regular expression, GUI attributes).  The
 		# attributes are applied to matches of the regular expression in
@@ -93,7 +93,7 @@ class GUIStream:
 			sys.stdout.write(data)
 		sys.stdout.write('\n')
 	dump = classmethod(dump)
-GUIStream.backlog = [None for i in range(100)]
+GUIStream.backlog = [None] * 100
 
 
 class ProgressBar:

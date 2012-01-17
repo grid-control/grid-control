@@ -170,7 +170,7 @@ class Config:
 
 
 	def getOptions(self, section):
-		return map(lambda (s, i): i, filter(lambda (s, i): s == section, self.content.keys()))
+		return map(lambda (s, i): i, filter(lambda (s, i): s == section.lower(), self.content.keys()))
 
 
 	# Compare this config object to another config file
