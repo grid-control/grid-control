@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 import gcSupport, sys, os, optparse, popen2, time, random, threading
 from python_compat import *
-from grid_control import Job, JobDB, GCError, Config, Proxy, job_selector, job_db, storage
+from grid_control import Job, JobDB, GCError, Config, Proxy, job_selector, job_db, storage, utils
 
 def md5sum(filename):
 	m = md5()
@@ -227,10 +227,9 @@ def realmain(opts, args):
 				path = path.replace('file://', '')
 				(csize, osize, stime, otime, lttime) = (0, 0, time.time(), time.time(), time.time())
 				while not lock.acquire(False): # Loop until monitor lock is available
-					print csize, osize, stime, otime, lttime, time.time() - lttime
 					if csize != osize:
 						lttime = time.time()
-					if time.time() - lttime > 60: # No size change in the last 5min!
+					if time.time() - lttime > 5*60: # No size change in the last 5min!
 						output.error("Hit copy timeout!")
 						abort.acquire()
 						break
@@ -426,7 +425,7 @@ def realmain(opts, args):
 				print "%20s: [%d/%d]" % (state, num, len(jobList))
 		print
 
-	if ("Downloaded" in infos) and (infos["Downloaded"] == nJobs):
+	if ("Downloaded" in infos) and (infos["Downloaded"] == len(jobDB)):
 		return True
 	return False
 

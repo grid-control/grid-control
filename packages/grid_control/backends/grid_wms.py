@@ -218,7 +218,7 @@ class GridWMS(WMS):
 			raise RethrowError('Could not write jdl data to %s.' % jdl)
 
 		try:
-			tmp = utils.filterDict(self._submitParams, vF = lambda v: v != '')
+			tmp = utils.filterDict(self._submitParams, vF = lambda v: v)
 			params = str.join(' ', map(lambda (x, y): '%s %s' % (x, y), tmp.items()))
 
 			log = tempfile.mktemp('.log')

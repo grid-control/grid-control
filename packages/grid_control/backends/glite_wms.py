@@ -12,10 +12,13 @@ class GliteWMS(GridWMS):
 		self._outputExec = utils.resolveInstallPath('glite-wms-job-output')
 		self._cancelExec = utils.resolveInstallPath('glite-wms-job-cancel')
 		self._submitParams.update({'-r': self._ce, '--config': self._configVO })
-
+		self._useDelegate = config.getBool('glite-wms', 'use delegate', True)
 
 	def bulkSubmissionBegin(self):
 		self._submitParams.update({ '-d': None })
+		if not self._useDelegate:
+			self._submitParams.update({ '-a': ' ' })
+			return True
 		log = tempfile.mktemp('.log')
 		try:
 			activity = utils.ActivityLog('creating delegate proxy for job submission')

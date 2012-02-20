@@ -11,6 +11,7 @@ parser.add_option("-L", "--listlumis", dest="listlumis", default=None)
 parser.add_option("-R", "--lumiranges", dest="lumiranges", default=None)
 parser.add_option("-r", "--remove", dest="remove")
 parser.add_option("-w", "--wipe", dest="wipe", default=False, action="store_true")
+parser.add_option("-W", "--wildcard", dest="wildcard", default=None)
 parser.add_option("-v", "--invalidate", dest="invalidate")
 parser.add_option("-d", "--dump", dest="dump")
 parser.add_option("-u", "--url", dest="url",
@@ -61,10 +62,10 @@ elif opts.listlumis:
 		for lumi in fileInfo['LumiList']:
 			rl.append(([int(lumi["RunNumber"]), int(lumi["LumiSectionNumber"])], [int(lumi["RunNumber"]), int(lumi["LumiSectionNumber"])]))
 		print lfn
-		print gcSupport.utils.wrapList(formatLumi(mergeLumi(rl)), 70, ',\n\t')
+		print utils.wrapList(formatLumi(mergeLumi(rl)), 70, ',\n\t')
 		allrl.extend(rl)
 	print "\nComplete dataset:"
-	print gcSupport.utils.wrapList(formatLumi(mergeLumi(allrl)), 70, ',\n\t')
+	print utils.wrapList(formatLumi(mergeLumi(allrl)), 70, ',\n\t')
 
 elif opts.list:
 	for block in api.listBlocks(opts.list):
@@ -98,6 +99,11 @@ elif opts.se:
 
 elif opts.invalidate:
 	api.updateProcDSStatus(opts.invalidate, "INVALID")
+
+elif opts.wildcard:
+       pd, sd, dt = (opts.wildcard.lstrip("/") + "/*/*/*").split("/")[:3]
+       for x in api.listProcessedDatasets(pd, dt, sd):
+               print x.get("PathList", [])[-1]
 
 else:
 	print "Abandon all data, ye who tinker here!"

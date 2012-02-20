@@ -63,6 +63,10 @@ class Config:
 
 	def parseFile(self, configFile, defaults = None):
 		try:
+			for line in map(lambda x: x.rstrip() + '=:', open(configFile, 'r').readlines()):
+				# Abort if non-indented, non-commented line with ":" preceeding "=" was found
+				if (line.find(":") < line.find("=")) and (line.lstrip() == line) and not line.lstrip().startswith(';'):
+					raise ConfigError('Invalid config line:\n\t%s\nPlease use "key = value" syntax or indent values!' % line)
 			parser = cp.ConfigParser(defaults)
 			parser.readfp(open(configFile, 'r'))
 			if parser.has_section('global') and parser.has_option('global', 'include'):
