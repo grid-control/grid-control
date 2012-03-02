@@ -53,7 +53,6 @@ def initGC(args):
 	if len(args) > 0:
 		configFile = args[0]
 		config = Config(configFile)
-		config.workDir = config.getPath('global', 'workdir', config.workDirDefault)
 		userSelector = None
 		if len(args) != 1:
 			userSelector = MultiJobSelector(args[1])

@@ -208,7 +208,7 @@ class JobManager:
 		if len(self.jobDB.getJobs(ClassSelector(JobClass.ENDSTATE))) == len(self.jobDB):
 			self.logDisabled()
 			self.eventhandler.onTaskFinish(len(self.jobDB))
-			if self.module.onTaskFinish():
+			if self.module.canFinish():
 				utils.vprint('Task successfully completed. Quitting grid-control!', -1, True)
 				utils.abort(True)
 

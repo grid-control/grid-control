@@ -6,12 +6,12 @@ from api import LocalWMSApi
 
 class LSF(LocalWMSApi):
 	_statusMap = {
-		'PEND':	 Job.QUEUED,  'PSUSP': Job.WAITING,
+		'PEND':  Job.QUEUED,  'PSUSP': Job.WAITING,
 		'USUSP': Job.WAITING, 'SSUSP': Job.WAITING,
 		'RUN':   Job.RUNNING, 'DONE':  Job.DONE,
 		'WAIT':  Job.WAITING, 'EXIT':  Job.FAILED,
 		# Better options?
-		'UNKWN':  Job.FAILED, 'ZOMBI':  Job.FAILED,
+		'UNKWN': Job.FAILED,  'ZOMBI': Job.FAILED,
 	}
 
 	def __init__(self, config):

@@ -28,7 +28,8 @@ def cleanSO(section, option):
 
 class Config:
 	def __init__(self, configFile = None, configDict = {}):
-		self.allowSet = True
+		(self.allowSet, self.workDir) = (True, None)
+		self.hidden = [('global', 'workdir'), ('global', 'workdir base'), ('global', 'include')]
 		(self.content, self.apicheck, self.append, self.runtime, self.accessed) = ({}, {}, {}, {}, {})
 
 		defaultCfg = ['/etc/grid-control.conf', '~/.grid-control.conf', utils.pathGC('default.conf')]
@@ -42,13 +43,13 @@ class Config:
 			self.parseFile(configFile)
 		else:
 			(self.baseDir, self.configFile, self.confName) = ('.', 'gc.conf', 'gc')
-		self.workDirDefault = os.path.join(self.baseDir, 'work.%s' % self.confName)
+		wdBase = self.getPath('global', 'workdir base', self.baseDir, check = False)
+		self.workDir = self.getPath('global', 'workdir', os.path.join(wdBase, 'work.' + self.confName), check = False)
 
 		# Override config settings via dictionary
 		for section in configDict:
 			for item in configDict[section]:
 				self.setInternal(section, item, str(configDict[section][item]), False)
-		self.set('global', 'include', '', default = '')
 
 
 	def setInternal(self, section, option, value, append):
@@ -63,6 +64,7 @@ class Config:
 
 	def parseFile(self, configFile, defaults = None):
 		try:
+			configFile = utils.resolvePath(configFile)
 			for line in map(lambda x: x.rstrip() + '=:', open(configFile, 'r').readlines()):
 				# Abort if non-indented, non-commented line with ":" preceeding "=" was found
 				if (line.find(":") < line.find("=")) and (line.lstrip() == line) and not line.lstrip().startswith(';'):
@@ -184,7 +186,7 @@ class Config:
 			return False
 		savedConfig = Config(saveConfigPath)
 		flag = False
-		for (section, option) in self.accessed:
+		for (section, option) in filter(lambda so: so not in self.hidden, self.accessed):
 			default, volatile = self.apicheck.get((section, option), (None, False))
 			value, default = self.accessed[(section, option)]
 			try:

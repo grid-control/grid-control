@@ -73,7 +73,6 @@ if __name__ == '__main__':
 		overlay = ConfigOverlay.open(config.get('global', 'config mode', 'verbatim'), config)
 
 		# Check work dir validity (default work directory is the config file name)
-		config.workDir = config.getPath('global', 'workdir', config.workDirDefault, check = False)
 		if not os.path.exists(config.workDir):
 			if not opts.init:
 				utils.vprint('Will force initialization of %s if continued!' % config.workDir, -1)
@@ -141,6 +140,12 @@ if __name__ == '__main__':
 			sys.exit(0)
 
 		actionList = config.getList('jobs', 'action', ['check', 'retrieve', 'submit'], volatile=True)
+
+		# Check for 
+		if config.get('global', 'file check', False, volatile=True):
+			if utils.fileCheck(config):
+				if utils.getUserBool('\nQuit grid-control in order to initialize the task again?', False):
+					sys.exit(0)
 
 		initSentinel.checkpoint('config')
 		savedConfigPath = os.path.join(config.workDir, 'work.conf')

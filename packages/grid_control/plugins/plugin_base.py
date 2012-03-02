@@ -91,6 +91,7 @@ class ParameterPlugin(AbstractObject):
 			return ParameterMetadata([self, None, params, self.getRequirements(params)])
 		else:
 			return None
+ParameterPlugin.dynamicLoaderPath()
 
 
 # A persistent class is reconstructed when reading data from file

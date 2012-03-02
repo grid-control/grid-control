@@ -101,9 +101,9 @@ elif opts.invalidate:
 	api.updateProcDSStatus(opts.invalidate, "INVALID")
 
 elif opts.wildcard:
-       pd, sd, dt = (opts.wildcard.lstrip("/") + "/*/*/*").split("/")[:3]
-       for x in api.listProcessedDatasets(pd, dt, sd):
-               print x.get("PathList", [])[-1]
+	pd, sd, dt = (opts.wildcard.lstrip("/") + "/*/*/*").split("/")[:3]
+	for x in api.listProcessedDatasets(pd, dt, sd):
+		print x.get("PathList", [])[-1]
 
 else:
 	print "Abandon all data, ye who tinker here!"

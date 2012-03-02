@@ -187,7 +187,7 @@ class Module(AbstractObject):
 		return {' ': 'All jobs'}
 
 
-	def onTaskFinish(self):
+	def canFinish(self):
 		return True
 
 

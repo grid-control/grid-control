@@ -258,22 +258,6 @@ def parseList(value, delimeter = ',', doFilter = lambda x: x not in ['', '\n'], 
 	return onEmpty
 
 
-def parseTuples(value):
-	"""Parse a string for keywords and tuples of keywords.
-	>>> parseTuples('(w x,y,z) spam (ham, eggs)')
-	[('w x', 'y', 'z'), 'spam', ('ham', 'eggs')]
-	>>> parseTuples('(4, 8:00), keyword, (), /pat h/to/file,+1.2e3 ,	(-.,;:=!^"x",[]{}), (1,2,),,')
-	[('4', '8:00'), 'keyword', (), '/pat', 'h/to/file', '+1.2e3', ('-.', ';:=!^"x"', '[]{}'), ('1', '2', '')]
-	"""
-	def to_tuple_or_str((t, s)):
-		if len(s) > 0:
-			return s.strip()
-		elif len(t.strip()) == 0:
-			return tuple()
-		return tuple(parseList(t, doFilter = lambda x: True))
-	return map(to_tuple_or_str, re.findall('[ ]*\(([^\)]*)\)[ ]*|[ ]*([^,( ]+)[ ]*', value))
-
-
 def parseTime(usertime):
 	if usertime == None or usertime == '':
 		return -1
@@ -617,7 +601,8 @@ def printTabular(head, data, fmtString = '', fmt = {}, level = -1):
 	if printTabular.parseable:
 		vprint(str.join("|", map(lambda x: x[1], head)), level)
 		for entry in data:
-			vprint(str.join("|", map(lambda x: str(entry.get(x[0], '')), head)), level)
+			if isinstance(entry, dict):
+				vprint(str.join("|", map(lambda x: str(entry.get(x[0], '')), head)), level)
 		return
 	justFunDict = { 'l': str.ljust, 'r': str.rjust, 'c': str.center }
 	# justFun = {id1: str.center, id2: str.rjust, ...}

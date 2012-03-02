@@ -44,3 +44,7 @@ class Host(LocalWMSApi):
 
 	def getCancelArguments(self, wmsIds):
 		return '-9 %s' % str.join(' ', wmsIds)
+
+
+class Localhost(Host):
+	pass

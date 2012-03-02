@@ -218,5 +218,5 @@ class DataMod(Module):
 		return jobChanges
 
 
-	def onTaskFinish(self):
+	def canFinish(self):
 		return not (self.dataRefresh > 0)

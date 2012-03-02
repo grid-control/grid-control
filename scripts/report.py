@@ -15,8 +15,6 @@ try:
 	config.opts = config
 	config.opts.init = False
 	config.opts.resync = False
-	# Check work dir validity (default work directory is the config file name)
-	config.workDir = config.getPath('global', 'workdir', config.workDirDefault)
 
 	# Initialise application module
 	module = Module.open(config.get('global', 'module'), config)
