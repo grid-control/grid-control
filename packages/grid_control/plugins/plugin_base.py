@@ -1,152 +1,76 @@
-import itertools, operator
 from python_compat import *
-from grid_control import AbstractError, AbstractObject
-
-# Init phase => yield sequentially all parameters, save in file
-# Run phase => construct plugin from header, allow random access to parameters
-
-# * Metadata format: (plugin reference, parameter key, parameter data, requirements)
-# * Processed format: ({processed variables}, [requirements])
+from grid_control import AbstractError, AbstractObject, utils
 
 # Fast and small parameter data container
-class ParameterMetadata(tuple):
-	__slots__ = ()
-	plugin = property(lambda x: x.__getitem__(0))
-	key    = property(lambda x: x.__getitem__(1))
-	data   = property(lambda x: x.__getitem__(2))
-	reqs   = property(lambda x: x.__getitem__(3))
+class ParameterMetadata:
+	def __init__(self):
+		(self.store, self.transient, self.reqs) = ({}, {}, [])
 
 
-# Base class for parameter plugins
 class ParameterPlugin(AbstractObject):
-	def __init__(self, *args, **kargs):
-		self.args = args
-		self.kargs = kargs
-		self.varNames = None
-		self.translators = []
+	def __init__(self):
+		self.jobMap = {}
+		self.intervention = None
 
-	# Modules can use this function to schedule parameter transformations
-	def setTransform(self, what, where = lambda x: True):
-		if where(self):
-			try:
-				self.translators.extend(what)
-			except:
-				self.translators.append(what)
+	def getMaxJobs(self):
+		return None
 
-	# Schedule parameter transformation on the data part of the meta data
-	def setDataTransform(self, what, where = lambda x: True):
-		self.setTransform(lambda (p, k, d, r): (p, k, what(d), r), where)
+	def getIntervention(self):
+		tmp = self.intervention
+		self.intervention = None
+		return tmp
 
-	# Apply the scheduled transformations sequentially
-	def applyTransform(self, meta):
-		return reduce(lambda x, y: y(x), self.translators, meta)
-
-	# Return requirements for parameter set
-	def getRequirements(self, pset):
+	def getParameterDeps(self):
 		return []
 
-	# Get list of processed parameter names
-	def getProcessedNames(self):
-		return set(reduce(operator.add, map(lambda (d, r): d.keys(), self.getProcessedParameters())))
-
-	# Get parameters in processed form
-	def getProcessedParameters(self):
-		for meta in self.getParameterMetadata():
-			result = ParameterMetadata(self.applyTransform(meta))
-			yield (result.data, result.reqs)
-
-	# Get parameters together with metadata
-	# (<plugin>, <key>, <data = parameter set>, <requirements>)
-	def getParameterMetadata(self):
-		for pset in self.getParameters():
-			yield ParameterMetadata([self, None, pset, self.getRequirements(pset)])
-
-	# User friendly method to yield parameters (without any metadata)
-	def getParameters(self):
-		raise AbstractError
-
-	# Go through all parameter sets and collect parameter names
 	def getParameterNames(self):
-		if self.varNames == None:
-			varList = map(lambda meta: meta.data.keys(), self.getParameterMetadata())
-			self.varNames = set(reduce(operator.add, varList))
-		return self.varNames
+		(result_store, result_transient) = (set(), set())
+		if self.getMaxJobs() == None:
+			info = self.getJobInfo(None)
+			return (info.store.keys(), info.transient.keys())
+		for info in self.getAllJobInfos():
+			result_store.update(info.store.keys())
+			result_transient.update(info.transient.keys())
+		return (list(result_store), list(result_transient))
 
-	# Data serialization functions - override as needed
-	#  Get data in header (plugin, [col1, col2,...])
-	def getHeader(self):
-		return (self, self.getParameterNames())
-	#  Write data (col1, col2,...)
-	def writeData(self, meta):
-		def getWriteValue(name):
-			value = meta.data.get(name)
-			if value != None:
-				return str(value)
-			return ''
-		return tuple(map(getWriteValue, self.getParameterNames()))
-	#  Read data back into the plugin
-	def readData(self, data):
-		params = dict(filter(lambda (k, v): v != '', zip(self.getParameterNames(), [data])))
-		if params:
-			return ParameterMetadata([self, None, params, self.getRequirements(params)])
-		else:
-			return None
-ParameterPlugin.dynamicLoaderPath()
-
-
-# A persistent class is reconstructed when reading data from file
-class PersistentParameter(ParameterPlugin):
-	def getHeader(self):
-		data = [self.__class__.__name__, self.args, self.kargs]
-		return (self, ['!%s' % str.join('|', map(str, data))])
-
-
-# Base class for indexed parameters where only a key is saved
-class IndexedParameter(PersistentParameter):
-	def getParameterMetadata(self):
-		def expandIndex(key):
-			data = self.getByIndex(key)
-			return ParameterMetadata([self, key, data, self.getRequirements(data)])
-		return map(expandIndex, itertools.count())
-
-	# Main function which retrieves the data corresponding to a certain key
-	def getByIndex(self, key):
+	def getParameters(self, pNum, result):
 		raise AbstractError
 
-	def writeData(self, meta):
-		return meta.key
+	def getJobInfo(self, jobNum):
+		meta = ParameterMetadata()
+		paramID = self.jobMap.get(jobNum, jobNum)
+		meta.transient['PARAM_ID'] = paramID
+		meta.transient['MY_JOBID'] = jobNum
+		self.getParameters(paramID, meta)
+		return meta
 
-	def readData(self, data):
-		if data != '':
-			idx = int(data)
-			data = self.getByIndex(idx)
-			return ParameterMetadata([self, idx, data, self.getRequirements(data)])
-		else:
-			return None
+	def getAllJobInfos(self):
+		for x in range(max(0, self.getMaxJobs())):
+			yield self.getJobInfo(x)
 
-
-# Plugin for verbatim parameters and file I/O
-class VerbatimParameter(ParameterPlugin):
-	def __init__(self, varName, varValues = None):
-		ParameterPlugin.__init__(self, [varName], varValues)
-		(self.varNames, self.varValues) = ([varName], varValues)
-
-	def getParameters(self):
-		def varCleaner(data):
-			if data:
-				return {self.varNames[0]: data}
-			return {}
-		return map(varCleaner, self.varValues)
-
-
-# Simple variable transformer
-class varTransform(object):
-	def __init__(self, oldKey, newKey, fun = lambda x: x):
-		(self.oldKey, self.newKey, self.fun) = (oldKey, newKey, fun)
-
-	def __call__(self, data):
-		tmp = data.get(self.oldKey)
-		if tmp != None:
-			data.pop(self.oldKey)
-			data[self.newKey] = self.fun(tmp)
-		return data
+	def resync(self, old):
+		from plugin_meta import ChainParaPlugin
+		from plugin_basic import InternalPlugin
+		jobMap = {}
+		def cmpParams(a, b):
+			return cmp(a.store, b.store)
+		def sameParams(paramsAdded, paramsMissing, paramsSame, oldParam, newParam):
+			jobMap[oldParam.transient['MY_JOBID']] = newParam.transient['PARAM_ID']
+		(pAdded, pMissing, pSame) = utils.DiffLists(old.getAllJobInfos(), self.getAllJobInfos(), cmpParams, sameParams)
+		# Construct complete parameter space plugin with missing psets and necessary intervention state
+		for (idx, meta) in enumerate(pAdded):
+			jobMap[self.getMaxJobs() + idx] = meta.transient['PARAM_ID']
+		disable = []
+		for (idx, meta) in enumerate(pMissing):
+			disable.append(idx + self.getMaxJobs())
+			jobMap[meta.transient['MY_JOBID']] = idx + self.getMaxJobs()
+		result = self
+		if pMissing:
+			result = ChainParaPlugin([self, InternalPlugin(pMissing, old.getParameterNames())])
+		result.jobMap = jobMap
+		if disable:
+			result.intervention = ([], disable)
+		return result
+ParameterPlugin.dynamicLoaderPath()
+ParameterPlugin.rawManagerMap = {}
+ParameterPlugin.varManagerMap = {}

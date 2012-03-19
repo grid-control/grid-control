@@ -197,23 +197,25 @@ class DataProvider(AbstractObject):
 
 			writeMetadata = (DataProvider.Metadata in block) and not stripMetadata
 			if writeMetadata:
-				buildMetadata = lambda v, fun: zip(block[DataProvider.Metadata], map(fun, v[DataProvider.Metadata]))
-				cMetadataSet = {} # Using dict to allow setdefault usage and avoid intersection bootstrap issue
-				for mSet in map(lambda fi: set(buildMetadata(fi, repr)), block[DataProvider.FileList]):
-					cMetadataSet.setdefault(None, set(mSet)).intersection_update(mSet)
-				cMetadataKeys = map(lambda (k, v): k, cMetadataSet.get(None, set()))
-				filterC = lambda inc: filter(lambda k: (k in cMetadataKeys) == inc, sorted(block[DataProvider.Metadata]))
-				writer.write('metadata = %s\n' % (filterC(True) + filterC(False)))
-				if cMetadataKeys:
-					cMetadataDict = dict(buildMetadata(block[DataProvider.FileList][0], lambda x: x))
-					writer.write('metadata common = %s\n' % map(lambda k: cMetadataDict[k], filterC(True)))
-					writeMetadata = len(cMetadataKeys) != len(block[DataProvider.Metadata])
+				getMetadata = lambda fi, idxList: map(lambda idx: fi[DataProvider.Metadata][idx], idxList)
+				metadataHash = lambda fi, idx: utils.md5(repr(fi[DataProvider.Metadata][idx])).digest()
+				cMetadataIdx = range(len(block[DataProvider.Metadata]))
+				cMetadataHash = map(lambda idx: metadataHash(block[DataProvider.FileList][0], idx), cMetadataIdx)
+				for fi in block[DataProvider.FileList]: # Identify common metadata
+					for idx in filter(lambda idx: metadataHash(fi, idx) != cMetadataHash[idx], cMetadataIdx):
+						cMetadataIdx.remove(idx)
+				def filterC(common):
+					idxList = filter(lambda idx: (idx in cMetadataIdx) == common, range(len(block[DataProvider.Metadata])))
+					return utils.sorted(idxList, key = lambda idx: block[DataProvider.Metadata][idx])
+				writer.write('metadata = %s\n' % map(lambda idx: block[DataProvider.Metadata][idx], filterC(True) + filterC(False)))
+				if cMetadataIdx:
+					writer.write('metadata common = %s\n' % getMetadata(block[DataProvider.FileList][0], filterC(True)))
+					writeMetadata = len(cMetadataIdx) != len(block[DataProvider.Metadata])
 			for fi in block[DataProvider.FileList]:
-				data = [str(fi[DataProvider.NEvents])]
+				writer.write('%s = %d' % (formatter(fi[DataProvider.lfn]), fi[DataProvider.NEvents]))
 				if writeMetadata:
-					fileMetadata = dict(buildMetadata(fi, lambda x: x))
-					data.append(repr(map(lambda k: fileMetadata[k], filterC(False))))
-				writer.write('%s = %s\n' % (formatter(fi[DataProvider.lfn]), str.join(' ', data)))
+					writer.write(' %s' % getMetadata(fi, filterC(False)))
+				writer.write('\n')
 			writer.write('\n')
 		stream.write(writer.getvalue())
 	saveStateRaw = staticmethod(saveStateRaw)

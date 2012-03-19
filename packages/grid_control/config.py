@@ -50,6 +50,11 @@ class Config:
 		for section in configDict:
 			for item in configDict[section]:
 				self.setInternal(section, item, str(configDict[section][item]), False)
+		self.set('global', 'include', '', default = '')
+
+
+	def getTaskDict(self):
+		return utils.PersistentDict(os.path.join(self.workDir, 'task.dat'), ' = ')
 
 
 	def setInternal(self, section, option, value, append):
@@ -161,18 +166,7 @@ class Config:
 	def getDict(self, section, item, default = noDefault, volatile = False, noVar = True, parser = lambda x: x):
 		if default != noDefault:
 			default = str.join('\n\t', map(lambda kv: '%s => %s' % kv, default.items()))
-		(result, order) = ({}, [])
-		for entry in self.get(section, item, default, volatile, noVar).split('\n'):
-			if '=>' in entry:
-				key, value = map(str.strip, entry.split('=>', 1))
-			elif entry:
-				key, value = (None, entry)
-			else:
-				continue
-			result[key] = parser(value.strip())
-			if key and (key not in order):
-				order.append(key)
-		return (result, order)
+		return utils.parseDict(self.get(section, item, default, volatile, noVar), parser)
 
 
 	def getOptions(self, section):

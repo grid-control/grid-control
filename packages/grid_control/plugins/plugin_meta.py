@@ -1,147 +1,153 @@
-import itertools, operator
 from python_compat import *
-from plugin_base import *
+from plugin_base import ParameterPlugin
 
 # Meta processing of parameter plugins
 # Aggregates and propagates results and changes to plugins
-class MetaParameter(ParameterPlugin):
-	def __init__(self, *args, **kargs):
-		ParameterPlugin.__init__(self, *args, **kargs)
-		self.plugins = args[0]
+class MultiParaPlugin(ParameterPlugin):
+	def __init__(self, plugins, maxJobs):
+		ParameterPlugin.__init__(self)
+		self.plugins = map(lambda p: (p.getMaxJobs(), p), plugins)
+		self.maxJobs = maxJobs
 
-	def setTransform(self, what, where = lambda x: True):
-		for plugin in self.plugins:
-			plugin.setTransform(what, where)
+	def getMaxJobs(self):
+		return self.maxJobs
 
-	def applyTransform(self, meta):
-		reqs = []
-		data = {}
-		for subMeta in meta.data:
-			reqs.extend(subMeta.reqs)
-			data.update(subMeta.plugin.applyTransform(subMeta).data)
-		return ParameterMetadata([self, None, data, reqs])
+	# Get local parameter numbers (result) from plugin index (pIdx) and subplugin parameter number (pNum)
+	def translateNum(self, pIdx, pNum):
+		raise
 
-	# Return requirements for parameter set
-	def getRequirements(self, pset):
-		result = []
-		for meta in pset:
-			result.extend(meta.reqs)
-		return result
-
-	def getParameters(self):
-		tmp = map(lambda x: x.getParameterMetadata(), self.plugins)
-		for plist in self.tool(*tmp):
-			yield list(plist)
+	def getIntervention(self):
+		(result_redo, result_disable) = (set(), set())
+		for (idx, (maxN, plugin)) in enumerate(self.plugins):
+			tmp = plugin.getIntervention()
+			if tmp:
+				(plugin_redo, plugin_disable) = tmp
+				for pNum in plugin_redo:
+					result_redo.update(self.translateNum(idx, pNum))
+				for pNum in plugin_disable:
+					result_disable.update(self.translateNum(idx, pNum))
+		result_redo = result_redo.difference(result_disable)
+		if len(result_redo) or len(result_disable):
+			return (list(result_redo), list(result_disable))
+		return None
 
 	def getParameterNames(self):
-		if self.varNames == None:
-			self.varNames = set(reduce(operator.add, map(lambda x: x.getParameterNames(), self.plugins)))
-		return self.varNames
+		(result_store, result_transient) = (set(), set())
+		for (maxN, plugin) in self.plugins:
+			(plugin_store, plugin_transient) = plugin.getParameterNames()
+			result_store.update(plugin_store)
+			result_transient.update(plugin_transient)
+		return (list(result_store), list(result_transient))
 
-	# For data serialization the plugin information is flattend
-	def getHeader(self):
-		header = []
-		for p in self.plugins:
-			head = p.getHeader()
-			# Flatten header information
-			if isinstance(head, list):
-				header.extend(head)
+
+# Base class for plugins invoking their sub-plugins in parallel
+class BaseZipParaPlugin(MultiParaPlugin):
+	def translateNum(self, pIdx, pNum):
+		return [pNum]
+
+	def getParameters(self, pNum, result):
+		for (maxN, plugin) in self.plugins:
+			if maxN:
+				if pNum < maxN:
+					plugin.getParameters(pNum, result)
 			else:
-				header.append(p.getHeader())
-		return header
+				plugin.getParameters(None, result)
 
-	def writeData(self, meta):
-		result = []
-		for subMeta in meta.data:
-			data = subMeta.plugin.writeData(subMeta)
-			if isinstance(data, list):
-				result.extend(data)
+
+class ZipLongParaPlugin(BaseZipParaPlugin):
+	def __init__(self, *plugins):
+		maxN = filter(lambda n: n != None, map(lambda p: p.getMaxJobs(), plugins))
+		if maxN:
+			BaseZipParaPlugin.__init__(self, plugins, max(maxN))
+		else:
+			BaseZipParaPlugin.__init__(self, plugins, None)
+
+
+class ZipShortPlugin(BaseZipParaPlugin):
+	def __init__(self, *plugins):
+		maxN = filter(lambda n: n != None, map(lambda p: p.getMaxJobs(), plugins))
+		if maxN:
+			BaseZipParaPlugin.__init__(self, plugins, min(maxN))
+		else:
+			BaseZipParaPlugin.__init__(self, plugins, None)
+
+
+class CombinePlugin(ZipLongParaPlugin):
+	def __init__(self, *plugins):
+		ZipLongParaPlugin.__init__(self, *plugins)
+#		assert(self.maxJobs == min(filter(lambda n: n != None, map(lambda p: p.getMaxJobs(), plugins))))
+ParameterPlugin.rawManagerMap['zip'] = CombinePlugin
+
+
+class ChainParaPlugin(MultiParaPlugin):
+	def __init__(self, *plugins):
+		self.maxN = map(lambda p: p.getMaxJobs(), plugins)
+		MultiParaPlugin.__init__(self, plugins, reduce(lambda a, b: a + b, filter(lambda n: n != None, self.maxN)))
+
+	def translateNum(self, pIdx, pNum):
+		return [pNum + sum(self.maxN[:pIdx])]
+
+	def getParameters(self, pNum, result):
+		limit = 0
+		for (maxN, p) in self.plugins:
+			if pNum < limit + maxN:
+				return p.getParameters(pNum - limit, result)
+			limit += maxN
+ParameterPlugin.rawManagerMap['chain'] = ChainParaPlugin
+
+
+class ChainParaPlugin(MultiParaPlugin):
+	def __init__(self, *plugins):
+		self.maxN = map(lambda p: p.getMaxJobs(), plugins)
+		MultiParaPlugin.__init__(self, plugins, reduce(lambda a, b: a + b, filter(lambda n: n != None, self.maxN)))
+
+	def translateNum(self, pIdx, pNum):
+		return [pNum + sum(self.maxN[:pIdx])]
+
+	def getParameters(self, pNum, result):
+		limit = 0
+		for (maxN, p) in self.plugins:
+			if pNum < limit + maxN:
+				return p.getParameters(pNum - limit, result)
+			limit += maxN
+ParameterPlugin.rawManagerMap['variation'] = ChainParaPlugin
+
+
+class RepeatParaPlugin(ChainParaPlugin):
+	def __init__(self, plugin, times):
+		plugins = [plugin] * times
+		ChainParaPlugin.__init__(self, *plugins)
+ParameterPlugin.rawManagerMap['repeat'] = RepeatParaPlugin
+
+
+class CrossParaPlugin(MultiParaPlugin):
+	def __init__(self, *plugins):
+		self.maxN = filter(lambda n: n != None, map(lambda p: p.getMaxJobs(), plugins))
+		MultiParaPlugin.__init__(self, plugins, reduce(lambda a, b: a * b, self.maxN))
+
+	def translateNum(self, pIdx, pNum):
+		tmp = reduce(lambda a, b: a * b, self.maxN[:pIdx], 1)
+		return filter(lambda x: (x / tmp) % self.plugins[pIdx][0] == pNum, range(self.getMaxJobs()))
+
+	def getParameters(self, pNum, result):
+		prev = 1
+		for (maxN, plugin) in self.plugins:
+			if maxN:
+				plugin.getParameters((pNum / prev) % maxN, result)
+				prev *= maxN
 			else:
-				result.append((subMeta.plugin, data))
-		return result
-
-	def tool(self, *args):
-		raise AbstractError
+				plugin.getParameters(None, result)
+ParameterPlugin.rawManagerMap['cross'] = CrossParaPlugin
 
 
-# Chain parameter plugins
-class ChainParameter(MetaParameter):
-	tool = itertools.chain
-
-
-# Zip an array of parameter plugins together
-# (yield up to the shortest plugin)
-class ZipParameter(MetaParameter):
-	tool = itertools.izip
-
-
-# Zip an array of parameter plugins together
-# (yield up to the longest plugin)
-class ZipLongestParameter(MetaParameter):
-	def tool(self, *args):
-		plugins = list(args)
-		# Yield as long as there is a single plugin with data
-		while len(plugins) > 0:
-			result = []
-			for p in plugins[:]:
-				try:
-					result.append(next(p))
-				except StopIteration:
-					# Remove finished generator from plugin list
-					plugins.remove(p)
-			if len(result) > 0:
-				yield result
-
-
-# Permutation parameter plugins
-class PermuteParameter(MetaParameter):
-	def getParameters(self):
-		def permute(args):
-			for meta in args[0].getParameterMetadata():
-				if len(args) > 1:
-					for base in permute(args[1:]):
-						yield base + [meta]
-				elif len(args) == 1:
-					yield [meta]
-		return permute(self.plugins)
-
-
-# Connect two plugins with matching variable
-# Requires a list with plugins and a list with
-# comparator objects (returns match between metadata)
-# Returns only complete matches between plugins
-class ConnectParameters(MetaParameter):
-	def __init__(self, *args, **kargs):
-		MetaParameter.__init__(self, *args, **kargs)
-		(self.plugins, connectors) = args
-		def tryMatchObj(x):
-			try:
-				return x.match
-			except:
-				return x
-		self.matchList = map(tryMatchObj, connectors)
-		if len(self.plugins) - 1 != len(self.matchList):
-			raise RuntimeError('Invalid parameters %s' % repr(args))
-
-	def tool(self, *args):
-		for main in self.plugins[0].getParameterMetadata():
-			iters = map(lambda x: x.getParameterMetadata(), self.plugins[1:])
-			tmp = map(lambda (f, meta): f(main, meta), zip(self.matchList, iters))
-			if not None in tmp:
-				yield tmp + [main]
-
-
-# Connector between processed variables
-class ProcessedConnector(object):
-	def __init__(self, var, eq = str.__eq__):
-		self.var = var
-		self.eq = lambda x, y: eq(str(x), str(y))
-
-	def match(self, main, other):
-		(x1, x2, data, x4) = main.plugin.applyTransform(main)
-		searchValue = data.get(self.var)
-		for meta in other:
-			(y1, y2, lookup, y4) = meta.plugin.applyTransform(meta)
-			if self.eq(searchValue, lookup.get(self.var)):
-				return meta
-		return None
+class ErrorParaPlugin(ChainParaPlugin):
+	def __init__(self, *plugins):
+		maxN = filter(lambda n: n != None, map(lambda p: p.getMaxJobs(), plugins))
+		central = map(lambda p: RangePlugin(p, 0, 0), plugins)
+		chain = [CombinePlugin(central)]
+		for pidx, p in enumerate(plugins):
+			if p.getMaxJobs():
+				tmp = list(central)
+				tmp[pidx] = RangePlugin(plugins[pidx], 1, None)
+				chain.append(CrossPlugin(tmp))
+		ChainParaPlugin.__init__(self, *chain)

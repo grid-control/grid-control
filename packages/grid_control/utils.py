@@ -160,6 +160,12 @@ class PersistentDict(dict):
 			pass
 		self.olddict = self.items()
 
+	def get(self, key, default = None, autoUpdate = True):
+		value = dict.get(self, key, default)
+		if autoUpdate:
+			self.write({key: value})
+		return value
+
 	def write(self, newdict = {}, update = True):
 		if not update:
 			self.clear()
@@ -167,7 +173,8 @@ class PersistentDict(dict):
 		if self.olddict == self.items():
 			return
 		try:
-			safeWrite(open(self.filename, 'w'), DictFormat(self.format).format(self))
+			if self.filename:
+				safeWrite(open(self.filename, 'w'), DictFormat(self.format).format(self))
 		except:
 			raise RuntimeError('Could not write to file %s' % self.filename)
 		self.olddict = self.items()
@@ -243,6 +250,21 @@ def parseType(value):
 		return int(value)
 	except ValueError:
 		return value
+
+
+def parseDict(entries, parser = lambda x: x):
+	(result, order) = ({}, [])
+	for entry in entries.split('\n'):
+		if '=>' in entry:
+			key, value = map(str.strip, entry.split('=>', 1))
+		elif entry:
+			key, value = (None, entry)
+		else:
+			continue
+		result[key] = parser(value.strip())
+		if key and (key not in order):
+			order.append(key)
+	return (result, order)
 
 
 def parseBool(x):

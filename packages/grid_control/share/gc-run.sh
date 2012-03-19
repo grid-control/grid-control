@@ -130,7 +130,7 @@ if [ -n "$SE_INPUT_FILES" ]; then
 	) &
 	killing_pid=$!
 	url_copy "$SE_INPUT_PATH" "file:///$MY_SCRATCH" "$SE_INPUT_FILES"
-	kill $killing_pid
+	kill4sure $killing_pid
 	echo
 fi
 
@@ -207,7 +207,7 @@ if [ $CODE -eq 0 -a -n "$SE_OUTPUT_FILES" ]; then
 	killing_pid=$!
 	export TRANSFERLOG="$MY_SCRATCH/SE.log"
 	url_copy "file:///$MY_SCRATCH" "$SE_OUTPUT_PATH" "$SE_OUTPUT_FILES"
-	kill $killing_pid
+	kill4sure $killing_pid
 	(
 	[ -f "$TRANSFERLOG" ] && cat "$TRANSFERLOG" | while read NAME_LOCAL NAME_DEST; do
 		echo "FILE$IDX=\"$(cd "$MY_SCRATCH"; md5sum "$NAME_LOCAL")  $NAME_DEST  $SE_OUTPUT_PATH\""

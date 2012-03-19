@@ -1,65 +1,31 @@
 from plugin_base import *
-from grid_control import utils
-import tarfile, grid_control.datasets.splitter_base
-DataSplitter = grid_control.datasets.splitter_base.DataSplitter
+from grid_control import utils, WMS
 
-# Dataset splitting plugin with delayed and cached info access
-class DatasetPlugin(IndexedParameter):
-	def __init__(self, fileName):
-		IndexedParameter.__init__(self, fileName)
-		self.cacheKey = None
-		self.fileName = fileName
-		self._fmt = utils.DictFormat()
-		self._tar = tarfile.open(fileName, 'r:')
-		metadata = self._tar.extractfile('Metadata').readlines()
-		self._metadata = self._fmt.parse(metadata, lowerCaseKey = False)
+class DataParaPlugin(ParameterPlugin):
+	def __init__(self, dataSplitter, fnFormat):
+		(self.dataSplitter, self.fnFormat) = (dataSplitter, fnFormat)
 
-		self.setTransform(self.infoLoader)
-		self.setDataTransform(varTransform(DataSplitter.Dataset, 'DATASETPATH'))
-		self.setDataTransform(varTransform(DataSplitter.DatasetID, 'DATASETID'))
-		self.setDataTransform(varTransform(DataSplitter.Nickname, 'DATASETNICK'))
+	def getMaxJobs(self):
+		return self.dataSplitter.getMaxJobs()
 
-	# Loading dataset info files is expensive - cache last opened subfile
-	def infoLoader(self, meta):
-		(plugin, key, dummy, reqs) = meta
-		if self.cacheKey != key / 100:
-			self.cacheKey = key / 100
-			subTarFileObj = self._tar.extractfile('%03dXX.tgz' % (key / 100))
-			self._cacheTar = tarfile.open(mode = 'r:gz', fileobj = subTarFileObj)
-		data = self._fmt.parse(self._cacheTar.extractfile('%05d/info' % key).readlines())
-		list = self._cacheTar.extractfile('%05d/list' % key).readlines()
-		data[DataSplitter.FileList] = map(str.strip, list)
-
-		# Dataset requirements
-		seList = data.get(DataSplitter.SEList)
-		if seList != None:
-			data.pop(DataSplitter.SEList)
-			reqs.append((WMS.STORAGE, seList))
-		return (plugin, key, data, reqs)
-
-	# Speed up lookup:
 	def getParameterNames(self):
-		return []
-	def getProcessedNames(self):
-		return ['DATASETPATH', 'DATASETID', 'DATASETNICK']
+		return (['DATASETSPLIT'], ['FILE_NAMES', 'MAX_EVENTS', 'SKIP_EVENTS', 'DATASETID', 'DATASETPATH', 'DATASETBLOCK', 'DATASETNICK'])
 
-	# Access to data is delayed
-	def getByIndex(self, key):
-		if key >= int(self._metadata['MaxJobs']):
-			raise StopIteration
-		return {}
-
-
-class DatasetEventPlugin(DatasetPlugin):
-	def __init__(self, fileName):
-		DatasetPlugin.__init__(self, fileName)
-		self.setDataTransform(varTransform(DataSplitter.NEvents, 'MAX_EVENTS'))
-		self.setDataTransform(varTransform(DataSplitter.Skipped, 'SKIP_EVENTS'))
-
-	def getProcessedNames(self):
-		return DatasetPlugin.getProcessedNames(self) + ['MAX_EVENTS', 'SKIP_EVENTS']
-
-
-# TODO: Use run / lumi section in file
-class DatasetRunLumiPlugin(DatasetPlugin):
-	pass
+	def getParameters(self, pNum, result):
+		import grid_control.datasets.splitter_base
+		DataSplitter = grid_control.datasets.splitter_base.DataSplitter
+		splitInfo = self.dataSplitter.getSplitInfo(pNum)
+		if utils.verbosity() > 0:
+			utils.vprint('Dataset task number: %d' % pNum)
+			DataSplitter.printInfoForJob(splitInfo)
+		result.store['DATASETSPLIT'] = pNum
+		result.transient.update({
+			'FILE_NAMES': self.fnFormat(splitInfo[DataSplitter.FileList]),
+			'MAX_EVENTS': splitInfo[DataSplitter.NEvents],
+			'SKIP_EVENTS': splitInfo.get(DataSplitter.Skipped, 0),
+			'DATASETID': splitInfo.get(DataSplitter.DatasetID, None),
+			'DATASETPATH': splitInfo.get(DataSplitter.Dataset, None),
+			'DATASETBLOCK': splitInfo.get(DataSplitter.BlockName, None),
+			'DATASETNICK': splitInfo.get(DataSplitter.Nickname, None),
+		})
+		result.reqs.append((WMS.STORAGE, splitInfo.get(DataSplitter.SEList)))

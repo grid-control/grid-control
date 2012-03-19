@@ -57,7 +57,7 @@ class DASProvider(CMSProvider):
 			return self.selectedLumis == None
 
 		result = []
-		for block in filter(lambda xblockFilter, listBlockInfo):
+		for block in filter(lambda x: True, listBlockInfo):
 			blockInfo = dict()
 			blockInfo[DataProvider.Dataset] = str.split(block['Name'], '#')[0]
 			blockInfo[DataProvider.BlockName] = str.split(block['Name'], '#')[1]

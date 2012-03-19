@@ -200,7 +200,7 @@ class Module(AbstractObject):
 		return {}
 
 
-	# Intervene in job management
+	# Intervene in job management - return None or (redoJobs, disableJobs)
 	def getIntervention(self):
 		return None
 
