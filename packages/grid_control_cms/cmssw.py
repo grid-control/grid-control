@@ -173,9 +173,17 @@ class CMSSW(DataMod):
 
 	# Lumi filter need
 	def neededVars(self):
+		result = []
+		varMap = {
+			DataSplitter.NEvents: 'MAX_EVENTS',
+			DataSplitter.Skipped: 'SKIP_EVENTS',
+			DataSplitter.FileList: 'FILE_NAMES'
+		}
+		if self.dataSplitter:
+			result.extend(map(lambda x: varMap[x], self.dataSplitter.neededVars()))
 		if self.selectedLumis:
-			return DataMod.neededVars(self) + ['LUMI_RANGE']
-		return DataMod.neededVars(self)
+			result.append('LUMI_RANGE')
+		return result
 
 
 	# Called on job submission

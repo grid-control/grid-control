@@ -72,16 +72,18 @@ DEFAULT: The default is to download the SE file and check them with MD5 hashes.
 			help=help, helpPrefix=("keep ", "remove "))
 	parser.add_option_group(ogFiles)
 
-	parser.add_option("-o", "--output", dest="output", default=None,
+	parser.add_option("-o", "--output",   dest="output", default=None,
 		help="specify the local output directory")
-	parser.add_option("-P", "--proxy",  dest="proxy",  default="VomsProxy",
+	parser.add_option("-P", "--proxy",    dest="proxy",  default="VomsProxy",
 		help="specify the proxy type used to determine ability to download - VomsProxy or TrivialProxy")
 	parser.add_option("-S", "--selectSE", dest="selectSE",  default=None, action="append",
 		help="specify the SE paths to process")
-	parser.add_option("-r", "--retry",  dest="retry",  default=0,
+	parser.add_option("-r", "--retry",    dest="retry",  default=0,
 		help="how often should a transfer be attempted [Default: 0]")
 	parser.add_option("-t", "--threads",  dest="threads",  default=0, type=int,
 		help="how many parallel download threads should be used to download files [Default: no multithreading]")
+	parser.add_option("", "--slowdown",   dest="slowdown", default=2,
+		help="specify time between downloads [Default: 2 sec]")
 
 	# Shortcut options
 	def withoutDefaults(opts):
@@ -230,7 +232,7 @@ def realmain(opts, args):
 					if csize != osize:
 						lttime = time.time()
 					if time.time() - lttime > 5*60: # No size change in the last 5min!
-						output.error("Hit copy timeout!")
+						output.error("Transfer timeout!")
 						abort.acquire()
 						break
 					if os.path.exists(path):
@@ -252,7 +254,6 @@ def realmain(opts, args):
 			while True:
 				if not copyAbortLock.acquire(False):
 					monitor.join()
-					print "ABORT"
 					break
 				copyAbortLock.release()
 				result = procCP.poll()
@@ -261,6 +262,7 @@ def realmain(opts, args):
 					monitor.join()
 					break
 				time.sleep(0.02)
+
 			if result != 0:
 				output.error("Unable to copy file from SE!")
 				output.error(procCP.getMessage())
@@ -287,22 +289,22 @@ def realmain(opts, args):
 		if failJob and opts.retry and (retry < opts.retry):
 			output.error("Download attempt #%d failed!" % (retry + 1))
 			job.set('download attempt', str(retry + 1))
-			incInfo("Download attempts")
 			jobDB.commit(jobNum, job)
-			return
+			return incInfo("Download attempts")
 
-		for (hash, name_local, name_dest, pathSE) in files:
+		for (fileIdx, fileInfo) in enumerate(files):
+			(hash, name_local, name_dest, pathSE) = fileInfo
 			# Remove downloaded files in case of failure
 			if (failJob and opts.rmLocalFail) or (not failJob and opts.rmLocalOK):
-				output.write("\tDeleting file %s from local...\r" % name_dest)
+				output.status(fileIdx, "Deleting file %s from local..." % name_dest)
 				outFilePath = os.path.join(opts.output, name_dest)
 				if storage.se_exists(outFilePath).wait() == 0:
 					dlfs_rm(outFilePath, 'local file')
 			# Remove SE files in case of failure
 			if (failJob and opts.rmSEFail)    or (not failJob and opts.rmSEOK):
-				output.write("\tDeleting file %s...\r" % name_dest)
+				output.status(fileIdx, "Deleting file %s..." % name_dest)
 				dlfs_rm(os.path.join(pathSE, name_dest), 'SE file')
-			output.write("%s\r" % (' ' * len("\tDeleting file %s from SE...\r" % name_dest)))
+			output.status(fileIdx, None)
 
 		if failJob:
 			incInfo("Failed downloads")
@@ -318,6 +320,7 @@ def realmain(opts, args):
 		# Save new job status infos
 		jobDB.commit(jobNum, job)
 		output.finish()
+		time.sleep(opts.slowdown)
 
 	if opts.shuffle:
 		random.shuffle(jobList)
@@ -326,6 +329,7 @@ def realmain(opts, args):
 
 	if opts.threads:
 		from grid_control import gui
+		errorOutput = []
 		class ThreadDisplay:
 			def __init__(self):
 				self.output = []
@@ -357,10 +361,16 @@ def realmain(opts, args):
 					msg = ''
 				self.output[2*idx] = self.infoline(idx, "(%s)" % self.tr[idx])
 				self.output[2*idx+1] = msg
+				print self, repr(msg)
 			def error(self, msg):
-				self.output.append(msg)
+				errorOutput.append(msg)
 			def write(self, msg):
 				self.output.append(msg)
+			def status(self, idx, msg):
+				if msg:
+					self.output[2*idx] = self.infoline(idx, "(%s)" % self.tr[idx]) + ' ' + msg
+				else:
+					self.output[2*idx] = self.infoline(idx, "(%s)" % self.tr[idx])
 			def finish(self):
 #				self.output.append(str(self.jobNum) + "FINISHED")
 				pass
@@ -368,11 +378,11 @@ def realmain(opts, args):
 		(active, todo) = ([], list(jobList))
 		todo.reverse()
 		screen = gui.Console()
-		screen.erase()
 		screen.move(0, 0)
 		screen.savePos()
 		while True:
-#			screen.loadPos()
+			screen.erase()
+			screen.loadPos()
 			active = filter(lambda (t, d): t.isAlive(), active)
 			while len(active) < opts.threads and len(todo):
 				display = ThreadDisplay()
@@ -380,11 +390,11 @@ def realmain(opts, args):
 					processSingleJob, todo.pop(), display), display))
 			for (t, d) in active:
 				sys.stdout.write(str.join('\n', d.output))
+			sys.stdout.write(str.join('\n', ['=' * 50] + errorOutput))
 			sys.stdout.flush()
 			if len(active) == 0:
 				break
 			time.sleep(0.01)
-#			screen.erase()
 	else:
 		class DefaultDisplay:
 			def init(self, jobNum):
@@ -408,7 +418,12 @@ def realmain(opts, args):
 				self.write("\t\tRemote site: %s\n" % hash)
 				self.write("\t\t Local site: %s\n" % hashLocal)
 			def error(self, msg):
-				sys.stdout.write('Job %d: %s' % (jobNum, msg))
+				sys.stdout.write('\nJob %d: %s' % (jobNum, msg.strip()))
+			def status(self, idx, msg):
+				if msg:
+					self.write('\t' + msg + '\r')
+				else:
+					self.write(' ' * len("\tDeleting file %s from SE...\r" % self.files[idx][2]) + '\r')
 			def write(self, msg):
 				sys.stdout.write(msg)
 			def finish(self):

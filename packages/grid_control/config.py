@@ -30,7 +30,7 @@ class Config:
 	def __init__(self, configFile = None, configDict = {}):
 		(self.allowSet, self.workDir) = (True, None)
 		self.hidden = [('global', 'workdir'), ('global', 'workdir base'), ('global', 'include')]
-		(self.content, self.apicheck, self.append, self.runtime, self.accessed) = ({}, {}, {}, {}, {})
+		(self.content, self.apicheck, self.append, self.accessed, self.dynamic) = ({}, {}, {}, {}, {})
 
 		defaultCfg = ['/etc/grid-control.conf', '~/.grid-control.conf', utils.pathGC('default.conf')]
 		for cfgFile in filter(os.path.exists, map(lambda p: utils.resolvePath(p, check = False), defaultCfg)):
@@ -103,10 +103,10 @@ class Config:
 		if not self.allowSet:
 			raise APIError('Invalid runtime config override: [%s] %s = %s' % (section, item, value))
 		utils.vprint('Overwrite of option [%s] %s = %s' % (section, item, value), 2)
-		if ((section, item) not in self.content) or override:
+		if ((section, item) not in self.content) or ((section, item) in self.dynamic) or override:
 			self.setInternal(section, item, value, append)
-			self.runtime[(section, item)] = self.content[(section, item)]
 			self.accessed[(section, item)] = (value, default)
+			self.dynamic[(section, item)] = True
 
 
 	def get(self, section, item, default = noDefault, volatile = False, noVar = True):

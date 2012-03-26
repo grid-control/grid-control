@@ -1,7 +1,7 @@
 import random
 from python_compat import *
-from grid_control import ConfigError, utils
-from plugin_base import ParameterPlugin
+from grid_control import ConfigError, utils, WMS
+from plugin_base import ParameterPlugin, ParameterMetadata
 
 class InternalPlugin(ParameterPlugin):
 	def __init__(self, values, names):
@@ -11,13 +11,11 @@ class InternalPlugin(ParameterPlugin):
 	def getMaxJobs(self):
 		return len(self.values)
 
-	def getParameterNames(self):
-		return self.names
+	def getParameterNames(self, result):
+		result.update(self.names)
 
 	def getParameters(self, pNum, result):
-		result.transient.update(self.values[pNum].transient)
-		result.store.update(self.values[pNum].store)
-		result.reqs.extend(self.values[pNum].reqs)
+		result.update(self.values[pNum])
 
 
 class SimpleParaPlugin(ParameterPlugin):
@@ -30,11 +28,11 @@ class SimpleParaPlugin(ParameterPlugin):
 	def getMaxJobs(self):
 		return len(self.values)
 
-	def getParameterNames(self):
-		return ([self.key], [])
+	def getParameterNames(self, result):
+		result.add(ParameterMetadata(self.key))
 
 	def getParameters(self, pNum, result):
-		result.store[self.key] = self.values[pNum]
+		result[self.key] = self.values[pNum]
 ParameterPlugin.varManagerMap['var'] = lambda varMap, key: SimpleParaPlugin(key, varMap.get(key.lower()))
 
 
@@ -44,7 +42,7 @@ class ConstParaPlugin(ParameterPlugin):
 		(self.key, self.value) = (key, value)
 
 	def getParameters(self, pNum, result):
-		result.store[self.key] = self.value
+		result[self.key] = self.value
 
 def createConstParaPlugin(varMap, key, value = None):
 	if value == None:
@@ -62,20 +60,17 @@ class LookupParaPlugin(ParameterPlugin):
 			values = {None: values[0]}
 		(self.key, self.values, self.lookup) = (key, values, lookup)
 
-	def getParameterDeps(self):
+	def resolveDeps(self):
 		return [self.lookup]
 
-	def getParameterNames(self):
-		return ([self.key], [])
+	def getParameterNames(self, result):
+		result.add(ParameterMetadata(self.key))
 
 	def getParameters(self, pNum, result):
-		src = result.store
-		if self.lookup in result.transient:
-			src = result.transient
-		lookup = src.get(self.lookup, None)
+		lookup = result.get(self.lookup, None)
 		value = self.values.get(lookup, self.values.get(None))
 		if value != None:
-			result.store[self.key] = value
+			result[self.key] = value
 ParameterPlugin.varManagerMap['lookup'] = lambda varMap, key, lookup: LookupParaPlugin(key, varMap.get(key.lower()), lookup)
 
 
@@ -84,8 +79,11 @@ class RNGParaPlugin(ParameterPlugin):
 		ParameterPlugin.__init__(self)
 		(self.key, self.low, self.high) = (key, low, high)
 
+	def getParameterNames(self, result):
+		result.add(ParameterMetadata(self.key, transient=True))
+
 	def getParameters(self, pNum, result):
-		result.transient[self.key] = random.randint(self.low, self.high)
+		result[self.key] = random.randint(self.low, self.high)
 ParameterPlugin.rawManagerMap['rng'] = RNGParaPlugin
 
 
@@ -94,49 +92,40 @@ class CounterParaPlugin(ParameterPlugin):
 		ParameterPlugin.__init__(self)
 		(self.key, self.seed) = (key, seed)
 
-	def getParameterNames(self):
-		return ([], [self.key])
+	def getParameterNames(self, result):
+		result.add(ParameterMetadata(self.key, transient=True))
 
 	def getParameters(self, pNum, result):
-		result.transient[self.key] = self.seed + result.transient['MY_JOBID']
+		result[self.key] = self.seed + result['MY_JOBID']
 ParameterPlugin.rawManagerMap['counter'] = CounterParaPlugin
 
 
-class FilterParaPlugin(ParameterPlugin):
-	def __init__(self, plugin):
-		self.plugin = plugin
+class RequirementParaPlugin(ParameterPlugin):
+	def resolveDeps(self):
+		return ['WALLTIME', 'CPUTIME', 'MEMORY']
+
+	def getParameterNames(self, result):
+		for key in ['WALLTIME', 'CPUTIME', 'MEMORY']:
+			if key in result:
+				result.remove(key)
+
+	def getParameters(self, pNum, result):
+		if 'WALLTIME' in result:
+			result[ParameterInfo.REQS].append(WMS.WALLTIME, utils.parseTime(result.pop('WALLTIME')))
+		if 'CPUTIME' in result:
+			result[ParameterInfo.REQS].append(WMS.CPUTIME, utils.parseTime(result.pop('CPUTIME')))
+		if 'MEMORY' in result:
+			result[ParameterInfo.REQS].append(WMS.MEMORY, utils.parseTime(result.pop('MEMORY')))
+
+
+class FormatterParaPlugin(ParameterPlugin):
+	def __init__(self, key, source, fmt, default = ''):
 		ParameterPlugin.__init__(self)
+		(self.key, self.fmt, self.source, self.default) = (key, fmt, source, default)
 
-	def getMaxJobs(self):
-		return self.plugin.getMaxJobs()
-
-	def getIntervention(self):
-		return self.plugin.getIntervention()
-
-	def getParameterDeps(self):
-		return self.plugin.getParameterDeps()
-
-	def getParameterNames(self):
-		return self.plugin.getParameterNames()
+	def getParameterNames(self, result):
+		result.add(ParameterMetadata(self.key, transient=True))
 
 	def getParameters(self, pNum, result):
-		return self.plugin.getParameters(pNum, result)
-
-
-class RequirementParaPlugin(FilterParaPlugin):
-	def getParameterNames(self):
-		fl = lambda lst: filter(lambda e: e not in ['WALLTIME', 'CPUTIME', 'MEMORY'], lst)
-		tmp = self.plugin.getParameterNames()
-		return (fl(tmp[0]), fl(tmp[1]))
-
-	def getParameters(self, pNum, result):
-		from grid_control import WMS
-		def dict2req(d):
-			if 'WALLTIME' in d:
-				result.reqs.append(WMS.WALLTIME, utils.parseTime(d.pop('WALLTIME')))
-			if 'CPUTIME' in d:
-				result.reqs.append(WMS.CPUTIME, utils.parseTime(d.pop('CPUTIME')))
-			if 'MEMORY' in d:
-				result.reqs.append(WMS.MEMORY, utils.parseTime(d.pop('MEMORY')))
-		dict2req(result.transient)
-		dict2req(result.store)
+		result[self.key] = self.fmt % utils.parseType(str(result.get(self.source, self.default)))
+ParameterPlugin.rawManagerMap['format'] = FormatterParaPlugin

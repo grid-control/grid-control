@@ -81,7 +81,9 @@ class ModularPluginManager(BasicPluginManager):
 			try:
 				self.plugins.append(eval(self.pExpr, userFun))
 			except NameError:
+				print userFun
 				raise
 			except:
+				print userFun
 				raise
 		return BasicPluginManager.getSource(self, doInit, doResync)

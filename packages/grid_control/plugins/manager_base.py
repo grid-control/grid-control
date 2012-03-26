@@ -7,16 +7,33 @@ from grid_control import AbstractObject, QM, utils
 class PluginManager(AbstractObject):
 	def __init__(self, config, section):
 		self.source = None
-		self.pPath = os.path.join(config.workDir, 'params.dat')
+		self.paramPath = os.path.join(config.workDir, 'params.dat.gz')
+		self.cachePath = os.path.join(config.workDir, 'params.map.gz')
+
+		if os.path.exists(self.paramPath):
+			if config.opts.init and not config.opts.resync:
+				utils.eprint('Re-Initialization will overwrite the current mapping between jobs and parameter/dataset content! This can lead to invalid results!')
+				if utils.getUserBool('Do you want to perform a syncronization between the current mapping and the new one to avoid this?', True):
+					config.opts.resync = True
+		elif config.opts.init and config.opts.resync:
+			config.opts.resync = False
+
 
 	def getSource(self, doInit, doResync):
+		log = None
 		if not self.source:
 			self.source = RNGParaPlugin()
-		if doResync and os.path.exists(self.pPath):
-			oldSource = GCDumpParaPlugin(self.pPath)
-			self.source = self.source.resync(oldSource)
-		if doResync or doInit:
-			GCDumpParaPlugin.write(self.pPath, self.source)
+		if not doResync and not doInit and os.path.exists(self.cachePath): # Get old mapping
+			log = utils.ActivityLog('Loading cached parameter information')
+			self.source = GCCacheParaPlugin(self.cachePath, self.source)
+		if doResync and os.path.exists(self.paramPath): # Perform sync
+			log = utils.ActivityLog('Syncronizing parameter information')
+			oldSource = GCDumpParaPlugin(self.paramPath)
+			self.source = self.source.doResync(oldSource)
+		if doResync or doInit: # Write current state
+			log = utils.ActivityLog('Saving parameter information')
+			GCDumpParaPlugin.write(self.paramPath, self.source)
+			GCCacheParaPlugin.write(self.cachePath, self.source)
 		# Display plugin structure
 		def displayPlugin(plugin, level = 1):
 			utils.vprint(('\t' * level) + plugin.__class__.__name__, 1)
@@ -59,15 +76,15 @@ class BasicPluginManager(PluginManager):
 			# args specified => gen seeds
 			newSeeds = str.join(' ', map(lambda x: str(random.randint(0, 10000000)), range(nseeds)))
 			seeds = map(int, config.getTaskDict().get('seeds', newSeeds).split())
-			utils.vprint('Using random seeds... %s' % seeds, -1, once = True)
+			utils.vprint('Using random seeds... %s' % seeds, once = True)
 		config.getTaskDict().write({'seeds': str.join(' ', map(str, seeds))})
 		return seeds
 
 	def getSource(self, doInit, doResync):
-		# Sort variable dependencies - trivial implementation for now
-		self.plugins = sorted(self.plugins, key = lambda p: p.getParameterDeps())
 		# Syncronize with existing parameters
-		self.source = RequirementParaPlugin(CombinePlugin(*self.plugins))
-		if self.repeat:
+		self.source = CombinePlugin(*(self.plugins + [RequirementParaPlugin()]))
+		if self.repeat > 1:
 			self.source = RepeatParaPlugin(self.source, self.repeat)
+		# Sort variable dependencies
+		self.source.resolveDeps()
 		return PluginManager.getSource(self, doInit, doResync)

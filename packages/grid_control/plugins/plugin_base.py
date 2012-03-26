@@ -1,76 +1,127 @@
 from python_compat import *
 from grid_control import AbstractError, AbstractObject, utils
 
-# Fast and small parameter data container
-class ParameterMetadata:
-	def __init__(self):
-		(self.store, self.transient, self.reqs) = ({}, {}, [])
+class ParameterInfo:
+	reqTypes = ('ACTIVE', 'HASH', 'REQS')
+	for idx, reqType in enumerate(reqTypes):
+		locals()[reqType] = idx
+
+
+class ParameterMetadata(str):
+	def __new__(cls, value, transient = False):
+		obj = str.__new__(cls, value)
+		obj.transient = transient
+		return obj
 
 
 class ParameterPlugin(AbstractObject):
 	def __init__(self):
-		self.jobMap = {}
-		self.intervention = None
+		self.mapJob2PID = {}
+		self.intervention = (set(), set(), False)
 
 	def getMaxJobs(self):
 		return None
 
-	def getIntervention(self):
+	def getPNumIntervention(self):
 		tmp = self.intervention
-		self.intervention = None
+		self.intervention = (set(), set(), False)
 		return tmp
 
-	def getParameterDeps(self):
-		return []
+	def resolveDeps(self):
+		return map(lambda k: '0%s' % k, self.getParameterNamesSet())
 
-	def getParameterNames(self):
-		(result_store, result_transient) = (set(), set())
+	def getParameterNamesSet(self):
+		result = set(map(lambda k: ParameterMetadata(k, transient=True), ['MY_JOBID', 'PARAM_ID']))
+		self.getParameterNames(result)
+		return result
+
+	def getParameterNames(self, result):
 		if self.getMaxJobs() == None:
 			info = self.getJobInfo(None)
-			return (info.store.keys(), info.transient.keys())
-		for info in self.getAllJobInfos():
-			result_store.update(info.store.keys())
-			result_transient.update(info.transient.keys())
-		return (list(result_store), list(result_transient))
+			result.update(map(ParameterMetadata, info.keys()))
+		else:
+			for info in self.getAllJobInfos():
+				result.update(map(ParameterMetadata, info.keys()))
 
 	def getParameters(self, pNum, result):
 		raise AbstractError
 
 	def getJobInfo(self, jobNum):
-		meta = ParameterMetadata()
-		paramID = self.jobMap.get(jobNum, jobNum)
-		meta.transient['PARAM_ID'] = paramID
-		meta.transient['MY_JOBID'] = jobNum
+		meta = {} # Speed and memory usage of dict is _much_ better than custom object
+		meta[ParameterInfo.ACTIVE] = True
+		meta[ParameterInfo.REQS] = []
+		paramID = self.mapJob2PID.get(jobNum, jobNum)
+		meta['MY_JOBID'] = jobNum
 		self.getParameters(paramID, meta)
+		meta['PARAM_ID'] = paramID
 		return meta
 
 	def getAllJobInfos(self):
 		for x in range(max(0, self.getMaxJobs())):
 			yield self.getJobInfo(x)
 
-	def resync(self, old):
+	def doResync(self, old): # This function is _VERY_ time critical!
 		from plugin_meta import ChainParaPlugin
 		from plugin_basic import InternalPlugin
-		jobMap = {}
-		def cmpParams(a, b):
-			return cmp(a.store, b.store)
+		mapJob2PID = {}
+		def translatePlugin(plugin, prune = False):
+			keys_store = sorted(filter(lambda k: k.transient == False, plugin.getParameterNamesSet()))
+			def translateEntry(meta):
+				tmp = md5()
+				for k in keys_store:
+					tmp.update(k)
+					if isinstance(meta[k], str):
+						tmp.update(meta[k])
+					else:
+						tmp.update(str(meta[k]))
+				return { ParameterInfo.HASH: tmp.digest(), ParameterInfo.ACTIVE: meta[ParameterInfo.ACTIVE],
+					'PARAM_ID': meta['PARAM_ID'], 'MY_JOBID': meta['MY_JOBID'] }
+			return map(translateEntry, plugin.getAllJobInfos())
+		params_old = translatePlugin(old)
+		params_new = translatePlugin(self, True)
+		redo = set()
 		def sameParams(paramsAdded, paramsMissing, paramsSame, oldParam, newParam):
-			jobMap[oldParam.transient['MY_JOBID']] = newParam.transient['PARAM_ID']
-		(pAdded, pMissing, pSame) = utils.DiffLists(old.getAllJobInfos(), self.getAllJobInfos(), cmpParams, sameParams)
-		# Construct complete parameter space plugin with missing psets and necessary intervention state
-		for (idx, meta) in enumerate(pAdded):
-			jobMap[self.getMaxJobs() + idx] = meta.transient['PARAM_ID']
-		disable = []
-		for (idx, meta) in enumerate(pMissing):
-			disable.append(idx + self.getMaxJobs())
-			jobMap[meta.transient['MY_JOBID']] = idx + self.getMaxJobs()
+			if not oldParam[ParameterInfo.ACTIVE]:
+				redo.add(newParam['PARAM_ID'])
+			mapJob2PID[oldParam['MY_JOBID']] = newParam['PARAM_ID']
+		(pAdded, pMissing, pSame) = utils.DiffLists(params_old, params_new,
+			lambda a, b: cmp(a[ParameterInfo.HASH], b[ParameterInfo.HASH]), sameParams)
+		# Construct complete parameter space plugin with missing parameter entries and intervention state
+		# NNNNNNNNNNNNN OOOOOOOOO | source: NEW (==self) and OLD (==from file)
+		# <same><added> <missing> | same: both in NEW and OLD, added: only in NEW, missing: only in OLD
+		oldMaxJobs = old.getMaxJobs()
+		for (idx, meta) in enumerate(pAdded): # Append new parameter entries
+			mapJob2PID[oldMaxJobs + idx] = meta['PARAM_ID']
+		disable = set()
+		newMaxJobs = self.getMaxJobs()
+		for (idx, meta) in enumerate(pMissing): # Missing 
+			if meta[ParameterInfo.ACTIVE]:
+				meta[ParameterInfo.ACTIVE] = False
+				disable.add(newMaxJobs + idx)
+			mapJob2PID[meta['MY_JOBID']] = newMaxJobs + idx
 		result = self
 		if pMissing:
-			result = ChainParaPlugin([self, InternalPlugin(pMissing, old.getParameterNames())])
-		result.jobMap = jobMap
-		if disable:
-			result.intervention = ([], disable)
+			def genMissingEntry(short):
+				tmp = old.getJobInfo(short['PARAM_ID'])
+				tmp[ParameterInfo.ACTIVE] = False
+				return tmp
+			missingInfos = map(genMissingEntry, pMissing)
+			result = ChainParaPlugin(self, InternalPlugin(missingInfos, old.getParameterNamesSet()))
+		result.mapJob2PID = mapJob2PID
+		if redo or disable:
+			result.intervention = (redo, disable, oldMaxJobs != newMaxJobs)
 		return result
+
+	def getIntervention(self):
+		(redo, disable, sizeChange) = self.getPNumIntervention()
+		redo = redo.difference(disable)
+		if redo or disable:
+			mapPID2Job = dict(map(lambda (k, v): (v, k), self.mapJob2PID.items()))
+			translate = lambda pNum: mapPID2Job.get(pNum, pNum)
+			return (map(translate, redo), map(translate, disable), sizeChange)
+		if sizeChange:
+			return (set(), set(), sizeChange)
+		return None
 ParameterPlugin.dynamicLoaderPath()
 ParameterPlugin.rawManagerMap = {}
 ParameterPlugin.varManagerMap = {}

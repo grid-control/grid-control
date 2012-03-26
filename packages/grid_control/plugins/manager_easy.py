@@ -101,9 +101,9 @@ class EasyPluginManager(ModularPluginManager):
 				return "var('%s')" % result[0]
 			return result[0][0]
 
-		finalExpr = ''
 		userExpr = config.get(section, 'parameters', '')
-		if userExpr:
+		if userExpr and ('var' not in userExpr):
 			finalExpr = parseParameters(userExpr)
 			utils.vprint('Using parameter expression:\n\t%s\n\t%s' % (userExpr, finalExpr), 0)
-		ModularPluginManager.__init__(self, config, section, finalExpr)
+			userExpr = finalExpr
+		ModularPluginManager.__init__(self, config, section, userExpr)
