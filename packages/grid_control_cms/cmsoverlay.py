@@ -5,6 +5,7 @@ class CMSOverlay(ConfigOverlay):
 	def __init__(self, config):
 		ConfigOverlay.__init__(self, config)
 		config.set('jobs', 'monitor', 'dashboard', override = False)
+		config.set('grid', 'sites', '-samtest -cmsprodhi', append = True)
 
 		# Rewrite cms storage urls:
 		proxy = Proxy.open('VomsProxy', config)
@@ -18,4 +19,4 @@ class CMSOverlay(ConfigOverlay):
 				return readJSON('https://cmsweb.cern.ch/phedex/datasvc/json/prod/lfn2pfn',
 					{'node': site, 'protocol': 'srm', 'lfn': '/store/user/%s/%s' % (hnName, url.rstrip('/'))})['phedex']['mapping']
 			return url
-		self.rewriteList(lambda (s, i): i.startswith('se') and i.endswith('path'), rewriteSEurl)
+		#self.rewriteList(lambda (s, i): i.startswith('se') and i.endswith('path'), rewriteSEurl)

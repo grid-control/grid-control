@@ -1,13 +1,13 @@
 from python_compat import *
-from grid_control import ConfigError, RethrowError, Job, utils
-from api import LocalWMSApi
+from grid_control import ConfigError, RethrowError, Job, utils, backends
+from grid_control.backends import LocalWMS
 
-class Host(LocalWMSApi):
-	def __init__(self, config):
-		LocalWMSApi.__init__(self, config)
-		self.submitExec = utils.pathShare('gc-host.sh')
-		self.statusExec = utils.resolveInstallPath('ps')
-		self.cancelExec = utils.resolveInstallPath('kill')
+class Host(LocalWMS):
+	def __init__(self, config, wmsName = None):
+		LocalWMS.__init__(self, config, wmsName,
+			submitExec = utils.pathShare('gc-host.sh'),
+			statusExec = utils.resolveInstallPath('ps'),
+			cancelExec = utils.resolveInstallPath('kill'))
 
 
 	def unknownID(self):
@@ -18,7 +18,7 @@ class Host(LocalWMSApi):
 		return ''
 
 
-	def getSubmitArguments(self, jobNum, jobName, reqs, sandbox, stdout, stderr, addAttr):
+	def getSubmitArguments(self, jobNum, jobName, reqs, sandbox, stdout, stderr):
 		return '%d "%s" "%s" "%s"' % (jobNum, sandbox, stdout, stderr)
 
 
@@ -30,7 +30,7 @@ class Host(LocalWMSApi):
 		head = map(lambda x: x.strip('%').lower(), next(status, '').split())
 		for entry in map(str.strip, status):
 			jobinfo = dict(zip(head, filter(lambda x: x != '', entry.split(None, len(head) - 1))))
-			jobinfo.update(zip(['id', 'status', 'dest'], [jobinfo.get('pid'), 'R', 'localhost/localqueue']))
+			jobinfo.update(dict(zip(['id', 'status', 'dest'], [jobinfo.get('pid'), 'R', 'localhost/localqueue'])))
 			yield jobinfo
 
 

@@ -347,7 +347,7 @@ def realmain(opts, args):
 				(hash, name_local, name_dest, pathSE) = self.files[idx]
 				if otime:
 					trfun = lambda sref, tref: gcSupport.prettySize(((csize - sref) / max(1, time.time() - tref)))
-					self.tr[idx] = '%7s - %7s/s' % (gcSupport.prettySize(csize), trfun(0, stime))
+					self.tr[idx] = '%7s avg. - %7s/s inst.' % (gcSupport.prettySize(csize), trfun(0, stime))
 					self.output[2*idx] = self.infoline(idx, "(%s - %7s/s)" % (self.tr[idx], trfun(osize, otime)))
 			def hash(self, idx, hashLocal = None):
 				(hash, name_local, name_dest, pathSE) = self.files[idx]
@@ -406,7 +406,7 @@ def realmain(opts, args):
 				(hash, name_local, name_dest, pathSE) = self.files[idx]
 				if otime:
 					tr = lambda sref, tref: gcSupport.prettySize(((csize - sref) / max(1, time.time() - tref)))
-					self.write("\r\t%s (%7s - %7s/s - %7s/s)" % (name_dest,
+					self.write("\r\t%s (%7s - %7s/s avg. - %7s/s inst.)" % (name_dest,
 					gcSupport.prettySize(csize), tr(0, stime), tr(osize, otime)))
 					sys.stdout.flush()
 				else:

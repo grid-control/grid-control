@@ -43,11 +43,11 @@ class ScriptMonitoring(Monitoring):
 	Monitoring.moduleMap["scripts"] = "ScriptMonitoring"
 	def __init__(self, config, module):
 		Monitoring.__init__(self, config, module)
-		self.silent = config.getBool('events', 'silent', True, volatile=True)
-		self.evtSubmit = config.get('events', 'on submit', '', volatile=True)
-		self.evtStatus = config.get('events', 'on status', '', volatile=True)
-		self.evtOutput = config.get('events', 'on output', '', volatile=True)
-		self.evtFinish = config.get('events', 'on finish', '', volatile=True)
+		self.silent = config.getBool('events', 'silent', True, mutable=True)
+		self.evtSubmit = config.get('events', 'on submit', '', mutable=True)
+		self.evtStatus = config.get('events', 'on status', '', mutable=True)
+		self.evtOutput = config.get('events', 'on output', '', mutable=True)
+		self.evtFinish = config.get('events', 'on finish', '', mutable=True)
 
 	# Get both task and job config / state dicts
 	def scriptThread(self, script, jobNum = None, jobObj = None, allDict = {}):

@@ -2,9 +2,9 @@ from grid_control import utils
 from grid_wms import GridWMS, jdlEscape
 
 class LCG(GridWMS):
-	def __init__(self, config, module, monitor):
+	def __init__(self, config, wmsName = None):
 		utils.deprecated('Please use the GliteWMS backend for grid jobs!')
-		GridWMS.__init__(self, config, module, monitor, 'lcg')
+		GridWMS.__init__(self, config, wmsName)
 
 		self._submitExec = utils.resolveInstallPath('edg-job-submit')
 		self._statusExec = utils.resolveInstallPath('edg-job-status')

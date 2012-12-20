@@ -1,26 +1,20 @@
 import os, os.path, time, signal
 from grid_control import Module, Config, GCError, ConfigError, UserError, utils, WMS
-from provider_base import DataProvider
-from splitter_base import DataSplitter
+from grid_control import datasets
+from grid_control.datasets import DataProvider, DataSplitter
+from grid_control.parameters.psource_data import ParameterSource, DataParameterSource
 
 class DataMod(Module):
 	def __init__(self, config):
 		Module.__init__(self, config)
 		(self.dataSplitter, self.dataChange) = (None, None)
 		self.dataset = config.get(self.__class__.__name__, 'dataset', '').strip()
-		self.checkSE = config.getBool(self.__class__.__name__, 'dataset storage check', True, volatile=True)
+		self.checkSE = config.getBool(self.__class__.__name__, 'dataset storage check', True, mutable=True)
 		self.dataRefresh = None
 		if self.dataset == '':
 			return
 		config.set('storage', 'se output pattern', '@NICK@_job_@MY_JOBID@_@X@', override=False)
-
-		if os.path.exists(os.path.join(config.workDir, 'datamap.tar')):
-			if config.opts.init and not config.opts.resync:
-				utils.eprint('Re-Initialization of task will overwrite the current mapping between jobs and dataset content, which can lead to invalid results!')
-				if utils.getUserBool('Do you want to perform a syncronization between the current mapping and the new one to avoid this?', True):
-					config.opts.resync = True
-		elif config.opts.init and config.opts.resync:
-			config.opts.resync = False
+		config.set('parameters', 'lookup', '@NICK@_job_@MY_JOBID@_@X@', override=False)
 
 		taskInfo = utils.PersistentDict(os.path.join(config.workDir, 'task.dat'), ' = ')
 		self.defaultProvider = config.get(self.__class__.__name__, 'dataset provider', 'ListProvider')
@@ -51,7 +45,7 @@ class DataMod(Module):
 				self.printDatasetOverview(oldBlocks)
 
 		# Select dataset refresh rate
-		self.dataRefresh = utils.parseTime(config.get(self.__class__.__name__, 'dataset refresh', '', volatile=True))
+		self.dataRefresh = utils.parseTime(config.get(self.__class__.__name__, 'dataset refresh', '', mutable=True))
 		if self.dataRefresh > 0:
 			self.dataRefresh = max(self.dataRefresh, taskInfo.get('max refresh rate', 0))
 			utils.vprint('Dataset source will be queried every %s' % utils.strTime(self.dataRefresh), -1)
@@ -62,6 +56,8 @@ class DataMod(Module):
 
 		if self.dataSplitter.getMaxJobs() == 0:
 			raise UserError('There are no events to process')
+		DataParameterSource.datasets[0] = {'obj': self.dataSplitter, 'fun': lambda fl: str.join(' ', fl)}
+
 
 
 	def getDatasetOverviewInfo(self, blocks):
@@ -85,68 +81,8 @@ class DataMod(Module):
 		utils.vprint(level = -1)
 
 
-	# This function is here to allow ParaMod to transform jobNums
-	def getTranslatedSplitInfo(self, jobNum):
-		if self.dataSplitter == None:
-			return {}
-		return self.dataSplitter.getSplitInfo(jobNum)
-
-
-	# Called on job submission
-	def onJobSubmit(self, jobObj, jobNum, dbmessage = [{}]):
-		splitInfo = self.getTranslatedSplitInfo(jobNum)
-		Module.onJobSubmit(self, jobObj, jobNum, [{
-			'nevtJob': splitInfo.get(DataSplitter.NEvents, 0),
-			'datasetFull': splitInfo.get(DataSplitter.Dataset, '')}] + dbmessage)
-
-
-	# Get job dependent environment variables
-	def getJobConfig(self, jobNum):
-		data = Module.getJobConfig(self, jobNum)
-		if self.dataSplitter == None:
-			return data
-
-		splitInfo = self.dataSplitter.getSplitInfo(jobNum)
-		if utils.verbosity() > 0:
-			utils.vprint('Job number: %d' % jobNum)
-			DataSplitter.printInfoForJob(splitInfo)
-
-		data['FILE_NAMES'] = self.formatFileList(splitInfo[DataSplitter.FileList])
-		data['MAX_EVENTS'] = splitInfo[DataSplitter.NEvents]
-		data['SKIP_EVENTS'] = splitInfo.get(DataSplitter.Skipped, 0)
-		data['DATASETID'] = splitInfo.get(DataSplitter.DatasetID, None)
-		data['DATASETPATH'] = splitInfo.get(DataSplitter.Dataset, None)
-		data['DATASETBLOCK'] = splitInfo.get(DataSplitter.BlockName, None)
-		data['DATASETNICK'] = splitInfo.get(DataSplitter.Nickname, None)
-		return data
-
-
-	def formatFileList(self, filelist):
-		return str.join(' ', filelist)
-
-
 	def getVarMapping(self):
 		return utils.mergeDicts([Module.getVarMapping(self), {'NICK': 'DATASETNICK'}])
-
-
-	# Get job requirements
-	def getRequirements(self, jobNum):
-		reqs = Module.getRequirements(self, jobNum)
-		if self.dataSplitter != None:
-			reqs.append((WMS.STORAGE, self.dataSplitter.getSplitInfo(jobNum).get(DataSplitter.SEList)))
-		return reqs
-
-
-	def canSubmit(self, jobNum):
-		if self.checkSE and (self.dataSplitter != None):
-			return self.dataSplitter.getSplitInfo(jobNum).get(DataSplitter.SEList) != []
-		return True
-
-
-	def getMaxJobs(self):
-		if self.dataSplitter == None:
-			return Module.getMaxJobs(self)
-		return self.dataSplitter.getMaxJobs()
 
 
 	def report(self, jobNum):
@@ -191,7 +127,6 @@ class DataMod(Module):
 
 	# Intervene in job management
 	def getIntervention(self):
-		jobChanges = None
 		if self.dataSplitter:
 			# Perform automatic resync
 			if not self.dataChange and self.dataRefresh > 0:
@@ -200,10 +135,13 @@ class DataMod(Module):
 					self.dataChange = self.doResync()
 			# Deal with job changes
 			if self.dataChange:
-				(oldDataSplitter, newDataSplitter, jobChanges) = self.dataChange
-				self.dataSplitter = newDataSplitter
+				(oldSplitter, newSplitter, jobChanges) = self.dataChange
+				self.dataSplitter = newSplitter
 				self.dataChange = None
-		return jobChanges
+				DataParameterSource.datasetSources[-1].intervention = (
+					set(jobChanges[0]), set(jobChanges[1]),
+					oldSplitter.getMaxJobs() != newSplitter.getMaxJobs())
+		return Module.getIntervention(self)
 
 
 	def canFinish(self):

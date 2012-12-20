@@ -1,97 +1,24 @@
 import sys, os, tempfile, shutil, time, random, glob
-from grid_control import AbstractObject, ConfigError, Job, utils
-from wms import WMS
-from local_api import LocalWMSApi
+from grid_control import AbstractObject, AbstractError, ConfigError, Job, utils
+from wms import WMS, BasicWMS
+from broker import Broker
 
-class LocalWMS(WMS):
-	def __init__(self, config, module, monitor):
-		wmsapi = config.get('local', 'wms', self._guessWMS())
-		if wmsapi != self._guessWMS():
-			utils.vprint('Default batch system on this host is: %s' % self._guessWMS(), -1, once = True)
-		self.api = LocalWMSApi.open(wmsapi, config)
-		utils.vprint('Using batch system: %s' % self.api.__class__.__name__, -1)
-		self.addAttr = dict(map(lambda item: (item, config.get(wmsapi, item)), config.getOptions(wmsapi)))
-
+class LocalWMS(BasicWMS):
+	def __init__(self, config, wmsName, submitExec, statusExec, cancelExec):
 		config.set('local', 'broker', 'RandomBroker', override = False)
-		WMS.__init__(self, config, module, monitor, 'local', self.api)
+		(self.submitExec, self.statusExec, self.cancelExec) = (submitExec, statusExec, cancelExec)
+		BasicWMS.__init__(self, config, wmsName, 'local')
+
+		self.brokerSite = self._createBroker('site broker', 'UserBroker', 'sites', 'sites', self.getNodes)
+		self.brokerQueue = self._createBroker('queue broker', 'UserBroker', 'queue', 'queues', self.getQueues)
 
 		self.sandCache = []
 		self.sandPath = config.getPath('local', 'sandbox path', os.path.join(config.workDir, 'sandbox'), check=False)
-		self.scratchPath = config.getPath('local', 'scratch path', '', volatile=True)
-
-
-	def _guessWMS(self):
-		wmsCmdList = [ ('PBS', 'pbs-config'), ('OGE', 'qsub'), ('LSF', 'bsub'), ('SLURM', 'job_slurm'), ('PBS', 'sh') ]
-		for wms, cmd in wmsCmdList:
-			try:
-				utils.resolveInstallPath(cmd)
-				return wms
-			except:
-				pass
-
-
-	def getSandboxFiles(self, smList):
-		files = WMS.getSandboxFiles(self, smList)
-		if self.proxy.getAuthFile():
-			files.append(utils.VirtualFile('_proxy.dat', open(self.proxy.getAuthFile(), 'r').read()))
-		return files
+		self.scratchPath = config.getPath('local', 'scratch path', '', mutable=True)
 
 
 	def getTimings(self):
-		return (20, 5) # Wait 20 seconds between cycles and 5 seconds between steps
-
-
-	def getRawIDs(self, ids):
-		return map(lambda (wmsId, jobNum): str(max(map(lambda x: utils.parseInt(x, 0), wmsId.split('.')))), ids)
-
-
-	def getGCID(self, wmsId):
-		return 'WMSID.%s.%s' % (self.api.__class__.__name__, wmsId)
-
-
-	# Submit job and yield (jobNum, WMS ID, other data)
-	def submitJob(self, jobNum):
-		activity = utils.ActivityLog('submitting jobs')
-
-		try:
-			if not os.path.exists(self.sandPath):
-				os.mkdir(self.sandPath)
-			sandbox = tempfile.mkdtemp('', '%s.%04d.' % (self.module.taskID, jobNum), self.sandPath)
-			for fileName in self.sandboxIn:
-				shutil.copy(fileName, sandbox)
-		except OSError:
-			raise RuntimeError('Sandbox path "%s" is not accessible.' % self.sandPath)
-		except IOError:
-			raise RuntimeError('Sandbox "%s" could not be prepared.' % sandbox)
-
-		cfgPath = os.path.join(sandbox, '_jobconfig.sh')
-		self.writeJobConfig(jobNum, cfgPath, {'GC_SANDBOX': sandbox, 'GC_SCRATCH': self.scratchPath})
-		reqs = dict(self.broker.brokerSites(self.module.getRequirements(jobNum)))
-
-		(stdout, stderr) = (os.path.join(sandbox, 'gc.stdout'), os.path.join(sandbox, 'gc.stderr'))
-		(taskName, jobName, jobType) = self.module.getDescription(jobNum)
-		proc = utils.LoggedProcess(self.api.submitExec, '%s "%s" %s' % (
-			self.api.getSubmitArguments(jobNum, jobName, reqs, sandbox, stdout, stderr, self.addAttr),
-			utils.pathShare('gc-local.sh'), self.api.getJobArguments(jobNum, sandbox)))
-		retCode = proc.wait()
-		wmsIdText = proc.getOutput().strip().strip('\n')
-		try:
-			wmsId = self.api.parseSubmitOutput(wmsIdText)
-		except:
-			wmsId = None
-
-		del activity
-
-		if retCode != 0:
-			utils.eprint('WARNING: %s failed:' % self.api.submitExec)
-		elif wmsId == None:
-			utils.eprint('WARNING: %s did not yield job id:\n%s' % (self.api.submitExec, wmsIdText))
-		if wmsId:
-			wmsId = self.getGCID(wmsId)
-			open(os.path.join(sandbox, wmsId), 'w')
-		else:
-			proc.logError(self.errorLog)
-		return (jobNum, utils.QM(wmsId, wmsId, None), {'sandbox': sandbox})
+		return (1, 1) # Wait 20 seconds between cycles and 5 seconds between steps
 
 
 	# Check status of jobs and yield (jobNum, wmsID, status, other data)
@@ -100,12 +27,12 @@ class LocalWMS(WMS):
 			raise StopIteration
 
 		activity = utils.ActivityLog('checking job status')
-		proc = utils.LoggedProcess(self.api.statusExec, self.api.getCheckArguments(self.getRawIDs(ids)))
+		proc = utils.LoggedProcess(self.statusExec, self.getCheckArguments(self._getRawIDs(ids)))
 
 		tmp = {}
-		for data in self.api.parseStatus(proc.iter()):
-			wmsId = self.getGCID(data['id'])
-			tmp[wmsId] = (wmsId, self.api.parseJobState(data['status']), data)
+		for data in self.parseStatus(proc.iter()):
+			wmsId = self._createId(data['id'])
+			tmp[wmsId] = (wmsId, self.parseJobState(data['status']), data)
 
 		for wmsId, jobNum in ids:
 			if wmsId not in tmp:
@@ -118,11 +45,38 @@ class LocalWMS(WMS):
 
 		if retCode != 0:
 			for line in proc.getError().splitlines():
-				if not self.api.unknownID() in line:
+				if not self.unknownID() in line:
 					utils.eprint(line)
 
 
-	def getSandbox(self, wmsId):
+	def cancelJobs(self, ids):
+		if not len(ids):
+			raise StopIteration
+
+		activity = utils.ActivityLog('cancelling jobs')
+		proc = utils.LoggedProcess(self.cancelExec, self.getCancelArguments(self._getRawIDs(ids)))
+		if proc.wait() != 0:
+			for line in proc.getError().splitlines():
+				if not self.unknownID() in line:
+					utils.eprint(line.strip())
+		del activity
+
+		activity = utils.ActivityLog('waiting for jobs to finish')
+		time.sleep(5)
+		for wmsId, jobNum in ids:
+			path = self._getSandbox(wmsId)
+			if path == None:
+				utils.eprint('Sandbox for job %d with wmsId "%s" could not be found' % (jobNum, wmsId))
+				continue
+			try:
+				shutil.rmtree(path)
+			except:
+				raise RuntimeError('Sandbox for job %d with wmsId "%s" could not be deleted' % (jobNum, wmsId))
+			yield (jobNum, wmsId)
+		del activity
+
+
+	def _getSandbox(self, wmsId):
 		# Speed up function by caching result of listdir
 		def searchSandbox(source):
 			for path in map(lambda sbox: os.path.join(self.sandPath, sbox), source):
@@ -136,47 +90,108 @@ class LocalWMS(WMS):
 		return searchSandbox(filter(lambda x: x not in oldCache, self.sandCache))
 
 
-	def getJobsOutput(self, ids):
+	# Submit job and yield (jobNum, WMS ID, other data)
+	def _submitJob(self, jobNum, module):
+		activity = utils.ActivityLog('submitting jobs')
+
+		try:
+			if not os.path.exists(self.sandPath):
+				os.mkdir(self.sandPath)
+			sandbox = tempfile.mkdtemp('', '%s.%04d.' % (module.taskID, jobNum), self.sandPath)
+		except:
+			raise RuntimeError('Unable to create sandbox directory "%s"!' % sandbox)
+		sbPrefix = sandbox.replace(self.sandPath, '').lstrip('/')
+		self.smSBIn.doTransfer(map(lambda (d, s, t): (d, s, os.path.join(sbPrefix, t)), self._getSandboxFilesIn(module)))
+
+		cfgPath = os.path.join(sandbox, '_jobconfig.sh')
+		self._writeJobConfig(cfgPath, jobNum, module, {'GC_SANDBOX': sandbox, 'GC_SCRATCH': self.scratchPath})
+		reqs = self.brokerSite.brokerAdd(module.getRequirements(jobNum), WMS.SITES)
+		reqs = dict(self.brokerQueue.brokerAdd(reqs, WMS.QUEUES))
+
+		(stdout, stderr) = (os.path.join(sandbox, 'gc.stdout'), os.path.join(sandbox, 'gc.stderr'))
+		(taskName, jobName, jobType) = module.getDescription(jobNum)
+		proc = utils.LoggedProcess(self.submitExec, '%s "%s" %s' % (
+			self.getSubmitArguments(jobNum, jobName, reqs, sandbox, stdout, stderr),
+			utils.pathShare('gc-local.sh'), self.getJobArguments(jobNum, sandbox)))
+		retCode = proc.wait()
+		wmsIdText = proc.getOutput().strip().strip('\n')
+		try:
+			wmsId = self.parseSubmitOutput(wmsIdText)
+		except:
+			wmsId = None
+
+		del activity
+
+		if retCode != 0:
+			utils.eprint('WARNING: %s failed:' % self.submitExec)
+		elif wmsId == None:
+			utils.eprint('WARNING: %s did not yield job id:\n%s' % (self.submitExec, wmsIdText))
+		if wmsId:
+			wmsId = self._createId(wmsId)
+			open(os.path.join(sandbox, wmsId), 'w')
+		else:
+			proc.logError(self.errorLog)
+		return (jobNum, utils.QM(wmsId, wmsId, None), {'sandbox': sandbox})
+
+
+	def _getJobsOutput(self, ids):
 		if not len(ids):
 			raise StopIteration
 
 		activity = utils.ActivityLog('retrieving job outputs')
 		for wmsId, jobNum in ids:
-			path = self.getSandbox(wmsId)
+			path = self._getSandbox(wmsId)
 			if path == None:
 				yield (jobNum, None)
 				continue
 
 			# Cleanup sandbox
-			outFiles = utils.listMapReduce(lambda pat: glob.glob(os.path.join(path, pat)), self.sandboxOut)
-			utils.removeFiles(filter(lambda x: x not in outFiles, map(lambda fn: os.path.join(path, fn), os.listdir(path))))
+			print "TODO: Delete processing files"
+#			outFiles = utils.listMapReduce(lambda pat: glob.glob(os.path.join(path, pat)), self.sandboxOut)
+#			utils.removeFiles(filter(lambda x: x not in outFiles, map(lambda fn: os.path.join(path, fn), os.listdir(path))))
 
 			yield (jobNum, path)
 		del activity
 
 
-	def cancelJobs(self, ids):
-		if not len(ids):
-			raise StopIteration
+	def _getSandboxFiles(self, module, monitor, smList):
+		files = BasicWMS._getSandboxFiles(self, module, monitor, smList)
+		if self.proxy.getAuthFile():
+			files.append(utils.VirtualFile('_proxy.dat', open(self.proxy.getAuthFile(), 'r').read()))
+		return files
 
-		activity = utils.ActivityLog('cancelling jobs')
-		proc = utils.LoggedProcess(self.api.cancelExec, self.api.getCancelArguments(self.getRawIDs(ids)))
-		if proc.wait() != 0:
-			for line in proc.getError().splitlines():
-				if not self.api.unknownID() in line:
-					utils.eprint(line.strip())
-		del activity
 
-		activity = utils.ActivityLog('waiting for jobs to finish')
-		time.sleep(5)
-		for wmsId, jobNum in ids:
-			path = self.getSandbox(wmsId)
-			if path == None:
-				utils.eprint('Sandbox for job %d with wmsId "%s" could not be found' % (jobNum, wmsId))
-				continue
-			try:
-				shutil.rmtree(path)
-			except:
-				raise RuntimeError('Sandbox for job %d with wmsId "%s" could not be deleted' % (jobNum, wmsId))
-			yield (wmsId, jobNum)
-		del activity
+	def getQueues(self):
+		return None
+
+	def getNodes(self):
+		return None
+
+	def parseJobState(self, state):
+		return self._statusMap[state]
+
+	def getCancelArguments(self, wmsIds):
+		return str.join(' ', wmsIds)
+
+	def checkReq(self, reqs, req, test = lambda x: x > 0):
+		if req in reqs:
+			return test(reqs[req])
+		return False
+
+	def getJobArguments(self, jobNum, sandbox):
+		raise AbstractError
+
+	def getSubmitArguments(self, jobNum, jobName, reqs, sandbox, stdout, stderr):
+		raise AbstractError
+
+	def parseSubmitOutput(self, data):
+		raise AbstractError
+
+	def unknownID(self):
+		raise AbstractError
+
+	def parseStatus(self, status):
+		raise AbstractError
+
+	def getCheckArguments(self, wmsIds):
+		raise AbstractError

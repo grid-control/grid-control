@@ -1,6 +1,6 @@
 import os.path
 from grid_control import QM, datasets
-from grid_control.datasets import DataMod
+from datamod import DataMod
 
 class UserMod(DataMod):
 	def __init__(self, config):
@@ -16,8 +16,8 @@ class UserMod(DataMod):
 	def getCommand(self):
 		if self._sendexec:
 			cmd = os.path.basename(self._executable)
-			return 'chmod u+x %s; ./%s $@ > job.stdout 2> job.stderr' % (cmd, cmd)
-		return '%s $@ > job.stdout 2> job.stderr' % self._executable
+			return 'chmod u+x %s; (./%s $@) > job.stdout 2> job.stderr' % (cmd, cmd)
+		return '(%s $@) > job.stdout 2> job.stderr' % self._executable
 
 
 	def getJobArguments(self, jobNum):

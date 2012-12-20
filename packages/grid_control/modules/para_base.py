@@ -3,9 +3,10 @@ from grid_control import Module, AbstractError, WMS, utils
 # Parameterized Module
 class ParaMod(Module):
 	def __init__(self, config):
+#		utils.deprecated('Please configure parameterized jobs via the [parameters] config section!')
 		Module.__init__(self, config)
 		self.baseMod = Module.open(config.get('ParaMod', 'module'), config)
-		self.baseJobs = config.getInt('ParaMod', 'jobs', 1, volatile=True)
+		self.baseJobs = config.getInt('ParaMod', 'jobs', 1, mutable=True)
 		self.paramSpace = None
 
 		# adopt functions from basemod

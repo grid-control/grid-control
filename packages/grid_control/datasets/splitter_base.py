@@ -1,5 +1,5 @@
 from python_compat import *
-import os, tarfile, time, copy, cStringIO
+import os, tarfile, time, copy, cStringIO, threading
 from grid_control import QM, AbstractObject, AbstractError, RuntimeError, utils, ConfigError, Config, noDefault
 from provider_base import DataProvider
 
@@ -108,7 +108,7 @@ class DataSplitter(AbstractObject):
 			for idx, var in enumerate(enum):
 				locals()[var] = idx
 
-		interactive = config.getBool('dataset', 'resync interactive', True, volatile = True)
+		interactive = config.getBool('dataset', 'resync interactive', True, mutable = True)
 
 		# Get processing mode (interactively)
 		def getMode(item, default, desc):
@@ -117,7 +117,7 @@ class DataSplitter(AbstractObject):
 					if (x.lower() == Resync.enum[opt]) or (x.lower() == Resync.enum[opt][0]):
 						return opt
 			if not interactive:
-				value = Resync.__dict__[config.get('dataset', 'resync mode %s' % item, Resync.enum[default], volatile = True).lower()]
+				value = Resync.__dict__[config.get('dataset', 'resync mode %s' % item, Resync.enum[default], mutable = True).lower()]
 				if value in desc.keys():
 					return value
 			utils.vprint(level = -1)
@@ -264,8 +264,8 @@ class DataSplitter(AbstractObject):
 			preserve = utils.getUserBool('Preserve unchanged splittings with changed files?', True)
 			reorder = utils.getUserBool('Reorder jobs to close gaps?', False)
 		else:
-			preserve = config.getBool('dataset', 'resync preserve', True, volatile = True)
-			reorder = config.getBool('dataset', 'resync reorder', False, volatile = True)
+			preserve = config.getBool('dataset', 'resync preserve', True, mutable = True)
+			reorder = config.getBool('dataset', 'resync reorder', False, mutable = True)
 
 		# ^^ Still not sure about the degrees of freedom ^^
 		#     User setup is finished starting from here
@@ -510,6 +510,7 @@ class DataSplitter(AbstractObject):
 		class JobFileTarAdaptor(object):
 			def __init__(self, path):
 				log = utils.ActivityLog('Reading job mapping file')
+				self.mutex = threading.Semaphore()
 				self._fmt = utils.DictFormat()
 				self._tar = tarfile.open(path, 'r:')
 				(self._cacheKey, self._cacheTar) = (None, None)
@@ -523,6 +524,7 @@ class DataSplitter(AbstractObject):
 				del log
 
 			def __getitem__(self, key):
+				self.mutex.acquire()
 				if not self._cacheKey == key / 100:
 					self._cacheKey = key / 100
 					subTarFileObj = self._tar.extractfile('%03dXX.tgz' % (key / 100))
@@ -534,6 +536,7 @@ class DataSplitter(AbstractObject):
 				if DataSplitter.CommonPrefix in data:
 					fileList = map(lambda x: '%s/%s' % (data[DataSplitter.CommonPrefix], x), fileList)
 				data[DataSplitter.FileList] = map(str.strip, fileList)
+				self.mutex.release()
 				return data
 
 		try:

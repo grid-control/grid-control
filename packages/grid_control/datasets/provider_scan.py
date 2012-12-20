@@ -2,7 +2,7 @@ import os, fnmatch, operator
 from grid_control import QM, utils, ConfigError, storage, JobSelector, AbstractObject, Config
 from provider_base import DataProvider
 from python_compat import *
-from scanner_basic import *
+from scanner_base import InfoScanner
 
 class ScanProviderBase(DataProvider):
 	def __init__(self, config, section, datasetExpr, datasetNick, datasetID = 0):

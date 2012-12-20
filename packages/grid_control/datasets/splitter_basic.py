@@ -23,7 +23,7 @@ class FLSplitStacker(FileLevelSplitter):
 			splitterList = self.setup(self.config.getList, block, 'splitter stack', ['BlockBoundarySplitter'])
 			subSplitter = map(lambda x: FileLevelSplitter.open(x, self.config, self.section), splitterList[:-1])
 			endSplitter = DataSplitter.open(splitterList[-1], self.config, self.section)
-			for subBlock in reduce(lambda x,y: y.splitBlocks(x), subSplitter, [block]):
+			for subBlock in reduce(lambda x, y: y.splitBlocks(x), subSplitter, [block]):
 				for splitting in endSplitter.splitDatasetInternal([subBlock]):
 					yield splitting
 

@@ -2,9 +2,9 @@ from grid_control import utils
 from grid_wms import GridWMS
 
 class Glite(GridWMS):
-	def __init__(self, config, module, monitor):
+	def __init__(self, config, wmsName = None):
 		utils.deprecated('Please use the GliteWMS backend for grid jobs!')
-		GridWMS.__init__(self, config, module, monitor, 'glite')
+		GridWMS.__init__(self, config, wmsName)
 
 		self._submitExec = utils.resolveInstallPath('glite-job-submit')
 		self._statusExec = utils.resolveInstallPath('glite-job-status')

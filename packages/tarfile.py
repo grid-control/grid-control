@@ -970,7 +970,7 @@ class TarInfo(object):
     linkpath = property(_getlinkpath, _setlinkpath)
 
     def __repr__(self):
-        return "<%s %r at %#x>" % (self.__class__.__name__,self.name,id(self))
+        return "<%s %r at %#x>" % (self.__class__.__name__, self.name, id(self))
 
     def get_info(self, encoding, errors):
         """Return the TarInfo's attributes as a dictionary.

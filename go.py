@@ -59,7 +59,7 @@ if __name__ == '__main__':
 	try:
 		config = Config(args[0])
 		# Read default command line options from config file
-		defaultCmdLine = config.get('global', 'cmdargs', '', volatile=True)
+		defaultCmdLine = config.get('global', 'cmdargs', '', mutable=True)
 		(opts.reportSite, opts.reportTime, opts.reportMod) = (0, 0, 0)
 		parser.parse_args(args = defaultCmdLine.split() + sys.argv[1:], values = opts)
 		def setConfigFromOpt(option, section, item, fun = lambda x: str(x)):
@@ -79,7 +79,7 @@ if __name__ == '__main__':
 				opts.init = True
 			if utils.getUserBool('Do you want to create the working directory %s?' % config.workDir, True):
 				os.makedirs(config.workDir)
-		checkSpace = config.getInt('global', 'workdir space', 10, volatile=True)
+		checkSpace = config.getInt('global', 'workdir space', 10, mutable=True)
 
 		class InitSentinel:
 			def __init__(self, config):
@@ -109,18 +109,15 @@ if __name__ == '__main__':
 
 		# Initialise workload management interface
 		initSentinel.checkpoint('backend')
-		backend = config.get('global', 'backend', 'grid')
-		defaultwms = { 'grid': 'GliteWMS', 'local': 'LocalWMS' }
-		if backend == 'grid':
-			wms = WMS.open(config.get(backend, 'wms', 'GliteWMS'), config, module, monitor)
-		elif backend == 'local':
-			wms = WMS.open(defaultwms[backend], config, module, monitor)
-		else:
-			raise ConfigError('Invalid backend specified!' % config.workDir)
+		wms = WMSFactory(config).getWMS()
 
 		# Initialise job database
 		initSentinel.checkpoint('jobmanager')
 		jobManager = JobManager(config, module, monitor)
+
+		# Prepare work package
+		initSentinel.checkpoint('deploy')
+		wms.deployTask(module, monitor)
 
 		# Give config help
 		if opts.help_cfg or opts.help_scfg:
@@ -139,10 +136,10 @@ if __name__ == '__main__':
 			jobManager.reset(wms, opts.reset)
 			sys.exit(0)
 
-		actionList = config.getList('jobs', 'action', ['check', 'retrieve', 'submit'], volatile=True)
+		actionList = config.getList('jobs', 'action', ['check', 'retrieve', 'submit'], mutable=True)
 
 		# Check for 
-		if config.get('global', 'file check', False, volatile=True):
+		if config.get('global', 'file check', False, mutable=True):
 			if utils.fileCheck(config):
 				if utils.getUserBool('\nQuit grid-control in order to initialize the task again?', False):
 					sys.exit(0)

@@ -195,7 +195,7 @@ class Report:
 				return fmt('%4d' % stats[state]['COUNT'], state) + ' (%3d%%)' % ratio
 			def fmtTime(state):
 				secs = stats[state]['TIME'] / max(1, stats[state]['COUNT']*1.0)
-				return fmt(utils.strTime(secs, '%d:%0.2d:%0.2d'), state)
+				return fmt(utils.strTimeShort(secs), state)
 			report.append(dict([('SITE', level)] + map(lambda x: (x, fmtRate(x)), Report.states)))
 			if timeDetails:
 				report.append(dict(map(lambda x: (x, fmtTime(x)), Report.states)))

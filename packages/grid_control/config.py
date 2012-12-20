@@ -3,28 +3,23 @@ from grid_control import *
 from python_compat import *
 
 noDefault = cp.NoOptionError
+def fmtDef(value, default, defFmt = lambda x: x): 
+	if value == noDefault:
+		return noDefault
+	return defFmt(default)
+
+def cleanSO(section, option): # return canonized section/option tuple
+	strStrip = lambda x: str(x).strip().lower()
+	if isinstance(section, list):
+		return (utils.uniqueListRL(map(strStrip, section)), strStrip(option))
+	return (strStrip(section), strStrip(option))
+
 def fmtStack(stack):
 	for frame in stack:
 		caller = frame[0].f_locals.get('self', None)
 		if caller and caller.__class__.__name__ != 'Config':
 			return frame[0].f_locals.get('self', None).__class__.__name__
 	return 'main'
-
-mkDef = lambda default, fmtDefault: QM(default == noDefault, noDefault, fmtDefault)
-def cleanSO(section, option):
-	strStrip = lambda x: str(x).strip().lower()
-	def uniqueReverseList(iter):
-		iter.reverse()
-		tmpSet, result = (set(), [])
-		for x in iter:
-			if x not in tmpSet:
-				result.append(x)
-				tmpSet.add(x)
-		result.reverse()
-		return result
-	if isinstance(section, list):
-		return (uniqueReverseList(map(strStrip, section)), strStrip(option))
-	return (strStrip(section), strStrip(option))
 
 class Config:
 	def __init__(self, configFile = None, configDict = {}):
@@ -59,6 +54,9 @@ class Config:
 
 	def setInternal(self, section, option, value, append):
 		section_option = cleanSO(section, option)
+		# Split into lines, remove comments and return merged result
+		value = map(lambda x: utils.rsplit(x, ';', 1)[0].strip(), value.splitlines())
+		value = str.join('\n', filter(lambda x: x != '', value))
 		if append and (section_option in self.content):
 			self.content[section_option] += '\n%s' % value
 			self.append[section_option] = False
@@ -78,18 +76,15 @@ class Config:
 			parser.readfp(open(configFile, 'r'))
 			if parser.has_section('global') and parser.has_option('global', 'include'):
 				self.setInternal('global', 'include', parser.get('global', 'include'), False)
-				for includeFile in self.getPaths('global', 'include', [], volatile = True):
+				for includeFile in self.getPaths('global', 'include', [], mutable = True):
 					self.parseFile(includeFile, parser.defaults())
 			for section in parser.sections():
 				for option in parser.options(section):
-					value = parser.get(section, option).splitlines()
+					value = parser.get(section, option)
 					try:
-						# Split into lines, remove comments and return merged result
-						value = map(lambda x: utils.rsplit(x, ';', 1)[0].strip(), value)
-						value = str.join('\n', filter(lambda x: x != '', value))
 						self.setInternal(section, option.rstrip('+'), value, option.endswith('+'))
 					except:
-						raise ConfigError('[%s] "%s" could not be parsed!' % (section, item))
+						raise ConfigError('[%s] "%s" could not be parsed!' % (section, option))
 			self.setInternal('global', 'include', '', False)
 		except:
 			raise RethrowError("Error while reading configuration file '%s'!" % configFile)
@@ -109,18 +104,19 @@ class Config:
 			self.dynamic[(section, item)] = True
 
 
-	def get(self, section, item, default = noDefault, volatile = False, noVar = True):
+	def get(self, section, item, default = noDefault, mutable = False, noVar = True):
 		(section, item) = cleanSO(section, item)
 		# Handle multi section get calls, use least specific setting for error message
 		if isinstance(section, list):
+			utils.vprint('Searching option "%s" in:\n\t%s' % (item, str.join('\n\t', section)), 4)
 			for specific in filter(lambda s: item in self.getOptions(s), section):
-				return self.get(specific, item, default, volatile, noVar)
-			return self.get(section[-1], item, default, volatile, noVar) # will trigger error message
-		utils.vprint('{%s}: ' % fmtStack(inspect.stack()), 4, newline=False)
+				return self.get(specific, item, default, mutable, noVar)
+			return self.get(section[-1], item, default, mutable, noVar) # will trigger error message
+		utils.vprint('{%s}: ' % fmtStack(inspect.stack()), 5, newline=False)
 		# API check: Keep track of used default values
-		if self.apicheck.setdefault((section, item), (default, volatile))[0] != default:
+		if self.apicheck.setdefault((section, item), (default, mutable))[0] != default:
 			raise APIError('Inconsistent default values: [%s] "%s"' % (section, item))
-		self.apicheck[(section, item)] = (default, volatile and self.apicheck[(section, item)][1])
+		self.apicheck[(section, item)] = (default, mutable and self.apicheck[(section, item)][1])
 		# Get config option value and protocol access
 		if (section, item) in self.content:
 			value = self.content[(section, item)]
@@ -136,37 +132,46 @@ class Config:
 		return utils.checkVar(value, '[%s] "%s" may not contain variables.' % (section, item), noVar)
 
 
-	def getPaths(self, section, item, default = noDefault, volatile = False, noVar = True, check = True):
-		value = self.getList(section, item, default, volatile, noVar)
-		return map(lambda x: utils.resolvePath(x, [self.baseDir], check, ConfigError), value)
+	def getPaths(self, section, item, default = noDefault, mutable = False, noVar = True, check = True):
+		def getPathsInt():
+			try:
+				for value in self.getList(section, item, default, mutable, noVar):
+					yield utils.resolvePath(value, [self.baseDir], check, ConfigError)
+			except:
+				raise ConfigError('Error resolving path in [%s] %s' % (section, item))
+		return list(getPathsInt())
 
 
-	def getPath(self, section, item, default = noDefault, volatile = False, noVar = True, check = True):
-		return (self.getPaths(section, item, mkDef(default, [default]), volatile, noVar, check) + [''])[0]
+	def getPath(self, section, item, default = noDefault, mutable = False, noVar = True, check = True):
+		return (self.getPaths(section, item, fmtDef(default, [default]), mutable, noVar, check) + [''])[0]
 
 
-	def getInt(self, section, item, default = noDefault, volatile = False, noVar = True):
-		return int(self.get(section, item, default, volatile, noVar))
+	def getInt(self, section, item, default = noDefault, mutable = False, noVar = True):
+		return int(self.get(section, item, default, mutable, noVar))
 
 
-	def getBool(self, section, item, default = noDefault, volatile = False, noVar = True):
-		return utils.parseBool(self.get(section, item, mkDef(default, QM(default, 'true', 'false')), volatile, noVar))
+	def getBool(self, section, item, default = noDefault, mutable = False, noVar = True):
+		return utils.parseBool(self.get(section, item, fmtDef(default, QM(default, 'true', 'false')), mutable, noVar))
 
 
-	def getList(self, section, item, default = noDefault, volatile = False, noVar = True, delim = None, empty = []):
+	def getTime(self, section, item, default = noDefault, mutable = False, noVar = True):
+		return utils.parseTime(self.get(section, item, fmtDef(default, default, utils.strTimeShort), mutable, noVar))
+
+
+	def getList(self, section, item, default = noDefault, mutable = False, noVar = True, delim = None, empty = []):
 		if default == None:
 			(default, empty) = ('', None)
 		elif default != noDefault:
 			default = str.join(QM(delim, delim, ' '), map(str, default))
 		if empty != None:
 			empty = list(empty)
-		return utils.parseList(self.get(section, item, default, volatile, noVar), delim, onEmpty = empty)
+		return utils.parseList(self.get(section, item, default, mutable, noVar), delim, onEmpty = empty)
 
 
-	def getDict(self, section, item, default = noDefault, volatile = False, noVar = True, parser = lambda x: x):
+	def getDict(self, section, item, default = noDefault, mutable = False, noVar = True, parser = lambda x: x):
 		if default != noDefault:
 			default = str.join('\n\t', map(lambda kv: '%s => %s' % kv, default.items()))
-		return utils.parseDict(self.get(section, item, default, volatile, noVar), parser)
+		return utils.parseDict(self.get(section, item, default, mutable, noVar), parser)
 
 
 	def getOptions(self, section):
@@ -174,20 +179,20 @@ class Config:
 
 
 	# Compare this config object to another config file
-	# Return true in case non-volatile parameters are changed
+	# Return true in case non-mutable parameters are changed
 	def needInit(self, saveConfigPath):
 		if not os.path.exists(saveConfigPath):
 			return False
 		savedConfig = Config(saveConfigPath)
 		flag = False
 		for (section, option) in filter(lambda so: so not in self.hidden, self.accessed):
-			default, volatile = self.apicheck.get((section, option), (None, False))
+			default, mutable = self.apicheck.get((section, option), (None, False))
 			value, default = self.accessed[(section, option)]
 			try:
 				oldValue = savedConfig.get(section, option, default, noVar = False)
 			except:
 				oldValue = '<not specified>'
-			if (str(value).strip() != str(oldValue).strip()) and not volatile:
+			if (str(value).strip() != str(oldValue).strip()) and not mutable:
 				if not flag:
 					utils.eprint('\nFound some changes in the config file, which will only apply')
 					utils.eprint('to the current task after a reinitialization:\n')
@@ -212,9 +217,15 @@ class Config:
 			output.setdefault(section.lower(), ['[%s]' % section]).append(value)
 		for (section, option) in sorted(self.accessed):
 			value, default = self.accessed[(section, option)]
+			dummy, mutable = self.apicheck.get((section, option), (None, False))
 			if (value != default) or printDefault:
-				addToOutput(section, '%s = %s' % (option, value))
-				if (value != default) and (default != noDefault):
+				tmp = '%s = %s' % (option, value)
+				if mutable:
+					tmp += ' ; Mutable'
+				if (value != default) and (default != noDefault) and ('\n' not in str(default)):
+					tmp += QM(mutable, ', Default: %s' % default, ' ; Default: %s' % default)
+				addToOutput(section, tmp)
+				if (value != default) and (default != noDefault) and ('\n' in str(default)):
 					addToOutput(section, '; Default setting: %s = %s' % (option, default), ';\t')
 		if printUnused:
 			for (section, option) in sorted(filter(lambda x: x not in self.accessed, self.content)):

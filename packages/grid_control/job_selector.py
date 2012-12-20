@@ -12,7 +12,8 @@ class JobSelector(AbstractObject):
 		raise AbstractError
 JobSelector.dynamicLoaderPath()
 JobSelector.moduleMap.update({'id': 'IDSelector', 'state': 'StateSelector', 'site': 'SiteSelector',
-	'queue': 'QueueSelector', 'var': 'VarSelector', 'nick': 'NickSelector', 'stuck': 'StuckSelector'})
+	'queue': 'QueueSelector', 'var': 'VarSelector', 'nick': 'NickSelector', 'stuck': 'StuckSelector',
+	'wms': 'BackendSelector', 'backend': 'BackendSelector'})
 
 
 class AndJobSelector(JobSelector): # Internally used
@@ -77,6 +78,11 @@ class SiteSelector(RegExSelector):
 class QueueSelector(RegExSelector):
 	def __init__(self, arg, **kwargs):
 		RegExSelector.__init__(self, arg, lambda num, obj: obj.get('dest', '').split('/')[-1].split(':')[0])
+
+
+class BackendSelector(RegExSelector):
+	def __init__(self, arg, **kwargs):
+		RegExSelector.__init__(self, arg, lambda num, obj: obj.get('id', '..').split('.')[1])
 
 
 class StateSelector(RegExSelector):

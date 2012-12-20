@@ -7,9 +7,9 @@ class DashBoard(Monitoring):
 	def __init__(self, config, module):
 		Monitoring.__init__(self, config, module)
 		(taskName, jobName, jobType) = module.getDescription(None) # TODO: use the other variables for monitoring
-		self.app = config.get('dashboard', 'application', 'shellscript', volatile=True)
-		self.tasktype = config.get('dashboard', 'task', jobType, volatile=True)
-		self.taskname = config.get('dashboard', 'task name', '@TASK_ID@_@NICK@', volatile=True, noVar=False)
+		self.app = config.get('dashboard', 'application', 'shellscript', mutable=True)
+		self.tasktype = config.get('dashboard', 'task', jobType, mutable=True)
+		self.taskname = config.get('dashboard', 'task name', '@TASK_ID@_@NICK@', mutable=True, noVar=False)
 
 
 	def getScript(self):
@@ -26,10 +26,9 @@ class DashBoard(Monitoring):
 
 
 	def publish(self, jobObj, jobNum, taskId, usermsg):
-		dashId = '%s_%s' % (jobNum, jobObj.wmsId)
-		rawId = jobObj.wmsId
-		if "WMSID." in jobObj.wmsId:
-			(header, backend, rawId) = utils.optSplit(jobObj.wmsId, '..')
+		(header, backend, rawId) = utils.optSplit(jobObj.wmsId, '..')
+		dashId = '%s_%s' % (jobNum, rawId)
+		if "http" not in jobObj.wmsId:
 			dashId = '%s_https://%s:/%s' % (jobNum, backend, rawId)
 		msg = utils.mergeDicts([{'taskId': taskId, 'jobId': dashId, 'sid': rawId}] + usermsg)
 		DashboardAPI(taskId, dashId).publish(**utils.filterDict(msg, vF = lambda v: v != None))
@@ -38,12 +37,13 @@ class DashBoard(Monitoring):
 	# Called on job submission
 	def onJobSubmit(self, wms, jobObj, jobNum):
 		taskId = self.module.substVars(self.taskname, jobNum).strip('_')
+		proxy = wms.getProxy(jobObj.wmsId)
 		utils.gcStartThread("Notifying dashboard about job submission %d" % jobNum,
 			self.publish, jobObj, jobNum, taskId, [{
-			'user': os.environ['LOGNAME'], 'GridName': wms.proxy.getUsername(),
+			'user': os.environ['LOGNAME'], 'GridName': proxy.getUsername(),
 			'tool': 'grid-control', 'JSToolVersion': utils.getVersion(),
 			'application': self.app, 'exe': 'shellscript', 'taskType': self.tasktype,
-			'scheduler': 'gLite', 'vo': wms.proxy.getVO()}, self.module.getSubmitInfo(jobNum)])
+			'scheduler': 'gLite', 'vo': proxy.getGroup()}, self.module.getSubmitInfo(jobNum)])
 
 
 	# Called on job status update

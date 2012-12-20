@@ -3,6 +3,16 @@ from gcSupport import *
 from grid_control.datasets import DataSplitter, DataProvider
 
 parser = optparse.OptionParser()
+
+ogBackend = optparse.OptionGroup(parser, 'Backend debugging', '')
+ogBackend.add_option('', '--backend',     dest='backend',     default=None,
+	help='Specify backend')
+ogBackend.add_option('', '--list-nodes',  dest='list_nodes',  default=False, action='store_true',
+	help='List backend nodes')
+ogBackend.add_option('', '--list-queues', dest='list_queues', default=False, action='store_true',
+	help='List backend queues')
+parser.add_option_group(ogBackend)
+
 parser.add_option("-j", "--jdl", dest="jdl", default=False, action="store_true",
 	help="Get JDL file")
 parser.add_option("-s", "--state", dest="state", default="",
@@ -122,3 +132,13 @@ if opts.decode:
 		if line.startswith('(B64) '):
 			line = gzip.GzipFile(fileobj = StringIO.StringIO(base64.b64decode(line.replace('(B64) ', '')))).read()
 		print line.rstrip()
+
+if opts.list_nodes or opts.list_queues:
+	config = Config()
+	config.opts = config
+	config.opts.init = True
+	wms = grid_control.WMS.open(opts.backend, config, opts.backend)
+	if opts.list_nodes:
+		print wms.getNodes()
+	if opts.list_queues:
+		print wms.getQueues()

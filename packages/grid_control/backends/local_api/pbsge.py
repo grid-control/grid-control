@@ -1,17 +1,18 @@
 import sys, os
 from grid_control import ConfigError, RethrowError, Job, utils
-from grid_control.backends.wms import WMS
-from api import LocalWMSApi
+from grid_control.backends import WMS, LocalWMS
 
-class PBSGECommon(LocalWMSApi):
-	def __init__(self, config):
-		LocalWMSApi.__init__(self, config)
-		self.submitExec = utils.resolveInstallPath('qsub')
-		self.statusExec = utils.resolveInstallPath('qstat')
-		self.cancelExec = utils.resolveInstallPath('qdel')
-		self.group = config.get('local', 'group', '', volatile=True)
-		self.shell = config.get('local', 'shell', '', volatile=True)
-		self.delay = config.getBool('local', 'delay output', False, volatile=True)
+class PBSGECommon(LocalWMS):
+	def __init__(self, config, wmsName = None):
+		LocalWMS.__init__(self, config, wmsName,
+			submitExec = utils.resolveInstallPath('qsub'),
+			statusExec = utils.resolveInstallPath('qstat'),
+			cancelExec = utils.resolveInstallPath('qdel'))
+		section = self._getSections('backend')
+		self.group = config.get(section, 'group', '', mutable=True)
+		self.shell = config.get(section, 'shell', '', mutable=True)
+		self.delay = config.getBool(section, 'delay output', False, mutable=True)
+		self.addAttr = config.getDict(section, 'submit options', {}, mutable=True) # TODO
 
 
 	def unknownID(self):
@@ -22,7 +23,7 @@ class PBSGECommon(LocalWMSApi):
 		return ''
 
 
-	def getSubmitArguments(self, jobNum, jobName, reqs, sandbox, stdout, stderr, addAttr, reqMap):
+	def getSubmitArguments(self, jobNum, jobName, reqs, sandbox, stdout, stderr, reqMap):
 		# Job name
 		params = ' -N "%s"' % jobName
 		# Job shell
@@ -41,4 +42,4 @@ class PBSGECommon(LocalWMSApi):
 			params += ' -v GC_DELAY_OUTPUT="%s" -v GC_DELAY_ERROR="%s" -o /dev/null -e /dev/null' % (stdout, stderr)
 		else:
 			params += ' -o "%s" -e "%s"' % (stdout, stderr)
-		return params + str.join('', map(lambda kv: ' -l %s=%s' % kv, addAttr.items()))
+		return params + str.join('', map(lambda kv: ' -l %s=%s' % kv, self.addAttr[0].items()))

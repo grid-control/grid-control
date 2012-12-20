@@ -1,5 +1,5 @@
 from python_compat import *
-import sys, os, StringIO, tarfile, time, fnmatch, re, popen2, threading, operator
+import sys, os, stat, StringIO, tarfile, time, fnmatch, re, popen2, threading, operator, Queue
 from exceptions import *
 
 def QM(cond, a, b):
@@ -37,6 +37,24 @@ def gcStartThread(desc, fun, *args, **kargs):
 	thread.setDaemon(True)
 	thread.start()
 	return thread
+
+
+def getThreadedGenerator(genList): # Combines multiple, threaded generators into single generator
+	(listThread, queue) = ([], Queue.Queue())
+	for (desc, gen) in genList:
+		def genThread():
+			try:
+				for item in gen:
+					queue.put(item)
+			finally:
+				queue.put(queue) # Use queue as end-of-generator marker
+		listThread.append(gcStartThread(desc, genThread))
+	while len(listThread):
+		tmp = queue.get(True)
+		if tmp == queue:
+			listThread.pop()
+		else:
+			yield tmp
 
 
 class LoggedProcess(object):
@@ -81,10 +99,12 @@ class LoggedProcess(object):
 		self.stderr.extend(self.proc.childerr.readlines())
 		return (self.wait(), self.stdout, self.stderr)
 
-	def logError(self, target, **kwargs): # Can also log content of additional files via kwargs
+	def logError(self, target, brief=False, **kwargs): # Can also log content of additional files via kwargs
 		now = time.time()
 		entry = '%s.%s' % (time.strftime('%Y-%m-%d_%H:%M:%S', time.localtime(now)), ('%.5f' % (now - int(now)))[2:])
-		eprint('WARNING: %s failed with code %d\n%s' % (os.path.basename(self.cmd), self.wait(), self.getError()))
+		eprint('WARNING: %s failed with code %d' % (os.path.basename(self.cmd), self.wait()), printTime=True)
+		if not brief:
+			eprint('\n%s' % self.getError(), printTime=True)
 
 		tar = tarfile.TarFile.open(target, 'a')
 		data = {'retCode': self.wait(), 'exec': self.cmd, 'args': self.args}
@@ -214,7 +234,7 @@ class VirtualFile(StringIO.StringIO):
 ################################################################
 # String manipulation
 
-def optSplit(opt, delim):
+def optSplit(opt, delim, empty = ''):
 	""" Split option strings into fixed tuples
 	>>> optSplit('abc : ghi # def', ['#', ':'])
 	('abc', 'def', 'ghi')
@@ -233,7 +253,8 @@ def optSplit(opt, delim):
 			return [str.join(prefix, tmp)] + oldResult[1:] + [new[:otherDelim]]
 		except:
 			return oldResult + ['']
-	return tuple(map(str.strip, reduce(getDelimeterPart, delim, [opt])))
+	result = map(str.strip, reduce(getDelimeterPart, delim, [opt]))
+	return tuple(map(lambda x: QM(x == '', empty, x), result))
 
 
 def parseInt(value, default = None):
@@ -252,19 +273,22 @@ def parseType(value):
 		return value
 
 
-def parseDict(entries, parser = lambda x: x):
-	(result, order) = ({}, [])
-	for entry in entries.split('\n'):
+def parseDict(entries, parserValue = lambda x: x, parserKey = lambda x: x):
+	(result, resultParsed, order) = ({}, {}, [])
+	key = None
+	for entry in entries.splitlines():
 		if '=>' in entry:
-			key, value = map(str.strip, entry.split('=>', 1))
-		elif entry:
-			key, value = (None, entry)
-		else:
-			continue
-		result[key] = parser(value.strip())
-		if key and (key not in order):
-			order.append(key)
-	return (result, order)
+			key, entry = map(str.strip, entry.split('=>', 1))
+			if key and (key not in order):
+				order.append(key)
+		result.setdefault(key, []).append(entry.strip())
+	def parserKeyInt(key):
+		if key:
+			return parserKey(key)
+	for key, value in result.items():
+		value = parserValue(str.join('\n', value).strip())
+		resultParsed[parserKeyInt(key)] = value
+	return (resultParsed, map(parserKeyInt, order))
 
 
 def parseBool(x):
@@ -280,6 +304,13 @@ def parseList(value, delimeter = ',', doFilter = lambda x: x not in ['', '\n'], 
 	return onEmpty
 
 
+def parseTuple(t, delimeter):
+	t = t.strip()
+	if t.startswith('('):
+		return tuple(map(str.strip, t[1:-1].split(delimeter)))
+	return (t,)
+
+
 def parseTime(usertime):
 	if usertime == None or usertime == '':
 		return -1
@@ -293,7 +324,7 @@ def parseTime(usertime):
 
 def strTime(secs, fmt = '%dh %0.2dmin %0.2dsec'):
 	return QM(secs >= 0, fmt % (secs / 60 / 60, (secs / 60) % 60, secs % 60), '')
-
+strTimeShort = lambda secs: strTime(secs, '%d:%0.2d:%0.2d')
 
 strGuid = lambda guid: '%s-%s-%s-%s-%s' % (guid[:8], guid[8:12], guid[12:16], guid[16:20], guid[20:])
 
@@ -301,30 +332,39 @@ strGuid = lambda guid: '%s-%s-%s-%s-%s' % (guid[:8], guid[8:12], guid[12:16], gu
 
 listMapReduce = lambda fun, lst, start = []: reduce(operator.add, map(fun, lst), start)
 
+def uniqueListRL(inList): # (right to left)
+	inList.reverse() # Duplicated items are removed from the left [a,b,a] -> [b,a]
+	tmpSet, result = (set(), [])
+	for x in inList:
+		if x not in tmpSet:
+			result.append(x)
+			tmpSet.add(x)
+	result.reverse()
+	return result
+
+
 def checkVar(value, message, check = True):
 	if check and max(map(lambda x: max(x.count('@'), x.count('__')), str(value).split('\n'))) >= 2:
 		raise ConfigError(message)
 	return value
 
 
-def accumulate(iterable, doEmit = lambda x, buf: x == '\n', start = '', opAdd = operator.add, addCause = True):
-	buffer = start
+def accumulate(iterable, empty, doEmit, doAdd = lambda item, buffer: True, opAdd = operator.add):
+	buffer = empty
 	for item in iterable:
+		if doAdd(item, buffer):
+			buffer = opAdd(buffer, item)
 		if doEmit(item, buffer):
-			if addCause:
-				buffer = opAdd(buffer, item)
-			yield buffer
-			buffer = start
-			if addCause:
-				continue
-		buffer = opAdd(buffer, item)
-	if buffer != start:
+			if buffer != empty:
+				yield buffer
+			buffer = empty
+	if buffer != empty:
 		yield buffer
 
 
 def wrapList(value, length, delimLines = ',\n', delimEntries = ', '):
-	counter = lambda item, buffer: len(item) + sum(map(len, buffer)) >= length
-	wrapped = accumulate(value, counter, [], lambda x, y: x + [y], False)
+	counter = lambda item, buffer: len(item) + sum(map(len, buffer)) + 2*len(buffer) > length
+	wrapped = accumulate(value, [], counter, opAdd = lambda x, y: x + [y])
 	return str.join(delimLines, map(lambda x: str.join(delimEntries, x), wrapped))
 
 
@@ -364,6 +404,29 @@ def DiffLists(oldList, newList, cmpFkt, changedFkt):
 		listMissing.append(old)
 		old = next(oldIter, None)
 	return (listAdded, listMissing, listChanged)
+
+
+def rawOrderedBlackWhiteList(value, bwfilter, matcher):
+	bwList = map(lambda x: (x, x.startswith('-'), QM(x.startswith('-'), x[1:], x)), bwfilter)
+	matchDict = {} # Map for temporary storage of ordered matches - False,True,None are special keys
+	for item in value:
+		matchExprLast = None
+		for (matchOrig, matchBlack, matchExpr) in bwList:
+			if matcher(item, matchExpr):
+				matchExprLast = matchOrig
+		matchDict.setdefault(matchExprLast, []).append(item)
+	for (matchOrig, matchBlack, matchExpr) in bwList:
+		matchDict.setdefault(matchBlack, []).extend(matchDict.get(matchOrig, []))
+	return (matchDict.get(False), matchDict.get(True), matchDict.get(None)) # white, black, unmatched
+
+
+def filterBlackWhite(value, bwfilter, matcher = str.startswith, addUnmatched = False):
+	if (value == None) or (bwfilter == None):
+		return None
+	(white, black, unmatched) = rawOrderedBlackWhiteList(value, bwfilter, matcher)
+	if white != None:
+		return white + QM(unmatched and addUnmatched, unmatched, [])
+	return QM(unmatched and bwfilter, unmatched, [])
 
 
 def splitBlackWhiteList(bwfilter):
@@ -462,21 +525,48 @@ def matchFileName(fn, patList):
 	return match
 
 
-def genTarball(outFile, dirName, pattern):
+def matchFiles(pathRoot, pattern, pathRel = ''):
+	# Return (root, fn, state) - state: None == dir, True/False = (un)checked file, other = filehandle
+	yield (pathRoot, pathRel, None)
+	for name in map(lambda x: os.path.join(pathRel, x), os.listdir(os.path.join(pathRoot, pathRel))):
+		match = matchFileName(name, pattern)
+		pathAbs = os.path.join(pathRoot, name)
+		if match == False:
+			continue
+		elif os.path.islink(pathAbs): # Not excluded symlinks
+			yield (pathAbs, name, True)
+		elif os.path.isdir(pathAbs): # Recurse into directories
+			if match == True: # (backwards compat: add parent directory - not needed?)
+				yield (pathAbs, name, True)
+			for result in matchFiles(pathRoot, QM(match == True, ['*'], pattern), name):
+				yield result
+		elif match == True: # Add matches
+			yield (pathAbs, name, True)
+
+
+def genTarball(outFile, fileList):
 	tar = tarfile.open(outFile, 'w:gz')
-	def walk(tar, root, dir):
-		msg = QM(len(dir) > 50, dir[:15] + '...' + dir[len(dir)-32:], dir)
-		activity = ActivityLog('Generating tarball: %s' % msg)
-		for name in map(lambda x: os.path.join(dir, x), os.listdir(os.path.join(root, dir))):
-			match = matchFileName(name, pattern)
-			if match:
-				tar.add(os.path.join(root, name), name)
-			elif (match != False) and os.path.isdir(os.path.join(root, name)):
-				walk(tar, root, name)
-			elif (match != False) and os.path.islink(os.path.join(root, name)):
-				tar.add(os.path.join(root, name), name)
-		del activity
-	walk(tar, dirName, '')
+	activity = None
+	for (pathAbs, pathRel, pathStatus) in fileList:
+		if pathStatus == True: # Existing file
+			tar.add(pathAbs, pathRel, recursive = False)
+		elif pathStatus == False: # Existing file
+			if not os.path.exists(pathAbs):
+				raise UserError('File %s does not exist!' % pathRel)
+			tar.add(pathAbs, pathRel, recursive = False)
+		elif pathStatus == None: # Directory
+			del activity
+			msg = QM(len(pathRel) > 50, pathRel[:15] + '...' + pathRel[len(pathRel)-32:], pathRel)
+			activity = ActivityLog('Generating tarball: %s' % msg)
+		else: # File handle
+			info, handle = pathStatus.getTarInfo()
+			info.mtime = time.time()
+			info.mode = stat.S_IRUSR + stat.S_IWUSR + stat.S_IRGRP + stat.S_IROTH
+			if info.name.endswith('.sh') or info.name.endswith('.py'):
+				info.mode += stat.S_IXUSR + stat.S_IXGRP + stat.S_IXOTH
+			tar.addfile(info, handle)
+			handle.close()
+	del activity
 	tar.close()
 
 
@@ -489,7 +579,7 @@ class AbstractObject:
 		if not hasattr(cls, 'moduleMap'):
 			(cls.moduleMap, cls.modPaths) = ({}, [])
 		splitUpFun = lambda x: rsplit(cls.__module__, ".", x)[0]
-		cls.modPaths = path + cls.modPaths + map(splitUpFun, range(cls.__module__.count(".") + 1))
+		cls.modPaths = uniqueListRL(path + cls.modPaths + map(splitUpFun, range(cls.__module__.count(".") + 1)))
 	dynamicLoaderPath = classmethod(dynamicLoaderPath)
 
 	def getClass(cls, name):
@@ -521,7 +611,14 @@ class AbstractObject:
 	getClass = classmethod(getClass)
 
 	def open(cls, name, *args, **kwargs):
-		return cls.getClass(name)(*args, **kwargs)
+		clsType = None
+		try:
+			clsType = cls.getClass(name)
+			return clsType(*args, **kwargs)
+		except GCError:
+			raise
+		except:
+			raise RethrowError('Error while creating instance of type %s (%s)' % (name, clsType))
 	open = classmethod(open)
 
 AbstractObject.pkgPaths = []
@@ -659,7 +756,8 @@ def printTabular(head, data, fmtString = '', fmt = {}, level = -1):
 		unused = list(keys)
 		while len(unused) != 0:
 			for key in list(getFitting(unused)): # list(...) => get fitting keys at once!
-				unused.remove(key)
+				if key in unused:
+					unused.remove(key)
 				yield key
 			yield None
 
@@ -681,7 +779,7 @@ def printTabular(head, data, fmtString = '', fmt = {}, level = -1):
 
 	# Wrap and align columns
 	headwrap = list(getGoodPartition(map(lambda (key, name): key, head),
-		dict(map(lambda (k,v): (k, v + 2), lendict.items())), printTabular.wraplen))
+		dict(map(lambda (k, v): (k, v + 2), lendict.items())), printTabular.wraplen))
 	lendict = getAlignedDict(headwrap, lendict, printTabular.wraplen)
 
 	headentry = dict(map(lambda (id, name): (id, name.center(lendict[id])), head))
@@ -744,6 +842,24 @@ def exitWithUsage(usage, msg = None, helpOpt = True):
 	sys.stderr.write(QM(msg, '%s\n' % msg, ''))
 	sys.stderr.write('Syntax: %s\n%s' % (usage, QM(helpOpt, 'Use --help to get a list of options!\n', '')))
 	sys.exit(0)
+
+
+def findTuples(value):
+	(buffer, counter, doEmit) = ('', 0, lambda: buffer.strip() and counter == 0)
+	for s in value:
+		if s == '(':
+			if doEmit():
+				yield buffer
+				buffer = ''
+			counter += 1
+		buffer += s
+		if s == ')':
+			counter -= 1
+			if doEmit():
+				yield buffer
+				buffer = ''
+	if doEmit():
+		yield buffer
 
 
 if __name__ == '__main__':

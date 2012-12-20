@@ -1,4 +1,4 @@
-import os, utils
+import os, utils, shutil
 from grid_control import *
 from python_compat import *
 
@@ -40,6 +40,18 @@ class StorageManager(AbstractObject):
 
 StorageManager.dynamicLoaderPath()
 
+class LocalSBStorageManager(StorageManager):
+	def __init__(self, config, section, optDefault, optPrefix, varPrefix):
+		StorageManager.__init__(self, config, section, optDefault, optPrefix, varPrefix)
+		self.sbPath = config.getPath(section, '%s path' % optDefault, os.path.join(config.workDir, 'sandbox'), check=False)
+
+	def doTransfer(self, listDescSourceTarget):
+		for (desc, source, target) in listDescSourceTarget:
+			try:
+				shutil.copy(source, os.path.join(self.sbPath, target))
+			except:
+				raise RethrowError('Unable to transfer "%s" to "%s"!' % (source, os.path.join(self.sbPath, target)))
+			
 
 class SEStorageManager(StorageManager):
 	def __init__(self, config, section, optDefault, optPrefix, varPrefix):
@@ -49,7 +61,7 @@ class SEStorageManager(StorageManager):
 		self.smPaths = normSEPaths(config.getList(section, '%s path' % optPrefix, self.defPaths, noVar=True))
 		self.smFiles = config.getList(section, '%s files' % optPrefix, [], noVar=False)
 		self.smPattern = config.get(section, '%s pattern' % optPrefix, '@X@', noVar=False)
-		self.smTimeout = utils.parseTime(config.get(section, '%s timeout' % optPrefix, '2:00'))
+		self.smTimeout = config.getTime(section, '%s timeout' % optPrefix, 2*60*60)
 		self.smForce = config.getBool(section, '%s force' % optPrefix, True)
 
 	def addFiles(self, files):

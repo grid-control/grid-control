@@ -1,6 +1,7 @@
 import os, random
 from python_compat import *
 from grid_control import ConfigError, AbstractError, AbstractObject, QM, utils, WMS, Job
+from grid_control.parameters import ParameterFactory, ParameterInfo
 from time import time, localtime, strftime
 
 class Module(AbstractObject):
@@ -8,34 +9,16 @@ class Module(AbstractObject):
 	def __init__(self, config):
 		self.config = config
 
-		wallTime = config.get('jobs', 'wall time', volatile=True)
-		self.wallTime = utils.parseTime(wallTime)
-		self.cpuTime = utils.parseTime(config.get('jobs', 'cpu time', wallTime, volatile=True))
-		self.nodeTimeout = utils.parseTime(config.get('jobs', 'node timeout', ''))
+		self.wallTime = config.getTime('jobs', 'wall time', mutable=True)
+		self.cpuTime = config.getTime('jobs', 'cpu time', self.wallTime, mutable=True)
+		self.nodeTimeout = config.getTime('jobs', 'node timeout', -1)
 
-		self.cpus = config.getInt('jobs', 'cpus', 1, volatile=True)
-		self.memory = config.getInt('jobs', 'memory', -1, volatile=True)
-
-		# Try to read task info file
-		taskInfo = utils.PersistentDict(os.path.join(config.workDir, 'task.dat'), ' = ')
+		self.cpus = config.getInt('jobs', 'cpus', 1, mutable=True)
+		self.memory = config.getInt('jobs', 'memory', -1, mutable=True)
 
 		# Compute / get task ID
-		self.taskID = taskInfo.get('task id', 'GC' + md5(str(time())).hexdigest()[:12])
+		self.taskID = config.getTaskDict().get('task id', 'GC' + md5(str(time())).hexdigest()[:12])
 		utils.vprint('Current task ID: %s' % self.taskID, -1, once = True)
-
-		# Set random seeds (args override config, explicit seeds override generation via nseeds)
-		self.seeds = map(int, config.getList('jobs', 'seeds', []))
-		self.nseeds = config.getInt('jobs', 'nseeds', 10)
-		if len(self.seeds) == 0:
-			# args specified => gen seeds
-			if 'seeds' in taskInfo:
-				self.seeds = map(int, str(taskInfo['seeds']).split())
-			else:
-				self.seeds = map(lambda x: random.randint(0, 10000000), range(self.nseeds))
-			utils.vprint('Creating random seeds... %s' % self.seeds, -1, once = True)
-
-		# Write task info file
-		taskInfo.write({'task id': self.taskID, 'seeds': str.join(' ', map(str, self.seeds))})
 
 		self.taskVariables = {
 			# Space limits
@@ -52,17 +35,22 @@ class Module(AbstractObject):
 		self.sbOutputFiles = config.getList(self.__class__.__name__, 'output files', [])
 		self.gzipOut = config.getBool(self.__class__.__name__, 'gzip output', True)
 
-		# Define constants for job
-		self.constants = dict(map(lambda var: (var.upper(), config.get('constants', var, '').strip()),
-			config.getOptions('constants')))
-		for var in map(str.strip, config.getList(self.__class__.__name__, 'constants', [])):
-			self.constants[var] = config.get(self.__class__.__name__, var, '').strip()
 		self.substFiles = config.getList(self.__class__.__name__, 'subst files', [])
-
 		self.dependencies = map(str.lower, config.getList(self.__class__.__name__, 'depends', []))
 
 		# Get error messages from gc-run.lib comments
 		self.errorDict = dict(self.updateErrorDict(utils.pathShare('gc-run.lib')))
+
+		# Init plugin manager / parameter source
+		pmName = config.get(self.__class__.__name__, 'parameter manager', 'EasyParameterFactory')
+		self.pm = ParameterFactory.open(pmName, config, [self.__class__.__name__, 'parameters'])
+		self.source = None
+
+
+	def getSource(self):
+		if not self.source:
+			self.source = self.pm.getSource(self.config.opts.init, self.config.opts.resync)
+		return self.source
 
 
 	# Read comments with error codes at the beginning of file
@@ -87,21 +75,20 @@ class Module(AbstractObject):
 			'DOBREAK': self.nodeTimeout,
 			'MY_RUNTIME': self.getCommand(),
 			# Seeds and substitutions
-			'SEEDS': str.join(' ', map(str, self.seeds)),
 			'SUBST_FILES': str.join(' ', map(os.path.basename, self.getSubstFiles())),
 			# Task infos
 			'TASK_ID': self.taskID,
 			'GC_CONF': self.config.confName,
 			'GC_VERSION': utils.getVersion(),
 		}
-		return utils.mergeDicts([taskConfig, self.taskVariables, self.constants])
+		return utils.mergeDicts([taskConfig, self.taskVariables])
 	getTaskConfig = lru_cache(getTaskConfig)
 
 
 	# Get job dependent environment variables
 	def getJobConfig(self, jobNum):
-		tmp = map(lambda (x, seed): ('SEED_%d' % x, seed + jobNum), enumerate(self.seeds))
-		return dict([('MY_JOBID', jobNum), ('JOB_RANDOM', random.randint(1e6, 1e7-1))] + tmp)
+		tmp = self.getSource().getJobInfo(jobNum)
+		return dict(map(lambda key: (key, tmp.get(key, '')), self.getSource().getJobKeys()))
 
 
 	def getTransientVars(self):
@@ -113,9 +100,9 @@ class Module(AbstractObject):
 
 	def getVarMapping(self):
 		# Take task variables and just the variables from the first job
-		envvars = self.getTaskConfig().keys() + self.getJobConfig(0).keys()
+		envvars = self.getTaskConfig().keys() + list(self.getSource().getJobKeys())
 		# Map vars: Eg. __MY_JOB__ will access $MY_JOBID
-		mapping = [('DATE', 'MYDATE'), ('TIMESTAMP', 'MYTIMESTAMP'),
+		mapping = [('DATE', 'MYDATE'), ('TIMESTAMP', 'MYTIMESTAMP'), ('MY_JOBID', 'MY_JOBID'),
 			('MY_JOB', 'MY_JOBID'), ('CONF', 'GC_CONF'), ('GUID', 'MYGUID')]
 		return dict(mapping + zip(envvars, envvars))
 
@@ -141,7 +128,7 @@ class Module(AbstractObject):
 			(WMS.CPUTIME, self.cpuTime),
 			(WMS.MEMORY, self.memory),
 			(WMS.CPUS, self.cpus)
-		]
+		] + self.getSource().getJobInfo(jobNum)[ParameterInfo.REQS]
 
 
 	def getSEInFiles(self):
@@ -172,7 +159,7 @@ class Module(AbstractObject):
 
 
 	def getMaxJobs(self):
-		return None
+		return self.getSource().getMaxJobs()
 
 
 	def getDependencies(self):
@@ -184,6 +171,10 @@ class Module(AbstractObject):
 
 
 	def report(self, jobNum):
+#		info = self.getSource().getJobInfo(jobNum)
+#		tmp = dict(map(lambda key: (key, info[key]), self.getSource().getParameterNamesSet()))
+#		info = self.getSource().getJobInfo(jobNum)
+#		tmp = map(lambda k: info[k], self.
 		return {' ': 'All jobs'}
 
 
@@ -192,7 +183,7 @@ class Module(AbstractObject):
 
 
 	def canSubmit(self, jobNum):
-		return True
+		return self.getSource().getJobInfo(jobNum)[ParameterInfo.ACTIVE]
 
 
 	# Called on job submission
@@ -202,6 +193,6 @@ class Module(AbstractObject):
 
 	# Intervene in job management - return None or (redoJobs, disableJobs)
 	def getIntervention(self):
-		return None
+		return self.getSource().getJobIntervention()
 
 Module.dynamicLoaderPath(['grid_control.modules'])

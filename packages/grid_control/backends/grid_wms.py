@@ -1,7 +1,7 @@
 from python_compat import *
 import os, time, copy, tempfile, tarfile
-from grid_control import ConfigError, APIError, RethrowError, Job, utils
-from wms import WMS
+from grid_control import QM, ConfigError, APIError, RethrowError, Job, utils
+from wms import WMS, BasicWMS
 
 try:
 	from email.utils import parsedate
@@ -13,7 +13,7 @@ def jdlEscape(value):
 	return '"' + str.join('', map(lambda char: repl.get(char, char), value)) + '"'
 
 
-class GridWMS(WMS):
+class GridWMS(BasicWMS):
 	_statusMap = {
 		'ready':     Job.READY,
 		'submitted': Job.SUBMITTED,
@@ -29,15 +29,20 @@ class GridWMS(WMS):
 	}
 
 
-	def __init__(self, config, module, monitor, section):
+	def __init__(self, config, wmsName):
 		config.set('grid', 'proxy', 'VomsProxy', override = False)
-		WMS.__init__(self, config, module, monitor, 'grid', None)
-		self._sites = config.get('grid', 'sites', '', volatile=True).split()
-		self.vo = config.get('grid', 'vo', self.proxy.getVO())
+		BasicWMS.__init__(self, config, wmsName, 'grid')
+
+		self.brokerSite = self._createBroker('site broker', 'UserBroker', 'sites', 'sites', self.getSites)
+		self.vo = config.get(self._getSections('backend'), 'vo', self.proxy.getGroup())
 
 		self._submitParams = {}
-		self._ce = config.get(section, 'ce', '', volatile=True)
-		self._configVO = config.getPath(section, 'config', '', volatile=True)
+		self._ce = config.get(self._getSections('backend'), 'ce', '', mutable=True)
+		self._configVO = config.getPath(self._getSections('backend'), 'config', '', mutable=True)
+
+
+	def getSites(self):
+		return None
 
 
 	def storageReq(self, sites):
@@ -48,7 +53,7 @@ class GridWMS(WMS):
 
 	def sitesReq(self, sites):
 		fmt = lambda x: 'RegExp(%s, other.GlueCEUniqueID)' % jdlEscape(x)
-		(blacklist, whitelist) = utils.splitBlackWhiteList(sites[1])
+		(blacklist, whitelist) = utils.splitBlackWhiteList(sites)
 		sitereqs = map(lambda x: '!' + fmt(x), blacklist)
 		if len(whitelist):
 			sitereqs.append('(%s)' % str.join(' || ', map(fmt, whitelist)))
@@ -81,24 +86,26 @@ class GridWMS(WMS):
 		return str.join(' && ', filter(lambda x: x != None, result))
 
 
-	def makeJDL(self, jobNum):
+	def makeJDL(self, jobNum, module):
 		cfgPath = os.path.join(self.config.workDir, 'jobs', 'job_%d.var' % jobNum)
-		wcList = filter(lambda x: '*' in x, self.sandboxOut)
+		sbIn = map(lambda (d, s, t): s, self._getSandboxFilesIn(module))
+		sbOut = map(lambda (d, s, t): t, self._getSandboxFilesOut(module))
+		wcList = filter(lambda x: '*' in x, sbOut)
 		if len(wcList):
-			self.writeJobConfig(jobNum, cfgPath, {'GC_WC': str.join(' ', wcList)})
-			sandboxOutJDL = filter(lambda x: x not in wcList, self.sandboxOut) + ['GC_WC.tar.gz']
+			self._writeJobConfig(cfgPath, jobNum, module, {'GC_WC': str.join(' ', wcList)})
+			sandboxOutJDL = filter(lambda x: x not in wcList, sbOut) + ['GC_WC.tar.gz']
 		else:
-			self.writeJobConfig(jobNum, cfgPath)
-			sandboxOutJDL = self.sandboxOut
+			self._writeJobConfig(cfgPath, jobNum, module)
+			sandboxOutJDL = sbOut
 
-		reqs = self.broker.brokerSites(self.module.getRequirements(jobNum))
-		formatStrList = lambda strList: '{ ' + str.join(', ', map(lambda x: '"%s"' % x, strList)) + ' }'
+		reqs = self.brokerSite.brokerAdd(module.getRequirements(jobNum), WMS.SITES)
+		formatStrList = lambda strList: '{ %s }' % str.join(', ', map(lambda x: '"%s"' % x, strList))
 		contents = {
 			'Executable': '"gc-run.sh"',
 			'Arguments': '"%d"' % jobNum,
 			'StdOutput': '"gc.stdout"',
 			'StdError': '"gc.stderr"',
-			'InputSandbox': formatStrList(self.sandboxIn + [cfgPath]),
+			'InputSandbox': formatStrList(sbIn + [cfgPath]),
 			'OutputSandbox': formatStrList(sandboxOutJDL),
 			'Requirements': self._formatRequirements(reqs),
 			'VirtualOrganisation': '"%s"' % self.vo,
@@ -114,7 +121,7 @@ class GridWMS(WMS):
 	def writeWMSIds(self, ids):
 		try:
 			fd, jobs = tempfile.mkstemp('.jobids')
-			utils.safeWrite(os.fdopen(fd, 'w'), str.join('\n', map(lambda (wmsId, jobNum): str(wmsId), ids)))
+			utils.safeWrite(os.fdopen(fd, 'w'), str.join('\n', self._getRawIDs(ids)))
 		except:
 			raise RethrowError('Could not write wms ids to %s.' % jobs)
 		return jobs
@@ -183,7 +190,7 @@ class GridWMS(WMS):
 		remap = { 'destination': 'dest', 'status reason': 'reason',
 			'status info for the job': 'id', 'current status': 'status',
 			'submitted': 'timestamp', 'reached': 'timestamp', 'exit code': 'gridexit'  }
-		for section in utils.accumulate(lines, lambda x, buf: ('='*70) in x, opAdd = adder):
+		for section in utils.accumulate(lines, lambda x, buf: ('='*70) in x, '', opAdd = adder):
 			data = utils.DictFormat(':').parse(str.join('', section), keyRemap = remap)
 			data = utils.filterDict(data, vF = lambda v: v)
 			if data:
@@ -208,10 +215,10 @@ class GridWMS(WMS):
 
 
 	# Submit job and yield (jobNum, WMS ID, other data)
-	def submitJob(self, jobNum):
+	def _submitJob(self, jobNum, module):
 		fd, jdl = tempfile.mkstemp('.jdl')
 		try:
-			data = self.makeJDL(jobNum)
+			data = self.makeJDL(jobNum, module)
 			utils.safeWrite(os.fdopen(fd, 'w'), data)
 		except:
 			utils.removeFiles([jdl])
@@ -238,7 +245,7 @@ class GridWMS(WMS):
 					proc.logError(self.errorLog, log = log, jdl = jdl)
 		finally:
 			utils.removeFiles([log, jdl])
-		return (jobNum, wmsId, {'jdl': str.join('', data)})
+		return (jobNum, QM(wmsId, self._createId(wmsId), None), {'jdl': str.join('', data)})
 
 
 	# Check status of jobs and yield (jobNum, wmsID, status, other data)
@@ -253,6 +260,7 @@ class GridWMS(WMS):
 		activity = utils.ActivityLog('checking job status')
 		proc = utils.LoggedProcess(self._statusExec, '--verbosity 1 --noint --logfile "%s" -i "%s"' % (log, jobs))
 		for data in self._parseStatus(proc.iter()):
+			data['id'] = self._createId(data['id'])
 			yield (jobNumMap.get(data['id']), data['id'], self._statusMap[data['status']], data)
 		retCode = proc.wait()
 		del activity
@@ -266,7 +274,7 @@ class GridWMS(WMS):
 
 
 	# Get output of jobs and yield output dirs
-	def getJobsOutput(self, ids):
+	def _getJobsOutput(self, ids):
 		if len(ids) == 0:
 			raise StopIteration
 
@@ -309,7 +317,7 @@ class GridWMS(WMS):
 				yield (currentJobNum, line.strip())
 				currentJobNum = None
 			else:
-				currentJobNum = jobNumMap.get(line, currentJobNum)
+				currentJobNum = jobNumMap.get(self._createId(line), currentJobNum)
 		retCode = proc.wait()
 		del activity
 
@@ -352,8 +360,8 @@ class GridWMS(WMS):
 
 			# select cancelled jobs
 			for deletedWMSId in filter(lambda x: x.startswith('- '), proc.iter()):
-				deletedWMSId = deletedWMSId.strip('- \n')
-				yield (deletedWMSId, jobNumMap.get(deletedWMSId))
+				deletedWMSId = self._createId(deletedWMSId.strip('- \n'))
+				yield (jobNumMap.get(deletedWMSId), deletedWMSId)
 
 			if retCode != 0:
 				if self.explainError(proc, retCode):

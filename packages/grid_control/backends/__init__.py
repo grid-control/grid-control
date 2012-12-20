@@ -1,6 +1,14 @@
 from wms import *
+from wms_factory import WMSFactory
+from local_wms import LocalWMS
 from broker import *
-from local_api import *
-wms.WMS.moduleMap['LocalWMS'] = 'local_wms.LocalWMS'
+from broker_basic import *
+
+wms.WMS.dynamicLoaderPath(['grid_control.backends.local_api'])
+wms.WMS.moduleMap['MultiWMS'] = 'wms_multi.MultiWMS'
+wms.WMS.moduleMap['ThreadedMultiWMS'] = 'wms_thread.ThreadedMultiWMS'
 wms.WMS.moduleMap['GliteWMS'] = 'glite_wms.GliteWMS'
-from local_wms import *
+wms.WMS.moduleMap['localhost'] = 'host.Localhost'
+wms.WMS.moduleMap['Condor'] = 'condor_wms.CondorWMS'
+wms.WMS.moduleMap['JMS'] = 'slurm.JMS'
+wms.WMS.moduleMap['OGE'] = 'sge.OGE'

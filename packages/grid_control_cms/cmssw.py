@@ -1,7 +1,9 @@
 import os, sys, shutil
 from python_compat import *
 from grid_control import QM, ConfigError, WMS, utils, storage, datasets, noDefault
-from grid_control.datasets import DataMod
+from grid_control.modules.datamod import DataMod
+from grid_control.datasets import DataSplitter
+from grid_control.parameters import DataParameterSource
 from lumi_tools import *
 
 class ExecutableWrapper:
@@ -32,6 +34,8 @@ class CMSSW(DataMod):
 		config.set(self.__class__.__name__, 'dataset splitter', 'EventBoundarySplitter', override = False)
 		DataMod.__init__(self, config)
 		self.errorDict.update(dict(self.updateErrorDict(utils.pathShare('gc-run.cmssw.sh', pkg = 'grid_control_cms'))))
+		for dsCfg in DataParameterSource.datasets.values():
+			dsCfg['fun'] = lambda fl: str.join(', ', map(lambda x: '"%s"' % x, fl))
 
 		# SCRAM info
 		scramProject = config.getList(self.__class__.__name__, 'scram project', [])
@@ -47,7 +51,7 @@ class CMSSW(DataMod):
 		# This works in tandem with provider_dbsv2.py !
 		self.selectedLumis = parseLumiFilter(config.get(self.__class__.__name__, 'lumi filter', ''))
 
-		self.useReqs = config.getBool(self.__class__.__name__, 'software requirements', True, volatile = True)
+		self.useReqs = config.getBool(self.__class__.__name__, 'software requirements', True, mutable = True)
 		self.seRuntime = config.getBool(self.__class__.__name__, 'se runtime', False)
 
 		if len(self.projectArea):
@@ -98,8 +102,8 @@ class CMSSW(DataMod):
 			if self.scramEnv.get('RELEASETOP', None):
 				projPath = os.path.normpath('%s/../../../../' % self.scramEnv['RELEASETOP'])
 				self.searchLoc.append(('CMSSW_DIR_PRO', projPath))
-		if len(self.searchLoc) and config.get('global', 'backend', 'grid') != 'grid':
-			utils.vprint('Jobs will try to use the CMSSW software located here:', -1)
+		if len(self.searchLoc):
+			utils.vprint('Local jobs will try to use the CMSSW software located here:', -1)
 			for i, loc in enumerate(self.searchLoc):
 				key, value = loc
 				utils.vprint(' %i) %s' % (i + 1, value), -1)
@@ -128,7 +132,8 @@ class CMSSW(DataMod):
 			os.path.join('packages', 'grid_control_cms', 'share', 'fragmentForCMSSW.py'))
 		if self.dataSplitter != None:
 			if config.opts.init:
-				self.instrumentCfgQueue(self.configFiles, fragment, mustPrepare = True)
+				if len(self.configFiles) > 0:
+					self.instrumentCfgQueue(self.configFiles, fragment, mustPrepare = True)
 		else:
 			self.eventsPerJob = config.get(self.__class__.__name__, 'events per job', 0, noVar = False)
 			if config.opts.init and self.prepare:
@@ -139,7 +144,7 @@ class CMSSW(DataMod):
 				if not utils.getUserBool('Runtime already exists! Do you want to regenerate CMSSW tarball?', True):
 					return
 			# Generate runtime tarball (and move to SE)
-			utils.genTarball(os.path.join(config.workDir, 'runtime.tar.gz'), self.projectArea, self.pattern)
+			utils.genTarball(os.path.join(config.workDir, 'runtime.tar.gz'), utils.matchFiles(self.projectArea, self.pattern))
 
 
 	def instrumentCfgQueue(self, cfgFiles, fragment, mustPrepare = False):
@@ -247,10 +252,6 @@ class CMSSW(DataMod):
 
 	def getJobArguments(self, jobNum):
 		return DataMod.getJobArguments(self, jobNum) + ' ' + self.arguments
-
-
-	def formatFileList(self, filelist):
-		return str.join(', ', map(lambda x: '"%s"' % x, filelist))
 
 
 	def getActiveLumiFilter(self, lumifilter, jobNum = None):

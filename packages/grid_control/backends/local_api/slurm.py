@@ -1,16 +1,15 @@
 import sys, os, shutil
 from grid_control import ConfigError, RethrowError, Job, utils
-from grid_control.backends.wms import WMS
-from api import LocalWMSApi
+from grid_control.backends import WMS, LocalWMS
 
-class JMS(LocalWMSApi):
+class JMS(LocalWMS):
 	_statusMap = { 's': Job.QUEUED, 'r': Job.RUNNING, 'CG': Job.DONE, 'w': Job.WAITING }
 
-	def __init__(self, config):
-		LocalWMSApi.__init__(self, config)
-		self.submitExec = utils.resolveInstallPath('job_submit')
-		self.statusExec = utils.resolveInstallPath('job_queue')
-		self.cancelExec = utils.resolveInstallPath('job_cancel')
+	def __init__(self, config, wmsName = None):
+		LocalWMS.__init__(self, config, wmsName,
+			submitExec = utils.resolveInstallPath('job_submit'),
+			statusExec = utils.resolveInstallPath('job_queue'),
+			cancelExec = utils.resolveInstallPath('job_cancel'))
 
 
 	def unknownID(self):
@@ -21,12 +20,12 @@ class JMS(LocalWMSApi):
 		return repr(sandbox)
 
 
-	def getSubmitArguments(self, jobNum, jobName, reqs, sandbox, stdout, stderr, addAttr):
+	def getSubmitArguments(self, jobNum, jobName, reqs, sandbox, stdout, stderr):
 		# Job name
 		params = ' -J "%s"' % jobName
 		# Job requirements
-		if WMS.SITES in reqs:
-			params += ' -c %s' % reqs[WMS.SITES][0]
+		if WMS.QUEUES in reqs:
+			params += ' -c %s' % reqs[WMS.QUEUES][0]
 		if self.checkReq(reqs, WMS.WALLTIME):
 			params += ' -T %d' % ((reqs[WMS.WALLTIME] + 59) / 60)
 		if self.checkReq(reqs, WMS.CPUTIME):

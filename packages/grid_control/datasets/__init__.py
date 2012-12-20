@@ -8,4 +8,4 @@ from splitter_basic	import *
 from splitter_event	import *
 from splitter_meta	import *
 
-from datamod import *
+from scanner_basic import *

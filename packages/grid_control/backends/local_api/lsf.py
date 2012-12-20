@@ -1,10 +1,9 @@
 import sys, os, itertools
 from python_compat import *
 from grid_control import ConfigError, RethrowError, Job, utils
-from grid_control.backends.wms import WMS
-from api import LocalWMSApi
+from grid_control.backends import WMS, LocalWMS
 
-class LSF(LocalWMSApi):
+class LSF(LocalWMS):
 	_statusMap = {
 		'PEND':  Job.QUEUED,  'PSUSP': Job.WAITING,
 		'USUSP': Job.WAITING, 'SSUSP': Job.WAITING,
@@ -14,11 +13,11 @@ class LSF(LocalWMSApi):
 		'UNKWN': Job.FAILED,  'ZOMBI': Job.FAILED,
 	}
 
-	def __init__(self, config):
-		LocalWMSApi.__init__(self, config)
-		self.submitExec = utils.resolveInstallPath('bsub')
-		self.statusExec = utils.resolveInstallPath('bjobs')
-		self.cancelExec = utils.resolveInstallPath('bkill')
+	def __init__(self, config, wmsName = None):
+		LocalWMS.__init__(self, config, wmsName,
+			submitExec = utils.resolveInstallPath('bsub'),
+			statusExec = utils.resolveInstallPath('bjobs'),
+			cancelExec = utils.resolveInstallPath('bkill'))
 
 
 	def unknownID(self):
@@ -29,12 +28,12 @@ class LSF(LocalWMSApi):
 		return repr(sandbox)
 
 
-	def getSubmitArguments(self, jobNum, jobName, reqs, sandbox, stdout, stderr, addAttr):
+	def getSubmitArguments(self, jobNum, jobName, reqs, sandbox, stdout, stderr):
 		# Job name
 		params = ' -J %s' % jobName
 		# Job requirements
-		if WMS.SITES in reqs:
-			params += ' -q %s' % reqs[WMS.SITES][0]
+		if WMS.QUEUES in reqs:
+			params += ' -q %s' % str.join(',', reqs[WMS.QUEUES])
 		if WMS.WALLTIME in reqs:
 			params += ' -W %d' % ((reqs[WMS.WALLTIME] + 59) / 60)
 		if WMS.CPUTIME in reqs:

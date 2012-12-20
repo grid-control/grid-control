@@ -6,20 +6,20 @@ from python_compat import *
 class JobManager:
 	def __init__(self, config, module, eventhandler):
 		(self.module, self.eventhandler) = (module, eventhandler)
-		self.jobLimit = config.getInt('jobs', 'jobs', -1, volatile=True)
-		selected = JobSelector.create(config.get('jobs', 'selected', '', volatile=True), module = self.module)
+		self.jobLimit = config.getInt('jobs', 'jobs', -1, mutable=True)
+		selected = JobSelector.create(config.get('jobs', 'selected', '', mutable=True), module = self.module)
 		self.jobDB = JobDB(config, self.getMaxJobs(self.module), selected)
 		self.disableLog = os.path.join(config.workDir, 'disabled')
 
-		self.timeout = utils.parseTime(config.get('jobs', 'queue timeout', '', volatile=True))
-		self.inFlight = config.getInt('jobs', 'in flight', -1, volatile=True)
-		self.inQueue = config.getInt('jobs', 'in queue', -1, volatile=True)
-		self.doShuffle = config.getBool('jobs', 'shuffle', False, volatile=True)
-		self.maxRetry = config.getInt('jobs', 'max retry', -1, volatile=True)
-		self.continuous = config.getBool('jobs', 'continuous', False, volatile=True)
+		self.timeout = config.getTime('jobs', 'queue timeout', -1, mutable=True)
+		self.inFlight = config.getInt('jobs', 'in flight', -1, mutable=True)
+		self.inQueue = config.getInt('jobs', 'in queue', -1, mutable=True)
+		self.doShuffle = config.getBool('jobs', 'shuffle', False, mutable=True)
+		self.maxRetry = config.getInt('jobs', 'max retry', -1, mutable=True)
+		self.continuous = config.getBool('jobs', 'continuous', False, mutable=True)
 
 		# Job offender heuristic (not persistent!) - remove jobs, which do not report their status
-		self.kickOffender = config.getInt('jobs', 'kick offender', 10, volatile=True)
+		self.kickOffender = config.getInt('jobs', 'kick offender', 10, mutable=True)
 		(self.offender, self.raster) = ({}, 0)
 
 
@@ -53,7 +53,7 @@ class JobManager:
 			utils.vprint('Please refer to %s for a complete list.' % self.disableLog, -1, True)
 
 
-	def _update(self, jobObj, jobNum, state):
+	def _update(self, jobObj, jobNum, state, showWMS = False):
 		if jobObj.state == state:
 			return
 
@@ -63,8 +63,10 @@ class JobManager:
 
 		jobNumLen = int(math.log10(max(1, len(self.jobDB))) + 1)
 		utils.vprint('Job %s state changed from %s to %s ' % (str(jobNum).ljust(jobNumLen), Job.states[oldState], Job.states[state]), -1, True, False)
+		if showWMS and jobObj.wmsId:
+			print "(WMS:%s)" % jobObj.wmsId.split('.')[1],
 		if (state == Job.SUBMITTED) and (jobObj.attempt > 1):
-			print '(retry #%s)' % (jobObj.attempt - 1)
+			print '(retry #%s)' % (jobObj.attempt - 1),
 		elif (state == Job.QUEUED) and jobObj.get('dest') != 'N/A':
 			print '(%s)' % jobObj.get('dest')
 		elif (state in [Job.WAITING, Job.ABORTED, Job.DISABLED]) and jobObj.get('reason'):
@@ -133,7 +135,7 @@ class JobManager:
 			return False
 
 		submitted = []
-		for jobNum, wmsId, data in wms.submitJobs(jobList):
+		for jobNum, wmsId, data in wms.submitJobs(jobList, self.module):
 			submitted.append(jobNum)
 			jobObj = self.jobDB.get(jobNum, create = True)
 
@@ -257,7 +259,7 @@ class JobManager:
 			self.eventhandler.onJobUpdate(wms, jobObj, jobNum, {'status': 'cancelled'})
 
 		jobs.reverse()
-		for (wmsId, jobNum) in wms.cancelJobs(self.wmsArgs(jobs)):
+		for (jobNum, wmsId) in wms.cancelJobs(self.wmsArgs(jobs)):
 			# Remove deleted job from todo list and mark as cancelled
 			jobs.remove(jobNum)
 			mark_cancelled(jobNum)

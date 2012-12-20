@@ -51,9 +51,10 @@ fi
 
 echo "==========================="
 echo
-checkfile "$MY_LANDINGZONE/sandbox.tar.gz"
+checkfile "$MY_LANDINGZONE/gc-sandbox.tar.gz"
 echo "Unpacking environment"
-tar xvfz "$MY_LANDINGZONE/sandbox.tar.gz" -C "$MY_SCRATCH" || fail 105
+tar xvfz "$MY_LANDINGZONE/gc-sandbox.tar.gz" -C "$MY_SCRATCH" || fail 105
+sleep 30
 
 checkfile "$MY_LANDINGZONE/job_${MY_JOBID}.var"
 checkfile "$MY_SCRATCH/_config.sh"
@@ -130,7 +131,7 @@ if [ -n "$SE_INPUT_FILES" ]; then
 	) &
 	killing_pid=$!
 	url_copy "$SE_INPUT_PATH" "file:///$MY_SCRATCH" "$SE_INPUT_FILES"
-	kill4sure $killing_pid
+	kill4sure $killing_pid 2> /dev/null
 	echo
 fi
 
@@ -207,7 +208,7 @@ if [ $CODE -eq 0 -a -n "$SE_OUTPUT_FILES" ]; then
 	killing_pid=$!
 	export TRANSFERLOG="$MY_SCRATCH/SE.log"
 	url_copy "file:///$MY_SCRATCH" "$SE_OUTPUT_PATH" "$SE_OUTPUT_FILES"
-	kill4sure $killing_pid
+	kill4sure $killing_pid 2> /dev/null
 	(
 	[ -f "$TRANSFERLOG" ] && cat "$TRANSFERLOG" | while read NAME_LOCAL NAME_DEST; do
 		echo "FILE$IDX=\"$(cd "$MY_SCRATCH"; md5sum "$NAME_LOCAL")  $NAME_DEST  $SE_OUTPUT_PATH\""

@@ -1,6 +1,6 @@
 import sys, os
 from grid_control import QM, ConfigError, RethrowError, Job, utils
-from grid_control.backends.wms import WMS
+from grid_control.backends import WMS
 from pbsge import PBSGECommon
 
 class PBS(PBSGECommon):
@@ -12,23 +12,21 @@ class PBS(PBSGECommon):
 		'fail':	Job.FAILED, 'success': Job.SUCCESS
 	}
 
-	def __init__(self, config):
-		PBSGECommon.__init__(self, config)
+	def __init__(self, config, wmsName = None):
+		PBSGECommon.__init__(self, config, wmsName)
 		self.nodesExec = utils.resolveInstallPath('pbsnodes')
-		self._server = config.get('local', 'server', '', volatile=True)
+		self._server = config.get(self._getSections('backend'), 'server', '', mutable=True)
 		self.fqid = lambda wmsId: QM(self._server, '%s.%s' % (wmsId, self._server), wmsId)
 
 
-	def getSubmitArguments(self, jobNum, jobName, reqs, sandbox, stdout, stderr, addAttr):
+	def getSubmitArguments(self, jobNum, jobName, reqs, sandbox, stdout, stderr):
 		reqMap = { WMS.MEMORY: ('pvmem', lambda m: '%dmb' % m) }
-		params = PBSGECommon.getSubmitArguments(self, jobNum, jobName, reqs, sandbox, stdout, stderr, addAttr, reqMap)
+		params = PBSGECommon.getSubmitArguments(self, jobNum, jobName, reqs, sandbox, stdout, stderr, reqMap)
 		# Job requirements
-		if WMS.SITES in reqs:
-			(queue, nodes) = reqs[WMS.SITES]
-			if queue:
-				params += ' -q %s' % queue
-			if nodes:
-				params += ' -l host=%s' % str.join('+', nodes)
+		if reqs.get(WMS.QUEUES):
+			params += ' -q %s' % reqs[WMS.QUEUES][0]
+		if reqs.get(WMS.SITES):
+			params += ' -l host=%s' % str.join('+', reqs[WMS.SITES])
 		return params
 
 
@@ -38,7 +36,7 @@ class PBS(PBSGECommon):
 
 
 	def parseStatus(self, status):
-		for section in utils.accumulate(status):
+		for section in utils.accumulate(status, '', lambda x, buf: x == '\n'):
 			try:
 				lines = section.replace('\n\t', '').split('\n')
 				jobinfo = utils.DictFormat(' = ').parse(lines[1:])

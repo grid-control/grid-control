@@ -5,28 +5,27 @@ from pbsge import PBSGECommon
 from python_compat import *
 
 class OGE(PBSGECommon):
-	def __init__(self, config):
-		PBSGECommon.__init__(self, config)
-		self.user = config.get('local', 'user', os.environ.get('LOGNAME', ''), volatile=True)
+	def __init__(self, config, wmsName = None):
+		PBSGECommon.__init__(self, config, wmsName)
+		self.user = config.get(self._getSections('backend'), 'user', os.environ.get('LOGNAME', ''), mutable=True)
 		self.configExec = utils.resolveInstallPath('qconf')
 
 
-	def getSubmitArguments(self, jobNum, jobName, reqs, sandbox, stdout, stderr, addAttr):
+	def getSubmitArguments(self, jobNum, jobName, reqs, sandbox, stdout, stderr):
 		timeStr = lambda s: '%02d:%02d:%02d' % (s / 3600, (s / 60) % 60, s % 60)
 		reqMap = { WMS.MEMORY: ('h_vmem', lambda m: '%dM' % m),
 			WMS.WALLTIME: ('s_rt', timeStr), WMS.CPUTIME: ('h_cpu', timeStr) }
 		# Restart jobs = no
 		params = ' -r n'
 		# Job requirements
-		if WMS.SITES in reqs:
-			(queue, nodes) = reqs[WMS.SITES]
-			if not nodes and queue:
-				params += ' -q %s' % queue
-			elif nodes and queue:
-				params += ' -q %s' % str.join(',', map(lambda node: '%s@%s' % (queue, node), nodes))
-			elif nodes:
-				raise ConfigError('Please also specify queue when selecting nodes!')
-		return params + PBSGECommon.getSubmitArguments(self, jobNum, jobName, reqs, sandbox, stdout, stderr, addAttr, reqMap)
+		(queue, nodes) = (reqs.get(WMS.QUEUES, [''])[0], reqs.get(WMS.SITES))
+		if not nodes and queue:
+			params += ' -q %s' % queue
+		elif nodes and queue:
+			params += ' -q %s' % str.join(',', map(lambda node: '%s@%s' % (queue, node), nodes))
+		elif nodes:
+			raise ConfigError('Please also specify queue when selecting nodes!')
+		return params + PBSGECommon.getSubmitArguments(self, jobNum, jobName, reqs, sandbox, stdout, stderr, reqMap)
 
 
 	def parseSubmitOutput(self, data):

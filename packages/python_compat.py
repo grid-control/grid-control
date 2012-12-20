@@ -3,11 +3,17 @@ try:	# str.rsplit >= Python 2.4
 except:
 	def rsplit(x, sep, maxsplit = None):
 		""" Split from the right side
+		>>> rsplit('abc', '.', 1)
+		['abc']
+		>>> rsplit('a.b.c.d.e.f.g', '.', 1)
+		['a.b.c.d.e.f', 'g']
 		>>> rsplit('a.b.c.d.e.f.g', '.', 2)
 		['a.b.c.d.e', 'f', 'g']
 		"""
 		tmp = x.split(sep)
-		return [str.join(sep, tmp[:len(tmp)-maxsplit])] + tmp[len(tmp)-maxsplit:]
+		if len(tmp) > 1:
+			return [str.join(sep, tmp[:len(tmp)-maxsplit])] + tmp[len(tmp)-maxsplit:]
+		return tmp
 
 try:	# set >= Python 2.4
 	set = set
