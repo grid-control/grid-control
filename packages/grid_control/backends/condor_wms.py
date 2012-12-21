@@ -300,7 +300,7 @@ class CondorWMS(BasicWMS):
 				raise Exception
 			jobinfo['jobid']=int(jobID)
 			del jobinfo['GCID@WMSID']
-			if "@" in jobinfo["RemoteHost"] and jobinfo["Queue"] != "N/A":
+			if "@" in jobinfo["RemoteHost"]:
 				jobinfo['dest'] = jobinfo["RemoteHost"].split("@")[1] + ': /' + jobinfo["Queue"]
 			elif jobinfo["RemoteHost"] == "N/A":
 				jobinfo['dest'] = jobinfo["RemoteHost"]
@@ -398,11 +398,15 @@ class CondorWMS(BasicWMS):
 			'should_transfer_files = ' + str( self.config.get( "Condor", "TransferFiles", "YES", mutable=True)),
 			'when_to_transfer_output = ' + str( self.config.get( "Condor", "TransferOutputOn", "ON_EXIT", mutable=True)),
 			 # remove jobs frozen for more than two days
-			'periodic_remove = ( (JobStatus == 5 && (CurrentTime - EnteredCurrentStatus) > (172800)))'
+			'periodic_remove = ( (JobStatus == 5 && (CurrentTime - EnteredCurrentStatus) > (172800)))',
+			# extract Queue information from Glidein
+			'+JOB_GLIDEIN_Entry_Name = "$$(GLIDEIN_Entry_Name:Unknown)"'
 			]
-		# remote submissal requires job data to stay active until retrieved
 		if self.remotePool:
+			# remote submissal requires job data to stay active until retrieved
 			jdlData.append("leave_in_queue = (JobStatus == 4) && ((StageOutFinish =?= UNDEFINED) || (StageOutFinish == 0))")
+			# Condor should not attempt to assign to local user
+			jdlData.append('+Owner=UNDEFINED')
 
 		# classad data
 		for line in str( self.config.get( "Condor", "ClassAdData","",mutable=True) ).splitlines():
