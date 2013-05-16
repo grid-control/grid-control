@@ -1,11 +1,27 @@
 from python_compat import *
-import os, tarfile, time, copy, cStringIO, threading
+import os, tarfile, time, copy, cStringIO, threading, gzip
 from grid_control import QM, AbstractObject, AbstractError, RuntimeError, utils, ConfigError, Config, noDefault
 from provider_base import DataProvider
 
+def fast_search(lst, cmp_op):
+	def bisect_left_cmp(lst, cmp_op):
+		(lo, hi) = (0, len(lst))
+		while lo < hi:
+			mid = (lo + hi) / 2
+			if cmp_op(lst[mid]) < 0: lo = mid + 1
+			else: hi = mid
+		return lo
+	idx = bisect_left_cmp(lst, cmp_op)
+	if idx < len(lst) and cmp_op(lst[idx]) == 0:
+		return lst[idx]
+
+ResyncMode = utils.makeEnum(['disable', 'complete', 'changed', 'ignore']) # prio: "disable" overrides "complete", etc.
+ResyncMode.noChanged = [ResyncMode.disable, ResyncMode.complete, ResyncMode.ignore]
+ResyncOrder = utils.makeEnum(['append', 'preserve', 'fillgap', 'reorder']) # reorder mechanism
+
 class DataSplitter(AbstractObject):
 	splitInfos = ['Dataset', 'SEList', 'NEvents', 'Skipped', 'FileList', 'Nickname', 'DatasetID',
-		'CommonPrefix', 'Invalid', 'BlockName', 'MetadataHeader', 'Metadata']
+		'CommonPrefix', 'Invalid', 'BlockName', 'MetadataHeader', 'Metadata', 'Comment']
 	for idx, splitInfo in enumerate(splitInfos):
 		locals()[splitInfo] = idx
 
@@ -13,6 +29,28 @@ class DataSplitter(AbstractObject):
 		(self.config, self.section) = (config, section)
 		self.splitSource = None
 		self._protocol = {}
+
+		def getResyncConfig(item, default, opts, cls = ResyncMode):
+			value = config.get('dataset', 'resync %s' % item, cls.members[default], mutable = True).lower()
+			result = cls.members.index(value)
+			if result not in opts:
+				raise ConfigError('Invalid resync setting %s for option "resync %s"!' % (value, item))
+			return result
+
+		# Resync settings:
+		self.interactive = config.getBool('dataset', 'resync interactive', False, mutable = True)
+		#   behaviour in case of event size changes
+		self.mode_removed = getResyncConfig('mode removed', ResyncMode.complete, ResyncMode.noChanged)
+		self.mode_expanded = getResyncConfig('mode expand', ResyncMode.changed, ResyncMode.allMembers)
+		self.mode_shrunken = getResyncConfig('mode shrink', ResyncMode.changed, ResyncMode.allMembers)
+		self.mode_new = getResyncConfig('mode new', ResyncMode.complete, [ResyncMode.complete, ResyncMode.ignore])
+		#   behaviour in case of metadata changes
+		self.metaOpts = {}
+		for meta in config.getList('dataset', 'resync metadata', [], mutable = True):
+			self.metaOpts[meta] = getResyncConfig('mode %s' % meta, ResyncMode.complete, ResyncMode.noChanged)
+		#   behaviour in case of job changes - disable changed jobs, preserve job number of changed jobs or reorder
+		self.resyncOrder = getResyncConfig('jobs', ResyncOrder.append, ResyncOrder.allMembers, ResyncOrder)
+
 
 
 	def setup(self, func, block, item, default = noDefault):
@@ -31,20 +69,20 @@ class DataSplitter(AbstractObject):
 	neededVars = classmethod(neededVars)
 
 
-	def finaliseJobSplitting(self, block, job, files = None):
+	def finaliseJobSplitting(self, block, splitInfo, files = None):
 		# Copy infos from block
 		for prop in ['Dataset', 'BlockName', 'DatasetID', 'Nickname', 'SEList']:
 			if getattr(DataProvider, prop) in block:
-				job[getattr(DataSplitter, prop)] = block[getattr(DataProvider, prop)]
+				splitInfo[getattr(DataSplitter, prop)] = block[getattr(DataProvider, prop)]
 		if DataProvider.Metadata in block:
-			job[DataSplitter.MetadataHeader] = block[DataProvider.Metadata]
+			splitInfo[DataSplitter.MetadataHeader] = block[DataProvider.Metadata]
 		# Helper for very simple splitter
 		if files:
-			job[DataSplitter.FileList] = map(lambda x: x[DataProvider.lfn], files)
-			job[DataSplitter.NEvents] = sum(map(lambda x: x[DataProvider.NEvents], files))
+			splitInfo[DataSplitter.FileList] = map(lambda x: x[DataProvider.lfn], files)
+			splitInfo[DataSplitter.NEvents] = sum(map(lambda x: x[DataProvider.NEvents], files))
 			if DataProvider.Metadata in block:
-				job[DataSplitter.Metadata] = map(lambda x: x[DataProvider.Metadata], files)
-		return job
+				splitInfo[DataSplitter.Metadata] = map(lambda x: x[DataProvider.Metadata], files)
+		return splitInfo
 
 
 	def splitDatasetInternal(self, blocks, firstEvent = 0):
@@ -54,501 +92,375 @@ class DataSplitter(AbstractObject):
 	def splitDataset(self, path, blocks):
 		log = utils.ActivityLog('Splitting dataset into jobs')
 		self.saveState(path, self.splitDatasetInternal(blocks))
-		self.splitSource = DataSplitter.loadStateInternal(path)
+		self.importState(path)
 
 
 	def getSplitInfo(self, jobNum):
 		if jobNum >= self.getMaxJobs():
 			raise RuntimeError('Job %d out of range for available dataset' % jobNum)
 		return self.splitSource[jobNum]
-	getSplitInfo = lru_cache(getSplitInfo)
 
 
 	def getMaxJobs(self):
 		return self.splitSource.maxJobs
 
 
-	def printInfoForJob(job):
-		utils.vprint(('Dataset: %s' % job[DataSplitter.Dataset]).ljust(50), -1, newline = False)
-		utils.vprint(('Events: %d' % job[DataSplitter.NEvents]).ljust(20), -1, newline = False)
-		utils.vprint('  ID: %s' % job.get(DataSplitter.DatasetID, 0), -1)
-		utils.vprint(('  Block: %s' % job.get(DataSplitter.BlockName, 0)).ljust(50), -1, newline = False)
-		utils.vprint(('  Skip: %d' % job.get(DataSplitter.Skipped, 0)).ljust(20), -1, newline = False)
-		if job.get(DataSplitter.Nickname):
-			utils.vprint('Nick: %s' % job[DataSplitter.Nickname], -1)
-		if job.get(DataSplitter.SEList) != None:
-			utils.vprint(' SEList: %s' % utils.wrapList(job[DataSplitter.SEList], 70, ',\n         '), -1)
-		for idx, head in enumerate(job.get(DataSplitter.MetadataHeader, [])):
-			oneFileMetadata = map(lambda x: repr(x[idx]), job[DataSplitter.Metadata])
+	def printInfoForJob(splitInfo):
+		if splitInfo.get(DataSplitter.Invalid, False):
+			utils.vprint(' Status: Invalidated splitting', -1)
+		utils.vprint(('Dataset: %s' % splitInfo[DataSplitter.Dataset]).ljust(50), -1, newline = False)
+		utils.vprint(('Events: %d' % splitInfo[DataSplitter.NEvents]).ljust(20), -1, newline = False)
+		utils.vprint('  ID: %s' % splitInfo.get(DataSplitter.DatasetID, 0), -1)
+		utils.vprint(('  Block: %s' % splitInfo.get(DataSplitter.BlockName, 0)).ljust(50), -1, newline = False)
+		utils.vprint(('  Skip: %d' % splitInfo.get(DataSplitter.Skipped, 0)).ljust(20), -1, newline = False)
+		if splitInfo.get(DataSplitter.Nickname):
+			utils.vprint('Nick: %s' % splitInfo[DataSplitter.Nickname], -1)
+		else:
+			utils.vprint('', -1)
+		if splitInfo.get(DataSplitter.SEList) != None:
+			utils.vprint(' SEList: %s' % utils.wrapList(splitInfo[DataSplitter.SEList], 70, ',\n         '), -1)
+		for idx, head in enumerate(splitInfo.get(DataSplitter.MetadataHeader, [])):
+			oneFileMetadata = map(lambda x: repr(x[idx]), splitInfo[DataSplitter.Metadata])
 			utils.vprint('%7s: %s' % (head, utils.wrapList(oneFileMetadata, 70, ',\n         ')), -1)
 		utils.vprint('  Files: ', -1, newline = False)
 		if utils.verbosity() > 2:
-			utils.vprint(str.join('\n         ', job[DataSplitter.FileList]), -1)
+			utils.vprint(str.join('\n         ', splitInfo[DataSplitter.FileList]), -1)
 		else:
-			utils.vprint('%d files selected' % len(job[DataSplitter.FileList]), -1)
+			utils.vprint('%d files selected' % len(splitInfo[DataSplitter.FileList]), -1)
 	printInfoForJob = staticmethod(printInfoForJob)
 
 
 	def printAllJobInfo(self):
 		for jobNum in range(self.getMaxJobs()):
-			utils.vprint('Job number: %d' % jobNum, -1)
+			utils.vprint('SplitID: %d' % jobNum, -1)
 			DataSplitter.printInfoForJob(self.getSplitInfo(jobNum))
 			utils.vprint('------------', -1)
 
 
-	def resyncMapping(self, newSplitPath, oldBlocks, newBlocks, config):
-		log = utils.ActivityLog('Resynchronization of dataset blocks')
-		(blocksAdded, blocksMissing, blocksChanged) = DataProvider.resyncSources(oldBlocks, newBlocks)
+	def resyncMapping(self, newSplitPath, oldBlocks, newBlocks):
+		log = utils.ActivityLog('Performing resynchronization of dataset')
+		(blocksAdded, blocksMissing, blocksMatching) = DataProvider.resyncSources(oldBlocks, newBlocks)
+		for rmBlock in blocksMissing: # Files in matching blocks are already sorted
+			rmBlock[DataProvider.FileList].sort(lambda a, b: cmp(a[DataProvider.lfn], b[DataProvider.lfn]))
 		del log
 
-		# Variables for later
-		(splitAdded, splitProcList, splitProcMode) = ([], {}, {})
-		class Resync:
-			enum = ['disable', 'append', 'replace', 'ignore']
-			for idx, var in enumerate(enum):
-				locals()[var] = idx
+		# Get block information (oldBlock, newBlock, filesMissing, filesMatched) which splitInfo is based on
+		def getMatchingBlock(splitInfo):
+			# Comparison operator between dataset block and splitting
+			def cmpSplitBlock(dsBlock, splitInfo):
+				if dsBlock[DataProvider.Dataset] == splitInfo[DataSplitter.Dataset]:
+					return cmp(dsBlock[DataProvider.BlockName], splitInfo[DataSplitter.BlockName])
+				return cmp(dsBlock[DataProvider.Dataset], splitInfo[DataSplitter.Dataset])
+			# Search for block in missing and matched blocks
+			result = fast_search(blocksMissing, lambda x: cmpSplitBlock(x, splitInfo))
+			if result:
+				return (result, None, result[DataProvider.FileList], [])
+			return fast_search(blocksMatching, lambda x: cmpSplitBlock(x[0], splitInfo)) # compare with old block
 
-		interactive = config.getBool('dataset', 'resync interactive', True, mutable = True)
-
-		# Get processing mode (interactively)
-		def getMode(item, default, desc):
-			def parser(x):
-				for opt in desc:
-					if (x.lower() == Resync.enum[opt]) or (x.lower() == Resync.enum[opt][0]):
-						return opt
-			if not interactive:
-				value = Resync.__dict__[config.get('dataset', 'resync mode %s' % item, Resync.enum[default], mutable = True).lower()]
-				if value in desc.keys():
-					return value
-			utils.vprint(level = -1)
-			for choice in desc:
-				utils.vprint('  %s)' % Resync.enum[choice].rjust(max(map(lambda x: len(Resync.enum[x]), desc.keys()))), desc[choice], -1)
-			return utils.getUserInput('\nPlease select how to proceed!', Resync.enum[default], desc.keys(), parser)
-
-		# Select processing mode for job (disable > append > replace) [ie. disable overrides all]
-		setMode = min
-
-		# Get Dictionary with affected jobs and corresponding old+new fileinfos
-		def getAffectedJobs(blockTuple):
-			(result, affectedOldInfos) = ({}, set())
-			for jobNum in range(self.getMaxJobs()):
-				jobLFNs = self.getSplitInfo(jobNum)[DataSplitter.FileList]
-				(jobOldFileInfos, jobNewFileInfos) = ([], [])
-				for (old, new) in blockTuple:
-					jobOldFileInfos.extend(filter(lambda x: x[DataProvider.lfn] in jobLFNs, old.get(DataProvider.FileList, [])))
-					jobNewFileInfos.extend(filter(lambda x: x[DataProvider.lfn] in jobLFNs, new.get(DataProvider.FileList, [])))
-				if jobOldFileInfos != []:
-					result[jobNum] = (jobOldFileInfos, jobNewFileInfos, new)
-					affectedOldInfos.update(map(lambda x: x[DataProvider.lfn], jobOldFileInfos))
-			return (result, len(affectedOldInfos))
-
-		# Add to processing chain
-		def addSplitProc(jobDict, mode):
-			if mode != Resync.ignore:
-				for jobNum in jobDict:
-					splitProcMode[jobNum] = setMode(splitProcMode.get(jobNum, mode), mode)
-					if mode != Resync.disable:
-						splitProcList.setdefault(jobNum, []).append(jobDict[jobNum])
-			utils.vprint(level = -1)
-
-		# Function for fast access to file infos via lfn
-		def getFileDict(blocks):
-			result = {}
-			for block in blocks:
-				for fileInfo in block[DataProvider.FileList]:
-					result[fileInfo[DataProvider.lfn]] = fileInfo
-			return result
-		oldFileInfoMap = getFileDict(oldBlocks)
-		newFileInfoMap = getFileDict(newBlocks)
-
-		# Return lists with expanded / shrunk files
-		# Input is the affected set taken from newBlocks
-		# Return block compatible with (newBlocks, oldBlocks)
-		def splitAndClassifyChanges(changedBlocks):
-			def getCorrespondingBlock(blockA, allBlocks):
-				for blockB in allBlocks:
-					if blockA[DataProvider.Dataset] == blockB[DataProvider.Dataset] and \
-						blockA.get(DataProvider.BlockName) == blockB.get(DataProvider.BlockName):
-						return blockB
-				raise RuntimeError('Block %s not found!' % str(blockA))
-
-			(shrunken, expanded) = ([], [])
-			for changedBlock in changedBlocks:
-				oldBlock = getCorrespondingBlock(changedBlock, oldBlocks)
-				for changedFileInfo in changedBlock[DataProvider.FileList]:
-					# Search old info and create new block container for return value
-					oldFileInfo = oldFileInfoMap[changedFileInfo[DataProvider.lfn]]
-					def copyBlock(orig, files):
-						result = copy.copy(orig)
-						result[DataProvider.FileList] = files
-						result[DataProvider.NEvents] = sum(map(lambda x: x[DataProvider.NEvents], files))
-						return result
-					copyOldBlock = copyBlock(oldBlock, [oldFileInfo])
-					copyNewBlock = copyBlock(changedBlock, [changedFileInfo])
-					# Classify into expanded and shrunken
-					if oldFileInfo[DataProvider.NEvents] < changedFileInfo[DataProvider.NEvents]:
-						expanded.append((copyOldBlock, copyNewBlock))
-					elif oldFileInfo[DataProvider.NEvents] > changedFileInfo[DataProvider.NEvents]:
-						shrunken.append((copyOldBlock, copyNewBlock))
-			return (shrunken, expanded)
-
-		def descBuilder(x, y = 'with', ignore = True):
-			desc = { Resync.disable: 'Disable jobs with %s files' % x,
-				Resync.replace: 'Replace existing jobs with jobs %s %s files' % (y, x),
-				Resync.append: 'Disable existing jobs and append these jobs %s %s files' % (y, x) }
-			if ignore:
-				desc[Resync.ignore] = 'Ignore %s parts of files' % x
-			return desc
-
-		# User overview and setup starts here
-		if blocksAdded or blocksMissing or blocksChanged:
-			utils.vprint('The following changes in the dataset information were detected:\n', -1)
-
-		head = [(DataProvider.Dataset, 'Dataset'), (DataProvider.BlockName, 'Block'),
-			(DataProvider.NEvents, 'Events'), (DataProvider.FileList, 'Files')]
-
-		if blocksAdded:
-			utils.vprint('=' * 15 + 'Added files'.center(15) + '=' * 15, -1)
-			utils.printTabular(head, blocksAdded, 'rlcc', {DataProvider.FileList: lambda x: len(x)})
-			NFiles = sum(map(lambda x: len(x[DataProvider.FileList]), blocksAdded))
-			addedJobs = list(self.splitDatasetInternal(blocksAdded))
-			output = (NFiles, len(blocksAdded), len(addedJobs))
-			utils.vprint('\n%d files in %d blocks were added, which corresponds to %d new jobs' % output, -1)
-			desc = {Resync.ignore: 'Ignore these new jobs', Resync.append: 'Append new jobs to existing task'}
-			if getMode('new', Resync.append, desc) == Resync.append:
-				splitAdded.extend(addedJobs)
-			utils.vprint(level = -1)
-
-		if blocksMissing:
-			utils.vprint('=' * 15 + 'Missing files'.center(15) + '=' * 15, -1)
-			utils.printTabular(head, blocksMissing, 'rlcc', {DataProvider.FileList: lambda x: len(x)})
-			(removeJobs, NFiles) = getAffectedJobs(map(lambda x: (x, {}), blocksMissing))
-			utils.vprint('\n%d files in %d blocks are missing.' % (NFiles, len(blocksMissing)), -1)
-			utils.vprint('This affects the following %d jobs:' % len(removeJobs), sorted(removeJobs.keys()), -1)
-			addSplitProc(removeJobs, getMode('removed', Resync.append, descBuilder('missing', 'without', False)))
-
-		if blocksChanged:
-			utils.vprint('=' * 15 + 'Changed files'.center(15) + '=' * 15, -1)
-			(changedJobs, NFiles) = getAffectedJobs(map(lambda x: (x, {}), blocksChanged))
-			utils.vprint('%d files in %d blocks have changed their length' % (NFiles, len(blocksChanged)), -1)
-			utils.vprint('This affects the following %d jobs:' % len(changedJobs), sorted(changedJobs.keys()), -1)
-			utils.vprint(level = -1)
-
-		# Did the file shrink or expand?
-		blocksShrunken, blocksExpanded = splitAndClassifyChanges(blocksChanged)
-
-		def getChangeOverview(blocks, title):
-			utils.vprint('-' * 15 + ('%s files' % title).center(15) + '-' * 15, -1)
-			(changedJobs, NFiles) = getAffectedJobs(blocks)
-			utils.vprint('%d files have %s in size:' % (NFiles, title.lower()), -1)
-			utils.vprint('This affects the following %d jobs: %s' % (len(changedJobs), sorted(changedJobs.keys())), -1)
-			utils.vprint(level = -1)
-			head = [(DataProvider.Dataset, 'Dataset'), (DataProvider.BlockName, 'Block'),
-				(None, 'Events (old)'), (DataProvider.NEvents, 'Events (new)'), (DataProvider.FileList, 'Files')]
-			utils.printTabular(head, map(lambda x: dict(x[0].items() + [(None, x[1][DataProvider.NEvents])]),
-				blocks), 'rlcc', {DataProvider.FileList: lambda x: len(x)})
-			return changedJobs
-
-		if blocksExpanded:
-			expandJobs = getChangeOverview(blocksExpanded, 'Expanded')
-			desc = descBuilder('expanded')
-			if DataSplitter.Skipped in self.neededVars():
-				desc[Resync.append] += ' (Try to append expanded parts as new jobs)'
-			addSplitProc(expandJobs, getMode('expand', Resync.append, desc))
-
-		if blocksShrunken:
-			shrinkJobs = getChangeOverview(blocksShrunken, 'Shrunken')
-			addSplitProc(shrinkJobs, getMode('shrink', Resync.append, descBuilder('shrunken')))
-
-		if interactive and (splitAdded or splitProcList):
-			preserve = utils.getUserBool('Preserve unchanged splittings with changed files?', True)
-			reorder = utils.getUserBool('Reorder jobs to close gaps?', False)
-		else:
-			preserve = config.getBool('dataset', 'resync preserve', True, mutable = True)
-			reorder = config.getBool('dataset', 'resync reorder', False, mutable = True)
-
-		# ^^ Still not sure about the degrees of freedom ^^
-		#     User setup is finished starting from here
-
-		# Process job modifications
-		(result, resultRedo, resultDisable) = ([], [], [])
-
-		# Zip rm+add on a file level: Input: [([rmlist], [addlist]),...] => [(rmfile, addfile),...]
-		def sortedFlatReZip(modList):
-			for rmEntry, addEntry, newBlock in modList:
-				if not addEntry:
-					addEntry = []
-				addDict = dict(map(lambda x: (x[DataProvider.lfn], x), addEntry))
-				for rmFile in rmEntry:
-					if rmFile[DataProvider.lfn] in addDict:
-						yield (rmFile, addDict.pop(rmFile[DataProvider.lfn]), newBlock)
-					else:
-						yield (rmFile, None, newBlock)
+		#######################################
+		# Process modifications of event sizes
+		#######################################
 
 		# Apply modification list to old splitting
 		# Input: oldSplit, modList = [(rmfile, addfile), ...], doExpandOutside
 		# With doExpandOutside, gc tries to handle expanding files via the splitting function
-		def processModList(oldSplit, modList, doExpandOutside):
-			newSplit = copy.deepcopy(oldSplit)
-			# Determine size infos and get started
-			sizeInfo = map(lambda x: oldFileInfoMap[x][DataProvider.NEvents], newSplit[DataSplitter.FileList])
+		def resyncSplitting(oldSplit, doExpandOutside, jobNum):
+			if oldSplit.get(DataSplitter.Invalid, False):
+				return (oldSplit, ResyncMode.ignore, [])
 
-			for rm, add, newBlock in modList:
-				try:
-					idx = newSplit[DataSplitter.FileList].index(rm[DataProvider.lfn])
-				except:
-					continue
+			(oldBlock, newBlock, filesMissing, filesMatched) = getMatchingBlock(oldSplit)
+
+			modSI = copy.deepcopy(oldSplit)
+			if newBlock:
+				modSI[DataSplitter.SEList] = newBlock.get(DataProvider.SEList)
+			# Determine size infos and get started
+			search_lfn = lambda lfn: fast_search(oldBlock[DataProvider.FileList], lambda x: cmp(x[DataProvider.lfn], lfn))
+			sizeInfo = map(lambda lfn: search_lfn(lfn)[DataProvider.NEvents], modSI[DataSplitter.FileList])
+			extended = []
+			metaIdxLookup = []
+			for meta in self.metaOpts:
+				(oldIdx, newIdx) = (None, None)
+				if oldBlock and (meta in oldBlock.get(DataProvider.Metadata, [])):
+					oldIdx = oldBlock[DataProvider.Metadata].index(meta)
+				if newBlock and (meta in newBlock.get(DataProvider.Metadata, [])):
+					newIdx = newBlock[DataProvider.Metadata].index(meta)
+				if (oldIdx != None) or (newIdx != None):
+					metaIdxLookup.append((oldIdx, newIdx, self.metaOpts[meta]))
+
+			# Select processing mode for job (disable > complete > changed > ignore) [ie. disable overrides all] using min
+			# Result: one of [disable, complete, ignore] (changed -> complete or igore)
+			procMode = ResyncMode.ignore
+
+			# Remove files from splitting
+			def removeFile(idx, rmFI):
+				modSI[DataSplitter.Comment] += '[rm] ' + rmFI[DataProvider.lfn]
+				modSI[DataSplitter.Comment] += '-%d ' % rmFI[DataProvider.NEvents]
+
+				if idx == len(modSI[DataSplitter.FileList]) - 1:
+					# Removal of last file from current splitting
+					modSI[DataSplitter.NEvents] = sum(sizeInfo) - modSI.get(DataSplitter.Skipped, 0)
+					modSI[DataSplitter.Comment] += '[rm_last] '
+				elif idx == 0:
+					# Removal of first file from current splitting
+					modSI[DataSplitter.NEvents] += max(0, sizeInfo[idx] - modSI.get(DataSplitter.Skipped, 0) - modSI[DataSplitter.NEvents])
+					modSI[DataSplitter.NEvents] += modSI.get(DataSplitter.Skipped, 0)
+					modSI[DataSplitter.Skipped] = 0
+					modSI[DataSplitter.Comment] += '[rm_first] '
+				else:
+					# File in the middle is affected - solution very simple :)
+					modSI[DataSplitter.Comment] += '[rm_middle] '
+
+				modSI[DataSplitter.NEvents] -= rmFI[DataProvider.NEvents]
+				modSI[DataSplitter.FileList].pop(idx)
+				sizeInfo.pop(idx)
+
+
+			# Process changed files in splitting - returns True if file index should be increased
+			def changeFile(idx, oldFI, newFI):
+				modSI[DataSplitter.Comment] += '[changed] ' + oldFI[DataProvider.lfn]
+				modSI[DataSplitter.Comment] += (' -%d ' % oldFI[DataProvider.NEvents])
+				modSI[DataSplitter.Comment] += (' +%d ' % newFI[DataProvider.NEvents])
 
 				def removeCompleteFile():
-					newSplit[DataSplitter.NEvents] -= rm[DataProvider.NEvents]
-					newSplit[DataSplitter.FileList].pop(idx)
+					modSI[DataSplitter.NEvents] -= oldFI[DataProvider.NEvents]
+					modSI[DataSplitter.FileList].pop(idx)
 					sizeInfo.pop(idx)
 
 				def replaceCompleteFile():
-					newSplit[DataSplitter.NEvents] += add[DataProvider.NEvents]
-					newSplit[DataSplitter.NEvents] -= rm[DataProvider.NEvents]
-					sizeInfo[idx] = add[DataProvider.NEvents]
+					modSI[DataSplitter.NEvents] += newFI[DataProvider.NEvents]
+					modSI[DataSplitter.NEvents] -= oldFI[DataProvider.NEvents]
+					sizeInfo[idx] = newFI[DataProvider.NEvents]
 
 				def expandOutside():
 					fileList = newBlock.pop(DataProvider.FileList)
-					newBlock[DataProvider.FileList] = [add]
-					splitAdded.extend(self.splitDatasetInternal([newBlock], rm[DataProvider.NEvents]))
+					newBlock[DataProvider.FileList] = [newFI]
+					for extSplit in self.splitDatasetInternal([newBlock], oldFI[DataProvider.NEvents]):
+						extSplit[DataSplitter.Comment] = oldSplit[DataSplitter.Comment] + '[ext_1] '
+						extended.append(extSplit)
 					newBlock[DataProvider.FileList] = fileList
-					sizeInfo[idx] = add[DataProvider.NEvents]
+					sizeInfo[idx] = newFI[DataProvider.NEvents]
 
-				if idx == 0:
+				if idx == len(modSI[DataSplitter.FileList]) - 1:
+					coverLast = modSI.get(DataSplitter.Skipped, 0) + modSI[DataSplitter.NEvents] - sum(sizeInfo[:-1])
+					if coverLast == oldFI[DataProvider.NEvents]:
+						# Change of last file, which ends in current splitting
+						if doExpandOutside and (oldFI[DataProvider.NEvents] < newFI[DataProvider.NEvents]):
+							expandOutside()
+							modSI[DataSplitter.Comment] += '[last_add_1] '
+						else:
+							replaceCompleteFile()
+							modSI[DataSplitter.Comment] += '[last_add_2] '
+					elif coverLast > newFI[DataProvider.NEvents]:
+						# Change of last file, which changes current coverage
+						modSI[DataSplitter.NEvents] -= coverLast
+						modSI[DataSplitter.NEvents] += oldFI[DataProvider.NEvents]
+						replaceCompleteFile()
+						modSI[DataSplitter.Comment] += '[last_add_3] '
+					else:
+						# Change of last file outside of current splitting
+						sizeInfo[idx] = newFI[DataProvider.NEvents]
+						modSI[DataSplitter.Comment] += '[last_add_4] '
+
+				elif idx == 0:
 					# First file is affected
-					if add and (add[DataProvider.NEvents] > newSplit.get(DataSplitter.Skipped, 0)):
+					if (newFI[DataProvider.NEvents] > modSI.get(DataSplitter.Skipped, 0)):
 						# First file changes and still lives in new splitting
-						following = sizeInfo[0] - newSplit.get(DataSplitter.Skipped, 0) - newSplit[DataSplitter.NEvents]
-						shrinkage = rm[DataProvider.NEvents] - add[DataProvider.NEvents]
+						following = sizeInfo[0] - modSI.get(DataSplitter.Skipped, 0) - modSI[DataSplitter.NEvents]
+						shrinkage = oldFI[DataProvider.NEvents] - newFI[DataProvider.NEvents]
 						if following > 0:
 							# First file not completely covered by current splitting
 							if following < shrinkage:
 								# Covered area of first file shrinks
-								newSplit[DataSplitter.NEvents] += following
+								modSI[DataSplitter.NEvents] += following
 								replaceCompleteFile()
+								modSI[DataSplitter.Comment] += '[first_add_1] '
 							else:
 								# First file changes outside of current splitting
-								sizeInfo[idx] = add[DataProvider.NEvents]
+								sizeInfo[idx] = newFI[DataProvider.NEvents]
+								modSI[DataSplitter.Comment] = '[first_add_2] '
 						else:
 							# Change of first file ending in current splitting - One could try to
 							# 'reverse fix' expanding files to allow expansion via adding only the expanding part
 							replaceCompleteFile()
+							modSI[DataSplitter.Comment] += '[first_add_3] '
 					else:
 						# Removal of first file from current splitting
-						newSplit[DataSplitter.NEvents] += max(0, sizeInfo[idx] - newSplit.get(DataSplitter.Skipped, 0) - newSplit[DataSplitter.NEvents])
-						newSplit[DataSplitter.NEvents] += newSplit.get(DataSplitter.Skipped, 0)
-						newSplit[DataSplitter.Skipped] = 0
+						modSI[DataSplitter.NEvents] += max(0, sizeInfo[idx] - modSI.get(DataSplitter.Skipped, 0) - modSI[DataSplitter.NEvents])
+						modSI[DataSplitter.NEvents] += modSI.get(DataSplitter.Skipped, 0)
+						modSI[DataSplitter.Skipped] = 0
 						removeCompleteFile()
-
-				elif idx == len(newSplit[DataSplitter.FileList]) - 1:
-					# Last file is affected
-					if add:
-						coverLast = newSplit.get(DataSplitter.Skipped, 0) + newSplit[DataSplitter.NEvents] - sum(sizeInfo[:-1])
-						if coverLast == rm[DataProvider.NEvents]:
-							# Change of last file, which ends in current splitting
-							if doExpandOutside and (rm[DataProvider.NEvents] < add[DataProvider.NEvents]):
-								expandOutside()
-							else:
-								replaceCompleteFile()
-						elif coverLast > add[DataProvider.NEvents]:
-							# Change of last file, which changes current coverage
-							newSplit[DataSplitter.NEvents] -= coverLast
-							newSplit[DataSplitter.NEvents] += rm[DataProvider.NEvents]
-							replaceCompleteFile()
-						else:
-							# Change of last file outside of current splitting
-							sizeInfo[idx] = add[DataProvider.NEvents]
-					else:
-						# Removal of last file from current splitting
-						newSplit[DataSplitter.NEvents] = sum(sizeInfo) - newSplit.get(DataSplitter.Skipped, 0)
-						removeCompleteFile()
+						return False
 
 				else:
 					# File in the middle is affected - solution very simple :)
-					if add:
-						# Replace file - expanding files could be swapped to the (fully contained) end
-						# to allow expansion via adding only the expanding part
-						replaceCompleteFile()
-					else:
-						# Remove file
-						removeCompleteFile()
+					# Replace file - expanding files could be swapped to the (fully contained) end
+					# to allow expansion via adding only the expanding part
+					replaceCompleteFile()
+					modSI[DataSplitter.Comment] += '[middle_add_1] '
+				return True
 
-			return newSplit
+			idx = 0
+			newMetadata = []
+			while idx < len(modSI[DataSplitter.FileList]):
+				lfn = modSI[DataSplitter.FileList][idx]
 
-		# To support old splittings: create lfn<->SE list map
-		if self.getSplitInfo(0).get(DataSplitter.BlockName, None) == None:
-			utils.deprecated('You are using an old data splitting format - only the slow resync is possible!')
-			def blockFQN(src, x):
-				if len(x[DataSplitter.FileList]):
-					return x[DataSplitter.FileList][0]
-			getSEMapBlock = lambda b: dict(map(lambda fi: (fi[DataProvider.lfn], b[DataProvider.SEList]), b[DataProvider.FileList]))
-			seBlockMap = utils.mergeDicts(map(getSEMapBlock, newBlocks))
-		else:
-			blockFQN = lambda src, x: (x[src.Dataset], x[src.BlockName])
-			seBlockMap = dict(map(lambda x: (blockFQN(DataProvider, x), x[DataProvider.SEList]), newBlocks))
+				rmFI = fast_search(filesMissing, lambda x: cmp(x[DataProvider.lfn], lfn))
+				if rmFI:
+					removeFile(idx, rmFI)
+					procMode = min(procMode, self.mode_removed)
+					for meta in modSI.get(DataSplitter.MetadataHeader, []):
+						procMode = min(procMode, self.metaOpts.get(meta, ResyncMode.ignore))
+					continue # dont increase filelist index!
 
-		# Iterate over existing job splittings and modifiy them as specified
-		doExpandOutside = DataSplitter.Skipped in self.neededVars()
-		log = None
-		for jobNum in range(self.getMaxJobs()):
-			del log
-			log = utils.ActivityLog('Resynchronization of job splittings [%d/%d]' % (jobNum, self.getMaxJobs()))
-			splitInfo = self.getSplitInfo(jobNum)
-			mode = splitProcMode.get(jobNum, None)
-			if mode:
-				modList = sortedFlatReZip(splitProcList[jobNum])
+				(oldFI, newFI) = fast_search(filesMatched, lambda x: cmp(x[0][DataProvider.lfn], lfn))
+				if DataProvider.Metadata in newFI:
+					newMetadata.append(newFI[DataProvider.Metadata])
+					for (oldMI, newMI, metaProc) in metaIdxLookup:
+						if (oldMI == None) or (newMI == None):
+							procMode = min(procMode, metaProc) # Metadata was removed
+						elif (oldFI[DataProvider.Metadata][oldMI] != newFI[DataProvider.Metadata][newMI]):
+							procMode = min(procMode, metaProc) # Metadata was changed
+				if oldFI[DataProvider.NEvents] == newFI[DataProvider.NEvents]:
+					idx += 1
+					continue
+				oldEvts = modSI[DataSplitter.NEvents]
+				oldSkip = modSI[DataSplitter.Skipped]
 
-			# Create new splittings
-			newSplitInfo = None
-			if mode == Resync.append:
-				newSplitInfo = processModList(splitInfo, modList, doExpandOutside)
-			elif mode == Resync.replace:
-				newSplitInfo = processModList(splitInfo, modList, False)
+				if changeFile(idx, oldFI, newFI):
+					pass
+					idx += 1
 
-			# Quality control of new splittings
-			if newSplitInfo:
-				if len(newSplitInfo[DataSplitter.FileList]) == 0:
-					mode = Resync.disable
-				# Keep unchanged splittings
-				if preserve and (newSplitInfo == splitInfo):
-					mode = None
+				mode = QM(oldFI[DataProvider.NEvents] < newFI[DataProvider.NEvents], self.mode_expanded, self.mode_shrunken)
+				if mode == ResyncMode.changed:
+					changed = (oldEvts != modSI[DataSplitter.NEvents]) or (oldSkip != modSI[DataSplitter.Skipped])
+					mode = QM(changed, ResyncMode.complete, ResyncMode.ignore)
+				procMode = min(procMode, mode)
+				continue
 
-			# Sort jobs according to guidelines
-			if mode == Resync.append:
-				mode = Resync.disable
-				splitAdded.append(newSplitInfo)
-			if mode == Resync.replace:
-				splitInfo = newSplitInfo
-				resultRedo.append(jobNum)
+			# Disable invalid / invalidated splittings
+			if (len(modSI[DataSplitter.FileList]) == 0) or (modSI[DataSplitter.NEvents] <= 0):
+				procMode = ResyncMode.disable
 
-			# Try to reassign job splittings or simply disable them
-			if (mode == Resync.disable) or splitInfo.get(DataSplitter.Invalid, False):
-				if reorder and len(splitAdded) > 0:
-					splitInfo = splitAdded.pop()
-					resultRedo.append(jobNum)
-				elif mode == Resync.disable:
-					resultDisable.append(jobNum)
-					splitInfo[DataSplitter.Invalid] = True
+			if procMode == ResyncMode.disable:
+				modSI[DataSplitter.Invalid] = True
+				return (modSI, ResyncMode.disable, []) # Discard extensions
 
 			# Update metadata
-			if DataSplitter.Metadata in splitInfo:
-				getMetadata = lambda x: newFileInfoMap.get(x, {}).get(DataSplitter.Metadata, None)
-				splitInfo[DataSplitter.Metadata] = map(getMetadata, splitInfo[DataSplitter.FileList])
-			# Update SE list of jobs
-			splitInfo[DataSplitter.SEList] = seBlockMap.get(blockFQN(DataSplitter, splitInfo), [])
-			result.append(splitInfo)
+			if DataSplitter.Metadata in modSI:
+				modSI.pop(DataSplitter.MetadataHeader)
+				modSI.pop(DataSplitter.Metadata)
+			if newMetadata:
+				modSI[DataSplitter.MetadataHeader] = newBlock.get(DataProvider.Metadata)
+				modSI[DataSplitter.Metadata] = newMetadata
 
-		for splitInfo in splitAdded:
-			result.append(splitInfo)
+			return (modSI, procMode, extended)
 
-		self.saveState(newSplitPath, result)
+		# Process splittings
+		def resyncIterator_raw():
+			extList = []
+			# Perform resync of existing splittings
+			for jobNum in range(self.getMaxJobs()):
+				splitInfo = self.getSplitInfo(jobNum)
+				if DataSplitter.Comment not in splitInfo:
+					splitInfo[DataSplitter.Comment] = 'src: %d ' % jobNum
+				(modSplitInfo, procMode, extended) = resyncSplitting(splitInfo, True, jobNum)
+				if (self.resyncOrder == ResyncOrder.append) and (procMode == ResyncMode.complete):
+					extList.append(modSplitInfo)
+					modSplitInfo = copy.copy(splitInfo)
+					modSplitInfo[DataSplitter.Invalid] = True
+					procMode = ResyncMode.disable
+				extList.extend(extended)
+				yield (jobNum, modSplitInfo, procMode)
+			# Yield collected extensions of existing splittings
+			for extSplitInfo in extList:
+				yield (None, extSplitInfo, ResyncMode.ignore)
+			# Yield completely new splittings
+			if self.mode_new == ResyncMode.complete:
+				for newSplitInfo in self.splitDatasetInternal(blocksAdded):
+					yield (None, newSplitInfo, ResyncMode.ignore)
+
+		def getSplitContainer():
+			(rawInfo, extInfo) = ([], [])
+			for (jobNum, splitInfo, procMode) in resyncIterator_raw():
+				if jobNum != None: # Separate existing and new splittings
+					rawInfo.append((jobNum, splitInfo, procMode))
+				else:
+					extInfo.append((None, splitInfo, None))
+			return (rawInfo, extInfo)
+
+		def getReorderIterator(mainIter, altIter): # alt source is used if main source contains invalid entries
+			for (jobNum, splitInfo, procMode) in mainIter:
+				if splitInfo.get(DataSplitter.Invalid, False) or (procMode == ResyncMode.disable):
+					extInfo = next(altIter, None)
+					while extInfo and extInfo[1].get(DataSplitter.Invalid, False):
+						extInfo = next(altIter, None)
+					if extInfo:
+						yield (jobNum, extInfo[1], ResyncMode.complete) # Overwrite invalid splittings
+						continue
+				yield (jobNum, splitInfo, procMode)
+			for extInfo in altIter:
+				yield (None, extInfo[1], ResyncMode.ignore)
+
+		# Use reordering if setup - log interventions (disable, redo) according to procMode
+		resultRedo = []
+		resultDisable = []
+		def resyncIterator():
+			if self.resyncOrder == ResyncOrder.fillgap:
+				rawInfo, extInfo = getSplitContainer()
+				resyncIter = getReorderIterator(rawInfo, iter(extInfo))
+			elif self.resyncOrder == ResyncOrder.reorder:
+				rawInfo, extInfo = getSplitContainer()
+				tsc = utils.TwoSidedContainer(rawInfo + extInfo)
+				resyncIter = getReorderIterator(tsc.forward(), tsc.backward())
+			else:
+				resyncIter = resyncIterator_raw()
+
+			for (jobNum, splitInfo, procMode) in resyncIter:
+				if jobNum:
+					if procMode == ResyncMode.complete:
+						resultRedo.append(jobNum)
+					if procMode == ResyncMode.disable:
+						resultDisable.append(jobNum)
+				yield splitInfo
+
+		# User overview and setup starts here
+		newSplitPathTMP = newSplitPath + '.tmp'
+		self.saveState(newSplitPathTMP, resyncIterator(), sourceLen = self.getMaxJobs(),
+			message = 'Performing resynchronization of dataset map (progress is estimated)')
+
+		if self.interactive:
+			# PRINT INFO, ASK
+			if not getUserBool('Do you want to use the new dataset splitting?', False):
+				return None
+		os.rename(newSplitPathTMP, newSplitPath)
+
 		return (resultRedo, resultDisable)
 
 
 	# Save as tar file to allow random access to mapping data with little memory overhead
-	def saveState(self, path, entries = None):
-		tar = tarfile.open(path, 'w:')
-		fmt = utils.DictFormat()
-		source = QM(entries == None, self.splitSource, list(entries)) # list(): for status display
-
-		# Function to close all tarfiles
-		def closeSubTar(jobNum, subTarFile, subTarFileObj):
-			if subTarFile:
-				subTarFile.close()
-				subTarFileObj.seek(0)
-				subTarFileInfo = tarfile.TarInfo('%03dXX.tgz' % (jobNum / 100))
-				subTarFileInfo.size = len(subTarFileObj.getvalue())
-				tar.addfile(subTarFileInfo, subTarFileObj)
-		# Write the splitting info grouped into subtarfiles
-		log = None
-		(jobNum, subTarFile, subTarFileObj) = (-1, None, None)
-		for jobNum, entry in enumerate(source):
-			if jobNum % 100 == 0:
-				closeSubTar(jobNum - 1, subTarFile, subTarFileObj)
-				subTarFileObj = cStringIO.StringIO()
-				subTarFile = tarfile.open(mode = 'w:gz', fileobj = subTarFileObj)
-				del log
-				log = utils.ActivityLog('Writing job mapping file [%d / %d]' % (jobNum, len(source)))
-			# Determine shortest way to store file list
-			tmp = entry.pop(DataSplitter.FileList)
-			commonprefix = os.path.commonprefix(tmp)
-			commonprefix = str.join('/', commonprefix.split('/')[:-1])
-			if len(commonprefix) > 6:
-				entry[DataSplitter.CommonPrefix] = commonprefix
-				savelist = map(lambda x: x.replace(commonprefix + '/', ''), tmp)
-			else:
-				savelist = tmp
-			# Write files with infos / filelist
-			def flat((x, y, z)):
-				if x in [DataSplitter.Metadata, DataSplitter.MetadataHeader]:
-					return (x, y, repr(z))
-				elif isinstance(z, list):
-					return (x, y, str.join(',', z))
-				return (x, y, z)
-			for name, data in [('list', str.join('\n', savelist)), ('info', fmt.format(entry, fkt = flat))]:
-				info, file = utils.VirtualFile(os.path.join('%05d' % jobNum, name), data).getTarInfo()
-				subTarFile.addfile(info, file)
-				file.close()
-			# Remove common prefix from info
-			if DataSplitter.CommonPrefix in entry:
-				entry.pop(DataSplitter.CommonPrefix)
-			entry[DataSplitter.FileList] = tmp
-		closeSubTar(jobNum, subTarFile, subTarFileObj)
-		del log
+	def saveState(self, path, source = None, sourceLen = None, message = 'Writing job mapping file'):
+		from splitter_io import DataSplitterIO
+		if source and not sourceLen:
+			source = list(source)
+			sourceLen = len(source)
+		elif not source:
+			(source, sourceLen) = (self.splitSource, self.getMaxJobs())
 		# Write metadata to allow reconstruction of data splitter
-		meta = {'ClassName': self.__class__.__name__, 'MaxJobs': jobNum + 1}
+		meta = {'ClassName': self.__class__.__name__}
 		meta.update(self._protocol)
-		info, file = utils.VirtualFile('Metadata', fmt.format(meta)).getTarInfo()
-		tar.addfile(info, file)
-		file.close()
-		tar.close()
+		DataSplitterIO().saveState(path, meta, source, sourceLen, message)
 
 
-	def loadStateInternal(path):
-		class JobFileTarAdaptor(object):
-			def __init__(self, path):
-				log = utils.ActivityLog('Reading job mapping file')
-				self.mutex = threading.Semaphore()
-				self._fmt = utils.DictFormat()
-				self._tar = tarfile.open(path, 'r:')
-				(self._cacheKey, self._cacheTar) = (None, None)
-
-				metadata = self._fmt.parse(self._tar.extractfile('Metadata').readlines(), lowerCaseKey = False)
-				self.maxJobs = metadata.pop('MaxJobs')
-				self.classname = metadata.pop('ClassName')
-				self.metadata = {None: dict(filter(lambda (k, v): not k.startswith('['), metadata.items()))}
-				for (k, v) in filter(lambda (k, v): k.startswith('['), metadata.items()):
-					self.metadata.setdefault('None %s' % k.split(']')[0].lstrip('['), {})[k.split(']')[1].strip()] = v
-				del log
-
-			def __getitem__(self, key):
-				self.mutex.acquire()
-				if not self._cacheKey == key / 100:
-					self._cacheKey = key / 100
-					subTarFileObj = self._tar.extractfile('%03dXX.tgz' % (key / 100))
-					self._cacheTar = tarfile.open(mode = 'r:gz', fileobj = subTarFileObj)
-				parserMap = { DataSplitter.SEList: utils.parseList, DataSplitter.BlockName: str,
-					DataSplitter.MetadataHeader: eval, DataSplitter.Metadata: lambda x: eval(x.strip("'")) }
-				data = self._fmt.parse(self._cacheTar.extractfile('%05d/info' % key).readlines(), valueParser=parserMap)
-				fileList = self._cacheTar.extractfile('%05d/list' % key).readlines()
-				if DataSplitter.CommonPrefix in data:
-					fileList = map(lambda x: '%s/%s' % (data[DataSplitter.CommonPrefix], x), fileList)
-				data[DataSplitter.FileList] = map(str.strip, fileList)
-				self.mutex.release()
-				return data
-
-		try:
-			return JobFileTarAdaptor(path)
-		except:
-			raise ConfigError("No valid dataset splitting found in '%s'." % path)
-	loadStateInternal = staticmethod(loadStateInternal)
+	def importState(self, path):
+		from splitter_io import DataSplitterIO
+		self.splitSource = DataSplitterIO().loadState(path)
 
 
-	def loadState(path):
-		src = DataSplitter.loadStateInternal(path)
-		cfg = Config(configDict=src.metadata)
+	def loadState(path, cfg = None):
+		from splitter_io import DataSplitterIO
+		src = DataSplitterIO().loadState(path)
+		if cfg == None:
+			cfg = Config(configDict=src.metadata)
 		splitter = DataSplitter.open(src.classname, cfg, section = None)
 		splitter.splitSource = src
 		# Transfer config protocol (in case no split function is called)

@@ -18,7 +18,7 @@ class LocalWMS(BasicWMS):
 
 
 	def getTimings(self):
-		return (1, 1) # Wait 20 seconds between cycles and 5 seconds between steps
+		return (20, 5) # Wait 20 seconds between cycles and 5 seconds between steps
 
 
 	# Check status of jobs and yield (jobNum, wmsID, status, other data)
@@ -146,9 +146,8 @@ class LocalWMS(BasicWMS):
 				continue
 
 			# Cleanup sandbox
-			print "TODO: Delete processing files"
-#			outFiles = utils.listMapReduce(lambda pat: glob.glob(os.path.join(path, pat)), self.sandboxOut)
-#			utils.removeFiles(filter(lambda x: x not in outFiles, map(lambda fn: os.path.join(path, fn), os.listdir(path))))
+			outFiles = utils.listMapReduce(lambda pat: glob.glob(os.path.join(path, pat)), self.outputFiles)
+			utils.removeFiles(filter(lambda x: x not in outFiles, map(lambda fn: os.path.join(path, fn), os.listdir(path))))
 
 			yield (jobNum, path)
 		del activity

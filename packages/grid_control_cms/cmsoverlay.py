@@ -1,5 +1,5 @@
 from grid_control import ConfigOverlay, Proxy
-from cms_ws import readJSON
+from webservice_api import readJSON
 
 class CMSOverlay(ConfigOverlay):
 	def __init__(self, config):
@@ -9,7 +9,7 @@ class CMSOverlay(ConfigOverlay):
 
 		# Rewrite cms storage urls:
 		proxy = Proxy.open('VomsProxy', config)
-		hnName = readJSON('https://cmsweb.cern.ch/sitedb/json/index/dnUserName', {'dn': proxy.get('identity')})
+		hnName = readJSON('https://cmsweb.cern.ch/sitedb/json/index/dnUserName', {'dn': proxy.getFQUsername()})
 		if not hnName:
 			raise ConfigError('Unable to map grid certificate to hypernews name!')
 

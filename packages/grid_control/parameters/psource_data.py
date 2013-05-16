@@ -1,27 +1,22 @@
+import time, os
 from psource_base import ParameterSource, ParameterMetadata, ParameterInfo
-from grid_control import utils, WMS
-from grid_control.datasets import DataSplitter
+from grid_control import utils, WMS, QM, UserError
+from grid_control.datasets import DataSplitter, DataProvider
 
-class DataParameterSource(ParameterSource):
-	def __init__(self, dataSplitter, fnFormat, checkSE = True):
-		ParameterSource.__init__(self)
-		(self.dataSplitter, self.fnFormat, self.checkSE) = (dataSplitter, fnFormat, checkSE)
+class DataSplitProcessor:
+	def __init__(self, checkSE = True):
+		self.checkSE = checkSE
 
-	def getMaxJobs(self):
-		return self.dataSplitter.getMaxJobs()
+	def formatFileList(self, fl):
+		return str.join(' ', fl)
 
-	def fillParameterKeys(self, result):
-		result.extend(
-			[ParameterMetadata('DATASETSPLIT')] + map(lambda k: ParameterMetadata(k, untracked=True),
-			['FILE_NAMES', 'MAX_EVENTS', 'SKIP_EVENTS', 'DATASETID', 'DATASETPATH', 'DATASETBLOCK', 'DATASETNICK']))
+	def getKeys(self):
+		return map(lambda k: ParameterMetadata(k, untracked=True), ['FILE_NAMES', 'MAX_EVENTS',
+			'SKIP_EVENTS', 'DATASETID', 'DATASETPATH', 'DATASETBLOCK', 'DATASETNICK'])
 
-	def fillParameterInfo(self, pNum, result):
-		splitInfo = self.dataSplitter.getSplitInfo(pNum)
-		if utils.verbosity() > 0:
-			utils.vprint('Dataset task number: %d' % pNum)
-			DataSplitter.printInfoForJob(splitInfo)
+	def process(self, pNum, splitInfo, result):
 		result.update({
-			'FILE_NAMES': self.fnFormat(splitInfo[DataSplitter.FileList]),
+			'FILE_NAMES': self.formatFileList(splitInfo[DataSplitter.FileList]),
 			'MAX_EVENTS': splitInfo[DataSplitter.NEvents],
 			'SKIP_EVENTS': splitInfo.get(DataSplitter.Skipped, 0),
 			'DATASETID': splitInfo.get(DataSplitter.DatasetID, None),
@@ -35,13 +30,84 @@ class DataParameterSource(ParameterSource):
 		if self.checkSE:
 			result[ParameterInfo.ACTIVE] = result[ParameterInfo.ACTIVE] and (splitInfo.get(DataSplitter.SEList) != [])
 
-	def create(cls, pconfig = None, src = 0):
-		if src not in DataParameterSource.datasets:
-			DataParameterSource.datasets[src] = {'obj': DataSplitter.loadState(src), 'fun': lambda fl: str.join(', ', fl)}
-		dsCfg = DataParameterSource.datasets.get(src)
-		DataParameterSource.datasetSources.append(DataParameterSource(dsCfg['obj'], dsCfg['fun']))
-		return DataParameterSource.datasetSources[-1]
+
+class DataParameterSource(ParameterSource):
+	def __init__(self, dataDir, srcName, dataProvider, dataSplitter, dataProc):
+		ParameterSource.__init__(self)
+		(self.dataDir, self.srcName, self.dataProvider, self.dataSplitter, self.dataProc) = \
+			(dataDir, srcName, dataProvider, dataSplitter, dataProc)
+
+		if not dataProvider:
+			pass # debug mode - used by scripts - disables resync
+		elif os.path.exists(self.getDataPath('cache.dat') and self.getDataPath('map.tar')):
+			self.dataSplitter.importState(self.getDataPath('map.tar'))
+		else:
+			self.dataProvider.saveState(self.getDataPath('cache.dat'))
+			self.dataSplitter.splitDataset(self.getDataPath('map.tar'), self.dataProvider.getBlocks())
+
+		self.maxN = self.dataSplitter.getMaxJobs()
+		self.keepOld = True
+
+	def getMaxParameters(self):
+		return self.maxN
+
+	def fillParameterKeys(self, result):
+		result.append(ParameterMetadata('DATASETSPLIT'))
+		result.extend(self.dataProc.getKeys())
+
+	def fillParameterInfo(self, pNum, result):
+		splitInfo = self.dataSplitter.getSplitInfo(pNum)
+		if utils.verbosity() > 2:
+			utils.vprint('Dataset task number: %d' % pNum)
+			DataSplitter.printInfoForJob(splitInfo)
+		self.dataProc.process(pNum, splitInfo, result)
+
+	def getHash(self):
+		return utils.md5(str(self.srcName) + str(self.dataSplitter.getMaxJobs())).hexdigest()
+
+	def __repr__(self):
+		return 'data(%s)' % QM(self.srcName == 'data', '', self.srcName)
+
+	def getDataPath(self, postfix):
+		return os.path.join(self.dataDir, self.srcName + postfix)
+
+	def resync(self):
+		(result_redo, result_disable, result_sizeChange) = ParameterSource.resync(self)
+		if self.resyncEnabled() and self.dataProvider:
+			# Get old and new dataset information
+			old = DataProvider.loadState(self.getDataPath('cache.dat')).getBlocks()
+			self.dataProvider.clearCache()
+			new = self.dataProvider.getBlocks()
+			self.dataProvider.saveState(self.getDataPath('cache-new.dat'))
+
+			# Use old splitting information to synchronize with new dataset infos
+			jobChanges = self.dataSplitter.resyncMapping(self.getDataPath('map-new.tar'), old, new)
+			if jobChanges:
+				# Move current splitting to backup and use the new splitting from now on
+				def backupRename(old, cur, new):
+					if self.keepOld:
+						os.rename(self.getDataPath(cur), self.getDataPath(old))
+					os.rename(self.getDataPath(new), self.getDataPath(cur))
+				backupRename(  'map-old-%d.tar' % time.time(),   'map.tar',   'map-new.tar')
+				backupRename('cache-old-%d.dat' % time.time(), 'cache.dat', 'cache-new.dat')
+				old_maxN = self.dataSplitter.getMaxJobs()
+				self.dataSplitter.importState(self.getDataPath('map.tar'))
+				self.maxN = self.dataSplitter.getMaxJobs()
+				self.dataSplitter.getMaxJobs()
+				result_redo.update(jobChanges[0])
+				result_disable.update(jobChanges[1])
+				result_sizeChange = result_sizeChange or (old_maxN != self.maxN)
+			self.resyncFinished()
+		return (result_redo, result_disable, result_sizeChange)
+
+	def create(cls, pconfig = None, src = 'data'):
+		if src not in DataParameterSource.datasetsAvailable:
+			raise UserError('Dataset parameter source "%s" not setup!' % src)
+		result = DataParameterSource.datasetsAvailable[src]
+		DataParameterSource.datasetsUsed.append(result)
+		return result
 	create = classmethod(create)
-DataParameterSource.datasets = {}
-DataParameterSource.datasetSources = []
+
+DataParameterSource.datasetsAvailable = {}
+DataParameterSource.datasetsUsed = []
 ParameterSource.managerMap['data'] = DataParameterSource

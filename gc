@@ -1,0 +1,21 @@
+#!/bin/sh
+
+BASEPATH=`dirname $0`
+SELECTOR="$1"
+shift
+
+case "$SELECTOR" in
+	"run")
+		$BASEPATH/go.py $@
+		;;
+	"report")
+		$BASEPATH/scripts/report.py $@
+		;;
+	"download")
+		$BASEPATH/scripts/downloadFromSE.py $@
+		;;
+	*)
+		echo "Syntax: $0 <run | report | download> <arguments>"
+		exit 1
+		;;
+esac

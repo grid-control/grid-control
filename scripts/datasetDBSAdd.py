@@ -75,6 +75,9 @@ class XMLWriter: # xml.dom.minidom needs a lot of memory - could be replaced by 
 
 def getDBSXML(opts, block, dsBlocks):
 	fqBlock = '%s#%s' % (block[DataProvider.Dataset], block[DataProvider.BlockName])
+	validBlock = re.compile(r"^(/[a-zA-Z0-9\.\-_]{1,100}){3}#[a-zA-Z0-9\.\-_]{1,100}$")
+	if validBlock.match(fqBlock) == None:
+		raise UserException("Invalid block name: %s" % fqBlock)
 	# Check validity of input dataset
 	def getKey(k):
 		try:
@@ -402,7 +405,7 @@ try:
 			config.set(None, 'dataset name pattern', '@DS_KEY@')
 		provider = DBSInfoProvider(config, None, args[0], None)
 
-	provider.saveState(opts.tmpDir)
+	provider.saveState(os.path.join(opts.tmpDir, 'dbs.dat'))
 	if opts.discovery:
 		sys.exit(0)
 	blocks = provider.getBlocks()

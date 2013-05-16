@@ -3,8 +3,14 @@ from python_compat import *
 from grid_control import QM, ConfigError, WMS, utils, storage, datasets, noDefault
 from grid_control.modules.datamod import DataMod
 from grid_control.datasets import DataSplitter
-from grid_control.parameters import DataParameterSource
+from grid_control.parameters import DataParameterSource, DataSplitProcessor
 from lumi_tools import *
+
+
+class CMSDataSplitProcessor(DataSplitProcessor):
+	def formatFileList(self, fl):
+		return str.join(', ', map(lambda x: '"%s"' % x, fl))
+
 
 class ExecutableWrapper:
 	def __init__(self, config, section, prefix = '', varPrefix = 'GC', exeDefault = noDefault):
@@ -34,8 +40,6 @@ class CMSSW(DataMod):
 		config.set(self.__class__.__name__, 'dataset splitter', 'EventBoundarySplitter', override = False)
 		DataMod.__init__(self, config)
 		self.errorDict.update(dict(self.updateErrorDict(utils.pathShare('gc-run.cmssw.sh', pkg = 'grid_control_cms'))))
-		for dsCfg in DataParameterSource.datasets.values():
-			dsCfg['fun'] = lambda fl: str.join(', ', map(lambda x: '"%s"' % x, fl))
 
 		# SCRAM info
 		scramProject = config.getList(self.__class__.__name__, 'scram project', [])
@@ -67,7 +71,7 @@ class CMSSW(DataMod):
 			# try to open it
 			try:
 				fp = open(os.path.join(scramPath, 'Environment'), 'r')
-				self.scramEnv = utils.DictFormat().parse(fp, lowerCaseKey = False)
+				self.scramEnv = utils.DictFormat().parse(fp, keyParser = {None: str})
 			except:
 				raise ConfigError('Project area file %s/.SCRAM/Environment cannot be parsed!' % self.projectArea)
 
@@ -79,7 +83,7 @@ class CMSSW(DataMod):
 			self.scramArch = config.get(self.__class__.__name__, 'scram arch', (archs + [None])[0])
 			try:
 				fp = open(os.path.join(scramPath, self.scramArch, 'Environment'), 'r')
-				self.scramEnv.update(utils.DictFormat().parse(fp, lowerCaseKey = False))
+				self.scramEnv.update(utils.DictFormat().parse(fp, keyParser = {None: str}))
 			except:
 				raise ConfigError('Project area file .SCRAM/%s/Environment cannot be parsed!' % self.scramArch)
 		else:
@@ -145,6 +149,10 @@ class CMSSW(DataMod):
 					return
 			# Generate runtime tarball (and move to SE)
 			utils.genTarball(os.path.join(config.workDir, 'runtime.tar.gz'), utils.matchFiles(self.projectArea, self.pattern))
+
+
+	def initDataProcessor(self):
+		return CMSDataSplitProcessor(self.checkSE)
 
 
 	def instrumentCfgQueue(self, cfgFiles, fragment, mustPrepare = False):
@@ -264,6 +272,15 @@ class CMSSW(DataMod):
 			return getLR(filterLumiFilter(runList, lumifilter))
 		except:
 			return getLR(lumifilter)
+
+
+	def getVarNames(self):
+		result = DataMod.getVarNames(self)
+		if self.dataSplitter == None:
+			result.append('MAX_EVENTS')
+		if self.selectedLumis:
+			result.append('LUMI_RANGE')
+		return result
 
 
 	# Get job dependent environment variables

@@ -10,6 +10,9 @@ from psource_lookup import *
 
 from pfactory_base import *
 from pfactory_modular import *
-from pfactory_easy import EasyParameterFactory
+from pfactory_simple import SimpleParameterFactory
+
+from padapter import *
 
 ParameterFactory.moduleMap['EasyParameterFactory'] = 'pfactory_easy.EasyParameterFactory'
+ParameterFactory.moduleMap['SimpleParameterFactory'] = 'pfactory_simple.SimpleParameterFactory'

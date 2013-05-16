@@ -5,7 +5,10 @@
 source $MY_LANDINGZONE/gc-run.lib || exit 101
 
 DASH_ID=$(echo $TASK_NAME | var_replacer "" | sed "s/__/_/g;s/^_//;s/_$//")
-if [ -n "$GLITE_WMS_JOBID" ]; then
+if [ -n "$CONDOR_WMS_DASHID" ]; then
+	GC_WMS_ID="$CONDOR_WMS_DASHID"
+	GC_CE_NAME="$(hostname -f)"
+elif [ -n "$GLITE_WMS_JOBID" ]; then
 	GC_WMS_ID="$GLITE_WMS_JOBID"
 	GC_CE_NAME="$GLOBUS_CE"
 else

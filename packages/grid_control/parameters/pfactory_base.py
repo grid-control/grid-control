@@ -3,48 +3,25 @@ from psource_basic import *
 from psource_meta import *
 from psource_file import *
 from psource_data import *
+from padapter import *
+from config_param import ParameterConfig
 from grid_control import AbstractObject, QM, utils
 
 class ParameterFactory(AbstractObject):
 	def __init__(self, config, sections):
-		self.static = config.getBool(sections, 'static parameters', False)
-		self.paramPath = os.path.join(config.workDir, 'params.dat.gz')
-		self.cachePath = os.path.join(config.workDir, 'params.map.gz')
-
-		if config.opts.init and self.static:
-			utils.eprint("WARNING: Static parameter mode switched on! Changes to parameter/dataset content can't be recovered!")
-		elif os.path.exists(self.paramPath):
-			if config.opts.init and not config.opts.resync:
-				utils.eprint('Re-Initialization will overwrite the current mapping between jobs and parameter/dataset content! This can lead to invalid results!')
-				if utils.getUserBool('Do you want to perform a syncronization between the current mapping and the new one to avoid this?', True):
-					config.opts.resync = True
-		elif config.opts.init and config.opts.resync:
-			config.opts.resync = False
+		self.adapter = config.get(sections, 'parameter adapter', 'TrackedParameterAdapter')
+		self.paramConfig = ParameterConfig(config, sections, self.adapter != 'TrackedParameterAdapter')
 
 
 	def _getRawSource(self, parent):
 		return parent
 
 
-	def getSource(self, doInit, doResync):
+	def getSource(self, config):
 		source = self._getRawSource(RNGParameterSource())
-		if DataParameterSource.datasets and not DataParameterSource.datasetSources:
-			source = CrossParameterSource(source, DataParameterSource.create())
-		if not doResync and not doInit and os.path.exists(self.cachePath): # Get old mapping
-			activity = utils.ActivityLog('Loading cached parameter information')
-			source = GCCacheParameterSource(self.cachePath, source)
-		elif not doInit and os.path.exists(self.paramPath): # Perform sync
-			activity = utils.ActivityLog('Syncronizing parameter information')
-			oldSource = GCDumpParameterSource(self.paramPath)
-			source = source.doResync(oldSource)
-
-		if (doResync or doInit) and not self.static: # Write current state
-			activity = utils.ActivityLog('Saving parameter information')
-			GCDumpParameterSource.write(self.paramPath, source)
-			GCCacheParameterSource.write(self.cachePath, source)
-		# Display plugin structure
-		source.show()
-		return source
+		if DataParameterSource.datasetsAvailable and not DataParameterSource.datasetsUsed:
+			source = CrossParameterSource(DataParameterSource.create(), source)
+		return ParameterAdapter.open(self.adapter, config, source)
 ParameterFactory.dynamicLoaderPath()
 
 
@@ -53,10 +30,10 @@ class BasicParameterFactory(ParameterFactory):
 		(self.constSources, self.lookupSources) = ([], [])
 		ParameterFactory.__init__(self, config, sections)
 
-		# Get constants from "[constants]"
+		# Get constants from [constants]
 		for cName in filter(lambda o: not o.endswith(' lookup'), config.getOptions('constants')):
 			self._addConstantPlugin(config, 'constants', cName, cName.upper())
-		# Get constants from "[<Module>] constants"
+		# Get constants from [<Module>] constants
 		for cName in map(str.strip, config.getList(sections, 'constants', [])):
 			self._addConstantPlugin(config, sections, cName, cName)
 		# Random number variables
@@ -86,7 +63,8 @@ class BasicParameterFactory(ParameterFactory):
 
 
 	def _getRawSource(self, parent):
-		source = ZipLongParameterSource(parent, RequirementParameterSource(), *self.constSources)
+		source_list = self.constSources + [parent, RequirementParameterSource()]
+		source = ZipLongParameterSource(*source_list)
 		if self.repeat > 1:
 			source = RepeatParameterSource(source, self.repeat)
 		return ParameterFactory._getRawSource(self, source)

@@ -26,6 +26,8 @@ class Config:
 		(self.allowSet, self.workDir) = (True, None)
 		self.hidden = [('global', 'workdir'), ('global', 'workdir base'), ('global', 'include')]
 		(self.content, self.apicheck, self.append, self.accessed, self.dynamic) = ({}, {}, {}, {}, {})
+		(self.configLog, self.configLogName) = ({}, None)
+		self.setConfigLog(None)
 
 		defaultCfg = ['/etc/grid-control.conf', '~/.grid-control.conf', utils.pathGC('default.conf')]
 		for cfgFile in filter(os.path.exists, map(lambda p: utils.resolvePath(p, check = False), defaultCfg)):
@@ -46,6 +48,16 @@ class Config:
 			for item in configDict[section]:
 				self.setInternal(section, item, str(configDict[section][item]), False)
 		self.set('global', 'include', '', default = '')
+
+
+	def setConfigLog(self, name):
+		self.configLog[name] = {}
+		self.configLogName = name
+		return self.configLog[name]
+
+
+	def getConfigLog(self, name):
+		return self.configLog[name]
 
 
 	def getTaskDict(self):
@@ -102,6 +114,7 @@ class Config:
 			self.setInternal(section, item, value, append)
 			self.accessed[(section, item)] = (value, default)
 			self.dynamic[(section, item)] = True
+			self.configLog[self.configLogName][(section, item)] = value
 
 
 	def get(self, section, item, default = noDefault, mutable = False, noVar = True):
@@ -129,6 +142,7 @@ class Config:
 			utils.vprint('Using default value [%s] %s = %s' % (section, item, default), 3)
 			value = default
 		self.accessed[(section, item)] = (value, default)
+		self.configLog[self.configLogName][(section, item)] = value
 		return utils.checkVar(value, '[%s] "%s" may not contain variables.' % (section, item), noVar)
 
 

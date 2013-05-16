@@ -8,3 +8,4 @@ nickname = Dataset2
 /bin/gettext = 1
 /bin/grep = 1
 /bin/mail = 1
+/bin/mailx = 3

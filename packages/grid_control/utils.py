@@ -7,6 +7,9 @@ def QM(cond, a, b):
 		return a
 	return b
 
+# placeholder for function arguments
+defaultArg = object()
+
 ################################################################
 # Path helper functions
 
@@ -123,6 +126,90 @@ class LoggedProcess(object):
 		tar.close()
 		eprint('All logfiles were moved to %s' % target)
 
+
+# Helper class handling commands through remote interfaces
+class RemoteProcessHandler(object):
+	# enum for connection type - LOCAL exists to ensure uniform interfacing with local programms if needed
+	class RPHType:
+		enumList = ('LOCAL','SSH','GSISSH')
+		for idx, eType in enumerate(enumList):
+			locals()[eType] = idx
+
+	# helper functions - properly prepare argument string for passing via interface
+	def _argFormatSSH(self, args):
+		return "'" + args.replace("'", "'\\''") + "'"
+	def _argFormatLocal(self, args):
+		return args
+
+	# template for input for connection types
+	RPHTemplate = {
+		RPHType.LOCAL: {
+			'command'	: "%(args)s %(cmdargs)s %%(cmd)s",
+			'copy'		: "cp -r %(args)s %(cpargs)s %%(source)s %%(dest)s",
+			'path'		: "%(path)s",
+			'argFormat'	: _argFormatLocal
+			},
+		RPHType.SSH: {
+			'command'	: "ssh %%(args)s %%(cmdargs)s %(rhost)s %%%%(cmd)s",
+			'copy'		: "scp -r %%(args)s %%(cpargs)s %%%%(source)s %%%%(dest)s",
+			'path'		: "%(host)s:%(path)s",
+			'argFormat'	: _argFormatSSH
+			},
+		RPHType.GSISSH: {
+			'command'	: "gsissh %%(args)s  %%(cmdargs)s %(rhost)s %%%%(cmd)s",
+			'copy'		: "gsiscp -r %%(args)s %%(cpargs)s %%%%(source)s %%%%(dest)s",
+			'path'		: "%(host)s:%(path)s",
+			'argFormat'	: _argFormatSSH
+			},
+		}
+	def __init__(self, remoteType="", **kwargs):
+		self.cmd=False
+		# pick requested remote connection
+		try:
+			self.remoteType = getattr( self.RPHType,remoteType.upper() )
+			self.cmd = self.RPHTemplate[self.remoteType]["command"]
+			self.copy = self.RPHTemplate[self.remoteType]["copy"]
+			self.path = self.RPHTemplate[self.remoteType]["path"]
+			self.argFormat = self.RPHTemplate[self.remoteType]["argFormat"]
+		except Exception:
+			raise RethrowError("Request to initialize RemoteProcessHandler of unknown type: %s" % remoteType)
+		# destination should be of type: [user@]host
+		if self.remoteType==self.RPHType.SSH or self.remoteType==self.RPHType.GSISSH:
+			try:
+				self.cmd = self.cmd % { "rhost" : kwargs["host"] }
+				self.copy = self.copy % { "rhost" : kwargs["host"] }
+				self.host = kwargs["host"]
+			except Exception:
+				raise RethrowError("Request to initialize RemoteProcessHandler of type %s without remote host." % self.RPHType.enumList[self.remoteType])
+		# add default arguments for all commands
+		self.cmd = self.cmd % { "cmdargs" : kwargs.get("cmdargs",""), "args" : kwargs.get("args","") }
+		self.copy = self.copy % { "cpargs" : kwargs.get("cpargs",""), "args" : kwargs.get("args","") }
+		# test connection once
+		ret, out, err = LoggedProcess( self.cmd % { "cmd" : "exit"} ).getAll()
+		if ret!=0:
+			raise GCError("Validation of remote connection failed!\nTest Command: %s\nReturn Code: %s\nStdOut: %s\nStdErr: %s" % (self.cmd % { "cmd" : "exit"},ret,out,err))
+		vprint('Remote interface initialized:\n	Cmd: %s\n	Cp : %s' % (self.cmd,self.copy), level=2)
+
+	# return instance of LoggedProcess with input properly wrapped
+	def LoggedProcess(self, cmd, args = '', argFormat=defaultArg):
+		if argFormat is defaultArg:
+			argFormat=self.argFormat
+		return LoggedProcess( self.cmd % { "cmd" : argFormat(self, "%s %s" % ( cmd, args )) } )
+
+	def LoggedCopyToRemote(self, source, dest):
+		return LoggedProcess( self.copy % { "source" : source, "dest" : self.path%{"host":self.host,"path":dest} } )
+
+	def LoggedCopyFromRemote(self, source, dest):
+		return LoggedProcess( self.copy % { "source" : self.path%{"host":self.host,"path":source}, "dest" : dest } )
+
+	def LoggedCopy(self, source, dest, remoteKey="<remote>"):
+		if source.startswith(remoteKey):
+			source = self.path%{"host":self.host,"path":source[len(remoteKey):]}
+		if dest.startswith(remoteKey):
+			dest = self.path%{"host":self.host,"path":dest[len(remoteKey):]}
+		return LoggedProcess( self.copy % { "source" : "%s:%s"%(self.host,source), "dest" : dest } )
+
+
 ################################################################
 # Global state functions
 
@@ -172,10 +259,11 @@ def filterDict(dictType, kF = lambda k: True, vF = lambda v: True):
 class PersistentDict(dict):
 	def __init__(self, filename, delimeter = '=', lowerCaseKey = True):
 		dict.__init__(self)
-		(self.format, self.filename) = (delimeter, filename)
+		self.fmt = DictFormat(delimeter)
+		self.filename = filename
+		keyParser = {None: QM(lowerCaseKey, lambda k: parseType(k.lower()), parseType)}
 		try:
-			dictObj = DictFormat(self.format)
-			self.update(dictObj.parse(open(filename), lowerCaseKey = lowerCaseKey))
+			self.update(self.fmt.parse(open(filename), keyParser = keyParser))
 		except:
 			pass
 		self.olddict = self.items()
@@ -194,7 +282,7 @@ class PersistentDict(dict):
 			return
 		try:
 			if self.filename:
-				safeWrite(open(self.filename, 'w'), DictFormat(self.format).format(self))
+				safeWrite(open(self.filename, 'w'), self.fmt.format(self))
 		except:
 			raise RuntimeError('Could not write to file %s' % self.filename)
 		self.olddict = self.items()
@@ -304,13 +392,6 @@ def parseList(value, delimeter = ',', doFilter = lambda x: x not in ['', '\n'], 
 	return onEmpty
 
 
-def parseTuple(t, delimeter):
-	t = t.strip()
-	if t.startswith('('):
-		return tuple(map(str.strip, t[1:-1].split(delimeter)))
-	return (t,)
-
-
 def parseTime(usertime):
 	if usertime == None or usertime == '':
 		return -1
@@ -380,9 +461,11 @@ def flatten(lists):
 	return result
 
 
-def DiffLists(oldList, newList, cmpFkt, changedFkt):
+def DiffLists(oldList, newList, cmpFkt, changedFkt, isSorted = False):
 	(listAdded, listMissing, listChanged) = ([], [], [])
-	(newIter, oldIter) = (iter(sorted(newList, cmpFkt)), iter(sorted(oldList, cmpFkt)))
+	if not isSorted:
+		(newList, oldList) = (sorted(newList, cmpFkt), sorted(oldList, cmpFkt))
+	(newIter, oldIter) = (iter(newList), iter(oldList))
 	(new, old) = (next(newIter, None), next(oldIter, None))
 	while True:
 		if (new == None) or (old == None):
@@ -456,55 +539,50 @@ def doBlackWhiteList(value, bwfilter, matcher = str.startswith, onEmpty = None, 
 class DictFormat(object):
 	# escapeString = escape '"', '$'
 	# types = preserve type information
-	def __init__(self, delimeter = '=', escapeString = False, types = True):
+	def __init__(self, delimeter = '=', escapeString = False):
 		self.delimeter = delimeter
-		self.types = types
 		self.escapeString = escapeString
 
 	# Parse dictionary lists
-	def parse(self, lines, lowerCaseKey = True, keyRemap = {}, valueParser = {}):
+	def parse(self, lines, keyParser = {}, valueParser = {}):
+		defaultKeyParser = keyParser.get(None, lambda k: parseType(k.lower()))
+		defaultValueParser = valueParser.get(None, parseType)
 		data = {}
-		currentline = ''
 		doAdd = False
+		currentline = ''
 		try:
 			lines = lines.splitlines()
 		except:
 			pass
 		for line in lines:
 			if self.escapeString:
-				# Accumulate lines until closing " found
-				if (line.count('"') - line.count('\\"')) % 2:
+				# Switch accumulate on/off when odd number of quotes found
+				if (line.count('"') - line.count('\\"')) % 2 == 1:
 					doAdd = not doAdd
 				currentline += line
 				if doAdd:
 					continue
 			else:
 				currentline = line
-			try:
-				# split at first occurence of delimeter and strip spaces around
+			try: # split at first occurence of delimeter and strip spaces around
 				key, value = map(str.strip, currentline.split(self.delimeter, 1))
-				if self.escapeString:
-					value = value.strip('"').replace('\\"', '"').replace('\\$', '$')
-				if lowerCaseKey:
-					key = key.lower()
-				if self.types:
-					value = parseType(value)
-					key = parseType(key)
-				# do .encode('utf-8') ?
-				data[keyRemap.get(key, key)] = valueParser.get(key, lambda x: x)(value)
-			except:
-				# in case no delimeter was found
-				pass
-			currentline = ''
+				currentline = ''
+			except: # in case no delimeter was found
+				currentline = ''
+				continue
+			if self.escapeString:
+				value = value.strip('"').replace('\\"', '"').replace('\\$', '$')
+			key = keyParser.get(key, defaultKeyParser)(key)
+			data[key] = valueParser.get(key, defaultValueParser)(value) # do .encode('utf-8') ?
 		if doAdd:
 			raise ConfigError('Invalid dict format in %s' % fp.name)
 		return data
 
 	# Format dictionary list
-	def format(self, dict, printNone = False, fkt = lambda (x, y, z): (x, y, z), format = '%s%s%s\n'):
+	def format(self, entries, printNone = False, fkt = lambda (x, y, z): (x, y, z), format = '%s%s%s\n'):
 		result = []
-		for key in dict.keys():
-			value = dict[key]
+		for key in entries.keys():
+			value = entries[key]
 			if value == None and not printNone:
 				continue
 			if self.escapeString and isinstance(value, str):
@@ -717,12 +795,20 @@ class ActivityLog:
 
 
 def printTabular(head, data, fmtString = '', fmt = {}, level = -1):
-	if printTabular.parseable:
+	if printTabular.mode == 'parseable':
 		vprint(str.join("|", map(lambda x: x[1], head)), level)
 		for entry in data:
 			if isinstance(entry, dict):
 				vprint(str.join("|", map(lambda x: str(entry.get(x[0], '')), head)), level)
 		return
+	if printTabular.mode == 'longlist':
+		maxhead = max(map(len, map(lambda (key, name): name, head)))
+		for entry in data:
+			for (key, name) in head:
+				print name.rjust(maxhead + 2), '|', str(fmt.get(key, str)(entry.get(key, '')))
+			print ('-' * (maxhead + 2)) + '-+-' + '-' * min(30, printTabular.wraplen - maxhead - 10)
+		return
+
 	justFunDict = { 'l': str.ljust, 'r': str.rjust, 'c': str.center }
 	# justFun = {id1: str.center, id2: str.rjust, ...}
 	head = list(head)
@@ -732,14 +818,15 @@ def printTabular(head, data, fmtString = '', fmt = {}, level = -1):
 	strippedlen = lambda x: len(re.sub('\33\[\d*(;\d*)*m', '', x))
 	just = lambda key, x: justFun.get(key, str.rjust)(x, lendict[key] + len(x) - strippedlen(x))
 
-	lendict = {}
+	lendict = dict(map(lambda (key, name): (key, len(name)), head))
+
 	entries = [] # formatted, but not yet aligned entries
 	for entry in data:
 		if isinstance(entry, dict):
 			tmp = {}
 			for key, name in head:
 				tmp[key] = str(fmt.get(key, str)(entry.get(key, '')))
-				lendict[key] = max(lendict.get(key, len(name)), strippedlen(tmp[key]))
+				lendict[key] = max(lendict[key], strippedlen(tmp[key]))
 			entries.append(tmp)
 		else:
 			entries.append(entry)
@@ -748,8 +835,8 @@ def printTabular(head, data, fmtString = '', fmt = {}, level = -1):
 		def getFitting(leftkeys):
 			current = 0
 			for key in leftkeys:
-				if current + lendict.get(key, 0) <= maxlen:
-					current += lendict.get(key, 0)
+				if current + lendict[key] <= maxlen:
+					current += lendict[key]
 					yield key
 			if current == 0:
 				yield leftkeys[0]
@@ -810,7 +897,7 @@ def printTabular(head, data, fmtString = '', fmt = {}, level = -1):
 		else:
 			vprint(' %s ' % str.join(' | ', map(lambda key: just(key, entry.get(key, '')), keys)), level)
 printTabular.wraplen = 100
-printTabular.parseable = False
+printTabular.mode = 'default'
 
 
 def getUserInput(text, default, choices, parser = lambda x: x):
@@ -844,21 +931,77 @@ def exitWithUsage(usage, msg = None, helpOpt = True):
 	sys.exit(0)
 
 
-def findTuples(value):
-	(buffer, counter, doEmit) = ('', 0, lambda: buffer.strip() and counter == 0)
-	for s in value:
-		if s == '(':
-			if doEmit():
-				yield buffer
-				buffer = ''
-			counter += 1
-		buffer += s
-		if s == ')':
-			counter -= 1
-			if doEmit():
-				yield buffer
-				buffer = ''
-	if doEmit():
+class TwoSidedContainer:
+	def __init__(self, allInfo):
+		(self.allInfo, self.left, self.right) = (allInfo, 0, 0)
+	def forward(self):
+		while self.left + self.right < len(self.allInfo):
+			self.left += 1
+			yield self.allInfo[self.left - 1]
+	def backward(self):
+		while self.left + self.right < len(self.allInfo):
+			self.right += 1
+			yield self.allInfo[len(self.allInfo) - self.right]
+
+
+def makeEnum(members, cls = None):
+	if cls == None:
+		cls = type('Enum_%s' % md5(str(members)).hexdigest(), (), {})
+	cls.members = members
+	cls.allMembers = range(len(members))
+	for idx, member in enumerate(members):
+		setattr(cls, member, idx)
+	return cls
+
+
+def split_advanced(tokens, doEmit, addEmitToken, quotes = ['"', "'"], brackets = ['()', '{}', '[]'], exType = Exception):
+	buffer = ''
+	emit_empty_buffer = False
+	stack_quote = []
+	stack_bracket = []
+	map_openbracket = dict(map(lambda x: (x[1], x[0]), brackets))
+	tokens = iter(tokens)
+	token = next(tokens, None)
+	while token:
+		emit_empty_buffer = False
+		# take care of quotations
+		if token in quotes:
+			if stack_quote and stack_quote[-1] == token:
+				stack_quote.pop()
+			else:
+				stack_quote.append(token)
+		if stack_quote:
+			buffer += token
+			token = next(tokens, None)
+			continue
+		# take care of parentheses
+		if token in map_openbracket.values():
+			stack_bracket.append(token)
+		if token in map_openbracket.keys():
+			if stack_bracket[-1] == map_openbracket[token]:
+				stack_bracket.pop()
+			else:
+				raise ExType('Uneven brackets!')
+		if stack_bracket:
+			buffer += token
+			token = next(tokens, None)
+			continue
+		# take care of low level splitting
+		if not doEmit(token):
+			buffer += token
+			token = next(tokens, None)
+			continue
+		if addEmitToken(token):
+			buffer += token
+		else: # if tokenlist ends with emit token, which is not emited, finish with empty buffer
+			emit_empty_buffer = True
+		yield buffer
+		buffer = ''
+		token = next(tokens, None)
+
+	if stack_quote or stack_bracket:
+		raise ExType('Brackets / quotes not closed!')
+	if buffer or emit_empty_buffer:
 		yield buffer
 
 

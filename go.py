@@ -35,7 +35,6 @@ if __name__ == '__main__':
 	parser.add_option('',   '--help-conf',     dest='help_cfg',   default=False, action='store_true')
 	parser.add_option('',   '--help-confmin',  dest='help_scfg',  default=False, action='store_true')
 	parser.add_option('-c', '--continuous',    dest='continuous', default=False, action='store_true')
-	parser.add_option('-G', '--gui',           dest='gui',        default=False, action='store_true')
 	parser.add_option('-i', '--init',          dest='init',       default=False, action='store_true')
 	parser.add_option('-q', '--resync',        dest='resync',     default=False, action='store_true')
 	parser.add_option('-s', '--no-submission', dest='submission', default=True,  action='store_false')
@@ -47,6 +46,8 @@ if __name__ == '__main__':
 	parser.add_option('-N', '--nseeds',        dest='nseeds',     default=None,  type='int')
 	parser.add_option('-m', '--max-retry',     dest='maxRetry',   default=None,  type='int')
 	parser.add_option('-v', '--verbose',       dest='verbosity',  default=0,     action='count')
+	parser.add_option('-G', '--gui',           dest='gui',        action='store_const', const = 'ANSIConsole')
+	parser.add_option('-W', '--webserver',     dest='gui',        action='store_const', const = 'CPWebserver')
 	Report.addOptions(parser)
 	(opts, args) = parser.parse_args()
 	utils.verbosity(opts.verbosity)
@@ -69,6 +70,7 @@ if __name__ == '__main__':
 			'action': opts.action, 'continuous': opts.continuous, 'selected': opts.selector}.items():
 			setConfigFromOpt(cmdopt, 'jobs', cfgopt)
 		setConfigFromOpt(opts.seed, 'jobs', 'seeds', lambda x: x.replace(',', ' '))
+		setConfigFromOpt(opts.gui, 'global', 'gui')
 		config.opts = opts
 		overlay = ConfigOverlay.open(config.get('global', 'config mode', 'verbatim'), config)
 
@@ -137,12 +139,7 @@ if __name__ == '__main__':
 			sys.exit(0)
 
 		actionList = config.getList('jobs', 'action', ['check', 'retrieve', 'submit'], mutable=True)
-
-		# Check for 
-		if config.get('global', 'file check', False, mutable=True):
-			if utils.fileCheck(config):
-				if utils.getUserBool('\nQuit grid-control in order to initialize the task again?', False):
-					sys.exit(0)
+		guiClass = config.get('global', 'gui', 'SimpleConsole', mutable=True)
 
 		initSentinel.checkpoint('config')
 		savedConfigPath = os.path.join(config.workDir, 'work.conf')
@@ -196,11 +193,8 @@ if __name__ == '__main__':
 				if not didWait:
 					wait(wms.getTimings()[0])
 
-		if opts.gui:
-			from grid_control import gui
-			gui.ANSIGUI(jobManager, jobCycle)
-		else:
-			jobCycle()
+		workflow = GUI.open(guiClass, jobCycle, jobManager, module)
+		workflow.run()
 
 	except GCError:
 		sys.stderr.write(GCError.message)

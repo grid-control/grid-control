@@ -179,16 +179,11 @@ class Report:
 
 
 	def siteReport(self, siteDetails = 0, timeDetails = 0):
-		from gui import Console
 		statinfo = self.getWNInfos()
-		markDict = {'FAILED': [Console.COLOR_RED, Console.BOLD], 'SUCCESS': [Console.COLOR_BLUE, Console.BOLD]}
 
 		report = []
 		def addRow(level, stats, mark = False):
 			fmt = lambda x, state: x
-			if mark:
-				fmt = lambda x, state: Console.fmt(x, markDict.get(state, []))
-				level = Console.fmt(level, [Console.BOLD])
 			def fmtRate(state):
 				all = max(1, sum(map(lambda x: stats[x]['COUNT'], Report.states)))
 				ratio = (100.0 * stats[state]['COUNT']) / all

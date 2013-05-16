@@ -1,8 +1,11 @@
 from grid_control import datasets, monitoring, overlay
 
-datasets.DataProvider.providers.update({'DASProvider': 'das', 'DBSApiv2': 'dbs'})
+datasets.DataProvider.moduleMap['DBS2Provider'] = 'provider_dbsv2.DBSApiv2'
+datasets.DataProvider.moduleMap['DBS3Provider'] = 'provider_dbsv3.DBS3Provider'
 datasets.DataProvider.moduleMap['DASProvider'] = 'provider_das.DASProvider'
-datasets.DataProvider.moduleMap['DBSApiv2'] = 'provider_dbsv2.DBSApiv2'
+datasets.DataProvider.moduleMap['DBSApiv2'] = datasets.DataProvider.moduleMap['DBS2Provider']
+datasets.DataProvider.moduleMap['dbs'] = datasets.DataProvider.moduleMap['DBS2Provider']
+datasets.DataProvider.providers.update({'DBSApiv3': 'dbs'})
 
 monitoring.Monitoring.moduleMap['dashboard'] = 'dashboard.DashBoard'
 
@@ -12,4 +15,4 @@ datasets.GCProvider.stageDir.update({'CMSSW': ['ObjectsFromCMSSW'], 'CMSSW_Advan
 datasets.GCProvider.stageFile.update({'CMSSW': ['MetadataFromCMSSW', 'SEListFromPath', 'LFNFromPath'],
 	'CMSSW_Advanced': ['MetadataFromCMSSW', 'SEListFromPath', 'LFNFromPath']})
 
-overlay.ConfigOverlay.moduleMap["cms"] = "cmsoverlay.CMSOverlay"
+overlay.ConfigOverlay.moduleMap['cms'] = 'cmsoverlay.CMSOverlay'

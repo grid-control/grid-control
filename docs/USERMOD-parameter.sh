@@ -17,3 +17,5 @@ cat IN*
 
 echo "HALLO"
 echo "WELT" >&2
+echo $x $y $z $spam
+echo $TEST

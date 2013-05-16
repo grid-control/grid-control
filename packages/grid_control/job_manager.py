@@ -50,7 +50,7 @@ class JobManager:
 			raise RuntimeError('Could not write disabled jobs to file %s!' % self.disableLog)
 		if len(disabled) > 0:
 			utils.vprint('There are %d disabled jobs in this task!' % len(disabled), -1, True)
-			utils.vprint('Please refer to %s for a complete list.' % self.disableLog, -1, True)
+			utils.vprint('Please refer to %s for a complete list.' % self.disableLog, -1, True, once = True)
 
 
 	def _update(self, jobObj, jobNum, state, showWMS = False):
@@ -66,7 +66,7 @@ class JobManager:
 		if showWMS and jobObj.wmsId:
 			print "(WMS:%s)" % jobObj.wmsId.split('.')[1],
 		if (state == Job.SUBMITTED) and (jobObj.attempt > 1):
-			print '(retry #%s)' % (jobObj.attempt - 1),
+			print '(retry #%s)' % (jobObj.attempt - 1)
 		elif (state == Job.QUEUED) and jobObj.get('dest') != 'N/A':
 			print '(%s)' % jobObj.get('dest')
 		elif (state in [Job.WAITING, Job.ABORTED, Job.DISABLED]) and jobObj.get('reason'):
@@ -197,7 +197,7 @@ class JobManager:
 				timeoutList.append(jobNum)
 				self.offender.pop(jobNum)
 
-		# Cancel jobs who took too long
+		# Cancel jobs which took too long
 		if len(timeoutList):
 			change = True
 			print '\nTimeout for the following jobs:'
@@ -244,10 +244,11 @@ class JobManager:
 		return change
 
 
-	def cancel(self, wms, jobs, interactive = False):
+	def cancel(self, wms, jobs, interactive = False, showJobs = True):
 		if len(jobs) == 0:
 			return
-		Report(self.jobDB, jobs).details()
+		if showJobs:
+			Report(self.jobDB, jobs).details()
 		if interactive and not utils.getUserBool('Do you really want to cancel these jobs?', True):
 			return
 
@@ -283,9 +284,9 @@ class JobManager:
 		jobs = self.jobDB.getJobs(JobSelector.create(select, module = self.module))
 		if jobs:
 			print '\nResetting the following jobs:'
-			self.cancel(wms, self.jobDB.getJobs(ClassSelector(JobClass.PROCESSING), jobs), True)
-			Report(self.jobDB, jobs)
+			Report(self.jobDB, jobs).details()
 			if utils.getUserBool('Are you sure you want to reset the state of these jobs?', False):
+				self.cancel(wms, self.jobDB.getJobs(ClassSelector(JobClass.PROCESSING), jobs), False, False)
 				for jobNum in jobs:
 					self.jobDB.commit(jobNum, Job())
 
@@ -305,12 +306,12 @@ class JobManager:
 				raise RuntimeError('For the following jobs it was not possible to reset the state to %s:\n%s' % output)
 
 		if jobChanges:
-			(redo, disable) = jobChanges
-			newMaxJobs = self.getMaxJobs(self.module)
-			if (redo == []) and (disable == []) and (len(self.jobDB) == newMaxJobs):
+			(redo, disable, sizeChange) = jobChanges
+			if (redo == []) and (disable == []) and (sizeChange == False):
 				return
 			utils.vprint('The job module has requested changes to the job database', -1, True)
-			if len(self.jobDB) != newMaxJobs:
+			if sizeChange:
+				newMaxJobs = self.getMaxJobs(self.module)
 				utils.vprint('Number of jobs changed from %d to %d' % (len(self.jobDB), newMaxJobs), -1, True)
 				self.jobDB.jobLimit = newMaxJobs
 			self.cancel(wms, self.jobDB.getJobs(ClassSelector(JobClass.PROCESSING), redo))

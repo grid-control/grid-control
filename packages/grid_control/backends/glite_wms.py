@@ -1,4 +1,5 @@
-import tempfile
+from python_compat import *
+import tempfile, time
 from grid_control import utils, RuntimeError
 from grid_wms import GridWMS
 
@@ -13,6 +14,14 @@ class GliteWMS(GridWMS):
 		self._cancelExec = utils.resolveInstallPath('glite-wms-job-cancel')
 		self._submitParams.update({'-r': self._ce, '--config': self._configVO})
 		self._useDelegate = config.getBool(self._getSections('backend'), 'use delegate', True, mutable=True)
+		self._sites = None
+		if config.getBool(self._getSections('backend'), 'discover sites', False, mutable=True):
+			lcgis = utils.resolveInstallPath('lcg-infosites')
+			self.sites = []
+
+
+	def getSites(self):
+		return self._sites
 
 
 	def bulkSubmissionBegin(self):
@@ -22,7 +31,7 @@ class GliteWMS(GridWMS):
 			return True
 		log = tempfile.mktemp('.log')
 		try:
-			dID = 'GCD' + md5(str(time())).hexdigest()[:10]
+			dID = 'GCD' + md5(str(time.time())).hexdigest()[:10]
 			activity = utils.ActivityLog('creating delegate proxy for job submission')
 			proc = utils.LoggedProcess(self._delegateExec, '%s -d %s --noint --logfile "%s"' %
 				(utils.QM(self._configVO, '--config "%s"' % self._configVO, ''), dID, log))

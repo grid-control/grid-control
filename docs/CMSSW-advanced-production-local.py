@@ -99,11 +99,11 @@ process.endjob_step = cms.Path(process.endOfProcess)
 process.out_step = cms.EndPath(process.output)
 
 # Schedule definition
-process.schedule = cms.Schedule(process.generation_step,process.endjob_step,process.out_step)
+process.schedule = cms.Schedule(process.generation_step, process.endjob_step, process.out_step)
 
 # special treatment in case of production filter sequence  
 for path in process.paths: 
-    getattr(process,path)._seq = process.ProductionFilterSequence*getattr(process,path)._seq
+    getattr(process, path)._seq = process.ProductionFilterSequence*getattr(process, path)._seq
 
 
 # Automatic addition of the customisation function

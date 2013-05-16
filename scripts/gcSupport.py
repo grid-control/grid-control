@@ -108,11 +108,16 @@ def prettySize(size):
 
 
 def parseOptions(parser):
-	parser.add_option('-P', '--parseable',         dest='parseable',             default=False, action='store_true',
+	parser.add_option('',   '--parseable', dest='displaymode', const='parseable', action='store_const',
 		help='Output tabular data in parseable format')
-	parser.add_option("-v", "--verbose",           dest="verbosity",             default=0,     action="count",
+	parser.add_option('-P', '--pivot',     dest='displaymode', const='longlist',  action='store_const',
+		help='Output pivoted tabular data')
+	parser.add_option('',   '--textwidth', dest='textwidth',   default=100,
+		help='Output tabular data with selected width')
+	parser.add_option("-v", "--verbose",   dest="verbosity",   default=0,         action="count",
 		help='Increase verbosity')
 	(opts, args) = parser.parse_args()
 	utils.verbosity(opts.verbosity)
-	utils.printTabular.parseable = opts.parseable
+	utils.printTabular.mode = opts.displaymode
+	utils.printTabular.wraplen = int(opts.textwidth)
 	return (opts, args)

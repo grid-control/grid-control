@@ -1,6 +1,7 @@
-from grid_control import QM, utils, datasets
+from grid_control import QM, utils, datasets, DatasetError
 from grid_control.datasets import DataProvider, HybridSplitter, DataSplitter
 from lumi_tools import *
+from webservice_api import *
 
 # required format: <dataset path>[@<instance>][#<block>]
 class CMSProvider(DataProvider):
@@ -19,8 +20,9 @@ class CMSProvider(DataProvider):
 		# This works in tandem with active job module (cmssy.py supports only [section] lumi filter!)
 		self.selectedLumis = parseLumiFilter(config.get(section, 'lumi filter', ''))
 		if self.selectedLumis:
-			utils.vprint('The following runs and lumi sections are selected:', -1, once = True)
-			utils.vprint(utils.wrapList(formatLumi(self.selectedLumis), 65, ',\n\t'), -1, once = True)
+			utils.vprint('Runs/lumi section filter enabled! (%d entries)' % len(self.selectedLumis), -1, once = True)
+			utils.vprint('\tThe following runs and lumi sections are selected:', 1, once = True)
+			utils.vprint('\t' + utils.wrapList(formatLumi(self.selectedLumis), 65, ',\n\t'), 1, once = True)
 
 
 	# Define how often the dataprovider can be queried automatically
@@ -46,3 +48,90 @@ class CMSProvider(DataProvider):
 				if selectLumi((lumi[runkey], lumi[lumikey]), self.selectedLumis):
 					return True
 		return self.selectedLumis == None
+
+
+	def nodeFilter(self, nameSiteDB, complete):
+		return (complete or not self.onlyComplete) and utils.filterBlackWhite([nameSiteDB], self.phedexBL)
+
+
+	# Get dataset se list from PhEDex (perhaps concurrent with listFiles)
+	def getPhedexSEList(self, blockPath, dictSE):
+		dictSE[blockPath] = []
+		url = 'https://cmsweb.cern.ch/phedex/datasvc/json/prod/blockreplicas'
+		for phedexBlock in readJSON(url, {'block': blockPath})['phedex']['block']:
+			for replica in phedexBlock['replica']:
+				if self.nodeFilter(replica['node'], replica['complete'] == 'y'):
+					dictSE[blockPath].append(replica['se'])
+
+
+	def getCMSDatasets(self):
+		result = [self.datasetPath]
+		if '*' in self.datasetPath:
+			result = list(self.getCMSDatasetsImpl(self.datasetPath))
+			if len(result) == 0:
+				raise DatasetError('No datasets selected by DBS wildcard %s !' % self.datasetPath)
+			utils.vprint('DBS dataset wildcard selected:\n\t%s\n' % str.join('\n\t', result), -1)
+		return result # List of resolved datasetPaths
+
+
+	def getCMSBlocks(self, datasetPath, getSites):
+		result = self.getCMSBlocksImpl(datasetPath, getSites)
+		result = filter(lambda b: self.blockFilter(b[0]), result)
+		if len(result) == 0:
+			raise DatasetError('Dataset %s does not contain any selected blocks!' % datasetPath)
+		return result # List of (blockname, selist) tuples
+
+
+	def getCMSFiles(self, blockPath):
+		lumiDict = {}
+		if self.selectedLumis: # Central lumi query
+			lumiDict = self.getCMSLumisImpl(blockPath)
+			lumiDict = QM(lumiDict, lumiDict, {})
+		for (fileInfo, listLumi) in self.getCMSFilesImpl(blockPath, self.onlyValid, self.selectedLumis):
+			if self.selectedLumis:
+				if not listLumi:
+					listLumi = lumiDict.get(fileInfo[DataProvider.lfn], [])
+				def acceptLumi():
+					for (run, lumiList) in listLumi:
+						for lumi in lumiList:
+							if selectLumi((run, lumi), self.selectedLumis):
+								return True
+				if not acceptLumi():
+					continue
+				fileInfo[DataProvider.Metadata] = [list(sorted(set(map(lambda (run, lumi_list): run, listLumi))))]
+			yield fileInfo
+
+
+	def getCMSLumisImpl(self, blockPath):
+		return None
+
+
+	def getGCBlocks(self, usePhedex):
+		for datasetPath in self.getCMSDatasets():
+			counter = 0
+			for (blockPath, listSE) in self.getCMSBlocks(datasetPath, getSites = not usePhedex):
+				result = {}
+				result[DataProvider.Dataset] = blockPath.split('#')[0]
+				result[DataProvider.BlockName] = blockPath.split('#')[1]
+
+				if usePhedex: # Start parallel phedex query
+					dictSE = {}
+					tPhedex = utils.gcStartThread("Query phedex site info for %s" % blockPath, self.getPhedexSEList, blockPath, dictSE)
+
+				if self.selectedLumis:
+					result[DataProvider.Metadata] = ['Runs']
+				result[DataProvider.FileList] = list(self.getCMSFiles(blockPath))
+
+				if usePhedex:
+					tPhedex.join()
+					listSE = dictSE.get(blockPath)
+				result[DataProvider.SEList] = listSE
+
+				if len(result[DataProvider.FileList]):
+					counter += 1
+					yield result
+
+			if (counter == 0) and self.selectedLumis:
+				raise DatasetError('Dataset %s does not contain the requested run/lumi sections!' % datasetPath)
+			elif counter == 0:
+				raise DatasetError('Dataset %s does not contain any valid blocks!' % datasetPath)

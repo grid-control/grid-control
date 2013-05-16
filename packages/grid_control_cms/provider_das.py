@@ -1,98 +1,50 @@
 from grid_control import QM, utils, DatasetError, RethrowError, datasets
-from grid_control.datasets import DataProvider, HybridSplitter, DataSplitter
+from grid_control.datasets import DataProvider
 from provider_cms import CMSProvider
 from python_compat import *
-from cms_ws import *
+from webservice_api import *
+import time
 
 # required format: <dataset path>[@<instance>][#<block>]
 class DASProvider(CMSProvider):
-	def getBlocksInternal(self, noFiles):
-		api = createDBSAPI(self.url)
-		def getWithPhedex(listBlockInfo, seList):
-			# Get dataset list from PhEDex (concurrent with listFiles)
-			phedexQuery = []
-			for block in listBlockInfo:
-				phedexQuery.extend(readJSON('https://cmsweb.cern.ch/phedex/datasvc/json/prod/blockreplicas',
-					{'block': block['Name']})['phedex']['block'])
-			for phedexBlock in phedexQuery:
-				phedexSelector = lambda x: (x['complete'] == 'y') or not self.onlyComplete
-				phedexSites = dict(map(lambda x: (x['node'], x['se']), filter(phedexSelector, phedexBlock['replica'])))
-				phedexSitesOK = utils.doBlackWhiteList(phedexSites.keys(), self.phedexBL)
-				seList[phedexBlock['name']] = map(lambda x: phedexSites[x], phedexSitesOK)
-		try:
-			toProcess = [self.datasetPath]
-			if '*' in self.datasetPath:
-				pd, sd, dt = (self.datasetPath.lstrip("/") + "/*/*/*").split("/")[:3]
-				toProcess = map(lambda x: x.get("PathList", [])[-1], api.listProcessedDatasets(pd, dt, sd))
-				utils.vprint("DBS dataset wildcard selected:\n\t%s\n" % str.join("\n\t", toProcess), -1)
-			# Start thread to retrieve list of files
-			(listBlockInfo, listFileInfo, seList) = ([], [], {})
-			def listFileInfoThread(self, api, path, result):
-				result.extend(api.listFiles(path, retriveList=['retrive_status'] + QM(self.selectedLumis, ['retrive_lumi'], [])))
-			for datasetPath in toProcess:
-				thisBlockInfo = api.listBlocks(datasetPath, nosite = self.phedex)
-				if not noFiles:
-					tFile = utils.gcStartThread("Retrieval of file infos for %s" % datasetPath,
-						listFileInfoThread, self, api, datasetPath, listFileInfo)
-					if self.phedex:
-						getWithPhedex(thisBlockInfo, seList)
-					tFile.join()
-				listBlockInfo.extend(thisBlockInfo)
-		except:
-			raise RethrowError('DBS exception')
+	def __init__(self, config, section, datasetExpr, datasetNick, datasetID = 0):
+		CMSProvider.__init__(self, config, section, datasetExpr, datasetNick, datasetID)
+		self.url = QM(self.url == '', 'https://cmsweb.cern.ch/das/cache', self.url)
 
-		if len(listBlockInfo) == 0:
-			raise DatasetError('Dataset %s has no registered blocks in dbs.' % self.datasetPath)
-		if len(listFileInfo) == 0 and not noFiles:
-			raise DatasetError('Dataset %s has no registered files in dbs.' % self.datasetPath)
 
-		def blockFilter(block):
-			return (self.datasetBlock == 'all') or (str.split(block['Name'], '#')[1] == self.datasetBlock)
+	def queryDAS(self, query):
+		(start, sleep) = (time.time(), 0.4)
+		while time.time() - start < 60:
+			tmp = readURL(self.url, {"input": query}, {"Accept": "application/json"})
+			if len(tmp) != 32:
+				return parseJSON(tmp)['data']
+			time.sleep(sleep)
+			sleep += 0.4
 
-		def lumiFilter(lumilist):
-			if self.selectedLumis:
-				for lumi in lumilist:
-					if selectLumi((lumi['RunNumber'], lumi['LumiSectionNumber']), self.selectedLumis):
-						return True
-			return self.selectedLumis == None
 
-		result = []
-		for block in filter(lambda x: True, listBlockInfo):
-			blockInfo = dict()
-			blockInfo[DataProvider.Dataset] = str.split(block['Name'], '#')[0]
-			blockInfo[DataProvider.BlockName] = str.split(block['Name'], '#')[1]
-			if self.phedex:
-				blockInfo[DataProvider.SEList] = seList.get(block['Name'], [])
-			else:
-				blockInfo[DataProvider.SEList] = map(lambda x: x['Name'], block['StorageElementList'])
+	def getCMSDatasetsImpl(self, datasetPath):
+		for ds1 in self.queryDAS("dataset dataset=%s" % datasetPath):
+			for ds2 in ds1['dataset']:
+				yield ds2['name']
 
-			dropped = 0
-			blockInfo[DataProvider.FileList] = []
-			if self.selectedLumis:
-				blockInfo[DataProvider.Metadata] = ['Runs']
-			for entry in listFileInfo:
-				if block['Name'] == entry['Block']['Name']:
-					if lumiFilter(entry['LumiList']) and (entry['Status'] == 'VALID' or not self.onlyValid):
-						blockInfo[DataProvider.FileList].append({
-							DataProvider.lfn      : entry['LogicalFileName'],
-							DataProvider.NEvents  : entry['NumberOfEvents'],
-							DataProvider.Metadata : [list(set(map(lambda x: int(x['RunNumber']), entry['LumiList'])))]
-						})
-					else:
-						dropped += 1
 
-			recordedFiles = len(blockInfo[DataProvider.FileList]) + dropped
-			if recordedFiles != block['NumberOfFiles'] and not noFiles:
-				utils.eprint('Inconsistency in dbs block %s: Number of files doesn\'t match (b:%d != f:%d)'
-					% (block['Name'], block['NumberOfFiles'], recordedFiles))
-			if dropped == 0:
-				blockInfo[DataProvider.NEvents] = block['NumberOfEvents']
-			if len(blockInfo[DataProvider.FileList]) > 0 or noFiles:
-				result.append(blockInfo)
+	def getCMSBlocksImpl(self, datasetPath, getSites):
+		for b1 in self.queryDAS("block dataset=%s" % datasetPath):
+			for b2 in b1['block']:
+				if 'replica' in b2:
+					listSE = []
+					for replica in b2['replica']:
+						if self.nodeFilter(replica['site'], replica['complete'] == 'y'):
+							listSE.append(replica['se'])
+					yield (b2['name'], listSE)
 
-		if len(result) == 0:
-			if self.selectedLumis:
-				utils.eprint('Dataset %s does not contain the requested run/lumi sections!' % self.datasetPath)
-			else:
-				raise DatasetError('Block %s not found in dbs.' % self.datasetBlock)
-		return result
+
+	def getCMSFilesImpl(self, blockPath, onlyValid, queryLumi):
+		for f1 in self.queryDAS("file block=%s" % blockPath):
+			for f2 in f1['file']:
+				if "nevents" in f2:
+					yield ({DataProvider.lfn: f2['name'], DataProvider.NEvents: f2['nevents']}, None)
+
+
+	def getBlocksInternal(self):
+		return self.getGCBlocks(usePhedex = False)

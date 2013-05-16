@@ -28,7 +28,7 @@ def discoverDataset(opts, parser, providerName, datasetExpr):
 		config = gcSupport.config.Config(configDict = {None: dict(parser.values.__dict__)})
 		provider = gcSupport.datasets.DataProvider.open(providerName, config, None, datasetExpr, None)
 		if opts.output:
-			provider.saveState(os.path.dirname(opts.output), os.path.basename(opts.output), None, opts.strip)
+			provider.saveState(opts.output, None, opts.strip)
 		else:
 			gcSupport.datasets.DataProvider.saveStateRaw(sys.stdout, provider.getBlocks(), opts.strip)
 	except gcSupport.GCError:

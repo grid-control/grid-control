@@ -1,5 +1,5 @@
 import os, gzip, cStringIO, copy, random
-from grid_control import QM, utils, AbstractObject, AbstractError, ConfigError, noDefault
+from grid_control import QM, utils, AbstractObject, AbstractError, ConfigError, noDefault, Config
 
 class NickNameProducer(AbstractObject):
 	def __init__(self, config):
@@ -25,7 +25,8 @@ class InlineNickNameProducer(NickNameProducer):
 
 class DataProvider(AbstractObject):
 	# To uncover errors, the enums of DataProvider / DataSplitter do *NOT* match
-	dataInfos = ['NEvents', 'BlockName', 'Dataset', 'SEList', 'lfn', 'FileList', 'Nickname', 'DatasetID', 'Metadata', 'Provider']
+	dataInfos = ['NEvents', 'BlockName', 'Dataset', 'SEList', 'lfn', 'FileList',
+		'Nickname', 'DatasetID', 'Metadata', 'Provider', 'ResyncInfo']
 	for id, dataInfo in enumerate(dataInfos):
 		locals()[dataInfo] = id
 
@@ -83,11 +84,11 @@ class DataProvider(AbstractObject):
 
 
 	# Cached access to list of block dicts, does also the validation checks
-	def getBlocks(self, noFiles = False):
+	def getBlocks(self):
 		self.allEvents = 0
 		def processBlocks():
 			# Validation, Filtering & Naming:
-			for block in self.getBlocksInternal(noFiles):
+			for block in self.getBlocksInternal():
 				block.setdefault(DataProvider.BlockName, '0')
 				block.setdefault(DataProvider.Provider, self.__class__.__name__)
 				if self._datasetID:
@@ -96,12 +97,10 @@ class DataProvider(AbstractObject):
 					block[DataProvider.Nickname] = self._datasetNick
 				else:
 					block[DataProvider.Nickname] = self.nProd.getName(block.get(DataProvider.Nickname, ''), block[DataProvider.Dataset], block)
-				if noFiles:
-					yield block
 
 				# Filter file list
 				events = sum(map(lambda x: x[DataProvider.NEvents], block[DataProvider.FileList]))
-				if block.setdefault(DataProvider.NEvents, events) != events and not noFiles:
+				if block.setdefault(DataProvider.NEvents, events) != events:
 					utils.eprint('WARNING: Inconsistency in block %s#%s: Number of events doesn\'t match (b:%d != f:%d)'
 						% (block[DataProvider.Dataset], block[DataProvider.BlockName], block[DataProvider.NEvents], events))
 
@@ -155,8 +154,12 @@ class DataProvider(AbstractObject):
 	# List of block dicts with format
 	# { NEvents: 123, Dataset: '/path/to/data', Block: 'abcd-1234', SEList: ['site1','site2'],
 	#   Filelist: [{lfn: '/path/to/file1', NEvents: 100}, {lfn: '/path/to/file2', NEvents: 23}]}
-	def getBlocksInternal(self, noFiles):
+	def getBlocksInternal(self):
 		raise AbstractError
+
+
+	def clearCache(self):
+		self._cache = None
 
 
 	# Print information about datasets
@@ -184,8 +187,9 @@ class DataProvider(AbstractObject):
 				writer.write('nickname = %s\n' % block[DataProvider.Nickname])
 			if DataProvider.DatasetID in block:
 				writer.write('id = %d\n' % block[DataProvider.DatasetID])
-			writer.write('events = %d\n' % block[DataProvider.NEvents])
-			if block[DataProvider.SEList] != None:
+			if DataProvider.NEvents in block:
+				writer.write('events = %d\n' % block[DataProvider.NEvents])
+			if block.get(DataProvider.SEList) != None:
 				writer.write('se list = %s\n' % str.join(',', block[DataProvider.SEList]))
 			cPrefix = os.path.commonprefix(map(lambda x: x[DataProvider.lfn], block[DataProvider.FileList]))
 			cPrefix = str.join('/', cPrefix.split('/')[:-1])
@@ -221,16 +225,16 @@ class DataProvider(AbstractObject):
 	saveStateRaw = staticmethod(saveStateRaw)
 
 
-	def saveState(self, path, filename = 'datacache.dat', dataBlocks = None, stripMetadata = False):
+	def saveState(self, path, dataBlocks = None, stripMetadata = False):
 		if dataBlocks == None:
 			dataBlocks = self.getBlocks()
-		DataProvider.saveStateRaw(open(os.path.join(path, filename), 'wb'), dataBlocks, stripMetadata)
+		DataProvider.saveStateRaw(open(path, 'wb'), dataBlocks, stripMetadata)
 
 
 	# Load dataset information using ListProvider
-	def loadState(config, path, filename = 'datacache.dat'):
+	def loadState(path):
 		# None, None = Don't override NickName and ID
-		return DataProvider.open('ListProvider', config, 'dataset', os.path.join(path, filename), None, None)
+		return DataProvider.open('ListProvider', Config(), 'dataset', path, None, None)
 	loadState = staticmethod(loadState)
 
 
@@ -242,38 +246,29 @@ class DataProvider(AbstractObject):
 			if x[DataProvider.Dataset] == y[DataProvider.Dataset]:
 				return cmp(x[DataProvider.BlockName], y[DataProvider.BlockName])
 			return cmp(x[DataProvider.Dataset], y[DataProvider.Dataset])
+		oldBlocks.sort(cmpBlock)
+		newBlocks.sort(cmpBlock)
 
-		# Compare different blocks according to their content
-		# Returns changes in terms of added, missing and changed files
-		def changedBlock(blocksAdded, blocksMissing, blocksChanged, oldBlock, newBlock):
-
+		def onMatchingBlock(blocksAdded, blocksMissing, blocksMatching, oldBlock, newBlock):
 			# Compare different files according to their name - NOT full content
 			def cmpFiles(x, y):
 				return cmp(x[DataProvider.lfn], y[DataProvider.lfn])
+			oldBlock[DataProvider.FileList].sort(cmpFiles)
+			newBlock[DataProvider.FileList].sort(cmpFiles)
 
-			# Compare different blocks according to their content
-			# Here just: #events, TODO: Checksums
-			def changedFiles(filesAdded, filesMissing, filesChanged, oldFile, newFile):
-				if oldFile[DataProvider.NEvents] != newFile[DataProvider.NEvents]:
-					filesChanged.append(newFile)
+			def onMatchingFile(filesAdded, filesMissing, filesMatched, oldFile, newFile):
+				filesMatched.append((oldFile, newFile))
 
-			tmp = utils.DiffLists(oldBlock[DataProvider.FileList], newBlock[DataProvider.FileList], cmpFiles, changedFiles)
-			(filesAdded, filesMissing, filesChanged) = tmp
+			(filesAdded, filesMissing, filesMatched) = \
+				utils.DiffLists(oldBlock[DataProvider.FileList], newBlock[DataProvider.FileList], cmpFiles, onMatchingFile, isSorted = True)
+			if filesAdded: # Create new block for added files in an existing block
+				tmpBlock = copy.copy(newBlock)
+				tmpBlock[DataProvider.FileList] = filesAdded
+				tmpBlock[DataProvider.NEvents] = sum(map(lambda x: x[DataProvider.NEvents], filesAdded))
+				blocksAdded.append(tmpBlock)
+			blocksMatching.append((oldBlock, newBlock, filesMissing, filesMatched))
 
-			def copyWithoutFiles(oldblock, files):
-				newblock = copy.copy(oldblock)
-				newblock[DataProvider.FileList] = files
-				newblock[DataProvider.NEvents] = sum(map(lambda x: x[DataProvider.NEvents], files))
-				return newblock
-
-			if filesAdded:
-				blocksAdded.append(copyWithoutFiles(newBlock, filesAdded))
-			if filesMissing:
-				blocksMissing.append(copyWithoutFiles(newBlock, filesMissing))
-			if filesChanged:
-				blocksChanged.append(copyWithoutFiles(newBlock, filesChanged))
-
-		return utils.DiffLists(oldBlocks, newBlocks, cmpBlock, changedBlock)
+		return utils.DiffLists(oldBlocks, newBlocks, cmpBlock, onMatchingBlock, isSorted = True)
 	resyncSources = staticmethod(resyncSources)
 
 DataProvider.providers = {}

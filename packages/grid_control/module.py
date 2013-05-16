@@ -19,6 +19,8 @@ class Module(AbstractObject):
 		# Compute / get task ID
 		self.taskID = config.getTaskDict().get('task id', 'GC' + md5(str(time())).hexdigest()[:12])
 		utils.vprint('Current task ID: %s' % self.taskID, -1, once = True)
+		self.taskDate = config.getTaskDict().get('task date', strftime("%F"))
+		utils.vprint('Task started on %s' % self.taskDate, -1, once = True)
 
 		self.taskVariables = {
 			# Space limits
@@ -42,15 +44,14 @@ class Module(AbstractObject):
 		self.errorDict = dict(self.updateErrorDict(utils.pathShare('gc-run.lib')))
 
 		# Init plugin manager / parameter source
-		pmName = config.get(self.__class__.__name__, 'parameter manager', 'EasyParameterFactory')
-		self.pm = ParameterFactory.open(pmName, config, [self.__class__.__name__, 'parameters'])
-		self.source = None
+		pmName = config.get([self.__class__.__name__, 'parameters'], 'parameter factory', 'SimpleParameterFactory')
+		pm = ParameterFactory.open(pmName, config, [self.__class__.__name__, 'parameters'])
+		self.setupJobParameters(config, pm)
+		self.source = pm.getSource(config)
 
 
-	def getSource(self):
-		if not self.source:
-			self.source = self.pm.getSource(self.config.opts.init, self.config.opts.resync)
-		return self.source
+	def setupJobParameters(self, config, pm):
+		pass
 
 
 	# Read comments with error codes at the beginning of file
@@ -78,6 +79,7 @@ class Module(AbstractObject):
 			'SUBST_FILES': str.join(' ', map(os.path.basename, self.getSubstFiles())),
 			# Task infos
 			'TASK_ID': self.taskID,
+			'GC_TASK_DATE': self.taskDate,
 			'GC_CONF': self.config.confName,
 			'GC_VERSION': utils.getVersion(),
 		}
@@ -87,23 +89,28 @@ class Module(AbstractObject):
 
 	# Get job dependent environment variables
 	def getJobConfig(self, jobNum):
-		tmp = self.getSource().getJobInfo(jobNum)
-		return dict(map(lambda key: (key, tmp.get(key, '')), self.getSource().getJobKeys()))
+		tmp = self.source.getJobInfo(jobNum)
+		return dict(map(lambda key: (key, tmp.get(key, '')), self.source.getJobKeys()))
 
 
 	def getTransientVars(self):
 		hx = str.join("", map(lambda x: "%02x" % x, map(random.randrange, [256]*16)))
-		return {'MYDATE': strftime("%F"), 'MYTIMESTAMP': strftime("%s"),
-			'MYGUID': '%s-%s-%s-%s-%s' % (hx[:8], hx[8:12], hx[12:16], hx[16:20], hx[20:]),
+		return {'GC_DATE': strftime("%F"), 'GC_TIMESTAMP': strftime("%s"),
+			'GC_GUID': '%s-%s-%s-%s-%s' % (hx[:8], hx[8:12], hx[12:16], hx[16:20], hx[20:]),
 			'RANDOM': str(random.randrange(0, 900000000))}
 
 
+	def getVarNames(self):
+		# Take task variables and the variables from the parameter source
+		return self.getTaskConfig().keys() + list(self.source.getJobKeys())
+
+
 	def getVarMapping(self):
-		# Take task variables and just the variables from the first job
-		envvars = self.getTaskConfig().keys() + list(self.getSource().getJobKeys())
 		# Map vars: Eg. __MY_JOB__ will access $MY_JOBID
-		mapping = [('DATE', 'MYDATE'), ('TIMESTAMP', 'MYTIMESTAMP'), ('MY_JOBID', 'MY_JOBID'),
-			('MY_JOB', 'MY_JOBID'), ('CONF', 'GC_CONF'), ('GUID', 'MYGUID')]
+		mapping = [('DATE', 'GC_DATE'), ('TIMESTAMP', 'GC_TIMESTAMP'), ('GUID', 'GC_GUID'),
+			('GC_DATE', 'GC_DATE'), ('GC_TIMESTAMP', 'GC_TIMESTAMP'), ('GC_GUID', 'GC_GUID'),
+			('MY_JOBID', 'MY_JOBID'), ('MY_JOB', 'MY_JOBID'), ('CONF', 'GC_CONF')]
+		envvars = self.getVarNames()
 		return dict(mapping + zip(envvars, envvars))
 
 
@@ -118,7 +125,7 @@ class Module(AbstractObject):
 
 	def validateVariables(self):
 		for x in self.getTaskConfig().values() + self.getJobConfig(0).values():
-			self.substVars(x, 0, dict.fromkeys(['X', 'XBASE', 'XEXT', 'MYDATE', 'MYTIMESTAMP', 'RANDOM'], ''))
+			self.substVars(x, 0, dict.fromkeys(['X', 'XBASE', 'XEXT', 'GC_DATE', 'GC_TIMESTAMP', 'GC_GUID', 'RANDOM'], ''))
 
 
 	# Get job requirements
@@ -128,7 +135,7 @@ class Module(AbstractObject):
 			(WMS.CPUTIME, self.cpuTime),
 			(WMS.MEMORY, self.memory),
 			(WMS.CPUS, self.cpus)
-		] + self.getSource().getJobInfo(jobNum)[ParameterInfo.REQS]
+		] + self.source.getJobInfo(jobNum)[ParameterInfo.REQS]
 
 
 	def getSEInFiles(self):
@@ -159,7 +166,7 @@ class Module(AbstractObject):
 
 
 	def getMaxJobs(self):
-		return self.getSource().getMaxJobs()
+		return self.source.getMaxJobs()
 
 
 	def getDependencies(self):
@@ -171,11 +178,8 @@ class Module(AbstractObject):
 
 
 	def report(self, jobNum):
-#		info = self.getSource().getJobInfo(jobNum)
-#		tmp = dict(map(lambda key: (key, info[key]), self.getSource().getParameterNamesSet()))
-#		info = self.getSource().getJobInfo(jobNum)
-#		tmp = map(lambda k: info[k], self.
-		return {' ': 'All jobs'}
+		keys = filter(lambda k: k.untracked == False, self.source.getJobKeys())
+		return utils.filterDict(self.source.getJobInfo(jobNum), kF = lambda k: k in keys)
 
 
 	def canFinish(self):
@@ -183,7 +187,7 @@ class Module(AbstractObject):
 
 
 	def canSubmit(self, jobNum):
-		return self.getSource().getJobInfo(jobNum)[ParameterInfo.ACTIVE]
+		return self.source.canSubmit(jobNum)
 
 
 	# Called on job submission
@@ -193,6 +197,6 @@ class Module(AbstractObject):
 
 	# Intervene in job management - return None or (redoJobs, disableJobs)
 	def getIntervention(self):
-		return self.getSource().getJobIntervention()
+		return self.source.resync()
 
 Module.dynamicLoaderPath(['grid_control.modules'])

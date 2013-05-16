@@ -189,9 +189,9 @@ class GridWMS(BasicWMS):
 		adder = lambda a, b: utils.QM('=====' not in b and b != '\n', a + b, a)
 		remap = { 'destination': 'dest', 'status reason': 'reason',
 			'status info for the job': 'id', 'current status': 'status',
-			'submitted': 'timestamp', 'reached': 'timestamp', 'exit code': 'gridexit'  }
+			'submitted': 'timestamp', 'reached': 'timestamp', 'exit code': 'gridexit' }
 		for section in utils.accumulate(lines, lambda x, buf: ('='*70) in x, '', opAdd = adder):
-			data = utils.DictFormat(':').parse(str.join('', section), keyRemap = remap)
+			data = utils.DictFormat(':').parse(str.join('', section), keyParser = {None: lambda k: remap.get(k, str)})
 			data = utils.filterDict(data, vF = lambda v: v)
 			if data:
 				try:

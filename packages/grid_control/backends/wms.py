@@ -133,6 +133,7 @@ class BasicWMS(WMS):
 
 
 	def deployTask(self, module, monitor):
+		self.outputFiles = map(lambda (d, s, t): t, self._getSandboxFilesOut(module)) # HACK
 		module.validateVariables()
 
 		self.smSEIn.addFiles(map(lambda (d, s, t): t, module.getSEInFiles())) # add module SE files to SM
@@ -194,23 +195,31 @@ class BasicWMS(WMS):
 
 			# inJobNum != None, dir != None => Job retrieval from WMS was ok
 			info = os.path.join(dir, 'job.info')
-			try:
-				# Function to parse job info file
-				data = utils.DictFormat().parse(open(info, 'r'), lowerCaseKey = False)
-				jobNum = data['JOBID']
-				if jobNum != inJobNum:
-					raise RuntimeError('Invalid job id in job file %s' % info)
-				if forceMove(dir, os.path.join(self._outputPath, 'job_%d' % jobNum)):
-					retrievedJobs.append(inJobNum)
-					yield (jobNum, data['EXITCODE'], data)
-				else:
-					yield (jobNum, -1, {})
-				continue
-			except:
-				pass
+			info_content = None
+			if not os.path.exists(info):
+				utils.eprint('Warning: "%s" does not exist.' % info)
+			else:
+				try:
+					info_content = open(info, 'r').read()
+				except Exception, ex:
+					utils.eprint('Warning: Unable to read "%s"!\n%s' % (info, str(ex)))
+			if info_content:
+				try:
+					# Function to parse job info file
+					data = utils.DictFormat().parse(info_content, keyParser = {None: str})
+					jobNum = data['JOBID']
+					if jobNum != inJobNum:
+						raise RuntimeError('Invalid job id in job file %s' % info)
+					if forceMove(dir, os.path.join(self._outputPath, 'job_%d' % jobNum)):
+						retrievedJobs.append(inJobNum)
+						yield (jobNum, data['EXITCODE'], data)
+					else:
+						yield (jobNum, -1, {})
+					continue
+				except:
+					# Something went wrong
+					utils.eprint('Warning: "%s" seems broken.' % info)
 
-			# Something went wrong
-			utils.eprint('Warning: "%s" seems broken.' % info)
 			# Clean empty dirs
 			for subDir in map(lambda x: x[0], os.walk(dir, topdown=False)):
 				try:

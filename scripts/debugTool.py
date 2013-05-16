@@ -15,6 +15,8 @@ parser.add_option_group(ogBackend)
 
 parser.add_option("-j", "--jdl", dest="jdl", default=False, action="store_true",
 	help="Get JDL file")
+parser.add_option("-J", "--jobs", dest="jobs", default="",
+	help="Display job ids matching selector")
 parser.add_option("-s", "--state", dest="state", default="",
 	help="Force new job state")
 parser.add_option("-S", "--splitting", dest="splitting", default="",
@@ -39,21 +41,32 @@ if opts.jdl or opts.state:
 		utils.exitWithUsage("%s <job info file>" % sys.argv[0])
 	job = Job.load(args[0])
 
+if opts.jobs:
+	config = Config(args[0])
+	config.opts = config
+	config.opts.init = False
+	config.opts.resync = False
+	# Initialise application module
+	module = Module.open(config.get('global', 'module'), config)
+	jobDB = JobDB(config)
+	selected = JobSelector.create(opts.jobs, module = module)
+	print str.join(' ', map(str, jobDB.getJobsIter(selected)))
+
 if opts.diff:
 	if len(args) != 2:
 		utils.exitWithUsage("%s <dataset source 1> <dataset source 2>" % sys.argv[0])
 	utils.eprint = lambda *x: {}
-	a = DataProvider.loadState(Config(), os.path.dirname(args[0]), os.path.basename(args[0]))
-	b = DataProvider.loadState(Config(), os.path.dirname(args[1]), os.path.basename(args[1]))
+	a = DataProvider.loadState(args[0])
+	b = DataProvider.loadState(args[1])
 	(blocksAdded, blocksMissing, blocksChanged) = DataProvider.resyncSources(a.getBlocks(), b.getBlocks())
 	utils.printTabular([(DataProvider.Dataset, "Dataset"), (DataProvider.BlockName, "Block")], blocksMissing)
 
 if opts.findrm:
 	removed = []
 	utils.eprint = lambda *x: {}
-	oldDP = DataProvider.loadState(Config(), os.path.dirname(args[0]), os.path.basename(args[0]))
+	oldDP = DataProvider.loadState(args[0])
 	for new in args[1:]:
-		newDP = DataProvider.loadState(Config(), os.path.dirname(new), os.path.basename(new))
+		newDP = DataProvider.loadState(new)
 		(blocksAdded, blocksMissing, blocksChanged) = DataProvider.resyncSources(oldDP.getBlocks(), newDP.getBlocks())
 		for block in blocksMissing:
 			tmp = dict(block)
@@ -99,7 +112,6 @@ if opts.splitting:
 		else:
 			utils.verbosity(10)
 			splitter.printAllJobInfo()
-			splittingInfos
 	else:
 		print "Checking %d jobs..." % splitter.getMaxJobs()
 		fail = utils.set()

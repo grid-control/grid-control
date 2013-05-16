@@ -124,7 +124,8 @@ checkbin() {
 		echo "OK (`getcommand $1`)"
 	else
 		echo "FAILED"
-		echo "`basename $1` missing" 1>&2
+		checkfile $1
+		echo "`basename $1` not executable" 1>&2
 		fail 103
 	fi
 }
@@ -243,13 +244,13 @@ var_replacer() {
 		j=$[j+1]
 	done
 	REPLACEFILE="${MY_SCRATCH:-.}/_replace.awk"
-	MYDATE=`date +%F`
-	MYTIMESTAMP=`date +%s`
-	MYGUID=`uuidgen 2> /dev/null`
-	if [ -z "$MYGUID" ]; then
+	GC_DATE=`date +%F`
+	GC_TIMESTAMP=`date +%s`
+	GC_GUID=`uuidgen 2> /dev/null`
+	if [ -z "$GC_GUID" ]; then
 		FMGUID="%04x%04x-%04x-%04x-%04x-%04x%04x%04x"
 		RINT="int(rand()*2**16), int(rand()*2**16), int(rand()*2**16), int(rand()*2**16)"
-		MYGUID=`echo | awk "BEGIN{srand($JOB_RANDOM)}{printf \"$FMGUID\", $RINT, $RINT}"`
+		GC_GUID=`echo | awk "BEGIN{srand($JOB_RANDOM)}{printf \"$FMGUID\", $RINT, $RINT}"`
 	fi
 
 	(
@@ -266,17 +267,18 @@ var_replacer() {
 		[ -f "${MY_SCRATCH:-.}/_varmap.dat" ] && cat "${MY_SCRATCH:-.}/_varmap.dat" |
 		while read USER_VARNAME REAL_VARNAME; do
 			VARVALUE="${!REAL_VARNAME}"
+			VARVALUE_ESC=`echo "$VARVALUE" | awk '{ gsub("\"", "\\\\\""); print }'`
 			[ -z "$VARVALUE" ] && echo "	gsub(\"^@IF@${USER_VARNAME}@.*\", \"\")"
 			[ -n "$VARVALUE" ] && echo "	gsub(\"^@IF@${USER_VARNAME}@\", \"\")"
-			echo "	gsub(\"^@IFEQ@${USER_VARNAME}@${VARVALUE//\"/\\\"}@\", \"\")"
-			echo "	gsub(\"@${USER_VARNAME}@\", \"${VARVALUE//\"/\\\"}\")"
-			echo "	gsub(\"__${USER_VARNAME}__\", \"${VARVALUE//\"/\\\"}\")"
+			echo '	gsub("^@IFEQ@'"${USER_VARNAME}"'@'"${VARVALUE_ESC}"'@", "")'
+			echo '	gsub("@'${USER_VARNAME}'@", "'"$VARVALUE_ESC"'")'
+			echo '	gsub("__'${USER_VARNAME}'__", "'"$VARVALUE_ESC"'")'
 		done
-		echo "	gsub(\"^@IFEQ.*\", \"\")"
-		echo "	gsub(\"@RANDOM@\", int(rand() * 900000000))"
-		echo "	gsub(\"__RANDOM__\", int(rand() * 900000000))"
-		echo "	print"
-		echo "}"
+		echo '	gsub("^@IFEQ.*", "")'
+		echo '	gsub("@RANDOM@", int(rand() * 900000000))'
+		echo '	gsub("__RANDOM__", int(rand() * 900000000))'
+		echo '	print'
+		echo '}'
 	) > "$REPLACEFILE"
 	awk -f "$REPLACEFILE" | awk -f "$REPLACEFILE"
 }

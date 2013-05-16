@@ -8,7 +8,8 @@ class WMSFactory:
 		wmsUsrList = config.getList('global', 'backend', ['grid'], mutable = True)
 		wmsSetupList = map(lambda wmsEntry: utils.optSplit(wmsEntry, ':', empty = None), wmsUsrList)
 		try:
-			wmsDict = {'grid': 'GliteWMS', 'local': self._guessWMS(), 'inactive': 'InactiveWMS'}
+			wmsDict = {'grid': 'GliteWMS', 'inactive': 'InactiveWMS',
+				'local': config.get('local', 'wms', self._guessWMS())}
 			wmsSetupList = map(lambda (wmsClass, wmsName): (wmsDict.get(wmsClass, wmsClass), wmsName), wmsSetupList)
 			self.wmsObjList = map(lambda (wmsClass, wmsName): WMS.open(wmsClass, config, wmsName), wmsSetupList)
 		except:

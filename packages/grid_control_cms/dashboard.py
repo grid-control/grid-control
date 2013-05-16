@@ -36,7 +36,7 @@ class DashBoard(Monitoring):
 
 	# Called on job submission
 	def onJobSubmit(self, wms, jobObj, jobNum):
-		taskId = self.module.substVars(self.taskname, jobNum).strip('_')
+		taskId = self.module.substVars(self.taskname, jobNum, addDict = {'NICK': ''}).strip('_')
 		proxy = wms.getProxy(jobObj.wmsId)
 		utils.gcStartThread("Notifying dashboard about job submission %d" % jobNum,
 			self.publish, jobObj, jobNum, taskId, [{
@@ -48,7 +48,7 @@ class DashBoard(Monitoring):
 
 	# Called on job status update
 	def onJobUpdate(self, wms, jobObj, jobNum, data):
-		taskId = self.module.substVars(self.taskname, jobNum).strip('_')
+		taskId = self.module.substVars(self.taskname, jobNum, addDict = {'NICK': ''}).strip('_')
 		utils.gcStartThread("Notifying dashboard about status of job %d" % jobNum,
 			self.publish, jobObj, jobNum, taskId, [{
 			'StatusValue': data.get('status', 'pending').upper(),

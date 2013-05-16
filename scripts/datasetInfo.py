@@ -22,6 +22,8 @@ parser.add_option('-m', '--metadata',      dest='metadata',     default=False, a
 	help='Get metadata infomation of dataset files')
 parser.add_option('-M', '--block-metadata', dest='blockmetadata', default=False, action='store_true',
 	help='Get common metadata infomation of dataset blocks')
+parser.add_option('', '--sort',            dest='sort',         default=False, action='store_true',
+	help='Sort dataset blocks and files')
 parser.add_option('-S', '--save',          dest='save',
 	help='Saves dataset information to specified file')
 (opts, args) = parseOptions(parser)
@@ -37,15 +39,14 @@ def noThread(desc, fun, *args, **kargs):
 utils.gcStartThread = noThread
 
 dataset = args[0].strip()
-if os.path.exists(dataset.split('%')[0]):
-	dir, file = os.path.split(dataset)
-	provider = DataProvider.loadState(Config(), dir, file)
+if os.path.exists(dataset):
+	provider = DataProvider.loadState(dataset)
 else:
 	cfgSettings = {'dbs blacklist T1': False, 'remove empty blocks': False, 'remove empty files': False}
-	if opts.save or opts.metadata or opts.blockmetadata:
+	if opts.metadata or opts.blockmetadata:
 		cfgSettings['lumi filter'] = '-'
 	dummyConfig = Config(configDict={'dummy': cfgSettings})
-	provider = DataProvider.create(dummyConfig, 'dummy', dataset, 'DBSApiv2')
+	provider = DataProvider.create(dummyConfig, 'dummy', dataset, 'dbs')
 blocks = provider.getBlocks()
 if len(blocks) == 0:
 	raise DatasetError('No blocks!')
@@ -130,7 +131,7 @@ def printMetadata(src, maxlen):
 		print '\t%s: %s' % (mk.rjust(maxlen), mv)
 	print
 
-if opts.metadata:
+if opts.metadata and not opts.save:
 	print
 	for block in blocks:
 		if len(datasets) > 1:
@@ -142,7 +143,7 @@ if opts.metadata:
 			printMetadata(zip(block[DataProvider.Metadata], f[DataProvider.Metadata]), mk_len)
 		print
 
-if opts.blockmetadata:
+if opts.blockmetadata and not opts.save:
 	for block in blocks:
 		if len(datasets) > 1:
 			print 'Dataset: %s' % block[DataProvider.Dataset]
@@ -187,5 +188,10 @@ if opts.info:
 
 if opts.save:
 	print
-	provider.saveState('.', opts.save)
+	blocks = provider.getBlocks()
+	if opts.sort:
+		blocks.sort(key = lambda b: b[DataProvider.Dataset] + '#' + b[DataProvider.BlockName])
+		for b in blocks:
+			b[DataProvider.FileList].sort(key = lambda fi: fi[DataProvider.lfn])
+	provider.saveState(opts.save, blocks)
 	print 'Dataset information saved to ./%s' % opts.save

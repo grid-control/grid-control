@@ -4,6 +4,8 @@ from gcSupport import utils, Config, Module, JobManager, JobSelector, Report, GC
 
 parser = optparse.OptionParser()
 parser.add_option('-J', '--job-selector', dest='selector', default=None)
+parser.add_option('-m', '--map', dest='showMap', default=False, action='store_true',
+	help='Draw map of sites')
 Report.addOptions(parser)
 (opts, args) = parseOptions(parser)
 
@@ -26,6 +28,11 @@ try:
 	del log
 
 	# Show reports
-	Report(jobs, selected).show(opts, module)
+	report = Report(jobs, selected)
+	if opts.showMap:
+		from grid_control_gui import geomap
+		geomap.drawMap(report)
+	else:
+		report.show(opts, module)
 except GCError:
 	utils.eprint(GCError.message)

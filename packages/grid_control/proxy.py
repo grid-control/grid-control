@@ -9,6 +9,9 @@ class Proxy(AbstractObject):
 	def getUsername(self):
 		raise AbstractError
 
+	def getFQUsername(self):
+		return self.getUsername()
+
 	def getGroup(self):
 		raise AbstractError
 
@@ -77,6 +80,9 @@ class VomsProxy(TimedProxy):
 
 	def getUsername(self):
 		return self._getProxyInfo('identity', lambda x: '/CN=%s' % x.split('CN=')[1].strip())
+
+	def getFQUsername(self):
+		return self._getProxyInfo('identity')
 
 	def getGroup(self):
 		return self._getProxyInfo('vo')

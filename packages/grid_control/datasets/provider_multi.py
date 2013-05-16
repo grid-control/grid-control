@@ -20,11 +20,11 @@ class DataMultiplexer(DataProvider):
 		return getProposal(splitter)
 
 
-	def getBlocksInternal(self, noFiles):
+	def getBlocksInternal(self):
 		exceptions = []
 		for provider in self.subprovider:
 			try:
-				for block in provider.getBlocks(noFiles):
+				for block in provider.getBlocks():
 					yield block
 			except GCError:
 				exceptions.append(GCError.message)

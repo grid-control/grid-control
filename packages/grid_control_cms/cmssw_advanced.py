@@ -118,3 +118,7 @@ class CMSSW_Advanced(cmssw.CMSSW):
 			utils.vprint(' *   Lumi range: %s' % data['LUMI_RANGE'], 1)
 			utils.vprint(' *    Variables: %s' % utils.filterDict(nickdata, lambda k: k not in ['CMSSW_CONFIG', 'LUMI_RANGE']), 1)
 		return data
+
+
+	def getVarNames(self):
+		return cmssw.CMSSW.getVarNames(self) + self.getJobConfig(0).keys()

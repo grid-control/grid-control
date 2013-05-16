@@ -27,34 +27,36 @@ class Job:
 		try:
 			data = utils.DictFormat(escapeString = True).parse(open(name))
 		except:
-			raise ConfigError('Invalid format in %s' % name)
-		job = Job(cls._stateDict[data.get('status', 'FAILED')])
+			raise RuntimeError('Invalid format in %s' % name)
+		try:
+			job = Job(cls._stateDict[data.get('status', 'FAILED')])
 
-		if 'id' in data:
-			job.wmsId = data['id']
-		if 'attempt' in data:
-			job.attempt = data['attempt']
-		if 'submitted' in data:
-			job.submitted = data['submitted']
-		if 'runtime' not in data:
+			if 'id' in data:
+				job.wmsId = data['id']
+			if 'attempt' in data:
+				job.attempt = data['attempt']
 			if 'submitted' in data:
-				data['runtime'] = time.time() - float(job.submitted)
-			else:
-				data['runtime'] = 0
-		if 'changed' in data:
-			job.changed = data['changed']
+				job.submitted = data['submitted']
+			if 'runtime' not in data:
+				if 'submitted' in data:
+					data['runtime'] = time.time() - float(job.submitted)
+				else:
+					data['runtime'] = 0
+			if 'changed' in data:
+				job.changed = data['changed']
 
-		for key in range(1, job.attempt + 1):
-			if ('history_' + str(key)).strip() in data:
-				job.history[key] = data['history_' + str(key)]
+			for key in range(1, job.attempt + 1):
+				if ('history_' + str(key)).strip() in data:
+					job.history[key] = data['history_' + str(key)]
 
-		for i in cls.__internals:
-			try:
-				del data[i]
-			except:
-				pass
-		job.dict = data
-
+			for i in cls.__internals:
+				try:
+					del data[i]
+				except:
+					pass
+			job.dict = data
+		except:
+			raise RuntimeError('Unable to parse data in %s:\n%r' % (name, data))
 		return job
 	load = classmethod(load)
 

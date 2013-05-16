@@ -1,3 +1,4 @@
+import time
 from python_compat import *
 from grid_control import AbstractError, AbstractObject, APIError, utils, QM
 
@@ -13,117 +14,61 @@ class ParameterMetadata(str):
 		obj.untracked = untracked
 		return obj
 
+	def __repr__(self):
+		return "'%s'" % QM(self.untracked, '!%s' % self, self)
+
 
 class ParameterSource(AbstractObject):
-	def __init__(self):
-		self.mapJob2PID = {}
-		self.resetParameterIntervention()
-
 	def create(cls, pconfig, *args, **kwargs):
 		return cls(*args, **kwargs)
 	create = classmethod(create)
 
-	def show(self, level = 0, other = ''):
-		utils.vprint(('\t' * level) + self.__class__.__name__ + QM(other, ' [%s]' % other, ''), 1)
+	def __init__(self):
+		self.resyncInfo = None
+		self.resyncTime = -1 # Default - always resync
+		self.resyncLast = None
 
-	def getMaxJobs(self):
+	def getMaxParameters(self):
 		return None
-
-	def fillParameterInfo(self, pNum, result):
-		raise AbstractError
-
-	def getJobInfo(self, jobNum):
-		if jobNum == None:
-			raise APIError('Unable to process jobNum None!')
-		paramID = self.mapJob2PID.get(jobNum, jobNum)
-		meta = {} # Speed and memory usage of dict is _much_ better than custom object
-		meta[ParameterInfo.ACTIVE] = True
-		meta[ParameterInfo.REQS] = []
-		meta['MY_JOBID'] = jobNum
-		meta['PARAM_ID'] = paramID
-		self.fillParameterInfo(paramID, meta)
-		return meta
 
 	def fillParameterKeys(self, result):
 		raise AbstractError
 
-	def getJobKeys(self):
-		result = map(lambda k: ParameterMetadata(k, untracked=True), ['MY_JOBID', 'PARAM_ID'])
-		self.fillParameterKeys(result)
-		return result
+	def fillParameterInfo(self, pNum, result):
+		raise AbstractError
 
-	def getParameterIntervention(self):
-		return self.intervention
+	def resyncCreate(self):
+		return (set(), set(), False) # returns two sets of parameter ids and boolean (redo, disable, sizeChange)
 
-	def resetParameterIntervention(self):
-		self.intervention = (set(), set(), False)
+	def resyncSetup(self, interval = None, force = None, info = None):
+		self.resyncInfo = info # User override for base resync infos
+		if interval != None:
+			self.resyncTime = interval # -1 == always, 0 == disabled, >0 == time in sec between resyncs
+			self.resyncLast = time.time()
+		if force == True:
+			self.resyncLast = None # Force resync on next attempt
 
-	def getJobIntervention(self):
-		(redo, disable, sizeChange) = self.getParameterIntervention()
-		self.resetParameterIntervention()
-		redo = redo.difference(disable)
-		if redo or disable:
-			mapPID2Job = dict(map(lambda (k, v): (v, k), self.mapJob2PID.items()))
-			translate = lambda pNum: mapPID2Job.get(pNum, pNum)
-			return (sorted(map(translate, redo)), sorted(map(translate, disable)), sizeChange)
-		if sizeChange:
-			return (set(), set(), sizeChange)
-		return None
+	def resyncEnabled(self):
+		if (self.resyncLast == None) or (self.resyncTime == -1):
+			return True
+		if self.resyncTime > 0:
+			if time.time() - self.resyncLast > self.resyncTime:
+				return True
+		return False
 
-	def doResync(self, old): # This function is _VERY_ time critical!
-		from psource_meta import ChainParameterSource
-		from psource_basic import InternalParameterSource
-		mapJob2PID = {}
-		def translatePlugin(plugin): # Reduces plugin output to essential information for diff
-			keys_store = sorted(filter(lambda k: k.untracked == False, plugin.getJobKeys()))
-			def translateEntry(meta): # Translates parameter setting into hash
-				tmp = md5()
-				for k in keys_store:
-					tmp.update(k)
-					value = meta.get(k, '')
-					if isinstance(value, str):
-						tmp.update(value)
-					else:
-						tmp.update(str(value))
-				return { ParameterInfo.HASH: tmp.digest(), ParameterInfo.ACTIVE: meta[ParameterInfo.ACTIVE],
-					'PARAM_ID': meta['PARAM_ID'], 'MY_JOBID': meta['MY_JOBID'] }
-			if plugin.getMaxJobs():
-				for jobNum in range(plugin.getMaxJobs()):
-					yield translateEntry(plugin.getJobInfo(jobNum))
-		params_old = list(translatePlugin(old))
-		params_new = list(translatePlugin(self))
-		redo = set()
-		def sameParams(paramsAdded, paramsMissing, paramsSame, oldParam, newParam):
-			if not oldParam[ParameterInfo.ACTIVE]:
-				redo.add(newParam['PARAM_ID'])
-			mapJob2PID[oldParam['MY_JOBID']] = newParam['PARAM_ID']
-		(pAdded, pMissing, pSame) = utils.DiffLists(params_old, params_new,
-			lambda a, b: cmp(a[ParameterInfo.HASH], b[ParameterInfo.HASH]), sameParams)
-		# Construct complete parameter space plugin with missing parameter entries and intervention state
-		# NNNNNNNNNNNNN OOOOOOOOO | source: NEW (==self) and OLD (==from file)
-		# <same><added> <missing> | same: both in NEW and OLD, added: only in NEW, missing: only in OLD
-		oldMaxJobs = old.getMaxJobs()
-		for (idx, meta) in enumerate(pAdded):
-			mapJob2PID[oldMaxJobs + idx] = meta['PARAM_ID']
-		disable = set()
-		newMaxJobs = self.getMaxJobs()
-		for (idx, meta) in enumerate(pMissing):
-			if meta[ParameterInfo.ACTIVE]:
-				meta[ParameterInfo.ACTIVE] = False
-				disable.add(newMaxJobs + idx)
-			mapJob2PID[meta['MY_JOBID']] = newMaxJobs + idx
-		result = self
-		if pMissing:
-			def genMissingEntry(short):
-				tmp = old.getJobInfo(short['PARAM_ID'])
-				tmp[ParameterInfo.ACTIVE] = False
-				return tmp
-			missingInfos = map(genMissingEntry, pMissing)
-			result = ChainParameterSource(self, InternalParameterSource(missingInfos, old.getParameterNamesSet()))
-		result.mapJob2PID = mapJob2PID
-		if redo or disable:
-			result.intervention = (redo, disable, oldMaxJobs != newMaxJobs)
-		return result
+	def resyncFinished(self):
+		self.resyncLast = time.time()
+
+	def resync(self): # needed when parameter values do not change but if meaning / validity of values do
+		if self.resyncEnabled() and self.resyncInfo:
+			return self.resyncInfo
+		return self.resyncCreate()
+
+	def show(self, level = 0, other = ''):
+		utils.vprint(('\t' * level) + self.__class__.__name__ + QM(other, ' [%s]' % other, ''), 1)
+
+	def getHash(self):
+		raise AbstractError
 
 ParameterSource.dynamicLoaderPath()
 ParameterSource.managerMap = {}

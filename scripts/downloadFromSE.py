@@ -109,11 +109,11 @@ DEFAULT: The default is to download the SE file and check them with MD5 hashes.
 	ogShort.add_option("-s", "--smart-copy", dest="shSCopy", default=None, action="store_const", const=optSCopy,
 		help = "Copy correct files from SE, but remember already downloaded files and delete corrupt files - shorthand for: ".ljust(100) + withoutDefaults(optSCopy))
 
-	optJVerify = "--verify-md5 --no-mark-dl --keep-se-fail --rm-local-fail --keep-se-ok --rm-local-ok"
+	optJVerify = "--verify-md5 --no-mark-dl --keep-se-fail --rm-local-fail --keep-se-ok --rm-local-ok --ignore-mark-dl"
 	ogShort.add_option("-V", "--just-verify", dest="shJVerify", default=None, action="store_const", const=optJVerify,
 		help = "Just verify files on SE - shorthand for:".ljust(100) + withoutDefaults(optJVerify))
 
-	optJDelete = "--skip-existing --rm-se-fail --rm-se-ok --rm-local-fail --keep-local-ok"
+	optJDelete = "--skip-existing --rm-se-fail --rm-se-ok --rm-local-fail --keep-local-ok --no-mark-dl --ignore-mark-dl"
 	ogShort.add_option("-D", "--just-delete", dest="shJDelete", default=None, action="store_const", const=optJDelete,
 		help = "Just delete all finished files on SE - shorthand for:".ljust(100) + withoutDefaults(optJDelete))
 	parser.add_option_group(ogShort)
@@ -320,7 +320,7 @@ def realmain(opts, args):
 		# Save new job status infos
 		jobDB.commit(jobNum, job)
 		output.finish()
-		time.sleep(opts.slowdown)
+		time.sleep(float(opts.slowdown))
 
 	if opts.shuffle:
 		random.shuffle(jobList)

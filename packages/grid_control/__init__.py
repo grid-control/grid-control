@@ -1,5 +1,6 @@
 from grid_control.exceptions	import *
 from grid_control.utils	import AbstractObject, QM
+from grid_control.processhandler	import ProcessHandler
 
 from grid_control.config	import Config, noDefault
 from grid_control.overlay	import ConfigOverlay
@@ -18,6 +19,8 @@ from grid_control.monitoring	import Monitoring
 
 from grid_control.parameters	import *
 from grid_control.module	import Module
+
+from grid_control.gui	import GUI
 
 # import dynamic repos
 import grid_control.modules

@@ -3,7 +3,9 @@ from grid_control import Module, AbstractError, WMS, utils
 # Parameterized Module
 class ParaMod(Module):
 	def __init__(self, config):
-#		utils.deprecated('Please configure parameterized jobs via the [parameters] config section!')
+		utils.deprecated('ParaMod modules are deprecated!\n' + 
+			'Please configure parameterized jobs via the [parameters] config section.\n' +
+			'See also: https://ekptrac.physik.uni-karlsruhe.de/trac/grid-control/wiki/ParaModMigration')
 		Module.__init__(self, config)
 		self.baseMod = Module.open(config.get('ParaMod', 'module'), config)
 		self.baseJobs = config.getInt('ParaMod', 'jobs', 1, mutable=True)
