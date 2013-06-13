@@ -211,7 +211,7 @@ class DataSplitterIO:
 			writer = DataSplitterIO_V1()
 		else:
 			writer = DataSplitterIO_V2()
-		writer.saveState(self, path, meta, source, sourceLen, message)
+		writer.saveState(path, meta, source, sourceLen, message)
 
 	def loadState(self, path):
 		try:
@@ -219,11 +219,7 @@ class DataSplitterIO:
 		except:
 			version = 1
 		if version == 1:
-			DataSplitterIO_V1().loadState(path)
+			state = DataSplitterIO_V1().loadState(path)
 		else:
-			DataSplitterIO_V2().loadState(path)
-		state = reader.loadState(path)
-		state.__getitem__ = lru_cache(state.__getitem__)
+			state = DataSplitterIO_V2().loadState(path)
 		return state
-
-DataSplitterIO = DataSplitterIO_V2

@@ -32,6 +32,13 @@ class Job:
 			job = Job(cls._stateDict[data.get('status', 'FAILED')])
 
 			if 'id' in data:
+				if not data['id'].startswith('WMSID'): # Legacy support
+					data['legacy'] = data['id']
+					if data['id'].startswith('https'):
+						data['id'] = 'WMSID.GLITEWMS.%s' % data['id']
+					else:
+						wmsId, backend = tuple(data['id'].split('.', 1))
+						data['id'] = 'WMSID.%s.%s' % (backend, wmsId)
 				job.wmsId = data['id']
 			if 'attempt' in data:
 				job.attempt = data['attempt']
@@ -71,6 +78,8 @@ class Job:
 			data['history_' + str(key)] = value
 		if self.wmsId != None:
 			data['id'] = self.wmsId
+			if self.dict.get('legacy', None): # Legacy support
+				data['id'] = self.dict.pop('legacy')
 		return data
 
 
@@ -89,6 +98,7 @@ class Job:
 
 
 	def assignId(self, wmsId):
+		self.dict['legacy'] = None # Legacy support
 		self.wmsId = wmsId
 		self.attempt = self.attempt + 1
 		self.submitted = time.time()

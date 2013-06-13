@@ -1,6 +1,7 @@
 import os, re, shlex
 from psource_base import ParameterSource
 from psource_meta import ZipLongParameterSource
+from psource_file import *
 from pfactory_base import BasicParameterFactory
 from grid_control import AbstractObject, QM, utils, RethrowError
 

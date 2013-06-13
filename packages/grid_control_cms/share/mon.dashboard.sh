@@ -4,19 +4,33 @@
 
 source $MY_LANDINGZONE/gc-run.lib || exit 101
 
-DASH_ID=$(echo $TASK_NAME | var_replacer "" | sed "s/__/_/g;s/^_//;s/_$//")
+# Task name: derive DASH_TASK from TASK_NAME - replace "__" by "_" and remove "_" from start / end:
+DASH_TASK=$(echo $TASK_NAME | var_replacer "" | sed "s/__/_/g;s/^_//;s/_$//")
+export REPORTID="taskId=$DASH_TASK MonitorID=$DASH_TASK"
+
+# JobID & CE
 if [ -n "$CONDOR_WMS_DASHID" ]; then
 	GC_WMS_ID="$CONDOR_WMS_DASHID"
 	GC_CE_NAME="$(hostname -f)"
 elif [ -n "$GLITE_WMS_JOBID" ]; then
 	GC_WMS_ID="$GLITE_WMS_JOBID"
-	GC_CE_NAME="$GLOBUS_CE"
+	GC_CE_NAME_GLITE="$(glite-brokerinfo getCE 2> /dev/null)"
+	GC_CE_NAME="${GC_CE_NAME_GLITE:-${GLOBUS_CE:-$OSG_JOB_CONTACT}}"
 else
-	GC_WMS_ID="https://sge:/${JOB_ID}"
+	GC_WMS_ID="https://${GC_WMS_NAME:-LRMS}:/${JOB_ID}"
 	GC_CE_NAME="$(hostname -f)"
 fi
-export REPORTID="taskId=$DASH_ID jobId=${MY_JOBID}_$GC_WMS_ID MonitorID=$DASH_ID MonitorJobID=${MY_JOBID}_$GC_WMS_ID"
+export DASH_JOBID="${MY_JOBID}_${GC_WMS_ID}"
+export REPORTID="$REPORTID jobId=$DASH_JOBID MonitorJobID=$DASH_JOBID"
 
+# Middleware info:
+if [ -n "$OSG_APP" ]; then
+	export REPORTID="$REPORTID GridFlavour=OSG"
+elif [ -n "$GLITE_WMS_JOBID" ]; then
+	export REPORTID="$REPORTID GridFlavour=LCG"
+fi
+
+# General dashboard submission
 case "$1" in
 	"start")
 		my_move "$MY_SCRATCH" "$MY_LANDINGZONE" "DashboardAPI.py Logger.py ProcInfo.py apmon.py report.py"
@@ -27,10 +41,10 @@ case "$1" in
 		chmod u+x "$MY_LANDINGZONE/report.py"
 		checkbin "$MY_LANDINGZONE/report.py"
 		echo $MY_LANDINGZONE/report.py $REPORTID \
-			SyncGridJobId="$GC_WMS_ID" SyncGridName="$GC_USERNAME" SyncCE="$GC_CE_NAME" \
+			SyncGridJobId="$GC_WMS_ID" SyncGridName="$GC_USERNAME" SyncCE="$GC_CE_NAME" WNHostName="$(hostname -f)" \
 			WNname="$(hostname -f)" ExeStart="$DB_EXEC"
 		$MY_LANDINGZONE/report.py $REPORTID \
-			SyncGridJobId="$GC_WMS_ID" SyncGridName="$GC_USERNAME" SyncCE="$GC_CE_NAME" \
+			SyncGridJobId="$GC_WMS_ID" SyncGridName="$GC_USERNAME" SyncCE="$GC_CE_NAME" WNHostName="$(hostname -f)" \
 			WNname="$(hostname -f)" ExeStart="$DB_EXEC"
 		;;
 	"stop")

@@ -1,7 +1,111 @@
 from python_compat import *
-import tempfile, time
+import tempfile, time, random, os
 from grid_control import utils, RuntimeError
 from grid_wms import GridWMS
+
+def choice_exp(sample, p = 0.5):
+	for x in sample:
+		if random.random() < p:
+			return x
+
+class DiscoverWMS_Lazy: # TODO: Move to broker infrastructure
+	def __init__(self, config):
+		self.statePath = os.path.join(config.workDir, 'glitewms.info')
+		(self.wms_ok, self.wms_all, self.pingDict, self.pos) = self.loadState()
+		self.wms_timeout = {}
+		self._exeLCGInfoSites = utils.resolveInstallPath('lcg-infosites')
+		self._exeGliteWMSJobListMatch = utils.resolveInstallPath('glite-wms-job-list-match')
+
+	def loadState(self):
+		try:
+			assert(os.path.exists(self.statePath))
+			tmp = utils.PersistentDict(self.statePath, ' = ')
+			pingDict = {}
+			for wms in tmp:
+				isOK, ping, ping_time = tuple(tmp[wms].split(',', 2))
+				if utils.parseBool(isOK):
+					pingDict[wms] = (utils.parseStr(ping, float), utils.parseStr(ping_time, float, 0))
+			return (pingDict.keys(), tmp.keys(), pingDict, 0)
+		except:
+			return ([], [], {}, None)
+
+	def updateState(self):
+		tmp = {}
+		for wms in self.wms_all:
+			pingentry = self.pingDict.get(wms, (None, 0))
+			tmp[wms] = '%r,%s,%s' % (wms in self.wms_ok, pingentry[0], pingentry[1])
+		utils.PersistentDict(self.statePath, ' = ').write(tmp)
+
+	def listWMS_all(self):
+		result = []
+		for line in utils.LoggedProcess(self._exeLCGInfoSites, 'wms').iter():
+			result.append(line.strip())
+		random.shuffle(result)
+		return result
+
+	def matchSites(self, endpoint):
+		result = []
+		checkArgs = '-a' 
+		if endpoint:
+			checkArgs += ' -e %s' % endpoint
+		proc = utils.LoggedProcess(self._exeGliteWMSJobListMatch, checkArgs + ' %s' % utils.pathShare('null.jdl'))
+		def matchThread(): # TODO: integrate timeout into loggedprocess
+			for line in proc.iter():
+				if line.startswith(' - '):
+					result.append(line[3:].strip())
+		thread = utils.gcStartThread('Matching jobs with WMS %s' % endpoint, matchThread)
+		thread.join(timeout = 3)
+		if thread.isAlive():
+			proc.kill()
+			thread.join()
+			self.wms_timeout[endpoint] = self.wms_timeout.get(endpoint, 0) + 1
+			if self.wms_timeout.get(endpoint, 0) > 10: # remove endpoints after 10 failures
+				self.wms_all.remove(endpoint)
+			return []
+		return result
+
+	def getSites(self):
+		return self.matchSites(self.getWMS())
+
+	def listWMS_good(self):
+		if (self.pos == None) or (len(self.wms_all) == 0): # initial discovery
+			self.pos = 0
+			self.wms_all = self.listWMS_all()
+		if self.pos == len(self.wms_all): # self.pos = None => perform rediscovery in next step
+			self.pos = 0
+		else:
+			wms = self.wms_all[self.pos]
+			if wms in self.wms_ok:
+				self.wms_ok.remove(wms)
+			if len(self.matchSites(wms)):
+				self.wms_ok.append(wms)
+			self.pos += 1
+			if self.pos == len(self.wms_all): # mark finished 
+				self.wms_ok.append(None)
+		return self.wms_ok
+
+	def getWMS(self):
+		log = utils.ActivityLog('Discovering available WMS services')
+		wms_best_list = []
+		for wms in self.listWMS_good():
+			if wms == None:
+				continue
+			ping, pingtime = self.pingDict.get(wms, (None, 0))
+			if time.time() - pingtime > 30 * 60: # check every ~30min
+				ping = utils.ping_host(wms.split('://')[1].split('/')[0].split(':')[0])
+				self.pingDict[wms] = (ping, time.time() + 10 * 60 * random.random()) # 10 min variation
+			if ping != None:
+				wms_best_list.append((wms, ping))
+		wms_best_list.sort(key = lambda (name, ping): ping)
+		result = choice_exp(wms_best_list)
+		if result != None:
+			wms, ping = result # reduce timeout by 10min for chosen wms => re-ping every 3 submits
+			self.pingDict[wms] = (ping, self.pingDict[wms][1] + 5*60)
+			result = wms
+		self.updateState()
+		del log
+		return result
+
 
 class GliteWMS(GridWMS):
 	def __init__(self, config, wmsName = 'glite-wms'):
@@ -13,20 +117,24 @@ class GliteWMS(GridWMS):
 		self._outputExec = utils.resolveInstallPath('glite-wms-job-output')
 		self._cancelExec = utils.resolveInstallPath('glite-wms-job-cancel')
 		self._submitParams.update({'-r': self._ce, '--config': self._configVO})
-		self._useDelegate = config.getBool(self._getSections('backend'), 'use delegate', True, mutable=True)
-		self._sites = None
-		if config.getBool(self._getSections('backend'), 'discover sites', False, mutable=True):
-			lcgis = utils.resolveInstallPath('lcg-infosites')
-			self.sites = []
+		sections = self._getSections('backend')
+		self._useDelegate = config.getBool(sections, 'use delegate', None, mutable=True)
+		self._discovery_module = None
+		if config.getBool(sections, 'discover wms', True, mutable=True):
+			self._discovery_module = DiscoverWMS_Lazy(config)
+		self._discover_sites = config.getBool(sections, 'discover sites', False, mutable=True)
 
 
 	def getSites(self):
-		return self._sites
+		if self._discover_sites and self._discovery_module:
+			return self._discovery_module.getSites()
 
 
 	def bulkSubmissionBegin(self):
 		self._submitParams.update({ '-d': None })
-		if not self._useDelegate:
+		if self._discovery_module:
+			self._submitParams.update({ '-e': self._discovery_module.getWMS() })
+		if self._useDelegate == False:
 			self._submitParams.update({ '-a': ' ' })
 			return True
 		log = tempfile.mktemp('.log')
@@ -49,8 +157,11 @@ class GliteWMS(GridWMS):
 
 
 	def submitJobs(self, jobNumList, module):
-		if self.bulkSubmissionBegin():
-			for submitInfo in GridWMS.submitJobs(self, jobNumList, module):
-				yield submitInfo
-		else:
-			raise RuntimeError('Unable to delegate proxy!')
+		if not self.bulkSubmissionBegin(): # Trying to delegate proxy failed
+			if self._useDelegate == True:  # User switched on forcing delegation => exception
+				raise RuntimeError('Unable to delegate proxy!')
+			utils.eprint('Unable to delegate proxy! Continue with automatic delegation...')
+			self._submitParams.update({ '-a': ' ' })
+			self._useDelegate = False
+		for submitInfo in GridWMS.submitJobs(self, jobNumList, module):
+			yield submitInfo

@@ -45,6 +45,7 @@ else:
 	cfgSettings = {'dbs blacklist T1': False, 'remove empty blocks': False, 'remove empty files': False}
 	if opts.metadata or opts.blockmetadata:
 		cfgSettings['lumi filter'] = '-'
+		cfgSettings['keep lumi metadata'] = True
 	dummyConfig = Config(configDict={'dummy': cfgSettings})
 	provider = DataProvider.create(dummyConfig, 'dummy', dataset, 'dbs')
 blocks = provider.getBlocks()

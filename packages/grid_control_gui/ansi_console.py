@@ -128,6 +128,7 @@ class ANSIProgressBar:
 class ANSIConsole(GUI):
 	def run(self):
 		jobMgr = self.jobMgr
+		header = self.getHeader()
 		def wrapper(screen):
 			# Event handling for resizing
 			def onResize(sig, frame):
@@ -162,7 +163,7 @@ class ANSIConsole(GUI):
 					screen.move(0, 0)
 					sys.stdout.logged = False
 					bar.update(len(jobMgr.jobDB.getJobs(ClassSelector(JobClass.SUCCESS))))
-					report.Report(jobMgr.jobDB).summary("%s\n%s" % (bar, message))
+					report.Report(jobMgr.jobDB, header = header).summary("%s\n%s" % (bar, message))
 					sys.stdout.logged = True
 					screen.loadPos()
 
@@ -179,8 +180,17 @@ class ANSIConsole(GUI):
 				screen.setscrreg()
 				screen.move(1, 0)
 				screen.eraseDown()
-				report.Report(jobMgr.jobDB).summary()
+				report.Report(jobMgr.jobDB, header = self.getHeader()).summary()
 		try:
 			wrapper(Console())
 		finally:
 			GUIStream.dump()
+
+	def getHeader(self):
+		tmp = self.module.config.confName + ' / ' + self.module.taskID
+		if len(tmp) < 45:
+			return tmp
+		tmp = self.module.config.confName
+		if len(tmp) < 45:
+			return tmp
+		return self.module.taskID

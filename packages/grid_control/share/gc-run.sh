@@ -36,6 +36,15 @@ echo
 checkdir "Start directory" "$MY_LANDINGZONE"
 checkdir "Scratch directory" "$MY_SCRATCH"
 
+echo "==========================="
+echo
+checkfile "$MY_LANDINGZONE/gc-sandbox.tar.gz"
+
+echo "Unpacking basic job configuration"
+tar xvfz "$MY_LANDINGZONE/gc-sandbox.tar.gz" -C "$MY_SCRATCH" _config.sh || fail 105
+checkfile "$MY_SCRATCH/_config.sh"
+source "$MY_SCRATCH/_config.sh"
+
 # Monitor space usage
 echo $$ > $MY_MARKER
 if [ -n "$(getrealdir $MY_SCRATCH | grep $(getrealdir $MY_LANDINGZONE))" ]; then
@@ -49,14 +58,9 @@ else
 	monitordirlimits "SCRATCH" "$MY_SCRATCH" &
 fi
 
-echo "==========================="
-echo
-checkfile "$MY_LANDINGZONE/gc-sandbox.tar.gz"
 echo "Unpacking environment"
 tar xvfz "$MY_LANDINGZONE/gc-sandbox.tar.gz" -C "$MY_SCRATCH" || fail 105
-
 checkfile "$MY_LANDINGZONE/job_${MY_JOBID}.var"
-checkfile "$MY_SCRATCH/_config.sh"
 cat "$MY_LANDINGZONE/job_${MY_JOBID}.var" >> "$MY_SCRATCH/_config.sh"
 source "$MY_SCRATCH/_config.sh"
 

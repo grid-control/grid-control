@@ -5,8 +5,8 @@ import time
 class Report:
 	states = ['WAITING', 'RUNNING', 'FAILED', 'SUCCESS']
 
-	def __init__(self, jobDB, jobs = None):
-		(self.jobDB, self.jobs) = (jobDB, jobs)
+	def __init__(self, jobDB, jobs = None, header = ''):
+		(self.jobDB, self.jobs, self.header) = (jobDB, jobs, header)
 		if jobs == None:
 			self.jobs = jobDB.getJobs()
 
@@ -48,7 +48,7 @@ class Report:
 
 	def printHeader(self, message, level = -1):
 		utils.vprint('-'*65, level)
-		utils.vprint(message.ljust(65), level)
+		utils.vprint(message + self.header.rjust(65 - len(message)), level)
 		utils.vprint(('-'*15).ljust(65), level)
 
 

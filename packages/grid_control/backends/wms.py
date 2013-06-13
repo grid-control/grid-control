@@ -261,10 +261,13 @@ class BasicWMS(WMS):
 		depList = set(itertools.chain(*map(lambda x: x.getDependencies(), [module] + smList)))
 		depPaths = map(lambda pkg: utils.pathShare('', pkg = pkg), os.listdir(utils.pathGC('packages')))
 		depFiles = map(lambda dep: utils.resolvePath('env.%s.sh' % dep, depPaths), depList)
-		taskEnv = list(itertools.chain(map(lambda x: x.getTaskConfig(), [module, monitor] + smList)))
-		taskEnv.append({'GC_DEPFILES': str.join(' ', depList), 'GC_USERNAME': self.proxy.getUsername()})
+		taskEnv = list(itertools.chain(map(lambda x: x.getTaskConfig(), [monitor, module] + smList)))
+		taskEnv.append({'GC_DEPFILES': str.join(' ', depList), 'GC_USERNAME': self.proxy.getUsername(),
+			'GC_WMS_NAME': self.wmsName})
 		taskConfig = sorted(utils.DictFormat(escapeString = True).format(utils.mergeDicts(taskEnv), format = 'export %s%s%s\n'))
-		varMapping = sorted(utils.DictFormat(delimeter = ' ').format(module.getVarMapping(), format = '%s%s%s\n'))
+		varMappingDict = dict(zip(monitor.getTaskConfig().keys(), monitor.getTaskConfig().keys()))
+		varMappingDict.update(module.getVarMapping())
+		varMapping = sorted(utils.DictFormat(delimeter = ' ').format(varMappingDict, format = '%s%s%s\n'))
 		# Resolve wildcards in module input files
 		def getModuleFiles():
 			for f in module.getSBInFiles():

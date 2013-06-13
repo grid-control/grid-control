@@ -84,6 +84,8 @@ DEFAULT: The default is to download the SE file and check them with MD5 hashes.
 		help="how many parallel download threads should be used to download files [Default: no multithreading]")
 	parser.add_option("", "--slowdown",   dest="slowdown", default=2,
 		help="specify time between downloads [Default: 2 sec]")
+	parser.add_option("", "--show-host",  dest="showHost", default=False, action='store_true',
+		help="show SE hostname during download")
 
 	# Shortcut options
 	def withoutDefaults(opts):
@@ -406,8 +408,11 @@ def realmain(opts, args):
 				(hash, name_local, name_dest, pathSE) = self.files[idx]
 				if otime:
 					tr = lambda sref, tref: gcSupport.prettySize(((csize - sref) / max(1, time.time() - tref)))
-					self.write("\r\t%s (%7s - %7s/s avg. - %7s/s inst.)" % (name_dest,
-					gcSupport.prettySize(csize), tr(0, stime), tr(osize, otime)))
+					tmp = name_dest
+					if opts.showHost:
+						tmp += ' [%s]' % pathSE.split('//')[-1].split('/')[0].split(':')[0]
+					self.write("\r\t%s (%7s - %7s/s avg. - %7s/s inst.)" % (tmp,
+						gcSupport.prettySize(csize), tr(0, stime), tr(osize, otime)))
 					sys.stdout.flush()
 				else:
 					self.write("\t%s" % name_dest)

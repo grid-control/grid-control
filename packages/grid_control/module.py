@@ -174,7 +174,7 @@ class Module(AbstractObject):
 
 
 	def getDescription(self, jobNum): # (task name, job name, job type)
-		return (self.taskID, self.taskID[:10] + '.' + str(jobNum), '')
+		return (self.taskID, self.taskID[:10] + '.' + str(jobNum), 'user')
 
 
 	def report(self, jobNum):

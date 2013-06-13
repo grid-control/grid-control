@@ -1,6 +1,6 @@
 import re
 from grid_control import utils, ConfigError, QM
-from psource_base import ParameterSource
+from psource_base import ParameterSource, ParameterInfo
 from psource_basic import KeyParameterSource, SingleParameterSource, SimpleParameterSource
 
 class LookupMatcher:
@@ -117,7 +117,7 @@ class SwitchingLookupParameterSource(SingleParameterSource):
 	def initPSpace(self):
 		result = []
 		def addEntry(pNum):
-			tmp = {}
+			tmp = {ParameterInfo.ACTIVE: True, ParameterInfo.REQS: []}
 			self.plugin.fillParameterInfo(pNum, tmp)
 			lookupResult = self.matcher.lookup(tmp)
 			if lookupResult:

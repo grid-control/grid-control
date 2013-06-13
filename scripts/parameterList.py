@@ -23,6 +23,8 @@ parser.add_option('-d', '--disabled',        dest='inactive',   default=False, a
 	help='Show disabled parameter sets')
 parser.add_option('-t', '--untracked',       dest='untracked',  default=False, action='store_true',
 	help='Display untracked variables')
+parser.add_option('-c', '--collapse',        dest='collapse',   default=0, action='count',
+	help='Do not collapse dataset infos in display')
 parser.add_option('-I', '--intervention',    dest='intervention', default=False, action='store_true',
 	help='Display intervention tasks')
 parser.add_option('-f', '--force-intervention', dest='forceiv', default=False, action='store_true',
@@ -33,6 +35,8 @@ parser.add_option('-i', '--reinit',          dest='init',       default=False, a
 	help='Trigger re-init')
 parser.add_option('-r', '--resync',          dest='resync',     default=False, action='store_true',
 	help='Trigger re-sync')
+parser.add_option('-V', '--visible',         dest='visible',    default="",
+	help='Set visible variables')
 parser.add_option('-S', '--save',            dest='save',
 	help='Saves information to specified file')
 (opts, args) = parseOptions(parser)
@@ -64,7 +68,7 @@ config.workDir = '.'
 config.getTaskDict = lambda: utils.PersistentDict(None)
 
 if opts.dataset:
-	config.set('parameters', 'lookup', 'DATASETNICK')
+	config.set('parameters', 'default lookup', 'DATASETNICK')
 pm = ParameterFactory.open(opts.manager, config, ['parameters'])
 
 # Create dataset parameter plugin
@@ -112,6 +116,7 @@ if opts.forceiv:
 
 if opts.listparams:
 	result = []
+	needGCParam = False
 	if plugin.getMaxJobs() != None:
 		countActive = 0
 		for jobNum in range(plugin.getMaxJobs()):
@@ -121,21 +126,58 @@ if opts.listparams:
 			if opts.inactive or info[ParameterInfo.ACTIVE]:
 				if not info[ParameterInfo.ACTIVE]:
 					info['GC_PARAM'] = 'N/A'
+				if str(info['GC_PARAM']) != str(jobNum):
+					needGCParam = True
 				result.append(info)
 		if opts.displaymode == 'parseable':
 			print 'Count,%d,%d' % (countActive, plugin.getMaxJobs())
 		else:
 			print 'Number of parameter points:', plugin.getMaxJobs()
-			print 'Number of active parameter points:', countActive
+			if countActive != plugin.getMaxJobs():
+				print 'Number of active parameter points:', countActive
 	else:
 		result.append(plugin.getJobInfo(123))
 	enabledOutput = opts.output.split(',')
 	output = filter(lambda k: not opts.output or k in enabledOutput, plugin.getJobKeys())
 	stored = filter(lambda k: k.untracked == False, output)
 	untracked = filter(lambda k: k.untracked == True, output)
-	head = [('MY_JOBID', '#'), ('GC_PARAM', 'GC_PARAM')]
+
+	if opts.collapse > 0:
+		result_old = result
+		result = {}
+		result_nicks = {}
+		head = [('COLLATE_JOBS', '# of jobs')]
+		if 'DATASETSPLIT' in stored:
+			stored.remove('DATASETSPLIT')
+		if opts.collapse == 1:
+			stored.append('DATASETNICK')
+			head.append(('DATASETNICK', 'DATASETNICK'))
+		elif opts.collapse == 2:
+			head.append(('COLLATE_NICK', '# of nicks'))
+		for pset in result_old:
+			if ('DATASETSPLIT' in pset) and (opts.collapse == 1):
+				pset.pop('DATASETSPLIT')
+			nickname = None
+			if ('DATASETNICK' in pset) and (opts.collapse == 2):
+				nickname = pset.pop('DATASETNICK')
+			h = md5(repr(map(lambda key: pset.get(key), stored))).hexdigest()
+			result.setdefault(h, []).append(pset)
+			result_nicks.setdefault(h, set()).add(nickname)
+				
+		def doCollate(h):
+			tmp = result[h][0]
+			tmp['COLLATE_JOBS'] = len(result[h])
+			tmp['COLLATE_NICK'] = len(result_nicks[h])
+			return tmp
+		result = map(doCollate, result)
+	else:
+		head = [('MY_JOBID', '#')]
+		if needGCParam:
+			head.append(('GC_PARAM', 'GC_PARAM'))
 	if opts.active:
 		head.append((ParameterInfo.ACTIVE, 'ACTIVE'))
+	if opts.visible:
+		stored = opts.visible.split(',')
 	head.extend(sorted(zip(stored, stored)))
 	if opts.untracked:
 		head.extend(sorted(map(lambda n: (n, '(%s)' % n), filter(lambda n: n not in ['GC_PARAM', 'MY_JOBID'], untracked))))

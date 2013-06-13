@@ -4,6 +4,7 @@ from psource_basic import *
 from psource_meta import *
 from psource_lookup import *
 from psource_data import *
+from psource_file import *
 from config_param import ParameterConfig
 from pfactory_base import BasicParameterFactory
 
@@ -149,7 +150,15 @@ class SimpleParameterFactory(BasicParameterFactory):
 				return createVarSource(tree2names(args[0]), tree2names(args[1]))
 			elif operator == 'ref':
 				assert(len(args) == 1)
-				return [DataParameterSource.create(self.paramConfig, args[0])]
+				refTypeDefault = 'dataset'
+				if args[0] not in DataParameterSource.datasetsAvailable:
+					refTypeDefault = 'csv'
+				refType = self.paramConfig.get(args[0], 'type', refTypeDefault)
+				if refType == 'dataset':
+					return [DataParameterSource.create(self.paramConfig, args[0])]
+				elif refType == 'csv':
+					return [CSVParameterSource.create(self.paramConfig, args[0])]
+				raise APIError('Unknown reference type: "%s"' % refType)
 			else:
 				args_complete = []
 				for expr_list in map(lambda expr: self.tree2expr(expr), args):

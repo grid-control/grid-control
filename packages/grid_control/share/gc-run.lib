@@ -452,9 +452,9 @@ url_copy_single_local() {
 url_copy_single_srm() {
 	debug_helper $FUNCNAME "$@"
 	if [ "$(basename `getcommand srmcp lcg-cp`)" == "lcg-cp" ]; then
-		print_and_eval "lcg-cp" "--checksum -v -n 1" "$1" "$2"
+		print_and_eval "lcg-cp" "-v -n 1" "$1" "$2"
 	else
-		print_and_eval "srmcp" "-2 -cksm_type=negotiate -debug=true -streams_num=1" "$1" "$2"
+		print_and_eval "srmcp" "-2 -debug=true -streams_num=1" "$1" "$2"
 	fi
 }
 

@@ -12,7 +12,7 @@ class DataMod(Module):
 		if self.dataset == '':
 			return
 		config.set('storage', 'se output pattern', '@NICK@_job_@MY_JOBID@_@X@', override=False)
-		config.set('parameters', 'lookup', 'DATASETNICK', override=False)
+		config.set('parameters', 'default lookup', 'DATASETNICK', override=False)
 
 		defaultProvider = config.get(self.__class__.__name__, 'dataset provider', 'ListProvider')
 		dataProvider = DataProvider.create(config, self.__class__.__name__, self.dataset, defaultProvider)
@@ -82,7 +82,7 @@ class DataMod(Module):
 	def getSubmitInfo(self, jobNum):
 		jobInfo = self.source.getJobInfo(jobNum)
 		submitInfo = {'nevtJob': jobInfo.get('MAX_EVENTS', 0),
-			'datasetFull': jobInfo.get('DATASETPATH', '')}
+			'datasetFull': jobInfo.get('DATASETPATH', 'none')}
 		return utils.mergeDicts([Module.getSubmitInfo(self, jobNum), submitInfo])
 
 

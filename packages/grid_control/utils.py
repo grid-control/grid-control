@@ -1,5 +1,5 @@
 from python_compat import *
-import sys, os, stat, StringIO, tarfile, time, fnmatch, re, popen2, threading, operator, Queue
+import sys, os, stat, StringIO, tarfile, time, fnmatch, re, popen2, threading, operator, Queue, signal
 from exceptions import *
 
 def QM(cond, a, b):
@@ -78,6 +78,9 @@ class LoggedProcess(object):
 
 	def getMessage(self):
 		return self.getOutput() + '\n' + self.getError()
+
+	def kill(self):
+		os.kill(self.proc.pid, signal.SIGTERM)
 
 	def iter(self):
 		while True:
@@ -348,6 +351,13 @@ def optSplit(opt, delim, empty = ''):
 def parseInt(value, default = None):
 	try:
 		return int(value)
+	except:
+		return default
+
+
+def parseStr(value, cls, default = None):
+	try:
+		return cls(value)
 	except:
 		return default
 
@@ -1003,6 +1013,15 @@ def split_advanced(tokens, doEmit, addEmitToken, quotes = ['"', "'"], brackets =
 		raise ExType('Brackets / quotes not closed!')
 	if buffer or emit_empty_buffer:
 		yield buffer
+
+
+def ping_host(host):
+	try:
+		tmp = LoggedProcess('ping', '-Uqnc 1 -W 1 %s' % host).getOutput().splitlines()
+		assert(tmp[-1].endswith('ms'))
+		return float(tmp[-1].split('/')[-2]) / 1000.
+	except:
+		return None
 
 
 if __name__ == '__main__':

@@ -1,4 +1,0 @@
-Hallo from grid-control job @MY_JOBID@!
-
-Parameter:
-@DATE@ __EVENTS__ @PTHAT@

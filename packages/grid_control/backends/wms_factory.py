@@ -6,11 +6,15 @@ class WMSFactory:
 	def __init__(self, config):
 		self.config = config
 		wmsUsrList = config.getList('global', 'backend', ['grid'], mutable = True)
-		wmsSetupList = map(lambda wmsEntry: utils.optSplit(wmsEntry, ':', empty = None), wmsUsrList)
+		def parseUserWMS(wmsEntry):
+			wmsClass, wmsName = utils.optSplit(wmsEntry, ':', empty = None)
+			wmsDict = {'grid': 'GliteWMS', 'inactive': 'InactiveWMS'}
+			wmsClass = wmsDict.get(wmsClass, wmsClass)
+			if wmsClass == 'local':
+				wmsClass = config.get('local', 'wms', self._guessWMS())
+			return (wmsClass, wmsName)
+		wmsSetupList = map(parseUserWMS, wmsUsrList)
 		try:
-			wmsDict = {'grid': 'GliteWMS', 'inactive': 'InactiveWMS',
-				'local': config.get('local', 'wms', self._guessWMS())}
-			wmsSetupList = map(lambda (wmsClass, wmsName): (wmsDict.get(wmsClass, wmsClass), wmsName), wmsSetupList)
 			self.wmsObjList = map(lambda (wmsClass, wmsName): WMS.open(wmsClass, config, wmsName), wmsSetupList)
 		except:
 			raise RethrowError('Invalid backend selected! (%s)' % str.join(",", wmsUsrList))

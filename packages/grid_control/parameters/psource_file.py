@@ -2,6 +2,7 @@ import os, csv, gzip
 from python_compat import *
 from grid_control import utils
 from psource_base import ParameterSource, ParameterMetadata, ParameterInfo
+from psource_basic import InternalParameterSource
 from psource_meta import ForwardingParameterSource
 
 # Reader for grid-control dump files
@@ -48,5 +49,25 @@ class GCDumpParameterSource(ParameterSource):
 
 
 # Reader for CSV files
-#class CSVParameter(GCDumpParameterSource):
-#	pass
+class CSVParameterSource(InternalParameterSource):
+	def __init__(self, fn, format = 'sniffed'):
+		sniffed = csv.Sniffer().sniff(open(fn).read(1024))
+		csv.register_dialect('sniffed', sniffed)
+		tmp = list(csv.DictReader(open(fn), dialect = format))
+
+		def cleanupDict(d):
+			# strip all key value entries
+			tmp = tuple(map(lambda item: map(str.strip, item), d.items()))
+			# filter empty parameters
+			return filter(lambda (k, v): k != '', tmp)
+		keys = []
+		if len(tmp):
+			keys = map(ParameterMetadata, tmp[0].keys())
+		values = map(lambda d: dict(cleanupDict(d)), tmp)
+		InternalParameterSource.__init__(self, values, keys)
+
+	def create(cls, pconfig = None, src = 'CSV'):
+		fn = pconfig.get(src, 'source')
+		return CSVParameterSource(fn , pconfig.get(src, 'format', 'sniffed'))
+	create = classmethod(create)
+ParameterSource.managerMap['csv'] = CSVParameterSource

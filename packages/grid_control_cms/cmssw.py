@@ -59,7 +59,7 @@ class CMSSW(DataMod):
 		self.seRuntime = config.getBool(self.__class__.__name__, 'se runtime', False)
 
 		if len(self.projectArea):
-			defaultPattern = '-.* -config lib python module */data *.xml *.sql *.cf[if] *.py -*/.git -*/.svn -*/CVS -*/work.*'
+			defaultPattern = '-.* -config bin lib python module */data *.xml *.sql *.cf[if] *.py -*/.git -*/.svn -*/CVS -*/work.*'
 			self.pattern = config.getList(self.__class__.__name__, 'area files', defaultPattern.split())
 
 			if os.path.exists(self.projectArea):

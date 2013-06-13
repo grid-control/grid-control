@@ -15,6 +15,7 @@ class CMSProvider(DataProvider):
 		(self.datasetPath, self.url, self.datasetBlock) = utils.optSplit(datasetExpr, '@#')
 		self.url = QM(self.url, self.url, config.get(section, 'dbs instance', ''))
 		self.datasetBlock = QM(self.datasetBlock, self.datasetBlock, 'all')
+		self.includeLumi = config.getBool(section, 'keep lumi metadata', False)
 		self.onlyValid = config.getBool(section, 'only valid', True)
 
 		# This works in tandem with active job module (cmssy.py supports only [section] lumi filter!)
@@ -98,7 +99,15 @@ class CMSProvider(DataProvider):
 								return True
 				if not acceptLumi():
 					continue
-				fileInfo[DataProvider.Metadata] = [list(sorted(set(map(lambda (run, lumi_list): run, listLumi))))]
+				if self.includeLumi:
+					(listLumiExt_Run, listLumiExt_Lumi) = ([], [])
+					for (run, lumi_list) in sorted(listLumi):
+						for lumi in lumi_list:
+							listLumiExt_Run.append(run)
+							listLumiExt_Lumi.append(lumi)
+					fileInfo[DataProvider.Metadata] = [listLumiExt_Run, listLumiExt_Lumi]
+				else:
+					fileInfo[DataProvider.Metadata] = [list(sorted(set(map(lambda (run, lumi_list): run, listLumi))))]
 			yield fileInfo
 
 
@@ -120,6 +129,8 @@ class CMSProvider(DataProvider):
 
 				if self.selectedLumis:
 					result[DataProvider.Metadata] = ['Runs']
+					if self.includeLumi:
+						result[DataProvider.Metadata].append('Lumi')
 				result[DataProvider.FileList] = list(self.getCMSFiles(blockPath))
 
 				if usePhedex:

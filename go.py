@@ -34,10 +34,10 @@ if __name__ == '__main__':
 	parser.add_option('',   '--help-vars',     dest='help_vars',  default=False, action='store_true')
 	parser.add_option('',   '--help-conf',     dest='help_cfg',   default=False, action='store_true')
 	parser.add_option('',   '--help-confmin',  dest='help_scfg',  default=False, action='store_true')
-	parser.add_option('-c', '--continuous',    dest='continuous', default=False, action='store_true')
 	parser.add_option('-i', '--init',          dest='init',       default=False, action='store_true')
 	parser.add_option('-q', '--resync',        dest='resync',     default=False, action='store_true')
 	parser.add_option('-s', '--no-submission', dest='submission', default=True,  action='store_false')
+	parser.add_option('-c', '--continuous',    dest='continuous', default=None,  action='store_true')
 	parser.add_option('-d', '--delete',        dest='delete',     default=None)
 	parser.add_option('',   '--reset',         dest='reset',      default=None)
 	parser.add_option('-a', '--action',        dest='action',     default=None)
@@ -140,6 +140,7 @@ if __name__ == '__main__':
 
 		actionList = config.getList('jobs', 'action', ['check', 'retrieve', 'submit'], mutable=True)
 		guiClass = config.get('global', 'gui', 'SimpleConsole', mutable=True)
+		runContinuous = config.getBool('jobs', 'continuous', False, mutable=True)
 
 		initSentinel.checkpoint('config')
 		savedConfigPath = os.path.join(config.workDir, 'work.conf')
@@ -155,7 +156,7 @@ if __name__ == '__main__':
 			config.prettyPrint(open(savedConfigPath, 'w'))
 		config.allowSet = False
 
-		if opts.continuous and not opts.gui:
+		if runContinuous and guiClass == 'SimpleConsole':
 			utils.vprint(level = -1)
 			Report(jobManager.jobDB).summary()
 			utils.vprint('Running in continuous mode. Press ^C to exit.', -1)
@@ -187,7 +188,7 @@ if __name__ == '__main__':
 								didWait = wait(wms.getTimings()[1])
 
 				# quit if abort flag is set or not in continuous mode
-				if utils.abort() or not opts.continuous:
+				if utils.abort() or not runContinuous:
 					break
 				# idle timeout
 				if not didWait:
