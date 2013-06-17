@@ -1,3 +1,4 @@
+from logging_setup import	logging_setup
 from grid_control.exceptions	import *
 from grid_control.utils	import AbstractObject, QM
 from grid_control.processhandler	import ProcessHandler

@@ -99,7 +99,7 @@ class Config:
 						raise ConfigError('[%s] "%s" could not be parsed!' % (section, option))
 			self.setInternal('global', 'include', '', False)
 		except:
-			raise RethrowError("Error while reading configuration file '%s'!" % configFile)
+			raise RethrowError("Error while reading configuration file '%s'!" % configFile, ConfigError)
 
 
 	def set(self, section, item, value = None, override = True, append = False, default = noDefault):
@@ -152,7 +152,7 @@ class Config:
 				for value in self.getList(section, item, default, mutable, noVar):
 					yield utils.resolvePath(value, [self.baseDir], check, ConfigError)
 			except:
-				raise ConfigError('Error resolving path in [%s] %s' % (section, item))
+				raise RethrowError('Error resolving path in [%s] %s' % (section, item), ConfigError)
 		return list(getPathsInt())
 
 

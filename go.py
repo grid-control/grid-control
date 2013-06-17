@@ -59,6 +59,7 @@ if __name__ == '__main__':
 	# big try... except block to catch exceptions and print error message
 	try:
 		config = Config(args[0])
+		logging_setup(config)
 		# Read default command line options from config file
 		defaultCmdLine = config.get('global', 'cmdargs', '', mutable=True)
 		(opts.reportSite, opts.reportTime, opts.reportMod) = (0, 0, 0)
@@ -197,10 +198,8 @@ if __name__ == '__main__':
 		workflow = GUI.open(guiClass, jobCycle, jobManager, module)
 		workflow.run()
 
-	except GCError:
-		sys.stderr.write(GCError.message)
-		if utils.verbosity() > 2:
-			raise RethrowError('')
+	except:
+		sys.stderr.write(logException())
 		sys.exit(1)
 
 	sys.exit(0)

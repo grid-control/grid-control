@@ -281,7 +281,7 @@ class PersistentDict(dict):
 		if not update:
 			self.clear()
 		self.update(newdict)
-		if self.olddict == self.items():
+		if dict(self.olddict) == dict(self.items()):
 			return
 		try:
 			if self.filename:
