@@ -45,7 +45,7 @@ def lookupConfigParser(pconfig, key, lookup):
 	if not lookup or lookup == ['']:
 		raise ConfigError('Lookup parameter not defined!')
 	matchfun = []
-	defaultMatcher = pconfig.get('default matcher', 'start')
+	defaultMatcher = pconfig.get('', 'default matcher', 'start')
 	matchstrList = pconfig.get(key.lstrip('!'), 'matcher', defaultMatcher).lower().splitlines()
 	if len(matchstrList) != len(lookup):
 		if len(matchstrList) == 1:
