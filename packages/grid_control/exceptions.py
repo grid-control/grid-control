@@ -31,7 +31,7 @@ def logException_internal(exClass, exValue, stack):
 				log.critical('\t\tself.%s = %r', var.ljust(maxlen), tmp['self'].__dict__[var])
 		log.critical('')
 		stack = stack.tb_next
-	exMessage = '%s: %s' % (exClass.__name__, str.join(' ', exValue.args))
+	exMessage = '%s: %s' % (exClass.__name__, str.join(' ', map(str, exValue.args)))
 	log.critical(exMessage)
 	del stack
 	return exMessage + '\n'
