@@ -58,6 +58,8 @@ def lookupConfigParser(pconfig, key, lookup):
 			matchfun.append(lambda value, pat: value.startswith(pat))
 		elif matchstr == 'end':
 			matchfun.append(lambda value, pat: value.endswith(pat))
+		elif matchstr == 'equal':
+			matchfun.append(lambda value, pat: value == pat)
 		elif matchstr == 'expr':
 			matchfun.append(lambda value, pat: eval('lambda value: %s' % pat)(value))
 		elif matchstr == 'regex':
