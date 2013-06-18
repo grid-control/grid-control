@@ -2,7 +2,7 @@ import os, sys, logging
 
 def logging_defaults():
 	# Default logging to stdout
-	logging.getLogger().addHandler(logging.StreamHandler(stream = sys.stdout))
+	logging.getLogger().addHandler(logging.StreamHandler(sys.stdout))
 	# Default exception logging to file in gc directory
 	# Convention: sys.path[1] == python dir of gc
 	handler_ex = logging.FileHandler(os.path.join(sys.path[1], '..', 'exception.last'), 'w')
