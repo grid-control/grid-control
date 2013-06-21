@@ -147,13 +147,14 @@ class BasicWMS(WMS):
 					yield (fn, os.path.basename(fn), False)
 				else:
 					yield (None, os.path.basename(fn.name), fn)
-			
+
 		# Package sandbox tar file
 		utils.vprint('Packing sandbox:')
 		sandbox = self._getSandboxName(module)
 		if not os.path.exists(os.path.dirname(sandbox)):
 			os.makedirs(os.path.dirname(sandbox))
-		utils.genTarball(sandbox, convert(self._getSandboxFiles(module, monitor, [self.smSEIn, self.smSEOut])))
+		if not os.path.exists(sandbox) or self.config.opts.init:
+			utils.genTarball(sandbox, convert(self._getSandboxFiles(module, monitor, [self.smSEIn, self.smSEOut])))
 
 
 	def submitJobs(self, jobNumList, module):
