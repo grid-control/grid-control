@@ -30,7 +30,7 @@ class Host(LocalWMS):
 		head = map(lambda x: x.strip('%').lower(), next(status, '').split())
 		for entry in map(str.strip, status):
 			jobinfo = dict(zip(head, filter(lambda x: x != '', entry.split(None, len(head) - 1))))
-			jobinfo.update(dict(zip(['id', 'status', 'dest'], [jobinfo.get('pid'), 'R', 'localhost/localqueue'])))
+			jobinfo.update({'id': jobinfo.get('pid'), 'status': 'R', 'dest': 'localhost/localqueue'}
 			yield jobinfo
 
 
