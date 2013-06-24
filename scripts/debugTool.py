@@ -93,9 +93,9 @@ if opts.state:
 	except:
 		print "Invalid state: %s", opts.state
 	oldState = job.state
-	utils.vprint("Job state changed from %s to %s" % (Job.states[oldState], Job.states[newState]), -1, True, False)
+	utils.vprint("Job state changed from %s to %s" % (Job.states[oldState], Job.states[newState]), -1, True)
 	job.state = newState
-	job.save(args[0])
+	utils.safeWrite(open(args[0], 'w'), utils.DictFormat(escapeString = True).format(job.getAll()))
 
 if opts.splitting:
 	splitter = DataSplitter.loadState(opts.splitting)
