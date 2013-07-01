@@ -14,10 +14,10 @@ def logException_internal(exClass, exValue, stack):
 		# Output relevant code fragment
 		linecache.checkcache(code.co_filename)
 		log.critical('Stack #%s [%s:%d] %s', counter, code.co_filename, stack.tb_lineno, code.co_name)
-		fmtLine = lambda line: line.rstrip().replace('\t', '  ')
-		log.critical('\t  | %s', fmtLine(linecache.getline(code.co_filename, stack.tb_lineno - 1)))
-		log.critical('\t=>| %s', fmtLine(linecache.getline(code.co_filename, stack.tb_lineno + 0)))
-		log.critical('\t  | %s', fmtLine(linecache.getline(code.co_filename, stack.tb_lineno + 1)))
+		fmtLine = lambda line: linecache.getline(code.co_filename, line).rstrip().replace('\t', '  ')
+		log.critical('\t  | %s', fmtLine(stack.tb_lineno - 1))
+		log.critical('\t=>| %s', fmtLine(stack.tb_lineno + 0))
+		log.critical('\t  | %s', fmtLine(stack.tb_lineno + 1))
 		log.critical('')
 		# Output local and class variables
 		log.critical('\tLocal variables:')
