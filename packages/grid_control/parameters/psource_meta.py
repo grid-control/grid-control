@@ -200,6 +200,9 @@ class RepeatParameterSource(ChainParameterSource):
 		ParameterSource.show(self, level, 'times = %d' % self.times)
 		self.plugin.show(level + 1)
 
+	def getHash(self):
+		return md5(self.plugin.getHash() + str(self.times)).hexdigest()
+
 	def __repr__(self):
 		return 'repeat(%s, %d)' % (repr(self.plugin), self.times)
 ParameterSource.managerMap['repeat'] = RepeatParameterSource
