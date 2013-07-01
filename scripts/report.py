@@ -6,6 +6,8 @@ parser = optparse.OptionParser()
 parser.add_option('-J', '--job-selector', dest='selector', default=None)
 parser.add_option('-m', '--map', dest='showMap', default=False, action='store_true',
 	help='Draw map of sites')
+parser.add_option('-C', '--cpu', dest='showCPU', default=False, action='store_true',
+	help='Display time overview')
 Report.addOptions(parser)
 (opts, args) = parseOptions(parser)
 
@@ -29,10 +31,17 @@ try:
 
 	# Show reports
 	report = Report(jobs, selected)
-	if opts.showMap:
+	if opts.showCPU:
+		cpuTime = 0
+		for jobNum in selected:
+			jobObj = jobs.get(jobNum)
+			cpuTime += jobObj.get('runtime', 0)
+		print 'Used wall time:', utils.strTime(cpuTime)
+		print 'Estimated cost: $%.2f' % ((cpuTime / 60 / 60) * 0.1)
+	elif opts.showMap:
 		from grid_control_gui import geomap
 		geomap.drawMap(report)
 	else:
 		report.show(opts, module)
-except GCError:
-	utils.eprint(GCError.message)
+except:
+	sys.stderr.write(logException())
