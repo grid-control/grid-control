@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 import sys, optparse
-from gcSupport import utils, Config, Module, JobManager, JobSelector, Report, GCError, parseOptions
+from gcSupport import utils, Config, Module, JobManager, JobSelector, Report, GCError, parseOptions, handleException
 
 parser = optparse.OptionParser()
 parser.add_option('-J', '--job-selector', dest='selector', default=None)
@@ -13,7 +13,8 @@ Report.addOptions(parser)
 
 if len(args) != 1:
 	utils.exitWithUsage('%s [options] <config file>' % sys.argv[0])
-try:
+
+def main():
 	# try to open config file
 	config = Config(args[0])
 	config.opts = config
@@ -43,5 +44,5 @@ try:
 		geomap.drawMap(report)
 	else:
 		report.show(opts, module)
-except:
-	sys.stderr.write(logException())
+
+handleException(main)

@@ -39,6 +39,16 @@ def logException_internal(exClass, exValue, stack):
 def logException():
 	return logException_internal(*sys.exc_info())
 
+# Function to warp a main function in correct exception handling
+def handleException(fun, *args, **kwargs):
+	try:
+		fun(*args, **kwargs)
+	except SystemExit: # Forward SystemExit exit code
+		sys.exit(sys.exc_info()[1].code)
+	except:
+		sys.stderr.write(logException())
+		sys.exit(1)
+
 class GCError(Exception):
 	pass	# grid-control exception base class
 

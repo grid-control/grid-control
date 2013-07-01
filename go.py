@@ -57,7 +57,7 @@ if __name__ == '__main__':
 		utils.exitWithUsage(usage, 'Config file not specified!')
 
 	# big try... except block to catch exceptions and print error message
-	try:
+	def main():
 		config = Config(args[0])
 		logging_setup(config)
 		# Read default command line options from config file
@@ -198,8 +198,4 @@ if __name__ == '__main__':
 		workflow = GUI.open(guiClass, jobCycle, jobManager, module)
 		workflow.run()
 
-	except:
-		sys.stderr.write(logException())
-		sys.exit(1)
-
-	sys.exit(0)
+	handleException(main)
