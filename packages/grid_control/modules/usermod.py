@@ -17,7 +17,7 @@ class UserMod(DataMod):
 		if self._sendexec:
 			cmd = os.path.basename(self._executable)
 			return 'chmod u+x %s; (./%s $@) > job.stdout 2> job.stderr' % (cmd, cmd)
-		return '(%s $@) > job.stdout 2> job.stderr' % self._executable
+		return '(%s $@) > job.stdout 2> job.stderr' % str.join('; ', self._executable.splitlines())
 
 
 	def getJobArguments(self, jobNum):
