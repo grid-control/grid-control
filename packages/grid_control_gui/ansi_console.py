@@ -1,6 +1,6 @@
-from grid_control import GUI, JobClass, utils
+from grid_control import GUI, JobClass, utils, report
 from grid_control.job_selector import ClassSelector
-import re, sys, signal, report, termios, array, fcntl
+import re, sys, signal, termios, array, fcntl
 
 class Console:
 	attr = {"COLOR_BLACK": "30", "COLOR_RED": "31", "COLOR_GREEN": "32",

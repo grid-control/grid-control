@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 import gcSupport, sys, os, optparse, popen2, time, random, threading
 from python_compat import *
-from grid_control import Job, JobDB, GCError, Config, Proxy, job_selector, job_db, storage, utils
+from grid_control import Job, JobDB, GCError, Config, Proxy, job_selector, job_db, storage, utils, logException
 
 def md5sum(filename):
 	m = md5()
@@ -163,9 +163,10 @@ def dlfs_rm(path, msg):
 
 def realmain(opts, args):
 	try:
-		proxy = Proxy.open(opts.proxy, Config(configDict={"proxy": {"ignore warnings": True}}))
-	except GCError:
-		sys.stderr.write(GCError.message)
+		pass
+#		proxy = Proxy.open(opts.proxy, Config(configDict={"proxy": {"ignore warnings": True}}))
+	except:
+		sys.stderr.write(logException())
 		sys.exit(1)
 
 	(workDir, config, jobDB) = gcSupport.initGC(args)
@@ -330,7 +331,7 @@ def realmain(opts, args):
 		jobList.sort()
 
 	if opts.threads:
-		from grid_control import gui
+		from grid_control_gui import ansi_console
 		errorOutput = []
 		class ThreadDisplay:
 			def __init__(self):
@@ -355,9 +356,9 @@ def realmain(opts, args):
 				(hash, name_local, name_dest, pathSE) = self.files[idx]
 				if hashLocal:
 					if hash == hashLocal:
-						result = gui.Console.fmt('MATCH', [gui.Console.COLOR_GREEN])
+						result = ansi_console.Console.fmt('MATCH', [ansi_console.Console.COLOR_GREEN])
 					else:
-						result = gui.Console.fmt('FAIL', [gui.Console.COLOR_RED])
+						result = ansi_console.Console.fmt('FAIL', [ansi_console.Console.COLOR_RED])
 					msg = '(R:%s L:%s) => %s' % (hash, hashLocal, result)
 				else:
 					msg = ''
@@ -379,7 +380,7 @@ def realmain(opts, args):
 
 		(active, todo) = ([], list(jobList))
 		todo.reverse()
-		screen = gui.Console()
+		screen = ansi_console.Console()
 		screen.move(0, 0)
 		screen.savePos()
 		while True:
