@@ -16,8 +16,18 @@ fi
 	echo "EXITCODE=107"
 ) > "$GC_SANDBOX/job.info"
 
-[ -d "/tmp" ] && export GC_LOCALSCRATCH="/tmp/${RANDOM}_${MY_JOBID}"
+# Search for local scratch directory - GC_SCRATCH is specified in the config file
+# Entries can be either paths or variable references
+for SDIR in $GC_SCRATCH; do
+	[ -d "${SDIR}" ] && export GC_LOCALSCRATCH="$SDIR/${RANDOM}_${MY_JOBID}"
+	[ -n "$GC_LOCALSCRATCH" ] && break
+	[ -d "${!SDIR}" ] && export GC_LOCALSCRATCH="${!SDIR}/${RANDOM}_${MY_JOBID}"
+	[ -n "$GC_LOCALSCRATCH" ] && break
+done
+[ -z "$GC_LOCALSCRATCH" ] && export GC_LOCALSCRATCH="$GC_SANDBOX/${RANDOM}_${MY_JOBID}"
 [ -n "$GC_LOCALSCRATCH" ] && mkdir -p "$GC_LOCALSCRATCH"
+
+# Go into sandbox and start script
 cd "$GC_SANDBOX"
 if [ -n "$GC_DELAY_OUTPUT" ]; then
 	./gc-run.sh ${MY_JOBID} > "$GC_LOCALSCRATCH/gc.stdout.tmp" 2> "$GC_LOCALSCRATCH/gc.stderr.tmp"
