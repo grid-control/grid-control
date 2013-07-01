@@ -24,6 +24,8 @@ parser.add_option('-M', '--block-metadata', dest='blockmetadata', default=False,
 	help='Get common metadata infomation of dataset blocks')
 parser.add_option('', '--sort',            dest='sort',         default=False, action='store_true',
 	help='Sort dataset blocks and files')
+parser.add_option('', '--settings',        dest='settings',     default=None,
+	help='Specify config file as source of detailed dataset settings')
 parser.add_option('-S', '--save',          dest='save',
 	help='Saves dataset information to specified file')
 (opts, args) = parseOptions(parser)
@@ -46,8 +48,12 @@ else:
 	if opts.metadata or opts.blockmetadata:
 		cfgSettings['lumi filter'] = '-'
 		cfgSettings['keep lumi metadata'] = True
-	dummyConfig = Config(configDict={'dummy': cfgSettings})
-	provider = DataProvider.create(dummyConfig, 'dummy', dataset, 'dbs')
+	section = 'dummy'
+	if opts.settings:
+		tmpCfg = Config(opts.settings)
+		section = tmpCfg.get('global', 'module')
+	dummyConfig = Config(opts.settings, configDict={section: cfgSettings})
+	provider = DataProvider.create(dummyConfig, section, dataset, 'dbs')
 blocks = provider.getBlocks()
 if len(blocks) == 0:
 	raise DatasetError('No blocks!')
