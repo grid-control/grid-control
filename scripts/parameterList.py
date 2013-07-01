@@ -45,22 +45,25 @@ parser.add_option('-S', '--save',            dest='save',
 if len(args) != 1:
 	utils.exitWithUsage(usage)
 
-if os.path.exists(args[0]):
-	config = Config(args[0])
-	if not opts.manager:
-		mod = config.get('global', 'module')
-		opts.manager = config.get(mod, 'parameter factory', 'SimpleParameterFactory')
-else:
-	if not opts.manager:
-		opts.manager = 'SimpleParameterFactory'
+paramSettings = {}
+if opts.parameters:
 	utils.vprint('Provided options:')
-	paramSettings = {'parameters': str.join(' ', args).replace('\\n', '\n')}
 	for p in opts.parameters:
 		k, v = p.split('=', 1)
 		paramSettings[k.strip()] = v.strip().replace('\\n', '\n')
 		utils.vprint('\t%s: %s' % (k.strip(), v.strip()))
 	utils.vprint('')
-	config = Config(configDict={'jobs': {'nseeds': 1}, 'parameters': paramSettings})
+
+if os.path.exists(args[0]):
+	config = Config(args[0], configDict = {'jobs': {'nseeds': 1}, 'parameters': paramSettings})
+	if not opts.manager:
+		mod = config.get('global', 'module')
+		opts.manager = config.get(mod, 'parameter factory', 'SimpleParameterFactory')
+else:
+	paramSettings['parameters'] = str.join(' ', args).replace('\\n', '\n')
+	config = Config(configDict = {'jobs': {'nseeds': 1}, 'parameters': paramSettings})
+	if not opts.manager:
+		opts.manager = 'SimpleParameterFactory'
 
 config.set('parameters', 'parameter adapter', 'BasicParameterAdapter')
 config.opts = opts
@@ -149,11 +152,11 @@ if opts.listparams:
 		head = [('COLLATE_JOBS', '# of jobs')]
 		if 'DATASETSPLIT' in stored:
 			stored.remove('DATASETSPLIT')
-		if opts.collapse == 1:
-			stored.append('DATASETNICK')
-			head.append(('DATASETNICK', 'DATASETNICK'))
-		elif opts.collapse == 2:
-			head.append(('COLLATE_NICK', '# of nicks'))
+			if (opts.collapse == 1):
+				stored.append('DATASETNICK')
+				head.append(('DATASETNICK', 'DATASETNICK'))
+			elif opts.collapse == 2:
+				head.append(('COLLATE_NICK', '# of nicks'))
 		for pset in result_old:
 			if ('DATASETSPLIT' in pset) and (opts.collapse == 1):
 				pset.pop('DATASETSPLIT')
