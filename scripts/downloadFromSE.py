@@ -163,8 +163,7 @@ def dlfs_rm(path, msg):
 
 def realmain(opts, args):
 	try:
-		pass
-#		proxy = Proxy.open(opts.proxy, Config(configDict={"proxy": {"ignore warnings": True}}))
+		proxy = Proxy.open(opts.proxy, Config(configDict={"proxy": {"ignore warnings": True}}))
 	except:
 		sys.stderr.write(logException())
 		sys.exit(1)
