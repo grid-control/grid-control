@@ -22,10 +22,10 @@ class GridWMS(BasicWMS):
 		'scheduled': Job.QUEUED,
 		'running':   Job.RUNNING,
 		'aborted':   Job.ABORTED,
-		'cancelled': Job.CANCELLED,
-		'failed':    Job.FAILED,
+		'cancelled': Job.ABORTED,
+		'failed':    Job.ABORTED,
 		'done':      Job.DONE,
-		'cleared':   Job.FAILED
+		'cleared':   Job.ABORTED
 	}
 
 

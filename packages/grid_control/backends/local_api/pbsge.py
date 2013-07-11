@@ -30,7 +30,7 @@ class PBSGECommon(LocalWMS):
 		if self.shell:
 			params += ' -S %s' % self.shell
 		# Job group
-		if len(self.group):
+		if self.group:
 			params += ' -W group_list=%s' % self.group
 		# Process job requirements
 		for req in reqMap:
