@@ -113,7 +113,11 @@ class ScanProviderBase(DataProvider):
 class ScanProvider(ScanProviderBase):
 	DataProvider.providers.update({'ScanProvider': 'scan'})
 	def __init__(self, config, section, datasetExpr, datasetNick, datasetID = 0):
-		config.set(section, 'source directory', datasetExpr)
+		if '*' in os.path.basename(datasetExpr):
+			config.set(section, 'source directory', os.path.dirname(datasetExpr))
+			config.set(section, 'filename filter', datasetExpr)
+		else:
+			config.set(section, 'source directory', datasetExpr)
 		defScanner = ['FilesFromLS', 'MatchOnFilename', 'MatchDelimeter', 'DetermineEvents', 'AddFilePrefix']
 		ScanProviderBase.__init__(self, config, section, defScanner, datasetNick, datasetID)
 
