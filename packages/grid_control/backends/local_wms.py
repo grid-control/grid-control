@@ -14,7 +14,7 @@ class LocalWMS(BasicWMS):
 
 		self.sandCache = []
 		self.sandPath = config.getPath('local', 'sandbox path', os.path.join(config.workDir, 'sandbox'), check=False)
-		self.scratchPath = config.getPath('local', 'scratch path', ['TMPDIR', '/tmp'], mutable=True, check=False)
+		self.scratchPath = config.getList('local', 'scratch path', ['TMPDIR', '/tmp'], mutable=True)
 
 
 	def getTimings(self):
@@ -104,7 +104,8 @@ class LocalWMS(BasicWMS):
 		self.smSBIn.doTransfer(map(lambda (d, s, t): (d, s, os.path.join(sbPrefix, t)), self._getSandboxFilesIn(module)))
 
 		cfgPath = os.path.join(sandbox, '_jobconfig.sh')
-		self._writeJobConfig(cfgPath, jobNum, module, {'GC_SANDBOX': sandbox, 'GC_SCRATCH': self.scratchPath})
+		self._writeJobConfig(cfgPath, jobNum, module, {'GC_SANDBOX': sandbox,
+			'GC_SCRATCH': str.join(' ', self.scratchPath)})
 		reqs = self.brokerSite.brokerAdd(module.getRequirements(jobNum), WMS.SITES)
 		reqs = dict(self.brokerQueue.brokerAdd(reqs, WMS.QUEUES))
 
