@@ -39,7 +39,7 @@ class BasicParameterFactory(ParameterFactory):
 		# Random number variables
 		for (idx, seed) in enumerate(self._getSeeds(config)):
 			self.constSources.append(CounterParameterSource('SEED_%d' % idx, seed))
-		self.repeat = config.getInt(sections, 'repeat', 1)
+		self.repeat = config.getInt(sections, 'repeat', 1, mutable=True) # ALL config.x -> paramconfig.x !
 
 
 	def _addConstantPlugin(self, config, sections, cName, varName):
