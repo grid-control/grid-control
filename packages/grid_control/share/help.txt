@@ -27,6 +27,7 @@
 	                            -S 1234,423,7856
 	-N, --nseeds <arg>       Generate <arg> random seeds if not explicitly specified
                                  via previous option (default=10)
+	-o, --override <opt>     Override config options using "[section] option = value"
 
 	                         --- Display options ---
 	-G, --gui                Run in GUI mode
@@ -41,7 +42,7 @@
 	                            -RR  / -TT  (broken down into site, CE)
 	                            -RRR / -TTT (broken down into site, CE, queue)
 	-D, --detail-report      Show detailed report of jobs
-	
+
 	                         --- Job selectors ---
 	                         The following job selectors are supported:
 	                            id:1,5,9,...       (Job numbers)

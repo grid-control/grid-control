@@ -38,6 +38,7 @@ if __name__ == '__main__':
 	parser.add_option('-q', '--resync',        dest='resync',     default=False, action='store_true')
 	parser.add_option('-s', '--no-submission', dest='submission', default=True,  action='store_false')
 	parser.add_option('-c', '--continuous',    dest='continuous', default=None,  action='store_true')
+	parser.add_option('-o', '--override',      dest='override',   default=[],    action='append')
 	parser.add_option('-d', '--delete',        dest='delete',     default=None)
 	parser.add_option('',   '--reset',         dest='reset',      default=None)
 	parser.add_option('-a', '--action',        dest='action',     default=None)
@@ -52,13 +53,23 @@ if __name__ == '__main__':
 	(opts, args) = parser.parse_args()
 	utils.verbosity(opts.verbosity)
 
+	# Allow to override config options on the command line:
+	configDict = {}
+	for uopt in opts.override:
+		try:
+			section, tmp = tuple(uopt.lstrip('[').split(']', 1))
+			key, value = tuple(map(str.strip, tmp.split('=', 1)))
+			configDict.setdefault(section, {})[key] = value
+		except:
+			raise RethrowError('Unable to parse option %s' % uopt, ConfigError)
+
 	# we need exactly one positional argument (config file)
 	if len(args) != 1:
 		utils.exitWithUsage(usage, 'Config file not specified!')
 
 	# big try... except block to catch exceptions and print error message
 	def main():
-		config = Config(args[0])
+		config = Config(args[0], configDict)
 		logging_setup(config)
 		# Read default command line options from config file
 		defaultCmdLine = config.get('global', 'cmdargs', '', mutable=True)
