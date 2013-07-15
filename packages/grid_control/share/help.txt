@@ -23,10 +23,6 @@
 
 	                         --- Module options ---
 	-q, --requery            Requery dataset information
-	-S, --seed <args>        Override seed specified in the config file e.g:
-	                            -S 1234,423,7856
-	-N, --nseeds <arg>       Generate <arg> random seeds if not explicitly specified
-                                 via previous option (default=10)
 	-o, --override <opt>     Override config options using "[section] option = value"
 
 	                         --- Display options ---

@@ -43,8 +43,6 @@ if __name__ == '__main__':
 	parser.add_option('',   '--reset',         dest='reset',      default=None)
 	parser.add_option('-a', '--action',        dest='action',     default=None)
 	parser.add_option('-J', '--job-selector',  dest='selector',   default=None)
-	parser.add_option('-S', '--seed',          dest='seed',       default=None)
-	parser.add_option('-N', '--nseeds',        dest='nseeds',     default=None,  type='int')
 	parser.add_option('-m', '--max-retry',     dest='maxRetry',   default=None,  type='int')
 	parser.add_option('-v', '--verbose',       dest='verbosity',  default=0,     action='count')
 	parser.add_option('-G', '--gui',           dest='gui',        action='store_const', const = 'ANSIConsole')
@@ -78,10 +76,9 @@ if __name__ == '__main__':
 		def setConfigFromOpt(option, section, item, fun = lambda x: str(x)):
 			if option != None:
 				config.set(section, item, fun(option))
-		for (cfgopt, cmdopt) in {'nseeds': opts.nseeds, 'max retry': opts.maxRetry,
+		for (cfgopt, cmdopt) in {'max retry': opts.maxRetry,
 			'action': opts.action, 'continuous': opts.continuous, 'selected': opts.selector}.items():
 			setConfigFromOpt(cmdopt, 'jobs', cfgopt)
-		setConfigFromOpt(opts.seed, 'jobs', 'seeds', lambda x: x.replace(',', ' '))
 		setConfigFromOpt(opts.gui, 'global', 'gui')
 		config.opts = opts
 		overlay = ConfigOverlay.open(config.get('global', 'config mode', 'verbatim'), config)
