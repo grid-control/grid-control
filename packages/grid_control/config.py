@@ -1,4 +1,4 @@
-import os, inspect, ConfigParser as cp
+import os, inspect, socket, ConfigParser as cp
 from grid_control import *
 from python_compat import *
 
@@ -29,8 +29,12 @@ class Config:
 		(self.configLog, self.configLogName) = ({}, None)
 		self.setConfigLog(None)
 
-		defaultCfg = ['/etc/grid-control.conf', '~/.grid-control.conf', utils.pathGC('default.conf')]
-		for cfgFile in filter(os.path.exists, map(lambda p: utils.resolvePath(p, check = False), defaultCfg)):
+		# Collect host / user / installation specific config files
+		host = socket.gethostbyaddr(socket.gethostname())[0]
+		hostCfg = map(lambda c: utils.pathGC('config/%s.conf' % host.split('.', c)[-1]), range(host.count('.') + 1, 0, -1))
+		defaultCfg = ['/etc/grid-control.conf', '~/.grid-control.conf', utils.pathGC('config/default.conf')]
+		# Read default config files
+		for cfgFile in filter(os.path.exists, map(lambda p: utils.resolvePath(p, check = False), hostCfg + defaultCfg)):
 			self.parseFile(cfgFile)
 		if configFile:
 			# use the directory of the config file as base directory
@@ -78,6 +82,7 @@ class Config:
 
 
 	def parseFile(self, configFile, defaults = None):
+		utils.vprint('Reading config file %s' % configFile, 4)
 		try:
 			configFile = utils.resolvePath(configFile)
 			for line in map(lambda x: x.rstrip() + '=:', open(configFile, 'r').readlines()):
