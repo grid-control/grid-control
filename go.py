@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-import sys, os, signal, optparse, time
+import sys, os, signal, optparse, time, logging
 
 # Load grid-control package
 sys.path.insert(1, os.path.join(sys.path[0], 'packages'))
@@ -50,6 +50,7 @@ if __name__ == '__main__':
 	Report.addOptions(parser)
 	(opts, args) = parser.parse_args()
 	utils.verbosity(opts.verbosity)
+	logging.getLogger().setLevel(logging.DEFAULT_VERBOSITY - opts.verbosity)
 
 	# Allow to override config options on the command line:
 	configDict = {}
@@ -76,8 +77,8 @@ if __name__ == '__main__':
 		def setConfigFromOpt(option, section, item, fun = lambda x: str(x)):
 			if option != None:
 				config.set(section, item, fun(option))
-		for (cfgopt, cmdopt) in {'max retry': opts.maxRetry,
-			'action': opts.action, 'continuous': opts.continuous, 'selected': opts.selector}.items():
+		for (cfgopt, cmdopt) in {'max retry': opts.maxRetry, 'action': opts.action,
+				'continuous': opts.continuous, 'selected': opts.selector}.items():
 			setConfigFromOpt(cmdopt, 'jobs', cfgopt)
 		setConfigFromOpt(opts.gui, 'global', 'gui')
 		config.opts = opts
