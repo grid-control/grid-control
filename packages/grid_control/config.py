@@ -68,17 +68,17 @@ class Config:
 		return utils.PersistentDict(os.path.join(self.workDir, 'task.dat'), ' = ')
 
 
-	def setInternal(self, section, option, value, append):
-		section_option = cleanSO(section, option)
+	def setInternal(self, section, item, value, append):
+		section_item = cleanSO(section, item)
 		# Split into lines, remove comments and return merged result
 		value = map(lambda x: utils.rsplit(x, ';', 1)[0].strip(), value.splitlines())
 		value = str.join('\n', filter(lambda x: x != '', value))
-		if append and (section_option in self.content):
-			self.content[section_option] += '\n%s' % value
-			self.append[section_option] = False
+		if append and (section_item in self.content):
+			self.content[section_item] += '\n%s' % value
+			self.append[section_item] = False
 		else:
-			self.content[section_option] = value
-			self.append[section_option] = append
+			self.content[section_item] = value
+			self.append[section_item] = append
 
 
 	def parseFile(self, configFile, defaults = None):
