@@ -1,4 +1,4 @@
-import os, inspect, socket, ConfigParser as cp
+import os, inspect, socket, logging, ConfigParser as cp
 from grid_control import *
 from python_compat import *
 
@@ -23,8 +23,12 @@ def fmtStack(stack):
 
 class Config:
 	def __init__(self, configFile = None, configDict = {}):
-		(self.allowSet, self.workDir) = (True, None)
+		# Configure logging for this config instance
+		self.confName = str.join('', os.path.basename(str(configFile)).split('.')[:-1])
+		self.logger = logging.getLogger(('config.%s' % self.confName).rstrip('.'))
+
 		self.hidden = [('global', 'workdir'), ('global', 'workdir base'), ('global', 'include')]
+		(self.allowSet, self.workDir) = (True, None)
 		(self.content, self.apicheck, self.append, self.accessed, self.dynamic) = ({}, {}, {}, {}, {})
 		(self.configLog, self.configLogName) = ({}, None)
 		self.setConfigLog(None)
@@ -36,11 +40,11 @@ class Config:
 		# Read default config files
 		for cfgFile in filter(os.path.exists, map(lambda p: utils.resolvePath(p, check = False), hostCfg + defaultCfg)):
 			self.parseFile(cfgFile)
+
 		if configFile:
 			# use the directory of the config file as base directory
 			self.baseDir = utils.cleanPath(os.path.dirname(configFile))
 			self.configFile = os.path.join(self.baseDir, os.path.basename(configFile))
-			self.confName = str.join('', os.path.basename(configFile).split('.')[:-1])
 			self.parseFile(configFile)
 		else:
 			(self.baseDir, self.configFile, self.confName) = ('.', 'gc.conf', 'gc')
@@ -70,19 +74,21 @@ class Config:
 
 	def setInternal(self, section, item, value, append):
 		section_item = cleanSO(section, item)
-		# Split into lines, remove comments and return merged result
+		# Split into lines, remove comments following the last ";" and return merged multi-line result
 		value = map(lambda x: utils.rsplit(x, ';', 1)[0].strip(), value.splitlines())
 		value = str.join('\n', filter(lambda x: x != '', value))
 		if append and (section_item in self.content):
+			# Append new value to existing value
 			self.content[section_item] += '\n%s' % value
 			self.append[section_item] = False
 		else:
+			# If there is no existing value, mark it so the user value is appended to the default value
 			self.content[section_item] = value
 			self.append[section_item] = append
 
 
 	def parseFile(self, configFile, defaults = None):
-		utils.vprint('Reading config file %s' % configFile, 4)
+		self.logger.log(logging.INFO1, 'Reading config file: %s' % configFile)
 		try:
 			configFile = utils.resolvePath(configFile)
 			for line in map(lambda x: x.rstrip() + '=:', open(configFile, 'r').readlines()):
@@ -108,13 +114,13 @@ class Config:
 
 
 	def set(self, section, item, value = None, override = True, append = False, default = noDefault):
-		utils.vprint('{%s}: ' % fmtStack(inspect.stack()), 4, newline=False)
+		self.logger.log(logging.DEBUG2, 'Config set request from: %s' % fmtStack(inspect.stack()))
 		(section, item) = cleanSO(section, item)
 		if isinstance(section, list):
 			section = section[0] # set most specific setting
 		if not self.allowSet:
 			raise APIError('Invalid runtime config override: [%s] %s = %s' % (section, item, value))
-		utils.vprint('Overwrite of option [%s] %s = %s' % (section, item, value), 2)
+		self.logger.log(logging.DEBUG1, 'Overwrite of option [%s] %s = %s' % (section, item, value))
 		if ((section, item) not in self.content) or ((section, item) in self.dynamic) or override:
 			self.setInternal(section, item, value, append)
 			self.accessed[(section, item)] = (value, default)
@@ -122,75 +128,124 @@ class Config:
 			self.configLog[self.configLogName][(section, item)] = value
 
 
-	def get(self, section, item, default = noDefault, mutable = False, noVar = True):
+	def getInternal(self, section, item, default, mutable, noVar):
 		(section, item) = cleanSO(section, item)
 		# Handle multi section get calls, use least specific setting for error message
 		if isinstance(section, list):
-			utils.vprint('Searching option "%s" in:\n\t%s' % (item, str.join('\n\t', section)), 4)
+			self.logger.log(logging.INFO3, 'Searching option "%s" in:\n\t%s' % (item, str.join('\n\t', section)))
 			for specific in filter(lambda s: item in self.getOptions(s), section):
-				return self.get(specific, item, default, mutable, noVar)
-			return self.get(section[-1], item, default, mutable, noVar) # will trigger error message
-		utils.vprint('{%s}: ' % fmtStack(inspect.stack()), 5, newline=False)
+				return self.getInternal(specific, item, default, mutable, noVar)
+			return self.getInternal(section[-1], item, default, mutable, noVar) # will trigger error message
+		self.logger.log(logging.DEBUG2, 'Config get request from: %s' % fmtStack(inspect.stack()))
 		# API check: Keep track of used default values
 		if self.apicheck.setdefault((section, item), (default, mutable))[0] != default:
 			raise APIError('Inconsistent default values: [%s] "%s"' % (section, item))
 		self.apicheck[(section, item)] = (default, mutable and self.apicheck[(section, item)][1])
 		# Get config option value and protocol access
+		isDefault = False
 		if (section, item) in self.content:
 			value = self.content[(section, item)]
 			if self.append.get((section, item), False) and default != noDefault:
 				value = '%s\n%s' % (default, value)
-			utils.vprint('Using user supplied [%s] %s = %s' % (section, item, value), 3)
+			self.logger.log(logging.INFO2, 'Using user supplied [%s] %s = %s' % (section, item, value))
 		else:
 			if default == noDefault:
 				raise ConfigError('[%s] "%s" does not exist!' % (section, item))
-			utils.vprint('Using default value [%s] %s = %s' % (section, item, default), 3)
+			self.logger.log(logging.INFO2, 'Using default value [%s] %s = %s' % (section, item, default))
 			value = default
+			isDefault = True
 		self.accessed[(section, item)] = (value, default)
 		self.configLog[self.configLogName][(section, item)] = value
-		return utils.checkVar(value, '[%s] "%s" may not contain variables.' % (section, item), noVar)
+		return (utils.checkVar(value, '[%s] "%s" may not contain variables.' % (section, item), noVar), isDefault)
 
 
-	def getPaths(self, section, item, default = noDefault, mutable = False, noVar = True, check = True):
-		def getPathsInt():
-			try:
-				for value in self.getList(section, item, default, mutable, noVar):
-					yield utils.resolvePath(value, [self.baseDir], check, ConfigError)
-			except:
-				raise RethrowError('Error resolving path in [%s] %s' % (section, item), ConfigError)
-		return list(getPathsInt())
+	def getTyped(self, desc, value2str, str2value, section, item, default, mutable, noVar, default2value = None):
+		# First transform default into string if applicable
+		default_str = noDefault
+		if default != noDefault:
+			default_str = value2str(default)
+		# Get string from config file
+		if isinstance(section, list):
+			section = utils.uniqueListRL(map(str.lower, section))
+		(resultraw, isDefault) = self.getInternal(section, item, default_str, mutable, noVar)
+		self.logger.log(logging.DEBUG1, 'Reading from config file [%s] %s: %s' % (section, item, resultraw))
+		# Convert string back to type - or directly use default
+		if isDefault:
+			if default2value == None:
+				result = str2value(value2str(default))
+			else:
+				result = default2value(default)
+		else:
+			result = str2value(resultraw)
+		if isinstance(section, list):
+			section = str.join(', ', section)
+		self.logger.log(logging.INFO1, 'Reading %s from [%s] %s: %s' % (desc, section, item, result))
+		return result
 
 
-	def getPath(self, section, item, default = noDefault, mutable = False, noVar = True, check = True):
-		return (self.getPaths(section, item, fmtDef(default, [default]), mutable, noVar, check) + [''])[0]
+	def get(self, section, item, default = noDefault, mutable = False, noVar = True):
+		return self.getTyped('string', str, str, section, item, default, mutable, noVar)
 
 
 	def getInt(self, section, item, default = noDefault, mutable = False, noVar = True):
-		return int(self.get(section, item, default, mutable, noVar))
+		return self.getTyped('int', str, int, section, item, default, mutable, noVar)
 
 
 	def getBool(self, section, item, default = noDefault, mutable = False, noVar = True):
-		return utils.parseBool(self.get(section, item, fmtDef(default, QM(default, 'true', 'false')), mutable, noVar))
+		value2str = lambda value: QM(value, 'true', 'false')
+		result = self.getTyped('bool', value2str, utils.parseBool, section, item, default, mutable, noVar)
+		if result == None:
+			raise ConfigError('Unable to parse bool from [%s] %s' % (section, item))
+		return result
 
 
 	def getTime(self, section, item, default = noDefault, mutable = False, noVar = True):
-		return utils.parseTime(self.get(section, item, fmtDef(default, default, utils.strTimeShort), mutable, noVar))
+		return self.getTyped('time', utils.strTimeShort, utils.parseTime, section, item, default, mutable, noVar)
 
 
-	def getList(self, section, item, default = noDefault, mutable = False, noVar = True, delim = None, empty = []):
-		if default == None:
-			(default, empty) = ('', None)
-		elif default != noDefault:
-			default = str.join(QM(delim, delim, ' '), map(str, default))
-		if empty != None:
-			empty = list(empty)
-		return utils.parseList(self.get(section, item, default, mutable, noVar), delim, onEmpty = empty)
+	def getList(self, section, item, default = noDefault, mutable = False, noVar = True):
+		# config file == '' => []
+		# default == None => None
+		def value2str(value):
+			if value:
+				return '\n' + str.join('\n', map(str, value))
+			return ''
+		str2value = lambda value: utils.parseList(value, None)
+		result = self.getTyped('list', value2str, str2value, section, item, default, mutable, noVar,
+			default2value = lambda x: x)
+		if result != None:
+			return map(str, result)
 
 
 	def getDict(self, section, item, default = noDefault, mutable = False, noVar = True, parser = lambda x: x):
-		if default != noDefault:
-			default = str.join('\n\t', map(lambda kv: '%s => %s' % kv, default.items()))
-		return utils.parseDict(self.get(section, item, default, mutable, noVar), parser)
+		value2str = lambda value: str.join('\n\t', map(lambda kv: '%s => %s' % kv, value.items()))
+		result = self.getTyped('dictionary', value2str, utils.parseDict, section, item, default, mutable, noVar)
+		if result == default: # default is given by dict, but this function returns ({dict}, [key order])
+			return (default, default.keys())
+		return result
+
+
+	def parsePath(self, value, check):
+		try:
+			return utils.resolvePath(value, [self.baseDir], check, ConfigError)
+		except:
+			raise RethrowError('Error resolving path %s' % value, ConfigError)
+
+
+	def parsePaths(self, value, check):
+		result = []
+		for path in utils.parseList(value, None, onEmpty = []):
+			result.append(self.parsePath(path, check))
+		return result
+
+
+	def getPath(self, section, item, default = noDefault, mutable = False, noVar = True, check = True):
+		return self.getTyped('path', str, lambda p: self.parsePath(p, check), section, item, default, mutable, noVar)
+
+
+	def getPaths(self, section, item, default = noDefault, mutable = False, noVar = True, check = True):
+		value2str = lambda value: str.join('\n', value)
+		return self.getTyped('paths', value2str, lambda p: self.parsePaths(p, check), section, item, default, mutable, noVar)
 
 
 	def getOptions(self, section):
@@ -213,16 +268,16 @@ class Config:
 				oldValue = '<not specified>'
 			if (str(value).strip() != str(oldValue).strip()) and not mutable:
 				if not flag:
-					utils.eprint('\nFound some changes in the config file, which will only apply')
-					utils.eprint('to the current task after a reinitialization:\n')
+					self.logger.warn('Found some changes in the config file, which will only ' +
+						'apply to the current task after a reinitialization:')
 				outputLine = '[%s] %s = %s' % (section, option, value.replace('\n', '\n\t'))
 				outputLine += QM(len(outputLine) > 60, '\n', '') + '  (old value: %s)' % oldValue.replace('\n', '\n\t')
-				utils.eprint(outputLine)
+				self.logger.warn(outputLine)
 				flag = True
 		unused = sorted(filter(lambda x: x not in self.accessed, self.content))
-		utils.vprint('There are %s unused config options!' % len(unused))
+		self.logger.log(logging.INFO1, 'There are %s unused config options!' % len(unused))
 		for (section, option) in unused:
-			utils.vprint('\t[%s] %s = %s' % (section, option, self.content[(section, option)]), 1)
+			self.logger.log(logging.INFO2, '\t[%s] %s = %s' % (section, option, self.content[(section, option)]))
 		return flag
 
 
