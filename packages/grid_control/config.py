@@ -166,7 +166,7 @@ class Config:
 			default_str = value2str(default)
 		# Get string from config file
 		if isinstance(section, list):
-			section = utils.uniqueListRL(map(str.lower, section))
+			section = utils.uniqueListRL(map(lambda x: str(x).lower(), section))
 		(resultraw, isDefault) = self.getInternal(section, item, default_str, mutable, noVar)
 		self.logger.log(logging.DEBUG1, 'Raw result for %s from [%s] %s: %s' % (desc, section, item, resultraw))
 		# Convert string back to type - or directly use default
@@ -204,8 +204,7 @@ class Config:
 
 
 	def getList(self, section, item, default = noDefault, mutable = False, noVar = True):
-		# config file == '' => []
-		# default == None => None
+		# getList('') == []; getList(None) == None;
 		def value2str(value):
 			if value:
 				return '\n' + str.join('\n', map(str, value))
@@ -219,7 +218,8 @@ class Config:
 
 	def getDict(self, section, item, default = noDefault, mutable = False, noVar = True, parser = lambda x: x):
 		value2str = lambda value: str.join('\n\t', map(lambda kv: '%s => %s' % kv, value.items()))
-		result = self.getTyped('dictionary', value2str, utils.parseDict, section, item, default, mutable, noVar)
+		str2value = lambda value: utils.parseDict(value, parser)
+		result = self.getTyped('dictionary', value2str, str2value, section, item, default, mutable, noVar)
 		if result == default: # default is given by dict, but this function returns ({dict}, [key order])
 			return (default, default.keys())
 		return result
@@ -244,7 +244,7 @@ class Config:
 
 
 	def getPaths(self, section, item, default = noDefault, mutable = False, noVar = True, check = True):
-		value2str = lambda value: str.join('\n', value)
+		value2str = lambda value: '\n' + str.join('\n', value)
 		return self.getTyped('paths', value2str, lambda p: self.parsePaths(p, check), section, item, default, mutable, noVar)
 
 

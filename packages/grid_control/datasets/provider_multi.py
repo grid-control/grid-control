@@ -1,4 +1,4 @@
-from grid_control import utils, DatasetError, GCError
+from grid_control import utils, DatasetError, GCError, logException
 from provider_base import DataProvider
 
 class DataMultiplexer(DataProvider):
@@ -21,15 +21,14 @@ class DataMultiplexer(DataProvider):
 
 
 	def getBlocksInternal(self):
-		exceptions = []
+		exceptions = ''
 		for provider in self.subprovider:
 			try:
 				for block in provider.getBlocks():
 					yield block
-			except GCError:
-				exceptions.append(GCError.message)
+			except:
+				exceptions += logException() + '\n'
 			if utils.abort():
 				raise DatasetError('Could not retrieve all datasets!')
-		if len(exceptions):
-			utils.eprint(str.join('\n', exceptions))
-			raise DatasetError('Could not retrieve all datasets!')
+		if exceptions:
+			raise DatasetError('Could not retrieve all datasets!\n' + exceptions)
