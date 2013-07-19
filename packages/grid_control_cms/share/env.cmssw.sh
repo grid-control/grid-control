@@ -22,8 +22,8 @@ else
 		echo "[PROJ-SITE] Using $VO_CMS_SW_DIR"
 
 	# Try other software directories
-	elif [ -d "/afs/cern.ch/cms/sw" ]; then
-		export VO_CMS_SW_DIR="/afs/cern.ch/cms/sw"
+	elif [ -d "/afs/cern.ch/cms" ]; then
+		export VO_CMS_SW_DIR="/afs/cern.ch/cms"
 		echo "[AFS-SITE] Using $VO_CMS_SW_DIR"
 	fi
 fi
