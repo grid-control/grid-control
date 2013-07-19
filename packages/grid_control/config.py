@@ -120,7 +120,7 @@ class Config:
 			section = section[0] # set most specific setting
 		if not self.allowSet:
 			raise APIError('Invalid runtime config override: [%s] %s = %s' % (section, item, value))
-		self.logger.log(logging.DEBUG1, 'Overwrite of option [%s] %s = %s' % (section, item, value))
+		self.logger.log(logging.INFO3, 'Overwrite of option [%s] %s = %s' % (section, item, value))
 		if ((section, item) not in self.content) or ((section, item) in self.dynamic) or override:
 			self.setInternal(section, item, value, append)
 			self.accessed[(section, item)] = (value, default)
@@ -132,7 +132,7 @@ class Config:
 		(section, item) = cleanSO(section, item)
 		# Handle multi section get calls, use least specific setting for error message
 		if isinstance(section, list):
-			self.logger.log(logging.INFO3, 'Searching option "%s" in:\n\t%s' % (item, str.join('\n\t', section)))
+			self.logger.log(logging.DEBUG1, 'Searching option "%s" in:\n\t%s' % (item, str.join('\n\t', section)))
 			for specific in filter(lambda s: item in self.getOptions(s), section):
 				return self.getInternal(specific, item, default, mutable, noVar)
 			return self.getInternal(section[-1], item, default, mutable, noVar) # will trigger error message
@@ -147,11 +147,11 @@ class Config:
 			value = self.content[(section, item)]
 			if self.append.get((section, item), False) and default != noDefault:
 				value = '%s\n%s' % (default, value)
-			self.logger.log(logging.INFO2, 'Using user supplied [%s] %s = %s' % (section, item, value))
+			self.logger.log(logging.INFO3, 'Using user supplied [%s] %s = %s' % (section, item, value))
 		else:
 			if default == noDefault:
 				raise ConfigError('[%s] "%s" does not exist!' % (section, item))
-			self.logger.log(logging.INFO2, 'Using default value [%s] %s = %s' % (section, item, default))
+			self.logger.log(logging.INFO3, 'Using default value [%s] %s = %s' % (section, item, default))
 			value = default
 			isDefault = True
 		self.accessed[(section, item)] = (value, default)
@@ -168,7 +168,7 @@ class Config:
 		if isinstance(section, list):
 			section = utils.uniqueListRL(map(str.lower, section))
 		(resultraw, isDefault) = self.getInternal(section, item, default_str, mutable, noVar)
-		self.logger.log(logging.DEBUG1, 'Reading from config file [%s] %s: %s' % (section, item, resultraw))
+		self.logger.log(logging.DEBUG1, 'Raw result for %s from [%s] %s: %s' % (desc, section, item, resultraw))
 		# Convert string back to type - or directly use default
 		if isDefault:
 			if default2value == None:
@@ -179,7 +179,7 @@ class Config:
 			result = str2value(resultraw)
 		if isinstance(section, list):
 			section = str.join(', ', section)
-		self.logger.log(logging.INFO1, 'Reading %s from [%s] %s: %s' % (desc, section, item, result))
+		self.logger.log(logging.INFO2, 'Result for %s from [%s] %s: %s' % (desc, section, item, result))
 		return result
 
 
@@ -277,7 +277,7 @@ class Config:
 		unused = sorted(filter(lambda x: x not in self.accessed, self.content))
 		self.logger.log(logging.INFO1, 'There are %s unused config options!' % len(unused))
 		for (section, option) in unused:
-			self.logger.log(logging.INFO2, '\t[%s] %s = %s' % (section, option, self.content[(section, option)]))
+			self.logger.log(logging.INFO1, '\t[%s] %s = %s' % (section, option, self.content[(section, option)]))
 		return flag
 
 
