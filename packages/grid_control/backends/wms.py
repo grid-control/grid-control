@@ -114,7 +114,7 @@ class BasicWMS(WMS):
 		smCfgSections = self._getSections('storage')
 		# UI -> SE -> WN
 		self.smSEIn = StorageManager.open('SEStorageManager', config, smCfgSections, 'se', 'se input', 'SE_INPUT')
-		self.smSBIn = StorageManager.open('LocalSBStorageManager', config, smCfgSections, 'sandbox', 'sandbox', 'SB_INPUT')
+		self.smSBIn = StorageManager.open('LocalSBStorageManager', config, smCfgSections + ['local'], 'sandbox', 'sandbox', 'SB_INPUT')
 		# UI <- SE <- WN
 		self.smSEOut = StorageManager.open('SEStorageManager', config, smCfgSections, 'se', 'se output', 'SE_OUTPUT')
 		self.smSBOut = None

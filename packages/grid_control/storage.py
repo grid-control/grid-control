@@ -51,7 +51,7 @@ class LocalSBStorageManager(StorageManager):
 				shutil.copy(source, os.path.join(self.sbPath, target))
 			except:
 				raise RethrowError('Unable to transfer "%s" to "%s"!' % (source, os.path.join(self.sbPath, target)))
-			
+
 
 class SEStorageManager(StorageManager):
 	def __init__(self, config, section, optDefault, optPrefix, varPrefix):
