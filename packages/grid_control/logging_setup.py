@@ -7,7 +7,7 @@ def logging_defaults():
 	logging.getLogger().addHandler(sh)
 	# Default exception logging to file in gc directory
 	# Convention: sys.path[1] == python dir of gc
-	handler_ex = logging.FileHandler(os.path.join(sys.path[1], '..', 'exception.last'), 'w')
+	handler_ex = logging.FileHandler(os.path.join(sys.path[1], '..', 'debug.log'), 'w')
 	logging.getLogger("exception").propagate = False
 	logging.getLogger("exception").addHandler(handler_ex)
 	# Register new log levels
