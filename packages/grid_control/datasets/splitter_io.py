@@ -88,7 +88,7 @@ class DataSplitterIO_V1:
 					subTarFileObj = self._tar.extractfile('%03dXX.tgz' % (key / 100))
 					subTarFileObj = cStringIO.StringIO(gzip.GzipFile(fileobj = subTarFileObj).read()) # 3-4x speedup for sequential access
 					self._cacheTar = tarfile.open(mode = 'r', fileobj = subTarFileObj)
-				parserMap = { None: str, DataSplitter.NEvents: int, DataSplitter.Skipped: int, 
+				parserMap = { None: str, DataSplitter.NEntries: int, DataSplitter.Skipped: int, 
 					DataSplitter.DatasetID: int, DataSplitter.Invalid: utils.parseBool,
 					DataSplitter.SEList: utils.parseList, DataSplitter.MetadataHeader: eval,
 					DataSplitter.Metadata: lambda x: eval(x.strip("'")) }
@@ -185,7 +185,7 @@ class DataSplitterIO_V2:
 					subTarFileObj = self._tar.extractfile('%03dXX.tgz' % (key / self.keySize))
 					subTarFileObj = cStringIO.StringIO(gzip.GzipFile(fileobj = subTarFileObj).read()) # 3-4x speedup for sequential access
 					self._cacheTar = tarfile.open(mode = 'r', fileobj = subTarFileObj)
-				parserMap = { None: str, DataSplitter.NEvents: int, DataSplitter.Skipped: int, 
+				parserMap = { None: str, DataSplitter.NEntries: int, DataSplitter.Skipped: int, 
 					DataSplitter.DatasetID: int, DataSplitter.Invalid: utils.parseBool,
 					DataSplitter.SEList: utils.parseList, DataSplitter.MetadataHeader: eval,
 					DataSplitter.Metadata: lambda x: eval(x.strip("'")) }

@@ -25,7 +25,7 @@ class InlineNickNameProducer(NickNameProducer):
 
 class DataProvider(AbstractObject):
 	# To uncover errors, the enums of DataProvider / DataSplitter do *NOT* match
-	dataInfos = ['NEvents', 'BlockName', 'Dataset', 'SEList', 'lfn', 'FileList',
+	dataInfos = ['NEntries', 'BlockName', 'Dataset', 'SEList', 'URL', 'FileList',
 		'Nickname', 'DatasetID', 'Metadata', 'Provider', 'ResyncInfo']
 	for id, dataInfo in enumerate(dataInfos):
 		locals()[dataInfo] = id
@@ -33,7 +33,7 @@ class DataProvider(AbstractObject):
 	def __init__(self, config, section, datasetExpr, datasetNick, datasetID):
 		(self._datasetExpr, self._datasetNick, self._datasetID) = (datasetExpr, datasetNick, datasetID)
 		self._cache = None
-		self.ignoreLFN = config.getList(section, 'ignore files', [])
+		self.ignoreURL = config.getList(section, 'ignore files', [])
 		self.sitefilter = config.getList(section, 'sites', [])
 		self.emptyBlock = config.getBool(section, 'remove empty blocks', True)
 		self.emptyFiles = config.getBool(section, 'remove empty files', True)
@@ -99,15 +99,15 @@ class DataProvider(AbstractObject):
 					block[DataProvider.Nickname] = self.nProd.getName(block.get(DataProvider.Nickname, ''), block[DataProvider.Dataset], block)
 
 				# Filter file list
-				events = sum(map(lambda x: x[DataProvider.NEvents], block[DataProvider.FileList]))
-				if block.setdefault(DataProvider.NEvents, events) != events:
+				events = sum(map(lambda x: x[DataProvider.NEntries], block[DataProvider.FileList]))
+				if block.setdefault(DataProvider.NEntries, events) != events:
 					utils.eprint('WARNING: Inconsistency in block %s#%s: Number of events doesn\'t match (b:%d != f:%d)'
-						% (block[DataProvider.Dataset], block[DataProvider.BlockName], block[DataProvider.NEvents], events))
+						% (block[DataProvider.Dataset], block[DataProvider.BlockName], block[DataProvider.NEntries], events))
 
 				# Filter ignored and empty files
-				block[DataProvider.FileList] = filter(lambda x: x[DataProvider.lfn] not in self.ignoreLFN, block[DataProvider.FileList])
+				block[DataProvider.FileList] = filter(lambda x: x[DataProvider.URL] not in self.ignoreURL, block[DataProvider.FileList])
 				if self.emptyFiles:
-					block[DataProvider.FileList] = filter(lambda x: x[DataProvider.NEvents] != 0, block[DataProvider.FileList])
+					block[DataProvider.FileList] = filter(lambda x: x[DataProvider.NEntries] != 0, block[DataProvider.FileList])
 
 				# Filter dataset sites
 				if block.setdefault(DataProvider.SEList, None) != None:
@@ -125,17 +125,17 @@ class DataProvider(AbstractObject):
 					def __init__(self, start, limit):
 						(self.counter, self.limit) = (start, limit)
 					def accept(self, fi):
-						if (self.limit < 0) or (self.counter + fi[DataProvider.NEvents] <= self.limit):
-							self.counter += fi[DataProvider.NEvents]
+						if (self.limit < 0) or (self.counter + fi[DataProvider.NEntries] <= self.limit):
+							self.counter += fi[DataProvider.NEntries]
 							return True
 						return False
 				eventCounter = EventCounter(self.allEvents, self.limitEvents)
 				block[DataProvider.FileList] = filter(eventCounter.accept, block[DataProvider.FileList])
-				block[DataProvider.NEvents] = eventCounter.counter - self.allEvents
+				block[DataProvider.NEntries] = eventCounter.counter - self.allEvents
 				self.allEvents = eventCounter.counter
 
 				# Filter empty blocks
-				if not (self.emptyBlock and block[DataProvider.NEvents] == 0):
+				if not (self.emptyBlock and block[DataProvider.NEntries] == 0):
 					yield block
 
 		if self._cache == None:
@@ -152,8 +152,8 @@ class DataProvider(AbstractObject):
 
 
 	# List of block dicts with format
-	# { NEvents: 123, Dataset: '/path/to/data', Block: 'abcd-1234', SEList: ['site1','site2'],
-	#   Filelist: [{lfn: '/path/to/file1', NEvents: 100}, {lfn: '/path/to/file2', NEvents: 23}]}
+	# { NEntries: 123, Dataset: '/path/to/data', Block: 'abcd-1234', SEList: ['site1','site2'],
+	#   Filelist: [{URL: '/path/to/file1', NEntries: 100}, {URL: '/path/to/file2', NEntries: 23}]}
 	def getBlocksInternal(self):
 		raise AbstractError
 
@@ -169,12 +169,12 @@ class DataProvider(AbstractObject):
 		for block in self.getBlocks():
 			utils.vprint('ID - Dataset - Nick : %s - %s - %s' % tuple(map(lambda (k, d): block.get(k, d), idList)), level)
 			utils.vprint('BlockName : %s' % block[DataProvider.BlockName], level)
-			utils.vprint('#Events   : %s' % block[DataProvider.NEvents], level)
+			utils.vprint('#Events   : %s' % block[DataProvider.NEntries], level)
 			seList = QM(block[DataProvider.SEList] != None, block[DataProvider.SEList], ['Not specified'])
 			utils.vprint('SE List   : %s' % str.join(', ',  seList), level)
 			utils.vprint('Files     : ', level)
 			for fi in block[DataProvider.FileList]:
-				utils.vprint('%s (Events: %d)' % (fi[DataProvider.lfn], fi[DataProvider.NEvents]), level)
+				utils.vprint('%s (Events: %d)' % (fi[DataProvider.URL], fi[DataProvider.NEntries]), level)
 			utils.vprint(level = level)
 
 
@@ -187,11 +187,11 @@ class DataProvider(AbstractObject):
 				writer.write('nickname = %s\n' % block[DataProvider.Nickname])
 			if DataProvider.DatasetID in block:
 				writer.write('id = %d\n' % block[DataProvider.DatasetID])
-			if DataProvider.NEvents in block:
-				writer.write('events = %d\n' % block[DataProvider.NEvents])
+			if DataProvider.NEntries in block:
+				writer.write('events = %d\n' % block[DataProvider.NEntries])
 			if block.get(DataProvider.SEList) != None:
 				writer.write('se list = %s\n' % str.join(',', block[DataProvider.SEList]))
-			cPrefix = os.path.commonprefix(map(lambda x: x[DataProvider.lfn], block[DataProvider.FileList]))
+			cPrefix = os.path.commonprefix(map(lambda x: x[DataProvider.URL], block[DataProvider.FileList]))
 			cPrefix = str.join('/', cPrefix.split('/')[:-1])
 			if len(cPrefix) > 6:
 				writer.write('prefix = %s\n' % cPrefix)
@@ -216,7 +216,7 @@ class DataProvider(AbstractObject):
 					writer.write('metadata common = %s\n' % getMetadata(block[DataProvider.FileList][0], filterC(True)))
 					writeMetadata = len(cMetadataIdx) != len(block[DataProvider.Metadata])
 			for fi in block[DataProvider.FileList]:
-				writer.write('%s = %d' % (formatter(fi[DataProvider.lfn]), fi[DataProvider.NEvents]))
+				writer.write('%s = %d' % (formatter(fi[DataProvider.URL]), fi[DataProvider.NEntries]))
 				if writeMetadata:
 					writer.write(' %s' % getMetadata(fi, filterC(False)))
 				writer.write('\n')
@@ -252,7 +252,7 @@ class DataProvider(AbstractObject):
 		def onMatchingBlock(blocksAdded, blocksMissing, blocksMatching, oldBlock, newBlock):
 			# Compare different files according to their name - NOT full content
 			def cmpFiles(x, y):
-				return cmp(x[DataProvider.lfn], y[DataProvider.lfn])
+				return cmp(x[DataProvider.URL], y[DataProvider.URL])
 			oldBlock[DataProvider.FileList].sort(cmpFiles)
 			newBlock[DataProvider.FileList].sort(cmpFiles)
 
@@ -264,7 +264,7 @@ class DataProvider(AbstractObject):
 			if filesAdded: # Create new block for added files in an existing block
 				tmpBlock = copy.copy(newBlock)
 				tmpBlock[DataProvider.FileList] = filesAdded
-				tmpBlock[DataProvider.NEvents] = sum(map(lambda x: x[DataProvider.NEvents], filesAdded))
+				tmpBlock[DataProvider.NEntries] = sum(map(lambda x: x[DataProvider.NEntries], filesAdded))
 				blocksAdded.append(tmpBlock)
 			blocksMatching.append((oldBlock, newBlock, filesMissing, filesMatched))
 

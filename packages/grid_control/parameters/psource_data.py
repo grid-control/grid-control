@@ -17,7 +17,7 @@ class DataSplitProcessor:
 	def process(self, pNum, splitInfo, result):
 		result.update({
 			'FILE_NAMES': self.formatFileList(splitInfo[DataSplitter.FileList]),
-			'MAX_EVENTS': splitInfo[DataSplitter.NEvents],
+			'MAX_EVENTS': splitInfo[DataSplitter.NEntries],
 			'SKIP_EVENTS': splitInfo.get(DataSplitter.Skipped, 0),
 			'DATASETID': splitInfo.get(DataSplitter.DatasetID, None),
 			'DATASETPATH': splitInfo.get(DataSplitter.Dataset, None),

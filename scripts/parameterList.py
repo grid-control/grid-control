@@ -80,7 +80,7 @@ class DummySplitter:
 		return 3
 	def getSplitInfo(self, pNum):
 		mkEntry = lambda ds, fl, n, nick: { DataSplitter.Dataset: ds, DataSplitter.Nickname: nick,
-			DataSplitter.FileList: fl, DataSplitter.NEvents: n }
+			DataSplitter.FileList: fl, DataSplitter.NEntries: n }
 		rndStr = lambda: md5(str(random.random())).hexdigest()[:10]
 		tmp = [ mkEntry('ds1', ['a', 'b'], 23, 'data_1'), mkEntry('ds1', ['1'], 42, 'data_1'),
 			mkEntry('ds2', ['m', 'n'], 123, 'data_2'), mkEntry('ds2', ['x', 'y', 'z'], 987, 'data_3') ]

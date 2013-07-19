@@ -43,7 +43,7 @@ class DASProvider(CMSProvider):
 		for f1 in self.queryDAS("file block=%s" % blockPath):
 			for f2 in f1['file']:
 				if "nevents" in f2:
-					yield ({DataProvider.lfn: f2['name'], DataProvider.NEvents: f2['nevents']}, None)
+					yield ({DataProvider.URL: f2['name'], DataProvider.NEntries: f2['nevents']}, None)
 
 
 	def getBlocksInternal(self):

@@ -32,7 +32,7 @@ class DBS3Provider(CMSProvider):
 		for fi in self.queryDBSv3('files', block_name = blockPath, detail = True):
 			if onlyValid and (fi['is_file_valid'] != 1):
 				continue
-			yield ({DataProvider.lfn: fi['logical_file_name'], DataProvider.NEvents: fi['event_count']}, None)
+			yield ({DataProvider.URL: fi['logical_file_name'], DataProvider.NEntries: fi['event_count']}, None)
 
 
 	def getCMSLumisImpl(self, blockPath):

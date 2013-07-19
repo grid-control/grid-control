@@ -89,7 +89,7 @@ if opts.configentry:
 				infos[dsName][DataProvider.Nickname] = nick
 				maxnick = max(maxnick, len(nick))
 			if len(block[DataProvider.FileList]):
-				infos[dsName][DataProvider.lfn] = block[DataProvider.FileList][0][DataProvider.lfn]
+				infos[dsName][DataProvider.URL] = block[DataProvider.FileList][0][DataProvider.URL]
 	for dsID, dsName in enumerate(order):
 		info = infos[dsName]
 		short = DataProvider.providers.get(provider.__class__.__name__, provider.__class__.__name__)
@@ -101,7 +101,7 @@ if opts.listdatasets:
 	print
 	infos = {}
 	infosum = {
-		DataProvider.NEvents : 0,
+		DataProvider.NEntries : 0,
 		DataProvider.Dataset : 'Sum'
 	}
 	order = []
@@ -110,17 +110,17 @@ if opts.listdatasets:
 		if not infos.get(dsName, None):
 			order.append(dsName)
 			infos[dsName] = {
-				DataProvider.NEvents : 0,
+				DataProvider.NEntries : 0,
 				DataProvider.Dataset : block[DataProvider.Dataset]
 			}
-		infos[dsName][DataProvider.NEvents] += block[DataProvider.NEvents]
-		infosum[DataProvider.NEvents] += block[DataProvider.NEvents]
-	utils.printTabular([(DataProvider.Dataset, 'Dataset'), (DataProvider.NEvents, 'Events')],
+		infos[dsName][DataProvider.NEntries] += block[DataProvider.NEntries]
+		infosum[DataProvider.NEntries] += block[DataProvider.NEntries]
+	utils.printTabular([(DataProvider.Dataset, 'Dataset'), (DataProvider.NEntries, 'Events')],
 		map(lambda x: infos[x], order) + ["=", infosum])
 
 if opts.listblocks:
 	print
-	utils.printTabular(headerbase + [(DataProvider.BlockName, 'Block'), (DataProvider.NEvents, 'Events')], blocks)
+	utils.printTabular(headerbase + [(DataProvider.BlockName, 'Block'), (DataProvider.NEntries, 'Events')], blocks)
 
 if opts.listfiles:
 	print
@@ -128,7 +128,7 @@ if opts.listfiles:
 		if len(datasets) > 1:
 			print 'Dataset: %s' % block[DataProvider.Dataset]
 		print 'Blockname: %s' % block[DataProvider.BlockName]
-		utils.printTabular([(DataProvider.lfn, 'Filename'), (DataProvider.NEvents, 'Events')], block[DataProvider.FileList])
+		utils.printTabular([(DataProvider.URL, 'Filename'), (DataProvider.NEntries, 'Events')], block[DataProvider.FileList])
 		print
 
 def printMetadata(src, maxlen):
@@ -146,7 +146,7 @@ if opts.metadata and not opts.save:
 		print 'Blockname: %s' % block[DataProvider.BlockName]
 		mk_len = max(map(len, block[DataProvider.Metadata]))
 		for f in block[DataProvider.FileList]:
-			print '%s [%d events]' % (f[DataProvider.lfn], f[DataProvider.NEvents])
+			print '%s [%d events]' % (f[DataProvider.URL], f[DataProvider.NEntries])
 			printMetadata(zip(block[DataProvider.Metadata], f[DataProvider.Metadata]), mk_len)
 		print
 
@@ -189,8 +189,8 @@ if opts.info:
 			print str.join(',', block.get(DataProvider.SEList, '-')),
 		else:
 			print '-',
-		print block.get(DataProvider.NEvents, 0),
-		evSum += block.get(DataProvider.NEvents, 0)
+		print block.get(DataProvider.NEntries, 0),
+		evSum += block.get(DataProvider.NEntries, 0)
 		print evSum
 
 if opts.save:
@@ -199,6 +199,6 @@ if opts.save:
 	if opts.sort:
 		blocks.sort(key = lambda b: b[DataProvider.Dataset] + '#' + b[DataProvider.BlockName])
 		for b in blocks:
-			b[DataProvider.FileList].sort(key = lambda fi: fi[DataProvider.lfn])
+			b[DataProvider.FileList].sort(key = lambda fi: fi[DataProvider.URL])
 	provider.saveState(opts.save, blocks)
 	print 'Dataset information saved to ./%s' % opts.save

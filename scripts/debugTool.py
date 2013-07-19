@@ -131,7 +131,7 @@ if opts.splitting:
 					if curJ != curS:
 						print "%s in job %d (j:%s != s:%s)" % (msg, jobNum, curJ, curS)
 						fail.add(jobNum)
-				printError(events, splitInfo[DataSplitter.NEvents], "Inconsistent number of events")
+				printError(events, splitInfo[DataSplitter.NEntries], "Inconsistent number of events")
 				printError(skip, splitInfo[DataSplitter.Skipped], "Inconsistent number of skipped events")
 				printError(files, splitInfo[DataSplitter.FileList], "Inconsistent list of files")
 			except:

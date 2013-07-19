@@ -37,7 +37,7 @@ class DBSApiv2(CMSProvider):
 			query = ['retrive_status'] + QM(queryLumi, ['retrive_lumi'], [])
 			for fi in self.api.listFiles(blockPath.split('#')[0], retriveList = query):
 				lumiList = map(lambda li: (int(li['RunNumber']), [int(li['LumiSectionNumber'])]), fi['LumiList'])
-				tmp = ({DataProvider.lfn: fi['LogicalFileName'], DataProvider.NEvents: int(fi['NumberOfEvents'])}, lumiList)
+				tmp = ({DataProvider.URL: fi['LogicalFileName'], DataProvider.NEntries: int(fi['NumberOfEvents'])}, lumiList)
 				self.fiCache.setdefault(fi['Block']['Name'], []).append(tmp)
 		return self.fiCache[blockPath]
 

@@ -166,17 +166,17 @@ def getDBSXML(opts, block, dsBlocks):
 
 	# Give information about List files in block
 	nodeBlock = writer.newElement(nodeDBS, 'block', {'name': fqBlock, 'path': block[DataProvider.Dataset],
-		'number_of_events': block[DataProvider.NEvents], 'number_of_files': len(block[DataProvider.FileList]),
+		'number_of_events': block[DataProvider.NEntries], 'number_of_files': len(block[DataProvider.FileList]),
 		'size': sum(getAllM(DBS.SIZE)), 'open_for_writing': QM(opts.closeBlock, '0', '1')})
 	for se in block[DataProvider.SEList]:
 		writer.newElement(nodeBlock, 'storage_element', {'storage_element_name': se})
 
 	# List files in block
 	for fi in block[DataProvider.FileList]:
-		nodeFile = writer.newElement(nodeDBS, 'file', {'lfn': fi[DataProvider.lfn],
+		nodeFile = writer.newElement(nodeDBS, 'file', {'lfn': fi[DataProvider.URL],
 			'queryable_meta_data': 'NOTSET', 'validation_status': 'VALID', 'status': 'VALID', 'type': 'EDM',
 			'checksum': getM(DBS.HASH_CRC32, fi), 'adler32': 'NOTSET', 'md5': getM(DBS.HASH_MD5, fi),
-			'size': getM(DBS.SIZE, fi), 'number_of_events': fi[DataProvider.NEvents], 'block_name': fqBlock})
+			'size': getM(DBS.SIZE, fi), 'number_of_events': fi[DataProvider.NEntries], 'block_name': fqBlock})
 
 		# List algos in file
 		writer.newElement(nodeFile, 'file_algorithm', {'app_version': getM(DBS.VERSION, fi),

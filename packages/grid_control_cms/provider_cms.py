@@ -91,7 +91,7 @@ class CMSProvider(DataProvider):
 		for (fileInfo, listLumi) in self.getCMSFilesImpl(blockPath, self.onlyValid, self.selectedLumis):
 			if self.selectedLumis:
 				if not listLumi:
-					listLumi = lumiDict.get(fileInfo[DataProvider.lfn], [])
+					listLumi = lumiDict.get(fileInfo[DataProvider.URL], [])
 				def acceptLumi():
 					for (run, lumiList) in listLumi:
 						for lumi in lumiList:

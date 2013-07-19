@@ -97,7 +97,7 @@ class ScanProviderBase(DataProvider):
 					blockSEList = list(set(blockSEList))
 				metaKeys = protoBlocks[hashDS][hashB][0][1].keys()
 				fnProps = lambda (path, metadata, events, seList, objStore): {
-					DataProvider.lfn: path, DataProvider.NEvents: events,
+					DataProvider.URL: path, DataProvider.NEntries: events,
 					DataProvider.Metadata: map(lambda x: metadata.get(x), metaKeys)}
 				yield {
 					DataProvider.Dataset: hashNameDictDS[hashDS],

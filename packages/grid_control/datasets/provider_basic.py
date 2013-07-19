@@ -20,7 +20,7 @@ class FileProvider(DataProvider):
 			DataProvider.Dataset: self._path,
 			DataProvider.SEList: self._selist,
 			DataProvider.FileList: [{
-				DataProvider.lfn: self._path, DataProvider.NEvents: int(self._events)
+				DataProvider.URL: self._path, DataProvider.NEntries: int(self._events)
 			}]
 		}
 
@@ -70,7 +70,7 @@ class ListProvider(DataProvider):
 				elif key.lower() == 'id':
 					blockinfo[DataProvider.DatasetID] = int(value)
 				elif key.lower() == 'events':
-					blockinfo[DataProvider.NEvents] = int(value)
+					blockinfo[DataProvider.NEntries] = int(value)
 				elif key.lower() == 'metadata':
 					blockinfo[DataProvider.Metadata] = eval(value)
 				elif key.lower() == 'metadata common':
@@ -84,7 +84,7 @@ class ListProvider(DataProvider):
 					if commonprefix:
 						key = '%s/%s' % (commonprefix, key)
 					value = value.split(' ', 1)
-					data = { DataProvider.lfn: key, DataProvider.NEvents: int(value[0]) }
+					data = { DataProvider.URL: key, DataProvider.NEntries: int(value[0]) }
 					if commonMetadata:
 						data[DataProvider.Metadata] = commonMetadata
 					if len(value) > 1:

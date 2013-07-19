@@ -9,7 +9,7 @@ class FileLevelSplitter(DataSplitter):
 	def newBlock(self, old, filelist):
 		new = dict(old)
 		new[DataProvider.FileList] = filelist
-		new[DataProvider.NEvents] = sum(map(lambda x: x[DataProvider.NEvents], filelist))
+		new[DataProvider.NEntries] = sum(map(lambda x: x[DataProvider.NEntries], filelist))
 		return new
 
 	def splitDatasetInternal(self, blocks, firstEvent = 0):
@@ -54,9 +54,9 @@ class HybridSplitter(FileLevelSplitter):
 			(events, fileStack) = (0, [])
 			eventsPerJob = self.setup(self.config.getInt, block, 'events per job')
 			for fileInfo in block[DataProvider.FileList]:
-				if (len(fileStack) > 0) and (events + fileInfo[DataProvider.NEvents] > eventsPerJob):
+				if (len(fileStack) > 0) and (events + fileInfo[DataProvider.NEntries] > eventsPerJob):
 					yield self.newBlock(block, fileStack)
 					(events, fileStack) = (0, [])
 				fileStack.append(fileInfo)
-				events += fileInfo[DataProvider.NEvents]
+				events += fileInfo[DataProvider.NEntries]
 			yield self.newBlock(block, fileStack)

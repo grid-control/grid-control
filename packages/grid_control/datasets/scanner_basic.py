@@ -121,7 +121,7 @@ class FilesFromDataProvider(InfoScanner):
 			for fi in block[DataProvider.FileList]:
 				metadata.update({'SRC_DATASET': block[DataProvider.Dataset], 'SRC_BLOCK': block[DataProvider.BlockName]})
 				metadata.update(dict(zip(block.get(DataProvider.Metadata, []), fi.get(DataProvider.Metadata, []))))
-				yield (fi[DataProvider.lfn], metadata, fi[DataProvider.NEvents], block[DataProvider.SEList], objStore)
+				yield (fi[DataProvider.URL], metadata, fi[DataProvider.NEntries], block[DataProvider.SEList], objStore)
 
 
 class MatchOnFilename(InfoScanner):
@@ -185,7 +185,7 @@ class ParentLookup(InfoScanner):
 		if source and (source not in self.lfnMap):
 			pSource = DataProvider.create(Config(), None, source, 'ListProvider')
 			for (n, fl) in map(lambda b: (b[DataProvider.Dataset], b[DataProvider.FileList]), pSource.getBlocks()):
-				self.lfnMap.setdefault(source, {}).update(dict(map(lambda fi: (self.lfnTrans(fi[DataProvider.lfn]), n), fl)))
+				self.lfnMap.setdefault(source, {}).update(dict(map(lambda fi: (self.lfnTrans(fi[DataProvider.URL]), n), fl)))
 		pList = set()
 		for key in filter(lambda k: k in metadata, self.parentKeys):
 			pList.update(map(lambda pPath: self.lfnMap.get(source, {}).get(self.lfnTrans(pPath)), metadata[key]))

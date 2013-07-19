@@ -20,7 +20,7 @@ ResyncMode.noChanged = [ResyncMode.disable, ResyncMode.complete, ResyncMode.igno
 ResyncOrder = utils.makeEnum(['append', 'preserve', 'fillgap', 'reorder']) # reorder mechanism
 
 class DataSplitter(AbstractObject):
-	splitInfos = ['Dataset', 'SEList', 'NEvents', 'Skipped', 'FileList', 'Nickname', 'DatasetID',
+	splitInfos = ['Dataset', 'SEList', 'NEntries', 'Skipped', 'FileList', 'Nickname', 'DatasetID',
 		'CommonPrefix', 'Invalid', 'BlockName', 'MetadataHeader', 'Metadata', 'Comment']
 	for idx, splitInfo in enumerate(splitInfos):
 		locals()[splitInfo] = idx
@@ -78,8 +78,8 @@ class DataSplitter(AbstractObject):
 			splitInfo[DataSplitter.MetadataHeader] = block[DataProvider.Metadata]
 		# Helper for very simple splitter
 		if files:
-			splitInfo[DataSplitter.FileList] = map(lambda x: x[DataProvider.lfn], files)
-			splitInfo[DataSplitter.NEvents] = sum(map(lambda x: x[DataProvider.NEvents], files))
+			splitInfo[DataSplitter.FileList] = map(lambda x: x[DataProvider.URL], files)
+			splitInfo[DataSplitter.NEntries] = sum(map(lambda x: x[DataProvider.NEntries], files))
 			if DataProvider.Metadata in block:
 				splitInfo[DataSplitter.Metadata] = map(lambda x: x[DataProvider.Metadata], files)
 		return splitInfo
@@ -109,7 +109,7 @@ class DataSplitter(AbstractObject):
 		if splitInfo.get(DataSplitter.Invalid, False):
 			utils.vprint(' Status: Invalidated splitting', -1)
 		utils.vprint(('Dataset: %s' % splitInfo[DataSplitter.Dataset]).ljust(50), -1, newline = False)
-		utils.vprint(('Events: %d' % splitInfo[DataSplitter.NEvents]).ljust(20), -1, newline = False)
+		utils.vprint(('Events: %d' % splitInfo[DataSplitter.NEntries]).ljust(20), -1, newline = False)
 		utils.vprint('  ID: %s' % splitInfo.get(DataSplitter.DatasetID, 0), -1)
 		utils.vprint(('  Block: %s' % splitInfo.get(DataSplitter.BlockName, 0)).ljust(50), -1, newline = False)
 		utils.vprint(('  Skip: %d' % splitInfo.get(DataSplitter.Skipped, 0)).ljust(20), -1, newline = False)
@@ -141,7 +141,7 @@ class DataSplitter(AbstractObject):
 		log = utils.ActivityLog('Performing resynchronization of dataset')
 		(blocksAdded, blocksMissing, blocksMatching) = DataProvider.resyncSources(oldBlocks, newBlocks)
 		for rmBlock in blocksMissing: # Files in matching blocks are already sorted
-			rmBlock[DataProvider.FileList].sort(lambda a, b: cmp(a[DataProvider.lfn], b[DataProvider.lfn]))
+			rmBlock[DataProvider.FileList].sort(lambda a, b: cmp(a[DataProvider.URL], b[DataProvider.URL]))
 		del log
 
 		# Get block information (oldBlock, newBlock, filesMissing, filesMatched) which splitInfo is based on
@@ -174,8 +174,8 @@ class DataSplitter(AbstractObject):
 			if newBlock:
 				modSI[DataSplitter.SEList] = newBlock.get(DataProvider.SEList)
 			# Determine size infos and get started
-			search_lfn = lambda lfn: fast_search(oldBlock[DataProvider.FileList], lambda x: cmp(x[DataProvider.lfn], lfn))
-			sizeInfo = map(lambda lfn: search_lfn(lfn)[DataProvider.NEvents], modSI[DataSplitter.FileList])
+			search_url = lambda url: fast_search(oldBlock[DataProvider.FileList], lambda x: cmp(x[DataProvider.URL], url))
+			sizeInfo = map(lambda url: search_url(url)[DataProvider.NEntries], modSI[DataSplitter.FileList])
 			extended = []
 			metaIdxLookup = []
 			for meta in self.metaOpts:
@@ -193,90 +193,90 @@ class DataSplitter(AbstractObject):
 
 			# Remove files from splitting
 			def removeFile(idx, rmFI):
-				modSI[DataSplitter.Comment] += '[rm] ' + rmFI[DataProvider.lfn]
-				modSI[DataSplitter.Comment] += '-%d ' % rmFI[DataProvider.NEvents]
+				modSI[DataSplitter.Comment] += '[rm] ' + rmFI[DataProvider.URL]
+				modSI[DataSplitter.Comment] += '-%d ' % rmFI[DataProvider.NEntries]
 
 				if idx == len(modSI[DataSplitter.FileList]) - 1:
 					# Removal of last file from current splitting
-					modSI[DataSplitter.NEvents] = sum(sizeInfo) - modSI.get(DataSplitter.Skipped, 0)
+					modSI[DataSplitter.NEntries] = sum(sizeInfo) - modSI.get(DataSplitter.Skipped, 0)
 					modSI[DataSplitter.Comment] += '[rm_last] '
 				elif idx == 0:
 					# Removal of first file from current splitting
-					modSI[DataSplitter.NEvents] += max(0, sizeInfo[idx] - modSI.get(DataSplitter.Skipped, 0) - modSI[DataSplitter.NEvents])
-					modSI[DataSplitter.NEvents] += modSI.get(DataSplitter.Skipped, 0)
+					modSI[DataSplitter.NEntries] += max(0, sizeInfo[idx] - modSI.get(DataSplitter.Skipped, 0) - modSI[DataSplitter.NEntries])
+					modSI[DataSplitter.NEntries] += modSI.get(DataSplitter.Skipped, 0)
 					modSI[DataSplitter.Skipped] = 0
 					modSI[DataSplitter.Comment] += '[rm_first] '
 				else:
 					# File in the middle is affected - solution very simple :)
 					modSI[DataSplitter.Comment] += '[rm_middle] '
 
-				modSI[DataSplitter.NEvents] -= rmFI[DataProvider.NEvents]
+				modSI[DataSplitter.NEntries] -= rmFI[DataProvider.NEntries]
 				modSI[DataSplitter.FileList].pop(idx)
 				sizeInfo.pop(idx)
 
 
 			# Process changed files in splitting - returns True if file index should be increased
 			def changeFile(idx, oldFI, newFI):
-				modSI[DataSplitter.Comment] += '[changed] ' + oldFI[DataProvider.lfn]
-				modSI[DataSplitter.Comment] += (' -%d ' % oldFI[DataProvider.NEvents])
-				modSI[DataSplitter.Comment] += (' +%d ' % newFI[DataProvider.NEvents])
+				modSI[DataSplitter.Comment] += '[changed] ' + oldFI[DataProvider.URL]
+				modSI[DataSplitter.Comment] += (' -%d ' % oldFI[DataProvider.NEntries])
+				modSI[DataSplitter.Comment] += (' +%d ' % newFI[DataProvider.NEntries])
 
 				def removeCompleteFile():
-					modSI[DataSplitter.NEvents] -= oldFI[DataProvider.NEvents]
+					modSI[DataSplitter.NEntries] -= oldFI[DataProvider.NEntries]
 					modSI[DataSplitter.FileList].pop(idx)
 					sizeInfo.pop(idx)
 
 				def replaceCompleteFile():
-					modSI[DataSplitter.NEvents] += newFI[DataProvider.NEvents]
-					modSI[DataSplitter.NEvents] -= oldFI[DataProvider.NEvents]
-					sizeInfo[idx] = newFI[DataProvider.NEvents]
+					modSI[DataSplitter.NEntries] += newFI[DataProvider.NEntries]
+					modSI[DataSplitter.NEntries] -= oldFI[DataProvider.NEntries]
+					sizeInfo[idx] = newFI[DataProvider.NEntries]
 
 				def expandOutside():
 					fileList = newBlock.pop(DataProvider.FileList)
 					newBlock[DataProvider.FileList] = [newFI]
-					for extSplit in self.splitDatasetInternal([newBlock], oldFI[DataProvider.NEvents]):
+					for extSplit in self.splitDatasetInternal([newBlock], oldFI[DataProvider.NEntries]):
 						extSplit[DataSplitter.Comment] = oldSplit[DataSplitter.Comment] + '[ext_1] '
 						extended.append(extSplit)
 					newBlock[DataProvider.FileList] = fileList
-					sizeInfo[idx] = newFI[DataProvider.NEvents]
+					sizeInfo[idx] = newFI[DataProvider.NEntries]
 
 				if idx == len(modSI[DataSplitter.FileList]) - 1:
-					coverLast = modSI.get(DataSplitter.Skipped, 0) + modSI[DataSplitter.NEvents] - sum(sizeInfo[:-1])
-					if coverLast == oldFI[DataProvider.NEvents]:
+					coverLast = modSI.get(DataSplitter.Skipped, 0) + modSI[DataSplitter.NEntries] - sum(sizeInfo[:-1])
+					if coverLast == oldFI[DataProvider.NEntries]:
 						# Change of last file, which ends in current splitting
-						if doExpandOutside and (oldFI[DataProvider.NEvents] < newFI[DataProvider.NEvents]):
+						if doExpandOutside and (oldFI[DataProvider.NEntries] < newFI[DataProvider.NEntries]):
 							expandOutside()
 							modSI[DataSplitter.Comment] += '[last_add_1] '
 						else:
 							replaceCompleteFile()
 							modSI[DataSplitter.Comment] += '[last_add_2] '
-					elif coverLast > newFI[DataProvider.NEvents]:
+					elif coverLast > newFI[DataProvider.NEntries]:
 						# Change of last file, which changes current coverage
-						modSI[DataSplitter.NEvents] -= coverLast
-						modSI[DataSplitter.NEvents] += oldFI[DataProvider.NEvents]
+						modSI[DataSplitter.NEntries] -= coverLast
+						modSI[DataSplitter.NEntries] += oldFI[DataProvider.NEntries]
 						replaceCompleteFile()
 						modSI[DataSplitter.Comment] += '[last_add_3] '
 					else:
 						# Change of last file outside of current splitting
-						sizeInfo[idx] = newFI[DataProvider.NEvents]
+						sizeInfo[idx] = newFI[DataProvider.NEntries]
 						modSI[DataSplitter.Comment] += '[last_add_4] '
 
 				elif idx == 0:
 					# First file is affected
-					if (newFI[DataProvider.NEvents] > modSI.get(DataSplitter.Skipped, 0)):
+					if (newFI[DataProvider.NEntries] > modSI.get(DataSplitter.Skipped, 0)):
 						# First file changes and still lives in new splitting
-						following = sizeInfo[0] - modSI.get(DataSplitter.Skipped, 0) - modSI[DataSplitter.NEvents]
-						shrinkage = oldFI[DataProvider.NEvents] - newFI[DataProvider.NEvents]
+						following = sizeInfo[0] - modSI.get(DataSplitter.Skipped, 0) - modSI[DataSplitter.NEntries]
+						shrinkage = oldFI[DataProvider.NEntries] - newFI[DataProvider.NEntries]
 						if following > 0:
 							# First file not completely covered by current splitting
 							if following < shrinkage:
 								# Covered area of first file shrinks
-								modSI[DataSplitter.NEvents] += following
+								modSI[DataSplitter.NEntries] += following
 								replaceCompleteFile()
 								modSI[DataSplitter.Comment] += '[first_add_1] '
 							else:
 								# First file changes outside of current splitting
-								sizeInfo[idx] = newFI[DataProvider.NEvents]
+								sizeInfo[idx] = newFI[DataProvider.NEntries]
 								modSI[DataSplitter.Comment] = '[first_add_2] '
 						else:
 							# Change of first file ending in current splitting - One could try to
@@ -285,8 +285,8 @@ class DataSplitter(AbstractObject):
 							modSI[DataSplitter.Comment] += '[first_add_3] '
 					else:
 						# Removal of first file from current splitting
-						modSI[DataSplitter.NEvents] += max(0, sizeInfo[idx] - modSI.get(DataSplitter.Skipped, 0) - modSI[DataSplitter.NEvents])
-						modSI[DataSplitter.NEvents] += modSI.get(DataSplitter.Skipped, 0)
+						modSI[DataSplitter.NEntries] += max(0, sizeInfo[idx] - modSI.get(DataSplitter.Skipped, 0) - modSI[DataSplitter.NEntries])
+						modSI[DataSplitter.NEntries] += modSI.get(DataSplitter.Skipped, 0)
 						modSI[DataSplitter.Skipped] = 0
 						removeCompleteFile()
 						return False
@@ -302,9 +302,9 @@ class DataSplitter(AbstractObject):
 			idx = 0
 			newMetadata = []
 			while idx < len(modSI[DataSplitter.FileList]):
-				lfn = modSI[DataSplitter.FileList][idx]
+				url = modSI[DataSplitter.FileList][idx]
 
-				rmFI = fast_search(filesMissing, lambda x: cmp(x[DataProvider.lfn], lfn))
+				rmFI = fast_search(filesMissing, lambda x: cmp(x[DataProvider.URL], url))
 				if rmFI:
 					removeFile(idx, rmFI)
 					procMode = min(procMode, self.mode_removed)
@@ -312,7 +312,7 @@ class DataSplitter(AbstractObject):
 						procMode = min(procMode, self.metaOpts.get(meta, ResyncMode.ignore))
 					continue # dont increase filelist index!
 
-				(oldFI, newFI) = fast_search(filesMatched, lambda x: cmp(x[0][DataProvider.lfn], lfn))
+				(oldFI, newFI) = fast_search(filesMatched, lambda x: cmp(x[0][DataProvider.URL], url))
 				if DataProvider.Metadata in newFI:
 					newMetadata.append(newFI[DataProvider.Metadata])
 					for (oldMI, newMI, metaProc) in metaIdxLookup:
@@ -320,25 +320,25 @@ class DataSplitter(AbstractObject):
 							procMode = min(procMode, metaProc) # Metadata was removed
 						elif (oldFI[DataProvider.Metadata][oldMI] != newFI[DataProvider.Metadata][newMI]):
 							procMode = min(procMode, metaProc) # Metadata was changed
-				if oldFI[DataProvider.NEvents] == newFI[DataProvider.NEvents]:
+				if oldFI[DataProvider.NEntries] == newFI[DataProvider.NEntries]:
 					idx += 1
 					continue
-				oldEvts = modSI[DataSplitter.NEvents]
+				oldEvts = modSI[DataSplitter.NEntries]
 				oldSkip = modSI[DataSplitter.Skipped]
 
 				if changeFile(idx, oldFI, newFI):
 					pass
 					idx += 1
 
-				mode = QM(oldFI[DataProvider.NEvents] < newFI[DataProvider.NEvents], self.mode_expanded, self.mode_shrunken)
+				mode = QM(oldFI[DataProvider.NEntries] < newFI[DataProvider.NEntries], self.mode_expanded, self.mode_shrunken)
 				if mode == ResyncMode.changed:
-					changed = (oldEvts != modSI[DataSplitter.NEvents]) or (oldSkip != modSI[DataSplitter.Skipped])
+					changed = (oldEvts != modSI[DataSplitter.NEntries]) or (oldSkip != modSI[DataSplitter.Skipped])
 					mode = QM(changed, ResyncMode.complete, ResyncMode.ignore)
 				procMode = min(procMode, mode)
 				continue
 
 			# Disable invalid / invalidated splittings
-			if (len(modSI[DataSplitter.FileList]) == 0) or (modSI[DataSplitter.NEvents] <= 0):
+			if (len(modSI[DataSplitter.FileList]) == 0) or (modSI[DataSplitter.NEntries] <= 0):
 				procMode = ResyncMode.disable
 
 			if procMode == ResyncMode.disable:

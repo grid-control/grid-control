@@ -188,7 +188,7 @@ class CMSSW(DataMod):
 	def neededVars(self):
 		result = []
 		varMap = {
-			DataSplitter.NEvents: 'MAX_EVENTS',
+			DataSplitter.NEntries: 'MAX_EVENTS',
 			DataSplitter.Skipped: 'SKIP_EVENTS',
 			DataSplitter.FileList: 'FILE_NAMES'
 		}

@@ -5,7 +5,7 @@ from provider_base import DataProvider
 
 class EventBoundarySplitter(DataSplitter):
 	def neededVars(cls):
-		return [DataSplitter.FileList, DataSplitter.Skipped, DataSplitter.NEvents]
+		return [DataSplitter.FileList, DataSplitter.Skipped, DataSplitter.NEntries]
 	neededVars = classmethod(neededVars)
 
 
@@ -16,7 +16,7 @@ class EventBoundarySplitter(DataSplitter):
 		lastEvent = 0
 		curSkip = 0
 		fileListIter = iter(fileList)
-		job = { DataSplitter.Skipped: 0, DataSplitter.NEvents: 0, DataSplitter.FileList: [] }
+		job = { DataSplitter.Skipped: 0, DataSplitter.NEntries: 0, DataSplitter.FileList: [] }
 		while True:
 			if curEvent >= lastEvent:
 				try:
@@ -26,7 +26,7 @@ class EventBoundarySplitter(DataSplitter):
 						yield job
 					break
 
-				nEvents = fileObj[DataProvider.NEvents]
+				nEvents = fileObj[DataProvider.NEntries]
 				if nEvents < 0:
 					raise DatasetError('EventBoundarySplitter does not support files with a negative number of events!')
 				curEvent = lastEvent
@@ -47,17 +47,17 @@ class EventBoundarySplitter(DataSplitter):
 			if not len(job[DataSplitter.FileList]):
 				job[DataSplitter.Skipped] = curSkip
 
-			job[DataSplitter.NEvents] += available
+			job[DataSplitter.NEntries] += available
 			nextEvent += available
 
-			job[DataSplitter.FileList].append(fileObj[DataProvider.lfn])
+			job[DataSplitter.FileList].append(fileObj[DataProvider.URL])
 			if DataProvider.Metadata in fileObj:
 				job.setdefault(DataSplitter.Metadata, []).append(fileObj[DataProvider.Metadata])
 
 			if nextEvent >= succEvent:
 				succEvent += eventsPerJob
 				yield job
-				job = { DataSplitter.Skipped: 0, DataSplitter.NEvents: 0, DataSplitter.FileList: [] }
+				job = { DataSplitter.Skipped: 0, DataSplitter.NEntries: 0, DataSplitter.FileList: [] }
 
 
 	def splitDatasetInternal(self, blocks, firstEvent = 0):
