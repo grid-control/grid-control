@@ -27,8 +27,11 @@ def logException_internal(exClass, exValue, stack):
 			log.critical('\t\t%s = %r', var.ljust(maxlen), tmp[var])
 		if 'self' in tmp:
 			log.critical('\tClass variables:')
-			for var in sorted(tmp['self'].__dict__):
-				log.critical('\t\tself.%s = %r', var.ljust(maxlen), tmp['self'].__dict__[var])
+			try:
+				for var in sorted(tmp['self'].__dict__):
+					log.critical('\t\tself.%s = %r', var.ljust(maxlen), tmp['self'].__dict__[var])
+			except:
+				pass
 		log.critical('')
 		stack = stack.tb_next
 	exMessage = '%s: %s' % (exClass.__name__, str.join(' ', map(str, exValue.args)))
