@@ -23,11 +23,7 @@ class Job:
 		self.dict = {}
 
 
-	def load(cls, name):
-		try:
-			data = utils.DictFormat(escapeString = True).parse(open(name))
-		except:
-			raise RuntimeError('Invalid format in %s' % name)
+	def loadData(cls, name, data):
 		try:
 			job = Job(cls._stateDict[data.get('status', 'FAILED')])
 
@@ -63,8 +59,17 @@ class Job:
 					pass
 			job.dict = data
 		except:
-			raise RuntimeError('Unable to parse data in %s:\n%r' % (name, data))
+			raise RethrowError('Unable to parse data in %s:\n%r' % (name, data), RuntimeError)
 		return job
+	loadData = classmethod(loadData)
+
+
+	def load(cls, name):
+		try:
+			data = utils.DictFormat(escapeString = True).parse(open(name))
+		except:
+			raise RuntimeError('Invalid format in %s' % name)
+		return Job.loadData(name, data)
 	load = classmethod(load)
 
 
