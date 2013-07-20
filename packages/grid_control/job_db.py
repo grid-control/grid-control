@@ -123,22 +123,25 @@ class JobClass:
 
 class JobDB:
 	def __init__(self, config, jobLimit = -1, jobSelector = None):
-		(self.jobLimit, self.alwaysSelector) = (jobLimit, jobSelector)
 		self.dbPath = os.path.join(config.workDir, 'jobs')
+		self._jobs = self.readJobs(jobLimit)
+		if jobLimit < 0 and len(jobMap) > 0:
+			jobLimit = max(jobMap) + 1
+		(self.jobLimit, self.alwaysSelector) = (jobLimit, jobSelector)
+
+
+	def readJobs(self, jobLimit):
 		try:
 			if not os.path.exists(self.dbPath):
-				if config.opts.init:
-					os.mkdir(self.dbPath)
-				else:
-					raise ConfigError("Not a properly initialized work directory '%s'." % config.workDir)
+				os.mkdir(self.dbPath)
 		except IOError:
 			raise RethrowError("Problem creating work directory '%s'" % self.dbPath)
 
 		candidates = fnmatch.filter(os.listdir(self.dbPath), 'job_*.txt')
-		(self._jobs, log, maxJobs) = ({}, None, len(candidates))
+		(jobMap, log, maxJobs) = ({}, None, len(candidates))
 		for idx, jobFile in enumerate(candidates):
-			if (jobLimit >= 0) and (len(self._jobs) >= jobLimit):
-				utils.eprint('Stopped reading job infos! The number of job infos in the work directory (%d)' % len(self._jobs), newline = False)
+			if (jobLimit >= 0) and (len(jobMap) >= jobLimit):
+				utils.eprint('Stopped reading job infos! The number of job infos in the work directory (%d)' % len(jobMap), newline = False)
 				utils.eprint('is larger than the maximum number of jobs (%d)' % jobLimit)
 				break
 			try: # 2xsplit is faster than regex
@@ -146,12 +149,11 @@ class JobDB:
 			except:
 				continue
 			jobObj = Job.load(os.path.join(self.dbPath, jobFile))
-			self._jobs[jobNum] = jobObj
+			jobMap[jobNum] = jobObj
 			if idx % 100 == 0:
 				del log
 				log = utils.ActivityLog('Reading job infos ... %d [%d%%]' % (idx, (100.0 * idx) / maxJobs))
-		if jobLimit < 0 and len(self._jobs) > 0:
-			self.jobLimit = max(self._jobs) + 1
+		return jobMap
 
 
 	def get(self, jobNum, default = None, create = False):
@@ -162,7 +164,7 @@ class JobDB:
 
 	def getJobsIter(self, jobSelector = None, subset = None):
 		if subset == None:
-			subset = range(self.jobLimit)
+			subset = xrange(self.jobLimit)
 		if jobSelector and self.alwaysSelector:
 			select = lambda *args: jobSelector(*args) and self.alwaysSelector(*args)
 		elif jobSelector or self.alwaysSelector:
