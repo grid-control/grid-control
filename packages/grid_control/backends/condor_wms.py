@@ -685,12 +685,12 @@ class Condor(BasicWMS):
 # _initPoolInterfaces: prepare commands and interfaces according to selected submit type
 	def _initPoolInterfaces(self, config):
 		# check submissal type
-		self.remoteType = config.get( self._getSections("backend"), "remote Type", "local").lower()
-		if True in [ self.remoteType in item for item in ["ssh"] ]:
+		self.remoteType = config.get( self._getSections("backend"), "remote Type", "").lower()
+		if self.remoteType in ["ssh"]:
 			self.remoteType = poolType.SSH
-		elif True in [ self.remoteType in item for item in ["gsissh","gssh"] ]:
+		elif self.remoteType in ["gsissh","gssh"]:
 			self.remoteType = poolType.GSISSH
-		elif True in [ self.remoteType in item for item in ["spool","condor","remote"] ]:
+		elif self.remoteType in ["spool","condor","remote"]:
 			self.remoteType = poolType.SPOOL
 		else:
 			self.remoteType = poolType.LOCAL
