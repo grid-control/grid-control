@@ -80,6 +80,15 @@ try:	# raw_input < Python 3.0
 except:
 	user_input = input
 
+try:	# any >= Python 2.5
+	any = any
+except:
+	def any(iterable):
+		for element in iterable:
+			if element:
+				return True
+		return False
+
 try:	# functools.lru_cache >= Python 3.2
 	import functools
 	lru_cache = functools.lru_cache
@@ -105,4 +114,4 @@ if __name__ == '__main__':
 	import doctest
 	doctest.testmod()
 
-__all__ = ['rsplit', 'set', 'sorted', 'md5', 'next', 'user_input', 'lru_cache']
+__all__ = ['rsplit', 'set', 'sorted', 'md5', 'next', 'user_input', 'any', 'lru_cache']
