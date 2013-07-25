@@ -285,10 +285,9 @@ class GridWMS(BasicWMS):
 				tmpPath = os.path.join(basePath, md5(ids[0][0]).hexdigest())
 			else:
 				tmpPath = basePath
-			if not os.path.exists(tmpPath):
-				os.makedirs(tmpPath)
+			utils.ensureDirExists(tmpPath)
 		except:
-			raise RuntimeError('Temporary path "%s" could not be created.' % tmpPath)
+			raise RethrowError('Temporary path "%s" could not be created.' % tmpPath, RuntimeError)
 
 		jobNumMap = dict(ids)
 		jobs = self.writeWMSIds(ids)

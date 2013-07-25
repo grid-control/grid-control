@@ -38,7 +38,7 @@ def ensureDirExists(dn, name = 'directory'):
 		try:
 			os.makedirs(dn)
 		except:
-			raise RethrowError('Problem creating %s "%s"' % (name, dn))
+			raise RethrowError('Problem creating %s "%s"' % (name, dn), RuntimeError)
 
 
 ################################################################

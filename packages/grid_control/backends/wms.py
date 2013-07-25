@@ -99,7 +99,7 @@ class BasicWMS(WMS):
 
 		self.errorLog = os.path.join(config.workDir, 'error.tar')
 		self._outputPath = os.path.join(config.workDir, 'output')
-		ensureDirExists(self._outputPath, 'output directory')
+		utils.ensureDirExists(self._outputPath, 'output directory')
 
 		# Initialise proxy, broker and storage manager
 		self.proxy = Proxy.open(config.get(self._getSections('backend'), 'proxy', 'TrivialProxy', mutable=True), config)
@@ -144,8 +144,7 @@ class BasicWMS(WMS):
 		# Package sandbox tar file
 		utils.vprint('Packing sandbox:')
 		sandbox = self._getSandboxName(module)
-		if not os.path.exists(os.path.dirname(sandbox)):
-			os.makedirs(os.path.dirname(sandbox))
+		utils.ensureDirExists(sandbox, 'sandbox directory')
 		if not os.path.exists(sandbox) or self.config.opts.init:
 			utils.genTarball(sandbox, convert(self._getSandboxFiles(module, monitor, [self.smSEIn, self.smSEOut])))
 

@@ -90,7 +90,7 @@ if __name__ == '__main__':
 				utils.vprint('Will force initialization of %s if continued!' % config.workDir, -1)
 				opts.init = True
 			if utils.getUserBool('Do you want to create the working directory %s?' % config.workDir, True):
-				os.makedirs(config.workDir)
+				utils.ensureDirExists(config.workDir, 'work directory')
 		checkSpace = config.getInt('global', 'workdir space', 10, mutable=True)
 
 		class InitSentinel:
