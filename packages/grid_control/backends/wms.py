@@ -99,14 +99,7 @@ class BasicWMS(WMS):
 
 		self.errorLog = os.path.join(config.workDir, 'error.tar')
 		self._outputPath = os.path.join(config.workDir, 'output')
-		if not os.path.exists(self._outputPath):
-			if config.opts.init:
-				try:
-					os.makedirs(self._outputPath)
-				except:
-					raise RethrowError('Problem creating work directory "%s"' % self._outputPath)
-			else:
-				raise ConfigError('Not a properly initialized work directory "%s".' % config.workDir)
+		ensureDirExists(self._outputPath, 'output directory')
 
 		# Initialise proxy, broker and storage manager
 		self.proxy = Proxy.open(config.get(self._getSections('backend'), 'proxy', 'TrivialProxy', mutable=True), config)

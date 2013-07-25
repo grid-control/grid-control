@@ -32,6 +32,15 @@ def resolvePath(path, userpath = [], check = True, ErrorClass = RuntimeError):
 def resolveInstallPath(path):
 	return resolvePath(path, os.environ['PATH'].split(':'), True, InstallationError)
 
+
+def ensureDirExists(dn, name = 'directory'):
+	if not os.path.exists(dn):
+		try:
+			os.makedirs(dn)
+		except:
+			raise RethrowError('Problem creating %s "%s"' % (name, dn))
+
+
 ################################################################
 # Process management functions
 
