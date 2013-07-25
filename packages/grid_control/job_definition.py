@@ -26,5 +26,14 @@ class JobDef(object):
 	def requireSoftware(self, value):
 		self.software = self._combineReq(lambda l, i: l + i, self.software, [value])
 
-	def requireStorage(self, listvalue):
-		self.storage = self._combineReq(lambda l, i: l + i, self.storage, listvalue)
+	def requireStorage(self, selist):
+		self.storage = self._combineReq(lambda l, i: l + i, self.storage, selist)
+
+	def applyTo(self, other):
+		other.variables.update(self.variables)
+		other.active = other.active and self.active
+		other.files.extend(self.files)
+		# FIX requirements!
+
+	def getHash(self):
+		return None
