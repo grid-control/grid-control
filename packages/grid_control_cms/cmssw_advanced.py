@@ -37,7 +37,7 @@ class CMSSW_Advanced(cmssw.CMSSW):
 			head.append((var, var))
 
 		# Mapping between nickname and lumi filter:
-		if config.get(self.__class__.__name__, 'lumi filter', '') != '':
+		if 'lumi filter' in config.getOptions(self.__class__.__name__):
 			raise ConfigError("Please use 'nickname lumi filter' instead of 'lumi filter'")
 		lumiParse = lambda x: formatLumi(parseLumiFilter(x))
 		self.nmLumi = config.getDict(self.__class__.__name__, 'nickname lumi filter', default={}, parser = lumiParse)[0]
