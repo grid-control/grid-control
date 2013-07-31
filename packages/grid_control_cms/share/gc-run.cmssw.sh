@@ -12,6 +12,8 @@ source $MY_LANDINGZONE/gc-run.lib || exit 101
 echo "CMSSW module starting"
 echo
 echo "---------------------------"
+timestamp "CMSSW_STARTUP" "START"
+echo "==========================="
 
 echo "NEventsProcessed=${MAX_EVENTS:-0}" > ${MY_DASHBOARDINFO:-/dev/null}
 
@@ -75,15 +77,22 @@ export CMSSW_SEARCH_PATH="$CMSSW_SEARCH_PATH:$MY_WORKDIR"
 mkdir -p "$MY_WORKDIR"; cd "$MY_WORKDIR"
 my_move "$MY_SCRATCH" "$MY_WORKDIR" "$SB_INPUT_FILES $SE_INPUT_FILES $CMSSW_PROLOG_EXEC $CMSSW_EPILOG_EXEC"
 echo
+echo "==========================="
+timestamp "CMSSW_STARTUP" "DONE"
 
 # Additional prolog scripts in the CMSSW environment
 for CMSSW_BIN in $CMSSW_PROLOG_EXEC; do
+	_PROLOG_COUNT=1
+	timestamp "CMSSW_PROLOG${_PROLOG_COUNT}" "START"
 	echo "---------------------------"
 	echo
 	echo "Starting $CMSSW_BIN with arguments: $CMSSW_PROLOG_ARGS"
 	checkbin "$CMSSW_BIN"
 	eval "./$CMSSW_BIN $CMSSW_PROLOG_ARGS"
+	CODE=$?
 	echo
+	timestamp "CMSSW_PROLOG${_PROLOG_COUNT}" "DONE"
+	_PROLOG_COUNT=$[ $_PROLOG_COUNT +1]
 done
 
 echo "---------------------------"
@@ -95,6 +104,8 @@ if [ -n "$CMSSW_CONFIG" ]; then
 	echo
 	cd "$MY_WORKDIR"
 	for CFG_NAME in $CMSSW_CONFIG; do
+		_CMSRUN_COUNT=1
+		timestamp "CMSSW_CMSRUN${_CMSRUN_COUNT}" "START"
 		echo "Config file: $CFG_NAME"
 		echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~"
 		checkfile "$CFG_NAME"
@@ -136,6 +147,8 @@ if [ -n "$CMSSW_CONFIG" ]; then
 		[ "$CODE" == "" ] && export CODE="-2"
 		echo "cmsRun finished with exit code $CODE"
 		echo
+		timestamp "CMSSW_CMSRUN${_CMSRUN_COUNT}" "DONE"
+		_CMSRUN_COUNT=$[ $_CMSRUN_COUNT +1]
 		[ "$CODE" != "0" ] && break
 	done
 	echo -e "CMSSW output on stdout and stderr:\n" | gzip > "00000.rawlog.gz"
@@ -154,12 +167,17 @@ fi
 
 # Additional epilog scripts in the CMSSW environment
 for CMSSW_BIN in $CMSSW_EPILOG_EXEC; do
+	_EPILOG_COUNT=1
+	timestamp "CMSSW_EPILOG${_EPILOG_COUNT}" "START"
 	echo "---------------------------"
 	echo
 	echo "Starting $CMSSW_BIN with arguments: $CMSSW_EPILOG_ARGS"
 	checkbin "$CMSSW_BIN"
+	CODE=$?
 	eval "./$CMSSW_BIN $CMSSW_EPILOG_ARGS"
 	echo
+	timestamp "CMSSW_EPILOG${_EPILOG_COUNT}" "DONE"
+	_EPILOG_COUNT=$[ $_EPILOG_COUNT +1]
 done
 
 echo

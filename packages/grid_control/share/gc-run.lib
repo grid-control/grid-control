@@ -653,3 +653,36 @@ display_short() {
 		cat
 	fi
 }
+
+timestamp() {
+	debug_helper $FUNCNAME "$@"
+	if [[ -z "$STARTDATE" ]];then
+		STARTDATE=`date +%s`
+	fi
+	echo "($(date +"%s"),$[ $(date +"%s") - $STARTDATE ],'${@:-NULL}')" >> $MY_LANDINGZONE\job.timestamps
+	echo "[$(date +"%Y:%m:%d-%k:%M:%S")] $@"
+}
+timereport() {
+	debug_helper $FUNCNAME "$@"
+	echo "==========================="
+	echo "== ===  Job timing  ==== =="
+	echo "Abs,Rel,TAG"
+	cat $MY_LANDINGZONE\job.timestamps
+	echo "==========================="
+	echo -n "timestamps = [" >> $MY_LANDINGZONE/job.info
+	while read line; do
+		echo -n "$line," >> $MY_LANDINGZONE/job.info
+	done < $MY_LANDINGZONE\job.timestamps
+	echo "]" >> $MY_LANDINGZONE/job.info
+}
+
+timeprocess() {
+	debug_helper $FUNCNAME "$@"
+	if [ -x "`getcommand time`" ]; then
+		`getcommand time` -o $MY_LANDINGZONE\job.timing -f "--Time--\nWall: %e s\nUser: %U s\nSys : %S s\nCPU : %P\n--Memory--\nMax RSS : %M KB\nAvr RSS : %t KB\nTot Mem : %K KB\n--Prog--\nCmd : %C\nExit: %x\n" $@
+	else
+		time $@
+	fi
+}
+
+

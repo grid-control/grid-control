@@ -20,7 +20,7 @@ echo "running on: `hostname -f; uname -a;`"
 [ -f /etc/redhat-release ] && cat /etc/redhat-release
 echo
 echo "Job $MY_JOBID started - `date`"
-STARTDATE=`date +%s`
+timestamp "WRAPPER" "START"
 
 echo
 echo "==========================="
@@ -38,6 +38,8 @@ checkdir "Scratch directory" "$MY_SCRATCH"
 
 echo "==========================="
 echo
+timestamp "DEPLOYMENT" "START"
+echo "==========================="
 checkfile "$MY_LANDINGZONE/gc-sandbox.tar.gz"
 
 echo "Unpacking basic job configuration"
@@ -104,7 +106,12 @@ if [ -n "$GC_MONITORING" ]; then
 	done
 	echo
 fi
+echo "==========================="
+timestamp "DEPLOYMENT" "DONE"
+echo
 
+echo
+timestamp "SE_IN" "START"
 # Select SE:
 if [ -n "$SE_INPUT_PATH" -o -n "$SE_OUTPUT_PATH" ]; then
 	echo "==========================="
@@ -131,6 +138,7 @@ if [ -n "$SE_INPUT_FILES" ]; then
 fi
 
 echo "==========================="
+timestamp "SE_IN" "DONE"
 echo
 # Do variable substitutions
 for SFILE in $SUBST_FILES "_config.sh"; do
@@ -158,6 +166,8 @@ checkdir "Scratch directory" "$MY_SCRATCH"
 echo "==========================="
 echo
 
+timestamp "EXECUTION" "START"
+echo "==========================="
 cd "$MY_SCRATCH"
 echo "${MY_RUNTIME/\$@/$GC_ARGS}" > $MY_LANDINGZONE/_runtime.sh
 export MY_RUNTIME="$(var_replacer '' < "$MY_LANDINGZONE/_runtime.sh")"
@@ -171,6 +181,8 @@ CODE=$?
 echo $$ > $MY_MARKER
 zip_files "$SB_OUTPUT_FILES"
 cd "$MY_LANDINGZONE"
+echo "==========================="
+timestamp "EXECUTION" "DONE"
 
 echo "Process $MY_RUNID exit code: $CODE"
 updatejobinfo $CODE
@@ -189,6 +201,7 @@ if [ -d "$MY_SCRATCH" -a -n "$SB_OUTPUT_FILES" ]; then
 	echo
 fi
 
+timestamp "SE_OUT" "START"
 export LOG_MD5="$MY_LANDINGZONE/SE.log"
 # Copy files to the SE
 if [ $CODE -eq 0 -a -n "$SE_OUTPUT_FILES" ]; then
@@ -205,6 +218,8 @@ if [ $CODE -eq 0 -a -n "$SE_OUTPUT_FILES" ]; then
 	export TRANSFERLOG=""
 	echo
 fi
+echo "==========================="
+timestamp "SE_OUT" "DONE"
 
 # Emulate grid wildcard support
 if [ -n "$GC_WC" ]; then
@@ -246,5 +261,10 @@ echo "TIME=$GC_WRAPTIME" >> $MY_LANDINGZONE/job.info
 [ -f "$LOG_MD5" ] && cat "$LOG_MD5" >> $MY_LANDINGZONE/job.info
 cat $MY_LANDINGZONE/job.info
 echo
+
+echo "==========================="
+timestamp "WRAPPER" "DONE"
+echo
+timereport
 
 exit $CODE
