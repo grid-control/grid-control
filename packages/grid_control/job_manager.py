@@ -144,20 +144,18 @@ class JobManager:
 	def getVerificationSubmitThrottle(self, submitCount):
 		jobsTotal = len(self.jobDB.getJobs(ClassSelector(JobClass.PROCESSED))) + len(self.jobDB.getJobs(ClassSelector(JobClass.PROCESSING)))
 		verifyIndex = bisect.bisect_left(self.verifyChunks, jobsTotal)
-		if verifyIndex == len(self.verifyChunks):
+		successRatio = len(self.jobDB.getJobs(ClassSelector(JobClass.SUCCESS))) * 1.0 / self.verifyChunks[verifyIndex]
+		try:
+			# not enough successes, enforce current limit
+			if successRatio < self.verifyThresh[verifyIndex]:
+				return min(submitCount, self.verifyChunks[verifyIndex]-jobsTotal)
+			# satisfied current condition, apply next limit
+			else:
+				return min(submitCount, self.verifyChunks[verifyIndex+1]-jobsTotal)
+		except IndexError:
+			utils.vprint('== All verification chunks passed ==\nVerification submission throttle disabled.', level=0)
 			self.verify = False
 			return submitCount
-		successRatio = len(self.jobDB.getJobs(ClassSelector(JobClass.SUCCESS)))*1.0/self.verifyChunks[verifyIndex]
-		if successRatio < self.verifyThresh[verifyIndex]:
-			return min(submitCount, self.verifyChunks[verifyIndex]-jobsTotal)
-		# satisfied current condition, send out more
-		if successRatio >= self.verifyThresh[verifyIndex]:
-			# got no more chunks to test
-			if verifyIndex == len(self.verifyChunks)-1:
-				self.verify=False
-				return submitCount
-			# test next chunk
-			return min(submitCount, self.verifyChunks[verifyIndex+1]-jobsTotal)
 
 	def submit(self, wms, maxsample = 100):
 		jobList = self.getSubmissionJobs(maxsample)
