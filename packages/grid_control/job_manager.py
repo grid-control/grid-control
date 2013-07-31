@@ -1,4 +1,5 @@
 import sys, os, re, fnmatch, random, math, time, operator
+import bisect
 from grid_control import QM, ConfigError, RuntimeError, RethrowError, Job, JobClass, JobDB, Report, utils
 from job_selector import JobSelector, ClassSelector, AndJobSelector
 from python_compat import *
@@ -17,11 +18,19 @@ class JobManager:
 		self.doShuffle = config.getBool('jobs', 'shuffle', False, mutable=True)
 		self.maxRetry = config.getInt('jobs', 'max retry', -1, mutable=True)
 		self.continuous = config.getBool('jobs', 'continuous', False, mutable=True)
-
 		# Job offender heuristic (not persistent!) - remove jobs, which do not report their status
 		self.kickOffender = config.getInt('jobs', 'kick offender', 10, mutable=True)
 		(self.offender, self.raster) = ({}, 0)
-
+		# job verification heuristic - launch jobs in chunks of increasing size if enough jobs succeed
+		self.verify = False
+		self.verifyChunks = map(int, config.getList('jobs', "verify chunks",[-1], mutable=True))
+		self.verifyThresh = map(float, config.getList('jobs', "verify reqs",[0.5], mutable=True))
+		if self.verifyChunks != [-1]:
+			self.verify=True
+			self.verifyThresh+=[self.verifyThresh[-1]]*(len(self.verifyChunks)-len(self.verifyThresh))
+			utils.vprint('== Verification mode active ==\nSubmission is capped unless the success ratio of a chunk of jobs is sufficent.', level=0)
+			utils.vprint('Enforcing the following (chunksize x ratio) sequence:', level=0)
+			utils.vprint(" > ".join(map(lambda tpl: "%d x %4.2f"%(tpl[0], tpl[1]), zip(self.verifyChunks, self.verifyThresh))), level=0)
 
 	def getMaxJobs(self, module):
 		nJobs = self.jobLimit
@@ -121,6 +130,8 @@ class JobManager:
 			submit = min(submit, self.inFlight - len(self.jobDB.getJobs(ClassSelector(JobClass.PROCESSING))))
 		if self.continuous:
 			submit = min(submit, maxsample)
+		if self.verify:
+			submit = self.getVerificationSubmitThrottle(submit)
 		submit = max(submit, 0)
 
 		if self.doShuffle:
@@ -128,6 +139,25 @@ class JobManager:
 		else:
 			return sorted(jobList)[:submit]
 
+	# Verification heuristic - check whether enough jobs have succeeded before submitting more
+	# @submitCount: number of jobs to submit
+	def getVerificationSubmitThrottle(self, submitCount):
+		jobsTotal = len(self.jobDB.getJobs(ClassSelector(JobClass.PROCESSED))) + len(self.jobDB.getJobs(ClassSelector(JobClass.PROCESSING)))
+		verifyIndex = bisect.bisect_left(self.verifyChunks, jobsTotal)
+		if verifyIndex == len(self.verifyChunks):
+			self.verify = False
+			return submitCount
+		successRatio = len(self.jobDB.getJobs(ClassSelector(JobClass.SUCCESS)))*1.0/self.verifyChunks[verifyIndex]
+		if successRatio < self.verifyThresh[verifyIndex]:
+			return min(submitCount, self.verifyChunks[verifyIndex]-jobsTotal)
+		# satisfied current condition, send out more
+		if successRatio >= self.verifyThresh[verifyIndex]:
+			# got no more chunks to test
+			if verifyIndex == len(self.verifyChunks)-1:
+				self.verify=False
+				return submitCount
+			# test next chunk
+			return min(submitCount, self.verifyChunks[verifyIndex+1]-jobsTotal)
 
 	def submit(self, wms, maxsample = 100):
 		jobList = self.getSubmissionJobs(maxsample)

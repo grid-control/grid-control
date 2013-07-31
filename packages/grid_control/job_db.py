@@ -119,6 +119,7 @@ class JobClass:
 	SUCCESS = mkJobClass(Job.SUCCESS)
 	DISABLED = mkJobClass(Job.DISABLED)
 	ENDSTATE = mkJobClass(Job.SUCCESS, Job.DISABLED)
+	PROCESSED = mkJobClass(Job.SUCCESS, Job.FAILED, Job.CANCELLED, Job.ABORTED)
 
 
 class JobDB:
