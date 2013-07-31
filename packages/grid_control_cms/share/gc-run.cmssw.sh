@@ -173,8 +173,8 @@ for CMSSW_BIN in $CMSSW_EPILOG_EXEC; do
 	echo
 	echo "Starting $CMSSW_BIN with arguments: $CMSSW_EPILOG_ARGS"
 	checkbin "$CMSSW_BIN"
-	CODE=$?
 	eval "./$CMSSW_BIN $CMSSW_EPILOG_ARGS"
+	CODE=$?
 	echo
 	timestamp "CMSSW_EPILOG${_EPILOG_COUNT}" "DONE"
 	_EPILOG_COUNT=$[ $_EPILOG_COUNT +1]
