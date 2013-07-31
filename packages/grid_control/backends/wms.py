@@ -144,7 +144,7 @@ class BasicWMS(WMS):
 		# Package sandbox tar file
 		utils.vprint('Packing sandbox:')
 		sandbox = self._getSandboxName(module)
-		utils.ensureDirExists(sandbox, 'sandbox directory')
+		utils.ensureDirExists(os.path.dirname(sandbox), 'sandbox directory')
 		if not os.path.exists(sandbox) or self.config.opts.init:
 			utils.genTarball(sandbox, convert(self._getSandboxFiles(module, monitor, [self.smSEIn, self.smSEOut])))
 
