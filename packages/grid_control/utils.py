@@ -70,9 +70,11 @@ def getThreadedGenerator(genList): # Combines multiple, threaded generators into
 
 
 class LoggedProcess(object):
-	def __init__(self, cmd, args = ''):
+	def __init__(self, cmd, args = '', niceCmd = False, niceArgs = False):
+		self.niceCmd = QM(niceCmd, niceCmd, os.path.basename(cmd))
+		self.niceArgs = QM(niceArgs, niceArgs, args)
 		(self.stdout, self.stderr, self.cmd, self.args) = ([], [], cmd, args)
-		vprint('External programm called: %s %s' % (cmd, args), level=3)
+		vprint('External programm called: %s %s' % (self.niceCmd, self.niceArgs), level=3)
 		self.proc = popen2.Popen3('%s %s' % (cmd, args), True)
 
 	def getOutput(self, wait = False):
@@ -117,7 +119,7 @@ class LoggedProcess(object):
 	def logError(self, target, brief=False, **kwargs): # Can also log content of additional files via kwargs
 		now = time.time()
 		entry = '%s.%s' % (time.strftime('%Y-%m-%d_%H:%M:%S', time.localtime(now)), ('%.5f' % (now - int(now)))[2:])
-		eprint('WARNING: %s failed with code %d' % (os.path.basename(self.cmd), self.wait()), printTime=True)
+		eprint('WARNING: %s failed with code %d' % (self.niceCmd, self.wait()), printTime=True)
 		if not brief:
 			eprint('\n%s' % self.getError(), printTime=True)
 
