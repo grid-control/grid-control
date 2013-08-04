@@ -662,6 +662,7 @@ timestamp() {
 	echo "($(date +"%s"),$[ $(date +"%s") - $STARTDATE ],'${@:-NULL}')" >> $MY_LANDINGZONE\job.timestamps
 	echo "[$(date +"%Y:%m:%d-%k:%M:%S")] $@"
 }
+
 timereport() {
 	debug_helper $FUNCNAME "$@"
 	echo "==========================="
