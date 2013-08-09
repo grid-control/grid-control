@@ -104,7 +104,7 @@ echo "---------------------------"
 echo
 checkdir "CMSSW working directory" "$MY_WORKDIR"
 
-if [ "$CODE" != "0" ] && [ -n "$CMSSW_CONFIG" ]; then
+if [ "$CODE" == "0" ] && [ -n "$CMSSW_CONFIG" ]; then
 	echo "---------------------------"
 	echo
 	cd "$MY_WORKDIR"
@@ -175,7 +175,7 @@ if [ "$CODE" != "0" ] && [ -n "$CMSSW_CONFIG" ]; then
 fi
 
 # Additional epilog scripts in the CMSSW environment
-if [ "$CODE" != "0" ]; then
+if [ "$CODE" == "0" ]; then
 	for CMSSW_BIN in $CMSSW_EPILOG_EXEC; do
 		_EPILOG_COUNT=1
 		timestamp "CMSSW_EPILOG${_EPILOG_COUNT}" "START"
