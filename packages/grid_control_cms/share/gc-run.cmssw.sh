@@ -93,13 +93,18 @@ for CMSSW_BIN in $CMSSW_PROLOG_EXEC; do
 	echo
 	timestamp "CMSSW_PROLOG${_PROLOG_COUNT}" "DONE"
 	_PROLOG_COUNT=$[ $_PROLOG_COUNT +1]
+	if [ "$CODE" != "0" ];then
+		echo "Prologue $CMSSW_BIN failed with code: $CODE"
+		echo "Aborting..."
+		break
+	fi
 done
 
 echo "---------------------------"
 echo
 checkdir "CMSSW working directory" "$MY_WORKDIR"
 
-if [ -n "$CMSSW_CONFIG" ]; then
+if [ "$CODE" != "0" ] && [ -n "$CMSSW_CONFIG" ]; then
 	echo "---------------------------"
 	echo
 	cd "$MY_WORKDIR"
@@ -149,7 +154,11 @@ if [ -n "$CMSSW_CONFIG" ]; then
 		echo
 		timestamp "CMSSW_CMSRUN${_CMSRUN_COUNT}" "DONE"
 		_CMSRUN_COUNT=$[ $_CMSRUN_COUNT +1]
-		[ "$CODE" != "0" ] && break
+		if [ "$CODE" != "0" ];then
+			echo "CMSSW config $CFG_NAME failed with code: $CODE"
+			echo "Aborting..."
+			break
+		fi
 	done
 	echo -e "CMSSW output on stdout and stderr:\n" | gzip > "00000.rawlog.gz"
 	[ "$GZIP_OUT" = "yes" ] && zcat -f *.rawlog.gz | gzip -9 > "cmssw.log.gz"
@@ -166,19 +175,26 @@ if [ -n "$CMSSW_CONFIG" ]; then
 fi
 
 # Additional epilog scripts in the CMSSW environment
-for CMSSW_BIN in $CMSSW_EPILOG_EXEC; do
-	_EPILOG_COUNT=1
-	timestamp "CMSSW_EPILOG${_EPILOG_COUNT}" "START"
-	echo "---------------------------"
-	echo
-	echo "Starting $CMSSW_BIN with arguments: $CMSSW_EPILOG_ARGS"
-	checkbin "$CMSSW_BIN"
-	eval "./$CMSSW_BIN $CMSSW_EPILOG_ARGS"
-	CODE=$?
-	echo
-	timestamp "CMSSW_EPILOG${_EPILOG_COUNT}" "DONE"
-	_EPILOG_COUNT=$[ $_EPILOG_COUNT +1]
-done
+if [ "$CODE" != "0" ]; then
+	for CMSSW_BIN in $CMSSW_EPILOG_EXEC; do
+		_EPILOG_COUNT=1
+		timestamp "CMSSW_EPILOG${_EPILOG_COUNT}" "START"
+		echo "---------------------------"
+		echo
+		echo "Starting $CMSSW_BIN with arguments: $CMSSW_EPILOG_ARGS"
+		checkbin "$CMSSW_BIN"
+		eval "./$CMSSW_BIN $CMSSW_EPILOG_ARGS"
+		CODE=$?
+		echo
+		timestamp "CMSSW_EPILOG${_EPILOG_COUNT}" "DONE"
+		_EPILOG_COUNT=$[ $_EPILOG_COUNT +1]
+		if [ "$CODE" != "0" ];then
+			echo "Epilogue $CMSSW_BIN failed with code: $CODE"
+			echo "Aborting..."
+			break
+		fi
+	done
+fi
 
 echo
 echo "---------------------------"
