@@ -144,8 +144,8 @@ class JobManager:
 	def getVerificationSubmitThrottle(self, submitCount):
 		jobsTotal = len(self.jobDB.getJobs(ClassSelector(JobClass.PROCESSED))) + len(self.jobDB.getJobs(ClassSelector(JobClass.PROCESSING)))
 		verifyIndex = bisect.bisect_left(self.verifyChunks, jobsTotal)
-		successRatio = len(self.jobDB.getJobs(ClassSelector(JobClass.SUCCESS))) * 1.0 / self.verifyChunks[verifyIndex]
 		try:
+			successRatio = len(self.jobDB.getJobs(ClassSelector(JobClass.SUCCESS))) * 1.0 / self.verifyChunks[verifyIndex]
 			# not enough successes, enforce current limit
 			if successRatio < self.verifyThresh[verifyIndex]:
 				return min(submitCount, self.verifyChunks[verifyIndex]-jobsTotal)
