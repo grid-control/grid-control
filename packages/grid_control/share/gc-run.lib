@@ -222,6 +222,13 @@ getcommand() {
 	RESULT="$(which $@ 2> /dev/null | head -n 1)"
 	echo ${RESULT:-$1}
 }
+# merge me!
+getexec() {
+	#debug_helper $FUNCNAME "$@"
+	[ -x "$@" ] && RESULT_HERE="./$@" || [ -x "$1" ] && RESULT_HERE="./$1" || RESULT_HERE=""
+	RESULT_WHICH="$(which $@ 2> /dev/null | head -n 1)"
+	echo ${RESULT_HERE:-${RESULT_WHICH:-$1}}
+}
 
 _find() {
 	debug_helper $FUNCNAME "$@"
