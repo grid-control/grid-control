@@ -80,6 +80,7 @@ echo
 echo "==========================="
 timestamp "CMSSW_STARTUP" "DONE"
 
+CODE=0
 # Additional prolog scripts in the CMSSW environment
 for CMSSW_BIN in $CMSSW_PROLOG_EXEC; do
 	_PROLOG_COUNT=1
