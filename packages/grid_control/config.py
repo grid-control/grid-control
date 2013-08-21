@@ -235,7 +235,6 @@ class Config:
 
 
 	def getPath(self, section, item, default = noDefault, mutable = False, noVar = True, check = True):
-		print section, item, default
 		return self.getTyped('path', str, lambda p: self.parsePath(p, check), section, item, default, mutable, noVar)
 
 
