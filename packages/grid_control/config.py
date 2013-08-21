@@ -226,10 +226,17 @@ class Config:
 
 
 	def parsePath(self, value, check):
+		if value == '':
+			return ''
 		try:
 			return utils.resolvePath(value, [self.baseDir], check, ConfigError)
 		except:
 			raise RethrowError('Error resolving path %s' % value, ConfigError)
+
+
+	def getPath(self, section, item, default = noDefault, mutable = False, noVar = True, check = True):
+		print section, item, default
+		return self.getTyped('path', str, lambda p: self.parsePath(p, check), section, item, default, mutable, noVar)
 
 
 	def parsePaths(self, value, check):
@@ -239,13 +246,9 @@ class Config:
 		return result
 
 
-	def getPath(self, section, item, default = noDefault, mutable = False, noVar = True, check = True):
-		return self.getTyped('path', str, lambda p: self.parsePath(p, check), section, item, default, mutable, noVar)
-
-
 	def getPaths(self, section, item, default = noDefault, mutable = False, noVar = True, check = True):
 		value2str = lambda value: '\n' + str.join('\n', value)
-		return self.getTyped('paths', value2str, lambda p: self.parsePaths(p, check), section, item, default, mutable, noVar)
+		return self.getTyped('paths', value2str, lambda pl: self.parsePaths(pl, check), section, item, default, mutable, noVar)
 
 
 	def getOptions(self, section):
