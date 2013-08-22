@@ -11,8 +11,10 @@ def fmtDef(value, default, defFmt = lambda x: x):
 def cleanSO(section, option): # return canonized section/option tuple
 	strStrip = lambda x: str(x).strip().lower()
 	if isinstance(section, list):
-		return (utils.uniqueListRL(map(strStrip, section)), strStrip(option))
-	return (strStrip(section), strStrip(option))
+		section = utils.uniqueListRL(map(strStrip, section))
+	if isinstance(option, list):
+		option = map(strStrip, option)
+	return (section, option)
 
 def fmtStack(stack):
 	for frame in stack:
@@ -118,6 +120,8 @@ class Config:
 		(section, item) = cleanSO(section, item)
 		if isinstance(section, list):
 			section = section[0] # set most specific setting
+		if isinstance(item, list):
+			item = item[0] # set most specific setting
 		if not self.allowSet:
 			raise APIError('Invalid runtime config override: [%s] %s = %s' % (section, item, value))
 		self.logger.log(logging.INFO3, 'Overwrite of option [%s] %s = %s' % (section, item, value))
@@ -136,6 +140,12 @@ class Config:
 			for specific in filter(lambda s: item in self.getOptions(s), section):
 				return self.getInternal(specific, item, default, mutable, noVar)
 			return self.getInternal(section[-1], item, default, mutable, noVar) # will trigger error message
+		# Handle multi section get calls, use first item for error message
+		if isinstance(item, list):
+			self.logger.log(logging.DEBUG1, 'Searching "%s" for options:\n\t%s' % (section, str.join('\n\t', item)))
+			for specific in filter(lambda i: i in self.getOptions(section), item):
+				return self.getInternal(section, specific, default, mutable, noVar)
+			return self.getInternal(section, item[0], default, mutable, noVar) # will trigger error message
 		self.logger.log(logging.DEBUG2, 'Config get request from: %s' % fmtStack(inspect.stack()))
 		# API check: Keep track of used default values
 		if self.apicheck.setdefault((section, item), (default, mutable))[0] != default:
