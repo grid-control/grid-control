@@ -1,5 +1,5 @@
 import os
-from grid_control import utils, Monitoring
+from grid_control import QM, utils, Monitoring
 from time import localtime, strftime
 from DashboardAPI import DashboardAPI
 
@@ -8,6 +8,7 @@ class DashBoard(Monitoring):
 		Monitoring.__init__(self, config, module)
 		(taskName, jobName, jobType) = module.getDescription(None) # TODO: use the other variables for monitoring
 		self.app = config.get('dashboard', 'application', 'shellscript', mutable=True)
+		jobType = QM(jobType, jobType, 'analysis')
 		self.tasktype = config.get('dashboard', 'task', jobType, mutable=True)
 		self.taskname = config.get('dashboard', 'task name', '@TASK_ID@_@DATASETNICK@', mutable=True, noVar=False)
 
