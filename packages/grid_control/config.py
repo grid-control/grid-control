@@ -12,8 +12,12 @@ def cleanSO(section, option): # return canonized section/option tuple
 	strStrip = lambda x: str(x).strip().lower()
 	if isinstance(section, list):
 		section = utils.uniqueListRL(map(strStrip, section))
+	else:
+		section = strStrip(section)
 	if isinstance(option, list):
 		option = map(strStrip, option)
+	else:
+		option = strStrip(option)
 	return (section, option)
 
 def fmtStack(stack):
