@@ -2,6 +2,10 @@ import os, inspect, socket, logging, ConfigParser as cp
 from grid_control import *
 from python_compat import *
 
+# ConfigScope class in eg. UserMod
+# scope = ConfigScope.__init__(*sections, parents = None)
+#   usage config.getInt(scope, option, ...)
+
 noDefault = cp.NoOptionError
 def fmtDef(value, default, defFmt = lambda x: x): 
 	if value == noDefault:
