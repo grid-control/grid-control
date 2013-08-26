@@ -1,5 +1,5 @@
 import os
-from grid_control import QM, utils, Monitoring
+from grid_control import QM, utils, Monitoring, Job
 from time import localtime, strftime
 from DashboardAPI import DashboardAPI
 
@@ -51,12 +51,15 @@ class DashBoard(Monitoring):
 	# Called on job status update
 	def onJobUpdate(self, wms, jobObj, jobNum, data):
 		taskId = self.module.substVars(self.taskname, jobNum, addDict = {'DATASETNICK': ''}).strip('_')
+		statusMap = {Job.DONE: 'DONE', Job.FAILED: 'DONE', Job.SUCCESS: 'DONE',
+			Job.RUNNING: 'RUNNING', Job.ABORTED: 'ABORTED', Job.CANCELLED: 'CANCELLED'}
+		statusDashboard = statusMap.get(jobObj.status, 'PENDING')
 		utils.gcStartThread("Notifying dashboard about status of job %d" % jobNum,
-			self.publish, jobObj, jobNum, taskId, [{
-			'StatusValue': data.get('status', 'pending').upper(),
-			'StatusValueReason': data.get('reason', data.get('status', 'pending')).upper(),
+			self.publish, jobObj, jobNum, taskId, [{'StatusValue': statusDashboard,
+			'StatusValueReason': data.get('reason', statusDashboard).upper(),
 			'StatusEnterTime': data.get('timestamp', strftime('%Y-%m-%d_%H:%M:%S', localtime())),
 			'StatusDestination': data.get('dest', '') }])
+
 
 	def onTaskFinish(self, nJobs):
 		utils.wait(5)
