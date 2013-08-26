@@ -99,7 +99,7 @@ class StateSelector(RegExSelector):
 class VarSelector(JobSelector):
 	def __init__(self, arg, **kwargs):
 		self.rxDict = map(lambda x: (x.split('=', 1)[0], re.compile(x.split('=', 1)[1])), arg.split(','))
-		self.jobCfg = lambda jobNum, var: str(kwargs['module'].getJobConfig(jobNum).get(var, ''))
+		self.jobCfg = lambda jobNum, var: str(kwargs['task'].getJobConfig(jobNum).get(var, ''))
 
 	def __call__(self, jobNum, jobObj):
 		return reduce(operator.and_, map(lambda (var, rx): rx.search(self.jobCfg(jobNum, var)) != None, self.rxDict))
@@ -107,7 +107,7 @@ class VarSelector(JobSelector):
 
 class NickSelector(RegExSelector):
 	def __init__(self, arg, **kwargs):
-		RegExSelector.__init__(self, arg, lambda jobNum, jobObj: kwargs['module'].getJobConfig(jobNum).get('DATASETNICK', ''))
+		RegExSelector.__init__(self, arg, lambda jobNum, jobObj: kwargs['task'].getJobConfig(jobNum).get('DATASETNICK', ''))
 
 
 class MultiJobSelector(JobSelector):

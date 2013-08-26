@@ -38,9 +38,9 @@ class JobManager:
 			# No valid number of jobs given in config file - module has to provide number of jobs
 			nJobs = module.getMaxJobs()
 			if nJobs == None:
-				raise ConfigError("Module doesn't provide max number of Jobs!")
+				raise ConfigError("Task module doesn't provide max number of Jobs!")
 		else:
-			# Module doesn't have to provide number of jobs
+			# Task module doesn't have to provide number of jobs
 			try:
 				maxJobs = module.getMaxJobs()
 				if maxJobs and (nJobs > maxJobs):

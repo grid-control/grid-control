@@ -1,7 +1,7 @@
 import os, sys, shutil
 from python_compat import *
 from grid_control import QM, ConfigError, WMS, utils, storage, datasets, noDefault
-from grid_control.modules.datamod import DataMod
+from grid_control.tasks.task_data import DataTask
 from grid_control.datasets import DataSplitter
 from grid_control.parameters import DataParameterSource, DataSplitProcessor
 from lumi_tools import *
@@ -33,7 +33,7 @@ class ExecutableWrapper:
 		return QM(self.sendexec and self.executable, [self.executable], [])
 
 
-class CMSSW(DataMod):
+class CMSSW(DataTask):
 	def __init__(self, config):
 		config.set('storage', 'se input timeout', '0:30', override = False)
 		config.set(self.__class__.__name__, 'dataset provider', 'DBSApiv2', override = False)

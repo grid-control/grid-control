@@ -107,7 +107,7 @@ if __name__ == '__main__':
 
 		# Initialise application module
 		initSentinel.checkpoint('module')
-		module = Module.open(config.get('global', 'module'), config)
+		module = TaskModule.open(config.get('global', ['task', 'module']), config)
 
 		# Give help about variables
 		if opts.help_vars:

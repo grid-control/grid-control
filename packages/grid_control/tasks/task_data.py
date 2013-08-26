@@ -1,10 +1,11 @@
 import os, os.path, time, signal
-from grid_control import Module, Config, GCError, ConfigError, UserError, utils, WMS
+from task_base import TaskModule
+from grid_control import Config, GCError, ConfigError, UserError, utils, WMS
 from grid_control import datasets
 from grid_control.datasets import DataProvider, DataSplitter
 from grid_control.parameters.psource_data import ParameterSource, DataParameterSource, DataSplitProcessor
 
-class DataMod(Module):
+class DataTask(TaskModule):
 	def setupJobParameters(self, config, pm):
 		self.dataSplitter = None
 		self.dataRefresh = None
@@ -74,8 +75,8 @@ class DataMod(Module):
 
 	def getVarMapping(self):
 		if self.dataSplitter:
-			return utils.mergeDicts([Module.getVarMapping(self), {'NICK': 'DATASETNICK'}])
-		return Module.getVarMapping(self)
+			return utils.mergeDicts([TaskModule.getVarMapping(self), {'NICK': 'DATASETNICK'}])
+		return TaskModule.getVarMapping(self)
 
 
 	# Called on job submission
@@ -83,7 +84,7 @@ class DataMod(Module):
 		jobInfo = self.source.getJobInfo(jobNum)
 		submitInfo = {'nevtJob': jobInfo.get('MAX_EVENTS', 0),
 			'datasetFull': jobInfo.get('DATASETPATH', 'none')}
-		return utils.mergeDicts([Module.getSubmitInfo(self, jobNum), submitInfo])
+		return utils.mergeDicts([TaskModule.getSubmitInfo(self, jobNum), submitInfo])
 
 
 	def canFinish(self):

@@ -1,8 +1,8 @@
 import os
 from grid_control import QM, utils, ConfigError
-from usermod import UserMod
+from UserTask import UserTask
 
-class ROOTMod(UserMod):
+class ROOTTask(UserTask):
 	def __init__(self, config):
 		# Determine ROOT path from previous settings / environment / config file
 		taskInfo = utils.PersistentDict(os.path.join(config.workDir, 'task.dat'), ' = ')
@@ -21,8 +21,8 @@ class ROOTMod(UserMod):
 			config.set(self.__class__.__name__, 'send executable', 'False')
 			config.set(self.__class__.__name__, 'executable', exeFull)
 
-		# Apply default handling from UserMod
-		UserMod.__init__(self, config)
+		# Apply default handling from UserTask
+		UserTask.__init__(self, config)
 		self.updateErrorDict(utils.pathShare('gc-run.root.sh'))
 
 		# Collect lib files needed by executable
@@ -30,7 +30,7 @@ class ROOTMod(UserMod):
 
 
 	def getTaskConfig(self):
-		return utils.mergeDicts([UserMod.getTaskConfig(self), {'MY_ROOTSYS': self._rootpath}])
+		return utils.mergeDicts([UserTask.getTaskConfig(self), {'MY_ROOTSYS': self._rootpath}])
 
 
 	def getCommand(self):
@@ -39,4 +39,8 @@ class ROOTMod(UserMod):
 
 
 	def getSBInFiles(self):
-		return UserMod.getSBInFiles(self) + self.libFiles + [utils.pathShare('gc-run.root.sh')]
+		return UserTask.getSBInFiles(self) + self.libFiles + [utils.pathShare('gc-run.root.sh')]
+
+
+class ROOTMod(ROOTTask):
+	pass

@@ -1,10 +1,10 @@
 import os.path
 from grid_control import QM, datasets
-from datamod import DataMod
+from task_data import DataTask
 
-class UserMod(DataMod):
+class UserTask(DataTask):
 	def __init__(self, config):
-		DataMod.__init__(self, config)
+		DataTask.__init__(self, config)
 		self._sendexec = config.getBool(self.__class__.__name__, 'send executable', True)
 		if self._sendexec:
 			self._executable = config.getPath(self.__class__.__name__, 'executable')
@@ -21,13 +21,17 @@ class UserMod(DataMod):
 
 
 	def getJobArguments(self, jobNum):
-		return DataMod.getJobArguments(self, jobNum) + ' ' + self._arguments
+		return DataTask.getJobArguments(self, jobNum) + ' ' + self._arguments
 
 
 	def getSBInFiles(self):
-		return DataMod.getSBInFiles(self) + QM(self._sendexec, [self._executable], [])
+		return DataTask.getSBInFiles(self) + QM(self._sendexec, [self._executable], [])
 
 
 	def getSBOutFiles(self):
 		tmp = map(lambda s: s + QM(self.gzipOut, '.gz', ''), ['job.stdout', 'job.stderr'])
-		return DataMod.getSBOutFiles(self) + tmp
+		return DataTask.getSBOutFiles(self) + tmp
+
+
+class UserMod(UserTask):
+	pass

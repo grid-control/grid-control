@@ -22,9 +22,6 @@ from grid_control.backends	import WMS, WMSFactory
 from grid_control.monitoring	import Monitoring
 
 from grid_control.parameters	import *
-from grid_control.module	import Module
+from grid_control.tasks	import TaskModule
 
 from grid_control.gui	import GUI
-
-# import dynamic repos
-import grid_control.modules

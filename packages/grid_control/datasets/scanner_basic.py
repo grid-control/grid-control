@@ -11,15 +11,15 @@ def splitParse(opt):
 # Get output directories from external config file
 class OutputDirsFromConfig(InfoScanner):
 	def __init__(self, config, section):
-		from grid_control import Module
+		from grid_control import TaskModule
 		newVerbosity = utils.verbosity(utils.verbosity() - 3)
 		extConfig = Config(config.getPath(section, 'source config'))
 		extConfig.opts = type('DummyType', (), {'init': False, 'resync': False})
 		self.extWorkDir = extConfig.workDir
-		self.extModule = Module.open(extConfig.get('global', 'module'), extConfig)
+		self.extTask = TaskModule.open(extConfig.get('global', ['task', 'module']), extConfig)
 		selector = config.get(section, 'source job selector', '')
 		extJobDB = JobDB(extConfig, jobSelector = lambda jobNum, jobObj: jobObj.state == Job.SUCCESS)
-		self.selected = sorted(extJobDB.getJobs(JobSelector.create(selector, module = self.extModule)))
+		self.selected = sorted(extJobDB.getJobs(JobSelector.create(selector, task = self.extTask)))
 		utils.verbosity(newVerbosity + 3)
 
 	def getEntries(self, path, metadata, events, seList, objStore):
@@ -28,7 +28,7 @@ class OutputDirsFromConfig(InfoScanner):
 			del log
 			log = utils.ActivityLog('Reading job logs - [%d / %d]' % (jobNum, self.selected[-1]))
 			metadata['GC_JOBNUM'] = jobNum
-			objStore.update({'GC_MODULE': self.extModule, 'GC_WORKDIR': self.extWorkDir})
+			objStore.update({'GC_TASK': self.extTask, 'GC_WORKDIR': self.extWorkDir})
 			yield (os.path.join(self.extWorkDir, 'output', 'job_%d' % jobNum), metadata, events, seList, objStore)
 
 
@@ -51,7 +51,7 @@ class OutputDirsFromWork(InfoScanner):
 				pass
 
 
-class MetadataFromModule(InfoScanner):
+class MetadataFromTask(InfoScanner):
 	def __init__(self, config, section):
 		ignoreDef = map(lambda x: 'SEED_%d' % x, range(10)) + ['FILE_NAMES',
 			'SB_INPUT_FILES', 'SE_INPUT_FILES', 'SE_INPUT_PATH', 'SE_INPUT_PATTERN',
@@ -59,15 +59,15 @@ class MetadataFromModule(InfoScanner):
 			'SE_MINFILESIZE', 'DOBREAK', 'MY_RUNTIME', 'MY_JOBID',
 			'GC_VERSION', 'GC_DEPFILES', 'SUBST_FILES', 'SEEDS',
 			'SCRATCH_LL', 'SCRATCH_UL', 'LANDINGZONE_LL', 'LANDINGZONE_UL']
-		self.ignoreVars = config.getList(section, 'ignore module vars', ignoreDef)
+		self.ignoreVars = config.getList(section, 'ignore task vars', ignoreDef)
 
 	def getEntries(self, path, metadata, events, seList, objStore):
 		newVerbosity = utils.verbosity(utils.verbosity() - 3)
-		if 'GC_MODULE' in objStore:
-			tmp = dict(objStore['GC_MODULE'].getTaskConfig())
+		if 'GC_TASK' in objStore:
+			tmp = dict(objStore['GC_TASK'].getTaskConfig())
 			if 'GC_JOBNUM' in metadata:
-				tmp.update(objStore['GC_MODULE'].getJobConfig(metadata['GC_JOBNUM']))
-			for (newKey, oldKey) in objStore['GC_MODULE'].getVarMapping().items():
+				tmp.update(objStore['GC_TASK'].getJobConfig(metadata['GC_JOBNUM']))
+			for (newKey, oldKey) in objStore['GC_TASK'].getVarMapping().items():
 				tmp[newKey] = tmp.get(oldKey)
 			metadata.update(utils.filterDict(tmp, kF = lambda k: k not in self.ignoreVars))
 		utils.verbosity(newVerbosity + 3)

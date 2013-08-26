@@ -4,7 +4,7 @@ from grid_control import ConfigError, AbstractError, AbstractObject, QM, utils, 
 from grid_control.parameters import ParameterFactory, ParameterInfo
 from time import time, localtime, strftime
 
-class Module(AbstractObject):
+class TaskModule(AbstractObject):
 	# Read configuration options and init vars
 	def __init__(self, config):
 		self.config = config
@@ -199,4 +199,4 @@ class Module(AbstractObject):
 	def getIntervention(self):
 		return self.source.resync()
 
-Module.dynamicLoaderPath(['grid_control.modules'])
+TaskModule.dynamicLoaderPath()
