@@ -125,9 +125,9 @@ class JobClass:
 class JobDB:
 	def __init__(self, config, jobLimit = -1, jobSelector = None):
 		self.dbPath = os.path.join(config.workDir, 'jobs')
-		self._jobs = self.readJobs(jobLimit)
-		if jobLimit < 0 and len(jobMap) > 0:
-			jobLimit = max(jobMap) + 1
+		self._jobMap = self.readJobs(jobLimit)
+		if jobLimit < 0 and len(self._jobMap) > 0:
+			jobLimit = max(self._jobMap) + 1
 		(self.jobLimit, self.alwaysSelector) = (jobLimit, jobSelector)
 
 
@@ -159,8 +159,8 @@ class JobDB:
 
 	def get(self, jobNum, default = None, create = False):
 		if create:
-			self._jobs[jobNum] = self._jobs.get(jobNum, Job())
-		return self._jobs.get(jobNum, default)
+			self._jobMap[jobNum] = self._jobMap.get(jobNum, Job())
+		return self._jobMap.get(jobNum, default)
 
 
 	def getJobsIter(self, jobSelector = None, subset = None):
