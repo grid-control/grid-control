@@ -1,4 +1,4 @@
-from grid_control import utils
+from grid_control import utils, noDefault
 
 class TaskExecutableWrapper:
 	def __init__(self, config, section, prefix = '', exeDefault = noDefault):

@@ -1,6 +1,7 @@
 def initGC():
-	import os, sys, grid_control.utils
-	sys.path.insert(1, grid_control.utils.cleanPath(os.path.dirname(__file__)))
+	import os, sys
+	sys.path.insert(1, os.path.dirname(__file__))
+	import grid_control.utils
 	sys.path.append(grid_control.utils.cleanPath(os.getcwd()))
 
 	# Package discovery

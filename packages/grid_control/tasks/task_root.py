@@ -1,6 +1,6 @@
 import os
 from grid_control import QM, utils, ConfigError
-from UserTask import UserTask
+from task_user import UserTask
 
 class ROOTTask(UserTask):
 	def __init__(self, config):

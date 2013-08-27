@@ -1,4 +1,3 @@
-from mpl_toolkits.basemap import Basemap
 import matplotlib.pyplot as plt
 import geodb
 import numpy, math, random, os
@@ -39,6 +38,7 @@ def draw_pie(ax, breakdown, pos, size, piecolor = ['red', 'orange', 'green', 'bl
 		ax.scatter(pos[0], pos[1], marker=(zip(x, y),0), s = size, facecolor = piecolor[i % len(piecolor)])
 
 def drawMap(report):
+	from mpl_toolkits.basemap import Basemap
 	siteinfo = report.getWNInfos()
 	states = ['FAILED', 'WAITING', 'SUCCESS', 'RUNNING']
 	sites = filter(lambda x: x not in states, siteinfo)
