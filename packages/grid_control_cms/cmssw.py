@@ -38,13 +38,14 @@ class CMSSW(DataTask):
 		config.set('storage', 'se input timeout', '0:30', override = False)
 		config.set(self.__class__.__name__, 'dataset provider', 'DBSApiv2', override = False)
 		config.set(self.__class__.__name__, 'dataset splitter', 'EventBoundarySplitter', override = False)
-		DataMod.__init__(self, config)
+		DataTask.__init__(self, config)
 		self.errorDict.update(dict(self.updateErrorDict(utils.pathShare('gc-run.cmssw.sh', pkg = 'grid_control_cms'))))
 
 		# SCRAM info
 		scramProject = config.getList(self.__class__.__name__, 'scram project', [])
 		if len(scramProject):
 			self.projectArea = config.getPath(self.__class__.__name__, 'project area', '')
+			print self.projectArea
 			if len(self.projectArea):
 				raise ConfigError('Cannot specify both SCRAM project and project area')
 			if len(scramProject) != 2:
@@ -201,7 +202,7 @@ class CMSSW(DataTask):
 
 	# Called on job submission
 	def getSubmitInfo(self, jobNum):
-		result = DataMod.getSubmitInfo(self, jobNum)
+		result = DataTask.getSubmitInfo(self, jobNum)
 		result.update({'application': self.scramEnv['SCRAM_PROJECTVERSION'], 'exe': 'cmsRun'})
 		if self.dataSplitter == None:
 			result.update({'nevtJob': self.eventsPerJob})
@@ -210,7 +211,7 @@ class CMSSW(DataTask):
 
 	# Get environment variables for gc_config.sh
 	def getTaskConfig(self):
-		data = DataMod.getTaskConfig(self)
+		data = DataTask.getTaskConfig(self)
 		data.update(dict(self.searchLoc))
 		data['CMSSW_OLD_RELEASETOP'] = self.scramEnv.get('RELEASETOP', None)
 		data['DB_EXEC'] = 'cmsRun'
@@ -226,7 +227,7 @@ class CMSSW(DataTask):
 
 	# Get job requirements
 	def getRequirements(self, jobNum):
-		reqs = DataMod.getRequirements(self, jobNum)
+		reqs = DataTask.getRequirements(self, jobNum)
 		if self.useReqs:
 			reqs.append((WMS.SOFTWARE, 'VO-cms-%s' % self.scramEnv['SCRAM_PROJECTVERSION']))
 			reqs.append((WMS.SOFTWARE, 'VO-cms-%s' % self.scramArch))
@@ -235,7 +236,7 @@ class CMSSW(DataTask):
 
 	# Get files to be transfered via SE (description, source, target)
 	def getSEInFiles(self):
-		files = DataMod.getSEInFiles(self)
+		files = DataTask.getSEInFiles(self)
 		if len(self.projectArea) and self.seRuntime:
 			return files + [('CMSSW runtime', os.path.join(self.config.workDir, 'runtime.tar.gz'), self.taskID + '.tar.gz')]
 		return files
@@ -243,7 +244,7 @@ class CMSSW(DataTask):
 
 	# Get files for input sandbox
 	def getSBInFiles(self):
-		files = DataMod.getSBInFiles(self) + self.configFiles + self.prolog.getSBInFiles() + self.epilog.getSBInFiles()
+		files = DataTask.getSBInFiles(self) + self.configFiles + self.prolog.getSBInFiles() + self.epilog.getSBInFiles()
 		if len(self.projectArea) and not self.seRuntime:
 			files.append(os.path.join(self.config.workDir, 'runtime.tar.gz'))
 		return files + [utils.pathShare('gc-run.cmssw.sh', pkg = 'grid_control_cms')]
@@ -251,7 +252,7 @@ class CMSSW(DataTask):
 
 	# Get files for output sandbox
 	def getSBOutFiles(self):
-		return DataMod.getSBOutFiles(self) + QM(self.gzipOut, ['cmssw.log.gz'], []) + ['cmssw.dbs.tar.gz']
+		return DataTask.getSBOutFiles(self) + QM(self.gzipOut, ['cmssw.log.gz'], []) + ['cmssw.dbs.tar.gz']
 
 
 	def getCommand(self):
@@ -259,7 +260,7 @@ class CMSSW(DataTask):
 
 
 	def getJobArguments(self, jobNum):
-		return DataMod.getJobArguments(self, jobNum) + ' ' + self.arguments
+		return DataTask.getJobArguments(self, jobNum) + ' ' + self.arguments
 
 
 	def getActiveLumiFilter(self, lumifilter, jobNum = None):
@@ -275,7 +276,7 @@ class CMSSW(DataTask):
 
 
 	def getVarNames(self):
-		result = DataMod.getVarNames(self)
+		result = DataTask.getVarNames(self)
 		if self.dataSplitter == None:
 			result.append('MAX_EVENTS')
 		if self.selectedLumis:
@@ -285,7 +286,7 @@ class CMSSW(DataTask):
 
 	# Get job dependent environment variables
 	def getJobConfig(self, jobNum):
-		data = DataMod.getJobConfig(self, jobNum)
+		data = DataTask.getJobConfig(self, jobNum)
 		if self.dataSplitter == None:
 			data['MAX_EVENTS'] = self.eventsPerJob
 		if self.selectedLumis:
@@ -294,9 +295,9 @@ class CMSSW(DataTask):
 
 
 	def getDescription(self, jobNum): # (task name, job name, type)
-		(taskName, jobName, jobType) = DataMod.getDescription(self, jobNum)
+		(taskName, jobName, jobType) = DataTask.getDescription(self, jobNum)
 		return (taskName, jobName, QM(jobType, jobType, QM(self.dataSplitter, 'analysis', 'production')))
 
 
 	def getDependencies(self):
-		return DataMod.getDependencies(self) + ['cmssw']
+		return DataTask.getDependencies(self) + ['cmssw']
