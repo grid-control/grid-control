@@ -7,9 +7,10 @@ from webservice_api import *
 class CMSProvider(DataProvider):
 	def __init__(self, config, section, datasetExpr, datasetNick, datasetID = 0):
 		DataProvider.__init__(self, config, section, datasetExpr, datasetNick, datasetID)
-		# PhEDex blacklist: '-T1_DE_KIT', '-T1_US_FNAL' allow user jobs
-		phedexBL = ['-T0_CH_CERN', '-T1_CH_CERN', '-T1_ES_PIC', '-T1_FR_CCIN2P3', '-T1_IT_CNAF', '-T1_TW_ASGC', '-T1_UK_RAL', '-T3_US_FNALLPC']
-		self.phedexBL = config.getList(section, 'phedex sites', phedexBL)
+		# PhEDex blacklist: 'T1_DE_KIT', 'T1_US_FNAL' and '*_Disk' allow user jobs - other T1's dont!
+		self.phedexBL = config.getList(section, 'phedex sites', ['-T3_US_FNALLPC'])
+		self.phedexWL = config.getList(section, 'phedex t1 accept', ['T1_DE_KIT', 'T1_US_FNAL'])
+		self.phedexT1 = config.get(section, 'phedex t1 mode', 'disk').lower()
 		self.onlyComplete = config.getBool(section, 'only complete sites', True)
 
 		(self.datasetPath, self.url, self.datasetBlock) = utils.optSplit(datasetExpr, '@#')
@@ -52,7 +53,18 @@ class CMSProvider(DataProvider):
 
 
 	def nodeFilter(self, nameSiteDB, complete):
-		return (complete or not self.onlyComplete) and utils.filterBlackWhite([nameSiteDB], self.phedexBL)
+		# Remove T0 and T1 by default
+		result = not (nameSiteDB.startswith('T0_') or nameSiteDB.startswith('T1_'))
+		# check if listed on the accepted list
+		if self.phedexT1 in ['accept', 'disk']:
+			result = result or (len(utils.filterBlackWhite([nameSiteDB], self.phedexWL)) != 0)
+		if self.phedexT1 == 'disk':
+			result = result or nameSiteDB.lower().endswith('_disk')
+		# apply phedex blacklist
+		result = result and (len(utils.filterBlackWhite([nameSiteDB], self.phedexBL)) != 0)
+		# check for completeness at the site
+		result = result and (complete or not self.onlyComplete)
+		return result
 
 
 	# Get dataset se list from PhEDex (perhaps concurrent with listFiles)
