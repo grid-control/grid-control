@@ -54,7 +54,7 @@ class DashBoard(Monitoring):
 		# Translate status into dashboard status message
 		statusMap = {Job.DONE: 'DONE', Job.FAILED: 'DONE', Job.SUCCESS: 'DONE',
 			Job.RUNNING: 'RUNNING', Job.ABORTED: 'ABORTED', Job.CANCELLED: 'CANCELLED'}
-		jobStatus = jobObj.status
+		jobStatus = jobObj.state
 		jobExitCode = jobObj.get('retcode', None)
 		# Aborted jobs should report exit code as well
 		addMsg = {}
