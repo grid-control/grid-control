@@ -256,6 +256,8 @@ class JobManager:
 
 			if retCode == 0:
 				state = Job.SUCCESS
+			elif retCode == 107: # set ABORTED instead of FAILED for errorcode 107
+				state = Job.ABORTED
 			else:
 				state = Job.FAILED
 

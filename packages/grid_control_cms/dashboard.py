@@ -11,6 +11,8 @@ class DashBoard(Monitoring):
 		jobType = QM(jobType, jobType, 'analysis')
 		self.tasktype = config.get('dashboard', 'task', jobType, mutable=True)
 		self.taskname = config.get('dashboard', 'task name', '@TASK_ID@_@DATASETNICK@', mutable=True, noVar=False)
+		self._statusMap = {Job.DONE: 'DONE', Job.FAILED: 'DONE', Job.SUCCESS: 'DONE',
+			Job.RUNNING: 'RUNNING', Job.ABORTED: 'ABORTED', Job.CANCELLED: 'CANCELLED'}
 
 
 	def getScript(self):
@@ -37,8 +39,8 @@ class DashBoard(Monitoring):
 
 	# Called on job submission
 	def onJobSubmit(self, wms, jobObj, jobNum):
-		taskId = self.module.substVars(self.taskname, jobNum, addDict = {'DATASETNICK': ''}).strip('_')
 		proxy = wms.getProxy(jobObj.wmsId)
+		taskId = self.module.substVars(self.taskname, jobNum, addDict = {'DATASETNICK': ''}).strip('_')
 		utils.gcStartThread("Notifying dashboard about job submission %d" % jobNum,
 			self.publish, jobObj, jobNum, taskId, [{
 			'user': os.environ['LOGNAME'], 'GridName': proxy.getUsername(), 'CMSUser': proxy.getUsername(),
@@ -49,25 +51,20 @@ class DashBoard(Monitoring):
 
 
 	# Called on job status update
-	def onJobUpdate(self, wms, jobObj, jobNum, data):
-		taskId = self.module.substVars(self.taskname, jobNum, addDict = {'DATASETNICK': ''}).strip('_')
+	def onJobUpdate(self, wms, jobObj, jobNum, data, addMsg = {}):
 		# Translate status into dashboard status message
-		statusMap = {Job.DONE: 'DONE', Job.FAILED: 'DONE', Job.SUCCESS: 'DONE',
-			Job.RUNNING: 'RUNNING', Job.ABORTED: 'ABORTED', Job.CANCELLED: 'CANCELLED'}
-		jobStatus = jobObj.state
-		jobExitCode = jobObj.get('retcode', None)
-		# Aborted jobs should report exit code as well
-		addMsg = {}
-		if (jobStatus == Job.FAILED) and (jobExitCode == 107):
-				addMsg = {'ExeExitCode': jobExitCode}
-				jobStatus = Job.ABORTED
+		statusDashboard = self._statusMap.get(jobObj.state, 'PENDING')
 		# Update dashboard information
-		statusDashboard = statusMap.get(jobStatus, 'PENDING')
+		taskId = self.module.substVars(self.taskname, jobNum, addDict = {'DATASETNICK': ''}).strip('_')
 		utils.gcStartThread("Notifying dashboard about status of job %d" % jobNum,
 			self.publish, jobObj, jobNum, taskId, [{'StatusValue': statusDashboard,
 			'StatusValueReason': data.get('reason', statusDashboard).upper(),
 			'StatusEnterTime': data.get('timestamp', strftime('%Y-%m-%d_%H:%M:%S', localtime())),
 			'StatusDestination': data.get('dest', '') }, addMsg])
+
+
+	def onJobOutput(self, wms, jobObj, jobNum, retCode):
+		self.onJobUpdate(wms, jobObj, jobNum, jobObj, {'ExeExitCode': retCode})
 
 
 	def onTaskFinish(self, nJobs):
