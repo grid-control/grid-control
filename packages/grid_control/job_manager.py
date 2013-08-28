@@ -287,7 +287,7 @@ class JobManager:
 			if jobObj == None:
 				return
 			self._update(jobObj, jobNum, Job.CANCELLED)
-			self.eventhandler.onJobUpdate(wms, jobObj, jobNum, {'status': 'cancelled'})
+			self.eventhandler.onJobUpdate(wms, jobObj, jobNum, {'reason': 'cancelled'})
 
 		jobs.reverse()
 		for (jobNum, wmsId) in wms.cancelJobs(self.wmsArgs(jobs)):
@@ -300,6 +300,8 @@ class JobManager:
 			Report(self.jobDB, jobs).details()
 			if (interactive and utils.getUserBool('Do you want to mark them as cancelled?', True)) or not interactive:
 				map(mark_cancelled, jobs)
+		if interactive:
+			utils.wait(2)
 
 
 	def delete(self, wms, select):
