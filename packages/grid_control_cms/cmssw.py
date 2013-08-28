@@ -2,35 +2,14 @@ import os, sys, shutil
 from python_compat import *
 from grid_control import QM, ConfigError, WMS, utils, storage, datasets, noDefault
 from grid_control.tasks.task_data import DataTask
+from grid_control.tasks.task_utils import TaskExecutableWrapper
 from grid_control.datasets import DataSplitter
 from grid_control.parameters import DataParameterSource, DataSplitProcessor
 from lumi_tools import *
 
-
 class CMSDataSplitProcessor(DataSplitProcessor):
 	def formatFileList(self, fl):
 		return str.join(', ', map(lambda x: '"%s"' % x, fl))
-
-
-class ExecutableWrapper:
-	def __init__(self, config, section, prefix = '', varPrefix = 'GC', exeDefault = noDefault):
-		(self.prefix, self.varPrefix) = (prefix, varPrefix)
-		self.sendexec = config.getBool(section, '%s send executable' % prefix, True)
-		if self.sendexec:
-			self.executable = config.getPath(section, '%s executable' % prefix, exeDefault)
-		else:
-			self.executable = config.get(section, '%s executable' % prefix, exeDefault, noVar = False)
-		self.arguments = config.get(section, '%s arguments' % prefix, '', noVar = False)
-
-	def isActive(self):
-		return self.executable
-
-	def getTaskConfig(self):
-		return { "%s_ARGS" % self.varPrefix: self.arguments,
-			"%s_EXEC" % self.varPrefix: os.path.basename(self.executable) }
-
-	def getSBInFiles(self):
-		return QM(self.sendexec and self.executable, [self.executable], [])
 
 
 class CMSSW(DataTask):
@@ -114,8 +93,8 @@ class CMSSW(DataTask):
 				utils.vprint(' %i) %s' % (i + 1, value), -1)
 
 		# Prolog / Epilog script support - warn about old syntax
-		self.prolog = ExecutableWrapper(config, self.__class__.__name__, 'prolog', 'CMSSW_PROLOG', '')
-		self.epilog = ExecutableWrapper(config, self.__class__.__name__, 'epilog', 'CMSSW_EPILOG', '')
+		self.prolog = TaskExecutableWrapper(config, self.__class__.__name__, 'prolog', '')
+		self.epilog = TaskExecutableWrapper(config, self.__class__.__name__, 'epilog', '')
 		if config.getPaths(self.__class__.__name__, 'executable', []) != []:
 			raise ConfigError('Prefix executable and argument options with either prolog or epilog!')
 		self.arguments = config.get(self.__class__.__name__, 'arguments', '', noVar = False)
@@ -222,7 +201,11 @@ class CMSSW(DataTask):
 		data['SE_RUNTIME'] = QM(self.seRuntime, 'yes', 'no')
 		data['HAS_RUNTIME'] = QM(len(self.projectArea), 'yes', 'no')
 		data['CMSSW_CONFIG'] = str.join(' ', map(os.path.basename, self.configFiles))
-		return utils.mergeDicts([data, self.prolog.getTaskConfig(), self.epilog.getTaskConfig()])
+		data['CMSSW_PROLOG_EXEC'] = self.prolog.getCommand()
+		data['CMSSW_PROLOG_ARGS'] = self.prolog.getArguments()
+		data['CMSSW_EPILOG_EXEC'] = self.epilog.getCommand()
+		data['CMSSW_EPILOG_ARGS'] = self.epilog.getArguments()
+		return data
 
 
 	# Get job requirements
