@@ -692,5 +692,3 @@ timeprocess() {
 		time $@
 	fi
 }
-
-
