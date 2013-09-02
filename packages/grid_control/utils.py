@@ -16,6 +16,10 @@ defaultArg = object()
 
 cleanPath = lambda x: os.path.abspath(os.path.normpath(os.path.expanduser(x.strip())))
 
+def getRootName(fn): # Return file name without extension
+	bn = os.path.basename(str(fn)).lstrip('.')
+	return QM('.' in bn, str.join('', bn.split('.')[:-1], bn)
+
 # Convention: sys.path[1] == python dir of gc
 pathGC = lambda *args: cleanPath(os.path.join(sys.path[1], '..', *args))
 pathShare = lambda *args, **kw: cleanPath(os.path.join(sys.path[1], kw.get('pkg', 'grid_control'), 'share', *args))
@@ -912,7 +916,7 @@ class TwoSidedContainer:
 			yield self.allInfo[len(self.allInfo) - self.right]
 
 
-def makeEnum(members, cls = None):
+def makeEnum(members = [], cls = None):
 	if cls == None:
 		cls = type('Enum_%s' % md5(str(members)).hexdigest(), (), {})
 	cls.members = members
