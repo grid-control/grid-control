@@ -18,7 +18,7 @@ cleanPath = lambda x: os.path.abspath(os.path.normpath(os.path.expanduser(x.stri
 
 def getRootName(fn): # Return file name without extension
 	bn = os.path.basename(str(fn)).lstrip('.')
-	return QM('.' in bn, str.join('', bn.split('.')[:-1], bn)
+	return QM('.' in bn, str.join('', bn.split('.')[:-1]), bn)
 
 # Convention: sys.path[1] == python dir of gc
 pathGC = lambda *args: cleanPath(os.path.join(sys.path[1], '..', *args))
