@@ -201,10 +201,12 @@ class CMSSW(DataTask):
 		data['SE_RUNTIME'] = QM(self.seRuntime, 'yes', 'no')
 		data['HAS_RUNTIME'] = QM(len(self.projectArea), 'yes', 'no')
 		data['CMSSW_CONFIG'] = str.join(' ', map(os.path.basename, self.configFiles))
-		data['CMSSW_PROLOG_EXEC'] = self.prolog.getCommand()
-		data['CMSSW_PROLOG_ARGS'] = self.prolog.getArguments()
-		data['CMSSW_EPILOG_EXEC'] = self.epilog.getCommand()
-		data['CMSSW_EPILOG_ARGS'] = self.epilog.getArguments()
+		if self.prolog.isActive():
+			data['CMSSW_PROLOG_EXEC'] = self.prolog.getCommand()
+			data['CMSSW_PROLOG_ARGS'] = self.prolog.getArguments()
+		if self.epilog.isActive():
+			data['CMSSW_EPILOG_EXEC'] = self.epilog.getCommand()
+			data['CMSSW_EPILOG_ARGS'] = self.epilog.getArguments()
 		return data
 
 
