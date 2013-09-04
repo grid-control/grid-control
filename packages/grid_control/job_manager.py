@@ -141,15 +141,22 @@ class JobManager:
 
 	# Verification heuristic - check whether enough jobs have succeeded before submitting more
 	# @submitCount: number of jobs to submit
-	def getVerificationSubmitThrottle(self, submitCount):
-		jobsTotal = len(self.jobDB.getJobs(ClassSelector(JobClass.PROCESSED))) + len(self.jobDB.getJobs(ClassSelector(JobClass.PROCESSING)))
+	def getVerificationSubmitThrottle(self, submitCount, _messageCache = { 'unreachableGoal' : False }):
+		jobsActive = len(self.jobDB.getJobs(ClassSelector(JobClass.PROCESSING)))
+		jobsSuccess = len(self.jobDB.getJobs(ClassSelector(JobClass.SUCCESS)))
+		jobsDone = len(self.jobDB.getJobs(ClassSelector(JobClass.PROCESSED)))
+		jobsTotal = jobsDone + jobsActive
 		verifyIndex = bisect.bisect_left(self.verifyChunks, jobsTotal)
 		try:
-			successRatio = len(self.jobDB.getJobs(ClassSelector(JobClass.SUCCESS))) * 1.0 / self.verifyChunks[verifyIndex]
-			# not enough successes, enforce current limit
+			successRatio = jobsSuccess * 1.0 / self.verifyChunks[verifyIndex]
+			if ( self.verifyChunks[verifyIndex] - jobsDone) + jobsSuccess < self.verifyChunks[verifyIndex]*self.verifyThresh[verifyIndex]:
+				if not _messageCache['unreachableGoal']:
+					utils.vprint('All remaining jobs are vetoed by an unachieveable verification goal.', -1, True)
+					utils.vprint('Current goal: %d successful jobs out of %d' % (self.verifyChunks[verifyIndex]*self.verifyThresh[verifyIndex], self.verifyChunks[verifyIndex]), -1, True)
+					_messageCache['unreachableGoal'] = True
+				return 0
 			if successRatio < self.verifyThresh[verifyIndex]:
 				return min(submitCount, self.verifyChunks[verifyIndex]-jobsTotal)
-			# satisfied current condition, apply next limit
 			else:
 				return min(submitCount, self.verifyChunks[verifyIndex+1]-jobsTotal)
 		except IndexError:
