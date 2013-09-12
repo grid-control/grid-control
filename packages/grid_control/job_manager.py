@@ -125,9 +125,9 @@ class JobManager:
 		# Determine number of jobs to submit
 		submit = len(jobList)
 		if self.inQueue > 0:
-			submit = min(submit, self.inQueue - len(self.jobDB.getJobs(ClassSelector(JobClass.ATWMS))))
+			submit = min(submit, self.inQueue - self.jobDB.getJobsN(ClassSelector(JobClass.ATWMS)))
 		if self.inFlight > 0:
-			submit = min(submit, self.inFlight - len(self.jobDB.getJobs(ClassSelector(JobClass.PROCESSING))))
+			submit = min(submit, self.inFlight - self.jobDB.getJobsN(ClassSelector(JobClass.PROCESSING)))
 		if self.continuous:
 			submit = min(submit, maxsample)
 		if self.verify:
@@ -142,9 +142,9 @@ class JobManager:
 	# Verification heuristic - check whether enough jobs have succeeded before submitting more
 	# @submitCount: number of jobs to submit
 	def getVerificationSubmitThrottle(self, submitCount, _messageCache = { 'unreachableGoal' : False }):
-		jobsActive = len(self.jobDB.getJobs(ClassSelector(JobClass.PROCESSING)))
-		jobsSuccess = len(self.jobDB.getJobs(ClassSelector(JobClass.SUCCESS)))
-		jobsDone = len(self.jobDB.getJobs(ClassSelector(JobClass.PROCESSED)))
+		jobsActive = self.jobDB.getJobsN(ClassSelector(JobClass.PROCESSING))
+		jobsSuccess = self.jobDB.getJobsN(ClassSelector(JobClass.SUCCESS))
+		jobsDone = self.jobDB.getJobsN(ClassSelector(JobClass.PROCESSED))
 		jobsTotal = jobsDone + jobsActive
 		verifyIndex = bisect.bisect_left(self.verifyChunks, jobsTotal)
 		try:
@@ -242,7 +242,7 @@ class JobManager:
 		self.processIntervention(wms, self.module.getIntervention())
 
 		# Quit when all jobs are finished
-		if len(self.jobDB.getJobs(ClassSelector(JobClass.ENDSTATE))) == len(self.jobDB):
+		if self.jobDB.getJobsN(ClassSelector(JobClass.ENDSTATE)) == len(self.jobDB):
 			self.logDisabled()
 			self.eventhandler.onTaskFinish(len(self.jobDB))
 			if self.module.canFinish():
