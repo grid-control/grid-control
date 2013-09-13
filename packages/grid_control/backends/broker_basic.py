@@ -12,7 +12,9 @@ class RandomBroker(Broker):
 class UserBroker(Broker):
 	def __init__(self, config, section, userOpt, itemName, discoverFun):
 		Broker.__init__(self, config, section, userOpt, itemName, discoverFun)
-		self._itemsStart = config.getList(section, userOpt, None, mutable=True)
+		self._itemsStart = config.getList(section, userOpt, [], mutable=True)
+		if not self._itemsStart:
+			self._itemsStart = None
 
 
 class FilterBroker(UserBroker):
@@ -27,7 +29,9 @@ class FilterBroker(UserBroker):
 class CoverageBroker(Broker):
 	def __init__(self, config, section, userOpt, itemName, discoverFun):
 		Broker.__init__(self, config, section, userOpt, itemName, discoverFun)
-		itemsUser = config.getList(section, userOpt, None, mutable=True)
+		itemsUser = config.getList(section, userOpt, [], mutable=True)
+		if not itemsUser:
+			itemsUser = None
 		itemsDisc = self._discover(discoverFun).keys()
 		self._itemsStart = itemsDisc
 		if itemsDisc and itemsUser:
