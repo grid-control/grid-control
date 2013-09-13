@@ -918,7 +918,7 @@ class TwoSidedContainer:
 
 def makeEnum(members = [], cls = None):
 	if cls == None:
-		cls = type('Enum_%s' % md5(str(members)).hexdigest(), (), {})
+		cls = type('Enum_%s_%s' % (md5(str(members)).hexdigest()[:4], str.join('_', members)), (), {})
 	cls.members = members
 	cls.allMembers = range(len(members))
 	for idx, member in enumerate(members):
