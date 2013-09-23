@@ -80,7 +80,7 @@ echo
 echo "==========================="
 timestamp "CMSSW_STARTUP" "DONE"
 
-CODE=0
+GC_CMSSWRUN_RETCODE=0
 # Additional prolog scripts in the CMSSW environment
 for CMSSW_BIN in $CMSSW_PROLOG_EXEC; do
 	_PROLOG_COUNT=1
@@ -90,12 +90,12 @@ for CMSSW_BIN in $CMSSW_PROLOG_EXEC; do
 	echo "Starting $CMSSW_BIN with arguments: $CMSSW_PROLOG_ARGS"
 	checkbin "$CMSSW_BIN"
 	eval "`getexec $CMSSW_BIN` $CMSSW_PROLOG_ARGS"
-	CODE=$?
+	GC_CMSSWRUN_RETCODE=$?
 	echo
 	timestamp "CMSSW_PROLOG${_PROLOG_COUNT}" "DONE"
 	_PROLOG_COUNT=$[ $_PROLOG_COUNT +1]
-	if [ "$CODE" != "0" ];then
-		echo "Prologue $CMSSW_BIN failed with code: $CODE"
+	if [ "$GC_CMSSWRUN_RETCODE" != "0" ];then
+		echo "Prologue $CMSSW_BIN failed with code: $GC_CMSSWRUN_RETCODE"
 		echo "Aborting..."
 		break
 	fi
@@ -105,7 +105,7 @@ echo "---------------------------"
 echo
 checkdir "CMSSW working directory" "$MY_WORKDIR"
 
-if [ "$CODE" == "0" ] && [ -n "$CMSSW_CONFIG" ]; then
+if [ "$GC_CMSSWRUN_RETCODE" == "0" ] && [ -n "$CMSSW_CONFIG" ]; then
 	echo "---------------------------"
 	echo
 	cd "$MY_WORKDIR"
@@ -173,10 +173,11 @@ if [ "$CODE" == "0" ] && [ -n "$CMSSW_CONFIG" ]; then
 	echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~"
 	echo
 	(cd "$MY_WORKDIR/cmssw.dbs"; tar cvzf "$MY_WORKDIR/cmssw.dbs.tar.gz" * )
+	GC_CMSSWRUN_RETCODE=$CODE
 fi
 
 # Additional epilog scripts in the CMSSW environment
-if [ "$CODE" == "0" ]; then
+if [ "$GC_CMSSWRUN_RETCODE" == "0" ]; then
 	for CMSSW_BIN in $CMSSW_EPILOG_EXEC; do
 		_EPILOG_COUNT=1
 		timestamp "CMSSW_EPILOG${_EPILOG_COUNT}" "START"
@@ -185,12 +186,12 @@ if [ "$CODE" == "0" ]; then
 		echo "Starting $CMSSW_BIN with arguments: $CMSSW_EPILOG_ARGS"
 		checkbin "$CMSSW_BIN"
 		eval "`getexec $CMSSW_BIN` $CMSSW_EPILOG_ARGS"
-		CODE=$?
+		GC_CMSSWRUN_RETCODE=$?
 		echo
 		timestamp "CMSSW_EPILOG${_EPILOG_COUNT}" "DONE"
 		_EPILOG_COUNT=$[ $_EPILOG_COUNT +1]
-		if [ "$CODE" != "0" ];then
-			echo "Epilogue $CMSSW_BIN failed with code: $CODE"
+		if [ "$GC_CMSSWRUN_RETCODE" != "0" ];then
+			echo "Epilogue $CMSSW_BIN failed with code: $GC_CMSSWRUN_RETCODE"
 			echo "Aborting..."
 			break
 		fi
@@ -207,4 +208,4 @@ echo "---------------------------"
 echo
 my_move "$MY_WORKDIR" "$MY_SCRATCH" "$SB_OUTPUT_FILES $SE_OUTPUT_FILES"
 
-exit $CODE
+exit $GC_CMSSWRUN_RETCODE
