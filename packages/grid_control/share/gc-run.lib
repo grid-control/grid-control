@@ -224,7 +224,7 @@ getcommand() {
 }
 # merge me!
 getexec() {
-	#debug_helper $FUNCNAME "$@"
+	debug_helper $FUNCNAME "$@"
 	[ -x "$@" ] && RESULT_HERE="./$@" || [ -x "$1" ] && RESULT_HERE="./$1" || RESULT_HERE=""
 	RESULT_WHICH="$(which $@ 2> /dev/null | head -n 1)"
 	echo ${RESULT_HERE:-${RESULT_WHICH:-$1}}
@@ -666,7 +666,7 @@ timestamp() {
 	if [[ -z "$STARTDATE" ]];then
 		STARTDATE=`date +%s`
 	fi
-	echo "($(date +"%s"),$[ $(date +"%s") - $STARTDATE ],'${@:-NULL}')" >> $MY_LANDINGZONE\job.timestamps
+	echo "'${@:-UNTAGGED}':$[ $(date +"%s") - $STARTDATE ]" >> $MY_LANDINGZONE\job.timestamps
 	echo "[$(date +"%Y:%m:%d-%k:%M:%S")] $@"
 }
 
@@ -674,14 +674,15 @@ timereport() {
 	debug_helper $FUNCNAME "$@"
 	echo "==========================="
 	echo "== ===  Job timing  ==== =="
-	echo "Abs,Rel,TAG"
+	echo "jobstart=$STARTDATE"
+	echo "Tag : Time"
 	cat $MY_LANDINGZONE\job.timestamps
 	echo "==========================="
-	echo -n "timestamps = [" >> $MY_LANDINGZONE/job.info
+	echo "timestamps={" >> $MY_LANDINGZONE/job.info
 	while read line; do
-		echo -n "$line," >> $MY_LANDINGZONE/job.info
+		echo "		$line," >> $MY_LANDINGZONE/job.info
 	done < $MY_LANDINGZONE\job.timestamps
-	echo "]" >> $MY_LANDINGZONE/job.info
+	echo "	}" >> $MY_LANDINGZONE/job.info
 }
 
 timeprocess() {
