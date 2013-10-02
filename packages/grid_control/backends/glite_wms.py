@@ -99,7 +99,7 @@ class DiscoverWMS_Lazy: # TODO: Move to broker infrastructure
 		wms_best_list.sort(key = lambda (name, ping): ping)
 		result = choice_exp(wms_best_list)
 		if result != None:
-			wms, ping = result # reduce timeout by 10min for chosen wms => re-ping every 3 submits
+			wms, ping = result # reduce timeout by 5min for chosen wms => re-ping every 6 submits
 			self.pingDict[wms] = (ping, self.pingDict[wms][1] + 5*60)
 			result = wms
 		self.updateState()

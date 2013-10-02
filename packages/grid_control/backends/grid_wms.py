@@ -1,5 +1,5 @@
 from python_compat import *
-import os, time, copy, tempfile, tarfile
+import sys, os, time, copy, tempfile, tarfile
 from grid_control import QM, ConfigError, APIError, RethrowError, Job, utils
 from wms import WMS, BasicWMS
 
@@ -39,6 +39,7 @@ class GridWMS(BasicWMS):
 		self._submitParams = {}
 		self._ce = config.get(self._getSections('backend'), 'ce', '', mutable=True)
 		self._configVO = config.getPath(self._getSections('backend'), 'config', '', mutable=True)
+		self._warnSBSize = config.getInt(self._getSections('backend'), 'warn sb size', 5 * 1024 * 1024)
 
 
 	def getSites(self):
@@ -97,6 +98,12 @@ class GridWMS(BasicWMS):
 		else:
 			self._writeJobConfig(cfgPath, jobNum, module)
 			sandboxOutJDL = sbOut
+		# Warn about too large sandboxes
+		sbSizes = map(os.path.getsize, sbIn)
+		if sbSizes and (self._warnSBSize > 0) and (sum(sbSizes) > self._warnSBSize):
+			if not utils.getUserBool('Sandbox is very large (%d bytes) and can cause issues with the WMS! Do you want to continue?' % sum(sbSizes), False):
+				sys.exit(0)
+			self._warnSBSize = 0
 
 		reqs = self.brokerSite.brokerAdd(module.getRequirements(jobNum), WMS.SITES)
 		formatStrList = lambda strList: '{ %s }' % str.join(', ', map(lambda x: '"%s"' % x, strList))
