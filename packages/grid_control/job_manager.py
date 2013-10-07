@@ -5,11 +5,11 @@ from job_selector import JobSelector, ClassSelector, AndJobSelector
 from python_compat import *
 
 class JobManager:
-	def __init__(self, config, module, eventhandler):
-		(self.module, self.eventhandler) = (module, eventhandler)
+	def __init__(self, config, task, eventhandler):
+		(self.task, self.eventhandler) = (task, eventhandler)
 		self.jobLimit = config.getInt('jobs', 'jobs', -1, mutable=True)
-		selected = JobSelector.create(config.get('jobs', 'selected', '', mutable=True), module = self.module)
-		self.jobDB = JobDB(config, self.getMaxJobs(self.module), selected)
+		selected = JobSelector.create(config.get('jobs', 'selected', '', mutable=True), task = self.task)
+		self.jobDB = JobDB(config, self.getMaxJobs(self.task), selected)
 		self.disableLog = os.path.join(config.workDir, 'disabled')
 
 		self.timeout = config.getTime('jobs', 'queue timeout', -1, mutable=True)
@@ -32,17 +32,17 @@ class JobManager:
 			utils.vprint('Enforcing the following (chunksize x ratio) sequence:', level=0)
 			utils.vprint(" > ".join(map(lambda tpl: "%d x %4.2f"%(tpl[0], tpl[1]), zip(self.verifyChunks, self.verifyThresh))), level=0)
 
-	def getMaxJobs(self, module):
+	def getMaxJobs(self, task):
 		nJobs = self.jobLimit
 		if nJobs < 0:
-			# No valid number of jobs given in config file - module has to provide number of jobs
-			nJobs = module.getMaxJobs()
+			# No valid number of jobs given in config file - task has to provide number of jobs
+			nJobs = task.getMaxJobs()
 			if nJobs == None:
 				raise ConfigError("Task module doesn't provide max number of Jobs!")
 		else:
 			# Task module doesn't have to provide number of jobs
 			try:
-				maxJobs = module.getMaxJobs()
+				maxJobs = task.getMaxJobs()
 				if maxJobs and (nJobs > maxJobs):
 					print 'Maximum number of jobs given as %d was truncated to %d' % (nJobs, maxJobs)
 					nJobs = maxJobs
@@ -88,7 +88,7 @@ class JobManager:
 				msg.append('error code: %d' % jobObj.get('retcode'))
 				try:
 					if utils.verbosity() > 0:
-						msg.append(self.module.errorDict[jobObj.get('retcode')])
+						msg.append(self.task.errorDict[jobObj.get('retcode')])
 				except:
 					pass
 			if jobObj.get('dest'):
@@ -112,13 +112,13 @@ class JobManager:
 		retryOK = readyList
 		if self.maxRetry >= 0:
 			retryOK = filter(lambda x: self.jobDB.get(x, Job()).attempt - 1 < self.maxRetry, readyList)
-		modOK = filter(self.module.canSubmit, readyList)
+		modOK = filter(self.task.canSubmit, readyList)
 		jobList = set.intersection(set(retryOK), set(modOK))
 
 		if static['showBlocker'] and len(readyList) > 0 and len(jobList) == 0: # No submission but ready jobs
 			err = []
 			err += QM(len(retryOK) > 0 and len(modOK) == 0, [], ['have hit their maximum number of retries'])
-			err += QM(len(retryOK) == 0 and len(modOK) > 0, [], ['are vetoed by the job module'])
+			err += QM(len(retryOK) == 0 and len(modOK) > 0, [], ['are vetoed by the task module'])
 			utils.vprint('All remaining jobs %s!' % str.join(QM(retryOK or modOK, ' or ', ' and '), err), -1, True)
 		static['showBlocker'] = not (len(readyList) > 0 and len(jobList) == 0)
 
@@ -170,7 +170,7 @@ class JobManager:
 			return False
 
 		submitted = []
-		for jobNum, wmsId, data in wms.submitJobs(jobList, self.module):
+		for jobNum, wmsId, data in wms.submitJobs(jobList, self.task):
 			submitted.append(jobNum)
 			jobObj = self.jobDB.get(jobNum, create = True)
 
@@ -238,14 +238,14 @@ class JobManager:
 			print '\nTimeout for the following jobs:'
 			self.cancel(wms, timeoutList)
 
-		# Process module interventions
-		self.processIntervention(wms, self.module.getIntervention())
+		# Process task interventions
+		self.processIntervention(wms, self.task.getIntervention())
 
 		# Quit when all jobs are finished
 		if self.jobDB.getJobsN(ClassSelector(JobClass.ENDSTATE)) == len(self.jobDB):
 			self.logDisabled()
 			self.eventhandler.onTaskFinish(len(self.jobDB))
-			if self.module.canFinish():
+			if self.task.canFinish():
 				utils.vprint('Task successfully completed. Quitting grid-control!', -1, True)
 				utils.abort(True)
 
@@ -312,7 +312,7 @@ class JobManager:
 
 
 	def delete(self, wms, select):
-		selector = AndJobSelector(ClassSelector(JobClass.PROCESSING), JobSelector.create(select, module = self.module))
+		selector = AndJobSelector(ClassSelector(JobClass.PROCESSING), JobSelector.create(select, task = self.task))
 		jobs = self.jobDB.getJobs(selector)
 		if jobs:
 			print '\nCancelling the following jobs:'
@@ -320,7 +320,7 @@ class JobManager:
 
 
 	def reset(self, wms, select):
-		jobs = self.jobDB.getJobs(JobSelector.create(select, module = self.module))
+		jobs = self.jobDB.getJobs(JobSelector.create(select, task = self.task))
 		if jobs:
 			print '\nResetting the following jobs:'
 			Report(self.jobDB, jobs).details()
@@ -330,7 +330,7 @@ class JobManager:
 					self.jobDB.commit(jobNum, Job())
 
 
-	# Process changes of job states requested by job module
+	# Process changes of job states requested by task module
 	def processIntervention(self, wms, jobChanges):
 		def resetState(jobs, newState):
 			jobSet = set(jobs)
@@ -348,9 +348,9 @@ class JobManager:
 			(redo, disable, sizeChange) = jobChanges
 			if (redo == []) and (disable == []) and (sizeChange == False):
 				return
-			utils.vprint('The job module has requested changes to the job database', -1, True)
+			utils.vprint('The task module has requested changes to the job database', -1, True)
 			if sizeChange:
-				newMaxJobs = self.getMaxJobs(self.module)
+				newMaxJobs = self.getMaxJobs(self.task)
 				utils.vprint('Number of jobs changed from %d to %d' % (len(self.jobDB), newMaxJobs), -1, True)
 				self.jobDB.jobLimit = newMaxJobs
 			self.cancel(wms, self.jobDB.getJobs(ClassSelector(JobClass.PROCESSING), redo))
