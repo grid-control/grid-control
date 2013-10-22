@@ -205,7 +205,7 @@ def realmain(opts, args):
 			if opts.markEmptyFailed:
 				failJob = True
 			else:
-				return incInfo("No files")
+				return incInfo("No files for job " + str(jobNum))
 
 		for (fileIdx, fileInfo) in enumerate(files):
 			(hash, name_local, name_dest, pathSE) = fileInfo
