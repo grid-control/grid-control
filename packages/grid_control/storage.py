@@ -43,7 +43,7 @@ StorageManager.dynamicLoaderPath()
 class LocalSBStorageManager(StorageManager):
 	def __init__(self, config, section, optDefault, optPrefix, varPrefix):
 		StorageManager.__init__(self, config, section, optDefault, optPrefix, varPrefix)
-		self.sbPath = config.getPath(section, '%s path' % optDefault, os.path.join(config.workDir, 'sandbox'), check=False)
+		self.sbPath = config.getPath(section, '%s path' % optDefault, os.path.join(config.workDir, 'sandbox'), mustExist = False)
 
 	def doTransfer(self, listDescSourceTarget):
 		for (desc, source, target) in listDescSourceTarget:

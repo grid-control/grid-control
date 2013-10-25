@@ -89,7 +89,7 @@ for CMSSW_BIN in $CMSSW_PROLOG_EXEC; do
 	echo
 	echo "Starting $CMSSW_BIN with arguments: $CMSSW_PROLOG_ARGS"
 	checkbin "$CMSSW_BIN"
-	eval "`getexec $CMSSW_BIN` $CMSSW_PROLOG_ARGS"
+	eval "$CMSSW_BIN $CMSSW_PROLOG_ARGS"
 	GC_CMSSWRUN_RETCODE=$?
 	echo
 	timestamp "CMSSW_PROLOG${_PROLOG_COUNT}" "DONE"
@@ -185,7 +185,7 @@ if [ "$GC_CMSSWRUN_RETCODE" == "0" ]; then
 		echo
 		echo "Starting $CMSSW_BIN with arguments: $CMSSW_EPILOG_ARGS"
 		checkbin "$CMSSW_BIN"
-		eval "`getexec $CMSSW_BIN` $CMSSW_EPILOG_ARGS"
+		eval "$CMSSW_BIN $CMSSW_EPILOG_ARGS"
 		GC_CMSSWRUN_RETCODE=$?
 		echo
 		timestamp "CMSSW_EPILOG${_EPILOG_COUNT}" "DONE"

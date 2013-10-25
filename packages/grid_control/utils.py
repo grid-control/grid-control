@@ -24,12 +24,12 @@ def getRootName(fn): # Return file name without extension
 pathGC = lambda *args: cleanPath(os.path.join(sys.path[1], '..', *args))
 pathShare = lambda *args, **kw: cleanPath(os.path.join(sys.path[1], kw.get('pkg', 'grid_control'), 'share', *args))
 
-def resolvePath(path, userpath = [], check = True, ErrorClass = RuntimeError):
+def resolvePath(path, userpath = [], mustExist = True, ErrorClass = RuntimeError):
 	searchpaths = uniqueListLR(['', os.getcwd(), pathGC()] + userpath)
 	for spath in searchpaths:
 		if os.path.exists(cleanPath(os.path.join(spath, path))):
 			return cleanPath(os.path.join(spath, path))
-	if check:
+	if mustExist:
 		raise ErrorClass('Could not find file "%s" in \n\t%s' % (path, str.join('\n\t', searchpaths)))
 	return cleanPath(path)
 

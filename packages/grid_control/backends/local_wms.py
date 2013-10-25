@@ -13,7 +13,7 @@ class LocalWMS(BasicWMS):
 		self.brokerQueue = self._createBroker('queue broker', 'UserBroker', 'queue', 'queues', self.getQueues)
 
 		self.sandCache = []
-		self.sandPath = config.getPath('local', 'sandbox path', os.path.join(config.workDir, 'sandbox'), check=False)
+		self.sandPath = config.getPath('local', 'sandbox path', os.path.join(config.workDir, 'sandbox'), mustExist = False)
 		self.scratchPath = config.getList('local', 'scratch path', ['TMPDIR', '/tmp'], mutable=True)
 
 

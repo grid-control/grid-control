@@ -85,7 +85,7 @@ class Condor(BasicWMS):
 		self.poolQuery = config.getDict(self._getSections("backend"), 'poolArgs query', {})[0]
 		self._formatStatusReturnQuery(config)
 		# Sandbox base path where individual job data is stored, staged and returned to
-		self.sandPath = config.getPath(self._getSections("local"), 'sandbox path', os.path.join(config.workDir, 'sandbox'), check=False)
+		self.sandPath = config.getPath(self._getSections("local"), 'sandbox path', os.path.join(config.workDir, 'sandbox'), mustExist = False)
 		# history query is faster with split files - check if and how this is used
 		# default condor_history command works WITHOUT explicitly specified file
 		self.historyFile = None

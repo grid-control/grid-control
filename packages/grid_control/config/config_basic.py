@@ -48,7 +48,7 @@ class Config:
 		hostCfg = map(lambda c: utils.pathGC('config/%s.conf' % host.split('.', c)[-1]), range(host.count('.') + 1, 0, -1))
 		defaultCfg = ['/etc/grid-control.conf', '~/.grid-control.conf', utils.pathGC('config/default.conf')]
 		# Read default config files
-		for cfgFile in filter(os.path.exists, map(lambda p: utils.resolvePath(p, check = False), hostCfg + defaultCfg)):
+		for cfgFile in filter(os.path.exists, map(lambda p: utils.resolvePath(p, mustExist = False), hostCfg + defaultCfg)):
 			self.parseFile(cfgFile)
 
 		if configFile:
@@ -58,8 +58,8 @@ class Config:
 			self.parseFile(configFile)
 		else:
 			(self.baseDir, self.configFile, self.confName) = ('.', 'gc.conf', 'gc')
-		wdBase = self.getPath('global', 'workdir base', self.baseDir, check = False)
-		self.workDir = self.getPath('global', 'workdir', os.path.join(wdBase, 'work.' + self.confName), check = False)
+		wdBase = self.getPath('global', 'workdir base', self.baseDir, mustExist = False)
+		self.workDir = self.getPath('global', 'workdir', os.path.join(wdBase, 'work.' + self.confName), mustExist = False)
 
 		# Override config settings via dictionary
 		for section in configDict:
@@ -243,29 +243,29 @@ class Config:
 		return result
 
 
-	def parsePath(self, value, check):
+	def parsePath(self, value, mustExist):
 		if value == '':
 			return ''
 		try:
-			return utils.resolvePath(value, [self.baseDir], check, ConfigError)
+			return utils.resolvePath(value, [self.baseDir], mustExist, ConfigError)
 		except:
 			raise RethrowError('Error resolving path %s' % value, ConfigError)
 
 
-	def getPath(self, section, item, default = noDefault, mutable = False, noVar = True, check = True):
-		return self.getTyped('path', str, lambda p: self.parsePath(p, check), section, item, default, mutable, noVar)
+	def getPath(self, section, item, default = noDefault, mutable = False, noVar = True, mustExist = True):
+		return self.getTyped('path', str, lambda p: self.parsePath(p, mustExist), section, item, default, mutable, noVar)
 
 
-	def parsePaths(self, value, check):
+	def parsePaths(self, value, mustExist):
 		result = []
 		for path in utils.parseList(value, None, onEmpty = []):
-			result.append(self.parsePath(path, check))
+			result.append(self.parsePath(path, mustExist))
 		return result
 
 
-	def getPaths(self, section, item, default = noDefault, mutable = False, noVar = True, check = True):
+	def getPaths(self, section, item, default = noDefault, mutable = False, noVar = True, mustExist = True):
 		value2str = lambda value: '\n' + str.join('\n', value)
-		return self.getTyped('paths', value2str, lambda pl: self.parsePaths(pl, check), section, item, default, mutable, noVar)
+		return self.getTyped('paths', value2str, lambda pl: self.parsePaths(pl, mustExist), section, item, default, mutable, noVar)
 
 
 	def getOptions(self, section):

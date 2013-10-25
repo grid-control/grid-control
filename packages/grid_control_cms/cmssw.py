@@ -102,7 +102,7 @@ class CMSSW(DataTask):
 		# Get cmssw config files and check their existance
 		self.configFiles = []
 		cfgDefault = QM(self.prolog.isActive() or self.epilog.isActive(), [], noDefault)
-		for cfgFile in config.getPaths(self.__class__.__name__, 'config file', cfgDefault, check = False):
+		for cfgFile in config.getPaths(self.__class__.__name__, 'config file', cfgDefault, mustExist = False):
 			newPath = os.path.join(config.workDir, os.path.basename(cfgFile))
 			if config.opts.init:
 				if not os.path.exists(cfgFile):
