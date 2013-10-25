@@ -25,7 +25,7 @@ pathGC = lambda *args: cleanPath(os.path.join(sys.path[1], '..', *args))
 pathShare = lambda *args, **kw: cleanPath(os.path.join(sys.path[1], kw.get('pkg', 'grid_control'), 'share', *args))
 
 def resolvePath(path, userpath = [], check = True, ErrorClass = RuntimeError):
-	searchpaths = [ '', os.getcwd(), pathGC() ] + userpath
+	searchpaths = uniqueListLR(['', os.getcwd(), pathGC()] + userpath)
 	for spath in searchpaths:
 		if os.path.exists(cleanPath(os.path.join(spath, path))):
 			return cleanPath(os.path.join(spath, path))
@@ -439,13 +439,18 @@ strGuid = lambda guid: '%s-%s-%s-%s-%s' % (guid[:8], guid[8:12], guid[12:16], gu
 
 listMapReduce = lambda fun, lst, start = []: reduce(operator.add, map(fun, lst), start)
 
-def uniqueListRL(inList): # (right to left)
-	inList.reverse() # Duplicated items are removed from the left [a,b,a] -> [b,a]
-	tmpSet, result = (set(), [])
+def uniqueListLR(inList): # (left to right)
+	tmpSet, result = (set(), []) # Duplicated items are removed from the right [a,b,a] -> [a,b]
 	for x in inList:
 		if x not in tmpSet:
 			result.append(x)
 			tmpSet.add(x)
+	return result
+
+
+def uniqueListRL(inList): # (right to left)
+	inList.reverse() # Duplicated items are removed from the left [a,b,a] -> [b,a]
+	result = uniqueListLR(inList)
 	result.reverse()
 	return result
 
