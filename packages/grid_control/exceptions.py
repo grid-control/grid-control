@@ -1,9 +1,9 @@
-import sys
+import sys, logging
 from python_compat import *
 
 # Exception handler which outputs a stack trace to the logging facility
 def logException_internal(exClass, exValue, stack):
-	import logging, linecache, time
+	import linecache, time
 	log = logging.getLogger('exception')
 	counter = 0
 	log.critical('Exception occured: %s' % time.strftime("%Y-%m-%d %H:%M:%S"))
@@ -50,6 +50,11 @@ def handleException(fun, *args, **kwargs):
 		sys.exit(sys.exc_info()[1].code)
 	except:
 		sys.stderr.write(logException())
+		for handler in logging.getLogger('exception').handlers:
+			if isinstance(handler, logging.FileHandler):
+				sys.stderr.write('In case this is caused by a bug, please send the log file:\n')
+				sys.stderr.write('\t"%s"\nto grid-control-dev@googlegroups.com\n' % handler.baseFilename)
+				break
 		sys.exit(1)
 
 class GCError(Exception):
