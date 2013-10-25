@@ -10,6 +10,7 @@ def logging_defaults():
 	handler_ex = logging.FileHandler(os.path.join(sys.path[1], '..', 'debug.log'), 'w')
 	logging.getLogger("exception").propagate = False
 	logging.getLogger("exception").addHandler(handler_ex)
+	#logging.getLogger("exception").addHandler(sh) - for debugging purposes
 	# Register new log levels
 	levelDict = {'DEFAULT_VERBOSITY': 14, # setLevel(logging.DEFAULT_VERBOSITY - opts.verbosity)
 		'INFO1': 13, 'INFO2': 12, 'INFO3': 11, 'DEBUG1': 9, 'DEBUG2': 8, 'DEBUG3': 7}
