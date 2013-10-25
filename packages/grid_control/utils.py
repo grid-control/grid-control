@@ -30,7 +30,7 @@ def resolvePath(path, userpath = [], check = True, ErrorClass = RuntimeError):
 		if os.path.exists(cleanPath(os.path.join(spath, path))):
 			return cleanPath(os.path.join(spath, path))
 	if check:
-		raise ErrorClass('Could not find file %s in \n\t%s' % (path, str.join('\n\t', searchpaths)))
+		raise ErrorClass('Could not find file "%s" in \n\t%s' % (path, str.join('\n\t', searchpaths)))
 	return cleanPath(path)
 
 
