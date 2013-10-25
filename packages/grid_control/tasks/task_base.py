@@ -144,7 +144,7 @@ class TaskModule(AbstractObject):
 
 	# Get files for input sandbox
 	def getSBInFiles(self):
-		return map(lambda p: utils.resolvePath(p, [self.config.baseDir], False), self.sbInputFiles)
+		return map(lambda p: self.config.parsePath(p, mustExist = False), self.sbInputFiles)
 
 
 	# Get files for output sandbox
