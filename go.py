@@ -51,38 +51,15 @@ if __name__ == '__main__':
 	(opts, args) = parser.parse_args()
 	utils.verbosity(opts.verbosity)
 	logging.getLogger().setLevel(logging.DEFAULT_VERBOSITY - opts.verbosity)
-
-	# Allow to override config options on the command line:
-	configDict = {}
-	for uopt in opts.override:
-		try:
-			section, tmp = tuple(uopt.lstrip('[').split(']', 1))
-			key, value = tuple(map(str.strip, tmp.split('=', 1)))
-			configDict.setdefault(section, {})[key] = value
-		except:
-			raise RethrowError('Unable to parse option %s' % uopt, ConfigError)
-
 	# we need exactly one positional argument (config file)
 	if len(args) != 1:
 		utils.exitWithUsage(usage, 'Config file not specified!')
 
 	# big try... except block to catch exceptions and print error message
 	def main():
-		config = Config(args[0], configDict)
-		logging_setup(config)
-		# Read default command line options from config file
-		defaultCmdLine = config.get('global', 'cmdargs', '', mutable=True)
-		(opts.reportSite, opts.reportTime, opts.reportMod) = (0, 0, 0)
-		parser.parse_args(args = defaultCmdLine.split() + sys.argv[1:], values = opts)
-		def setConfigFromOpt(option, section, item, fun = lambda x: str(x)):
-			if option != None:
-				config.set(section, item, fun(option))
-		for (cfgopt, cmdopt) in {'max retry': opts.maxRetry, 'action': opts.action,
-				'continuous': opts.continuous, 'selected': opts.selector}.items():
-			setConfigFromOpt(cmdopt, 'jobs', cfgopt)
-		setConfigFromOpt(opts.gui, 'global', 'gui')
+		config = Config(configFile = args[0], optParser = parser)
 		config.opts = opts
-		overlay = ConfigOverlay.open(config.get('global', 'config mode', 'verbatim'), config)
+		logging_setup(config)
 
 		# Check work dir validity (default work directory is the config file name)
 		if not os.path.exists(config.workDir):
@@ -153,18 +130,13 @@ if __name__ == '__main__':
 		runContinuous = config.getBool('jobs', 'continuous', False, mutable=True)
 
 		initSentinel.checkpoint('config')
-		savedConfigPath = os.path.join(config.workDir, 'work.conf')
 		if not opts.init:
-			# Compare config files
-			if config.needInit(savedConfigPath):
+			if config._todo_remove_major_change:
 				if utils.getUserBool('\nQuit grid-control in order to initialize the task again?', False):
 					sys.exit(0)
 				if utils.getUserBool('\nOverwrite currently saved configuration to remove warning in the future?', False):
-					config.prettyPrint(open(savedConfigPath, 'w'))
-		else:
-			# Save working config file - no runtime config file changes should happen after this point
-			config.prettyPrint(open(savedConfigPath, 'w'))
-		config.allowSet = False
+					config.freezeConfig(writeConfig = True)
+		config.freezeConfig(writeConfig = opts.init)
 
 		if runContinuous and guiClass == 'SimpleConsole':
 			utils.vprint(level = -1)
