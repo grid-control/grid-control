@@ -18,33 +18,59 @@ def multi_line_format(value):
 
 # Holder of config information
 class ConfigEntry(object):
-	def __init__(self, value, source):
-		(self.section, self.option) = (None, None)
+	def __init__(self, value, source, section = None, option = None, default = notSet, accessed = False):
+		(self.section, self.option) = (section, option)
 		(self.value, self.source) = (value, source)
-		(self.default, self.accessed) = (notSet, False)
+		(self.default, self.accessed) = (default, accessed)
 
 	def __repr__(self):
 		return '%s(%r)' % (self.__class__.__name__, self.__dict__)
 
-	def format(self, section, value = None):
-		result = ''
-		if section:
-			result += '[%s] ' % self.section
-		value = QM(value == None, self.value, value)
+	def format(self, printSection = False, printDefaultValue = False):
+		entries = self._format(self.value)
+		if printSection: # Print prefix with section information
+			entries = map(lambda entry: '[%s] %s' % (self.section, entry), entries)
+		if printDefaultValue and (self.default not in [notSet, noDefault]): # Add default information
+			defentries = self._format([self.default], printOption = False)
+			assert(len(defentries) == 1) # Defaults can't be queues!
+			lines_def = map(str.lstrip, defentries[0].splitlines())
+			lines_def[0] = 'Default: %s' % lines_def[0]
+			lines_val = entries[0].splitlines()
+			tmp = [] # Combine values and defaults line-wise.
+			for line in range(max(len(lines_def), len(lines_val))):
+				if (line < len(lines_val)) and (line < len(lines_def)):
+					tmp.append('%s ; %s' % (lines_val[line], lines_def[line]))
+				elif line < len(lines_val):
+					tmp.append(lines_val[line])
+				elif line < len(lines_def):
+					tmp.append('\t ; %s' % lines_def[line])
+			entries = [str.join('\n', tmp)] + entries[1:]
+		return str.join('\n', entries)
+
+	# Returns list of option settings corresponding to the current set
+	def _format(self, value, printOption = True):
+		# Package resolved values into list container
 		value = QM(isinstance(value, list), value, [value])
-		if isinstance(self.value, list) and (notSet in self.value):
-			if self.value[0] == notSet:
-				result += '%s +=' % self.option
-				return result + multi_line_format(str.join('\n', value[1:]).strip())
-			elif self.value[-1] == notSet:
-				result += '%s ^=' % self.option
-				return result + multi_line_format(str.join('\n', value[:-1]).strip())
+		# Handle value queues
+		if notSet in value:
+			if value[0] == notSet:
+				# Return current append queue
+				result = '%s +=' % self.option
+				return [result + multi_line_format(str.join('\n', value[1:]).strip())]
+			elif value[-1] == notSet:
+				# Return current prepend queue
+				result = '%s ^=' % self.option
+				return [result + multi_line_format(str.join('\n', value[:-1]).strip())]
 			else:
+				# In case of append / prepend queues, multiple settings are necessary to reflect the setup
 				idx = value.index(notSet)
-				return self.format(section, value[:idx + 1]) + '\n' + self.format(section, value[idx:])
+				return [self._format(value[:idx + 1]), self._format(value[idx:])]
 		else:
-			result += '%s =' % self.option
-			return result + multi_line_format(str.join('\n', value).strip())
+			# Simple value handling
+			result = multi_line_format(str.join('\n', value).strip())
+			if printOption:
+				return [('%s =' % self.option) + result]
+			return [result]
 
 
 # Container for config data - initialized from config file / dict, providing accessors
@@ -61,8 +87,13 @@ class ConfigContainer(object):
 				yield self._content[section][option]
 
 
-	def getOptions(self, section):
-		return sorted(self._content.get(standardConfigForm(section), {}).keys())
+	def getOptions(self, section, getDefault = False):
+		result = []
+		content_section = self._content.get(standardConfigForm(section), {})
+		for option in content_section:
+			if getDefault or (content_section.get(option).source not in ['<default>', '<default-unmarked>']):
+				result.append(option)
+		return result
 
 
 	def setEntry(self, section, option, value, source, markAccessed = False):
@@ -124,9 +155,9 @@ class ConfigContainer(object):
 				entry = ConfigEntry([default], '<default-unmarked>') # store default value
 			(entry.section, entry.option) = (section, option)
 			self._content[section][option] = entry
-			self._logger.log(logging.INFO3, 'Using default value %s' % entry.format(section = True))
+			self._logger.log(logging.INFO3, 'Using default value %s' % entry.format(printSection = True))
 		else:
-			self._logger.log(logging.INFO3, 'Using user supplied %s' % entry.format(section = True))
+			self._logger.log(logging.INFO3, 'Using user supplied %s' % entry.format(printSection = True))
 		if (entry.default != notSet) and (entry.default != default):
 			raise APIError('Inconsistent default values: [%s] "%s"' % (section, option))
 		(entry.default, entry.accessed) = (default, True) # store default value and access
@@ -137,7 +168,7 @@ class ConfigContainer(object):
 		return entry
 
 
-	def write(self, stream, printDefault = True, printUnused = True, printHeader = True):
+	def write(self, stream, printDefault = True, printUnused = True, printDynamic = True, printHeader = True):
 		if printHeader:
 			stream.write('\n; %s\n; This is the %s set of %sconfig options:\n; %s\n\n' % \
 				('='*60, utils.QM(printDefault, 'complete', 'minimal'), utils.QM(printUnused, '', 'used '), '='*60))
@@ -145,24 +176,14 @@ class ConfigContainer(object):
 		def addToOutput(section, value, prefix = '\t'):
 			output.setdefault(section.lower(), ['[%s]' % section]).append(value)
 		for entry in self.iterContent(accessed = True): 
-			# Don't print dynamically set config options unless requested
-			isDynamic = entry.source in ['<default>', '<dict>', '<cmdline>', '<cmdline override>', '<dynamic>']
-			if not printDefault and isDynamic:
+			# Don't print default values
+			if not printDefault and (entry.source == '<default>'):
 				continue
-			value_str = entry.format(section = False)
-			default_str = ''
-			if (entry.default not in [notSet, noDefault]) and not isDynamic:
-				if '\n' not in entry.default:
-					default_str = ' ; Default:'
-				else:
-					default_str = '\n; Default setting: %s =' % entry.option
-				default_str += multi_line_format(entry.default).replace('\n', '\n;')
-			if '\n' not in default_str and '\n' in value_str:
-				value_str = value_str.replace('\n', default_str + '\n', 1)
-			else:
-				value_str += default_str
-			addToOutput(entry.section, value_str)
+			# Don't print dynamically set config options
+			if not printDynamic and (entry.source in ['<dict>', '<cmdline>', '<cmdline override>', '<dynamic>']):
+				continue
+			addToOutput(entry.section, entry.format(printDefaultValue = (entry.value != entry.default)))
 		if printUnused:
 			for entry in self.iterContent(accessed = False):
-				addToOutput(entry.section, entry.format(section = False))
+				addToOutput(entry.section, entry.format(printSection = False, printDefaultValue = False))
 		stream.write('%s\n' % str.join('\n\n', map(lambda s: str.join('\n', output[s]), sorted(output))))
