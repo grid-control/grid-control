@@ -219,18 +219,18 @@ class Config(ConfigBase):
 		# Returned class is only using the new getter API
 		class ResolvedConfigBase(ConfigBase):
 			def __init__(self, config, scope):
-				self.scope = scope
+				(self.config, self.scope) = (config, scope)
 				def mySet(option, value, *args, **kwargs):
-					return config.set(scope, option, value, *args, **kwargs)
+					return self.config.set(scope, option, value, *args, **kwargs)
 				def myGet(desc, obj2str, str2obj, option, *args, **kwargs):
-					primedResolver = lambda cc: config._resolver.getSource(cc, section, option)
-					return config.getTyped(desc, obj2str, str2obj, primedResolver, *args, **kwargs)
+					primedResolver = lambda cc: self.config._resolver.getSource(cc, self.scope, option)
+					return self.config.getTyped(desc, obj2str, str2obj, primedResolver, *args, **kwargs)
 				def myIter():
-					return config.getOptions(scope)
+					return self.config.getOptions(scope)
 				ConfigBase.__init__(self, mySet, myGet, myIter, config._baseDir)
 
 			# Factory for more specific instances
-			def getScoped(self, scope):
-				return ResolvedConfigBase(config, self.scope + scope)
+			def getScoped(self, scope_left = [], scope_right = []):
+				return ResolvedConfigBase(self.config, scope_left + self.scope + scope_right)
 
 		return ResolvedConfigBase(self, section)
