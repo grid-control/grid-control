@@ -37,8 +37,10 @@ class BasicParameterFactory(ParameterFactory):
 		for cName in map(str.strip, config.getList(sections, 'constants', [])):
 			self._addConstantPlugin(config, sections, cName, cName)
 		# Random number variables
-		for (idx, seed) in enumerate(self._getSeeds(config)):
-			self.constSources.append(CounterParameterSource('SEED_%d' % idx, seed))
+		nseeds = config.getInt('jobs', 'nseeds', 10)
+		newSeeds = map(lambda x: str(random.randint(0, 10000000)), range(nseeds))
+		for (idx, seed) in enumerate(config.getList('jobs', 'seeds', newSeeds, persistent = True)):
+			self.constSources.append(CounterParameterSource('SEED_%d' % idx, int(seed)))
 		self.repeat = config.getInt(sections, 'repeat', 1, mutable=True) # ALL config.x -> paramconfig.x !
 
 
@@ -48,18 +50,6 @@ class BasicParameterFactory(ParameterFactory):
 			self.lookupSources.append(LookupParameterSource(varName, config.getDict(sections, cName, {}), lookupVar))
 		else:
 			self.constSources.append(ConstParameterSource(varName, config.get(sections, cName, '').strip()))
-
-
-	def _getSeeds(self, config):
-		seeds = map(int, config.getList('jobs', 'seeds', []))
-		nseeds = config.getInt('jobs', 'nseeds', 10)
-		if len(seeds) == 0:
-			# args specified => gen seeds
-			newSeeds = str.join(' ', map(lambda x: str(random.randint(0, 10000000)), range(nseeds)))
-			seeds = map(int, str(config.getTaskDict().get('seeds', newSeeds)).split())
-			utils.vprint('Using random seeds... %s' % seeds, once = True)
-		config.getTaskDict().write({'seeds': str.join(' ', map(str, seeds))})
-		return seeds
 
 
 	def _getRawSource(self, parent):

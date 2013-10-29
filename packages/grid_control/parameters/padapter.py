@@ -89,7 +89,7 @@ class TrackedParameterAdapter(BasicParameterAdapter):
 		userResync = config.opts.resync
 		needResync = False
 		pHash = self._rawSource.getHash()
-		self.storedHash = config.getTaskDict().get('parameter hash', pHash)
+		self.storedHash = config.get('parameters', 'parameter hash', pHash, persistent = True)
 		if self.storedHash != pHash:
 			needResync = True # Resync needed if parameters have changed
 		doResync = (userResync or needResync) and not doInit

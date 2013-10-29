@@ -85,6 +85,8 @@ if __name__ == '__main__':
 		# Initialise application module
 		initSentinel.checkpoint('module')
 		module = TaskModule.open(config.get('global', ['task', 'module']), config)
+		utils.vprint('Current task ID: %s' % module.taskID, -1)
+		utils.vprint('Task started on %s' % module.taskDate, -1)
 
 		# Give help about variables
 		if opts.help_vars:

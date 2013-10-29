@@ -1,4 +1,4 @@
-import os, inspect, logging, ConfigParser, StringIO
+import os, inspect, logging, ConfigParser
 from grid_control import *
 from python_compat import *
 from container_base import noDefault, standardConfigForm, ConfigContainer
@@ -74,7 +74,26 @@ class BaseConfigResolver:
 		return standardConfigForm(option) in self.getOptions(container, section)
 
 
-class Config(ConfigBase):
+# Class returned from getScoped calls - it is only using the new getter API
+class ResolvedConfigBase(ConfigBase):
+	def __init__(self, config, scope):
+		(self._config, self._scope) = (config, scope)
+		def mySet(option, value, *args, **kwargs):
+			return self._config.set(scope, option, value, *args, **kwargs)
+		def myGet(desc, obj2str, str2obj, option, *args, **kwargs):
+			primedResolver = lambda cc: self._config._resolver.getSource(cc, self._scope, option)
+			return self._config.getTyped(desc, obj2str, str2obj, primedResolver, *args, **kwargs)
+		def myIter():
+			return self._config.getOptions(scope)
+		ConfigBase.__init__(self, mySet, myGet, myIter, config._baseDir)
+
+		# Factory for more specific instances
+	def getScoped(self, scope_left = [], scope_right = []):
+		return ResolvedConfigBase(self._config, scope_left + self._scope + scope_right)
+
+
+# Main config interface
+class NewConfig(ConfigBase):
 	def __init__(self, configFile = None, configDict = {}, optParser = None, configHostSpecific = True):
 		self._todo_remove_major_change = False
 		(self._allowSet, self._oldCfg) = (True, None)
@@ -117,10 +136,6 @@ class Config(ConfigBase):
 
 		# Get persistent variables - only possible after self._oldCfg was set!
 		self.confName = self.get('global', 'config id', confName, persistent = True)
-
-
-	def getTaskDict(self):
-		return utils.PersistentDict(os.path.join(self.workDir, 'task.dat'), ' = ')
 
 
 	def freezeConfig(self, writeConfig = True):
@@ -216,21 +231,27 @@ class Config(ConfigBase):
 
 	# Return config class instance with given scope and the ability to return further specialized instances
 	def getScoped(self, section):
-		# Returned class is only using the new getter API
-		class ResolvedConfigBase(ConfigBase):
-			def __init__(self, config, scope):
-				(self.config, self.scope) = (config, scope)
-				def mySet(option, value, *args, **kwargs):
-					return self.config.set(scope, option, value, *args, **kwargs)
-				def myGet(desc, obj2str, str2obj, option, *args, **kwargs):
-					primedResolver = lambda cc: self.config._resolver.getSource(cc, self.scope, option)
-					return self.config.getTyped(desc, obj2str, str2obj, primedResolver, *args, **kwargs)
-				def myIter():
-					return self.config.getOptions(scope)
-				ConfigBase.__init__(self, mySet, myGet, myIter, config._baseDir)
-
-			# Factory for more specific instances
-			def getScoped(self, scope_left = [], scope_right = []):
-				return ResolvedConfigBase(self.config, scope_left + self.scope + scope_right)
-
 		return ResolvedConfigBase(self, section)
+
+
+# For compatibility for old work directories
+class Config(NewConfig):
+	def __init__(self, configFile = None, configDict = {}, optParser = None, configHostSpecific = True):
+		NewConfig.__init__(self, configFile, configDict, optParser, configHostSpecific)
+		persistencyFile = os.path.join(self.workDir, 'task.dat')
+		if os.path.exists(persistencyFile):
+			persistencyDict = utils.PersistentDict(persistencyFile, ' = ')
+			def setPersistentSetting(section, key):
+				if key in persistencyDict:
+					value = persistencyDict.get(key)
+					self._oldCfg.setEntry(section, key, value, '<persistency file>', markAccessed = True)
+			setPersistentSetting('task', 'task id')
+			setPersistentSetting('task', 'task date')
+			setPersistentSetting('parameters', 'parameter hash')
+			setPersistentSetting('jobs', 'seeds')
+
+
+# Change handler to notify about impossible changes
+def changeImpossible(old_obj, cur_obj, cur_entry):
+	raise ConfigError('It is *not* possible to change "[%s] %s" from %r to %r!' %
+		(cur_entry.section, cur_entry.option, old_obj, cur_obj))

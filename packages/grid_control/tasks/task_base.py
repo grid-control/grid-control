@@ -17,10 +17,8 @@ class TaskModule(AbstractObject):
 		self.memory = config.getInt('jobs', 'memory', -1, mutable=True)
 
 		# Compute / get task ID
-		self.taskID = config.getTaskDict().get('task id', 'GC' + md5(str(time())).hexdigest()[:12])
-		utils.vprint('Current task ID: %s' % self.taskID, -1, once = True)
-		self.taskDate = config.getTaskDict().get('task date', strftime("%F"))
-		utils.vprint('Task started on %s' % self.taskDate, -1, once = True)
+		self.taskID = config.get('task', 'task id', 'GC' + md5(str(time())).hexdigest()[:12], persistent = True)
+		self.taskDate = config.get('task', 'task date', strftime("%F"), persistent = True)
 
 		self.taskVariables = {
 			# Space limits
