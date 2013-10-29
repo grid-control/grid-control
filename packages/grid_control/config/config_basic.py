@@ -214,8 +214,9 @@ class Config(ConfigBase):
 		self._curCfg.write(*args, **kwargs)
 
 
+	# Return config class instance with given scope and the ability to return further specialized instances
 	def getScoped(self, section):
-		# Class factory
+		# Returned class is only using the new getter API
 		class ResolvedConfigBase(ConfigBase):
 			def __init__(self, config, scope):
 				self.scope = scope
@@ -227,7 +228,8 @@ class Config(ConfigBase):
 				def myIter():
 					return config.getOptions(scope)
 				ConfigBase.__init__(self, mySet, myGet, myIter, config._baseDir)
-			# Class factory
+
+			# Factory for more specific instances
 			def getScoped(self, scope):
 				return ResolvedConfigBase(config, self.scope + scope)
 
