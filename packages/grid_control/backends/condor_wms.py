@@ -7,6 +7,7 @@ import popen2
 import time
 
 import tempfile
+from python_compat import *
 from grid_control import utils, QM, ProcessHandler, Job
 from wms import WMS, BasicWMS, RethrowError
 
@@ -54,7 +55,7 @@ class Condor(BasicWMS):
 		else:
 			self.debug=False
 		######
-		self.taskID = config.getTaskDict()['task id']
+		self.taskID = config.get('condor', 'task id', md5(str(time.time())).hexdigest(), persistent = True) # FIXME!
 		self.debugOut("""
 		
 		#############################
