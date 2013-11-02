@@ -1,5 +1,5 @@
 from python_compat import *
-import sys, os, stat, StringIO, tarfile, time, fnmatch, re, popen2, threading, operator, Queue, signal
+import sys, os, stat, StringIO, tarfile, time, fnmatch, re, popen2, threading, operator, Queue, signal, glob
 from exceptions import *
 from abstract import AbstractObject
 
@@ -24,14 +24,23 @@ def getRootName(fn): # Return file name without extension
 pathGC = lambda *args: cleanPath(os.path.join(sys.path[1], '..', *args))
 pathShare = lambda *args, **kw: cleanPath(os.path.join(sys.path[1], kw.get('pkg', 'grid_control'), 'share', *args))
 
-def resolvePath(path, userpath = [], mustExist = True, ErrorClass = RuntimeError):
-	searchpaths = uniqueListLR(['', os.getcwd(), pathGC()] + userpath)
+
+def resolvePaths(path, userPath = [], mustExist = True, ErrorClass = RuntimeError):
+	searchpaths = uniqueListLR([os.getcwd(), pathGC()] + userPath)
 	for spath in searchpaths:
-		if os.path.exists(cleanPath(os.path.join(spath, path))):
-			return cleanPath(os.path.join(spath, path))
+		result = glob.glob(cleanPath(os.path.join(spath, path)))
+		if result:
+			return result
 	if mustExist:
 		raise ErrorClass('Could not find file "%s" in \n\t%s' % (path, str.join('\n\t', searchpaths)))
-	return cleanPath(path)
+	return [cleanPath(path)]
+
+
+def resolvePath(path, userPath = [], mustExist = True, ErrorClass = RuntimeError):
+	result = resolvePaths(path, userPath = userPath, mustExist = mustExist, ErrorClass = ErrorClass)
+	if len(result) != 1:
+		raise ErrorClass('Path "%s" matches multiple files:\n\t%s' % (path, str.join('\n\t', result)))
+	return result[0]
 
 
 def resolveInstallPath(path):
