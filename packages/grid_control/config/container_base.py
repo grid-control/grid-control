@@ -168,22 +168,19 @@ class ConfigContainer(object):
 		return entry
 
 
-	def write(self, stream, printDefault = True, printUnused = True, printDynamic = True, printHeader = True):
-		if printHeader:
-			stream.write('\n; %s\n; This is the %s set of %sconfig options:\n; %s\n\n' % \
-				('='*60, utils.QM(printDefault, 'complete', 'minimal'), utils.QM(printUnused, '', 'used '), '='*60))
+	def write(self, stream, printDefault = True, printUnused = True):
+		stream.write('\n; %s\n; This is the %s set of %sconfig options:\n; %s\n\n' % \
+			('='*60, utils.QM(printDefault, 'complete', 'minimal'), utils.QM(printUnused, '', 'used '), '='*60))
 		output = {} # {'section1': [output1, output2, ...], 'section2': [...output...], ...}
 		def addToOutput(section, value, prefix = '\t'):
 			output.setdefault(section.lower(), ['[%s]' % section]).append(value)
 		for entry in self.iterContent(accessed = True): 
-			# Don't print default values
+			# Don't print default values unless specified
 			if not printDefault and (entry.source == '<default>'):
 				continue
-			# Don't print dynamically set config options
-			if not printDynamic and (entry.source in ['<dict>', '<cmdline>', '<cmdline override>', '<dynamic>']):
-				continue
+			# value-default comparison, since for persistent entries: value == default, source != '<default>'
 			addToOutput(entry.section, entry.format(printDefaultValue = (entry.value != entry.default)))
-		if printUnused:
+		if printUnused: # Unused entries have no stored default value => printDefault is not utilized
 			for entry in self.iterContent(accessed = False):
 				addToOutput(entry.section, entry.format(printSection = False, printDefaultValue = False))
 		stream.write('%s\n' % str.join('\n\n', map(lambda s: str.join('\n', output[s]), sorted(output))))

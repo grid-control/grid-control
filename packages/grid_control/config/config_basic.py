@@ -80,9 +80,9 @@ class ResolvedConfigBase(ConfigBase):
 		(self._config, self._scope) = (config, scope)
 		def mySet(option, value, *args, **kwargs):
 			return self._config.set(scope, option, value, *args, **kwargs)
-		def myGet(desc, obj2str, str2obj, option, *args, **kwargs):
+		def myGet(desc, obj2str, str2obj, def2obj, option, *args, **kwargs):
 			primedResolver = lambda cc: self._config._resolver.getSource(cc, self._scope, option)
-			return self._config.getTyped(desc, obj2str, str2obj, primedResolver, *args, **kwargs)
+			return self._config.getTyped(desc, obj2str, str2obj, def2obj, primedResolver, *args, **kwargs)
 		def myIter():
 			return self._config.getOptions(scope)
 		ConfigBase.__init__(self, mySet, myGet, myIter, config._baseDir)
@@ -115,9 +115,9 @@ class NewConfig(ConfigBase):
 		def mySet(section, option, value, *args, **kwargs):
 			primedResolver = lambda cc: self._resolver.getTarget(cc, section, option)
 			return self.setChecked(primedResolver, value, *args, **kwargs)
-		def myGet(desc, obj2str, str2obj, section, option, *args, **kwargs):
+		def myGet(desc, obj2str, str2obj, def2obj, section, option, *args, **kwargs):
 			primedResolver = lambda cc: self._resolver.getSource(cc, section, option)
-			return self.getTyped_compat(desc, obj2str, str2obj, primedResolver, *args, **kwargs)
+			return self.getTyped_compat(desc, obj2str, str2obj, def2obj, primedResolver, *args, **kwargs)
 		def myIter(section):
 			return self._resolver.getOptions(self._curCfg, section)
 		ConfigBase.__init__(self, mySet, myGet, myIter, self._baseDir)
@@ -167,16 +167,21 @@ class NewConfig(ConfigBase):
 
 
 	# Get a typed config value from the container
-	def getTyped(self, desc, obj2str, str2obj, resolver, default_obj,
+	def getTyped(self, desc, obj2str, str2obj, def2obj, resolver, default_obj,
 			onChange = None, onValid = None, persistent = False, markDefault = True):
 		(section, option) = resolver(self._curCfg)
 		# First transform default into string if applicable
 		default_str = noDefault
 		if default_obj != noDefault:
 			try:
-				default_str = obj2str(default_obj)
+				if def2obj:
+					default_obj = def2obj(default_obj)
 			except:
 				raise APIError('Unable to convert default object: %r' % default_obj)
+			try:
+				default_str = obj2str(default_obj)
+			except:
+				raise APIError('Unable to get string representation of default object: %r' % default_obj)
 
 		old_entry = None
 		if self._oldCfg:
@@ -187,6 +192,7 @@ class NewConfig(ConfigBase):
 		cur_entry = self._curCfg.getEntry(section, option, default_str, markDefault = markDefault)
 		try:
 			cur_obj = str2obj(cur_entry.value)
+			cur_entry.value = obj2str(cur_obj)
 		except:
 			raise RethrowError('Unable to parse %s: [%s] %s = %s' % (desc, section, option, cur_entry.value), ConfigError)
 
@@ -203,7 +209,7 @@ class NewConfig(ConfigBase):
 		return cur_obj
 
 
-	def getTyped_compat(self, desc, obj2str, str2obj, resolver, default_obj = noDefault,
+	def getTyped_compat(self, desc, obj2str, str2obj, def2obj, resolver, default_obj = noDefault,
 			mutable = False, noVar = True, persistent = False, markDefault = True):
 		if mutable == False:
 			def onChange(old_obj, cur_obj, cur_entry):
@@ -221,7 +227,7 @@ class NewConfig(ConfigBase):
 				utils.checkVar(obj, '[%s] "%s" may not contain variables.' % (section, option))
 		else:
 			onValid = None
-		return self.getTyped(desc, obj2str, str2obj, resolver, default_obj,
+		return self.getTyped(desc, obj2str, str2obj, def2obj, resolver, default_obj,
 			onChange = onChange, onValid = onValid, persistent = persistent, markDefault = markDefault)
 
 
