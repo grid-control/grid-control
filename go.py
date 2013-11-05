@@ -112,7 +112,7 @@ if __name__ == '__main__':
 
 		# Give config help
 		if opts.help_cfg or opts.help_scfg:
-			config.prettyPrint(sys.stdout, printDefault = opts.help_cfg, printUnused = False)
+			config.write(sys.stdout, printDefault = opts.help_cfg, printUnused = False)
 			sys.exit(0)
 
 		# If invoked in report mode, just show report and exit
