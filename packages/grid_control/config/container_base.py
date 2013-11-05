@@ -175,8 +175,8 @@ class ConfigContainer(object):
 		def addToOutput(section, value, prefix = '\t'):
 			output.setdefault(section.lower(), ['[%s]' % section]).append(value)
 		for entry in self.iterContent(accessed = True): 
-			# Don't print default values unless specified
-			if not printDefault and (entry.source == '<default>'):
+			# Don't print default values unless specified - dynamic settings always derive from non-default settings
+			if not printDefault and (entry.source in ['<default>', '<dynamic>']):
 				continue
 			# value-default comparison, since for persistent entries: value == default, source != '<default>'
 			addToOutput(entry.section, entry.format(printDefaultValue = (entry.value != entry.default)))

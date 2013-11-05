@@ -18,6 +18,12 @@ def cleanSO(section, option):
 	return (section, option)
 
 
+# Change handler to notify about impossible changes
+def changeImpossible(old_obj, cur_obj, cur_entry):
+	raise ConfigError('It is *not* possible to change "[%s] %s" from %r to %r!' %
+		(cur_entry.section, cur_entry.option, old_obj, cur_obj))
+
+
 def fmtStack(stack):
 	for frame in stack:
 		caller = frame[0].f_locals.get('self', None)
@@ -168,7 +174,7 @@ class NewConfig(ConfigBase):
 
 	# Get a typed config value from the container
 	def getTyped(self, desc, obj2str, str2obj, def2obj, resolver, default_obj,
-			onChange = None, onValid = None, persistent = False, markDefault = True):
+			onChange = changeImpossible, onValid = None, persistent = False, markDefault = True):
 		(section, option) = resolver(self._curCfg)
 		# First transform default into string if applicable
 		default_str = noDefault
@@ -255,9 +261,3 @@ class Config(NewConfig):
 			setPersistentSetting('task', 'task date')
 			setPersistentSetting('parameters', 'parameter hash')
 			setPersistentSetting('jobs', 'seeds')
-
-
-# Change handler to notify about impossible changes
-def changeImpossible(old_obj, cur_obj, cur_entry):
-	raise ConfigError('It is *not* possible to change "[%s] %s" from %r to %r!' %
-		(cur_entry.section, cur_entry.option, old_obj, cur_obj))

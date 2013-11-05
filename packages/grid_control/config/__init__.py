@@ -1,1 +1,1 @@
-from config_basic import Config, noDefault
+from config_basic import Config, noDefault, changeImpossible
