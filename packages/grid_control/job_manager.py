@@ -7,30 +7,30 @@ from python_compat import *
 class JobManager:
 	def __init__(self, config, task, eventhandler):
 		(self.task, self.eventhandler) = (task, eventhandler)
-		self.jobLimit = config.getInt('jobs', 'jobs', -1, mutable=True)
-		selected = JobSelector.create(config.get('jobs', 'selected', '', mutable=True), task = self.task)
+		self.jobLimit = config.getInt('jobs', -1, onChange = None)
+		selected = JobSelector.create(config.get('selected', '', onChange = None), task = self.task)
 		self.jobDB = JobDB(config, self.getMaxJobs(self.task), selected)
 		self.disableLog = os.path.join(config.workDir, 'disabled')
 
-		self.timeout = config.getTime('jobs', 'queue timeout', -1, mutable=True)
-		self.inFlight = config.getInt('jobs', 'in flight', -1, mutable=True)
-		self.inQueue = config.getInt('jobs', 'in queue', -1, mutable=True)
-		self.doShuffle = config.getBool('jobs', 'shuffle', False, mutable=True)
-		self.maxRetry = config.getInt('jobs', 'max retry', -1, mutable=True)
-		self.continuous = config.getBool('jobs', 'continuous', False, mutable=True)
+		self.timeout = config.getTime('queue timeout', -1, onChange = None)
+		self.inFlight = config.getInt('in flight', -1, onChange = None)
+		self.inQueue = config.getInt('in queue', -1, onChange = None)
+		self.doShuffle = config.getBool('shuffle', False, onChange = None)
+		self.maxRetry = config.getInt('max retry', -1, onChange = None)
+		self.continuous = config.getBool('continuous', False, onChange = None)
 		# Job offender heuristic (not persistent!) - remove jobs, which do not report their status
-		self.kickOffender = config.getInt('jobs', 'kick offender', 10, mutable=True)
+		self.kickOffender = config.getInt('kick offender', 10, onChange = None)
 		(self.offender, self.raster) = ({}, 0)
 		# job verification heuristic - launch jobs in chunks of increasing size if enough jobs succeed
 		self.verify = False
-		self.verifyChunks = map(int, config.getList('jobs', "verify chunks",[-1], mutable=True))
-		self.verifyThresh = map(float, config.getList('jobs', "verify reqs",[0.5], mutable=True))
+		self.verifyChunks = map(int, config.getList('verify chunks',[-1], onChange = None))
+		self.verifyThresh = map(float, config.getList('verify reqs',[0.5], onChange = None))
 		if self.verifyChunks != [-1]:
 			self.verify=True
 			self.verifyThresh+=[self.verifyThresh[-1]]*(len(self.verifyChunks)-len(self.verifyThresh))
 			utils.vprint('== Verification mode active ==\nSubmission is capped unless the success ratio of a chunk of jobs is sufficent.', level=0)
 			utils.vprint('Enforcing the following (chunksize x ratio) sequence:', level=0)
-			utils.vprint(" > ".join(map(lambda tpl: "%d x %4.2f"%(tpl[0], tpl[1]), zip(self.verifyChunks, self.verifyThresh))), level=0)
+			utils.vprint(' > '.join(map(lambda tpl: '%d x %4.2f'%(tpl[0], tpl[1]), zip(self.verifyChunks, self.verifyThresh))), level=0)
 
 	def getMaxJobs(self, task):
 		nJobs = self.jobLimit
@@ -73,7 +73,7 @@ class JobManager:
 		jobNumLen = int(math.log10(max(1, len(self.jobDB))) + 1)
 		utils.vprint('Job %s state changed from %s to %s ' % (str(jobNum).ljust(jobNumLen), Job.states[oldState], Job.states[state]), -1, True, False)
 		if showWMS and jobObj.wmsId:
-			print "(WMS:%s)" % jobObj.wmsId.split('.')[1],
+			print '(WMS:%s)' % jobObj.wmsId.split('.')[1],
 		if (state == Job.SUBMITTED) and (jobObj.attempt > 1):
 			print '(retry #%s)' % (jobObj.attempt - 1)
 		elif (state == Job.QUEUED) and jobObj.get('dest') != 'N/A':
@@ -224,7 +224,7 @@ class JobManager:
 				return False
 
 		if self.kickOffender:
-			self.raster = QM(reported, 1, self.raster + 1) # make "raster" iteratively smaller
+			self.raster = QM(reported, 1, self.raster + 1) # make 'raster' iteratively smaller
 			for jobNum in filter(lambda x: x not in reported, jobList):
 				self.offender[jobNum] = self.offender.get(jobNum, 0) + 1
 			kickList = filter(lambda jobNum: self.offender[jobNum] >= self.kickOffender, self.offender)

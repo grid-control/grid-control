@@ -59,7 +59,7 @@ if __name__ == '__main__':
 	def main():
 		config = Config(configFile = args[0], optParser = parser)
 		config.opts = opts
-		logging_setup(config)
+		logging_setup(config.getScoped(['logging']))
 
 		# Check work dir validity (default work directory is the config file name)
 		if not os.path.exists(config.workDir):
@@ -104,7 +104,7 @@ if __name__ == '__main__':
 
 		# Initialise job database
 		initSentinel.checkpoint('jobmanager')
-		jobManager = JobManager(config, module, monitor)
+		jobManager = JobManager(config.getScoped(['jobs']), module, monitor)
 
 		# Prepare work package
 		initSentinel.checkpoint('deploy')
