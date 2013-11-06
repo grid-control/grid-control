@@ -18,7 +18,9 @@ class ConfigBase(object):
 		return self._rawSet(*args, **kwargs)
 
 	def get(self, *args, **kwargs): # Surrounding spaces will get discarded
-		return self._rawGet('string', str.__str__, str, None, *args, **kwargs)
+		obj2str = kwargs.pop('obj2str', str.__str__)
+		str2obj = kwargs.pop('str2obj', str)
+		return self._rawGet('string', obj2str, str2obj, None, *args, **kwargs)
 
 	def getInt(self, *args, **kwargs): # Using strict integer (de-)serialization
 		return self._rawGet('int', int.__str__, int, None, *args, **kwargs)
@@ -54,8 +56,9 @@ class ConfigBase(object):
 
 	# Get whitespace separated list (space, tab, newline)
 	def getList(self, *args, **kwargs):
+		parseItem = kwargs.pop('parseItem', lambda x: x)
 		obj2str = lambda value: '\n' + str.join('\n', map(str, value))
-		str2obj = lambda value: utils.parseList(value, None)
+		str2obj = lambda value: map(parseItem, utils.parseList(value, None))
 		return self._rawGet('list', obj2str, str2obj, None, *args, **kwargs)
 
 	# Return resolved path (search paths: $PWD, <gc directory>, <base path from constructor>)
@@ -103,13 +106,13 @@ class ConfigBase(object):
 
 	# Return class - default class is also given in string form!
 	def getClass(self, *args, **kwargs):
-		baseClass = kwargs.pop('cls', None)
+		baseClass = kwargs.pop('cls')
 		str2obj = lambda value: ConfigBase._ClassProxy(baseClass, value, self)
 		return self._rawGet('class', str, str2obj, str2obj, *args, **kwargs)
 
 	# Return classes - default class is also given in string form!
 	def getClassList(self, *args, **kwargs):
-		baseClass = kwargs.pop('cls', None)
+		baseClass = kwargs.pop('cls')
 		parseSingle = lambda x: ConfigBase._ClassProxy(baseClass, x, self)
 		str2obj = lambda value: map(parseSingle, utils.parseList(value, None, onEmpty = []))
 		obj2str = lambda value: str.join(' ', map(str, value))

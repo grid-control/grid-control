@@ -24,6 +24,11 @@ def changeImpossible(old_obj, cur_obj, cur_entry):
 		(cur_entry.section, cur_entry.option, old_obj, cur_obj))
 
 
+# Validation handler to check for variables in string
+def validNoVar(section, option, obj):
+	return utils.checkVar(obj, '[%s] "%s" may not contain variables.' % (section, option))
+
+
 def fmtStack(stack):
 	for frame in stack:
 		caller = frame[0].f_locals.get('self', None)
@@ -82,8 +87,8 @@ class BaseConfigResolver:
 
 # Class returned from getScoped calls - it is only using the new getter API
 class ResolvedConfigBase(ConfigBase):
-	def __init__(self, config, scope):
-		(self._config, self._scope) = (config, scope)
+	def __init__(self, config, scope, forward = []):
+		(self._config, self._scope, self._forward) = (config, scope, forward)
 		def mySet(option, value, *args, **kwargs):
 			return self._config.set(scope, option, value, *args, **kwargs)
 		def myGet(desc, obj2str, str2obj, def2obj, option, *args, **kwargs):
@@ -92,10 +97,12 @@ class ResolvedConfigBase(ConfigBase):
 		def myIter():
 			return self._config.getOptions(scope)
 		ConfigBase.__init__(self, mySet, myGet, myIter, config._baseDir)
+		for attr in forward: # Forward specified attributes from main config to this instance
+			setattr(self, attr, getattr(config, attr))
 
 		# Factory for more specific instances
 	def getScoped(self, scope_left = [], scope_right = []):
-		return ResolvedConfigBase(self._config, scope_left + self._scope + scope_right)
+		return ResolvedConfigBase(self._config, scope_left + self._scope + scope_right, self._forward)
 
 
 # Main config interface
@@ -109,7 +116,7 @@ class NewConfig(ConfigBase):
 
 		if configFile:
 			# use the directory of the config file as base directory for file searches in getPath
-			self._baseDir = utils.cleanPath(os.path.dirname(configFile))
+			self._baseDir = os.path.dirname(utils.resolvePath(configFile))
 			self.configFile = os.path.join(self._baseDir, os.path.basename(configFile))
 		else: # self.configFile is only used to forward the filename to monitoring scripts
 			(self._baseDir, self.configFile) = ('.', 'gc.conf')
@@ -142,6 +149,8 @@ class NewConfig(ConfigBase):
 
 		# Get persistent variables - only possible after self._oldCfg was set!
 		self.confName = self.get('global', 'config id', confName, persistent = True)
+		# Specify variables to forward to scoped config instances
+		self._forward = ['workDir', 'configFile', 'confName']
 
 
 	def freezeConfig(self, writeConfig = True):
@@ -168,7 +177,7 @@ class NewConfig(ConfigBase):
 			option += '?'
 		elif append:
 			option += '+'
-		self._logger.log(logging.INFO3, 'Overwrite of option [%s] %s = %s' % (section, option, value))
+		self._logger.log(logging.INFO3, 'Setting dynamic key [%s] %s = %s' % (section, option, value))
 		self._curCfg.setEntry(section, option, value, source, markAccessed = True)
 
 
@@ -195,6 +204,7 @@ class NewConfig(ConfigBase):
 			old_entry = self._oldCfg.getEntry(section_old, option_old, default_str)
 			if persistent: # Override current default value with stored value
 				default_str = old_entry.value
+				self._logger.log(logging.INFO2, 'Applying persistent %s' % old_entry.format(printSection = True))
 		cur_entry = self._curCfg.getEntry(section, option, default_str, markDefault = markDefault)
 		try:
 			cur_obj = str2obj(cur_entry.value)
@@ -243,10 +253,10 @@ class NewConfig(ConfigBase):
 
 	# Return config class instance with given scope and the ability to return further specialized instances
 	def getScoped(self, section):
-		return ResolvedConfigBase(self, section)
+		return ResolvedConfigBase(self, section, self._forward)
 
 
-# For compatibility for old work directories
+# For compatibility with old work directories
 class Config(NewConfig):
 	def __init__(self, configFile = None, configDict = {}, optParser = None, configHostSpecific = True):
 		NewConfig.__init__(self, configFile, configDict, optParser, configHostSpecific)
