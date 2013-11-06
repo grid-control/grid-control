@@ -102,7 +102,7 @@ class ConfigContainer(object):
 		if option[-1] in ['+', '-', '*', '?', '^']:
 			option_type = option[-1]
 			option = option[:-1].strip() # option without modifier
-		self._logger.log(logging.INFO2, 'Setting option [%s] %s %s=%s' % \
+		self._logger.log(logging.INFO2, 'Setting config opt. [%s] %s %s=%s' % \
 			(section, option, QM(option_type, option_type, ''), multi_line_format(value)))
 		if (section, option) in self._fixed:
 			self._logger.log(logging.INFO2, 'Skipped setting fixed option [%s] %s!' % (section, option))

@@ -50,7 +50,7 @@ class BasicConfigContainer(ConfigContainer):
 		try:
 			configFile = utils.resolvePath(configFile, ErrorClass = ConfigError)
 			log = logging.getLogger(('config.%s' % utils.getRootName(configFile)).rstrip('.'))
-			log.log(logging.INFO1, 'Reading config file: %s' % configFile)
+			log.log(logging.INFO1, 'Reading config file %s' % configFile)
 			for line in map(lambda x: x.rstrip() + '=:', open(configFile, 'r').readlines()):
 				# Abort if non-indented, non-commented line with ":" preceeding "=" was found
 				if (line.find(":") < line.find("=")) and (line.lstrip() == line) and not line.lstrip().startswith(';'):
