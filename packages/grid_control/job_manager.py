@@ -18,19 +18,7 @@ class JobManager:
 		self.doShuffle = config.getBool('shuffle', False, onChange = None)
 		self.maxRetry = config.getInt('max retry', -1, onChange = None)
 		self.continuous = config.getBool('continuous', False, onChange = None)
-		# Job offender heuristic (not persistent!) - remove jobs, which do not report their status
-		self.kickOffender = config.getInt('kick offender', 10, onChange = None)
-		(self.offender, self.raster) = ({}, 0)
-		# job verification heuristic - launch jobs in chunks of increasing size if enough jobs succeed
-		self.verify = False
-		self.verifyChunks = config.getList('verify chunks',[-1], onChange = None, parseItem = int)
-		self.verifyThresh = config.getList('verify reqs',[0.5], onChange = None, parseItem = float)
-		if self.verifyChunks != [-1]:
-			self.verify=True
-			self.verifyThresh+=[self.verifyThresh[-1]]*(len(self.verifyChunks)-len(self.verifyThresh))
-			utils.vprint('== Verification mode active ==\nSubmission is capped unless the success ratio of a chunk of jobs is sufficent.', level=0)
-			utils.vprint('Enforcing the following (chunksize x ratio) sequence:', level=0)
-			utils.vprint(' > '.join(map(lambda tpl: '%d x %4.2f'%(tpl[0], tpl[1]), zip(self.verifyChunks, self.verifyThresh))), level=0)
+
 
 	def getMaxJobs(self, task):
 		nJobs = self.jobLimit
@@ -139,30 +127,6 @@ class JobManager:
 		else:
 			return sorted(jobList)[:submit]
 
-	# Verification heuristic - check whether enough jobs have succeeded before submitting more
-	# @submitCount: number of jobs to submit
-	def getVerificationSubmitThrottle(self, submitCount, _messageCache = { 'unreachableGoal' : False }):
-		jobsActive = self.jobDB.getJobsN(ClassSelector(JobClass.PROCESSING))
-		jobsSuccess = self.jobDB.getJobsN(ClassSelector(JobClass.SUCCESS))
-		jobsDone = self.jobDB.getJobsN(ClassSelector(JobClass.PROCESSED))
-		jobsTotal = jobsDone + jobsActive
-		verifyIndex = bisect.bisect_left(self.verifyChunks, jobsTotal)
-		try:
-			successRatio = jobsSuccess * 1.0 / self.verifyChunks[verifyIndex]
-			if ( self.verifyChunks[verifyIndex] - jobsDone) + jobsSuccess < self.verifyChunks[verifyIndex]*self.verifyThresh[verifyIndex]:
-				if not _messageCache['unreachableGoal']:
-					utils.vprint('All remaining jobs are vetoed by an unachieveable verification goal.', -1, True)
-					utils.vprint('Current goal: %d successful jobs out of %d' % (self.verifyChunks[verifyIndex]*self.verifyThresh[verifyIndex], self.verifyChunks[verifyIndex]), -1, True)
-					_messageCache['unreachableGoal'] = True
-				return 0
-			if successRatio < self.verifyThresh[verifyIndex]:
-				return min(submitCount, self.verifyChunks[verifyIndex]-jobsTotal)
-			else:
-				return min(submitCount, self.verifyChunks[verifyIndex+1]-jobsTotal)
-		except IndexError:
-			utils.vprint('== All verification chunks passed ==\nVerification submission throttle disabled.', level=0)
-			self.verify = False
-			return submitCount
 
 	def submit(self, wms, maxsample = 100):
 		jobList = self.getSubmissionJobs(maxsample)
@@ -194,16 +158,8 @@ class JobManager:
 		return map(lambda jobNum: (self.jobDB.get(jobNum).wmsId, jobNum), jobList)
 
 
-	def check(self, wms, maxsample = 100):
-		(change, timeoutList) = (False, [])
-		jobList = self.sample(self.jobDB.getJobs(ClassSelector(JobClass.PROCESSING)), QM(self.continuous, maxsample, -1))
-
-		if self.kickOffender:
-			nOffender = len(self.offender) # Waiting list gets larger in case reported == []
-			waitList = self.sample(self.offender, nOffender - max(1, nOffender / 2**self.raster))
-			jobList = filter(lambda x: x not in waitList, jobList)
-
-		reported = []
+	def checkJobList(self, wms, jobList):
+		(change, timeoutList, reported) = (False, [], [])
 		for jobNum, wmsId, state, info in wms.checkJobs(self.wmsArgs(jobList)):
 			if jobNum in self.offender:
 				self.offender.pop(jobNum)
@@ -221,16 +177,17 @@ class JobManager:
 					if self.timeout > 0 and time.time() - jobObj.submitted > self.timeout:
 						timeoutList.append(jobNum)
 			if utils.abort():
-				return False
+				return (None, timeoutList, reported)
+		return (change, timeoutList, reported)
 
-		if self.kickOffender:
-			self.raster = QM(reported, 1, self.raster + 1) # make 'raster' iteratively smaller
-			for jobNum in filter(lambda x: x not in reported, jobList):
-				self.offender[jobNum] = self.offender.get(jobNum, 0) + 1
-			kickList = filter(lambda jobNum: self.offender[jobNum] >= self.kickOffender, self.offender)
-			for jobNum in set(list(kickList) + QM((len(reported) == 0) and (len(jobList) == 1), jobList, [])):
-				timeoutList.append(jobNum)
-				self.offender.pop(jobNum)
+
+	def check(self, wms, maxsample = 100):
+		jobList = self.sample(self.jobDB.getJobs(ClassSelector(JobClass.PROCESSING)), QM(self.continuous, maxsample, -1))
+
+		# Check jobs in the joblist and return changes, timeouts and successfully reported jobs
+		(change, timeoutList, reported) = self.checkJobList(wms, jobList)
+		if change == None: # neither True or False => abort
+			return False
 
 		# Cancel jobs which took too long
 		if len(timeoutList):
@@ -358,3 +315,77 @@ class JobManager:
 			self.cancel(wms, self.jobDB.getJobs(ClassSelector(JobClass.PROCESSING), disable))
 			resetState(disable, Job.DISABLED)
 			utils.vprint('All requested changes are applied', -1, True)
+
+
+class SimpleJobManager(JobManager):
+	def __init__(self, config, task, eventhandler):
+		JobManager.__init__(self, config, task, eventhandler)
+
+		# Job offender heuristic (not persistent!) - remove jobs, which do not report their status
+		self.kickOffender = config.getInt('kick offender', 10, onChange = None)
+		(self.offender, self.raster) = ({}, 0)
+		# job verification heuristic - launch jobs in chunks of increasing size if enough jobs succeed
+		self.verify = False
+		self.verifyChunks = config.getList('verify chunks', [-1], onChange = None, parseItem = int)
+		self.verifyThresh = config.getList('verify reqs', [0.5], onChange = None, parseItem = float)
+		if self.verifyChunks != [-1]:
+			self.verify = True
+			self.verifyThresh += [self.verifyThresh[-1]] * (len(self.verifyChunks) - len(self.verifyThresh))
+			utils.vprint('== Verification mode active ==\nSubmission is capped unless the success ratio of a chunk of jobs is sufficent.', level=0)
+			utils.vprint('Enforcing the following (chunksize x ratio) sequence:', level=0)
+			utils.vprint(' > '.join(map(lambda tpl: '%d x %4.2f'%(tpl[0], tpl[1]), zip(self.verifyChunks, self.verifyThresh))), level=0)
+
+
+	def checkJobList(self, wms, jobList):
+		if self.kickOffender:
+			nOffender = len(self.offender) # Waiting list gets larger in case reported == []
+			waitList = self.sample(self.offender, nOffender - max(1, nOffender / 2**self.raster))
+			jobList = filter(lambda x: x not in waitList, jobList)
+
+		(change, timeoutList, reported) = JobManager.checkJobList(self, wms, jobList)
+		if change == None:
+			return (change, timeoutList, reported) # abort check
+
+		if self.kickOffender:
+			self.raster = QM(reported, 1, self.raster + 1) # make 'raster' iteratively smaller
+			for jobNum in filter(lambda x: x not in reported, jobList):
+				self.offender[jobNum] = self.offender.get(jobNum, 0) + 1
+			kickList = filter(lambda jobNum: self.offender[jobNum] >= self.kickOffender, self.offender)
+			for jobNum in set(list(kickList) + QM((len(reported) == 0) and (len(jobList) == 1), jobList, [])):
+				timeoutList.append(jobNum)
+				self.offender.pop(jobNum)
+
+		return (change, timeoutList, reported)
+
+
+	def getSubmissionJobs(self, maxsample):
+		result = JobManager.getSubmissionJobs(self, maxsample)
+		if self.verify:
+			return result[:self.getVerificationSubmitThrottle(len(result))]
+		return result
+
+
+	# Verification heuristic - check whether enough jobs have succeeded before submitting more
+	# @submitCount: number of jobs to submit
+	def getVerificationSubmitThrottle(self, submitCount, _messageCache = { 'unreachableGoal' : False }):
+		jobsActive = self.jobDB.getJobsN(ClassSelector(JobClass.PROCESSING))
+		jobsSuccess = self.jobDB.getJobsN(ClassSelector(JobClass.SUCCESS))
+		jobsDone = self.jobDB.getJobsN(ClassSelector(JobClass.PROCESSED))
+		jobsTotal = jobsDone + jobsActive
+		verifyIndex = bisect.bisect_left(self.verifyChunks, jobsTotal)
+		try:
+			successRatio = jobsSuccess * 1.0 / self.verifyChunks[verifyIndex]
+			if ( self.verifyChunks[verifyIndex] - jobsDone) + jobsSuccess < self.verifyChunks[verifyIndex]*self.verifyThresh[verifyIndex]:
+				if not _messageCache['unreachableGoal']:
+					utils.vprint('All remaining jobs are vetoed by an unachieveable verification goal.', -1, True)
+					utils.vprint('Current goal: %d successful jobs out of %d' % (self.verifyChunks[verifyIndex]*self.verifyThresh[verifyIndex], self.verifyChunks[verifyIndex]), -1, True)
+					_messageCache['unreachableGoal'] = True
+				return 0
+			if successRatio < self.verifyThresh[verifyIndex]:
+				return min(submitCount, self.verifyChunks[verifyIndex]-jobsTotal)
+			else:
+				return min(submitCount, self.verifyChunks[verifyIndex+1]-jobsTotal)
+		except IndexError:
+			utils.vprint('== All verification chunks passed ==\nVerification submission throttle disabled.', level=0)
+			self.verify = False
+			return submitCount
