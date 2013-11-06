@@ -23,8 +23,8 @@ class JobManager:
 		(self.offender, self.raster) = ({}, 0)
 		# job verification heuristic - launch jobs in chunks of increasing size if enough jobs succeed
 		self.verify = False
-		self.verifyChunks = map(int, config.getList('verify chunks',[-1], onChange = None))
-		self.verifyThresh = map(float, config.getList('verify reqs',[0.5], onChange = None))
+		self.verifyChunks = config.getList('verify chunks',[-1], onChange = None, parseItem = int)
+		self.verifyThresh = config.getList('verify reqs',[0.5], onChange = None, parseItem = float)
 		if self.verifyChunks != [-1]:
 			self.verify=True
 			self.verifyThresh+=[self.verifyThresh[-1]]*(len(self.verifyChunks)-len(self.verifyThresh))
