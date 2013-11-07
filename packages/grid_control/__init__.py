@@ -3,7 +3,7 @@ from grid_control.exceptions	import *
 from grid_control.utils	import AbstractObject, QM
 from grid_control.processhandler	import ProcessHandler
 
-from grid_control.config	import Config, noDefault
+from grid_control.config	import Config, noDefault, validNoVar
 from grid_control.overlay	import ConfigOverlay
 
 from grid_control.job_definition	import JobDef
@@ -12,7 +12,7 @@ from grid_control.job_db_zip	import ZippedJobDB
 
 from grid_control.job_selector	import JobSelector
 from grid_control.report	import Report
-from grid_control.job_manager	import JobManager
+from grid_control.job_manager	import SimpleJobManager
 
 from grid_control.help	import Help
 
