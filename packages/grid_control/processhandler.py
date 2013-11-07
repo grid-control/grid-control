@@ -63,7 +63,7 @@ class SSHProcessHandler(ProcessHandler):
 			raise RethrowError("Request to initialize SSH-Type RemoteProcessHandler without remote host.")
 		try:
 			self.sshLinkBase=os.path.abspath(kwargs["sshLink"])
-			# older ssh/gsissh a maximum length limit for control paths...
+			# older ssh/gsissh puts a maximum length limit on control paths...
 			if ( len(self.sshLinkBase)>= 107):
 				self.sshLinkBase=os.path.expanduser("~/.ssh/%s"%os.path.basename(self.sshLinkBase))
 			self.sshLink=self.sshLinkBase
@@ -152,13 +152,13 @@ class SSHProcessHandler(ProcessHandler):
 		return True
 
 	# keep a process active in the background to speed up connecting by providing an active socket
-	def _refreshSSHLink(self, minSeconds=40, maxSeconds=60):
+	def _refreshSSHLink(self, minSeconds=580, maxSeconds=600):
 		# if there is a link, ensure it'll still live for minimum lifetime
 		if os.path.exists(self.sshLink) and stat.S_ISSOCK(os.stat(self.sshLink).st_mode):
 			if ( time.time() - self.socketTimestamp < maxSeconds-minSeconds ):
 				return True
 		# rotate socket
-		socketIdMax=math.ceil(maxSeconds/(maxSeconds-minSeconds))
+		socketIdMax=math.ceil(1.0*maxSeconds/(maxSeconds-minSeconds))
 		if socketIdMax==self.socketIdNow:
 			self.socketIdNow=0
 		else:
