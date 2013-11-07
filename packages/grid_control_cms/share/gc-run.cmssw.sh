@@ -178,24 +178,24 @@ fi
 
 # Additional epilog scripts in the CMSSW environment
 if [ "$GC_CMSSWRUN_RETCODE" == "0" ]; then
-	for CMSSW_BIN in $CMSSW_EPILOG_EXEC; do
+#	for CMSSW_BIN in $CMSSW_EPILOG_EXEC; do
 		_EPILOG_COUNT=1
 		timestamp "CMSSW_EPILOG${_EPILOG_COUNT}" "START"
 		echo "---------------------------"
 		echo
-		echo "Starting $CMSSW_BIN with arguments: $CMSSW_EPILOG_ARGS"
-		checkbin "$CMSSW_BIN"
-		eval "$CMSSW_BIN $CMSSW_EPILOG_ARGS"
+		echo "Starting $CMSSW_EPILOG_EXEC with arguments: $CMSSW_EPILOG_ARGS"
+#		checkbin "$CMSSW_BIN"
+		eval "$CMSSW_EPILOG_EXEC $CMSSW_EPILOG_ARGS"
 		GC_CMSSWRUN_RETCODE=$?
 		echo
 		timestamp "CMSSW_EPILOG${_EPILOG_COUNT}" "DONE"
 		_EPILOG_COUNT=$[ $_EPILOG_COUNT +1]
 		if [ "$GC_CMSSWRUN_RETCODE" != "0" ];then
-			echo "Epilogue $CMSSW_BIN failed with code: $GC_CMSSWRUN_RETCODE"
+			echo "Epilogue $CMSSW_EPILOG_EXEC failed with code: $GC_CMSSWRUN_RETCODE"
 			echo "Aborting..."
-			break
+#			break
 		fi
-	done
+#	done
 fi
 
 echo
