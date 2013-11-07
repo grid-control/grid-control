@@ -31,7 +31,7 @@ class TaskModule(AbstractObject):
 		# Storage setup - in case a directory is give, prepend dir specifier
 		config.set('storage', 'se output pattern', 'job_@MY_JOBID@_@X@', override=False)
 		self.seMinSize = config.getInt('storage', 'se min size', -1)
-		self.sbInputFiles = config.getList(self.__class__.__name__, 'input files', [])
+		self.sbInputFiles = config.getPaths(self.__class__.__name__, 'input files', [])
 		self.sbOutputFiles = config.getList(self.__class__.__name__, 'output files', [])
 		self.gzipOut = config.getBool(self.__class__.__name__, 'gzip output', True)
 
@@ -142,17 +142,17 @@ class TaskModule(AbstractObject):
 
 	# Get files for input sandbox
 	def getSBInFiles(self):
-		return map(lambda p: self.config.parsePath(p, mustExist = False), self.sbInputFiles)
+		return list(self.sbInputFiles)
 
 
 	# Get files for output sandbox
 	def getSBOutFiles(self):
-		return self.sbOutputFiles[:]
+		return list(self.sbOutputFiles)
 
 
 	# Get files whose content will be subject to variable substitution
 	def getSubstFiles(self):
-		return self.substFiles[:]
+		return list(self.substFiles)
 
 
 	def getCommand(self):
@@ -168,7 +168,7 @@ class TaskModule(AbstractObject):
 
 
 	def getDependencies(self):
-		return self.dependencies[:]
+		return list(self.dependencies)
 
 
 	def getDescription(self, jobNum): # (task name, job name, job type)
