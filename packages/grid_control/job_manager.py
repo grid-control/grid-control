@@ -118,8 +118,6 @@ class JobManager:
 			submit = min(submit, self.inFlight - self.jobDB.getJobsN(ClassSelector(JobClass.PROCESSING)))
 		if self.continuous:
 			submit = min(submit, maxsample)
-		if self.verify:
-			submit = self.getVerificationSubmitThrottle(submit)
 		submit = max(submit, 0)
 
 		if self.doShuffle:
