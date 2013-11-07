@@ -2,13 +2,13 @@ import os
 from grid_control import QM, utils, noDefault
 
 class TaskExecutableWrapper:
-	def __init__(self, config, section, prefix = '', exeDefault = noDefault):
-		self._executableSend = config.getBool(section, '%s send executable' % prefix, True)
+	def __init__(self, config, prefix = '', exeDefault = noDefault):
+		self._executableSend = config.getBool('%s send executable' % prefix, True)
 		if self._executableSend:
-			self._executable = config.getPath(section, '%s executable' % prefix, exeDefault)
+			self._executable = config.getPath('%s executable' % prefix, exeDefault)
 		else:
-			self._executable = config.get(section, '%s executable' % prefix, exeDefault, noVar = False)
-		self._arguments = config.get(section, '%s arguments' % prefix, '', noVar = False)
+			self._executable = config.get('%s executable' % prefix, exeDefault)
+		self._arguments = config.get('%s arguments' % prefix, '')
 
 
 	def isActive(self):

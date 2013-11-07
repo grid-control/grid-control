@@ -93,8 +93,8 @@ class CMSSW(DataTask):
 				utils.vprint(' %i) %s' % (i + 1, value), -1)
 
 		# Prolog / Epilog script support - warn about old syntax
-		self.prolog = TaskExecutableWrapper(config, self.__class__.__name__, 'prolog', '')
-		self.epilog = TaskExecutableWrapper(config, self.__class__.__name__, 'epilog', '')
+		self.prolog = TaskExecutableWrapper(config.getScoped([self.__class__.__name__]), 'prolog', '')
+		self.epilog = TaskExecutableWrapper(config.getScoped([self.__class__.__name__]), 'epilog', '')
 		if config.getPaths(self.__class__.__name__, 'executable', []) != []:
 			raise ConfigError('Prefix executable and argument options with either prolog or epilog!')
 		self.arguments = config.get(self.__class__.__name__, 'arguments', '', noVar = False)
@@ -119,7 +119,7 @@ class CMSSW(DataTask):
 				if len(self.configFiles) > 0:
 					self.instrumentCfgQueue(self.configFiles, fragment, mustPrepare = True)
 		else:
-			self.eventsPerJob = config.get(self.__class__.__name__, 'events per job', 0, noVar = False)
+			self.eventsPerJob = config.get(self.__class__.__name__, 'events per job', '0', noVar = False)
 			if config.opts.init and self.prepare:
 				self.instrumentCfgQueue(self.configFiles, fragment)
 

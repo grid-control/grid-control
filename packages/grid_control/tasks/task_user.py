@@ -6,7 +6,7 @@ from task_utils import TaskExecutableWrapper
 class UserTask(DataTask):
 	def __init__(self, config):
 		DataTask.__init__(self, config)
-		self._exeWrap = TaskExecutableWrapper(config, self.__class__.__name__)
+		self._exeWrap = TaskExecutableWrapper(config.getScoped([self.__class__.__name__]))
 
 
 	def getCommand(self):
