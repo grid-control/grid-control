@@ -23,7 +23,7 @@ def se_copy(src, dst, force = True, tmp = ''):
 
 
 class StorageManager(AbstractObject):
-	def __init__(self, config, section, optDefault, optPrefix, varPrefix):
+	def __init__(self, config, optDefault, optPrefix, varPrefix):
 		(self.smOptPrefix, self.varPrefix) = (optPrefix, varPrefix)
 
 	def addFiles(self, files):
@@ -41,9 +41,9 @@ class StorageManager(AbstractObject):
 StorageManager.dynamicLoaderPath()
 
 class LocalSBStorageManager(StorageManager):
-	def __init__(self, config, section, optDefault, optPrefix, varPrefix):
-		StorageManager.__init__(self, config, section, optDefault, optPrefix, varPrefix)
-		self.sbPath = config.getPath(section, '%s path' % optDefault, os.path.join(config.workDir, 'sandbox'), mustExist = False)
+	def __init__(self, config, optDefault, optPrefix, varPrefix):
+		StorageManager.__init__(self, config, optDefault, optPrefix, varPrefix)
+		self.sbPath = config.getPath('%s path' % optDefault, os.path.join(config.workDir, 'sandbox'), mustExist = False)
 
 	def doTransfer(self, listDescSourceTarget):
 		for (desc, source, target) in listDescSourceTarget:
@@ -54,15 +54,15 @@ class LocalSBStorageManager(StorageManager):
 
 
 class SEStorageManager(StorageManager):
-	def __init__(self, config, section, optDefault, optPrefix, varPrefix):
-		StorageManager.__init__(self, config, section, optDefault, optPrefix, varPrefix)
-		normSEPaths = lambda seList: map(lambda x: QM(x[0] == '/', 'dir:///%s' % x.lstrip('/'), x), seList)
-		self.defPaths = normSEPaths(config.getList(section, '%s path' % optDefault, [], noVar=True))
-		self.smPaths = normSEPaths(config.getList(section, '%s path' % optPrefix, self.defPaths, noVar=True))
-		self.smFiles = config.getList(section, '%s files' % optPrefix, [], noVar=False)
-		self.smPattern = config.get(section, '%s pattern' % optPrefix, '@X@', noVar=False)
-		self.smTimeout = config.getTime(section, '%s timeout' % optPrefix, 2*60*60)
-		self.smForce = config.getBool(section, '%s force' % optPrefix, True)
+	def __init__(self, config, optDefault, optPrefix, varPrefix):
+		StorageManager.__init__(self, config, optDefault, optPrefix, varPrefix)
+		normSEPath = lambda x: QM(x[0] == '/', 'dir:///%s' % x.lstrip('/'), x)
+		self.defPaths = config.getList('%s path' % optDefault, [], onValid = validNoVar, parseItem = normSEPath)
+		self.smPaths = config.getList('%s path' % optPrefix, self.defPaths, onValid = validNoVar, parseItem = normSEPath)
+		self.smFiles = config.getList('%s files' % optPrefix, [])
+		self.smPattern = config.get('%s pattern' % optPrefix, '@X@')
+		self.smTimeout = config.getTime('%s timeout' % optPrefix, 2*60*60)
+		self.smForce = config.getBool('%s force' % optPrefix, True)
 
 	def addFiles(self, files):
 		self.smFiles.extend(files)

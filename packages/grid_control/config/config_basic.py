@@ -252,8 +252,8 @@ class NewConfig(ConfigBase):
 
 
 	# Return config class instance with given scope and the ability to return further specialized instances
-	def getScoped(self, section):
-		return ResolvedConfigBase(self, section, self._forward)
+	def getScoped(self, sections = []):
+		return ResolvedConfigBase(self, sections, self._forward)
 
 
 # For compatibility with old work directories

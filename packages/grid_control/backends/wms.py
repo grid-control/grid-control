@@ -104,12 +104,12 @@ class BasicWMS(WMS):
 		# Initialise proxy, broker and storage manager
 		self.proxy = Proxy.open(config.get(self._getSections('backend'), 'proxy', 'TrivialProxy', mutable=True), config)
 
-		smCfgSections = self._getSections('storage')
+		configSM = config.getScoped(self._getSections('storage'))
 		# UI -> SE -> WN
-		self.smSEIn = StorageManager.open('SEStorageManager', config, smCfgSections, 'se', 'se input', 'SE_INPUT')
-		self.smSBIn = StorageManager.open('LocalSBStorageManager', config, smCfgSections + ['local'], 'sandbox', 'sandbox', 'SB_INPUT')
+		self.smSEIn = StorageManager.open('SEStorageManager', configSM, 'se', 'se input', 'SE_INPUT')
+		self.smSBIn = StorageManager.open('LocalSBStorageManager', configSM.getScoped(['local']), 'sandbox', 'sandbox', 'SB_INPUT')
 		# UI <- SE <- WN
-		self.smSEOut = StorageManager.open('SEStorageManager', config, smCfgSections, 'se', 'se output', 'SE_OUTPUT')
+		self.smSEOut = StorageManager.open('SEStorageManager', configSM, 'se', 'se output', 'SE_OUTPUT')
 		self.smSBOut = None
 
 
