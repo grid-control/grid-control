@@ -152,39 +152,35 @@ class SSHProcessHandler(ProcessHandler):
 		return True
 
 	# keep a process active in the background to speed up connecting by providing an active socket
-	def _refreshSSHLink(self, minSeconds=580, maxSeconds=600):
+	def _refreshSSHLink(self, minSeconds=120, maxSeconds=600):
 		# if there is a link, ensure it'll still live for minimum lifetime
 		if os.path.exists(self.sshLink) and stat.S_ISSOCK(os.stat(self.sshLink).st_mode):
 			if ( time.time() - self.socketTimestamp < maxSeconds-minSeconds ):
 				return True
 		# rotate socket
-		socketIdMax=math.ceil(1.0*maxSeconds/(maxSeconds-minSeconds))
-		if socketIdMax==self.socketIdNow:
-			self.socketIdNow=0
-		else:
-			self.socketIdNow+=1
-		self.sshLink=self.sshLinkBase+str(self.socketIdNow)
-		self.socketArgsDef=" -o ControlMaster=auto  -o ControlPath=" + self.sshLink + " "
+		self.socketIdNow = (self.socketIdNow + 1) % (math.ceil(1.0*maxSeconds/(maxSeconds-minSeconds)) + 1)
+		self.sshLink = self.sshLinkBase+str(self.socketIdNow)
+		self.socketArgsDef = " -o ControlMaster=auto  -o ControlPath=" + self.sshLink + " "
 		if os.path.exists(self.sshLink):
 			os.remove(self.sshLink)
 		# send a dummy background process over ssh to keep the connection going
-		socketProc=self._SocketProcess("sleep %s" % maxSeconds)
-		timeout=0
+		socketProc = self._SocketProcess("sleep %s" % maxSeconds)
+		timeout = 0
 		while not os.path.exists(self.sshLink):
 			time.sleep(0.5)
-			timeout+=0.5
-			if timeout==6:
+			timeout += 0.5
+			if timeout == 6:
 				vprint("SSH socket still not available after 6 seconds...\n%s" % self.sshLink, level=1)
 				vprint('Socket process: %s' % (socketProc.cmd), level=2)
-			if timeout==10:
+			if timeout == 10:
 				return False
-		self.socketTimestamp=time.time()
+		self.socketTimestamp = time.time()
 		return self._secureSSHLink()
 
 # remote Processes via GSISSH
 class GSISSHProcessHandler(SSHProcessHandler):
 	# commands to use - overwritten by inheriting class
-	cmd="gsissh"
-	cpy="gsiscp -r"
+	cmd = "gsissh"
+	cpy = "gsiscp -r"
 
 ProcessHandler.dynamicLoaderPath()
