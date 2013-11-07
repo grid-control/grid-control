@@ -50,8 +50,8 @@ class Condor(BasicWMS):
 		### WMSname=condor is a hardcoded hack until interface is clear
 		BasicWMS.__init__(self, config, wmsName, 'condor')
 		# special debug out/messages/annotations - may have noticeable effect on storage and performance!
-		if config.get( self._getSections("backend"), "debugLog", False):
-			self.debug=open(config.get( self._getSections("backend"), "debugLog", False),'a')
+		if config.get( self._getSections("backend"), "debugLog", ""):
+			self.debug=open(config.get( self._getSections("backend"), "debugLog", ""),'a')
 		else:
 			self.debug=False
 		######
