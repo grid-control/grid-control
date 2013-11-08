@@ -32,7 +32,7 @@ def validNoVar(section, option, obj):
 def fmtStack(stack):
 	for frame in stack:
 		caller = frame[0].f_locals.get('self', None)
-		if caller and caller.__class__.__name__ != 'Config':
+		if caller and caller.__class__.__name__ not in ['Config', 'NewConfig', 'BaseConfigResolver', 'ResolvedConfigBase']:
 			return frame[0].f_locals.get('self', None).__class__.__name__
 	return 'main'
 
@@ -88,7 +88,7 @@ class BaseConfigResolver:
 # Class returned from getScoped calls - it is only using the new getter API
 class ResolvedConfigBase(ConfigBase):
 	def __init__(self, config, scope, forward = []):
-		(self._config, self._scope, self._forward) = (config, scope, forward)
+		(self._config, self._scope, self._forward) = (config, utils.uniqueListRL(scope), forward)
 		def mySet(option, value, *args, **kwargs):
 			return self._config.set(scope, option, value, *args, **kwargs)
 		def myGet(desc, obj2str, str2obj, def2obj, option, *args, **kwargs):
@@ -100,9 +100,14 @@ class ResolvedConfigBase(ConfigBase):
 		for attr in forward: # Forward specified attributes from main config to this instance
 			setattr(self, attr, getattr(config, attr))
 
-		# Factory for more specific instances
+	# Factory for more specific instances
 	def getScoped(self, scope_left = [], scope_right = []):
+		if scope_left == None:
+			return self._config # Allow to get unspecific instance
 		return ResolvedConfigBase(self._config, scope_left + self._scope + scope_right, self._forward)
+
+	def __repr__(self):
+		return '%s(%r)' % (self.__class__.__name__, self._scope)
 
 
 # Main config interface
@@ -126,12 +131,15 @@ class NewConfig(ConfigBase):
 
 		# Setup config interface for following get*,... calls
 		def mySet(section, option, value, *args, **kwargs):
+			self._logger.debug("old style call from %s [%s] %s" % (fmtStack(inspect.stack()), section, option))
 			primedResolver = lambda cc: self._resolver.getTarget(cc, section, option)
 			return self.setChecked(primedResolver, value, *args, **kwargs)
 		def myGet(desc, obj2str, str2obj, def2obj, section, option, *args, **kwargs):
+			self._logger.debug("old style call from %s [%s] %s" % (fmtStack(inspect.stack()), section, option))
 			primedResolver = lambda cc: self._resolver.getSource(cc, section, option)
 			return self.getTyped_compat(desc, obj2str, str2obj, def2obj, primedResolver, *args, **kwargs)
 		def myIter(section):
+			self._logger.debug("old style call from %s [%s]" % (fmtStack(inspect.stack()), section))
 			return self._resolver.getOptions(self._curCfg, section)
 		ConfigBase.__init__(self, mySet, myGet, myIter, self._baseDir)
 
@@ -150,7 +158,7 @@ class NewConfig(ConfigBase):
 		# Get persistent variables - only possible after self._oldCfg was set!
 		self.confName = self.get('global', 'config id', confName, persistent = True)
 		# Specify variables to forward to scoped config instances
-		self._forward = ['workDir', 'configFile', 'confName']
+		self._forward = ['workDir', 'configFile', 'confName', 'opts']
 
 
 	def freezeConfig(self, writeConfig = True):
