@@ -7,7 +7,7 @@ from python_compat import *
 class OGE(PBSGECommon):
 	def __init__(self, config, wmsName = None):
 		PBSGECommon.__init__(self, config, wmsName)
-		self.user = config.get(self._getSections('backend'), 'user', os.environ.get('LOGNAME', ''), mutable=True)
+		self.user = config.get(self._getSections('backend'), 'user', os.environ.get('LOGNAME', ''), onChange = None)
 		self.configExec = utils.resolveInstallPath('qconf')
 
 

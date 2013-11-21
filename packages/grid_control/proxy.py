@@ -40,9 +40,9 @@ class TrivialProxy(Proxy):
 class TimedProxy(Proxy):
 	def __init__(self, config):
 		Proxy.__init__(self, config)
-		self._lowerLimit = config.getTime('proxy', 'min lifetime', 300, mutable=True)
-		self._maxQueryTime = config.getTime('proxy', 'max query time',  5 * 60, mutable=True)
-		self._minQueryTime = config.getTime('proxy', 'min query time', 30 * 60, mutable=True)
+		self._lowerLimit = config.getTime('proxy', 'min lifetime', 300, onChange = None)
+		self._maxQueryTime = config.getTime('proxy', 'max query time',  5 * 60, onChange = None)
+		self._minQueryTime = config.getTime('proxy', 'min query time', 30 * 60, onChange = None)
 		self._lastUpdate = 0
 
 	def canSubmit(self, neededTime, canCurrentlySubmit):
@@ -75,7 +75,7 @@ class VomsProxy(TimedProxy):
 	def __init__(self, config):
 		TimedProxy.__init__(self, config)
 		self._infoExec = utils.resolveInstallPath('voms-proxy-info')
-		self._ignoreWarning = config.getBool('proxy', 'ignore warnings', False, mutable=True)
+		self._ignoreWarning = config.getBool('proxy', 'ignore warnings', False, onChange = None)
 		self._cache = None
 
 	def getUsername(self):

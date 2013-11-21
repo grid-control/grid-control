@@ -4,8 +4,8 @@ from grid_control import QM, AbstractObject, AbstractError, utils
 class Broker(AbstractObject):
 	def __init__(self, config, section, userOpt, itemName, discoverFun):
 		(self._itemsStart, self._itemsDiscovered, self._itemName) = (None, False, itemName)
-		self._nEntries = config.getInt(section, '%s entries' % userOpt, 0, mutable=True)
-		self._nRandom = config.getBool(section, '%s randomize' % userOpt, False, mutable=True)
+		self._nEntries = config.getInt(section, '%s entries' % userOpt, 0, onChange = None)
+		self._nRandom = config.getBool(section, '%s randomize' % userOpt, False, onChange = None)
 
 	def _discover(self, discoverFun, cached = True):
 		if not cached or (self._itemsDiscovered == False):

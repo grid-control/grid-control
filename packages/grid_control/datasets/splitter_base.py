@@ -31,14 +31,14 @@ class DataSplitter(AbstractObject):
 		self._protocol = {}
 
 		def getResyncConfig(item, default, opts, cls = ResyncMode):
-			value = config.get('dataset', 'resync %s' % item, cls.members[default], mutable = True).lower()
+			value = config.get('dataset', 'resync %s' % item, cls.members[default], onChange = None).lower()
 			result = cls.members.index(value)
 			if result not in opts:
 				raise ConfigError('Invalid resync setting %s for option "resync %s"!' % (value, item))
 			return result
 
 		# Resync settings:
-		self.interactive = config.getBool('dataset', 'resync interactive', False, mutable = True)
+		self.interactive = config.getBool('dataset', 'resync interactive', False, onChange = None)
 		#   behaviour in case of event size changes
 		self.mode_removed = getResyncConfig('mode removed', ResyncMode.complete, ResyncMode.noChanged)
 		self.mode_expanded = getResyncConfig('mode expand', ResyncMode.changed, ResyncMode.allMembers)
@@ -46,7 +46,7 @@ class DataSplitter(AbstractObject):
 		self.mode_new = getResyncConfig('mode new', ResyncMode.complete, [ResyncMode.complete, ResyncMode.ignore])
 		#   behaviour in case of metadata changes
 		self.metaOpts = {}
-		for meta in config.getList('dataset', 'resync metadata', [], mutable = True):
+		for meta in config.getList('dataset', 'resync metadata', [], onChange = None):
 			self.metaOpts[meta] = getResyncConfig('mode %s' % meta, ResyncMode.complete, ResyncMode.noChanged)
 		#   behaviour in case of job changes - disable changed jobs, preserve job number of changed jobs or reorder
 		self.resyncOrder = getResyncConfig('jobs', ResyncOrder.append, ResyncOrder.allMembers, ResyncOrder)

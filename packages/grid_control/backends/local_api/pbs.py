@@ -15,7 +15,7 @@ class PBS(PBSGECommon):
 	def __init__(self, config, wmsName = None):
 		PBSGECommon.__init__(self, config, wmsName)
 		self.nodesExec = utils.resolveInstallPath('pbsnodes')
-		self._server = config.get(self._getSections('backend'), 'server', '', mutable=True)
+		self._server = config.get(self._getSections('backend'), 'server', '', onChange = None)
 		self.fqid = lambda wmsId: QM(self._server, '%s.%s' % (wmsId, self._server), wmsId)
 
 

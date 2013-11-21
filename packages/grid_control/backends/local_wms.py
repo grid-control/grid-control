@@ -14,7 +14,7 @@ class LocalWMS(BasicWMS):
 
 		self.sandCache = []
 		self.sandPath = config.getPath('local', 'sandbox path', os.path.join(config.workDir, 'sandbox'), mustExist = False)
-		self.scratchPath = config.getList('local', 'scratch path', ['TMPDIR', '/tmp'], mutable=True)
+		self.scratchPath = config.getList('local', 'scratch path', ['TMPDIR', '/tmp'], onChange = None)
 
 
 	def getTimings(self):

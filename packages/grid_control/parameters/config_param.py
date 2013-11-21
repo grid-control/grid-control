@@ -1,4 +1,5 @@
-from grid_control import noDefault, utils, ConfigError, QM
+from grid_control import noDefault, utils, ConfigError, QM, changeImpossible
+
 import shlex
 
 def parseTuple(t, delimeter):
@@ -98,18 +99,23 @@ class ParameterConfig:
 		return list(yieldEntries())
 
 
+	def onChange(self, old_obj, cur_obj, cur_entry):
+		if self.static:
+			changeImpossible(old_obj, cur_obj, cur_entry)
+
+
 	def getOpt(self, var, opt = None):
 		return self.optDict.get((var, opt), ('%s %s' % (var, QM(opt, opt, ''))).replace('\'', ''))
 
 
 	def get(self, var, opt = None, default = noDefault):
-		result = self.config.get(self.sections, self.getOpt(var, opt), default, mutable = not self.static)
+		result = self.config.get(self.sections, self.getOpt(var, opt), default, onChange = self.onChange)
 		self.configLog[(var, opt)] = result
 		return result
 
 
 	def getBool(self, var, opt = None, default = noDefault):
-		result = self.config.getBool(self.sections, self.getOpt(var, opt), default, mutable = not self.static)
+		result = self.config.getBool(self.sections, self.getOpt(var, opt), default, onChange = self.onChange)
 		self.configLog[(var, opt)] = result
 		return result
 

@@ -68,7 +68,7 @@ if __name__ == '__main__':
 				opts.init = True
 			if utils.getUserBool('Do you want to create the working directory %s?' % config.workDir, True):
 				utils.ensureDirExists(config.workDir, 'work directory')
-		checkSpace = config.getInt('global', 'workdir space', 10, mutable=True)
+		checkSpace = config.getInt('global', 'workdir space', 10, onChange = None)
 
 		class InitSentinel:
 			def __init__(self, config):
@@ -127,17 +127,11 @@ if __name__ == '__main__':
 			jobManager.reset(wms, opts.reset)
 			sys.exit(0)
 
-		actionList = config.getList('jobs', 'action', ['check', 'retrieve', 'submit'], mutable=True)
-		guiClass = config.get('global', 'gui', 'SimpleConsole', mutable=True)
-		runContinuous = config.getBool('jobs', 'continuous', False, mutable=True)
+		actionList = config.getList('jobs', 'action', ['check', 'retrieve', 'submit'], onChange = None)
+		guiClass = config.get('global', 'gui', 'SimpleConsole', onChange = None)
+		runContinuous = config.getBool('jobs', 'continuous', False, onChange = None)
 
 		initSentinel.checkpoint('config')
-		if not opts.init:
-			if config._todo_remove_major_change:
-				if utils.getUserBool('\nQuit grid-control in order to initialize the task again?', False):
-					sys.exit(0)
-				if utils.getUserBool('\nOverwrite currently saved configuration to remove warning in the future?', False):
-					config.freezeConfig(writeConfig = True)
 		config.freezeConfig(writeConfig = opts.init)
 
 		if runContinuous and guiClass == 'SimpleConsole':

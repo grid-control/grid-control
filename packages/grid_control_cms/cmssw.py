@@ -35,7 +35,7 @@ class CMSSW(DataTask):
 		# This works in tandem with provider_dbsv2.py !
 		self.selectedLumis = parseLumiFilter(config.get(self.__class__.__name__, 'lumi filter', ''))
 
-		self.useReqs = config.getBool(self.__class__.__name__, 'software requirements', True, mutable = True)
+		self.useReqs = config.getBool(self.__class__.__name__, 'software requirements', True, onChange = None)
 		self.seRuntime = config.getBool(self.__class__.__name__, 'se runtime', False)
 
 		if len(self.projectArea):
@@ -97,7 +97,7 @@ class CMSSW(DataTask):
 		self.epilog = TaskExecutableWrapper(config.getScoped([self.__class__.__name__]), 'epilog', '')
 		if config.getPaths(self.__class__.__name__, 'executable', []) != []:
 			raise ConfigError('Prefix executable and argument options with either prolog or epilog!')
-		self.arguments = config.get(self.__class__.__name__, 'arguments', '', noVar = False)
+		self.arguments = config.get(self.__class__.__name__, 'arguments', '')
 
 		# Get cmssw config files and check their existance
 		self.configFiles = []
@@ -119,7 +119,7 @@ class CMSSW(DataTask):
 				if len(self.configFiles) > 0:
 					self.instrumentCfgQueue(self.configFiles, fragment, mustPrepare = True)
 		else:
-			self.eventsPerJob = config.get(self.__class__.__name__, 'events per job', '0', noVar = False)
+			self.eventsPerJob = config.get(self.__class__.__name__, 'events per job', '0')
 			if config.opts.init and self.prepare:
 				self.instrumentCfgQueue(self.configFiles, fragment)
 

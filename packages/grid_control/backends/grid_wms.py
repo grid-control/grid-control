@@ -37,8 +37,8 @@ class GridWMS(BasicWMS):
 		self.vo = config.get(self._getSections('backend'), 'vo', self.proxy.getGroup())
 
 		self._submitParams = {}
-		self._ce = config.get(self._getSections('backend'), 'ce', '', mutable=True)
-		self._configVO = config.getPath(self._getSections('backend'), 'config', '', mutable=True)
+		self._ce = config.get(self._getSections('backend'), 'ce', '', onChange = None)
+		self._configVO = config.getPath(self._getSections('backend'), 'config', '', onChange = None)
 		self._warnSBSize = config.getInt(self._getSections('backend'), 'warn sb size', 5 * 1024 * 1024)
 
 

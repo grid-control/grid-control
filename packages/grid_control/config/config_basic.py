@@ -113,7 +113,6 @@ class ResolvedConfigBase(ConfigBase):
 # Main config interface
 class NewConfig(ConfigBase):
 	def __init__(self, configFile = None, configDict = {}, optParser = None, configHostSpecific = True):
-		self._todo_remove_major_change = False
 		(self._allowSet, self._oldCfg) = (True, None)
 		# Read in the current configuration from config file, manual dictionary, command line and "config" dir
 		self._curCfg = BasicConfigContainer('current', configFile, configDict, optParser, configHostSpecific)
@@ -137,7 +136,7 @@ class NewConfig(ConfigBase):
 		def myGet(desc, obj2str, str2obj, def2obj, section, option, *args, **kwargs):
 			self._logger.debug("old style call from %s [%s] %s" % (fmtStack(inspect.stack()), section, option))
 			primedResolver = lambda cc: self._resolver.getSource(cc, section, option)
-			return self.getTyped_compat(desc, obj2str, str2obj, def2obj, primedResolver, *args, **kwargs)
+			return self.getTyped(desc, obj2str, str2obj, def2obj, primedResolver, *args, **kwargs)
 		def myIter(section):
 			self._logger.debug("old style call from %s [%s]" % (fmtStack(inspect.stack()), section))
 			return self._resolver.getOptions(self._curCfg, section)
@@ -190,7 +189,7 @@ class NewConfig(ConfigBase):
 
 
 	# Get a typed config value from the container
-	def getTyped(self, desc, obj2str, str2obj, def2obj, resolver, default_obj,
+	def getTyped(self, desc, obj2str, str2obj, def2obj, resolver, default_obj = noDefault,
 			onChange = changeImpossible, onValid = None, persistent = False, markDefault = True):
 		(section, option) = resolver(self._curCfg)
 		# First transform default into string if applicable
@@ -231,28 +230,6 @@ class NewConfig(ConfigBase):
 		if onValid:
 			return onValid(section, option, cur_obj)
 		return cur_obj
-
-
-	def getTyped_compat(self, desc, obj2str, str2obj, def2obj, resolver, default_obj = noDefault,
-			mutable = False, noVar = True, persistent = False, markDefault = True):
-		if mutable == False:
-			def onChange(old_obj, cur_obj, cur_entry):
-				if self.opts.init:
-					return
-				self._logger.warn('Found some changes in the config file, ' +
-					'which will only apply to the current task after a reinitialization:')
-				self._logger.warn('[%s] %s' % (cur_entry.section, cur_entry.option))
-				self._logger.warn('\told: %r\n\tnew: %r' % (old_obj, cur_obj))
-				self._todo_remove_major_change = True
-		else:
-			onChange = None
-		if noVar == True:
-			onValid = lambda section, option, obj: \
-				utils.checkVar(obj, '[%s] "%s" may not contain variables.' % (section, option))
-		else:
-			onValid = None
-		return self.getTyped(desc, obj2str, str2obj, def2obj, resolver, default_obj,
-			onChange = onChange, onValid = onValid, persistent = persistent, markDefault = markDefault)
 
 
 	def write(self, *args, **kwargs):

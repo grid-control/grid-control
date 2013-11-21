@@ -5,7 +5,7 @@ from wms_multi import MultiWMS
 class WMSFactory:
 	def __init__(self, config):
 		self.config = config
-		wmsUsrList = config.getList('global', 'backend', ['grid'], mutable = True)
+		wmsUsrList = config.getList('global', 'backend', ['grid'], onChange = None)
 		def parseUserWMS(wmsEntry):
 			wmsClass, wmsName = utils.optSplit(wmsEntry, ':', empty = None)
 			wmsDict = {'grid': 'GliteWMS', 'inactive': 'InactiveWMS'}
@@ -19,7 +19,7 @@ class WMSFactory:
 		except:
 			raise RethrowError('Invalid backend selected! (%s)' % str.join(",", wmsUsrList))
 		if len(self.wmsObjList) > 1:
-			self.wmsMultiClass = config.get('global', 'backend manager', 'MultiWMS', mutable = True)
+			self.wmsMultiClass = config.get('global', 'backend manager', 'MultiWMS', onChange = None)
 
 
 	def getWMS(self):

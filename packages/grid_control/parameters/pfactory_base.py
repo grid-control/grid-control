@@ -41,7 +41,7 @@ class BasicParameterFactory(ParameterFactory):
 		newSeeds = map(lambda x: str(random.randint(0, 10000000)), range(nseeds))
 		for (idx, seed) in enumerate(config.getList('jobs', 'seeds', newSeeds, persistent = True)):
 			self.constSources.append(CounterParameterSource('SEED_%d' % idx, int(seed)))
-		self.repeat = config.getInt(sections, 'repeat', 1, mutable=True) # ALL config.x -> paramconfig.x !
+		self.repeat = config.getInt(sections, 'repeat', 1, onChange = None) # ALL config.x -> paramconfig.x !
 
 
 	def _addConstantPlugin(self, config, sections, cName, varName):

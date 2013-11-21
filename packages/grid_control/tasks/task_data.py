@@ -20,7 +20,7 @@ class DataTask(TaskModule):
 		splitterName = config.get(self.__class__.__name__, 'dataset splitter', 'FileBoundarySplitter')
 		splitterClass = dataProvider.checkSplitter(DataSplitter.getClass(splitterName))
 		self.dataSplitter = splitterClass(config, self.__class__.__name__)
-		self.checkSE = config.getBool(self.__class__.__name__, 'dataset storage check', True, mutable=True)
+		self.checkSE = config.getBool(self.__class__.__name__, 'dataset storage check', True, onChange = None)
 
 		# Create and register dataset parameter plugin
 		paramSource = DataParameterSource(config.workDir, 'data',
@@ -28,7 +28,7 @@ class DataTask(TaskModule):
 		DataParameterSource.datasetsAvailable['data'] = paramSource
 
 		# Select dataset refresh rate
-		self.dataRefresh = utils.parseTime(config.get(self.__class__.__name__, 'dataset refresh', '', mutable=True))
+		self.dataRefresh = utils.parseTime(config.get(self.__class__.__name__, 'dataset refresh', '', onChange = None))
 		if self.dataRefresh > 0:
 			paramSource.resyncSetup(interval = max(self.dataRefresh, dataProvider.queryLimit()))
 			utils.vprint('Dataset source will be queried every %s' % utils.strTime(self.dataRefresh), -1)

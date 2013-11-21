@@ -9,12 +9,12 @@ class TaskModule(AbstractObject):
 	def __init__(self, config):
 		self.config = config
 
-		self.wallTime = config.getTime('jobs', 'wall time', mutable=True)
-		self.cpuTime = config.getTime('jobs', 'cpu time', self.wallTime, mutable=True)
+		self.wallTime = config.getTime('jobs', 'wall time', onChange = None)
+		self.cpuTime = config.getTime('jobs', 'cpu time', self.wallTime, onChange = None)
 		self.nodeTimeout = config.getTime('jobs', 'node timeout', -1)
 
-		self.cpus = config.getInt('jobs', 'cpus', 1, mutable=True)
-		self.memory = config.getInt('jobs', 'memory', -1, mutable=True)
+		self.cpus = config.getInt('jobs', 'cpus', 1, onChange = None)
+		self.memory = config.getInt('jobs', 'memory', -1, onChange = None)
 
 		# Compute / get task ID
 		self.taskID = config.get('task', 'task id', 'GC' + md5(str(time())).hexdigest()[:12], persistent = True)

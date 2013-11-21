@@ -9,10 +9,10 @@ class PBSGECommon(LocalWMS):
 			statusExec = utils.resolveInstallPath('qstat'),
 			cancelExec = utils.resolveInstallPath('qdel'))
 		section = self._getSections('backend')
-		self.group = config.get(section, 'group', '', mutable=True)
-		self.shell = config.get(section, 'shell', '', mutable=True)
-		self.delay = config.getBool(section, 'delay output', False, mutable=True)
-		self.addAttr = config.getDict(section, 'submit options', {}, mutable=True) # TODO
+		self.group = config.get(section, 'group', '', onChange = None)
+		self.shell = config.get(section, 'shell', '', onChange = None)
+		self.delay = config.getBool(section, 'delay output', False, onChange = None)
+		self.addAttr = config.getDict(section, 'submit options', {}, onChange = None) # TODO
 
 
 	def unknownID(self):

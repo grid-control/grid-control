@@ -118,11 +118,11 @@ class GliteWMS(GridWMS):
 		self._cancelExec = utils.resolveInstallPath('glite-wms-job-cancel')
 		self._submitParams.update({'-r': self._ce, '--config': self._configVO})
 		sections = self._getSections('backend')
-		self._useDelegate = config.getBool(sections, 'use delegate', None, mutable=True)
+		self._useDelegate = config.getBool(sections, 'use delegate', None, onChange = None)
 		self._discovery_module = None
-		if config.getBool(sections, 'discover wms', True, mutable=True):
+		if config.getBool(sections, 'discover wms', True, onChange = None):
 			self._discovery_module = DiscoverWMS_Lazy(config)
-		self._discover_sites = config.getBool(sections, 'discover sites', False, mutable=True)
+		self._discover_sites = config.getBool(sections, 'discover sites', False, onChange = None)
 
 
 	def getSites(self):

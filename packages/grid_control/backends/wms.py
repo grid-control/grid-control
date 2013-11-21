@@ -40,7 +40,7 @@ class WMS(AbstractObject):
 
 	def _createBroker(self, name, default, *args):
 		sections = self._getSections('backend')
-		return Broker.open(self.config.get(sections, name, default, mutable=True), self.config, sections, *args)
+		return Broker.open(self.config.get(sections, name, default, onChange = None), self.config, sections, *args)
 
 	def _createId(self, wmsIdRaw):
 		return 'WMSID.%s.%s' % (self.wmsName, wmsIdRaw)
@@ -102,7 +102,7 @@ class BasicWMS(WMS):
 		utils.ensureDirExists(self._outputPath, 'output directory')
 
 		# Initialise proxy, broker and storage manager
-		self.proxy = Proxy.open(config.get(self._getSections('backend'), 'proxy', 'TrivialProxy', mutable=True), config)
+		self.proxy = Proxy.open(config.get(self._getSections('backend'), 'proxy', 'TrivialProxy', onChange = None), config)
 
 		configSM = config.getScoped(self._getSections('storage'))
 		# UI -> SE -> WN

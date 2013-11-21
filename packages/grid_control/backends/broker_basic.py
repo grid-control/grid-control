@@ -12,7 +12,7 @@ class RandomBroker(Broker):
 class UserBroker(Broker):
 	def __init__(self, config, section, userOpt, itemName, discoverFun):
 		Broker.__init__(self, config, section, userOpt, itemName, discoverFun)
-		self._itemsStart = config.getList(section, userOpt, [], mutable=True)
+		self._itemsStart = config.getList(section, userOpt, [], onChange = None)
 		if not self._itemsStart:
 			self._itemsStart = None
 
@@ -29,7 +29,7 @@ class FilterBroker(UserBroker):
 class CoverageBroker(Broker):
 	def __init__(self, config, section, userOpt, itemName, discoverFun):
 		Broker.__init__(self, config, section, userOpt, itemName, discoverFun)
-		itemsUser = config.getList(section, userOpt, [], mutable=True)
+		itemsUser = config.getList(section, userOpt, [], onChange = None)
 		if not itemsUser:
 			itemsUser = None
 		itemsDisc = self._discover(discoverFun).keys()
@@ -91,7 +91,7 @@ class SimpleBroker(FilterBroker):
 class StorageBroker(Broker):
 	def __init__(self, config, section, userOpt, itemName, discoverFun):
 		Broker.__init__(self, config, section, userOpt, itemName, discoverFun)
-		self.storageDict = config.getDict(section, '%s storage access' % userOpt, {}, mutable=True,
+		self.storageDict = config.getDict(section, '%s storage access' % userOpt, {}, onChange = None,
 			parser = lambda x: utils.parseList(x, ' '))[0]
 
 	def _broker(self, reqs, items):
