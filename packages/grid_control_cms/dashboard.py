@@ -4,8 +4,8 @@ from time import localtime, strftime
 from DashboardAPI import DashboardAPI
 
 class DashBoard(Monitoring):
-	def __init__(self, config, task):
-		Monitoring.__init__(self, config, task)
+	def __init__(self, config, name, task):
+		Monitoring.__init__(self, config, name, task)
 		(taskName, jobName, jobType) = task.getDescription(None) # TODO: use the other variables for monitoring
 		self.app = config.get('dashboard', 'application', 'shellscript', onChange = None)
 		jobType = QM(jobType, jobType, 'analysis')

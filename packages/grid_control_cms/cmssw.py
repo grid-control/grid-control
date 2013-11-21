@@ -13,11 +13,11 @@ class CMSDataSplitProcessor(DataSplitProcessor):
 
 
 class CMSSW(DataTask):
-	def __init__(self, config):
+	def __init__(self, config, name):
 		config.set('storage', 'se input timeout', '0:30', override = False)
 		config.set(self.__class__.__name__, 'dataset provider', 'DBSApiv2', override = False)
 		config.set(self.__class__.__name__, 'dataset splitter', 'EventBoundarySplitter', override = False)
-		DataTask.__init__(self, config)
+		DataTask.__init__(self, config, name)
 		self.errorDict.update(dict(self.updateErrorDict(utils.pathShare('gc-run.cmssw.sh', pkg = 'grid_control_cms'))))
 
 		# SCRAM info

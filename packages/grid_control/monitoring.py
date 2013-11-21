@@ -1,8 +1,9 @@
 import os
-from grid_control import AbstractObject, Job, utils
+from grid_control import NamedObject, Job, utils
 
-class EventHandler(AbstractObject):
-	def __init__(self, config, task, submodules = []):
+class EventHandler(NamedObject):
+	def __init__(self, config, name, task, submodules = []):
+		NamedObject.__init__(self, config, name)
 		(self.config, self.task, self.submodules) = (config, task, submodules)
 
 	def onJobSubmit(self, wms, jobObj, jobNum):
@@ -41,8 +42,8 @@ Monitoring.dynamicLoaderPath()
 
 class ScriptMonitoring(Monitoring):
 	Monitoring.moduleMap["scripts"] = "ScriptMonitoring"
-	def __init__(self, config, task):
-		Monitoring.__init__(self, config, task)
+	def __init__(self, config, name, task):
+		Monitoring.__init__(self, config, name, task)
 		self.silent = config.getBool('events', 'silent', True, onChange = None)
 		self.evtSubmit = config.get('events', 'on submit', '', onChange = None)
 		self.evtStatus = config.get('events', 'on status', '', onChange = None)

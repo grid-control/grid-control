@@ -84,7 +84,7 @@ if __name__ == '__main__':
 
 		# Initialis task module
 		initSentinel.checkpoint('module')
-		task = TaskModule.open(config.get('global', ['task', 'module']), config)
+		task = TaskModule.open(config.get('global', ['task', 'module']), config, 'task')
 		utils.vprint('Current task ID: %s' % task.taskID, -1)
 		utils.vprint('Task started on %s' % task.taskDate, -1)
 
@@ -95,7 +95,7 @@ if __name__ == '__main__':
 
 		# Initialise monitoring module
 		initSentinel.checkpoint('monitoring')
-		monitor = Monitoring(config, task, map(lambda x: Monitoring.open(x, config, task),
+		monitor = Monitoring(config, 'monitor', task, map(lambda x: Monitoring.open(x, config, 'monitor', task),
 			config.getList('jobs', 'monitor', ['scripts'])))
 
 		# Initialise workload management interface

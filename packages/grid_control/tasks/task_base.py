@@ -1,12 +1,12 @@
 import os, random
 from python_compat import *
-from grid_control import ConfigError, AbstractError, AbstractObject, QM, utils, WMS, Job
+from grid_control import ConfigError, AbstractError, NamedObject, QM, utils, WMS, Job
 from grid_control.parameters import ParameterFactory, ParameterInfo
 from time import time, localtime, strftime
 
-class TaskModule(AbstractObject):
+class TaskModule(NamedObject):
 	# Read configuration options and init vars
-	def __init__(self, config):
+	def __init__(self, config, name):
 		self.config = config
 
 		self.wallTime = config.getTime('jobs', 'wall time', onChange = None)

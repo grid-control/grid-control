@@ -4,8 +4,8 @@ from task_data import DataTask
 from task_utils import TaskExecutableWrapper
 
 class UserTask(DataTask):
-	def __init__(self, config):
-		DataTask.__init__(self, config)
+	def __init__(self, config, name):
+		DataTask.__init__(self, config, name)
 		self._exeWrap = TaskExecutableWrapper(config.getScoped([self.__class__.__name__]))
 
 

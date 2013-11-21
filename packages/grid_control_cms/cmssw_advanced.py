@@ -11,7 +11,7 @@ def fromNM(nm, nickname, default):
 	return [nm.get(None, default)]
 
 class CMSSW_Advanced(cmssw.CMSSW):
-	def __init__(self, config):
+	def __init__(self, config, name):
 		head = [(0, 'Nickname')]
 
 		# Mapping between nickname and config files:
@@ -56,7 +56,7 @@ class CMSSW_Advanced(cmssw.CMSSW):
 				yield utils.mergeDicts([tmp, self.nmConst.get(nick, {})])
 		utils.printTabular(head, report(), 'cl')
 		utils.vprint(level = -1)
-		cmssw.CMSSW.__init__(self, config)
+		cmssw.CMSSW.__init__(self, config, name)
 
 
 	def displayLumi(self, lumi):

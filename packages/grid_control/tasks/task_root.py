@@ -3,7 +3,7 @@ from grid_control import QM, utils, ConfigError
 from task_user import UserTask
 
 class ROOTTask(UserTask):
-	def __init__(self, config):
+	def __init__(self, config, name):
 		# Determine ROOT path from previous settings / environment / config file
 		taskInfo = utils.PersistentDict(os.path.join(config.workDir, 'task.dat'), ' = ')
 		self._rootpath = taskInfo.get('root path', os.environ.get('ROOTSYS', None))
@@ -22,7 +22,7 @@ class ROOTTask(UserTask):
 			config.set(self.__class__.__name__, 'executable', exeFull)
 
 		# Apply default handling from UserTask
-		UserTask.__init__(self, config)
+		UserTask.__init__(self, config, name)
 		self.updateErrorDict(utils.pathShare('gc-run.root.sh'))
 
 		# Collect lib files needed by executable
