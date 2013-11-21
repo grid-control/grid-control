@@ -187,10 +187,10 @@ class ANSIConsole(GUI):
 			GUIStream.dump()
 
 	def getHeader(self):
-		tmp = self.module.config.confName + ' / ' + self.module.taskID
+		tmp = self.task.config.confName + ' / ' + self.task.taskID
 		if len(tmp) < 45:
 			return tmp
-		tmp = self.module.config.confName
+		tmp = self.task.config.confName
 		if len(tmp) < 45:
 			return tmp
-		return self.module.taskID
+		return self.task.taskID

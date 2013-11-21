@@ -18,14 +18,14 @@ class Report:
 			help='Print site specific job information - use several times to increase verbosity')
 		parser.add_option('-T', '--time-report',   dest='reportTime', default=0,     action='count',
 			help='Print time specific job information - use several times to increase verbosity')
-		parser.add_option('-M', '--module-report', dest='reportMod',  default=0,     action='count',
-			help='Print module specific job information')
+		parser.add_option('-M', '--task-report',   dest='reportMod',  default=0,     action='count',
+			help='Print task specific job information')
 		parser.add_option('-D', '--detail-report', dest='reportMore', default=False, action='store_true',
 			help='Print detailed job information')
 	addOptions = staticmethod(addOptions)
 
 
-	def show(self, opts, module = None):
+	def show(self, opts, task = None):
 		if opts.report:
 			utils.vprint(level = -1)
 			self.summary()
@@ -35,7 +35,7 @@ class Report:
 		if opts.reportSite or opts.reportTime:
 			self.siteReport(opts.reportSite, opts.reportTime)
 		if opts.reportMod:
-			self.modReport(module)
+			self.modReport(task)
 		if opts.report or opts.reportMore or opts.reportSite or opts.reportTime or opts.reportMod:
 			return True
 		return False
@@ -98,12 +98,12 @@ class Report:
 		return 0
 
 
-	def modReport(self, module):
+	def modReport(self, task):
 		(order, head, reports) = ([], [], {})
 		allStates = dict.fromkeys(Report.states, 0)
 
 		for jobNum in self.jobs:
-			report = module.report(jobNum)
+			report = task.report(jobNum)
 			if str(report) not in reports:
 				reports[str(report)] = dict(map(lambda x: (x, 0), Report.states))
 				for key, value in report.iteritems():
@@ -121,7 +121,7 @@ class Report:
 			except:
 				pass
 		infos = map(lambda x: reports[x], order) + ["=", allStates]
-		self.printHeader('MODULE SUMMARY:')
+		self.printHeader('TASK SUMMARY:')
 		utils.vprint(level = -1)
 		utils.printTabular(map(lambda x: (x, x), head + Report.states), infos, 'c' * len(head))
 		utils.vprint(level = -1)

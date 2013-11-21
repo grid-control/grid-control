@@ -1,8 +1,8 @@
 from grid_control import AbstractObject, AbstractError
 
 class GUI(AbstractObject):
-	def __init__(self, jobCycle, jobMgr, module):
-		(self.jobCycle, self.jobMgr, self.module) = (jobCycle, jobMgr, module)
+	def __init__(self, jobCycle, jobMgr, task):
+		(self.jobCycle, self.jobMgr, self.task) = (jobCycle, jobMgr, task)
 
 	def run(self):
 		raise AbstractError()

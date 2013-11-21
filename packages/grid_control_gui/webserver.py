@@ -44,8 +44,8 @@ class TabularHTML:
 		return self.table
 
 class CPWebserver(GUI):
-	def __init__(self, jobCycle, jobMgr, module):
-		GUI.__init__(self, jobCycle, jobMgr, module)
+	def __init__(self, jobCycle, jobMgr, task):
+		GUI.__init__(self, jobCycle, jobMgr, task)
 		self.counter = 0
 
 	def processQueue(self, timeout):
@@ -73,7 +73,7 @@ class CPWebserver(GUI):
 		result += str(CPProgressBar(0, min(100, self.counter), 100, 300))
 		if 'job' in kw:
 			jobNum = int(kw['job'])
-			info = self.module.getJobConfig(jobNum)
+			info = self.task.getJobConfig(jobNum)
 			result += str(TabularHTML(zip(sorted(info), sorted(info)), [info], top = False))
 		def getJobObjs():
 			for jobNum in self.jobMgr.jobDB.getJobs():

@@ -19,7 +19,7 @@ class CMSProvider(DataProvider):
 		self.includeLumi = config.getBool(section, 'keep lumi metadata', False)
 		self.onlyValid = config.getBool(section, 'only valid', True)
 
-		# This works in tandem with active job module (cmssy.py supports only [section] lumi filter!)
+		# This works in tandem with active task module (cmssy.py supports only [section] lumi filter!)
 		self.selectedLumis = parseLumiFilter(config.get(section, 'lumi filter', ''))
 		if self.selectedLumis:
 			utils.vprint('Runs/lumi section filter enabled! (%d entries)' % len(self.selectedLumis), -1, once = True)

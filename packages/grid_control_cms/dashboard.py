@@ -4,9 +4,9 @@ from time import localtime, strftime
 from DashboardAPI import DashboardAPI
 
 class DashBoard(Monitoring):
-	def __init__(self, config, module):
-		Monitoring.__init__(self, config, module)
-		(taskName, jobName, jobType) = module.getDescription(None) # TODO: use the other variables for monitoring
+	def __init__(self, config, task):
+		Monitoring.__init__(self, config, task)
+		(taskName, jobName, jobType) = task.getDescription(None) # TODO: use the other variables for monitoring
 		self.app = config.get('dashboard', 'application', 'shellscript', onChange = None)
 		jobType = QM(jobType, jobType, 'analysis')
 		self.tasktype = config.get('dashboard', 'task', jobType, onChange = None)
@@ -40,14 +40,14 @@ class DashBoard(Monitoring):
 	# Called on job submission
 	def onJobSubmit(self, wms, jobObj, jobNum):
 		proxy = wms.getProxy(jobObj.wmsId)
-		taskId = self.module.substVars(self.taskname, jobNum, addDict = {'DATASETNICK': ''}).strip('_')
+		taskId = self.task.substVars(self.taskname, jobNum, addDict = {'DATASETNICK': ''}).strip('_')
 		utils.gcStartThread("Notifying dashboard about job submission %d" % jobNum,
 			self.publish, jobObj, jobNum, taskId, [{
 			'user': os.environ['LOGNAME'], 'GridName': proxy.getUsername(), 'CMSUser': proxy.getUsername(),
 			'tool': 'grid-control', 'JSToolVersion': utils.getVersion(),
 			'SubmissionType':'direct', 'tool_ui': os.environ.get('HOSTNAME',''),
 			'application': self.app, 'exe': 'shellscript', 'taskType': self.tasktype,
-			'scheduler': wms.wmsName, 'vo': proxy.getGroup()}, self.module.getSubmitInfo(jobNum)])
+			'scheduler': wms.wmsName, 'vo': proxy.getGroup()}, self.task.getSubmitInfo(jobNum)])
 
 
 	# Called on job status update
@@ -55,7 +55,7 @@ class DashBoard(Monitoring):
 		# Translate status into dashboard status message
 		statusDashboard = self._statusMap.get(jobObj.state, 'PENDING')
 		# Update dashboard information
-		taskId = self.module.substVars(self.taskname, jobNum, addDict = {'DATASETNICK': ''}).strip('_')
+		taskId = self.task.substVars(self.taskname, jobNum, addDict = {'DATASETNICK': ''}).strip('_')
 		utils.gcStartThread("Notifying dashboard about status of job %d" % jobNum,
 			self.publish, jobObj, jobNum, taskId, [{'StatusValue': statusDashboard,
 			'StatusValueReason': data.get('reason', statusDashboard).upper(),

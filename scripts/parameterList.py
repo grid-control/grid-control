@@ -57,8 +57,8 @@ if opts.parameters:
 if os.path.exists(args[0]):
 	config = Config(args[0], configDict = {'jobs': {'nseeds': 1}, 'parameters': paramSettings})
 	if not opts.manager:
-		mod = config.get('global', 'module')
-		opts.manager = config.get(mod, 'parameter factory', 'SimpleParameterFactory')
+		task = config.get('global', ['task', 'module'])
+		opts.manager = config.get(task, 'parameter factory', 'SimpleParameterFactory')
 else:
 	paramSettings['parameters'] = str.join(' ', args).replace('\\n', '\n')
 	config = Config(configDict = {'jobs': {'nseeds': 1}, 'parameters': paramSettings})

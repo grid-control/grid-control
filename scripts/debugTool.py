@@ -46,10 +46,10 @@ if opts.jobs:
 	config.opts = config
 	config.opts.init = False
 	config.opts.resync = False
-	# Initialise application module
-	module = Module.open(config.get('global', 'module'), config)
+	# Initialise task module
+	task = TaskModule.open(config.get('global', ['task', 'module']), config)
 	jobDB = JobDB(config)
-	selected = JobSelector.create(opts.jobs, module = module)
+	selected = JobSelector.create(opts.jobs, task = task)
 	print str.join(' ', map(str, jobDB.getJobsIter(selected)))
 
 if opts.diff:

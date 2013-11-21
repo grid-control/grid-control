@@ -2,8 +2,8 @@ import os
 from grid_control import AbstractObject, Job, utils
 
 class EventHandler(AbstractObject):
-	def __init__(self, config, module, submodules = []):
-		(self.config, self.module, self.submodules) = (config, module, submodules)
+	def __init__(self, config, task, submodules = []):
+		(self.config, self.task, self.submodules) = (config, task, submodules)
 
 	def onJobSubmit(self, wms, jobObj, jobNum):
 		for submodule in self.submodules:
@@ -41,8 +41,8 @@ Monitoring.dynamicLoaderPath()
 
 class ScriptMonitoring(Monitoring):
 	Monitoring.moduleMap["scripts"] = "ScriptMonitoring"
-	def __init__(self, config, module):
-		Monitoring.__init__(self, config, module)
+	def __init__(self, config, task):
+		Monitoring.__init__(self, config, task)
 		self.silent = config.getBool('events', 'silent', True, onChange = None)
 		self.evtSubmit = config.get('events', 'on submit', '', onChange = None)
 		self.evtStatus = config.get('events', 'on status', '', onChange = None)
@@ -54,19 +54,19 @@ class ScriptMonitoring(Monitoring):
 		try:
 			tmp = {}
 			if jobNum != None:
-				tmp.update(self.module.getSubmitInfo(jobNum))
+				tmp.update(self.task.getSubmitInfo(jobNum))
 			if jobObj != None:
 				tmp.update(jobObj.getAll())
 			tmp.update({'WORKDIR': self.config.workDir, 'CFGFILE': self.config.configFile})
-			tmp.update(self.module.getTaskConfig())
-			tmp.update(self.module.getJobConfig(jobNum))
+			tmp.update(self.task.getTaskConfig())
+			tmp.update(self.task.getJobConfig(jobNum))
 			if jobNum != None:
-				tmp.update(self.module.getSubmitInfo(jobNum))
+				tmp.update(self.task.getSubmitInfo(jobNum))
 			tmp.update(allDict)
 			for key, value in tmp.iteritems():
 				os.environ["GC_%s" % key] = str(value)
 
-			script = self.module.substVars(script, jobNum, tmp)
+			script = self.task.substVars(script, jobNum, tmp)
 			if self.silent:
 				utils.LoggedProcess(script).wait()
 			else:

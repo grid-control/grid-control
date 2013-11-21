@@ -51,7 +51,7 @@ else:
 	section = 'dummy'
 	if opts.settings:
 		tmpCfg = Config(opts.settings)
-		section = tmpCfg.get('global', 'module')
+		section = tmpCfg.get('global', ['task', 'module'])
 	dummyConfig = Config(opts.settings, configDict={section: cfgSettings})
 	provider = DataProvider.create(dummyConfig, section, dataset, 'dbs')
 blocks = provider.getBlocks()

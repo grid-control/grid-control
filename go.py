@@ -82,20 +82,20 @@ if __name__ == '__main__':
 				self.log[name] = 'done'
 		initSentinel = InitSentinel(config)
 
-		# Initialise application module
+		# Initialis task module
 		initSentinel.checkpoint('module')
-		module = TaskModule.open(config.get('global', ['task', 'module']), config)
-		utils.vprint('Current task ID: %s' % module.taskID, -1)
-		utils.vprint('Task started on %s' % module.taskDate, -1)
+		task = TaskModule.open(config.get('global', ['task', 'module']), config)
+		utils.vprint('Current task ID: %s' % task.taskID, -1)
+		utils.vprint('Task started on %s' % task.taskDate, -1)
 
 		# Give help about variables
 		if opts.help_vars:
-			Help().listVars(module)
+			Help().listVars(task)
 			sys.exit(0)
 
 		# Initialise monitoring module
 		initSentinel.checkpoint('monitoring')
-		monitor = Monitoring(config, module, map(lambda x: Monitoring.open(x, config, module),
+		monitor = Monitoring(config, task, map(lambda x: Monitoring.open(x, config, task),
 			config.getList('jobs', 'monitor', ['scripts'])))
 
 		# Initialise workload management interface
@@ -104,11 +104,11 @@ if __name__ == '__main__':
 
 		# Initialise job database
 		initSentinel.checkpoint('jobmanager')
-		jobManager = SimpleJobManager(config.getScoped(['jobs']), module, monitor)
+		jobManager = SimpleJobManager(config.getScoped(['jobs']), task, monitor)
 
 		# Prepare work package
 		initSentinel.checkpoint('deploy')
-		wms.deployTask(module, monitor)
+		wms.deployTask(task, monitor)
 
 		# Give config help
 		if opts.help_cfg or opts.help_scfg:
@@ -116,7 +116,7 @@ if __name__ == '__main__':
 			sys.exit(0)
 
 		# If invoked in report mode, just show report and exit
-		if Report(jobManager.jobDB).show(opts, module):
+		if Report(jobManager.jobDB).show(opts, task):
 			sys.exit(0)
 
 		# Check if jobs have to be deleted / reset and exit
@@ -145,7 +145,7 @@ if __name__ == '__main__':
 			while True:
 				(didWait, lastSpaceMsg) = (False, 0)
 				# Check whether wms can submit
-				if not wms.canSubmit(module.wallTime, opts.submission):
+				if not wms.canSubmit(task.wallTime, opts.submission):
 					opts.submission = False
 				# Check free disk space
 				freeSpace = lambda x: x.f_bavail * x.f_bsize / 1024**2
@@ -172,7 +172,7 @@ if __name__ == '__main__':
 				if not didWait:
 					wait(wms.getTimings()[0])
 
-		workflow = GUI.open(guiClass, jobCycle, jobManager, module)
+		workflow = GUI.open(guiClass, jobCycle, jobManager, task)
 		workflow.run()
 
 	handleException(main)
