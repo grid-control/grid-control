@@ -1,7 +1,6 @@
 from python_compat import *
 import sys, os, stat, StringIO, tarfile, time, fnmatch, re, popen2, threading, operator, Queue, signal, glob
 from exceptions import *
-from abstract import AbstractObject
 
 def QM(cond, a, b):
 	if cond:

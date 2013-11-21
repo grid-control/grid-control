@@ -58,7 +58,7 @@ class AbstractObject:
 AbstractObject.pkgPaths = []
 
 
+# NamedObject provides methods used by config.getClass methods to determine relevant sections
 class NamedObject(AbstractObject):
 	def __init__(self, config, name):
 		self._name = name
-		self._config = config.getScoped([self.__class__.__name__ + ' ' + name, self.__class__.__name__])

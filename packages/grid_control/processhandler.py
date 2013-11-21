@@ -1,7 +1,8 @@
 from python_compat import *
 import sys, os, stat, time, popen2, math
 from exceptions import *
-from utils import AbstractObject, LoggedProcess, vprint
+from abstract import AbstractObject
+from utils import LoggedProcess, vprint
 
 # placeholder for function arguments
 defaultArg = object()
