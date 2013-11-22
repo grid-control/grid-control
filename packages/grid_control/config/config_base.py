@@ -109,13 +109,15 @@ class ConfigBase(object):
 	# Return class - default class is also given in string form!
 	def getClass(self, *args, **kwargs):
 		baseClass = kwargs.pop('cls')
-		str2obj = lambda value: ConfigBase._ClassProxy(baseClass, value, self)
+		configScope = kwargs.pop('scope', [])
+		str2obj = lambda value: ConfigBase._ClassProxy(baseClass, value, self.getScoped(configScope))
 		return self._rawGet('class', str, str2obj, str2obj, *args, **kwargs)
 
 	# Return classes - default class is also given in string form!
 	def getClassList(self, *args, **kwargs):
 		baseClass = kwargs.pop('cls')
-		parseSingle = lambda x: ConfigBase._ClassProxy(baseClass, x, self)
+		configScope = kwargs.pop('scope', [])
+		parseSingle = lambda x: ConfigBase._ClassProxy(baseClass, x, self.getScoped(configScope))
 		str2obj = lambda value: map(parseSingle, utils.parseList(value, None, onEmpty = []))
-		obj2str = lambda value: str.join(' ', map(str, value))
+		obj2str = lambda value: str.join('\n', map(str, value))
 		return self._rawGet('class', obj2str, str2obj, str2obj, *args, **kwargs)
