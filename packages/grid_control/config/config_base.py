@@ -94,15 +94,17 @@ class ConfigBase(object):
 		def __init__(self, baseClass, value, config):
 			(clsName, instName) = utils.optSplit(value, ':')
 			if instName == '':
-				instName = clsName # Default is to use the class name as instance name
-			(self.baseClass, self.config, self.clsName, self.instName) = (baseClass, config, clsName, instName)
+				instName = clsName.split('.')[-1] # Default: (non fully qualified) class name as instance name
+			(self._baseClass, self._config, self._clsName, self._instName) = \
+				(baseClass, config, clsName, instName)
 		def __eq__(self, other): # Used to check for changes compared to old 
-			result = (self.baseClass.__class__.__name__ == other.__class__.__name__)
-			return result and (self.clsName == other.clsName) and (self.instName == other.instName)
+			result = (self._baseClass.__class__.__name__ == other.__class__.__name__)
+			return result and (self._clsName == other.clsName) and (self._instName == other.instName)
 		def __str__(self):  # Used to serialize config setting
-			return QM(self.clsName == self.instName, self.clsName, '%s:%s' % (self.clsName, self.instName))
+			clsName = self._clsName.split('.')[-1] # take care of fully qualified class names
+			return QM(clsName == self._instName, self._clsName, '%s:%s' % (self._clsName, self._instName))
 		def __call__(self, *args, **kwargs): # Instantiate wrapped class with config and instance name as args
-			return self.baseClass.getInstance(self.clsName, self.config, self.instName, *args, **kwargs)
+			return self._baseClass.getInstance(self._clsName, self.config, self._instName, *args, **kwargs)
 
 	# Return class - default class is also given in string form!
 	def getClass(self, *args, **kwargs):
