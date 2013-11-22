@@ -78,3 +78,60 @@ AbstractObject.pkgPaths = []
 class NamedObject(AbstractObject):
 	def __init__(self, config, name):
 		self._name = name
+
+
+	def getLocalConfigSections(self):
+		if self.__class__.__name__.lower() == self._name.lower():
+			return [self._name]
+		return [self.__class__.__name__ + ' ' + self._name]
+
+
+	# Collects named config section
+	def getAllConfigSections(cls, instName):
+		def collectSections(clsCurrent): # Collect sections based on class hierarchie
+			if clsCurrent != NamedObject:
+				for section in clsCurrent.getConfigSections():
+					if section.lower() != instName.lower():
+						yield section + ' ' + instName
+					yield section
+				for clsBase in clsCurrent.__bases__:
+					for section in collectSections(clsBase):
+						yield section
+		return list(collectSections(cls))
+	getAllConfigSections = classmethod(getAllConfigSections)
+
+
+	def getConfigSections(cls):
+		return []
+	getConfigSections = classmethod(getConfigSections)
+
+
+	# Function to quickly create getConfigSections class members returning a fixed section list
+	def createFunction_getConfigSections(clsParent, sections):
+		def getConfigSectionsTemplate(cls):
+			return sections
+		return classmethod(getConfigSectionsTemplate)
+	createFunction_getConfigSections = classmethod(createFunction_getConfigSections)
+
+
+
+# General purpose class factory
+class ClassFactory:
+	def __init__(self, cls, config, opt, optMerge, scope = None):
+		self._proxyList = config.getClassList(opt[0], opt[1], cls = cls, scope = scope)
+		self._mergeCls = None
+		if len(self._proxyList) > 1:
+			self._mergeCls = config.getClass(optMerge[0], optMerge[1], cls = cls, scope = scope)
+
+	# Get single instance by merging multiple sub instances if necessary
+	def getInstance(self, *args, **kwargs):
+		clsList = []
+		for clsUser in self._proxyList:
+			try:
+				clsList.append(clsUser(*args, **kwargs))
+			except:
+				raise RethrowError('Unable to load %s' % clsUser)
+		if len(clsList) == 1:
+			return clsList[0]
+		elif len(clsList) > 1:
+			return self._mergeCls(*clsList)

@@ -104,7 +104,9 @@ class ConfigBase(object):
 			clsName = self._clsName.split('.')[-1] # take care of fully qualified class names
 			return QM(clsName == self._instName, self._clsName, '%s:%s' % (self._clsName, self._instName))
 		def __call__(self, *args, **kwargs): # Instantiate wrapped class with config and instance name as args
-			return self._baseClass.getInstance(self._clsName, self.config, self._instName, *args, **kwargs)
+			cls = self._baseClass.getClass(self._clsName) # Get class to collect config sections
+			config = self._config.getScoped(cls.getAllConfigSections(self._instName))
+			return self._baseClass.getInstance(self._clsName, config, self._instName, *args, **kwargs)
 
 	# Return class - default class is also given in string form!
 	def getClass(self, *args, **kwargs):
