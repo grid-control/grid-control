@@ -471,4 +471,4 @@ class DataSplitter(AbstractObject):
 		return splitter
 	loadState = staticmethod(loadState)
 
-DataSplitter.dynamicLoaderPath()
+DataSplitter.registerObject()

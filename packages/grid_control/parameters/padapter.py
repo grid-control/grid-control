@@ -39,7 +39,7 @@ class ParameterAdapter(AbstractObject):
 
 	def show(self):
 		self._source.show()
-ParameterAdapter.dynamicLoaderPath()
+ParameterAdapter.registerObject()
 
 
 class BasicParameterAdapter(ParameterAdapter):

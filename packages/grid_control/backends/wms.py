@@ -292,4 +292,4 @@ class BasicWMS(WMS):
 		raise AbstractError # Return (jobNum, sandbox) for finished jobs
 
 
-WMS.dynamicLoaderPath()
+WMS.registerObject()

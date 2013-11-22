@@ -22,7 +22,7 @@ class EventHandler(NamedObject):
 		for submodule in self.submodules:
 			submodule.onTaskFinish(nJobs)
 
-EventHandler.dynamicLoaderPath()
+EventHandler.registerObject()
 
 
 # Monitoring base class with submodule support
@@ -38,7 +38,7 @@ class Monitoring(EventHandler):
 	def getFiles(self):
 		return utils.listMapReduce(lambda m: list(m.getFiles()), self.submodules, self.getScript())
 
-Monitoring.dynamicLoaderPath()
+Monitoring.registerObject()
 
 class ScriptMonitoring(Monitoring):
 	Monitoring.moduleMap["scripts"] = "ScriptMonitoring"

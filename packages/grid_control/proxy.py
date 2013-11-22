@@ -20,7 +20,7 @@ class Proxy(AbstractObject):
 
 	def canSubmit(self, neededTime, canCurrentlySubmit):
 		raise AbstractError
-Proxy.dynamicLoaderPath()
+Proxy.registerObject()
 
 
 class TrivialProxy(Proxy):

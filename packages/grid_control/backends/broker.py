@@ -28,4 +28,4 @@ class Broker(AbstractObject):
 		if result != None:
 			reqs.append((reqEntry, result))
 		return reqs
-Broker.dynamicLoaderPath()
+Broker.registerObject()

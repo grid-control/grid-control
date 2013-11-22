@@ -197,4 +197,4 @@ class TaskModule(NamedObject):
 	def getIntervention(self):
 		return self.source.resync()
 
-TaskModule.dynamicLoaderPath()
+TaskModule.registerObject()

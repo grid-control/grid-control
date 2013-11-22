@@ -10,7 +10,7 @@ class JobSelector(AbstractObject):
 
 	def __call__(self, jobNum, jobObj):
 		raise AbstractError
-JobSelector.dynamicLoaderPath()
+JobSelector.registerObject()
 JobSelector.moduleMap.update({'id': 'IDSelector', 'state': 'StateSelector', 'site': 'SiteSelector',
 	'queue': 'QueueSelector', 'var': 'VarSelector', 'nick': 'NickSelector', 'stuck': 'StuckSelector',
 	'wms': 'BackendSelector', 'backend': 'BackendSelector'})

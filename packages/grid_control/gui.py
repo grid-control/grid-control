@@ -6,7 +6,7 @@ class GUI(AbstractObject):
 
 	def run(self):
 		raise AbstractError()
-GUI.dynamicLoaderPath()
+GUI.registerObject()
 
 
 class SimpleConsole(GUI):

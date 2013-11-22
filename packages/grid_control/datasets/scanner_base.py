@@ -15,4 +15,4 @@ class InfoScanner(AbstractObject):
 
 	def getEntries(self, path, metadata, events, seList, objStore):
 		raise AbstractError
-InfoScanner.dynamicLoaderPath()
+InfoScanner.registerObject()

@@ -7,7 +7,7 @@ class NickNameProducer(AbstractObject):
 
 	def getName(self, oldnick, dataset, block):
 		raise AbstractError
-NickNameProducer.dynamicLoaderPath()
+NickNameProducer.registerObject()
 
 
 class SimpleNickNameProducer(NickNameProducer):
@@ -272,4 +272,4 @@ class DataProvider(AbstractObject):
 	resyncSources = staticmethod(resyncSources)
 
 DataProvider.providers = {}
-DataProvider.dynamicLoaderPath()
+DataProvider.registerObject()

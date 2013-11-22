@@ -184,4 +184,4 @@ class GSISSHProcessHandler(SSHProcessHandler):
 	cmd = "gsissh"
 	cpy = "gsiscp -r"
 
-ProcessHandler.dynamicLoaderPath()
+ProcessHandler.registerObject()

@@ -70,5 +70,5 @@ class ParameterSource(AbstractObject):
 	def getHash(self):
 		raise AbstractError
 
-ParameterSource.dynamicLoaderPath()
+ParameterSource.registerObject()
 ParameterSource.managerMap = {}

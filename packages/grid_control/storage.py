@@ -38,7 +38,7 @@ class StorageManager(AbstractObject):
 	def doTransfer(self, listDescSourceTarget):
 		pass
 
-StorageManager.dynamicLoaderPath()
+StorageManager.registerObject()
 
 class LocalSBStorageManager(StorageManager):
 	def __init__(self, config, optDefault, optPrefix, varPrefix):

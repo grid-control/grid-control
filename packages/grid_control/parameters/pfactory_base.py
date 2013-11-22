@@ -22,7 +22,7 @@ class ParameterFactory(AbstractObject):
 		if DataParameterSource.datasetsAvailable and not DataParameterSource.datasetsUsed:
 			source = CrossParameterSource(DataParameterSource.create(), source)
 		return ParameterAdapter.open(self.adapter, config, source)
-ParameterFactory.dynamicLoaderPath()
+ParameterFactory.registerObject()
 
 
 class BasicParameterFactory(ParameterFactory):

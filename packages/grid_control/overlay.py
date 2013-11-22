@@ -11,5 +11,5 @@ class ConfigOverlay(AbstractObject):
 	def rewriteList(self, selector, rewriteFun):
 		pass
 
-ConfigOverlay.dynamicLoaderPath()
+ConfigOverlay.registerObject()
 ConfigOverlay.moduleMap["verbatim"] = "ConfigOverlay"
