@@ -6,20 +6,20 @@ class ROOTTask(UserTask):
 	def __init__(self, config, name):
 		# Determine ROOT path from previous settings / environment / config file
 		taskInfo = utils.PersistentDict(os.path.join(config.workDir, 'task.dat'), ' = ')
-		self._rootpath = taskInfo.get('root path', os.environ.get('ROOTSYS', None))
-		self._rootpath = config.get(self.__class__.__name__, 'root path', self._rootpath)
+		self._rootpath = config.get(self.__class__.__name__, 'root path',
+			os.environ.get('ROOTSYS', ''), persistent = True)
 		if not self._rootpath:
 			raise ConfigError('Either set environment variable "ROOTSYS" or set option "root path"!')
 		utils.vprint('Using the following ROOT path: %s' % self._rootpath, -1)
 		taskInfo.write({'root path': self._rootpath})
 
 		# Special handling for executables bundled with ROOT
-		exe = config.get(self.__class__.__name__, 'executable')
-		exeFull = os.path.join(self._rootpath, 'bin', exe)
+		self._executable = config.get(self.__class__.__name__, 'executable')
+		exeFull = os.path.join(self._rootpath, 'bin', self._executable)
 		self.builtIn = os.path.exists(exeFull)
 		if self.builtIn:
 			config.set(self.__class__.__name__, 'send executable', 'False')
-			config.set(self.__class__.__name__, 'executable', exeFull)
+			# store resolved built-in executable path?
 
 		# Apply default handling from UserTask
 		UserTask.__init__(self, config, name)
