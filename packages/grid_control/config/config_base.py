@@ -97,9 +97,8 @@ class ConfigBase(object):
 				instName = clsName.split('.')[-1] # Default: (non fully qualified) class name as instance name
 			(self._baseClass, self._config, self._clsName, self._instName) = \
 				(baseClass, config, clsName, instName)
-		def __eq__(self, other): # Used to check for changes compared to old 
-			result = (self._baseClass.__class__.__name__ == other.__class__.__name__)
-			return result and (self._clsName == other.clsName) and (self._instName == other.instName)
+		def __eq__(self, other): # Used to check for changes compared to old
+			return str(self) == str(other)
 		def __str__(self):  # Used to serialize config setting
 			clsName = self._clsName.split('.')[-1] # take care of fully qualified class names
 			return QM(clsName == self._instName, self._clsName, '%s:%s' % (self._clsName, self._instName))

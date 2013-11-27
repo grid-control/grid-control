@@ -19,9 +19,22 @@ def cleanSO(section, option):
 
 
 # Change handler to notify about impossible changes
-def changeImpossible(old_obj, cur_obj, cur_entry):
-	raise ConfigError('It is *not* possible to change "[%s] %s" from %r to %r!' %
+def changeImpossible(config, old_obj, cur_obj, cur_entry):
+	raise ConfigError('It is *not* possible to change "[%s] %s" from %s to %s!' %
 		(cur_entry.section, cur_entry.option, old_obj, cur_obj))
+
+
+# Change handler to trigger re-inits
+class changeInitNeeded:
+	def __init__(self, option):
+		self._option = option
+
+	def __call__(self, config, old_obj, cur_obj, cur_entry):
+		silent = config.getScope(None).getBool('interactive', self._option, True, onChange = None)
+		if silent or utils.getUserBool(
+			'Changing "[%s] %s" from %s to %s needs a partial reinitalization (same as --reinit %s). Do you want to continue?' %
+				(cur_entry.section, cur_entry.option, old_obj, cur_obj, self._option)):
+			self._config.set('init %s' % self._option, 'True')
 
 
 # Validation handler to check for variables in string
@@ -60,8 +73,13 @@ class BaseConfigResolver:
 
 	# Return source from specified section and option
 	def getSource(self, container, section, option):
+		def flat(value): # Small function to flatten section / option lists
+			if isinstance(value, list):
+				return str.join('|', value)
+			return value
+		self._logger.log(logging.DEBUG1, 'Query config section(s) [%s] for option(s) "%s"' % (flat(section), flat(option)))
+
 		# Handle multi section get calls, use least specific setting for error message
-		self._logger.log(logging.DEBUG1, 'Query config section(s) "%s" for option(s) "%s"' % (section, option))
 		if isinstance(section, list):
 			for specific in filter(lambda s: self.hasOption(container, s, option), section):
 				# return result of most specific section 
@@ -88,7 +106,7 @@ class BaseConfigResolver:
 # Class returned from getScoped calls - it is only using the new getter API
 class ResolvedConfigBase(ConfigBase):
 	def __init__(self, config, scope, forward = []):
-		(self._config, self._scope, self._forward) = (config, utils.uniqueListRL(scope), forward)
+		(self._config, self._scope, self._forward) = (config, utils.uniqueListRL(map(str.lower, scope)), forward)
 		def mySet(option, value, *args, **kwargs):
 			return self._config.set(scope, option, value, *args, **kwargs)
 		def myGet(desc, obj2str, str2obj, def2obj, option, *args, **kwargs):
@@ -99,6 +117,13 @@ class ResolvedConfigBase(ConfigBase):
 		ConfigBase.__init__(self, mySet, myGet, myIter, config._baseDir)
 		for attr in forward: # Forward specified attributes from main config to this instance
 			setattr(self, attr, getattr(config, attr))
+
+	# Setter function with option section override
+	def set(self, *args, **kwargs):
+		section = kwargs.pop('section', None)
+		if section:
+			return self.getScoped(None).set(section, *args, **kwargs)
+		return ConfigBase.set(self, *args, **kwargs)
 
 	# Factory for more specific instances
 	def getScoped(self, scope_left = [], scope_right = []):
@@ -225,8 +250,8 @@ class NewConfig(ConfigBase):
 				old_obj = str2obj(old_entry.value)
 			except:
 				raise RethrowError('Unable to parse stored %s: [%s] %s = %s' % (desc, section, option, old_entry.value), ConfigError)
-			if old_obj != cur_obj:
-				onChange(old_obj, cur_obj, cur_entry)
+			if not (old_obj == cur_obj):
+				onChange(self, old_obj, cur_obj, cur_entry)
 		if onValid:
 			return onValid(section, option, cur_obj)
 		return cur_obj

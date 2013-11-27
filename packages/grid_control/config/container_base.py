@@ -125,8 +125,8 @@ class ConfigContainer(object):
 		elif option_type == '?': # not sure how to handle "?=" after "+=" - replace or append?
 			if option not in self._content[section]: # set only unset options
 				tmp[option] = ConfigEntry([value], source)
-			elif self._content[section][option].source == '<default>':
-				tmp[option] = ConfigEntry([value], source) # default values are also overriden by ?=
+			elif self._content[section][option].source in ['<default>', '<dynamic>']:
+				tmp[option] = ConfigEntry([value], source) # dynamic and default values are also overriden by ?=
 		elif option_type == '*': # this option can not be changed by other config files
 			tmp[option] = ConfigEntry([value], source)
 			self._fixed.append((section, option))
