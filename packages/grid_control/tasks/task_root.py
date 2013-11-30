@@ -15,7 +15,7 @@ class ROOTTask(UserTask):
 
 		# Special handling for executables bundled with ROOT
 		self._executable = config.get(self.__class__.__name__, 'executable')
-		exeFull = os.path.join(self._rootpath, 'bin', self._executable)
+		exeFull = os.path.join(self._rootpath, 'bin', self._executable.lstrip('/'))
 		self.builtIn = os.path.exists(exeFull)
 		if self.builtIn:
 			config.set(self.__class__.__name__, 'send executable', 'False')
