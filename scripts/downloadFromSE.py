@@ -189,7 +189,8 @@ def realmain(opts, args):
 			output.error('Job has not yet finished successfully!')
 			return incInfo('Processing')
 		if job.get('download') == 'True' and not opts.markIgnoreDL:
-			output.error('All files already downloaded!')
+			if not opts.threads:
+				output.error('All files already downloaded!')
 			return incInfo('Downloaded')
 		retry = int(job.get('download attempt', 0))
 		failJob = False
