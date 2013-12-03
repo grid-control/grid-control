@@ -143,12 +143,14 @@ class ConfigContainer(object):
 		(tmp[option].section, tmp[option].option) = (section, option)
 
 
-	def getEntry(self, section, option, default, markDefault = True):
+	def getEntry(self, section, option, default, markDefault = True, raiseMissing = True):
 		(section, option) = (standardConfigForm(section), standardConfigForm(option))
 		entry = self._content.setdefault(section, {}).get(option)
 		if not entry: # option was not set
 			if default == noDefault:
-				raise ConfigError('[%s] "%s" does not exist!' % (section, option))
+				if raiseMissing: # Fix for new config options, without default value
+					raise ConfigError('[%s] "%s" does not exist!' % (section, option))
+				return None
 			if markDefault: # Mark as default value
 				entry = ConfigEntry([default], '<default>') # store default value
 			else: # poorly hide the fact that its a default value (ie. to ensure persistency)
