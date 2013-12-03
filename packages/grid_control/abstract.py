@@ -52,7 +52,7 @@ class AbstractObject(object):
 				log.log(logging.DEBUG2, 'Unable to import module %s' % modName)
 				continue
 			if issubclass(newcls, cls):
-				log.log(logging.DEBUG1, 'Successfully loaded class %s' % newcls.__name__)
+				log.log(logging.DEBUG1, 'Successfully loaded class %s:%s' % (newcls.__module__, newcls.__name__))
 				return newcls
 			raise ConfigError('%s is not of type %s' % (newcls, cls))
 		raise ConfigError('%s "%s" does not exist in\n\t%s!' % (cls.__name__, clsName, str.join('\n\t', searchPath(clsName))))
