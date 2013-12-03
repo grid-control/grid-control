@@ -1,7 +1,7 @@
-from grid_control import ConfigOverlay, Proxy
+from grid_control import Proxy
 from webservice_api import readJSON
 
-class CMSOverlay(ConfigOverlay):
+class CMSOverlay:
 	def __init__(self, config):
 		ConfigOverlay.__init__(self, config)
 		config.set('jobs', 'monitor', 'dashboard', override = False)

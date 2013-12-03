@@ -5,7 +5,6 @@ from grid_control.utils	import QM
 from grid_control.processhandler	import ProcessHandler
 
 from grid_control.config	import Config, noDefault, validNoVar, changeImpossible
-from grid_control.overlay	import ConfigOverlay
 
 from grid_control.job_definition	import JobDef
 from grid_control.job_db	import Job, JobClass, JobDB
