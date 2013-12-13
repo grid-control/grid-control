@@ -739,9 +739,9 @@ class Condor(BasicWMS):
 				testProcess.logError(self.errorLog)
 				raise RuntimeError("Failed to access remote Condor tools! The pool you are submitting to is very likely not configured properly.")
 			# get initial workdir on remote pool
-			if config.get( self._getSections("backend"), "remote workdir", False):
+			if config.get( self._getSections("backend"), "remote workdir", ''):
 				uName=self.Pool.LoggedProcess("whoami").getOutput().strip()
-				self.poolWorkDir=os.path.join(config.get( self._getSections("backend"), "remote workdir", False), uName)
+				self.poolWorkDir=os.path.join(config.get( self._getSections("backend"), "remote workdir", ''), uName)
 				pwdProcess=self.Pool.LoggedProcess("mkdir -p %s" % self.poolWorkDir )
 			else:
 				pwdProcess=self.Pool.LoggedProcess("pwd")
