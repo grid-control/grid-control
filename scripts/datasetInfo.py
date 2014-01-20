@@ -44,10 +44,10 @@ dataset = args[0].strip()
 if os.path.exists(dataset):
 	provider = DataProvider.loadState(dataset)
 else:
-	cfgSettings = {'dbs blacklist T1': False, 'remove empty blocks': False, 'remove empty files': False}
+	cfgSettings = {'dbs blacklist T1': 'False', 'remove empty blocks': 'False', 'remove empty files': 'False'}
 	if opts.metadata or opts.blockmetadata:
 		cfgSettings['lumi filter'] = '-'
-		cfgSettings['keep lumi metadata'] = True
+		cfgSettings['keep lumi metadata'] = 'True'
 	section = 'dummy'
 	if opts.settings:
 		tmpCfg = Config(opts.settings)

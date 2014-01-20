@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 import base64, xml.dom.minidom, optparse, locale, re, time, os, operator
 from gcSupport import *
-from grid_control.gui import Console
+from grid_control_gui.ansi_console import Console
 from grid_control_cms import provider_dbsv2
 from grid_control_cms.provider_dbsv2 import *
 from grid_control_cms.DBSAPI.dbsMigrateApi import DbsMigrateApi
