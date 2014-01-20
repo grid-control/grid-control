@@ -128,9 +128,13 @@ class CMSProvider(DataProvider):
 
 
 	def getGCBlocks(self, usePhedex):
+		blockCache = []
 		for datasetPath in self.getCMSDatasets():
 			counter = 0
 			for (blockPath, listSE) in self.getCMSBlocks(datasetPath, getSites = not usePhedex):
+				if blockPath in blockCache:
+					raise DatasetError('CMS source provided duplicate blocks! %s' % blockPath)
+				blockCache.append(blockPath)
 				result = {}
 				result[DataProvider.Dataset] = blockPath.split('#')[0]
 				result[DataProvider.BlockName] = blockPath.split('#')[1]
