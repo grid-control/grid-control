@@ -99,7 +99,7 @@ class ParameterConfig:
 		return list(yieldEntries())
 
 
-	def onChange(self, old_obj, cur_obj, cur_entry, obj2str):
+	def onChange(self, config, old_obj, cur_obj, cur_entry, obj2str):
 		if self.static:
 			changeImpossible(old_obj, cur_obj, cur_entry, obj2str)
 

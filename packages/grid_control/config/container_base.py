@@ -26,6 +26,9 @@ class ConfigEntry(object):
 	def __repr__(self):
 		return '%s(%r)' % (self.__class__.__name__, self.__dict__)
 
+	def format_opt(self):
+		return '[%s] %s' % (self.section, self.option)
+
 	def format(self, printSection = False, printDefaultValue = False):
 		entries = self._format(self.value)
 		if printSection: # Print prefix with section information

@@ -19,9 +19,9 @@ def cleanSO(section, option):
 
 
 # Change handler to notify about impossible changes
-def changeImpossible(config, old_obj, cur_obj, cur_entry):
-	raise ConfigError('It is *not* possible to change "[%s] %s" from %s to %s!' %
-		(cur_entry.section, cur_entry.option, old_obj, cur_obj))
+def changeImpossible(config, old_obj, cur_obj, cur_entry, obj2str):
+	raise ConfigError('It is *not* possible to change "%s" from %s to %s!' %
+		(cur_entry.format_opt(), obj2str(old_obj), obj2str(cur_obj)))
 
 
 # Change handler to trigger re-inits
@@ -29,12 +29,21 @@ class changeInitNeeded:
 	def __init__(self, option):
 		self._option = option
 
-	def __call__(self, config, old_obj, cur_obj, cur_entry):
-		silent = config.getScope(None).getBool('interactive', self._option, True, onChange = None)
-		if silent or utils.getUserBool(
-			'Changing "[%s] %s" from %s to %s needs a partial reinitalization (same as --reinit %s). Do you want to continue?' %
-				(cur_entry.section, cur_entry.option, old_obj, cur_obj, self._option)):
-			self._config.set('init %s' % self._option, 'True')
+	def __call__(self, config, old_obj, cur_obj, cur_entry, obj2str):
+		log = logging.getLogger('config.onChange.%s' % self._option)
+		raw_config = config.getScoped(None)
+		interaction_def = raw_config.getBool('interactive', 'default', True, onChange = None)
+		interaction_opt = raw_config.getBool('interactive', self._option, interaction_def, onChange = None)
+		if interaction_opt:
+			if utils.getUserBool('The option "%s" was changed from the old value:' % cur_entry.format_opt() +
+				'\n\t%s\nto the new value:\n\t%s\nDo you want to abort?' % (obj2str(old_obj), obj2str(cur_obj)), False):
+				raise ConfigError('Abort due to unintentional config change!')
+			if not utils.getUserBool('A partial reinitialization (same as --reinit %s) is needed to apply this change! Do you want to continue?' % self._option, True):
+				log.log(logging.INFO1, 'Using stored value %s for option %s' % (obj2str(cur_obj), cur_entry.format_opt()))
+				return old_obj
+		config.set('init %s' % self._option, 'True')
+		config.set('init config', 'True', section = 'global') # This will trigger a write of the new options
+		return cur_obj
 
 
 # Validation handler to check for variables in string
@@ -111,7 +120,7 @@ class ResolvedConfigBase(ConfigBase):
 			return self._config.set(scope, option, value, *args, **kwargs)
 		def myGet(desc, obj2str, str2obj, def2obj, option, *args, **kwargs):
 			primedResolver = lambda cc: self._config._resolver.getSource(cc, self._scope, option)
-			return self._config.getTyped(desc, obj2str, str2obj, def2obj, primedResolver, *args, **kwargs)
+			return self._config.getTyped(desc, obj2str, str2obj, def2obj, primedResolver, *args, caller = self, **kwargs)
 		def myIter():
 			return self._config.getOptions(scope)
 		ConfigBase.__init__(self, mySet, myGet, myIter, config._baseDir)
@@ -215,7 +224,7 @@ class NewConfig(ConfigBase):
 
 	# Get a typed config value from the container
 	def getTyped(self, desc, obj2str, str2obj, def2obj, resolver, default_obj = noDefault,
-			onChange = changeImpossible, onValid = None, persistent = False, markDefault = True):
+			onChange = changeImpossible, onValid = None, persistent = False, markDefault = True, caller = None):
 		(section, option) = resolver(self._curCfg)
 		# First transform default into string if applicable
 		default_str = noDefault
@@ -233,8 +242,8 @@ class NewConfig(ConfigBase):
 		old_entry = None
 		if self._oldCfg:
 			(section_old, option_old) = resolver(self._oldCfg)
-			old_entry = self._oldCfg.getEntry(section_old, option_old, default_str)
-			if persistent: # Override current default value with stored value
+			old_entry = self._oldCfg.getEntry(section_old, option_old, default_str, raiseMissing = False)
+			if old_entry and persistent: # Override current default value with stored value
 				default_str = old_entry.value
 				self._logger.log(logging.INFO2, 'Applying persistent %s' % old_entry.format(printSection = True))
 		cur_entry = self._curCfg.getEntry(section, option, default_str, markDefault = markDefault)
@@ -251,7 +260,10 @@ class NewConfig(ConfigBase):
 			except:
 				raise RethrowError('Unable to parse stored %s: [%s] %s = %s' % (desc, section, option, old_entry.value), ConfigError)
 			if not (old_obj == cur_obj):
-				onChange(self, old_obj, cur_obj, cur_entry)
+				# Main reason for caller support is to localize reinits to affected modules
+				caller = QM(caller, caller, self)
+				cur_obj = onChange(caller, old_obj, cur_obj, cur_entry, obj2str)
+				cur_entry.value = obj2str(cur_obj)
 		if onValid:
 			return onValid(section, option, cur_obj)
 		return cur_obj
@@ -262,7 +274,7 @@ class NewConfig(ConfigBase):
 
 
 	# Return config class instance with given scope and the ability to return further specialized instances
-	def getScoped(self, sections = []):
+	def getScoped(self, sections):
 		return ResolvedConfigBase(self, sections, self._forward)
 
 
@@ -271,6 +283,7 @@ class Config(NewConfig):
 	def __init__(self, configFile = None, configDict = {}, optParser = None, configHostSpecific = True):
 		NewConfig.__init__(self, configFile, configDict, optParser, configHostSpecific)
 		persistencyFile = os.path.join(self.workDir, 'task.dat')
+		# read old persistency file - and set appropriate config options
 		if os.path.exists(persistencyFile):
 			persistencyDict = utils.PersistentDict(persistencyFile, ' = ')
 			def setPersistentSetting(section, key):
