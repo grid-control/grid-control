@@ -1,10 +1,10 @@
 import os, gzip
 from python_compat import *
-from grid_control import APIError, UserError, AbstractObject, utils
+from grid_control import APIError, UserError, LoadableObject, utils
 from psource_base import ParameterInfo, ParameterMetadata, ParameterSource
 from psource_file import GCDumpParameterSource
 
-class ParameterAdapter(AbstractObject):
+class ParameterAdapter(LoadableObject):
 	def __init__(self, source):
 		self._source = source
 		self._prune = True

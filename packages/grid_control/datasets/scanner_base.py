@@ -1,6 +1,6 @@
-from grid_control import utils, AbstractObject, AbstractError
+from grid_control import utils, LoadableObject, AbstractError
 
-class InfoScanner(AbstractObject):
+class InfoScanner(LoadableObject):
 	def __init__(self, config, section):
 		pass
 

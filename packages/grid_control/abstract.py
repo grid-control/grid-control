@@ -3,7 +3,7 @@ from exceptions import *
 import utils, logging
 
 # Abstract class taking care of dynamic class loading 
-class AbstractObject(object):
+class LoadableObject(object):
 	def __init__(self):
 		raise AbstractError
 
@@ -34,7 +34,7 @@ class AbstractObject(object):
 			cls.moduleMap = dict(map(lambda (k, v): (k.lower(), v), cls.moduleMap.items()))
 			fqName = cls.moduleMap.get(cname.lower(), cname) # resolve module mapping
 			yield fqName
-			for path in cls.modPaths + AbstractObject.pkgPaths:
+			for path in cls.modPaths + LoadableObject.pkgPaths:
 				if not '.' in fqName:
 					yield mjoin([path, fqName.lower(), fqName])
 				yield mjoin([path, fqName])
@@ -71,11 +71,11 @@ class AbstractObject(object):
 	open = classmethod(getInstance)
 	getInstance = classmethod(getInstance)
 
-AbstractObject.pkgPaths = []
+LoadableObject.pkgPaths = []
 
 
 # NamedObject provides methods used by config.getClass methods to determine relevant sections
-class NamedObject(AbstractObject):
+class NamedObject(LoadableObject):
 	def __init__(self, config, name):
 		self._name = name
 

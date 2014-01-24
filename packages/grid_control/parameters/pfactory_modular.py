@@ -3,7 +3,7 @@ from psource_base import ParameterSource
 from psource_meta import ZipLongParameterSource
 from psource_file import *
 from pfactory_base import BasicParameterFactory
-from grid_control import AbstractObject, QM, utils, RethrowError
+from grid_control import LoadableObject, QM, utils, RethrowError
 
 # Parameter factory which evaluates a parameter module string
 class ModularParameterFactory(BasicParameterFactory):

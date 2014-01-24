@@ -1,6 +1,6 @@
 from python_compat import *
 import os, tarfile, time, copy, cStringIO, threading, gzip
-from grid_control import QM, AbstractObject, AbstractError, RuntimeError, utils, ConfigError, Config, noDefault
+from grid_control import QM, LoadableObject, AbstractError, RuntimeError, utils, ConfigError, Config, noDefault
 from provider_base import DataProvider
 
 def fast_search(lst, cmp_op):
@@ -19,7 +19,7 @@ ResyncMode = utils.makeEnum(['disable', 'complete', 'changed', 'ignore']) # prio
 ResyncMode.noChanged = [ResyncMode.disable, ResyncMode.complete, ResyncMode.ignore]
 ResyncOrder = utils.makeEnum(['append', 'preserve', 'fillgap', 'reorder']) # reorder mechanism
 
-class DataSplitter(AbstractObject):
+class DataSplitter(LoadableObject):
 	splitInfos = ['Dataset', 'SEList', 'NEntries', 'Skipped', 'FileList', 'Nickname', 'DatasetID',
 		'CommonPrefix', 'Invalid', 'BlockName', 'MetadataHeader', 'Metadata', 'Comment']
 	for idx, splitInfo in enumerate(splitInfos):

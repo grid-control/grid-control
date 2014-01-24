@@ -5,9 +5,9 @@ from psource_file import *
 from psource_data import *
 from padapter import *
 from config_param import ParameterConfig
-from grid_control import AbstractObject, QM, utils
+from grid_control import LoadableObject, QM, utils
 
-class ParameterFactory(AbstractObject):
+class ParameterFactory(LoadableObject):
 	def __init__(self, config, sections):
 		self.adapter = config.get(sections, 'parameter adapter', 'TrackedParameterAdapter')
 		self.paramConfig = ParameterConfig(config, sections, self.adapter != 'TrackedParameterAdapter')

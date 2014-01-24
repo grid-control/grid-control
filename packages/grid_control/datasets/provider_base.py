@@ -1,7 +1,7 @@
 import os, gzip, cStringIO, copy, random
-from grid_control import QM, utils, AbstractObject, AbstractError, ConfigError, noDefault, Config
+from grid_control import QM, utils, LoadableObject, AbstractError, ConfigError, noDefault, Config
 
-class NickNameProducer(AbstractObject):
+class NickNameProducer(LoadableObject):
 	def __init__(self, config):
 		self.config = config
 
@@ -23,7 +23,7 @@ class InlineNickNameProducer(NickNameProducer):
 		return eval(self.config.get(cfgSections, 'nickname expr', 'oldnick'))
 
 
-class DataProvider(AbstractObject):
+class DataProvider(LoadableObject):
 	# To uncover errors, the enums of DataProvider / DataSplitter do *NOT* match
 	dataInfos = ['NEntries', 'BlockName', 'Dataset', 'SEList', 'URL', 'FileList',
 		'Nickname', 'DatasetID', 'Metadata', 'Provider', 'ResyncInfo']

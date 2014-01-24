@@ -22,7 +22,7 @@ def se_copy(src, dst, force = True, tmp = ''):
 	return se_runcmd(cmd, {'GC_KEEPTMP': tmp}, src, dst)
 
 
-class StorageManager(AbstractObject):
+class StorageManager(LoadableObject):
 	def __init__(self, config, optDefault, optPrefix, varPrefix):
 		(self.smOptPrefix, self.varPrefix) = (optPrefix, varPrefix)
 

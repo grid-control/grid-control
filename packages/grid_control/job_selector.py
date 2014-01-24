@@ -1,7 +1,7 @@
 import re, operator, time
-from grid_control import QM, UserError, AbstractError, AbstractObject, Job, utils
+from grid_control import QM, UserError, AbstractError, LoadableObject, Job, utils
 
-class JobSelector(AbstractObject):
+class JobSelector(LoadableObject):
 	def create(arg, **kwargs):
 		if arg:
 			return MultiJobSelector(arg, **kwargs)

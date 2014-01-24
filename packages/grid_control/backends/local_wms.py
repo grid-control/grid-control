@@ -1,5 +1,5 @@
 import sys, os, tempfile, shutil, time, random, glob
-from grid_control import AbstractObject, AbstractError, ConfigError, Job, utils
+from grid_control import LoadableObject, AbstractError, ConfigError, Job, utils
 from wms import WMS, BasicWMS
 from broker import Broker
 

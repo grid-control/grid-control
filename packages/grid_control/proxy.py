@@ -1,8 +1,8 @@
 # Generic base class for authentication proxies
 import os, time
-from grid_control import QM, AbstractObject, InstallationError, AbstractError, UserError, utils
+from grid_control import QM, LoadableObject, InstallationError, AbstractError, UserError, utils
 
-class Proxy(AbstractObject):
+class Proxy(LoadableObject):
 	def __init__(self, config):
 		pass
 

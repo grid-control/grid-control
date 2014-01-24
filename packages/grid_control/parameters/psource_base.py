@@ -1,6 +1,6 @@
 import time
 from python_compat import *
-from grid_control import AbstractError, AbstractObject, APIError, utils, QM
+from grid_control import AbstractError, LoadableObject, APIError, utils, QM
 
 class ParameterInfo:
 	reqTypes = ('ACTIVE', 'HASH', 'REQS')
@@ -18,7 +18,7 @@ class ParameterMetadata(str):
 		return "'%s'" % QM(self.untracked, '!%s' % self, self)
 
 
-class ParameterSource(AbstractObject):
+class ParameterSource(LoadableObject):
 	def create(cls, pconfig, *args, **kwargs):
 		return cls(*args, **kwargs)
 	create = classmethod(create)

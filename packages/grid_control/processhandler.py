@@ -1,7 +1,7 @@
 from python_compat import *
 import sys, os, stat, time, popen2, math
 from exceptions import *
-from abstract import AbstractObject
+from abstract import LoadableObject
 from utils import LoggedProcess, vprint
 
 # placeholder for function arguments
@@ -13,7 +13,7 @@ defaultArg = object()
 # create interface for initializing a set of commands sharing a similar setup, e.g. remote commands through SSH
 
 # Process Handler:
-class ProcessHandler(AbstractObject):
+class ProcessHandler(LoadableObject):
 	def LoggedProcess(self, cmd, args = '', **kwargs):
 		raise AbstractError
 	def LoggedCopyToRemote(self, source, dest, **kwargs):

@@ -2,10 +2,10 @@
 
 from python_compat import *
 import sys, os, time, stat, shutil, tarfile, glob, itertools
-from grid_control import QM, AbstractObject, AbstractError, ConfigError, RuntimeError, RethrowError, UserError, utils, Proxy, StorageManager
+from grid_control import QM, LoadableObject, AbstractError, ConfigError, RuntimeError, RethrowError, UserError, utils, Proxy, StorageManager
 from broker import Broker
 
-class WMS(AbstractObject):
+class WMS(LoadableObject):
 	reqTypes = ('WALLTIME', 'CPUTIME', 'MEMORY', 'CPUS', 'BACKEND', 'SITES', 'QUEUES', 'SOFTWARE', 'STORAGE')
 	for idx, reqType in enumerate(reqTypes):
 		locals()[reqType] = idx

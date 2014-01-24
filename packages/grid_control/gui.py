@@ -1,6 +1,6 @@
-from grid_control import AbstractObject, AbstractError
+from grid_control import LoadableObject, AbstractError
 
-class GUI(AbstractObject):
+class GUI(LoadableObject):
 	def __init__(self, jobCycle, jobMgr, task):
 		(self.jobCycle, self.jobMgr, self.task) = (jobCycle, jobMgr, task)
 
