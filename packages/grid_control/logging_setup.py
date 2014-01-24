@@ -7,11 +7,19 @@ def logging_defaults():
 	# Maybe needed for debugging because logging_setup(config) is called after config.stored is used
 	#logging.getLogger('config.stored').addHandler(sh)
 
-	# Default exception logging to file in gc directory
+	# Default exception logging to file in gc / tmp / user directory
 	# Convention: sys.path[1] == python dir of gc
-	handler_ex = logging.FileHandler(os.path.join(sys.path[1], '..', 'debug.log'), 'w')
-	logging.getLogger("exception").propagate = False
-	logging.getLogger("exception").addHandler(handler_ex)
+	handler_ex = None
+	for fnLog in [os.path.join(sys.path[1], '..', 'debug.log'), '/tmp/gc.debug.%d' % os.getuid(), '~/gc.debug']:
+		fnLog = os.path.abspath(os.path.normpath(os.path.expanduser(fnLog)))
+		try:
+			handler_ex = logging.FileHandler(fnLog, 'w')
+			break
+		except:
+			pass
+	if handler_ex:
+		logging.getLogger("exception").propagate = False
+		logging.getLogger("exception").addHandler(handler_ex)
 
 	# Register new log levels
 	levelDict = {'DEFAULT_VERBOSITY': 14, # setLevel(logging.DEFAULT_VERBOSITY - opts.verbosity)
