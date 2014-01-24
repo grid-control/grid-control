@@ -39,8 +39,8 @@ class WMS(AbstractObject):
 		raise AbstractError # Return (jobNum, wmsId) for cancelled jobs
 
 	def _createBroker(self, name, default, *args):
-		sections = self._getSections('backend')
-		return Broker.open(self.config.get(sections, name, default, onChange = None), self.config, sections, *args)
+		config = self.config.getScoped(self._getSections('backend'))
+		return config.getClass(name, default, cls = Broker)(*args)
 
 	def _createId(self, wmsIdRaw):
 		return 'WMSID.%s.%s' % (self.wmsName, wmsIdRaw)

@@ -4,22 +4,22 @@ from broker import Broker
 from wms import WMS
 
 class RandomBroker(Broker):
-	def __init__(self, config, section, userOpt, itemName, discoverFun):
-		Broker.__init__(self, config, section, userOpt, itemName, discoverFun)
+	def __init__(self, config, name, userOpt, itemName, discoverFun):
+		Broker.__init__(self, config, name, userOpt, itemName, discoverFun)
 		self._itemsStart = self._discover(discoverFun)
 
 
 class UserBroker(Broker):
-	def __init__(self, config, section, userOpt, itemName, discoverFun):
-		Broker.__init__(self, config, section, userOpt, itemName, discoverFun)
-		self._itemsStart = config.getList(section, userOpt, [], onChange = None)
+	def __init__(self, config, name, userOpt, itemName, discoverFun):
+		Broker.__init__(self, config, name, userOpt, itemName, discoverFun)
+		self._itemsStart = config.getList(userOpt, [], onChange = None)
 		if not self._itemsStart:
 			self._itemsStart = None
 
 
 class FilterBroker(UserBroker):
-	def __init__(self, config, section, userOpt, itemName, discoverFun):
-		UserBroker.__init__(self, config, section, userOpt, itemName, discoverFun)
+	def __init__(self, config, name, userOpt, itemName, discoverFun):
+		UserBroker.__init__(self, config, name, userOpt, itemName, discoverFun)
 		if self._itemsStart:
 			self._discover(discoverFun)
 		if self._itemsDiscovered:
@@ -27,9 +27,9 @@ class FilterBroker(UserBroker):
 
 
 class CoverageBroker(Broker):
-	def __init__(self, config, section, userOpt, itemName, discoverFun):
-		Broker.__init__(self, config, section, userOpt, itemName, discoverFun)
-		itemsUser = config.getList(section, userOpt, [], onChange = None)
+	def __init__(self, config, name, userOpt, itemName, discoverFun):
+		Broker.__init__(self, config, name, userOpt, itemName, discoverFun)
+		itemsUser = config.getList(userOpt, [], onChange = None)
 		if not itemsUser:
 			itemsUser = None
 		itemsDisc = self._discover(discoverFun).keys()
@@ -49,8 +49,8 @@ class CoverageBroker(Broker):
 
 
 class SimpleBroker(FilterBroker):
-	def __init__(self, config, section, userOpt, itemName, discoverFun):
-		FilterBroker.__init__(self, config, section, userOpt, itemName, discoverFun)
+	def __init__(self, config, name, userOpt, itemName, discoverFun):
+		FilterBroker.__init__(self, config, name, userOpt, itemName, discoverFun)
 		self._discover(discoverFun)
 
 		def item_cmp(a, b, cmp_fun = cmp):
@@ -89,9 +89,9 @@ class SimpleBroker(FilterBroker):
 
 
 class StorageBroker(Broker):
-	def __init__(self, config, section, userOpt, itemName, discoverFun):
-		Broker.__init__(self, config, section, userOpt, itemName, discoverFun)
-		self.storageDict = config.getDict(section, '%s storage access' % userOpt, {}, onChange = None,
+	def __init__(self, config, name, userOpt, itemName, discoverFun):
+		Broker.__init__(self, config, name, userOpt, itemName, discoverFun)
+		self.storageDict = config.getDict('%s storage access' % userOpt, {}, onChange = None,
 			parser = lambda x: utils.parseList(x, ' '))[0]
 
 	def _broker(self, reqs, items):

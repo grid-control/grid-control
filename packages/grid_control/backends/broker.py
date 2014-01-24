@@ -1,11 +1,12 @@
 import random
-from grid_control import QM, AbstractObject, AbstractError, utils
+from grid_control import QM, NamedObject, AbstractError, utils
 
-class Broker(AbstractObject):
-	def __init__(self, config, section, userOpt, itemName, discoverFun):
+class Broker(NamedObject):
+	def __init__(self, config, name, userOpt, itemName, discoverFun):
+		NamedObject.__init__(self, config, name)
 		(self._itemsStart, self._itemsDiscovered, self._itemName) = (None, False, itemName)
-		self._nEntries = config.getInt(section, '%s entries' % userOpt, 0, onChange = None)
-		self._nRandom = config.getBool(section, '%s randomize' % userOpt, False, onChange = None)
+		self._nEntries = config.getInt('%s entries' % userOpt, 0, onChange = None)
+		self._nRandom = config.getBool('%s randomize' % userOpt, False, onChange = None)
 
 	def _discover(self, discoverFun, cached = True):
 		if not cached or (self._itemsDiscovered == False):
