@@ -120,7 +120,7 @@ class GliteWMS(GridWMS):
 		sections = self._getSections('backend')
 		self._useDelegate = config.getBool(sections, 'use delegate', None, onChange = None)
 		self._discovery_module = None
-		if config.getBool(sections, 'discover wms', True, onChange = None):
+		if config.getBool(sections, 'discover wms', False, onChange = None):
 			self._discovery_module = DiscoverWMS_Lazy(config)
 		self._discover_sites = config.getBool(sections, 'discover sites', False, onChange = None)
 
