@@ -104,21 +104,30 @@ class ConfigBase(object):
 			return QM(clsName == self._instName, self._clsName, '%s:%s' % (self._clsName, self._instName))
 		def __call__(self, *args, **kwargs): # Instantiate wrapped class with config and instance name as args
 			cls = self._baseClass.getClass(self._clsName) # Get class to collect config sections
-			config = self._config.getScoped(cls.getAllConfigSections(self._instName))
+			sections = cls.getAllConfigSections(self._instName)
+			config = self._config
+			if sections:
+				config = self._config.getScoped(sections)
 			return self._baseClass.getInstance(self._clsName, config, self._instName, *args, **kwargs)
 
 	# Return class - default class is also given in string form!
 	def getClass(self, *args, **kwargs):
 		baseClass = kwargs.pop('cls')
 		configScope = kwargs.pop('scope', [])
-		str2obj = lambda value: ConfigBase._ClassProxy(baseClass, value, self.getScoped(configScope))
+		config = self
+		if configScope != []:
+			config = self.getScoped(configScope)
+		str2obj = lambda value: ConfigBase._ClassProxy(baseClass, value, config)
 		return self._rawGet('class', str, str2obj, str2obj, *args, **kwargs)
 
 	# Return classes - default class is also given in string form!
 	def getClassList(self, *args, **kwargs):
 		baseClass = kwargs.pop('cls')
 		configScope = kwargs.pop('scope', [])
-		parseSingle = lambda x: ConfigBase._ClassProxy(baseClass, x, self.getScoped(configScope))
+		config = self
+		if configScope != []:
+			config = self.getScoped(configScope)
+		parseSingle = lambda x: ConfigBase._ClassProxy(baseClass, x, config)
 		str2obj = lambda value: map(parseSingle, utils.parseList(value, None, onEmpty = []))
 		obj2str = lambda value: str.join('\n', map(str, value))
 		return self._rawGet('class', obj2str, str2obj, str2obj, *args, **kwargs)
