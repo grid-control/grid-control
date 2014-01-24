@@ -52,8 +52,10 @@ class BasicConfigContainer(ConfigContainer):
 			log = logging.getLogger(('config.%s' % utils.getRootName(configFile)).rstrip('.'))
 			log.log(logging.INFO1, 'Reading config file %s' % configFile)
 			for line in map(lambda x: x.rstrip() + '=:', open(configFile, 'r').readlines()):
-				# Abort if non-indented, non-commented line with ":" preceeding "=" was found
-				if (line.find(":") < line.find("=")) and (line.lstrip() == line) and not line.lstrip().startswith(';'):
+				if line.startswith('[') or line.lstrip().startswith(';'):
+					continue # skip section and comment lines
+				# Abort if non-indented line with ":" preceeding "=" was found
+				if (line.lstrip() == line) and (line.find(":") < line.find("=")):
 					raise ConfigError('Invalid config line:\n\t%s\nPlease use "key = value" syntax or indent values!' % line)
 			# Parse with python config parser
 			parser = ConfigParser.ConfigParser(defaults)
