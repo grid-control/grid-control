@@ -136,21 +136,24 @@ class LoggedProcess(object):
 		if not brief:
 			eprint('\n%s' % self.getError(), printTime=True)
 
-		tar = tarfile.TarFile.open(target, 'a')
-		data = {'retCode': self.wait(), 'exec': self.cmd, 'args': self.args}
-		files = [VirtualFile(os.path.join(entry, 'info'), DictFormat().format(data))]
-		kwargs.update({'stdout': self.getOutput(), 'stderr': self.getError()})
-		for key, value in kwargs.items():
-			try:
-				content = open(value, 'r').readlines()
-			except:
-				content = [value]
-			files.append(VirtualFile(os.path.join(entry, key), content))
-		for fileObj in files:
-			info, handle = fileObj.getTarInfo()
-			tar.addfile(info, handle)
-			handle.close()
-		tar.close()
+		try:
+			tar = tarfile.TarFile.open(target, 'a')
+			data = {'retCode': self.wait(), 'exec': self.cmd, 'args': self.args}
+			files = [VirtualFile(os.path.join(entry, 'info'), DictFormat().format(data))]
+			kwargs.update({'stdout': self.getOutput(), 'stderr': self.getError()})
+			for key, value in kwargs.items():
+				try:
+					content = open(value, 'r').readlines()
+				except:
+					content = [value]
+				files.append(VirtualFile(os.path.join(entry, key), content))
+			for fileObj in files:
+				info, handle = fileObj.getTarInfo()
+				tar.addfile(info, handle)
+				handle.close()
+			tar.close()
+		except:
+			raise RuntimeError('Unable to log errors of external process "%s" to "%s"' % (self.niceCmd, target))
 		eprint('All logfiles were moved to %s' % target)
 
 
