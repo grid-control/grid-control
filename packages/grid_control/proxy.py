@@ -1,5 +1,5 @@
 # Generic base class for authentication proxies
-import os, time
+import os, time, getpass
 from grid_control import QM, LoadableObject, InstallationError, AbstractError, UserError, utils
 
 class Proxy(LoadableObject):
@@ -25,7 +25,7 @@ Proxy.registerObject()
 
 class TrivialProxy(Proxy):
 	def getUsername(self):
-		return os.environ.get('LOGNAME', 'Unknown')
+		return getpass.getuser()
 
 	def getGroup(self):
 		return os.environ.get('GROUP', 'None')

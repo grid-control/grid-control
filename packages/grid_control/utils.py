@@ -43,7 +43,7 @@ def resolvePath(path, userPath = [], mustExist = True, ErrorClass = RuntimeError
 
 
 def resolveInstallPath(path):
-	return resolvePath(path, os.environ['PATH'].split(':'), True, InstallationError)
+	return resolvePath(path, os.environ['PATH'].split(os.pathsep), True, InstallationError)
 
 
 def ensureDirExists(dn, name = 'directory'):
@@ -53,6 +53,16 @@ def ensureDirExists(dn, name = 'directory'):
 		except:
 			raise RethrowError('Problem creating %s "%s"' % (name, dn), RuntimeError)
 
+
+def freeSpace(dn):
+	try:
+		stat_info = os.statvfs(dn)
+		return stat_info.f_bavail * stat_info.f_bsize / 1024**2
+	except:
+		import ctypes
+		free_bytes = ctypes.c_ulonglong(0)
+		ctypes.windll.kernel32.GetDiskFreeSpaceExW(ctypes.c_wchar_p(dn), None, None, ctypes.pointer(free_bytes))
+		return free_bytes.value / 1024**2
 
 ################################################################
 # Process management functions

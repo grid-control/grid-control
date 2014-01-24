@@ -18,7 +18,7 @@ class TaskModule(NamedObject):
 
 		# Compute / get task ID
 		self.taskID = config.get('task', 'task id', 'GC' + md5(str(time())).hexdigest()[:12], persistent = True)
-		self.taskDate = config.get('task', 'task date', strftime("%F"), persistent = True)
+		self.taskDate = config.get('task', 'task date', strftime('%Y-%m-%d'), persistent = True)
 
 		self.taskVariables = {
 			# Space limits

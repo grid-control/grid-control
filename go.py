@@ -148,8 +148,7 @@ if __name__ == '__main__':
 				if not wms.canSubmit(task.wallTime, opts.submission):
 					opts.submission = False
 				# Check free disk space
-				freeSpace = lambda x: x.f_bavail * x.f_bsize / 1024**2
-				if (checkSpace > 0) and freeSpace(os.statvfs(config.workDir)) < checkSpace:
+				if (checkSpace > 0) and utils.freeSpace(config.workDir) < checkSpace:
 					if time.time() - lastSpaceMsg > 5 * 60:
 						utils.vprint('Not enough space left in working directory', -1, True)
 						lastSpaceMsg = time.time()
