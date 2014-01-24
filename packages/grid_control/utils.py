@@ -163,7 +163,7 @@ class LoggedProcess(object):
 				handle.close()
 			tar.close()
 		except:
-			raise RuntimeError('Unable to log errors of external process "%s" to "%s"' % (self.niceCmd, target))
+			raise RethrowError('Unable to log errors of external process "%s" to "%s"' % (self.niceCmd, target), RuntimeError)
 		eprint('All logfiles were moved to %s' % target)
 
 
