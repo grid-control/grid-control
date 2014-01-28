@@ -89,7 +89,10 @@ class ParameterConfig:
 
 		def yieldEntries():
 			for tupleEntry in tupleList:
-				tmp = self.parseParameter(varName, tupleEntry[varIndex], varType)
+				try:
+					tmp = self.parseParameter(varName, tupleEntry[varIndex], varType)
+				except:
+					raise ConfigError('Unable to parse %r' % tupleEntry)
 				if isinstance(tmp, list):
 					if len(tmp) != 1:
 						raise ConfigError('[Variable: %s] Tuple entry (%s) expands to multiple variable entries (%s)!' % (varName, tupleEntry[varIndex], tmp))
