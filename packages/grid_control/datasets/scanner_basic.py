@@ -197,7 +197,7 @@ class DetermineEvents(InfoScanner):
 	def __init__(self, config, section):
 		self.eventsCmd = config.get(section, 'events command', '')
 		self.eventsKey = config.get(section, 'events key', '')
-		self.eventsDefault = config.get(section, 'events default', -1)
+		self.eventsDefault = config.getInt(section, 'events default', -1)
 
 	def getEntries(self, path, metadata, events, seList, objStore):
 		events = int(metadata.get(self.eventsKey, QM(events >= 0, events, self.eventsDefault)))
