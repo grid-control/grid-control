@@ -7,6 +7,11 @@ def logException_internal(exClass, exValue, stack):
 	log = logging.getLogger('exception')
 	counter = 0
 	log.critical('Exception occured: %s' % time.strftime("%Y-%m-%d %H:%M:%S"))
+	try:
+		import utils
+		log.critical('grid-control: %s' % utils.getVersion())
+	except:
+		log.critical('grid-control: Unknown version')
 	log.critical('')
 	while stack:
 		counter += 1
