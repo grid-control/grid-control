@@ -1,4 +1,4 @@
-from python_compat import *
+from python_compat import set, sorted, md5, next, user_input, lru_cache
 import sys, os, stat, StringIO, tarfile, time, fnmatch, re, popen2, threading, operator, Queue, signal, glob
 from exceptions import *
 

@@ -1,5 +1,4 @@
 # Helper to access CMS webservices (SiteDB, Phedex)
-from python_compat import *
 
 def removeUnicode(obj):
 	if type(obj) in (list, tuple, set):

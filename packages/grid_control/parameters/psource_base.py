@@ -1,5 +1,5 @@
 import time
-from python_compat import *
+from python_compat import set
 from grid_control import AbstractError, LoadableObject, APIError, utils, QM
 
 class ParameterInfo:

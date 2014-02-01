@@ -110,8 +110,24 @@ except:
 		(funProxy.fun, funProxy.cache) = (fun, [])
 		return funProxy
 
-if __name__ == '__main__':
-	import doctest
-	doctest.testmod()
-
 __all__ = ['rsplit', 'set', 'sorted', 'md5', 'next', 'user_input', 'any', 'lru_cache']
+
+if __name__ == '__main__':
+	import os, re, doctest
+	doctest.testmod()
+	for (root, dirs, files) in os.walk('.'):
+		for fn in filter(lambda fn: fn.endswith('.py'), files):
+			fn = os.path.join(root, fn)
+			found = False
+			tmp = open(fn).read()
+			for feature in __all__:
+				if re.search('[^\.a-zA-Z]%s\(' % feature, tmp):
+					found = True
+					for line in tmp.splitlines():
+						if 'python_compat' in line:
+							if feature not in line:
+								print fn, feature
+			if (not found) and ('python_compat' in tmp):
+				print fn, 'missing'
+#			print __all__
+#			print 

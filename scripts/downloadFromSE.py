@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 import gcSupport, sys, os, optparse, popen2, time, random, threading
-from python_compat import *
+from python_compat import md5
 from grid_control import Job, JobDB, GCError, Config, Proxy, job_selector, job_db, storage, utils, logException
 
 def md5sum(filename):

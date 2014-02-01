@@ -1,4 +1,4 @@
-from python_compat import *
+from python_compat import rsplit
 from exceptions import *
 import utils, logging
 

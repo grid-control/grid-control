@@ -1,5 +1,5 @@
 import random, re
-from python_compat import *
+from python_compat import md5
 from grid_control import ConfigError, utils, WMS, APIError
 from psource_base import ParameterSource, ParameterMetadata, ParameterInfo
 

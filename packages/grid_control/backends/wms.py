@@ -1,6 +1,6 @@
 # Generic base class for workload management systems
 
-from python_compat import *
+from python_compat import set, sorted
 import sys, os, time, stat, shutil, tarfile, glob, itertools
 from grid_control import QM, LoadableObject, AbstractError, ConfigError, RuntimeError, RethrowError, UserError, utils, Proxy, StorageManager
 from broker import Broker

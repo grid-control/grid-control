@@ -1,6 +1,6 @@
 import os, inspect, logging, ConfigParser
 from grid_control import *
-from python_compat import *
+from python_compat import set, sorted
 from container_base import noDefault, standardConfigForm, ConfigContainer
 from container_basic import BasicConfigContainer
 from config_base import ConfigBase

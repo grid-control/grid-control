@@ -4,7 +4,6 @@ import sys, os, re, fcntl, time, optparse
 # add python subdirectory from where exec was started to search path
 sys.path.insert(1, os.path.join(sys.path[0], '..', 'packages'))
 from gcPackage import *
-from python_compat import *
 
 class DummyStream(object):
 	def __init__(self, stream):

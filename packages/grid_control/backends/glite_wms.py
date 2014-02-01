@@ -1,4 +1,4 @@
-from python_compat import *
+from python_compat import md5
 import tempfile, time, random, os
 from grid_control import utils, RuntimeError
 from grid_wms import GridWMS

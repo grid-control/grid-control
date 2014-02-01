@@ -1,4 +1,4 @@
-from python_compat import *
+from python_compat import rsplit
 from grid_control import QM, utils, ConfigError
 from provider_base import DataProvider
 

@@ -1,5 +1,5 @@
 import os, gzip
-from python_compat import *
+from python_compat import set, sorted, md5
 from grid_control import APIError, UserError, LoadableObject, utils
 from psource_base import ParameterInfo, ParameterMetadata, ParameterSource
 from psource_file import GCDumpParameterSource

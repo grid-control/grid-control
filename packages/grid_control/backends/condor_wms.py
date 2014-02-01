@@ -7,7 +7,7 @@ import popen2
 import time
 
 import tempfile
-from python_compat import *
+from python_compat import set, md5
 from grid_control import utils, QM, ProcessHandler, Job
 from wms import WMS, BasicWMS, RethrowError
 

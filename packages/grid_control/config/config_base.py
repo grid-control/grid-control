@@ -1,4 +1,4 @@
-from python_compat import *
+from python_compat import set
 from grid_control import *
 import glob
 

@@ -2,7 +2,7 @@ import sys, os, xml.dom.minidom
 from grid_control import QM, ConfigError, RethrowError, Job, utils
 from grid_control.backends.wms import WMS
 from pbsge import PBSGECommon
-from python_compat import *
+from python_compat import set
 
 class OGE(PBSGECommon):
 	def __init__(self, config, wmsName = None):

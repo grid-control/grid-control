@@ -1,4 +1,4 @@
-from python_compat import *
+from python_compat import next
 from grid_control import ConfigError, RethrowError, Job, utils, backends
 from grid_control.backends import LocalWMS
 

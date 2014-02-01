@@ -1,5 +1,5 @@
 import os, random
-from python_compat import *
+from python_compat import lru_cache, md5
 from grid_control import ConfigError, AbstractError, NamedObject, QM, utils, WMS, Job
 from grid_control.parameters import ParameterFactory, ParameterInfo
 from time import time, localtime, strftime

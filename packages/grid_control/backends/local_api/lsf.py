@@ -1,5 +1,5 @@
 import sys, os, itertools
-from python_compat import *
+from python_compat import next
 from grid_control import ConfigError, RethrowError, Job, utils
 from grid_control.backends import WMS, LocalWMS
 

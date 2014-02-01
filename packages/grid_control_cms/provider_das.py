@@ -1,7 +1,6 @@
 from grid_control import QM, utils, DatasetError, RethrowError, datasets
 from grid_control.datasets import DataProvider
 from provider_cms import CMSProvider
-from python_compat import *
 from webservice_api import *
 import time
 

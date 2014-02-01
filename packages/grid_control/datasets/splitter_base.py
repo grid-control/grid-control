@@ -1,4 +1,4 @@
-from python_compat import *
+from python_compat import next
 import os, tarfile, time, copy, cStringIO, threading, gzip
 from grid_control import QM, LoadableObject, AbstractError, RuntimeError, utils, ConfigError, Config, noDefault
 from provider_base import DataProvider

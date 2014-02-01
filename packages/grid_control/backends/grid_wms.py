@@ -1,4 +1,4 @@
-from python_compat import *
+from python_compat import md5
 import sys, os, time, copy, tempfile, tarfile
 from grid_control import QM, ConfigError, APIError, RethrowError, Job, utils
 from wms import WMS, BasicWMS

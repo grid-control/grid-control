@@ -1,4 +1,4 @@
-from python_compat import *
+from python_compat import sorted
 from grid_control import APIError, ConfigError, RethrowError, utils, QM
 import logging
 

@@ -1,5 +1,5 @@
 import sys, logging
-from python_compat import *
+from python_compat import sorted
 
 # Exception handler which outputs a stack trace to the logging facility
 def logException_internal(exClass, exValue, stack):

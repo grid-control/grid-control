@@ -1,4 +1,3 @@
-from python_compat import *
 from grid_control import ConfigError, RethrowError, utils
 import sys, os, logging, ConfigParser, socket
 from container_base import ConfigContainer

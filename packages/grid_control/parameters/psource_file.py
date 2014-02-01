@@ -1,5 +1,5 @@
 import os, csv, gzip
-from python_compat import *
+from python_compat import sorted
 from grid_control import utils
 from psource_base import ParameterSource, ParameterMetadata, ParameterInfo
 from psource_basic import InternalParameterSource

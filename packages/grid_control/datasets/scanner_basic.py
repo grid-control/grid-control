@@ -2,7 +2,7 @@ import os, sys
 from grid_control import QM, utils, ConfigError, storage, JobSelector, LoadableObject, Config, JobDB, JobSelector, Job, RethrowError
 from scanner_base import InfoScanner
 from grid_control.datasets import DataProvider
-from python_compat import *
+from python_compat import set, sorted
 
 def splitParse(opt):
 	(delim, ds, de) = utils.optSplit(opt, '::')

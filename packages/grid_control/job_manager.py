@@ -2,7 +2,7 @@ import sys, os, re, fnmatch, random, math, time, operator
 import bisect
 from grid_control import QM, ConfigError, RuntimeError, RethrowError, Job, JobClass, JobDB, Report, utils
 from job_selector import JobSelector, ClassSelector, AndJobSelector
-from python_compat import *
+from python_compat import set, sorted
 
 class JobManager:
 	def __init__(self, config, task, eventhandler):

@@ -1,4 +1,3 @@
-from python_compat import *
 import sys, os, stat, time, popen2, math
 from exceptions import *
 from abstract import LoadableObject

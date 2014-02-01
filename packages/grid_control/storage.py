@@ -1,6 +1,6 @@
 import os, utils, shutil
 from grid_control import *
-from python_compat import *
+from python_compat import set
 
 # All functions use url_* functions from gc-run.lib (just like the job did...)
 

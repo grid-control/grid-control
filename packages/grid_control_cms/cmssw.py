@@ -1,5 +1,4 @@
 import os, sys, shutil
-from python_compat import *
 from grid_control import QM, ConfigError, WMS, utils, storage, datasets, noDefault
 from grid_control.tasks.task_data import DataTask
 from grid_control.tasks.task_utils import TaskExecutableWrapper
