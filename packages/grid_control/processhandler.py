@@ -44,15 +44,13 @@ class LocalProcessHandler(ProcessHandler):
 
 # remote Processes via SSH
 class SSHProcessHandler(ProcessHandler):
-	# commands to use - overwritten by inheriting class
-	cmd = resolveInstallPath("ssh")
-	cpy = resolveInstallPath("scp") + " -r"
 	# track lifetime and quality of command socket
 	socketTimestamp=0
 	socketFailCount=0
 	# older versions of ssh/gsissh will propagate an end of master incorrectly to children - rotate sockets
 	socketIdNow=0
 	def __init__(self, **kwargs):
+		self.__initcommands(**kwargs)
 		self.defaultArgs="-vvv -o BatchMode=yes  -o ForwardX11=no " + kwargs.get("defaultArgs","")
 		self.socketArgs=""
 		self.socketEnforce=kwargs.get("sshLinkEnforce",True)
@@ -76,6 +74,9 @@ class SSHProcessHandler(ProcessHandler):
 		testProcess = self.LoggedProcess( "exit" )
 		if testProcess.wait() != 0:
 			raise RuntimeError("Failed to validate remote connection.\n	Command: %s Return code: %s\n%s" % ( testProcess.cmd, testProcess.wait(), testProcess.getOutput() ) )
+	def __initcommands(self, **kwargs):
+		self.cmd = resolveInstallPath("ssh")
+		self.cpy = resolveInstallPath("scp") + " -r"
 
 	# return instance of LoggedProcess with input properly wrapped
 	def LoggedProcess(self, cmd, args = '', **kwargs):
@@ -181,7 +182,8 @@ class SSHProcessHandler(ProcessHandler):
 # remote Processes via GSISSH
 class GSISSHProcessHandler(SSHProcessHandler):
 	# commands to use - overwritten by inheriting class
-	cmd = resolveInstallPath("gsissh")
-	cpy = resolveInstallPath("gsiscp") + " -r"
+	def __initcommands(self, **kwargs):
+		cmd = resolveInstallPath("gsissh")
+		cpy = resolveInstallPath("gsiscp") + " -r"
 
 ProcessHandler.registerObject()
