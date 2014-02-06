@@ -1,7 +1,8 @@
 import sys, os, stat, time, popen2, math
 from exceptions import *
+
 from abstract import LoadableObject
-from utils import LoggedProcess, vprint
+from utils import LoggedProcess, vprint, resolveInstallPath
 
 # placeholder for function arguments
 defaultArg = object()
@@ -44,8 +45,8 @@ class LocalProcessHandler(ProcessHandler):
 # remote Processes via SSH
 class SSHProcessHandler(ProcessHandler):
 	# commands to use - overwritten by inheriting class
-	cmd="ssh"
-	cpy="scp -r"
+	cmd = resolveInstallPath("ssh")
+	cpy = resolveInstallPath("scp") + " -r"
 	# track lifetime and quality of command socket
 	socketTimestamp=0
 	socketFailCount=0
@@ -180,7 +181,7 @@ class SSHProcessHandler(ProcessHandler):
 # remote Processes via GSISSH
 class GSISSHProcessHandler(SSHProcessHandler):
 	# commands to use - overwritten by inheriting class
-	cmd = "gsissh"
-	cpy = "gsiscp -r"
+	cmd = resolveInstallPath("gsissh")
+	cpy = resolveInstallPath("gsiscp") + " -r"
 
 ProcessHandler.registerObject()
