@@ -120,7 +120,8 @@ class ResolvedConfigBase(ConfigBase):
 			return self._config.set(scope, option, value, *args, **kwargs)
 		def myGet(desc, obj2str, str2obj, def2obj, option, *args, **kwargs):
 			primedResolver = lambda cc: self._config._resolver.getSource(cc, self._scope, option)
-			return self._config.getTyped(desc, obj2str, str2obj, def2obj, primedResolver, *args, caller = self, **kwargs)
+			kwargs["caller"] = self
+			return self._config.getTyped(desc, obj2str, str2obj, def2obj, primedResolver, *args, **kwargs)
 		def myIter():
 			return self._config.getOptions(scope)
 		ConfigBase.__init__(self, mySet, myGet, myIter, config._baseDir)
