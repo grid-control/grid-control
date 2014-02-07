@@ -1,9 +1,9 @@
-[/MY/SKIM#1111]
+[/MY/SKIM1#1111]
 nickname = Dataset1
 /bin/env = 1
 /bin/arch = 1
 
-[/MY/SKIM#2222]
+[/MY/SKIM2#2222]
 nickname = Dataset2
 /bin/gettext = 1
 /bin/grep = 1

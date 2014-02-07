@@ -144,7 +144,7 @@ class GridWMS(BasicWMS):
 				if status.find('failed') >=0:
 					status = 'failed'
 				else:
-					status = status.split()[0]
+					status = status.split('(')[0].split()[0]
 			except:
 				pass
 			data['status'] = status

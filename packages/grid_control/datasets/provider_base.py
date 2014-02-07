@@ -1,10 +1,35 @@
 import os, gzip, cStringIO, copy, random
-from grid_control import QM, utils, LoadableObject, AbstractError, ConfigError, noDefault, Config
+from grid_control import QM, utils, LoadableObject, AbstractError, ConfigError, noDefault, Config, DatasetError
 
 class NickNameProducer(LoadableObject):
-	def __init__(self, config):
+	def __init__(self, config, section = 'dataset'):
 		self.config = config
+		# Check if two different datasets have the same nickname
+		self._checkCollision = config.getBool(section, 'nickname check collision', True)
+		self._checkCollisionData = {}
+		# Ensure the same nickname is used consistently in all blocks of a dataset
+		self._checkConsistency = config.getBool(section, 'nickname check consistency', True)
+		self._checkConsistencyData = {}
 
+	# Get nickname and check for collisions
+	def process(self, block):
+		blockDS = block[DataProvider.Dataset]
+		oldNick = block.get(DataProvider.Nickname, '')
+		newNick = self.getName(oldNick, blockDS, block)
+		if not (self._checkCollision or self._checkConsistency):
+			return newNick # Skip checking for collisions if disabled
+		# Check if nickname is used consistenly in all blocks of a datasets
+		if self._checkCollision:
+			if self._checkCollisionData.setdefault(blockDS, newNick) != newNick:
+				raise DatasetError('Different blocks of dataset "%s" have different nicknames: "%s" != "%s"' % (
+					blockDS, self._checkCollisionData[blockDS], newNick))
+		if self._checkConsistency:
+			if self._checkConsistencyData.setdefault(newNick, blockDS) != blockDS:
+				raise DatasetError('Multiple datasets use the same nickname "%s": "%s" != "%s"' % (
+					newNick, self._checkConsistencyData[newNick], blockDS))
+		return newNick
+
+	# Overwritten by users / other implementations
 	def getName(self, oldnick, dataset, block):
 		raise AbstractError
 NickNameProducer.registerObject()
@@ -40,7 +65,7 @@ class DataProvider(LoadableObject):
 		self.limitEvents = config.getInt(section, 'limit events', -1)
 		self.limitFiles = config.getInt(section, 'limit files', -1)
 		nickProducer = config.get(section, 'nickname source', 'SimpleNickNameProducer')
-		self.nProd = NickNameProducer.open(nickProducer, config)
+		self._nickProducer = NickNameProducer.open(nickProducer, config, section)
 
 
 	# Parse dataset format [NICK : [PROVIDER : [(/)*]]] DATASET
@@ -96,7 +121,7 @@ class DataProvider(LoadableObject):
 				if self._datasetNick:
 					block[DataProvider.Nickname] = self._datasetNick
 				else:
-					block[DataProvider.Nickname] = self.nProd.getName(block.get(DataProvider.Nickname, ''), block[DataProvider.Dataset], block)
+					block[DataProvider.Nickname] = self._nickProducer.process(block)
 
 				# Filter file list
 				events = sum(map(lambda x: x[DataProvider.NEntries], block[DataProvider.FileList]))
