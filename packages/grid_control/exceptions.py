@@ -31,7 +31,7 @@ def logException_internal(exClass, exValue, stack):
 		for var in sorted(filter(lambda v: v != 'self', tmp)):
 			log.critical('\t\t%s = %r', var.ljust(maxlen), tmp[var])
 		if 'self' in tmp:
-			log.critical('\tClass variables:')
+			log.critical('\tClass variables (%r):' % tmp['self'])
 			try:
 				for var in sorted(tmp['self'].__dict__):
 					log.critical('\t\tself.%s = %r', var.ljust(maxlen), tmp['self'].__dict__[var])
@@ -39,10 +39,11 @@ def logException_internal(exClass, exValue, stack):
 				pass
 		log.critical('')
 		stack = stack.tb_next
-	exMessage = '%s: %s' % (exClass.__name__, str.join(' ', map(str, exValue.args)))
-	log.critical(exMessage)
-	del stack
-	return exMessage + '\n'
+	if exClass:
+		exMessage = '%s: %s' % (exClass.__name__, str.join(' ', map(str, exValue.args)))
+		log.critical(exMessage)
+		del stack
+		return exMessage + '\n'
 
 def logException():
 	return logException_internal(*sys.exc_info())
@@ -62,8 +63,11 @@ def handleException(fun, *args, **kwargs):
 				break
 		sys.exit(1)
 
+# grid-control exception base class
 class GCError(Exception):
-	pass	# grid-control exception base class
+	def __init__(self, *args, **kwargs):
+		logException() # always log exception
+		Exception.__init__(self, *args, **kwargs)
 
 class ConfigError(GCError):
 	pass	# some error with the configuration

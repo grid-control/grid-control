@@ -7,12 +7,14 @@ class LoadableObject(object):
 	def __init__(self):
 		raise AbstractError
 
-	# Modify the module search path for the class
-	def registerObject(cls, searchPath = []):
-		if not hasattr(cls, 'moduleMap'):
-			(cls.moduleMap, cls.moduleMapDynamic, cls.modPaths) = ({}, {}, [])
-		splitUpFun = lambda x: rsplit(cls.__module__, ".", x)[0]
-		cls.modPaths = utils.uniqueListRL(searchPath + cls.modPaths + map(splitUpFun, range(cls.__module__.count(".") + 1)))
+	# Modify the module search path for the class - parent is used by NamedObject to impersonate caller
+	def registerObject(cls, searchPath = [], base = None):
+		if not base:
+			base = cls
+		if not hasattr(base, 'moduleMap'):
+			(base.moduleMap, base.moduleMapDynamic, base.modPaths) = ({}, {}, [])
+		splitUpFun = lambda x: rsplit(base.__module__, ".", x)[0]
+		base.modPaths = utils.uniqueListRL(searchPath + base.modPaths + map(splitUpFun, range(base.__module__.count(".") + 1)))
 	registerObject = classmethod(registerObject)
 
 
@@ -80,10 +82,8 @@ class NamedObject(LoadableObject):
 		self._name = name
 
 
-	def getLocalConfigSections(self):
-		if self.__class__.__name__.lower() == self._name.lower():
-			return [self._name]
-		return [self.__class__.__name__ + ' ' + self._name]
+	def getObjectName(self):
+		return self._name
 
 
 	# Collects named config section
@@ -135,3 +135,30 @@ class ClassFactory:
 			return clsList[0]
 		elif len(clsList) > 1:
 			return self._mergeCls(*clsList)
+
+
+# Needed by getClass / getClasses to wrap the fixed arguments to the instantiation / name of the instance
+class ClassWrapper:
+	def __init__(self, baseClass, value, config, tags):
+		(self._baseClass, self._config, self._tags) = (baseClass, config, tags)
+		(self._instClassName, self._instName) = utils.optSplit(value, ':')
+		if self._instName == '':
+			self._instName = self._instClassName.split('.')[-1] # Default: (non fully qualified) class name as instance name
+
+	def __eq__(self, other): # Used to check for changes compared to old
+		return str(self) == str(other)
+
+	def __repr__(self):
+		return '<class wrapper for %r (base: %r)>' % (str(self), self._baseClass.__name__)
+
+	def __str__(self):  # Used to serialize config setting
+		if self._instName == self._instClassName.split('.')[-1]: # take care of fully qualified class names
+			return self._instClassName
+		return '%s:%s' % (self._instClassName, self._instName)
+
+	def getInstance(self, *args, **kwargs):
+		cls = self._baseClass.getClass(self._instClassName)
+		if issubclass(cls, NamedObject):
+			config = self._config.getTagged(cls, self._instName, self._tags)
+			return cls(config, self._instName, *args, **kwargs)
+		return cls(*args, **kwargs)

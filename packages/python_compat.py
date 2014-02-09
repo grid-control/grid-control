@@ -117,6 +117,8 @@ if __name__ == '__main__':
 	doctest.testmod()
 	for (root, dirs, files) in os.walk('.'):
 		for fn in filter(lambda fn: fn.endswith('.py'), files):
+			if fn.endswith("python_compat.py"):
+				continue
 			fn = os.path.join(root, fn)
 			found = False
 			tmp = open(fn).read()
@@ -129,5 +131,3 @@ if __name__ == '__main__':
 								print fn, feature
 			if (not found) and ('python_compat' in tmp):
 				print fn, 'missing'
-#			print __all__
-#			print 
