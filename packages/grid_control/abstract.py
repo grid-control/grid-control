@@ -24,7 +24,8 @@ class LoadableObject(object):
 		# resolve class name/alias to fully qualified class path
 		def resolveClassName(name):
 			cname = cls.moduleMapDynamic.get(name, name)
-			cname = cls.moduleMap.get(name, name)
+			classMap = dict(map(lambda (k, v): (k.lower(), v), cls.moduleMap.items()))
+			cname = classMap.get(name, name)
 			if cname == name:
 				return name
 			return resolveClassName(cname)
@@ -32,9 +33,7 @@ class LoadableObject(object):
 		log.log(logging.DEBUG2, 'Loading resolved class %s' % clsName)
 		mjoin = lambda x: str.join('.', x)
 		# Yield search paths
-		def searchPath(cname):
-			cls.moduleMap = dict(map(lambda (k, v): (k.lower(), v), cls.moduleMap.items()))
-			fqName = cls.moduleMap.get(cname.lower(), cname) # resolve module mapping
+		def searchPath(fqName):
 			yield fqName
 			for path in cls.modPaths + LoadableObject.pkgPaths:
 				if not '.' in fqName:

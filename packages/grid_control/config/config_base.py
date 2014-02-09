@@ -1,6 +1,6 @@
 from python_compat import set
 from grid_control import *
-import glob
+import glob, os
 
 # Config interface class accessing data using an interface supplied by another class
 class ConfigBase(object):

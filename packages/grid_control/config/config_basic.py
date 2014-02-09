@@ -124,7 +124,7 @@ class ResolvedConfigBase(ConfigBase):
 			return self._config.getTyped(desc, obj2str, str2obj, def2obj, primedResolver, *args, **kwargs)
 		def myIter():
 			return self._config.getOptions(scope)
-		ConfigBase.__init__(self, mySet, myGet, myIter, config._baseDir, config._workDir)
+		ConfigBase.__init__(self, mySet, myGet, myIter, config._baseDir, config._pathWork)
 		for attr in forward: # Forward specified attributes from main config to this instance
 			setattr(self, attr, getattr(config, attr))
 
@@ -179,7 +179,7 @@ class NewConfig(ConfigBase):
 
 		# Determine work directory 
 		wdBase = self.getPath('global', 'workdir base', self._baseDir, mustExist = False)
-		self._workDir = self.getPath('global', 'workdir', os.path.join(wdBase, 'work.' + confName),
+		self._pathWork = self.getPath('global', 'workdir', os.path.join(wdBase, 'work.' + confName),
 			mustExist = False, markDefault = False) # "markDefault = False" forces writeout in both dumps
 
 		# Determine and load stored config settings
