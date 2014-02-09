@@ -124,7 +124,7 @@ class ResolvedConfigBase(ConfigBase):
 			return self._config.getTyped(desc, obj2str, str2obj, def2obj, primedResolver, *args, **kwargs)
 		def myIter():
 			return self._config.getOptions(scope)
-		ConfigBase.__init__(self, mySet, myGet, myIter, config._baseDir)
+		ConfigBase.__init__(self, mySet, myGet, myIter, config._baseDir, config._workDir)
 		for attr in forward: # Forward specified attributes from main config to this instance
 			setattr(self, attr, getattr(config, attr))
 
@@ -175,16 +175,16 @@ class NewConfig(ConfigBase):
 		def myIter(section):
 			self._logger.debug("old style call from %s [%s]" % (fmtStack(inspect.stack()), section))
 			return self._resolver.getOptions(self._curCfg, section)
-		ConfigBase.__init__(self, mySet, myGet, myIter, self._baseDir)
+		ConfigBase.__init__(self, mySet, myGet, myIter, self._baseDir, None)
 
 		# Determine work directory 
 		wdBase = self.getPath('global', 'workdir base', self._baseDir, mustExist = False)
-		self.workDir = self.getPath('global', 'workdir', os.path.join(wdBase, 'work.' + confName),
+		self._workDir = self.getPath('global', 'workdir', os.path.join(wdBase, 'work.' + confName),
 			mustExist = False, markDefault = False) # "markDefault = False" forces writeout in both dumps
 
 		# Determine and load stored config settings
-		self._flatCfgPath = os.path.join(self.workDir, 'current.conf') # Minimal config file
-		self._oldCfgPath = os.path.join(self.workDir, 'work.conf') # Config file with saved settings
+		self._flatCfgPath = self.getWorkPath('current.conf') # Minimal config file
+		self._oldCfgPath = self.getWorkPath('work.conf') # Config file with saved settings
 		if os.path.exists(self._oldCfgPath):
 			logging.getLogger('config.stored').propagate = False
 			self._oldCfg = BasicConfigContainer('stored', configFile = self._oldCfgPath)
@@ -192,7 +192,7 @@ class NewConfig(ConfigBase):
 		# Get persistent variables - only possible after self._oldCfg was set!
 		self.confName = self.get('global', 'config id', confName, persistent = True)
 		# Specify variables to forward to scoped config instances
-		self._forward = ['workDir', 'configFile', 'confName', 'opts']
+		self._forward = ['configFile', 'confName', 'opts']
 
 
 	def freezeConfig(self, writeConfig = True):
@@ -283,7 +283,7 @@ class NewConfig(ConfigBase):
 class Config(NewConfig):
 	def __init__(self, configFile = None, configDict = {}, optParser = None, configHostSpecific = True):
 		NewConfig.__init__(self, configFile, configDict, optParser, configHostSpecific)
-		persistencyFile = os.path.join(self.workDir, 'task.dat')
+		persistencyFile = self.getWorkPath('task.dat')
 		# read old persistency file - and set appropriate config options
 		if os.path.exists(persistencyFile):
 			persistencyDict = utils.PersistentDict(persistencyFile, ' = ')

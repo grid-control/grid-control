@@ -67,7 +67,6 @@ else:
 
 config.set('parameters', 'parameter adapter', 'BasicParameterAdapter')
 config.opts = opts
-config.workDir = '.'
 config.getTaskDict = lambda: utils.PersistentDict(None)
 
 if opts.dataset:
@@ -109,7 +108,7 @@ elif opts.dataset:
 
 if opts.dataset:
 	DataParameterSource.datasetsAvailable['data'] = DataParameterSource(
-		config.workDir, 'data', None, dataSplitter, DataSplitProcessorTest())
+		config.getWorkPath(), 'data', None, dataSplitter, DataSplitProcessorTest())
 
 plugin = pm.getSource(config)
 

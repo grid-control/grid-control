@@ -5,7 +5,7 @@ from task_user import UserTask
 class ROOTTask(UserTask):
 	def __init__(self, config, name):
 		# Determine ROOT path from previous settings / environment / config file
-		taskInfo = utils.PersistentDict(os.path.join(config.workDir, 'task.dat'), ' = ')
+		taskInfo = utils.PersistentDict(config.getWorkPath('task.dat'), ' = ')
 		self._rootpath = config.get(self.__class__.__name__, 'root path',
 			os.environ.get('ROOTSYS', ''), persistent = True)
 		if not self._rootpath:

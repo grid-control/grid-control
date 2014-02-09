@@ -86,7 +86,7 @@ class Condor(BasicWMS):
 		self.poolQuery = config.getDict(self._getSections("backend"), 'poolArgs query', {})[0]
 		self._formatStatusReturnQuery(config)
 		# Sandbox base path where individual job data is stored, staged and returned to
-		self.sandPath = config.getPath(self._getSections("local"), 'sandbox path', os.path.join(config.workDir, 'sandbox'), mustExist = False)
+		self.sandPath = config.getPath(self._getSections("local"), 'sandbox path', config.getWorkPath('sandbox'), mustExist = False)
 		# history query is faster with split files - check if and how this is used
 		# default condor_history command works WITHOUT explicitly specified file
 		self.historyFile = None
@@ -722,9 +722,9 @@ class Condor(BasicWMS):
 			# ssh type instructions are passed to the remote host via regular ssh/gsissh
 			host="%s%s"%(QM(user,"%s@" % user,""), sched)
 			if self.remoteType == poolType.SSH:
-				self.Pool=ProcessHandler.open("SSHProcessHandler",remoteHost=host , sshLink=os.path.join(config.workDir, ".ssh", self.wmsName+host ) )
+				self.Pool=ProcessHandler.open("SSHProcessHandler",remoteHost=host , sshLink=config.getWorkPath(".ssh", self.wmsName+host ) )
 			else:
-				self.Pool=ProcessHandler.open("GSISSHProcessHandler",remoteHost=host , sshLink=os.path.join(config.workDir, ".gsissh", self.wmsName+host ) )
+				self.Pool=ProcessHandler.open("GSISSHProcessHandler",remoteHost=host , sshLink=config.getWorkPath(".gsissh", self.wmsName+host ) )
 			# ssh type instructions rely on commands being available on remote pool
 			self.submitExec = 'condor_submit'
 			self.statusExec = 'condor_q'

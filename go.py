@@ -62,18 +62,18 @@ if __name__ == '__main__':
 		logging_setup(config.getScoped(['logging']))
 
 		# Check work dir validity (default work directory is the config file name)
-		if not os.path.exists(config.workDir):
+		if not os.path.exists(config.getWorkPath()):
 			if not opts.init:
-				utils.vprint('Will force initialization of %s if continued!' % config.workDir, -1)
+				utils.vprint('Will force initialization of %s if continued!' % config.getWorkPath(), -1)
 				opts.init = True
-			if utils.getUserBool('Do you want to create the working directory %s?' % config.workDir, True):
-				utils.ensureDirExists(config.workDir, 'work directory')
+			if utils.getUserBool('Do you want to create the working directory %s?' % config.getWorkPath(), True):
+				utils.ensureDirExists(config.getWorkPath(), 'work directory')
 		checkSpace = config.getInt('global', 'workdir space', 10, onChange = None)
 
 		class InitSentinel:
 			def __init__(self, config):
 				(self.config, self.userInit) = (config, config.opts.init)
-				self.log = utils.PersistentDict(os.path.join(config.workDir, 'initlog'))
+				self.log = utils.PersistentDict(config.getWorkPath('initlog'))
 				self.log.write(update = not self.userInit)
 
 			def checkpoint(self, name):
@@ -148,7 +148,7 @@ if __name__ == '__main__':
 				if not wms.canSubmit(task.wallTime, opts.submission):
 					opts.submission = False
 				# Check free disk space
-				if (checkSpace > 0) and utils.freeSpace(config.workDir) < checkSpace:
+				if (checkSpace > 0) and utils.freeSpace(config.getWorkPath()) < checkSpace:
 					if time.time() - lastSpaceMsg > 5 * 60:
 						utils.vprint('Not enough space left in working directory', -1, True)
 						lastSpaceMsg = time.time()

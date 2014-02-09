@@ -71,8 +71,8 @@ class TrackedParameterAdapter(BasicParameterAdapter):
 		self._rawSource = source
 		BasicParameterAdapter.__init__(self, config, source)
 		self._mapJob2PID = {}
-		self._pathJob2PID = os.path.join(config.workDir, 'params.map.gz')
-		self._pathParams = os.path.join(config.workDir, 'params.dat.gz')
+		self._pathJob2PID = config.getWorkPath('params.map.gz')
+		self._pathParams = config.getWorkPath('params.dat.gz')
 
 		# Find out if init should be performed - overrides userResync!
 		userInit = config.opts.init

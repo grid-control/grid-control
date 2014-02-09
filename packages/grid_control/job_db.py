@@ -124,7 +124,7 @@ class JobClass:
 
 class JobDB:
 	def __init__(self, config, jobLimit = -1, jobSelector = None):
-		self.dbPath = os.path.join(config.workDir, 'jobs')
+		self.dbPath = config.getWorkPath('jobs')
 		self._jobMap = self.readJobs(jobLimit)
 		if jobLimit < 0 and len(self._jobMap) > 0:
 			jobLimit = max(self._jobMap) + 1

@@ -58,7 +58,7 @@ class ScriptMonitoring(Monitoring):
 				tmp.update(self.task.getSubmitInfo(jobNum))
 			if jobObj != None:
 				tmp.update(jobObj.getAll())
-			tmp.update({'WORKDIR': self.config.workDir, 'CFGFILE': self.config.configFile})
+			tmp.update({'WORKDIR': self.config.getWorkPath(), 'CFGFILE': self.config.configFile})
 			tmp.update(self.task.getTaskConfig())
 			tmp.update(self.task.getJobConfig(jobNum))
 			if jobNum != None:

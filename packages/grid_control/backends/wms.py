@@ -97,9 +97,10 @@ class BasicWMS(WMS):
 		else:
 			utils.vprint('Using batch system: %s' % self.wmsName, -1)
 
-		self.errorLog = os.path.join(config.workDir, 'error.tar')
-		self._outputPath = os.path.join(config.workDir, 'output')
+		self.errorLog = config.getWorkPath('error.tar')
+		self._outputPath = config.getWorkPath('output')
 		utils.ensureDirExists(self._outputPath, 'output directory')
+		self._failPath = config.getWorkPath('fail')
 
 		# Initialise proxy, broker and storage manager
 		self.proxy = Proxy.open(config.get(self._getSections('backend'), 'proxy', 'TrivialProxy', onChange = None), config)
@@ -173,7 +174,6 @@ class BasicWMS(WMS):
 			return True
 
 		retrievedJobs = []
-		failPath = os.path.join(self.config.workDir, 'fail')
 
 		for inJobNum, dir in self._getJobsOutput(ids):
 			# inJobNum != None, dir == None => Job could not be retrieved
@@ -222,15 +222,14 @@ class BasicWMS(WMS):
 
 			if os.path.exists(dir):
 				# Preserve failed job
-				if not os.path.exists(failPath):
-					os.mkdir(failPath)
-				forceMove(dir, os.path.join(failPath, os.path.basename(dir)))
+				utils.ensureDirExists(self._failPath, 'failed output directory')
+				forceMove(dir, os.path.join(self._failPath, os.path.basename(dir)))
 
 			yield (inJobNum, -1, {})
 
 
 	def _getSandboxName(self, module):
-		return os.path.join(self.config.workDir, 'files', module.taskID, self.wmsName, 'gc-sandbox.tar.gz')
+		return self.config.getWorkPath('files', module.taskID, self.wmsName, 'gc-sandbox.tar.gz')
 
 
 	def _getSandboxFilesIn(self, module):

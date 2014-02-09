@@ -102,7 +102,7 @@ class CMSSW(DataTask):
 		self.configFiles = []
 		cfgDefault = QM(self.prolog.isActive() or self.epilog.isActive(), [], noDefault)
 		for cfgFile in config.getPaths(self.__class__.__name__, 'config file', cfgDefault, mustExist = False):
-			newPath = os.path.join(config.workDir, os.path.basename(cfgFile))
+			newPath = config.getWorkPath(os.path.basename(cfgFile))
 			if config.opts.init:
 				if not os.path.exists(cfgFile):
 					raise ConfigError('Config file %r not found.' % cfgFile)
@@ -123,11 +123,11 @@ class CMSSW(DataTask):
 				self.instrumentCfgQueue(self.configFiles, fragment)
 
 		if config.opts.init and len(self.projectArea):
-			if os.path.exists(os.path.join(config.workDir, 'runtime.tar.gz')):
+			if os.path.exists(config.getWorkPath('runtime.tar.gz')):
 				if not utils.getUserBool('Runtime already exists! Do you want to regenerate CMSSW tarball?', True):
 					return
 			# Generate runtime tarball (and move to SE)
-			utils.genTarball(os.path.join(config.workDir, 'runtime.tar.gz'), utils.matchFiles(self.projectArea, self.pattern))
+			utils.genTarball(config.getWorkPath('runtime.tar.gz'), utils.matchFiles(self.projectArea, self.pattern))
 
 
 	def initDataProcessor(self):
@@ -224,7 +224,7 @@ class CMSSW(DataTask):
 	def getSEInFiles(self):
 		files = DataTask.getSEInFiles(self)
 		if len(self.projectArea) and self.seRuntime:
-			return files + [('CMSSW runtime', os.path.join(self.config.workDir, 'runtime.tar.gz'), self.taskID + '.tar.gz')]
+			return files + [('CMSSW runtime', self.config.getWorkPath('runtime.tar.gz'), self.taskID + '.tar.gz')]
 		return files
 
 
@@ -232,7 +232,7 @@ class CMSSW(DataTask):
 	def getSBInFiles(self):
 		files = DataTask.getSBInFiles(self) + self.configFiles + self.prolog.getSBInFiles() + self.epilog.getSBInFiles()
 		if len(self.projectArea) and not self.seRuntime:
-			files.append(os.path.join(self.config.workDir, 'runtime.tar.gz'))
+			files.append(self.config.getWorkPath('runtime.tar.gz'))
 		return files + [utils.pathShare('gc-run.cmssw.sh', pkg = 'grid_control_cms')]
 
 

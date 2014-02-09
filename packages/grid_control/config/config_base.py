@@ -4,12 +4,15 @@ import glob
 
 # Config interface class accessing data using an interface supplied by another class
 class ConfigBase(object):
-	def __init__(self, rawSet, rawGet, rawIter, rawBasePath):
+	def __init__(self, rawSet, rawGet, rawIter, pathBase, pathWork):
 		# required options:
 		#   rawSet(...) unspecific - 
 		#   rawGet(desc, obj2str, str2obj, ...)
 		(self._rawSet, self._rawGet, self._rawIter) = (rawSet, rawGet, rawIter)
-		self._rawBasePath = rawBasePath
+		(self._pathBase, self._pathWork) = (pathBase, pathWork)
+
+	def getWorkPath(self, *fnList):
+		return os.path.join(self._pathWork, *fnList)
 
 	def getOptions(self, *args, **kwargs):
 		return self._rawIter(*args, **kwargs)
@@ -68,7 +71,7 @@ class ConfigBase(object):
 			if value == '':
 				return ''
 			try:
-				return utils.resolvePath(value, [self._rawBasePath], mustExist, ConfigError)
+				return utils.resolvePath(value, [self._pathBase], mustExist, ConfigError)
 			except:
 				raise RethrowError('Error resolving path %s' % value, ConfigError)
 		return self._rawGet('path', str.__str__, parsePath, None, *args, **kwargs)
@@ -79,7 +82,7 @@ class ConfigBase(object):
 			result = []
 			for pattern in value:
 				try:
-					result.extend(utils.resolvePaths(pattern, [self._rawBasePath], mustExist, ConfigError))
+					result.extend(utils.resolvePaths(pattern, [self._pathBase], mustExist, ConfigError))
 				except:
 					raise RethrowError('Error resolving pattern %s' % pattern, ConfigError)
 			return result

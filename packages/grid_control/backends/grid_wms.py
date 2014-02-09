@@ -88,7 +88,7 @@ class GridWMS(BasicWMS):
 
 
 	def makeJDL(self, jobNum, module):
-		cfgPath = os.path.join(self.config.workDir, 'jobs', 'job_%d.var' % jobNum)
+		cfgPath = config.getWorkPath('jobs', 'job_%d.var' % jobNum)
 		sbIn = map(lambda (d, s, t): s, self._getSandboxFilesIn(module))
 		sbOut = map(lambda (d, s, t): t, self._getSandboxFilesOut(module))
 		wcList = filter(lambda x: '*' in x, sbOut)

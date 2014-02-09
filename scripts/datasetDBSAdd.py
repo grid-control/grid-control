@@ -389,7 +389,7 @@ try:
 	if os.path.isdir(args[0]):
 		opts.workDir = os.path.abspath(os.path.normpath(args[0]))
 	else:
-		opts.workDir = Config(args[0]).workDir
+		opts.workDir = Config(args[0]).getWorkPath()
 	opts.tmpDir = os.path.join(opts.workDir, 'dbs')
 	if not os.path.exists(opts.tmpDir):
 		os.mkdir(opts.tmpDir)

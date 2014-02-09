@@ -55,7 +55,7 @@ def initGC(args):
 		userSelector = None
 		if len(args) != 1:
 			userSelector = MultiJobSelector(args[1])
-		return (config.workDir, config, JobDB(config, jobSelector = userSelector))
+		return (config.getWorkPath(), config, JobDB(config, jobSelector = userSelector))
 	sys.stderr.write("Syntax: %s <config file> [<job id>, ...]\n\n" % sys.argv[0])
 	sys.exit(1)
 

@@ -10,7 +10,7 @@ class JobManager:
 		self.jobLimit = config.getInt('jobs', -1, onChange = None)
 		selected = JobSelector.create(config.get('selected', '', onChange = None), task = self.task)
 		self.jobDB = JobDB(config, self.getMaxJobs(self.task), selected)
-		self.disableLog = os.path.join(config.workDir, 'disabled')
+		self.disableLog = config.getWorkPath('disabled')
 
 		self.timeout = config.getTime('queue timeout', -1, onChange = None)
 		self.inFlight = config.getInt('in flight', -1, onChange = None)

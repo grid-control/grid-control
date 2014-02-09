@@ -43,7 +43,7 @@ StorageManager.registerObject()
 class LocalSBStorageManager(StorageManager):
 	def __init__(self, config, optDefault, optPrefix, varPrefix):
 		StorageManager.__init__(self, config, optDefault, optPrefix, varPrefix)
-		self.sbPath = config.getPath('%s path' % optDefault, os.path.join(config.workDir, 'sandbox'), mustExist = False)
+		self.sbPath = config.getPath('%s path' % optDefault, config.getWorkPath('sandbox'), mustExist = False)
 
 	def doTransfer(self, listDescSourceTarget):
 		for (desc, source, target) in listDescSourceTarget:

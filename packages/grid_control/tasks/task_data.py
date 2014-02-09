@@ -23,7 +23,7 @@ class DataTask(TaskModule):
 		self.checkSE = config.getBool(self.__class__.__name__, 'dataset storage check', True, onChange = None)
 
 		# Create and register dataset parameter plugin
-		paramSource = DataParameterSource(config.workDir, 'data',
+		paramSource = DataParameterSource(config.getWorkPath(), 'data',
 			dataProvider, self.dataSplitter, self.initDataProcessor())
 		DataParameterSource.datasetsAvailable['data'] = paramSource
 

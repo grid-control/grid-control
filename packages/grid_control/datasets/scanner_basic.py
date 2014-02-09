@@ -15,7 +15,7 @@ class OutputDirsFromConfig(InfoScanner):
 		newVerbosity = utils.verbosity(utils.verbosity() - 3)
 		extConfig = Config(config.getPath(section, 'source config'))
 		extConfig.opts = type('DummyType', (), {'init': False, 'resync': False})
-		self.extWorkDir = extConfig.workDir
+		self.extWorkDir = extConfig.getWorkPath()
 		self.extTask = TaskModule.open(extConfig.get('global', ['task', 'module']), extConfig)
 		selector = config.get(section, 'source job selector', '')
 		extJobDB = JobDB(extConfig, jobSelector = lambda jobNum, jobObj: jobObj.state == Job.SUCCESS)

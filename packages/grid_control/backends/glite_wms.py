@@ -10,7 +10,7 @@ def choice_exp(sample, p = 0.5):
 
 class DiscoverWMS_Lazy: # TODO: Move to broker infrastructure
 	def __init__(self, config):
-		self.statePath = os.path.join(config.workDir, 'glitewms.info')
+		self.statePath = config.getWorkPath('glitewms.info')
 		(self.wms_ok, self.wms_all, self.pingDict, self.pos) = self.loadState()
 		self.wms_timeout = {}
 		self._exeLCGInfoSites = utils.resolveInstallPath('lcg-infosites')
