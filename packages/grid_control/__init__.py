@@ -12,7 +12,7 @@ from grid_control.job_db_zip	import ZippedJobDB
 
 from grid_control.job_selector	import JobSelector
 from grid_control.report	import Report
-from grid_control.job_manager	import SimpleJobManager
+from grid_control.job_manager	import JobManager
 
 from grid_control.help	import Help
 

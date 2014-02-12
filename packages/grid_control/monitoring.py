@@ -2,6 +2,8 @@ import os
 from grid_control import NamedObject, Job, utils
 
 class EventHandler(NamedObject):
+	getConfigSections = NamedObject.createFunction_getConfigSections(['events'])
+
 	def __init__(self, config, name, task, submodules = []):
 		NamedObject.__init__(self, config, name)
 		(self.config, self.task, self.submodules) = (config, task, submodules)
@@ -22,7 +24,7 @@ class EventHandler(NamedObject):
 		for submodule in self.submodules:
 			submodule.onTaskFinish(nJobs)
 
-EventHandler.registerObject()
+EventHandler.registerObject(tagName = 'event')
 
 
 # Monitoring base class with submodule support
@@ -38,10 +40,13 @@ class Monitoring(EventHandler):
 	def getFiles(self):
 		return utils.listMapReduce(lambda m: list(m.getFiles()), self.submodules, self.getScript())
 
-Monitoring.registerObject()
+Monitoring.registerObject(tagName = 'monitor')
+Monitoring.moduleMap["scripts"] = "ScriptMonitoring"
+
 
 class ScriptMonitoring(Monitoring):
-	Monitoring.moduleMap["scripts"] = "ScriptMonitoring"
+	getConfigSections = NamedObject.createFunction_getConfigSections(['scripts'])
+
 	def __init__(self, config, name, task):
 		Monitoring.__init__(self, config, name, task)
 		self.silent = config.getBool('events', 'silent', True, onChange = None)

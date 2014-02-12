@@ -1,13 +1,16 @@
 import os, random
 from python_compat import lru_cache, md5
-from grid_control import ConfigError, AbstractError, NamedObject, QM, utils, WMS, Job
+from grid_control import ConfigError, AbstractError, NamedObject, QM, utils, WMS, Job, changeInitNeeded
 from grid_control.parameters import ParameterFactory, ParameterInfo
 from time import time, localtime, strftime
 
 class TaskModule(NamedObject):
+	getConfigSections = NamedObject.createFunction_getConfigSections(['task'])
+
 	# Read configuration options and init vars
 	def __init__(self, config, name):
-		self.config = config
+		NamedObject.__init__(self, config, name)
+		initSandbox = changeInitNeeded('sandbox')
 
 		self.wallTime = config.getTime('jobs', 'wall time', onChange = None)
 		self.cpuTime = config.getTime('jobs', 'cpu time', self.wallTime, onChange = None)
@@ -79,7 +82,7 @@ class TaskModule(NamedObject):
 			# Task infos
 			'TASK_ID': self.taskID,
 			'GC_TASK_DATE': self.taskDate,
-			'GC_CONF': self.config.confName,
+			'GC_CONF': self.taskConfigName,
 			'GC_VERSION': utils.getVersion(),
 		}
 		return utils.mergeDicts([taskConfig, self.taskVariables])
@@ -198,4 +201,4 @@ class TaskModule(NamedObject):
 	def getIntervention(self):
 		return self.source.resync()
 
-TaskModule.registerObject()
+TaskModule.registerObject(tagName = 'task')

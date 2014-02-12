@@ -12,6 +12,8 @@ class CMSDataSplitProcessor(DataSplitProcessor):
 
 
 class CMSSW(DataTask):
+	getConfigSections = DataTask.createFunction_getConfigSections(['CMSSW'])
+
 	def __init__(self, config, name):
 		config.set('storage', 'se input timeout', '0:30', override = False)
 		config.set(self.__class__.__name__, 'dataset provider', 'DBSApiv2', override = False)
@@ -36,6 +38,7 @@ class CMSSW(DataTask):
 
 		self.useReqs = config.getBool(self.__class__.__name__, 'software requirements', True, onChange = None)
 		self.seRuntime = config.getBool(self.__class__.__name__, 'se runtime', False)
+		self.runtimePath = config.getWorkPath('runtime.tar.gz')
 
 		if len(self.projectArea):
 			defaultPattern = '-.* -config bin lib python module */data *.xml *.sql *.cf[if] *.py -*/.git -*/.svn -*/CVS -*/work.*'
@@ -224,7 +227,7 @@ class CMSSW(DataTask):
 	def getSEInFiles(self):
 		files = DataTask.getSEInFiles(self)
 		if len(self.projectArea) and self.seRuntime:
-			return files + [('CMSSW runtime', self.config.getWorkPath('runtime.tar.gz'), self.taskID + '.tar.gz')]
+			return files + [('CMSSW runtime', self.runtimePath, self.taskID + '.tar.gz')]
 		return files
 
 
@@ -232,7 +235,7 @@ class CMSSW(DataTask):
 	def getSBInFiles(self):
 		files = DataTask.getSBInFiles(self) + self.configFiles + self.prolog.getSBInFiles() + self.epilog.getSBInFiles()
 		if len(self.projectArea) and not self.seRuntime:
-			files.append(self.config.getWorkPath('runtime.tar.gz'))
+			files.append(self.runtimePath)
 		return files + [utils.pathShare('gc-run.cmssw.sh', pkg = 'grid_control_cms')]
 
 

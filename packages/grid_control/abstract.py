@@ -4,9 +4,6 @@ import utils, logging
 
 # Abstract class taking care of dynamic class loading 
 class LoadableObject(object):
-	def __init__(self):
-		raise AbstractError
-
 	# Modify the module search path for the class - parent is used by NamedObject to impersonate caller
 	def registerObject(cls, searchPath = [], base = None):
 		if not base:
@@ -83,6 +80,14 @@ class NamedObject(LoadableObject):
 
 	def getObjectName(self):
 		return self._name
+
+
+	# Modify the module search path for the class
+	def registerObject(cls, searchPath = [], tagName = None):
+		if tagName or not hasattr(cls, 'tagName'):
+			cls.tagName = tagName
+		LoadableObject.registerObject(searchPath, base = cls)
+	registerObject = classmethod(registerObject)
 
 
 	# Collects named config section

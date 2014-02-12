@@ -2,6 +2,8 @@ import random
 from grid_control import QM, NamedObject, AbstractError, utils
 
 class Broker(NamedObject):
+	getConfigSections = NamedObject.createFunction_getConfigSections(['broker'])
+
 	def __init__(self, config, name, userOpt, itemName, discoverFun):
 		NamedObject.__init__(self, config, name)
 		(self._itemsStart, self._itemsDiscovered, self._itemName) = (None, False, itemName)
@@ -29,4 +31,5 @@ class Broker(NamedObject):
 		if result != None:
 			reqs.append((reqEntry, result))
 		return reqs
-Broker.registerObject()
+
+Broker.registerObject(tagName = 'broker')

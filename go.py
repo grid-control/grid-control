@@ -104,7 +104,7 @@ if __name__ == '__main__':
 
 		# Initialise job database
 		initSentinel.checkpoint('jobmanager')
-		jobManager = SimpleJobManager(config.getScoped(['jobs']), task, monitor)
+		jobManager = JobManager.open('SimpleJobManager', config.getScoped(['jobs']), 'jobs', task, monitor)
 
 		# Prepare work package
 		initSentinel.checkpoint('deploy')

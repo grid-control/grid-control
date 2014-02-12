@@ -4,7 +4,7 @@ from local_wms import LocalWMS
 from broker import *
 from broker_basic import *
 
-wms.WMS.registerObject(['grid_control.backends.local_api'])
+wms.WMS.registerObject(searchPath = ['grid_control.backends.local_api'])
 wms.WMS.moduleMap['MultiWMS'] = 'wms_multi.MultiWMS'
 wms.WMS.moduleMap['ThreadedMultiWMS'] = 'wms_thread.ThreadedMultiWMS'
 wms.WMS.moduleMap['GliteWMS'] = 'glite_wms.GliteWMS'

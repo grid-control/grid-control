@@ -1,11 +1,14 @@
 import sys, os, re, fnmatch, random, math, time, operator
 import bisect
-from grid_control import QM, ConfigError, RuntimeError, RethrowError, Job, JobClass, JobDB, Report, utils
+from grid_control import QM, ConfigError, RuntimeError, RethrowError, Job, JobClass, JobDB, Report, utils, NamedObject
 from job_selector import JobSelector, ClassSelector, AndJobSelector
 from python_compat import set, sorted
 
-class JobManager:
-	def __init__(self, config, task, eventhandler):
+class JobManager(NamedObject):
+	getConfigSections = NamedObject.createFunction_getConfigSections(['jobs'])
+
+	def __init__(self, config, name, task, eventhandler):
+		NamedObject.__init__(self, config, name)
 		(self.task, self.eventhandler) = (task, eventhandler)
 		self.jobLimit = config.getInt('jobs', -1, onChange = None)
 		selected = JobSelector.create(config.get('selected', '', onChange = None), task = self.task)
@@ -314,10 +317,12 @@ class JobManager:
 			resetState(disable, Job.DISABLED)
 			utils.vprint('All requested changes are applied', -1, True)
 
+JobManager.registerObject(tagName = 'jobmgr')
+
 
 class SimpleJobManager(JobManager):
-	def __init__(self, config, task, eventhandler):
-		JobManager.__init__(self, config, task, eventhandler)
+	def __init__(self, config, name, task, eventhandler):
+		JobManager.__init__(self, config, name, task, eventhandler)
 
 		# Job offender heuristic (not persistent!) - remove jobs, which do not report their status
 		self.kickOffender = config.getInt('kick offender', 10, onChange = None)

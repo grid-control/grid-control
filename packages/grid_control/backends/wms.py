@@ -2,16 +2,19 @@
 
 from python_compat import set, sorted
 import sys, os, time, stat, shutil, tarfile, glob, itertools
-from grid_control import QM, LoadableObject, AbstractError, ConfigError, RuntimeError, RethrowError, UserError, utils, Proxy, StorageManager
+from grid_control import QM, NamedObject, AbstractError, ConfigError, RuntimeError, RethrowError, UserError, utils, Proxy, StorageManager
 from broker import Broker
 
-class WMS(LoadableObject):
+class WMS(NamedObject):
+	getConfigSections = NamedObject.createFunction_getConfigSections(['backend'])
+
 	reqTypes = ('WALLTIME', 'CPUTIME', 'MEMORY', 'CPUS', 'BACKEND', 'SITES', 'QUEUES', 'SOFTWARE', 'STORAGE')
 	for idx, reqType in enumerate(reqTypes):
 		locals()[reqType] = idx
 
 	def __init__(self, config, wmsName, wmsClass):
 		wmsName = QM(wmsName, wmsName, self.__class__.__name__).upper().replace('.', '_')
+		NamedObject.__init__(self, config, wmsName)
 		(self.config, self.wmsName, self.wmsClass) = (config, wmsName, wmsClass)
 
 	def getTimings(self): # Return (waitIdle, wait)
@@ -57,6 +60,8 @@ class WMS(LoadableObject):
 	def _getSections(self, prefix):
 		mkSection = lambda x: [x, '%s %s' % (prefix, x)]
 		return mkSection(self.wmsName) + mkSection(self.__class__.__name__) + mkSection(self.wmsClass) + [prefix]
+
+WMS.registerObject(tagName = 'wms')
 
 
 class InactiveWMS(WMS):
@@ -290,5 +295,3 @@ class BasicWMS(WMS):
 	def _getJobsOutput(self, ids):
 		raise AbstractError # Return (jobNum, sandbox) for finished jobs
 
-
-WMS.registerObject()

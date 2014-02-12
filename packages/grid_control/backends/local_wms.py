@@ -1,9 +1,11 @@
 import sys, os, tempfile, shutil, time, random, glob
-from grid_control import LoadableObject, AbstractError, ConfigError, Job, utils
+from grid_control import AbstractError, ConfigError, Job, utils
 from wms import WMS, BasicWMS
 from broker import Broker
 
 class LocalWMS(BasicWMS):
+	getConfigSections = BasicWMS.createFunction_getConfigSections(['local'])
+
 	def __init__(self, config, wmsName, submitExec, statusExec, cancelExec):
 		config.set('local', 'broker', 'RandomBroker', override = False)
 		(self.submitExec, self.statusExec, self.cancelExec) = (submitExec, statusExec, cancelExec)
