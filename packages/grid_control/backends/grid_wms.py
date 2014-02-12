@@ -2,6 +2,7 @@ from python_compat import md5
 import sys, os, time, copy, tempfile, tarfile
 from grid_control import QM, ConfigError, APIError, RethrowError, Job, utils
 from wms import WMS, BasicWMS
+from broker import Broker
 
 try:
 	from email.utils import parsedate
@@ -30,18 +31,18 @@ class GridWMS(BasicWMS):
 
 
 	def __init__(self, config, wmsName):
-		config.set('grid', 'proxy', 'VomsProxy', override = False)
+		config.set('proxy', 'VomsProxy', override = False)
 		BasicWMS.__init__(self, config, wmsName, 'grid')
 
 		self.brokerSite = config.getClass('site broker', 'UserBroker',
 			cls = Broker, tags = [self]).getInstance('sites', 'sites', self.getSites)
-		self.vo = config.get(self._getSections('backend'), 'vo', self.proxy.getGroup())
+		self.vo = config.get('vo', self.proxy.getGroup())
 
 		self._submitParams = {}
-		self._ce = config.get(self._getSections('backend'), 'ce', '', onChange = None)
-		self._configVO = config.getPath(self._getSections('backend'), 'config', '', onChange = None)
-		self._warnSBSize = config.getInt(self._getSections('backend'), 'warn sb size', 5 * 1024 * 1024)
-
+		self._ce = config.get('ce', '', onChange = None)
+		self._configVO = config.getPath('config', '', onChange = None)
+		self._warnSBSize = config.getInt('warn sb size', 5 * 1024 * 1024)
+		self._jobPath = config.getWorkPath('jobs')
 
 	def getSites(self):
 		return None
@@ -89,7 +90,7 @@ class GridWMS(BasicWMS):
 
 
 	def makeJDL(self, jobNum, module):
-		cfgPath = config.getWorkPath('jobs', 'job_%d.var' % jobNum)
+		cfgPath = os.path.join(self._jobPath, 'job_%d.var' % jobNum)
 		sbIn = map(lambda (d, s, t): s, self._getSandboxFilesIn(module))
 		sbOut = map(lambda (d, s, t): t, self._getSandboxFilesOut(module))
 		wcList = filter(lambda x: '*' in x, sbOut)

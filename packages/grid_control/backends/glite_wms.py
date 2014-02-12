@@ -7,6 +7,7 @@ def choice_exp(sample, p = 0.5):
 	for x in sample:
 		if random.random() < p:
 			return x
+	return sample[-1]
 
 class DiscoverWMS_Lazy: # TODO: Move to broker infrastructure
 	def __init__(self, config):
@@ -117,12 +118,12 @@ class GliteWMS(GridWMS):
 		self._outputExec = utils.resolveInstallPath('glite-wms-job-output')
 		self._cancelExec = utils.resolveInstallPath('glite-wms-job-cancel')
 		self._submitParams.update({'-r': self._ce, '--config': self._configVO})
-		sections = self._getSections('backend')
-		self._useDelegate = config.getBool(sections, 'use delegate', None, onChange = None)
+		self._useDelegate = config.getBool('try delegate', True, onChange = None)
+		self._forceDelegate = config.getBool('force delegate', False, onChange = None)
 		self._discovery_module = None
-		if config.getBool(sections, 'discover wms', False, onChange = None):
+		if config.getBool('discover wms', False, onChange = None):
 			self._discovery_module = DiscoverWMS_Lazy(config)
-		self._discover_sites = config.getBool(sections, 'discover sites', False, onChange = None)
+		self._discover_sites = config.getBool('discover sites', False, onChange = None)
 
 
 	def getSites(self):
@@ -158,7 +159,7 @@ class GliteWMS(GridWMS):
 
 	def submitJobs(self, jobNumList, module):
 		if not self.bulkSubmissionBegin(): # Trying to delegate proxy failed
-			if self._useDelegate == True:  # User switched on forcing delegation => exception
+			if self._forceDelegate: # User switched on forcing delegation => exception
 				raise RuntimeError('Unable to delegate proxy!')
 			utils.eprint('Unable to delegate proxy! Continue with automatic delegation...')
 			self._submitParams.update({ '-a': ' ' })

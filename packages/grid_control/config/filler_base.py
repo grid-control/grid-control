@@ -27,7 +27,8 @@ class FileConfigFiller(ConfigFiller):
 			parser.readfp(open(configFile, 'r'))
 			# Parse include files
 			if parser.has_option('global', 'include'):
-				for includeFile in utils.parseList(parser.get('global', 'include'), None):
+				includeFiles = parser.get('global', 'include').split('#')[0].split(';')[0]
+				for includeFile in utils.parseList(includeFiles, None):
 					self.parseFile(container, includeFile, parser.defaults())
 			# Store config settings
 			for section in parser.sections():

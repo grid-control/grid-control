@@ -149,7 +149,6 @@ if __name__ == '__main__':
 				utils.ensureDirExists(config.getWorkPath(), 'work directory')
 
 		workflow = config.getClass('global', 'workflow', 'Workflow:global', cls = Workflow).getInstance()
-		print config.getBool('global', '#init config', False, onChange = None)
 		config.freezeConfig(writeConfig = config.getBool('global', '#init config', False, onChange = None))
 
 #		if not opts.init:

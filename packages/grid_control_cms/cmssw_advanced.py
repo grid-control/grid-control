@@ -17,20 +17,20 @@ class CMSSW_Advanced(cmssw.CMSSW):
 		head = [(0, 'Nickname')]
 
 		# Mapping between nickname and config files:
-		cfgList = config.get(self.__class__.__name__, 'nickname config', '')
-		self.nmCfg = config.getDict(self.__class__.__name__, 'nickname config', default={}, parser = lambda x: map(str.strip, x.split(',')))[0]
+		cfgList = config.get('nickname config', '')
+		self.nmCfg = config.getDict('nickname config', default={}, parser = lambda x: map(str.strip, x.split(',')))[0]
 		if cfgList:
-			if 'config file' in config.getOptions(self.__class__.__name__):
+			if 'config file' in config.getOptions():
 				raise ConfigError("Please use 'nickname config' instead of 'config file'")
 			allConfigFiles = utils.flatten(self.nmCfg.values())
-			config.set(self.__class__.__name__, 'config file', str.join('\n', allConfigFiles))
+			config.set('config file', str.join('\n', allConfigFiles))
 			head.append((1, 'Config file'))
 
 		# Mapping between nickname and constants:
-		self.nmCName = map(str.strip, config.get(self.__class__.__name__, 'nickname constants', '').split())
+		self.nmCName = map(str.strip, config.get('nickname constants', '').split())
 		self.nmConst = {}
 		for var in self.nmCName:
-			tmp = config.getDict(self.__class__.__name__, var, default={})[0]
+			tmp = config.getDict(var, default={})[0]
 			for (nick, value) in tmp.items():
 				if value:
 					self.nmConst.setdefault(nick, {})[var] = value
@@ -39,15 +39,15 @@ class CMSSW_Advanced(cmssw.CMSSW):
 			head.append((var, var))
 
 		# Mapping between nickname and lumi filter:
-		if 'lumi filter' in config.getOptions(self.__class__.__name__):
+		if 'lumi filter' in config.getOptions():
 			raise ConfigError("Please use 'nickname lumi filter' instead of 'lumi filter'")
 		lumiParse = lambda x: formatLumi(parseLumiFilter(x))
-		self.nmLumi = config.getDict(self.__class__.__name__, 'nickname lumi filter', default={}, parser = lumiParse)[0]
+		self.nmLumi = config.getDict('nickname lumi filter', default={}, parser = lumiParse)[0]
 		if self.nmLumi:
-			for dataset in config.get(self.__class__.__name__, 'dataset', '').splitlines():
+			for dataset in config.get('dataset', '').splitlines():
 				(datasetNick, datasetProvider, datasetExpr) = DataProvider.parseDatasetExpr(config, dataset, None)
 				config.set('dataset %s' % datasetNick, 'lumi filter', str.join(',', utils.flatten(fromNM(self.nmLumi, datasetNick, []))))
-			config.set(self.__class__.__name__, 'lumi filter', str.join(',', self.nmLumi.get(None, [])))
+			config.set('lumi filter', str.join(',', self.nmLumi.get(None, [])))
 			head.append((2, 'Lumi filter'))
 
 		utils.vprint('Mapping between nickname and other settings:\n', -1)

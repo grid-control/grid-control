@@ -20,9 +20,9 @@ class LoadableObject(object):
 		log.log(logging.DEBUG1, 'Loading class %s' % clsName)
 		# resolve class name/alias to fully qualified class path
 		def resolveClassName(name):
-			cname = cls.moduleMapDynamic.get(name, name)
+			cname = cls.moduleMapDynamic.get(name.lower(), name)
 			classMap = dict(map(lambda (k, v): (k.lower(), v), cls.moduleMap.items()))
-			cname = classMap.get(name, name)
+			cname = classMap.get(cname.lower(), cname)
 			if cname == name:
 				return name
 			return resolveClassName(cname)
