@@ -28,13 +28,18 @@ def logException_internal(exClass, exValue, stack):
 		log.critical('\tLocal variables:')
 		tmp = dict(stack.tb_frame.f_locals)
 		maxlen = max(map(len, tmp.keys()) + [0])
+		def display(var):
+			try:
+				return repr(var)
+			except:
+				return 'unable to display!'
 		for var in sorted(filter(lambda v: v != 'self', tmp)):
-			log.critical('\t\t%s = %r', var.ljust(maxlen), tmp[var])
+			log.critical('\t\t%s = %s', var.ljust(maxlen), display(tmp[var]))
 		if 'self' in tmp:
-			log.critical('\tClass variables (%r):' % tmp['self'])
+			log.critical('\tClass variables (%s):' % display(tmp['self']))
 			try:
 				for var in sorted(tmp['self'].__dict__):
-					log.critical('\t\tself.%s = %r', var.ljust(maxlen), tmp['self'].__dict__[var])
+					log.critical('\t\tself.%s = %s', var.ljust(maxlen), display(tmp['self'].__dict__[var]))
 			except:
 				pass
 		log.critical('')

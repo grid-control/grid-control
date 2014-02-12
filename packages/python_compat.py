@@ -130,4 +130,4 @@ if __name__ == '__main__':
 							if feature not in line:
 								print fn, feature
 			if (not found) and ('python_compat' in tmp):
-				print fn, 'missing'
+				print fn, 'not needed'
