@@ -5,15 +5,15 @@ from python_compat import set, md5
 from scanner_base import InfoScanner
 
 class ScanProviderBase(DataProvider):
-	def __init__(self, config, section, datasetExpr, datasetNick, datasetID = 0):
-		DataProvider.__init__(self, config, section, '', datasetNick, datasetID)
-		DSB = lambda cFun, n, *args, **kargs: (cFun(section, 'dataset %s' % n, *args, **kargs),
-			cFun(section, 'block %s' % n, *args, **kargs))
+	def __init__(self, config, datasetExpr, datasetNick, datasetID = 0):
+		DataProvider.__init__(self, config, '', datasetNick, datasetID)
+		DSB = lambda cFun, n, *args, **kargs: (cFun('dataset %s' % n, *args, **kargs),
+			cFun('block %s' % n, *args, **kargs))
 		(self.nameDS, self.nameB) = DSB(config.get, 'name pattern', '')
 		(self.kUserDS, self.kUserB) = DSB(config.getList, 'hash keys', [])
 		(self.kGuardDS, self.kGuardB) = DSB(config.getList, 'guard override', [])
-		self.kSelectDS = config.getList(section, 'dataset key select', [])
-		scanList = config.getList(section, 'scanner', datasetExpr)
+		self.kSelectDS = config.getList('dataset key select', [])
+		scanList = config.getList('scanner', datasetExpr)
 		self.scanner = map(lambda cls: InfoScanner.open(cls, config, section), scanList)
 
 
@@ -112,14 +112,14 @@ class ScanProviderBase(DataProvider):
 # required format: <storage url>
 class ScanProvider(ScanProviderBase):
 	DataProvider.providers.update({'ScanProvider': 'scan'})
-	def __init__(self, config, section, datasetExpr, datasetNick, datasetID = 0):
+	def __init__(self, config, datasetExpr, datasetNick, datasetID = 0):
 		if '*' in os.path.basename(datasetExpr):
-			config.set(section, 'source directory', os.path.dirname(datasetExpr))
-			config.set(section, 'filename filter', datasetExpr)
+			config.set('source directory', os.path.dirname(datasetExpr))
+			config.set('filename filter', datasetExpr)
 		else:
-			config.set(section, 'source directory', datasetExpr)
+			config.set('source directory', datasetExpr)
 		defScanner = ['FilesFromLS', 'MatchOnFilename', 'MatchDelimeter', 'DetermineEvents', 'AddFilePrefix']
-		ScanProviderBase.__init__(self, config, section, defScanner, datasetNick, datasetID)
+		ScanProviderBase.__init__(self, config, defScanner, datasetNick, datasetID)
 
 
 # Get dataset information just from grid-control instance
@@ -129,20 +129,20 @@ class GCProvider(ScanProviderBase):
 	stageDir = {}
 	stageFile = {None: ['MatchOnFilename', 'MatchDelimeter']}
 
-	def __init__(self, config, section, datasetExpr, datasetNick, datasetID = 0):
+	def __init__(self, config, datasetExpr, datasetNick, datasetID = 0):
 		if os.path.isdir(datasetExpr):
 			GCProvider.stageDir[None] = ['OutputDirsFromWork']
-			config.set(section, 'source directory', datasetExpr)
+			config.set('source directory', datasetExpr)
 			datasetExpr = os.path.join(datasetExpr, 'work.conf')
 		else:
 			GCProvider.stageDir[None] = ['OutputDirsFromConfig', 'MetadataFromModule']
 			datasetExpr, selector = utils.optSplit(datasetExpr, '%')
-			config.set(section, 'source config', datasetExpr)
-			config.set(section, 'source job selector', selector)
+			config.set('source config', datasetExpr)
+			config.set('source job selector', selector)
 		extConfig = Config(datasetExpr)
 		extModule = extConfig.get('global', 'module')
 		if 'ParaMod' in extModule:
 			extModule = extConfig.get('ParaMod', 'module')
 		sGet = lambda scannerDict: scannerDict.get(None) + scannerDict.get(extModule, [])
 		sList = sGet(GCProvider.stageDir) + ['FilesFromJobInfo'] + sGet(GCProvider.stageFile) + ['DetermineEvents', 'AddFilePrefix']
-		ScanProviderBase.__init__(self, config, section, sList, datasetNick, datasetID)
+		ScanProviderBase.__init__(self, config, sList, datasetNick, datasetID)

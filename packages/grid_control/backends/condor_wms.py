@@ -95,7 +95,8 @@ class Condor(BasicWMS):
 			if not os.path.isfile(self.historyFile):
 				self.historyFile = None
 		# broker for selecting Sites
-		self.brokerSite = self._createBroker('site broker', 'UserBroker', 'sites', 'sites', self.getSites)
+		self.brokerSite = config.getClass('site broker', 'UserBroker', cls = Broker,
+			tags = [self]).getInstance('sites', 'sites', self.getSites)
 		self.debugFlush()
 
 	def explainError(self, proc, code):

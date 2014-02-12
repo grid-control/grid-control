@@ -101,8 +101,8 @@ def tok2tree(value, precedence):
 
 
 class SimpleParameterFactory(BasicParameterFactory):
-	def __init__(self, config, sections):
-		BasicParameterFactory.__init__(self, config, sections)
+	def __init__(self, config, name):
+		BasicParameterFactory.__init__(self, config, name)
 		self.pExpr = self.paramConfig.get('parameters', None, '')
 		self.elevatedSwitch = [] # Switch statements are elevated to global scope
 		self.precedence = {'*': [], '+': ['*'], ',': ['*', '+']}

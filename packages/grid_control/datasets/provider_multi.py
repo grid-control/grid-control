@@ -2,10 +2,10 @@ from grid_control import utils, DatasetError, GCError, logException
 from provider_base import DataProvider
 
 class DataMultiplexer(DataProvider):
-	def __init__(self, config, section, datasetExpr, defaultProvider, datasetID = None):
+	def __init__(self, config, datasetExpr, defaultProvider, datasetID = None):
 		# ..., None, None) = Don't override NickName and ID
-		DataProvider.__init__(self, config, section, None, None, None)
-		mkProvider = lambda (id, entry): DataProvider.create(config, section, entry, defaultProvider, id)
+		DataProvider.__init__(self, config, None, None, None)
+		mkProvider = lambda (id, entry): DataProvider.create(config, entry, defaultProvider, id)
 		self.subprovider = map(mkProvider, enumerate(datasetExpr.splitlines()))
 
 

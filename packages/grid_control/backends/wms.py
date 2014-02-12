@@ -41,10 +41,6 @@ class WMS(NamedObject):
 	def cancelJobs(self, ids):
 		raise AbstractError # Return (jobNum, wmsId) for cancelled jobs
 
-	def _createBroker(self, name, default, *args):
-		config = self.config.getScoped(self._getSections('backend'))
-		return config.getClass(name, default, cls = Broker)(*args)
-
 	def _createId(self, wmsIdRaw):
 		return 'WMSID.%s.%s' % (self.wmsName, wmsIdRaw)
 
@@ -67,7 +63,7 @@ WMS.registerObject(tagName = 'wms')
 class InactiveWMS(WMS):
 	def __init__(self, config, wmsName, wmsClass):
 		WMS.__init__(self, config, wmsName, wmsClass)
-		self.proxy = Proxy.open('TrivialProxy', config)
+		self.proxy = Proxy.open('TrivialProxy', config.getScoped(['proxy']))
 
 	def getTimings(self): # Return (waitIdle, wait)
 		return (0, 0)
@@ -108,12 +104,12 @@ class BasicWMS(WMS):
 		self._failPath = config.getWorkPath('fail')
 
 		# Initialise proxy, broker and storage manager
-		self.proxy = Proxy.open(config.get(self._getSections('backend'), 'proxy', 'TrivialProxy', onChange = None), config)
+		self.proxy = config.getClass('proxy', 'TrivialProxy', cls = Proxy).getInstance(config)
 
-		configSM = config.getScoped(self._getSections('storage'))
+		configSM = config.addSections(self._getSections('storage'))
 		# UI -> SE -> WN
 		self.smSEIn = StorageManager.open('SEStorageManager', configSM, 'se', 'se input', 'SE_INPUT')
-		self.smSBIn = StorageManager.open('LocalSBStorageManager', configSM.getScoped(['local']), 'sandbox', 'sandbox', 'SB_INPUT')
+		self.smSBIn = StorageManager.open('LocalSBStorageManager', configSM, 'sandbox', 'sandbox', 'SB_INPUT')
 		# UI <- SE <- WN
 		self.smSEOut = StorageManager.open('SEStorageManager', configSM, 'se', 'se output', 'SE_OUTPUT')
 		self.smSBOut = None

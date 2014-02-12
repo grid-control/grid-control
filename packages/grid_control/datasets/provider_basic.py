@@ -6,8 +6,8 @@ from provider_base import DataProvider
 # required format: <path to data file>|<number of events>[@SE1,SE2]
 class FileProvider(DataProvider):
 	DataProvider.providers.update({'FileProvider': 'file'})
-	def __init__(self, config, section, datasetExpr, datasetNick, datasetID = 0):
-		DataProvider.__init__(self, config, section, datasetExpr, datasetNick, datasetID)
+	def __init__(self, config, datasetExpr, datasetNick, datasetID = 0):
+		DataProvider.__init__(self, config, datasetExpr, datasetNick, datasetID)
 
 		(self._path, self._events, selist) = utils.optSplit(datasetExpr, '|@')
 		self._selist = utils.parseList(selist, delimeter = ',', onEmpty = None)
@@ -29,8 +29,8 @@ class FileProvider(DataProvider):
 # required format: <path to list of data files>[@<forced prefix>][%[/]<selected dataset>[#<selected block>][#]]
 class ListProvider(DataProvider):
 	DataProvider.providers.update({'ListProvider': 'list'})
-	def __init__(self, config, section, datasetExpr, datasetNick, datasetID = 0):
-		DataProvider.__init__(self, config, section, datasetExpr, datasetNick, datasetID)
+	def __init__(self, config, datasetExpr, datasetNick, datasetID = 0):
+		DataProvider.__init__(self, config, datasetExpr, datasetNick, datasetID)
 
 		(path, self._forcePrefix, self._filter) = utils.optSplit(datasetExpr, '@%')
 		self._filename = utils.resolvePath(path)

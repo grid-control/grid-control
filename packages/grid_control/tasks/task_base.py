@@ -12,44 +12,46 @@ class TaskModule(NamedObject):
 		NamedObject.__init__(self, config, name)
 		initSandbox = changeInitNeeded('sandbox')
 
-		self.wallTime = config.getTime('jobs', 'wall time', onChange = None)
-		self.cpuTime = config.getTime('jobs', 'cpu time', self.wallTime, onChange = None)
-		self.nodeTimeout = config.getTime('jobs', 'node timeout', -1)
-
-		self.cpus = config.getInt('jobs', 'cpus', 1, onChange = None)
-		self.memory = config.getInt('jobs', 'memory', -1, onChange = None)
+		# Task requirements
+		job_config = config.addSections(['jobs']).addTags([self]) # Move this into parameter manager?
+		self.wallTime = job_config.getTime('wall time', onChange = None)
+		self.cpuTime = job_config.getTime('cpu time', self.wallTime, onChange = None)
+		self.nodeTimeout = job_config.getTime('node timeout', -1, onChange = initSandbox)
+		self.cpus = job_config.getInt('cpus', 1, onChange = None)
+		self.memory = job_config.getInt('memory', -1, onChange = None)
 
 		# Compute / get task ID
-		self.taskID = config.get('task', 'task id', 'GC' + md5(str(time())).hexdigest()[:12], persistent = True)
-		self.taskDate = config.get('task', 'task date', strftime('%Y-%m-%d'), persistent = True)
+		self.taskID = config.get('task id', 'GC' + md5(str(time())).hexdigest()[:12], persistent = True)
+		self.taskDate = config.get('task date', strftime('%Y-%m-%d'), persistent = True, onChange = initSandbox)
 		self.taskConfigName = config.confName
 
+		# Storage setup
+		storage_config = config.addSections(['storage']).addTags([self])
 		self.taskVariables = {
 			# Space limits
-			'SCRATCH_UL': config.getInt('storage', 'scratch space used', 5000),
-			'SCRATCH_LL': config.getInt('storage', 'scratch space left', 1),
-			'LANDINGZONE_UL': config.getInt('storage', 'landing zone space used', 100),
-			'LANDINGZONE_LL': config.getInt('storage', 'landing zone space left', 1),
+			'SCRATCH_UL': storage_config.getInt('scratch space used', 5000, onChange = initSandbox),
+			'SCRATCH_LL': storage_config.getInt('scratch space left', 1, onChange = initSandbox),
+			'LANDINGZONE_UL': storage_config.getInt('landing zone space used', 100, onChange = initSandbox),
+			'LANDINGZONE_LL': storage_config.getInt('landing zone space left', 1, onChange = initSandbox),
 		}
+		storage_config.set('se output pattern', 'job_@MY_JOBID@_@X@', override = False)
+		self.seMinSize = storage_config.getInt('se min size', -1, onChange = initSandbox)
 
-		# Storage setup - in case a directory is give, prepend dir specifier
-		config.set('storage', 'se output pattern', 'job_@MY_JOBID@_@X@', override=False)
-		self.seMinSize = config.getInt('storage', 'se min size', -1)
-		self.sbInputFiles = config.getPaths(self.__class__.__name__, 'input files', [])
-		self.sbOutputFiles = config.getList(self.__class__.__name__, 'output files', [])
-		self.gzipOut = config.getBool(self.__class__.__name__, 'gzip output', True)
+		self.sbInputFiles = config.getPaths('input files', [], onChange = initSandbox)
+		self.sbOutputFiles = config.getList('output files', [], onChange = initSandbox)
+		self.gzipOut = config.getBool('gzip output', True, onChange = initSandbox)
 
-		self.substFiles = config.getList(self.__class__.__name__, 'subst files', [])
-		self.dependencies = map(str.lower, config.getList(self.__class__.__name__, 'depends', []))
+		self.substFiles = config.getList('subst files', [], onChange = initSandbox)
+		self.dependencies = map(str.lower, config.getList('depends', [], onChange = initSandbox))
 
 		# Get error messages from gc-run.lib comments
 		self.errorDict = dict(self.updateErrorDict(utils.pathShare('gc-run.lib')))
 
 		# Init plugin manager / parameter source
-		pmName = config.get([self.__class__.__name__, 'parameters'], 'parameter factory', 'SimpleParameterFactory')
-		pm = ParameterFactory.open(pmName, config, [self.__class__.__name__, 'parameters'])
-		self.setupJobParameters(config, pm)
-		self.source = pm.getSource(config)
+		pm = config.getClass('parameter factory', 'SimpleParameterFactory', cls = ParameterFactory).getInstance()
+		configParam = config.addSections(['parameters']).addTags([self])
+		self.setupJobParameters(configParam, pm)
+		self.source = pm.getSource(configParam)
 
 
 	def setupJobParameters(self, config, pm):

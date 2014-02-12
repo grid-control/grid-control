@@ -2,13 +2,13 @@ import os, gzip, cStringIO, copy, random
 from grid_control import QM, utils, LoadableObject, AbstractError, ConfigError, noDefault, Config, DatasetError
 
 class NickNameProducer(LoadableObject):
-	def __init__(self, config, section = 'dataset'):
+	def __init__(self, config):
 		self.config = config
 		# Check if two different datasets have the same nickname
-		self._checkCollision = config.getBool(section, 'nickname check collision', True)
+		self._checkCollision = config.getBool('nickname check collision', True)
 		self._checkCollisionData = {}
 		# Ensure the same nickname is used consistently in all blocks of a dataset
-		self._checkConsistency = config.getBool(section, 'nickname check consistency', True)
+		self._checkConsistency = config.getBool('nickname check consistency', True)
 		self._checkConsistencyData = {}
 
 	# Get nickname and check for collisions
@@ -55,17 +55,17 @@ class DataProvider(LoadableObject):
 	for id, dataInfo in enumerate(dataInfos):
 		locals()[dataInfo] = id
 
-	def __init__(self, config, section, datasetExpr, datasetNick, datasetID):
+	def __init__(self, config, datasetExpr, datasetNick, datasetID):
 		(self._datasetExpr, self._datasetNick, self._datasetID) = (datasetExpr, datasetNick, datasetID)
 		self._cache = None
-		self.ignoreURL = config.getList(section, 'ignore files', [])
-		self.sitefilter = config.getList(section, 'sites', [])
-		self.emptyBlock = config.getBool(section, 'remove empty blocks', True)
-		self.emptyFiles = config.getBool(section, 'remove empty files', True)
-		self.limitEvents = config.getInt(section, 'limit events', -1)
-		self.limitFiles = config.getInt(section, 'limit files', -1)
-		nickProducer = config.get(section, 'nickname source', 'SimpleNickNameProducer')
-		self._nickProducer = NickNameProducer.open(nickProducer, config, section)
+		self.ignoreURL = config.getList('ignore files', [])
+		self.sitefilter = config.getList('sites', [])
+		self.emptyBlock = config.getBool('remove empty blocks', True)
+		self.emptyFiles = config.getBool('remove empty files', True)
+		self.limitEvents = config.getInt('limit events', -1)
+		self.limitFiles = config.getInt('limit files', -1)
+		nickProducer = config.get('nickname source', 'SimpleNickNameProducer')
+		self._nickProducer = NickNameProducer.open(nickProducer, config)
 
 
 	# Parse dataset format [NICK : [PROVIDER : [(/)*]]] DATASET
@@ -88,13 +88,14 @@ class DataProvider(LoadableObject):
 
 
 	# Create a new DataProvider instance
-	def create(config, section, dataset, defaultProvider, dsId = 0):
+	def create(config, dataset, defaultProvider, dsId = 0):
 		if '\n' in dataset:
-			return DataProvider.open('DataMultiplexer', config, section, dataset, defaultProvider)
+			return DataProvider.open('DataMultiplexer', config, dataset, defaultProvider)
 		else:
 			(dsNick, dsProv, dsExpr) = DataProvider.parseDatasetExpr(config, dataset, defaultProvider)
-			section = ['dataset %s' % dsNick, 'dataset %s' % dsId, 'dataset', section, 'dataset'] # last => help
-			return DataProvider.open(dsProv, config, section, dsExpr, dsNick, dsId)
+			config = config.addSections(['dataset']).addNames([dsNick, str(dsId)])
+			section = ['dataset %s' % dsNick, 'dataset %s' % dsId, 'dataset', 'dataset'] # last => help
+			return DataProvider.open(dsProv, config, dsExpr, dsNick, dsId)
 	create = staticmethod(create)
 
 

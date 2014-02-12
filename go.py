@@ -10,6 +10,84 @@ def print_help(*args):
 	utils.eprint('%s\n%s' % (usage, open(utils.pathShare('help.txt'), 'r').read()))
 	sys.exit(0)
 
+# Workflow class
+class Workflow(NamedObject):
+	getConfigSections = NamedObject.createFunction_getConfigSections(['workflow', 'global'])
+
+	def __init__(self, config, name):
+		NamedObject.__init__(self, config, name)
+		self._workDir = config.getWorkPath()
+		# Initialise task module
+		self.task = config.getClass(['task', 'module'], cls = TaskModule, tags = [self]).getInstance()
+		utils.vprint('Current task ID: %s' % self.task.taskID, -1)
+		utils.vprint('Task started on %s' % self.task.taskDate, -1)
+
+		# Initialise monitoring module
+		self.monitor = ClassFactory(Monitoring, config, [self.task],
+			('monitor', 'scripts'), ('monitor manager', 'Monitoring')).getInstance(self.task)
+
+		# Initialise workload management interface
+		self.wms = ClassFactory(WMS, config, [self.task],
+			('backend', 'grid'), ('backend manager', 'MultiWMS')).getInstance()
+
+		# Initialise job database
+		jobManagerCls = config.getClass('job manager', 'SimpleJobManager', cls = JobManager,
+			tags = [self.task, self.wms])
+		self.jobManager = jobManagerCls.getInstance(self.task, self.monitor)
+
+		# Prepare work package
+		self.wms.deployTask(self.task, self.monitor)
+
+		global_config = config.clone()
+		self.actionList = global_config.getList('jobs', 'action', ['check', 'retrieve', 'submit'], onChange = None)
+		self.runContinuous = global_config.getBool('jobs', 'continuous', False, onChange = None)
+
+		self.checkSpace = config.getInt('workdir space', 10, onChange = None)
+		self.guiClass = config.get('gui', 'SimpleConsole', onChange = None)
+
+
+	# Job submission loop
+	def jobCycle(self, wait = utils.wait):
+		while True:
+			(didWait, lastSpaceMsg) = (False, 0)
+			# Check whether wms can submit
+			if not self.wms.canSubmit(self.task.wallTime, opts.submission):
+				opts.submission = False
+			# Check free disk space
+			if (self.checkSpace > 0) and utils.freeSpace(self._workDir) < self.checkSpace:
+				if time.time() - lastSpaceMsg > 5 * 60:
+					utils.vprint('Not enough space left in working directory', -1, True)
+					lastSpaceMsg = time.time()
+			else:
+				for action in map(str.lower, self.actionList):
+					if action.startswith('c') and not utils.abort():   # check for jobs
+						if self.jobManager.check(self.wms):
+							didWait = wait(self.wms.getTimings()[1])
+					elif action.startswith('r') and not utils.abort(): # retrieve finished jobs
+						if self.jobManager.retrieve(self.wms):
+							didWait = wait(self.wms.getTimings()[1])
+					elif action.startswith('s') and not utils.abort() and opts.submission:
+						if self.jobManager.submit(self.wms):
+							didWait = wait(self.wms.getTimings()[1])
+
+			# quit if abort flag is set or not in continuous mode
+			if utils.abort() or not self.runContinuous:
+				break
+			# idle timeout
+			if not didWait:
+				wait(self.wms.getTimings()[0])
+
+	def run(self):
+		if self.runContinuous and self.guiClass == 'SimpleConsole':
+			utils.vprint(level = -1)
+			Report(self.jobManager.jobDB).summary()
+			utils.vprint('Running in continuous mode. Press ^C to exit.', -1)
+
+		cycler = GUI.open(self.guiClass, self.jobCycle, self.jobManager, self.task)
+		cycler.run()
+Workflow.registerObject(tagName = 'workflow')
+
+
 if __name__ == '__main__':
 	global log, handler
 	log = None
@@ -57,58 +135,33 @@ if __name__ == '__main__':
 
 	# big try... except block to catch exceptions and print error message
 	def main():
-		config = Config(configFile = args[0], optParser = parser)
+		config = CompatConfig(configFile = args[0], optParser = parser)
 		config.opts = opts
-		logging_setup(config.getScoped(['logging']))
+		logging_setup(config.addSections(['logging']))
 
 		# Check work dir validity (default work directory is the config file name)
 		if not os.path.exists(config.getWorkPath()):
+			config.set('global', '#init config', 'True')
 			if not opts.init:
 				utils.vprint('Will force initialization of %s if continued!' % config.getWorkPath(), -1)
 				opts.init = True
 			if utils.getUserBool('Do you want to create the working directory %s?' % config.getWorkPath(), True):
 				utils.ensureDirExists(config.getWorkPath(), 'work directory')
-		checkSpace = config.getInt('global', 'workdir space', 10, onChange = None)
 
-		class InitSentinel:
-			def __init__(self, config):
-				(self.config, self.userInit) = (config, config.opts.init)
-				self.log = utils.PersistentDict(config.getWorkPath('initlog'))
-				self.log.write(update = not self.userInit)
+		workflow = config.getClass('global', 'workflow', 'Workflow:global', cls = Workflow).getInstance()
+		print config.getBool('global', '#init config', False, onChange = None)
+		config.freezeConfig(writeConfig = config.getBool('global', '#init config', False, onChange = None))
 
-			def checkpoint(self, name):
-				self.log.write()
-				self.config.opts.init = QM(self.userInit, self.userInit, self.log.get(name) != 'done')
-				self.log[name] = 'done'
-		initSentinel = InitSentinel(config)
-
-		# Initialis task module
-		initSentinel.checkpoint('module')
-		task = TaskModule.open(config.get('global', ['task', 'module']), config, 'task')
-		utils.vprint('Current task ID: %s' % task.taskID, -1)
-		utils.vprint('Task started on %s' % task.taskDate, -1)
+#		if not opts.init:
+#				if utils.getUserBool('\nQuit grid-control in order to initialize the task again?', False):
+#					sys.exit(0)
+#				if utils.getUserBool('\nOverwrite currently saved configuration to remove warning in the future?', False):
+#					config.freezeConfig(writeConfig = True)
 
 		# Give help about variables
 		if opts.help_vars:
-			Help().listVars(task)
+			Help().listVars(workflow.task)
 			sys.exit(0)
-
-		# Initialise monitoring module
-		initSentinel.checkpoint('monitoring')
-		monitor = Monitoring(config, 'monitor', task, map(lambda x: Monitoring.open(x, config, 'monitor', task),
-			config.getList('jobs', 'monitor', ['scripts'])))
-
-		# Initialise workload management interface
-		initSentinel.checkpoint('backend')
-		wms = WMSFactory(config).getWMS()
-
-		# Initialise job database
-		initSentinel.checkpoint('jobmanager')
-		jobManager = JobManager.open('SimpleJobManager', config.getScoped(['jobs']), 'jobs', task, monitor)
-
-		# Prepare work package
-		initSentinel.checkpoint('deploy')
-		wms.deployTask(task, monitor)
 
 		# Give config help
 		if opts.help_cfg or opts.help_scfg:
@@ -116,62 +169,17 @@ if __name__ == '__main__':
 			sys.exit(0)
 
 		# If invoked in report mode, just show report and exit
-		if Report(jobManager.jobDB).show(opts, task):
+		if Report(workflow.jobManager.jobDB).show(opts, workflow.task):
 			sys.exit(0)
 
 		# Check if jobs have to be deleted / reset and exit
 		if opts.delete:
-			jobManager.delete(wms, opts.delete)
+			workflow.jobManager.delete(workflow.wms, opts.delete)
 			sys.exit(0)
 		if opts.reset:
-			jobManager.reset(wms, opts.reset)
+			workflow.jobManager.reset(workflow.wms, opts.reset)
 			sys.exit(0)
 
-		actionList = config.getList('jobs', 'action', ['check', 'retrieve', 'submit'], onChange = None)
-		guiClass = config.get('global', 'gui', 'SimpleConsole', onChange = None)
-		runContinuous = config.getBool('jobs', 'continuous', False, onChange = None)
-
-		initSentinel.checkpoint('config')
-		config.freezeConfig(writeConfig = opts.init)
-
-		if runContinuous and guiClass == 'SimpleConsole':
-			utils.vprint(level = -1)
-			Report(jobManager.jobDB).summary()
-			utils.vprint('Running in continuous mode. Press ^C to exit.', -1)
-
-		# Job submission loop
-		initSentinel.checkpoint('loop')
-		def jobCycle(wait = utils.wait):
-			while True:
-				(didWait, lastSpaceMsg) = (False, 0)
-				# Check whether wms can submit
-				if not wms.canSubmit(task.wallTime, opts.submission):
-					opts.submission = False
-				# Check free disk space
-				if (checkSpace > 0) and utils.freeSpace(config.getWorkPath()) < checkSpace:
-					if time.time() - lastSpaceMsg > 5 * 60:
-						utils.vprint('Not enough space left in working directory', -1, True)
-						lastSpaceMsg = time.time()
-				else:
-					for action in map(str.lower, actionList):
-						if action.startswith('c') and not utils.abort():   # check for jobs
-							if jobManager.check(wms):
-								didWait = wait(wms.getTimings()[1])
-						elif action.startswith('r') and not utils.abort(): # retrieve finished jobs
-							if jobManager.retrieve(wms):
-								didWait = wait(wms.getTimings()[1])
-						elif action.startswith('s') and not utils.abort() and opts.submission:
-							if jobManager.submit(wms):
-								didWait = wait(wms.getTimings()[1])
-
-				# quit if abort flag is set or not in continuous mode
-				if utils.abort() or not runContinuous:
-					break
-				# idle timeout
-				if not didWait:
-					wait(wms.getTimings()[0])
-
-		workflow = GUI.open(guiClass, jobCycle, jobManager, task)
 		workflow.run()
 
 	handleException(main)

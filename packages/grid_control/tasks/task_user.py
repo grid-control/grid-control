@@ -8,7 +8,7 @@ class UserTask(DataTask):
 
 	def __init__(self, config, name):
 		DataTask.__init__(self, config, name)
-		self._exeWrap = TaskExecutableWrapper(config.getScoped([self.__class__.__name__]))
+		self._exeWrap = TaskExecutableWrapper(config)
 
 
 	def getCommand(self):

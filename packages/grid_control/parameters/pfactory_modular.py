@@ -7,8 +7,8 @@ from grid_control import LoadableObject, QM, utils, RethrowError
 
 # Parameter factory which evaluates a parameter module string
 class ModularParameterFactory(BasicParameterFactory):
-	def __init__(self, config, sections):
-		BasicParameterFactory.__init__(self, config, sections)
+	def __init__(self, config, name):
+		BasicParameterFactory.__init__(self, config, name)
 		self.pExpr = self.paramConfig.get('parameters', '')
 
 

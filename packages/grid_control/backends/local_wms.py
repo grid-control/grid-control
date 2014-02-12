@@ -7,16 +7,18 @@ class LocalWMS(BasicWMS):
 	getConfigSections = BasicWMS.createFunction_getConfigSections(['local'])
 
 	def __init__(self, config, wmsName, submitExec, statusExec, cancelExec):
-		config.set('local', 'broker', 'RandomBroker', override = False)
+		config.set('broker', 'RandomBroker', override = False)
 		(self.submitExec, self.statusExec, self.cancelExec) = (submitExec, statusExec, cancelExec)
 		BasicWMS.__init__(self, config, wmsName, 'local')
 
-		self.brokerSite = self._createBroker('site broker', 'UserBroker', 'sites', 'sites', self.getNodes)
-		self.brokerQueue = self._createBroker('queue broker', 'UserBroker', 'queue', 'queues', self.getQueues)
+		self.brokerSite = config.getClass('site broker', 'UserBroker', cls = Broker,
+			tags = [self]).getInstance('sites', 'sites', self.getNodes)
+		self.brokerQueue = config.getClass('queue broker', 'UserBroker', cls = Broker,
+			tags = [self]).getInstance('queue', 'queues', self.getQueues)
 
 		self.sandCache = []
-		self.sandPath = config.getPath('local', 'sandbox path', config.getWorkPath('sandbox'), mustExist = False)
-		self.scratchPath = config.getList('local', 'scratch path', ['TMPDIR', '/tmp'], onChange = None)
+		self.sandPath = config.getPath('sandbox path', config.getWorkPath('sandbox'), mustExist = False)
+		self.scratchPath = config.getList('scratch path', ['TMPDIR', '/tmp'], onChange = True)
 
 
 	def getTimings(self):

@@ -12,3 +12,16 @@ wms.WMS.moduleMap['localhost'] = 'host.Localhost'
 wms.WMS.moduleMap['Condor'] = 'condor_wms.Condor'
 wms.WMS.moduleMap['JMS'] = 'slurm.JMS'
 wms.WMS.moduleMap['OGE'] = 'sge.OGE'
+wms.WMS.moduleMap['grid'] = 'GliteWMS'
+wms.WMS.moduleMap['inactive'] = 'InactiveWMS'
+
+def findLocalWMS(self, clsName):
+	for wms, cmd in [('OGE', 'sgepasswd'), ('PBS', 'pbs-config'), ('OGE', 'qsub'), ('LSF', 'bsub'), ('SLURM', 'job_slurm')]:
+		try:
+			utils.resolveInstallPath(cmd)
+			return wms
+		except:
+			pass
+	return 'PBS'
+
+wms.WMS.moduleMapDynamic['local'] = findLocalWMS

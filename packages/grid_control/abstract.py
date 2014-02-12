@@ -83,9 +83,11 @@ class NamedObject(LoadableObject):
 
 
 	# Modify the module search path for the class
-	def registerObject(cls, searchPath = [], tagName = None):
+	def registerObject(cls, searchPath = [], tagName = None, defaultName = None):
 		if tagName or not hasattr(cls, 'tagName'):
 			cls.tagName = tagName
+		if defaultName or not hasattr(cls, 'defaultName'):
+			cls.defaultName = defaultName
 		LoadableObject.registerObject(searchPath, base = cls)
 	registerObject = classmethod(registerObject)
 
@@ -121,18 +123,18 @@ class NamedObject(LoadableObject):
 
 # General purpose class factory
 class ClassFactory:
-	def __init__(self, cls, config, opt, optMerge, scope = None):
-		self._proxyList = config.getClassList(opt[0], opt[1], cls = cls, scope = scope)
+	def __init__(self, cls, config, tags, opt, optMerge):
+		self._proxyList = config.getClassList(opt[0], opt[1], cls = cls, tags = tags)
 		self._mergeCls = None
 		if len(self._proxyList) > 1:
-			self._mergeCls = config.getClass(optMerge[0], optMerge[1], cls = cls, scope = scope)
+			self._mergeCls = config.getClass(optMerge[0], optMerge[1], cls = cls, tags = tags)
 
 	# Get single instance by merging multiple sub instances if necessary
 	def getInstance(self, *args, **kwargs):
 		clsList = []
 		for clsUser in self._proxyList:
 			try:
-				clsList.append(clsUser(*args, **kwargs))
+				clsList.append(clsUser.getInstance(*args, **kwargs))
 			except:
 				raise RethrowError('Unable to load %s' % clsUser)
 		if len(clsList) == 1:
@@ -143,8 +145,8 @@ class ClassFactory:
 
 # Needed by getClass / getClasses to wrap the fixed arguments to the instantiation / name of the instance
 class ClassWrapper:
-	def __init__(self, baseClass, value, config, tags):
-		(self._baseClass, self._config, self._tags) = (baseClass, config, tags)
+	def __init__(self, baseClass, value, config, tags, inherit):
+		(self._baseClass, self._config, self._tags, self._inherit) = (baseClass, config, tags, inherit)
 		(self._instClassName, self._instName) = utils.optSplit(value, ':')
 		if self._instName == '':
 			self._instName = self._instClassName.split('.')[-1] # Default: (non fully qualified) class name as instance name
@@ -163,6 +165,6 @@ class ClassWrapper:
 	def getInstance(self, *args, **kwargs):
 		cls = self._baseClass.getClass(self._instClassName)
 		if issubclass(cls, NamedObject):
-			config = self._config.getTagged(cls, self._instName, self._tags)
+			config = self._config.newClass(cls, self._instName).addTags(self._tags)
 			return cls(config, self._instName, *args, **kwargs)
 		return cls(*args, **kwargs)

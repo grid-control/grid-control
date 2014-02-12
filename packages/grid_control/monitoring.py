@@ -49,11 +49,11 @@ class ScriptMonitoring(Monitoring):
 
 	def __init__(self, config, name, task):
 		Monitoring.__init__(self, config, name, task)
-		self.silent = config.getBool('events', 'silent', True, onChange = None)
-		self.evtSubmit = config.get('events', 'on submit', '', onChange = None)
-		self.evtStatus = config.get('events', 'on status', '', onChange = None)
-		self.evtOutput = config.get('events', 'on output', '', onChange = None)
-		self.evtFinish = config.get('events', 'on finish', '', onChange = None)
+		self.silent = config.getBool('silent', True, onChange = None)
+		self.evtSubmit = config.get('on submit', '', onChange = None)
+		self.evtStatus = config.get('on status', '', onChange = None)
+		self.evtOutput = config.get('on output', '', onChange = None)
+		self.evtFinish = config.get('on finish', '', onChange = None)
 
 	# Get both task and job config / state dicts
 	def scriptThread(self, script, jobNum = None, jobObj = None, allDict = {}):

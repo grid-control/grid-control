@@ -33,7 +33,8 @@ class GridWMS(BasicWMS):
 		config.set('grid', 'proxy', 'VomsProxy', override = False)
 		BasicWMS.__init__(self, config, wmsName, 'grid')
 
-		self.brokerSite = self._createBroker('site broker', 'UserBroker', 'sites', 'sites', self.getSites)
+		self.brokerSite = config.getClass('site broker', 'UserBroker',
+			cls = Broker, tags = [self]).getInstance('sites', 'sites', self.getSites)
 		self.vo = config.get(self._getSections('backend'), 'vo', self.proxy.getGroup())
 
 		self._submitParams = {}

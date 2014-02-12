@@ -16,7 +16,8 @@ class MultiWMS(WMS):
 			waitIdle = max(waitIdle, wi)
 			waitDefault = max(waitDefault, wd)
 		self.timing = (waitIdle, waitDefault)
-		self.brokerWMS = self._createBroker('wms broker', 'RandomBroker', 'wms', 'wms', self.wmsMap.keys)
+		self.brokerWMS = config.getClass('wms broker', 'RandomBroker',
+			cls = Broker, tags = [self]).getInstance('wms', 'wms', self.wmsMap.keys)
 
 
 	def getTimings(self):

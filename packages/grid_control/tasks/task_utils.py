@@ -1,14 +1,15 @@
 import os
-from grid_control import QM, utils, noDefault
+from grid_control import QM, utils, noDefault, changeInitNeeded
 
 class TaskExecutableWrapper:
 	def __init__(self, config, prefix = '', exeDefault = noDefault):
-		self._executableSend = config.getBool('%s send executable' % prefix, True)
+		initSandbox = changeInitNeeded('sandbox')
+		self._executableSend = config.getBool('%s send executable' % prefix, True, onChange = initSandbox)
 		if self._executableSend:
-			self._executable = config.getPath('%s executable' % prefix, exeDefault)
+			self._executable = config.getPath('%s executable' % prefix, exeDefault, onChange = initSandbox)
 		else:
-			self._executable = config.get('%s executable' % prefix, exeDefault)
-		self._arguments = config.get('%s arguments' % prefix, '')
+			self._executable = config.get('%s executable' % prefix, exeDefault, onChange = initSandbox)
+		self._arguments = config.get('%s arguments' % prefix, '', onChange = initSandbox)
 
 
 	def isActive(self):

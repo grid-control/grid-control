@@ -1,5 +1,5 @@
-from python_compat import sorted
-from grid_control import APIError, ConfigError, RethrowError, utils, QM
+from python_compat import sorted, set
+from grid_control import APIError, AbstractError, ConfigError, RethrowError, utils, QM
 import logging
 
 # Placeholder to specify a non-existing default or not-set value
@@ -15,7 +15,6 @@ def multi_line_format(value):
 		return '\n\t%s' % str.join('\n\t', value_list)
 	return ' %s' % str.join('\n\t', value_list)
 
-
 # Holder of config information
 class ConfigEntry(object):
 	def __init__(self, value, source, section = None, option = None, default = notSet, accessed = False):
@@ -30,6 +29,8 @@ class ConfigEntry(object):
 		return '[%s] %s' % (self.section, self.option)
 
 	def format(self, printSection = False, printDefaultValue = False):
+		if self.option.startswith('#'):
+			return ''
 		entries = self._format(self.value)
 		if printSection: # Print prefix with section information
 			entries = map(lambda entry: '[%s] %s' % (self.section, entry), entries)
@@ -76,17 +77,57 @@ class ConfigEntry(object):
 			return [result]
 
 
-# Container for config data - initialized from config file / dict, providing accessors
-# Future: Further split into static and fully dynamic container - (how to bootstrap from static?)
+# General container for config data
 class ConfigContainer(object):
 	def __init__(self, name):
-		(self._content, self._fixed) = ({}, [])
 		self._logger = logging.getLogger('config.%s' % name)
+		self._readOnly = False
+
+	def iterContent(self):
+		raise AbstractError
+
+	def getOptions(self, section, getDefault = False):
+		raise AbstractError
+
+	def setReadOnly(self):
+		self._readOnly = True
+
+	def setEntry(self, section, option, value, source, markAccessed = False):
+		raise AbstractError
+
+	def getEntry(self, section, option, default, markDefault = True, raiseMissing = True):
+		raise AbstractError
+
+	def write(self, stream, printDefault = True, printUnused = True):
+		stream.write('\n; %s\n; This is the %s set of %sconfig options:\n; %s\n\n' % \
+			('='*60, QM(printDefault, 'complete', 'minimal'), QM(printUnused, '', 'used '), '='*60))
+		output = {} # {'section1': [output1, output2, ...], 'section2': [...output...], ...}
+		def addToOutput(section, value, prefix = '\t'):
+			if value:
+				output.setdefault(section.lower(), ['[%s]' % section]).append(value)
+		for entry in filter(lambda e: e.accessed == True, self.iterContent()):
+			# Don't print default values unless specified - dynamic settings always derive from non-default settings
+			if not printDefault and (entry.source in ['<default>', '<dynamic>']):
+				continue
+			# value-default comparison, since for persistent entries: value == default, source != '<default>'
+			addToOutput(entry.section, entry.format(printDefaultValue = (entry.value != entry.default)))
+		if printUnused: # Unused entries have no stored default value => printDefault is not utilized
+			for entry in filter(lambda e: e.accessed == False, self.iterContent()):
+				addToOutput(entry.section, entry.format(printSection = False, printDefaultValue = False))
+		stream.write('%s\n' % str.join('\n\n', map(lambda s: str.join('\n', output[s]), sorted(output))))
 
 
-	def iterContent(self, accessed):
+# Container for config data using dictionaries
+# TODO: further move functionality into ConfigContainer - in case a dynamic container is implemented
+class BasicConfigContainer(ConfigContainer):
+	def __init__(self, name):
+		(self._content, self._fixed) = ({}, [])
+		ConfigContainer.__init__(self, name)
+
+
+	def iterContent(self):
 		for section in sorted(self._content):
-			for option in filter(lambda o: accessed == self._content[section][o].accessed, sorted(self._content[section])):
+			for option in sorted(self._content[section]):
 				yield self._content[section][option]
 
 
@@ -100,6 +141,8 @@ class ConfigContainer(object):
 
 
 	def setEntry(self, section, option, value, source, markAccessed = False):
+		if self._readOnly:
+			raise APIError('Config container is read-only!')
 		(section, option) = (standardConfigForm(section), standardConfigForm(option))
 		option_type = None # Get config option modifier
 		if option[-1] in ['+', '-', '*', '?', '^']:
@@ -144,6 +187,7 @@ class ConfigContainer(object):
 		if markAccessed:
 			tmp[option].accessed = True
 		(tmp[option].section, tmp[option].option) = (section, option)
+		return tmp[option]
 
 
 	def getEntry(self, section, option, default, markDefault = True, raiseMissing = True):
@@ -173,19 +217,100 @@ class ConfigContainer(object):
 		return entry
 
 
-	def write(self, stream, printDefault = True, printUnused = True):
-		stream.write('\n; %s\n; This is the %s set of %sconfig options:\n; %s\n\n' % \
-			('='*60, utils.QM(printDefault, 'complete', 'minimal'), utils.QM(printUnused, '', 'used '), '='*60))
-		output = {} # {'section1': [output1, output2, ...], 'section2': [...output...], ...}
-		def addToOutput(section, value, prefix = '\t'):
-			output.setdefault(section.lower(), ['[%s]' % section]).append(value)
-		for entry in self.iterContent(accessed = True): 
-			# Don't print default values unless specified - dynamic settings always derive from non-default settings
-			if not printDefault and (entry.source in ['<default>', '<dynamic>']):
-				continue
-			# value-default comparison, since for persistent entries: value == default, source != '<default>'
-			addToOutput(entry.section, entry.format(printDefaultValue = (entry.value != entry.default)))
-		if printUnused: # Unused entries have no stored default value => printDefault is not utilized
-			for entry in self.iterContent(accessed = False):
-				addToOutput(entry.section, entry.format(printSection = False, printDefaultValue = False))
-		stream.write('%s\n' % str.join('\n\n', map(lambda s: str.join('\n', output[s]), sorted(output))))
+# Container allowing access via selectors
+class ResolvingConfigContainer(BasicConfigContainer):
+	def iterContent(self, selOptions = [], selSections = [], selNames = [], selTags = []):
+		# Function to parse section into section name, section titles and section tags
+		def parseSection(section):
+			tmp = section.split()
+			assert(len(tmp) > 0)
+			nameList = []
+			tagDict = {}
+			for entry in tmp[1:]:
+				if ':' in entry:
+					tagentry = entry.split(':')
+					assert(len(tagentry) == 2)
+					tagDict[tagentry[0]] = tagentry[1]
+				else:
+					nameList.append(entry)
+			return (section, (tmp[0], nameList, tagDict)) # section, (main, nameList, tagDict)
+		sectionList = map(parseSection, self._content)
+
+		# Function to impose weak ordering on sections
+		def cmpSection(a, b):
+			(a_sMain, a_sNames, a_sTags) = a[1] # a = (section, sectionInfo)
+			(b_sMain, b_sNames, b_sTags) = b[1]
+			def findIndex(search, value, default):
+				try:
+					return -search.index(value)
+				except:
+					return default
+			cmpSection = cmp(findIndex(selSections, a_sMain, a_sMain), findIndex(selSections, b_sMain, b_sMain))
+			if cmpSection != 0:
+				return -cmpSection # return same order as used in selSelections
+			cmpNames = cmp(a_sNames, b_sNames)
+			if cmpNames != 0:
+				return -cmpNames # entries without names come *after* entries with names
+			selTagsOrder = map(lambda (tk, tv): tk, selTags)
+			score = lambda tags: sum(map(lambda (i, t): 1 << (len(selTagsOrder) - findIndex(selTagsOrder, t, 0)), enumerate(tags)))
+			return -cmp(score(a_sTags), score(b_sTags))
+
+		def matchSection(sectionEntry):
+			(section, sectionInfos) = sectionEntry
+			(sMain, sTitles, sTags) = sectionInfos
+			if selSections and (sMain not in map(str.lower, selSections)):
+				return False
+			if sTitles:
+				for selName in map(str.lower, selNames):
+					if selName not in sTitles:
+						return False
+			for (selTagKey, selTagValue) in selTags:
+				if selTagKey not in sTags:
+					continue
+				if sTags[selTagKey] != selTagValue:
+					return False
+			return True
+
+		sectionList = sorted(filter(matchSection, sectionList), cmp = cmpSection)
+		if selOptions: # option list specified - return matching sections in same order
+			for option in map(str.lower, selOptions):
+				for (section, sectionInfo) in sectionList:
+					if option in self._content[section]:
+						yield self._content[section][option]
+		else: # no option specified
+			for (section, sectionInfo) in sectionList:
+				for option in sorted(self._content[section]):
+					yield self._content[section][option]
+
+
+	def getOptions(self, selector):
+		result = []
+		(selSections, selOptions, selNames, selTags) = selector
+		for entry in self.iterContent(selOptions, selSections, selNames, selTags):
+			if entry.option not in result:
+				result.append(entry.option)
+		return result
+
+
+	def get(self, selector, default, markDefault = True, raiseMissing = True):
+		(selSections, selOptions, selNames, selTags) = selector
+		# TODO: Option inheritance: dont just stop at best matching entry
+		#       collect / apply settings from all matching entries
+		for entry in self.iterContent(selOptions, selSections, selNames, selTags):
+			return self.getEntry(entry.section, entry.option,
+				default, markDefault, raiseMissing)
+		return self.getEntry(selSections[0], selOptions[0],
+			default, markDefault, raiseMissing)
+
+
+	def set(self, selector, value, source, markAccessed = False):
+		(selSections, selOptions, selNames, selTags) = selector
+		# TODO: Dont just write to most specific entry - go up in priority
+		#       till existing section without specific option is found
+		section = selSections[0]
+		strName = str.join(' ', selNames)
+		if selSections[0].lower() != strName.lower():
+			section += (' ' + strName)
+		selTags = filter(lambda (tk, tv): tk != tv, selTags)
+		section += (' ' + str.join(' ', map(lambda ti: '%s:%s' % ti, selTags)))
+		return self.setEntry(section, selOptions[0], value, source, markAccessed)

@@ -7,20 +7,21 @@ from grid_control.parameters.psource_data import ParameterSource, DataParameterS
 
 class DataTask(TaskModule):
 	def setupJobParameters(self, config, pm):
+		config = config.addSections(['dataset']).addTags([self])
 		self.dataSplitter = None
 		self.dataRefresh = None
-		self.dataset = config.get(self.__class__.__name__, 'dataset', '').strip()
+		self.dataset = config.get('dataset', '').strip()
 		if self.dataset == '':
 			return
-		config.set('storage', 'se output pattern', '@NICK@_job_@MY_JOBID@_@X@', override=False)
-		config.set('parameters', 'default lookup', 'DATASETNICK', override=False)
+		config.set('se output pattern', '@NICK@_job_@MY_JOBID@_@X@', override = False)
+		config.set('default lookup', 'DATASETNICK', override = False)
 
-		defaultProvider = config.get(self.__class__.__name__, 'dataset provider', 'ListProvider')
-		dataProvider = DataProvider.create(config, self.__class__.__name__, self.dataset, defaultProvider)
-		splitterName = config.get(self.__class__.__name__, 'dataset splitter', 'FileBoundarySplitter')
+		defaultProvider = config.get('dataset provider', 'ListProvider')
+		dataProvider = DataProvider.create(config, self.dataset, defaultProvider)
+		splitterName = config.get('dataset splitter', 'FileBoundarySplitter')
 		splitterClass = dataProvider.checkSplitter(DataSplitter.getClass(splitterName))
-		self.dataSplitter = splitterClass(config, self.__class__.__name__)
-		self.checkSE = config.getBool(self.__class__.__name__, 'dataset storage check', True, onChange = None)
+		self.dataSplitter = splitterClass(config)
+		self.checkSE = config.getBool('dataset storage check', True, onChange = None)
 
 		# Create and register dataset parameter plugin
 		paramSource = DataParameterSource(config.getWorkPath(), 'data',
@@ -28,7 +29,7 @@ class DataTask(TaskModule):
 		DataParameterSource.datasetsAvailable['data'] = paramSource
 
 		# Select dataset refresh rate
-		self.dataRefresh = utils.parseTime(config.get(self.__class__.__name__, 'dataset refresh', '', onChange = None))
+		self.dataRefresh = config.getTime('dataset refresh', -1, onChange = None)
 		if self.dataRefresh > 0:
 			paramSource.resyncSetup(interval = max(self.dataRefresh, dataProvider.queryLimit()))
 			utils.vprint('Dataset source will be queried every %s' % utils.strTime(self.dataRefresh), -1)
@@ -37,12 +38,6 @@ class DataTask(TaskModule):
 		def externalRefresh(sig, frame):
 			paramSource.resyncSetup(force = True)
 		signal.signal(signal.SIGUSR2, externalRefresh)
-
-		if config.opts.init:
-			if utils.verbosity() > 2:
-				dataProvider.printDataset()
-			if utils.verbosity() > 2:
-				self.dataSplitter.printAllJobInfo()
 
 		if self.dataSplitter.getMaxJobs() == 0:
 			raise UserError('There are no events to process')
