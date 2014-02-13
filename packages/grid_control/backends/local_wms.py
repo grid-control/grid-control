@@ -99,6 +99,7 @@ class LocalWMS(BasicWMS):
 		activity = utils.ActivityLog('submitting jobs')
 
 		try:
+			sandbox = self.sandPath # defined here for exception message in case os.mkdir fails
 			if not os.path.exists(self.sandPath):
 				os.mkdir(self.sandPath)
 			sandbox = tempfile.mkdtemp('', '%s.%04d.' % (module.taskID, jobNum), self.sandPath)
