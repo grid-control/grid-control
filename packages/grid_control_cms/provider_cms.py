@@ -74,7 +74,10 @@ class CMSProvider(DataProvider):
 		for phedexBlock in readJSON(url, {'block': blockPath})['phedex']['block']:
 			for replica in phedexBlock['replica']:
 				if self.nodeFilter(replica['node'], replica['complete'] == 'y'):
-					dictSE[blockPath].append(replica['se'])
+					if 'se' in replica and replica['se'] is not None:
+						dictSE[blockPath].append(replica['se'])
+					else:
+						print 'Warning: skipping a replica of a dataset hosted at a site, as the site did not declare its SE address'
 
 
 	def getCMSDatasets(self):
