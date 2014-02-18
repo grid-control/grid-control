@@ -49,11 +49,15 @@ else:
 		cfgSettings['lumi filter'] = '-'
 		cfgSettings['keep lumi metadata'] = 'True'
 	section = 'dummy'
+	fillerList = [DefaultFilesConfigFiller()]
 	if opts.settings:
-		tmpCfg = Config(opts.settings)
+		fillerList.append(FileConfigFiller([opts.settings]))
+		tmpCfg = Config(fillerList, opts.settings)
 		section = tmpCfg.get('global', ['task', 'module'])
-	dummyConfig = Config(opts.settings, configDict={section: cfgSettings})
-	provider = DataProvider.create(dummyConfig, section, dataset, 'dbs')
+
+	dummyConfig = Config(fillerList + [DictConfigFiller({section: cfgSettings})], opts.settings)
+	dummyConfig.opts = opts
+	provider = DataProvider.create(dummyConfig.addSections([section]), dataset, 'dbs')
 blocks = provider.getBlocks()
 if len(blocks) == 0:
 	raise DatasetError('No blocks!')

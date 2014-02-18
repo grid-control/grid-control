@@ -22,7 +22,7 @@ def logging_defaults():
 		logging.getLogger("exception").addHandler(handler_ex)
 
 	# Register new log levels
-	levelDict = {'DEFAULT_VERBOSITY': 14, # setLevel(logging.DEFAULT_VERBOSITY - opts.verbosity)
+	levelDict = {'DEFAULT_VERBOSITY': 14, # setLevel(logging.DEFAULT_VERBOSITY - <verbosity level>)
 		'INFO1': 13, 'INFO2': 12, 'INFO3': 11, 'DEBUG1': 9, 'DEBUG2': 8, 'DEBUG3': 7}
 	for name in levelDict:
 		setattr(logging, name.upper(), levelDict[name]) # Add numerical constant

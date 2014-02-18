@@ -14,7 +14,7 @@ class changeInitNeeded:
 
 	def __call__(self, config, old_obj, cur_obj, cur_entry, obj2str):
 		log = logging.getLogger('config.onChange.%s' % self._option)
-		raw_config = config.getScoped(None)
+		raw_config = config.clone()
 		interaction_def = raw_config.getBool('interactive', 'default', True, onChange = None)
 		interaction_opt = raw_config.getBool('interactive', self._option, interaction_def, onChange = None)
 		if interaction_opt:
