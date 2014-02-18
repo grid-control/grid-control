@@ -2,8 +2,8 @@ import os, inspect, logging, ConfigParser
 from grid_control import *
 from container_base import noDefault, standardConfigForm, ResolvingConfigContainer
 from config_base import ConfigBase
-from filler_base import FileConfigFiller, DefaultFilesConfigFiller, OptsConfigFiller, DictConfigFiller
 from config_handlers import *
+from filler_base import FileConfigFiller
 
 class TaggedConfig(ConfigBase):
 	def __init__(self, *args, **kwargs):
@@ -72,17 +72,12 @@ class TaggedConfig(ConfigBase):
 
 # Main config interface
 class Config(TaggedConfig):
-	def __init__(self, configFile = None, configDict = {}, optParser = None, configHostSpecific = True):
+	def __init__(self, fillerList, configFile = None):
 		self._allowSet = True
 		# Read in the current configuration from config file, manual dictionary, command line and "config" dir
 		curCfg = ResolvingConfigContainer('current')
-		DefaultFilesConfigFiller(curCfg)
-		if configFile:
-			FileConfigFiller(curCfg, [configFile])
-		if optParser:
-			OptsConfigFiller(curCfg, optParser)
-		DictConfigFiller(curCfg, configDict)
-		# TODO: make container and filler chain somehow configurable (eg. to dynamically provide options)
+		for filler in fillerList:
+			filler.fill(curCfg)
 
 		if configFile:
 			# use the directory of the config file as base directory for file searches in getPath
@@ -106,7 +101,7 @@ class Config(TaggedConfig):
 		if os.path.exists(self._oldCfgPath):
 			logging.getLogger('config.stored').propagate = False
 			oldCfg = ResolvingConfigContainer('stored')
-			FileConfigFiller(oldCfg, [self._oldCfgPath])
+			FileConfigFiller([self._oldCfgPath]).fill(oldCfg)
 			self.init(oldCfg = oldCfg)
 
 		# Get persistent variables - only possible after self._oldCfg was set!
@@ -132,8 +127,8 @@ class Config(TaggedConfig):
 
 # For compatibility with old work directories
 class CompatConfig(Config):
-	def __init__(self, configFile = None, configDict = {}, optParser = None, configHostSpecific = True):
-		Config.__init__(self, configFile, configDict, optParser, configHostSpecific)
+	def __init__(self, fillerList, configFile = None):
+		Config.__init__(self, fillerList, configFile)
 		persistencyFile = self.getWorkPath('task.dat')
 		# read old persistency file - and set appropriate config options
 		if os.path.exists(persistencyFile):

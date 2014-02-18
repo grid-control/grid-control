@@ -1,17 +1,23 @@
+# GCSCF: DEF,ENC
 from grid_control import ConfigError, RethrowError, utils
 import sys, os, logging, ConfigParser, socket
 
+# Class to fill config containers with settings
 class ConfigFiller(object):
-	pass
+	def fill(self, container):
+		raise AbstractError
 
 
 # Config filler which collects data from config files
 class FileConfigFiller(ConfigFiller):
-	def __init__(self, container, configFiles):
-		for configFile in configFiles:
-			self.parseFile(container, configFile)
+	def __init__(self, configFiles):
+		self._configFiles = configFiles
 
-	def parseFile(self, container, configFile, defaults = None):
+	def fill(self, container):
+		for configFile in self._configFiles:
+			self._parseFile(container, configFile)
+
+	def _parseFile(self, container, configFile, defaults = None):
 		try:
 			configFile = utils.resolvePath(configFile, ErrorClass = ConfigError)
 			log = logging.getLogger(('config.%s' % utils.getRootName(configFile)).rstrip('.'))
@@ -29,7 +35,7 @@ class FileConfigFiller(ConfigFiller):
 			if parser.has_option('global', 'include'):
 				includeFiles = parser.get('global', 'include').split('#')[0].split(';')[0]
 				for includeFile in utils.parseList(includeFiles, None):
-					self.parseFile(container, includeFile, parser.defaults())
+					self._parseFile(container, includeFile, parser.defaults())
 			# Store config settings
 			for section in parser.sections():
 				for option in parser.options(section):
@@ -44,41 +50,36 @@ class FileConfigFiller(ConfigFiller):
 
 # Config filler which collects data from default config files
 class DefaultFilesConfigFiller(FileConfigFiller):
-	def __init__(self, container):
+	def __init__(self):
 		# Collect host / user / installation specific config files
 		host = socket.gethostbyaddr(socket.gethostname())[0]
 		hostCfg = map(lambda c: utils.pathGC('config/%s.conf' % host.split('.', c)[-1]), range(host.count('.') + 1, 0, -1))
 		defaultCfg = ['/etc/grid-control.conf', '~/.grid-control.conf', utils.pathGC('config/default.conf')]
 		fqConfigFiles = map(lambda p: utils.resolvePath(p, mustExist = False), hostCfg + defaultCfg)
-		FileConfigFiller.__init__(self, container, filter(os.path.exists, fqConfigFiles))
+		FileConfigFiller.__init__(self, filter(os.path.exists, fqConfigFiles))
 
 
-# Config filler which collects data from command line arguments
-class OptsConfigFiller(ConfigFiller):
-	def __init__(self, container, optParser):
-		defaultCmdLine = container.getEntry('global', 'cmdargs', '').value
-		(opts, args) = optParser.parse_args(args = defaultCmdLine.split() + sys.argv[1:])
-		def setConfigFromOpt(section, option, value):
-			if value != None:
-				container.setEntry(section, option, str(value), '<cmdline>')
-		for (option, value) in {'max retry': opts.maxRetry, 'action': opts.action,
-				'continuous': opts.continuous, 'selected': opts.selector}.items():
-			setConfigFromOpt('jobs', option, value)
-		setConfigFromOpt('global', 'gui', opts.gui)
+# Config filler which collects data from dictionary
+class DictConfigFiller(ConfigFiller):
+	def __init__(self, configDict):
+		self._configDict = configDict
 
-		# Allow to override config options on the command line:
-		for uopt in opts.override:
+	def fill(self, container):
+		for section in self._configDict:
+			for option in self._configDict[section]:
+				container.setEntry(section, option, self._configDict[section][option], '<dict>')
+
+
+# Config filler which collects data from a user string
+class StringConfigFiller(ConfigFiller):
+	def __init__(self, optionList):
+		self._optionList = optionList
+
+	def fill(self, container):
+		for uopt in self._optionList:
 			try:
 				section, tmp = tuple(uopt.lstrip('[').split(']', 1))
 				option, value = tuple(map(str.strip, tmp.split('=', 1)))
 				container.setEntry(section, option, value, '<cmdline override>')
 			except:
 				raise RethrowError('Unable to parse option %s' % uopt, ConfigError)
-
-
-# Config filler which collects data from dictionary
-class DictConfigFiller(ConfigFiller):
-	def __init__(self, container, configDict):
-		for section in configDict:
-			for option in configDict[section]:
-				container.setEntry(section, option, configDict[section][option], '<dict>')

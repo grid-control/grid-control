@@ -49,15 +49,36 @@ if __name__ == '__main__':
 	parser.add_option('-W', '--webserver',     dest='gui',        action='store_const', const = 'CPWebserver')
 	Report.addOptions(parser)
 	(opts, args) = parser.parse_args()
+
 	utils.verbosity(opts.verbosity)
 	logging.getLogger().setLevel(logging.DEFAULT_VERBOSITY - opts.verbosity)
+
 	# we need exactly one positional argument (config file)
 	if len(args) != 1:
 		utils.exitWithUsage(usage, 'Config file not specified!')
 
+	# Config filler which collects data from command line arguments
+	class OptsConfigFiller(ConfigFiller):
+		def __init__(self, optParser):
+			self._optParser = optParser
+
+		def fill(self, container):
+			defaultCmdLine = container.getEntry('global', 'cmdargs', '').value
+			(opts, args) = self._optParser.parse_args(args = defaultCmdLine.split() + sys.argv[1:])
+			def setConfigFromOpt(section, option, value):
+				if value != None:
+					container.setEntry(section, option, str(value), '<cmdline>')
+			for (option, value) in {'max retry': opts.maxRetry, 'action': opts.action,
+					'continuous': opts.continuous, 'selected': opts.selector}.items():
+				setConfigFromOpt('jobs', option, value)
+			setConfigFromOpt('global', 'gui', opts.gui)
+			StringConfigFiller(opts.override).fill(container)
+
 	# big try... except block to catch exceptions and print error message
 	def main():
-		config = CompatConfig(configFile = args[0], optParser = parser)
+		config = CompatConfig([
+			DefaultFilesConfigFiller(), FileConfigFiller([args[0]]), OptsConfigFiller(parser)], args[0])
+			 # Apply override command line options
 		config.opts = opts
 		logging_setup(config.addSections(['logging']))
 
