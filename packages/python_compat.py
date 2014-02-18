@@ -64,6 +64,24 @@ except:
 	import md5
 	md5 = md5.md5
 
+try:	# any >= Python 2.5
+	any = any
+except:
+	def any(iterable):
+		for element in iterable:
+			if element:
+				return True
+		return False
+
+try:	# all >= Python 2.5
+	all = all
+except:
+	def all(iterable):
+		for element in iterable:
+			if not element:
+				return False
+		return True
+
 try:	# next >= Python 2.6
 	next = next
 except:
@@ -79,15 +97,6 @@ try:	# raw_input < Python 3.0
 	user_input = raw_input
 except:
 	user_input = input
-
-try:	# any >= Python 2.5
-	any = any
-except:
-	def any(iterable):
-		for element in iterable:
-			if element:
-				return True
-		return False
 
 try:	# functools.lru_cache >= Python 3.2
 	import functools
@@ -110,7 +119,7 @@ except:
 		(funProxy.fun, funProxy.cache) = (fun, [])
 		return funProxy
 
-__all__ = ['rsplit', 'set', 'sorted', 'md5', 'next', 'user_input', 'any', 'lru_cache']
+__all__ = ['rsplit', 'set', 'sorted', 'md5', 'any', 'all', 'next', 'user_input', 'lru_cache']
 
 if __name__ == '__main__':
 	import os, re, doctest
@@ -123,7 +132,7 @@ if __name__ == '__main__':
 			found = False
 			tmp = open(fn).read()
 			for feature in __all__:
-				if re.search('[^\.a-zA-Z]%s\(' % feature, tmp):
+				if re.search('[^_\.a-zA-Z]%s\(' % feature, tmp):
 					found = True
 					for line in tmp.splitlines():
 						if 'python_compat' in line:
