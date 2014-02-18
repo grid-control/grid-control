@@ -25,3 +25,5 @@ from grid_control.parameters	import *
 from grid_control.tasks	import TaskModule
 
 from grid_control.gui	import GUI
+
+from grid_control.workflow	import Workflow
