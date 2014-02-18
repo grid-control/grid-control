@@ -153,16 +153,20 @@ class ConfigBase(object):
 		(selector, args, kwargs) = self._selectorFilter(*args, **kwargs)
 		return self._getTyped('list', obj2str, str2obj, None, selector, *args, **kwargs)
 
+	# Resolve path
+	def resolvePath(self, value, mustExist, errorMsg):
+		try:
+			return utils.resolvePath(value, [self._pathBase], mustExist, ConfigError)
+		except:
+			raise RethrowError(errorMsg, ConfigError)
+
 	# Return resolved path (search paths: $PWD, <gc directory>, <base path from constructor>)
 	def getPath(self, *args, **kwargs):
 		mustExist = kwargs.pop('mustExist', True) # throw exception if file is not found
 		def parsePath(value):
 			if value == '':
 				return ''
-			try:
-				return utils.resolvePath(value, [self._pathBase], mustExist, ConfigError)
-			except:
-				raise RethrowError('Error resolving path %s' % value, ConfigError)
+			return self.resolvePath(value, mustExist, 'Error resolving path %s' % value)
 		(selector, args, kwargs) = self._selectorFilter(*args, **kwargs)
 		return self._getTyped('path', str.__str__, parsePath, None, selector, *args, **kwargs)
 
@@ -171,10 +175,7 @@ class ConfigBase(object):
 		def patlist2pathlist(value, mustExist):
 			result = []
 			for pattern in value:
-				try:
-					result.extend(utils.resolvePaths(pattern, [self._pathBase], mustExist, ConfigError))
-				except:
-					raise RethrowError('Error resolving pattern %s' % pattern, ConfigError)
+				result.extend(self.resolvePath(pattern, mustExist, 'Error resolving pattern %s' % pattern))
 			return result
 
 		mustExist = kwargs.pop('mustExist', True)

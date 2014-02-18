@@ -33,7 +33,7 @@ class ListProvider(DataProvider):
 		DataProvider.__init__(self, config, datasetExpr, datasetNick, datasetID)
 
 		(path, self._forcePrefix, self._filter) = utils.optSplit(datasetExpr, '@%')
-		self._filename = utils.resolvePath(path)
+		self._filename = config.resolvePath(path, True, 'Error resolving dataset file: %s' % path)
 
 
 	def getBlocksInternal(self):
