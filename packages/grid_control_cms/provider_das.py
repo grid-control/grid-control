@@ -6,8 +6,8 @@ import time
 
 # required format: <dataset path>[@<instance>][#<block>]
 class DASProvider(CMSProvider):
-	def __init__(self, config, section, datasetExpr, datasetNick, datasetID = 0):
-		CMSProvider.__init__(self, config, section, datasetExpr, datasetNick, datasetID)
+	def __init__(self, config, datasetExpr, datasetNick, datasetID = 0):
+		CMSProvider.__init__(self, config, datasetExpr, datasetNick, datasetID)
 		self.url = QM(self.url == '', 'https://cmsweb.cern.ch/das/cache', self.url)
 
 

@@ -14,10 +14,10 @@ def createDBSAPI(url):
 
 
 # required format: <dataset path>[@<instance>][#<block>]
-class DBSApiv2(CMSProvider):
-	def __init__(self, config, section, datasetExpr, datasetNick, datasetID = 0):
-		CMSProvider.__init__(self, config, section, datasetExpr, datasetNick, datasetID)
-		self.phedex = config.getBool(section, 'use phedex', True) and (self.url == '')
+class DBS2Provider(CMSProvider):
+	def __init__(self, config, datasetExpr, datasetNick, datasetID = 0):
+		CMSProvider.__init__(self, config, datasetExpr, datasetNick, datasetID)
+		self.phedex = config.getBool('use phedex', True) and (self.url == '')
 
 
 	def getCMSDatasetsImpl(self, datasetPath):

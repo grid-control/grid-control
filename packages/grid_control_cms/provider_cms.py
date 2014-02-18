@@ -5,22 +5,22 @@ from webservice_api import *
 
 # required format: <dataset path>[@<instance>][#<block>]
 class CMSProvider(DataProvider):
-	def __init__(self, config, section, datasetExpr, datasetNick, datasetID = 0):
-		DataProvider.__init__(self, config, section, datasetExpr, datasetNick, datasetID)
+	def __init__(self, config, datasetExpr, datasetNick, datasetID = 0):
+		DataProvider.__init__(self, config, datasetExpr, datasetNick, datasetID)
 		# PhEDex blacklist: 'T1_DE_KIT', 'T1_US_FNAL' and '*_Disk' allow user jobs - other T1's dont!
-		self.phedexBL = config.getList(section, 'phedex sites', ['-T3_US_FNALLPC'])
-		self.phedexWL = config.getList(section, 'phedex t1 accept', ['T1_DE_KIT', 'T1_US_FNAL'])
-		self.phedexT1 = config.get(section, 'phedex t1 mode', 'disk').lower()
-		self.onlyComplete = config.getBool(section, 'only complete sites', True)
+		self.phedexBL = config.getList('phedex sites', ['-T3_US_FNALLPC'])
+		self.phedexWL = config.getList('phedex t1 accept', ['T1_DE_KIT', 'T1_US_FNAL'])
+		self.phedexT1 = config.get('phedex t1 mode', 'disk').lower()
+		self.onlyComplete = config.getBool('only complete sites', True)
 
 		(self.datasetPath, self.url, self.datasetBlock) = utils.optSplit(datasetExpr, '@#')
-		self.url = QM(self.url, self.url, config.get(section, 'dbs instance', ''))
+		self.url = QM(self.url, self.url, config.get('dbs instance', ''))
 		self.datasetBlock = QM(self.datasetBlock, self.datasetBlock, 'all')
-		self.includeLumi = config.getBool(section, 'keep lumi metadata', False)
-		self.onlyValid = config.getBool(section, 'only valid', True)
+		self.includeLumi = config.getBool('keep lumi metadata', False)
+		self.onlyValid = config.getBool('only valid', True)
 
 		# This works in tandem with active task module (cmssy.py supports only [section] lumi filter!)
-		self.selectedLumis = parseLumiFilter(config.get(section, 'lumi filter', ''))
+		self.selectedLumis = parseLumiFilter(config.get('lumi filter', ''))
 		if self.selectedLumis:
 			utils.vprint('Runs/lumi section filter enabled! (%d entries)' % len(self.selectedLumis), -1, once = True)
 			utils.vprint('\tThe following runs and lumi sections are selected:', 1, once = True)
