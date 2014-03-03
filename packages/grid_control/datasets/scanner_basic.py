@@ -1,5 +1,5 @@
 import os, sys
-from grid_control import QM, utils, ConfigError, storage, JobSelector, LoadableObject, Config, JobDB, JobSelector, Job, RethrowError
+from grid_control import QM, utils, ConfigError, storage, JobSelector, LoadableObject, Config, JobDB, JobSelector, Job, RethrowError, DefaultFilesConfigFiller, FileConfigFiller
 from scanner_base import InfoScanner
 from grid_control.datasets import DataProvider
 from python_compat import set, sorted
@@ -10,14 +10,15 @@ def splitParse(opt):
 
 # Get output directories from external config file
 class OutputDirsFromConfig(InfoScanner):
-	def __init__(self, config, section):
+	def __init__(self, config):
 		from grid_control import TaskModule
 		newVerbosity = utils.verbosity(utils.verbosity() - 3)
-		extConfig = Config(config.getPath(section, 'source config'))
+		extConfigFN = config.getPath('source config')
+		extConfig = Config([DefaultFilesConfigFiller(), FileConfigFiller([extConfigFN])], extConfigFN)
 		extConfig.opts = type('DummyType', (), {'init': False, 'resync': False})
 		self.extWorkDir = extConfig.getWorkPath()
-		self.extTask = TaskModule.open(extConfig.get('global', ['task', 'module']), extConfig)
-		selector = config.get(section, 'source job selector', '')
+		self.extTask = extConfig.getClass('global', ['task', 'module'], cls = TaskModule).getInstance()
+		selector = config.get('source job selector', '')
 		extJobDB = JobDB(extConfig, jobSelector = lambda jobNum, jobObj: jobObj.state == Job.SUCCESS)
 		self.selected = sorted(extJobDB.getJobs(JobSelector.create(selector, task = self.extTask)))
 		utils.verbosity(newVerbosity + 3)
@@ -33,8 +34,8 @@ class OutputDirsFromConfig(InfoScanner):
 
 
 class OutputDirsFromWork(InfoScanner):
-	def __init__(self, config, section):
-		self.extWorkDir = config.get(section, 'source directory')
+	def __init__(self, config):
+		self.extWorkDir = config.get('source directory')
 		self.extOutputDir = os.path.join(self.extWorkDir, 'output')
 
 	def getEntries(self, path, metadata, events, seList, objStore):
@@ -52,14 +53,14 @@ class OutputDirsFromWork(InfoScanner):
 
 
 class MetadataFromTask(InfoScanner):
-	def __init__(self, config, section):
+	def __init__(self, config):
 		ignoreDef = map(lambda x: 'SEED_%d' % x, range(10)) + ['FILE_NAMES',
 			'SB_INPUT_FILES', 'SE_INPUT_FILES', 'SE_INPUT_PATH', 'SE_INPUT_PATTERN',
 			'SB_OUTPUT_FILES', 'SE_OUTPUT_FILES', 'SE_OUTPUT_PATH', 'SE_OUTPUT_PATTERN',
 			'SE_MINFILESIZE', 'DOBREAK', 'MY_RUNTIME', 'MY_JOBID',
 			'GC_VERSION', 'GC_DEPFILES', 'SUBST_FILES', 'SEEDS',
 			'SCRATCH_LL', 'SCRATCH_UL', 'LANDINGZONE_LL', 'LANDINGZONE_UL']
-		self.ignoreVars = config.getList(section, 'ignore task vars', ignoreDef)
+		self.ignoreVars = config.getList('ignore task vars', ignoreDef)
 
 	def getEntries(self, path, metadata, events, seList, objStore):
 		newVerbosity = utils.verbosity(utils.verbosity() - 3)
@@ -75,8 +76,8 @@ class MetadataFromTask(InfoScanner):
 
 
 class FilesFromLS(InfoScanner):
-	def __init__(self, config, section):
-		self.path = config.get(section, 'source directory', '.')
+	def __init__(self, config):
+		self.path = config.get('source directory', '.')
 		self.path = QM('://' in self.path, self.path, utils.cleanPath(self.path))
 
 	def getEntries(self, path, metadata, events, seList, objStore):
@@ -112,8 +113,8 @@ class FilesFromJobInfo(InfoScanner):
 
 
 class FilesFromDataProvider(InfoScanner):
-	def __init__(self, config, section):
-		dsPath = config.get(section, 'source dataset path')
+	def __init__(self, config):
+		dsPath = config.get('source dataset path')
 		self.source = DataProvider.create(config, None, dsPath, 'ListProvider')
 
 	def getEntries(self, path, metadata, events, seList, objStore):
@@ -125,8 +126,8 @@ class FilesFromDataProvider(InfoScanner):
 
 
 class MatchOnFilename(InfoScanner):
-	def __init__(self, config, section):
-		self.match = config.getList(section, 'filename filter', ['*.root'])
+	def __init__(self, config):
+		self.match = config.getList('filename filter', ['*.root'])
 
 	def getEntries(self, path, metadata, events, seList, objStore):
 		if utils.matchFileName(path, self.match):
@@ -134,18 +135,18 @@ class MatchOnFilename(InfoScanner):
 
 
 class AddFilePrefix(InfoScanner):
-	def __init__(self, config, section):
-		self.prefix = config.get(section, 'filename prefix', '')
+	def __init__(self, config):
+		self.prefix = config.get('filename prefix', '')
 
 	def getEntries(self, path, metadata, events, seList, objStore):
 		yield (self.prefix + path, metadata, events, seList, objStore)
 
 
 class MatchDelimeter(InfoScanner):
-	def __init__(self, config, section):
-		self.matchDelim = config.get(section, 'delimeter match', '').split(':')
-		self.delimDS = config.get(section, 'delimeter dataset key', '')
-		self.delimB = config.get(section, 'delimeter block key', '')
+	def __init__(self, config):
+		self.matchDelim = config.get('delimeter match', '').split(':')
+		self.delimDS = config.get('delimeter dataset key', '')
+		self.delimB = config.get('delimeter block key', '')
 
 	def getGuards(self):
 		return (QM(self.delimDS, ['DELIMETER_DS'], []), QM(self.delimB, ['DELIMETER_B'], []))
@@ -163,11 +164,11 @@ class MatchDelimeter(InfoScanner):
 
 
 class ParentLookup(InfoScanner):
-	def __init__(self, config, section):
-		self.parentKeys = config.getList(section, 'parent keys', [])
-		self.looseMatch = config.getInt(section, 'parent match level', 1)
-		self.source = config.get(section, 'parent source', '')
-		self.merge = config.getBool(section, 'merge parents', False)
+	def __init__(self, config):
+		self.parentKeys = config.getList('parent keys', [])
+		self.looseMatch = config.getInt('parent match level', 1)
+		self.source = config.get('parent source', '')
+		self.merge = config.getBool('merge parents', False)
 		self.lfnMap = {}
 
 	def getGuards(self):
@@ -194,10 +195,10 @@ class ParentLookup(InfoScanner):
 
 
 class DetermineEvents(InfoScanner):
-	def __init__(self, config, section):
-		self.eventsCmd = config.get(section, 'events command', '')
-		self.eventsKey = config.get(section, 'events key', '')
-		self.eventsDefault = config.getInt(section, 'events default', -1)
+	def __init__(self, config):
+		self.eventsCmd = config.get('events command', '')
+		self.eventsKey = config.get('events key', '')
+		self.eventsDefault = config.getInt('events default', -1)
 
 	def getEntries(self, path, metadata, events, seList, objStore):
 		events = int(metadata.get(self.eventsKey, QM(events >= 0, events, self.eventsDefault)))

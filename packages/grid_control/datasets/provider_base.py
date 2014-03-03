@@ -44,8 +44,7 @@ class SimpleNickNameProducer(NickNameProducer):
 
 class InlineNickNameProducer(NickNameProducer):
 	def getName(self, oldnick, dataset, block):
-		cfgSections = ['dataset %s' % block.get(DataProvider.Dataset, ''), 'dataset']
-		return eval(self.config.get(cfgSections, 'nickname expr', 'oldnick'))
+		return eval(self.config.get('nickname expr', 'oldnick'))
 
 
 class DataProvider(LoadableObject):
@@ -94,7 +93,7 @@ class DataProvider(LoadableObject):
 		else:
 			(dsNick, dsProv, dsExpr) = DataProvider.parseDatasetExpr(config, dataset, defaultProvider)
 			config = config.addSections(['dataset']).addNames([dsNick, str(dsId)])
-			section = ['dataset %s' % dsNick, 'dataset %s' % dsId, 'dataset', 'dataset'] # last => help
+			section = ['dataset %s' % dsNick, 'dataset %s' % dsId, 'dataset', 'dataset'] # TODO: remove
 			return DataProvider.open(dsProv, config, dsExpr, dsNick, dsId)
 	create = staticmethod(create)
 

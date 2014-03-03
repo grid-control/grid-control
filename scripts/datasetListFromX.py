@@ -24,12 +24,13 @@ def addOptions(parser):
 
 
 def discoverDataset(opts, parser, providerName, datasetExpr):
-	try:
-		config = gcSupport.config.Config(configDict = {None: dict(parser.values.__dict__)})
-		provider = gcSupport.datasets.DataProvider.open(providerName, config, None, datasetExpr, None)
+	def main():
+		configEntries = map(lambda (k,v): (k, str(v)), parser.values.__dict__.items())
+		config = gcSupport.config.Config([
+			gcSupport.config.DictConfigFiller({'dataset': dict(configEntries)})]).addSections(['dataset'])
+		provider = gcSupport.datasets.DataProvider.open(providerName, config, datasetExpr, None)
 		if opts.output:
 			provider.saveState(opts.output, None, opts.strip)
 		else:
 			gcSupport.datasets.DataProvider.saveStateRaw(sys.stdout, provider.getBlocks(), opts.strip)
-	except gcSupport.GCError:
-		gcSupport.utils.eprint(gcSupport.GCError.message)
+	gcSupport.handleException(main)

@@ -1,7 +1,7 @@
 from grid_control import utils, LoadableObject, AbstractError
 
 class InfoScanner(LoadableObject):
-	def __init__(self, config, section):
+	def __init__(self, config):
 		pass
 
 	def getGuards(self):

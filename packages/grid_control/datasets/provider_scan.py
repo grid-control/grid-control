@@ -1,5 +1,5 @@
 import os, fnmatch, operator
-from grid_control import QM, utils, ConfigError, storage, JobSelector, LoadableObject, Config
+from grid_control import QM, utils, ConfigError, storage, JobSelector, LoadableObject, Config, DefaultFilesConfigFiller, FileConfigFiller
 from provider_base import DataProvider
 from python_compat import set, md5
 from scanner_base import InfoScanner
@@ -14,7 +14,7 @@ class ScanProviderBase(DataProvider):
 		(self.kGuardDS, self.kGuardB) = DSB(config.getList, 'guard override', [])
 		self.kSelectDS = config.getList('dataset key select', [])
 		scanList = config.getList('scanner', datasetExpr)
-		self.scanner = map(lambda cls: InfoScanner.open(cls, config, section), scanList)
+		self.scanner = map(lambda cls: InfoScanner.open(cls, config), scanList)
 
 
 	def collectFiles(self):
@@ -135,12 +135,12 @@ class GCProvider(ScanProviderBase):
 			config.set('source directory', datasetExpr)
 			datasetExpr = os.path.join(datasetExpr, 'work.conf')
 		else:
-			GCProvider.stageDir[None] = ['OutputDirsFromConfig', 'MetadataFromModule']
+			GCProvider.stageDir[None] = ['OutputDirsFromConfig', 'MetadataFromTask']
 			datasetExpr, selector = utils.optSplit(datasetExpr, '%')
 			config.set('source config', datasetExpr)
 			config.set('source job selector', selector)
-		extConfig = Config(datasetExpr)
-		extModule = extConfig.get('global', 'module')
+		extConfig = Config([DefaultFilesConfigFiller(), FileConfigFiller([datasetExpr])], datasetExpr)
+		extModule = extConfig.get('global', ['task', 'module'])
 		if 'ParaMod' in extModule:
 			extModule = extConfig.get('ParaMod', 'module')
 		sGet = lambda scannerDict: scannerDict.get(None) + scannerDict.get(extModule, [])
