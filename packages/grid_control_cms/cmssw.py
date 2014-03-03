@@ -285,7 +285,7 @@ class CMSSW(DataTask):
 
 	def getDescription(self, jobNum): # (task name, job name, type)
 		(taskName, jobName, jobType) = DataTask.getDescription(self, jobNum)
-		return (taskName, jobName, QM(jobType, jobType, QM(self.dataSplitter, 'analysis', 'production')))
+		return (taskName, jobName, QM(jobType, jobType, 'analysis'))
 
 
 	def getDependencies(self):
