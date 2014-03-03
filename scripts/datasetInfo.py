@@ -175,12 +175,12 @@ if opts.liststorage:
 			print 'Dataset: %s' % dsName
 		if block.get(DataProvider.BlockName, None):
 			print 'Blockname: %s' % block[DataProvider.BlockName]
-		if block[DataProvider.SEList] == None:
+		if block[DataProvider.Locations] == None:
 			print '\tNo location contraint specified'
-		elif block[DataProvider.SEList] == []:
+		elif block[DataProvider.Locations] == []:
 			print '\tNot located at anywhere'
 		else:
-			for se in block[DataProvider.SEList]:
+			for se in block[DataProvider.Locations]:
 				print '\t%s' % se
 		print
 
@@ -189,8 +189,8 @@ if opts.info:
 	for block in blocks:
 		print block.get(DataProvider.Dataset, '-'),
 		print block.get(DataProvider.BlockName, '-'),
-		if block.get(DataProvider.SEList, None):
-			print str.join(',', block.get(DataProvider.SEList, '-')),
+		if block.get(DataProvider.Locations, None):
+			print str.join(',', block.get(DataProvider.Locations, '-')),
 		else:
 			print '-',
 		print block.get(DataProvider.NEntries, 0),

@@ -121,7 +121,7 @@ class FilesFromDataProvider(InfoScanner):
 			for fi in block[DataProvider.FileList]:
 				metadata.update({'SRC_DATASET': block[DataProvider.Dataset], 'SRC_BLOCK': block[DataProvider.BlockName]})
 				metadata.update(dict(zip(block.get(DataProvider.Metadata, []), fi.get(DataProvider.Metadata, []))))
-				yield (fi[DataProvider.URL], metadata, fi[DataProvider.NEntries], block[DataProvider.SEList], objStore)
+				yield (fi[DataProvider.URL], metadata, fi[DataProvider.NEntries], block[DataProvider.Locations], objStore)
 
 
 class MatchOnFilename(InfoScanner):

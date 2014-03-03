@@ -50,7 +50,7 @@ class InlineNickNameProducer(NickNameProducer):
 
 class DataProvider(LoadableObject):
 	# To uncover errors, the enums of DataProvider / DataSplitter do *NOT* match
-	dataInfos = ['NEntries', 'BlockName', 'Dataset', 'SEList', 'URL', 'FileList',
+	dataInfos = ['NEntries', 'BlockName', 'Dataset', 'Locations', 'URL', 'FileList',
 		'Nickname', 'DatasetID', 'Metadata', 'Provider', 'ResyncInfo']
 	for id, dataInfo in enumerate(dataInfos):
 		locals()[dataInfo] = id
@@ -136,12 +136,12 @@ class DataProvider(LoadableObject):
 					block[DataProvider.FileList] = filter(lambda x: x[DataProvider.NEntries] != 0, block[DataProvider.FileList])
 
 				# Filter dataset sites
-				if block.setdefault(DataProvider.SEList, None) != None:
-					sites = utils.doBlackWhiteList(block[DataProvider.SEList], self.sitefilter, onEmpty = [], preferWL = False)
+				if block.setdefault(DataProvider.Locations, None) != None:
+					sites = utils.doBlackWhiteList(block[DataProvider.Locations], self.sitefilter, onEmpty = [], preferWL = False)
 					if len(sites) == 0 and len(block[DataProvider.FileList]) != 0:
 						utils.eprint('WARNING: Block %s#%s is not available at any site!'
 							% (block[DataProvider.Dataset], block[DataProvider.BlockName]))
-					block[DataProvider.SEList] = sites
+					block[DataProvider.Locations] = sites
 
 				# Filter by number of files
 				block[DataProvider.FileList] = block[DataProvider.FileList][:QM(self.limitFiles < 0, None, self.limitFiles)]
@@ -178,7 +178,7 @@ class DataProvider(LoadableObject):
 
 
 	# List of block dicts with format
-	# { NEntries: 123, Dataset: '/path/to/data', Block: 'abcd-1234', SEList: ['site1','site2'],
+	# { NEntries: 123, Dataset: '/path/to/data', Block: 'abcd-1234', Locations: ['site1','site2'],
 	#   Filelist: [{URL: '/path/to/file1', NEntries: 100}, {URL: '/path/to/file2', NEntries: 23}]}
 	def getBlocksInternal(self):
 		raise AbstractError
@@ -196,7 +196,7 @@ class DataProvider(LoadableObject):
 			utils.vprint('ID - Dataset - Nick : %s - %s - %s' % tuple(map(lambda (k, d): block.get(k, d), idList)), level)
 			utils.vprint('BlockName : %s' % block[DataProvider.BlockName], level)
 			utils.vprint('#Events   : %s' % block[DataProvider.NEntries], level)
-			seList = QM(block[DataProvider.SEList] != None, block[DataProvider.SEList], ['Not specified'])
+			seList = QM(block[DataProvider.Locations] != None, block[DataProvider.Locations], ['Not specified'])
 			utils.vprint('SE List   : %s' % str.join(', ',  seList), level)
 			utils.vprint('Files     : ', level)
 			for fi in block[DataProvider.FileList]:
@@ -215,8 +215,8 @@ class DataProvider(LoadableObject):
 				writer.write('id = %d\n' % block[DataProvider.DatasetID])
 			if DataProvider.NEntries in block:
 				writer.write('events = %d\n' % block[DataProvider.NEntries])
-			if block.get(DataProvider.SEList) != None:
-				writer.write('se list = %s\n' % str.join(',', block[DataProvider.SEList]))
+			if block.get(DataProvider.Locations) != None:
+				writer.write('se list = %s\n' % str.join(',', block[DataProvider.Locations]))
 			cPrefix = os.path.commonprefix(map(lambda x: x[DataProvider.URL], block[DataProvider.FileList]))
 			cPrefix = str.join('/', cPrefix.split('/')[:-1])
 			if len(cPrefix) > 6:

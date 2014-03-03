@@ -155,7 +155,7 @@ class CMSProvider(DataProvider):
 				if usePhedex:
 					tPhedex.join()
 					listSE = dictSE.get(blockPath)
-				result[DataProvider.SEList] = listSE
+				result[DataProvider.Locations] = listSE
 
 				if len(result[DataProvider.FileList]):
 					counter += 1

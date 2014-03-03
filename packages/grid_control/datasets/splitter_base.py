@@ -20,7 +20,7 @@ ResyncMode.noChanged = [ResyncMode.disable, ResyncMode.complete, ResyncMode.igno
 ResyncOrder = utils.makeEnum(['append', 'preserve', 'fillgap', 'reorder']) # reorder mechanism
 
 class DataSplitter(LoadableObject):
-	splitInfos = ['Dataset', 'SEList', 'NEntries', 'Skipped', 'FileList', 'Nickname', 'DatasetID',
+	splitInfos = ['Dataset', 'Locations', 'NEntries', 'Skipped', 'FileList', 'Nickname', 'DatasetID',
 		'CommonPrefix', 'Invalid', 'BlockName', 'MetadataHeader', 'Metadata', 'Comment']
 	for idx, splitInfo in enumerate(splitInfos):
 		locals()[splitInfo] = idx
@@ -71,7 +71,7 @@ class DataSplitter(LoadableObject):
 
 	def finaliseJobSplitting(self, block, splitInfo, files = None):
 		# Copy infos from block
-		for prop in ['Dataset', 'BlockName', 'DatasetID', 'Nickname', 'SEList']:
+		for prop in ['Dataset', 'BlockName', 'DatasetID', 'Nickname', 'Locations']:
 			if getattr(DataProvider, prop) in block:
 				splitInfo[getattr(DataSplitter, prop)] = block[getattr(DataProvider, prop)]
 		if DataProvider.Metadata in block:
@@ -117,12 +117,12 @@ class DataSplitter(LoadableObject):
 			utils.vprint('Nick: %s' % splitInfo[DataSplitter.Nickname], -1)
 		else:
 			utils.vprint('', -1)
-		if splitInfo.get(DataSplitter.SEList) != None:
-			utils.vprint(' SEList: %s' % utils.wrapList(splitInfo[DataSplitter.SEList], 70, ',\n         '), -1)
+		if splitInfo.get(DataSplitter.Locations) != None:
+			utils.vprint('Locations: %s' % utils.wrapList(splitInfo[DataSplitter.Locations], 70, ',\n         '), -1)
 		for idx, head in enumerate(splitInfo.get(DataSplitter.MetadataHeader, [])):
 			oneFileMetadata = map(lambda x: repr(x[idx]), splitInfo[DataSplitter.Metadata])
 			utils.vprint('%7s: %s' % (head, utils.wrapList(oneFileMetadata, 70, ',\n         ')), -1)
-		utils.vprint('  Files: ', -1, newline = False)
+		utils.vprint('    Files: ', -1, newline = False)
 		if utils.verbosity() > 2:
 			utils.vprint(str.join('\n         ', splitInfo[DataSplitter.FileList]), -1)
 		else:
@@ -172,7 +172,7 @@ class DataSplitter(LoadableObject):
 
 			modSI = copy.deepcopy(oldSplit)
 			if newBlock:
-				modSI[DataSplitter.SEList] = newBlock.get(DataProvider.SEList)
+				modSI[DataSplitter.Locations] = newBlock.get(DataProvider.Locations)
 			# Determine size infos and get started
 			search_url = lambda url: fast_search(oldBlock[DataProvider.FileList], lambda x: cmp(x[DataProvider.URL], url))
 			sizeInfo = map(lambda url: search_url(url)[DataProvider.NEntries], modSI[DataSplitter.FileList])

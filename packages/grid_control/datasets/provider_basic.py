@@ -18,7 +18,7 @@ class FileProvider(DataProvider):
 	def getBlocksInternal(self):
 		yield {
 			DataProvider.Dataset: self._path,
-			DataProvider.SEList: self._selist,
+			DataProvider.Locations: self._selist,
 			DataProvider.FileList: [{
 				DataProvider.URL: self._path, DataProvider.NEntries: int(self._events)
 			}]
@@ -52,7 +52,7 @@ class ListProvider(DataProvider):
 			elif line.startswith('['):
 				if blockinfo and doFilter(blockinfo):
 					yield blockinfo
-				blockinfo = { DataProvider.SEList: None, DataProvider.FileList: [] }
+				blockinfo = { DataProvider.Locations: None, DataProvider.FileList: [] }
 				blockname = line.lstrip('[').rstrip(']').split('#')
 				if len(blockname) > 0:
 					blockinfo[DataProvider.Dataset] = blockname[0]
@@ -76,7 +76,7 @@ class ListProvider(DataProvider):
 				elif key.lower() == 'metadata common':
 					commonMetadata = eval(value)
 				elif key.lower() == 'se list':
-					blockinfo[DataProvider.SEList] = utils.parseList(value)
+					blockinfo[DataProvider.Locations] = utils.parseList(value)
 				elif key.lower() == 'prefix':
 					if not self._forcePrefix:
 						commonprefix = value

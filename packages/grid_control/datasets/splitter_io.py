@@ -89,7 +89,7 @@ class DataSplitterIO_V1:
 					self._cacheTar = tarfile.open(mode = 'r', fileobj = subTarFileObj)
 				parserMap = { None: str, DataSplitter.NEntries: int, DataSplitter.Skipped: int, 
 					DataSplitter.DatasetID: int, DataSplitter.Invalid: utils.parseBool,
-					DataSplitter.SEList: utils.parseList, DataSplitter.MetadataHeader: eval,
+					DataSplitter.Locations: utils.parseList, DataSplitter.MetadataHeader: eval,
 					DataSplitter.Metadata: lambda x: eval(x.strip("'")) }
 				data = self._fmt.parse(self._cacheTar.extractfile('%05d/info' % key).readlines(),
 					keyParser = {None: int}, valueParser = parserMap)
@@ -186,7 +186,7 @@ class DataSplitterIO_V2:
 					self._cacheTar = tarfile.open(mode = 'r', fileobj = subTarFileObj)
 				parserMap = { None: str, DataSplitter.NEntries: int, DataSplitter.Skipped: int, 
 					DataSplitter.DatasetID: int, DataSplitter.Invalid: utils.parseBool,
-					DataSplitter.SEList: utils.parseList, DataSplitter.MetadataHeader: eval,
+					DataSplitter.Locations: utils.parseList, DataSplitter.MetadataHeader: eval,
 					DataSplitter.Metadata: lambda x: eval(x.strip("'")) }
 				fullData = self._cacheTar.extractfile('%05d' % key).readlines()
 				data = self._fmt.parse(filter(lambda x: not x.startswith('='), fullData),

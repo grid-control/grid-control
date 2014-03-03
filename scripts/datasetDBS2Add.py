@@ -168,7 +168,7 @@ def getDBSXML(opts, block, dsBlocks):
 	nodeBlock = writer.newElement(nodeDBS, 'block', {'name': fqBlock, 'path': block[DataProvider.Dataset],
 		'number_of_events': block[DataProvider.NEntries], 'number_of_files': len(block[DataProvider.FileList]),
 		'size': sum(getAllM(DBS.SIZE)), 'open_for_writing': QM(opts.closeBlock, '0', '1')})
-	for se in block[DataProvider.SEList]:
+	for se in block[DataProvider.Locations]:
 		writer.newElement(nodeBlock, 'storage_element', {'storage_element_name': se})
 
 	# List files in block

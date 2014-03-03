@@ -25,10 +25,10 @@ class DataSplitProcessor:
 			'DATASETNICK': splitInfo.get(DataSplitter.Nickname, None),
 			'DATASETSPLIT': pNum,
 		})
-		result[ParameterInfo.REQS].append((WMS.STORAGE, splitInfo.get(DataSplitter.SEList)))
+		result[ParameterInfo.REQS].append((WMS.STORAGE, splitInfo.get(DataSplitter.Locations)))
 		result[ParameterInfo.ACTIVE] = result[ParameterInfo.ACTIVE] and not splitInfo.get(DataSplitter.Invalid, False)
 		if self.checkSE:
-			result[ParameterInfo.ACTIVE] = result[ParameterInfo.ACTIVE] and (splitInfo.get(DataSplitter.SEList) != [])
+			result[ParameterInfo.ACTIVE] = result[ParameterInfo.ACTIVE] and (splitInfo.get(DataSplitter.Locations) != [])
 
 
 class DataParameterSource(ParameterSource):

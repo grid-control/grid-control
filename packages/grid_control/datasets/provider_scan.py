@@ -102,7 +102,7 @@ class ScanProviderBase(DataProvider):
 				yield {
 					DataProvider.Dataset: hashNameDictDS[hashDS],
 					DataProvider.BlockName: hashNameDictB[hashB][1],
-					DataProvider.SEList: blockSEList,
+					DataProvider.Locations: blockSEList,
 					DataProvider.Metadata: metaKeys,
 					DataProvider.FileList: map(fnProps, protoBlocks[hashDS][hashB])
 				}
