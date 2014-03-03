@@ -22,6 +22,8 @@ parser.add_option('-m', '--metadata',      dest='metadata',     default=False, a
 	help='Get metadata infomation of dataset files')
 parser.add_option('-M', '--block-metadata', dest='blockmetadata', default=False, action='store_true',
 	help='Get common metadata infomation of dataset blocks')
+parser.add_option('-L', '--location',      dest='locationfmt',  default='hostname',
+	help='Format of location information')
 parser.add_option('', '--sort',            dest='sort',         default=False, action='store_true',
 	help='Sort dataset blocks and files')
 parser.add_option('', '--settings',        dest='settings',     default=None,
@@ -44,7 +46,8 @@ dataset = args[0].strip()
 if os.path.exists(dataset):
 	provider = DataProvider.loadState(dataset)
 else:
-	cfgSettings = {'dbs blacklist T1': 'False', 'remove empty blocks': 'False', 'remove empty files': 'False'}
+	cfgSettings = {'dbs blacklist T1': 'False', 'remove empty blocks': 'False',
+		'remove empty files': 'False', 'location format': opts.locationfmt}
 	if opts.metadata or opts.blockmetadata:
 		cfgSettings['lumi filter'] = '-'
 		cfgSettings['keep lumi metadata'] = 'True'

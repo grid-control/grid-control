@@ -1,4 +1,4 @@
-from grid_control import QM, utils, datasets, DatasetError
+from grid_control import QM, utils, datasets, DatasetError, ConfigError
 from grid_control.datasets import DataProvider, HybridSplitter, DataSplitter
 from lumi_tools import *
 from webservice_api import *
@@ -12,6 +12,9 @@ class CMSProvider(DataProvider):
 		self.phedexWL = config.getList('phedex t1 accept', ['T1_DE_KIT', 'T1_US_FNAL'])
 		self.phedexT1 = config.get('phedex t1 mode', 'disk').lower()
 		self.onlyComplete = config.getBool('only complete sites', True)
+		self.locationFormat = config.get('location format', 'hostname').lower() # hostname or sitedb
+		if self.locationFormat not in ['hostname', 'sitedb', 'both']:
+			raise ConfigError('Invalid location format: %s' % self.locationFormat)
 
 		(self.datasetPath, self.url, self.datasetBlock) = utils.optSplit(datasetExpr, '@#')
 		self.url = QM(self.url, self.url, config.get('dbs instance', ''))
@@ -74,10 +77,18 @@ class CMSProvider(DataProvider):
 		for phedexBlock in readJSON(url, {'block': blockPath})['phedex']['block']:
 			for replica in phedexBlock['replica']:
 				if self.nodeFilter(replica['node'], replica['complete'] == 'y'):
-					if 'se' in replica and replica['se'] is not None:
-						dictSE[blockPath].append(replica['se'])
+					location = None
+					if self.locationFormat == 'hostname':
+						location = replica.get('se')
+					elif self.locationFormat == 'sitedb':
+						location = replica.get('node')
+					elif self.locationFormat == 'both' and (replica.get('node') or replica.get('se')):
+						location = '%s/%s' % (replica.get('node'), replica.get('se'))
+					if location:
+						dictSE[blockPath].append(location)
 					else:
-						print 'Warning: skipping a replica of a dataset hosted at a site, as the site did not declare its SE address'
+						utils.vprint('Warning: Dataset block %s replica at %s / %s is skipped!' %
+							(blockPath, replica.get('node'), replica.get('se')) , -1)
 
 
 	def getCMSDatasets(self):
