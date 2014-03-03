@@ -44,7 +44,10 @@ class TaggedConfig(ConfigBase):
 		tmp = self.clone(selectorFilter = selectorFilter, ClassTemplate = TaggedConfig)
 		tmp._initSelector(refClass, refNames, refTags, refSections)
 		tmp.confName = self.confName # FIXME: move into API
-		tmp.opts = self.opts
+		try:
+			tmp.opts = self.opts
+		except:
+			pass
 		return tmp
 
 
@@ -72,7 +75,7 @@ class TaggedConfig(ConfigBase):
 
 # Main config interface
 class Config(TaggedConfig):
-	def __init__(self, fillerList, configFile = None):
+	def __init__(self, fillerList = [], configFile = None):
 		self._allowSet = True
 		# Read in the current configuration from config file, manual dictionary, command line and "config" dir
 		curCfg = ResolvingConfigContainer('current')
@@ -127,7 +130,7 @@ class Config(TaggedConfig):
 
 # For compatibility with old work directories
 class CompatConfig(Config):
-	def __init__(self, fillerList, configFile = None):
+	def __init__(self, fillerList = [], configFile = None):
 		Config.__init__(self, fillerList, configFile)
 		persistencyFile = self.getWorkPath('task.dat')
 		# read old persistency file - and set appropriate config options

@@ -258,9 +258,9 @@ class DataProvider(LoadableObject):
 
 
 	# Load dataset information using ListProvider
-	def loadState(path):
+	def loadState(path, config = Config()):
 		# None, None = Don't override NickName and ID
-		return DataProvider.open('ListProvider', Config(), 'dataset', path, None, None)
+		return DataProvider.open('ListProvider', config.addSections(['dataset']), path, None, None)
 	loadState = staticmethod(loadState)
 
 
