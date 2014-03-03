@@ -4,29 +4,29 @@ from grid_control import QM, utils, LoadableObject, AbstractError, ConfigError, 
 class NickNameProducer(LoadableObject):
 	def __init__(self, config):
 		self.config = config
-		# Check if two different datasets have the same nickname
-		self._checkCollision = config.getBool('nickname check collision', True)
-		self._checkCollisionData = {}
 		# Ensure the same nickname is used consistently in all blocks of a dataset
 		self._checkConsistency = config.getBool('nickname check consistency', True)
 		self._checkConsistencyData = {}
+		# Check if two different datasets have the same nickname
+		self._checkCollision = config.getBool('nickname check collision', True)
+		self._checkCollisionData = {}
 
 	# Get nickname and check for collisions
 	def process(self, block):
 		blockDS = block[DataProvider.Dataset]
 		oldNick = block.get(DataProvider.Nickname, '')
 		newNick = self.getName(oldNick, blockDS, block)
-		if not (self._checkCollision or self._checkConsistency):
+		if not (self._checkConsistency or self._checkCollision):
 			return newNick # Skip checking for collisions if disabled
 		# Check if nickname is used consistenly in all blocks of a datasets
-		if self._checkCollision:
-			if self._checkCollisionData.setdefault(blockDS, newNick) != newNick:
-				raise DatasetError('Different blocks of dataset "%s" have different nicknames: "%s" != "%s"' % (
-					blockDS, self._checkCollisionData[blockDS], newNick))
 		if self._checkConsistency:
-			if self._checkConsistencyData.setdefault(newNick, blockDS) != blockDS:
+			if self._checkConsistencyData.setdefault(blockDS, newNick) != newNick:
+				raise DatasetError('Different blocks of dataset "%s" have different nicknames: "%s" != "%s"' % (
+					blockDS, self._checkConsistencyData[blockDS], newNick))
+		if self._checkCollision:
+			if self._checkCollisionData.setdefault(newNick, blockDS) != blockDS:
 				raise DatasetError('Multiple datasets use the same nickname "%s": "%s" != "%s"' % (
-					newNick, self._checkConsistencyData[newNick], blockDS))
+					newNick, self._checkCollisionData[newNick], blockDS))
 		return newNick
 
 	# Overwritten by users / other implementations
