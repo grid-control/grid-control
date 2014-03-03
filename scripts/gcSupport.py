@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-import sys, os, re, fcntl, time, optparse
+import sys, os, re, fcntl, time, optparse, logging
 
 # add python subdirectory from where exec was started to search path
 sys.path.insert(1, os.path.join(sys.path[0], '..', 'packages'))
@@ -116,6 +116,7 @@ def parseOptions(parser):
 	parser.add_option("-v", "--verbose",   dest="verbosity",   default=0,         action="count",
 		help='Increase verbosity')
 	(opts, args) = parser.parse_args()
+	logging.getLogger().setLevel(logging.DEFAULT_VERBOSITY - opts.verbosity)
 	utils.verbosity(opts.verbosity)
 	utils.printTabular.mode = opts.displaymode
 	utils.printTabular.wraplen = int(opts.textwidth)

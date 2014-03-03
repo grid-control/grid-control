@@ -30,7 +30,10 @@ def logException_internal(exClass, exValue, stack):
 		maxlen = max(map(len, tmp.keys()) + [0])
 		def display(var):
 			try:
-				return repr(var)
+				value = repr(var)
+				if log.isEnabledFor(logging.INFO1) or (len(value) < 500):
+					return value
+				return value[:500] + " ... [length:%d]" % len(value)
 			except:
 				return 'unable to display!'
 		for var in sorted(filter(lambda v: v != 'self', tmp)):
