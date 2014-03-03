@@ -153,7 +153,8 @@ def main():
 			if len(str(mv)) > 200:
 				mv = '<metadata entry size: %s> %s...' % (len(str(mv)), repr(mv)[:200])
 			print '\t%s: %s' % (mk.rjust(maxlen), mv)
-		print
+		if src:
+			print
 
 	if opts.metadata and not opts.save:
 		print
@@ -161,10 +162,10 @@ def main():
 			if len(datasets) > 1:
 				print 'Dataset: %s' % block[DataProvider.Dataset]
 			print 'Blockname: %s' % block[DataProvider.BlockName]
-			mk_len = max(map(len, block[DataProvider.Metadata]))
+			mk_len = max(map(len, block.get(DataProvider.Metadata, [''])))
 			for f in block[DataProvider.FileList]:
 				print '%s [%d events]' % (f[DataProvider.URL], f[DataProvider.NEntries])
-				printMetadata(zip(block[DataProvider.Metadata], f[DataProvider.Metadata]), mk_len)
+				printMetadata(zip(block.get(DataProvider.Metadata, []), f.get(DataProvider.Metadata, [])), mk_len)
 			print
 
 	if opts.blockmetadata and not opts.save:
