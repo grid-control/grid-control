@@ -8,11 +8,10 @@ class PBSGECommon(LocalWMS):
 			submitExec = utils.resolveInstallPath('qsub'),
 			statusExec = utils.resolveInstallPath('qstat'),
 			cancelExec = utils.resolveInstallPath('qdel'))
-		section = self._getSections('backend')
-		self.group = config.get(section, 'group', '', onChange = None)
-		self.shell = config.get(section, 'shell', '', onChange = None)
-		self.delay = config.getBool(section, 'delay output', False, onChange = None)
-		self.addAttr = config.getDict(section, 'submit options', {}, onChange = None) # TODO
+		self.group = config.get('group', '', onChange = None)
+		self.shell = config.get('shell', '', onChange = None)
+		self.delay = config.getBool('delay output', False, onChange = None)
+		self.addAttr = config.getDict('submit options', {}, onChange = None) # TODO
 
 
 	def unknownID(self):

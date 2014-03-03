@@ -7,7 +7,8 @@ from python_compat import set
 class OGE(PBSGECommon):
 	def __init__(self, config, wmsName = None):
 		PBSGECommon.__init__(self, config, wmsName)
-		self.user = config.get(self._getSections('backend'), 'user', os.environ.get('LOGNAME', ''), onChange = None)
+		self.user = config.get('user', os.environ.get('LOGNAME', ''), onChange = None)
+		self.project = config.get('project name', '', onChange = None)
 		self.configExec = utils.resolveInstallPath('qconf')
 
 
@@ -17,6 +18,8 @@ class OGE(PBSGECommon):
 			WMS.WALLTIME: ('s_rt', timeStr), WMS.CPUTIME: ('h_cpu', timeStr) }
 		# Restart jobs = no
 		params = ' -r n'
+		if self.project:
+			params += ' -P %s' % self.project
 		# Job requirements
 		(queue, nodes) = (reqs.get(WMS.QUEUES, [''])[0], reqs.get(WMS.SITES))
 		if not nodes and queue:
