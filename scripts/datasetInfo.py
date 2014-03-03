@@ -105,25 +105,28 @@ if opts.configentry:
 
 
 if opts.listdatasets:
+	# Add some enums for consistent access to info dicts
+	DataProvider.NFiles = -1
+	DataProvider.NBlocks = -2
+
 	print
 	infos = {}
-	infosum = {
-		DataProvider.NEntries : 0,
-		DataProvider.Dataset : 'Sum'
-	}
 	order = []
+	infosum = {DataProvider.Dataset : 'Sum'}
 	for block in blocks:
 		dsName = block.get(DataProvider.Dataset, '')
 		if not infos.get(dsName, None):
 			order.append(dsName)
-			infos[dsName] = {
-				DataProvider.NEntries : 0,
-				DataProvider.Dataset : block[DataProvider.Dataset]
-			}
-		infos[dsName][DataProvider.NEntries] += block[DataProvider.NEntries]
-		infosum[DataProvider.NEntries] += block[DataProvider.NEntries]
-	utils.printTabular([(DataProvider.Dataset, 'Dataset'), (DataProvider.NEntries, 'Events')],
-		map(lambda x: infos[x], order) + ["=", infosum])
+			infos[dsName] = {DataProvider.Dataset: block[DataProvider.Dataset]}
+		def updateInfos(target):
+			target[DataProvider.NBlocks]  = target.get(DataProvider.NBlocks, 0) + 1
+			target[DataProvider.NFiles]   = target.get(DataProvider.NFiles, 0) + len(block[DataProvider.FileList])
+			target[DataProvider.NEntries] = target.get(DataProvider.NEntries, 0) + block[DataProvider.NEntries]
+		updateInfos(infos[dsName])
+		updateInfos(infosum)
+	head = [(DataProvider.Dataset, 'Dataset'), (DataProvider.NEntries, '#Events'),
+		(DataProvider.NBlocks, '#Blocks'), (DataProvider.NFiles, '#Files')]
+	utils.printTabular(head, map(lambda x: infos[x], order) + ["=", infosum])
 
 if opts.listblocks:
 	print
