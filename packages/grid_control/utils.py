@@ -802,10 +802,17 @@ def printTabular(head, data, fmtString = '', fmt = {}, level = -1):
 		return
 	if printTabular.mode == 'longlist':
 		maxhead = max(map(len, map(lambda (key, name): name, head)))
+		showLine = False
 		for entry in data:
-			for (key, name) in head:
-				print name.rjust(maxhead + 2), '|', str(fmt.get(key, str)(entry.get(key, '')))
-			print ('-' * (maxhead + 2)) + '-+-' + '-' * min(30, printTabular.wraplen - maxhead - 10)
+			if isinstance(entry, dict):
+				if showLine:
+					print ('-' * (maxhead + 2)) + '-+-' + '-' * min(30, printTabular.wraplen - maxhead - 10)
+				for (key, name) in head:
+					print name.rjust(maxhead + 2), '|', str(fmt.get(key, str)(entry.get(key, '')))
+				showLine = True
+			elif showLine:
+				print ('=' * (maxhead + 2)) + '=+=' + '=' * min(30, printTabular.wraplen - maxhead - 10)
+				showLine = False
 		return
 
 	justFunDict = { 'l': str.ljust, 'r': str.rjust, 'c': str.center }
