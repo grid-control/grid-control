@@ -1,5 +1,6 @@
 from grid_control import QM, utils, datasets, DatasetError, ConfigError
 from grid_control.datasets import DataProvider, HybridSplitter, DataSplitter
+from python_compat import set
 from lumi_tools import *
 from webservice_api import *
 
@@ -21,6 +22,7 @@ class CMSProvider(DataProvider):
 		self.datasetBlock = QM(self.datasetBlock, self.datasetBlock, 'all')
 		self.includeLumi = config.getBool('keep lumi metadata', False)
 		self.onlyValid = config.getBool('only valid', True)
+		self.checkUnique = config.getBool('check unique', True)
 
 		# This works in tandem with active task module (cmssy.py supports only [section] lumi filter!)
 		self.selectedLumis = parseLumiFilter(config.get('lumi filter', ''))
@@ -162,6 +164,12 @@ class CMSProvider(DataProvider):
 					if self.includeLumi:
 						result[DataProvider.Metadata].append('Lumi')
 				result[DataProvider.FileList] = list(self.getCMSFiles(blockPath))
+				if self.checkUnique:
+					uniqueFL = list(set(result[DataProvider.FileList]))
+					if result[DataProvider.FileList] != uniqueFL:
+						utils.vprint('Warning: The webservice returned %d duplicated files in dataset block %s! Continuing with unique files...' %
+							(len(result[DataProvider.FileList]) - uniqueFL), -1)
+					result[DataProvider.FileList] = uniqueFL
 
 				if usePhedex:
 					tPhedex.join()
