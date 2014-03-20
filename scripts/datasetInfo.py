@@ -24,6 +24,8 @@ parser.add_option('-M', '--block-metadata', dest='blockmetadata', default=False,
 	help='Get common metadata infomation of dataset blocks')
 parser.add_option('-L', '--location',      dest='locationfmt',  default='hostname',
 	help='Format of location information')
+parser.add_option('-p', '--provider',      dest='provider',     default='dbs',
+	help='Default dataset provider')
 parser.add_option('', '--sort',            dest='sort',         default=False, action='store_true',
 	help='Sort dataset blocks and files')
 parser.add_option('', '--settings',        dest='settings',     default=None,
@@ -65,7 +67,7 @@ def main():
 	if os.path.exists(dataset):
 		provider = DataProvider.loadState(dataset, dummyConfig)
 	else:
-		provider = DataProvider.create(dummyConfig, dataset, 'dbs')
+		provider = DataProvider.create(dummyConfig, dataset, opts.provider)
 	blocks = provider.getBlocks()
 	if len(blocks) == 0:
 		raise DatasetError('No blocks!')
