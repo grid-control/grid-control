@@ -165,11 +165,16 @@ class CMSProvider(DataProvider):
 						result[DataProvider.Metadata].append('Lumi')
 				result[DataProvider.FileList] = list(self.getCMSFiles(blockPath))
 				if self.checkUnique:
-					uniqueFL = list(set(result[DataProvider.FileList]))
-					if result[DataProvider.FileList] != uniqueFL:
+					uniqueURLs = set(map(lambda x: x[DataProvider.URL], result[DataProvider.FileList]))
+					if len(result[DataProvider.FileList]) != len(uniqueURLs):
 						utils.vprint('Warning: The webservice returned %d duplicated files in dataset block %s! Continuing with unique files...' %
-							(len(result[DataProvider.FileList]) - uniqueFL), -1)
-					result[DataProvider.FileList] = uniqueFL
+							(len(result[DataProvider.FileList]) - len(uniqueURLs)), -1)
+					uniqueFIs = []
+					for fi in result[DataProvider.FileList]:
+						if fi[DataProvider.URL] in uniqueURLs:
+							uniqueURLs.remove(fi[DataProvider.URL])
+							uniqueFIs.append(fi)
+					result[DataProvider.FileList] = uniqueFIs
 
 				if usePhedex:
 					tPhedex.join()
