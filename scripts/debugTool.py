@@ -13,6 +13,8 @@ ogBackend.add_option('', '--list-queues', dest='list_queues', default=False, act
 	help='List backend queues')
 parser.add_option_group(ogBackend)
 
+parser.add_option("", "--reset-attempts", dest="resettrys", default=False, action="store_true",
+	help="Reset the attempt counter")
 parser.add_option("-j", "--jdl", dest="jdl", default=False, action="store_true",
 	help="Get JDL file")
 parser.add_option("-J", "--jobs", dest="jobs", default="",
@@ -47,10 +49,26 @@ if opts.jobs:
 	config.opts.init = False
 	config.opts.resync = False
 	# Initialise task module
-	task = TaskModule.open(config.get('global', ['task', 'module']), config)
-	jobDB = JobDB(config)
-	selected = JobSelector.create(opts.jobs, task = task)
+	taskName = config.get('global', ['task', 'module'])
+	try:
+		task = TaskModule.open(taskName, config, taskName)
+		jobDB = JobDB(config)
+		selected = JobSelector.create(opts.jobs, task = task)
+	except:
+		sys.stderr.write(logException())
+		raise
+	if opts.resettrys:
+		for jobNum in jobDB.getJobsIter(selected):
+			print "Resetting attempts", jobNum
+			jobinfo = jobDB.get(jobNum)
+			jobinfo.attempt = 0
+			jobinfo.history = {}
+			for key in jobinfo.dict.keys():
+				if key.startswith('history'):
+					jobinfo.dict.pop(key)
+			jobDB.commit(jobNum, jobinfo)
 	print str.join(' ', map(str, jobDB.getJobsIter(selected)))
+
 
 if opts.diff:
 	if len(args) != 2:
