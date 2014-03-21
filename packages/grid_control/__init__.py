@@ -18,7 +18,7 @@ from grid_control.help	import Help
 
 from grid_control.proxy	import Proxy
 from grid_control.storage	import StorageManager
-from grid_control.backends	import WMS, WMSFactory
+from grid_control.backends	import WMS
 from grid_control.monitoring	import Monitoring
 
 from grid_control.parameters	import *

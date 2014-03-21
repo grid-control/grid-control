@@ -20,9 +20,9 @@ class LoadableObject(object):
 		log.log(logging.DEBUG1, 'Loading class %s' % clsName)
 		# resolve class name/alias to fully qualified class path
 		def resolveClassName(name):
-			cname = cls.moduleMapDynamic.get(name.lower(), name)
+			resolveFun = cls.moduleMapDynamic.get(name.lower(), lambda x: x)
 			classMap = dict(map(lambda (k, v): (k.lower(), v), cls.moduleMap.items()))
-			cname = classMap.get(cname.lower(), cname)
+			cname = resolveFun(classMap.get(name.lower(), name))
 			if cname == name:
 				return name
 			return resolveClassName(cname)
@@ -124,23 +124,18 @@ class NamedObject(LoadableObject):
 # General purpose class factory
 class ClassFactory:
 	def __init__(self, cls, config, tags, opt, optMerge):
-		self._proxyList = config.getClassList(opt[0], opt[1], cls = cls, tags = tags)
+		proxyList = config.getClassList(opt[0], opt[1], cls = cls, tags = tags)
 		self._mergeCls = None
-		if len(self._proxyList) > 1:
+		if len(proxyList) > 1:
 			self._mergeCls = config.getClass(optMerge[0], optMerge[1], cls = cls, tags = tags)
+		self._classList = map(lambda clsProxy: lambda *args, **kwargs: clsProxy.getInstance(*args, **kwargs), proxyList)
 
 	# Get single instance by merging multiple sub instances if necessary
 	def getInstance(self, *args, **kwargs):
-		clsList = []
-		for clsUser in self._proxyList:
-			try:
-				clsList.append(clsUser.getInstance(*args, **kwargs))
-			except:
-				raise RethrowError('Unable to load %s' % clsUser)
-		if len(clsList) == 1:
-			return clsList[0]
-		elif len(clsList) > 1:
-			return self._mergeCls(*clsList)
+		if len(self._classList) == 1:
+			return self._classList[0](*args, **kwargs)
+		elif len(self._classList) > 1:
+			return self._mergeCls.getInstance(self._classList, *args, **kwargs)
 
 
 # Needed by getClass / getClasses to wrap the fixed arguments to the instantiation / name of the instance

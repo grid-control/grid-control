@@ -1,5 +1,4 @@
 from wms import *
-from wms_factory import WMSFactory
 from local_wms import LocalWMS
 from broker import *
 from broker_basic import *
@@ -15,7 +14,7 @@ wms.WMS.moduleMap['OGE'] = 'sge.OGE'
 wms.WMS.moduleMap['grid'] = 'GliteWMS'
 wms.WMS.moduleMap['inactive'] = 'InactiveWMS'
 
-def findLocalWMS(self, clsName):
+def findLocalWMS(clsName):
 	for wms, cmd in [('OGE', 'sgepasswd'), ('PBS', 'pbs-config'), ('OGE', 'qsub'), ('LSF', 'bsub'), ('SLURM', 'job_slurm')]:
 		try:
 			utils.resolveInstallPath(cmd)

@@ -4,13 +4,15 @@ from time import localtime, strftime
 from DashboardAPI import DashboardAPI
 
 class DashBoard(Monitoring):
+	getConfigSections = Monitoring.createFunction_getConfigSections(['dashboard'])
+
 	def __init__(self, config, name, task):
 		Monitoring.__init__(self, config, name, task)
 		(taskName, jobName, jobType) = task.getDescription(None) # TODO: use the other variables for monitoring
-		self.app = config.get('dashboard', 'application', 'shellscript', onChange = None)
+		self.app = config.get('application', 'shellscript', onChange = None)
 		jobType = QM(jobType, jobType, 'analysis')
-		self.tasktype = config.get('dashboard', 'task', jobType, onChange = None)
-		self.taskname = config.get('dashboard', 'task name', '@TASK_ID@_@DATASETNICK@', onChange = None)
+		self.tasktype = config.get('task', jobType, onChange = None)
+		self.taskname = config.get('task name', '@TASK_ID@_@DATASETNICK@', onChange = None)
 		self._statusMap = {Job.DONE: 'DONE', Job.FAILED: 'DONE', Job.SUCCESS: 'DONE',
 			Job.RUNNING: 'RUNNING', Job.ABORTED: 'ABORTED', Job.CANCELLED: 'CANCELLED'}
 

@@ -173,13 +173,15 @@ class ConfigBase(object):
 	# Return multiple resolved paths (each line processed same as getPath)
 	def getPaths(self, *args, **kwargs):
 		def patlist2pathlist(value, mustExist):
-			result = []
-			for pattern in value:
-				result.extend(self.resolvePath(pattern, mustExist, 'Error resolving pattern %s' % pattern))
-			return result
+			try:
+				for pattern in value:
+					for fn in utils.resolvePaths(pattern, [self._pathBase], mustExist, ConfigError):
+						yield fn
+			except:
+				raise RethrowError('Error resolving pattern %s' % pattern, ConfigError)
 
 		mustExist = kwargs.pop('mustExist', True)
-		str2obj = lambda value: patlist2pathlist(utils.parseList(value, None, onEmpty = []), mustExist)
+		str2obj = lambda value: list(patlist2pathlist(utils.parseList(value, None, onEmpty = []), mustExist))
 		obj2str = lambda value: '\n' + str.join('\n', patlist2pathlist(value, False))
 		(selector, args, kwargs) = self._selectorFilter(*args, **kwargs)
 		return self._getTyped('paths', obj2str, str2obj, None, selector, *args, **kwargs)

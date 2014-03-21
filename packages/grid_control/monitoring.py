@@ -44,6 +44,11 @@ Monitoring.registerObject(tagName = 'monitor')
 Monitoring.moduleMap["scripts"] = "ScriptMonitoring"
 
 
+class MultiMonitor(Monitoring):
+	def __init__(self, config, name, submodules, task):
+		Monitoring.__init__(self, config, name, None, map(lambda m: m(task), submodules))
+
+
 class ScriptMonitoring(Monitoring):
 	getConfigSections = NamedObject.createFunction_getConfigSections(['scripts'])
 

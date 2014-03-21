@@ -5,6 +5,7 @@ from grid_control.backends import WMS
 from grid_control.job_manager import JobManager
 from grid_control.gui import GUI
 from grid_control import utils
+from grid_control.report import Report
 
 # Workflow class
 class Workflow(NamedObject):
@@ -20,7 +21,7 @@ class Workflow(NamedObject):
 
 		# Initialise monitoring module
 		self.monitor = ClassFactory(Monitoring, config, [self.task],
-			('monitor', 'scripts'), ('monitor manager', 'Monitoring')).getInstance(self.task)
+			('monitor', 'scripts'), ('monitor manager', 'MultiMonitor')).getInstance(self.task)
 
 		# Initialise workload management interface
 		self.wms = ClassFactory(WMS, config, [self.task],

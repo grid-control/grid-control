@@ -2,11 +2,13 @@ import time, xmpp, stat, os
 from grid_control import Monitoring
 
 class JabberAlarm(Monitoring):
-	def __init__(self, config, task, submodules = []):
-		Monitoring.__init__(self, config, task)
-		self.source_jid = config.get('jabber', 'source jid')
-		self.target_jid = config.get('jabber', 'target jid')
-		pwPath = config.getPath('jabber', 'source password file')
+	getConfigSections = Monitoring.createFunction_getConfigSections(['jabber'])
+
+	def __init__(self, config, name, task, submodules = []):
+		Monitoring.__init__(self, config, name, task)
+		self.source_jid = config.get('source jid')
+		self.target_jid = config.get('target jid')
+		pwPath = config.getPath('source password file')
 		os.chmod(pwPath, stat.S_IRUSR)
 		self.source_pw = open(pwPath).read().strip()
 

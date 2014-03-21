@@ -1,6 +1,6 @@
 from grid_control import QM, utils, datasets, DatasetError, ConfigError
 from grid_control.datasets import DataProvider, HybridSplitter, DataSplitter
-from python_compat import set
+from python_compat import set, sorted
 from lumi_tools import *
 from webservice_api import *
 
