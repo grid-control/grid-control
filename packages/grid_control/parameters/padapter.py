@@ -75,7 +75,7 @@ class TrackedParameterAdapter(BasicParameterAdapter):
 		self._pathParams = config.getWorkPath('params.dat.gz')
 
 		# Find out if init should be performed - overrides userResync!
-		userInit = config.opts.init
+		userInit = config.getState(detail = 'parameters')
 		needInit = False
 		if not (os.path.exists(self._pathParams) and os.path.exists(self._pathJob2PID)):
 			needInit = True # Init needed if no parameter log exists
@@ -86,7 +86,7 @@ class TrackedParameterAdapter(BasicParameterAdapter):
 		doInit = userInit or needInit
 
 		# Find out if resync should be performed
-		userResync = config.opts.resync
+		userResync = config.getState('resync', detail = 'parameters')
 		needResync = False
 		pHash = self._rawSource.getHash()
 		self.storedHash = config.get('parameter hash', pHash, persistent = True)

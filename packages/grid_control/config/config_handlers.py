@@ -24,8 +24,8 @@ class changeInitNeeded:
 			if not utils.getUserBool('A partial reinitialization (same as --reinit %s) is needed to apply this change! Do you want to continue?' % self._option, True):
 				log.log(logging.INFO1, 'Using stored value %s for option %s' % (obj2str(cur_obj), cur_entry.format_opt()))
 				return old_obj
-		config.set('init %s' % self._option, 'True')
-		config.set('init config', 'True', section = 'global') # This will trigger a write of the new options
+		config.setState(True, 'init', self._option) # This will trigger a write of the new options
+		config.setState(True, 'init', 'config')
 		return cur_obj
 
 

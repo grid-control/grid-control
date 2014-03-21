@@ -133,7 +133,7 @@ class BasicWMS(WMS):
 
 		self.smSEIn.addFiles(map(lambda (d, s, t): t, module.getSEInFiles())) # add module SE files to SM
 		# Transfer common SE files
-		if self.config.opts.init:
+		if self.config.getState(detail = 'storage'):
 			self.smSEIn.doTransfer(module.getSEInFiles())
 
 		def convert(fnList):
@@ -147,7 +147,7 @@ class BasicWMS(WMS):
 		utils.vprint('Packing sandbox:')
 		sandbox = self._getSandboxName(module)
 		utils.ensureDirExists(os.path.dirname(sandbox), 'sandbox directory')
-		if not os.path.exists(sandbox) or self.config.opts.init:
+		if not os.path.exists(sandbox) or self.config.getState(detail = 'sandbox'):
 			utils.genTarball(sandbox, convert(self._getSandboxFiles(module, monitor, [self.smSEIn, self.smSEOut])))
 
 

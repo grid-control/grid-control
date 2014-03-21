@@ -35,8 +35,9 @@ class BasicParameterFactory(ParameterFactory):
 		unscopedConfig = config.clone()
 
 		# Get constants from [constants]
-		for cName in filter(lambda o: not o.endswith(' lookup'), unscopedConfig.getOptions('constants')):
-			self._addConstantPlugin(config, 'constants', cName, cName.upper())
+		constantsConfig = config.newClass(None, []).newSections(['constants'])
+		for cName in filter(lambda o: not o.endswith(' lookup'), constantsConfig.getOptions()):
+			self._addConstantPlugin(constantsConfig, cName, cName.upper())
 		# Get constants from [<Module>] constants
 		for cName in map(str.strip, config.getList('constants', [])):
 			self._addConstantPlugin(config, cName, cName)
@@ -53,7 +54,7 @@ class BasicParameterFactory(ParameterFactory):
 		if lookupVar:
 			self.lookupSources.append(LookupParameterSource(varName, config.getDict(cName, {}), lookupVar))
 		else:
-			self.constSources.append(ConstParameterSource(varName, config.get(cName, '').strip()))
+			self.constSources.append(ConstParameterSource(varName, config.get(cName).strip()))
 
 
 	def _getRawSource(self, parent):

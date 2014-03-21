@@ -51,8 +51,8 @@ class TaggedConfig(ConfigBase):
 		return tmp
 
 
-	def newClass(self, refClass, refName):
-		return self.myclone(refClass, [refName], self._selTags, self._selSections)
+	def newClass(self, refClass, refNames):
+		return self.myclone(refClass, refNames, self._selTags, self._selSections)
 
 	def addSections(self, refSections):
 		return self.myclone(self._selClass, self._selNames, self._selTags, refSections + self._selSections)
@@ -114,7 +114,7 @@ class Config(TaggedConfig):
 
 
 	def freezeConfig(self, writeConfig = True):
-		self._allowSet = False
+		self._curCfg.setReadOnly()
 		# Inform the user about unused options
 		unused = list(filter(lambda entry: entry.accessed == False, self._curCfg.iterContent()))
 		self._logger.log(logging.INFO1, 'There are %s unused config options!' % len(unused))

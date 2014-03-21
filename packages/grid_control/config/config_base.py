@@ -221,3 +221,18 @@ class ConfigBase(object):
 	# Write settings to file
 	def write(self, *args, **kwargs):
 		self._curCfg.write(*args, **kwargs)
+
+	# Get state
+	def getState(self, statename = 'init', detail = None):
+		global_scope = self.clone()
+		state = global_scope.getBool('global', '#%s' % statename, False, onChange = None)
+		if detail:
+			state = global_scope.getBool('global', '#%s %s' % (statename, detail), state, onChange = None)
+		return state
+
+	def setState(self, value, statename = 'init', detail = None):
+		global_scope = self.clone()
+		if detail:
+			global_scope.set('global', '#%s %s' % (statename, detail), str(value))
+		else:
+			global_scope.set('global', '#%s' % statename, str(value))

@@ -72,6 +72,8 @@ if __name__ == '__main__':
 					'continuous': opts.continuous, 'selected': opts.selector}.items():
 				setConfigFromOpt('jobs', option, value)
 			setConfigFromOpt('global', 'gui', opts.gui)
+			setConfigFromOpt('global', '#init', opts.init)
+			setConfigFromOpt('global', '#resync', opts.resync)
 			StringConfigFiller(opts.override).fill(container)
 
 	# big try... except block to catch exceptions and print error message
@@ -84,21 +86,14 @@ if __name__ == '__main__':
 
 		# Check work dir validity (default work directory is the config file name)
 		if not os.path.exists(config.getWorkPath()):
-			config.set('global', '#init config', 'True')
-			if not opts.init:
+			if not config.getState():
 				utils.vprint('Will force initialization of %s if continued!' % config.getWorkPath(), -1)
-				opts.init = True
+				config.setState(True)
 			if utils.getUserBool('Do you want to create the working directory %s?' % config.getWorkPath(), True):
 				utils.ensureDirExists(config.getWorkPath(), 'work directory')
 
 		workflow = config.getClass('global', 'workflow', 'Workflow:global', cls = Workflow).getInstance()
-		config.freezeConfig(writeConfig = config.getBool('global', '#init config', False, onChange = None))
-
-#		if not opts.init:
-#				if utils.getUserBool('\nQuit grid-control in order to initialize the task again?', False):
-#					sys.exit(0)
-#				if utils.getUserBool('\nOverwrite currently saved configuration to remove warning in the future?', False):
-#					config.freezeConfig(writeConfig = True)
+		config.freezeConfig(writeConfig = config.getState(detail = 'config'))
 
 		# Give help about variables
 		if opts.help_vars:

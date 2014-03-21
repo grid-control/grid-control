@@ -165,6 +165,6 @@ class ClassWrapper:
 	def getInstance(self, *args, **kwargs):
 		cls = self._baseClass.getClass(self._instClassName)
 		if issubclass(cls, NamedObject):
-			config = self._config.newClass(cls, self._instName).addTags(self._tags)
+			config = self._config.newClass(cls, [self._instName]).addTags(self._tags)
 			return cls(config, self._instName, *args, **kwargs)
 		return cls(*args, **kwargs)

@@ -81,7 +81,7 @@ class CMSSW(DataTask):
 
 		# Information about search order for software environment
 		self.searchLoc = []
-		if config.opts.init:
+		if config.getState('sandbox'):
 			userPath = config.get('cmssw dir', '')
 			if userPath != '':
 				self.searchLoc.append(('CMSSW_DIR_USER', userPath))
@@ -117,20 +117,21 @@ class CMSSW(DataTask):
 		fragment = config.getPath('instrumentation fragment',
 			os.path.join('packages', 'grid_control_cms', 'share', 'fragmentForCMSSW.py'))
 		if self.dataSplitter != None:
-			if config.opts.init:
+			if config.getState('sandbox'):
 				if len(self.configFiles) > 0:
 					self.instrumentCfgQueue(self.configFiles, fragment, mustPrepare = True)
 		else:
 			self.eventsPerJob = config.get('events per job', '0')
-			if config.opts.init and self.prepare:
+			if config.getState(detail = 'sandbox') and self.prepare:
 				self.instrumentCfgQueue(self.configFiles, fragment)
 
-		if config.opts.init and len(self.projectArea):
 			if os.path.exists(config.getWorkPath('runtime.tar.gz')):
 				if not utils.getUserBool('Runtime already exists! Do you want to regenerate CMSSW tarball?', True):
 					return
 			# Generate runtime tarball (and move to SE)
 			utils.genTarball(config.getWorkPath('runtime.tar.gz'), utils.matchFiles(self.projectArea, self.pattern))
+			if self.seRuntime:
+				config.setState(True, detail = 'storage')
 
 
 	def initDataProcessor(self):
