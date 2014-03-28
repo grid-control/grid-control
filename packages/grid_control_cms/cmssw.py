@@ -16,7 +16,7 @@ class CMSSW(DataTask):
 
 	def __init__(self, config, name):
 		config.set('se input timeout', '0:30', override = False)
-		config.set('dataset provider', 'DBSApiv2', override = False)
+		config.set('dataset provider', 'DBS3Provider', override = False)
 		config.set('dataset splitter', 'EventBoundarySplitter', override = False)
 		DataTask.__init__(self, config, name)
 		self.errorDict.update(dict(self.updateErrorDict(utils.pathShare('gc-run.cmssw.sh', pkg = 'grid_control_cms'))))
@@ -129,7 +129,8 @@ class CMSSW(DataTask):
 				if not utils.getUserBool('Runtime already exists! Do you want to regenerate CMSSW tarball?', True):
 					return
 			# Generate runtime tarball (and move to SE)
-			utils.genTarball(config.getWorkPath('runtime.tar.gz'), utils.matchFiles(self.projectArea, self.pattern))
+			if self.projectArea:
+				utils.genTarball(config.getWorkPath('runtime.tar.gz'), utils.matchFiles(self.projectArea, self.pattern))
 			if self.seRuntime:
 				config.setState(True, detail = 'storage')
 
