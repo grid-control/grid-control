@@ -1,5 +1,8 @@
 import os, sys, logging
 
+logLevelDict = {'DEFAULT_VERBOSITY': 14, # setLevel(logging.DEFAULT_VERBOSITY - <verbosity level>)
+	'INFO1': 13, 'INFO2': 12, 'INFO3': 11, 'DEBUG1': 9, 'DEBUG2': 8, 'DEBUG3': 7}
+
 def logging_defaults():
 	# Default logging to stdout
 	sh = logging.StreamHandler(sys.stdout)
@@ -22,11 +25,9 @@ def logging_defaults():
 		logging.getLogger("exception").addHandler(handler_ex)
 
 	# Register new log levels
-	levelDict = {'DEFAULT_VERBOSITY': 14, # setLevel(logging.DEFAULT_VERBOSITY - <verbosity level>)
-		'INFO1': 13, 'INFO2': 12, 'INFO3': 11, 'DEBUG1': 9, 'DEBUG2': 8, 'DEBUG3': 7}
-	for name in levelDict:
-		setattr(logging, name.upper(), levelDict[name]) # Add numerical constant
-		logging.addLevelName(levelDict[name], name)     # Register with logging module
+	for name in logLevelDict:
+		setattr(logging, name.upper(), logLevelDict[name]) # Add numerical constant
+		logging.addLevelName(logLevelDict[name], name)     # Register with logging module
 logging_defaults()
 
 
@@ -48,10 +49,14 @@ def logging_setup(config):
 				elif dest == 'file':
 					option = option.replace('handler', 'file')
 					logger.addHandler(logging.FileHandler(config.get(option, onChange = None), 'w'))
+				else:
+					raise Exception('Unknown handler [logging] %s = %s' % (option, dest))
 		elif option.endswith('level'):
-			logger.setLevel(config.get(option, onChange = None).upper())
+			logger.setLevel(logLevelDict.get(config.get(option, onChange = None).upper(), 0))
 		elif option.endswith('propagate'):
 			logger.propagate = config.getBool(option, onChange = None)
+		elif not option.endswith('format'):
+			raise Exception('Unknown option [logging] %s = %s' % (option, config.get(option, onChange = None)))
 
 	# Formatting affects all handlers and needs to be done after the handlers are setup
 	for option in config.getOptions():
