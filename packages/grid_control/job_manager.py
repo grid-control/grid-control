@@ -210,7 +210,7 @@ class JobManager(NamedObject):
 		return change
 
 
-	def retrieve(self, wms, maxsample = 10):
+	def retrieve(self, wms, maxsample = 100):
 		change = False
 		jobList = self.sample(self.jobDB.getJobs(ClassSelector(JobClass.DONE)), QM(self.continuous, maxsample, -1))
 
