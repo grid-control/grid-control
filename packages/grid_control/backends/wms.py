@@ -2,7 +2,7 @@
 
 from python_compat import set, sorted
 import sys, os, time, stat, shutil, tarfile, glob, itertools
-from grid_control import QM, NamedObject, AbstractError, ConfigError, RuntimeError, RethrowError, UserError, utils, Proxy, StorageManager
+from grid_control import QM, NamedObject, AbstractError, ConfigError, RuntimeError, RethrowError, UserError, utils, Proxy, StorageManager, ClassFactory
 from broker import Broker
 
 class WMS(NamedObject):
@@ -104,14 +104,16 @@ class BasicWMS(WMS):
 		self._failPath = config.getWorkPath('fail')
 
 		# Initialise proxy, broker and storage manager
-		self.proxy = config.getClass('proxy', 'TrivialProxy', cls = Proxy).getInstance(config)
+		self.proxy = ClassFactory(Proxy, config, [self],
+			('proxy', 'TrivialProxy'), ('proxy manager', 'MultiProxy')).getInstance()
+		print self.proxy
+		print self.proxy.getUsername()
 
-		configSM = config.addSections(self._getSections('storage'))
 		# UI -> SE -> WN
-		self.smSEIn = StorageManager.open('SEStorageManager', configSM, 'se', 'se input', 'SE_INPUT')
-		self.smSBIn = StorageManager.open('LocalSBStorageManager', configSM, 'sandbox', 'sandbox', 'SB_INPUT')
+		self.smSEIn = config.getClass('se input manager', 'SEStorageManager', cls = StorageManager, tags = [self]).getInstance('se', 'se input', 'SE_INPUT')
+		self.smSBIn = config.getClass('sb input manager', 'LocalSBStorageManager', cls = StorageManager, tags = [self]).getInstance('sandbox', 'sandbox', 'SB_INPUT')
 		# UI <- SE <- WN
-		self.smSEOut = StorageManager.open('SEStorageManager', configSM, 'se', 'se output', 'SE_OUTPUT')
+		self.smSEOut = config.getClass('se output manager', 'SEStorageManager', cls = StorageManager, tags = [self]).getInstance('se', 'se output', 'SE_OUTPUT')
 		self.smSBOut = None
 
 

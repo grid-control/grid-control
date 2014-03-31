@@ -22,8 +22,11 @@ def se_copy(src, dst, force = True, tmp = ''):
 	return se_runcmd(cmd, {'GC_KEEPTMP': tmp}, src, dst)
 
 
-class StorageManager(LoadableObject):
-	def __init__(self, config, optDefault, optPrefix, varPrefix):
+class StorageManager(NamedObject):
+	getConfigSections = NamedObject.createFunction_getConfigSections(['storage'])
+
+	def __init__(self, config, name, optDefault, optPrefix, varPrefix):
+		NamedObject.__init__(self, config, name)
 		(self.smOptPrefix, self.varPrefix) = (optPrefix, varPrefix)
 
 	def addFiles(self, files):
@@ -41,8 +44,8 @@ class StorageManager(LoadableObject):
 StorageManager.registerObject()
 
 class LocalSBStorageManager(StorageManager):
-	def __init__(self, config, optDefault, optPrefix, varPrefix):
-		StorageManager.__init__(self, config, optDefault, optPrefix, varPrefix)
+	def __init__(self, config, name, optDefault, optPrefix, varPrefix):
+		StorageManager.__init__(self, config, name, optDefault, optPrefix, varPrefix)
 		self.sbPath = config.getPath('%s path' % optDefault, config.getWorkPath('sandbox'), mustExist = False)
 
 	def doTransfer(self, listDescSourceTarget):
@@ -54,8 +57,8 @@ class LocalSBStorageManager(StorageManager):
 
 
 class SEStorageManager(StorageManager):
-	def __init__(self, config, optDefault, optPrefix, varPrefix):
-		StorageManager.__init__(self, config, optDefault, optPrefix, varPrefix)
+	def __init__(self, config, name, optDefault, optPrefix, varPrefix):
+		StorageManager.__init__(self, config, name, optDefault, optPrefix, varPrefix)
 		normSEPath = lambda x: QM(x[0] == '/', 'dir:///%s' % x.lstrip('/'), x)
 		self.defPaths = config.getList('%s path' % optDefault, [], onValid = validNoVar, parseItem = normSEPath)
 		self.smPaths = config.getList('%s path' % optPrefix, self.defPaths, onValid = validNoVar, parseItem = normSEPath)
