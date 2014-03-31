@@ -41,7 +41,7 @@ class Workflow(NamedObject):
 
 		self.checkSpace = config.getInt('workdir space', 10, onChange = None)
 		self.guiClass = config.get('gui', 'SimpleConsole', onChange = None)
-		self.submitFlag = True
+		self.submitFlag = config.getBool('submission', True, onChange = None)
 
 
 	# Job submission loop
