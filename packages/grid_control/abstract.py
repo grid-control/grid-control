@@ -140,11 +140,14 @@ class ClassFactory:
 
 # Needed by getClass / getClasses to wrap the fixed arguments to the instantiation / name of the instance
 class ClassWrapper:
-	def __init__(self, baseClass, value, config, tags, inherit):
+	def __init__(self, baseClass, value, config, tags, inherit, defaultName):
 		(self._baseClass, self._config, self._tags, self._inherit) = (baseClass, config, tags, inherit)
 		(self._instClassName, self._instName) = utils.optSplit(value, ':')
 		if self._instName == '':
-			self._instName = self._instClassName.split('.')[-1] # Default: (non fully qualified) class name as instance name
+			if not defaultName:
+				self._instName = self._instClassName.split('.')[-1] # Default: (non fully qualified) class name as instance name
+			else:
+				self._instName = defaultName
 
 	def __eq__(self, other): # Used to check for changes compared to old
 		return str(self) == str(other)
