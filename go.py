@@ -74,6 +74,7 @@ if __name__ == '__main__':
 			setConfigFromOpt('global', 'gui', opts.gui)
 			setConfigFromOpt('global', '#init', opts.init)
 			setConfigFromOpt('global', '#resync', opts.resync)
+			setConfigFromOpt('global', 'submission', opts.submission)
 			StringConfigFiller(opts.override).fill(container)
 
 	# big try... except block to catch exceptions and print error message
