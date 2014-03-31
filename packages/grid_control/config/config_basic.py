@@ -53,6 +53,8 @@ class TaggedConfig(ConfigBase):
 
 	def newClass(self, refClass, refNames):
 		return self.myclone(refClass, refNames, self._selTags, self._selSections)
+	def resetClass(self, refClass, refNames):
+		return self.myclone(refClass, refNames, self._selTags, self._selSections)
 
 	def addSections(self, refSections):
 		return self.myclone(self._selClass, self._selNames, self._selTags, refSections + self._selSections)
@@ -120,7 +122,7 @@ class Config(TaggedConfig):
 		self._logger.log(logging.INFO1, 'There are %s unused config options!' % len(unused))
 		for entry in unused:
 			self._logger.log(logging.INFO1, '\t%s' % entry.format(printSection = True))
-		if writeConfig:
+		if writeConfig or not os.path.exists(self._oldCfgPath):
 			# Write user friendly, flat config file and config file with saved settings
 			self.write(open(self._flatCfgPath, 'w'), printDefault = False, printUnused = False)
 			fp_work = open(self._oldCfgPath, 'w')
