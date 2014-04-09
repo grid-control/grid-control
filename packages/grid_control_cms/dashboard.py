@@ -45,7 +45,7 @@ class DashBoard(Monitoring):
 		taskId = self.task.substVars(self.taskname, jobNum, addDict = {'DATASETNICK': ''}).strip('_')
 		utils.gcStartThread("Notifying dashboard about job submission %d" % jobNum,
 			self.publish, jobObj, jobNum, taskId, [{
-			'user': os.environ['LOGNAME'], 'GridName': proxy.getUsername(), 'CMSUser': proxy.getUsername(),
+			'user': os.environ['LOGNAME'], 'GridName': '/CN=%s' % proxy.getUsername(), 'CMSUser': proxy.getUsername(),
 			'tool': 'grid-control', 'JSToolVersion': utils.getVersion(),
 			'SubmissionType':'direct', 'tool_ui': os.environ.get('HOSTNAME',''),
 			'application': self.app, 'exe': 'shellscript', 'taskType': self.tasktype,
