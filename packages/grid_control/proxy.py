@@ -1,6 +1,7 @@
-# Generic base class for authentication proxies
+# Generic base class for authentication proxies GCSCF:
 import os, time, getpass, shutil, stat
 from grid_control import QM, NamedObject, InstallationError, AbstractError, UserError, utils
+from python_compat import parsedate
 
 class Proxy(NamedObject):
 	getConfigSections = NamedObject.createFunction_getConfigSections(['proxy'])
@@ -135,3 +136,73 @@ class VomsProxy(TimedProxy):
 			return parse(info[key])
 		except:
 			raise RuntimeError("Can't access %s in proxy information:\n%s" % (key, info))
+
+
+class RefreshableProxy(TimedProxy):
+	def __init__(self, config, name):
+		TimedProxy.__init__(self, config, name)
+		self._refresh = config.getList('proxy refresh', '1:00:00', onChange = None)
+
+	def _refreshProxy(self):
+		raise AbstractError
+
+	def _checkTimeleft(self, neededTime): # check for time left
+		if self._getTimeleft(True) < self._refresh:
+			self._refreshProxy()
+			self._getTimeleft(False)
+		return TimedProxy._checkTimeleft(self, neededTime)
+
+
+class AFSProxy(RefreshableProxy):
+	def __init__(self, config, name):
+		RefreshableProxy.__init__(self, config, name)
+		self._kinitExec = utils.resolveInstallPath('kinit')
+		self._klistExec = utils.resolveInstallPath('klist')
+		self._aklogExec = utils.resolveInstallPath('aklog')
+		self._cache = None
+		self._proxyPaths = {}
+		for name in ['KRB5CCNAME', 'KRBTKFILE']:
+			self._proxyPaths[name] = config.getWorkPath('proxy.%s' % name)
+		self._backupTickets()
+		self._tickets = config.getList('tickets', [], onChange = None)
+
+	def _backupTickets(self):
+		for name in ['KRB5CCNAME', 'KRBTKFILE']:
+			if name not in os.environ:
+				raise RuntimeError('Environment variable "%s" not found!' % name)
+			oldFN = os.environ[name].replace('FILE:', '')
+			newFN = self._proxyPaths[name]
+			shutil.copyfile(oldFN, newFN)
+			os.chmod(newFN, stat.S_IRUSR | stat.S_IWUSR)
+			os.environ[name] = newFN
+
+	def _refreshProxy(self, cached):
+		return utils.LoggedProcess(self._kinitExec, '-R').wait()
+		
+	def _parseTickets(self, cached = True):
+		# Return cached results if requested
+		if cached and self._cache:
+			return self._cache
+		# Call klist and parse results
+		proc = utils.LoggedProcess(self._klistExec, '-v')
+		retCode = proc.wait()
+		self._cache = {}
+		for sectionInfo in utils.accumulate(proc.getOutput(), '', lambda x, buf: buf.endswith('\n\n')):
+			parseDate = lambda x: time.mktime(parsedate(x))
+			tmp = utils.DictFormat(':').parse(sectionInfo, valueParser = {'auth time': parseDate,
+				'start time': parseDate, 'end time': parseDate, 'renew till': parseDate})
+			if 'server' in tmp:
+				self._cache[tmp['server']] = tmp
+			else:
+				self._cache[None] = tmp
+		return self._cache
+
+	def _getTimeleft(self, cached):
+		info = self._parseTickets(cached)
+		time_current = time.time()
+		time_end = time_current
+		for ticket in info:
+			if ((ticket not in self._tickets) and self._tickets) or not ticket:
+				continue
+			time_end = max(info[ticket]['end time'], time_end)
+		return time_end - time_current
