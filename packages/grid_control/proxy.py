@@ -102,7 +102,7 @@ class VomsProxy(TimedProxy):
 		print self._getTimeleft(False)
 
 	def getUsername(self):
-		return self._getProxyInfo('identity', lambda x: '/CN=%s' % x.split('CN=')[1].strip())
+		return self._getProxyInfo('identity').split('CN=')[1].strip()
 
 	def getFQUsername(self):
 		return self._getProxyInfo('identity')
