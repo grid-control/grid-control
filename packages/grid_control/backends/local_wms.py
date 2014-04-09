@@ -20,6 +20,7 @@ class LocalWMS(BasicWMS):
 		self.sandPath = config.getPath('sandbox path', config.getWorkPath('sandbox'), mustExist = False)
 		self.scratchPath = config.getList('scratch path', ['TMPDIR', '/tmp'], onChange = True)
 		self.submitOpts = config.get('submit options', '', onChange = None)
+		self.memory = config.getInt('memory', -1, onChange = None)
 
 
 	def getTimings(self):
@@ -114,6 +115,8 @@ class LocalWMS(BasicWMS):
 			'GC_SCRATCH': str.join(' ', self.scratchPath)})
 		reqs = self.brokerSite.brokerAdd(module.getRequirements(jobNum), WMS.SITES)
 		reqs = dict(self.brokerQueue.brokerAdd(reqs, WMS.QUEUES))
+		if (self.memory > 0) and (reqs.get(WMS.MEMORY, 0) < self.memory):
+			reqs[WMS.MEMORY] = self.memory # local jobs need higher (more realistic) memory requirements
 
 		(stdout, stderr) = (os.path.join(sandbox, 'gc.stdout'), os.path.join(sandbox, 'gc.stderr'))
 		(taskName, jobName, jobType) = module.getDescription(jobNum)
