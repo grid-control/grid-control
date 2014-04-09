@@ -119,7 +119,12 @@ except:
 		(funProxy.fun, funProxy.cache) = (fun, [])
 		return funProxy
 
-__all__ = ['rsplit', 'set', 'sorted', 'md5', 'any', 'all', 'next', 'user_input', 'lru_cache']
+try:	# 
+	from email.utils import parsedate
+except ImportError:
+	from email.Utils import parsedate
+
+__all__ = ['rsplit', 'set', 'sorted', 'md5', 'any', 'all', 'next', 'user_input', 'lru_cache', 'parsedate']
 
 if __name__ == '__main__':
 	import os, re, doctest

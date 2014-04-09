@@ -1,13 +1,8 @@
-from python_compat import md5
+from python_compat import md5, parsedate
 import sys, os, time, copy, tempfile, tarfile
 from grid_control import QM, ConfigError, APIError, RethrowError, Job, utils
 from wms import WMS, BasicWMS
 from broker import Broker
-
-try:
-	from email.utils import parsedate
-except ImportError:
-	from email.Utils import parsedate
 
 def jdlEscape(value):
 	repl = { '\\': r'\\', '\"': r'\"', '\n': r'\n' }
