@@ -1,5 +1,5 @@
 from python_compat import set, sorted, md5, next, user_input, lru_cache
-import sys, os, stat, StringIO, tarfile, time, fnmatch, re, popen2, threading, operator, Queue, signal, glob
+import sys, os, stat, StringIO, tarfile, time, fnmatch, re, popen2, threading, operator, Queue, signal, glob, logging
 from exceptions import *
 
 def QM(cond, a, b):
@@ -97,7 +97,8 @@ class LoggedProcess(object):
 		self.niceCmd = QM(niceCmd, niceCmd, os.path.basename(cmd))
 		self.niceArgs = QM(niceArgs, niceArgs, args)
 		(self.stdout, self.stderr, self.cmd, self.args) = ([], [], cmd, args)
-		vprint('External programm called: %s %s' % (self.niceCmd, self.niceArgs), level=3)
+		self._logger = logging.getLogger('process.%s' % os.path.basename(cmd))
+		self._logger.log(logging.DEBUG1, 'External programm called: %s %s' % (self.niceCmd, self.niceArgs))
 		self.proc = popen2.Popen3('%s %s' % (cmd, args), True)
 
 	def getOutput(self, wait = False):
