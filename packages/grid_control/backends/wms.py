@@ -53,17 +53,14 @@ class WMS(NamedObject):
 	def _getRawIDs(self, ids):
 		return map(lambda (wmsId, jobNum): self._splitId(wmsId)[1], ids)
 
-	def _getSections(self, prefix):
-		mkSection = lambda x: [x, '%s %s' % (prefix, x)]
-		return mkSection(self.wmsName) + mkSection(self.__class__.__name__) + mkSection(self.wmsClass) + [prefix]
-
 WMS.registerObject(tagName = 'wms')
 
 
 class InactiveWMS(WMS):
 	def __init__(self, config, wmsName, wmsClass):
 		WMS.__init__(self, config, wmsName, wmsClass)
-		self.proxy = Proxy.open('TrivialProxy', config.getScoped(['proxy']))
+		self.proxy = ClassFactory(Proxy, config, [self],
+			('proxy', 'TrivialProxy'), ('proxy manager', 'MultiProxy')).getInstance()
 
 	def getTimings(self): # Return (waitIdle, wait)
 		return (0, 0)
