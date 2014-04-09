@@ -220,6 +220,8 @@ class BasicConfigContainer(ConfigContainer):
 # Container allowing access via selectors
 class ResolvingConfigContainer(BasicConfigContainer):
 	def iterContent(self, selOptions = [], selSections = [], selNames = [], selTags = []):
+		self._logger.log(logging.DEBUG1, 'Matching section: %r names: %r tags: %r options: %r' %
+			(selSections, selNames, selTags, selOptions))
 		# Function to parse section into section name, section titles and section tags
 		def parseSection(section):
 			tmp = section.split()
@@ -272,15 +274,20 @@ class ResolvingConfigContainer(BasicConfigContainer):
 			return True
 
 		sectionList = sorted(filter(matchSection, sectionList), cmp = cmpSection)
-		if selOptions: # option list specified - return matching sections in same order
-			for option in map(str.lower, selOptions):
+		def iterContentImpl():
+			if selOptions: # option list specified - return matching sections in same order
+				for option in map(str.lower, selOptions):
+					for (section, sectionInfo) in sectionList:
+						if option in self._content[section]:
+							yield self._content[section][option]
+			else: # no option specified
 				for (section, sectionInfo) in sectionList:
-					if option in self._content[section]:
+					for option in sorted(self._content[section]):
 						yield self._content[section][option]
-		else: # no option specified
-			for (section, sectionInfo) in sectionList:
-				for option in sorted(self._content[section]):
-					yield self._content[section][option]
+		result = list(iterContentImpl())
+		for entry in result:
+			self._logger.log(logging.DEBUG1, '\t%s matches' % entry.format_opt())
+		return result
 
 
 	def getOptions(self, selector):
