@@ -23,7 +23,13 @@ class ConfigEntry(object):
 		(self.default, self.accessed) = (default, accessed)
 
 	def __repr__(self):
-		return '%s(%r)' % (self.__class__.__name__, self.__dict__)
+		def fmtValue(value):
+			if value == noDefault:
+				return '<no default>'
+			elif value == notSet:
+				return '<not set>'
+			return repr(value)
+		return '%s(%s)' % (self.__class__.__name__, str.join(', ', map(lambda (k, v): '%s = %s' % (k, fmtValue(v)), sorted(self.__dict__.items()))))
 
 	def format_opt(self):
 		return '[%s] %s' % (self.section, self.option)
