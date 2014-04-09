@@ -106,8 +106,6 @@ class BasicWMS(WMS):
 		# Initialise proxy, broker and storage manager
 		self.proxy = ClassFactory(Proxy, config, [self],
 			('proxy', 'TrivialProxy'), ('proxy manager', 'MultiProxy')).getInstance()
-		print self.proxy
-		print self.proxy.getUsername()
 
 		# UI -> SE -> WN
 		self.smSEIn = config.getClass('se input manager', 'SEStorageManager', cls = StorageManager, tags = [self]).getInstance('se', 'se input', 'SE_INPUT')
