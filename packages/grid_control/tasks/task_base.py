@@ -16,9 +16,9 @@ class TaskModule(NamedObject):
 		job_config = config.addSections(['jobs']).addTags([self]) # Move this into parameter manager?
 		self.wallTime = job_config.getTime('wall time', onChange = None)
 		self.cpuTime = job_config.getTime('cpu time', self.wallTime, onChange = None)
-		self.nodeTimeout = job_config.getTime('node timeout', -1, onChange = initSandbox)
 		self.cpus = job_config.getInt('cpus', 1, onChange = None)
 		self.memory = job_config.getInt('memory', -1, onChange = None)
+		self.nodeTimeout = job_config.getTime('node timeout', -1, onChange = initSandbox)
 
 		# Compute / get task ID
 		self.taskID = config.get('task id', 'GC' + md5(str(time())).hexdigest()[:12], persistent = True)
