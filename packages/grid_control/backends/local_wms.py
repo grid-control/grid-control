@@ -19,6 +19,7 @@ class LocalWMS(BasicWMS):
 		self.sandCache = []
 		self.sandPath = config.getPath('sandbox path', config.getWorkPath('sandbox'), mustExist = False)
 		self.scratchPath = config.getList('scratch path', ['TMPDIR', '/tmp'], onChange = True)
+		self.submitOpts = config.get('submit options', '', onChange = None)
 
 
 	def getTimings(self):
@@ -116,7 +117,7 @@ class LocalWMS(BasicWMS):
 
 		(stdout, stderr) = (os.path.join(sandbox, 'gc.stdout'), os.path.join(sandbox, 'gc.stderr'))
 		(taskName, jobName, jobType) = module.getDescription(jobNum)
-		proc = utils.LoggedProcess(self.submitExec, '%s "%s" %s' % (
+		proc = utils.LoggedProcess(self.submitExec, '%s "%s" %s %s' % (self.submitOpts,
 			self.getSubmitArguments(jobNum, jobName, reqs, sandbox, stdout, stderr),
 			utils.pathShare('gc-local.sh'), self.getJobArguments(jobNum, sandbox)))
 		retCode = proc.wait()

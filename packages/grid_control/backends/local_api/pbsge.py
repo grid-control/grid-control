@@ -8,10 +8,9 @@ class PBSGECommon(LocalWMS):
 			submitExec = utils.resolveInstallPath('qsub'),
 			statusExec = utils.resolveInstallPath('qstat'),
 			cancelExec = utils.resolveInstallPath('qdel'))
-		self.group = config.get('group', '', onChange = None)
 		self.shell = config.get('shell', '', onChange = None)
+		self.account = config.get('account', '', onChange = None)
 		self.delay = config.getBool('delay output', False, onChange = None)
-		self.addAttr = config.getDict('submit options', {}, onChange = None) # TODO
 
 
 	def unknownID(self):
@@ -25,12 +24,12 @@ class PBSGECommon(LocalWMS):
 	def getSubmitArguments(self, jobNum, jobName, reqs, sandbox, stdout, stderr, reqMap):
 		# Job name
 		params = ' -N "%s"' % jobName
+		# Job accounting
+		if self.account:
+			params += ' -P %s' % self.account
 		# Job shell
 		if self.shell:
 			params += ' -S %s' % self.shell
-		# Job group
-		if self.group:
-			params += ' -W group_list=%s' % self.group
 		# Process job requirements
 		for req in reqMap:
 			if self.checkReq(reqs, req):
@@ -41,4 +40,4 @@ class PBSGECommon(LocalWMS):
 			params += ' -v GC_DELAY_OUTPUT="%s" -v GC_DELAY_ERROR="%s" -o /dev/null -e /dev/null' % (stdout, stderr)
 		else:
 			params += ' -o "%s" -e "%s"' % (stdout, stderr)
-		return params + str.join('', map(lambda kv: ' -l %s=%s' % kv, self.addAttr[0].items()))
+		return params
