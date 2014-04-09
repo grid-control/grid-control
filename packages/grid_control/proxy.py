@@ -99,7 +99,6 @@ class VomsProxy(TimedProxy):
 		self._infoExec = utils.resolveInstallPath('voms-proxy-info')
 		self._ignoreWarning = config.getBool('ignore warnings', False, onChange = None)
 		self._cache = None
-		print self._getTimeleft(False)
 
 	def getUsername(self):
 		return self._getProxyInfo('identity').split('CN=')[1].strip()
