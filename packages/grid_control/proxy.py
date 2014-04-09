@@ -141,7 +141,7 @@ class VomsProxy(TimedProxy):
 class RefreshableProxy(TimedProxy):
 	def __init__(self, config, name):
 		TimedProxy.__init__(self, config, name)
-		self._refresh = config.getList('proxy refresh', '1:00:00', onChange = None)
+		self._refresh = config.getTime('proxy refresh', 60*60, onChange = None)
 
 	def _refreshProxy(self):
 		raise AbstractError
@@ -176,7 +176,7 @@ class AFSProxy(RefreshableProxy):
 			os.chmod(newFN, stat.S_IRUSR | stat.S_IWUSR)
 			os.environ[name] = newFN
 
-	def _refreshProxy(self, cached):
+	def _refreshProxy(self):
 		return utils.LoggedProcess(self._kinitExec, '-R').wait()
 		
 	def _parseTickets(self, cached = True):
