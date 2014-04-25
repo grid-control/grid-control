@@ -120,7 +120,7 @@ class LocalWMS(BasicWMS):
 
 		(stdout, stderr) = (os.path.join(sandbox, 'gc.stdout'), os.path.join(sandbox, 'gc.stderr'))
 		(taskName, jobName, jobType) = module.getDescription(jobNum)
-		proc = utils.LoggedProcess(self.submitExec, '%s "%s" %s %s' % (self.submitOpts,
+		proc = utils.LoggedProcess(self.submitExec, '%s %s "%s" %s' % (self.submitOpts,
 			self.getSubmitArguments(jobNum, jobName, reqs, sandbox, stdout, stderr),
 			utils.pathShare('gc-local.sh'), self.getJobArguments(jobNum, sandbox)))
 		retCode = proc.wait()
