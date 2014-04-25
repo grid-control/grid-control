@@ -10,7 +10,8 @@ class JabberAlarm(Monitoring):
 		self.target_jid = config.get('target jid')
 		pwPath = config.getPath('source password file')
 		os.chmod(pwPath, stat.S_IRUSR)
-		self.source_pw = open(pwPath).read().strip()
+		# password in variable name removes it from debug log!
+		self.source_password = open(pwPath).read().strip()
 
 	def onTaskFinish(self, nJobs):
 		jid = xmpp.protocol.JID(self.source_jid)
@@ -19,7 +20,7 @@ class JabberAlarm(Monitoring):
 		if not con:
 			print 'could not connect!'
 			return
-		auth = cl.auth(jid.getNode(), self.source_pw, resource = jid.getResource())
+		auth = cl.auth(jid.getNode(), self.source_password, resource = jid.getResource())
 		if not auth:
 			print 'could not authenticate!'
 			return

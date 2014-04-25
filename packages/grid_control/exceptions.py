@@ -25,26 +25,30 @@ def logException_internal(exClass, exValue, stack):
 		log.critical('\t  | %s', fmtLine(stack.tb_lineno + 1))
 		log.critical('')
 		# Output local and class variables
-		log.critical('\tLocal variables:')
-		tmp = dict(stack.tb_frame.f_locals)
-		maxlen = max(map(len, tmp.keys()) + [0])
-		def display(var):
+		def safeRepr(obj):
 			try:
-				value = repr(var)
+				value = repr(obj)
 				if log.isEnabledFor(logging.INFO1) or (len(value) < 500):
 					return value
 				return value[:500] + " ... [length:%d]" % len(value)
 			except:
 				return 'unable to display!'
-		for var in sorted(filter(lambda v: v != 'self', tmp)):
-			log.critical('\t\t%s = %s', var.ljust(maxlen), display(tmp[var]))
-		if 'self' in tmp:
-			log.critical('\tClass variables (%s):' % display(tmp['self']))
-			try:
-				for var in sorted(tmp['self'].__dict__):
-					log.critical('\t\tself.%s = %s', var.ljust(maxlen), display(tmp['self'].__dict__[var]))
-			except:
-				pass
+		def display(keys, varDict, varPrefix = ''):
+			maxlen = max(map(len, tmp.keys()) + [0])
+			for var in sorted(keys):
+				value = safeRepr(varDict[var])
+				if 'password' in var:
+					value = '<redacted>'
+				log.critical('\t\t%s%s = %s', varPrefix, var.ljust(maxlen), value)
+
+		tmp = dict(stack.tb_frame.f_locals)
+		log.critical('\tLocal variables:')
+		display(filter(lambda v: v != 'self', tmp), tmp)
+		try:
+			log.critical('\tClass variables (%s):' % safeRepr(tmp['self']))
+			display(tmp['self'].__dict__, tmp['self'].__dict__, 'self.')
+		except:
+			pass
 		log.critical('')
 		stack = stack.tb_next
 	if exClass:
