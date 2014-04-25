@@ -178,7 +178,7 @@ class AFSProxy(RefreshableProxy):
 
 	def _refreshProxy(self):
 		return utils.LoggedProcess(self._kinitExec, '-R').wait()
-		
+
 	def _parseTickets(self, cached = True):
 		# Return cached results if requested
 		if cached and self._cache:

@@ -17,8 +17,8 @@ class SimpleConsole(GUI):
 		self._report = self._reportClass.getInstance(self._workflow.jobManager.jobDB, configString = self._reportOpts)
 
 	def displayWorkflow(self):
+		utils.vprint(level = -1)
+		self._report.display()
 		if self._workflow.runContinuous:
-			utils.vprint(level = -1)
-			self._report.display()
 			utils.vprint('Running in continuous mode. Press ^C to exit.', -1)
 		self._workflow.jobCycle()

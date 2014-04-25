@@ -3,16 +3,16 @@ from grid_control.job_selector import ClassSelector
 import re, sys, signal, termios, array, fcntl
 
 class Console:
-	attr = {"COLOR_BLACK": "30", "COLOR_RED": "31", "COLOR_GREEN": "32",
-		"COLOR_YELLOW": "33", "COLOR_BLUE": "34", "COLOR_MAGENTA": "35",
-		"COLOR_CYAN": "36", "COLOR_WHITE": "37", "BOLD": "1", "RESET": "0"}
-	cmd = {"savePos": "7", "loadPos": "8", "eraseDown": "[J", "erase": "[2J"}
+	attr = {'COLOR_BLACK': '30', 'COLOR_RED': '31', 'COLOR_GREEN': '32',
+		'COLOR_YELLOW': '33', 'COLOR_BLUE': '34', 'COLOR_MAGENTA': '35',
+		'COLOR_CYAN': '36', 'COLOR_WHITE': '37', 'BOLD': '1', 'RESET': '0'}
+	cmd = {'savePos': '7', 'loadPos': '8', 'eraseDown': '[J', 'erase': '[2J'}
 	for (name, esc) in attr.items():
 		locals()[name] = esc
 
 	def fmt(cls, data, attr = []):
 		if sys.stdout.isatty():
-			return "\033[%sm%s\033[0m" % (str.join(";", [Console.RESET] + attr), data)
+			return '\033[%sm%s\033[0m' % (str.join(';', [Console.RESET] + attr), data)
 		return data
 	fmt = classmethod(fmt)
 
@@ -24,19 +24,19 @@ class Console:
 			setattr(self, proc, callFactory(esc))
 
 	def esc(self, data):
-		self.stdout.write("\033" + data)
+		self.stdout.write('\033' + data)
 		self.stdout.flush()
 
 	def getmaxyx(self):
-		size = array.array("B", [0, 0, 0, 0])
+		size = array.array('B', [0, 0, 0, 0])
 		fcntl.ioctl(0, termios.TIOCGWINSZ, size, True)
 		return (size[0], size[2])
 
 	def move(self, row, col):
-		self.esc("[%d;%dH" % (row, col))
+		self.esc('[%d;%dH' % (row, col))
 
 	def setscrreg(self, top = 0, bottom = 0):
-		self.esc("[%d;%dr" % (top, bottom))
+		self.esc('[%d;%dr' % (top, bottom))
 
 	def addstr(self, data, attr = []):
 		self.stdout.write(Console.fmt(data, attr))
@@ -110,14 +110,14 @@ class ANSIProgressBar:
 
 		# Build progress bar
 		if blocks == 0:
-			self.bar = "[>%s]" % (' '*(complete-1))
+			self.bar = '[>%s]' % (' '*(complete-1))
 		elif blocks == complete:
-			self.bar = "[%s]" % ('='*complete)
+			self.bar = '[%s]' % ('='*complete)
 		else:
-			self.bar = "[%s>%s]" % ('='*(blocks-1), ' '*(complete-blocks))
+			self.bar = '[%s>%s]' % ('='*(blocks-1), ' '*(complete-blocks))
 
 		# Print percentage
-		text = str(done) + "%"
+		text = str(done) + '%'
 		textPos = (self.width - len(text) + 1) / 2
 		self.bar = self.bar[0:textPos] + text + self.bar[textPos+len(text):]
 
@@ -159,11 +159,11 @@ class ANSIConsole(GUI):
 			# Wrapping ActivityLog functionality
 			class GUILog:
 				def __init__(self, message):
-					self.message = "%s..." % message
+					self.message = '%s...' % message
 					self.show(self.message.center(65))
 
 				def __del__(self):
-					if hasattr(sys.stdout, "logged"):
+					if hasattr(sys.stdout, 'logged'):
 						self.show(' ' * len(self.message))
 
 				def show(self, message):
@@ -171,7 +171,7 @@ class ANSIConsole(GUI):
 					screen.move(0, 0)
 					sys.stdout.logged = False
 					bar.update(len(jobMgr.jobDB.getJobs(ClassSelector(JobClass.SUCCESS))))
-					self._report.display(message = "%s\n%s" % (bar, message))
+					self._report.display(message = '%s\n%s' % (bar, message))
 					report.Report(jobMgr.jobDB, header = header).summary()
 					sys.stdout.logged = True
 					screen.loadPos()
