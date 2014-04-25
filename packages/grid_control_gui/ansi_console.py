@@ -1,4 +1,4 @@
-from grid_control import GUI, JobClass, utils, report
+from grid_control import GUI, JobClass, utils, Report
 from grid_control.job_selector import ClassSelector
 import re, sys, signal, termios, array, fcntl
 
@@ -126,8 +126,16 @@ class ANSIProgressBar:
 
 
 class ANSIConsole(GUI):
-	def run(self):
-		jobMgr = self.jobMgr
+	def __init__(self, config, workflow):
+		GUI.__init__(self, config, workflow)
+		self._report = self._reportClass.getInstance(self._workflow.jobManager.jobDB, configString = self.getHeader())
+
+	def displayWorkflow(self):
+		if self._workflow.runContinuous:
+			utils.vprint(level = -1)
+
+	def displayWorkflow(self):
+		jobMgr = self._workflow.jobManager
 		header = self.getHeader()
 		def wrapper(screen):
 			# Event handling for resizing
@@ -163,7 +171,8 @@ class ANSIConsole(GUI):
 					screen.move(0, 0)
 					sys.stdout.logged = False
 					bar.update(len(jobMgr.jobDB.getJobs(ClassSelector(JobClass.SUCCESS))))
-					report.Report(jobMgr.jobDB, header = header).summary("%s\n%s" % (bar, message))
+					self._report.display(message = "%s\n%s" % (bar, message))
+					report.Report(jobMgr.jobDB, header = header).summary()
 					sys.stdout.logged = True
 					screen.loadPos()
 
@@ -173,24 +182,24 @@ class ANSIConsole(GUI):
 				utils.ActivityLog = GUILog
 				sys.stdout = GUIStream(saved[0], screen)
 				sys.stderr = GUIStream(saved[1], screen)
-				self.jobCycle(guiWait)
+				self._workflow.jobCycle(guiWait)
 			finally:
 				if sys.modules['__main__'].log: del sys.modules['__main__'].log
 				sys.stdout, sys.stderr, utils.ActivityLog = saved
 				screen.setscrreg()
 				screen.move(1, 0)
 				screen.eraseDown()
-				report.Report(jobMgr.jobDB, header = self.getHeader()).summary()
+				self._report.display()
 		try:
 			wrapper(Console())
 		finally:
 			GUIStream.dump()
 
 	def getHeader(self):
-		tmp = self.task.taskConfigName + ' / ' + self.task.taskID
+		tmp = self._workflow.task.taskConfigName + ' / ' + self._workflow.task.taskID
 		if len(tmp) < 45:
 			return tmp
-		tmp = self.task.taskConfigName
+		tmp = self._workflow.task.taskConfigName
 		if len(tmp) < 45:
 			return tmp
-		return self.task.taskID
+		return self._workflow.task.taskID

@@ -47,7 +47,13 @@ if __name__ == '__main__':
 	parser.add_option('-v', '--verbose',       dest='verbosity',  default=0,     action='count')
 	parser.add_option('-G', '--gui',           dest='gui',        action='store_const', const = 'ANSIConsole')
 	parser.add_option('-W', '--webserver',     dest='gui',        action='store_const', const = 'CPWebserver')
-	Report.addOptions(parser)
+	# Deprecated options - refer to new report script instead
+	parser.add_option('-r', '--report',        dest='old_report', default=False, action='store_true')
+	parser.add_option('-R', '--site-report',   dest='old_report', default=False, action='store_true')
+	parser.add_option('-T', '--time-report',   dest='old_report', default=False, action='store_true')
+	parser.add_option('-M', '--task-report',   dest='old_report', default=False, action='store_true')
+	parser.add_option('-D', '--detail-report', dest='old_report', default=False, action='store_true')
+	parser.add_option('',   '--help-vars',     dest='old_report', default=False, action='store_true')
 	(opts, args) = parser.parse_args()
 
 	utils.verbosity(opts.verbosity)
@@ -56,6 +62,8 @@ if __name__ == '__main__':
 	# we need exactly one positional argument (config file)
 	if len(args) != 1:
 		utils.exitWithUsage(usage, 'Config file not specified!')
+	if opts.old_report:
+		utils.deprecated('Please use the more versatile report tool in the scripts directory!')
 
 	# Config filler which collects data from command line arguments
 	class OptsConfigFiller(ConfigFiller):
@@ -93,6 +101,7 @@ if __name__ == '__main__':
 			if utils.getUserBool('Do you want to create the working directory %s?' % config.getWorkPath(), True):
 				utils.ensureDirExists(config.getWorkPath(), 'work directory')
 
+		# Create workflow and freeze config settings
 		workflow = config.getClass('global', 'workflow', 'Workflow:global', cls = Workflow).getInstance()
 		config.freezeConfig(writeConfig = config.getState(detail = 'config'))
 
@@ -106,18 +115,14 @@ if __name__ == '__main__':
 			config.write(sys.stdout, printDefault = opts.help_cfg, printUnused = False)
 			sys.exit(0)
 
-		# If invoked in report mode, just show report and exit
-		if Report(workflow.jobManager.jobDB).show(opts, workflow.task):
-			sys.exit(0)
-
-		# Check if jobs have to be deleted / reset and exit
+		# Check if user requested deletion / reset of jobs
 		if opts.delete:
 			workflow.jobManager.delete(workflow.wms, opts.delete)
 			sys.exit(0)
 		if opts.reset:
 			workflow.jobManager.reset(workflow.wms, opts.reset)
 			sys.exit(0)
-
+		# Run the configured workflow
 		workflow.run()
 
 	handleException(main)

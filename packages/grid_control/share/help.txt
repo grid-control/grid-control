@@ -30,15 +30,6 @@
 	-v, --verbose            Give detailed information during run
                                 (use multiple times to increase verbosity)
 
-	                         --- Report options ---
-	-r, --report             Show status report of jobs
-	-M, --module-report      Show module specific job status report
-	-R, --site-report        Show site report
-	-T, --time-report        Show time report
-	                            -RR  / -TT  (broken down into site, CE)
-	                            -RRR / -TTT (broken down into site, CE, queue)
-	-D, --detail-report      Show detailed report of jobs
-
 	                         --- Job selectors ---
 	                         The following job selectors are supported:
 	                            id:1,5,9,...       (Job numbers)

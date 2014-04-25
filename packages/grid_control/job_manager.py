@@ -21,6 +21,7 @@ class JobManager(NamedObject):
 		self.doShuffle = config.getBool('shuffle', False, onChange = None)
 		self.maxRetry = config.getInt('max retry', -1, onChange = None)
 		self.continuous = config.getBool('continuous', False, onChange = None)
+		self.reportClass = config.getClass('abort report', 'LocationReport', cls = Report, onChange = None)
 
 
 	def getMaxJobs(self, task):
@@ -243,7 +244,7 @@ class JobManager(NamedObject):
 		if len(jobs) == 0:
 			return
 		if showJobs:
-			Report(self.jobDB, jobs).details()
+			self.reportClass.getInstance(self.jobDB, jobs).display()
 		if interactive and not utils.getUserBool('Do you really want to cancel these jobs?', True):
 			return
 
@@ -262,7 +263,7 @@ class JobManager(NamedObject):
 
 		if len(jobs) > 0:
 			print '\nThere was a problem with cancelling the following jobs:'
-			Report(self.jobDB, jobs).details()
+			self.reportClass.getInstance(self.jobDB, jobs).display()
 			if (interactive and utils.getUserBool('Do you want to mark them as cancelled?', True)) or not interactive:
 				map(mark_cancelled, jobs)
 		if interactive:
@@ -281,7 +282,7 @@ class JobManager(NamedObject):
 		jobs = self.jobDB.getJobs(JobSelector.create(select, task = self.task))
 		if jobs:
 			print '\nResetting the following jobs:'
-			Report(self.jobDB, jobs).details()
+			self.reportClass.getInstance(self.jobDB, jobs).display()
 			if utils.getUserBool('Are you sure you want to reset the state of these jobs?', False):
 				self.cancel(wms, self.jobDB.getJobs(ClassSelector(JobClass.PROCESSING), jobs), False, False)
 				for jobNum in jobs:
