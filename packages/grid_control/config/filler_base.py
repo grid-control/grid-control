@@ -17,9 +17,9 @@ class FileConfigFiller(ConfigFiller):
 		for configFile in self._configFiles:
 			self._parseFile(container, configFile)
 
-	def _parseFile(self, container, configFile, defaults = None):
+	def _parseFile(self, container, configFile, defaults = None, searchPaths = []):
 		try:
-			configFile = utils.resolvePath(configFile, ErrorClass = ConfigError)
+			configFile = utils.resolvePath(configFile, searchPaths, ErrorClass = ConfigError)
 			log = logging.getLogger(('config.%s' % utils.getRootName(configFile)).rstrip('.'))
 			log.log(logging.INFO1, 'Reading config file %s' % configFile)
 			for line in map(lambda x: x.rstrip() + '=:', open(configFile, 'r').readlines()):
@@ -35,7 +35,8 @@ class FileConfigFiller(ConfigFiller):
 			if parser.has_option('global', 'include'):
 				includeFiles = parser.get('global', 'include').split('#')[0].split(';')[0]
 				for includeFile in utils.parseList(includeFiles, None):
-					self._parseFile(container, includeFile, parser.defaults())
+					self._parseFile(container, includeFile, parser.defaults(),
+						searchPaths + [os.path.dirname(configFile)])
 			# Store config settings
 			for section in parser.sections():
 				for option in parser.options(section):
