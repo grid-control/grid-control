@@ -20,16 +20,16 @@ class Workflow(NamedObject):
 		utils.vprint('Task started on %s' % self.task.taskDate, -1)
 
 		# Initialise monitoring module
-		self.monitor = ClassFactory(Monitoring, config, [self.task],
-			('monitor', 'scripts'), ('monitor manager', 'MultiMonitor')).getInstance(self.task)
+		self.monitor = ClassFactory(config, ('monitor', 'scripts'), ('monitor manager', 'MultiMonitor'),
+			cls = Monitoring, tags = [self.task]).getInstance(self.task)
 
 		# Initialise workload management interface
-		self.wms = ClassFactory(WMS, config, [self.task],
-			('backend', 'grid'), ('backend manager', 'MultiWMS')).getInstance()
+		self.wms = ClassFactory(config, ('backend', 'grid'), ('backend manager', 'MultiWMS'),
+			cls = WMS, tags = [self.task]).getInstance()
 
 		# Initialise job database
-		jobManagerCls = config.getClass('job manager', 'SimpleJobManager', cls = JobManager,
-			tags = [self.task, self.wms])
+		jobManagerCls = config.getClass('job manager', 'SimpleJobManager',
+			cls = JobManager, tags = [self.task, self.wms])
 		self.jobManager = jobManagerCls.getInstance(self.task, self.monitor)
 
 		# Prepare work package

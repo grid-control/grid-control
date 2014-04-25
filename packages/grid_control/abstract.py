@@ -123,12 +123,12 @@ class NamedObject(LoadableObject):
 
 # General purpose class factory
 class ClassFactory:
-	def __init__(self, cls, config, tags, opt, optMerge):
-		proxyList = config.getClassList(opt[0], opt[1], cls = cls, tags = tags)
+	def __init__(self, config, opt, optMerge, **kwargs):
+		proxyList = config.getClassList(opt[0], opt[1], **kwargs)
 		self._mergeCls = None
 		if len(proxyList) > 1:
-			self._mergeCls = config.getClass(optMerge[0], optMerge[1], cls = cls, tags = tags)
-		self._classList = map(lambda clsProxy: lambda *args, **kwargs: clsProxy.getInstance(*args, **kwargs), proxyList)
+			self._mergeCls = config.getClass(optMerge[0], optMerge[1], **kwargs)
+		self._classList = map(lambda clsProxy: lambda *cargs, **ckwargs: clsProxy.getInstance(*cargs, **ckwargs), proxyList)
 
 	# Get single instance by merging multiple sub instances if necessary
 	def getInstance(self, *args, **kwargs):

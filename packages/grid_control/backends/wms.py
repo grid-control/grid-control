@@ -59,8 +59,8 @@ WMS.registerObject(tagName = 'wms')
 class InactiveWMS(WMS):
 	def __init__(self, config, wmsName, wmsClass):
 		WMS.__init__(self, config, wmsName, wmsClass)
-		self.proxy = ClassFactory(Proxy, config, [self],
-			('proxy', 'TrivialProxy'), ('proxy manager', 'MultiProxy')).getInstance()
+		self.proxy = ClassFactory(config, ('proxy', 'TrivialProxy'), ('proxy manager', 'MultiProxy'),
+			cls = Proxy, tags = [self]).getInstance()
 
 	def getTimings(self): # Return (waitIdle, wait)
 		return (0, 0)
@@ -101,8 +101,8 @@ class BasicWMS(WMS):
 		self._failPath = config.getWorkPath('fail')
 
 		# Initialise proxy, broker and storage manager
-		self.proxy = ClassFactory(Proxy, config, [self],
-			('proxy', 'TrivialProxy'), ('proxy manager', 'MultiProxy')).getInstance()
+		self.proxy = ClassFactory(config, ('proxy', 'TrivialProxy'), ('proxy manager', 'MultiProxy'),
+			cls = Proxy, tags = [self]).getInstance()
 
 		# UI -> SE -> WN
 		self.smSEIn = config.getClass('se input manager', 'SEStorageManager', cls = StorageManager, tags = [self]).getInstance('se', 'se input', 'SE_INPUT')
