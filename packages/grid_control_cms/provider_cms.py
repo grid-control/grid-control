@@ -189,3 +189,8 @@ class CMSProvider(DataProvider):
 				raise DatasetError('Dataset %s does not contain the requested run/lumi sections!' % datasetPath)
 			elif counter == 0:
 				raise DatasetError('Dataset %s does not contain any valid blocks!' % datasetPath)
+
+
+class DBS2Provider(CMSProvider):
+	def __init__(self, config, datasetExpr, datasetNick, datasetID = 0):
+		raise DatasetError('CMS deprecated all DBS2 Services in April 2014! Please use DBS3Provider instead.')
