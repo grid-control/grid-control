@@ -128,15 +128,11 @@ class ANSIProgressBar:
 class ANSIConsole(GUI):
 	def __init__(self, config, workflow):
 		GUI.__init__(self, config, workflow)
-		self._report = self._reportClass.getInstance(self._workflow.jobManager.jobDB, configString = self.getHeader())
+		self._report = self._reportClass.getInstance(self._workflow.jobManager.jobDB, self._workflow.task)
 
 	def displayWorkflow(self):
-		if self._workflow.runContinuous:
-			utils.vprint(level = -1)
-
-	def displayWorkflow(self):
-		jobMgr = self._workflow.jobManager
-		header = self.getHeader()
+		report = self._report
+		workflow = self._workflow
 		def wrapper(screen):
 			# Event handling for resizing
 			def onResize(sig, frame):
@@ -147,7 +143,7 @@ class ANSIConsole(GUI):
 				screen.loadPos()
 			screen.erase()
 			onResize(None, None)
-			bar = ANSIProgressBar(0, len(jobMgr.jobDB), 65)
+			bar = ANSIProgressBar(0, len(workflow.jobManager.jobDB), 65)
 
 			def guiWait(timeout):
 				onResize(None, None)
@@ -170,9 +166,9 @@ class ANSIConsole(GUI):
 					screen.savePos()
 					screen.move(0, 0)
 					sys.stdout.logged = False
-					bar.update(len(jobMgr.jobDB.getJobs(ClassSelector(JobClass.SUCCESS))))
-					self._report.display(message = '%s\n%s' % (bar, message))
-					report.Report(jobMgr.jobDB, header = header).summary()
+					report.display()
+					bar.update(len(workflow.jobManager.jobDB.getJobs(ClassSelector(JobClass.SUCCESS))))
+					sys.stdout.write('%s\n%s\n' % (bar, message))
 					sys.stdout.logged = True
 					screen.loadPos()
 
@@ -182,24 +178,16 @@ class ANSIConsole(GUI):
 				utils.ActivityLog = GUILog
 				sys.stdout = GUIStream(saved[0], screen)
 				sys.stderr = GUIStream(saved[1], screen)
-				self._workflow.jobCycle(guiWait)
+				workflow.jobCycle(guiWait)
 			finally:
 				if sys.modules['__main__'].log: del sys.modules['__main__'].log
 				sys.stdout, sys.stderr, utils.ActivityLog = saved
 				screen.setscrreg()
 				screen.move(1, 0)
 				screen.eraseDown()
-				self._report.display()
+				report.display()
+				sys.stdout.write('\n')
 		try:
 			wrapper(Console())
 		finally:
 			GUIStream.dump()
-
-	def getHeader(self):
-		tmp = self._workflow.task.taskConfigName + ' / ' + self._workflow.task.taskID
-		if len(tmp) < 45:
-			return tmp
-		tmp = self._workflow.task.taskConfigName
-		if len(tmp) < 45:
-			return tmp
-		return self._workflow.task.taskID
