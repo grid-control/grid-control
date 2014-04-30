@@ -3,6 +3,16 @@ from grid_control import QM, Job, RuntimeError, utils, AbstractError, LoadableOb
 class Report(LoadableObject):
 	def __init__(self, jobDB, task, jobs = None, configString = ''):
 		(self._jobDB, self._task, self._jobs) = (jobDB, task, jobs)
+		self._header = self._getHeader(45)
+
+	def _getHeader(self, maxLen = 45):
+		tmp = self._task.taskConfigName + ' / ' + self._task.taskID
+		if len(tmp) < maxLen:
+			return tmp
+		tmp = self._task.taskConfigName
+		if len(tmp) < maxLen:
+			return tmp
+		return self._task.taskID
 
 	def display(self):
 		raise AbstractError
@@ -10,16 +20,6 @@ Report.registerObject()
 
 
 class BasicReport(Report):
-	def __init__(self, jobDB, task, jobs = None, configString = ''):
-		Report.__init__(self, jobDB, task, jobs, configString)
-		self._header = task.taskConfigName + ' / ' + task.taskID
-		if len(self._header) < 45:
-			return
-		self._header = task.taskConfigName
-		if len(self._header) < 45:
-			return
-		self._header = task.taskID
-
 	def _printHeader(self, message, level = -1):
 		utils.vprint('-'*65, level)
 		utils.vprint(message + self._header.rjust(65 - len(message)), level)
