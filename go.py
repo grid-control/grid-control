@@ -31,7 +31,6 @@ if __name__ == '__main__':
 
 	parser = optparse.OptionParser(add_help_option=False)
 	parser.add_option('-h', '--help',          action='callback', callback=print_help)
-	parser.add_option('',   '--help-vars',     dest='help_vars',  default=False, action='store_true')
 	parser.add_option('',   '--help-conf',     dest='help_cfg',   default=False, action='store_true')
 	parser.add_option('',   '--help-confmin',  dest='help_scfg',  default=False, action='store_true')
 	parser.add_option('-i', '--init',          dest='init',       default=False, action='store_true')
@@ -104,11 +103,6 @@ if __name__ == '__main__':
 		# Create workflow and freeze config settings
 		workflow = config.getClass('global', 'workflow', 'Workflow:global', cls = Workflow).getInstance()
 		config.freezeConfig(writeConfig = config.getState(detail = 'config'))
-
-		# Give help about variables
-		if opts.help_vars:
-			Help().listVars(workflow.task)
-			sys.exit(0)
 
 		# Give config help
 		if opts.help_cfg or opts.help_scfg:

@@ -1,7 +1,6 @@
     Options:
 	                         --- Help options ---
 	-h, --help               Show this helpful message
-	    --help-vars          Show the usable variable placeholders
 	    --help-conf          Show all config options (including default values)
 	                         used in the current setup
 	    --help-confmin       Show the reduced set of config options necessary
