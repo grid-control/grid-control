@@ -807,12 +807,12 @@ def printTabular(head, data, fmtString = '', fmt = {}, level = -1):
 		for entry in data:
 			if isinstance(entry, dict):
 				if showLine:
-					print ('-' * (maxhead + 2)) + '-+-' + '-' * min(30, printTabular.wraplen - maxhead - 10)
+					vprint(('-' * (maxhead + 2)) + '-+-' + '-' * min(30, printTabular.wraplen - maxhead - 10))
 				for (key, name) in head:
-					print name.rjust(maxhead + 2), '|', str(fmt.get(key, str)(entry.get(key, '')))
+					vprint(name.rjust(maxhead + 2), '|', str(fmt.get(key, str)(entry.get(key, ''))))
 				showLine = True
 			elif showLine:
-				print ('=' * (maxhead + 2)) + '=+=' + '=' * min(30, printTabular.wraplen - maxhead - 10)
+				vprint(('=' * (maxhead + 2)) + '=+=' + '=' * min(30, printTabular.wraplen - maxhead - 10))
 				showLine = False
 		return
 

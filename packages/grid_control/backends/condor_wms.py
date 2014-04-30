@@ -499,7 +499,7 @@ class Condor(BasicWMS):
 					if self.explainError(proc, retCode):
 						pass
 					else:
-						print "Submitted %4d jobs of %4d expected" % (len(wmsJobIdList),len(jobNumList))
+						utils.eprint("Submitted %4d jobs of %4d expected" % (len(wmsJobIdList),len(jobNumList)))
 						proc.logError(self.errorLog, jdl = jdlFilePath)
 			finally:
 				utils.removeFiles([jdlFilePath])

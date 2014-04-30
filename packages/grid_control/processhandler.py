@@ -2,7 +2,7 @@ import sys, os, stat, time, popen2, math
 from exceptions import *
 
 from abstract import LoadableObject
-from utils import LoggedProcess, vprint, resolveInstallPath
+from utils import LoggedProcess, eprint, vprint, resolveInstallPath
 
 # placeholder for function arguments
 defaultArg = object()
@@ -111,7 +111,7 @@ class SSHProcessHandler(ProcessHandler):
 				if self.socketArgs!="":
 					self.socketArgs=""
 				if self.socketFailCount>maxFailCount:
-					print "Failed to create secure socket %s more than %s times!\nDisabling further attempts." % (self.sshLink,maxFailCount)
+					eprint("Failed to create secure socket %s more than %s times!\nDisabling further attempts." % (self.sshLink,maxFailCount))
 					self.sshLink=False
 
 	# make sure the link file is properly protected

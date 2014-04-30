@@ -25,7 +25,6 @@ class CMSSW(DataTask):
 		scramProject = config.getList('scram project', [])
 		if len(scramProject):
 			self.projectArea = config.getPath('project area', '')
-			print self.projectArea
 			if len(self.projectArea):
 				raise ConfigError('Cannot specify both SCRAM project and project area')
 			if len(scramProject) != 2:

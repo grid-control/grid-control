@@ -38,7 +38,7 @@ class ConfigEntry(object):
 		if self.option.startswith('#'):
 			return ''
 		entries = self._format(self.value)
-		if printSection: # Print prefix with section information
+		if printSection: # Display prefix with section information
 			entries = map(lambda entry: '[%s] %s' % (self.section, entry), entries)
 		if printDefaultValue and (self.default not in [notSet, noDefault]): # Add default information
 			defentries = self._format([self.default], printOption = False)
@@ -112,7 +112,7 @@ class ConfigContainer(object):
 			if value:
 				output.setdefault(section.lower(), ['[%s]' % section]).append(value)
 		for entry in filter(lambda e: e.accessed == True, self.iterContent()):
-			# Don't print default values unless specified - dynamic settings always derive from non-default settings
+			# Don't display default values unless specified - dynamic settings always derive from non-default settings
 			if not printDefault and (entry.source in ['<default>', '<dynamic>']):
 				continue
 			# value-default comparison, since for persistent entries: value == default, source != '<default>'
