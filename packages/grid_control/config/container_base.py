@@ -226,6 +226,12 @@ class BasicConfigContainer(ConfigContainer):
 # Container allowing access via selectors
 class ResolvingConfigContainer(BasicConfigContainer):
 	def iterContent(self, selOptions = [], selSections = [], selNames = [], selTags = []):
+		selOptions = map(str.lower, selOptions)
+		selSections = map(str.lower, selSections)
+		selNames = map(str.lower, selNames)
+		selTags = map(lambda (tk, tv): (tk.lower(), tv.lower()), selTags)
+		selTagsOrder = map(lambda (tk, tv): tk, selTags)
+
 		self._logger.log(logging.DEBUG1, 'Matching section: %r names: %r tags: %r options: %r' %
 			(selSections, selNames, selTags, selOptions))
 		# Function to parse section into section name, section titles and section tags
@@ -242,7 +248,8 @@ class ResolvingConfigContainer(BasicConfigContainer):
 				else:
 					nameList.append(entry)
 			return (section, (tmp[0], nameList, tagDict)) # section, (main, nameList, tagDict)
-		sectionList = map(parseSection, self._content)
+
+		parsedSections = map(parseSection, self._content)
 
 		# Function to impose weak ordering on sections
 		def cmpSection(a, b):
@@ -259,17 +266,16 @@ class ResolvingConfigContainer(BasicConfigContainer):
 			cmpNames = cmp(a_sNames, b_sNames)
 			if cmpNames != 0:
 				return -cmpNames # entries without names come *after* entries with names
-			selTagsOrder = map(lambda (tk, tv): tk, selTags)
 			score = lambda tags: sum(map(lambda (i, t): 1 << (len(selTagsOrder) - findIndex(selTagsOrder, t, 0)), enumerate(tags)))
 			return -cmp(score(a_sTags), score(b_sTags))
 
 		def matchSection(sectionEntry):
 			(section, sectionInfos) = sectionEntry
 			(sMain, sTitles, sTags) = sectionInfos
-			if selSections and (sMain not in map(str.lower, selSections)):
+			if selSections and (sMain not in selSections):
 				return False
 			if sTitles:
-				for selName in map(str.lower, selNames):
+				for selName in selNames:
 					if selName not in sTitles:
 						return False
 			for (selTagKey, selTagValue) in selTags:
@@ -279,21 +285,20 @@ class ResolvingConfigContainer(BasicConfigContainer):
 					return False
 			return True
 
-		sectionList = sorted(filter(matchSection, sectionList), cmp = cmpSection)
+		parsedSections = sorted(filter(matchSection, parsedSections), cmp = cmpSection)
 		def iterContentImpl():
 			if selOptions: # option list specified - return matching sections in same order
-				for option in map(str.lower, selOptions):
-					for (section, sectionInfo) in sectionList:
+				for option in selOptions:
+					for (section, sectionInfo) in parsedSections:
 						if option in self._content[section]:
 							yield self._content[section][option]
 			else: # no option specified
-				for (section, sectionInfo) in sectionList:
+				for (section, sectionInfo) in parsedSections:
 					for option in sorted(self._content[section]):
 						yield self._content[section][option]
-		result = list(iterContentImpl())
-		for entry in result:
+		for entry in iterContentImpl():
 			self._logger.log(logging.DEBUG1, '\t%s matches' % entry.format_opt())
-		return result
+		return iterContentImpl()
 
 
 	def getOptions(self, selector):
