@@ -17,6 +17,9 @@ class Report(LoadableObject):
 			return tmp
 		return self._task.taskID
 
+	def getHeight(self):
+		raise AbstractError
+
 	def display(self):
 		raise AbstractError
 Report.registerObject()
@@ -27,6 +30,9 @@ class BasicReport(Report):
 		utils.vprint('-'*65, level)
 		utils.vprint(message + self._header.rjust(65 - len(message)), level)
 		utils.vprint(('-'*15).ljust(65), level)
+
+	def getHeight(self):
+		return 14
 
 	def display(self):
 		summary = map(lambda x: 0.0, Job.states)

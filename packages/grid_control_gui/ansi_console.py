@@ -1,5 +1,4 @@
 from grid_control import GUI, JobClass, utils, Report
-from grid_control.job_selector import ClassSelector
 import re, sys, signal, termios, array, fcntl
 
 class Console:
@@ -96,37 +95,9 @@ class GUIStream:
 GUIStream.backlog = [None] * 100
 
 
-class BasicProgressBar:
-	def __init__(self, minValue = 0, maxValue = 100, totalWidth = 16):
-		(self._min, self._max, self._width) = (minValue, maxValue, totalWidth)
-		self.update(0)
-
-	def update(self, newProgress = 0):
-		# Compute variables
-		complete = self._width - 2
-		progress = max(self._min, min(self._max, newProgress))
-		done = int(round(((progress - self._min) / max(1.0, float(self._max - self._min))) * 100.0))
-		blocks = int(round((done / 100.0) * complete))
-
-		# Build progress bar
-		if blocks == 0:
-			self._bar = '[>%s]' % (' '*(complete-1))
-		elif blocks == complete:
-			self._bar = '[%s]' % ('='*complete)
-		else:
-			self._bar = '[%s>%s]' % ('='*(blocks-1), ' '*(complete-blocks))
-
-		# Print percentage
-		text = str(done) + '%'
-		textPos = (self._width - len(text) + 1) / 2
-		self._bar = self._bar[0:textPos] + text + self._bar[textPos+len(text):]
-
-	def __str__(self):
-		return str(self._bar)
-
-
 class ANSIConsole(GUI):
 	def __init__(self, config, workflow):
+		config.set('report', 'BasicBarReport', override = False)
 		GUI.__init__(self, config, workflow)
 		self._report = self._reportClass.getInstance(self._workflow.jobManager.jobDB, self._workflow.task)
 
@@ -138,12 +109,11 @@ class ANSIConsole(GUI):
 			def onResize(sig, frame):
 				screen.savePos()
 				(sizey, sizex) = screen.getmaxyx()
-				screen.setscrreg(min(17, sizey), sizey)
+				screen.setscrreg(min(report.getHeight() + 2, sizey), sizey)
 				utils.printTabular.wraplen = sizex - 5
 				screen.loadPos()
 			screen.erase()
 			onResize(None, None)
-			bar = BasicProgressBar(0, len(workflow.jobManager.jobDB), 65)
 
 			def guiWait(timeout):
 				onResize(None, None)
@@ -167,8 +137,7 @@ class ANSIConsole(GUI):
 					screen.move(0, 0)
 					sys.stdout.logged = False
 					report.display()
-					bar.update(len(workflow.jobManager.jobDB.getJobs(ClassSelector(JobClass.SUCCESS))))
-					sys.stdout.write('%s\n%s\n' % (bar, message))
+					sys.stdout.write('%s\n' % message)
 					sys.stdout.logged = True
 					screen.loadPos()
 
