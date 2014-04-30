@@ -9,10 +9,10 @@ class JobManager(NamedObject):
 
 	def __init__(self, config, name, task, eventhandler):
 		NamedObject.__init__(self, config, name)
-		(self.task, self.eventhandler) = (task, eventhandler)
+		(self._task, self._eventhandler) = (task, eventhandler)
 		self.jobLimit = config.getInt('jobs', -1, onChange = None)
-		selected = JobSelector.create(config.get('selected', '', onChange = None), task = self.task)
-		self.jobDB = JobDB(config, self.getMaxJobs(self.task), selected)
+		selected = JobSelector.create(config.get('selected', '', onChange = None), task = self._task)
+		self.jobDB = JobDB(config, self.getMaxJobs(self._task), selected)
 		self.disableLog = config.getWorkPath('disabled')
 
 		self.timeout = config.getTime('queue timeout', -1, onChange = None)
@@ -80,7 +80,7 @@ class JobManager(NamedObject):
 				msg.append('error code: %d' % jobObj.get('retcode'))
 				try:
 					if utils.verbosity() > 0:
-						msg.append(self.task.errorDict[jobObj.get('retcode')])
+						msg.append(self._task.errorDict[jobObj.get('retcode')])
 				except:
 					pass
 			if jobObj.get('dest'):
@@ -104,7 +104,7 @@ class JobManager(NamedObject):
 		retryOK = readyList
 		if self.maxRetry >= 0:
 			retryOK = filter(lambda x: self.jobDB.get(x, Job()).attempt - 1 < self.maxRetry, readyList)
-		modOK = filter(self.task.canSubmit, readyList)
+		modOK = filter(self._task.canSubmit, readyList)
 		jobList = set.intersection(set(retryOK), set(modOK))
 
 		if static['showBlocker'] and len(readyList) > 0 and len(jobList) == 0: # No submission but ready jobs
@@ -136,7 +136,7 @@ class JobManager(NamedObject):
 			return False
 
 		submitted = []
-		for jobNum, wmsId, data in wms.submitJobs(jobList, self.task):
+		for jobNum, wmsId, data in wms.submitJobs(jobList, self._task):
 			submitted.append(jobNum)
 			jobObj = self.jobDB.get(jobNum, create = True)
 
@@ -150,7 +150,7 @@ class JobManager(NamedObject):
 				jobObj.set(key, value)
 
 			self._update(jobObj, jobNum, Job.SUBMITTED)
-			self.eventhandler.onJobSubmit(wms, jobObj, jobNum)
+			self._eventhandler.onJobSubmit(wms, jobObj, jobNum)
 			if utils.abort():
 				return False
 		return len(submitted) != 0
@@ -172,7 +172,7 @@ class JobManager(NamedObject):
 				for key, value in info.items():
 					jobObj.set(key, value)
 				self._update(jobObj, jobNum, state)
-				self.eventhandler.onJobUpdate(wms, jobObj, jobNum, info)
+				self._eventhandler.onJobUpdate(wms, jobObj, jobNum, info)
 			else:
 				# If a job stays too long in an inital state, cancel it
 				if jobObj.state in (Job.SUBMITTED, Job.WAITING, Job.READY, Job.QUEUED):
@@ -198,13 +198,13 @@ class JobManager(NamedObject):
 			self.cancel(wms, timeoutList)
 
 		# Process task interventions
-		self.processIntervention(wms, self.task.getIntervention())
+		self.processIntervention(wms, self._task.getIntervention())
 
 		# Quit when all jobs are finished
 		if self.jobDB.getJobsN(ClassSelector(JobClass.ENDSTATE)) == len(self.jobDB):
 			self.logDisabled()
-			self.eventhandler.onTaskFinish(len(self.jobDB))
-			if self.task.canFinish():
+			self._eventhandler.onTaskFinish(len(self.jobDB))
+			if self._task.canFinish():
 				utils.vprint('Task successfully completed. Quitting grid-control!', -1, True)
 				utils.abort(True)
 
@@ -232,7 +232,7 @@ class JobManager(NamedObject):
 				jobObj.set('retcode', retCode)
 				jobObj.set('runtime', data.get('TIME', -1))
 				self._update(jobObj, jobNum, state)
-				self.eventhandler.onJobOutput(wms, jobObj, jobNum, retCode)
+				self._eventhandler.onJobOutput(wms, jobObj, jobNum, retCode)
 
 			if utils.abort():
 				return False
@@ -253,7 +253,7 @@ class JobManager(NamedObject):
 			if jobObj == None:
 				return
 			self._update(jobObj, jobNum, Job.CANCELLED)
-			self.eventhandler.onJobUpdate(wms, jobObj, jobNum, {'reason': 'cancelled'})
+			self._eventhandler.onJobUpdate(wms, jobObj, jobNum, {'reason': 'cancelled'})
 
 		jobs.reverse()
 		for (jobNum, wmsId) in wms.cancelJobs(self.wmsArgs(jobs)):
@@ -271,7 +271,7 @@ class JobManager(NamedObject):
 
 
 	def delete(self, wms, select):
-		selector = AndJobSelector(ClassSelector(JobClass.PROCESSING), JobSelector.create(select, task = self.task))
+		selector = AndJobSelector(ClassSelector(JobClass.PROCESSING), JobSelector.create(select, task = self._task))
 		jobs = self.jobDB.getJobs(selector)
 		if jobs:
 			print '\nCancelling the following jobs:'
@@ -279,7 +279,7 @@ class JobManager(NamedObject):
 
 
 	def reset(self, wms, select):
-		jobs = self.jobDB.getJobs(JobSelector.create(select, task = self.task))
+		jobs = self.jobDB.getJobs(JobSelector.create(select, task = self._task))
 		if jobs:
 			print '\nResetting the following jobs:'
 			self._reportClass.getInstance(self.jobDB, self._task, jobs).display()
@@ -309,7 +309,7 @@ class JobManager(NamedObject):
 				return
 			utils.vprint('The task module has requested changes to the job database', -1, True)
 			if sizeChange:
-				newMaxJobs = self.getMaxJobs(self.task)
+				newMaxJobs = self.getMaxJobs(self._task)
 				utils.vprint('Number of jobs changed from %d to %d' % (len(self.jobDB), newMaxJobs), -1, True)
 				self.jobDB.jobLimit = newMaxJobs
 			self.cancel(wms, self.jobDB.getJobs(ClassSelector(JobClass.PROCESSING), redo))

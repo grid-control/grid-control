@@ -19,11 +19,11 @@ class Console:
 	def __init__(self):
 		(self.stdout, self.stdin) = (sys.stdout, sys.stdin)
 		def callFactory(x):
-			return lambda: self.esc(x)
+			return lambda: self._esc(x)
 		for (proc, esc) in Console.cmd.items():
 			setattr(self, proc, callFactory(esc))
 
-	def esc(self, data):
+	def _esc(self, data):
 		self.stdout.write('\033' + data)
 		self.stdout.flush()
 
@@ -33,10 +33,10 @@ class Console:
 		return (size[0], size[2])
 
 	def move(self, row, col):
-		self.esc('[%d;%dH' % (row, col))
+		self._esc('[%d;%dH' % (row, col))
 
 	def setscrreg(self, top = 0, bottom = 0):
-		self.esc('[%d;%dr' % (top, bottom))
+		self._esc('[%d;%dr' % (top, bottom))
 
 	def addstr(self, data, attr = []):
 		self.stdout.write(Console.fmt(data, attr))
@@ -63,7 +63,7 @@ class GUIStream:
 		]
 		self.regex = re.compile('(%s)' % '|'.join(map(lambda (a, b): a, self.attrs)))
 
-	def attributes(self, string, pos):
+	def _attributes(self, string, pos):
 		""" Retrieve the attributes for a match in string at position pos. """
 		for (expr, attr) in self.attrs:
 			match = re.search(expr, string)
@@ -79,7 +79,7 @@ class GUIStream:
 		match = self.regex.search(data[idx:])
 		while match:
 			self.screen.addstr(data[idx:idx + match.start()])
-			self.screen.addstr(match.group(0), self.attributes(data[idx:], match.start()))
+			self.screen.addstr(match.group(0), self._attributes(data[idx:], match.start()))
 			idx += match.end()
 			match = self.regex.search(data[idx:])
 		self.screen.addstr(data[idx:])
@@ -96,33 +96,33 @@ class GUIStream:
 GUIStream.backlog = [None] * 100
 
 
-class ANSIProgressBar:
+class BasicProgressBar:
 	def __init__(self, minValue = 0, maxValue = 100, totalWidth = 16):
-		(self.min, self.max, self.width) = (minValue, maxValue, totalWidth)
+		(self._min, self._max, self._width) = (minValue, maxValue, totalWidth)
 		self.update(0)
 
 	def update(self, newProgress = 0):
 		# Compute variables
-		complete = self.width - 2
-		progress = max(self.min, min(self.max, newProgress))
-		done = int(round(((progress - self.min) / max(1.0, float(self.max - self.min))) * 100.0))
+		complete = self._width - 2
+		progress = max(self._min, min(self._max, newProgress))
+		done = int(round(((progress - self._min) / max(1.0, float(self._max - self._min))) * 100.0))
 		blocks = int(round((done / 100.0) * complete))
 
 		# Build progress bar
 		if blocks == 0:
-			self.bar = '[>%s]' % (' '*(complete-1))
+			self._bar = '[>%s]' % (' '*(complete-1))
 		elif blocks == complete:
-			self.bar = '[%s]' % ('='*complete)
+			self._bar = '[%s]' % ('='*complete)
 		else:
-			self.bar = '[%s>%s]' % ('='*(blocks-1), ' '*(complete-blocks))
+			self._bar = '[%s>%s]' % ('='*(blocks-1), ' '*(complete-blocks))
 
 		# Print percentage
 		text = str(done) + '%'
-		textPos = (self.width - len(text) + 1) / 2
-		self.bar = self.bar[0:textPos] + text + self.bar[textPos+len(text):]
+		textPos = (self._width - len(text) + 1) / 2
+		self._bar = self._bar[0:textPos] + text + self._bar[textPos+len(text):]
 
 	def __str__(self):
-		return str(self.bar)
+		return str(self._bar)
 
 
 class ANSIConsole(GUI):
@@ -143,7 +143,7 @@ class ANSIConsole(GUI):
 				screen.loadPos()
 			screen.erase()
 			onResize(None, None)
-			bar = ANSIProgressBar(0, len(workflow.jobManager.jobDB), 65)
+			bar = BasicProgressBar(0, len(workflow.jobManager.jobDB), 65)
 
 			def guiWait(timeout):
 				onResize(None, None)
