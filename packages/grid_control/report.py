@@ -2,7 +2,10 @@ from grid_control import QM, Job, RuntimeError, utils, AbstractError, LoadableOb
 
 class Report(LoadableObject):
 	def __init__(self, jobDB, task, jobs = None, configString = ''):
+		if jobs == None:
+			jobs = jobDB.getJobs()
 		(self._jobDB, self._task, self._jobs) = (jobDB, task, jobs)
+		# FIXME: really store task for later access? maybe just use task during init run?
 		self._header = self._getHeader(45)
 
 	def _getHeader(self, maxLen = 45):
@@ -27,11 +30,9 @@ class BasicReport(Report):
 
 	def display(self):
 		summary = map(lambda x: 0.0, Job.states)
-		jobs = self._jobs
-		if self._jobs == None:
-			jobs = self._jobDB.getJobs()
-		for jobNum in jobs:
-			summary[self._jobDB.get(jobNum, Job()).state] += 1
+		defaultJob = Job()
+		for jobNum in self._jobs:
+			summary[self._jobDB.get(jobNum, defaultJob).state] += 1
 		makeSum = lambda *states: sum(map(lambda z: summary[z], states))
 		makePer = lambda *states: [makeSum(*states), round(makeSum(*states) / len(self._jobDB) * 100.0)]
 

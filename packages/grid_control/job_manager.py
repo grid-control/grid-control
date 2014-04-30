@@ -102,8 +102,9 @@ class JobManager(NamedObject):
 		# Get list of submittable jobs
 		readyList = self.jobDB.getJobs(ClassSelector(JobClass.READY))
 		retryOK = readyList
+		defaultJob = Job()
 		if self.maxRetry >= 0:
-			retryOK = filter(lambda x: self.jobDB.get(x, Job()).attempt - 1 < self.maxRetry, readyList)
+			retryOK = filter(lambda x: self.jobDB.get(x, defaultJob).attempt - 1 < self.maxRetry, readyList)
 		modOK = filter(self._task.canSubmit, readyList)
 		jobList = set.intersection(set(retryOK), set(modOK))
 
