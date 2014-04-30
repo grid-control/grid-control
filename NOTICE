@@ -1,0 +1,53 @@
+grid-control (https://ekptrac.physik.uni-karlsruhe.de/trac/grid-control)
+
+Copyright (C) 2007-2014 Karlsruhe Institute of Technology
+
+Maintained by: Fred Stober             <grid-control-dev@googlegroups.com>
+
+ Developed by: Fred Stober             <mail@fredstober.de>
+               Jana Saout              <jana@saout.de>
+               Max Fischer             <max.fischer@kit.edu>
+               Armin Burgmeier         <burgmeier@ekp.uni-karlsruhe.de>
+               Armin Scheurer          <contact@armin-scheurer.de>
+               Volker Buege            <v.buege@enbw.com>
+               Matthias Wolf           <matthias.wolf.60@nd.edu>
+               Andreas Oehler          <andreasoehler@gmx.net>
+               Jochen Ott              <ott@ekp.uni-karlsruhe.de>
+               Manuel Zeise            <zeise@cern.ch>
+               Klaus Rabbertz          <klaus.rabbertz@cern.ch>
+               Oliver Oberst           <oliver.oberst@de.ibm.com>
+               Benjamin Klein          <klein@ekp.physik.uni-karlsruhe.de>
+               Eike Schlieckau         <eike.schlieckau@desy.de>
+               Luigi Calligaris        <luigi.calligaris@desy.de>
+               Dominik Haitz           <dhaitz@ekp.uni-karlsruhe.de>
+               Georg Sieber            <g.sieber@cern.ch>
+               Peter Krauss            <Peter.Krauss@cern.ch>
+               Joram Berger            <joram.berger@cern.ch>
+               Philipp Schieferdecker  <Philipp.Schieferdecker@cern.ch>
+               Corinna Günth           <corinna.guenth@student.kit.edu>
+               Jasmin Kiefer           <jasmin.gruschke@sap.com>
+               Hauke Held              <hauke.held@kit.edu>
+               Thomas Hauth            <Thomas.Hauth@cern.ch>
+               (in order of contributed source code lines)
+
+--
+
+This product includes backported python library code (http://www.python.org)
+Copyright (C) 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010,
+  2011, 2012, 2013 Python Software Foundation.
+Licensed under the Python Software Foundation License.
+
+This product includes a tar file library (tarfile.py),
+Copyright (C) 2002 Lars Gustäbel <lars@gustaebel.de>
+Licensed under the terms described in the source file.
+
+This product includes part of the MonALISA framework (http://monalisa.cacr.caltech.edu),
+Copyright (C) 2006 California Institute of Technology
+Licensed under the terms described in the source files.
+
+This product includes xmpppy (http://xmpppy.sourceforge.net/),
+Copyright (C) 2003-2005 Alexey "Snake" Nezhdanov
+Licensed under the GNU General Public License version 2, or any later version.
+xmppy includes debug code,
+Copyright (C) 2003 Jacob Lundqvist
+Licensed under the GNU Lesser General Public License version 2, or any later version.
