@@ -1,4 +1,4 @@
-#-#  Copyright 2013-2014 Karlsruhe Institute of Technology
+#-#  Copyright 2014 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -12,49 +12,9 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-from grid_control import GUI, JobClass, utils, Report
-import re, sys, signal, termios, array, fcntl
-
-class Console:
-	attr = {'COLOR_BLACK': '30', 'COLOR_RED': '31', 'COLOR_GREEN': '32',
-		'COLOR_YELLOW': '33', 'COLOR_BLUE': '34', 'COLOR_MAGENTA': '35',
-		'COLOR_CYAN': '36', 'COLOR_WHITE': '37', 'BOLD': '1', 'RESET': '0'}
-	cmd = {'savePos': '7', 'loadPos': '8', 'eraseDown': '[J', 'erase': '[2J'}
-	for (name, esc) in attr.items():
-		locals()[name] = esc
-
-	def fmt(cls, data, attr = []):
-		if sys.stdout.isatty():
-			return '\033[%sm%s\033[0m' % (str.join(';', [Console.RESET] + attr), data)
-		return data
-	fmt = classmethod(fmt)
-
-	def __init__(self):
-		(self.stdout, self.stdin) = (sys.stdout, sys.stdin)
-		def callFactory(x):
-			return lambda: self._esc(x)
-		for (proc, esc) in Console.cmd.items():
-			setattr(self, proc, callFactory(esc))
-
-	def _esc(self, data):
-		self.stdout.write('\033' + data)
-		self.stdout.flush()
-
-	def getmaxyx(self):
-		size = array.array('B', [0, 0, 0, 0])
-		fcntl.ioctl(0, termios.TIOCGWINSZ, size, True)
-		return (size[0], size[2])
-
-	def move(self, row, col):
-		self._esc('[%d;%dH' % (row, col))
-
-	def setscrreg(self, top = 0, bottom = 0):
-		self._esc('[%d;%dr' % (top, bottom))
-
-	def addstr(self, data, attr = []):
-		self.stdout.write(Console.fmt(data, attr))
-		self.stdout.flush()
-
+import sys, re
+from ansi import Console
+from grid_control import GUI, utils, Report
 
 class GUIStream:
 	def __init__(self, stream, screen):
@@ -109,7 +69,7 @@ class GUIStream:
 GUIStream.backlog = [None] * 100
 
 
-class ANSIConsole(GUI):
+class ANSIGUI(GUI):
 	def __init__(self, config, workflow):
 		config.set('report', 'BasicBarReport', override = False)
 		GUI.__init__(self, config, workflow)

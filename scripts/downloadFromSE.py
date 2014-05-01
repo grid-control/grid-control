@@ -345,7 +345,7 @@ def realmain(opts, args):
 		jobList.sort()
 
 	if opts.threads:
-		from grid_control_gui import ansi_console
+		from grid_control_gui import ansi
 		errorOutput = []
 		class ThreadDisplay:
 			def __init__(self):
@@ -370,9 +370,9 @@ def realmain(opts, args):
 				(hash, name_local, name_dest, pathSE) = self.files[idx]
 				if hashLocal:
 					if hash == hashLocal:
-						result = ansi_console.Console.fmt('MATCH', [ansi_console.Console.COLOR_GREEN])
+						result = ansi.Console.fmt('MATCH', [ansi.Console.COLOR_GREEN])
 					else:
-						result = ansi_console.Console.fmt('FAIL', [ansi_console.Console.COLOR_RED])
+						result = ansi.Console.fmt('FAIL', [ansi.Console.COLOR_RED])
 					msg = '(R:%s L:%s) => %s' % (hash, hashLocal, result)
 				else:
 					msg = ''
@@ -394,7 +394,7 @@ def realmain(opts, args):
 
 		(active, todo) = ([], list(jobList))
 		todo.reverse()
-		screen = ansi_console.Console()
+		screen = ansi.Console()
 		screen.move(0, 0)
 		screen.savePos()
 		while True:

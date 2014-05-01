@@ -433,13 +433,13 @@ def parseDict(entries, parserValue = lambda x: x, parserKey = lambda x: x):
 				order.append(key)
 		if (key != None) or entry.strip() != '':
 			result.setdefault(key, []).append(entry.strip())
-	def parserKeyInt(key):
+	def parserKeyIntern(key):
 		if key:
 			return parserKey(key)
 	for key, value in result.items():
 		value = parserValue(str.join('\n', value).strip())
-		resultParsed[parserKeyInt(key)] = value
-	return (resultParsed, map(parserKeyInt, order))
+		resultParsed[parserKeyIntern(key)] = value
+	return (resultParsed, map(parserKeyIntern, order))
 
 
 def parseBool(x):

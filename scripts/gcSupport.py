@@ -30,6 +30,21 @@ class DummyStream(object):
 		return self.__stream.__getattribute__(name)
 
 
+def getConfig(fn = None, cfgDict = {}, section = None):
+	fillerList = [DefaultFilesConfigFiller()]
+	if fn:
+		fillerList.append(FileConfigFiller([fn]))
+	if cfgDict:
+		if section:
+			fillerList.append(DictConfigFiller({section: cfgDict}))
+		else:
+			fillerList.append(DictConfigFiller(cfgDict))
+	config = Config(fillerList, fn)
+	if section:
+		return config.addSections([section])
+	return config
+
+
 class Silencer(object):
 	def __init__(self):
 		self.saved = (sys.stdout, sys.stderr)

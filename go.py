@@ -58,7 +58,7 @@ if __name__ == '__main__':
 	parser.add_option('-J', '--job-selector',  dest='selector',   default=None)
 	parser.add_option('-m', '--max-retry',     dest='maxRetry',   default=None,  type='int')
 	parser.add_option('-v', '--verbose',       dest='verbosity',  default=0,     action='count')
-	parser.add_option('-G', '--gui',           dest='gui',        action='store_const', const = 'ANSIConsole')
+	parser.add_option('-G', '--gui',           dest='gui',        action='store_const', const = 'ANSIGUI')
 	parser.add_option('-W', '--webserver',     dest='gui',        action='store_const', const = 'CPWebserver')
 	# Deprecated options - refer to new report script instead
 	parser.add_option('-r', '--report',        dest='old_report', default=False, action='store_true')
