@@ -30,7 +30,7 @@ shift
 echo "JOBID=$MY_JOBID"
 echo "grid-control - Version$GC_VERSION"
 echo "running on: `hostname -f; uname -a;`"
-[ -f /etc/redhat-release ] && cat /etc/redhat-release
+lsb_release -a 2> /dev/null
 echo
 echo "Job $MY_JOBID started - `date`"
 timestamp "WRAPPER" "START"
