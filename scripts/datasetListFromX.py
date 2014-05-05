@@ -35,6 +35,10 @@ def addOptions(parser):
 		help='Multi dataset mode - files are sorted into different datasets according to <delimeter>:<start>:<end>')
 	parser.add_option('-B', '--delimeter-block',   dest='delimeter block key',   default='',
 		help='Multi block mode - files are sorted into different blocks according to <delimeter>:<start>:<end>')
+	parser.add_option('-H', '--hash-dataset',      dest='dataset hash keys',     default='',
+		help='Multi dataset mode - files are sorted into different datasets according to hash of variables')
+	parser.add_option('',   '--hash-block',        dest='block hash keys',       default='',
+		help='Multi block mode - files are sorted into different blocks according to hash of variables')
 
 
 def discoverDataset(opts, parser, providerName, datasetExpr):
