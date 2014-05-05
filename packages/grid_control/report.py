@@ -76,6 +76,63 @@ class BasicReport(Report):
 		return 0
 
 
+class CategoryReport(Report):
+	def __init__(self, jobDB, task, jobs = None, configString = ''):
+		Report.__init__(self, jobDB, task, jobs, configString)
+		catJobs = {}
+		catDescDict = {}
+		# Assignment of jobs to categories (depending on variables and using datasetnick if available)
+		for jobNum in self._jobs:
+			jobConfig = task.getJobConfig(jobNum)
+			varList = sorted(filter(lambda var: '!' not in repr(var), jobConfig.keys()))
+			if 'DATASETSPLIT' in varList:
+				varList.remove('DATASETSPLIT')
+				varList.append('DATASETNICK')
+			catKey = str.join('|', map(lambda var: '%s=%s' % (var, jobConfig[var]), varList))
+			catJobs.setdefault(catKey, []).append(jobNum)
+			if catKey not in catDescDict:
+				catDescDict[catKey] = dict(map(lambda var: (var, jobConfig[var]), varList))
+		# Kill redundant keys from description
+		commonVars = dict(map(lambda var: (var, jobConfig[var]), varList)) # seed with last varList
+		for catKey in catDescDict:
+			for key in commonVars.keys():
+				if key not in catDescDict[catKey].keys():
+					commonVars.pop(key)
+				elif commonVars[key] != catDescDict[catKey][key]:
+					commonVars.pop(key)
+		for catKey in catDescDict:
+			for commonKey in commonVars:
+				catDescDict[catKey].pop(commonKey)
+		# Generate job-category map with efficient int keys - catNum becomes the new catKey
+		self._job2cat = {}
+		self._catDescDict = {}
+		for catNum, catKey in enumerate(sorted(catJobs)):
+			self._catDescDict[catNum] = catDescDict[catKey]
+			self._job2cat.update(dict.fromkeys(catJobs[catKey], catNum))
+
+	def _formatDesc(self, desc, others):
+		if isinstance(desc, str):
+			result = desc
+		else:
+			desc = dict(desc) # perform copy to allow dict.pop(...) calls
+			tmp = []
+			if 'DATASETNICK' in desc:
+				tmp = ['Dataset: %s' % desc.pop('DATASETNICK')]
+			result = str.join(', ', tmp + map(lambda key: '%s = %s' % (key, desc[key]), desc))
+		if others > 1:
+			result += ' (%d subtasks)' % others
+		return result
+
+	def _getCategoryStateSummary(self):
+		catStateDict = {}
+		defaultJob = Job()
+		for jobNum in self._jobs:
+			jobState = self._jobDB.get(jobNum, defaultJob).state
+			catKey = self._job2cat[jobNum]
+			catStateDict[catKey][jobState] = catStateDict.setdefault(catKey, {}).get(jobState, 0) + 1
+		return (catStateDict, dict(self._catDescDict), {}) # (<state overview>, <descriptions>, <#subcategories>)
+
+
 class LocationReport(Report):
 	def display(self):
 		reports = []

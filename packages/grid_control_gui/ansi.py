@@ -23,8 +23,15 @@ class Console:
 		locals()[name] = esc
 
 	def fmt(cls, data, attr = []):
+		class ColorString:
+			def __init__(self, value, attr):
+				(self._data, self._attr) = (data, attr)
+			def __len__(self):
+				return len(self._data)
+			def __str__(self):
+				return '\033[%sm%s\033[0m' % (str.join(';', [Console.RESET] + self._attr), self._data)
 		if sys.stdout.isatty():
-			return '\033[%sm%s\033[0m' % (str.join(';', [Console.RESET] + attr), data)
+			return ColorString(data, attr)
 		return data
 	fmt = classmethod(fmt)
 
