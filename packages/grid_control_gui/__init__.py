@@ -16,6 +16,6 @@ from grid_control import GUI, Monitoring, Report
 
 Monitoring.moduleMap['jabber'] = 'jabber.JabberAlarm'
 GUI.moduleMap['ANSIGUI'] = 'gui_ansi.ANSIGUI'
-GUI.moduleMap['CPWebserver'] = 'webserver.CPWebserver'
+GUI.moduleMap['CPWebserver'] = 'gui_cherrypy.CPWebserver'
 Report.moduleMap['BasicBarReport'] = 'report_basic.BasicBarReport'
 Report.moduleMap['GUIReport'] = 'report_gui.GUIReport'
