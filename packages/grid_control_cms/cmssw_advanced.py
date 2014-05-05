@@ -32,7 +32,8 @@ class CMSSW_Advanced(cmssw.CMSSW):
 
 		# Mapping between nickname and config files:
 		cfgList = config.get('nickname config', '')
-		self.nmCfg = config.getDict('nickname config', default={}, parser = lambda x: map(str.strip, x.split(',')))[0]
+		self.nmCfg = config.getDict('nickname config', {},
+			parser = lambda x: map(str.strip, x.split(',')), str = lambda x: str.join(',', x))[0]
 		if cfgList:
 			if 'config file' in config.getOptions():
 				raise ConfigError("Please use 'nickname config' instead of 'config file'")
@@ -44,7 +45,7 @@ class CMSSW_Advanced(cmssw.CMSSW):
 		self.nmCName = map(str.strip, config.get('nickname constants', '').split())
 		self.nmConst = {}
 		for var in self.nmCName:
-			tmp = config.getDict(var, default={})[0]
+			tmp = config.getDict(var, {})[0]
 			for (nick, value) in tmp.items():
 				if value:
 					self.nmConst.setdefault(nick, {})[var] = value
@@ -56,7 +57,7 @@ class CMSSW_Advanced(cmssw.CMSSW):
 		if 'lumi filter' in config.getOptions():
 			raise ConfigError("Please use 'nickname lumi filter' instead of 'lumi filter'")
 		lumiParse = lambda x: formatLumi(parseLumiFilter(x))
-		self.nmLumi = config.getDict('nickname lumi filter', default={}, parser = lumiParse)[0]
+		self.nmLumi = config.getDict('nickname lumi filter', {}, parser = lumiParse)[0]
 		if self.nmLumi:
 			for dataset in config.get('dataset', '').splitlines():
 				(datasetNick, datasetProvider, datasetExpr) = DataProvider.parseDatasetExpr(config, dataset, None)

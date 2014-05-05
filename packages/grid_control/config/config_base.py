@@ -148,12 +148,13 @@ class ConfigBase(object):
 	# Returns a tuple with (<dictionary>, <keys>) - the keys are sorted by order of appearance
 	def getDict(self, *args, **kwargs): # Default key is accessed via key == None (None is never in keys!)
 		parser = kwargs.pop('parser', lambda x: x) # currently only support value parsers
+		strfun = kwargs.pop('str', lambda x: x)    # currently only support value handling
 		def obj2str(value):
 			(srcdict, srckeys) = value
 			getmax = lambda src: max(map(lambda x: len(str(x)), src) + [0])
-			result = srcdict.get(None, '')
+			result = strfun(srcdict.get(None, parser('')))
 			fmt = '\n\t%%%ds => %%%ds' % (getmax(srckeys), getmax(srcdict.values()))
-			return result + str.join('', map(lambda k: fmt % (k, srcdict[k]), srckeys))
+			return result + str.join('', map(lambda k: fmt % (k, strfun(srcdict[k])), srckeys))
 		str2obj = lambda value: utils.parseDict(value, parser)
 		def2obj = lambda value: (value, value.keys())
 		(selector, args, kwargs) = self._selectorFilter(*args, **kwargs)

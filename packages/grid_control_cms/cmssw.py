@@ -75,7 +75,7 @@ class CMSSW(DataTask):
 					raise ConfigError('Installed program in project area not recognized.')
 
 			archs = filter(lambda x: os.path.isdir(os.path.join(scramPath, x)) and not x.startswith('.'), os.listdir(scramPath))
-			self.scramArch = config.get('scram arch', (archs + [None])[0])
+			self.scramArch = config.get('scram arch', (archs + [noDefault])[0])
 			try:
 				fp = open(os.path.join(scramPath, self.scramArch, 'Environment'), 'r')
 				self.scramEnv.update(utils.DictFormat().parse(fp, keyParser = {None: str}))
