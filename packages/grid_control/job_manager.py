@@ -26,7 +26,8 @@ class JobManager(NamedObject):
 		(self._task, self._eventhandler) = (task, eventhandler)
 		self.jobLimit = config.getInt('jobs', -1, onChange = None)
 		selected = JobSelector.create(config.get('selected', '', onChange = None), task = self._task)
-		self.jobDB = JobDB(config, self.getMaxJobs(self._task), selected)
+		jobDBClass = config.getClass('jobdb', 'JobDB', cls = JobDB)
+		self.jobDB = jobDBClass.getInstance(config, self.getMaxJobs(self._task), selected)
 		self.disableLog = config.getWorkPath('disabled')
 
 		self.timeout = config.getTime('queue timeout', -1, onChange = None)

@@ -22,7 +22,7 @@ from grid_control.processhandler	import ProcessHandler
 
 from grid_control.job_definition	import JobDef
 from grid_control.job_db	import Job, JobClass, JobDB
-from grid_control.job_db_zip	import ZippedJobDB
+from grid_control.job_db_zip	import ZippedJobDB, Migrate2ZippedJobDB
 
 from grid_control.job_selector	import JobSelector
 from grid_control.report	import Report

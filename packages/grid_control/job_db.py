@@ -13,6 +13,7 @@
 #-#  limitations under the License.
 
 import sys, os, time, fnmatch, operator, utils
+from abstract import LoadableObject
 from exceptions import ConfigError, RuntimeError, RethrowError
 from utils import QM
 
@@ -136,9 +137,9 @@ class JobClass:
 	PROCESSED = mkJobClass(Job.SUCCESS, Job.FAILED, Job.CANCELLED, Job.ABORTED)
 
 
-class JobDB:
+class JobDB(LoadableObject):
 	def __init__(self, config, jobLimit = -1, jobSelector = None):
-		self.dbPath = config.getWorkPath('jobs')
+		self._dbPath = config.getWorkPath('jobs')
 		self._jobMap = self.readJobs(jobLimit)
 		if jobLimit < 0 and len(self._jobMap) > 0:
 			jobLimit = max(self._jobMap) + 1
@@ -147,23 +148,23 @@ class JobDB:
 
 	def readJobs(self, jobLimit):
 		try:
-			if not os.path.exists(self.dbPath):
-				os.mkdir(self.dbPath)
+			if not os.path.exists(self._dbPath):
+				os.mkdir(self._dbPath)
 		except IOError:
-			raise RethrowError("Problem creating work directory '%s'" % self.dbPath)
+			raise RethrowError("Problem creating work directory '%s'" % self._dbPath)
 
-		candidates = fnmatch.filter(os.listdir(self.dbPath), 'job_*.txt')
+		candidates = fnmatch.filter(os.listdir(self._dbPath), 'job_*.txt')
 		(jobMap, log, maxJobs) = ({}, None, len(candidates))
 		for idx, jobFile in enumerate(candidates):
 			if (jobLimit >= 0) and (len(jobMap) >= jobLimit):
-				utils.eprint('Stopped reading job infos! The number of job infos in the work directory (%d)' % len(jobMap), newline = False)
+				utils.eprint('Stopped reading job infos! The number of job infos in the work directory (%d) ' % len(jobMap), newline = False)
 				utils.eprint('is larger than the maximum number of jobs (%d)' % jobLimit)
 				break
 			try: # 2xsplit is faster than regex
 				jobNum = int(jobFile.split(".")[0].split("_")[1])
 			except:
 				continue
-			jobObj = Job.load(os.path.join(self.dbPath, jobFile))
+			jobObj = Job.load(os.path.join(self._dbPath, jobFile))
 			jobMap[jobNum] = jobObj
 			if idx % 100 == 0:
 				del log
@@ -205,10 +206,12 @@ class JobDB:
 
 
 	def commit(self, jobNum, jobObj):
-		fp = open(os.path.join(self.dbPath, 'job_%d.txt' % jobNum), 'w')
+		fp = open(os.path.join(self._dbPath, 'job_%d.txt' % jobNum), 'w')
 		utils.safeWrite(fp, utils.DictFormat(escapeString = True).format(jobObj.getAll()))
 #		if jobObj.state == Job.DISABLED:
 
 
 	def __len__(self):
 		return self.jobLimit
+
+JobDB.registerObject()
