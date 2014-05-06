@@ -84,7 +84,7 @@ def generateDBS3BlockDumps(provider):
 
         ###add dataset information
         blockDump[u'dataset'] = {u'physics_group_name': None,
-                                 u'dataset_access_type': 'PRODUCTION',
+                                 u'dataset_access_type': 'VALID',
                                  u'data_tier_name': dataTier,
                                  u'processed_ds_name': processedDataset,
                                  u'xtcrosssection': None,###Add to meta data from FrameWorkJobReport, if possible!
