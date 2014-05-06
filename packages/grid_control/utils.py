@@ -41,7 +41,7 @@ def resolvePaths(path, userPath = [], mustExist = True, ErrorClass = RuntimeErro
 	path = os.path.normpath(os.path.expanduser(path))
 	searchpaths = map(cleanPath, uniqueListLR([os.getcwd(), pathGC()] + userPath))
 	for spath in searchpaths:
-		result = glob.glob(cleanPath(os.path.join(spath, path)))
+		result = glob.glob(cleanPath(os.path.join(spath, os.path.expandvars(path))))
 		if result:
 			return result
 	if mustExist:
