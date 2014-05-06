@@ -12,7 +12,7 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-import sys, re
+import sys, re, signal
 from ansi import Console
 from grid_control import GUI, utils, Report
 
