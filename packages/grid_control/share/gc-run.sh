@@ -1,5 +1,5 @@
 #!/bin/bash
-#-#  Copyright 2010-2013 Karlsruhe Institute of Technology
+#-#  Copyright 2010-2014 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
