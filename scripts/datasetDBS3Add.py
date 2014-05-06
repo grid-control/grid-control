@@ -73,7 +73,7 @@ def generateDBS3BlockDumps(provider):
             del datasetConfDict[u'lfn']
             ###check for duplicates
             if datasetConfDict not in datasetConfigurations:
-                datasetConfigurations.extend(datasetConfDict)
+                datasetConfigurations.append(datasetConfDict)
 
             ###update block size for block information
             blockSize += fileSize
