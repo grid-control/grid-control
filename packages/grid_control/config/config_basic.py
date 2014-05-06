@@ -155,7 +155,8 @@ class CompatConfig(Config):
 			def setPersistentSetting(section, key):
 				if key in persistencyDict:
 					value = persistencyDict.get(key)
-					self._oldCfg.setEntry(section, key, value, '<persistency file>', markAccessed = True)
+					if value:
+						self._oldCfg.setEntry(section, key, value, '<persistency file>', markAccessed = True)
 			setPersistentSetting('task', 'task id')
 			setPersistentSetting('task', 'task date')
 			setPersistentSetting('parameters', 'parameter hash')
