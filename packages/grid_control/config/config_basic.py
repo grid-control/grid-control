@@ -152,11 +152,12 @@ class CompatConfig(Config):
 		# read old persistency file - and set appropriate config options
 		if os.path.exists(persistencyFile):
 			persistencyDict = utils.PersistentDict(persistencyFile, ' = ')
+			if not self._oldCfg:
+				return
 			def setPersistentSetting(section, key):
 				if key in persistencyDict:
 					value = persistencyDict.get(key)
-					if value:
-						self._oldCfg.setEntry(section, key, value, '<persistency file>', markAccessed = True)
+					self._oldCfg.setEntry(section, key, value, '<persistency file>', markAccessed = True)
 			setPersistentSetting('task', 'task id')
 			setPersistentSetting('task', 'task date')
 			setPersistentSetting('parameters', 'parameter hash')
