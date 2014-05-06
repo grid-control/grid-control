@@ -32,7 +32,7 @@ class Report(LoadableObject):
 		return self._task.taskID
 
 	def getHeight(self):
-		raise AbstractError
+		return 0
 
 	def display(self):
 		raise AbstractError

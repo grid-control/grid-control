@@ -14,7 +14,7 @@
 
 import sys
 from python_compat import set, sorted
-from grid_control import Job
+from grid_control import Job, utils
 from grid_control.report import CategoryReport
 from ansi import Console
 
@@ -50,6 +50,28 @@ class JobProgressBar:
 
 	def __str__(self):
 		return str(self._bar)
+
+
+class ModuleReport(CategoryReport):
+	def display(self):
+		(catStateDict, catDescDict, catSubcatDict) = CategoryReport._getCategoryStateSummary(self)
+
+		infos = []
+		head = set()
+		stateCat = {Job.SUCCESS: 'SUCCESS', Job.FAILED: 'FAILED', Job.RUNNING: 'RUNNING', Job.DONE: 'RUNNING'}
+		for catKey in catDescDict:
+			tmp = catDescDict[catKey]
+			infos.append(tmp)
+			head.update(tmp.keys())
+			for stateKey in catStateDict[catKey]:
+				state = stateCat.get(stateKey, 'WAITING')
+				tmp[state] = tmp.get(state, 0) + catStateDict[catKey][stateKey]
+
+		stateCatList = ['WAITING', 'RUNNING', 'FAILED', 'SUCCESS']
+		utils.vprint(level = -1)
+		utils.printTabular(map(lambda x: (x, x), sorted(head) + stateCatList),
+			infos, 'c' * len(head), fmt = dict.fromkeys(stateCatList, lambda x: '%7d' % utils.parseInt(x, 0)))
+		utils.vprint(level = -1)
 
 
 class AdaptiveReport(CategoryReport):
@@ -177,16 +199,20 @@ class GUIReport(AdaptiveReport):
 		AdaptiveReport.__init__(self, jobDB, task, jobs, str(int(self.maxY / 5)))
 
 	def getHeight(self):
-		return int(self.maxY / 5) * 2 + 1
+		return self.catMax * 3 + 1
+
+	def printLimited(self, value, width, rvalue = ''):
+		if len(value) + len(rvalue) > width:
+			value = str(value)[:width - 3 - len(rvalue)] + '...'
+		sys.stdout.write(str(value) + ' ' * (width - (len(value) + len(rvalue))) + str(rvalue) + '\n')
+
+	def printGUIHeader(self, message):
+		self.printLimited('-' * (self.maxX - 24), self.maxX)
+		self.printLimited('%s %s' % (message, self._getHeader(self.maxX - len(message) - 1)), self.maxX)
+		self.printLimited('-' * (self.maxX - 24), self.maxX)
 
 	def display(self):
-		def printLimited(value, width, rvalue = ''):
-			if len(value) + len(rvalue) > width:
-				value = str(value)[:width - 3 - len(rvalue)] + '...'
-			sys.stdout.write(str(value) + ' ' * (width - (len(value) + len(rvalue))) + str(rvalue) + '\n')
-		printLimited('-' * (self.maxX - 24), self.maxX)
-		printLimited('Status report for task: %s' % self._getHeader(self.maxX - 30), self.maxX)
-		printLimited('-' * (self.maxX - 24), self.maxX)
+		self.printGUIHeader('Status report for task:')
 		(catStateDict, catDescDict, catSubcatDict) = self._getCategoryStateSummary()
 		sumCat = lambda catKey, states: sum(map(lambda z: catStateDict[catKey].get(z, 0), states))
 
@@ -194,10 +220,10 @@ class GUIReport(AdaptiveReport):
 			desc = self._formatDesc(catDescDict[catKey], catSubcatDict.get(catKey, 0))
 			completed = sumCat(catKey, [Job.SUCCESS])
 			total = sum(catStateDict[catKey].values())
-			printLimited(Console.fmt(desc, [Console.BOLD]), self.maxX,
+			self.printLimited(Console.fmt(desc, [Console.BOLD]), self.maxX,
 				'(%5d jobs, %6.2f%%  )' % (total, 100 * completed / float(total)))
 			bar = JobProgressBar(sum(catStateDict[catKey].values()), width = self.maxX)
 			bar.update(completed,
 				sumCat(catKey, [Job.SUBMITTED, Job.WAITING, Job.READY, Job.QUEUED, Job.RUNNING]),
 				sumCat(catKey, [Job.ABORTED, Job.CANCELLED, Job.FAILED]))
-			printLimited(bar, self.maxX)
+			self.printLimited(bar, self.maxX)
