@@ -21,8 +21,12 @@ if [ -n "$VO_CMS_SW_DIR" ]; then
 else
 	# Fallback - try different default values for CMSSW directory
 
+	# Try CVMFS
+	if [ -d "/cvmfs/cms.cern.ch" ]; then
+		export VO_CMS_SW_DIR=/cvmfs/cms.cern.ch
+		echo "[CVMFS-SITE] Using $VO_CMS_SW_DIR"
 	# Fix for OSG sites
-	if [ -n "$OSG_APP" -a -d "$OSG_APP" ]; then
+	elif [ -n "$OSG_APP" -a -d "$OSG_APP" ]; then
 		export VO_CMS_SW_DIR="$OSG_APP/cmssoft/cms"
 		echo "[OSG-SITE] Using $VO_CMS_SW_DIR"
 
