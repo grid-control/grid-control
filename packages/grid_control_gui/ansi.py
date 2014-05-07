@@ -58,5 +58,5 @@ class Console:
 		self._esc('[%d;%dr' % (top, bottom))
 
 	def addstr(self, data, attr = []):
-		self.stdout.write(Console.fmt(data, attr))
+		self.stdout.write(str(Console.fmt(data, attr)))
 		self.stdout.flush()
