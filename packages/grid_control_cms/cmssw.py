@@ -137,7 +137,7 @@ class CMSSW(DataTask):
 			self.eventsPerJob = config.get('events per job', '0')
 			if config.getState(detail = 'sandbox') and self.prepare:
 				self.instrumentCfgQueue(self.configFiles, fragment)
-
+		if config.getState(detail = 'sandbox'):
 			if os.path.exists(config.getWorkPath('runtime.tar.gz')):
 				if not utils.getUserBool('Runtime already exists! Do you want to regenerate CMSSW tarball?', True):
 					return

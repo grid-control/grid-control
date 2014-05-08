@@ -199,7 +199,7 @@ class GUIReport(AdaptiveReport):
 		AdaptiveReport.__init__(self, jobDB, task, jobs, str(int(self.maxY / 5)))
 
 	def getHeight(self):
-		return self.catMax * 3 + 1
+		return self._catMax * 3 + 1
 
 	def printLimited(self, value, width, rvalue = ''):
 		if len(value) + len(rvalue) > width:
