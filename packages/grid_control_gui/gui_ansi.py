@@ -111,6 +111,7 @@ class ANSIGUI(GUI):
 					screen.move(0, 0)
 					sys.stdout.logged = False
 					report.display()
+					screen.move(report.getHeight() + 1, 0)
 					sys.stdout.write('%s\n' % message)
 					sys.stdout.logged = True
 					screen.loadPos()
