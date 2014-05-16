@@ -118,7 +118,8 @@ class ParameterConfig:
 
 	def onChange(self, config, old_obj, cur_obj, cur_entry, obj2str):
 		if self.static:
-			changeImpossible(old_obj, cur_obj, cur_entry, obj2str)
+			return changeImpossible(old_obj, cur_obj, cur_entry, obj2str)
+		return cur_obj
 
 
 	def getOpt(self, var, opt = None):
