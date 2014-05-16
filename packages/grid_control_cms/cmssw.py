@@ -222,11 +222,11 @@ class CMSSW(DataTask):
 		data['CMSSW_CONFIG'] = str.join(' ', map(os.path.basename, self.configFiles))
 		if self.prolog.isActive():
 			data['CMSSW_PROLOG_EXEC'] = self.prolog.getCommand()
-			data['CMSSW_PROLOG_SB_In_FILES'] = self.prolog.getSBInFiles()
+			data['CMSSW_PROLOG_SB_In_FILES'] = str.join(' ', self.prolog.getSBInFiles())
 			data['CMSSW_PROLOG_ARGS'] = self.prolog.getArguments()
 		if self.epilog.isActive():
 			data['CMSSW_EPILOG_EXEC'] = self.epilog.getCommand()
-			data['CMSSW_EPILOG_SB_In_FILES'] = self.epilog.getSBInFiles()
+			data['CMSSW_EPILOG_SB_In_FILES'] = str.join(' ', self.epilog.getSBInFiles())
 			data['CMSSW_EPILOG_ARGS'] = self.epilog.getArguments()
 		return data
 

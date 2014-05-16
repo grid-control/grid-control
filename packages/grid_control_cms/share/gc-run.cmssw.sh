@@ -101,7 +101,7 @@ for CMSSW_BIN in $CMSSW_PROLOG_EXEC; do
 	echo "---------------------------"
 	echo
 	echo "Starting $CMSSW_BIN with arguments: $CMSSW_PROLOG_ARGS"
-	checkbin "$CMSSW_BIN"
+#	checkbin "$CMSSW_BIN"
 	eval "$CMSSW_BIN $CMSSW_PROLOG_ARGS"
 	GC_CMSSWRUN_RETCODE=$?
 	echo
