@@ -70,6 +70,8 @@ class DefaultFilesConfigFiller(FileConfigFiller):
 		host = socket.gethostbyaddr(socket.gethostname())[0]
 		hostCfg = map(lambda c: utils.pathGC('config/%s.conf' % host.split('.', c)[-1]), range(host.count('.') + 1, 0, -1))
 		defaultCfg = ['/etc/grid-control.conf', '~/.grid-control.conf', utils.pathGC('config/default.conf')]
+		if os.environ.get('GC_CONFIG'):
+			defaultCfg.append('$GC_CONFIG')
 		fqConfigFiles = map(lambda p: utils.resolvePath(p, mustExist = False), hostCfg + defaultCfg)
 		FileConfigFiller.__init__(self, filter(os.path.exists, fqConfigFiles))
 
