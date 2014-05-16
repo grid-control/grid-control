@@ -1,5 +1,5 @@
 #!/bin/bash
-#-#  Copyright 2010-2011 Karlsruhe Institute of Technology
+#-#  Copyright 2010-2014 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -26,9 +26,9 @@ if [ -z "$GLITE_LOCATION" ]; then
 
 	cat $VO_KEEPER
 	# Source UI
-	if [ -d "/wlcg/sw/UI_glite-3_1" ]; then
-		source "/wlcg/sw/UI_glite-3_1/external/etc/profile.d/grid-env.sh"
-		echo "[WLCG-SITE] Using gLite `glite-version`"
+	if [ -d "/cvmfs/grid.cern.ch" ]; then
+		source "`ls -1 3.*/etc/profile.d/grid-env.sh | sort | tail -n 1`"
+		echo "[CMVFS-SITE] Using gLite `glite-version`"
 	elif [ -d "/afs/desy.de/project/glite" ]; then
 		source "/afs/desy.de/project/glite/UI/etc/profile.d/grid-env.sh"
 		echo "[AFS-SITE] Using gLite `glite-version`"

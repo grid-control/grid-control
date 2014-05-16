@@ -7,27 +7,29 @@ Maintained by: Fred Stober             <grid-control-dev@googlegroups.com>
  Developed by: Fred Stober             <mail@fredstober.de>
                Jana Saout              <jana@saout.de>
                Max Fischer             <max.fischer@kit.edu>
-               Armin Burgmeier         <burgmeier@ekp.uni-karlsruhe.de>
                Armin Scheurer          <contact@armin-scheurer.de>
-               Volker Buege            <v.buege@enbw.com>
-               Matthias Wolf           <matthias.wolf.60@nd.edu>
                Andreas Oehler          <andreasoehler@gmx.net>
                Jochen Ott              <ott@ekp.uni-karlsruhe.de>
-               Manuel Zeise            <manuel.zeise@sap.com>
+               Matthias Wolf           <matthias.wolf.60@nd.edu>
+               Volker Buege            <v.buege@enbw.com>
+               Manuel Zeise            <zeise@cern.ch>
+               Manuel Giffels          <manuel.giffels@cern.ch>
                Klaus Rabbertz          <klaus.rabbertz@cern.ch>
+               Armin Burgmeier         <burgmeier@ekp.uni-karlsruhe.de>
                Oliver Oberst           <oliver.oberst@de.ibm.com>
                Benjamin Klein          <klein@ekp.physik.uni-karlsruhe.de>
-               Eike Schlieckau         <eike.schlieckau@desy.de>
-               Luigi Calligaris        <luigi.calligaris@desy.de>
-               Dominik Haitz           <dhaitz@ekp.uni-karlsruhe.de>
-               Georg Sieber            <g.sieber@cern.ch>
-               Peter Krauss            <Peter.Krauss@cern.ch>
                Joram Berger            <joram.berger@cern.ch>
-               Philipp Schieferdecker  <Philipp.Schieferdecker@cern.ch>
+               Luigi Calligaris        <luigi.calligaris@desy.de>
+               Eike Schlieckau         <eike.schlieckau@desy.de>
+               Dominik Haitz           <dhaitz@ekp.uni-karlsruhe.de>
+               Peter Krauss            <peter.krauss@cern.ch>
+               Georg Sieber            <g.sieber@cern.ch>
+               Raphael Friese          <raphael.friese@partner.kit.edu>
                Corinna Günth           <corinna.guenth@student.kit.edu>
-               Jasmin Kiefer           <jasmin.gruschke@sap.com>
+               Thomas Hauth            <thomas.hauth@cern.ch>
                Hauke Held              <hauke.held@kit.edu>
-               Thomas Hauth            <Thomas.Hauth@cern.ch>
+               Jasmin Kiefer           <jasmin.gruschke@sap.com>
+               Philipp Schieferdecker  <philipp.schieferdecker@cern.ch>
                (in order of contributed source code lines)
 
 --
