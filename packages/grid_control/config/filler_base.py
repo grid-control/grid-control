@@ -100,3 +100,11 @@ class StringConfigFiller(ConfigFiller):
 				container.setEntry(section, option, value, '<cmdline override>')
 			except:
 				raise RethrowError('Unable to parse option %s' % uopt, ConfigError)
+
+
+# Class to fill config containers with settings from a python config file
+class PythonConfigFiller(DictConfigFiller):
+	def __init__(self, configFile):
+		from gcSettings import Settings
+		exec open(configFile) in {}, {'Settings': Settings}
+		DictConfigFiller.__init__(self, Settings._base)

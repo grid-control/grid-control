@@ -14,7 +14,8 @@
 
 from config_basic import Config, CompatConfig, noDefault
 from config_handlers import validNoVar, changeImpossible, changeInitNeeded
-from filler_base import ConfigFiller, FileConfigFiller, DefaultFilesConfigFiller, DictConfigFiller, StringConfigFiller
+from filler_base import ConfigFiller, FileConfigFiller, DefaultFilesConfigFiller,\
+	DictConfigFiller, StringConfigFiller, PythonConfigFiller
 
 # At the lowest level, all config option values are represented by strings
 # which are encapsulated in the ConfigEntry class, which holds access and source

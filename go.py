@@ -49,6 +49,7 @@ if __name__ == '__main__':
 	parser.add_option('',   '--help-confmin',  dest='help_scfg',  default=False, action='store_true')
 	parser.add_option('-i', '--init',          dest='init',       default=False, action='store_true')
 	parser.add_option('-q', '--resync',        dest='resync',     default=False, action='store_true')
+	parser.add_option('-P', '--python',        dest='python',     default=False, action='store_true')
 	parser.add_option('-s', '--no-submission', dest='submission', default=True,  action='store_false')
 	parser.add_option('-c', '--continuous',    dest='continuous', default=None,  action='store_true')
 	parser.add_option('-o', '--override',      dest='override',   default=[],    action='append')
@@ -100,8 +101,11 @@ if __name__ == '__main__':
 
 	# big try... except block to catch exceptions and print error message
 	def main():
-		config = CompatConfig([
-			DefaultFilesConfigFiller(), FileConfigFiller([args[0]]), OptsConfigFiller(parser)], args[0])
+		if opts.python:
+			fcf = PythonConfigFiller(args[0])
+		else:
+			fcf = FileConfigFiller([args[0]])
+		config = CompatConfig([DefaultFilesConfigFiller(), fcf, OptsConfigFiller(parser)], args[0])
 			 # Apply override command line options
 		config.opts = opts
 		logging_setup(config.addSections(['logging']))
