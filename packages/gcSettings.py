@@ -24,7 +24,7 @@ class Settings(object):
 		if isinstance(value, list):
 			value = str.join('\n', value)
 		mod = dict([(override, '?'), (append, '+'), (force, '*')]).get(True, '')
-		Settings._base.setdefault(self._s, []).append('%s %s= %s' % (name.replace('_', ' '), mod, value))
+		Settings._config.setdefault(self._s, []).append((name.replace('_', ' '), mod, value))
 
 	def __getattribute__(self, name):
 		if name in ['_s', 'section', 'set']:
@@ -38,10 +38,17 @@ class Settings(object):
 
 	def __str__(self):
 		result = []
-		for section in Settings._base:
+		for section in Settings._config:
 			result.append('[%s]' % section)
-			result.extend(Settings._base[section])
+			result.extend(map(lambda entry: '%s %s= %s' % entry, Settings._config[section]))
 			result.append('')
 		return str.join('\n', result)
 
-Settings._base = {}
+	def getConfigDict(cls):
+		result = {}
+		for section in Settings._config:
+			result[section] = dict(map(lambda (opt, mod, val): (opt + mod, str(val)), Settings._config[section]))
+		return result
+	getConfigDict = classmethod(getConfigDict)
+
+Settings._config = {}

@@ -107,4 +107,4 @@ class PythonConfigFiller(DictConfigFiller):
 	def __init__(self, configFile):
 		from gcSettings import Settings
 		exec open(configFile) in {}, {'Settings': Settings}
-		DictConfigFiller.__init__(self, Settings._base)
+		DictConfigFiller.__init__(self, Settings.getConfigDict())
