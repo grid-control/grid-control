@@ -272,7 +272,7 @@ class GUIReport(AdaptiveReport):
 		(catStateDict, catDescDict, catSubcatDict) = self._getCategoryStateSummary()
 		sumCat = lambda catKey, states: sum(map(lambda z: catStateDict[catKey].get(z, 0), states))
 
-		self.printGUIHeader('Status report for task: %s %s' % (len(catStateDict), self.getHeight()))
+		self.printGUIHeader('Status report for task:')
 		for catKey in catStateDict: #sorted(catStateDict, key = lambda x: -self._categories[x][0]):
 			desc = self._formatDesc(catDescDict[catKey], catSubcatDict.get(catKey, 0))
 			completed = sumCat(catKey, [Job.SUCCESS])
