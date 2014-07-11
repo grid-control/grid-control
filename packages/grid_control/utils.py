@@ -68,15 +68,30 @@ def ensureDirExists(dn, name = 'directory'):
 			raise RethrowError('Problem creating %s "%s"' % (name, dn), RuntimeError)
 
 
+def freeSpace_int(dn, result):
+	if os.path.exists(dn):
+		try:
+			stat_info = os.statvfs(dn)
+			result['space'] = stat_info.f_bavail * stat_info.f_bsize / 1024**2
+		except:
+			import ctypes
+			free_bytes = ctypes.c_ulonglong(0)
+			ctypes.windll.kernel32.GetDiskFreeSpaceExW(ctypes.c_wchar_p(dn), None, None, ctypes.pointer(free_bytes))
+			result['space'] = free_bytes.value / 1024**2
+	else:
+		result['space'] = -1
+
 def freeSpace(dn):
-	try:
-		stat_info = os.statvfs(dn)
-		return stat_info.f_bavail * stat_info.f_bsize / 1024**2
-	except:
-		import ctypes
-		free_bytes = ctypes.c_ulonglong(0)
-		ctypes.windll.kernel32.GetDiskFreeSpaceExW(ctypes.c_wchar_p(dn), None, None, ctypes.pointer(free_bytes))
-		return free_bytes.value / 1024**2
+	result = {}
+	t = threading.Thread(target = freeSpace_int, args = (dn, result))
+	t.start()
+	t.join(5)
+	if 'space' not in result:
+		eprint('Unable to get free disk space for directory %s after waiting for 5 sec!' % dn)
+		eprint('The file system is probably hanging - try to check free disk space manually.')
+		eprint('You can disable the the free disk space check at your own risk with [global] workdir space = 0')
+		os._exit(0)
+	return result['space']
 
 ################################################################
 # Process management functions
