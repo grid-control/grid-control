@@ -89,31 +89,31 @@ class ProcessAdapterInterface(LoadableObject):
 	# public interfaces
 	def LoggedExecute(self, command, args = '', niceCmd = None, niceArgs = None):
 		"""Execute a command via the adapter shell"""
-		raise AbstractError()
+		raise AbstractError
 	def LoggedGet(self, source, destination):
 		"""Move a source file/folder from the adapter domain to the local domain destination"""
-		raise AbstractError()
+		raise AbstractError
 	def LoggedPut(self, source, destination):
 		"""Move a source file/folder from the local domain to the adapter domain destination"""
-		raise AbstractError()
+		raise AbstractError
 	def LoggedDelete(self, targets):
 		"""Delete a file/folder in the adapter domain"""
-		raise AbstractError()
+		raise AbstractError
 	def getDomain(self):
 		"""Get a descriptive representation of the adapter domain"""
-		raise AbstractError()
+		raise AbstractError
 	def getType(self):
 		"""Get a descriptive representation of the adapter interfacing method"""
-		raise AbstractError()
+		raise AbstractError
 	def getProtocol(self):
 		"""Get a descriptive representation of the adapter interfacing protocol"""
-		raise AbstractError()
+		raise AbstractError
 	def isLoopback(self):
 		"""Check if this adapter is a loopback."""
 		return bool(self.getLoopbackURI())
 	def getLoopbackURI(self):
 		"""Return a local URI if this adapter is a loopback"""
-		raise AbstractError()
+		raise AbstractError
 	def getDomainAbsPath(self, path):
 		"""Translate any path to an absolute one in the adapter domain"""
 		abspath = path
@@ -132,9 +132,9 @@ class ProcessAdapterInterface(LoadableObject):
 		
 		raises ValueError if the URI is not compatible
 		"""
-		raise ValueError()
+		raise ValueError
 	def _initInterfaces(self, **kwargs):
-		raise AbstractError()
+		raise AbstractError
 
 	@classmethod
 	def _initLogger(self, **kwargs):
