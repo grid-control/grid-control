@@ -261,6 +261,11 @@ class SSHProcessAdapter(ProcessAdapterInterface):
 		# test connection once before usage
 		self._validateConnection()
 		self._basepath = self._basepath or self.LoggedExecute( "pwd" ).getOutput().strip()
+	def __enter__(self):
+		pass
+	def __exit__(self, exc_type, exc_value, traceback):
+		for socket in self._socketProcs:
+			self._socketProcs[socket].kill()
 
 	# Logged Processes
 	def LoggedExecute(self, command, args = '', niceCmd = None, niceArgs = None):
