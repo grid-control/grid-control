@@ -411,6 +411,7 @@ class SSHProcessAdapter(ProcessAdapterInterface):
 		# create list of socket names and corresponding arguments to rotate through
 		self._socketList = [ os.path.join(self._socketDir, str(socketIndex)) for socketIndex in range(self._socketCount) ]
 		self._socketArgList = [ "-o ControlMaster=auto  -o ControlPath=%s" % socket for socket in self._socketList ]
+		self._socketProcs = {}
 
 	def _incrementSocket(self):
 		self._socketIndex = ( self._socketIndex + 1 ) % self._socketCount
@@ -460,6 +461,7 @@ class SSHProcessAdapter(ProcessAdapterInterface):
 				if errorLog:
 					socketProcess.logError(errorLog)
 				return False
+		self._socketProcs[self._getCurrentSocket()] = socketProcess
 		return True
 
 	# Helper functions for SSH connections
