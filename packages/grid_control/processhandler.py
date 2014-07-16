@@ -65,18 +65,16 @@ class SSHProcessHandler(ProcessHandler):
 	socketIdNow=0
 	def __init__(self, **kwargs):
 		self.__initcommands(**kwargs)
-		self.defaultArgs="-vvv -o BatchMode=yes  -o ForwardX11=no " + kwargs.get("defaultArgs","")
+		self.defaultArgs="-vvv -o BatchMode=yes -o ForwardX11=no " + kwargs.get("defaultArgs","")
 		self.socketArgs=""
 		self.socketEnforce=kwargs.get("sshLinkEnforce",True)
 		try:
 			self.remoteHost = kwargs["remoteHost"]
-			if not self.remoteHost:
-				raise RuntimeError("No Host")
 		except Exception:
 			raise RethrowError("Request to initialize SSH-Type RemoteProcessHandler without remote host.")
 		try:
 			self.sshLinkBase=os.path.abspath(kwargs["sshLink"])
-			# older ssh/gsissh puts a maximum length limit on control paths...
+			# older ssh/gsissh puts a maximum length limit on control paths, use a different one
 			if ( len(self.sshLinkBase)>= 107):
 				self.sshLinkBase=os.path.expanduser("~/.ssh/%s"%os.path.basename(self.sshLinkBase))
 			self.sshLink=self.sshLinkBase
@@ -87,6 +85,7 @@ class SSHProcessHandler(ProcessHandler):
 		# test connection once
 		testProcess = self.LoggedProcess( "exit" )
 		if testProcess.wait() != 0:
+			bla = testProcess.getError() 
 			raise RuntimeError("Failed to validate remote connection.\n	Command: %s Return code: %s\n%s" % ( testProcess.cmd, testProcess.wait(), testProcess.getOutput() ) )
 	def __initcommands(self, **kwargs):
 		self.cmd = resolveInstallPath("ssh")
@@ -95,15 +94,49 @@ class SSHProcessHandler(ProcessHandler):
 	# return instance of LoggedProcess with input properly wrapped
 	def LoggedProcess(self, cmd, args = '', **kwargs):
 		self._socketHandler()
-		return LoggedProcess( " ".join([self.cmd, self.defaultArgs, self.socketArgs, kwargs.get('handlerArgs',""), self.remoteHost, self._argFormat(cmd + " " + args)]) )
-	def _SocketProcess(self, cmd, args = '', **kwargs):
-		return LoggedProcess( " ".join([self.cmd, self.defaultArgs, self.socketArgsDef, kwargs.get('handlerArgs',""), self.remoteHost, self._argFormat(cmd + " " + args)]) )
+		return LoggedProcess( " ".join([self.cmd, self.defaultArgs, self.socketArgs, self.remoteHost, self._argFormat(cmd + " " + args)]) )
 	def LoggedCopyToRemote(self, source, dest, **kwargs):
 		self._socketHandler()
-		return LoggedProcess( " ".join([self.cpy, self.defaultArgs, self.socketArgs, kwargs.get('handlerArgs',""), source, self._remotePath(dest)]) )
+		return LoggedProcess( " ".join([self.cpy, self.defaultArgs, self.socketArgs, source, self._remotePath(dest)]) )
 	def LoggedCopyFromRemote(self, source, dest, **kwargs):
 		self._socketHandler()
-		return LoggedProcess( " ".join([self.cpy, self.defaultArgs, self.socketArgs, kwargs.get('handlerArgs',""), self._remotePath(source), dest]) )
+		return LoggedProcess( " ".join([self.cpy, self.defaultArgs, self.socketArgs, self._remotePath(source), dest]) )
+
+	# Socket creation and cleanup
+	def _CreateSocket(self, duration = 60):
+		self.__ControlMaster = LoggedProcess( " ".join([self.cmd, self.defaultArgs, "-o ControlMaster=yes", self.socketArgsDef, self.remoteHost, self._argFormat("sleep %d" % duration)]) )
+		timeout = 0
+		while not os.path.exists(self.sshLink):
+			time.sleep(0.5)
+			timeout += 0.5
+			if timeout == 5:
+				vprint("SSH socket still not available after 5 seconds...\n%s" % self.sshLink, level=1)
+				vprint('Socket process: %s' % (socketProc.cmd), level=2)
+			if timeout == 10:
+				return False
+	def _CleanSocket(self):
+		if not os.path.exists(self.sshLink):
+			print "No Socket %s" % self.sshLink
+			return True
+		print "Killing Socket %s" % self.sshLink
+		#killSocket = LoggedProcess( " ".join([self.cmd, self.defaultArgs, self.socketArgsDef, "-O exit", self.remoteHost]) )
+		#while killSocket.poll() == -1:
+			#print "poll", killSocket.poll()
+			#time.sleep(0.5)
+			#timeout += 0.5
+			#if timeout == 5:
+				#vprint("Failed to cancel ssh Socket...\n%s" % self.sshLink, level=1)
+				#return False
+		#print "done", killSocket.poll()
+		timeout = 0
+		while os.path.exists(self.sshLink):
+			print "exists %d" % timeout
+			time.sleep(0.5)
+			timeout += 0.5
+			#if timeout == 5:
+			#	vprint("Failed to remove ssh Socket...\n%s" % self.sshLink, level=1)
+			#	return False
+		return True
 
 	def getDomain(self):
 		return self.remoteHost
@@ -128,13 +161,11 @@ class SSHProcessHandler(ProcessHandler):
 					eprint("Failed to create secure socket %s more than %s times!\nDisabling further attempts." % (self.sshLink,maxFailCount))
 					self.sshLink=False
 
-	# make sure the link file is properly protected
+	# make sure the link file and directory are properly protected
 	# 	@sshLink:	location of the link
 	#	@directory:	secure only directory (for initializing)
-	def _secureSSHLink(self, initDirectory=False):
-		sshLink=os.path.abspath(self.sshLink)
-		sshLinkDir=os.path.dirname(self.sshLink)
-		# containing directory should be secure
+	def _secureLinkDirectory(self, sshLink, enforce = True):
+		sshLinkDir = os.path.dirname(sshLink)
 		if not os.path.isdir(sshLinkDir):
 			try:
 				os.makedirs(sshLinkDir)
@@ -143,53 +174,51 @@ class SSHProcessHandler(ProcessHandler):
 					raise RethrowError("Could not create or access directory for SSHLink:\n	%s" % sshLinkDir)
 				else:
 					return False
-		if initDirectory:
-			return True
 		if sshLinkDir!=os.path.dirname(os.path.expanduser("~/.ssh/")):
 			try:
 				os.chmod(sshLinkDir,0700)
 			except Exception:
-				RethrowError("Could not secure directory for SSHLink:\n	%s" % sshLinkDir)
-		# socket link object should be secure against manipulation if it exists
+				if self.socketEnforce:
+					raise RethrowError("Could not secure directory for SSHLink:\n	%s" % sshLinkDir)
+				else:
+					return False
+		return True
+	def _secureLinkSocket(self, sshLink, enforce = True):
 		if os.path.exists(sshLink):
 			if stat.S_ISSOCK(os.stat(sshLink).st_mode):
 				try:
 					os.chmod(sshLink,0700)
 				except Exception:
 					if self.socketEnforce:
-						raise RethrowError("Could not validate security of SSHLink:\n	%s\nThis is a potential security violation!" % sshLink)
+						raise RethrowError("Could not secure SSHLink:\n	%s" % sshLink)
 					else:
 						return False
 			else:
 				if self.socketEnforce:
-					raise RuntimeError("Could not validate security of SSHLink:\n	%s\nThis is a potential security violation!" % sshLink)
+					raise RuntimeError("Non-socket object already exists for SSHLink:\n	%s" % sshLink)
 				else:
 					return False
 		return True
+	def _secureSSHLink(self, initDirectory=False):
+		if self._secureLinkDirectory(self.sshLink) and (initDirectory or self._secureLinkSocket(self.sshLink)):
+			return True
+		return False
 
 	# keep a process active in the background to speed up connecting by providing an active socket
-	def _refreshSSHLink(self, minSeconds=120, maxSeconds=600):
+	def _refreshSSHLink(self, minSeconds=5, maxSeconds=20):
 		# if there is a link, ensure it'll still live for minimum lifetime
 		if os.path.exists(self.sshLink) and stat.S_ISSOCK(os.stat(self.sshLink).st_mode):
 			if ( time.time() - self.socketTimestamp < maxSeconds-minSeconds ):
 				return True
+		# stop already existing socket master
+		if not self._CleanSocket():
+			return False
 		# rotate socket
 		self.socketIdNow = (self.socketIdNow + 1) % (math.ceil(1.0*maxSeconds/(maxSeconds-minSeconds)) + 1)
 		self.sshLink = self.sshLinkBase+str(self.socketIdNow)
-		self.socketArgsDef = " -o ControlMaster=auto  -o ControlPath=" + self.sshLink + " "
-		if os.path.exists(self.sshLink):
-			os.remove(self.sshLink)
-		# send a dummy background process over ssh to keep the connection going
-		socketProc = self._SocketProcess("sleep %s" % maxSeconds)
-		timeout = 0
-		while not os.path.exists(self.sshLink):
-			time.sleep(0.5)
-			timeout += 0.5
-			if timeout == 6:
-				vprint("SSH socket still not available after 6 seconds...\n%s" % self.sshLink, level=1)
-				vprint('Socket process: %s' % (socketProc.cmd), level=2)
-			if timeout == 10:
-				return False
+		self.socketArgsDef = "-o ControlPath=" + self.sshLink
+		# start new socket
+		socketProc = self._CreateSocket(maxSeconds)
 		self.socketTimestamp = time.time()
 		return self._secureSSHLink()
 
