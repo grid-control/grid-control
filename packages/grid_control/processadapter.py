@@ -77,10 +77,16 @@ def ProcessAdapterFactory(URI, externalSchemes = [], collapseLocal = True, **kwa
 class ProcessAdapterInterface(LoadableObject):
 	uriScheme = []
 	_basepath = ""
+	# python internals
 	def __init__(self, URI, **kwargs):
 		self.URI=URI
 		self._initLogger(**kwargs)
 		self._log(logging.INFO1, 'Establishing process adapter of type %s' % self.__class__.__name__)
+	def __enter__(self):
+		raise NotImplementedError
+	def __exit__(self, exc_type, exc_value, traceback):
+		raise NotImplementedError
+	# public interfaces
 	def LoggedExecute(self, command, args = '', niceCmd = None, niceArgs = None):
 		"""Execute a command via the adapter shell"""
 		raise AbstractError()
