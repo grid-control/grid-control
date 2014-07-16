@@ -169,6 +169,10 @@ class LocalProcessAdapter(ProcessAdapterInterface):
 		( _, self._basepath ) = self.resolveURI(URI)
 		self._basepath = self._basepath or os.getcwd()
 		self._initInterfaces(**kwargs)
+	def __enter__(self):
+		pass
+	def __exit__(self, exc_type, exc_value, traceback):
+		pass
 
 	def LoggedExecute(self, command, args = '', niceCmd = None, niceArgs = None):
 		return LoggedProcess(command, args = args, niceCmd = niceCmd or command, niceArgs = niceArgs or args)
