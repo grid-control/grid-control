@@ -484,7 +484,6 @@ class SSHProcessAdapter(ProcessAdapterInterface):
 		return argString
 
 	def getGlobalAbsPath(self, path):
-		"""Translate any path to an absolute one in the executing GC domain"""
 		abspath = (self._user and self._user+"@" or "") + self._host + ":" + self.getDomainAbsPath(path)
 		return abspath
 	getGlobalAbsPath = lru_cache(getGlobalAbsPath, 30)
