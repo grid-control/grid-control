@@ -128,6 +128,7 @@ class LoggedProcess(object):
 		(self.stdout, self.stderr, self.cmd, self.args) = ([], [], cmd, args)
 		self._logger = logging.getLogger('process.%s' % os.path.basename(cmd))
 		self._logger.log(logging.DEBUG1, 'External programm called: %s %s' % (self.niceCmd, self.niceArgs))
+		self.stime = time.time()
 		self.proc = popen2.Popen3('%s %s' % (cmd, args), True)
 
 	def getOutput(self, wait = False):
@@ -158,8 +159,14 @@ class LoggedProcess(object):
 			self.stdout.append(line)
 			yield line
 
-	def wait(self):
-		return self.proc.wait()
+	def wait(self, timeout = -1, kill = True):
+		if not timeout > 0:
+			return self.proc.wait()
+		while self.poll() < 0 and timeout > ( time.time() - self.stime ):
+			time.sleep(1)
+		if kill and timeout > ( time.time() - self.stime ):
+			self.kill()
+		return self.poll()
 
 	def poll(self):
 		return self.proc.poll()
