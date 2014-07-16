@@ -123,7 +123,7 @@ class ProcessAdapterInterface(LoadableObject):
 	getDomainAbsPath = lru_cache(getDomainAbsPath, 30)
 	def getGlobalAbsPath(self, path):
 		"""Translate any path to an absolute one in the executing GC domain"""
-		return self.getDomainAbsPath(path)
+		raise AbstractError
 	# general internal functions
 	@classmethod
 	def resolveURI(self, URI = None, **kwargs):
@@ -196,6 +196,8 @@ class LocalProcessAdapter(ProcessAdapterInterface):
 		return True
 	def getLoopbackURI(self):
 		return self.URI
+	def getGlobalAbsPath(self, path):
+		return self.getDomainAbsPath(path)
 
 	# general internal functions
 	@classmethod
