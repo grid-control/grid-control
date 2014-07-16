@@ -264,8 +264,10 @@ class SSHProcessAdapter(ProcessAdapterInterface):
 	def __enter__(self):
 		pass
 	def __exit__(self, exc_type, exc_value, traceback):
+		self._log(logging.DEBUG1,'Exiting context for URI' % self.URI)
 		for socket in self._socketProcs:
 			self._socketProcs[socket].kill()
+			self._log(logging.DEBUG3,'Terminated master for socket %s' % socket)
 
 	# Logged Processes
 	def LoggedExecute(self, command, args = '', niceCmd = None, niceArgs = None):
