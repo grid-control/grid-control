@@ -15,7 +15,7 @@ from condor_schedd import HTCScheddFactory
 HTCondor backend core
  This module provides the backend for HTCondor pools of version 8+.
 
- The 'HTCondorPool' class provides a GC compatible WMS-backend and
+ The 'HTCondor' class provides a GC compatible WMS-backend and
 handles interaction with all other components.
 
 Conventions:
@@ -26,8 +26,8 @@ while job activities are directed via job data maps of
   {ScheddURI : [jobData,jobData,jobData,...] }
 
 The <WMSID> of GC is formatted as WMSID.<WMSName>.<RAWID>, with
-the <RAWID> formatted as <poolURI>.<TaskID>.<ClusterID>.<ProcID>, e.g.
-   WMSID.HTCondorPool.ssh://ekpcms5:80/opt/htc/.6fe1e996253f.2031.13
+the <RAWID> formatted as <poolURI>.<TaskID>.<JobNum>.<ClusterID>.<ProcID>, e.g.
+   WMSID.HTCondor.ssh://ekpcms5:22/opt/htc/.6fe1e996253f.325.2031.13
 
    o Files
 Since the HTC backends operates on remote machines, it may use both
@@ -62,7 +62,53 @@ import tempfile
 from grid_control import utils, QM, ProcessHandler, Job
 from wms import WMS, BasicWMS, RethrowError
 
-class HTCondorPool(BasicWMS):
+class HTCJobID(object):
+	"""
+	HTCondorWMS unique job identifier
+	
+	Links GC and HTC jobs via the respective pseudo-unique identifiers
+	  gcJobNum@gcTaskID
+	and
+	  clusterID.procID@scheddURI
+	"""
+	__slots__ = ['_infoBlob']
+	def __init__(self, gcJobNum = -1, gcTaskID = '', clusterID = -1, procID = -1, scheddURI = '', rawID = '', typed = True):
+		if rawID:
+			scheddURI, gcTaskID, gcJobNum, clusterID, procID = rawID.rsplit('.',4)
+		if typed:
+			self._infoBlob = ( int(gcJobNum), str(gcTaskID), str(scheddURI), int(clusterID), int(procID) )
+		else:
+			self._infoBlob = ( gcJobNum, gcTaskID, scheddURI, clusterID, procID )
+	@property
+	def jobNum(self):
+		return self._infoBlob[0]
+	@property
+	def gcTaskID(self):
+		return self._infoBlob[1]
+	@property
+	def scheddURI(self):
+		return self._infoBlob[2]
+	@property
+	def clusterID(self):
+		return self._infoBlob[3]
+	@property
+	def procID(self):
+		return self._infoBlob[4]
+	@property
+	def rawID(self):
+		"""Return an unambigious raw wmsID string representation"""
+		return '%s.%s.%s.%s.%s' % ( self.scheddURI, self.taskId, self.gcJobNum, self.clusterID, self.procID)
+	def __len__(self):
+		return 5
+	def __getitem__(self, key):
+		return self._infoBlob[key]
+	def __eq__(self, other):
+		return ( type(other) == type(self) and self._infoBlob == other._infoBlob )
+	def __ne__(self, other):
+		return not self.__eq__(other)
+		
+
+class HTCondor(BasicWMS):
 	""""
 	Backend for HTCondor 8+
 	"""
@@ -149,7 +195,7 @@ class HTCondorPool(BasicWMS):
 
 	# path functions shared with schedds
 	def getJobCfgPath(self, jobNum = "%d"):
-		cfgName = 'job_%s.var' % str(jobNum)
+		cfgName = 'job_%s.var' % jobNum
 		return os.path.join(config.getWorkPath('jobs'), cfgName), cfgName
 
 	def getSandboxPath(self, subdirToken=""):
@@ -182,88 +228,71 @@ class HTCondorPool(BasicWMS):
 				)
 			# Yield (jobNum, wmsId, other data) per job
 			jobInfoMaps = self._digestQueueInfoMap(rawJobInfoMaps)
-			for jobData in jobInfoMaps:
+			for htcID in jobInfoMaps:
 				yield (
-					jobData[0],
-					jobInfoMaps[jobData]['wmsID'],
-					jobInfoMaps[jobData]
+					htcID.jobNum,
+					htcID.rawID,
+					jobInfoMaps[htcID]
 					)
 		del(activity)
 
 	def checkJobs(self, wmsJobIdList):
 		activity   = utils.ActivityLog('Checking jobs...')
-		for scheddURI, jobDataList in self._getJobDataMap(wmsJobIdList).items():
-			if scheddURI != self._schedd.getURI():
-				self._log(logging.DEFAULT_VERBOSITY,'Bug! Got jobs at Schedd %s, but servicing only Schedd %s'%(scheddURI, self._schedd.getURI()))
-				if utils.getUserBool('Do you wish to ignore these jobs and continue?', False):
-					continue
-				else:
-					sys.exit(1)
-			rawjobInfoMaps = self._schedd.checkJobs(
-				jobDataList,
-				self._getQueryArgs()
+		assert bool(filter( lambda itr: itr.scheddURI != self._schedd.getURI(), self._splitGcRequests(wmsJobIdList))), 'Bug! Got jobs at Schedd %s, but servicing only Schedd %s' % (scheddURI, self._schedd.getURI())
+		rawJobInfoMaps = self._schedd.checkJobs(
+			self._splitGcRequests(wmsJobIdList),
+			self._getQueryArgs()
+			)
+		# Yield (jobNum, wmsId, state, other data) per active jobs
+		jobInfoMaps = self._digestQueueInfoMap(rawJobInfoMaps)
+		for htcID in jobInfoMaps:
+			yield (
+				htcID.jobNum,
+				htcID.rawID,
+				self._statusMap[jobInfoMaps[htcID]['state']],
+				jobInfoMaps[htcID]
 				)
-			# Yield (jobNum, wmsId, state, other data) per active jobs
-			jobInfoMaps = self._digestQueueInfoMap(rawjobInfoMaps)
-			for jobData in jobInfoMaps:
-				yield (
-					jobData[0],
-					jobInfoMaps[jobData]['wmsID'],
-					self._statusMap[jobInfoMaps[jobData]['state']],
-					jobInfoMaps[jobData]
-					)
 		del(activity)
 
 	def _getJobsOutput(self, wmsJobIdList):
 		activity   = utils.ActivityLog('Fetching jobs...')
-		for scheddURI, jobDataList in self._getJobDataMap(wmsJobIdList).items():
-			if scheddURI != self._schedd.getURI():
-				self._log(logging.INFO1,'Bug! Got jobs at Schedd %s, but servicing only Schedd %s'%(scheddURI, self._schedd.getURI()))
-				continue
-			returnedJobs = self._schedd.getJobsOutput(
-				jobDataList
+		assert bool(filter( lambda itr: itr.scheddURI != self._schedd.getURI(), self._splitGcRequests(wmsJobIdList))), 'Bug! Got jobs at Schedd %s, but servicing only Schedd %s' % (scheddURI, self._schedd.getURI())
+		returnedJobs = self._schedd.getJobsOutput(
+			self._splitGcRequests(wmsJobIdList)
+			)
+		# Yield (jobNum, outputPath) per retrieved job
+		for htcID in returnedJobs:
+			yield (
+				htcID.jobNum,
+				self.getSandboxPath(htcID.jobNum)
 				)
-			# Yield (jobNum, outputPath) per retrieved job
-			for jobData in returnedJobs:
-				yield jobData[0], self.getSandboxPath(jobData[0]
 		del activity
 	
 	def cancelJobs(self, wmsJobIdList):
 		activity   = utils.ActivityLog('Canceling jobs...')
-		for scheddURI, jobDataList in self._getJobDataMap(wmsJobIdList).items():
-			if scheddURI != self._schedd.getURI():
-				continue
-			canceledJobs = self._schedd.cancelJobs(
-				jobDataList
+		assert bool(filter( lambda itr: itr.scheddURI != self._schedd.getURI(), self._splitGcRequests(wmsJobIdList))), 'Bug! Got jobs at Schedd %s, but servicing only Schedd %s' % (scheddURI, self._schedd.getURI())
+		canceledJobs = self._schedd.cancelJobs(
+			self._splitGcRequests(wmsJobIdList)
+			)
+		# Yield ( jobNum, wmsID) for canceled jobs
+		for htcJobID in canceledJobs:
+			yield (
+				htcJobID.jobNum,
+				self._createGcId(htcJobID)
 				)
-			# Yield ( jobNum, wmsID) for canceled jobs
-			for jobData in canceledJobs:
-				yield (
-					jobData[0],
-					self._createGcId(scheddURI, jobData[1], jobData[2], jobData[3])
-					)
-		del(activity)
-
-	# TODO: move me to schedd
-	def _getBaseJDLData(self):
-		"""Create the jdl"""
-		jdlData = {}
-		jdlData['Head'] = {
-			'Executable'   : os.path.join('%(stageDir)s', '%(executable)s'),
-			}
-		jdlData['PerJob'] = {
-			'+GcJobNum'       : '%(jobNum)s',
-			}
-		return jdlData
+		del activity
 
 	# GC/WMS/Job ID converters
-	def _createGcId(self, scheddURI, taskId, clusterID, processID):
-		"""Create a GcId"""
-		return self._createId('%s.%s.%s'%(scheddURI, taskId, clusterID, processID))
+	def _createGcId(self, htcJobID):
+		"""Create a GcId for a given htcJobID"""
+		return self._createId(htcJobID.rawID)
 	def _splitGcId(self, gcId):
-		"""Split a GcId, returning (wmsName, scheddURI,taskID,clusterID,processID)"""
-		wmsName, wmsId = self._splitId(gcId)
-		return (wmsName,) + tuple(wmsId.rsplit('.',3))
+		"""Split a GcId, returning wmsName and htcJobID"""
+		wmsName, rawId = self._splitId(gcId)
+		return (wmsName,) + HTCJobID(rawID = rawId)
+	def _splitGcRequests(self, gcRequests):
+		"""Process sequence of (jobNum, GcId), returning sequence of htcIDs"""
+		return [ HTCJobID( rawID = self._splitGcId(gcId)[1] ) for jobNum, gcId in jobNumGcIdList ]
 	def _getJobDataMap(self, jobNumGcIdList):
 		"""Process list of (jobNum, GcId), returning {ScheddURI : [(jobNum, taskID, clusterID, processID),...] }"""
 		scheddJobMap = {}

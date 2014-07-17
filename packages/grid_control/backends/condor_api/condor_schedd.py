@@ -11,6 +11,7 @@ import re
 # GC modules
 import utils
 import htcUtils
+from htcondor_wms import HTCJobID
 
 from python_compat import md5
 from process_adapter import ProcessAdapterFactory
@@ -73,46 +74,46 @@ class HTCScheddBase(LoadableObject):
 		Submit a batch of jobs from the sandbox
 		
 		Returns:
-		JobInfoMaps  { jobData : InfoData,...]
+		JobInfoMaps  { HTCJobID : InfoData,...]
 		       Sequence of per job information
 		"""
 		raise AbstractError
 
-	def checkJobs(self, jobDataList, queryArguments):
+	def checkJobs(self, htcIDs, queryArguments):
 		"""
 		Get the status of a number of jobs
 		
 		Rquired:
-		jobDataList [jobData, ...]
+		htcIDs [HTCJobID, ...]
 		
 		Returns:
-		JobInfoMapMaps  { jobData : InfoData,...]
+		JobInfoMapMaps  { HTCJobID : InfoData,...]
 		       Sequence of per checked job information maps
 		"""
 		raise AbstractError
 
-	def getJobsOutput(self, jobDataList):
+	def getJobsOutput(self, htcIDs):
 		"""
 		Return output of a finished job to the sandbox
 		
 		Rquired:
-		jobDataList [jobData, ...]
+		htcIDs [HTCJobID, ...]
 		
 		Returns:
-		ReturnedJobs  [jobData,...]
+		ReturnedJobs  [HTCJobID,...]
 		       Sequence of retrieved jobs
 		"""
 		raise AbstractError
 
-	def cancelJobs(self, jobDataList):
+	def cancelJobs(self, htcIDs):
 		"""
 		Cancel/Abort/Delete a number of jobs
 		
 		Rquired:
-		jobDataList [jobData, ...]
+		htcIDs [HTCJobID, ...]
 		
 		Returns:
-		ReturnedJobs  [jobData,...]
+		ReturnedJobs  [HTCJobID,...]
 		       Sequence of removed jobs"""
 		raise AbstractError
 
@@ -133,10 +134,10 @@ class HTCScheddBase(LoadableObject):
 		raise AbstractError
 
 	# internal interfaces for HTC Schedds
-	def getStagingDir(self, jobData = None, taskID = None):
+	def getStagingDir(self, htcID = None, taskID = None):
 		"""Return path in the Schedd domain where HTC picks up and returns files"""
 		raise AbstractError
-	def cleanStagingDir(self, jobData = None, taskID = None):
+	def cleanStagingDir(self, htcID = None, taskID = None):
 		"""Clean path in the Schedd domain where HTC picks up and returns files"""
 		raise AbstractError
 
@@ -149,9 +150,9 @@ class HTCScheddBase(LoadableObject):
 			'periodic_remove         = (JobStatus == 5 && HoldReasonCode != 16)',
 			'environment             = CONDOR_WMS_DASHID=https://%s:/$(Cluster).$(Process)' % self.wmsName,
 			'Universe                = %s' % self.parentPool._jobSettings["Universe"]	# TODO: Unhack me
-			'+GcID                   = %s' % self._createGcId(self.URI, task.taskID, '$(Cluster)', '$(Process)'),
+			'+GcID                   = %s' % self.parentPool._createGcId(HTCJobID('$(GcJobNum)', self.URI, task.taskID, '$(Cluster)', '$(Process)', typed = False)),
 			'+GcJobNumToWmsID        = $(GcJobNum)@$(Cluster).$(Process)',
-			'+GcJobNumToGcID         = $(GcJobNum)@%s' % self._createGcId(self.URI, task.taskID, '$(Cluster)', '$(Process)'),
+			'+GcJobNumToGcID         = $(GcJobNum)@$(GcID)',
 			'arguments               = $(GcJobNum)',
 			'Log                     = "%s/gcJobs.log"' % self.getStagingDir(),
 			]
@@ -189,29 +190,30 @@ def HTCScheddCLIBase(HTCScheddBase):
 		if submitProc.wait(timeout = self._adapterMaxWait):
 			submitProc.logError(self.parentPool.errorLog, brief=True)
 			return = []
-		infoMaps = htcUtils.parseKWListIter(submitProc.getOutput())
-		return self._digestQueryInfoMap(infoMaps, queryArguments)
+		queryInfoMaps = htcUtils.parseKWListIter(submitProc.getOutput())
+		return self._digestQueryInfoMap(queryInfoMaps, queryArguments)
 
-	def checkJobs(self, jobDataList, queryArguments):
-		queryProc = self._condor_q(self, jobDataList, queryAttributes = queryArguments)
+	def checkJobs(self, htcIDs, queryArguments):
+		queryProc = self._condor_q(self, htcIDs, queryAttributes = queryArguments)
 		if queryProc.wait(timeout = self._adapterMaxWait):
 			queryProc.logError(self.parentPool.errorLog, brief=True)
 			return []
-		infoMaps = htcUtils.parseKWListIter(queryProc.getOutput())
-		return self._digestQueryInfoMap(infoMaps, queryArguments)
+		queryInfoMaps = htcUtils.parseKWListIter(queryProc.getOutput())
+		return self._digestQueryInfoMap(queryInfoMaps, queryArguments)
 
-	def _digestQueryInfoMap(self, infoMaps, queryArguments):
+	def _digestQueryInfoMap(self, queryInfoMaps, queryArguments):
+		"""Digest raw queryInfoMaps to maps of HTCjobID : infoMap"""
 		dataMap  = {}
-		for infoMap in infoMaps:
-			gcID = self.parentPool.splitGcId(infoMap['GcID'])
-			dataMap[gcID] = {}
+		for infoMap in queryInfoMaps:
+			htcID = self.parentPool.splitGcId(infoMap['GcID'])[1]
+			dataMap[htcID] = {}
 			for key in infoMap:
 				if key in queryArguments:
-					dataMap[gcID][key] = infoMap[key]
-		return infoMaps
+					dataMap[htcID][key] = infoMap[key]
+		return dataMap
 
-	def cancelJobs(self, jobDataList):
-		rmProc = self._condor_rm(self, jobDataList)
+	def cancelJobs(self, htcIDs):
+		rmProc = self._condor_rm(self, htcIDs)
 		if rmProc.wait(timeout = self._adapterMaxWait):
 			rmProc.logError(self.parentPool.errorLog, brief=True)
 			return []
@@ -224,14 +226,14 @@ def HTCScheddCLIBase(HTCScheddBase):
 			except AttributeError:
 				if line:
 					self._log(logging.INFO3, "Failed to parse condor_rm output '%s'" % line)
-		rmDataList = []
-		for jobData in jobDataList:
+		rmIDList = []
+		for htcID in htcIDs:
 			try:
-				rmList.remove((jobData[2],jobData[3]))
-				rmDataList.append(jobData)
+				rmList.remove((htcID.clusterID,htcID.procID))
+				rmIDList.append(htcID)
 			except ValueError:
 				pass
-		return rmDataList
+		return rmIDList
 
 	@singleQueryCache(defReturnItem = (0,0,0))
 	def getHTCVersion(self):
@@ -259,25 +261,25 @@ def HTCScheddCLIBase(HTCScheddBase):
 			)
 		return subProc
 
-	def _condor_q(self, jobDataList, queryAttributes = []):
+	def _condor_q(self, htcIDs, queryAttributes = []):
 		qqProc = self._adapter.LoggedExecute(
 			"condor_q",
 			"%s -userlog '%s' -attributes '%s' -long" % (
-				' '.join([ '%d.%d'%(obj[2], obj[3]) for obj in jobDataList ]),
-				os.path.join(self.getStagingDir(jobDataList[0]),'gcJobs.log'),
+				' '.join([ '%d.%d'%(htcID.clusterID, htcID.procID) for htcID in htcIDs ]),
+				os.path.join(self.getStagingDir(htcIDs[0]),'gcJobs.log'),
 				','.join(queryAttributes)
 				)
 			)
 		return qqProc
 
-	def _condor_history(self, jobDataList):
+	def _condor_history(self, htcIDs):
 		raise AbstractError
 
-	def _condor_rm(self, jobDataList):
+	def _condor_rm(self, htcIDs):
 		rmProc = self._adapter.LoggedExecute(
 			"condor_rm",
 			"%s" % (
-				' '.join([ '%d.%d'%(obj[2], obj[3]) for obj in jobDataList ])
+				' '.join([ '%d.%d'%(htcID.clusterID, htcID.procID) for htcID in htcIDs ])
 				)
 			)
 		return rmProc
@@ -294,10 +296,10 @@ class HTCScheddLocal(HTCScheddCLIBase):
 	def getTimings(self):
 		return (20,5)
 
-	def getJobsOutput(self, jobDataList):
-		return jobDataList
+	def getJobsOutput(self, htcIDs):
+		return htcIDs
 
-	def _stageTaskFiles(self, jobNumList, tasks):
+	def _stageTaskFiles(self, jobNumList, task):
 		return jobNumList
 
 	def _prepareSubmit(self, task, jobNumList, queryArguments):
@@ -319,7 +321,7 @@ class HTCScheddLocal(HTCScheddCLIBase):
 			'x509userproxy           = "%s"' % self.pool.getProxy().getAuthFile(),
 			)]
 		for jobNum in jobNumList:
-			jobStageDir = self.getStagingDir(jobData = (jobNum, task.taskID, 0, 0))
+			jobStageDir = self.getStagingDir(htcID = HTCJobID(jobNum, task.taskID, 0, 0))
 			jdlData.extend([
 			'initialdir              = "%s"' % jobStageDir,
 			'Output                  = "%s/gs.stdout"' % jobStageDir,
@@ -336,12 +338,12 @@ class HTCScheddLocal(HTCScheddCLIBase):
 			)]
 		return jdlData
 
-	def getStagingDir(self, jobData = None, taskID = None):
+	def getStagingDir(self, htcID = None, taskID = None):
 		try:
-			return self.parentPool.getSandboxPath(jobData[0])
+			return self.parentPool.getSandboxPath(htcID.jobNum)
 		except TypeError:
 			return self.parentPool.getSandboxPath()
-	def cleanStagingDir(self, jobData = None, taskID = None):
+	def cleanStagingDir(self, htcID = None, taskID = None):
 		pass
 
 # Remote schedd interfaced via local HTC
@@ -352,12 +354,12 @@ class HTCScheddSpool(HTCScheddLocal):
 	def getTimings(self):
 		return (30,5)
 
-	def getJobsOutput(self, jobDataList):
-		self._condor_transfer_data(job1DataList)
+	def getJobsOutput(self, htcIDs):
+		self._condor_transfer_data(htcIDs)
 		if submitProc.wait(timeout = self._adapterMaxWait):
 			submitProc.logError(self.parentPool.errorLog, brief=True)
 			return = []
-		return HTCScheddLocal.getJobsOutput(self, jobDataList)
+		return HTCScheddLocal.getJobsOutput(self, htcIDs)
 
 	def getScheddName(self):
 		return self.getURI().split('spool://')[1]
@@ -372,12 +374,12 @@ class HTCScheddSpool(HTCScheddLocal):
 			)
 		return subProc
 
-	def _condor_q(self, jobDataList, queryAttributes = []):
+	def _condor_q(self, htcIDs, queryAttributes = []):
 		qqProc = self._adapter.LoggedExecute(
 			"condor_q",
 			"%s -userlog '%s' -attributes '%s' -long  -name '%s'" % (
-				' '.join([ '%d.%d'%(obj[2], obj[3]) for obj in jobDataList ]),
-				os.path.join(self.getStagingDir(jobDataList[0]),'gcJobs.log'),
+				' '.join([ '%d.%d'%(htcID.clusterID, htcID.procID) for htcID in htcIDs ]),
+				os.path.join(self.getStagingDir(taskID = htcIDs[0].gctaskID),'gcJobs.log'),
 				','.join(queryAttributes),
 				self.getScheddName(),
 				)
@@ -388,7 +390,7 @@ class HTCScheddSpool(HTCScheddLocal):
 		rmProc = self._adapter.LoggedExecute(
 			"condor_rm",
 			"%s -name '%s'" % (
-				' '.join([ '%d.%d'%(obj[2], obj[3]) for obj in jobDataList ]),
+				' '.join([ '%d.%d'%(htcID.clusterID, htcID.procID) for htcID in htcIDs ])
 				self.getScheddName(),
 				)
 			)
@@ -398,7 +400,7 @@ class HTCScheddSpool(HTCScheddLocal):
 		trdProc = self._adapter.LoggedExecute(
 			"condor_transfer_data",
 			"%s -name '%s'" % (
-				' '.join([ '%d.%d'%(obj[2], obj[3]) for obj in jobDataList ]),
+				' '.join([ '%d.%d'%(htcID.clusterID, htcID.procID) for htcID in htcIDs ])
 				self.getScheddName(),
 				)
 			)
@@ -417,28 +419,28 @@ class HTCScheddSSH(HTCScheddCLIBase):
 	def getTimings(self):
 		return (60,10)
 
-	def getJobsOutput(self, jobDataList):
+	def getJobsOutput(self, htcIDs):
 		retrievedJobs = []
-		for index, jobData in enumerate(jobDataList):
-			self._log(logging.DEBUG3, "Retrieving job files (%d/%d): %s" %( index, len(jobDataList), jobData[0]) )
-			getProcess = self._adapter.LoggedGet(self.getStagingDir(jobData), fileInfoBlob[2])
-			if putProcess.wait(timeout = self._adapterMaxWait):
-				putProcess.logError(self.parentPool.errorLog, brief=True)
+		for index, htcID in enumerate(htcIDs):
+			self._log(logging.DEBUG3, "Retrieving job files (%d/%d): %s" %( index, len(htcIDs), jobData[0]) )
+			getProcess = self._adapter.LoggedGet(self.getStagingDir(htcID), self.parentPool.getSandboxPath(htcID.jobNum))
+			if getProcess.wait(timeout = self._adapterMaxWait):
+				getProcess.logError(self.parentPool.errorLog, brief=True)
 				self._log(logging.INFO1, "Retrieval failed for job %d." %(jobData[0]) )
 			else:
-				retrievedJobs.append(jobDataList)
+				retrievedJobs.append(htcID)
 			try:
-				self.cleanStagingDir(jobData = jobData)
+				self.cleanStagingDir(htcID = htcID)
 			except RuntimeError as err:
 				self._log( logging.DEFAULT_VERBOSITY, err.message )
 		# clean up task dir if no job(dir)s remain
 		try:
-			statProcess = self._adapter.LoggedExecute('find %s -maxdepth 1 -type d | wc -l' % self.getStagingDir(jobData = ('*', jobDataList[0][1],0,0)))
+			statProcess = self._adapter.LoggedExecute('find %s -maxdepth 1 -type d | wc -l' % self.getStagingDir( (taskID = htcIDs[0].gctaskID)))
 			if statProcess.wait(timeout = self._adapterMaxWait):
 				statProcess.logError(self.parentPool.errorLog, brief=True)
-				raise RuntimeError('Failed to check remote dir for cleanup : %s @ %s' % (self.cleanStagingDir((taskID = jobDataList[0][1]) ), self.getDomain()))
-			elif (int(checkProcess.getOutput()) <= 1):
-				self.cleanStagingDir((taskID = jobDataList[0][1]) )
+				raise RuntimeError('Failed to check remote dir for cleanup : %s @ %s' % (self.getStagingDir( (taskID = htcIDs[0].gctaskID))))
+			elif (int(checkProcess.getOutput()) == 1):
+				self.cleanStagingDir((taskID = htcIDs[0].gctaskID))
 		except RuntimeError as err:
 			self._log( logging.DEFAULT_VERBOSITY, err.message )
 		return retrievedJobs
@@ -494,7 +496,7 @@ class HTCScheddSSH(HTCScheddCLIBase):
 		taskFiles.extend(
 			map(
 				lambda (desrc, path, base): (descr, path, os.path.join(self.getStagingDir(taskID = task.taskID), base) )
-				self.pool._getSandboxFilesIn(task)
+				self.parentPool._getSandboxFilesIn(task)
 				)
 			)
 		proxyFile = self.pool.getProxy().getAuthFile()
@@ -529,7 +531,7 @@ class HTCScheddSSH(HTCScheddCLIBase):
 					if putProcess.wait(timeout = self._adapterMaxWait):
 						putProcess.logError(self.parentPool.errorLog, brief=True)
 						try:
-							self.cleanStagingDir(jobData = (jobNum, task.taskID))
+							self.cleanStagingDir( htcID = HTCJobID(jobNum, task.taskID))
 						except RuntimeError as err:
 							self._log( logging.INFO1, err.message )
 						raise RuntimeError
@@ -539,17 +541,17 @@ class HTCScheddSSH(HTCScheddCLIBase):
 				stagedJobs.append(jobNum)
 		return stagedJobs
 
-	def _getStagingToken(self, jobData = None, taskID = None):
+	def _getStagingToken(self, htcID = None, taskID = None):
 		"""Construct the key for a staging directory"""
 		try:
-			return 'taskID.%s.job_%s' % ( str(jobData[1]), str(jobData[0]) )
+			return 'taskID.%s/job_%s' % ( htcID.gctaskID, htcID.jobNum )
 		except TypeError:
 			if taskID:
 				return 'taskID.%s' % taskID
 		return ''
 	_getStagingDirToken = lru_cache(_getStagingDirToken, 31)
-	def getStagingDir(self, jobData = None, taskID = None):
-		token = self._getStagingToken(jobData = None, taskID = None)
+	def getStagingDir(self, htcID = None, taskID = None):
+		token = self._getStagingToken(htcID = htcID, taskID = taskID)
 		try:
 			return self._stageDirCache[token]
 		except KeyError:
@@ -559,13 +561,16 @@ class HTCScheddSSH(HTCScheddCLIBase):
 		mkdirProcess = self._adapter.LoggedExecute("mkdir -m 744 -p", stageDirPath )
 		if mkdirProcess.wait(timeout = self._adapterMaxWait):
 			mkdirProcess.logError(self.parentPool.errorLog, brief=True)
-			raise RuntimeError
+			raise RuntimeError('Failed to create remote dir : %s @ %s' % (stageDirPath, self.getDomain()))
 		self._stageDirCache[token] = stageDirPath
 		return stageDirPath
 
-	def cleanStagingDir(self, jobData = None, taskID = None):
-		token = self._getStagingToken(jobData = None, taskID = None)
-		stageDirPath = self.getStagingDir(jobData = None, taskID = None)
+	def cleanStagingDir(self, htcID = None, taskID = None):
+		token        = self._getStagingToken(htcID = htcID, taskID = taskID)
+		try:
+			stageDirPath = self.getStagingDir(htcID = htcID, taskID = taskID)
+		except RuntimeError:
+			return
 		rmdirProcess = self._adapter.LoggedExecute("rm -rf", stageDirPath )
 		if rmdirProcess.wait(timeout = self._adapterMaxWait):
 			rmdirProcess.logError(self.parentPool.errorLog, brief=True)
