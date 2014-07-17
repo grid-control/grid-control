@@ -31,7 +31,7 @@ def HTCScheddFactory(URI, **kwargs):
 	adapter, scheme = ProcessAdapterFactory(URI, externalSchemes=["spool"])
 	if not adapter:
 		raise NotImplementedError("Schedd interfacing via methods of scheme '%s' has not been implemented yet." % scheme)
-	for HTCSchedd in [ HTCScheddLocal, HTCScheddSSH ]
+	for HTCSchedd in [ HTCScheddLocal, HTCScheddSSH ]:
 		if adapter.getType() in HTCSchedd.adapterTypes:
 			return HTCSchedd(URI = URI, adapter = adapter, **kwargs)
 
@@ -149,7 +149,7 @@ class HTCScheddBase(LoadableObject):
 			'when_to_transfer_output = ON_EXIT',
 			'periodic_remove         = (JobStatus == 5 && HoldReasonCode != 16)',
 			'environment             = CONDOR_WMS_DASHID=https://%s:/$(Cluster).$(Process)' % self.wmsName,
-			'Universe                = %s' % self.parentPool._jobSettings["Universe"]	# TODO: Unhack me
+			'Universe                = %s' % self.parentPool._jobSettings["Universe"],	# TODO: Unhack me
 			'+GcID                   = %s' % self.parentPool._createGcId(HTCJobID('$(GcJobNum)', self.URI, task.taskID, '$(Cluster)', '$(Process)', typed = False)),
 			'+GcJobNumToWmsID        = $(GcJobNum)@$(Cluster).$(Process)',
 			'+GcJobNumToGcID         = $(GcJobNum)@$(GcID)',
@@ -189,7 +189,7 @@ def HTCScheddCLIBase(HTCScheddBase):
 		submitProc = self._condor_submit(jdlFilePath)
 		if submitProc.wait(timeout = self._adapterMaxWait):
 			submitProc.logError(self.parentPool.errorLog, brief=True)
-			return = []
+			return []
 		queryInfoMaps = htcUtils.parseKWListIter(submitProc.getOutput())
 		return self._digestQueryInfoMap(queryInfoMaps, queryArguments)
 
@@ -319,7 +319,7 @@ class HTCScheddLocal(HTCScheddCLIBase):
 			jdlData.extend([
 			'use_x509userproxy       = True',
 			'x509userproxy           = "%s"' % self.pool.getProxy().getAuthFile(),
-			)]
+			])
 		for jobNum in jobNumList:
 			jobStageDir = self.getStagingDir(htcID = HTCJobID(jobNum, task.taskID, 0, 0))
 			jdlData.extend([
@@ -333,9 +333,9 @@ class HTCScheddLocal(HTCScheddCLIBase):
 				[ self.parentPool.getJobCfgPath(jobNum)[0] ]
 				),
 			'transfer_output_files   = "%s"' % ",".join(
-				[ src for descr, src, trg in self._getSandboxFilesOut(task)[2:] ) ]
+				[ src for descr, src, trg in self._getSandboxFilesOut(task)[2:] ]
 				),
-			)]
+			])
 		return jdlData
 
 	def getStagingDir(self, htcID = None, taskID = None):
@@ -358,7 +358,7 @@ class HTCScheddSpool(HTCScheddLocal):
 		self._condor_transfer_data(htcIDs)
 		if submitProc.wait(timeout = self._adapterMaxWait):
 			submitProc.logError(self.parentPool.errorLog, brief=True)
-			return = []
+			return []
 		return HTCScheddLocal.getJobsOutput(self, htcIDs)
 
 	def getScheddName(self):
@@ -390,7 +390,7 @@ class HTCScheddSpool(HTCScheddLocal):
 		rmProc = self._adapter.LoggedExecute(
 			"condor_rm",
 			"%s -name '%s'" % (
-				' '.join([ '%d.%d'%(htcID.clusterID, htcID.procID) for htcID in htcIDs ])
+				' '.join([ '%d.%d' % (htcID.clusterID, htcID.procID) for htcID in htcIDs ]),
 				self.getScheddName(),
 				)
 			)
@@ -400,7 +400,7 @@ class HTCScheddSpool(HTCScheddLocal):
 		trdProc = self._adapter.LoggedExecute(
 			"condor_transfer_data",
 			"%s -name '%s'" % (
-				' '.join([ '%d.%d'%(htcID.clusterID, htcID.procID) for htcID in htcIDs ])
+				' '.join([ '%d.%d'%(htcID.clusterID, htcID.procID) for htcID in htcIDs ]),
 				self.getScheddName(),
 				)
 			)
@@ -435,12 +435,12 @@ class HTCScheddSSH(HTCScheddCLIBase):
 				self._log( logging.DEFAULT_VERBOSITY, err.message )
 		# clean up task dir if no job(dir)s remain
 		try:
-			statProcess = self._adapter.LoggedExecute('find %s -maxdepth 1 -type d | wc -l' % self.getStagingDir( (taskID = htcIDs[0].gctaskID)))
+			statProcess = self._adapter.LoggedExecute('find %s -maxdepth 1 -type d | wc -l' % self.getStagingDir( taskID = htcIDs[0].gctaskID) )
 			if statProcess.wait(timeout = self._adapterMaxWait):
 				statProcess.logError(self.parentPool.errorLog, brief=True)
-				raise RuntimeError('Failed to check remote dir for cleanup : %s @ %s' % (self.getStagingDir( (taskID = htcIDs[0].gctaskID))))
+				raise RuntimeError('Failed to check remote dir for cleanup : %s @ %s' % (self.getStagingDir( taskID = htcIDs[0].gctaskID) ))
 			elif (int(checkProcess.getOutput()) == 1):
-				self.cleanStagingDir((taskID = htcIDs[0].gctaskID))
+				self.cleanStagingDir(taskID = htcIDs[0].gctaskID)
 		except RuntimeError as err:
 			self._log( logging.DEFAULT_VERBOSITY, err.message )
 		return retrievedJobs
@@ -460,11 +460,11 @@ class HTCScheddSSH(HTCScheddCLIBase):
 		jdlData.extend([
 			'Executable              = "%s"' % taskFiles[0][2],
 			])
-		if self.parentPool.getProxy().getAuthFile():
+		if proxyFile:
 			jdlData.extend([
 			'use_x509userproxy       = True',
 			'x509userproxy           = "%s"' % proxyFile[2],
-			)]
+			])
 		for jobNum in jobNumList:
 			jobStageDir = self.getStagingDir(jobData = (jobNum, task.taskID, 0, 0))
 			jdlData.extend([
@@ -476,9 +476,9 @@ class HTCScheddSSH(HTCScheddCLIBase):
 				[ schd for descr, gc, schd in taskFiles[1:] + jobFileMap[jobNum] ]
 				),
 			'transfer_output_files   = "%s"' % ",".join(
-				[ src for descr, src, trg in self._getSandboxFilesOut(task)[2:] ) ]
+				[ src for descr, src, trg in self._getSandboxFilesOut(task)[2:] ]
 				),
-			)]
+			])
 		return jdlData
 
 	# internal interfaces for HTC Pool/Schedds
@@ -495,14 +495,13 @@ class HTCScheddSSH(HTCScheddCLIBase):
 		taskFiles = []
 		taskFiles.extend(
 			map(
-				lambda (desrc, path, base): (descr, path, os.path.join(self.getStagingDir(taskID = task.taskID), base) )
+				lambda (desrc, path, base): (descr, path, os.path.join(self.getStagingDir(taskID = task.taskID), base) ),
 				self.parentPool._getSandboxFilesIn(task)
 				)
 			)
-		proxyFile = self.pool.getProxy().getAuthFile()
-		if proxyFile:
-			proxyFiles = 
-			('User Proxy', proxyFile, os.path.join(self.getStagingDir(taskID = task.taskID), os.path.basename(proxyFile)))
+		proxyFile = ()
+		if self.pool.getProxy():
+			('User Proxy', self.pool.getProxy().getAuthFile(), os.path.join(self.getStagingDir(taskID = task.taskID), os.path.basename(self.pool.getProxy().getAuthFile())))
 		jobFileMap = {}
 		for jobNum in jobNumList:
 			jcFull, jcBase = self.getJobCfgPath(jobNum)
@@ -516,7 +515,9 @@ class HTCScheddSSH(HTCScheddCLIBase):
 		taskFiles, proxyFile, jobFileMap = self._getSubmitFileMap(task, jobNumList)
 		self._log(logging.DEBUG1, "Staging task files.")
 		stagedJobs = []
-		for index, fileInfoBlob in enumerate(taskFiles + [proxyFile]):
+		if proxyFile:
+			taskFiles.append(proxyFile)
+		for index, fileInfoBlob in enumerate(taskFiles):
 			self._log(logging.DEBUG3, "Staging task files (%d/%d): %s" %( index, len(taskFiles), fileInfoBlob[0]) )
 			putProcess = self._adapter.LoggedPut(fileInfoBlob[1], fileInfoBlob[2])
 			if putProcess.wait(timeout = self._adapterMaxWait):

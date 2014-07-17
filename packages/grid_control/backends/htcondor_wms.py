@@ -217,7 +217,7 @@ class HTCondor(BasicWMS):
 			activity = utils.ActivityLog('Submitting jobs... (%2d%)'%(100*(requestLen-len(jobNumList))/requestLen))
 			for jobNum in jobSubmitNumList:
 				self._writeJobConfig(
-					self._getJobCfgPath(jobNum)
+					self._getJobCfgPath(jobNum),
 					jobNum,
 					task
 					)
