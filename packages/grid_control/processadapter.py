@@ -170,7 +170,7 @@ class LocalProcessAdapter(ProcessAdapterInterface):
 		self._basepath = self._basepath or os.getcwd()
 		self._initInterfaces(**kwargs)
 	def __enter__(self):
-		pass
+		self
 	def __exit__(self, exc_type, exc_value, traceback):
 		pass
 
@@ -264,7 +264,7 @@ class SSHProcessAdapter(ProcessAdapterInterface):
 		self._validateConnection()
 		self._basepath = self._basepath or self.LoggedExecute( "pwd" ).getOutput().strip()
 	def __enter__(self):
-		pass
+		self
 	def __exit__(self, exc_type, exc_value, traceback):
 		self._log(logging.DEBUG1,'Exiting context for URI' % self.URI)
 		for socket in self._socketProcs:
