@@ -18,7 +18,7 @@ import socket
 from python_compat import *
 from exceptions import *
 from abstract import LoadableObject
-from utils import LoggedProcess, vprint, eprint, resolveInstallPath, ensureDirExists, lru_cache, QM
+from utils import LoggedProcess, resolveInstallPath, ensureDirExists, lru_cache, QM
 
 # Container to call commands in a generic fashion
 class CommandContainer(object):

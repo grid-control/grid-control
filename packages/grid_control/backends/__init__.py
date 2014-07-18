@@ -21,6 +21,7 @@ wms.WMS.registerObject(searchPath = ['grid_control.backends.local_api'])
 wms.WMS.moduleMap['MultiWMS'] = 'wms_multi.MultiWMS'
 wms.WMS.moduleMap['ThreadedMultiWMS'] = 'wms_thread.ThreadedMultiWMS'
 wms.WMS.moduleMap['GliteWMS'] = 'glite_wms.GliteWMS'
+wms.WMS.moduleMap['HTCondor'] = 'htcondor_wms.HTCondor'
 wms.WMS.moduleMap['localhost'] = 'host.Localhost'
 wms.WMS.moduleMap['Condor'] = 'condor_wms.Condor'
 wms.WMS.moduleMap['JMS'] = 'slurm.JMS'

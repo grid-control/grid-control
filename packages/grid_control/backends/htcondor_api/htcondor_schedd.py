@@ -10,11 +10,13 @@ import re
 
 # GC modules
 import utils
-import htcUtils
-from htcondor_wms import HTCJobID
+from abstract       import LoadableObject
+from htcondor_utils import parseKWListIter, singleQueryCache
+from wmsid          import HTCJobID
 
-from python_compat import md5
-from process_adapter import ProcessAdapterFactory
+# HTC modules
+from python_compat  import md5, lru_cache
+from processadapter import ProcessAdapterFactory
 
 """
 This module provides adapter classes for uniformly issuing GC commands to HTCondor Schedds.
@@ -177,12 +179,12 @@ class HTCScheddBase(LoadableObject):
 
 
 # Schedd interfaced via python
-def HTCScheddPyBase(HTCScheddBase):
+class HTCScheddPyBase(HTCScheddBase):
 	def __init__(self, **kwArgs):
 		raise NotImplementedError
 
 # Schedd interfaced via CLI
-def HTCScheddCLIBase(HTCScheddBase):
+class HTCScheddCLIBase(HTCScheddBase):
 	# public interfaces for HTC Pool/WMS
 	def submitJobs(self, jobNumList, task, queryArguments):
 		jdlFilePath = self._prepareSubmit(task, jobNumList, queryArguments)
@@ -190,7 +192,7 @@ def HTCScheddCLIBase(HTCScheddBase):
 		if submitProc.wait(timeout = self._adapterMaxWait):
 			submitProc.logError(self.parentPool.errorLog, brief=True)
 			return []
-		queryInfoMaps = htcUtils.parseKWListIter(submitProc.getOutput())
+		queryInfoMaps = parseKWListIter(submitProc.getOutput())
 		return self._digestQueryInfoMap(queryInfoMaps, queryArguments)
 
 	def checkJobs(self, htcIDs, queryArguments):
@@ -198,7 +200,7 @@ def HTCScheddCLIBase(HTCScheddBase):
 		if queryProc.wait(timeout = self._adapterMaxWait):
 			queryProc.logError(self.parentPool.errorLog, brief=True)
 			return []
-		queryInfoMaps = htcUtils.parseKWListIter(queryProc.getOutput())
+		queryInfoMaps = parseKWListIter(queryProc.getOutput())
 		return self._digestQueryInfoMap(queryInfoMaps, queryArguments)
 
 	def _digestQueryInfoMap(self, queryInfoMaps, queryArguments):
@@ -550,7 +552,7 @@ class HTCScheddSSH(HTCScheddCLIBase):
 			if taskID:
 				return 'taskID.%s' % taskID
 		return ''
-	_getStagingDirToken = lru_cache(_getStagingDirToken, 31)
+	_getStagingToken = lru_cache(_getStagingToken, 31)
 	def getStagingDir(self, htcID = None, taskID = None):
 		token = self._getStagingToken(htcID = htcID, taskID = taskID)
 		try:
