@@ -43,31 +43,6 @@ a link copy. For convention with other backends, these correspond to:
   Staging: The folder where HTCondor works on
 """
 
-#### ::TODO::
-# Public Interfaces:
-#    Auxiliary:
-#      getSites
-# Unhacks:
-#    jobData dict-class
-
-#import os
-#import sys
-
-#import logging
-
-#from utils import makeEnum, ensureDirExists, ActivityLog
-#from grid_control import Job
-
-#import sys, os
-#import re
-#import glob
-#import popen2
-#import time
-
-#import tempfile
-#from grid_control import utils, QM, ProcessHandler, Job
-#from wms import WMS, BasicWMS, RethrowError
-
 class HTCondor(BasicWMS):
 	""""
 	Backend for HTCondor 8+
