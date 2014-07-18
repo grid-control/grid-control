@@ -56,17 +56,17 @@ def ProcessAdapterFactory(URI, externalSchemes = [], collapseLocal = True, **kwa
 	raises ValueError if the URI does not match an adapter
 	"""
 	_logger = logging.getLogger('process.adapter.%s' % ProcessAdapterFactory.__name__)
-	def getAdapter(URI, externalScheme = [], **kwargs):
-		if URI.split("://")[0] in externalScheme:
+	def getAdapter(URI, externalSchemes = [], **kwargs):
+		if URI.split("://")[0] in externalSchemes:
 			return None, URI.split("://")[0]
 		for Adapter in [ LocalProcessAdapter, SSHProcessAdapter, GSISSHProcessAdapter ]:
-			try:
-				tmp = Adapter.resolveURI(URI, **kwargs)
-				return Adapter(URI = URI, **kwargs), tmp[0]
-			except ValueError:
-				continue
-		raise ValueError("Failed to match URI with any Adapter.")
-	adapter, scheme = getAdapter(URI, externalScheme, **kwargs)
+			#try:
+			tmp = Adapter.resolveURI(URI, **kwargs)
+			return Adapter(URI = URI, **kwargs), tmp[0]
+			#except ValueError:
+			#	continue
+		raise ValueError("Failed to match URI '%s' with any Adapter." % URI)
+	adapter, scheme = getAdapter(URI, externalSchemes, **kwargs)
 	if collapseLocal and adapter.isLoopback() and adapter.getType() != 'local':
 		_logger.log(logging.INFO3, 'Swapping adapter of type %s for local adapter (resolving loopback).' % (URI, adapter.__class__.__name__))
 		adapter, scheme = getAdapter(adapter.getLoopbackURI(), **kwargs)
@@ -166,7 +166,7 @@ class LocalProcessAdapter(ProcessAdapterInterface):
 	uriRepr   = "[local://][/<path>]"
 	def __init__(self, URI, **kwargs):
 		ProcessAdapterInterface.__init__(self, URI, **kwargs)
-		( _, self._basepath ) = self.resolveURI(URI)
+		( _, self._basepath, _ ) = self.resolveURI(URI)
 		self._basepath = self._basepath or os.getcwd()
 		self._initInterfaces(**kwargs)
 	def __enter__(self):
@@ -202,7 +202,12 @@ class LocalProcessAdapter(ProcessAdapterInterface):
 	# general internal functions
 	@classmethod
 	def resolveURI(self, URI, **kwargs):
-		( scheme, path ) = re.search(r'(?:(\w*)://)(?:/(.*))?(.*)',URI).group(1,2,3)
+		if URI == '':
+			return ('', None, None)
+		reMatch = re.search(r'(?:(\w*)://)(?:/(.*))?(.*)',URI).group(1,2,3)
+		if not reMatch:
+			raise ValueError("URI %s could not be parsed" % URI)
+		( scheme, path, leftover ) = reMatch.group(1,2,3)
 		self._log(logging.DEBUG1, 'Resolved URI %s as %s' % (URI, { 'scheme' : scheme, 'path' : path, 'remainder' : leftover}) )
 		if ( scheme ) and ( scheme not in self.uriScheme ):
 			raise ValueError("Got URI of scheme '%s', expected '%s'." % (scheme, "' or '".join(self.uriScheme)))
@@ -257,7 +262,7 @@ class SSHProcessAdapter(ProcessAdapterInterface):
 		       maximum number of sockets in use
 		"""
 		ProcessAdapterInterface.__init__(self, URI, **kwargs)
-		( _, self._user, self._host, self._port, self._basepath ) = self.resolveURI(URI, **kwargs)
+		( _, self._user, self._host, self._port, self._basepath, _ ) = self.resolveURI(URI, **kwargs)
 		self._initInterfaces(**kwargs)
 		self._initSockets(**kwargs)
 		# test connection once before usage
@@ -340,7 +345,10 @@ class SSHProcessAdapter(ProcessAdapterInterface):
 	# general internal functions
 	@classmethod
 	def resolveURI(self, URI, **kwargs):
-		( scheme, user, host, port, path, leftover) = re.search(r'(?:(\w*)://)?(?:(\w*)@)?(\w*)(?::(\d*))(?:/(.*))?(.*)',URI).group(1,2,3,4,5,6)
+		reMatch = re.search(r'(?:(\w*)://)?(?:(\w*)@)?(\w*)(?::(\d*))(?:/(.*))?(.*)',URI)
+		if not reMatch:
+			raise ValueError("URI %s could not be parsed" % URI)
+		( scheme, user, host, port, path, leftover) = reMatch.group(1,2,3,4,5,6)
 		self._log(logging.DEBUG1, 'Resolved URI %s as %s' % (URI, { 'scheme' : scheme, 'user' : user, 'host' : host, 'port' : port, 'path' : path, 'remainder' : leftover}) )
 		if ( scheme ) and ( scheme not in self.uriScheme ):
 			raise ValueError("Got URI of scheme '%s', expected '%s'." % (scheme, "' or '".join(self.uriScheme)))
