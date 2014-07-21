@@ -337,21 +337,24 @@ class SSHProcessAdapter(ProcessAdapterInterface):
 		return "ssh"
 	def getProtocol(self):
 		return "ssh"
-	def getLoopbackURI(self, _cachedURI = []):
+	def getLoopbackURI(self, _cachedURI = {}):
 		try:
-			return _cachedURI[0]
-		except IndexError:
-			_cachedURI[0] = None
-			remoteHostname = self.LoggedExecute('hostname').getOutput(wait=True)
-			localHostname  = socket.gethostname()
+			return _cachedURI[self]
+		except KeyError:
+			_cachedURI[self] = None
+			remoteHostname = self.LoggedExecute('hostname').getOutput(wait=True).strip()
+			localHostname  = socket.gethostname().strip()
+			remoteAdress   = socket.gethostbyname(remoteHostname)
+			localAdress    = socket.gethostbyname(localHostname)
+			self._log(logging.DEBUG1, "'Checking host/IP for loopback - local: '%s/%s', remote: '%s/%s'" % (localHostname, localAdress, remoteHostname, remoteAdress) )
 			if socket.gethostbyname(remoteHostname) == socket.gethostbyname(localHostname):
-				_cachedURI[0] = LocalProcessAdapter.createURI({
+				_cachedURI[self] = LocalProcessAdapter.createURI({
 					'user' : self._user,
 					'host' : self._host,
 					'port' : self._port,
 					'path' : self._basepath
 					})
-			return _cachedURI[0]
+			return _cachedURI[self]
 
 	def LoggedSocket(self, command="", args = '', niceCmd = None, niceArgs = None):
 		return LoggedProcess(
