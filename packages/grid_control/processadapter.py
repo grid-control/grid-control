@@ -269,6 +269,8 @@ class SSHProcessAdapter(ProcessAdapterInterface):
 		( _, self._user, self._host, self._port, self._basepath ) = self.resolveURI(URI, **kwargs)
 		self._initInterfaces(**kwargs)
 		self._initSockets(**kwargs)
+		# always clean up on termination, even outside of context
+		atexit.register(self.__exit__, None, None, None)
 		# test connection once before usage
 		self._validateConnection()
 		self._basepath = self._basepath or self.LoggedExecute( "pwd" ).getOutput().strip()
@@ -277,8 +279,9 @@ class SSHProcessAdapter(ProcessAdapterInterface):
 	def __exit__(self, exc_type, exc_value, traceback):
 		self._log(logging.DEBUG1,"Exiting context for URI '%s'" % self.URI)
 		for socket in self._socketProcs:
-			self._socketProcs[socket].kill()
-			self._log(logging.DEBUG3,'Terminated master for socket %s' % socket)
+			if self._socketProcs[socket].poll() < 0:
+				self._socketProcs[socket].kill()
+				self._log(logging.DEBUG3,'Terminated master for socket %s - PID: %s' % (socket, self._socketProcs[socket].proc.pid))
 
 	# Logged Processes
 	def LoggedExecute(self, command, args = '', niceCmd = None, niceArgs = None):
