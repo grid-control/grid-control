@@ -18,7 +18,7 @@ import socket
 from python_compat import *
 from exceptions import *
 from abstract import LoadableObject
-from grid_control.utils import LoggedProcess, resolveInstallPath, ensureDirExists, lru_cache, QM
+from grid_control.utils import LoggedProcess, resolveInstallPath, ensureDirExists, lru_cache, QM, InstallationError
 
 # Container to call commands in a generic fashion
 class CommandContainer(object):
@@ -63,9 +63,13 @@ def ProcessAdapterFactory(URI, externalSchemes = [], collapseLocal = True, **kwa
 			try:
 				tmp = Adapter.resolveURI(URI, **kwargs)
 				return Adapter(URI = URI, **kwargs), tmp[0]
-			except ValueError:   # error in resolving URI
+			except ValueError:        # error in resolving URI
 				continue
-			except RuntimeError: # error in establishing connection
+			except InstallationError: # adapter is not available/broken
+				_logger.log(logging.DEBUG3, "URI '%s', rejecting adapter %s [Not available]" % (URI, Adapter.__name__))
+				continue
+			except RuntimeError:      # error in establishing connection
+				_logger.log(logging.DEBUG3, "URI '%s', rejecting adapter %s [Verification failed]" % (URI, Adapter.__name__))
 				continue
 		raise ValueError("Failed to match URI '%s' with any Adapter." % URI)
 	adapter, scheme = getAdapter(URI, externalSchemes, **kwargs)
