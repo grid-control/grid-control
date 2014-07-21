@@ -207,7 +207,7 @@ class LocalProcessAdapter(ProcessAdapterInterface):
 	def resolveURI(self, URI, **kwargs):
 		if URI == '':
 			return ('', None, None)
-		reMatch = re.search(r'(?:(\w*)://)(?:/(.*))?(.*)',URI).group(1,2,3)
+		reMatch = re.search(r'(?:(\w*)://)(?:/(.*))?(.*)',URI)
 		if not reMatch:
 			raise ValueError("URI %s could not be parsed" % URI)
 		( scheme, path, leftover ) = reMatch.group(1,2,3)
@@ -348,7 +348,7 @@ class SSHProcessAdapter(ProcessAdapterInterface):
 	# general internal functions
 	@classmethod
 	def resolveURI(self, URI, **kwargs):
-		reMatch = re.search(r'(?:(\w*)://)?(?:(\w*)@)?(\w*)(?::(\d*))(?:/(.*))?(.*)',URI)
+		reMatch = re.search(r'(?:(\w*)://)?(?:(\w*)@)?([\w.]*)(?::(\d*))?(?:/(.*))?(.*)',URI)
 		if not reMatch:
 			raise ValueError("URI %s could not be parsed" % URI)
 		( scheme, user, host, port, path, leftover) = reMatch.group(1,2,3,4,5,6)
