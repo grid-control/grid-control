@@ -474,8 +474,8 @@ class SSHProcessAdapter(ProcessAdapterInterface):
 		# validate socket exists
 		waitTime = 0
 		while not os.path.exists(self._getCurrentSocket()):
-			if socketProcess.poll():
-				self._log(logging.DEBUG1, "Failure on ControlMaster socket creation.")
+			if socketProcess.poll() > 0:
+				self._log(logging.DEBUG1, "Failure on ControlMaster socket creation [code: %s]."%socketProcess.poll())
 				if self._errorLog:
 					socketProcess.logError(self._errorLog)
 				return False
