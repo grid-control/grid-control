@@ -13,7 +13,7 @@
 #-#  limitations under the License.
 
 from python_compat import set, sorted, md5, next, user_input, lru_cache
-import sys, os, stat, StringIO, tarfile, time, fnmatch, re, popen2, threading, operator, Queue, signal, glob, logging
+import sys, os, stat, StringIO, tarfile, time, fnmatch, re, popen2, threading, operator, Queue, signal, glob, logging, errno
 from exceptions import *
 
 def QM(cond, a, b):
@@ -145,7 +145,11 @@ class LoggedProcess(object):
 		return self.getOutput() + '\n' + self.getError()
 
 	def kill(self):
-		os.kill(self.proc.pid, signal.SIGTERM)
+		try:
+			os.kill(self.proc.pid, signal.SIGTERM)
+		except OSError, osError:
+			if osError.errno != errno.ESRCH: # errno.ESRCH: no such process (already dead)
+				raise
 
 	def iter(self):
 		while True:
