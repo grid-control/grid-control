@@ -83,6 +83,7 @@ class ProcessAdapterInterface(LoadableObject):
 	# python internals
 	def __init__(self, URI, **kwargs):
 		self.URI=URI
+		self._errorLog = kwargs.get('errorLog')
 		self._initLogger(**kwargs)
 		self._log(logging.INFO1, 'Establishing process adapter of type %s' % self.__class__.__name__)
 	def __enter__(self):
@@ -156,8 +157,8 @@ class ProcessAdapterInterface(LoadableObject):
 		stdProcess = self.LoggedExecute( "echo stdout; echo stderr >&2; exit 0" )
 		for proc in [ testProcess, stdProcess]:
 			if proc.wait() != os.EX_OK:
-				if errorLog:
-					proc.logError(errorLog)
+				if self._errorLog:
+					proc.logError(self._errorLog)
 				raise RuntimeError("Failure when validating connection to %s." % self.getDomain)
 		if len(testProcess.getOutput()) != 0 or stdProcess.getOutput() != "stdout\n":
 			raise InstallationError("Output of processes from adapter for URI %s is either muted or poluted." %  self.URI )
@@ -478,8 +479,8 @@ class SSHProcessAdapter(ProcessAdapterInterface):
 			if waitTime == timeOut:
 				self._log(logging.DEBUG1, "Timeout (%ds) on ControlMaster socket creation." % timeOut)
 				socketProcess.kill()
-				if errorLog:
-					socketProcess.logError(errorLog)
+				if self._errorLog:
+					socketProcess.logError(self._errorLog)
 				return False
 		self._socketProcs[self._getCurrentSocket()] = socketProcess
 		return True
