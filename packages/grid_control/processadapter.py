@@ -63,7 +63,9 @@ def ProcessAdapterFactory(URI, externalSchemes = [], collapseLocal = True, **kwa
 			try:
 				tmp = Adapter.resolveURI(URI, **kwargs)
 				return Adapter(URI = URI, **kwargs), tmp[0]
-			except ValueError as err:
+			except ValueError:   # error in resolving URI
+				continue
+			except RuntimeError: # error in establishing connection
 				continue
 		raise ValueError("Failed to match URI '%s' with any Adapter." % URI)
 	adapter, scheme = getAdapter(URI, externalSchemes, **kwargs)
