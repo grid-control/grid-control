@@ -446,7 +446,7 @@ class SSHProcessAdapter(ProcessAdapterInterface):
 		self._socketMinSec  = kwargs.get("socketMinSec", 300)
 		self._socketCount   = max(2,kwargs.get("socketCount", 2))
 		self._socketIndex   = 0
-		self._socketMaxMiss = kwargs.get("socketMaxMiss", 6)
+		self._socketMaxMiss = kwargs.get("socketMaxMiss", 2)
 		self._socketMisses  = 0
 		# sockets should reside in secure, managed directory
 		if kwargs.get("socketDir","") and len(kwargs.get("socketDir")) < 105:
@@ -489,7 +489,7 @@ class SSHProcessAdapter(ProcessAdapterInterface):
 				return ""
 			if self._socketMisses == self._socketMaxMiss:
 				raise RuntimeError("Repeated timeout on critical ControlMaster socket creation.")
-		self._socketMisses = 0
+		self._socketMisses = max(self._socketMisses-1, 0)
 		return self._getCurrentSocketArgs()
 
 	def _validateControlMaster(self, timeOut = 20):
