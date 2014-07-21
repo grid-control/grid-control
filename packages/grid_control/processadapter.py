@@ -435,12 +435,13 @@ class SSHProcessAdapter(ProcessAdapterInterface):
 				"command" : kwargs.get("command","<undefined command>"),
 				"URI"     : self.URI,
 				},
+			lambda **kwargs: kwargs.get('args') and "Arguments: '%s'" % kwargs.get('args') or ''
 			)
 
 	# Interface specific internal methods
 	def _initSockets(self, **kwargs):
 		self._needSocket    = kwargs.get("needSocket", True)
-		self._socketMinSec  = kwargs.get("socketMinSec", 3600)
+		self._socketMinSec  = kwargs.get("socketMinSec", 300)
 		self._socketCount   = max(2,kwargs.get("socketCount", 2))
 		self._socketIndex   = 0
 		self._socketMaxMiss = kwargs.get("socketMaxMiss", 6)
