@@ -68,9 +68,9 @@ def ProcessAdapterFactory(URI, externalSchemes = [], collapseLocal = True, **kwa
 		raise ValueError("Failed to match URI '%s' with any Adapter." % URI)
 	adapter, scheme = getAdapter(URI, externalSchemes, **kwargs)
 	if collapseLocal and adapter.isLoopback() and adapter.getType() != 'local':
-		_logger.log(logging.INFO3, 'Swapping adapter of type %s for local adapter (resolving loopback).' % (URI, adapter.__class__.__name__))
+		_logger.log(logging.INFO3, 'Swapping adapter of type %s for local adapter (resolving loopback).' % (adapter.__class__.__name__))
 		adapter, scheme = getAdapter(adapter.getLoopbackURI(), **kwargs)
-	_logger.log(logging.INFO2, 'Resolved URI %s, providing adapter %s' % (URI, adapter.__class__.__name__))
+	_logger.log(logging.INFO2, "Resolved URI '%s', providing adapter %s" % (URI, adapter.__class__.__name__))
 	return adapter, scheme
 
 # Base class defining interface
@@ -152,16 +152,16 @@ class ProcessAdapterInterface(LoadableObject):
 		raises RuntimeError if the connection exits unsuccessfully
 		raises InstallationError if stdout is not clean
 		"""
-		self._log(logging.INFO2, 'Validating adapter for URI %s' % self.URI )
+		self._log(logging.INFO2, "Validating adapter for URI '%s'" % self.URI )
 		testProcess = self.LoggedExecute( "exit 0" )
 		stdProcess = self.LoggedExecute( "echo stdout; echo stderr >&2; exit 0" )
 		for proc in [ testProcess, stdProcess]:
 			if proc.wait() != os.EX_OK:
 				if self._errorLog:
 					proc.logError(self._errorLog)
-				raise RuntimeError("Failure when validating connection to %s." % self.getDomain)
+				raise RuntimeError("Failure when validating connection to '%s'." % self.getDomain)
 		if len(testProcess.getOutput()) != 0 or stdProcess.getOutput() != "stdout\n":
-			raise InstallationError("Output of processes from adapter for URI %s is either muted or poluted." %  self.URI )
+			raise InstallationError("Output of processes from adapter for URI '%s' is either muted or poluted." %  self.URI )
 
 
 # Access to local system
@@ -212,11 +212,11 @@ class LocalProcessAdapter(ProcessAdapterInterface):
 		if not reMatch:
 			raise ValueError("URI %s could not be parsed" % URI)
 		( scheme, path, leftover ) = reMatch.group(1,2,3)
-		self._log(logging.DEBUG1, 'Resolved URI %s as %s' % (URI, { 'scheme' : scheme, 'path' : path, 'remainder' : leftover}) )
+		self._log(logging.DEBUG1, "Resolved URI '%s' as %s" % (URI, { 'scheme' : scheme, 'path' : path, 'remainder' : leftover}) )
 		if ( scheme ) and ( scheme not in self.uriScheme ):
 			raise ValueError("Got URI of scheme '%s', expected '%s'." % (scheme, "' or '".join(self.uriScheme)))
 		if leftover:
-			raise ValueError("URI %s yielded unexpected leftover '%s'. Expected URI form %s." % (URI, leftover, self.uriRepr))
+			raise ValueError("URI '%s' yielded unexpected leftover '%s'. Expected URI form %s." % (URI, leftover, self.uriRepr))
 		return ( scheme, path )
 	@classmethod
 	def createURI(self, elementMap):
@@ -275,7 +275,7 @@ class SSHProcessAdapter(ProcessAdapterInterface):
 	def __enter__(self):
 		self
 	def __exit__(self, exc_type, exc_value, traceback):
-		self._log(logging.DEBUG1,'Exiting context for URI' % self.URI)
+		self._log(logging.DEBUG1,"Exiting context for URI '%s'" % self.URI)
 		for socket in self._socketProcs:
 			self._socketProcs[socket].kill()
 			self._log(logging.DEBUG3,'Terminated master for socket %s' % socket)
@@ -288,7 +288,8 @@ class SSHProcessAdapter(ProcessAdapterInterface):
 				command = command,
 				args    = args
 				),
-			niceCmd = self._exeWrapper.niceCmd(command=(command or niceCmd))
+			niceCmd = self._exeWrapper.niceCmd(command=(niceCmd or command)),
+			niceArgs = self._exeWrapper.niceArg(args=(niceArgs or args)),
 			)
 
 	def LoggedGet(self, source, destination):
@@ -298,7 +299,11 @@ class SSHProcessAdapter(ProcessAdapterInterface):
 				source=self.getGlobalAbsPath(source),
 				destination=destination
 				),
-			niceCmd = self._copy.niceCmd()
+			niceCmd = self._copy.niceCmd(),
+			niceArgs = self._copy.niceArg(
+				source=self.getGlobalAbsPath(source),
+				destination=destination
+				),
 			)
 
 	def LoggedPut(self, source, destination):
@@ -308,11 +313,20 @@ class SSHProcessAdapter(ProcessAdapterInterface):
 				source=source,
 				destination=self.getGlobalAbsPath(destination)
 				),
-			niceCmd = self._copy.niceCmd()
+			niceCmd  = self._copy.niceCmd(),
+			niceArgs = self._copy.niceArg(
+				source=source,
+				destination=self.getGlobalAbsPath(destination)
+				),
 			)
 
 	def LoggedDelete(self, target):
-		return LoggedProcess(self._delete.cmd, self._delete.args({ "target" : target }), niceCmd = self._delete.niceCmd())
+		return LoggedProcess(
+			self._delete.cmd,
+			self._delete.args({ "target" : target }),
+			niceCmd  = self._delete.niceCmd(),
+			niceArgs = self._delete.niceArg({ "target" : target }),
+			)
 
 	def getDomain(self):
 		return self._host
@@ -343,7 +357,8 @@ class SSHProcessAdapter(ProcessAdapterInterface):
 				command = command,
 				args    = args
 				),
-			niceCmd = self._socketWrapper.niceCmd(command=(command or niceCmd))
+			niceCmd = self._socketWrapper.niceCmd(command=(niceCmd or command)),
+			niceArgs = self._exeWrapper.niceArg(args=(niceArgs or args)),
 			)
 
 	# general internal functions
@@ -372,10 +387,11 @@ class SSHProcessAdapter(ProcessAdapterInterface):
 				"host"       : self._host,
 				"payload"    : self._wrapPayload(kwargs["command"] + " " + kwargs.get("args",''))
 				},
-			lambda **kwargs: "%(command)s via adapter ssh [URI %(URI)s]" % {
+			lambda **kwargs: "'%(command)s' via adapter ssh [URI %(URI)s]" % {
 				"command" : kwargs.get("command","<undefined command>"),
 				"URI"     : self.URI,
 				},
+			lambda **kwargs: kwargs.get('args') and "Arguments: '%s'" % kwargs.get('args') or ''
 			)
 		self._copy = CommandContainer(
 			resolveInstallPath("scp"),
@@ -386,7 +402,8 @@ class SSHProcessAdapter(ProcessAdapterInterface):
 				"source"     : kwargs["source"],
 				"destination": kwargs["destination"],
 				},
-			lambda **kwargs: "scp"
+			lambda **kwargs: "scp",
+			lambda **kwargs: "Transfer: '%(source)' -> '%(destination)'" % kwargs,
 			)
 		self._delete = CommandContainer(
 			resolveInstallPath("ssh"),
@@ -396,7 +413,8 @@ class SSHProcessAdapter(ProcessAdapterInterface):
 				"socketArgs" : self._getValidSocketArgs(),
 				"payload" : self._wrapPayload( "rm -rf " + kwargs["target"] )
 				},
-			lambda **kwargs: "'rm' via ssh"
+			lambda **kwargs: "'rm' via ssh",
+			lambda **kwargs: "Target: '%(target)'" % kwargs,
 			)
 		self._socketWrapper = CommandContainer(
 			resolveInstallPath("ssh"),
