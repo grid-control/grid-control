@@ -9,6 +9,7 @@ import logging
 
 # GC modules
 import utils
+import json
 from abstract     import LoadableObject
 from wms          import BasicWMS
 from grid_control import Job
@@ -91,33 +92,37 @@ class HTCondor(BasicWMS):
 		"""
 		Establish adapters and connection details for pool and schedd
 		"""
-		rawDict = {}
+		poolConfig = {}
 		for poolConfigFileName in config.getList('poolConfig', onChange = None):
-			confFile = open(poolConfigFileName, 'r')
-			rawDict.update(eval(confFile.read()))
-			confFile.close()
-		self._jobFeatureMap = rawDict.get('jobFeatureMap',{})
-		self._queueQueryMap = rawDict.get('queueQueryMap',{})
-		self._niceName      = rawDict.get('NiceName', '<POOLNAME>')
+			try:
+				confFile = open(poolConfigFileName, 'r')
+				poolConfig.update(json.load(confFile)) # TODO: json
+				confFile.close()
+			except Exception:
+				raise RethrowError('Failed to parse pool configuration file!')
+		self._jobFeatureMap = poolConfig.get('jobFeatureMap',{})
+		self._queueQueryMap = poolConfig.get('queueQueryMap',{})
+		self._niceName      = poolConfig.get('NiceName', '<POOLNAME>')
 		if config.get('ScheddURI',''):
 			self._schedd = HTCScheddFactory(config.get('ScheddURI',''), parentPool=self)
 		else:
-			self._schedd = self._getDynamicSchedd(config)
+			self._schedd = self._getDynamicSchedd(poolConfig)
 			config.set('ScheddURI', self._schedd.getURI())
 			self._log(logging.INFO1,'Using Schedd %s (none defined)'%(self._schedd.getURI()))
 		self._log(logging.INFO1,'Connected to Schedd %s'%(self._schedd.getURI()))
 
-	def _getDynamicSchedd(self, config):
+	def _getDynamicSchedd(self, poolConfig):
 		"""
 		Pick a schedd based on best guess
 		"""
+		self._log(logging.DEBUG1,'Selecting Schedd from Pool (none explicitly defined)')
 		candidateURIList = []
-		candidateURIList.extend(config.getList('ScheddURIs',[]))
-		candidateURIList.extend('localhost://')
-		self._log(logging.INFO2,'Selecting Schedd from URI list: %s'%(','.join(candidateURIList)))
+		candidateURIList.extend(poolConfig.get('ScheddURIs',[]))
+		candidateURIList.append('localhost://')
+		self._log(logging.DEBUG3,'Selecting Schedd from URI list: %s'%(','.join(candidateURIList)))
 		for scheddCandidate in candidateURIList:
 			try:
-				candidate = HTCScheddFactory(config.get('ScheddURI',''), parentPool=self)
+				candidate = HTCScheddFactory(scheddCandidate, parentPool=self)
 				if candidate.getCanSubmit():
 					return candidate
 			except NotImplementedError:
