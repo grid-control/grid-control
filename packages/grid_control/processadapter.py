@@ -77,6 +77,9 @@ def ProcessAdapterFactory(URI, externalSchemes = [], collapseLocal = True, **kwa
 class ProcessAdapterInterface(LoadableObject):
 	uriScheme = []
 	_basepath = ""
+	# Default loggers
+	_logger = logging.getLogger('process.adapter')
+	_log    = _logger.log
 	# python internals
 	def __init__(self, URI, **kwargs):
 		self.URI=URI
