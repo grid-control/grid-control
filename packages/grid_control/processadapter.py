@@ -60,11 +60,11 @@ def ProcessAdapterFactory(URI, externalSchemes = [], collapseLocal = True, **kwa
 		if URI.split("://")[0] in externalSchemes:
 			return None, URI.split("://")[0]
 		for Adapter in [ LocalProcessAdapter, SSHProcessAdapter, GSISSHProcessAdapter ]:
-			#try:
-			tmp = Adapter.resolveURI(URI, **kwargs)
-			return Adapter(URI = URI, **kwargs), tmp[0]
-			#except ValueError:
-			#	continue
+			try:
+				tmp = Adapter.resolveURI(URI, **kwargs)
+				return Adapter(URI = URI, **kwargs), tmp[0]
+			except ValueError as err:
+				continue
 		raise ValueError("Failed to match URI '%s' with any Adapter." % URI)
 	adapter, scheme = getAdapter(URI, externalSchemes, **kwargs)
 	if collapseLocal and adapter.isLoopback() and adapter.getType() != 'local':
