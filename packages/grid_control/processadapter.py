@@ -170,7 +170,7 @@ class LocalProcessAdapter(ProcessAdapterInterface):
 	uriRepr   = "[local://][/<path>]"
 	def __init__(self, URI, **kwargs):
 		ProcessAdapterInterface.__init__(self, URI, **kwargs)
-		( _, self._basepath, _ ) = self.resolveURI(URI)
+		( _, self._basepath ) = self.resolveURI(URI)
 		self._basepath = self._basepath or os.getcwd()
 		self._initInterfaces(**kwargs)
 	def __enter__(self):
@@ -216,7 +216,7 @@ class LocalProcessAdapter(ProcessAdapterInterface):
 		if ( scheme ) and ( scheme not in self.uriScheme ):
 			raise ValueError("Got URI of scheme '%s', expected '%s'." % (scheme, "' or '".join(self.uriScheme)))
 		if leftover:
-			raise ValueError("URI %s yielded unexpected leftover. Expected URI form %s." % (URI, self.uriRepr))
+			raise ValueError("URI %s yielded unexpected leftover '%s'. Expected URI form %s." % (URI, leftover, self.uriRepr))
 		return ( scheme, path )
 	@classmethod
 	def createURI(self, elementMap):
@@ -266,7 +266,7 @@ class SSHProcessAdapter(ProcessAdapterInterface):
 		       maximum number of sockets in use
 		"""
 		ProcessAdapterInterface.__init__(self, URI, **kwargs)
-		( _, self._user, self._host, self._port, self._basepath, _ ) = self.resolveURI(URI, **kwargs)
+		( _, self._user, self._host, self._port, self._basepath ) = self.resolveURI(URI, **kwargs)
 		self._initInterfaces(**kwargs)
 		self._initSockets(**kwargs)
 		# test connection once before usage
@@ -349,7 +349,7 @@ class SSHProcessAdapter(ProcessAdapterInterface):
 	# general internal functions
 	@classmethod
 	def resolveURI(self, URI, **kwargs):
-		reMatch = re.search(r'(?:(\w*)://)?(?:(\w*)@)?([\w.]*)(?::(\d*))?(?:/(.*))?(.*)',URI)
+		reMatch = re.search(r'(?:(\w*)://)?(?:(\w*)@)?([\w.-]*)(?::(\d*))?(?:/(.*))?(.*)',URI)
 		if not reMatch:
 			raise ValueError("URI %s could not be parsed" % URI)
 		( scheme, user, host, port, path, leftover) = reMatch.group(1,2,3,4,5,6)
@@ -357,7 +357,7 @@ class SSHProcessAdapter(ProcessAdapterInterface):
 		if ( scheme ) and ( scheme not in self.uriScheme ):
 			raise ValueError("Got URI of scheme '%s', expected '%s'." % (scheme, "' or '".join(self.uriScheme)))
 		if leftover:
-			raise ValueError("URI %s yielded unexpected leftover. Expected URI form %s." % (URI, self.uriRepr))
+			raise ValueError("URI %s yielded unexpected leftover '%s'. Expected URI form %s." % (URI, leftover, self.uriRepr))
 		if not host:
 			raise ValueError("URI %s yielded no hostname. Expected URI form %s." % (URI, self.uriRepr))
 		return ( scheme, user, host, port, path )
