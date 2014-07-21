@@ -148,7 +148,7 @@ class ProcessAdapterInterface(LoadableObject):
 
 	@classmethod
 	def _initLogger(self, **kwargs):
-		self._logger = logging.getLogger('process.adapter.%s' % self.__class__.__name__)
+		self._logger = logging.getLogger('process.adapter.%s' % self.__name__)
 		self._log = self._logger.log
 
 	def _validateConnection(self):
@@ -380,7 +380,7 @@ class SSHProcessAdapter(ProcessAdapterInterface):
 		if not reMatch:
 			raise ValueError("URI %s could not be parsed" % URI)
 		( scheme, user, host, port, path, leftover) = reMatch.group(1,2,3,4,5,6)
-		self._log(logging.DEBUG1, 'Resolved URI %s as %s' % (URI, { 'scheme' : scheme, 'user' : user, 'host' : host, 'port' : port, 'path' : path, 'remainder' : leftover}) )
+		self._log(logging.DEBUG1, "Resolved URI '%s' as %s" % (URI, { 'scheme' : scheme, 'user' : user, 'host' : host, 'port' : port, 'path' : path, 'remainder' : leftover}) )
 		if ( scheme ) and ( scheme not in self.uriScheme ):
 			raise ValueError("Got URI of scheme '%s', expected '%s'." % (scheme, "' or '".join(self.uriScheme)))
 		if leftover:
@@ -484,7 +484,6 @@ class SSHProcessAdapter(ProcessAdapterInterface):
 			self._incrementSocket()
 		while not self._validateControlMaster():
 			self._socketMisses += 1
-			self._log(logging.DEBUG1, 'Tested socket: %s' % self._getCurrentSocket())
 			if not self._needSocket:
 				self._log(logging.INFO3, 'Failed to validate socket. (%d/%d)' % (self._socketMisses, self._socketMaxMiss))
 				if self._socketMisses == self._socketMaxMiss:
