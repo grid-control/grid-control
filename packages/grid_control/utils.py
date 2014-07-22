@@ -547,7 +547,7 @@ def flatten(lists):
 	result = []
 	for x in lists:
 		try:
-			if isinstance(x, str):
+			if isinstance(x, basestring):
 				raise
 			result.extend(x)
 		except:
