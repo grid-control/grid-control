@@ -71,6 +71,10 @@ class HTCondor(BasicWMS):
 			'donetime'  : [ 'CompletionDate' ],
 			'host'      : [ 'RemoteHost', 'LastRemoteHost' ],
 			}
+	_jobFeatureMapDef = {
+		'CPU'    : ['request_cpus'],
+		'MEMORY' : ['request_memory', '%(d)MB'],
+		}
 	# Initialization
 	def __init__(self, config, wmsName):
 		self._initLogger()
@@ -262,3 +266,13 @@ class HTCondor(BasicWMS):
 					infoDict[gcKey] = rawDict[queryArg]
 					break
 		return infoDict
+
+	@ property
+	def jdlRequirementMap(self):
+		jrm = {}
+		jrm.update(self._jobFeatureMapDef)
+		jrm.update(self._jobFeatureMap)
+		for key in jrm:
+			if isinstance(jrm[key], basestring):
+				jrm[key] = (jrm[key], '%s')
+		return self._jobFeatureMap
