@@ -24,7 +24,7 @@ notSet = utils.makeEnum(['notSet'])
 standardConfigForm = lambda x: str(x).strip().lower()
 
 def multi_line_format(value):
-	value_list = map(str.strip, filter(lambda x: x.strip() != '', value.strip().splitlines()))
+	value_list = map(lambda strg : strg.strip(), filter(lambda x: x.strip() != '', value.strip().splitlines()))
 	if len(value_list) > 1:
 		return '\n\t%s' % str.join('\n\t', value_list)
 	return ' %s' % str.join('\n\t', value_list)
