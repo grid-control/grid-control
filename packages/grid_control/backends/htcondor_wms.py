@@ -267,7 +267,7 @@ class HTCondor(BasicWMS):
 					break
 		return infoDict
 
-	@ property
+	@property
 	def jdlRequirementMap(self):
 		jrm = {}
 		jrm.update(self._jobFeatureMapDef)
