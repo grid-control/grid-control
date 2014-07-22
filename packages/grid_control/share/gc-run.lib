@@ -472,10 +472,15 @@ url_copy_single_local() {
 
 url_copy_single_srm() {
 	debug_helper $FUNCNAME "$@"
-	if [ "$(basename `getcommand srmcp lcg-cp`)" == "lcg-cp" ]; then
+	res=1
+	if [ "$(basename `getcommand lcg-cp`)" == "lcg-cp" ]; then
 		print_and_eval "lcg-cp" "-v -n 1" "$1" "$2"
-	else
-		print_and_eval "srmcp" "-2 -debug=true -streams_num=1" "$1" "$2"
+		res=$?
+	fi
+	if [ $res -gt 0 ]; then
+		if [ "$(basename `getcommand srmcp`)" == "srmcp" ]; then
+			print_and_eval "srmcp" "-2 -debug=true -streams_num=1" "$1" "$2"
+		fi
 	fi
 }
 
