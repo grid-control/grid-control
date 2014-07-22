@@ -13,6 +13,7 @@ import json
 from abstract     import LoadableObject
 from wms          import BasicWMS
 from grid_control import Job
+from grid_control.exceptions   import ConfigError
 
 # HTC modules
 from htcondor_api.htcondor_schedd import HTCScheddFactory
@@ -85,7 +86,7 @@ class HTCondor(BasicWMS):
 
 	@classmethod
 	def _initLogger(self):
-		self._logger = logging.getLogger('backend.%s' % self.__class__.__name__)
+		self._logger = logging.getLogger('backend.%s' % self.__name__)
 		self._log = self._logger.log
 
 	def _initPoolInterfaces(self, config):
@@ -108,24 +109,26 @@ class HTCondor(BasicWMS):
 		else:
 			self._schedd = self._getDynamicSchedd(poolConfig)
 			config.set('ScheddURI', self._schedd.getURI())
-			self._log(logging.INFO1,'Using Schedd %s (none defined)'%(self._schedd.getURI()))
+			self._log(logging.INFO1,'Using Schedd %s (none explicitly defined)'%(self._schedd.getURI()))
 		self._log(logging.INFO1,'Connected to Schedd %s'%(self._schedd.getURI()))
 
 	def _getDynamicSchedd(self, poolConfig):
 		"""
 		Pick a schedd based on best guess
 		"""
-		self._log(logging.DEBUG1,'Selecting Schedd from Pool (none explicitly defined)')
 		candidateURIList = []
 		candidateURIList.extend(poolConfig.get('ScheddURIs',[]))
 		candidateURIList.append('localhost://')
-		self._log(logging.DEBUG3,'Selecting Schedd from URI list: %s'%(','.join(candidateURIList)))
+		self._log(logging.DEBUG1,"Checking Schedd URI list: '%s'"%("','".join(candidateURIList)))
 		for scheddCandidate in candidateURIList:
 			try:
+				self._log(logging.DEBUG2,"Testing Schedd URI '%s'" % scheddCandidate)
 				candidate = HTCScheddFactory(scheddCandidate, parentPool=self)
 				if candidate.getCanSubmit():
 					return candidate
-			except NotImplementedError:
+				else:
+					self._log(logging.DEBUG3,"Reached schedd, but cannot submit." % scheddCandidate)
+			except ValueError:
 				continue
 		raise ConfigError('Unable to guess valid HTCondor Schedd.')
 

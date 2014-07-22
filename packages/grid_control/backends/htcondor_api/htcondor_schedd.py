@@ -125,7 +125,7 @@ class HTCScheddBase(LoadableObject):
 
 	def getCanSubmit(self):
 		"""Return whether submission to this Schedd is possible"""
-		return False
+		return ( self._adapter.LoggedExecute("which condor_submit").wait(timeout = self._adapterMaxWait) == 0 )
 	
 	def getSubmitScale(self):
 		"""Return number of jobs to submit as one batch"""
@@ -174,7 +174,7 @@ class HTCScheddBase(LoadableObject):
 	# GC internals
 	@classmethod
 	def _initLogger(self):
-		self._logger = logging.getLogger('backend.htcschedd.%s' % self.__class__.__name__)
+		self._logger = logging.getLogger('backend.htcschedd.%s' % self.__name__)
 		self._log = self._logger.log
 
 
@@ -415,7 +415,7 @@ class HTCScheddSSH(HTCScheddCLIBase):
 	_submitScale        = 20
 	_adapterMaxWait     = 30
 	def __init__(self, URI="", adapter = None, parentPool = None):
-		HTCScheddCLIBase.__init__(self, URI="", adapter = None, parentPool = None)
+		HTCScheddCLIBase.__init__(self, URI = URI, adapter = adapter, parentPool = parentPool)
 		self._stageDirCache = {}
 
 	def getTimings(self):
