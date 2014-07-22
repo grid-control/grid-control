@@ -144,7 +144,7 @@ class HTCScheddBase(LoadableObject):
 		raise AbstractError
 
 	def _getBaseJDLData(self, task, queryArguments):
-		"""Create a sequence of attribute for a submission JDL"""
+		"""Create a sequence of default attributes for a submission JDL"""
 		jdlData = [
 			'+submitTool             = "GridControl (version %s)"' % utils.getVersion(),
 			'should_transfer_files   = YES',
@@ -170,7 +170,47 @@ class HTCScheddBase(LoadableObject):
 		for line in self.parentPool._jobSettings["JDL"]:
 			jdlData.append( line )
 		return jdlData
+		return jdlData
 
+	def _getRequirementJdlData(self, task, jobNum):
+		"""Create JDL attributes corresponding to job requirements"""
+		jdlData      = []
+		requirements = module.getRequirements(jobNum)
+		poolRequMap  = self.parentPool.jdlRequirementMap
+		for reqType, reqValue in requirements:
+			# ('WALLTIME', 'CPUTIME', 'MEMORY', 'CPUS', 'BACKEND', 'SITES', 'QUEUES', 'SOFTWARE', 'STORAGE')
+			if reqType == WMS.SITES:
+				(wantSites, vetoSites) = utils.splitBlackWhiteList(reqValue[1])
+				if "+SITES" in poolRequMap:
+					jdlReq.append( '%s = "%s"' % (
+						poolRequMap["+SITES"][0],
+						poolRequMap["+SITES"][1] % ','.join(wantSites)
+						)
+					)
+				if "-SITES" in poolRequMap:
+					jdlReq.append( '%s = "%s"' % (
+						poolRequMap["-SITES"][0],
+						poolRequMap["-SITES"][1] % ','.join(vetoSites)
+						)
+					)
+				continue
+			if reqType == WMS.STORAGE:
+				if ("STORAGE" in poolRequMap) and reqValue > 0:
+					jdlReq.append( '%s = %s ' % (
+						poolRequMap["STORAGE"][0],
+						poolRequMap["-SITES"][1] % ','.join(reqValue)
+						)
+					)
+				continue
+			#HACK
+			if WMS.reqTypes[reqType] in poolRequMap:
+				jdlReq.append( "%s = %s" % (
+					poolRequMap[WMS.reqTypes[reqType]][0],
+					poolRequMap[WMS.reqTypes[reqType]][1] % reqValue
+					)
+				)
+				continue
+		self._log(logging.DEFAULT_VERBOSITY, "Requirement '%s' cannot be mapped to pool and will be ignored!" % WMS.reqTypes[reqType])
 	# GC internals
 	@classmethod
 	def _initLogger(self):
@@ -323,12 +363,13 @@ class HTCScheddLocal(HTCScheddCLIBase):
 			'x509userproxy           = "%s"' % self.pool.getProxy().getAuthFile(),
 			])
 		for jobNum in jobNumList:
+			jdlData.extend(self._getRequirementJdlData(task, jobNum))
 			jobStageDir = self.getStagingDir(htcID = HTCJobID(jobNum, task.taskID, 0, 0))
 			jdlData.extend([
 			'initialdir              = "%s"' % jobStageDir,
 			'Output                  = "%s/gs.stdout"' % jobStageDir,
 			'Error                   = "%s/gs.stderr"' % jobStageDir,
-			# HACK: ignore executable (In[0]) stdout (Out[0]) and stderr (Out[1])
+			# HACK: ignore executable (In[0]), stdout (Out[0]) and stderr (Out[1])
 			'transfer_input_files    = %s' % '","'.join(
 				[ src for descr, src, trg in self.parentPool._getSandboxFilesIn(task)[1:]]
 				+
@@ -468,12 +509,13 @@ class HTCScheddSSH(HTCScheddCLIBase):
 			'x509userproxy           = "%s"' % proxyFile[2],
 			])
 		for jobNum in jobNumList:
+			jdlData.extend(self._getRequirementJdlData(task, jobNum))
 			jobStageDir = self.getStagingDir(jobData = (jobNum, task.taskID, 0, 0))
 			jdlData.extend([
 			'initialdir              = "%s"' % jobStageDir,
 			'Output                  = "%s/gs.stdout"' % jobStageDir,
 			'Error                   = "%s/gs.stderr"' % jobStageDir,
-			# HACK: ignore executable (In[0]) stdout (Out[0]) and stderr (Out[1])
+			# HACK: ignore executable (In[0]), stdout (Out[0]) and stderr (Out[1])
 			'transfer_input_files    = %s' % '","'.join(
 				[ schd for descr, gc, schd in taskFiles[1:] + jobFileMap[jobNum] ]
 				),
