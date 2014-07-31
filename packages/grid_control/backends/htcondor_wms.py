@@ -240,7 +240,7 @@ class HTCondor(BasicWMS):
 		"""Split a GcId, returning wmsName and htcJobID"""
 		wmsName, rawId = self._splitId(gcId)
 		return (wmsName,) + HTCJobID(rawID = rawId)
-	def _splitGcRequests(self, gcRequests):
+	def _splitGcRequests(self, jobNumGcIdList):
 		"""Process sequence of (jobNum, GcId), returning sequence of htcIDs"""
 		return [ HTCJobID( rawID = self._splitGcId(gcId)[1] ) for jobNum, gcId in jobNumGcIdList ]
 	def _getJobDataMap(self, jobNumGcIdList):
