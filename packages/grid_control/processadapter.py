@@ -16,8 +16,8 @@ import socket
 
 # GC modules
 from python_compat import *
-from exceptions import *
-from abstract import LoadableObject
+from exceptions    import *
+from abstract      import LoadableObject
 from grid_control.utils import LoggedProcess, resolveInstallPath, ensureDirExists, lru_cache, QM, InstallationError
 
 # Container to call commands in a generic fashion
