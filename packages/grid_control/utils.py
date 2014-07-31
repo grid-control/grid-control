@@ -14,7 +14,7 @@
 
 from python_compat import set, sorted, md5, next, user_input, lru_cache
 import sys, os, stat, StringIO, tarfile, time, fnmatch, re, popen2, threading, operator, Queue, signal, glob, logging, errno
-from exceptions import *
+from grid_control.exceptions import *
 
 def QM(cond, a, b):
 	if cond:

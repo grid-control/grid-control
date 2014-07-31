@@ -18,7 +18,7 @@ import socket
 from python_compat import *
 from exceptions    import *
 from abstract      import LoadableObject
-from grid_control.utils import LoggedProcess, resolveInstallPath, ensureDirExists, lru_cache, QM, InstallationError
+from utils         import LoggedProcess, resolveInstallPath, ensureDirExists, lru_cache, QM, InstallationError
 
 # Container to call commands in a generic fashion
 class CommandContainer(object):
