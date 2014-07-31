@@ -83,9 +83,9 @@ class HTCondor(BasicWMS):
 		self._sandboxDir  = config.getPath('sandbox path', config.getWorkPath('sandbox.%s'%wmsName), mustExist = False)
 		self._initPoolInterfaces(config)
 		self._jobSettings = {
-			"Universe" : config.get("Universe", "vanilla"),
-			"ClassAd" : config.getList("append ClassAd", []),
-			"JDL" : config.getList("append JDL", []),
+			"Universe" : config.get("universe", "vanilla"),
+			"ClassAd" : config.getList("append info", []),
+			"JDL" : config.getList("append opts", []),
 			}
 
 	@classmethod
