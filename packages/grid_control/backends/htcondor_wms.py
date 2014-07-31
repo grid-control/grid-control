@@ -256,6 +256,7 @@ class HTCondor(BasicWMS):
 		qqM = {}
 		qqM.update(self._queueQueryMapDef)
 		qqM.update(self._queueQueryMap)
+		return qqM
 	def _getQueryArgs(self):
 		"""ClassAd names to query Condor with"""
 		qqM = self._getQueueQueryMap()
