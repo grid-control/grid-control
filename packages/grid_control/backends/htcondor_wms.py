@@ -258,10 +258,10 @@ class HTCondor(BasicWMS):
 		qqM.update(self._queueQueryMap)
 	def _getQueryArgs(self):
 		"""ClassAd names to query Condor with"""
-		qqm = self._getQueueQueryMap()
+		qqM = self._getQueueQueryMap()
 		return utils.flatten(qqM.values())
 	def _digestQueueInfoMap(self, queueInfoMap):
-		qqm = self._getQueueQueryMap()
+		qqM = self._getQueueQueryMap()
 		infoDict = {}
 		for gcKey, queryArgList in qqM.items():
 			for queryArg in queryArgList:
