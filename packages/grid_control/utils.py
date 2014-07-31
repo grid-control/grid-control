@@ -134,7 +134,7 @@ class TimeoutContext(object):
 		if ( signal.alarm( int(duration) ) != 0 ):
 			raise GCError("Bug! Timeout set while previous timeout was active.")
 	def _onTimeout(self, sigNum, frame):
-		raise TimeoutError
+		raise TimeoutError("Timeout after %d seconds." % self._duration )
 	def cancel(self):
 		if self._active:
 			signal.alarm(0)
