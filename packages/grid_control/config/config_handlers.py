@@ -20,6 +20,13 @@ def changeImpossible(config, old_obj, cur_obj, cur_entry, obj2str):
 	raise ConfigError('It is *not* possible to change "%s" from %s to %s!' %
 		(cur_entry.format_opt(), obj2str(old_obj), obj2str(cur_obj)))
 
+# Change handler to disallow modification, accepting only unset variables
+def changeOnlyUnset(config, old_obj, cur_obj, cur_entry, obj2str):
+	if not ( old_obj and cur_obj ):
+		return cur_obj and cur_obj or old_obj
+	raise ConfigError('It is *not* possible to change "%s" once it has been set!\n( Found change from %s to %s )' %
+		(cur_entry.format_opt(), obj2str(old_obj), obj2str(cur_obj)))
+
 
 # Change handler to trigger re-inits
 class changeInitNeeded:

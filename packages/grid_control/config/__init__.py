@@ -13,7 +13,7 @@
 #-#  limitations under the License.
 
 from config_basic import Config, CompatConfig, noDefault
-from config_handlers import validNoVar, changeImpossible, changeInitNeeded
+from config_handlers import validNoVar, changeImpossible, changeInitNeeded, changeOnlyUnset
 from filler_base import ConfigFiller, FileConfigFiller, DefaultFilesConfigFiller,\
 	DictConfigFiller, StringConfigFiller, PythonConfigFiller
 
