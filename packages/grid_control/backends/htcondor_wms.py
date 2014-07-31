@@ -98,7 +98,7 @@ class HTCondor(BasicWMS):
 		Establish adapters and connection details for pool and schedd
 		"""
 		poolConfig = {}
-		for poolConfigFileName in config.getList('poolConfig', [], onChange = None):
+		for poolConfigFileName in config.getList('poolConfig', [], mustExist = False, onChange = None):
 			try:
 				confFile = open(poolConfigFileName, 'r')
 				poolConfig.update(json.load(confFile)) # TODO: json
