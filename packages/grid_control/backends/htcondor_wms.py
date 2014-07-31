@@ -11,6 +11,7 @@ import logging
 import utils
 import json
 from abstract     import LoadableObject
+from config       import changeOnlyUnset
 from wms          import BasicWMS
 from grid_control import Job
 from grid_control.exceptions   import ConfigError
@@ -110,7 +111,7 @@ class HTCondor(BasicWMS):
 		self._queueQueryMap = poolConfig.get('queueQueryMap',{})
 		self._niceName      = poolConfig.get('NiceName', '<POOLNAME>')
 		if config.get('ScheddURI',''):
-			self._schedd = HTCScheddFactory(config.get('ScheddURI',''), parentPool=self)
+			self._schedd = HTCScheddFactory(config.get('ScheddURI','', onChange = changeOnlyUnset), parentPool=self)
 		else:
 			self._schedd = self._getDynamicSchedd(poolConfig)
 			config.set('ScheddURI', self._schedd.getURI())
