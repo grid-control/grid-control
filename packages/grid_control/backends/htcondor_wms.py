@@ -110,8 +110,9 @@ class HTCondor(BasicWMS):
 		self._jobFeatureMap = poolConfig.get('jobFeatureMap',{})
 		self._queueQueryMap = poolConfig.get('queueQueryMap',{})
 		self._niceName      = poolConfig.get('NiceName', '<POOLNAME>')
-		if config.get('ScheddURI',''):
-			self._schedd = HTCScheddFactory(config.get('ScheddURI','', onChange = changeOnlyUnset), parentPool=self)
+		cfgScheddURI = config.get('ScheddURI','', onChange = changeOnlyUnset)
+		if cfgScheddURI:
+			self._schedd = HTCScheddFactory(cfgScheddURI, parentPool=self)
 		else:
 			self._schedd = self._getDynamicSchedd(poolConfig)
 			config.set('ScheddURI', self._schedd.getURI())
