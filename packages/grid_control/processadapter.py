@@ -375,6 +375,7 @@ class SSHProcessAdapter(ProcessAdapterInterface):
 				),
 			niceCmd = self._socketWrapper.niceCmd(command=(niceCmd or command)),
 			niceArgs = self._exeWrapper.niceArg(args=(niceArgs or args)),
+			shell    = False,
 			)
 
 	# general internal functions
@@ -394,15 +395,26 @@ class SSHProcessAdapter(ProcessAdapterInterface):
 		return ( scheme, user, host, port, path )
 
 	def _initInterfaces(self, **kwargs):
+		def makeArgList(*args):
+			argList = []
+			for arg in args:
+				try:
+					if isinstance(arg, basestring):
+						raise
+					argList.extend(arg)
+				except Exception:
+					argList.append(arg)
+			return [ arg for arg in argList if arg ]
+		portArgs = lambda key : self._port and "-%s%s"%(key, self._port) or ""
 		self._exeWrapper = CommandContainer(
 			resolveInstallPath("ssh"),
-			lambda **kwargs: filter( lambda entry: entry ,(
+			lambda **kwargs: makeArgList(
 				self._getDefaultArgs(),
 				self._getValidSocketArgs(),
-				(self._port and "-p" + self._port or ""),
+				portArgs('p'),
 				self._host,
-				self._wrapPayload(kwargs["command"] + " " + kwargs.get("args",''))
-				)),
+				" ".join((kwargs["command"], kwargs.get("args",'')))
+				),
 			lambda **kwargs: "'%(command)s' [via ssh %(URI)s]" % {
 				"command" : kwargs.get("command","<undefined command>"),
 				"URI"     : self.URI,
@@ -411,39 +423,39 @@ class SSHProcessAdapter(ProcessAdapterInterface):
 			)
 		self._copy = CommandContainer(
 			resolveInstallPath("scp"),
-			lambda **kwargs: filter( lambda entry: entry ,(
+			lambda **kwargs: makeArgList(
 				self._getDefaultArgs(),
 				self._getValidSocketArgs(),
 				"-r",
-				(self._port and "-P" + self._port or ""),
+				portArgs('P'),
 				kwargs["source"],
-				(self._port and "-P" + self._port or ""),
+				portArgs('P'),
 				kwargs["destination"],
-				)),
+				),
 			lambda **kwargs: "'scp' [%(URI)s]",
 			lambda **kwargs: "Transfer: '%(source)' -> '%(destination)'" % kwargs,
 			)
 		self._delete = CommandContainer(
 			resolveInstallPath("ssh"),
-			lambda **kwargs: filter( lambda entry: entry ,(
+			lambda **kwargs: makeArgList(
 				self._getDefaultArgs(),
 				self._getValidSocketArgs(),
-				(self._port and "-p"+self._port or ""),
+				portArgs('p'),
 				self._host,
-				self._wrapPayload( "rm -rf " + kwargs["target"] ),
-				)),
+				"rm -rf " + kwargs["target"],
+				),
 			lambda **kwargs: "'rm' [via ssh %(URI)s]" % kwargs,
 			lambda **kwargs: "Target: '%(target)'" % kwargs,
 			)
 		self._socketWrapper = CommandContainer(
 			resolveInstallPath("ssh"),
-			lambda **kwargs: filter( lambda entry: entry ,(
+			lambda **kwargs: makeArgList(
 				self._getDefaultArgs(),
 				self._getCurrentSocketArgs(),
-				(self._port and "-p" + self._port or ""),
+				portArgs('p'),
 				self._host,
-				self._wrapPayload( " ".join((kwargs["command"], kwargs.get("args",''))))
-				)),
+				" ".join((kwargs["command"], kwargs.get("args",'')))
+				),
 			lambda **kwargs: "'%(command)s' [via ssh %(URI)s (master)]" % {
 				"command" : kwargs.get("command","<undefined command>"),
 				"URI"     : self.URI,
@@ -469,7 +481,7 @@ class SSHProcessAdapter(ProcessAdapterInterface):
 		self._log(logging.DEBUG1, 'Using socket directoy %s' % self._socketDir)
 		# create list of socket names and corresponding arguments to rotate through
 		self._socketList = [ os.path.join(self._socketDir, str(socketIndex)) for socketIndex in range(self._socketCount) ]
-		self._socketArgList = [ "-o ControlMaster=auto  -o ControlPath=%s" % socket for socket in self._socketList ]
+		self._socketArgList = [ ["-oControlMaster=auto","-oControlPath=%s" % socket] for socket in self._socketList ]
 		self._socketProcs = {}
 
 	def _incrementSocket(self):
@@ -482,7 +494,7 @@ class SSHProcessAdapter(ProcessAdapterInterface):
 	def _getValidSocketArgs(self):
 		if self._socketMisses >= self._socketMaxMiss:
 			self._socketMisses -= 1
-			return ""
+			return []
 		# validate that current socket does exist and is fresh enough, else pick next
 		try:
 			if ( time.time() - os.path.getctime(self._getCurrentSocket()) ) > self._socketMinSec:
@@ -496,7 +508,7 @@ class SSHProcessAdapter(ProcessAdapterInterface):
 				if self._socketMisses == self._socketMaxMiss:
 					self._socketMisses + self._socketMaxMiss
 					self._log(logging.INFO2, 'Disabling failing sockets for %d operations.' % self._socketMaxMiss)
-				return ""
+				return []
 			if self._socketMisses == self._socketMaxMiss:
 				raise RuntimeError("Repeated failure to create ControlMaster.")
 		self._socketMisses = max(self._socketMisses-1, 0)
@@ -507,7 +519,7 @@ class SSHProcessAdapter(ProcessAdapterInterface):
 		if os.path.exists(self._getCurrentSocket()):
 			return True
 		# create dummy background process, encapsuling sleep to stay alive regardless of SSH version
-		socketProcess = self.LoggedSocket("sleep %s" % ((self._socketCount - 0.5 ) * self._socketMinSec))
+		socketProcess = self.LoggedSocket("sleep", "%d" % ((self._socketCount - 0.5 ) * self._socketMinSec))
 		# validate socket exists
 		waitTime = 0
 		while not os.path.exists(self._getCurrentSocket()):
@@ -528,13 +540,9 @@ class SSHProcessAdapter(ProcessAdapterInterface):
 		return True
 
 	# Helper functions for SSH connections
-	def _wrapPayload(self, payload):
-		"""Wrap cmd/arg payload in strong quoting to protect for ssh passing"""
-		return "'" + payload.replace("'", "'\\''") + "'"
-
 	def _getDefaultArgs(self):
 		"""Provide arguments for ssh container"""
-		argString = "-v -o BatchMode=yes  -o ForwardX11=no"
+		argString = ["-v", "-oBatchMode=yes", "-oForwardX11=no"]
 		return argString
 
 	def getGlobalAbsPath(self, path):
