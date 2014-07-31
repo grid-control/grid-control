@@ -116,6 +116,9 @@ class GridError(GCError):
 class DatasetError(GCError):
 	pass	# some error with the dataset
 
+class TimeoutError(GCError):
+	pass	# timeout while waiting for an operation to finish
+
 # some error related to abstract functions
 class AbstractError(APIError):
 	def __init__(self):

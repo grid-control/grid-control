@@ -120,6 +120,31 @@ def getThreadedGenerator(genList): # Combines multiple, threaded generators into
 		else:
 			yield tmp
 
+# Legacy context implementation: use as "with timeout(3):" or "timeout(3)\n...\ntimeout.cancel()"
+class timeout( object ):
+	def __init__(self, duration = 1, exception = TimeoutError):
+		"""
+		Set a timeout to occur in duration, raising exception.
+		
+		This implementation is not thread-safe and only one timeout may be active at a time.
+		"""
+		self._active     = True
+		self._duration   = duration
+		self._handlerOld = signal.signal( signal.SIGALRM, self._onTimeout )
+		if ( signal.alarm( int(duration) ) != 0 ):
+			raise GCError("Bug! Timeout set while previous timeout was active.")
+	def _onTimeout(self, sigNum, frame):
+		raise TimeoutError
+	def cancel(self):
+		if self._active:
+			signal.alarm(0)
+			signal.signal( signal.SIGALRM, self._handlerOld )
+			self._active = False
+	# Context methods
+	def __enter__(self):
+		return self
+	def __exit__(self, exc_type, exc_value, traceback):
+		self.cancel()
 
 class LoggedProcess(object):
 	def __init__(self, cmd, args = '', niceCmd = False, niceArgs = False):
