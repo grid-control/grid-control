@@ -486,7 +486,7 @@ class SSHProcessAdapter(ProcessAdapterInterface):
 		# validate that current socket does exist and is fresh enough, else pick next
 		try:
 			if ( time.time() - os.path.getctime(self._getCurrentSocket()) ) > self._socketMinSec:
-				self._incrementSocket()
+				raise OSError
 		except OSError:
 			self._incrementSocket()
 		while not self._validateControlMaster():
@@ -498,11 +498,11 @@ class SSHProcessAdapter(ProcessAdapterInterface):
 					self._log(logging.INFO2, 'Disabling failing sockets for %d operations.' % self._socketMaxMiss)
 				return ""
 			if self._socketMisses == self._socketMaxMiss:
-				raise RuntimeError("Repeated timeout on critical ControlMaster socket creation.")
+				raise RuntimeError("Repeated failure to create ControlMaster.")
 		self._socketMisses = max(self._socketMisses-1, 0)
 		return self._getCurrentSocketArgs()
 
-	def _validateControlMaster(self, timeOut = 20):
+	def _validateControlMaster(self, timeout = 20):
 		# socket already exists, so Master is fresh or undying
 		if os.path.exists(self._getCurrentSocket()):
 			return True
@@ -518,8 +518,8 @@ class SSHProcessAdapter(ProcessAdapterInterface):
 				return False
 			time.sleep(0.5)
 			waitTime += 0.5
-			if waitTime == timeOut:
-				self._log(logging.DEBUG1, "Timeout (%ds) on ControlMaster socket creation." % timeOut)
+			if waitTime == timeout:
+				self._log(logging.DEBUG1, "Timeout (%ds) on ControlMaster socket creation." % timeout)
 				socketProcess.kill()
 				if self._errorLog:
 					socketProcess.logError(self._errorLog)
