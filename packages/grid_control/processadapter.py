@@ -297,8 +297,9 @@ class SSHProcessAdapter(ProcessAdapterInterface):
 				command = command,
 				args    = args
 				),
-			niceCmd = self._exeWrapper.niceCmd(command=(niceCmd or command)),
+			niceCmd  = self._exeWrapper.niceCmd(command=(niceCmd or command)),
 			niceArgs = self._exeWrapper.niceArg(args=(niceArgs or args)),
+			shell    = False,
 			)
 
 	def LoggedGet(self, source, destination):
@@ -308,11 +309,12 @@ class SSHProcessAdapter(ProcessAdapterInterface):
 				source=self.getGlobalAbsPath(source),
 				destination=destination
 				),
-			niceCmd = self._copy.niceCmd(),
+			niceCmd  = self._copy.niceCmd(),
 			niceArgs = self._copy.niceArg(
 				source=self.getGlobalAbsPath(source),
 				destination=destination
 				),
+			shell    = False,
 			)
 
 	def LoggedPut(self, source, destination):
@@ -327,6 +329,7 @@ class SSHProcessAdapter(ProcessAdapterInterface):
 				source=source,
 				destination=self.getGlobalAbsPath(destination)
 				),
+			shell    = False,
 			)
 
 	def LoggedDelete(self, target):
@@ -335,6 +338,7 @@ class SSHProcessAdapter(ProcessAdapterInterface):
 			self._delete.args({ "target" : target }),
 			niceCmd  = self._delete.niceCmd(),
 			niceArgs = self._delete.niceArg({ "target" : target }),
+			shell    = False,
 			)
 
 	def getDomain(self):
@@ -392,14 +396,14 @@ class SSHProcessAdapter(ProcessAdapterInterface):
 	def _initInterfaces(self, **kwargs):
 		self._exeWrapper = CommandContainer(
 			resolveInstallPath("ssh"),
-			lambda **kwargs: "%(port)s %(sshargs)s %(socketArgs)s %(host)s %(payload)s"  % {
-				"port"       : (self._port and "-p"+self._port or ""),
-				"sshargs"    : self._getDefaultArgs(),
-				"socketArgs" : self._getValidSocketArgs(),
-				"host"       : self._host,
-				"payload"    : self._wrapPayload(kwargs["command"] + " " + kwargs.get("args",''))
-				},
-			lambda **kwargs: "'%(command)s' via adapter ssh [URI %(URI)s]" % {
+			lambda **kwargs: filter( lambda entry: entry ,(
+				self._getDefaultArgs(),
+				self._getValidSocketArgs(),
+				(self._port and "-p" + self._port or ""),
+				self._host,
+				self._wrapPayload(kwargs["command"] + " " + kwargs.get("args",''))
+				)),
+			lambda **kwargs: "'%(command)s' [via ssh %(URI)s]" % {
 				"command" : kwargs.get("command","<undefined command>"),
 				"URI"     : self.URI,
 				},
@@ -407,37 +411,40 @@ class SSHProcessAdapter(ProcessAdapterInterface):
 			)
 		self._copy = CommandContainer(
 			resolveInstallPath("scp"),
-			lambda **kwargs: "%(sshargs)s %(socketArgs)s -r %(port)s %(source)s %(port)s %(destination)s"  % {
-				"port"       : (self._port and "-P"+self._port or ""),
-				"sshargs"    : self._getDefaultArgs(),
-				"socketArgs" : self._getValidSocketArgs(),
+			lambda **kwargs: filter( lambda entry: entry ,(
+				self._getDefaultArgs(),
+				self._getValidSocketArgs(),
+				"-r",
+				(self._port and "-P" + self._port or ""),
 				"source"     : kwargs["source"],
+				(self._port and "-P" + self._port or ""),
 				"destination": kwargs["destination"],
-				},
-			lambda **kwargs: "scp",
+				)),
+			lambda **kwargs: "'scp' [%(URI)s]",
 			lambda **kwargs: "Transfer: '%(source)' -> '%(destination)'" % kwargs,
 			)
 		self._delete = CommandContainer(
 			resolveInstallPath("ssh"),
-			lambda **kwargs: "%(port)s %(sshargs)s %(socketArgs)s %(payload)s"  % {
-				"port"    : (self._port and "-p"+self._port or ""),
-				"sshargs" : self._getDefaultArgs(),
-				"socketArgs" : self._getValidSocketArgs(),
-				"payload" : self._wrapPayload( "rm -rf " + kwargs["target"] )
-				},
-			lambda **kwargs: "'rm' via ssh",
+			lambda **kwargs: filter( lambda entry: entry ,(
+				self._getDefaultArgs(),
+				self._getValidSocketArgs(),
+				(self._port and "-p"+self._port or ""),
+				self._host,
+				self._wrapPayload( "rm -rf " + kwargs["target"] ),
+				)),
+			lambda **kwargs: "'rm' [via ssh %(URI)s]" % kwargs,
 			lambda **kwargs: "Target: '%(target)'" % kwargs,
 			)
 		self._socketWrapper = CommandContainer(
 			resolveInstallPath("ssh"),
-			lambda **kwargs: "%(port)s %(sshargs)s %(socketArgs)s %(host)s %(payload)s"  % {
-				"port"       : (self._port and "-p"+self._port or ""),
-				"sshargs"    : self._getDefaultArgs(),
-				"socketArgs" : self._getCurrentSocketArgs(),
-				"host"       : self._host,
-				"payload"    : self._wrapPayload(kwargs["command"] + " " + kwargs.get("args",''))
-				},
-			lambda **kwargs: "%(command)s via adapter ssh (master) [URI %(URI)s]" % {
+			lambda **kwargs: filter( lambda entry: entry ,(
+				self._getDefaultArgs(),
+				self._getCurrentSocketArgs(),
+				(self._port and "-p" + self._port or ""),
+				self._host,
+				self._wrapPayload( " ".join((kwargs["command"], kwargs.get("args",''))))
+				)),
+			lambda **kwargs: "'%(command)s' [via ssh %(URI)s (master)]" % {
 				"command" : kwargs.get("command","<undefined command>"),
 				"URI"     : self.URI,
 				},

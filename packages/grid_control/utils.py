@@ -147,14 +147,21 @@ class TimeoutContext(object):
 		self.cancel()
 
 class LoggedProcess(object):
-	def __init__(self, cmd, args = '', niceCmd = False, niceArgs = False):
+	def __init__(self, cmd, args = '', niceCmd = None, niceArgs = None, shell = True):
 		self.niceCmd = QM(niceCmd, niceCmd, os.path.basename(cmd))
 		self.niceArgs = QM(niceArgs, niceArgs, args)
 		(self.stdout, self.stderr, self.cmd, self.args) = ([], [], cmd, args)
 		self._logger = logging.getLogger('process.%s' % os.path.basename(cmd))
 		self._logger.log(logging.DEBUG1, 'External programm called: %s %s' % (self.niceCmd, self.niceArgs))
 		self.stime = time.time()
-		self.proc = popen2.Popen3('%s %s' % (cmd, args), True)
+		if shell:
+			self.proc = popen2.Popen3('%s %s' % (cmd, args), True)
+		else:
+			if isinstance(cmd, basestring):
+				cmd = [cmd]
+			if isinstance(args, basestring):
+				args = args.split()
+			self.proc = popen2.Popen3( cmd + args, True)
 
 	def getOutput(self, wait = False):
 		if wait:
