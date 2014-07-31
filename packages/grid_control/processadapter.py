@@ -288,6 +288,8 @@ class SSHProcessAdapter(ProcessAdapterInterface):
 			if self._socketProcs[socket].poll() < 0:
 				self._socketProcs[socket].kill()
 				self._log(logging.DEBUG3,'Terminated master for socket %s - PID: %s' % (socket, self._socketProcs[socket].proc.pid))
+		time.sleep(0.2) # delay for sockets to disappear before further cleanup
+		shutil.rmtree(self._socketDir)
 
 	# Logged Processes
 	def LoggedExecute(self, command, args = '', niceCmd = None, niceArgs = None):
@@ -477,7 +479,6 @@ class SSHProcessAdapter(ProcessAdapterInterface):
 			ensureDirExists(self._socketDir, name = "SSH connection socket container directory")
 		else:
 			self._socketDir = tempfile.mkdtemp()
-			atexit.register(shutil.rmtree, self._socketDir)
 		self._log(logging.DEBUG1, 'Using socket directoy %s' % self._socketDir)
 		# create list of socket names and corresponding arguments to rotate through
 		self._socketList = [ os.path.join(self._socketDir, str(socketIndex)) for socketIndex in range(self._socketCount) ]
