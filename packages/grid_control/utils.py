@@ -121,7 +121,7 @@ def getThreadedGenerator(genList): # Combines multiple, threaded generators into
 			yield tmp
 
 # Legacy context implementation: use as "with timeout(3):" or "timeout(3)\n...\ntimeout.cancel()"
-class timeout( object ):
+class TimeoutContext( object ):
 	def __init__(self, duration = 1, exception = TimeoutError):
 		"""
 		Set a timeout to occur in duration, raising exception.
