@@ -161,7 +161,7 @@ class LoggedProcess(object):
 				cmd = [cmd]
 			if isinstance(args, basestring):
 				args = args.split()
-			self.proc = popen2.Popen3( cmd + args, True)
+			self.proc = popen2.Popen3( cmd + list(args), True)
 
 	def getOutput(self, wait = False):
 		if wait:
