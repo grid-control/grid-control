@@ -13,6 +13,7 @@ import utils
 from abstract       import LoadableObject
 from htcondor_utils import parseKWListIter, singleQueryCache
 from wmsid          import HTCJobID
+from grid_control   import WMS
 
 # HTC modules
 from python_compat  import md5, lru_cache
@@ -146,23 +147,31 @@ class HTCScheddBase(LoadableObject):
 	def _getBaseJDLData(self, task, queryArguments):
 		"""Create a sequence of default attributes for a submission JDL"""
 		jdlData = [
-			'+submitTool             = "GridControl (version %s)"' % utils.getVersion(),
-			'should_transfer_files   = YES',
-			'when_to_transfer_output = ON_EXIT',
-			'periodic_remove         = (JobStatus == 5 && HoldReasonCode != 16)',
-			'environment             = CONDOR_WMS_DASHID=https://%s:/$(Cluster).$(Process)' % self.wmsName,
-			'Universe                = %s' % self.parentPool._jobSettings["Universe"],	# TODO: Unhack me
-			'+GcID                   = %s' % self.parentPool._createGcId(HTCJobID('$(GcJobNum)', self.URI, task.taskID, '$(Cluster)', '$(Process)', typed = False)),
-			'+GcJobNumToWmsID        = $(GcJobNum)@$(Cluster).$(Process)',
-			'+GcJobNumToGcID         = $(GcJobNum)@$(GcID)',
-			'arguments               = $(GcJobNum)',
-			'Log                     = "%s/gcJobs.log"' % self.getStagingDir(),
+			'+submitTool              = "GridControl (version %s)"' % utils.getVersion(),
+			'should_transfer_files    = YES',
+			'when_to_transfer_output  = ON_EXIT',
+			'periodic_remove          = (JobStatus == 5 && HoldReasonCode != 16)',
+			'environment              = CONDOR_WMS_DASHID=https://%s:/$(Cluster).$(Process)' % self.parentPool.wmsName,
+			'Universe                 = %s' % self.parentPool._jobSettings["Universe"],	# TODO: Unhack me
+			'+GcID                    = "%s"' % self.parentPool._createGcId(
+				HTCJobID(
+					gcJobNum  = '$(GcJobNum)',
+					gcTaskID  = task.taskID,
+					clusterID = '$(Cluster)',
+					procID    = '$(Process)',
+					scheddURI = self.getURI(),
+					typed     = False)
+				),
+			'+GcJobNumToWmsID         = "$(GcJobNum)@$(Cluster).$(Process)"',
+			'+GcJobNumToGcID          = "$(GcJobNum)@$(GcID)"',
+			'Log                      = %s' % os.path.join(self.getStagingDir(), 'gcJobs.log'),
+			'job_ad_information_attrs = %s' %','.join([ arg for arg in queryArguments if arg not in ['JobStatus']]),
 			]
 		for key in queryArguments:
 			try:
 				# is this a match string? '+JOB_GLIDEIN_Entry_Name = "$$(GLIDEIN_Entry_Name:Unknown)"' -> MATCH_GLIDEIN_Entry_Name = "CMS_T2_DE_RWTH_grid-ce2" && MATCH_EXP_JOB_GLIDEIN_Entry_Name = "CMS_T2_DE_RWTH_grid-ce2"
 				matchKey=re.match("(?:MATCH_EXP_JOB_|MATCH_|JOB_)(.*)",key).group(1)
-				jdlData['Head']['+JOB_%s'%matchKey] = "$$(%s:Unknown)"%matchKey
+				jdlData['Head']['+JOB_%s'%matchKey] = "$$(%s:Unknown)" % matchKey
 			except AttributeError:
 				pass
 		for line in self.parentPool._jobSettings["ClassAd"]:
@@ -175,20 +184,20 @@ class HTCScheddBase(LoadableObject):
 	def _getRequirementJdlData(self, task, jobNum):
 		"""Create JDL attributes corresponding to job requirements"""
 		jdlData      = []
-		requirements = module.getRequirements(jobNum)
+		requirements = task.getRequirements(jobNum)
 		poolRequMap  = self.parentPool.jdlRequirementMap
 		for reqType, reqValue in requirements:
 			# ('WALLTIME', 'CPUTIME', 'MEMORY', 'CPUS', 'BACKEND', 'SITES', 'QUEUES', 'SOFTWARE', 'STORAGE')
 			if reqType == WMS.SITES:
 				(wantSites, vetoSites) = utils.splitBlackWhiteList(reqValue[1])
 				if "+SITES" in poolRequMap:
-					jdlReq.append( '%s = "%s"' % (
+					jdlData.append( '%s = "%s"' % (
 						poolRequMap["+SITES"][0],
 						poolRequMap["+SITES"][1] % ','.join(wantSites)
 						)
 					)
 				if "-SITES" in poolRequMap:
-					jdlReq.append( '%s = "%s"' % (
+					jdlData.append( '%s = "%s"' % (
 						poolRequMap["-SITES"][0],
 						poolRequMap["-SITES"][1] % ','.join(vetoSites)
 						)
@@ -196,21 +205,28 @@ class HTCScheddBase(LoadableObject):
 				continue
 			if reqType == WMS.STORAGE:
 				if ("STORAGE" in poolRequMap) and reqValue > 0:
-					jdlReq.append( '%s = %s ' % (
+					jdlData.append( '%s = %s ' % (
 						poolRequMap["STORAGE"][0],
-						poolRequMap["-SITES"][1] % ','.join(reqValue)
+						poolRequMap["STORAGE"][1] % ','.join(reqValue)
 						)
 					)
 				continue
 			#HACK
-			if WMS.reqTypes[reqType] in poolRequMap:
-				jdlReq.append( "%s = %s" % (
+			if reqValue > 0 and WMS.reqTypes[reqType] in poolRequMap:
+				jdlData.append( "%s = %s" % (
 					poolRequMap[WMS.reqTypes[reqType]][0],
 					poolRequMap[WMS.reqTypes[reqType]][1] % reqValue
 					)
 				)
 				continue
-		self._log(logging.DEFAULT_VERBOSITY, "Requirement '%s' cannot be mapped to pool and will be ignored!" % WMS.reqTypes[reqType])
+			try:
+				if int(reqValue) <= 0:
+					continue
+			except TypeError:
+				pass
+			self._log(logging.INFO3, "Requirement '%s' cannot be mapped to pool and will be ignored!" % WMS.reqTypes[reqType])
+		return jdlData
+
 	# GC internals
 	@classmethod
 	def _initLogger(self):
@@ -232,22 +248,22 @@ class HTCScheddCLIBase(HTCScheddBase):
 		if submitProc.wait(timeout = self._adapterMaxWait):
 			submitProc.logError(self.parentPool.errorLog, brief=True)
 			return []
-		queryInfoMaps = parseKWListIter(submitProc.getOutput())
+		queryInfoMaps = parseKWListIter(submitProc.iter(), jobDelimeter = lambda line: line.startswith('** Proc'))
 		return self._digestQueryInfoMap(queryInfoMaps, queryArguments)
 
 	def checkJobs(self, htcIDs, queryArguments):
-		queryProc = self._condor_q(self, htcIDs, queryAttributes = queryArguments)
+		queryProc = self._condor_q(htcIDs, queryAttributes = queryArguments)
 		if queryProc.wait(timeout = self._adapterMaxWait):
 			queryProc.logError(self.parentPool.errorLog, brief=True)
 			return []
-		queryInfoMaps = parseKWListIter(queryProc.getOutput())
+		queryInfoMaps = parseKWListIter(queryProc.iter())
 		return self._digestQueryInfoMap(queryInfoMaps, queryArguments)
 
 	def _digestQueryInfoMap(self, queryInfoMaps, queryArguments):
 		"""Digest raw queryInfoMaps to maps of HTCjobID : infoMap"""
 		dataMap  = {}
 		for infoMap in queryInfoMaps:
-			htcID = self.parentPool.splitGcId(infoMap['GcID'])[1]
+			htcID = HTCJobID( rawID = infoMap['rawID'])
 			dataMap[htcID] = {}
 			for key in infoMap:
 				if key in queryArguments:
@@ -255,13 +271,13 @@ class HTCScheddCLIBase(HTCScheddBase):
 		return dataMap
 
 	def cancelJobs(self, htcIDs):
-		rmProc = self._condor_rm(self, htcIDs)
+		rmProc = self._condor_rm(htcIDs)
 		if rmProc.wait(timeout = self._adapterMaxWait):
 			rmProc.logError(self.parentPool.errorLog, brief=True)
 			return []
 		# Parse raw output of type "Job <ClusterID>.<ProcID> marked for removal"
 		rmList = []
-		for line in rmProc.getOutput():
+		for line in rmProc.iter():
 			try:
 				clusterID, procID = re.match('Job (\d*\.\d*)', line).groups()
 				rmList.append((int(clusterID), int(procID)))
@@ -284,7 +300,7 @@ class HTCScheddCLIBase(HTCScheddBase):
 		verProc = self._adapter.LoggedExecute("condor_version")
 		if verProc.wait(timeout = self._adapterMaxWait):
 			subProc.logError(self.parentPool.errorLog, brief=True)
-		for line in verProc.getOutput():
+		for line in verProc.iter():
 			try:
 				return re.match("$CondorVersion:*?(\d)\.(\d)\.(\d)").groups()
 			except AttributeError:
@@ -297,7 +313,7 @@ class HTCScheddCLIBase(HTCScheddBase):
 	def _condor_submit(self, jdlFilePath):
 		subProc = self._adapter.LoggedExecute(
 			"condor_submit",
-			"%s" % (
+			"-verbose %s" % (
 				jdlFilePath
 				)
 			)
@@ -308,7 +324,7 @@ class HTCScheddCLIBase(HTCScheddBase):
 			"condor_q",
 			"%s -userlog '%s' -attributes '%s' -long" % (
 				' '.join([ '%d.%d'%(htcID.clusterID, htcID.procID) for htcID in htcIDs ]),
-				os.path.join(self.getStagingDir(htcIDs[0]),'gcJobs.log'),
+				os.path.join(self.getStagingDir(),'gcJobs.log'),
 				','.join(queryAttributes)
 				)
 			)
@@ -345,46 +361,59 @@ class HTCScheddLocal(HTCScheddCLIBase):
 		return jobNumList
 
 	def _prepareSubmit(self, task, jobNumList, queryArguments):
-		jdlFilePath = os.path.join(self.parentPool.getSandboxPath(), 'htc-%s.schedd-%s.jdl' % (self.parentPool.wmsName,md5(self.getURI).hexdigest()))
+		jdlFilePath = os.path.join(self.parentPool.getSandboxPath(), 'htc-%s.schedd-%s.jdl' % (self.parentPool.wmsName,md5(self.getURI()).hexdigest()))
 		utils.safeWrite(
-			os.open(jdlFilePath, 'w'),
-			self._getJDLData(task, jobNumList, queryArguments)
+			open(jdlFilePath, 'w'),
+			( line + '\n' for line in self._getJDLData(task, jobNumList, queryArguments))
 			)
 		return jdlFilePath
 
 	def _getJDLData(self, task, jobNumList, queryArguments):
-		jdlData = HTCScheddCLIBase._getBaseJDLData(self, task, jobNumList, queryArguments)
+		jdlData = self._getBaseJDLData(task, queryArguments)
 		jdlData.extend([
-			'Executable              = "%s"' % self.parentPool._getSandboxFilesIn(task)[0][1],
+			'Executable              = %s' % self.parentPool._getSandboxFilesIn(task)[0][1],
 			])
-		if self.pool.getProxy().getAuthFile():
-			jdlData.extend([
-			'use_x509userproxy       = True',
-			'x509userproxy           = "%s"' % self.pool.getProxy().getAuthFile(),
-			])
+		try:
+			if parentPool.proxy.getAuthFile():
+				jdlData.extend([
+				'x509userproxy           = %s' % self.parentPool.proxy.getAuthFile(),
+				'use_x509userproxy       = True',
+				])
+		except Exception:
+			pass
 		for jobNum in jobNumList:
 			jdlData.extend(self._getRequirementJdlData(task, jobNum))
-			jobStageDir = self.getStagingDir(htcID = HTCJobID(jobNum, task.taskID, 0, 0))
+			jobStageDir = self.getStagingDir(htcID = HTCJobID(gcJobNum=jobNum, gcTaskID=task.taskID))
 			jdlData.extend([
-			'initialdir              = "%s"' % jobStageDir,
-			'Output                  = "%s/gs.stdout"' % jobStageDir,
-			'Error                   = "%s/gs.stderr"' % jobStageDir,
+			'+GcJobNum               = "%s"' % jobNum,
+			'arguments               = %s' % jobNum,
+			'initialdir              = %s' % jobStageDir,
+			'Output                  = %s' % os.path.join(jobStageDir, 'gc.stdout'),
+			'Error                   = %s' % os.path.join(jobStageDir, 'gc.stderr'),
 			# HACK: ignore executable (In[0]), stdout (Out[0]) and stderr (Out[1])
-			'transfer_input_files    = %s' % '","'.join(
+			'transfer_input_files    = %s' % ','.join(
 				[ src for descr, src, trg in self.parentPool._getSandboxFilesIn(task)[1:]]
 				+
 				[ self.parentPool.getJobCfgPath(jobNum)[0] ]
 				),
-			'transfer_output_files   = "%s"' % ",".join(
-				[ src for descr, src, trg in self._getSandboxFilesOut(task)[2:] ]
+			'transfer_output_files   = %s' % ','.join(
+				[ src for descr, src, trg in self.parentPool._getSandboxFilesOut(task)[2:] ]
 				),
+			'+rawID                   = "%s"' % HTCJobID(
+													gcJobNum  = jobNum,
+													gcTaskID  = task.taskID,
+													clusterID = '$(Cluster)',
+													procID    = '$(Process)',
+													scheddURI = self.getURI(),
+													typed     = False).rawID,
+			'Queue',
 			])
 		return jdlData
 
 	def getStagingDir(self, htcID = None, taskID = None):
 		try:
-			return self.parentPool.getSandboxPath(htcID.jobNum)
-		except TypeError:
+			return self.parentPool.getSandboxPath(htcID.gcJobNum)
+		except AttributeError:
 			return self.parentPool.getSandboxPath()
 	def cleanStagingDir(self, htcID = None, taskID = None):
 		pass
@@ -410,7 +439,7 @@ class HTCScheddSpool(HTCScheddLocal):
 	def _condor_submit(self, jdlFilePath):
 		subProc = self._adapter.LoggedExecute(
 			"condor_submit",
-			"%s -name '%s'" % (
+			"%s -name '%s' -verbose" % (
 				jdlFilePath,
 				self.getScheddName(),
 				)
@@ -489,39 +518,49 @@ class HTCScheddSSH(HTCScheddCLIBase):
 		return retrievedJobs
 
 	def _prepareSubmit(self, task, jobNumList, queryArguments):
-		localJdlFilePath = os.path.join(self.parentPool.getSandboxPath(), 'htc-%s.schedd-%s.jdl' % (self.parentPool.wmsName,md5(self.getURI).hexdigest()))
+		localJdlFilePath = os.path.join(self.parentPool.getSandboxPath(), 'htc-%s.schedd-%s.jdl' % (self.parentPool.wmsName,md5(self.getURI()).hexdigest()))
 		readyJobNumList  = self._stageSubmitFiles(task, jobNumList)
 		utils.safeWrite(
-			os.open(localJdlFilePath, 'w'),
-			self._getJDLData(task, jobNumList, queryArguments)
+			open(localJdlFilePath, 'w'),
+			( line + '\n' for line in self._getJDLData(task, readyJobNumList, queryArguments))
 			)
+		raise NotImplementedError('JDL must get moved to remote')
 		return jdlFilePath
 
 	def _getJDLData(self, task, jobNumList, queryArguments):
 		taskFiles, proxyFile, jobFileMap = self._getSubmitFileMap(task, jobNumList)
-		jdlData = HTCScheddCLIBase._getBaseJDLData(self, task, jobNumList, queryArguments)
+		jdlData = self._getBaseJDLData(task, queryArguments)
 		jdlData.extend([
-			'Executable              = "%s"' % taskFiles[0][2],
+			'Executable              = %s' % taskFiles[0][2],
 			])
 		if proxyFile:
 			jdlData.extend([
 			'use_x509userproxy       = True',
-			'x509userproxy           = "%s"' % proxyFile[2],
+			'x509userproxy           = %s' % proxyFile[2],
 			])
 		for jobNum in jobNumList:
 			jdlData.extend(self._getRequirementJdlData(task, jobNum))
-			jobStageDir = self.getStagingDir(jobData = (jobNum, task.taskID, 0, 0))
+			jobStageDir = self.getStagingDir(htcID = HTCJobID(gcJobNum=jobNum, gcTaskID=task.taskID))
 			jdlData.extend([
-			'initialdir              = "%s"' % jobStageDir,
-			'Output                  = "%s/gs.stdout"' % jobStageDir,
-			'Error                   = "%s/gs.stderr"' % jobStageDir,
+			'+GcJobNum               = "%s"' % jobNum,
+			'arguments               = %s' % jobNum,
+			'initialdir              = %s' % jobStageDir,
+			'Output                  = %s' % os.path.join(jobStageDir, 'gc.stdout'),
+			'Error                   = %s' % os.path.join(jobStageDir, 'gc.stderr'),
 			# HACK: ignore executable (In[0]), stdout (Out[0]) and stderr (Out[1])
-			'transfer_input_files    = %s' % '","'.join(
+			'transfer_input_files    = %s' % ','.join(
 				[ schd for descr, gc, schd in taskFiles[1:] + jobFileMap[jobNum] ]
 				),
-			'transfer_output_files   = "%s"' % ",".join(
-				[ src for descr, src, trg in self._getSandboxFilesOut(task)[2:] ]
+			'transfer_output_files   = %s' % ','.join(
+				[ src for descr, src, trg in self.parentPool._getSandboxFilesOut(task)[2:] ]
 				),
+			'+rawID                   = "%s"' % HTCJobID(
+													gcJobNum  = jobNum,
+													gcTaskID  = task.taskID,
+													clusterID = '$(Cluster)',
+													procID    = '$(Process)',
+													scheddURI = self.getURI(),
+													typed     = False).rawID,
 			])
 		return jdlData
 
@@ -544,8 +583,11 @@ class HTCScheddSSH(HTCScheddCLIBase):
 				)
 			)
 		proxyFile = ()
-		if self.pool.getProxy():
-			('User Proxy', self.pool.getProxy().getAuthFile(), os.path.join(self.getStagingDir(taskID = task.taskID), os.path.basename(self.pool.getProxy().getAuthFile())))
+		try:
+			if parentPool.proxy.getAuthFile():
+				proxyFile = ('User Proxy', self.parentPool.proxy.getAuthFile(), os.path.join(self.getStagingDir(taskID = task.taskID), os.path.basename(self.parentPool.proxy.getAuthFile())))
+		except:
+			pass
 		jobFileMap = {}
 		for jobNum in jobNumList:
 			jcFull, jcBase = self.getJobCfgPath(jobNum)
@@ -589,8 +631,8 @@ class HTCScheddSSH(HTCScheddCLIBase):
 	def _getStagingToken(self, htcID = None, taskID = None):
 		"""Construct the key for a staging directory"""
 		try:
-			return 'taskID.%s/job_%s' % ( htcID.gctaskID, htcID.jobNum )
-		except TypeError:
+			return 'taskID.%s/job_%s' % ( htcID.gctaskID, htcID.gcJobNum )
+		except AttributeError:
 			if taskID:
 				return 'taskID.%s' % taskID
 		return ''

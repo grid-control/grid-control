@@ -18,7 +18,7 @@ class HTCJobID(object):
 		else:
 			self._infoBlob = ( gcJobNum, gcTaskID, scheddURI, clusterID, procID )
 	@property
-	def jobNum(self):
+	def gcJobNum(self):
 		return self._infoBlob[0]
 	@property
 	def gcTaskID(self):
@@ -35,7 +35,7 @@ class HTCJobID(object):
 	@property
 	def rawID(self):
 		"""Return an unambigious raw wmsID string representation"""
-		return '%s.%s.%s.%s.%s' % ( self.scheddURI, self.taskId, self.gcJobNum, self.clusterID, self.procID)
+		return '%s.%s.%s.%s.%s' % ( self.scheddURI, self.gcTaskID, self.gcJobNum, self.clusterID, self.procID)
 	def __len__(self):
 		return 5
 	def __getitem__(self, key):

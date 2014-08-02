@@ -9,18 +9,23 @@ def chmodNumPerms(args = ''):
 		perm += 1
 	return perm
 
-def parseKWListIter(self, kwListIter):
+def parseKWListIter(kwListIter, jobDelimeter = lambda line: not line):
 	"""Parse an iterator of blobs of 'key = value' lines as provided by condor"""
 	infoMaps    = []
 	parseBuffer = {}
 	for line in kwListIter:
-		if not line:
+		line = line.strip()
+		if parseBuffer and jobDelimeter(line):
 			infoMaps.append(parseBuffer)
 			parseBuffer = {}
 			continue
-		key, val = [ obj.strip() for obj in line.split('=') ]
-		parseBuffer[key] = val
-	return infoMaps
+		try:
+			key, val = [ obj.strip().replace('"','') for obj in line.split('=',1) ]
+			parseBuffer[key] = val
+		except ValueError as err:
+			pass
+	infoMaps.append(parseBuffer)
+	return [ iMap for iMap in infoMaps if iMap ]
 
 def singleQueryCache(defReturnItem = None, maxFuncFails = 10, functionFailureItem = None):
 	"""Lightweight function memoization for a single query call with limited retries"""
