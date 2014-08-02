@@ -685,7 +685,7 @@ timestamp() {
 	if [[ -z "$STARTDATE" ]];then
 		STARTDATE=`date +%s`
 	fi
-	echo "'${@:-UNTAGGED}':$[ $(date +"%s") - $STARTDATE ]" >> $MY_LANDINGZONE\job.timestamps
+	echo "'${@:-UNTAGGED}':$[ $(date +"%s") - $STARTDATE ]" >> $MY_LANDINGZONE/job.timestamps
 	echo "[$(date +"%Y:%m:%d-%k:%M:%S")] $@"
 }
 
@@ -695,19 +695,19 @@ timereport() {
 	echo "== ===  Job timing  ==== =="
 	echo "jobstart=$STARTDATE"
 	echo "Tag : Time"
-	cat $MY_LANDINGZONE\job.timestamps
+	cat $MY_LANDINGZONE/job.timestamps
 	echo "==========================="
 	echo "timestamps={" >> $MY_LANDINGZONE/job.info
 	while read line; do
 		echo "		$line," >> $MY_LANDINGZONE/job.info
-	done < $MY_LANDINGZONE\job.timestamps
+	done < $MY_LANDINGZONE/job.timestamps
 	echo "	}" >> $MY_LANDINGZONE/job.info
 }
 
 timeprocess() {
 	debug_helper $FUNCNAME "$@"
 	if [ -x "`getcommand time`" ]; then
-		`getcommand time` -o $MY_LANDINGZONE\job.timing -f "--Time--\nWall: %e s\nUser: %U s\nSys : %S s\nCPU : %P\n--Memory--\nMax RSS : %M KB\nAvr RSS : %t KB\nTot Mem : %K KB\n--Prog--\nCmd : %C\nExit: %x\n" $@
+		`getcommand time` -o $MY_LANDINGZONE/job.timing -f "--Time--\nWall: %e s\nUser: %U s\nSys : %S s\nCPU : %P\n--Memory--\nMax RSS : %M KB\nAvr RSS : %t KB\nTot Mem : %K KB\n--Prog--\nCmd : %C\nExit: %x\n" $@
 	else
 		time $@
 	fi
