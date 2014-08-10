@@ -21,17 +21,20 @@ from ansi import Console
 class JobProgressBar:
 	def __init__(self, total = 100, width = 16, jobsOnFinish = False):
 		(self._total, self._width, self._jobsOnFinish) = (total, width, jobsOnFinish)
-		self.update(0, 0)
+		self.update()
 
-	def update(self, success = 0, processing = 0, failed = 0):
+	def update(self, success = 0, queued = 0, running = 0, failed = 0):
 		# Compute variables
-		complete = self._width - 26
-		blocks_ok = int(round(success / float(self._total) * complete))
-		blocks_proc = int(round(processing / float(self._total) * complete))
-		blocks_fail = min(complete - blocks_ok - blocks_proc, int(round(failed / float(self._total) * complete)))
-		self._bar = str(Console.fmt('=' * blocks_ok, [Console.COLOR_GREEN]))
+		complete = self._width - 31
+		blocks_ok   = int(round(success / float(self._total) * complete))
+		blocks_proc = int(round(queued / float(self._total) * complete))
+		blocks_run  = int(round(running / float(self._total) * complete))
+		blocks_fail = min(complete - blocks_ok - blocks_proc - blocks_run,
+			int(round(failed / float(self._total) * complete)))
+		self._bar  = str(Console.fmt('=' * blocks_ok, [Console.COLOR_GREEN]))
+		self._bar += str(Console.fmt('=' * blocks_run, [Console.COLOR_BLUE]))
 		self._bar += str(Console.fmt('=' * blocks_proc, [Console.COLOR_WHITE]))
-		self._bar += ' ' * (complete - blocks_ok - blocks_proc - blocks_fail)
+		self._bar += ' ' * (complete - blocks_ok - blocks_proc - blocks_run - blocks_fail)
 		self._bar += str(Console.fmt('=' * blocks_fail, [Console.COLOR_RED]))
 		self._bar = '[%s] ' % self._bar
 		if success == self._total and self._jobsOnFinish:
@@ -41,8 +44,10 @@ class JobProgressBar:
 			self._bar += '(%s)' % (Console.fmt('finished'.center(21), [Console.COLOR_GREEN]))
 		else:
 			fmt = lambda x: str(x).rjust(5)#int(math.log(self._total) / math.log(10)) + 1)
-			self._bar += '(%s | %s | %s)' % (Console.fmt(fmt(success), [Console.COLOR_GREEN]),
-				Console.fmt(fmt(processing), [Console.COLOR_WHITE]),
+			self._bar += '(%s | %s | %s | %s)' % (
+				Console.fmt(fmt(success), [Console.COLOR_GREEN]),
+				Console.fmt(fmt(running), [Console.COLOR_BLUE]),
+				Console.fmt(fmt(queued), [Console.COLOR_WHITE]),
 				Console.fmt(fmt(failed), [Console.COLOR_RED]))
 
 	def __len__(self):
@@ -281,7 +286,8 @@ class GUIReport(AdaptiveReport):
 				'(%5d jobs, %6.2f%%  )' % (total, 100 * completed / float(total)))
 			bar = JobProgressBar(sum(catStateDict[catKey].values()), width = self.maxX)
 			bar.update(completed,
-				sumCat(catKey, [Job.SUBMITTED, Job.WAITING, Job.READY, Job.QUEUED, Job.RUNNING, Job.DONE]),
+				sumCat(catKey, [Job.SUBMITTED, Job.WAITING, Job.READY, Job.QUEUED]),
+				sumCat(catKey, [Job.RUNNING, Job.DONE]),
 				sumCat(catKey, [Job.ABORTED, Job.CANCELLED, Job.FAILED]))
 			self.printLimited(bar, self.maxX)
 		for x in range(self._catMax - len(catStateDict)):
