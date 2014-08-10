@@ -13,7 +13,7 @@
 #-#  limitations under the License.
 
 import os, sys
-from grid_control import QM, utils, ConfigError, storage, JobSelector, LoadableObject, Config, JobDB, JobSelector, Job, RethrowError, DefaultFilesConfigFiller, FileConfigFiller
+from grid_control import QM, utils, ConfigError, storage, JobSelector, LoadableObject, Config, JobDB, JobSelector, Job, RethrowError, DefaultFilesConfigFiller, GeneralFileConfigFiller, MultiConfigFiller
 from scanner_base import InfoScanner
 from grid_control.datasets import DataProvider
 from python_compat import set, sorted
@@ -28,7 +28,8 @@ class OutputDirsFromConfig(InfoScanner):
 		from grid_control import TaskModule
 		newVerbosity = utils.verbosity(utils.verbosity() - 3)
 		extConfigFN = config.getPath('source config')
-		extConfig = Config([DefaultFilesConfigFiller(), FileConfigFiller([extConfigFN])], extConfigFN)
+		extFillers = [DefaultFilesConfigFiller(), GeneralFileConfigFiller([extConfigFN])]
+		extConfig = Config(MultiConfigFiller(extFillers), extConfigFN)
 		extConfig.opts = type('DummyType', (), {'init': False, 'resync': False})
 		self.extWorkDir = extConfig.getWorkPath()
 		self.extTask = extConfig.getClass('global', ['task', 'module'], cls = TaskModule).getInstance()

@@ -12,6 +12,8 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
+# This class is used by the grid-control python config file parser
+
 class Settings(object):
 	def __init__(self, section = None):
 		self._s = section

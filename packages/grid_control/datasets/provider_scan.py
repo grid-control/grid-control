@@ -13,7 +13,7 @@
 #-#  limitations under the License.
 
 import os, fnmatch, operator
-from grid_control import QM, utils, ConfigError, storage, JobSelector, LoadableObject, Config, DefaultFilesConfigFiller, FileConfigFiller
+from grid_control import QM, utils, ConfigError, storage, JobSelector, LoadableObject, Config, DefaultFilesConfigFiller, GeneralFileConfigFiller, MultiConfigFiller
 from provider_base import DataProvider
 from python_compat import set, md5
 from scanner_base import InfoScanner
@@ -153,7 +153,8 @@ class GCProvider(ScanProviderBase):
 			datasetExpr, selector = utils.optSplit(datasetExpr, '%')
 			config.set('source config', datasetExpr)
 			config.set('source job selector', selector)
-		extConfig = Config([DefaultFilesConfigFiller(), FileConfigFiller([datasetExpr])], datasetExpr)
+		extFillers = [DefaultFilesConfigFiller(), GeneralFileConfigFiller([datasetExpr])]
+		extConfig = Config(MultiConfigFiller(extFillers), datasetExpr)
 		extModule = extConfig.get('global', ['task', 'module'])
 		if 'ParaMod' in extModule:
 			extModule = extConfig.get('ParaMod', 'module')

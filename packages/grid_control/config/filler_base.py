@@ -13,11 +13,11 @@
 #-#  limitations under the License.
 
 # GCSCF: DEF,ENC
-from grid_control import ConfigError, RethrowError, utils
+from grid_control import ConfigError, RethrowError, utils, LoadableObject
 import sys, os, logging, ConfigParser, socket
 
 # Class to fill config containers with settings
-class ConfigFiller(object):
+class ConfigFiller(LoadableObject):
 	def fill(self, container):
 		raise AbstractError
 
@@ -104,7 +104,30 @@ class StringConfigFiller(ConfigFiller):
 
 # Class to fill config containers with settings from a python config file
 class PythonConfigFiller(DictConfigFiller):
-	def __init__(self, configFile):
+	def __init__(self, configFiles):
 		from gcSettings import Settings
-		exec open(configFile) in {}, {'Settings': Settings}
+		for configFile in configFiles:
+			exec open(configFile) in {}, {'Settings': Settings}
 		DictConfigFiller.__init__(self, Settings.getConfigDict())
+
+
+# Fill config using multiple fillers
+class MultiConfigFiller(ConfigFiller):
+	def __init__(self, fillerList):
+		self._fillerList = fillerList
+
+	def fill(self, container):
+		for filler in self._fillerList:
+			filler.fill(container)
+
+
+# Class which handles python and normal config files transparently
+class GeneralFileConfigFiller(MultiConfigFiller):
+	def __init__(self, configFiles):
+		fillerList = []
+		for configFile in configFiles:
+			if configFile.endswith('py'):
+				fillerList.append(PythonConfigFiller([configFile]))
+			else:
+				fillerList.append(FileConfigFiller([configFile]))
+		MultiConfigFiller.__init__(self, fillerList)
