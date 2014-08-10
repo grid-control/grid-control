@@ -41,11 +41,6 @@ else
 		export VO_CMS_SW_DIR="$CMSSW_DIR_PRO"
 		echo "[PROJ-SITE] Using $VO_CMS_SW_DIR"
 
-	# Check AFS
-	elif [ -d "/afs/cern.ch/cms" ]; then
-		export VO_CMS_SW_DIR="/afs/cern.ch/cms"
-		echo "[AFS-SITE] Using $VO_CMS_SW_DIR"
-
 	else
 		echo "No valid location found for VO_CMS_SW_DIR!"
 	fi
