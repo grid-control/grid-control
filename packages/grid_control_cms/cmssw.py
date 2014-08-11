@@ -49,7 +49,7 @@ class CMSSW(DataTask):
 		# This works in tandem with provider_dbsv2.py !
 		self.selectedLumis = parseLumiFilter(config.get('lumi filter', ''))
 
-		self.useReqs = config.getBool('software requirements', True, onChange = None)
+		self.useReqs = config.getBool('software requirements', False, onChange = None)
 		self.seRuntime = config.getBool('se runtime', False)
 		self.runtimePath = config.getWorkPath('runtime.tar.gz')
 

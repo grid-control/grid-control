@@ -69,8 +69,6 @@ def logging_setup(config):
 			logger.setLevel(logLevelDict.get(config.get(option, onChange = None).upper(), 0))
 		elif option.endswith('propagate'):
 			logger.propagate = config.getBool(option, onChange = None)
-		elif not option.endswith('format'):
-			raise Exception('Unknown option [logging] %s = %s' % (option, config.get(option, onChange = None)))
 
 	# Formatting affects all handlers and needs to be done after the handlers are setup
 	for option in config.getOptions():
