@@ -82,11 +82,11 @@ class ConfigBase(object):
 				if def2obj:
 					default_obj = def2obj(default_obj)
 			except:
-				raise APIError('Unable to convert default object: %r' % default_obj)
+				raise APIError('Unable to convert default object: %s' % repr(default_obj))
 			try:
 				default_str = obj2str(default_obj)
 			except:
-				raise APIError('Unable to get string representation of default object: %r' % default_obj)
+				raise APIError('Unable to get string representation of default object: %s' % repr(default_obj))
 
 		old_entry = None
 		if self._oldCfg:
@@ -152,7 +152,9 @@ class ConfigBase(object):
 		def obj2str(value):
 			(srcdict, srckeys) = value
 			getmax = lambda src: max(map(lambda x: len(str(x)), src) + [0])
-			result = strfun(srcdict.get(None, parser('')))
+			result = ''
+			if srcdict.get(None):
+				result = strfun(srcdict.get(None, parser('')))
 			fmt = '\n\t%%%ds => %%%ds' % (getmax(srckeys), getmax(srcdict.values()))
 			return result + str.join('', map(lambda k: fmt % (k, strfun(srcdict[k])), srckeys))
 		str2obj = lambda value: utils.parseDict(value, parser)
