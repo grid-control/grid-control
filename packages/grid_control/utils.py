@@ -81,15 +81,16 @@ def freeSpace_int(dn, result):
 	else:
 		result['space'] = -1
 
-def freeSpace(dn):
+
+def freeSpace(dn, timeout = 5):
 	result = {}
 	t = threading.Thread(target = freeSpace_int, args = (dn, result))
 	t.start()
-	t.join(5)
+	t.join(timeout)
 	if 'space' not in result:
-		eprint('Unable to get free disk space for directory %s after waiting for 5 sec!' % dn)
-		eprint('The file system is probably hanging - try to check free disk space manually.')
-		eprint('You can disable the the free disk space check at your own risk with [global] workdir space = 0')
+		eprint('Unable to get free disk space for directory %s after waiting for %d sec!' % (dn, timeout))
+		eprint('The file system is probably hanging or corrupted - try to check the free disk space manually.')
+		eprint('Refer to the documentation to disable checking the free disk space - at your own risk')
 		os._exit(0)
 	return result['space']
 
