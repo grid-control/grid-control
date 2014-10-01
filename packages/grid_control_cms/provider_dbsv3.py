@@ -22,9 +22,9 @@ import os
 class DBS3Provider(CMSProvider):
 	def __init__(self, config, datasetExpr, datasetNick, datasetID = 0):
 		CMSProvider.__init__(self, config, datasetExpr, datasetNick, datasetID)
-		if self.url != '':
-			raise ConfigError('Other DBS instances are not yet supported!')
-		self.url = 'https://cmsweb.cern.ch/dbs/prod/global/DBSReader'
+		self.usePhedex = (self.url == '') # Use DBS locality for private samples
+		if self.url == '':
+			self.url = 'https://cmsweb.cern.ch/dbs/prod/global/DBSReader'
 
 
 	def queryDBSv3(self, api, **params):
@@ -41,7 +41,11 @@ class DBS3Provider(CMSProvider):
 
 
 	def getCMSBlocksImpl(self, datasetPath, getSites):
-		return map(lambda b: (b['block_name'], None), self.queryDBSv3('blocks', dataset = datasetPath))
+		def getNameSEList(blockinfo):
+			if getSites:
+				return (blockinfo['block_name'], [blockinfo['origin_site_name']])
+			return (blockinfo['block_name'], None)
+		return map(getNameSEList, self.queryDBSv3('blocks', dataset = datasetPath, detail = getSites))
 
 
 	def getCMSFilesImpl(self, blockPath, onlyValid, queryLumi):
@@ -60,4 +64,4 @@ class DBS3Provider(CMSProvider):
 
 
 	def getBlocksInternal(self):
-		return self.getGCBlocks(usePhedex = True)
+		return self.getGCBlocks(usePhedex = self.usePhedex)
