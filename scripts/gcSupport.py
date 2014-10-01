@@ -33,13 +33,13 @@ class DummyStream(object):
 def getConfig(fn = None, cfgDict = {}, section = None):
 	fillerList = [DefaultFilesConfigFiller()]
 	if fn:
-		fillerList.append(FileConfigFiller([fn]))
+		fillerList.append(GeneralFileConfigFiller([fn]))
 	if cfgDict:
 		if section:
 			fillerList.append(DictConfigFiller({section: cfgDict}))
 		else:
 			fillerList.append(DictConfigFiller(cfgDict))
-	config = Config(fillerList, fn)
+	config = Config(MultiConfigFiller(fillerList), fn)
 	if section:
 		return config.addSections([section])
 	return config

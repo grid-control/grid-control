@@ -70,11 +70,11 @@ def main():
 
 	fillerList = [DefaultFilesConfigFiller()]
 	if opts.settings:
-		fillerList.append(FileConfigFiller([opts.settings]))
+		fillerList.append(GeneralFileConfigFiller([opts.settings]))
 		tmpCfg = Config(fillerList, opts.settings)
 		section = tmpCfg.get('global', ['task', 'module'])
 
-	dummyConfig = Config(fillerList + [DictConfigFiller({section: cfgSettings})], opts.settings)
+	dummyConfig = Config(MultiConfigFiller(fillerList + [DictConfigFiller({section: cfgSettings})]), opts.settings)
 	dummyConfig.opts = opts
 	dummyConfig = dummyConfig.addSections(['dataset'])
 
