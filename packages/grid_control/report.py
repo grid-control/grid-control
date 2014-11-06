@@ -23,6 +23,8 @@ class Report(LoadableObject):
 		self._header = self._getHeader(45)
 
 	def _getHeader(self, maxLen = 45):
+		if not self._task:
+			return ''
 		tmp = self._task.taskConfigName + ' / ' + self._task.taskID
 		if len(tmp) < maxLen:
 			return tmp
