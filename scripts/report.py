@@ -19,6 +19,8 @@ from gcSupport import utils, Config, TaskModule, JobManager, JobSelector, Report
 parser = optparse.OptionParser()
 parser.add_option('', '--report', dest='reportClass', default='GUIReport')
 parser.add_option('-J', '--job-selector', dest='selector', default=None)
+parser.add_option('-T', '--use-task', dest='useTask', default=False, action='store_true',
+	help='Forward task information to report')
 parser.add_option('', '--str', dest='string', default=None)
 #parser.add_option('-m', '--map', dest='showMap', default=False, action='store_true',
 #	help='Draw map of sites')
@@ -35,10 +37,14 @@ def main():
 	config = getConfig(args[0], section = 'global')
 
 	# Initialise task module
-	task = config.getClass(['task', 'module'], cls = TaskModule).getInstance()
+	task = None
+	tags = []
+	if opts.useTask:
+		task = config.getClass(['task', 'module'], cls = TaskModule).getInstance()
+		tags = [task]
 
 	# Initialise job database
-	jobManagerCls = config.getClass('job manager', 'SimpleJobManager', cls = JobManager, tags = [task])
+	jobManagerCls = config.getClass('job manager', 'SimpleJobManager', cls = JobManager, tags = tags)
 	jobDB = jobManagerCls.getInstance(task, None).jobDB
 	log = utils.ActivityLog('Filtering job entries')
 	selected = jobDB.getJobs(JobSelector.create(opts.selector, task = task))
@@ -64,4 +70,5 @@ def main():
 	else:
 		report.show(opts, task)
 
-handleException(main)
+if __name__ == '__main__':
+	handleException(main)
