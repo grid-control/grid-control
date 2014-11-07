@@ -38,7 +38,8 @@ except:
 try:	# sorted >= Python 2.4
 	sorted = sorted
 except:
-	def sorted(unsortedList, comp = None, key = None):
+	builtin_cmp = cmp
+	def sorted(unsortedList, cmp = None, key = None, reverse = False):
 		""" Sort list by either using the standard comparison method cmp()
 		or, if supplied, the function comp.  The optional argument key
 		is a function that returns the key to sort by - default is the
@@ -47,28 +48,30 @@ except:
 		>>> sorted([4, 3, 1, 5, 2])
 		[1, 2, 3, 4, 5]
 
-		>>> sorted([4, 3, 1, 5, 2], comp=lambda a, b: -cmp(a, b))
+		>>> sorted([4, 3, 1, 5, 2], reverse = True)
+		[5, 4, 3, 2, 1]
+
+		>>> sorted([4, 3, 1, 5, 2], cmp=lambda a, b: -cmp(a, b))
 		[5, 4, 3, 2, 1]
 
 		>>> sorted(['spam', 'ham', 'cheese'], key=len)
 		['ham', 'spam', 'cheese']
 
-		>>> sorted(['spam', 'ham', 'cheese'], comp=lambda a, b: -cmp(a, b), key=len)
+		>>> sorted(['spam', 'ham', 'cheese'], cmp=lambda a, b: -cmp(a, b), key=len)
 		['cheese', 'spam', 'ham']
 		"""
-
 		tmp = list(unsortedList)
-		tmp_cmp = comp
+		if cmp == None:
+			cmp = builtin_cmp
 
-		if key and comp:
-			tmp_cmp = lambda x, y: comp(key(x), key(y))
-		elif key:
-			tmp_cmp = lambda x, y: cmp(key(x), key(y))
-
-		if tmp_cmp != None:
-			tmp.sort(tmp_cmp)
-		else:
-			tmp.sort()
+		if key and reverse:
+			tmp.sort(lambda x, y: -cmp(key(x), key(y)))
+		elif key and not reverse:
+			tmp.sort(lambda x, y: cmp(key(x), key(y)))
+		elif reverse:
+			tmp.sort(lambda x, y: -cmp(x, y))
+		elif not reverse:
+			tmp.sort(cmp)
 		return tmp
 
 try:	# hashlib >= Python 2.5
@@ -148,14 +151,14 @@ if __name__ == '__main__':
 			if fn.endswith("python_compat.py"):
 				continue
 			fn = os.path.join(root, fn)
-			found = False
-			tmp = open(fn).read()
-			for feature in __all__:
-				if re.search('[^_\.a-zA-Z]%s\(' % feature, tmp):
-					found = True
-					for line in tmp.splitlines():
-						if 'python_compat' in line:
-							if feature not in line:
-								print fn, feature
-			if (not found) and ('python_compat' in tmp):
-				print fn, 'not needed'
+			tmp = open(fn).read().replace('def set(', '')
+			needed = set(filter(lambda name: re.search('[^_\.a-zA-Z]%s\(' % name, tmp), __all__))
+			imported = set()
+			for import_line in filter(lambda line: 'python_compat' in line, tmp.splitlines()):
+				imported.update(filter(lambda feature: feature in import_line, __all__))
+			if not needed and ('python_compat' in tmp):
+				print fn, 'python_compat import not needed!'
+			for feature in needed.difference(imported):
+				print fn, feature, 'missing!'
+			for feature in imported.difference(needed):
+				print fn, feature, 'not needed!'
