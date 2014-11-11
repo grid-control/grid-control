@@ -21,7 +21,9 @@ class LocalWMS(BasicWMS):
 	getConfigSections = BasicWMS.createFunction_getConfigSections(['local'])
 
 	def __init__(self, config, wmsName, submitExec, statusExec, cancelExec):
-		config.set('broker', 'RandomBroker', override = False)
+		config.set('broker', 'RandomBroker')
+		config.setInt('wait idle', 20)
+		config.setInt('wait work', 5)
 		(self.submitExec, self.statusExec, self.cancelExec) = (submitExec, statusExec, cancelExec)
 		BasicWMS.__init__(self, config, wmsName, 'local')
 
@@ -35,10 +37,6 @@ class LocalWMS(BasicWMS):
 		self.scratchPath = config.getList('scratch path', ['TMPDIR', '/tmp'], onChange = True)
 		self.submitOpts = config.get('submit options', '', onChange = None)
 		self.memory = config.getInt('memory', -1, onChange = None)
-
-
-	def getTimings(self):
-		return (20, 5) # Wait 20 seconds between cycles and 5 seconds between steps
 
 
 	# Check status of jobs and yield (jobNum, wmsID, status, other data)

@@ -61,6 +61,7 @@ class Workflow(NamedObject):
 
 	# Job submission loop
 	def jobCycle(self, wait = utils.wait):
+		(waitIdle, waitWork) = self.wms.getTimings()
 		while True:
 			(didWait, lastSpaceMsg) = (False, 0)
 			# Check whether wms can submit
@@ -75,20 +76,20 @@ class Workflow(NamedObject):
 				for action in map(str.lower, self._actionList):
 					if action.startswith('c') and not utils.abort():   # check for jobs
 						if self.jobManager.check(self.wms):
-							didWait = wait(self.wms.getTimings()[1])
+							didWait = wait(waitWork)
 					elif action.startswith('r') and not utils.abort(): # retrieve finished jobs
 						if self.jobManager.retrieve(self.wms):
-							didWait = wait(self.wms.getTimings()[1])
+							didWait = wait(waitWork)
 					elif action.startswith('s') and not utils.abort() and self._submitFlag:
 						if self.jobManager.submit(self.wms):
-							didWait = wait(self.wms.getTimings()[1])
+							didWait = wait(waitWork)
 
 			# quit if abort flag is set or not in continuous mode
 			if utils.abort() or not self.runContinuous:
 				break
 			# idle timeout
 			if not didWait:
-				wait(self.wms.getTimings()[0])
+				wait(waitIdle)
 
 	def run(self):
 		self._gui.displayWorkflow()

@@ -30,9 +30,11 @@ class WMS(NamedObject):
 		wmsName = QM(wmsName, wmsName, self.__class__.__name__).upper().replace('.', '_')
 		NamedObject.__init__(self, config, wmsName)
 		(self.config, self.wmsName, self.wmsClass) = (config, wmsName, wmsClass)
+		self._wait_idle = config.getInt('wait idle', 60)
+		self._wait_work = config.getInt('wait work', 10)
 
 	def getTimings(self): # Return (waitIdle, wait)
-		raise AbstractError
+		return (self._wait_idle, self._wait_work)
 
 	def canSubmit(self, neededTime, canCurrentlySubmit):
 		raise AbstractError
@@ -75,9 +77,6 @@ class InactiveWMS(WMS):
 		WMS.__init__(self, config, wmsName, wmsClass)
 		self.proxy = ClassFactory(config, ('proxy', 'TrivialProxy'), ('proxy manager', 'MultiProxy'),
 			cls = Proxy, tags = [self]).getInstance()
-
-	def getTimings(self): # Return (waitIdle, wait)
-		return (0, 0)
 
 	def canSubmit(self, neededTime, canCurrentlySubmit):
 		return True
@@ -124,10 +123,6 @@ class BasicWMS(WMS):
 		# UI <- SE <- WN
 		self.smSEOut = config.getClass('se output manager', 'SEStorageManager', cls = StorageManager, tags = [self]).getInstance('se', 'se output', 'SE_OUTPUT')
 		self.smSBOut = None
-
-
-	def getTimings(self):
-		return (60, 10)
 
 
 	def canSubmit(self, neededTime, canCurrentlySubmit):
