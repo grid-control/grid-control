@@ -69,7 +69,7 @@ class FileConfigFiller(ConfigFiller):
 				except:
 					raise ConfigError(exceptionText + '\nUnable to strip comments!')
 				exceptionText = 'Unable to parse config file %s:%d\n\t%r' % (configFile, idx, line)
-				if not line.strip(): # skip empty lines
+				if not line.strip() or line.startswith('#'): # skip empty lines or comment lines
 					return
 				elif line[0].isspace():
 					try:
@@ -200,7 +200,7 @@ class GeneralFileConfigFiller(MultiConfigFiller):
 
 
 # read old persistency file - and set appropriate config options (only used on oldContainer!)
-class CompatConfigFiller:
+class CompatConfigFiller(ConfigFiller):
 	def __init__(self, persistencyFile):
 		self._persistencyDict = {}
 		if os.path.exists(persistencyFile):
