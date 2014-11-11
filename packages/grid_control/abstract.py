@@ -147,11 +147,9 @@ class ClassWrapper:
 	def getInstance(self, *args, **kwargs):
 		cls = self._baseClass.getClass(self._instClassName)
 		if issubclass(cls, NamedObject):
-			addSections = []
-			if self._inherit:
-				addSections = cls.configSections
 			from config import TaggedConfigView
-			config = self._config.changeView(viewClass = TaggedConfigView, setSections = None,
-				addSections = addSections, setClasses = [cls], setNames = [self._instName], addTags = self._tags)
+			config = self._config.changeView(viewClass = TaggedConfigView,
+				setClasses = [cls], setSections = None, setNames = [self._instName],
+				addTags = self._tags, inheritSections = self._inherit)
 			return cls(config, self._instName, *args, **kwargs)
 		return cls(*args, **kwargs)
