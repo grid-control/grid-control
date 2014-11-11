@@ -5,7 +5,7 @@
 #-#  you may not use this file except in compliance with the License.
 #-#  You may obtain a copy of the License at
 #-#
-#-#      http://www.apache.org/licenses/LICENSE-2.0
+#-#	  http://www.apache.org/licenses/LICENSE-2.0
 #-#
 #-#  Unless required by applicable law or agreed to in writing, software
 #-#  distributed under the License is distributed on an "AS IS" BASIS,
@@ -94,10 +94,10 @@ class JobInfo ( object ) :
 
 
 #def makeEnumAndMapping( entryNames )
-#    enums = utils.makeEnum( entryNames )
-#    mappingStringToEnum = dict()
+#	enums = utils.makeEnum( entryNames )
+#	mappingStringToEnum = dict()
 	
-#    for i in range(0, len ( entryNames ) entryName
+#	for i in range(0, len ( entryNames ) entryName
 
 
 
@@ -123,7 +123,9 @@ JobResultEnum = utils.makeEnum( [ "TIMESTAMP_WRAPPER_START",
 "TIMESTAMP_EXECUTION_DONE",
 "TIMESTAMP_SE_OUT_START",
 "TIMESTAMP_SE_OUT_DONE",
-"TIMESTAMP_WRAPPER_DONE" ] )
+"TIMESTAMP_WRAPPER_DONE",
+"FILESIZE_IN_TOTAL",
+"FILESIZE_OUT_TOTAL" ] )
 
 import matplotlib
 import matplotlib.pyplot as plt
@@ -156,8 +158,6 @@ def extractJobTiming( jInfo ):
 # - if a user job was run, the execution time of the user job 
 #   will be reported
 def getPayloadRuntime ( jobInfo ):
-#	print jobInfo
-#	print JobResultEnum.TIMESTAMP_EXECUTION_DONE
 	if ( jobInfo [ JobResultEnum.TIMESTAMP_CMSSW_CMSRUN1_START ] != None ) and \
 		( jobInfo [ JobResultEnum.TIMESTAMP_CMSSW_CMSRUN1_DONE ] != None ):
 		return jobInfo [ JobResultEnum.TIMESTAMP_CMSSW_CMSRUN1_DONE ] - \
@@ -166,16 +166,103 @@ def getPayloadRuntime ( jobInfo ):
 	return jobInfo [ JobResultEnum.TIMESTAMP_EXECUTION_DONE ] - \
 				jobInfo [ JobResultEnum.TIMESTAMP_EXECUTION_START ]
 
-class PlotReport( Report ):
+def getSeOutRuntime ( jobInfo ):
+	return jobInfo [ JobResultEnum.TIMESTAMP_SE_OUT_DONE ] - \
+				jobInfo [ JobResultEnum.TIMESTAMP_SE_OUT_START ]
+
+def getSeInRuntime ( jobInfo ):
+	return jobInfo [ JobResultEnum.TIMESTAMP_SE_IN_DONE ] - \
+				jobInfo [ JobResultEnum.TIMESTAMP_SE_IN_START ]
+
+def getJobRuntime ( jobInfo ):
+	return jobInfo [ JobResultEnum.TIMESTAMP_WRAPPER_DONE ] - \
+				jobInfo [ JobResultEnum.TIMESTAMP_WRAPPER_START ]
+
+def getSeOutBandwidth ( jobInfo ):
 	
+	seOutTime = getSeOutRuntime( jobInfo )
+	fileSize =  jobInfo [ JobResultEnum.FILESIZE_OUT_TOTAL ]
+	
+	if ( seOutTime > 0 ) :
+		return fileSize / seOutTime
+	else:
+		return None
+
+def getSeInBandwidth ( jobInfo ):
+	
+	seInTime = getSeInRuntime( jobInfo )
+	fileSize =  jobInfo [ JobResultEnum.FILESIZE_IN_TOTAL ]
+	
+	if ( seInTime > 0 ) :
+		return fileSize / seInTime
+	else:
+		return None
+
+def getSeOutAverageBandwithAtTimeSpan(jobInfo, timeStart, timeEnd):	
+	if getSeOutRuntime( jobInfo ) > 0:	
+		return getQuantityAtTimeSpan( jobInfo, timeStart, timeEnd, \
+			lambda jinf : (jinf [ JobResultEnum.TIMESTAMP_SE_OUT_START ], jinf [ JobResultEnum.TIMESTAMP_SE_OUT_DONE ] ), \
+			lambda jinf : getSeOutBandwidth(jinf) )
+	else:
+		return None
+
+def getSeOutActiveAtTimeSpan(jobInfo, timeStart, timeEnd):	
+	if getSeOutRuntime( jobInfo ) > 0:	
+		return getQuantityAtTimeSpan( jobInfo, timeStart, timeEnd, \
+			lambda jinf : (jinf [ JobResultEnum.TIMESTAMP_SE_OUT_START ], jinf [ JobResultEnum.TIMESTAMP_SE_OUT_DONE ] ), \
+			lambda jinf : 1.0 )
+	else:
+		return None
+		
+def getSeInAverageBandwithAtTimeSpan(jobInfo, timeStart, timeEnd):	
+	if getSeInRuntime( jobInfo ) > 0:	
+		return getQuantityAtTimeSpan( jobInfo, timeStart, timeEnd, \
+			lambda jinf : (jinf [ JobResultEnum.TIMESTAMP_SE_IN_START ], jinf [ JobResultEnum.TIMESTAMP_SE_IN_DONE ] ), \
+			lambda jinf : getSeInBandwidth(jinf) )
+	else:
+		return None
+		
+def getSeInActiveAtTimeSpan(jobInfo, timeStart, timeEnd):	
+	if getSeInRuntime( jobInfo ) > 0:	
+		return getQuantityAtTimeSpan( jobInfo, timeStart, timeEnd, \
+			lambda jinf : (jinf [ JobResultEnum.TIMESTAMP_SE_IN_START ], jinf [ JobResultEnum.TIMESTAMP_SE_IN_DONE ] ), \
+			lambda jinf : 1.0 )
+	else:
+		return None
+		
+def getJobActiveAtTimeSpan(jobInfo, timeStart, timeEnd):	
+	if getJobRuntime( jobInfo ) > 0:	
+		return getQuantityAtTimeSpan( jobInfo, timeStart, timeEnd, \
+			lambda jinf : (jinf [ JobResultEnum.TIMESTAMP_WRAPPER_START ], jinf [ JobResultEnum.TIMESTAMP_WRAPPER_DONE ] ), \
+			lambda jinf : 1.0 )
+	else:
+		return None
+
+def getQuantityAtTimeSpan(jobInfo, timeStart, timeEnd, timingExtract, quantityExtract ):	
+	assert ( timeStart < timeEnd )
+
+	(theStart, theEnd) = timingExtract ( jobInfo )
+
+	## will be positive if there is overlap to the left
+	leftOutside = max(0, theStart - timeStart )
+	## will be positive if there is overlap to the right
+	rightOutside = max(0, timeEnd - theEnd )
+	totalOutside = leftOutside + rightOutside
+	fractionOutside = float( totalOutside ) / float ( timeEnd - timeStart )
+	fractionOutside = min (1.0, fractionOutside)
+
+	return quantityExtract(jobInfo) * ( 1.0 - fractionOutside )
+
+class PlotReport( Report ):
 	
 	def initHistogram ( self, name, xlabel, ylabel ):
 		fig = plt.figure()
 
 		ax = fig.add_subplot(111)
-		ax.set_xlabel(r"Time (s)", ha="right", x=1)
-		ax.set_ylabel(r"Bandwith (MB/s)", va="top", y=1, labelpad = 20.0)
-		
+		ax.set_xlabel(xlabel)#, ha="left" )
+		# y = 0.8 will move the label more to the center
+		ax.set_ylabel(ylabel, va="top", y=0.75, labelpad = 20.0)
+				
 		return (name, fig, ax)
 	
 	def finalizeHistogram( self, plotSet, useLegend = False ):
@@ -186,22 +273,64 @@ class PlotReport( Report ):
 		for it in self.imageTypes:
 			plt.savefig( plotSet[0] + "." + it ) 
 
-	def plotPayloadRuntime ( self, histo, jobResult ):
+	def plotHistogram ( self, histo, jobResult, extractor ):
 
 		runtime = []
 		for res in jobResult:
-			runtime = runtime + [ getPayloadRuntime( res ) ]
+			val = extractor( res )
+			if val != None:
+				runtime = runtime + [ val ]
+
+		if len( runtime ) == 0:
+			print "Skipping " + histo[0] + ", no input data"
+			return None
 
 		thisHistType = "bar"
 		#if transparent:
 		#	thisHistType = "step"
-
+		
 		pl = plt.hist( runtime, 40 )#, color= plotColor, label = plotLabel, histtype=thisHistType )
+		#histo[2].set_ymargin( 0.4 )
 		return pl
 		
+	def plotOverall( self, histo, jInfos, minSeTime, maxSeTime, extractor ):
+		overAllBandwith = []
+		timeStep = []
+		
+		stepSize = 1# int( ( maxSeTime - minSeTime) / 10000.0 )
 
+		for i in xrange( minSeTime, maxSeTime + 1, stepSize ):
+
+			thisBw = 0
+			timeStep = timeStep + [ i - minSeTime ]
+
+			for jinfo in jInfos:
+				#if ( jinfo.jobFailed ):
+				#	continue		
+				
+				val = extractor( jinfo, i, i + stepSize )
+				#print getSeOutRuntime(jinfo)
+				if val != None:
+					#runtime = runtime + [ ( jinfo.eventCount ) / ( jinfo.payloadRuntime() / 60.0 ) ]
+					#print getSeAverageBandwithAtTimeSpan( jinfo, i, i + stepSize )
+					thisBw = thisBw + val
+					
+			overAllBandwith = overAllBandwith + [thisBw]
+
+		histo[2].set_ylim( bottom = min(overAllBandwith)*0.99, top = max(overAllBandwith) * 1.2 )
+		histo[2].set_xlim( left = min(timeStep)*0.99, right = max(timeStep) * 1.01 )
+		#print overAllBandwith
+		pl = plt.plot( timeStep, overAllBandwith, color="green" )
+
+		
 	def display(self):
 		jobResult = []
+		
+		#larger default fonts
+		matplotlib.rcParams.update({'font.size': 16})
+		
+		minSeOutTime = None
+		maxSeOutTime = None
 		
 		allJobs = self._jobDB.getJobs()
 		workdir = os.path.join( self._jobDB._dbPath, ".." ) 
@@ -215,14 +344,70 @@ class PlotReport( Report ):
 				continue
 				
 			jResult = extractJobTiming( jInfo )
+			
+			# todo: read from job info
+			jResult[ JobResultEnum.FILESIZE_IN_TOTAL ] = 3000.0
+			jResult[ JobResultEnum.FILESIZE_OUT_TOTAL ] = 3000.0
+			
 			jobResult = jobResult + [jResult]
 			#print jobResult
 			
+			if (minSeOutTime == None) or ( maxSeOutTime == None ):
+				minSeOutTime = jResult [ JobResultEnum.TIMESTAMP_SE_OUT_START ]
+				maxSeOutTime = jResult [ JobResultEnum.TIMESTAMP_SE_OUT_DONE ]
+			else:
+				minSeOutTime = min ( minSeOutTime, jResult [ JobResultEnum.TIMESTAMP_SE_OUT_START ] )
+				maxSeOutTime = max ( maxSeOutTime, jResult [ JobResultEnum.TIMESTAMP_SE_OUT_DONE ] )
+			
+		print str( minSeOutTime ) + " : " + str( maxSeOutTime ) 
 		
 		histo =	self.initHistogram( "payload_runtime", "Payload Runtime (s)", "Count" )
-		self.plotPayloadRuntime( histo, jobResult )
+		self.plotHistogram( histo, jobResult, lambda x: getPayloadRuntime( x ) )
 		self.finalizeHistogram( histo )
 
+		histo =	self.initHistogram( "se_out_runtime", "SE Out Runtime (s)", "Count" )
+		self.plotHistogram( histo, jobResult, lambda x: getSeOutRuntime( x ) )
+		self.finalizeHistogram( histo )
+		
+		histo =	self.initHistogram( "se_in_runtime", "SE In Runtime (s)", "Count" )
+		self.plotHistogram( histo, jobResult, lambda x: getSeInRuntime( x ) )
+		self.finalizeHistogram( histo )
+
+		histo =	self.initHistogram( "se_out_runtime", "SE OUT Runtime (s)", "Count" )
+		self.plotHistogram( histo, jobResult, lambda x: getSeOutRuntime( x ) )
+		self.finalizeHistogram( histo )
+
+		histo =	self.initHistogram( "se_out_bandwidth", "SE OUT Bandwidth (MB/s)", "Count" )
+		self.plotHistogram( histo, jobResult, lambda x: getSeOutBandwidth( x ) )
+		self.finalizeHistogram( histo )
+		
+		# job active
+		histo =	self.initHistogram( "job_active_total", "Time (s)", "Active Jobs" )
+		self.plotOverall( histo, jobResult, minSeOutTime, maxSeOutTime, \
+			lambda x, i, ip: getJobActiveAtTimeSpan(x,i,ip) )
+		self.finalizeHistogram( histo )
+
+		# stage out active & bandwidth
+		histo =	self.initHistogram( "se_out_bandwidth_total", "Time (s)", "Total SE OUT Bandwidth (MB/s)" )
+		self.plotOverall( histo, jobResult, minSeOutTime, maxSeOutTime, \
+			lambda x, i, ip: getSeOutAverageBandwithAtTimeSpan(x,i,ip) )
+		self.finalizeHistogram( histo )
+
+		histo =	self.initHistogram( "se_out_active_total", "Time (s)", "Active Stageouts" )
+		self.plotOverall( histo, jobResult, minSeOutTime, maxSeOutTime, \
+			lambda x, i, ip: getSeOutActiveAtTimeSpan(x,i,ip) )
+		self.finalizeHistogram( histo )
+
+		# stage in active & bandwidth
+		histo =	self.initHistogram( "se_in_bandwidth_total", "Time (s)", "Total SE IN Bandwidth (MB/s)" )
+		self.plotOverall( histo, jobResult, minSeOutTime, maxSeOutTime, \
+			lambda x, i, ip: getSeInAverageBandwithAtTimeSpan(x,i,ip) )
+		self.finalizeHistogram( histo )
+
+		histo =	self.initHistogram( "se_in_active_total", "Time (s)", "Active Stageins" )
+		self.plotOverall( histo, jobResult, minSeOutTime, maxSeOutTime, \
+			lambda x, i, ip: getSeInActiveAtTimeSpan(x,i,ip) )
+		self.finalizeHistogram( histo )
 
 if len(args) != 1:
 	utils.exitWithUsage('%s [options] <config file>' % sys.argv[0])
