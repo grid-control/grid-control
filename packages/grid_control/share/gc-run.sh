@@ -33,6 +33,7 @@ echo "running on: `hostname -f; uname -a;`"
 lsb_release -a 2> /dev/null
 echo
 echo "Job $MY_JOBID started - `date`"
+export STARTDATE=`date +%s`
 timestamp "WRAPPER" "START"
 
 echo

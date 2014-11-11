@@ -682,10 +682,7 @@ display_short() {
 
 timestamp() {
 	debug_helper $FUNCNAME "$@"
-	if [[ -z "$STARTDATE" ]];then
-		STARTDATE=`date +%s`
-	fi
-	echo "'${@:-UNTAGGED}':$[ $(date +"%s") - $STARTDATE ]" >> $MY_LANDINGZONE/job.timestamps
+	echo "$1_$2=$[ $(date +"%s")]" >> $MY_LANDINGZONE/job.timestamps
 	echo "[$(date +"%Y:%m:%d-%k:%M:%S")] $@"
 }
 
@@ -697,11 +694,9 @@ timereport() {
 	echo "Tag : Time"
 	cat $MY_LANDINGZONE/job.timestamps
 	echo "==========================="
-	echo "timestamps={" >> $MY_LANDINGZONE/job.info
 	while read line; do
-		echo "		$line," >> $MY_LANDINGZONE/job.info
+		echo "TIMESTAMP_$line" >> $MY_LANDINGZONE/job.info
 	done < $MY_LANDINGZONE/job.timestamps
-	echo "	}" >> $MY_LANDINGZONE/job.info
 }
 
 timeprocess() {
