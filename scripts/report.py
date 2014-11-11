@@ -14,7 +14,7 @@
 #-#  limitations under the License.
 
 import sys, os, optparse
-from gcSupport import utils, Config, TaskModule, JobManager, JobSelector, Report, parseOptions, handleException, getConfig, getJobInfo
+from gcSupport import utils, TaskModule, JobManager, JobSelector, Report, parseOptions, handleException, getConfig, getJobInfo
 
 parser = optparse.OptionParser()
 parser.add_option('', '--report', dest='reportClass', default='GUIReport')
@@ -430,7 +430,7 @@ def main():
 	selected = jobDB.getJobs(JobSelector.create(opts.selector, task = task))
 	del log
 
-	report = Report.open(opts.reportClass, jobDB, task, selected, opts.string)
+	report = Report.getInstance(opts.reportClass, jobDB, task, selected, opts.string)
 	report.display()
 
 	sys.exit()
