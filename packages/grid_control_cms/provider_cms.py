@@ -15,8 +15,8 @@
 from grid_control import QM, utils, datasets, DatasetError, ConfigError
 from grid_control.datasets import DataProvider, HybridSplitter, DataSplitter
 from python_compat import set, sorted
-from lumi_tools import *
-from webservice_api import *
+from lumi_tools import parseLumiFilter, formatLumi, selectLumi
+from webservice_api import readJSON
 
 # required format: <dataset path>[@<instance>][#<block>]
 class CMSProvider(DataProvider):

@@ -14,7 +14,7 @@
 
 # Generic base class for authentication proxies GCSCF:
 import os, time, getpass, shutil, stat
-from grid_control import QM, NamedObject, InstallationError, AbstractError, UserError, utils
+from grid_control import QM, NamedObject, AbstractError, UserError, utils
 from python_compat import parsedate
 
 class Proxy(NamedObject):

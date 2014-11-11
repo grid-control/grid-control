@@ -13,9 +13,9 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-import gcSupport, sys, os, optparse, popen2, time, random, threading
+import gcSupport, sys, os, optparse, time, random, threading
 from python_compat import md5
-from grid_control import Job, JobDB, GCError, Config, Proxy, job_selector, job_db, storage, utils, logException
+from grid_control import Job, Config, Proxy, job_selector, job_db, storage, utils, logException
 
 def md5sum(filename):
 	m = md5()

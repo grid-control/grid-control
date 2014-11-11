@@ -14,7 +14,7 @@
 #-#  limitations under the License.
 
 from gcSupport import *
-from grid_control.datasets import DataProvider, NickNameProducer
+from grid_control.datasets import NickNameProducer
 from grid_control_cms.provider_dbsv2 import createDBSAPI
 
 usage = '%s [OPTIONS] <DBS dataset path>' % sys.argv[0]

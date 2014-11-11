@@ -12,7 +12,7 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-from grid_control import QM, Job, RuntimeError, utils, AbstractError, LoadableObject
+from grid_control import Job, utils, AbstractError, LoadableObject
 
 class Report(LoadableObject):
 	def __init__(self, jobDB, task, jobs = None, configString = ''):

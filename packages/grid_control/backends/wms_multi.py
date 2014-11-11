@@ -12,7 +12,6 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-from grid_control import RuntimeError
 from wms import WMS
 from broker import Broker
 # Distribute to WMS according to job id prefix

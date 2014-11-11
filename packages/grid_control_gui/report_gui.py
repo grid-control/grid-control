@@ -284,9 +284,9 @@ class GUIReport(AdaptiveReport):
 			desc = self._formatDesc(catDescDict[catKey], catSubcatDict.get(catKey, 0))
 			completed = sumCat(catKey, [Job.SUCCESS])
 			total = sum(catStateDict[catKey].values())
-			self.printLimited(Console.fmt(desc, [Console.BOLD]), self.maxX,
+			self.printLimited(Console.fmt(desc, [Console.BOLD]), self.maxX - 24,
 				'(%5d jobs, %6.2f%%  )' % (total, 100 * completed / float(total)))
-			bar = JobProgressBar(sum(catStateDict[catKey].values()), width = self.maxX)
+			bar = JobProgressBar(sum(catStateDict[catKey].values()), width = self.maxX - 19)
 			bar.update(completed,
 				sumCat(catKey, [Job.SUBMITTED, Job.WAITING, Job.READY, Job.QUEUED]),
 				sumCat(catKey, [Job.RUNNING, Job.DONE]),

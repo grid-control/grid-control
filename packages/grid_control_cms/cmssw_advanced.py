@@ -15,7 +15,7 @@
 import os, re, cmssw
 from python_compat import set, sorted
 from grid_control import datasets, utils, ConfigError
-from grid_control.datasets import DataSplitter, DataProvider
+from grid_control.datasets import DataProvider
 from lumi_tools import *
 
 def fromNM(nm, nickname, default):

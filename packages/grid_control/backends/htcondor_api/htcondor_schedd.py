@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 
 # core modules
-import sys
 import os
 
 # standard modules
@@ -10,7 +9,6 @@ import re
 
 # GC modules
 import utils
-from abstract       import LoadableObject
 from htcondor_utils import parseKWListIter, singleQueryCache
 from wmsid          import HTCJobID
 from grid_control   import WMS

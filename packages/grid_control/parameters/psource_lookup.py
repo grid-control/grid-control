@@ -13,7 +13,7 @@
 #-#  limitations under the License.
 
 import re
-from grid_control import utils, ConfigError, QM
+from grid_control import utils, ConfigError
 from psource_base import ParameterSource, ParameterInfo
 from psource_basic import KeyParameterSource, SingleParameterSource, SimpleParameterSource
 

@@ -13,7 +13,7 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-import sys, os, signal, optparse, time, logging
+import sys, os, signal, optparse, logging
 
 # Load grid-control package
 sys.path.insert(1, os.path.join(sys.path[0], 'packages'))

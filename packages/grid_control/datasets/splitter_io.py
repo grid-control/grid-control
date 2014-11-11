@@ -12,9 +12,8 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-import os, tarfile, time, copy, cStringIO, threading, gzip
-from grid_control import QM, LoadableObject, AbstractError, RuntimeError, utils, ConfigError, Config, noDefault
-from provider_base import DataProvider
+import os, tarfile, cStringIO, threading, gzip
+from grid_control import utils, ConfigError
 from splitter_base import DataSplitter
 
 class BaseJobFileTarAdaptor(object):

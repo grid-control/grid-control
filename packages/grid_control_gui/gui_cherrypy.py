@@ -12,6 +12,7 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
+from python_compat import sorted
 from grid_control import GUI, utils, Job
 import time, os, tempfile
 try:

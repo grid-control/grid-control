@@ -12,10 +12,10 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-from grid_control import QM, utils, DatasetError, RethrowError, datasets
+from grid_control import QM, datasets
 from grid_control.datasets import DataProvider
 from provider_cms import CMSProvider
-from webservice_api import *
+from webservice_api import readURL, parseJSON
 import time
 
 # required format: <dataset path>[@<instance>][#<block>]

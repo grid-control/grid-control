@@ -12,7 +12,7 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-import sys, os, stat, time, popen2, math
+import os, stat, time, math
 from exceptions import *
 
 from abstract import LoadableObject

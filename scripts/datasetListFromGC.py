@@ -13,7 +13,7 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-import os, gcSupport, sys, optparse, datasetListFromX
+import gcSupport, sys, optparse, datasetListFromX
 
 usage = '[options] <config file / work directory>'
 parser = optparse.OptionParser(usage='%%prog %s' % usage)

@@ -13,7 +13,7 @@
 #-#  limitations under the License.
 
 from python_compat import next
-from grid_control import ConfigError, RethrowError, Job, utils, backends
+from grid_control import Job, utils, backends
 from grid_control.backends import LocalWMS
 
 class Host(LocalWMS):

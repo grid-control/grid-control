@@ -12,8 +12,8 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-import sys, os, tempfile, shutil, time, random, glob
-from grid_control import AbstractError, ConfigError, Job, utils
+import os, tempfile, shutil, time, glob
+from grid_control import AbstractError, Job, utils
 from wms import WMS, BasicWMS
 from broker import Broker
 

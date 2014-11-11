@@ -2,13 +2,11 @@
 
 # core modules
 import os
-import sys
 import atexit
 
 # standard modules
 import logging
 import re
-import stat
 import shutil
 import time
 import tempfile
@@ -18,7 +16,7 @@ import socket
 from python_compat import *
 from exceptions    import *
 from abstract      import LoadableObject
-from utils         import LoggedProcess, resolveInstallPath, ensureDirExists, lru_cache, QM, InstallationError
+from utils         import LoggedProcess, resolveInstallPath, ensureDirExists, lru_cache, InstallationError
 
 # Container to call commands in a generic fashion
 class CommandContainer(object):

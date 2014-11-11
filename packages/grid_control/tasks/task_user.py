@@ -12,8 +12,7 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-import os.path
-from grid_control import QM, datasets
+from grid_control import QM
 from task_data import DataTask
 from task_utils import TaskExecutableWrapper
 

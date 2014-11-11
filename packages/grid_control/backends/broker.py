@@ -13,7 +13,7 @@
 #-#  limitations under the License.
 
 import random
-from grid_control import QM, NamedObject, AbstractError, utils
+from grid_control import QM, NamedObject, utils
 
 class Broker(NamedObject):
 	configSections = ['broker']

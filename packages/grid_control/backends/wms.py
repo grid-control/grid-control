@@ -15,9 +15,8 @@
 # Generic base class for workload management systems
 
 from python_compat import set, sorted
-import sys, os, time, stat, shutil, tarfile, glob, itertools
-from grid_control import QM, NamedObject, AbstractError, ConfigError, RuntimeError, RethrowError, UserError, utils, Proxy, StorageManager, ClassFactory
-from broker import Broker
+import os, shutil, glob, itertools
+from grid_control import QM, NamedObject, AbstractError, RuntimeError, RethrowError, utils, Proxy, StorageManager, ClassFactory
 
 class WMS(NamedObject):
 	configSections = ['wms', 'backend']

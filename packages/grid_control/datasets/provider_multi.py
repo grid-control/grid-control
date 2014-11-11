@@ -12,7 +12,7 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-from grid_control import utils, DatasetError, GCError, logException
+from grid_control import utils, DatasetError, logException
 from provider_base import DataProvider
 
 class DataMultiplexer(DataProvider):

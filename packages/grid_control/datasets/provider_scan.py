@@ -12,8 +12,8 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-import os, fnmatch, operator
-from grid_control import QM, utils, ConfigError, storage, JobSelector, LoadableObject, Config, DefaultFilesConfigFiller, GeneralFileConfigFiller, MultiConfigFiller
+import os
+from grid_control import QM, utils, DefaultFilesConfigFiller, GeneralFileConfigFiller, MultiConfigFiller
 from provider_base import DataProvider
 from python_compat import set, md5
 from scanner_base import InfoScanner

@@ -12,7 +12,7 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-import os, re, tarfile, operator, xml.dom.minidom
+import os, re, tarfile, xml.dom.minidom
 from grid_control import QM, RethrowError
 from grid_control.datasets import InfoScanner
 

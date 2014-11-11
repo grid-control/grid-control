@@ -12,9 +12,9 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-import sys, os, re, fnmatch, random, math, time, operator
+import random, math, time
 import bisect
-from grid_control import QM, ConfigError, RuntimeError, RethrowError, Job, JobClass, JobDB, Report, utils, NamedObject
+from grid_control import QM, ConfigError, RuntimeError, Job, JobClass, JobDB, Report, utils, NamedObject
 from job_selector import JobSelector, ClassSelector, AndJobSelector
 from python_compat import set, sorted
 

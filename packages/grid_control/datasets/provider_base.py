@@ -13,7 +13,7 @@
 #-#  limitations under the License.
 
 import os, cStringIO, copy
-from grid_control import QM, utils, LoadableObject, AbstractError, ConfigError, noDefault, DatasetError, ConfigFactory
+from grid_control import QM, utils, LoadableObject, AbstractError, ConfigFactory
 from nickname_base import NickNameProducer
 
 class DataProvider(LoadableObject):

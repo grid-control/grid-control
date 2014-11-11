@@ -42,7 +42,7 @@ def mergeLumi(rlrange):
 	>>> mergeLumi([([1, 1], [2, 2]), ([2, 3], [2, 10]), ([2, 11], [4, 30])])
 	[([1, 1], [4, 30])]
 	"""
-	rlrange = sorted(rlrange, cmpLumi)
+	rlrange.sort(cmpLumi)
 	i = 0
 	while i < len(rlrange) - 1:
 		(end_run, end_lumi) = rlrange[i][1]

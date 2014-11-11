@@ -12,8 +12,9 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
+import sys
 from python_compat import rsplit
-from exceptions import *
+from grid_control.exceptions import GCError, ConfigError, RethrowError
 import utils, logging
 
 # Abstract class taking care of dynamic class loading 

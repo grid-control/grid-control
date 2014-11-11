@@ -414,6 +414,8 @@ wipp-crm.weizmann.ac.il
 	print "unused entries:", filter(lambda x: x not in used, geoDict)
 
 	print 'geoDict = {'
-	for entry in sorted(geoDict, key = lambda x: str.join('.', reversed(x.split('.')))):
+	geoDictKeys = geoDict.keys()
+	geoDictKeys.sort(key = lambda x: str.join('.', reversed(x.split('.'))))
+	for entry in geoDictKeys:
 		print '\t%r: (%.6f, %.6f),' % (entry, geoDict[entry][0], geoDict[entry][1])
 	print '}'

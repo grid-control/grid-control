@@ -14,7 +14,7 @@
 
 import time
 from python_compat import set
-from grid_control import AbstractError, LoadableObject, APIError, utils, QM
+from grid_control import AbstractError, LoadableObject, utils, QM
 
 class ParameterInfo:
 	reqTypes = ('ACTIVE', 'HASH', 'REQS')

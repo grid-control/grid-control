@@ -13,7 +13,7 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-import os, gcSupport, sys, optparse
+import gcSupport, sys
 
 def addOptions(parser):
 	parser.add_option('-d', '--dataset', dest='dataset name pattern', default='', help='Name pattern of dataset')

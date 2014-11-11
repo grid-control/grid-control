@@ -12,12 +12,11 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-import os, csv, gzip
+import csv, gzip
 from python_compat import sorted
 from grid_control import utils
 from psource_base import ParameterSource, ParameterMetadata, ParameterInfo
 from psource_basic import InternalParameterSource
-from psource_meta import ForwardingParameterSource
 
 # Reader for grid-control dump files
 class GCDumpParameterSource(ParameterSource):

@@ -51,7 +51,6 @@ import time
 import struct
 import copy
 import re
-import operator
 
 if not hasattr(os, 'SEEK_SET'):
 	os.SEEK_SET = 0

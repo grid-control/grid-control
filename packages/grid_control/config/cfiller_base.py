@@ -13,6 +13,7 @@
 #-#  limitations under the License.
 
 # GCSCF: DEF,ENC
+from python_compat import rsplit
 from grid_control import ConfigError, RethrowError, utils, LoadableObject
 from config_entry import ConfigEntry
 import os, logging

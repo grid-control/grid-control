@@ -12,14 +12,13 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-import os
 from psource_basic import *
 from psource_meta import *
 from psource_file import *
 from psource_data import *
 from padapter import *
 from config_param import ParameterConfig
-from grid_control import NamedObject, QM, utils
+from grid_control import NamedObject
 
 class ParameterFactory(NamedObject):
 	configSections = ['parameters']

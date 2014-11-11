@@ -19,7 +19,6 @@ from grid_control.backends import WMS
 from grid_control.job_manager import JobManager
 from grid_control.gui import GUI
 from grid_control import utils
-from grid_control.report import Report
 
 # Workflow class
 class Workflow(NamedObject):

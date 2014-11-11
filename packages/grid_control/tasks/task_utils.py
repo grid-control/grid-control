@@ -13,7 +13,7 @@
 #-#  limitations under the License.
 
 import os
-from grid_control import QM, utils, noDefault, changeInitNeeded
+from grid_control import QM, noDefault, changeInitNeeded
 
 class TaskExecutableWrapper:
 	def __init__(self, config, prefix = '', exeDefault = noDefault):

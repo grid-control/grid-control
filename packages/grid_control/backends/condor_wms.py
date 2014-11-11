@@ -14,7 +14,7 @@
 
 # -*- coding: utf-8 -*-
 
-import sys, os
+import os
 import re
 import commands, glob
 import popen2

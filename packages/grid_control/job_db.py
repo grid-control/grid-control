@@ -12,9 +12,9 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-import sys, os, time, fnmatch, operator, utils
+import os, time, fnmatch, operator, utils
 from abstract import LoadableObject
-from exceptions import ConfigError, RuntimeError, RethrowError
+from exceptions import RuntimeError, RethrowError
 from utils import QM
 
 class Job:

@@ -12,8 +12,7 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-from grid_control import NamedObject
-from config_entry import standardConfigForm, ConfigEntry
+from config_entry import standardConfigForm
 from cview_base import SimpleConfigView, selectorUnchanged
 
 # Simple ConfigView implementation

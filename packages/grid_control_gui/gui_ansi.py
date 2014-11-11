@@ -14,7 +14,7 @@
 
 import sys, re, signal
 from ansi import Console
-from grid_control import GUI, utils, Report
+from grid_control import GUI, utils
 
 class GUIStream:
 	def __init__(self, stream, screen):

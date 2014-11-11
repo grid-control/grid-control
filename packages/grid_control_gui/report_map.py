@@ -12,9 +12,10 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-import matplotlib.pyplot as plt
+import matplotlib.pyplot
 import geodb
 import numpy, math, random, os
+from python_compat import sorted
 
 def remove_all_overlap(data):
 	dist2 = lambda a, b: (a['x'] - b['x'])**2 + (a['y'] - b['y'])**2
@@ -82,9 +83,9 @@ def drawMap(report):
 	print (lon_l, lat_l)
 	print (lon_h, lat_h)
 
-	plt.subplots_adjust(left=0, right=1, top=1, bottom=0, wspace=0, hspace=0)
-	fig = plt.figure(figsize=(12, 6))
-	ax = plt.subplot(111)
+	matplotlib.pyplot.subplots_adjust(left=0, right=1, top=1, bottom=0, wspace=0, hspace=0)
+	fig = matplotlib.pyplot.figure(figsize=(12, 6))
+	ax = matplotlib.pyplot.subplot(111)
 	m = Basemap(projection='cyl', lat_0=0, lon_0=0,
 		llcrnrlat=lat_l-10, urcrnrlat=lat_h+10,
 		llcrnrlon=lon_l-10, urcrnrlon=lon_h+10)

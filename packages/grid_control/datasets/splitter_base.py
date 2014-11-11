@@ -13,8 +13,8 @@
 #-#  limitations under the License.
 
 from python_compat import next
-import os, tarfile, time, copy, cStringIO, threading, gzip
-from grid_control import QM, LoadableObject, AbstractError, RuntimeError, utils, ConfigError, Config, noDefault
+import os, copy
+from grid_control import QM, LoadableObject, AbstractError, RuntimeError, utils, ConfigError, noDefault
 from provider_base import DataProvider
 
 def fast_search(lst, cmp_op):

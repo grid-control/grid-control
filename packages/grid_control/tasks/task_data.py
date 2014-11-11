@@ -12,9 +12,9 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-import os, os.path, time, signal
+import os, signal
 from task_base import TaskModule
-from grid_control import GCError, ConfigError, UserError, utils, WMS
+from grid_control import UserError, utils
 from grid_control import datasets
 from grid_control.datasets import DataProvider, DataSplitter
 from grid_control.parameters.psource_data import ParameterSource, DataParameterSource, DataSplitProcessor

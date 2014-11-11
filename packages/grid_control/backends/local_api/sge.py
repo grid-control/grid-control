@@ -12,7 +12,7 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-import sys, os, xml.dom.minidom
+import os, xml.dom.minidom
 from grid_control import QM, ConfigError, RethrowError, Job, utils
 from grid_control.backends.wms import WMS
 from pbsge import PBSGECommon

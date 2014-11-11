@@ -14,7 +14,7 @@
 
 from grid_control import QM
 from python_compat import md5
-from psource_base import ParameterSource, ParameterMetadata
+from psource_base import ParameterSource
 
 def combineSyncResult(a, b, sc_fun = lambda x, y: x or y):
 	if a == None:

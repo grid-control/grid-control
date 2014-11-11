@@ -14,7 +14,7 @@
 
 from python_compat import md5, parsedate
 import sys, os, time, copy, tempfile, tarfile
-from grid_control import QM, ConfigError, APIError, RethrowError, Job, utils
+from grid_control import QM, APIError, RethrowError, Job, utils
 from wms import WMS, BasicWMS
 from broker import Broker
 

@@ -13,7 +13,7 @@
 #-#  limitations under the License.
 
 import os, sys
-from grid_control import QM, utils, ConfigError, storage, JobSelector, LoadableObject, Config, JobDB, JobSelector, Job, RethrowError, DefaultFilesConfigFiller, GeneralFileConfigFiller, MultiConfigFiller
+from grid_control import QM, utils, storage, JobSelector, JobDB, JobSelector, Job, RethrowError, DefaultFilesConfigFiller, GeneralFileConfigFiller, MultiConfigFiller
 from scanner_base import InfoScanner
 from grid_control.datasets import DataProvider
 from python_compat import set, sorted

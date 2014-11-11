@@ -19,7 +19,6 @@ from psource_meta import *
 from psource_lookup import *
 from psource_data import *
 from psource_file import *
-from config_param import ParameterConfig
 from pfactory_base import BasicParameterFactory
 from python_compat import next
 

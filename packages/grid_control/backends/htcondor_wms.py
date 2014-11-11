@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 
 # core modules
-import sys
 import os
 
 # standard modules
@@ -10,8 +9,6 @@ import logging
 # GC modules
 import utils
 import json
-from abstract     import LoadableObject
-from config       import changeOnlyUnset
 from wms          import BasicWMS
 from grid_control import Job
 from grid_control.exceptions   import ConfigError

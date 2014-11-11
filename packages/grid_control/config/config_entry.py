@@ -12,9 +12,8 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-from python_compat import sorted
+from python_compat import sorted, set
 from grid_control import ConfigError, utils, QM, APIError
-import logging
 
 # Placeholder to specify a non-existing default
 noDefault = utils.makeEnum(['noDefault'])

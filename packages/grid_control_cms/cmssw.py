@@ -12,12 +12,12 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-import os, sys, shutil
-from grid_control import QM, ConfigError, WMS, utils, storage, datasets, noDefault
+import os, shutil
+from grid_control import QM, ConfigError, WMS, utils, datasets, noDefault
 from grid_control.tasks.task_data import DataTask
 from grid_control.tasks.task_utils import TaskExecutableWrapper
 from grid_control.datasets import DataSplitter
-from grid_control.parameters import DataParameterSource, DataSplitProcessor
+from grid_control.parameters import DataSplitProcessor
 from lumi_tools import *
 
 class CMSDataSplitProcessor(DataSplitProcessor):

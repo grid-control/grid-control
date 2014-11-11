@@ -12,8 +12,7 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-import sys, os, shutil
-from grid_control import ConfigError, RethrowError, Job, utils
+from grid_control import Job, utils
 from grid_control.backends import WMS, LocalWMS
 
 class JMS(LocalWMS):

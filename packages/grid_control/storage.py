@@ -13,7 +13,7 @@
 #-#  limitations under the License.
 
 import os, utils, shutil
-from grid_control import *
+from grid_control import ConfigError, RethrowError, RuntimeError, NamedObject, validNoVar, QM
 from python_compat import set
 
 # All functions use url_* functions from gc-run.lib (just like the job did...)
