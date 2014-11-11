@@ -28,7 +28,7 @@ class TypedConfigInterface(object):
 		self._log = logging.getLogger('config.%s' % self._configView.configName)
 
 	def __str__(self):
-		return '<%s(view = %r)>' % (self.__class__.__name__, self._configView)
+		return '<%s(view = %s)>' % (self.__class__.__name__, self._configView)
 
 	def changeView(self, interfaceClass = None, **kwargs):
 		if not interfaceClass:
