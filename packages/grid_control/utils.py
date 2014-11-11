@@ -27,7 +27,7 @@ defaultArg = object()
 ################################################################
 # Path helper functions
 
-cleanPath = lambda x: os.path.abspath(os.path.normpath(os.path.expanduser(x.strip())))
+cleanPath = lambda x: os.path.expandvars(os.path.normpath(os.path.expanduser(x.strip())))
 
 def getRootName(fn): # Return file name without extension
 	bn = os.path.basename(str(fn)).lstrip('.')
@@ -37,20 +37,27 @@ def getRootName(fn): # Return file name without extension
 pathGC = lambda *args: cleanPath(os.path.join(sys.path[1], '..', *args))
 pathShare = lambda *args, **kw: cleanPath(os.path.join(sys.path[1], kw.get('pkg', 'grid_control'), 'share', *args))
 
-def resolvePaths(path, userPath = [], mustExist = True, ErrorClass = RuntimeError):
-	path = os.path.normpath(os.path.expanduser(path))
-	searchpaths = map(cleanPath, uniqueListLR([os.getcwd(), pathGC()] + userPath))
-	for spath in searchpaths:
-		result = glob.glob(cleanPath(os.path.join(spath, os.path.expandvars(path))))
-		if result:
-			return result
-	if mustExist:
-		raise ErrorClass('Could not find file "%s" in \n\t%s' % (path, str.join('\n\t', searchpaths)))
-	return [cleanPath(path)]
+def resolvePaths(path, searchPaths = [], mustExist = True, ErrorClass = RuntimeError):
+	path = cleanPath(path) # replace $VAR, ~user, \ separators
+	result = []
+	if os.path.isabs(path):
+		result.extend(glob.glob(path)) # Resolve wildcards for existing files
+		if not result:
+			if mustExist:
+				raise ErrorClass('Could not find file "%s"' % path)
+			return [path] # Return non-existing, absolute path
+	else: # search relative path in search directories
+		for spath in set(searchPaths):
+			result.extend(glob.glob(cleanPath(os.path.join(spath, path))))
+		if not result:
+			if mustExist:
+				raise ErrorClass('Could not find file "%s" in \n\t%s' % (path, str.join('\n\t', searchPaths)))
+			raise APIError('Relative path to non-existing file "%s" used!' % path)
+	return result
 
 
-def resolvePath(path, userPath = [], mustExist = True, ErrorClass = RuntimeError):
-	result = resolvePaths(path, userPath = userPath, mustExist = mustExist, ErrorClass = ErrorClass)
+def resolvePath(path, searchPaths = [], mustExist = True, ErrorClass = RuntimeError):
+	result = resolvePaths(path, searchPaths, mustExist, ErrorClass)
 	if len(result) != 1:
 		raise ErrorClass('Path "%s" matches multiple files:\n\t%s' % (path, str.join('\n\t', result)))
 	return result[0]
