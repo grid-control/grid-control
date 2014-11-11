@@ -16,7 +16,7 @@ import os
 from grid_control import NamedObject, Job, utils
 
 class EventHandler(NamedObject):
-	getConfigSections = NamedObject.createFunction_getConfigSections(['events'])
+	configSections = ['events']
 
 	def __init__(self, config, name, task, submodules = []):
 		NamedObject.__init__(self, config, name)
@@ -64,7 +64,7 @@ class MultiMonitor(Monitoring):
 
 
 class ScriptMonitoring(Monitoring):
-	getConfigSections = NamedObject.createFunction_getConfigSections(['scripts'])
+	configSections = EventHandler.configSections + ['scripts']
 
 	def __init__(self, config, name, task):
 		Monitoring.__init__(self, config, name, task)

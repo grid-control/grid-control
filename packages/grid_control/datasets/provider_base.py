@@ -13,7 +13,7 @@
 #-#  limitations under the License.
 
 import os, cStringIO, copy
-from grid_control import QM, utils, LoadableObject, AbstractError, ConfigError, noDefault, Config, DatasetError
+from grid_control import QM, utils, LoadableObject, AbstractError, ConfigError, noDefault, DatasetError, ConfigFactory
 from nickname_base import NickNameProducer
 
 class DataProvider(LoadableObject):
@@ -59,12 +59,11 @@ class DataProvider(LoadableObject):
 	# Create a new DataProvider instance
 	def create(config, dataset, defaultProvider, dsId = 0):
 		if '\n' in dataset:
-			return DataProvider.open('DataMultiplexer', config, dataset, defaultProvider)
+			return DataProvider.getInstance('DataMultiplexer', config, dataset, defaultProvider)
 		else:
 			(dsNick, dsProv, dsExpr) = DataProvider.parseDatasetExpr(config, dataset, defaultProvider)
-			config = config.addSections(['dataset']).addNames([dsNick, str(dsId)])
-			section = ['dataset %s' % dsNick, 'dataset %s' % dsId, 'dataset', 'dataset'] # TODO: remove
-			return DataProvider.open(dsProv, config, dsExpr, dsNick, dsId)
+			config = config.changeView(addSections = ['dataset'], addNames = [dsNick, str(dsId)])
+			return DataProvider.getInstance(dsProv, config, dsExpr, dsNick, dsId)
 	create = staticmethod(create)
 
 
@@ -227,9 +226,12 @@ class DataProvider(LoadableObject):
 
 
 	# Load dataset information using ListProvider
-	def loadState(path, config = Config()):
+	def loadState(path, config = None):
+		if config == None:
+			config = ConfigFactory().getConfig()
+		config = config.changeView(addSections = ['dataset'])
 		# None, None = Don't override NickName and ID
-		return DataProvider.open('ListProvider', config.addSections(['dataset']), path, None, None)
+		return DataProvider.getInstance('ListProvider', config, path, None, None)
 	loadState = staticmethod(loadState)
 
 

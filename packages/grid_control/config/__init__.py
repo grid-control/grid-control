@@ -12,10 +12,12 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-from config_basic import Config, CompatConfig, noDefault
-from config_handlers import validNoVar, changeImpossible, changeInitNeeded, changeOnlyUnset
-from filler_base import ConfigFiller, MultiConfigFiller, DefaultFilesConfigFiller,\
-	DictConfigFiller, StringConfigFiller, GeneralFileConfigFiller
+from config_entry import noDefault, ConfigEntry
+from cview_tagged import TaggedConfigView
+from config_factory import ConfigFactory
+from chandlers_base import validNoVar, changeImpossible, changeInitNeeded
+from cfiller_base import ConfigFiller, MultiConfigFiller,\
+	DefaultFilesConfigFiller, DictConfigFiller, StringConfigFiller, GeneralFileConfigFiller
 
 # At the lowest level, all config option values are represented by strings
 # which are encapsulated in the ConfigEntry class, which holds access and source
@@ -25,4 +27,4 @@ from filler_base import ConfigFiller, MultiConfigFiller, DefaultFilesConfigFille
 # entries accessible via "section" and "option" specifiers.
 
 # The type parsing config interface (getInt, getBool, getClass, ...) is defined
-# in the ConfigBase class
+# in the TypedConfigInterface class

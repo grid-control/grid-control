@@ -18,6 +18,8 @@ import utils, logging
 
 # Abstract class taking care of dynamic class loading 
 class LoadableObject(object):
+	configSections = []
+
 	# Modify the module search path for the class - parent is used by NamedObject to impersonate caller
 	def registerObject(cls, searchPath = [], base = None):
 		if not base:
@@ -27,7 +29,6 @@ class LoadableObject(object):
 		splitUpFun = lambda x: rsplit(base.__module__, ".", x)[0]
 		base.modPaths = utils.uniqueListRL(searchPath + base.modPaths + map(splitUpFun, range(base.__module__.count(".") + 1)))
 	registerObject = classmethod(registerObject)
-
 
 	def getClass(cls, clsName):
 		log = logging.getLogger('classloader.%s' % cls.__name__)
@@ -70,7 +71,7 @@ class LoadableObject(object):
 		raise ConfigError('%s "%s" does not exist in\n\t%s!' % (cls.__name__, clsName, str.join('\n\t', searchPath(clsName))))
 	getClass = classmethod(getClass)
 
-
+	# Get an instance of a derived class by specifying the class name and constructor arguments
 	def getInstance(cls, clsName, *args, **kwargs):
 		clsType = None
 		try:
@@ -80,7 +81,6 @@ class LoadableObject(object):
 			raise
 		except:
 			raise RethrowError('Error while creating instance of type %s (%s)' % (clsName, clsType))
-	open = classmethod(getInstance)
 	getInstance = classmethod(getInstance)
 
 LoadableObject.pkgPaths = []
@@ -91,10 +91,8 @@ class NamedObject(LoadableObject):
 	def __init__(self, config, name):
 		self._name = name
 
-
 	def getObjectName(self):
 		return self._name
-
 
 	# Modify the module search path for the class
 	def registerObject(cls, searchPath = [], tagName = None, defaultName = None):
@@ -104,35 +102,6 @@ class NamedObject(LoadableObject):
 			cls.defaultName = defaultName
 		LoadableObject.registerObject(searchPath, base = cls)
 	registerObject = classmethod(registerObject)
-
-
-	# Collects named config section
-	def getAllConfigSections(cls, instName):
-		def collectSections(clsCurrent): # Collect sections based on class hierarchie
-			if clsCurrent != NamedObject:
-				for section in clsCurrent.getConfigSections():
-					if section.lower() != instName.lower():
-						yield section + ' ' + instName
-					yield section
-				for clsBase in clsCurrent.__bases__:
-					for section in collectSections(clsBase):
-						yield section
-		return list(collectSections(cls))
-	getAllConfigSections = classmethod(getAllConfigSections)
-
-
-	def getConfigSections(cls):
-		return []
-	getConfigSections = classmethod(getConfigSections)
-
-
-	# Function to quickly create getConfigSections class members returning a fixed section list
-	def createFunction_getConfigSections(clsParent, sections):
-		def getConfigSectionsTemplate(cls):
-			return sections
-		return classmethod(getConfigSectionsTemplate)
-	createFunction_getConfigSections = classmethod(createFunction_getConfigSections)
-
 
 
 # General purpose class factory
@@ -166,7 +135,7 @@ class ClassWrapper:
 	def __eq__(self, other): # Used to check for changes compared to old
 		return str(self) == str(other)
 
-	def __repr__(self):
+	def __str__(self):
 		return '<class wrapper for %r (base: %r)>' % (str(self), self._baseClass.__name__)
 
 	def __str__(self):  # Used to serialize config setting
@@ -177,6 +146,11 @@ class ClassWrapper:
 	def getInstance(self, *args, **kwargs):
 		cls = self._baseClass.getClass(self._instClassName)
 		if issubclass(cls, NamedObject):
-			config = self._config.newClass(cls, [self._instName]).addTags(self._tags)
+			addSections = []
+			if self._inherit:
+				addSections = cls.configSections
+			from config import TaggedConfigView
+			config = self._config.changeView(viewClass = TaggedConfigView, setSections = None,
+				addSections = addSections, setClasses = [cls], setNames = [self._instName], addTags = self._tags)
 			return cls(config, self._instName, *args, **kwargs)
 		return cls(*args, **kwargs)

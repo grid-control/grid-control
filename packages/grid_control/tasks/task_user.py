@@ -18,7 +18,7 @@ from task_data import DataTask
 from task_utils import TaskExecutableWrapper
 
 class UserTask(DataTask):
-	getConfigSections = DataTask.createFunction_getConfigSections(['UserTask'])
+	configSections = DataTask.configSections + ['UserTask']
 
 	def __init__(self, config, name):
 		DataTask.__init__(self, config, name)
@@ -43,4 +43,4 @@ class UserTask(DataTask):
 
 
 class UserMod(UserTask):
-	getConfigSections = DataTask.createFunction_getConfigSections(['UserMod'])
+	configSections = DataTask.configSections + ['UserMod', 'UserTask']

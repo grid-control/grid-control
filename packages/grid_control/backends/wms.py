@@ -20,7 +20,7 @@ from grid_control import QM, NamedObject, AbstractError, ConfigError, RuntimeErr
 from broker import Broker
 
 class WMS(NamedObject):
-	getConfigSections = NamedObject.createFunction_getConfigSections(['backend'])
+	configSections = ['wms', 'backend']
 
 	reqTypes = ('WALLTIME', 'CPUTIME', 'MEMORY', 'CPUS', 'BACKEND', 'SITES', 'QUEUES', 'SOFTWARE', 'STORAGE')
 	for idx, reqType in enumerate(reqTypes):
@@ -76,7 +76,7 @@ class InactiveWMS(WMS):
 	def __init__(self, config, wmsName, wmsClass):
 		WMS.__init__(self, config, wmsName, wmsClass)
 		self.proxy = ClassFactory(config, ('proxy', 'TrivialProxy'), ('proxy manager', 'MultiProxy'),
-			cls = Proxy, tags = [self]).getInstance()
+			cls = Proxy, inherit = True, tags = [self]).getInstance()
 
 	def canSubmit(self, neededTime, canCurrentlySubmit):
 		return True
@@ -115,7 +115,7 @@ class BasicWMS(WMS):
 
 		# Initialise proxy, broker and storage manager
 		self.proxy = ClassFactory(config, ('proxy', 'TrivialProxy'), ('proxy manager', 'MultiProxy'),
-			cls = Proxy, tags = [self]).getInstance()
+			cls = Proxy, inherit = True, tags = [self]).getInstance()
 
 		# UI -> SE -> WN
 		self.smSEIn = config.getClass('se input manager', 'SEStorageManager', cls = StorageManager, tags = [self]).getInstance('se', 'se input', 'SE_INPUT')

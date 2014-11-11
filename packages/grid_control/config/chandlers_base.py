@@ -20,36 +20,29 @@ def changeImpossible(config, old_obj, cur_obj, cur_entry, obj2str):
 	raise ConfigError('It is *not* possible to change "%s" from \'%s\' to \'%s\'!' %
 		(cur_entry.format_opt(), obj2str(old_obj), obj2str(cur_obj)))
 
-# Change handler to disallow modification, accepting only unset variables
-def changeOnlyUnset(config, old_obj, cur_obj, cur_entry, obj2str):
-	if not ( old_obj and cur_obj ):
-		return cur_obj and cur_obj or old_obj
-	raise ConfigError('It is *not* possible to change "%s" once it has been set!\n( Found change from \'%s\' to \'%s\' )' %
-		(cur_entry.format_opt(), obj2str(old_obj), obj2str(cur_obj)))
-
 
 # Change handler to trigger re-inits
-class changeInitNeeded:
+class changeInitNeeded(object):
 	def __init__(self, option):
 		self._option = option
 
 	def __call__(self, config, old_obj, cur_obj, cur_entry, obj2str):
 		log = logging.getLogger('config.onChange.%s' % self._option)
-		raw_config = config.clone()
-		interaction_def = raw_config.getBool('interactive', 'default', True, onChange = None)
-		interaction_opt = raw_config.getBool('interactive', self._option, interaction_def, onChange = None)
+		config = config.changeView(setSections = ['interactive'])
+		interaction_def = config.getBool('default', True, onChange = None)
+		interaction_opt = config.getBool(self._option, interaction_def, onChange = None)
 		if interaction_opt:
 			if utils.getUserBool('The option "%s" was changed from the old value:' % cur_entry.format_opt() +
 				'\n\t%s\nto the new value:\n\t%s\nDo you want to abort?' % (obj2str(old_obj), obj2str(cur_obj)), False):
 				raise ConfigError('Abort due to unintentional config change!')
 			if not utils.getUserBool('A partial reinitialization (same as --reinit %s) is needed to apply this change! Do you want to continue?' % self._option, True):
-				log.log(logging.INFO1, 'Using stored value %s for option %s' % (obj2str(cur_obj), cur_entry.format_opt()))
+				log.log(logging.INFO1, 'Using stored value %s for option %s' % (obj2str(old_obj), cur_entry.format_opt()))
 				return old_obj
-		config.setState(True, 'init', self._option) # This will trigger a write of the new options
-		config.setState(True, 'init', 'config')
+		config.setState(True, 'init', detail = self._option)
+		config.setState(True, 'init', detail = 'config') # This will trigger a write of the new options
 		return cur_obj
 
 
 # Validation handler to check for variables in string
-def validNoVar(section, option, obj):
-	return utils.checkVar(obj, '[%s] "%s" may not contain variables.' % (section, option))
+def validNoVar(loc, obj):
+	return utils.checkVar(obj, '%s = %s may not contain variables.' % (loc, obj))

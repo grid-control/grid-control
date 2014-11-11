@@ -34,7 +34,7 @@ class BaseJobFileTarAdaptor(object):
 		del log
 
 
-class DataSplitterIO_V1:
+class DataSplitterIO_V1(object):
 	# Save as tar file to allow random access to mapping data with little memory overhead
 	def saveState(self, path, meta, source, sourceLen, message):
 		tar = tarfile.open(path, 'w:')
@@ -119,7 +119,7 @@ class DataSplitterIO_V1:
 		except:
 			raise ConfigError("No valid dataset splitting found in '%s'." % path)
 
-class DataSplitterIO_V2:
+class DataSplitterIO_V2(object):
 	def __init__(self):
 		self.keySize = 100
 
@@ -218,7 +218,7 @@ class DataSplitterIO_V2:
 			raise ConfigError("No valid dataset splitting found in '%s'." % path)
 
 
-class DataSplitterIO:
+class DataSplitterIO(object):
 	def saveState(self, path, meta, source, sourceLen, message = 'Writing job mapping file', version = 2):
 		if version == 1:
 			writer = DataSplitterIO_V1()

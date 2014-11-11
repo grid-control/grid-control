@@ -65,14 +65,9 @@ def parseParameterOptions(options):
 
 
 class ParameterConfig:
-	def __init__(self, config, sections, static):
-		(self.config, self.sections, self.static) = (config, sections, static)
-		(self.varDict, self.optDict) = ({}, {})
-		for section in sections:
-			(varDict, optDict) = parseParameterOptions(config.getOptions(section))
-			self.varDict.update(varDict)
-			self.optDict.update(optDict)
-		self.configLog = {}
+	def __init__(self, config, static):
+		(self.config, self.static) = (config, static)
+		(self.varDict, self.optDict) = parseParameterOptions(config.getOptions())
 
 
 	def parseParameter(self, varName, value, ptype):
@@ -127,14 +122,12 @@ class ParameterConfig:
 
 
 	def get(self, var, opt = None, default = noDefault):
-		result = self.config.get(self.sections, self.getOpt(var, opt), default, onChange = self.onChange)
-		self.configLog[(var, opt)] = result
+		result = self.config.get(self.getOpt(var, opt), default, onChange = self.onChange)
 		return result
 
 
 	def getBool(self, var, opt = None, default = noDefault):
-		result = self.config.getBool(self.sections, self.getOpt(var, opt), default, onChange = self.onChange)
-		self.configLog[(var, opt)] = result
+		result = self.config.getBool(self.getOpt(var, opt), default, onChange = self.onChange)
 		return result
 
 

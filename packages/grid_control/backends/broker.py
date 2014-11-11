@@ -16,7 +16,7 @@ import random
 from grid_control import QM, NamedObject, AbstractError, utils
 
 class Broker(NamedObject):
-	getConfigSections = NamedObject.createFunction_getConfigSections(['broker'])
+	configSections = ['broker']
 
 	def __init__(self, config, name, userOpt, itemName, discoverFun):
 		NamedObject.__init__(self, config, name)

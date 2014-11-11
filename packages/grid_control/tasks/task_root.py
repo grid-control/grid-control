@@ -13,18 +13,18 @@
 #-#  limitations under the License.
 
 import os
-from grid_control import QM, utils, ConfigError
+from grid_control import QM, utils, ConfigError, changeInitNeeded
 from task_user import UserTask
 
 class ROOTTask(UserTask):
+	configSections = UserTask.configSections + ['ROOTTask']
+
 	def __init__(self, config, name):
 		# Determine ROOT path from previous settings / environment / config file
-		taskInfo = utils.PersistentDict(config.getWorkPath('task.dat'), ' = ')
 		self._rootpath = config.get('root path', os.environ.get('ROOTSYS', ''), persistent = True, onChange = changeInitNeeded('sandbox'))
 		if not self._rootpath:
 			raise ConfigError('Either set environment variable "ROOTSYS" or set option "root path"!')
 		utils.vprint('Using the following ROOT path: %s' % self._rootpath, -1)
-		taskInfo.write({'root path': self._rootpath})
 
 		# Special handling for executables bundled with ROOT
 		self._executable = config.get('executable', onChange = changeInitNeeded('sandbox'))
@@ -56,4 +56,4 @@ class ROOTTask(UserTask):
 
 
 class ROOTMod(ROOTTask):
-	pass
+	configSections = UserTask.configSections + ['ROOTMod', 'ROOTTask']

@@ -14,21 +14,21 @@
 
 import os, os.path, time, signal
 from task_base import TaskModule
-from grid_control import Config, GCError, ConfigError, UserError, utils, WMS
+from grid_control import GCError, ConfigError, UserError, utils, WMS
 from grid_control import datasets
 from grid_control.datasets import DataProvider, DataSplitter
 from grid_control.parameters.psource_data import ParameterSource, DataParameterSource, DataSplitProcessor
 
 class DataTask(TaskModule):
 	def setupJobParameters(self, config, pm):
-		config = config.addSections(['dataset']).addTags([self])
+		config = config.changeView(addSections = ['dataset'], addTags = [self])
 		self.dataSplitter = None
 		self.dataRefresh = None
 		self.dataset = config.get('dataset', '').strip()
 		if self.dataset == '':
 			return
-		config.set('se output pattern', '@NICK@_job_@MY_JOBID@_@X@', override = False)
-		config.set('default lookup', 'DATASETNICK', override = False)
+		config.set('se output pattern', '@NICK@_job_@MY_JOBID@_@X@')
+		config.set('default lookup', 'DATASETNICK')
 
 		defaultProvider = config.get('dataset provider', 'ListProvider')
 		dataProvider = DataProvider.create(config, self.dataset, defaultProvider)

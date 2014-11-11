@@ -19,7 +19,7 @@ from grid_control.parameters import ParameterFactory, ParameterInfo
 from time import time, localtime, strftime
 
 class TaskModule(NamedObject):
-	getConfigSections = NamedObject.createFunction_getConfigSections(['task'])
+	configSections = ['task']
 
 	# Read configuration options and init vars
 	def __init__(self, config, name):
@@ -27,29 +27,29 @@ class TaskModule(NamedObject):
 		initSandbox = changeInitNeeded('sandbox')
 
 		# Task requirements
-		job_config = config.addSections(['jobs']).addTags([self]) # Move this into parameter manager?
-		self.wallTime = job_config.getTime('wall time', onChange = None)
-		self.cpuTime = job_config.getTime('cpu time', self.wallTime, onChange = None)
-		self.cpus = job_config.getInt('cpus', 1, onChange = None)
-		self.memory = job_config.getInt('memory', -1, onChange = None)
-		self.nodeTimeout = job_config.getTime('node timeout', -1, onChange = initSandbox)
+		configJobs = config.changeView(addSections = ['jobs'], addTags = [self]) # Move this into parameter manager?
+		self.wallTime = configJobs.getTime('wall time', onChange = None)
+		self.cpuTime = configJobs.getTime('cpu time', self.wallTime, onChange = None)
+		self.cpus = configJobs.getInt('cpus', 1, onChange = None)
+		self.memory = configJobs.getInt('memory', -1, onChange = None)
+		self.nodeTimeout = configJobs.getTime('node timeout', -1, onChange = initSandbox)
 
 		# Compute / get task ID
 		self.taskID = config.get('task id', 'GC' + md5(str(time())).hexdigest()[:12], persistent = True)
 		self.taskDate = config.get('task date', strftime('%Y-%m-%d'), persistent = True, onChange = initSandbox)
-		self.taskConfigName = config.confName
+		self.taskConfigName = config.getConfigName()
 
 		# Storage setup
-		storage_config = config.addSections(['storage']).addTags([self])
+		configStorage = config.changeView(addSections = ['storage'], addTags = [self])
 		self.taskVariables = {
 			# Space limits
-			'SCRATCH_UL': storage_config.getInt('scratch space used', 5000, onChange = initSandbox),
-			'SCRATCH_LL': storage_config.getInt('scratch space left', 1, onChange = initSandbox),
-			'LANDINGZONE_UL': storage_config.getInt('landing zone space used', 100, onChange = initSandbox),
-			'LANDINGZONE_LL': storage_config.getInt('landing zone space left', 1, onChange = initSandbox),
+			'SCRATCH_UL': configStorage.getInt('scratch space used', 5000, onChange = initSandbox),
+			'SCRATCH_LL': configStorage.getInt('scratch space left', 1, onChange = initSandbox),
+			'LANDINGZONE_UL': configStorage.getInt('landing zone space used', 100, onChange = initSandbox),
+			'LANDINGZONE_LL': configStorage.getInt('landing zone space left', 1, onChange = initSandbox),
 		}
-		storage_config.set('se output pattern', 'job_@MY_JOBID@_@X@', override = False)
-		self.seMinSize = storage_config.getInt('se min size', -1, onChange = initSandbox)
+		configStorage.set('se output pattern', 'job_@MY_JOBID@_@X@')
+		self.seMinSize = configStorage.getInt('se min size', -1, onChange = initSandbox)
 
 		self.sbInputFiles = config.getPaths('input files', [], onChange = initSandbox)
 		self.sbOutputFiles = config.getList('output files', [], onChange = initSandbox)
@@ -63,7 +63,7 @@ class TaskModule(NamedObject):
 
 		# Init plugin manager / parameter source
 		pm = config.getClass('parameter factory', 'SimpleParameterFactory', cls = ParameterFactory).getInstance()
-		configParam = config.addSections(['parameters']).addTags([self])
+		configParam = config.changeView(addSections = ['parameters'], addTags = [self])
 		self.setupJobParameters(configParam, pm)
 		self.source = pm.getSource(configParam)
 

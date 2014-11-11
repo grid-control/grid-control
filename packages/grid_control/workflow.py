@@ -23,7 +23,7 @@ from grid_control.report import Report
 
 # Workflow class
 class Workflow(NamedObject):
-	getConfigSections = NamedObject.createFunction_getConfigSections(['workflow', 'global'])
+	configSections = ['global', 'workflow']
 
 	def __init__(self, config, name):
 		NamedObject.__init__(self, config, name)
@@ -49,9 +49,9 @@ class Workflow(NamedObject):
 		# Prepare work package
 		self.wms.deployTask(self.task, self.monitor)
 
-		global_config = config.clone()
-		self._actionList = global_config.getList('jobs', 'action', ['check', 'retrieve', 'submit'], onChange = None)
-		self.runContinuous = global_config.getBool('jobs', 'continuous', False, onChange = None)
+		configJobs = config.changeView(setSections = ['jobs'])
+		self._actionList = configJobs.getList('action', ['check', 'retrieve', 'submit'], onChange = None)
+		self.runContinuous = configJobs.getBool('continuous', False, onChange = None)
 
 		self._checkSpace = config.getInt('workdir space', 10, onChange = None)
 		self._submitFlag = config.getBool('submission', True, onChange = None)

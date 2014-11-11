@@ -18,7 +18,7 @@ from grid_control import QM, NamedObject, InstallationError, AbstractError, User
 from python_compat import parsedate
 
 class Proxy(NamedObject):
-	getConfigSections = NamedObject.createFunction_getConfigSections(['proxy'])
+	configSections = ['proxy']
 
 	def getUsername(self):
 		raise AbstractError

@@ -22,7 +22,7 @@ class CMSOverlay:
 		config.set('grid', 'sites', '-samtest -cmsprodhi', append = True)
 
 		# Rewrite cms storage urls:
-		proxy = Proxy.open('VomsProxy', config)
+		proxy = Proxy.getInstance('VomsProxy', config)
 		hnName = readJSON('https://cmsweb.cern.ch/sitedb/json/index/dnUserName', {'dn': proxy.getFQUsername()})
 		if not hnName:
 			raise ConfigError('Unable to map grid certificate to hypernews name!')

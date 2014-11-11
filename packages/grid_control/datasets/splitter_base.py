@@ -40,7 +40,7 @@ class DataSplitter(LoadableObject):
 		locals()[splitInfo] = idx
 
 	def __init__(self, config):
-		self.config = config.addSections(['dataset'])
+		self.config = config.changeView(addSections = ['dataset'])
 		self.splitSource = None
 		self._protocol = {}
 
@@ -475,7 +475,7 @@ class DataSplitter(LoadableObject):
 		src = DataSplitterIO().loadState(path)
 		if cfg == None:
 			cfg = Config(configDict=src.metadata)
-		splitter = DataSplitter.open(src.classname, cfg, section = None)
+		splitter = DataSplitter.getInstance(src.classname, cfg, section = None)
 		splitter.splitSource = src
 		# Transfer config protocol (in case no split function is called)
 		splitter._protocol = src.metadata[None]

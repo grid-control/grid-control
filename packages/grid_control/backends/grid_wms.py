@@ -40,7 +40,7 @@ class GridWMS(BasicWMS):
 
 
 	def __init__(self, config, wmsName):
-		config.set('proxy', 'VomsProxy', override = False)
+		config.set('proxy', 'VomsProxy')
 		BasicWMS.__init__(self, config, wmsName, 'grid')
 
 		self.brokerSite = config.getClass('site broker', 'UserBroker',

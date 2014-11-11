@@ -84,25 +84,30 @@ if __name__ == '__main__':
 			self._optParser = optParser
 
 		def fill(self, container):
-			defaultCmdLine = container.getEntry('global', 'cmdargs', '').value
-			(opts, args) = self._optParser.parse_args(args = defaultCmdLine.split() + sys.argv[1:])
+			entries = filter(lambda entry: entry.section == 'global', container.getEntries('cmdargs'))
+			combinedEntry = ConfigEntry.combineEntries(entries)
+			defaultCmdLine = []
+			if combinedEntry:
+				defaultCmdLine = combinedEntry.value.split()
+			(opts, args) = self._optParser.parse_args(args = defaultCmdLine + sys.argv[1:])
 			def setConfigFromOpt(section, option, value):
 				if value != None:
-					container.setEntry(section, option, str(value), '<cmdline>')
+					self._addEntry(container, section, option, str(value), '<cmdline>')
 			for (option, value) in {'max retry': opts.maxRetry, 'action': opts.action,
 					'continuous': opts.continuous, 'selected': opts.selector}.items():
 				setConfigFromOpt('jobs', option, value)
+			setConfigFromOpt('state!', '#init', opts.init)
+			setConfigFromOpt('state!', '#resync', opts.resync)
 			setConfigFromOpt('global', 'gui', opts.gui)
-			setConfigFromOpt('global', '#init', opts.init)
-			setConfigFromOpt('global', '#resync', opts.resync)
 			setConfigFromOpt('global', 'submission', opts.submission)
 			StringConfigFiller(opts.override).fill(container)
 
 	# big try... except block to catch exceptions and print error message
 	def main():
 		configFillers = [DefaultFilesConfigFiller(), GeneralFileConfigFiller([args[0]]), OptsConfigFiller(parser)]
-		config = CompatConfig(MultiConfigFiller(configFillers), args[0])
-		logging_setup(config.addSections(['logging']))
+		configFactory = ConfigFactory(MultiConfigFiller(configFillers), configFilePath = args[0])
+		config = configFactory.getConfig()
+		logging_setup(config.changeView(setSections = ['logging']))
 
 		# Check work dir validity (default work directory is the config file name)
 		if not os.path.exists(config.getWorkPath()):
@@ -113,8 +118,9 @@ if __name__ == '__main__':
 				utils.ensureDirExists(config.getWorkPath(), 'work directory')
 
 		# Create workflow and freeze config settings
-		workflow = config.getClass('global', 'workflow', 'Workflow:global', cls = Workflow).getInstance()
-		config.freezeConfig(writeConfig = config.getState(detail = 'config'))
+		globalConfig = config.changeView(setSections = ['global'])
+		workflow = globalConfig.getClass('workflow', 'Workflow:global', cls = Workflow).getInstance()
+		configFactory.freezeConfig(writeConfig = config.getState(detail = 'config'))
 
 		# Give config help
 		if opts.help_cfg or opts.help_scfg:

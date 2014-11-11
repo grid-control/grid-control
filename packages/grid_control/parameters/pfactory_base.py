@@ -22,12 +22,12 @@ from config_param import ParameterConfig
 from grid_control import NamedObject, QM, utils
 
 class ParameterFactory(NamedObject):
-	getConfigSections = NamedObject.createFunction_getConfigSections(['parameters'])
+	configSections = ['parameters']
 
 	def __init__(self, config, name):
 		NamedObject.__init__(self, config, name)
 		self.adapter = config.get('parameter adapter', 'TrackedParameterAdapter')
-		self.paramConfig = ParameterConfig(config.clone(), ['parameters'], self.adapter != 'TrackedParameterAdapter')
+		self.paramConfig = ParameterConfig(config.changeView(setSections = ['parameters']), self.adapter != 'TrackedParameterAdapter')
 
 
 	def _getRawSource(self, parent):
@@ -38,7 +38,7 @@ class ParameterFactory(NamedObject):
 		source = self._getRawSource(RNGParameterSource())
 		if DataParameterSource.datasetsAvailable and not DataParameterSource.datasetsUsed:
 			source = CrossParameterSource(DataParameterSource.create(), source)
-		return ParameterAdapter.open(self.adapter, config, source)
+		return ParameterAdapter.getInstance(self.adapter, config, source)
 ParameterFactory.registerObject(tagName = 'param')
 
 
@@ -46,19 +46,19 @@ class BasicParameterFactory(ParameterFactory):
 	def __init__(self, config, name):
 		(self.constSources, self.lookupSources) = ([], [])
 		ParameterFactory.__init__(self, config, name)
-		unscopedConfig = config.clone()
 
-		# Get constants from [constants]
-		constantsConfig = config.newClass(None, []).newSections(['constants'])
-		for cName in filter(lambda o: not o.endswith(' lookup'), constantsConfig.getOptions()):
-			self._addConstantPlugin(constantsConfig, cName, cName.upper())
+		# Get constants from [constants <tags...>]
+		configConstants = config.changeView(setClasses = None, setSections = ['constants'], addTags = [self])
+		for cName in filter(lambda o: not o.endswith(' lookup'), configConstants.getOptions()):
+			self._addConstantPlugin(configConstants, cName, cName.upper())
 		# Get constants from [<Module>] constants
 		for cName in map(str.strip, config.getList('constants', [])):
 			self._addConstantPlugin(config, cName, cName)
 		# Random number variables
-		nseeds = unscopedConfig.getInt('jobs', 'nseeds', 10)
+		configJobs = config.changeView(setSections = ['jobs'])
+		nseeds = configJobs.getInt('nseeds', 10)
 		newSeeds = map(lambda x: str(random.randint(0, 10000000)), range(nseeds))
-		for (idx, seed) in enumerate(unscopedConfig.getList('jobs', 'seeds', newSeeds, persistent = True)):
+		for (idx, seed) in enumerate(configJobs.getList('seeds', newSeeds, persistent = True)):
 			self.constSources.append(CounterParameterSource('SEED_%d' % idx, int(seed)))
 		self.repeat = config.getInt('repeat', 1, onChange = None) # ALL config.x -> paramconfig.x !
 

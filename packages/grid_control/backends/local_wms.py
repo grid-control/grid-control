@@ -18,7 +18,7 @@ from wms import WMS, BasicWMS
 from broker import Broker
 
 class LocalWMS(BasicWMS):
-	getConfigSections = BasicWMS.createFunction_getConfigSections(['local'])
+	configSections = BasicWMS.configSections + ['local']
 
 	def __init__(self, config, wmsName, submitExec, statusExec, cancelExec):
 		config.set('broker', 'RandomBroker')
@@ -28,9 +28,9 @@ class LocalWMS(BasicWMS):
 		BasicWMS.__init__(self, config, wmsName, 'local')
 
 		self.brokerSite = config.getClass('site broker', 'UserBroker', cls = Broker,
-			tags = [self]).getInstance('sites', 'sites', self.getNodes)
+			inherit = True, tags = [self]).getInstance('sites', 'sites', self.getNodes)
 		self.brokerQueue = config.getClass('queue broker', 'UserBroker', cls = Broker,
-			tags = [self]).getInstance('queue', 'queues', self.getQueues)
+			inherit = True, tags = [self]).getInstance('queue', 'queues', self.getQueues)
 
 		self.sandCache = []
 		self.sandPath = config.getPath('sandbox path', config.getWorkPath('sandbox'), mustExist = False)

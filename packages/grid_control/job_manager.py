@@ -19,7 +19,7 @@ from job_selector import JobSelector, ClassSelector, AndJobSelector
 from python_compat import set, sorted
 
 class JobManager(NamedObject):
-	getConfigSections = NamedObject.createFunction_getConfigSections(['jobs'])
+	configSections = ['jobs']
 
 	def __init__(self, config, name, task, eventhandler):
 		NamedObject.__init__(self, config, name)
