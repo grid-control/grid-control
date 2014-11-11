@@ -15,11 +15,9 @@
 from grid_control import datasets, monitoring
 
 datasets.DataProvider.moduleMap['DASProvider'] = 'provider_das.DASProvider'
-datasets.DataProvider.moduleMap['DBS2Provider'] = 'provider_cms.DBS2Provider'
 datasets.DataProvider.moduleMap['DBS3Provider'] = 'provider_dbsv3.DBS3Provider'
-datasets.DataProvider.moduleMap['DBSApiv2'] = datasets.DataProvider.moduleMap['DBS2Provider']
 datasets.DataProvider.moduleMap['dbs'] = datasets.DataProvider.moduleMap['DBS3Provider']
-datasets.DataProvider.providers.update({'DBSApiv3': 'dbs'})
+datasets.DataProvider.providers.update({'DBS3Provider': 'dbs'})
 
 monitoring.Monitoring.moduleMap['dashboard'] = 'dashboard.DashBoard'
 
