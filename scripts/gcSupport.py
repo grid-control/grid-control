@@ -94,10 +94,13 @@ def getWorkJobs(args, selector = None):
 	return (workDir, len(jobDB), jobDB.getJobs(selector))
 
 
-def getJobInfo(workDir, jobNum, retCodeFilter = lambda x: True):
+def getJobInfo(workDir, jobNum, retCodeFilter = lambda x: True, preserveCase = False):
 	jobInfoPath = os.path.join(workDir, 'output', 'job_%d' % jobNum, 'job.info')
 	try:
-		jobInfo = utils.DictFormat('=').parse(open(jobInfoPath))
+		kwargs = dict()
+		if preserveCase:
+			kwargs["keyParser"] = {None: utils.parseType}
+		jobInfo = utils.DictFormat('=').parse(open(jobInfoPath), **kwargs)
 		if retCodeFilter(jobInfo.get('exitcode', -1)):
 			return jobInfo
 	except:
