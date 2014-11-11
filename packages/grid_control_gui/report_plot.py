@@ -49,13 +49,6 @@ def extractJobTiming( jInfo ):
 			jobResult[ enumID ] = val
 
 	return jobResult
-	#print JobResultEnum.members
-	#pi = JobResultEnum.members.index("payloadDone")
-	#myEnum = JobResultEnum
-	#myEnum.setFromKey( "outputSize" )
-	#print myEnum.fromString( "TIMESTAMP_WRAPPER_DONE" )
-	#print timingDict
-
 
 # returns the job payload runtime in seconds
 # - if a CMSSW job was run, only the time spend in the actual
@@ -210,14 +203,9 @@ class PlotReport( Report ):
 			timeStep = timeStep + [ i - minSeTime ]
 
 			for jinfo in jInfos:
-				#if ( jinfo.jobFailed ):
-				#	continue		
 				
 				val = extractor( jinfo, i, i + stepSize )
-				#print getSeOutRuntime(jinfo)
 				if val != None:
-					#runtime = runtime + [ ( jinfo.eventCount ) / ( jinfo.payloadRuntime() / 60.0 ) ]
-					#print getSeAverageBandwithAtTimeSpan( jinfo, i, i + stepSize )
 					thisBw = thisBw + val
 					
 			overAllBandwith = overAllBandwith + [thisBw]
