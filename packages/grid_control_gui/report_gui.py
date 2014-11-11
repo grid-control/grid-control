@@ -140,6 +140,7 @@ class AdaptiveReport(CategoryReport):
 	def __init__(self, jobDB, task, jobs = None, configString = ''):
 		CategoryReport.__init__(self, jobDB, task, jobs, configString)
 		self._catMax = int(configString)
+		self._catCur = self._catMax
 
 	def _getCategoryStateSummary(self):
 		(catStateDict, catDescDict, catSubcatDict) = CategoryReport._getCategoryStateSummary(self)
@@ -261,7 +262,7 @@ class GUIReport(AdaptiveReport):
 		AdaptiveReport.__init__(self, jobDB, task, jobs, str(int(self.maxY / 5)))
 
 	def getHeight(self):
-		return self._catMax * 2 + 3
+		return self._catCur * 2 + 3
 
 	def printLimited(self, value, width, rvalue = ''):
 		if len(value) + len(rvalue) > width:
@@ -275,6 +276,7 @@ class GUIReport(AdaptiveReport):
 
 	def display(self):
 		(catStateDict, catDescDict, catSubcatDict) = self._getCategoryStateSummary()
+		self._catCur = len(catStateDict)
 		sumCat = lambda catKey, states: sum(map(lambda z: catStateDict[catKey].get(z, 0), states))
 
 		self.printGUIHeader('Status report for task:')

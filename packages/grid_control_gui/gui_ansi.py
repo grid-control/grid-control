@@ -71,19 +71,22 @@ GUIStream.backlog = [None] * 100
 
 class ANSIGUI(GUI):
 	def __init__(self, config, workflow):
-		config.set('report', 'BasicBarReport', override = False)
+		config.set('report', 'BasicBarReport')
 		GUI.__init__(self, config, workflow)
 		self._report = self._reportClass.getInstance(self._workflow.jobManager.jobDB, self._workflow.task)
+		self._reportHeight = None
 
 	def displayWorkflow(self):
+		gui = self
 		report = self._report
 		workflow = self._workflow
 		def wrapper(screen):
 			# Event handling for resizing
 			def onResize(sig, frame):
+				gui._reportHeight = report.getHeight()
 				screen.savePos()
 				(sizey, sizex) = screen.getmaxyx()
-				screen.setscrreg(min(report.getHeight() + 2, sizey), sizey)
+				screen.setscrreg(min(gui._reportHeight + 2, sizey), sizey)
 				utils.printTabular.wraplen = sizex - 5
 				screen.loadPos()
 			screen.erase()
@@ -107,11 +110,13 @@ class ANSIGUI(GUI):
 						self.show(' ' * len(self.message))
 
 				def show(self, message):
+					if gui._reportHeight != report.getHeight():
+						onResize(None, None)
 					screen.savePos()
 					screen.move(0, 0)
 					sys.stdout.logged = False
 					report.display()
-					screen.move(report.getHeight() + 1, 0)
+					screen.move(gui._reportHeight + 1, 0)
 					sys.stdout.write('%s\n' % message)
 					sys.stdout.logged = True
 					screen.loadPos()
