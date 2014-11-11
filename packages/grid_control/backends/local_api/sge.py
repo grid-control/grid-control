@@ -19,6 +19,7 @@ from pbsge import PBSGECommon
 from python_compat import set
 
 class OGE(PBSGECommon):
+	configSections = PBSGECommon.configSections + ['OGE']
 	def __init__(self, config, wmsName = None):
 		PBSGECommon.__init__(self, config, wmsName)
 		self.user = config.get('user', os.environ.get('LOGNAME', ''), onChange = None)
@@ -116,4 +117,4 @@ class OGE(PBSGECommon):
 
 
 class SGE(OGE):
-	pass
+	configSections = SGE.configSections + ['SGE']

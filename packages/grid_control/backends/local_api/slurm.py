@@ -16,6 +16,7 @@ from grid_control import Job, utils
 from grid_control.backends import WMS, LocalWMS
 
 class JMS(LocalWMS):
+	configSections = LocalWMS.configSections + ['JMS']
 	_statusMap = { 's': Job.QUEUED, 'r': Job.RUNNING, 'CG': Job.DONE, 'w': Job.WAITING }
 
 	def __init__(self, config, wmsName = None):
@@ -83,4 +84,4 @@ class JMS(LocalWMS):
 
 
 class SLURM(JMS):
-	pass
+	configSections = JMS.configSections + ['SLURM']

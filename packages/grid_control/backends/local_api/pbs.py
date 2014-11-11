@@ -17,6 +17,7 @@ from grid_control.backends import WMS
 from pbsge import PBSGECommon
 
 class PBS(PBSGECommon):
+	configSections = PBSGECommon.configSections + ['PBS']
 	_statusMap = {
 		'H': Job.SUBMITTED, 'S': Job.SUBMITTED,
 		'W': Job.WAITING,   'Q': Job.QUEUED,

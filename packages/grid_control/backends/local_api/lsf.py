@@ -18,6 +18,7 @@ from grid_control import RethrowError, Job, utils
 from grid_control.backends import WMS, LocalWMS
 
 class LSF(LocalWMS):
+	configSections = LocalWMS.configSections + ['LSF']
 	_statusMap = {
 		'PEND':  Job.QUEUED,  'PSUSP': Job.WAITING,
 		'USUSP': Job.WAITING, 'SSUSP': Job.WAITING,

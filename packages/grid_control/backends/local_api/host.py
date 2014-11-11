@@ -17,6 +17,7 @@ from grid_control import Job, utils, backends
 from grid_control.backends import LocalWMS
 
 class Host(LocalWMS):
+	configSections = LocalWMS.configSections + ['Host']
 	def __init__(self, config, wmsName = None):
 		LocalWMS.__init__(self, config, wmsName,
 			submitExec = utils.pathShare('gc-host.sh'),
@@ -61,4 +62,4 @@ class Host(LocalWMS):
 
 
 class Localhost(Host):
-	pass
+	configSections = Host.configSections + ['Localhost']
