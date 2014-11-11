@@ -13,30 +13,38 @@
 #-#  limitations under the License.
 
 from grid_control import AbstractError
-from splitter_base import DataSplitter
+from splitter_basic import FileLevelSplitter
 from provider_base import DataProvider
 
 # Split dataset along block and metadata boundaries - using equivalence classes of metadata
-class MetadataSplitter(DataSplitter):
-	def metaCmp(self, md, fiA, fiB):
+class MetadataSplitter(FileLevelSplitter):
+	def metaCmp(self, metadataNames, fiA, fiB):
 		raise AbstractError
 
-	def splitDatasetInternal(self, blocks, firstEvent = 0):
+	def splitBlocks(self, blocks):
 		for block in blocks:
 			files = block[DataProvider.FileList]
-			files.sort(lambda a, b: self.metaCmp(block[DataProvider.Metadata], a, b))
+			files.sort(lambda a, b: self.metaCmp(block[DataProvider.Metadata], block, a, b))
 			(fileStack, reprElement) = ([], None)
 			for fi in files:
 				if reprElement == None:
 					reprElement = fi
 				if self.metaCmp(block[DataProvider.Metadata], fi, reprElement) != 0:
-					yield self.finaliseJobSplitting(block, dict(), fileStack)
+					yield self.newBlock(block, fileStack)
 					(fileStack, reprElement) = ([], fi)
 				fileStack.append(fi)
-			yield self.finaliseJobSplitting(block, dict(), fileStack)
+			yield self.newBlock(block, fileStack)
+
+
+class UserMetadataSplitter(MetadataSplitter):
+	def metaCmp(self, metadataNames, block, fiA, fiB):
+		selMetadataNames = self.setup(self.config.getList, block, 'split metadata', [])
+		selMetadataIdx = map(lambda name: metadataNames.index(name), selMetadataNames)
+		getMetadata = lambda fi: map(lambda idx: fi[DataProvider.Metadata][idx], selMetadataIdx)
+		return cmp(getMetadata(fiA), getMetadata(fiB))
 
 
 class RunSplitter(MetadataSplitter):
-	def metaCmp(self, md, fiA, fiB):
-		mdIdx = md.index('Runs')
+	def metaCmp(self, metadataNames, block, fiA, fiB):
+		mdIdx = metadataNames.index('Run')
 		return cmp(fiA[DataProvider.Metadata][mdIdx], fiB[DataProvider.Metadata][mdIdx])
