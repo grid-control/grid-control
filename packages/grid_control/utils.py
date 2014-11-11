@@ -56,15 +56,15 @@ def resolvePaths(path, searchPaths = [], mustExist = True, ErrorClass = RuntimeE
 	return result
 
 
-def resolvePath(path, searchPaths = [], mustExist = True, ErrorClass = RuntimeError):
+def resolvePath(path, searchPaths = [], mustExist = True, ErrorClass = RuntimeError, takeFirst = False):
 	result = resolvePaths(path, searchPaths, mustExist, ErrorClass)
-	if len(result) != 1:
+	if (len(result) > 1) and not takeFirst:
 		raise ErrorClass('Path "%s" matches multiple files:\n\t%s' % (path, str.join('\n\t', result)))
 	return result[0]
 
 
 def resolveInstallPath(path):
-	return resolvePath(path, os.environ['PATH'].split(os.pathsep), True, InstallationError)
+	return resolvePath(path, os.environ['PATH'].split(os.pathsep), True, InstallationError, True)
 
 
 def ensureDirExists(dn, name = 'directory'):
