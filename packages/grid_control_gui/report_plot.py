@@ -225,6 +225,14 @@ class PlotReport( Report ):
 		minSeOutTime = None
 		maxSeOutTime = None
 		
+		fixedFileSizeIn = 3000.0
+		fixedFileSizeOut = 3000.0
+		
+		if ( fixedFileSizeIn != None ) or ( fixedFileSizeOut != None ):
+			print "!! Warning, using fixed file size:"
+			print " Input File: " + str( fixedFileSizeIn ) + " MB"
+			print " Output File: " + str( fixedFileSizeOut ) + " MB"
+		
 		allJobs = self._jobDB.getJobs()
 		workdir = os.path.join( self._jobDB._dbPath, ".." ) 
 		for j in allJobs:
@@ -239,8 +247,8 @@ class PlotReport( Report ):
 			jResult = extractJobTiming( jInfo )
 			
 			# todo: read from job info
-			jResult[ JobResultEnum.FILESIZE_IN_TOTAL ] = 3000.0
-			jResult[ JobResultEnum.FILESIZE_OUT_TOTAL ] = 3000.0
+			jResult[ JobResultEnum.FILESIZE_IN_TOTAL ] = fixedFileSizeIn
+			jResult[ JobResultEnum.FILESIZE_OUT_TOTAL ] = fixedFileSizeOut
 			
 			jobResult = jobResult + [jResult]
 			#print jobResult
