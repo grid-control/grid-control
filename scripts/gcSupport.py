@@ -39,9 +39,9 @@ def getConfig(fn = None, cfgDict = {}, section = None):
 			fillerList.append(DictConfigFiller({section: cfgDict}))
 		else:
 			fillerList.append(DictConfigFiller(cfgDict))
-	config = Config(MultiConfigFiller(fillerList), fn)
+	config = ConfigFactory(MultiConfigFiller(fillerList), fn).getConfig()
 	if section:
-		return config.addSections([section])
+		return config.changeView(addSections = [section])
 	return config
 
 
