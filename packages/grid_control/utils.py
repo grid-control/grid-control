@@ -1035,7 +1035,9 @@ def makeEnum(members = [], cls = None):
 	if cls == None:
 		cls = type('Enum_%s_%s' % (md5(str(members)).hexdigest()[:4], str.join('_', members)), (), {})
 	cls.members = members
+	cls.memberDict = dict(map(lambda (idx, name): (name, idx), enumerate(members)))
 	cls.allMembers = range(len(members))
+	cls.fromString = classmethod(lambda cls, name: cls.memberDict.get(name, None))
 	for idx, member in enumerate(members):
 		setattr(cls, member, idx)
 	return cls
