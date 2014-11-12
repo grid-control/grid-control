@@ -150,7 +150,7 @@ class DictConfigFiller(ConfigFiller):
 	def fill(self, container):
 		for section in self._configDict:
 			for option in self._configDict[section]:
-				self._addEntry(container, section, option, self._configDict[section][option], '<dict>')
+				self._addEntry(container, section, option, str(self._configDict[section][option]), '<dict>')
 
 
 # Config filler which collects data from a user string

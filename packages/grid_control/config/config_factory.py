@@ -64,7 +64,9 @@ class ConfigFactory(object):
 		self._view.setConfigName(tmpInterface.get('config id', getName(), persistent = True))
 
 
-	def getConfig(self):
+	def getConfig(self, **kwargs):
+		if kwargs:
+			return TypedConfigInterface(self._view).changeView(**kwargs)
 		return TypedConfigInterface(self._view)
 
 

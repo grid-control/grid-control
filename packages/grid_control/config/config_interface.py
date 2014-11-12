@@ -168,7 +168,7 @@ class TypedConfigInterface(object):
 			(srcdict, srckeys) = value
 			getmax = lambda src: max(map(lambda x: len(str(x)), src) + [0])
 			result = ''
-			if srcdict.get(None):
+			if srcdict.get(None) != None:
 				result = strfun(srcdict.get(None, parser('')))
 			fmt = '\n\t%%%ds => %%%ds' % (getmax(srckeys), getmax(srcdict.values()))
 			return result + str.join('', map(lambda k: fmt % (k, strfun(srcdict[k])), srckeys))

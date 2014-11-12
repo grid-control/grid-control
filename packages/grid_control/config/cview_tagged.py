@@ -59,6 +59,8 @@ class TaggedConfigView(SimpleConfigView):
 				return None
 		idxClass = myIndex(self._cfgClassSections, curSection)
 		idxSection = myIndex(self._cfgSections, curSection)
+		if (not self._cfgClassSections) and (not self._cfgSections):
+			idxSection = 0
 		if (idxClass != None) or (idxSection != None): # Section is selected by class or manually
 			idxNames = tuple(map(lambda n: myIndex(self._cfgNames, n), curNames))
 			if None not in idxNames: # All names in current section are selected
@@ -73,7 +75,7 @@ class TaggedConfigView(SimpleConfigView):
 			if self._cfgClassSections:
 				section = self._cfgClassSections[-1]
 			else:
-				section = self._cfgSections[-1]
+				section = SimpleConfigView._getSection(self, specific)
 			if self._cfgNames:
 				section += ' %s' % str.join(' ', self._cfgNames)
 			if self._cfgTags:
@@ -81,5 +83,4 @@ class TaggedConfigView(SimpleConfigView):
 			return section
 		elif self._cfgClassSections:
 			return self._cfgClassSections[0]
-		elif self._cfgSections:
-			return self._cfgSections[0]
+		return SimpleConfigView._getSection(self, specific)

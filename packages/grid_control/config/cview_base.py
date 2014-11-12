@@ -191,14 +191,15 @@ class SimpleConfigView(HistoricalConfigView):
 	def __str__(self):
 		return '<%s(sections = %r)>' % (self.__class__.__name__, self._cfgSections)
 
-	def _getSection(self, specific):
-		if self._cfgSections and specific:
-			return self._cfgSections[-1]
-		elif self._cfgSections:
-			return self._cfgSections[0]
-
 	def _getSectionKey(self, section):
 		if self._cfgSections == None:
 			return section
 		if section in self._cfgSections:
 			return self._cfgSections.index(section)
+
+	def _getSection(self, specific):
+		if self._cfgSections and specific:
+			return self._cfgSections[-1]
+		elif self._cfgSections:
+			return self._cfgSections[0]
+		return 'global'
