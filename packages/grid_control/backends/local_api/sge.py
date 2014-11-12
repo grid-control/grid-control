@@ -22,9 +22,9 @@ class OGE(PBSGECommon):
 	configSections = PBSGECommon.configSections + ['OGE']
 	def __init__(self, config, wmsName = None):
 		PBSGECommon.__init__(self, config, wmsName)
-		self.user = config.get('user', os.environ.get('LOGNAME', ''), onChange = None)
-		self.project = config.get('project name', '', onChange = None)
-		self.configExec = utils.resolveInstallPath('qconf')
+		self._user = config.get('user', os.environ.get('LOGNAME', ''), onChange = None)
+		self._project = config.get('project name', '', onChange = None)
+		self._configExec = utils.resolveInstallPath('qconf')
 
 
 	def getSubmitArguments(self, jobNum, jobName, reqs, sandbox, stdout, stderr):
@@ -33,8 +33,8 @@ class OGE(PBSGECommon):
 			WMS.WALLTIME: ('s_rt', timeStr), WMS.CPUTIME: ('h_cpu', timeStr) }
 		# Restart jobs = no
 		params = ' -r n'
-		if self.project:
-			params += ' -P %s' % self.project
+		if self._project:
+			params += ' -P %s' % self._project
 		# Job requirements
 		(queue, nodes) = (reqs.get(WMS.QUEUES, [''])[0], reqs.get(WMS.SITES))
 		if not nodes and queue:
@@ -84,7 +84,7 @@ class OGE(PBSGECommon):
 
 
 	def getCheckArguments(self, wmsIds):
-		return '-xml' + QM(self.user, ' -u %s' % self.user, '')
+		return '-xml' + QM(self._user, ' -u %s' % self._user, '')
 
 
 	def getCancelArguments(self, wmsIds):
@@ -97,9 +97,9 @@ class OGE(PBSGECommon):
 		reqs = dict(zip(tags, [WMS.MEMORY, WMS.CPUTIME, WMS.WALLTIME]))
 		parser = dict(zip(tags, [int, utils.parseTime, utils.parseTime]))
 
-		for queue in map(str.strip, utils.LoggedProcess(self.configExec, '-sql').iter()):
+		for queue in map(str.strip, utils.LoggedProcess(self._configExec, '-sql').iter()):
 			queues[queue] = dict()
-			for line in utils.LoggedProcess(self.configExec, '-sq %s' % queue).iter():
+			for line in utils.LoggedProcess(self._configExec, '-sq %s' % queue).iter():
 				attr, value = map(str.strip, line.split(' ', 1))
 				if (attr in tags) and (value != 'INFINITY'):
 					queues[queue][reqs[attr]] = parser[attr](value)
@@ -108,9 +108,9 @@ class OGE(PBSGECommon):
 
 	def getNodes(self):
 		(result, active) = (set(), False)
-		for group in utils.LoggedProcess(self.configExec, '-shgrpl').iter():
+		for group in utils.LoggedProcess(self._configExec, '-shgrpl').iter():
 			result.add(group.strip())
-			for host in utils.LoggedProcess(self.configExec, '-shgrp_resolved %s' % group).iter():
+			for host in utils.LoggedProcess(self._configExec, '-shgrp_resolved %s' % group).iter():
 				result.update(host.split())
 		if len(result) > 0:
 			return list(result)

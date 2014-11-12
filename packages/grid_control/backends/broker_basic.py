@@ -105,8 +105,8 @@ class SimpleBroker(FilterBroker):
 class StorageBroker(Broker):
 	def __init__(self, config, name, userOpt, itemName, discoverFun):
 		Broker.__init__(self, config, name, userOpt, itemName, discoverFun)
-		self.storageDict = config.getDict('%s storage access' % userOpt, {}, onChange = None,
-			parser = lambda x: utils.parseList(x, ' '))[0]
+		self._storageDict = config.getDict('%s storage access' % userOpt, {}, onChange = None,
+			parser = lambda x: utils.parseList(x, ' '), strfun = lambda x: str.join(' ', x))[0]
 
 	def _broker(self, reqs, items):
 		result = Broker._broker(self, reqs, items)
@@ -115,5 +115,5 @@ class StorageBroker(Broker):
 				if result == None:
 					result = []
 				for rval in rValue:
-					result.extend(self.storageDict.get(rval, []))
+					result.extend(self._storageDict.get(rval, []))
 		return result

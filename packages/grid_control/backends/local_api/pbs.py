@@ -28,9 +28,9 @@ class PBS(PBSGECommon):
 
 	def __init__(self, config, wmsName = None):
 		PBSGECommon.__init__(self, config, wmsName)
-		self.nodesExec = utils.resolveInstallPath('pbsnodes')
+		self._nodesExec = utils.resolveInstallPath('pbsnodes')
 		self._server = config.get('server', '', onChange = None)
-		self.fqid = lambda wmsId: QM(self._server, '%s.%s' % (wmsId, self._server), wmsId)
+		self._fqid = lambda wmsId: QM(self._server, '%s.%s' % (wmsId, self._server), wmsId)
 
 
 	def getSubmitArguments(self, jobNum, jobName, reqs, sandbox, stdout, stderr):
@@ -68,11 +68,11 @@ class PBS(PBSGECommon):
 
 
 	def getCheckArguments(self, wmsIds):
-		return '-f %s' % str.join(' ', map(self.fqid, wmsIds))
+		return '-f %s' % str.join(' ', map(self._fqid, wmsIds))
 
 
 	def getCancelArguments(self, wmsIds):
-		return str.join(' ', map(self.fqid, wmsIds))
+		return str.join(' ', map(self._fqid, wmsIds))
 
 
 	def getQueues(self):
@@ -93,7 +93,7 @@ class PBS(PBSGECommon):
 
 	def getNodes(self):
 		result = []
-		for line in utils.LoggedProcess(self.nodesExec).iter():
+		for line in utils.LoggedProcess(self._nodesExec).iter():
 			if not line.startswith(' ') and len(line) > 1:
 				node = line.strip()
 			if ('state = ' in line) and ('down' not in line) and ('offline' not in line):

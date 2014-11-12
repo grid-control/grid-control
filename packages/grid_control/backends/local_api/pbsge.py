@@ -21,9 +21,9 @@ class PBSGECommon(LocalWMS):
 			submitExec = utils.resolveInstallPath('qsub'),
 			statusExec = utils.resolveInstallPath('qstat'),
 			cancelExec = utils.resolveInstallPath('qdel'))
-		self.shell = config.get('shell', '', onChange = None)
-		self.account = config.get('account', '', onChange = None)
-		self.delay = config.getBool('delay output', False, onChange = None)
+		self._shell = config.get('shell', '', onChange = None)
+		self._account = config.get('account', '', onChange = None)
+		self._delay = config.getBool('delay output', False, onChange = None)
 
 
 	def unknownID(self):
@@ -38,18 +38,18 @@ class PBSGECommon(LocalWMS):
 		# Job name
 		params = ' -N "%s"' % jobName
 		# Job accounting
-		if self.account:
-			params += ' -P %s' % self.account
+		if self._account:
+			params += ' -P %s' % self._account
 		# Job shell
-		if self.shell:
-			params += ' -S %s' % self.shell
+		if self._shell:
+			params += ' -S %s' % self._shell
 		# Process job requirements
 		for req in reqMap:
 			if self.checkReq(reqs, req):
 				params += ' -l %s=%s' % (reqMap[req][0], reqMap[req][1](reqs[req]))
 		# Sandbox, IO paths
 		params += ' -v GC_SANDBOX="%s"' % sandbox
-		if self.delay:
+		if self._delay:
 			params += ' -v GC_DELAY_OUTPUT="%s" -v GC_DELAY_ERROR="%s" -o /dev/null -e /dev/null' % (stdout, stderr)
 		else:
 			params += ' -o "%s" -e "%s"' % (stdout, stderr)
