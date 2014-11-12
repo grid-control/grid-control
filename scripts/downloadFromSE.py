@@ -14,8 +14,9 @@
 #-#  limitations under the License.
 
 import gcSupport, sys, os, optparse, time, random, threading
+OutputFileInfo = gcSupport.OutputFileInfo
 from python_compat import md5
-from grid_control import Job, Config, Proxy, job_selector, job_db, storage, utils, logException
+from grid_control import Job,  Proxy, job_selector, job_db, storage, utils, logException
 
 def md5sum(filename):
 	m = md5()
@@ -177,7 +178,7 @@ def dlfs_rm(path, msg):
 
 def realmain(opts, args):
 	try:
-		proxy = Proxy.open(opts.proxy, Config(configDict={'proxy': {'ignore warnings': 'True'}}))
+		proxy = Proxy.getInstance(opts.proxy, gcSupport.getConfig(cfgDict = {'proxy': {'ignore warnings': 'True'}}), 'proxy')
 	except:
 		sys.stderr.write(logException())
 		sys.exit(1)
@@ -215,6 +216,9 @@ def realmain(opts, args):
 
 		# Read the file hash entries from job info file
 		files = gcSupport.getFileInfo(workDir, jobNum, lambda retCode: retCode == 0)
+		if files:
+			files = map(lambda fi: (fi[OutputFileInfo.Hash], fi[OutputFileInfo.NameLocal],
+				fi[OutputFileInfo.NameDest], fi[OutputFileInfo.Path]), files)
 		output.files(files)
 		if not files:
 			if opts.markEmptyFailed:

@@ -116,14 +116,15 @@ class FileConfigFiller(ConfigFiller):
 				for entry in utils.parseList(value, None):
 					yield entry
 
+		newSearchPaths = [os.path.dirname(configFile)]
 		# Add entries from include statement recursively
 		for includeFile in getFlatList('global', 'include'):
-			self._fillContentFromFile(includeFile, searchPaths, configContent)
+			self._fillContentFromFile(includeFile, searchPaths + newSearchPaths, configContent)
 		# Process all other entries in current file
 		self._fillContentFromSingleFile(configFile, configFileData, searchPaths, configContent)
 		# Override entries in current config file
 		for overrideFile in getFlatList('global', 'include override'):
-			self._fillContentFromFile(overrideFile, searchPaths, configContent)
+			self._fillContentFromFile(overrideFile, searchPaths + newSearchPaths, configContent)
 		# Filter special global options
 		if configContent.get('global', []):
 			configContent['global'] = filter(lambda (opt, v, s): opt not in ['include', 'include override'], configContent['global'])

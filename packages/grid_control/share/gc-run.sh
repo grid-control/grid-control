@@ -225,7 +225,13 @@ if [ $CODE -eq 0 -a -n "$SE_OUTPUT_FILES" ]; then
 	url_copy "file:///$MY_SCRATCH" "$SE_OUTPUT_PATH" "$SE_OUTPUT_FILES"
 	(
 	[ -f "$TRANSFERLOG" ] && cat "$TRANSFERLOG" | while read NAME_LOCAL NAME_DEST; do
-		echo "FILE$IDX=\"$(cd "$MY_SCRATCH"; md5sum "$NAME_LOCAL")  $NAME_DEST  $SE_OUTPUT_PATH\""
+		MD5HASH=$(cd "$MY_SCRATCH"; md5sum "$NAME_LOCAL" | cut -d " " -f 1)
+		echo "FILE$IDX=\"$MD5HASH  $NAME_LOCAL  $NAME_DEST  $SE_OUTPUT_PATH\""
+		echo "OUTPUT_FILE_${IDX:-0}_LOCAL=\"$NAME_LOCAL\""
+		echo "OUTPUT_FILE_${IDX:-0}_DEST=\"$NAME_DEST\""
+		echo "OUTPUT_FILE_${IDX:-0}_PATH=\"$SE_OUTPUT_PATH\""
+		echo "OUTPUT_FILE_${IDX:-0}_HASH=$MD5HASH"
+		echo "OUTPUT_FILE_${IDX:-0}_SIZE=$(cd "$MY_SCRATCH"; stat -c%s "$NAME_LOCAL")"
 		IDX=$[IDX + 1]
 	done
 	) > "$LOG_MD5"

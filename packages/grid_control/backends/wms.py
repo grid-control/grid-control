@@ -68,6 +68,22 @@ class WMS(NamedObject):
 	def _getRawIDs(self, ids):
 		return map(lambda (wmsId, jobNum): self._splitId(wmsId)[1], ids)
 
+	def parseJobInfo(fn):
+		if not os.path.exists(fn):
+			return utils.eprint('Warning: "%s" does not exist.' % fn)
+		try:
+			info_content = open(fn, 'r').read()
+		except Exception, ex:
+			return utils.eprint('Warning: Unable to read "%s"!\n%s' % (fn, str(ex)))
+		if not info_content:
+			return utils.eprint('Warning: "%s" is empty!' % fn)
+		try:
+			data = utils.DictFormat().parse(info_content, keyParser = {None: str})
+			return (data['JOBID'], data['EXITCODE'], data)
+		except:
+			return utils.eprint('Warning: Unable to parse "%s"!' % fn)
+	parseJobInfo = staticmethod(parseJobInfo)
+
 WMS.registerObject(tagName = 'wms')
 
 
@@ -193,31 +209,17 @@ class BasicWMS(WMS):
 				continue
 
 			# inJobNum != None, dir != None => Job retrieval from WMS was ok
-			info = os.path.join(dir, 'job.info')
-			info_content = None
-			if not os.path.exists(info):
-				utils.eprint('Warning: "%s" does not exist.' % info)
-			else:
-				try:
-					info_content = open(info, 'r').read()
-				except Exception, ex:
-					utils.eprint('Warning: Unable to read "%s"!\n%s' % (info, str(ex)))
-			if info_content:
-				try:
-					# Function to parse job info file
-					data = utils.DictFormat().parse(info_content, keyParser = {None: str})
-					jobNum = data['JOBID']
-					if jobNum != inJobNum:
-						raise RuntimeError('Invalid job id in job file %s' % info)
-					if forceMove(dir, os.path.join(self._outputPath, 'job_%d' % jobNum)):
-						retrievedJobs.append(inJobNum)
-						yield (jobNum, data['EXITCODE'], data)
-					else:
-						yield (jobNum, -1, {})
-					continue
-				except:
-					# Something went wrong
-					utils.eprint('Warning: "%s" seems broken.' % info)
+			jobInfo = WMS.parseJobInfo(os.path.join(dir, 'job.info'))
+			if jobInfo:
+				(jobNum, jobExitCode, jobData) = jobInfo
+				if jobNum != inJobNum:
+					raise RuntimeError('Invalid job id in job file %s' % info)
+				if forceMove(dir, os.path.join(self._outputPath, 'job_%d' % jobNum)):
+					retrievedJobs.append(inJobNum)
+					yield jobInfo
+				else:
+					yield (jobNum, -1, {})
+				continue
 
 			# Clean empty dirs
 			for subDir in map(lambda x: x[0], os.walk(dir, topdown=False)):
@@ -295,4 +297,3 @@ class BasicWMS(WMS):
 
 	def _getJobsOutput(self, ids):
 		raise AbstractError # Return (jobNum, sandbox) for finished jobs
-
