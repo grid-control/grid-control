@@ -117,4 +117,4 @@ class OGE(PBSGECommon):
 
 
 class SGE(OGE):
-	configSections = SGE.configSections + ['SGE']
+	configSections = OGE.configSections + ['SGE']
