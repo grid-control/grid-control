@@ -15,7 +15,6 @@
 # Generic base class for authentication proxies GCSCF:
 import os, time, getpass, shutil, stat
 from grid_control import QM, NamedObject, AbstractError, UserError, utils
-from python_compat import parsedate
 
 class Proxy(NamedObject):
 	configSections = ['proxy']
@@ -172,23 +171,18 @@ class AFSProxy(RefreshableProxy):
 		RefreshableProxy.__init__(self, config, name)
 		self._kinitExec = utils.resolveInstallPath('kinit')
 		self._klistExec = utils.resolveInstallPath('klist')
-		self._aklogExec = utils.resolveInstallPath('aklog')
 		self._cache = None
-		self._proxyPaths = {}
-		for name in ['KRB5CCNAME', 'KRBTKFILE']:
-			self._proxyPaths[name] = config.getWorkPath('proxy.%s' % name)
-		self._backupTickets()
+		self._backupTickets(config)
 		self._tickets = config.getList('tickets', [], onChange = None)
 
-	def _backupTickets(self):
-		for name in ['KRB5CCNAME', 'KRBTKFILE']:
-			if name not in os.environ:
-				raise RuntimeError('Environment variable "%s" not found!' % name)
-			oldFN = os.environ[name].replace('FILE:', '')
-			newFN = self._proxyPaths[name]
-			shutil.copyfile(oldFN, newFN)
-			os.chmod(newFN, stat.S_IRUSR | stat.S_IWUSR)
-			os.environ[name] = newFN
+	def _backupTickets(self, config):
+		for name in ['KRB5CCNAME', 'KRBTKFILE']: # store kerberos files in work directory for persistency
+			if name in os.environ:
+				oldFN = os.environ[name].replace('FILE:', '')
+				newFN = config.getWorkPath('proxy.%s' % name)
+				shutil.copyfile(oldFN, newFN)
+				os.chmod(newFN, stat.S_IRUSR | stat.S_IWUSR)
+				os.environ[name] = newFN
 
 	def _refreshProxy(self):
 		return utils.LoggedProcess(self._kinitExec, '-R').wait()
@@ -198,17 +192,22 @@ class AFSProxy(RefreshableProxy):
 		if cached and self._cache:
 			return self._cache
 		# Call klist and parse results
-		proc = utils.LoggedProcess(self._klistExec, '-v')
+		proc = utils.LoggedProcess(self._klistExec)
 		retCode = proc.wait()
 		self._cache = {}
-		for sectionInfo in utils.accumulate(proc.getOutput(), '', lambda x, buf: buf.endswith('\n\n')):
-			parseDate = lambda x: time.mktime(parsedate(x))
-			tmp = utils.DictFormat(':').parse(sectionInfo, valueParser = {'auth time': parseDate,
-				'start time': parseDate, 'end time': parseDate, 'renew till': parseDate})
-			if 'server' in tmp:
-				self._cache[tmp['server']] = tmp
-			else:
-				self._cache[None] = tmp
+		for line in proc.getOutput().splitlines():
+			if line.count('@') and (line.count(':') > 1):
+				(issued, expires, principal) = line.split('  ')
+				parseDate = lambda value, format: time.mktime(time.strptime(value, format))
+				if (expires.count('/') == 2) and (expires.count(':') == 2):
+					expires = parseDate(expires, '%m/%d/%y %H:%M:%S')
+				else:
+					currentYear = int(time.strftime('%Y'))
+					expires = parseDate('%s %d' % (expires, currentYear), '%b %d %H:%M:%S %Y')
+					issued = parseDate('%s %d' % (issued, currentYear), '%b %d %H:%M:%S %Y')
+					if expires < issued: # wraparound at new year
+						expires = parseDate('%s %d' % (expires, currentYear + 1), '%b %d %H:%M:%S %Y')
+				self._cache[principal] = expires
 		return self._cache
 
 	def _getTimeleft(self, cached):
@@ -216,7 +215,7 @@ class AFSProxy(RefreshableProxy):
 		time_current = time.time()
 		time_end = time_current
 		for ticket in info:
-			if ((ticket not in self._tickets) and self._tickets) or not ticket:
+			if (self._tickets and (ticket not in self._tickets)) or not ticket:
 				continue
-			time_end = max(info[ticket]['end time'], time_end)
+			time_end = max(info[ticket], time_end)
 		return time_end - time_current
