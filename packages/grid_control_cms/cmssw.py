@@ -26,12 +26,12 @@ class CMSDataSplitProcessor(DataSplitProcessor):
 
 
 class CMSSW(DataTask):
-	getConfigSections = DataTask.createFunction_getConfigSections(['CMSSW'])
+	configSections = DataTask.configSections + ['CMSSW']
 
 	def __init__(self, config, name):
-		config.set('se input timeout', '0:30', override = False)
-		config.set('dataset provider', 'DBS3Provider', override = False)
-		config.set('dataset splitter', 'EventBoundarySplitter', override = False)
+		config.set('se input timeout', '0:30')
+		config.set('dataset provider', 'DBS3Provider')
+		config.set('dataset splitter', 'EventBoundarySplitter')
 		DataTask.__init__(self, config, name)
 		self.errorDict.update(dict(self.updateErrorDict(utils.pathShare('gc-run.cmssw.sh', pkg = 'grid_control_cms'))))
 
@@ -49,7 +49,7 @@ class CMSSW(DataTask):
 		# This works in tandem with provider_dbsv2.py !
 		self.selectedLumis = parseLumiFilter(config.get('lumi filter', ''))
 
-		self.useReqs = config.getBool('software requirements', False, onChange = None)
+		self.useReqs = config.getBool('software requirements', True, onChange = None)
 		self.seRuntime = config.getBool('se runtime', False)
 		self.runtimePath = config.getWorkPath('runtime.tar.gz')
 
@@ -127,8 +127,7 @@ class CMSSW(DataTask):
 
 		# Check that for dataset jobs the necessary placeholders are in the config file
 		self.prepare = config.getBool('prepare config', False)
-		fragment = config.getPath('instrumentation fragment',
-			os.path.join('packages', 'grid_control_cms', 'share', 'fragmentForCMSSW.py'))
+		fragment = config.getPath('instrumentation fragment', utils.pathShare('fragmentForCMSSW.py', pkg = 'grid_control_cms'))
 		if self.dataSplitter != None:
 			if config.getState('sandbox'):
 				if len(self.configFiles) > 0:
@@ -235,7 +234,6 @@ class CMSSW(DataTask):
 	def getRequirements(self, jobNum):
 		reqs = DataTask.getRequirements(self, jobNum)
 		if self.useReqs:
-			reqs.append((WMS.SOFTWARE, 'VO-cms-%s' % self.scramEnv['SCRAM_PROJECTVERSION']))
 			reqs.append((WMS.SOFTWARE, 'VO-cms-%s' % self.scramArch))
 		return reqs
 

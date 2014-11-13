@@ -29,8 +29,8 @@ class WMS(NamedObject):
 		wmsName = QM(wmsName, wmsName, self.__class__.__name__).upper().replace('.', '_')
 		NamedObject.__init__(self, config, wmsName)
 		(self.config, self.wmsName, self.wmsClass) = (config, wmsName, wmsClass)
-		self._wait_idle = config.getInt('wait idle', 60)
-		self._wait_work = config.getInt('wait work', 10)
+		self._wait_idle = config.getInt('wait idle', 60, onChange = None)
+		self._wait_work = config.getInt('wait work', 10, onChange = None)
 
 	def getTimings(self): # Return (waitIdle, wait)
 		return (self._wait_idle, self._wait_work)

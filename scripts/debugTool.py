@@ -14,6 +14,7 @@
 #-#  limitations under the License.
 
 from gcSupport import *
+import optparse
 from grid_control.datasets import DataSplitter, DataProvider
 
 parser = optparse.OptionParser()

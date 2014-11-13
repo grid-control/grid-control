@@ -24,6 +24,7 @@ class PBSGECommon(LocalWMS):
 		self._shell = config.get('shell', '', onChange = None)
 		self._account = config.get('account', '', onChange = None)
 		self._delay = config.getBool('delay output', False, onChange = None)
+		self._softwareMap = config.getDict('software requirement map', {}, onChange = None)
 
 
 	def unknownID(self):
@@ -44,6 +45,13 @@ class PBSGECommon(LocalWMS):
 		if self._shell:
 			params += ' -S %s' % self._shell
 		# Process job requirements
+		softwareMatch = False
+		for softwareReq in self._softwareMap[1]:
+			if str(reqs.get(WMS.SOFTWARE)).startswith(softwareReq):
+				params += ' ' + self._softwareMap[0][softwareReq]
+				softwareMatch = True
+		if (None in self._softwareMap[0]) and not softwareMatch:
+			params += ' ' + self._softwareMap[0][None]
 		for req in reqMap:
 			if self.checkReq(reqs, req):
 				params += ' -l %s=%s' % (reqMap[req][0], reqMap[req][1](reqs[req]))

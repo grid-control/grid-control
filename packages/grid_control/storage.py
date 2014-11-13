@@ -55,7 +55,7 @@ class StorageManager(NamedObject):
 	def doTransfer(self, listDescSourceTarget):
 		pass
 
-StorageManager.registerObject()
+StorageManager.registerObject(tagName = 'storage')
 
 class LocalSBStorageManager(StorageManager):
 	def __init__(self, config, name, optDefault, optPrefix, varPrefix):
