@@ -25,7 +25,7 @@ def fromNM(nm, nickname, default):
 	return [nm.get(None, default)]
 
 class CMSSW_Advanced(cmssw.CMSSW):
-	getConfigSections = cmssw.CMSSW.createFunction_getConfigSections(['CMSSW_Advanced'])
+	configSections = cmssw.CMSSW.configSections + ['CMSSW_Advanced']
 
 	def __init__(self, config, name):
 		head = [(0, 'Nickname')]

@@ -18,7 +18,7 @@ from time import localtime, strftime
 from DashboardAPI import DashboardAPI
 
 class DashBoard(Monitoring):
-	getConfigSections = Monitoring.createFunction_getConfigSections(['dashboard'])
+	configSections = Monitoring.configSections + ['dashboard']
 
 	def __init__(self, config, name, task):
 		Monitoring.__init__(self, config, name, task)

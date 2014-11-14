@@ -14,7 +14,7 @@
 #-#  limitations under the License.
 
 import sys, os, optparse
-from gcSupport import utils, TaskModule, JobManager, JobSelector, Report, parseOptions, handleException, getConfig, getJobInfo
+from grid_control import utils, TaskModule, JobManager, JobSelector, Report, handleException
 
 JobResultEnum = utils.makeEnum( [ 
 	"TIMESTAMP_WRAPPER_START",

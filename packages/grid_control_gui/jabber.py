@@ -16,7 +16,7 @@ import time, xmpp, stat, os
 from grid_control import Monitoring
 
 class JabberAlarm(Monitoring):
-	getConfigSections = Monitoring.createFunction_getConfigSections(['jabber'])
+	configSections = Monitoring.configSections + ['jabber']
 
 	def __init__(self, config, name, task, submodules = []):
 		Monitoring.__init__(self, config, name, task)

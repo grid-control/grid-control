@@ -25,7 +25,7 @@ import re
 import utils
 from htcondor_utils import parseKWListIter, singleQueryCache
 from wmsid          import HTCJobID
-from grid_control   import WMS
+from grid_control   import WMS, LoadableObject
 
 # HTC modules
 from python_compat  import md5, lru_cache
