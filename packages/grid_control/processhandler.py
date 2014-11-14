@@ -176,7 +176,7 @@ class SSHProcessHandler(ProcessHandler):
 					return False
 		if sshLinkDir!=os.path.dirname(os.path.expanduser("~/.ssh/")):
 			try:
-				os.chmod(sshLinkDir,0700)
+				os.chmod(sshLinkDir, stat.S_IRWXU)
 			except Exception:
 				if self.socketEnforce:
 					raise RethrowError("Could not secure directory for SSHLink:\n	%s" % sshLinkDir)
@@ -187,7 +187,7 @@ class SSHProcessHandler(ProcessHandler):
 		if os.path.exists(sshLink):
 			if stat.S_ISSOCK(os.stat(sshLink).st_mode):
 				try:
-					os.chmod(sshLink,0700)
+					os.chmod(sshLink, stat.S_IRWXU)
 				except Exception:
 					if self.socketEnforce:
 						raise RethrowError("Could not secure SSHLink:\n	%s" % sshLink)

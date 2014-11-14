@@ -59,7 +59,7 @@ class Popen3:
         _active.append(self)
 
     def _run_child(self, cmd):
-        if isinstance(cmd, basestring):
+        if isinstance(cmd, str):
             cmd = ['/bin/sh', '-c', cmd]
         for i in range(3, MAXFD):
             try:

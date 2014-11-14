@@ -104,7 +104,7 @@ class CMSProvider(DataProvider):
 						dictSE[blockPath].append(location)
 					else:
 						utils.vprint('Warning: Dataset block %s replica at %s / %s is skipped!' %
-							(blockPath, replica.get('node'), replica.get('se')) , -1)
+							(blockPath, replica.get('node'), replica.get('se')), -1)
 
 
 	def getCMSDatasets(self):

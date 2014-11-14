@@ -350,8 +350,7 @@ class Condor(BasicWMS):
 			utils.vprint('querrying condor_history', 2)
 			# querying the history can be VERY slow! Only do so bit by bit if possible
 			if self.historyFile:
-				historyList = [ "-f "+ file for file in filter(os.path.isfile, glob.glob(self.historyFile+"*")) ]
-				historyList.sort()
+				historyList = sorted([ "-f "+ file for file in filter(os.path.isfile, glob.glob(self.historyFile+"*")) ])
 			else:
 				historyList=[""]
 			# query the history file by file until no more jobs need updating

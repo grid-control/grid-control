@@ -169,9 +169,9 @@ class LoggedProcess(object):
 		if shell:
 			self.proc = popen2.Popen3('%s %s' % (cmd, args), True)
 		else:
-			if isinstance(cmd, basestring):
+			if isinstance(cmd, str):
 				cmd = [cmd]
-			if isinstance(args, basestring):
+			if isinstance(args, str):
 				args = args.split()
 			self.proc = popen2.Popen3( cmd + list(args), True)
 
@@ -256,7 +256,7 @@ class LoggedProcess(object):
 class RemoteProcessHandler(object):
 	# enum for connection type - LOCAL exists to ensure uniform interfacing with local programms if needed
 	class RPHType:
-		enumList = ('LOCAL','SSH','GSISSH')
+		enumList = ('LOCAL', 'SSH', 'GSISSH')
 		for idx, eType in enumerate(enumList):
 			locals()[eType] = idx
 
@@ -291,7 +291,7 @@ class RemoteProcessHandler(object):
 		self.cmd=False
 		# pick requested remote connection
 		try:
-			self.remoteType = getattr( self.RPHType,remoteType.upper() )
+			self.remoteType = getattr(self.RPHType, remoteType.upper())
 			self.cmd = self.RPHTemplate[self.remoteType]["command"]
 			self.copy = self.RPHTemplate[self.remoteType]["copy"]
 			self.path = self.RPHTemplate[self.remoteType]["path"]
@@ -310,7 +310,7 @@ class RemoteProcessHandler(object):
 		self.cmd = self.cmd % { "cmdargs" : kwargs.get("cmdargs",""), "args" : kwargs.get("args","") }
 		self.copy = self.copy % { "cpargs" : kwargs.get("cpargs",""), "args" : kwargs.get("args","") }
 		# test connection once
-		ret, out, err = LoggedProcess( self.cmd % { "cmd" : "exit"} ).getAll()
+		ret, out, err = LoggedProcess(self.cmd % { "cmd" : "exit"}).getAll()
 		if ret!=0:
 			raise GCError("Validation of remote connection failed!\nTest Command: %s\nReturn Code: %s\nStdOut: %s\nStdErr: %s" % (self.cmd % { "cmd" : "exit"},ret,out,err))
 		vprint('Remote interface initialized:\n	Cmd: %s\n	Cp : %s' % (self.cmd,self.copy), level=2)
@@ -591,7 +591,7 @@ def flatten(lists):
 	result = []
 	for x in lists:
 		try:
-			if isinstance(x, basestring):
+			if isinstance(x, str):
 				raise
 			result.extend(x)
 		except:

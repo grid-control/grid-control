@@ -413,7 +413,7 @@ class SSHProcessAdapter(ProcessAdapterInterface):
 			argList = []
 			for arg in args:
 				try:
-					if isinstance(arg, basestring):
+					if isinstance(arg, str):
 						raise
 					argList.extend(arg)
 				except Exception:
@@ -617,13 +617,3 @@ class GSISSHProcessAdapter(SSHProcessAdapter):
 				"URI"     : self.URI,
 				},
 			)
-
-
-
-
-
-
-
-
-
-

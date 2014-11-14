@@ -12,7 +12,6 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-import itertools
 from python_compat import next
 from grid_control import RethrowError, Job, utils
 from grid_control.backends import WMS, LocalWMS
@@ -66,17 +65,18 @@ class LSF(LocalWMS):
 	def parseStatus(self, status):
 		next(status)
 		tmpHead = ['id', 'user', 'status', 'queue', 'from', 'dest_host', 'job_name']
-		for jobline in itertools.ifilter(lambda x: x != '', status):
-			try:
-				tmp = jobline.split()
-				jobinfo = dict(zip(tmpHead, tmp[:7]))
-				jobinfo['submit_time'] = str.join(' ', tmp[7:10])
-				jobinfo['dest'] = 'N/A'
-				if jobinfo['dest_host'] != '-':
-					jobinfo['dest'] = '%s/%s' % (jobinfo['dest_host'], jobinfo['queue'])
-				yield jobinfo
-			except:
-				raise RethrowError('Error reading job info:\n%s' % jobline)
+		for jobline in status:
+			if jobline != '':
+				try:
+					tmp = jobline.split()
+					jobinfo = dict(zip(tmpHead, tmp[:7]))
+					jobinfo['submit_time'] = str.join(' ', tmp[7:10])
+					jobinfo['dest'] = 'N/A'
+					if jobinfo['dest_host'] != '-':
+						jobinfo['dest'] = '%s/%s' % (jobinfo['dest_host'], jobinfo['queue'])
+					yield jobinfo
+				except:
+					raise RethrowError('Error reading job info:\n%s' % jobline)
 
 
 	def getCheckArguments(self, wmsIds):

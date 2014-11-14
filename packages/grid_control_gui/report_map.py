@@ -50,7 +50,7 @@ def draw_pie(ax, breakdown, pos, size, piecolor = ['red', 'orange', 'green', 'bl
 	for i in xrange(len(breakdown)-1):
 		x = [0] + numpy.cos(numpy.linspace(2 * math.pi * breakdown[i], 2 * math.pi * breakdown[i+1], 20)).tolist()
 		y = [0] + numpy.sin(numpy.linspace(2 * math.pi * breakdown[i], 2 * math.pi * breakdown[i+1], 20)).tolist()
-		ax.scatter(pos[0], pos[1], marker=(zip(x, y),0), s = size, facecolor = piecolor[i % len(piecolor)])
+		ax.scatter(pos[0], pos[1], marker=(zip(x, y), 0), s = size, facecolor = piecolor[i % len(piecolor)])
 
 def drawMap(report):
 	from mpl_toolkits.basemap import Basemap

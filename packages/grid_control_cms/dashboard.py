@@ -61,7 +61,7 @@ class DashBoard(Monitoring):
 			self.publish, jobObj, jobNum, taskId, [{
 			'user': os.environ['LOGNAME'], 'GridName': '/CN=%s' % proxy.getUsername(), 'CMSUser': proxy.getUsername(),
 			'tool': 'grid-control', 'JSToolVersion': utils.getVersion(),
-			'SubmissionType':'direct', 'tool_ui': os.environ.get('HOSTNAME',''),
+			'SubmissionType':'direct', 'tool_ui': os.environ.get('HOSTNAME', ''),
 			'application': self.app, 'exe': 'shellscript', 'taskType': self.tasktype,
 			'scheduler': wms.wmsName, 'vo': proxy.getGroup()}, self.task.getSubmitInfo(jobNum)])
 

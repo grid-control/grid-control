@@ -21,95 +21,90 @@ config = getConfig(cfgDict = {'nickname check collision': 'False'}, section = 'd
 provider = ListProvider(config, 'datacache.dat', None, None)
 
 def generateDBS3BlockDumps(provider):
-    for blockInfo in provider.getBlocks():
-        blockDump = dict(files=[], file_conf_list=[], file_parent_list=[])
-        locations = blockInfo[DataProvider.Locations]
-        dataset = blockInfo[DataProvider.Dataset]
-        primaryDataset, processedDataset, dataTier = dataset[1:].split('/')
-        blockName = blockInfo[DataProvider.BlockName]
-        fileList = blockInfo[DataProvider.FileList]
-        blockSize = 0
-        datasetConfigurations = []
+	for blockInfo in provider.getBlocks():
+		blockDump = dict(files=[], file_conf_list=[], file_parent_list=[])
+		locations = blockInfo[DataProvider.Locations]
+		dataset = blockInfo[DataProvider.Dataset]
+		primaryDataset, processedDataset, dataTier = dataset[1:].split('/')
+		blockName = blockInfo[DataProvider.BlockName]
+		fileList = blockInfo[DataProvider.FileList]
+		blockSize = 0
+		datasetConfigurations = []
 
-        for fileInfo in fileList:
-            metadataInfo = dict(zip(blockInfo[DataProvider.Metadata], fileInfo[DataProvider.Metadata]))
-            datasetType = metadataInfo['CMSSW_DATATYPE'].lower()
-            fileSize = metadataInfo['SE_OUTPUT_SIZE']
-            lfn = fileInfo[DataProvider.URL]
-            fileLumiList = [{u'lumi_section_num': lumi_num,
-                             u'run_num': run_num} for run_num, lumi_num in metadataInfo['CMSSW_LUMIS']]
+		for fileInfo in fileList:
+			metadataInfo = dict(zip(blockInfo[DataProvider.Metadata], fileInfo[DataProvider.Metadata]))
+			datasetType = metadataInfo['CMSSW_DATATYPE'].lower()
+			fileSize = metadataInfo['SE_OUTPUT_SIZE']
+			lfn = fileInfo[DataProvider.URL]
+			makeLumiDict = lambda (run_num, lumi_num): {'lumi_section_num': lumi_num, 'run_num': run_num}
+			fileLumiList = map(makeLumiDict, metadataInfo['CMSSW_LUMIS'])
 
-            ###add file information
-            fileDict = {u'check_sum': metadataInfo['SE_OUTPUT_HASH_CRC32'],
-                        u'file_lumi_list': fileLumiList,
-                        u'adler32': 'NOTSET',
-                        u'event_count': metadataInfo['CMSSW_EVENTS_WRITE'],
-                        u'file_type': 'EDM',
-                        u'logical_file_name': lfn,
-                        u'file_size': fileSize,
-                        u'md5': metadataInfo['SE_OUTPUT_HASH_MD5'],
-                        u'auto_cross_section': 0.0
-                        }
-            blockDump[u'files'].append(fileDict)
+			###add file information
+			fileDict = {'check_sum': metadataInfo['SE_OUTPUT_HASH_CRC32'],
+						'file_lumi_list': fileLumiList,
+						'adler32': 'NOTSET',
+						'event_count': metadataInfo['CMSSW_EVENTS_WRITE'],
+						'file_type': 'EDM',
+						'logical_file_name': lfn,
+						'file_size': fileSize,
+						'md5': metadataInfo['SE_OUTPUT_HASH_MD5'],
+						'auto_cross_section': 0.0
+						}
+			blockDump['files'].append(fileDict)
 
-            ###add file configurations
-            fileConfDict = {u'release_version': metadataInfo['CMSSW_VERSION'],
-                            u'pset_hash': metadataInfo['CMSSW_CONFIG_HASH'],
-                            u'lfn': lfn,
-                            u'app_name': 'cmsRun',
-                            u'output_module_label': 'crab2_mod_label',
-                            u'global_tag': metadataInfo['GLOBALTAG'],
-                            }
+			###add file configurations
+			fileConfDict = {'release_version': metadataInfo['CMSSW_VERSION'],
+							'pset_hash': metadataInfo['CMSSW_CONFIG_HASH'],
+							'lfn': lfn,
+							'app_name': 'cmsRun',
+							'output_module_label': 'crab2_mod_label',
+							'global_tag': metadataInfo['GLOBALTAG'],
+							}
 
-            blockDump[u'file_conf_list'].append(fileConfDict)
+			blockDump['file_conf_list'].append(fileConfDict)
 
-            ###add file parentage information
-            file_parentage = [{'logical_file_name': lfn,
-                          'parent_logical_file_name': parent_lfn} for parent_lfn in metadataInfo['CMSSW_PARENT_LFN']]
-            blockDump[u'file_parent_list'].extend(file_parentage)
+			###add file parentage information
+			file_parentage = [{'logical_file_name': lfn,
+						  'parent_logical_file_name': parent_lfn} for parent_lfn in metadataInfo['CMSSW_PARENT_LFN']]
+			blockDump['file_parent_list'].extend(file_parentage)
 
-            ###fill dataset configurations
-            datasetConfDict = dict(fileConfDict)
-            del datasetConfDict[u'lfn']
-            ###check for duplicates
-            if datasetConfDict not in datasetConfigurations:
-                datasetConfigurations.append(datasetConfDict)
+			###fill dataset configurations
+			datasetConfDict = dict(fileConfDict)
+			del datasetConfDict['lfn']
+			###check for duplicates
+			if datasetConfDict not in datasetConfigurations:
+				datasetConfigurations.append(datasetConfDict)
 
-            ###update block size for block information
-            blockSize += fileSize
+			###update block size for block information
+			blockSize += fileSize
 
-        ###add primary dataset information
-        blockDump[u'primds'] = {u'primary_ds_type': datasetType,
-                                u'primary_ds_name': primaryDataset}
+		###add primary dataset information
+		blockDump['primds'] = {'primary_ds_type': datasetType, 'primary_ds_name': primaryDataset}
 
-        ###add dataset information
-        blockDump[u'dataset'] = {u'physics_group_name': None,
-                                 u'dataset_access_type': 'VALID',
-                                 u'data_tier_name': dataTier,
-                                 u'processed_ds_name': processedDataset,
-                                 u'xtcrosssection': None,###Add to meta data from FrameWorkJobReport, if possible!
-                                 u'dataset': dataset
-                                 }
+		###add dataset information
+		blockDump['dataset'] = {'physics_group_name': None,
+								 'dataset_access_type': 'VALID',
+								 'data_tier_name': dataTier,
+								 'processed_ds_name': processedDataset,
+								 'xtcrosssection': None,###Add to meta data from FrameWorkJobReport, if possible!
+								 'dataset': dataset
+								 }
 
-        ###add block information
-        blockDump[u'block'] = {u'open_for_writing': 0,
-                               u'block_name': '%s#%s' % (dataset, blockName),
-                               u'file_count': len(fileList),
-                               u'block_size': blockSize,
-                               u'origin_site_name': locations[0] if len(locations) else 'UNKNOWN'}
+		###add block information
+		blockDump['block'] = {'open_for_writing': 0,
+							   'block_name': '%s#%s' % (dataset, blockName),
+							   'file_count': len(fileList),
+							   'block_size': blockSize,
+							   'origin_site_name': locations[0] if len(locations) else 'UNKNOWN'}
 
-        ###add acquisition_era, CRAB is important because of checks within DBS 3
-        blockDump[u'acquisition_era'] = {u'acquisition_era_name': 'CRAB',
-                                         u'start_date': 0}
+		###add acquisition_era, CRAB is important because of checks within DBS 3
+		blockDump['acquisition_era'] = {'acquisition_era_name': 'CRAB', 'start_date': 0}
+		###add processing_era
+		blockDump['processing_era'] = {'processing_version': 1, 'description': 'grid-control'}
+		###add dataset configurations
+		blockDump['dataset_conf_list'] = list(datasetConfigurations)
 
-        ###add processing_era
-        blockDump[u'processing_era'] = {u'processing_version': 1,
-                                        u'description': 'grid-control'}
-
-        ###add dataset configurations
-        blockDump[u'dataset_conf_list'] = list(datasetConfigurations)
-
-        yield blockDump
+		yield blockDump
 
 for blockDump in generateDBS3BlockDumps(provider):
-    pprint.pprint(blockDump)
+	pprint.pprint(blockDump)

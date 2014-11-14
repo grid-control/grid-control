@@ -55,6 +55,6 @@ class HTCJobID(object):
 	def __getitem__(self, key):
 		return self._infoBlob[key]
 	def __eq__(self, other):
-		return ( type(other) == type(self) and self._infoBlob == other._infoBlob )
+		return ( isinstance(other, type(self)) and self._infoBlob == other._infoBlob )
 	def __ne__(self, other):
 		return not self.__eq__(other)

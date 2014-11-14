@@ -105,7 +105,7 @@ except:
 	def next(it, *default):
 		try:
 			return it.next()
-		except:
+		except Exception:
 			if default:
 				return default[0]
 			raise
@@ -136,7 +136,7 @@ except:
 		(funProxy.fun, funProxy.cache) = (fun, [])
 		return funProxy
 
-try:	# 
+try:	# email.utils >= Python 2.5
 	from email.utils import parsedate
 except ImportError:
 	from email.Utils import parsedate

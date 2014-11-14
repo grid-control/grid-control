@@ -307,7 +307,7 @@ class HTCondor(BasicWMS):
 		jrm.update(self._jobFeatureMapDef)
 		jrm.update(self._jobFeatureMap)
 		for key in jrm:
-			if isinstance(jrm[key], basestring):
+			if isinstance(jrm[key], str):
 				jrm[key] = [jrm[key]]
 			if len(jrm[key]) == 1:
 				jrm[key].append('%s')

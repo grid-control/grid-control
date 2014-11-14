@@ -81,6 +81,6 @@ class CSVParameterSource(InternalParameterSource):
 
 	def create(cls, pconfig = None, src = 'CSV'):
 		fn = pconfig.get(src, 'source')
-		return CSVParameterSource(fn , pconfig.get(src, 'format', 'sniffed'))
+		return CSVParameterSource(fn, pconfig.get(src, 'format', 'sniffed'))
 	create = classmethod(create)
 ParameterSource.managerMap['csv'] = CSVParameterSource
