@@ -29,7 +29,7 @@ class MetadataSplitter(FileLevelSplitter):
 			for fi in files:
 				if reprElement == None:
 					reprElement = fi
-				if self.metaCmp(block[DataProvider.Metadata], fi, reprElement) != 0:
+				if self.metaCmp(block[DataProvider.Metadata], block, fi, reprElement) != 0:
 					yield self.newBlock(block, fileStack)
 					(fileStack, reprElement) = ([], fi)
 				fileStack.append(fi)
@@ -46,5 +46,5 @@ class UserMetadataSplitter(MetadataSplitter):
 
 class RunSplitter(MetadataSplitter):
 	def metaCmp(self, metadataNames, block, fiA, fiB):
-		mdIdx = metadataNames.index('Run')
+		mdIdx = metadataNames.index('Runs')
 		return cmp(fiA[DataProvider.Metadata][mdIdx], fiB[DataProvider.Metadata][mdIdx])
