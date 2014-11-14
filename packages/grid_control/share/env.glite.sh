@@ -27,7 +27,7 @@ if [ -z "$GLITE_LOCATION" ]; then
 	cat $VO_KEEPER
 	# Source UI
 	if [ -d "/cvmfs/grid.cern.ch" ]; then
-		source "`ls -1 3.*/etc/profile.d/grid-env.sh | sort | tail -n 1`"
+		source "`ls -1 /cvmfs/grid.cern.ch/3.*/etc/profile.d/grid-env.sh | sort | tail -n 1`"
 		echo "[CMVFS-SITE] Using gLite `glite-version`"
 	elif [ -d "/afs/desy.de/project/glite" ]; then
 		source "/afs/desy.de/project/glite/UI/etc/profile.d/grid-env.sh"
