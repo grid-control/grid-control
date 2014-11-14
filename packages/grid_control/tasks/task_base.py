@@ -19,7 +19,7 @@ from grid_control.parameters import ParameterFactory, ParameterInfo
 from time import time, strftime
 
 class TaskModule(NamedObject):
-	configSections = ['task']
+	configSections = NamedObject.configSections + ['task']
 
 	# Read configuration options and init vars
 	def __init__(self, config, name):

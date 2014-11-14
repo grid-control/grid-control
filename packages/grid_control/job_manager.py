@@ -12,14 +12,13 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-import random, math, time
-import bisect
+import random, math, time, logging, bisect
 from grid_control import QM, ConfigError, RuntimeError, Job, JobClass, JobDB, Report, utils, NamedObject
 from job_selector import JobSelector, ClassSelector, AndJobSelector
 from python_compat import set, sorted
 
 class JobManager(NamedObject):
-	configSections = ['jobs']
+	configSections = NamedObject.configSections + ['jobs']
 
 	def __init__(self, config, name, task, eventhandler):
 		NamedObject.__init__(self, config, name)

@@ -37,7 +37,7 @@ def se_copy(src, dst, force = True, tmp = ''):
 
 
 class StorageManager(NamedObject):
-	configSections = ['storage']
+	configSections = NamedObject.configSections + ['storage']
 
 	def __init__(self, config, name, optDefault, optPrefix, varPrefix):
 		NamedObject.__init__(self, config, name)

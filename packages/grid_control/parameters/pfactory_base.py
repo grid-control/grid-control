@@ -21,7 +21,7 @@ from config_param import ParameterConfig
 from grid_control import NamedObject
 
 class ParameterFactory(NamedObject):
-	configSections = ['parameters']
+	configSections = NamedObject.configSections + ['parameters']
 
 	def __init__(self, config, name):
 		NamedObject.__init__(self, config, name)

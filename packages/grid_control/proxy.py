@@ -17,7 +17,7 @@ import os, time, getpass, shutil, stat
 from grid_control import QM, NamedObject, AbstractError, UserError, utils
 
 class Proxy(NamedObject):
-	configSections = ['proxy']
+	configSections = NamedObject.configSections + ['proxy']
 
 	def getUsername(self):
 		raise AbstractError
@@ -33,7 +33,7 @@ class Proxy(NamedObject):
 
 	def canSubmit(self, neededTime, canCurrentlySubmit):
 		raise AbstractError
-Proxy.registerObject()
+Proxy.registerObject(tagName = 'proxy')
 
 
 class MultiProxy(Proxy):

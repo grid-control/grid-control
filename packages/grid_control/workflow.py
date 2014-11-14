@@ -22,7 +22,7 @@ from grid_control import utils
 
 # Workflow class
 class Workflow(NamedObject):
-	configSections = ['global', 'workflow']
+	configSections = NamedObject.configSections + ['global', 'workflow']
 
 	def __init__(self, config, name):
 		NamedObject.__init__(self, config, name)

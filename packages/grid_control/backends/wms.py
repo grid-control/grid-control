@@ -19,7 +19,7 @@ import os, shutil, glob, itertools
 from grid_control import QM, NamedObject, AbstractError, RuntimeError, RethrowError, utils, Proxy, StorageManager, ClassFactory
 
 class WMS(NamedObject):
-	configSections = ['wms', 'backend']
+	configSections = NamedObject.configSections + ['wms', 'backend']
 
 	reqTypes = ('WALLTIME', 'CPUTIME', 'MEMORY', 'CPUS', 'BACKEND', 'SITES', 'QUEUES', 'SOFTWARE', 'STORAGE')
 	for idx, reqType in enumerate(reqTypes):

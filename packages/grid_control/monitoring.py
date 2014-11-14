@@ -16,7 +16,7 @@ import os
 from grid_control import NamedObject, Job, utils
 
 class EventHandler(NamedObject):
-	configSections = ['events']
+	configSections = NamedObject.configSections + ['events']
 
 	def __init__(self, config, name, task, submodules = []):
 		NamedObject.__init__(self, config, name)
