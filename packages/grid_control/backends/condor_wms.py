@@ -34,6 +34,7 @@ class poolType:
 		locals()[eType] = idx
 
 class Condor(BasicWMS):
+	configSections = BasicWMS.configSections + ['condor']
 	# dictionary mapping vanilla condor job status to GC job status
 	# condor: U = unexpanded (never been run), H = on hold, R = running, I = idle (waiting for a machine to execute on), C = completed, and X = removed. 
 	# 0 Unexpanded 	U -- 1	Idle 	I -- 2	Running 	R -- 3	Removed 	X -- 4	Completed 	C -- 5	Held 	H -- 6	Submission_err 	E
@@ -61,8 +62,7 @@ class Condor(BasicWMS):
 #>>config: Config class extended dictionary
 	def __init__(self, config, wmsName):
 		utils.vprint('Using batch system: Condor/GlideInWMS', -1)
-		### WMSname=condor is a hardcoded hack until interface is clear
-		BasicWMS.__init__(self, config, wmsName, 'condor')
+		BasicWMS.__init__(self, config, wmsName)
 		# special debug out/messages/annotations - may have noticeable effect on storage and performance!
 		if config.get( self._getSections("backend"), "debugLog", ""):
 			self.debug=open(config.get( self._getSections("backend"), "debugLog", ""),'a')

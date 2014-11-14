@@ -24,6 +24,8 @@ def jdlEscape(value):
 
 
 class GridWMS(BasicWMS):
+	configSections = BasicWMS.configSections + ['grid']
+
 	_statusMap = {
 		'ready':     Job.READY,
 		'submitted': Job.SUBMITTED,
@@ -41,7 +43,7 @@ class GridWMS(BasicWMS):
 
 	def __init__(self, config, wmsName):
 		config.set('proxy', 'VomsProxy')
-		BasicWMS.__init__(self, config, wmsName, 'grid')
+		BasicWMS.__init__(self, config, wmsName)
 
 		self.brokerSite = config.getClass('site broker', 'UserBroker',
 			cls = Broker, tags = [self]).getInstance('sites', 'sites', self.getSites)

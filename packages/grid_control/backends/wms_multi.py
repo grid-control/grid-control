@@ -20,7 +20,7 @@ class MultiWMS(WMS):
 	def __init__(self, config, defaultWMS, wmsList):
 		self.defaultWMS = defaultWMS
 		self.wmsMap = dict(map(lambda wmsObj: (wmsObj.wmsName, wmsObj), wmsList))
-		WMS.__init__(self, config, None, None)
+		WMS.__init__(self, config, None)
 
 		# Determine WMS timings
 		waitIdle, waitDefault = self.defaultWMS.getTimings()

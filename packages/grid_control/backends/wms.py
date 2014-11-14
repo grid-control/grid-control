@@ -25,10 +25,10 @@ class WMS(NamedObject):
 	for idx, reqType in enumerate(reqTypes):
 		locals()[reqType] = idx
 
-	def __init__(self, config, wmsName, wmsClass):
+	def __init__(self, config, wmsName):
 		wmsName = QM(wmsName, wmsName, self.__class__.__name__).upper().replace('.', '_')
 		NamedObject.__init__(self, config, wmsName)
-		(self.config, self.wmsName, self.wmsClass) = (config, wmsName, wmsClass)
+		(self.config, self.wmsName) = (config, wmsName)
 		self._wait_idle = config.getInt('wait idle', 60, onChange = None)
 		self._wait_work = config.getInt('wait work', 10, onChange = None)
 
@@ -88,8 +88,8 @@ WMS.registerObject(tagName = 'wms')
 
 
 class InactiveWMS(WMS):
-	def __init__(self, config, wmsName, wmsClass):
-		WMS.__init__(self, config, wmsName, wmsClass)
+	def __init__(self, config, wmsName):
+		WMS.__init__(self, config, wmsName)
 		self.proxy = ClassFactory(config, ('proxy', 'TrivialProxy'), ('proxy manager', 'MultiProxy'),
 			cls = Proxy, inherit = True, tags = [self]).getInstance()
 
@@ -116,8 +116,8 @@ class InactiveWMS(WMS):
 
 
 class BasicWMS(WMS):
-	def __init__(self, config, wmsName, wmsClass):
-		WMS.__init__(self, config, wmsName, wmsClass)
+	def __init__(self, config, wmsName):
+		WMS.__init__(self, config, wmsName)
 		if self.wmsName != self.__class__.__name__.upper():
 			utils.vprint('Using batch system: %s (%s)' % (self.__class__.__name__, self.wmsName), -1)
 		else:

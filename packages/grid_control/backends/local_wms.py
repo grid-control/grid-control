@@ -25,7 +25,7 @@ class LocalWMS(BasicWMS):
 		config.setInt('wait idle', 20)
 		config.setInt('wait work', 5)
 		(self.submitExec, self.statusExec, self.cancelExec) = (submitExec, statusExec, cancelExec)
-		BasicWMS.__init__(self, config, wmsName, 'local')
+		BasicWMS.__init__(self, config, wmsName)
 
 		self.brokerSite = config.getClass('site broker', 'UserBroker', cls = Broker,
 			inherit = True, tags = [self]).getInstance('sites', 'sites', self.getNodes)

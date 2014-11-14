@@ -58,7 +58,8 @@ a link copy. For convention with other backends, these correspond to:
 """
 
 class HTCondor(BasicWMS):
-	""""
+	configSections = BasicWMS.configSections + ['htcondor']
+	"""
 	Backend for HTCondor 8+
 	"""
 	_statusMap = {
@@ -91,7 +92,7 @@ class HTCondor(BasicWMS):
 	# Initialization
 	def __init__(self, config, wmsName):
 		self._initLogger()
-		BasicWMS.__init__(self, config, wmsName, 'HTCondor')
+		BasicWMS.__init__(self, config, wmsName)
 		# setup the connection to pools and their interfaces
 		self._sandboxDir  = config.getPath('sandbox path', config.getWorkPath('sandbox.%s'%wmsName), mustExist = False)
 		self._initPoolInterfaces(config)
