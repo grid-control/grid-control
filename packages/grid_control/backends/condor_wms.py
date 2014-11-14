@@ -24,6 +24,7 @@ import tempfile
 from python_compat import set, md5
 from grid_control import utils, QM, ProcessHandler, Job
 from wms import WMS, BasicWMS, RethrowError
+from broker import Broker
 
 # if the ssh stuff proves too hack'y: http://www.lag.net/paramiko/
 
@@ -64,12 +65,12 @@ class Condor(BasicWMS):
 		utils.vprint('Using batch system: Condor/GlideInWMS', -1)
 		BasicWMS.__init__(self, config, wmsName)
 		# special debug out/messages/annotations - may have noticeable effect on storage and performance!
-		if config.get( self._getSections("backend"), "debugLog", ""):
-			self.debug=open(config.get( self._getSections("backend"), "debugLog", ""),'a')
+		if config.get("debugLog", ""):
+			self.debug=open(config.get("debugLog", ""),'a')
 		else:
 			self.debug=False
 		######
-		self.taskID = config.get('condor', 'task id', md5(str(time.time())).hexdigest(), persistent = True) # FIXME!
+		self.taskID = config.get('task id', md5(str(time.time())).hexdigest(), persistent = True) # FIXME!
 		self.debugOut("""
 		
 		#############################
@@ -80,27 +81,27 @@ class Condor(BasicWMS):
 		Name:   %s
 		#############################
 		
-		"""%(config.confName,self.taskID,wmsName))
+		"""%(config.getConfigName(),self.taskID,wmsName))
 		# finalize config state by reading values or setting to defaults
 		self.settings={
 			"jdl": {
-				"Universe" : config.get( self._getSections("backend"), "Universe", "vanilla"),
-				"NotifyEmail" : config.get( self._getSections("backend"), "NotifyEmail", ""),
-				"ClassAdData" : config.getList( self._getSections("backend"), "ClassAdData",[]),
-				"JDLData" : config.getList( self._getSections("backend"), "JDLData",[])
+				"Universe" : config.get("Universe", "vanilla"),
+				"NotifyEmail" : config.get("NotifyEmail", ""),
+				"ClassAdData" : config.getList("ClassAdData",[]),
+				"JDLData" : config.getList("JDLData",[])
 				},
 			"pool" : {
-				"hosts" : config.getList( self._getSections("backend"), "PoolHostList",[])
+				"hosts" : config.getList("PoolHostList",[])
 				}
 			}
 		# prepare interfaces for local/remote/ssh pool access
 		self._initPoolInterfaces(config)
 		# load keys for condor pool ClassAds
-		self.poolReqs  = config.getDict(self._getSections("backend"), 'poolArgs req', {})[0]
-		self.poolQuery = config.getDict(self._getSections("backend"), 'poolArgs query', {})[0]
+		self.poolReqs  = config.getDict('poolArgs req', {})[0]
+		self.poolQuery = config.getDict('poolArgs query', {})[0]
 		self._formatStatusReturnQuery(config)
 		# Sandbox base path where individual job data is stored, staged and returned to
-		self.sandPath = config.getPath(self._getSections("local"), 'sandbox path', config.getWorkPath('sandbox'), mustExist = False)
+		self.sandPath = config.getPath('sandbox path', config.getWorkPath('sandbox'), mustExist = False)
 		# history query is faster with split files - check if and how this is used
 		# default condor_history command works WITHOUT explicitly specified file
 		self.historyFile = None
@@ -700,7 +701,7 @@ class Condor(BasicWMS):
 # _initPoolInterfaces: prepare commands and interfaces according to selected submit type
 	def _initPoolInterfaces(self, config):
 		# check submissal type
-		self.remoteType = config.get( self._getSections("backend"), "remote Type", "").lower()
+		self.remoteType = config.get("remote Type", "").lower()
 		if self.remoteType in ["ssh"]:
 			self.remoteType = poolType.SSH
 		elif self.remoteType in ["gsissh","gssh"]:
@@ -717,7 +718,7 @@ class Condor(BasicWMS):
 		# prepare commands appropriate for pool type
 		if self.remoteType == poolType.LOCAL or self.remoteType == poolType.SPOOL:
 			self.user=user
-			self.Pool=self.Pool=ProcessHandler.open("LocalProcessHandler")
+			self.Pool=self.Pool=ProcessHandler.getInstance("LocalProcessHandler")
 			# local and remote use condor tools installed locally - get them
 			self.submitExec = utils.resolveInstallPath('condor_submit')
 			self.statusExec = utils.resolveInstallPath('condor_q')
@@ -736,9 +737,9 @@ class Condor(BasicWMS):
 			# ssh type instructions are passed to the remote host via regular ssh/gsissh
 			host="%s%s"%(QM(user,"%s@" % user,""), sched)
 			if self.remoteType == poolType.SSH:
-				self.Pool=ProcessHandler.open("SSHProcessHandler",remoteHost=host , sshLink=config.getWorkPath(".ssh", self.wmsName+host ) )
+				self.Pool=ProcessHandler.getInstance("SSHProcessHandler",remoteHost=host , sshLink=config.getWorkPath(".ssh", self.wmsName+host ) )
 			else:
-				self.Pool=ProcessHandler.open("GSISSHProcessHandler",remoteHost=host , sshLink=config.getWorkPath(".gsissh", self.wmsName+host ) )
+				self.Pool=ProcessHandler.getInstance("GSISSHProcessHandler",remoteHost=host , sshLink=config.getWorkPath(".gsissh", self.wmsName+host ) )
 			# ssh type instructions rely on commands being available on remote pool
 			self.submitExec = 'condor_submit'
 			self.statusExec = 'condor_q'
@@ -753,9 +754,9 @@ class Condor(BasicWMS):
 				testProcess.logError(self.errorLog)
 				raise RuntimeError("Failed to access remote Condor tools! The pool you are submitting to is very likely not configured properly.")
 			# get initial workdir on remote pool
-			if config.get( self._getSections("backend"), "remote workdir", ''):
+			if config.get("remote workdir", ''):
 				uName=self.Pool.LoggedProcess("whoami").getOutput().strip()
-				self.poolWorkDir=os.path.join(config.get( self._getSections("backend"), "remote workdir", ''), uName)
+				self.poolWorkDir=os.path.join(config.get("remote workdir", ''), uName)
 				pwdProcess=self.Pool.LoggedProcess("mkdir -p %s" % self.poolWorkDir )
 			else:
 				pwdProcess=self.Pool.LoggedProcess("pwd")
@@ -765,11 +766,11 @@ class Condor(BasicWMS):
 
 #_getDestination: read user/sched/collector from config
 	def _getDestination(self,config):
-		splitDest = [ item.strip() for item in config.get( self._getSections("backend"), "remote Dest", "@").split("@") ]
-		user = config.get( self._getSections("backend"), "remote User", "").strip()
+		splitDest = [ item.strip() for item in config.get("remote Dest", "@").split("@") ]
+		user = config.get("remote User", "").strip()
 		if len(splitDest)==1:
 			return QM(user,user,None),splitDest[0],None
 		elif len(splitDest)==2:
 			return QM(user,user,None),splitDest[0],splitDest[1]
 		else:
-			raise RuntimeError("Could not parse Configuration setting 'remote Dest'! \nExpected:	[<sched>|<sched>@|<sched>@<collector>]\nFound:	%s"%config.get( self._getSections("backend"), "remote Dest", "@"))
+			raise RuntimeError("Could not parse Configuration setting 'remote Dest'! \nExpected:	[<sched>|<sched>@|<sched>@<collector>]\nFound:	%s"%config.get("remote Dest", "@"))
