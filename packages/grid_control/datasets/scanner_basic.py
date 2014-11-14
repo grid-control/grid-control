@@ -13,7 +13,7 @@
 #-#  limitations under the License.
 
 import os, sys
-from grid_control import QM, utils, storage, JobSelector, JobDB, JobSelector, Job, RethrowError, DefaultFilesConfigFiller, GeneralFileConfigFiller, MultiConfigFiller
+from grid_control import QM, utils, storage, JobSelector, JobDB, JobSelector, Job, RethrowError, DefaultFilesConfigFiller, GeneralFileConfigFiller, MultiConfigFiller, ConfigFactory
 from scanner_base import InfoScanner
 from grid_control.datasets import DataProvider
 from python_compat import set, sorted
@@ -29,10 +29,9 @@ class OutputDirsFromConfig(InfoScanner):
 		newVerbosity = utils.verbosity(utils.verbosity() - 3)
 		extConfigFN = config.getPath('source config')
 		extFillers = [DefaultFilesConfigFiller(), GeneralFileConfigFiller([extConfigFN])]
-		extConfig = Config(MultiConfigFiller(extFillers), extConfigFN)
-		extConfig.opts = type('DummyType', (), {'init': False, 'resync': False})
+		extConfig = ConfigFactory(MultiConfigFiller(extFillers), extConfigFN).getConfig(setSections = ['global'])
 		self.extWorkDir = extConfig.getWorkPath()
-		self.extTask = extConfig.getClass('global', ['task', 'module'], cls = TaskModule).getInstance()
+		self.extTask = extConfig.getClass(['task', 'module'], cls = TaskModule).getInstance()
 		selector = config.get('source job selector', '')
 		extJobDB = JobDB(extConfig, jobSelector = lambda jobNum, jobObj: jobObj.state == Job.SUCCESS)
 		self.selected = sorted(extJobDB.getJobs(JobSelector.create(selector, task = self.extTask)))

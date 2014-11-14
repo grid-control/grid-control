@@ -30,16 +30,16 @@ class DummyStream(object):
 		return self.__stream.__getattribute__(name)
 
 
-def getConfig(fn = None, cfgDict = {}, section = None):
+def getConfig(configFile = None, configDict = {}, section = None):
 	fillerList = [DefaultFilesConfigFiller()]
-	if fn:
-		fillerList.append(GeneralFileConfigFiller([fn]))
-	if cfgDict:
+	if configFile:
+		fillerList.append(GeneralFileConfigFiller([configFile]))
+	if configDict:
 		if section:
-			fillerList.append(DictConfigFiller({section: cfgDict}))
+			fillerList.append(DictConfigFiller({section: configDict}))
 		else:
-			fillerList.append(DictConfigFiller(cfgDict))
-	config = ConfigFactory(MultiConfigFiller(fillerList), fn).getConfig()
+			fillerList.append(DictConfigFiller(configDict))
+	config = ConfigFactory(MultiConfigFiller(fillerList), configFile).getConfig()
 	if section:
 		return config.changeView(addSections = [section])
 	return config

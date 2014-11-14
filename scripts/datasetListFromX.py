@@ -44,9 +44,8 @@ def addOptions(parser):
 def discoverDataset(opts, parser, providerName, datasetExpr):
 	def main():
 		configEntries = map(lambda (k,v): (k, str(v)), parser.values.__dict__.items())
-		config = gcSupport.config.Config([
-			gcSupport.config.DictConfigFiller({'dataset': dict(configEntries)})]).addSections(['dataset'])
-		provider = gcSupport.datasets.DataProvider.open(providerName, config, datasetExpr, None)
+		config = gcSupport.getConfig(configDict = {'dataset': dict(configEntries)})
+		provider = gcSupport.datasets.DataProvider.getInstance(providerName, config, datasetExpr, None)
 		if opts.output:
 			provider.saveState(opts.output, None, opts.strip)
 		else:

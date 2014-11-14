@@ -60,28 +60,19 @@ utils.gcStartThread = noThread
 
 def main():
 	dataset = args[0].strip()
-	cfgSettings = {'dbs blacklist T1': 'False', 'remove empty blocks': 'False',
-		'remove empty files': 'False', 'location format': opts.locationfmt,
-		'nickname check collision': 'False'}
+	cfgSettings = {'dbs blacklist T1 *': 'False', 'remove empty blocks *': 'False',
+		'remove empty files *': 'False', 'location format *': opts.locationfmt,
+		'nickname check collision *': 'False'}
 	if opts.metadata or opts.blockmetadata:
-		cfgSettings['lumi filter'] = '-'
-		cfgSettings['keep lumi metadata'] = 'True'
-	section = 'dataset'
+		cfgSettings['lumi filter *'] = '-'
+		cfgSettings['keep lumi metadata *'] = 'True'
 
-	fillerList = [DefaultFilesConfigFiller()]
-	if opts.settings:
-		fillerList.append(GeneralFileConfigFiller([opts.settings]))
-		tmpCfg = Config(fillerList, opts.settings)
-		section = tmpCfg.get('global', ['task', 'module'])
-
-	dummyConfig = Config(MultiConfigFiller(fillerList + [DictConfigFiller({section: cfgSettings})]), opts.settings)
-	dummyConfig.opts = opts
-	dummyConfig = dummyConfig.addSections(['dataset'])
+	config = getConfig(configFile = opts.settings, configDict = {'dataset': cfgSettings})
 
 	if os.path.exists(dataset):
-		provider = DataProvider.loadState(dataset, dummyConfig)
+		provider = DataProvider.loadState(dataset, config)
 	else:
-		provider = DataProvider.create(dummyConfig, dataset, opts.provider)
+		provider = DataProvider.create(config, dataset, opts.provider)
 	blocks = provider.getBlocks()
 	if len(blocks) == 0:
 		raise DatasetError('No blocks!')

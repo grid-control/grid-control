@@ -13,7 +13,7 @@
 #-#  limitations under the License.
 
 import os, cStringIO, copy
-from grid_control import QM, utils, LoadableObject, AbstractError, ConfigFactory
+from grid_control import QM, utils, LoadableObject, AbstractError, ConfigFactory, TaggedConfigView
 from nickname_base import NickNameProducer
 
 class DataProvider(LoadableObject):
@@ -62,7 +62,8 @@ class DataProvider(LoadableObject):
 			return DataProvider.getInstance('DataMultiplexer', config, dataset, defaultProvider)
 		else:
 			(dsNick, dsProv, dsExpr) = DataProvider.parseDatasetExpr(config, dataset, defaultProvider)
-			config = config.changeView(addSections = ['dataset'], addNames = [dsNick, str(dsId)])
+			config = config.changeView(viewClass = TaggedConfigView,
+				addSections = ['dataset'], addNames = [dsNick, str(dsId)])
 			return DataProvider.getInstance(dsProv, config, dsExpr, dsNick, dsId)
 	create = staticmethod(create)
 

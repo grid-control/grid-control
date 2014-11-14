@@ -13,7 +13,7 @@
 #-#  limitations under the License.
 
 import os
-from grid_control import QM, utils, DefaultFilesConfigFiller, GeneralFileConfigFiller, MultiConfigFiller
+from grid_control import QM, utils, ConfigFactory, DefaultFilesConfigFiller, GeneralFileConfigFiller, MultiConfigFiller
 from provider_base import DataProvider
 from python_compat import set, md5
 from scanner_base import InfoScanner
@@ -154,10 +154,10 @@ class GCProvider(ScanProviderBase):
 			config.set('source config', datasetExpr)
 			config.set('source job selector', selector)
 		extFillers = [DefaultFilesConfigFiller(), GeneralFileConfigFiller([datasetExpr])]
-		extConfig = Config(MultiConfigFiller(extFillers), datasetExpr)
-		extModule = extConfig.get('global', ['task', 'module'])
-		if 'ParaMod' in extModule:
-			extModule = extConfig.get('ParaMod', 'module')
+		extConfig = ConfigFactory(MultiConfigFiller(extFillers), datasetExpr).getConfig()
+		extModule = extConfig.changeView(setSections = ['global']).get(['task', 'module'])
+		if 'ParaMod' in extModule: # handle old config files
+			extModule = extConfig.changeView(setSections = ['ParaMod']).get('module')
 		sGet = lambda scannerDict: scannerDict.get(None) + scannerDict.get(extModule, [])
 		sList = sGet(GCProvider.stageDir) + ['FilesFromJobInfo'] + sGet(GCProvider.stageFile) + ['DetermineEvents', 'AddFilePrefix']
 		ScanProviderBase.__init__(self, config, sList, datasetNick, datasetID)

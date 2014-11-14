@@ -12,7 +12,7 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-from grid_control import UserError, datasets
+from grid_control import UserError, datasets, utils
 from grid_control.datasets import DataProvider
 from provider_cms import CMSProvider
 from webservice_api import readJSON
@@ -28,10 +28,10 @@ class DBS3Provider(CMSProvider):
 
 
 	def queryDBSv3(self, api, **params):
-		proxyPath = os.environ.get('X509_USER_PROXY', '')
+		proxyPath = utils.resolvePath(os.environ.get('X509_USER_PROXY', ''), mustExist = False)
 		if not os.path.exists(proxyPath):
 			raise UserError('VOMS proxy needed to query DBS3! Environment variable X509_USER_PROXY is "%s"' % proxyPath)
-		return readJSON(self.url + '/%s' % api, params, cert = os.environ['X509_USER_PROXY'])
+		return readJSON(self.url + '/%s' % api, params, cert = proxyPath)
 
 
 	def getCMSDatasetsImpl(self, datasetPath):
