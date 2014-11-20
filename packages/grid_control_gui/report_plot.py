@@ -44,11 +44,13 @@ JobResultEnum = utils.makeEnum([
 	"TIMESTAMP_SE_OUT_DONE",
 	"TIMESTAMP_WRAPPER_DONE",
 	"FILESIZE_IN_TOTAL",
-	"FILESIZE_OUT_TOTAL"])
+	"FILESIZE_OUT_TOTAL",
+	"EVENT_COUNT"])
 
 
-def extractJobTiming(jInfo):
+def extractJobTiming(jInfo, task ):
 	jobResult = dict()
+	jobNum = jInfo[0]
 
 	# intialize all with None
 	for key in JobResultEnum.members:
@@ -68,8 +70,20 @@ def extractJobTiming(jInfo):
 		if re.match("INPUT_FILE_._SIZE", key):
 			total_size_in = total_size_in + int(val)
 
+
 	jobResult[JobResultEnum.FILESIZE_OUT_TOTAL] = total_size_out
 	jobResult[JobResultEnum.FILESIZE_IN_TOTAL] = total_size_in
+
+	# look for processed events, if available
+	if ( task != None ):
+		jobConfig = task.getJobConfig( jobNum )
+		jobResult[JobResultEnum.EVENT_COUNT] = int( jobConfig["MAX_EVENTS"] )
+		# make sure an undefined max event count ( -1 in cmssw ) is treated
+		# as unkown event count
+		if ( jobResult[JobResultEnum.EVENT_COUNT] < 0 ):
+			jobResult[JobResultEnum.EVENT_COUNT] = None
+	else:
+		jobResult[JobResultEnum.EVENT_COUNT] = None
 
 	return jobResult
 
@@ -104,13 +118,14 @@ def getJobRuntime(jobInfo):
 		   jobInfo[JobResultEnum.TIMESTAMP_WRAPPER_START]
 
 
+# note: can return None if no event count could be
+# determined for the job
 def getEventCount(jobInfo):
-	# todo: read this from the job info
-	return 200
+	return jobInfo[JobResultEnum.EVENT_COUNT]
 
 
 def getEventRate(jobInfo):
-	if getPayloadRuntime(jobInfo) > 0:
+	if (getPayloadRuntime(jobInfo) > 0) and (getEventCount(jobInfo) != None):
 		return getEventCount(jobInfo) / ( getPayloadRuntime(jobInfo) / 60.0 )
 	else:
 		return None
@@ -419,9 +434,7 @@ class PlotReport(Report):
 
 	def display(self):
 		self.jobResult = []
-
 		print(str(len(self._jobs)) + " job(s) selected for plots")
-		print("Warning: Using fixed event count per job")
 
 		# larger default fonts
 		matplotlib.rcParams.update({'font.size': 16})
@@ -447,7 +460,7 @@ class PlotReport(Report):
 				print("Ignoring job")
 				continue
 
-			jResult = extractJobTiming(jInfo)
+			jResult = extractJobTiming(jInfo, self._task)
 
 			self.jobResult = self.jobResult + [jResult]
 
@@ -466,6 +479,8 @@ class PlotReport(Report):
 
 		self.produceHistogram(("payload_runtime", "Payload Runtime (min)", "Count"),
 							  lambda x: getPayloadRuntime(x) / 60.0)
+		self.produceHistogram(("event_per_job", "Event per Job", "Count"),
+							  lambda x: getEventCount(x))
 		self.produceHistogram(("event_rate", "Event Rate (Events/min)", "Count"),
 							  lambda x: getEventRate(x))
 		self.produceHistogram(("se_in_runtime", "SE In Runtime (s)", "Count"),
