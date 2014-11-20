@@ -368,11 +368,21 @@ class PlotReport(Report):
 				truncatedOverAllBandwidth = truncatedOverAllBandwidth + [thisBw]
 				truncatedTimeStep = truncatedTimeStep + [currentTimeStep]
 
-		histo[2].set_ylim(bottom=min(overAllBandwidth) * 0.99, top=max(overAllBandwidth) * 1.2)
+		# make sure the axis are not exactly the same
+		minY = min(overAllBandwidth)
+		maxY = max(overAllBandwidth)
+		if (maxY <= minY):
+			maxY = minY + 1.0
+
+
+		histo[2].set_ylim(bottom= minY * 0.99, top=maxY * 1.2)
 		histo[2].set_xlim(left=min(timeStep) * 0.99, right=max(timeStep) * 1.01)
 		pl = plt.plot(timeStep, overAllBandwidth, color="green")
 
 		if fit:
+			if (len(truncatedTimeStep) == 0) or (len(truncatedOverAllBandwidth)==0):
+				print("Skipping fit due to the lack of input data")
+				return
 			fitRes = numpy.polyfit(truncatedTimeStep, truncatedOverAllBandwidth, 0)
 
 			avgVal = fitRes[0]
@@ -401,7 +411,7 @@ class PlotReport(Report):
 
 	def produceOverallGraph(self, naming, timespan, lambdaExtractor, fit=False, unit="MB/s", cumulate=False):
 		if (timespan[0] == timespan[1]) or (timespan[0] is None) or (timespan[1] is None):
-			print("Skipping plot " + str(naming) + " because not timespan is available")
+			print("Skipping plot " + str(naming) + " because no timespan is available")
 			return
 		histogram = self.initHistogram(naming[0], naming[1], naming[2])
 		self.plotOverall(histogram, self.jobResult, timespan,
