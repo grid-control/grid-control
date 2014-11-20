@@ -374,7 +374,6 @@ class PlotReport(Report):
 		if (maxY <= minY):
 			maxY = minY + 1.0
 
-
 		histo[2].set_ylim(bottom= minY * 0.99, top=maxY * 1.2)
 		histo[2].set_xlim(left=min(timeStep) * 0.99, right=max(timeStep) * 1.01)
 		pl = plt.plot(timeStep, overAllBandwidth, color="green")
