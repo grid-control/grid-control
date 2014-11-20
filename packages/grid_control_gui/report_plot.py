@@ -18,6 +18,9 @@
 # run like this to plot all successful jobs:
 #
 # scripts/report.py <config file> --report PlotReport --job-selector state:SUCCESS
+#
+# add the option --use-task if you want the plotting script to load data like event count
+# per job from the configuration
 
 import sys
 import os
@@ -267,7 +270,11 @@ def getQuantityAtTimeSpan(jobInfo, timeStart, timeEnd, timingExtract, quantityEx
 	fractionOutside = float(totalOutside) / float(timeEnd - timeStart)
 	fractionOutside = min(1.0, fractionOutside)
 
-	return quantityExtract(jobInfo) * ( 1.0 - fractionOutside )
+	q = quantityExtract(jobInfo)
+	if q == None:
+		return None
+
+	return q * ( 1.0 - fractionOutside )
 
 
 # note: timeStart must be before all timestamps evaluated here
