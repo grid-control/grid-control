@@ -20,6 +20,33 @@ from grid_control.utils import LoggedProcess, eprint, resolveInstallPath, vprint
 # placeholder for function arguments
 defaultArg = object()
 
+# Legacy context implementation: use as "with timeout(3):" or "timeout(3)\n...\ntimeout.cancel()"
+class TimeoutContext(object):
+	def __init__(self, duration = 1, exception = TimeoutError):
+		"""
+		Set a timeout to occur in duration, raising exception.
+		
+		This implementation is not thread-safe and only one timeout may be active at a time.
+		"""
+		self._active     = True
+		self._duration   = duration
+		self._handlerOld = signal.signal( signal.SIGALRM, self._onTimeout )
+		if ( signal.alarm( int(duration) ) != 0 ):
+			raise GCError("Bug! Timeout set while previous timeout was active.")
+	def _onTimeout(self, sigNum, frame):
+		raise TimeoutError("Timeout after %d seconds." % self._duration )
+	def cancel(self):
+		if self._active:
+			signal.alarm(0)
+			signal.signal( signal.SIGALRM, self._handlerOld )
+			self._active = False
+	# Context methods
+	def __enter__(self):
+		return self
+	def __exit__(self, exc_type, exc_value, traceback):
+		self.cancel()
+
+
 ################################
 # Process Handlers
 # create interface for initializing a set of commands sharing a similar setup, e.g. remote commands through SSH
@@ -226,3 +253,86 @@ class GSISSHProcessHandler(SSHProcessHandler):
 	def __initcommands(self, **kwargs):
 		cmd = resolveInstallPath("gsissh")
 		cpy = resolveInstallPath("gsiscp") + " -r"
+
+# Helper class handling commands through remote interfaces
+class RemoteProcessHandler(object):
+	# enum for connection type - LOCAL exists to ensure uniform interfacing with local programms if needed
+	class RPHType:
+		enumList = ('LOCAL', 'SSH', 'GSISSH')
+		for idx, eType in enumerate(enumList):
+			locals()[eType] = idx
+
+	# helper functions - properly prepare argument string for passing via interface
+	def _argFormatSSH(self, args):
+		return "'" + args.replace("'", "'\\''") + "'"
+	def _argFormatLocal(self, args):
+		return args
+
+	# template for input for connection types
+	RPHTemplate = {
+		RPHType.LOCAL: {
+			'command'	: "%(args)s %(cmdargs)s %%(cmd)s",
+			'copy'		: "cp -r %(args)s %(cpargs)s %%(source)s %%(dest)s",
+			'path'		: "%(path)s",
+			'argFormat'	: _argFormatLocal
+			},
+		RPHType.SSH: {
+			'command'	: "ssh %%(args)s %%(cmdargs)s %(rhost)s %%%%(cmd)s",
+			'copy'		: "scp -r %%(args)s %%(cpargs)s %%%%(source)s %%%%(dest)s",
+			'path'		: "%(host)s:%(path)s",
+			'argFormat'	: _argFormatSSH
+			},
+		RPHType.GSISSH: {
+			'command'	: "gsissh %%(args)s  %%(cmdargs)s %(rhost)s %%%%(cmd)s",
+			'copy'		: "gsiscp -r %%(args)s %%(cpargs)s %%%%(source)s %%%%(dest)s",
+			'path'		: "%(host)s:%(path)s",
+			'argFormat'	: _argFormatSSH
+			},
+		}
+	def __init__(self, remoteType="", **kwargs):
+		self.cmd=False
+		# pick requested remote connection
+		try:
+			self.remoteType = getattr(self.RPHType, remoteType.upper())
+			self.cmd = self.RPHTemplate[self.remoteType]["command"]
+			self.copy = self.RPHTemplate[self.remoteType]["copy"]
+			self.path = self.RPHTemplate[self.remoteType]["path"]
+			self.argFormat = self.RPHTemplate[self.remoteType]["argFormat"]
+		except Exception:
+			raise RethrowError("Request to initialize RemoteProcessHandler of unknown type: %s" % remoteType)
+		# destination should be of type: [user@]host
+		if self.remoteType==self.RPHType.SSH or self.remoteType==self.RPHType.GSISSH:
+			try:
+				self.cmd = self.cmd % { "rhost" : kwargs["host"] }
+				self.copy = self.copy % { "rhost" : kwargs["host"] }
+				self.host = kwargs["host"]
+			except Exception:
+				raise RethrowError("Request to initialize RemoteProcessHandler of type %s without remote host." % self.RPHType.enumList[self.remoteType])
+		# add default arguments for all commands
+		self.cmd = self.cmd % { "cmdargs" : kwargs.get("cmdargs",""), "args" : kwargs.get("args","") }
+		self.copy = self.copy % { "cpargs" : kwargs.get("cpargs",""), "args" : kwargs.get("args","") }
+		# test connection once
+		ret, out, err = LoggedProcess(self.cmd % { "cmd" : "exit"}).getAll()
+		if ret!=0:
+			raise GCError("Validation of remote connection failed!\nTest Command: %s\nReturn Code: %s\nStdOut: %s\nStdErr: %s" % (self.cmd % { "cmd" : "exit"},ret,out,err))
+		vprint('Remote interface initialized:\n	Cmd: %s\n	Cp : %s' % (self.cmd,self.copy), level=2)
+
+	# return instance of LoggedProcess with input properly wrapped
+	def LoggedProcess(self, cmd, args = '', argFormat=defaultArg):
+		if argFormat is defaultArg:
+			argFormat=self.argFormat
+		return LoggedProcess( self.cmd % { "cmd" : argFormat(self, "%s %s" % ( cmd, args )) } )
+
+	def LoggedCopyToRemote(self, source, dest):
+		return LoggedProcess( self.copy % { "source" : source, "dest" : self.path%{"host":self.host,"path":dest} } )
+
+	def LoggedCopyFromRemote(self, source, dest):
+		return LoggedProcess( self.copy % { "source" : self.path%{"host":self.host,"path":source}, "dest" : dest } )
+
+	def LoggedCopy(self, source, dest, remoteKey="<remote>"):
+		if source.startswith(remoteKey):
+			source = self.path%{"host":self.host,"path":source[len(remoteKey):]}
+		if dest.startswith(remoteKey):
+			dest = self.path%{"host":self.host,"path":dest[len(remoteKey):]}
+		return LoggedProcess( self.copy % { "source" : "%s:%s"%(self.host,source), "dest" : dest } )
+

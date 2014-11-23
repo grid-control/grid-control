@@ -424,8 +424,8 @@ class DataSplitter(LoadableObject):
 				resyncIter = getReorderIterator(rawInfo, iter(extInfo))
 			elif self.resyncOrder == ResyncOrder.reorder:
 				rawInfo, extInfo = getSplitContainer()
-				tsc = utils.TwoSidedContainer(rawInfo + extInfo)
-				resyncIter = getReorderIterator(tsc.forward(), tsc.backward())
+				tsi = utils.TwoSidedIterator(rawInfo + extInfo)
+				resyncIter = getReorderIterator(tsi.forward(), tsi.backward())
 			else:
 				resyncIter = resyncIterator_raw()
 

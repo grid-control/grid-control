@@ -1,4 +1,4 @@
-#-#  Copyright 2010-2014 Karlsruhe Institute of Technology
+#-#  Copyright 2007-2014 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -12,17 +12,14 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-from python_compat import set, sorted, md5, next, user_input, lru_cache
-import sys, os, stat, StringIO, tarfile, time, fnmatch, re, popen2, threading, operator, Queue, signal, glob, logging, errno
-from grid_control.exceptions import GCError, ConfigError, InstallationError, RuntimeError, UserError, APIError, TimeoutError, RethrowError
+import os, re, sys, glob, stat, time, Queue, errno, popen2, signal, fnmatch, logging, tarfile, operator, threading
+from grid_control.exceptions import APIError, ConfigError, GCError, InstallationError, RethrowError, RuntimeError, TimeoutError, UserError
+from python_compat import lru_cache, md5, next, set, sorted, user_input
 
 def QM(cond, a, b):
 	if cond:
 		return a
 	return b
-
-# placeholder for function arguments
-defaultArg = object()
 
 ################################################################
 # Path helper functions
@@ -33,9 +30,8 @@ def getRootName(fn): # Return file name without extension
 	bn = os.path.basename(str(fn)).lstrip('.')
 	return QM('.' in bn, str.join('', bn.split('.')[:-1]), bn)
 
-# Convention: sys.path[1] == python dir of gc
-pathGC = lambda *args: cleanPath(os.path.join(sys.path[1], '..', *args))
-pathShare = lambda *args, **kw: cleanPath(os.path.join(sys.path[1], kw.get('pkg', 'grid_control'), 'share', *args))
+pathGC = lambda *args: cleanPath(os.path.join(os.environ['GC_PACKAGES_PATH'], '..', *args))
+pathShare = lambda *args, **kw: cleanPath(os.path.join(os.environ['GC_PACKAGES_PATH'], kw.get('pkg', 'grid_control'), 'share', *args))
 
 def resolvePaths(path, searchPaths = [], mustExist = True, ErrorClass = RuntimeError):
 	path = cleanPath(path) # replace $VAR, ~user, \ separators
@@ -52,7 +48,7 @@ def resolvePaths(path, searchPaths = [], mustExist = True, ErrorClass = RuntimeE
 		if not result:
 			if mustExist:
 				raise ErrorClass('Could not find file "%s" in \n\t%s' % (path, str.join('\n\t', searchPaths)))
-			raise APIError('Relative path to non-existing file "%s" used!' % path)
+			return [path] # Return non-existing, relative path
 	return result
 
 
@@ -131,32 +127,6 @@ def getThreadedGenerator(genList): # Combines multiple, threaded generators into
 			listThread.pop()
 		else:
 			yield tmp
-
-# Legacy context implementation: use as "with timeout(3):" or "timeout(3)\n...\ntimeout.cancel()"
-class TimeoutContext(object):
-	def __init__(self, duration = 1, exception = TimeoutError):
-		"""
-		Set a timeout to occur in duration, raising exception.
-		
-		This implementation is not thread-safe and only one timeout may be active at a time.
-		"""
-		self._active     = True
-		self._duration   = duration
-		self._handlerOld = signal.signal( signal.SIGALRM, self._onTimeout )
-		if ( signal.alarm( int(duration) ) != 0 ):
-			raise GCError("Bug! Timeout set while previous timeout was active.")
-	def _onTimeout(self, sigNum, frame):
-		raise TimeoutError("Timeout after %d seconds." % self._duration )
-	def cancel(self):
-		if self._active:
-			signal.alarm(0)
-			signal.signal( signal.SIGALRM, self._handlerOld )
-			self._active = False
-	# Context methods
-	def __enter__(self):
-		return self
-	def __exit__(self, exc_type, exc_value, traceback):
-		self.cancel()
 
 class LoggedProcess(object):
 	def __init__(self, cmd, args = '', niceCmd = None, niceArgs = None, shell = True):
@@ -250,89 +220,6 @@ class LoggedProcess(object):
 		except:
 			raise RethrowError('Unable to log errors of external process "%s" to "%s"' % (self.niceCmd, target), RuntimeError)
 		eprint('All logfiles were moved to %s' % target)
-
-
-# Helper class handling commands through remote interfaces
-class RemoteProcessHandler(object):
-	# enum for connection type - LOCAL exists to ensure uniform interfacing with local programms if needed
-	class RPHType:
-		enumList = ('LOCAL', 'SSH', 'GSISSH')
-		for idx, eType in enumerate(enumList):
-			locals()[eType] = idx
-
-	# helper functions - properly prepare argument string for passing via interface
-	def _argFormatSSH(self, args):
-		return "'" + args.replace("'", "'\\''") + "'"
-	def _argFormatLocal(self, args):
-		return args
-
-	# template for input for connection types
-	RPHTemplate = {
-		RPHType.LOCAL: {
-			'command'	: "%(args)s %(cmdargs)s %%(cmd)s",
-			'copy'		: "cp -r %(args)s %(cpargs)s %%(source)s %%(dest)s",
-			'path'		: "%(path)s",
-			'argFormat'	: _argFormatLocal
-			},
-		RPHType.SSH: {
-			'command'	: "ssh %%(args)s %%(cmdargs)s %(rhost)s %%%%(cmd)s",
-			'copy'		: "scp -r %%(args)s %%(cpargs)s %%%%(source)s %%%%(dest)s",
-			'path'		: "%(host)s:%(path)s",
-			'argFormat'	: _argFormatSSH
-			},
-		RPHType.GSISSH: {
-			'command'	: "gsissh %%(args)s  %%(cmdargs)s %(rhost)s %%%%(cmd)s",
-			'copy'		: "gsiscp -r %%(args)s %%(cpargs)s %%%%(source)s %%%%(dest)s",
-			'path'		: "%(host)s:%(path)s",
-			'argFormat'	: _argFormatSSH
-			},
-		}
-	def __init__(self, remoteType="", **kwargs):
-		self.cmd=False
-		# pick requested remote connection
-		try:
-			self.remoteType = getattr(self.RPHType, remoteType.upper())
-			self.cmd = self.RPHTemplate[self.remoteType]["command"]
-			self.copy = self.RPHTemplate[self.remoteType]["copy"]
-			self.path = self.RPHTemplate[self.remoteType]["path"]
-			self.argFormat = self.RPHTemplate[self.remoteType]["argFormat"]
-		except Exception:
-			raise RethrowError("Request to initialize RemoteProcessHandler of unknown type: %s" % remoteType)
-		# destination should be of type: [user@]host
-		if self.remoteType==self.RPHType.SSH or self.remoteType==self.RPHType.GSISSH:
-			try:
-				self.cmd = self.cmd % { "rhost" : kwargs["host"] }
-				self.copy = self.copy % { "rhost" : kwargs["host"] }
-				self.host = kwargs["host"]
-			except Exception:
-				raise RethrowError("Request to initialize RemoteProcessHandler of type %s without remote host." % self.RPHType.enumList[self.remoteType])
-		# add default arguments for all commands
-		self.cmd = self.cmd % { "cmdargs" : kwargs.get("cmdargs",""), "args" : kwargs.get("args","") }
-		self.copy = self.copy % { "cpargs" : kwargs.get("cpargs",""), "args" : kwargs.get("args","") }
-		# test connection once
-		ret, out, err = LoggedProcess(self.cmd % { "cmd" : "exit"}).getAll()
-		if ret!=0:
-			raise GCError("Validation of remote connection failed!\nTest Command: %s\nReturn Code: %s\nStdOut: %s\nStdErr: %s" % (self.cmd % { "cmd" : "exit"},ret,out,err))
-		vprint('Remote interface initialized:\n	Cmd: %s\n	Cp : %s' % (self.cmd,self.copy), level=2)
-
-	# return instance of LoggedProcess with input properly wrapped
-	def LoggedProcess(self, cmd, args = '', argFormat=defaultArg):
-		if argFormat is defaultArg:
-			argFormat=self.argFormat
-		return LoggedProcess( self.cmd % { "cmd" : argFormat(self, "%s %s" % ( cmd, args )) } )
-
-	def LoggedCopyToRemote(self, source, dest):
-		return LoggedProcess( self.copy % { "source" : source, "dest" : self.path%{"host":self.host,"path":dest} } )
-
-	def LoggedCopyFromRemote(self, source, dest):
-		return LoggedProcess( self.copy % { "source" : self.path%{"host":self.host,"path":source}, "dest" : dest } )
-
-	def LoggedCopy(self, source, dest, remoteKey="<remote>"):
-		if source.startswith(remoteKey):
-			source = self.path%{"host":self.host,"path":source[len(remoteKey):]}
-		if dest.startswith(remoteKey):
-			dest = self.path%{"host":self.host,"path":dest[len(remoteKey):]}
-		return LoggedProcess( self.copy % { "source" : "%s:%s"%(self.host,source), "dest" : dest } )
 
 
 ################################################################
@@ -431,18 +318,6 @@ def removeFiles(args):
 		except:
 			pass
 
-
-class VirtualFile(StringIO.StringIO):
-	def __init__(self, name, lines):
-		StringIO.StringIO.__init__(self, str.join('', lines))
-		self.name = name
-		self.size = len(self.getvalue())
-
-
-	def getTarInfo(self):
-		info = tarfile.TarInfo(self.name)
-		info.size = self.size
-		return (info, self)
 
 ################################################################
 # String manipulation
@@ -544,22 +419,20 @@ strGuid = lambda guid: '%s-%s-%s-%s-%s' % (guid[:8], guid[8:12], guid[12:16], gu
 
 ################################################################
 
+class TwoSidedIterator(object):
+	def __init__(self, allInfo):
+		(self.allInfo, self.left, self.right) = (allInfo, 0, 0)
+	def forward(self):
+		while self.left + self.right < len(self.allInfo):
+			self.left += 1
+			yield self.allInfo[self.left - 1]
+	def backward(self):
+		while self.left + self.right < len(self.allInfo):
+			self.right += 1
+			yield self.allInfo[len(self.allInfo) - self.right]
+
+
 listMapReduce = lambda fun, lst, start = []: reduce(operator.add, map(fun, lst), start)
-
-def uniqueListLR(inList): # (left to right)
-	tmpSet, result = (set(), []) # Duplicated items are removed from the right [a,b,a] -> [a,b]
-	for x in inList:
-		if x not in tmpSet:
-			result.append(x)
-			tmpSet.add(x)
-	return result
-
-
-def uniqueListRL(inList): # (right to left)
-	inList.reverse() # Duplicated items are removed from the left [a,b,a] -> [b,a]
-	result = uniqueListLR(inList)
-	result.reverse()
-	return result
 
 
 def checkVar(value, message, check = True):
@@ -1020,19 +893,6 @@ def exitWithUsage(usage, msg = None, helpOpt = True):
 	sys.stderr.write(QM(msg, '%s\n' % msg, ''))
 	sys.stderr.write('Syntax: %s\n%s' % (usage, QM(helpOpt, 'Use --help to get a list of options!\n', '')))
 	sys.exit(0)
-
-
-class TwoSidedContainer:
-	def __init__(self, allInfo):
-		(self.allInfo, self.left, self.right) = (allInfo, 0, 0)
-	def forward(self):
-		while self.left + self.right < len(self.allInfo):
-			self.left += 1
-			yield self.allInfo[self.left - 1]
-	def backward(self):
-		while self.left + self.right < len(self.allInfo):
-			self.right += 1
-			yield self.allInfo[len(self.allInfo) - self.right]
 
 
 def makeEnum(members = [], cls = None):
