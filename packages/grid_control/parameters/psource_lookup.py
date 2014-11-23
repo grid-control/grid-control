@@ -122,7 +122,6 @@ class SimpleLookupParameterSource(SingleParameterSource):
 	def create(cls, pconfig, key, lookup = None):
 		return SimpleLookupParameterSource(*lookupConfigParser(pconfig, key, lookup))
 	create = classmethod(create)
-ParameterSource.managerMap['lookup'] = SimpleLookupParameterSource
 
 
 class SwitchingLookupParameterSource(SingleParameterSource):
@@ -193,7 +192,6 @@ class SwitchingLookupParameterSource(SingleParameterSource):
 	def create(cls, pconfig, plugin, key, lookup = None):
 		return SwitchingLookupParameterSource(plugin, *lookupConfigParser(pconfig, key, lookup))
 	create = classmethod(create)
-ParameterSource.managerMap['switch'] = SwitchingLookupParameterSource
 
 
 def createLookupHelper(pconfig, var_list, lookup_list):

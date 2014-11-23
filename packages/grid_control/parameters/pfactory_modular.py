@@ -29,17 +29,21 @@ class ModularParameterFactory(BasicParameterFactory):
 		if not pExpr:
 			return parent
 		# Wrap plugin factory functions
-		def createWrapper(cls):
+		def createWrapper(clsName):
 			def wrapper(*args):
 				try:
-					return cls.create(self.paramConfig, *args)
+					parameterClass = ParameterSource.getClass(clsName)
 				except:
-					raise RethrowError('Error while creating %s with arguments "%s"' % (cls, args))
+					raise RethrowError('Unable to create parameter source "%r"!' % clsName)
+				try:
+					return parameterClass.create(self.paramConfig, *args)
+				except:
+					raise RethrowError('Error while creating "%r" with arguments "%r"' % (parameterClass.__name__, args))
 			return wrapper
 		userFun = dict(map(lambda (key, cls): (key, createWrapper(cls)), ParameterSource.managerMap.items()))
 		try:
 			source = eval(pExpr, userFun)
-		except:
+		except Exception:
 			utils.eprint('Available functions: %s' % userFun.keys())
 			raise
 		return ZipLongParameterSource(parent, source)

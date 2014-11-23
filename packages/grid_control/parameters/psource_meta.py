@@ -81,7 +81,7 @@ class RangeParameterSource(ForwardingParameterSource):
 
 	def show(self, level = 0):
 		ForwardingParameterSource.show(self, level, 'range = (%s, %s)' % (self.posStart, self.posEnd))
-ParameterSource.managerMap['range'] = RangeParameterSource
+ParameterSource.managerMap['range'] = 'RangeParameterSource'
 
 
 # Meta processing of parameter plugins
@@ -169,7 +169,7 @@ class ZipLongParameterSource(BaseZipParameterSource):
 
 	def __repr__(self):
 		return 'zip(%s)' % str.join(', ', map(repr, self.pluginList))
-ParameterSource.managerMap['zip'] = ZipLongParameterSource
+ParameterSource.managerMap['zip'] = 'ZipLongParameterSource'
 
 
 class ChainParameterSource(MultiParameterSource):
@@ -189,7 +189,7 @@ class ChainParameterSource(MultiParameterSource):
 
 	def __repr__(self):
 		return 'chain(%s)' % str.join(', ', map(repr, self.pluginList))
-ParameterSource.managerMap['chain'] = ChainParameterSource
+ParameterSource.managerMap['chain'] = 'ChainParameterSource'
 
 
 class RepeatParameterSource(ChainParameterSource):
@@ -219,7 +219,7 @@ class RepeatParameterSource(ChainParameterSource):
 
 	def __repr__(self):
 		return 'repeat(%s, %d)' % (repr(self.plugin), self.times)
-ParameterSource.managerMap['repeat'] = RepeatParameterSource
+ParameterSource.managerMap['repeat'] = 'RepeatParameterSource'
 
 
 class CrossParameterSource(MultiParameterSource):
@@ -247,7 +247,7 @@ class CrossParameterSource(MultiParameterSource):
 
 	def __repr__(self):
 		return 'cross(%s)' % str.join(', ', map(repr, self.pluginList))
-ParameterSource.managerMap['cross'] = CrossParameterSource
+ParameterSource.managerMap['cross'] = 'CrossParameterSource'
 
 
 class ErrorParameterSource(ChainParameterSource):
@@ -265,10 +265,10 @@ class ErrorParameterSource(ChainParameterSource):
 	def fillParameterKeys(self, result):
 		for plugin in self.rawPlugins:
 			plugin.fillParameterKeys(result)
-ParameterSource.managerMap['variation'] = ErrorParameterSource
+ParameterSource.managerMap['variation'] = 'ErrorParameterSource'
 
 
 class CombineParameterSource(ZipLongParameterSource):
 	# combine according to common parameter value
 	pass
-ParameterSource.managerMap['combine'] = CombineParameterSource
+ParameterSource.managerMap['combine'] = 'CombineParameterSource'

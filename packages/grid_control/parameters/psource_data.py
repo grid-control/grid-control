@@ -127,4 +127,4 @@ class DataParameterSource(ParameterSource):
 
 DataParameterSource.datasetsAvailable = {}
 DataParameterSource.datasetsUsed = []
-ParameterSource.managerMap['data'] = DataParameterSource
+ParameterSource.managerMap['data'] = 'DataParameterSource'

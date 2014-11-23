@@ -79,7 +79,7 @@ class KeyParameterSource(SingleParameterSource):
 
 	def __repr__(self):
 		return 'key(%s)' % str.join(', ', self.keys)
-ParameterSource.managerMap['key'] = KeyParameterSource
+ParameterSource.managerMap['key'] = 'KeyParameterSource'
 
 
 class SimpleParameterSource(SingleParameterSource):
@@ -107,7 +107,7 @@ class SimpleParameterSource(SingleParameterSource):
 	def create(cls, pconfig, key):
 		return SimpleParameterSource(key, pconfig.getParameter(key.lstrip('!')))
 	create = classmethod(create)
-ParameterSource.managerMap['var'] = SimpleParameterSource
+ParameterSource.managerMap['var'] = 'SimpleParameterSource'
 
 
 class SimpleFileParameterSource(SimpleParameterSource):
@@ -116,7 +116,7 @@ class SimpleFileParameterSource(SimpleParameterSource):
 
 	def __repr__(self):
 		return 'files(%s)' % repr(self.meta)
-ParameterSource.managerMap['files'] = SimpleFileParameterSource
+ParameterSource.managerMap['files'] = 'SimpleFileParameterSource'
 
 
 class ConstParameterSource(SingleParameterSource):
@@ -138,7 +138,7 @@ class ConstParameterSource(SingleParameterSource):
 			value = pconfig.get(key)
 		return ConstParameterSource(key, value)
 	create = classmethod(create)
-ParameterSource.managerMap['const'] = ConstParameterSource
+ParameterSource.managerMap['const'] = 'ConstParameterSource'
 
 
 class RNGParameterSource(SingleParameterSource):
@@ -157,7 +157,7 @@ class RNGParameterSource(SingleParameterSource):
 
 	def __repr__(self):
 		return 'rng(%s)' % repr(self.meta).replace('!', '')
-ParameterSource.managerMap['rng'] = RNGParameterSource
+ParameterSource.managerMap['rng'] = 'RNGParameterSource'
 
 
 class CounterParameterSource(SingleParameterSource):
@@ -176,7 +176,7 @@ class CounterParameterSource(SingleParameterSource):
 
 	def __repr__(self):
 		return 'counter(%r, %s)' % (self.meta, self.seed)
-ParameterSource.managerMap['counter'] = CounterParameterSource
+ParameterSource.managerMap['counter'] = 'CounterParameterSource'
 
 
 class FormatterParameterSource(SingleParameterSource):
@@ -193,7 +193,7 @@ class FormatterParameterSource(SingleParameterSource):
 
 	def fillParameterInfo(self, pNum, result):
 		result[self.key] = self.fmt % utils.parseType(str(result.get(self.source, self.default)))
-ParameterSource.managerMap['format'] = FormatterParameterSource
+ParameterSource.managerMap['format'] = 'FormatterParameterSource'
 
 
 class CollectParameterSource(SingleParameterSource): # Merge parameter values
@@ -211,4 +211,4 @@ class CollectParameterSource(SingleParameterSource): # Merge parameter values
 				if src.search(str(key)):
 					result[self.key] = result[key]
 					return
-ParameterSource.managerMap['collect'] = CollectParameterSource
+ParameterSource.managerMap['collect'] = 'CollectParameterSource'

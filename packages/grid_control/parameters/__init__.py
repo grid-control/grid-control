@@ -15,3 +15,6 @@
 from grid_control.parameters.pfactory_base import ParameterFactory
 from grid_control.parameters.psource_base import ParameterInfo, ParameterMetadata, ParameterSource
 from grid_control.parameters.psource_data import DataParameterSource, DataSplitProcessor
+
+ParameterSource.managerMap['lookup'] = 'SimpleLookupParameterSource'
+ParameterSource.managerMap['switch'] = 'SwitchingLookupParameterSource'
