@@ -1,5 +1,5 @@
 #!/bin/bash
-#-#  Copyright 2010-2014 Karlsruhe Institute of Technology
+#-#  Copyright 2008-2014 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -87,10 +87,10 @@ checkfile "$MY_SCRATCH/_replace.awk"
 cat "$MY_SCRATCH/_replace.awk" | display_short
 
 # Job timeout (for debugging)
-if [ ${DOBREAK:-1} -gt 0 ]; then
+if [ ${GC_JOBTIMEOUT:-1} -gt 0 ]; then
 (
-	sleep ${DOBREAK} &&
-	echo "===! Timeout after ${DOBREAK} sec !===" 1>&2 &&
+	sleep ${GC_JOBTIMEOUT} &&
+	echo "===! Timeout after ${GC_JOBTIMEOUT} sec !===" 1>&2 &&
 	updatejobinfo 123 &&
 	kill -1 $$
 ) &

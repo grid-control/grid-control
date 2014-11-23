@@ -97,7 +97,7 @@ class TaskModule(NamedObject):
 			'SB_OUTPUT_FILES': str.join(' ', self.getSBOutFiles()),
 			'SB_INPUT_FILES': str.join(' ', map(os.path.basename, self.getSBInFiles())),
 			# Runtime
-			'DOBREAK': self.nodeTimeout,
+			'GC_JOBTIMEOUT': self.nodeTimeout,
 			'MY_RUNTIME': self.getCommand(),
 			# Seeds and substitutions
 			'SUBST_FILES': str.join(' ', map(os.path.basename, self.getSubstFiles())),
