@@ -32,7 +32,7 @@ class TaskModule(NamedObject):
 		initSandbox = changeInitNeeded('sandbox')
 
 		# Task requirements
-		configJobs = config.changeView(addSections = ['jobs'], addTags = [self]) # Move this into parameter manager?
+		configJobs = config.changeView(viewClass = TaggedConfigView, addSections = ['jobs'], addTags = [self]) # Move this into parameter manager?
 		self.wallTime = configJobs.getTime('wall time', onChange = None)
 		self.cpuTime = configJobs.getTime('cpu time', self.wallTime, onChange = None)
 		self.cpus = configJobs.getInt('cpus', 1, onChange = None)
@@ -45,7 +45,7 @@ class TaskModule(NamedObject):
 		self.taskConfigName = config.getConfigName()
 
 		# Storage setup
-		configStorage = config.changeView(addSections = ['storage'], addTags = [self])
+		configStorage = config.changeView(viewClass = TaggedConfigView, addSections = ['storage'], addTags = [self])
 		self.taskVariables = {
 			# Space limits
 			'SCRATCH_UL': configStorage.getInt('scratch space used', 5000, onChange = initSandbox),
@@ -67,8 +67,9 @@ class TaskModule(NamedObject):
 		self.errorDict = dict(self.updateErrorDict(utils.pathShare('gc-run.lib')))
 
 		# Init plugin manager / parameter source
-		pm = config.getClass('parameter factory', 'SimpleParameterFactory', cls = ParameterFactory).getInstance()
-		configParam = config.changeView(addSections = ['parameters'], addTags = [self])
+		pm = config.getClass('parameter factory', 'SimpleParameterFactory',
+			cls = ParameterFactory, inherit = True).getInstance()
+		configParam = config.changeView(viewClass = TaggedConfigView, addSections = ['parameters'], addTags = [self])
 		self.setupJobParameters(configParam, pm)
 		self.source = pm.getSource(configParam)
 

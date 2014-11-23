@@ -22,7 +22,7 @@ from grid_control.tasks.task_base import TaskModule
 
 class DataTask(TaskModule):
 	def setupJobParameters(self, config, pm):
-		config = config.changeView(addSections = ['dataset'], addTags = [self])
+		config = config.changeView(viewClass = TaggedConfigView, addSections = ['dataset'], addTags = [self])
 		self.dataSplitter = None
 		self.dataRefresh = None
 		self.dataset = config.get('dataset', '').strip()

@@ -66,8 +66,7 @@ class DataProvider(LoadableObject):
 			return DataProvider.getInstance('DataMultiplexer', config, dataset, defaultProvider)
 		else:
 			(dsNick, dsProv, dsExpr) = DataProvider.parseDatasetExpr(config, dataset, defaultProvider)
-			config = config.changeView(viewClass = TaggedConfigView,
-				addSections = ['dataset'], addNames = [dsNick, str(dsId)])
+			config = config.changeView(viewClass = TaggedConfigView, addNames = [dsNick, str(dsId)])
 			return DataProvider.getInstance(dsProv, config, dsExpr, dsNick, dsId)
 	create = staticmethod(create)
 

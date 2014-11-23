@@ -43,7 +43,7 @@ class DataSplitter(LoadableObject):
 		locals()[splitInfo] = idx
 
 	def __init__(self, config):
-		self.config = config.changeView(addSections = ['dataset'])
+		self.config = config
 		self.splitSource = None
 		self._protocol = {}
 

@@ -48,7 +48,8 @@ class BasicParameterFactory(ParameterFactory):
 		ParameterFactory.__init__(self, config, name)
 
 		# Get constants from [constants <tags...>]
-		configConstants = config.changeView(setClasses = None, setSections = ['constants'], addTags = [self])
+		configConstants = config.changeView(viewClass = TaggedConfigView,
+			setClasses = None, setSections = ['constants'], addTags = [self])
 		for cName in filter(lambda o: not o.endswith(' lookup'), configConstants.getOptions()):
 			self._addConstantPlugin(configConstants, cName, cName.upper())
 		# Get constants from [<Module>] constants

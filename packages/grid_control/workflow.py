@@ -36,21 +36,21 @@ class Workflow(NamedObject):
 
 		# Initialise monitoring module
 		self.monitor = ClassFactory(config, ('monitor', 'scripts'), ('monitor manager', 'MultiMonitor'),
-			cls = Monitoring, tags = [self.task]).getInstance(self.task)
+			cls = Monitoring, tags = [self, self.task]).getInstance(self.task)
 
 		# Initialise workload management interface
 		self.wms = ClassFactory(config, ('backend', 'grid'), ('backend manager', 'MultiWMS'),
-			cls = WMS, tags = [self.task]).getInstance()
+			cls = WMS, tags = [self, self.task]).getInstance()
 
 		# Initialise job database
 		jobManagerCls = config.getClass('job manager', 'SimpleJobManager',
-			cls = JobManager, tags = [self.task, self.wms])
+			cls = JobManager, tags = [self, self.task, self.wms])
 		self.jobManager = jobManagerCls.getInstance(self.task, self.monitor)
 
 		# Prepare work package
 		self.wms.deployTask(self.task, self.monitor)
 
-		configJobs = config.changeView(setSections = ['jobs'])
+		configJobs = config.changeView(viewClass = TaggedConfigView, addSections = ['jobs'], addTags = [self])
 		self._actionList = configJobs.getList('action', ['check', 'retrieve', 'submit'], onChange = None)
 		self.runContinuous = configJobs.getBool('continuous', False, onChange = None)
 
