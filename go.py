@@ -19,11 +19,6 @@ import sys, os, signal, optparse, logging
 sys.path.insert(1, os.path.join(sys.path[0], 'packages'))
 from gcPackage import *
 
-usage = 'Syntax: %s [OPTIONS] <config file>\n' % sys.argv[0]
-def print_help(*args):
-	utils.eprint('%s\n%s' % (usage, open(utils.pathShare('help.txt'), 'r').read()))
-	sys.exit(0)
-
 if __name__ == '__main__':
 	global log, handler
 	log = None
@@ -43,8 +38,9 @@ if __name__ == '__main__':
 	if pyver < 2.3:
 		utils.deprecated('This python version (%.1f) is not supported anymore!' % pyver)
 
+	usage = 'Syntax: %s [OPTIONS] <config file>\n' % sys.argv[0]
 	parser = optparse.OptionParser(add_help_option=False)
-	parser.add_option('-h', '--help',          action='callback', callback=print_help)
+	parser.add_option('-h', '--help',          dest='help',       default=False, action='store_true')
 	parser.add_option('',   '--help-conf',     dest='help_cfg',   default=False, action='store_true')
 	parser.add_option('',   '--help-confmin',  dest='help_scfg',  default=False, action='store_true')
 	parser.add_option('-i', '--init',          dest='init',       default=False, action='store_true')
@@ -68,6 +64,9 @@ if __name__ == '__main__':
 	parser.add_option('-D', '--detail-report', dest='old_report', default=False, action='store_true')
 	parser.add_option('',   '--help-vars',     dest='old_report', default=False, action='store_true')
 	(opts, args) = parser.parse_args()
+	if opts.help:
+		utils.eprint('%s\n%s' % (usage, open(utils.pathShare('help.txt'), 'r').read()))
+		sys.exit(0)
 
 	utils.verbosity(opts.verbosity)
 	logging.getLogger().setLevel(logging.DEFAULT_VERBOSITY - opts.verbosity)
