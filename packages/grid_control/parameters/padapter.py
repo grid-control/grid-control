@@ -21,7 +21,7 @@ from grid_control.parameters.psource_file import GCDumpParameterSource
 from python_compat import md5, set, sorted
 
 class ParameterAdapter(LoadableObject):
-	def __init__(self, source):
+	def __init__(self, config, source):
 		self._source = source
 		self._prune = True
 
@@ -59,7 +59,7 @@ class ParameterAdapter(LoadableObject):
 
 class BasicParameterAdapter(ParameterAdapter):
 	def __init__(self, config, source):
-		ParameterAdapter.__init__(self, source)
+		ParameterAdapter.__init__(self, config, source)
 		self._activeMap = {}
 		self._resyncState = None
 
@@ -169,9 +169,9 @@ class TrackedParameterAdapter(BasicParameterAdapter):
 				for jobNum in range(plugin.getMaxJobs()):
 					yield translateEntry(plugin.getJobInfo(jobNum))
 
-		old = ParameterAdapter(GCDumpParameterSource(self._pathParams))
+		old = ParameterAdapter(None, GCDumpParameterSource(self._pathParams))
 		params_old = list(translatePlugin(old))
-		new = ParameterAdapter(self._rawSource)
+		new = ParameterAdapter(None, self._rawSource)
 		params_new = list(translatePlugin(new))
 
 		mapJob2PID = {}

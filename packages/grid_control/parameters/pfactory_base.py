@@ -56,7 +56,7 @@ class BasicParameterFactory(ParameterFactory):
 		for cName in map(str.strip, config.getList('constants', [])):
 			self._addConstantPlugin(config, cName, cName)
 		# Random number variables
-		configJobs = config.changeView(setSections = ['jobs'])
+		configJobs = config.changeView(addSections = ['jobs'])
 		nseeds = configJobs.getInt('nseeds', 10)
 		newSeeds = map(lambda x: str(random.randint(0, 10000000)), range(nseeds))
 		for (idx, seed) in enumerate(configJobs.getList('seeds', newSeeds, persistent = True)):
