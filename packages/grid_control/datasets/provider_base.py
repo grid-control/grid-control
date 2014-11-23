@@ -230,11 +230,9 @@ class DataProvider(LoadableObject):
 
 
 	# Load dataset information using ListProvider
-	def loadState(path, config = None):
-		if config == None:
-			config = createConfigFactory(useDefaultFiles = False).getConfig()
-		config = config.changeView(addSections = ['dataset'])
-		# None, None = Don't override NickName and ID
+	def loadState(path):
+		config = createConfigFactory(useDefaultFiles = False, configDict = {'dataset': {
+			'nickname check consistency': 'False', 'nickname check collision': 'False'}}).getConfig()
 		return DataProvider.getInstance('ListProvider', config, path, None, None)
 	loadState = staticmethod(loadState)
 

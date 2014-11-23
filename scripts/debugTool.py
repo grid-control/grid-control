@@ -86,17 +86,17 @@ if opts.diff:
 	if len(args) != 2:
 		utils.exitWithUsage("%s <dataset source 1> <dataset source 2>" % sys.argv[0])
 	utils.eprint = lambda *x: {}
-	a = DataProvider.loadState(args[0])
-	b = DataProvider.loadState(args[1])
+	a = DataProvider.getInstance('ListProvider', config, args[0], None)
+	b = DataProvider.getInstance('ListProvider', config, args[1], None)
 	(blocksAdded, blocksMissing, blocksChanged) = DataProvider.resyncSources(a.getBlocks(), b.getBlocks())
 	utils.printTabular([(DataProvider.Dataset, "Dataset"), (DataProvider.BlockName, "Block")], blocksMissing)
 
 if opts.findrm:
 	removed = []
 	utils.eprint = lambda *x: {}
-	oldDP = DataProvider.loadState(args[0])
+	oldDP = DataProvider.getInstance('ListProvider', config, args[0], None)
 	for new in args[1:]:
-		newDP = DataProvider.loadState(new)
+		newDP = DataProvider.getInstance('ListProvider', config, new, None)
 		(blocksAdded, blocksMissing, blocksChanged) = DataProvider.resyncSources(oldDP.getBlocks(), newDP.getBlocks())
 		for block in blocksMissing:
 			tmp = dict(block)

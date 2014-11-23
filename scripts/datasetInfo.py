@@ -71,7 +71,7 @@ def main():
 	config = getConfig(configFile = opts.settings, configDict = {'dataset': cfgSettings})
 
 	if os.path.exists(dataset):
-		provider = DataProvider.loadState(dataset, config)
+		provider = DataProvider.getInstance('ListProvider', config, dataset, None)
 	else:
 		provider = DataProvider.create(config, dataset, opts.provider)
 	blocks = provider.getBlocks()
