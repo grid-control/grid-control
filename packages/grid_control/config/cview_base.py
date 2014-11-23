@@ -116,42 +116,50 @@ class HistoricalConfigView(ConfigView):
 	def iterContent(self):
 		return self._matchEntries(self._curContainer)
 
+	def _getEntry(self, option_list, defaultEntry, defaultEntry_fallback):
+		if defaultEntry.value != noDefault:
+			self._curContainer.setDefault(defaultEntry)
+		# Assemble matching config entries and combine them
+		entries = self._matchEntries(self._curContainer, option_list)
+		if defaultEntry.value != noDefault:
+			entries.append(defaultEntry_fallback)
+		self._log.log(logging.DEBUG1, 'Used config entries:')
+		for entry in entries:
+			self._log.log(logging.DEBUG1, '  %s (%s | %s)' % (entry.format(printSection = True), entry.source, entry.order))
+		curEntry = ConfigEntry.combineEntries(entries)
+		# Ensure that fallback default value is stored in persistent storage
+		if (defaultEntry.value != noDefault) and defaultEntry_fallback.accessed:
+			self._curContainer.setDefault(defaultEntry_fallback)
+		return curEntry
+
+	def _getDefaultEntries(self, option_list, default_str, persistent, oldEntry):
+		if persistent and oldEntry:
+			default_str = oldEntry.value
+		defaultEntry = self._createEntry(option_list, default_str, '?=', '<default>', specific = False, reverse = True)
+		if persistent and not oldEntry:
+			if self._curContainer.getDefault(defaultEntry):
+				defaultEntry = self._curContainer.getDefault(defaultEntry)
+		defaultEntry_fallback = self._createEntry(option_list, defaultEntry.value, '?=', '<default fallback>', specific = True, reverse = False)
+		return (defaultEntry, defaultEntry_fallback)
+
 	# Return old and current merged config entries
 	def get(self, option_list, default_str, persistent):
-		def getEntriesWithDefault(container, option_list, default_str, desc):
-			if default_str != noDefault:
-				defaultEntry_fallback = self._createEntry(option_list, default_str, '?=', '<default fallback>', specific = True, reverse = False)
-				defaultEntry = self._createEntry(option_list, default_str, '?=', '<default>', specific = False, reverse = True)
-				container.setDefault(defaultEntry)
-
-			entries = self._matchEntries(container, option_list)
-			if default_str != noDefault:
-				entries.append(defaultEntry_fallback)
-			self._log.log(logging.DEBUG1, '%s config entries:' % desc)
-			for entry in entries:
-				self._log.log(logging.DEBUG1, '  %s (%s | %s)' % (entry.format(printSection = True), entry.source, entry.order))
-			result = ConfigEntry.combineEntries(entries)
-			if (default_str != noDefault) and defaultEntry_fallback.accessed:
-				container.setDefault(defaultEntry_fallback)
-			return (result, (default_str != noDefault) and (defaultEntry.accessed or defaultEntry_fallback.accessed))
-
 		oldEntry = None
-		if self._oldContainer.enabled:
+		if self._oldContainer.enabled: # If old container is enabled => return stored entry
 			oldEntry = ConfigEntry.combineEntries(self._matchEntries(self._oldContainer, option_list))
-			if oldEntry and persistent: # Override current default value with stored value
-				default_str = oldEntry.value
-		(curEntry, curUsedDefault) = getEntriesWithDefault(self._curContainer, option_list, default_str, 'Used')
+		# Process current entry
+		(defaultEntry, defaultEntry_fallback) = self._getDefaultEntries(option_list, default_str, persistent, oldEntry)
+		curEntry = self._getEntry(option_list, defaultEntry, defaultEntry_fallback)
 		if curEntry == None:
 			raise ConfigError('"[%s] %s" does not exist!' % (self._getSection(specific = False), option_list[0]))
-		elif curUsedDefault and oldEntry and persistent:
-			self._log.log(logging.INFO2, 'Using persistent    %s' % curEntry.format(printSection = True))
-		elif curUsedDefault:
-			self._log.log(logging.INFO2, 'Using default value %s' % curEntry.format(printSection = True))
+		description = 'Using user supplied %s'
+		if persistent and (defaultEntry.accessed or defaultEntry.accessed):
+			description = 'Using persistent    %s'
+		elif defaultEntry.accessed or defaultEntry.accessed:
+			description = 'Using default value %s'
 		elif '!' in curEntry.section:
-			self._log.log(logging.INFO2, 'Using dynamic value %s' % curEntry.format(printSection = True))
-		else:
-			self._log.log(logging.INFO2, 'Using user supplied %s' % curEntry.format(printSection = True))
-
+			description = 'Using dynamic value %s'
+		self._log.log(logging.INFO2, description % curEntry.format(printSection = True))
 		return (oldEntry, curEntry)
 
 	def set(self, option_list, value, opttype, source, markAccessed = True):

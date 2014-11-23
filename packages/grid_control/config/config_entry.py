@@ -136,12 +136,15 @@ class ConfigContainer(object):
 	def setReadOnly(self):
 		self._read_only = True
 
+	def getDefault(self, entry):
+		return self._content_default.get(entry.option, {}).get(entry.section)
+
 	def setDefault(self, entry):
-		curEntry = self._content_default.get(entry.option, {}).get(entry.section)
+		curEntry = self.getDefault(entry)
 		if self._read_only and not curEntry:
 			raise APIError('Config container is read-only!')
 		elif curEntry and (curEntry.value != entry.value):
-			raise APIError('Inconsistent default values!')
+			raise APIError('Inconsistent default values! (%r != %r)' % (curEntry.value, entry.value))
 		entry.order = 0
 		self._content_default.setdefault(entry.option, {}).setdefault(entry.section, entry)
 
