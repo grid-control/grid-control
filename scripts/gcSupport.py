@@ -156,7 +156,7 @@ def parseOptions(parser):
 	parser.add_option("-v", "--verbose",   dest="verbosity",   default=0,         action="count",
 		help='Increase verbosity')
 	(opts, args) = parser.parse_args()
-	logging.getLogger().setLevel(logging.DEFAULT_VERBOSITY - opts.verbosity)
+	logging.getLogger().setLevel(logging.DEFAULT - opts.verbosity)
 	utils.verbosity(opts.verbosity)
 	utils.printTabular.mode = opts.displaymode
 	utils.printTabular.wraplen = int(opts.textwidth)

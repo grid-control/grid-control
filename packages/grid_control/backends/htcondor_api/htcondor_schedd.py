@@ -516,7 +516,7 @@ class HTCScheddSSH(HTCScheddCLIBase):
 			try:
 				self.cleanStagingDir(htcID = htcID)
 			except RuntimeError as err:
-				self._log( logging.DEFAULT_VERBOSITY, err.message )
+				self._log( logging.DEFAULT, err.message )
 		# clean up task dir if no job(dir)s remain
 		try:
 			statProcess = self._adapter.LoggedExecute('find %s -maxdepth 1 -type d | wc -l' % self.getStagingDir( taskID = htcIDs[0].gctaskID) )
@@ -526,7 +526,7 @@ class HTCScheddSSH(HTCScheddCLIBase):
 			elif (int(checkProcess.getOutput()) == 1):
 				self.cleanStagingDir(taskID = htcIDs[0].gctaskID)
 		except RuntimeError as err:
-			self._log( logging.DEFAULT_VERBOSITY, err.message )
+			self._log( logging.DEFAULT, err.message )
 		return retrievedJobs
 
 	def _prepareSubmit(self, task, jobNumList, queryArguments):

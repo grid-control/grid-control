@@ -14,15 +14,33 @@
 
 import os, sys, logging
 
-logLevelDict = {'DEFAULT_VERBOSITY': 14, # setLevel(logging.DEFAULT_VERBOSITY - <verbosity level>)
+logLevelDict = {'DEFAULT': 14, # setLevel(logging.DEFAULT - <verbosity level>)
 	'INFO1': 13, 'INFO2': 12, 'INFO3': 11, 'DEBUG1': 9, 'DEBUG2': 8, 'DEBUG3': 7}
 
 def logging_defaults():
-	# Default logging to stdout
-	sh = logging.StreamHandler(sys.stdout)
-	logging.getLogger().addHandler(sh)
-	# Maybe needed for debugging because logging_setup(config) is called after config.stored is used
-	#logging.getLogger('config.stored').addHandler(sh)
+	def setupLogStream(logger, logFormat):
+		handler = logging.StreamHandler(sys.stdout)
+		handler.setFormatter(logging.Formatter(fmt=logFormat, datefmt='%Y-%m-%d %H:%M:%S'))
+		logger.addHandler(handler)
+		return logger
+
+	setupLogStream(logging.getLogger(), '%(asctime)s - %(name)s:%(levelname)s - %(message)s')
+	setupLogStream(logging.getLogger('user'), '%(message)s').propagate = False
+	setupLogStream(logging.getLogger('user.time'), '%(asctime)s - %(message)s').propagate = False
+
+	class UniqueFilter(logging.Filter):
+		def __init__(self):
+			self._memory = []
+		def filter(self, record):
+			isNew = record.msg not in self._memory
+			if not isNew:
+				self._memory.remove(record.msg)
+			self._memory.insert(0, record.msg)
+			while len(self._memory) > 1000: # prevent memory filling up
+				self._memory.pop()
+			return isNew
+	logging.getLogger('user.once').addFilter(UniqueFilter())
+	logging.getLogger('user.time.once').addFilter(UniqueFilter())
 
 	# Default exception logging to file in gc / tmp / user directory
 	# Convention: sys.path[1] == python dir of gc
@@ -55,6 +73,9 @@ def logging_setup(config):
 	for option in config.getOptions():
 		logger = getLoggerFromOption(option)
 		if option.endswith('handler'): # Contains list of handlers to add to logger
+			# remove any standard handlers:
+			for handler in list(logger.handlers):
+				logger.removeHandler(handler)
 			for dest in config.getList(option, [], onChange = None):
 				if dest == 'stdout':
 					logger.addHandler(logging.StreamHandler(sys.stdout))

@@ -69,7 +69,7 @@ if __name__ == '__main__':
 		sys.exit(0)
 
 	utils.verbosity(opts.verbosity)
-	logging.getLogger().setLevel(logging.DEFAULT_VERBOSITY - opts.verbosity)
+	logging.getLogger().setLevel(logging.DEFAULT - opts.verbosity)
 
 	# we need exactly one positional argument (config file)
 	if len(args) != 1:
