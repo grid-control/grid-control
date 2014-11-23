@@ -29,7 +29,7 @@ class BaseJobFileTarAdaptor(object):
 		metadata = self._fmt.parse(self._tar.extractfile('Metadata').readlines(), keyParser = {None: str})
 		self.maxJobs = metadata.pop('MaxJobs')
 		self.classname = metadata.pop('ClassName')
-		self.metadata = {None: dict(filter(lambda (k, v): not k.startswith('['), metadata.items()))}
+		self.metadata = {'None': dict(filter(lambda (k, v): not k.startswith('['), metadata.items()))}
 		for (k, v) in filter(lambda (k, v): k.startswith('['), metadata.items()):
 			self.metadata.setdefault('None %s' % k.split(']')[0].lstrip('['), {})[k.split(']')[1].strip()] = v
 		del log

@@ -480,11 +480,11 @@ class DataSplitter(LoadableObject):
 	def loadState(path, cfg = None):
 		src = DataSplitter._getIOHandler().loadState(path)
 		if cfg == None:
-			cfg = Config(configDict=src.metadata)
-		splitter = DataSplitter.getInstance(src.classname, cfg, section = None)
+			cfg = createConfigFactory(configDict = src.metadata).getConfig()
+		splitter = DataSplitter.getInstance(src.classname, cfg)
 		splitter.splitSource = src
 		# Transfer config protocol (in case no split function is called)
-		splitter._protocol = src.metadata[None]
+		splitter._protocol = src.metadata['None']
 		for section in filter(lambda x: x, src.metadata):
 			meta2prot = lambda (k, v): ('[%s] %s' % (section.replace('None ', ''), k), v)
 			splitter._protocol.update(dict(map(meta2prot, src.metadata[section].items())))
