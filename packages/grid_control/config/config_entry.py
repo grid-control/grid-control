@@ -39,7 +39,7 @@ class ConfigEntry(object):
 		(self.section, self.option, self.source, self.order) = (section.lower(), option.lower(), source.lower(), order)
 		(self.value, self.opttype, self.accessed) = (value, opttype, accessed)
 
-	def __str__(self):
+	def __repr__(self):
 		varList = str.join(', ', map(lambda (k, v): '%s = %s' % (k, repr(v)), sorted(self.__dict__.items())))
 		return '%s(%s)' % (self.__class__.__name__, varList)
 

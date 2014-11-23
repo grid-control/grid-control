@@ -30,7 +30,7 @@ class TypedConfigInterface(object):
 		self._configView = configView
 		self._log = logging.getLogger('config.%s' % self._configView.configName)
 
-	def __str__(self):
+	def __repr__(self):
 		return '<%s(view = %s)>' % (self.__class__.__name__, self._configView)
 
 	def changeView(self, interfaceClass = None, **kwargs):

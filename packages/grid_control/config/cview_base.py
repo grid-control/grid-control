@@ -206,7 +206,7 @@ class SimpleConfigView(HistoricalConfigView):
 		setattr(self, memberName, result)
 		return result
 
-	def __str__(self):
+	def __repr__(self):
 		return '<%s(sections = %r)>' % (self.__class__.__name__, self._cfgSections)
 
 	def _getSectionKey(self, section):
