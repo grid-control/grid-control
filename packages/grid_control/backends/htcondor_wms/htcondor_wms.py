@@ -21,15 +21,15 @@ import os
 import logging
 
 # GC modules
-import utils
 import json
-from wms          import BasicWMS
-from grid_control import Job
-from grid_control.exceptions   import ConfigError
+from grid_control import utils
+from grid_control.backends.wms import BasicWMS
+from grid_control.exceptions import ConfigError
+from grid_control.job_db import Job
 
 # HTC modules
-from htcondor_api.htcondor_schedd import HTCScheddFactory
-from htcondor_api.wmsid           import HTCJobID
+from htcondor_schedd import HTCScheddFactory
+from wmsid import HTCJobID
 
 """
 HTCondor backend core

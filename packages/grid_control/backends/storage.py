@@ -12,8 +12,11 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-import os, utils, shutil
-from grid_control import ConfigError, RethrowError, RuntimeError, NamedObject, validNoVar, QM
+import os, shutil
+from grid_control import utils
+from grid_control.abstract import NamedObject
+from grid_control.config import validNoVar
+from grid_control.exceptions import ConfigError, RethrowError, RuntimeError
 from python_compat import set
 
 # All functions use url_* functions from gc-run.lib (just like the job did...)
@@ -38,6 +41,7 @@ def se_copy(src, dst, force = True, tmp = ''):
 
 class StorageManager(NamedObject):
 	configSections = NamedObject.configSections + ['storage']
+	tagName = 'storage'
 
 	def __init__(self, config, name, optDefault, optPrefix, varPrefix):
 		NamedObject.__init__(self, config, name)
@@ -55,7 +59,6 @@ class StorageManager(NamedObject):
 	def doTransfer(self, listDescSourceTarget):
 		pass
 
-StorageManager.registerObject(tagName = 'storage')
 
 class LocalSBStorageManager(StorageManager):
 	def __init__(self, config, name, optDefault, optPrefix, varPrefix):
@@ -73,7 +76,7 @@ class LocalSBStorageManager(StorageManager):
 class SEStorageManager(StorageManager):
 	def __init__(self, config, name, optDefault, optPrefix, varPrefix):
 		StorageManager.__init__(self, config, name, optDefault, optPrefix, varPrefix)
-		normSEPath = lambda x: QM(x[0] == '/', 'dir:///%s' % x.lstrip('/'), x)
+		normSEPath = lambda x: utils.QM(x[0] == '/', 'dir:///%s' % x.lstrip('/'), x)
 		self.defPaths = config.getList('%s path' % optDefault, [], onValid = validNoVar, parseItem = normSEPath)
 		self.smPaths = config.getList('%s path' % optPrefix, self.defPaths, onValid = validNoVar, parseItem = normSEPath)
 		self.smFiles = config.getList('%s files' % optPrefix, [])

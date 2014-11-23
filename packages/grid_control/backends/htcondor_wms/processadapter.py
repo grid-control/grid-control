@@ -15,22 +15,22 @@
 # -*- coding: utf-8 -*-
 
 # core modules
-import os
 import atexit
+import os
 
 # standard modules
 import logging
 import re
 import shutil
-import time
-import tempfile
 import socket
+import tempfile
+import time
 
 # GC modules
-from python_compat import *
-from exceptions    import *
-from abstract      import LoadableObject
-from utils         import LoggedProcess, resolveInstallPath, ensureDirExists, lru_cache, InstallationError
+from grid_control.abstract import LoadableObject
+from grid_control.exceptions import AbstractError, InstallationError, RuntimeError
+from grid_control.utils import InstallationError, LoggedProcess, ensureDirExists, resolveInstallPath
+from python_compat import lru_cache
 
 # Container to call commands in a generic fashion
 class CommandContainer(object):
@@ -90,6 +90,7 @@ def ProcessAdapterFactory(URI, externalSchemes = [], collapseLocal = True, **kwa
 		adapter, scheme = getAdapter(adapter.getLoopbackURI(), **kwargs)
 	_logger.log(logging.INFO2, "Resolved URI '%s', providing adapter %s" % (URI, adapter.__class__.__name__))
 	return adapter, scheme
+
 
 # Base class defining interface
 class ProcessAdapterInterface(LoadableObject):

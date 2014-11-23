@@ -1,4 +1,4 @@
-#-#  Copyright 2010-2014 Karlsruhe Institute of Technology
+#-#  Copyright 2007-2014 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -13,11 +13,14 @@
 #-#  limitations under the License.
 
 # Generic base class for authentication proxies GCSCF:
-import os, time, getpass, shutil, stat
-from grid_control import QM, NamedObject, AbstractError, UserError, utils
+import os, stat, time, shutil, getpass
+from grid_control import utils
+from grid_control.abstract import NamedObject
+from grid_control.exceptions import AbstractError, UserError
 
 class Proxy(NamedObject):
 	configSections = NamedObject.configSections + ['proxy']
+	tagName = 'proxy'
 
 	def getUsername(self):
 		raise AbstractError
@@ -33,7 +36,6 @@ class Proxy(NamedObject):
 
 	def canSubmit(self, neededTime, canCurrentlySubmit):
 		raise AbstractError
-Proxy.registerObject(tagName = 'proxy')
 
 
 class MultiProxy(Proxy):
@@ -102,7 +104,7 @@ class TimedProxy(Proxy):
 		if (delta > self._minQueryTime) or (timeleft < neededTime and delta > self._maxQueryTime):
 			self._lastUpdate = time.time()
 			timeleft = self._getTimeleft(cached = False)
-			verbosity = QM(timeleft < neededTime, -1, 0)
+			verbosity = utils.QM(timeleft < neededTime, -1, 0)
 			utils.vprint('The proxy now has %s left' % utils.strTime(timeleft), verbosity, printTime = True)
 		return timeleft >= neededTime
 

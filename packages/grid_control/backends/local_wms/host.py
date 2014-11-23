@@ -1,4 +1,4 @@
-#-#  Copyright 2010-2014 Karlsruhe Institute of Technology
+#-#  Copyright 2009-2014 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -12,14 +12,15 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
+from grid_control import utils
+from grid_control.backends.local_wms.local_wms import LocalWMS
+from grid_control.job_db import Job
 from python_compat import next
-from grid_control import Job, utils, backends
-from grid_control.backends import LocalWMS
 
 class Host(LocalWMS):
 	configSections = LocalWMS.configSections + ['Host']
-	def __init__(self, config, wmsName = None):
-		LocalWMS.__init__(self, config, wmsName,
+	def __init__(self, config, name):
+		LocalWMS.__init__(self, config, name,
 			submitExec = utils.pathShare('gc-host.sh'),
 			statusExec = utils.resolveInstallPath('ps'),
 			cancelExec = utils.resolveInstallPath('kill'))

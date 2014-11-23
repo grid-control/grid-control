@@ -1,4 +1,4 @@
-#-#  Copyright 2010-2014 Karlsruhe Institute of Technology
+#-#  Copyright 2009-2014 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -13,15 +13,17 @@
 #-#  limitations under the License.
 
 import os, xml.dom.minidom
-from grid_control import QM, ConfigError, RethrowError, Job, utils
+from grid_control import utils
+from grid_control.backends.local_wms.pbsge import PBSGECommon
 from grid_control.backends.wms import WMS
-from pbsge import PBSGECommon
+from grid_control.exceptions import ConfigError, RethrowError
+from grid_control.job_db import Job
 from python_compat import set
 
 class OGE(PBSGECommon):
 	configSections = PBSGECommon.configSections + ['OGE']
-	def __init__(self, config, wmsName = None):
-		PBSGECommon.__init__(self, config, wmsName)
+	def __init__(self, config, name):
+		PBSGECommon.__init__(self, config, name)
 		self._user = config.get('user', os.environ.get('LOGNAME', ''), onChange = None)
 		self._project = config.get('project name', '', onChange = None)
 		self._configExec = utils.resolveInstallPath('qconf')
@@ -84,7 +86,7 @@ class OGE(PBSGECommon):
 
 
 	def getCheckArguments(self, wmsIds):
-		return '-xml' + QM(self._user, ' -u %s' % self._user, '')
+		return '-xml' + utils.QM(self._user, ' -u %s' % self._user, '')
 
 
 	def getCancelArguments(self, wmsIds):

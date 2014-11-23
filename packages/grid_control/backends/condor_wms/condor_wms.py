@@ -14,17 +14,19 @@
 
 # -*- coding: utf-8 -*-
 
+import glob, commands
 import os
-import re
-import commands, glob
 import popen2
-import time
-
+import re
 import tempfile
-from python_compat import set, md5
-from grid_control import utils, QM, ProcessHandler, Job
-from wms import WMS, BasicWMS, RethrowError
-from broker import Broker
+import time
+from grid_control import utils
+from grid_control.backends.broker import Broker
+from grid_control.backends.condor_wms.processhandler import ProcessHandler
+from grid_control.backends.wms import BasicWMS, WMS
+from grid_control.exceptions import RethrowError
+from grid_control.job_db import Job
+from python_compat import md5, set, sorted
 
 # if the ssh stuff proves too hack'y: http://www.lag.net/paramiko/
 
@@ -714,7 +716,7 @@ class Condor(BasicWMS):
 
 		# get remote destination features
 		user,sched,collector = self._getDestination(config)
-		self.debugOut("Destination:\n	user:%s @ sched:%s via collector:%s" % ( QM(user,user,"<local default>"), QM(sched,sched,"<local default>"),QM(collector,collector,"<local default>")))
+		self.debugOut("Destination:\n	user:%s @ sched:%s via collector:%s" % ( utils.QM(user,user,"<local default>"), utils.QM(sched,sched,"<local default>"),utils.QM(collector,collector,"<local default>")))
 		# prepare commands appropriate for pool type
 		if self.remoteType == poolType.LOCAL or self.remoteType == poolType.SPOOL:
 			self.user=user
@@ -728,14 +730,14 @@ class Condor(BasicWMS):
 			self.configValExec = utils.resolveInstallPath('condor_config_val')	# service is better when being able to adjust to pool settings
 			if self.remoteType == poolType.SPOOL:
 				# remote requires adding instructions for accessing remote pool
-				self.submitExec+= " %s %s" % (QM(sched,"-remote %s"%sched,""),QM(collector, "-pool %s"%collector, ""))
-				self.statusExec+= " %s %s" % (QM(sched,"-name %s"%sched,""),QM(collector, "-pool %s"%collector, ""))
+				self.submitExec+= " %s %s" % (utils.QM(sched,"-remote %s"%sched,""),utils.QM(collector, "-pool %s"%collector, ""))
+				self.statusExec+= " %s %s" % (utils.QM(sched,"-name %s"%sched,""),utils.QM(collector, "-pool %s"%collector, ""))
 				self.historyExec = "false"	# disabled for this type
-				self.cancelExec+= " %s %s" % (QM(sched,"-name %s"%sched,""),QM(collector, "-pool %s"%collector, ""))
-				self.transferExec+= " %s %s" % (QM(sched,"-name %s"%sched,""),QM(collector, "-pool %s"%collector, ""))
+				self.cancelExec+= " %s %s" % (utils.QM(sched,"-name %s"%sched,""),utils.QM(collector, "-pool %s"%collector, ""))
+				self.transferExec+= " %s %s" % (utils.QM(sched,"-name %s"%sched,""),utils.QM(collector, "-pool %s"%collector, ""))
 		else:
 			# ssh type instructions are passed to the remote host via regular ssh/gsissh
-			host="%s%s"%(QM(user,"%s@" % user,""), sched)
+			host="%s%s"%(utils.QM(user,"%s@" % user,""), sched)
 			if self.remoteType == poolType.SSH:
 				self.Pool=ProcessHandler.getInstance("SSHProcessHandler",remoteHost=host , sshLink=config.getWorkPath(".ssh", self.wmsName+host ) )
 			else:
@@ -769,8 +771,8 @@ class Condor(BasicWMS):
 		splitDest = [ item.strip() for item in config.get("remote Dest", "@").split("@") ]
 		user = config.get("remote User", "").strip()
 		if len(splitDest)==1:
-			return QM(user,user,None),splitDest[0],None
+			return utils.QM(user,user,None),splitDest[0],None
 		elif len(splitDest)==2:
-			return QM(user,user,None),splitDest[0],splitDest[1]
+			return utils.QM(user,user,None),splitDest[0],splitDest[1]
 		else:
 			raise RuntimeError("Could not parse Configuration setting 'remote Dest'! \nExpected:	[<sched>|<sched>@|<sched>@<collector>]\nFound:	%s"%config.get("remote Dest", "@"))

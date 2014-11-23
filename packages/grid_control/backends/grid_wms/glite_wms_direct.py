@@ -1,4 +1,4 @@
-#-#  Copyright 2010-2012 Karlsruhe Institute of Technology
+#-#  Copyright 2010-2014 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -13,6 +13,7 @@
 #-#  limitations under the License.
 
 import os, sys
+
 glite = os.environ.get('GLITE_WMS_LOCATION', os.environ.get('GLITE_LOCATION', ''))
 for p in ['lib', 'lib64', os.path.join('lib', 'python'), os.path.join('lib64', 'python')]:
 	sys.path.append(os.path.join(glite, p))
@@ -39,8 +40,9 @@ except: # gLite 3.1
 	except:
 		getStatusDirect = None
 
-from grid_control import utils, GridError
-from glite_wms import GliteWMS
+from grid_control import utils
+from grid_control.backends.grid_wms.glite_wms import GliteWMS
+from grid_control.exceptions import GridError
 
 class GliteWMSDirect(GliteWMS):
 	# Check status of jobs and yield (jobNum, wmsID, status, other data)

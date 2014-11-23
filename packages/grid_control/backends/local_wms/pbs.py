@@ -1,4 +1,4 @@
-#-#  Copyright 2010-2014 Karlsruhe Institute of Technology
+#-#  Copyright 2009-2014 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -12,9 +12,11 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-from grid_control import QM, RethrowError, Job, utils
-from grid_control.backends import WMS
-from pbsge import PBSGECommon
+from grid_control import utils
+from grid_control.backends.local_wms.pbsge import PBSGECommon
+from grid_control.backends.wms import WMS
+from grid_control.exceptions import RethrowError
+from grid_control.job_db import Job
 
 class PBS(PBSGECommon):
 	configSections = PBSGECommon.configSections + ['PBS']
@@ -26,11 +28,11 @@ class PBS(PBSGECommon):
 		'fail':	Job.FAILED, 'success': Job.SUCCESS
 	}
 
-	def __init__(self, config, wmsName = None):
-		PBSGECommon.__init__(self, config, wmsName)
+	def __init__(self, config, name):
+		PBSGECommon.__init__(self, config, name)
 		self._nodesExec = utils.resolveInstallPath('pbsnodes')
 		self._server = config.get('server', '', onChange = None)
-		self._fqid = lambda wmsId: QM(self._server, '%s.%s' % (wmsId, self._server), wmsId)
+		self._fqid = lambda wmsId: utils.QM(self._server, '%s.%s' % (wmsId, self._server), wmsId)
 
 
 	def getSubmitArguments(self, jobNum, jobName, reqs, sandbox, stdout, stderr):

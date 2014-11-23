@@ -22,14 +22,15 @@ import logging
 import re
 
 # GC modules
-import utils
-from htcondor_utils import parseKWListIter, singleQueryCache
-from wmsid          import HTCJobID
-from grid_control   import WMS, LoadableObject
+from grid_control import utils
+from grid_control.abstract import LoadableObject
+from grid_control.backends import WMS
+from python_compat import lru_cache, md5
 
 # HTC modules
-from python_compat  import md5, lru_cache
+from htcondor_utils import parseKWListIter, singleQueryCache
 from processadapter import ProcessAdapterFactory
+from wmsid import HTCJobID
 
 """
 This module provides adapter classes for uniformly issuing GC commands to HTCondor Schedds.

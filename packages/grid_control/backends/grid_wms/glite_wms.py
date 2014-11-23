@@ -1,4 +1,4 @@
-#-#  Copyright 2010-2014 Karlsruhe Institute of Technology
+#-#  Copyright 2007-2014 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -12,10 +12,11 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
+import os, time, random, tempfile
+from grid_control import utils
+from grid_control.backends.grid_wms.grid_wms import GridWMS
+from grid_control.exceptions import RuntimeError
 from python_compat import md5
-import tempfile, time, random, os
-from grid_control import utils, RuntimeError
-from grid_wms import GridWMS
 
 def choice_exp(sample, p = 0.5):
 	for x in sample:
@@ -123,8 +124,10 @@ class DiscoverWMS_Lazy: # TODO: Move to broker infrastructure
 
 
 class GliteWMS(GridWMS):
-	def __init__(self, config, wmsName = 'glite-wms'):
-		GridWMS.__init__(self, config, wmsName)
+	configSections = GridWMS.configSections + ['glite-wms', 'glitewms'] # backwards compatibility
+
+	def __init__(self, config, name):
+		GridWMS.__init__(self, config, name)
 
 		self._delegateExec = utils.resolveInstallPath('glite-wms-job-delegate-proxy')
 		self._submitExec = utils.resolveInstallPath('glite-wms-job-submit')
@@ -180,3 +183,7 @@ class GliteWMS(GridWMS):
 			self._useDelegate = False
 		for submitInfo in GridWMS.submitJobs(self, jobNumList, module):
 			yield submitInfo
+
+
+class Grid(GliteWMS):
+	pass

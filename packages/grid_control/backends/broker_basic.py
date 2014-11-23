@@ -12,10 +12,10 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
+from grid_control import utils
+from grid_control.backends.broker import Broker
+from grid_control.backends.wms import WMS
 from python_compat import sorted
-from grid_control import utils, QM
-from broker import Broker
-from wms import WMS
 
 class RandomBroker(Broker):
 	def __init__(self, config, name, userOpt, itemName, discoverFun):
@@ -87,7 +87,7 @@ class SimpleBroker(FilterBroker):
 	def _broker(self, reqs, items):
 		if not self._itemsDiscovered:
 			return FilterBroker._broker(self, reqs, self._itemsStart) # Use user constrained items
-		items = QM(self._itemsStart != None, self._itemsStart, self._itemsSorted) # or discovered items
+		items = utils.QM(self._itemsStart != None, self._itemsStart, self._itemsSorted) # or discovered items
 
 		# Match items which fulfill the requirements
 		def matcher(props, cmp_fun = cmp):

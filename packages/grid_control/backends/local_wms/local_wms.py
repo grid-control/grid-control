@@ -1,4 +1,4 @@
-#-#  Copyright 2010-2014 Karlsruhe Institute of Technology
+#-#  Copyright 2009-2014 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -12,20 +12,23 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-import os, tempfile, shutil, time, glob
-from grid_control import AbstractError, Job, utils
-from wms import WMS, BasicWMS
-from broker import Broker
+import os, glob, time, shutil, tempfile
+from grid_control import utils
+from grid_control.backends.broker import Broker
+from grid_control.backends.wms import BasicWMS, WMS
+from grid_control.exceptions import AbstractError
+from grid_control.job_db import Job
+from grid_control.utils.file_objects import VirtualFile
 
 class LocalWMS(BasicWMS):
 	configSections = BasicWMS.configSections + ['local']
 
-	def __init__(self, config, wmsName, submitExec, statusExec, cancelExec):
+	def __init__(self, config, name, submitExec, statusExec, cancelExec):
 		config.set('broker', 'RandomBroker')
 		config.setInt('wait idle', 20)
 		config.setInt('wait work', 5)
 		(self.submitExec, self.statusExec, self.cancelExec) = (submitExec, statusExec, cancelExec)
-		BasicWMS.__init__(self, config, wmsName)
+		BasicWMS.__init__(self, config, name)
 
 		self.brokerSite = config.getClass('site broker', 'UserBroker', cls = Broker,
 			inherit = True, tags = [self]).getInstance('sites', 'sites', self.getNodes)
@@ -178,7 +181,7 @@ class LocalWMS(BasicWMS):
 	def _getSandboxFiles(self, module, monitor, smList):
 		files = BasicWMS._getSandboxFiles(self, module, monitor, smList)
 		if self.proxy.getAuthFile():
-			files.append(utils.VirtualFile('_proxy.dat', open(self.proxy.getAuthFile(), 'r').read()))
+			files.append(VirtualFile('_proxy.dat', open(self.proxy.getAuthFile(), 'r').read()))
 		return files
 
 
@@ -216,3 +219,14 @@ class LocalWMS(BasicWMS):
 
 	def getCheckArguments(self, wmsIds):
 		raise AbstractError
+
+
+class Local(WMS):
+	def __new__(cls, config, name):
+		for cmd, wms in [('sgepasswd', 'OGE'), ('pbs-config', 'PBS'), ('qsub', 'OGE'), ('bsub', 'LSF'), ('job_slurm', 'SLURM')]:
+			try:
+				utils.resolveInstallPath(cmd)
+				return WMS.getInstance(wms, config, name)
+			except:
+				pass
+		return WMS.getInstance('PBS', config, name)

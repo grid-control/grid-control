@@ -1,4 +1,4 @@
-#-#  Copyright 2010-2014 Karlsruhe Institute of Technology
+#-#  Copyright 2009-2014 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -12,11 +12,13 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
+import os, sys, copy, time, tarfile, tempfile
+from grid_control import utils
+from grid_control.backends.broker import Broker
+from grid_control.backends.wms import BasicWMS, WMS
+from grid_control.exceptions import APIError, RethrowError
+from grid_control.job_db import Job
 from python_compat import md5, parsedate
-import sys, os, time, copy, tempfile, tarfile
-from grid_control import QM, APIError, RethrowError, Job, utils
-from wms import WMS, BasicWMS
-from broker import Broker
 
 def jdlEscape(value):
 	repl = { '\\': r'\\', '\"': r'\"', '\n': r'\n' }
@@ -41,9 +43,9 @@ class GridWMS(BasicWMS):
 	}
 
 
-	def __init__(self, config, wmsName):
+	def __init__(self, config, name):
 		config.set('proxy', 'VomsProxy')
-		BasicWMS.__init__(self, config, wmsName)
+		BasicWMS.__init__(self, config, name)
 
 		self.brokerSite = config.getClass('site broker', 'UserBroker',
 			cls = Broker, tags = [self]).getInstance('sites', 'sites', self.getSites)
@@ -265,7 +267,7 @@ class GridWMS(BasicWMS):
 					proc.logError(self.errorLog, log = log, jdl = jdl)
 		finally:
 			utils.removeFiles([log, jdl])
-		return (jobNum, QM(wmsId, self._createId(wmsId), None), {'jdl': str.join('', data)})
+		return (jobNum, utils.QM(wmsId, self._createId(wmsId), None), {'jdl': str.join('', data)})
 
 
 	# Check status of jobs and yield (jobNum, wmsID, status, other data)

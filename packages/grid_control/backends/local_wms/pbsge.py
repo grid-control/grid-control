@@ -13,11 +13,12 @@
 #-#  limitations under the License.
 
 from grid_control import utils
-from grid_control.backends import WMS, LocalWMS
+from grid_control.backends.local_wms.local_wms import LocalWMS
+from grid_control.backends.wms import WMS
 
 class PBSGECommon(LocalWMS):
-	def __init__(self, config, wmsName = None):
-		LocalWMS.__init__(self, config, wmsName,
+	def __init__(self, config, name):
+		LocalWMS.__init__(self, config, name,
 			submitExec = utils.resolveInstallPath('qsub'),
 			statusExec = utils.resolveInstallPath('qstat'),
 			cancelExec = utils.resolveInstallPath('qdel'))

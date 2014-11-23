@@ -1,4 +1,4 @@
-#-#  Copyright 2010-2014 Karlsruhe Institute of Technology
+#-#  Copyright 2009-2014 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -13,10 +13,12 @@
 #-#  limitations under the License.
 
 import random
-from grid_control import QM, NamedObject, utils
+from grid_control import utils
+from grid_control.abstract import NamedObject
 
 class Broker(NamedObject):
 	configSections = NamedObject.configSections + ['broker']
+	tagName = 'broker'
 
 	def __init__(self, config, name, userOpt, itemName, discoverFun):
 		NamedObject.__init__(self, config, name)
@@ -35,7 +37,7 @@ class Broker(NamedObject):
 
 	def _broker(self, reqs, items):
 		if items and self._nRandom:
-			return random.sample(items, QM(self._nEntries, self._nEntries, len(items)))
+			return random.sample(items, utils.QM(self._nEntries, self._nEntries, len(items)))
 		elif items and self._nEntries:
 			return items[:self._nEntries]
 		return items
@@ -45,5 +47,3 @@ class Broker(NamedObject):
 		if result != None:
 			reqs.append((reqEntry, result))
 		return reqs
-
-Broker.registerObject(tagName = 'broker')

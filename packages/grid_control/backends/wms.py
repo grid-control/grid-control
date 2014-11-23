@@ -1,4 +1,4 @@
-#-#  Copyright 2010-2014 Karlsruhe Institute of Technology
+#-#  Copyright 2007-2014 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -14,19 +14,25 @@
 
 # Generic base class for workload management systems
 
+import os, glob, shutil, itertools
+from grid_control import utils
+from grid_control.abstract import ClassFactory, NamedObject
+from grid_control.backends.proxy import Proxy
+from grid_control.backends.storage import StorageManager
+from grid_control.exceptions import AbstractError, RethrowError, RuntimeError
+from grid_control.utils.file_objects import VirtualFile
 from python_compat import set, sorted
-import os, shutil, glob, itertools
-from grid_control import QM, NamedObject, AbstractError, RuntimeError, RethrowError, utils, Proxy, StorageManager, ClassFactory
 
 class WMS(NamedObject):
 	configSections = NamedObject.configSections + ['wms', 'backend']
+	tagName = 'wms'
 
 	reqTypes = ('WALLTIME', 'CPUTIME', 'MEMORY', 'CPUS', 'BACKEND', 'SITES', 'QUEUES', 'SOFTWARE', 'STORAGE')
 	for idx, reqType in enumerate(reqTypes):
 		locals()[reqType] = idx
 
 	def __init__(self, config, wmsName):
-		wmsName = QM(wmsName, wmsName, self.__class__.__name__).upper().replace('.', '_')
+		wmsName = utils.QM(wmsName, wmsName, self.__class__.__name__).upper().replace('.', '_')
 		NamedObject.__init__(self, config, wmsName)
 		(self.config, self.wmsName) = (config, wmsName)
 		self._wait_idle = config.getInt('wait idle', 60, onChange = None)
@@ -41,10 +47,10 @@ class WMS(NamedObject):
 	def getProxy(self, wmsId):
 		raise AbstractError # Return proxy instance responsible for this wmsId
 
-	def deployTask(self, module, monitor):
+	def deployTask(self, task, monitor):
 		raise AbstractError
 
-	def submitJobs(self, jobNumList, module): # jobNumList = [1, 2, ...]
+	def submitJobs(self, jobNumList, task): # jobNumList = [1, 2, ...]
 		raise AbstractError # Return (jobNum, wmsId, data) for successfully submitted jobs
 
 	def checkJobs(self, ids): # ids = [(WMS-61226, 1), (WMS-61227, 2), ...]
@@ -84,8 +90,6 @@ class WMS(NamedObject):
 			return utils.eprint('Warning: Unable to parse "%s"!' % fn)
 	parseJobInfo = staticmethod(parseJobInfo)
 
-WMS.registerObject(tagName = 'wms')
-
 
 class InactiveWMS(WMS):
 	def __init__(self, config, wmsName):
@@ -99,10 +103,10 @@ class InactiveWMS(WMS):
 	def getProxy(self, wmsId):
 		return self.proxy
 
-	def deployTask(self, module, monitor):
+	def deployTask(self, task, monitor):
 		return
 
-	def submitJobs(self, jobNumList, module): # jobNumList = [1, 2, ...]
+	def submitJobs(self, jobNumList, task): # jobNumList = [1, 2, ...]
 		utils.vprint('Inactive WMS (%s): Discarded submission of %d jobs' % (self.wmsName, len(jobNumList)), -1)
 
 	def checkJobs(self, ids): # ids = [(WMS-61226, 1), (WMS-61227, 2), ...]
@@ -113,6 +117,7 @@ class InactiveWMS(WMS):
 
 	def cancelJobs(self, ids):
 		utils.vprint('Inactive WMS (%s): Discarded abort of %d jobs' % (self.wmsName, len(ids)), -1)
+WMS.moduleMap['inactive'] = 'InactiveWMS'
 
 
 class BasicWMS(WMS):
@@ -148,14 +153,14 @@ class BasicWMS(WMS):
 		return self.proxy
 
 
-	def deployTask(self, module, monitor):
-		self.outputFiles = map(lambda (d, s, t): t, self._getSandboxFilesOut(module)) # HACK
-		module.validateVariables()
+	def deployTask(self, task, monitor):
+		self.outputFiles = map(lambda (d, s, t): t, self._getSandboxFilesOut(task)) # HACK
+		task.validateVariables()
 
-		self.smSEIn.addFiles(map(lambda (d, s, t): t, module.getSEInFiles())) # add module SE files to SM
+		self.smSEIn.addFiles(map(lambda (d, s, t): t, task.getSEInFiles())) # add task SE files to SM
 		# Transfer common SE files
 		if self.config.getState(detail = 'storage'):
-			self.smSEIn.doTransfer(module.getSEInFiles())
+			self.smSEIn.doTransfer(task.getSEInFiles())
 
 		def convert(fnList):
 			for fn in fnList:
@@ -166,17 +171,17 @@ class BasicWMS(WMS):
 
 		# Package sandbox tar file
 		utils.vprint('Packing sandbox:')
-		sandbox = self._getSandboxName(module)
+		sandbox = self._getSandboxName(task)
 		utils.ensureDirExists(os.path.dirname(sandbox), 'sandbox directory')
 		if not os.path.exists(sandbox) or self.config.getState(detail = 'sandbox'):
-			utils.genTarball(sandbox, convert(self._getSandboxFiles(module, monitor, [self.smSEIn, self.smSEOut])))
+			utils.genTarball(sandbox, convert(self._getSandboxFiles(task, monitor, [self.smSEIn, self.smSEOut])))
 
 
-	def submitJobs(self, jobNumList, module):
+	def submitJobs(self, jobNumList, task):
 		for jobNum in jobNumList:
 			if utils.abort():
 				raise StopIteration
-			yield self._submitJob(jobNum, module)
+			yield self._submitJob(jobNum, task)
 
 
 	def retrieveJobs(self, ids): # Process output sandboxes returned by getJobsOutput
@@ -236,62 +241,62 @@ class BasicWMS(WMS):
 			yield (inJobNum, -1, {})
 
 
-	def _getSandboxName(self, module):
-		return self.config.getWorkPath('files', module.taskID, self.wmsName, 'gc-sandbox.tar.gz')
+	def _getSandboxName(self, task):
+		return self.config.getWorkPath('files', task.taskID, self.wmsName, 'gc-sandbox.tar.gz')
 
 
-	def _getSandboxFilesIn(self, module):
+	def _getSandboxFilesIn(self, task):
 		return [
 			('GC Runtime', utils.pathShare('gc-run.sh'), 'gc-run.sh'),
 			('GC Runtime library', utils.pathShare('gc-run.lib'), 'gc-run.lib'),
-			('GC Sandbox', self._getSandboxName(module), 'gc-sandbox.tar.gz'),
+			('GC Sandbox', self._getSandboxName(task), 'gc-sandbox.tar.gz'),
 		]
 
 
-	def _getSandboxFilesOut(self, module):
+	def _getSandboxFilesOut(self, task):
 		return [
 			('GC Wrapper - stdout', 'gc.stdout', 'gc.stdout'),
 			('GC Wrapper - stderr', 'gc.stderr', 'gc.stderr'),
 			('GC Job summary', 'job.info', 'job.info'),
-		] + map(lambda fn: ('Module output', fn, fn), module.getSBOutFiles())
+		] + map(lambda fn: ('Task output', fn, fn), task.getSBOutFiles())
 
 
-	def _getSandboxFiles(self, module, monitor, smList):
+	def _getSandboxFiles(self, task, monitor, smList):
 		# Prepare all input files
-		depList = set(itertools.chain(*map(lambda x: x.getDependencies(), [module] + smList)))
+		depList = set(itertools.chain(*map(lambda x: x.getDependencies(), [task] + smList)))
 		depPaths = map(lambda pkg: utils.pathShare('', pkg = pkg), os.listdir(utils.pathGC('packages')))
 		depFiles = map(lambda dep: utils.resolvePath('env.%s.sh' % dep, depPaths), depList)
-		taskEnv = list(itertools.chain(map(lambda x: x.getTaskConfig(), [monitor, module] + smList)))
+		taskEnv = list(itertools.chain(map(lambda x: x.getTaskConfig(), [monitor, task] + smList)))
 		taskEnv.append({'GC_DEPFILES': str.join(' ', depList), 'GC_USERNAME': self.proxy.getUsername(),
 			'GC_WMS_NAME': self.wmsName})
 		taskConfig = sorted(utils.DictFormat(escapeString = True).format(utils.mergeDicts(taskEnv), format = 'export %s%s%s\n'))
 		varMappingDict = dict(zip(monitor.getTaskConfig().keys(), monitor.getTaskConfig().keys()))
-		varMappingDict.update(module.getVarMapping())
+		varMappingDict.update(task.getVarMapping())
 		varMapping = sorted(utils.DictFormat(delimeter = ' ').format(varMappingDict, format = '%s%s%s\n'))
-		# Resolve wildcards in module input files
-		def getModuleFiles():
-			for f in module.getSBInFiles():
+		# Resolve wildcards in task input files
+		def getTaskFiles():
+			for f in task.getSBInFiles():
 				matched = glob.glob(f)
 				if matched != []:
 					for match in matched:
 						yield match
 				else:
 					yield f
-		return list(itertools.chain(monitor.getFiles(), depFiles, getModuleFiles(),
-			[utils.VirtualFile('_config.sh', taskConfig), utils.VirtualFile('_varmap.dat', varMapping)]))
+		return list(itertools.chain(monitor.getFiles(), depFiles, getTaskFiles(),
+			[VirtualFile('_config.sh', taskConfig), VirtualFile('_varmap.dat', varMapping)]))
 
 
-	def _writeJobConfig(self, cfgPath, jobNum, module, extras = {}):
+	def _writeJobConfig(self, cfgPath, jobNum, task, extras = {}):
 		try:
-			jobEnv = utils.mergeDicts([module.getJobConfig(jobNum), extras])
-			jobEnv['GC_ARGS'] = module.getJobArguments(jobNum).strip()
+			jobEnv = utils.mergeDicts([task.getJobConfig(jobNum), extras])
+			jobEnv['GC_ARGS'] = task.getJobArguments(jobNum).strip()
 			content = utils.DictFormat(escapeString = True).format(jobEnv, format = 'export %s%s%s\n')
 			utils.safeWrite(open(cfgPath, 'w'), content)
 		except:
 			raise RethrowError('Could not write job config data to %s.' % cfgPath)
 
 
-	def _submitJob(self, jobNum, module):
+	def _submitJob(self, jobNum, task):
 		raise AbstractError # Return (jobNum, wmsId, data) for successfully submitted jobs
 
 

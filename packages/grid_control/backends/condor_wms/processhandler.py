@@ -12,15 +12,13 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-import os, stat, time, math
-from exceptions import *
-
-from abstract import LoadableObject
-from utils import LoggedProcess, eprint, vprint, resolveInstallPath
+import os, math, stat, time
+from grid_control.abstract import LoadableObject
+from grid_control.exceptions import AbstractError, GCError, RethrowError, RuntimeError, TimeoutError, TimeoutError
+from grid_control.utils import LoggedProcess, eprint, resolveInstallPath, vprint
 
 # placeholder for function arguments
 defaultArg = object()
-
 
 ################################
 # Process Handlers
@@ -228,5 +226,3 @@ class GSISSHProcessHandler(SSHProcessHandler):
 	def __initcommands(self, **kwargs):
 		cmd = resolveInstallPath("gsissh")
 		cpy = resolveInstallPath("gsiscp") + " -r"
-
-ProcessHandler.registerObject()

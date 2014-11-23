@@ -1,4 +1,4 @@
-#-#  Copyright 2010-2014 Karlsruhe Institute of Technology
+#-#  Copyright 2008-2014 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -12,9 +12,12 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
+from grid_control import utils
+from grid_control.backends.local_wms.local_wms import LocalWMS
+from grid_control.backends.wms import WMS
+from grid_control.exceptions import RethrowError
+from grid_control.job_db import Job
 from python_compat import next
-from grid_control import RethrowError, Job, utils
-from grid_control.backends import WMS, LocalWMS
 
 class LSF(LocalWMS):
 	configSections = LocalWMS.configSections + ['LSF']
@@ -27,8 +30,8 @@ class LSF(LocalWMS):
 		'UNKWN': Job.FAILED,  'ZOMBI': Job.FAILED,
 	}
 
-	def __init__(self, config, wmsName = None):
-		LocalWMS.__init__(self, config, wmsName,
+	def __init__(self, config, name):
+		LocalWMS.__init__(self, config, name,
 			submitExec = utils.resolveInstallPath('bsub'),
 			statusExec = utils.resolveInstallPath('bjobs'),
 			cancelExec = utils.resolveInstallPath('bkill'))

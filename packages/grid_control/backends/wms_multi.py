@@ -12,8 +12,9 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-from wms import WMS
-from broker import Broker
+from grid_control.backends.broker import Broker
+from grid_control.backends.wms import WMS
+
 # Distribute to WMS according to job id prefix
 
 class MultiWMS(WMS):
@@ -48,17 +49,17 @@ class MultiWMS(WMS):
 		return self.wmsMap.get(self._splitId(wmsId)[0], self.defaultWMS).getProxy(wmsId)
 
 
-	def deployTask(self, module, monitor):
-		self.defaultWMS.deployTask(module, monitor)
+	def deployTask(self, task, monitor):
+		self.defaultWMS.deployTask(task, monitor)
 		for wmsPrefix, wmsObj in self.wmsMap.items():
-			wmsObj.deployTask(module, monitor)
+			wmsObj.deployTask(task, monitor)
 
 
-	def submitJobs(self, jobNumList, module):
+	def submitJobs(self, jobNumList, task):
 		def brokerJobs(jobNum):
-			jobReq = self.brokerWMS.brokerAdd(module.getRequirements(jobNum), WMS.BACKEND)
+			jobReq = self.brokerWMS.brokerAdd(task.getRequirements(jobNum), WMS.BACKEND)
 			return dict(jobReq).get(WMS.BACKEND)[0]
-		return self._forwardCall(jobNumList, brokerJobs, lambda wmsObj, args: wmsObj.submitJobs(args, module))
+		return self._forwardCall(jobNumList, brokerJobs, lambda wmsObj, args: wmsObj.submitJobs(args, task))
 
 
 	def checkJobs(self, ids):
@@ -73,7 +74,7 @@ class MultiWMS(WMS):
 		return self._forwardCall(ids, lambda (wmsId, jobNum): self._splitId(wmsId)[0], lambda wmsObj, args: wmsObj.cancelJobs(args))
 
 
-	def _assignArgs(self, args, assignFun):
+	def _getMapID2Backend(self, args, assignFun):
 		argMap = {}
 		for arg in args: # Assign args to backends
 			backend = assignFun(arg)
@@ -84,7 +85,7 @@ class MultiWMS(WMS):
 
 
 	def _forwardCall(self, args, assignFun, callFun):
-		argMap = self._assignArgs(args, assignFun)
+		argMap = self._getMapID2Backend(args, assignFun)
 		for wmsPrefix in filter(lambda wmsPrefix: wmsPrefix in argMap, self.wmsMap):
 			for result in callFun(self.wmsMap[wmsPrefix], argMap[wmsPrefix]):
 				yield result

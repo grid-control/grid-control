@@ -1,4 +1,4 @@
-#-#  Copyright 2010-2012 Karlsruhe Institute of Technology
+#-#  Copyright 2007-2014 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -13,21 +13,15 @@
 #-#  limitations under the License.
 
 from grid_control import utils
-from grid_wms import GridWMS, jdlEscape
+from grid_control.backends.grid_wms.grid_wms import GridWMS
 
-class LCG(GridWMS):
-	def __init__(self, config, wmsName = None):
+class Glite(GridWMS):
+	def __init__(self, config, name):
 		utils.deprecated('Please use the GliteWMS backend for grid jobs!')
-		GridWMS.__init__(self, config, wmsName)
+		GridWMS.__init__(self, config, name)
 
-		self._submitExec = utils.resolveInstallPath('edg-job-submit')
-		self._statusExec = utils.resolveInstallPath('edg-job-status')
-		self._outputExec = utils.resolveInstallPath('edg-job-get-output')
-		self._cancelExec = utils.resolveInstallPath('edg-job-cancel')
+		self._submitExec = utils.resolveInstallPath('glite-job-submit')
+		self._statusExec = utils.resolveInstallPath('glite-job-status')
+		self._outputExec = utils.resolveInstallPath('glite-job-output')
+		self._cancelExec = utils.resolveInstallPath('glite-job-cancel')
 		self._submitParams.update({'-r': self._ce, '--config-vo': self._configVO })
-
-
-	def storageReq(self, sites):
-		fmt = lambda x: '(target.GlueSEUniqueID == %s)' % jdlEscape(x)
-		if sites:
-			return 'anyMatch(other.storage.CloseSEs, ' + str.join(' || ', map(fmt, sites)) + ')'

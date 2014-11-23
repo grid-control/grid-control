@@ -13,7 +13,7 @@
 #-#  limitations under the License.
 
 from grid_control import utils
-from wms_multi import MultiWMS
+from grid_control.backends.wms_multi import MultiWMS
 
 class ThreadedMultiWMS(MultiWMS):
 	def _forwardCall(self, args, assignFun, callFun):

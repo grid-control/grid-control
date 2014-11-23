@@ -1,4 +1,4 @@
-#-#  Copyright 2010-2014 Karlsruhe Institute of Technology
+#-#  Copyright 2009-2014 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -12,15 +12,17 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-from grid_control import Job, utils
-from grid_control.backends import WMS, LocalWMS
+from grid_control import utils
+from grid_control.backends.local_wms.local_wms import LocalWMS
+from grid_control.backends.wms import WMS
+from grid_control.job_db import Job
 
 class JMS(LocalWMS):
 	configSections = LocalWMS.configSections + ['JMS']
 	_statusMap = { 's': Job.QUEUED, 'r': Job.RUNNING, 'CG': Job.DONE, 'w': Job.WAITING }
 
-	def __init__(self, config, wmsName = None):
-		LocalWMS.__init__(self, config, wmsName,
+	def __init__(self, config, name):
+		LocalWMS.__init__(self, config, name,
 			submitExec = utils.resolveInstallPath('job_submit'),
 			statusExec = utils.resolveInstallPath('job_queue'),
 			cancelExec = utils.resolveInstallPath('job_cancel'))
