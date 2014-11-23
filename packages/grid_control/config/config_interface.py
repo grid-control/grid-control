@@ -241,3 +241,55 @@ class SimpleConfigInterface(TypedConfigInterface):
 		option = ('#%s %s' % (statename, detail)).strip()
 		view = self.changeView(viewClass = SimpleConfigView, setSections = ['state'])
 		return view.set(option, str(value), '=')
+
+	def getChoice(self, option, choices, default = noDefault,
+			obj2str = str.__str__, str2obj = str, def2obj = None, onValid = None, **kwargs):
+		default_str = self._getDefaultStr(default, def2obj, obj2str)
+		capDefault = lambda value: utils.QM(value == default_str, value.upper(), value.lower())
+		choices_str = str.join('/', map(capDefault, map(obj2str, choices)))
+		if (default != noDefault) and (default not in choices):
+			raise APIError('Invalid default choice "%s" [%s]!' % (default, choices_str))
+		if 'interactive' in kwargs:
+			kwargs['interactive'] += (' [%s]' % choices_str)
+		def myOnValid(loc, obj):
+			if obj not in choices:
+				raise ConfigError('Invalid choice "%s" [%s]!' % (obj, choices_str))
+			if onValid:
+				return onValid(loc, obj)
+			return obj
+		return self._getInternal('choice', obj2str, str2obj, def2obj, option, default,
+			onValid = myOnValid, interactiveDefault = False, **kwargs)
+	def setChoice(self, option, value, opttype = '=', source = None, obj2str = str.__str__):
+		return self._setInternal('choice', obj2str, option, value, opttype, source)
+
+	def getChoiceYesNo(self, option, default = noDefault, **kwargs):
+		return self.getChoice(option, [True, False], default,
+			obj2str = lambda obj: {True: 'yes', False: 'no'}.get(obj), str2obj = utils.parseBool, **kwargs)
+
+	def getEnum(self, option, enum, default = noDefault, **kwargs):
+		return self.getChoice(option, enum.members, default, obj2str = lambda obj: enum.members[obj],
+			str2obj = lambda value: enum.memberDict[value], **kwargs)
+
+	def _getInternal(self, desc, obj2str, str2obj, def2obj, option, default_obj,
+			interactive = None, interactiveDefault = True, **kwargs):
+		if (not interactive) or (option in self.getOptions()):
+			return TypedConfigInterface._getInternal(self, desc, obj2str, str2obj, def2obj, option, default_obj, **kwargs)
+		prompt = interactive
+		if (default_obj != noDefault) and interactiveDefault:
+			prompt += (' [%s]' % self._getDefaultStr(default_obj, def2obj, obj2str))
+		while True:
+			try:
+				userInput = user_input('%s: ' % prompt)
+			except:
+				sys.stdout.write('\n')
+				sys.exit(0)
+			if userInput == '':
+				obj = default_obj
+			else:
+				try:
+					obj = str2obj(userInput)
+				except:
+					raise UserError('Unable to parse %s: %s' % (desc, userInput))
+					continue
+			break
+		return TypedConfigInterface._getInternal(self, desc, obj2str, str2obj, def2obj, option, obj, **kwargs)
