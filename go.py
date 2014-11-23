@@ -128,7 +128,8 @@ if __name__ == '__main__':
 
 		# Give config help
 		if opts.help_cfg or opts.help_scfg:
-			config.write(sys.stdout, printDefault = opts.help_cfg, printUnused = False)
+			config.write(sys.stdout, printDefault = opts.help_cfg, printUnused = False,
+				printMinimal = opts.help_scfg, printSource = opts.help_cfg)
 			sys.exit(0)
 
 		# Check if user requested deletion / reset of jobs

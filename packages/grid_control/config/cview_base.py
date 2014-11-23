@@ -46,27 +46,36 @@ class ConfigView(object):
 	def set(self, option, value, opttype, source, markAccessed = True):
 		raise AbstractError
 
-	def write(self, stream, entries = None, printMinimal = False, printUnused = True, printSource = False, printDefault = True):
+	def write(self, stream, entries = None, printMinimal = False, printState = False,
+			printUnused = True, printSource = False, printDefault = True, printTight = False):
 		if not entries:
 			entries = self.iterContent()
-		config_sections = {}
+		config = {}
 		for entry in entries:
 			if printUnused or entry.accessed:
 				if printDefault or not entry.source.startswith('<default'):
-					config_sections.setdefault(entry.section, {}).setdefault(entry.option, []).append(entry)
-		for section in sorted(config_sections):
-			stream.write('[%s]\n' % section)
-			for option in sorted(config_sections[section]):
-				entryList = sorted(config_sections[section][option], key = lambda e: e.order)
+					if printState or not entry.option.startswith('#'):
+						config.setdefault(entry.section, {}).setdefault(entry.option, []).append(entry)
+		for section in sorted(config):
+			if not printTight:
+				stream.write('[%s]\n' % section)
+			for option in sorted(config[section]):
+				entryList = sorted(config[section][option], key = lambda e: e.order)
 				if printMinimal:
 					entryList = ConfigEntry.simplifyEntries(entryList)
 				for entry in entryList:
+					if printTight:
+						stream.write('[%s] ' % section)
 					for idx, line in enumerate(entry.format().splitlines()):
 						if printSource and (idx == 0) and entry.source:
-							stream.write('%-30s; %s\n' % (line, entry.source))
+							if len(line) < 33:
+								stream.write('%-35s; %s\n' % (line, entry.source))
+							else:
+								stream.write('; source: %s\n%s\n' % (entry.source, line))
 						else:
 							stream.write(line + '\n')
-			stream.write('\n')
+			if not printTight:
+				stream.write('\n')
 
 
 # Historical config view

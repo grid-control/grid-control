@@ -40,10 +40,10 @@ class DummyStream(object):
 		return self.__stream.__getattribute__(name)
 
 
-def getConfig(configFile = None, configDict = {}, section = None):
+def getConfig(configFile = None, configDict = {}, section = None, additional = []):
 	if configDict and section:
 		configDict = {section: configDict}
-	config = createConfigFactory(configFile, configDict).getConfig()
+	config = createConfigFactory(configFile, configDict, additional = additional).getConfig()
 	if section:
 		return config.changeView(addSections = [section])
 	return config
