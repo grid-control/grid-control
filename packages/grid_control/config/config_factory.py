@@ -47,7 +47,7 @@ class ConfigFactory(object):
 		self._view.pathDict['search_paths'] = UniqueList([os.getcwd(), pathMain])
 
 		# Determine work directory using config interface with "global" scope
-		tmpInterface = TypedConfigInterface(self._view.getView(setSections = ['global']))
+		tmpInterface = SimpleConfigInterface(self._view.getView(setSections = ['global']))
 		wdBase = tmpInterface.getPath('workdir base', pathMain, mustExist = False)
 		pathWork = tmpInterface.getPath('workdir', os.path.join(wdBase, getName('work')), mustExist = False)
 		self._view.pathDict['<WORKDIR>'] = pathWork # tmpInterface still has undefinied
@@ -69,8 +69,8 @@ class ConfigFactory(object):
 
 	def getConfig(self, **kwargs):
 		if kwargs:
-			return TypedConfigInterface(self._view).changeView(**kwargs)
-		return TypedConfigInterface(self._view)
+			return SimpleConfigInterface(self._view).changeView(**kwargs)
+		return SimpleConfigInterface(self._view)
 
 
 	def freezeConfig(self, writeConfig = True):

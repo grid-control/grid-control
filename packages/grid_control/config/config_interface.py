@@ -80,16 +80,7 @@ class TypedConfigInterface(object):
 				raise APIError('Unable to get string representation of default object: %s' % repr(default_obj))
 		return noDefault
 
-	def _getTyped(self, desc, obj2str, str2obj, def2obj, option, default_obj = noDefault,
-			onChange = defaultOnChange, onValid = defaultOnValid, persistent = False):
-		self._log.log(logging.DEBUG2, 'Config query from: "%s"' % self._getCaller())
-		default_str = self._getDefaultStr(default_obj, def2obj, obj2str)
-
-		# Make sure option is in a consistent format
-		option_list = standardConfigForm(option)
-		self._log.log(logging.DEBUG1, 'Config query for config option "%s"' % str.join(' / ', option_list))
-		(old_entry, cur_entry) = self._configView.get(option_list, default_str, persistent = persistent)
-
+	def _processEntries(self, old_entry, cur_entry, desc, obj2str, str2obj, onChange, onValid):
 		# Wrap parsing of object
 		def parseEntry(entry, entry_desc = ''):
 			try:
@@ -112,7 +103,18 @@ class TypedConfigInterface(object):
 			return onValid(cur_entry.format_opt(), cur_obj)
 		return cur_obj
 
-	def _setTyped(self, desc, obj2str, option, set_obj, opttype, source):
+	def _getInternal(self, desc, obj2str, str2obj, def2obj, option, default_obj,
+			onChange = defaultOnChange, onValid = defaultOnValid, persistent = False):
+		self._log.log(logging.DEBUG2, 'Config query from: "%s"' % self._getCaller())
+		default_str = self._getDefaultStr(default_obj, def2obj, obj2str)
+
+		# Make sure option is in a consistent format
+		option_list = standardConfigForm(option)
+		self._log.log(logging.DEBUG1, 'Config query for config option "%s"' % str.join(' / ', option_list))
+		(old_entry, cur_entry) = self._configView.get(option_list, default_str, persistent = persistent)
+		return self._processEntries(old_entry, cur_entry, desc, obj2str, str2obj, onChange, onValid)
+
+	def _setInternal(self, desc, obj2str, option, set_obj, opttype, source):
 		mode = {'?=': 'default', '+=': 'append', '^=': 'prepend', '=': 'override'}.get(opttype, 'set')
 		if not source:
 			source = '<%s by %s>' % (desc, self._getCaller())
@@ -124,49 +126,43 @@ class TypedConfigInterface(object):
 		self._log.log(logging.INFO2, 'Setting %s %s %s ' % (desc, mode, entry.format(printSection = True)))
 		return entry
 
-	def get(self, option, default = noDefault, obj2str = str.__str__, str2obj = str,
-			onChange = defaultOnChange, onValid = defaultOnValid, persistent = False):
-		return self._getTyped('string', obj2str, str2obj, None, option, default,
-			onChange, onValid, persistent) # surrounding spaces will get discarded
-	def set(self, option, value, opttype = '=', source = None):
-		return self._setTyped('string', str.__str__, option, value, opttype, source)
+	# Handling string config options - whitespace around the value will get discarded
+	def get(self, option, default = noDefault, obj2str = str.__str__, str2obj = str, **kwargs):
+		return self._getInternal('string', obj2str, str2obj, None, option, default, **kwargs)
+	def set(self, option, value, opttype = '=', source = None, obj2str = str.__str__):
+		return self._setInternal('string', obj2str, option, value, opttype, source)
 
-	def getInt(self, option, default = noDefault,
-			onChange = defaultOnChange, onValid = defaultOnValid, persistent = False):
-		return self._getTyped('int', int.__str__, int, None, option, default,
-			onChange, onValid, persistent) # using strict integer (de-)serialization
+	# Handling integer config options - using strict integer (de-)serialization
+	def getInt(self, option, default = noDefault, **kwargs):
+		return self._getInternal('int', int.__str__, int, None, option, default, **kwargs)
 	def setInt(self, option, value, opttype = '=', source = None):
-		return self._setTyped('int', int.__str__, option, value, opttype, source)
+		return self._setInternal('int', int.__str__, option, value, opttype, source)
 
-	def getBool(self, option, default = noDefault,
-			onChange = defaultOnChange, onValid = defaultOnValid, persistent = False):
-		def str2obj(value): # Feature: true and false are not the only valid expressions ...
+	# Handling boolean config options - feature: true and false are not the only valid expressions
+	def getBool(self, option, default = noDefault, **kwargs):
+		def str2obj(value):
 			result = utils.parseBool(value)
 			if result == None:
 				raise ConfigError('Valid boolean expressions are: "true", "false"')
 			return result
-		return self._getTyped('bool', bool.__str__, str2obj, None, option, default,
-			onChange, onValid, persistent)
+		return self._getInternal('bool', bool.__str__, str2obj, None, option, default, **kwargs)
 	def setBool(self, option, value, opttype = '=', source = None):
-		return self._setTyped('bool', bool.__str__, option, value, opttype, source)
+		return self._setInternal('bool', bool.__str__, option, value, opttype, source)
 
 	# Get time in seconds - input base is hours
-	def getTime(self, option, default = noDefault,
-			onChange = defaultOnChange, onValid = defaultOnValid, persistent = False):
+	def getTime(self, option, default = noDefault, **kwargs):
 		def str2obj(value):
 			try:
 				return utils.parseTime(value) # empty or negative values are mapped to -1
 			except:
 				raise ConfigError('Valid time expressions have the format: hh[:mm[:ss]]')
-		return self._getTyped('time', utils.strTimeShort, str2obj, None, option, default,
-			onChange, onValid, persistent)
+		return self._getInternal('time', utils.strTimeShort, str2obj, None, option, default, **kwargs)
 	def setTime(self, option, value, opttype = '=', source = None):
-		return self._setTyped('time', utils.strTimeShort, option, value, opttype, source)
+		return self._setInternal('time', utils.strTimeShort, option, value, opttype, source)
 
 	# Returns a tuple with (<dictionary>, <keys>) - the keys are sorted by order of appearance
 	# Default key is accessed via key == None (None is never in keys!)
-	def getDict(self, option, default = noDefault, parser = lambda x: x, strfun = lambda x: x,
-			onChange = defaultOnChange, onValid = defaultOnValid, persistent = False):
+	def getDict(self, option, default = noDefault, parser = lambda x: x, strfun = lambda x: x, **kwargs):
 		def obj2str(value):
 			(srcdict, srckeys) = value
 			getmax = lambda src: max(map(lambda x: len(str(x)), src) + [0])
@@ -177,66 +173,62 @@ class TypedConfigInterface(object):
 			return result + str.join('', map(lambda k: fmt % (k, strfun(srcdict[k])), srckeys))
 		str2obj = lambda value: utils.parseDict(value, parser)
 		def2obj = lambda value: (value, value.keys())
-		return self._getTyped('dictionary', obj2str, str2obj, def2obj, option, default,
-			onChange, onValid, persistent)
+		return self._getInternal('dictionary', obj2str, str2obj, def2obj, option, default, **kwargs)
 
 	# Get whitespace separated list (space, tab, newline)
-	def getList(self, option, default = noDefault, parseItem = lambda x: x,
-			onChange = defaultOnChange, onValid = defaultOnValid, persistent = False):
+	def getList(self, option, default = noDefault, parseItem = lambda x: x, **kwargs):
 		obj2str = lambda value: '\n' + str.join('\n', map(str, value))
 		str2obj = lambda value: map(parseItem, utils.parseList(value, None))
-		return self._getTyped('list', obj2str, str2obj, None, option, default,
-			onChange, onValid, persistent)
+		return self._getInternal('list', obj2str, str2obj, None, option, default, **kwargs)
 
 	# Resolve path
 	def resolvePath(self, value, mustExist, errorMsg):
 		try:
-			return utils.resolvePath(value, self._configView.pathDict.get('search', []), mustExist, ConfigError)
+			return utils.resolvePath(value, self._configView.pathDict.get('search_paths', []), mustExist, ConfigError)
 		except:
 			raise RethrowError(errorMsg, ConfigError)
 
-	# Return resolved path (search paths: $PWD, <gc directory>, <base path from constructor>)
-	def getPath(self, option, default = noDefault, mustExist = True,
-			onChange = defaultOnChange, onValid = defaultOnValid, persistent = False):
+	# Return resolved path (search paths given in pathDict['search_paths'])
+	def getPath(self, option, default = noDefault, mustExist = True, storeRelative = False, **kwargs):
 		def parsePath(value):
 			if value == '':
 				return ''
 			return self.resolvePath(value, mustExist, 'Error resolving path %s' % value)
-		return self._getTyped('path', str.__str__, parsePath, None, option, default,
-			onChange, onValid, persistent)
+		obj2str = str.__str__
+		str2obj = parsePath
+		if storeRelative:
+			obj2str = lambda value: os.path.relpath(value, self.getWorkPath())
+			str2obj = lambda value: os.path.join(self.getWorkPath(), parsePath(value))
+		return self._getInternal('path', obj2str, str2obj, None, option, default, **kwargs)
 
 	# Return multiple resolved paths (each line processed same as getPath)
-	def getPaths(self, option, default = noDefault, mustExist = True,
-			onChange = defaultOnChange, onValid = defaultOnValid, persistent = False):
+	def getPaths(self, option, default = noDefault, mustExist = True, **kwargs):
 		def patlist2pathlist(value, mustExist):
 			try:
 				for pattern in value:
-					for fn in utils.resolvePaths(pattern, self._configView.pathDict.get('search', []), mustExist, ConfigError):
+					for fn in utils.resolvePaths(pattern, self._configView.pathDict.get('search_paths', []), mustExist, ConfigError):
 						yield fn
 			except:
 				raise RethrowError('Error resolving pattern %s' % pattern, ConfigError)
 
 		str2obj = lambda value: list(patlist2pathlist(utils.parseList(value, None, onEmpty = []), mustExist))
 		obj2str = lambda value: '\n' + str.join('\n', patlist2pathlist(value, False))
-		return self._getTyped('paths', obj2str, str2obj, None, option, default,
-			onChange, onValid, persistent)
+		return self._getInternal('paths', obj2str, str2obj, None, option, default, **kwargs)
 
 	# Return class - default class is also given in string form!
-	def getClass(self, option, default = noDefault, cls = LoadableObject, tags = [], inherit = False, defaultName = '',
-			onChange = defaultOnChange, onValid = defaultOnValid, persistent = False):
+	def getClass(self, option, default = noDefault, cls = LoadableObject, tags = [], inherit = False, defaultName = '', **kwargs):
 		str2obj = lambda value: ClassWrapper(cls, value, self, tags, inherit, defaultName)
-		return self._getTyped('class', str, str2obj, str2obj, option, default,
-			onChange, onValid, persistent)
+		return self._getInternal('class', str, str2obj, str2obj, option, default, **kwargs)
 
 	# Return classes - default classes are also given in string form!
-	def getClassList(self, option, default = noDefault, cls = LoadableObject, tags = [], inherit = False, defaultName = '',
-			onChange = defaultOnChange, onValid = defaultOnValid, persistent = False):
+	def getClassList(self, option, default = noDefault, cls = LoadableObject, tags = [], inherit = False, defaultName = '', **kwargs):
 		parseSingle = lambda value: ClassWrapper(cls, value, self, tags, inherit, defaultName)
 		str2obj = lambda value: map(parseSingle, utils.parseList(value, None, onEmpty = []))
 		obj2str = lambda value: str.join('\n', map(str, value))
-		return self._getTyped('class', obj2str, str2obj, str2obj, option, default,
-			onChange, onValid, persistent)
+		return self._getInternal('class', obj2str, str2obj, str2obj, option, default, **kwargs)
 
+
+class SimpleConfigInterface(TypedConfigInterface):
 	# Get state - bool stored in hidden "state" section - any given detail overrides global state
 	def getState(self, statename = 'init', detail = '', default = False):
 		view = self.changeView(viewClass = SimpleConfigView, setSections = ['state'])
@@ -244,7 +236,6 @@ class TypedConfigInterface(object):
 		if detail:
 			state = view.getBool('#%s %s' % (statename, detail), state, onChange = None)
 		return state
-
 	# Set state - bool stored in hidden "state" section
 	def setState(self, value, statename = 'init', detail = ''):
 		option = ('#%s %s' % (statename, detail)).strip()
