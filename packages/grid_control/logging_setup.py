@@ -30,14 +30,10 @@ def logging_defaults():
 
 	class UniqueFilter(logging.Filter):
 		def __init__(self):
-			self._memory = []
+			self._memory = set()
 		def filter(self, record):
 			isNew = record.msg not in self._memory
-			if not isNew:
-				self._memory.remove(record.msg)
-			self._memory.insert(0, record.msg)
-			while len(self._memory) > 1000: # prevent memory filling up
-				self._memory.pop()
+			self._memory.add(record.msg)
 			return isNew
 	logging.getLogger('user.once').addFilter(UniqueFilter())
 	logging.getLogger('user.time.once').addFilter(UniqueFilter())
