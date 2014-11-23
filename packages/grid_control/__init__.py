@@ -1,4 +1,4 @@
-#-#  Copyright 2010-2014 Karlsruhe Institute of Technology
+#-#  Copyright 2007-2014 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -12,30 +12,21 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-from logging_setup import	logging_setup
-from grid_control.exceptions	import *
-from grid_control.abstract	import LoadableObject, NamedObject, ClassFactory, ClassWrapper
-from grid_control.utils	import QM
-from grid_control.config	import *
+def initGC():
+	import os, sys
+	basePath = os.path.dirname(os.path.dirname(__file__))
+	sys.path.insert(1, basePath) # packages bundled with grid-control have priority
+	os.environ['GC_PACKAGES_PATH'] = basePath # Store grid-control base path in enviroment variable
+	from grid_control.logging_setup import logging_setup
+	from grid_control.abstract import LoadableObject
+	# Package discovery
+	for pkgName in filter(lambda p: os.path.isdir(os.path.join(basePath, p)), os.listdir(basePath)):
+		pluginFile = os.path.join(basePath, pkgName, '.PLUGINS')
+		if os.path.exists(pluginFile):
+			__import__(pkgName) # Trigger initialisation of module
+			for line in map(str.strip, open(pluginFile)):
+				if line and not line.endswith(':'):
+					modulePath, module = line.split()
+					LoadableObject.moduleMap.setdefault(module, []).append('%s.%s' % (modulePath, module))
 
-from grid_control.processhandler	import ProcessHandler
-
-from grid_control.job_definition	import JobDef
-from grid_control.job_db	import Job, JobClass, JobDB
-from grid_control.job_db_zip	import ZippedJobDB, Migrate2ZippedJobDB
-
-from grid_control.job_selector	import JobSelector
-from grid_control.report	import Report
-from grid_control.job_manager	import JobManager
-
-from grid_control.proxy	import Proxy
-from grid_control.storage	import StorageManager
-from grid_control.backends	import WMS
-from grid_control.monitoring	import Monitoring
-
-from grid_control.parameters	import *
-from grid_control.tasks	import TaskModule
-
-from grid_control.gui	import GUI
-
-from grid_control.workflow	import Workflow
+initGC()

@@ -12,7 +12,9 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-from grid_control import utils, LoadableObject, AbstractError
+from grid_control import utils
+from grid_control.abstract import LoadableObject
+from grid_control.exceptions import AbstractError
 
 class InfoScanner(LoadableObject):
 	def __init__(self, config):
@@ -29,4 +31,3 @@ class InfoScanner(LoadableObject):
 
 	def getEntries(self, path, metadata, events, seList, objStore):
 		raise AbstractError
-InfoScanner.registerObject()

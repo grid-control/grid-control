@@ -13,10 +13,10 @@
 #-#  limitations under the License.
 
 import csv, gzip
-from python_compat import sorted
 from grid_control import utils
-from psource_base import ParameterSource, ParameterMetadata, ParameterInfo
-from psource_basic import InternalParameterSource
+from grid_control.parameters.psource_base import ParameterInfo, ParameterMetadata, ParameterSource
+from grid_control.parameters.psource_basic import InternalParameterSource
+from python_compat import sorted
 
 # Reader for grid-control dump files
 class GCDumpParameterSource(ParameterSource):

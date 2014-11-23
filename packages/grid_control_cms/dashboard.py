@@ -1,4 +1,4 @@
-#-#  Copyright 2010-2014 Karlsruhe Institute of Technology
+#-#  Copyright 2009-2014 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -12,10 +12,11 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-import os
-from grid_control import QM, utils, Monitoring, Job
-from time import localtime, strftime
-from DashboardAPI import DashboardAPI
+import os, time
+from grid_control import utils
+from grid_control.job_db import Job
+from grid_control.monitoring import Monitoring
+from grid_control_cms.DashboardAPI import DashboardAPI
 
 class DashBoard(Monitoring):
 	configSections = Monitoring.configSections + ['dashboard']
@@ -24,7 +25,7 @@ class DashBoard(Monitoring):
 		Monitoring.__init__(self, config, name, task)
 		(taskName, jobName, jobType) = task.getDescription(None) # TODO: use the other variables for monitoring
 		self.app = config.get('application', 'shellscript', onChange = None)
-		jobType = QM(jobType, jobType, 'analysis')
+		jobType = utils.QM(jobType, jobType, 'analysis')
 		self.tasktype = config.get('task', jobType, onChange = None)
 		self.taskname = config.get('task name', '@TASK_ID@_@DATASETNICK@', onChange = None)
 		self._statusMap = {Job.DONE: 'DONE', Job.FAILED: 'DONE', Job.SUCCESS: 'DONE',
@@ -75,7 +76,7 @@ class DashBoard(Monitoring):
 		utils.gcStartThread("Notifying dashboard about status of job %d" % jobNum,
 			self.publish, jobObj, jobNum, taskId, [{'StatusValue': statusDashboard,
 			'StatusValueReason': data.get('reason', statusDashboard).upper(),
-			'StatusEnterTime': data.get('timestamp', strftime('%Y-%m-%d_%H:%M:%S', localtime())),
+			'StatusEnterTime': data.get('timestamp', time.strftime('%Y-%m-%d_%H:%M:%S', time.localtime())),
 			'StatusDestination': data.get('dest', '') }, addMsg])
 
 

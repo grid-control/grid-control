@@ -12,9 +12,9 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-from grid_control import AbstractError
-from splitter_basic import FileLevelSplitter
-from provider_base import DataProvider
+from grid_control.datasets.provider_base import DataProvider
+from grid_control.datasets.splitter_basic import FileLevelSplitter
+from grid_control.exceptions import AbstractError
 
 # Split dataset along block and metadata boundaries - using equivalence classes of metadata
 class MetadataSplitter(FileLevelSplitter):

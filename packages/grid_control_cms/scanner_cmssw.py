@@ -13,8 +13,9 @@
 #-#  limitations under the License.
 
 import os, re, tarfile, xml.dom.minidom
-from grid_control import QM, RethrowError
-from grid_control.datasets import InfoScanner
+from grid_control import utils
+from grid_control.datasets.scanner_base import InfoScanner
+from grid_control.exceptions import RethrowError
 
 class ObjectsFromCMSSW(InfoScanner):
 	def __init__(self, config):
@@ -47,12 +48,12 @@ class ObjectsFromCMSSW(InfoScanner):
 				cfgHash = tar.extractfile('%s/hash' % cfg).readlines()[-1].strip()
 				metadata.setdefault('CMSSW_CONFIG_JOBHASH', []).append(cfgHash)
 				tmpCfg[cfg] = {'CMSSW_CONFIG_FILE': cfg, 'CMSSW_CONFIG_HASH': cfgHash, 'CMSSW_VERSION': cmsswVersion}
-				tmpCfg[cfg]['CMSSW_CONFIG_CONTENT'] = self.cfgStore.setdefault(QM(self.mergeConfigs, cfgHash, cfg), cfgContent)
+				tmpCfg[cfg]['CMSSW_CONFIG_CONTENT'] = self.cfgStore.setdefault(utils.QM(self.mergeConfigs, cfgHash, cfg), cfgContent)
 				# Get annotation from config content
 				def searchConfigFile(key, regex, default):
 					try:
 						tmp = re.compile(regex).search(cfgContent.group(1).strip('\"\' '))
-						tmpCfg[cfg][key] = QM(tmp, tmp, default)
+						tmpCfg[cfg][key] = utils.QM(tmp, tmp, default)
 					except:
 						tmpCfg[cfg][key] = default
 				searchConfigFile('CMSSW_ANNOTATION', '.*annotation.*=.*cms.untracked.string.*\((.*)\)', None)

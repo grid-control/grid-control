@@ -1,4 +1,4 @@
-#-#  Copyright 2013-2014 Karlsruhe Institute of Technology
+#-#  Copyright 2007-2014 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -13,13 +13,18 @@
 #-#  limitations under the License.
 
 import os, random
-from python_compat import lru_cache, md5
-from grid_control import AbstractError, NamedObject, utils, WMS, changeInitNeeded
+from grid_control import utils
+from grid_control.abstract import NamedObject
+from grid_control.backends import WMS
+from grid_control.config import TaggedConfigView, changeInitNeeded
+from grid_control.exceptions import AbstractError
 from grid_control.parameters import ParameterFactory, ParameterInfo
-from time import time, strftime
+from time import strftime, time
+from python_compat import lru_cache, md5
 
 class TaskModule(NamedObject):
 	configSections = NamedObject.configSections + ['task']
+	tagName = 'task'
 
 	# Read configuration options and init vars
 	def __init__(self, config, name):
@@ -216,5 +221,3 @@ class TaskModule(NamedObject):
 	# Intervene in job management - return None or (redoJobs, disableJobs)
 	def getIntervention(self):
 		return self.source.resync()
-
-TaskModule.registerObject(tagName = 'task')

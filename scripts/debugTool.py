@@ -13,9 +13,9 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-from gcSupport import *
-import optparse
-from grid_control.datasets import DataSplitter, DataProvider
+import optparse, gcSupport
+from gcSupport import TaskModule, getConfig
+from grid_control.datasets import DataProvider, DataSplitter
 
 parser = optparse.OptionParser()
 
@@ -50,7 +50,7 @@ parser.add_option("-C", "--checksplitting", dest="checkSplitting", default="",
 	help="Check splitting of dataset in specified work directory")
 parser.add_option("-d", "--decode", dest="decode", default="",
 	help="Decode log files")
-(opts, args) = parseOptions(parser)
+(opts, args) = gcSupport.parseOptions(parser)
 
 # we need exactly one positional argument (config file)
 if opts.jdl or opts.state:
@@ -59,12 +59,9 @@ if opts.jdl or opts.state:
 	job = Job.load(args[0])
 
 if opts.jobs:
-	config = Config(args[0])
-	config.opts = config
-	config.opts.init = False
-	config.opts.resync = False
+	config = getConfig(args[0])
 	# Initialise task module
-	taskName = config.get('global', ['task', 'module'])
+	taskName = config.get(['task', 'module'])
 	try:
 		task = TaskModule.open(taskName, config, taskName)
 		jobDB = JobDB(config)

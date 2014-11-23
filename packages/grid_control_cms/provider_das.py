@@ -1,4 +1,4 @@
-#-#  Copyright 2012-2014 Karlsruhe Institute of Technology
+#-#  Copyright 2009-2014 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -12,17 +12,17 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-from grid_control import QM, datasets
-from grid_control.datasets import DataProvider
-from provider_cms import CMSProvider
-from webservice_api import readURL, parseJSON
 import time
+from grid_control import utils
+from grid_control.datasets import DataProvider
+from grid_control_cms.provider_cms import CMSProvider
+from grid_control_cms.webservice_api import parseJSON, readURL
 
 # required format: <dataset path>[@<instance>][#<block>]
 class DASProvider(CMSProvider):
 	def __init__(self, config, datasetExpr, datasetNick, datasetID = 0):
 		CMSProvider.__init__(self, config, datasetExpr, datasetNick, datasetID)
-		self.url = QM(self.url == '', 'https://cmsweb.cern.ch/das/cache', self.url)
+		self.url = utils.QM(self.url == '', 'https://cmsweb.cern.ch/das/cache', self.url)
 
 
 	def queryDAS(self, query):

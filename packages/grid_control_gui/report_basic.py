@@ -13,7 +13,7 @@
 #-#  limitations under the License.
 
 import sys
-from grid_control import JobClass
+from grid_control.job_db import JobClass
 from grid_control.job_selector import ClassSelector
 from grid_control.report import BasicReport
 

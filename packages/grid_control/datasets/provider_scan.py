@@ -13,10 +13,11 @@
 #-#  limitations under the License.
 
 import os
-from grid_control import QM, utils, ConfigFactory, DefaultFilesConfigFiller, GeneralFileConfigFiller, MultiConfigFiller
-from provider_base import DataProvider
-from python_compat import set, md5
-from scanner_base import InfoScanner
+from grid_control import utils
+from grid_control.config import createConfigFactory
+from grid_control.datasets.provider_base import DataProvider
+from grid_control.datasets.scanner_base import InfoScanner
+from python_compat import md5, set
 
 class ScanProviderBase(DataProvider):
 	def __init__(self, config, datasetExpr, datasetNick, datasetID = 0):
@@ -48,19 +49,19 @@ class ScanProviderBase(DataProvider):
 
 	def generateDatasetName(self, key, data):
 		if 'SE_OUTPUT_BASE' in data:
-			return utils.replaceDict(QM(self.nameDS, self.nameDS, '/PRIVATE/@SE_OUTPUT_BASE@'), data)
-		return utils.replaceDict(QM(self.nameDS, self.nameDS, '/PRIVATE/Dataset_%s' % key), data)
+			return utils.replaceDict(utils.QM(self.nameDS, self.nameDS, '/PRIVATE/@SE_OUTPUT_BASE@'), data)
+		return utils.replaceDict(utils.QM(self.nameDS, self.nameDS, '/PRIVATE/Dataset_%s' % key), data)
 
 
 	def generateBlockName(self, key, data):
-		return utils.replaceDict(QM(self.nameB, self.nameB, key[:8]), data)
+		return utils.replaceDict(utils.QM(self.nameB, self.nameB, key[:8]), data)
 
 
 	def getBlocksInternal(self):
 		# Split files into blocks/datasets via key functions and determine metadata intersection
 		(protoBlocks, commonDS, commonB) = ({}, {}, {})
 		def getActiveKeys(kUser, kGuard, gIdx):
-			return kUser + QM(kGuard, kGuard, utils.listMapReduce(lambda x: x.getGuards()[gIdx], self.scanner))
+			return kUser + utils.QM(kGuard, kGuard, utils.listMapReduce(lambda x: x.getGuards()[gIdx], self.scanner))
 		keysDS = getActiveKeys(self.kUserDS, self.kGuardDS, 0)
 		keysB = getActiveKeys(self.kUserB, self.kGuardB, 1)
 		for fileInfo in self.collectFiles():
@@ -105,7 +106,7 @@ class ScanProviderBase(DataProvider):
 			for hashB in protoBlocks[hashDS]:
 				blockSEList = None
 				for seList in filter(lambda s: s != None, map(lambda x: x[3], protoBlocks[hashDS][hashB])):
-					blockSEList = QM(blockSEList == None, [], blockSEList)
+					blockSEList = utils.QM(blockSEList == None, [], blockSEList)
 					blockSEList.extend(seList)
 				if blockSEList != None:
 					blockSEList = list(set(blockSEList))
@@ -153,8 +154,7 @@ class GCProvider(ScanProviderBase):
 			datasetExpr, selector = utils.optSplit(datasetExpr, '%')
 			config.set('source config', datasetExpr)
 			config.set('source job selector', selector)
-		extFillers = [DefaultFilesConfigFiller(), GeneralFileConfigFiller([datasetExpr])]
-		extConfig = ConfigFactory(MultiConfigFiller(extFillers), datasetExpr).getConfig()
+		extConfig = createConfigFactory(datasetExpr).getConfig()
 		extModule = extConfig.changeView(setSections = ['global']).get(['task', 'module'])
 		if 'ParaMod' in extModule: # handle old config files
 			extModule = extConfig.changeView(setSections = ['ParaMod']).get('module')

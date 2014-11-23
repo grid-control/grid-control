@@ -13,7 +13,8 @@
 #-#  limitations under the License.
 
 import logging
-from grid_control import utils, ConfigError
+from grid_control import utils
+from grid_control.exceptions import ConfigError
 
 # Change handler to notify about impossible changes
 def changeImpossible(config, old_obj, cur_obj, cur_entry, obj2str):

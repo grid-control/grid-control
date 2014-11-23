@@ -13,10 +13,13 @@
 #-#  limitations under the License.
 
 # GCSCF: DEF,ENC
-from python_compat import rsplit
-from grid_control import ConfigError, RethrowError, utils, LoadableObject
-from config_entry import ConfigEntry
 import os, logging
+from grid_control import utils
+from grid_control.abstract import LoadableObject
+from grid_control.config.config_entry import ConfigEntry
+from grid_control.exceptions import ConfigError, RethrowError
+from grid_control.utils.data_structures import UniqueList
+from python_compat import rsplit
 
 # Class to fill config containers with settings
 class ConfigFiller(LoadableObject):
@@ -34,20 +37,26 @@ class ConfigFiller(LoadableObject):
 
 # Config filler which collects data from config files
 class FileConfigFiller(ConfigFiller):
-	def __init__(self, configFiles):
-		self._configFiles = configFiles
+	def __init__(self, configFiles, addSearchPath = True):
+		(self._configFiles, self._addSearchPath) = (configFiles, addSearchPath)
 
 	def fill(self, container):
+		searchPaths = []
 		for configFile in self._configFiles:
 			configContent = {}
-			self._fillContentFromFile(configFile, [os.getcwd()], configContent)
+			searchPaths.extend(self._fillContentFromFile(configFile, [os.getcwd()], configContent))
 			# Store config settings
 			for section in configContent:
 				# Allow very basic substitutions with %(option)s syntax
 				substDict = dict(map(lambda (opt, v, l): (opt, v), configContent.get('default', [])))
 				substDict.update(map(lambda (opt, v, l): (opt, v), configContent.get(section, [])))
 				for (option, value, source) in configContent[section]:
-					self._addEntry(container, section, option, value % substDict, source)
+					# Protection for non-interpolation "%" in value 
+					value = (value.replace('%', '\x01').replace('\x01(', '%(') % substDict).replace('\x01', '%')
+					self._addEntry(container, section, option, value, source)
+		searchString = str.join(' ', UniqueList(searchPaths))
+		if self._addSearchPath:
+			self._addEntry(container, 'global', 'module paths+', searchString, str.join(',', self._configFiles))
 
 	def _fillContentFromSingleFile(self, configFile, configFileData, searchPaths, configContent):
 		try:
@@ -128,6 +137,8 @@ class FileConfigFiller(ConfigFiller):
 		# Filter special global options
 		if configContent.get('global', []):
 			configContent['global'] = filter(lambda (opt, v, s): opt not in ['include', 'include override'], configContent['global'])
+		return searchPaths + newSearchPaths
+
 
 # Config filler which collects data from default config files
 class DefaultFilesConfigFiller(FileConfigFiller):
@@ -140,7 +151,7 @@ class DefaultFilesConfigFiller(FileConfigFiller):
 		if os.environ.get('GC_CONFIG'):
 			defaultCfg.append('$GC_CONFIG')
 		fqConfigFiles = map(lambda p: utils.resolvePath(p, mustExist = False), hostCfg + defaultCfg)
-		FileConfigFiller.__init__(self, filter(os.path.exists, fqConfigFiles))
+		FileConfigFiller.__init__(self, filter(os.path.exists, fqConfigFiles), addSearchPath = False)
 
 
 # Config filler which collects data from dictionary

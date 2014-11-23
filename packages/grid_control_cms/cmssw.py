@@ -1,4 +1,4 @@
-#-#  Copyright 2010-2014 Karlsruhe Institute of Technology
+#-#  Copyright 2007-2014 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -13,12 +13,15 @@
 #-#  limitations under the License.
 
 import os, shutil
-from grid_control import QM, ConfigError, WMS, utils, datasets, noDefault
+from grid_control import utils
+from grid_control.backends import WMS
+from grid_control.config import noDefault
+from grid_control.datasets import DataSplitter
+from grid_control.exceptions import ConfigError
+from grid_control.parameters import DataSplitProcessor
 from grid_control.tasks.task_data import DataTask
 from grid_control.tasks.task_utils import TaskExecutableWrapper
-from grid_control.datasets import DataSplitter
-from grid_control.parameters import DataSplitProcessor
-from lumi_tools import *
+from grid_control_cms.lumi_tools import filterLumiFilter, formatLumi, parseLumiFilter
 
 class CMSDataSplitProcessor(DataSplitProcessor):
 	def formatFileList(self, fl):
@@ -116,7 +119,7 @@ class CMSSW(DataTask):
 
 		# Get cmssw config files and check their existance
 		self.configFiles = []
-		cfgDefault = QM(self.prolog.isActive() or self.epilog.isActive(), [], noDefault)
+		cfgDefault = utils.QM(self.prolog.isActive() or self.epilog.isActive(), [], noDefault)
 		for cfgFile in config.getPaths('config file', cfgDefault, mustExist = False):
 			newPath = config.getWorkPath(os.path.basename(cfgFile))
 			if not os.path.exists(newPath):
@@ -215,9 +218,9 @@ class CMSSW(DataTask):
 		data['SCRAM_ARCH'] = self.scramArch
 		data['SCRAM_VERSION'] = self.scramVersion
 		data['SCRAM_PROJECTVERSION'] = self.scramEnv['SCRAM_PROJECTVERSION']
-		data['GZIP_OUT'] = QM(self.gzipOut, 'yes', 'no')
-		data['SE_RUNTIME'] = QM(self.seRuntime, 'yes', 'no')
-		data['HAS_RUNTIME'] = QM(len(self.projectArea), 'yes', 'no')
+		data['GZIP_OUT'] = utils.QM(self.gzipOut, 'yes', 'no')
+		data['SE_RUNTIME'] = utils.QM(self.seRuntime, 'yes', 'no')
+		data['HAS_RUNTIME'] = utils.QM(len(self.projectArea), 'yes', 'no')
 		data['CMSSW_CONFIG'] = str.join(' ', map(os.path.basename, self.configFiles))
 		if self.prolog.isActive():
 			data['CMSSW_PROLOG_EXEC'] = self.prolog.getCommand()
@@ -256,7 +259,7 @@ class CMSSW(DataTask):
 
 	# Get files for output sandbox
 	def getSBOutFiles(self):
-		return DataTask.getSBOutFiles(self) + QM(self.gzipOut, ['cmssw.log.gz'], []) + ['cmssw.dbs.tar.gz']
+		return DataTask.getSBOutFiles(self) + utils.QM(self.gzipOut, ['cmssw.log.gz'], []) + ['cmssw.dbs.tar.gz']
 
 
 	def getCommand(self):
@@ -300,7 +303,7 @@ class CMSSW(DataTask):
 
 	def getDescription(self, jobNum): # (task name, job name, type)
 		(taskName, jobName, jobType) = DataTask.getDescription(self, jobNum)
-		return (taskName, jobName, QM(jobType, jobType, 'analysis'))
+		return (taskName, jobName, utils.QM(jobType, jobType, 'analysis'))
 
 
 	def getDependencies(self):

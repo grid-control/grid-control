@@ -1,4 +1,4 @@
-#-#  Copyright 2014 Karlsruhe Institute of Technology
+#-#  Copyright 2013-2014 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -12,9 +12,12 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
+import os, time, tempfile
+from grid_control import utils
+from grid_control.gui import GUI
+from grid_control.job_db import Job
 from python_compat import sorted
-from grid_control import GUI, utils, Job
-import time, os, tempfile
+
 try:
 	import cherrypy
 except:

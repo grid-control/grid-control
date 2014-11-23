@@ -13,9 +13,13 @@
 #-#  limitations under the License.
 
 import os, sys
-from grid_control import QM, utils, storage, JobSelector, JobDB, JobSelector, Job, RethrowError, DefaultFilesConfigFiller, GeneralFileConfigFiller, MultiConfigFiller, ConfigFactory
-from scanner_base import InfoScanner
+from grid_control import utils
+from grid_control.config import createConfigFactory
 from grid_control.datasets import DataProvider
+from grid_control.datasets.scanner_base import InfoScanner
+from grid_control.exceptions import RethrowError
+from grid_control.job_db import Job, JobDB
+from grid_control.job_selector import JobSelector
 from python_compat import set, sorted
 
 def splitParse(opt):
@@ -25,11 +29,10 @@ def splitParse(opt):
 # Get output directories from external config file
 class OutputDirsFromConfig(InfoScanner):
 	def __init__(self, config):
-		from grid_control import TaskModule
+		from grid_control.tasks import TaskModule
 		newVerbosity = utils.verbosity(utils.verbosity() - 3)
 		extConfigFN = config.getPath('source config')
-		extFillers = [DefaultFilesConfigFiller(), GeneralFileConfigFiller([extConfigFN])]
-		extConfig = ConfigFactory(MultiConfigFiller(extFillers), extConfigFN).getConfig(setSections = ['global'])
+		extConfig = createConfigFactory(extConfigFN).getConfig(setSections = ['global'])
 		self.extWorkDir = extConfig.getWorkPath()
 		self.extTask = extConfig.getClass(['task', 'module'], cls = TaskModule).getInstance()
 		selector = config.get('source job selector', '')
@@ -92,12 +95,13 @@ class MetadataFromTask(InfoScanner):
 class FilesFromLS(InfoScanner):
 	def __init__(self, config):
 		self.path = config.get('source directory', '.')
-		self.path = QM('://' in self.path, self.path, utils.cleanPath(self.path))
+		self.path = utils.QM('://' in self.path, self.path, utils.cleanPath(self.path))
 
 	def getEntries(self, path, metadata, events, seList, objStore):
 		metadata['GC_SOURCE_DIR'] = self.path
 		(log, counter) = (None, 0)
-		proc = storage.se_ls(self.path)
+		from grid_control.backends.storage import se_ls
+		proc = se_ls(self.path)
 		for fn in proc.iter():
 			log = utils.ActivityLog('Reading source directory - [%d]' % counter)
 			yield (os.path.join(self.path, fn.strip()), metadata, events, seList, objStore)
@@ -163,7 +167,7 @@ class MatchDelimeter(InfoScanner):
 		self.delimB = config.get('delimeter block key', '')
 
 	def getGuards(self):
-		return (QM(self.delimDS, ['DELIMETER_DS'], []), QM(self.delimB, ['DELIMETER_B'], []))
+		return (utils.QM(self.delimDS, ['DELIMETER_DS'], []), utils.QM(self.delimB, ['DELIMETER_B'], []))
 
 	def getEntries(self, path, metadata, events, seList, objStore):
 		if len(self.matchDelim) == 2:
@@ -186,7 +190,7 @@ class ParentLookup(InfoScanner):
 		self.lfnMap = {}
 
 	def getGuards(self):
-		return ([], QM(self.merge, [], ['PARENT_PATH']))
+		return ([], utils.QM(self.merge, [], ['PARENT_PATH']))
 
 	def lfnTrans(self, lfn):
 		if lfn and self.looseMatch:
@@ -196,7 +200,7 @@ class ParentLookup(InfoScanner):
 
 	def getEntries(self, path, metadata, events, seList, objStore):
 		datacachePath = os.path.join(objStore.get('GC_WORKDIR', ''), 'datacache.dat')
-		source = QM((self.source == '') and os.path.exists(datacachePath), datacachePath, self.source)
+		source = utils.QM((self.source == '') and os.path.exists(datacachePath), datacachePath, self.source)
 		if source and (source not in self.lfnMap):
 			pSource = DataProvider.create(Config(), None, source, 'ListProvider')
 			for (n, fl) in map(lambda b: (b[DataProvider.Dataset], b[DataProvider.FileList]), pSource.getBlocks()):
@@ -215,7 +219,7 @@ class DetermineEvents(InfoScanner):
 		self.eventsDefault = config.getInt('events default', -1)
 
 	def getEntries(self, path, metadata, events, seList, objStore):
-		events = int(metadata.get(self.eventsKey, QM(events >= 0, events, self.eventsDefault)))
+		events = int(metadata.get(self.eventsKey, utils.QM(events >= 0, events, self.eventsDefault)))
 		if self.eventsCmd:
 			try:
 				events = int(os.popen('%s %s' % (self.eventsCmd, path)).readlines()[-1])

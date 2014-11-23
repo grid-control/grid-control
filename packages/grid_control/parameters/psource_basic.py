@@ -12,10 +12,12 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-import random, re
+import re, random
+from grid_control import utils
+from grid_control.backends import WMS
+from grid_control.exceptions import APIError, ConfigError
+from grid_control.parameters.psource_base import ParameterInfo, ParameterMetadata, ParameterSource
 from python_compat import md5
-from grid_control import ConfigError, utils, WMS, APIError
-from psource_base import ParameterSource, ParameterMetadata, ParameterInfo
 
 class InternalParameterSource(ParameterSource):
 	def __init__(self, values, keys):

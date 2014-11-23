@@ -12,8 +12,9 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-import os, utils, zipfile
-from job_db import Job, JobDB
+import os, zipfile
+from grid_control import utils
+from grid_control.job_db import Job, JobDB
 
 class ZippedJobDB(JobDB):
 	def __init__(self, config, jobLimit = -1, jobSelector = None):

@@ -12,9 +12,10 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-from grid_control import noDefault, utils, ConfigError, QM, changeImpossible
-
 import shlex
+from grid_control import utils
+from grid_control.config import changeImpossible, noDefault
+from grid_control.exceptions import ConfigError
 
 def parseTuple(t, delimeter):
 	t = t.strip()
@@ -32,9 +33,9 @@ def frange(start, end = None, num = None, steps = None, format = '%g'):
 		steps = (end - start) / (num - 1)
 		num -= 1
 	if (end != None) and (num == None):
-		steps = QM(steps, steps, 1)
+		steps = utils.QM(steps, steps, 1)
 		num = int(1 + (end - start) / steps)
-	result = map(lambda i: start + QM(steps, steps, 1) * i, range(num)) + QM(end, [end], [])
+	result = map(lambda i: start + utils.QM(steps, steps, 1) * i, range(num)) + utils.QM(end, [end], [])
 	return map(lambda x: format % x, result)
 
 
@@ -118,7 +119,7 @@ class ParameterConfig:
 
 
 	def getOpt(self, var, opt = None):
-		return self.optDict.get((var, opt), ('%s %s' % (var, QM(opt, opt, ''))).replace('\'', ''))
+		return self.optDict.get((var, opt), ('%s %s' % (var, utils.QM(opt, opt, ''))).replace('\'', ''))
 
 
 	def get(self, var, opt = None, default = noDefault):

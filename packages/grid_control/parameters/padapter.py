@@ -13,10 +13,12 @@
 #-#  limitations under the License.
 
 import os, gzip
-from python_compat import set, sorted, md5
-from grid_control import APIError, LoadableObject, utils
-from psource_base import ParameterInfo, ParameterMetadata, ParameterSource
-from psource_file import GCDumpParameterSource
+from grid_control import utils
+from grid_control.abstract import LoadableObject
+from grid_control.exceptions import APIError
+from grid_control.parameters.psource_base import ParameterInfo, ParameterMetadata, ParameterSource
+from grid_control.parameters.psource_file import GCDumpParameterSource
+from python_compat import md5, set, sorted
 
 class ParameterAdapter(LoadableObject):
 	def __init__(self, source):
@@ -53,7 +55,6 @@ class ParameterAdapter(LoadableObject):
 
 	def show(self):
 		self._source.show()
-ParameterAdapter.registerObject()
 
 
 class BasicParameterAdapter(ParameterAdapter):
@@ -206,8 +207,8 @@ class TrackedParameterAdapter(BasicParameterAdapter):
 			missingInfos.append(tmp)
 
 		if missingInfos:
-			from psource_meta import ChainParameterSource
-			from psource_basic import InternalParameterSource
+			from grid_control.parameters.psource_meta import ChainParameterSource
+			from grid_control.parameters.psource_basic import InternalParameterSource
 			currentInfoKeys = new.getJobKeys()
 			missingInfoKeys = filter(lambda key: key not in currentInfoKeys, old.getJobKeys())
 			self._source = ChainParameterSource(self._rawSource, InternalParameterSource(missingInfos, missingInfoKeys))

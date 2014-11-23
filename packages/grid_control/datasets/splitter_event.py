@@ -1,4 +1,4 @@
-#-#  Copyright 2010-2014 Karlsruhe Institute of Technology
+#-#  Copyright 2009-2014 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -12,10 +12,10 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
+from grid_control.datasets.provider_base import DataProvider
+from grid_control.datasets.splitter_base import DataSplitter
+from grid_control.exceptions import DatasetError
 from python_compat import next
-from grid_control import DatasetError
-from splitter_base import DataSplitter
-from provider_base import DataProvider
 
 class EventBoundarySplitter(DataSplitter):
 	def neededVars(cls):

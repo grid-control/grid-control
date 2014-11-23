@@ -1,4 +1,4 @@
-#-#  Copyright 2010-2014 Karlsruhe Institute of Technology
+#-#  Copyright 2009-2014 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -12,7 +12,10 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-from grid_control import LoadableObject, AbstractError, Report, utils
+from grid_control import utils
+from grid_control.abstract import LoadableObject
+from grid_control.exceptions import AbstractError
+from grid_control.report import Report
 
 class GUI(LoadableObject):
 	def __init__(self, config, workflow):
@@ -22,7 +25,6 @@ class GUI(LoadableObject):
 
 	def displayWorkflow(self):
 		raise AbstractError()
-GUI.registerObject()
 
 
 class SimpleConsole(GUI):

@@ -12,9 +12,11 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-import os, tarfile, cStringIO, threading, gzip
-from grid_control import utils, ConfigError
-from splitter_base import DataSplitter
+import os, gzip, tarfile, cStringIO, threading
+from grid_control import utils
+from grid_control.datasets.splitter_base import DataSplitter
+from grid_control.exceptions import ConfigError
+from grid_control.utils.file_objects import VirtualFile
 
 class BaseJobFileTarAdaptor(object):
 	def __init__(self, path):
@@ -74,7 +76,7 @@ class DataSplitterIO_V1(object):
 					return (x, y, str.join(',', z))
 				return (x, y, z)
 			for name, data in [('list', str.join('\n', savelist)), ('info', fmt.format(entry, fkt = flat))]:
-				info, file = utils.VirtualFile(os.path.join('%05d' % jobNum, name), data).getTarInfo()
+				info, file = VirtualFile(os.path.join('%05d' % jobNum, name), data).getTarInfo()
 				subTarFile.addfile(info, file)
 				file.close()
 			# Remove common prefix from info
@@ -85,7 +87,7 @@ class DataSplitterIO_V1(object):
 		del log
 		# Write metadata to allow reconstruction of data splitter
 		meta['MaxJobs'] = jobNum + 1
-		info, file = utils.VirtualFile('Metadata', fmt.format(meta)).getTarInfo()
+		info, file = VirtualFile('Metadata', fmt.format(meta)).getTarInfo()
 		tar.addfile(info, file)
 		file.close()
 		tar.close()
@@ -164,7 +166,7 @@ class DataSplitterIO_V2(object):
 					return (x, y, str.join(',', z))
 				return (x, y, z)
 			data = str.join('', fmt.format(entry, fkt = flat) + map(lambda fn: '=%s\n' % fn, savelist))
-			info, file = utils.VirtualFile('%05d' % jobNum, data).getTarInfo()
+			info, file = VirtualFile('%05d' % jobNum, data).getTarInfo()
 			subTarFile.addfile(info, file)
 			file.close()
 			# Remove common prefix from info
@@ -176,7 +178,7 @@ class DataSplitterIO_V2(object):
 		# Write metadata to allow reconstruction of data splitter
 		meta['MaxJobs'] = lastValid + 1
 		for (fn, data) in [('Metadata', fmt.format(meta)), ('Version', '2')]:
-			info, file = utils.VirtualFile(fn, data).getTarInfo()
+			info, file = VirtualFile(fn, data).getTarInfo()
 			tar.addfile(info, file)
 			file.close()
 		tar.close()

@@ -12,17 +12,19 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-from grid_control.abstract import NamedObject, ClassFactory
-from grid_control.tasks import TaskModule
-from grid_control.monitoring import Monitoring
-from grid_control.backends import WMS
-from grid_control.job_manager import JobManager
-from grid_control.gui import GUI
 from grid_control import utils
+from grid_control.abstract import ClassFactory, NamedObject
+from grid_control.backends import WMS
+from grid_control.config import TaggedConfigView
+from grid_control.gui import GUI
+from grid_control.job_manager import JobManager
+from grid_control.monitoring import Monitoring
+from grid_control.tasks import TaskModule
 
 # Workflow class
 class Workflow(NamedObject):
 	configSections = NamedObject.configSections + ['global', 'workflow']
+	tagName = 'workflow'
 
 	def __init__(self, config, name):
 		NamedObject.__init__(self, config, name)
@@ -92,4 +94,3 @@ class Workflow(NamedObject):
 
 	def run(self):
 		self._gui.displayWorkflow()
-Workflow.registerObject(tagName = 'workflow')

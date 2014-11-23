@@ -12,12 +12,11 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-from config_entry import noDefault, ConfigEntry
-from cview_tagged import TaggedConfigView
-from config_factory import ConfigFactory
-from chandlers_base import validNoVar, changeImpossible, changeInitNeeded
-from cfiller_base import ConfigFiller, MultiConfigFiller,\
-	DefaultFilesConfigFiller, DictConfigFiller, StringConfigFiller, GeneralFileConfigFiller
+from grid_control.config.chandlers_base import changeImpossible, changeInitNeeded, validNoVar
+from grid_control.config.config_entry import ConfigEntry, noDefault
+from grid_control.config.config_factory import createConfigFactory
+from grid_control.config.cview_base import SimpleConfigView
+from grid_control.config.cview_tagged import TaggedConfigView
 
 # At the lowest level, all config option values are represented by strings
 # which are encapsulated in the ConfigEntry class, which holds access and source

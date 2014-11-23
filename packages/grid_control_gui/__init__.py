@@ -12,12 +12,6 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-from grid_control import GUI, Monitoring, Report
+from grid_control.monitoring import Monitoring
 
 Monitoring.moduleMap['jabber'] = 'jabber.JabberAlarm'
-GUI.moduleMap['ANSIGUI'] = 'gui_ansi.ANSIGUI'
-GUI.moduleMap['CPWebserver'] = 'gui_cherrypy.CPWebserver'
-Report.moduleMap['BasicBarReport'] = 'report_basic.BasicBarReport'
-Report.moduleMap['ModuleReport'] = 'report_gui.ModuleReport'
-Report.moduleMap['GUIReport'] = 'report_gui.GUIReport'
-Report.moduleMap['PlotReport'] = 'report_plot.PlotReport'

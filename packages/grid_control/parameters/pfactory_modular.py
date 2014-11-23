@@ -12,11 +12,11 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-from psource_base import ParameterSource
-from psource_meta import ZipLongParameterSource
-from psource_file import *
-from pfactory_base import BasicParameterFactory
-from grid_control import utils, RethrowError
+from grid_control import utils
+from grid_control.exceptions import RethrowError
+from grid_control.parameters.pfactory_base import BasicParameterFactory
+from grid_control.parameters.psource_base import ParameterSource
+from grid_control.parameters.psource_meta import ZipLongParameterSource
 
 # Parameter factory which evaluates a parameter module string
 class ModularParameterFactory(BasicParameterFactory):

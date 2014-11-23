@@ -12,6 +12,7 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
+preserved_for_later_use = """
 from grid_control import Proxy
 from webservice_api import readJSON
 
@@ -34,3 +35,4 @@ class CMSOverlay:
 					{'node': site, 'protocol': 'srm', 'lfn': '/store/user/%s/%s' % (hnName, url.rstrip('/'))})['phedex']['mapping']
 			return url
 		#self.rewriteList(lambda (s, i): i.startswith('se') and i.endswith('path'), rewriteSEurl)
+"""

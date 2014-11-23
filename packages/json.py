@@ -65,7 +65,6 @@ make_scanner = c_make_scanner or py_make_scanner
 
 """Implementation of JSONDecoder
 """
-import re
 import sys
 import struct
 
@@ -425,7 +424,6 @@ class JSONDecoder(object):
 
 """Implementation of JSONEncoder
 """
-import re
 
 c_encode_basestring_ascii = None
 c_make_encoder = None

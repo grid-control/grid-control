@@ -13,7 +13,8 @@
 #-#  limitations under the License.
 
 import os
-from grid_control import QM, noDefault, changeInitNeeded
+from grid_control import utils
+from grid_control.config import changeInitNeeded, noDefault
 
 class TaskExecutableWrapper:
 	def __init__(self, config, prefix = '', exeDefault = noDefault):
@@ -42,4 +43,4 @@ class TaskExecutableWrapper:
 
 
 	def getSBInFiles(self):
-		return QM(self._executableSend and self._executable, [self._executable], [])
+		return utils.QM(self._executableSend and self._executable, [self._executable], [])

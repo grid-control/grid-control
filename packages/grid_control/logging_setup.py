@@ -13,6 +13,7 @@
 #-#  limitations under the License.
 
 import os, sys, logging
+from python_compat import set
 
 logLevelDict = {'DEFAULT': 14, # setLevel(logging.DEFAULT - <verbosity level>)
 	'INFO1': 13, 'INFO2': 12, 'INFO3': 11, 'DEBUG1': 9, 'DEBUG2': 8, 'DEBUG3': 7}
@@ -39,9 +40,8 @@ def logging_defaults():
 	logging.getLogger('user.time.once').addFilter(UniqueFilter())
 
 	# Default exception logging to file in gc / tmp / user directory
-	# Convention: sys.path[1] == python dir of gc
 	handler_ex = None
-	for fnLog in [os.path.join(sys.path[1], '..', 'debug.log'), '/tmp/gc.debug.%d' % os.getuid(), '~/gc.debug']:
+	for fnLog in [os.path.join(os.environ['GC_PACKAGES_PATH'], '..', 'debug.log'), '/tmp/gc.debug.%d' % os.getuid(), '~/gc.debug']:
 		fnLog = os.path.abspath(os.path.normpath(os.path.expanduser(fnLog)))
 		try:
 			handler_ex = logging.FileHandler(fnLog, 'w')

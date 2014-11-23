@@ -99,6 +99,11 @@ except:
 				return False
 		return True
 
+try:	# email.utils >= Python 2.5
+	from email.utils import parsedate
+except ImportError:
+	from email.Utils import parsedate
+
 try:	# next >= Python 2.6
 	next = next
 except:
@@ -109,6 +114,15 @@ except:
 			if default:
 				return default[0]
 			raise
+
+try:	# io >= Python 2.6 (unicode)
+	import StringIO, cStringIO
+	StringBuffer = cStringIO.StringIO
+	StringBufferBase = StringIO.StringIO # its not possible to derive from cStringIO
+except:
+	import io
+	StringBuffer = io.StringIO
+	StringBufferBase = io.StringIO
 
 try:	# raw_input < Python 3.0
 	user_input = raw_input
@@ -136,29 +150,24 @@ except:
 		(funProxy.fun, funProxy.cache) = (fun, [])
 		return funProxy
 
-try:	# email.utils >= Python 2.5
-	from email.utils import parsedate
-except ImportError:
-	from email.Utils import parsedate
-
-__all__ = ['rsplit', 'set', 'sorted', 'md5', 'any', 'all', 'next', 'user_input', 'lru_cache', 'parsedate']
+__all__ = ['StringBuffer', 'StringBufferBase', 'all', 'any', 'lru_cache', 'md5',
+	'next', 'parsedate', 'rsplit', 'set', 'sorted', 'user_input']
 
 if __name__ == '__main__':
 	import os, re, doctest
 	doctest.testmod()
 	for (root, dirs, files) in os.walk('.'):
-		for fn in filter(lambda fn: fn.endswith('.py'), files):
-			if fn.endswith("python_compat.py"):
-				continue
+		for fn in filter(lambda fn: fn.endswith('.py') and not fn.endswith("python_compat.py"), files):
 			fn = os.path.join(root, fn)
-			tmp = open(fn).read().replace('def set(', '')
+			tmp = open(fn).read().replace('def set(', '').replace('def next(', '').replace('next()', '')
 			needed = set(filter(lambda name: re.search('[^_\.a-zA-Z]%s\(' % name, tmp), __all__))
+			needed.update(filter(lambda name: re.search('\(%s\)' % name, tmp), __all__))
 			imported = set()
 			for import_line in filter(lambda line: 'python_compat' in line, tmp.splitlines()):
-				imported.update(filter(lambda feature: feature in import_line, __all__))
+				imported.update(map(str.strip, import_line.split(None, 3)[3].split(',')))
 			if not needed and ('python_compat' in tmp):
-				print fn, 'python_compat import not needed!'
+				print('%s: python_compat import not needed!' % fn)
 			for feature in needed.difference(imported):
-				print fn, feature, 'missing!'
+				print('%s: missing import of "%s"' % (fn, feature))
 			for feature in imported.difference(needed):
-				print fn, feature, 'not needed!'
+				print('%s: unnecessary import of "%s"' % (fn, feature))

@@ -1,4 +1,4 @@
-#-#  Copyright 2012-2014 Karlsruhe Institute of Technology
+#-#  Copyright 2007-2014 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -12,13 +12,18 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-import random, math, time, logging, bisect
-from grid_control import QM, ConfigError, RuntimeError, Job, JobClass, JobDB, Report, utils, NamedObject
-from job_selector import JobSelector, ClassSelector, AndJobSelector
+import math, time, bisect, random, logging
+from grid_control import utils
+from grid_control.abstract import NamedObject
+from grid_control.exceptions import ConfigError, RuntimeError
+from grid_control.job_db import Job, JobClass, JobDB
+from grid_control.job_selector import AndJobSelector, ClassSelector, JobSelector
+from grid_control.report import Report
 from python_compat import set, sorted
 
 class JobManager(NamedObject):
 	configSections = NamedObject.configSections + ['jobs']
+	tagName = 'jobmgr'
 
 	def __init__(self, config, name, task, eventhandler):
 		NamedObject.__init__(self, config, name)
@@ -87,7 +92,7 @@ class JobManager(NamedObject):
 		elif (state in [Job.WAITING, Job.ABORTED, Job.DISABLED]) and jobObj.get('reason'):
 			print '(%s)' % jobObj.get('reason')
 		elif (state == Job.SUCCESS) and jobObj.get('runtime', None) != None:
-			print '(runtime %s)' % utils.strTime(QM(jobObj.get('runtime') != '', jobObj.get('runtime'), 0))
+			print '(runtime %s)' % utils.strTime(utils.QM(jobObj.get('runtime') != '', jobObj.get('runtime'), 0))
 		elif (state == Job.FAILED):
 			msg = []
 			if jobObj.get('retcode'):
@@ -124,9 +129,9 @@ class JobManager(NamedObject):
 
 		if static['showBlocker'] and len(readyList) > 0 and len(jobList) == 0: # No submission but ready jobs
 			err = []
-			err += QM(len(retryOK) > 0 and len(modOK) == 0, [], ['have hit their maximum number of retries'])
-			err += QM(len(retryOK) == 0 and len(modOK) > 0, [], ['are vetoed by the task module'])
-			utils.vprint('All remaining jobs %s!' % str.join(QM(retryOK or modOK, ' or ', ' and '), err), -1, True)
+			err += utils.QM(len(retryOK) > 0 and len(modOK) == 0, [], ['have hit their maximum number of retries'])
+			err += utils.QM(len(retryOK) == 0 and len(modOK) > 0, [], ['are vetoed by the task module'])
+			utils.vprint('All remaining jobs %s!' % str.join(utils.QM(retryOK or modOK, ' or ', ' and '), err), -1, True)
 		static['showBlocker'] = not (len(readyList) > 0 and len(jobList) == 0)
 
 		# Determine number of jobs to submit
@@ -199,7 +204,7 @@ class JobManager(NamedObject):
 
 
 	def check(self, wms, maxsample = 100):
-		jobList = self.sample(self.jobDB.getJobs(ClassSelector(JobClass.PROCESSING)), QM(self.continuous, maxsample, -1))
+		jobList = self.sample(self.jobDB.getJobs(ClassSelector(JobClass.PROCESSING)), utils.QM(self.continuous, maxsample, -1))
 
 		# Check jobs in the joblist and return changes, timeouts and successfully reported jobs
 		(change, timeoutList, reported) = self.checkJobList(wms, jobList)
@@ -228,7 +233,7 @@ class JobManager(NamedObject):
 
 	def retrieve(self, wms, maxsample = 100):
 		change = False
-		jobList = self.sample(self.jobDB.getJobs(ClassSelector(JobClass.DONE)), QM(self.continuous, maxsample, -1))
+		jobList = self.sample(self.jobDB.getJobs(ClassSelector(JobClass.DONE)), utils.QM(self.continuous, maxsample, -1))
 
 		for jobNum, retCode, data in wms.retrieveJobs(self.wmsArgs(jobList)):
 			jobObj = self.jobDB.get(jobNum)
@@ -333,8 +338,6 @@ class JobManager(NamedObject):
 			resetState(disable, Job.DISABLED)
 			utils.vprint('All requested changes are applied', -1, True)
 
-JobManager.registerObject(tagName = 'jobmgr')
-
 
 class SimpleJobManager(JobManager):
 	def __init__(self, config, name, task, eventhandler):
@@ -366,11 +369,11 @@ class SimpleJobManager(JobManager):
 			return (change, timeoutList, reported) # abort check
 
 		if self.kickOffender:
-			self.raster = QM(reported, 1, self.raster + 1) # make 'raster' iteratively smaller
+			self.raster = utils.QM(reported, 1, self.raster + 1) # make 'raster' iteratively smaller
 			for jobNum in filter(lambda x: x not in reported, jobList):
 				self.offender[jobNum] = self.offender.get(jobNum, 0) + 1
 			kickList = filter(lambda jobNum: self.offender[jobNum] >= self.kickOffender, self.offender)
-			for jobNum in set(list(kickList) + QM((len(reported) == 0) and (len(jobList) == 1), jobList, [])):
+			for jobNum in set(list(kickList) + utils.QM((len(reported) == 0) and (len(jobList) == 1), jobList, [])):
 				timeoutList.append(jobNum)
 				self.offender.pop(jobNum)
 

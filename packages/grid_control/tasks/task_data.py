@@ -1,4 +1,4 @@
-#-#  Copyright 2013-2014 Karlsruhe Institute of Technology
+#-#  Copyright 2009-2014 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -13,11 +13,12 @@
 #-#  limitations under the License.
 
 import os, signal
-from task_base import TaskModule
-from grid_control import UserError, utils
-from grid_control import datasets
+from grid_control import utils
+from grid_control.config import TaggedConfigView
 from grid_control.datasets import DataProvider, DataSplitter
-from grid_control.parameters.psource_data import ParameterSource, DataParameterSource, DataSplitProcessor
+from grid_control.exceptions import UserError
+from grid_control.parameters import DataParameterSource, DataSplitProcessor, ParameterSource
+from grid_control.tasks.task_base import TaskModule
 
 class DataTask(TaskModule):
 	def setupJobParameters(self, config, pm):

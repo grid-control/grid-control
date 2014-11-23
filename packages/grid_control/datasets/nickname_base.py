@@ -12,7 +12,8 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-from grid_control import LoadableObject, AbstractError, DatasetError
+from grid_control.abstract import LoadableObject
+from grid_control.exceptions import AbstractError, DatasetError
 
 class NickNameProducer(LoadableObject):
 	def __init__(self, config):
@@ -26,7 +27,7 @@ class NickNameProducer(LoadableObject):
 
 	# Get nickname and check for collisions
 	def process(self, block):
-		from grid_control import DataProvider
+		from grid_control.datasets import DataProvider
 		blockDS = block[DataProvider.Dataset]
 		oldNick = block.get(DataProvider.Nickname, '')
 		newNick = self.getName(oldNick, blockDS, block)
@@ -46,7 +47,6 @@ class NickNameProducer(LoadableObject):
 	# Overwritten by users / other implementations
 	def getName(self, oldnick, dataset, block):
 		raise AbstractError
-NickNameProducer.registerObject()
 
 
 class SimpleNickNameProducer(NickNameProducer):

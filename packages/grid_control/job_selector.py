@@ -12,8 +12,11 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-import re, operator, time
-from grid_control import QM, UserError, AbstractError, LoadableObject, Job, utils
+import re, time, operator
+from grid_control import utils
+from grid_control.abstract import LoadableObject
+from grid_control.exceptions import AbstractError, UserError
+from grid_control.job_db import Job
 
 class JobSelector(LoadableObject):
 	def create(arg, **kwargs):
@@ -24,7 +27,7 @@ class JobSelector(LoadableObject):
 
 	def __call__(self, jobNum, jobObj):
 		raise AbstractError
-JobSelector.registerObject()
+
 JobSelector.moduleMap.update({'id': 'IDSelector', 'state': 'StateSelector', 'site': 'SiteSelector',
 	'queue': 'QueueSelector', 'var': 'VarSelector', 'nick': 'NickSelector', 'stuck': 'StuckSelector',
 	'wms': 'BackendSelector', 'backend': 'BackendSelector'})
@@ -58,7 +61,7 @@ class IDSelector(JobSelector):
 	def __init__(self, arg, **kwargs):
 		idList = map(lambda x: x.split('-'), arg.split(','))
 		try:
-			parse = lambda x: QM(x != '', int, str)
+			parse = lambda x: utils.QM(x != '', int, str)
 			self.ranges = map(lambda x: (parse(x[0])(x[0]), parse(x[-1])(x[-1])), idList)
 		except:
 			raise UserError('Job identifiers must be integers or ranges.')
@@ -127,9 +130,9 @@ class NickSelector(RegExSelector):
 class MultiJobSelector(JobSelector):
 	def __init__(self, arg, **kwargs):
 		def parseTerm(term):
-			cmpValue = QM(term[0] == '~', False, True)
+			cmpValue = utils.QM(term[0] == '~', False, True)
 			term = term.lstrip('~')
-			selectorType = QM(term[0].isdigit(), 'id', 'state')
+			selectorType = utils.QM(term[0].isdigit(), 'id', 'state')
 			if ':' in term:
 				selectorType = term.split(':', 1)[0]
 			selector = JobSelector.getInstance(selectorType, term.split(':', 1)[-1], **kwargs)

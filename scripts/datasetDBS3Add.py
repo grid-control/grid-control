@@ -13,9 +13,9 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
+import pprint
 from gcSupport import *
 from grid_control.datasets import DataProvider, ListProvider
-import pprint
 
 config = getConfig(cfgDict = {'nickname check collision': 'False'}, section = 'dataset')
 provider = ListProvider(config, 'datacache.dat', None, None)

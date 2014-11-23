@@ -12,8 +12,8 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-from splitter_base import DataSplitter
-from provider_base import DataProvider
+from grid_control.datasets.provider_base import DataProvider
+from grid_control.datasets.splitter_base import DataSplitter
 
 # Base class for (stackable) splitters with file level granularity
 class FileLevelSplitter(DataSplitter):

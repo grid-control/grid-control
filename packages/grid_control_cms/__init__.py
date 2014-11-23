@@ -12,17 +12,12 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-from grid_control import datasets, monitoring
+from grid_control.datasets import DataProvider
 
-datasets.DataProvider.moduleMap['DASProvider'] = 'provider_das.DASProvider'
-datasets.DataProvider.moduleMap['DBS3Provider'] = 'provider_dbsv3.DBS3Provider'
-datasets.DataProvider.moduleMap['dbs'] = datasets.DataProvider.moduleMap['DBS3Provider']
-datasets.DataProvider.providers.update({'DBS3Provider': 'dbs'})
+DataProvider.moduleMap['dbs'] = 'DBS3Provider'
+DataProvider.providers.update({'DBS3Provider': 'dbs'})
+from grid_control.datasets.provider_scan import GCProvider
 
-monitoring.Monitoring.moduleMap['dashboard'] = 'dashboard.DashBoard'
-
-datasets.InfoScanner.moduleMap.update(dict(map(lambda x: (x, 'scanner_cmssw.%s' % x),
-	['ObjectsFromCMSSW', 'MetadataFromCMSSW', 'SEListFromPath', 'LFNFromPath', 'FilterEDMFiles'])))
-datasets.GCProvider.stageDir.update({'CMSSW': ['ObjectsFromCMSSW'], 'CMSSW_Advanced': ['ObjectsFromCMSSW']})
-datasets.GCProvider.stageFile.update({'CMSSW': ['MetadataFromCMSSW', 'SEListFromPath', 'LFNFromPath'],
+GCProvider.stageDir.update({'CMSSW': ['ObjectsFromCMSSW'], 'CMSSW_Advanced': ['ObjectsFromCMSSW']})
+GCProvider.stageFile.update({'CMSSW': ['MetadataFromCMSSW', 'SEListFromPath', 'LFNFromPath'],
 	'CMSSW_Advanced': ['MetadataFromCMSSW', 'SEListFromPath', 'LFNFromPath']})

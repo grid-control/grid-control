@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-#-#  Copyright 2014 Karlsruhe Institute of Technology
+#-#  Copyright 2009-2014 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -22,16 +22,13 @@
 # add the option --use-task if you want the plotting script to load data like event count
 # per job from the configuration
 
-import sys
-import os
-import optparse
-import re
-from grid_control import utils, TaskModule, JobManager, JobSelector, Report, handleException
-from gcSupport import getJobInfo
-
 import matplotlib
 import matplotlib.pyplot as plt
-import numpy
+import os, re, numpy
+
+#from gcSupport import getJobInfo
+from grid_control import utils
+from grid_control.report import Report
 
 JobResultEnum = utils.makeEnum([
 	"TIMESTAMP_WRAPPER_START",

@@ -1,4 +1,4 @@
-#-#  Copyright 2010-2014 Karlsruhe Institute of Technology
+#-#  Copyright 2009-2014 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -12,10 +12,13 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-from python_compat import next
 import os, copy
-from grid_control import QM, LoadableObject, AbstractError, RuntimeError, utils, ConfigError, noDefault
-from provider_base import DataProvider
+from grid_control import utils
+from grid_control.abstract import LoadableObject
+from grid_control.config import createConfigFactory, noDefault
+from grid_control.datasets.provider_base import DataProvider
+from grid_control.exceptions import AbstractError, ConfigError, RuntimeError
+from python_compat import next
 
 def fast_search(lst, cmp_op):
 	def bisect_left_cmp(lst, cmp_op):
@@ -344,10 +347,10 @@ class DataSplitter(LoadableObject):
 					pass
 					idx += 1
 
-				mode = QM(oldFI[DataProvider.NEntries] < newFI[DataProvider.NEntries], self.mode_expanded, self.mode_shrunken)
+				mode = utils.QM(oldFI[DataProvider.NEntries] < newFI[DataProvider.NEntries], self.mode_expanded, self.mode_shrunken)
 				if mode == ResyncMode.changed:
 					changed = (oldEvts != modSI[DataSplitter.NEntries]) or (oldSkip != modSI[DataSplitter.Skipped])
-					mode = QM(changed, ResyncMode.complete, ResyncMode.ignore)
+					mode = utils.QM(changed, ResyncMode.complete, ResyncMode.ignore)
 				procMode = min(procMode, mode)
 				continue
 
@@ -443,7 +446,7 @@ class DataSplitter(LoadableObject):
 			message = 'Performing resynchronization of dataset map (progress is estimated)')
 
 		if self.interactive:
-			# PRINT INFO, ASK
+			# TODO: print info and ask
 			if not getUserBool('Do you want to use the new dataset splitting?', False):
 				return None
 		os.rename(newSplitPathTMP, newSplitPath)
@@ -451,9 +454,14 @@ class DataSplitter(LoadableObject):
 		return (resultRedo, resultDisable)
 
 
+	def _getIOHandler(cls):
+		from grid_control.datasets.splitter_io import DataSplitterIO
+		return DataSplitterIO()
+	_getIOHandler = classmethod(_getIOHandler)
+
+
 	# Save as tar file to allow random access to mapping data with little memory overhead
 	def saveState(self, path, source = None, sourceLen = None, message = 'Writing job mapping file'):
-		from splitter_io import DataSplitterIO
 		if source and not sourceLen:
 			source = list(source)
 			sourceLen = len(source)
@@ -462,17 +470,15 @@ class DataSplitter(LoadableObject):
 		# Write metadata to allow reconstruction of data splitter
 		meta = {'ClassName': self.__class__.__name__}
 		meta.update(self._protocol)
-		DataSplitterIO().saveState(path, meta, source, sourceLen, message)
+		DataSplitter._getIOHandler().saveState(path, meta, source, sourceLen, message)
 
 
 	def importState(self, path):
-		from splitter_io import DataSplitterIO
-		self.splitSource = DataSplitterIO().loadState(path)
+		self.splitSource = DataSplitter._getIOHandler().loadState(path)
 
 
 	def loadState(path, cfg = None):
-		from splitter_io import DataSplitterIO
-		src = DataSplitterIO().loadState(path)
+		src = DataSplitter._getIOHandler().loadState(path)
 		if cfg == None:
 			cfg = Config(configDict=src.metadata)
 		splitter = DataSplitter.getInstance(src.classname, cfg, section = None)
@@ -484,5 +490,3 @@ class DataSplitter(LoadableObject):
 			splitter._protocol.update(dict(map(meta2prot, src.metadata[section].items())))
 		return splitter
 	loadState = staticmethod(loadState)
-
-DataSplitter.registerObject()

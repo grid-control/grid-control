@@ -12,11 +12,14 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-import os, logging, inspect
-from grid_control import utils, APIError, ConfigError, RethrowError, ClassWrapper, LoadableObject
-from config_entry import standardConfigForm, noDefault
-from chandlers_base import changeImpossible
-from cview_base import SimpleConfigView
+import os, sys, inspect, logging
+from grid_control import utils
+from grid_control.abstract import ClassWrapper, LoadableObject
+from grid_control.config.chandlers_base import changeImpossible
+from grid_control.config.config_entry import noDefault, standardConfigForm
+from grid_control.config.cview_base import SimpleConfigView
+from grid_control.exceptions import APIError, ConfigError, RethrowError
+from python_compat import user_input
 
 # Config interface class accessing typed data using an string interface provided by configView
 class TypedConfigInterface(object):

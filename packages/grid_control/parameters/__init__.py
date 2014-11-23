@@ -1,4 +1,4 @@
-#-#  Copyright 2010-2013 Karlsruhe Institute of Technology
+#-#  Copyright 2009-2014 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -12,21 +12,6 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-from config_param import *
-
-from psource_base import *
-from psource_basic import *
-#from psource_fnlo import *
-from psource_meta import *
-from psource_file import *
-from psource_data import *
-from psource_lookup import *
-
-from pfactory_base import *
-from pfactory_modular import *
-from pfactory_simple import SimpleParameterFactory
-
-from padapter import *
-
-ParameterFactory.moduleMap['EasyParameterFactory'] = 'pfactory_easy.EasyParameterFactory'
-ParameterFactory.moduleMap['SimpleParameterFactory'] = 'pfactory_simple.SimpleParameterFactory'
+from grid_control.parameters.pfactory_base import ParameterFactory
+from grid_control.parameters.psource_base import ParameterInfo, ParameterMetadata, ParameterSource
+from grid_control.parameters.psource_data import DataParameterSource, DataSplitProcessor

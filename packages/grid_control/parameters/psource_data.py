@@ -1,4 +1,4 @@
-#-#  Copyright 2012-2014 Karlsruhe Institute of Technology
+#-#  Copyright 2009-2014 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -12,10 +12,12 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-import time, os
-from psource_base import ParameterSource, ParameterMetadata, ParameterInfo
-from grid_control import utils, WMS, QM, UserError
-from grid_control.datasets import DataSplitter, DataProvider
+import os, time
+from grid_control import utils
+from grid_control.backends import WMS
+from grid_control.datasets import DataProvider, DataSplitter
+from grid_control.exceptions import UserError
+from grid_control.parameters.psource_base import ParameterInfo, ParameterMetadata, ParameterSource
 
 class DataSplitProcessor:
 	def __init__(self, checkSE = True):
@@ -39,7 +41,8 @@ class DataSplitProcessor:
 			'DATASETNICK': splitInfo.get(DataSplitter.Nickname, None),
 			'DATASETSPLIT': pNum,
 		})
-		result[ParameterInfo.REQS].append((WMS.STORAGE, splitInfo.get(DataSplitter.Locations)))
+		if splitInfo.get(DataSplitter.Locations) != None:
+			result[ParameterInfo.REQS].append((WMS.STORAGE, splitInfo.get(DataSplitter.Locations)))
 		result[ParameterInfo.ACTIVE] = result[ParameterInfo.ACTIVE] and not splitInfo.get(DataSplitter.Invalid, False)
 		if self.checkSE:
 			result[ParameterInfo.ACTIVE] = result[ParameterInfo.ACTIVE] and (splitInfo.get(DataSplitter.Locations) != [])
@@ -80,7 +83,7 @@ class DataParameterSource(ParameterSource):
 		return utils.md5(str(self.srcName) + str(self.dataSplitter.getMaxJobs())).hexdigest()
 
 	def __repr__(self):
-		return 'data(%s)' % QM(self.srcName == 'data', '', self.srcName)
+		return 'data(%s)' % utils.QM(self.srcName == 'data', '', self.srcName)
 
 	def getDataPath(self, postfix):
 		return os.path.join(self.dataDir, self.srcName + postfix)

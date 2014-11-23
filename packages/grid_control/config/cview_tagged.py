@@ -12,8 +12,8 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-from config_entry import standardConfigForm
-from cview_base import SimpleConfigView, selectorUnchanged
+from grid_control.config.config_entry import standardConfigForm
+from grid_control.config.cview_base import SimpleConfigView, selectorUnchanged
 
 # Simple ConfigView implementation
 class TaggedConfigView(SimpleConfigView):

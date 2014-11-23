@@ -12,11 +12,12 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-from grid_control import UserError, datasets, utils
-from grid_control.datasets import DataProvider
-from provider_cms import CMSProvider
-from webservice_api import readJSON
 import os
+from grid_control import utils
+from grid_control.datasets import DataProvider
+from grid_control.exceptions import UserError
+from grid_control_cms.provider_cms import CMSProvider
+from grid_control_cms.webservice_api import readJSON
 
 # required format: <dataset path>[@<instance>][#<block>]
 class DBS3Provider(CMSProvider):

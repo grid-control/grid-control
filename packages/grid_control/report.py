@@ -1,4 +1,4 @@
-#-#  Copyright 2010-2014 Karlsruhe Institute of Technology
+#-#  Copyright 2007-2014 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -12,7 +12,10 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-from grid_control import Job, utils, AbstractError, LoadableObject
+from grid_control import utils
+from grid_control.abstract import LoadableObject
+from grid_control.exceptions import AbstractError
+from grid_control.job_db import Job
 
 class Report(LoadableObject):
 	def __init__(self, jobDB, task, jobs = None, configString = ''):
@@ -38,7 +41,6 @@ class Report(LoadableObject):
 
 	def display(self):
 		raise AbstractError
-Report.registerObject()
 
 
 class BasicReport(Report):

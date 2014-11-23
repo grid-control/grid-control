@@ -13,8 +13,9 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-from gcSupport import *
-from grid_control.datasets import NickNameProducer
+import sys, optparse
+from gcSupport import getConfig, handleException, parseOptions, utils
+from grid_control.datasets.nickname_base import NickNameProducer
 from grid_control_cms.provider_dbsv3 import DBS3Provider
 
 usage = '%s [OPTIONS] <DBS dataset path>' % sys.argv[0]

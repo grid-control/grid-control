@@ -12,9 +12,9 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-from grid_control import QM
+from grid_control import utils
+from grid_control.parameters.psource_base import ParameterSource
 from python_compat import md5
-from psource_base import ParameterSource
 
 def combineSyncResult(a, b, sc_fun = lambda x, y: x or y):
 	if a == None:
@@ -53,9 +53,9 @@ class ForwardingParameterSource(ParameterSource):
 class RangeParameterSource(ForwardingParameterSource):
 	def __init__(self, plugin, posStart = None, posEnd = None):
 		ForwardingParameterSource.__init__(self, plugin)
-		self.posStart = QM(posStart == None, 0, posStart)
+		self.posStart = utils.QM(posStart == None, 0, posStart)
 		self.posEndUser = posEnd
-		self.posEnd = QM(self.posEndUser == None, self.plugin.getMaxParameters() - 1, self.posEndUser)
+		self.posEnd = utils.QM(self.posEndUser == None, self.plugin.getMaxParameters() - 1, self.posEndUser)
 
 	def getMaxParameters(self):
 		return self.posEnd - self.posStart + 1
@@ -76,7 +76,7 @@ class RangeParameterSource(ForwardingParameterSource):
 			if (pNum >= self.posStart) and (pNum <= self.posEnd):
 				result_disable.add(pNum - self.posStart)
 		oldPosEnd = self.posEnd
-		self.posEnd = QM(self.posEndUser == None, self.plugin.getMaxParameters() - 1, self.posEndUser)
+		self.posEnd = utils.QM(self.posEndUser == None, self.plugin.getMaxParameters() - 1, self.posEndUser)
 		return (result_redo, result_disable, result_sizeChange or (oldPosEnd != self.posEnd))
 
 	def show(self, level = 0):

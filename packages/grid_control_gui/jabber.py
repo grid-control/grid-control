@@ -12,8 +12,8 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-import time, xmpp, stat, os
-from grid_control import Monitoring
+import os, stat, time, xmpp
+from grid_control.monitoring import Monitoring
 
 class JabberAlarm(Monitoring):
 	configSections = Monitoring.configSections + ['jabber']

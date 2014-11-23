@@ -12,64 +12,66 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-import sys
+import sys, logging
+from grid_control import utils
+from grid_control.exceptions import ConfigError, GCError, RethrowError
 from python_compat import rsplit
-from grid_control.exceptions import GCError, ConfigError, RethrowError
-import utils, logging
 
 # Abstract class taking care of dynamic class loading 
 class LoadableObject(object):
 	configSections = []
+	moduleMap = {}
 
-	# Modify the module search path for the class - parent is used by NamedObject to impersonate caller
-	def registerObject(cls, searchPath = [], base = None):
-		if not base:
-			base = cls
-		if not hasattr(base, 'moduleMap'):
-			(base.moduleMap, base.moduleMapDynamic, base.modPaths) = ({}, {}, [])
-		splitUpFun = lambda x: rsplit(base.__module__, ".", x)[0]
-		base.modPaths = utils.uniqueListRL(searchPath + base.modPaths + map(splitUpFun, range(base.__module__.count(".") + 1)))
-	registerObject = classmethod(registerObject)
-
-	def getClass(cls, clsName):
+	def getClass(cls, clsName, modulePaths = []):
 		log = logging.getLogger('classloader.%s' % cls.__name__)
 		log.log(logging.DEBUG1, 'Loading class %s' % clsName)
-		# resolve class name/alias to fully qualified class path
-		def resolveClassName(name):
-			resolveFun = cls.moduleMapDynamic.get(name.lower(), lambda x: x)
-			classMap = dict(map(lambda (k, v): (k.lower(), v), cls.moduleMap.items()))
-			cname = resolveFun(classMap.get(name.lower(), name))
-			if cname == name:
-				return name
-			return resolveClassName(cname)
-		clsName = resolveClassName(clsName)
-		log.log(logging.DEBUG2, 'Loading resolved class %s' % clsName)
-		mjoin = lambda x: str.join('.', x)
-		# Yield search paths
-		def searchPath(fqName):
-			yield fqName
-			for path in cls.modPaths + LoadableObject.pkgPaths:
-				if not '.' in fqName:
-					yield mjoin([path, fqName.lower(), fqName])
-				yield mjoin([path, fqName])
 
-		for modName in searchPath(clsName):
-			parts = modName.split('.')
-			try: # Try to import missing modules
-				for pkg in map(lambda (i, x): mjoin(parts[:i+1]), enumerate(parts[:-1])):
-					if pkg not in sys.modules:
-						log.log(logging.DEBUG3, 'Importing module %s' % pkg)
-						__import__(pkg)
-				newcls = getattr(sys.modules[mjoin(parts[:-1])], parts[-1])
-				assert(not isinstance(newcls, type(sys.modules['grid_control'])))
-			except:
-				log.log(logging.DEBUG2, 'Unable to import module %s' % modName)
+		# resolve class name/alias to complete class path 'UserTask -> grid_control.tasks.user_task.UserTask'
+		clsMap = dict(map(lambda (k, v): (k.lower(), v), cls.moduleMap.items()))
+		clsSearchList = [clsName]
+		clsNameStored = clsName
+		clsFormat = lambda cls: '%s:%s' % (cls.__module__, cls.__name__)
+		clsProcessed = set()
+		while clsSearchList:
+			clsName = clsSearchList.pop()
+			if clsName in clsProcessed: # Prevent lookup circles
 				continue
-			if issubclass(newcls, cls):
-				log.log(logging.DEBUG1, 'Successfully loaded class %s:%s' % (newcls.__module__, newcls.__name__))
-				return newcls
-			raise ConfigError('%s is not of type %s' % (newcls, cls))
-		raise ConfigError('%s "%s" does not exist in\n\t%s!' % (cls.__name__, clsName, str.join('\n\t', searchPath(clsName))))
+			clsProcessed.add(clsName)
+			clsModuleList = []
+			if '.' in clsName: # module.submodule.class specification
+				clsModuleName, clsName = rsplit(clsName, '.', 1)
+				log.log(logging.DEBUG2, 'Importing module %s' % clsModuleName)
+				oldSysPath = list(sys.path)
+				try:
+					sys.path.extend(modulePaths)
+					clsModuleList = [__import__(clsModuleName, {}, {}, [clsName])]
+				except Exception:
+					log.log(logging.DEBUG2, 'Unable to import module %s' % clsModuleName)
+				sys.path = oldSysPath
+			elif hasattr(sys.modules['__main__'], clsName):
+				clsModuleList.append(sys.modules['__main__'])
+
+			clsLoadedList = []
+			for clsModule in clsModuleList:
+				log.log(logging.DEBUG2, 'Searching for class %s:%s' % (clsModule.__name__, clsName))
+				try:
+					clsLoadedList.append(getattr(clsModule, clsName))
+				except:
+					log.log(logging.DEBUG2, 'Unable to import class %s:%s' % (clsModule.__name__, clsName))
+
+			for clsLoaded in clsLoadedList:
+				if issubclass(clsLoaded, cls):
+					log.log(logging.DEBUG1, 'Successfully loaded class %s' % clsFormat(clsLoaded))
+					return clsLoaded
+				log.log(logging.DEBUG, '%s is not of type %s!' % (clsFormat(clsLoaded), clsFormat(cls)))
+
+			clsMapResult = clsMap.get(clsName.lower(), [])
+			if isinstance(clsMapResult, str):
+				clsSearchList.append(clsMapResult)
+			else:
+				clsSearchList.extend(clsMapResult)
+		raise ConfigError('Unable to load %s of type %s' % (clsNameStored, clsFormat(cls)))
+
 	getClass = classmethod(getClass)
 
 	# Get an instance of a derived class by specifying the class name and constructor arguments
@@ -80,7 +82,7 @@ class LoadableObject(object):
 			return clsType(*args, **kwargs)
 		except GCError:
 			raise
-		except:
+		except Exception:
 			raise RethrowError('Error while creating instance of type %s (%s)' % (clsName, clsType))
 	getInstance = classmethod(getInstance)
 
@@ -89,20 +91,14 @@ LoadableObject.pkgPaths = []
 
 # NamedObject provides methods used by config.getClass methods to determine relevant sections
 class NamedObject(LoadableObject):
+	defaultName = None
+	tagName = None
+
 	def __init__(self, config, name):
 		self._name = name
 
 	def getObjectName(self):
 		return self._name
-
-	# Modify the module search path for the class
-	def registerObject(cls, searchPath = [], tagName = None, defaultName = None):
-		if tagName or not hasattr(cls, 'tagName'):
-			cls.tagName = tagName
-		if defaultName or not hasattr(cls, 'defaultName'):
-			cls.defaultName = defaultName
-		LoadableObject.registerObject(searchPath, base = cls)
-	registerObject = classmethod(registerObject)
 
 
 # General purpose class factory
@@ -145,9 +141,11 @@ class ClassWrapper:
 		return '%s:%s' % (self._instClassName, self._instName)
 
 	def getInstance(self, *args, **kwargs):
-		cls = self._baseClass.getClass(self._instClassName)
+		from grid_control.config import SimpleConfigView, TaggedConfigView
+		configLoader = self._config.changeView(viewClass = SimpleConfigView, setSections = ['global'])
+		modulePaths = configLoader.getPaths('module paths', mustExist = False, onChange = None)
+		cls = self._baseClass.getClass(self._instClassName, modulePaths)
 		if issubclass(cls, NamedObject):
-			from config import TaggedConfigView
 			config = self._config.changeView(viewClass = TaggedConfigView,
 				setClasses = [cls], setSections = None, setNames = [self._instName],
 				addTags = self._tags, inheritSections = self._inherit)

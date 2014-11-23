@@ -1,4 +1,4 @@
-#-#  Copyright 2012-2014 Karlsruhe Institute of Technology
+#-#  Copyright 2009-2014 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -13,8 +13,10 @@
 #-#  limitations under the License.
 
 import time
+from grid_control import utils
+from grid_control.abstract import LoadableObject
+from grid_control.exceptions import AbstractError
 from python_compat import set
-from grid_control import AbstractError, LoadableObject, utils, QM
 
 class ParameterInfo:
 	reqTypes = ('ACTIVE', 'HASH', 'REQS')
@@ -29,7 +31,7 @@ class ParameterMetadata(str):
 		return obj
 
 	def __repr__(self):
-		return "'%s'" % QM(self.untracked, '!%s' % self, self)
+		return "'%s'" % utils.QM(self.untracked, '!%s' % self, self)
 
 
 class ParameterSource(LoadableObject):
@@ -79,10 +81,9 @@ class ParameterSource(LoadableObject):
 		return self.resyncCreate()
 
 	def show(self, level = 0, other = ''):
-		utils.vprint(('\t' * level) + self.__class__.__name__ + QM(other, ' [%s]' % other, ''), 1)
+		utils.vprint(('\t' * level) + self.__class__.__name__ + utils.QM(other, ' [%s]' % other, ''), 1)
 
 	def getHash(self):
 		raise AbstractError
 
-ParameterSource.registerObject()
 ParameterSource.managerMap = {}

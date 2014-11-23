@@ -16,8 +16,13 @@
 import sys, os, signal, optparse, logging
 
 # Load grid-control package
-sys.path.insert(1, os.path.join(sys.path[0], 'packages'))
-from gcPackage import *
+sys.path.append(os.path.abspath(os.path.join(sys.path[0], 'packages')))
+from grid_control import utils
+from grid_control.config import createConfigFactory, ConfigEntry
+from grid_control.config.cfiller_base import ConfigFiller, StringConfigFiller
+from grid_control.exceptions import handleException
+from grid_control.logging_setup import logging_setup
+from grid_control.workflow import Workflow
 
 if __name__ == '__main__':
 	global log, handler
@@ -103,8 +108,7 @@ if __name__ == '__main__':
 
 	# big try... except block to catch exceptions and print error message
 	def main():
-		configFillers = [DefaultFilesConfigFiller(), GeneralFileConfigFiller([args[0]]), OptsConfigFiller(parser)]
-		configFactory = ConfigFactory(MultiConfigFiller(configFillers), configFilePath = args[0])
+		configFactory = createConfigFactory(configFile = args[0], additional = [OptsConfigFiller(parser)])
 		config = configFactory.getConfig()
 		logging_setup(config.changeView(setSections = ['logging']))
 

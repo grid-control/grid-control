@@ -1,4 +1,4 @@
-#-#  Copyright 2013 Karlsruhe Institute of Technology
+#-#  Copyright 2013-2014 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -12,8 +12,4 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-from task_base import TaskModule
-from task_user import *
-
-TaskModule.moduleMap['ROOTTask'] = 'task_root.ROOTTask'
-TaskModule.moduleMap['ROOTMod'] = 'task_root.ROOTMod'
+from grid_control.tasks.task_base import TaskModule

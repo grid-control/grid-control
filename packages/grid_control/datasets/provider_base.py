@@ -1,4 +1,4 @@
-#-#  Copyright 2010-2014 Karlsruhe Institute of Technology
+#-#  Copyright 2009-2014 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -12,9 +12,13 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-import os, cStringIO, copy
-from grid_control import QM, utils, LoadableObject, AbstractError, ConfigFactory, TaggedConfigView
-from nickname_base import NickNameProducer
+import os, copy
+from grid_control import utils
+from grid_control.abstract import LoadableObject
+from grid_control.config import TaggedConfigView, createConfigFactory
+from grid_control.datasets.nickname_base import NickNameProducer
+from grid_control.exceptions import AbstractError
+from python_compat import StringBuffer
 
 class DataProvider(LoadableObject):
 	# To uncover errors, the enums of DataProvider / DataSplitter do *NOT* match
@@ -113,7 +117,7 @@ class DataProvider(LoadableObject):
 					block[DataProvider.Locations] = sites
 
 				# Filter by number of files
-				block[DataProvider.FileList] = block[DataProvider.FileList][:QM(self.limitFiles < 0, None, self.limitFiles)]
+				block[DataProvider.FileList] = block[DataProvider.FileList][:utils.QM(self.limitFiles < 0, None, self.limitFiles)]
 
 				# Filter by event count
 				class EventCounter:
@@ -141,7 +145,7 @@ class DataProvider(LoadableObject):
 				utils.vprint('%s:' % self._datasetNick, newline = False)
 			elif self.__class__.__name__ == 'DataMultiplexer':
 				utils.vprint('Summary:', newline = False)
-			units = QM(self.allEvents < 0, '%d files' % -self.allEvents, '%d events' % self.allEvents)
+			units = utils.QM(self.allEvents < 0, '%d files' % -self.allEvents, '%d events' % self.allEvents)
 			utils.vprint('Running over %s split into %d blocks.' % (units, len(self._cache)))
 		return self._cache
 
@@ -165,7 +169,7 @@ class DataProvider(LoadableObject):
 			utils.vprint('ID - Dataset - Nick : %s - %s - %s' % tuple(map(lambda (k, d): block.get(k, d), idList)), level)
 			utils.vprint('BlockName : %s' % block[DataProvider.BlockName], level)
 			utils.vprint('#Events   : %s' % block[DataProvider.NEntries], level)
-			seList = QM(block[DataProvider.Locations] != None, block[DataProvider.Locations], ['Not specified'])
+			seList = utils.QM(block[DataProvider.Locations] != None, block[DataProvider.Locations], ['Not specified'])
 			utils.vprint('SE List   : %s' % str.join(', ',  seList), level)
 			utils.vprint('Files     : ', level)
 			for fi in block[DataProvider.FileList]:
@@ -175,7 +179,7 @@ class DataProvider(LoadableObject):
 
 	# Save dataset information in 'ini'-style => 10x faster to r/w than cPickle
 	def saveStateRaw(stream, dataBlocks, stripMetadata = False):
-		writer = cStringIO.StringIO()
+		writer = StringBuffer()
 		for block in dataBlocks:
 			writer.write('[%s#%s]\n' % (block[DataProvider.Dataset], block[DataProvider.BlockName]))
 			if DataProvider.Nickname in block:
@@ -229,7 +233,7 @@ class DataProvider(LoadableObject):
 	# Load dataset information using ListProvider
 	def loadState(path, config = None):
 		if config == None:
-			config = ConfigFactory().getConfig()
+			config = createConfigFactory(useDefaultFiles = False).getConfig()
 		config = config.changeView(addSections = ['dataset'])
 		# None, None = Don't override NickName and ID
 		return DataProvider.getInstance('ListProvider', config, path, None, None)
@@ -270,4 +274,3 @@ class DataProvider(LoadableObject):
 	resyncSources = staticmethod(resyncSources)
 
 DataProvider.providers = {}
-DataProvider.registerObject()

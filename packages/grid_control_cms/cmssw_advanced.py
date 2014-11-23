@@ -12,11 +12,13 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-import os, re, cmssw
-from python_compat import set, sorted
-from grid_control import datasets, utils, ConfigError
+import os, re
+from grid_control import utils
 from grid_control.datasets import DataProvider
-from lumi_tools import *
+from grid_control.exceptions import ConfigError
+from grid_control_cms.cmssw import CMSSW
+from grid_control_cms.lumi_tools import formatLumi, parseLumiFilter
+from python_compat import set, sorted
 
 def fromNM(nm, nickname, default):
 	tmp = filter(lambda p: p and nickname and re.search(p, nickname), nm)
@@ -24,8 +26,8 @@ def fromNM(nm, nickname, default):
 		return map(lambda pattern: nm[pattern], tmp)
 	return [nm.get(None, default)]
 
-class CMSSW_Advanced(cmssw.CMSSW):
-	configSections = cmssw.CMSSW.configSections + ['CMSSW_Advanced']
+class CMSSW_Advanced(CMSSW):
+	configSections = CMSSW.configSections + ['CMSSW_Advanced']
 
 	def __init__(self, config, name):
 		head = [(0, 'Nickname')]
@@ -73,7 +75,7 @@ class CMSSW_Advanced(cmssw.CMSSW):
 				yield utils.mergeDicts([tmp, self.nmConst.get(nick, {})])
 		utils.printTabular(head, report(), 'cl')
 		utils.vprint(level = -1)
-		cmssw.CMSSW.__init__(self, config, name)
+		CMSSW.__init__(self, config, name)
 
 
 	def displayLumi(self, lumi):
@@ -84,7 +86,7 @@ class CMSSW_Advanced(cmssw.CMSSW):
 
 
 	def getDatasetOverviewInfo(self, blocks):
-		(head, blockInfos, fmt) = cmssw.CMSSW.getDatasetOverviewInfo(self, blocks)
+		(head, blockInfos, fmt) = CMSSW.getDatasetOverviewInfo(self, blocks)
 		head.extend([('CMSSW_CONFIG', 'Config file'), ('LUMI_RANGE', 'Lumi filter')])
 		def fmtLR(x):
 			if x:
@@ -102,13 +104,13 @@ class CMSSW_Advanced(cmssw.CMSSW):
 
 	def neededVars(self):
 		if self.nmLumi:
-			return cmssw.CMSSW.neededVars(self) + ['LUMI_RANGE']
-		return cmssw.CMSSW.neededVars(self)
+			return CMSSW.neededVars(self) + ['LUMI_RANGE']
+		return CMSSW.neededVars(self)
 
 
 	def getTaskConfig(self):
 		# Remove config file variable from the global settings
-		data = cmssw.CMSSW.getTaskConfig(self)
+		data = CMSSW.getTaskConfig(self)
 		data.pop('CMSSW_CONFIG')
 		return data
 
@@ -125,7 +127,7 @@ class CMSSW_Advanced(cmssw.CMSSW):
 
 
 	def getJobConfig(self, jobNum):
-		data = cmssw.CMSSW.getJobConfig(self, jobNum)
+		data = CMSSW.getJobConfig(self, jobNum)
 		nickdata = self.getVarsForNick(data.get('DATASETNICK'))
 		data.update(nickdata)
 		data['LUMI_RANGE'] = self.getActiveLumiFilter(data['LUMI_RANGE'], jobNum)
@@ -138,4 +140,4 @@ class CMSSW_Advanced(cmssw.CMSSW):
 
 
 	def getVarNames(self):
-		return cmssw.CMSSW.getVarNames(self) + self.getJobConfig(0).keys()
+		return CMSSW.getVarNames(self) + self.getJobConfig(0).keys()

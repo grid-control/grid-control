@@ -13,10 +13,11 @@
 #-#  limitations under the License.
 
 import sys
-from python_compat import set, sorted
-from grid_control import Job, utils
+from grid_control import utils
+from grid_control.job_db import Job
 from grid_control.report import Report
-from ansi import Console
+from grid_control_gui.ansi import Console
+from python_compat import set, sorted
 
 class JobProgressBar:
 	def __init__(self, total = 100, width = 16, jobsOnFinish = False):

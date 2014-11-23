@@ -1,4 +1,4 @@
-#-#  Copyright 2010-2014 Karlsruhe Institute of Technology
+#-#  Copyright 2009-2014 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -13,10 +13,13 @@
 #-#  limitations under the License.
 
 import os
-from grid_control import NamedObject, Job, utils
+from grid_control import utils
+from grid_control.abstract import NamedObject
+from grid_control.job_db import Job
 
 class EventHandler(NamedObject):
 	configSections = NamedObject.configSections + ['events']
+	tagName = 'event'
 
 	def __init__(self, config, name, task, submodules = []):
 		NamedObject.__init__(self, config, name)
@@ -38,11 +41,11 @@ class EventHandler(NamedObject):
 		for submodule in self.submodules:
 			submodule.onTaskFinish(nJobs)
 
-EventHandler.registerObject(tagName = 'event')
-
 
 # Monitoring base class with submodule support
 class Monitoring(EventHandler):
+	tagName = 'monitor'
+
 	# Script to call later on
 	def getScript(self):
 		return utils.listMapReduce(lambda m: list(m.getScript()), self.submodules)
@@ -53,8 +56,6 @@ class Monitoring(EventHandler):
 
 	def getFiles(self):
 		return utils.listMapReduce(lambda m: list(m.getFiles()), self.submodules, self.getScript())
-
-Monitoring.registerObject(tagName = 'monitor')
 Monitoring.moduleMap["scripts"] = "ScriptMonitoring"
 
 

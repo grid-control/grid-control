@@ -13,9 +13,10 @@
 #-#  limitations under the License.
 
 import re
-from grid_control import utils, ConfigError
-from psource_base import ParameterSource, ParameterInfo
-from psource_basic import KeyParameterSource, SingleParameterSource, SimpleParameterSource
+from grid_control import utils
+from grid_control.exceptions import ConfigError
+from grid_control.parameters.psource_base import ParameterInfo, ParameterSource
+from grid_control.parameters.psource_basic import KeyParameterSource, SimpleParameterSource, SingleParameterSource
 
 class LookupMatcher:
 	def __init__(self, lookupKeys, lookupFunctions, lookupDictConfig):

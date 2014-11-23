@@ -1,4 +1,4 @@
-#-#  Copyright 2010-2014 Karlsruhe Institute of Technology
+#-#  Copyright 2007-2014 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -12,10 +12,10 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-import os, time, fnmatch, operator, utils
-from abstract import LoadableObject
-from exceptions import RuntimeError, RethrowError
-from utils import QM
+import os, time, fnmatch, operator
+from grid_control import utils
+from grid_control.abstract import LoadableObject
+from grid_control.exceptions import RethrowError, RuntimeError
 
 class Job:
 	states = ('INIT', 'SUBMITTED', 'DISABLED', 'READY', 'WAITING', 'QUEUED', 'ABORTED',
@@ -184,7 +184,7 @@ class JobDB(LoadableObject):
 		if jobSelector and self.alwaysSelector:
 			select = lambda *args: jobSelector(*args) and self.alwaysSelector(*args)
 		elif jobSelector or self.alwaysSelector:
-			select = QM(jobSelector, jobSelector, self.alwaysSelector)
+			select = utils.QM(jobSelector, jobSelector, self.alwaysSelector)
 		else:
 			for jobNum in subset:
 				yield jobNum
@@ -213,5 +213,3 @@ class JobDB(LoadableObject):
 
 	def __len__(self):
 		return self.jobLimit
-
-JobDB.registerObject()

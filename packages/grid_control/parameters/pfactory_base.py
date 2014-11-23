@@ -12,16 +12,18 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-from psource_basic import *
-from psource_meta import *
-from psource_file import *
-from psource_data import *
-from padapter import *
-from config_param import ParameterConfig
-from grid_control import NamedObject
+import random
+from grid_control.abstract import NamedObject
+from grid_control.config import TaggedConfigView
+from grid_control.parameters.config_param import ParameterConfig
+from grid_control.parameters.padapter import ParameterAdapter
+from grid_control.parameters.psource_basic import ConstParameterSource, CounterParameterSource, RNGParameterSource, RequirementParameterSource
+from grid_control.parameters.psource_data import DataParameterSource
+from grid_control.parameters.psource_meta import CrossParameterSource, RepeatParameterSource, ZipLongParameterSource
 
 class ParameterFactory(NamedObject):
 	configSections = NamedObject.configSections + ['parameters']
+	tagName = 'parameters'
 
 	def __init__(self, config, name):
 		NamedObject.__init__(self, config, name)
@@ -38,7 +40,6 @@ class ParameterFactory(NamedObject):
 		if DataParameterSource.datasetsAvailable and not DataParameterSource.datasetsUsed:
 			source = CrossParameterSource(DataParameterSource.create(), source)
 		return ParameterAdapter.getInstance(self.adapter, config, source)
-ParameterFactory.registerObject(tagName = 'param')
 
 
 class BasicParameterFactory(ParameterFactory):

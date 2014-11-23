@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-#-#  Copyright 2014 Karlsruhe Institute of Technology
+#-#  Copyright 2009-2014 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -13,12 +13,12 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-import base64, xml.dom.minidom, optparse, locale, re, time, os, operator
+import os, re, time, base64, locale, operator, optparse, xml.dom.minidom
 from gcSupport import *
 from grid_control_cms import provider_dbsv2
-from grid_control_cms.provider_dbsv2 import *
+from grid_control_cms.DBSAPI.dbsApiException import DbsBadRequest, DbsException
 from grid_control_cms.DBSAPI.dbsMigrateApi import DbsMigrateApi
-from grid_control_cms.DBSAPI.dbsApiException import DbsException, DbsBadRequest
+from grid_control_cms.provider_dbsv2 import *
 
 class DBSInfoProvider(datasets.GCProvider):
 	def __init__(self, config, section, datasetExpr, datasetNick, datasetID = 0):

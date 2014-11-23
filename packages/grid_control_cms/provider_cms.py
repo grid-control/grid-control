@@ -12,11 +12,13 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-from grid_control import QM, utils, datasets, DatasetError, ConfigError
-from grid_control.datasets import DataProvider, HybridSplitter, DataSplitter
+from grid_control import utils
+from grid_control.datasets import DataProvider, DataSplitter
+from grid_control.datasets.splitter_basic import HybridSplitter
+from grid_control.exceptions import ConfigError, DatasetError
+from grid_control_cms.lumi_tools import formatLumi, parseLumiFilter, selectLumi
+from grid_control_cms.webservice_api import readJSON
 from python_compat import set, sorted
-from lumi_tools import parseLumiFilter, formatLumi, selectLumi
-from webservice_api import readJSON
 
 # required format: <dataset path>[@<instance>][#<block>]
 class CMSProvider(DataProvider):
@@ -32,8 +34,8 @@ class CMSProvider(DataProvider):
 			raise ConfigError('Invalid location format: %s' % self.locationFormat)
 
 		(self.datasetPath, self.url, self.datasetBlock) = utils.optSplit(datasetExpr, '@#')
-		self.url = QM(self.url, self.url, config.get('dbs instance', ''))
-		self.datasetBlock = QM(self.datasetBlock, self.datasetBlock, 'all')
+		self.url = utils.QM(self.url, self.url, config.get('dbs instance', ''))
+		self.datasetBlock = utils.QM(self.datasetBlock, self.datasetBlock, 'all')
 		self.includeLumi = config.getBool('keep lumi metadata', False)
 		self.onlyValid = config.getBool('only valid', True)
 		self.checkUnique = config.getBool('check unique', True)
@@ -129,7 +131,7 @@ class CMSProvider(DataProvider):
 		lumiDict = {}
 		if self.selectedLumis: # Central lumi query
 			lumiDict = self.getCMSLumisImpl(blockPath)
-			lumiDict = QM(lumiDict, lumiDict, {})
+			lumiDict = utils.QM(lumiDict, lumiDict, {})
 		for (fileInfo, listLumi) in self.getCMSFilesImpl(blockPath, self.onlyValid, self.selectedLumis):
 			if self.selectedLumis:
 				if not listLumi:

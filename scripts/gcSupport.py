@@ -13,11 +13,21 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-import sys, os, fcntl, time, logging, optparse
+import os, sys, time, fcntl, logging
 
 # add python subdirectory from where exec was started to search path
-sys.path.insert(1, os.path.join(sys.path[0], '..', 'packages'))
-from gcPackage import *
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'packages')))
+
+from grid_control import utils
+from grid_control.backends import WMS, storage
+from grid_control.backends.proxy import Proxy
+from grid_control.config import createConfigFactory
+from grid_control.exceptions import handleException, logException
+from grid_control.job_db import Job, JobClass, JobDB
+from grid_control.job_manager import JobManager
+from grid_control.job_selector import ClassSelector, JobSelector
+from grid_control.report import Report
+from grid_control.tasks import TaskModule
 
 class DummyStream(object):
 	def __init__(self, stream):
@@ -31,15 +41,9 @@ class DummyStream(object):
 
 
 def getConfig(configFile = None, configDict = {}, section = None):
-	fillerList = [DefaultFilesConfigFiller()]
-	if configFile:
-		fillerList.append(GeneralFileConfigFiller([configFile]))
-	if configDict:
-		if section:
-			fillerList.append(DictConfigFiller({section: configDict}))
-		else:
-			fillerList.append(DictConfigFiller(configDict))
-	config = ConfigFactory(MultiConfigFiller(fillerList), configFile).getConfig()
+	if configDict and section:
+		configDict = {section: configDict}
+	config = createConfigFactory(configFile, configDict).getConfig()
 	if section:
 		return config.changeView(addSections = [section])
 	return config
@@ -82,7 +86,7 @@ def initGC(args):
 		config = getConfig(args[0])
 		userSelector = None
 		if len(args) != 1:
-			userSelector = MultiJobSelector(args[1])
+			userSelector = JobSelector.create(args[1])
 		return (config.getWorkPath(), config, JobDB(config, jobSelector = userSelector))
 	sys.stderr.write("Syntax: %s <config file> [<job id>, ...]\n\n" % sys.argv[0])
 	sys.exit(1)

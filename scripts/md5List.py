@@ -14,11 +14,14 @@
 #-#  limitations under the License.
 
 import sys
-from gcSupport import *
+from gcSupport import OutputFileInfo, getFileInfo, getWorkJobs, handleException
 
-(workDir, nJobs, jobList) = getWorkJobs(sys.argv[1:])
-for jobNum in sorted(jobList):
-	fileList = getFileInfo(workDir, jobNum, lambda retCode: retCode == 0, [])
-	for fileInfo in fileList:
-		pathSE = fileInfo[OutputFileInfo.Path].replace("file://", "").replace("dir://", "")
-		print("%s  %s/%s" % (fileInfo[OutputFileInfo.Hash], pathSE, fileInfo[OutputFileInfo.NameDest]))
+def main():
+	(workDir, nJobs, jobList) = getWorkJobs(sys.argv[1:])
+	for jobNum in sorted(jobList):
+		for fileInfo in getFileInfo(workDir, jobNum, lambda retCode: retCode == 0, []):
+			pathSE = fileInfo[OutputFileInfo.Path].replace("file://", "").replace("dir://", "")
+			print("%s  %s/%s" % (fileInfo[OutputFileInfo.Hash], pathSE, fileInfo[OutputFileInfo.NameDest]))
+
+if __name__ == '__main__':
+	handleException(main)

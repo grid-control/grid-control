@@ -1,4 +1,4 @@
-#-#  Copyright 2014 Karlsruhe Institute of Technology
+#-#  Copyright 2013-2014 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -12,9 +12,9 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-import matplotlib.pyplot
 import geodb
-import numpy, math, random, os
+import matplotlib.pyplot
+import os, math, numpy, random
 from python_compat import sorted
 
 def remove_all_overlap(data):

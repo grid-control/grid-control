@@ -13,7 +13,7 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-import gcSupport, optparse, datasetListFromX
+import optparse, gcSupport, datasetListFromX
 
 parser = optparse.OptionParser('%prog [options] <data path> <dataset name> <pattern (*.root) / files>')
 parser.add_option('-p', '--path', dest='path', default='.', help='Path to dataset files')

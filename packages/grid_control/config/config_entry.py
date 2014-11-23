@@ -12,8 +12,9 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-from python_compat import sorted, set
-from grid_control import ConfigError, utils, QM, APIError
+from grid_control import utils
+from grid_control.exceptions import APIError, ConfigError
+from python_compat import set, sorted
 
 # Placeholder to specify a non-existing default
 noDefault = utils.makeEnum(['noDefault'])
@@ -50,7 +51,7 @@ class ConfigEntry(object):
 	def format(self, printSection = False, printDefault = False, default = noDefault):
 		if (self.value == noDefault) or (not printDefault and (self.value == default)):
 			return ''
-		return '%s %s %s' % (QM(printSection, self.format_opt(), self.option), self.opttype, multi_line_format(self.value))
+		return '%s %s %s' % (utils.QM(printSection, self.format_opt(), self.option), self.opttype, multi_line_format(self.value))
 
 	def processEntries(cls, entryList):
 		result = None

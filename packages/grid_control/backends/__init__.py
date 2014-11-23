@@ -12,29 +12,4 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-from wms import *
-from broker import *
-from broker_basic import *
-
-wms.WMS.registerObject(searchPath = ['grid_control.backends.local_api'])
-wms.WMS.moduleMap['MultiWMS'] = 'wms_multi.MultiWMS'
-wms.WMS.moduleMap['ThreadedMultiWMS'] = 'wms_thread.ThreadedMultiWMS'
-wms.WMS.moduleMap['GliteWMS'] = 'glite_wms.GliteWMS'
-wms.WMS.moduleMap['HTCondor'] = 'htcondor_wms.HTCondor'
-wms.WMS.moduleMap['localhost'] = 'host.Localhost'
-wms.WMS.moduleMap['Condor'] = 'condor_wms.Condor'
-wms.WMS.moduleMap['JMS'] = 'slurm.JMS'
-wms.WMS.moduleMap['OGE'] = 'sge.OGE'
-wms.WMS.moduleMap['grid'] = 'GliteWMS'
-wms.WMS.moduleMap['inactive'] = 'InactiveWMS'
-
-def findLocalWMS(clsName):
-	for wms, cmd in [('OGE', 'sgepasswd'), ('PBS', 'pbs-config'), ('OGE', 'qsub'), ('LSF', 'bsub'), ('SLURM', 'job_slurm')]:
-		try:
-			utils.resolveInstallPath(cmd)
-			return wms
-		except:
-			pass
-	return 'PBS'
-
-wms.WMS.moduleMapDynamic['local'] = findLocalWMS
+from grid_control.backends.wms import WMS

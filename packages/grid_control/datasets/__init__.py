@@ -1,4 +1,4 @@
-#-#  Copyright 2010-2013 Karlsruhe Institute of Technology
+#-#  Copyright 2009-2014 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -12,14 +12,5 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-from provider_base	import *
-from provider_basic	import *
-from provider_multi	import *
-from provider_scan	import *
-
-from splitter_base	import *
-from splitter_basic	import *
-from splitter_event	import *
-from splitter_meta	import *
-
-from scanner_basic import *
+from grid_control.datasets.provider_base import DataProvider
+from grid_control.datasets.splitter_base import DataSplitter

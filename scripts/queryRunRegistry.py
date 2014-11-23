@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-#-#  Copyright 2010 Karlsruhe Institute of Technology
+#-#  Copyright 2010-2014 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -13,9 +13,9 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-from gcSupport import utils
-from grid_control_cms.lumi_tools import formatLumi, parseLumiFromJSON, mergeLumi
 import xmlrpclib
+from gcSupport import utils
+from grid_control_cms.lumi_tools import formatLumi, mergeLumi, parseLumiFromJSON
 
 server = xmlrpclib.ServerProxy('http://pccmsdqm04.cern.ch/runregistry/xmlrpc')
 data = server.DataExporter.export('RUNLUMISECTION', 'GLOBAL', 'json', {'groupName': 'Collisions10'})

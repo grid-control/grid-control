@@ -1,4 +1,4 @@
-#-#  Copyright 2013-2014 Karlsruhe Institute of Technology
+#-#  Copyright 2010-2014 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -13,8 +13,10 @@
 #-#  limitations under the License.
 
 import os
-from grid_control import QM, utils, ConfigError, changeInitNeeded
-from task_user import UserTask
+from grid_control import utils
+from grid_control.config import changeInitNeeded
+from grid_control.exceptions import ConfigError
+from grid_control.tasks.task_user import UserTask
 
 class ROOTTask(UserTask):
 	configSections = UserTask.configSections + ['ROOTTask']
@@ -48,7 +50,7 @@ class ROOTTask(UserTask):
 
 	def getCommand(self):
 		cmd = './gc-run.root.sh %s $@ > job.stdout 2> job.stderr' % self._executable
-		return QM(self.builtIn, '', 'chmod u+x %s; ' % self._executable) + cmd
+		return utils.QM(self.builtIn, '', 'chmod u+x %s; ' % self._executable) + cmd
 
 
 	def getSBInFiles(self):

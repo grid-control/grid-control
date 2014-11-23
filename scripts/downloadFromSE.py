@@ -13,10 +13,9 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-import gcSupport, sys, os, optparse, time, random, threading
-OutputFileInfo = gcSupport.OutputFileInfo
+import os, sys, time, random, optparse, gcSupport, threading
+from gcSupport import ClassSelector, Job, JobClass, OutputFileInfo, Proxy, logException, storage, utils
 from python_compat import md5
-from grid_control import Job,  Proxy, job_selector, job_db, storage, utils, logException
 
 def md5sum(filename):
 	m = md5()
@@ -178,13 +177,13 @@ def dlfs_rm(path, msg):
 
 def realmain(opts, args):
 	try:
-		proxy = Proxy.getInstance(opts.proxy, gcSupport.getConfig(cfgDict = {'proxy': {'ignore warnings': 'True'}}), 'proxy')
+		proxy = Proxy.getInstance(opts.proxy, gcSupport.getConfig(configDict = {'proxy': {'ignore warnings': 'True'}}), 'proxy')
 	except:
 		sys.stderr.write(logException())
 		sys.exit(1)
 
 	(workDir, config, jobDB) = gcSupport.initGC(args)
-	jobList = jobDB.getJobs(job_selector.ClassSelector(job_db.JobClass.SUCCESS))
+	jobList = jobDB.getJobs(ClassSelector(JobClass.SUCCESS))
 
 	# Create SE output dir
 	if not opts.output:
@@ -224,7 +223,7 @@ def realmain(opts, args):
 			if opts.markEmptyFailed:
 				failJob = True
 			else:
-				return incInfo('No files for job ' + str(jobNum))
+				return incInfo('Job without output files')
 
 		for (fileIdx, fileInfo) in enumerate(files):
 			(hash, name_local, name_dest, pathSE) = fileInfo
@@ -461,7 +460,7 @@ def realmain(opts, args):
 		print '\nStatus overview:'
 		for (state, num) in infos.items():
 			if num > 0:
-				print '%20s: [%d/%d]' % (state, num, len(jobList))
+				print '\t%20s: [%d/%d]' % (state, num, len(jobList))
 		print
 
 	if ('Downloaded' in infos) and (infos['Downloaded'] == len(jobDB)):

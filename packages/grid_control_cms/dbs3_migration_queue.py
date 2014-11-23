@@ -14,9 +14,7 @@
 
 from multiprocessing import Process
 from multiprocessing.queues import JoinableQueue
-from time import sleep
-from time import time
-
+from time import sleep, time
 
 class MigrationRequestedState(object):
     def __init__(self, migration_task):

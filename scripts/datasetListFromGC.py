@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-#-#  Copyright 2010-2014 Karlsruhe Institute of Technology
+#-#  Copyright 2009-2014 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -13,7 +13,7 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-import gcSupport, sys, optparse, datasetListFromX
+import sys, optparse, gcSupport, datasetListFromX
 
 usage = '[options] <config file / work directory>'
 parser = optparse.OptionParser(usage='%%prog %s' % usage)

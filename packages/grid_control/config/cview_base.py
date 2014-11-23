@@ -13,9 +13,10 @@
 #-#  limitations under the License.
 
 import logging
+from grid_control import utils
+from grid_control.config.config_entry import ConfigEntry, noDefault, standardConfigForm
+from grid_control.exceptions import ConfigError
 from python_compat import sorted
-from grid_control import utils, ConfigError
-from config_entry import noDefault, standardConfigForm, ConfigEntry
 
 selectorUnchanged = utils.makeEnum(['selector_unchanged'])
 

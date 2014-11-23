@@ -13,13 +13,11 @@
 #-#  limitations under the License.
 
 from grid_control import utils
-from psource_base import *
-from psource_basic import *
-from psource_meta import *
-from psource_lookup import *
-from psource_data import *
-from psource_file import *
-from pfactory_base import BasicParameterFactory
+from grid_control.parameters.pfactory_base import BasicParameterFactory
+from grid_control.parameters.psource_base import ParameterSource
+from grid_control.parameters.psource_data import DataParameterSource
+from grid_control.parameters.psource_lookup import createLookupHelper
+from grid_control.parameters.psource_meta import ChainParameterSource, CrossParameterSource, RepeatParameterSource, ZipLongParameterSource
 from python_compat import next
 
 def tokenize(value, tokList):
@@ -129,7 +127,7 @@ class SimpleParameterFactory(BasicParameterFactory):
 		elif len(args) > 0:
 			result = args[0]
 		else:
-			return QM(repeat > 1, [repeat], [])
+			return utils.QM(repeat > 1, [repeat], [])
 		if repeat > 1:
 			return [RepeatParameterSource(result, repeat)]
 		return [result]
