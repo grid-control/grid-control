@@ -408,7 +408,7 @@ class PlotReport(Report):
 						lw=2)
 
 			plt.annotate("%.2f" % avgVal + " " + unit, xy=(relTimeSpan * 0.7, avgVal),
-						 xytext=(relTimeSpan * 0.75, avgVal * 0.85), backgroundcolor="lightgray")
+						 xytext=(relTimeSpan * 0.75, avgVal * 0.85), backgroundcolor="gray")
 
 		print " done"
 
