@@ -13,15 +13,18 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-import sys
-from gcSupport import OutputFileInfo, getFileInfo, getWorkJobs, handleException
+import os, sys
+from gcSupport import FileInfoProcessor, JobInfoProcessor, getWorkJobs, handleException
 
 def main():
+	jip = JobInfoProcessor()
+	fip = FileInfoProcessor()
 	(workDir, nJobs, jobList) = getWorkJobs(sys.argv[1:])
 	for jobNum in sorted(jobList):
-		for fileInfo in getFileInfo(workDir, jobNum, lambda retCode: retCode == 0, []):
-			pathSE = fileInfo[OutputFileInfo.Path].replace("file://", "").replace("dir://", "")
-			print("%s  %s/%s" % (fileInfo[OutputFileInfo.Hash], pathSE, fileInfo[OutputFileInfo.NameDest]))
+		if jip.process(os.path.join(workDir, 'output', 'job_%d' % jobNum))[1] == 0:
+			for fileInfo in fip.process(os.path.join(workDir, 'output', 'job_%d' % jobNum)):
+				pathSE = fileInfo[OutputFileInfo.Path].replace("file://", "").replace("dir://", "")
+				print("%s  %s/%s" % (fileInfo[OutputFileInfo.Hash], pathSE, fileInfo[OutputFileInfo.NameDest]))
 
 if __name__ == '__main__':
 	handleException(main)

@@ -14,7 +14,7 @@
 #-#  limitations under the License.
 
 import os, sys, time, random, optparse, gcSupport, threading
-from gcSupport import ClassSelector, Job, JobClass, OutputFileInfo, Proxy, logException, storage, utils
+from gcSupport import ClassSelector, FileInfoProcessor, Job, JobClass, OutputFileInfo, Proxy, logException, storage, utils
 from python_compat import md5
 
 def md5sum(filename):
@@ -214,7 +214,7 @@ def realmain(opts, args):
 			sys.exit(1)
 
 		# Read the file hash entries from job info file
-		files = gcSupport.getFileInfo(workDir, jobNum, lambda retCode: retCode == 0)
+		files = FileInfoProcessor().process(os.path.join(workDir, 'output', 'job_%d' % jobNum))
 		if files:
 			files = map(lambda fi: (fi[OutputFileInfo.Hash], fi[OutputFileInfo.NameLocal],
 				fi[OutputFileInfo.NameDest], fi[OutputFileInfo.Path]), files)

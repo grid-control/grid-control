@@ -152,6 +152,11 @@ grid_control.monitoring	Monitoring
 grid_control.monitoring	MultiMonitor
 grid_control.monitoring	ScriptMonitoring
 
+grid_control.output_processor.OutputProcessor:
+grid_control.output_processor	FileInfoProcessor
+grid_control.output_processor	JobInfoProcessor
+grid_control.output_processor	OutputProcessor
+
 grid_control.parameters.padapter.ParameterAdapter:
 grid_control.parameters.padapter	BasicParameterAdapter
 grid_control.parameters.padapter	ParameterAdapter

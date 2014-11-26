@@ -26,6 +26,7 @@ from grid_control.exceptions import handleException, logException
 from grid_control.job_db import Job, JobClass, JobDB
 from grid_control.job_manager import JobManager
 from grid_control.job_selector import ClassSelector, JobSelector
+from grid_control.output_processor import FileInfoProcessor, JobInfoProcessor
 from grid_control.report import Report
 from grid_control.tasks import TaskModule
 
@@ -98,34 +99,11 @@ def getWorkJobs(args, selector = None):
 
 
 def getJobInfo(workDir, jobNum, retCodeFilter = lambda x: True):
-	jobInfoPath = os.path.join(workDir, 'output', 'job_%d' % jobNum, 'job.info')
-	jobInfo = WMS.parseJobInfo(jobInfoPath)
+	jobInfo = JobInfoProcessor().process(os.path.join(workDir, 'output', 'job_%d' % jobNum))
 	if jobInfo:
 		(jobNumStored, jobExitCode, jobData) = jobInfo
 		if retCodeFilter(jobExitCode):
 			return jobInfo
-
-
-OutputFileInfo = utils.makeEnum(['Hash', 'NameLocal', 'NameDest', 'Path'])
-
-def getFileInfo(workDir, jobNum, retCodeFilter = lambda x: True, rejected = None):
-	jobInfo = getJobInfo(workDir, jobNum, retCodeFilter)
-	if not jobInfo:
-		return rejected
-	(jobNumStored, jobExitCode, jobData) = jobInfo
-	result = {}
-	# parse old job info data format for files
-	oldFileFormat = [OutputFileInfo.Hash, OutputFileInfo.NameLocal, OutputFileInfo.NameDest, OutputFileInfo.Path]
-	for (fileKey, fileData) in filter(lambda (key, value): key.startswith('FILE'), jobData.items()):
-		fileIdx = fileKey.replace('FILE', '').rjust(1, '0')
-		result[int(fileIdx)] = dict(zip(oldFileFormat, fileData.strip('"').split('  ')))
-	# parse new job info data format
-	for (fileKey, fileData) in filter(lambda (key, value): key.startswith('OUTPUT_FILE'), jobData.items()):
-		(fileIdx, fileProperty) = fileKey.replace('OUTPUT_FILE_', '').split('_')
-		if isinstance(fileData, str):
-			fileData = fileData.strip('"')
-		result.setdefault(int(fileIdx), {})[OutputFileInfo.fromString(fileProperty)] = fileData
-	return result.values()
 
 
 def getCMSSWInfo(tarPath):

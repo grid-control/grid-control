@@ -28,6 +28,7 @@ import os, re, numpy
 
 #from gcSupport import getJobInfo
 from grid_control import utils
+from grid_control.output_processor import JobInfoProcessor
 from grid_control.report import Report
 
 JobResultEnum = utils.makeEnum([
@@ -459,7 +460,7 @@ class PlotReport(Report):
 		for j in self._jobs:
 			job = self._jobDB.get(j)
 
-			jInfo = getJobInfo(workdir, j)
+			jInfo = JobInfoProcessor().process(os.path.join(workdir, 'output', j))
 			if (jInfo is None):
 				print("Ignoring job")
 				continue
