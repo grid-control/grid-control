@@ -45,7 +45,8 @@ class TaskModule(NamedObject):
 		self.taskConfigName = config.getConfigName()
 
 		# Storage setup
-		configStorage = config.changeView(viewClass = TaggedConfigView, addSections = ['storage'], addTags = [self])
+		configStorage = config.changeView(viewClass = TaggedConfigView,
+			setClasses = None, setNames = None, addSections = ['storage'], addTags = [self])
 		self.taskVariables = {
 			# Space limits
 			'SCRATCH_UL': configStorage.getInt('scratch space used', 5000, onChange = initSandbox),

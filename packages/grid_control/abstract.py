@@ -15,7 +15,7 @@
 import sys, logging
 from grid_control import utils
 from grid_control.exceptions import ConfigError, GCError, RethrowError
-from python_compat import rsplit
+from python_compat import rsplit, set
 
 # Abstract class taking care of dynamic class loading 
 class LoadableObject(object):
