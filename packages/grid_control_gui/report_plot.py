@@ -460,7 +460,7 @@ class PlotReport(Report):
 		for j in self._jobs:
 			job = self._jobDB.get(j)
 
-			jInfo = JobInfoProcessor().process(os.path.join(workdir, 'output', j))
+			jInfo = JobInfoProcessor().process(os.path.join(workdir, 'output', 'job_%d' % j))
 			if (jInfo is None):
 				print("Ignoring job")
 				continue
