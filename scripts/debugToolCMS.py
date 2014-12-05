@@ -23,9 +23,9 @@ def lfn2pfn(node, lfn):
 		{'node': node, 'protocol': 'srmv2', 'lfn': lfn})['phedex']['mapping'][0]['pfn']
 
 parser = optparse.OptionParser()
-parser.add_option("-s", "--SE", dest="SE", default=None, help="Resolve LFN on CMS SE into PFN")
-parser.add_option("", "--lfn", dest="lfn", default="/store/user/<hypernews name>", help="Name of default LFN")
-parser.add_option("", "--se-prot", dest="seprot", default="srmv2", help="Name of default SE protocol")
+parser.add_option('-s', '--SE', dest='SE', default=None, help='Resolve LFN on CMS SE into PFN')
+parser.add_option('', '--lfn', dest='lfn', default='/store/user/<hypernews name>', help='Name of default LFN')
+parser.add_option('', '--se-prot', dest='seprot', default='srmv2', help='Name of default SE protocol')
 (opts, args) = parseOptions(parser)
 
 if opts.SE:

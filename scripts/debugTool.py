@@ -28,34 +28,34 @@ ogBackend.add_option('', '--list-queues', dest='list_queues', default=False, act
 	help='List backend queues')
 parser.add_option_group(ogBackend)
 
-parser.add_option("", "--reset-attempts", dest="resettrys", default=False, action="store_true",
-	help="Reset the attempt counter")
-parser.add_option("-j", "--jdl", dest="jdl", default=False, action="store_true",
-	help="Get JDL file")
-parser.add_option("-J", "--jobs", dest="jobs", default="",
-	help="Display job ids matching selector")
-parser.add_option("-s", "--state", dest="state", default="",
-	help="Force new job state")
-parser.add_option("-S", "--splitting", dest="splitting", default="",
-	help="Show splitting information dataset")
-parser.add_option("", "--splitting-infos", dest="splittingInfos", default="",
-	help="Select displayed splitting information")
-parser.add_option("-i", "--invalid", dest="invalid", default="",
-	help="List invalidated dataset splittings")
-parser.add_option("-D", "--diffdata", dest="diff", default=False, action="store_true",
-	help="Show difference between datasets")
-parser.add_option("-R", "--findremoved", dest="findrm", default=False, action="store_true",
-	help="Find removed blocks")
-parser.add_option("-C", "--checksplitting", dest="checkSplitting", default="",
-	help="Check splitting of dataset in specified work directory")
-parser.add_option("-d", "--decode", dest="decode", default="",
-	help="Decode log files")
+parser.add_option('', '--reset-attempts', dest='resettrys', default=False, action='store_true',
+	help='Reset the attempt counter')
+parser.add_option('-j', '--jdl', dest='jdl', default=False, action='store_true',
+	help='Get JDL file')
+parser.add_option('-J', '--jobs', dest='jobs', default='',
+	help='Display job ids matching selector')
+parser.add_option('-s', '--state', dest='state', default='',
+	help='Force new job state')
+parser.add_option('-S', '--splitting', dest='splitting', default='',
+	help='Show splitting information dataset')
+parser.add_option('', '--splitting-infos', dest='splittingInfos', default='',
+	help='Select displayed splitting information')
+parser.add_option('-i', '--invalid', dest='invalid', default='',
+	help='List invalidated dataset splittings')
+parser.add_option('-D', '--diffdata', dest='diff', default=False, action='store_true',
+	help='Show difference between datasets')
+parser.add_option('-R', '--findremoved', dest='findrm', default=False, action='store_true',
+	help='Find removed blocks')
+parser.add_option('-C', '--checksplitting', dest='checkSplitting', default='',
+	help='Check splitting of dataset in specified work directory')
+parser.add_option('-d', '--decode', dest='decode', default='',
+	help='Decode log files')
 (opts, args) = gcSupport.parseOptions(parser)
 
 # we need exactly one positional argument (config file)
 if opts.jdl or opts.state:
 	if len(args) != 1:
-		utils.exitWithUsage("%s <job info file>" % sys.argv[0])
+		utils.exitWithUsage('%s <job info file>' % sys.argv[0])
 	job = Job.load(args[0])
 
 if opts.jobs:
@@ -71,7 +71,7 @@ if opts.jobs:
 		raise
 	if opts.resettrys:
 		for jobNum in jobDB.getJobsIter(selected):
-			print "Resetting attempts", jobNum
+			print 'Resetting attempts', jobNum
 			jobinfo = jobDB.get(jobNum)
 			jobinfo.attempt = 0
 			jobinfo.history = {}
@@ -84,12 +84,12 @@ if opts.jobs:
 
 if opts.diff:
 	if len(args) != 2:
-		utils.exitWithUsage("%s <dataset source 1> <dataset source 2>" % sys.argv[0])
+		utils.exitWithUsage('%s <dataset source 1> <dataset source 2>' % sys.argv[0])
 	utils.eprint = lambda *x: {}
 	a = DataProvider.getInstance('ListProvider', config, args[0], None)
 	b = DataProvider.getInstance('ListProvider', config, args[1], None)
 	(blocksAdded, blocksMissing, blocksChanged) = DataProvider.resyncSources(a.getBlocks(), b.getBlocks())
-	utils.printTabular([(DataProvider.Dataset, "Dataset"), (DataProvider.BlockName, "Block")], blocksMissing)
+	utils.printTabular([(DataProvider.Dataset, 'Dataset'), (DataProvider.BlockName, 'Block')], blocksMissing)
 
 if opts.findrm:
 	removed = []
@@ -103,7 +103,7 @@ if opts.findrm:
 			tmp[-1] = new
 			removed.append(tmp)
 		oldDP = newDP
-	utils.printTabular([(DataProvider.Dataset, "Dataset"), (DataProvider.BlockName, "Block"), (-1, "Removed in file")], removed)
+	utils.printTabular([(DataProvider.Dataset, 'Dataset'), (DataProvider.BlockName, 'Block'), (-1, 'Removed in file')], removed)
 
 if opts.invalid:
 	splitter = DataSplitter.loadState(opts.invalid)
@@ -112,18 +112,18 @@ if opts.invalid:
 			splitInfo = splitter.getSplitInfo(jobNum)
 			if splitInfo.get(DataSplitter.Invalid, False):
 				yield str(jobNum)
-	print str.join(",", getInvalid())
+	print str.join(',', getInvalid())
 
 if opts.jdl:
-	print job.get("jdl")
+	print job.get('jdl')
 
 if opts.state:
 	try:
 		newState = getattr(Job, opts.state)
 	except:
-		print "Invalid state: %s", opts.state
+		print 'Invalid state: %s', opts.state
 	oldState = job.state
-	utils.vprint("Job state changed from %s to %s" % (Job.states[oldState], Job.states[newState]), -1, True)
+	utils.vprint('Job state changed from %s to %s' % (Job.states[oldState], Job.states[newState]), -1, True)
 	job.state = newState
 	utils.safeWrite(open(args[0], 'w'), utils.DictFormat(escapeString = True).format(job.getAll()))
 
@@ -143,30 +143,30 @@ if opts.splitting:
 			utils.verbosity(10)
 			splitter.printAllJobInfo()
 	else:
-		print "Checking %d jobs..." % splitter.getMaxJobs()
+		print 'Checking %d jobs...' % splitter.getMaxJobs()
 		fail = utils.set()
 		for jobNum in range(splitter.getMaxJobs()):
 			splitInfo = splitter.getSplitInfo(jobNum)
 			try:
 				(events, skip, files) = (0, 0, [])
-				for line in open(os.path.join(opts.checkSplitting, "jobs", "job_%d.var" % jobNum)).readlines():
+				for line in open(os.path.join(opts.checkSplitting, 'jobs', 'job_%d.var' % jobNum)).readlines():
 					if 'MAX_EVENTS' in line:
-						events = int(line.split('MAX_EVENTS', 1)[1].replace("=", ""))
+						events = int(line.split('MAX_EVENTS', 1)[1].replace('=', ''))
 					if 'SKIP_EVENTS' in line:
-						skip = int(line.split('SKIP_EVENTS', 1)[1].replace("=", ""))
+						skip = int(line.split('SKIP_EVENTS', 1)[1].replace('=', ''))
 					if 'FILE_NAMES' in line:
-						files = line.split('FILE_NAMES', 1)[1].replace("=", "").replace("\"", "").replace("\\", "")
-						files = map(lambda x: x.strip().strip(","), files.split())
+						files = line.split('FILE_NAMES', 1)[1].replace('=', '').replace('\"', '').replace('\\', '')
+						files = map(lambda x: x.strip().strip(','), files.split())
 				def printError(curJ, curS, msg):
 					if curJ != curS:
-						print "%s in job %d (j:%s != s:%s)" % (msg, jobNum, curJ, curS)
+						print '%s in job %d (j:%s != s:%s)' % (msg, jobNum, curJ, curS)
 						fail.add(jobNum)
-				printError(events, splitInfo[DataSplitter.NEntries], "Inconsistent number of events")
-				printError(skip, splitInfo[DataSplitter.Skipped], "Inconsistent number of skipped events")
-				printError(files, splitInfo[DataSplitter.FileList], "Inconsistent list of files")
+				printError(events, splitInfo[DataSplitter.NEntries], 'Inconsistent number of events')
+				printError(skip, splitInfo[DataSplitter.Skipped], 'Inconsistent number of skipped events')
+				printError(files, splitInfo[DataSplitter.FileList], 'Inconsistent list of files')
 			except:
-				print "Job %d was never initialized!" % jobNum
-		print str.join("\n", map(str, fail))
+				print 'Job %d was never initialized!' % jobNum
+		print str.join('\n', map(str, fail))
 
 if opts.decode:
 	import base64, gzip, StringIO

@@ -38,7 +38,7 @@ DEFAULT: The default is to download the SE file and check them with MD5 hashes.
    as already downloaded, so that the files are not copied again.
  * Failed transfer attempts will mark the job as failed, so that it
    can be resubmitted."""
-	parser = optparse.OptionParser(usage = "%prog [options] <config file>\n" + help)
+	parser = optparse.OptionParser(usage = '%prog [options] <config file>\n' + help)
 
 	def addBoolOpt(optList, optPostfix, dest, default, help, optShort=('', ''), optPrefix=('no', ''), helpPrefix=('do not ', '')):
 		def buildLongOpt(prefix, postfix):

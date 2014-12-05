@@ -56,7 +56,7 @@ if len(args) != 1:
 # Disable threaded queries
 def noThread(desc, fun, *args, **kargs):
 	fun(*args, **kargs)
-	return type("DummyThread", (), {"join": lambda self: None})()
+	return type('DummyThread', (), {'join': lambda self: None})()
 utils.gcStartThread = noThread
 
 def main():
@@ -142,7 +142,7 @@ def main():
 			updateInfos(infosum)
 		head = [(DataProvider.Dataset, 'Dataset'), (DataProvider.NEntries, '#Events'),
 			(DataProvider.NBlocks, '#Blocks'), (DataProvider.NFiles, '#Files')]
-		utils.printTabular(head, map(lambda x: infos[x], order) + ["=", infosum])
+		utils.printTabular(head, map(lambda x: infos[x], order) + ['=', infosum])
 
 	if opts.listblocks:
 		print('')

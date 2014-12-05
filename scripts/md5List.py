@@ -23,8 +23,8 @@ def main():
 	for jobNum in sorted(jobList):
 		if jip.process(os.path.join(workDir, 'output', 'job_%d' % jobNum))[1] == 0:
 			for fileInfo in fip.process(os.path.join(workDir, 'output', 'job_%d' % jobNum)):
-				pathSE = fileInfo[OutputFileInfo.Path].replace("file://", "").replace("dir://", "")
-				print("%s  %s/%s" % (fileInfo[OutputFileInfo.Hash], pathSE, fileInfo[OutputFileInfo.NameDest]))
+				pathSE = fileInfo[OutputFileInfo.Path].replace('file://', '').replace('dir://', '')
+				print('%s  %s/%s' % (fileInfo[OutputFileInfo.Hash], pathSE, fileInfo[OutputFileInfo.NameDest]))
 
 if __name__ == '__main__':
 	handleException(main)

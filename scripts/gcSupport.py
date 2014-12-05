@@ -89,7 +89,7 @@ def initGC(args):
 		if len(args) != 1:
 			userSelector = JobSelector.create(args[1])
 		return (config.getWorkPath(), config, JobDB(config, jobSelector = userSelector))
-	sys.stderr.write("Syntax: %s <config file> [<job id>, ...]\n\n" % sys.argv[0])
+	sys.stderr.write('Syntax: %s <config file> [<job id>, ...]\n\n' % sys.argv[0])
 	sys.exit(1)
 
 
@@ -109,18 +109,18 @@ def getJobInfo(workDir, jobNum, retCodeFilter = lambda x: True):
 def getCMSSWInfo(tarPath):
 	import tarfile, xml.dom.minidom
 	# Read framework report files to get number of events
-	tarFile = tarfile.open(tarPath, "r:gz")
+	tarFile = tarfile.open(tarPath, 'r:gz')
 	fwkReports = filter(lambda x: os.path.basename(x.name) == 'report.xml', tarFile.getmembers())
 	for fwkReport in map(lambda fn: tarFile.extractfile(fn), fwkReports):
 		try:
 			yield xml.dom.minidom.parse(fwkReport)
 		except:
-			print "Error while parsing %s" % tarPath
+			print 'Error while parsing %s' % tarPath
 			raise
 
 
 def prettySize(size):
-	suffixes = [("B", 2**10), ("K", 2**20), ("M", 2**30), ("G", 2**40), ("T", 2**50)]
+	suffixes = [('B', 2**10), ('K', 2**20), ('M', 2**30), ('G', 2**40), ('T', 2**50)]
 	for suf, lim in suffixes:
 		if size > lim:
 			continue
@@ -135,7 +135,7 @@ def parseOptions(parser):
 		help='Output pivoted tabular data')
 	parser.add_option('',   '--textwidth', dest='textwidth',   default=100,
 		help='Output tabular data with selected width')
-	parser.add_option("-v", "--verbose",   dest="verbosity",   default=0,         action="count",
+	parser.add_option('-v', '--verbose',   dest='verbosity',   default=0,         action='count',
 		help='Increase verbosity')
 	(opts, args) = parser.parse_args()
 	logging.getLogger().setLevel(logging.DEFAULT - opts.verbosity)
