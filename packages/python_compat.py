@@ -150,6 +150,14 @@ except:
 		(funProxy.fun, funProxy.cache) = (fun, [])
 		return funProxy
 
+try: #logging.NullHandler >= Python 2.7
+    import logging
+    NullHandler = logging.NullHandler
+except:
+    class NullHandler(logging.Handler):
+        def emit(self, record):
+            pass
+
 __all__ = ['StringBuffer', 'StringBufferBase', 'all', 'any', 'lru_cache', 'md5',
 	'next', 'parsedate', 'rsplit', 'set', 'sorted', 'user_input']
 
