@@ -17,6 +17,13 @@
 def setupHTTPSClientAuthHandler(key, cert):
     import urllib2, httplib
 
+    #fix ca verification error in Python 2.7.9
+    try:
+        import ssl
+        ssl._create_default_https_context = ssl._create_unverified_context
+    except AttributeError:
+        pass
+
     class HTTPSClientAuthHandler(urllib2.HTTPSHandler):
         def __init__(self, key, cert):
             urllib2.HTTPSHandler.__init__(self)
@@ -105,4 +112,3 @@ def sendJSON(url, data=None, params=None, headers=None, cert=None, method='POST'
             raise http_error
     else:
         return parseJSON(http_data.read())
-    
