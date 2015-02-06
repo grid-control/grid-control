@@ -12,9 +12,12 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-from multiprocessing import Process
-from multiprocessing.queues import JoinableQueue
-from time import sleep, time
+from Queue import Queue
+from Queue import Empty
+from time import time
+
+import logging
+
 
 class MigrationRequestedState(object):
     def __init__(self, migration_task):
@@ -22,22 +25,46 @@ class MigrationRequestedState(object):
 
     def run(self):
         #submit task to DBS 3 migration
-        print "MigrationRequestedState:", self.migration_task
+        try:
+            self.migration_task.migration_request = \
+                self.migration_task.dbs_client.migrateSubmit(self.migration_task.payload)
+        except AttributeError:
+            #simulation
+            self.migration_task.logger.info("%s has been queued for migration!" % self.migration_task)
+        else:
+            self.migration_task.logger.info("%s has been queued for migration!" % self.migration_task)
+
         self.migration_task.state = MigrationSubmittedState(self.migration_task)
 
 
 class MigrationSubmittedState(object):
     def __init__(self, migration_task):
         self.migration_task = migration_task
-        self.last_poll_time = time()
         self.max_poll_interval = 10
+        self.last_poll_time = time()
 
     def run(self):
         if abs(self.last_poll_time-time()) > self.max_poll_interval:
             #check migration status
-            print "MigrationSubmittedState:", self.migration_task
-            self.last_poll_time = time()
-            self.migration_task.state.__class__ = MigrationDoneState
+            try:
+                migration_request_id = self.migration_task.migration_request['migration_details']['migration_request_id']
+                request_status = self.migration_task.dbs_client.migrateStatus(migration_rqst_id=migration_request_id)
+                self.migration_task.logger.debug("%s has migration_status=%s"
+                                                 % (self.migration_task, request_status[0]['migration_status']))
+            except AttributeError:
+                #simulation
+                request_status = [{'migration_status': 2}]
+                self.migration_task.logger.debug("%s has migration_status=%s"
+                                                 % (self.migration_task, request_status[0]['migration_status']))
+            finally:
+                self.last_poll_time = time()
+
+            if request_status[0]['migration_status'] == 2:
+                #migration okay
+                self.migration_task.state.__class__ = MigrationDoneState
+            elif request_status[0]['migration_status'] == 9:
+                #migration failed
+                self.migration_task.state.__class__ = MigrationFailedState
 
 
 class MigrationDoneState(object):
@@ -45,8 +72,7 @@ class MigrationDoneState(object):
         self.migration_task = migration_task
 
     def run(self):
-        print "MigrationDoneState:", self.migration_task
-        pass
+        self.migration_task.logger.info("%s is done!" % self.migration_task)
 
 
 class MigrationFailedState(object):
@@ -54,15 +80,16 @@ class MigrationFailedState(object):
         self.migration_task = migration_task
 
     def run(self):
-        #handle error
-        print "MigrationFailedState:", self.migration_task
-        pass
+        self.migration_task.logger.error("%s failed! Please contact DBS admin!" % self.migration_task)
+        raise MigrationFailed("%s failed! Please contact DBS admin!" % self.migration_task)
 
 
 class MigrationTask(object):
-    def __init__(self, block_name, migration_url):
+    def __init__(self, block_name, migration_url, dbs_client):
         self.block_name = block_name
         self.migration_url = migration_url
+        self.dbs_client = dbs_client
+        self.logger = logging.getLogger('dbs3-migration')
 
         self.state = MigrationRequestedState(self)
 
@@ -74,6 +101,11 @@ class MigrationTask(object):
 
     def is_failed(self):
         return self.state.__class__ == MigrationFailedState
+
+    @property
+    def payload(self):
+        return {'migration_url': self.migration_url,
+                'migration_input': self.block_name}
 
     def __eq__(self, other):
         return (self.block_name == other.block_name) and (self.migration_url == other.migration_url)
@@ -93,57 +125,49 @@ class MigrationTask(object):
 
 
 class AlreadyQueued(Exception):
-    def __init__(self, msg):
-        self._msg = msg
-        super(AlreadyQueued, self).__init__(self, "AlreadyQueuedException %s" % self._msg)
+    def __init__(self, message):
+        self.message = message
+        super(AlreadyQueued, self).__init__(self, "AlreadyQueuedException %s" % self.message)
 
     def __repr__(self):
-        return '%s %r' % (self.__class__.__name__, self._msg)
+        return '%s %r' % (self.__class__.__name__, self.message)
 
     def __str__(self):
-        return repr(self._msg)
+        return repr(self.message)
 
 
 class MigrationFailed(Exception):
-    def __init__(self, msg):
-        self._msg = msg
-        super(MigrationFailed, self).__init__(self, "MigrationFailedException %s" % self._msg)
+    def __init__(self, message):
+        self.message = message
+        super(MigrationFailed, self).__init__(self, "MigrationFailedException %s" % self.message)
 
     def __repr__(self):
-        return '%s %r' % (self.__class__.__name__, self._msg)
+        return '%s %r' % (self.__class__.__name__, self.message)
 
     def __str__(self):
-        return repr(self._msg)
+        return repr(self.message)
 
 
-class DBS3MigrationQueue(JoinableQueue):
+class DBS3MigrationQueue(Queue):
     _unique_queued_tasks = set()
 
     def __init__(self, maxsize=0):
-        super(DBS3MigrationQueue, self).__init__(maxsize)
+        Queue.__init__(self, maxsize)
 
     def add_migration_task(self, migration_task):
         if migration_task not in self._unique_queued_tasks:
             self._unique_queued_tasks.add(migration_task)
             self.put(migration_task)
         else:
-            raise AlreadyQueued('The migration task %s is already queued!' % migration_task)
-
-    def has_unfinished_tasks(self):
-        return not self._unfinished_tasks._semlock._is_zero()
-
-    def release_worker(self):
-        while self.has_unfinished_tasks():
-            sleep(1)
-        self.put(None)
-        self.task_done()
+            raise AlreadyQueued('%s is already queued!' % migration_task)
 
 
-def worker(queue):
+def do_migration(queue):
     while True:
-        task = queue.get()
-        #quit worker on None, means all tasks are done
-        if not task:
+        try:
+            task = queue.get(block=False)
+        except Empty:
+            #quit worker, means all tasks are done
             break
         try:
             task.run()
@@ -161,20 +185,20 @@ def worker(queue):
 
 
 if __name__ == '__main__':
+    #set-up logging
+    logging.basicConfig(format='%(levelname)s: %(message)s')
+    logger = logging.getLogger('dbs3-migration')
+    logger.addHandler(logging.NullHandler())
+    logger.setLevel(logging.DEBUG)
+
     block_names = ['test1', 'test1', 'test2', 'test3', 'test4']
     migration_queue = DBS3MigrationQueue()
 
     for block in block_names:
         try:
-            migration_queue.add_migration_task(MigrationTask(block_name=block, migration_url='http://a.b.c'))
+            migration_queue.add_migration_task(MigrationTask(block_name=block,
+                                                             migration_url='http://a.b.c', dbs_client=None))
         except AlreadyQueued as aq:
-            print aq
+            logger.warning(aq.message)
 
-    p = Process(target=worker, args=(migration_queue,))
-    p.start()
-    sleep(5)
-    print "Add new migration request to queue!"
-    migration_queue.add_migration_task(MigrationTask(block_name='test5', migration_url='http://a.b.c'))
-    migration_queue.release_worker()
-    # wait for all tasks to be finished
-    p.join()
+    do_migration(migration_queue)
