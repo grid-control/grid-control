@@ -13,8 +13,9 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-import os
+import os, optparse
 from gcSupport import *
+from grid_control.utils import QM
 from grid_control.exceptions import UserError
 from grid_control.datasets.provider_base import DataProvider
 from grid_control.datasets.provider_basic import ListProvider
@@ -23,16 +24,16 @@ from grid_control_cms.dbs3_migration_queue import DBS3MigrationQueue, MigrationT
 from grid_control_cms.webservice_api import readJSON, sendJSON
 
 class DBSInfoProvider(GCProvider):
-	def __init__(self, config, section, datasetExpr, datasetNick, datasetID = 0):
+	def __init__(self, config, datasetExpr, datasetNick, datasetID = 0):
 		tmp = QM(os.path.isdir(datasetExpr), ['OutputDirsFromWork'], ['OutputDirsFromConfig', 'MetadataFromModule'])
-		config.set(section, 'scanner', str.join(' ', tmp + ['ObjectsFromCMSSW', 'FilesFromJobInfo',
+		config.set('scanner', str.join(' ', tmp + ['ObjectsFromCMSSW', 'FilesFromJobInfo',
 			'MetadataFromCMSSW', 'ParentLookup', 'SEListFromPath', 'LFNFromPath', 'DetermineEvents',
 			'FilterEDMFiles']))
-		config.set(section, 'include config infos', 'True')
-		config.set(section, 'parent keys', 'CMSSW_PARENT_LFN CMSSW_PARENT_PFN')
-		config.set(section, 'events key', 'CMSSW_EVENTS_WRITE')
-		GCProvider.__init__(self, config, section, datasetExpr, datasetNick, datasetID)
-		self.discovery = config.getBool(['dataset %s' % datasetNick, section], 'discovery', False)
+		config.set('include config infos', 'True')
+		config.set('parent keys', 'CMSSW_PARENT_LFN CMSSW_PARENT_PFN')
+		config.set('events key', 'CMSSW_EVENTS_WRITE')
+		GCProvider.__init__(self, config, datasetExpr, datasetNick, datasetID)
+		self.discovery = config.getBool('discovery', False)
 
 	def generateDatasetName(self, key, data):
 		if self.discovery:
@@ -125,7 +126,7 @@ class DBS3LiteClient(object):
         return readJSON('%s/%s' % (self._migrate_url, 'status'), params=kwargs, cert=self._proxy_path)
 
 
-def generateDBS3BlockDumps(blocks):
+def generateDBS3BlockDumps(opts, blocks):
     for blockInfo in blocks:
         blockDump = dict(dataset_conf_list=[], files=[], file_conf_list=[], file_parent_list=[])
         locations = blockInfo[DataProvider.Locations]
@@ -164,7 +165,7 @@ def generateDBS3BlockDumps(blocks):
                             u'lfn': lfn,
                             u'app_name': 'cmsRun',
                             u'output_module_label': 'crab2_mod_label',
-                            u'global_tag': metadataInfo['GLOBALTAG'],
+                            u'global_tag': opts.globaltag,#metadataInfo['GLOBALTAG'],
                             }
 
             blockDump[u'file_conf_list'].append(fileConfDict)
@@ -218,6 +219,8 @@ def generateDBS3BlockDumps(blocks):
 if __name__ == '__main__':
 	usage = '%s [OPTIONS] <config file / work directory>' % sys.argv[0]
 	parser = optparse.OptionParser(usage=usage)
+	parser.add_option('-G', '--globaltag',       dest='globaltag',          default=None,
+		help='Specify global tag')
 	parser.add_option('-F', '--input',           dest='inputFile',          default=None,
 		help='Specify dbs input file to use instead of scanning job output')
 	parser.add_option('-k', '--key-select',      dest='dataset key select', default='',
@@ -299,8 +302,8 @@ if __name__ == '__main__':
 	if os.path.isdir(args[0]):
 		opts.workDir = os.path.abspath(os.path.normpath(args[0]))
 	else:
-		opts.workDir = Config(args[0]).getWorkPath()
-	opts.tmpDir = os.path.join(opts.workDir, 'dbs')
+		opts.workDir = getConfig(configFile = args[0]).getWorkPath()
+	opts.tmpDir = '/tmp'#os.path.join(opts.workDir, 'dbs')
 	if not os.path.exists(opts.tmpDir):
 		os.mkdir(opts.tmpDir)
 	# Lock file in case several instances of this program are running
@@ -308,12 +311,12 @@ if __name__ == '__main__':
 
 	# 1) Get dataset information
 	if opts.inputFile:
-		provider = datasets.ListProvider(Config(), None, opts.inputFile, None)
+		provider = datasets.ListProvider(getConfig(), None, opts.inputFile, None)
 	else:
-		config = Config(configDict = {None: dict(parser.values.__dict__)})
+		config = getConfig(configDict = {'dataset': dict(parser.values.__dict__)})
 		if opts.discovery:
-			config.set(None, 'dataset name pattern', '@DS_KEY@')
-		provider = DBSInfoProvider(config, None, args[0], None)
+			config.set('dataset name pattern', '@DS_KEY@')
+		provider = DBSInfoProvider(config, args[0], None)
 
 	provider.saveState(os.path.join(opts.tmpDir, 'dbs.dat'))
 	if opts.discovery:
@@ -325,7 +328,7 @@ if __name__ == '__main__':
 		# Query target DBS for all found datasets and perform dataset resync with "supposed" state
 		dNames = set(map(lambda b: b[DataProvider.Dataset], blocks))
 		dNames = filter(lambda ds: hasDataset(opts.dbsTarget, ds), dNames)
-		config = Config(configDict = {None: {'dbs instance': opts.dbsTarget}})
+		config = getConfig(configDict = {None: {'dbs instance': opts.dbsTarget}})
 		oldBlocks = reduce(operator.add, map(lambda ds: DBSApiv2(config, None, ds, None).getBlocks(), dNames), [])
 		(blocksAdded, blocksMissing, blocksChanged) = DataProvider.resyncSources(oldBlocks, blocks)
 		if len(blocksMissing) or len(blocksChanged):
@@ -361,7 +364,7 @@ if __name__ == '__main__':
 	#					  verifypeer=False)
 	dbs3_migration_queue = DBS3MigrationQueue()
 
-	for blockDump in generateDBS3BlockDumps(blocks):
+	for blockDump in generateDBS3BlockDumps(opts, blocks):
 		###initiate the dbs3 to dbs3 migration of parent blocks
 		logger.debug('Checking parentage for block: %s' % blockDump['block']['block_name'])
 		unique_parent_lfns = set((parent[u'parent_logical_file_name'] for parent in blockDump[u'file_parent_list']))
