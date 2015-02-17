@@ -22,6 +22,7 @@ class ObjectsFromCMSSW(InfoScanner):
 		self.importParents = config.getBool('include parent infos', False)
 		self.mergeConfigs = config.getBool('merge config infos', True)
 		self.cfgStore = {}
+		self.gtStore = {}
 
 	def getEntries(self, path, metadata, events, seList, objStore):
 		def readTag(base, tag, default = None):
@@ -49,6 +50,15 @@ class ObjectsFromCMSSW(InfoScanner):
 				metadata.setdefault('CMSSW_CONFIG_JOBHASH', []).append(cfgHash)
 				tmpCfg[cfg] = {'CMSSW_CONFIG_FILE': cfg, 'CMSSW_CONFIG_HASH': cfgHash, 'CMSSW_VERSION': cmsswVersion}
 				tmpCfg[cfg]['CMSSW_CONFIG_CONTENT'] = self.cfgStore.setdefault(utils.QM(self.mergeConfigs, cfgHash, cfg), cfgContent)
+				# Read global tag from config file
+				if cfgHash not in self.gtStore:
+					cfgContentEnv = {}
+					try:
+						exec cfgContent in cfgContentEnv
+						self.gtStore[cfgHash] = cfgContentEnv['process'].GlobalTag.globaltag.value()
+					except Exception:
+						self.gtStore[cfgHash] = 'unknown:All'
+				tmpCfg[cfg]['CMSSW_GLOBALTAG'] = self.gtStore[cfgHash]
 				# Get annotation from config content
 				def searchConfigFile(key, regex, default):
 					try:
