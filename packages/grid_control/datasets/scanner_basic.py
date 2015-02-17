@@ -202,7 +202,7 @@ class ParentLookup(InfoScanner):
 		datacachePath = os.path.join(objStore.get('GC_WORKDIR', ''), 'datacache.dat')
 		source = utils.QM((self.source == '') and os.path.exists(datacachePath), datacachePath, self.source)
 		if source and (source not in self.lfnMap):
-			pSource = DataProvider.create(Config(), None, source, 'ListProvider')
+			pSource = DataProvider.create(createConfigFactory().getConfig(), source, 'ListProvider')
 			for (n, fl) in map(lambda b: (b[DataProvider.Dataset], b[DataProvider.FileList]), pSource.getBlocks()):
 				self.lfnMap.setdefault(source, {}).update(dict(map(lambda fi: (self.lfnTrans(fi[DataProvider.URL]), n), fl)))
 		pList = set()
