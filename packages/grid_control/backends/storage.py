@@ -12,7 +12,7 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-import os, shutil
+import sys, os, shutil
 from grid_control import utils
 from grid_control.abstract import NamedObject
 from grid_control.config import validNoVar
