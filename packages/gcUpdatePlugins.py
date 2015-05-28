@@ -1,4 +1,4 @@
-#-#  Copyright 2014 Karlsruhe Institute of Technology
+#-#  Copyright 2014-2015 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
 
 if __name__ == '__main__':
 	import os, sys
-	from python_compat import sorted
+	from python_compat import sorted, set
 	blacklist = []
 	# import everything
 	def recurse(root):
@@ -38,19 +38,23 @@ if __name__ == '__main__':
 					yield('from %s.%s import *' % (str.join('.', tmp), entry))
 	sys.path.append(os.path.dirname(__file__))
 
-	for imp in recurse('.'):
-		try:
-			exec(imp)
-		except:
-			print('Unable to exec "%s"!' % imp)
-			raise
-
 	def sc(x, y):
 		try:
 			return issubclass(x, y)
 		except:
 			pass
 		return None
+
+	clsList = []
+	from grid_control.abstract import LoadableObject
+
+	for imp in recurse('.'):
+		try:
+			exec(imp)
+			clsList.extend(filter(lambda x: sc(x, LoadableObject), map(eval, list(dir()))))
+		except:
+			print('Unable to exec "%s"!' % imp)
+			raise
 
 	def getBaseNames(cls):
 		if ((LoadableObject in cls.__bases__) or (NamedObject in cls.__bases__)) and (cls != NamedObject):
@@ -61,7 +65,7 @@ if __name__ == '__main__':
 		return result
 
 	packages = {}
-	for cls in filter(lambda x: sc(x, LoadableObject) and getBaseNames(x), map(eval, list(dir()))):
+	for cls in filter(getBaseNames, set(clsList)):
 		packages.setdefault(cls.__module__.split('.')[0], {}).setdefault(str.join(';', getBaseNames(cls)), []).append(cls)
 
 	for package in packages:
