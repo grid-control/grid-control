@@ -75,7 +75,7 @@ class FileConfigFiller(ConfigFiller):
 				exceptionText = 'Unable to parse config file %s:%d\n\t%r' % (configFile, idx, line)
 				try:
 					line = rsplit(line, ';', 1)[0].rstrip()
-				except:
+				except Exception:
 					raise ConfigError(exceptionText + '\nUnable to strip comments!')
 				exceptionText = 'Unable to parse config file %s:%d\n\t%r' % (configFile, idx, line)
 				if not line.strip() or line.startswith('#'): # skip empty lines or comment lines
@@ -84,7 +84,7 @@ class FileConfigFiller(ConfigFiller):
 					try:
 						self._currentValue += '\n' + line.strip()
 						self._currentLines += [idx]
-					except:
+					except Exception:
 						raise ConfigError(exceptionText + '\nInvalid indentation!')
 				elif line.startswith('['):
 					if self._currentOption:
@@ -92,7 +92,7 @@ class FileConfigFiller(ConfigFiller):
 					try:
 						self._currentSection = line[1:line.index(']')].strip()
 						parseLine(idx, line[line.index(']') + 1:].strip())
-					except:
+					except Exception:
 						raise ConfigError(exceptionText + '\nUnable to parse config section!')
 				elif '=' in line:
 					if self._currentOption:
@@ -100,7 +100,7 @@ class FileConfigFiller(ConfigFiller):
 					try:
 						(self._currentOption, self._currentValue) = map(str.strip, line.split('=', 1))
 						self._currentLines = [idx]
-					except:
+					except Exception:
 						raise ConfigError(exceptionText + '\nUnable to parse config option!')
 				else:
 					raise ConfigError(exceptionText + '\nPlease use "key = value" syntax or indent values!')
@@ -108,7 +108,7 @@ class FileConfigFiller(ConfigFiller):
 				parseLine(idx, line)
 			if self._currentOption:
 				storeOption()
-		except:
+		except Exception:
 			raise RethrowError('Error while reading configuration file "%s"!' % configFile, ConfigError)
 
 	def _fillContentFromFile(self, configFile, searchPaths, configContent = {}):
@@ -176,7 +176,7 @@ class StringConfigFiller(ConfigFiller):
 				section, tmp = tuple(uopt.lstrip('[').split(']', 1))
 				option, value = tuple(map(str.strip, tmp.split('=', 1)))
 				self._addEntry(container, section, option, value, '<cmdline override>')
-			except:
+			except Exception:
 				raise RethrowError('Unable to parse option %s' % uopt, ConfigError)
 
 

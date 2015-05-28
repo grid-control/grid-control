@@ -1,4 +1,4 @@
-#-#  Copyright 2014 Karlsruhe Institute of Technology
+#-#  Copyright 2014-2015 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -25,7 +25,7 @@ class TaggedConfigView(SimpleConfigView):
 		if inheritSections:
 			try:
 				addSections = parent._cfgClassSections + addSections
-			except:
+			except Exception:
 				pass
 		SimpleConfigView.__init__(self, name, oldContainer, curContainer, parent,
 			setSections = setSections, addSections = addSections)
@@ -55,7 +55,7 @@ class TaggedConfigView(SimpleConfigView):
 		def myIndex(src, value):
 			try:
 				return src.index(value)
-			except:
+			except Exception:
 				return None
 		idxClass = myIndex(self._cfgClassSections, curSection)
 		idxSection = myIndex(self._cfgSections, curSection)

@@ -72,11 +72,11 @@ class TypedConfigInterface(object):
 			try:
 				if def2obj:
 					default_obj = def2obj(default_obj)
-			except:
+			except Exception:
 				raise APIError('Unable to convert default object: %s' % repr(default_obj))
 			try:
 				return obj2str(default_obj)
-			except:
+			except Exception:
 				raise APIError('Unable to get string representation of default object: %s' % repr(default_obj))
 		return noDefault
 
@@ -87,7 +87,7 @@ class TypedConfigInterface(object):
 				obj = str2obj(entry.value)
 				entry.value = obj2str(obj) # Update value of entry with formatted data
 				return obj
-			except:
+			except Exception:
 				raise RethrowError('Unable to parse %s: %s' % (entry_desc + desc,
 					entry.format(printSection = True)), ConfigError)
 		cur_obj = parseEntry(cur_entry)
@@ -120,7 +120,7 @@ class TypedConfigInterface(object):
 			source = '<%s by %s>' % (desc, self._getCaller())
 		try:
 			value = obj2str(set_obj)
-		except:
+		except Exception:
 			raise APIError('Unable to get string representation of set value: %s' % repr(set_obj))
 		entry = self._configView.set(standardConfigForm(option), value, opttype, source)
 		self._log.log(logging.INFO2, 'Setting %s %s %s ' % (desc, mode, entry.format(printSection = True)))
@@ -154,7 +154,7 @@ class TypedConfigInterface(object):
 		def str2obj(value):
 			try:
 				return utils.parseTime(value) # empty or negative values are mapped to -1
-			except:
+			except Exception:
 				raise ConfigError('Valid time expressions have the format: hh[:mm[:ss]]')
 		return self._getInternal('time', utils.strTimeShort, str2obj, None, option, default, **kwargs)
 	def setTime(self, option, value, opttype = '=', source = None):
@@ -185,7 +185,7 @@ class TypedConfigInterface(object):
 	def resolvePath(self, value, mustExist, errorMsg):
 		try:
 			return utils.resolvePath(value, self._configView.pathDict.get('search_paths', []), mustExist, ConfigError)
-		except:
+		except Exception:
 			raise RethrowError(errorMsg, ConfigError)
 
 	# Return resolved path (search paths given in pathDict['search_paths'])
@@ -208,7 +208,7 @@ class TypedConfigInterface(object):
 				for pattern in value:
 					for fn in utils.resolvePaths(pattern, self._configView.pathDict.get('search_paths', []), mustExist, ConfigError):
 						yield fn
-			except:
+			except Exception:
 				raise RethrowError('Error resolving pattern %s' % pattern, ConfigError)
 
 		str2obj = lambda value: list(patlist2pathlist(utils.parseList(value, None, onEmpty = []), mustExist))
@@ -267,7 +267,7 @@ class SimpleConfigInterface(TypedConfigInterface):
 			obj2str = lambda obj: {True: 'yes', False: 'no'}.get(obj), str2obj = utils.parseBool, **kwargs)
 
 	def getEnum(self, option, enum, default = noDefault, **kwargs):
-		return self.getChoice(option, enum.members, default, obj2str = lambda obj: enum.members[obj],
+		return self.getChoice(option, enum.allMembers, default, obj2str = lambda obj: enum.members[obj],
 			str2obj = lambda value: enum.memberDict[value], **kwargs)
 
 	def _getInternal(self, desc, obj2str, str2obj, def2obj, option, default_obj,
@@ -280,7 +280,7 @@ class SimpleConfigInterface(TypedConfigInterface):
 		while True:
 			try:
 				userInput = user_input('%s: ' % prompt)
-			except:
+			except Exception:
 				sys.stdout.write('\n')
 				sys.exit(os.EX_DATAERR)
 			if userInput == '':
@@ -288,7 +288,7 @@ class SimpleConfigInterface(TypedConfigInterface):
 			else:
 				try:
 					obj = str2obj(userInput)
-				except:
+				except Exception:
 					raise UserError('Unable to parse %s: %s' % (desc, userInput))
 					continue
 			break

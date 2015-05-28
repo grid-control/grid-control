@@ -1,4 +1,4 @@
-#-#  Copyright 2014 Karlsruhe Institute of Technology
+#-#  Copyright 2014-2015 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -51,7 +51,10 @@ class ConfigEntry(object):
 	def format(self, printSection = False, printDefault = False, default = noDefault):
 		if (self.value == noDefault) or (not printDefault and (self.value == default)):
 			return ''
-		return '%s %s %s' % (utils.QM(printSection, self.format_opt(), self.option), self.opttype, multi_line_format(self.value))
+		result = '%s %s' % (self.opttype, multi_line_format(self.value))
+		if printSection:
+			return '%s %s' % (self.format_opt(), result)
+		return '%s %s' % (self.option, result)
 
 	def processEntries(cls, entryList):
 		result = None
