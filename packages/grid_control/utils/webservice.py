@@ -17,13 +17,14 @@
 import urllib
 import urllib2
 import httplib
+from parsing import parseJSON
 
 try:
 	import requests
 except ImportError:
-	#fall back to urllib2
+	# fall back to urllib2
 
-	#fix ca verification error in Python 2.7.9
+	# fix ca verification error in Python 2.7.9
 	try:
 		import ssl
 		ssl._create_default_https_context = ssl._create_unverified_context

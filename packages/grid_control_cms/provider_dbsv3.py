@@ -1,4 +1,4 @@
-#-#  Copyright 2013-2014 Karlsruhe Institute of Technology
+#-#  Copyright 2013-2015 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -16,8 +16,8 @@ import os
 from grid_control import utils
 from grid_control.datasets import DataProvider
 from grid_control.exceptions import UserError
+from grid_control.utils.webservice import readJSON
 from grid_control_cms.provider_cms import CMSProvider
-from grid_control_cms.webservice_api import readJSON
 
 # required format: <dataset path>[@<instance>][#<block>]
 class DBS3Provider(CMSProvider):
@@ -29,6 +29,8 @@ class DBS3Provider(CMSProvider):
 
 
 	def queryDBSv3(self, api, **params):
+		if not os.environ.get('X509_USER_PROXY', ''):
+			raise UserError('VOMS proxy needed to query DBS3! Environment variable X509_USER_PROXY is not set!')
 		proxyPath = utils.resolvePath(os.environ.get('X509_USER_PROXY', ''), mustExist = False)
 		if not os.path.exists(proxyPath):
 			raise UserError('VOMS proxy needed to query DBS3! Environment variable X509_USER_PROXY is "%s"' % proxyPath)

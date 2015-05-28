@@ -1,4 +1,4 @@
-#-#  Copyright 2012-2014 Karlsruhe Institute of Technology
+#-#  Copyright 2012-2015 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -16,8 +16,8 @@ from grid_control import utils
 from grid_control.datasets import DataProvider, DataSplitter
 from grid_control.datasets.splitter_basic import HybridSplitter
 from grid_control.exceptions import ConfigError, DatasetError
+from grid_control.utils.webservice import readJSON
 from grid_control_cms.lumi_tools import formatLumi, parseLumiFilter, selectLumi
-from grid_control_cms.webservice_api import readJSON
 from python_compat import set, sorted
 
 # required format: <dataset path>[@<instance>][#<block>]

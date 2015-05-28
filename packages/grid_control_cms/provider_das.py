@@ -1,4 +1,4 @@
-#-#  Copyright 2009-2014 Karlsruhe Institute of Technology
+#-#  Copyright 2009-2015 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -16,8 +16,8 @@ import time
 from grid_control import utils
 from grid_control.datasets import DataProvider
 from grid_control.utils.parsing import parseJSON
+from grid_control.utils.webservice import readURL
 from grid_control_cms.provider_cms import CMSProvider
-from grid_control_cms.webservice_api import readURL
 
 # required format: <dataset path>[@<instance>][#<block>]
 class DASProvider(CMSProvider):
