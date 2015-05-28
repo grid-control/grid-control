@@ -1,5 +1,5 @@
 #!/bin/bash
-#-#  Copyright 2010-2011 Karlsruhe Institute of Technology
+#-#  Copyright 2009-2015 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -15,13 +15,18 @@
 
 if [ -z "$1" ]; then
 	echo "Usage: $0 DatasetName"
-	echo "The list of files is taken from stdin. Requires an CMSSW environment!"
+	echo "The list of files is taken from the standard input."
 	echo "Example:"
 	echo -e "\tls *.root | $0 MyDataset"
-	exit
+	exit 1
 fi
 
-echo [$1]
+if [ -z "$CMSSW_BASE" ]; then
+	echo "This script requires an CMSSW environment!"
+	exit 1
+fi
+
+echo "[$1]"
 while read FILE; do
 	EVENTS=`edmFileUtil -e file://$FILE | grep "^$FILE" | sed -e "s/.*( \(.*\)events.*/\1/"`
 	echo "file://`readlink -e $FILE` = $EVENTS"
