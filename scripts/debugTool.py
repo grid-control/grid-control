@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-#-#  Copyright 2010-2014 Karlsruhe Institute of Technology
+#-#  Copyright 2010-2015 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -123,7 +123,7 @@ if opts.state:
 	except:
 		print 'Invalid state: %s', opts.state
 	oldState = job.state
-	utils.vprint('Job state changed from %s to %s' % (Job.states[oldState], Job.states[newState]), -1, True)
+	utils.vprint('Job state changed from %s to %s' % (Job.members[oldState], Job.members[newState]), -1, True)
 	job.state = newState
 	utils.safeWrite(open(args[0], 'w'), utils.DictFormat(escapeString = True).format(job.getAll()))
 

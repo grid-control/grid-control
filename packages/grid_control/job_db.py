@@ -1,4 +1,4 @@
-#-#  Copyright 2007-2014 Karlsruhe Institute of Technology
+#-#  Copyright 2007-2015 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -18,17 +18,10 @@ from grid_control.abstract import LoadableObject
 from grid_control.exceptions import RethrowError, RuntimeError
 
 class Job:
-	states = ('INIT', 'SUBMITTED', 'DISABLED', 'READY', 'WAITING', 'QUEUED', 'ABORTED',
-		'RUNNING', 'CANCELLED', 'DONE', 'FAILED', 'SUCCESS')
-	_stateDict = {}
-	for idx, state in enumerate(states):
-		_stateDict[state] = idx
-		locals()[state] = idx
 	__internals = ('wmsId', 'status')
 
-
-	def __init__(self, state = INIT):
-		self.state = state
+	def __init__(self):
+		self.state = Job.INIT
 		self.nextstate = None
 		self.attempt = 0
 		self.history = {}
@@ -40,7 +33,8 @@ class Job:
 
 	def loadData(cls, name, data):
 		try:
-			job = Job(cls._stateDict[data.get('status', 'FAILED')])
+			job = Job()
+			job.state = Job.fromString(data.get('status', 'FAILED'))
 
 			if 'id' in data:
 				if not data['id'].startswith('WMSID'): # Legacy support
@@ -90,7 +84,7 @@ class Job:
 
 	def getAll(self):
 		data = self.dict
-		data['status'] = self.states[self.state]
+		data['status'] = Job.members[self.state]
 		data['attempt'] = self.attempt
 		data['submitted'] = self.submitted
 		data['changed'] = self.changed
@@ -122,6 +116,9 @@ class Job:
 		self.wmsId = wmsId
 		self.attempt = self.attempt + 1
 		self.submitted = time.time()
+
+utils.makeEnum(['INIT', 'SUBMITTED', 'DISABLED', 'READY', 'WAITING', 'QUEUED', 'ABORTED',
+		'RUNNING', 'CANCELLED', 'DONE', 'FAILED', 'SUCCESS'], Job)
 
 
 class JobClass:

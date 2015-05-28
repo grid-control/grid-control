@@ -36,6 +36,7 @@ class CPProgressBar:
 	</div>
 </div>""" % (self.width, int(self.width * self.done / 100), int(self.done))
 
+
 class TabularHTML:
 	def __init__(self, head, data, fmt = {}, top = True):
 		self.table = """
@@ -60,6 +61,7 @@ class TabularHTML:
 
 	def __str__(self):
 		return self.table
+
 
 class CPWebserver(GUI):
 	def __init__(self, jobCycle, jobMgr, task):
@@ -106,7 +108,7 @@ class CPWebserver(GUI):
 			], getJobObjs(),
 			fmt = {
 				'jobNum': lambda x: '<a href="jobs?job=%s">%s</a>' % (x, x),
-				'state': lambda s: Job.states[s],
+				'state': lambda s: Job.members[s],
 				'submitted': fmtTime
 			}, top = True))
 		result += '</body>'

@@ -1,4 +1,4 @@
-#-#  Copyright 2010-2014 Karlsruhe Institute of Technology
+#-#  Copyright 2010-2015 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -104,10 +104,10 @@ class BackendSelector(RegExSelector):
 
 class StateSelector(RegExSelector):
 	def __init__(self, arg, **kwargs):
-		predef = {'TODO': 'SUBMITTED,WAITING,READY,QUEUED', 'ALL': str.join(',', Job.states)}
+		predef = {'TODO': 'SUBMITTED,WAITING,READY,QUEUED', 'ALL': str.join(',', Job.members)}
 		RegExSelector.__init__(self, predef.get(arg.upper(), arg), None, lambda x: '^%s.*' % x.upper())
-		stateList = reduce(operator.add, map(lambda x: list(filter(x.match, Job.states)), self.rxList))
-		self.states = map(lambda x: list(Job.states).index(x), stateList)
+		stateList = reduce(operator.add, map(lambda x: list(filter(x.match, Job.members)), self.rxList))
+		self.states = map(lambda x: list(Job.members).index(x), stateList)
 
 	def __call__(self, jobNum, jobObj):
 		return jobObj.state in self.states

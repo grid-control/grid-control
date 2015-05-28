@@ -27,10 +27,6 @@ class WMS(NamedObject):
 	configSections = NamedObject.configSections + ['wms', 'backend']
 	tagName = 'wms'
 
-	reqTypes = ('WALLTIME', 'CPUTIME', 'MEMORY', 'CPUS', 'BACKEND', 'SITES', 'QUEUES', 'SOFTWARE', 'STORAGE')
-	for idx, reqType in enumerate(reqTypes):
-		locals()[reqType] = idx
-
 	def __init__(self, config, wmsName):
 		wmsName = utils.QM(wmsName, wmsName, self.__class__.__name__).upper().replace('.', '_')
 		NamedObject.__init__(self, config, wmsName)
@@ -89,7 +85,7 @@ class WMS(NamedObject):
 		except:
 			return utils.eprint('Warning: Unable to parse "%s"!' % fn)
 	parseJobInfo = staticmethod(parseJobInfo)
-
+utils.makeEnum(['WALLTIME', 'CPUTIME', 'MEMORY', 'CPUS', 'BACKEND', 'SITES', 'QUEUES', 'SOFTWARE', 'STORAGE'], WMS)
 
 class InactiveWMS(WMS):
 	def __init__(self, config, wmsName):

@@ -1,4 +1,4 @@
-#-#  Copyright 2009-2014 Karlsruhe Institute of Technology
+#-#  Copyright 2009-2015 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -21,12 +21,6 @@ from grid_control.exceptions import AbstractError
 from python_compat import StringBuffer
 
 class DataProvider(LoadableObject):
-	# To uncover errors, the enums of DataProvider / DataSplitter do *NOT* match
-	dataInfos = ['NEntries', 'BlockName', 'Dataset', 'Locations', 'URL', 'FileList',
-		'Nickname', 'DatasetID', 'Metadata', 'Provider', 'ResyncInfo']
-	for id, dataInfo in enumerate(dataInfos):
-		locals()[dataInfo] = id
-
 	def __init__(self, config, datasetExpr, datasetNick, datasetID):
 		(self._datasetExpr, self._datasetNick, self._datasetID) = (datasetExpr, datasetNick, datasetID)
 		self._cache = None
@@ -271,3 +265,6 @@ class DataProvider(LoadableObject):
 	resyncSources = staticmethod(resyncSources)
 
 DataProvider.providers = {}
+# To uncover errors, the enums of DataProvider / DataSplitter do *NOT* match type wise
+utils.makeEnum(['NEntries', 'BlockName', 'Dataset', 'Locations', 'URL', 'FileList',
+	'Nickname', 'DatasetID', 'Metadata', 'Provider', 'ResyncInfo'], DataProvider)

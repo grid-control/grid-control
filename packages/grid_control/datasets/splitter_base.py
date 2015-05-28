@@ -1,4 +1,4 @@
-#-#  Copyright 2009-2014 Karlsruhe Institute of Technology
+#-#  Copyright 2009-2015 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -37,11 +37,6 @@ ResyncMode.noChanged = [ResyncMode.disable, ResyncMode.complete, ResyncMode.igno
 ResyncOrder = utils.makeEnum(['append', 'preserve', 'fillgap', 'reorder']) # reorder mechanism
 
 class DataSplitter(LoadableObject):
-	splitInfos = ['Dataset', 'Locations', 'NEntries', 'Skipped', 'FileList', 'Nickname', 'DatasetID',
-		'CommonPrefix', 'Invalid', 'BlockName', 'MetadataHeader', 'Metadata', 'Comment']
-	for idx, splitInfo in enumerate(splitInfos):
-		locals()[splitInfo] = idx
-
 	def __init__(self, config):
 		self.config = config
 		self.splitSource = None
@@ -490,3 +485,6 @@ class DataSplitter(LoadableObject):
 			splitter._protocol.update(dict(map(meta2prot, src.metadata[section].items())))
 		return splitter
 	loadState = staticmethod(loadState)
+
+utils.makeEnum(['Dataset', 'Locations', 'NEntries', 'Skipped', 'FileList', 'Nickname', 'DatasetID',
+	'CommonPrefix', 'Invalid', 'BlockName', 'MetadataHeader', 'Metadata', 'Comment'], DataSplitter)
