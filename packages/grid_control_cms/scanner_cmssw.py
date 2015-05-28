@@ -1,4 +1,4 @@
-#-#  Copyright 2010-2014 Karlsruhe Institute of Technology
+#-#  Copyright 2010-2015 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -46,11 +46,16 @@ class ObjectsFromCMSSW(InfoScanner):
 		for cfg in filter(lambda x: not '/' in x and x not in ['version', 'files'], tar.getnames()):
 			try:
 				cfgContent = tar.extractfile('%s/config' % cfg).read()
-				cfgHash = tar.extractfile('%s/hash' % cfg).readlines()[-1].strip()
+				cfgHashResult = tar.extractfile('%s/hash' % cfg).readlines()
+				cfgHash = cfgHashResult[-1].strip()
 				metadata.setdefault('CMSSW_CONFIG_JOBHASH', []).append(cfgHash)
 				tmpCfg[cfg] = {'CMSSW_CONFIG_FILE': cfg, 'CMSSW_CONFIG_HASH': cfgHash, 'CMSSW_VERSION': cmsswVersion}
 				tmpCfg[cfg]['CMSSW_CONFIG_CONTENT'] = self.cfgStore.setdefault(utils.QM(self.mergeConfigs, cfgHash, cfg), cfgContent)
-				# Read global tag from config file
+				# Read global tag from config file - first from hash file, then from config file
+				if cfgHash not in self.gtStore:
+					gtLines = filter(lambda x: x.startswith('globaltag:'), cfgHashResult)
+					if gtLines:
+						self.gtStore[cfgHash] = gtLines[-1].split(':')[1].strip()
 				if cfgHash not in self.gtStore:
 					cfgContentEnv = {}
 					try:

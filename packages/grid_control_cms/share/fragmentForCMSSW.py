@@ -50,6 +50,11 @@ def customise_for_gc(process):
 	except:
 		pass
 
+	# Print GlobalTag for DBS3 registration - output is taken from edmConfigHash
+	try:
+		print 'globaltag:%s' % process.GlobalTag.globaltag.value()
+	except:
+		pass
 	return (process)
 
 process = customise_for_gc(process)
