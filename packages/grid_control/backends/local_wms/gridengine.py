@@ -1,4 +1,4 @@
-#-#  Copyright 2009-2014 Karlsruhe Institute of Technology
+#-#  Copyright 2009-2015 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -20,7 +20,7 @@ from grid_control.exceptions import ConfigError, RethrowError
 from grid_control.job_db import Job
 from python_compat import set
 
-class OGE(PBSGECommon):
+class GridEngine(PBSGECommon):
 	configSections = PBSGECommon.configSections + ['OGE']
 	def __init__(self, config, name):
 		PBSGECommon.__init__(self, config, name)
@@ -118,5 +118,11 @@ class OGE(PBSGECommon):
 			return list(result)
 
 
-class SGE(OGE):
-	configSections = OGE.configSections + ['SGE']
+class UGE(GridEngine): # Univa Grid Engine
+	configSections = GridEngine.configSections + ['UGE']
+
+class OGE(GridEngine): # Oracle Grid Engine
+	configSections = GridEngine.configSections + ['OGE']
+
+class SGE(GridEngine): # Sun Grid Engine
+	configSections = GridEngine.configSections + ['SGE']

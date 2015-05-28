@@ -15,9 +15,8 @@
 from grid_control import utils
 from grid_control.backends.grid_wms.grid_wms import GridWMS, jdlEscape
 
-class LCG(GridWMS):
+class EuropeanDataGrid(GridWMS):
 	def __init__(self, config, name):
-		utils.deprecated('Please use the GliteWMS backend for grid jobs!')
 		GridWMS.__init__(self, config, name)
 
 		self._submitExec = utils.resolveInstallPath('edg-job-submit')
@@ -31,3 +30,10 @@ class LCG(GridWMS):
 		fmt = lambda x: '(target.GlueSEUniqueID == %s)' % jdlEscape(x)
 		if sites:
 			return 'anyMatch(other.storage.CloseSEs, ' + str.join(' || ', map(fmt, sites)) + ')'
+
+
+class EDG(EuropeanDataGrid):
+	pass
+
+class LCG(EuropeanDataGrid):
+	pass
