@@ -26,6 +26,10 @@ class DBS3Provider(CMSProvider):
 		self.usePhedex = (self.url == '') # Use DBS locality for private samples
 		if self.url == '':
 			self.url = 'https://cmsweb.cern.ch/dbs/prod/global/DBSReader'
+		elif '/' not in self.url: # assume prod instance
+			self.url = 'https://cmsweb.cern.ch/dbs/prod/%s/DBSReader' % self.url
+		elif not self.url.startswith('http'): # eg. prod/phys03
+			self.url = 'https://cmsweb.cern.ch/dbs/%s/DBSReader' % self.url
 
 
 	def queryDBSv3(self, api, **params):

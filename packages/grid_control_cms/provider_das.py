@@ -23,10 +23,19 @@ from grid_control_cms.provider_cms import CMSProvider
 class DASProvider(CMSProvider):
 	def __init__(self, config, datasetExpr, datasetNick, datasetID = 0):
 		CMSProvider.__init__(self, config, datasetExpr, datasetNick, datasetID)
+		self._instance = ''
+		if '/' not in self.url:
+			self._instance = 'prod/%s' % self.url
+			self.url = ''
+		elif not self.url.startswith('http'):
+			self._instance = self.url
+			self.url = ''
 		self.url = utils.QM(self.url == '', 'https://cmsweb.cern.ch/das/cache', self.url)
 
 
 	def queryDAS(self, query):
+		if self._instance:
+			query += ' instance=%s' % self._instance
 		(start, sleep) = (time.time(), 0.4)
 		while time.time() - start < 60:
 			tmp = readURL(self.url, {"input": query}, {"Accept": "application/json"})
