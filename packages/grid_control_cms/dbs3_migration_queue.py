@@ -12,10 +12,10 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-from Queue import Queue
-from Queue import Empty
+from collections import deque
 from time import time
 
+import cPickle as pickle
 import logging
 
 
@@ -53,6 +53,7 @@ class MigrationSubmittedState(object):
                                                  % (self.migration_task, request_status[0]['migration_status']))
             except AttributeError:
                 #simulation
+                print "Simulation"
                 request_status = [{'migration_status': 2}]
                 self.migration_task.logger.debug("%s has migration_status=%s"
                                                  % (self.migration_task, request_status[0]['migration_status']))
@@ -123,6 +124,22 @@ class MigrationTask(object):
         return '%s(block_name="%s", migration_url="%s")' % (self.__class__.__name__, self.block_name,
                                                             self.migration_url)
 
+    def __getstate__(self):
+        """
+        Logger object cannot be pickled
+        """
+        state = dict(self.__dict__)
+        del state['logger']
+        return state
+
+    def __setstate__(self, state):
+        """
+        Logger object cannot be pickled, restore logger attribute
+        """
+        state['logger'] = logging.getLogger('dbs3-migration')
+        self.__dict__.update(state)
+        return True
+
 
 class AlreadyQueued(Exception):
     def __init__(self, message):
@@ -148,25 +165,34 @@ class MigrationFailed(Exception):
         return repr(self.message)
 
 
-class DBS3MigrationQueue(Queue):
+class DBS3MigrationQueue(deque):
     _unique_queued_tasks = set()
 
-    def __init__(self, maxsize=0):
-        Queue.__init__(self, maxsize)
+    def __init__(self, tasks=None, maxlen=None):
+        super(DBS3MigrationQueue, self).__init__(iterable=tasks or [], maxlen=maxlen)
 
     def add_migration_task(self, migration_task):
         if migration_task not in self._unique_queued_tasks:
             self._unique_queued_tasks.add(migration_task)
-            self.put(migration_task)
+            self.append(migration_task)
         else:
             raise AlreadyQueued('%s is already queued!' % migration_task)
+
+    @staticmethod
+    def read_from_disk(filename):
+        with open(filename, 'r') as f:
+            return pickle.load(f)
+
+    def save_to_disk(self, filename):
+        with open(filename, 'w') as f:
+            pickle.dump(self, f)
 
 
 def do_migration(queue):
     while True:
         try:
-            task = queue.get(block=False)
-        except Empty:
+            task = queue.popleft()
+        except IndexError:
             #quit worker, means all tasks are done
             break
         try:
@@ -176,12 +202,10 @@ def do_migration(queue):
         else:
             if not (task.is_done() or task.is_failed()):
                 #re-queue task for further processing
-                queue.put(task)
+                queue.append(task)
             else:
                 #last execution of run, to print final migration done/failed message
                 task.run()
-        finally:
-            queue.task_done()
 
 
 if __name__ == '__main__':
@@ -201,4 +225,7 @@ if __name__ == '__main__':
         except AlreadyQueued as aq:
             logger.warning(aq.message)
 
-    do_migration(migration_queue)
+    migration_queue.save_to_disk('test.pkl')
+    del migration_queue
+    new_migration_queue = DBS3MigrationQueue.read_from_disk('test.pkl')
+    do_migration(new_migration_queue)
