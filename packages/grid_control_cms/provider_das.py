@@ -15,8 +15,9 @@
 import time
 from grid_control import utils
 from grid_control.datasets import DataProvider
+from grid_control.utils.parsing import parseJSON
 from grid_control_cms.provider_cms import CMSProvider
-from grid_control_cms.webservice_api import parseJSON, readURL
+from grid_control_cms.webservice_api import readURL
 
 # required format: <dataset path>[@<instance>][#<block>]
 class DASProvider(CMSProvider):
@@ -30,7 +31,7 @@ class DASProvider(CMSProvider):
 		while time.time() - start < 60:
 			tmp = readURL(self.url, {"input": query}, {"Accept": "application/json"})
 			if len(tmp) != 32:
-				return parseJSON(tmp)['data']
+				return parseJSON(tmp.replace('\'', '"'))['data']
 			time.sleep(sleep)
 			sleep += 0.4
 
