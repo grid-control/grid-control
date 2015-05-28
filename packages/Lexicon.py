@@ -6,7 +6,7 @@ A set of regular expressions  and other tests that we can use to validate input
 to other classes. If a test fails an AssertionError should be raised, and
 handled appropriately by the client methods, on success returns True.
 
-from https://raw.githubusercontent.com/dmwm/WMCore/master/src/python/WMCore/Lexicon.py
+taken from https://raw.githubusercontent.com/dmwm/WMCore/master/src/python/WMCore/Lexicon.py
 and modified
 """
 

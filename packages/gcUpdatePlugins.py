@@ -51,6 +51,7 @@ if __name__ == '__main__':
 	for imp in recurse('.'):
 		try:
 			exec(imp)
+			str = __builtins__.str # undo unicode magic by externals
 			clsList.extend(filter(lambda x: sc(x, LoadableObject), map(eval, list(dir()))))
 		except:
 			print('Unable to exec "%s"!' % imp)
@@ -76,4 +77,4 @@ if __name__ == '__main__':
 				if cls not in [LoadableObject, NamedObject]:
 					outputLine += ('%s\t%s\n' % (cls.__module__, cls.__name__))
 			output.append(outputLine)
-		open(os.path.join(package, '.PLUGINS'), 'w').write(str.join('\n', output))
+		open(os.path.join(package, '.PLUGINS'), 'wb').write(str.join('\n', output))
