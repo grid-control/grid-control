@@ -1,4 +1,4 @@
-#-#  Copyright 2013-2014 Karlsruhe Institute of Technology
+#-#  Copyright 2013-2015 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -56,7 +56,7 @@ class LoadableObject(object):
 				log.log(logging.DEBUG2, 'Searching for class %s:%s' % (clsModule.__name__, clsName))
 				try:
 					clsLoadedList.append(getattr(clsModule, clsName))
-				except:
+				except Exception:
 					log.log(logging.DEBUG2, 'Unable to import class %s:%s' % (clsModule.__name__, clsName))
 
 			for clsLoaded in clsLoadedList:
@@ -70,7 +70,7 @@ class LoadableObject(object):
 				clsSearchList.append(clsMapResult)
 			else:
 				clsSearchList.extend(clsMapResult)
-		raise ConfigError('Unable to load %s of type %s' % (clsNameStored, clsFormat(cls)))
+		raise ConfigError('Unable to load %r of type %r' % (clsNameStored, clsFormat(cls)))
 
 	getClass = classmethod(getClass)
 
@@ -132,7 +132,7 @@ class ClassWrapper:
 	def __eq__(self, other): # Used to check for changes compared to old
 		return str(self) == str(other)
 
-	def __str__(self):
+	def __repr__(self):
 		return '<class wrapper for %r (base: %r)>' % (str(self), self._baseClass.__name__)
 
 	def __str__(self):  # Used to serialize config setting
@@ -140,11 +140,18 @@ class ClassWrapper:
 			return self._instClassName
 		return '%s:%s' % (self._instClassName, self._instName)
 
-	def getInstance(self, *args, **kwargs):
-		from grid_control.config import SimpleConfigView, TaggedConfigView
+	def getObjectName(self):
+		return self._instName
+
+	def getClass(self):
+		from grid_control.config import SimpleConfigView
 		configLoader = self._config.changeView(viewClass = SimpleConfigView, setSections = ['global'])
 		modulePaths = configLoader.getPaths('module paths', mustExist = False, onChange = None)
-		cls = self._baseClass.getClass(self._instClassName, modulePaths)
+		return self._baseClass.getClass(self._instClassName, modulePaths)
+
+	def getInstance(self, *args, **kwargs):
+		from grid_control.config import TaggedConfigView
+		cls = self.getClass()
 		if issubclass(cls, NamedObject):
 			config = self._config.changeView(viewClass = TaggedConfigView,
 				setClasses = [cls], setSections = None, setNames = [self._instName],
