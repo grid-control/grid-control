@@ -155,7 +155,7 @@ DEFAULT: The default is to download the SE file and check them with MD5 hashes.
 		sys.stderr.write('usage: %s [options] <config file>\n\n' % os.path.basename(sys.argv[0]))
 		sys.stderr.write('Config file not specified!\n')
 		sys.stderr.write('Use --help to get a list of options!\n')
-		sys.exit(0)
+		sys.exit(os.EX_USAGE)
 
 	while True:
 		try:
@@ -165,7 +165,7 @@ DEFAULT: The default is to download the SE file and check them with MD5 hashes.
 		except KeyboardInterrupt:
 			raise
 			print '\n\nDownload aborted!\n'
-			sys.exit(1)
+			sys.exit(os.EX_TEMPFAIL)
 
 
 def dlfs_rm(path, msg):
@@ -180,7 +180,7 @@ def realmain(opts, args):
 		proxy = Proxy.getInstance(opts.proxy, gcSupport.getConfig(configDict = {'proxy': {'ignore warnings': 'True'}}), 'proxy')
 	except:
 		sys.stderr.write(logException())
-		sys.exit(1)
+		sys.exit(os.EX_UNAVAILABLE)
 
 	(workDir, config, jobDB) = gcSupport.initGC(args)
 	jobList = jobDB.getJobs(ClassSelector(JobClass.SUCCESS))
@@ -211,7 +211,7 @@ def realmain(opts, args):
 
 		if not proxy.canSubmit(20*60, True):
 			sys.stderr.write('Please renew grid proxy!')
-			sys.exit(1)
+			sys.exit(os.EX_UNAVAILABLE)
 
 		# Read the file hash entries from job info file
 		files = FileInfoProcessor().process(os.path.join(workDir, 'output', 'job_%d' % jobNum))
@@ -464,8 +464,8 @@ def realmain(opts, args):
 		print
 
 	if ('Downloaded' in infos) and (infos['Downloaded'] == len(jobDB)):
-		return True
-	return False
+		return os.EX_OK
+	return os.EX_NOINPUT
 
 if __name__ == '__main__':
 	sys.exit(main(sys.argv[1:]))

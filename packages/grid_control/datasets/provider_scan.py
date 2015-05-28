@@ -1,4 +1,4 @@
-#-#  Copyright 2010-2014 Karlsruhe Institute of Technology
+#-#  Copyright 2010-2015 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -12,7 +12,7 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-import os
+import os, sys
 from grid_control import utils
 from grid_control.config import createConfigFactory
 from grid_control.datasets.provider_base import DataProvider
@@ -96,7 +96,7 @@ class ScanProviderBase(DataProvider):
 							for x in filter(lambda (k, v): k in hashKeys, varDict[keyFmt(key)].items()):
 								utils.eprint('\t\t%s = %s' % x)
 					if ask and not utils.getUserBool('Do you want to continue?', False):
-						sys.exit(0)
+						sys.exit(os.EX_OK)
 					ask = False
 		findCollision('dataset', hashNameDictDS, commonDS, keysDS)
 		findCollision('block', hashNameDictB, commonB, keysB, lambda x: x[1])

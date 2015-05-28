@@ -90,7 +90,7 @@ def initGC(args):
 			userSelector = JobSelector.create(args[1])
 		return (config.getWorkPath(), config, JobDB(config, jobSelector = userSelector))
 	sys.stderr.write('Syntax: %s <config file> [<job id>, ...]\n\n' % sys.argv[0])
-	sys.exit(1)
+	sys.exit(os.EX_USAGE)
 
 
 def getWorkJobs(args, selector = None):

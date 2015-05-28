@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-#-#  Copyright 2011-2014 Karlsruhe Institute of Technology
+#-#  Copyright 2011-2015 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -27,7 +27,7 @@ parser.add_option('-n', '--nickproducer', dest='nprod', default='SimpleNickNameP
 def main():
 	if len(args) == 0:
 		print 'Dataset path not specified!'
-		sys.exit(0)
+		sys.exit(os.EX_USAGE)
 	datasetPath = args[0]
 	if '*' in datasetPath:
 		dbs3 = DBS3Provider(getConfig(), datasetPath, None)

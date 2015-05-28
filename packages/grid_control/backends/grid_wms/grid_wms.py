@@ -117,7 +117,7 @@ class GridWMS(BasicWMS):
 		sbSizes = map(os.path.getsize, sbIn)
 		if sbSizes and (self._warnSBSize > 0) and (sum(sbSizes) > self._warnSBSize):
 			if not utils.getUserBool('Sandbox is very large (%d bytes) and can cause issues with the WMS! Do you want to continue?' % sum(sbSizes), False):
-				sys.exit(0)
+				sys.exit(os.EX_OK)
 			self._warnSBSize = 0
 
 		reqs = self.brokerSite.brokerAdd(module.getRequirements(jobNum), WMS.SITES)

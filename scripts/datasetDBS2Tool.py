@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-#-#  Copyright 2014 Karlsruhe Institute of Technology
+#-#  Copyright 2009-2015 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -52,7 +52,7 @@ if opts.lumiranges:
 	mkDict = lambda (ds, min_max): {0: ds, 1: min_max[0], 2: min_max[1]}
 	print
 	utils.printTabular([(0, 'Dataset'), (1, 'MinRun'), (2, 'MaxRun')], map(mkDict, lrInfo.items()))
-	sys.exit(0)
+	sys.exit(os.EX_OK)
 
 api = createDBSAPI(opts.url)
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-#-#  Copyright 2009-2014 Karlsruhe Institute of Technology
+#-#  Copyright 2009-2015 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -420,7 +420,7 @@ try:
 
 	provider.saveState(os.path.join(opts.tmpDir, 'dbs.dat'))
 	if opts.discovery:
-		sys.exit(0)
+		sys.exit(os.EX_OK)
 	blocks = provider.getBlocks()
 
 	# 2) Filter datasets
@@ -433,7 +433,7 @@ try:
 		(blocksAdded, blocksMissing, blocksChanged) = DataProvider.resyncSources(oldBlocks, blocks)
 		if len(blocksMissing) or len(blocksChanged):
 			if not utils.getUserBool(' * WARNING: Block structure has changed! Continue?', False):
-				sys.exit(0)
+				sys.exit(os.EX_OK)
 		# Search for blocks which were partially added and generate "pseudo"-blocks with left over files
 		setOldBlocks = set(map(lambda x: x[DataProvider.BlockName], oldBlocks))
 		setAddedBlocks = set(map(lambda x: x[DataProvider.BlockName], blocksAdded))
@@ -451,7 +451,7 @@ try:
 	# 4) Translate into DBSXML
 	xmlFiles = createDBSXMLDumps(opts, blocks)
 	if not opts.doImport or opts.display_cfg or opts.display_data:
-		sys.exit(0)
+		sys.exit(os.EX_OK)
 
 	# 5) Migrate parent datasets
 	if opts.importParents:
@@ -465,7 +465,7 @@ try:
 			utils.vprint(' * The following parents will be needed at the target dbs instance:', -1)
 			utils.vprint(str.join('\n', map(lambda x: '   * %s' % x, parents)), -1)
 			if not (opts.batch or utils.getUserBool(' * Register these parents?', True)):
-				sys.exit(0)
+				sys.exit(os.EX_OK)
 			for parent in parents:
 				registerParent(opts, parent)
 

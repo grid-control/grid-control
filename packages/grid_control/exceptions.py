@@ -1,4 +1,4 @@
-#-#  Copyright 2010-2014 Karlsruhe Institute of Technology
+#-#  Copyright 2007-2014 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -12,7 +12,7 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-import sys, logging
+import os, sys, logging
 from python_compat import sorted
 
 # Exception handler which outputs a stack trace to the logging facility
@@ -87,7 +87,7 @@ def handleException(fun, *args, **kwargs):
 				sys.stderr.write('In case this is caused by a bug, please send the log file:\n')
 				sys.stderr.write('\t"%s"\nto grid-control-dev@googlegroups.com\n' % handler.baseFilename)
 				break
-		sys.exit(1)
+		sys.exit(os.EX_SOFTWARE)
 
 # grid-control exception base class
 class GCError(Exception):

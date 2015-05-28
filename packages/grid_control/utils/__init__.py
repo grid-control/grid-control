@@ -1,4 +1,4 @@
-#-#  Copyright 2007-2014 Karlsruhe Institute of Technology
+#-#  Copyright 2007-2015 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -870,7 +870,7 @@ def getUserInput(text, default, choices, parser = lambda x: x):
 			userinput = user_input('%s %s: ' % (text, '[%s]' % default))
 		except:
 			eprint()
-			sys.exit(0)
+			sys.exit(os.EX_OK)
 		if userinput == '':
 			return parser(default)
 		if parser(userinput) != None:
@@ -886,13 +886,13 @@ def getUserBool(text, default):
 def deprecated(text):
 	eprint('%s\n[DEPRECATED] %s' % (open(pathShare('fail.txt'), 'r').read(), text))
 	if not getUserBool('Do you want to continue?', False):
-		sys.exit(0)
+		sys.exit(os.EX_TEMPFAIL)
 
 
 def exitWithUsage(usage, msg = None, helpOpt = True):
 	sys.stderr.write(QM(msg, '%s\n' % msg, ''))
 	sys.stderr.write('Syntax: %s\n%s' % (usage, QM(helpOpt, 'Use --help to get a list of options!\n', '')))
-	sys.exit(0)
+	sys.exit(os.EX_USAGE)
 
 
 def makeEnum(members = [], cls = None):

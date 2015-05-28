@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-#-#  Copyright 2010-2014 Karlsruhe Institute of Technology
+#-#  Copyright 2010-2015 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -106,7 +106,7 @@ def main():
 							readDict[outputName] = 0
 						readDict[outputName] += int(inFile.getElementsByTagName('EventsRead')[0].childNodes[0].data)
 			except KeyboardInterrupt:
-				sys.exit(0)
+				sys.exit(os.EX_OK)
 			except:
 				raise
 				print 'Error while parsing framework output of job %s!' % jobNum

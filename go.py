@@ -71,7 +71,7 @@ if __name__ == '__main__':
 	(opts, args) = parser.parse_args()
 	if opts.help:
 		utils.eprint('%s\n%s' % (usage, open(utils.pathShare('help.txt'), 'r').read()))
-		sys.exit(0)
+		sys.exit(os.EX_USAGE)
 
 	utils.verbosity(opts.verbosity)
 	logging.getLogger().setLevel(logging.DEFAULT - opts.verbosity)
@@ -130,15 +130,15 @@ if __name__ == '__main__':
 		if opts.help_cfg or opts.help_scfg:
 			config.write(sys.stdout, printDefault = opts.help_cfg, printUnused = False,
 				printMinimal = opts.help_scfg, printSource = opts.help_cfg)
-			sys.exit(0)
+			sys.exit(os.EX_OK)
 
 		# Check if user requested deletion / reset of jobs
 		if opts.delete:
 			workflow.jobManager.delete(workflow.wms, opts.delete)
-			sys.exit(0)
+			sys.exit(os.EX_OK)
 		if opts.reset:
 			workflow.jobManager.reset(workflow.wms, opts.reset)
-			sys.exit(0)
+			sys.exit(os.EX_OK)
 		# Run the configured workflow
 		workflow.run()
 

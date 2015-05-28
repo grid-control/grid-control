@@ -125,7 +125,7 @@ class FilesFromJobInfo(InfoScanner):
 					'SE_OUTPUT_BASE': os.path.splitext(name_local)[0], 'SE_OUTPUT_PATH': pathSE})
 				yield (os.path.join(pathSE, name_dest), metadata, events, seList, objStore)
 		except KeyboardInterrupt:
-			sys.exit(0)
+			sys.exit(os.EX_TEMPFAIL)
 		except:
 			raise RethrowError('Unable to read job results from %s!' % jobInfoPath)
 

@@ -282,7 +282,7 @@ class SimpleConfigInterface(TypedConfigInterface):
 				userInput = user_input('%s: ' % prompt)
 			except:
 				sys.stdout.write('\n')
-				sys.exit(0)
+				sys.exit(os.EX_DATAERR)
 			if userInput == '':
 				obj = default_obj
 			else:

@@ -407,7 +407,6 @@ wipp-crm.weizmann.ac.il
 			print line
 			print '\t%r: %r' % (line, geocode(line))
 #			if counter == 3:
-#				sys.exit(0)
 		else:
 			used.add(match)
 	print counter, "unmatched entries"
