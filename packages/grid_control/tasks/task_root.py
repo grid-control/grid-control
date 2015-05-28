@@ -1,4 +1,4 @@
-#-#  Copyright 2010-2014 Karlsruhe Institute of Technology
+#-#  Copyright 2010-2015 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -54,7 +54,8 @@ class ROOTTask(UserTask):
 
 
 	def getSBInFiles(self):
-		return UserTask.getSBInFiles(self) + self.libFiles + [utils.pathShare('gc-run.root.sh')]
+		return UserTask.getSBInFiles(self) + self.libFiles + [
+			utils.Result(pathAbs = utils.pathShare('gc-run.root.sh'), pathRel = 'gc-run.root.sh')]
 
 
 class ROOTMod(ROOTTask):

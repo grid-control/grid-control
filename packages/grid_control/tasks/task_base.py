@@ -96,7 +96,7 @@ class TaskModule(NamedObject):
 			'SE_MINFILESIZE': self.seMinSize,
 			# Sandbox
 			'SB_OUTPUT_FILES': str.join(' ', self.getSBOutFiles()),
-			'SB_INPUT_FILES': str.join(' ', map(os.path.basename, self.getSBInFiles())),
+			'SB_INPUT_FILES': str.join(' ', map(lambda x: x.pathRel, self.getSBInFiles())),
 			# Runtime
 			'GC_JOBTIMEOUT': self.nodeTimeout,
 			'MY_RUNTIME': self.getCommand(),
@@ -169,7 +169,7 @@ class TaskModule(NamedObject):
 
 	# Get files for input sandbox
 	def getSBInFiles(self):
-		return list(self.sbInputFiles)
+		return map(lambda fn: utils.Result(pathAbs = fn, pathRel = os.path.basename(fn)), self.sbInputFiles)
 
 
 	# Get files for output sandbox
@@ -199,7 +199,8 @@ class TaskModule(NamedObject):
 
 
 	def getDescription(self, jobNum): # (task name, job name, job type)
-		return (self.taskID, self.taskID[:10] + '.' + str(jobNum), None)
+		return utils.Result(taskName = self.taskID,
+			jobName = self.taskID[:10] + '.' + str(jobNum), jobType = None)
 
 
 	def report(self, jobNum):

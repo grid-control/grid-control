@@ -23,9 +23,9 @@ class DashBoard(Monitoring):
 
 	def __init__(self, config, name, task):
 		Monitoring.__init__(self, config, name, task)
-		(taskName, jobName, jobType) = task.getDescription(None) # TODO: use the other variables for monitoring
+		jobDesc = task.getDescription(None) # TODO: use the other variables for monitoring
 		self.app = config.get('application', 'shellscript', onChange = None)
-		jobType = utils.QM(jobType, jobType, 'analysis')
+		jobType = utils.QM(jobDesc.jobType, jobDesc.jobType, 'analysis')
 		self.tasktype = config.get('task', jobType, onChange = None)
 		self.taskname = config.get('task name', '@TASK_ID@_@DATASETNICK@', onChange = None)
 		self._statusMap = {Job.DONE: 'DONE', Job.FAILED: 'DONE', Job.SUCCESS: 'DONE',

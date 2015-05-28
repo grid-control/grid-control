@@ -244,6 +244,17 @@ def abort(new = None):
 ################################################################
 # Dictionary tools
 
+def formatDict(d, fmt = '%s=%r', joinStr = ', '):
+	return str.join(joinStr, map(lambda k: fmt % (k, d[k]), sorted(d)))
+
+
+class Result: # Use with caution! Compared with tuples: +25% accessing, 8x slower instantiation
+	def __init__(self, **kwargs):
+		self.__dict__ = kwargs 
+	def __repr__(self):
+		return 'Result(%s)' % formatDict(self.__dict__, '%s=%r')
+
+
 def mergeDicts(dicts):
 	tmp = dict()
 	for x in dicts:

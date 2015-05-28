@@ -35,7 +35,7 @@ class WMS(NamedObject):
 		self._wait_work = config.getInt('wait work', 10, onChange = None)
 
 	def getTimings(self): # Return (waitIdle, wait)
-		return (self._wait_idle, self._wait_work)
+		return utils.Result(waitOnIdle = self._wait_idle, waitBetweenSteps = self._wait_work)
 
 	def canSubmit(self, neededTime, canCurrentlySubmit):
 		raise AbstractError
@@ -272,12 +272,12 @@ class BasicWMS(WMS):
 		# Resolve wildcards in task input files
 		def getTaskFiles():
 			for f in task.getSBInFiles():
-				matched = glob.glob(f)
+				matched = glob.glob(f.pathAbs)
 				if matched != []:
 					for match in matched:
 						yield match
 				else:
-					yield f
+					yield f.pathAbs
 		return list(itertools.chain(monitor.getFiles(), depFiles, getTaskFiles(),
 			[VirtualFile('_config.sh', taskConfig), VirtualFile('_varmap.dat', varMapping)]))
 

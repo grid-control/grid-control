@@ -135,7 +135,7 @@ class HTCScheddBase(LoadableObject):
 
 	def getTimings(self):
 		"""Return suggested Idle/Active polling interval"""
-		return (60,10)
+		return utils.Result(waitOnIdle = 60, waitBetweenSteps = 10)
 
 	def getCanSubmit(self):
 		"""Return whether submission to this Schedd is possible"""
@@ -365,7 +365,7 @@ class HTCScheddLocal(HTCScheddCLIBase):
 	_adapterMaxWait   = 30
 
 	def getTimings(self):
-		return (20,5)
+		return utils.Result(waitOnIdle = 20, waitBetweenSteps = 5)
 
 	def getJobsOutput(self, htcIDs):
 		return htcIDs
@@ -437,7 +437,7 @@ class HTCScheddSpool(HTCScheddLocal):
 	_submitScale = 10
 	_adapterMaxWait   = 30
 	def getTimings(self):
-		return (30,5)
+		return utils.Result(waitOnIdle = 30, waitBetweenSteps = 5)
 
 	def getJobsOutput(self, htcIDs):
 		self._condor_transfer_data(htcIDs)
@@ -502,7 +502,7 @@ class HTCScheddSSH(HTCScheddCLIBase):
 		self._stageDirCache = {}
 
 	def getTimings(self):
-		return (60,10)
+		return utils.Result(waitOnIdle = 60, waitBetweenSteps = 10)
 
 	def getJobsOutput(self, htcIDs):
 		retrievedJobs = []

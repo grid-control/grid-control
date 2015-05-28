@@ -1,4 +1,4 @@
-#-#  Copyright 2012-2014 Karlsruhe Institute of Technology
+#-#  Copyright 2012-2015 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -14,6 +14,7 @@
 
 from grid_control.backends.broker import Broker
 from grid_control.backends.wms import WMS
+from grid_control.utils import Result
 
 # Distribute to WMS according to job id prefix
 
@@ -24,12 +25,12 @@ class MultiWMS(WMS):
 		WMS.__init__(self, config, None)
 
 		# Determine WMS timings
-		waitIdle, waitDefault = self.defaultWMS.getTimings()
+		defaultT = self.defaultWMS.getTimings()
+		self.timing = Result(waitOnIdle = defaultT.waitOnIdle, waitBetweenSteps = defaultT.waitBetweenSteps)
 		for wmsPrefix, wmsObj in self.wmsMap.items():
-			wi, wd = wmsObj.getTimings()
-			waitIdle = max(waitIdle, wi)
-			waitDefault = max(waitDefault, wd)
-		self.timing = (waitIdle, waitDefault)
+			wmsT = wmsObj.getTimings()
+			self.timing.waitOnIdle = max(self.timing.waitOnIdle, wmsT.waitOnIdle)
+			self.timing.waitBetweenSteps = max(self.timing.waitBetweenSteps, wmsT.waitBetweenSteps)
 		self.brokerWMS = config.getClass('wms broker', 'RandomBroker',
 			cls = Broker, tags = [self]).getInstance('wms', 'wms', self.wmsMap.keys)
 

@@ -1,4 +1,4 @@
-#-#  Copyright 2013-2014 Karlsruhe Institute of Technology
+#-#  Copyright 2013-2015 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -43,4 +43,6 @@ class TaskExecutableWrapper:
 
 
 	def getSBInFiles(self):
-		return utils.QM(self._executableSend and self._executable, [self._executable], [])
+		if self._executableSend and self._executable:
+			return [utils.Result(pathAbs = self._executable, pathRel = os.path.basename(self._executable))]
+		return []

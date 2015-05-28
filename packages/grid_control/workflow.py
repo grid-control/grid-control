@@ -1,4 +1,4 @@
-#-#  Copyright 2014 Karlsruhe Institute of Technology
+#-#  Copyright 2014-2015 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -62,7 +62,7 @@ class Workflow(NamedObject):
 
 	# Job submission loop
 	def jobCycle(self, wait = utils.wait):
-		(waitIdle, waitWork) = self.wms.getTimings()
+		wmsTiming = self.wms.getTimings()
 		while True:
 			(didWait, lastSpaceMsg) = (False, 0)
 			# Check whether wms can submit
@@ -77,20 +77,20 @@ class Workflow(NamedObject):
 				for action in map(str.lower, self._actionList):
 					if action.startswith('c') and not utils.abort():   # check for jobs
 						if self.jobManager.check(self.wms):
-							didWait = wait(waitWork)
+							didWait = wait(wmsTiming.waitBetweenSteps)
 					elif action.startswith('r') and not utils.abort(): # retrieve finished jobs
 						if self.jobManager.retrieve(self.wms):
-							didWait = wait(waitWork)
+							didWait = wait(wmsTiming.waitBetweenSteps)
 					elif action.startswith('s') and not utils.abort() and self._submitFlag:
 						if self.jobManager.submit(self.wms):
-							didWait = wait(waitWork)
+							didWait = wait(wmsTiming.waitBetweenSteps)
 
 			# quit if abort flag is set or not in continuous mode
 			if utils.abort() or not self.runContinuous:
 				break
 			# idle timeout
 			if not didWait:
-				wait(waitIdle)
+				wait(wmsTiming.waitOnIdle)
 
 	def run(self):
 		self._gui.displayWorkflow()

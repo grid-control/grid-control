@@ -134,7 +134,7 @@ class LocalWMS(BasicWMS):
 			reqs[WMS.MEMORY] = self.memory # local jobs need higher (more realistic) memory requirements
 
 		(stdout, stderr) = (os.path.join(sandbox, 'gc.stdout'), os.path.join(sandbox, 'gc.stderr'))
-		(taskName, jobName, jobType) = module.getDescription(jobNum)
+		jobName = module.getDescription(jobNum).jobName
 		proc = utils.LoggedProcess(self.submitExec, '%s %s "%s" %s' % (self.submitOpts,
 			self.getSubmitArguments(jobNum, jobName, reqs, sandbox, stdout, stderr),
 			utils.pathShare('gc-local.sh'), self.getJobArguments(jobNum, sandbox)))

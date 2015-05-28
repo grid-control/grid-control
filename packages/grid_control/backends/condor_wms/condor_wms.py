@@ -145,12 +145,11 @@ class Condor(BasicWMS):
 # overwrite for check/submit/fetch intervals
 	def getTimings(self):
 		if self.remoteType == poolType.SSH or self.remoteType == poolType.GSISSH:
-			return (30, 5)
+			return utils.Result(waitOnIdle = 30, waitBetweenSteps = 5)
 		elif self.remoteType == poolType.SPOOL:
-			return (60, 10)
+			return utils.Result(waitOnIdle = 60, waitBetweenSteps = 10)
 		else:
-		#if True:
-			return (20, 5)
+			return utils.Result(waitOnIdle = 20, waitBetweenSteps = 5)
 
 # _getVersion: get a comparable representation of condor version from condor_version
 #>> args: command line argument to condor_version
@@ -595,7 +594,7 @@ class Condor(BasicWMS):
 			workdir = self.getWorkdirPath(jobNum)
 			jdlData.extend([
 				# store matching Grid-Control and Condor ID
-				'+GridControl_GCtoWMSID = "%s@$(Cluster).$(Process)"' % module.getDescription(jobNum)[1],
+				'+GridControl_GCtoWMSID = "%s@$(Cluster).$(Process)"' % module.getDescription(jobNum).jobName,
 				'+GridControl_GCIDtoWMSID = "%s@$(Cluster).$(Process)"' % jobNum,
 				# publish the WMS id for Dashboard
 				'environment = CONDOR_WMS_DASHID=https://%s:/$(Cluster).$(Process)' % self.wmsName,
