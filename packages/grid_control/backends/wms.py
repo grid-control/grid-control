@@ -17,7 +17,7 @@
 import os, glob, shutil, itertools
 from grid_control import utils
 from grid_control.abstract import ClassFactory, NamedObject
-from grid_control.backends.proxy import Proxy
+from grid_control.backends.access import AccessToken
 from grid_control.backends.storage import StorageManager
 from grid_control.exceptions import AbstractError, RethrowError, RuntimeError
 from grid_control.utils.file_objects import VirtualFile
@@ -40,8 +40,8 @@ class WMS(NamedObject):
 	def canSubmit(self, neededTime, canCurrentlySubmit):
 		raise AbstractError
 
-	def getProxy(self, wmsId):
-		raise AbstractError # Return proxy instance responsible for this wmsId
+	def getAccessToken(self, wmsId):
+		raise AbstractError # Return access token instance responsible for this wmsId
 
 	def deployTask(self, task, monitor):
 		raise AbstractError
@@ -87,17 +87,18 @@ class WMS(NamedObject):
 	parseJobInfo = staticmethod(parseJobInfo)
 utils.makeEnum(['WALLTIME', 'CPUTIME', 'MEMORY', 'CPUS', 'BACKEND', 'SITES', 'QUEUES', 'SOFTWARE', 'STORAGE'], WMS)
 
+
 class InactiveWMS(WMS):
 	def __init__(self, config, wmsName):
 		WMS.__init__(self, config, wmsName)
-		self.proxy = ClassFactory(config, ('proxy', 'TrivialProxy'), ('proxy manager', 'MultiProxy'),
-			cls = Proxy, inherit = True, tags = [self]).getInstance()
+		self._token = ClassFactory(config, ('access', 'TrivialAccessToken'), ('access manager', 'MultiAccessToken'),
+			cls = AccessToken, inherit = True, tags = [self]).getInstance()
 
 	def canSubmit(self, neededTime, canCurrentlySubmit):
 		return True
 
-	def getProxy(self, wmsId):
-		return self.proxy
+	def getAccessToken(self, wmsId):
+		return self._token
 
 	def deployTask(self, task, monitor):
 		return
@@ -129,9 +130,9 @@ class BasicWMS(WMS):
 		utils.ensureDirExists(self._outputPath, 'output directory')
 		self._failPath = config.getWorkPath('fail')
 
-		# Initialise proxy, broker and storage manager
-		self.proxy = ClassFactory(config, ('proxy', 'TrivialProxy'), ('proxy manager', 'MultiProxy'),
-			cls = Proxy, inherit = True, tags = [self]).getInstance()
+		# Initialise access token, broker and storage manager
+		self._token = ClassFactory(config, ('access token', 'TrivialAccessToken'), ('access token manager', 'MultiAccessToken'),
+			cls = AccessToken, inherit = True, tags = [self]).getInstance()
 
 		# UI -> SE -> WN
 		self.smSEIn = config.getClass('se input manager', 'SEStorageManager', cls = StorageManager, tags = [self]).getInstance('se', 'se input', 'SE_INPUT')
@@ -142,11 +143,11 @@ class BasicWMS(WMS):
 
 
 	def canSubmit(self, neededTime, canCurrentlySubmit):
-		return self.proxy.canSubmit(neededTime, canCurrentlySubmit)
+		return self._token.canSubmit(neededTime, canCurrentlySubmit)
 
 
-	def getProxy(self, wmsId):
-		return self.proxy
+	def getAccessToken(self, wmsId):
+		return self._token
 
 
 	def deployTask(self, task, monitor):
@@ -263,7 +264,7 @@ class BasicWMS(WMS):
 		depPaths = map(lambda pkg: utils.pathShare('', pkg = pkg), os.listdir(utils.pathGC('packages')))
 		depFiles = map(lambda dep: utils.resolvePath('env.%s.sh' % dep, depPaths), depList)
 		taskEnv = list(itertools.chain(map(lambda x: x.getTaskConfig(), [monitor, task] + smList)))
-		taskEnv.append({'GC_DEPFILES': str.join(' ', depList), 'GC_USERNAME': self.proxy.getUsername(),
+		taskEnv.append({'GC_DEPFILES': str.join(' ', depList), 'GC_USERNAME': self._token.getUsername(),
 			'GC_WMS_NAME': self.wmsName})
 		taskConfig = sorted(utils.DictFormat(escapeString = True).format(utils.mergeDicts(taskEnv), format = 'export %s%s%s\n'))
 		varMappingDict = dict(zip(monitor.getTaskConfig().keys(), monitor.getTaskConfig().keys()))

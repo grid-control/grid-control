@@ -56,15 +56,15 @@ class DashBoard(Monitoring):
 
 	# Called on job submission
 	def onJobSubmit(self, wms, jobObj, jobNum):
-		proxy = wms.getProxy(jobObj.wmsId)
+		token = wms.getAccessToken(jobObj.wmsId)
 		taskId = self.task.substVars(self.taskname, jobNum, addDict = {'DATASETNICK': ''}).strip('_')
 		utils.gcStartThread("Notifying dashboard about job submission %d" % jobNum,
 			self.publish, jobObj, jobNum, taskId, [{
-			'user': os.environ['LOGNAME'], 'GridName': '/CN=%s' % proxy.getUsername(), 'CMSUser': proxy.getUsername(),
+			'user': os.environ['LOGNAME'], 'GridName': '/CN=%s' % token.getUsername(), 'CMSUser': token.getUsername(),
 			'tool': 'grid-control', 'JSToolVersion': utils.getVersion(),
 			'SubmissionType':'direct', 'tool_ui': os.environ.get('HOSTNAME', ''),
 			'application': self.app, 'exe': 'shellscript', 'taskType': self.tasktype,
-			'scheduler': wms.wmsName, 'vo': proxy.getGroup()}, self.task.getSubmitInfo(jobNum)])
+			'scheduler': wms.wmsName, 'vo': token.getGroup()}, self.task.getSubmitInfo(jobNum)])
 
 
 	# Called on job status update

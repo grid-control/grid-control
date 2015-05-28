@@ -1,3 +1,13 @@
+grid_control.backends.access.AccessToken:
+grid_control.backends.access	AFSAccessToken
+grid_control.backends.access	AccessToken
+grid_control.backends.access	MultiAccessToken
+grid_control.backends.access	RefreshableAccessToken
+grid_control.backends.access	TimedAccessToken
+grid_control.backends.access	TrivialAccessToken
+grid_control.backends.access	TrivialProxy
+grid_control.backends.access	VomsProxy
+
 grid_control.backends.broker.Broker:
 grid_control.backends.broker	Broker
 grid_control.backends.broker_basic	CoverageBroker
@@ -26,15 +36,6 @@ grid_control.backends.htcondor_wms.processadapter	GSISSHProcessAdapter
 grid_control.backends.htcondor_wms.processadapter	LocalProcessAdapter
 grid_control.backends.htcondor_wms.processadapter	ProcessAdapterInterface
 grid_control.backends.htcondor_wms.processadapter	SSHProcessAdapter
-
-grid_control.backends.proxy.Proxy:
-grid_control.backends.proxy	AFSProxy
-grid_control.backends.proxy	MultiProxy
-grid_control.backends.proxy	Proxy
-grid_control.backends.proxy	RefreshableProxy
-grid_control.backends.proxy	TimedProxy
-grid_control.backends.proxy	TrivialProxy
-grid_control.backends.proxy	VomsProxy
 
 grid_control.backends.storage.StorageManager:
 grid_control.backends.storage	LocalSBStorageManager

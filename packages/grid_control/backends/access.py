@@ -1,4 +1,4 @@
-#-#  Copyright 2007-2014 Karlsruhe Institute of Technology
+#-#  Copyright 2007-2015 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -13,14 +13,15 @@
 #-#  limitations under the License.
 
 # Generic base class for authentication proxies GCSCF:
-import os, stat, time, shutil, getpass
+
+import os, time
 from grid_control import utils
 from grid_control.abstract import NamedObject
 from grid_control.exceptions import AbstractError, UserError
 
-class Proxy(NamedObject):
-	configSections = NamedObject.configSections + ['proxy']
-	tagName = 'proxy'
+class AccessToken(NamedObject):
+	configSections = NamedObject.configSections + ['proxy', 'access']
+	tagName = 'access'
 
 	def getUsername(self):
 		raise AbstractError
@@ -31,53 +32,57 @@ class Proxy(NamedObject):
 	def getGroup(self):
 		raise AbstractError
 
-	def getAuthFile(self):
+	def getAuthFiles(self):
 		raise AbstractError
 
 	def canSubmit(self, neededTime, canCurrentlySubmit):
 		raise AbstractError
 
 
-class MultiProxy(Proxy):
-	def __init__(self, config, name, subproxies):
-		Proxy.__init__(self, config, name)
-		self._subproxies = map(lambda pbuilder: pbuilder(), subproxies)
+class MultiAccessToken(AccessToken):
+	def __init__(self, config, name, subtokenBuilder):
+		AccessToken.__init__(self, config, name)
+		self._subtokenList = map(lambda tbuilder: tbuilder(), subtokenBuilder)
 
 	def getUsername(self):
-		return self._subproxies[0].getUsername()
+		return self._subtokenList[0].getUsername()
 
 	def getFQUsername(self):
-		return self._subproxies[0].getFQUsername()
+		return self._subtokenList[0].getFQUsername()
 
 	def getGroup(self):
-		return self._subproxies[0].getGroup()
+		return self._subtokenList[0].getGroup()
 
-	def getAuthFile(self):
-		return self._subproxies[0].getAuthFile()
+	def getAuthFiles(self):
+		return self._subtokenList[0].getAuthFiles()
 
 	def canSubmit(self, neededTime, canCurrentlySubmit):
-		for subproxy in self._subproxies:
-			canCurrentlySubmit = canCurrentlySubmit and subproxy.canSubmit(neededTime, canCurrentlySubmit)
+		for subtoken in self._subtokenList:
+			canCurrentlySubmit = canCurrentlySubmit and subtoken.canSubmit(neededTime, canCurrentlySubmit)
 		return canCurrentlySubmit
 
 
-class TrivialProxy(Proxy):
+class TrivialAccessToken(AccessToken):
 	def getUsername(self):
-		return getpass.getuser()
+		for var in ('LOGNAME', 'USER', 'LNAME', 'USERNAME'):
+			result = os.environ.get(var)
+			if result:
+				return result
+		raise RuntimeError('Unable to determine username!')
 
 	def getGroup(self):
 		return os.environ.get('GROUP', 'None')
 
-	def getAuthFile(self):
-		return None
+	def getAuthFiles(self):
+		return []
 
 	def canSubmit(self, neededTime, canCurrentlySubmit):
 		return True
 
 
-class TimedProxy(Proxy):
+class TimedAccessToken(AccessToken):
 	def __init__(self, config, name):
-		Proxy.__init__(self, config, name)
+		AccessToken.__init__(self, config, name)
 		self._lowerLimit = config.getTime('min lifetime', 300, onChange = None)
 		self._maxQueryTime = config.getTime('max query time',  5 * 60, onChange = None)
 		self._minQueryTime = config.getTime('min query time', 30 * 60, onChange = None)
@@ -85,10 +90,10 @@ class TimedProxy(Proxy):
 
 	def canSubmit(self, neededTime, canCurrentlySubmit):
 		if not self._checkTimeleft(self._lowerLimit):
-			raise UserError('Your proxy only has %d seconds left! (Required are %s)' %
+			raise UserError('Your access token only has %d seconds left! (Required are %s)' %
 				(self._getTimeleft(cached = True), utils.strTime(self._lowerLimit)))
 		if not self._checkTimeleft(self._lowerLimit + neededTime) and canCurrentlySubmit:
-			utils.vprint('Proxy lifetime (%s) does not meet the proxy and walltime (%s) requirements!' %
+			utils.vprint('Access token lifetime (%s) does not meet the access and walltime (%s) requirements!' %
 				(utils.strTime(self._getTimeleft(cached = False)), utils.strTime(self._lowerLimit + neededTime)), -1, printTime = True)
 			utils.vprint('Disabling job submission', -1, printTime = True)
 			return False
@@ -100,18 +105,18 @@ class TimedProxy(Proxy):
 	def _checkTimeleft(self, neededTime): # check for time left
 		delta = time.time() - self._lastUpdate
 		timeleft = max(0, self._getTimeleft(cached = True) - delta)
-		# recheck proxy => after > 30min have passed or when time is running out (max every 5 minutes)
+		# recheck token => after > 30min have passed or when time is running out (max every 5 minutes)
 		if (delta > self._minQueryTime) or (timeleft < neededTime and delta > self._maxQueryTime):
 			self._lastUpdate = time.time()
 			timeleft = self._getTimeleft(cached = False)
 			verbosity = utils.QM(timeleft < neededTime, -1, 0)
-			utils.vprint('The proxy now has %s left' % utils.strTime(timeleft), verbosity, printTime = True)
+			utils.vprint('The access token now has %s left' % utils.strTime(timeleft), verbosity, printTime = True)
 		return timeleft >= neededTime
 
 
-class VomsProxy(TimedProxy):
+class VomsProxy(TimedAccessToken):
 	def __init__(self, config, name):
-		TimedProxy.__init__(self, config, name)
+		TimedAccessToken.__init__(self, config, name)
 		self._infoExec = utils.resolveInstallPath('voms-proxy-info')
 		self._ignoreWarning = config.getBool('ignore warnings', False, onChange = None)
 		self._cache = None
@@ -125,8 +130,8 @@ class VomsProxy(TimedProxy):
 	def getGroup(self):
 		return self._getProxyInfo('vo')
 
-	def getAuthFile(self):
-		return self._getProxyInfo('path')
+	def getAuthFiles(self):
+		return [self._getProxyInfo('path')]
 
 	def _getTimeleft(self, cached):
 		return self._getProxyInfo('timeleft', utils.parseTime, cached)
@@ -140,7 +145,7 @@ class VomsProxy(TimedProxy):
 		retCode = proc.wait()
 		if (retCode != 0) and not self._ignoreWarning:
 			msg = ('voms-proxy-info output:\n%s\n%s\n' % (proc.getOutput(), proc.getError())).replace('\n\n', '\n')
-			msg += 'If job submission is still possible, you can set [proxy] ignore warnings = True\n'
+			msg += 'If job submission is still possible, you can set [access] ignore warnings = True\n'
 			raise RuntimeError(msg + 'voms-proxy-info failed with return code %d' % retCode)
 		self._cache = utils.DictFormat(':').parse(proc.getOutput())
 		return self._cache
@@ -149,28 +154,28 @@ class VomsProxy(TimedProxy):
 		info = self._parseProxy(cached)
 		try:
 			return parse(info[key])
-		except:
+		except Exception:
 			raise RuntimeError("Can't access %s in proxy information:\n%s" % (key, info))
 
 
-class RefreshableProxy(TimedProxy):
+class RefreshableAccessToken(TimedAccessToken):
 	def __init__(self, config, name):
-		TimedProxy.__init__(self, config, name)
-		self._refresh = config.getTime('proxy refresh', 60*60, onChange = None)
+		TimedAccessToken.__init__(self, config, name)
+		self._refresh = config.getTime('access refresh', 60*60, onChange = None)
 
-	def _refreshProxy(self):
+	def _refreshAccessToken(self):
 		raise AbstractError
 
 	def _checkTimeleft(self, neededTime): # check for time left
 		if self._getTimeleft(True) < self._refresh:
-			self._refreshProxy()
+			self._refreshAccessToken()
 			self._getTimeleft(False)
-		return TimedProxy._checkTimeleft(self, neededTime)
+		return TimedAccessToken._checkTimeleft(self, neededTime)
 
 
-class AFSProxy(RefreshableProxy):
+class AFSAccessToken(RefreshableAccessToken):
 	def __init__(self, config, name):
-		RefreshableProxy.__init__(self, config, name)
+		RefreshableAccessToken.__init__(self, config, name)
 		self._kinitExec = utils.resolveInstallPath('kinit')
 		self._klistExec = utils.resolveInstallPath('klist')
 		self._cache = None
@@ -178,6 +183,7 @@ class AFSProxy(RefreshableProxy):
 		self._tickets = config.getList('tickets', [], onChange = None)
 
 	def _backupTickets(self, config):
+		import os, stat, shutil
 		for name in ['KRB5CCNAME', 'KRBTKFILE']: # store kerberos files in work directory for persistency
 			if name in os.environ:
 				oldFN = os.environ[name].replace('FILE:', '')
@@ -186,7 +192,7 @@ class AFSProxy(RefreshableProxy):
 				os.chmod(newFN, stat.S_IRUSR | stat.S_IWUSR)
 				os.environ[name] = newFN
 
-	def _refreshProxy(self):
+	def _refreshAccessToken(self):
 		return utils.LoggedProcess(self._kinitExec, '-R').wait()
 
 	def _parseTickets(self, cached = True):
@@ -221,3 +227,7 @@ class AFSProxy(RefreshableProxy):
 				continue
 			time_end = max(info[ticket], time_end)
 		return time_end - time_current
+
+
+class TrivialProxy(TrivialAccessToken):
+	pass

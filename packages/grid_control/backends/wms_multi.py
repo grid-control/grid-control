@@ -46,8 +46,8 @@ class MultiWMS(WMS):
 		return canCurrentlySubmit
 
 
-	def getProxy(self, wmsId):
-		return self.wmsMap.get(self._splitId(wmsId)[0], self.defaultWMS).getProxy(wmsId)
+	def getAccessToken(self, wmsId):
+		return self.wmsMap.get(self._splitId(wmsId)[0], self.defaultWMS).getAccessToken(wmsId)
 
 
 	def deployTask(self, task, monitor):

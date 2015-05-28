@@ -1,4 +1,4 @@
-#-#  Copyright 2014 Karlsruhe Institute of Technology
+#-#  Copyright 2014-2015 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -387,9 +387,9 @@ class HTCScheddLocal(HTCScheddCLIBase):
 			'Executable              = %s' % self.parentPool._getSandboxFilesIn(task)[0][1],
 			])
 		try:
-			if parentPool.proxy.getAuthFile():
+			for authFile in parentPool.proxy.getAuthFiles():
 				jdlData.extend([
-				'x509userproxy           = %s' % self.parentPool.proxy.getAuthFile(),
+				'x509userproxy           = %s' % authFile,
 				'use_x509userproxy       = True',
 				])
 		except Exception:
@@ -597,8 +597,8 @@ class HTCScheddSSH(HTCScheddCLIBase):
 			)
 		proxyFile = ()
 		try:
-			if parentPool.proxy.getAuthFile():
-				proxyFile = ('User Proxy', self.parentPool.proxy.getAuthFile(), os.path.join(self.getStagingDir(taskID = task.taskID), os.path.basename(self.parentPool.proxy.getAuthFile())))
+			for authFile in parentPool.proxy.getauthFiles():
+				proxyFile = ('User Proxy', authFile, os.path.join(self.getStagingDir(taskID = task.taskID), os.path.basename(authFile)))
 		except:
 			pass
 		jobFileMap = {}

@@ -1,4 +1,4 @@
-#-#  Copyright 2009-2014 Karlsruhe Institute of Technology
+#-#  Copyright 2009-2015 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -44,12 +44,12 @@ class GridWMS(BasicWMS):
 
 
 	def __init__(self, config, name):
-		config.set('proxy', 'VomsProxy')
+		config.set('access token', 'VomsProxy')
 		BasicWMS.__init__(self, config, name)
 
 		self.brokerSite = config.getClass('site broker', 'UserBroker',
 			cls = Broker, tags = [self]).getInstance('sites', 'sites', self.getSites)
-		self.vo = config.get('vo', self.proxy.getGroup())
+		self.vo = config.get('vo', self._token.getGroup())
 
 		self._submitParams = {}
 		self._ce = config.get('ce', '', onChange = None)

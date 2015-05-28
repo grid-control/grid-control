@@ -1,4 +1,4 @@
-#-#  Copyright 2012-2014 Karlsruhe Institute of Technology
+#-#  Copyright 2012-2015 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -478,9 +478,9 @@ class Condor(BasicWMS):
 						copyProcess.logError(self.errorLog, brief=True)
 				self.debugFlush()
 				# copy proxy
-				if self.proxy.getAuthFile():
+				for authFile in self.proxy.getAuthFiles():
 					self.debugOut("Copying proxy")
-					copyProcess = self.Pool.LoggedCopyToRemote(self.proxy.getAuthFile(), os.path.join(self.getWorkdirPath(), os.path.basename(self.proxy.getAuthFile())) )
+					copyProcess = self.Pool.LoggedCopyToRemote(authFile, os.path.join(self.getWorkdirPath(), os.path.basename(authFile)))
 					if copyProcess.wait() != 0:
 						if self.explainError(copyProcess, copyProcess.wait()):
 							pass
@@ -576,11 +576,11 @@ class Condor(BasicWMS):
 			jdlData.extend("leave_in_queue = (JobStatus == 4) && ((StageOutFinish =?= UNDEFINED) || (StageOutFinish == 0))",
 			# Condor should not attempt to assign to local user
 			'+Owner=UNDEFINED')
-		if self.proxy.getAuthFile():
+		for authFile in self.proxy.getAuthFiles():
 			if not (self.remoteType == poolType.SSH or self.remoteType == poolType.GSISSH):
-				jdlData.append("x509userproxy = %s" % self.proxy.getAuthFile() )
+				jdlData.append("x509userproxy = %s" % authFile)
 			else:
-				jdlData.append("x509userproxy = %s" % os.path.join(self.getWorkdirPath(), os.path.basename(self.proxy.getAuthFile())) )
+				jdlData.append("x509userproxy = %s" % os.path.join(self.getWorkdirPath(), os.path.basename(authFile)))
 			self.debugOut("  o Added Proxy")
 		for line in self.settings["jdl"]["ClassAdData"]:
 			jdlData.append( '+' + line )

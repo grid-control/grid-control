@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-#-#  Copyright 2009-2014 Karlsruhe Institute of Technology
+#-#  Copyright 2009-2015 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
 #-#  limitations under the License.
 
 import os, sys, time, random, optparse, gcSupport, threading
-from gcSupport import ClassSelector, FileInfoProcessor, Job, JobClass, OutputFileInfo, Proxy, logException, storage, utils
+from gcSupport import AccessToken, ClassSelector, FileInfoProcessor, Job, JobClass, OutputFileInfo, logException, storage, utils
 from python_compat import md5
 
 def md5sum(filename):
@@ -88,8 +88,8 @@ DEFAULT: The default is to download the SE file and check them with MD5 hashes.
 
 	parser.add_option('-o', '--output',   dest='output', default=None,
 		help='specify the local output directory')
-	parser.add_option('-P', '--proxy',    dest='proxy',  default='VomsProxy',
-		help='specify the proxy type used to determine ability to download - VomsProxy or TrivialProxy')
+	parser.add_option('-T', '--token',    dest='token',  default='VomsProxy',
+		help='specify the access token used to determine ability to download - VomsProxy or TrivialAccessToken')
 	parser.add_option('-S', '--selectSE', dest='selectSE',  default=None, action='append',
 		help='specify the SE paths to process')
 	parser.add_option('-r', '--retry',    dest='retry',  default=0,
@@ -177,7 +177,7 @@ def dlfs_rm(path, msg):
 
 def realmain(opts, args):
 	try:
-		proxy = Proxy.getInstance(opts.proxy, gcSupport.getConfig(configDict = {'proxy': {'ignore warnings': 'True'}}), 'proxy')
+		token = AccessToken.getInstance(opts.access, gcSupport.getConfig(configDict = {'access': {'ignore warnings': 'True'}}), 'access')
 	except:
 		sys.stderr.write(logException())
 		sys.exit(os.EX_UNAVAILABLE)
@@ -209,8 +209,8 @@ def realmain(opts, args):
 		retry = int(job.get('download attempt', 0))
 		failJob = False
 
-		if not proxy.canSubmit(20*60, True):
-			sys.stderr.write('Please renew grid proxy!')
+		if not token.canSubmit(20*60, True):
+			sys.stderr.write('Please renew access token!')
 			sys.exit(os.EX_UNAVAILABLE)
 
 		# Read the file hash entries from job info file

@@ -1,4 +1,4 @@
-#-#  Copyright 2009-2014 Karlsruhe Institute of Technology
+#-#  Copyright 2009-2015 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -180,8 +180,8 @@ class LocalWMS(BasicWMS):
 
 	def _getSandboxFiles(self, module, monitor, smList):
 		files = BasicWMS._getSandboxFiles(self, module, monitor, smList)
-		if self.proxy.getAuthFile():
-			files.append(VirtualFile('_proxy.dat', open(self.proxy.getAuthFile(), 'r').read()))
+		for idx, authFile in enumerate(self._token.getAuthFiles()):
+			files.append(VirtualFile(('_proxy.dat.%d' % idx).replace('.0', ''), open(authFile, 'r').read()))
 		return files
 
 

@@ -1,4 +1,4 @@
-#-#  Copyright 2011-2014 Karlsruhe Institute of Technology
+#-#  Copyright 2011-2015 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -13,7 +13,6 @@
 #-#  limitations under the License.
 
 preserved_for_later_use = """
-from grid_control import Proxy
 from webservice_api import readJSON
 
 class CMSOverlay:
@@ -23,8 +22,7 @@ class CMSOverlay:
 		config.set('grid', 'sites', '-samtest -cmsprodhi', append = True)
 
 		# Rewrite cms storage urls:
-		proxy = Proxy.getInstance('VomsProxy', config)
-		hnName = readJSON('https://cmsweb.cern.ch/sitedb/json/index/dnUserName', {'dn': proxy.getFQUsername()})
+		hnName = readJSON('https://cmsweb.cern.ch/sitedb/json/index/dnUserName', {'dn': getFQUsername()})
 		if not hnName:
 			raise ConfigError('Unable to map grid certificate to hypernews name!')
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-#-#  Copyright 2009-2014 Karlsruhe Institute of Technology
+#-#  Copyright 2009-2015 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -20,7 +20,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'p
 
 from grid_control import utils
 from grid_control.backends import WMS, storage
-from grid_control.backends.proxy import Proxy
+from grid_control.backends.access import AccessToken
 from grid_control.config import createConfigFactory
 from grid_control.exceptions import handleException, logException
 from grid_control.job_db import Job, JobClass, JobDB

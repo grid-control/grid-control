@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-#-#  Copyright 2013-2014 Karlsruhe Institute of Technology
+#-#  Copyright 2013-2015 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -15,7 +15,7 @@
 
 #from gcSupport import *
 import optparse
-from gcSupport import Proxy, getConfig, parseOptions
+from gcSupport import AccessToken, getConfig, parseOptions
 from grid_control_cms.webservice_api import readJSON
 
 def lfn2pfn(node, lfn):
@@ -30,9 +30,9 @@ parser.add_option('', '--se-prot', dest='seprot', default='srmv2', help='Name of
 
 if opts.SE:
 	if '<hypernews name>' in opts.lfn:
-		proxy = Proxy.getInstance('VomsProxy', getConfig(), None)
+		token = AccessToken.getInstance('VomsProxy', getConfig(), None)
 		hnName = readJSON('https://cmsweb.cern.ch/sitedb/json/index/dnUserName',
-			{'dn': proxy.getFQUsername()})
+			{'dn': token.getFQUsername()})
 		if not hnName:
 			raise ConfigError('Unable to map grid certificate to hypernews name!')
 		opts.lfn = opts.lfn.replace('<hypernews name>', hnName['user'])
