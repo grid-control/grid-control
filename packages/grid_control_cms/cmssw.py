@@ -1,4 +1,4 @@
-#-#  Copyright 2007-2014 Karlsruhe Institute of Technology
+#-#  Copyright 2007-2015 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -97,7 +97,7 @@ class CMSSW(DataTask):
 
 		# Information about search order for software environment
 		self.searchLoc = []
-		if config.getState('sandbox'):
+		if config.getState('init', detail = 'sandbox'):
 			userPath = config.get('cmssw dir', '')
 			if userPath != '':
 				self.searchLoc.append(('CMSSW_DIR_USER', userPath))
@@ -132,16 +132,16 @@ class CMSSW(DataTask):
 		self.prepare = config.getBool('prepare config', False)
 		fragment = config.getPath('instrumentation fragment', utils.pathShare('fragmentForCMSSW.py', pkg = 'grid_control_cms'))
 		if self.dataSplitter != None:
-			if config.getState('sandbox'):
+			if config.getState('init', detail = 'sandbox'):
 				if len(self.configFiles) > 0:
 					self.instrumentCfgQueue(self.configFiles, fragment, mustPrepare = True)
 		else:
 			self.eventsPerJob = config.get('events per job', '0')
-			if config.getState(detail = 'sandbox') and self.prepare:
+			if config.getState('init', detail = 'sandbox') and self.prepare:
 				self.instrumentCfgQueue(self.configFiles, fragment)
 		if not os.path.exists(config.getWorkPath('runtime.tar.gz')):
-			config.setState(True, detail = 'sandbox')
-		if config.getState(detail = 'sandbox'):
+			config.setState(True, 'init', detail = 'sandbox')
+		if config.getState('init', detail = 'sandbox'):
 			if os.path.exists(config.getWorkPath('runtime.tar.gz')):
 				if not utils.getUserBool('Runtime already exists! Do you want to regenerate CMSSW tarball?', True):
 					return
@@ -149,7 +149,7 @@ class CMSSW(DataTask):
 			if self.projectArea:
 				utils.genTarball(config.getWorkPath('runtime.tar.gz'), utils.matchFiles(self.projectArea, self.pattern))
 			if self.seRuntime:
-				config.setState(True, detail = 'storage')
+				config.setState(True, 'init', detail = 'storage')
 
 
 	def initDataProcessor(self):

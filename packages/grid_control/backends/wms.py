@@ -1,4 +1,4 @@
-#-#  Copyright 2007-2014 Karlsruhe Institute of Technology
+#-#  Copyright 2007-2015 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -156,7 +156,7 @@ class BasicWMS(WMS):
 
 		self.smSEIn.addFiles(map(lambda (d, s, t): t, task.getSEInFiles())) # add task SE files to SM
 		# Transfer common SE files
-		if self.config.getState(detail = 'storage'):
+		if self.config.getState('init', detail = 'storage'):
 			self.smSEIn.doTransfer(task.getSEInFiles())
 
 		def convert(fnList):
@@ -170,7 +170,7 @@ class BasicWMS(WMS):
 		utils.vprint('Packing sandbox:')
 		sandbox = self._getSandboxName(task)
 		utils.ensureDirExists(os.path.dirname(sandbox), 'sandbox directory')
-		if not os.path.exists(sandbox) or self.config.getState(detail = 'sandbox'):
+		if not os.path.exists(sandbox) or self.config.getState('init', detail = 'sandbox'):
 			utils.genTarball(sandbox, convert(self._getSandboxFiles(task, monitor, [self.smSEIn, self.smSEOut])))
 
 

@@ -1,4 +1,4 @@
-#-#  Copyright 2013-2014 Karlsruhe Institute of Technology
+#-#  Copyright 2013-2015 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -90,7 +90,7 @@ class TrackedParameterAdapter(BasicParameterAdapter):
 		self._pathParams = config.getWorkPath('params.dat.gz')
 
 		# Find out if init should be performed - overrides userResync!
-		userInit = config.getState(detail = 'parameters')
+		userInit = config.getState('init', detail = 'parameters')
 		needInit = False
 		if not (os.path.exists(self._pathParams) and os.path.exists(self._pathJob2PID)):
 			needInit = True # Init needed if no parameter log exists

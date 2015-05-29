@@ -1,4 +1,4 @@
-#-#  Copyright 2014 Karlsruhe Institute of Technology
+#-#  Copyright 2014-2015 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -230,14 +230,14 @@ class TypedConfigInterface(object):
 
 class SimpleConfigInterface(TypedConfigInterface):
 	# Get state - bool stored in hidden "state" section - any given detail overrides global state
-	def getState(self, statename = 'init', detail = '', default = False):
+	def getState(self, statename, detail = '', default = False):
 		view = self.changeView(viewClass = SimpleConfigView, setSections = ['state'])
 		state = view.getBool('#%s' % statename, default, onChange = None)
 		if detail:
 			state = view.getBool('#%s %s' % (statename, detail), state, onChange = None)
 		return state
 	# Set state - bool stored in hidden "state" section
-	def setState(self, value, statename = 'init', detail = ''):
+	def setState(self, value, statename, detail = ''):
 		option = ('#%s %s' % (statename, detail)).strip()
 		view = self.changeView(viewClass = SimpleConfigView, setSections = ['state'])
 		return view.set(option, str(value), '=')

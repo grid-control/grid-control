@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-#-#  Copyright 2007-2014 Karlsruhe Institute of Technology
+#-#  Copyright 2007-2015 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -114,9 +114,9 @@ if __name__ == '__main__':
 
 		# Check work dir validity (default work directory is the config file name)
 		if not os.path.exists(config.getWorkPath()):
-			if not config.getState():
+			if not config.getState('init'):
 				utils.vprint('Will force initialization of %s if continued!' % config.getWorkPath(), -1)
-				config.setState(True)
+				config.setState(True, 'init')
 			if config.getChoiceYesNo('workdir interactive', True,
 					interactive = 'Do you want to create the working directory %s?' % config.getWorkPath()):
 				utils.ensureDirExists(config.getWorkPath(), 'work directory')
@@ -124,7 +124,7 @@ if __name__ == '__main__':
 		# Create workflow and freeze config settings
 		globalConfig = config.changeView(setSections = ['global'])
 		workflow = globalConfig.getClass('workflow', 'Workflow:global', cls = Workflow).getInstance()
-		configFactory.freezeConfig(writeConfig = config.getState(detail = 'config'))
+		configFactory.freezeConfig(writeConfig = config.getState('init', detail = 'config'))
 
 		# Give config help
 		if opts.help_cfg or opts.help_scfg:
