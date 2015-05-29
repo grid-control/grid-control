@@ -1,4 +1,4 @@
-#-#  Copyright 2013-2014 Karlsruhe Institute of Technology
+#-#  Copyright 2013-2015 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -12,7 +12,7 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-import geodb
+import grid_control_gui.geodb
 import matplotlib.pyplot
 import os, math, numpy, random
 from python_compat import sorted
@@ -62,14 +62,14 @@ def drawMap(report):
 
 	posList = []
 	for hostname in entries:
-		entry = geodb.getGeoMatch(hostname)
+		entry = grid_control_gui.geodb.getGeoMatch(hostname)
 		if not entry:
 			continue
-		lat, lon = geodb.geoDict[entry]
+		(site, lat, lon) = entry
 		stateinfo = entries[hostname]
 		weight = math.log(sum(stateinfo)) / math.log(2) + 1
 		size = 20 * weight
-		posList.append({'pos': (lon, lat), 'weight': weight, 'size': size, 'site': entry, 'info': stateinfo})
+		posList.append({'pos': (lon, lat), 'weight': weight, 'size': size, 'site': site, 'info': stateinfo})
 
 	(lon_l, lat_l) = (lon_h, lat_h) = posList[0]['pos']
 	for pos in posList:

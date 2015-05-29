@@ -1,4 +1,4 @@
-#-#  Copyright 2010-2014 Karlsruhe Institute of Technology
+#-#  Copyright 2010-2015 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -124,6 +124,14 @@ except:
 	StringBuffer = io.StringIO
 	StringBufferBase = io.StringIO
 
+try:	# logging.NullHandler >= Python 2.7
+	import logging
+	NullHandler = logging.NullHandler
+except:
+	class NullHandler(logging.Handler):
+		def emit(self, record):
+			pass
+
 try:	# raw_input < Python 3.0
 	user_input = raw_input
 except:
@@ -150,16 +158,8 @@ except:
 		(funProxy.fun, funProxy.cache) = (fun, [])
 		return funProxy
 
-try: #logging.NullHandler >= Python 2.7
-    import logging
-    NullHandler = logging.NullHandler
-except:
-    class NullHandler(logging.Handler):
-        def emit(self, record):
-            pass
-
-__all__ = ['StringBuffer', 'StringBufferBase', 'all', 'any', 'lru_cache', 'md5',
-	'next', 'parsedate', 'rsplit', 'set', 'sorted', 'user_input']
+__all__ = ['NullHandler', 'StringBuffer', 'StringBufferBase', 'all', 'any',
+	'lru_cache', 'md5', 'next', 'parsedate', 'rsplit', 'set', 'sorted', 'user_input']
 
 if __name__ == '__main__':
 	import os, re, doctest

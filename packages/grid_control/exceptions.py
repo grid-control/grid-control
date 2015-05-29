@@ -1,4 +1,4 @@
-#-#  Copyright 2007-2014 Karlsruhe Institute of Technology
+#-#  Copyright 2007-2015 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -22,8 +22,8 @@ def logException_internal(exClass, exValue, stack):
 	counter = 0
 	log.critical('Exception occured: %s' % time.strftime("%Y-%m-%d %H:%M:%S"))
 	try:
-		import utils
-		log.critical('grid-control: %s' % utils.getVersion())
+		import grid_control.utils
+		log.critical('grid-control: %s' % grid_control.utils.getVersion())
 	except:
 		log.critical('grid-control: Unknown version')
 	log.critical('')
@@ -127,7 +127,7 @@ class AbstractError(APIError):
 # Rethrow error message to add additional information
 class RethrowError(GCError):
 	def __init__(self, msg, exClass = GCError):
-		prevInfo = logException() # 
+		prevInfo = logException()
 		if isinstance(sys.exc_info()[1], KeyboardInterrupt):
 			GCError.__init__(self, 'Aborted by user')
 		else:

@@ -14,12 +14,7 @@
 
 # -*- coding: utf-8 -*-
 
-import glob, commands
-import os
-import popen2
-import re
-import tempfile
-import time
+import os, re, glob, time, commands, tempfile
 from grid_control import utils
 from grid_control.backends.broker import Broker
 from grid_control.backends.condor_wms.processhandler import ProcessHandler
@@ -150,15 +145,6 @@ class Condor(BasicWMS):
 			return utils.Result(waitOnIdle = 60, waitBetweenSteps = 10)
 		else:
 			return utils.Result(waitOnIdle = 20, waitBetweenSteps = 5)
-
-# _getVersion: get a comparable representation of condor version from condor_version
-#>> args: command line argument to condor_version
-	def _getVersion(self):
-		for line in popen2.Popen3(self.statusExec,"-version").fromchild.readlines():
-			if line.startswith('$CondorVersion: '):
-				version=tuple([ int(ver) for ver in re.search("(\d+).(\d+).(\d+)",line).groups() ])
-		return version
-
 
 # getSandbox: return path to sandbox for a specific job or basepath
 	def getSandboxPath(self, jobNum=""):

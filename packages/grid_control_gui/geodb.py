@@ -1,5 +1,5 @@
 #!/bin/env python
-#-#  Copyright 2013-2014 Karlsruhe Institute of Technology
+#-#  Copyright 2013-2015 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -14,88 +14,88 @@
 #-#  limitations under the License.
 
 geoDict = {
-	'cam.ac.uk': (52.204451,0.110865),
-	'lebedev.ru': (55.697663,37.565417),
-	'tamu.edu': (30.606743,-96.349611),
-	'shef.ac.uk': (53.379258,-1.492002),
-	'metu.edu.tr': (39.890904,32.784734),
-	'ucl.ac.be': (50.668504,4.612838),
-	'technion.ac.il': (32.777443,35.021707),
-	'baylor.edu': (31.541675,-97.121204),
-	'bnl.gov': (40.87056,-72.880139),
-	'icm.edu.pl': (52.220228,20.980339),
-	'ucy.ac.cy': (35.158933,33.377094),
-	'iihe.ac.be': (50.813921,4.266747),
-	'ifca.es': (43.472356,-3.80373),
-	'jet.efda.org': (51.658075,-1.229839),
-	'jinr.ru': (56.745899,37.189393),
-	'cornell.edu': (42.446325,-76.477561),
-	'wroc.pl': (51.114084,17.034931),
-	'ucsd.edu': (32.875695,-117.232289),
-	'sprace.org.br': (-23.523169,-46.667857),
-	'dur.scotgrid.ac.uk': (54.7596,-1.578441),
-	'umd.edu': (38.985366,-76.939759),
-	'ncp.edu.pk': (33.750035,73.16411),
+	'cam.ac.uk': (52.204451, 0.110865),
+	'lebedev.ru': (55.697663, 37.565417),
+	'tamu.edu': (30.606743, -96.349611),
+	'shef.ac.uk': (53.379258, -1.492002),
+	'metu.edu.tr': (39.890904, 32.784734),
+	'ucl.ac.be': (50.668504, 4.612838),
+	'technion.ac.il': (32.777443, 35.021707),
+	'baylor.edu': (31.541675, -97.121204),
+	'bnl.gov': (40.87056, -72.880139),
+	'icm.edu.pl': (52.220228, 20.980339),
+	'ucy.ac.cy': (35.158933, 33.377094),
+	'iihe.ac.be': (50.813921, 4.266747),
+	'ifca.es': (43.472356, -3.80373),
+	'jet.efda.org': (51.658075, -1.229839),
+	'jinr.ru': (56.745899, 37.189393),
+	'cornell.edu': (42.446325, -76.477561),
+	'wroc.pl': (51.114084, 17.034931),
+	'ucsd.edu': (32.875695, -117.232289),
+	'sprace.org.br': (-23.523169, -46.667857),
+	'dur.scotgrid.ac.uk': (54.7596, -1.578441),
+	'umd.edu': (38.985366, -76.939759),
+	'ncp.edu.pk': (33.750035, 73.16411),
 	'cbpf.br': (-22.953962099999998, -43.173729100000003),
 	'kiae.ru': (55.801216500000002, 37.4770295),
 	'msu.ru': (55.706713999999998, 37.516877899999997),
-	'nd.edu': (41.692463,-86.235824),
+	'nd.edu': (41.692463, -86.235824),
 	'cinvestav.mx': (19.510706800000001, -99.129099299999993),
 	'unina.it': (40.8683537, 14.273237699999999),
 	'weizmann.ac.il': (32.111285700000003, 34.801503599999997),
 	'nikhef.nl': (52.356160199999998, 4.9506603),
 	'ifh.de': (52.376036900000003, 13.6513928),
 	'colorado.edu': (39.754908499999999, -105.0234923),
-	'ufl.edu': (29.643454,-82.350612),
-	'kfki.hu': (46.87404,17.905941),
-	'ciemat.es': (40.454523,-3.728886),
-	'knu.ac.kr': (35.891831,128.610649),
-	'kharkov.ua': (50.087988,36.249275),
-	'purdue.edu': (40.427872,-86.913929),
-	'vanderbilt.edu': (36.143836,-86.803694),
-	'itwm.fhg.de': (49.43085,7.752557),
-	'nectec.or.th': (14.079305,100.601006),
-	'cscs.ch': (47.377589,8.547853),
-	'ohio-state.edu': (40.012891,-83.029404),
-	'nhn.ou.edu': (35.208459,-97.445741),
-	'tu-dortmund.de': (51.484603,7.412914),
-	'ihep.su': (54.865346,37.211666),
-	'uniandes.edu.co': (4.602947,-74.066248),
-	'ultralight.org': (34.141415,-118.124896),
-	'rl.ac.uk': (51.573229,-1.31567),
-	'rhul.ac.uk': (51.425571,-0.562928),
-	'manchester.ac.uk': (53.477013,-2.239208),
-	'brunel.ac.uk': (51.533069,-0.473878),
-	'ox.ac.uk': (51.75695,-1.257262),
-	'bris.ac.uk': (51.457991,-2.601492),
-	'qmul.ac.uk': (51.524312,-0.038649),
-	'mit.edu': (42.360066,-71.093273),
-	'gla.scotgrid.ac.uk': (55.872277,-4.289138),
-	'tau.ac.il': (32.111296,34.801669),
-	'liv.ac.uk': (53.404441,-2.964942),
-	'ed.ac.uk': (55.945379,-3.191407),
-	'hellasgrid.gr': (37.983716,23.729725),
-	'ic.ac.uk': (51.498912,-0.174465),
-	'in2p3.fr': (45.783088,4.865513),
-	'wisc.edu': (43.075158,-89.400959),
-	'cern.ch': (46.234167,6.052778),
-	'spbu.ru': (59.941148,30.298315),
-	'ttu.edu': (33.585496,-101.871427),
-	'infn.it': (41.900712,12.512133),
-	'slac.stanford.edu': (37.418436,-122.205935),
-	'rwth-aachen.de': (50.777341,6.077743),
-	'fnal.gov': (41.831968,-88.251858),
-	'brown.edu': (41.827107,-71.40295),
-	'unl.edu': (40.818226,-96.700001),
-	'desy.de': (53.575639,9.879441),
-	'sinica.edu.tw': (25.043459,121.614486),
+	'ufl.edu': (29.643454, -82.350612),
+	'kfki.hu': (46.87404, 17.905941),
+	'ciemat.es': (40.454523, -3.728886),
+	'knu.ac.kr': (35.891831, 128.610649),
+	'kharkov.ua': (50.087988, 36.249275),
+	'purdue.edu': (40.427872, -86.913929),
+	'vanderbilt.edu': (36.143836, -86.803694),
+	'itwm.fhg.de': (49.43085, 7.752557),
+	'nectec.or.th': (14.079305, 100.601006),
+	'cscs.ch': (47.377589, 8.547853),
+	'ohio-state.edu': (40.012891, -83.029404),
+	'nhn.ou.edu': (35.208459, -97.445741),
+	'tu-dortmund.de': (51.484603, 7.412914),
+	'ihep.su': (54.865346, 37.211666),
+	'uniandes.edu.co': (4.602947, -74.066248),
+	'ultralight.org': (34.141415, -118.124896),
+	'rl.ac.uk': (51.573229, -1.31567),
+	'rhul.ac.uk': (51.425571, -0.562928),
+	'manchester.ac.uk': (53.477013, -2.239208),
+	'brunel.ac.uk': (51.533069, -0.473878),
+	'ox.ac.uk': (51.75695, -1.257262),
+	'bris.ac.uk': (51.457991, -2.601492),
+	'qmul.ac.uk': (51.524312, -0.038649),
+	'mit.edu': (42.360066, -71.093273),
+	'gla.scotgrid.ac.uk': (55.872277, -4.289138),
+	'tau.ac.il': (32.111296, 34.801669),
+	'liv.ac.uk': (53.404441, -2.964942),
+	'ed.ac.uk': (55.945379, -3.191407),
+	'hellasgrid.gr': (37.983716, 23.729725),
+	'ic.ac.uk': (51.498912, -0.174465),
+	'in2p3.fr': (45.783088, 4.865513),
+	'wisc.edu': (43.075158, -89.400959),
+	'cern.ch': (46.234167, 6.052778),
+	'spbu.ru': (59.941148, 30.298315),
+	'ttu.edu': (33.585496, -101.871427),
+	'infn.it': (41.900712, 12.512133),
+	'slac.stanford.edu': (37.418436, -122.205935),
+	'rwth-aachen.de': (50.777341, 6.077743),
+	'fnal.gov': (41.831968, -88.251858),
+	'brown.edu': (41.827107, -71.40295),
+	'unl.edu': (40.818226, -96.700001),
+	'desy.de': (53.575639, 9.879441),
+	'sinica.edu.tw': (25.043459, 121.614486),
 }
 
 def getGeoMatch(hostname):
 	result = None
-	for entry in geoDict:
-		if hostname.endswith(entry):
-			result = entry
+	for site in geoDict:
+		if hostname.endswith(site):
+			result = (site, geoDict[site][0], geoDict[site][1])
 	return result
 
 if __name__ == '__main__':
@@ -396,7 +396,8 @@ wipp-crm.weizmann.ac.il
 		url_info.close()
 		return result
 
-	import urllib2, time
+	import sys, time, urllib2
+	from python_compat import set
 	counter = 0
 	used = set()
 	for line in map(str.strip, allCEs.splitlines()):
@@ -404,17 +405,15 @@ wipp-crm.weizmann.ac.il
 		match = getGeoMatch(line)
 		if not match:
 			counter += 1
-			print line
-			print '\t%r: %r' % (line, geocode(line))
-#			if counter == 3:
+			sys.stderr.write('\t%r: %r\n' % (line, geocode(line)))
 		else:
 			used.add(match)
-	print counter, "unmatched entries"
-	print "unused entries:", filter(lambda x: x not in used, geoDict)
+	sys.stderr.write('%s unmatched entries\n' % counter)
+	sys.stderr.write('unused entries:\n%s\n' % repr(filter(lambda x: x not in used, geoDict)))
 
-	print 'geoDict = {'
+	sys.stdout.write('geoDict = {\n')
 	geoDictKeys = geoDict.keys()
 	geoDictKeys.sort(key = lambda x: str.join('.', reversed(x.split('.'))))
 	for entry in geoDictKeys:
-		print '\t%r: (%.6f, %.6f),' % (entry, geoDict[entry][0], geoDict[entry][1])
-	print '}'
+		sys.stdout.write('\t%r: (%.6f, %.6f),\n' % (entry, geoDict[entry][0], geoDict[entry][1]))
+	sys.stdout.write('}\n')

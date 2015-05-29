@@ -17,7 +17,7 @@
 import httplib
 import urllib
 import urllib2
-from parsing import parseJSON
+from grid_control.utils.parsing import parseJSON
 
 try:
 	import requests

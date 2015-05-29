@@ -99,8 +99,10 @@ def freeSpace(dn, timeout = 5):
 		os._exit(os.EX_OSERR)
 	return result['space']
 
+
 ################################################################
 # Process management functions
+
 
 def gcStartThread(desc, fun, *args, **kargs):
 	thread = threading.Thread(target = fun, args = args, kwargs = kargs)
@@ -307,6 +309,7 @@ class PersistentDict(dict):
 		except:
 			raise RuntimeError('Could not write to file %s' % self.filename)
 		self.olddict = self.items()
+
 
 ################################################################
 # File IO helper
