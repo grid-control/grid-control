@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-#-#  Copyright 2014 Karlsruhe Institute of Technology
+#-#  Copyright 2014-2015 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -15,11 +15,11 @@
 
 import os, optparse
 from gcSupport import *
-from grid_control.utils import QM
-from grid_control.exceptions import UserError
 from grid_control.datasets.provider_base import DataProvider
 from grid_control.datasets.provider_scan import GCProvider
-from grid_control_cms.dbs3_migration_queue import DBS3MigrationQueue, MigrationTask, do_migration, AlreadyQueued
+from grid_control.exceptions import UserError
+from grid_control.utils import QM
+from grid_control_cms.dbs3_migration_queue import AlreadyQueued, DBS3MigrationQueue, MigrationTask, do_migration
 from grid_control_cms.webservice_api import readJSON, sendJSON
 
 class DBSInfoProvider(GCProvider):

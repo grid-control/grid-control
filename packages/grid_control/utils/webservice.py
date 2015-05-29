@@ -14,9 +14,9 @@
 
 # Helper to access CMS web-services (DBS, SiteDB, PhEDEx)
 
+import httplib
 import urllib
 import urllib2
-import httplib
 from parsing import parseJSON
 
 try:

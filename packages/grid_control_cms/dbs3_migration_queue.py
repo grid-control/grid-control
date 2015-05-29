@@ -1,4 +1,4 @@
-#-#  Copyright 2014 Karlsruhe Institute of Technology
+#-#  Copyright 2014-2015 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -12,12 +12,12 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-from collections import deque
-from time import time
-
 import cPickle as pickle
 import logging
-
+from Queue import Empty, Queue
+from collections import deque
+from time import time
+from python_compat import set
 
 class MigrationRequestedState(object):
     def __init__(self, migration_task):
