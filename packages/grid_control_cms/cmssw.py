@@ -53,8 +53,8 @@ class CMSSW(DataTask):
 		self.selectedLumis = parseLumiFilter(config.get('lumi filter', ''))
 
 		self.useReqs = config.getBool('software requirements', True, onChange = None)
-		self.seRuntime = config.getBool('se runtime', False)
-		self.runtimePath = config.getWorkPath('runtime.tar.gz')
+		self._projectAreaTarballSE = config.getBool(['se project area', 'se runtime'], True)
+		self._projectAreaTarball = config.getWorkPath('cmssw-project-area.tar.gz')
 
 		if len(self.projectArea):
 			defaultPattern = '-.* -config bin lib python module */data *.xml *.sql *.cf[if] *.py -*/.git -*/.svn -*/CVS -*/work.*'
@@ -139,16 +139,16 @@ class CMSSW(DataTask):
 			self.eventsPerJob = config.get('events per job', '0')
 			if config.getState('init', detail = 'sandbox') and self.prepare:
 				self.instrumentCfgQueue(self.configFiles, fragment)
-		if not os.path.exists(config.getWorkPath('runtime.tar.gz')):
+		if not os.path.exists(self._projectAreaTarball):
 			config.setState(True, 'init', detail = 'sandbox')
 		if config.getState('init', detail = 'sandbox'):
-			if os.path.exists(config.getWorkPath('runtime.tar.gz')):
-				if not utils.getUserBool('Runtime already exists! Do you want to regenerate CMSSW tarball?', True):
+			if os.path.exists(self._projectAreaTarball):
+				if not utils.getUserBool('CMSSW tarball already exists! Do you want to regenerate it?', True):
 					return
-			# Generate runtime tarball (and move to SE)
+			# Generate CMSSW tarball
 			if self.projectArea:
-				utils.genTarball(config.getWorkPath('runtime.tar.gz'), utils.matchFiles(self.projectArea, self.pattern))
-			if self.seRuntime:
+				utils.genTarball(self._projectAreaTarball, utils.matchFiles(self.projectArea, self.pattern))
+			if self._projectAreaTarballSE:
 				config.setState(True, 'init', detail = 'storage')
 
 
@@ -219,7 +219,7 @@ class CMSSW(DataTask):
 		data['SCRAM_VERSION'] = self.scramVersion
 		data['SCRAM_PROJECTVERSION'] = self.scramEnv['SCRAM_PROJECTVERSION']
 		data['GZIP_OUT'] = utils.QM(self.gzipOut, 'yes', 'no')
-		data['SE_RUNTIME'] = utils.QM(self.seRuntime, 'yes', 'no')
+		data['SE_RUNTIME'] = utils.QM(self._projectAreaTarballSE, 'yes', 'no')
 		data['HAS_RUNTIME'] = utils.QM(len(self.projectArea), 'yes', 'no')
 		data['CMSSW_CONFIG'] = str.join(' ', map(os.path.basename, self.configFiles))
 		if self.prolog.isActive():
@@ -244,16 +244,16 @@ class CMSSW(DataTask):
 	# Get files to be transfered via SE (description, source, target)
 	def getSEInFiles(self):
 		files = DataTask.getSEInFiles(self)
-		if len(self.projectArea) and self.seRuntime:
-			return files + [('CMSSW runtime', self.runtimePath, self.taskID + '.tar.gz')]
+		if len(self.projectArea) and self._projectAreaTarballSE:
+			return files + [('CMSSW tarball', self._projectAreaTarball, self.taskID + '.tar.gz')]
 		return files
 
 
 	# Get files for input sandbox
 	def getSBInFiles(self):
 		files = DataTask.getSBInFiles(self) + self.configFiles + self.prolog.getSBInFiles() + self.epilog.getSBInFiles()
-		if len(self.projectArea) and not self.seRuntime:
-			files.append(utils.Result(pathAbs = self.runtimePath, pathRel = os.path.basename(self.runtimePath)))
+		if len(self.projectArea) and not self._projectAreaTarballSE:
+			files.append(utils.Result(pathAbs = self._projectAreaTarball, pathRel = os.path.basename(self._projectAreaTarball)))
 		return files + [utils.Result(pathAbs = utils.pathShare('gc-run.cmssw.sh', pkg = 'grid_control_cms'), pathRel = 'gc-run.cmssw.sh')]
 
 
