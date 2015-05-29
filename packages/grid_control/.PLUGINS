@@ -161,6 +161,8 @@ grid_control.output_processor.OutputProcessor:
 grid_control.output_processor	FileInfoProcessor
 grid_control.output_processor	JobInfoProcessor
 grid_control.output_processor	OutputProcessor
+grid_control.output_processor	SandboxProcessor
+grid_control.output_processor	TaskOutputProcessor
 
 grid_control.parameters.padapter.ParameterAdapter:
 grid_control.parameters.padapter	BasicParameterAdapter

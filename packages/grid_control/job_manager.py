@@ -1,4 +1,4 @@
-#-#  Copyright 2007-2014 Karlsruhe Institute of Technology
+#-#  Copyright 2007-2015 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@ from grid_control.abstract import NamedObject
 from grid_control.exceptions import ConfigError, RuntimeError
 from grid_control.job_db import Job, JobClass, JobDB
 from grid_control.job_selector import AndJobSelector, ClassSelector, JobSelector
+from grid_control.output_processor import TaskOutputProcessor
 from grid_control.report import Report
 from python_compat import set, sorted
 
@@ -33,6 +34,8 @@ class JobManager(NamedObject):
 		jobDBClass = config.getClass('jobdb', 'JobDB', cls = JobDB)
 		self.jobDB = jobDBClass.getInstance(config, self.getMaxJobs(self._task), selected)
 		self.disableLog = config.getWorkPath('disabled')
+		outputProcessorClass = config.getClass('output processor', 'SandboxProcessor', cls = TaskOutputProcessor)
+		self._outputProcessor = outputProcessorClass.getInstance(task)
 
 		self.timeout = config.getTime('queue timeout', -1, onChange = None)
 		self.inFlight = config.getInt('in flight', -1, onChange = None)
@@ -246,6 +249,11 @@ class JobManager(NamedObject):
 				state = Job.ABORTED
 			else:
 				state = Job.FAILED
+
+			if state == Job.SUCCESS:
+				if not self._outputProcessor.process(outputdir):
+					retCode = 108
+					state = Job.FAILED
 
 			if state != jobObj.state:
 				change = True
