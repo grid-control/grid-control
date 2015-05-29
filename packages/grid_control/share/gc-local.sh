@@ -29,9 +29,9 @@ fi
 	echo "EXITCODE=107"
 ) > "$GC_SANDBOX/job.info"
 
-# Search for local scratch directory - GC_SCRATCH is specified in the config file
+# Search for local scratch directory - GC_SCRATCH_SEARCH is specified in the config file
 # Entries can be either paths or variable references
-for SDIR in $GC_SCRATCH; do
+for SDIR in $GC_SCRATCH_SEARCH; do
 	[ -d "${SDIR}" ] && export GC_LOCALSCRATCH="$SDIR/${RANDOM}_${GC_JOB_ID}"
 	[ -n "$GC_LOCALSCRATCH" ] && break
 	[ -d "${!SDIR}" ] && export GC_LOCALSCRATCH="${!SDIR}/${RANDOM}_${GC_JOB_ID}"

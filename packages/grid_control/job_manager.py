@@ -238,7 +238,7 @@ class JobManager(NamedObject):
 		change = False
 		jobList = self.sample(self.jobDB.getJobs(ClassSelector(JobClass.DONE)), utils.QM(self.continuous, maxsample, -1))
 
-		for jobNum, retCode, data in wms.retrieveJobs(self.wmsArgs(jobList)):
+		for jobNum, retCode, data, outputdir in wms.retrieveJobs(self.wmsArgs(jobList)):
 			jobObj = self.jobDB.get(jobNum)
 			if jobObj == None:
 				continue

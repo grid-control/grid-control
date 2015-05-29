@@ -30,7 +30,7 @@ shift
 # Print job informations
 echo "JOBID=$GC_JOB_ID"
 echo "grid-control - Version$GC_VERSION"
-echo "running on: `hostname -f; uname -a;`"
+echo "running on: `hostname -f 2>&1; uname -a;`"
 lsb_release -a 2> /dev/null
 echo
 echo "Job $GC_JOB_ID started - `date`"

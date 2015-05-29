@@ -127,7 +127,7 @@ class LocalWMS(BasicWMS):
 
 		cfgPath = os.path.join(sandbox, '_jobconfig.sh')
 		self._writeJobConfig(cfgPath, jobNum, module, {'GC_SANDBOX': sandbox,
-			'GC_SCRATCH': str.join(' ', self.scratchPath)})
+			'GC_SCRATCH_SEARCH': str.join(' ', self.scratchPath)})
 		reqs = self.brokerSite.brokerAdd(module.getRequirements(jobNum), WMS.SITES)
 		reqs = dict(self.brokerQueue.brokerAdd(reqs, WMS.QUEUES))
 		if (self.memory > 0) and (reqs.get(WMS.MEMORY, 0) < self.memory):

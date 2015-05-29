@@ -53,7 +53,7 @@ class WMS(NamedObject):
 		raise AbstractError # Return (jobNum, wmsId, state, info) for active jobs
 
 	def retrieveJobs(self, ids):
-		raise AbstractError # Return (jobNum, retCode, data) for retrived jobs
+		raise AbstractError # Return (jobNum, retCode, data, outputdir) for retrived jobs
 
 	def cancelJobs(self, ids):
 		raise AbstractError # Return (jobNum, wmsId) for cancelled jobs
@@ -203,7 +203,7 @@ class BasicWMS(WMS):
 			# inJobNum != None, dir == None => Job could not be retrieved
 			if dir == None:
 				if inJobNum not in retrievedJobs:
-					yield (inJobNum, -1, {})
+					yield (inJobNum, -1, {}, None)
 				continue
 
 			# inJobNum == None, dir != None => Found leftovers of job retrieval
@@ -218,9 +218,9 @@ class BasicWMS(WMS):
 					raise RuntimeError('Invalid job id in job file %s' % info)
 				if forceMove(dir, os.path.join(self._outputPath, 'job_%d' % jobNum)):
 					retrievedJobs.append(inJobNum)
-					yield jobInfo
+					yield (jobNum, jobExitCode, jobData, dir)
 				else:
-					yield (jobNum, -1, {})
+					yield (jobNum, -1, {}, None)
 				continue
 
 			# Clean empty dirs
@@ -235,7 +235,7 @@ class BasicWMS(WMS):
 				utils.ensureDirExists(self._failPath, 'failed output directory')
 				forceMove(dir, os.path.join(self._failPath, os.path.basename(dir)))
 
-			yield (inJobNum, -1, {})
+			yield (inJobNum, -1, {}, None)
 
 
 	def _getSandboxName(self, task):
