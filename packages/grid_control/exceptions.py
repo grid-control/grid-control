@@ -119,6 +119,9 @@ class DatasetError(GCError):
 class TimeoutError(GCError):
 	pass	# timeout while waiting for an operation to finish
 
+class InputValidationError(GCError):
+	pass    # error during input validation for publication in DBS3
+
 # some error related to abstract functions
 class AbstractError(APIError):
 	def __init__(self):
