@@ -1,4 +1,4 @@
-#-#  Copyright 2013-2014 Karlsruhe Institute of Technology
+#-#  Copyright 2013-2015 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -12,16 +12,17 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-import os, gzip, tarfile, cStringIO, threading
+import os, gzip, tarfile, cStringIO
 from grid_control import utils
 from grid_control.datasets.splitter_base import DataSplitter
 from grid_control.exceptions import ConfigError
 from grid_control.utils.file_objects import VirtualFile
+from grid_control.utils.thread_tools import GCLock
 
 class BaseJobFileTarAdaptor(object):
 	def __init__(self, path):
 		log = utils.ActivityLog('Reading job mapping file')
-		self.mutex = threading.Semaphore()
+		self._mutex = GCLock()
 		self._fmt = utils.DictFormat()
 		self._tar = tarfile.open(path, 'r:')
 		(self._cacheKey, self._cacheTar) = (None, None)
@@ -96,7 +97,7 @@ class DataSplitterIO_V1(object):
 	def loadState(self, path):
 		class JobFileTarAdaptor_V1(BaseJobFileTarAdaptor):
 			def __getitem__(self, key):
-				self.mutex.acquire()
+				self._mutex.acquire()
 				if not self._cacheKey == key / 100:
 					self._cacheKey = key / 100
 					subTarFileObj = self._tar.extractfile('%03dXX.tgz' % (key / 100))
@@ -112,7 +113,7 @@ class DataSplitterIO_V1(object):
 				if DataSplitter.CommonPrefix in data:
 					fileList = map(lambda x: '%s/%s' % (data[DataSplitter.CommonPrefix], x), fileList)
 				data[DataSplitter.FileList] = map(str.strip, fileList)
-				self.mutex.release()
+				self._mutex.release()
 				return data
 
 		try:
@@ -193,7 +194,7 @@ class DataSplitterIO_V2(object):
 			def __getitem__(self, key):
 				if key >= self.maxJobs:
 					raise IndexError
-				self.mutex.acquire()
+				self._mutex.acquire()
 				if not self._cacheKey == key / self.keySize:
 					self._cacheKey = key / self.keySize
 					subTarFileObj = self._tar.extractfile('%03dXX.tgz' % (key / self.keySize))
@@ -210,7 +211,7 @@ class DataSplitterIO_V2(object):
 				if DataSplitter.CommonPrefix in data:
 					fileList = map(lambda x: '%s/%s' % (data[DataSplitter.CommonPrefix], x), fileList)
 				data[DataSplitter.FileList] = map(str.strip, fileList)
-				self.mutex.release()
+				self._mutex.release()
 				return data
 
 		try:

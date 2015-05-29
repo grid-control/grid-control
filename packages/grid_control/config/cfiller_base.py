@@ -1,4 +1,4 @@
-#-#  Copyright 2014 Karlsruhe Institute of Technology
+#-#  Copyright 2014-2015 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -13,12 +13,13 @@
 #-#  limitations under the License.
 
 # GCSCF: DEF,ENC
-import os, logging
+import os, sys, logging
 from grid_control import utils
 from grid_control.abstract import LoadableObject
 from grid_control.config.config_entry import ConfigEntry
 from grid_control.exceptions import ConfigError, RethrowError
 from grid_control.utils.data_structures import UniqueList
+from grid_control.utils.thread_tools import TimeoutException, hang_protection
 from python_compat import rsplit
 
 # Class to fill config containers with settings
@@ -144,8 +145,18 @@ class FileConfigFiller(ConfigFiller):
 class DefaultFilesConfigFiller(FileConfigFiller):
 	def __init__(self):
 		# Collect host / user / installation specific config files
-		import socket
-		host = socket.gethostbyaddr(socket.gethostname())[0]
+		def resolve_hostname():
+			import socket
+			host = socket.gethostname()
+			try:
+				return socket.gethostbyaddr(host)[0]
+			except Exception:
+				return host
+		try:
+			host = hang_protection(resolve_hostname, timeout = 5)
+		except TimeoutException:
+			sys.stderr.write('System call to resolve hostname is hanging!\n')
+			os._exit(os.EX_OSERR)
 		hostCfg = map(lambda c: utils.pathGC('config/%s.conf' % host.split('.', c)[-1]), range(host.count('.') + 1, 0, -1))
 		defaultCfg = ['/etc/grid-control.conf', '~/.grid-control.conf', utils.pathGC('config/default.conf')]
 		if os.environ.get('GC_CONFIG'):

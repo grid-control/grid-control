@@ -14,7 +14,8 @@
 
 import os, re, sys, glob, stat, time, Queue, errno, popen2, signal, fnmatch, logging, tarfile, operator, threading
 from grid_control.exceptions import APIError, ConfigError, GCError, InstallationError, RethrowError, RuntimeError, TimeoutError, UserError
-from parsing import parseBool, parseDict, parseInt, parseList, parseStr, parseTime, parseType, strGuid, strTime, strTimeShort
+from grid_control.utils.parsing import parseBool, parseDict, parseInt, parseList, parseStr, parseTime, parseType, strGuid, strTime, strTimeShort
+from grid_control.utils.thread_tools import TimeoutException, hang_protection
 from python_compat import lru_cache, md5, next, set, sorted, user_input
 
 def QM(cond, a, b):
@@ -76,30 +77,26 @@ def ensureDirExists(dn, name = 'directory'):
 			raise RethrowError('Problem creating %s "%s"' % (name, dn), RuntimeError)
 
 
-def freeSpace_int(dn, result):
-	if os.path.exists(dn):
-		try:
-			stat_info = os.statvfs(dn)
-			result['space'] = stat_info.f_bavail * stat_info.f_bsize / 1024**2
-		except:
-			import ctypes
-			free_bytes = ctypes.c_ulonglong(0)
-			ctypes.windll.kernel32.GetDiskFreeSpaceExW(ctypes.c_wchar_p(dn), None, None, ctypes.pointer(free_bytes))
-			result['space'] = free_bytes.value / 1024**2
-	else:
-		result['space'] = -1
-
-
 def freeSpace(dn, timeout = 5):
-	result = {}
-	t = threading.Thread(target = freeSpace_int, args = (dn, result))
-	t.start()
-	t.join(timeout)
-	if 'space' not in result:
-		eprint('Unable to get free disk space for directory %s after waiting for %d sec!' % (dn, timeout))
-		eprint('The file system is probably hanging or corrupted - try to check the free disk space manually.')
-		eprint('Refer to the documentation to disable checking the free disk space - at your own risk')
-		os._exit(0)
+	def freeSpace_int():
+		if os.path.exists(dn):
+			try:
+				stat_info = os.statvfs(dn)
+				return stat_info.f_bavail * stat_info.f_bsize / 1024**2
+			except:
+				import ctypes
+				free_bytes = ctypes.c_ulonglong(0)
+				ctypes.windll.kernel32.GetDiskFreeSpaceExW(ctypes.c_wchar_p(dn), None, None, ctypes.pointer(free_bytes))
+				return free_bytes.value / 1024**2
+		return -1
+
+	try:
+		return hang_protection(freeSpace_int, timeout)
+	except TimeoutException:
+		sys.stderr.write('Unable to get free disk space for directory %s after waiting for %d sec!' % (dn, timeout))
+		sys.stderr.write('The file system is probably hanging or corrupted - try to check the free disk space manually.')
+		sys.stderr.write('Refer to the documentation to disable checking the free disk space - at your own risk')
+		os._exit(os.EX_OSERR)
 	return result['space']
 
 ################################################################
