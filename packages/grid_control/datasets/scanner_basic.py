@@ -1,4 +1,4 @@
-#-#  Copyright 2010-2014 Karlsruhe Institute of Technology
+#-#  Copyright 2010-2015 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -74,7 +74,7 @@ class MetadataFromTask(InfoScanner):
 		ignoreDef = map(lambda x: 'SEED_%d' % x, range(10)) + ['FILE_NAMES',
 			'SB_INPUT_FILES', 'SE_INPUT_FILES', 'SE_INPUT_PATH', 'SE_INPUT_PATTERN',
 			'SB_OUTPUT_FILES', 'SE_OUTPUT_FILES', 'SE_OUTPUT_PATH', 'SE_OUTPUT_PATTERN',
-			'SE_MINFILESIZE', 'DOBREAK', 'MY_RUNTIME', 'MY_JOBID',
+			'SE_MINFILESIZE', 'DOBREAK', 'MY_RUNTIME', 'GC_RUNTIME', 'MY_JOBID', 'GC_JOB_ID',
 			'GC_VERSION', 'GC_DEPFILES', 'SUBST_FILES', 'SEEDS',
 			'SCRATCH_LL', 'SCRATCH_UL', 'LANDINGZONE_LL', 'LANDINGZONE_UL']
 		self.ignoreVars = config.getList('ignore task vars', ignoreDef)

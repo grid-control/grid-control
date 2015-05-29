@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-#-#  Copyright 2012-2014 Karlsruhe Institute of Technology
+#-#  Copyright 2012-2015 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -186,7 +186,7 @@ def main():
 				return tmp
 			result = map(doCollate, result)
 		else:
-			head = [('MY_JOBID', '#')]
+			head = [('GC_JOB_ID', '#')]
 			if needGCParam:
 				head.append(('GC_PARAM', 'GC_PARAM'))
 		if opts.active:
@@ -195,7 +195,7 @@ def main():
 			stored = opts.visible.split(',')
 		head.extend(sorted(zip(stored, stored)))
 		if opts.untracked:
-			head.extend(sorted(map(lambda n: (n, '(%s)' % n), filter(lambda n: n not in ['GC_PARAM', 'MY_JOBID'], untracked))))
+			head.extend(sorted(map(lambda n: (n, '(%s)' % n), filter(lambda n: n not in ['GC_PARAM', 'GC_JOB_ID'], untracked))))
 		utils.vprint('')
 		utils.printTabular(head, result)
 

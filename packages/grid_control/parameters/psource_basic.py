@@ -1,4 +1,4 @@
-#-#  Copyright 2012-2014 Karlsruhe Institute of Technology
+#-#  Copyright 2012-2015 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -172,7 +172,7 @@ class CounterParameterSource(SingleParameterSource):
 		return md5(str(self.key) + str(self.seed)).hexdigest()
 
 	def fillParameterInfo(self, pNum, result):
-		result[self.key] = self.seed + result['MY_JOBID']
+		result[self.key] = self.seed + result['GC_JOB_ID']
 
 	def __repr__(self):
 		return 'counter(%r, %s)' % (self.meta, self.seed)

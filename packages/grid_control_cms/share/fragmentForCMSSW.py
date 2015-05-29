@@ -4,7 +4,7 @@ def customise_for_gc(process):
 	from IOMC.RandomEngine.RandomServiceHelper import RandomNumberServiceHelper
 
 	try:
-		maxevents = __MAX_EVENTS__
+		maxevents = int(__MAX_EVENTS__)
 		process.maxEvents = cms.untracked.PSet(
 			input = cms.untracked.int32(max(-1, maxevents))
 		)
@@ -45,7 +45,7 @@ def customise_for_gc(process):
 	# Generator related setup
 	try:
 		if hasattr(process, 'generator') and process.source.type_() != 'PoolSource':
-			process.source.firstLuminosityBlock = cms.untracked.uint32(1 + __MY_JOBID__)
+			process.source.firstLuminosityBlock = cms.untracked.uint32(1 + __GC_JOB_ID__)
 			print 'Generator random seed:', process.RandomNumberGeneratorService.generator.initialSeed
 	except:
 		pass

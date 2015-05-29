@@ -1,5 +1,5 @@
 #!/bin/bash
-#-#  Copyright 2008-2014 Karlsruhe Institute of Technology
+#-#  Copyright 2008-2015 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -20,71 +20,72 @@ source gc-run.lib || exit 101
 
 set +f
 trap abort 0 1 2 3 15
-export MY_JOBID="$1"
-export MY_LANDINGZONE="`pwd`"
-export MY_MARKER="$MY_LANDINGZONE/RUNNING.$$"
-export MY_SCRATCH="`getscratch`"
+export GC_JOB_ID="$1"
+export MY_JOBID="$GC_JOB_ID" # legacy script support
+export GC_LANDINGZONE="`pwd`"
+export GC_MARKER="$GC_LANDINGZONE/RUNNING.$$"
+export GC_SCRATCH="`getscratch`"
 shift
 
 # Print job informations
-echo "JOBID=$MY_JOBID"
+echo "JOBID=$GC_JOB_ID"
 echo "grid-control - Version$GC_VERSION"
 echo "running on: `hostname -f; uname -a;`"
 lsb_release -a 2> /dev/null
 echo
-echo "Job $MY_JOBID started - `date`"
+echo "Job $GC_JOB_ID started - `date`"
 export STARTDATE=`date +%s`
 timestamp "WRAPPER" "START"
 
 echo
 echo "==========================="
 echo
-checkvar MY_JOBID
-checkvar MY_LANDINGZONE
-checkvar MY_SCRATCH
+checkvar GC_JOB_ID
+checkvar GC_LANDINGZONE
+checkvar GC_SCRATCH
 export | display_short
 
 echo
 echo "==========================="
 echo
-checkdir "Start directory" "$MY_LANDINGZONE"
-checkdir "Scratch directory" "$MY_SCRATCH"
+checkdir "Start directory" "$GC_LANDINGZONE"
+checkdir "Scratch directory" "$GC_SCRATCH"
 
 echo "==========================="
 echo
 timestamp "DEPLOYMENT" "START"
 echo "==========================="
-checkfile "$MY_LANDINGZONE/gc-sandbox.tar.gz"
+checkfile "$GC_LANDINGZONE/gc-sandbox.tar.gz"
 
 echo "Unpacking basic job configuration"
-tar xvfz "$MY_LANDINGZONE/gc-sandbox.tar.gz" -C "$MY_SCRATCH" _config.sh || fail 105
-checkfile "$MY_SCRATCH/_config.sh"
-source "$MY_SCRATCH/_config.sh"
+tar xvfz "$GC_LANDINGZONE/gc-sandbox.tar.gz" -C "$GC_SCRATCH" _config.sh || fail 105
+checkfile "$GC_SCRATCH/_config.sh"
+source "$GC_SCRATCH/_config.sh"
 
 # Monitor space usage
-echo $$ > $MY_MARKER
-if [ -n "$(getrealdir $MY_SCRATCH | grep $(getrealdir $MY_LANDINGZONE))" ]; then
-	echo "\$MY_SCRATCH is a subdirectory of \$MY_LANDINGZONE"; echo
+echo $$ > $GC_MARKER
+if [ -n "$(getrealdir $GC_SCRATCH | grep $(getrealdir $GC_LANDINGZONE))" ]; then
+	echo "\$GC_SCRATCH is a subdirectory of \$GC_LANDINGZONE"; echo
 	# Landing zone: Used space < 5Gb && Free space > 1Gb (using limits on the scratch directory)
-	monitordirlimits "SCRATCH" $MY_LANDINGZONE &
+	monitordirlimits "SCRATCH" $GC_LANDINGZONE &
 else
 	# Landing zone: Used space < 50Mb && Free space > 100Mb
-	monitordirlimits "LANDINGZONE" "$MY_LANDINGZONE" &
+	monitordirlimits "LANDINGZONE" "$GC_LANDINGZONE" &
 	# Landing zone: Used space < 5Gb && Free space > 1Gb
-	monitordirlimits "SCRATCH" "$MY_SCRATCH" &
+	monitordirlimits "SCRATCH" "$GC_SCRATCH" &
 fi
 
 echo "Unpacking environment"
-tar xvfz "$MY_LANDINGZONE/gc-sandbox.tar.gz" -C "$MY_SCRATCH" || fail 105
-checkfile "$MY_LANDINGZONE/job_${MY_JOBID}.var"
-cat "$MY_LANDINGZONE/job_${MY_JOBID}.var" >> "$MY_SCRATCH/_config.sh"
-source "$MY_SCRATCH/_config.sh"
+tar xvfz "$GC_LANDINGZONE/gc-sandbox.tar.gz" -C "$GC_SCRATCH" || fail 105
+checkfile "$GC_LANDINGZONE/job_${GC_JOB_ID}.var"
+cat "$GC_LANDINGZONE/job_${GC_JOB_ID}.var" >> "$GC_SCRATCH/_config.sh"
+source "$GC_SCRATCH/_config.sh"
 
 echo "Prepare variable substitution"
-checkfile "$MY_SCRATCH/_varmap.dat"
-echo "__DATE__: Variable substitution in task __TASK_ID__: __X__" | var_replacer "SUCCESSFUL"
-checkfile "$MY_SCRATCH/_replace.awk"
-cat "$MY_SCRATCH/_replace.awk" | display_short
+checkfile "$GC_SCRATCH/_varmap.dat"
+echo "__DATE__: Variable substitution in task __GC_TASK_ID__: __X__" | var_replacer "SUCCESSFUL"
+checkfile "$GC_SCRATCH/_replace.awk"
+cat "$GC_SCRATCH/_replace.awk" | display_short
 
 # Job timeout (for debugging)
 if [ ${GC_JOBTIMEOUT:-1} -gt 0 ]; then
@@ -102,8 +103,8 @@ if [ -n "$GC_DEPFILES" ]; then
 	echo "==========================="
 	echo
 	for DEPFILE in $GC_DEPFILES; do
-		checkfile "$MY_SCRATCH/env.$DEPFILE.sh"
-		source "$MY_SCRATCH/env.$DEPFILE.sh"
+		checkfile "$GC_SCRATCH/env.$DEPFILE.sh"
+		source "$GC_SCRATCH/env.$DEPFILE.sh"
 	done
 	echo
 fi
@@ -112,11 +113,11 @@ fi
 if [ -n "$GC_MONITORING" ]; then
 	echo "==========================="
 	echo
-	my_move "$MY_SCRATCH" "$MY_LANDINGZONE" "$GC_MONITORING"
+	my_move "$GC_SCRATCH" "$GC_LANDINGZONE" "$GC_MONITORING"
 	echo
 	for MON_APP in $GC_MONITORING; do
-		checkfile "$MY_LANDINGZONE/$MON_APP"
-		source "$MY_LANDINGZONE/$MON_APP" "start"
+		checkfile "$GC_LANDINGZONE/$MON_APP"
+		source "$GC_LANDINGZONE/$MON_APP" "start"
 	done
 	echo
 fi
@@ -147,7 +148,7 @@ fi
 if [ -n "$SE_INPUT_FILES" ]; then
 	echo "==========================="
 	echo
-	url_copy "$SE_INPUT_PATH" "file:///$MY_SCRATCH" "$SE_INPUT_FILES"
+	url_copy "$SE_INPUT_PATH" "file:///$GC_SCRATCH" "$SE_INPUT_FILES"
 	echo
 fi
 
@@ -165,16 +166,16 @@ done
 
 SAVED_SE_INPUT_PATH="$SE_INPUT_PATH"
 SAVED_SE_OUTPUT_PATH="$SE_OUTPUT_PATH"
-checkfile "$MY_SCRATCH/_config.sh"
-source "$MY_SCRATCH/_config.sh"
+checkfile "$GC_SCRATCH/_config.sh"
+source "$GC_SCRATCH/_config.sh"
 export SE_INPUT_PATH="$SAVED_SE_INPUT_PATH"
 export SE_OUTPUT_PATH="$SAVED_SE_OUTPUT_PATH"
 
 echo
 echo "==========================="
 echo
-checkdir "Start directory" "$MY_LANDINGZONE"
-checkdir "Scratch directory" "$MY_SCRATCH"
+checkdir "Start directory" "$GC_LANDINGZONE"
+checkdir "Scratch directory" "$GC_SCRATCH"
 
 # Execute program
 echo "==========================="
@@ -182,56 +183,56 @@ echo
 
 timestamp "EXECUTION" "START"
 echo "==========================="
-cd "$MY_SCRATCH"
-echo "${MY_RUNTIME/\$@/$GC_ARGS}" > $MY_LANDINGZONE/_runtime.sh
-export MY_RUNTIME="$(var_replacer '' < "$MY_LANDINGZONE/_runtime.sh")"
-checkvar MY_RUNTIME
-eval "$MY_RUNTIME" &
-MY_RUNID=$!
-echo "Process $MY_RUNID is running..."
-echo $MY_RUNID > $MY_MARKER
-wait $MY_RUNID
+cd "$GC_SCRATCH"
+echo "${GC_RUNTIME/\$@/$GC_ARGS}" > $GC_LANDINGZONE/_runtime.sh
+export GC_RUNTIME="$(var_replacer '' < "$GC_LANDINGZONE/_runtime.sh")"
+checkvar GC_RUNTIME
+eval "$GC_RUNTIME" &
+GC_PROCESS_ID=$!
+echo "Process $GC_PROCESS_ID is running..."
+echo $GC_PROCESS_ID > $GC_MARKER
+wait $GC_PROCESS_ID
 CODE=$?
-echo $$ > $MY_MARKER
+echo $$ > $GC_MARKER
 zip_files "$SB_OUTPUT_FILES"
-cd "$MY_LANDINGZONE"
+cd "$GC_LANDINGZONE"
 echo "==========================="
 timestamp "EXECUTION" "DONE"
 
-echo "Process $MY_RUNID exit code: $CODE"
+echo "Process $GC_PROCESS_ID exit code: $CODE"
 updatejobinfo $CODE
 echo
 
 echo "==========================="
 echo
-checkdir "Start directory" "$MY_LANDINGZONE"
-[ -d "$MY_SCRATCH" ] && checkdir "Scratch directory" "$MY_SCRATCH"
+checkdir "Start directory" "$GC_LANDINGZONE"
+[ -d "$GC_SCRATCH" ] && checkdir "Scratch directory" "$GC_SCRATCH"
 
-if [ -d "$MY_SCRATCH" -a -n "$SB_OUTPUT_FILES" ]; then
+if [ -d "$GC_SCRATCH" -a -n "$SB_OUTPUT_FILES" ]; then
 	echo "==========================="
 	echo
 	# Move output into landingzone
-	my_move "$MY_SCRATCH" "$MY_LANDINGZONE" "$SB_OUTPUT_FILES"
+	my_move "$GC_SCRATCH" "$GC_LANDINGZONE" "$SB_OUTPUT_FILES"
 	echo
 fi
 
 timestamp "SE_OUT" "START"
-export LOG_MD5="$MY_LANDINGZONE/SE.log"
+export LOG_MD5="$GC_LANDINGZONE/SE.log"
 # Copy files to the SE
 if [ $CODE -eq 0 -a -n "$SE_OUTPUT_FILES" ]; then
 	echo "==========================="
 	echo
-	export TRANSFERLOG="$MY_SCRATCH/SE.log"
-	url_copy "file:///$MY_SCRATCH" "$SE_OUTPUT_PATH" "$SE_OUTPUT_FILES"
+	export TRANSFERLOG="$GC_SCRATCH/SE.log"
+	url_copy "file:///$GC_SCRATCH" "$SE_OUTPUT_PATH" "$SE_OUTPUT_FILES"
 	(
 	[ -f "$TRANSFERLOG" ] && cat "$TRANSFERLOG" | while read NAME_LOCAL NAME_DEST; do
-		MD5HASH=$(cd "$MY_SCRATCH"; md5sum "$NAME_LOCAL" | cut -d " " -f 1)
+		MD5HASH=$(cd "$GC_SCRATCH"; md5sum "$NAME_LOCAL" | cut -d " " -f 1)
 		echo "FILE$IDX=\"$MD5HASH  $NAME_LOCAL  $NAME_DEST  $SE_OUTPUT_PATH\""
 		echo "OUTPUT_FILE_${IDX:-0}_LOCAL=\"$NAME_LOCAL\""
 		echo "OUTPUT_FILE_${IDX:-0}_DEST=\"$NAME_DEST\""
 		echo "OUTPUT_FILE_${IDX:-0}_PATH=\"$SE_OUTPUT_PATH\""
 		echo "OUTPUT_FILE_${IDX:-0}_HASH=$MD5HASH"
-		echo "OUTPUT_FILE_${IDX:-0}_SIZE=$(cd "$MY_SCRATCH"; stat -c%s "$NAME_LOCAL")"
+		echo "OUTPUT_FILE_${IDX:-0}_SIZE=$(cd "$GC_SCRATCH"; stat -c%s "$NAME_LOCAL")"
 		IDX=$[IDX + 1]
 	done
 	) > "$LOG_MD5"
@@ -253,21 +254,21 @@ fi
 
 echo "==========================="
 echo
-checkdir "Start directory" "$MY_LANDINGZONE"
-[ -d "$MY_SCRATCH" ] && checkdir "Scratch directory" "$MY_SCRATCH"
+checkdir "Start directory" "$GC_LANDINGZONE"
+[ -d "$GC_SCRATCH" ] && checkdir "Scratch directory" "$GC_SCRATCH"
 
 # Notify monitoring about job stop
 export GC_WRAPTIME="$[ $(date +%s) - $STARTDATE ]"
 if [ -n "$GC_MONITORING" ]; then
 	echo "==========================="
 	echo
-	times > "$MY_LANDINGZONE/cputime"
+	times > "$GC_LANDINGZONE/cputime"
 	GC_CPUTIMEPARSER='{gsub("s","m"); split($1,x,"m"); SUM+=x[1]*60+x[2]}END{printf "%.0f\n", SUM}'
-	export GC_CPUTIME=`cat "$MY_LANDINGZONE/cputime" | awk "$GC_CPUTIMEPARSER"`
+	export GC_CPUTIME=`cat "$GC_LANDINGZONE/cputime" | awk "$GC_CPUTIMEPARSER"`
 
 	for MON_APP in $GC_MONITORING; do
-		checkfile "$MY_LANDINGZONE/$MON_APP"
-		source "$MY_LANDINGZONE/$MON_APP" "stop"
+		checkfile "$GC_LANDINGZONE/$MON_APP"
+		source "$GC_LANDINGZONE/$MON_APP" "stop"
 	done
 	echo
 fi
@@ -276,10 +277,10 @@ echo "==========================="
 echo
 cleanup
 trap - 0 1 2 3 15
-echo "Job $MY_JOBID finished - `date`"
-echo "TIME=$GC_WRAPTIME" >> $MY_LANDINGZONE/job.info
-[ -f "$LOG_MD5" ] && cat "$LOG_MD5" >> $MY_LANDINGZONE/job.info
-cat $MY_LANDINGZONE/job.info
+echo "Job $GC_JOB_ID finished - `date`"
+echo "TIME=$GC_WRAPTIME" >> $GC_LANDINGZONE/job.info
+[ -f "$LOG_MD5" ] && cat "$LOG_MD5" >> $GC_LANDINGZONE/job.info
+cat $GC_LANDINGZONE/job.info
 echo
 
 echo "==========================="

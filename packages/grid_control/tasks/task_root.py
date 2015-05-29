@@ -45,7 +45,7 @@ class ROOTTask(UserTask):
 
 
 	def getTaskConfig(self):
-		return utils.mergeDicts([UserTask.getTaskConfig(self), {'MY_ROOTSYS': self._rootpath}])
+		return utils.mergeDicts([UserTask.getTaskConfig(self), {'GC_ROOTSYS': self._rootpath}])
 
 
 	def getCommand(self):

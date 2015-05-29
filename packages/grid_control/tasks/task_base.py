@@ -1,4 +1,4 @@
-#-#  Copyright 2007-2014 Karlsruhe Institute of Technology
+#-#  Copyright 2007-2015 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -54,7 +54,7 @@ class TaskModule(NamedObject):
 			'LANDINGZONE_UL': configStorage.getInt('landing zone space used', 100, onChange = initSandbox),
 			'LANDINGZONE_LL': configStorage.getInt('landing zone space left', 1, onChange = initSandbox),
 		}
-		configStorage.set('se output pattern', 'job_@MY_JOBID@_@X@')
+		configStorage.set('se output pattern', 'job_@GC_JOB_ID@_@X@')
 		self.seMinSize = configStorage.getInt('se min size', -1, onChange = initSandbox)
 
 		self.sbInputFiles = config.getPaths('input files', [], onChange = initSandbox)
@@ -99,13 +99,13 @@ class TaskModule(NamedObject):
 			'SB_INPUT_FILES': str.join(' ', map(lambda x: x.pathRel, self.getSBInFiles())),
 			# Runtime
 			'GC_JOBTIMEOUT': self.nodeTimeout,
-			'MY_RUNTIME': self.getCommand(),
+			'GC_RUNTIME': self.getCommand(),
 			# Seeds and substitutions
 			'SUBST_FILES': str.join(' ', map(os.path.basename, self.getSubstFiles())),
 			# Task infos
-			'TASK_ID': self.taskID,
+			'GC_TASK_CONF': self.taskConfigName,
 			'GC_TASK_DATE': self.taskDate,
-			'GC_CONF': self.taskConfigName,
+			'GC_TASK_ID': self.taskID,
 			'GC_VERSION': utils.getVersion(),
 		}
 		return utils.mergeDicts([taskConfig, self.taskVariables])
@@ -131,12 +131,15 @@ class TaskModule(NamedObject):
 
 
 	def getVarMapping(self):
-		# Map vars: Eg. __MY_JOB__ will access $MY_JOBID
-		mapping = [('DATE', 'GC_DATE'), ('TIMESTAMP', 'GC_TIMESTAMP'), ('GUID', 'GC_GUID'),
-			('GC_DATE', 'GC_DATE'), ('GC_TIMESTAMP', 'GC_TIMESTAMP'), ('GC_GUID', 'GC_GUID'),
-			('MY_JOBID', 'MY_JOBID'), ('MY_JOB', 'MY_JOBID'), ('CONF', 'GC_CONF')]
-		envvars = self.getVarNames()
-		return dict(mapping + zip(envvars, envvars))
+		# Transient variables
+		transients = ['GC_DATE', 'GC_TIMESTAMP', 'GC_GUID'] # these variables are determined on the WN
+		# Alias vars: Eg. __MY_JOB__ will access $GC_JOB_ID - used mostly for compatibility
+		alias = {'DATE': 'GC_DATE', 'TIMESTAMP': 'GC_TIMESTAMP', 'GUID': 'GC_GUID',
+			'MY_JOBID': 'GC_JOB_ID', 'MY_JOB': 'GC_JOB_ID', 'JOBID': 'GC_JOB_ID',
+			'CONF': 'GC_CONF', 'TASK_ID': 'GC_TASK_ID'}
+		varNames = self.getVarNames() + transients
+		alias.update(zip(varNames, varNames)) # include reflexive mappings
+		return alias
 
 
 	def substVars(self, inp, jobNum = None, addDict = {}, check = True):

@@ -1,4 +1,4 @@
-#-#  Copyright 2009-2014 Karlsruhe Institute of Technology
+#-#  Copyright 2009-2015 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -28,7 +28,7 @@ class DataTask(TaskModule):
 		self.dataset = config.get('dataset', '').strip()
 		if self.dataset == '':
 			return
-		config.set('se output pattern', '@NICK@_job_@MY_JOBID@_@X@')
+		config.set('se output pattern', '@NICK@_job_@GC_JOB_ID@_@X@')
 		config.set('default lookup', 'DATASETNICK')
 
 		defaultProvider = config.get('dataset provider', 'ListProvider')

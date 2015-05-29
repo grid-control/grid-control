@@ -72,15 +72,15 @@ abort() {
 	trap - 0 1 2 3 15
 	GC_DEBUG="true"
 	debug_helper $FUNCNAME "$@"
-	echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" >> $MY_LANDINGZONE/gc.stderr
-	echo "!!     DEBUG INFORMATION     !!" >> $MY_LANDINGZONE/gc.stderr
-	echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" >> $MY_LANDINGZONE/gc.stderr
-	[ -d "$MY_LANDINGZONE" ] && checkdir "Start directory" "$MY_LANDINGZONE" >> $MY_LANDINGZONE/gc.stderr
-	[ -d "$MY_SCRATCH" ] && checkdir "Scratch directory" "$MY_SCRATCH" >> $MY_LANDINGZONE/gc.stderr
-	set >> $MY_LANDINGZONE/gc.stderr
+	echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" >> $GC_LANDINGZONE/gc.stderr
+	echo "!!     DEBUG INFORMATION     !!" >> $GC_LANDINGZONE/gc.stderr
+	echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" >> $GC_LANDINGZONE/gc.stderr
+	[ -d "$GC_LANDINGZONE" ] && checkdir "Start directory" "$GC_LANDINGZONE" >> $GC_LANDINGZONE/gc.stderr
+	[ -d "$GC_SCRATCH" ] && checkdir "Scratch directory" "$GC_SCRATCH" >> $GC_LANDINGZONE/gc.stderr
+	set >> $GC_LANDINGZONE/gc.stderr
 	cleanup
 	[ -n "$1" ] && updatejobinfo $1
-	[ -n "$(grep 'EXITCODE=0' $MY_LANDINGZONE/job.info)" ] && updatejobinfo 100
+	[ -n "$(grep 'EXITCODE=0' $GC_LANDINGZONE/job.info)" ] && updatejobinfo 100
 	trap - 0 1 2 3 15
 	kill4sure $$
 }
@@ -101,11 +101,11 @@ kill4sure() {
 
 updatejobinfo() {
 	debug_helper $FUNCNAME "$@"
-	if [ -d "$MY_LANDINGZONE" ]; then
+	if [ -d "$GC_LANDINGZONE" ]; then
 		(
-			echo "JOBID=$MY_JOBID"
+			echo "JOBID=$GC_JOB_ID"
 			echo "EXITCODE=$1"
-		) > $MY_LANDINGZONE/job.info
+		) > $GC_LANDINGZONE/job.info
 	fi
 }
 
@@ -166,15 +166,15 @@ getrealdir() {
 getscratch() {
 	debug_helper $FUNCNAME "$@"
 	# find scratch directory with highest amount of disk space
-	MY_SCRATCH="invalid"
+	GC_SCRATCH="invalid"
 
 	# getscratch_internal <list of variables> 
 	# it will return with the path pointing at the biggest amount of free space
 	# if no none of the directories exist, it returns 1
 	getscratch_internal() {
 		debug_helper $FUNCNAME "$@"
-		MY_SCRATCH="invalid"
-		MY_SCRATCHSIZE=-1
+		GC_SCRATCH="invalid"
+		GC_SCRATCHSIZE=-1
 		# find scratch directory with highest amount of disk space
 		for DIRVAR in $@;
 		do
@@ -190,15 +190,15 @@ getscratch() {
 					# Get free space
 					SIZE="`getdiskspace $DIR/$$`" &> /dev/null
 					# If it is the biggest space, use it!
-					[ "$SIZE" -gt "$MY_SCRATCHSIZE" ] && MY_SCRATCH="$DIR/$$" && MY_SCRATCHSIZE="$SIZE" &> /dev/null
+					[ "$SIZE" -gt "$GC_SCRATCHSIZE" ] && GC_SCRATCH="$DIR/$$" && GC_SCRATCHSIZE="$SIZE" &> /dev/null
 					rm -rf "$DIR/$$" &> /dev/null
 				fi
 			fi
 		done
 		# Was a scratch directory found?
-		if [ "$MY_SCRATCHSIZE" -gt 0 ]; then
-			mkdir -p "$MY_SCRATCH" &> /dev/null
-			echo $MY_SCRATCH
+		if [ "$GC_SCRATCHSIZE" -gt 0 ]; then
+			mkdir -p "$GC_SCRATCH" &> /dev/null
+			echo $GC_SCRATCH
 			return 0;
 		fi
 		return 1;
@@ -206,7 +206,7 @@ getscratch() {
 
 	getscratch_internal GC_SCRATCH && return 0
 	getscratch_internal GC_LOCALSCRATCH && return 0
-	getscratch_internal MY_LANDINGZONE && return 0
+	getscratch_internal GC_LANDINGZONE && return 0
 	getscratch_internal LOCAL_SCRATCH NODE_SCRATCH USER_SCRATCH EDG_WL_SCRATCH OSG_WN_TMP LCG_TMP DG_WL_SCRATCH && return 0
 
 	echo "Site doesn't define scratch directory variables! Trying other locations..." 1>&2
@@ -214,7 +214,7 @@ getscratch() {
 
 	# FAIL or continue?
 	#fail 123
-	getscratch_internal MY_LANDINGZONE && return 0
+	getscratch_internal GC_LANDINGZONE && return 0
 
 	export GC_TMP="/tmp"
 	getscratch_internal HOME TMPDIR GC_TMP && return 0
@@ -226,9 +226,9 @@ getscratch() {
 cleanup() {
 	[ -z "$GC_DOCLEANUP" ] && return 0
 	debug_helper $FUNCNAME "$@"
-	[ -d "$MY_LANDINGZONE" ] && cd "$MY_LANDINGZONE"
-	[ -f "$MY_MARKER" ] && rm -Rf "$MY_MARKER" &> /dev/null
-	[ -d "$MY_SCRATCH" ] && rm -Rf "$MY_SCRATCH" &> /dev/null
+	[ -d "$GC_LANDINGZONE" ] && cd "$GC_LANDINGZONE"
+	[ -f "$GC_MARKER" ] && rm -Rf "$GC_MARKER" &> /dev/null
+	[ -d "$GC_SCRATCH" ] && rm -Rf "$GC_SCRATCH" &> /dev/null
 }
 
 # TODO: choose grid commands
@@ -249,10 +249,10 @@ _find() {
 	debug_helper $FUNCNAME "$@"
 	if test -f "`pwd`/$1"; then
 		echo "`pwd`/$1"
-	elif test -f "$MY_SCRATCH/$1"; then
-		echo "$MY_SCRATCH/$1"
-	elif test -f "$MY_LANDINGZONE/$1"; then
-		echo "$MY_LANDINGZONE/$1"
+	elif test -f "$GC_SCRATCH/$1"; then
+		echo "$GC_SCRATCH/$1"
+	elif test -f "$GC_LANDINGZONE/$1"; then
+		echo "$GC_LANDINGZONE/$1"
 	else
 		echo "$1 not found" 2>&1
 	fi
@@ -262,10 +262,10 @@ var_replacer() {
 	debug_helper $FUNCNAME "$@"
 	j=0
 	for i in $SEEDS; do
-		eval "export SEED_$j=$[i+$MY_JOBID]"
+		eval "export SEED_$j=$[i+$GC_JOB_ID]"
 		j=$[j+1]
 	done
-	REPLACEFILE="${MY_SCRATCH:-.}/_replace.awk"
+	REPLACEFILE="${GC_SCRATCH:-.}/_replace.awk"
 	GC_DATE=`date +%F`
 	GC_TIMESTAMP=`date +%s`
 	GC_GUID=`uuidgen 2> /dev/null`
@@ -286,7 +286,7 @@ var_replacer() {
 		[ -n "$XBASE" ] && echo "	gsub(\"__XBASE__\", \"$XBASE\")"
 		[ -n "$XEXT" ] && echo "	gsub(\"@XEXT@\", \"$XEXT\")"
 		[ -n "$XEXT" ] && echo "	gsub(\"__XEXT__\", \"$XEXT\")"
-		[ -f "${MY_SCRATCH:-.}/_varmap.dat" ] && cat "${MY_SCRATCH:-.}/_varmap.dat" |
+		[ -f "${GC_SCRATCH:-.}/_varmap.dat" ] && cat "${GC_SCRATCH:-.}/_varmap.dat" |
 		while read USER_VARNAME REAL_VARNAME; do
 			VARVALUE="${!REAL_VARNAME}"
 			VARVALUE_ESC=`echo "$VARVALUE" | awk '{ gsub("\"", "\\\\\""); print }'`
@@ -326,8 +326,8 @@ monitordirlimits() {
 	LIMIT_UL="${1}_UL"
 	[ "$1" == "SCRATCH" ] && DEFAULT_LL=100 || DEFAULT_LL=1000
 	[ "$1" == "SCRATCH" ] && DEFAULT_UL=50 || DEFAULT_UL=100
-	while [ -f "$MY_MARKER" ]; do
-		[ -z "$MDL_CFG" -a -f "$MY_SCRATCH/_config.sh" ] && source "$MY_SCRATCH/_config.sh" && MDL_CFG="set"
+	while [ -f "$GC_MARKER" ]; do
+		[ -z "$MDL_CFG" -a -f "$GC_SCRATCH/_config.sh" ] && source "$GC_SCRATCH/_config.sh" && MDL_CFG="set"
 		DISKSPACE="`getdiskspace $2`"
 		if [ $DISKSPACE -lt ${!LIMIT_LL:-$DEFAULT_LL} ]; then
 			echo "Lower space limit reached on $2 ($DISKSPACE < ${!LIMIT_LL:-$DEFAULT_LL})" 1>&2
@@ -351,7 +351,7 @@ print_and_eval() {
 	shift
 	echo "$PAELEVEL`basename $CMD` $@"
 	export PAELEVEL="$PAELEVEL "
-	LOGFILE="${MY_LANDINGZONE:-/tmp}/paqe.$USER.${#BASH_LINENO[*]}.$RANDOM$RANDOM"
+	LOGFILE="${GC_LANDINGZONE:-/tmp}/paqe.$USER.${#BASH_LINENO[*]}.$RANDOM$RANDOM"
 	( eval "$CMD $@" > "$LOGFILE.out" 2> "$LOGFILE.err" )
 	CODE="$?"
 	export PAELEVEL="${PAELEVEL# }"
@@ -488,7 +488,7 @@ url_copy_single_srm() {
 url_copy_connector() {
 	debug_helper $FUNCNAME "$@"
 	TMPCP="$GC_KEEPTMP"
-	[ -z "$GC_KEEPTMP" ] && TMPCP="file://${MY_SCRATCH:-/tmp}/ucc.$USER.$RANDOM$RANDOM"
+	[ -z "$GC_KEEPTMP" ] && TMPCP="file://${GC_SCRATCH:-/tmp}/ucc.$USER.$RANDOM$RANDOM"
 	print_and_eval "url_copy_single" "$1" "$TMPCP" || fail 106
 	print_and_eval "url_copy_single" "$TMPCP" "$2" || fail 106
 	[ -z "$GC_KEEPTMP" ] && url_rm "$TMPCP"
@@ -566,8 +566,8 @@ url_copy() {
 				SOURCE_PATTERN="__X__"
 				for PATTERN_1 in "$FILENAMES"; do
 					PATTERN_2="`echo ${SE_INPUT_PATTERN:-__X__} | var_replacer "$PATTERN_1"`"
-					(url_ls "$SOURCE_URL" "$PATTERN_2" > "$MY_SCRATCH/_url_ls.dat") 2>&1
-					SOURCE_FILES="$SOURCE_FILES $(< "$MY_SCRATCH/_url_ls.dat")"
+					(url_ls "$SOURCE_URL" "$PATTERN_2" > "$GC_SCRATCH/_url_ls.dat") 2>&1
+					SOURCE_FILES="$SOURCE_FILES $(< "$GC_SCRATCH/_url_ls.dat")"
 				done
 			else
 				SOURCE_PATTERN="${SE_INPUT_PATTERN:-__X__}"
@@ -683,7 +683,7 @@ display_short() {
 
 timestamp() {
 	debug_helper $FUNCNAME "$@"
-	echo "$1_$2=$[ $(date +"%s")]" >> $MY_LANDINGZONE/job.timestamps
+	echo "$1_$2=$[ $(date +"%s")]" >> $GC_LANDINGZONE/job.timestamps
 	echo "[$(date +"%Y:%m:%d-%k:%M:%S")] $@"
 }
 
@@ -693,17 +693,17 @@ timereport() {
 	echo "== ===  Job timing  ==== =="
 	echo "jobstart=$STARTDATE"
 	echo "Tag : Time"
-	cat $MY_LANDINGZONE/job.timestamps
+	cat $GC_LANDINGZONE/job.timestamps
 	echo "==========================="
 	while read line; do
-		echo "TIMESTAMP_$line" >> $MY_LANDINGZONE/job.info
-	done < $MY_LANDINGZONE/job.timestamps
+		echo "TIMESTAMP_$line" >> $GC_LANDINGZONE/job.info
+	done < $GC_LANDINGZONE/job.timestamps
 }
 
 timeprocess() {
 	debug_helper $FUNCNAME "$@"
 	if [ -x "`getcommand time`" ]; then
-		`getcommand time` -o $MY_LANDINGZONE/job.timing -f "--Time--\nWall: %e s\nUser: %U s\nSys : %S s\nCPU : %P\n--Memory--\nMax RSS : %M KB\nAvr RSS : %t KB\nTot Mem : %K KB\n--Prog--\nCmd : %C\nExit: %x\n" $@
+		`getcommand time` -o $GC_LANDINGZONE/job.timing -f "--Time--\nWall: %e s\nUser: %U s\nSys : %S s\nCPU : %P\n--Memory--\nMax RSS : %M KB\nAvr RSS : %t KB\nTot Mem : %K KB\n--Prog--\nCmd : %C\nExit: %x\n" $@
 	else
 		time $@
 	fi

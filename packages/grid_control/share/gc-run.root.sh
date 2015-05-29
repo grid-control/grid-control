@@ -1,5 +1,5 @@
 #!/bin/sh
-#-#  Copyright 2010 Karlsruhe Institute of Technology
+#-#  Copyright 2010-2015 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -17,13 +17,13 @@
 
 # 110 - ROOT area not found
 
-source $MY_LANDINGZONE/gc-run.lib || exit 101
+source $GC_LANDINGZONE/gc-run.lib || exit 101
 
 echo "ROOT module starting"
 echo
 echo "---------------------------"
 
-export ROOTSYS=$MY_ROOTSYS
+export ROOTSYS=$GC_ROOTSYS
 export PATH="$PATH:$ROOTSYS/bin"
 export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$ROOTSYS/lib:$ROOTSYS/lib/root:."
 echo -n "ROOT Version: "

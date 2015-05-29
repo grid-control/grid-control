@@ -29,7 +29,7 @@ class ParameterAdapter(LoadableObject):
 		return self._source.getMaxParameters()
 
 	def getJobKeys(self):
-		result = map(lambda k: ParameterMetadata(k, untracked=True), ['MY_JOBID', 'GC_PARAM'])
+		result = map(lambda k: ParameterMetadata(k, untracked=True), ['GC_JOB_ID', 'GC_PARAM'])
 		self._source.fillParameterKeys(result)
 		return result
 
@@ -39,7 +39,7 @@ class ParameterAdapter(LoadableObject):
 		if jobNum == None:
 			raise APIError('Unable to process jobNum None!')
 		result = {ParameterInfo.ACTIVE: True, ParameterInfo.REQS: []}
-		result['MY_JOBID'] = jobNum
+		result['GC_JOB_ID'] = jobNum
 		result['GC_PARAM'] = pNum
 		self._source.fillParameterInfo(pNum, result)
 		if self._prune:
@@ -142,7 +142,7 @@ class TrackedParameterAdapter(BasicParameterAdapter):
 			result = BasicParameterAdapter.getJobInfo(self, jobNum, pNum)
 		else:
 			result = {ParameterInfo.ACTIVE: False}
-		result['MY_JOBID'] = jobNum
+		result['GC_JOB_ID'] = jobNum
 		return result
 
 	def _resyncInternal(self): # This function is _VERY_ time critical!

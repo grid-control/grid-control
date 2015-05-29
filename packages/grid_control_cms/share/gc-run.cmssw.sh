@@ -1,5 +1,5 @@
 #!/bin/bash
-#-#  Copyright 2010-2014 Karlsruhe Institute of Technology
+#-#  Copyright 2008-2015 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -20,7 +20,7 @@
 # 112 - CMSSW environment setup failed
 # 113 - Problem while hashing config file
 
-source $MY_LANDINGZONE/gc-run.lib || exit 101
+source $GC_LANDINGZONE/gc-run.lib || exit 101
 
 echo "CMSSW module starting"
 echo
@@ -28,7 +28,7 @@ echo "---------------------------"
 timestamp "CMSSW_STARTUP" "START"
 echo "==========================="
 
-echo "NEventsProcessed=${MAX_EVENTS:-0}" > ${MY_DASHBOARDINFO:-/dev/null}
+echo "NEventsProcessed=${MAX_EVENTS:-0}" > ${GC_DASHBOARDINFO:-/dev/null}
 
 checkvar "VO_CMS_SW_DIR"
 checkfile "$VO_CMS_SW_DIR/cmsset_default.sh"
@@ -58,9 +58,9 @@ cd "$SCRAM_PROJECTVERSION"
 if ! [ "$HAS_RUNTIME" = no ]; then
 
 	if [ "$SE_RUNTIME" = yes ]; then
-		echo "Rename CMSSW environment package: ${TASK_ID}.tar.gz"
-		mv `_find ${TASK_ID}.tar.gz` runtime.tar.gz || fail 101
-		export SE_INPUT_FILES="${SE_INPUT_FILES/${TASK_ID}.tar.gz/}"
+		echo "Rename CMSSW environment package: ${GC_TASK_ID}.tar.gz"
+		mv `_find ${GC_TASK_ID}.tar.gz` runtime.tar.gz || fail 101
+		export SE_INPUT_FILES="${SE_INPUT_FILES/${GC_TASK_ID}.tar.gz/}"
 	fi
 
 	echo "Unpacking CMSSW environment"
@@ -85,10 +85,10 @@ echo
 
 echo "---------------------------"
 echo
-export MY_WORKDIR="`pwd`/workdir"
-export CMSSW_SEARCH_PATH="$CMSSW_SEARCH_PATH:$MY_WORKDIR"
-mkdir -p "$MY_WORKDIR"; cd "$MY_WORKDIR"
-my_move "$MY_SCRATCH" "$MY_WORKDIR" "$SB_INPUT_FILES $SE_INPUT_FILES $CMSSW_PROLOG_SB_In_FILES $CMSSW_EPILOG_SB_In_FILES"
+export GC_WORKDIR="`pwd`/workdir"
+export CMSSW_SEARCH_PATH="$CMSSW_SEARCH_PATH:$GC_WORKDIR"
+mkdir -p "$GC_WORKDIR"; cd "$GC_WORKDIR"
+my_move "$GC_SCRATCH" "$GC_WORKDIR" "$SB_INPUT_FILES $SE_INPUT_FILES $CMSSW_PROLOG_SB_In_FILES $CMSSW_EPILOG_SB_In_FILES"
 echo
 echo "==========================="
 timestamp "CMSSW_STARTUP" "DONE"
@@ -116,19 +116,19 @@ done
 
 echo "---------------------------"
 echo
-checkdir "CMSSW working directory" "$MY_WORKDIR"
+checkdir "CMSSW working directory" "$GC_WORKDIR"
 
 if [ "$GC_CMSSWRUN_RETCODE" == "0" ] && [ -n "$CMSSW_CONFIG" ]; then
 	echo "---------------------------"
 	echo
-	cd "$MY_WORKDIR"
+	cd "$GC_WORKDIR"
 	for CFG_NAME in $CMSSW_CONFIG; do
 		_CMSRUN_COUNT=1
 		timestamp "CMSSW_CMSRUN${_CMSRUN_COUNT}" "START"
 		echo "Config file: $CFG_NAME"
 		echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~"
 		checkfile "$CFG_NAME"
-		DBSDIR="$MY_WORKDIR/cmssw.dbs/$CFG_NAME"
+		DBSDIR="$GC_WORKDIR/cmssw.dbs/$CFG_NAME"
 		mkdir -p "$DBSDIR"
 
 		echo "Substituting variables..."
@@ -153,12 +153,12 @@ if [ "$GC_CMSSWRUN_RETCODE" == "0" ] && [ -n "$CMSSW_CONFIG" ]; then
 			(
 				echo "Starting cmsRun with config file $CFG_NAME and arguments $@"
 				cmsRun -j "$DBSDIR/report.xml" -e "$CFG_NAME" $@
-				echo $? > "$MY_LANDINGZONE/exitcode.txt"
+				echo $? > "$GC_LANDINGZONE/exitcode.txt"
 				echo
 				echo "---------------------------"
 				echo
 			) 2>&1 | gzip -9 > "$CFG_NAME.rawlog.gz"
-			[ -f "$MY_LANDINGZONE/exitcode.txt" ] && CODE=$(< "$MY_LANDINGZONE/exitcode.txt") && rm -f "$MY_LANDINGZONE/exitcode.txt"
+			[ -f "$GC_LANDINGZONE/exitcode.txt" ] && CODE=$(< "$GC_LANDINGZONE/exitcode.txt") && rm -f "$GC_LANDINGZONE/exitcode.txt"
 		else 
 			cmsRun -j "$DBSDIR/report.xml" -e "$CFG_NAME" $@
 			CODE=$?
@@ -180,12 +180,12 @@ if [ "$GC_CMSSWRUN_RETCODE" == "0" ] && [ -n "$CMSSW_CONFIG" ]; then
 	# Calculate hash of output files for DBS
 	echo "Calculating output file hash..."
 	for OUT_NAME in $SE_OUTPUT_FILES; do
-		[ -s "$OUT_NAME" ] && cksum "$OUT_NAME" >> "$MY_WORKDIR/cmssw.dbs/files"
+		[ -s "$OUT_NAME" ] && cksum "$OUT_NAME" >> "$GC_WORKDIR/cmssw.dbs/files"
 	done
-	echo "$SCRAM_PROJECTVERSION" > "$MY_WORKDIR/cmssw.dbs/version"
+	echo "$SCRAM_PROJECTVERSION" > "$GC_WORKDIR/cmssw.dbs/version"
 	echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~"
 	echo
-	(cd "$MY_WORKDIR/cmssw.dbs"; tar cvzf "$MY_WORKDIR/cmssw.dbs.tar.gz" * )
+	(cd "$GC_WORKDIR/cmssw.dbs"; tar cvzf "$GC_WORKDIR/cmssw.dbs.tar.gz" * )
 	GC_CMSSWRUN_RETCODE=$CODE
 fi
 
@@ -214,11 +214,11 @@ fi
 echo
 echo "---------------------------"
 echo
-checkdir "CMSSW working directory after processing" "$MY_WORKDIR"
+checkdir "CMSSW working directory after processing" "$GC_WORKDIR"
 
 # Move output into scratch
 echo "---------------------------"
 echo
-my_move "$MY_WORKDIR" "$MY_SCRATCH" "$SB_OUTPUT_FILES $SE_OUTPUT_FILES"
+my_move "$GC_WORKDIR" "$GC_SCRATCH" "$SB_OUTPUT_FILES $SE_OUTPUT_FILES"
 
 exit $GC_CMSSWRUN_RETCODE

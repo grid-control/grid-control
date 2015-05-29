@@ -20,8 +20,8 @@ echo "Searching for gLite environment..."
 export _JAVA_OPTIONS="-Xms128m -Xmx512m"
 if [ -z "$GLITE_LOCATION" ]; then
 	# Save local VO environment variables
-	VO_KEEPER="${MY_LANDINGZONE:-/tmp}/env.glite.old"
-	VO_REVERT="${MY_LANDINGZONE:-/tmp}/env.glite.new"
+	VO_KEEPER="${GC_LANDINGZONE:-/tmp}/env.glite.old"
+	VO_REVERT="${GC_LANDINGZONE:-/tmp}/env.glite.new"
 	export | grep VO_ | sed -e "s/^.*VO_/VO_/" > "$VO_KEEPER"
 
 	cat $VO_KEEPER
@@ -50,9 +50,9 @@ if [ -z "$GLITE_LOCATION" ]; then
 fi
 echo "Using gLite UI $GLITE_LOCATION"
 
-if [ -s "$MY_SCRATCH/_proxy.dat" ]; then
-	mv "$MY_SCRATCH/_proxy.dat" "$MY_LANDINGZONE/_proxy.dat"
-	chmod 400 "$MY_LANDINGZONE/_proxy.dat"
-	[ ! -s "$X509_USER_PROXY" ] && export X509_USER_PROXY="$MY_LANDINGZONE/_proxy.dat"
+if [ -s "$GC_SCRATCH/_proxy.dat" ]; then
+	mv "$GC_SCRATCH/_proxy.dat" "$GC_LANDINGZONE/_proxy.dat"
+	chmod 400 "$GC_LANDINGZONE/_proxy.dat"
+	[ ! -s "$X509_USER_PROXY" ] && export X509_USER_PROXY="$GC_LANDINGZONE/_proxy.dat"
 fi
 echo "Using grid proxy $X509_USER_PROXY"

@@ -1,4 +1,4 @@
-#-#  Copyright 2009-2014 Karlsruhe Institute of Technology
+#-#  Copyright 2009-2015 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -27,7 +27,7 @@ class DashBoard(Monitoring):
 		self.app = config.get('application', 'shellscript', onChange = None)
 		jobType = utils.QM(jobDesc.jobType, jobDesc.jobType, 'analysis')
 		self.tasktype = config.get('task', jobType, onChange = None)
-		self.taskname = config.get('task name', '@TASK_ID@_@DATASETNICK@', onChange = None)
+		self.taskname = config.get('task name', '@GC_TASK_ID@_@DATASETNICK@', onChange = None)
 		self._statusMap = {Job.DONE: 'DONE', Job.FAILED: 'DONE', Job.SUCCESS: 'DONE',
 			Job.RUNNING: 'RUNNING', Job.ABORTED: 'ABORTED', Job.CANCELLED: 'CANCELLED'}
 
