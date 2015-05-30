@@ -15,7 +15,7 @@
 if __name__ == '__main__':
 	import os, sys
 	from python_compat import sorted, set
-	blacklist = []
+	blacklist = ['./requests/packages/chardet/chardetect.py']
 	# import everything
 	def recurse(root):
 		tmp = root.lstrip('./').split('/')
@@ -55,7 +55,6 @@ if __name__ == '__main__':
 			clsList.extend(filter(lambda x: sc(x, LoadableObject), map(eval, list(dir()))))
 		except:
 			print('Unable to exec "%s"!' % imp)
-			raise
 
 	def getBaseNames(cls):
 		if ((LoadableObject in cls.__bases__) or (NamedObject in cls.__bases__)) and (cls != NamedObject):
