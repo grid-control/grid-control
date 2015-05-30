@@ -67,7 +67,7 @@ class FileMutex:
 		self.lockfile = lockfile
 		while os.path.exists(self.lockfile):
 			if first and (time.time() - first > 10):
-				print 'Trying to aquire lock file %s...' % lockfile
+				print 'Trying to aquire lock file %s ...' % lockfile
 				first = False
 			time.sleep(0.2)
 		self.fd = open(self.lockfile, 'w')

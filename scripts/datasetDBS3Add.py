@@ -13,21 +13,16 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-import optparse
-
-from gcSupport import *
-
+import os, sys, optparse
+from gcSupport import FileMutex, getConfig, utils
 from grid_control.datasets.provider_base import DataProvider
-from grid_control.datasets.provider_basic import ListProvider
-
+from grid_control_cms.dbs3_input_validation import DBS3InputValidation
+from grid_control_cms.dbs3_lite_client import DBS3LiteClient
+from grid_control_cms.dbs3_migration_queue import AlreadyQueued
 from grid_control_cms.dbs3_migration_queue import DBS3MigrationQueue
 from grid_control_cms.dbs3_migration_queue import MigrationTask
 from grid_control_cms.dbs3_migration_queue import do_migration
-from grid_control_cms.dbs3_migration_queue import AlreadyQueued
-from grid_control_cms.dbs3_lite_client import DBS3LiteClient
-from grid_control_cms.dbs3_info_provider import DBS3InfoProvider
-from grid_control_cms.dbs3_input_validation import DBS3InputValidation
-
+from python_compat import NullHandler, set
 
 def generateDBS3BlockDumps(opts, blocks):
     for block_info in blocks:
@@ -121,9 +116,6 @@ def generateDBS3BlockDumps(opts, blocks):
 
 
 if __name__ == '__main__':
-    from python_compat import NullHandler
-    from python_compat import set
-
     usage = '%s [OPTIONS] <config file / work directory>' % sys.argv[0]
     parser = optparse.OptionParser(usage=usage)
     parser.add_option('-G', '--globaltag', dest='globaltag', default='crab2_tag', help='Specify global tag')
@@ -217,12 +209,12 @@ if __name__ == '__main__':
 
     # 1) Get dataset information
     if opts.inputFile:
-        provider = ListProvider(getConfig(), opts.inputFile, None, None)
+        provider = DataProvider.getInstance('ListProvider', getConfig(), opts.inputFile, None)
     else:
         config = getConfig(configDict = {'dataset': dict(parser.values.__dict__)})
         if opts.discovery:
             config.set('dataset name pattern', '@DS_KEY@')
-        provider = DBS3InfoProvider(config, args[0], None)
+        provider = DataProvider.getInstance('DBSInfoProvider', config, args[0], None)
 
     provider.saveState(os.path.join(opts.tmpDir, 'dbs.dat'))
     if opts.discovery:
