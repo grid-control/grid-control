@@ -99,7 +99,8 @@ class ObjectsFromCMSSW(InfoScanner):
 						lumis.append((runId, int(lumi.getAttribute('ID'))))
 				tmpOut['CMSSW_LUMIS'] = lumis
 
-				tmpFiles.setdefault(readTag(outputFile, 'PFN'), {}).update(tmpOut)
+				pfn = readTag(outputFile, 'PFN').split(':')[-1]
+				tmpFiles.setdefault(pfn, {}).update(tmpOut)
 		objStore.update({'CMSSW_CONFIG': tmpCfg, 'CMSSW_FILES': tmpFiles})
 		tar.close()
 		yield (path, metadata, events, seList, objStore)
