@@ -43,6 +43,18 @@ class Report(LoadableObject):
 		raise AbstractError
 
 
+class MultiReport(Report):
+	def __init__(self, reportProxyList, jobDB, task, jobs = None, configString = ''):
+		self._reportList = map(lambda p: p.getInstance(jobDB, task, jobs, configString), reportProxyList)
+
+	def getHeight(self):
+		return sum(map(lambda r: r.getHeight(), self._reportList))
+
+	def display(self):
+		for report in self._reportList:
+			report.display()
+
+
 class BasicReport(Report):
 	def _printHeader(self, message, level = -1):
 		utils.vprint('-'*65, level)

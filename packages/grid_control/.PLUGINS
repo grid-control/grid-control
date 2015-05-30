@@ -209,6 +209,7 @@ grid_control.parameters.psource_meta	ZipShortParameterSource
 grid_control.report.Report:
 grid_control.report	BasicReport
 grid_control.report	LocationReport
+grid_control.report	MultiReport
 grid_control.report	Report
 
 grid_control.tasks.task_base.TaskModule:

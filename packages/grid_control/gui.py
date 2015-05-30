@@ -1,4 +1,4 @@
-#-#  Copyright 2009-2014 Karlsruhe Institute of Technology
+#-#  Copyright 2009-2015 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -13,14 +13,16 @@
 #-#  limitations under the License.
 
 from grid_control import utils
-from grid_control.abstract import LoadableObject
+from grid_control.abstract import ClassFactory, LoadableObject
 from grid_control.exceptions import AbstractError
 from grid_control.report import Report
 
 class GUI(LoadableObject):
 	def __init__(self, config, workflow):
 		self._workflow = workflow
-		self._reportClass = config.getClass('report', 'BasicReport', cls = Report, onChange = None)
+		self._reportClass = ClassFactory(config,
+			('report', 'BasicReport'), ('report manager', 'MultiReport'),
+			cls = Report, onChange = None)
 		self._reportOpts = config.get('report options', '', onChange = None)
 
 	def displayWorkflow(self):
