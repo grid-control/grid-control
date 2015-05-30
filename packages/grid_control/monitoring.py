@@ -60,8 +60,9 @@ Monitoring.moduleMap["scripts"] = "ScriptMonitoring"
 
 
 class MultiMonitor(Monitoring):
-	def __init__(self, config, name, submodules, task):
-		Monitoring.__init__(self, config, name, None, map(lambda m: m(task), submodules))
+	def __init__(self, config, name, monitoringProxyList, task):
+		submoduleList = map(lambda m: m.getInstance(task), monitoringProxyList)
+		Monitoring.__init__(self, config, name, None, submoduleList)
 
 
 class ScriptMonitoring(Monitoring):

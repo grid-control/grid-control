@@ -104,18 +104,17 @@ class NamedObject(LoadableObject):
 # General purpose class factory
 class ClassFactory:
 	def __init__(self, config, base_opt_def, merge_opt_base, **kwargs):
-		proxyList = config.getClassList(base_opt_def[0], base_opt_def[1], **kwargs)
+		self._proxyList = config.getClassList(base_opt_def[0], base_opt_def[1], **kwargs)
 		self._mergeCls = None
-		if len(proxyList) > 1:
+		if len(self._proxyList) > 1:
 			self._mergeCls = config.getClass(merge_opt_base[0], merge_opt_base[1], **kwargs)
-		self._classList = map(lambda clsProxy: lambda *cargs, **ckwargs: clsProxy.getInstance(*cargs, **ckwargs), proxyList)
 
 	# Get single instance by merging multiple sub instances if necessary
 	def getInstance(self, *args, **kwargs):
-		if len(self._classList) == 1:
-			return self._classList[0](*args, **kwargs)
-		elif len(self._classList) > 1:
-			return self._mergeCls.getInstance(self._classList, *args, **kwargs)
+		if len(self._proxyList) == 1:
+			return self._proxyList[0].getInstance(*args, **kwargs)
+		elif len(self._proxyList) > 1:
+			return self._mergeCls.getInstance(self._proxyList, *args, **kwargs)
 
 
 # Needed by getClass / getClasses to wrap the fixed arguments to the instantiation / name of the instance

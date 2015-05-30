@@ -19,46 +19,47 @@ from grid_control.utils import Result
 # Distribute to WMS according to job id prefix
 
 class MultiWMS(WMS):
-	def __init__(self, config, defaultWMS, wmsList):
-		self.defaultWMS = defaultWMS
-		self.wmsMap = dict(map(lambda wmsObj: (wmsObj.wmsName, wmsObj), wmsList))
-		WMS.__init__(self, config, None)
-
-		# Determine WMS timings
-		defaultT = self.defaultWMS.getTimings()
-		self.timing = Result(waitOnIdle = defaultT.waitOnIdle, waitBetweenSteps = defaultT.waitBetweenSteps)
-		for wmsPrefix, wmsObj in self.wmsMap.items():
+	def __init__(self, config, wmsName, wmsList):
+		WMS.__init__(self, config, wmsName)
+		self._defaultWMS = wmsList[0].getInstance()
+		defaultT = self._defaultWMS.getTimings()
+		self._timing = Result(waitOnIdle = defaultT.waitOnIdle, waitBetweenSteps = defaultT.waitBetweenSteps)
+		self._wmsMap = {}
+		for wmsEntry in wmsList[1:]:
+			wmsObj = wmsEntry.getInstance()
+			self._wmsMap[wmsEntry.getObjectName().lower()] = wmsObj
 			wmsT = wmsObj.getTimings()
-			self.timing.waitOnIdle = max(self.timing.waitOnIdle, wmsT.waitOnIdle)
-			self.timing.waitBetweenSteps = max(self.timing.waitBetweenSteps, wmsT.waitBetweenSteps)
-		self.brokerWMS = config.getClass('wms broker', 'RandomBroker',
-			cls = Broker, tags = [self]).getInstance('wms', 'wms', self.wmsMap.keys)
+			self._timing.waitOnIdle = max(self._timing.waitOnIdle, wmsT.waitOnIdle)
+			self._timing.waitBetweenSteps = max(self._timing.waitBetweenSteps, wmsT.waitBetweenSteps)
+
+		self._brokerWMS = config.getClass('wms broker', 'RandomBroker',
+			cls = Broker, tags = [self]).getInstance('wms', 'wms', self._wmsMap.keys)
 
 
 	def getTimings(self):
-		return self.timing
+		return self._timing
 
 
 	def canSubmit(self, neededTime, canCurrentlySubmit):
-		canCurrentlySubmit = self.defaultWMS.canSubmit(neededTime, canCurrentlySubmit)
-		for wmsPrefix, wmsObj in self.wmsMap.items():
+		canCurrentlySubmit = self._defaultWMS.canSubmit(neededTime, canCurrentlySubmit)
+		for wmsPrefix, wmsObj in self._wmsMap.items():
 			canCurrentlySubmit = wmsObj.canSubmit(neededTime, canCurrentlySubmit)
 		return canCurrentlySubmit
 
 
-	def getAccessToken(self, wmsId):
-		return self.wmsMap.get(self._splitId(wmsId)[0], self.defaultWMS).getAccessToken(wmsId)
+	def getAccessToken(self, gcID):
+		return self._wmsMap.get(self._splitId(gcID)[0], self._defaultWMS).getAccessToken(gcID)
 
 
 	def deployTask(self, task, monitor):
-		self.defaultWMS.deployTask(task, monitor)
-		for wmsPrefix, wmsObj in self.wmsMap.items():
+		self._defaultWMS.deployTask(task, monitor)
+		for wmsPrefix, wmsObj in self._wmsMap.items():
 			wmsObj.deployTask(task, monitor)
 
 
 	def submitJobs(self, jobNumList, task):
 		def brokerJobs(jobNum):
-			jobReq = self.brokerWMS.brokerAdd(task.getRequirements(jobNum), WMS.BACKEND)
+			jobReq = self._brokerWMS.brokerAdd(task.getRequirements(jobNum), WMS.BACKEND)
 			return dict(jobReq).get(WMS.BACKEND)[0]
 		return self._forwardCall(jobNumList, brokerJobs, lambda wmsObj, args: wmsObj.submitJobs(args, task))
 
@@ -80,13 +81,14 @@ class MultiWMS(WMS):
 		for arg in args: # Assign args to backends
 			backend = assignFun(arg)
 			if not backend:
-				backend = self.defaultWMS.wmsName
-			argMap.setdefault(backend, []).append(arg)
+				backend = self._defaultWMS.wmsName
+			argMap.setdefault(backend.lower(), []).append(arg)
 		return argMap
 
 
 	def _forwardCall(self, args, assignFun, callFun):
 		argMap = self._getMapID2Backend(args, assignFun)
-		for wmsPrefix in filter(lambda wmsPrefix: wmsPrefix in argMap, self.wmsMap):
-			for result in callFun(self.wmsMap[wmsPrefix], argMap[wmsPrefix]):
+		for wmsPrefix in filter(lambda wmsPrefix: wmsPrefix in argMap, self._wmsMap):
+			wms = self._wmsMap[wmsPrefix]
+			for result in callFun(wms, argMap[wmsPrefix]):
 				yield result
