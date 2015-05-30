@@ -12,3 +12,4 @@ grid_control_gui.report_gui	CategoryReport
 grid_control_gui.report_gui	GUIReport
 grid_control_gui.report_gui	ModuleReport
 grid_control_gui.report_plot	PlotReport
+grid_control_gui.report_time	TimeReport
