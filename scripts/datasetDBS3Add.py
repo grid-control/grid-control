@@ -161,6 +161,8 @@ if __name__ == '__main__':
         help='Enable non-interactive batch mode [Default: Interactive mode]')
     ogMode.add_option('-d', '--discovery',       dest='discovery',     default=False, action='store_true',
         help='Enable discovery mode - just collect file information and exit')
+    ogMode.add_option('',   '--tempdir',         dest='tmpDir',        default='',
+        help='Override temp directory')
     ogMode.add_option('-i', '--no-import',       dest='doImport',      default=True,  action='store_false',
         help='Disable import of new datasets into target DBS instance - only temporary xml files are created, ' +
             'which can be added later via datasetDBSTool.py [Default: Import datasets]')
@@ -206,7 +208,8 @@ if __name__ == '__main__':
         opts.workDir = os.path.abspath(os.path.normpath(args[0]))
     else:
         opts.workDir = getConfig(configFile=args[0]).getWorkPath()
-    opts.tmpDir = os.path.join(opts.workDir, 'dbs')
+    if not opts.tmpDir:
+        opts.tmpDir = os.path.join(opts.workDir, 'dbs')
     if not os.path.exists(opts.tmpDir):
         os.mkdir(opts.tmpDir)
     # Lock file in case several instances of this program are running
