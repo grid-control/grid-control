@@ -1,4 +1,4 @@
-#-#  Copyright 2009-2014 Karlsruhe Institute of Technology
+#-#  Copyright 2009-2015 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -12,7 +12,7 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-import re, sys, signal
+import re, sys, time, signal
 from grid_control import utils
 from grid_control.gui import GUI
 from grid_control_gui.ansi import Console
@@ -98,13 +98,18 @@ class ANSIGUI(GUI):
 				oldHandler = signal.signal(signal.SIGWINCH, onResize)
 				result = utils.wait(timeout)
 				signal.signal(signal.SIGWINCH, oldHandler)
+				if (time.time() - guiWait.lastwait > 10) and not timeout:
+					tmp = utils.ActivityLog('') # force display update
+					del tmp
+				guiWait.lastwait = time.time()
 				return result
+			guiWait.lastwait = 0
 
 			# Wrapping ActivityLog functionality
 			class GUILog:
 				def __init__(self, message):
 					self.message = '%s...' % message
-					self.show(self.message.center(65))
+					self.show(self.message)
 
 				def __del__(self):
 					if hasattr(sys.stdout, 'logged'):
@@ -112,13 +117,15 @@ class ANSIGUI(GUI):
 
 				def show(self, message):
 					if gui._reportHeight != report.getHeight():
+						screen.erase()
 						onResize(None, None)
+						sys.stdout.dump()
 					screen.savePos()
 					screen.move(0, 0)
 					sys.stdout.logged = False
 					report.display()
 					screen.move(gui._reportHeight + 1, 0)
-					sys.stdout.write('%s\n' % message)
+					sys.stdout.write('%s\n' % message.center(65))
 					sys.stdout.logged = True
 					screen.loadPos()
 
