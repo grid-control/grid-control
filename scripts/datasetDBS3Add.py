@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-#-#  Copyright 2014-2015 Karlsruhe Institute of Technology
+#-#  Copyright 2014 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -13,224 +13,126 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-import os, optparse
+import optparse
+
 from gcSupport import *
+
 from grid_control.datasets.provider_base import DataProvider
-from grid_control.datasets.provider_scan import GCProvider
-from grid_control.exceptions import UserError
-from grid_control.utils import QM
-from grid_control_cms.dbs3_migration_queue import AlreadyQueued, DBS3MigrationQueue, MigrationTask, do_migration
-from grid_control_cms.webservice_api import readJSON, sendJSON
+from grid_control.datasets.provider_basic import ListProvider
 
-class DBSInfoProvider(GCProvider):
-    def __init__(self, config, datasetExpr, datasetNick, datasetID = 0):
-        tmp = QM(os.path.isdir(datasetExpr), ['OutputDirsFromWork'], ['OutputDirsFromConfig', 'MetadataFromModule'])
-        config.set('scanner', str.join(' ', tmp + ['ObjectsFromCMSSW', 'FilesFromJobInfo',
-            'MetadataFromCMSSW', 'ParentLookup', 'SEListFromPath', 'LFNFromPath', 'DetermineEvents',
-            'FilterEDMFiles']))
-        config.set('include config infos', 'True')
-        config.set('parent keys', 'CMSSW_PARENT_LFN CMSSW_PARENT_PFN')
-        config.set('events key', 'CMSSW_EVENTS_WRITE')
-        GCProvider.__init__(self, config, datasetExpr, datasetNick, datasetID)
-        self.discovery = config.getBool('discovery', False)
-
-    def generateDatasetName(self, key, data):
-        if self.discovery:
-            return GCProvider.generateDatasetName(self, key, data)
-        if 'CMSSW_DATATIER' not in data:
-            raise RuntimeError('Incompatible data tiers in dataset: %s' % data)
-        getPathComponents = lambda path: QM(path, tuple(path.strip('/').split('/')), ())
-        userPath = getPathComponents(self.nameDS)
-
-        (primary, processed, tier) = (None, None, None)
-        # In case of a child dataset, use the parent infos to construct new path
-        for parent in data.get('PARENT_PATH', []):
-            if len(userPath) == 3:
-                (primary, processed, tier) = userPath
-            else:
-                try:
-                    (primary, processed, tier) = getPathComponents(parent)
-                except:
-                    pass
-        if (primary == None) and (len(userPath) > 0):
-            primary = userPath[0]
-            userPath = userPath[1:]
-
-        if len(userPath) == 2:
-            (processed, tier) = userPath
-        elif len(userPath) == 1:
-            (processed, tier) = (userPath[0], data['CMSSW_DATATIER'])
-        elif len(userPath) == 0:
-            (processed, tier) = ('Dataset_%s' % key, data['CMSSW_DATATIER'])
-
-        rawDS = '/%s/%s/%s' % (primary, processed, tier)
-        if None in (primary, processed, tier):
-            raise RuntimeError('Invalid dataset name supplied: %r\nresulting in %s' % (self.nameDS, rawDS))
-        return utils.replaceDict(rawDS, data)
-
-    def generateBlockName(self, key, data):
-        return utils.strGuid(key)
-
-
-
-class DBS3LiteClient(object):
-    def __init__(self, url):
-        self._reader_url = '%s/%s' % (url, 'DBSReader')
-        self._writer_url = '%s/%s' % (url, 'DBSWriter')
-        self._migrate_url = '%s/%s' % (url, 'DBSMigrate')
-
-        self._proxy_path = os.environ.get('X509_USER_PROXY', '')
-        if not os.path.exists(self._proxy_path):
-            raise UserError('VOMS proxy needed to query DBS3! Environment variable X509_USER_PROXY is "%s"'
-                            % self._proxy_path)
-
-        #check if pycurl dbs client is available, will improve performance
-        try:
-            from dbs.apis.dbsClient import DbsApi as dbs_api
-        except ImportError:
-            pass
-        else:
-            self._dbs_reader_api = dbs_api(url=self._reader_url, key=self._proxy_path, cert=self._proxy_path)
-            self._dbs_writer_api = dbs_api(url=self._writer_url, key=self._proxy_path, cert=self._proxy_path)
-            self._dbs_migrate_api = dbs_api(url=self._migrate_url, key=self._proxy_path, cert=self._proxy_path)
-
-    def insertBulkBlock(self, data):
-        if hasattr(self, '_dbs_writer_api'):
-            return self._dbs_writer_api.insertBulkBlock(data)
-        return sendJSON('%s/%s' % (self._migrate_url, 'bulkblocks'), data=data, cert=self._proxy_path)
-
-    def listBlocks(self, **kwargs):
-        if hasattr(self, '_dbs_reader_api'):
-            return self._dbs_reader_api.listBlocks(**kwargs)
-        return readJSON('%s/%s' % (self._reader_url, 'blocks'), params=kwargs, cert=self._proxy_path)
-
-    def listFiles(self, **kwargs):
-        if hasattr(self, '_dbs_reader_api'):
-            return self._dbs_reader_api.listFiles(**kwargs)
-        return readJSON('%s/%s' % (self._reader_url, 'files'), params=kwargs, cert=self._proxy_path)
-
-    def listFileParents(self, **kwargs):
-        if hasattr(self, '_dbs_reader_api'):
-            return self._dbs_reader_api.listFileParents(**kwargs)
-        return readJSON('%s/%s' % (self._reader_url, 'fileparents'), params=kwargs, cert=self._proxy_path)
-
-    def migrateSubmit(self, data):
-        if hasattr(self, '_dbs_migrate_api'):
-            return self._dbs_migrate_api.migrateSubmit(data)
-        return sendJSON('%s/%s' % (self._migrate_url, 'submit'), data=data, cert=self._proxy_path)
-
-    def migrateStatus(self, **kwargs):
-        if hasattr(self, '_dbs_migrate_api'):
-            return self._dbs_migrate_api.migrateStatus(**kwargs)
-        return readJSON('%s/%s' % (self._migrate_url, 'status'), params=kwargs, cert=self._proxy_path)
+from grid_control_cms.dbs3_migration_queue import DBS3MigrationQueue
+from grid_control_cms.dbs3_migration_queue import MigrationTask
+from grid_control_cms.dbs3_migration_queue import do_migration
+from grid_control_cms.dbs3_migration_queue import AlreadyQueued
+from grid_control_cms.dbs3_lite_client import DBS3LiteClient
+from grid_control_cms.dbs3_info_provider import DBS3InfoProvider
+from grid_control_cms.dbs3_input_validation import DBS3InputValidation
 
 
 def generateDBS3BlockDumps(opts, blocks):
-    print "Blocks:", len(blocks)
-    for blockInfo in blocks:
-        blockDump = dict(dataset_conf_list=[], files=[], file_conf_list=[], file_parent_list=[])
-        locations = blockInfo[DataProvider.Locations]
-        dataset = blockInfo[DataProvider.Dataset]
-        primaryDataset, processedDataset, dataTier = dataset[1:].split('/')
-        blockName = blockInfo[DataProvider.BlockName]
-        fileList = blockInfo[DataProvider.FileList]
-        blockSize = 0
-        datasetConfigurations = blockDump[u'dataset_conf_list']
+    for block_info in blocks:
+        block_dump = dict(dataset_conf_list=[], files=[], file_conf_list=[], file_parent_list=[])
+        locations = block_info[DataProvider.Locations]
+        dataset = block_info[DataProvider.Dataset]
+        primary_dataset, processed_dataset, data_tier = dataset[1:].split('/')
 
-        for fileInfo in fileList:
-            metadataInfo = dict(zip(blockInfo[DataProvider.Metadata], fileInfo[DataProvider.Metadata]))
-            parent_lfns = metadataInfo['CMSSW_PARENT_LFN']
-            datasetType = metadataInfo['CMSSW_DATATYPE'].lower()
-            fileSize = metadataInfo['SE_OUTPUT_SIZE']
-            lfn = fileInfo[DataProvider.URL]
-            fileLumiList = [{u'lumi_section_num': lumi_num,
-                             u'run_num': run_num} for run_num, lumi_num in metadataInfo['CMSSW_LUMIS']]
+        block_name = block_info[DataProvider.BlockName]
+        file_list = block_info[DataProvider.FileList]
+        block_size = 0
+        dataset_configurations = block_dump[u'dataset_conf_list']
+
+        for file_info in file_list:
+            metadata_info = dict(zip(block_info[DataProvider.Metadata], file_info[DataProvider.Metadata]))
+            parent_lfns = metadata_info['CMSSW_PARENT_LFN']
+            dataset_type = metadata_info['CMSSW_DATATYPE']
+            file_size = metadata_info['SE_OUTPUT_SIZE']
+            lfn = file_info[DataProvider.URL]
+            file_lumi_list = [{u'lumi_section_num': lumi_num, u'run_num': run_num} for run_num, lumi_num in
+                              metadata_info['CMSSW_LUMIS']]
 
             ###add file information
-            fileDict = {u'check_sum': metadataInfo['SE_OUTPUT_HASH_CRC32'],
-                        u'file_lumi_list': fileLumiList,
-                        u'adler32': 'NOTSET',
-                        u'event_count': metadataInfo['CMSSW_EVENTS_WRITE'],
-                        u'file_type': 'EDM',
-                        u'logical_file_name': lfn,
-                        u'file_size': fileSize,
-                        u'md5': metadataInfo['SE_OUTPUT_HASH_MD5'],
-                        u'auto_cross_section': 0.0
-                        }
-            blockDump[u'files'].append(fileDict)
+            file_dict = {u'check_sum': metadata_info['SE_OUTPUT_HASH_CRC32'],
+                         u'file_lumi_list': file_lumi_list,
+                         u'adler32': 'NOTSET',
+                         u'event_count': metadata_info['CMSSW_EVENTS_WRITE'],
+                         u'file_type': 'EDM',
+                         u'logical_file_name': lfn,
+                         u'file_size': file_size,
+                         u'md5': metadata_info['SE_OUTPUT_HASH_MD5'],
+                         u'auto_cross_section': 0.0
+                         }
+            block_dump[u'files'].append(file_dict)
 
             ###add file configurations
-            fileConfDict = {u'release_version': metadataInfo['CMSSW_VERSION'],
-                            u'pset_hash': metadataInfo['CMSSW_CONFIG_HASH'],
-                            u'lfn': lfn,
-                            u'app_name': 'cmsRun',
-                            u'output_module_label': 'crab2_mod_label',
-                            u'global_tag': opts.globaltag,#metadataInfo['GLOBALTAG'],
+            file_conf_dict = {u'release_version': metadata_info['CMSSW_VERSION'],
+                              u'pset_hash': metadata_info['CMSSW_CONFIG_HASH'],
+                              u'lfn': lfn,
+                              u'app_name': 'cmsRun',
+                              u'output_module_label': 'crab2_mod_label',
+                              u'global_tag': metadata_info['CMSSW_GLOBALTAG']#,#default=opts.globaltag)
                             }
 
-            blockDump[u'file_conf_list'].append(fileConfDict)
+            block_dump[u'file_conf_list'].append(file_conf_dict)
 
             ###add file parentage information
             file_parentage = [{'logical_file_name': lfn,
                                'parent_logical_file_name': parent_lfn} for parent_lfn in parent_lfns]
-            blockDump[u'file_parent_list'].extend(file_parentage)
+            block_dump[u'file_parent_list'].extend(file_parentage)
 
             ###fill dataset configurations, same as file configurations with removed lfn
-            datasetConfDict = dict(fileConfDict)
-            del datasetConfDict[u'lfn']
+            dataset_conf_dict = dict(file_conf_dict)
+            del dataset_conf_dict[u'lfn']
 
-            if datasetConfDict not in datasetConfigurations:
-                datasetConfigurations.append(datasetConfDict)
+            if dataset_conf_dict not in dataset_configurations:
+                dataset_configurations.append(dataset_conf_dict)
 
             ###update block size for block summary information
-            blockSize += fileSize
+            block_size += file_size
 
         ###add primary dataset information
-        blockDump[u'primds'] = {u'primary_ds_type': datasetType,
-                                u'primary_ds_name': primaryDataset}
+        block_dump[u'primds'] = {u'primary_ds_type': dataset_type,
+                                 u'primary_ds_name': primary_dataset}
 
         ###add dataset information
-        blockDump[u'dataset'] = {u'physics_group_name': None,
+        block_dump[u'dataset'] = {u'physics_group_name': None,
                                  u'dataset_access_type': 'VALID',
-                                 u'data_tier_name': dataTier,
-                                 u'processed_ds_name': processedDataset,
+                                 u'data_tier_name': data_tier,
+                                 u'processed_ds_name': processed_dataset,
                                  u'xtcrosssection': None,###Add to meta data from FrameWorkJobReport, if possible!
                                  u'dataset': dataset
                                  }
 
         ###add block information
-        blockDump[u'block'] = {u'open_for_writing': 0,
-                               u'block_name': '%s#%s' % (dataset, blockName),
-                               u'file_count': len(fileList),
-                               u'block_size': blockSize,
+        block_dump[u'block'] = {u'open_for_writing': 0,
+                               u'block_name': '%s#%s' % (dataset, block_name),
+                               u'file_count': len(file_list),
+                               u'block_size': block_size,
                                u'origin_site_name': locations[0] if len(locations) else 'UNKNOWN'}
 
         ###add acquisition_era, CRAB is important because of checks within DBS 3
-        blockDump[u'acquisition_era'] = {u'acquisition_era_name': 'CRAB',
+        block_dump[u'acquisition_era'] = {u'acquisition_era_name': 'CRAB',
                                          u'start_date': 0}
 
         ###add processing_era
-        blockDump[u'processing_era'] = {u'processing_version': 1,
+        block_dump[u'processing_era'] = {u'processing_version': 1,
                                         u'description': 'grid-control'}
 
-        yield blockDump
+        yield DBS3InputValidation.validate_json_input('blockBulk', block_dump)
 
 
 if __name__ == '__main__':
+    from python_compat import NullHandler
+    from python_compat import set
+
     usage = '%s [OPTIONS] <config file / work directory>' % sys.argv[0]
     parser = optparse.OptionParser(usage=usage)
-    parser.add_option('-G', '--globaltag',       dest='globaltag',          default=None,
-        help='Specify global tag')
-    parser.add_option('-F', '--input',           dest='inputFile',          default=None,
-        help='Specify dbs input file to use instead of scanning job output')
-    parser.add_option('-k', '--key-select',      dest='dataset key select', default='',
-        help='Specify dataset keys to process')
-
-    parser.add_option('-L', '--no-lumi',         dest='importLumi',    default=True,   action='store_false',
-        help='Do not include lumi section information [Default: Include Lumi information]')
-    parser.add_option('-p', '--no-parents',      dest='importParents', default=True,   action='store_false',
-        help='Disable import of parent datasets into target DBS instance - ' +
-            'Warning: this will disconnect the dataset from it\'s parents [Default: Import parents]')
+    parser.add_option('-G', '--globaltag', dest='globaltag', default='crab2_tag', help='Specify global tag')
+    parser.add_option('-F', '--input', dest='inputFile', default=None,
+                      help='Specify dbs input file to use instead of scanning job output')
+#    parser.add_option('-k', '--key-select',      dest='dataset key select', default='',
+#        help='Specify dataset keys to process')
+    parser.add_option('-c', '--continue-migration', dest='continue_migration', default=False, action='store_true',
+                      help='Continue an already started migration')
 
     ogDiscover = optparse.OptionGroup(parser, 'Discovery options - ignored in case dbs input file is specified', '')
     ogDiscover.add_option('-n', '--name',        dest='dataset name pattern', default='',
@@ -242,7 +144,7 @@ if __name__ == '__main__':
     ogDiscover.add_option('-j', '--jobhash',     dest='useJobHash',    default=False,  action='store_true',
         help='Use hash of all config files in job for dataset key calculation')
     ogDiscover.add_option('-u', '--unique-cfg',  dest='uniqueCfg',     default=False,  action='store_true',
-        help='Cirumvent edmConfigHash collisions so each dataset is stored with unique config information')
+        help='Circumvent edmConfigHash collisions so each dataset is stored with unique config information')
     ogDiscover.add_option('-P', '--parent',      dest='parent source', default='',
         help='Override parent information source - to bootstrap a reprocessing on local files')
     ogDiscover.add_option('-H', '--hash-keys',   dest='dataset hash keys', default='',
@@ -271,14 +173,14 @@ if __name__ == '__main__':
 #		help='Keep blocks open for addition of further files [Default: Close blocks]')
     parser.add_option_group(ogInc)
 
-#	ogInst = optparse.OptionGroup(parser, 'DBS instance handling', '')
-#	ogInst.add_option('-t', '--target-instance', dest='dbsTarget',
-#		default='https://cmsdbsprod.cern.ch:8443/cms_dbs_ph_analysis_02_writer/servlet/DBSServlet',
-#		help='Specify target dbs instance url')
-#	ogInst.add_option('-s', '--source-instance', dest='dbsSource',
-#		default='http://cmsdbsprod.cern.ch/cms_dbs_prod_global/servlet/DBSServlet',
-#		help='Specify source dbs instance url(s), where parent datasets are taken from')
-#	parser.add_option_group(ogInst)
+    ogInst = optparse.OptionGroup(parser, 'DBS instance handling', '')
+    ogInst.add_option('-t', '--target-instance', dest='dbsTarget',
+                      default='https://cmsweb.cern.ch/dbs/prod/phys03',
+                      help='Specify target dbs instance url')
+    ogInst.add_option('-s', '--source-instance', dest='dbsSource',
+                      default='https://cmsweb.cern.ch/dbs/prod/global',
+                      help='Specify source dbs instance url(s), where parent datasets are taken from')
+    parser.add_option_group(ogInst)
 
     ogDbg = optparse.OptionGroup(parser, 'Display options', '')
     ogDbg.add_option('-D', '--display-dataset', dest='display_data',  default=None,
@@ -291,7 +193,6 @@ if __name__ == '__main__':
 
     (opts, args) = parser.parse_args()
     utils.verbosity(opts.verbosity)
-    setattr(opts, 'include parent infos', opts.importParents)
     setattr(opts, 'dataset hash keys', getattr(opts, 'dataset hash keys').replace(',', ' '))
     if opts.useJobHash:
         setattr(opts, 'dataset hash keys', getattr(opts, 'dataset hash keys') + ' CMSSW_CONFIG_JOBHASH')
@@ -302,8 +203,8 @@ if __name__ == '__main__':
     if os.path.isdir(args[0]):
         opts.workDir = os.path.abspath(os.path.normpath(args[0]))
     else:
-        opts.workDir = getConfig(configFile = args[0]).getWorkPath()
-    opts.tmpDir = '/tmp'#os.path.join(opts.workDir, 'dbs')
+        opts.workDir = getConfig(configFile=args[0]).getWorkPath()
+    opts.tmpDir = os.path.join(opts.workDir, 'dbs')
     if not os.path.exists(opts.tmpDir):
         os.mkdir(opts.tmpDir)
     # Lock file in case several instances of this program are running
@@ -311,12 +212,12 @@ if __name__ == '__main__':
 
     # 1) Get dataset information
     if opts.inputFile:
-        provider = datasets.ListProvider(getConfig(), None, opts.inputFile, None)
+        provider = ListProvider(getConfig(), opts.inputFile, None, None)
     else:
         config = getConfig(configDict = {'dataset': dict(parser.values.__dict__)})
         if opts.discovery:
             config.set('dataset name pattern', '@DS_KEY@')
-        provider = DBSInfoProvider(config, args[0], None)
+        provider = DBS3InfoProvider(config, args[0], None)
 
     provider.saveState(os.path.join(opts.tmpDir, 'dbs.dat'))
     if opts.discovery:
@@ -348,8 +249,6 @@ if __name__ == '__main__':
     if opts.display_data or opts.display_cfg:
         raise APIError('Not yet reimplemented')
 
-    from python_compat import NullHandler, set
-
     #set-up logging
     logging.basicConfig(format='%(levelname)s: %(message)s')
     logger = logging.getLogger('dbs3-migration')
@@ -357,33 +256,43 @@ if __name__ == '__main__':
     logger.setLevel(logging.DEBUG)
 
     #set-up dbs clients
-    dbs3_phys03_client = DBS3LiteClient(url='https://cmsweb.cern.ch/dbs/prod/phys03')
-    dbs3_global_client = DBS3LiteClient(url='https://cmsweb.cern.ch/dbs/prod/global')
-    proxy_path = os.environ.get('X509_USER_PROXY')
-    #dbs3_client = dbs_api(url='https://cmsweb.cern.ch/dbs/prod/phys03/DBSReader', key=proxy_path, cert=proxy_path,
-    #					  verifypeer=False)
+    dbs3_target_client = DBS3LiteClient(url='https://cmsweb-testbed.cern.ch/dbs/int/phys03')#opts.dbsTarget
+    dbs3_source_client = DBS3LiteClient(url=opts.dbsSource)
+
     dbs3_migration_queue = DBS3MigrationQueue()
 
     for blockDump in generateDBS3BlockDumps(opts, blocks):
-        ###initiate the dbs3 to dbs3 migration of parent blocks
-        logger.debug('Checking parentage for block: %s' % blockDump['block']['block_name'])
-        unique_parent_lfns = set((parent[u'parent_logical_file_name'] for parent in blockDump[u'file_parent_list']))
-        print "Number of files:", len(unique_parent_lfns)
-        unique_blocks = set((block['block_name'] for parent_lfn in unique_parent_lfns
-                             for block in dbs3_global_client.listBlocks(logical_file_name=parent_lfn)))
-        for block_to_migrate in unique_blocks:
-            if dbs3_phys03_client.listBlocks(block_name=block_to_migrate):
-                #block already at destination
-                continue
-            migration_task = MigrationTask(block_name=block_to_migrate,
-                migration_url='http://a.b.c', dbs_client=None)#dbs3_client)
+        if not opts.continue_migration:
+            ###initiate the dbs3 to dbs3 migration of parent blocks
+            logger.debug('Checking parentage for block: %s' % blockDump['block']['block_name'])
+            unique_parent_lfns = set((parent[u'parent_logical_file_name'] for parent in blockDump[u'file_parent_list']))
+            unique_blocks = set((block['block_name'] for parent_lfn in unique_parent_lfns
+                                 for block in dbs3_source_client.listBlocks(logical_file_name=parent_lfn)))
+            for block_to_migrate in unique_blocks:
+                if dbs3_target_client.listBlocks(block_name=block_to_migrate):
+                    #block already at destination
+                    logger.debug('Block %s is already at destination' % block_to_migrate)
+                    continue
+                migration_task = MigrationTask(block_name=block_to_migrate,
+                                               migration_url='https://cmsweb.cern.ch/dbs/prod/global/DBSReader',
+                                               dbs_client=None)#dbs3_target_client)
+                try:
+                    dbs3_migration_queue.add_migration_task(migration_task)
+                except AlreadyQueued as aq:
+                    logger.debug(aq.message)
+
+            dbs3_migration_queue.save_to_disk(os.path.join(opts.tmpDir, 'dbs3_migration.pkl'))
+        else:
             try:
-                dbs3_migration_queue.add_migration_task(migration_task)
-            except AlreadyQueued as aq:
-                logger.debug(aq.message)
+                dbs3_migration_queue = DBS3MigrationQueue.read_from_disk(os.path.join(opts.tmpDir,
+                                                                                      'dbs3_migration.pkl'))
+            except IOError as io_err:
+                msg = "Probably, there is no DBS 3 migration for this dataset ongoing, Dude!"
+                logger.exception('%s\n%s' % (io_err.message, msg))
+                raise
 
         #wait for all parent blocks migrated to dbs3
         do_migration(dbs3_migration_queue)
 
         #insert block into dbs3
-        #dbs3_client.insertBulkBlock(blockDump)
+        #dbs3_target_client.insertBulkBlock(blockDump)
