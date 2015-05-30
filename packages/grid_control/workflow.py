@@ -12,12 +12,14 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
+import logging
 from grid_control import utils
 from grid_control.abstract import ClassFactory, NamedObject
 from grid_control.backends import WMS
 from grid_control.config import TaggedConfigView
 from grid_control.gui import GUI
 from grid_control.job_manager import JobManager
+from grid_control.logging_setup import LogEveryNsec
 from grid_control.monitoring import Monitoring
 from grid_control.tasks import TaskModule
 
@@ -64,15 +66,15 @@ class Workflow(NamedObject):
 	def jobCycle(self, wait = utils.wait):
 		wmsTiming = self.wms.getTimings()
 		while True:
-			(didWait, lastSpaceMsg) = (False, 0)
+			didWait = False
 			# Check whether wms can submit
 			if not self.wms.canSubmit(self.task.wallTime, self._submitFlag):
 				self._submitFlag = False
 			# Check free disk space
+			spaceLogger = logging.getLogger('user.space')
+			spaceLogger.addFilter(LogEveryNsec(5 * 60))
 			if (self._checkSpace > 0) and utils.freeSpace(self._workDir) < self._checkSpace:
-				if time.time() - lastSpaceMsg > 5 * 60:
-					utils.vprint('Not enough space left in working directory', -1, True)
-					lastSpaceMsg = time.time()
+				spaceLogger.warning('Not enough space left in working directory')
 			else:
 				for action in map(str.lower, self._actionList):
 					if action.startswith('c') and not utils.abort():   # check for jobs

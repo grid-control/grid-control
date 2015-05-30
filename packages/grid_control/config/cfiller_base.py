@@ -161,6 +161,8 @@ class DefaultFilesConfigFiller(FileConfigFiller):
 		defaultCfg = ['/etc/grid-control.conf', '~/.grid-control.conf', utils.pathGC('config/default.conf')]
 		if os.environ.get('GC_CONFIG'):
 			defaultCfg.append('$GC_CONFIG')
+		log = logging.getLogger('config.default')
+		log.log(logging.DEBUG1, 'Possible default config files: %s' % str.join(', ', defaultCfg))
 		fqConfigFiles = map(lambda p: utils.resolvePath(p, mustExist = False), hostCfg + defaultCfg)
 		FileConfigFiller.__init__(self, filter(os.path.exists, fqConfigFiles), addSearchPath = False)
 

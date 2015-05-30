@@ -50,6 +50,7 @@ if __name__ == '__main__':
 	parser.add_option('',   '--help-confmin',  dest='help_scfg',  default=False, action='store_true')
 	parser.add_option('-i', '--init',          dest='init',       default=False, action='store_true')
 	parser.add_option('-q', '--resync',        dest='resync',     default=False, action='store_true')
+	parser.add_option('',   '--debug',         dest='debug',      default=False, action='store_true')
 	parser.add_option('-s', '--no-submission', dest='submission', default=True,  action='store_false')
 	parser.add_option('-c', '--continuous',    dest='continuous', default=None,  action='store_true')
 	parser.add_option('-o', '--override',      dest='override',   default=[],    action='append')
@@ -75,6 +76,8 @@ if __name__ == '__main__':
 
 	utils.verbosity(opts.verbosity)
 	logging.getLogger().setLevel(logging.DEFAULT - opts.verbosity)
+	if opts.debug:
+		logging.getLogger('exception').addHandler(logging.StreamHandler(sys.stdout))
 
 	# we need exactly one positional argument (config file)
 	if len(args) != 1:

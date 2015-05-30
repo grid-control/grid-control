@@ -1,4 +1,4 @@
-#-#  Copyright 2013-2014 Karlsruhe Institute of Technology
+#-#  Copyright 2013-2015 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -12,11 +12,43 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-import os, sys, logging
+import os, sys, time, logging
 from python_compat import set
 
 logLevelDict = {'DEFAULT': 14, # setLevel(logging.DEFAULT - <verbosity level>)
 	'INFO1': 13, 'INFO2': 12, 'INFO3': 11, 'DEBUG1': 9, 'DEBUG2': 8, 'DEBUG3': 7}
+
+class LogOnce(logging.Filter):
+	def __init__(self):
+		self._memory = set()
+
+	def filter(self, record):
+		isNew = record.msg not in self._memory
+		self._memory.add(record.msg)
+		return isNew
+
+
+class LogEveryNsec(logging.Filter):
+	def __init__(self, delta):
+		self._memory = {}
+		self._delta = delta
+
+	def filter(self, record):
+		accept = self._memory.get(record.msg, 0) - time.time() > self._delta
+		if accept:
+			self._memory[record.msg] = time.time()
+		return accept
+
+
+def getFilteredLogger(name, logFilter = None):
+	logger = logging.getLogger(name)
+	if name not in getFilteredLogger._memory: # not setup yet
+		if logFilter:
+			logger.addFilter(logFilter)
+		getFilteredLogger._memory.append(name)
+	return logger
+getFilteredLogger._memory = []
+
 
 def logging_defaults():
 	def setupLogStream(logger, logFormat):
@@ -28,16 +60,8 @@ def logging_defaults():
 	setupLogStream(logging.getLogger(), '%(asctime)s - %(name)s:%(levelname)s - %(message)s')
 	setupLogStream(logging.getLogger('user'), '%(message)s').propagate = False
 	setupLogStream(logging.getLogger('user.time'), '%(asctime)s - %(message)s').propagate = False
-
-	class UniqueFilter(logging.Filter):
-		def __init__(self):
-			self._memory = set()
-		def filter(self, record):
-			isNew = record.msg not in self._memory
-			self._memory.add(record.msg)
-			return isNew
-	logging.getLogger('user.once').addFilter(UniqueFilter())
-	logging.getLogger('user.time.once').addFilter(UniqueFilter())
+	getFilteredLogger('user.once', LogOnce())
+	getFilteredLogger('user.time.once', LogOnce())
 
 	# Default exception logging to file in gc / tmp / user directory
 	handler_ex = None
