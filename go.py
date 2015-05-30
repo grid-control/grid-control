@@ -117,7 +117,7 @@ if __name__ == '__main__':
 			if not config.getState('init'):
 				utils.vprint('Will force initialization of %s if continued!' % config.getWorkPath(), -1)
 				config.setState(True, 'init')
-			if config.getChoiceYesNo('workdir interactive', True,
+			if config.getChoiceYesNo('workdir create', True,
 					interactive = 'Do you want to create the working directory %s?' % config.getWorkPath()):
 				utils.ensureDirExists(config.getWorkPath(), 'work directory')
 
