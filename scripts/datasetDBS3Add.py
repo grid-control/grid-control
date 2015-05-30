@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-#-#  Copyright 2014 Karlsruhe Institute of Technology
+#-#  Copyright 2014-2015 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -193,6 +193,8 @@ if __name__ == '__main__':
 
     (opts, args) = parser.parse_args()
     utils.verbosity(opts.verbosity)
+    setattr(opts, 'include parent infos', True)
+    setattr(opts, 'importLumi', True)
     setattr(opts, 'dataset hash keys', getattr(opts, 'dataset hash keys').replace(',', ' '))
     if opts.useJobHash:
         setattr(opts, 'dataset hash keys', getattr(opts, 'dataset hash keys') + ' CMSSW_CONFIG_JOBHASH')

@@ -12,6 +12,7 @@
 #-#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
+from grid_control import utils
 from grid_control.datasets.provider_scan import GCProvider
 from grid_control.utils import QM
 
