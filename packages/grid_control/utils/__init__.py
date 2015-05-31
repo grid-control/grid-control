@@ -103,7 +103,6 @@ def freeSpace(dn, timeout = 5):
 ################################################################
 # Process management functions
 
-
 def gcStartThread(desc, fun, *args, **kargs):
 	thread = threading.Thread(target = fun, args = args, kwargs = kargs)
 	thread.setDaemon(True)
@@ -240,6 +239,7 @@ def verbosity(new = None):
 
 def abort(new = None):
 	return globalSetupProxy(abort, False, new)
+
 
 ################################################################
 # Dictionary tools
@@ -703,12 +703,12 @@ def printTabular(head, data, fmtString = '', fmt = {}, level = -1):
 		for entry in data:
 			if isinstance(entry, dict):
 				if showLine:
-					vprint(('-' * (maxhead + 2)) + '-+-' + '-' * min(30, printTabular.wraplen - maxhead - 10))
+					vprint((('-' * (maxhead + 2)) + '-+-' + '-' * min(30, printTabular.wraplen - maxhead - 10)), level)
 				for (key, name) in head:
-					vprint(name.rjust(maxhead + 2), '|', str(fmt.get(key, str)(entry.get(key, ''))))
+					vprint((name.rjust(maxhead + 2) + ' | ' + str(fmt.get(key, str)(entry.get(key, '')))), level)
 				showLine = True
 			elif showLine:
-				vprint(('=' * (maxhead + 2)) + '=+=' + '=' * min(30, printTabular.wraplen - maxhead - 10))
+				vprint((('=' * (maxhead + 2)) + '=+=' + '=' * min(30, printTabular.wraplen - maxhead - 10)), level)
 				showLine = False
 		return
 

@@ -1,4 +1,4 @@
-#-#  Copyright 2012-2014 Karlsruhe Institute of Technology
+#-#  Copyright 2012-2015 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -16,7 +16,7 @@ import re
 from grid_control import utils
 from grid_control.exceptions import ConfigError
 from grid_control.parameters.psource_base import ParameterInfo, ParameterSource
-from grid_control.parameters.psource_basic import KeyParameterSource, SimpleParameterSource, SingleParameterSource
+from grid_control.parameters.psource_basic import FormatterParameterSource, KeyParameterSource, SimpleParameterSource, SingleParameterSource
 
 class LookupMatcher:
 	def __init__(self, lookupKeys, lookupFunctions, lookupDictConfig):
@@ -204,8 +204,10 @@ def createLookupHelper(pconfig, var_list, lookup_list):
 	var_name = var_list[0]
 
 	pvalue = pconfig.getParameter(var_name.lstrip('!'))
-	if not isinstance(pvalue, tuple): # simple parameter source
+	if isinstance(pvalue, list): # simple parameter source
 		return [(False, SimpleParameterSource, [var_name, pvalue])]
+	elif isinstance(pvalue, tuple) and pvalue[0] == 'format':
+		return [(False, FormatterParameterSource, pvalue[1:])]
 
 	lookup_key = None
 	if lookup_list: # default lookup key

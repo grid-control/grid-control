@@ -13,8 +13,8 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-import sys, random, optparse
-from gcSupport import parseOptions, utils
+import os, sys, random, optparse
+from gcSupport import getConfig, handleException, parseOptions, utils
 from grid_control.datasets import DataSplitter
 from grid_control.parameters import DataParameterSource, ParameterFactory, ParameterInfo, ParameterMetadata, ParameterSource
 

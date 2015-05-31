@@ -192,7 +192,11 @@ class FormatterParameterSource(SingleParameterSource):
 			(self.key, self.fmt, self.source, self.default))
 
 	def fillParameterInfo(self, pNum, result):
-		result[self.key] = self.fmt % utils.parseType(str(result.get(self.source, self.default)))
+		src = utils.parseType(str(result.get(self.source, self.default)))
+		result[self.key] = self.fmt % src
+
+	def __repr__(self):
+		return 'format(%r, %r, %r, %r)' % (self.key, self.fmt, self.source, self.default)
 ParameterSource.managerMap['format'] = 'FormatterParameterSource'
 
 
