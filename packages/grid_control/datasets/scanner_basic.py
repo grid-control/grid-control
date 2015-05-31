@@ -214,15 +214,19 @@ class ParentLookup(InfoScanner):
 
 class DetermineEvents(InfoScanner):
 	def __init__(self, config):
-		self.eventsCmd = config.get('events command', '')
-		self.eventsKey = config.get('events key', '')
-		self.eventsDefault = config.getInt('events default', -1)
+		self._eventsCmd = config.get('events command', '')
+		self._eventsKey = config.get('events key', '')
+		self._eventsKeyScale = config.getInt('events key scale', 1)
+		self._eventsDefault = config.getInt('events default', -1)
 
 	def getEntries(self, path, metadata, events, seList, objStore):
-		events = int(metadata.get(self.eventsKey, utils.QM(events >= 0, events, self.eventsDefault)))
-		if self.eventsCmd:
+		if events < 0:
+			events = self._eventsDefault
+		if self._eventsKey:
+			events = int(metadata.get(self._eventsKey, events)) / self._eventsKeyScale
+		if self._eventsCmd:
 			try:
-				events = int(os.popen('%s %s' % (self.eventsCmd, path)).readlines()[-1])
+				events = int(os.popen('%s %s' % (self._eventsCmd, path)).readlines()[-1])
 			except:
 				pass
 		yield (path, metadata, events, seList, objStore)
