@@ -18,13 +18,13 @@ from grid_control.backends import WMS
 from grid_control.config import noDefault
 from grid_control.datasets import DataSplitter
 from grid_control.exceptions import ConfigError
-from grid_control.parameters import DataSplitProcessor
+from grid_control.parameters import BasicDataSplitProcessor
 from grid_control.tasks.task_data import DataTask
 from grid_control.tasks.task_utils import TaskExecutableWrapper
 from grid_control_cms.lumi_tools import filterLumiFilter, formatLumi, parseLumiFilter
 
-class CMSDataSplitProcessor(DataSplitProcessor):
-	def formatFileList(self, fl):
+class CMSDataSplitProcessor(BasicDataSplitProcessor):
+	def _formatFileList(self, fl):
 		return str.join(', ', map(lambda x: '"%s"' % x, fl))
 
 
@@ -35,6 +35,7 @@ class CMSSW(DataTask):
 		config.set('se input timeout', '0:30')
 		config.set('dataset provider', 'DBS3Provider')
 		config.set('dataset splitter', 'EventBoundarySplitter')
+		config.set('dataset processor', 'CMSDataSplitProcessor SECheckSplitProcessor')
 		DataTask.__init__(self, config, name)
 		self.errorDict.update(dict(self.updateErrorDict(utils.pathShare('gc-run.cmssw.sh', pkg = 'grid_control_cms'))))
 

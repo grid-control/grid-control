@@ -15,6 +15,9 @@ grid_control_cms.scanner_cmssw	SEListFromPath
 grid_control.monitoring.EventHandler:
 grid_control_cms.dashboard	DashBoard
 
+grid_control.parameters.processor_base.DataSplitProcessor:
+grid_control_cms.cmssw	CMSDataSplitProcessor
+
 grid_control.tasks.task_base.TaskModule:
 grid_control_cms.cmssw	CMSSW
 grid_control_cms.cmssw_advanced	CMSSW_Advanced

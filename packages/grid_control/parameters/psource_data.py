@@ -1,4 +1,4 @@
-#-#  Copyright 2009-2014 Karlsruhe Institute of Technology
+#-#  Copyright 2009-2015 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -14,39 +14,9 @@
 
 import os, time
 from grid_control import utils
-from grid_control.backends import WMS
 from grid_control.datasets import DataProvider, DataSplitter
 from grid_control.exceptions import UserError
 from grid_control.parameters.psource_base import ParameterInfo, ParameterMetadata, ParameterSource
-
-class DataSplitProcessor:
-	def __init__(self, checkSE = True):
-		self.checkSE = checkSE
-
-	def formatFileList(self, fl):
-		return str.join(' ', fl)
-
-	def getKeys(self):
-		return map(lambda k: ParameterMetadata(k, untracked=True), ['FILE_NAMES', 'MAX_EVENTS',
-			'SKIP_EVENTS', 'DATASETID', 'DATASETPATH', 'DATASETBLOCK', 'DATASETNICK'])
-
-	def process(self, pNum, splitInfo, result):
-		result.update({
-			'FILE_NAMES': self.formatFileList(splitInfo[DataSplitter.FileList]),
-			'MAX_EVENTS': splitInfo[DataSplitter.NEntries],
-			'SKIP_EVENTS': splitInfo.get(DataSplitter.Skipped, 0),
-			'DATASETID': splitInfo.get(DataSplitter.DatasetID, None),
-			'DATASETPATH': splitInfo.get(DataSplitter.Dataset, None),
-			'DATASETBLOCK': splitInfo.get(DataSplitter.BlockName, None),
-			'DATASETNICK': splitInfo.get(DataSplitter.Nickname, None),
-			'DATASETSPLIT': pNum,
-		})
-		if splitInfo.get(DataSplitter.Locations) != None:
-			result[ParameterInfo.REQS].append((WMS.STORAGE, splitInfo.get(DataSplitter.Locations)))
-		result[ParameterInfo.ACTIVE] = result[ParameterInfo.ACTIVE] and not splitInfo.get(DataSplitter.Invalid, False)
-		if self.checkSE:
-			result[ParameterInfo.ACTIVE] = result[ParameterInfo.ACTIVE] and (splitInfo.get(DataSplitter.Locations) != [])
-
 
 class DataParameterSource(ParameterSource):
 	def __init__(self, dataDir, srcName, dataProvider, dataSplitter, dataProc):

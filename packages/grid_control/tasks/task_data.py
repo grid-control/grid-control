@@ -14,6 +14,7 @@
 
 import os, signal
 from grid_control import utils
+from grid_control.abstract import ClassFactory
 from grid_control.config import TaggedConfigView
 from grid_control.datasets import DataProvider, DataSplitter
 from grid_control.exceptions import UserError
@@ -36,11 +37,14 @@ class DataTask(TaskModule):
 		splitterName = config.get('dataset splitter', 'FileBoundarySplitter')
 		splitterClass = dataProvider.checkSplitter(DataSplitter.getClass(splitterName))
 		self.dataSplitter = splitterClass(config)
-		self.checkSE = config.getBool('dataset storage check', True, onChange = None)
 
 		# Create and register dataset parameter plugin
+		paramSplitProcessor = ClassFactory(config,
+			('dataset processor', 'BasicDataSplitProcessor SECheckSplitProcessor'),
+			('dataset processor manager', 'MultiDataSplitProcessor'),
+			cls = DataSplitProcessor).getInstance(config)
 		paramSource = DataParameterSource(config.getWorkPath(), 'data',
-			dataProvider, self.dataSplitter, self.initDataProcessor())
+			dataProvider, self.dataSplitter, paramSplitProcessor)
 		DataParameterSource.datasetsAvailable['data'] = paramSource
 
 		# Select dataset refresh rate
@@ -56,10 +60,6 @@ class DataTask(TaskModule):
 
 		if self.dataSplitter.getMaxJobs() == 0:
 			raise UserError('There are no events to process')
-
-
-	def initDataProcessor(self):
-		return DataSplitProcessor(self.checkSE)
 
 
 	def getDatasetOverviewInfo(self, blocks):
