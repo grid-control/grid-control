@@ -14,7 +14,7 @@
 #-#  limitations under the License.
 
 import os, sys, time, random, optparse, gcSupport, threading
-from gcSupport import AccessToken, ClassSelector, FileInfoProcessor, Job, JobClass, OutputFileInfo, logException, storage, utils
+from gcSupport import AccessToken, ClassSelector, FileInfoProcessor, Job, JobClass, logException, storage, utils
 from python_compat import md5
 
 def md5sum(filename):
@@ -177,7 +177,7 @@ def dlfs_rm(path, msg):
 
 def realmain(opts, args):
 	try:
-		token = AccessToken.getInstance(opts.access, gcSupport.getConfig(configDict = {'access': {'ignore warnings': 'True'}}), 'access')
+		token = AccessToken.getInstance(opts.token, gcSupport.getConfig(configDict = {'access': {'ignore warnings': 'True'}}), 'access')
 	except:
 		sys.stderr.write(logException())
 		sys.exit(os.EX_UNAVAILABLE)
@@ -216,8 +216,8 @@ def realmain(opts, args):
 		# Read the file hash entries from job info file
 		files = FileInfoProcessor().process(os.path.join(workDir, 'output', 'job_%d' % jobNum))
 		if files:
-			files = map(lambda fi: (fi[OutputFileInfo.Hash], fi[OutputFileInfo.NameLocal],
-				fi[OutputFileInfo.NameDest], fi[OutputFileInfo.Path]), files)
+			files = map(lambda fi: (fi[FileInfoProcessor.Hash], fi[FileInfoProcessor.NameLocal],
+				fi[FileInfoProcessor.NameDest], fi[FileInfoProcessor.Path]), files)
 		output.files(files)
 		if not files:
 			if opts.markEmptyFailed:
