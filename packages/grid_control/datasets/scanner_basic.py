@@ -110,14 +110,27 @@ class FilesFromLS(InfoScanner):
 			utils.eprint(proc.getError())
 
 
+class JobInfoFromOutputDir(InfoScanner):
+	def getEntries(self, path, metadata, events, seList, objStore):
+		jobInfoPath = os.path.join(path, 'job.info')
+		try:
+			jobInfo = utils.DictFormat('=').parse(open(jobInfoPath))
+			if jobInfo.get('exitcode') == 0:
+				objStore['JOBINFO'] = jobInfo
+				yield (path, metadata, events, seList, objStore)
+		except:
+			pass
+
+
 class FilesFromJobInfo(InfoScanner):
 	def getGuards(self):
 		return (['SE_OUTPUT_FILE'], ['SE_OUTPUT_PATH'])
 
 	def getEntries(self, path, metadata, events, seList, objStore):
-		jobInfoPath = os.path.join(path, 'job.info')
+		if 'JOBINFO' not in objStore:
+			raise RethrowError('Job information is not filled! Ensure that "JobInfoFromOutputDir" is scheduled!')
 		try:
-			jobInfo = utils.DictFormat('=').parse(open(jobInfoPath))
+			jobInfo = objStore['JOBINFO']
 			files = filter(lambda x: x[0].startswith('file'), jobInfo.items())
 			fileInfos = map(lambda (x, y): tuple(y.strip('"').split('  ')), files)
 			for (hashMD5, name_local, name_dest, pathSE) in fileInfos:
@@ -127,7 +140,7 @@ class FilesFromJobInfo(InfoScanner):
 		except KeyboardInterrupt:
 			sys.exit(os.EX_TEMPFAIL)
 		except:
-			raise RethrowError('Unable to read job results from %s!' % jobInfoPath)
+			raise RethrowError('Unable to read file stageout information!')
 
 
 class FilesFromDataProvider(InfoScanner):

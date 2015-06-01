@@ -1,14 +1,14 @@
 grid-control (https://ekptrac.physik.uni-karlsruhe.de/trac/grid-control)
 
-Copyright (C) 2007-2014 Karlsruhe Institute of Technology
+Copyright (C) 2007-2015 Karlsruhe Institute of Technology
 
 Maintained by: Fred Stober             <grid-control-dev@googlegroups.com>
 
  Developed by: Fred Stober             <mail@fredstober.de>
                Max Fischer             <max.fischer@kit.edu>
                Jana Saout              <jana@saout.de>
-               Thomas Hauth            <thomas.hauth@cern.ch>
                Manuel Giffels          <manuel.giffels@cern.ch>
+               Thomas Hauth            <thomas.hauth@cern.ch>
                Armin Scheurer          <contact@armin-scheurer.de>
                Andreas Oehler          <andreasoehler@gmx.net>
                Jochen Ott              <ott@ekp.uni-karlsruhe.de>
@@ -31,7 +31,8 @@ Maintained by: Fred Stober             <grid-control-dev@googlegroups.com>
                Jasmin Kiefer           <jasmin.gruschke@sap.com>
                Thomas Scharrer         <uhddv@student.kit.edu>
                Philipp Schieferdecker  <philipp.schieferdecker@cern.ch>
-               (in order of contributed source code lines)
+
+               (in order of contributed source code lines - excluding libraries)
 
 --
 

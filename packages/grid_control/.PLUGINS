@@ -104,6 +104,7 @@ grid_control.datasets.scanner_basic	DetermineEvents
 grid_control.datasets.scanner_basic	FilesFromDataProvider
 grid_control.datasets.scanner_basic	FilesFromJobInfo
 grid_control.datasets.scanner_basic	FilesFromLS
+grid_control.datasets.scanner_basic	JobInfoFromOutputDir
 grid_control.datasets.scanner_basic	MatchDelimeter
 grid_control.datasets.scanner_basic	MatchOnFilename
 grid_control.datasets.scanner_basic	MetadataFromTask

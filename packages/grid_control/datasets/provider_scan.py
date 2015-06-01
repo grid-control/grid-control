@@ -159,5 +159,5 @@ class GCProvider(ScanProviderBase):
 		if 'ParaMod' in extModule: # handle old config files
 			extModule = extConfig.changeView(setSections = ['ParaMod']).get('module')
 		sGet = lambda scannerDict: scannerDict.get(None) + scannerDict.get(extModule, [])
-		sList = sGet(GCProvider.stageDir) + ['FilesFromJobInfo'] + sGet(GCProvider.stageFile) + ['DetermineEvents', 'AddFilePrefix']
+		sList = sGet(GCProvider.stageDir) + ['JobInfoFromOutputDir', 'FilesFromJobInfo'] + sGet(GCProvider.stageFile) + ['DetermineEvents', 'AddFilePrefix']
 		ScanProviderBase.__init__(self, config, sList, datasetNick, datasetID)

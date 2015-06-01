@@ -21,7 +21,7 @@ class DBSInfoProvider(GCProvider):
 		tmp = ['OutputDirsFromConfig', 'MetadataFromModule']
 		if os.path.isdir(datasetExpr):
 			tmp = ['OutputDirsFromWork']
-		tmp.extend(['ObjectsFromCMSSW', 'FilesFromJobInfo', 'MetadataFromCMSSW',
+		tmp.extend(['JobInfoFromOutputDir', 'FilesFromJobInfo', 'ObjectsFromCMSSW', 'MetadataFromCMSSW',
 			'ParentLookup', 'SEListFromPath', 'LFNFromPath', 'DetermineEvents', 'FilterEDMFiles'])
 		config.set('scanner', str.join(' ', tmp))
 		config.set('include config infos', 'True')
