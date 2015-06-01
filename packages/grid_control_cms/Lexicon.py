@@ -14,7 +14,7 @@ import re
 import string
 import urlparse
 
-#from grid_control.exceptions import InputValidationError
+from grid_control.exceptions import InputValidationError
 
 #restriction enforced by DBS. for different types blocks.
 #It could have a strict restriction
