@@ -13,8 +13,8 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-import os, sys, optparse
-from gcSupport import FileMutex, getConfig, utils
+import logging, os, sys, optparse
+from gcSupport import FileMutex, getConfig, handleException, utils
 from grid_control.datasets.provider_base import DataProvider
 from grid_control_cms.dbs3_input_validation import DBS3InputValidation
 from grid_control_cms.dbs3_lite_client import DBS3LiteClient
@@ -115,7 +115,7 @@ def generateDBS3BlockDumps(opts, blocks):
         yield DBS3InputValidation.validate_json_input('blockBulk', block_dump)
 
 
-if __name__ == '__main__':
+def main():
     usage = '%s [OPTIONS] <config file / work directory>' % sys.argv[0]
     parser = optparse.OptionParser(usage=usage)
     parser.add_option('-G', '--globaltag', dest='globaltag', default='crab2_tag', help='Specify global tag')
@@ -253,7 +253,7 @@ if __name__ == '__main__':
     logger.setLevel(logging.DEBUG)
 
     #set-up dbs clients
-    dbs3_target_client = DBS3LiteClient(url='https://cmsweb-testbed.cern.ch/dbs/int/phys03')#opts.dbsTarget
+    dbs3_target_client = DBS3LiteClient(url=opts.dbsTarget)
     dbs3_source_client = DBS3LiteClient(url=opts.dbsSource)
 
     dbs3_migration_queue = DBS3MigrationQueue()
@@ -272,7 +272,7 @@ if __name__ == '__main__':
                     continue
                 migration_task = MigrationTask(block_name=block_to_migrate,
                                                migration_url='https://cmsweb.cern.ch/dbs/prod/global/DBSReader',
-                                               dbs_client=None)#dbs3_target_client)
+                                               dbs_client=dbs3_target_client)
                 try:
                     dbs3_migration_queue.add_migration_task(migration_task)
                 except AlreadyQueued as aq:
@@ -292,4 +292,7 @@ if __name__ == '__main__':
         do_migration(dbs3_migration_queue)
 
         #insert block into dbs3
-        #dbs3_target_client.insertBulkBlock(blockDump)
+        dbs3_target_client.insertBulkBlock(blockDump)
+
+if __name__ == '__main__':
+    handleException(main)
