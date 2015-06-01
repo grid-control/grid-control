@@ -88,13 +88,16 @@ class ObjectsFromCMSSW(InfoScanner):
 						inputs = outputFile.getElementsByTagName('Inputs')[0].getElementsByTagName('Input')
 					except:
 						inputs = []
+
+					tmpOut.update({'CMSSW_PARENT_PFN': [], 'CMSSW_PARENT_LFN': []})
+
 					for inputFileElement in inputs:
 						pfn = readTag(inputFileElement, 'PFN')
 						lfn = readTag(inputFileElement, 'LFN')
 						if not lfn:
-							lfn = pfn[lfn.find('/store/'):]
-						tmpOut.setdefault('CMSSW_PARENT_PFN', []).append(pfn)
-						tmpOut.setdefault('CMSSW_PARENT_LFN', []).append(lfn)
+							lfn = pfn[pfn.find('/store/'):]
+						tmpOut['CMSSW_PARENT_PFN'].append(pfn)
+						tmpOut['CMSSW_PARENT_LFN'].append(lfn)
 
 				# Read lumisection infos
 				lumis = []
