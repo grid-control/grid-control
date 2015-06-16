@@ -55,8 +55,8 @@ class SiteDB(object):
         return unflatten_json(parseJSON(response))
 
     def cms_name_to_se(self, cms_name):
-        cms_name = cms_name.replace('*','.*')
-        cms_name = cms_name.replace('%','.*')
+        cms_name = cms_name.replace('*', '.*')
+        cms_name = cms_name.replace('%', '.*')
         cms_name_regex = re.compile(cms_name)
 
         psn_site_names = filter(lambda site: site['type'] == 'psn' and cms_name_regex.match(site[u'alias']),
@@ -72,21 +72,17 @@ class SiteDB(object):
         site_names = []
         for site_resource in site_resources:
             site_names.extend(self._site_names(site_name=site_resource['site_name']))
-        return [x['alias'] for x in filter(lambda x: x['type']=='cms', site_names)]
+        return [site_name['alias'] for site_name in filter(lambda site: site['type'] == 'cms', site_names)]
 
     def dn_to_username(self, dn):
-        user_info = filter(lambda user: user['dn']==dn, self._people())
-        try:
-            return user_info[0]['username']
-        except IndexError:
-            return None
+        user_info = filter(lambda this_user: this_user['dn'] == dn, self._people())
+        for user in user_info:
+            return user['username']
 
     def username_to_dn(self, username):
         user_info = self._people(username=username)
-        try:
-            return next(user_info)['dn']
-        except StopIteration:
-            return None
+        for user in user_info:
+            return user['dn']
 
 
 if __name__ == '__main__':
