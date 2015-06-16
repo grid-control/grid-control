@@ -36,7 +36,7 @@ if opts.SE:
 	if '<hypernews name>' in opts.lfn:
 		token = AccessToken.getInstance('VomsProxy', getConfig(), None)
 		site_db = SiteDB()
-		hnName = site_db.dn2username(dn=token.getFQUsername())
+		hnName = site_db.dn_to_username(dn=token.getFQUsername())
 		if not hnName:
 			raise ConfigError('Unable to map grid certificate to hypernews name!')
 		opts.lfn = opts.lfn.replace('<hypernews name>', hnName)

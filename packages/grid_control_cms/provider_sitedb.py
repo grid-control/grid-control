@@ -16,6 +16,7 @@ from grid_control.utils.webservice import parseJSON
 from grid_control.utils.webservice import RestClient
 
 import os
+import re
 
 
 def unflatten_json(data):
@@ -35,22 +36,53 @@ class SiteDB(object):
         self.rest_client = RestClient(cert=self._proxy_path)
         self._url = url
 
-    def _people(self, user_name=None):
-        if user_name:
-            response = self.rest_client.get(self._url, api='people', params=dict(match=user_name))
+    def _people(self, username=None):
+        if username:
+            response = self.rest_client.get(self._url, api='people', params=dict(match=username))
         else:
             response = self.rest_client.get(self._url, api='people')
         return unflatten_json(parseJSON(response))
 
-    def dn2username(self, dn):
+    def _site_names(self, site_name=None):
+        if site_name:
+            response = self.rest_client.get(self._url, api='site-names', params=dict(match=site_name))
+        else:
+            response = self.rest_client.get(self._url, api='site-names')
+        return unflatten_json(parseJSON(response))
+
+    def _site_resources(self):
+        response = self.rest_client.get(self._url, api='site-resources')
+        return unflatten_json(parseJSON(response))
+
+    def cms_name_to_se(self, cms_name):
+        cms_name = cms_name.replace('*','.*')
+        cms_name = cms_name.replace('%','.*')
+        cms_name_regex = re.compile(cms_name)
+
+        psn_site_names = filter(lambda site: site['type'] == 'psn' and cms_name_regex.match(site[u'alias']),
+                                self._site_names())
+        site_names = set(map(lambda x: x['site_name'], psn_site_names))
+        site_resources = filter(lambda x: x['site_name'] in site_names, self._site_resources())
+        host_list = filter(lambda x: x['type'] == 'SE', site_resources)
+        host_list = map(lambda x: x['fqdn'], host_list)
+        return host_list
+
+    def se_to_cms_name(self, se):
+        site_resources = filter(lambda resources: resources['fqdn'] == se, self._site_resources())
+        site_names = []
+        for site_resource in site_resources:
+            site_names.extend(self._site_names(site_name=site_resource['site_name']))
+        return [x['alias'] for x in filter(lambda x: x['type']=='cms', site_names)]
+
+    def dn_to_username(self, dn):
         user_info = filter(lambda user: user['dn']==dn, self._people())
         try:
             return user_info[0]['username']
         except IndexError:
             return None
 
-    def username2dn(self, user_name):
-        user_info = self._people(user_name=user_name)
+    def username_to_dn(self, username):
+        user_info = self._people(username=username)
         try:
             return next(user_info)['dn']
         except StopIteration:
@@ -59,5 +91,8 @@ class SiteDB(object):
 
 if __name__ == '__main__':
     site_db = SiteDB()
-    print site_db.dn2username(dn='/C=DE/O=GermanGrid/OU=KIT/CN=Manuel Giffels')
-    print site_db.username2dn(user_name='giffels')
+    print site_db.dn_to_username(dn='/C=DE/O=GermanGrid/OU=KIT/CN=Manuel Giffels')
+    print site_db.username_to_dn(username='giffels')
+    print site_db.cms_name_to_se(cms_name='T*_PL_Warsaw')
+    print site_db.se_to_cms_name(se='se.polgrid.pl')
+    print site_db.se_to_cms_name(se='se.grid.icm.edu.pl')
