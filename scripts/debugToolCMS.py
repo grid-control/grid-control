@@ -13,14 +13,18 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-#from gcSupport import *
+
 import optparse
 from gcSupport import AccessToken, getConfig, parseOptions
-from grid_control_cms.webservice_api import readJSON
+from grid_control.exceptions import ConfigError
+from grid_control.utils.webservice import readJSON
+from grid_control_cms.provider_sitedb import SiteDB
+
 
 def lfn2pfn(node, lfn):
 	return readJSON('https://cmsweb.cern.ch/phedex/datasvc/json/prod/lfn2pfn',
 		{'node': node, 'protocol': 'srmv2', 'lfn': lfn})['phedex']['mapping'][0]['pfn']
+
 
 parser = optparse.OptionParser()
 parser.add_option('-s', '--SE', dest='SE', default=None, help='Resolve LFN on CMS SE into PFN')
@@ -31,11 +35,11 @@ parser.add_option('', '--se-prot', dest='seprot', default='srmv2', help='Name of
 if opts.SE:
 	if '<hypernews name>' in opts.lfn:
 		token = AccessToken.getInstance('VomsProxy', getConfig(), None)
-		hnName = readJSON('https://cmsweb.cern.ch/sitedb/json/index/dnUserName',
-			{'dn': token.getFQUsername()})
+		site_db = SiteDB()
+		hnName = site_db.dn2username(dn=token.getFQUsername())
 		if not hnName:
 			raise ConfigError('Unable to map grid certificate to hypernews name!')
-		opts.lfn = opts.lfn.replace('<hypernews name>', hnName['user'])
+		opts.lfn = opts.lfn.replace('<hypernews name>', hnName)
 
 	tmp = readJSON('https://cmsweb.cern.ch/phedex/datasvc/json/prod/lfn2pfn',
 		{'node': opts.SE, 'protocol': opts.seprot, 'lfn': opts.lfn})['phedex']['mapping']
