@@ -22,6 +22,7 @@ from grid_control_cms.dbs3_migration_queue import AlreadyQueued
 from grid_control_cms.dbs3_migration_queue import DBS3MigrationQueue
 from grid_control_cms.dbs3_migration_queue import MigrationTask
 from grid_control_cms.dbs3_migration_queue import do_migration
+from grid_control_cms.provider_sitedb import SiteDB
 from python_compat import NullHandler, set
 
 def generateDBS3BlockDumps(opts, blocks):
@@ -98,11 +99,17 @@ def generateDBS3BlockDumps(opts, blocks):
                                  }
 
         ###add block information
+        site_db = SiteDB()
+        try:
+            origin_site_name = site_db.se_to_cms_name(locations[0])[0]
+        except IndexError:
+            origin_site_name = 'UNKNOWN'
+
         block_dump[u'block'] = {u'open_for_writing': 0,
                                u'block_name': '%s#%s' % (dataset, block_name),
                                u'file_count': len(file_list),
                                u'block_size': block_size,
-                               u'origin_site_name': locations[0] if len(locations) else 'UNKNOWN'}
+                               u'origin_site_name': origin_site_name}
 
         ###add acquisition_era, CRAB is important because of checks within DBS 3
         block_dump[u'acquisition_era'] = {u'acquisition_era_name': 'CRAB',
