@@ -52,7 +52,7 @@ class NickNameProducer(LoadableObject):
 class SimpleNickNameProducer(NickNameProducer):
 	def getName(self, oldnick, dataset, block):
 		if oldnick == '':
-			return dataset.replace('/PRIVATE/', '').lstrip('/').split('/')[0].split('#')[0]
+			return dataset.replace('/PRIVATE/', '').lstrip('/').split('#')[0].replace('/', '_').replace('__', '_')
 		return oldnick
 
 
