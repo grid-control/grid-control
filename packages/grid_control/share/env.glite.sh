@@ -15,25 +15,22 @@
 
 # grid-control: https://ekptrac.physik.uni-karlsruhe.de/trac/grid-control
 
-echo "Searching for gLite environment..."
+echo "Searching for GRID environment..."
 
+# Limit memory used by java tools
 export _JAVA_OPTIONS="-Xms128m -Xmx512m"
-if [ -z "$GLITE_LOCATION" ]; then
+
+function gc_find_grid() {
+	echo "[GRID] Searching in $1"
 	# Save local VO environment variables
-	VO_KEEPER="${GC_LANDINGZONE:-/tmp}/env.glite.old"
-	VO_REVERT="${GC_LANDINGZONE:-/tmp}/env.glite.new"
+	VO_KEEPER="${GC_LANDINGZONE:-/tmp}/env.grid.old"
+	VO_REVERT="${GC_LANDINGZONE:-/tmp}/env.grid.new"
 	export | grep VO_ | sed -e "s/^.*VO_/VO_/" > "$VO_KEEPER"
 
-	cat $VO_KEEPER
-	# Source UI
-	if [ -d "/cvmfs/grid.cern.ch" ]; then
-		source "`ls -1 /cvmfs/grid.cern.ch/3.*/etc/profile.d/grid-env.sh | sort | tail -n 1`"
-		echo "[CMVFS-SITE] Using gLite `glite-version`"
-	elif [ -d "/afs/desy.de/project/glite" ]; then
-		source "/afs/desy.de/project/glite/UI/etc/profile.d/grid-env.sh"
-		echo "[AFS-SITE] Using gLite `glite-version`"
-	else
-		echo "[WARNING] No gLite found!"
+	if [ -f "$2" ]; then
+		source "$2"
+	fi
+	if [ -z "$GRID_LOCATION" ]; then
 		return 1
 	fi
 
@@ -47,12 +44,29 @@ if [ -z "$GLITE_LOCATION" ]; then
 	done > "$VO_REVERT"
 	source "$VO_REVERT"
 	rm "$VO_KEEPER" "$VO_REVERT"
-fi
-echo "Using gLite UI $GLITE_LOCATION"
+	return 0
+}
 
+if [ -n "$GRID_LOCATION" ]; then
+	echo -n "[GRID-LOCAL] "
+elif gc_find_grid "CVMFS" $(ls -1t /cvmfs/grid.cern.ch/*/etc/profile.d/setup*.sh 2> /dev/null | head -n 1); then
+	echo -n "[GRID-CVMFS] "
+elif gc_find_grid "CVMFS - 2nd try" $(ls -1t /cvmfs/grid.cern.ch/*/etc/profile.d/grid*.sh 2> /dev/null | head -n 1); then
+	echo -n "[GRID-CVMFS] "
+elif gc_find_grid "OSG" "/uscmst1/prod/grid/gLite_SL5.sh"; then
+	echo -n "[GRID-OSG] "
+elif gc_find_grid "AFS" "/afs/cern.ch/cms/LCG/LCG-2/UI/cms_ui_env.sh"; then
+	echo -n "[GRID-AFS] "
+else
+	echo "[WARNING] No GRID environment found!"
+	return 1
+fi
+echo "Using GRID UI `glite-version 2> /dev/null` at $GLITE_LOCATION"
+
+# Use proxy from input sandbox if available
 if [ -s "$GC_SCRATCH/_proxy.dat" ]; then
 	mv "$GC_SCRATCH/_proxy.dat" "$GC_LANDINGZONE/_proxy.dat"
 	chmod 400 "$GC_LANDINGZONE/_proxy.dat"
 	[ ! -s "$X509_USER_PROXY" ] && export X509_USER_PROXY="$GC_LANDINGZONE/_proxy.dat"
 fi
-echo "Using grid proxy $X509_USER_PROXY"
+echo "Using GRID proxy $X509_USER_PROXY"
