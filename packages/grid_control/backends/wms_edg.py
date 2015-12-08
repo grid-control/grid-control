@@ -13,7 +13,7 @@
 #-#  limitations under the License.
 
 from grid_control import utils
-from grid_control.backends.grid_wms.grid_wms import GridWMS, jdlEscape
+from grid_control.backends.wms_grid import GridWMS, jdlEscape
 
 class EuropeanDataGrid(GridWMS):
 	def __init__(self, config, name):

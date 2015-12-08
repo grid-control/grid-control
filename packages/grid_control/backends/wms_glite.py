@@ -13,7 +13,7 @@
 #-#  limitations under the License.
 
 from grid_control import utils
-from grid_control.backends.grid_wms.grid_wms import GridWMS
+from grid_control.backends.wms_grid import GridWMS
 
 class Glite(GridWMS):
 	def __init__(self, config, name):

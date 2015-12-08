@@ -44,32 +44,32 @@ grid_control.backends.storage	StorageManager
 
 grid_control.backends.wms.WMS:
 grid_control.backends.condor_wms.condor_wms	Condor
-grid_control.backends.grid_wms.edg	EDG
-grid_control.backends.grid_wms.edg	EuropeanDataGrid
-grid_control.backends.grid_wms.edg	LCG
-grid_control.backends.grid_wms.glite	Glite
-grid_control.backends.grid_wms.glite_wms	GliteWMS
-grid_control.backends.grid_wms.glite_wms	Grid
-grid_control.backends.grid_wms.glite_wms_direct	GliteWMSDirect
-grid_control.backends.grid_wms.grid_wms	GridWMS
 grid_control.backends.htcondor_wms.htcondor_wms	HTCondor
-grid_control.backends.local_wms.gridengine	GridEngine
-grid_control.backends.local_wms.gridengine	OGE
-grid_control.backends.local_wms.gridengine	SGE
-grid_control.backends.local_wms.gridengine	UGE
-grid_control.backends.local_wms.host	Host
-grid_control.backends.local_wms.host	Localhost
-grid_control.backends.local_wms.local_wms	Local
-grid_control.backends.local_wms.local_wms	LocalWMS
-grid_control.backends.local_wms.lsf	LSF
-grid_control.backends.local_wms.pbs	PBS
-grid_control.backends.local_wms.pbsge	PBSGECommon
-grid_control.backends.local_wms.slurm	JMS
-grid_control.backends.local_wms.slurm	SLURM
 grid_control.backends.wms	BasicWMS
 grid_control.backends.wms	InactiveWMS
 grid_control.backends.wms	WMS
+grid_control.backends.wms_edg	EDG
+grid_control.backends.wms_edg	EuropeanDataGrid
+grid_control.backends.wms_edg	LCG
+grid_control.backends.wms_glite	Glite
+grid_control.backends.wms_glitewms	GliteWMS
+grid_control.backends.wms_glitewms	Grid
+grid_control.backends.wms_glitewms_direct	GliteWMSDirect
+grid_control.backends.wms_grid	GridWMS
+grid_control.backends.wms_gridengine	GridEngine
+grid_control.backends.wms_gridengine	OGE
+grid_control.backends.wms_gridengine	SGE
+grid_control.backends.wms_gridengine	UGE
+grid_control.backends.wms_host	Host
+grid_control.backends.wms_host	Localhost
+grid_control.backends.wms_local	Local
+grid_control.backends.wms_local	LocalWMS
+grid_control.backends.wms_lsf	LSF
 grid_control.backends.wms_multi	MultiWMS
+grid_control.backends.wms_pbs	PBS
+grid_control.backends.wms_pbsge	PBSGECommon
+grid_control.backends.wms_slurm	JMS
+grid_control.backends.wms_slurm	SLURM
 grid_control.backends.wms_thread	ThreadedMultiWMS
 
 grid_control.config.cfiller_base.ConfigFiller:

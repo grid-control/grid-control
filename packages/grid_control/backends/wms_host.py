@@ -13,7 +13,7 @@
 #-#  limitations under the License.
 
 from grid_control import utils
-from grid_control.backends.local_wms.local_wms import LocalWMS
+from grid_control.backends.wms_local import LocalWMS
 from grid_control.job_db import Job
 from python_compat import next
 

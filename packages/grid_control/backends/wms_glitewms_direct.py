@@ -41,7 +41,7 @@ except: # gLite 3.1
 		getStatusDirect = None
 
 from grid_control import utils
-from grid_control.backends.grid_wms.glite_wms import GliteWMS
+from grid_control.backends.wms_glitewms import GliteWMS
 from grid_control.exceptions import GridError
 
 class GliteWMSDirect(GliteWMS):

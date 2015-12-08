@@ -13,8 +13,8 @@
 #-#  limitations under the License.
 
 from grid_control import utils
-from grid_control.backends.local_wms.pbsge import PBSGECommon
 from grid_control.backends.wms import WMS
+from grid_control.backends.wms_pbsge import PBSGECommon
 from grid_control.exceptions import RethrowError
 from grid_control.job_db import Job
 

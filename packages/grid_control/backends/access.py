@@ -183,7 +183,7 @@ class AFSAccessToken(RefreshableAccessToken):
 		self._tickets = config.getList('tickets', [], onChange = None)
 
 	def _backupTickets(self, config):
-		import os, stat, shutil
+		import stat, shutil
 		for name in ['KRB5CCNAME', 'KRBTKFILE']: # store kerberos files in work directory for persistency
 			if name in os.environ:
 				oldFN = os.environ[name].replace('FILE:', '')
