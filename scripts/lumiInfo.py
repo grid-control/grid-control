@@ -38,6 +38,8 @@ ogCalc.add_option('-j', '--job-json', dest='save_jobjson', default=False, action
 	help='Output JSON file with processed lumi sections')
 ogCalc.add_option('-e', '--job-events', dest='get_events', default=False, action='store_true',
 	help='Get number of events processed')
+ogCalc.add_option("-p", "--parameterized", dest="parameterized", default=False, action="store_true",
+	help="Use output file name to categorize output (useful for parameterized tasks)")
 parser.add_option_group(ogCalc)
 
 (opts, args) = parseOptions(parser)
@@ -83,9 +85,12 @@ def main():
 					incomplete = True
 				continue
 
-			if splitter:
-				splitInfo = splitter.getSplitInfo(jobNum)
-			outputName = splitInfo.get(DataSplitter.Nickname, splitInfo.get(DataSplitter.DatasetID, 0))
+			if not parameterized:
+				if splitter:
+					splitInfo = splitter.getSplitInfo(jobNum)
+				outputName = splitInfo.get(DataSplitter.Nickname, splitInfo.get(DataSplitter.DatasetID, 0))
+			else:
+				outputName = jobInfo['file'].split()[2].replace("_%d_" % jobNum, '_').replace('/', '_').replace('__', '_')
 
 			# Read framework report files to get number of events
 			try:
