@@ -28,7 +28,7 @@ except ImportError:
 	try:
 		import ssl
 		ssl._create_default_https_context = ssl._create_unverified_context
-	except AttributeError:
+	except Exception:
 		pass
 
 	class HTTPSClientAuthHandler(urllib2.HTTPSHandler):
