@@ -373,6 +373,14 @@ class TwoSidedIterator(object):
 
 listMapReduce = lambda fun, lst, start = []: reduce(operator.add, map(fun, lst), start)
 
+def getNamedLogger(prefix, name, instance, postfix = None):
+	if not name:
+		name = instance.__class__.__name__
+	logname = '%s.%s' % (prefix, name.upper().replace('.', '_'))
+	if postfix:
+		logname = '%s.%s' % (logname, postfix)
+	return logging.getLogger(logname)
+
 
 def checkVar(value, message, check = True):
 	if check and max(map(lambda x: max(x.count('@'), x.count('__')), str(value).split('\n'))) >= 2:
