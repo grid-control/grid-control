@@ -13,8 +13,8 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-import logging, os, sys, optparse
-from gcSupport import FileMutex, getConfig, handleException, utils
+import os, sys, logging, optparse
+from gcSupport import FileMutex, getConfig, utils
 from grid_control.datasets.provider_base import DataProvider
 from grid_control_cms.dbs3_input_validation import DBS3InputValidation
 from grid_control_cms.dbs3_lite_client import DBS3LiteClient
@@ -302,4 +302,4 @@ def main():
         dbs3_target_client.insertBulkBlock(blockDump)
 
 if __name__ == '__main__':
-    handleException(main)
+    sys.exit(main())

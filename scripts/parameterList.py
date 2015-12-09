@@ -14,7 +14,7 @@
 #-#  limitations under the License.
 
 import os, sys, random, optparse
-from gcSupport import getConfig, handleException, parseOptions, utils
+from gcSupport import getConfig, parseOptions, utils
 from grid_control.datasets import DataSplitter
 from grid_control.parameters import DataParameterSource, ParameterFactory, ParameterInfo, ParameterMetadata, ParameterSource
 
@@ -221,4 +221,4 @@ def main():
 				utils.vprint('No intervention')
 
 if __name__ == '__main__':
-	handleException(main)
+	sys.exit(main())

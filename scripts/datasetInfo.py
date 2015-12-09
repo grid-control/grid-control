@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-#-#  Copyright 2009-2014 Karlsruhe Institute of Technology
+#-#  Copyright 2009-2015 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
 #-#  limitations under the License.
 
 import os, sys, optparse
-from gcSupport import getConfig, handleException, parseOptions, utils
+from gcSupport import getConfig, parseOptions, utils
 from grid_control.datasets import DataProvider
 
 usage = '%s [OPTIONS] <DBS dataset path> | <dataset cache file>' % sys.argv[0]
@@ -227,4 +227,4 @@ def main():
 		provider.saveState(opts.save, blocks)
 		print('Dataset information saved to ./%s' % opts.save)
 
-handleException(main)
+sys.exit(main())

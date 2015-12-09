@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-#-#  Copyright 2010-2014 Karlsruhe Institute of Technology
+#-#  Copyright 2010-2015 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -50,4 +50,4 @@ def discoverDataset(opts, parser, providerName, datasetExpr):
 			provider.saveState(opts.output, None, opts.strip)
 		else:
 			gcSupport.datasets.DataProvider.saveStateRaw(sys.stdout, provider.getBlocks(), opts.strip)
-	gcSupport.handleException(main)
+	sys.exit(main())

@@ -62,13 +62,9 @@ if opts.jobs:
 	config = getConfig(args[0])
 	# Initialise task module
 	taskName = config.get(['task', 'module'])
-	try:
-		task = TaskModule.open(taskName, config, taskName)
-		jobDB = JobDB(config)
-		selected = JobSelector.create(opts.jobs, task = task)
-	except:
-		sys.stderr.write(logException())
-		raise
+	task = TaskModule.open(taskName, config, taskName)
+	jobDB = JobDB(config)
+	selected = JobSelector.create(opts.jobs, task = task)
 	if opts.resettrys:
 		for jobNum in jobDB.getJobsIter(selected):
 			print 'Resetting attempts', jobNum

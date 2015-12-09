@@ -14,7 +14,7 @@
 #-#  limitations under the License.
 
 import os, sys, optparse
-from gcSupport import getCMSSWInfo, getJobInfo, getWorkJobs, handleException, parseOptions, utils
+from gcSupport import getCMSSWInfo, getJobInfo, getWorkJobs, parseOptions, utils
 from grid_control.datasets import DataSplitter
 from grid_control_cms.lumi_tools import formatLumi, mergeLumi, parseLumiFilter
 
@@ -171,4 +171,4 @@ def main():
 				llist = result.setdefault(start[0], []).extend(range(start[1], end[1] + 1))
 			print result
 
-handleException(main)
+sys.exit(main())

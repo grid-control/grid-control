@@ -20,7 +20,6 @@ sys.path.append(os.path.abspath(os.path.join(sys.path[0], 'packages')))
 from grid_control import utils
 from grid_control.config import createConfigFactory, ConfigEntry
 from grid_control.config.cfiller_base import ConfigFiller, StringConfigFiller
-from grid_control.exceptions import handleException
 from grid_control.logging_setup import logging_setup
 from grid_control.workflow import Workflow
 
@@ -145,4 +144,4 @@ if __name__ == '__main__':
 		# Run the configured workflow
 		workflow.run()
 
-	handleException(main)
+	sys.exit(main())

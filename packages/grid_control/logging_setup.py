@@ -75,6 +75,7 @@ def logging_defaults():
 	if handler_ex:
 		logging.getLogger("exception").propagate = False
 		logging.getLogger("exception").addHandler(handler_ex)
+	logging.getLogger("exception").setLevel(logging.DEBUG)
 
 	# Register new log levels
 	for name in logLevelDict:

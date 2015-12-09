@@ -14,7 +14,7 @@
 #-#  limitations under the License.
 
 import os, sys, time, random, optparse, gcSupport, threading
-from gcSupport import AccessToken, ClassSelector, FileInfoProcessor, Job, JobClass, logException, storage, utils
+from gcSupport import AccessToken, ClassSelector, FileInfoProcessor, Job, JobClass, OSLayer, storage, utils
 from python_compat import md5
 
 def md5sum(filename):
@@ -176,12 +176,8 @@ def dlfs_rm(path, msg):
 
 
 def realmain(opts, args):
-	try:
-		token = AccessToken.getInstance(opts.token, gcSupport.getConfig(configDict = {'access': {'ignore warnings': 'True'}}), 'access')
-	except:
-		sys.stderr.write(logException())
-		sys.exit(os.EX_UNAVAILABLE)
-
+	config = gcSupport.getConfig(configDict = {'access': {'ignore warnings': 'True'}})
+	token = AccessToken.getInstance(opts.token, config, 'access', OSLayer.create(config))
 	(workDir, config, jobDB) = gcSupport.initGC(args)
 	jobList = jobDB.getJobs(ClassSelector(JobClass.SUCCESS))
 

@@ -21,8 +21,8 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'p
 from grid_control import utils
 from grid_control.backends import WMS, storage
 from grid_control.backends.access import AccessToken
+from grid_control.backends.oslayer import OSLayer
 from grid_control.config import createConfigFactory
-from grid_control.exceptions import handleException, logException
 from grid_control.job_db import Job, JobClass, JobDB
 from grid_control.job_manager import JobManager
 from grid_control.job_selector import ClassSelector, JobSelector

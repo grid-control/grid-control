@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-#-#  Copyright 2009-2014 Karlsruhe Institute of Technology
+#-#  Copyright 2009-2015 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
 #-#  limitations under the License.
 
 import sys, optparse
-from gcSupport import JobManager, JobSelector, Report, TaskModule, getConfig, handleException, parseOptions, utils
+from gcSupport import JobManager, JobSelector, Report, TaskModule, getConfig, parseOptions, utils
 
 parser = optparse.OptionParser()
 parser.add_option('', '--report', dest='reportClass', default='GUIReport')
@@ -49,4 +49,4 @@ def main():
 	report.display()
 
 if __name__ == '__main__':
-	handleException(main)
+	sys.exit(main())

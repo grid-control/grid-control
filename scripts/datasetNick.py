@@ -14,7 +14,7 @@
 #-#  limitations under the License.
 
 import sys, optparse
-from gcSupport import getConfig, handleException, parseOptions, utils
+from gcSupport import getConfig, parseOptions, utils
 from grid_control.datasets.nickname_base import NickNameProducer
 from grid_control_cms.provider_dbsv3 import DBS3Provider
 
@@ -40,4 +40,4 @@ def main():
 		[(0, 'Nickname'), (1, 'Dataset')],
 		map(lambda ds: {0: nProd.getName('', ds, None), 1: ds}, toProcess), 'll')
 
-handleException(main)
+sys.exit(main())
