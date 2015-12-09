@@ -14,8 +14,11 @@
 
 import sys, logging
 from grid_control import utils
-from grid_control.exceptions import ConfigError, GCError, RethrowError
+from grid_control.exceptions import GCError
 from python_compat import rsplit, set
+
+class PluginError(GCError):
+	pass
 
 # Abstract class taking care of dynamic class loading 
 class LoadableObject(object):
@@ -70,8 +73,7 @@ class LoadableObject(object):
 				clsSearchList.append(clsMapResult)
 			else:
 				clsSearchList.extend(clsMapResult)
-		raise ConfigError('Unable to load %r of type %r' % (clsNameStored, clsFormat(cls)))
-
+		raise PluginError('Unable to load %r of type %r - tried:\n\t%s' % (clsNameStored, clsFormat(cls), str.join('\n\t', clsProcessed)))
 	getClass = classmethod(getClass)
 
 	# Get an instance of a derived class by specifying the class name and constructor arguments
@@ -83,7 +85,7 @@ class LoadableObject(object):
 		except GCError:
 			raise
 		except Exception:
-			raise RethrowError('Error while creating instance of type %s (%s)' % (clsName, clsType))
+			raise PluginError('Error while creating instance of type %s (%s)' % (clsName, clsType))
 	getInstance = classmethod(getInstance)
 
 LoadableObject.pkgPaths = []
@@ -155,5 +157,10 @@ class ClassWrapper:
 			config = self._config.changeView(viewClass = TaggedConfigView,
 				setClasses = [cls], setSections = None, setNames = [self._instName],
 				addTags = self._tags, inheritSections = self._inherit)
-			return cls(config, self._instName, *args, **kwargs)
-		return cls(*args, **kwargs)
+			args = [config, self._instName] + list(args)
+		try:
+			return cls(*args, **kwargs)
+		except GCError:
+			raise
+		except Exception:
+			raise PluginError('Error while creating instance of type %s (%s)' % (cls, str(self)))

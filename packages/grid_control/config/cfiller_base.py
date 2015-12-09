@@ -156,6 +156,7 @@ class DefaultFilesConfigFiller(FileConfigFiller):
 			host = hang_protection(resolve_hostname, timeout = 5)
 		except TimeoutException:
 			sys.stderr.write('System call to resolve hostname is hanging!\n')
+			sys.stderr.flush()
 			os._exit(os.EX_OSERR)
 		hostCfg = map(lambda c: utils.pathGC('config/%s.conf' % host.split('.', c)[-1]), range(host.count('.') + 1, -1, -1))
 		defaultCfg = ['/etc/grid-control.conf', '~/.grid-control.conf', utils.pathGC('config/default.conf')]

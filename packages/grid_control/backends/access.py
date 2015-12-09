@@ -90,11 +90,11 @@ class TimedAccessToken(AccessToken):
 
 	def canSubmit(self, neededTime, canCurrentlySubmit):
 		if not self._checkTimeleft(self._lowerLimit):
-			raise UserError('Your access token only has %d seconds left! (Required are %s)' %
-				(self._getTimeleft(cached = True), utils.strTime(self._lowerLimit)))
+			raise UserError('Your access token (%s) only has %d seconds left! (Required are %s)' %
+				(self.getObjectName(), self._getTimeleft(cached = True), utils.strTime(self._lowerLimit)))
 		if not self._checkTimeleft(self._lowerLimit + neededTime) and canCurrentlySubmit:
-			utils.vprint('Access token lifetime (%s) does not meet the access and walltime (%s) requirements!' %
-				(utils.strTime(self._getTimeleft(cached = False)), utils.strTime(self._lowerLimit + neededTime)), -1, printTime = True)
+			utils.vprint('Access token (%s) lifetime (%s) does not meet the access and walltime (%s) requirements!' %
+				(self.getObjectName(), utils.strTime(self._getTimeleft(cached = False)), utils.strTime(self._lowerLimit + neededTime)), -1, printTime = True)
 			utils.vprint('Disabling job submission', -1, printTime = True)
 			return False
 		return True

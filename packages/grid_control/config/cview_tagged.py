@@ -14,6 +14,7 @@
 
 from grid_control.config.config_entry import standardConfigForm
 from grid_control.config.cview_base import SimpleConfigView, selectorUnchanged
+from grid_control.exceptions import APIError
 
 # Simple ConfigView implementation
 class TaggedConfigView(SimpleConfigView):
@@ -32,7 +33,12 @@ class TaggedConfigView(SimpleConfigView):
 
 		self._initVariable('_cfgClassSections', None, setClasses, addClasses, standardConfigForm, lambda x: x.configSections)
 		self._initVariable('_cfgNames', [], setNames, addNames, standardConfigForm)
-		makeTagTuple = lambda t: [(t.tagName.lower(), t.getObjectName().lower())]
+		def makeTagTuple(t):
+			try:
+				tagName = t.tagName.lower()
+			except:
+				raise APIError('Class %r does not define a tag name!' % t.__class__.__name__)
+			return [(tagName, t.getObjectName().lower())]
 		self._initVariable('_cfgTags', [], setTags, addTags, lambda x: x, makeTagTuple)
 		self._cfgTagsOrder = map(lambda (tagName, tagValue): tagName, self._cfgTags)
 
