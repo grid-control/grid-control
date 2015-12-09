@@ -85,7 +85,7 @@ class JobManager(NamedObject):
 		self.jobDB.commit(jobNum, jobObj)
 
 		jobNumLen = int(math.log10(max(1, len(self.jobDB))) + 1)
-		utils.vprint('Job %s state changed from %s to %s ' % (str(jobNum).ljust(jobNumLen), Job.members[oldState], Job.members[state]), -1, True, False)
+		utils.vprint('Job %s state changed from %s to %s ' % (str(jobNum).ljust(jobNumLen), Job.enum2str(oldState), Job.enum2str(state)), -1, True, False)
 		if showWMS and jobObj.wmsId:
 			print '(WMS:%s)' % jobObj.wmsId.split('.')[1],
 		if (state == Job.SUBMITTED) and (jobObj.attempt > 1):
@@ -328,7 +328,7 @@ class JobManager(NamedObject):
 					jobSet.remove(jobNum)
 					jobObj.attempt = 0
 			if len(jobSet) > 0:
-				output = (Job.members[newState], str.join(', ', map(str, jobSet)))
+				output = (Job.enum2str(newState), str.join(', ', map(str, jobSet)))
 				raise RuntimeError('For the following jobs it was not possible to reset the state to %s:\n%s' % output)
 
 		if jobChanges:

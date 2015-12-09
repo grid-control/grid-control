@@ -104,10 +104,10 @@ class BackendSelector(RegExSelector):
 
 class StateSelector(RegExSelector):
 	def __init__(self, arg, **kwargs):
-		predef = {'TODO': 'SUBMITTED,WAITING,READY,QUEUED', 'ALL': str.join(',', Job.members)}
+		predef = {'TODO': 'SUBMITTED,WAITING,READY,QUEUED', 'ALL': str.join(',', Job.enumNames)}
 		RegExSelector.__init__(self, predef.get(arg.upper(), arg), None, lambda x: '^%s.*' % x.upper())
-		stateList = reduce(operator.add, map(lambda x: list(filter(x.match, Job.members)), self.rxList))
-		self.states = map(lambda x: list(Job.members).index(x), stateList)
+		stateList = reduce(operator.add, map(lambda x: list(filter(x.match, Job.enumNames)), self.rxList))
+		self.states = map(Job.str2enum, stateList)
 
 	def __call__(self, jobNum, jobObj):
 		return jobObj.state in self.states

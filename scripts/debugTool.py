@@ -123,7 +123,7 @@ if opts.state:
 	except:
 		print 'Invalid state: %s', opts.state
 	oldState = job.state
-	utils.vprint('Job state changed from %s to %s' % (Job.members[oldState], Job.members[newState]), -1, True)
+	utils.vprint('Job state changed from %s to %s' % (Job.enum2str(oldState), Job.enum2str(newState)), -1, True)
 	job.state = newState
 	utils.safeWrite(open(args[0], 'w'), utils.DictFormat(escapeString = True).format(job.getAll()))
 

@@ -54,14 +54,14 @@ def extractJobTiming(jInfo, task ):
 	jobNum = jInfo[0]
 
 	# intialize all with None
-	for key in JobResultEnum.members:
-		enumID = JobResultEnum.fromString(key)
+	for key in JobResultEnum.enumNames:
+		enumID = JobResultEnum.str2enum(key)
 		jobResult[enumID] = None
 
 	total_size_in = 0
 	total_size_out = 0
 	for ( key, val ) in jInfo[2].iteritems():
-		enumID = JobResultEnum.fromString(key)
+		enumID = JobResultEnum.str2enum(key)
 		if (enumID is not None):
 			jobResult[enumID] = val
 

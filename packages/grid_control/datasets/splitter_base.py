@@ -41,27 +41,19 @@ class DataSplitter(LoadableObject):
 		self.config = config
 		self.splitSource = None
 		self._protocol = {}
-
-		def getResyncConfig(item, default, opts, cls = ResyncMode):
-			value = config.get('resync %s' % item, cls.members[default], onChange = None).lower()
-			result = cls.members.index(value)
-			if result not in opts:
-				raise ConfigError('Invalid resync setting %s for option "resync %s"!' % (value, item))
-			return result
-
 		# Resync settings:
 		self.interactive = config.getBool('resync interactive', False, onChange = None)
 		#   behaviour in case of event size changes
-		self.mode_removed = getResyncConfig('mode removed', ResyncMode.complete, ResyncMode.noChanged)
-		self.mode_expanded = getResyncConfig('mode expand', ResyncMode.changed, ResyncMode.allMembers)
-		self.mode_shrunken = getResyncConfig('mode shrink', ResyncMode.changed, ResyncMode.allMembers)
-		self.mode_new = getResyncConfig('mode new', ResyncMode.complete, [ResyncMode.complete, ResyncMode.ignore])
+		self.mode_removed = config.getEnum('mode removed', ResyncMode, ResyncMode.complete, subset = ResyncMode.noChanged)
+		self.mode_expanded = config.getEnum('mode expand', ResyncMode, ResyncMode.changed)
+		self.mode_shrunken = config.getEnum('mode shrink', ResyncMode, ResyncMode.changed)
+		self.mode_new = config.getEnum('mode new', ResyncMode, ResyncMode.complete, subset = [ResyncMode.complete, ResyncMode.ignore])
 		#   behaviour in case of metadata changes
 		self.metaOpts = {}
 		for meta in config.getList('resync metadata', [], onChange = None):
-			self.metaOpts[meta] = getResyncConfig('mode %s' % meta, ResyncMode.complete, ResyncMode.noChanged)
+			self.metaOpts[meta] = config.getEnum('mode %s' % meta, ResyncMode, ResyncMode.complete, subset = ResyncMode.noChanged)
 		#   behaviour in case of job changes - disable changed jobs, preserve job number of changed jobs or reorder
-		self.resyncOrder = getResyncConfig('jobs', ResyncOrder.append, ResyncOrder.allMembers, ResyncOrder)
+		self.resyncOrder = config.getEnum('jobs', ResyncOrder, ResyncOrder.append)
 
 
 

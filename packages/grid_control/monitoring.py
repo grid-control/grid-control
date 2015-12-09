@@ -112,7 +112,7 @@ class ScriptMonitoring(Monitoring):
 
 	# Called on job status update
 	def onJobUpdate(self, wms, jobObj, jobNum, data):
-		self.runInBackground(self.evtStatus, jobNum, jobObj, {'STATUS': Job.members[jobObj.state]})
+		self.runInBackground(self.evtStatus, jobNum, jobObj, {'STATUS': Job.enum2str(jobObj.state)})
 
 	# Called on job status update
 	def onJobOutput(self, wms, jobObj, jobNum, retCode):

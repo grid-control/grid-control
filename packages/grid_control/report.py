@@ -65,7 +65,7 @@ class BasicReport(Report):
 		return 14
 
 	def display(self):
-		summary = map(lambda x: 0.0, Job.members)
+		summary = map(lambda x: 0.0, Job.enumNames)
 		defaultJob = Job()
 		for jobNum in self._jobs:
 			summary[self._jobDB.get(jobNum, defaultJob).state] += 1
@@ -85,7 +85,7 @@ class BasicReport(Report):
 			utils.vprint('(Jobs    IGNORED:%8d  %3d%%)' % (ignored, ignored / len(self._jobDB) * 100.0), -1)
 		else:
 			utils.vprint(' ' * 31, -1)
-		for stateNum, category in enumerate(Job.members):
+		for stateNum, category in enumerate(Job.enumNames):
 			utils.vprint('Jobs  %9s:%8d  %3d%%     ' % tuple([category] + makePer(stateNum)), \
 				-1, newline = stateNum % 2)
 		utils.vprint('-' * 65, -1)
@@ -99,7 +99,7 @@ class LocationReport(Report):
 			jobObj = self._jobDB.get(jobNum)
 			if not jobObj or (jobObj.state == Job.INIT):
 				continue
-			reports.append({0: jobNum, 1: Job.members[jobObj.state], 2: jobObj.wmsId})
+			reports.append({0: jobNum, 1: Job.enum2str(jobObj.state), 2: jobObj.wmsId})
 			if utils.verbosity() > 0:
 				history = jobObj.history.items()
 				history.reverse()

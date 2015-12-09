@@ -42,7 +42,7 @@ class FileInfoProcessor(JobInfoProcessor):
 				(fileIdx, fileProperty) = fileKey.replace('OUTPUT_FILE_', '').split('_')
 				if isinstance(fileData, str):
 					fileData = fileData.strip('"')
-				result.setdefault(int(fileIdx), {})[FileInfoProcessor.fromString(fileProperty)] = fileData
+				result.setdefault(int(fileIdx), {})[FileInfoProcessor.str2enum(fileProperty)] = fileData
 			return result.values()
 utils.makeEnum(['Hash', 'NameLocal', 'NameDest', 'Path'], FileInfoProcessor)
 

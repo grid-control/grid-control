@@ -266,9 +266,11 @@ class SimpleConfigInterface(TypedConfigInterface):
 		return self.getChoice(option, [True, False], default,
 			obj2str = lambda obj: {True: 'yes', False: 'no'}.get(obj), str2obj = utils.parseBool, **kwargs)
 
-	def getEnum(self, option, enum, default = noDefault, **kwargs):
-		return self.getChoice(option, enum.allMembers, default, obj2str = lambda obj: enum.members[obj],
-			str2obj = lambda value: enum.memberDict[value], **kwargs)
+	def getEnum(self, option, enum, default = noDefault, subset = None, **kwargs):
+		choices = enum.enumValues
+		if subset:
+			choices = subset
+		return self.getChoice(option, choices, default, obj2str = enum.enum2str, str2obj = enum.str2enum, **kwargs)
 
 	def _getInternal(self, desc, obj2str, str2obj, def2obj, option, default_obj,
 			interactive = None, interactiveDefault = True, **kwargs):

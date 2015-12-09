@@ -842,15 +842,29 @@ def exitWithUsage(usage, msg = None, helpOpt = True):
 	sys.exit(os.EX_USAGE)
 
 
-def makeEnum(members = [], cls = None):
-	if cls == None:
-		cls = type('Enum_%s_%s' % (md5(str(members)).hexdigest()[:4], str.join('_', members)), (), {})
-	cls.members = members
-	cls.memberDict = dict(map(lambda (idx, name): (name, idx), enumerate(members)))
-	cls.allMembers = range(len(members))
-	cls.fromString = classmethod(lambda cls, name: cls.memberDict.get(name, None))
-	for idx, member in enumerate(members):
-		setattr(cls, member, idx)
+def makeEnum(members = [], cls = None, useHash = False):
+	if cls:
+		enumID = md5(str(members) + '!' + cls.__name__).hexdigest()[:4]
+	else:
+		enumID = md5(str(members)).hexdigest()[:4]
+		cls = type('Enum_%s_%s' % (enumID, str.join('_', members)), (), {})
+
+	if useHash:
+		getValue = lambda (idx, name): idx + int(enumID, 16)
+	else:
+		getValue = lambda (idx, name): idx
+	values = list(map(getValue, enumerate(members)))
+
+	cls.enumNames = members
+	cls.enumValues = values
+	cls._enumMapNV = dict(zip(cls.enumNames, cls.enumValues))
+	cls._enumMapVN = dict(zip(cls.enumValues, cls.enumNames))
+	if len(cls._enumMapNV) != len(cls._enumMapVN):
+		raise APIError('Invalid enum definition!')
+	cls.enum2str = cls._enumMapVN.get
+	cls.str2enum = cls._enumMapNV.get
+	for name, value in zip(cls.enumNames, cls.enumValues):
+		setattr(cls, name, value)
 	return cls
 
 
