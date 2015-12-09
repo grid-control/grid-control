@@ -35,6 +35,24 @@ if __name__ == '__main__':
 		signal.signal(signal.SIGINT, handler)
 	handler = signal.signal(signal.SIGINT, interrupt)
 
+	# set up signal handler for debug session requests
+	def interrupt_debug(sig, frame):
+		import sys, code
+		from grid_control.exceptions import logStack, parseFrame
+		variables = {'_frame': frame}
+		variables.update(frame.f_globals)
+		variables.update(frame.f_locals)
+		console = code.InteractiveConsole(variables)
+		console.push('import rlcompleter, readline')
+		console.push('readline.parse_and_bind("tab: complete")')
+		console.push('readline.set_completer(rlcompleter.Completer(globals()).complete)')
+		stackDict = sys._current_frames()
+		for threadID in stackDict:
+			logging.getLogger().critical(str(threadID))
+			logStack(logging.getLogger(), parseFrame(threadID, stackDict[threadID]))
+		console.interact('grid-control debug mode enabled!')
+	signal.signal(signal.SIGURG, interrupt_debug)
+
 	# display the 'grid-control' logo and version
 	utils.vprint(open(utils.pathShare('logo.txt'), 'r').read(), -1)
 	utils.vprint('Revision: %s' % utils.getVersion(), -1)
