@@ -146,7 +146,7 @@ class TrackedParameterAdapter(BasicParameterAdapter):
 		return result
 
 	def _resyncInternal(self): # This function is _VERY_ time critical!
-		tmp = self._rawSource.resync() # First ask about plugin changes
+		tmp = self._rawSource.resync() # First ask about psource changes
 		(redo, disable, sizeChange) = (set(tmp[0]), set(tmp[1]), tmp[2])
 		hashNew = self._rawSource.getHash()
 		hashChange = self.storedHash != hashNew
@@ -155,8 +155,8 @@ class TrackedParameterAdapter(BasicParameterAdapter):
 			self._resyncState = None
 			return 
 
-		def translatePlugin(plugin): # Reduces plugin output to essential information for diff
-			keys_store = sorted(filter(lambda k: k.untracked == False, plugin.getJobKeys()))
+		def translatePSource(psource): # Reduces psource output to essential information for diff
+			keys_store = sorted(filter(lambda k: k.untracked == False, psource.getJobKeys()))
 			def translateEntry(meta): # Translates parameter setting into hash
 				tmp = md5()
 				for key in filter(lambda k: k in meta, keys_store):
@@ -165,14 +165,14 @@ class TrackedParameterAdapter(BasicParameterAdapter):
 						tmp.update(str(meta[key]))
 				return { ParameterInfo.HASH: tmp.hexdigest(), 'GC_PARAM': meta['GC_PARAM'],
 					ParameterInfo.ACTIVE: meta[ParameterInfo.ACTIVE] }
-			if plugin.getMaxJobs() != None:
-				for jobNum in range(plugin.getMaxJobs()):
-					yield translateEntry(plugin.getJobInfo(jobNum))
+			if psource.getMaxJobs() != None:
+				for jobNum in range(psource.getMaxJobs()):
+					yield translateEntry(psource.getJobInfo(jobNum))
 
 		old = ParameterAdapter(None, GCDumpParameterSource(self._pathParams))
-		params_old = list(translatePlugin(old))
+		params_old = list(translatePSource(old))
 		new = ParameterAdapter(None, self._rawSource)
-		params_new = list(translatePlugin(new))
+		params_new = list(translatePSource(new))
 
 		mapJob2PID = {}
 		def sameParams(paramsAdded, paramsMissing, paramsSame, oldParam, newParam):
@@ -184,7 +184,7 @@ class TrackedParameterAdapter(BasicParameterAdapter):
 		(pAdded, pMissing, pSame) = utils.DiffLists(params_old, params_new,
 			lambda a, b: cmp(a[ParameterInfo.HASH], b[ParameterInfo.HASH]), sameParams)
 
-		# Construct complete parameter space plugin with missing parameter entries and intervention state
+		# Construct complete parameter space psource with missing parameter entries and intervention state
 		# NNNNNNNNNNNNN OOOOOOOOO | source: NEW (==self) and OLD (==from file)
 		# <same><added> <missing> | same: both in NEW and OLD, added: only in NEW, missing: only in OLD
 		oldMaxJobs = old.getMaxJobs()

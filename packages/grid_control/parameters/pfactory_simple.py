@@ -1,4 +1,4 @@
-#-#  Copyright 2013-2014 Karlsruhe Institute of Technology
+#-#  Copyright 2013-2015 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -119,11 +119,11 @@ class SimpleParameterFactory(BasicParameterFactory):
 		self.elevatedSwitch = [] # Switch statements are elevated to global scope
 		self.precedence = {'*': [], '+': ['*'], ',': ['*', '+']}
 
-	def combineSources(self, PluginClass, args):
+	def combineSources(self, PSourceClass, args):
 		repeat = reduce(lambda a, b: a * b, filter(lambda expr: isinstance(expr, int), args), 1)
 		args = filter(lambda expr: not isinstance(expr, int), args)
 		if len(args) > 1:
-			result = PluginClass(*args)
+			result = PSourceClass(*args)
 		elif len(args) > 0:
 			result = args[0]
 		else:
@@ -144,16 +144,16 @@ class SimpleParameterFactory(BasicParameterFactory):
 				return [node]
 
 		def createVarSource(var_list, lookup_list): # create variable source
-			plugin_list = []
-			for (doElevate, PluginClass, args) in createLookupHelper(self.paramConfig, var_list, lookup_list):
+			psource_list = []
+			for (doElevate, PSourceClass, args) in createLookupHelper(self.paramConfig, var_list, lookup_list):
 				if doElevate: # switch needs elevation beyond local scope
-					self.elevatedSwitch.append((PluginClass, args))
+					self.elevatedSwitch.append((PSourceClass, args))
 				else:
-					plugin_list.append(PluginClass(*args))
+					psource_list.append(PSourceClass(*args))
 			# Optimize away unnecessary cross operations
-			if len(filter(lambda p: p.getMaxParameters() != None, plugin_list)) > 1:
-				return [CrossParameterSource(*plugin_list)]
-			return plugin_list # simply forward list of plugins
+			if len(filter(lambda p: p.getMaxParameters() != None, psource_list)) > 1:
+				return [CrossParameterSource(*psource_list)]
+			return psource_list # simply forward list of psources
 
 		if isinstance(node, tuple):
 			(operator, args) = node
@@ -205,8 +205,8 @@ class SimpleParameterFactory(BasicParameterFactory):
 			source = self.combineSources(ZipLongParameterSource, source_list) # zip more efficient
 		assert(len(source) == 1)
 		source = source[0]
-		for (PluginClass, args) in self.elevatedSwitch:
-			source = PluginClass(source, *args)
+		for (PSourceClass, args) in self.elevatedSwitch:
+			source = PSourceClass(source, *args)
 		utils.vprint('Parsing output: %r' % source, 0)
 		return source
 

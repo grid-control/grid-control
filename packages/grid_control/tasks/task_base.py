@@ -67,7 +67,7 @@ class TaskModule(NamedObject):
 		# Get error messages from gc-run.lib comments
 		self.errorDict = dict(self.updateErrorDict(utils.pathShare('gc-run.lib')))
 
-		# Init plugin manager / parameter source
+		# Init parameter source manager
 		pm = config.getClass('parameter factory', 'SimpleParameterFactory',
 			cls = ParameterFactory, inherit = True).getInstance()
 		configParam = config.changeView(viewClass = TaggedConfigView, addSections = ['parameters'], addTags = [self])

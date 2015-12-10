@@ -25,7 +25,7 @@ parser = optparse.OptionParser(usage=usage)
 parser.add_option('-l', '--list-parameters', dest='listparams', default=False, action='store_true',
 	help='')
 parser.add_option('-M', '--manager',         dest='manager',    default=None,
-	help='Select plugin manager')
+	help='Select parameter source manager')
 parser.add_option('-p', '--parameter',       dest='parameters', default=[], action='append',
 	help='Specify parameters')
 parser.add_option('-o', '--output',          dest='output',     default='',
@@ -86,7 +86,7 @@ def main():
 	configTask = config.changeView(setSections = [config.get(['task', 'module'], 'DummyTask')])
 	pm = config.getClass('parameter factory', 'SimpleParameterFactory', cls = ParameterFactory).getInstance()
 
-	# Create dataset parameter plugin
+	# Create dataset parameter source
 	class DummySplitter:
 		def getMaxJobs(self):
 			return 3
@@ -123,7 +123,7 @@ def main():
 		DataParameterSource.datasetsAvailable['data'] = DataParameterSource(
 			config.getWorkPath(), 'data', None, dataSplitter, DataSplitProcessorTest())
 
-	plugin = pm.getSource(config)
+	psource = pm.getSource(config)
 
 	if opts.forceiv:
 		for dp in DataParameterSource.datasetSources:
@@ -132,10 +132,10 @@ def main():
 	if opts.listparams:
 		result = []
 		needGCParam = False
-		if plugin.getMaxJobs() != None:
+		if psource.getMaxJobs() != None:
 			countActive = 0
-			for jobNum in range(plugin.getMaxJobs()):
-				info = plugin.getJobInfo(jobNum)
+			for jobNum in range(psource.getMaxJobs()):
+				info = psource.getJobInfo(jobNum)
 				if info[ParameterInfo.ACTIVE]:
 					countActive += 1
 				if opts.inactive or info[ParameterInfo.ACTIVE]:
@@ -145,15 +145,15 @@ def main():
 						needGCParam = True
 					result.append(info)
 			if opts.displaymode == 'parseable':
-				utils.vprint('Count,%d,%d' % (countActive, plugin.getMaxJobs()))
+				utils.vprint('Count,%d,%d' % (countActive, psource.getMaxJobs()))
 			else:
-				utils.vprint('Number of parameter points: %d' % plugin.getMaxJobs())
-				if countActive != plugin.getMaxJobs():
+				utils.vprint('Number of parameter points: %d' % psource.getMaxJobs())
+				if countActive != psource.getMaxJobs():
 					utils.vprint('Number of active parameter points: %d' % countActive)
 		else:
-			result.append(plugin.getJobInfo(123))
+			result.append(psource.getJobInfo(123))
 		enabledOutput = opts.output.split(',')
-		output = filter(lambda k: not opts.output or k in enabledOutput, plugin.getJobKeys())
+		output = filter(lambda k: not opts.output or k in enabledOutput, psource.getJobKeys())
 		stored = filter(lambda k: k.untracked == False, output)
 		untracked = filter(lambda k: k.untracked == True, output)
 
@@ -201,12 +201,12 @@ def main():
 
 	if opts.save:
 		utils.vprint('')
-		plugins.plugin_file.GCDumpParaPlugin.write(opts.save, plugin)
+		ParameterSource.getClass('GCDumpParameterSource').write(opts.save, psource)
 		utils.vprint('Parameter information saved to ./%s' % opts.save)
 
 	if opts.intervention:
 		utils.vprint('')
-		tmp = plugin.getJobIntervention()
+		tmp = psource.getJobIntervention()
 		if tmp:
 			if opts.displaymode == 'parseable':
 				utils.vprint('R: %s' % str.join(',', map(str, tmp[0])))

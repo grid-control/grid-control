@@ -38,7 +38,7 @@ class DataTask(TaskModule):
 		splitterClass = dataProvider.checkSplitter(DataSplitter.getClass(splitterName))
 		self.dataSplitter = splitterClass(config)
 
-		# Create and register dataset parameter plugin
+		# Create and register dataset parameter source
 		paramSplitProcessor = ClassFactory(config,
 			('dataset processor', 'BasicDataSplitProcessor SECheckSplitProcessor'),
 			('dataset processor manager', 'MultiDataSplitProcessor'),

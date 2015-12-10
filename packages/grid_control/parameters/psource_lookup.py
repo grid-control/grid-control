@@ -125,26 +125,26 @@ class SimpleLookupParameterSource(SingleParameterSource):
 
 
 class SwitchingLookupParameterSource(SingleParameterSource):
-	def __init__(self, plugin, outputKey, lookupKeys, lookupFunctions, lookupDictConfig):
+	def __init__(self, psource, outputKey, lookupKeys, lookupFunctions, lookupDictConfig):
 		SingleParameterSource.__init__(self, outputKey)
 		self.matcher = LookupMatcher(lookupKeys, lookupFunctions, lookupDictConfig)
-		self.plugin = plugin
+		self.psource = psource
 		self.pSpace = self.initPSpace()
 
 	def initPSpace(self):
 		result = []
 		def addEntry(pNum):
 			tmp = {ParameterInfo.ACTIVE: True, ParameterInfo.REQS: []}
-			self.plugin.fillParameterInfo(pNum, tmp)
+			self.psource.fillParameterInfo(pNum, tmp)
 			lookupResult = self.matcher.lookup(tmp)
 			if lookupResult:
 				for (lookupIdx, tmp) in enumerate(lookupResult):
 					result.append((pNum, lookupIdx))
 
-		if self.plugin.getMaxParameters() == None:
+		if self.psource.getMaxParameters() == None:
 			addEntry(None)
 		else:
-			for pNum in range(self.plugin.getMaxParameters()):
+			for pNum in range(self.psource.getMaxParameters()):
 				addEntry(pNum)
 		if len(result) == 0:
 			utils.vprint('Lookup parameter "%s" has no matching entries!' % self.key, -1)
@@ -155,47 +155,47 @@ class SwitchingLookupParameterSource(SingleParameterSource):
 
 	def fillParameterInfo(self, pNum, result):
 		if len(self.pSpace) == 0:
-			self.plugin.fillParameterInfo(pNum, result)
+			self.psource.fillParameterInfo(pNum, result)
 			return
 		subNum, lookupIndex = self.pSpace[pNum]
-		self.plugin.fillParameterInfo(subNum, result)
+		self.psource.fillParameterInfo(subNum, result)
 		result[self.key] = self.matcher.lookup(result)[lookupIndex]
 
 	def fillParameterKeys(self, result):
 		result.append(self.meta)
-		self.plugin.fillParameterKeys(result)
+		self.psource.fillParameterKeys(result)
 
 	def resync(self):
 		(result_redo, result_disable, result_sizeChange) = ParameterSource.resync(self)
 		if self.resyncEnabled():
-			(plugin_redo, plugin_disable, plugin_sizeChange) = self.plugin.resync()
+			(psource_redo, psource_disable, psource_sizeChange) = self.psource.resync()
 			self.pSpace = self.initPSpace()
 			for pNum, pInfo in enumerate(self.pSpace):
 				subNum, lookupIndex = pInfo
-				if subNum in plugin_redo:
+				if subNum in psource_redo:
 					result_redo.add(pNum)
-				if subNum in plugin_disable:
+				if subNum in psource_disable:
 					result_disable.add(pNum)
 			self.resyncFinished()
-		return (result_redo, result_disable, result_sizeChange or plugin_sizeChange)
+		return (result_redo, result_disable, result_sizeChange or psource_sizeChange)
 
 	def getHash(self):
-		return utils.md5(str(self.key) + self.matcher.getHash() + self.plugin.getHash()).hexdigest()
+		return utils.md5(str(self.key) + self.matcher.getHash() + self.psource.getHash()).hexdigest()
 
 	def __repr__(self):
-		return "switch(%r, key('%s'), %s)" % (self.plugin, self.key, repr(self.matcher))
+		return "switch(%r, key('%s'), %s)" % (self.psource, self.key, repr(self.matcher))
 
 	def show(self, level = 0):
 		ParameterSource.show(self, level, 'var = %s, lookup = %s' % (self.key, str.join(',', self.matcher.lookupKeys)))
-		self.plugin.show(level + 1)
+		self.psource.show(level + 1)
 
-	def create(cls, pconfig, plugin, key, lookup = None):
-		return SwitchingLookupParameterSource(plugin, *lookupConfigParser(pconfig, key, lookup))
+	def create(cls, pconfig, psource, key, lookup = None):
+		return SwitchingLookupParameterSource(psource, *lookupConfigParser(pconfig, key, lookup))
 	create = classmethod(create)
 
 
 def createLookupHelper(pconfig, var_list, lookup_list):
-	# Return list of (doElevate, PluginClass, arguments) entries
+	# Return list of (doElevate, PSourceClass, arguments) entries
 	if len(var_list) != 1: # multi-lookup handling
 		result = []
 		for var_name in var_list:

@@ -1,4 +1,4 @@
-#-#  Copyright 2012-2014 Karlsruhe Institute of Technology
+#-#  Copyright 2012-2015 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -51,10 +51,10 @@ class BasicParameterFactory(ParameterFactory):
 		configConstants = config.changeView(viewClass = TaggedConfigView,
 			setClasses = None, setSections = ['constants'], addTags = [self])
 		for cName in filter(lambda o: not o.endswith(' lookup'), configConstants.getOptions()):
-			self._addConstantPlugin(configConstants, cName, cName.upper())
+			self._addConstantPSource(configConstants, cName, cName.upper())
 		# Get constants from [<Module>] constants
 		for cName in map(str.strip, config.getList('constants', [])):
-			self._addConstantPlugin(config, cName, cName)
+			self._addConstantPSource(config, cName, cName)
 		# Random number variables
 		configJobs = config.changeView(addSections = ['jobs'])
 		nseeds = configJobs.getInt('nseeds', 10)
@@ -64,7 +64,7 @@ class BasicParameterFactory(ParameterFactory):
 		self.repeat = config.getInt('repeat', 1, onChange = None) # ALL config.x -> paramconfig.x !
 
 
-	def _addConstantPlugin(self, config, cName, varName):
+	def _addConstantPSource(self, config, cName, varName):
 		lookupVar = config.get('%s lookup' % cName, '')
 		if lookupVar:
 			self.lookupSources.append(LookupParameterSource(varName, config.getDict(cName, {}), lookupVar))
