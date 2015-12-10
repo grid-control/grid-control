@@ -26,14 +26,17 @@ from grid_control_cms.lumi_tools import filterLumiFilter, formatLumi, parseLumiF
 class CMSDataSplitProcessor(BasicDataSplitProcessor):
 	def __init__(self, config):
 		BasicDataSplitProcessor.__init__(self, config)
-		lfnModifier = config.get('lfn modifier', '')
+		lfnModifier = config.get('lfn modifier', '', onChange = None)
+		lfnModifierShortcuts = config.getDict('lfn modifier dict', {
+			'<xrootd>': 'root://cms-xrd-global.cern.ch//store/',
+			'<xrootd:eu>': 'root://xrootd-cms.infn.it//store/',
+			'<xrootd:us>': 'root://cmsxrootd.fnal.gov//store/',
+		}, onChange = None)[0]
 		self._prefix = None
 		if lfnModifier == '/':
 			self._prefix = '/store/'
-		elif lfnModifier.lower() == '<xrootd:eu>':
-			self._prefix = 'root://xrootd-cms.infn.it//store/'
-		elif lfnModifier.lower() == '<xrootd:us>':
-			self._prefix = 'root://cmsxrootd.fnal.gov//store/'
+		elif lfnModifier.lower() in lfnModifierShortcuts:
+			self._prefix = lfnModifierShortcuts[lfnModifier.lower()]
 		elif lfnModifier:
 			self._prefix = lfnModifier + '/store/'
 
