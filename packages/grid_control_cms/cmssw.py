@@ -24,7 +24,22 @@ from grid_control.tasks.task_utils import TaskExecutableWrapper
 from grid_control_cms.lumi_tools import filterLumiFilter, formatLumi, parseLumiFilter
 
 class CMSDataSplitProcessor(BasicDataSplitProcessor):
+	def __init__(self, config):
+		BasicDataSplitProcessor.__init__(self, config)
+		lfnModifier = config.get('lfn modifier', '')
+		self._prefix = None
+		if lfnModifier == '/':
+			self._prefix = '/store/'
+		elif lfnModifier.lower() == '<xrootd:eu>':
+			self._prefix = 'root://xrootd-cms.infn.it//store/'
+		elif lfnModifier.lower() == '<xrootd:us>':
+			self._prefix = 'root://cmsxrootd.fnal.gov//store/'
+		elif lfnModifier:
+			self._prefix = lfnModifier + '/store/'
+
 	def _formatFileList(self, fl):
+		if self._prefix:
+			fl = map(lambda fn: self._prefix + fn.split('/store/', 1)[-1])
 		return str.join(', ', map(lambda x: '"%s"' % x, fl))
 
 
