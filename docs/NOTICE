@@ -54,3 +54,7 @@ Licensed under the GNU General Public License version 2, or any later version.
 xmppy includes debug code,
 Copyright (C) 2003 Jacob Lundqvist
 Licensed under the GNU Lesser General Public License version 2, or any later version.
+
+This product includes requests (http://python-requests.org)
+Copyright 2015 Kenneth Reitz
+Licensed under the Apache License, Version 2.0.
