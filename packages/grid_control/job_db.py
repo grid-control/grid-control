@@ -34,7 +34,7 @@ class Job:
 	def loadData(cls, name, data):
 		try:
 			job = Job()
-			job.state = Job.str2enum(data.get('status', 'FAILED'))
+			job.state = Job.str2enum(data.get('status'), Job.FAILED)
 
 			if 'id' in data:
 				if not data['id'].startswith('WMSID'): # Legacy support
@@ -118,7 +118,7 @@ class Job:
 		self.submitted = time.time()
 
 utils.makeEnum(['INIT', 'SUBMITTED', 'DISABLED', 'READY', 'WAITING', 'QUEUED', 'ABORTED',
-		'RUNNING', 'CANCELLED', 'DONE', 'FAILED', 'SUCCESS'], Job, useHash = True)
+		'RUNNING', 'CANCELLED', 'DONE', 'FAILED', 'SUCCESS'], Job, useHash = False)
 
 
 class JobClass:
