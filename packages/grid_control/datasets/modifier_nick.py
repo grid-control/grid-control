@@ -1,4 +1,4 @@
-#-#  Copyright 2014 Karlsruhe Institute of Technology
+#-#  Copyright 2014-2015 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -12,12 +12,13 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-from grid_control.abstract import LoadableObject
+from grid_control.datasets.modifier_base import DatasetModifier
+from grid_control.datasets.provider_base import DataProvider
 from grid_control.exceptions import AbstractError, DatasetError
 
-class NickNameProducer(LoadableObject):
-	def __init__(self, config):
-		self.config = config
+class NickNameProducer(DatasetModifier):
+	def __init__(self, config, name):
+		DatasetModifier.__init__(self, config, name)
 		# Ensure the same nickname is used consistently in all blocks of a dataset
 		self._checkConsistency = config.getBool('nickname check consistency', True)
 		self._checkConsistencyData = {}
@@ -26,13 +27,10 @@ class NickNameProducer(LoadableObject):
 		self._checkCollisionData = {}
 
 	# Get nickname and check for collisions
-	def process(self, block):
-		from grid_control.datasets import DataProvider
+	def processBlock(self, block):
 		blockDS = block[DataProvider.Dataset]
 		oldNick = block.get(DataProvider.Nickname, '')
 		newNick = self.getName(oldNick, blockDS, block)
-		if not (self._checkConsistency or self._checkCollision):
-			return newNick # Skip checking for collisions if disabled
 		# Check if nickname is used consistenly in all blocks of a datasets
 		if self._checkConsistency:
 			if self._checkConsistencyData.setdefault(blockDS, newNick) != newNick:
@@ -42,7 +40,8 @@ class NickNameProducer(LoadableObject):
 			if self._checkCollisionData.setdefault(newNick, blockDS) != blockDS:
 				raise DatasetError('Multiple datasets use the same nickname "%s": "%s" != "%s"' % (
 					newNick, self._checkCollisionData[newNick], blockDS))
-		return newNick
+		block[DataProvider.Nickname] = newNick
+		return block
 
 	# Overwritten by users / other implementations
 	def getName(self, oldnick, dataset, block):
@@ -57,5 +56,9 @@ class SimpleNickNameProducer(NickNameProducer):
 
 
 class InlineNickNameProducer(NickNameProducer):
+	def __init__(self, config, name):
+		NickNameProducer.__init__(self, config, name)
+		self._expr = config.get('nickname expr', 'oldnick')
+
 	def getName(self, oldnick, dataset, block):
-		return eval(self.config.get('nickname expr', 'oldnick'))
+		return eval(self._expr)

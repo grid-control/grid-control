@@ -83,10 +83,24 @@ grid_control.config.cfiller_base	MultiConfigFiller
 grid_control.config.cfiller_base	PythonConfigFiller
 grid_control.config.cfiller_base	StringConfigFiller
 
-grid_control.datasets.nickname_base.NickNameProducer:
-grid_control.datasets.nickname_base	InlineNickNameProducer
-grid_control.datasets.nickname_base	NickNameProducer
-grid_control.datasets.nickname_base	SimpleNickNameProducer
+grid_control.datasets.modifier_base.DatasetModifier:
+grid_control.datasets.modifier_base	DatasetModifier
+grid_control.datasets.modifier_base	MultiDataModifier
+grid_control.datasets.modifier_basic	EmptyFilter
+grid_control.datasets.modifier_basic	EntriesConsistencyFilter
+grid_control.datasets.modifier_basic	EntriesCountFilter
+grid_control.datasets.modifier_basic	EventsCountFilter
+grid_control.datasets.modifier_basic	FileCountFilter
+grid_control.datasets.modifier_basic	FileFilter
+grid_control.datasets.modifier_basic	FileRegexFilter
+grid_control.datasets.modifier_basic	LocationFilter
+grid_control.datasets.modifier_basic	URLCountFilter
+grid_control.datasets.modifier_basic	URLFilter
+grid_control.datasets.modifier_basic	URLRegexFilter
+grid_control.datasets.modifier_basic	UniqueFilter
+grid_control.datasets.modifier_nick	InlineNickNameProducer
+grid_control.datasets.modifier_nick	NickNameProducer
+grid_control.datasets.modifier_nick	SimpleNickNameProducer
 
 grid_control.datasets.provider_base.DataProvider:
 grid_control.datasets.provider_base	DataProvider

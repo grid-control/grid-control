@@ -14,9 +14,9 @@
 
 import os, copy
 from grid_control import utils
-from grid_control.abstract import LoadableObject
+from grid_control.abstract import ClassFactory, LoadableObject
 from grid_control.config import TaggedConfigView, createConfigFactory
-from grid_control.datasets.nickname_base import NickNameProducer
+from grid_control.datasets.modifier_base import DatasetModifier
 from grid_control.exceptions import AbstractError
 from python_compat import StringBuffer
 
@@ -24,15 +24,13 @@ class DataProvider(LoadableObject):
 	def __init__(self, config, datasetExpr, datasetNick, datasetID):
 		(self._datasetExpr, self._datasetNick, self._datasetID) = (datasetExpr, datasetNick, datasetID)
 		self._cache = None
-		self.ignoreURL = config.getList('ignore files', [])
 		self.sitefilter = config.getList('sites', [])
-		self.emptyBlock = config.getBool('remove empty blocks', True)
-		self.emptyFiles = config.getBool('remove empty files', True)
-		self.limitEvents = config.getInt('limit events', -1)
-		self.limitFiles = config.getInt('limit files', -1)
 
-		nickProducerClass = config.getClass('nickname source', 'SimpleNickNameProducer', cls = NickNameProducer)
-		self._nickProducer = nickProducerClass.getInstance(config)
+		nickProducerClass = config.getClass('nickname source', 'SimpleNickNameProducer', cls = DatasetModifier)
+		self._nickProducer = nickProducerClass.getInstance()
+		self._datasetModifier = ClassFactory(config,
+			('dataset modifier', 'EntriesConsistencyFilter URLFilter URLCountFilter EntriesCountFilter EmptyFilter UniqueFilter LocationFilter'),
+			('dataset modifier manager', 'MultiDataModifier'), cls = DatasetModifier).getInstance()
 
 
 	# Parse dataset format [NICK : [PROVIDER : [(/)*]]] DATASET
@@ -83,51 +81,20 @@ class DataProvider(LoadableObject):
 			for block in self.getBlocksInternal():
 				block.setdefault(DataProvider.BlockName, '0')
 				block.setdefault(DataProvider.Provider, self.__class__.__name__)
+				block.setdefault(DataProvider.Locations, None)
 				if self._datasetID:
 					block[DataProvider.DatasetID] = self._datasetID
 				if self._datasetNick:
 					block[DataProvider.Nickname] = self._datasetNick
 				else:
-					block[DataProvider.Nickname] = self._nickProducer.process(block)
+					block = self._nickProducer.processBlock(block)
+					if not block:
+						raise DatasetError('Nickname producer failed!')
 
-				# Filter file list
-				events = sum(map(lambda x: x[DataProvider.NEntries], block[DataProvider.FileList]))
-				if block.setdefault(DataProvider.NEntries, events) != events:
-					utils.eprint('WARNING: Inconsistency in block %s#%s: Number of events doesn\'t match (b:%d != f:%d)'
-						% (block[DataProvider.Dataset], block[DataProvider.BlockName], block[DataProvider.NEntries], events))
-
-				# Filter ignored and empty files
-				block[DataProvider.FileList] = filter(lambda x: x[DataProvider.URL] not in self.ignoreURL, block[DataProvider.FileList])
-				if self.emptyFiles:
-					block[DataProvider.FileList] = filter(lambda x: x[DataProvider.NEntries] != 0, block[DataProvider.FileList])
-
-				# Filter dataset sites
-				if block.setdefault(DataProvider.Locations, None) != None:
-					sites = utils.doBlackWhiteList(block[DataProvider.Locations], self.sitefilter, onEmpty = [], preferWL = False)
-					if len(sites) == 0 and len(block[DataProvider.FileList]) != 0:
-						utils.eprint('WARNING: Block %s#%s is not available at any site!'
-							% (block[DataProvider.Dataset], block[DataProvider.BlockName]))
-					block[DataProvider.Locations] = sites
-
-				# Filter by number of files
-				block[DataProvider.FileList] = block[DataProvider.FileList][:utils.QM(self.limitFiles < 0, None, self.limitFiles)]
-
-				# Filter by event count
-				class EventCounter:
-					def __init__(self, start, limit):
-						(self.counter, self.limit) = (start, limit)
-					def accept(self, fi):
-						if (self.limit < 0) or (self.counter + fi[DataProvider.NEntries] <= self.limit):
-							self.counter += fi[DataProvider.NEntries]
-							return True
-						return False
-				eventCounter = EventCounter(self.allEvents, self.limitEvents)
-				block[DataProvider.FileList] = filter(eventCounter.accept, block[DataProvider.FileList])
-				block[DataProvider.NEntries] = eventCounter.counter - self.allEvents
-				self.allEvents = eventCounter.counter
-
-				# Filter empty blocks
-				if not (self.emptyBlock and block[DataProvider.NEntries] == 0):
+				# Process block with configured dataset modifiers
+				block = self._datasetModifier.processBlock(block)
+				if block:
+					self.allEvents += block[DataProvider.NEntries]
 					yield block
 
 		if self._cache == None:
