@@ -131,7 +131,7 @@ class BasicWMS(WMS):
 		self._failPath = config.getWorkPath('fail')
 
 		# Initialise access token, broker and storage manager
-		self._token = ClassFactory(config, ('access token', 'TrivialAccessToken'), ('access token manager', 'MultiAccessToken'),
+		self._token = ClassFactory(config, (['access token', 'proxy'], 'TrivialAccessToken'), ('access token manager', 'MultiAccessToken'),
 			cls = AccessToken, inherit = True, tags = [self]).getInstance()
 
 		# UI -> SE -> WN

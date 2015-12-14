@@ -14,10 +14,14 @@
 
 # Generic base class for authentication proxies GCSCF:
 
-import os, time
+import os, time, logging
 from grid_control import utils
 from grid_control.abstract import NamedObject
-from grid_control.exceptions import AbstractError, UserError
+from grid_control.exceptions import AbstractError, GCError, UserError
+from python_compat import rsplit
+
+class AccessTokenError(GCError):
+	pass
 
 class AccessToken(NamedObject):
 	configSections = NamedObject.configSections + ['proxy', 'access']
@@ -42,7 +46,7 @@ class AccessToken(NamedObject):
 class MultiAccessToken(AccessToken):
 	def __init__(self, config, name, subtokenBuilder):
 		AccessToken.__init__(self, config, name)
-		self._subtokenList = map(lambda tbuilder: tbuilder(), subtokenBuilder)
+		self._subtokenList = map(lambda tbuilder: tbuilder.getInstance(), subtokenBuilder)
 
 	def getUsername(self):
 		return self._subtokenList[0].getUsername()
@@ -68,7 +72,7 @@ class TrivialAccessToken(AccessToken):
 			result = os.environ.get(var)
 			if result:
 				return result
-		raise RuntimeError('Unable to determine username!')
+		raise AccessTokenError('Unable to determine username!')
 
 	def getGroup(self):
 		return os.environ.get('GROUP', 'None')
@@ -86,16 +90,20 @@ class TimedAccessToken(AccessToken):
 		self._lowerLimit = config.getTime('min lifetime', 300, onChange = None)
 		self._maxQueryTime = config.getTime('max query time',  5 * 60, onChange = None)
 		self._minQueryTime = config.getTime('min query time', 30 * 60, onChange = None)
+		self._ignoreTime = config.getBool('ignore walltime', False, onChange = None)
 		self._lastUpdate = 0
+		self._logUser = logging.getLogger('user.time')
 
 	def canSubmit(self, neededTime, canCurrentlySubmit):
 		if not self._checkTimeleft(self._lowerLimit):
 			raise UserError('Your access token (%s) only has %d seconds left! (Required are %s)' %
 				(self.getObjectName(), self._getTimeleft(cached = True), utils.strTime(self._lowerLimit)))
+		if self._ignoreTime:
+			return True
 		if not self._checkTimeleft(self._lowerLimit + neededTime) and canCurrentlySubmit:
-			utils.vprint('Access token (%s) lifetime (%s) does not meet the access and walltime (%s) requirements!' %
-				(self.getObjectName(), utils.strTime(self._getTimeleft(cached = False)), utils.strTime(self._lowerLimit + neededTime)), -1, printTime = True)
-			utils.vprint('Disabling job submission', -1, printTime = True)
+			self._logUser.warning('Access token (%s) lifetime (%s) does not meet the access and walltime (%s) requirements!' %
+				(self.getObjectName(), utils.strTime(self._getTimeleft(cached = False)), utils.strTime(self._lowerLimit + neededTime)))
+			self._logUser.warning('Disabling job submission')
 			return False
 		return True
 
@@ -110,7 +118,7 @@ class TimedAccessToken(AccessToken):
 			self._lastUpdate = time.time()
 			timeleft = self._getTimeleft(cached = False)
 			verbosity = utils.QM(timeleft < neededTime, -1, 0)
-			utils.vprint('The access token now has %s left' % utils.strTime(timeleft), verbosity, printTime = True)
+			self._logUser.info('Time left for access token "%s": %s' % (self.getObjectName(), utils.strTime(timeleft)))
 		return timeleft >= neededTime
 
 
@@ -146,7 +154,7 @@ class VomsProxy(TimedAccessToken):
 		if (retCode != 0) and not self._ignoreWarning:
 			msg = ('voms-proxy-info output:\n%s\n%s\n' % (proc.getOutput(), proc.getError())).replace('\n\n', '\n')
 			msg += 'If job submission is still possible, you can set [access] ignore warnings = True\n'
-			raise RuntimeError(msg + 'voms-proxy-info failed with return code %d' % retCode)
+			raise AccessTokenError(msg + 'voms-proxy-info failed with return code %d' % retCode)
 		self._cache = utils.DictFormat(':').parse(proc.getOutput())
 		return self._cache
 
@@ -155,7 +163,7 @@ class VomsProxy(TimedAccessToken):
 		try:
 			return parse(info[key])
 		except Exception:
-			raise RuntimeError("Can't access %s in proxy information:\n%s" % (key, info))
+			raise AccessTokenError("Can't access %s in proxy information:\n%s" % (key, info))
 
 
 class RefreshableAccessToken(TimedAccessToken):
@@ -179,18 +187,18 @@ class AFSAccessToken(RefreshableAccessToken):
 		self._kinitExec = utils.resolveInstallPath('kinit')
 		self._klistExec = utils.resolveInstallPath('klist')
 		self._cache = None
+		self._authFiles = dict(map(lambda name: (name, config.getWorkPath('proxy.%s' % name)), ['KRB5CCNAME', 'KRBTKFILE']))
 		self._backupTickets(config)
 		self._tickets = config.getList('tickets', [], onChange = None)
 
 	def _backupTickets(self, config):
 		import stat, shutil
-		for name in ['KRB5CCNAME', 'KRBTKFILE']: # store kerberos files in work directory for persistency
+		for name in self._authFiles: # store kerberos files in work directory for persistency
 			if name in os.environ:
-				oldFN = os.environ[name].replace('FILE:', '')
-				newFN = config.getWorkPath('proxy.%s' % name)
-				shutil.copyfile(oldFN, newFN)
-				os.chmod(newFN, stat.S_IRUSR | stat.S_IWUSR)
-				os.environ[name] = newFN
+				fn = os.environ[name].replace('FILE:', '')
+				shutil.copyfile(fn, self._authFiles[name])
+				os.chmod(self._authFiles[name], stat.S_IRUSR | stat.S_IWUSR)
+				os.environ[name] = self._authFiles[name]
 
 	def _refreshAccessToken(self):
 		return utils.LoggedProcess(self._kinitExec, '-R').wait()
@@ -203,23 +211,33 @@ class AFSAccessToken(RefreshableAccessToken):
 		proc = utils.LoggedProcess(self._klistExec)
 		retCode = proc.wait()
 		self._cache = {}
-		for line in proc.getOutput().splitlines():
-			if line.count('@') and (line.count(':') > 1):
-				(issued, expires, principal) = line.split('  ')
-				parseDate = lambda value, format: time.mktime(time.strptime(value, format))
-				if (expires.count('/') == 2) and (expires.count(':') == 2):
-					expires = parseDate(expires, '%m/%d/%y %H:%M:%S')
-				else:
-					currentYear = int(time.strftime('%Y'))
-					expires = parseDate('%s %d' % (expires, currentYear), '%b %d %H:%M:%S %Y')
-					issued = parseDate('%s %d' % (issued, currentYear), '%b %d %H:%M:%S %Y')
-					if expires < issued: # wraparound at new year
-						expires = parseDate('%s %d' % (expires, currentYear + 1), '%b %d %H:%M:%S %Y')
-				self._cache[principal] = expires
+		try:
+			for line in proc.getOutput().splitlines():
+				if line.count('@') and (line.count(':') > 1):
+					issued_expires, principal = rsplit(line, '  ', 1)
+					issued_expires = issued_expires.replace('/', ' ').split()
+					assert(len(issued_expires) % 2 == 0)
+					issued_str = str.join(' ', issued_expires[:len(issued_expires) / 2])
+					expires_str = str.join(' ', issued_expires[len(issued_expires) / 2:])
+					parseDate = lambda value, format: time.mktime(time.strptime(value, format))
+					if expires_str.count(' ') == 3:
+						expires = parseDate(expires_str, '%m %d %y %H:%M:%S')
+					elif expires_str.count(' ') == 2: # year information is missing
+						currentYear = int(time.strftime('%Y'))
+						expires = parseDate(expires_str + ' %d' % currentYear, '%b %d %H:%M:%S %Y')
+						issued = parseDate(issued_str + ' %d' % currentYear, '%b %d %H:%M:%S %Y')
+						if expires < issued: # wraparound at new year
+							expires = parseDate(expires_str + ' %d' % (currentYear + 1), '%b %d %H:%M:%S %Y')
+					self._cache.setdefault('tickets', {})[principal] = expires
+				elif line.count(':') == 1:
+					key, value = map(str.strip, line.split(':', 1))
+					self._cache[key.lower()] = value
+		except:
+			raise AccessTokenError('Unable to parse kerberos ticket information!')
 		return self._cache
 
 	def _getTimeleft(self, cached):
-		info = self._parseTickets(cached)
+		info = self._parseTickets(cached)['tickets']
 		time_current = time.time()
 		time_end = time_current
 		for ticket in info:
@@ -228,6 +246,25 @@ class AFSAccessToken(RefreshableAccessToken):
 			time_end = max(info[ticket], time_end)
 		return time_end - time_current
 
+	def _getPrincipal(self):
+		info = self._parseTickets()
+		return info.get('default principal', info.get('principal'))
+
+	def getUsername(self):
+		return self._getPrincipal().split('@')[0]
+
+	def getFQUsername(self):
+		return self._getPrincipal()
+
+	def getGroup(self):
+		return self._getPrincipal().split('@')[1]
+
+	def getAuthFiles(self):
+		return self._authFiles.values()
+
 
 class TrivialProxy(TrivialAccessToken):
+	pass
+
+class AFSProxy(AFSAccessToken):
 	pass

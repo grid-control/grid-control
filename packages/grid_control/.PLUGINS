@@ -1,5 +1,6 @@
 grid_control.backends.access.AccessToken:
 grid_control.backends.access	AFSAccessToken
+grid_control.backends.access	AFSProxy
 grid_control.backends.access	AccessToken
 grid_control.backends.access	MultiAccessToken
 grid_control.backends.access	RefreshableAccessToken
