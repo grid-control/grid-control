@@ -14,7 +14,7 @@
 
 from grid_control import utils
 from grid_control.datasets.provider_base import DataProvider, DatasetError
-from grid_control.exceptions import ExceptionCollector
+from hpfwk import ExceptionCollector
 
 class DataMultiplexer(DataProvider):
 	def __init__(self, config, datasetExpr, defaultProvider, datasetID = None):

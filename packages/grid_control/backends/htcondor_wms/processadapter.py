@@ -27,10 +27,9 @@ import tempfile
 import time
 
 # GC modules
-from grid_control.abstract import LoadableObject
-from grid_control.exceptions import AbstractError
 from grid_control.gc_exceptions import InstallationError, RuntimeError
 from grid_control.utils import InstallationError, LoggedProcess, ensureDirExists, resolveInstallPath
+from hpfwk import AbstractError, Plugin
 from python_compat import lru_cache
 
 # Container to call commands in a generic fashion
@@ -94,7 +93,7 @@ def ProcessAdapterFactory(URI, externalSchemes = [], collapseLocal = True, **kwa
 
 
 # Base class defining interface
-class ProcessAdapterInterface(LoadableObject):
+class ProcessAdapterInterface(Plugin):
 	uriScheme = []
 	_basepath = ""
 	# Default loggers

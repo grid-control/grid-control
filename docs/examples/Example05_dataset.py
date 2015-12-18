@@ -1,5 +1,5 @@
-from grid_control.abstract import LoadableObject
+from hpfwk import Plugin
 
-class MyNick(LoadableObject.getClass('NickNameProducer')):
+class MyNick(Plugin.getClass('NickNameProducer')):
 	def getName(self, oldnick, dataset, block):
 		return oldnick + "_changed"

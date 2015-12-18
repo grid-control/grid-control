@@ -13,11 +13,10 @@
 #-#  limitations under the License.
 
 import os, math, stat, time
-from grid_control.abstract import LoadableObject
 from grid_control.config import ConfigError
-from grid_control.exceptions import AbstractError, NestedException
 from grid_control.gc_exceptions import RuntimeError
 from grid_control.utils import LoggedProcess, eprint, resolveInstallPath, vprint
+from hpfwk import AbstractError, NestedException, Plugin
 
 class TimeoutError(NestedException):
 	pass
@@ -57,7 +56,7 @@ class TimeoutContext(object):
 # create interface for initializing a set of commands sharing a similar setup, e.g. remote commands through SSH
 
 # Process Handler:
-class ProcessHandler(LoadableObject):
+class ProcessHandler(Plugin):
 	def LoggedProcess(self, cmd, args = '', **kwargs):
 		raise AbstractError
 	def LoggedCopyToRemote(self, source, dest, **kwargs):

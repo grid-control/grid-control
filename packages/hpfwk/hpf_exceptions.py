@@ -151,13 +151,15 @@ def collectExceptionInfos(exType, exValue, exTraceback):
 
 # Formatter class to display exception details
 class ExceptionFormatter(logging.Formatter):
-	def __init__(self, showCode = True, codeContext = 1, showVariables = True, showLongVariables = False):
+	def __init__(self, showCode = True, codeContext = 1, showVariables = True, showLongVariables = False, showOnlyLastCode = False):
 		logging.Formatter.__init__(self)
-		(self._showCode, self._codeContext) = (showCode, codeContext)
+		(self._showCode, self._codeContext, self._showOnlyLastCode) = (showCode, codeContext, showOnlyLastCode)
 		(self._showVariables, self._showLongVariables) = (showVariables, showLongVariables)
 
 	def format(self, record):
 		traceback, infos = collectExceptionInfos(*record.exc_info)
+		if self._showOnlyLastCode:
+			traceback = [traceback[-1]]
 		msg = record.msg + '\n\n'
 		if self._showCode:
 			msg += str.join('\n', formatStack(traceback, codeContext = self._codeContext,

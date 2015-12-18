@@ -12,6 +12,6 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-from hpf_exceptions import APIError, AbstractError, NestedException, debugInterruptHandler
+from hpf_exceptions import APIError, AbstractError, ExceptionCollector, ExceptionFormatter, NestedException, debugInterruptHandler
 from hpf_logging import initLogging
 from grid_control.abstract import NamedPlugin, Plugin, initPlugins

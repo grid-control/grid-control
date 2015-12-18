@@ -16,23 +16,23 @@
 
 import os, glob, shutil, itertools
 from grid_control import utils
-from grid_control.abstract import ClassFactory, NamedObject
+from grid_control.abstract import ClassFactory
 from grid_control.backends.access import AccessToken
 from grid_control.backends.storage import StorageManager
-from grid_control.exceptions import AbstractError, NestedException
 from grid_control.utils.file_objects import VirtualFile
+from hpfwk import AbstractError, NamedPlugin, NestedException
 from python_compat import set, sorted
 
 class BackendError(NestedException):
 	pass
 
-class WMS(NamedObject):
-	configSections = NamedObject.configSections + ['wms', 'backend']
+class WMS(NamedPlugin):
+	configSections = NamedPlugin.configSections + ['wms', 'backend']
 	tagName = 'wms'
 
 	def __init__(self, config, wmsName):
 		wmsName = utils.QM(wmsName, wmsName, self.__class__.__name__).upper().replace('.', '_')
-		NamedObject.__init__(self, config, wmsName)
+		NamedPlugin.__init__(self, config, wmsName)
 		(self.config, self.wmsName) = (config, wmsName)
 		self._wait_idle = config.getInt('wait idle', 60, onChange = None)
 		self._wait_work = config.getInt('wait work', 10, onChange = None)

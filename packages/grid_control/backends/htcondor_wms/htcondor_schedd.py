@@ -23,8 +23,8 @@ import re
 
 # GC modules
 from grid_control import utils
-from grid_control.abstract import LoadableObject
 from grid_control.backends import WMS
+from hpfwk import Plugin
 from python_compat import lru_cache, md5
 
 # HTC modules
@@ -51,7 +51,7 @@ def HTCScheddFactory(URI, **kwargs):
 		if adapter.getType() in HTCSchedd.adapterTypes:
 			return HTCSchedd(URI = URI, adapter = adapter, **kwargs)
 
-class HTCScheddBase(LoadableObject):
+class HTCScheddBase(Plugin):
 	"""
 	Base Interface for interactions with a Schedd
 	"""

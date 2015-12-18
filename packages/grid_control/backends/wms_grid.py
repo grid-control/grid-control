@@ -16,8 +16,8 @@ import os, sys, copy, time, tarfile, tempfile
 from grid_control import utils
 from grid_control.backends.broker import Broker
 from grid_control.backends.wms import BackendError, BasicWMS, WMS
-from grid_control.exceptions import APIError
 from grid_control.job_db import Job
+from hpfwk import APIError
 from python_compat import md5, parsedate
 
 def jdlEscape(value):

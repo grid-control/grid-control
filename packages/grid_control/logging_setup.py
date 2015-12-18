@@ -13,6 +13,8 @@
 #-#  limitations under the License.
 
 import os, sys, time, logging
+from grid_control.gc_exceptions import GCLogHandler
+from hpfwk import ExceptionFormatter
 from python_compat import set
 
 class LogOnce(logging.Filter):
@@ -60,19 +62,25 @@ def logging_defaults():
 	getFilteredLogger('user.once', LogOnce())
 	getFilteredLogger('user.time.once', LogOnce())
 
-	# Default exception logging to file in gc / tmp / user directory
-	handler_ex = None
+	# Default exception logging to stderr and file in gc / tmp / user directory
+	logException = logging.getLogger("exception")
+	handlerException_stdout = logging.StreamHandler(sys.stderr)
+	handlerException_file = None
 	for fnLog in [os.path.join(os.environ['GC_PACKAGES_PATH'], '..', 'debug.log'), '/tmp/gc.debug.%d' % os.getuid(), '~/gc.debug']:
 		fnLog = os.path.abspath(os.path.normpath(os.path.expanduser(fnLog)))
 		try:
-			handler_ex = logging.FileHandler(fnLog, 'w')
+			handlerException_file = GCLogHandler(fnLog, 'w')
 			break
 		except Exception:
 			pass
-	if handler_ex:
-		logging.getLogger("exception").propagate = False
-		logging.getLogger("exception").addHandler(handler_ex)
-	logging.getLogger("exception").setLevel(logging.DEBUG)
+	if handlerException_file:
+		handlerException_file.setFormatter(ExceptionFormatter())
+		handlerException_stdout.setFormatter(ExceptionFormatter(showCode = False, showVariables = False))
+		logException.addHandler(handlerException_file)
+	else:
+		handlerException_stdout.setFormatter(ExceptionFormatter())
+	logException.addHandler(handlerException_stdout)
+	logException.propagate = False
 
 
 def logging_setup(config):

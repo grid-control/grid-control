@@ -14,10 +14,9 @@
 
 import os, sys, shutil
 from grid_control import utils
-from grid_control.abstract import NamedObject
 from grid_control.config import ConfigError, validNoVar
-from grid_control.exceptions import NestedException
 from grid_control.gc_exceptions import RuntimeError
+from hpfwk import NamedPlugin, NestedException
 from python_compat import set
 
 class StorageError(NestedException):
@@ -43,12 +42,12 @@ def se_copy(src, dst, force = True, tmp = ''):
 	return se_runcmd(cmd, {'GC_KEEPTMP': tmp}, src, dst)
 
 
-class StorageManager(NamedObject):
-	configSections = NamedObject.configSections + ['storage']
+class StorageManager(NamedPlugin):
+	configSections = NamedPlugin.configSections + ['storage']
 	tagName = 'storage'
 
 	def __init__(self, config, name, optDefault, optPrefix, varPrefix):
-		NamedObject.__init__(self, config, name)
+		NamedPlugin.__init__(self, config, name)
 		(self.smOptPrefix, self.varPrefix) = (optPrefix, varPrefix)
 
 	def addFiles(self, files):

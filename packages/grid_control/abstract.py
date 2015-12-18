@@ -112,13 +112,6 @@ class NamedPlugin(Plugin):
 	def getObjectName(self):
 		return self._name
 
-# Legacy objects:
-class LoadableObject(Plugin):
-	pass
-
-class NamedObject(NamedPlugin):
-	pass
-
 # General purpose class factory
 class ClassFactory:
 	def __init__(self, config, base_opt_def, merge_opt_base, **kwargs):

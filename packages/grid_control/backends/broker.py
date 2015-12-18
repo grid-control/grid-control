@@ -14,14 +14,14 @@
 
 import random
 from grid_control import utils
-from grid_control.abstract import NamedObject
+from hpfwk import NamedPlugin
 
-class Broker(NamedObject):
-	configSections = NamedObject.configSections + ['broker']
+class Broker(NamedPlugin):
+	configSections = NamedPlugin.configSections + ['broker']
 	tagName = 'broker'
 
 	def __init__(self, config, name, userOpt, itemName, discoverFun):
-		NamedObject.__init__(self, config, name)
+		NamedPlugin.__init__(self, config, name)
 		(self._itemsStart, self._itemsDiscovered, self._itemName) = (None, False, itemName)
 		self._nEntries = config.getInt('%s entries' % userOpt, 0, onChange = None)
 		self._nRandom = config.getBool('%s randomize' % userOpt, False, onChange = None)

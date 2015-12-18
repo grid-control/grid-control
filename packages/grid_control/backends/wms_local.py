@@ -16,9 +16,9 @@ import os, glob, time, shutil, tempfile
 from grid_control import utils
 from grid_control.backends.broker import Broker
 from grid_control.backends.wms import BasicWMS, WMS
-from grid_control.exceptions import AbstractError
 from grid_control.job_db import Job
 from grid_control.utils.file_objects import VirtualFile
+from hpfwk import AbstractError
 
 class LocalWMS(BasicWMS):
 	configSections = BasicWMS.configSections + ['local']

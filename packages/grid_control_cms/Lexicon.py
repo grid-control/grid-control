@@ -13,7 +13,7 @@ and modified
 import re
 import string
 import urlparse
-from grid_control.exceptions import NestedException
+from hpfwk import NestedException
 
 class InputValidationError(NestedException):
 	pass	# error during input validation for publication in DBS3

@@ -16,16 +16,15 @@
 
 import os, time, logging
 from grid_control import utils
-from grid_control.abstract import NamedObject
-from grid_control.exceptions import AbstractError, NestedException
 from grid_control.gc_exceptions import UserError
+from hpfwk import AbstractError, NamedPlugin, NestedException
 from python_compat import rsplit
 
 class AccessTokenError(NestedException):
 	pass
 
-class AccessToken(NamedObject):
-	configSections = NamedObject.configSections + ['proxy', 'access']
+class AccessToken(NamedPlugin):
+	configSections = NamedPlugin.configSections + ['proxy', 'access']
 	tagName = 'access'
 
 	def getUsername(self):
