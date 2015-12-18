@@ -13,9 +13,8 @@
 #-#  limitations under the License.
 
 import os, re, tarfile, xml.dom.minidom
-from grid_control import utils
+from grid_control.datasets import DatasetError
 from grid_control.datasets.scanner_base import InfoScanner
-from grid_control.exceptions import RethrowError
 
 class ObjectsFromCMSSW(InfoScanner):
 	def __init__(self, config):
@@ -28,7 +27,7 @@ class ObjectsFromCMSSW(InfoScanner):
 		def readTag(base, tag, default = None):
 			try:
 				return str(base.getElementsByTagName(tag)[0].childNodes[0].data)
-			except:
+			except Exception:
 				return default
 
 		jobNum = metadata['GC_JOBNUM']
@@ -38,8 +37,8 @@ class ObjectsFromCMSSW(InfoScanner):
 			for rawdata in map(str.split, tar.extractfile('files').readlines()):
 				tmpFiles[rawdata[2]] = {'SE_OUTPUT_HASH_CRC32': rawdata[0], 'SE_OUTPUT_SIZE': int(rawdata[1])}
 			objStore['CMSSW_FILES'] = tmpFiles
-		except:
-			raise RethrowError('Could not read CMSSW file infos for job %d!' % jobNum)
+		except Exception:
+			raise DatasetError('Could not read CMSSW file infos for job %d!' % jobNum)
 
 		tmpCfg = {}
 		cmsswVersion = tar.extractfile('version').read().strip()
@@ -68,15 +67,18 @@ class ObjectsFromCMSSW(InfoScanner):
 				def searchConfigFile(key, regex, default):
 					try:
 						tmp = re.compile(regex).search(cfgContent.group(1).strip('\"\' '))
-						tmpCfg[cfg][key] = utils.QM(tmp, tmp, default)
-					except:
+					except Exception:
+						tmp = None
+					if tmp:
+						tmpCfg[cfg][key] = tmp
+					else:
 						tmpCfg[cfg][key] = default
 				searchConfigFile('CMSSW_ANNOTATION', '.*annotation.*=.*cms.untracked.string.*\((.*)\)', None)
 				searchConfigFile('CMSSW_DATATIER', '.*dataTier.*=.*cms.untracked.string.*\((.*)\)', 'USER')
 				cfgReport = xml.dom.minidom.parseString(tar.extractfile('%s/report.xml' % cfg).read())
 				evRead = sum(map(lambda x: int(readTag(x, 'EventsRead')), cfgReport.getElementsByTagName('InputFile')))
-			except:
-				raise RethrowError('Could not read config infos about %s in job %d' % (cfg, jobNum))
+			except Exception:
+				raise DatasetError('Could not read config infos about %s in job %d' % (cfg, jobNum))
 
 			for outputFile in cfgReport.getElementsByTagName('File'):
 				tmpOut = {'CMSSW_DATATYPE': readTag(outputFile, 'DataType'), 'CMSSW_CONFIG_FILE': cfg,
@@ -86,7 +88,7 @@ class ObjectsFromCMSSW(InfoScanner):
 				if self.importParents:
 					try:
 						inputs = outputFile.getElementsByTagName('Inputs')[0].getElementsByTagName('Input')
-					except:
+					except Exception:
 						inputs = []
 
 					tmpOut.update({'CMSSW_PARENT_PFN': [], 'CMSSW_PARENT_LFN': []})

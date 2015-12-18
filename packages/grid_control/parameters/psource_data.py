@@ -15,7 +15,7 @@
 import os, time
 from grid_control import utils
 from grid_control.datasets import DataProvider, DataSplitter
-from grid_control.exceptions import UserError
+from grid_control.gc_exceptions import UserError
 from grid_control.parameters.psource_base import ParameterInfo, ParameterMetadata, ParameterSource
 
 class DataParameterSource(ParameterSource):

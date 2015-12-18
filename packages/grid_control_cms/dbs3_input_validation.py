@@ -12,10 +12,12 @@
 #-#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
+
+from grid_control_cms.Lexicon import DBSUser
+from grid_control_cms.Lexicon import InputValidationError
 from grid_control_cms.Lexicon import acqname
 from grid_control_cms.Lexicon import block
 from grid_control_cms.Lexicon import dataset
-from grid_control_cms.Lexicon import DBSUser
 from grid_control_cms.Lexicon import globalTag
 from grid_control_cms.Lexicon import lfn
 from grid_control_cms.Lexicon import primdataset
@@ -23,9 +25,6 @@ from grid_control_cms.Lexicon import procdataset
 from grid_control_cms.Lexicon import searchstr
 from grid_control_cms.Lexicon import userprocdataset
 from grid_control_cms.Lexicon import validateUrl
-
-from grid_control.exceptions import InputValidationError
-
 
 class DBS3InputValidation(object):
     _accepted_input_keys = {

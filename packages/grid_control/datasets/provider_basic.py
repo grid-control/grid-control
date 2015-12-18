@@ -1,4 +1,4 @@
-#-#  Copyright 2009-2014 Karlsruhe Institute of Technology
+#-#  Copyright 2009-2015 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -13,8 +13,8 @@
 #-#  limitations under the License.
 
 from grid_control import utils
+from grid_control.config import ConfigError
 from grid_control.datasets.provider_base import DataProvider
-from grid_control.exceptions import ConfigError
 from python_compat import rsplit
 
 # Provides information about a single file

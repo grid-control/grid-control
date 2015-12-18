@@ -27,7 +27,7 @@ class GCEvent:
 	def is_set(self):
 		try:
 			return self._event.is_set() # Python > 2.6
-		except:
+		except Exception:
 			return self._event.isSet()
 
 	def set(self):
@@ -75,7 +75,7 @@ def hang_protection(fun, timeout = 5):
 	def hang_protection_wrapper():
 		try:
 			result[None] = fun()
-		except:
+		except Exception:
 			result[None] = None
 	t = threading.Thread(target = hang_protection_wrapper)
 	t.start()

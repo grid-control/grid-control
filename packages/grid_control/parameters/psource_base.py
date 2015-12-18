@@ -15,8 +15,12 @@
 import time
 from grid_control import utils
 from grid_control.abstract import LoadableObject
-from grid_control.exceptions import AbstractError
+from grid_control.exceptions import AbstractError, NestedException
 from python_compat import set
+
+class ParameterError(NestedException):
+	pass
+
 
 class ParameterInfo:
 	reqTypes = ('ACTIVE', 'HASH', 'REQS')

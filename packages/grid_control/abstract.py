@@ -14,10 +14,10 @@
 
 import sys, logging
 from grid_control import utils
-from grid_control.exceptions import GCError
+from grid_control.exceptions import NestedException
 from python_compat import rsplit, set
 
-class PluginError(GCError):
+class PluginError(NestedException):
 	pass
 
 # Abstract class taking care of dynamic class loading 
@@ -82,8 +82,6 @@ class LoadableObject(object):
 		try:
 			clsType = cls.getClass(clsName)
 			return clsType(*args, **kwargs)
-		except GCError:
-			raise
 		except Exception:
 			raise PluginError('Error while creating instance of type %s (%s)' % (clsName, clsType))
 	getInstance = classmethod(getInstance)
@@ -160,7 +158,5 @@ class ClassWrapper:
 			args = [config, self._instName] + list(args)
 		try:
 			return cls(*args, **kwargs)
-		except GCError:
-			raise
 		except Exception:
 			raise PluginError('Error while creating instance of type %s (%s)' % (cls, str(self)))

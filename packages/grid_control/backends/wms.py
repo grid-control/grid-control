@@ -19,9 +19,12 @@ from grid_control import utils
 from grid_control.abstract import ClassFactory, NamedObject
 from grid_control.backends.access import AccessToken
 from grid_control.backends.storage import StorageManager
-from grid_control.exceptions import AbstractError, RethrowError, RuntimeError
+from grid_control.exceptions import AbstractError, NestedException
 from grid_control.utils.file_objects import VirtualFile
 from python_compat import set, sorted
+
+class BackendError(NestedException):
+	pass
 
 class WMS(NamedObject):
 	configSections = NamedObject.configSections + ['wms', 'backend']
@@ -82,7 +85,7 @@ class WMS(NamedObject):
 		try:
 			data = utils.DictFormat().parse(info_content, keyParser = {None: str})
 			return (data['JOBID'], data['EXITCODE'], data)
-		except:
+		except Exception:
 			return utils.eprint('Warning: Unable to parse "%s"!' % fn)
 	parseJobInfo = staticmethod(parseJobInfo)
 utils.makeEnum(['WALLTIME', 'CPUTIME', 'MEMORY', 'CPUS', 'BACKEND', 'SITES', 'QUEUES', 'SOFTWARE', 'STORAGE'], WMS)
@@ -215,7 +218,7 @@ class BasicWMS(WMS):
 			if jobInfo:
 				(jobNum, jobExitCode, jobData) = jobInfo
 				if jobNum != inJobNum:
-					raise RuntimeError('Invalid job id in job file %s' % info)
+					raise BackendError('Invalid job id in job file %s' % info)
 				if forceMove(dir, os.path.join(self._outputPath, 'job_%d' % jobNum)):
 					retrievedJobs.append(inJobNum)
 					yield (jobNum, jobExitCode, jobData, dir)
@@ -227,7 +230,7 @@ class BasicWMS(WMS):
 			for subDir in map(lambda x: x[0], os.walk(dir, topdown=False)):
 				try:
 					os.rmdir(subDir)
-				except:
+				except Exception:
 					pass
 
 			if os.path.exists(dir):
@@ -289,8 +292,8 @@ class BasicWMS(WMS):
 			jobEnv['GC_ARGS'] = task.getJobArguments(jobNum).strip()
 			content = utils.DictFormat(escapeString = True).format(jobEnv, format = 'export %s%s%s\n')
 			utils.safeWrite(open(cfgPath, 'w'), content)
-		except:
-			raise RethrowError('Could not write job config data to %s.' % cfgPath)
+		except Exception:
+			raise BackendError('Could not write job config data to %s.' % cfgPath)
 
 
 	def _submitJob(self, jobNum, task):

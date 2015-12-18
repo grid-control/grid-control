@@ -1,4 +1,4 @@
-#-#  Copyright 2009-2014 Karlsruhe Institute of Technology
+#-#  Copyright 2009-2015 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -13,9 +13,8 @@
 #-#  limitations under the License.
 
 from grid_control import utils
-from grid_control.backends.wms import WMS
+from grid_control.backends.wms import BackendError, WMS
 from grid_control.backends.wms_pbsge import PBSGECommon
-from grid_control.exceptions import RethrowError
 from grid_control.job_db import Job
 
 class PBS(PBSGECommon):
@@ -64,8 +63,8 @@ class PBS(PBSGECommon):
 						jobinfo.get('exec_host').split('/')[0] + '.' + jobinfo.get('server', ''),
 						jobinfo.get('queue')
 					)
-			except:
-				raise RethrowError('Error reading job info:\n%s' % section)
+			except Exception:
+				raise BackendError('Error reading job info:\n%s' % section)
 			yield jobinfo
 
 

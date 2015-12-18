@@ -17,10 +17,11 @@
 import os, time, logging
 from grid_control import utils
 from grid_control.abstract import NamedObject
-from grid_control.exceptions import AbstractError, GCError, UserError
+from grid_control.exceptions import AbstractError, NestedException
+from grid_control.gc_exceptions import UserError
 from python_compat import rsplit
 
-class AccessTokenError(GCError):
+class AccessTokenError(NestedException):
 	pass
 
 class AccessToken(NamedObject):

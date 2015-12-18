@@ -1,4 +1,4 @@
-#-#  Copyright 2014 Karlsruhe Institute of Technology
+#-#  Copyright 2014-2015 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -24,7 +24,7 @@ import logging
 import json
 from grid_control import utils
 from grid_control.backends.wms import BasicWMS
-from grid_control.exceptions import ConfigError
+from grid_control.config import ConfigError
 from grid_control.job_db import Job
 
 # HTC modules
@@ -119,7 +119,7 @@ class HTCondor(BasicWMS):
 				poolConfig.update(json.load(confFile)) # TODO: json
 				confFile.close()
 			except Exception:
-				raise RethrowError('Failed to parse pool configuration file!')
+				raise BackendError('Failed to parse pool configuration file!')
 		self._jobFeatureMap = poolConfig.get('jobFeatureMap',{})
 		self._queueQueryMap = poolConfig.get('queueQueryMap',{})
 		self._niceName      = poolConfig.get('NiceName', '<POOLNAME>')
@@ -167,7 +167,7 @@ class HTCondor(BasicWMS):
 			try:
 				os.makedirs(sandpath)
 			except Exception:
-				raise RethrowError('Error accessing or creating sandbox directory:\n	%s' % sandpath)
+				raise BackendError('Error accessing or creating sandbox directory:\n	%s' % sandpath)
 		return sandpath
 
 	# Primary backend actions

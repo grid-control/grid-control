@@ -36,7 +36,7 @@ class TaggedConfigView(SimpleConfigView):
 		def makeTagTuple(t):
 			try:
 				tagName = t.tagName.lower()
-			except:
+			except Exception:
 				raise APIError('Class %r does not define a tag name!' % t.__class__.__name__)
 			return [(tagName, t.getObjectName().lower())]
 		self._initVariable('_cfgTags', [], setTags, addTags, lambda x: x, makeTagTuple)

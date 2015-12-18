@@ -14,7 +14,7 @@
 
 import re
 from grid_control import utils
-from grid_control.exceptions import ConfigError
+from grid_control.config import ConfigError
 from grid_control.parameters.psource_base import ParameterInfo, ParameterSource
 from grid_control.parameters.psource_basic import FormatterParameterSource, KeyParameterSource, SimpleParameterSource, SingleParameterSource
 

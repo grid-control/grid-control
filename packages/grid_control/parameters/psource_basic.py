@@ -15,7 +15,8 @@
 import re, random
 from grid_control import utils
 from grid_control.backends import WMS
-from grid_control.exceptions import APIError, ConfigError
+from grid_control.config import ConfigError
+from grid_control.exceptions import APIError
 from grid_control.parameters.psource_base import ParameterInfo, ParameterMetadata, ParameterSource
 from python_compat import md5
 

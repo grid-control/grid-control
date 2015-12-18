@@ -13,9 +13,9 @@
 #-#  limitations under the License.
 
 from grid_control import utils
-from grid_control.datasets import DataProvider, DataSplitter
+from grid_control.config import ConfigError
+from grid_control.datasets import DataProvider, DataSplitter, DatasetError
 from grid_control.datasets.splitter_basic import HybridSplitter
-from grid_control.exceptions import ConfigError, DatasetError
 from grid_control.utils.webservice import readJSON
 from grid_control_cms.lumi_tools import formatLumi, parseLumiFilter, selectLumi
 from python_compat import set, sorted

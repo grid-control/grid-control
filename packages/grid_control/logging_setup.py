@@ -70,7 +70,7 @@ def logging_defaults():
 		try:
 			handler_ex = logging.FileHandler(fnLog, 'w')
 			break
-		except:
+		except Exception:
 			pass
 	if handler_ex:
 		logging.getLogger("exception").propagate = False

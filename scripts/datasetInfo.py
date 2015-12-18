@@ -15,7 +15,7 @@
 
 import os, sys, optparse
 from gcSupport import getConfig, parseOptions, utils
-from grid_control.datasets import DataProvider
+from grid_control.datasets import DataProvider, DatasetError
 
 usage = '%s [OPTIONS] <DBS dataset path> | <dataset cache file>' % sys.argv[0]
 parser = optparse.OptionParser(usage=usage)
@@ -102,7 +102,7 @@ def main():
 							block[DataProvider.Nickname] = dsName.lstrip('/').split('/')[1]
 						else:
 							block[DataProvider.Nickname] = dsName
-					except:
+					except Exception:
 						pass
 				if DataProvider.Nickname not in block and opts.confignick:
 					block[DataProvider.Nickname] = np.getName(None, dsName, block)

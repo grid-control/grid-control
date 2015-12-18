@@ -11,13 +11,11 @@
 #-#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
-from grid_control.exceptions import UserError
-from grid_control.utils.webservice import parseJSON
-from grid_control.utils.webservice import RestClient
 
-import os
-import re
-
+import os, re
+from grid_control.gc_exceptions import UserError
+from grid_control.utils.webservice import RestClient, parseJSON
+from python_compat import set
 
 def unflatten_json(data):
     """Tranform input to unflatten JSON format"""

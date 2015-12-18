@@ -14,8 +14,7 @@
 
 import re
 from grid_control.datasets.modifier_base import DatasetModifier
-from grid_control.datasets.provider_base import DataProvider
-from grid_control.exceptions import DatasetError
+from grid_control.datasets.provider_base import DataProvider, DatasetError
 from grid_control.utils import doBlackWhiteList, makeEnum
 from python_compat import md5, set
 

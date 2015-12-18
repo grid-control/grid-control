@@ -13,7 +13,8 @@
 #-#  limitations under the License.
 
 import os, re, sys, glob, stat, time, Queue, errno, popen2, signal, fnmatch, logging, tarfile, operator, threading
-from grid_control.exceptions import APIError, ConfigError, GCError, InstallationError, RethrowError, RuntimeError, TimeoutError, UserError
+from grid_control.exceptions import APIError
+from grid_control.gc_exceptions import InstallationError, RuntimeError, UserError
 from grid_control.utils.parsing import parseBool, parseDict, parseInt, parseList, parseStr, parseTime, parseType, strGuid, strTime, strTimeShort
 from grid_control.utils.thread_tools import TimeoutException, hang_protection
 from python_compat import lru_cache, md5, next, set, sorted, user_input
@@ -73,8 +74,8 @@ def ensureDirExists(dn, name = 'directory'):
 	if not os.path.exists(dn):
 		try:
 			os.makedirs(dn)
-		except:
-			raise RethrowError('Problem creating %s "%s"' % (name, dn), RuntimeError)
+		except Exception:
+			raise RuntimeError('Problem creating %s "%s"' % (name, dn))
 
 
 def freeSpace(dn, timeout = 5):
@@ -83,7 +84,7 @@ def freeSpace(dn, timeout = 5):
 			try:
 				stat_info = os.statvfs(dn)
 				return stat_info.f_bavail * stat_info.f_bsize / 1024**2
-			except:
+			except Exception:
 				import ctypes
 				free_bytes = ctypes.c_ulonglong(0)
 				ctypes.windll.kernel32.GetDiskFreeSpaceExW(ctypes.c_wchar_p(dn), None, None, ctypes.pointer(free_bytes))
@@ -168,7 +169,7 @@ class LoggedProcess(object):
 		while True:
 			try:
 				line = self.proc.fromchild.readline()
-			except:
+			except Exception:
 				abort(True)
 				break
 			if not line:
@@ -208,7 +209,7 @@ class LoggedProcess(object):
 			for key, value in kwargs.items():
 				try:
 					content = open(value, 'r').readlines()
-				except:
+				except Exception:
 					content = [value]
 				files.append(VirtualFile(os.path.join(entry, key), content))
 			for fileObj in files:
@@ -216,8 +217,8 @@ class LoggedProcess(object):
 				tar.addfile(info, handle)
 				handle.close()
 			tar.close()
-		except:
-			raise RethrowError('Unable to log errors of external process "%s" to "%s"' % (self.niceCmd, target), RuntimeError)
+		except Exception:
+			raise RuntimeError('Unable to log errors of external process "%s" to "%s"' % (self.niceCmd, target))
 		eprint('All logfiles were moved to %s' % target)
 
 
@@ -229,7 +230,7 @@ def globalSetupProxy(fun, default, new = None):
 		fun.setting = new
 	try:
 		return fun.setting
-	except:
+	except Exception:
 		return default
 
 
@@ -287,7 +288,7 @@ class PersistentDict(dict):
 		keyParser = {None: QM(lowerCaseKey, lambda k: parseType(k.lower()), parseType)}
 		try:
 			self.update(self.fmt.parse(open(filename), keyParser = keyParser))
-		except:
+		except Exception:
 			pass
 		self.olddict = self.items()
 
@@ -306,7 +307,7 @@ class PersistentDict(dict):
 		try:
 			if self.filename:
 				safeWrite(open(self.filename, 'w'), self.fmt.format(self))
-		except:
+		except Exception:
 			raise RuntimeError('Could not write to file %s' % self.filename)
 		self.olddict = self.items()
 
@@ -327,7 +328,7 @@ def removeFiles(args):
 				os.rmdir(item)
 			else:
 				os.unlink(item)
-		except:
+		except Exception:
 			pass
 
 
@@ -348,10 +349,10 @@ def optSplit(opt, delim, empty = ''):
 			try: # Find position of other delimeters in string
 				otherDelim = min(filter(lambda idx: idx >= 0, map(lambda x: new.find(x), delim)))
 				tmp[0] += new[otherDelim:]
-			except:
+			except Exception:
 				otherDelim = None
 			return [str.join(prefix, tmp)] + oldResult[1:] + [new[:otherDelim]]
-		except:
+		except Exception:
 			return oldResult + ['']
 	result = map(str.strip, reduce(getDelimeterPart, delim, [opt]))
 	return tuple(map(lambda x: QM(x == '', empty, x), result))
@@ -384,6 +385,7 @@ def getNamedLogger(prefix, name, instance, postfix = None):
 
 def checkVar(value, message, check = True):
 	if check and max(map(lambda x: max(x.count('@'), x.count('__')), str(value).split('\n'))) >= 2:
+		from grid_control.config import ConfigError
 		raise ConfigError(message)
 	return value
 
@@ -414,7 +416,7 @@ def flatten(lists):
 			if isinstance(x, str):
 				raise
 			result.extend(x)
-		except:
+		except Exception:
 			result.append(x)
 	return result
 
@@ -510,7 +512,7 @@ class DictFormat(object):
 		currentline = ''
 		try:
 			lines = lines.splitlines()
-		except:
+		except Exception:
 			pass
 		for line in lines:
 			if self.escapeString:
@@ -525,7 +527,7 @@ class DictFormat(object):
 			try: # split at first occurence of delimeter and strip spaces around
 				key, value = map(str.strip, currentline.split(self.delimeter, 1))
 				currentline = ''
-			except: # in case no delimeter was found
+			except Exception: # in case no delimeter was found
 				currentline = ''
 				continue
 			if self.escapeString:
@@ -533,7 +535,7 @@ class DictFormat(object):
 			key = keyParser.get(key, defaultKeyParser)(key)
 			data[key] = valueParser.get(key, defaultValueParser)(value) # do .encode('utf-8') ?
 		if doAdd:
-			raise ConfigError('Invalid dict format in %s' % fp.name)
+			raise RuntimeError('Invalid dict format in %s' % fp.name)
 		return data
 
 	# Format dictionary list
@@ -632,7 +634,7 @@ def getVersion():
 			if 'stable' in LoggedProcess('svn info', pathGC()).getOutput(True):
 				return '%s - stable' % version
 			return '%s - testing' % version
-	except:
+	except Exception:
 		pass
 	return 'unknown'
 getVersion = lru_cache(getVersion)
@@ -815,7 +817,7 @@ def getUserInput(text, default, choices, parser = lambda x: x):
 	while True:
 		try:
 			userinput = user_input('%s %s: ' % (text, '[%s]' % default))
-		except:
+		except Exception:
 			eprint()
 			sys.exit(os.EX_OK)
 		if userinput == '':
@@ -924,7 +926,7 @@ def ping_host(host):
 		tmp = LoggedProcess('ping', '-Uqnc 1 -W 1 %s' % host).getOutput().splitlines()
 		assert(tmp[-1].endswith('ms'))
 		return float(tmp[-1].split('/')[-2]) / 1000.
-	except:
+	except Exception:
 		return None
 
 

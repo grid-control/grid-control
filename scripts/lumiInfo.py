@@ -71,7 +71,7 @@ def main():
 		(lumiDict, readDict, writeDict) = ({}, {}, {})
 		try:
 			splitter = DataSplitter.loadState(os.path.join(workDir, 'datamap.tar'))
-		except:
+		except Exception:
 			pass
 		jobList = sorted(jobList)
 
@@ -112,7 +112,7 @@ def main():
 						readDict[outputName] += int(inFile.getElementsByTagName('EventsRead')[0].childNodes[0].data)
 			except KeyboardInterrupt:
 				sys.exit(os.EX_OK)
-			except:
+			except Exception:
 				raise
 				print 'Error while parsing framework output of job %s!' % jobNum
 				continue
@@ -156,7 +156,7 @@ def main():
 			raise Exception('No arguments given!')
 		try:
 			lumis = parseLumiFilter(str.join(' ', args))
-		except:
+		except Exception:
 			raise Exception('Could not parse: %s' % str.join(' ', args))
 
 		if opts.save_exprgc:

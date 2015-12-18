@@ -17,8 +17,12 @@ from grid_control import utils
 from grid_control.abstract import ClassFactory, LoadableObject
 from grid_control.config import TaggedConfigView, createConfigFactory
 from grid_control.datasets.modifier_base import DatasetModifier
-from grid_control.exceptions import AbstractError
+from grid_control.exceptions import AbstractError, NestedException
 from python_compat import StringBuffer
+
+class DatasetError(NestedException):
+	pass
+
 
 class DataProvider(LoadableObject):
 	def __init__(self, config, datasetExpr, datasetNick, datasetID):

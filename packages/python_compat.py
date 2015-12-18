@@ -14,7 +14,7 @@
 
 try:	# str.rsplit >= Python 2.4
 	rsplit = str.rsplit
-except:
+except Exception:
 	def rsplit(x, sep, maxsplit = None):
 		""" Split from the right side
 		>>> rsplit('abc', '.', 1)
@@ -31,13 +31,13 @@ except:
 
 try:	# set >= Python 2.4
 	set = set
-except:
+except Exception:
 	import sets
 	set = sets.Set
 
 try:	# sorted >= Python 2.4
 	sorted = sorted
-except:
+except Exception:
 	builtin_cmp = cmp
 	def sorted(unsortedList, cmp = None, key = None, reverse = False):
 		""" Sort list by either using the standard comparison method cmp()
@@ -77,13 +77,13 @@ except:
 try:	# hashlib >= Python 2.5
 	import hashlib
 	md5 = hashlib.md5
-except:
+except Exception:
 	import md5
 	md5 = md5.md5
 
 try:	# any >= Python 2.5
 	any = any
-except:
+except Exception:
 	def any(iterable):
 		for element in iterable:
 			if element:
@@ -92,7 +92,7 @@ except:
 
 try:	# all >= Python 2.5
 	all = all
-except:
+except Exception:
 	def all(iterable):
 		for element in iterable:
 			if not element:
@@ -106,7 +106,7 @@ except ImportError:
 
 try:	# next >= Python 2.6
 	next = next
-except:
+except Exception:
 	def next(it, *default):
 		try:
 			return it.next()
@@ -119,7 +119,7 @@ try:	# io >= Python 2.6 (unicode)
 	import StringIO, cStringIO
 	StringBuffer = cStringIO.StringIO
 	StringBufferBase = StringIO.StringIO # its not possible to derive from cStringIO
-except:
+except Exception:
 	import io
 	StringBuffer = io.StringIO
 	StringBufferBase = io.StringIO
@@ -127,20 +127,20 @@ except:
 try:	# logging.NullHandler >= Python 2.7
 	import logging
 	NullHandler = logging.NullHandler
-except:
+except Exception:
 	class NullHandler(logging.Handler):
 		def emit(self, record):
 			pass
 
 try:	# raw_input < Python 3.0
 	user_input = raw_input
-except:
+except Exception:
 	user_input = input
 
 try:	# functools.lru_cache >= Python 3.2
 	import functools
 	lru_cache = functools.lru_cache
-except:
+except Exception:
 	def lru_cache(fun, maxsize = 10): # Implementation causes CPU performance hit to avoid I/O
 		def funProxy(*args, **kargs):
 			idx = None

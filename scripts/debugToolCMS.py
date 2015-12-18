@@ -13,13 +13,11 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-
 import optparse
 from gcSupport import AccessToken, getConfig, parseOptions
-from grid_control.exceptions import ConfigError
+from grid_control.gc_exceptions import RuntimeError
 from grid_control.utils.webservice import readJSON
 from grid_control_cms.provider_sitedb import SiteDB
-
 
 def lfn2pfn(node, lfn):
 	return readJSON('https://cmsweb.cern.ch/phedex/datasvc/json/prod/lfn2pfn',
@@ -38,7 +36,7 @@ if opts.SE:
 		site_db = SiteDB()
 		hnName = site_db.dn_to_username(dn=token.getFQUsername())
 		if not hnName:
-			raise ConfigError('Unable to map grid certificate to hypernews name!')
+			raise RuntimeError('Unable to map grid certificate to hypernews name!')
 		opts.lfn = opts.lfn.replace('<hypernews name>', hnName)
 
 	tmp = readJSON('https://cmsweb.cern.ch/phedex/datasvc/json/prod/lfn2pfn',

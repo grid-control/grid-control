@@ -91,7 +91,7 @@ class LocalWMS(BasicWMS):
 				continue
 			try:
 				shutil.rmtree(path)
-			except:
+			except Exception:
 				raise RuntimeError('Sandbox for job %d with wmsId "%s" could not be deleted' % (jobNum, wmsId))
 			yield (jobNum, wmsId)
 		del activity
@@ -120,7 +120,7 @@ class LocalWMS(BasicWMS):
 			if not os.path.exists(self.sandPath):
 				os.mkdir(self.sandPath)
 			sandbox = tempfile.mkdtemp('', '%s.%04d.' % (module.taskID, jobNum), self.sandPath)
-		except:
+		except Exception:
 			raise RuntimeError('Unable to create sandbox directory "%s"!' % sandbox)
 		sbPrefix = sandbox.replace(self.sandPath, '').lstrip('/')
 		self.smSBIn.doTransfer(map(lambda (d, s, t): (d, s, os.path.join(sbPrefix, t)), self._getSandboxFilesIn(module)))
@@ -142,7 +142,7 @@ class LocalWMS(BasicWMS):
 		wmsIdText = proc.getOutput().strip().strip('\n')
 		try:
 			wmsId = self.parseSubmitOutput(wmsIdText)
-		except:
+		except Exception:
 			wmsId = None
 
 		del activity
@@ -227,6 +227,6 @@ class Local(WMS):
 			try:
 				utils.resolveInstallPath(cmd)
 				return WMS.getInstance(wms, config, name)
-			except:
+			except Exception:
 				pass
 		return WMS.getInstance('PBS', config, name)

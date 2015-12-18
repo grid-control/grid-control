@@ -14,8 +14,7 @@
 
 import os
 from grid_control import utils
-from grid_control.config import changeInitNeeded
-from grid_control.exceptions import ConfigError
+from grid_control.config import ConfigError, changeInitNeeded
 from grid_control.tasks.task_user import UserTask
 
 class ROOTTask(UserTask):

@@ -18,8 +18,7 @@ import os, re, glob, time, commands, tempfile
 from grid_control import utils
 from grid_control.backends.broker import Broker
 from grid_control.backends.condor_wms.processhandler import ProcessHandler
-from grid_control.backends.wms import BasicWMS, WMS
-from grid_control.exceptions import RethrowError
+from grid_control.backends.wms import BackendError, BasicWMS, WMS
 from grid_control.job_db import Job
 from python_compat import md5, set, sorted
 
@@ -153,7 +152,7 @@ class Condor(BasicWMS):
 			try:
 				os.makedirs(sandpath)
 			except Exception:
-				raise RethrowError('Error accessing or creating sandbox directory:\n	%s' % sandpath)
+				raise BackendError('Error accessing or creating sandbox directory:\n	%s' % sandpath)
 		return sandpath
 
 # getWorkdirPath: return path to condor output dir for a specific job or basepath
@@ -245,7 +244,7 @@ class Condor(BasicWMS):
 					jobNum=wmsToJobMap[wmsID]
 					yield ( jobNum, wmsID)
 				except KeyError:	# mismatch in GC<->Condor mapping
-					raise RethrowError('Error with canceled condor job:\n%s\nExpected Condor IDs:\n%s\nRemaining condor_rm Output:%s' % (wmsID, wmsIdList, cancelProcess.getMessage() ))
+					raise BackendError('Error with canceled condor job:\n%s\nExpected Condor IDs:\n%s\nRemaining condor_rm Output:%s' % (wmsID, wmsIdList, cancelProcess.getMessage() ))
 			# clean up remote work dir
 			if self.remoteType == poolType.SSH or self.remoteType == poolType.GSISSH:
 				cleanupProcess = self.Pool.LoggedProcess('rm -rf %s' % self.getWorkdirPath(jobNum) )
@@ -285,7 +284,7 @@ class Condor(BasicWMS):
 							cleanupProcess.logError(self.errorLog)
 							raise RuntimeError("Cleanup Process %s returned: %s" % ( cleanupProcess.cmd, cleanupProcess.getMessage() ) )
 			except Exception:
-				raise RethrowError("Exception while cleaning up remote working directory. There might be some junk data left in: %s @ %s" % ( self.getWorkdirPath(), self.Pool.getDomain() ) )
+				raise BackendError("Exception while cleaning up remote working directory. There might be some junk data left in: %s @ %s" % ( self.getWorkdirPath(), self.Pool.getDomain() ) )
 
 # checkJobs: Check status of jobs and yield (jobNum, wmsID, status, other data)
 #>>wmsJobIdList: list of (wmsID, JobNum) tuples
@@ -313,7 +312,7 @@ class Condor(BasicWMS):
 					wmsIdList.remove(wmsID)
 					yield ( jobID, self._createId(wmsID), status, jobinfo )
 			except Exception:
-				raise RethrowError('Error reading job status info:\n%s' % statusReturnLine)
+				raise BackendError('Error reading job status info:\n%s' % statusReturnLine)
 
 		# cleanup after final yield
 		retCode = statusProcess.wait()
@@ -354,7 +353,7 @@ class Condor(BasicWMS):
 								wmsIdList.remove(wmsID)
 								yield ( jobID, self._createId(wmsID), status, jobinfo )
 						except Exception:
-							raise RethrowError('Error reading job status info:\n%s' % statusReturnLine)
+							raise BackendError('Error reading job status info:\n%s' % statusReturnLine)
 
 					# cleanup after final yield
 					retCode = statusProcess.wait()
@@ -392,7 +391,7 @@ class Condor(BasicWMS):
 			jobinfo['status'] = self._humanMap[jobinfo['status']]
 			return ( jobinfo['jobid'], jobinfo['wmsid'], status, jobinfo )
 		except Exception:
-			raise RethrowError('Error reading job info:\n%s' % line)
+			raise BackendError('Error reading job info:\n%s' % line)
 
 
 # submitJobs: Submit a number of jobs and yield (jobNum, WMS ID, other data) sequentially
@@ -418,14 +417,14 @@ class Condor(BasicWMS):
 				utils.safeWrite(os.fdopen(jdlDescriptor, 'w'), data)
 			except Exception:
 				utils.removeFiles([jdlFilePath])
-				raise RethrowError('Could not write jdl data to %s.' % jdlFilePath)
+				raise BackendError('Could not write jdl data to %s.' % jdlFilePath)
 
 			# create the _jobconfig.sh file containing the actual data
 			for jobNum in jobNumList:
 				try:
 					self._writeJobConfig(_getJobCFG(jobNum)[0], jobNum, module)
 				except Exception:
-					raise RethrowError('Could not write _jobconfig data for %s.' % jobNum)
+					raise BackendError('Could not write _jobconfig data for %s.' % jobNum)
 
 			self.debugOut("Copying to remote")
 			# copy infiles to ssh/gsissh remote pool if required

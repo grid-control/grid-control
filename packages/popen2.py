@@ -182,7 +182,7 @@ def _test():
     print "testing popen3..."
     try:
         r, w, e = popen3([cmd])
-    except:
+    except Exception:
         r, w, e = popen3(cmd)
     w.write(teststr)
     w.close()

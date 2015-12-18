@@ -1,4 +1,4 @@
-#-#  Copyright 2009-2014 Karlsruhe Institute of Technology
+#-#  Copyright 2009-2015 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -13,8 +13,8 @@
 #-#  limitations under the License.
 
 from grid_control import utils
-from grid_control.datasets.provider_base import DataProvider
-from grid_control.exceptions import DatasetError, logException
+from grid_control.datasets.provider_base import DataProvider, DatasetError
+from grid_control.exceptions import ExceptionCollector
 
 class DataMultiplexer(DataProvider):
 	def __init__(self, config, datasetExpr, defaultProvider, datasetID = None):
@@ -36,14 +36,13 @@ class DataMultiplexer(DataProvider):
 
 
 	def getBlocksInternal(self):
-		exceptions = ''
+		ec = ExceptionCollector()
 		for provider in self.subprovider:
 			try:
 				for block in provider.getBlocks():
 					yield block
-			except:
-				exceptions += logException() + '\n'
+			except Exception:
+				ec.collect()
 			if utils.abort():
 				raise DatasetError('Could not retrieve all datasets!')
-		if exceptions:
-			raise DatasetError('Could not retrieve all datasets!\n' + exceptions)
+		ec.raise_any(DatasetError('Could not retrieve all datasets!'))

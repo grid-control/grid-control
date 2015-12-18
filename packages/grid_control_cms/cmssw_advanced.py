@@ -1,4 +1,4 @@
-#-#  Copyright 2010-2014 Karlsruhe Institute of Technology
+#-#  Copyright 2010-2015 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -14,8 +14,8 @@
 
 import os, re
 from grid_control import utils
+from grid_control.config import ConfigError
 from grid_control.datasets import DataProvider
-from grid_control.exceptions import ConfigError
 from grid_control_cms.cmssw import CMSSW
 from grid_control_cms.lumi_tools import formatLumi, parseLumiFilter
 from python_compat import set, sorted

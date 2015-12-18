@@ -13,8 +13,10 @@ and modified
 import re
 import string
 import urlparse
+from grid_control.exceptions import NestedException
 
-from grid_control.exceptions import InputValidationError
+class InputValidationError(NestedException):
+	pass	# error during input validation for publication in DBS3
 
 #restriction enforced by DBS. for different types blocks.
 #It could have a strict restriction

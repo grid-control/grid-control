@@ -1,4 +1,4 @@
-#-#  Copyright 2013-2014 Karlsruhe Institute of Technology
+#-#  Copyright 2013-2015 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -13,7 +13,7 @@
 #-#  limitations under the License.
 
 from grid_control.config.chandlers_base import changeImpossible, changeInitNeeded, validNoVar
-from grid_control.config.config_entry import ConfigEntry, noDefault
+from grid_control.config.config_entry import ConfigEntry, ConfigError, noDefault
 from grid_control.config.config_factory import createConfigFactory
 from grid_control.config.cview_base import SimpleConfigView
 from grid_control.config.cview_tagged import TaggedConfigView

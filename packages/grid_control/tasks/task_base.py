@@ -85,7 +85,7 @@ class TaskModule(NamedObject):
 			try:
 				transform = lambda (x, y): (int(x.strip('# ')), y)
 				yield transform(map(str.strip, line.split(' - ', 1)))
-			except:
+			except Exception:
 				pass
 
 

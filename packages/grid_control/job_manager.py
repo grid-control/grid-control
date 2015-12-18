@@ -15,7 +15,8 @@
 import math, time, bisect, random, logging
 from grid_control import utils
 from grid_control.abstract import NamedObject
-from grid_control.exceptions import ConfigError, RuntimeError
+from grid_control.config import ConfigError
+from grid_control.gc_exceptions import RuntimeError
 from grid_control.job_db import Job, JobClass, JobDB
 from grid_control.job_selector import AndJobSelector, ClassSelector, JobSelector
 from grid_control.output_processor import TaskOutputProcessor
@@ -60,7 +61,7 @@ class JobManager(NamedObject):
 				if maxJobs and (nJobs > maxJobs):
 					print 'Maximum number of jobs given as %d was truncated to %d' % (nJobs, maxJobs)
 					nJobs = maxJobs
-			except:
+			except Exception:
 				pass
 		return nJobs
 
@@ -69,7 +70,7 @@ class JobManager(NamedObject):
 		disabled = self.jobDB.getJobs(ClassSelector(JobClass.DISABLED))
 		try:
 			open(self.disableLog, 'w').write(str.join('\n', map(str, disabled)))
-		except:
+		except Exception:
 			raise RuntimeError('Could not write disabled jobs to file %s!' % self.disableLog)
 		if len(disabled) > 0:
 			utils.vprint('There are %d disabled jobs in this task!' % len(disabled), -1, True)
@@ -103,7 +104,7 @@ class JobManager(NamedObject):
 				try:
 					if utils.verbosity() > 0:
 						msg.append(self._task.errorDict[jobObj.get('retcode')])
-				except:
+				except Exception:
 					pass
 			if jobObj.get('dest'):
 				msg.append(jobObj.get('dest'))

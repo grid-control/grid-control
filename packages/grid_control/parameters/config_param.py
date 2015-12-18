@@ -14,8 +14,7 @@
 
 import shlex
 from grid_control import utils
-from grid_control.config import changeImpossible, noDefault
-from grid_control.exceptions import ConfigError
+from grid_control.config import ConfigError, changeImpossible, noDefault
 
 def parseTuple(t, delimeter):
 	t = t.strip()
@@ -105,7 +104,7 @@ class ParameterConfig:
 			for tupleEntry in tupleList:
 				try:
 					tmp = self.parseParameter(varName, tupleEntry[varIndex], varType)
-				except:
+				except Exception:
 					raise ConfigError('Unable to parse %r' % tupleEntry)
 				if isinstance(tmp, list):
 					if len(tmp) != 1:
@@ -139,7 +138,7 @@ class ParameterConfig:
 	def getParameterOption(self, varName):
 		try:
 			return self.varDict[varName.lower()]
-		except:
+		except Exception:
 			raise ConfigError('Variable %s is undefined' % varName)
 
 

@@ -1,4 +1,4 @@
-#-#  Copyright 2010-2014 Karlsruhe Institute of Technology
+#-#  Copyright 2010-2015 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -18,13 +18,17 @@ glite = os.environ.get('GLITE_WMS_LOCATION', os.environ.get('GLITE_LOCATION', ''
 for p in ['lib', 'lib64', os.path.join('lib', 'python'), os.path.join('lib64', 'python')]:
 	sys.path.append(os.path.join(glite, p))
 
+from grid_control import utils
+from grid_control.backends.wms import BackendError
+from grid_control.backends.wms_glitewms import GliteWMS
+
 try: # gLite 3.2
 	import wmsui_api
 	glStates = wmsui_api.states_names
 	def getStatusDirect(wmsId):
 		jobStatus = wmsui_api.getStatusDirect(wmsui_api.getJobIdfromList([wmsId])[0], 0)
 		return map(lambda name: (name.lower(), jobStatus.getAttribute(glStates.index(name))), glStates)
-except: # gLite 3.1
+except Exception: # gLite 3.1
 	try:
 		from glite_wmsui_LbWrapper import Status
 		import Job
@@ -34,15 +38,11 @@ except: # gLite 3.1
 			wrStatus.getStatusDirect(wmsId, 0)
 			err, apiMsg = wrStatus.get_error()
 			if err:
-				raise GridError(apiMsg)
+				raise BackendError(apiMsg)
 			info = wrStatus.loadStatus()
 			return zip(map(str.lower, jobStatus.states_names), info[0:jobStatus.ATTR_MAX])
-	except:
+	except Exception:
 		getStatusDirect = None
-
-from grid_control import utils
-from grid_control.backends.wms_glitewms import GliteWMS
-from grid_control.exceptions import GridError
 
 class GliteWMSDirect(GliteWMS):
 	# Check status of jobs and yield (jobNum, wmsID, status, other data)
@@ -64,7 +64,7 @@ class GliteWMSDirect(GliteWMS):
 				data['id'] = self._createId(data.get('jobid', wmsId))
 				data['dest'] = data.get('destination', 'N/A')
 				yield (jobNum, data['id'], self._statusMap[data['status'].lower()], data)
-			except:
+			except Exception:
 				errors.append(repr(sys.exc_info()[1]))
 				if utils.abort():
 					break

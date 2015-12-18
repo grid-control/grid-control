@@ -599,7 +599,7 @@ class HTCScheddSSH(HTCScheddCLIBase):
 		try:
 			for authFile in parentPool.proxy.getauthFiles():
 				proxyFile = ('User Proxy', authFile, os.path.join(self.getStagingDir(taskID = task.taskID), os.path.basename(authFile)))
-		except:
+		except Exception:
 			pass
 		jobFileMap = {}
 		for jobNum in jobNumList:

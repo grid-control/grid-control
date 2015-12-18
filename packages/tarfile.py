@@ -1611,7 +1611,7 @@ class TarFile(object):
                     buf = self.tarinfo.create_pax_global_header(self.pax_headers.copy())
                     self.fileobj.write(buf)
                     self.offset += len(buf)
-        except:
+        except Exception:
             if not self._extfileobj:
                 self.fileobj.close()
             self.closed = True

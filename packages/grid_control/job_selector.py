@@ -15,7 +15,8 @@
 import re, time, operator
 from grid_control import utils
 from grid_control.abstract import LoadableObject
-from grid_control.exceptions import AbstractError, UserError
+from grid_control.exceptions import AbstractError
+from grid_control.gc_exceptions import UserError
 from grid_control.job_db import Job
 
 class JobSelector(LoadableObject):
@@ -63,7 +64,7 @@ class IDSelector(JobSelector):
 		try:
 			parse = lambda x: utils.QM(x != '', int, str)
 			self.ranges = map(lambda x: (parse(x[0])(x[0]), parse(x[-1])(x[-1])), idList)
-		except:
+		except Exception:
 			raise UserError('Job identifiers must be integers or ranges.')
 
 	def __call__(self, jobNum, jobObj):

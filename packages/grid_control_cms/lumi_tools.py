@@ -1,4 +1,4 @@
-#-#  Copyright 2010-2014 Karlsruhe Institute of Technology
+#-#  Copyright 2010-2015 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -84,7 +84,7 @@ def parseLumiFilter(lumiexpr):
 
 	lumis = []
 	import os
-	from grid_control.exceptions import ConfigError
+	from grid_control.config import ConfigError
 	for token in map(str.strip, lumiexpr.split(',')):
 		token = map(str.strip, token.split('|'))
 		if os.path.exists(token[0]):
@@ -92,12 +92,12 @@ def parseLumiFilter(lumiexpr):
 				if len(token) == 1:
 					token.append('')
 				lumis.extend(parseLumiFromJSON(open(token[0]).read(), token[1]))
-			except:
+			except Exception:
 				raise ConfigError('Could not process lumi filter file:\n%s' % token)
 		else:
 			try:
 				lumis.append(parseLumiFromString(token[0]))
-			except:
+			except Exception:
 				raise ConfigError('Could not process lumi filter expression:\n%s' % token[0])
 	return mergeLumi(lumis)
 

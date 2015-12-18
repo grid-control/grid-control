@@ -17,7 +17,8 @@ from grid_control import utils
 from grid_control.abstract import LoadableObject
 from grid_control.config import createConfigFactory, noDefault
 from grid_control.datasets.provider_base import DataProvider
-from grid_control.exceptions import AbstractError, ConfigError, RuntimeError
+from grid_control.exceptions import AbstractError
+from grid_control.gc_exceptions import RuntimeError
 from python_compat import next
 
 def fast_search(lst, cmp_op):

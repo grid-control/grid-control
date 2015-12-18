@@ -46,7 +46,7 @@ class DBSInfoProvider(GCProvider):
 			else:
 				try:
 					(primary, processed, tier) = getPathComponents(parent)
-				except:
+				except Exception:
 					pass
 		if (primary == None) and (len(userPath) > 0):
 			primary = userPath[0]

@@ -36,14 +36,14 @@ def parseJSON(data):
 def parseInt(value, default = None):
 	try:
 		return int(value)
-	except:
+	except Exception:
 		return default
 
 
 def parseStr(value, cls, default = None):
 	try:
 		return cls(value)
-	except:
+	except Exception:
 		return default
 
 

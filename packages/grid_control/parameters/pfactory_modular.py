@@ -13,9 +13,8 @@
 #-#  limitations under the License.
 
 from grid_control import utils
-from grid_control.exceptions import RethrowError
 from grid_control.parameters.pfactory_base import BasicParameterFactory
-from grid_control.parameters.psource_base import ParameterSource
+from grid_control.parameters.psource_base import ParameterError, ParameterSource
 from grid_control.parameters.psource_meta import ZipLongParameterSource
 
 # Parameter factory which evaluates a parameter module string
@@ -33,12 +32,12 @@ class ModularParameterFactory(BasicParameterFactory):
 			def wrapper(*args):
 				try:
 					parameterClass = ParameterSource.getClass(clsName)
-				except:
-					raise RethrowError('Unable to create parameter source "%r"!' % clsName)
+				except Exception:
+					raise ParameterError('Unable to create parameter source "%r"!' % clsName)
 				try:
 					return parameterClass.create(self.paramConfig, *args)
-				except:
-					raise RethrowError('Error while creating "%r" with arguments "%r"' % (parameterClass.__name__, args))
+				except Exception:
+					raise ParameterError('Error while creating "%r" with arguments "%r"' % (parameterClass.__name__, args))
 			return wrapper
 		userFun = dict(map(lambda (key, cls): (key, createWrapper(cls)), ParameterSource.managerMap.items()))
 		try:

@@ -13,8 +13,11 @@
 #-#  limitations under the License.
 
 from grid_control import utils
-from grid_control.exceptions import APIError, ConfigError
+from grid_control.exceptions import APIError, NestedException
 from python_compat import set, sorted
+
+class ConfigError(NestedException):
+	pass
 
 # Placeholder to specify a non-existing default
 noDefault = utils.makeEnum(['noDefault'])

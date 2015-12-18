@@ -15,7 +15,7 @@
 import os
 from grid_control import utils
 from grid_control.datasets import DataProvider
-from grid_control.exceptions import UserError
+from grid_control.gc_exceptions import UserError
 from grid_control.utils.webservice import readJSON
 from grid_control_cms.provider_cms import CMSProvider
 

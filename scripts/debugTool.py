@@ -116,7 +116,7 @@ if opts.jdl:
 if opts.state:
 	try:
 		newState = getattr(Job, opts.state)
-	except:
+	except Exception:
 		print 'Invalid state: %s', opts.state
 	oldState = job.state
 	utils.vprint('Job state changed from %s to %s' % (Job.enum2str(oldState), Job.enum2str(newState)), -1, True)
@@ -160,7 +160,7 @@ if opts.splitting:
 				printError(events, splitInfo[DataSplitter.NEntries], 'Inconsistent number of events')
 				printError(skip, splitInfo[DataSplitter.Skipped], 'Inconsistent number of skipped events')
 				printError(files, splitInfo[DataSplitter.FileList], 'Inconsistent list of files')
-			except:
+			except Exception:
 				print 'Job %d was never initialized!' % jobNum
 		print str.join('\n', map(str, fail))
 

@@ -12,7 +12,7 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-import os
+import os, logging
 from grid_control import utils
 from grid_control.abstract import NamedObject
 from grid_control.job_db import Job
@@ -23,6 +23,7 @@ class EventHandler(NamedObject):
 
 	def __init__(self, config, name, task, submodules = []):
 		NamedObject.__init__(self, config, name)
+		self._log = logging.getLogger('monitoring')
 		(self.config, self.task, self.submodules) = (config, task, submodules)
 
 	def onJobSubmit(self, wms, jobObj, jobNum):
@@ -98,8 +99,8 @@ class ScriptMonitoring(Monitoring):
 				utils.LoggedProcess(script).wait()
 			else:
 				os.system(script)
-		except GCError:
-			utils.eprint(GCError.message)
+		except Exception:
+			self._log.exception('Error while running user script!')
 
 	def runInBackground(self, script, jobNum = None, jobObj = None, addDict =  {}):
 		if script != '':

@@ -1,4 +1,4 @@
-#-#  Copyright 2007-2014 Karlsruhe Institute of Technology
+#-#  Copyright 2007-2015 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -15,7 +15,7 @@
 import os, time, random, tempfile
 from grid_control import utils
 from grid_control.backends.wms_grid import GridWMS
-from grid_control.exceptions import RuntimeError
+from grid_control.gc_exceptions import RuntimeError
 from python_compat import md5
 
 def choice_exp(sample, p = 0.5):
@@ -42,7 +42,7 @@ class DiscoverWMS_Lazy: # TODO: Move to broker infrastructure
 				if utils.parseBool(isOK):
 					pingDict[wms] = (utils.parseStr(ping, float), utils.parseStr(ping_time, float, 0))
 			return (pingDict.keys(), tmp.keys(), pingDict, 0)
-		except:
+		except Exception:
 			return ([], [], {}, None)
 
 	def updateState(self):

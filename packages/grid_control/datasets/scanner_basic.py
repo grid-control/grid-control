@@ -15,9 +15,8 @@
 import os, sys
 from grid_control import utils
 from grid_control.config import createConfigFactory
-from grid_control.datasets import DataProvider
+from grid_control.datasets import DataProvider, DatasetError
 from grid_control.datasets.scanner_base import InfoScanner
-from grid_control.exceptions import RethrowError
 from grid_control.job_db import Job, JobDB
 from grid_control.job_selector import JobSelector
 from python_compat import set, sorted
@@ -65,7 +64,7 @@ class OutputDirsFromWork(InfoScanner):
 				del log
 				log = utils.ActivityLog('Reading job logs - [%d / %d]' % (idx, len(allDirs)))
 				yield (os.path.join(self.extOutputDir, dirName), metadata, events, seList, objStore)
-			except:
+			except Exception:
 				pass
 
 
@@ -118,7 +117,7 @@ class JobInfoFromOutputDir(InfoScanner):
 			if jobInfo.get('exitcode') == 0:
 				objStore['JOBINFO'] = jobInfo
 				yield (path, metadata, events, seList, objStore)
-		except:
+		except Exception:
 			pass
 
 
@@ -128,7 +127,7 @@ class FilesFromJobInfo(InfoScanner):
 
 	def getEntries(self, path, metadata, events, seList, objStore):
 		if 'JOBINFO' not in objStore:
-			raise RethrowError('Job information is not filled! Ensure that "JobInfoFromOutputDir" is scheduled!')
+			raise DatasetError('Job information is not filled! Ensure that "JobInfoFromOutputDir" is scheduled!')
 		try:
 			jobInfo = objStore['JOBINFO']
 			files = filter(lambda x: x[0].startswith('file'), jobInfo.items())
@@ -139,8 +138,8 @@ class FilesFromJobInfo(InfoScanner):
 				yield (os.path.join(pathSE, name_dest), metadata, events, seList, objStore)
 		except KeyboardInterrupt:
 			sys.exit(os.EX_TEMPFAIL)
-		except:
-			raise RethrowError('Unable to read file stageout information!')
+		except Exception:
+			raise DatasetError('Unable to read file stageout information!')
 
 
 class FilesFromDataProvider(InfoScanner):
@@ -240,6 +239,6 @@ class DetermineEvents(InfoScanner):
 		if self._eventsCmd:
 			try:
 				events = int(os.popen('%s %s' % (self._eventsCmd, path)).readlines()[-1])
-			except:
+			except Exception:
 				pass
 		yield (path, metadata, events, seList, objStore)

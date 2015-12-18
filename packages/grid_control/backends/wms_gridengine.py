@@ -14,9 +14,9 @@
 
 import os, xml.dom.minidom
 from grid_control import utils
-from grid_control.backends.wms import WMS
+from grid_control.backends.wms import BackendError, WMS
 from grid_control.backends.wms_pbsge import PBSGECommon
-from grid_control.exceptions import ConfigError, RethrowError
+from grid_control.config import ConfigError
 from grid_control.job_db import Job
 from python_compat import set
 
@@ -56,8 +56,8 @@ class GridEngine(PBSGECommon):
 	def parseStatus(self, status):
 		try:
 			dom = xml.dom.minidom.parseString(str.join('', status))
-		except:
-			raise RethrowError("Couldn't parse qstat XML output!")
+		except Exception:
+			raise BackendError("Couldn't parse qstat XML output!")
 		for jobentry in dom.getElementsByTagName('job_list'):
 			jobinfo = {}
 			try:
@@ -72,8 +72,8 @@ class GridEngine(PBSGECommon):
 				if 'queue_name' in jobinfo:
 					queue, node = jobinfo['queue_name'].split('@')
 					jobinfo['dest'] = '%s/%s' % (node, queue)
-			except:
-				raise RethrowError('Error reading job info:\n%s' % jobentry.toxml())
+			except Exception:
+				raise BackendError('Error reading job info:\n%s' % jobentry.toxml())
 			yield jobinfo
 
 

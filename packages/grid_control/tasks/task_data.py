@@ -17,7 +17,7 @@ from grid_control import utils
 from grid_control.abstract import ClassFactory
 from grid_control.config import TaggedConfigView
 from grid_control.datasets import DataProvider, DataSplitter
-from grid_control.exceptions import UserError
+from grid_control.gc_exceptions import UserError
 from grid_control.parameters import DataParameterSource, DataSplitProcessor, ParameterSource
 from grid_control.tasks.task_base import TaskModule
 

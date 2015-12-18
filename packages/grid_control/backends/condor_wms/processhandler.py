@@ -1,4 +1,4 @@
-#-#  Copyright 2013-2014 Karlsruhe Institute of Technology
+#-#  Copyright 2013-2015 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -14,8 +14,13 @@
 
 import os, math, stat, time
 from grid_control.abstract import LoadableObject
-from grid_control.exceptions import AbstractError, GCError, RethrowError, RuntimeError, TimeoutError, TimeoutError
+from grid_control.config import ConfigError
+from grid_control.exceptions import AbstractError, NestedException
+from grid_control.gc_exceptions import RuntimeError
 from grid_control.utils import LoggedProcess, eprint, resolveInstallPath, vprint
+
+class TimeoutError(NestedException):
+	pass
 
 # placeholder for function arguments
 defaultArg = object()
@@ -32,7 +37,7 @@ class TimeoutContext(object):
 		self._duration   = duration
 		self._handlerOld = signal.signal( signal.SIGALRM, self._onTimeout )
 		if ( signal.alarm( int(duration) ) != 0 ):
-			raise GCError("Bug! Timeout set while previous timeout was active.")
+			raise TimeoutError("Bug! Timeout set while previous timeout was active.")
 	def _onTimeout(self, sigNum, frame):
 		raise TimeoutError("Timeout after %d seconds." % self._duration )
 	def cancel(self):
@@ -96,7 +101,7 @@ class SSHProcessHandler(ProcessHandler):
 		try:
 			self.remoteHost = kwargs["remoteHost"]
 		except Exception:
-			raise RethrowError("Request to initialize SSH-Type RemoteProcessHandler without remote host.")
+			raise ConfigError("Request to initialize SSH-Type RemoteProcessHandler without remote host.")
 		try:
 			self.sshLinkBase=os.path.abspath(kwargs["sshLink"])
 			# older ssh/gsissh puts a maximum length limit on control paths, use a different one
@@ -196,7 +201,7 @@ class SSHProcessHandler(ProcessHandler):
 				os.makedirs(sshLinkDir)
 			except Exception:
 				if self.socketEnforce:
-					raise RethrowError("Could not create or access directory for SSHLink:\n	%s" % sshLinkDir)
+					raise RuntimeError("Could not create or access directory for SSHLink:\n	%s" % sshLinkDir)
 				else:
 					return False
 		if sshLinkDir!=os.path.dirname(os.path.expanduser("~/.ssh/")):
@@ -204,7 +209,7 @@ class SSHProcessHandler(ProcessHandler):
 				os.chmod(sshLinkDir, stat.S_IRWXU)
 			except Exception:
 				if self.socketEnforce:
-					raise RethrowError("Could not secure directory for SSHLink:\n	%s" % sshLinkDir)
+					raise RuntimeError("Could not secure directory for SSHLink:\n	%s" % sshLinkDir)
 				else:
 					return False
 		return True
@@ -215,7 +220,7 @@ class SSHProcessHandler(ProcessHandler):
 					os.chmod(sshLink, stat.S_IRWXU)
 				except Exception:
 					if self.socketEnforce:
-						raise RethrowError("Could not secure SSHLink:\n	%s" % sshLink)
+						raise RuntimeError("Could not secure SSHLink:\n	%s" % sshLink)
 					else:
 						return False
 			else:
@@ -299,7 +304,7 @@ class RemoteProcessHandler(object):
 			self.path = self.RPHTemplate[self.remoteType]["path"]
 			self.argFormat = self.RPHTemplate[self.remoteType]["argFormat"]
 		except Exception:
-			raise RethrowError("Request to initialize RemoteProcessHandler of unknown type: %s" % remoteType)
+			raise ConfigError("Request to initialize RemoteProcessHandler of unknown type: %s" % remoteType)
 		# destination should be of type: [user@]host
 		if self.remoteType==self.RPHType.SSH or self.remoteType==self.RPHType.GSISSH:
 			try:
@@ -307,14 +312,14 @@ class RemoteProcessHandler(object):
 				self.copy = self.copy % { "rhost" : kwargs["host"] }
 				self.host = kwargs["host"]
 			except Exception:
-				raise RethrowError("Request to initialize RemoteProcessHandler of type %s without remote host." % self.RPHType.enumList[self.remoteType])
+				raise ConfigError("Request to initialize RemoteProcessHandler of type %s without remote host." % self.RPHType.enumList[self.remoteType])
 		# add default arguments for all commands
 		self.cmd = self.cmd % { "cmdargs" : kwargs.get("cmdargs",""), "args" : kwargs.get("args","") }
 		self.copy = self.copy % { "cpargs" : kwargs.get("cpargs",""), "args" : kwargs.get("args","") }
 		# test connection once
 		ret, out, err = LoggedProcess(self.cmd % { "cmd" : "exit"}).getAll()
 		if ret!=0:
-			raise GCError("Validation of remote connection failed!\nTest Command: %s\nReturn Code: %s\nStdOut: %s\nStdErr: %s" % (self.cmd % { "cmd" : "exit"},ret,out,err))
+			raise RuntimeError("Validation of remote connection failed!\nTest Command: %s\nReturn Code: %s\nStdOut: %s\nStdErr: %s" % (self.cmd % { "cmd" : "exit"},ret,out,err))
 		vprint('Remote interface initialized:\n	Cmd: %s\n	Cp : %s' % (self.cmd,self.copy), level=2)
 
 	# return instance of LoggedProcess with input properly wrapped

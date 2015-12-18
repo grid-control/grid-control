@@ -1,4 +1,4 @@
-#-#  Copyright 2013-2014 Karlsruhe Institute of Technology
+#-#  Copyright 2013-2015 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -20,7 +20,7 @@ from python_compat import sorted
 
 try:
 	import cherrypy
-except:
+except Exception:
 	print "cherrypy package must be installed!"
 	raise
 

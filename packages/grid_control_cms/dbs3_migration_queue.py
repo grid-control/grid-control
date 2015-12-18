@@ -197,7 +197,7 @@ def do_migration(queue):
             break
         try:
             task.run()
-        except:
+        except Exception:
             raise
         else:
             if not (task.is_done() or task.is_failed()):

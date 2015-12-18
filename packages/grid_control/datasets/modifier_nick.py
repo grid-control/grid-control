@@ -13,8 +13,8 @@
 #-#  limitations under the License.
 
 from grid_control.datasets.modifier_base import DatasetModifier
-from grid_control.datasets.provider_base import DataProvider
-from grid_control.exceptions import AbstractError, DatasetError
+from grid_control.datasets.provider_base import DataProvider, DatasetError
+from grid_control.exceptions import AbstractError
 
 class NickNameProducer(DatasetModifier):
 	def __init__(self, config, name):

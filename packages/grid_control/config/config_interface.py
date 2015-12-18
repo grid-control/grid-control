@@ -16,9 +16,9 @@ import os, sys, inspect, logging
 from grid_control import utils
 from grid_control.abstract import ClassWrapper, LoadableObject
 from grid_control.config.chandlers_base import changeImpossible
-from grid_control.config.config_entry import noDefault, standardConfigForm
+from grid_control.config.config_entry import ConfigError, noDefault, standardConfigForm
 from grid_control.config.cview_base import SimpleConfigView
-from grid_control.exceptions import APIError, ConfigError, RethrowError
+from grid_control.exceptions import APIError
 from python_compat import user_input
 
 # Config interface class accessing typed data using an string interface provided by configView
@@ -88,8 +88,8 @@ class TypedConfigInterface(object):
 				entry.value = obj2str(obj) # Update value of entry with formatted data
 				return obj
 			except Exception:
-				raise RethrowError('Unable to parse %s: %s' % (entry_desc + desc,
-					entry.format(printSection = True)), ConfigError)
+				raise ConfigError('Unable to parse %s: %s' % (entry_desc + desc,
+					entry.format(printSection = True)))
 		cur_obj = parseEntry(cur_entry)
 
 		# Notify about changes
@@ -186,7 +186,7 @@ class TypedConfigInterface(object):
 		try:
 			return utils.resolvePath(value, self._configView.pathDict.get('search_paths', []), mustExist, ConfigError)
 		except Exception:
-			raise RethrowError(errorMsg, ConfigError)
+			raise ConfigError(errorMsg)
 
 	# Return resolved path (search paths given in pathDict['search_paths'])
 	def getPath(self, option, default = noDefault, mustExist = True, storeRelative = False, **kwargs):
@@ -209,7 +209,7 @@ class TypedConfigInterface(object):
 					for fn in utils.resolvePaths(pattern, self._configView.pathDict.get('search_paths', []), mustExist, ConfigError):
 						yield fn
 			except Exception:
-				raise RethrowError('Error resolving pattern %s' % pattern, ConfigError)
+				raise ConfigError('Error resolving pattern %s' % pattern)
 
 		str2obj = lambda value: list(patlist2pathlist(utils.parseList(value, None, onEmpty = []), mustExist))
 		obj2str = lambda value: '\n' + str.join('\n', patlist2pathlist(value, False))

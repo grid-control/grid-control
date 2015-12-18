@@ -12,12 +12,11 @@
 #-#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
-from grid_control.exceptions import UserError
-from grid_control.utils.webservice import parseJSON
-from grid_control.utils.webservice import RestClient
 
 import json
 import os
+from grid_control.gc_exceptions import UserError
+from grid_control.utils.webservice import RestClient, parseJSON
 
 class DBS3LiteClient(object):
     def __init__(self, url):

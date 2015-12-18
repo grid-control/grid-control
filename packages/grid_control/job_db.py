@@ -15,7 +15,10 @@
 import os, time, fnmatch, operator
 from grid_control import utils
 from grid_control.abstract import LoadableObject
-from grid_control.exceptions import RethrowError, RuntimeError
+from grid_control.exceptions import NestedException
+
+class JobError(NestedException):
+	pass
 
 class Job:
 	__internals = ('wmsId', 'status')
@@ -64,11 +67,11 @@ class Job:
 			for i in cls.__internals:
 				try:
 					del data[i]
-				except:
+				except Exception:
 					pass
 			job.dict = data
-		except:
-			raise RethrowError('Unable to parse data in %s:\n%r' % (name, data), RuntimeError)
+		except Exception:
+			raise JobError('Unable to parse data in %s:\n%r' % (name, data))
 		return job
 	loadData = classmethod(loadData)
 
@@ -76,8 +79,8 @@ class Job:
 	def load(cls, name):
 		try:
 			data = utils.DictFormat(escapeString = True).parse(open(name))
-		except:
-			raise RuntimeError('Invalid format in %s' % name)
+		except Exception:
+			raise JobError('Invalid format in %s' % name)
 		return Job.loadData(name, data)
 	load = classmethod(load)
 
@@ -147,8 +150,8 @@ class JobDB(LoadableObject):
 		try:
 			if not os.path.exists(self._dbPath):
 				os.mkdir(self._dbPath)
-		except IOError:
-			raise RethrowError("Problem creating work directory '%s'" % self._dbPath)
+		except Exception:
+			raise JobError("Problem creating work directory '%s'" % self._dbPath)
 
 		candidates = fnmatch.filter(os.listdir(self._dbPath), 'job_*.txt')
 		(jobMap, log, maxJobs) = ({}, None, len(candidates))
@@ -159,7 +162,7 @@ class JobDB(LoadableObject):
 				break
 			try: # 2xsplit is faster than regex
 				jobNum = int(jobFile.split(".")[0].split("_")[1])
-			except:
+			except Exception:
 				continue
 			jobObj = Job.load(os.path.join(self._dbPath, jobFile))
 			jobMap[jobNum] = jobObj

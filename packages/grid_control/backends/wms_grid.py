@@ -15,8 +15,8 @@
 import os, sys, copy, time, tarfile, tempfile
 from grid_control import utils
 from grid_control.backends.broker import Broker
-from grid_control.backends.wms import BasicWMS, WMS
-from grid_control.exceptions import APIError, RethrowError
+from grid_control.backends.wms import BackendError, BasicWMS, WMS
+from grid_control.exceptions import APIError
 from grid_control.job_db import Job
 from python_compat import md5, parsedate
 
@@ -144,8 +144,8 @@ class GridWMS(BasicWMS):
 		try:
 			fd, jobs = tempfile.mkstemp('.jobids')
 			utils.safeWrite(os.fdopen(fd, 'w'), str.join('\n', self._getRawIDs(ids)))
-		except:
-			raise RethrowError('Could not write wms ids to %s.' % jobs)
+		except Exception:
+			raise BackendError('Could not write wms ids to %s.' % jobs)
 		return jobs
 
 
@@ -160,19 +160,19 @@ class GridWMS(BasicWMS):
 					status = 'failed'
 				else:
 					status = status.split('(')[0].split()[0]
-			except:
+			except Exception:
 				pass
 			data['status'] = status
 			try:
 				data['timestamp'] = int(time.mktime(parsedate(data['timestamp'])))
-			except:
+			except Exception:
 				pass
 			return data
 
 		for line in lines:
 			try:
 				key, value = line.split(':', 1)
-			except:
+			except Exception:
 				continue
 			key = key.strip().lower()
 			value = value.strip()
@@ -194,7 +194,7 @@ class GridWMS(BasicWMS):
 				if cur != None:
 					try:
 						yield format(cur)
-					except:
+					except Exception:
 						pass
 				cur = { 'id': value }
 			else:
@@ -203,7 +203,7 @@ class GridWMS(BasicWMS):
 		if cur != None:
 			try:
 				yield format(cur)
-			except:
+			except Exception:
 				pass
 
 
@@ -221,11 +221,11 @@ class GridWMS(BasicWMS):
 						data['status'] = 'failed'
 					else:
 						data['status'] = data['status'].split()[0].lower()
-				except:
+				except Exception:
 					pass
 				try:
 					data['timestamp'] = int(time.mktime(parsedate(data['timestamp'])))
-				except:
+				except Exception:
 					pass
 				yield data
 
@@ -242,9 +242,9 @@ class GridWMS(BasicWMS):
 		try:
 			data = self.makeJDL(jobNum, module)
 			utils.safeWrite(os.fdopen(fd, 'w'), data)
-		except:
+		except Exception:
 			utils.removeFiles([jdl])
-			raise RethrowError('Could not write jdl data to %s.' % jdl)
+			raise BackendError('Could not write jdl data to %s.' % jdl)
 
 		try:
 			tmp = utils.filterDict(self._submitParams, vF = lambda v: v)
@@ -308,8 +308,8 @@ class GridWMS(BasicWMS):
 			else:
 				tmpPath = basePath
 			utils.ensureDirExists(tmpPath)
-		except:
-			raise RethrowError('Temporary path "%s" could not be created.' % tmpPath, RuntimeError)
+		except Exception:
+			raise BackendError('Temporary path "%s" could not be created.' % tmpPath, RuntimeError)
 
 		jobNumMap = dict(ids)
 		jobs = self.writeWMSIds(ids)
@@ -332,7 +332,7 @@ class GridWMS(BasicWMS):
 						try:
 							tarfile.TarFile.open(wildcardTar, 'r:gz').extractall(outputDir)
 							os.unlink(wildcardTar)
-						except:
+						except Exception:
 							utils.eprint("Can't unpack output files contained in %s" % wildcardTar)
 							pass
 				yield (currentJobNum, line.strip())

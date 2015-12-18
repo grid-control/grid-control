@@ -15,9 +15,8 @@
 import os, shutil
 from grid_control import utils
 from grid_control.backends import WMS
-from grid_control.config import noDefault
+from grid_control.config import ConfigError, noDefault
 from grid_control.datasets import DataSplitter
-from grid_control.exceptions import ConfigError
 from grid_control.parameters import BasicDataSplitProcessor
 from grid_control.tasks.task_data import DataTask
 from grid_control.tasks.task_utils import TaskExecutableWrapper
@@ -89,7 +88,7 @@ class CMSSW(DataTask):
 			try:
 				fp = open(os.path.join(scramPath, 'Environment'), 'r')
 				self.scramEnv = utils.DictFormat().parse(fp, keyParser = {None: str})
-			except:
+			except Exception:
 				raise ConfigError('Project area file %s/.SCRAM/Environment cannot be parsed!' % self.projectArea)
 
 			for key in ['SCRAM_PROJECTNAME', 'SCRAM_PROJECTVERSION']:
@@ -101,7 +100,7 @@ class CMSSW(DataTask):
 			try:
 				fp = open(os.path.join(scramPath, self.scramArch, 'Environment'), 'r')
 				self.scramEnv.update(utils.DictFormat().parse(fp, keyParser = {None: str}))
-			except:
+			except Exception:
 				raise ConfigError('Project area file .SCRAM/%s/Environment cannot be parsed!' % self.scramArch)
 		else:
 			self.scramEnv = {
@@ -297,7 +296,7 @@ class CMSSW(DataTask):
 			runTag = splitInfo[DataSplitter.MetadataHeader].index("Runs")
 			runList = utils.listMapReduce(lambda m: m[runTag], splitInfo[DataSplitter.Metadata])
 			return getLR(filterLumiFilter(runList, lumifilter))
-		except:
+		except Exception:
 			return getLR(lumifilter)
 
 

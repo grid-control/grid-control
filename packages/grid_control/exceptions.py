@@ -15,80 +15,84 @@
 import sys, logging
 
 # Function to log local and class variables
-def logVariables(log, variables):
+def formatVariables(variables, showLongVariables = False):
 	def safeRepr(obj):
 		try:
 			value = repr(obj)
 		except Exception:
-			raise
 			return 'unable to display!'
 		try:
-			if log.isEnabledFor(logging.INFO1) or (len(value) < 500):
+			if (len(value) < 100) or showLongVariables:
 				return value
 		except Exception:
-			return value[:500] + ' ... [length:%d]' % len(value)
+			return value[:100] + ' ... [length:%d]' % len(value)
+
+	maxlen = max(map(len, variables) + [0])
 	def display(keys, varDict, varPrefix = ''):
-		maxlen = max(map(len, variables.keys()) + [0])
 		keys.sort()
 		for var in keys:
 			value = safeRepr(varDict[var])
 			if 'password' in var:
 				value = '<redacted>'
-			log.debug('\t\t%s%s = %s', varPrefix, var.ljust(maxlen), value)
+			yield '\t\t%s%s = %s' % (varPrefix, var.ljust(maxlen), value)
 
-	if filter(lambda v: v != 'self', variables):
-		log.debug('\tLocal variables:')
-		display(filter(lambda v: v != 'self', variables), variables)
-	if 'self' in variables:
-		log.debug('\tClass variables (%s):' % safeRepr(variables['self']))
-		if hasattr(variables['self'], '__dict__'):
-			classVariables = variables['self'].__dict__
-		elif hasattr(variables['self'], '__slots__'):
-			classVariables = dict(map(lambda attr: (attr, getattr(variables['self'], attr)), variables['self'].__slots__))
-		try:
-			display(classVariables.keys(), classVariables, 'self.')
-		except Exception:
-			log.debug('\t\t<unable to acces>')
+	classVariable = variables.pop('self', None)
 	if variables:
-		log.debug('')
+		yield '\tLocal variables:'
+		for line in display(variables.keys(), variables):
+			yield line
+	if classVariable:
+		yield '\tClass variables (%s):' % safeRepr(classVariable)
+		if hasattr(classVariable, '__dict__'):
+			classVariables = classVariable.__dict__
+		elif hasattr(classVariable, '__slots__'):
+			classVariables = dict(map(lambda attr: (attr, getattr(classVariable, attr)), classVariable.__slots__))
+		try:
+			for line in display(classVariables.keys(), classVariables, 'self.'):
+				yield line
+		except Exception:
+			yield '\t\t<unable to acces class>'
+	if variables:
+		yield ''
 
 # Function to log source code and variables from frames
-def logStack(log, frames, codeContext = 0):
+def formatStack(frames, codeContext = 0, showVariables = True, showLongVariables = True):
 	import linecache
 	for frame in frames:
 		# Output relevant code fragment
 		linecache.checkcache(frame['file'])
-		ctx = ''
-		if frame['context']:
-			ctx = '%s-' % frame['context']
-		log.info('Stack #%s%02d [%s:%d] %s', ctx, frame['idx'], frame['file'], frame['line'], frame['fun'])
+		trackingDisplay = ''
+		if frame['trackingID']:
+			trackingDisplay = '%s-' % frame['trackingID']
+		yield 'Stack #%s%02d [%s:%d] %s' % (trackingDisplay, frame['idx'], frame['file'], frame['line'], frame['fun'])
 		fmtLine = lambda line: linecache.getline(frame['file'], line).rstrip().replace('\t', '  ')
 		for delta_line in range(-codeContext, codeContext + 1):
 			if delta_line == 0:
-				log.info('\t=>| %s', fmtLine(frame['line'] + delta_line))
+				yield '\t=>| %s' % fmtLine(frame['line'] + delta_line)
 			else:
-				log.info('\t  | %s', fmtLine(frame['line'] + delta_line))
-		log.info('')
-		if log.isEnabledFor(logging.DEBUG):
-			logVariables(log, frame['locals'])
+				yield '\t  | %s' % fmtLine(frame['line'] + delta_line)
+		yield ''
+		if showVariables:
+			for line in formatVariables(frame['locals'], showLongVariables = showLongVariables):
+				yield line
 
 # Parse traceback information
-def parseTraceback(contextName, exClass, exValue, exStack):
+def parseTraceback(traceback):
 	result = []
-	while exStack:
-		result.append({'context': contextName, 'idx': len(result) + 1,
-			'file': exStack.tb_frame.f_code.co_filename,
-			'line': exStack.tb_lineno, # tb_lineno shows the location of the exception cause
-			'fun': exStack.tb_frame.f_code.co_name,
-			'locals': dict(exStack.tb_frame.f_locals)})
-		exStack = exStack.tb_next
-	return (result[:-1], result[-1:])
+	while traceback:
+		result.append({'idx': len(result) + 1,
+			'file': traceback.tb_frame.f_code.co_filename,
+			'line': traceback.tb_lineno, # tb_lineno shows the location of the exception cause
+			'fun': traceback.tb_frame.f_code.co_name,
+			'locals': dict(traceback.tb_frame.f_locals)})
+		traceback = traceback.tb_next
+	return result
 
 # Parse stack frame
-def parseFrame(contextName, frame):
+def parseFrame(frame):
 	result = []
 	while frame:
-		result.insert(0, {'context': contextName,
+		result.insert(0, {
 			'file': frame.f_code.co_filename,
 			'line': frame.f_lineno,
 			'fun': frame.f_code.co_name,
@@ -98,102 +102,112 @@ def parseFrame(contextName, frame):
 		entry['idx'] = idx
 	return result
 
-# Collect full traceback and exception context
-def collectExceptionInfos(exType, exValue, exStack):
-	top_context = None
-	if hasattr(exValue, 'context'):
-		top_context = exValue.context
-	traceback, traceback_tail = parseTraceback(top_context, exType, exValue, exStack)
-	context = {}
-	traceback_stack = traceback_tail
-	while hasattr(exValue, 'context') and hasattr(exValue, 'traceback') and hasattr(exValue, 'nested'): # contains infos about nested exceptions
-		context[exValue.context] = exValue
-		# append head and put tail onto the traceback stack
-		cur_traceback, cur_traceback_tail = exValue.traceback
-		traceback.extend(cur_traceback)
-		traceback_stack.extend(cur_traceback_tail)
-		exValue = exValue.nested
-	if exValue: # inner exception is not a GCError
-		context[0] = exValue
-	while traceback_stack:
-		traceback.append(traceback_stack.pop())
-	return (traceback, context)
+class NestedExceptionHelper(object):
+	def __init__(self, exValue, exTraceback):
+		self.nested = [exValue]
+		self.traceback = parseTraceback(exTraceback)
 
-# Exception handler which outputs a stack trace to the logging facility
-def logException(exType, exValue, exStack):
-	traceback, context = collectExceptionInfos(exType, exValue, exStack)
-	import time
-	log = logging.getLogger('exception')
-	log.critical('Exception occured: %s' % time.strftime('%Y-%m-%d %H:%M:%S'))
-	try:
-		import grid_control.utils
-		log.critical('grid-control: %s' % grid_control.utils.getVersion())
-	except Exception:
-		log.critical('grid-control: Unknown version')
-	log.critical('')
-	logStack(log, traceback, codeContext = 1)
-	context_keys = context.keys()
-	context_keys.sort()
-	while context_keys:
-		exValue = context[context_keys.pop()]
-		msg = '%s: %s' % (exValue.__class__.__name__, exValue)
-		if not isinstance(exValue, GCError):
-			msg += '\n%s  %s' % (len(exValue.__class__.__name__) * ' ', exValue.args)
-		log.critical(msg)
-		sys.stderr.write(msg + '\n')
-
-# Exception handler for interactive mode:
-def gc_excepthook(exType, exValue, exStack):
-	logException(exType, exValue, exStack)
-	sys.stderr.write('\n')
-	for handler in logging.getLogger('exception').handlers:
-		if isinstance(handler, logging.FileHandler):
-			sys.stderr.write('In case this is caused by a bug, please send the log file:\n')
-			sys.stderr.write('\t"%s"\nto grid-control-dev@googlegroups.com\n' % handler.baseFilename)
-			break
-sys.excepthook = gc_excepthook
-
-# grid-control exception base class
-class GCError(Exception):
+# nested exception base class
+class NestedException(Exception):
 	def __init__(self, *args, **kwargs):
-		self.context = 1
-		self.nested = sys.exc_info()[1]
-		if hasattr(self.nested, 'context'):
-			self.context = self.nested.context + 1
-		self.traceback = parseTraceback(self.context - 1, *sys.exc_info())
+		self.nested = []
+		self.traceback = []
+		if sys.exc_info()[1]:
+			self.nested = [sys.exc_info()[1]]
+			self.traceback = parseTraceback(sys.exc_info()[2])
 		Exception.__init__(self, *args, **kwargs)
 
-class ConfigError(GCError):
-	pass	# some error with the configuration
-
-class InstallationError(GCError):
-	pass	# some error with installed programs
-
-class RuntimeError(GCError):
-	pass	# some error with the runtime
-
-class UserError(GCError):
-	pass	# some error caused by the user
-
-class APIError(GCError):
-	pass	# some error in using the API
-
-class GridError(GCError):
-	pass	# some error with the Backend
-
-class DatasetError(GCError):
-	pass	# some error with the dataset
-
-class TimeoutError(GCError):
-	pass	# timeout while waiting for an operation to finish
-
-class InputValidationError(GCError):
-	pass	# error during input validation for publication in DBS3
+# some error in using the API
+class APIError(NestedException):
+	pass
 
 # some error related to abstract functions
 class AbstractError(APIError):
 	def __init__(self):
 		APIError.__init__(self, '%s is an abstract function!' % sys._getframe(1).f_code.co_name)
 
-class RethrowError(GCError):
-	pass
+# Collect full traceback and exception context
+def collectExceptionInfos(exType, exValue, exTraceback):
+	topLevel = NestedExceptionHelper(exValue, exTraceback)
+
+	exInfo = []
+	def collectRecursive(ex, cur_depth = -1, trackingID = 'T'):
+		if not isinstance(ex, NestedExceptionHelper):
+			cur_depth += 1
+			exInfo.append((ex, cur_depth, trackingID))
+		if hasattr(ex, 'traceback') and hasattr(ex, 'nested'): # decent
+			for frame in ex.traceback[:-1]: # yield all frames except for the final raise statement
+				frame['trackingID'] = trackingID
+				yield frame
+			for idx, exNested in enumerate(ex.nested):
+				for frame in collectRecursive(exNested, cur_depth, trackingID + '|%d' % idx):
+					yield frame
+			for frame in ex.traceback[-1:]:
+				frame['trackingID'] = trackingID
+				yield frame
+
+	traceback = list(collectRecursive(topLevel))
+	return (traceback, exInfo) # skipping top-level exception helper
+
+# Formatter class to display exception details
+class ExceptionFormatter(logging.Formatter):
+	def __init__(self, showCode = True, codeContext = 1, showVariables = True, showLongVariables = False):
+		logging.Formatter.__init__(self)
+		(self._showCode, self._codeContext) = (showCode, codeContext)
+		(self._showVariables, self._showLongVariables) = (showVariables, showLongVariables)
+
+	def format(self, record):
+		traceback, infos = collectExceptionInfos(*record.exc_info)
+		msg = record.msg + '\n\n'
+		if self._showCode:
+			msg += str.join('\n', formatStack(traceback, codeContext = self._codeContext,
+				showVariables = self._showVariables, showLongVariables = self._showLongVariables)) + '\n\n'
+		def formatInfos(info):
+			(exValue, exDepth, exID) = info
+			result = '%s%s: %s' % ('  ' * exDepth, exValue.__class__.__name__, exValue)
+			if not isinstance(exValue, NestedException):
+				try:
+					result += '\n%s%s  %s' % ('  ' * exDepth, len(exValue.__class__.__name__) * ' ', exValue.args)
+				except:
+					pass
+			return result
+		msg += str.join('\n', map(formatInfos, infos)) + '\n'
+		return msg
+
+# Signal handler for debug session requests
+def debugInterruptHandler(sig, frame):
+	import code
+	variables = {'_frame': frame}
+	variables.update(frame.f_globals)
+	variables.update(frame.f_locals)
+	console = code.InteractiveConsole(variables)
+	console.push('import rlcompleter, readline')
+	console.push('readline.parse_and_bind("tab: complete")')
+	console.push('readline.set_completer(rlcompleter.Completer(globals()).complete)')
+	stackDict = sys._current_frames()
+	log = logging.getLogger('debug_session')
+	log.addFormatter(FormatStack())
+	for threadID in stackDict:
+		log.critical('Stack of thread #%d:\n' % threadID + str.join('\n',
+			formatStack(parseFrame(threadID, stackDict[threadID]), codeContext = 0, showVariables = False)))
+	console.interact('debug mode enabled!')
+
+# Utility class to collect multiple exceptions and throw them at a later time
+class ExceptionCollector(object):
+	def __init__(self):
+		self._exceptions = []
+
+	def collect(self):
+		self._exceptions.append(NestedExceptionHelper(sys.exc_info()[1], sys.exc_info()[2]))
+		try: # python 2 needs manual clear of exception information after the exception handler
+			sys.exc_clear()
+		except Exception: # python 3 removed this function
+			pass
+
+	def raise_any(self, value):
+		if not self._exceptions:
+			return
+		if hasattr(value, 'nested'):
+			value.nested.extend(self._exceptions)
+		self._exceptions = []
+		raise value

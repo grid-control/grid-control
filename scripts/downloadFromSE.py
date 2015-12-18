@@ -293,7 +293,7 @@ def realmain(opts, args):
 						dlfs_rm('file://%s' % checkPath, 'SE file')
 				except KeyboardInterrupt:
 					raise
-				except:
+				except Exception:
 					hashLocal = None
 				output.hash(fileIdx, hashLocal)
 				if hash != hashLocal:

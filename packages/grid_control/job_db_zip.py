@@ -1,4 +1,4 @@
-#-#  Copyright 2013-2014 Karlsruhe Institute of Technology
+#-#  Copyright 2013-2015 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -27,7 +27,7 @@ class ZippedJobDB(JobDB):
 		if os.path.exists(self._dbFile):
 			try:
 				tar = zipfile.ZipFile(self._dbFile, 'r', zipfile.ZIP_DEFLATED)
-			except: # Try to recover job archive
+			except Exception: # Try to recover job archive
 				utils.eprint('=' * 40 + '\nStarting recovery of broken job database')
 				utils.eprint(' => Answer "y" if asked "Is this a single-disk archive?"!\n' + '=' * 40)
 				os.system('zip -FF %s --out %s.tmp 2> /dev/null' % (self._dbFile, self._dbFile))
@@ -40,7 +40,7 @@ class ZippedJobDB(JobDB):
 					(jobNum, tid) = tuple(map(lambda s: int(s[1:]), fnTarInfo.split('_', 1)))
 					try:
 						rawData = tar.open(fnTarInfo).read()
-					except:
+					except Exception:
 						pass
 				for broken in brokenList:
 					os.system('zip %s -d %s' % (self._dbFile, broken))
@@ -85,7 +85,7 @@ class Migrate2ZippedJobDB(ZippedJobDB):
 				oldDB.readJobs(-1)
 				for jobNum in oldDB.getJobs():
 					self.commit(jobNum, oldDB.get(jobNum))
-			except:
+			except Exception:
 				utils.removeFiles([dbFile])
 				raise
 			del log

@@ -1,4 +1,4 @@
-#-#  Copyright 2014 Karlsruhe Institute of Technology
+#-#  Copyright 2014-2015 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -28,7 +28,8 @@ import time
 
 # GC modules
 from grid_control.abstract import LoadableObject
-from grid_control.exceptions import AbstractError, InstallationError, RuntimeError
+from grid_control.exceptions import AbstractError
+from grid_control.gc_exceptions import InstallationError, RuntimeError
 from grid_control.utils import InstallationError, LoggedProcess, ensureDirExists, resolveInstallPath
 from python_compat import lru_cache
 
@@ -241,7 +242,7 @@ class LocalProcessAdapter(ProcessAdapterInterface):
 	def createURI(self, elementMap):
 		try:
 			return 'localhost:///%s' % elementMap['path']
-		except:
+		except Exception:
 			return 'localhost://'
 
 	def _initInterfaces(self, **kwargs):

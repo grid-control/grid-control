@@ -78,7 +78,7 @@ class FileMutex:
 		try:
 			if os.path.exists(self.lockfile):
 				os.unlink(self.lockfile)
-		except:
+		except Exception:
 			pass
 
 
@@ -114,7 +114,7 @@ def getCMSSWInfo(tarPath):
 	for fwkReport in map(lambda fn: tarFile.extractfile(fn), fwkReports):
 		try:
 			yield xml.dom.minidom.parse(fwkReport)
-		except:
+		except Exception:
 			print 'Error while parsing %s' % tarPath
 			raise
 

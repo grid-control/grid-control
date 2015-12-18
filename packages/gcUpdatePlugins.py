@@ -41,7 +41,7 @@ if __name__ == '__main__':
 	def sc(x, y):
 		try:
 			return issubclass(x, y)
-		except:
+		except Exception:
 			pass
 		return None
 
@@ -53,7 +53,7 @@ if __name__ == '__main__':
 			exec(imp)
 			str = __builtins__.str # undo unicode magic by externals
 			clsList.extend(filter(lambda x: sc(x, LoadableObject), map(eval, list(dir()))))
-		except:
+		except Exception:
 			print('Unable to exec "%s"!' % imp)
 
 	def getBaseNames(cls):

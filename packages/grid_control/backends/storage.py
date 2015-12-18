@@ -15,9 +15,13 @@
 import os, sys, shutil
 from grid_control import utils
 from grid_control.abstract import NamedObject
-from grid_control.config import validNoVar
-from grid_control.exceptions import ConfigError, RethrowError, RuntimeError
+from grid_control.config import ConfigError, validNoVar
+from grid_control.exceptions import NestedException
+from grid_control.gc_exceptions import RuntimeError
 from python_compat import set
+
+class StorageError(NestedException):
+	pass
 
 # All functions use url_* functions from gc-run.lib (just like the job did...)
 
@@ -69,8 +73,8 @@ class LocalSBStorageManager(StorageManager):
 		for (desc, source, target) in listDescSourceTarget:
 			try:
 				shutil.copy(source, os.path.join(self.sbPath, target))
-			except:
-				raise RethrowError('Unable to transfer "%s" to "%s"!' % (source, os.path.join(self.sbPath, target)))
+			except Exception:
+				raise StorageError('Unable to transfer "%s" to "%s"!' % (source, os.path.join(self.sbPath, target)))
 
 
 class SEStorageManager(StorageManager):
