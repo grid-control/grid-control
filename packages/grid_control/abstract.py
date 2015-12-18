@@ -13,15 +13,13 @@
 #-#  limitations under the License.
 
 import sys, logging
-from grid_control import utils
-from grid_control.exceptions import NestedException
-from python_compat import rsplit, set
+from hpfwk import NestedException
 
 class PluginError(NestedException):
 	pass
 
 # Abstract class taking care of dynamic class loading 
-class LoadableObject(object):
+class Plugin(object):
 	configSections = []
 	moduleMap = {}
 
@@ -29,20 +27,22 @@ class LoadableObject(object):
 		log = logging.getLogger('classloader.%s' % cls.__name__)
 		log.log(logging.DEBUG1, 'Loading class %s' % clsName)
 
-		# resolve class name/alias to complete class path 'UserTask -> grid_control.tasks.user_task.UserTask'
+		# resolve class name/alias to complete class path 'myplugin -> module.submodule.MyPlugin'
 		clsMap = dict(map(lambda (k, v): (k.lower(), v), cls.moduleMap.items()))
 		clsSearchList = [clsName]
 		clsNameStored = clsName
 		clsFormat = lambda cls: '%s:%s' % (cls.__module__, cls.__name__)
-		clsProcessed = set()
+		clsProcessed = []
 		while clsSearchList:
 			clsName = clsSearchList.pop()
 			if clsName in clsProcessed: # Prevent lookup circles
 				continue
-			clsProcessed.add(clsName)
+			clsProcessed.append(clsName)
 			clsModuleList = []
 			if '.' in clsName: # module.submodule.class specification
-				clsModuleName, clsName = rsplit(clsName, '.', 1)
+				clsNameParts = clsName.split('.')
+				clsName = clsNameParts[-1]
+				clsModuleName = str.join('.', clsNameParts[:-1])
 				log.log(logging.DEBUG2, 'Importing module %s' % clsModuleName)
 				oldSysPath = list(sys.path)
 				try:
@@ -86,11 +86,23 @@ class LoadableObject(object):
 			raise PluginError('Error while creating instance of type %s (%s)' % (clsName, clsType))
 	getInstance = classmethod(getInstance)
 
-LoadableObject.pkgPaths = []
+Plugin.pkgPaths = []
 
+# Init plugin search paths
+def initPlugins(basePath):
+	import os, sys
+	# Package discovery
+	for pkgName in filter(lambda p: os.path.isdir(os.path.join(basePath, p)), os.listdir(basePath)):
+		pluginFile = os.path.join(basePath, pkgName, '.PLUGINS')
+		if os.path.exists(pluginFile):
+			__import__(pkgName) # Trigger initialisation of module
+			for line in map(str.strip, open(pluginFile)):
+				if line and not line.endswith(':'):
+					modulePath, module = line.split()
+					Plugin.moduleMap.setdefault(module, []).append('%s.%s' % (modulePath, module))
 
-# NamedObject provides methods used by config.getClass methods to determine relevant sections
-class NamedObject(LoadableObject):
+# NamedPlugin provides functionality to name plugin instances
+class NamedPlugin(Plugin):
 	defaultName = None
 	tagName = None
 
@@ -100,6 +112,12 @@ class NamedObject(LoadableObject):
 	def getObjectName(self):
 		return self._name
 
+# Legacy objects:
+class LoadableObject(Plugin):
+	pass
+
+class NamedObject(NamedPlugin):
+	pass
 
 # General purpose class factory
 class ClassFactory:
@@ -120,6 +138,7 @@ class ClassFactory:
 # Needed by getClass / getClasses to wrap the fixed arguments to the instantiation / name of the instance
 class ClassWrapper:
 	def __init__(self, baseClass, value, config, tags, inherit, defaultName):
+		from grid_control import utils
 		(self._baseClass, self._config, self._tags, self._inherit) = (baseClass, config, tags, inherit)
 		(self._instClassName, self._instName) = utils.optSplit(value, ':')
 		if self._instName == '':
@@ -151,7 +170,7 @@ class ClassWrapper:
 	def getInstance(self, *args, **kwargs):
 		from grid_control.config import TaggedConfigView
 		cls = self.getClass()
-		if issubclass(cls, NamedObject):
+		if issubclass(cls, NamedPlugin):
 			config = self._config.changeView(viewClass = TaggedConfigView,
 				setClasses = [cls], setSections = None, setNames = [self._instName],
 				addTags = self._tags, inheritSections = self._inherit)

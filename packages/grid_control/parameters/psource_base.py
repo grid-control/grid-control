@@ -14,8 +14,7 @@
 
 import time
 from grid_control import utils
-from grid_control.abstract import LoadableObject
-from grid_control.exceptions import AbstractError, NestedException
+from hpfwk import AbstractError, NestedException, Plugin
 from python_compat import set
 
 class ParameterError(NestedException):
@@ -38,7 +37,7 @@ class ParameterMetadata(str):
 		return "'%s'" % utils.QM(self.untracked, '!%s' % self, self)
 
 
-class ParameterSource(LoadableObject):
+class ParameterSource(Plugin):
 	def create(cls, pconfig, *args, **kwargs):
 		return cls(*args, **kwargs)
 	create = classmethod(create)

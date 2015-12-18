@@ -13,11 +13,11 @@
 #-#  limitations under the License.
 
 from grid_control import utils
-from grid_control.abstract import ClassFactory, LoadableObject
-from grid_control.exceptions import AbstractError
+from grid_control.abstract import ClassFactory
 from grid_control.report import Report
+from hpfwk import AbstractError, Plugin
 
-class GUI(LoadableObject):
+class GUI(Plugin):
 	def __init__(self, config, workflow):
 		self._workflow = workflow
 		self._reportClass = ClassFactory(config,

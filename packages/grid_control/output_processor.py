@@ -14,11 +14,10 @@
 
 import os
 from grid_control import utils
-from grid_control.abstract import LoadableObject
 from grid_control.backends import WMS
-from grid_control.exceptions import AbstractError
+from hpfwk import AbstractError, Plugin
 
-class OutputProcessor(LoadableObject):
+class OutputProcessor(Plugin):
 	def process(self, dn):
 		raise AbstractError
 

@@ -14,8 +14,7 @@
 
 import os, time, fnmatch, operator
 from grid_control import utils
-from grid_control.abstract import LoadableObject
-from grid_control.exceptions import NestedException
+from hpfwk import NestedException, Plugin
 
 class JobError(NestedException):
 	pass
@@ -137,7 +136,7 @@ class JobClass:
 	PROCESSED = mkJobClass(Job.SUCCESS, Job.FAILED, Job.CANCELLED, Job.ABORTED)
 
 
-class JobDB(LoadableObject):
+class JobDB(Plugin):
 	def __init__(self, config, jobLimit = -1, jobSelector = None):
 		self._dbPath = config.getWorkPath('jobs')
 		self._jobMap = self.readJobs(jobLimit)

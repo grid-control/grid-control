@@ -12,14 +12,14 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-from grid_control.abstract import LoadableObject
 from grid_control.backends import WMS
 from grid_control.datasets.splitter_base import DataSplitter
 from grid_control.parameters.psource_base import ParameterInfo, ParameterMetadata
+from hpfwk import Plugin
 from python_compat import set
 
 # Class used by DataParameterSource to convert dataset splittings into parameter data
-class DataSplitProcessor(LoadableObject):
+class DataSplitProcessor(Plugin):
 	def __init__(self, config):
 		pass
 

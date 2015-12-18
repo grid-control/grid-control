@@ -1,4 +1,4 @@
-#-#  Copyright 2007-2015 Karlsruhe Institute of Technology
+#-#  Copyright 2009-2015 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -12,13 +12,16 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-def initGC():
-	import os, sys
-	basePath = os.path.dirname(os.path.dirname(__file__))
-	sys.path.insert(1, basePath) # packages bundled with grid-control have priority
-	os.environ['GC_PACKAGES_PATH'] = basePath # Store grid-control base path in enviroment variable
-	from hpfwk import initPlugins, initLogging
-	from grid_control.logging_setup import logging_defaults
-	initLogging(logging_defaults)
-	initPlugins(basePath)
-initGC()
+def initLogging(initFun = None):
+	import logging
+
+	logLevelDict = {'DEFAULT': 14,
+		'INFO1': 13, 'INFO2': 12, 'INFO3': 11, 'DEBUG1': 9, 'DEBUG2': 8, 'DEBUG3': 7}
+
+	# Register new log levels
+	for name in logLevelDict:
+		setattr(logging, name.upper(), logLevelDict[name]) # Add numerical constant
+		logging.addLevelName(logLevelDict[name], name)     # Register with logging module
+
+	if initFun:
+		initFun()

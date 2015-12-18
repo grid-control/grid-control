@@ -14,7 +14,7 @@
 
 from grid_control.datasets.modifier_base import DatasetModifier
 from grid_control.datasets.provider_base import DataProvider, DatasetError
-from grid_control.exceptions import AbstractError
+from hpfwk import AbstractError
 
 class NickNameProducer(DatasetModifier):
 	def __init__(self, config, name):

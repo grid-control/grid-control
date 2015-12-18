@@ -1,4 +1,4 @@
-#-#  Copyright 2012-2014 Karlsruhe Institute of Technology
+#-#  Copyright 2012-2015 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -13,10 +13,9 @@
 #-#  limitations under the License.
 
 from grid_control import utils
-from grid_control.abstract import LoadableObject
-from grid_control.exceptions import AbstractError
+from hpfwk import AbstractError, Plugin
 
-class InfoScanner(LoadableObject):
+class InfoScanner(Plugin):
 	def __init__(self, config):
 		pass
 

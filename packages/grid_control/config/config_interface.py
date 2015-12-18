@@ -14,11 +14,11 @@
 
 import os, sys, inspect, logging
 from grid_control import utils
-from grid_control.abstract import ClassWrapper, LoadableObject
+from grid_control.abstract import ClassWrapper
 from grid_control.config.chandlers_base import changeImpossible
 from grid_control.config.config_entry import ConfigError, noDefault, standardConfigForm
 from grid_control.config.cview_base import SimpleConfigView
-from grid_control.exceptions import APIError
+from hpfwk import APIError, Plugin
 from python_compat import user_input
 
 # Config interface class accessing typed data using an string interface provided by configView
@@ -216,12 +216,12 @@ class TypedConfigInterface(object):
 		return self._getInternal('paths', obj2str, str2obj, None, option, default, **kwargs)
 
 	# Return class - default class is also given in string form!
-	def getClass(self, option, default = noDefault, cls = LoadableObject, tags = [], inherit = False, defaultName = '', **kwargs):
+	def getClass(self, option, default = noDefault, cls = Plugin, tags = [], inherit = False, defaultName = '', **kwargs):
 		str2obj = lambda value: ClassWrapper(cls, value, self, tags, inherit, defaultName)
 		return self._getInternal('class', str, str2obj, str2obj, option, default, **kwargs)
 
 	# Return classes - default classes are also given in string form!
-	def getClassList(self, option, default = noDefault, cls = LoadableObject, tags = [], inherit = False, defaultName = '', **kwargs):
+	def getClassList(self, option, default = noDefault, cls = Plugin, tags = [], inherit = False, defaultName = '', **kwargs):
 		parseSingle = lambda value: ClassWrapper(cls, value, self, tags, inherit, defaultName)
 		str2obj = lambda value: map(parseSingle, utils.parseList(value, None, onEmpty = []))
 		obj2str = lambda value: str.join('\n', map(str, value))

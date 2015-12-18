@@ -13,9 +13,9 @@
 #-#  limitations under the License.
 
 import logging
-from grid_control.abstract import NamedObject
+from hpfwk import NamedPlugin
 
-class DatasetModifier(NamedObject):
+class DatasetModifier(NamedPlugin):
 	tagName = 'dmod'
 
 	def __init__(self, config, name):

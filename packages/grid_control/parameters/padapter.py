@@ -14,13 +14,12 @@
 
 import os, gzip
 from grid_control import utils
-from grid_control.abstract import LoadableObject
-from grid_control.exceptions import APIError
 from grid_control.parameters.psource_base import ParameterInfo, ParameterMetadata, ParameterSource
 from grid_control.parameters.psource_file import GCDumpParameterSource
+from hpfwk import APIError, Plugin
 from python_compat import md5, set, sorted
 
-class ParameterAdapter(LoadableObject):
+class ParameterAdapter(Plugin):
 	def __init__(self, config, source):
 		self._source = source
 		self._prune = True

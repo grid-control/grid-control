@@ -14,7 +14,7 @@
 
 import logging
 from grid_control import utils
-from grid_control.abstract import ClassFactory, NamedObject
+from grid_control.abstract import ClassFactory
 from grid_control.backends import WMS
 from grid_control.config import TaggedConfigView
 from grid_control.gui import GUI
@@ -22,14 +22,15 @@ from grid_control.job_manager import JobManager
 from grid_control.logging_setup import LogEveryNsec
 from grid_control.monitoring import Monitoring
 from grid_control.tasks import TaskModule
+from hpfwk import NamedPlugin
 
 # Workflow class
-class Workflow(NamedObject):
-	configSections = NamedObject.configSections + ['global', 'workflow']
+class Workflow(NamedPlugin):
+	configSections = NamedPlugin.configSections + ['global', 'workflow']
 	tagName = 'workflow'
 
 	def __init__(self, config, name):
-		NamedObject.__init__(self, config, name)
+		NamedPlugin.__init__(self, config, name)
 		self._workDir = config.getWorkPath()
 		# Initialise task module
 		self.task = config.getClass(['task', 'module'], cls = TaskModule, tags = [self]).getInstance()

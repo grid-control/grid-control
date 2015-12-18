@@ -14,17 +14,16 @@
 
 import os, copy
 from grid_control import utils
-from grid_control.abstract import ClassFactory, LoadableObject
+from grid_control.abstract import ClassFactory
 from grid_control.config import TaggedConfigView, createConfigFactory
 from grid_control.datasets.modifier_base import DatasetModifier
-from grid_control.exceptions import AbstractError, NestedException
+from hpfwk import AbstractError, NestedException, Plugin
 from python_compat import StringBuffer
 
 class DatasetError(NestedException):
 	pass
 
-
-class DataProvider(LoadableObject):
+class DataProvider(Plugin):
 	def __init__(self, config, datasetExpr, datasetNick, datasetID):
 		(self._datasetExpr, self._datasetNick, self._datasetID) = (datasetExpr, datasetNick, datasetID)
 		self._cache = None

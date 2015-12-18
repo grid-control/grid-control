@@ -14,12 +14,11 @@
 
 import re, time, operator
 from grid_control import utils
-from grid_control.abstract import LoadableObject
-from grid_control.exceptions import AbstractError
 from grid_control.gc_exceptions import UserError
 from grid_control.job_db import Job
+from hpfwk import AbstractError, Plugin
 
-class JobSelector(LoadableObject):
+class JobSelector(Plugin):
 	def create(arg, **kwargs):
 		if arg:
 			return MultiJobSelector(arg, **kwargs)

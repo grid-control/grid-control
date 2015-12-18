@@ -46,19 +46,22 @@ if __name__ == '__main__':
 		return None
 
 	clsList = []
-	from grid_control.abstract import LoadableObject
+	from hpfwk import Plugin, NamedPlugin
 
 	for imp in recurse('.'):
 		try:
 			exec(imp)
 			str = __builtins__.str # undo unicode magic by externals
-			clsList.extend(filter(lambda x: sc(x, LoadableObject), map(eval, list(dir()))))
+			clsList.extend(filter(lambda x: sc(x, Plugin), map(eval, list(dir()))))
 		except Exception:
+			raise
 			print('Unable to exec "%s"!' % imp)
 
+	topClasses = [Plugin, NamedPlugin]
 	def getBaseNames(cls):
-		if ((LoadableObject in cls.__bases__) or (NamedObject in cls.__bases__)) and (cls != NamedObject):
-			return ['%s.%s' % (cls.__module__, cls.__name__)]
+		for topClass in topClasses:
+			if (topClass in cls.__bases__) and (cls not in topClasses):
+				return ['%s.%s' % (cls.__module__, cls.__name__)]
 		result = []
 		for clsBase in cls.__bases__:
 			result.extend(getBaseNames(clsBase))
@@ -73,7 +76,7 @@ if __name__ == '__main__':
 		for baseClass in sorted(packages[package]):
 			outputLine = '%s:\n' % baseClass
 			for cls in sorted(packages[package][baseClass], key = lambda x: (x.__module__, x.__name__)):
-				if cls not in [LoadableObject, NamedObject]:
+				if cls not in topClasses:
 					outputLine += ('%s\t%s\n' % (cls.__module__, cls.__name__))
 			output.append(outputLine)
 		open(os.path.join(package, '.PLUGINS'), 'wb').write(str.join('\n', output))

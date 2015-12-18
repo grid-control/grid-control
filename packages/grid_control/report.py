@@ -13,11 +13,10 @@
 #-#  limitations under the License.
 
 from grid_control import utils
-from grid_control.abstract import LoadableObject
-from grid_control.exceptions import AbstractError
 from grid_control.job_db import Job
+from hpfwk import AbstractError, Plugin
 
-class Report(LoadableObject):
+class Report(Plugin):
 	def __init__(self, jobDB, task, jobs = None, configString = ''):
 		if jobs == None:
 			jobs = jobDB.getJobs()

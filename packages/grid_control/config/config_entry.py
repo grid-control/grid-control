@@ -13,7 +13,7 @@
 #-#  limitations under the License.
 
 from grid_control import utils
-from grid_control.exceptions import APIError, NestedException
+from hpfwk import APIError, NestedException
 from python_compat import set, sorted
 
 class ConfigError(NestedException):

@@ -13,8 +13,7 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-import json
-import os
+import os, json
 from grid_control.gc_exceptions import UserError
 from grid_control.utils.webservice import RestClient, parseJSON
 

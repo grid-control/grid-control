@@ -13,10 +13,10 @@
 #-#  limitations under the License.
 
 import os, re, sys, glob, stat, time, Queue, errno, popen2, signal, fnmatch, logging, tarfile, operator, threading
-from grid_control.exceptions import APIError
 from grid_control.gc_exceptions import InstallationError, RuntimeError, UserError
 from grid_control.utils.parsing import parseBool, parseDict, parseInt, parseList, parseStr, parseTime, parseType, strGuid, strTime, strTimeShort
 from grid_control.utils.thread_tools import TimeoutException, hang_protection
+from hpfwk import APIError
 from python_compat import lru_cache, md5, next, set, sorted, user_input
 
 def QM(cond, a, b):

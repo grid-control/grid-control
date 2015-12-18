@@ -15,9 +15,6 @@
 import os, sys, time, logging
 from python_compat import set
 
-logLevelDict = {'DEFAULT': 14, # setLevel(logging.DEFAULT - <verbosity level>)
-	'INFO1': 13, 'INFO2': 12, 'INFO3': 11, 'DEBUG1': 9, 'DEBUG2': 8, 'DEBUG3': 7}
-
 class LogOnce(logging.Filter):
 	def __init__(self):
 		self._memory = set()
@@ -76,12 +73,6 @@ def logging_defaults():
 		logging.getLogger("exception").propagate = False
 		logging.getLogger("exception").addHandler(handler_ex)
 	logging.getLogger("exception").setLevel(logging.DEBUG)
-
-	# Register new log levels
-	for name in logLevelDict:
-		setattr(logging, name.upper(), logLevelDict[name]) # Add numerical constant
-		logging.addLevelName(logLevelDict[name], name)     # Register with logging module
-logging_defaults()
 
 
 def logging_setup(config):

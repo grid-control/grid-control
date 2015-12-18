@@ -13,20 +13,20 @@
 #-#  limitations under the License.
 
 import random
-from grid_control.abstract import NamedObject
 from grid_control.config import TaggedConfigView
 from grid_control.parameters.config_param import ParameterConfig
 from grid_control.parameters.padapter import ParameterAdapter
 from grid_control.parameters.psource_basic import ConstParameterSource, CounterParameterSource, RNGParameterSource, RequirementParameterSource
 from grid_control.parameters.psource_data import DataParameterSource
 from grid_control.parameters.psource_meta import CrossParameterSource, RepeatParameterSource, ZipLongParameterSource
+from hpfwk import NamedPlugin
 
-class ParameterFactory(NamedObject):
-	configSections = NamedObject.configSections + ['parameters']
+class ParameterFactory(NamedPlugin):
+	configSections = NamedPlugin.configSections + ['parameters']
 	tagName = 'parameters'
 
 	def __init__(self, config, name):
-		NamedObject.__init__(self, config, name)
+		NamedPlugin.__init__(self, config, name)
 		self.adapter = config.get('parameter adapter', 'TrackedParameterAdapter')
 		self.paramConfig = ParameterConfig(config.changeView(setSections = ['parameters']), self.adapter != 'TrackedParameterAdapter')
 

@@ -15,14 +15,14 @@
 # GCSCF: DEF,ENC
 import os, sys, logging
 from grid_control import utils
-from grid_control.abstract import LoadableObject
 from grid_control.config.config_entry import ConfigEntry, ConfigError
 from grid_control.utils.data_structures import UniqueList
 from grid_control.utils.thread_tools import TimeoutException, hang_protection
+from hpfwk import Plugin
 from python_compat import rsplit
 
 # Class to fill config containers with settings
-class ConfigFiller(LoadableObject):
+class ConfigFiller(Plugin):
 	def _addEntry(self, container, section, option, value, source):
 		option = option.strip()
 		opttype = '='

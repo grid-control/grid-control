@@ -1,4 +1,4 @@
-#-#  Copyright 2007-2015 Karlsruhe Institute of Technology
+#-#  Copyright 2009-2015 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -12,13 +12,6 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-def initGC():
-	import os, sys
-	basePath = os.path.dirname(os.path.dirname(__file__))
-	sys.path.insert(1, basePath) # packages bundled with grid-control have priority
-	os.environ['GC_PACKAGES_PATH'] = basePath # Store grid-control base path in enviroment variable
-	from hpfwk import initPlugins, initLogging
-	from grid_control.logging_setup import logging_defaults
-	initLogging(logging_defaults)
-	initPlugins(basePath)
-initGC()
+from hpf_exceptions import APIError, AbstractError, NestedException, debugInterruptHandler
+from hpf_logging import initLogging
+from grid_control.abstract import NamedPlugin, Plugin, initPlugins

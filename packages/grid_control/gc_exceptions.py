@@ -1,4 +1,4 @@
-#-#  Copyright 2013-2015 Karlsruhe Institute of Technology
+#-#  Copyright 2015 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -13,7 +13,7 @@
 #-#  limitations under the License.
 
 import os, sys, logging
-from grid_control.exceptions import NestedException
+from hpfwk import NestedException
 
 class GCLogHandler(logging.FileHandler):
 	def __init__(self, fn, *args, **kwargs):

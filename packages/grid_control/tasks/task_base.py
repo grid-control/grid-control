@@ -14,21 +14,20 @@
 
 import os, random
 from grid_control import utils
-from grid_control.abstract import NamedObject
 from grid_control.backends import WMS
 from grid_control.config import TaggedConfigView, changeInitNeeded
-from grid_control.exceptions import AbstractError
 from grid_control.parameters import ParameterFactory, ParameterInfo
+from hpfwk import AbstractError, NamedPlugin
 from time import strftime, time
 from python_compat import lru_cache, md5
 
-class TaskModule(NamedObject):
-	configSections = NamedObject.configSections + ['task']
+class TaskModule(NamedPlugin):
+	configSections = NamedPlugin.configSections + ['task']
 	tagName = 'task'
 
 	# Read configuration options and init vars
 	def __init__(self, config, name):
-		NamedObject.__init__(self, config, name)
+		NamedPlugin.__init__(self, config, name)
 		initSandbox = changeInitNeeded('sandbox')
 
 		# Task requirements

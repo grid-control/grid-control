@@ -14,21 +14,21 @@
 
 import math, time, bisect, random, logging
 from grid_control import utils
-from grid_control.abstract import NamedObject
 from grid_control.config import ConfigError
 from grid_control.gc_exceptions import RuntimeError
 from grid_control.job_db import Job, JobClass, JobDB
 from grid_control.job_selector import AndJobSelector, ClassSelector, JobSelector
 from grid_control.output_processor import TaskOutputProcessor
 from grid_control.report import Report
+from hpfwk import NamedPlugin
 from python_compat import set, sorted
 
-class JobManager(NamedObject):
-	configSections = NamedObject.configSections + ['jobs']
+class JobManager(NamedPlugin):
+	configSections = NamedPlugin.configSections + ['jobs']
 	tagName = 'jobmgr'
 
 	def __init__(self, config, name, task, eventhandler):
-		NamedObject.__init__(self, config, name)
+		NamedPlugin.__init__(self, config, name)
 		(self._task, self._eventhandler) = (task, eventhandler)
 		self.jobLimit = config.getInt('jobs', -1, onChange = None)
 		selected = JobSelector.create(config.get('selected', '', onChange = None), task = self._task)

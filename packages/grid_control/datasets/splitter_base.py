@@ -14,11 +14,10 @@
 
 import os, copy
 from grid_control import utils
-from grid_control.abstract import LoadableObject
 from grid_control.config import createConfigFactory, noDefault
 from grid_control.datasets.provider_base import DataProvider
-from grid_control.exceptions import AbstractError
 from grid_control.gc_exceptions import RuntimeError
+from hpfwk import AbstractError, Plugin
 from python_compat import next
 
 def fast_search(lst, cmp_op):
@@ -37,7 +36,7 @@ ResyncMode = utils.makeEnum(['disable', 'complete', 'changed', 'ignore']) # prio
 ResyncMode.noChanged = [ResyncMode.disable, ResyncMode.complete, ResyncMode.ignore]
 ResyncOrder = utils.makeEnum(['append', 'preserve', 'fillgap', 'reorder']) # reorder mechanism
 
-class DataSplitter(LoadableObject):
+class DataSplitter(Plugin):
 	def __init__(self, config):
 		self.config = config
 		self.splitSource = None

@@ -14,7 +14,7 @@
 
 from grid_control.config.config_entry import standardConfigForm
 from grid_control.config.cview_base import SimpleConfigView, selectorUnchanged
-from grid_control.exceptions import APIError
+from hpfwk import APIError
 
 # Simple ConfigView implementation
 class TaggedConfigView(SimpleConfigView):
