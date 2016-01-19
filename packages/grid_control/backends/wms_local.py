@@ -1,4 +1,4 @@
-#-#  Copyright 2009-2015 Karlsruhe Institute of Technology
+#-#  Copyright 2009-2016 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -30,9 +30,9 @@ class LocalWMS(BasicWMS):
 		(self.submitExec, self.statusExec, self.cancelExec) = (submitExec, statusExec, cancelExec)
 		BasicWMS.__init__(self, config, name)
 
-		self.brokerSite = config.getClass('site broker', 'UserBroker', cls = Broker,
+		self.brokerSite = config.getPlugin('site broker', 'UserBroker', cls = Broker,
 			inherit = True, tags = [self]).getInstance('sites', 'sites', self.getNodes)
-		self.brokerQueue = config.getClass('queue broker', 'UserBroker', cls = Broker,
+		self.brokerQueue = config.getPlugin('queue broker', 'UserBroker', cls = Broker,
 			inherit = True, tags = [self]).getInstance('queue', 'queues', self.getQueues)
 
 		self.sandCache = []

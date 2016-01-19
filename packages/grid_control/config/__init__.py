@@ -1,4 +1,4 @@
-#-#  Copyright 2013-2015 Karlsruhe Institute of Technology
+#-#  Copyright 2013-2016 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -25,5 +25,5 @@ from grid_control.config.cview_tagged import TaggedConfigView
 # These config entries are stored in an ConfigContainer, which makes the
 # entries accessible via "section" and "option" specifiers.
 
-# The type parsing config interface (getInt, getBool, getClass, ...) is defined
+# The type parsing config interface (getInt, getBool, getPlugin, ...) is defined
 # in the TypedConfigInterface class

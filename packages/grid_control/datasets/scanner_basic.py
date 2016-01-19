@@ -1,4 +1,4 @@
-#-#  Copyright 2010-2015 Karlsruhe Institute of Technology
+#-#  Copyright 2010-2016 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -33,7 +33,7 @@ class OutputDirsFromConfig(InfoScanner):
 		extConfigFN = config.getPath('source config')
 		extConfig = createConfigFactory(extConfigFN).getConfig(setSections = ['global'])
 		self.extWorkDir = extConfig.getWorkPath()
-		self.extTask = extConfig.getClass(['task', 'module'], cls = TaskModule).getInstance()
+		self.extTask = extConfig.getPlugin(['task', 'module'], cls = TaskModule).getInstance()
 		selector = config.get('source job selector', '')
 		extJobDB = JobDB(extConfig, jobSelector = lambda jobNum, jobObj: jobObj.state == Job.SUCCESS)
 		self.selected = sorted(extJobDB.getJobs(JobSelector.create(selector, task = self.extTask)))

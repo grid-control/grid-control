@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-#-#  Copyright 2007-2015 Karlsruhe Institute of Technology
+#-#  Copyright 2007-2016 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -13,12 +13,12 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-import sys, os, signal, optparse, logging
+import os, sys, signal, logging, optparse
 
 # Load grid-control package
 sys.path.append(os.path.abspath(os.path.join(sys.path[0], 'packages')))
 from grid_control import utils
-from grid_control.config import createConfigFactory, ConfigEntry
+from grid_control.config import ConfigEntry, createConfigFactory
 from grid_control.config.cfiller_base import ConfigFiller, StringConfigFiller
 from grid_control.logging_setup import logging_setup
 from grid_control.workflow import Workflow
@@ -129,7 +129,7 @@ if __name__ == '__main__':
 
 		# Create workflow and freeze config settings
 		globalConfig = config.changeView(setSections = ['global'])
-		workflow = globalConfig.getClass('workflow', 'Workflow:global', cls = Workflow).getInstance()
+		workflow = globalConfig.getPlugin('workflow', 'Workflow:global', cls = Workflow).getInstance()
 		configFactory.freezeConfig(writeConfig = config.getState('init', detail = 'config'))
 
 		# Give config help

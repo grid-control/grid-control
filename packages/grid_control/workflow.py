@@ -32,20 +32,20 @@ class Workflow(NamedPlugin):
 		NamedPlugin.__init__(self, config, name)
 		self._workDir = config.getWorkPath()
 		# Initialise task module
-		self.task = config.getClass(['task', 'module'], cls = TaskModule, tags = [self]).getInstance()
+		self.task = config.getPlugin(['task', 'module'], cls = TaskModule, tags = [self]).getInstance()
 		utils.vprint('Current task ID: %s' % self.task.taskID, -1)
 		utils.vprint('Task started on %s' % self.task.taskDate, -1)
 
 		# Initialise monitoring module
-		self.monitor = config.getCompositeClass('monitor', 'scripts', 'MultiMonitor',
+		self.monitor = config.getCompositePlugin('monitor', 'scripts', 'MultiMonitor',
 			cls = Monitoring, tags = [self, self.task]).getInstance(self.task)
 
 		# Initialise workload management interface
-		self.wms = config.getCompositeClass('backend', 'grid', 'MultiWMS',
+		self.wms = config.getCompositePlugin('backend', 'grid', 'MultiWMS',
 			cls = WMS, tags = [self, self.task]).getInstance()
 
 		# Initialise job database
-		jobManagerCls = config.getClass('job manager', 'SimpleJobManager',
+		jobManagerCls = config.getPlugin('job manager', 'SimpleJobManager',
 			cls = JobManager, tags = [self, self.task, self.wms])
 		self.jobManager = jobManagerCls.getInstance(self.task, self.monitor)
 
@@ -58,7 +58,7 @@ class Workflow(NamedPlugin):
 
 		self._checkSpace = config.getInt('workdir space', 10, onChange = None)
 		self._submitFlag = config.getBool('submission', True, onChange = None)
-		guiClass = config.getClass('gui', 'SimpleConsole', cls = GUI, onChange = None)
+		guiClass = config.getPlugin('gui', 'SimpleConsole', cls = GUI, onChange = None)
 		self._gui = guiClass.getInstance(config, self)
 
 

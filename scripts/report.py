@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-#-#  Copyright 2009-2015 Karlsruhe Institute of Technology
+#-#  Copyright 2009-2016 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -35,11 +35,11 @@ def main():
 	task = None
 	tags = []
 	if opts.useTask:
-		task = config.getClass(['task', 'module'], cls = TaskModule).getInstance()
+		task = config.getPlugin(['task', 'module'], cls = TaskModule).getInstance()
 		tags = [task]
 
 	# Initialise job database
-	jobManagerCls = config.getClass('job manager', 'SimpleJobManager', cls = JobManager, tags = tags)
+	jobManagerCls = config.getPlugin('job manager', 'SimpleJobManager', cls = JobManager, tags = tags)
 	jobDB = jobManagerCls.getInstance(task, None).jobDB
 	log = utils.ActivityLog('Filtering job entries')
 	selected = jobDB.getJobs(JobSelector.create(opts.selector, task = task))

@@ -1,4 +1,4 @@
-#-#  Copyright 2012-2015 Karlsruhe Institute of Technology
+#-#  Copyright 2012-2016 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -106,7 +106,7 @@ class Condor(BasicWMS):
 			if not os.path.isfile(self.historyFile):
 				self.historyFile = None
 		# broker for selecting Sites
-		self.brokerSite = config.getClass('site broker', 'UserBroker', cls = Broker,
+		self.brokerSite = config.getPlugin('site broker', 'UserBroker', cls = Broker,
 			tags = [self]).getInstance('sites', 'sites', self.getSites)
 		self.debugFlush()
 

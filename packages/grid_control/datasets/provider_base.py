@@ -28,9 +28,9 @@ class DataProvider(Plugin):
 		self._cache = None
 		self.sitefilter = config.getList('sites', [])
 
-		nickProducerClass = config.getClass('nickname source', 'SimpleNickNameProducer', cls = DatasetModifier)
+		nickProducerClass = config.getPlugin('nickname source', 'SimpleNickNameProducer', cls = DatasetModifier)
 		self._nickProducer = nickProducerClass.getInstance()
-		self._datasetModifier = config.getCompositeClass('dataset modifier',
+		self._datasetModifier = config.getCompositePlugin('dataset modifier',
 			'EntriesConsistencyFilter URLFilter URLCountFilter EntriesCountFilter EmptyFilter UniqueFilter LocationFilter',
 			'MultiDataModifier', cls = DatasetModifier).getInstance()
 

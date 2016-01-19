@@ -93,7 +93,7 @@ utils.makeEnum(['WALLTIME', 'CPUTIME', 'MEMORY', 'CPUS', 'BACKEND', 'SITES', 'QU
 class InactiveWMS(WMS):
 	def __init__(self, config, wmsName):
 		WMS.__init__(self, config, wmsName)
-		self._token = config.getCompositeClass(['access token', 'proxy'], 'TrivialAccessToken',
+		self._token = config.getCompositePlugin(['access token', 'proxy'], 'TrivialAccessToken',
 			'MultiAccessToken', cls = AccessToken, inherit = True, tags = [self]).getInstance()
 
 	def canSubmit(self, neededTime, canCurrentlySubmit):
@@ -133,14 +133,14 @@ class BasicWMS(WMS):
 		self._failPath = config.getWorkPath('fail')
 
 		# Initialise access token, broker and storage manager
-		self._token = config.getCompositeClass(['access token', 'proxy'], 'TrivialAccessToken',
+		self._token = config.getCompositePlugin(['access token', 'proxy'], 'TrivialAccessToken',
 			'MultiAccessToken', cls = AccessToken, inherit = True, tags = [self]).getInstance()
 
 		# UI -> SE -> WN
-		self.smSEIn = config.getClass('se input manager', 'SEStorageManager', cls = StorageManager, tags = [self]).getInstance('se', 'se input', 'SE_INPUT')
-		self.smSBIn = config.getClass('sb input manager', 'LocalSBStorageManager', cls = StorageManager, tags = [self]).getInstance('sandbox', 'sandbox', 'SB_INPUT')
+		self.smSEIn = config.getPlugin('se input manager', 'SEStorageManager', cls = StorageManager, tags = [self]).getInstance('se', 'se input', 'SE_INPUT')
+		self.smSBIn = config.getPlugin('sb input manager', 'LocalSBStorageManager', cls = StorageManager, tags = [self]).getInstance('sandbox', 'sandbox', 'SB_INPUT')
 		# UI <- SE <- WN
-		self.smSEOut = config.getClass('se output manager', 'SEStorageManager', cls = StorageManager, tags = [self]).getInstance('se', 'se output', 'SE_OUTPUT')
+		self.smSEOut = config.getPlugin('se output manager', 'SEStorageManager', cls = StorageManager, tags = [self]).getInstance('se', 'se output', 'SE_OUTPUT')
 		self.smSBOut = None
 
 

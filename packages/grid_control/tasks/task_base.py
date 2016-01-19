@@ -1,4 +1,4 @@
-#-#  Copyright 2007-2015 Karlsruhe Institute of Technology
+#-#  Copyright 2007-2016 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -67,7 +67,7 @@ class TaskModule(NamedPlugin):
 		self.errorDict = dict(self.updateErrorDict(utils.pathShare('gc-run.lib')))
 
 		# Init parameter source manager
-		pm = config.getClass('parameter factory', 'SimpleParameterFactory',
+		pm = config.getPlugin('parameter factory', 'SimpleParameterFactory',
 			cls = ParameterFactory, inherit = True).getInstance()
 		configParam = config.changeView(viewClass = TaggedConfigView, addSections = ['parameters'], addTags = [self])
 		self.setupJobParameters(configParam, pm)

@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-#-#  Copyright 2012-2015 Karlsruhe Institute of Technology
+#-#  Copyright 2012-2016 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -84,7 +84,7 @@ def main():
 
 	# Initialize ParameterFactory
 	configTask = config.changeView(setSections = [config.get(['task', 'module'], 'DummyTask')])
-	pm = config.getClass('parameter factory', 'SimpleParameterFactory', cls = ParameterFactory).getInstance()
+	pm = config.getPlugin('parameter factory', 'SimpleParameterFactory', cls = ParameterFactory).getInstance()
 
 	# Create dataset parameter source
 	class DummySplitter:

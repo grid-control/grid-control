@@ -21,7 +21,7 @@ from grid_control.config.cview_tagged import TaggedConfigView
 from hpfwk import APIError, NamedPlugin, Plugin, PluginError
 from python_compat import user_input
 
-# Needed by getClass / getClasses to wrap the fixed arguments to the instantiation / name of the instance
+# Needed by getPlugin / getCompositePlugin to wrap the fixed arguments to the instantiation / name of the instance
 class ClassWrapper(object):
 	def __init__(self, baseClass, value, config, tags, inherit, defaultName, pluginPaths):
 		(self._baseClass, self._config, self._tags, self._inherit, self._pluginPaths) = \
@@ -165,26 +165,22 @@ class TypedConfigInterface(ConfigInterface):
 		return self._getInternal('paths', obj2str, str2obj, None, option, default, **kwargs)
 
 	# Return class - default class is also given in string form!
-	def getClass(self, option, default = noDefault, cls = Plugin, tags = [], inherit = False, defaultName = '', **kwargs):
+	def getPlugin(self, option, default = noDefault, cls = Plugin, tags = [], inherit = False, defaultName = '', **kwargs):
 		str2obj = lambda value: ClassWrapper(cls, value, self, tags, inherit, defaultName, self._getPluginPaths())
-		return self._getInternal('class', str, str2obj, str2obj, option, default, **kwargs)
+		return self._getInternal('plugin', str, str2obj, str2obj, option, default, **kwargs)
 
-	# Return classes - default classes are also given in string form!
-	def getClassList(self, option, default = noDefault, cls = Plugin, tags = [], inherit = False, defaultName = '', **kwargs):
+	# Return composite class - default classes are also given in string form!
+	def getCompositePlugin(self, option, default = noDefault, default_compositor = noDefault, option_compositor = None,
+			cls = Plugin, tags = [], inherit = False, defaultName = '', **kwargs):
 		parseSingle = lambda value: ClassWrapper(cls, value, self, tags, inherit, defaultName, self._getPluginPaths())
 		str2obj = lambda value: map(parseSingle, utils.parseList(value, None, onEmpty = []))
 		obj2str = lambda value: str.join('\n', map(str, value))
-		return self._getInternal('class', obj2str, str2obj, str2obj, option, default, **kwargs)
-
-	# Return composite class
-	def getCompositeClass(self, option, default = noDefault, default_compositor = noDefault, option_compositor = None,
-			cls = Plugin, tags = [], inherit = False, defaultName = '', **kwargs):
-		clsList = self.getClassList(option, default, cls, tags, inherit, defaultName, **kwargs)
+		clsList = self._getInternal('plugins', obj2str, str2obj, str2obj, option, default, **kwargs)
 		if len(clsList) == 1:
 			return clsList[0]
 		if not option_compositor:
 			option_compositor = option + ' manager'
-		clsCompositor = self.getClass(option_compositor, default_compositor, cls, tags, inherit, defaultName, **kwargs)
+		clsCompositor = self.getPlugin(option_compositor, default_compositor, cls, tags, inherit, defaultName, **kwargs)
 		return CompositedClassWrapper(clsCompositor, clsList)
 
 

@@ -1,4 +1,4 @@
-#-#  Copyright 2007-2015 Karlsruhe Institute of Technology
+#-#  Copyright 2007-2016 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -32,10 +32,10 @@ class JobManager(NamedPlugin):
 		(self._task, self._eventhandler) = (task, eventhandler)
 		self.jobLimit = config.getInt('jobs', -1, onChange = None)
 		selected = JobSelector.create(config.get('selected', '', onChange = None), task = self._task)
-		jobDBClass = config.getClass('jobdb', 'JobDB', cls = JobDB)
+		jobDBClass = config.getPlugin('jobdb', 'JobDB', cls = JobDB)
 		self.jobDB = jobDBClass.getInstance(config, self.getMaxJobs(self._task), selected)
 		self.disableLog = config.getWorkPath('disabled')
-		outputProcessorClass = config.getClass('output processor', 'SandboxProcessor', cls = TaskOutputProcessor)
+		outputProcessorClass = config.getPlugin('output processor', 'SandboxProcessor', cls = TaskOutputProcessor)
 		self._outputProcessor = outputProcessorClass.getInstance(task)
 
 		self.timeout = config.getTime('queue timeout', -1, onChange = None)
@@ -44,7 +44,7 @@ class JobManager(NamedPlugin):
 		self.doShuffle = config.getBool('shuffle', False, onChange = None)
 		self.maxRetry = config.getInt('max retry', -1, onChange = None)
 		self.continuous = config.getBool('continuous', False, onChange = None)
-		self._reportClass = config.getClass('abort report', 'LocationReport', cls = Report, onChange = None)
+		self._reportClass = config.getPlugin('abort report', 'LocationReport', cls = Report, onChange = None)
 
 
 	def getMaxJobs(self, task):
