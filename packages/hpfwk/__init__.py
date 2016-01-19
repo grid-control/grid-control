@@ -1,4 +1,4 @@
-#-#  Copyright 2009-2015 Karlsruhe Institute of Technology
+#-#  Copyright 2009-2016 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -12,6 +12,6 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-from hpf_exceptions import APIError, AbstractError, ExceptionCollector, ExceptionFormatter, NestedException, debugInterruptHandler
-from hpf_logging import initLogging
-from grid_control.abstract import NamedPlugin, Plugin, initPlugins
+from hpfwk.hpf_exceptions import APIError, AbstractError, ExceptionCollector, ExceptionFormatter, NestedException, debugInterruptHandler
+from hpfwk.hpf_logging import initLogging
+from hpfwk.hpf_plugin import NamedPlugin, Plugin, PluginError, initPlugins

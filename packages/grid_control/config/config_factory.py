@@ -1,4 +1,4 @@
-#-#  Copyright 2014 Karlsruhe Institute of Technology
+#-#  Copyright 2014-2016 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -15,8 +15,8 @@
 import os, logging
 from grid_control import utils
 from grid_control.config.cfiller_base import CompatConfigFiller, DefaultFilesConfigFiller, DictConfigFiller, GeneralFileConfigFiller, MultiConfigFiller
+from grid_control.config.cinterface_typed import SimpleConfigInterface
 from grid_control.config.config_entry import ConfigContainer
-from grid_control.config.config_interface import SimpleConfigInterface
 from grid_control.config.cview_base import SimpleConfigView
 from grid_control.utils.data_structures import UniqueList
 
@@ -52,7 +52,7 @@ class ConfigFactory(object):
 		pathWork = tmpInterface.getPath('workdir', os.path.join(wdBase, getName('work')), mustExist = False)
 		self._view.pathDict['<WORKDIR>'] = pathWork # tmpInterface still has undefinied
 		# Set dynamic plugin search path
-		tmpInterface.set('module paths', os.getcwd(), '+=')
+		tmpInterface.set('plugin paths', os.getcwd(), '+=')
 
 		# Determine and load stored config settings
 		self._flatCfgPath = os.path.join(pathWork, 'current.conf') # Minimal config file

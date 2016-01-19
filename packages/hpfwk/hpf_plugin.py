@@ -1,4 +1,4 @@
-#-#  Copyright 2013-2015 Karlsruhe Institute of Technology
+#-#  Copyright 2013-2016 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -12,7 +12,7 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-import sys, logging
+import os, sys, logging
 from hpfwk import NestedException
 
 class PluginError(NestedException):
@@ -90,7 +90,6 @@ Plugin.pkgPaths = []
 
 # Init plugin search paths
 def initPlugins(basePath):
-	import os, sys
 	# Package discovery
 	for pkgName in filter(lambda p: os.path.isdir(os.path.join(basePath, p)), os.listdir(basePath)):
 		pluginFile = os.path.join(basePath, pkgName, '.PLUGINS')
@@ -111,64 +110,3 @@ class NamedPlugin(Plugin):
 
 	def getObjectName(self):
 		return self._name
-
-# General purpose class factory
-class ClassFactory:
-	def __init__(self, config, base_opt_def, merge_opt_base, **kwargs):
-		self._proxyList = config.getClassList(base_opt_def[0], base_opt_def[1], **kwargs)
-		self._mergeCls = None
-		if len(self._proxyList) > 1:
-			self._mergeCls = config.getClass(merge_opt_base[0], merge_opt_base[1], **kwargs)
-
-	# Get single instance by merging multiple sub instances if necessary
-	def getInstance(self, *args, **kwargs):
-		if len(self._proxyList) == 1:
-			return self._proxyList[0].getInstance(*args, **kwargs)
-		elif len(self._proxyList) > 1:
-			return self._mergeCls.getInstance(self._proxyList, *args, **kwargs)
-
-
-# Needed by getClass / getClasses to wrap the fixed arguments to the instantiation / name of the instance
-class ClassWrapper:
-	def __init__(self, baseClass, value, config, tags, inherit, defaultName):
-		from grid_control import utils
-		(self._baseClass, self._config, self._tags, self._inherit) = (baseClass, config, tags, inherit)
-		(self._instClassName, self._instName) = utils.optSplit(value, ':')
-		if self._instName == '':
-			if not defaultName:
-				self._instName = self._instClassName.split('.')[-1] # Default: (non fully qualified) class name as instance name
-			else:
-				self._instName = defaultName
-
-	def __eq__(self, other): # Used to check for changes compared to old
-		return str(self) == str(other)
-
-	def __repr__(self):
-		return '<class wrapper for %r (base: %r)>' % (str(self), self._baseClass.__name__)
-
-	def __str__(self):  # Used to serialize config setting
-		if self._instName == self._instClassName.split('.')[-1]: # take care of fully qualified class names
-			return self._instClassName
-		return '%s:%s' % (self._instClassName, self._instName)
-
-	def getObjectName(self):
-		return self._instName
-
-	def getClass(self):
-		from grid_control.config import SimpleConfigView
-		configLoader = self._config.changeView(viewClass = SimpleConfigView, setSections = ['global'])
-		modulePaths = configLoader.getPaths('module paths', mustExist = False, onChange = None)
-		return self._baseClass.getClass(self._instClassName, modulePaths)
-
-	def getInstance(self, *args, **kwargs):
-		from grid_control.config import TaggedConfigView
-		cls = self.getClass()
-		if issubclass(cls, NamedPlugin):
-			config = self._config.changeView(viewClass = TaggedConfigView,
-				setClasses = [cls], setSections = None, setNames = [self._instName],
-				addTags = self._tags, inheritSections = self._inherit)
-			args = [config, self._instName] + list(args)
-		try:
-			return cls(*args, **kwargs)
-		except Exception:
-			raise PluginError('Error while creating instance of type %s (%s)' % (cls, str(self)))

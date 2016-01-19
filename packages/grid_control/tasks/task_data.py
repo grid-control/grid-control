@@ -14,7 +14,6 @@
 
 import os, signal
 from grid_control import utils
-from grid_control.abstract import ClassFactory
 from grid_control.config import TaggedConfigView
 from grid_control.datasets import DataProvider, DataSplitter
 from grid_control.gc_exceptions import UserError
@@ -45,9 +44,8 @@ class DataTask(TaskModule):
 		self.dataSplitter = splitterClass(config)
 
 		# Create and register dataset parameter source
-		paramSplitProcessor = ClassFactory(config,
-			('dataset processor', 'BasicDataSplitProcessor SECheckSplitProcessor'),
-			('dataset processor manager', 'MultiDataSplitProcessor'),
+		paramSplitProcessor = config.getCompositeClass('dataset processor',
+			'BasicDataSplitProcessor SECheckSplitProcessor', 'MultiDataSplitProcessor',
 			cls = DataSplitProcessor).getInstance(config)
 		paramSource = DataParameterSource(config.getWorkPath(), 'data',
 			dataProvider, self.dataSplitter, paramSplitProcessor)

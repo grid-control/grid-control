@@ -1,4 +1,4 @@
-#-#  Copyright 2009-2015 Karlsruhe Institute of Technology
+#-#  Copyright 2009-2016 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -14,7 +14,6 @@
 
 import os, copy
 from grid_control import utils
-from grid_control.abstract import ClassFactory
 from grid_control.config import TaggedConfigView, createConfigFactory
 from grid_control.datasets.modifier_base import DatasetModifier
 from hpfwk import AbstractError, NestedException, Plugin
@@ -31,9 +30,9 @@ class DataProvider(Plugin):
 
 		nickProducerClass = config.getClass('nickname source', 'SimpleNickNameProducer', cls = DatasetModifier)
 		self._nickProducer = nickProducerClass.getInstance()
-		self._datasetModifier = ClassFactory(config,
-			('dataset modifier', 'EntriesConsistencyFilter URLFilter URLCountFilter EntriesCountFilter EmptyFilter UniqueFilter LocationFilter'),
-			('dataset modifier manager', 'MultiDataModifier'), cls = DatasetModifier).getInstance()
+		self._datasetModifier = config.getCompositeClass('dataset modifier',
+			'EntriesConsistencyFilter URLFilter URLCountFilter EntriesCountFilter EmptyFilter UniqueFilter LocationFilter',
+			'MultiDataModifier', cls = DatasetModifier).getInstance()
 
 
 	# Parse dataset format [NICK : [PROVIDER : [(/)*]]] DATASET

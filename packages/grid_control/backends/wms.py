@@ -1,4 +1,4 @@
-#-#  Copyright 2007-2015 Karlsruhe Institute of Technology
+#-#  Copyright 2007-2016 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -16,7 +16,6 @@
 
 import os, glob, shutil, itertools
 from grid_control import utils
-from grid_control.abstract import ClassFactory
 from grid_control.backends.access import AccessToken
 from grid_control.backends.storage import StorageManager
 from grid_control.utils.file_objects import VirtualFile
@@ -94,8 +93,8 @@ utils.makeEnum(['WALLTIME', 'CPUTIME', 'MEMORY', 'CPUS', 'BACKEND', 'SITES', 'QU
 class InactiveWMS(WMS):
 	def __init__(self, config, wmsName):
 		WMS.__init__(self, config, wmsName)
-		self._token = ClassFactory(config, ('access', 'TrivialAccessToken'), ('access manager', 'MultiAccessToken'),
-			cls = AccessToken, inherit = True, tags = [self]).getInstance()
+		self._token = config.getCompositeClass(['access token', 'proxy'], 'TrivialAccessToken',
+			'MultiAccessToken', cls = AccessToken, inherit = True, tags = [self]).getInstance()
 
 	def canSubmit(self, neededTime, canCurrentlySubmit):
 		return True
@@ -134,8 +133,8 @@ class BasicWMS(WMS):
 		self._failPath = config.getWorkPath('fail')
 
 		# Initialise access token, broker and storage manager
-		self._token = ClassFactory(config, (['access token', 'proxy'], 'TrivialAccessToken'), ('access token manager', 'MultiAccessToken'),
-			cls = AccessToken, inherit = True, tags = [self]).getInstance()
+		self._token = config.getCompositeClass(['access token', 'proxy'], 'TrivialAccessToken',
+			'MultiAccessToken', cls = AccessToken, inherit = True, tags = [self]).getInstance()
 
 		# UI -> SE -> WN
 		self.smSEIn = config.getClass('se input manager', 'SEStorageManager', cls = StorageManager, tags = [self]).getInstance('se', 'se input', 'SE_INPUT')

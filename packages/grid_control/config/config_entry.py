@@ -1,4 +1,4 @@
-#-#  Copyright 2014-2015 Karlsruhe Institute of Technology
+#-#  Copyright 2014-2016 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -94,7 +94,7 @@ class ConfigEntry(object):
 					result = None
 				elif result: # with arguments: remove string from current value
 					used.append(entry)
-					result = mkNew(result.replace(entry.value.strip(), ''))
+					result = mkNew(result.value.replace(entry.value.strip(), ''))
 				else:
 					raise ConfigError('Unable to substract "%s" from non-existing value!' % entry.format_opt())
 		return (result, used)
@@ -155,7 +155,7 @@ class ConfigContainer(object):
 		self._content_default.setdefault(entry.option, {}).setdefault(entry.section, entry)
 
 	def append(self, entry):
-		if self._counter == None:
+		if self._read_only:
 			raise APIError('Config container is read-only!')
 		self._counter += 1
 		entry.order = self._counter

@@ -1,4 +1,4 @@
-#-#  Copyright 2014-2015 Karlsruhe Institute of Technology
+#-#  Copyright 2014-2016 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -14,7 +14,6 @@
 
 import logging
 from grid_control import utils
-from grid_control.abstract import ClassFactory
 from grid_control.backends import WMS
 from grid_control.config import TaggedConfigView
 from grid_control.gui import GUI
@@ -38,11 +37,11 @@ class Workflow(NamedPlugin):
 		utils.vprint('Task started on %s' % self.task.taskDate, -1)
 
 		# Initialise monitoring module
-		self.monitor = ClassFactory(config, ('monitor', 'scripts'), ('monitor manager', 'MultiMonitor'),
+		self.monitor = config.getCompositeClass('monitor', 'scripts', 'MultiMonitor',
 			cls = Monitoring, tags = [self, self.task]).getInstance(self.task)
 
 		# Initialise workload management interface
-		self.wms = ClassFactory(config, ('backend', 'grid'), ('backend manager', 'MultiWMS'),
+		self.wms = config.getCompositeClass('backend', 'grid', 'MultiWMS',
 			cls = WMS, tags = [self, self.task]).getInstance()
 
 		# Initialise job database

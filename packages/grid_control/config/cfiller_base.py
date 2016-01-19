@@ -56,7 +56,7 @@ class FileConfigFiller(ConfigFiller):
 					self._addEntry(container, section, option, value, source)
 		searchString = str.join(' ', UniqueList(searchPaths))
 		if self._addSearchPath:
-			self._addEntry(container, 'global', 'module paths+', searchString, str.join(',', self._configFiles))
+			self._addEntry(container, 'global', 'plugin paths+', searchString, str.join(',', self._configFiles))
 
 	def _fillContentFromSingleFile(self, configFile, configFileData, searchPaths, configContent):
 		try:
