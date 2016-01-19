@@ -1,4 +1,4 @@
-#-#  Copyright 2013-2015 Karlsruhe Institute of Technology
+#-#  Copyright 2013-2016 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -66,20 +66,20 @@ def logging_defaults():
 	logException = logging.getLogger("exception")
 	handlerException_stdout = logging.StreamHandler(sys.stderr)
 	handlerException_file = None
+	formatterException_stdout = ExceptionFormatter()
 	for fnLog in [os.path.join(os.environ['GC_PACKAGES_PATH'], '..', 'debug.log'), '/tmp/gc.debug.%d' % os.getuid(), '~/gc.debug']:
 		fnLog = os.path.abspath(os.path.normpath(os.path.expanduser(fnLog)))
 		try:
 			handlerException_file = GCLogHandler(fnLog, 'w')
+			formatterException_stdout = ExceptionFormatter(showCode = False, showVariables = False)
 			break
 		except Exception:
 			pass
+	handlerException_stdout.setFormatter(formatterException_stdout)
+	logException.addHandler(handlerException_stdout)
 	if handlerException_file:
 		handlerException_file.setFormatter(ExceptionFormatter())
-		handlerException_stdout.setFormatter(ExceptionFormatter(showCode = False, showVariables = False))
 		logException.addHandler(handlerException_file)
-	else:
-		handlerException_stdout.setFormatter(ExceptionFormatter())
-	logException.addHandler(handlerException_stdout)
 	logException.propagate = False
 
 
@@ -98,14 +98,17 @@ def logging_setup(config):
 				logger.removeHandler(handler)
 			for dest in config.getList(option, [], onChange = None):
 				if dest == 'stdout':
-					logger.addHandler(logging.StreamHandler(sys.stdout))
+					handler = logging.StreamHandler(sys.stdout)
 				elif dest == 'stderr':
-					logger.addHandler(logging.StreamHandler(sys.stderr))
+					handler = logging.StreamHandler(sys.stderr)
 				elif dest == 'file':
 					option = option.replace('handler', 'file')
-					logger.addHandler(logging.FileHandler(config.get(option, onChange = None), 'w'))
+					handler = logging.FileHandler(config.get(option, onChange = None), 'w')
 				else:
 					raise Exception('Unknown handler [logging] %s = %s' % (option, dest))
+				if option.startswith('exception'):
+					handler.setFormatter(ExceptionFormatter())
+				logger.addHandler(handler)
 		elif option.endswith('level'):
 			logger.setLevel(logLevelDict.get(config.get(option, onChange = None).upper(), 0))
 		elif option.endswith('propagate'):
