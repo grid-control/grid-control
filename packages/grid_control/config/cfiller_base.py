@@ -1,4 +1,4 @@
-#-#  Copyright 2014-2015 Karlsruhe Institute of Technology
+#-#  Copyright 2014-2016 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -78,7 +78,7 @@ class FileConfigFiller(ConfigFiller):
 				except Exception:
 					raise ConfigError(exceptionText + '\nUnable to strip comments!')
 				exceptionText = 'Unable to parse config file %s:%d\n\t%r' % (configFile, idx, line)
-				if not line.strip() or line.startswith('#'): # skip empty lines or comment lines
+				if not line.strip() or line.lstrip().startswith('#'): # skip empty lines or comment lines
 					return
 				elif line[0].isspace():
 					try:
