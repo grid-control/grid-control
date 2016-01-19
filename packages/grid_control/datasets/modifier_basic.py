@@ -1,4 +1,4 @@
-#-#  Copyright 2015 Karlsruhe Institute of Technology
+#-#  Copyright 2015-2016 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -148,7 +148,7 @@ class UniqueFilter(DatasetModifier):
 		if self._checkURL != DatasetUniqueMode.ignore:
 			def processFI(fiList):
 				for fi in fiList:
-					urlHash = md5(repr((fi[DataProvider.URL], fi[DataProvider.NEntries], fi[DataProvider.Metadata]))).digest()
+					urlHash = md5(repr((fi[DataProvider.URL], fi[DataProvider.NEntries], fi.get(DataProvider.Metadata)))).digest()
 					if urlHash in self._recordedURL:
 						msg = 'Multiple occurences of URL: "%s"!' % fi[DataProvider.URL]
 						if self._checkURL == DatasetUniqueMode.warn:
@@ -165,9 +165,9 @@ class UniqueFilter(DatasetModifier):
 
 		# Check uniqueness of blocks
 		if self._checkBlock != DatasetUniqueMode.ignore:
-			blockHash = md5(repr((block[DataProvider.Dataset], block[DataProvider.BlockName],
+			blockHash = md5(repr((block.get(DataProvider.Dataset), block[DataProvider.BlockName],
 				recordedBlockURL, block[DataProvider.NEntries],
-				block[DataProvider.Locations], block[DataProvider.Metadata]))).digest()
+				block[DataProvider.Locations], block.get(DataProvider.Metadata)))).digest()
 			if blockHash in self._recordedBlock:
 				msg = 'Multiple occurences of block: "%s#%s"!' % (fi[DataProvider.Dataset], fi[DataProvider.BlockName])
 				if self._checkBlock == DatasetUniqueMode.warn:
