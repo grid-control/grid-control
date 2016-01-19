@@ -1,4 +1,4 @@
-#-#  Copyright 2010-2015 Karlsruhe Institute of Technology
+#-#  Copyright 2010-2016 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -58,7 +58,7 @@ class ObjectsFromCMSSW(InfoScanner):
 				if cfgHash not in self.gtStore:
 					cfgContentEnv = {}
 					try:
-						exec cfgContent in cfgContentEnv
+						exec(cfgContent, cfgContentEnv)
 						self.gtStore[cfgHash] = cfgContentEnv['process'].GlobalTag.globaltag.value()
 					except Exception:
 						self.gtStore[cfgHash] = 'unknown:All'
