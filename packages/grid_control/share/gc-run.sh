@@ -1,5 +1,5 @@
 #!/bin/bash
-#-#  Copyright 2008-2015 Karlsruhe Institute of Technology
+#-#  Copyright 2008-2016 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -19,7 +19,14 @@ export GC_DOCLEANUP="true"
 source gc-run.lib || exit 101
 
 set +f
-trap abort 0 1 2 3 15
+function abort_signal() {
+	debug_helper $FUNCNAME "$@"
+	abort
+}
+for GC_SIGNAL in 0 1 2 3 15; do
+	trap "abort_signal $GC_SIGNAL" $GC_SIGNAL
+done
+
 export GC_JOB_ID="$1"
 export MY_JOBID="$GC_JOB_ID" # legacy script support
 export GC_LANDINGZONE="`pwd`"
