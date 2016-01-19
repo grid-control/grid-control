@@ -1,4 +1,4 @@
-#-#  Copyright 2012-2015 Karlsruhe Institute of Technology
+#-#  Copyright 2012-2016 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -24,7 +24,7 @@ class MultiWMS(WMS):
 		self._defaultWMS = wmsList[0].getInstance()
 		defaultT = self._defaultWMS.getTimings()
 		self._timing = Result(waitOnIdle = defaultT.waitOnIdle, waitBetweenSteps = defaultT.waitBetweenSteps)
-		self._wmsMap = {}
+		self._wmsMap = {self._defaultWMS.getObjectName().lower(): self._defaultWMS}
 		for wmsEntry in wmsList[1:]:
 			wmsObj = wmsEntry.getInstance()
 			self._wmsMap[wmsEntry.getObjectName().lower()] = wmsObj
