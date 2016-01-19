@@ -1,4 +1,4 @@
-#-#  Copyright 2009-2015 Karlsruhe Institute of Technology
+#-#  Copyright 2009-2016 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -21,7 +21,7 @@ class DataMultiplexer(DataProvider):
 		# ..., None, None) = Don't override NickName and ID
 		DataProvider.__init__(self, config, None, None, None)
 		mkProvider = lambda (id, entry): DataProvider.create(config, entry, defaultProvider, id)
-		self.subprovider = map(mkProvider, enumerate(datasetExpr.splitlines()))
+		self.subprovider = map(mkProvider, enumerate(filter(lambda x: x != '', datasetExpr.splitlines())))
 
 
 	def queryLimit(self):
