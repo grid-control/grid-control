@@ -1,4 +1,4 @@
-#-#  Copyright 2009-2015 Karlsruhe Institute of Technology
+#-#  Copyright 2009-2016 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -26,7 +26,13 @@ class DataTask(TaskModule):
 		config = config.changeView(viewClass = TaggedConfigView, addSections = ['dataset'], addTags = [self])
 		self.dataSplitter = None
 		self.dataRefresh = None
-		self.dataset = config.get('dataset', '').strip()
+		self._forceRefresh = config.getState('resync', detail = 'dataset', default = False)
+		def userRefresh(config, old_obj, cur_obj, cur_entry, obj2str):
+			if ((old_obj == '') and (cur_obj != '')):
+				raise UserError('It is currently not possible to attach a dataset to a non-dataset task!')
+			self._forceRefresh = True
+			return cur_obj
+		self.dataset = config.get('dataset', '', onChange = userRefresh).strip()
 		if self.dataset == '':
 			return
 		config.set('se output pattern', '@NICK@_job_@GC_JOB_ID@_@X@')
@@ -54,6 +60,8 @@ class DataTask(TaskModule):
 			utils.vprint('Dataset source will be queried every %s' % utils.strTime(self.dataRefresh), -1)
 		else:
 			paramSource.resyncSetup(interval = 0)
+		if self._forceRefresh:
+			paramSource.resyncSetup(force = True)
 		def externalRefresh(sig, frame):
 			paramSource.resyncSetup(force = True)
 		signal.signal(signal.SIGUSR2, externalRefresh)
