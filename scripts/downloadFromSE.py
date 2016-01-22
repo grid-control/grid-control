@@ -14,7 +14,7 @@
 #-#  limitations under the License.
 
 import os, sys, time, random, optparse, gcSupport, threading
-from gcSupport import AccessToken, ClassSelector, FileInfoProcessor, Job, JobClass, OSLayer, storage, utils
+from gcSupport import AccessToken, ClassSelector, FileInfoProcessor, Job, JobClass, storage, utils
 from python_compat import md5
 
 def md5sum(filename):
