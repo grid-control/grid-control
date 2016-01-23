@@ -2,5 +2,10 @@ language: python
 python:
   - "2.6"
   - "2.7"
+before_install:
+  - pip install codecov
+  - pip install 'coverage<4'
 script:
-  - ./go.py docs/examples/ExampleS1_stresstest.conf
+  - coverage run -a go.py docs/examples/ExampleS1_stresstest.conf
+after_success:
+  - codecov
