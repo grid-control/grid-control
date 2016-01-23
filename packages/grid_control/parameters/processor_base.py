@@ -14,9 +14,10 @@
 
 from grid_control.backends import WMS
 from grid_control.datasets.splitter_base import DataSplitter
+from grid_control.utils import filterBlackWhite
 from grid_control.parameters.psource_base import ParameterInfo, ParameterMetadata
 from hpfwk import Plugin
-from python_compat import set
+from python_compat import any, set
 
 # Class used by DataParameterSource to convert dataset splittings into parameter data
 class DataSplitProcessor(Plugin):
@@ -62,28 +63,39 @@ class BasicDataSplitProcessor(DataSplitProcessor):
 			'DATASETNICK': splitInfo.get(DataSplitter.Nickname, None),
 			'DATASETSPLIT': pNum,
 		})
-		if splitInfo.get(DataSplitter.Locations) != None:
-			result[ParameterInfo.REQS].append((WMS.STORAGE, splitInfo.get(DataSplitter.Locations)))
 		result[ParameterInfo.ACTIVE] = result[ParameterInfo.ACTIVE] and not splitInfo.get(DataSplitter.Invalid, False)
 
 
-class SECheckSplitProcessor(DataSplitProcessor):
+class LocationSplitProcessor(DataSplitProcessor):
 	def __init__(self, config):
 		DataSplitProcessor.__init__(self, config)
-		self._checkSE = config.getBool('dataset storage check', True, onChange = None)
+		self._filter = config.getList('datasplit location filter', [], onChange = None)
+		self._preference = config.getList('datasplit location preference', [], onChange = None)
+		self._reqs = config.getBool('datasplit location requirement', True, onChange = None)
+		self._disable = config.getBool('datasplit location check', True, onChange = None)
 
 	def getKeys(self):
 		return []
 
 	def process(self, pNum, splitInfo, result):
-		if self._checkSE:
-			result[ParameterInfo.ACTIVE] = result[ParameterInfo.ACTIVE] and (splitInfo.get(DataSplitter.Locations) != [])
+		locations = splitInfo.get(DataSplitter.Locations)
+		if locations != None:
+			locations = filterBlackWhite(locations, self._filter, addUnmatched = True)
+		if self._preference:
+			if not locations: # [] or None
+				locations = self._preference
+			elif any(map(lambda x: x in self._preference, locations)): # preferred location available
+				locations = filter(lambda x: x in self._preference, locations)
+		if self._reqs and (locations != None):
+			result[ParameterInfo.REQS].append((WMS.STORAGE, locations))
+		if self._disable:
+			result[ParameterInfo.ACTIVE] = result[ParameterInfo.ACTIVE] and (locations != [])
 
 
 class MetadataSplitProcessor(DataSplitProcessor):
 	def __init__(self, config):
 		DataSplitProcessor.__init__(self, config)
-		self._metadata = config.getList('dataset metadata', [])
+		self._metadata = config.getList('datasplit metadata', [])
 
 	def getKeys(self):
 		return map(lambda k: ParameterMetadata(k, untracked=True), self._metadata)

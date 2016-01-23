@@ -52,7 +52,8 @@ class CMSSW(DataTask):
 		config.set('se input timeout', '0:30')
 		config.set('dataset provider', 'DBS3Provider')
 		config.set('dataset splitter', 'EventBoundarySplitter')
-		config.set('dataset processor', 'CMSDataSplitProcessor SECheckSplitProcessor')
+		config.set('datasource modifier', 'LumiDatasetFilter', '+=')
+		config.set('datasplit processor', 'CMSDataSplitProcessor LocationSplitProcessor')
 		DataTask.__init__(self, config, name)
 		self.errorDict.update(dict(self.updateErrorDict(utils.pathShare('gc-run.cmssw.sh', pkg = 'grid_control_cms'))))
 

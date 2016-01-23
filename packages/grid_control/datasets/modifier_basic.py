@@ -15,7 +15,7 @@
 import re
 from grid_control.datasets.modifier_base import DatasetModifier
 from grid_control.datasets.provider_base import DataProvider, DatasetError
-from grid_control.utils import doBlackWhiteList, makeEnum
+from grid_control.utils import filterBlackWhite, makeEnum
 from python_compat import md5, set
 
 class EntriesConsistencyFilter(DatasetModifier):
@@ -23,7 +23,7 @@ class EntriesConsistencyFilter(DatasetModifier):
 		# Check entry consistency
 		events = sum(map(lambda x: x[DataProvider.NEntries], block[DataProvider.FileList]))
 		if block.setdefault(DataProvider.NEntries, events) != events:
-			self._log.warning('WARNING: Inconsistency in block %s#%s: Number of events doesn\'t match (b:%d != f:%d)'
+			self._log.warning('Inconsistency in block %s#%s: Number of events doesn\'t match (b:%d != f:%d)'
 				% (block[DataProvider.Dataset], block[DataProvider.BlockName], block[DataProvider.NEntries], events))
 		return block
 
@@ -115,17 +115,17 @@ class EmptyFilter(DatasetModifier):
 class LocationFilter(DatasetModifier):
 	def __init__(self, config, name):
 		DatasetModifier.__init__(self, config, name)
-		self._sitefilter = config.getList('sites', [])
+		self._locationfilter = config.getList('datasource location filter', [])
 
 	def processBlock(self, block):
 		if block[DataProvider.Locations] != None:
-			sites = doBlackWhiteList(block[DataProvider.Locations], self._sitefilter, onEmpty = [], preferWL = False)
+			sites = filterBlackWhite(block[DataProvider.Locations], self._locationfilter, addUnmatched = True)
 			if len(sites) == 0 and len(block[DataProvider.FileList]) != 0:
 				if not len(block[DataProvider.Locations]):
-					self._log.warning('WARNING: Block %s#%s is not available at any site!'
+					self._log.warning('Block %s#%s is not available at any site!'
 						% (block[DataProvider.Dataset], block[DataProvider.BlockName]))
 				elif not len(sites):
-					self._log.warning('WARNING: Block %s#%s is not available at any selected site!'
+					self._log.warning('Block %s#%s is not available at any selected site!'
 						% (block[DataProvider.Dataset], block[DataProvider.BlockName]))
 			block[DataProvider.Locations] = sites
 		return block

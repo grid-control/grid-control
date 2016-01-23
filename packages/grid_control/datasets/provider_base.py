@@ -30,7 +30,7 @@ class DataProvider(Plugin):
 
 		nickProducerClass = config.getPlugin('nickname source', 'SimpleNickNameProducer', cls = DatasetModifier)
 		self._nickProducer = nickProducerClass.getInstance()
-		self._datasetModifier = config.getCompositePlugin('dataset modifier',
+		self._datasetModifier = config.getCompositeClass('datasource modifier',
 			'EntriesConsistencyFilter URLFilter URLCountFilter EntriesCountFilter EmptyFilter UniqueFilter LocationFilter',
 			'MultiDataModifier', cls = DatasetModifier).getInstance()
 

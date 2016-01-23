@@ -194,9 +194,9 @@ grid_control.parameters.pfactory_simple	SimpleParameterFactory
 grid_control.parameters.processor_base.DataSplitProcessor:
 grid_control.parameters.processor_base	BasicDataSplitProcessor
 grid_control.parameters.processor_base	DataSplitProcessor
+grid_control.parameters.processor_base	LocationSplitProcessor
 grid_control.parameters.processor_base	MetadataSplitProcessor
 grid_control.parameters.processor_base	MultiDataSplitProcessor
-grid_control.parameters.processor_base	SECheckSplitProcessor
 
 grid_control.parameters.psource_base.ParameterSource:
 grid_control.parameters.psource_base	ParameterSource
