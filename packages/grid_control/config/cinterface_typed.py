@@ -184,7 +184,20 @@ class TypedConfigInterface(ConfigInterface):
 		return CompositedClassWrapper(clsCompositor, clsList)
 
 
+# Filter expression class
+class FilterBase(Plugin):
+	def __init__(self, filterExpr):
+		pass
+
+	def filterList(self, value):
+		raise AbstractError
+
 class SimpleConfigInterface(TypedConfigInterface):
+	def getFilter(self, option, pluginName):
+		filterExpr = self.getList(option, [])
+		filterCls = self.getPlugin(option.rstrip() + ' plugin', pluginName, cls = FilterBase)
+		return filterCls.getInstance(filterExpr)
+
 	# Get state - bool stored in hidden "state" section - any given detail overrides global state
 	def getState(self, statename, detail = '', default = False):
 		view = self.changeView(viewClass = SimpleConfigView, setSections = ['state'])
