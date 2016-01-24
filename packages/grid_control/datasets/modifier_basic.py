@@ -27,6 +27,7 @@ class EntriesConsistencyFilter(DatasetModifier):
 				% (block[DataProvider.Dataset], block[DataProvider.BlockName], block[DataProvider.NEntries], events))
 		return block
 
+
 class URLFilter(DatasetModifier):
 	def __init__(self, config, name):
 		DatasetModifier.__init__(self, config, name)
@@ -116,6 +117,8 @@ class LocationFilter(DatasetModifier):
 	def __init__(self, config, name):
 		DatasetModifier.__init__(self, config, name)
 		self._locationfilter = config.getList('datasource location filter', [])
+		if not self._locationfilter:
+			self._locationfilter = None
 
 	def processBlock(self, block):
 		if block[DataProvider.Locations] != None:

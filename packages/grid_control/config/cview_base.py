@@ -15,6 +15,7 @@
 import logging
 from grid_control import utils
 from grid_control.config.config_entry import ConfigEntry, ConfigError, noDefault, standardConfigForm
+from hpfwk import AbstractError
 from python_compat import sorted
 
 selectorUnchanged = utils.makeEnum(['selector_unchanged'])
