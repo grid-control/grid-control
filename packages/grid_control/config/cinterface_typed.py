@@ -18,7 +18,7 @@ from grid_control.config.cinterface_base import ConfigInterface
 from grid_control.config.config_entry import ConfigError, noDefault
 from grid_control.config.cview_base import SimpleConfigView
 from grid_control.config.cview_tagged import TaggedConfigView
-from hpfwk import APIError, NamedPlugin, Plugin, PluginError, AbstractError
+from hpfwk import APIError, AbstractError, NamedPlugin, Plugin, PluginError
 from python_compat import user_input
 
 # Needed by getPlugin / getCompositePlugin to wrap the fixed arguments to the instantiation / name of the instance

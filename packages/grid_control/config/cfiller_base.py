@@ -18,7 +18,7 @@ from grid_control import utils
 from grid_control.config.config_entry import ConfigEntry, ConfigError
 from grid_control.utils.data_structures import UniqueList
 from grid_control.utils.thread_tools import TimeoutException, hang_protection
-from hpfwk import Plugin, AbstractError
+from hpfwk import AbstractError, Plugin
 from python_compat import rsplit
 
 # Class to fill config containers with settings
