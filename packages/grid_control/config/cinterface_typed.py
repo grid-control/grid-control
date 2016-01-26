@@ -21,6 +21,11 @@ from grid_control.config.cview_tagged import TaggedConfigView
 from hpfwk import APIError, AbstractError, NamedPlugin, Plugin, PluginError
 from python_compat import user_input
 
+def appendOption(option, suffix):
+	if isinstance(option, (list, tuple)):
+		return map(lambda x: appendOption(x, suffix), option)
+	return option.rstrip() + ' ' + suffix
+
 # Needed by getPlugin / getCompositePlugin to wrap the fixed arguments to the instantiation / name of the instance
 class ClassWrapper(object):
 	def __init__(self, baseClass, value, config, tags, inherit, defaultName, pluginPaths):
@@ -175,11 +180,11 @@ class TypedConfigInterface(ConfigInterface):
 		parseSingle = lambda value: ClassWrapper(cls, value, self, tags, inherit, defaultName, self._getPluginPaths())
 		str2obj = lambda value: map(parseSingle, utils.parseList(value, None, onEmpty = []))
 		obj2str = lambda value: str.join('\n', map(str, value))
-		clsList = self._getInternal('plugins', obj2str, str2obj, str2obj, option, default, **kwargs)
+		clsList = self._getInternal('composite plugin', obj2str, str2obj, str2obj, option, default, **kwargs)
 		if len(clsList) == 1:
 			return clsList[0]
 		if not option_compositor:
-			option_compositor = option + ' manager'
+			option_compositor = appendOption(option, 'manager')
 		clsCompositor = self.getPlugin(option_compositor, default_compositor, cls, tags, inherit, defaultName, **kwargs)
 		return CompositedClassWrapper(clsCompositor, clsList)
 
@@ -195,7 +200,7 @@ class FilterBase(Plugin):
 class SimpleConfigInterface(TypedConfigInterface):
 	def getFilter(self, option, pluginName):
 		filterExpr = self.getList(option, [])
-		filterCls = self.getPlugin(option.rstrip() + ' plugin', pluginName, cls = FilterBase)
+		filterCls = self.getPlugin(appendOption(option, 'plugin'), pluginName, cls = FilterBase)
 		return filterCls.getInstance(filterExpr)
 
 	# Get state - bool stored in hidden "state" section - any given detail overrides global state
