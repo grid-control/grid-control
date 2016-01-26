@@ -1,4 +1,4 @@
-#-#  Copyright 2009-2015 Karlsruhe Institute of Technology
+#-#  Copyright 2009-2016 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -12,7 +12,7 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-import os, logging
+import os, time, logging
 from grid_control import utils
 from grid_control.job_db import Job
 from hpfwk import NamedPlugin
@@ -76,9 +76,18 @@ class ScriptMonitoring(Monitoring):
 		self.evtStatus = config.get('on status', '', onChange = None)
 		self.evtOutput = config.get('on output', '', onChange = None)
 		self.evtFinish = config.get('on finish', '', onChange = None)
+		self.running = {}
+		self.runningToken = 0
+		self.runningMax = config.getTime('script runtime', 5, onChange = None)
+
+	def cleanupRunning(self):
+		currentTime = time.time()
+		for (token, startTime) in list(self.running.items()):
+			if currentTime - startTime > self.runningMax:
+				self.running.pop(token, None) # lock free: ignore missing tokens
 
 	# Get both task and job config / state dicts
-	def scriptThread(self, script, jobNum = None, jobObj = None, allDict = {}):
+	def scriptThread(self, token, script, jobNum = None, jobObj = None, allDict = {}):
 		try:
 			tmp = {}
 			if jobNum != None:
@@ -87,8 +96,8 @@ class ScriptMonitoring(Monitoring):
 				tmp.update(jobObj.getAll())
 			tmp['WORKDIR'] = self.config.getWorkPath()
 			tmp.update(self.task.getTaskConfig())
-			tmp.update(self.task.getJobConfig(jobNum))
 			if jobNum != None:
+				tmp.update(self.task.getJobConfig(jobNum))
 				tmp.update(self.task.getSubmitInfo(jobNum))
 			tmp.update(allDict)
 			for key, value in tmp.iteritems():
@@ -101,11 +110,15 @@ class ScriptMonitoring(Monitoring):
 				os.system(script)
 		except Exception:
 			self._log.exception('Error while running user script!')
+		self.running.pop(token, None)
 
 	def runInBackground(self, script, jobNum = None, jobObj = None, addDict =  {}):
 		if script != '':
+			self.runningToken += 1
+			self.running[self.runningToken] = time.time()
 			utils.gcStartThread("Running monitoring script %s" % script,
-				ScriptMonitoring.scriptThread, self, script, jobNum, jobObj)
+				self.scriptThread, self.runningToken, script, jobNum, jobObj)
+			self.cleanupRunning()
 
 	# Called on job submission
 	def onJobSubmit(self, wms, jobObj, jobNum):
@@ -122,3 +135,6 @@ class ScriptMonitoring(Monitoring):
 	# Called at the end of the task
 	def onTaskFinish(self, nJobs):
 		self.runInBackground(self.evtFinish, addDict = {'NJOBS': nJobs})
+		while self.running:
+			self.cleanupRunning()
+			time.sleep(0.1)
