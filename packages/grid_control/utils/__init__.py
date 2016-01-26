@@ -1,4 +1,4 @@
-#-#  Copyright 2007-2015 Karlsruhe Institute of Technology
+#-#  Copyright 2007-2016 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -18,6 +18,12 @@ from grid_control.utils.parsing import parseBool, parseDict, parseInt, parseList
 from grid_control.utils.thread_tools import TimeoutException, hang_protection
 from hpfwk import APIError
 from python_compat import lru_cache, md5, next, set, sorted, user_input
+
+def execWrapper(script, context = None):
+	if context == None:
+		context = dict()
+	exec(script, context)
+	return context
 
 def QM(cond, a, b):
 	if cond:

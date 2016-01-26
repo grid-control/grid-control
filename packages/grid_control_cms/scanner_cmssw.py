@@ -56,9 +56,8 @@ class ObjectsFromCMSSW(InfoScanner):
 					if gtLines:
 						self.gtStore[cfgHash] = gtLines[-1].split(':')[1].strip()
 				if cfgHash not in self.gtStore:
-					cfgContentEnv = {}
 					try:
-						exec(cfgContent, cfgContentEnv)
+						cfgContentEnv = utils.execWrapper(cfgContent)
 						self.gtStore[cfgHash] = cfgContentEnv['process'].GlobalTag.globaltag.value()
 					except Exception:
 						self.gtStore[cfgHash] = 'unknown:All'
