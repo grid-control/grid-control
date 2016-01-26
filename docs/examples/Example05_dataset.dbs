@@ -13,3 +13,8 @@ metadata common = ["M2c"]
 /bin/grep = 1 ["M3B"]
 /bin/mail = 1 ["M3C"]
 /bin/mailx = 3 ["M3D"]
+
+[/MY/SKIM3#333]
+nickname = Dataset3
+/bin/sh = 2
+/bin/cp = 1
