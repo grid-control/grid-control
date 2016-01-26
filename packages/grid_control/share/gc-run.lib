@@ -1,5 +1,5 @@
 #!/bin/bash
-#-#  Copyright 2008-2015 Karlsruhe Institute of Technology
+#-#  Copyright 2008-2016 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -41,15 +41,15 @@ GC_VERSION="$Revision: 848$"
 
 debug_helper() {
 	[ -z "$GC_DEBUG" ] && return
-	echo -n "$$:shell:" 1>&2
+	OUTPUT="$(date +%s.%N):$$:shell:"
 	for i in `seq ${#BASH_LINENO[*]} -1 0`; do
-		[ -n "${BASH_LINENO[$i]}" ] && echo -n "${BASH_LINENO[$i]} " 1>&2
-		[ -n "${BASH_SOURCE[$i]}" ] && echo -n "`basename ${BASH_SOURCE[$i]}`:" 1>&2
-		[ -n "${FUNCNAME[$i]}" ] && echo -n "${FUNCNAME[$i]}:" 1>&2
+		[ -n "${BASH_LINENO[$i]}" ] && OUTPUT="$OUTPUT${BASH_LINENO[$i]} "
+		[ -n "${BASH_SOURCE[$i]}" ] && OUTPUT="$OUTPUT$(basename ${BASH_SOURCE[$i]}):"
+		[ -n "${FUNCNAME[$i]}" ] && OUTPUT="$OUTPUT${FUNCNAME[$i]}:"
 	done
 	CMD="$1"
 	shift
-	echo "$LINENO - $CMD($@)" 1>&2
+	echo "$OUTPUT$LINENO - $CMD($@)" 1>&2
 }
 
 fail() {
