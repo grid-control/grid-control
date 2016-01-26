@@ -1,4 +1,4 @@
-#-#  Copyright 2010-2015 Karlsruhe Institute of Technology
+#-#  Copyright 2010-2016 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -28,10 +28,6 @@ class JobSelector(Plugin):
 	def __call__(self, jobNum, jobObj):
 		raise AbstractError
 
-JobSelector.moduleMap.update({'id': 'IDSelector', 'state': 'StateSelector', 'site': 'SiteSelector',
-	'queue': 'QueueSelector', 'var': 'VarSelector', 'nick': 'NickSelector', 'stuck': 'StuckSelector',
-	'wms': 'BackendSelector', 'backend': 'BackendSelector'})
-
 
 class AndJobSelector(JobSelector): # Internally used
 	def __init__(self, *args):
@@ -50,6 +46,8 @@ class ClassSelector(JobSelector):
 
 
 class StuckSelector(JobSelector):
+	alias = ['stuck']
+
 	def __init__(self, arg, **kwargs):
 		self.time_threshold = utils.parseTime(arg)
 
@@ -58,6 +56,8 @@ class StuckSelector(JobSelector):
 
 
 class IDSelector(JobSelector):
+	alias = ['id']
+
 	def __init__(self, arg, **kwargs):
 		idList = map(lambda x: x.split('-'), arg.split(','))
 		try:
@@ -88,21 +88,29 @@ class RegExSelector(JobSelector):
 
 
 class SiteSelector(RegExSelector):
+	alias = ['site']
+
 	def __init__(self, arg, **kwargs):
 		RegExSelector.__init__(self, arg, lambda num, obj: obj.get('dest', '').split('/')[0].split(':')[0])
 
 
 class QueueSelector(RegExSelector):
+	alias = ['queue']
+
 	def __init__(self, arg, **kwargs):
 		RegExSelector.__init__(self, arg, lambda num, obj: obj.get('dest', '').split('/')[-1].split(':')[0])
 
 
 class BackendSelector(RegExSelector):
+	alias = ['backend', 'wms']
+
 	def __init__(self, arg, **kwargs):
 		RegExSelector.__init__(self, arg, lambda num, obj: obj.get('id', '..').split('.')[1])
 
 
 class StateSelector(RegExSelector):
+	alias = ['state']
+
 	def __init__(self, arg, **kwargs):
 		predef = {'TODO': 'SUBMITTED,WAITING,READY,QUEUED', 'ALL': str.join(',', Job.enumNames)}
 		RegExSelector.__init__(self, predef.get(arg.upper(), arg), None, lambda x: '^%s.*' % x.upper())
@@ -114,6 +122,8 @@ class StateSelector(RegExSelector):
 
 
 class VarSelector(JobSelector):
+	alias = ['var']
+
 	def __init__(self, arg, **kwargs):
 		self.rxDict = map(lambda x: (x.split('=', 1)[0], re.compile(x.split('=', 1)[1])), arg.split(','))
 		self.jobCfg = lambda jobNum, var: str(kwargs['task'].getJobConfig(jobNum).get(var, ''))
@@ -123,6 +133,8 @@ class VarSelector(JobSelector):
 
 
 class NickSelector(RegExSelector):
+	alias = ['nick']
+
 	def __init__(self, arg, **kwargs):
 		RegExSelector.__init__(self, arg, lambda jobNum, jobObj: kwargs['task'].getJobConfig(jobNum).get('DATASETNICK', ''))
 

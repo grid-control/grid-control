@@ -57,7 +57,6 @@ class Monitoring(EventHandler):
 
 	def getFiles(self):
 		return utils.listMapReduce(lambda m: list(m.getFiles()), self.submodules, self.getScript())
-Monitoring.moduleMap["scripts"] = "ScriptMonitoring"
 
 
 class MultiMonitor(Monitoring):
@@ -67,6 +66,7 @@ class MultiMonitor(Monitoring):
 
 
 class ScriptMonitoring(Monitoring):
+	alias = ['scripts']
 	configSections = EventHandler.configSections + ['scripts']
 
 	def __init__(self, config, name, task):

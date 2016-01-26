@@ -45,7 +45,7 @@ grid_control.backends.wms.WMS:
 grid_control.backends.condor_wms.condor_wms	Condor
 grid_control.backends.htcondor_wms.htcondor_wms	HTCondor
 grid_control.backends.wms	BasicWMS
-grid_control.backends.wms	InactiveWMS
+grid_control.backends.wms	InactiveWMS inactive
 grid_control.backends.wms	WMS
 grid_control.backends.wms_edg	EuropeanDataGrid EDG LCG
 grid_control.backends.wms_glite	Glite
@@ -143,24 +143,24 @@ grid_control.job_manager	SimpleJobManager
 
 grid_control.job_selector.JobSelector:
 grid_control.job_selector	AndJobSelector
-grid_control.job_selector	BackendSelector
+grid_control.job_selector	BackendSelector backend wms
 grid_control.job_selector	ClassSelector
-grid_control.job_selector	IDSelector
+grid_control.job_selector	IDSelector id
 grid_control.job_selector	JobSelector
 grid_control.job_selector	MultiJobSelector
-grid_control.job_selector	NickSelector
-grid_control.job_selector	QueueSelector
+grid_control.job_selector	NickSelector nick
+grid_control.job_selector	QueueSelector queue
 grid_control.job_selector	RegExSelector
-grid_control.job_selector	SiteSelector
-grid_control.job_selector	StateSelector
-grid_control.job_selector	StuckSelector
-grid_control.job_selector	VarSelector
+grid_control.job_selector	SiteSelector site
+grid_control.job_selector	StateSelector state
+grid_control.job_selector	StuckSelector stuck
+grid_control.job_selector	VarSelector var
 
 grid_control.monitoring.EventHandler:
 grid_control.monitoring	EventHandler
 grid_control.monitoring	Monitoring
 grid_control.monitoring	MultiMonitor
-grid_control.monitoring	ScriptMonitoring
+grid_control.monitoring	ScriptMonitoring scripts
 
 grid_control.output_processor.OutputProcessor:
 grid_control.output_processor	FileInfoProcessor

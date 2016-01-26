@@ -91,6 +91,8 @@ utils.makeEnum(['WALLTIME', 'CPUTIME', 'MEMORY', 'CPUS', 'BACKEND', 'SITES', 'QU
 
 
 class InactiveWMS(WMS):
+	alias = ['inactive']
+
 	def __init__(self, config, wmsName):
 		WMS.__init__(self, config, wmsName)
 		self._token = config.getCompositePlugin(['access token', 'proxy'], 'TrivialAccessToken',
@@ -116,7 +118,6 @@ class InactiveWMS(WMS):
 
 	def cancelJobs(self, ids):
 		utils.vprint('Inactive WMS (%s): Discarded abort of %d jobs' % (self.wmsName, len(ids)), -1)
-WMS.moduleMap['inactive'] = 'InactiveWMS'
 
 
 class BasicWMS(WMS):
