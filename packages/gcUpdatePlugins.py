@@ -79,9 +79,6 @@ if __name__ == '__main__':
 			outputLine = '%s:\n' % baseClass
 			for cls in sorted(packages[package][baseClass], key = lambda x: (x.__module__, x.__name__)):
 				if cls not in topClasses:
-					outputLine += '%s\t%s' % (cls.__module__, cls.__name__)
-					if cls.alias and cls.alias not in map(lambda pcls: pcls.alias, cls.__bases__):
-						outputLine += ' ' + str.join(' ', cls.alias)
-					outputLine += '\n'
+					outputLine += '%s\t%s\n' % (cls.__module__, str.join(' ', cls.getClassNames()))
 			output.append(outputLine)
 		open(os.path.join(package, '.PLUGINS'), 'wb').write(str.join('\n', output))

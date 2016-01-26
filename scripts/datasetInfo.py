@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-#-#  Copyright 2009-2015 Karlsruhe Institute of Technology
+#-#  Copyright 2009-2016 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@
 import os, sys, optparse
 from gcSupport import getConfig, parseOptions, utils
 from grid_control.datasets import DataProvider, DatasetError
+from python_compat import sorted
 
 usage = '%s [OPTIONS] <DBS dataset path> | <dataset cache file>' % sys.argv[0]
 parser = optparse.OptionParser(usage=usage)
@@ -114,10 +115,10 @@ def main():
 					infos[dsName][DataProvider.URL] = block[DataProvider.FileList][0][DataProvider.URL]
 		for dsID, dsName in enumerate(order):
 			info = infos[dsName]
-			short = DataProvider.providers.get(provider.__class__.__name__, provider.__class__.__name__)
+			providerName = sorted(provider.getClassNames(), key = len)[0]
 			nickname = info.get(DataProvider.Nickname, 'nick%d' % dsID).rjust(maxnick)
-			filterExpr = utils.QM(short == 'list', ' %% %s' % info[DataProvider.Dataset], '')
-			print('\t%s : %s : %s%s' % (nickname, short, provider._datasetExpr, filterExpr))
+			filterExpr = utils.QM(providerName == 'list', ' %% %s' % info[DataProvider.Dataset], '')
+			print('\t%s : %s : %s%s' % (nickname, providerName, provider._datasetExpr, filterExpr))
 
 
 	if opts.listdatasets:

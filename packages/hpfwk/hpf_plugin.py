@@ -24,6 +24,12 @@ class Plugin(object):
 	configSections = []
 	moduleMap = {}
 
+	def getClassNames(cls):
+		if cls.alias not in map(lambda parent: parent.alias, cls.__bases__):
+			return [cls.__name__] + cls.alias
+		return [cls.__name__]
+	getClassNames = classmethod(getClassNames)
+
 	def getClass(cls, clsName, modulePaths = []):
 		log = logging.getLogger('classloader.%s' % cls.__name__)
 		log.log(logging.DEBUG1, 'Loading class %s' % clsName)
