@@ -3,7 +3,7 @@
 #-------------------------------------------------------------------
 # tarfile.py
 #-------------------------------------------------------------------
-# Copyright (C) 2002 Lars Gust‰bel <lars@gustaebel.de>
+# Copyright (C) 2002 Lars Gust√§bel <lars@gustaebel.de>
 # All rights reserved.
 #
 # Permission  is  hereby granted,  free  of charge,  to  any person
@@ -34,10 +34,10 @@ __version__ = "$Revision: 81667 $"
 # $Source$
 
 version     = "0.9.0"
-__author__  = "Lars Gust‰bel (lars@gustaebel.de)"
+__author__  = "Lars Gust√§bel (lars@gustaebel.de)"
 __date__    = "$Date: 2010-06-03 07:34:14 -0500 (Thu, 03 Jun 2010) $"
 __cvsid__   = "$Id: tarfile.py 81667 2010-06-03 12:34:14Z lars.gustaebel $"
-__credits__ = "Gustavo Niemeyer, Niels Gust‰bel, Richard Townsend."
+__credits__ = "Gustavo Niemeyer, Niels Gust√§bel, Richard Townsend."
 
 #---------
 # Imports
