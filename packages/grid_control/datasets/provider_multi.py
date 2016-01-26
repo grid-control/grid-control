@@ -18,8 +18,6 @@ from hpfwk import ExceptionCollector
 
 class DataMultiplexer(DataProvider):
 	def __init__(self, config, datasetExpr, defaultProvider, datasetID = None):
-		# ..., None, None) = Don't override NickName and ID
-		DataProvider.__init__(self, config, None, None, None)
 		mkProvider = lambda (id, entry): DataProvider.create(config, entry, defaultProvider, id)
 		self.subprovider = map(mkProvider, enumerate(filter(lambda x: x != '', datasetExpr.splitlines())))
 
@@ -35,7 +33,7 @@ class DataMultiplexer(DataProvider):
 		return getProposal(splitter)
 
 
-	def getBlocksInternal(self):
+	def getBlocks(self):
 		ec = ExceptionCollector()
 		for provider in self.subprovider:
 			try:
