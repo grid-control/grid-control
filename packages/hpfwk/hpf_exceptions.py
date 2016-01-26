@@ -1,4 +1,4 @@
-#-#  Copyright 2007-2015 Karlsruhe Institute of Technology
+#-#  Copyright 2007-2016 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -62,7 +62,7 @@ def formatStack(frames, codeContext = 0, showVariables = True, showLongVariables
 		# Output relevant code fragment
 		linecache.checkcache(frame['file'])
 		trackingDisplay = ''
-		if frame['trackingID']:
+		if frame.get('trackingID') != None:
 			trackingDisplay = '%s-' % frame['trackingID']
 		yield 'Stack #%s%02d [%s:%d] %s' % (trackingDisplay, frame['idx'], frame['file'], frame['line'], frame['fun'])
 		fmtLine = lambda line: linecache.getline(frame['file'], line).rstrip().replace('\t', '  ')
@@ -188,10 +188,9 @@ def debugInterruptHandler(sig, frame):
 	console.push('readline.set_completer(rlcompleter.Completer(globals()).complete)')
 	stackDict = sys._current_frames()
 	log = logging.getLogger('debug_session')
-	log.addFormatter(FormatStack())
 	for threadID in stackDict:
 		log.critical('Stack of thread #%d:\n' % threadID + str.join('\n',
-			formatStack(parseFrame(threadID, stackDict[threadID]), codeContext = 0, showVariables = False)))
+			formatStack(parseFrame(stackDict[threadID]), codeContext = 0, showVariables = False)))
 	console.interact('debug mode enabled!')
 
 # Utility class to collect multiple exceptions and throw them at a later time
