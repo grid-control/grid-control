@@ -121,22 +121,6 @@ class DataProvider(Plugin):
 		self._cache = None
 
 
-	# Print information about datasets
-	def printDataset(self, level = 2):
-		utils.vprint('Provided datasets:', level)
-		idList = [(DataProvider.DatasetID, 0), (DataProvider.Dataset, None), (DataProvider.Nickname, '""')]
-		for block in self.getBlocks():
-			utils.vprint('ID - Dataset - Nick : %s - %s - %s' % tuple(map(lambda (k, d): block.get(k, d), idList)), level)
-			utils.vprint('BlockName : %s' % block[DataProvider.BlockName], level)
-			utils.vprint('#Events   : %s' % block[DataProvider.NEntries], level)
-			seList = utils.QM(block[DataProvider.Locations] != None, block[DataProvider.Locations], ['Not specified'])
-			utils.vprint('SE List   : %s' % str.join(', ',  seList), level)
-			utils.vprint('Files     : ', level)
-			for fi in block[DataProvider.FileList]:
-				utils.vprint('%s (Events: %d)' % (fi[DataProvider.URL], fi[DataProvider.NEntries]), level)
-			utils.vprint(level = level)
-
-
 	# Save dataset information in 'ini'-style => 10x faster to r/w than cPickle
 	def saveStateRaw(stream, dataBlocks, stripMetadata = False):
 		writer = StringBuffer()

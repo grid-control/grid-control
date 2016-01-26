@@ -12,7 +12,7 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-import os, signal
+import signal
 from grid_control import utils
 from grid_control.config import TaggedConfigView
 from grid_control.datasets import DataProvider, DataSplitter, PartitionProcessor
@@ -66,27 +66,6 @@ class DataTask(TaskModule):
 
 		if self.dataSplitter.getMaxJobs() == 0:
 			raise UserError('There are no events to process')
-
-
-	def getDatasetOverviewInfo(self, blocks):
-		head = [(DataProvider.DatasetID, 'ID'), (DataProvider.Nickname, 'Nickname'), (DataProvider.Dataset, 'Dataset path')]
-		blockInfos = []
-		for block in blocks:
-			shortProvider = DataProvider.providers.get(block[DataProvider.Provider], block[DataProvider.Provider])
-			value = {DataProvider.DatasetID: block.get(DataProvider.DatasetID, 0),
-				DataProvider.Nickname: block.get(DataProvider.Nickname, ''),
-				DataProvider.Dataset: '%s://%s' % (shortProvider, block[DataProvider.Dataset])}
-			if value not in blockInfos:
-				blockInfos.append(value)
-		return (head, blockInfos, {})
-
-
-	def printDatasetOverview(self, blocks):
-		(head, blockInfos, fmt) = self.getDatasetOverviewInfo(blocks)
-		utils.vprint('Using the following datasets:', -1)
-		utils.vprint(level = -1)
-		utils.printTabular(head, blockInfos, 'rcl', fmt = fmt)
-		utils.vprint(level = -1)
 
 
 	def getVarMapping(self):

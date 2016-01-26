@@ -1,4 +1,4 @@
-#-#  Copyright 2010-2015 Karlsruhe Institute of Technology
+#-#  Copyright 2010-2016 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -83,23 +83,6 @@ class CMSSW_Advanced(CMSSW):
 			return '%s ... %s (%d entries)' % (lumi[0], lumi[-1], len(lumi))
 		else:
 			return str.join(', ', lumi)
-
-
-	def getDatasetOverviewInfo(self, blocks):
-		(head, blockInfos, fmt) = CMSSW.getDatasetOverviewInfo(self, blocks)
-		head.extend([('CMSSW_CONFIG', 'Config file'), ('LUMI_RANGE', 'Lumi filter')])
-		def fmtLR(x):
-			if x:
-				return self.displayLumi(formatLumi(x))
-			return x
-		fmt['LUMI_RANGE'] = fmtLR
-		for blockInfo in blockInfos:
-			data = self.getVarsForNick(blockInfo.get(DataProvider.Nickname, None))
-			for key in filter(lambda k: k not in ['CMSSW_CONFIG', 'LUMI_RANGE'], data.keys()):
-				if (key, key) not in head:
-					head.append((key, key))
-			blockInfo.update(data)
-		return (head, blockInfos, fmt)
 
 
 	def neededVars(self):
