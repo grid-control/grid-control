@@ -1,4 +1,4 @@
-#-#  Copyright 2009-2015 Karlsruhe Institute of Technology
+#-#  Copyright 2009-2016 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -13,7 +13,6 @@
 #-#  limitations under the License.
 
 from grid_control.parameters.pfactory_base import ParameterFactory
-from grid_control.parameters.processor_base import BasicDataSplitProcessor, DataSplitProcessor
 from grid_control.parameters.psource_base import ParameterInfo, ParameterMetadata, ParameterSource
 from grid_control.parameters.psource_data import DataParameterSource
 

@@ -1,4 +1,4 @@
-#-#  Copyright 2009-2015 Karlsruhe Institute of Technology
+#-#  Copyright 2009-2016 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -14,7 +14,6 @@
 
 import os, time
 from grid_control import utils
-from grid_control.datasets import DataProvider, DataSplitter
 from grid_control.gc_exceptions import UserError
 from grid_control.parameters.psource_base import ParameterInfo, ParameterMetadata, ParameterSource
 

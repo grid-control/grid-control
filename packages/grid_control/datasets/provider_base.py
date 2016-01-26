@@ -15,7 +15,7 @@
 import os, copy
 from grid_control import utils
 from grid_control.config import TaggedConfigView, createConfigFactory
-from grid_control.datasets.modifier_base import DatasetModifier
+from grid_control.datasets.dproc_base import DataProcessor
 from hpfwk import AbstractError, NestedException, Plugin
 from python_compat import StringBuffer
 
@@ -27,11 +27,12 @@ class DataProvider(Plugin):
 		(self._datasetExpr, self._datasetNick, self._datasetID) = (datasetExpr, datasetNick, datasetID)
 		self._cache = None
 
-		nickProducerClass = config.getPlugin('nickname source', 'SimpleNickNameProducer', cls = DatasetModifier)
+		nickProducerClass = config.getPlugin('nickname source', 'SimpleNickNameProducer', cls = DataProcessor)
 		self._nickProducer = nickProducerClass.getInstance()
-		self._datasetModifier = config.getCompositePlugin('datasource modifier',
-			'EntriesConsistencyFilter URLFilter URLCountFilter EntriesCountFilter EmptyFilter UniqueFilter LocationFilter',
-			'MultiDataModifier', cls = DatasetModifier).getInstance()
+		self._datasetProcessor = config.getCompositePlugin('dataset processor',
+			'EntriesConsistencyDataProcessor URLDataProcessor URLCountDataProcessor ' +
+			'EntriesCountDataProcessor EmptyDataProcessor UniqueDataProcessor LocationDataProcessor',
+			'MultiDataProcessor', cls = DataProcessor).getInstance()
 
 
 	# Parse dataset format [NICK : [PROVIDER : [(/)*]]] DATASET
@@ -91,7 +92,7 @@ class DataProvider(Plugin):
 						raise DatasetError('Nickname producer failed!')
 
 				# Process block with configured dataset modifiers
-				block = self._datasetModifier.processBlock(block)
+				block = self._datasetProcessor.processBlock(block)
 				if block:
 					self.allEvents += block[DataProvider.NEntries]
 					yield block

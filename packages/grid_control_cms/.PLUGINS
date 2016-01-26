@@ -1,3 +1,6 @@
+grid_control.datasets.pproc_base.PartitionProcessor:
+grid_control_cms.cmssw	CMSPartitionProcessor
+
 grid_control.datasets.provider_base.DataProvider:
 grid_control_cms.provider_cms	CMSProvider
 grid_control_cms.provider_cms	DBS2Provider
@@ -14,9 +17,6 @@ grid_control_cms.scanner_cmssw	SEListFromPath
 
 grid_control.monitoring.EventHandler:
 grid_control_cms.dashboard	DashBoard
-
-grid_control.parameters.processor_base.DataSplitProcessor:
-grid_control_cms.cmssw	CMSDataSplitProcessor
 
 grid_control.tasks.task_base.TaskModule:
 grid_control_cms.cmssw	CMSSW

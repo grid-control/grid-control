@@ -1,4 +1,4 @@
-#-#  Copyright 2014-2015 Karlsruhe Institute of Technology
+#-#  Copyright 2014-2016 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -12,13 +12,13 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-from grid_control.datasets.modifier_base import DatasetModifier
+from grid_control.datasets.dproc_base import DataProcessor
 from grid_control.datasets.provider_base import DataProvider, DatasetError
 from hpfwk import AbstractError
 
-class NickNameProducer(DatasetModifier):
+class NickNameProducer(DataProcessor):
 	def __init__(self, config, name):
-		DatasetModifier.__init__(self, config, name)
+		DataProcessor.__init__(self, config, name)
 		# Ensure the same nickname is used consistently in all blocks of a dataset
 		self._checkConsistency = config.getBool('nickname check consistency', True)
 		self._checkConsistencyData = {}

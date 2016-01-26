@@ -1,4 +1,4 @@
-#-#  Copyright 2015 Karlsruhe Institute of Technology
+#-#  Copyright 2015-2016 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -15,19 +15,20 @@
 import logging
 from hpfwk import NamedPlugin
 
-class DatasetModifier(NamedPlugin):
-	tagName = 'dmod'
+class DataProcessor(NamedPlugin):
+	tagName = 'dsproc'
 
 	def __init__(self, config, name):
+		NamedPlugin.__init__(self, config, name)
 		self._log = logging.getLogger(self.tagName)
 
 	def processBlock(self, block):
 		raise AbstractError
 
 
-class MultiDataModifier(DatasetModifier):
+class MultiDataProcessor(DataProcessor):
 	def __init__(self, config, name, modifierProxyList):
-		DatasetModifier.__init__(self, config, name)
+		DataProcessor.__init__(self, config, name)
 		self._modifierList = map(lambda p: p.getInstance(), modifierProxyList)
 
 	def processBlock(self, block):

@@ -15,9 +15,9 @@
 import os, signal
 from grid_control import utils
 from grid_control.config import TaggedConfigView
-from grid_control.datasets import DataProvider, DataSplitter
+from grid_control.datasets import DataProvider, DataSplitter, PartitionProcessor
 from grid_control.gc_exceptions import UserError
-from grid_control.parameters import DataParameterSource, DataSplitProcessor, ParameterSource
+from grid_control.parameters import DataParameterSource, ParameterSource
 from grid_control.tasks.task_base import TaskModule
 
 class DataTask(TaskModule):
@@ -44,11 +44,11 @@ class DataTask(TaskModule):
 		self.dataSplitter = splitterClass(config)
 
 		# Create and register dataset parameter source
-		paramSplitProcessor = config.getCompositePlugin('datasplit processor',
-			'BasicDataSplitProcessor LocationSplitProcessor', 'MultiDataSplitProcessor',
-			cls = DataSplitProcessor).getInstance(config)
+		partProcessor = config.getCompositePlugin('partition processor',
+			'BasicPartitionProcessor LocationPartitionProcessor', 'MultiPartitionProcessor',
+			cls = PartitionProcessor).getInstance(config)
 		paramSource = DataParameterSource(config.getWorkPath(), 'data',
-			dataProvider, self.dataSplitter, paramSplitProcessor)
+			dataProvider, self.dataSplitter, partProcessor)
 		DataParameterSource.datasetsAvailable['data'] = paramSource
 
 		# Select dataset refresh rate

@@ -14,13 +14,13 @@
 
 from grid_control.backends import WMS
 from grid_control.datasets.splitter_base import DataSplitter
-from grid_control.parameters.psource_base import ParameterInfo, ParameterMetadata
+from grid_control.parameters import ParameterInfo, ParameterMetadata
 from grid_control.utils import filterBlackWhite
 from hpfwk import Plugin
 from python_compat import any, set
 
 # Class used by DataParameterSource to convert dataset splittings into parameter data
-class DataSplitProcessor(Plugin):
+class PartitionProcessor(Plugin):
 	def __init__(self, config):
 		pass
 
@@ -31,9 +31,9 @@ class DataSplitProcessor(Plugin):
 		raise AbstractError
 
 
-class MultiDataSplitProcessor(DataSplitProcessor):
+class MultiPartitionProcessor(PartitionProcessor):
 	def __init__(self, processorProxyList, config):
-		DataSplitProcessor.__init__(self, config)
+		PartitionProcessor.__init__(self, config)
 		self._processorList = map(lambda p: p.getInstance(config), processorProxyList)
 
 	def getKeys(self):
@@ -44,7 +44,7 @@ class MultiDataSplitProcessor(DataSplitProcessor):
 			processor.process(pNum, splitInfo, result)
 
 
-class BasicDataSplitProcessor(DataSplitProcessor):
+class BasicPartitionProcessor(PartitionProcessor):
 	def _formatFileList(self, fl):
 		return str.join(' ', fl)
 
@@ -66,13 +66,13 @@ class BasicDataSplitProcessor(DataSplitProcessor):
 		result[ParameterInfo.ACTIVE] = result[ParameterInfo.ACTIVE] and not splitInfo.get(DataSplitter.Invalid, False)
 
 
-class LocationSplitProcessor(DataSplitProcessor):
+class LocationPartitionProcessor(PartitionProcessor):
 	def __init__(self, config):
-		DataSplitProcessor.__init__(self, config)
-		self._filter = config.getList('datasplit location filter', [], onChange = None)
-		self._preference = config.getList('datasplit location preference', [], onChange = None)
-		self._reqs = config.getBool('datasplit location requirement', True, onChange = None)
-		self._disable = config.getBool('datasplit location check', True, onChange = None)
+		PartitionProcessor.__init__(self, config)
+		self._filter = config.getList('partition location filter', [], onChange = None)
+		self._preference = config.getList('partition location preference', [], onChange = None)
+		self._reqs = config.getBool('partition location requirement', True, onChange = None)
+		self._disable = config.getBool('partition location check', True, onChange = None)
 
 	def getKeys(self):
 		return []
@@ -92,10 +92,10 @@ class LocationSplitProcessor(DataSplitProcessor):
 			result[ParameterInfo.ACTIVE] = result[ParameterInfo.ACTIVE] and (locations != [])
 
 
-class MetadataSplitProcessor(DataSplitProcessor):
+class MetaPartitionProcessor(PartitionProcessor):
 	def __init__(self, config):
-		DataSplitProcessor.__init__(self, config)
-		self._metadata = config.getList('datasplit metadata', [])
+		PartitionProcessor.__init__(self, config)
+		self._metadata = config.getList('partition metadata', [])
 
 	def getKeys(self):
 		return map(lambda k: ParameterMetadata(k, untracked=True), self._metadata)

@@ -16,16 +16,15 @@ import os, shutil
 from grid_control import utils
 from grid_control.backends import WMS
 from grid_control.config import ConfigError, noDefault
-from grid_control.datasets import DataSplitter
-from grid_control.parameters import BasicDataSplitProcessor
+from grid_control.datasets import BasicPartitionProcessor, DataSplitter
 from grid_control.tasks.task_data import DataTask
 from grid_control.tasks.task_utils import TaskExecutableWrapper
 from grid_control_cms.lumi_tools import filterLumiFilter, formatLumi, parseLumiFilter
 
-class CMSDataSplitProcessor(BasicDataSplitProcessor):
+class CMSPartitionProcessor(BasicPartitionProcessor):
 	def __init__(self, config):
-		BasicDataSplitProcessor.__init__(self, config)
-		lfnModifier = config.get('lfn modifier', '', onChange = None)
+		BasicPartitionProcessor.__init__(self, config)
+		lfnModifier = config.get('partition lfn modifier', '', onChange = None)
 		lfnModifierShortcuts = config.getDict('lfn modifier dict', {
 			'<xrootd>': 'root://cms-xrd-global.cern.ch//store/',
 			'<xrootd:eu>': 'root://xrootd-cms.infn.it//store/',
@@ -52,7 +51,7 @@ class CMSSW(DataTask):
 		config.set('se input timeout', '0:30')
 		config.set('dataset provider', 'DBS3Provider')
 		config.set('dataset splitter', 'EventBoundarySplitter')
-		config.set('datasplit processor', 'CMSDataSplitProcessor LocationSplitProcessor')
+		config.set('partition processor', 'CMSPartitionProcessor LocationPartitionProcessor')
 		DataTask.__init__(self, config, name)
 		self.errorDict.update(dict(self.updateErrorDict(utils.pathShare('gc-run.cmssw.sh', pkg = 'grid_control_cms'))))
 
@@ -168,10 +167,6 @@ class CMSSW(DataTask):
 				utils.genTarball(self._projectAreaTarball, utils.matchFiles(self.projectArea, self.pattern))
 			if self._projectAreaTarballSE:
 				config.setState(True, 'init', detail = 'storage')
-
-
-	def initDataProcessor(self):
-		return CMSDataSplitProcessor(self.checkSE)
 
 
 	def instrumentCfgQueue(self, cfgFiles, fragment, mustPrepare = False):
