@@ -13,13 +13,15 @@
 #-#  limitations under the License.
 
 if __name__ == '__main__':
-	import os, sys
+	import os, sys, random
 	from python_compat import sorted, set
 	blacklist = ['./requests/packages/chardet/chardetect.py']
 	# import everything
 	def recurse(root):
 		tmp = root.lstrip('./').split('/')
-		for entry in filter(lambda x: x != __file__, os.listdir(root)):
+		files = os.listdir(root)
+		random.shuffle(files)
+		for entry in filter(lambda x: x != __file__, files):
 			path = os.path.join(root, entry)
 			if entry.startswith('.') or entry.endswith('pyc') or entry.startswith('__') or path in blacklist:
 				continue
