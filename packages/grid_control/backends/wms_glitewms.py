@@ -1,4 +1,4 @@
-#-#  Copyright 2007-2015 Karlsruhe Institute of Technology
+#-#  Copyright 2007-2016 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -124,6 +124,7 @@ class DiscoverWMS_Lazy: # TODO: Move to broker infrastructure
 
 
 class GliteWMS(GridWMS):
+	alias = ['grid']
 	configSections = GridWMS.configSections + ['glite-wms', 'glitewms'] # backwards compatibility
 
 	def __init__(self, config, name):
@@ -183,7 +184,3 @@ class GliteWMS(GridWMS):
 			self._useDelegate = False
 		for submitInfo in GridWMS.submitJobs(self, jobNumList, module):
 			yield submitInfo
-
-
-class Grid(GliteWMS):
-	pass

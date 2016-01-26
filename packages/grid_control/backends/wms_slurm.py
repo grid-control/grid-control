@@ -1,4 +1,4 @@
-#-#  Copyright 2009-2014 Karlsruhe Institute of Technology
+#-#  Copyright 2009-2016 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -18,7 +18,8 @@ from grid_control.backends.wms_local import LocalWMS
 from grid_control.job_db import Job
 
 class JMS(LocalWMS):
-	configSections = LocalWMS.configSections + ['JMS']
+	alias = ['SLURM']
+	configSections = LocalWMS.configSections + ['SLURM', 'JMS']
 	_statusMap = { 's': Job.QUEUED, 'r': Job.RUNNING, 'CG': Job.DONE, 'w': Job.WAITING }
 
 	def __init__(self, config, name):
@@ -83,7 +84,3 @@ class JMS(LocalWMS):
 
 	def getCancelArguments(self, wmsIds):
 		return str.join(' ', wmsIds)
-
-
-class SLURM(JMS):
-	configSections = JMS.configSections + ['SLURM']

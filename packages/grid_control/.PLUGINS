@@ -1,12 +1,10 @@
 grid_control.backends.access.AccessToken:
-grid_control.backends.access	AFSAccessToken
-grid_control.backends.access	AFSProxy
+grid_control.backends.access	AFSAccessToken AFSProxy
 grid_control.backends.access	AccessToken
 grid_control.backends.access	MultiAccessToken
 grid_control.backends.access	RefreshableAccessToken
 grid_control.backends.access	TimedAccessToken
-grid_control.backends.access	TrivialAccessToken
-grid_control.backends.access	TrivialProxy
+grid_control.backends.access	TrivialAccessToken TrivialProxy
 grid_control.backends.access	VomsProxy
 
 grid_control.backends.broker.Broker:
@@ -49,28 +47,20 @@ grid_control.backends.htcondor_wms.htcondor_wms	HTCondor
 grid_control.backends.wms	BasicWMS
 grid_control.backends.wms	InactiveWMS
 grid_control.backends.wms	WMS
-grid_control.backends.wms_edg	EDG
-grid_control.backends.wms_edg	EuropeanDataGrid
-grid_control.backends.wms_edg	LCG
+grid_control.backends.wms_edg	EuropeanDataGrid EDG LCG
 grid_control.backends.wms_glite	Glite
-grid_control.backends.wms_glitewms	GliteWMS
-grid_control.backends.wms_glitewms	Grid
+grid_control.backends.wms_glitewms	GliteWMS grid
 grid_control.backends.wms_glitewms_direct	GliteWMSDirect
 grid_control.backends.wms_grid	GridWMS
-grid_control.backends.wms_gridengine	GridEngine
-grid_control.backends.wms_gridengine	OGE
-grid_control.backends.wms_gridengine	SGE
-grid_control.backends.wms_gridengine	UGE
-grid_control.backends.wms_host	Host
-grid_control.backends.wms_host	Localhost
+grid_control.backends.wms_gridengine	GridEngine SGE UGE OGE
+grid_control.backends.wms_host	Host Localhost
 grid_control.backends.wms_local	Local
 grid_control.backends.wms_local	LocalWMS
 grid_control.backends.wms_lsf	LSF
 grid_control.backends.wms_multi	MultiWMS
 grid_control.backends.wms_pbs	PBS
 grid_control.backends.wms_pbsge	PBSGECommon
-grid_control.backends.wms_slurm	JMS
-grid_control.backends.wms_slurm	SLURM
+grid_control.backends.wms_slurm	JMS SLURM
 grid_control.backends.wms_thread	ThreadedMultiWMS
 
 grid_control.config.cfiller_base.ConfigFiller:
@@ -84,20 +74,19 @@ grid_control.config.cfiller_base	MultiConfigFiller
 grid_control.config.cfiller_base	PythonConfigFiller
 grid_control.config.cfiller_base	StringConfigFiller
 
+grid_control.config.cinterface_typed.FilterBase:
+grid_control.config.cinterface_typed	FilterBase
+
 grid_control.datasets.modifier_base.DatasetModifier:
 grid_control.datasets.modifier_base	DatasetModifier
 grid_control.datasets.modifier_base	MultiDataModifier
 grid_control.datasets.modifier_basic	EmptyFilter
 grid_control.datasets.modifier_basic	EntriesConsistencyFilter
-grid_control.datasets.modifier_basic	EntriesCountFilter
-grid_control.datasets.modifier_basic	EventsCountFilter
-grid_control.datasets.modifier_basic	FileCountFilter
-grid_control.datasets.modifier_basic	FileFilter
-grid_control.datasets.modifier_basic	FileRegexFilter
+grid_control.datasets.modifier_basic	EntriesCountFilter EventsCountFilter
 grid_control.datasets.modifier_basic	LocationFilter
-grid_control.datasets.modifier_basic	URLCountFilter
-grid_control.datasets.modifier_basic	URLFilter
-grid_control.datasets.modifier_basic	URLRegexFilter
+grid_control.datasets.modifier_basic	URLCountFilter FileCountFilter
+grid_control.datasets.modifier_basic	URLFilter FileFilter
+grid_control.datasets.modifier_basic	URLRegexFilter FileRegexFilter
 grid_control.datasets.modifier_basic	UniqueFilter
 grid_control.datasets.modifier_nick	InlineNickNameProducer
 grid_control.datasets.modifier_nick	NickNameProducer
@@ -105,11 +94,11 @@ grid_control.datasets.modifier_nick	SimpleNickNameProducer
 
 grid_control.datasets.provider_base.DataProvider:
 grid_control.datasets.provider_base	DataProvider
-grid_control.datasets.provider_basic	FileProvider
-grid_control.datasets.provider_basic	ListProvider
+grid_control.datasets.provider_basic	FileProvider file
+grid_control.datasets.provider_basic	ListProvider list
 grid_control.datasets.provider_multi	DataMultiplexer
-grid_control.datasets.provider_scan	GCProvider
-grid_control.datasets.provider_scan	ScanProvider
+grid_control.datasets.provider_scan	GCProvider gc
+grid_control.datasets.provider_scan	ScanProvider scan
 grid_control.datasets.provider_scan	ScanProviderBase
 
 grid_control.datasets.scanner_base.InfoScanner:
@@ -238,10 +227,8 @@ grid_control.report	Report
 grid_control.tasks.task_base.TaskModule:
 grid_control.tasks.task_base	TaskModule
 grid_control.tasks.task_data	DataTask
-grid_control.tasks.task_root	ROOTMod
-grid_control.tasks.task_root	ROOTTask
-grid_control.tasks.task_user	UserMod
-grid_control.tasks.task_user	UserTask
+grid_control.tasks.task_root	ROOTTask ROOTMod
+grid_control.tasks.task_user	UserTask UserMod
 
 grid_control.workflow.Workflow:
 grid_control.workflow	Workflow

@@ -1,4 +1,4 @@
-#-#  Copyright 2010-2015 Karlsruhe Institute of Technology
+#-#  Copyright 2010-2016 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -126,7 +126,8 @@ class ScanProviderBase(DataProvider):
 # Get dataset information from storage url
 # required format: <storage url>
 class ScanProvider(ScanProviderBase):
-	DataProvider.providers.update({'ScanProvider': 'scan'})
+	alias = ['scan']
+
 	def __init__(self, config, datasetExpr, datasetNick, datasetID = 0):
 		if '*' in os.path.basename(datasetExpr):
 			config.set('source directory', os.path.dirname(datasetExpr))
@@ -140,7 +141,7 @@ class ScanProvider(ScanProviderBase):
 # Get dataset information just from grid-control instance
 # required format: <path to config file / workdir> [%<job selector]
 class GCProvider(ScanProviderBase):
-	DataProvider.providers.update({'GCProvider': 'gc'})
+	alias = ['gc']
 	stageDir = {}
 	stageFile = {None: ['MatchOnFilename', 'MatchDelimeter']}
 

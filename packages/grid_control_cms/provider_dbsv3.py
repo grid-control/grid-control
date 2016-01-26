@@ -1,4 +1,4 @@
-#-#  Copyright 2013-2015 Karlsruhe Institute of Technology
+#-#  Copyright 2013-2016 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -21,6 +21,8 @@ from grid_control_cms.provider_cms import CMSProvider
 
 # required format: <dataset path>[@<instance>][#<block>]
 class DBS3Provider(CMSProvider):
+	alias = ['dbs3', 'dbs']
+
 	def __init__(self, config, datasetExpr, datasetNick, datasetID = 0):
 		CMSProvider.__init__(self, config, datasetExpr, datasetNick, datasetID)
 		self.usePhedex = (self.url == '') # Use DBS locality for private samples

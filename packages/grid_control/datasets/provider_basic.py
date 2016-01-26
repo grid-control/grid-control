@@ -1,4 +1,4 @@
-#-#  Copyright 2009-2015 Karlsruhe Institute of Technology
+#-#  Copyright 2009-2016 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -20,7 +20,8 @@ from python_compat import rsplit
 # Provides information about a single file
 # required format: <path to data file>|<number of events>[@SE1,SE2]
 class FileProvider(DataProvider):
-	DataProvider.providers.update({'FileProvider': 'file'})
+	alias = ['file']
+
 	def __init__(self, config, datasetExpr, datasetNick, datasetID = 0):
 		DataProvider.__init__(self, config, datasetExpr, datasetNick, datasetID)
 
@@ -43,7 +44,8 @@ class FileProvider(DataProvider):
 # Takes dataset information from an configuration file
 # required format: <path to list of data files>[@<forced prefix>][%[/]<selected dataset>[#<selected block>][#]]
 class ListProvider(DataProvider):
-	DataProvider.providers.update({'ListProvider': 'list'})
+	alias = ['list']
+
 	def __init__(self, config, datasetExpr, datasetNick, datasetID = 0):
 		DataProvider.__init__(self, config, datasetExpr, datasetNick, datasetID)
 

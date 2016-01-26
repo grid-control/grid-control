@@ -29,6 +29,8 @@ class EntriesConsistencyFilter(DatasetModifier):
 
 
 class URLFilter(DatasetModifier):
+	alias = ['FileFilter']
+
 	def __init__(self, config, name):
 		DatasetModifier.__init__(self, config, name)
 		self._ignoreURLs = config.getList(['ignore urls', 'ignore files'], [])
@@ -40,11 +42,10 @@ class URLFilter(DatasetModifier):
 		block[DataProvider.FileList] = filter(lambda x: self._matchURL(x[DataProvider.URL]), block[DataProvider.FileList])
 		return block
 
-class FileFilter(URLFilter):
-	pass
-
 
 class URLRegexFilter(URLFilter):
+	alias = ['FileRegexFilter']
+
 	def __init__(self, config, name):
 		URLFilter.__init__(self, config, name)
 		self._ignoreREs = map(re.compile, self._ignoreURLs)
@@ -55,11 +56,10 @@ class URLRegexFilter(URLFilter):
 				return True
 		return False
 
-class FileRegexFilter(URLRegexFilter):
-	pass
-
 
 class URLCountFilter(DatasetModifier):
+	alias = ['FileCountFilter']
+
 	def __init__(self, config, name):
 		DatasetModifier.__init__(self, config, name)
 		self._limitFiles = config.getInt(['limit urls', 'limit files'], -1)
@@ -70,11 +70,10 @@ class URLCountFilter(DatasetModifier):
 			self._limitFiles -= len(block[DataProvider.FileList])
 		return block
 
-class FileCountFilter(URLCountFilter):
-	pass
-
 
 class EntriesCountFilter(DatasetModifier):
+	alias = ['EventsCountFilter']
+
 	def __init__(self, config, name):
 		DatasetModifier.__init__(self, config, name)
 		self._limitEntries = config.getInt(['limit entries', 'limit events'], -1)
@@ -93,9 +92,6 @@ class EntriesCountFilter(DatasetModifier):
 				return True
 			block[DataProvider.FileList] = filter(filterEvents, block[DataProvider.FileList])
 		return block
-
-class EventsCountFilter(EntriesCountFilter):
-	pass
 
 
 class EmptyFilter(DatasetModifier):

@@ -67,6 +67,8 @@ class MultiAccessToken(AccessToken):
 
 
 class TrivialAccessToken(AccessToken):
+	alias = ['TrivialProxy']
+
 	def getUsername(self):
 		for var in ('LOGNAME', 'USER', 'LNAME', 'USERNAME'):
 			result = os.environ.get(var)
@@ -182,6 +184,8 @@ class RefreshableAccessToken(TimedAccessToken):
 
 
 class AFSAccessToken(RefreshableAccessToken):
+	alias = ['AFSProxy']
+
 	def __init__(self, config, name):
 		RefreshableAccessToken.__init__(self, config, name)
 		self._kinitExec = utils.resolveInstallPath('kinit')
@@ -264,10 +268,3 @@ class AFSAccessToken(RefreshableAccessToken):
 
 	def getAuthFiles(self):
 		return self._authFiles.values()
-
-
-class TrivialProxy(TrivialAccessToken):
-	pass
-
-class AFSProxy(AFSAccessToken):
-	pass

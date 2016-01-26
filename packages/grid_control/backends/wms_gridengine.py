@@ -1,4 +1,4 @@
-#-#  Copyright 2009-2015 Karlsruhe Institute of Technology
+#-#  Copyright 2009-2016 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -21,7 +21,9 @@ from grid_control.job_db import Job
 from python_compat import set
 
 class GridEngine(PBSGECommon):
-	configSections = PBSGECommon.configSections + ['OGE']
+	alias = ['SGE', 'UGE', 'OGE']
+	configSections = PBSGECommon.configSections + ['GridEngine'] + alias
+
 	def __init__(self, config, name):
 		PBSGECommon.__init__(self, config, name)
 		self._user = config.get('user', os.environ.get('LOGNAME', ''), onChange = None)
@@ -116,13 +118,3 @@ class GridEngine(PBSGECommon):
 				result.update(host.split())
 		if len(result) > 0:
 			return list(result)
-
-
-class UGE(GridEngine): # Univa Grid Engine
-	configSections = GridEngine.configSections + ['UGE']
-
-class OGE(GridEngine): # Oracle Grid Engine
-	configSections = GridEngine.configSections + ['OGE']
-
-class SGE(GridEngine): # Sun Grid Engine
-	configSections = GridEngine.configSections + ['SGE']

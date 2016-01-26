@@ -1,4 +1,4 @@
-#-#  Copyright 2014-2015 Karlsruhe Institute of Technology
+#-#  Copyright 2014-2016 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -77,6 +77,9 @@ if __name__ == '__main__':
 			outputLine = '%s:\n' % baseClass
 			for cls in sorted(packages[package][baseClass], key = lambda x: (x.__module__, x.__name__)):
 				if cls not in topClasses:
-					outputLine += ('%s\t%s\n' % (cls.__module__, cls.__name__))
+					outputLine += '%s\t%s' % (cls.__module__, cls.__name__)
+					if cls.alias and cls.alias not in map(lambda pcls: pcls.alias, cls.__bases__):
+						outputLine += ' ' + str.join(' ', cls.alias)
+					outputLine += '\n'
 			output.append(outputLine)
 		open(os.path.join(package, '.PLUGINS'), 'wb').write(str.join('\n', output))

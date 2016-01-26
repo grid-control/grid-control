@@ -1,8 +1,8 @@
 grid_control.datasets.provider_base.DataProvider:
 grid_control_cms.provider_cms	CMSProvider
 grid_control_cms.provider_cms	DBS2Provider
-grid_control_cms.provider_das	DASProvider
-grid_control_cms.provider_dbsv3	DBS3Provider
+grid_control_cms.provider_das	DASProvider das
+grid_control_cms.provider_dbsv3	DBS3Provider dbs3 dbs
 grid_control_cms.provider_scan_dbs	DBSInfoProvider
 
 grid_control.datasets.scanner_base.InfoScanner:

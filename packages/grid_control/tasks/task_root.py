@@ -1,4 +1,4 @@
-#-#  Copyright 2010-2015 Karlsruhe Institute of Technology
+#-#  Copyright 2010-2016 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -18,7 +18,8 @@ from grid_control.config import ConfigError, changeInitNeeded
 from grid_control.tasks.task_user import UserTask
 
 class ROOTTask(UserTask):
-	configSections = UserTask.configSections + ['ROOTTask']
+	alias = ['ROOTMod']
+	configSections = UserTask.configSections + ['ROOTMod', 'ROOTTask']
 
 	def __init__(self, config, name):
 		# Determine ROOT path from previous settings / environment / config file
@@ -55,7 +56,3 @@ class ROOTTask(UserTask):
 	def getSBInFiles(self):
 		return UserTask.getSBInFiles(self) + self.libFiles + [
 			utils.Result(pathAbs = utils.pathShare('gc-run.root.sh'), pathRel = 'gc-run.root.sh')]
-
-
-class ROOTMod(ROOTTask):
-	configSections = UserTask.configSections + ['ROOTMod', 'ROOTTask']

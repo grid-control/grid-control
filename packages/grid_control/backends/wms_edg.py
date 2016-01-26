@@ -1,4 +1,4 @@
-#-#  Copyright 2007-2014 Karlsruhe Institute of Technology
+#-#  Copyright 2007-2016 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -16,6 +16,8 @@ from grid_control import utils
 from grid_control.backends.wms_grid import GridWMS, jdlEscape
 
 class EuropeanDataGrid(GridWMS):
+	alias = ['EDG', 'LCG']
+
 	def __init__(self, config, name):
 		GridWMS.__init__(self, config, name)
 
@@ -30,10 +32,3 @@ class EuropeanDataGrid(GridWMS):
 		fmt = lambda x: '(target.GlueSEUniqueID == %s)' % jdlEscape(x)
 		if sites:
 			return 'anyMatch(other.storage.CloseSEs, ' + str.join(' || ', map(fmt, sites)) + ')'
-
-
-class EDG(EuropeanDataGrid):
-	pass
-
-class LCG(EuropeanDataGrid):
-	pass

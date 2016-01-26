@@ -1,4 +1,4 @@
-#-#  Copyright 2009-2014 Karlsruhe Institute of Technology
+#-#  Copyright 2009-2016 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -18,7 +18,9 @@ from grid_control.job_db import Job
 from python_compat import next
 
 class Host(LocalWMS):
-	configSections = LocalWMS.configSections + ['Host']
+	alias = ['Localhost']
+	configSections = LocalWMS.configSections + ['Localhost', 'Host']
+
 	def __init__(self, config, name):
 		LocalWMS.__init__(self, config, name,
 			submitExec = utils.pathShare('gc-host.sh'),
@@ -60,7 +62,3 @@ class Host(LocalWMS):
 
 	def getCancelArguments(self, wmsIds):
 		return '-9 %s' % str.join(' ', wmsIds)
-
-
-class Localhost(Host):
-	configSections = Host.configSections + ['Localhost']

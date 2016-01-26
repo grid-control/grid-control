@@ -1,4 +1,4 @@
-#-#  Copyright 2007-2014 Karlsruhe Institute of Technology
+#-#  Copyright 2007-2016 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -17,7 +17,8 @@ from grid_control.tasks.task_data import DataTask
 from grid_control.tasks.task_utils import TaskExecutableWrapper
 
 class UserTask(DataTask):
-	configSections = DataTask.configSections + ['UserTask']
+	alias = ['UserMod']
+	configSections = DataTask.configSections + ['UserMod', 'UserTask']
 
 	def __init__(self, config, name):
 		DataTask.__init__(self, config, name)
@@ -39,7 +40,3 @@ class UserTask(DataTask):
 	def getSBOutFiles(self):
 		tmp = map(lambda s: s + utils.QM(self.gzipOut, '.gz', ''), ['job.stdout', 'job.stderr'])
 		return DataTask.getSBOutFiles(self) + tmp
-
-
-class UserMod(UserTask):
-	configSections = DataTask.configSections + ['UserMod', 'UserTask']

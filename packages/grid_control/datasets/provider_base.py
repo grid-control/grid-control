@@ -26,7 +26,6 @@ class DataProvider(Plugin):
 	def __init__(self, config, datasetExpr, datasetNick, datasetID):
 		(self._datasetExpr, self._datasetNick, self._datasetID) = (datasetExpr, datasetNick, datasetID)
 		self._cache = None
-		self.sitefilter = config.getList('sites', [])
 
 		nickProducerClass = config.getPlugin('nickname source', 'SimpleNickNameProducer', cls = DatasetModifier)
 		self._nickProducer = nickProducerClass.getInstance()
@@ -39,13 +38,11 @@ class DataProvider(Plugin):
 	def parseDatasetExpr(config, expression, defaultProvider):
 		(nickname, provider, dataset) = ('', defaultProvider, None)
 		temp = map(str.strip, expression.split(':', 2))
-		providerMap = dict(map(lambda (x, y): (y, x), DataProvider.providers.items()))
 
 		if len(temp) == 3:
 			(nickname, provider, dataset) = temp
 			if dataset.startswith('/'):
 				dataset = '/' + dataset.lstrip('/')
-			provider = providerMap.get(provider.lower(), provider)
 		elif len(temp) == 2:
 			(nickname, dataset) = temp
 		elif len(temp) == 1:
@@ -233,7 +230,6 @@ class DataProvider(Plugin):
 		return utils.DiffLists(oldBlocks, newBlocks, cmpBlock, onMatchingBlock, isSorted = True)
 	resyncSources = staticmethod(resyncSources)
 
-DataProvider.providers = {}
 # To uncover errors, the enums of DataProvider / DataSplitter do *NOT* match type wise
 utils.makeEnum(['NEntries', 'BlockName', 'Dataset', 'Locations', 'URL', 'FileList',
 	'Nickname', 'DatasetID', 'Metadata', 'Provider', 'ResyncInfo'], DataProvider)

@@ -20,6 +20,7 @@ class PluginError(NestedException):
 
 # Abstract class taking care of dynamic class loading 
 class Plugin(object):
+	alias = []
 	configSections = []
 	moduleMap = {}
 
@@ -97,8 +98,10 @@ def initPlugins(basePath):
 			__import__(pkgName) # Trigger initialisation of module
 			for line in map(str.strip, open(pluginFile)):
 				if line and not line.endswith(':'):
-					modulePath, module = line.split()
-					Plugin.moduleMap.setdefault(module, []).append('%s.%s' % (modulePath, module))
+					tmp = line.split()
+					(modulePath, module) = (tmp[0], tmp[1])
+					for pluginName in tmp[1:]:
+						Plugin.moduleMap.setdefault(pluginName, []).append('%s.%s' % (modulePath, module))
 
 # NamedPlugin provides functionality to name plugin instances
 class NamedPlugin(Plugin):
