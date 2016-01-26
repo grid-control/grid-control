@@ -101,7 +101,7 @@ class MetadataSplitProcessor(DataSplitProcessor):
 		return map(lambda k: ParameterMetadata(k, untracked=True), self._metadata)
 
 	def process(self, pNum, splitInfo, result):
-		for idx, mkey in enumerate(splitInfo[DataSplitter.MetadataHeader]):
+		for idx, mkey in enumerate(splitInfo.get(DataSplitter.MetadataHeader, [])):
 			if mkey in self._metadata:
 				tmp = set(map(lambda x: x[idx], splitInfo[DataSplitter.Metadata]))
 				if len(tmp) == 1:
