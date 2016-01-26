@@ -1,4 +1,4 @@
-#-#  Copyright 2014-2015 Karlsruhe Institute of Technology
+#-#  Copyright 2014-2016 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -37,7 +37,7 @@ class TaggedConfigView(SimpleConfigView):
 			try:
 				tagName = t.tagName.lower()
 			except Exception:
-				raise APIError('Class %r does not define a tag name!' % t.__class__.__name__)
+				raise APIError('Class %r does not define a valid tag name!' % t.__class__.__name__)
 			return [(tagName, t.getObjectName().lower())]
 		self._initVariable('_cfgTags', [], setTags, addTags, lambda x: x, makeTagTuple)
 		self._cfgTagsOrder = map(lambda (tagName, tagValue): tagName, self._cfgTags)
