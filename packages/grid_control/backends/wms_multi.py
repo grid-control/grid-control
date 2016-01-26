@@ -27,7 +27,7 @@ class MultiWMS(WMS):
 		self._wmsMap = {self._defaultWMS.getObjectName().lower(): self._defaultWMS}
 		for wmsEntry in wmsList[1:]:
 			wmsObj = wmsEntry.getInstance()
-			self._wmsMap[wmsEntry.getObjectName().lower()] = wmsObj
+			self._wmsMap[wmsObj.getObjectName().lower()] = wmsObj
 			wmsT = wmsObj.getTimings()
 			self._timing.waitOnIdle = max(self._timing.waitOnIdle, wmsT.waitOnIdle)
 			self._timing.waitBetweenSteps = max(self._timing.waitBetweenSteps, wmsT.waitBetweenSteps)

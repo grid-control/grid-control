@@ -200,7 +200,8 @@ class AFSAccessToken(RefreshableAccessToken):
 		for name in self._authFiles: # store kerberos files in work directory for persistency
 			if name in os.environ:
 				fn = os.environ[name].replace('FILE:', '')
-				shutil.copyfile(fn, self._authFiles[name])
+				if fn != self._authFiles[name]:
+					shutil.copyfile(fn, self._authFiles[name])
 				os.chmod(self._authFiles[name], stat.S_IRUSR | stat.S_IWUSR)
 				os.environ[name] = self._authFiles[name]
 
