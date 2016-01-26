@@ -29,7 +29,7 @@ class Plugin(object):
 		log.log(logging.DEBUG1, 'Loading class %s' % clsName)
 
 		# resolve class name/alias to complete class path 'myplugin -> module.submodule.MyPlugin'
-		clsMap = dict(map(lambda (k, v): (k.lower(), v), cls.moduleMap.items()))
+		clsMap = dict(map(lambda k_v: (k_v[0].lower(), k_v[1]), cls.moduleMap.items()))
 		clsSearchList = [clsName]
 		clsNameStored = clsName
 		clsFormat = lambda cls: '%s:%s' % (cls.__module__, cls.__name__)
