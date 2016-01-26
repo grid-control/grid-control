@@ -197,7 +197,16 @@ class FilterBase(Plugin):
 	def filterList(self, value):
 		raise AbstractError
 
+
+CommandType = utils.makeEnum(['executable', 'command'])
+
 class SimpleConfigInterface(TypedConfigInterface):
+	def getCommand(self, option, default = noDefault, **kwargs):
+		scriptType = self.getEnum(appendOption(option, 'type'), CommandType, CommandType.executable, **kwargs)
+		if scriptType == CommandType.executable:
+			return self.getPath(option, default, **kwargs)
+		return self.get(option, default, **kwargs)
+
 	def getFilter(self, option, pluginName):
 		filterExpr = self.getList(option, [])
 		filterCls = self.getPlugin(appendOption(option, 'plugin'), pluginName, cls = FilterBase)

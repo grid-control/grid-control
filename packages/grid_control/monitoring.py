@@ -52,7 +52,7 @@ class Monitoring(EventHandler):
 		return utils.listMapReduce(lambda m: list(m.getScript()), self.submodules)
 
 	def getTaskConfig(self):
-		tmp = {'GC_MONITORING': str.join(" ", map(os.path.basename, self.getScript()))}
+		tmp = {'GC_MONITORING': str.join(' ', map(os.path.basename, self.getScript()))}
 		return utils.mergeDicts(map(lambda m: m.getTaskConfig(), self.submodules) + [tmp])
 
 	def getFiles(self):
@@ -72,10 +72,10 @@ class ScriptMonitoring(Monitoring):
 	def __init__(self, config, name, task):
 		Monitoring.__init__(self, config, name, task)
 		self.silent = config.getBool('silent', True, onChange = None)
-		self.evtSubmit = config.get('on submit', '', onChange = None)
-		self.evtStatus = config.get('on status', '', onChange = None)
-		self.evtOutput = config.get('on output', '', onChange = None)
-		self.evtFinish = config.get('on finish', '', onChange = None)
+		self.evtSubmit = config.getCommand('on submit', '', onChange = None)
+		self.evtStatus = config.getCommand('on status', '', onChange = None)
+		self.evtOutput = config.getCommand('on output', '', onChange = None)
+		self.evtFinish = config.getCommand('on finish', '', onChange = None)
 		self.running = {}
 		self.runningToken = 0
 		self.runningMax = config.getTime('script runtime', 5, onChange = None)
@@ -101,7 +101,9 @@ class ScriptMonitoring(Monitoring):
 				tmp.update(self.task.getSubmitInfo(jobNum))
 			tmp.update(allDict)
 			for key, value in tmp.iteritems():
-				os.environ["GC_%s" % key] = str(value)
+				if not key.startswith('GC_'):
+					key = 'GC_' + key
+				os.environ[key] = str(value)
 
 			script = self.task.substVars(script, jobNum, tmp)
 			if self.silent:
@@ -116,7 +118,7 @@ class ScriptMonitoring(Monitoring):
 		if script != '':
 			self.runningToken += 1
 			self.running[self.runningToken] = time.time()
-			utils.gcStartThread("Running monitoring script %s" % script,
+			utils.gcStartThread('Running monitoring script %s' % script,
 				self.scriptThread, self.runningToken, script, jobNum, jobObj)
 			self.cleanupRunning()
 
