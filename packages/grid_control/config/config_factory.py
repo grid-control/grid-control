@@ -36,11 +36,11 @@ class ConfigFactory(object):
 
 		# Init config containers
 		self._curContainer = ConfigContainer('current')
+		if filler: # Read in the current configuration ...
+			filler.fill(self._curContainer)
 		logging.getLogger('config.stored').propagate = False
 		oldContainer = ConfigContainer('stored')
 		oldContainer.enabled = False
-		if filler: # Read in the current configuration ...
-			filler.fill(self._curContainer)
 
 		# Create config view and temporary config interface
 		self._view = SimpleConfigView(getName(), oldContainer, self._curContainer)
