@@ -1,4 +1,4 @@
-#-#  Copyright 2014-2015 Karlsruhe Institute of Technology
+#-#  Copyright 2014-2016 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -28,7 +28,7 @@ import time
 
 # GC modules
 from grid_control.gc_exceptions import InstallationError, RuntimeError
-from grid_control.utils import InstallationError, LoggedProcess, ensureDirExists, resolveInstallPath
+from grid_control.utils import LoggedProcess, ensureDirExists, resolveInstallPath
 from hpfwk import AbstractError, Plugin
 from python_compat import lru_cache
 
