@@ -1,4 +1,4 @@
-#-#  Copyright 2013-2015 Karlsruhe Institute of Technology
+#-#  Copyright 2013-2016 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -17,12 +17,6 @@ from grid_control import utils
 from grid_control.gui import GUI
 from grid_control.job_db import Job
 from python_compat import sorted
-
-try:
-	import cherrypy
-except Exception:
-	print "cherrypy package must be installed!"
-	raise
 
 class CPProgressBar:
 	def __init__(self, minValue = 0, progress = 0, maxValue = 100, totalWidth = 300):
@@ -67,12 +61,14 @@ class CPWebserver(GUI):
 	def __init__(self, jobCycle, jobMgr, task):
 		GUI.__init__(self, jobCycle, jobMgr, task)
 		self.counter = 0
+		import cherrypy
 
 	def processQueue(self, timeout):
 		self.counter += 1
 		utils.wait(timeout)
 
 	def image(self):
+		import cherrypy
 		cherrypy.response.headers['Content-Type']= 'image/png'
 		nodes = ["MetadataSplitter", "RunSplitter"]
 		edges = [("MetadataSplitter", "RunSplitter")]
@@ -116,6 +112,7 @@ class CPWebserver(GUI):
 	jobs.exposed = True
 
 	def index(self):
+		import cherrypy
 		result = '<body>'
 		result += '<a href="jobs">go to jobs</a>'
 		result += '<div>%s</div>' % cherrypy.request.__dict__
@@ -124,6 +121,7 @@ class CPWebserver(GUI):
 	index.exposed = True
 
 	def run(self):
+		import cherrypy
 		basic_auth = {'tools.auth_basic.on': True, 'tools.auth_basic.realm': 'earth',
 			'tools.auth_basic.checkpassword': cherrypy.lib.auth_basic.checkpassword_dict({'user' : '123'})}
 		cherrypy.log.screen = False
