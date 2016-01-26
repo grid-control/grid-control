@@ -1,4 +1,4 @@
-#-#  Copyright 2007-2015 Karlsruhe Institute of Technology
+#-#  Copyright 2007-2016 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -221,7 +221,10 @@ class AFSAccessToken(RefreshableAccessToken):
 					expires_str = str.join(' ', issued_expires[len(issued_expires) / 2:])
 					parseDate = lambda value, format: time.mktime(time.strptime(value, format))
 					if expires_str.count(' ') == 3:
-						expires = parseDate(expires_str, '%m %d %y %H:%M:%S')
+						if len(expires_str.split()[2]) == 2:
+							expires = parseDate(expires_str, '%m %d %y %H:%M:%S')
+						else:
+							expires = parseDate(expires_str, '%m %d %Y %H:%M:%S')
 					elif expires_str.count(' ') == 2: # year information is missing
 						currentYear = int(time.strftime('%Y'))
 						expires = parseDate(expires_str + ' %d' % currentYear, '%b %d %H:%M:%S %Y')
