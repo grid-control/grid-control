@@ -21,11 +21,9 @@ def formatVariables(variables, showLongVariables = False):
 			value = repr(obj)
 		except Exception:
 			return 'unable to display!'
-		try:
-			if (len(value) < 100) or showLongVariables:
-				return value
-		except Exception:
-			return value[:100] + ' ... [length:%d]' % len(value)
+		if (len(value) < 200) or showLongVariables:
+			return value
+		return value[:200] + ' ... [length:%d]' % len(value)
 
 	maxlen = max(map(len, variables) + [0])
 	def display(keys, varDict, varPrefix = ''):

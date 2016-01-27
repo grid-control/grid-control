@@ -16,12 +16,12 @@ import logging
 from grid_control import utils
 from grid_control.backends import WMS
 from grid_control.config import TaggedConfigView
+from grid_control.gc_plugin import NamedPlugin
 from grid_control.gui import GUI
 from grid_control.job_manager import JobManager
 from grid_control.logging_setup import LogEveryNsec
 from grid_control.monitoring import Monitoring
 from grid_control.tasks import TaskModule
-from hpfwk import NamedPlugin
 
 # Workflow class
 class Workflow(NamedPlugin):

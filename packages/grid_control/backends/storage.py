@@ -1,4 +1,4 @@
-#-#  Copyright 2010-2015 Karlsruhe Institute of Technology
+#-#  Copyright 2010-2016 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -16,7 +16,8 @@ import os, sys, shutil
 from grid_control import utils
 from grid_control.config import ConfigError, validNoVar
 from grid_control.gc_exceptions import RuntimeError
-from hpfwk import NamedPlugin, NestedException
+from grid_control.gc_plugin import NamedPlugin
+from hpfwk import NestedException
 from python_compat import set
 
 class StorageError(NestedException):

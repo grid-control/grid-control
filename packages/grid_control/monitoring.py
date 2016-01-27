@@ -14,8 +14,8 @@
 
 import os, time, logging
 from grid_control import utils
+from grid_control.gc_plugin import NamedPlugin
 from grid_control.job_db import Job
-from hpfwk import NamedPlugin
 
 class EventHandler(NamedPlugin):
 	configSections = NamedPlugin.configSections + ['events']

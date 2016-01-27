@@ -1,4 +1,4 @@
-#-#  Copyright 2012-2015 Karlsruhe Institute of Technology
+#-#  Copyright 2012-2016 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -14,12 +14,12 @@
 
 import random
 from grid_control.config import TaggedConfigView
+from grid_control.gc_plugin import NamedPlugin
 from grid_control.parameters.config_param import ParameterConfig
 from grid_control.parameters.padapter import ParameterAdapter
 from grid_control.parameters.psource_basic import ConstParameterSource, CounterParameterSource, RNGParameterSource, RequirementParameterSource
 from grid_control.parameters.psource_data import DataParameterSource
 from grid_control.parameters.psource_meta import CrossParameterSource, RepeatParameterSource, ZipLongParameterSource
-from hpfwk import NamedPlugin
 
 class ParameterFactory(NamedPlugin):
 	configSections = NamedPlugin.configSections + ['parameters']

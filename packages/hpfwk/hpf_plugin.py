@@ -18,6 +18,35 @@ from hpfwk import NestedException
 class PluginError(NestedException):
 	pass
 
+# Wrapper class to fix plugin arguments
+class InstanceFactory(object):
+	def __init__(self, bindValue, cls, *args, **kwargs):
+		(self._bindValue, self._cls, self._args, self._kwargs) = (bindValue, cls, args, kwargs)
+
+	def _fmt(self, args, kwargs, addEllipsis = False):
+		args_str_list = map(repr, args)
+		args_str_list.extend(map(lambda kv: '%s=%r' % kv, kwargs.items()))
+		if addEllipsis:
+			args_str_list.append('...')
+		return '%s(%s)' % (self._cls.__name__, str.join(', ', args_str_list))
+
+	def __eq__(self, other): # Used to check for changes compared to old
+		return self._bindValue == other._bindValue
+
+	def __repr__(self):
+		return '<instance factory for %s>' % self._fmt(self._args, self._kwargs, addEllipsis = True)
+
+	def getInstance(self, *args, **kwargs):
+		args = self._args + args
+		kwargs = dict(self._kwargs.items() + kwargs.items())
+		try:
+			return self._cls(*args, **kwargs)
+		except Exception:
+			raise PluginError('Error while creating instance: %s' % self._fmt(args, kwargs))
+
+	def bindValue(self):
+		return self._bindValue
+
 # Abstract class taking care of dynamic class loading 
 class Plugin(object):
 	alias = []
@@ -93,6 +122,11 @@ class Plugin(object):
 			raise PluginError('Error while creating instance of type %s (%s)' % (clsName, clsType))
 	getInstance = classmethod(getInstance)
 
+	def bind(cls, value, modulePaths = [], **kwargs):
+		for entry in value.split():
+			yield InstanceFactory(entry, cls.getClass(entry, modulePaths))
+	bind = classmethod(bind)
+
 Plugin.pkgPaths = []
 
 # Init plugin search paths
@@ -108,14 +142,3 @@ def initPlugins(basePath):
 					(modulePath, module) = (tmp[0], tmp[1])
 					for pluginName in tmp[1:]:
 						Plugin.moduleMap.setdefault(pluginName, []).append('%s.%s' % (modulePath, module))
-
-# NamedPlugin provides functionality to name plugin instances
-class NamedPlugin(Plugin):
-	defaultName = None
-	tagName = None
-
-	def __init__(self, config, name):
-		self._name = name
-
-	def getObjectName(self):
-		return self._name

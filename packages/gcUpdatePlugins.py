@@ -48,7 +48,8 @@ if __name__ == '__main__':
 		return None
 
 	clsList = []
-	from hpfwk import Plugin, NamedPlugin
+	from hpfwk import Plugin
+	from grid_control.gc_plugin import NamedPlugin
 
 	for imp in recurse('.'):
 		try:

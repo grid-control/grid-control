@@ -17,55 +17,13 @@ from grid_control import utils
 from grid_control.config.cinterface_base import ConfigInterface
 from grid_control.config.config_entry import ConfigError, noDefault
 from grid_control.config.cview_base import SimpleConfigView
-from grid_control.config.cview_tagged import TaggedConfigView
-from hpfwk import APIError, AbstractError, NamedPlugin, Plugin, PluginError
+from hpfwk import APIError, AbstractError, Plugin
 from python_compat import user_input
 
 def appendOption(option, suffix):
 	if isinstance(option, (list, tuple)):
 		return map(lambda x: appendOption(x, suffix), option)
 	return option.rstrip() + ' ' + suffix
-
-# Needed by getPlugin / getCompositePlugin to wrap the fixed arguments to the instantiation / name of the instance
-class ClassWrapper(object):
-	def __init__(self, baseClass, value, config, tags, inherit, defaultName, pluginPaths):
-		(self._baseClass, self._config, self._tags, self._inherit, self._pluginPaths) = \
-			(baseClass, config, tags, inherit, pluginPaths)
-		(self._instClassName, self._instName) = utils.optSplit(value, ':')
-		if self._instName == '':
-			if not defaultName:
-				self._instName = self._instClassName.split('.')[-1] # Default: (non fully qualified) class name as instance name
-			else:
-				self._instName = defaultName
-
-	def __eq__(self, other): # Used to check for changes compared to old
-		return str(self) == str(other)
-
-	def __repr__(self):
-		return '<class wrapper for %r (base: %r)>' % (str(self), self._baseClass.__name__)
-
-	def __str__(self):  # Used to serialize config setting
-		if self._instName == self._instClassName.split('.')[-1]: # take care of fully qualified class names
-			return self._instClassName
-		return '%s:%s' % (self._instClassName, self._instName)
-
-	def getObjectName(self):
-		return self._instName
-
-	def getClass(self):
-		return self._baseClass.getClass(self._instClassName, self._pluginPaths)
-
-	def getInstance(self, *args, **kwargs):
-		cls = self.getClass()
-		if issubclass(cls, NamedPlugin):
-			config = self._config.changeView(viewClass = TaggedConfigView,
-				setClasses = [cls], setSections = None, setNames = [self._instName],
-				addTags = self._tags, inheritSections = self._inherit)
-			args = [config, self._instName] + list(args)
-		try:
-			return cls(*args, **kwargs)
-		except Exception:
-			raise PluginError('Error while creating instance of type %s (%s)' % (cls, str(self)))
 
 # General purpose class factory
 class CompositedClassWrapper(object):
@@ -170,22 +128,35 @@ class TypedConfigInterface(ConfigInterface):
 		return self._getInternal('paths', obj2str, str2obj, None, option, default, **kwargs)
 
 	# Return class - default class is also given in string form!
-	def getPlugin(self, option, default = noDefault, cls = Plugin, tags = [], inherit = False, defaultName = '', **kwargs):
-		str2obj = lambda value: ClassWrapper(cls, value, self, tags, inherit, defaultName, self._getPluginPaths())
-		return self._getInternal('plugin', str, str2obj, str2obj, option, default, **kwargs)
+	def getPlugin(self, option, default = noDefault,
+			cls = Plugin, tags = [], inherit = False, requirePlugin = True, **kwargs):
+		def str2obj(value):
+			objList = list(cls.bind(value, self._getPluginPaths(), config = self, inherit = inherit, tags = tags))
+			if len(objList) > 1:
+				raise ConfigError('This option only allows to specify a single plugin!')
+			elif objList:
+				return objList[0]
+			if requirePlugin:
+				raise ConfigError('This option requires to specify a valid plugin!')
+		obj2str = lambda obj: obj.bindValue()
+		return self._getInternal('plugin', obj2str, str2obj, str2obj, option, default, **kwargs)
 
 	# Return composite class - default classes are also given in string form!
-	def getCompositePlugin(self, option, default = noDefault, default_compositor = noDefault, option_compositor = None,
-			cls = Plugin, tags = [], inherit = False, defaultName = '', **kwargs):
-		parseSingle = lambda value: ClassWrapper(cls, value, self, tags, inherit, defaultName, self._getPluginPaths())
-		str2obj = lambda value: map(parseSingle, utils.parseList(value, None, onEmpty = []))
-		obj2str = lambda value: str.join('\n', map(str, value))
+	def getCompositePlugin(self, option, default = noDefault,
+			default_compositor = noDefault, option_compositor = None,
+			cls = Plugin, tags = [], inherit = False, requirePlugin = True, **kwargs):
+		str2obj = lambda value: list(cls.bind(value, self._getPluginPaths(), config = self, inherit = inherit, tags = tags))
+		obj2str = lambda value: str.join('\n', map(lambda obj: obj.bindValue(), value))
 		clsList = self._getInternal('composite plugin', obj2str, str2obj, str2obj, option, default, **kwargs)
 		if len(clsList) == 1:
 			return clsList[0]
+		if not clsList:
+			if requirePlugin:
+				raise ConfigError('This option requires to specify a valid plugin!')
+			return
 		if not option_compositor:
 			option_compositor = appendOption(option, 'manager')
-		clsCompositor = self.getPlugin(option_compositor, default_compositor, cls, tags, inherit, defaultName, **kwargs)
+		clsCompositor = self.getPlugin(option_compositor, default_compositor, cls, tags, inherit, **kwargs)
 		return CompositedClassWrapper(clsCompositor, clsList)
 
 
@@ -209,7 +180,7 @@ class SimpleConfigInterface(TypedConfigInterface):
 
 	def getFilter(self, option, pluginName):
 		filterExpr = self.getList(option, [])
-		filterCls = self.getPlugin(appendOption(option, 'plugin'), pluginName, cls = FilterBase)
+		filterCls = self.getPlugin(appendOption(option, 'type'), pluginName, cls = FilterBase)
 		return filterCls.getInstance(filterExpr)
 
 	# Get state - bool stored in hidden "state" section - any given detail overrides global state

@@ -16,11 +16,11 @@ import math, time, bisect, random, logging
 from grid_control import utils
 from grid_control.config import ConfigError
 from grid_control.gc_exceptions import RuntimeError
+from grid_control.gc_plugin import NamedPlugin
 from grid_control.job_db import Job, JobClass, JobDB
 from grid_control.job_selector import AndJobSelector, ClassSelector, JobSelector
 from grid_control.output_processor import TaskOutputProcessor
 from grid_control.report import Report
-from hpfwk import NamedPlugin
 from python_compat import set, sorted
 
 class JobManager(NamedPlugin):

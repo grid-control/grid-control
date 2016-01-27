@@ -13,7 +13,7 @@
 #-#  limitations under the License.
 
 import logging
-from hpfwk import NamedPlugin
+from grid_control.gc_plugin import NamedPlugin
 
 class DataProcessor(NamedPlugin):
 	tagName = 'dsproc'

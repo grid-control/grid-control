@@ -18,8 +18,9 @@ import os, glob, shutil, itertools
 from grid_control import utils
 from grid_control.backends.access import AccessToken
 from grid_control.backends.storage import StorageManager
+from grid_control.gc_plugin import NamedPlugin
 from grid_control.utils.file_objects import VirtualFile
-from hpfwk import AbstractError, NamedPlugin, NestedException
+from hpfwk import AbstractError, NestedException
 from python_compat import set, sorted
 
 class BackendError(NestedException):

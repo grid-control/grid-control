@@ -1,4 +1,4 @@
-#-#  Copyright 2009-2014 Karlsruhe Institute of Technology
+#-#  Copyright 2009-2016 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
 
 import random
 from grid_control import utils
-from hpfwk import NamedPlugin
+from grid_control.gc_plugin import NamedPlugin
 
 class Broker(NamedPlugin):
 	configSections = NamedPlugin.configSections + ['broker']

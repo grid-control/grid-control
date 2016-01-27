@@ -14,4 +14,4 @@
 
 from hpfwk.hpf_exceptions import APIError, AbstractError, ExceptionCollector, ExceptionFormatter, NestedException, debugInterruptHandler
 from hpfwk.hpf_logging import initLogging
-from hpfwk.hpf_plugin import NamedPlugin, Plugin, PluginError, initPlugins
+from hpfwk.hpf_plugin import InstanceFactory, Plugin, initPlugins

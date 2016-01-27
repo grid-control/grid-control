@@ -16,8 +16,9 @@ import os, random
 from grid_control import utils
 from grid_control.backends import WMS
 from grid_control.config import TaggedConfigView, changeInitNeeded
+from grid_control.gc_plugin import NamedPlugin
 from grid_control.parameters import ParameterFactory, ParameterInfo
-from hpfwk import AbstractError, NamedPlugin
+from hpfwk import AbstractError
 from time import strftime, time
 from python_compat import lru_cache, md5
 

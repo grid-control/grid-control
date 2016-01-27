@@ -17,7 +17,8 @@
 import os, time, logging
 from grid_control import utils
 from grid_control.gc_exceptions import UserError
-from hpfwk import AbstractError, NamedPlugin, NestedException
+from grid_control.gc_plugin import NamedPlugin
+from hpfwk import AbstractError, NestedException
 from python_compat import rsplit
 
 class AccessTokenError(NestedException):
