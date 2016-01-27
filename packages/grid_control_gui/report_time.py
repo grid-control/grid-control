@@ -1,4 +1,4 @@
-#-#  Copyright 2013-2015 Karlsruhe Institute of Technology
+#-#  Copyright 2012-2016 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -17,6 +17,12 @@ from grid_control import utils
 from grid_control.report import Report
 
 class TimeReport(Report):
+	def __init__(self, jobDB, task, jobs = None, configString = ''):
+		Report.__init__(self, jobDB, task, jobs, configString)
+		self._dollar_per_hour = 0.013
+		if configString:
+			self._dollar_per_hour = float(configString)
+
 	def getHeight(self):
 		return 1
 
@@ -27,4 +33,4 @@ class TimeReport(Report):
 			if jobObj:
 				cpuTime += jobObj.get('runtime', 0)
 		sys.stdout.write('Consumed wall time: %-20s' % utils.strTime(cpuTime))
-		sys.stdout.write('Estimated cost: $%.2f\n' % ((cpuTime / 60 / 60) * 0.1))
+		sys.stdout.write('Estimated cost: $%.2f\n' % ((cpuTime / 60. / 60.) * self._dollar_per_hour))
