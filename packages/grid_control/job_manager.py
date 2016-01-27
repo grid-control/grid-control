@@ -12,7 +12,7 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-import math, time, bisect, random, logging
+import math, time, bisect, random
 from grid_control import utils
 from grid_control.config import ConfigError
 from grid_control.gc_exceptions import RuntimeError

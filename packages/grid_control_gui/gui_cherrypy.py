@@ -14,9 +14,15 @@
 
 import os, time, tempfile
 from grid_control import utils
+from grid_control.gc_exceptions import InstallationError
 from grid_control.gui import GUI
 from grid_control.job_db import Job
 from python_compat import sorted
+
+try:
+	import cherrypy
+except:
+	cherrypy = None
 
 class CPProgressBar:
 	def __init__(self, minValue = 0, progress = 0, maxValue = 100, totalWidth = 300):
@@ -58,17 +64,17 @@ class TabularHTML:
 
 
 class CPWebserver(GUI):
-	def __init__(self, jobCycle, jobMgr, task):
-		GUI.__init__(self, jobCycle, jobMgr, task)
+	def __init__(self, config, workflow):
+		if not cherrypy:
+			raise InstallationError('cherrypy is not installed!')
+		GUI.__init__(self, config, workflow)
 		self.counter = 0
-		import cherrypy
 
 	def processQueue(self, timeout):
 		self.counter += 1
 		utils.wait(timeout)
 
 	def image(self):
-		import cherrypy
 		cherrypy.response.headers['Content-Type']= 'image/png'
 		nodes = ["MetadataSplitter", "RunSplitter"]
 		edges = [("MetadataSplitter", "RunSplitter")]
@@ -112,7 +118,6 @@ class CPWebserver(GUI):
 	jobs.exposed = True
 
 	def index(self):
-		import cherrypy
 		result = '<body>'
 		result += '<a href="jobs">go to jobs</a>'
 		result += '<div>%s</div>' % cherrypy.request.__dict__
@@ -120,8 +125,7 @@ class CPWebserver(GUI):
 		return result
 	index.exposed = True
 
-	def run(self):
-		import cherrypy
+	def displayWorkflow(self):
 		basic_auth = {'tools.auth_basic.on': True, 'tools.auth_basic.realm': 'earth',
 			'tools.auth_basic.checkpassword': cherrypy.lib.auth_basic.checkpassword_dict({'user' : '123'})}
 		cherrypy.log.screen = False
