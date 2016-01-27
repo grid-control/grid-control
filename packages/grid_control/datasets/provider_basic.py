@@ -22,7 +22,7 @@ from python_compat import rsplit
 class FileProvider(DataProvider):
 	alias = ['file']
 
-	def __init__(self, config, datasetExpr, datasetNick, datasetID = 0):
+	def __init__(self, config, datasetExpr, datasetNick = None, datasetID = 0):
 		DataProvider.__init__(self, config, datasetExpr, datasetNick, datasetID)
 
 		(self._path, self._events, selist) = utils.optSplit(datasetExpr, '|@')
@@ -46,7 +46,7 @@ class FileProvider(DataProvider):
 class ListProvider(DataProvider):
 	alias = ['list']
 
-	def __init__(self, config, datasetExpr, datasetNick, datasetID = 0):
+	def __init__(self, config, datasetExpr, datasetNick = None, datasetID = 0):
 		DataProvider.__init__(self, config, datasetExpr, datasetNick, datasetID)
 
 		(path, self._forcePrefix, self._filter) = utils.optSplit(datasetExpr, '@%')

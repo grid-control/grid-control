@@ -12,35 +12,43 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
+import logging
 from grid_control import utils
 from grid_control.datasets.provider_base import DataProvider, DatasetError
 from hpfwk import ExceptionCollector
 
-class DataMultiplexer(DataProvider):
-	def __init__(self, config, datasetExpr, defaultProvider, datasetID = None):
-		mkProvider = lambda (id, entry): DataProvider.create(config, entry, defaultProvider, id)
-		self.subprovider = map(mkProvider, enumerate(filter(lambda x: x != '', datasetExpr.splitlines())))
+class MultiDatasetProvider(DataProvider):
+	def __init__(self, config, datasetExpr, datasetNick, datasetID, providerProxyList):
+		DataProvider.__init__(self, config, datasetExpr, datasetNick, datasetID)
+		self._providerList = map(lambda p: p.getInstance(), providerProxyList)
+		for provider in self._providerList:
+			provider.setPassthrough()
 
 
 	def queryLimit(self):
-		return max(map(lambda x: x.queryLimit(), self.subprovider))
+		return max(map(lambda x: x.queryLimit(), self._providerList))
 
 
 	def checkSplitter(self, splitter):
-		getProposal = lambda x: reduce(lambda prop, prov: prov.checkSplitter(prop), self.subprovider, x)
+		getProposal = lambda x: reduce(lambda prop, prov: prov.checkSplitter(prop), self._providerList, x)
 		if getProposal(splitter) != getProposal(getProposal(splitter)):
 			raise DatasetError('Dataset providers could not agree on valid dataset splitter!')
 		return getProposal(splitter)
 
 
 	def getBlocks(self):
-		ec = ExceptionCollector()
-		for provider in self.subprovider:
-			try:
-				for block in provider.getBlocks():
-					yield block
-			except Exception:
-				ec.collect()
-			if utils.abort():
-				raise DatasetError('Could not retrieve all datasets!')
-		ec.raise_any(DatasetError('Could not retrieve all datasets!'))
+		if self._cache == None:
+			ec = ExceptionCollector()
+			def getAllBlocks():
+				for provider in self._providerList:
+					try:
+						for block in provider.getBlocks():
+							yield block
+					except Exception:
+						ec.collect()
+					if utils.abort():
+						raise DatasetError('Could not retrieve all datasets!')
+			self._cache = list(self._stats.process(self._datasetProcessor.process(getAllBlocks())))
+			ec.raise_any(DatasetError('Could not retrieve all datasets!'))
+			logging.getLogger('user').info('Summary: Running over %s distributed over %d blocks.' % self._stats.getStats())
+		return self._cache

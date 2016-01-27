@@ -43,9 +43,6 @@ class DataParameterSource(ParameterSource):
 
 	def fillParameterInfo(self, pNum, result):
 		splitInfo = self.dataSplitter.getSplitInfo(pNum)
-		if utils.verbosity() > 2:
-			utils.vprint('Dataset task number: %d' % pNum)
-			DataSplitter.printInfoForJob(splitInfo)
 		self.dataProc.process(pNum, splitInfo, result)
 
 	def getHash(self):
@@ -61,6 +58,7 @@ class DataParameterSource(ParameterSource):
 		(result_redo, result_disable, result_sizeChange) = ParameterSource.resync(self)
 		if self.resyncEnabled() and self.dataProvider:
 			# Get old and new dataset information
+			from grid_control.datasets import DataProvider
 			old = DataProvider.loadState(self.getDataPath('cache.dat')).getBlocks()
 			self.dataProvider.clearCache()
 			new = self.dataProvider.getBlocks()

@@ -18,6 +18,26 @@ from grid_control.datasets.provider_base import DataProvider, DatasetError
 from grid_control.utils import filterBlackWhite, makeEnum
 from python_compat import md5, set
 
+class StatsDataProcessor(DataProcessor):
+	def __init__(self, config):
+		DataProcessor.__init__(self, config)
+		self._entries = 0
+		self._blocks = 0
+
+	def getStats(self):
+		if self._entries < 0:
+			units = '%d files' % -self._entries
+		else:
+			units = '%d events' % self._entries
+		return (units, self._blocks)
+
+	def process(self, blockIter):
+		for block in blockIter:
+			self._blocks += 1
+			self._entries += block[DataProvider.NEntries]
+			yield block
+
+
 class EntriesConsistencyDataProcessor(DataProcessor):
 	def processBlock(self, block):
 		# Check entry consistency
@@ -31,8 +51,8 @@ class EntriesConsistencyDataProcessor(DataProcessor):
 class URLDataProcessor(DataProcessor):
 	alias = ['FileDataProcessor']
 
-	def __init__(self, config, name):
-		DataProcessor.__init__(self, config, name)
+	def __init__(self, config):
+		DataProcessor.__init__(self, config)
 		self._ignoreURLs = config.getList(['dataset ignore urls', 'dataset ignore files'], [])
 
 	def _matchURL(self, url):
@@ -46,8 +66,8 @@ class URLDataProcessor(DataProcessor):
 class URLRegexDataProcessor(URLDataProcessor):
 	alias = ['FileRegexDataProcessor']
 
-	def __init__(self, config, name):
-		URLDataProcessor.__init__(self, config, name)
+	def __init__(self, config):
+		URLDataProcessor.__init__(self, config)
 		self._ignoreREs = map(re.compile, self._ignoreURLs)
 
 	def _matchURL(self, url):
@@ -60,8 +80,8 @@ class URLRegexDataProcessor(URLDataProcessor):
 class URLCountDataProcessor(DataProcessor):
 	alias = ['FileCountDataProcessor']
 
-	def __init__(self, config, name):
-		DataProcessor.__init__(self, config, name)
+	def __init__(self, config):
+		DataProcessor.__init__(self, config)
 		self._limitFiles = config.getInt(['dataset limit urls', 'dataset limit files'], -1)
 
 	def processBlock(self, block):
@@ -74,8 +94,8 @@ class URLCountDataProcessor(DataProcessor):
 class EntriesCountDataProcessor(DataProcessor):
 	alias = ['EventsCountDataProcessor']
 
-	def __init__(self, config, name):
-		DataProcessor.__init__(self, config, name)
+	def __init__(self, config):
+		DataProcessor.__init__(self, config)
 		self._limitEntries = config.getInt(['dataset limit entries', 'dataset limit events'], -1)
 
 	def processBlock(self, block):
@@ -95,8 +115,8 @@ class EntriesCountDataProcessor(DataProcessor):
 
 
 class EmptyDataProcessor(DataProcessor):
-	def __init__(self, config, name):
-		DataProcessor.__init__(self, config, name)
+	def __init__(self, config):
+		DataProcessor.__init__(self, config)
 		self._emptyFiles = config.getBool('dataset remove empty files', True)
 		self._emptyBlock = config.getBool('dataset remove empty blocks', True)
 
@@ -110,8 +130,8 @@ class EmptyDataProcessor(DataProcessor):
 
 
 class LocationDataProcessor(DataProcessor):
-	def __init__(self, config, name):
-		DataProcessor.__init__(self, config, name)
+	def __init__(self, config):
+		DataProcessor.__init__(self, config)
 		self._locationfilter = config.getList('dataset location filter', [])
 		if not self._locationfilter:
 			self._locationfilter = None
@@ -134,12 +154,15 @@ class LocationDataProcessor(DataProcessor):
 DatasetUniqueMode = makeEnum(['warn', 'abort', 'skip', 'ignore', 'record'], useHash = True)
 
 class UniqueDataProcessor(DataProcessor):
-	def __init__(self, config, name):
-		DataProcessor.__init__(self, config, name)
+	def __init__(self, config):
+		DataProcessor.__init__(self, config)
 		self._checkURL = config.getEnum('dataset check unique url', DatasetUniqueMode, DatasetUniqueMode.abort)
 		self._checkBlock = config.getEnum('dataset check unique block', DatasetUniqueMode, DatasetUniqueMode.abort)
+
+	def process(self, blockIter):
 		self._recordedURL = set()
 		self._recordedBlock = set()
+		return DataProcessor.process(self, blockIter)
 
 	def processBlock(self, block):
 		# Check uniqueness of URLs

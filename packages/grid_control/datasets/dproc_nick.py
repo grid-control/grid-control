@@ -17,8 +17,8 @@ from grid_control.datasets.provider_base import DataProvider, DatasetError
 from hpfwk import AbstractError
 
 class NickNameProducer(DataProcessor):
-	def __init__(self, config, name):
-		DataProcessor.__init__(self, config, name)
+	def __init__(self, config):
+		DataProcessor.__init__(self, config)
 		# Ensure the same nickname is used consistently in all blocks of a dataset
 		self._checkConsistency = config.getBool('nickname check consistency', True)
 		self._checkConsistencyData = {}
@@ -56,8 +56,8 @@ class SimpleNickNameProducer(NickNameProducer):
 
 
 class InlineNickNameProducer(NickNameProducer):
-	def __init__(self, config, name):
-		NickNameProducer.__init__(self, config, name)
+	def __init__(self, config):
+		NickNameProducer.__init__(self, config)
 		self._expr = config.get('nickname expr', 'oldnick')
 
 	def getName(self, oldnick, dataset, block):

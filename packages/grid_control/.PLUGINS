@@ -84,10 +84,12 @@ grid_control.datasets.dproc_basic	EmptyDataProcessor
 grid_control.datasets.dproc_basic	EntriesConsistencyDataProcessor
 grid_control.datasets.dproc_basic	EntriesCountDataProcessor EventsCountDataProcessor
 grid_control.datasets.dproc_basic	LocationDataProcessor
+grid_control.datasets.dproc_basic	StatsDataProcessor
 grid_control.datasets.dproc_basic	URLCountDataProcessor FileCountDataProcessor
 grid_control.datasets.dproc_basic	URLDataProcessor FileDataProcessor
 grid_control.datasets.dproc_basic	URLRegexDataProcessor FileRegexDataProcessor
 grid_control.datasets.dproc_basic	UniqueDataProcessor
+grid_control.datasets.dproc_conf	PartitionEstimator SplitSettingEstimator
 grid_control.datasets.dproc_nick	InlineNickNameProducer
 grid_control.datasets.dproc_nick	NickNameProducer
 grid_control.datasets.dproc_nick	SimpleNickNameProducer
@@ -103,7 +105,7 @@ grid_control.datasets.provider_base.DataProvider:
 grid_control.datasets.provider_base	DataProvider
 grid_control.datasets.provider_basic	FileProvider file
 grid_control.datasets.provider_basic	ListProvider list
-grid_control.datasets.provider_multi	DataMultiplexer
+grid_control.datasets.provider_multi	MultiDatasetProvider
 grid_control.datasets.provider_scan	GCProvider gc
 grid_control.datasets.provider_scan	ScanProvider scan
 grid_control.datasets.provider_scan	ScanProviderBase

@@ -20,7 +20,7 @@ from grid_control.datasets.scanner_base import InfoScanner
 from python_compat import md5, set
 
 class ScanProviderBase(DataProvider):
-	def __init__(self, config, datasetExpr, datasetNick, datasetID = 0):
+	def __init__(self, config, datasetExpr, datasetNick = None, datasetID = 0):
 		DataProvider.__init__(self, config, '', datasetNick, datasetID)
 		DSB = lambda cFun, n, *args, **kargs: (cFun('dataset %s' % n, *args, **kargs),
 			cFun('block %s' % n, *args, **kargs))
@@ -128,7 +128,7 @@ class ScanProviderBase(DataProvider):
 class ScanProvider(ScanProviderBase):
 	alias = ['scan']
 
-	def __init__(self, config, datasetExpr, datasetNick, datasetID = 0):
+	def __init__(self, config, datasetExpr, datasetNick = None, datasetID = 0):
 		if '*' in os.path.basename(datasetExpr):
 			config.set('source directory', os.path.dirname(datasetExpr))
 			config.set('filename filter', datasetExpr)
@@ -145,7 +145,7 @@ class GCProvider(ScanProviderBase):
 	stageDir = {}
 	stageFile = {None: ['MatchOnFilename', 'MatchDelimeter']}
 
-	def __init__(self, config, datasetExpr, datasetNick, datasetID = 0):
+	def __init__(self, config, datasetExpr, datasetNick = None, datasetID = 0):
 		if os.path.isdir(datasetExpr):
 			GCProvider.stageDir[None] = ['OutputDirsFromWork']
 			config.set('source directory', datasetExpr)

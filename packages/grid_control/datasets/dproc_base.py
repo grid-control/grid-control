@@ -13,27 +13,38 @@
 #-#  limitations under the License.
 
 import logging
-from grid_control.gc_plugin import NamedPlugin
+from hpfwk import InstanceFactory, Plugin
 
-class DataProcessor(NamedPlugin):
-	tagName = 'dsproc'
+class DataProcessor(Plugin):
+	def __init__(self, config):
+		self._log = logging.getLogger('dataproc')
 
-	def __init__(self, config, name):
-		NamedPlugin.__init__(self, config, name)
-		self._log = logging.getLogger(self.tagName)
+	def process(self, blockIter):
+		for block in blockIter:
+			yield self.processBlock(block)
 
 	def processBlock(self, block):
 		raise AbstractError
 
+	def bind(cls, value, modulePaths = [], config = None, **kwargs):
+		for entry in value.split():
+			yield InstanceFactory(entry, cls.getClass(entry, modulePaths), config)
+	bind = classmethod(bind)
+
 
 class MultiDataProcessor(DataProcessor):
-	def __init__(self, config, name, modifierProxyList):
-		DataProcessor.__init__(self, config, name)
-		self._modifierList = map(lambda p: p.getInstance(), modifierProxyList)
+	def __init__(self, config, processorProxyList):
+		DataProcessor.__init__(self, config)
+		self._processorList = map(lambda p: p.getInstance(), processorProxyList)
+
+	def process(self, blockIter):
+		for processor in self._processorList:
+			blockIter = processor.process(blockIter)
+		return blockIter
 
 	def processBlock(self, block):
-		for modifier in self._modifierList:
-			block = modifier.processBlock(block)
+		for processor in self._processorList:
+			block = processor.processBlock(block)
 			if not block:
 				break
 		return block

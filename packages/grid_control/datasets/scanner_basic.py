@@ -145,7 +145,7 @@ class FilesFromJobInfo(InfoScanner):
 class FilesFromDataProvider(InfoScanner):
 	def __init__(self, config):
 		dsPath = config.get('source dataset path')
-		self.source = DataProvider.create(config, None, dsPath, 'ListProvider')
+		self.source = DataProvider.getInstance('ListProvider', config, dsPath)
 
 	def getEntries(self, path, metadata, events, seList, objStore):
 		for block in self.source.getBlocks():
@@ -214,7 +214,7 @@ class ParentLookup(InfoScanner):
 		datacachePath = os.path.join(objStore.get('GC_WORKDIR', ''), 'datacache.dat')
 		source = utils.QM((self.source == '') and os.path.exists(datacachePath), datacachePath, self.source)
 		if source and (source not in self.lfnMap):
-			pSource = DataProvider.create(createConfigFactory().getConfig(), source, 'ListProvider')
+			pSource = DataProvider.getInstance('ListProvider', createConfigFactory().getConfig(), source)
 			for (n, fl) in map(lambda b: (b[DataProvider.Dataset], b[DataProvider.FileList]), pSource.getBlocks()):
 				self.lfnMap.setdefault(source, {}).update(dict(map(lambda fi: (self.lfnTrans(fi[DataProvider.URL]), n), fl)))
 		pList = set()

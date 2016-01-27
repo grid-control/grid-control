@@ -22,7 +22,7 @@ from grid_control.tasks.task_base import TaskModule
 
 class DataTask(TaskModule):
 	def setupJobParameters(self, config, pm):
-		config = config.changeView(viewClass = TaggedConfigView, addSections = ['dataset'], addTags = [self])
+		config = config.changeView(viewClass = TaggedConfigView, addSections = ['dataset'])
 		self.dataSplitter = None
 		self.dataRefresh = None
 		self._forceRefresh = config.getState('resync', detail = 'dataset', default = False)
@@ -37,8 +37,8 @@ class DataTask(TaskModule):
 		config.set('se output pattern', '@NICK@_job_@GC_JOB_ID@_@X@')
 		config.set('default lookup', 'DATASETNICK')
 
-		defaultProvider = config.get('dataset provider', 'ListProvider')
-		dataProvider = DataProvider.create(config, self.dataset, defaultProvider)
+		dataProvider = config.getCompositePlugin('dataset', '', ':MultiDatasetProvider:',
+			cls = DataProvider, requirePlugin = False).getInstance()
 		splitterName = config.get('dataset splitter', 'FileBoundarySplitter')
 		splitterClass = dataProvider.checkSplitter(DataSplitter.getClass(splitterName))
 		self.dataSplitter = splitterClass(config)

@@ -12,21 +12,22 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-import os, copy
+import os, copy, logging
 from grid_control import utils
-from grid_control.config import TaggedConfigView, createConfigFactory
+from grid_control.config import createConfigFactory
 from grid_control.datasets.dproc_base import DataProcessor
-from hpfwk import AbstractError, NestedException, Plugin
+from hpfwk import AbstractError, InstanceFactory, NestedException, Plugin
 from python_compat import StringBuffer
 
 class DatasetError(NestedException):
 	pass
 
 class DataProvider(Plugin):
-	def __init__(self, config, datasetExpr, datasetNick, datasetID):
+	def __init__(self, config, datasetExpr, datasetNick = None, datasetID = 0):
 		(self._datasetExpr, self._datasetNick, self._datasetID) = (datasetExpr, datasetNick, datasetID)
-		self._cache = None
+		(self._cache, self._passthrough) = (None, False)
 
+		self._stats = DataProcessor.getInstance('StatsDataProcessor', config)
 		nickProducerClass = config.getPlugin('nickname source', 'SimpleNickNameProducer', cls = DataProcessor)
 		self._nickProducer = nickProducerClass.getInstance()
 		self._datasetProcessor = config.getCompositePlugin('dataset processor',
@@ -35,32 +36,30 @@ class DataProvider(Plugin):
 			'MultiDataProcessor', cls = DataProcessor).getInstance()
 
 
-	# Parse dataset format [NICK : [PROVIDER : [(/)*]]] DATASET
-	def parseDatasetExpr(config, expression, defaultProvider):
-		(nickname, provider, dataset) = ('', defaultProvider, None)
-		temp = map(str.strip, expression.split(':', 2))
+	def bind(cls, value, modulePaths = [], config = None, **kwargs):
+		defaultProvider = config.get('dataset provider', 'ListProvider')
 
-		if len(temp) == 3:
-			(nickname, provider, dataset) = temp
-			if dataset.startswith('/'):
-				dataset = '/' + dataset.lstrip('/')
-		elif len(temp) == 2:
-			(nickname, dataset) = temp
-		elif len(temp) == 1:
-			dataset = temp[0]
-		return (nickname, provider, dataset)
-	parseDatasetExpr = staticmethod(parseDatasetExpr)
+		for idx, entry in enumerate(filter(str.strip, value.splitlines())):
+			(nickname, provider, dataset) = ('', defaultProvider, None)
+			temp = map(str.strip, entry.split(':', 2))
+			if len(temp) == 3:
+				(nickname, provider, dataset) = temp
+				if dataset.startswith('/'):
+					dataset = '/' + dataset.lstrip('/')
+			elif len(temp) == 2:
+				(nickname, dataset) = temp
+			elif len(temp) == 1:
+				dataset = temp[0]
+
+			clsNew = cls.getClass(provider, modulePaths)
+			bindValue = str.join(':', [nickname, provider, dataset])
+			yield InstanceFactory(bindValue, clsNew, config, dataset, nickname, idx)
+	bind = classmethod(bind)
 
 
-	# Create a new DataProvider instance
-	def create(config, dataset, defaultProvider, dsId = 0):
-		if '\n' in dataset:
-			return DataProvider.getInstance('DataMultiplexer', config, dataset, defaultProvider)
-		else:
-			(dsNick, dsProv, dsExpr) = DataProvider.parseDatasetExpr(config, dataset, defaultProvider)
-			config = config.changeView(viewClass = TaggedConfigView, addNames = [dsNick, str(dsId)])
-			return DataProvider.getInstance(dsProv, config, dsExpr, dsNick, dsId)
-	create = staticmethod(create)
+	def setPassthrough(self):
+		self._passthrough = True
+		self._nickProducer = None
 
 
 	# Define how often the dataprovider can be queried automatically
@@ -75,8 +74,7 @@ class DataProvider(Plugin):
 
 	# Cached access to list of block dicts, does also the validation checks
 	def getBlocks(self):
-		self.allEvents = 0
-		def processBlocks():
+		def prepareBlocks():
 			# Validation, Filtering & Naming:
 			for block in self.getBlocksInternal():
 				block.setdefault(DataProvider.BlockName, '0')
@@ -84,29 +82,29 @@ class DataProvider(Plugin):
 				block.setdefault(DataProvider.Locations, None)
 				if self._datasetID:
 					block[DataProvider.DatasetID] = self._datasetID
+				events = sum(map(lambda x: x[DataProvider.NEntries], block[DataProvider.FileList]))
+				block.setdefault(DataProvider.NEntries, events)
 				if self._datasetNick:
 					block[DataProvider.Nickname] = self._datasetNick
-				else:
+				elif self._nickProducer:
 					block = self._nickProducer.processBlock(block)
 					if not block:
 						raise DatasetError('Nickname producer failed!')
-
-				# Process block with configured dataset modifiers
-				block = self._datasetProcessor.processBlock(block)
-				if block:
-					self.allEvents += block[DataProvider.NEntries]
-					yield block
+				yield block
 
 		if self._cache == None:
-			if self._datasetExpr:
-				log = utils.ActivityLog('Retrieving %s' % self._datasetExpr)
-			self._cache = list(processBlocks())
+			log = utils.ActivityLog('Retrieving %s' % self._datasetExpr)
+			if self._passthrough:
+				self._cache = list(self._stats.process(prepareBlocks()))
+			else:
+				self._cache = list(self._stats.process(self._datasetProcessor.process(prepareBlocks())))
 			if self._datasetNick:
-				utils.vprint('%s:' % self._datasetNick, newline = False)
-			elif self.__class__.__name__ == 'DataMultiplexer':
-				utils.vprint('Summary:', newline = False)
-			units = utils.QM(self.allEvents < 0, '%d files' % -self.allEvents, '%d events' % self.allEvents)
-			utils.vprint('Running over %s split into %d blocks.' % (units, len(self._cache)))
+				statString = '%s: ' % self._datasetNick
+			else:
+				statString = '%s: ' % self._datasetExpr
+			del log
+			statString += 'Running over %s distributed over %d blocks.' % self._stats.getStats()
+			logging.getLogger('user').info(statString)
 		return self._cache
 
 
@@ -178,7 +176,7 @@ class DataProvider(Plugin):
 	def loadState(path):
 		config = createConfigFactory(useDefaultFiles = False, configDict = {'dataset': {
 			'nickname check consistency': 'False', 'nickname check collision': 'False'}}).getConfig()
-		return DataProvider.getInstance('ListProvider', config, path, None, None)
+		return DataProvider.getInstance('ListProvider', config, path)
 	loadState = staticmethod(loadState)
 
 

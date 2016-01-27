@@ -1,4 +1,4 @@
-#-#  Copyright 2009-2015 Karlsruhe Institute of Technology
+#-#  Copyright 2009-2016 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -107,38 +107,6 @@ class DataSplitter(Plugin):
 
 	def getMaxJobs(self):
 		return self.splitSource.maxJobs
-
-
-	def printInfoForJob(splitInfo):
-		if splitInfo.get(DataSplitter.Invalid, False):
-			utils.vprint(' Status: Invalidated splitting', -1)
-		utils.vprint(('Dataset: %s' % splitInfo[DataSplitter.Dataset]).ljust(50), -1, newline = False)
-		utils.vprint(('Events: %d' % splitInfo[DataSplitter.NEntries]).ljust(20), -1, newline = False)
-		utils.vprint('  ID: %s' % splitInfo.get(DataSplitter.DatasetID, 0), -1)
-		utils.vprint(('  Block: %s' % splitInfo.get(DataSplitter.BlockName, 0)).ljust(50), -1, newline = False)
-		utils.vprint(('  Skip: %d' % splitInfo.get(DataSplitter.Skipped, 0)).ljust(20), -1, newline = False)
-		if splitInfo.get(DataSplitter.Nickname):
-			utils.vprint('Nick: %s' % splitInfo[DataSplitter.Nickname], -1)
-		else:
-			utils.vprint('', -1)
-		if splitInfo.get(DataSplitter.Locations) != None:
-			utils.vprint('Locations: %s' % utils.wrapList(splitInfo[DataSplitter.Locations], 70, ',\n         '), -1)
-		for idx, head in enumerate(splitInfo.get(DataSplitter.MetadataHeader, [])):
-			oneFileMetadata = map(lambda x: repr(x[idx]), splitInfo[DataSplitter.Metadata])
-			utils.vprint('%7s: %s' % (head, utils.wrapList(oneFileMetadata, 70, ',\n         ')), -1)
-		utils.vprint('    Files: ', -1, newline = False)
-		if utils.verbosity() > 2:
-			utils.vprint(str.join('\n         ', splitInfo[DataSplitter.FileList]), -1)
-		else:
-			utils.vprint('%d files selected' % len(splitInfo[DataSplitter.FileList]), -1)
-	printInfoForJob = staticmethod(printInfoForJob)
-
-
-	def printAllJobInfo(self):
-		for jobNum in range(self.getMaxJobs()):
-			utils.vprint('SplitID: %d' % jobNum, -1)
-			DataSplitter.printInfoForJob(self.getSplitInfo(jobNum))
-			utils.vprint('------------', -1)
 
 
 	def resyncMapping(self, newSplitPath, oldBlocks, newBlocks):

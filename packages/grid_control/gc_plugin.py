@@ -35,7 +35,7 @@ class NamedPlugin(Plugin):
 				(clsName, instanceName) = tmp
 			elif len(tmp) == 1:
 				clsName = tmp[0]
-			clsNew = cls.getClass(clsName)
+			clsNew = cls.getClass(clsName, modulePaths)
 			if not instanceName:
 				instanceName = clsNew.__name__.split('.')[-1]
 			config = config.changeView(viewClass = TaggedConfigView,

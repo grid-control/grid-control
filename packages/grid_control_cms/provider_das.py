@@ -23,7 +23,7 @@ from grid_control_cms.provider_cms import CMSProvider
 class DASProvider(CMSProvider):
 	alias = ['das']
 
-	def __init__(self, config, datasetExpr, datasetNick, datasetID = 0):
+	def __init__(self, config, datasetExpr, datasetNick = None, datasetID = 0):
 		CMSProvider.__init__(self, config, datasetExpr, datasetNick, datasetID)
 		self._instance = ''
 		if '/' not in self.url:

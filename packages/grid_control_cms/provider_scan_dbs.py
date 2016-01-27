@@ -1,4 +1,4 @@
-#-#  Copyright 2015 Karlsruhe Institute of Technology
+#-#  Copyright 2015-2016 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -17,7 +17,7 @@ from grid_control import utils
 from grid_control.datasets.provider_scan import GCProvider
 
 class DBSInfoProvider(GCProvider):
-	def __init__(self, config, datasetExpr, datasetNick, datasetID = 0):
+	def __init__(self, config, datasetExpr, datasetNick = None, datasetID = 0):
 		tmp = ['OutputDirsFromConfig', 'MetadataFromModule']
 		if os.path.isdir(datasetExpr):
 			tmp = ['OutputDirsFromWork']

@@ -1,4 +1,4 @@
-#-#  Copyright 2012-2015 Karlsruhe Institute of Technology
+#-#  Copyright 2012-2016 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -22,7 +22,7 @@ from python_compat import set, sorted
 
 # required format: <dataset path>[@<instance>][#<block>]
 class CMSProvider(DataProvider):
-	def __init__(self, config, datasetExpr, datasetNick, datasetID = 0):
+	def __init__(self, config, datasetExpr, datasetNick = None, datasetID = 0):
 		DataProvider.__init__(self, config, datasetExpr, datasetNick, datasetID)
 		# PhEDex blacklist: 'T1_DE_KIT', 'T1_US_FNAL' and '*_Disk' allow user jobs - other T1's dont!
 		self.phedexBL = config.getList('phedex sites', ['-T3_US_FNALLPC'])
