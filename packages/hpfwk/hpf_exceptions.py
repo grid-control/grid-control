@@ -25,7 +25,7 @@ def formatVariables(variables, showLongVariables = False):
 			return value
 		return value[:200] + ' ... [length:%d]' % len(value)
 
-	maxlen = max(map(len, variables) + [0])
+	maxlen = max(list(map(len, variables)) + [0])
 	def display(keys, varDict, varPrefix = ''):
 		keys.sort()
 		for var in keys:
@@ -37,16 +37,16 @@ def formatVariables(variables, showLongVariables = False):
 	classVariable = variables.pop('self', None)
 	if variables:
 		yield '\tLocal variables:'
-		for line in display(variables.keys(), variables):
+		for line in display(list(variables.keys()), variables):
 			yield line
-	if classVariable:
+	if classVariable != None:
 		yield '\tClass variables (%s):' % safeRepr(classVariable)
 		if hasattr(classVariable, '__dict__'):
 			classVariables = classVariable.__dict__
 		elif hasattr(classVariable, '__slots__'):
 			classVariables = dict(map(lambda attr: (attr, getattr(classVariable, attr)), classVariable.__slots__))
 		try:
-			for line in display(classVariables.keys(), classVariables, 'self.'):
+			for line in display(list(classVariables.keys()), classVariables, 'self.'):
 				yield line
 		except Exception:
 			yield '\t\t<unable to acces class>'
@@ -155,6 +155,8 @@ class ExceptionFormatter(logging.Formatter):
 		(self._showVariables, self._showLongVariables) = (showVariables, showLongVariables)
 
 	def format(self, record):
+		if not record.exc_info:
+			return logging.Formatter.format(self, record)
 		traceback, infos = collectExceptionInfos(*record.exc_info)
 		if self._showOnlyLastCode:
 			traceback = [traceback[-1]]
