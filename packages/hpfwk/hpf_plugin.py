@@ -51,7 +51,9 @@ class InstanceFactory(object):
 class Plugin(object):
 	alias = []
 	configSections = []
+
 	moduleMap = {}
+	classMap = {}
 
 	def getClassNames(cls):
 		if cls.alias not in map(lambda parent: parent.alias, cls.__bases__):
@@ -111,6 +113,10 @@ class Plugin(object):
 				clsSearchList.extend(clsMapResult)
 		raise PluginError('Unable to load %r of type %r - tried:\n\t%s' % (clsNameStored, clsFormat(cls), str.join('\n\t', clsProcessed)))
 	getClass = classmethod(getClass)
+
+	def getClassList(cls):
+		return Plugin.classMap.get(cls.__name__, [])
+	getClassList = classmethod(getClassList)
 
 	# Get an instance of a derived class by specifying the class name and constructor arguments
 	def getInstance(cls, clsName, *args, **kwargs):
