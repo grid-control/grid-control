@@ -144,7 +144,7 @@ class TaskModule(NamedPlugin):
 
 	def substVars(self, inp, jobNum = None, addDict = {}, check = True):
 		allVars = utils.mergeDicts([addDict, self.getTaskConfig()])
-		if jobNum != None:
+		if jobNum is not None:
 			allVars.update(self.getJobConfig(jobNum))
 		subst = lambda x: utils.replaceDict(x, allVars, self.getVarMapping().items() + zip(addDict, addDict))
 		result = subst(subst(str(inp)))

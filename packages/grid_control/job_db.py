@@ -92,7 +92,7 @@ class Job:
 		data['changed'] = self.changed
 		for key, value in self.history.items():
 			data['history_' + str(key)] = value
-		if self.wmsId != None:
+		if self.wmsId is not None:
 			data['id'] = self.wmsId
 			if self.dict.get('legacy', None): # Legacy support
 				data['id'] = self.dict.pop('legacy')
@@ -178,7 +178,7 @@ class JobDB(Plugin):
 
 
 	def getJobsIter(self, jobSelector = None, subset = None):
-		if subset == None:
+		if subset is None:
 			subset = xrange(self.jobLimit)
 		if jobSelector and self.alwaysSelector:
 			select = lambda *args: jobSelector(*args) and self.alwaysSelector(*args)

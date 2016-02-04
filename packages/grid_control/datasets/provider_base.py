@@ -92,7 +92,7 @@ class DataProvider(Plugin):
 						raise DatasetError('Nickname producer failed!')
 				yield block
 
-		if self._cache == None:
+		if self._cache is None:
 			log = utils.ActivityLog('Retrieving %s' % self._datasetExpr)
 			if self._passthrough:
 				self._cache = list(self._stats.process(prepareBlocks()))
@@ -130,7 +130,7 @@ class DataProvider(Plugin):
 				writer.write('id = %d\n' % block[DataProvider.DatasetID])
 			if DataProvider.NEntries in block:
 				writer.write('events = %d\n' % block[DataProvider.NEntries])
-			if block.get(DataProvider.Locations) != None:
+			if block.get(DataProvider.Locations) is not None:
 				writer.write('se list = %s\n' % str.join(',', block[DataProvider.Locations]))
 			cPrefix = os.path.commonprefix(map(lambda x: x[DataProvider.URL], block[DataProvider.FileList]))
 			cPrefix = str.join('/', cPrefix.split('/')[:-1])
@@ -167,7 +167,7 @@ class DataProvider(Plugin):
 
 
 	def saveState(self, path, dataBlocks = None, stripMetadata = False):
-		if dataBlocks == None:
+		if dataBlocks is None:
 			dataBlocks = self.getBlocks()
 		DataProvider.saveStateRaw(open(path, 'wb'), dataBlocks, stripMetadata)
 

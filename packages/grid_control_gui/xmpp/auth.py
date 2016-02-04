@@ -137,7 +137,7 @@ class SASL(PlugIn):
         self._owner.RegisterHandler('challenge',self.SASLHandler,xmlns=NS_SASL)
         self._owner.RegisterHandler('failure',self.SASLHandler,xmlns=NS_SASL)
         self._owner.RegisterHandler('success',self.SASLHandler,xmlns=NS_SASL)
-        if "ANONYMOUS" in mecs and self.username == None:
+        if "ANONYMOUS" in mecs and self.username is None:
             node=Node('auth',attrs={'xmlns':NS_SASL,'mechanism':'ANONYMOUS'})
         elif "DIGEST-MD5" in mecs:
             node=Node('auth',attrs={'xmlns':NS_SASL,'mechanism':'DIGEST-MD5'})

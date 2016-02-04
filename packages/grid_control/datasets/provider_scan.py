@@ -105,10 +105,10 @@ class ScanProviderBase(DataProvider):
 		for hashDS in protoBlocks:
 			for hashB in protoBlocks[hashDS]:
 				blockSEList = None
-				for seList in filter(lambda s: s != None, map(lambda x: x[3], protoBlocks[hashDS][hashB])):
-					blockSEList = utils.QM(blockSEList == None, [], blockSEList)
+				for seList in filter(lambda s: s is not None, map(lambda x: x[3], protoBlocks[hashDS][hashB])):
+					blockSEList = utils.QM(blockSEList is None, [], blockSEList)
 					blockSEList.extend(seList)
-				if blockSEList != None:
+				if blockSEList is not None:
 					blockSEList = list(set(blockSEList))
 				metaKeys = protoBlocks[hashDS][hashB][0][1].keys()
 				fnProps = lambda (path, metadata, events, seList, objStore): {

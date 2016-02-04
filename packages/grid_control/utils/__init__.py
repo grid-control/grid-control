@@ -20,7 +20,7 @@ from hpfwk import APIError
 from python_compat import lru_cache, md5, next, set, sorted, user_input
 
 def execWrapper(script, context = None):
-	if context == None:
+	if context is None:
 		context = dict()
 	exec(script, context)
 	return context
@@ -232,7 +232,7 @@ class LoggedProcess(object):
 # Global state functions
 
 def globalSetupProxy(fun, default, new = None):
-	if new != None:
+	if new is not None:
 		fun.setting = new
 	try:
 		return fun.setting
@@ -434,7 +434,7 @@ def DiffLists(oldList, newList, cmpFkt, changedFkt, isSorted = False):
 	(newIter, oldIter) = (iter(newList), iter(oldList))
 	(new, old) = (next(newIter, None), next(oldIter, None))
 	while True:
-		if (new == None) or (old == None):
+		if (new is None) or (old is None):
 			break
 		result = cmpFkt(new, old)
 		if result < 0: # new[npos] < old[opos]
@@ -446,10 +446,10 @@ def DiffLists(oldList, newList, cmpFkt, changedFkt, isSorted = False):
 		else: # new[npos] == old[opos] according to *active* comparison
 			changedFkt(listAdded, listMissing, listChanged, old, new)
 			(new, old) = (next(newIter, None), next(oldIter, None))
-	while new != None:
+	while new is not None:
 		listAdded.append(new)
 		new = next(newIter, None)
-	while old != None:
+	while old is not None:
 		listMissing.append(old)
 		old = next(oldIter, None)
 	return (listAdded, listMissing, listChanged)
@@ -470,10 +470,10 @@ def rawOrderedBlackWhiteList(value, bwfilter, matcher):
 
 
 def filterBlackWhite(value, bwfilter, matcher = str.startswith, addUnmatched = False):
-	if (value == None) or (bwfilter == None):
+	if (value is None) or (bwfilter is None):
 		return None
 	(white, black, unmatched) = rawOrderedBlackWhiteList(value, bwfilter, matcher)
-	if white != None:
+	if white is not None:
 		return white + QM(unmatched and addUnmatched, unmatched, [])
 	return QM(unmatched and bwfilter, unmatched, [])
 
@@ -549,7 +549,7 @@ class DictFormat(object):
 		result = []
 		for key in entries.keys():
 			value = entries[key]
-			if value == None and not printNone:
+			if value is None and not printNone:
 				continue
 			if self.escapeString and isinstance(value, str):
 				value = '"%s"' % str(value).replace('"', '\\"').replace('$', '\\$')
@@ -598,7 +598,7 @@ def genTarball(outFile, fileList):
 			if not os.path.exists(pathAbs):
 				raise UserError('File %s does not exist!' % pathRel)
 			tar.add(pathAbs, pathRel, recursive = False)
-		elif pathStatus == None: # Directory
+		elif pathStatus is None: # Directory
 			del activity
 			msg = QM(len(pathRel) > 50, pathRel[:15] + '...' + pathRel[len(pathRel)-32:], pathRel)
 			activity = ActivityLog('Generating tarball: %s' % msg)
@@ -795,7 +795,7 @@ def printTabular(head, data, fmtString = '', fmt = {}, level = -1):
 			def doEntry(entry):
 				tmp = []
 				for key in headwrap:
-					if key == None:
+					if key is None:
 						yield (tmp, entry)
 						tmp = []
 					else:
@@ -828,7 +828,7 @@ def getUserInput(text, default, choices, parser = lambda x: x):
 			sys.exit(os.EX_OK)
 		if userinput == '':
 			return parser(default)
-		if parser(userinput) != None:
+		if parser(userinput) is not None:
 			return parser(userinput)
 		valid = str.join(', ', map(lambda x: '"%s"' % x, choices[:-1]))
 		eprint('Invalid input! Answer with %s or "%s"' % (valid, choices[-1]))

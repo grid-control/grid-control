@@ -38,7 +38,7 @@ class CompositedClassWrapper(object):
 class TypedConfigInterface(ConfigInterface):
 	# Function to retrieve the plugin search paths
 	def _getPluginPaths(self):
-		if self._configView.pathDict.get('plugin_paths') == None:
+		if self._configView.pathDict.get('plugin_paths') is None:
 			pluginCfg = self.changeView(viewClass = SimpleConfigView, setSections = ['global'])
 			pluginPaths = pluginCfg.getPaths('plugin paths', mustExist = False, onChange = None)
 			self._configView.pathDict['plugin_paths'] = pluginPaths
@@ -54,7 +54,7 @@ class TypedConfigInterface(ConfigInterface):
 	def getBool(self, option, default = noDefault, **kwargs):
 		def str2obj(value):
 			result = utils.parseBool(value)
-			if result == None:
+			if result is None:
 				raise ConfigError('Valid boolean expressions are: "true", "false"')
 			return result
 		return self._getInternal('bool', bool.__str__, str2obj, None, option, default, **kwargs)
@@ -79,7 +79,7 @@ class TypedConfigInterface(ConfigInterface):
 			(srcdict, srckeys) = value
 			getmax = lambda src: max(map(lambda x: len(str(x)), src) + [0])
 			result = ''
-			if srcdict.get(None) != None:
+			if srcdict.get(None) is not None:
 				result = strfun(srcdict.get(None, parser('')))
 			fmt = '\n\t%%%ds => %%%ds' % (getmax(srckeys), getmax(srcdict.values()))
 			return result + str.join('', map(lambda k: fmt % (k, strfun(srcdict[k])), srckeys))

@@ -67,7 +67,7 @@ class TaggedConfigView(SimpleConfigView):
 		idxSection = myIndex(self._cfgSections, curSection)
 		if (not self._cfgClassSections) and (not self._cfgSections):
 			idxSection = 0
-		if (idxClass != None) or (idxSection != None): # Section is selected by class or manually
+		if (idxClass is not None) or (idxSection is not None): # Section is selected by class or manually
 			idxNames = tuple(map(lambda n: myIndex(self._cfgNames, n), curNames))
 			if None not in idxNames: # All names in current section are selected
 				curTagNames = filter(lambda tn: tn in curTags, self._cfgTagsOrder)

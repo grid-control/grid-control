@@ -18,7 +18,7 @@ from hpfwk import AbstractError, Plugin
 
 class Report(Plugin):
 	def __init__(self, jobDB, task, jobs = None, configString = ''):
-		if jobs == None:
+		if jobs is None:
 			jobs = jobDB.getJobs()
 		(self._jobDB, self._task, self._jobs) = (jobDB, task, jobs)
 		# FIXME: really store task for later access? maybe just use task during init run?

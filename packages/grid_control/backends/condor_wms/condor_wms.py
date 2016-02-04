@@ -186,7 +186,7 @@ class Condor(BasicWMS):
 		activity = utils.ActivityLog('retrieving job outputs')
 		for wmsId, jobNum in wmsJobIdList:
 			sandpath = self.getSandboxPath(jobNum)
-			if sandpath == None:
+			if sandpath is None:
 				yield (jobNum, None)
 				continue
 			# when working with a remote spool schedd, tell condor to return files

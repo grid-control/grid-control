@@ -101,7 +101,7 @@ if __name__ == '__main__':
 				defaultCmdLine = combinedEntry.value.split()
 			(opts, args) = self._optParser.parse_args(args = defaultCmdLine + sys.argv[1:])
 			def setConfigFromOpt(section, option, value):
-				if value != None:
+				if value is not None:
 					self._addEntry(container, section, option, str(value), '<cmdline>')
 			for (option, value) in {'max retry': opts.maxRetry, 'action': opts.action,
 					'continuous': opts.continuous, 'selected': opts.selector}.items():

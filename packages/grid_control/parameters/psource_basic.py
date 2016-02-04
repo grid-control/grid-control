@@ -86,7 +86,7 @@ ParameterSource.managerMap['key'] = 'KeyParameterSource'
 class SimpleParameterSource(SingleParameterSource):
 	def __init__(self, key, values):
 		SingleParameterSource.__init__(self, key)
-		if values == None:
+		if values is None:
 			raise ConfigError('Missing values for %s' % key)
 		self.values = values
 
@@ -135,7 +135,7 @@ class ConstParameterSource(SingleParameterSource):
 		result[self.key] = self.value
 
 	def create(cls, pconfig, key, value = None):
-		if value == None:
+		if value is None:
 			value = pconfig.get(key)
 		return ConstParameterSource(key, value)
 	create = classmethod(create)

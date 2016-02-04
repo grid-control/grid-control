@@ -27,7 +27,7 @@ class MetadataSplitter(FileLevelSplitter):
 			files.sort(lambda a, b: self.metaCmp(block[DataProvider.Metadata], block, a, b))
 			(fileStack, reprElement) = ([], None)
 			for fi in files:
-				if reprElement == None:
+				if reprElement is None:
 					reprElement = fi
 				if self.metaCmp(block[DataProvider.Metadata], block, fi, reprElement) != 0:
 					yield self.newBlock(block, fileStack)

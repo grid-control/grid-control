@@ -50,7 +50,7 @@ class DBSInfoProvider(datasets.GCProvider):
 					(primary, processed, tier) = getPathComponents(parent)
 				except:
 					pass
-		if (primary == None) and (len(userPath) > 0):
+		if (primary is None) and (len(userPath) > 0):
 			primary = userPath[0]
 			userPath = userPath[1:]
 
@@ -89,7 +89,7 @@ class XMLWriter: # xml.dom.minidom needs a lot of memory - could be replaced by 
 def getDBSXML(opts, block, dsBlocks):
 	fqBlock = '%s#%s' % (block[DataProvider.Dataset], block[DataProvider.BlockName])
 	validBlock = re.compile(r'^(/[a-zA-Z0-9\.\-_]{1,100}){3}#[a-zA-Z0-9\.\-_]{1,100}$')
-	if validBlock.match(fqBlock) == None:
+	if validBlock.match(fqBlock) is None:
 		raise UserException('Invalid block name: %s' % fqBlock)
 	# Check validity of input dataset
 	def getKey(k):

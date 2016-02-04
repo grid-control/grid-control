@@ -17,7 +17,7 @@ from grid_control.parameters.psource_base import ParameterSource
 from python_compat import md5
 
 def combineSyncResult(a, b, sc_fun = lambda x, y: x or y):
-	if a == None:
+	if a is None:
 		return b
 	(redo_a, disable_a, sizeChange_a) = a
 	(redo_b, disable_b, sizeChange_b) = b
@@ -53,9 +53,9 @@ class ForwardingParameterSource(ParameterSource):
 class RangeParameterSource(ForwardingParameterSource):
 	def __init__(self, psource, posStart = None, posEnd = None):
 		ForwardingParameterSource.__init__(self, psource)
-		self._posStart = utils.QM(posStart == None, 0, posStart)
+		self._posStart = utils.QM(posStart is None, 0, posStart)
 		self._posEndUser = posEnd
-		self._posEnd = utils.QM(self._posEndUser == None, self._psource.getMaxParameters() - 1, self._posEndUser)
+		self._posEnd = utils.QM(self._posEndUser is None, self._psource.getMaxParameters() - 1, self._posEndUser)
 
 	def getMaxParameters(self):
 		return self._posEnd - self._posStart + 1
@@ -76,7 +76,7 @@ class RangeParameterSource(ForwardingParameterSource):
 			if (pNum >= self._posStart) and (pNum <= self._posEnd):
 				result_disable.add(pNum - self._posStart)
 		oldPosEnd = self._posEnd
-		self._posEnd = utils.QM(self._posEndUser == None, self._psource.getMaxParameters() - 1, self._posEndUser)
+		self._posEnd = utils.QM(self._posEndUser is None, self._psource.getMaxParameters() - 1, self._posEndUser)
 		return (result_redo, result_disable, result_sizeChange or (oldPosEnd != self._posEnd))
 
 	def show(self, level = 0):
@@ -140,7 +140,7 @@ class MultiParameterSource(BaseMultiParameterSource):
 class BaseZipParameterSource(MultiParameterSource):
 	def fillParameterInfo(self, pNum, result):
 		for (psource, maxN) in zip(self._psourceList, self._psourceMaxList):
-			if maxN != None:
+			if maxN is not None:
 				if pNum < maxN:
 					psource.fillParameterInfo(pNum, result)
 			else:
@@ -157,13 +157,13 @@ class BaseZipParameterSource(MultiParameterSource):
 
 class ZipShortParameterSource(BaseZipParameterSource):
 	def initMaxParameters(self):
-		maxN = filter(lambda n: n != None, self._psourceMaxList)
+		maxN = filter(lambda n: n is not None, self._psourceMaxList)
 		if len(maxN):
 			return min(maxN)
 
 class ZipLongParameterSource(BaseZipParameterSource):
 	def initMaxParameters(self):
-		maxN = filter(lambda n: n != None, self._psourceMaxList)
+		maxN = filter(lambda n: n is not None, self._psourceMaxList)
 		if len(maxN):
 			return max(maxN)
 
@@ -200,7 +200,7 @@ class RepeatParameterSource(ChainParameterSource):
 
 	def initMaxParameters(self):
 		self.maxN = self._psource.getMaxParameters()
-		if self.maxN != None:
+		if self.maxN is not None:
 			return self.times * self.maxN
 		return self.times
 
@@ -230,7 +230,7 @@ class CrossParameterSource(MultiParameterSource):
 			self.quickFill.append((psource, maxN, prev))
 			if maxN:
 				prev *= maxN
-		maxList = filter(lambda n: n != None, self._psourceMaxList)
+		maxList = filter(lambda n: n is not None, self._psourceMaxList)
 		if maxList:
 			return reduce(lambda a, b: a * b, maxList)
 
@@ -256,7 +256,7 @@ class ErrorParameterSource(ChainParameterSource):
 		central = map(lambda p: RangeParameterSource(p, 0, 0), psources)
 		chain = [ZipLongParameterSource(*central)]
 		for pidx, p in enumerate(psources):
-			if p.getMaxParameters() != None:
+			if p.getMaxParameters() is not None:
 				tmp = list(central)
 				tmp[pidx] = RangeParameterSource(psources[pidx], 1, None)
 				chain.append(CrossParameterSource(*tmp))

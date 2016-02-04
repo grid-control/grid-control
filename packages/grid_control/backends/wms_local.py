@@ -86,7 +86,7 @@ class LocalWMS(BasicWMS):
 		time.sleep(5)
 		for wmsId, jobNum in ids:
 			path = self._getSandbox(wmsId)
-			if path == None:
+			if path is None:
 				utils.eprint('Sandbox for job %d with wmsId "%s" could not be found' % (jobNum, wmsId))
 				continue
 			try:
@@ -149,7 +149,7 @@ class LocalWMS(BasicWMS):
 
 		if retCode != 0:
 			utils.eprint('WARNING: %s failed:' % self.submitExec)
-		elif wmsId == None:
+		elif wmsId is None:
 			utils.eprint('WARNING: %s did not yield job id:\n%s' % (self.submitExec, wmsIdText))
 		if wmsId:
 			wmsId = self._createId(wmsId)
@@ -166,7 +166,7 @@ class LocalWMS(BasicWMS):
 		activity = utils.ActivityLog('retrieving job outputs')
 		for wmsId, jobNum in ids:
 			path = self._getSandbox(wmsId)
-			if path == None:
+			if path is None:
 				yield (jobNum, None)
 				continue
 

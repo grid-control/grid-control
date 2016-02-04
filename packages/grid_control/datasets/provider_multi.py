@@ -37,7 +37,7 @@ class MultiDatasetProvider(DataProvider):
 
 
 	def getBlocks(self):
-		if self._cache == None:
+		if self._cache is None:
 			ec = ExceptionCollector()
 			def getAllBlocks():
 				for provider in self._providerList:

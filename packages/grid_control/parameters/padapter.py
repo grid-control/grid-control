@@ -33,9 +33,9 @@ class ParameterAdapter(Plugin):
 		return result
 
 	def getJobInfo(self, jobNum, pNum = None):
-		if pNum == None:
+		if pNum is None:
 			pNum = jobNum
-		if jobNum == None:
+		if jobNum is None:
 			raise APIError('Unable to process jobNum None!')
 		result = {ParameterInfo.ACTIVE: True, ParameterInfo.REQS: []}
 		result['GC_JOB_ID'] = jobNum
@@ -68,10 +68,10 @@ class BasicParameterAdapter(ParameterAdapter):
 		return self._activeMap[jobNum]
 
 	def resync(self): # Allow queuing of resync results - (because of external or init trigger)
-		if (self._resyncState == None):
+		if (self._resyncState is None):
 			self._resyncInternal()
 		result = self._resyncState
-		if result != None:
+		if result is not None:
 			self._activeMap = {} # invalidate cache on changes
 		self._resyncState = None
 		return result
@@ -93,7 +93,7 @@ class TrackedParameterAdapter(BasicParameterAdapter):
 		needInit = False
 		if not (os.path.exists(self._pathParams) and os.path.exists(self._pathJob2PID)):
 			needInit = True # Init needed if no parameter log exists
-		if userInit and not needInit and (source.getMaxParameters() != None):
+		if userInit and not needInit and (source.getMaxParameters() is not None):
 			utils.eprint('Re-Initialization will overwrite the current mapping between jobs and parameter/dataset content! This can lead to invalid results!')
 			if utils.getUserBool('Do you want to perform a syncronization between the current mapping and the new one to avoid this?', True):
 				userInit = False
@@ -137,7 +137,7 @@ class TrackedParameterAdapter(BasicParameterAdapter):
 
 	def getJobInfo(self, jobNum): # Perform mapping between jobNum and parameter number
 		pNum = self._mapJob2PID.get(jobNum, jobNum)
-		if (pNum < self._source.getMaxParameters()) or (self._source.getMaxParameters() == None):
+		if (pNum < self._source.getMaxParameters()) or (self._source.getMaxParameters() is None):
 			result = BasicParameterAdapter.getJobInfo(self, jobNum, pNum)
 		else:
 			result = {ParameterInfo.ACTIVE: False}
@@ -164,7 +164,7 @@ class TrackedParameterAdapter(BasicParameterAdapter):
 						tmp.update(str(meta[key]))
 				return { ParameterInfo.HASH: tmp.hexdigest(), 'GC_PARAM': meta['GC_PARAM'],
 					ParameterInfo.ACTIVE: meta[ParameterInfo.ACTIVE] }
-			if psource.getMaxJobs() != None:
+			if psource.getMaxJobs() is not None:
 				for jobNum in range(psource.getMaxJobs()):
 					yield translateEntry(psource.getJobInfo(jobNum))
 

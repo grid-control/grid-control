@@ -205,13 +205,13 @@ class BasicWMS(WMS):
 
 		for inJobNum, dir in self._getJobsOutput(ids):
 			# inJobNum != None, dir == None => Job could not be retrieved
-			if dir == None:
+			if dir is None:
 				if inJobNum not in retrievedJobs:
 					yield (inJobNum, -1, {}, None)
 				continue
 
 			# inJobNum == None, dir != None => Found leftovers of job retrieval
-			if inJobNum == None:
+			if inJobNum is None:
 				continue
 
 			# inJobNum != None, dir != None => Job retrieval from WMS was ok

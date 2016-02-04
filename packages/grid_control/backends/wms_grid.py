@@ -99,7 +99,7 @@ class GridWMS(BasicWMS):
 				pass # Handle number of cpus in makeJDL
 			else:
 				raise APIError('Unknown requirement type %s or argument %r' % (WMS.reqTypes[reqType], arg))
-		return str.join(' && ', filter(lambda x: x != None, result))
+		return str.join(' && ', filter(lambda x: x is not None, result))
 
 
 	def makeJDL(self, jobNum, module):
@@ -191,7 +191,7 @@ class GridWMS(BasicWMS):
 				continue
 
 			if key == 'id':
-				if cur != None:
+				if cur is not None:
 					try:
 						yield format(cur)
 					except Exception:
@@ -200,7 +200,7 @@ class GridWMS(BasicWMS):
 			else:
 				cur[key] = value
 
-		if cur != None:
+		if cur is not None:
 			try:
 				yield format(cur)
 			except Exception:
@@ -260,7 +260,7 @@ class GridWMS(BasicWMS):
 			retCode = proc.wait()
 			del activity
 
-			if (retCode != 0) or (wmsId == None):
+			if (retCode != 0) or (wmsId is None):
 				if self.explainError(proc, retCode):
 					pass
 				else:

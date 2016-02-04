@@ -156,7 +156,7 @@ class DataSplitter(Plugin):
 					oldIdx = oldBlock[DataProvider.Metadata].index(meta)
 				if newBlock and (meta in newBlock.get(DataProvider.Metadata, [])):
 					newIdx = newBlock[DataProvider.Metadata].index(meta)
-				if (oldIdx != None) or (newIdx != None):
+				if (oldIdx is not None) or (newIdx is not None):
 					metaIdxLookup.append((oldIdx, newIdx, self.metaOpts[meta]))
 
 			# Select processing mode for job (disable > complete > changed > ignore) [ie. disable overrides all] using min
@@ -288,7 +288,7 @@ class DataSplitter(Plugin):
 				if DataProvider.Metadata in newFI:
 					newMetadata.append(newFI[DataProvider.Metadata])
 					for (oldMI, newMI, metaProc) in metaIdxLookup:
-						if (oldMI == None) or (newMI == None):
+						if (oldMI is None) or (newMI is None):
 							procMode = min(procMode, metaProc) # Metadata was removed
 						elif (oldFI[DataProvider.Metadata][oldMI] != newFI[DataProvider.Metadata][newMI]):
 							procMode = min(procMode, metaProc) # Metadata was changed
@@ -354,7 +354,7 @@ class DataSplitter(Plugin):
 		def getSplitContainer():
 			(rawInfo, extInfo) = ([], [])
 			for (jobNum, splitInfo, procMode) in resyncIterator_raw():
-				if jobNum != None: # Separate existing and new splittings
+				if jobNum is not None: # Separate existing and new splittings
 					rawInfo.append((jobNum, splitInfo, procMode))
 				else:
 					extInfo.append((None, splitInfo, None))
@@ -434,7 +434,7 @@ class DataSplitter(Plugin):
 
 	def loadState(path, cfg = None):
 		src = DataSplitter._getIOHandler().loadState(path)
-		if cfg == None:
+		if cfg is None:
 			cfg = createConfigFactory(configDict = src.metadata).getConfig()
 		splitter = DataSplitter.getInstance(src.classname, cfg)
 		splitter.splitSource = src

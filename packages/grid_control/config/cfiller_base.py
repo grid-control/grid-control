@@ -64,7 +64,7 @@ class FileConfigFiller(ConfigFiller):
 			def storeOption():
 				if not self._currentSection:
 					raise ConfigError(exceptionText + '\nFound config option outside of config section!')
-				assert(self._currentOption and (self._currentValue != None) and self._currentLines)
+				assert(self._currentOption and (self._currentValue is not None) and self._currentLines)
 				sectionContent = configContent.setdefault(self._currentSection, [])
 				sectionContent.append((self._currentOption, self._currentValue,
 					configFile + ':' + str.join(',', map(str, self._currentLines))))

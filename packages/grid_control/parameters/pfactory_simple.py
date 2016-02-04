@@ -151,7 +151,7 @@ class SimpleParameterFactory(BasicParameterFactory):
 				else:
 					psource_list.append(PSourceClass(*args))
 			# Optimize away unnecessary cross operations
-			if len(filter(lambda p: p.getMaxParameters() != None, psource_list)) > 1:
+			if len(filter(lambda p: p.getMaxParameters() is not None, psource_list)) > 1:
 				return [CrossParameterSource(*psource_list)]
 			return psource_list # simply forward list of psources
 
@@ -199,7 +199,7 @@ class SimpleParameterFactory(BasicParameterFactory):
 			source_list.insert(0, DataParameterSource.create())
 		if parent:
 			source_list.append(parent)
-		if len(filter(lambda p: p.getMaxParameters() != None, source_list)) > 1:
+		if len(filter(lambda p: p.getMaxParameters() is not None, source_list)) > 1:
 			source = self.combineSources(CrossParameterSource, source_list)
 		else:
 			source = self.combineSources(ZipLongParameterSource, source_list) # zip more efficient

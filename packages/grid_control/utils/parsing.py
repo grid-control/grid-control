@@ -64,7 +64,7 @@ def parseDict(entries, parserValue = lambda x: x, parserKey = lambda x: x):
 			key, entry = map(str.strip, entry.split('=>', 1))
 			if key and (key not in order):
 				order.append(key)
-		if (key != None) or entry.strip() != '':
+		if (key is not None) or entry.strip() != '':
 			result.setdefault(key, []).append(entry.strip())
 	def parserKeyIntern(key):
 		if key:
@@ -89,7 +89,7 @@ def parseList(value, delimeter = ',', doFilter = lambda x: x not in ['', '\n'], 
 
 
 def parseTime(usertime):
-	if usertime == None or usertime == '':
+	if usertime is None or usertime == '':
 		return -1
 	tmp = map(int, usertime.split(':'))
 	while len(tmp) < 3:

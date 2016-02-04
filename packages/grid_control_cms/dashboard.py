@@ -51,7 +51,7 @@ class DashBoard(Monitoring):
 		if "http" not in jobObj.wmsId:
 			dashId = '%s_https://%s:/%s' % (jobNum, backend, rawId)
 		msg = utils.mergeDicts([{'taskId': taskId, 'jobId': dashId, 'sid': rawId}] + usermsg)
-		DashboardAPI(taskId, dashId).publish(**utils.filterDict(msg, vF = lambda v: v != None))
+		DashboardAPI(taskId, dashId).publish(**utils.filterDict(msg, vF = lambda v: v is not None))
 
 
 	# Called on job submission

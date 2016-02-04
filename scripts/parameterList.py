@@ -132,7 +132,7 @@ def main():
 	if opts.listparams:
 		result = []
 		needGCParam = False
-		if psource.getMaxJobs() != None:
+		if psource.getMaxJobs() is not None:
 			countActive = 0
 			for jobNum in range(psource.getMaxJobs()):
 				info = psource.getJobInfo(jobNum)

@@ -61,7 +61,7 @@ except Exception:
 		['cheese', 'spam', 'ham']
 		"""
 		tmp = list(unsortedList)
-		if cmp == None:
+		if cmp is None:
 			cmp = builtin_cmp
 
 		if key and reverse:
@@ -163,7 +163,7 @@ except Exception:
 			for (i, value) in enumerate(funProxy.cache):
 				if value[0] == (args, kargs):
 					idx = i
-			if idx != None:
+			if idx is not None:
 				(key, item) = funProxy.cache.pop(idx)
 			else:
 				item = funProxy.fun(*args, **kargs)

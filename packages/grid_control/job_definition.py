@@ -21,7 +21,7 @@ class JobDef(object):
 		(self.memory, self.time_wall, self.time_cpu, self.cores) = (None, None, None, None)
 
 	def _combineReq(self, fun, oldValue, newValue):
-		if oldValue != None:
+		if oldValue is not None:
 			return fun(oldValue, newValue)
 		return newValue
 

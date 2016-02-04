@@ -90,13 +90,13 @@ class ScriptMonitoring(Monitoring):
 	def scriptThread(self, token, script, jobNum = None, jobObj = None, allDict = {}):
 		try:
 			tmp = {}
-			if jobNum != None:
+			if jobNum is not None:
 				tmp.update(self.task.getSubmitInfo(jobNum))
-			if jobObj != None:
+			if jobObj is not None:
 				tmp.update(jobObj.getAll())
 			tmp['WORKDIR'] = self.config.getWorkPath()
 			tmp.update(self.task.getTaskConfig())
-			if jobNum != None:
+			if jobNum is not None:
 				tmp.update(self.task.getJobConfig(jobNum))
 				tmp.update(self.task.getSubmitInfo(jobNum))
 			tmp.update(allDict)
