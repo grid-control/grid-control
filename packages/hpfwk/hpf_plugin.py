@@ -36,6 +36,9 @@ class InstanceFactory(object):
 	def __repr__(self):
 		return '<instance factory for %s>' % self._fmt(self._args, self._kwargs, addEllipsis = True)
 
+	def getClass(self):
+		return self._cls
+
 	def getInstance(self, *args, **kwargs):
 		args = self._args + args
 		kwargs = dict(self._kwargs.items() + kwargs.items())

@@ -186,8 +186,8 @@ if __name__ == '__main__':
 		for fn in filter(lambda fn: fn.endswith('.py') and not fn.endswith("python_compat.py"), files):
 			fn = os.path.join(root, fn)
 			tmp = open(fn).read().replace('def set(', '').replace('def next(', '').replace('next()', '')
-			needed = set(filter(lambda name: re.search('[^_\.a-zA-Z]%s\(' % name, tmp), __all__))
-			needed.update(filter(lambda name: re.search('\(%s\)' % name, tmp), __all__))
+			needed = set(filter(lambda name: re.search('[^_\.a-zA-Z]%s\(' % name, tmp), __all__ + ['map', 'filter']))
+			needed.update(filter(lambda name: re.search('\(%s\)' % name, tmp), __all__ + ['map', 'filter']))
 			imported = set()
 			for import_line in filter(lambda line: 'python_compat' in line, tmp.splitlines()):
 				imported.update(map(str.strip, import_line.split(None, 3)[3].split(',')))
