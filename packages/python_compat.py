@@ -12,6 +12,19 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
+try:	# itemgetter >= Python 2.4
+	from operator import itemgetter
+except:
+	def itemgetter(*items):
+		if len(items) == 1:
+			item = items[0]
+			def g(obj):
+				return obj[item]
+		else:
+			def g(obj):
+				return tuple(map(lambda item: obj[item], items))
+		return g
+
 try:	# str.rsplit >= Python 2.4
 	rsplit = str.rsplit
 except Exception:
@@ -190,7 +203,7 @@ except Exception:
 		return funProxy
 
 __all__ = ['NullHandler', 'StringBuffer', 'StringBufferBase',
-	'all', 'any', 'ifilter', 'imap', 'irange', 'izip', 'lfilter', 'lmap', 'lrange', 'lzip', 'lru_cache',
+	'all', 'any', 'ifilter', 'imap', 'irange', 'itemgetter', 'izip', 'lfilter', 'lmap', 'lrange', 'lzip', 'lru_cache',
 	'md5', 'next', 'parsedate', 'rsplit', 'set', 'sorted', 'user_input']
 
 if __name__ == '__main__':
