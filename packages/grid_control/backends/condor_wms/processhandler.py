@@ -1,4 +1,4 @@
-#-#  Copyright 2013-2015 Karlsruhe Institute of Technology
+#-#  Copyright 2013-2016 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -13,8 +13,8 @@
 #-#  limitations under the License.
 
 import os, math, stat, time
+from grid_control.backends.wms import BackendError
 from grid_control.config import ConfigError
-from grid_control.gc_exceptions import RuntimeError
 from grid_control.utils import LoggedProcess, eprint, resolveInstallPath, vprint
 from hpfwk import AbstractError, NestedException, Plugin
 
@@ -115,7 +115,7 @@ class SSHProcessHandler(ProcessHandler):
 		testProcess = self.LoggedProcess( "exit" )
 		if testProcess.wait() != 0:
 			bla = testProcess.getError() 
-			raise RuntimeError("Failed to validate remote connection.\n	Command: %s Return code: %s\n%s" % ( testProcess.cmd, testProcess.wait(), testProcess.getOutput() ) )
+			raise BackendError("Failed to validate remote connection.\n	Command: %s Return code: %s\n%s" % ( testProcess.cmd, testProcess.wait(), testProcess.getOutput() ) )
 	def __initcommands(self, **kwargs):
 		self.cmd = resolveInstallPath("ssh")
 		self.cpy = resolveInstallPath("scp") + " -r"
@@ -200,7 +200,7 @@ class SSHProcessHandler(ProcessHandler):
 				os.makedirs(sshLinkDir)
 			except Exception:
 				if self.socketEnforce:
-					raise RuntimeError("Could not create or access directory for SSHLink:\n	%s" % sshLinkDir)
+					raise BackendError("Could not create or access directory for SSHLink:\n	%s" % sshLinkDir)
 				else:
 					return False
 		if sshLinkDir!=os.path.dirname(os.path.expanduser("~/.ssh/")):
@@ -208,7 +208,7 @@ class SSHProcessHandler(ProcessHandler):
 				os.chmod(sshLinkDir, stat.S_IRWXU)
 			except Exception:
 				if self.socketEnforce:
-					raise RuntimeError("Could not secure directory for SSHLink:\n	%s" % sshLinkDir)
+					raise BackendError("Could not secure directory for SSHLink:\n	%s" % sshLinkDir)
 				else:
 					return False
 		return True
@@ -219,12 +219,12 @@ class SSHProcessHandler(ProcessHandler):
 					os.chmod(sshLink, stat.S_IRWXU)
 				except Exception:
 					if self.socketEnforce:
-						raise RuntimeError("Could not secure SSHLink:\n	%s" % sshLink)
+						raise BackendError("Could not secure SSHLink:\n	%s" % sshLink)
 					else:
 						return False
 			else:
 				if self.socketEnforce:
-					raise RuntimeError("Non-socket object already exists for SSHLink:\n	%s" % sshLink)
+					raise BackendError("Non-socket object already exists for SSHLink:\n	%s" % sshLink)
 				else:
 					return False
 		return True
@@ -318,7 +318,7 @@ class RemoteProcessHandler(object):
 		# test connection once
 		ret, out, err = LoggedProcess(self.cmd % { "cmd" : "exit"}).getAll()
 		if ret!=0:
-			raise RuntimeError("Validation of remote connection failed!\nTest Command: %s\nReturn Code: %s\nStdOut: %s\nStdErr: %s" % (self.cmd % { "cmd" : "exit"},ret,out,err))
+			raise BackendError("Validation of remote connection failed!\nTest Command: %s\nReturn Code: %s\nStdOut: %s\nStdErr: %s" % (self.cmd % { "cmd" : "exit"},ret,out,err))
 		vprint('Remote interface initialized:\n	Cmd: %s\n	Cp : %s' % (self.cmd,self.copy), level=2)
 
 	# return instance of LoggedProcess with input properly wrapped

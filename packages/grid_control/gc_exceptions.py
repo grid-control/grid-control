@@ -1,4 +1,4 @@
-#-#  Copyright 2015 Karlsruhe Institute of Technology
+#-#  Copyright 2015-2016 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -37,9 +37,6 @@ sys.excepthook = gc_excepthook
 
 class GCError(NestedException):
 	pass	# grid-control exception base class
-
-class RuntimeError(GCError):
-	pass	# some error with the runtime
 
 class UserError(GCError):
 	pass	# some error caused by the user

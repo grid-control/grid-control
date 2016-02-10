@@ -13,7 +13,7 @@
 #-#  limitations under the License.
 
 import logging
-from hpfwk import InstanceFactory, Plugin
+from hpfwk import AbstractError, InstanceFactory, Plugin
 
 class DataProcessor(Plugin):
 	def __init__(self, config):

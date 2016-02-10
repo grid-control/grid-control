@@ -14,15 +14,20 @@
 #-#  limitations under the License.
 
 import sys, optparse
-from gcSupport import JobManager, JobSelector, Report, TaskModule, getConfig, parseOptions, utils
+from gcSupport import JobDB, JobManager, JobSelector, Report, TaskModule, getConfig, parseOptions, utils
 
 parser = optparse.OptionParser()
 parser.add_option('', '--report', dest='reportClass', default='GUIReport')
+parser.add_option('', '--report-list', dest='reportList', default=False, action='store_true',
+	help='List available report classes')
 parser.add_option('-J', '--job-selector', dest='selector', default=None)
 parser.add_option('-T', '--use-task', dest='useTask', default=False, action='store_true',
 	help='Forward task information to report')
 parser.add_option('', '--str', dest='string', default=None)
 (opts, args) = parseOptions(parser)
+
+if opts.reportList:
+	print Report.getClassList()
 
 if len(args) != 1:
 	utils.exitWithUsage('%s [options] <config file>' % sys.argv[0])
@@ -33,14 +38,11 @@ def main():
 
 	# Initialise task module
 	task = None
-	tags = []
 	if opts.useTask:
 		task = config.getPlugin(['task', 'module'], cls = TaskModule).getInstance()
-		tags = [task]
 
 	# Initialise job database
-	jobManagerCls = config.getPlugin('job manager', 'SimpleJobManager', cls = JobManager, tags = tags)
-	jobDB = jobManagerCls.getInstance(task, None).jobDB
+	jobDB = config.getPlugin('jobdb', 'JobDB', cls = JobDB).getInstance(config)
 	log = utils.ActivityLog('Filtering job entries')
 	selected = jobDB.getJobs(JobSelector.create(opts.selector, task = task))
 	del log

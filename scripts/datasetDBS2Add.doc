@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 #-#  Copyright 2009-2015 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
@@ -36,7 +35,7 @@ class DBSInfoProvider(datasets.GCProvider):
 		if self.discovery:
 			return datasets.GCProvider.generateDatasetName(self, key, data)
 		if 'CMSSW_DATATIER' not in data:
-			raise RuntimeError('Incompatible data tiers in dataset: %s' % data)
+			raise Exception('Incompatible data tiers in dataset: %s' % data)
 		getPathComponents = lambda path: QM(path, tuple(path.strip('/').split('/')), ())
 		userPath = getPathComponents(self.nameDS)
 
@@ -50,7 +49,7 @@ class DBSInfoProvider(datasets.GCProvider):
 					(primary, processed, tier) = getPathComponents(parent)
 				except:
 					pass
-		if (primary is None) and (len(userPath) > 0):
+		if (primary == None) and (len(userPath) > 0):
 			primary = userPath[0]
 			userPath = userPath[1:]
 
@@ -63,7 +62,7 @@ class DBSInfoProvider(datasets.GCProvider):
 
 		rawDS = '/%s/%s/%s' % (primary, processed, tier)
 		if None in (primary, processed, tier):
-			raise RuntimeError('Invalid dataset name supplied: %r\nresulting in %s' % (self.nameDS, rawDS))
+			raise Exception('Invalid dataset name supplied: %r\nresulting in %s' % (self.nameDS, rawDS))
 		return utils.replaceDict(rawDS, data)
 
 	def generateBlockName(self, key, data):
@@ -89,7 +88,7 @@ class XMLWriter: # xml.dom.minidom needs a lot of memory - could be replaced by 
 def getDBSXML(opts, block, dsBlocks):
 	fqBlock = '%s#%s' % (block[DataProvider.Dataset], block[DataProvider.BlockName])
 	validBlock = re.compile(r'^(/[a-zA-Z0-9\.\-_]{1,100}){3}#[a-zA-Z0-9\.\-_]{1,100}$')
-	if validBlock.match(fqBlock) is None:
+	if validBlock.match(fqBlock) == None:
 		raise UserException('Invalid block name: %s' % fqBlock)
 	# Check validity of input dataset
 	def getKey(k):
@@ -114,9 +113,9 @@ def getDBSXML(opts, block, dsBlocks):
 	getOutsideM = lambda key, outside: getAllM(outside[DataProvider.Metadata].index(key), outside[DataProvider.FileList])
 
 	if block[DataProvider.Dataset].count('/') != 3:
-		raise RuntimeError('Invalid dataset name: %s' % block[DataProvider.Dataset])
+		raise Exception('Invalid dataset name: %s' % block[DataProvider.Dataset])
 	if block[DataProvider.BlockName] != utils.strGuid(block[DataProvider.BlockName].replace('-', '')):
-		raise RuntimeError('Invalid block name: %s' % block[DataProvider.BlockName])
+		raise Exception('Invalid block name: %s' % block[DataProvider.BlockName])
 
 	dataType = set(getAllM(DBS.TYPE))
 	if len(dataType) == 0: # Try to recover type from other blocks
@@ -231,7 +230,7 @@ def createDBSXMLDumps(opts, allBlocks):
 
 def makeDBSAPI(url):
 	if not 'X509_USER_PROXY' in os.environ:
-		raise RuntimeError('Environment variable X509_USER_PROXY not set!')
+		raise Exception('Environment variable X509_USER_PROXY not set!')
 	return createDBSAPI(url)
 
 
@@ -287,7 +286,7 @@ def registerParent(opts, parentPath):
 			del quiet
 		except Exception, ex:
 			del quiet
-			raise RuntimeError('Could not migrate dataset %s to target: %s' % (parentPath, str(ex)))
+			raise Exception('Could not migrate dataset %s to target: %s' % (parentPath, str(ex)))
 		del log
 		utils.vprint(' * Migrating dataset parent %s - done' % parentPath, -1)
 

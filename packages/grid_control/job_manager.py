@@ -15,9 +15,8 @@
 import math, time, bisect, random
 from grid_control import utils
 from grid_control.config import ConfigError
-from grid_control.gc_exceptions import RuntimeError
 from grid_control.gc_plugin import NamedPlugin
-from grid_control.job_db import Job, JobClass, JobDB
+from grid_control.job_db import Job, JobClass, JobDB, JobError
 from grid_control.job_selector import AndJobSelector, ClassSelector, JobSelector
 from grid_control.output_processor import TaskOutputProcessor
 from grid_control.report import Report
@@ -71,7 +70,7 @@ class JobManager(NamedPlugin):
 		try:
 			open(self.disableLog, 'w').write(str.join('\n', map(str, disabled)))
 		except Exception:
-			raise RuntimeError('Could not write disabled jobs to file %s!' % self.disableLog)
+			raise JobError('Could not write disabled jobs to file %s!' % self.disableLog)
 		if len(disabled) > 0:
 			utils.vprint('There are %d disabled jobs in this task!' % len(disabled), -1, True)
 			utils.vprint('Please refer to %s for a complete list.' % self.disableLog, -1, True, once = True)
@@ -330,7 +329,7 @@ class JobManager(NamedPlugin):
 					jobObj.attempt = 0
 			if len(jobSet) > 0:
 				output = (Job.enum2str(newState), str.join(', ', map(str, jobSet)))
-				raise RuntimeError('For the following jobs it was not possible to reset the state to %s:\n%s' % output)
+				raise JobError('For the following jobs it was not possible to reset the state to %s:\n%s' % output)
 
 		if jobChanges:
 			(redo, disable, sizeChange) = jobChanges

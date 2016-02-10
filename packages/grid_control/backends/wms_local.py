@@ -15,7 +15,7 @@
 import os, glob, time, shutil, tempfile
 from grid_control import utils
 from grid_control.backends.broker import Broker
-from grid_control.backends.wms import BasicWMS, WMS
+from grid_control.backends.wms import BackendError, BasicWMS, WMS
 from grid_control.job_db import Job
 from grid_control.utils.file_objects import VirtualFile
 from hpfwk import AbstractError
@@ -92,7 +92,7 @@ class LocalWMS(BasicWMS):
 			try:
 				shutil.rmtree(path)
 			except Exception:
-				raise RuntimeError('Sandbox for job %d with wmsId "%s" could not be deleted' % (jobNum, wmsId))
+				raise BackendError('Sandbox for job %d with wmsId "%s" could not be deleted' % (jobNum, wmsId))
 			yield (jobNum, wmsId)
 		del activity
 
@@ -121,7 +121,7 @@ class LocalWMS(BasicWMS):
 				os.mkdir(self.sandPath)
 			sandbox = tempfile.mkdtemp('', '%s.%04d.' % (module.taskID, jobNum), self.sandPath)
 		except Exception:
-			raise RuntimeError('Unable to create sandbox directory "%s"!' % sandbox)
+			raise BackendError('Unable to create sandbox directory "%s"!' % sandbox)
 		sbPrefix = sandbox.replace(self.sandPath, '').lstrip('/')
 		self.smSBIn.doTransfer(map(lambda (d, s, t): (d, s, os.path.join(sbPrefix, t)), self._getSandboxFilesIn(module)))
 

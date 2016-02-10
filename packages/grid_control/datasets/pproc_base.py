@@ -16,7 +16,7 @@ from grid_control.backends import WMS
 from grid_control.datasets.splitter_base import DataSplitter
 from grid_control.parameters import ParameterInfo, ParameterMetadata
 from grid_control.utils import filterBlackWhite
-from hpfwk import Plugin
+from hpfwk import AbstractError, Plugin
 from python_compat import any, set
 
 # Class used by DataParameterSource to convert dataset splittings into parameter data
@@ -70,6 +70,8 @@ class LocationPartitionProcessor(PartitionProcessor):
 	def __init__(self, config):
 		PartitionProcessor.__init__(self, config)
 		self._filter = config.getList('partition location filter', [], onChange = None)
+		if self._filter == []:
+			self._filter = None
 		self._preference = config.getList('partition location preference', [], onChange = None)
 		self._reqs = config.getBool('partition location requirement', True, onChange = None)
 		self._disable = config.getBool('partition location check', True, onChange = None)

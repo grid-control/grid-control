@@ -1,4 +1,4 @@
-#-#  Copyright 2013-2015 Karlsruhe Institute of Technology
+#-#  Copyright 2013-2016 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -86,7 +86,7 @@ class Migrate2ZippedJobDB(ZippedJobDB):
 				for jobNum in oldDB.getJobs():
 					self.commit(jobNum, oldDB.get(jobNum))
 			except Exception:
-				utils.removeFiles([dbFile])
+				utils.removeFiles([self._dbFile])
 				raise
 			del log
 

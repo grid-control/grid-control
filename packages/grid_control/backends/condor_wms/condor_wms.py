@@ -173,7 +173,7 @@ class Condor(BasicWMS):
 					pass
 				else:
 					mkdirProcess.logError(self.errorLog)
-					raise RuntimeError("Error accessing or creating remote working directory!\n%s" % remotePath)
+					raise BackendError("Error accessing or creating remote working directory!\n%s" % remotePath)
 
 
 # getJobsOutput: retrieve task output files from sandbox directory
@@ -282,7 +282,7 @@ class Condor(BasicWMS):
 							pass
 						else:
 							cleanupProcess.logError(self.errorLog)
-							raise RuntimeError("Cleanup Process %s returned: %s" % ( cleanupProcess.cmd, cleanupProcess.getMessage() ) )
+							raise BackendError("Cleanup Process %s returned: %s" % ( cleanupProcess.cmd, cleanupProcess.getMessage() ) )
 			except Exception:
 				raise BackendError("Exception while cleaning up remote working directory. There might be some junk data left in: %s @ %s" % ( self.getWorkdirPath(), self.Pool.getDomain() ) )
 
@@ -375,7 +375,7 @@ class Condor(BasicWMS):
 			# extract GC and WMS ID, check for consistency
 			jobID,wmsID=jobinfo['GCID@WMSID'].split('@')
 			if (wmsID != jobinfo['wmsid']):
-				raise RuntimeError("Critical! Unable to match jobs in queue! \n CondorID: %s	Expected: %s \n%s" % ( jobinfo['wmsid'], wmsID, line ))
+				raise BackendError("Critical! Unable to match jobs in queue! \n CondorID: %s	Expected: %s \n%s" % ( jobinfo['wmsid'], wmsID, line ))
 			jobinfo['jobid']=int(jobID)
 			del jobinfo['GCID@WMSID']
 			# extract Host and Queue data
@@ -738,7 +738,7 @@ class Condor(BasicWMS):
 			self.debugOut("*** Testing remote connectivity:\n%s"%testProcess.cmd)
 			if testProcess.wait()!=0:
 				testProcess.logError(self.errorLog)
-				raise RuntimeError("Failed to access remote Condor tools! The pool you are submitting to is very likely not configured properly.")
+				raise BackendError("Failed to access remote Condor tools! The pool you are submitting to is very likely not configured properly.")
 			# get initial workdir on remote pool
 			if config.get("remote workdir", ''):
 				uName=self.Pool.LoggedProcess("whoami").getOutput().strip()
@@ -748,7 +748,7 @@ class Condor(BasicWMS):
 				pwdProcess=self.Pool.LoggedProcess("pwd")
 				self.poolWorkDir=pwdProcess.getOutput().strip()
 			if pwdProcess.wait()!=0:
-				raise RuntimeError("Failed to determine, create or verify base work directory on remote host with code %s!\nThere might be a problem with your credentials or authorisation.\nOutput Message: %s\nError Message: %s" % (pwdProcess.wait(),pwdProcess.getOutput(),pwdProcess.getError()) )
+				raise BackendError("Failed to determine, create or verify base work directory on remote host with code %s!\nThere might be a problem with your credentials or authorisation.\nOutput Message: %s\nError Message: %s" % (pwdProcess.wait(),pwdProcess.getOutput(),pwdProcess.getError()) )
 
 #_getDestination: read user/sched/collector from config
 	def _getDestination(self,config):
@@ -759,4 +759,4 @@ class Condor(BasicWMS):
 		elif len(splitDest)==2:
 			return utils.QM(user,user,None),splitDest[0],splitDest[1]
 		else:
-			raise RuntimeError("Could not parse Configuration setting 'remote Dest'! \nExpected:	[<sched>|<sched>@|<sched>@<collector>]\nFound:	%s"%config.get("remote Dest", "@"))
+			raise BackendError("Could not parse Configuration setting 'remote Dest'! \nExpected:	[<sched>|<sched>@|<sched>@<collector>]\nFound:	%s"%config.get("remote Dest", "@"))

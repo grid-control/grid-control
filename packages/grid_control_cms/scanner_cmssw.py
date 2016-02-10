@@ -13,6 +13,7 @@
 #-#  limitations under the License.
 
 import os, re, tarfile, xml.dom.minidom
+from grid_control import utils
 from grid_control.datasets import DatasetError
 from grid_control.datasets.scanner_base import InfoScanner
 
@@ -132,7 +133,7 @@ class SEListFromPath(InfoScanner):
 		if proto in ['dir', 'file']:
 			yield (path, metadata, events, ['localhost'], objStore)
 		elif proto in ['rfio']:
-			if 'cern.ch' in seUrl:
+			if 'cern.ch' in path:
 				yield (path, metadata, events, ['caf.cern.ch'], objStore)
 			else:
 				yield (path, metadata, events, [fn.lstrip('/').split('/')[1]], objStore)

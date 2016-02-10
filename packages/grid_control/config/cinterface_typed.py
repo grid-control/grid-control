@@ -160,15 +160,6 @@ class TypedConfigInterface(ConfigInterface):
 		return CompositedClassWrapper(clsCompositor, clsList)
 
 
-# Filter expression class
-class FilterBase(Plugin):
-	def __init__(self, filterExpr):
-		pass
-
-	def filterList(self, value):
-		raise AbstractError
-
-
 CommandType = utils.makeEnum(['executable', 'command'])
 
 class SimpleConfigInterface(TypedConfigInterface):
@@ -245,7 +236,7 @@ class SimpleConfigInterface(TypedConfigInterface):
 				try:
 					obj = str2obj(userInput)
 				except Exception:
-					raise UserError('Unable to parse %s: %s' % (desc, userInput))
+					raise ConfigError('Unable to parse %s: %s' % (desc, userInput))
 					continue
 			break
 		return TypedConfigInterface._getInternal(self, desc, obj2str, str2obj, def2obj, option, obj, **kwargs)

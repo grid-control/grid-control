@@ -25,7 +25,7 @@ class Report(Plugin):
 		self._header = self._getHeader(45)
 
 	def _getHeader(self, maxLen = 45):
-		if not self._task:
+		if not self._task or not self._task.taskConfigName:
 			return ''
 		tmp = self._task.taskConfigName + ' / ' + self._task.taskID
 		if len(tmp) < maxLen:

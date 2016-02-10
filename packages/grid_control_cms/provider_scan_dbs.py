@@ -14,6 +14,7 @@
 
 import os
 from grid_control import utils
+from grid_control.datasets.provider_base import DatasetError
 from grid_control.datasets.provider_scan import GCProvider
 
 class DBSInfoProvider(GCProvider):
@@ -34,7 +35,7 @@ class DBSInfoProvider(GCProvider):
 		if self._discovery:
 			return GCProvider.generateDatasetName(self, key, data)
 		if 'CMSSW_DATATIER' not in data:
-			raise RuntimeError('Incompatible data tiers in dataset: %s' % data)
+			raise DatasetError('Incompatible data tiers in dataset: %s' % data)
 		getPathComponents = lambda path: utils.QM(path, tuple(path.strip('/').split('/')), ())
 		userPath = getPathComponents(self.nameDS)
 
@@ -61,7 +62,7 @@ class DBSInfoProvider(GCProvider):
 
 		rawDS = '/%s/%s/%s' % (primary, processed, tier)
 		if None in (primary, processed, tier):
-			raise RuntimeError('Invalid dataset name supplied: %r\nresulting in %s' % (self.nameDS, rawDS))
+			raise DatasetError('Invalid dataset name supplied: %r\nresulting in %s' % (self.nameDS, rawDS))
 		return utils.replaceDict(rawDS, data)
 
 	def generateBlockName(self, key, data):

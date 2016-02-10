@@ -104,8 +104,6 @@ def main():
 							block[DataProvider.Nickname] = dsName
 					except Exception:
 						pass
-				if DataProvider.Nickname not in block and opts.confignick:
-					block[DataProvider.Nickname] = np.getName(None, dsName, block)
 				if DataProvider.Nickname in block:
 					nick = block[DataProvider.Nickname]
 					infos[dsName][DataProvider.Nickname] = nick

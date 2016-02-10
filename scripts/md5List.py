@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-#-#  Copyright 2010-2015 Karlsruhe Institute of Technology
+#-#  Copyright 2010-2016 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -23,8 +23,8 @@ def main():
 	for jobNum in sorted(jobList):
 		if jip.process(os.path.join(workDir, 'output', 'job_%d' % jobNum))[1] == 0:
 			for fileInfo in fip.process(os.path.join(workDir, 'output', 'job_%d' % jobNum)):
-				pathSE = fileInfo[OutputFileInfo.Path].replace('file://', '').replace('dir://', '')
-				print('%s  %s/%s' % (fileInfo[OutputFileInfo.Hash], pathSE, fileInfo[OutputFileInfo.NameDest]))
+				pathSE = fileInfo[FileInfoProcessor.Path].replace('file://', '').replace('dir://', '')
+				print('%s  %s/%s' % (fileInfo[FileInfoProcessor.Hash], pathSE, fileInfo[FileInfoProcessor.NameDest]))
 
 if __name__ == '__main__':
 	sys.exit(main())

@@ -27,7 +27,8 @@ import tempfile
 import time
 
 # GC modules
-from grid_control.gc_exceptions import InstallationError, RuntimeError
+from grid_control.backends.wms import BackendError
+from grid_control.gc_exceptions import InstallationError
 from grid_control.utils import LoggedProcess, ensureDirExists, resolveInstallPath
 from hpfwk import AbstractError, Plugin
 from python_compat import lru_cache
@@ -80,7 +81,7 @@ def ProcessAdapterFactory(URI, externalSchemes = [], collapseLocal = True, **kwa
 			except InstallationError: # adapter is not available/broken
 				_logger.log(logging.DEBUG3, "URI '%s', rejecting adapter %s [Not available]" % (URI, Adapter.__name__))
 				continue
-			except RuntimeError:      # error in establishing connection
+			except BackendError:      # error in establishing connection
 				_logger.log(logging.DEBUG3, "URI '%s', rejecting adapter %s [Verification failed]" % (URI, Adapter.__name__))
 				continue
 		raise ValueError("Failed to match URI '%s' with any Adapter." % URI)
@@ -168,7 +169,7 @@ class ProcessAdapterInterface(Plugin):
 		"""
 		Test the connection of this adapter
 
-		raises RuntimeError if the connection exits unsuccessfully
+		raises BackendError if the connection exits unsuccessfully
 		raises InstallationError if stdout is not clean
 		"""
 		self._log(logging.INFO2, "Validating adapter for URI '%s'" % self.URI )
@@ -178,7 +179,7 @@ class ProcessAdapterInterface(Plugin):
 			if proc.wait() != os.EX_OK:
 				if self._errorLog:
 					proc.logError(self._errorLog)
-				raise RuntimeError("Failure when validating connection to '%s'." % self.getDomain)
+				raise BackendError("Failure when validating connection to '%s'." % self.getDomain)
 		if len(testProcess.getOutput()) != 0 or stdProcess.getOutput() != "stdout\n":
 			raise InstallationError("Output of processes from adapter for URI '%s' is either muted or poluted." %  self.URI )
 
@@ -524,7 +525,7 @@ class SSHProcessAdapter(ProcessAdapterInterface):
 					self._log(logging.INFO2, 'Disabling failing sockets for %d operations.' % self._socketMaxMiss)
 				return []
 			if self._socketMisses == self._socketMaxMiss:
-				raise RuntimeError("Repeated failure to create ControlMaster.")
+				raise BackendError("Repeated failure to create ControlMaster.")
 		self._socketMisses = max(self._socketMisses-1, 0)
 		return self._getCurrentSocketArgs()
 

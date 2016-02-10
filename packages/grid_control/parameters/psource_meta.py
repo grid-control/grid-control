@@ -14,6 +14,7 @@
 
 from grid_control import utils
 from grid_control.parameters.psource_base import ParameterSource
+from hpfwk import AbstractError
 from python_compat import md5
 
 def combineSyncResult(a, b, sc_fun = lambda x, y: x or y):

@@ -138,8 +138,10 @@ class LocationDataProcessor(DataProcessor):
 
 	def processBlock(self, block):
 		if block[DataProvider.Locations] is not None:
-			sites = filterBlackWhite(block[DataProvider.Locations], self._locationfilter, addUnmatched = True)
-			if len(sites) == 0 and len(block[DataProvider.FileList]) != 0:
+			sites = block[DataProvider.Locations]
+			if False and self._locationfilter:
+				sites = filterBlackWhite(sites, self._locationfilter, addUnmatched = True)
+			if False and (sites != None) and (len(sites) == 0) and (len(block[DataProvider.FileList]) != 0):
 				if not len(block[DataProvider.Locations]):
 					self._log.warning('Block %s#%s is not available at any site!'
 						% (block[DataProvider.Dataset], block[DataProvider.BlockName]))
@@ -191,7 +193,7 @@ class UniqueDataProcessor(DataProcessor):
 				recordedBlockURL, block[DataProvider.NEntries],
 				block[DataProvider.Locations], block.get(DataProvider.Metadata)))).digest()
 			if blockHash in self._recordedBlock:
-				msg = 'Multiple occurences of block: "%s#%s"!' % (fi[DataProvider.Dataset], fi[DataProvider.BlockName])
+				msg = 'Multiple occurences of block: "%s#%s"!' % (block[DataProvider.Dataset], block[DataProvider.BlockName])
 				if self._checkBlock == DatasetUniqueMode.warn:
 					self._log.warning(msg)
 				elif self._checkBlock == DatasetUniqueMode.abort:

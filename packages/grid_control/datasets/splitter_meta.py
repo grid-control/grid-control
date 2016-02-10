@@ -18,7 +18,7 @@ from hpfwk import AbstractError
 
 # Split dataset along block and metadata boundaries - using equivalence classes of metadata
 class MetadataSplitter(FileLevelSplitter):
-	def metaCmp(self, metadataNames, fiA, fiB):
+	def metaCmp(self, metadataNames, block, fiA, fiB):
 		raise AbstractError
 
 	def splitBlocks(self, blocks):
@@ -39,7 +39,7 @@ class MetadataSplitter(FileLevelSplitter):
 class UserMetadataSplitter(MetadataSplitter):
 	def metaCmp(self, metadataNames, block, fiA, fiB):
 		selMetadataNames = self.setup(self.config.getList, block, 'split metadata', [])
-		selMetadataIdx = map(lambda name: metadataNames.index(name), selMetadataNames)
+		selMetadataIdx = map(metadataNames.index, selMetadataNames)
 		getMetadata = lambda fi: map(lambda idx: fi[DataProvider.Metadata][idx], selMetadataIdx)
 		return cmp(getMetadata(fiA), getMetadata(fiB))
 

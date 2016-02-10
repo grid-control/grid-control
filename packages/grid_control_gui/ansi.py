@@ -1,4 +1,4 @@
-#-#  Copyright 2014 Karlsruhe Institute of Technology
+#-#  Copyright 2014-2016 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
 
 import sys, tty, array, fcntl, termios
 
-class Console:
+class Console(object):
 	attr = {'COLOR_BLACK': '30', 'COLOR_RED': '31', 'COLOR_GREEN': '32',
 		'COLOR_YELLOW': '33', 'COLOR_BLUE': '34', 'COLOR_MAGENTA': '35',
 		'COLOR_CYAN': '36', 'COLOR_WHITE': '37', 'BOLD': '1', 'RESET': '0'}
@@ -23,8 +23,8 @@ class Console:
 		locals()[name] = esc
 
 	def fmt(cls, data, attr = []):
-		class ColorString:
-			def __init__(self, value, attr):
+		class ColorString(object):
+			def __init__(self, data, attr):
 				(self._data, self._attr) = (data, attr)
 			def __len__(self):
 				return len(self._data)

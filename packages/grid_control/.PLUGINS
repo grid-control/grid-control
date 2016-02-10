@@ -74,8 +74,28 @@ grid_control.config.cfiller_base	MultiConfigFiller
 grid_control.config.cfiller_base	PythonConfigFiller
 grid_control.config.cfiller_base	StringConfigFiller
 
-grid_control.config.cinterface_typed.FilterBase:
-grid_control.config.cinterface_typed	FilterBase
+grid_control.config.matcher_base.ListFilterBase:
+grid_control.config.matcher_base	ListFilterBase
+
+grid_control.config.matcher_base.MatcherBase:
+grid_control.config.matcher_base	AdvancedBlackWhiteMatcher blackwhite2
+grid_control.config.matcher_base	BasicMatcher
+grid_control.config.matcher_base	BlackWhiteMatcher blackwhite
+grid_control.config.matcher_base	EndMatcher end
+grid_control.config.matcher_base	EqualMatcher equal
+grid_control.config.matcher_base	ExprMatcher expr eval
+grid_control.config.matcher_base	MatcherBase
+grid_control.config.matcher_base	RegExMatcher regex
+grid_control.config.matcher_base	StartMatcher start
+
+grid_control.config.matcher_base.MediumListFilter:
+grid_control.config.matcher_base	MediumListFilter try_strict
+
+grid_control.config.matcher_base.StrictListFilter:
+grid_control.config.matcher_base	StrictListFilter strict require
+
+grid_control.config.matcher_base.WeakListFilter:
+grid_control.config.matcher_base	WeakListFilter weak prefer
 
 grid_control.datasets.dproc_base.DataProcessor:
 grid_control.datasets.dproc_base	DataProcessor

@@ -15,22 +15,14 @@
 # -*- coding: utf-8 -*-
 
 # core modules
-import os
-
-# standard modules
-import logging
-import re
-
-# GC modules
+import os, re, logging
 from grid_control import utils
-from grid_control.backends import WMS
+from grid_control.backends.wms import BackendError, WMS
 from hpfwk import Plugin
-from python_compat import lru_cache, md5
-
-# HTC modules
 from htcondor_utils import parseKWListIter, singleQueryCache
 from processadapter import ProcessAdapterFactory
 from wmsid import HTCJobID
+from python_compat import lru_cache, md5
 
 """
 This module provides adapter classes for uniformly issuing GC commands to HTCondor Schedds.
@@ -516,17 +508,17 @@ class HTCScheddSSH(HTCScheddCLIBase):
 				retrievedJobs.append(htcID)
 			try:
 				self.cleanStagingDir(htcID = htcID)
-			except RuntimeError as err:
+			except Exception as err:
 				self._log( logging.DEFAULT, err.message )
 		# clean up task dir if no job(dir)s remain
 		try:
 			statProcess = self._adapter.LoggedExecute('find %s -maxdepth 1 -type d | wc -l' % self.getStagingDir( taskID = htcIDs[0].gctaskID) )
 			if statProcess.wait(timeout = self._adapterMaxWait):
 				statProcess.logError(self.parentPool.errorLog, brief=True)
-				raise RuntimeError('Failed to check remote dir for cleanup : %s @ %s' % (self.getStagingDir( taskID = htcIDs[0].gctaskID) ))
+				raise BackendError('Failed to check remote dir for cleanup : %s @ %s' % (self.getStagingDir( taskID = htcIDs[0].gctaskID) ))
 			elif (int(checkProcess.getOutput()) == 1):
 				self.cleanStagingDir(taskID = htcIDs[0].gctaskID)
-		except RuntimeError as err:
+		except Exception as err:
 			self._log( logging.DEFAULT, err.message )
 		return retrievedJobs
 
@@ -632,10 +624,10 @@ class HTCScheddSSH(HTCScheddCLIBase):
 						putProcess.logError(self.parentPool.errorLog, brief=True)
 						try:
 							self.cleanStagingDir( htcID = HTCJobID(jobNum, task.taskID))
-						except RuntimeError as err:
+						except Exception as err:
 							self._log( logging.INFO1, err.message )
-						raise RuntimeError
-			except RuntimeError:
+						raise BackendError
+			except BackendError:
 				continue
 			else:
 				stagedJobs.append(jobNum)
@@ -661,7 +653,7 @@ class HTCScheddSSH(HTCScheddCLIBase):
 		mkdirProcess = self._adapter.LoggedExecute("mkdir -m 744 -p", stageDirPath )
 		if mkdirProcess.wait(timeout = self._adapterMaxWait):
 			mkdirProcess.logError(self.parentPool.errorLog, brief=True)
-			raise RuntimeError('Failed to create remote dir : %s @ %s' % (stageDirPath, self.getDomain()))
+			raise BackendError('Failed to create remote dir : %s @ %s' % (stageDirPath, self.getDomain()))
 		self._stageDirCache[token] = stageDirPath
 		return stageDirPath
 
@@ -669,10 +661,10 @@ class HTCScheddSSH(HTCScheddCLIBase):
 		token        = self._getStagingToken(htcID = htcID, taskID = taskID)
 		try:
 			stageDirPath = self.getStagingDir(htcID = htcID, taskID = taskID)
-		except RuntimeError:
+		except BackendError:
 			return
 		rmdirProcess = self._adapter.LoggedExecute("rm -rf", stageDirPath )
 		if rmdirProcess.wait(timeout = self._adapterMaxWait):
 			rmdirProcess.logError(self.parentPool.errorLog, brief=True)
-			raise RuntimeError('Failed to clean remote dir : %s @ %s' % (stageDirPath, self.getDomain()))
+			raise BackendError('Failed to clean remote dir : %s @ %s' % (stageDirPath, self.getDomain()))
 		del(self._stageDirCache[token])

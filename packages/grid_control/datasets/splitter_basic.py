@@ -1,4 +1,4 @@
-#-#  Copyright 2010-2014 Karlsruhe Institute of Technology
+#-#  Copyright 2010-2016 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -14,6 +14,7 @@
 
 from grid_control.datasets.provider_base import DataProvider
 from grid_control.datasets.splitter_base import DataSplitter
+from hpfwk import AbstractError
 
 # Base class for (stackable) splitters with file level granularity
 class FileLevelSplitter(DataSplitter):

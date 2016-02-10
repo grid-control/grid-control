@@ -17,9 +17,8 @@ from grid_control.config import TaggedConfigView
 from grid_control.gc_plugin import NamedPlugin
 from grid_control.parameters.config_param import ParameterConfig
 from grid_control.parameters.padapter import ParameterAdapter
-from grid_control.parameters.psource_basic import ConstParameterSource, CounterParameterSource, RNGParameterSource, RequirementParameterSource
+from grid_control.parameters.psource_base import ParameterSource
 from grid_control.parameters.psource_data import DataParameterSource
-from grid_control.parameters.psource_meta import CrossParameterSource, RepeatParameterSource, ZipLongParameterSource
 
 class ParameterFactory(NamedPlugin):
 	configSections = NamedPlugin.configSections + ['parameters']
@@ -36,9 +35,9 @@ class ParameterFactory(NamedPlugin):
 
 
 	def getSource(self, config):
-		source = self._getRawSource(RNGParameterSource())
+		source = self._getRawSource(ParameterSource.getInstance('RNGParameterSource'))
 		if DataParameterSource.datasetsAvailable and not DataParameterSource.datasetsUsed:
-			source = CrossParameterSource(DataParameterSource.create(), source)
+			source = ParameterSource.getInstance('CrossParameterSource', DataParameterSource.create(), source)
 		return ParameterAdapter.getInstance(self.adapter, config, source)
 
 
@@ -60,21 +59,24 @@ class BasicParameterFactory(ParameterFactory):
 		nseeds = configJobs.getInt('nseeds', 10)
 		newSeeds = map(lambda x: str(random.randint(0, 10000000)), range(nseeds))
 		for (idx, seed) in enumerate(configJobs.getList('seeds', newSeeds, persistent = True)):
-			self.constSources.append(CounterParameterSource('SEED_%d' % idx, int(seed)))
+			ps = ParameterSource.getInstance('CounterParameterSource', 'SEED_%d' % idx, int(seed))
+			self.constSources.append(ps)
 		self.repeat = config.getInt('repeat', 1, onChange = None) # ALL config.x -> paramconfig.x !
 
 
 	def _addConstantPSource(self, config, cName, varName):
 		lookupVar = config.get('%s lookup' % cName, '')
 		if lookupVar:
-			self.lookupSources.append(LookupParameterSource(varName, config.getDict(cName, {}), lookupVar))
+			ps = ParameterSource.getInstance('LookupParameterSource', varName, config.getDict(cName, {}), lookupVar)
+			self.lookupSources.append(ps)
 		else:
-			self.constSources.append(ConstParameterSource(varName, config.get(cName).strip()))
+			ps = ParameterSource.getInstance('ConstParameterSource', varName, config.get(cName).strip())
+			self.constSources.append(ps)
 
 
 	def _getRawSource(self, parent):
-		source_list = self.constSources + [parent, RequirementParameterSource()]
-		source = ZipLongParameterSource(*source_list)
+		source_list = self.constSources + [parent, ParameterSource.getInstance('RequirementParameterSource')]
+		source = ParameterSource.getInstance('ZipLongParameterSource', *source_list)
 		if self.repeat > 1:
-			source = RepeatParameterSource(source, self.repeat)
+			source = ParameterSource.getInstance('RepeatParameterSource', source, self.repeat)
 		return ParameterFactory._getRawSource(self, source)

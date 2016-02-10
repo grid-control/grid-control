@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-#-#  Copyright 2011-2015 Karlsruhe Institute of Technology
+#-#  Copyright 2011-2016 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -13,7 +13,7 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-import sys, optparse
+import os, sys, optparse
 from gcSupport import getConfig, parseOptions, utils
 from grid_control.datasets.nickname_base import NickNameProducer
 from grid_control_cms.provider_dbsv3 import DBS3Provider

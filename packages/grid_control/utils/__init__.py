@@ -13,7 +13,8 @@
 #-#  limitations under the License.
 
 import os, re, sys, glob, stat, time, Queue, errno, popen2, signal, fnmatch, logging, tarfile, operator, threading
-from grid_control.gc_exceptions import InstallationError, RuntimeError, UserError
+from grid_control.gc_exceptions import GCError, InstallationError, UserError
+from grid_control.utils.file_objects import VirtualFile
 from grid_control.utils.parsing import parseBool, parseDict, parseInt, parseList, parseStr, parseTime, parseType, strGuid, strTime, strTimeShort
 from grid_control.utils.thread_tools import TimeoutException, hang_protection
 from hpfwk import APIError
@@ -42,7 +43,7 @@ def getRootName(fn): # Return file name without extension
 pathGC = lambda *args: cleanPath(os.path.join(os.environ['GC_PACKAGES_PATH'], '..', *args))
 pathShare = lambda *args, **kw: cleanPath(os.path.join(os.environ['GC_PACKAGES_PATH'], kw.get('pkg', 'grid_control'), 'share', *args))
 
-def resolvePaths(path, searchPaths = [], mustExist = True, ErrorClass = RuntimeError):
+def resolvePaths(path, searchPaths = [], mustExist = True, ErrorClass = GCError):
 	path = cleanPath(path) # replace $VAR, ~user, \ separators
 	result = []
 	if os.path.isabs(path):
@@ -61,7 +62,7 @@ def resolvePaths(path, searchPaths = [], mustExist = True, ErrorClass = RuntimeE
 	return result
 
 
-def resolvePath(path, searchPaths = [], mustExist = True, ErrorClass = RuntimeError):
+def resolvePath(path, searchPaths = [], mustExist = True, ErrorClass = GCError):
 	result = resolvePaths(path, searchPaths, mustExist, ErrorClass)
 	if len(result) > 1:
 		raise ErrorClass('Path "%s" matches multiple files:\n\t%s' % (path, str.join('\n\t', result)))
@@ -81,7 +82,7 @@ def ensureDirExists(dn, name = 'directory'):
 		try:
 			os.makedirs(dn)
 		except Exception:
-			raise RuntimeError('Problem creating %s "%s"' % (name, dn))
+			raise GCError('Problem creating %s "%s"' % (name, dn))
 
 
 def freeSpace(dn, timeout = 5):
@@ -104,7 +105,6 @@ def freeSpace(dn, timeout = 5):
 		sys.stderr.write('The file system is probably hanging or corrupted - try to check the free disk space manually.')
 		sys.stderr.write('Refer to the documentation to disable checking the free disk space - at your own risk')
 		os._exit(os.EX_OSERR)
-	return result['space']
 
 
 ################################################################
@@ -224,7 +224,7 @@ class LoggedProcess(object):
 				handle.close()
 			tar.close()
 		except Exception:
-			raise RuntimeError('Unable to log errors of external process "%s" to "%s"' % (self.niceCmd, target))
+			raise GCError('Unable to log errors of external process "%s" to "%s"' % (self.niceCmd, target))
 		eprint('All logfiles were moved to %s' % target)
 
 
@@ -255,7 +255,7 @@ def formatDict(d, fmt = '%s=%r', joinStr = ', '):
 	return str.join(joinStr, map(lambda k: fmt % (k, d[k]), sorted(d)))
 
 
-class Result: # Use with caution! Compared with tuples: +25% accessing, 8x slower instantiation
+class Result(object): # Use with caution! Compared with tuples: +25% accessing, 8x slower instantiation
 	def __init__(self, **kwargs):
 		self.__dict__ = kwargs 
 	def __repr__(self):
@@ -314,7 +314,7 @@ class PersistentDict(dict):
 			if self.filename:
 				safeWrite(open(self.filename, 'w'), self.fmt.format(self))
 		except Exception:
-			raise RuntimeError('Could not write to file %s' % self.filename)
+			raise GCError('Could not write to file %s' % self.filename)
 		self.olddict = self.items()
 
 
@@ -353,7 +353,7 @@ def optSplit(opt, delim, empty = ''):
 			tmp = oldResult[0].split(prefix)
 			new = tmp.pop(1)
 			try: # Find position of other delimeters in string
-				otherDelim = min(filter(lambda idx: idx >= 0, map(lambda x: new.find(x), delim)))
+				otherDelim = min(filter(lambda idx: idx >= 0, map(new.find, delim)))
 				tmp[0] += new[otherDelim:]
 			except Exception:
 				otherDelim = None
@@ -397,16 +397,16 @@ def checkVar(value, message, check = True):
 
 
 def accumulate(iterable, empty, doEmit, doAdd = lambda item, buffer: True, opAdd = operator.add):
-	buffer = empty
+	buf = empty
 	for item in iterable:
-		if doAdd(item, buffer):
-			buffer = opAdd(buffer, item)
-		if doEmit(item, buffer):
-			if buffer != empty:
-				yield buffer
-			buffer = empty
-	if buffer != empty:
-		yield buffer
+		if doAdd(item, buf):
+			buf = opAdd(buf, item)
+		if doEmit(item, buf):
+			if buf != empty:
+				yield buf
+			buf = empty
+	if buf != empty:
+		yield buf
 
 
 def wrapList(value, length, delimLines = ',\n', delimEntries = ', '):
@@ -541,7 +541,7 @@ class DictFormat(object):
 			key = keyParser.get(key, defaultKeyParser)(key)
 			data[key] = valueParser.get(key, defaultValueParser)(value) # do .encode('utf-8') ?
 		if doAdd:
-			raise RuntimeError('Invalid dict format in %s' % fp.name)
+			raise GCError('Invalid dict format in %s' % repr(lines))
 		return data
 
 	# Format dictionary list
@@ -922,7 +922,7 @@ def split_advanced(tokens, doEmit, addEmitToken, quotes = ['"', "'"], brackets =
 		token = next(tokens, None)
 
 	if stack_quote or stack_bracket:
-		raise ExType('Brackets / quotes not closed!')
+		raise exType('Brackets / quotes not closed!')
 	if buffer or emit_empty_buffer:
 		yield buffer
 

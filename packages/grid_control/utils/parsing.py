@@ -95,7 +95,7 @@ def parseTime(usertime):
 	while len(tmp) < 3:
 		tmp.append(0)
 	if tmp[2] > 59 or tmp[1] > 59 or len(tmp) > 3:
-		raise ConfigError('Invalid time format: %s' % usertime)
+		raise Exception('Invalid time format: %s' % usertime)
 	return reduce(lambda x, y: x * 60 + y, tmp)
 
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-#-#  Copyright 2013-2015 Karlsruhe Institute of Technology
+#-#  Copyright 2013-2016 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -15,7 +15,6 @@
 
 import optparse
 from gcSupport import AccessToken, getConfig, parseOptions
-from grid_control.gc_exceptions import RuntimeError
 from grid_control.utils.webservice import readJSON
 from grid_control_cms.provider_sitedb import SiteDB
 
@@ -36,7 +35,7 @@ if opts.SE:
 		site_db = SiteDB()
 		hnName = site_db.dn_to_username(dn=token.getFQUsername())
 		if not hnName:
-			raise RuntimeError('Unable to map grid certificate to hypernews name!')
+			raise Exception('Unable to map grid certificate to hypernews name!')
 		opts.lfn = opts.lfn.replace('<hypernews name>', hnName)
 
 	tmp = readJSON('https://cmsweb.cern.ch/phedex/datasvc/json/prod/lfn2pfn',

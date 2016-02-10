@@ -25,9 +25,9 @@ def parseTuple(t, delimeter):
 
 def frange(start, end = None, num = None, steps = None, format = '%g'):
 	if (end is None) and (num is None):
-		raise exceptions.ConfigError('frange: No exit condition!')
+		raise ConfigError('frange: No exit condition!')
 	if (end is not None) and (num is not None) and (steps is not None):
-		raise exceptions.ConfigError('frange: Overdetermined parameters!')
+		raise ConfigError('frange: Overdetermined parameters!')
 	if (end is not None) and (num is not None) and (steps is None):
 		steps = (end - start) / (num - 1)
 		num -= 1

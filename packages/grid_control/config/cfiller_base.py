@@ -61,9 +61,10 @@ class FileConfigFiller(ConfigFiller):
 	def _fillContentFromSingleFile(self, configFile, configFileData, searchPaths, configContent):
 		try:
 			(self._currentSection, self._currentOption, self._currentValue, self._currentLines) = (None, None, None, None)
-			def storeOption():
+			exceptionIntro = 'Unable to parse config file %s' % configFile
+			def storeOption(exceptionIntro):
 				if not self._currentSection:
-					raise ConfigError(exceptionText + '\nFound config option outside of config section!')
+					raise ConfigError(exceptionIntro + '\nFound config option outside of config section!')
 				assert(self._currentOption and (self._currentValue is not None) and self._currentLines)
 				sectionContent = configContent.setdefault(self._currentSection, [])
 				sectionContent.append((self._currentOption, self._currentValue,
@@ -72,12 +73,12 @@ class FileConfigFiller(ConfigFiller):
 
 			# Not using ConfigParser anymore! Ability to read duplicate options is needed
 			def parseLine(idx, line):
-				exceptionText = 'Unable to parse config file %s:%d\n\t%r' % (configFile, idx, line)
+				exceptionIntroLineInfo = exceptionIntro + ':%d\n\t%r' % (idx, line)
 				try:
 					line = rsplit(line, ';', 1)[0].rstrip()
 				except Exception:
-					raise ConfigError(exceptionText + '\nUnable to strip comments!')
-				exceptionText = 'Unable to parse config file %s:%d\n\t%r' % (configFile, idx, line)
+					raise ConfigError(exceptionIntroLineInfo + '\nUnable to strip comments!')
+				exceptionIntroLineInfo = exceptionIntro + ':%d\n\t%r' % (idx, line) # removed comment
 				if not line.strip() or line.lstrip().startswith('#'): # skip empty lines or comment lines
 					return
 				elif line[0].isspace():
@@ -85,29 +86,29 @@ class FileConfigFiller(ConfigFiller):
 						self._currentValue += '\n' + line.strip()
 						self._currentLines += [idx]
 					except Exception:
-						raise ConfigError(exceptionText + '\nInvalid indentation!')
+						raise ConfigError(exceptionIntroLineInfo + '\nInvalid indentation!')
 				elif line.startswith('['):
 					if self._currentOption:
-						storeOption()
+						storeOption(exceptionIntroLineInfo)
 					try:
 						self._currentSection = line[1:line.index(']')].strip()
 						parseLine(idx, line[line.index(']') + 1:].strip())
 					except Exception:
-						raise ConfigError(exceptionText + '\nUnable to parse config section!')
+						raise ConfigError(exceptionIntroLineInfo + '\nUnable to parse config section!')
 				elif '=' in line:
 					if self._currentOption:
-						storeOption()
+						storeOption(exceptionIntroLineInfo)
 					try:
 						(self._currentOption, self._currentValue) = map(str.strip, line.split('=', 1))
 						self._currentLines = [idx]
 					except Exception:
-						raise ConfigError(exceptionText + '\nUnable to parse config option!')
+						raise ConfigError(exceptionIntroLineInfo + '\nUnable to parse config option!')
 				else:
-					raise ConfigError(exceptionText + '\nPlease use "key = value" syntax or indent values!')
+					raise ConfigError(exceptionIntroLineInfo + '\nPlease use "key = value" syntax or indent values!')
 			for idx, line in enumerate(configFileData):
 				parseLine(idx, line)
 			if self._currentOption:
-				storeOption()
+				storeOption(exceptionIntro)
 		except Exception:
 			raise ConfigError('Error while reading configuration file "%s"!' % configFile)
 
@@ -156,7 +157,8 @@ class DefaultFilesConfigFiller(FileConfigFiller):
 		except TimeoutException:
 			sys.stderr.write('System call to resolve hostname is hanging!\n')
 			sys.stderr.flush()
-			os._exit(os.EX_OSERR)
+			return
+#			os._exit(os.EX_OSERR)
 		hostCfg = map(lambda c: utils.pathGC('config/%s.conf' % host.split('.', c)[-1]), range(host.count('.') + 1, -1, -1))
 		defaultCfg = ['/etc/grid-control.conf', '~/.grid-control.conf', utils.pathGC('config/default.conf')]
 		if os.environ.get('GC_CONFIG'):

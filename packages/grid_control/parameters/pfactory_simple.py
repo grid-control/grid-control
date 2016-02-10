@@ -13,11 +13,14 @@
 #-#  limitations under the License.
 
 from grid_control import utils
+from grid_control.config import ConfigError
 from grid_control.parameters.pfactory_base import BasicParameterFactory
 from grid_control.parameters.psource_base import ParameterSource
 from grid_control.parameters.psource_data import DataParameterSource
+from grid_control.parameters.psource_file import CSVParameterSource
 from grid_control.parameters.psource_lookup import createLookupHelper
 from grid_control.parameters.psource_meta import ChainParameterSource, CrossParameterSource, RepeatParameterSource, ZipLongParameterSource
+from hpfwk import APIError
 from python_compat import next
 
 def tokenize(value, tokList):

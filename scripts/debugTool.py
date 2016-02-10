@@ -13,8 +13,9 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-import optparse, gcSupport
-from gcSupport import TaskModule, getConfig
+import sys, optparse, gcSupport
+from gcSupport import Job, JobDB, JobSelector, TaskModule, getConfig
+from grid_control import utils
 from grid_control.datasets import DataProvider, DataSplitter
 
 parser = optparse.OptionParser()

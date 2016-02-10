@@ -309,7 +309,7 @@ class GridWMS(BasicWMS):
 				tmpPath = basePath
 			utils.ensureDirExists(tmpPath)
 		except Exception:
-			raise BackendError('Temporary path "%s" could not be created.' % tmpPath, RuntimeError)
+			raise BackendError('Temporary path "%s" could not be created.' % tmpPath, BackendError)
 
 		jobNumMap = dict(ids)
 		jobs = self.writeWMSIds(ids)
@@ -334,7 +334,6 @@ class GridWMS(BasicWMS):
 							os.unlink(wildcardTar)
 						except Exception:
 							utils.eprint("Can't unpack output files contained in %s" % wildcardTar)
-							pass
 				yield (currentJobNum, line.strip())
 				currentJobNum = None
 			else:

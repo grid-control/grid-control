@@ -14,8 +14,8 @@
 
 import os, time, random, tempfile
 from grid_control import utils
+from grid_control.backends.wms import BackendError
 from grid_control.backends.wms_grid import GridWMS
-from grid_control.gc_exceptions import RuntimeError
 from python_compat import md5
 
 def choice_exp(sample, p = 0.5):
@@ -24,7 +24,7 @@ def choice_exp(sample, p = 0.5):
 			return x
 	return sample[-1]
 
-class DiscoverWMS_Lazy: # TODO: Move to broker infrastructure
+class DiscoverWMS_Lazy(object): # TODO: Move to broker infrastructure
 	def __init__(self, config):
 		self.statePath = config.getWorkPath('glitewms.info')
 		(self.wms_ok, self.wms_all, self.pingDict, self.pos) = self.loadState()
@@ -178,7 +178,7 @@ class GliteWMS(GridWMS):
 	def submitJobs(self, jobNumList, module):
 		if not self.bulkSubmissionBegin(): # Trying to delegate proxy failed
 			if self._forceDelegate: # User switched on forcing delegation => exception
-				raise RuntimeError('Unable to delegate proxy!')
+				raise BackendError('Unable to delegate proxy!')
 			utils.eprint('Unable to delegate proxy! Continue with automatic delegation...')
 			self._submitParams.update({ '-a': ' ' })
 			self._useDelegate = False

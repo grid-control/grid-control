@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-#-#  Copyright 2014-2015 Karlsruhe Institute of Technology
+#-#  Copyright 2014-2016 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -13,7 +13,7 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-import os, sys, logging, optparse
+import os, sys, logging, operator, optparse
 from gcSupport import FileMutex, getConfig, utils
 from grid_control.datasets.provider_base import DataProvider
 from grid_control_cms.dbs3_input_validation import DBS3InputValidation
@@ -23,7 +23,8 @@ from grid_control_cms.dbs3_migration_queue import DBS3MigrationQueue
 from grid_control_cms.dbs3_migration_queue import MigrationTask
 from grid_control_cms.dbs3_migration_queue import do_migration
 from grid_control_cms.provider_sitedb import SiteDB
-from python_compat import NullHandler, set
+from hpfwk import APIError
+from python_compat import NullHandler, md5, set
 
 def generateDBS3BlockDumps(opts, blocks):
     for block_info in blocks:
@@ -232,7 +233,7 @@ def main():
     if opts.incremental:
         # Query target DBS for all found datasets and perform dataset resync with "supposed" state
         dNames = set(map(lambda b: b[DataProvider.Dataset], blocks))
-        dNames = filter(lambda ds: hasDataset(opts.dbsTarget, ds), dNames)
+#        dNames = filter(lambda ds: hasDataset(opts.dbsTarget, ds), dNames) - todo
         config = getConfig(configDict = {None: {'dbs instance': opts.dbsTarget}})
         oldBlocks = reduce(operator.add, map(lambda ds: DBSApiv2(config, None, ds, None).getBlocks(), dNames), [])
         (blocksAdded, blocksMissing, blocksChanged) = DataProvider.resyncSources(oldBlocks, blocks)

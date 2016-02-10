@@ -16,8 +16,7 @@ import os, copy
 from grid_control import utils
 from grid_control.config import createConfigFactory, noDefault
 from grid_control.datasets.provider_base import DataProvider
-from grid_control.gc_exceptions import RuntimeError
-from hpfwk import AbstractError, Plugin
+from hpfwk import AbstractError, NestedException, Plugin
 from python_compat import next
 
 def fast_search(lst, cmp_op):
@@ -35,6 +34,9 @@ def fast_search(lst, cmp_op):
 ResyncMode = utils.makeEnum(['disable', 'complete', 'changed', 'ignore']) # prio: "disable" overrides "complete", etc.
 ResyncMode.noChanged = [ResyncMode.disable, ResyncMode.complete, ResyncMode.ignore]
 ResyncOrder = utils.makeEnum(['append', 'preserve', 'fillgap', 'reorder']) # reorder mechanism
+
+class PartitionError(NestedException):
+	pass
 
 class DataSplitter(Plugin):
 	def __init__(self, config):
@@ -101,7 +103,7 @@ class DataSplitter(Plugin):
 
 	def getSplitInfo(self, jobNum):
 		if jobNum >= self.getMaxJobs():
-			raise RuntimeError('Job %d out of range for available dataset' % jobNum)
+			raise PartitionError('Job %d out of range for available dataset' % jobNum)
 		return self.splitSource[jobNum]
 
 
@@ -402,7 +404,7 @@ class DataSplitter(Plugin):
 
 		if self.interactive:
 			# TODO: print info and ask
-			if not getUserBool('Do you want to use the new dataset splitting?', False):
+			if not utils.getUserBool('Do you want to use the new dataset splitting?', False):
 				return None
 		os.rename(newSplitPathTMP, newSplitPath)
 

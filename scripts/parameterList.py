@@ -17,6 +17,7 @@ import os, sys, random, optparse
 from gcSupport import getConfig, parseOptions, utils
 from grid_control.datasets import DataSplitter
 from grid_control.parameters import DataParameterSource, ParameterFactory, ParameterInfo, ParameterMetadata, ParameterSource
+from python_compat import md5
 
 random.seed(0)
 

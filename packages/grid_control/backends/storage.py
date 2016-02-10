@@ -15,7 +15,6 @@
 import os, sys, shutil
 from grid_control import utils
 from grid_control.config import ConfigError, validNoVar
-from grid_control.gc_exceptions import RuntimeError
 from grid_control.gc_plugin import NamedPlugin
 from hpfwk import NestedException
 from python_compat import set
@@ -119,4 +118,4 @@ class SEStorageManager(StorageManager):
 					utils.eprint(proc.getMessage())
 					utils.eprint('Unable to copy %s! You can try to copy it manually.' % desc)
 					if not utils.getUserBool('Is %s (%s) available on SE %s?' % (desc, source, sePath), False):
-						raise RuntimeError('%s is missing on SE %s!' % (desc, sePath))
+						raise StorageError('%s is missing on SE %s!' % (desc, sePath))
