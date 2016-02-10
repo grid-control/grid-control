@@ -24,7 +24,7 @@ class InstanceFactory(object):
 		(self._bindValue, self._cls, self._args, self._kwargs) = (bindValue, cls, args, kwargs)
 
 	def _fmt(self, args, kwargs, addEllipsis = False):
-		args_str_list = map(repr, args)
+		args_str_list = list(map(repr, args))
 		args_str_list.extend(map(lambda kv: '%s=%r' % kv, kwargs.items()))
 		if addEllipsis:
 			args_str_list.append('...')
@@ -132,13 +132,17 @@ Plugin.pkgPaths = []
 # Init plugin search paths
 def initPlugins(basePath):
 	# Package discovery
-	for pkgName in filter(lambda p: os.path.isdir(os.path.join(basePath, p)), os.listdir(basePath)):
-		pluginFile = os.path.join(basePath, pkgName, '.PLUGINS')
-		if os.path.exists(pluginFile):
-			__import__(pkgName) # Trigger initialisation of module
-			for line in map(str.strip, open(pluginFile)):
-				if line and not line.endswith(':'):
-					tmp = line.split()
-					(modulePath, module) = (tmp[0], tmp[1])
-					for pluginName in tmp[1:]:
-						Plugin.moduleMap.setdefault(pluginName, []).append('%s.%s' % (modulePath, module))
+	for pkgName in os.listdir(basePath):
+		if os.path.isdir(os.path.join(basePath, pkgName)):
+			pluginFile = os.path.join(basePath, pkgName, '.PLUGINS')
+			if os.path.exists(pluginFile):
+				__import__(pkgName) # Trigger initialisation of module
+				for line in map(str.strip, open(pluginFile)):
+					if line and line.endswith(':'):
+						baseClass = line.rstrip(':').split('.')[-1]
+					elif line and not line.endswith(':'):
+						tmp = line.split()
+						(modulePath, module) = (tmp[0], tmp[1])
+						for pluginName in tmp[1:]:
+							Plugin.moduleMap.setdefault(pluginName, []).append('%s.%s' % (modulePath, module))
+							Plugin.classMap.setdefault(baseClass, []).append(pluginName)
