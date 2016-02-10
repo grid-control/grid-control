@@ -1,4 +1,4 @@
-#-#  Copyright 2012-2015 Karlsruhe Institute of Technology
+#-#  Copyright 2012-2016 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@ from grid_control import utils
 from grid_control.parameters.pfactory_base import BasicParameterFactory
 from grid_control.parameters.psource_base import ParameterError, ParameterSource
 from grid_control.parameters.psource_meta import ZipLongParameterSource
+from python_compat import imap
 
 # Parameter factory which evaluates a parameter module string
 class ModularParameterFactory(BasicParameterFactory):
@@ -39,7 +40,7 @@ class ModularParameterFactory(BasicParameterFactory):
 				except Exception:
 					raise ParameterError('Error while creating "%r" with arguments "%r"' % (parameterClass.__name__, args))
 			return wrapper
-		userFun = dict(map(lambda (key, cls): (key, createWrapper(cls)), ParameterSource.managerMap.items()))
+		userFun = dict(imap(lambda (key, cls): (key, createWrapper(cls)), ParameterSource.managerMap.items()))
 		try:
 			source = eval(pExpr, userFun)
 		except Exception:

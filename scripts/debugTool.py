@@ -17,6 +17,7 @@ import sys, optparse, gcSupport
 from gcSupport import Job, JobDB, JobSelector, TaskModule, getConfig
 from grid_control import utils
 from grid_control.datasets import DataProvider, DataSplitter
+from python_compat import imap, irange, lmap, lzip
 
 parser = optparse.OptionParser()
 
@@ -76,7 +77,7 @@ if opts.jobs:
 				if key.startswith('history'):
 					jobinfo.dict.pop(key)
 			jobDB.commit(jobNum, jobinfo)
-	print str.join(' ', map(str, jobDB.getJobsIter(selected)))
+	print str.join(' ', imap(str, jobDB.getJobsIter(selected)))
 
 
 if opts.diff:
@@ -105,7 +106,7 @@ if opts.findrm:
 if opts.invalid:
 	splitter = DataSplitter.loadState(opts.invalid)
 	def getInvalid():
-		for jobNum in range(splitter.getMaxJobs()):
+		for jobNum in irange(splitter.getMaxJobs()):
 			splitInfo = splitter.getSplitInfo(jobNum)
 			if splitInfo.get(DataSplitter.Invalid, False):
 				yield str(jobNum)
@@ -129,17 +130,17 @@ if opts.splitting:
 	if not opts.checkSplitting:
 		if opts.splittingInfos:
 			keyStrings = opts.splittingInfos.split(',')
-			keyList = map(lambda k: getattr(DataSplitter, k), keyStrings)
+			keyList = lmap(lambda k: getattr(DataSplitter, k), keyStrings)
 			def getInfos():
-				for jobNum in range(splitter.getMaxJobs()):
+				for jobNum in irange(splitter.getMaxJobs()):
 					splitInfo = splitter.getSplitInfo(jobNum)
-					tmp = map(lambda k: (k, splitInfo.get(k, '')), keyList)
+					tmp = lmap(lambda k: (k, splitInfo.get(k, '')), keyList)
 					yield dict([('jobNum', jobNum)] + tmp)
-			utils.printTabular([('jobNum', 'Job')] + zip(keyList, keyStrings), getInfos())
+			utils.printTabular([('jobNum', 'Job')] + lzip(keyList, keyStrings), getInfos())
 	else:
 		print 'Checking %d jobs...' % splitter.getMaxJobs()
 		fail = utils.set()
-		for jobNum in range(splitter.getMaxJobs()):
+		for jobNum in irange(splitter.getMaxJobs()):
 			splitInfo = splitter.getSplitInfo(jobNum)
 			try:
 				(events, skip, files) = (0, 0, [])
@@ -150,7 +151,7 @@ if opts.splitting:
 						skip = int(line.split('SKIP_EVENTS', 1)[1].replace('=', ''))
 					if 'FILE_NAMES' in line:
 						files = line.split('FILE_NAMES', 1)[1].replace('=', '').replace('\"', '').replace('\\', '')
-						files = map(lambda x: x.strip().strip(','), files.split())
+						files = lmap(lambda x: x.strip().strip(','), files.split())
 				def printError(curJ, curS, msg):
 					if curJ != curS:
 						print '%s in job %d (j:%s != s:%s)' % (msg, jobNum, curJ, curS)
@@ -160,7 +161,7 @@ if opts.splitting:
 				printError(files, splitInfo[DataSplitter.FileList], 'Inconsistent list of files')
 			except Exception:
 				print 'Job %d was never initialized!' % jobNum
-		print str.join('\n', map(str, fail))
+		print str.join('\n', imap(str, fail))
 
 if opts.decode:
 	import base64, gzip, StringIO

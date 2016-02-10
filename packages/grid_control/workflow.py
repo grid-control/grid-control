@@ -22,6 +22,7 @@ from grid_control.job_manager import JobManager
 from grid_control.logging_setup import LogEveryNsec
 from grid_control.monitoring import Monitoring
 from grid_control.tasks import TaskModule
+from python_compat import imap
 
 # Workflow class
 class Workflow(NamedPlugin):
@@ -76,7 +77,7 @@ class Workflow(NamedPlugin):
 			if (self._checkSpace > 0) and utils.freeSpace(self._workDir) < self._checkSpace:
 				spaceLogger.warning('Not enough space left in working directory')
 			else:
-				for action in map(str.lower, self._actionList):
+				for action in imap(str.lower, self._actionList):
 					if action.startswith('c') and not utils.abort():   # check for jobs
 						if self.jobManager.check(self.wms):
 							didWait = wait(wmsTiming.waitBetweenSteps)

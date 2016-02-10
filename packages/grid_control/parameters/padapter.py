@@ -17,7 +17,7 @@ from grid_control import utils
 from grid_control.parameters.psource_base import ParameterInfo, ParameterMetadata, ParameterSource
 from grid_control.parameters.psource_file import GCDumpParameterSource
 from hpfwk import APIError, Plugin
-from python_compat import md5, set, sorted
+from python_compat import ifilter, imap, irange, lfilter, lmap, md5, set, sorted
 
 class ParameterAdapter(Plugin):
 	def __init__(self, config, source):
@@ -28,7 +28,7 @@ class ParameterAdapter(Plugin):
 		return self._source.getMaxParameters()
 
 	def getJobKeys(self):
-		result = map(lambda k: ParameterMetadata(k, untracked=True), ['GC_JOB_ID', 'GC_PARAM'])
+		result = lmap(lambda k: ParameterMetadata(k, untracked=True), ['GC_JOB_ID', 'GC_PARAM'])
 		self._source.fillParameterKeys(result)
 		return result
 
@@ -124,15 +124,15 @@ class TrackedParameterAdapter(BasicParameterAdapter):
 		self.maxN = int(fp.readline())
 		if not self.maxN:
 			self.maxN = None
-		mapInfo = filter(lambda x: x, map(str.strip, fp.readline().split(',')))
-		self._mapJob2PID = dict(map(lambda x: tuple(map(lambda y: int(y.lstrip('!')), x.split(':'))), mapInfo))
+		mapInfo = lfilter(lambda x: x, imap(str.strip, fp.readline().split(',')))
+		self._mapJob2PID = dict(imap(lambda x: tuple(imap(lambda y: int(y.lstrip('!')), x.split(':'))), mapInfo))
 		self._activeMap = {}
 
 	def writeJob2PID(self, fn):
 		fp = gzip.open(fn, 'w')
 		fp.write('%d\n' % max(0, self._rawSource.getMaxParameters()))
-		data = filter(lambda (jobNum, pNum): jobNum != pNum, self._mapJob2PID.items())
-		datastr = map(lambda (jobNum, pNum): '%d:%d' % (jobNum, pNum), data)
+		data = lfilter(lambda (jobNum, pNum): jobNum != pNum, self._mapJob2PID.items())
+		datastr = lmap(lambda (jobNum, pNum): '%d:%d' % (jobNum, pNum), data)
 		fp.write('%s\n' % str.join(',', datastr))
 
 	def getJobInfo(self, jobNum): # Perform mapping between jobNum and parameter number
@@ -155,17 +155,17 @@ class TrackedParameterAdapter(BasicParameterAdapter):
 			return 
 
 		def translatePSource(psource): # Reduces psource output to essential information for diff
-			keys_store = sorted(filter(lambda k: k.untracked == False, psource.getJobKeys()))
+			keys_store = sorted(ifilter(lambda k: k.untracked == False, psource.getJobKeys()))
 			def translateEntry(meta): # Translates parameter setting into hash
 				tmp = md5()
-				for key in filter(lambda k: k in meta, keys_store):
+				for key in ifilter(lambda k: k in meta, keys_store):
 					if str(meta[key]):
 						tmp.update(key)
 						tmp.update(str(meta[key]))
 				return { ParameterInfo.HASH: tmp.hexdigest(), 'GC_PARAM': meta['GC_PARAM'],
 					ParameterInfo.ACTIVE: meta[ParameterInfo.ACTIVE] }
 			if psource.getMaxJobs() is not None:
-				for jobNum in range(psource.getMaxJobs()):
+				for jobNum in irange(psource.getMaxJobs()):
 					yield translateEntry(psource.getJobInfo(jobNum))
 
 		old = ParameterAdapter(None, GCDumpParameterSource(self._pathParams))
@@ -209,15 +209,15 @@ class TrackedParameterAdapter(BasicParameterAdapter):
 			from grid_control.parameters.psource_meta import ChainParameterSource
 			from grid_control.parameters.psource_basic import InternalParameterSource
 			currentInfoKeys = new.getJobKeys()
-			missingInfoKeys = filter(lambda key: key not in currentInfoKeys, old.getJobKeys())
+			missingInfoKeys = lfilter(lambda key: key not in currentInfoKeys, old.getJobKeys())
 			self._source = ChainParameterSource(self._rawSource, InternalParameterSource(missingInfos, missingInfoKeys))
 
 		self._mapJob2PID = mapJob2PID # Update Job2PID map
 		redo = redo.difference(disable)
 		if redo or disable:
-			mapPID2Job = dict(map(lambda (k, v): (v, k), self._mapJob2PID.items()))
+			mapPID2Job = dict(imap(lambda (k, v): (v, k), self._mapJob2PID.items()))
 			translate = lambda pNum: mapPID2Job.get(pNum, pNum)
-			self._resyncState = (set(map(translate, redo)), set(map(translate, disable)), sizeChange)
+			self._resyncState = (set(imap(translate, redo)), set(imap(translate, disable)), sizeChange)
 		elif sizeChange:
 			self._resyncState = (set(), set(), sizeChange)
 		# Write resynced state

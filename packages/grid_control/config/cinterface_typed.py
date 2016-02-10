@@ -17,12 +17,12 @@ from grid_control import utils
 from grid_control.config.cinterface_base import ConfigInterface
 from grid_control.config.config_entry import ConfigError, noDefault
 from grid_control.config.cview_base import SimpleConfigView
-from hpfwk import APIError, AbstractError, Plugin
-from python_compat import user_input
+from hpfwk import APIError, Plugin
+from python_compat import imap, lmap, user_input
 
 def appendOption(option, suffix):
 	if isinstance(option, (list, tuple)):
-		return map(lambda x: appendOption(x, suffix), option)
+		return lmap(lambda x: appendOption(x, suffix), option)
 	return option.rstrip() + ' ' + suffix
 
 # General purpose class factory
@@ -77,20 +77,20 @@ class TypedConfigInterface(ConfigInterface):
 	def getDict(self, option, default = noDefault, parser = lambda x: x, strfun = lambda x: x, **kwargs):
 		def obj2str(value):
 			(srcdict, srckeys) = value
-			getmax = lambda src: max(map(lambda x: len(str(x)), src) + [0])
+			getmax = lambda src: max(lmap(lambda x: len(str(x)), src) + [0])
 			result = ''
 			if srcdict.get(None) is not None:
 				result = strfun(srcdict.get(None, parser('')))
 			fmt = '\n\t%%%ds => %%%ds' % (getmax(srckeys), getmax(srcdict.values()))
-			return result + str.join('', map(lambda k: fmt % (k, strfun(srcdict[k])), srckeys))
+			return result + str.join('', imap(lambda k: fmt % (k, strfun(srcdict[k])), srckeys))
 		str2obj = lambda value: utils.parseDict(value, parser)
 		def2obj = lambda value: (value, value.keys())
 		return self._getInternal('dictionary', obj2str, str2obj, def2obj, option, default, **kwargs)
 
 	# Get whitespace separated list (space, tab, newline)
 	def getList(self, option, default = noDefault, parseItem = lambda x: x, **kwargs):
-		obj2str = lambda value: '\n' + str.join('\n', map(str, value))
-		str2obj = lambda value: map(parseItem, utils.parseList(value, None))
+		obj2str = lambda value: '\n' + str.join('\n', imap(str, value))
+		str2obj = lambda value: lmap(parseItem, utils.parseList(value, None))
 		return self._getInternal('list', obj2str, str2obj, None, option, default, **kwargs)
 
 	# Resolve path
@@ -146,7 +146,7 @@ class TypedConfigInterface(ConfigInterface):
 			default_compositor = noDefault, option_compositor = None,
 			cls = Plugin, tags = [], inherit = False, requirePlugin = True, **kwargs):
 		str2obj = lambda value: list(cls.bind(value, self._getPluginPaths(), config = self, inherit = inherit, tags = tags))
-		obj2str = lambda value: str.join('\n', map(lambda obj: obj.bindValue(), value))
+		obj2str = lambda value: str.join('\n', imap(lambda obj: obj.bindValue(), value))
 		clsList = self._getInternal('composite plugin', obj2str, str2obj, str2obj, option, default, **kwargs)
 		if len(clsList) == 1:
 			return clsList[0]
@@ -191,7 +191,7 @@ class SimpleConfigInterface(TypedConfigInterface):
 			obj2str = str.__str__, str2obj = str, def2obj = None, onValid = None, **kwargs):
 		default_str = self._getDefaultStr(default, def2obj, obj2str)
 		capDefault = lambda value: utils.QM(value == default_str, value.upper(), value.lower())
-		choices_str = str.join('/', map(capDefault, map(obj2str, choices)))
+		choices_str = str.join('/', imap(capDefault, imap(obj2str, choices)))
 		if (default != noDefault) and (default not in choices):
 			raise APIError('Invalid default choice "%s" [%s]!' % (default, choices_str))
 		if 'interactive' in kwargs:

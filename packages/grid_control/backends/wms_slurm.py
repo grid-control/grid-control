@@ -16,6 +16,7 @@ from grid_control import utils
 from grid_control.backends.wms import WMS
 from grid_control.backends.wms_local import LocalWMS
 from grid_control.job_db import Job
+from python_compat import izip, lmap
 
 class JMS(LocalWMS):
 	alias = ['SLURM']
@@ -65,8 +66,8 @@ class JMS(LocalWMS):
 		for jobline in str.join('', list(status)).split('\n')[2:]:
 			if jobline == '':
 				continue
-			tmp = map(lambda x: x.strip('\x1b(B'), jobline.replace('\x1b[m', '').split())
-			jobinfo = dict(zip(tmpHead, tmp[:12]))
+			tmp = lmap(lambda x: x.strip('\x1b(B'), jobline.replace('\x1b[m', '').split())
+			jobinfo = dict(izip(tmpHead, tmp[:12]))
 			jobinfo['dest'] = 'N/A'
 			if len(tmp) > 12:
 				jobinfo['start_time'] = tmp[12]

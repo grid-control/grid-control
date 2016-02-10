@@ -15,6 +15,7 @@
 from grid_control.config.config_entry import standardConfigForm
 from grid_control.config.cview_base import SimpleConfigView, selectorUnchanged
 from hpfwk import APIError
+from python_compat import imap, lfilter, lmap
 
 # Simple ConfigView implementation
 class TaggedConfigView(SimpleConfigView):
@@ -40,7 +41,7 @@ class TaggedConfigView(SimpleConfigView):
 				raise APIError('Class %r does not define a valid tag name!' % t.__class__.__name__)
 			return [(tagName, t.getObjectName().lower())]
 		self._initVariable('_cfgTags', [], setTags, addTags, lambda x: x, makeTagTuple)
-		self._cfgTagsOrder = map(lambda (tagName, tagValue): tagName, self._cfgTags)
+		self._cfgTagsOrder = lmap(lambda (tagName, tagValue): tagName, self._cfgTags)
 
 	def __str__(self):
 		return '<%s(class = %r, sections = %r, names = %r, tags = %r)>' %\
@@ -68,11 +69,11 @@ class TaggedConfigView(SimpleConfigView):
 		if (not self._cfgClassSections) and (not self._cfgSections):
 			idxSection = 0
 		if (idxClass is not None) or (idxSection is not None): # Section is selected by class or manually
-			idxNames = tuple(map(lambda n: myIndex(self._cfgNames, n), curNames))
+			idxNames = tuple(imap(lambda n: myIndex(self._cfgNames, n), curNames))
 			if None not in idxNames: # All names in current section are selected
-				curTagNames = filter(lambda tn: tn in curTags, self._cfgTagsOrder)
-				curTagNamesLeft = filter(lambda tn: tn not in self._cfgTagsOrder, curTags)
-				idxTags = map(lambda tn: myIndex(self._cfgTags, (tn, curTags[tn])), curTagNames)
+				curTagNames = lfilter(lambda tn: tn in curTags, self._cfgTagsOrder)
+				curTagNamesLeft = lfilter(lambda tn: tn not in self._cfgTagsOrder, curTags)
+				idxTags = lmap(lambda tn: myIndex(self._cfgTags, (tn, curTags[tn])), curTagNames)
 				if (None not in idxTags) and not curTagNamesLeft:
 					return (idxClass, idxSection, idxNames, idxTags)
 
@@ -85,7 +86,7 @@ class TaggedConfigView(SimpleConfigView):
 			if self._cfgNames:
 				section += ' %s' % str.join(' ', self._cfgNames)
 			if self._cfgTags:
-				section += ' %s' % str.join(' ', map(lambda t: '%s:%s' % t, self._cfgTags))
+				section += ' %s' % str.join(' ', imap(lambda t: '%s:%s' % t, self._cfgTags))
 			return section
 		elif self._cfgClassSections:
 			return self._cfgClassSections[0]

@@ -15,7 +15,7 @@
 from grid_control import utils
 from grid_control.backends.broker import Broker
 from grid_control.backends.wms import WMS
-from python_compat import sorted
+from python_compat import lfilter, sorted
 
 class RandomBroker(Broker):
 	def __init__(self, config, name, userOpt, itemName, discoverFun):
@@ -98,8 +98,8 @@ class SimpleBroker(FilterBroker):
 					return False
 			return True
 		# Apply sort order and give matching entries as preselection to FilterBroker
-		items = filter(lambda x: matcher(self._itemsDiscovered[x]), items)
-		return FilterBroker._broker(self, reqs, filter(lambda x: x in items, self._itemsSorted))
+		items = lfilter(lambda x: matcher(self._itemsDiscovered[x]), items)
+		return FilterBroker._broker(self, reqs, lfilter(lambda x: x in items, self._itemsSorted))
 
 
 class StorageBroker(Broker):

@@ -15,7 +15,7 @@
 from grid_control import utils
 from grid_control.backends.wms_local import LocalWMS
 from grid_control.job_db import Job
-from python_compat import next
+from python_compat import ifilter, imap, izip, lmap, next
 
 class Host(LocalWMS):
 	alias = ['Localhost']
@@ -45,9 +45,9 @@ class Host(LocalWMS):
 
 
 	def parseStatus(self, status):
-		head = map(lambda x: x.strip('%').lower(), next(status, '').split())
-		for entry in map(str.strip, status):
-			jobinfo = dict(zip(head, filter(lambda x: x != '', entry.split(None, len(head) - 1))))
+		head = lmap(lambda x: x.strip('%').lower(), next(status, '').split())
+		for entry in imap(str.strip, status):
+			jobinfo = dict(izip(head, ifilter(lambda x: x != '', entry.split(None, len(head) - 1))))
 			jobinfo.update({'id': jobinfo.get('pid'), 'status': 'R', 'dest': 'localhost/localqueue'})
 			yield jobinfo
 

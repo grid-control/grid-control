@@ -181,7 +181,7 @@ class MediumListFilter(Plugin):
 		strict_result = lfilter(self._matchFun.match, entries)
 		if strict_result:
 			return strict_result
-		return filter(lambda entry: self._matchFun.match(entry) != False, entries)
+		return lfilter(lambda entry: self._matchFun.match(entry) != False, entries)
 
 
 class WeakListFilter(Plugin):
@@ -190,4 +190,4 @@ class WeakListFilter(Plugin):
 	def filterList(self, entries):
 		if entries == None:
 			return self._positive
-		return filter(lambda entry: self._matchFun.match(entry) != False, entries)
+		return lfilter(lambda entry: self._matchFun.match(entry) != False, entries)

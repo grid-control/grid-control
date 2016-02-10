@@ -17,6 +17,7 @@ from grid_control import utils
 from grid_control.config import ConfigError
 from grid_control.parameters.psource_base import ParameterInfo, ParameterSource
 from grid_control.parameters.psource_basic import FormatterParameterSource, KeyParameterSource, SimpleParameterSource, SingleParameterSource
+from python_compat import imap, irange, izip, lmap
 
 class LookupMatcher:
 	def __init__(self, lookupKeys, lookupFunctions, lookupDictConfig):
@@ -27,16 +28,16 @@ class LookupMatcher:
 			self.lookupDict, self.lookupOrder = ({None: lookupDictConfig}, [])
 
 	def getHash(self):
-		return utils.md5(str(map(lambda x: self.lookupDict, self.lookupOrder))).hexdigest()
+		return utils.md5(str(lmap(lambda x: self.lookupDict, self.lookupOrder))).hexdigest()
 
 	def __repr__(self):
-		return 'key(%s)' % str.join(', ', map(lambda x: "'%s'" % x, self.lookupKeys))
+		return 'key(%s)' % str.join(', ', imap(lambda x: "'%s'" % x, self.lookupKeys))
 
 	def matchRule(self, src):
-		srcValues = map(lambda key: src.get(key, None), self.lookupKeys)
+		srcValues = lmap(lambda key: src.get(key, None), self.lookupKeys)
 		for lookupValues in self.lookupOrder:
 			match = True
-			for (sval, lval, lmatch) in zip(srcValues, lookupValues, self.lookupFunctions):
+			for (sval, lval, lmatch) in izip(srcValues, lookupValues, self.lookupFunctions):
 				if sval is not None:
 					match = match and lmatch(sval, lval)
 			if match:
@@ -144,7 +145,7 @@ class SwitchingLookupParameterSource(SingleParameterSource):
 		if self.psource.getMaxParameters() is None:
 			addEntry(None)
 		else:
-			for pNum in range(self.psource.getMaxParameters()):
+			for pNum in irange(self.psource.getMaxParameters()):
 				addEntry(pNum)
 		if len(result) == 0:
 			utils.vprint('Lookup parameter "%s" has no matching entries!' % self.key, -1)
@@ -217,7 +218,7 @@ def createLookupHelper(pconfig, var_list, lookup_list):
 	tmp = lookupConfigParser(pconfig, KeyParameterSource(var_name), lookup_key)
 	(outputKey, lookupKeys, lookupFunctions, lookupDictConfig) = tmp
 	(lookupContent, lookupOrder) = lookupDictConfig
-	lookupLen = map(len, lookupContent.values())
+	lookupLen = lmap(len, lookupContent.values())
 
 	if (min(lookupLen) == 1) and (max(lookupLen) == 1): # simple lookup sufficient for this setup
 		return [(False, SimpleLookupParameterSource, list(tmp))]

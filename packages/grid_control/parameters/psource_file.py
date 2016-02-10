@@ -16,7 +16,7 @@ import csv, gzip
 from grid_control import utils
 from grid_control.parameters.psource_base import ParameterInfo, ParameterMetadata, ParameterSource
 from grid_control.parameters.psource_basic import InternalParameterSource
-from python_compat import sorted
+from python_compat import ifilter, imap, irange, izip, lfilter, lmap, sorted
 
 # Reader for grid-control dump files
 class GCDumpParameterSource(ParameterSource):
@@ -29,35 +29,35 @@ class GCDumpParameterSource(ParameterSource):
 			self.keys = eval(keyline)
 		def parseLine(line):
 			if not line.startswith('#'):
-				pNumStr, stored = map(str.strip, line.split('\t', 1))
-				return ('!' in pNumStr, int(pNumStr.rstrip('!')), map(eval, stored.split('\t')))
-		self.values = map(parseLine, fp.readlines())
+				pNumStr, stored = lmap(str.strip, line.split('\t', 1))
+				return ('!' in pNumStr, int(pNumStr.rstrip('!')), lmap(eval, stored.split('\t')))
+		self.values = lmap(parseLine, fp.readlines())
 
 	def getMaxParameters(self):
 		return len(self.values)
 
 	def fillParameterKeys(self, result):
-		result.extend(map(lambda k: ParameterMetadata(k, untracked = False), self.keys))
+		result.extend(imap(lambda k: ParameterMetadata(k, untracked = False), self.keys))
 
 	def fillParameterInfo(self, pNum, result):
 		result[ParameterInfo.ACTIVE] = not self.values[pNum][0]
-		result.update(filter(lambda (k, v): v is not None, zip(self.keys, self.values[pNum][2])))
+		result.update(ifilter(lambda (k, v): v is not None, izip(self.keys, self.values[pNum][2])))
 
 	def write(cls, fn, pa):
 		fp = gzip.open(fn, 'wb')
-		keys = sorted(filter(lambda p: p.untracked == False, pa.getJobKeys()))
+		keys = sorted(ifilter(lambda p: p.untracked == False, pa.getJobKeys()))
 		fp.write('# %s\n' % keys)
 		maxN = pa.getMaxJobs()
 		if maxN:
 			log = None
-			for jobNum in range(maxN):
+			for jobNum in irange(maxN):
 				del log
 				log = utils.ActivityLog('Writing parameter dump [%d/%d]' % (jobNum + 1, maxN))
 				meta = pa.getJobInfo(jobNum)
 				if meta.get(ParameterInfo.ACTIVE, True):
-					fp.write('%d\t%s\n' % (jobNum, str.join('\t', map(lambda k: repr(meta.get(k, '')), keys))))
+					fp.write('%d\t%s\n' % (jobNum, str.join('\t', imap(lambda k: repr(meta.get(k, '')), keys))))
 				else:
-					fp.write('%d!\t%s\n' % (jobNum, str.join('\t', map(lambda k: repr(meta.get(k, '')), keys))))
+					fp.write('%d!\t%s\n' % (jobNum, str.join('\t', imap(lambda k: repr(meta.get(k, '')), keys))))
 	write = classmethod(write)
 
 
@@ -70,13 +70,13 @@ class CSVParameterSource(InternalParameterSource):
 
 		def cleanupDict(d):
 			# strip all key value entries
-			tmp = tuple(map(lambda item: map(str.strip, item), d.items()))
+			tmp = tuple(imap(lambda item: imap(str.strip, item), d.items()))
 			# filter empty parameters
-			return filter(lambda (k, v): k != '', tmp)
+			return lfilter(lambda (k, v): k != '', tmp)
 		keys = []
 		if len(tmp):
-			keys = map(ParameterMetadata, tmp[0].keys())
-		values = map(lambda d: dict(cleanupDict(d)), tmp)
+			keys = lmap(ParameterMetadata, tmp[0].keys())
+		values = lmap(lambda d: dict(cleanupDict(d)), tmp)
 		InternalParameterSource.__init__(self, values, keys)
 
 	def create(cls, pconfig = None, src = 'CSV'):

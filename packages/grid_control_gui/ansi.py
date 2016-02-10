@@ -13,6 +13,7 @@
 #-#  limitations under the License.
 
 import sys, tty, array, fcntl, termios
+from python_compat import imap
 
 class Console(object):
 	attr = {'COLOR_BLACK': '30', 'COLOR_RED': '31', 'COLOR_GREEN': '32',
@@ -60,7 +61,7 @@ class Console(object):
 		while not output.endswith('R'):
 			output += sys.stdin.read(1)
 		termios.tcsetattr(fd, termios.TCSADRAIN, state)
-		return tuple(map(int, output[2:-1].split(';')))
+		return tuple(imap(int, output[2:-1].split(';')))
 
 	def move(self, row, col):
 		self._esc('[%d;%dH' % (row, col))

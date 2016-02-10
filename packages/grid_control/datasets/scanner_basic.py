@@ -19,7 +19,7 @@ from grid_control.datasets import DataProvider, DatasetError
 from grid_control.datasets.scanner_base import InfoScanner
 from grid_control.job_db import Job, JobDB
 from grid_control.job_selector import JobSelector
-from python_compat import set, sorted
+from python_compat import ifilter, imap, irange, izip, lfilter, lmap, set, sorted
 
 def splitParse(opt):
 	(delim, ds, de) = utils.optSplit(opt, '::')
@@ -56,7 +56,7 @@ class OutputDirsFromWork(InfoScanner):
 
 	def getEntries(self, path, metadata, events, seList, objStore):
 		log = None
-		allDirs = filter(lambda fn: fn.startswith('job_'), os.listdir(self.extOutputDir))
+		allDirs = ifilter(lambda fn: fn.startswith('job_'), os.listdir(self.extOutputDir))
 		for idx, dirName in enumerate(allDirs):
 			try:
 				metadata['GC_JOBNUM'] = int(dirName.split('_')[1])
@@ -70,7 +70,7 @@ class OutputDirsFromWork(InfoScanner):
 
 class MetadataFromTask(InfoScanner):
 	def __init__(self, config):
-		ignoreDef = map(lambda x: 'SEED_%d' % x, range(10)) + ['FILE_NAMES',
+		ignoreDef = lmap(lambda x: 'SEED_%d' % x, irange(10)) + ['FILE_NAMES',
 			'SB_INPUT_FILES', 'SE_INPUT_FILES', 'SE_INPUT_PATH', 'SE_INPUT_PATTERN',
 			'SB_OUTPUT_FILES', 'SE_OUTPUT_FILES', 'SE_OUTPUT_PATH', 'SE_OUTPUT_PATTERN',
 			'SE_MINFILESIZE', 'DOBREAK', 'MY_RUNTIME', 'GC_RUNTIME', 'MY_JOBID', 'GC_JOB_ID',
@@ -130,8 +130,8 @@ class FilesFromJobInfo(InfoScanner):
 			raise DatasetError('Job information is not filled! Ensure that "JobInfoFromOutputDir" is scheduled!')
 		try:
 			jobInfo = objStore['JOBINFO']
-			files = filter(lambda x: x[0].startswith('file'), jobInfo.items())
-			fileInfos = map(lambda (x, y): tuple(y.strip('"').split('  ')), files)
+			files = ifilter(lambda x: x[0].startswith('file'), jobInfo.items())
+			fileInfos = imap(lambda (x, y): tuple(y.strip('"').split('  ')), files)
 			for (hashMD5, name_local, name_dest, pathSE) in fileInfos:
 				metadata.update({'SE_OUTPUT_HASH_MD5': hashMD5, 'SE_OUTPUT_FILE': name_local,
 					'SE_OUTPUT_BASE': os.path.splitext(name_local)[0], 'SE_OUTPUT_PATH': pathSE})
@@ -151,7 +151,7 @@ class FilesFromDataProvider(InfoScanner):
 		for block in self.source.getBlocks():
 			for fi in block[DataProvider.FileList]:
 				metadata.update({'SRC_DATASET': block[DataProvider.Dataset], 'SRC_BLOCK': block[DataProvider.BlockName]})
-				metadata.update(dict(zip(block.get(DataProvider.Metadata, []), fi.get(DataProvider.Metadata, []))))
+				metadata.update(dict(izip(block.get(DataProvider.Metadata, []), fi.get(DataProvider.Metadata, []))))
 				yield (fi[DataProvider.URL], metadata, fi[DataProvider.NEntries], block[DataProvider.Locations], objStore)
 
 
@@ -207,7 +207,7 @@ class ParentLookup(InfoScanner):
 	def lfnTrans(self, lfn):
 		if lfn and self.looseMatch:
 			trunkPath = lambda x, y: (lambda s: (s[0], os.path.join(x[1], s[1])))(os.path.split(x[0]))
-			return reduce(trunkPath, range(self.looseMatch), (lfn, ''))[1]
+			return reduce(trunkPath, irange(self.looseMatch), (lfn, ''))[1]
 		return lfn
 
 	def getEntries(self, path, metadata, events, seList, objStore):
@@ -215,12 +215,12 @@ class ParentLookup(InfoScanner):
 		source = utils.QM((self.source == '') and os.path.exists(datacachePath), datacachePath, self.source)
 		if source and (source not in self.lfnMap):
 			pSource = DataProvider.getInstance('ListProvider', createConfigFactory().getConfig(), source)
-			for (n, fl) in map(lambda b: (b[DataProvider.Dataset], b[DataProvider.FileList]), pSource.getBlocks()):
-				self.lfnMap.setdefault(source, {}).update(dict(map(lambda fi: (self.lfnTrans(fi[DataProvider.URL]), n), fl)))
+			for (n, fl) in imap(lambda b: (b[DataProvider.Dataset], b[DataProvider.FileList]), pSource.getBlocks()):
+				self.lfnMap.setdefault(source, {}).update(dict(imap(lambda fi: (self.lfnTrans(fi[DataProvider.URL]), n), fl)))
 		pList = set()
-		for key in filter(lambda k: k in metadata, self.parentKeys):
-			pList.update(map(lambda pPath: self.lfnMap.get(source, {}).get(self.lfnTrans(pPath)), metadata[key]))
-		metadata['PARENT_PATH'] = filter(lambda x: x, pList)
+		for key in ifilter(lambda k: k in metadata, self.parentKeys):
+			pList.update(imap(lambda pPath: self.lfnMap.get(source, {}).get(self.lfnTrans(pPath)), metadata[key]))
+		metadata['PARENT_PATH'] = lfilter(lambda x: x, pList)
 		yield (path, metadata, events, seList, objStore)
 
 

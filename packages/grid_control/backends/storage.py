@@ -17,7 +17,7 @@ from grid_control import utils
 from grid_control.config import ConfigError, validNoVar
 from grid_control.gc_plugin import NamedPlugin
 from hpfwk import NestedException
-from python_compat import set
+from python_compat import imap, set
 
 class StorageError(NestedException):
 	pass
@@ -28,8 +28,8 @@ ensurePrefix = lambda fn: utils.QM('://' in fn, fn, 'file:////%s' % os.path.absp
 
 def se_runcmd(cmd, varDict = {}, *urls):
 	runLib = utils.pathShare('gc-run.lib')
-	args = str.join(' ', map(lambda x: '"%s"' % ensurePrefix(x).replace('dir://', 'file://'), urls))
-	varString = str.join(' ', map(lambda x: 'export %s="%s";' % (x, varDict[x]), varDict))
+	args = str.join(' ', imap(lambda x: '"%s"' % ensurePrefix(x).replace('dir://', 'file://'), urls))
+	varString = str.join(' ', imap(lambda x: 'export %s="%s";' % (x, varDict[x]), varDict))
 	return utils.LoggedProcess('source %s || exit 1; %s %s %s' % (runLib, varString, cmd, args))
 
 se_ls = lambda target: se_runcmd('url_ls', {}, target)
@@ -99,7 +99,7 @@ class SEStorageManager(StorageManager):
 		}
 
 	def getDependencies(self):
-		if True in map(lambda x: not x.startswith('dir'), self.smPaths):
+		if True in imap(lambda x: not x.startswith('dir'), self.smPaths):
 			return ['glite']
 		return []
 

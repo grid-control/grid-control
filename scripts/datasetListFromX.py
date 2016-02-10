@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-#-#  Copyright 2010-2015 Karlsruhe Institute of Technology
+#-#  Copyright 2010-2016 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -14,6 +14,7 @@
 #-#  limitations under the License.
 
 import sys, gcSupport
+from python_compat import imap
 
 def addOptions(parser):
 	parser.add_option('-d', '--dataset', dest='dataset name pattern', default='', help='Name pattern of dataset')
@@ -43,7 +44,7 @@ def addOptions(parser):
 
 def discoverDataset(opts, parser, providerName, datasetExpr):
 	def main():
-		configEntries = map(lambda (k, v): (k, str(v)), parser.values.__dict__.items())
+		configEntries = imap(lambda (k, v): (k, str(v)), parser.values.__dict__.items())
 		config = gcSupport.getConfig(configDict = {'dataset': dict(configEntries)})
 		provider = gcSupport.datasets.DataProvider.getInstance(providerName, config, datasetExpr, None)
 		if opts.output:

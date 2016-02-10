@@ -15,6 +15,7 @@
 import os, zipfile
 from grid_control import utils
 from grid_control.job_db import Job, JobDB
+from python_compat import imap
 
 class ZippedJobDB(JobDB):
 	def __init__(self, config, jobLimit = -1, jobSelector = None):
@@ -37,7 +38,7 @@ class ZippedJobDB(JobDB):
 				utils.removeFiles([self._dbFile + '.broken'])
 				brokenList = []
 				for idx, fnTarInfo in enumerate(tar.namelist()):
-					(jobNum, tid) = tuple(map(lambda s: int(s[1:]), fnTarInfo.split('_', 1)))
+					(jobNum, tid) = tuple(imap(lambda s: int(s[1:]), fnTarInfo.split('_', 1)))
 					try:
 						rawData = tar.open(fnTarInfo).read()
 					except Exception:
@@ -49,7 +50,7 @@ class ZippedJobDB(JobDB):
 			maxJobs = len(tar.namelist())
 			tMap = {}
 			for idx, fnTarInfo in enumerate(tar.namelist()):
-				(jobNum, tid) = tuple(map(lambda s: int(s[1:]), fnTarInfo.split('_', 1)))
+				(jobNum, tid) = tuple(imap(lambda s: int(s[1:]), fnTarInfo.split('_', 1)))
 				if tid < tMap.get(jobNum, 0):
 					continue
 				data = utils.DictFormat(escapeString = True).parse(tar.open(fnTarInfo).read())

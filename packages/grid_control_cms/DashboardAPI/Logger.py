@@ -61,7 +61,7 @@ class Logger:
 	# Set the logging level
 	def setLogLevel(this, strLevel):
 		this.log_lock.acquire();
-		for l_idx in range(len(LEVELS)):
+		for l_idx, l_name in enumerate(LEVELS):
 			if strLevel == LEVELS[l_idx]:
 				this.logLevel = l_idx;
 		this.log_lock.release();

@@ -16,6 +16,7 @@ import os, time, logging
 from grid_control import utils
 from grid_control.gc_plugin import NamedPlugin
 from grid_control.job_db import Job
+from python_compat import imap, lmap
 
 class EventHandler(NamedPlugin):
 	configSections = NamedPlugin.configSections + ['events']
@@ -52,8 +53,8 @@ class Monitoring(EventHandler):
 		return utils.listMapReduce(lambda m: list(m.getScript()), self.submodules)
 
 	def getTaskConfig(self):
-		tmp = {'GC_MONITORING': str.join(' ', map(os.path.basename, self.getScript()))}
-		return utils.mergeDicts(map(lambda m: m.getTaskConfig(), self.submodules) + [tmp])
+		tmp = {'GC_MONITORING': str.join(' ', imap(os.path.basename, self.getScript()))}
+		return utils.mergeDicts(lmap(lambda m: m.getTaskConfig(), self.submodules) + [tmp])
 
 	def getFiles(self):
 		return utils.listMapReduce(lambda m: list(m.getFiles()), self.submodules, self.getScript())
@@ -61,7 +62,7 @@ class Monitoring(EventHandler):
 
 class MultiMonitor(Monitoring):
 	def __init__(self, config, name, monitoringProxyList, task):
-		submoduleList = map(lambda m: m.getInstance(task), monitoringProxyList)
+		submoduleList = lmap(lambda m: m.getInstance(task), monitoringProxyList)
 		Monitoring.__init__(self, config, name, None, submoduleList)
 
 

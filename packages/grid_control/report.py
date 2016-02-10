@@ -15,6 +15,7 @@
 from grid_control import utils
 from grid_control.job_db import Job
 from hpfwk import AbstractError, Plugin
+from python_compat import imap, irange, lmap, lzip
 
 class Report(Plugin):
 	def __init__(self, jobDB, task, jobs = None, configString = ''):
@@ -44,10 +45,10 @@ class Report(Plugin):
 
 class MultiReport(Report):
 	def __init__(self, reportProxyList, jobDB, task, jobs = None, configString = ''):
-		self._reportList = map(lambda p: p.getInstance(jobDB, task, jobs, configString), reportProxyList)
+		self._reportList = lmap(lambda p: p.getInstance(jobDB, task, jobs, configString), reportProxyList)
 
 	def getHeight(self):
-		return sum(map(lambda r: r.getHeight(), self._reportList))
+		return sum(imap(lambda r: r.getHeight(), self._reportList))
 
 	def display(self):
 		for report in self._reportList:
@@ -64,11 +65,11 @@ class BasicReport(Report):
 		return 14
 
 	def display(self):
-		summary = map(lambda x: 0.0, Job.enumNames)
+		summary = lmap(lambda x: 0.0, Job.enumNames)
 		defaultJob = Job()
 		for jobNum in self._jobs:
 			summary[self._jobDB.get(jobNum, defaultJob).state] += 1
-		makeSum = lambda *states: sum(map(lambda z: summary[z], states))
+		makeSum = lambda *states: sum(imap(lambda z: summary[z], states))
 		makePer = lambda *states: [makeSum(*states), round(makeSum(*states) / len(self._jobDB) * 100.0)]
 
 		# Print report summary
@@ -107,5 +108,5 @@ class LocationReport(Report):
 						reports.append({1: at, 2: ' -> ' + dest})
 			elif jobObj.get('dest', 'N/A') != 'N/A':
 				reports.append({2: ' -> ' + jobObj.get('dest')})
-		utils.printTabular(zip(range(3), ['Job', 'Status / Attempt', 'Id / Destination']), reports, 'rcl')
+		utils.printTabular(lzip(irange(3), ['Job', 'Status / Attempt', 'Id / Destination']), reports, 'rcl')
 		utils.vprint()

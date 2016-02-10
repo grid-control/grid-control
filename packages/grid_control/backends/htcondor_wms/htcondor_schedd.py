@@ -22,7 +22,7 @@ from hpfwk import Plugin
 from htcondor_utils import parseKWListIter, singleQueryCache
 from processadapter import ProcessAdapterFactory
 from wmsid import HTCJobID
-from python_compat import lru_cache, md5
+from python_compat import imap, lru_cache, md5
 
 """
 This module provides adapter classes for uniformly issuing GC commands to HTCondor Schedds.
@@ -582,7 +582,7 @@ class HTCScheddSSH(HTCScheddCLIBase):
 		"""
 		taskFiles = []
 		taskFiles.extend(
-			map(
+			imap(
 				lambda (desrc, path, base): (descr, path, os.path.join(self.getStagingDir(taskID = task.taskID), base) ),
 				self.parentPool._getSandboxFilesIn(task)
 				)

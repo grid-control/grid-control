@@ -15,6 +15,7 @@
 from grid_control.datasets.provider_base import DataProvider
 from grid_control.datasets.splitter_base import DataSplitter
 from hpfwk import AbstractError
+from python_compat import imap
 
 # Base class for (stackable) splitters with file level granularity
 class FileLevelSplitter(DataSplitter):
@@ -24,7 +25,7 @@ class FileLevelSplitter(DataSplitter):
 	def newBlock(self, old, filelist):
 		new = dict(old)
 		new[DataProvider.FileList] = filelist
-		new[DataProvider.NEntries] = sum(map(lambda x: x[DataProvider.NEntries], filelist))
+		new[DataProvider.NEntries] = sum(imap(lambda x: x[DataProvider.NEntries], filelist))
 		return new
 
 	def splitDatasetInternal(self, blocks, firstEvent = 0):
@@ -36,7 +37,7 @@ class FLSplitStacker(FileLevelSplitter):
 	def splitDatasetInternal(self, blocks, firstEvent = 0):
 		for block in blocks:
 			splitterList = self.setup(self.config.getList, block, 'splitter stack', ['BlockBoundarySplitter'])
-			subSplitter = map(lambda x: FileLevelSplitter.getInstance(x, self.config), splitterList[:-1])
+			subSplitter = imap(lambda x: FileLevelSplitter.getInstance(x, self.config), splitterList[:-1])
 			endSplitter = DataSplitter.getInstance(splitterList[-1], self.config)
 			for subBlock in reduce(lambda x, y: y.splitBlocks(x), subSplitter, [block]):
 				for splitting in endSplitter.splitDatasetInternal([subBlock]):

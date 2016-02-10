@@ -1,4 +1,4 @@
-#-#  Copyright 2009-2015 Karlsruhe Institute of Technology
+#-#  Copyright 2009-2016 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@ from grid_control import utils
 from grid_control.backends.wms import BackendError, WMS
 from grid_control.backends.wms_pbsge import PBSGECommon
 from grid_control.job_db import Job
+from python_compat import ifilter, imap, izip, lmap
 
 class PBS(PBSGECommon):
 	configSections = PBSGECommon.configSections + ['PBS']
@@ -69,26 +70,26 @@ class PBS(PBSGECommon):
 
 
 	def getCheckArguments(self, wmsIds):
-		return '-f %s' % str.join(' ', map(self._fqid, wmsIds))
+		return '-f %s' % str.join(' ', imap(self._fqid, wmsIds))
 
 
 	def getCancelArguments(self, wmsIds):
-		return str.join(' ', map(self._fqid, wmsIds))
+		return str.join(' ', imap(self._fqid, wmsIds))
 
 
 	def getQueues(self):
 		(queues, active) = ({}, False)
 		keys = [WMS.MEMORY, WMS.CPUTIME, WMS.WALLTIME]
-		parser = dict(zip(keys, [int, utils.parseTime, utils.parseTime]))
+		parser = dict(izip(keys, [int, utils.parseTime, utils.parseTime]))
 		for line in utils.LoggedProcess(self.statusExec, '-q').iter():
 			if line.startswith('-'):
 				active = True
 			elif line.startswith(' '):
 				active = False
 			elif active:
-				fields = map(str.strip, line.split()[:4])
-				props = filter(lambda (k, v): not v.startswith('-'), zip(keys, fields[1:]))
-				queues[fields[0]] = dict(map(lambda (k, v): (k, parser[k](v)), props))
+				fields = lmap(str.strip, line.split()[:4])
+				props = ifilter(lambda (k, v): not v.startswith('-'), izip(keys, fields[1:]))
+				queues[fields[0]] = dict(imap(lambda (k, v): (k, parser[k](v)), props))
 		return queues
 
 

@@ -14,6 +14,7 @@
 
 from grid_control.datasets.dproc_base import DataProcessor
 from grid_control.datasets.provider_base import DataProvider
+from python_compat import lmap
 
 class PartitionEstimator(DataProcessor):
 	alias = ['SplitSettingEstimator']
@@ -29,7 +30,7 @@ class PartitionEstimator(DataProcessor):
 
 	def process(self, blockIter):
 		if self._writeSettings:
-			blocks = map(self.processBlock, blockIter)
+			blocks = lmap(self.processBlock, blockIter)
 			def setSplitParam(config, name, value, target):
 				config.setInt(name, max(1, int(value / float(target) + 0.5)))
 			if self._targetJobs:

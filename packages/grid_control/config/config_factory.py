@@ -19,6 +19,7 @@ from grid_control.config.cinterface_typed import SimpleConfigInterface
 from grid_control.config.config_entry import ConfigContainer
 from grid_control.config.cview_base import SimpleConfigView
 from grid_control.utils.data_structures import UniqueList
+from python_compat import lfilter
 
 # Main config interface
 class ConfigFactory(object):
@@ -76,7 +77,7 @@ class ConfigFactory(object):
 	def freezeConfig(self, writeConfig = True):
 		self._curContainer.setReadOnly()
 		# Inform the user about unused options
-		unused = list(filter(lambda entry: (entry.accessed == False) and ('!' not in entry.section), self._view.iterContent()))
+		unused = lfilter(lambda entry: (entry.accessed == False) and ('!' not in entry.section), self._view.iterContent())
 		log = logging.getLogger('config.freeze')
 		log.log(logging.INFO1, 'There are %s unused config options!' % len(unused))
 		for entry in unused:

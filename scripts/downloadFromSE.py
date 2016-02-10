@@ -15,7 +15,7 @@
 
 import os, sys, time, random, optparse, gcSupport, threading
 from gcSupport import AccessToken, ClassSelector, FileInfoProcessor, Job, JobClass, storage, utils
-from python_compat import md5
+from python_compat import ifilter, imap, irange, lfilter, lmap, md5
 
 def md5sum(filename):
 	m = md5()
@@ -106,7 +106,7 @@ DEFAULT: The default is to download the SE file and check them with MD5 hashes.
 		def isDefault(opt):
 			return (parser.get_option(opt).default and parser.get_option(opt).action == 'store_true') or \
 				(not parser.get_option(opt).default and parser.get_option(opt).action == 'store_false')
-		return str.join(' ', filter(lambda x: not isDefault(x), opts.split()))
+		return str.join(' ', ifilter(lambda x: not isDefault(x), opts.split()))
 
 	ogShort = optparse.OptionGroup(parser, 'Shortcuts', '')
 	optMove = '--verify-md5 --overwrite --mark-dl --use-mark-dl --mark-fail --rm-se-fail --rm-local-fail --rm-se-ok --keep-local-ok'
@@ -212,7 +212,7 @@ def realmain(opts, args):
 		# Read the file hash entries from job info file
 		files = FileInfoProcessor().process(os.path.join(workDir, 'output', 'job_%d' % jobNum))
 		if files:
-			files = map(lambda fi: (fi[FileInfoProcessor.Hash], fi[FileInfoProcessor.NameLocal],
+			files = lmap(lambda fi: (fi[FileInfoProcessor.Hash], fi[FileInfoProcessor.NameLocal],
 				fi[FileInfoProcessor.NameDest], fi[FileInfoProcessor.Path]), files)
 		output.files(files)
 		if not files:
@@ -228,7 +228,7 @@ def realmain(opts, args):
 			# Copy files to local folder
 			outFilePath = os.path.join(opts.output, name_dest)
 			if opts.selectSE:
-				if not (True in map(lambda s: s in pathSE, opts.selectSE)):
+				if not (True in imap(lambda s: s in pathSE, opts.selectSE)):
 					output.error('skip file because it is not located on selected SE!')
 					return
 			if opts.skipExisting and (storage.se_exists(outFilePath) == 0):
@@ -356,7 +356,7 @@ def realmain(opts, args):
 				return 'Job %5d [%i/%i] %s %s' % (self.jobNum, fileIdx + 1, len(self.files), self.files[fileIdx][2], msg)
 			def files(self, files):
 				(self.files, self.output, self.tr) = (files, self.output[1:], ['']*len(files))
-				for x in range(len(files)):
+				for x in irange(len(files)):
 					self.output.insert(2*x, self.infoline(x))
 					self.output.insert(2*x+1, '')
 			def file(self, idx, csize = None, osize = None, stime = None, otime = None):
@@ -399,7 +399,7 @@ def realmain(opts, args):
 		while True:
 			screen.erase()
 			screen.loadPos()
-			active = filter(lambda (t, d): t.isAlive(), active)
+			active = lfilter(lambda (t, d): t.isAlive(), active)
 			while len(active) < opts.threads and len(todo):
 				display = ThreadDisplay()
 				active.append((utils.gcStartThread('Download %s' % todo[-1],

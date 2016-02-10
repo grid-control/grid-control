@@ -15,7 +15,7 @@
 from grid_control import utils
 from grid_control.config import ConfigError
 from grid_control.datasets.provider_base import DataProvider
-from python_compat import rsplit
+from python_compat import lmap, rsplit
 
 # Provides information about a single file
 # required format: <path to data file>|<number of events>[@SE1,SE2]
@@ -78,7 +78,7 @@ class ListProvider(DataProvider):
 				commonprefix = self._forcePrefix
 				commonMetadata = []
 			elif line != '':
-				tmp = map(str.strip, utils.QM('[' in line, line.split(' = ', 1), rsplit(line, '=', 1)))
+				tmp = lmap(str.strip, utils.QM('[' in line, line.split(' = ', 1), rsplit(line, '=', 1)))
 				if len(tmp) != 2:
 					raise ConfigError('Malformed entry in dataset file:\n%s' % line)
 				key, value = tmp

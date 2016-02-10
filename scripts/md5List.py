@@ -15,6 +15,7 @@
 
 import os, sys
 from gcSupport import FileInfoProcessor, JobInfoProcessor, getWorkJobs
+from python_compat import sorted
 
 def main():
 	jip = JobInfoProcessor()

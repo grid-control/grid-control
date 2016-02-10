@@ -18,12 +18,12 @@ from grid_control.config import ConfigError
 from grid_control.datasets import DataProvider
 from grid_control_cms.cmssw import CMSSW
 from grid_control_cms.lumi_tools import formatLumi, parseLumiFilter
-from python_compat import set, sorted
+from python_compat import imap, lfilter, lmap, set, sorted
 
 def fromNM(nm, nickname, default):
-	tmp = filter(lambda p: p and nickname and re.search(p, nickname), nm)
-	if len(tmp)>0:
-		return map(lambda pattern: nm[pattern], tmp)
+	tmp = lfilter(lambda p: p and nickname and re.search(p, nickname), nm)
+	if len(tmp) > 0:
+		return lmap(lambda pattern: nm[pattern], tmp)
 	return [nm.get(None, default)]
 
 class CMSSW_Advanced(CMSSW):
@@ -35,7 +35,7 @@ class CMSSW_Advanced(CMSSW):
 		# Mapping between nickname and config files:
 		cfgList = config.get('nickname config', '')
 		self.nmCfg = config.getDict('nickname config', {},
-			parser = lambda x: map(str.strip, x.split(',')), str = lambda x: str.join(',', x))[0]
+			parser = lambda x: lmap(str.strip, x.split(',')), str = lambda x: str.join(',', x))[0]
 		if cfgList:
 			if 'config file' in config.getOptions():
 				raise ConfigError("Please use 'nickname config' instead of 'config file'")
@@ -44,7 +44,7 @@ class CMSSW_Advanced(CMSSW):
 			head.append((1, 'Config file'))
 
 		# Mapping between nickname and constants:
-		self.nmCName = map(str.strip, config.get('nickname constants', '').split())
+		self.nmCName = lmap(str.strip, config.get('nickname constants', '').split())
 		self.nmConst = {}
 		for var in self.nmCName:
 			tmp = config.getDict(var, {})[0]
@@ -70,7 +70,7 @@ class CMSSW_Advanced(CMSSW):
 		utils.vprint('Mapping between nickname and other settings:\n', -1)
 		def report():
 			for nick in sorted(set(self.nmCfg.keys() + self.nmConst.keys() + self.nmLumi.keys())):
-				tmp = {0: nick, 1: str.join(', ', map(os.path.basename, self.nmCfg.get(nick, ''))),
+				tmp = {0: nick, 1: str.join(', ', imap(os.path.basename, self.nmCfg.get(nick, ''))),
 					2: self.displayLumi(self.nmLumi.get(nick, '')) }
 				yield utils.mergeDicts([tmp, self.nmConst.get(nick, {})])
 		utils.printTabular(head, report(), 'cl')
@@ -99,9 +99,9 @@ class CMSSW_Advanced(CMSSW):
 
 
 	def getVarsForNick(self, nick):
-		data = {'CMSSW_CONFIG': str.join(' ', map(os.path.basename, utils.flatten(fromNM(self.nmCfg, nick, ''))))}
+		data = {'CMSSW_CONFIG': str.join(' ', imap(os.path.basename, utils.flatten(fromNM(self.nmCfg, nick, ''))))}
 		constants = utils.mergeDicts(fromNM(self.nmConst, None, {}) + fromNM(self.nmConst, nick, {}))
-		constants = dict(map(lambda var: (var, constants.get(var, '')), self.nmCName))
+		constants = dict(imap(lambda var: (var, constants.get(var, '')), self.nmCName))
 		data.update(constants)
 		lumifilter = utils.flatten(fromNM(self.nmLumi, nick, ''))
 		if lumifilter:

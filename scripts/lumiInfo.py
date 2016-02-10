@@ -17,6 +17,7 @@ import os, sys, optparse
 from gcSupport import getCMSSWInfo, getJobInfo, getWorkJobs, parseOptions, utils
 from grid_control.datasets import DataSplitter
 from grid_control_cms.lumi_tools import formatLumi, mergeLumi, parseLumiFilter
+from python_compat import imap, irange, lmap, set, sorted
 
 parser = optparse.OptionParser()
 
@@ -57,7 +58,7 @@ def outputJSON(lumis, stream = sys.stdout):
 			tmp[start[0]] = []
 		tmp[start[0]].append([start[1], end[1]])
 	stream.write('{\n')
-	entries = map(lambda run: '\t"%d": %s' % (run, tmp[run]), sorted(tmp.keys()))
+	entries = imap(lambda run: '\t"%d": %s' % (run, tmp[run]), sorted(tmp.keys()))
 	stream.write('%s\n' % str.join(',\n', entries))
 	stream.write('}\n')
 
@@ -136,7 +137,7 @@ def main():
 			if writeDict.get(sample, None):
 				print
 				head = [(0, '          Output filename'), (1, 'Events')]
-				utils.printTabular(head, map(lambda pfn: {0: pfn, 1: writeDict[sample][pfn]}, writeDict[sample]))
+				utils.printTabular(head, lmap(lambda pfn: {0: pfn, 1: writeDict[sample][pfn]}, writeDict[sample]))
 			if opts.save_jobjson:
 				outputJSON(lumis, open(os.path.join(workDir, 'processed_%s.json' % sample), 'w'))
 				print 'Saved processed lumi sections in', os.path.join(workDir, 'processed_%s.json' % sample)
@@ -168,7 +169,7 @@ def main():
 			for rlrange in lumis:
 				start, end = rlrange
 				assert(start[0] == end[0])
-				llist = result.setdefault(start[0], []).extend(range(start[1], end[1] + 1))
+				llist = result.setdefault(start[0], []).extend(irange(start[1], end[1] + 1))
 			print result
 
 sys.exit(main())

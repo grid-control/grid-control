@@ -12,6 +12,8 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
+from python_compat import imap, lfilter, lmap
+
 def removeUnicode(obj):
 	if type(obj) in (list, tuple, set):
 		(obj, oldType) = (list(obj), type(obj))
@@ -61,7 +63,7 @@ def parseDict(entries, parserValue = lambda x: x, parserKey = lambda x: x):
 	key = None
 	for entry in entries.splitlines():
 		if '=>' in entry:
-			key, entry = map(str.strip, entry.split('=>', 1))
+			key, entry = lmap(str.strip, entry.split('=>', 1))
 			if key and (key not in order):
 				order.append(key)
 		if (key is not None) or entry.strip() != '':
@@ -72,7 +74,7 @@ def parseDict(entries, parserValue = lambda x: x, parserKey = lambda x: x):
 	for key, value in result.items():
 		value = parserValue(str.join('\n', value).strip())
 		resultParsed[parserKeyIntern(key)] = value
-	return (resultParsed, map(parserKeyIntern, order))
+	return (resultParsed, lmap(parserKeyIntern, order))
 
 
 def parseBool(x):
@@ -84,14 +86,14 @@ def parseBool(x):
 
 def parseList(value, delimeter = ',', doFilter = lambda x: x not in ['', '\n'], onEmpty = []):
 	if value:
-		return filter(doFilter, map(str.strip, value.split(delimeter)))
+		return lfilter(doFilter, imap(str.strip, value.split(delimeter)))
 	return onEmpty
 
 
 def parseTime(usertime):
 	if usertime is None or usertime == '':
 		return -1
-	tmp = map(int, usertime.split(':'))
+	tmp = lmap(int, usertime.split(':'))
 	while len(tmp) < 3:
 		tmp.append(0)
 	if tmp[2] > 59 or tmp[1] > 59 or len(tmp) > 3:

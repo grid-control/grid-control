@@ -18,7 +18,7 @@ from grid_control.datasets import DataProvider, DataSplitter, DatasetError
 from grid_control.datasets.splitter_basic import HybridSplitter
 from grid_control.utils.webservice import readJSON
 from grid_control_cms.lumi_tools import formatLumi, parseLumiFilter, selectLumi
-from python_compat import set, sorted
+from python_compat import imap, lfilter, set, sorted
 
 # required format: <dataset path>[@<instance>][#<block>]
 class CMSProvider(DataProvider):
@@ -121,7 +121,7 @@ class CMSProvider(DataProvider):
 
 	def getCMSBlocks(self, datasetPath, getSites):
 		result = self.getCMSBlocksImpl(datasetPath, getSites)
-		result = filter(lambda b: self.blockFilter(b[0]), result)
+		result = lfilter(lambda b: self.blockFilter(b[0]), result)
 		if len(result) == 0:
 			raise DatasetError('Dataset %s does not contain any selected blocks!' % datasetPath)
 		return result # List of (blockname, selist) tuples
@@ -151,7 +151,7 @@ class CMSProvider(DataProvider):
 							listLumiExt_Lumi.append(lumi)
 					fileInfo[DataProvider.Metadata] = [listLumiExt_Run, listLumiExt_Lumi]
 				else:
-					fileInfo[DataProvider.Metadata] = [list(sorted(set(map(lambda (run, lumi_list): run, listLumi))))]
+					fileInfo[DataProvider.Metadata] = [list(sorted(set(imap(lambda (run, lumi_list): run, listLumi))))]
 			yield fileInfo
 
 
@@ -181,7 +181,7 @@ class CMSProvider(DataProvider):
 						result[DataProvider.Metadata].append('Lumi')
 				result[DataProvider.FileList] = list(self.getCMSFiles(blockPath))
 				if self.checkUnique:
-					uniqueURLs = set(map(lambda x: x[DataProvider.URL], result[DataProvider.FileList]))
+					uniqueURLs = set(imap(lambda x: x[DataProvider.URL], result[DataProvider.FileList]))
 					if len(result[DataProvider.FileList]) != len(uniqueURLs):
 						utils.vprint('Warning: The webservice returned %d duplicated files in dataset block %s! Continuing with unique files...' %
 							(len(result[DataProvider.FileList]) - len(uniqueURLs)), -1)

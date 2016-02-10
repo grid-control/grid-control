@@ -18,7 +18,7 @@ from grid_control.backends.wms import BackendError, WMS
 from grid_control.backends.wms_pbsge import PBSGECommon
 from grid_control.config import ConfigError
 from grid_control.job_db import Job
-from python_compat import set
+from python_compat import imap, izip, lmap, set
 
 class GridEngine(PBSGECommon):
 	alias = ['SGE', 'UGE', 'OGE']
@@ -44,7 +44,7 @@ class GridEngine(PBSGECommon):
 		if not nodes and queue:
 			params += ' -q %s' % queue
 		elif nodes and queue:
-			params += ' -q %s' % str.join(',', map(lambda node: '%s@%s' % (queue, node), nodes))
+			params += ' -q %s' % str.join(',', imap(lambda node: '%s@%s' % (queue, node), nodes))
 		elif nodes:
 			raise ConfigError('Please also specify queue when selecting nodes!')
 		return params + PBSGECommon.getSubmitArguments(self, jobNum, jobName, reqs, sandbox, stdout, stderr, reqMap)
@@ -80,9 +80,9 @@ class GridEngine(PBSGECommon):
 
 
 	def parseJobState(self, state):
-		if True in map(lambda x: x in state, ['h', 's', 'S', 'T', 'w']):
+		if True in imap(lambda x: x in state, ['h', 's', 'S', 'T', 'w']):
 			return Job.QUEUED
-		if True in map(lambda x: x in state, ['r', 't']):
+		if True in imap(lambda x: x in state, ['r', 't']):
 			return Job.RUNNING
 		return Job.READY
 
@@ -98,13 +98,13 @@ class GridEngine(PBSGECommon):
 	def getQueues(self):
 		queues = {}
 		tags = ['h_vmem', 'h_cpu', 's_rt']
-		reqs = dict(zip(tags, [WMS.MEMORY, WMS.CPUTIME, WMS.WALLTIME]))
-		parser = dict(zip(tags, [int, utils.parseTime, utils.parseTime]))
+		reqs = dict(izip(tags, [WMS.MEMORY, WMS.CPUTIME, WMS.WALLTIME]))
+		parser = dict(izip(tags, [int, utils.parseTime, utils.parseTime]))
 
-		for queue in map(str.strip, utils.LoggedProcess(self._configExec, '-sql').iter()):
+		for queue in imap(str.strip, utils.LoggedProcess(self._configExec, '-sql').iter()):
 			queues[queue] = dict()
 			for line in utils.LoggedProcess(self._configExec, '-sq %s' % queue).iter():
-				attr, value = map(str.strip, line.split(' ', 1))
+				attr, value = lmap(str.strip, line.split(' ', 1))
 				if (attr in tags) and (value != 'INFINITY'):
 					queues[queue][reqs[attr]] = parser[attr](value)
 		return queues

@@ -24,7 +24,7 @@ from grid_control_cms.dbs3_migration_queue import MigrationTask
 from grid_control_cms.dbs3_migration_queue import do_migration
 from grid_control_cms.provider_sitedb import SiteDB
 from hpfwk import APIError
-from python_compat import NullHandler, md5, set
+from python_compat import NullHandler, imap, izip, md5, set
 
 def generateDBS3BlockDumps(opts, blocks):
     for block_info in blocks:
@@ -39,7 +39,7 @@ def generateDBS3BlockDumps(opts, blocks):
         dataset_configurations = block_dump[u'dataset_conf_list']
 
         for file_info in file_list:
-            metadata_info = dict(zip(block_info[DataProvider.Metadata], file_info[DataProvider.Metadata]))
+            metadata_info = dict(izip(block_info[DataProvider.Metadata], file_info[DataProvider.Metadata]))
             parent_lfns = metadata_info['CMSSW_PARENT_LFN']
             dataset_type = metadata_info['CMSSW_DATATYPE']
             file_size = metadata_info['SE_OUTPUT_SIZE']
@@ -232,17 +232,17 @@ def main():
     # 2) Filter datasets
     if opts.incremental:
         # Query target DBS for all found datasets and perform dataset resync with "supposed" state
-        dNames = set(map(lambda b: b[DataProvider.Dataset], blocks))
-#        dNames = filter(lambda ds: hasDataset(opts.dbsTarget, ds), dNames) - todo
+        dNames = set(imap(lambda b: b[DataProvider.Dataset], blocks))
+#        dNames = xfilter(lambda ds: hasDataset(opts.dbsTarget, ds), dNames) - todo
         config = getConfig(configDict = {None: {'dbs instance': opts.dbsTarget}})
-        oldBlocks = reduce(operator.add, map(lambda ds: DBSApiv2(config, None, ds, None).getBlocks(), dNames), [])
+        oldBlocks = reduce(operator.add, imap(lambda ds: DBSApiv2(config, None, ds, None).getBlocks(), dNames), [])
         (blocksAdded, blocksMissing, blocksChanged) = DataProvider.resyncSources(oldBlocks, blocks)
         if len(blocksMissing) or len(blocksChanged):
             if not utils.getUserBool(' * WARNING: Block structure has changed! Continue?', False):
                 sys.exit(os.EX_OK)
         # Search for blocks which were partially added and generate "pseudo"-blocks with left over files
-        setOldBlocks = set(map(lambda x: x[DataProvider.BlockName], oldBlocks))
-        setAddedBlocks = set(map(lambda x: x[DataProvider.BlockName], blocksAdded))
+        setOldBlocks = set(imap(lambda x: x[DataProvider.BlockName], oldBlocks))
+        setAddedBlocks = set(imap(lambda x: x[DataProvider.BlockName], blocksAdded))
         blockCollision = set.intersection(setOldBlocks, setAddedBlocks)
         if blockCollision and opts.closeBlock: # Block are closed and contents have changed
             for block in blocksAdded:

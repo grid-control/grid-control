@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-#-#  Copyright 2009-2015 Karlsruhe Institute of Technology
+#-#  Copyright 2009-2016 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@ import sys, optparse
 from gcSupport import *
 from grid_control_cms.lumi_tools import formatLumi, mergeLumi
 from grid_control_cms.provider_dbsv2 import DataProvider, createDBSAPI
+from python_compat import imap, lmap, set
 
 parser = optparse.OptionParser()
 parser.add_option("-l", "--list", dest="list", default=None)
@@ -51,7 +52,7 @@ if opts.lumiranges:
 			lrInfo[ds] = (f(min, 0), f(max, 1))
 	mkDict = lambda (ds, min_max): {0: ds, 1: min_max[0], 2: min_max[1]}
 	print
-	utils.printTabular([(0, 'Dataset'), (1, 'MinRun'), (2, 'MaxRun')], map(mkDict, lrInfo.items()))
+	utils.printTabular([(0, 'Dataset'), (1, 'MinRun'), (2, 'MaxRun')], lmap(mkDict, lrInfo.items()))
 	sys.exit(os.EX_OK)
 
 api = createDBSAPI(opts.url)
@@ -108,7 +109,7 @@ elif opts.parents:
 elif opts.se:
 	selist = []
 	for block in api.listBlocks(opts.se):
-		selist.extend(map(lambda x: x["Name"], block["StorageElementList"]))
+		selist.extend(imap(lambda x: x["Name"], block["StorageElementList"]))
 	print str.join(",", set(selist))
 
 elif opts.invalidate:

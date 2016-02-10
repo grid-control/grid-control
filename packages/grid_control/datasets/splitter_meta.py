@@ -15,6 +15,7 @@
 from grid_control.datasets.provider_base import DataProvider
 from grid_control.datasets.splitter_basic import FileLevelSplitter
 from hpfwk import AbstractError
+from python_compat import imap, lmap
 
 # Split dataset along block and metadata boundaries - using equivalence classes of metadata
 class MetadataSplitter(FileLevelSplitter):
@@ -39,8 +40,8 @@ class MetadataSplitter(FileLevelSplitter):
 class UserMetadataSplitter(MetadataSplitter):
 	def metaCmp(self, metadataNames, block, fiA, fiB):
 		selMetadataNames = self.setup(self.config.getList, block, 'split metadata', [])
-		selMetadataIdx = map(metadataNames.index, selMetadataNames)
-		getMetadata = lambda fi: map(lambda idx: fi[DataProvider.Metadata][idx], selMetadataIdx)
+		selMetadataIdx = imap(metadataNames.index, selMetadataNames)
+		getMetadata = lambda fi: lmap(lambda idx: fi[DataProvider.Metadata][idx], selMetadataIdx)
 		return cmp(getMetadata(fiA), getMetadata(fiB))
 
 

@@ -16,6 +16,7 @@ import os, re, tarfile, xml.dom.minidom
 from grid_control import utils
 from grid_control.datasets import DatasetError
 from grid_control.datasets.scanner_base import InfoScanner
+from python_compat import ifilter, imap, lfilter
 
 class ObjectsFromCMSSW(InfoScanner):
 	def __init__(self, config):
@@ -35,7 +36,7 @@ class ObjectsFromCMSSW(InfoScanner):
 		tar = tarfile.open(os.path.join(path, 'cmssw.dbs.tar.gz'), 'r')
 		try:
 			tmpFiles = {}
-			for rawdata in map(str.split, tar.extractfile('files').readlines()):
+			for rawdata in imap(str.split, tar.extractfile('files').readlines()):
 				tmpFiles[rawdata[2]] = {'SE_OUTPUT_HASH_CRC32': rawdata[0], 'SE_OUTPUT_SIZE': int(rawdata[1])}
 			objStore['CMSSW_FILES'] = tmpFiles
 		except Exception:
@@ -43,7 +44,7 @@ class ObjectsFromCMSSW(InfoScanner):
 
 		tmpCfg = {}
 		cmsswVersion = tar.extractfile('version').read().strip()
-		for cfg in filter(lambda x: not '/' in x and x not in ['version', 'files'], tar.getnames()):
+		for cfg in ifilter(lambda x: not '/' in x and x not in ['version', 'files'], tar.getnames()):
 			try:
 				cfgContent = tar.extractfile('%s/config' % cfg).read()
 				cfgHashResult = tar.extractfile('%s/hash' % cfg).readlines()
@@ -53,7 +54,7 @@ class ObjectsFromCMSSW(InfoScanner):
 				tmpCfg[cfg]['CMSSW_CONFIG_CONTENT'] = self.cfgStore.setdefault(utils.QM(self.mergeConfigs, cfgHash, cfg), cfgContent)
 				# Read global tag from config file - first from hash file, then from config file
 				if cfgHash not in self.gtStore:
-					gtLines = filter(lambda x: x.startswith('globaltag:'), cfgHashResult)
+					gtLines = lfilter(lambda x: x.startswith('globaltag:'), cfgHashResult)
 					if gtLines:
 						self.gtStore[cfgHash] = gtLines[-1].split(':')[1].strip()
 				if cfgHash not in self.gtStore:
@@ -76,7 +77,7 @@ class ObjectsFromCMSSW(InfoScanner):
 				searchConfigFile('CMSSW_ANNOTATION', '.*annotation.*=.*cms.untracked.string.*\((.*)\)', None)
 				searchConfigFile('CMSSW_DATATIER', '.*dataTier.*=.*cms.untracked.string.*\((.*)\)', 'USER')
 				cfgReport = xml.dom.minidom.parseString(tar.extractfile('%s/report.xml' % cfg).read())
-				evRead = sum(map(lambda x: int(readTag(x, 'EventsRead')), cfgReport.getElementsByTagName('InputFile')))
+				evRead = sum(imap(lambda x: int(readTag(x, 'EventsRead')), cfgReport.getElementsByTagName('InputFile')))
 			except Exception:
 				raise DatasetError('Could not read config infos about %s in job %d' % (cfg, jobNum))
 
@@ -156,5 +157,5 @@ class LFNFromPath(InfoScanner):
 
 class FilterEDMFiles(InfoScanner):
 	def getEntries(self, path, metadata, events, seList, objStore):
-		if not (False in map(lambda x: x in metadata, ['CMSSW_EVENTS_WRITE', 'CMSSW_CONFIG_FILE'])):
+		if not (False in imap(lambda x: x in metadata, ['CMSSW_EVENTS_WRITE', 'CMSSW_CONFIG_FILE'])):
 			yield (path, metadata, events, seList, objStore)

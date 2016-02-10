@@ -14,6 +14,7 @@
 
 import logging
 from hpfwk import AbstractError, InstanceFactory, Plugin
+from python_compat import lmap
 
 class DataProcessor(Plugin):
 	def __init__(self, config):
@@ -35,7 +36,7 @@ class DataProcessor(Plugin):
 class MultiDataProcessor(DataProcessor):
 	def __init__(self, config, processorProxyList):
 		DataProcessor.__init__(self, config)
-		self._processorList = map(lambda p: p.getInstance(), processorProxyList)
+		self._processorList = lmap(lambda p: p.getInstance(), processorProxyList)
 
 	def process(self, blockIter):
 		for processor in self._processorList:

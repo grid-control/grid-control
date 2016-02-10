@@ -17,7 +17,7 @@ import os, sys, random, optparse
 from gcSupport import getConfig, parseOptions, utils
 from grid_control.datasets import DataSplitter
 from grid_control.parameters import DataParameterSource, ParameterFactory, ParameterInfo, ParameterMetadata, ParameterSource
-from python_compat import md5
+from python_compat import ifilter, imap, irange, izip, lfilter, lmap, md5, set, sorted
 
 random.seed(0)
 
@@ -101,7 +101,7 @@ def main():
 
 	class DataSplitProcessorTest:
 		def getKeys(self):
-			return map(lambda k: ParameterMetadata(k, untracked=True),
+			return lmap(lambda k: ParameterMetadata(k, untracked=True),
 				['DATASETINFO', 'DATASETID', 'DATASETPATH', 'DATASETBLOCK', 'DATASETNICK'])
 
 		def process(self, pNum, splitInfo, result):
@@ -135,7 +135,7 @@ def main():
 		needGCParam = False
 		if psource.getMaxJobs() is not None:
 			countActive = 0
-			for jobNum in range(psource.getMaxJobs()):
+			for jobNum in irange(psource.getMaxJobs()):
 				info = psource.getJobInfo(jobNum)
 				if info[ParameterInfo.ACTIVE]:
 					countActive += 1
@@ -154,9 +154,9 @@ def main():
 		else:
 			result.append(psource.getJobInfo(123))
 		enabledOutput = opts.output.split(',')
-		output = filter(lambda k: not opts.output or k in enabledOutput, psource.getJobKeys())
-		stored = filter(lambda k: k.untracked == False, output)
-		untracked = filter(lambda k: k.untracked == True, output)
+		output = lfilter(lambda k: not opts.output or k in enabledOutput, psource.getJobKeys())
+		stored = lfilter(lambda k: k.untracked == False, output)
+		untracked = lfilter(lambda k: k.untracked == True, output)
 
 		if opts.collapse > 0:
 			result_old = result
@@ -176,7 +176,7 @@ def main():
 				nickname = None
 				if ('DATASETNICK' in pset) and (opts.collapse == 2):
 					nickname = pset.pop('DATASETNICK')
-				h = md5(repr(map(lambda key: pset.get(key), stored))).hexdigest()
+				h = md5(repr(lmap(lambda key: pset.get(key), stored))).hexdigest()
 				result.setdefault(h, []).append(pset)
 				result_nicks.setdefault(h, set()).add(nickname)
 
@@ -185,7 +185,7 @@ def main():
 				tmp['COLLATE_JOBS'] = len(result[h])
 				tmp['COLLATE_NICK'] = len(result_nicks[h])
 				return tmp
-			result = map(doCollate, result)
+			result = lmap(doCollate, result)
 		else:
 			head = [('GC_JOB_ID', '#')]
 			if needGCParam:
@@ -194,9 +194,9 @@ def main():
 			head.append((ParameterInfo.ACTIVE, 'ACTIVE'))
 		if opts.visible:
 			stored = opts.visible.split(',')
-		head.extend(sorted(zip(stored, stored)))
+		head.extend(sorted(izip(stored, stored)))
 		if opts.untracked:
-			head.extend(sorted(map(lambda n: (n, '(%s)' % n), filter(lambda n: n not in ['GC_PARAM', 'GC_JOB_ID'], untracked))))
+			head.extend(sorted(imap(lambda n: (n, '(%s)' % n), ifilter(lambda n: n not in ['GC_PARAM', 'GC_JOB_ID'], untracked))))
 		utils.vprint('')
 		utils.printTabular(head, result)
 
@@ -210,8 +210,8 @@ def main():
 		tmp = psource.getJobIntervention()
 		if tmp:
 			if opts.displaymode == 'parseable':
-				utils.vprint('R: %s' % str.join(',', map(str, tmp[0])))
-				utils.vprint('D: %s' % str.join(',', map(str, tmp[1])))
+				utils.vprint('R: %s' % str.join(',', imap(str, tmp[0])))
+				utils.vprint('D: %s' % str.join(',', imap(str, tmp[1])))
 			else:
 				utils.vprint('   Redo: %r' % tmp[0])
 				utils.vprint('Disable: %r' % tmp[1])

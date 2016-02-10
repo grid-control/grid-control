@@ -23,6 +23,7 @@ from grid_control.config.cfiller_base import ConfigFiller, StringConfigFiller
 from grid_control.logging_setup import logging_setup
 from grid_control.workflow import Workflow
 from hpfwk import debugInterruptHandler
+from python_compat import lfilter
 
 if __name__ == '__main__':
 	global log, handler
@@ -94,7 +95,7 @@ if __name__ == '__main__':
 			self._optParser = optParser
 
 		def fill(self, container):
-			entries = filter(lambda entry: entry.section == 'global', container.getEntries('cmdargs'))
+			entries = lfilter(lambda entry: entry.section == 'global', container.getEntries('cmdargs'))
 			combinedEntry = ConfigEntry.combineEntries(entries)
 			defaultCmdLine = []
 			if combinedEntry:

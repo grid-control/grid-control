@@ -16,7 +16,7 @@
 import os, sys, optparse
 from gcSupport import getConfig, parseOptions, utils
 from grid_control.datasets import DataProvider, DatasetError
-from python_compat import sorted
+from python_compat import imap, izip, lmap, lzip, set, sorted
 
 usage = '%s [OPTIONS] <DBS dataset path> | <dataset cache file>' % sys.argv[0]
 parser = optparse.OptionParser(usage=usage)
@@ -78,7 +78,7 @@ def main():
 	if len(blocks) == 0:
 		raise DatasetError('No blocks!')
 
-	datasets = set(map(lambda x: x[DataProvider.Dataset], blocks))
+	datasets = set(imap(lambda x: x[DataProvider.Dataset], blocks))
 	if len(datasets) > 1 or opts.info:
 		headerbase = [(DataProvider.Dataset, 'Dataset')]
 	else:
@@ -140,7 +140,7 @@ def main():
 			updateInfos(infosum)
 		head = [(DataProvider.Dataset, 'Dataset'), (DataProvider.NEntries, '#Events'),
 			(DataProvider.NBlocks, '#Blocks'), (DataProvider.NFiles, '#Files')]
-		utils.printTabular(head, map(lambda x: infos[x], order) + ['=', infosum])
+		utils.printTabular(head, lmap(lambda x: infos[x], order) + ['=', infosum])
 
 	if opts.listblocks:
 		print('')
@@ -169,10 +169,10 @@ def main():
 			if len(datasets) > 1:
 				print('Dataset: %s' % block[DataProvider.Dataset])
 			print('Blockname: %s' % block[DataProvider.BlockName])
-			mk_len = max(map(len, block.get(DataProvider.Metadata, [''])))
+			mk_len = max(imap(len, block.get(DataProvider.Metadata, [''])))
 			for f in block[DataProvider.FileList]:
 				print('%s [%d events]' % (f[DataProvider.URL], f[DataProvider.NEntries]))
-				printMetadata(zip(block.get(DataProvider.Metadata, []), f.get(DataProvider.Metadata, [])), mk_len)
+				printMetadata(lzip(block.get(DataProvider.Metadata, []), f.get(DataProvider.Metadata, [])), mk_len)
 			print('')
 
 	if opts.blockmetadata and not opts.save:
@@ -180,11 +180,11 @@ def main():
 			if len(datasets) > 1:
 				print('Dataset: %s' % block[DataProvider.Dataset])
 			print('Blockname: %s' % block[DataProvider.BlockName])
-			mkdict = lambda x: dict(zip(block[DataProvider.Metadata], x[DataProvider.Metadata]))
+			mkdict = lambda x: dict(izip(block[DataProvider.Metadata], x[DataProvider.Metadata]))
 			metadata = utils.QM(block[DataProvider.FileList], mkdict(block[DataProvider.FileList][0]), {})
 			for fileInfo in block[DataProvider.FileList]:
 				utils.intersectDict(metadata, mkdict(fileInfo))
-			printMetadata(metadata.items(), max(map(len, metadata.keys())))
+			printMetadata(metadata.items(), max(imap(len, metadata.keys())))
 
 	if opts.liststorage:
 		print('')

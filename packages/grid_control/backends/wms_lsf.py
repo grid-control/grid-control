@@ -1,4 +1,4 @@
-#-#  Copyright 2008-2015 Karlsruhe Institute of Technology
+#-#  Copyright 2008-2016 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -16,7 +16,7 @@ from grid_control import utils
 from grid_control.backends.wms import BackendError, WMS
 from grid_control.backends.wms_local import LocalWMS
 from grid_control.job_db import Job
-from python_compat import next
+from python_compat import izip, next
 
 class LSF(LocalWMS):
 	configSections = LocalWMS.configSections + ['LSF']
@@ -71,7 +71,7 @@ class LSF(LocalWMS):
 			if jobline != '':
 				try:
 					tmp = jobline.split()
-					jobinfo = dict(zip(tmpHead, tmp[:7]))
+					jobinfo = dict(izip(tmpHead, tmp[:7]))
 					jobinfo['submit_time'] = str.join(' ', tmp[7:10])
 					jobinfo['dest'] = 'N/A'
 					if jobinfo['dest_host'] != '-':

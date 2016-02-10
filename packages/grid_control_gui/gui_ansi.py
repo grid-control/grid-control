@@ -1,4 +1,4 @@
-#-#  Copyright 2009-2015 Karlsruhe Institute of Technology
+#-#  Copyright 2009-2016 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@ import re, sys, time, signal
 from grid_control import utils
 from grid_control.gui import GUI
 from grid_control_gui.ansi import Console
+from python_compat import ifilter, imap
 
 class GUIStream:
 	def __init__(self, stream, screen):
@@ -35,7 +36,7 @@ class GUIStream:
 			('(?<=Successful jobs:)\s+[1-9]\d*', [Console.COLOR_GREEN, Console.BOLD]),
 			('(?<=SUCCESS:)\s+[1-9]\d*', [Console.COLOR_GREEN, Console.BOLD]),
 		]
-		self.regex = re.compile('(%s)' % '|'.join(map(lambda (a, b): a, self.attrs)))
+		self.regex = re.compile('(%s)' % '|'.join(imap(lambda (a, b): a, self.attrs)))
 
 	def _attributes(self, string, pos):
 		""" Retrieve the attributes for a match in string at position pos. """
@@ -63,7 +64,7 @@ class GUIStream:
 		return self.stream.__getattribute__(name)
 
 	def dump(cls):
-		for data in filter(lambda x: x, GUIStream.backlog):
+		for data in ifilter(lambda x: x, GUIStream.backlog):
 			sys.stdout.write(data)
 		sys.stdout.write('\n')
 	dump = classmethod(dump)

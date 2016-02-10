@@ -31,7 +31,7 @@ from grid_control.backends.wms import BackendError
 from grid_control.gc_exceptions import InstallationError
 from grid_control.utils import LoggedProcess, ensureDirExists, resolveInstallPath
 from hpfwk import AbstractError, Plugin
-from python_compat import lru_cache
+from python_compat import irange, lru_cache
 
 # Container to call commands in a generic fashion
 class CommandContainer(object):
@@ -495,7 +495,7 @@ class SSHProcessAdapter(ProcessAdapterInterface):
 			self._socketDir = tempfile.mkdtemp()
 		self._log(logging.DEBUG1, 'Using socket directoy %s' % self._socketDir)
 		# create list of socket names and corresponding arguments to rotate through
-		self._socketList = [ os.path.join(self._socketDir, str(socketIndex)) for socketIndex in range(self._socketCount) ]
+		self._socketList = [ os.path.join(self._socketDir, str(socketIndex)) for socketIndex in irange(self._socketCount) ]
 		self._socketArgList = [ ["-oControlMaster=auto","-oControlPath=%s" % socket] for socket in self._socketList ]
 		self._socketProcs = {}
 

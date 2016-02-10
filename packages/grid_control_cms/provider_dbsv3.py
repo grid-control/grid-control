@@ -18,6 +18,7 @@ from grid_control.datasets import DataProvider
 from grid_control.gc_exceptions import UserError
 from grid_control.utils.webservice import readJSON
 from grid_control_cms.provider_cms import CMSProvider
+from python_compat import lmap
 
 # required format: <dataset path>[@<instance>][#<block>]
 class DBS3Provider(CMSProvider):
@@ -46,7 +47,7 @@ class DBS3Provider(CMSProvider):
 	def getCMSDatasetsImpl(self, datasetPath):
 		pd, sd, dt = (datasetPath.lstrip('/') + '/*/*/*').split('/')[:3]
 		tmp = self.queryDBSv3('datasets', primary_ds_name = pd, processed_ds_name = sd, data_tier_name = dt)
-		return map(lambda x: x['dataset'], tmp)
+		return lmap(lambda x: x['dataset'], tmp)
 
 
 	def getCMSBlocksImpl(self, datasetPath, getSites):
@@ -54,7 +55,7 @@ class DBS3Provider(CMSProvider):
 			if getSites:
 				return (blockinfo['block_name'], [blockinfo['origin_site_name']])
 			return (blockinfo['block_name'], None)
-		return map(getNameSEList, self.queryDBSv3('blocks', dataset = datasetPath, detail = getSites))
+		return lmap(getNameSEList, self.queryDBSv3('blocks', dataset = datasetPath, detail = getSites))
 
 
 	def getCMSFilesImpl(self, blockPath, onlyValid, queryLumi):
@@ -67,7 +68,7 @@ class DBS3Provider(CMSProvider):
 	def getCMSLumisImpl(self, blockPath):
 		result = {}
 		for lumiInfo in self.queryDBSv3('filelumis', block_name = blockPath):
-			tmp = (int(lumiInfo['run_num']), map(int, lumiInfo['lumi_section_num']))
+			tmp = (int(lumiInfo['run_num']), lmap(int, lumiInfo['lumi_section_num']))
 			result.setdefault(lumiInfo['logical_file_name'], []).append(tmp)
 		return result
 

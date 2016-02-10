@@ -1,4 +1,4 @@
-#-#  Copyright 2013-2015 Karlsruhe Institute of Technology
+#-#  Copyright 2013-2016 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@ from grid_control.config import ConfigError
 from grid_control.datasets.splitter_base import DataSplitter
 from grid_control.utils.file_objects import VirtualFile
 from grid_control.utils.thread_tools import GCLock
+from python_compat import ifilter, imap, lfilter, lmap
 
 class BaseJobFileTarAdaptor(object):
 	def __init__(self, path):
@@ -30,8 +31,8 @@ class BaseJobFileTarAdaptor(object):
 		metadata = self._fmt.parse(self._tar.extractfile('Metadata').readlines(), keyParser = {None: str})
 		self.maxJobs = metadata.pop('MaxJobs')
 		self.classname = metadata.pop('ClassName')
-		self.metadata = {'None': dict(filter(lambda (k, v): not k.startswith('['), metadata.items()))}
-		for (k, v) in filter(lambda (k, v): k.startswith('['), metadata.items()):
+		self.metadata = {'None': dict(ifilter(lambda (k, v): not k.startswith('['), metadata.items()))}
+		for (k, v) in ifilter(lambda (k, v): k.startswith('['), metadata.items()):
 			self.metadata.setdefault('None %s' % k.split(']')[0].lstrip('['), {})[k.split(']')[1].strip()] = v
 		del log
 
@@ -66,7 +67,7 @@ class DataSplitterIO_V1(object):
 			commonprefix = str.join('/', commonprefix.split('/')[:-1])
 			if len(commonprefix) > 6:
 				entry[DataSplitter.CommonPrefix] = commonprefix
-				savelist = map(lambda x: x.replace(commonprefix + '/', ''), tmp)
+				savelist = lmap(lambda x: x.replace(commonprefix + '/', ''), tmp)
 			else:
 				savelist = tmp
 			# Write files with infos / filelist
@@ -111,8 +112,8 @@ class DataSplitterIO_V1(object):
 					keyParser = {None: int}, valueParser = parserMap)
 				fileList = self._cacheTar.extractfile('%05d/list' % key).readlines()
 				if DataSplitter.CommonPrefix in data:
-					fileList = map(lambda x: '%s/%s' % (data[DataSplitter.CommonPrefix], x), fileList)
-				data[DataSplitter.FileList] = map(str.strip, fileList)
+					fileList = imap(lambda x: '%s/%s' % (data[DataSplitter.CommonPrefix], x), fileList)
+				data[DataSplitter.FileList] = lmap(str.strip, fileList)
 				self._mutex.release()
 				return data
 
@@ -156,7 +157,7 @@ class DataSplitterIO_V2(object):
 			commonprefix = str.join('/', commonprefix.split('/')[:-1])
 			if len(commonprefix) > 6:
 				entry[DataSplitter.CommonPrefix] = commonprefix
-				savelist = map(lambda x: x.replace(commonprefix + '/', ''), tmp)
+				savelist = lmap(lambda x: x.replace(commonprefix + '/', ''), tmp)
 			else:
 				savelist = tmp
 			# Write files with infos / filelist
@@ -166,7 +167,7 @@ class DataSplitterIO_V2(object):
 				elif isinstance(z, list):
 					return (x, y, str.join(',', z))
 				return (x, y, z)
-			data = str.join('', fmt.format(entry, fkt = flat) + map(lambda fn: '=%s\n' % fn, savelist))
+			data = str.join('', fmt.format(entry, fkt = flat) + lmap(lambda fn: '=%s\n' % fn, savelist))
 			info, file = VirtualFile('%05d' % jobNum, data).getTarInfo()
 			subTarFile.addfile(info, file)
 			file.close()
@@ -205,12 +206,12 @@ class DataSplitterIO_V2(object):
 					DataSplitter.Locations: utils.parseList, DataSplitter.MetadataHeader: eval,
 					DataSplitter.Metadata: lambda x: eval(x.strip("'")) }
 				fullData = self._cacheTar.extractfile('%05d' % key).readlines()
-				data = self._fmt.parse(filter(lambda x: not x.startswith('='), fullData),
+				data = self._fmt.parse(lfilter(lambda x: not x.startswith('='), fullData),
 					keyParser = {None: int}, valueParser = parserMap)
-				fileList = map(lambda x: x[1:], filter(lambda x: x.startswith('='), fullData))
+				fileList = imap(lambda x: x[1:], ifilter(lambda x: x.startswith('='), fullData))
 				if DataSplitter.CommonPrefix in data:
-					fileList = map(lambda x: '%s/%s' % (data[DataSplitter.CommonPrefix], x), fileList)
-				data[DataSplitter.FileList] = map(str.strip, fileList)
+					fileList = imap(lambda x: '%s/%s' % (data[DataSplitter.CommonPrefix], x), fileList)
+				data[DataSplitter.FileList] = lmap(str.strip, fileList)
 				self._mutex.release()
 				return data
 

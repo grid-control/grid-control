@@ -17,7 +17,7 @@ from grid_control import utils
 from grid_control.config import createConfigFactory
 from grid_control.datasets.provider_base import DataProvider
 from grid_control.datasets.scanner_base import InfoScanner
-from python_compat import md5, set
+from python_compat import ifilter, imap, lmap, md5, set
 
 class ScanProviderBase(DataProvider):
 	def __init__(self, config, datasetExpr, datasetNick = None, datasetID = 0):
@@ -29,7 +29,7 @@ class ScanProviderBase(DataProvider):
 		(self.kGuardDS, self.kGuardB) = DSB(config.getList, 'guard override', [])
 		self.kSelectDS = config.getList('dataset key select', [])
 		scanList = config.getList('scanner', datasetExpr)
-		self.scanner = map(lambda cls: InfoScanner.getInstance(cls, config), scanList)
+		self.scanner = lmap(lambda cls: InfoScanner.getInstance(cls, config), scanList)
 
 
 	def collectFiles(self):
@@ -40,11 +40,11 @@ class ScanProviderBase(DataProvider):
 						yield (path, dict(metadata), nEvents, seList, objStore)
 			else:
 				yield args
-		return recurse(len(self.scanner), map(lambda x: x.getEntriesVerbose, self.scanner), (None, {}, None, None, {}))
+		return recurse(len(self.scanner), lmap(lambda x: x.getEntriesVerbose, self.scanner), (None, {}, None, None, {}))
 
 
 	def generateKey(self, keys, base, path, metadata, events, seList, objStore):
-		return md5(repr(base) + repr(seList) + repr(map(lambda k: metadata.get(k, None), keys))).hexdigest()
+		return md5(repr(base) + repr(seList) + repr(lmap(lambda k: metadata.get(k, None), keys))).hexdigest()
 
 
 	def generateDatasetName(self, key, data):
@@ -93,7 +93,7 @@ class ScanProviderBase(DataProvider):
 					for key in nameDict:
 						if nameDict[key] == name:
 							utils.eprint('\t%s hash %s using:' % (tName, keyFmt(key)))
-							for x in filter(lambda (k, v): k in hashKeys, varDict[keyFmt(key)].items()):
+							for x in ifilter(lambda (k, v): k in hashKeys, varDict[keyFmt(key)].items()):
 								utils.eprint('\t\t%s = %s' % x)
 					if ask and not utils.getUserBool('Do you want to continue?', False):
 						sys.exit(os.EX_OK)
@@ -105,7 +105,7 @@ class ScanProviderBase(DataProvider):
 		for hashDS in protoBlocks:
 			for hashB in protoBlocks[hashDS]:
 				blockSEList = None
-				for seList in filter(lambda s: s is not None, map(lambda x: x[3], protoBlocks[hashDS][hashB])):
+				for seList in ifilter(lambda s: s is not None, imap(lambda x: x[3], protoBlocks[hashDS][hashB])):
 					blockSEList = utils.QM(blockSEList is None, [], blockSEList)
 					blockSEList.extend(seList)
 				if blockSEList is not None:
@@ -113,13 +113,13 @@ class ScanProviderBase(DataProvider):
 				metaKeys = protoBlocks[hashDS][hashB][0][1].keys()
 				fnProps = lambda (path, metadata, events, seList, objStore): {
 					DataProvider.URL: path, DataProvider.NEntries: events,
-					DataProvider.Metadata: map(lambda x: metadata.get(x), metaKeys)}
+					DataProvider.Metadata: lmap(lambda x: metadata.get(x), metaKeys)}
 				yield {
 					DataProvider.Dataset: hashNameDictDS[hashDS],
 					DataProvider.BlockName: hashNameDictB[hashB][1],
 					DataProvider.Locations: blockSEList,
 					DataProvider.Metadata: metaKeys,
-					DataProvider.FileList: map(fnProps, protoBlocks[hashDS][hashB])
+					DataProvider.FileList: lmap(fnProps, protoBlocks[hashDS][hashB])
 				}
 
 

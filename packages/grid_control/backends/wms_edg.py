@@ -14,6 +14,7 @@
 
 from grid_control import utils
 from grid_control.backends.wms_grid import GridWMS, jdlEscape
+from python_compat import imap
 
 class EuropeanDataGrid(GridWMS):
 	alias = ['EDG', 'LCG']
@@ -31,4 +32,4 @@ class EuropeanDataGrid(GridWMS):
 	def storageReq(self, sites):
 		fmt = lambda x: '(target.GlueSEUniqueID == %s)' % jdlEscape(x)
 		if sites:
-			return 'anyMatch(other.storage.CloseSEs, ' + str.join(' || ', map(fmt, sites)) + ')'
+			return 'anyMatch(other.storage.CloseSEs, ' + str.join(' || ', imap(fmt, sites)) + ')'

@@ -1,4 +1,4 @@
-#-#  Copyright 2014 Karlsruhe Institute of Technology
+#-#  Copyright 2014-2016 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -17,7 +17,7 @@ from grid_control import utils
 from grid_control.job_db import Job
 from grid_control.report import Report
 from grid_control_gui.ansi import Console
-from python_compat import set, sorted
+from python_compat import ifilter, imap, irange, lfilter, lmap, set, sorted
 
 class JobProgressBar:
 	def __init__(self, total = 100, width = 16, jobsOnFinish = False):
@@ -66,16 +66,16 @@ class CategoryReport(Report):
 		# Assignment of jobs to categories (depending on variables and using datasetnick if available)
 		for jobNum in self._jobs:
 			jobConfig = task.getJobConfig(jobNum)
-			varList = sorted(filter(lambda var: '!' not in repr(var), jobConfig.keys()))
+			varList = sorted(ifilter(lambda var: '!' not in repr(var), jobConfig.keys()))
 			if 'DATASETSPLIT' in varList:
 				varList.remove('DATASETSPLIT')
 				varList.append('DATASETNICK')
-			catKey = str.join('|', map(lambda var: '%s=%s' % (var, jobConfig[var]), varList))
+			catKey = str.join('|', imap(lambda var: '%s=%s' % (var, jobConfig[var]), varList))
 			catJobs.setdefault(catKey, []).append(jobNum)
 			if catKey not in catDescDict:
-				catDescDict[catKey] = dict(map(lambda var: (var, jobConfig[var]), varList))
+				catDescDict[catKey] = dict(imap(lambda var: (var, jobConfig[var]), varList))
 		# Kill redundant keys from description
-		commonVars = dict(map(lambda var: (var, jobConfig[var]), varList)) # seed with last varList
+		commonVars = dict(imap(lambda var: (var, jobConfig[var]), varList)) # seed with last varList
 		for catKey in catDescDict:
 			for key in commonVars.keys():
 				if key not in catDescDict[catKey].keys():
@@ -100,7 +100,7 @@ class CategoryReport(Report):
 			tmp = []
 			if 'DATASETNICK' in desc:
 				tmp = ['Dataset: %s' % desc.pop('DATASETNICK')]
-			result = str.join(', ', tmp + map(lambda key: '%s = %s' % (key, desc[key]), desc))
+			result = str.join(', ', tmp + lmap(lambda key: '%s = %s' % (key, desc[key]), desc))
 		if others > 1:
 			result += ' (%d subtasks)' % others
 		return result
@@ -132,7 +132,7 @@ class ModuleReport(CategoryReport):
 
 		stateCatList = ['WAITING', 'RUNNING', 'FAILED', 'SUCCESS']
 		utils.vprint(level = -1)
-		utils.printTabular(map(lambda x: (x, x), sorted(head) + stateCatList),
+		utils.printTabular(lmap(lambda x: (x, x), sorted(head) + stateCatList),
 			infos, 'c' * len(head), fmt = dict.fromkeys(stateCatList, lambda x: '%7d' % utils.parseInt(x, 0)))
 		utils.vprint(level = -1)
 
@@ -172,12 +172,12 @@ class AdaptiveReport(CategoryReport):
 			return newCatKey
 
 		# Merge successfully completed categories
-		successKey = mergeCats('Completed subtasks', filter(lambda catKey:
+		successKey = mergeCats('Completed subtasks', lfilter(lambda catKey:
 			(len(catStateDict[catKey]) == 1) and (Job.SUCCESS in catStateDict[catKey]), catStateDict))
 
 		# Next merge steps shouldn't see non-dict catKeys in catDescDict
 		hiddenDesc = {}
-		for catKey in filter(lambda catKey: not isinstance(catDescDict[catKey], dict), catDescDict):
+		for catKey in ifilter(lambda catKey: not isinstance(catDescDict[catKey], dict), catDescDict):
 			hiddenDesc[catKey] = catDescDict.pop(catKey)
 
 		# Merge parameters to reach category goal - NP hard problem, so be greedy and quick!
@@ -199,7 +199,7 @@ class AdaptiveReport(CategoryReport):
 					else:
 						catKeySearch = catKeySearchDict[varKey]
 					if catKeySearch:
-						matches = filter(lambda ck: eqDict(catDescDict[catKey], catDescDict[ck], varKey), catKeySearch)
+						matches = lfilter(lambda ck: eqDict(catDescDict[catKey], catDescDict[ck], varKey), catKeySearch)
 						if matches:
 							catKeySearchDict[varKey] = catKeySearch.difference(set(matches))
 							varKeyResult.setdefault(varKey, []).append(matches)
@@ -211,7 +211,7 @@ class AdaptiveReport(CategoryReport):
 			varKeyResult = getKeyMergeResults()
 			(varKeyMerge, varKeyMergeDelta) = (None, 0)
 			for varKey in varKeyResult:
-				delta = sum(map(len, varKeyResult[varKey])) - len(varKeyResult[varKey])
+				delta = sum(imap(len, varKeyResult[varKey])) - len(varKeyResult[varKey])
 				if (delta <= deltaGoal) and (delta > varKeyMergeDelta):
 					(varKeyMerge, varKeyMergeDelta) = (varKey, delta)
 			if varKeyMerge:
@@ -227,7 +227,7 @@ class AdaptiveReport(CategoryReport):
 		for varKey in sorted(varKeyResult, cmp = lambda a, b: -cmp(a, b)):
 			if varKey == 'DATASETNICK': # Never remove dataset infos
 				continue
-			if sum(map(len, varKeyResult[varKey])) - len(varKeyResult[varKey]) == 0:
+			if sum(imap(len, varKeyResult[varKey])) - len(varKeyResult[varKey]) == 0:
 				catDescSet = set()
 				for catKey in catDescDict:
 					descDict = dict(catDescDict[catKey])
@@ -278,7 +278,7 @@ class GUIReport(AdaptiveReport):
 	def display(self):
 		(catStateDict, catDescDict, catSubcatDict) = self._getCategoryStateSummary()
 		self._catCur = len(catStateDict)
-		sumCat = lambda catKey, states: sum(map(lambda z: catStateDict[catKey].get(z, 0), states))
+		sumCat = lambda catKey, states: sum(imap(lambda z: catStateDict[catKey].get(z, 0), states))
 
 		self.printGUIHeader('Status report for task:')
 		for catKey in catStateDict: #sorted(catStateDict, key = lambda x: -self._categories[x][0]):
@@ -293,6 +293,6 @@ class GUIReport(AdaptiveReport):
 				sumCat(catKey, [Job.RUNNING, Job.DONE]),
 				sumCat(catKey, [Job.ABORTED, Job.CANCELLED, Job.FAILED]))
 			self.printLimited(bar, self.maxX)
-		for x in range(self._catMax - len(catStateDict)):
+		for x in irange(self._catMax - len(catStateDict)):
 			print ' ' * self.maxX
 			print ' ' * self.maxX

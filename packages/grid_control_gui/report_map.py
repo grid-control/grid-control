@@ -1,4 +1,4 @@
-#-#  Copyright 2013-2015 Karlsruhe Institute of Technology
+#-#  Copyright 2013-2016 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -15,7 +15,7 @@
 import grid_control_gui.geodb
 import matplotlib.pyplot
 import os, math, numpy, random
-from python_compat import sorted
+from python_compat import imap, irange, lfilter, lmap, lzip, sorted
 
 def remove_all_overlap(data):
 	dist2 = lambda a, b: (a['x'] - b['x'])**2 + (a['y'] - b['y'])**2
@@ -30,15 +30,15 @@ def remove_all_overlap(data):
 				a['y'] = a['y'] + vec['y'] * (random.random() - 0.25)
 		return a
 	def center_of_mass(data):
-		wsum_x = sum(map(lambda pt: pt['x']*pt['weight'], data))
-		wsum_y = sum(map(lambda pt: pt['y']*pt['weight'], data))
-		sum_w = sum(map(lambda pt: pt['weight'], data))
+		wsum_x = sum(imap(lambda pt: pt['x']*pt['weight'], data))
+		wsum_y = sum(imap(lambda pt: pt['y']*pt['weight'], data))
+		sum_w = sum(imap(lambda pt: pt['weight'], data))
 		return {'x': wsum_x / sum_w, 'y': wsum_y / sum_w}
 
 	result = []
 	data = sorted(data, key = lambda x: -x['weight'])
 	for pt in data:
-		collisions = filter(lambda x: check_overlap(x, pt), result)
+		collisions = lfilter(lambda x: check_overlap(x, pt), result)
 		if collisions:
 			result.append(remove_overlap(center_of_mass(collisions), pt))
 		else:
@@ -47,17 +47,17 @@ def remove_all_overlap(data):
 
 def draw_pie(ax, breakdown, pos, size, piecolor = ['red', 'orange', 'green', 'blue', 'purple']):
 	breakdown = [0] + list(numpy.cumsum(breakdown)* 1.0 / sum(breakdown))
-	for i in xrange(len(breakdown)-1):
+	for i in irange(len(breakdown)-1):
 		x = [0] + numpy.cos(numpy.linspace(2 * math.pi * breakdown[i], 2 * math.pi * breakdown[i+1], 20)).tolist()
 		y = [0] + numpy.sin(numpy.linspace(2 * math.pi * breakdown[i], 2 * math.pi * breakdown[i+1], 20)).tolist()
-		ax.scatter(pos[0], pos[1], marker=(zip(x, y), 0), s = size, facecolor = piecolor[i % len(piecolor)])
+		ax.scatter(pos[0], pos[1], marker=(lzip(x, y), 0), s = size, facecolor = piecolor[i % len(piecolor)])
 
 def drawMap(report):
 	from mpl_toolkits.basemap import Basemap
 	siteinfo = report.getWNInfos()
 	states = ['FAILED', 'WAITING', 'SUCCESS', 'RUNNING']
-	sites = filter(lambda x: x not in states, siteinfo)
-	entries = dict(map(lambda site: (site, map(lambda state: siteinfo[site][state]['COUNT'], states)), sites))
+	sites = lfilter(lambda x: x not in states, siteinfo)
+	entries = dict(imap(lambda site: (site, lmap(lambda state: siteinfo[site][state]['COUNT'], states)), sites))
 #	entries = {'unl.edu': [276, 0, 246, 0], 'desy.de': [107, 0, 0, 0], 'fnal.gov': [16, 0, 294, 0], 'N/A': [0, 0, 0, 0]}
 
 	posList = []

@@ -21,7 +21,7 @@ from grid_control.backends.storage import StorageManager
 from grid_control.gc_plugin import NamedPlugin
 from grid_control.utils.file_objects import VirtualFile
 from hpfwk import AbstractError, NestedException
-from python_compat import set, sorted
+from python_compat import imap, izip, lmap, set, sorted
 
 class BackendError(NestedException):
 	pass
@@ -71,7 +71,7 @@ class WMS(NamedPlugin):
 			return ('grid', wmsId)
 
 	def _getRawIDs(self, ids):
-		return map(lambda (wmsId, jobNum): self._splitId(wmsId)[1], ids)
+		return lmap(lambda (wmsId, jobNum): self._splitId(wmsId)[1], ids)
 
 	def parseJobInfo(fn):
 		if not os.path.exists(fn):
@@ -155,10 +155,10 @@ class BasicWMS(WMS):
 
 
 	def deployTask(self, task, monitor):
-		self.outputFiles = map(lambda (d, s, t): t, self._getSandboxFilesOut(task)) # HACK
+		self.outputFiles = lmap(lambda (d, s, t): t, self._getSandboxFilesOut(task)) # HACK
 		task.validateVariables()
 
-		self.smSEIn.addFiles(map(lambda (d, s, t): t, task.getSEInFiles())) # add task SE files to SM
+		self.smSEIn.addFiles(lmap(lambda (d, s, t): t, task.getSEInFiles())) # add task SE files to SM
 		# Transfer common SE files
 		if self.config.getState('init', detail = 'storage'):
 			self.smSEIn.doTransfer(task.getSEInFiles())
@@ -228,7 +228,7 @@ class BasicWMS(WMS):
 				continue
 
 			# Clean empty dirs
-			for subDir in map(lambda x: x[0], os.walk(dir, topdown=False)):
+			for subDir in imap(lambda x: x[0], os.walk(dir, topdown=False)):
 				try:
 					os.rmdir(subDir)
 				except Exception:
@@ -259,19 +259,19 @@ class BasicWMS(WMS):
 			('GC Wrapper - stdout', 'gc.stdout', 'gc.stdout'),
 			('GC Wrapper - stderr', 'gc.stderr', 'gc.stderr'),
 			('GC Job summary', 'job.info', 'job.info'),
-		] + map(lambda fn: ('Task output', fn, fn), task.getSBOutFiles())
+		] + lmap(lambda fn: ('Task output', fn, fn), task.getSBOutFiles())
 
 
 	def _getSandboxFiles(self, task, monitor, smList):
 		# Prepare all input files
-		depList = set(itertools.chain(*map(lambda x: x.getDependencies(), [task] + smList)))
-		depPaths = map(lambda pkg: utils.pathShare('', pkg = pkg), os.listdir(utils.pathGC('packages')))
-		depFiles = map(lambda dep: utils.resolvePath('env.%s.sh' % dep, depPaths), depList)
-		taskEnv = list(itertools.chain(map(lambda x: x.getTaskConfig(), [monitor, task] + smList)))
+		depList = set(itertools.chain(*imap(lambda x: x.getDependencies(), [task] + smList)))
+		depPaths = lmap(lambda pkg: utils.pathShare('', pkg = pkg), os.listdir(utils.pathGC('packages')))
+		depFiles = lmap(lambda dep: utils.resolvePath('env.%s.sh' % dep, depPaths), depList)
+		taskEnv = list(itertools.chain(imap(lambda x: x.getTaskConfig(), [monitor, task] + smList)))
 		taskEnv.append({'GC_DEPFILES': str.join(' ', depList), 'GC_USERNAME': self._token.getUsername(),
 			'GC_WMS_NAME': self.wmsName})
 		taskConfig = sorted(utils.DictFormat(escapeString = True).format(utils.mergeDicts(taskEnv), format = 'export %s%s%s\n'))
-		varMappingDict = dict(zip(monitor.getTaskConfig().keys(), monitor.getTaskConfig().keys()))
+		varMappingDict = dict(izip(monitor.getTaskConfig().keys(), monitor.getTaskConfig().keys()))
 		varMappingDict.update(task.getVarMapping())
 		varMapping = sorted(utils.DictFormat(delimeter = ' ').format(varMappingDict, format = '%s%s%s\n'))
 		# Resolve wildcards in task input files

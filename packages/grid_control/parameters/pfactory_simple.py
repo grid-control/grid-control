@@ -21,7 +21,7 @@ from grid_control.parameters.psource_file import CSVParameterSource
 from grid_control.parameters.psource_lookup import createLookupHelper
 from grid_control.parameters.psource_meta import ChainParameterSource, CrossParameterSource, RepeatParameterSource, ZipLongParameterSource
 from hpfwk import APIError
-from python_compat import next
+from python_compat import ifilter, imap, irange, lfilter, next
 
 def tokenize(value, tokList):
 	(pos, start) = (0, 0)
@@ -58,7 +58,7 @@ def tok2inlinetok(tokens, operatorList):
 
 def tok2tree(value, precedence):
 	value = list(value)
-	errorStr = str.join('', map(str, value))
+	errorStr = str.join('', imap(str, value))
 	tokens = iter(value)
 	token = next(tokens, None)
 	tokStack = []
@@ -69,7 +69,7 @@ def tok2tree(value, precedence):
 		while len(opStack) and (opStack[-1][0] in opList):
 			operator = opStack.pop()
 			tmp = []
-			for x in range(len(operator) + 1):
+			for x in irange(len(operator) + 1):
 				tmp.append(tokStack.pop())
 			tmp.reverse()
 			tokStack.append((operator[0], tmp))
@@ -123,8 +123,8 @@ class SimpleParameterFactory(BasicParameterFactory):
 		self.precedence = {'*': [], '+': ['*'], ',': ['*', '+']}
 
 	def combineSources(self, PSourceClass, args):
-		repeat = reduce(lambda a, b: a * b, filter(lambda expr: isinstance(expr, int), args), 1)
-		args = filter(lambda expr: not isinstance(expr, int), args)
+		repeat = reduce(lambda a, b: a * b, ifilter(lambda expr: isinstance(expr, int), args), 1)
+		args = lfilter(lambda expr: not isinstance(expr, int), args)
 		if len(args) > 1:
 			result = PSourceClass(*args)
 		elif len(args) > 0:
@@ -154,7 +154,7 @@ class SimpleParameterFactory(BasicParameterFactory):
 				else:
 					psource_list.append(PSourceClass(*args))
 			# Optimize away unnecessary cross operations
-			if len(filter(lambda p: p.getMaxParameters() is not None, psource_list)) > 1:
+			if len(lfilter(lambda p: p.getMaxParameters() is not None, psource_list)) > 1:
 				return [CrossParameterSource(*psource_list)]
 			return psource_list # simply forward list of psources
 
@@ -176,7 +176,7 @@ class SimpleParameterFactory(BasicParameterFactory):
 				raise APIError('Unknown reference type: "%s"' % refType)
 			else:
 				args_complete = []
-				for expr_list in map(lambda expr: self.tree2expr(expr), args):
+				for expr_list in imap(lambda expr: self.tree2expr(expr), args):
 					args_complete.extend(expr_list)
 				if operator == '*':
 					return self.combineSources(CrossParameterSource, args_complete)
@@ -194,7 +194,7 @@ class SimpleParameterFactory(BasicParameterFactory):
 	def _getUserSource(self, pExpr, parent):
 		tokens = tokenize(pExpr, self.precedence.keys() + list('()[]<>'))
 		tokens = list(tok2inlinetok(tokens, self.precedence.keys()))
-		utils.vprint('Parsing parameter string: "%s"' % str.join(' ', map(str, tokens)), 0)
+		utils.vprint('Parsing parameter string: "%s"' % str.join(' ', imap(str, tokens)), 0)
 		tree = tok2tree(tokens, self.precedence)
 
 		source_list = self.tree2expr(tree)
@@ -202,7 +202,7 @@ class SimpleParameterFactory(BasicParameterFactory):
 			source_list.insert(0, DataParameterSource.create())
 		if parent:
 			source_list.append(parent)
-		if len(filter(lambda p: p.getMaxParameters() is not None, source_list)) > 1:
+		if len(lfilter(lambda p: p.getMaxParameters() is not None, source_list)) > 1:
 			source = self.combineSources(CrossParameterSource, source_list)
 		else:
 			source = self.combineSources(ZipLongParameterSource, source_list) # zip more efficient

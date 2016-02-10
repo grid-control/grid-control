@@ -20,7 +20,7 @@ from grid_control.backends.broker import Broker
 from grid_control.backends.condor_wms.processhandler import ProcessHandler
 from grid_control.backends.wms import BackendError, BasicWMS, WMS
 from grid_control.job_db import Job
-from python_compat import md5, set, sorted
+from python_compat import ifilter, irange, izip, lzip, md5, set, sorted
 
 # if the ssh stuff proves too hack'y: http://www.lag.net/paramiko/
 
@@ -181,7 +181,7 @@ class Condor(BasicWMS):
 	def _getJobsOutput(self, wmsJobIdList):
 		if not len(wmsJobIdList):
 			raise StopIteration
-		self.debugOut("Started retrieving: %s" % set(zip(*wmsJobIdList)[0]))
+		self.debugOut("Started retrieving: %s" % set(izip(*wmsJobIdList)[0]))
 
 		activity = utils.ActivityLog('retrieving job outputs')
 		for wmsId, jobNum in wmsJobIdList:
@@ -224,7 +224,7 @@ class Condor(BasicWMS):
 	def cancelJobs(self, wmsJobIdList):
 		if len(wmsJobIdList) == 0:
 			raise StopIteration
-		self.debugOut("Started canceling: %s" % set(zip(*wmsJobIdList)[0]))
+		self.debugOut("Started canceling: %s" % set(izip(*wmsJobIdList)[0]))
 		self.debugPool()
 
 		wmsIdList=self._getRawIDs(wmsJobIdList)
@@ -291,7 +291,7 @@ class Condor(BasicWMS):
 	def checkJobs(self, wmsJobIdList):
 		if len(wmsJobIdList) == 0:
 			raise StopIteration
-		self.debugOut("Started checking: %s" % set(zip(*wmsJobIdList)[0]))
+		self.debugOut("Started checking: %s" % set(izip(*wmsJobIdList)[0]))
 		self.debugPool()
 
 		wmsIdList=self._getRawIDs(wmsJobIdList)
@@ -337,7 +337,7 @@ class Condor(BasicWMS):
 			utils.vprint('querrying condor_history', 2)
 			# querying the history can be VERY slow! Only do so bit by bit if possible
 			if self.historyFile:
-				historyList = sorted([ "-f "+ file for file in filter(os.path.isfile, glob.glob(self.historyFile+"*")) ])
+				historyList = sorted([ "-f "+ file for file in ifilter(os.path.isfile, glob.glob(self.historyFile+"*")) ])
 			else:
 				historyList=[""]
 			# query the history file by file until no more jobs need updating
@@ -371,7 +371,7 @@ class Condor(BasicWMS):
 		try:
 			statusReturnValues = line.split()
 			# transform output string to dictionary
-			jobinfo = dict(zip(self.statusReturnKeys, statusReturnValues))
+			jobinfo = dict(izip(self.statusReturnKeys, statusReturnValues))
 			# extract GC and WMS ID, check for consistency
 			jobID,wmsID=jobinfo['GCID@WMSID'].split('@')
 			if (wmsID != jobinfo['wmsid']):
@@ -400,7 +400,7 @@ class Condor(BasicWMS):
 #	JobNum is linked to the actual *task* here
 	def submitJobs(self, jobNumListFull, module):
 		submitBatch=25
-		for index in range(0,len(jobNumListFull),submitBatch):
+		for index in irange(0, len(jobNumListFull), submitBatch):
 			jobNumList=jobNumListFull[index:index+submitBatch]
 			self.debugOut("\nStarted submitting: %s" % jobNumList)
 			self.debugPool()
@@ -488,7 +488,7 @@ class Condor(BasicWMS):
 						GCWMSID=line.split('=')[1].strip(' "\n').split('@')
 						GCID,WMSID=int(GCWMSID[0]),GCWMSID[1].strip()
 						# Condor creates a default job then overwrites settings on any subsequent job - i.e. skip every second, but better be sure
-						if ( not wmsJobIdList ) or ( GCID not in zip(*wmsJobIdList)[0] ):
+						if ( not wmsJobIdList ) or ( GCID not in lzip(*wmsJobIdList)[0] ):
 							wmsJobIdList.append((self._createId(WMSID),GCID))
 					if "GridControl_GCtoWMSID" in line:
 						self.debugOut("o : %s" % line)
@@ -506,7 +506,7 @@ class Condor(BasicWMS):
 			self.debugOut("Done Submitting")
 
 			# yield the (jobNum, WMS ID, other data) of each job successively
-			for index in range(len(wmsJobIdList)):
+			for index in irange(len(wmsJobIdList)):
 				yield (wmsJobIdList[index][1], wmsJobIdList[index][0], {} )
 			self.debugOut("Yielded submitted job")
 			self.debugFlush()
@@ -616,8 +616,8 @@ class Condor(BasicWMS):
 				#refuseRegx=[ site for site in self._siteMap.keys() if True in [ re.search(expression.lower(),siteDescript.lower()) is not None for siteDescript in _siteMap[site] for expression in blacklist ] ]
 				#desireRegx=[ site for site in self._siteMap.keys() if True in [ re.search(expression.lower(),siteDescript.lower()) is not None for siteDescript in _siteMap[site] for expression in whitelist ] ]
 				## sites specifically matched
-				#refuseSite=[ site for site in self._siteMap.keys() if site.lower() in map(lambda req: req.lower(), blacklist) ]
-				#desireSite=[ site for site in self._siteMap.keys() if site.lower() in map(lambda req: req.lower(), whitelist) ]
+				#refuseSite=[ site for site in self._siteMap.keys() if site.lower() in ap(lambda req: req.lower(), blacklist) ]
+				#desireSite=[ site for site in self._siteMap.keys() if site.lower() in ap(lambda req: req.lower(), whitelist) ]
 				## sites to actually match; refusing takes precedence over desiring, specific takes precedence over expression
 				#refuseSites=set(refuseSite).union(set(refuseRegx))
 				#desireSites=set(desireSite).union(set(desireRegx)-set(refuseRegx))-set(refuseSite)

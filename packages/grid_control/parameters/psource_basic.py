@@ -18,7 +18,7 @@ from grid_control.backends import WMS
 from grid_control.config import ConfigError
 from grid_control.parameters.psource_base import ParameterInfo, ParameterMetadata, ParameterSource
 from hpfwk import APIError
-from python_compat import md5
+from python_compat import lmap, md5
 
 class InternalParameterSource(ParameterSource):
 	def __init__(self, values, keys):
@@ -72,8 +72,8 @@ class SingleParameterSource(ParameterSource):
 class KeyParameterSource(SingleParameterSource):
 	def __init__(self, *keys):
 		ParameterSource.__init__(self)
-		self.keys = map(lambda key: key.lstrip('!'), keys)
-		self.meta = map(lambda key: ParameterMetadata(key.lstrip('!'), untracked = '!' in key), keys)
+		self.keys = lmap(lambda key: key.lstrip('!'), keys)
+		self.meta = lmap(lambda key: ParameterMetadata(key.lstrip('!'), untracked = '!' in key), keys)
 
 	def fillParameterKeys(self, result):
 		result.extend(self.meta)
@@ -205,7 +205,7 @@ class CollectParameterSource(SingleParameterSource): # Merge parameter values
 	def __init__(self, target, *sources):
 		SingleParameterSource.__init__(self, target)
 		self.srcList = sources
-		self.sources = map(lambda regex: re.compile('^%s$' % regex.replace('...', '.*')), list(sources))
+		self.sources = lmap(lambda regex: re.compile('^%s$' % regex.replace('...', '.*')), list(sources))
 
 	def getHash(self):
 		return md5(str(self.key) + str(self.srcList)).hexdigest()

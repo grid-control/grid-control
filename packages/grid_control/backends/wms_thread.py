@@ -14,11 +14,12 @@
 
 from grid_control import utils
 from grid_control.backends.wms_multi import MultiWMS
+from python_compat import ifilter, imap
 
 class ThreadedMultiWMS(MultiWMS):
 	def _forwardCall(self, args, assignFun, callFun):
 		argMap = self._getMapID2Backend(args, assignFun)
 		makeGenerator = lambda wmsPrefix: (wmsPrefix, callFun(self._wmsMap[wmsPrefix], argMap[wmsPrefix]))
-		activeWMS = filter(lambda wmsPrefix: wmsPrefix in argMap, self._wmsMap)
-		for result in utils.getThreadedGenerator(map(makeGenerator, activeWMS)):
+		activeWMS = ifilter(lambda wmsPrefix: wmsPrefix in argMap, self._wmsMap)
+		for result in utils.getThreadedGenerator(imap(makeGenerator, activeWMS)):
 			yield result

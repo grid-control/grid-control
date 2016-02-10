@@ -19,7 +19,7 @@ from grid_control.config.config_entry import ConfigEntry, ConfigError
 from grid_control.utils.data_structures import UniqueList
 from grid_control.utils.thread_tools import TimeoutException, hang_protection
 from hpfwk import AbstractError, Plugin
-from python_compat import rsplit
+from python_compat import ifilter, imap, irange, lfilter, lmap, rsplit
 
 # Class to fill config containers with settings
 class ConfigFiller(Plugin):
@@ -48,8 +48,8 @@ class FileConfigFiller(ConfigFiller):
 			# Store config settings
 			for section in configContent:
 				# Allow very basic substitutions with %(option)s syntax
-				substDict = dict(map(lambda (opt, v, l): (opt, v), configContent.get('default', [])))
-				substDict.update(map(lambda (opt, v, l): (opt, v), configContent.get(section, [])))
+				substDict = dict(imap(lambda (opt, v, l): (opt, v), configContent.get('default', [])))
+				substDict.update(imap(lambda (opt, v, l): (opt, v), configContent.get(section, [])))
 				for (option, value, source) in configContent[section]:
 					# Protection for non-interpolation "%" in value 
 					value = (value.replace('%', '\x01').replace('\x01(', '%(') % substDict).replace('\x01', '%')
@@ -68,7 +68,7 @@ class FileConfigFiller(ConfigFiller):
 				assert(self._currentOption and (self._currentValue is not None) and self._currentLines)
 				sectionContent = configContent.setdefault(self._currentSection, [])
 				sectionContent.append((self._currentOption, self._currentValue,
-					configFile + ':' + str.join(',', map(str, self._currentLines))))
+					configFile + ':' + str.join(',', imap(str, self._currentLines))))
 				(self._currentOption, self._currentValue, self._currentLines) = (None, None, None)
 
 			# Not using ConfigParser anymore! Ability to read duplicate options is needed
@@ -99,7 +99,7 @@ class FileConfigFiller(ConfigFiller):
 					if self._currentOption:
 						storeOption(exceptionIntroLineInfo)
 					try:
-						(self._currentOption, self._currentValue) = map(str.strip, line.split('=', 1))
+						(self._currentOption, self._currentValue) = lmap(str.strip, line.split('=', 1))
 						self._currentLines = [idx]
 					except Exception:
 						raise ConfigError(exceptionIntroLineInfo + '\nUnable to parse config option!')
@@ -122,7 +122,7 @@ class FileConfigFiller(ConfigFiller):
 		tmpConfigContent = {}
 		self._fillContentFromSingleFile(configFile, configFileData, searchPaths, tmpConfigContent)
 		def getFlatList(section, option):
-			for (opt, value, s) in filter(lambda (opt, v, s): opt == option, tmpConfigContent.get(section, [])):
+			for (opt, value, s) in ifilter(lambda (opt, v, s): opt == option, tmpConfigContent.get(section, [])):
 				for entry in utils.parseList(value, None):
 					yield entry
 
@@ -137,7 +137,7 @@ class FileConfigFiller(ConfigFiller):
 			self._fillContentFromFile(overrideFile, searchPaths + newSearchPaths, configContent)
 		# Filter special global options
 		if configContent.get('global', []):
-			configContent['global'] = filter(lambda (opt, v, s): opt not in ['include', 'include override'], configContent['global'])
+			configContent['global'] = lfilter(lambda (opt, v, s): opt not in ['include', 'include override'], configContent['global'])
 		return searchPaths + newSearchPaths
 
 
@@ -159,14 +159,14 @@ class DefaultFilesConfigFiller(FileConfigFiller):
 			sys.stderr.flush()
 			return
 #			os._exit(os.EX_OSERR)
-		hostCfg = map(lambda c: utils.pathGC('config/%s.conf' % host.split('.', c)[-1]), range(host.count('.') + 1, -1, -1))
+		hostCfg = lmap(lambda c: utils.pathGC('config/%s.conf' % host.split('.', c)[-1]), irange(host.count('.') + 1, -1, -1))
 		defaultCfg = ['/etc/grid-control.conf', '~/.grid-control.conf', utils.pathGC('config/default.conf')]
 		if os.environ.get('GC_CONFIG'):
 			defaultCfg.append('$GC_CONFIG')
 		log = logging.getLogger('config.default')
 		log.log(logging.DEBUG1, 'Possible default config files: %s' % str.join(', ', defaultCfg))
-		fqConfigFiles = map(lambda p: utils.resolvePath(p, mustExist = False), hostCfg + defaultCfg)
-		FileConfigFiller.__init__(self, filter(os.path.exists, fqConfigFiles), addSearchPath = False)
+		fqConfigFiles = lmap(lambda p: utils.resolvePath(p, mustExist = False), hostCfg + defaultCfg)
+		FileConfigFiller.__init__(self, lfilter(os.path.exists, fqConfigFiles), addSearchPath = False)
 
 
 # Config filler which collects data from dictionary
@@ -183,13 +183,13 @@ class DictConfigFiller(ConfigFiller):
 # Config filler which collects data from a user string
 class StringConfigFiller(ConfigFiller):
 	def __init__(self, optionList):
-		self._optionList = filter(lambda x: x, map(str.strip, optionList))
+		self._optionList = lfilter(lambda x: x, imap(str.strip, optionList))
 
 	def fill(self, container):
 		for uopt in self._optionList:
 			try:
 				section, tmp = tuple(uopt.lstrip('[').split(']', 1))
-				option, value = tuple(map(str.strip, tmp.split('=', 1)))
+				option, value = tuple(imap(str.strip, tmp.split('=', 1)))
 				self._addEntry(container, section, option, value, '<cmdline override>')
 			except Exception:
 				raise ConfigError('Unable to parse option %s' % uopt)

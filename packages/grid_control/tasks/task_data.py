@@ -19,6 +19,7 @@ from grid_control.datasets import DataProvider, DataSplitter, PartitionProcessor
 from grid_control.gc_exceptions import UserError
 from grid_control.parameters import DataParameterSource, ParameterSource
 from grid_control.tasks.task_base import TaskModule
+from python_compat import lfilter
 
 class DataTask(TaskModule):
 	def setupJobParameters(self, config, pm):
@@ -88,7 +89,7 @@ class DataTask(TaskModule):
 
 	def report(self, jobNum):
 		info = self.source.getJobInfo(jobNum)
-		keys = filter(lambda k: k.untracked == False, self.source.getJobKeys())
+		keys = lfilter(lambda k: k.untracked == False, self.source.getJobKeys())
 		result = utils.filterDict(info, kF = lambda k: k in keys)
 		if self.dataSplitter:
 			result.pop('DATASETSPLIT')

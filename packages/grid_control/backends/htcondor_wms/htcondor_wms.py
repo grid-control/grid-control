@@ -1,4 +1,4 @@
-#-#  Copyright 2014-2015 Karlsruhe Institute of Technology
+#-#  Copyright 2014-2016 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -30,6 +30,7 @@ from grid_control.job_db import Job
 # HTC modules
 from htcondor_schedd import HTCScheddFactory
 from wmsid import HTCJobID
+from python_compat import lfilter
 
 """
 HTCondor backend core
@@ -203,7 +204,7 @@ class HTCondor(BasicWMS):
 		if not len(wmsJobIdList):
 			raise StopIteration
 		activity   = utils.ActivityLog('Checking jobs...')
-		assert not bool(filter( lambda htcid: htcid.scheddURI != self._schedd.getURI(), self._splitGcRequests(wmsJobIdList))), 'Bug! Got jobs at Schedds %s, but servicing only Schedd %s' % (filter( lambda itr: itr.scheddURI != self._schedd.getURI(), self._splitGcRequests(wmsJobIdList)), self._schedd.getURI())
+		assert not bool(lfilter( lambda htcid: htcid.scheddURI != self._schedd.getURI(), self._splitGcRequests(wmsJobIdList))), 'Bug! Got jobs at Schedds %s, but servicing only Schedd %s' % (lfilter( lambda itr: itr.scheddURI != self._schedd.getURI(), self._splitGcRequests(wmsJobIdList)), self._schedd.getURI())
 		rawJobInfoMaps = self._schedd.checkJobs(
 			self._splitGcRequests(wmsJobIdList),
 			self._getQueryArgs()
@@ -223,7 +224,7 @@ class HTCondor(BasicWMS):
 		if not len(wmsJobIdList):
 			raise StopIteration
 		activity   = utils.ActivityLog('Fetching jobs...')
-		assert not bool(filter( lambda htcid: htcid.scheddURI != self._schedd.getURI(), self._splitGcRequests(wmsJobIdList))), 'Bug! Got jobs at Schedds %s, but servicing only Schedd %s' % (filter( lambda itr: itr.scheddURI != self._schedd.getURI(), self._splitGcRequests(wmsJobIdList)), self._schedd.getURI())
+		assert not bool(lfilter( lambda htcid: htcid.scheddURI != self._schedd.getURI(), self._splitGcRequests(wmsJobIdList))), 'Bug! Got jobs at Schedds %s, but servicing only Schedd %s' % (lfilter( lambda itr: itr.scheddURI != self._schedd.getURI(), self._splitGcRequests(wmsJobIdList)), self._schedd.getURI())
 		returnedJobs = self._schedd.getJobsOutput(
 			self._splitGcRequests(wmsJobIdList)
 			)
@@ -239,7 +240,7 @@ class HTCondor(BasicWMS):
 		if not len(wmsJobIdList):
 			raise StopIteration
 		activity   = utils.ActivityLog('Canceling jobs...')
-		assert not bool(filter( lambda htcid: htcid.scheddURI != self._schedd.getURI(), self._splitGcRequests(wmsJobIdList))), 'Bug! Got jobs at Schedds %s, but servicing only Schedd %s' % (filter( lambda itr: itr.scheddURI != self._schedd.getURI(), self._splitGcRequests(wmsJobIdList)), self._schedd.getURI())
+		assert not bool(lfilter( lambda htcid: htcid.scheddURI != self._schedd.getURI(), self._splitGcRequests(wmsJobIdList))), 'Bug! Got jobs at Schedds %s, but servicing only Schedd %s' % (lfilter( lambda itr: itr.scheddURI != self._schedd.getURI(), self._splitGcRequests(wmsJobIdList)), self._schedd.getURI())
 		canceledJobs = self._schedd.cancelJobs(
 			self._splitGcRequests(wmsJobIdList)
 			)

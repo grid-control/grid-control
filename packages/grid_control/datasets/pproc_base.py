@@ -17,7 +17,7 @@ from grid_control.datasets.splitter_base import DataSplitter
 from grid_control.parameters import ParameterInfo, ParameterMetadata
 from grid_control.utils import filterBlackWhite
 from hpfwk import AbstractError, Plugin
-from python_compat import any, set
+from python_compat import any, imap, lfilter, lmap, set
 
 # Class used by DataParameterSource to convert dataset splittings into parameter data
 class PartitionProcessor(Plugin):
@@ -34,10 +34,10 @@ class PartitionProcessor(Plugin):
 class MultiPartitionProcessor(PartitionProcessor):
 	def __init__(self, processorProxyList, config):
 		PartitionProcessor.__init__(self, config)
-		self._processorList = map(lambda p: p.getInstance(config), processorProxyList)
+		self._processorList = lmap(lambda p: p.getInstance(config), processorProxyList)
 
 	def getKeys(self):
-		return reduce(list.__add__, map(lambda p: p.getKeys(), self._processorList), [])
+		return reduce(list.__add__, imap(lambda p: p.getKeys(), self._processorList), [])
 
 	def process(self, pNum, splitInfo, result):
 		for processor in self._processorList:
@@ -49,7 +49,7 @@ class BasicPartitionProcessor(PartitionProcessor):
 		return str.join(' ', fl)
 
 	def getKeys(self):
-		return map(lambda k: ParameterMetadata(k, untracked=True), ['FILE_NAMES', 'MAX_EVENTS',
+		return lmap(lambda k: ParameterMetadata(k, untracked=True), ['FILE_NAMES', 'MAX_EVENTS',
 			'SKIP_EVENTS', 'DATASETID', 'DATASETPATH', 'DATASETBLOCK', 'DATASETNICK'])
 
 	def process(self, pNum, splitInfo, result):
@@ -86,8 +86,8 @@ class LocationPartitionProcessor(PartitionProcessor):
 		if self._preference:
 			if not locations: # [] or None
 				locations = self._preference
-			elif any(map(lambda x: x in self._preference, locations)): # preferred location available
-				locations = filter(lambda x: x in self._preference, locations)
+			elif any(imap(lambda x: x in self._preference, locations)): # preferred location available
+				locations = lfilter(lambda x: x in self._preference, locations)
 		if self._reqs and (locations is not None):
 			result[ParameterInfo.REQS].append((WMS.STORAGE, locations))
 		if self._disable:
@@ -100,11 +100,11 @@ class MetaPartitionProcessor(PartitionProcessor):
 		self._metadata = config.getList('partition metadata', [])
 
 	def getKeys(self):
-		return map(lambda k: ParameterMetadata(k, untracked=True), self._metadata)
+		return lmap(lambda k: ParameterMetadata(k, untracked=True), self._metadata)
 
 	def process(self, pNum, splitInfo, result):
 		for idx, mkey in enumerate(splitInfo.get(DataSplitter.MetadataHeader, [])):
 			if mkey in self._metadata:
-				tmp = set(map(lambda x: x[idx], splitInfo[DataSplitter.Metadata]))
+				tmp = set(imap(lambda x: x[idx], splitInfo[DataSplitter.Metadata]))
 				if len(tmp) == 1:
 					result[mkey] = tmp.pop()

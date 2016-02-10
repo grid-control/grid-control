@@ -20,7 +20,7 @@ from grid_control.gc_plugin import NamedPlugin
 from grid_control.parameters import ParameterFactory, ParameterInfo
 from hpfwk import AbstractError
 from time import strftime, time
-from python_compat import lru_cache, md5
+from python_compat import ifilter, imap, izip, lfilter, lmap, lru_cache, lzip, md5
 
 class TaskModule(NamedPlugin):
 	configSections = NamedPlugin.configSections + ['task']
@@ -62,7 +62,7 @@ class TaskModule(NamedPlugin):
 		self.gzipOut = config.getBool('gzip output', True, onChange = initSandbox)
 
 		self.substFiles = config.getList('subst files', [], onChange = initSandbox)
-		self.dependencies = map(str.lower, config.getList('depends', [], onChange = initSandbox))
+		self.dependencies = lmap(str.lower, config.getList('depends', [], onChange = initSandbox))
 
 		# Get error messages from gc-run.lib comments
 		self.errorDict = dict(self.updateErrorDict(utils.pathShare('gc-run.lib')))
@@ -81,10 +81,10 @@ class TaskModule(NamedPlugin):
 
 	# Read comments with error codes at the beginning of file
 	def updateErrorDict(self, fileName):
-		for line in filter(lambda x: x.startswith('#'), open(fileName, 'r').readlines()):
+		for line in ifilter(lambda x: x.startswith('#'), open(fileName, 'r').readlines()):
 			try:
 				transform = lambda (x, y): (int(x.strip('# ')), y)
-				yield transform(map(str.strip, line.split(' - ', 1)))
+				yield transform(lmap(str.strip, line.split(' - ', 1)))
 			except Exception:
 				pass
 
@@ -96,12 +96,12 @@ class TaskModule(NamedPlugin):
 			'SE_MINFILESIZE': self.seMinSize,
 			# Sandbox
 			'SB_OUTPUT_FILES': str.join(' ', self.getSBOutFiles()),
-			'SB_INPUT_FILES': str.join(' ', map(lambda x: x.pathRel, self.getSBInFiles())),
+			'SB_INPUT_FILES': str.join(' ', imap(lambda x: x.pathRel, self.getSBInFiles())),
 			# Runtime
 			'GC_JOBTIMEOUT': self.nodeTimeout,
 			'GC_RUNTIME': self.getCommand(),
 			# Seeds and substitutions
-			'SUBST_FILES': str.join(' ', map(os.path.basename, self.getSubstFiles())),
+			'SUBST_FILES': str.join(' ', imap(os.path.basename, self.getSubstFiles())),
 			# Task infos
 			'GC_TASK_CONF': self.taskConfigName,
 			'GC_TASK_DATE': self.taskDate,
@@ -115,11 +115,11 @@ class TaskModule(NamedPlugin):
 	# Get job dependent environment variables
 	def getJobConfig(self, jobNum):
 		tmp = self.source.getJobInfo(jobNum)
-		return dict(map(lambda key: (key, tmp.get(key, '')), self.source.getJobKeys()))
+		return dict(imap(lambda key: (key, tmp.get(key, '')), self.source.getJobKeys()))
 
 
 	def getTransientVars(self):
-		hx = str.join("", map(lambda x: "%02x" % x, map(random.randrange, [256]*16)))
+		hx = str.join("", imap(lambda x: "%02x" % x, imap(random.randrange, [256]*16)))
 		return {'GC_DATE': strftime("%F"), 'GC_TIMESTAMP': strftime("%s"),
 			'GC_GUID': '%s-%s-%s-%s-%s' % (hx[:8], hx[8:12], hx[12:16], hx[16:20], hx[20:]),
 			'RANDOM': str(random.randrange(0, 900000000))}
@@ -138,7 +138,7 @@ class TaskModule(NamedPlugin):
 			'MY_JOBID': 'GC_JOB_ID', 'MY_JOB': 'GC_JOB_ID', 'JOBID': 'GC_JOB_ID',
 			'CONF': 'GC_CONF', 'TASK_ID': 'GC_TASK_ID'}
 		varNames = self.getVarNames() + transients
-		alias.update(zip(varNames, varNames)) # include reflexive mappings
+		alias.update(izip(varNames, varNames)) # include reflexive mappings
 		return alias
 
 
@@ -146,7 +146,7 @@ class TaskModule(NamedPlugin):
 		allVars = utils.mergeDicts([addDict, self.getTaskConfig()])
 		if jobNum is not None:
 			allVars.update(self.getJobConfig(jobNum))
-		subst = lambda x: utils.replaceDict(x, allVars, self.getVarMapping().items() + zip(addDict, addDict))
+		subst = lambda x: utils.replaceDict(x, allVars, self.getVarMapping().items() + lzip(addDict, addDict))
 		result = subst(subst(str(inp)))
 		return utils.checkVar(result, "'%s' contains invalid variable specifiers: '%s'" % (inp, result), check)
 
@@ -172,7 +172,7 @@ class TaskModule(NamedPlugin):
 
 	# Get files for input sandbox
 	def getSBInFiles(self):
-		return map(lambda fn: utils.Result(pathAbs = fn, pathRel = os.path.basename(fn)), self.sbInputFiles)
+		return lmap(lambda fn: utils.Result(pathAbs = fn, pathRel = os.path.basename(fn)), self.sbInputFiles)
 
 
 	# Get files for output sandbox
@@ -207,7 +207,7 @@ class TaskModule(NamedPlugin):
 
 
 	def report(self, jobNum):
-		keys = filter(lambda k: k.untracked == False, self.source.getJobKeys())
+		keys = lfilter(lambda k: k.untracked == False, self.source.getJobKeys())
 		return utils.filterDict(self.source.getJobInfo(jobNum), kF = lambda k: k in keys)
 
 

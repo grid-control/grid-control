@@ -1,5 +1,5 @@
 #!/bin/env python
-#-#  Copyright 2013-2015 Karlsruhe Institute of Technology
+#-#  Copyright 2013-2016 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -387,20 +387,21 @@ vserv13.hep.phy.cam.ac.uk
 wipp-crm.weizmann.ac.il
 """
 
+	import sys, time, urllib2
+	from python_compat import set, imap, lmap, lfilter
+
 	def geocode(loc):
 		request = "http://maps.googleapis.com/maps/api/geocode/json?address=%s&sensor=false" % (str.join('.', loc.split('.')[2:]))
 		url_info = urllib2.urlopen(request)
 		result = eval(url_info.read())
 		if 'Placemark' in result:
-			result = map(lambda x: (x['address'], tuple(reversed(x['Point']['coordinates'][:2]))), result['Placemark'])
+			result = lmap(lambda x: (x['address'], tuple(reversed(x['Point']['coordinates'][:2]))), result['Placemark'])
 		url_info.close()
 		return result
 
-	import sys, time, urllib2
-	from python_compat import set
 	counter = 0
 	used = set()
-	for line in map(str.strip, allCEs.splitlines()):
+	for line in imap(str.strip, allCEs.splitlines()):
 		time.sleep(0.2)
 		match = getGeoMatch(line)
 		if not match:
@@ -409,7 +410,7 @@ wipp-crm.weizmann.ac.il
 		else:
 			used.add(match)
 	sys.stderr.write('%s unmatched entries\n' % counter)
-	sys.stderr.write('unused entries:\n%s\n' % repr(filter(lambda x: x not in used, geoDict)))
+	sys.stderr.write('unused entries:\n%s\n' % repr(lfilter(lambda x: x not in used, geoDict)))
 
 	sys.stdout.write('geoDict = {\n')
 	geoDictKeys = geoDict.keys()

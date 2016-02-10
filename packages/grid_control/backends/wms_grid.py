@@ -18,11 +18,11 @@ from grid_control.backends.broker import Broker
 from grid_control.backends.wms import BackendError, BasicWMS, WMS
 from grid_control.job_db import Job
 from hpfwk import APIError
-from python_compat import md5, parsedate
+from python_compat import ifilter, imap, irange, lfilter, lmap, md5, parsedate
 
 def jdlEscape(value):
 	repl = { '\\': r'\\', '\"': r'\"', '\n': r'\n' }
-	return '"' + str.join('', map(lambda char: repl.get(char, char), value)) + '"'
+	return '"' + str.join('', imap(lambda char: repl.get(char, char), value)) + '"'
 
 
 class GridWMS(BasicWMS):
@@ -64,15 +64,15 @@ class GridWMS(BasicWMS):
 	def storageReq(self, sites):
 		fmt = lambda x: 'Member(%s, other.GlueCESEBindGroupSEUniqueID)' % jdlEscape(x)
 		if sites:
-			return '( %s )' % str.join(' || ', map(fmt, sites))
+			return '( %s )' % str.join(' || ', imap(fmt, sites))
 
 
 	def sitesReq(self, sites):
 		fmt = lambda x: 'RegExp(%s, other.GlueCEUniqueID)' % jdlEscape(x)
 		(blacklist, whitelist) = utils.splitBlackWhiteList(sites)
-		sitereqs = map(lambda x: '!' + fmt(x), blacklist)
+		sitereqs = lmap(lambda x: '!' + fmt(x), blacklist)
 		if len(whitelist):
-			sitereqs.append('(%s)' % str.join(' || ', map(fmt, whitelist)))
+			sitereqs.append('(%s)' % str.join(' || ', imap(fmt, whitelist)))
 		if sitereqs:
 			return '( %s )' % str.join(' && ', sitereqs)
 
@@ -99,29 +99,29 @@ class GridWMS(BasicWMS):
 				pass # Handle number of cpus in makeJDL
 			else:
 				raise APIError('Unknown requirement type %s or argument %r' % (WMS.reqTypes[reqType], arg))
-		return str.join(' && ', filter(lambda x: x is not None, result))
+		return str.join(' && ', ifilter(lambda x: x is not None, result))
 
 
 	def makeJDL(self, jobNum, module):
 		cfgPath = os.path.join(self._jobPath, 'job_%d.var' % jobNum)
-		sbIn = map(lambda (d, s, t): s, self._getSandboxFilesIn(module))
-		sbOut = map(lambda (d, s, t): t, self._getSandboxFilesOut(module))
-		wcList = filter(lambda x: '*' in x, sbOut)
+		sbIn = lmap(lambda (d, s, t): s, self._getSandboxFilesIn(module))
+		sbOut = lmap(lambda (d, s, t): t, self._getSandboxFilesOut(module))
+		wcList = lfilter(lambda x: '*' in x, sbOut)
 		if len(wcList):
 			self._writeJobConfig(cfgPath, jobNum, module, {'GC_WC': str.join(' ', wcList)})
-			sandboxOutJDL = filter(lambda x: x not in wcList, sbOut) + ['GC_WC.tar.gz']
+			sandboxOutJDL = lfilter(lambda x: x not in wcList, sbOut) + ['GC_WC.tar.gz']
 		else:
 			self._writeJobConfig(cfgPath, jobNum, module)
 			sandboxOutJDL = sbOut
 		# Warn about too large sandboxes
-		sbSizes = map(os.path.getsize, sbIn)
+		sbSizes = lmap(os.path.getsize, sbIn)
 		if sbSizes and (self._warnSBSize > 0) and (sum(sbSizes) > self._warnSBSize):
 			if not utils.getUserBool('Sandbox is very large (%d bytes) and can cause issues with the WMS! Do you want to continue?' % sum(sbSizes), False):
 				sys.exit(os.EX_OK)
 			self._warnSBSize = 0
 
 		reqs = self.brokerSite.brokerAdd(module.getRequirements(jobNum), WMS.SITES)
-		formatStrList = lambda strList: '{ %s }' % str.join(', ', map(lambda x: '"%s"' % x, strList))
+		formatStrList = lambda strList: '{ %s }' % str.join(', ', imap(lambda x: '"%s"' % x, strList))
 		contents = {
 			'Executable': '"gc-run.sh"',
 			'Arguments': '"%d"' % jobNum,
@@ -248,14 +248,14 @@ class GridWMS(BasicWMS):
 
 		try:
 			tmp = utils.filterDict(self._submitParams, vF = lambda v: v)
-			params = str.join(' ', map(lambda (x, y): '%s %s' % (x, y), tmp.items()))
+			params = str.join(' ', imap(lambda (x, y): '%s %s' % (x, y), tmp.items()))
 
 			log = tempfile.mktemp('.log')
 			activity = utils.ActivityLog('submitting jobs')
 			proc = utils.LoggedProcess(self._submitExec, '%s --nomsg --noint --logfile "%s" "%s"' % (params, log, jdl))
 
 			wmsId = None
-			for line in filter(lambda x: x.startswith('http'), map(str.strip, proc.iter())):
+			for line in ifilter(lambda x: x.startswith('http'), imap(str.strip, proc.iter())):
 				wmsId = line
 			retCode = proc.wait()
 			del activity
@@ -322,7 +322,7 @@ class GridWMS(BasicWMS):
 		# yield output dirs
 		todo = jobNumMap.values()
 		currentJobNum = None
-		for line in map(str.strip, proc.iter()):
+		for line in imap(str.strip, proc.iter()):
 			if line.startswith(tmpPath):
 				todo.remove(currentJobNum)
 				outputDir = line.strip()
@@ -363,7 +363,7 @@ class GridWMS(BasicWMS):
 			raise StopIteration
 
 		waitFlag = False
-		for ids in map(lambda x: allIds[x:x+5], range(0, len(allIds), 5)):
+		for ids in imap(lambda x: allIds[x:x+5], irange(0, len(allIds), 5)):
 			# Delete jobs in groups of 5 - with 5 seconds between groups
 			if waitFlag and utils.wait(5) == False:
 				break
@@ -379,7 +379,7 @@ class GridWMS(BasicWMS):
 			del activity
 
 			# select cancelled jobs
-			for deletedWMSId in filter(lambda x: x.startswith('- '), proc.iter()):
+			for deletedWMSId in ifilter(lambda x: x.startswith('- '), proc.iter()):
 				deletedWMSId = self._createId(deletedWMSId.strip('- \n'))
 				yield (jobNumMap.get(deletedWMSId), deletedWMSId)
 

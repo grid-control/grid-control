@@ -1,4 +1,4 @@
-#-#  Copyright 2014-2015 Karlsruhe Institute of Technology
+#-#  Copyright 2014-2016 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@ import os
 from grid_control import utils
 from grid_control.backends import WMS
 from hpfwk import AbstractError, Plugin
+from python_compat import ifilter, izip
 
 class OutputProcessor(Plugin):
 	def process(self, dn):
@@ -33,11 +34,11 @@ class FileInfoProcessor(JobInfoProcessor):
 			result = {}
 			# parse old job info data format for files
 			oldFileFormat = [FileInfoProcessor.Hash, FileInfoProcessor.NameLocal, FileInfoProcessor.NameDest, FileInfoProcessor.Path]
-			for (fileKey, fileData) in filter(lambda (key, value): key.startswith('FILE'), jobData.items()):
+			for (fileKey, fileData) in ifilter(lambda (key, value): key.startswith('FILE'), jobData.items()):
 				fileIdx = fileKey.replace('FILE', '').rjust(1, '0')
-				result[int(fileIdx)] = dict(zip(oldFileFormat, fileData.strip('"').split('  ')))
+				result[int(fileIdx)] = dict(izip(oldFileFormat, fileData.strip('"').split('  ')))
 			# parse new job info data format
-			for (fileKey, fileData) in filter(lambda (key, value): key.startswith('OUTPUT_FILE'), jobData.items()):
+			for (fileKey, fileData) in ifilter(lambda (key, value): key.startswith('OUTPUT_FILE'), jobData.items()):
 				(fileIdx, fileProperty) = fileKey.replace('OUTPUT_FILE_', '').split('_')
 				if isinstance(fileData, str):
 					fileData = fileData.strip('"')

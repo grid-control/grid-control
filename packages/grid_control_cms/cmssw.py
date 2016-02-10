@@ -20,6 +20,7 @@ from grid_control.datasets import BasicPartitionProcessor, DataSplitter
 from grid_control.tasks.task_data import DataTask
 from grid_control.tasks.task_utils import TaskExecutableWrapper
 from grid_control_cms.lumi_tools import filterLumiFilter, formatLumi, parseLumiFilter
+from python_compat import imap, lfilter
 
 class CMSPartitionProcessor(BasicPartitionProcessor):
 	def __init__(self, config):
@@ -40,8 +41,8 @@ class CMSPartitionProcessor(BasicPartitionProcessor):
 
 	def _formatFileList(self, fl):
 		if self._prefix:
-			fl = map(lambda fn: self._prefix + fn.split('/store/', 1)[-1])
-		return str.join(', ', map(lambda x: '"%s"' % x, fl))
+			fl = imap(lambda fn: self._prefix + fn.split('/store/', 1)[-1])
+		return str.join(', ', imap(lambda x: '"%s"' % x, fl))
 
 
 class CMSSW(DataTask):
@@ -94,7 +95,7 @@ class CMSSW(DataTask):
 				if key not in self.scramEnv:
 					raise ConfigError('Installed program in project area not recognized.')
 
-			archs = filter(lambda x: os.path.isdir(os.path.join(scramPath, x)) and not x.startswith('.'), os.listdir(scramPath))
+			archs = lfilter(lambda x: os.path.isdir(os.path.join(scramPath, x)) and not x.startswith('.'), os.listdir(scramPath))
 			self.scramArch = config.get('scram arch', (archs + [noDefault])[0])
 			try:
 				fp = open(os.path.join(scramPath, self.scramArch, 'Environment'), 'r')
@@ -193,9 +194,9 @@ class CMSSW(DataTask):
 			if self.prepare or not isInstrumented(cfg):
 				if self.prepare or utils.getUserBool('Do you want to prepare %s for running over the dataset?' % cfg, True):
 					doInstrument(cfg)
-		if mustPrepare and not (True in map(isInstrumented, cfgFiles)):
+		if mustPrepare and not (True in imap(isInstrumented, cfgFiles)):
 			raise ConfigError('A config file must use %s to work properly!' %
-				str.join(', ', map(lambda x: '@%s@' % x, self.neededVars())))
+				str.join(', ', imap(lambda x: '@%s@' % x, self.neededVars())))
 
 
 	# Lumi filter need
@@ -207,7 +208,7 @@ class CMSSW(DataTask):
 			DataSplitter.FileList: 'FILE_NAMES'
 		}
 		if self.dataSplitter:
-			result.extend(map(lambda x: varMap[x], self.dataSplitter.neededVars()))
+			result.extend(imap(lambda x: varMap[x], self.dataSplitter.neededVars()))
 		if self.selectedLumis:
 			result.append('LUMI_RANGE')
 		return result
@@ -234,14 +235,14 @@ class CMSSW(DataTask):
 		data['GZIP_OUT'] = utils.QM(self.gzipOut, 'yes', 'no')
 		data['SE_RUNTIME'] = utils.QM(self._projectAreaTarballSE, 'yes', 'no')
 		data['HAS_RUNTIME'] = utils.QM(len(self.projectArea), 'yes', 'no')
-		data['CMSSW_CONFIG'] = str.join(' ', map(os.path.basename, self.configFiles))
+		data['CMSSW_CONFIG'] = str.join(' ', imap(os.path.basename, self.configFiles))
 		if self.prolog.isActive():
 			data['CMSSW_PROLOG_EXEC'] = self.prolog.getCommand()
-			data['CMSSW_PROLOG_SB_In_FILES'] = str.join(' ', map(lambda x: x.pathRel, self.prolog.getSBInFiles()))
+			data['CMSSW_PROLOG_SB_In_FILES'] = str.join(' ', imap(lambda x: x.pathRel, self.prolog.getSBInFiles()))
 			data['CMSSW_PROLOG_ARGS'] = self.prolog.getArguments()
 		if self.epilog.isActive():
 			data['CMSSW_EPILOG_EXEC'] = self.epilog.getCommand()
-			data['CMSSW_EPILOG_SB_In_FILES'] = str.join(' ', map(lambda x: x.pathRel, self.epilog.getSBInFiles()))
+			data['CMSSW_EPILOG_SB_In_FILES'] = str.join(' ', imap(lambda x: x.pathRel, self.epilog.getSBInFiles()))
 			data['CMSSW_EPILOG_ARGS'] = self.epilog.getArguments()
 		return data
 
@@ -284,7 +285,7 @@ class CMSSW(DataTask):
 
 
 	def getActiveLumiFilter(self, lumifilter, jobNum = None):
-		getLR = lambda x: str.join(',', map(lambda x: '"%s"' % x, formatLumi(x)))
+		getLR = lambda x: str.join(',', imap(lambda x: '"%s"' % x, formatLumi(x)))
 		return getLR(lumifilter) # TODO: Validate subset selection
 		try:
 			splitInfo = self.dataSplitter.getSplitInfo(jobNum)

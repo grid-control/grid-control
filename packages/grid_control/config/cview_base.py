@@ -16,7 +16,7 @@ import logging
 from grid_control import utils
 from grid_control.config.config_entry import ConfigEntry, ConfigError, noDefault, standardConfigForm
 from hpfwk import AbstractError
-from python_compat import sorted
+from python_compat import ifilter, imap, lfilter, sorted
 
 selectorUnchanged = utils.makeEnum(['selector_unchanged'])
 
@@ -106,14 +106,14 @@ class HistoricalConfigView(ConfigView):
 	def _matchEntries(self, container, option_list = None):
 		key_list = container.getKeys()
 		if option_list is not None:
-			key_list = filter(lambda key: key in key_list, option_list)
+			key_list = lfilter(lambda key: key in key_list, option_list)
 
 		result = []
 		getFilteredSectionKey = lambda entry: self._getSectionKey(entry.section.replace('!', '').strip())
 		getOrderedEntryKey = lambda entry: (getFilteredSectionKey(entry), entry.order)
 		for key in key_list:
 			(entries, entries_reverse) = ([], [])
-			for entry in filter(lambda x: getFilteredSectionKey(x) is not None, container.getEntries(key)):
+			for entry in ifilter(lambda x: getFilteredSectionKey(x) is not None, container.getEntries(key)):
 				if entry.section.endswith('!'):
 					entries_reverse.append(entry)
 				else:
@@ -187,7 +187,7 @@ class SimpleConfigView(HistoricalConfigView):
 
 	def _initVariable(self, memberName, default, setValue, addValue, normValues, parseValue = lambda x: [x]):
 		def collect(value):
-			for entries in map(parseValue, value):
+			for entries in imap(parseValue, value):
 				for entry in entries:
 					yield entry
 		# Setting initial value of variable

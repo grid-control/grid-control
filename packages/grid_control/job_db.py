@@ -15,6 +15,7 @@
 import os, time, fnmatch, operator
 from grid_control import utils
 from hpfwk import NestedException, Plugin
+from python_compat import imap, irange
 
 class JobError(NestedException):
 	pass
@@ -59,7 +60,7 @@ class Job:
 			if 'changed' in data:
 				job.changed = data['changed']
 
-			for key in range(1, job.attempt + 1):
+			for key in irange(1, job.attempt + 1):
 				if ('history_' + str(key)).strip() in data:
 					job.history[key] = data['history_' + str(key)]
 
@@ -124,7 +125,7 @@ utils.makeEnum(['INIT', 'SUBMITTED', 'DISABLED', 'READY', 'WAITING', 'QUEUED', '
 
 
 class JobClass:
-	mkJobClass = lambda *fList: (reduce(operator.add, map(lambda f: 1 << f, fList)), fList)
+	mkJobClass = lambda *fList: (reduce(operator.add, imap(lambda f: 1 << f, fList)), fList)
 	ATWMS = mkJobClass(Job.SUBMITTED, Job.WAITING, Job.READY, Job.QUEUED)
 	RUNNING = mkJobClass(Job.RUNNING)
 	PROCESSING = mkJobClass(Job.SUBMITTED, Job.WAITING, Job.READY, Job.QUEUED, Job.RUNNING)
@@ -179,7 +180,7 @@ class JobDB(Plugin):
 
 	def getJobsIter(self, jobSelector = None, subset = None):
 		if subset is None:
-			subset = xrange(self.jobLimit)
+			subset = irange(self.jobLimit)
 		if jobSelector and self.alwaysSelector:
 			select = lambda *args: jobSelector(*args) and self.alwaysSelector(*args)
 		elif jobSelector or self.alwaysSelector:

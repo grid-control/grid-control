@@ -19,7 +19,7 @@ from grid_control import utils
 from grid_control.gc_exceptions import UserError
 from grid_control.gc_plugin import NamedPlugin
 from hpfwk import AbstractError, NestedException
-from python_compat import rsplit
+from python_compat import imap, lmap, rsplit
 
 class AccessTokenError(NestedException):
 	pass
@@ -47,7 +47,7 @@ class AccessToken(NamedPlugin):
 class MultiAccessToken(AccessToken):
 	def __init__(self, config, name, subtokenBuilder):
 		AccessToken.__init__(self, config, name)
-		self._subtokenList = map(lambda tbuilder: tbuilder.getInstance(), subtokenBuilder)
+		self._subtokenList = lmap(lambda tbuilder: tbuilder.getInstance(), subtokenBuilder)
 
 	def getUsername(self):
 		return self._subtokenList[0].getUsername()
@@ -192,7 +192,7 @@ class AFSAccessToken(RefreshableAccessToken):
 		self._kinitExec = utils.resolveInstallPath('kinit')
 		self._klistExec = utils.resolveInstallPath('klist')
 		self._cache = None
-		self._authFiles = dict(map(lambda name: (name, config.getWorkPath('proxy.%s' % name)), ['KRB5CCNAME', 'KRBTKFILE']))
+		self._authFiles = dict(imap(lambda name: (name, config.getWorkPath('proxy.%s' % name)), ['KRB5CCNAME', 'KRBTKFILE']))
 		self._backupTickets(config)
 		self._tickets = config.getList('tickets', [], onChange = None)
 
@@ -239,7 +239,7 @@ class AFSAccessToken(RefreshableAccessToken):
 							expires = parseDate(expires_str + ' %d' % (currentYear + 1), '%b %d %H:%M:%S %Y')
 					self._cache.setdefault('tickets', {})[principal] = expires
 				elif line.count(':') == 1:
-					key, value = map(str.strip, line.split(':', 1))
+					key, value = lmap(str.strip, line.split(':', 1))
 					self._cache[key.lower()] = value
 		except:
 			raise AccessTokenError('Unable to parse kerberos ticket information!')

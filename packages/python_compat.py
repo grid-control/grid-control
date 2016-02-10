@@ -153,6 +153,21 @@ except:
 	ifilter = filter
 	lfilter = lambda *args: list(filter(*args))
 
+try:	# itertools.izip < Python 3.0
+	import itertools
+	izip = itertools.izip
+	lzip = zip
+except:
+	izip = zip
+	lzip = lambda *args: list(zip(*args))
+
+try:	# xrange < Python 3.0
+	irange = xrange
+	lrange = range
+except:
+	irange = range
+	lrange = lambda *args: list(range(*args))
+
 try:	# functools.lru_cache >= Python 3.2
 	import functools
 	lru_cache = functools.lru_cache
@@ -175,7 +190,7 @@ except Exception:
 		return funProxy
 
 __all__ = ['NullHandler', 'StringBuffer', 'StringBufferBase',
-	'all', 'any', 'ifilter', 'imap', 'lfilter', 'lmap', 'lru_cache',
+	'all', 'any', 'ifilter', 'imap', 'irange', 'izip', 'lfilter', 'lmap', 'lrange', 'lzip', 'lru_cache',
 	'md5', 'next', 'parsedate', 'rsplit', 'set', 'sorted', 'user_input']
 
 if __name__ == '__main__':
@@ -183,11 +198,14 @@ if __name__ == '__main__':
 	logging.basicConfig()
 	doctest.testmod()
 	for (root, dirs, files) in os.walk('.'):
+		if root.startswith('./.'):
+			continue
 		for fn in filter(lambda fn: fn.endswith('.py') and not fn.endswith("python_compat.py"), files):
 			fn = os.path.join(root, fn)
-			tmp = open(fn).read().replace('def set(', '').replace('def next(', '').replace('next()', '')
-			needed = set(filter(lambda name: re.search('[^_\.a-zA-Z]%s\(' % name, tmp), __all__ + ['map', 'filter']))
-			needed.update(filter(lambda name: re.search('\(%s\)' % name, tmp), __all__ + ['map', 'filter']))
+			tmp = open(fn).read().replace('\'zip(', '').replace('def set(', '').replace('def filter(', '').replace('def next(', '').replace('next()', '')
+			builtin_avoid = ['filter', 'map', 'range', 'xrange', 'zip']
+			needed = set(filter(lambda name: re.search('[^_\.a-zA-Z]%s\(' % name, tmp), __all__ + builtin_avoid))
+			needed.update(filter(lambda name: re.search('\(%s\)' % name, tmp), __all__ + builtin_avoid))
 			imported = set()
 			for import_line in filter(lambda line: 'python_compat' in line, tmp.splitlines()):
 				imported.update(map(str.strip, import_line.split(None, 3)[3].split(',')))

@@ -15,6 +15,7 @@
 from grid_control import utils
 from grid_control.tasks.task_data import DataTask
 from grid_control.tasks.task_utils import TaskExecutableWrapper
+from python_compat import lmap
 
 class UserTask(DataTask):
 	alias = ['UserMod']
@@ -38,5 +39,5 @@ class UserTask(DataTask):
 
 
 	def getSBOutFiles(self):
-		tmp = map(lambda s: s + utils.QM(self.gzipOut, '.gz', ''), ['job.stdout', 'job.stderr'])
+		tmp = lmap(lambda s: s + utils.QM(self.gzipOut, '.gz', ''), ['job.stdout', 'job.stderr'])
 		return DataTask.getSBOutFiles(self) + tmp

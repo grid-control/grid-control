@@ -17,7 +17,7 @@ from grid_control import utils
 from grid_control.config import createConfigFactory
 from grid_control.datasets.dproc_base import DataProcessor
 from hpfwk import AbstractError, InstanceFactory, NestedException, Plugin
-from python_compat import StringBuffer
+from python_compat import StringBuffer, ifilter, imap, irange, lmap, lrange, sorted
 
 class DatasetError(NestedException):
 	pass
@@ -39,9 +39,9 @@ class DataProvider(Plugin):
 	def bind(cls, value, modulePaths = [], config = None, **kwargs):
 		defaultProvider = config.get('dataset provider', 'ListProvider')
 
-		for idx, entry in enumerate(filter(str.strip, value.splitlines())):
+		for idx, entry in enumerate(ifilter(str.strip, value.splitlines())):
 			(nickname, provider, dataset) = ('', defaultProvider, None)
-			temp = map(str.strip, entry.split(':', 2))
+			temp = lmap(str.strip, entry.split(':', 2))
 			if len(temp) == 3:
 				(nickname, provider, dataset) = temp
 				if dataset.startswith('/'):
@@ -82,7 +82,7 @@ class DataProvider(Plugin):
 				block.setdefault(DataProvider.Locations, None)
 				if self._datasetID:
 					block[DataProvider.DatasetID] = self._datasetID
-				events = sum(map(lambda x: x[DataProvider.NEntries], block[DataProvider.FileList]))
+				events = sum(imap(lambda x: x[DataProvider.NEntries], block[DataProvider.FileList]))
 				block.setdefault(DataProvider.NEntries, events)
 				if self._datasetNick:
 					block[DataProvider.Nickname] = self._datasetNick
@@ -132,7 +132,7 @@ class DataProvider(Plugin):
 				writer.write('events = %d\n' % block[DataProvider.NEntries])
 			if block.get(DataProvider.Locations) is not None:
 				writer.write('se list = %s\n' % str.join(',', block[DataProvider.Locations]))
-			cPrefix = os.path.commonprefix(map(lambda x: x[DataProvider.URL], block[DataProvider.FileList]))
+			cPrefix = os.path.commonprefix(lmap(lambda x: x[DataProvider.URL], block[DataProvider.FileList]))
 			cPrefix = str.join('/', cPrefix.split('/')[:-1])
 			if len(cPrefix) > 6:
 				writer.write('prefix = %s\n' % cPrefix)
@@ -142,17 +142,17 @@ class DataProvider(Plugin):
 
 			writeMetadata = (DataProvider.Metadata in block) and not stripMetadata
 			if writeMetadata:
-				getMetadata = lambda fi, idxList: map(lambda idx: fi[DataProvider.Metadata][idx], idxList)
+				getMetadata = lambda fi, idxList: lmap(lambda idx: fi[DataProvider.Metadata][idx], idxList)
 				metadataHash = lambda fi, idx: utils.md5(repr(fi[DataProvider.Metadata][idx])).digest()
-				cMetadataIdx = range(len(block[DataProvider.Metadata]))
-				cMetadataHash = map(lambda idx: metadataHash(block[DataProvider.FileList][0], idx), cMetadataIdx)
+				cMetadataIdx = lrange(len(block[DataProvider.Metadata]))
+				cMetadataHash = lmap(lambda idx: metadataHash(block[DataProvider.FileList][0], idx), cMetadataIdx)
 				for fi in block[DataProvider.FileList]: # Identify common metadata
-					for idx in filter(lambda idx: metadataHash(fi, idx) != cMetadataHash[idx], cMetadataIdx):
+					for idx in ifilter(lambda idx: metadataHash(fi, idx) != cMetadataHash[idx], cMetadataIdx):
 						cMetadataIdx.remove(idx)
 				def filterC(common):
-					idxList = filter(lambda idx: (idx in cMetadataIdx) == common, range(len(block[DataProvider.Metadata])))
-					return utils.sorted(idxList, key = lambda idx: block[DataProvider.Metadata][idx])
-				writer.write('metadata = %s\n' % map(lambda idx: block[DataProvider.Metadata][idx], filterC(True) + filterC(False)))
+					idxList = ifilter(lambda idx: (idx in cMetadataIdx) == common, irange(len(block[DataProvider.Metadata])))
+					return sorted(idxList, key = lambda idx: block[DataProvider.Metadata][idx])
+				writer.write('metadata = %s\n' % lmap(lambda idx: block[DataProvider.Metadata][idx], filterC(True) + filterC(False)))
 				if cMetadataIdx:
 					writer.write('metadata common = %s\n' % getMetadata(block[DataProvider.FileList][0], filterC(True)))
 					writeMetadata = len(cMetadataIdx) != len(block[DataProvider.Metadata])
@@ -206,7 +206,7 @@ class DataProvider(Plugin):
 			if filesAdded: # Create new block for added files in an existing block
 				tmpBlock = copy.copy(newBlock)
 				tmpBlock[DataProvider.FileList] = filesAdded
-				tmpBlock[DataProvider.NEntries] = sum(map(lambda x: x[DataProvider.NEntries], filesAdded))
+				tmpBlock[DataProvider.NEntries] = sum(imap(lambda x: x[DataProvider.NEntries], filesAdded))
 				blocksAdded.append(tmpBlock)
 			blocksMatching.append((oldBlock, newBlock, filesMissing, filesMatched))
 

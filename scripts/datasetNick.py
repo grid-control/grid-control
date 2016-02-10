@@ -17,6 +17,7 @@ import os, sys, optparse
 from gcSupport import getConfig, parseOptions, utils
 from grid_control.datasets.nickname_base import NickNameProducer
 from grid_control_cms.provider_dbsv3 import DBS3Provider
+from python_compat import lmap
 
 usage = '%s [OPTIONS] <DBS dataset path>' % sys.argv[0]
 parser = optparse.OptionParser(usage=usage)
@@ -38,6 +39,6 @@ def main():
 	nProd = NickNameProducer.getInstance(opts.nprod, getConfig())
 	utils.printTabular(
 		[(0, 'Nickname'), (1, 'Dataset')],
-		map(lambda ds: {0: nProd.getName('', ds, None), 1: ds}, toProcess), 'll')
+		lmap(lambda ds: {0: nProd.getName('', ds, None), 1: ds}, toProcess), 'll')
 
 sys.exit(main())

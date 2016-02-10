@@ -17,7 +17,7 @@ from grid_control import utils
 from grid_control.config import createConfigFactory, noDefault
 from grid_control.datasets.provider_base import DataProvider
 from hpfwk import AbstractError, NestedException, Plugin
-from python_compat import next
+from python_compat import ifilter, imap, irange, lmap, next
 
 def fast_search(lst, cmp_op):
 	def bisect_left_cmp(lst, cmp_op):
@@ -84,10 +84,10 @@ class DataSplitter(Plugin):
 			splitInfo[DataSplitter.MetadataHeader] = block[DataProvider.Metadata]
 		# Helper for very simple splitter
 		if files:
-			splitInfo[DataSplitter.FileList] = map(lambda x: x[DataProvider.URL], files)
-			splitInfo[DataSplitter.NEntries] = sum(map(lambda x: x[DataProvider.NEntries], files))
+			splitInfo[DataSplitter.FileList] = lmap(lambda x: x[DataProvider.URL], files)
+			splitInfo[DataSplitter.NEntries] = sum(imap(lambda x: x[DataProvider.NEntries], files))
 			if DataProvider.Metadata in block:
-				splitInfo[DataSplitter.Metadata] = map(lambda x: x[DataProvider.Metadata], files)
+				splitInfo[DataSplitter.Metadata] = lmap(lambda x: x[DataProvider.Metadata], files)
 		return splitInfo
 
 
@@ -149,7 +149,7 @@ class DataSplitter(Plugin):
 				modSI[DataSplitter.Locations] = newBlock.get(DataProvider.Locations)
 			# Determine size infos and get started
 			search_url = lambda url: fast_search(oldBlock[DataProvider.FileList], lambda x: cmp(x[DataProvider.URL], url))
-			sizeInfo = map(lambda url: search_url(url)[DataProvider.NEntries], modSI[DataSplitter.FileList])
+			sizeInfo = lmap(lambda url: search_url(url)[DataProvider.NEntries], modSI[DataSplitter.FileList])
 			extended = []
 			metaIdxLookup = []
 			for meta in self.metaOpts:
@@ -333,7 +333,7 @@ class DataSplitter(Plugin):
 		def resyncIterator_raw():
 			extList = []
 			# Perform resync of existing splittings
-			for jobNum in range(self.getMaxJobs()):
+			for jobNum in irange(self.getMaxJobs()):
 				splitInfo = self.getSplitInfo(jobNum)
 				if DataSplitter.Comment not in splitInfo:
 					splitInfo[DataSplitter.Comment] = 'src: %d ' % jobNum
@@ -442,9 +442,9 @@ class DataSplitter(Plugin):
 		splitter.splitSource = src
 		# Transfer config protocol (in case no split function is called)
 		splitter._protocol = src.metadata['None']
-		for section in filter(lambda x: x, src.metadata):
+		for section in ifilter(lambda x: x, src.metadata):
 			meta2prot = lambda (k, v): ('[%s] %s' % (section.replace('None ', ''), k), v)
-			splitter._protocol.update(dict(map(meta2prot, src.metadata[section].items())))
+			splitter._protocol.update(dict(imap(meta2prot, src.metadata[section].items())))
 		return splitter
 	loadState = staticmethod(loadState)
 

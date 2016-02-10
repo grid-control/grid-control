@@ -17,7 +17,7 @@ from grid_control import utils
 from grid_control.gc_exceptions import InstallationError
 from grid_control.gui import GUI
 from grid_control.job_db import Job
-from python_compat import sorted
+from python_compat import imap, lmap, lzip, sorted
 
 try:
 	import cherrypy
@@ -46,13 +46,13 @@ class TabularHTML:
 	tr {background-color:#ffffff;}
 	td {font-size:12px;border-width: 1px;padding: 8px;border-style: solid;border-color: #7799aa;}
 </style>"""
-		lookupDict = map(lambda (id, name): (id, fmt.get(id, str)), head)
-		headerList = map(lambda (id, name): '<th>%s</th>' % name, head)
-		entryList = lambda entry: map(lambda (id, fmt): '<td>%s</td>' % fmt(entry.get(id)), lookupDict)
-		rowList = [headerList] + map(entryList, data)
+		lookupDict = lmap(lambda (id, name): (id, fmt.get(id, str)), head)
+		headerList = lmap(lambda (id, name): '<th>%s</th>' % name, head)
+		entryList = lambda entry: lmap(lambda (id, fmt): '<td>%s</td>' % fmt(entry.get(id)), lookupDict)
+		rowList = [headerList] + lmap(entryList, data)
 		if not top:
-			rowList = zip(*rowList)
-		rows = map(lambda row: '\t<tr>%s</tr>\n' % str.join('', row), rowList)
+			rowList = lzip(*rowList)
+		rows = lmap(lambda row: '\t<tr>%s</tr>\n' % str.join('', row), rowList)
 		if top:
 			widthStr = 'width:100%;'
 		else:
@@ -78,8 +78,8 @@ class CPWebserver(GUI):
 		cherrypy.response.headers['Content-Type']= 'image/png'
 		nodes = ["MetadataSplitter", "RunSplitter"]
 		edges = [("MetadataSplitter", "RunSplitter")]
-		nodeStr = str.join('', map(lambda x: '%s [label="%s", fillcolor="/set312/1", style="filled"]\n' % (x, x), nodes))
-		edgeStr = str.join('', map(lambda x: '%s -> %s' % x, edges))
+		nodeStr = str.join('', imap(lambda x: '%s [label="%s", fillcolor="/set312/1", style="filled"]\n' % (x, x), nodes))
+		edgeStr = str.join('', imap(lambda x: '%s -> %s' % x, edges))
 		inp = "digraph mygraph { overlap=False; ranksep=1.5; %s; %s; }" % (nodeStr, edgeStr)
 
 		fd, fn = tempfile.mkstemp()
@@ -96,7 +96,7 @@ class CPWebserver(GUI):
 		if 'job' in kw:
 			jobNum = int(kw['job'])
 			info = self.task.getJobConfig(jobNum)
-			result += str(TabularHTML(zip(sorted(info), sorted(info)), [info], top = False))
+			result += str(TabularHTML(lzip(sorted(info), sorted(info)), [info], top = False))
 		def getJobObjs():
 			for jobNum in self.jobMgr.jobDB.getJobs():
 				result = self.jobMgr.jobDB.get(jobNum).__dict__

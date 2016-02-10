@@ -18,7 +18,7 @@ from grid_control.utils.file_objects import VirtualFile
 from grid_control.utils.parsing import parseBool, parseDict, parseInt, parseList, parseStr, parseTime, parseType, strGuid, strTime, strTimeShort
 from grid_control.utils.thread_tools import TimeoutException, hang_protection
 from hpfwk import APIError
-from python_compat import lru_cache, md5, next, set, sorted, user_input
+from python_compat import ifilter, imap, irange, izip, lfilter, lmap, lru_cache, lzip, md5, next, set, sorted, user_input
 
 def execWrapper(script, context = None):
 	if context is None:
@@ -71,7 +71,7 @@ def resolvePath(path, searchPaths = [], mustExist = True, ErrorClass = GCError):
 
 def resolveInstallPath(path):
 	result = resolvePaths(path, os.environ['PATH'].split(os.pathsep), True, InstallationError)
-	result_exe = filter(lambda fn: os.access(fn, os.X_OK), result) # filter executable files
+	result_exe = lfilter(lambda fn: os.access(fn, os.X_OK), result) # filter executable files
 	if not result_exe:
 		raise InstallationError('Files matching %s:\n\t%s\nare not executable!' % (path, str.join('\n\t', result_exe)))
 	return result_exe[0]
@@ -252,7 +252,7 @@ def abort(new = None):
 # Dictionary tools
 
 def formatDict(d, fmt = '%s=%r', joinStr = ', '):
-	return str.join(joinStr, map(lambda k: fmt % (k, d[k]), sorted(d)))
+	return str.join(joinStr, imap(lambda k: fmt % (k, d[k]), sorted(d)))
 
 
 class Result(object): # Use with caution! Compared with tuples: +25% accessing, 8x slower instantiation
@@ -276,14 +276,14 @@ def intersectDict(dictA, dictB):
 
 
 def replaceDict(result, allVars, varMapping = None):
-	for (virtual, real) in QM(varMapping, varMapping, zip(allVars.keys(), allVars.keys())):
+	for (virtual, real) in QM(varMapping, varMapping, lzip(allVars.keys(), allVars.keys())):
 		for delim in ['@', '__']:
 			result = result.replace(delim + virtual + delim, str(allVars.get(real, '')))
 	return result
 
 
 def filterDict(dictType, kF = lambda k: True, vF = lambda v: True):
-	return dict(filter(lambda (k, v): kF(k) and vF(v), dictType.iteritems()))
+	return dict(ifilter(lambda (k, v): kF(k) and vF(v), dictType.iteritems()))
 
 
 class PersistentDict(dict):
@@ -353,15 +353,15 @@ def optSplit(opt, delim, empty = ''):
 			tmp = oldResult[0].split(prefix)
 			new = tmp.pop(1)
 			try: # Find position of other delimeters in string
-				otherDelim = min(filter(lambda idx: idx >= 0, map(new.find, delim)))
+				otherDelim = min(ifilter(lambda idx: idx >= 0, imap(new.find, delim)))
 				tmp[0] += new[otherDelim:]
 			except Exception:
 				otherDelim = None
 			return [str.join(prefix, tmp)] + oldResult[1:] + [new[:otherDelim]]
 		except Exception:
 			return oldResult + ['']
-	result = map(str.strip, reduce(getDelimeterPart, delim, [opt]))
-	return tuple(map(lambda x: QM(x == '', empty, x), result))
+	result = lmap(str.strip, reduce(getDelimeterPart, delim, [opt]))
+	return tuple(imap(lambda x: QM(x == '', empty, x), result))
 
 ################################################################
 
@@ -378,7 +378,7 @@ class TwoSidedIterator(object):
 			yield self.allInfo[len(self.allInfo) - self.right]
 
 
-listMapReduce = lambda fun, lst, start = []: reduce(operator.add, map(fun, lst), start)
+listMapReduce = lambda fun, lst, start = []: reduce(operator.add, imap(fun, lst), start)
 
 def getNamedLogger(prefix, name, instance, postfix = None):
 	if not name:
@@ -390,7 +390,7 @@ def getNamedLogger(prefix, name, instance, postfix = None):
 
 
 def checkVar(value, message, check = True):
-	if check and max(map(lambda x: max(x.count('@'), x.count('__')), str(value).split('\n'))) >= 2:
+	if check and max(imap(lambda x: max(x.count('@'), x.count('__')), str(value).split('\n'))) >= 2:
 		from grid_control.config import ConfigError
 		raise ConfigError(message)
 	return value
@@ -410,9 +410,9 @@ def accumulate(iterable, empty, doEmit, doAdd = lambda item, buffer: True, opAdd
 
 
 def wrapList(value, length, delimLines = ',\n', delimEntries = ', '):
-	counter = lambda item, buffer: len(item) + sum(map(len, buffer)) + 2*len(buffer) > length
+	counter = lambda item, buffer: len(item) + sum(imap(len, buffer)) + 2*len(buffer) > length
 	wrapped = accumulate(value, [], counter, opAdd = lambda x, y: x + [y])
-	return str.join(delimLines, map(lambda x: str.join(delimEntries, x), wrapped))
+	return str.join(delimLines, imap(lambda x: str.join(delimEntries, x), wrapped))
 
 
 def flatten(lists):
@@ -456,7 +456,7 @@ def DiffLists(oldList, newList, cmpFkt, changedFkt, isSorted = False):
 
 
 def rawOrderedBlackWhiteList(value, bwfilter, matcher):
-	bwList = map(lambda x: (x, x.startswith('-'), QM(x.startswith('-'), x[1:], x)), bwfilter)
+	bwList = lmap(lambda x: (x, x.startswith('-'), QM(x.startswith('-'), x[1:], x)), bwfilter)
 	matchDict = {} # Map for temporary storage of ordered matches - False,True,None are special keys
 	for item in value:
 		matchExprLast = None
@@ -479,8 +479,8 @@ def filterBlackWhite(value, bwfilter, matcher = str.startswith, addUnmatched = F
 
 
 def splitBlackWhiteList(bwfilter):
-	blacklist = map(lambda x: x[1:], filter(lambda x: x.startswith('-'), QM(bwfilter, bwfilter, [])))
-	whitelist = filter(lambda x: not x.startswith('-'), QM(bwfilter, bwfilter, []))
+	blacklist = lmap(lambda x: x[1:], ifilter(lambda x: x.startswith('-'), QM(bwfilter, bwfilter, [])))
+	whitelist = lfilter(lambda x: not x.startswith('-'), QM(bwfilter, bwfilter, []))
 	return (blacklist, whitelist)
 
 
@@ -495,10 +495,10 @@ def doBlackWhiteList(value, bwfilter, matcher = str.startswith, onEmpty = None, 
 	(['T2_US_MIT', 'T1_DE_KIT_MSS', 'T1_US_FNAL'], None, None)
 	"""
 	(blacklist, whitelist) = splitBlackWhiteList(bwfilter)
-	checkMatch = lambda item, matchList: True in map(lambda x: matcher(item, x), matchList)
-	value = filter(lambda x: not checkMatch(x, blacklist), QM(value or not preferWL, value, whitelist))
+	checkMatch = lambda item, matchList: True in imap(lambda x: matcher(item, x), matchList)
+	value = lfilter(lambda x: not checkMatch(x, blacklist), QM(value or not preferWL, value, whitelist))
 	if len(whitelist):
-		return filter(lambda x: checkMatch(x, whitelist), value)
+		return lfilter(lambda x: checkMatch(x, whitelist), value)
 	return QM(value or bwfilter, value, onEmpty)
 
 
@@ -531,7 +531,7 @@ class DictFormat(object):
 			else:
 				currentline = line
 			try: # split at first occurence of delimeter and strip spaces around
-				key, value = map(str.strip, currentline.split(self.delimeter, 1))
+				key, value = lmap(str.strip, currentline.split(self.delimeter, 1))
 				currentline = ''
 			except Exception: # in case no delimeter was found
 				currentline = ''
@@ -555,7 +555,7 @@ class DictFormat(object):
 				value = '"%s"' % str(value).replace('"', '\\"').replace('$', '\\$')
 				lines = value.splitlines()
 				result.append(format % fkt((key, self.delimeter, lines[0])))
-				result.extend(map(lambda x: x + '\n', lines[1:]))
+				result.extend(imap(lambda x: x + '\n', lines[1:]))
 			else:
 				result.append(format % fkt((key, self.delimeter, value)))
 		return result
@@ -572,7 +572,7 @@ def matchFileName(fn, patList):
 def matchFiles(pathRoot, pattern, pathRel = ''):
 	# Return (root, fn, state) - state: None == dir, True/False = (un)checked file, other = filehandle
 	yield (pathRoot, pathRel, None)
-	for name in map(lambda x: os.path.join(pathRel, x), os.listdir(os.path.join(pathRoot, pathRel))):
+	for name in imap(lambda x: os.path.join(pathRel, x), os.listdir(os.path.join(pathRoot, pathRel))):
 		match = matchFileName(name, pattern)
 		pathAbs = os.path.join(pathRoot, name)
 		if match == False:
@@ -647,8 +647,8 @@ getVersion = lru_cache(getVersion)
 
 
 def wait(timeout):
-	shortStep = map(lambda x: (x, 1), range(max(timeout - 5, 0), timeout))
-	for x, w in map(lambda x: (x, 5), range(0, timeout - 5, 5)) + shortStep:
+	shortStep = lmap(lambda x: (x, 1), irange(max(timeout - 5, 0), timeout))
+	for x, w in lmap(lambda x: (x, 5), irange(0, timeout - 5, 5)) + shortStep:
 		if abort():
 			return False
 		log = ActivityLog('waiting for %d seconds' % (timeout - x))
@@ -708,13 +708,13 @@ class ActivityLog:
 
 def printTabular(head, data, fmtString = '', fmt = {}, level = -1):
 	if printTabular.mode == 'parseable':
-		vprint(str.join("|", map(lambda x: x[1], head)), level)
+		vprint(str.join("|", imap(lambda x: x[1], head)), level)
 		for entry in data:
 			if isinstance(entry, dict):
-				vprint(str.join("|", map(lambda x: str(entry.get(x[0], '')), head)), level)
+				vprint(str.join("|", imap(lambda x: str(entry.get(x[0], '')), head)), level)
 		return
 	if printTabular.mode == 'longlist':
-		maxhead = max(map(len, map(lambda (key, name): name, head)))
+		maxhead = max(imap(len, imap(lambda (key, name): name, head)))
 		showLine = False
 		for entry in data:
 			if isinstance(entry, dict):
@@ -731,13 +731,13 @@ def printTabular(head, data, fmtString = '', fmt = {}, level = -1):
 	justFunDict = { 'l': str.ljust, 'r': str.rjust, 'c': str.center }
 	# justFun = {id1: str.center, id2: str.rjust, ...}
 	head = list(head)
-	justFun = dict(map(lambda (idx, x): (idx[0], justFunDict[x]), zip(head, fmtString)))
+	justFun = dict(imap(lambda (idx, x): (idx[0], justFunDict[x]), izip(head, fmtString)))
 
 	# adjust to lendict of column (considering escape sequence correction)
 	strippedlen = lambda x: len(re.sub('\33\[\d*(;\d*)*m', '', x))
 	just = lambda key, x: justFun.get(key, str.rjust)(x, lendict[key] + len(x) - strippedlen(x))
 
-	lendict = dict(map(lambda (key, name): (key, len(name)), head))
+	lendict = dict(imap(lambda (key, name): (key, len(name)), head))
 
 	entries = [] # formatted, but not yet aligned entries
 	for entry in data:
@@ -773,7 +773,7 @@ def printTabular(head, data, fmtString = '', fmt = {}, level = -1):
 			offset = 2
 			(tmp, keys) = (keys[:keys.index(None)], keys[keys.index(None)+1:])
 			for key in tmp:
-				left = max(0, maxlen - sum(map(lambda k: lendict[k] + 3, tmp)))
+				left = max(0, maxlen - sum(imap(lambda k: lendict[k] + 3, tmp)))
 				for edge in edges:
 					if (edge > offset + lendict[key]) and (edge - (offset + lendict[key]) < left):
 						lendict[key] += edge - (offset + lendict[key])
@@ -784,11 +784,11 @@ def printTabular(head, data, fmtString = '', fmt = {}, level = -1):
 		return lendict
 
 	# Wrap and align columns
-	headwrap = list(getGoodPartition(map(lambda (key, name): key, head),
-		dict(map(lambda (k, v): (k, v + 2), lendict.items())), printTabular.wraplen))
+	headwrap = list(getGoodPartition(lmap(lambda (key, name): key, head),
+		dict(imap(lambda (k, v): (k, v + 2), lendict.items())), printTabular.wraplen))
 	lendict = getAlignedDict(headwrap, lendict, printTabular.wraplen)
 
-	headentry = dict(map(lambda (id, name): (id, name.center(lendict[id])), head))
+	headentry = dict(imap(lambda (id, name): (id, name.center(lendict[id])), head))
 	# Wrap rows
 	def wrapentries(entries):
 		for idx, entry in enumerate(entries):
@@ -812,9 +812,9 @@ def printTabular(head, data, fmtString = '', fmt = {}, level = -1):
 	for (keys, entry) in wrapentries([headentry, "="] + entries):
 		if isinstance(entry, str):
 			decor = lambda x: "%s%s%s" % (entry, x, entry)
-			vprint(decor(str.join(decor('+'), map(lambda key: entry * lendict[key], keys))), level)
+			vprint(decor(str.join(decor('+'), lmap(lambda key: entry * lendict[key], keys))), level)
 		else:
-			vprint(' %s ' % str.join(' | ', map(lambda key: just(key, entry.get(key, '')), keys)), level)
+			vprint(' %s ' % str.join(' | ', imap(lambda key: just(key, entry.get(key, '')), keys)), level)
 printTabular.wraplen = 100
 printTabular.mode = 'default'
 
@@ -830,7 +830,7 @@ def getUserInput(text, default, choices, parser = lambda x: x):
 			return parser(default)
 		if parser(userinput) is not None:
 			return parser(userinput)
-		valid = str.join(', ', map(lambda x: '"%s"' % x, choices[:-1]))
+		valid = str.join(', ', imap(lambda x: '"%s"' % x, choices[:-1]))
 		eprint('Invalid input! Answer with %s or "%s"' % (valid, choices[-1]))
 
 
@@ -861,17 +861,17 @@ def makeEnum(members = [], cls = None, useHash = False):
 		getValue = lambda (idx, name): idx + int(enumID, 16)
 	else:
 		getValue = lambda (idx, name): idx
-	values = list(map(getValue, enumerate(members)))
+	values = lmap(getValue, enumerate(members))
 
 	cls.enumNames = members
 	cls.enumValues = values
-	cls._enumMapNV = dict(zip(cls.enumNames, cls.enumValues))
-	cls._enumMapVN = dict(zip(cls.enumValues, cls.enumNames))
+	cls._enumMapNV = dict(izip(cls.enumNames, cls.enumValues))
+	cls._enumMapVN = dict(izip(cls.enumValues, cls.enumNames))
 	if len(cls._enumMapNV) != len(cls._enumMapVN):
 		raise APIError('Invalid enum definition!')
 	cls.enum2str = cls._enumMapVN.get
 	cls.str2enum = cls._enumMapNV.get
-	for name, value in zip(cls.enumNames, cls.enumValues):
+	for name, value in izip(cls.enumNames, cls.enumValues):
 		setattr(cls, name, value)
 	return cls
 
@@ -881,7 +881,7 @@ def split_advanced(tokens, doEmit, addEmitToken, quotes = ['"', "'"], brackets =
 	emit_empty_buffer = False
 	stack_quote = []
 	stack_bracket = []
-	map_openbracket = dict(map(lambda x: (x[1], x[0]), brackets))
+	map_openbracket = dict(imap(lambda x: (x[1], x[0]), brackets))
 	tokens = iter(tokens)
 	token = next(tokens, None)
 	while token:

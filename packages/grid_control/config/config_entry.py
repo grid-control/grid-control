@@ -14,7 +14,7 @@
 
 from grid_control import utils
 from hpfwk import APIError, NestedException
-from python_compat import set, sorted
+from python_compat import imap, lfilter, lmap, set, sorted
 
 class ConfigError(NestedException):
 	pass
@@ -27,10 +27,10 @@ def standardConfigForm(value):
 	if value is not None:
 		if not isinstance(value, list):
 			value = [value]
-		return map(lambda x: str(x).strip().lower(), value)
+		return lmap(lambda x: str(x).strip().lower(), value)
 
 def multi_line_format(value):
-	value_list = filter(lambda x: x != '', map(str.strip, value.strip().splitlines()))
+	value_list = lfilter(lambda x: x != '', imap(str.strip, value.strip().splitlines()))
 	if len(value_list) > 1:
 		return '\n\t%s' % str.join('\n\t', value_list)
 	return str.join('\n\t', value_list)
@@ -43,7 +43,7 @@ class ConfigEntry(object):
 		(self.value, self.opttype, self.accessed) = (value, opttype, accessed)
 
 	def __repr__(self):
-		varList = str.join(', ', map(lambda (k, v): '%s = %s' % (k, repr(v)), sorted(self.__dict__.items())))
+		varList = str.join(', ', imap(lambda (k, v): '%s = %s' % (k, repr(v)), sorted(self.__dict__.items())))
 		return '%s(%s)' % (self.__class__.__name__, varList)
 
 	def format_opt(self):

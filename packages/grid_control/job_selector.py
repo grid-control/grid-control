@@ -17,6 +17,7 @@ from grid_control import utils
 from grid_control.gc_exceptions import UserError
 from grid_control.job_db import Job
 from hpfwk import AbstractError, Plugin
+from python_compat import imap, lfilter, lmap
 
 class JobSelector(Plugin):
 	def create(arg, **kwargs):
@@ -34,7 +35,7 @@ class AndJobSelector(JobSelector): # Internally used
 		self.selectors = args
 
 	def __call__(self, jobNum, jobObj):
-		return reduce(operator.and_, map(lambda selector: selector(jobNum, jobObj), self.selectors))
+		return reduce(operator.and_, imap(lambda selector: selector(jobNum, jobObj), self.selectors))
 
 
 class ClassSelector(JobSelector):
@@ -59,10 +60,10 @@ class IDSelector(JobSelector):
 	alias = ['id']
 
 	def __init__(self, arg, **kwargs):
-		idList = map(lambda x: x.split('-'), arg.split(','))
+		idList = imap(lambda x: x.split('-'), arg.split(','))
 		try:
 			parse = lambda x: utils.QM(x != '', int, str)
-			self.ranges = map(lambda x: (parse(x[0])(x[0]), parse(x[-1])(x[-1])), idList)
+			self.ranges = lmap(lambda x: (parse(x[0])(x[0]), parse(x[-1])(x[-1])), idList)
 		except Exception:
 			raise UserError('Job identifiers must be integers or ranges.')
 
@@ -72,12 +73,12 @@ class IDSelector(JobSelector):
 				if (jobRange[1] == '') or (jobNum <= jobRange[1]):
 					return True
 			return False
-		return reduce(operator.or_, map(checkID, self.ranges))
+		return reduce(operator.or_, imap(checkID, self.ranges))
 
 
 class RegExSelector(JobSelector):
 	def __init__(self, arg, objParser, regexParser = lambda x: x, **kwargs):
-		self.rxList = map(lambda x: re.compile(regexParser(x)), arg.split(','))
+		self.rxList = lmap(lambda x: re.compile(regexParser(x)), arg.split(','))
 		self.objParser = objParser
 
 	def __call__(self, jobNum, jobObj):
@@ -114,8 +115,8 @@ class StateSelector(RegExSelector):
 	def __init__(self, arg, **kwargs):
 		predef = {'TODO': 'SUBMITTED,WAITING,READY,QUEUED', 'ALL': str.join(',', Job.enumNames)}
 		RegExSelector.__init__(self, predef.get(arg.upper(), arg), None, lambda x: '^%s.*' % x.upper())
-		stateList = reduce(operator.add, map(lambda x: list(filter(x.match, Job.enumNames)), self.rxList))
-		self.states = map(Job.str2enum, stateList)
+		stateList = reduce(operator.add, imap(lambda x: lfilter(x.match, Job.enumNames), self.rxList))
+		self.states = lmap(Job.str2enum, stateList)
 
 	def __call__(self, jobNum, jobObj):
 		return jobObj.state in self.states
@@ -125,11 +126,11 @@ class VarSelector(JobSelector):
 	alias = ['var']
 
 	def __init__(self, arg, **kwargs):
-		self.rxDict = map(lambda x: (x.split('=', 1)[0], re.compile(x.split('=', 1)[1])), arg.split(','))
+		self.rxDict = lmap(lambda x: (x.split('=', 1)[0], re.compile(x.split('=', 1)[1])), arg.split(','))
 		self.jobCfg = lambda jobNum, var: str(kwargs['task'].getJobConfig(jobNum).get(var, ''))
 
 	def __call__(self, jobNum, jobObj):
-		return reduce(operator.and_, map(lambda (var, rx): rx.search(self.jobCfg(jobNum, var)) is not None, self.rxDict))
+		return reduce(operator.and_, imap(lambda (var, rx): rx.search(self.jobCfg(jobNum, var)) is not None, self.rxDict))
 
 
 class NickSelector(RegExSelector):
@@ -149,9 +150,9 @@ class MultiJobSelector(JobSelector):
 				selectorType = term.split(':', 1)[0]
 			selector = JobSelector.getInstance(selectorType, term.split(':', 1)[-1], **kwargs)
 			return lambda jobNum, jobObj: selector.__call__(jobNum, jobObj) == cmpValue
-		orTerms = str.join('+', map(str.strip, arg.split('+'))).split()
-		self.js = map(lambda orTerm: map(parseTerm, orTerm.split('+')), orTerms)
+		orTerms = str.join('+', imap(str.strip, arg.split('+'))).split()
+		self.js = lmap(lambda orTerm: lmap(parseTerm, orTerm.split('+')), orTerms)
 
 	def __call__(self, jobNum, jobObj):
 		onTerm = lambda term: term(jobNum, jobObj) # [[f1], [f2,f3]] => f1(...) || (f2(...) && f3(...))
-		return reduce(operator.or_, map(lambda andTerm: reduce(operator.and_, map(onTerm, andTerm)), self.js))
+		return reduce(operator.or_, imap(lambda andTerm: reduce(operator.and_, imap(onTerm, andTerm)), self.js))

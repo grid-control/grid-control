@@ -19,6 +19,7 @@ from grid_control.parameters.config_param import ParameterConfig
 from grid_control.parameters.padapter import ParameterAdapter
 from grid_control.parameters.psource_base import ParameterSource
 from grid_control.parameters.psource_data import DataParameterSource
+from python_compat import ifilter, imap, irange, lmap
 
 class ParameterFactory(NamedPlugin):
 	configSections = NamedPlugin.configSections + ['parameters']
@@ -49,15 +50,15 @@ class BasicParameterFactory(ParameterFactory):
 		# Get constants from [constants <tags...>]
 		configConstants = config.changeView(viewClass = TaggedConfigView,
 			setClasses = None, setSections = ['constants'], addTags = [self])
-		for cName in filter(lambda o: not o.endswith(' lookup'), configConstants.getOptions()):
+		for cName in ifilter(lambda o: not o.endswith(' lookup'), configConstants.getOptions()):
 			self._addConstantPSource(configConstants, cName, cName.upper())
 		# Get constants from [<Module>] constants
-		for cName in map(str.strip, config.getList('constants', [])):
+		for cName in imap(str.strip, config.getList('constants', [])):
 			self._addConstantPSource(config, cName, cName)
 		# Random number variables
 		configJobs = config.changeView(addSections = ['jobs'])
 		nseeds = configJobs.getInt('nseeds', 10)
-		newSeeds = map(lambda x: str(random.randint(0, 10000000)), range(nseeds))
+		newSeeds = lmap(lambda x: str(random.randint(0, 10000000)), irange(nseeds))
 		for (idx, seed) in enumerate(configJobs.getList('seeds', newSeeds, persistent = True)):
 			ps = ParameterSource.getInstance('CounterParameterSource', 'SEED_%d' % idx, int(seed))
 			self.constSources.append(ps)

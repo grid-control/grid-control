@@ -30,6 +30,7 @@ import os, re, numpy
 from grid_control import utils
 from grid_control.output_processor import JobInfoProcessor
 from grid_control.report import Report
+from python_compat import irange
 
 JobResultEnum = utils.makeEnum([
 	"TIMESTAMP_WRAPPER_START",
@@ -369,7 +370,7 @@ class PlotReport(Report):
 		truncFront = relTimeSpan * trunctationFractionFront
 		truncBack = relTimeSpan * ( 1.0 - trunctationFractionBack )
 
-		for i in range(minTime, maxTime + 1, stepSize):
+		for i in irange(minTime, maxTime + 1, stepSize):
 			thisBw = 0
 			currentTimeStep = i - minTime
 			timeStep = timeStep + [currentTimeStep]

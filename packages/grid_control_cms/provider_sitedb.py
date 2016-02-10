@@ -1,4 +1,4 @@
-#-#  Copyright 2015 Karlsruhe Institute of Technology
+#-#  Copyright 2015-2016 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -15,13 +15,13 @@
 import os, re
 from grid_control.gc_exceptions import UserError
 from grid_control.utils.webservice import RestClient, parseJSON
-from python_compat import set
+from python_compat import ifilter, imap, izip, lfilter, lmap, set
 
 def unflatten_json(data):
     """Tranform input to unflatten JSON format"""
     columns = data['desc']['columns']
     for row in data['result']:
-        yield dict(zip(columns, row))
+        yield dict(izip(columns, row))
 
 
 class SiteDB(object):
@@ -57,23 +57,23 @@ class SiteDB(object):
         cms_name = cms_name.replace('%', '.*')
         cms_name_regex = re.compile(cms_name)
 
-        psn_site_names = filter(lambda site: site['type'] == 'psn' and cms_name_regex.match(site[u'alias']),
+        psn_site_names = lfilter(lambda site: site['type'] == 'psn' and cms_name_regex.match(site[u'alias']),
                                 self._site_names())
-        site_names = set(map(lambda x: x['site_name'], psn_site_names))
-        site_resources = filter(lambda x: x['site_name'] in site_names, self._site_resources())
-        host_list = filter(lambda x: x['type'] == 'SE', site_resources)
-        host_list = map(lambda x: x['fqdn'], host_list)
+        site_names = set(imap(lambda x: x['site_name'], psn_site_names))
+        site_resources = lfilter(lambda x: x['site_name'] in site_names, self._site_resources())
+        host_list = lfilter(lambda x: x['type'] == 'SE', site_resources)
+        host_list = lmap(lambda x: x['fqdn'], host_list)
         return host_list
 
     def se_to_cms_name(self, se):
-        site_resources = filter(lambda resources: resources['fqdn'] == se, self._site_resources())
+        site_resources = lfilter(lambda resources: resources['fqdn'] == se, self._site_resources())
         site_names = []
         for site_resource in site_resources:
             site_names.extend(self._site_names(site_name=site_resource['site_name']))
-        return [site_name['alias'] for site_name in filter(lambda site: site['type'] == 'cms', site_names)]
+        return [site_name['alias'] for site_name in ifilter(lambda site: site['type'] == 'cms', site_names)]
 
     def dn_to_username(self, dn):
-        user_info = filter(lambda this_user: this_user['dn'] == dn, self._people())
+        user_info = ifilter(lambda this_user: this_user['dn'] == dn, self._people())
         for user in user_info:
             return user['username']
 

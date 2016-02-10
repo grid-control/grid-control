@@ -1,4 +1,4 @@
-#-#  Copyright 2012-2015 Karlsruhe Institute of Technology
+#-#  Copyright 2012-2016 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -14,6 +14,7 @@
 
 from grid_control import utils
 from hpfwk import AbstractError, Plugin
+from python_compat import izip
 
 class InfoScanner(Plugin):
 	def __init__(self, config):
@@ -24,7 +25,7 @@ class InfoScanner(Plugin):
 
 	def getEntriesVerbose(self, level, *args):
 		utils.vprint('    ' * level + 'Collecting information with %s...' % self.__class__.__name__, 1)
-		for c, n, l in zip(args, ['Path', 'Metadata', 'Events', 'SE list', 'Objects'], [1, 2, 1, 2, 2]):
+		for c, n, l in izip(args, ['Path', 'Metadata', 'Events', 'SE list', 'Objects'], [1, 2, 1, 2, 2]):
 			utils.vprint('    ' * level + '  %s: %s' % (n, c), l)
 		return self.getEntries(*args)
 

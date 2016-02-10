@@ -19,6 +19,7 @@ from grid_control.backends.wms import BackendError, BasicWMS, WMS
 from grid_control.job_db import Job
 from grid_control.utils.file_objects import VirtualFile
 from hpfwk import AbstractError
+from python_compat import ifilter, imap, lfilter
 
 class LocalWMS(BasicWMS):
 	configSections = BasicWMS.configSections + ['local']
@@ -100,15 +101,15 @@ class LocalWMS(BasicWMS):
 	def _getSandbox(self, wmsId):
 		# Speed up function by caching result of listdir
 		def searchSandbox(source):
-			for path in map(lambda sbox: os.path.join(self.sandPath, sbox), source):
+			for path in imap(lambda sbox: os.path.join(self.sandPath, sbox), source):
 				if os.path.exists(os.path.join(path, wmsId)):
 					return path
 		result = searchSandbox(self.sandCache)
 		if result:
 			return result
 		oldCache = self.sandCache[:]
-		self.sandCache = filter(lambda x: os.path.isdir(os.path.join(self.sandPath, x)), os.listdir(self.sandPath))
-		return searchSandbox(filter(lambda x: x not in oldCache, self.sandCache))
+		self.sandCache = lfilter(lambda x: os.path.isdir(os.path.join(self.sandPath, x)), os.listdir(self.sandPath))
+		return searchSandbox(ifilter(lambda x: x not in oldCache, self.sandCache))
 
 
 	# Submit job and yield (jobNum, WMS ID, other data)
@@ -123,7 +124,7 @@ class LocalWMS(BasicWMS):
 		except Exception:
 			raise BackendError('Unable to create sandbox directory "%s"!' % sandbox)
 		sbPrefix = sandbox.replace(self.sandPath, '').lstrip('/')
-		self.smSBIn.doTransfer(map(lambda (d, s, t): (d, s, os.path.join(sbPrefix, t)), self._getSandboxFilesIn(module)))
+		self.smSBIn.doTransfer(imap(lambda (d, s, t): (d, s, os.path.join(sbPrefix, t)), self._getSandboxFilesIn(module)))
 
 		cfgPath = os.path.join(sandbox, '_jobconfig.sh')
 		self._writeJobConfig(cfgPath, jobNum, module, {'GC_SANDBOX': sandbox,
@@ -172,7 +173,7 @@ class LocalWMS(BasicWMS):
 
 			# Cleanup sandbox
 			outFiles = utils.listMapReduce(lambda pat: glob.glob(os.path.join(path, pat)), self.outputFiles)
-			utils.removeFiles(filter(lambda x: x not in outFiles, map(lambda fn: os.path.join(path, fn), os.listdir(path))))
+			utils.removeFiles(ifilter(lambda x: x not in outFiles, imap(lambda fn: os.path.join(path, fn), os.listdir(path))))
 
 			yield (jobNum, path)
 		del activity

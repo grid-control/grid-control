@@ -16,7 +16,7 @@ import re
 from grid_control.datasets.dproc_base import DataProcessor
 from grid_control.datasets.provider_base import DataProvider, DatasetError
 from grid_control.utils import filterBlackWhite, makeEnum
-from python_compat import md5, set
+from python_compat import imap, lfilter, lmap, md5, set
 
 class StatsDataProcessor(DataProcessor):
 	def __init__(self, config):
@@ -41,7 +41,7 @@ class StatsDataProcessor(DataProcessor):
 class EntriesConsistencyDataProcessor(DataProcessor):
 	def processBlock(self, block):
 		# Check entry consistency
-		events = sum(map(lambda x: x[DataProvider.NEntries], block[DataProvider.FileList]))
+		events = sum(imap(lambda x: x[DataProvider.NEntries], block[DataProvider.FileList]))
 		if block.setdefault(DataProvider.NEntries, events) != events:
 			self._log.warning('Inconsistency in block %s#%s: Number of events doesn\'t match (b:%d != f:%d)'
 				% (block[DataProvider.Dataset], block[DataProvider.BlockName], block[DataProvider.NEntries], events))
@@ -59,7 +59,7 @@ class URLDataProcessor(DataProcessor):
 		return url not in self._ignoreURLs
 
 	def processBlock(self, block):
-		block[DataProvider.FileList] = filter(lambda x: self._matchURL(x[DataProvider.URL]), block[DataProvider.FileList])
+		block[DataProvider.FileList] = lfilter(lambda x: self._matchURL(x[DataProvider.URL]), block[DataProvider.FileList])
 		return block
 
 
@@ -68,7 +68,7 @@ class URLRegexDataProcessor(URLDataProcessor):
 
 	def __init__(self, config):
 		URLDataProcessor.__init__(self, config)
-		self._ignoreREs = map(re.compile, self._ignoreURLs)
+		self._ignoreREs = lmap(re.compile, self._ignoreURLs)
 
 	def _matchURL(self, url):
 		for matcher in self._ignoreREs:
@@ -110,7 +110,7 @@ class EntriesCountDataProcessor(DataProcessor):
 				block[DataProvider.NEntries] += fi[DataProvider.NEntries]
 				self._limitEntries -= fi[DataProvider.NEntries]
 				return True
-			block[DataProvider.FileList] = filter(filterEvents, block[DataProvider.FileList])
+			block[DataProvider.FileList] = lfilter(filterEvents, block[DataProvider.FileList])
 		return block
 
 
@@ -122,7 +122,7 @@ class EmptyDataProcessor(DataProcessor):
 
 	def processBlock(self, block):
 		if self._emptyFiles:
-			block[DataProvider.FileList] = filter(lambda fi: fi[DataProvider.NEntries] != 0, block[DataProvider.FileList])
+			block[DataProvider.FileList] = lfilter(lambda fi: fi[DataProvider.NEntries] != 0, block[DataProvider.FileList])
 		if self._emptyBlock:
 			if (block[DataProvider.NEntries] == 0) or not block[DataProvider.FileList]:
 				return

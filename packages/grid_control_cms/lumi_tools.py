@@ -12,6 +12,8 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
+from python_compat import imap, lmap
+
 def makeint(x):
 	if x.strip().upper() not in ['', 'MAX', 'MIN']:
 		return int(x)
@@ -19,8 +21,8 @@ def makeint(x):
 
 def parseLumiFromJSON(data, select = ''):
 	runs = eval(data)
-	rr = map(makeint, select.split('-') + [''])[:2]
-	for run in map(int, runs.keys()):
+	rr = lmap(makeint, select.split('-') + [''])[:2]
+	for run in imap(int, runs.keys()):
 		if (rr[0] and run < rr[0]) or (rr[1] and run > rr[1]):
 			continue
 		for lumi in runs[str(run)]:
@@ -57,22 +59,22 @@ def mergeLumi(rlrange):
 
 def parseLumiFromString(rlrange):
 	""" Parse user supplied lumi info into easier to handle format
-	>>> map(parseLumiFromString, ['1', '1-', '-1', '1-2'])
+	>>> lmap(parseLumiFromString, ['1', '1-', '-1', '1-2'])
 	[([1, None], [1, None]), ([1, None], [None, None]), ([None, None], [1, None]), ([1, None], [2, None])]
-	>>> map(parseLumiFromString, ['1:5', '1:5-', '-1:5', '1:5-2:6'])
+	>>> lmap(parseLumiFromString, ['1:5', '1:5-', '-1:5', '1:5-2:6'])
 	[([1, 5], [1, 5]), ([1, 5], [None, None]), ([None, None], [1, 5]), ([1, 5], [2, 6])]
-	>>> map(parseLumiFromString, ['1-:5', ':5-1', ':5-:6'])
+	>>> lmap(parseLumiFromString, ['1-:5', ':5-1', ':5-:6'])
 	[([1, None], [None, 5]), ([None, 5], [1, None]), ([None, 5], [None, 6])]
-	>>> map(parseLumiFromString, ['1:5-2', '1-2:5'])
+	>>> lmap(parseLumiFromString, ['1:5-2', '1-2:5'])
 	[([1, 5], [2, None]), ([1, None], [2, 5])]
 	"""
 	def parseRunLumi(rl):
 		if ':' in rl:
-			return map(makeint, rl.split(':'))
+			return lmap(makeint, rl.split(':'))
 		else:
 			return [makeint(rl), None]
 	if '-' in rlrange:
-		return tuple(map(parseRunLumi, rlrange.split('-')))
+		return tuple(imap(parseRunLumi, rlrange.split('-')))
 	else:
 		tmp = parseRunLumi(rlrange)
 		return (tmp, tmp)
@@ -85,8 +87,8 @@ def parseLumiFilter(lumiexpr):
 	lumis = []
 	import os
 	from grid_control.config import ConfigError
-	for token in map(str.strip, lumiexpr.split(',')):
-		token = map(str.strip, token.split('|'))
+	for token in imap(str.strip, lumiexpr.split(',')):
+		token = lmap(str.strip, token.split('|'))
 		if os.path.exists(token[0]):
 			try:
 				if len(token) == 1:
@@ -147,13 +149,13 @@ def selectLumi(run_lumi, lumifilter):
 
 def formatLumi(lumifilter):
 	""" Check if lumifilter selects the given run/lumi
-	>>> formatLumi(map(parseLumiFromString, ['1', '1-', '-1', '1-2']))
+	>>> formatLumi(imap(parseLumiFromString, ['1', '1-', '-1', '1-2']))
 	['1:MIN-1:MAX', '1:MIN-9999999:MAX', '1:MIN-1:MAX', '1:MIN-2:MAX']
-	>>> formatLumi(map(parseLumiFromString, ['1:5', '1:5-', '-1:5', '1:5-2:6']))
+	>>> formatLumi(imap(parseLumiFromString, ['1:5', '1:5-', '-1:5', '1:5-2:6']))
 	['1:5-1:5', '1:5-9999999:MAX', '1:MIN-1:5', '1:5-2:6']
-	>>> formatLumi(map(parseLumiFromString, ['1-:5', ':5-1', ':5-:6']))
+	>>> formatLumi(imap(parseLumiFromString, ['1-:5', ':5-1', ':5-:6']))
 	['1:MIN-9999999:5', '1:5-1:MAX', '1:5-9999999:6']
-	>>> formatLumi(map(parseLumiFromString, ['1:5-2', '1-2:5']))
+	>>> formatLumi(imap(parseLumiFromString, ['1:5-2', '1-2:5']))
 	['1:5-2:MAX', '1:MIN-2:5']
 	"""
 	def formatRange(rlrange):
@@ -161,9 +163,9 @@ def formatLumi(lumifilter):
 		default = lambda x, d: (x, d)[x is None]
 		start = [default(start[0], '1'), default(start[1], 'MIN')]
 		end = [default(end[0], '9999999'), default(end[1], 'MAX')]
-		return str.join('-', map(lambda x: '%s:%s' % tuple(x), (start, end)))
+		return str.join('-', imap(lambda x: '%s:%s' % tuple(x), (start, end)))
 	if lumifilter:
-		return map(formatRange, lumifilter)
+		return lmap(formatRange, lumifilter)
 	return ''
 
 

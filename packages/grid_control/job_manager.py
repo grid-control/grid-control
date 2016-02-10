@@ -20,7 +20,7 @@ from grid_control.job_db import Job, JobClass, JobDB, JobError
 from grid_control.job_selector import AndJobSelector, ClassSelector, JobSelector
 from grid_control.output_processor import TaskOutputProcessor
 from grid_control.report import Report
-from python_compat import set, sorted
+from python_compat import ifilter, imap, lfilter, lmap, lzip, set, sorted
 
 class JobManager(NamedPlugin):
 	configSections = NamedPlugin.configSections + ['jobs']
@@ -68,7 +68,7 @@ class JobManager(NamedPlugin):
 	def logDisabled(self):
 		disabled = self.jobDB.getJobs(ClassSelector(JobClass.DISABLED))
 		try:
-			open(self.disableLog, 'w').write(str.join('\n', map(str, disabled)))
+			open(self.disableLog, 'w').write(str.join('\n', imap(str, disabled)))
 		except Exception:
 			raise JobError('Could not write disabled jobs to file %s!' % self.disableLog)
 		if len(disabled) > 0:
@@ -126,8 +126,8 @@ class JobManager(NamedPlugin):
 		retryOK = readyList
 		defaultJob = Job()
 		if self.maxRetry >= 0:
-			retryOK = filter(lambda x: self.jobDB.get(x, defaultJob).attempt - 1 < self.maxRetry, readyList)
-		modOK = filter(self._task.canSubmit, readyList)
+			retryOK = lfilter(lambda x: self.jobDB.get(x, defaultJob).attempt - 1 < self.maxRetry, readyList)
+		modOK = lfilter(self._task.canSubmit, readyList)
 		jobList = set.intersection(set(retryOK), set(modOK))
 
 		if static['showBlocker'] and len(readyList) > 0 and len(jobList) == 0: # No submission but ready jobs
@@ -180,7 +180,7 @@ class JobManager(NamedPlugin):
 
 
 	def wmsArgs(self, jobList):
-		return map(lambda jobNum: (self.jobDB.get(jobNum).wmsId, jobNum), jobList)
+		return lmap(lambda jobNum: (self.jobDB.get(jobNum).wmsId, jobNum), jobList)
 
 
 	def checkJobList(self, wms, jobList):
@@ -293,7 +293,7 @@ class JobManager(NamedPlugin):
 			print '\nThere was a problem with cancelling the following jobs:'
 			self._reportClass.getInstance(self.jobDB, self._task, jobs).display()
 			if (interactive and utils.getUserBool('Do you want to mark them as cancelled?', True)) or not interactive:
-				map(mark_cancelled, jobs)
+				lmap(mark_cancelled, jobs)
 		if interactive:
 			utils.wait(2)
 
@@ -328,7 +328,7 @@ class JobManager(NamedPlugin):
 					jobSet.remove(jobNum)
 					jobObj.attempt = 0
 			if len(jobSet) > 0:
-				output = (Job.enum2str(newState), str.join(', ', map(str, jobSet)))
+				output = (Job.enum2str(newState), str.join(', ', imap(str, jobSet)))
 				raise JobError('For the following jobs it was not possible to reset the state to %s:\n%s' % output)
 
 		if jobChanges:
@@ -363,14 +363,14 @@ class SimpleJobManager(JobManager):
 			self.verifyThresh += [self.verifyThresh[-1]] * (len(self.verifyChunks) - len(self.verifyThresh))
 			utils.vprint('== Verification mode active ==\nSubmission is capped unless the success ratio of a chunk of jobs is sufficent.', level=0)
 			utils.vprint('Enforcing the following (chunksize x ratio) sequence:', level=0)
-			utils.vprint(' > '.join(map(lambda tpl: '%d x %4.2f'%(tpl[0], tpl[1]), zip(self.verifyChunks, self.verifyThresh))), level=0)
+			utils.vprint(' > '.join(imap(lambda tpl: '%d x %4.2f'%(tpl[0], tpl[1]), lzip(self.verifyChunks, self.verifyThresh))), level=0)
 
 
 	def checkJobList(self, wms, jobList):
 		if self.kickOffender:
 			nOffender = len(self.offender) # Waiting list gets larger in case reported == []
 			waitList = self.sample(self.offender, nOffender - max(1, nOffender / 2**self.raster))
-			jobList = filter(lambda x: x not in waitList, jobList)
+			jobList = lfilter(lambda x: x not in waitList, jobList)
 
 		(change, timeoutList, reported) = JobManager.checkJobList(self, wms, jobList)
 		if change is None:
@@ -378,10 +378,10 @@ class SimpleJobManager(JobManager):
 
 		if self.kickOffender:
 			self.raster = utils.QM(reported, 1, self.raster + 1) # make 'raster' iteratively smaller
-			for jobNum in filter(lambda x: x not in reported, jobList):
+			for jobNum in ifilter(lambda x: x not in reported, jobList):
 				self.offender[jobNum] = self.offender.get(jobNum, 0) + 1
-			kickList = filter(lambda jobNum: self.offender[jobNum] >= self.kickOffender, self.offender)
-			for jobNum in set(list(kickList) + utils.QM((len(reported) == 0) and (len(jobList) == 1), jobList, [])):
+			kickList = lfilter(lambda jobNum: self.offender[jobNum] >= self.kickOffender, self.offender)
+			for jobNum in set(kickList + utils.QM((len(reported) == 0) and (len(jobList) == 1), jobList, [])):
 				timeoutList.append(jobNum)
 				self.offender.pop(jobNum)
 

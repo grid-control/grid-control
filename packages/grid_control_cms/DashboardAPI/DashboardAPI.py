@@ -217,18 +217,3 @@ class DashboardAPI :
 
     def free(self) :
         apmonFree()
-        
-##
-## MAIN PROGRAM (FOR TEST)
-##
-if __name__ == '__main__' :
-    args = sys.argv[1:]
-    if len(args) > 0 and args[0] == 'TEST' :
-        dashboard = DashboardAPI('Test')
-        for i in range(100) :
-            #print 'Test', 'testjob_' + `i`, {'testparam':i}
-            dashboard.sendValues({'testparam':i}, 'testjob_' + `i`)
-        dashboard.free()
-        sys.exit(0)
-    report(args)
-    sys.exit(0)

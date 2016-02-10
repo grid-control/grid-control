@@ -16,17 +16,18 @@ import logging
 from grid_control import utils
 from grid_control.datasets.provider_base import DataProvider, DatasetError
 from hpfwk import ExceptionCollector
+from python_compat import imap, lmap
 
 class MultiDatasetProvider(DataProvider):
 	def __init__(self, config, datasetExpr, datasetNick, datasetID, providerProxyList):
 		DataProvider.__init__(self, config, datasetExpr, datasetNick, datasetID)
-		self._providerList = map(lambda p: p.getInstance(), providerProxyList)
+		self._providerList = lmap(lambda p: p.getInstance(), providerProxyList)
 		for provider in self._providerList:
 			provider.setPassthrough()
 
 
 	def queryLimit(self):
-		return max(map(lambda x: x.queryLimit(), self._providerList))
+		return max(imap(lambda x: x.queryLimit(), self._providerList))
 
 
 	def checkSplitter(self, splitter):
