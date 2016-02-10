@@ -137,6 +137,22 @@ try:	# raw_input < Python 3.0
 except Exception:
 	user_input = input
 
+try:	# itertools.imap < Python 3.0
+	import itertools
+	imap = itertools.imap
+	lmap = map
+except:
+	imap = map
+	lmap = lambda *args: list(map(*args))
+
+try:	# itertools.ifilter < Python 3.0
+	import itertools
+	ifilter = itertools.ifilter
+	lfilter = filter
+except:
+	ifilter = filter
+	lfilter = lambda *args: list(filter(*args))
+
 try:	# functools.lru_cache >= Python 3.2
 	import functools
 	lru_cache = functools.lru_cache
@@ -158,11 +174,13 @@ except Exception:
 		(funProxy.fun, funProxy.cache) = (fun, [])
 		return funProxy
 
-__all__ = ['NullHandler', 'StringBuffer', 'StringBufferBase', 'all', 'any',
-	'lru_cache', 'md5', 'next', 'parsedate', 'rsplit', 'set', 'sorted', 'user_input']
+__all__ = ['NullHandler', 'StringBuffer', 'StringBufferBase',
+	'all', 'any', 'ifilter', 'imap', 'lfilter', 'lmap', 'lru_cache',
+	'md5', 'next', 'parsedate', 'rsplit', 'set', 'sorted', 'user_input']
 
 if __name__ == '__main__':
-	import os, re, doctest
+	import os, re, doctest, logging
+	logging.basicConfig()
 	doctest.testmod()
 	for (root, dirs, files) in os.walk('.'):
 		for fn in filter(lambda fn: fn.endswith('.py') and not fn.endswith("python_compat.py"), files):
@@ -174,8 +192,8 @@ if __name__ == '__main__':
 			for import_line in filter(lambda line: 'python_compat' in line, tmp.splitlines()):
 				imported.update(map(str.strip, import_line.split(None, 3)[3].split(',')))
 			if not needed and ('python_compat' in tmp):
-				print('%s: python_compat import not needed!' % fn)
+				logging.critical('%s: python_compat import not needed!' % fn)
 			for feature in needed.difference(imported):
-				print('%s: missing import of "%s"' % (fn, feature))
+				logging.critical('%s: missing import of "%s"' % (fn, feature))
 			for feature in imported.difference(needed):
-				print('%s: unnecessary import of "%s"' % (fn, feature))
+				logging.critical('%s: unnecessary import of "%s"' % (fn, feature))
