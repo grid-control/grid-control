@@ -198,7 +198,7 @@ def main():
 				print('Dataset: %s' % dsName)
 			if block.get(DataProvider.BlockName, None):
 				print('Blockname: %s' % block[DataProvider.BlockName])
-			if block[DataProvider.Locations] == None:
+			if block[DataProvider.Locations] is None:
 				print('\tNo location contraint specified')
 			elif block[DataProvider.Locations] == []:
 				print('\tNot located at anywhere')

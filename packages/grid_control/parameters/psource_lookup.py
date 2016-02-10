@@ -1,4 +1,4 @@
-#-#  Copyright 2012-2015 Karlsruhe Institute of Technology
+#-#  Copyright 2012-2016 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -37,7 +37,7 @@ class LookupMatcher:
 		for lookupValues in self.lookupOrder:
 			match = True
 			for (sval, lval, lmatch) in zip(srcValues, lookupValues, self.lookupFunctions):
-				if sval != None:
+				if sval is not None:
 					match = match and lmatch(sval, lval)
 			if match:
 				return lookupValues
@@ -53,7 +53,7 @@ def lookupConfigParser(pconfig, key, lookup):
 		src.fillParameterKeys(result)
 		return result
 	key = collectKeys(key)[0]
-	if lookup == None:
+	if lookup is None:
 		lookup = [pconfig.get('default lookup')]
 	else:
 		lookup = collectKeys(lookup)
@@ -103,11 +103,11 @@ class SimpleLookupParameterSource(SingleParameterSource):
 
 	def fillParameterInfo(self, pNum, result):
 		lookupResult = self.matcher.lookup(result)
-		if lookupResult == None:
+		if lookupResult is None:
 			return
 		elif len(lookupResult) != 1:
 			raise ConfigError("%s can't handle multiple lookup parameter sets!" % self.__class__.__name__)
-		elif lookupResult[0] != None:
+		elif lookupResult[0] is not None:
 			result[self.key] = lookupResult[0]
 
 	def show(self, level = 0):
@@ -141,7 +141,7 @@ class SwitchingLookupParameterSource(SingleParameterSource):
 				for (lookupIdx, tmp) in enumerate(lookupResult):
 					result.append((pNum, lookupIdx))
 
-		if self.psource.getMaxParameters() == None:
+		if self.psource.getMaxParameters() is None:
 			addEntry(None)
 		else:
 			for pNum in range(self.psource.getMaxParameters()):

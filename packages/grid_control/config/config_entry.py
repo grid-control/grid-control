@@ -24,7 +24,7 @@ noDefault = utils.makeEnum(['noDefault'])
 
 # return canonized section or option string
 def standardConfigForm(value):
-	if value != None:
+	if value is not None:
 		if not isinstance(value, list):
 			value = [value]
 		return map(lambda x: str(x).strip().lower(), value)

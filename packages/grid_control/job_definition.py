@@ -1,4 +1,4 @@
-#-#  Copyright 2013 Karlsruhe Institute of Technology
+#-#  Copyright 2013-2016 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -21,7 +21,7 @@ class JobDef(object):
 		(self.memory, self.time_wall, self.time_cpu, self.cores) = (None, None, None, None)
 
 	def _combineReq(self, fun, oldValue, newValue):
-		if oldValue != None:
+		if oldValue is not None:
 			return fun(oldValue, newValue)
 		return newValue
 

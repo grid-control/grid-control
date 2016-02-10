@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-#-#  Copyright 2009-2014 Karlsruhe Institute of Technology
+#-#  Copyright 2009-2016 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -76,7 +76,7 @@ def extractJobTiming(jInfo, task ):
 	jobResult[JobResultEnum.FILESIZE_IN_TOTAL] = total_size_in
 
 	# look for processed events, if available
-	if ( task != None ):
+	if ( task is not None ):
 		jobConfig = task.getJobConfig( jobNum )
 		jobResult[JobResultEnum.EVENT_COUNT] = int( jobConfig["MAX_EVENTS"] )
 		# make sure an undefined max event count ( -1 in cmssw ) is treated
@@ -126,7 +126,7 @@ def getEventCount(jobInfo):
 
 
 def getEventRate(jobInfo):
-	if (getPayloadRuntime(jobInfo) > 0) and (getEventCount(jobInfo) != None):
+	if (getPayloadRuntime(jobInfo) > 0) and (getEventCount(jobInfo) is not None):
 		return getEventCount(jobInfo) / ( getPayloadRuntime(jobInfo) / 60.0 )
 	else:
 		return None
@@ -269,7 +269,7 @@ def getQuantityAtTimeSpan(jobInfo, timeStart, timeEnd, timingExtract, quantityEx
 	fractionOutside = min(1.0, fractionOutside)
 
 	q = quantityExtract(jobInfo)
-	if q == None:
+	if q is None:
 		return None
 
 	return q * ( 1.0 - fractionOutside )

@@ -70,7 +70,7 @@ class CMSProvider(DataProvider):
 			for lumi in lumilist:
 				if selectLumi((lumi[runkey], lumi[lumikey]), self.selectedLumis):
 					return True
-		return self.selectedLumis == None
+		return self.selectedLumis is None
 
 
 	def nodeFilter(self, nameSiteDB, complete):

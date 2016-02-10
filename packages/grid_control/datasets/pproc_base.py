@@ -79,14 +79,14 @@ class LocationPartitionProcessor(PartitionProcessor):
 
 	def process(self, pNum, splitInfo, result):
 		locations = splitInfo.get(DataSplitter.Locations)
-		if locations != None:
+		if locations is not None:
 			locations = filterBlackWhite(locations, self._filter, addUnmatched = True)
 		if self._preference:
 			if not locations: # [] or None
 				locations = self._preference
 			elif any(map(lambda x: x in self._preference, locations)): # preferred location available
 				locations = filter(lambda x: x in self._preference, locations)
-		if self._reqs and (locations != None):
+		if self._reqs and (locations is not None):
 			result[ParameterInfo.REQS].append((WMS.STORAGE, locations))
 		if self._disable:
 			result[ParameterInfo.ACTIVE] = result[ParameterInfo.ACTIVE] and (locations != [])

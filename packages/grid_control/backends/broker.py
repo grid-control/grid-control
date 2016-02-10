@@ -30,7 +30,7 @@ class Broker(NamedPlugin):
 		if not cached or (self._itemsDiscovered == False):
 			self._itemsDiscovered = discoverFun()
 			msg = 'an unknown number of'
-			if self._itemsDiscovered != None:
+			if self._itemsDiscovered is not None:
 				msg = str(len(self._itemsDiscovered))
 			utils.vprint('Broker discovered %s %s' % (msg, self._itemName))
 		return self._itemsDiscovered
@@ -44,6 +44,6 @@ class Broker(NamedPlugin):
 
 	def brokerAdd(self, reqs, reqEntry):
 		result = self._broker(reqs, self._itemsStart)
-		if result != None:
+		if result is not None:
 			reqs.append((reqEntry, result))
 		return reqs

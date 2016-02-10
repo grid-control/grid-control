@@ -1,4 +1,4 @@
-#-#  Copyright 2010-2015 Karlsruhe Institute of Technology
+#-#  Copyright 2010-2016 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -112,8 +112,8 @@ def filterLumiFilter(runs, lumifilter):
 	for filterEntry in lumifilter:
 		(sel_start, sel_end) = (filterEntry[0][0], filterEntry[1][0])
 		for run in runs:
-			if (sel_start == None) or (run >= sel_start):
-				if (sel_end == None) or (run <= sel_end):
+			if (sel_start is None) or (run >= sel_start):
+				if (sel_end is None) or (run <= sel_end):
 					yield filterEntry
 
 
@@ -132,15 +132,15 @@ def selectLumi(run_lumi, lumifilter):
 	for (sel_start, sel_end) in lumifilter:
 		(sel_start_run, sel_start_lumi) = sel_start
 		(sel_end_run, sel_end_lumi) = sel_end
-		if (sel_start_run == None) or (run >= sel_start_run):
-			if (sel_end_run == None) or (run <= sel_end_run):
+		if (sel_start_run is None) or (run >= sel_start_run):
+			if (sel_end_run is None) or (run <= sel_end_run):
 				# At this point, run_lumi is contained in the selected run
-				if (sel_start_run != None) and (run > sel_start_run):
+				if (sel_start_run is not None) and (run > sel_start_run):
 					sel_start_lumi = None
-				if (sel_start_lumi == None) or (lumi >= sel_start_lumi):
-					if (sel_end_run != None) and (run < sel_end_run):
+				if (sel_start_lumi is None) or (lumi >= sel_start_lumi):
+					if (sel_end_run is not None) and (run < sel_end_run):
 						sel_end_lumi = None
-					if (sel_end_lumi == None) or (lumi <= sel_end_lumi):
+					if (sel_end_lumi is None) or (lumi <= sel_end_lumi):
 						return True
 	return False
 
@@ -158,7 +158,7 @@ def formatLumi(lumifilter):
 	"""
 	def formatRange(rlrange):
 		(start, end) = rlrange
-		default = lambda x, d: (x, d)[x == None]
+		default = lambda x, d: (x, d)[x is None]
 		start = [default(start[0], '1'), default(start[1], 'MIN')]
 		end = [default(end[0], '9999999'), default(end[1], 'MAX')]
 		return str.join('-', map(lambda x: '%s:%s' % tuple(x), (start, end)))

@@ -129,7 +129,7 @@ class VarSelector(JobSelector):
 		self.jobCfg = lambda jobNum, var: str(kwargs['task'].getJobConfig(jobNum).get(var, ''))
 
 	def __call__(self, jobNum, jobObj):
-		return reduce(operator.and_, map(lambda (var, rx): rx.search(self.jobCfg(jobNum, var)) != None, self.rxDict))
+		return reduce(operator.and_, map(lambda (var, rx): rx.search(self.jobCfg(jobNum, var)) is not None, self.rxDict))
 
 
 class NickSelector(RegExSelector):

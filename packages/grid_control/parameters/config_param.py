@@ -1,4 +1,4 @@
-#-#  Copyright 2012-2015 Karlsruhe Institute of Technology
+#-#  Copyright 2012-2016 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -24,14 +24,14 @@ def parseTuple(t, delimeter):
 
 
 def frange(start, end = None, num = None, steps = None, format = '%g'):
-	if (end == None) and (num == None):
+	if (end is None) and (num is None):
 		raise exceptions.ConfigError('frange: No exit condition!')
-	if (end != None) and (num != None) and (steps != None):
+	if (end is not None) and (num is not None) and (steps is not None):
 		raise exceptions.ConfigError('frange: Overdetermined parameters!')
-	if (end != None) and (num != None) and (steps == None):
+	if (end is not None) and (num is not None) and (steps is None):
 		steps = (end - start) / (num - 1)
 		num -= 1
-	if (end != None) and (num == None):
+	if (end is not None) and (num is None):
 		steps = utils.QM(steps, steps, 1)
 		num = int(1 + (end - start) / steps)
 	result = map(lambda i: start + utils.QM(steps, steps, 1) * i, range(num)) + utils.QM(end, [end], [])
@@ -55,7 +55,7 @@ def parseParameterOptions(options):
 	for rawOpt in options:
 		var, opt = parseParameterOption(rawOpt)
 		optDict[(var, opt)] = rawOpt
-		if opt == None:
+		if opt is None:
 			if isinstance(var, tuple):
 				for sk in var:
 					varDict[sk] = var

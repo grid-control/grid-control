@@ -137,7 +137,7 @@ class LocationDataProcessor(DataProcessor):
 			self._locationfilter = None
 
 	def processBlock(self, block):
-		if block[DataProvider.Locations] != None:
+		if block[DataProvider.Locations] is not None:
 			sites = filterBlackWhite(block[DataProvider.Locations], self._locationfilter, addUnmatched = True)
 			if len(sites) == 0 and len(block[DataProvider.FileList]) != 0:
 				if not len(block[DataProvider.Locations]):

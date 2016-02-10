@@ -1,4 +1,4 @@
-#-#  Copyright 2011-2015 Karlsruhe Institute of Technology
+#-#  Copyright 2011-2016 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -27,7 +27,7 @@ class MetadataSplitter(FileLevelSplitter):
 			files.sort(lambda a, b: self.metaCmp(block[DataProvider.Metadata], block, a, b))
 			(fileStack, reprElement) = ([], None)
 			for fi in files:
-				if reprElement == None:
+				if reprElement is None:
 					reprElement = fi
 				if self.metaCmp(block[DataProvider.Metadata], block, fi, reprElement) != 0:
 					yield self.newBlock(block, fileStack)

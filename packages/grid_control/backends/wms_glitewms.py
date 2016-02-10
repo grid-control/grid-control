@@ -84,7 +84,7 @@ class DiscoverWMS_Lazy: # TODO: Move to broker infrastructure
 		return self.matchSites(self.getWMS())
 
 	def listWMS_good(self):
-		if (self.pos == None) or (len(self.wms_all) == 0): # initial discovery
+		if (self.pos is None) or (len(self.wms_all) == 0): # initial discovery
 			self.pos = 0
 			self.wms_all = self.listWMS_all()
 		if self.pos == len(self.wms_all): # self.pos = None => perform rediscovery in next step
@@ -104,17 +104,17 @@ class DiscoverWMS_Lazy: # TODO: Move to broker infrastructure
 		log = utils.ActivityLog('Discovering available WMS services')
 		wms_best_list = []
 		for wms in self.listWMS_good():
-			if wms == None:
+			if wms is None:
 				continue
 			ping, pingtime = self.pingDict.get(wms, (None, 0))
 			if time.time() - pingtime > 30 * 60: # check every ~30min
 				ping = utils.ping_host(wms.split('://')[1].split('/')[0].split(':')[0])
 				self.pingDict[wms] = (ping, time.time() + 10 * 60 * random.random()) # 10 min variation
-			if ping != None:
+			if ping is not None:
 				wms_best_list.append((wms, ping))
 		wms_best_list.sort(key = lambda (name, ping): ping)
 		result = choice_exp(wms_best_list)
-		if result != None:
+		if result is not None:
 			wms, ping = result # reduce timeout by 5min for chosen wms => re-ping every 6 submits
 			self.pingDict[wms] = (ping, self.pingDict[wms][1] + 5*60)
 			result = wms
@@ -170,7 +170,7 @@ class GliteWMS(GridWMS):
 
 			if proc.wait() != 0:
 				proc.logError(self.errorLog, log = log)
-			return (self._submitParams.get('-d', None) != None)
+			return (self._submitParams.get('-d', None) is not None)
 		finally:
 			utils.removeFiles([log])
 

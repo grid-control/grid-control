@@ -105,7 +105,7 @@ class HistoricalConfigView(ConfigView):
 
 	def _matchEntries(self, container, option_list = None):
 		key_list = container.getKeys()
-		if option_list != None:
+		if option_list is not None:
 			key_list = filter(lambda key: key in key_list, option_list)
 
 		result = []
@@ -113,7 +113,7 @@ class HistoricalConfigView(ConfigView):
 		getOrderedEntryKey = lambda entry: (getFilteredSectionKey(entry), entry.order)
 		for key in key_list:
 			(entries, entries_reverse) = ([], [])
-			for entry in filter(lambda x: getFilteredSectionKey(x) != None, container.getEntries(key)):
+			for entry in filter(lambda x: getFilteredSectionKey(x) is not None, container.getEntries(key)):
 				if entry.section.endswith('!'):
 					entries_reverse.append(entry)
 				else:
@@ -159,7 +159,7 @@ class HistoricalConfigView(ConfigView):
 		# Process current entry
 		(defaultEntry, defaultEntry_fallback) = self._getDefaultEntries(option_list, default_str, persistent, oldEntry)
 		curEntry = self._getEntry(option_list, defaultEntry, defaultEntry_fallback)
-		if curEntry == None:
+		if curEntry is None:
 			raise ConfigError('"[%s] %s" does not exist!' % (self._getSection(specific = False), option_list[0]))
 		description = 'Using user supplied %s'
 		if persistent and (defaultEntry.accessed or defaultEntry.accessed):
@@ -194,12 +194,12 @@ class SimpleConfigView(HistoricalConfigView):
 		result = default
 		if hasattr(self._parent, memberName): # get from parent if available
 			result = getattr(self._parent, memberName)
-		if setValue == None:
+		if setValue is None:
 			result = setValue
 		elif setValue != selectorUnchanged:
 			result = normValues(list(collect(setValue)))
 		# Add to settings
-		if addValue and (result != None):
+		if addValue and (result is not None):
 			result = result + normValues(list(collect(addValue)))
 		elif addValue:
 			result = normValues(list(collect(addValue)))
@@ -210,7 +210,7 @@ class SimpleConfigView(HistoricalConfigView):
 		return '<%s(sections = %r)>' % (self.__class__.__name__, self._cfgSections)
 
 	def _getSectionKey(self, section):
-		if self._cfgSections == None:
+		if self._cfgSections is None:
 			return section
 		if section in self._cfgSections:
 			return self._cfgSections.index(section)

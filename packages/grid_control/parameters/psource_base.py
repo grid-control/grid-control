@@ -1,4 +1,4 @@
-#-#  Copyright 2009-2015 Karlsruhe Institute of Technology
+#-#  Copyright 2009-2016 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -61,14 +61,14 @@ class ParameterSource(Plugin):
 
 	def resyncSetup(self, interval = None, force = None, info = None):
 		self.resyncInfo = info # User override for base resync infos
-		if interval != None:
+		if interval is not None:
 			self.resyncTime = interval # -1 == always, 0 == disabled, >0 == time in sec between resyncs
 			self.resyncLast = time.time()
 		if force == True:
 			self.resyncLast = None # Force resync on next attempt
 
 	def resyncEnabled(self):
-		if (self.resyncLast == None) or (self.resyncTime == -1):
+		if (self.resyncLast is None) or (self.resyncTime == -1):
 			return True
 		if self.resyncTime > 0:
 			if time.time() - self.resyncLast > self.resyncTime:

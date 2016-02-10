@@ -298,7 +298,7 @@ class ProcInfo:
 			line = FNET.readline();
 			while(line != ''):
 				m = re.match("\s*eth(\d):(\d+)\s+\d+\s+(\d+)\s+\d+\s+\d+\s+\d+\s+\d+\s+\d+\s+(\d+)\s+\d+\s+(\d+)", line);
-				if m != None:
+				if m is not None:
 					this.DATA['raw_eth'+m.group(1)+'_in'] = float(m.group(2));
 					this.DATA['raw_eth'+m.group(1)+'_out'] = float(m.group(4));
 					this.DATA['raw_eth'+m.group(1)+'_errs'] = int(m.group(3)) + int(m.group(5));
@@ -386,15 +386,15 @@ class ProcInfo:
 	def parsePSTime (this, my_time):
 		my_time = my_time.strip();
 		m = re.match("(\d+)-(\d+):(\d+):(\d+)", my_time);
-		if m != None:
+		if m is not None:
 			return int(m.group(1)) * 24 * 3600 + int(m.group(2)) * 3600 + int(m.group(3)) * 60 + int(m.group(4));
 		else:
 			m = re.match("(\d+):(\d+):(\d+)", my_time);
-			if(m != None):
+			if(m is not None):
 				return int(m.group(1)) * 3600 + int(m.group(2)) * 60 + int(m.group(3));
 			else:
 				m = re.match("(\d+):(\d+)", my_time);
-				if(m != None):
+				if(m is not None):
 					return int(m.group(1)) * 60 + int(m.group(2));
 				else:
 					return 0;
@@ -418,7 +418,7 @@ class ProcInfo:
 			while(line != ''):
 				line = line.strip();
 				m = re.match("(\S+)\s+(\S+)\s+(\S+)\s+(\S+)\s+(\S+)\s+(\S+)\s+(\S+)\s+(.+)", line);
-				if m != None:
+				if m is not None:
 					apid, etime1, cputime1, pcpu1, pmem1, rsz1, vsz1, comm1 = m.group(1), m.group(2), m.group(3), m.group(4), m.group(5), m.group(6), m.group(7), m.group(8);
 					sec = this.parsePSTime(etime1);
 					if sec > etime: 	# the elapsed time is the maximum of all elapsed
@@ -480,7 +480,7 @@ class ProcInfo:
 			DF = os.popen("df -k "+workDir+" | tail -1");
 			line = DF.readline().strip();
 			m = re.match("\S+\s+(\S+)\s+(\S+)\s+(\S+)\s+(\S+)%", line);
-			if m != None:
+			if m is not None:
 				this.JOBS[pid]['DATA']['disk_total'] = float(m.group(1)) / 1024.0;
 				this.JOBS[pid]['DATA']['disk_used']  = float(m.group(2)) / 1024.0;
 				this.JOBS[pid]['DATA']['disk_free']  = float(m.group(3)) / 1024.0;
@@ -562,14 +562,14 @@ class ProcInfo:
 				    result[key] = dataHash[key];
 			
 			m = re.match("^net_(.*)$", param);
-			if m == None:
+			if m is None:
 				m = re.match("^(ip)$", param);
-			if m != None:
+			if m is not None:
 				net_param = m.group(1);
 				#this.logger.log(Logger.DEBUG, "Querying param "+net_param);
 				for key, value in dataHash.items():
 					m = re.match("eth\d_"+net_param, key);
-					if m != None:
+					if m is not None:
 						result[key] = value;
 			else:
 				if param == 'processes':

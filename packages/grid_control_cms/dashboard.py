@@ -1,4 +1,4 @@
-#-#  Copyright 2009-2015 Karlsruhe Institute of Technology
+#-#  Copyright 2009-2016 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -51,7 +51,7 @@ class DashBoard(Monitoring):
 		if "http" not in jobObj.wmsId:
 			dashId = '%s_https://%s:/%s' % (jobNum, backend, rawId)
 		msg = utils.mergeDicts([{'taskId': taskId, 'jobId': dashId, 'sid': rawId}] + usermsg)
-		DashboardAPI(taskId, dashId).publish(**utils.filterDict(msg, vF = lambda v: v != None))
+		DashboardAPI(taskId, dashId).publish(**utils.filterDict(msg, vF = lambda v: v is not None))
 
 
 	# Called on job submission

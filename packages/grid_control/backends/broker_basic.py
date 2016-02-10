@@ -1,4 +1,4 @@
-#-#  Copyright 2012-2014 Karlsruhe Institute of Technology
+#-#  Copyright 2012-2016 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -87,7 +87,7 @@ class SimpleBroker(FilterBroker):
 	def _broker(self, reqs, items):
 		if not self._itemsDiscovered:
 			return FilterBroker._broker(self, reqs, self._itemsStart) # Use user constrained items
-		items = utils.QM(self._itemsStart != None, self._itemsStart, self._itemsSorted) # or discovered items
+		items = utils.QM(self._itemsStart is not None, self._itemsStart, self._itemsSorted) # or discovered items
 
 		# Match items which fulfill the requirements
 		def matcher(props, cmp_fun = cmp):
@@ -112,7 +112,7 @@ class StorageBroker(Broker):
 		result = Broker._broker(self, reqs, items)
 		for (rType, rValue) in reqs:
 			if (rType == WMS.STORAGE) and rValue:
-				if result == None:
+				if result is None:
 					result = []
 				for rval in rValue:
 					result.extend(self._storageDict.get(rval, []))

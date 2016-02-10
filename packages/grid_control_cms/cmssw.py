@@ -148,7 +148,7 @@ class CMSSW(DataTask):
 		# Check that for dataset jobs the necessary placeholders are in the config file
 		self.prepare = config.getBool('prepare config', False)
 		fragment = config.getPath('instrumentation fragment', utils.pathShare('fragmentForCMSSW.py', pkg = 'grid_control_cms'))
-		if self.dataSplitter != None:
+		if self.dataSplitter is not None:
 			if config.getState('init', detail = 'sandbox'):
 				if len(self.configFiles) > 0:
 					self.instrumentCfgQueue(self.configFiles, fragment, mustPrepare = True)
@@ -217,7 +217,7 @@ class CMSSW(DataTask):
 	def getSubmitInfo(self, jobNum):
 		result = DataTask.getSubmitInfo(self, jobNum)
 		result.update({'application': self.scramEnv['SCRAM_PROJECTVERSION'], 'exe': 'cmsRun'})
-		if self.dataSplitter == None:
+		if self.dataSplitter is None:
 			result.update({'nevtJob': self.eventsPerJob})
 		return result
 
@@ -297,7 +297,7 @@ class CMSSW(DataTask):
 
 	def getVarNames(self):
 		result = DataTask.getVarNames(self)
-		if self.dataSplitter == None:
+		if self.dataSplitter is None:
 			result.append('MAX_EVENTS')
 		if self.selectedLumis:
 			result.append('LUMI_RANGE')
@@ -307,7 +307,7 @@ class CMSSW(DataTask):
 	# Get job dependent environment variables
 	def getJobConfig(self, jobNum):
 		data = DataTask.getJobConfig(self, jobNum)
-		if self.dataSplitter == None:
+		if self.dataSplitter is None:
 			data['MAX_EVENTS'] = self.eventsPerJob
 		if self.selectedLumis:
 			data['LUMI_RANGE'] = self.getActiveLumiFilter(self.selectedLumis)

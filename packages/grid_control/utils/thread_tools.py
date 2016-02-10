@@ -1,4 +1,4 @@
-#-#  Copyright 2015 Karlsruhe Institute of Technology
+#-#  Copyright 2015-2016 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -37,7 +37,7 @@ class GCEvent:
 		return self._event.clear()
 
 	def wait(self, timeout, description = 'event'):
-		if timeout == None:
+		if timeout is None:
 			timeout = blocking_equivalent
 		try:
 			return self._event.wait(timeout)
@@ -54,7 +54,7 @@ class GCLock:
 		try:
 			if timeout == 0: # Non-blocking
 				return self._lock.acquire(False)
-			if timeout == None: # Blocking
+			if timeout is None: # Blocking
 				timeout = blocking_equivalent
 			start = time.time()
 			while time.time() - start < timeout: # Polling lock until timeout

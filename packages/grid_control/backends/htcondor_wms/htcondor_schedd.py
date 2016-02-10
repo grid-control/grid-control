@@ -1,4 +1,4 @@
-#-#  Copyright 2014-2015 Karlsruhe Institute of Technology
+#-#  Copyright 2014-2016 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -75,7 +75,7 @@ class HTCScheddBase(Plugin):
 		else:
 			self._adapter, _ = ProcessAdapterFactory(URI, externalSchemes=["spool"])
 		self._URI = URI or self._adapter.getURI()
-		assert self._adapter != None, "Bug! Schedd initialization with invalid adapter data."
+		assert self._adapter is not None, "Bug! Schedd initialization with invalid adapter data."
 		assert adapter.getType() in self.adapterTypes, "Bug! Got adapter of type '%s', expected '%s'" % (adapter.getType(), "' or '".join(self.adapterType))
 		self.parentPool = parentPool
 

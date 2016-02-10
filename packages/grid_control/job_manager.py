@@ -52,7 +52,7 @@ class JobManager(NamedPlugin):
 		if nJobs < 0:
 			# No valid number of jobs given in config file - task has to provide number of jobs
 			nJobs = task.getMaxJobs()
-			if nJobs == None:
+			if nJobs is None:
 				raise ConfigError("Task module doesn't provide max number of Jobs!")
 		else:
 			# Task module doesn't have to provide number of jobs
@@ -95,7 +95,7 @@ class JobManager(NamedPlugin):
 			print '(%s)' % jobObj.get('dest')
 		elif (state in [Job.WAITING, Job.ABORTED, Job.DISABLED]) and jobObj.get('reason'):
 			print '(%s)' % jobObj.get('reason')
-		elif (state == Job.SUCCESS) and jobObj.get('runtime', None) != None:
+		elif (state == Job.SUCCESS) and jobObj.get('runtime', None) is not None:
 			print '(runtime %s)' % utils.strTime(utils.QM(jobObj.get('runtime') != '', jobObj.get('runtime'), 0))
 		elif (state == Job.FAILED):
 			msg = []
@@ -164,7 +164,7 @@ class JobManager(NamedPlugin):
 			submitted.append(jobNum)
 			jobObj = self.jobDB.get(jobNum, create = True)
 
-			if wmsId == None:
+			if wmsId is None:
 				# Could not register at WMS
 				self._update(jobObj, jobNum, Job.FAILED)
 				continue
@@ -212,7 +212,7 @@ class JobManager(NamedPlugin):
 
 		# Check jobs in the joblist and return changes, timeouts and successfully reported jobs
 		(change, timeoutList, reported) = self.checkJobList(wms, jobList)
-		if change == None: # neither True or False => abort
+		if change is None: # neither True or False => abort
 			return False
 
 		# Cancel jobs which took too long
@@ -241,7 +241,7 @@ class JobManager(NamedPlugin):
 
 		for jobNum, retCode, data, outputdir in wms.retrieveJobs(self.wmsArgs(jobList)):
 			jobObj = self.jobDB.get(jobNum)
-			if jobObj == None:
+			if jobObj is None:
 				continue
 
 			if retCode == 0:
@@ -279,7 +279,7 @@ class JobManager(NamedPlugin):
 
 		def mark_cancelled(jobNum):
 			jobObj = self.jobDB.get(jobNum)
-			if jobObj == None:
+			if jobObj is None:
 				return
 			self._update(jobObj, jobNum, Job.CANCELLED)
 			self._eventhandler.onJobUpdate(wms, jobObj, jobNum, {'reason': 'cancelled'})
@@ -374,7 +374,7 @@ class SimpleJobManager(JobManager):
 			jobList = filter(lambda x: x not in waitList, jobList)
 
 		(change, timeoutList, reported) = JobManager.checkJobList(self, wms, jobList)
-		if change == None:
+		if change is None:
 			return (change, timeoutList, reported) # abort check
 
 		if self.kickOffender:

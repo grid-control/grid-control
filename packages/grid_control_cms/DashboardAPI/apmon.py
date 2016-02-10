@@ -269,11 +269,11 @@ class ApMon:
 		
 		NOTE that python doesn't know about 32-bit floats (only 64-bit floats!)
 		"""
-		if (clusterName == None) or (clusterName == ""):
+		if (clusterName is None) or (clusterName == ""):
 			clusterName = self.__defaultUserCluster
 		else:
 			self.__defaultUserCluster = clusterName
-		if nodeName == None:
+		if nodeName is None:
 			nodeName = self.__defaultUserNode
 		else:
 			self.__defaultUserNode = nodeName
@@ -310,9 +310,9 @@ class ApMon:
 		Set the cluster and node names where to send system related information.
 		"""
 		self.__bgMonitorLock.acquire();
-		if (clusterName != None) and (clusterName != ""):
+		if (clusterName is not None) and (clusterName != ""):
 		    self.__defaultSysMonCluster = clusterName;
-		if (nodeName != None) and (nodeName != ""):
+		if (nodeName is not None) and (nodeName != ""):
 		    self.__defaultSysMonNode = nodeName;
 		self.__bgMonitorLock.release();
 	
@@ -343,7 +343,7 @@ class ApMon:
 			if(options['sys_monitoring'] and (mustSend or options['sys_data_sent'] + options['sys_interval'] <= now)):
 				for param, active in options.items():
 					m = re.match("sys_(.+)", param);
-					if(m != None and active):
+					if(m is not None and active):
 						param = m.group(1);
 						if not (param == 'monitoring' or param == 'interval' or param == 'data_sent'):
 							sysParams.append(param)
@@ -351,7 +351,7 @@ class ApMon:
 			if(options['job_monitoring'] and (mustSend or options['job_data_sent'] + options['job_interval'] <= now)):
 				for param, active in options.items():
 					m = re.match("job_(.+)", param);
-					if(m != None and active):
+					if(m is not None and active):
 						param = m.group(1);
 						if not (param == 'monitoring' or param == 'interval' or param == 'data_sent'):
 							jobParams.append(param);
@@ -436,7 +436,7 @@ class ApMon:
 		#self.__bgMonitorEvent.set()
 		#self.__bgMonitorFinished.wait()
 		
-		if self.__udpSocket != None:
+		if self.__udpSocket is not None:
 			self.logger.log(Logger.DEBUG, "Closing UDP socket on ApMon object destroy.");
 			self.__udpSocket.close();
 			self.__udpSocket = None;
@@ -569,9 +569,9 @@ class ApMon:
 				continue
 			elif line.startswith("xApMon_"):
 				m = re.match("xApMon_(.*)", line);
-				if m != None:
+				if m is not None:
 					m = re.match("(\S+)\s*=\s*(\S+)", m.group(1));
-					if m != None:
+					if m is not None:
 						param = m.group(1); value = m.group(2);
 						if(value.upper() == "ON"):
 							value = True;
@@ -623,11 +623,11 @@ class ApMon:
 			self.logger.log(Logger.ERROR, "Cannot open "+url+". Incorrectly formed URL.")
 			return None
 		host = r.group(1)
-		if r.group(3) == None:
+		if r.group(3) is None:
 			port = 80	# no port is given, pick the default 80 for HTTP
 		else:
 			port = int(r.group(3))
-		if r.group(4) == None:
+		if r.group(4) is None:
 			path = ""	# no path is give, let server decide
 		else:
 			path = r.group(4)
@@ -669,7 +669,7 @@ class ApMon:
 				if line == "":
 					break  # exit at the end of file or at the first empty line (finish of http headers)
 				r = re.compile("HTTP/\d.\d (\d+)").match(line)
-				if r != None:
+				if r is not None:
 					httpStatus = int(r.group(1))
         		if httpStatus == 200:
 				return file
@@ -696,7 +696,7 @@ class ApMon:
 			self.logger.log(Logger.DEBUG, "Dropping packet since rate is too fast!");
 			return;
 		
-		if destination == None:
+		if destination is None:
 			self.logger.log(Logger.WARNING, "Destination is None");
 			return;
 		
@@ -731,7 +731,7 @@ class ApMon:
 		
 		xdrPacker.pack_int (sent_params_nr)
 		
-		if (timeStamp != None) and (timeStamp > 0):
+		if (timeStamp is not None) and (timeStamp > 0):
 			paramsPacker.pack_int(timeStamp);
 		
 		buffer = xdrPacker.get_buffer() + paramsPacker.get_buffer()

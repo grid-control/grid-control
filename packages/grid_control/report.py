@@ -1,4 +1,4 @@
-#-#  Copyright 2007-2015 Karlsruhe Institute of Technology
+#-#  Copyright 2007-2016 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -18,7 +18,7 @@ from hpfwk import AbstractError, Plugin
 
 class Report(Plugin):
 	def __init__(self, jobDB, task, jobs = None, configString = ''):
-		if jobs == None:
+		if jobs is None:
 			jobs = jobDB.getJobs()
 		(self._jobDB, self._task, self._jobs) = (jobDB, task, jobs)
 		# FIXME: really store task for later access? maybe just use task during init run?

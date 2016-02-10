@@ -39,7 +39,7 @@ def formatVariables(variables, showLongVariables = False):
 		yield '\tLocal variables:'
 		for line in display(list(variables.keys()), variables):
 			yield line
-	if classVariable != None:
+	if classVariable is not None:
 		yield '\tClass variables (%s):' % safeRepr(classVariable)
 		if hasattr(classVariable, '__dict__'):
 			classVariables = classVariable.__dict__
@@ -60,7 +60,7 @@ def formatStack(frames, codeContext = 0, showVariables = True, showLongVariables
 		# Output relevant code fragment
 		linecache.checkcache(frame['file'])
 		trackingDisplay = ''
-		if frame.get('trackingID') != None:
+		if frame.get('trackingID') is not None:
 			trackingDisplay = '%s-' % frame['trackingID']
 		yield 'Stack #%s%02d [%s:%d] %s' % (trackingDisplay, frame['idx'], frame['file'], frame['line'], frame['fun'])
 		fmtLine = lambda line: linecache.getline(frame['file'], line).rstrip().replace('\t', '  ')
