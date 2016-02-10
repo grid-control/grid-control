@@ -1,0 +1,9 @@
+ignore-patterns:
+  - packages/json.py
+  - packages/popen2.py
+  - packages/python_compat.py
+  - packages/tarfile.py
+  - packages/requests/*
+  - packages/grid_control_cms/DashboardAPI/*
+  - packages/grid_control_gui/xmpp/*
+  - docs/*
