@@ -20,7 +20,7 @@ class TimeoutException(Exception):
 	pass
 
 # Event with interruptible, blocking wait (implemented with polling)
-class GCEvent:
+class GCEvent(object):
 	def __init__(self):
 		self._event = threading.Event()
 
@@ -45,7 +45,7 @@ class GCEvent:
 			raise KeyboardInterrupt('Interrupted while waiting for %s' % description)
 
 # Lock with optional acquire timeout
-class GCLock:
+class GCLock(object):
 	def __init__(self, interval = 0.5):
 		self._interval = interval
 		self._lock = threading.Lock()
