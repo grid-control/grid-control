@@ -93,7 +93,7 @@ class ScanProviderBase(DataProvider):
 					for key in nameDict:
 						if nameDict[key] == name:
 							utils.eprint('\t%s hash %s using:' % (tName, keyFmt(key)))
-							for x in ifilter(lambda (k, v): k in hashKeys, varDict[keyFmt(key)].items()):
+							for x in ifilter(lambda k_v: k_v[0] in hashKeys, varDict[keyFmt(key)].items()):
 								utils.eprint('\t\t%s = %s' % x)
 					if ask and not utils.getUserBool('Do you want to continue?', False):
 						sys.exit(os.EX_OK)
@@ -111,9 +111,9 @@ class ScanProviderBase(DataProvider):
 				if blockSEList is not None:
 					blockSEList = list(set(blockSEList))
 				metaKeys = protoBlocks[hashDS][hashB][0][1].keys()
-				fnProps = lambda (path, metadata, events, seList, objStore): {
-					DataProvider.URL: path, DataProvider.NEntries: events,
-					DataProvider.Metadata: lmap(lambda x: metadata.get(x), metaKeys)}
+				def fnProps(path, metadata, events, seList, objStore):
+					return {DataProvider.URL: path, DataProvider.NEntries: events,
+						DataProvider.Metadata: lmap(lambda x: metadata.get(x), metaKeys)}
 				yield {
 					DataProvider.Dataset: hashNameDictDS[hashDS],
 					DataProvider.BlockName: hashNameDictB[hashB][1],

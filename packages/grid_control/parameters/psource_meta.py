@@ -15,7 +15,7 @@
 from grid_control import utils
 from grid_control.parameters.psource_base import ParameterSource
 from hpfwk import AbstractError
-from python_compat import imap, irange, izip, lfilter, lmap, md5
+from python_compat import imap, irange, izip, lfilter, lmap, md5_hex, reduce
 
 def combineSyncResult(a, b, sc_fun = lambda x, y: x or y):
 	if a is None:
@@ -62,7 +62,7 @@ class RangeParameterSource(ForwardingParameterSource):
 		return self._posEnd - self._posStart + 1
 
 	def getHash(self):
-		return md5(self._psource.getHash() + str([self._posStart, self._posEnd])).hexdigest()
+		return md5_hex(self._psource.getHash() + str([self._posStart, self._posEnd]))
 
 	def fillParameterInfo(self, pNum, result):
 		self._psource.fillParameterInfo(pNum + self._posStart, result)
@@ -116,7 +116,7 @@ class BaseMultiParameterSource(ParameterSource):
 			psource.show(level + 1)
 
 	def getHash(self):
-		return md5(str(lmap(lambda p: str(p.getMaxParameters()) + p.getHash(), self._psourceList))).hexdigest()
+		return md5_hex(str(lmap(lambda p: str(p.getMaxParameters()) + p.getHash(), self._psourceList)))
 
 
 # Aggregates and propagates results and changes to psources
@@ -216,7 +216,7 @@ class RepeatParameterSource(ChainParameterSource):
 		self._psource.show(level + 1)
 
 	def getHash(self):
-		return md5(self._psource.getHash() + str(self.times)).hexdigest()
+		return md5_hex(self._psource.getHash() + str(self.times))
 
 	def __repr__(self):
 		return 'repeat(%s, %d)' % (repr(self._psource), self.times)

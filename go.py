@@ -41,8 +41,8 @@ if __name__ == '__main__':
 	signal.signal(signal.SIGURG, debugInterruptHandler)
 
 	# display the 'grid-control' logo and version
-	utils.vprint(open(utils.pathShare('logo.txt'), 'r').read(), -1)
-	utils.vprint('Revision: %s' % utils.getVersion(), -1)
+	sys.stdout.write(open(utils.pathShare('logo.txt'), 'r').read())
+	sys.stdout.write('Revision: %s\n' % utils.getVersion())
 	pyver = sys.version_info[0] + sys.version_info[1] / 10.0
 	if pyver < 2.3:
 		utils.deprecated('This python version (%.1f) is not supported anymore!' % pyver)
@@ -75,7 +75,7 @@ if __name__ == '__main__':
 	parser.add_option('',   '--help-vars',     dest='old_report', default=False, action='store_true')
 	(opts, args) = parser.parse_args()
 	if opts.help:
-		utils.eprint('%s\n%s' % (usage, open(utils.pathShare('help.txt'), 'r').read()))
+		sys.stderr.write('%s\n%s\n' % (usage, open(utils.pathShare('help.txt'), 'r').read()))
 		sys.exit(os.EX_USAGE)
 
 	utils.verbosity(opts.verbosity)
@@ -113,7 +113,7 @@ if __name__ == '__main__':
 			setConfigFromOpt('global', 'submission', opts.submission)
 			StringConfigFiller(opts.override).fill(container)
 
-	# big try... except block to catch exceptions and print error message
+	# big try... except block to catch exceptions and show error message
 	def main():
 		configFactory = createConfigFactory(configFile = args[0], additional = [OptsConfigFiller(parser)])
 		config = configFactory.getConfig()
@@ -122,7 +122,7 @@ if __name__ == '__main__':
 		# Check work dir validity (default work directory is the config file name)
 		if not os.path.exists(config.getWorkPath()):
 			if not config.getState('init'):
-				utils.vprint('Will force initialization of %s if continued!' % config.getWorkPath(), -1)
+				logging.getLogger('user').warning('Starting initialization of %s!' % config.getWorkPath())
 				config.setState(True, 'init')
 			if config.getChoiceYesNo('workdir create', True,
 					interactive = 'Do you want to create the working directory %s?' % config.getWorkPath()):

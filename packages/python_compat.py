@@ -12,6 +12,8 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
+import sys, itertools
+
 try:	# itemgetter >= Python 2.4
 	from operator import itemgetter
 except:
@@ -22,7 +24,7 @@ except:
 				return obj[item]
 		else:
 			def g(obj):
-				return tuple(map(lambda item: obj[item], items))
+				return tuple(imap(lambda item: obj[item], items))
 		return g
 
 try:	# str.rsplit >= Python 2.4
@@ -50,41 +52,29 @@ except Exception:
 
 try:	# sorted >= Python 2.4
 	sorted = sorted
+	def sort_inplace(unsortedList, key = lambda x: x):
+		unsortedList.sort(key = key)
 except Exception:
 	builtin_cmp = cmp
-	def sorted(unsortedList, cmp = None, key = None, reverse = False):
-		""" Sort list by either using the standard comparison method cmp()
-		or, if supplied, the function comp.  The optional argument key
-		is a function that returns the key to sort by - default is the
-		identity function.
-
+	def sort_inplace(unsortedList, key = lambda x: x):
+		unsortedList.sort(lambda a, b: builtin_cmp(key(a), key(b)))
+	def sorted(unsortedList, key = None, reverse = False):
+		""" Sort list by either using the function key that returns
+		the key to sort by - default is the identity function.
 		>>> sorted([4, 3, 1, 5, 2])
 		[1, 2, 3, 4, 5]
-
 		>>> sorted([4, 3, 1, 5, 2], reverse = True)
 		[5, 4, 3, 2, 1]
-
-		>>> sorted([4, 3, 1, 5, 2], cmp=lambda a, b: -cmp(a, b))
-		[5, 4, 3, 2, 1]
-
 		>>> sorted(['spam', 'ham', 'cheese'], key=len)
 		['ham', 'spam', 'cheese']
-
-		>>> sorted(['spam', 'ham', 'cheese'], cmp=lambda a, b: -cmp(a, b), key=len)
-		['cheese', 'spam', 'ham']
 		"""
 		tmp = list(unsortedList)
-		if cmp is None:
-			cmp = builtin_cmp
-
-		if key and reverse:
-			tmp.sort(lambda x, y: -cmp(key(x), key(y)))
-		elif key and not reverse:
-			tmp.sort(lambda x, y: cmp(key(x), key(y)))
-		elif reverse:
-			tmp.sort(lambda x, y: -cmp(x, y))
-		elif not reverse:
-			tmp.sort(cmp)
+		if key:
+			sort_inplace(tmp, key = key)
+		else:
+			tmp.sort()
+		if reverse:
+			tmp.reverse()
 		return tmp
 
 try:	# hashlib >= Python 2.5
@@ -151,23 +141,24 @@ except Exception:
 	user_input = input
 
 try:	# itertools.imap < Python 3.0
-	import itertools
 	imap = itertools.imap
 	lmap = map
+	ismap = itertools.starmap
 except:
 	imap = map
-	lmap = lambda *args: list(map(*args))
+	lmap = lambda *args: list(imap(*args))
+	ismap = itertools.starmap
+lsmap = lambda *args: list(ismap(*args))
 
 try:	# itertools.ifilter < Python 3.0
-	import itertools
 	ifilter = itertools.ifilter
 	lfilter = filter
 except:
 	ifilter = filter
-	lfilter = lambda *args: list(filter(*args))
+	def lfilter(*args):
+		return list(filter(*args))
 
 try:	# itertools.izip < Python 3.0
-	import itertools
 	izip = itertools.izip
 	lzip = zip
 except:
@@ -181,11 +172,16 @@ except:
 	irange = range
 	lrange = lambda *args: list(range(*args))
 
+try:	# reduce < Python 3.0
+	reduce = reduce
+except:
+	from functools import reduce
+
 try:	# functools.lru_cache >= Python 3.2
 	import functools
-	lru_cache = functools.lru_cache
+	lru_cache = functools.lru_cache(30)
 except Exception:
-	def lru_cache(fun, maxsize = 10): # Implementation causes CPU performance hit to avoid I/O
+	def lru_cache(fun, maxsize = 30): # Implementation causes CPU performance hit to avoid I/O
 		def funProxy(*args, **kargs):
 			idx = None
 			for (i, value) in enumerate(funProxy.cache):
@@ -202,9 +198,21 @@ except Exception:
 		(funProxy.fun, funProxy.cache) = (fun, [])
 		return funProxy
 
-__all__ = ['NullHandler', 'StringBuffer', 'StringBufferBase',
-	'all', 'any', 'ifilter', 'imap', 'irange', 'itemgetter', 'izip', 'lfilter', 'lmap', 'lrange', 'lzip', 'lru_cache',
-	'md5', 'next', 'parsedate', 'rsplit', 'set', 'sorted', 'user_input']
+if sys.version_info[0:2] < (2, 7):	# missing features in tarfile <= Python 2.6
+	tarfile = __import__('pc_tarfile')
+else:
+	import tarfile
+
+if sys.version_info[0] < 3:	# unicode encoding <= Python 3
+	md5_hex = lambda value: md5(value).hexdigest()
+else:
+	md5_hex = lambda value: md5(str(value).encode('utf-8')).hexdigest()
+
+__all__ = ['NullHandler', 'StringBuffer', 'StringBufferBase', 'all', 'any',
+	'ifilter', 'imap', 'irange', 'itemgetter', 'izip',
+	'lfilter', 'lmap', 'lrange', 'lzip', 'lru_cache',
+	'md5', 'md5_hex', 'next', 'parsedate', 'rsplit', 'set', 'ismap', 'lsmap',
+	'sorted', 'sort_inplace', 'tarfile', 'user_input']
 
 if __name__ == '__main__':
 	import os, re, doctest, logging
@@ -216,9 +224,10 @@ if __name__ == '__main__':
 		for fn in filter(lambda fn: fn.endswith('.py') and not fn.endswith("python_compat.py"), files):
 			fn = os.path.join(root, fn)
 			tmp = open(fn).read().replace('\'zip(', '').replace('def set(', '').replace('def filter(', '').replace('def next(', '').replace('next()', '')
-			builtin_avoid = ['filter', 'map', 'range', 'xrange', 'zip']
-			needed = set(filter(lambda name: re.search('[^_\.a-zA-Z]%s\(' % name, tmp), __all__ + builtin_avoid))
+			builtin_avoid = ['filter', 'map', 'range', 'reduce', 'xrange', 'zip']
+			needed = set(filter(lambda name: re.search('[^_\'\/\.a-zA-Z]%s\(' % name, tmp), __all__ + builtin_avoid))
 			needed.update(filter(lambda name: re.search('\(%s\)' % name, tmp), __all__ + builtin_avoid))
+			needed.update(filter(lambda name: re.search('[^_\'\/\.a-zA-Z]%s\.' % name, tmp), __all__ + builtin_avoid))
 			imported = set()
 			for import_line in filter(lambda line: 'python_compat' in line, tmp.splitlines()):
 				imported.update(map(str.strip, import_line.split(None, 3)[3].split(',')))

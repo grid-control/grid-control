@@ -16,7 +16,7 @@ import logging
 from grid_control import utils
 from grid_control.datasets.provider_base import DataProvider, DatasetError
 from hpfwk import ExceptionCollector
-from python_compat import imap, lmap
+from python_compat import imap, lmap, reduce
 
 class MultiDatasetProvider(DataProvider):
 	def __init__(self, config, datasetExpr, datasetNick, datasetID, providerProxyList):

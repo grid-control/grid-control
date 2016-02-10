@@ -14,12 +14,13 @@
 
 # Generic base class for workload management systems
 
-import os, glob, shutil, itertools
+import os, glob, shutil, logging
 from grid_control import utils
 from grid_control.backends.access import AccessToken
 from grid_control.backends.storage import StorageManager
 from grid_control.gc_plugin import NamedPlugin
 from grid_control.utils.file_objects import VirtualFile
+from grid_control.utils.gc_itertools import ichain, lchain
 from hpfwk import AbstractError, NestedException
 from python_compat import imap, izip, lmap, set, sorted
 
@@ -71,22 +72,24 @@ class WMS(NamedPlugin):
 			return ('grid', wmsId)
 
 	def _getRawIDs(self, ids):
-		return lmap(lambda (wmsId, jobNum): self._splitId(wmsId)[1], ids)
+		for (wmsId, jobNum) in ids:
+			yield self._splitId(wmsId)[1]
 
 	def parseJobInfo(fn):
+		log = logging.getLogger('wms')
 		if not os.path.exists(fn):
-			return utils.eprint('Warning: "%s" does not exist.' % fn)
+			return log.warning('%r does not exist.' % fn)
 		try:
 			info_content = open(fn, 'r').read()
-		except Exception, ex:
-			return utils.eprint('Warning: Unable to read "%s"!\n%s' % (fn, str(ex)))
+		except Exception:
+			return log.exception('Unable to read %r!' % fn)
 		if not info_content:
-			return utils.eprint('Warning: "%s" is empty!' % fn)
+			return log.warning('%r is empty!' % fn)
 		try:
 			data = utils.DictFormat().parse(info_content, keyParser = {None: str})
 			return (data['JOBID'], data['EXITCODE'], data)
 		except Exception:
-			return utils.eprint('Warning: Unable to parse "%s"!' % fn)
+			return log.warning('Unable to parse %r!' % fn)
 	parseJobInfo = staticmethod(parseJobInfo)
 utils.makeEnum(['WALLTIME', 'CPUTIME', 'MEMORY', 'CPUS', 'BACKEND', 'SITES', 'QUEUES', 'SOFTWARE', 'STORAGE'], WMS)
 
@@ -155,10 +158,10 @@ class BasicWMS(WMS):
 
 
 	def deployTask(self, task, monitor):
-		self.outputFiles = lmap(lambda (d, s, t): t, self._getSandboxFilesOut(task)) # HACK
+		self.outputFiles = lmap(lambda d_s_t: d_s_t[2], self._getSandboxFilesOut(task)) # HACK
 		task.validateVariables()
 
-		self.smSEIn.addFiles(lmap(lambda (d, s, t): t, task.getSEInFiles())) # add task SE files to SM
+		self.smSEIn.addFiles(lmap(lambda d_s_t: d_s_t[2], task.getSEInFiles())) # add task SE files to SM
 		# Transfer common SE files
 		if self.config.getState('init', detail = 'storage'):
 			self.smSEIn.doTransfer(task.getSEInFiles())
@@ -186,18 +189,19 @@ class BasicWMS(WMS):
 
 
 	def retrieveJobs(self, ids): # Process output sandboxes returned by getJobsOutput
+		log = logging.getLogger('wms')
 		# Function to force moving a directory
 		def forceMove(source, target):
 			try:
 				if os.path.exists(target):
 					shutil.rmtree(target)
-			except IOError, e:
-				utils.eprint('Warning: "%s" cannot be removed: %s' % (target, str(e)))
+			except IOError:
+				log.exception('%r cannot be removed: %s' % target)
 				return False
 			try:
 				shutil.move(source, target)
-			except IOError, e:
-				utils.eprint('Warning: Error moving job output directory from "%s" to "%s": %s' % (source, target, str(e)))
+			except IOError:
+				log.exception('Error moving job output directory from %r to %r' % (source, target))
 				return False
 			return True
 
@@ -264,13 +268,13 @@ class BasicWMS(WMS):
 
 	def _getSandboxFiles(self, task, monitor, smList):
 		# Prepare all input files
-		depList = set(itertools.chain(*imap(lambda x: x.getDependencies(), [task] + smList)))
+		depList = set(ichain(imap(lambda x: x.getDependencies(), [task] + smList)))
 		depPaths = lmap(lambda pkg: utils.pathShare('', pkg = pkg), os.listdir(utils.pathGC('packages')))
 		depFiles = lmap(lambda dep: utils.resolvePath('env.%s.sh' % dep, depPaths), depList)
-		taskEnv = list(itertools.chain(imap(lambda x: x.getTaskConfig(), [monitor, task] + smList)))
-		taskEnv.append({'GC_DEPFILES': str.join(' ', depList), 'GC_USERNAME': self._token.getUsername(),
+		taskEnv = dict(ichain(imap(lambda x: x.getTaskConfig().items(), [monitor, task] + smList)))
+		taskEnv.update({'GC_DEPFILES': str.join(' ', depList), 'GC_USERNAME': self._token.getUsername(),
 			'GC_WMS_NAME': self.wmsName})
-		taskConfig = sorted(utils.DictFormat(escapeString = True).format(utils.mergeDicts(taskEnv), format = 'export %s%s%s\n'))
+		taskConfig = sorted(utils.DictFormat(escapeString = True).format(taskEnv, format = 'export %s%s%s\n'))
 		varMappingDict = dict(izip(monitor.getTaskConfig().keys(), monitor.getTaskConfig().keys()))
 		varMappingDict.update(task.getVarMapping())
 		varMapping = sorted(utils.DictFormat(delimeter = ' ').format(varMappingDict, format = '%s%s%s\n'))
@@ -283,8 +287,8 @@ class BasicWMS(WMS):
 						yield match
 				else:
 					yield f.pathAbs
-		return list(itertools.chain(monitor.getFiles(), depFiles, getTaskFiles(),
-			[VirtualFile('_config.sh', taskConfig), VirtualFile('_varmap.dat', varMapping)]))
+		return lchain([monitor.getFiles(), depFiles, getTaskFiles(),
+			[VirtualFile('_config.sh', taskConfig), VirtualFile('_varmap.dat', varMapping)]])
 
 
 	def _writeJobConfig(self, cfgPath, jobNum, task, extras = {}):

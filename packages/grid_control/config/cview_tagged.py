@@ -41,7 +41,7 @@ class TaggedConfigView(SimpleConfigView):
 				raise APIError('Class %r does not define a valid tag name!' % t.__class__.__name__)
 			return [(tagName, t.getObjectName().lower())]
 		self._initVariable('_cfgTags', [], setTags, addTags, lambda x: x, makeTagTuple)
-		self._cfgTagsOrder = lmap(lambda (tagName, tagValue): tagName, self._cfgTags)
+		self._cfgTagsOrder = lmap(lambda tagName_tagValue: tagName_tagValue[0], self._cfgTags)
 
 	def __str__(self):
 		return '<%s(class = %r, sections = %r, names = %r, tags = %r)>' %\

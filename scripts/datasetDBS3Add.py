@@ -18,13 +18,10 @@ from gcSupport import FileMutex, getConfig, utils
 from grid_control.datasets.provider_base import DataProvider
 from grid_control_cms.dbs3_input_validation import DBS3InputValidation
 from grid_control_cms.dbs3_lite_client import DBS3LiteClient
-from grid_control_cms.dbs3_migration_queue import AlreadyQueued
-from grid_control_cms.dbs3_migration_queue import DBS3MigrationQueue
-from grid_control_cms.dbs3_migration_queue import MigrationTask
-from grid_control_cms.dbs3_migration_queue import do_migration
+from grid_control_cms.dbs3_migration_queue import AlreadyQueued, DBS3MigrationQueue, MigrationTask, do_migration
 from grid_control_cms.provider_sitedb import SiteDB
 from hpfwk import APIError
-from python_compat import NullHandler, imap, izip, md5, set
+from python_compat import NullHandler, imap, izip, md5, reduce, set
 
 def generateDBS3BlockDumps(opts, blocks):
     for block_info in blocks:

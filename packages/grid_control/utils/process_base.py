@@ -13,7 +13,7 @@
 #-#  limitations under the License.
 
 import os, pty, sys, time, errno, fcntl, select, signal, logging, termios, threading
-from grid_control.utils.thread_tools import GCEvent, GCLock
+from grid_control.utils.thread_tools import GCEvent, GCLock, GCQueue
 from python_compat import ifilter, imap, irange, lmap
 
 try:
@@ -33,47 +33,12 @@ def safeClose(fd):
 class ProcessTimeout(Exception):
 	pass
 
-
-class LockedBuffer(object):
-	def __init__(self):
-		self._lock = GCLock()
-		self._notify = GCEvent()
-		self._closed = GCEvent()
-		self._buffer = ''
-
-	def __repr__(self):
-		return '%s(%r)' % (self.__class__.__name__, self._buffer)
-
-	def close(self):
-		self._closed.set()
-		self._notify.set()
-
-	def wait(self, timeout):
-		return self._notify.wait(timeout)
-
-	def get(self, timeout):
-		self._notify.wait(timeout)
-		self._lock.acquire()
-		result = self._buffer
-		self._buffer = ''
-		if not self._closed.is_set():
-			self._notify.clear()
-		self._lock.release()
-		return result
-
-	def add(self, value):
-		self._lock.acquire()
-		self._buffer += value
-		self._notify.set()
-		self._lock.release()
-
-
 class Process(object):
 	def __init__(self, cmd, *args, **kwargs):
 		self._process_finished = GCEvent()
-		self._buffer_stdin = LockedBuffer()
-		self._buffer_stdout = LockedBuffer()
-		self._buffer_stderr = LockedBuffer()
+		self._buffer_stdin = GCQueue(str)
+		self._buffer_stdout = GCQueue(str)
+		self._buffer_stderr = GCQueue(str)
 		self._iter_buffer_stdout = ''
 		# Stream logging setup
 		self._logging = kwargs.get('logging', True)
@@ -170,7 +135,7 @@ class Process(object):
 	def write_stdin(self, value, log = True):
 		if log and self._logging:
 			self._log_stdin += value
-		self._buffer_stdin.add(value)
+		self._buffer_stdin.put(value)
 
 	def read_stdin_log(self):
 		return self._log_stdin
@@ -247,7 +212,7 @@ class LocalProcess(Process):
 							tmp = ''
 						if not tmp:
 							break
-						buffer.add(tmp)
+						buffer.put(tmp)
 				while not self._process_shutdown.is_set():
 					try:
 						select.select([fd], [], [], 0.2)
@@ -292,12 +257,12 @@ class LocalProcess(Process):
 						self._status = sts
 				self._process_shutdown.set() # start shutdown of handlers and wait for it to finish
 				self._process_shutdown_stdin.set() # start shutdown of handlers and wait for it to finish
-				self._buffer_stdin.close() # wakeup process input handler
+				self._buffer_stdin.finish() # wakeup process input handler
 				thread_in.join()
 				thread_out.join()
 				thread_err.join()
-				self._buffer_stdout.close() # wakeup pending output buffer waits
-				self._buffer_stderr.close()
+				self._buffer_stdout.finish() # wakeup pending output buffer waits
+				self._buffer_stderr.finish()
 				self._process_finished.set()
 
 			thread = threading.Thread(target = checkStatus)
@@ -333,8 +298,8 @@ class LocalProcess(Process):
 		if not self._process_finished.is_set():
 			try:
 				os.kill(self._pid, sig)
-			except OSError, osError:
-				if osError.errno != errno.ESRCH: # errno.ESRCH: no such process (already dead)
+			except OSError:
+				if sys.exc_info()[1].errno != errno.ESRCH: # errno.ESRCH: no such process (already dead)
 					raise
 
 LocalProcess.fdCreationLock = GCLock()

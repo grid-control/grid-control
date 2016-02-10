@@ -17,7 +17,7 @@ from grid_control import utils
 from grid_control.config import createConfigFactory
 from grid_control.datasets.dproc_base import DataProcessor
 from hpfwk import AbstractError, InstanceFactory, NestedException, Plugin
-from python_compat import StringBuffer, ifilter, imap, irange, lmap, lrange, sorted
+from python_compat import StringBuffer, ifilter, imap, irange, lmap, lrange, sort_inplace, sorted
 
 class DatasetError(NestedException):
 	pass
@@ -184,25 +184,23 @@ class DataProvider(Plugin):
 	# Only the affected files are returned in the block file list
 	def resyncSources(oldBlocks, newBlocks):
 		# Compare different blocks according to their name - NOT full content
-		def cmpBlock(x, y):
-			if x[DataProvider.Dataset] == y[DataProvider.Dataset]:
-				return cmp(x[DataProvider.BlockName], y[DataProvider.BlockName])
-			return cmp(x[DataProvider.Dataset], y[DataProvider.Dataset])
-		oldBlocks.sort(cmpBlock)
-		newBlocks.sort(cmpBlock)
+		def keyBlock(x):
+			return (x[DataProvider.Dataset], x[DataProvider.BlockName])
+		sort_inplace(oldBlocks, key = keyBlock)
+		sort_inplace(newBlocks, key = keyBlock)
 
 		def onMatchingBlock(blocksAdded, blocksMissing, blocksMatching, oldBlock, newBlock):
 			# Compare different files according to their name - NOT full content
-			def cmpFiles(x, y):
-				return cmp(x[DataProvider.URL], y[DataProvider.URL])
-			oldBlock[DataProvider.FileList].sort(cmpFiles)
-			newBlock[DataProvider.FileList].sort(cmpFiles)
+			def keyFiles(x):
+				return x[DataProvider.URL]
+			sort_inplace(oldBlock[DataProvider.FileList], key = keyFiles)
+			sort_inplace(newBlock[DataProvider.FileList], key = keyFiles)
 
 			def onMatchingFile(filesAdded, filesMissing, filesMatched, oldFile, newFile):
 				filesMatched.append((oldFile, newFile))
 
 			(filesAdded, filesMissing, filesMatched) = \
-				utils.DiffLists(oldBlock[DataProvider.FileList], newBlock[DataProvider.FileList], cmpFiles, onMatchingFile, isSorted = True)
+				utils.DiffLists(oldBlock[DataProvider.FileList], newBlock[DataProvider.FileList], keyFiles, onMatchingFile, isSorted = True)
 			if filesAdded: # Create new block for added files in an existing block
 				tmpBlock = copy.copy(newBlock)
 				tmpBlock[DataProvider.FileList] = filesAdded
@@ -210,7 +208,7 @@ class DataProvider(Plugin):
 				blocksAdded.append(tmpBlock)
 			blocksMatching.append((oldBlock, newBlock, filesMissing, filesMatched))
 
-		return utils.DiffLists(oldBlocks, newBlocks, cmpBlock, onMatchingBlock, isSorted = True)
+		return utils.DiffLists(oldBlocks, newBlocks, keyBlock, onMatchingBlock, isSorted = True)
 	resyncSources = staticmethod(resyncSources)
 
 # To uncover errors, the enums of DataProvider / DataSplitter do *NOT* match type wise

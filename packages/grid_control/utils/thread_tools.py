@@ -16,6 +16,12 @@ import time, threading
 
 blocking_equivalent = 1e10 # instead of blocking, we wait for this long
 
+def start_thread(desc, fun, *args, **kargs):
+	thread = threading.Thread(target = fun, args = args, kwargs = kargs)
+	thread.setDaemon(True)
+	thread.start()
+	return thread
+
 class TimeoutException(Exception):
 	pass
 
@@ -67,6 +73,40 @@ class GCLock(object):
 			raise KeyboardInterrupt('Interrupted while waiting to acquire lock')
 
 	def release(self):
+		self._lock.release()
+
+class GCQueue(object):
+	def __init__(self, BufferObject):
+		self._lock = GCLock()
+		self._notify = GCEvent()
+		self._finished = GCEvent()
+		self._buffer_type = BufferObject
+		self._buffer = self._buffer_type()
+
+	def __repr__(self):
+		return '%s(%r)' % (self.__class__.__name__, self._buffer)
+
+	def finish(self):
+		self._finished.set()
+		self._notify.set()
+
+	def wait(self, timeout):
+		return self._notify.wait(timeout)
+
+	def get(self, timeout):
+		self._notify.wait(timeout)
+		self._lock.acquire()
+		result = self._buffer
+		self._buffer = self._buffer_type()
+		if not self._finished.is_set():
+			self._notify.clear()
+		self._lock.release()
+		return result
+
+	def put(self, value):
+		self._lock.acquire()
+		self._buffer += value
+		self._notify.set()
 		self._lock.release()
 
 # Function to protect against hanging system calls

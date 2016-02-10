@@ -19,7 +19,7 @@ from grid_control.config.config_entry import ConfigEntry, ConfigError
 from grid_control.utils.data_structures import UniqueList
 from grid_control.utils.thread_tools import TimeoutException, hang_protection
 from hpfwk import AbstractError, Plugin
-from python_compat import ifilter, imap, irange, lfilter, lmap, rsplit
+from python_compat import ifilter, imap, irange, ismap, lfilter, lmap, rsplit
 
 # Class to fill config containers with settings
 class ConfigFiller(Plugin):
@@ -48,8 +48,10 @@ class FileConfigFiller(ConfigFiller):
 			# Store config settings
 			for section in configContent:
 				# Allow very basic substitutions with %(option)s syntax
-				substDict = dict(imap(lambda (opt, v, l): (opt, v), configContent.get('default', [])))
-				substDict.update(imap(lambda (opt, v, l): (opt, v), configContent.get(section, [])))
+				def getOptValue(option, value, source):
+					return (option, value)
+				substDict = dict(ismap(getOptValue, configContent.get('default', [])))
+				substDict.update(ismap(getOptValue, configContent.get(section, [])))
 				for (option, value, source) in configContent[section]:
 					# Protection for non-interpolation "%" in value 
 					value = (value.replace('%', '\x01').replace('\x01(', '%(') % substDict).replace('\x01', '%')
@@ -122,7 +124,7 @@ class FileConfigFiller(ConfigFiller):
 		tmpConfigContent = {}
 		self._fillContentFromSingleFile(configFile, configFileData, searchPaths, tmpConfigContent)
 		def getFlatList(section, option):
-			for (opt, value, s) in ifilter(lambda (opt, v, s): opt == option, tmpConfigContent.get(section, [])):
+			for (opt, value, s) in ifilter(lambda opt_v_s: opt_v_s[0] == option, tmpConfigContent.get(section, [])):
 				for entry in utils.parseList(value, None):
 					yield entry
 
@@ -137,7 +139,7 @@ class FileConfigFiller(ConfigFiller):
 			self._fillContentFromFile(overrideFile, searchPaths + newSearchPaths, configContent)
 		# Filter special global options
 		if configContent.get('global', []):
-			configContent['global'] = lfilter(lambda (opt, v, s): opt not in ['include', 'include override'], configContent['global'])
+			configContent['global'] = lfilter(lambda opt_v_s: opt_v_s[0] not in ['include', 'include override'], configContent['global'])
 		return searchPaths + newSearchPaths
 
 

@@ -12,17 +12,18 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-import csv, gzip
+import csv
 from grid_control import utils
 from grid_control.parameters.psource_base import ParameterInfo, ParameterMetadata, ParameterSource
 from grid_control.parameters.psource_basic import InternalParameterSource
+from grid_control.utils.file_objects import ZipFile
 from python_compat import ifilter, imap, irange, izip, lfilter, lmap, sorted
 
 # Reader for grid-control dump files
 class GCDumpParameterSource(ParameterSource):
 	def __init__(self, fn):
 		ParameterSource.__init__(self)
-		fp = gzip.open(fn, 'rb')
+		fp = ZipFile(fn, 'r')
 		keyline = fp.readline().lstrip('#').strip()
 		self.keys = []
 		if keyline:
@@ -41,10 +42,10 @@ class GCDumpParameterSource(ParameterSource):
 
 	def fillParameterInfo(self, pNum, result):
 		result[ParameterInfo.ACTIVE] = not self.values[pNum][0]
-		result.update(ifilter(lambda (k, v): v is not None, izip(self.keys, self.values[pNum][2])))
+		result.update(ifilter(lambda k_v: k_v[1] is not None, izip(self.keys, self.values[pNum][2])))
 
 	def write(cls, fn, pa):
-		fp = gzip.open(fn, 'wb')
+		fp = ZipFile(fn, 'w')
 		keys = sorted(ifilter(lambda p: p.untracked == False, pa.getJobKeys()))
 		fp.write('# %s\n' % keys)
 		maxN = pa.getMaxJobs()
@@ -72,7 +73,7 @@ class CSVParameterSource(InternalParameterSource):
 			# strip all key value entries
 			tmp = tuple(imap(lambda item: imap(str.strip, item), d.items()))
 			# filter empty parameters
-			return lfilter(lambda (k, v): k != '', tmp)
+			return lfilter(lambda k_v: k_v[0] != '', tmp)
 		keys = []
 		if len(tmp):
 			keys = lmap(ParameterMetadata, tmp[0].keys())

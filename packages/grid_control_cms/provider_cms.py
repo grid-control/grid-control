@@ -16,6 +16,7 @@ from grid_control import utils
 from grid_control.config import ConfigError
 from grid_control.datasets import DataProvider, DataSplitter, DatasetError
 from grid_control.datasets.splitter_basic import HybridSplitter
+from grid_control.utils.thread_tools import start_thread
 from grid_control.utils.webservice import readJSON
 from grid_control_cms.lumi_tools import formatLumi, parseLumiFilter, selectLumi
 from python_compat import imap, lfilter, set, sorted
@@ -173,7 +174,7 @@ class CMSProvider(DataProvider):
 
 				if usePhedex: # Start parallel phedex query
 					dictSE = {}
-					tPhedex = utils.gcStartThread("Query phedex site info for %s" % blockPath, self.getPhedexSEList, blockPath, dictSE)
+					tPhedex = start_thread("Query phedex site info for %s" % blockPath, self.getPhedexSEList, blockPath, dictSE)
 
 				if self.selectedLumis:
 					result[DataProvider.Metadata] = ['Runs']

@@ -18,9 +18,10 @@ from grid_control.backends import WMS
 from grid_control.config import TaggedConfigView, changeInitNeeded
 from grid_control.gc_plugin import NamedPlugin
 from grid_control.parameters import ParameterFactory, ParameterInfo
+from grid_control.utils.gc_itertools import ichain, lchain
 from hpfwk import AbstractError
 from time import strftime, time
-from python_compat import ifilter, imap, izip, lfilter, lmap, lru_cache, lzip, md5
+from python_compat import ifilter, imap, izip, lfilter, lmap, lru_cache, md5_hex
 
 class TaskModule(NamedPlugin):
 	configSections = NamedPlugin.configSections + ['task']
@@ -40,7 +41,7 @@ class TaskModule(NamedPlugin):
 		self.nodeTimeout = configJobs.getTime('node timeout', -1, onChange = initSandbox)
 
 		# Compute / get task ID
-		self.taskID = config.get('task id', 'GC' + md5(str(time())).hexdigest()[:12], persistent = True)
+		self.taskID = config.get('task id', 'GC' + md5_hex(str(time()))[:12], persistent = True)
 		self.taskDate = config.get('task date', strftime('%Y-%m-%d'), persistent = True, onChange = initSandbox)
 		self.taskConfigName = config.getConfigName()
 
@@ -81,9 +82,10 @@ class TaskModule(NamedPlugin):
 
 	# Read comments with error codes at the beginning of file
 	def updateErrorDict(self, fileName):
+		def transform(x, y):
+			return (int(x.strip('# ')), y)
 		for line in ifilter(lambda x: x.startswith('#'), open(fileName, 'r').readlines()):
 			try:
-				transform = lambda (x, y): (int(x.strip('# ')), y)
 				yield transform(lmap(str.strip, line.split(' - ', 1)))
 			except Exception:
 				pass
@@ -127,7 +129,7 @@ class TaskModule(NamedPlugin):
 
 	def getVarNames(self):
 		# Take task variables and the variables from the parameter source
-		return self.getTaskConfig().keys() + list(self.source.getJobKeys())
+		return lchain([self.getTaskConfig().keys(), self.source.getJobKeys()])
 
 
 	def getVarMapping(self):
@@ -146,13 +148,13 @@ class TaskModule(NamedPlugin):
 		allVars = utils.mergeDicts([addDict, self.getTaskConfig()])
 		if jobNum is not None:
 			allVars.update(self.getJobConfig(jobNum))
-		subst = lambda x: utils.replaceDict(x, allVars, self.getVarMapping().items() + lzip(addDict, addDict))
+		subst = lambda x: utils.replaceDict(x, allVars, ichain([self.getVarMapping().items(), izip(addDict, addDict)]))
 		result = subst(subst(str(inp)))
 		return utils.checkVar(result, "'%s' contains invalid variable specifiers: '%s'" % (inp, result), check)
 
 
 	def validateVariables(self):
-		for x in self.getTaskConfig().values() + self.getJobConfig(0).values():
+		for x in ichain([self.getTaskConfig().values(), self.getJobConfig(0).values()]):
 			self.substVars(x, 0, dict.fromkeys(['X', 'XBASE', 'XEXT', 'GC_DATE', 'GC_TIMESTAMP', 'GC_GUID', 'RANDOM'], ''))
 
 

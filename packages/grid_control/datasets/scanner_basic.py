@@ -19,7 +19,7 @@ from grid_control.datasets import DataProvider, DatasetError
 from grid_control.datasets.scanner_base import InfoScanner
 from grid_control.job_db import Job, JobDB
 from grid_control.job_selector import JobSelector
-from python_compat import ifilter, imap, irange, izip, lfilter, lmap, set, sorted
+from python_compat import ifilter, imap, irange, izip, lfilter, lmap, reduce, set, sorted
 
 def splitParse(opt):
 	(delim, ds, de) = utils.optSplit(opt, '::')

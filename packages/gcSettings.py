@@ -1,4 +1,4 @@
-#-#  Copyright 2014 Karlsruhe Institute of Technology
+#-#  Copyright 2014-2016 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -19,8 +19,10 @@ class Settings(object):
 		self._s = section
 
 	def section(self, section, name = '', **tags):
-		tags_string = str.join(' ', map(lambda k: '%s:%s' % (k, tags[k]), tags))
-		return Settings(('%s %s %s' % (section, name, tags_string)).strip())
+		tags_list = []
+		for key in tags:
+			tags_list.append('%s:%s' % (k, tags[k]))
+		return Settings(('%s %s %s' % (section, name, str.join(' ', tags_list))).strip())
 
 	def set(self, name, value, override = False, append = False, force = False):
 		if isinstance(value, list):
@@ -42,14 +44,17 @@ class Settings(object):
 		result = []
 		for section in Settings._config:
 			result.append('[%s]' % section)
-			result.extend(map(lambda entry: '%s %s= %s' % entry, Settings._config[section]))
+			for entry in Settings._config[section]:
+				result.append('%s %s= %s' % entry)
 			result.append('')
 		return str.join('\n', result)
 
 	def getConfigDict(cls):
 		result = {}
 		for section in Settings._config:
-			result[section] = dict(map(lambda (opt, mod, val): (opt + mod, str(val)), Settings._config[section]))
+			result[section] = {}
+			for (opt, mod, val) in Settings._config[section]:
+				result[section][opt + mod] = str(val)
 		return result
 	getConfigDict = classmethod(getConfigDict)
 

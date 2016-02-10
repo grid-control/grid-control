@@ -14,7 +14,7 @@
 #-#  limitations under the License.
 
 import sys, optparse
-from gcSupport import JobDB, JobManager, JobSelector, Report, TaskModule, getConfig, parseOptions, utils
+from gcSupport import JobDB, JobSelector, Report, TaskModule, getConfig, parseOptions, utils
 
 parser = optparse.OptionParser()
 parser.add_option('', '--report', dest='reportClass', default='GUIReport')

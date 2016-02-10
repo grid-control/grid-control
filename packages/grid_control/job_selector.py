@@ -17,7 +17,7 @@ from grid_control import utils
 from grid_control.gc_exceptions import UserError
 from grid_control.job_db import Job
 from hpfwk import AbstractError, Plugin
-from python_compat import imap, lfilter, lmap
+from python_compat import imap, lfilter, lmap, reduce
 
 class JobSelector(Plugin):
 	def create(arg, **kwargs):
@@ -130,7 +130,9 @@ class VarSelector(JobSelector):
 		self.jobCfg = lambda jobNum, var: str(kwargs['task'].getJobConfig(jobNum).get(var, ''))
 
 	def __call__(self, jobNum, jobObj):
-		return reduce(operator.and_, imap(lambda (var, rx): rx.search(self.jobCfg(jobNum, var)) is not None, self.rxDict))
+		def match(var, rx):
+			return rx.search(self.jobCfg(jobNum, var)) is not None
+		return reduce(operator.and_, imap(match, self.rxDict))
 
 
 class NickSelector(RegExSelector):

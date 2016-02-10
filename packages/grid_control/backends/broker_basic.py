@@ -15,6 +15,7 @@
 from grid_control import utils
 from grid_control.backends.broker import Broker
 from grid_control.backends.wms import WMS
+from grid_control.utils.gc_itertools import ichain
 from python_compat import lfilter, sorted
 
 class RandomBroker(Broker):
@@ -69,20 +70,36 @@ class SimpleBroker(FilterBroker):
 
 		def item_cmp(a, b, cmp_fun = cmp):
 			diff = 0 # Return negative if a < b, zero if a == b, positive if a > b
-			for key in a.keys() + b.keys():
+			for key in ichain([a.keys(), b.keys()]):
 				current_diff = 1
 				if key in a and key in b:
 					current_diff = cmp_fun(a[key], b[key])
 				elif key in a:
 					current_diff = -1
-				if (diff != current_diff) and (diff == 0):
-					diff = current_diff
-				elif (diff != current_diff) and (current_diff != 0):
-					return 0
+				if current_diff != 0:
+					if diff == 0:
+						diff = current_diff
+					elif diff != current_diff:
+						return 0
 			return diff
+		class KeyObject(object):
+			def __init__(self, obj, *args):
+				self.obj = self._itemsDiscovered[obj]
+			def __lt__(self, other):
+				return item_cmp(self.obj, other.obj) < 0
+			def __gt__(self, other):
+				return item_cmp(self.obj, other.obj) > 0
+			def __eq__(self, other):
+				return item_cmp(self.obj, other.obj) == 0
+			def __le__(self, other):
+				return item_cmp(self.obj, other.obj) <= 0
+			def __ge__(self, other):
+				return item_cmp(self.obj, other.obj) >= 0
+			def __ne__(self, other):
+				return item_cmp(self.obj, other.obj) != 0
 
 		if self._itemsDiscovered: # Sort discovered items according to requirements
-			self._itemsSorted = sorted(self._itemsDiscovered, item_cmp, lambda x: self._itemsDiscovered[x])
+			self._itemsSorted = sorted(self._itemsDiscovered, key = KeyObject)
 
 	def _broker(self, reqs, items):
 		if not self._itemsDiscovered:

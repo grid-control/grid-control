@@ -16,7 +16,8 @@
 import os, sys, optparse
 from gcSupport import getConfig, parseOptions, utils
 from grid_control.datasets import DataProvider, DatasetError
-from python_compat import imap, izip, lmap, lzip, set, sorted
+from grid_control.utils import thread_tools
+from python_compat import imap, itemgetter, izip, lmap, lzip, set, sort_inplace, sorted
 
 usage = '%s [OPTIONS] <DBS dataset path> | <dataset cache file>' % sys.argv[0]
 parser = optparse.OptionParser(usage=usage)
@@ -58,7 +59,7 @@ if len(args) != 1:
 def noThread(desc, fun, *args, **kargs):
 	fun(*args, **kargs)
 	return type('DummyThread', (), {'join': lambda self: None})()
-utils.gcStartThread = noThread
+thread_tools.start_thread = noThread
 
 def main():
 	dataset = args[0].strip()
@@ -78,7 +79,7 @@ def main():
 	if len(blocks) == 0:
 		raise DatasetError('No blocks!')
 
-	datasets = set(imap(lambda x: x[DataProvider.Dataset], blocks))
+	datasets = set(imap(itemgetter(DataProvider.Dataset), blocks))
 	if len(datasets) > 1 or opts.info:
 		headerbase = [(DataProvider.Dataset, 'Dataset')]
 	else:
@@ -219,9 +220,9 @@ def main():
 		print('')
 		blocks = provider.getBlocks()
 		if opts.sort:
-			blocks.sort(key = lambda b: b[DataProvider.Dataset] + '#' + b[DataProvider.BlockName])
+			sort_inplace(blocks, key = itemgetter(DataProvider.Dataset, DataProvider.BlockName))
 			for b in blocks:
-				b[DataProvider.FileList].sort(key = lambda fi: fi[DataProvider.URL])
+				sort_inplace(b[DataProvider.FileList], key = itemgetter(DataProvider.URL))
 		provider.saveState(opts.save, blocks)
 		print('Dataset information saved to ./%s' % opts.save)
 

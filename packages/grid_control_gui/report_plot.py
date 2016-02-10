@@ -23,7 +23,7 @@
 # per job from the configuration
 
 import matplotlib
-import matplotlib.pyplot as plt
+import matplotlib.pyplot
 import os, re, numpy
 
 #from gcSupport import getJobInfo
@@ -309,7 +309,7 @@ def getCumQuantityAtTimeSpan(jobInfo, timeStart, timeEnd, timingExtract, quantit
 
 class PlotReport(Report):
 	def initHistogram(self, name, xlabel, ylabel):
-		fig = plt.figure()
+		fig = matplotlib.pyplot.figure()
 
 		ax = fig.add_subplot(111)
 		ax.set_xlabel(xlabel)  #, ha="left" )
@@ -320,11 +320,11 @@ class PlotReport(Report):
 
 	def finalizeHistogram(self, plotSet, useLegend=False):
 		if ( useLegend ):
-			plt.legend(loc="upper right", numpoints=1, frameon=False, ncol=2)
+			matplotlib.pyplot.legend(loc="upper right", numpoints=1, frameon=False, ncol=2)
 
 		self.imageTypes = ["png", "pdf"]
 		for it in self.imageTypes:
-			plt.savefig(plotSet[0] + "." + it)
+			matplotlib.pyplot.savefig(plotSet[0] + "." + it)
 
 	def plotHistogram(self, histo, jobResult, extractor):
 		print "Plotting " + histo[0] + " ..."
@@ -342,7 +342,7 @@ class PlotReport(Report):
 		# if transparent:
 		#	thisHistType = "step"
 
-		pl = plt.hist(runtime, 40)  # , color= plotColor, label = plotLabel, histtype=thisHistType )
+		pl = matplotlib.pyplot.hist(runtime, 40)  # , color= plotColor, label = plotLabel, histtype=thisHistType )
 		# histo[2].set_ymargin( 0.4 )
 		print " done"
 		return pl
@@ -397,7 +397,7 @@ class PlotReport(Report):
 
 		histo[2].set_ylim(bottom= minY * 0.99, top=maxY * 1.2)
 		histo[2].set_xlim(left=min(timeStep) * 0.99, right=max(timeStep) * 1.01)
-		pl = plt.plot(timeStep, overAllBandwidth, color="green")
+		pl = matplotlib.pyplot.plot(timeStep, overAllBandwidth, color="green")
 
 		if fit:
 			if (len(truncatedTimeStep) == 0) or (len(truncatedOverAllBandwidth)==0):
@@ -406,10 +406,10 @@ class PlotReport(Report):
 			fitRes = numpy.polyfit(truncatedTimeStep, truncatedOverAllBandwidth, 0)
 
 			avgVal = fitRes[0]
-			plt.axhline(y=avgVal, xmin=trunctationFractionFront, xmax=1.0 - trunctationFractionBack, color="black",
+			matplotlib.pyplot.axhline(y=avgVal, xmin=trunctationFractionFront, xmax=1.0 - trunctationFractionBack, color="black",
 						lw=2)
 
-			plt.annotate("%.2f" % avgVal + " " + unit, xy=(relTimeSpan * 0.7, avgVal),
+			matplotlib.pyplot.annotate("%.2f" % avgVal + " " + unit, xy=(relTimeSpan * 0.7, avgVal),
 						 xytext=(relTimeSpan * 0.75, avgVal * 0.85), backgroundcolor="gray")
 
 		print " done"

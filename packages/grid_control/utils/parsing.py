@@ -12,7 +12,7 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-from python_compat import imap, lfilter, lmap
+from python_compat import imap, ismap, lfilter, lmap, reduce, sorted
 
 def removeUnicode(obj):
 	if type(obj) in (list, tuple, set):
@@ -108,3 +108,8 @@ def strTime(secs, fmt = '%dh %0.2dmin %0.2dsec'):
 strTimeShort = lambda secs: strTime(secs, '%d:%0.2d:%0.2d')
 
 strGuid = lambda guid: '%s-%s-%s-%s-%s' % (guid[:8], guid[8:12], guid[12:16], guid[16:20], guid[20:])
+
+def strDict(d):
+	def fmtKeyValue(key, value):
+		return '%s = %s' % (key, repr(value))
+	return str.join(', ', ismap(fmtKeyValue, sorted(d.items())))

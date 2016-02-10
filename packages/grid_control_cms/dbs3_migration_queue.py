@@ -1,4 +1,4 @@
-#-#  Copyright 2014-2015 Karlsruhe Institute of Technology
+#-#  Copyright 2014-2016 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -12,9 +12,7 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-import cPickle as pickle
-import logging
-from Queue import Empty, Queue
+import cPickle, logging
 from collections import deque
 from time import time
 from python_compat import set
@@ -181,11 +179,11 @@ class DBS3MigrationQueue(deque):
     @staticmethod
     def read_from_disk(filename):
         with open(filename, 'r') as f:
-            return pickle.load(f)
+            return cPickle.load(f)
 
     def save_to_disk(self, filename):
         with open(filename, 'w') as f:
-            pickle.dump(self, f)
+            cPickle.dump(self, f)
 
 
 def do_migration(queue):

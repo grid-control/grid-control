@@ -15,7 +15,7 @@
 import os, time, fnmatch, operator
 from grid_control import utils
 from hpfwk import NestedException, Plugin
-from python_compat import imap, irange
+from python_compat import imap, irange, reduce
 
 class JobError(NestedException):
 	pass

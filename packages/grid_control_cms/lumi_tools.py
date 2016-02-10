@@ -12,7 +12,7 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-from python_compat import imap, lmap
+from python_compat import imap, lmap, sort_inplace
 
 def makeint(x):
 	if x.strip().upper() not in ['', 'MAX', 'MIN']:
@@ -29,12 +29,8 @@ def parseLumiFromJSON(data, select = ''):
 			yield ([run, lumi[0]], [run, lumi[1]])
 
 
-def cmpLumi(a, b):
-	(start_a_run, start_a_lumi) = a[0]
-	(start_b_run, start_b_lumi) = b[0]
-	if start_a_run == start_b_run:
-		return cmp(start_a_lumi, start_b_lumi)
-	return cmp(start_a_run, start_b_run)
+def keyLumi(a):
+	return tuple(a[0])
 
 
 def mergeLumi(rlrange):
@@ -44,7 +40,7 @@ def mergeLumi(rlrange):
 	>>> mergeLumi([([1, 1], [2, 2]), ([2, 3], [2, 10]), ([2, 11], [4, 30])])
 	[([1, 1], [4, 30])]
 	"""
-	rlrange.sort(cmpLumi)
+	sort_inplace(rlrange, keyLumi)
 	i = 0
 	while i < len(rlrange) - 1:
 		(end_run, end_lumi) = rlrange[i][1]

@@ -12,14 +12,17 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-from grid_control import utils
 from grid_control.backends.wms_multi import MultiWMS
+from grid_control.utils.gc_itertools import tchain
 from python_compat import ifilter, imap
 
 class ThreadedMultiWMS(MultiWMS):
 	def _forwardCall(self, args, assignFun, callFun):
 		argMap = self._getMapID2Backend(args, assignFun)
-		makeGenerator = lambda wmsPrefix: (wmsPrefix, callFun(self._wmsMap[wmsPrefix], argMap[wmsPrefix]))
+		def makeGenerator(wmsPrefix):
+			result = callFun(self._wmsMap[wmsPrefix], argMap[wmsPrefix])
+			result.name = wmsPrefix
+			return result
 		activeWMS = ifilter(lambda wmsPrefix: wmsPrefix in argMap, self._wmsMap)
-		for result in utils.getThreadedGenerator(imap(makeGenerator, activeWMS)):
+		for result in tchain(imap(makeGenerator, activeWMS)):
 			yield result

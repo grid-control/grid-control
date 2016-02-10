@@ -12,11 +12,11 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-import os, re, tarfile, xml.dom.minidom
+import os, re, xml.dom.minidom
 from grid_control import utils
 from grid_control.datasets import DatasetError
 from grid_control.datasets.scanner_base import InfoScanner
-from python_compat import ifilter, imap, lfilter
+from python_compat import ifilter, imap, lfilter, tarfile
 
 class ObjectsFromCMSSW(InfoScanner):
 	def __init__(self, config):

@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-#-#  Copyright 2015 Karlsruhe Institute of Technology
+#-#  Copyright 2015-2016 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -13,18 +13,7 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-from grid_control_cms.Lexicon import DBSUser
-from grid_control_cms.Lexicon import InputValidationError
-from grid_control_cms.Lexicon import acqname
-from grid_control_cms.Lexicon import block
-from grid_control_cms.Lexicon import dataset
-from grid_control_cms.Lexicon import globalTag
-from grid_control_cms.Lexicon import lfn
-from grid_control_cms.Lexicon import primdataset
-from grid_control_cms.Lexicon import procdataset
-from grid_control_cms.Lexicon import searchstr
-from grid_control_cms.Lexicon import userprocdataset
-from grid_control_cms.Lexicon import validateUrl
+from grid_control_cms.Lexicon import DBSUser, InputValidationError, acqname, block, dataset, globalTag, lfn, primdataset, procdataset, searchstr, userprocdataset, validateUrl
 
 class DBS3InputValidation(object):
     _accepted_input_keys = {

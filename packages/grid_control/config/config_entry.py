@@ -13,6 +13,8 @@
 #-#  limitations under the License.
 
 from grid_control import utils
+from grid_control.utils.gc_itertools import ichain, lchain
+from grid_control.utils.parsing import strDict
 from hpfwk import APIError, NestedException
 from python_compat import imap, lfilter, lmap, set, sorted
 
@@ -43,8 +45,7 @@ class ConfigEntry(object):
 		(self.value, self.opttype, self.accessed) = (value, opttype, accessed)
 
 	def __repr__(self):
-		varList = str.join(', ', imap(lambda (k, v): '%s = %s' % (k, repr(v)), sorted(self.__dict__.items())))
-		return '%s(%s)' % (self.__class__.__name__, varList)
+		return '%s(%s)' % (self.__class__.__name__, strDict(self.__dict__))
 
 	def format_opt(self):
 		if '!' in self.section:
@@ -162,7 +163,7 @@ class ConfigContainer(object):
 		self._content.setdefault(entry.option, []).append(entry)
 
 	def getEntries(self, option):
-		return self._content.get(option, []) + self._content_default.get(option, {}).values()
+		return lchain([self._content.get(option, []), self._content_default.get(option, {}).values()])
 
 	def getKeys(self):
-		return set(self._content.keys() + self._content_default.keys())
+		return sorted(set(ichain([self._content.keys(), self._content_default.keys()])))

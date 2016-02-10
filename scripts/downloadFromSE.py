@@ -15,6 +15,7 @@
 
 import os, sys, time, random, optparse, gcSupport, threading
 from gcSupport import AccessToken, ClassSelector, FileInfoProcessor, Job, JobClass, storage, utils
+from grid_control.utils.thread_tools import start_thread
 from python_compat import ifilter, imap, irange, lfilter, lmap, md5
 
 def md5sum(filename):
@@ -263,8 +264,7 @@ def realmain(opts, args):
 			copyAbortLock = threading.Lock()
 			monitorLock = threading.Lock()
 			monitorLock.acquire()
-			monitor = utils.gcStartThread('Download monitor %s' % jobNum,
-				monitorFile, checkPath, monitorLock, copyAbortLock)
+			monitor = start_thread('Download monitor %s' % jobNum, monitorFile, checkPath, monitorLock, copyAbortLock)
 			result = -1
 			procCP = storage.se_copy(os.path.join(pathSE, name_dest), outFilePath, tmp = checkPath)
 			while True:
@@ -402,8 +402,7 @@ def realmain(opts, args):
 			active = lfilter(lambda (t, d): t.isAlive(), active)
 			while len(active) < opts.threads and len(todo):
 				display = ThreadDisplay()
-				active.append((utils.gcStartThread('Download %s' % todo[-1],
-					processSingleJob, todo.pop(), display), display))
+				active.append((start_thread('Download %s' % todo[-1], processSingleJob, todo.pop(), display), display))
 			for (t, d) in active:
 				sys.stdout.write(str.join('\n', d.output))
 			sys.stdout.write(str.join('\n', ['=' * 50] + errorOutput))

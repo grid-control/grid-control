@@ -110,7 +110,11 @@ class HistoricalConfigView(ConfigView):
 
 		result = []
 		getFilteredSectionKey = lambda entry: self._getSectionKey(entry.section.replace('!', '').strip())
-		getOrderedEntryKey = lambda entry: (getFilteredSectionKey(entry), entry.order)
+		def removeNone(key):
+			if key is None:
+				return -1
+			return key
+		getOrderedEntryKey = lambda entry: (tuple(imap(removeNone, getFilteredSectionKey(entry))), entry.order)
 		for key in key_list:
 			(entries, entries_reverse) = ([], [])
 			for entry in ifilter(lambda x: getFilteredSectionKey(x) is not None, container.getEntries(key)):
@@ -211,9 +215,9 @@ class SimpleConfigView(HistoricalConfigView):
 
 	def _getSectionKey(self, section):
 		if self._cfgSections is None:
-			return section
+			return (section,)
 		if section in self._cfgSections:
-			return self._cfgSections.index(section)
+			return (self._cfgSections.index(section),)
 
 	def _getSection(self, specific):
 		if self._cfgSections and specific:

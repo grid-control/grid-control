@@ -28,7 +28,7 @@ from grid_control.job_selector import ClassSelector, JobSelector
 from grid_control.output_processor import FileInfoProcessor, JobInfoProcessor
 from grid_control.report import Report
 from grid_control.tasks import TaskModule
-from python_compat import ifilter, imap
+from python_compat import ifilter, imap, tarfile
 
 class DummyStream(object):
 	def __init__(self, stream):
@@ -107,7 +107,7 @@ def getJobInfo(workDir, jobNum, retCodeFilter = lambda x: True):
 
 
 def getCMSSWInfo(tarPath):
-	import tarfile, xml.dom.minidom
+	import xml.dom.minidom
 	# Read framework report files to get number of events
 	tarFile = tarfile.open(tarPath, 'r:gz')
 	fwkReports = ifilter(lambda x: os.path.basename(x.name) == 'report.xml', tarFile.getmembers())

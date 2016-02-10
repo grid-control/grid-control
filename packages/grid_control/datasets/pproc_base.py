@@ -16,6 +16,7 @@ from grid_control.backends import WMS
 from grid_control.datasets.splitter_base import DataSplitter
 from grid_control.parameters import ParameterInfo, ParameterMetadata
 from grid_control.utils import filterBlackWhite
+from grid_control.utils.gc_itertools import lchain
 from hpfwk import AbstractError, Plugin
 from python_compat import any, imap, lfilter, lmap, set
 
@@ -37,7 +38,7 @@ class MultiPartitionProcessor(PartitionProcessor):
 		self._processorList = lmap(lambda p: p.getInstance(config), processorProxyList)
 
 	def getKeys(self):
-		return reduce(list.__add__, imap(lambda p: p.getKeys(), self._processorList), [])
+		return lchain(imap(lambda p: p.getKeys(), self._processorList))
 
 	def process(self, pNum, splitInfo, result):
 		for processor in self._processorList:

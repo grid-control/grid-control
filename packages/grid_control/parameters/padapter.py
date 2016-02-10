@@ -12,12 +12,13 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-import os, gzip
+import os
 from grid_control import utils
 from grid_control.parameters.psource_base import ParameterInfo, ParameterMetadata, ParameterSource
 from grid_control.parameters.psource_file import GCDumpParameterSource
+from grid_control.utils.file_objects import ZipFile
 from hpfwk import APIError, Plugin
-from python_compat import ifilter, imap, irange, lfilter, lmap, md5, set, sorted
+from python_compat import ifilter, imap, irange, ismap, itemgetter, lfilter, lmap, md5, set, sort_inplace, sorted
 
 class ParameterAdapter(Plugin):
 	def __init__(self, config, source):
@@ -120,7 +121,7 @@ class TrackedParameterAdapter(BasicParameterAdapter):
 			GCDumpParameterSource.write(self._pathParams, self)
 
 	def readJob2PID(self):
-		fp = gzip.open(self._pathJob2PID, 'r')
+		fp = ZipFile(self._pathJob2PID, 'r')
 		self.maxN = int(fp.readline())
 		if not self.maxN:
 			self.maxN = None
@@ -129,10 +130,10 @@ class TrackedParameterAdapter(BasicParameterAdapter):
 		self._activeMap = {}
 
 	def writeJob2PID(self, fn):
-		fp = gzip.open(fn, 'w')
+		fp = ZipFile(fn, 'w')
 		fp.write('%d\n' % max(0, self._rawSource.getMaxParameters()))
-		data = lfilter(lambda (jobNum, pNum): jobNum != pNum, self._mapJob2PID.items())
-		datastr = lmap(lambda (jobNum, pNum): '%d:%d' % (jobNum, pNum), data)
+		data = lfilter(lambda jobNum_pNum: jobNum_pNum[0] != jobNum_pNum[1], self._mapJob2PID.items())
+		datastr = lmap(lambda jobNum_pNum: '%d:%d' % jobNum_pNum, data)
 		fp.write('%s\n' % str.join(',', datastr))
 
 	def getJobInfo(self, jobNum): # Perform mapping between jobNum and parameter number
@@ -160,8 +161,8 @@ class TrackedParameterAdapter(BasicParameterAdapter):
 				tmp = md5()
 				for key in ifilter(lambda k: k in meta, keys_store):
 					if str(meta[key]):
-						tmp.update(key)
-						tmp.update(str(meta[key]))
+						tmp.update(key.encode('ascii'))
+						tmp.update(str(meta[key]).encode('ascii'))
 				return { ParameterInfo.HASH: tmp.hexdigest(), 'GC_PARAM': meta['GC_PARAM'],
 					ParameterInfo.ACTIVE: meta[ParameterInfo.ACTIVE] }
 			if psource.getMaxJobs() is not None:
@@ -180,22 +181,21 @@ class TrackedParameterAdapter(BasicParameterAdapter):
 			if oldParam[ParameterInfo.ACTIVE] and not newParam[ParameterInfo.ACTIVE]:
 				disable.add(newParam['GC_PARAM'])
 			mapJob2PID[oldParam['GC_PARAM']] = newParam['GC_PARAM']
-		(pAdded, pMissing, pSame) = utils.DiffLists(params_old, params_new,
-			lambda a, b: cmp(a[ParameterInfo.HASH], b[ParameterInfo.HASH]), sameParams)
+		(pAdded, pMissing, pSame) = utils.DiffLists(params_old, params_new, itemgetter(ParameterInfo.HASH), sameParams)
 
 		# Construct complete parameter space psource with missing parameter entries and intervention state
 		# NNNNNNNNNNNNN OOOOOOOOO | source: NEW (==self) and OLD (==from file)
 		# <same><added> <missing> | same: both in NEW and OLD, added: only in NEW, missing: only in OLD
 		oldMaxJobs = old.getMaxJobs()
 		# assign sequential job numbers to the added parameter entries
-		pAdded.sort(key = lambda x: x['GC_PARAM'])
+		sort_inplace(pAdded, key = lambda x: x['GC_PARAM'])
 		for (idx, meta) in enumerate(pAdded):
 			if oldMaxJobs + idx != meta['GC_PARAM']:
 				mapJob2PID[oldMaxJobs + idx] = meta['GC_PARAM']
 
 		missingInfos = []
 		newMaxJobs = new.getMaxJobs()
-		pMissing.sort(key = lambda x: x['GC_PARAM'])
+		sort_inplace(pMissing, key = lambda x: x['GC_PARAM'])
 		for (idx, meta) in enumerate(pMissing):
 			mapJob2PID[meta['GC_PARAM']] = newMaxJobs + idx
 			tmp = old.getJobInfo(newMaxJobs + idx, meta['GC_PARAM'])
@@ -215,7 +215,7 @@ class TrackedParameterAdapter(BasicParameterAdapter):
 		self._mapJob2PID = mapJob2PID # Update Job2PID map
 		redo = redo.difference(disable)
 		if redo or disable:
-			mapPID2Job = dict(imap(lambda (k, v): (v, k), self._mapJob2PID.items()))
+			mapPID2Job = dict(ismap(utils.swap, self._mapJob2PID.items()))
 			translate = lambda pNum: mapPID2Job.get(pNum, pNum)
 			self._resyncState = (set(imap(translate, redo)), set(imap(translate, disable)), sizeChange)
 		elif sizeChange:

@@ -12,13 +12,13 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-import os, re, sys, glob, stat, time, Queue, errno, popen2, signal, fnmatch, logging, tarfile, operator, threading
+import os, re, sys, glob, stat, time, errno, popen2, signal, fnmatch, logging, operator
 from grid_control.gc_exceptions import GCError, InstallationError, UserError
 from grid_control.utils.file_objects import VirtualFile
 from grid_control.utils.parsing import parseBool, parseDict, parseInt, parseList, parseStr, parseTime, parseType, strGuid, strTime, strTimeShort
 from grid_control.utils.thread_tools import TimeoutException, hang_protection
 from hpfwk import APIError
-from python_compat import ifilter, imap, irange, izip, lfilter, lmap, lru_cache, lzip, md5, next, set, sorted, user_input
+from python_compat import ifilter, imap, irange, ismap, izip, lfilter, lmap, lru_cache, lsmap, lzip, md5_hex, next, reduce, set, sorted, tarfile, user_input
 
 def execWrapper(script, context = None):
 	if context is None:
@@ -30,6 +30,9 @@ def QM(cond, a, b):
 	if cond:
 		return a
 	return b
+
+def swap(a, b):
+	return (b, a)
 
 ################################################################
 # Path helper functions
@@ -110,30 +113,6 @@ def freeSpace(dn, timeout = 5):
 ################################################################
 # Process management functions
 
-def gcStartThread(desc, fun, *args, **kargs):
-	thread = threading.Thread(target = fun, args = args, kwargs = kargs)
-	thread.setDaemon(True)
-	thread.start()
-	return thread
-
-
-def getThreadedGenerator(genList): # Combines multiple, threaded generators into single generator
-	(listThread, queue) = ([], Queue.Queue())
-	for (desc, gen) in genList:
-		def genThread():
-			try:
-				for item in gen:
-					queue.put(item)
-			finally:
-				queue.put(queue) # Use queue as end-of-generator marker
-		listThread.append(gcStartThread(desc, genThread))
-	while len(listThread):
-		tmp = queue.get(True)
-		if tmp == queue:
-			listThread.pop()
-		else:
-			yield tmp
-
 class LoggedProcess(object):
 	def __init__(self, cmd, args = '', niceCmd = None, niceArgs = None, shell = True):
 		self.niceCmd = QM(niceCmd, niceCmd, os.path.basename(cmd))
@@ -167,8 +146,8 @@ class LoggedProcess(object):
 	def kill(self):
 		try:
 			os.kill(self.proc.pid, signal.SIGTERM)
-		except OSError, osError:
-			if osError.errno != errno.ESRCH: # errno.ESRCH: no such process (already dead)
+		except OSError:
+			if sys.exc_info[1].errno != errno.ESRCH: # errno.ESRCH: no such process (already dead)
 				raise
 
 	def iter(self):
@@ -283,7 +262,9 @@ def replaceDict(result, allVars, varMapping = None):
 
 
 def filterDict(dictType, kF = lambda k: True, vF = lambda v: True):
-	return dict(ifilter(lambda (k, v): kF(k) and vF(v), dictType.iteritems()))
+	def filterItems(k_v):
+		return kF(k_v[0]) and vF(k_v[1])
+	return dict(ifilter(filterItems, dictType.items()))
 
 
 class PersistentDict(dict):
@@ -427,20 +408,21 @@ def flatten(lists):
 	return result
 
 
-def DiffLists(oldList, newList, cmpFkt, changedFkt, isSorted = False):
+def DiffLists(oldList, newList, keyFun, changedFkt, isSorted = False):
 	(listAdded, listMissing, listChanged) = ([], [], [])
 	if not isSorted:
-		(newList, oldList) = (sorted(newList, cmpFkt), sorted(oldList, cmpFkt))
+		(newList, oldList) = (sorted(newList, key = keyFun), sorted(oldList, key = keyFun))
 	(newIter, oldIter) = (iter(newList), iter(oldList))
 	(new, old) = (next(newIter, None), next(oldIter, None))
 	while True:
 		if (new is None) or (old is None):
 			break
-		result = cmpFkt(new, old)
-		if result < 0: # new[npos] < old[opos]
+		keyNew = keyFun(new)
+		keyOld = keyFun(old)
+		if keyNew < keyOld: # new[npos] < old[opos]
 			listAdded.append(new)
 			new = next(newIter, None)
-		elif result > 0: # new[npos] > old[opos]
+		elif keyNew > keyOld: # new[npos] > old[opos]
 			listMissing.append(old)
 			old = next(oldIter, None)
 		else: # new[npos] == old[opos] according to *active* comparison
@@ -545,7 +527,7 @@ class DictFormat(object):
 		return data
 
 	# Format dictionary list
-	def format(self, entries, printNone = False, fkt = lambda (x, y, z): (x, y, z), format = '%s%s%s\n'):
+	def format(self, entries, printNone = False, fkt = lambda x_y_z: x_y_z, format = '%s%s%s\n'):
 		result = []
 		for key in entries.keys():
 			value = entries[key]
@@ -714,7 +696,9 @@ def printTabular(head, data, fmtString = '', fmt = {}, level = -1):
 				vprint(str.join("|", imap(lambda x: str(entry.get(x[0], '')), head)), level)
 		return
 	if printTabular.mode == 'longlist':
-		maxhead = max(imap(len, imap(lambda (key, name): name, head)))
+		def getHeadName(key, name):
+			return name
+		maxhead = max(imap(len, imap(getHeadName, head)))
 		showLine = False
 		for entry in data:
 			if isinstance(entry, dict):
@@ -731,13 +715,17 @@ def printTabular(head, data, fmtString = '', fmt = {}, level = -1):
 	justFunDict = { 'l': str.ljust, 'r': str.rjust, 'c': str.center }
 	# justFun = {id1: str.center, id2: str.rjust, ...}
 	head = list(head)
-	justFun = dict(imap(lambda (idx, x): (idx[0], justFunDict[x]), izip(head, fmtString)))
+	def getKeyFormat(headEntry, fmtString):
+		return (headEntry[0], justFunDict[fmtString])
+	justFun = dict(imap(getKeyFormat, izip(head, fmtString)))
 
 	# adjust to lendict of column (considering escape sequence correction)
 	strippedlen = lambda x: len(re.sub('\33\[\d*(;\d*)*m', '', x))
 	just = lambda key, x: justFun.get(key, str.rjust)(x, lendict[key] + len(x) - strippedlen(x))
 
-	lendict = dict(imap(lambda (key, name): (key, len(name)), head))
+	def getKeyLen(key, name):
+		return (key, len(name))
+	lendict = dict(imap(getKeyLen, head))
 
 	entries = [] # formatted, but not yet aligned entries
 	for entry in data:
@@ -784,11 +772,17 @@ def printTabular(head, data, fmtString = '', fmt = {}, level = -1):
 		return lendict
 
 	# Wrap and align columns
-	headwrap = list(getGoodPartition(lmap(lambda (key, name): key, head),
-		dict(imap(lambda (k, v): (k, v + 2), lendict.items())), printTabular.wraplen))
+	def getHeadKey(key, name):
+		return key
+	def getPaddedKeyLen(key, length):
+		return (key, length + 2)
+	headwrap = list(getGoodPartition(lsmap(getHeadKey, head),
+		dict(ismap(getPaddedKeyLen, lendict.items())), printTabular.wraplen))
 	lendict = getAlignedDict(headwrap, lendict, printTabular.wraplen)
 
-	headentry = dict(imap(lambda (id, name): (id, name.center(lendict[id])), head))
+	def getKeyPaddedName(key, name):
+		return (key, name.center(lendict[key]))
+	headentry = dict(imap(getKeyPaddedName, head))
 	# Wrap rows
 	def wrapentries(entries):
 		for idx, entry in enumerate(entries):
@@ -852,16 +846,17 @@ def exitWithUsage(usage, msg = None, helpOpt = True):
 
 def makeEnum(members = [], cls = None, useHash = False):
 	if cls:
-		enumID = md5(str(members) + '!' + cls.__name__).hexdigest()[:4]
+		enumID = md5_hex(str(members) + '!' + cls.__name__)[:4]
 	else:
-		enumID = md5(str(members)).hexdigest()[:4]
+		enumID = md5_hex(str(members))[:4]
 		cls = type('Enum_%s_%s' % (enumID, str.join('_', members)), (), {})
 
-	if useHash:
-		getValue = lambda (idx, name): idx + int(enumID, 16)
-	else:
-		getValue = lambda (idx, name): idx
-	values = lmap(getValue, enumerate(members))
+	def getValue(idx, name):
+		if useHash:
+			return idx + int(enumID, 16)
+		else:
+			return idx
+	values = lsmap(getValue, enumerate(members))
 
 	cls.enumNames = members
 	cls.enumValues = values

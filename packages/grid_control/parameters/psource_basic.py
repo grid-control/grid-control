@@ -18,7 +18,7 @@ from grid_control.backends import WMS
 from grid_control.config import ConfigError
 from grid_control.parameters.psource_base import ParameterInfo, ParameterMetadata, ParameterSource
 from hpfwk import APIError
-from python_compat import lmap, md5
+from python_compat import lmap, md5_hex
 
 class InternalParameterSource(ParameterSource):
 	def __init__(self, values, keys):
@@ -35,7 +35,7 @@ class InternalParameterSource(ParameterSource):
 		result.extend(self.keys)
 
 	def getHash(self):
-		return utils.md5(str(self.values) + str(self.keys)).hexdigest()
+		return md5_hex(str(self.values) + str(self.keys))
 
 
 class RequirementParameterSource(ParameterSource):
@@ -100,7 +100,7 @@ class SimpleParameterSource(SingleParameterSource):
 		result[self.key] = self.values[pNum]
 
 	def getHash(self):
-		return utils.md5(str(self.key) + str(self.values)).hexdigest()
+		return md5_hex(str(self.key) + str(self.values))
 
 	def __repr__(self):
 		return 'var(%s)' % repr(self.meta)
@@ -129,7 +129,7 @@ class ConstParameterSource(SingleParameterSource):
 		ParameterSource.show(self, level, 'const = %s, value = %s' % (self.key, self.value))
 
 	def getHash(self):
-		return md5(str(self.key) + str(self.value)).hexdigest()
+		return md5_hex(str(self.key) + str(self.value))
 
 	def fillParameterInfo(self, pNum, result):
 		result[self.key] = self.value
@@ -154,7 +154,7 @@ class RNGParameterSource(SingleParameterSource):
 		result[self.key] = random.randint(self.low, self.high)
 
 	def getHash(self):
-		return md5(str(self.key) + str([self.low, self.high])).hexdigest()
+		return md5_hex(str(self.key) + str([self.low, self.high]))
 
 	def __repr__(self):
 		return 'rng(%s)' % repr(self.meta).replace('!', '')
@@ -170,7 +170,7 @@ class CounterParameterSource(SingleParameterSource):
 		ParameterSource.show(self, level, 'var = %s, start = %s' % (self.key, self.seed))
 
 	def getHash(self):
-		return md5(str(self.key) + str(self.seed)).hexdigest()
+		return md5_hex(str(self.key) + str(self.seed))
 
 	def fillParameterInfo(self, pNum, result):
 		result[self.key] = self.seed + result['GC_JOB_ID']
@@ -186,7 +186,7 @@ class FormatterParameterSource(SingleParameterSource):
 		(self.fmt, self.source, self.default) = (fmt, source, default)
 
 	def getHash(self):
-		return md5(str(self.key) + str([self.fmt, self.source, self.default])).hexdigest()
+		return md5_hex(str(self.key) + str([self.fmt, self.source, self.default]))
 
 	def show(self, level = 0):
 		ParameterSource.show(self, level, 'var = %s, fmt = %s, source = %s, default = %s' %
@@ -208,7 +208,7 @@ class CollectParameterSource(SingleParameterSource): # Merge parameter values
 		self.sources = lmap(lambda regex: re.compile('^%s$' % regex.replace('...', '.*')), list(sources))
 
 	def getHash(self):
-		return md5(str(self.key) + str(self.srcList)).hexdigest()
+		return md5_hex(str(self.key) + str(self.srcList))
 
 	def fillParameterInfo(self, pNum, result):
 		for src in self.sources:

@@ -6,8 +6,8 @@ whether mode is 'r' or 'w'.  This module provides the functions popen2(cmd)
 and popen3(cmd) which return two or three pipes to the spawned command.
 """
 
-import os
-import sys
+import os, sys
+from python_compat import irange
 
 __all__ = ["popen2", "popen3", "popen4"]
 
@@ -61,7 +61,7 @@ class Popen3:
     def _run_child(self, cmd):
         if isinstance(cmd, str):
             cmd = ['/bin/sh', '-c', cmd]
-        for i in range(3, MAXFD):
+        for i in irange(3, MAXFD):
             try:
                 os.close(i)
             except OSError:
@@ -162,41 +162,3 @@ else:
         return inst.fromchild, inst.tochild
 
     __all__.extend(["Popen3", "Popen4"])
-
-def _test():
-    cmd  = "cat"
-    teststr = "ab cd\n"
-    if os.name == "nt":
-        cmd = "more"
-    # "more" doesn't act the same way across Windows flavors,
-    # sometimes adding an extra newline at the start or the
-    # end.  So we strip whitespace off both ends for comparison.
-    expected = teststr.strip()
-    print "testing popen2..."
-    r, w = popen2(cmd)
-    w.write(teststr)
-    w.close()
-    got = r.read()
-    if got.strip() != expected:
-        raise ValueError("wrote %s read %s" % (`teststr`, `got`))
-    print "testing popen3..."
-    try:
-        r, w, e = popen3([cmd])
-    except Exception:
-        r, w, e = popen3(cmd)
-    w.write(teststr)
-    w.close()
-    got = r.read()
-    if got.strip() != expected:
-        raise ValueError("wrote %s read %s" % (`teststr`, `got`))
-    got = e.read()
-    if got:
-        raise ValueError("unexected %s on stderr" % `got`)
-    for inst in _active[:]:
-        inst.wait()
-    if _active:
-        raise ValueError("_active not empty")
-    print "All OK"
-
-if __name__ == '__main__':
-    _test()

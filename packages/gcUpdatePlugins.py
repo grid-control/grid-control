@@ -14,14 +14,14 @@
 
 if __name__ == '__main__':
 	import os, sys, random
-	from python_compat import sorted, set
+	from python_compat import sorted, set, ifilter, imap
 	blacklist = ['./requests/packages/chardet/chardetect.py']
 	# import everything
 	def recurse(root):
 		tmp = root.lstrip('./').split('/')
 		files = os.listdir(root)
 		random.shuffle(files)
-		for entry in filter(lambda x: x != __file__, files):
+		for entry in ifilter(lambda x: x != __file__, files):
 			path = os.path.join(root, entry)
 			if entry.startswith('.') or entry.endswith('pyc') or entry.startswith('__') or path in blacklist:
 				continue
@@ -55,7 +55,7 @@ if __name__ == '__main__':
 		try:
 			exec(imp)
 			str = __builtins__.str # undo unicode magic by externals
-			clsList.extend(filter(lambda x: sc(x, Plugin), map(eval, list(dir()))))
+			clsList.extend(ifilter(lambda x: sc(x, Plugin), imap(eval, list(dir()))))
 		except Exception:
 			raise
 			print('Unable to exec "%s"!' % imp)
@@ -71,7 +71,7 @@ if __name__ == '__main__':
 		return result
 
 	packages = {}
-	for cls in filter(getBaseNames, set(clsList)):
+	for cls in ifilter(getBaseNames, set(clsList)):
 		packages.setdefault(cls.__module__.split('.')[0], {}).setdefault(str.join(';', getBaseNames(cls)), []).append(cls)
 
 	for package in packages:

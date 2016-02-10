@@ -388,7 +388,7 @@ wipp-crm.weizmann.ac.il
 """
 
 	import sys, time, urllib2
-	from python_compat import set, imap, lmap, lfilter
+	from python_compat import set, imap, lmap, lfilter, sorted
 
 	def geocode(loc):
 		request = "http://maps.googleapis.com/maps/api/geocode/json?address=%s&sensor=false" % (str.join('.', loc.split('.')[2:]))
@@ -413,8 +413,7 @@ wipp-crm.weizmann.ac.il
 	sys.stderr.write('unused entries:\n%s\n' % repr(lfilter(lambda x: x not in used, geoDict)))
 
 	sys.stdout.write('geoDict = {\n')
-	geoDictKeys = geoDict.keys()
-	geoDictKeys.sort(key = lambda x: str.join('.', reversed(x.split('.'))))
+	geoDictKeys = sorted(geoDict.keys(), key = lambda x: str.join('.', reversed(x.split('.'))))
 	for entry in geoDictKeys:
 		sys.stdout.write('\t%r: (%.6f, %.6f),\n' % (entry, geoDict[entry][0], geoDict[entry][1]))
 	sys.stdout.write('}\n')

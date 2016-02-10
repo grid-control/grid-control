@@ -13,9 +13,9 @@
 #-#  limitations under the License.
 
 import os, time
-from grid_control import utils
 from grid_control.job_db import Job
 from grid_control.monitoring import Monitoring
+from grid_control.utils.thread_tools import start_thread
 from grid_control_cms.DashboardAPI import DashboardAPI
 
 class DashBoard(Monitoring):
@@ -58,7 +58,7 @@ class DashBoard(Monitoring):
 	def onJobSubmit(self, wms, jobObj, jobNum):
 		token = wms.getAccessToken(jobObj.wmsId)
 		taskId = self.task.substVars(self.taskname, jobNum, addDict = {'DATASETNICK': ''}).strip('_')
-		utils.gcStartThread("Notifying dashboard about job submission %d" % jobNum,
+		start_thread("Notifying dashboard about job submission %d" % jobNum,
 			self.publish, jobObj, jobNum, taskId, [{
 			'user': os.environ['LOGNAME'], 'GridName': '/CN=%s' % token.getUsername(), 'CMSUser': token.getUsername(),
 			'tool': 'grid-control', 'JSToolVersion': utils.getVersion(),
@@ -73,7 +73,7 @@ class DashBoard(Monitoring):
 		statusDashboard = self._statusMap.get(jobObj.state, 'PENDING')
 		# Update dashboard information
 		taskId = self.task.substVars(self.taskname, jobNum, addDict = {'DATASETNICK': ''}).strip('_')
-		utils.gcStartThread("Notifying dashboard about status of job %d" % jobNum,
+		start_thread("Notifying dashboard about status of job %d" % jobNum,
 			self.publish, jobObj, jobNum, taskId, [{'StatusValue': statusDashboard,
 			'StatusValueReason': data.get('reason', statusDashboard).upper(),
 			'StatusEnterTime': data.get('timestamp', time.strftime('%Y-%m-%d_%H:%M:%S', time.localtime())),

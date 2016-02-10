@@ -24,8 +24,11 @@ class InstanceFactory(object):
 		(self._bindValue, self._cls, self._args, self._kwargs) = (bindValue, cls, args, kwargs)
 
 	def _fmt(self, args, kwargs, addEllipsis = False):
-		args_str_list = list(map(repr, args))
-		args_str_list.extend(map(lambda kv: '%s=%r' % kv, kwargs.items()))
+		args_str_list = []
+		for arg in args:
+			args_str_list.append(repr(arg))
+		for k_v in kwargs.items():
+			args_str_list.append('%s=%r' % k_v)
 		if addEllipsis:
 			args_str_list.append('...')
 		return '%s(%s)' % (self._cls.__name__, str.join(', ', args_str_list))
@@ -41,7 +44,7 @@ class InstanceFactory(object):
 
 	def getInstance(self, *args, **kwargs):
 		args = self._args + args
-		kwargs = dict(self._kwargs.items() + kwargs.items())
+		kwargs = dict(list(self._kwargs.items()) + list(kwargs.items()))
 		try:
 			return self._cls(*args, **kwargs)
 		except Exception:
@@ -69,7 +72,9 @@ class Plugin(object):
 		log.log(logging.DEBUG1, 'Loading class %s' % clsName)
 
 		# resolve class name/alias to complete class path 'myplugin -> module.submodule.MyPlugin'
-		clsMap = dict(map(lambda k_v: (k_v[0].lower(), k_v[1]), cls.moduleMap.items()))
+		clsMap = {}
+		for (key, value) in cls.moduleMap.items():
+			clsMap[key.lower()] = value
 		clsSearchList = [clsName]
 		clsNameStored = clsName
 		clsFormat = lambda cls: '%s:%s' % (cls.__module__, cls.__name__)
@@ -146,7 +151,8 @@ def initPlugins(basePath):
 			pluginFile = os.path.join(basePath, pkgName, '.PLUGINS')
 			if os.path.exists(pluginFile):
 				__import__(pkgName) # Trigger initialisation of module
-				for line in map(str.strip, open(pluginFile)):
+				for line in open(pluginFile):
+					line = line.strip()
 					if line and line.endswith(':'):
 						baseClass = line.rstrip(':').split('.')[-1]
 					elif line and not line.endswith(':'):

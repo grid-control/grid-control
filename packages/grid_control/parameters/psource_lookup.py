@@ -17,7 +17,7 @@ from grid_control import utils
 from grid_control.config import ConfigError
 from grid_control.parameters.psource_base import ParameterInfo, ParameterSource
 from grid_control.parameters.psource_basic import FormatterParameterSource, KeyParameterSource, SimpleParameterSource, SingleParameterSource
-from python_compat import imap, irange, izip, lmap
+from python_compat import imap, irange, izip, lmap, md5_hex
 
 class LookupMatcher:
 	def __init__(self, lookupKeys, lookupFunctions, lookupDictConfig):
@@ -28,7 +28,7 @@ class LookupMatcher:
 			self.lookupDict, self.lookupOrder = ({None: lookupDictConfig}, [])
 
 	def getHash(self):
-		return utils.md5(str(lmap(lambda x: self.lookupDict, self.lookupOrder))).hexdigest()
+		return md5_hex(str(lmap(lambda x: self.lookupDict, self.lookupOrder)))
 
 	def __repr__(self):
 		return 'key(%s)' % str.join(', ', imap(lambda x: "'%s'" % x, self.lookupKeys))
@@ -115,7 +115,7 @@ class SimpleLookupParameterSource(SingleParameterSource):
 		ParameterSource.show(self, level, 'var = %s, lookup = %s' % (self.key, str.join(',', self.matcher.lookupKeys)))
 
 	def getHash(self):
-		return utils.md5(str(self.key) + self.matcher.getHash()).hexdigest()
+		return md5_hex(str(self.key) + self.matcher.getHash())
 
 	def __repr__(self):
 		return "lookup(key('%s'), %s)" % (self.key, repr(self.matcher))
@@ -181,7 +181,7 @@ class SwitchingLookupParameterSource(SingleParameterSource):
 		return (result_redo, result_disable, result_sizeChange or psource_sizeChange)
 
 	def getHash(self):
-		return utils.md5(str(self.key) + self.matcher.getHash() + self.psource.getHash()).hexdigest()
+		return md5_hex(str(self.key) + self.matcher.getHash() + self.psource.getHash())
 
 	def __repr__(self):
 		return "switch(%r, key('%s'), %s)" % (self.psource, self.key, repr(self.matcher))

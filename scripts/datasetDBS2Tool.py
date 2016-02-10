@@ -14,7 +14,7 @@
 #-#  limitations under the License.
 
 import sys, optparse
-from gcSupport import *
+from gcSupport import Config
 from grid_control_cms.lumi_tools import formatLumi, mergeLumi
 from grid_control_cms.provider_dbsv2 import DataProvider, createDBSAPI
 from python_compat import imap, lmap, set

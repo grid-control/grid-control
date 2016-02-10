@@ -17,7 +17,7 @@ from grid_control import utils
 from grid_control.config import createConfigFactory, noDefault
 from grid_control.datasets.provider_base import DataProvider
 from hpfwk import AbstractError, NestedException, Plugin
-from python_compat import ifilter, imap, irange, lmap, next
+from python_compat import ifilter, imap, irange, lmap, next, sort_inplace
 
 def fast_search(lst, cmp_op):
 	def bisect_left_cmp(lst, cmp_op):
@@ -115,7 +115,7 @@ class DataSplitter(Plugin):
 		log = utils.ActivityLog('Performing resynchronization of dataset')
 		(blocksAdded, blocksMissing, blocksMatching) = DataProvider.resyncSources(oldBlocks, newBlocks)
 		for rmBlock in blocksMissing: # Files in matching blocks are already sorted
-			rmBlock[DataProvider.FileList].sort(lambda a, b: cmp(a[DataProvider.URL], b[DataProvider.URL]))
+			sort_inplace(rmBlock[DataProvider.FileList], key = lambda x: x[DataProvider.URL])
 		del log
 
 		# Get block information (oldBlock, newBlock, filesMissing, filesMatched) which splitInfo is based on
@@ -443,7 +443,8 @@ class DataSplitter(Plugin):
 		# Transfer config protocol (in case no split function is called)
 		splitter._protocol = src.metadata['None']
 		for section in ifilter(lambda x: x, src.metadata):
-			meta2prot = lambda (k, v): ('[%s] %s' % (section.replace('None ', ''), k), v)
+			def meta2prot(k, v):
+				return ('[%s] %s' % (section.replace('None ', ''), k), v)
 			splitter._protocol.update(dict(imap(meta2prot, src.metadata[section].items())))
 		return splitter
 	loadState = staticmethod(loadState)

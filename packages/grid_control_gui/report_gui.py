@@ -224,7 +224,7 @@ class AdaptiveReport(CategoryReport):
 
 		# Remove redundant variables from description
 		varKeyResult = getKeyMergeResults()
-		for varKey in sorted(varKeyResult, cmp = lambda a, b: -cmp(a, b)):
+		for varKey in sorted(varKeyResult, reverse = True):
 			if varKey == 'DATASETNICK': # Never remove dataset infos
 				continue
 			if sum(imap(len, varKeyResult[varKey])) - len(varKeyResult[varKey]) == 0:

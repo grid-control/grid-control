@@ -25,7 +25,9 @@ def formatVariables(variables, showLongVariables = False):
 			return value
 		return value[:200] + ' ... [length:%d]' % len(value)
 
-	maxlen = max(list(map(len, variables)) + [0])
+	maxlen = 0
+	for var in variables:
+		maxlen = max(maxlen, len(var))
 	def display(keys, varDict, varPrefix = ''):
 		keys.sort()
 		for var in keys:
@@ -44,7 +46,9 @@ def formatVariables(variables, showLongVariables = False):
 		if hasattr(classVariable, '__dict__'):
 			classVariables = classVariable.__dict__
 		elif hasattr(classVariable, '__slots__'):
-			classVariables = dict(map(lambda attr: (attr, getattr(classVariable, attr)), classVariable.__slots__))
+			classVariables = {}
+			for attr in classVariable.__slots__:
+				classVariables[attr] = getattr(classVariable, attr)
 		try:
 			for line in display(list(classVariables.keys()), classVariables, 'self.'):
 				yield line
@@ -167,13 +171,14 @@ class ExceptionFormatter(logging.Formatter):
 		def formatInfos(info):
 			(exValue, exDepth, exID) = info
 			result = '%s%s: %s' % ('  ' * exDepth, exValue.__class__.__name__, exValue)
-			if not isinstance(exValue, NestedException):
+			if not isinstance(exValue, NestedException) and (len(exValue.args) > 1):
 				try:
 					result += '\n%s%s  %s' % ('  ' * exDepth, len(exValue.__class__.__name__) * ' ', exValue.args)
 				except:
 					pass
 			return result
-		msg += str.join('\n', map(formatInfos, infos)) + '\n'
+		for info in infos:
+			msg += formatInfos(info) + '\n'
 		return msg
 
 # Signal handler for debug session requests

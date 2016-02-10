@@ -12,13 +12,13 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-import os, sys, copy, time, tarfile, tempfile
+import os, sys, copy, time, tempfile
 from grid_control import utils
 from grid_control.backends.broker import Broker
 from grid_control.backends.wms import BackendError, BasicWMS, WMS
 from grid_control.job_db import Job
 from hpfwk import APIError
-from python_compat import ifilter, imap, irange, lfilter, lmap, md5, parsedate
+from python_compat import ifilter, imap, irange, lfilter, lmap, md5, parsedate, tarfile
 
 def jdlEscape(value):
 	repl = { '\\': r'\\', '\"': r'\"', '\n': r'\n' }
@@ -104,8 +104,8 @@ class GridWMS(BasicWMS):
 
 	def makeJDL(self, jobNum, module):
 		cfgPath = os.path.join(self._jobPath, 'job_%d.var' % jobNum)
-		sbIn = lmap(lambda (d, s, t): s, self._getSandboxFilesIn(module))
-		sbOut = lmap(lambda (d, s, t): t, self._getSandboxFilesOut(module))
+		sbIn = lmap(lambda d_s_t: d_s_t[1], self._getSandboxFilesIn(module))
+		sbOut = lmap(lambda d_s_t: d_s_t[2], self._getSandboxFilesOut(module))
 		wcList = lfilter(lambda x: '*' in x, sbOut)
 		if len(wcList):
 			self._writeJobConfig(cfgPath, jobNum, module, {'GC_WC': str.join(' ', wcList)})
@@ -248,7 +248,7 @@ class GridWMS(BasicWMS):
 
 		try:
 			tmp = utils.filterDict(self._submitParams, vF = lambda v: v)
-			params = str.join(' ', imap(lambda (x, y): '%s %s' % (x, y), tmp.items()))
+			params = str.join(' ', imap(lambda x_y: '%s %s' % x_y, tmp.items()))
 
 			log = tempfile.mktemp('.log')
 			activity = utils.ActivityLog('submitting jobs')

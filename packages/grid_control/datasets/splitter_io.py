@@ -12,13 +12,13 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-import os, gzip, tarfile, cStringIO
+import os, gzip
 from grid_control import utils
 from grid_control.config import ConfigError
 from grid_control.datasets.splitter_base import DataSplitter
 from grid_control.utils.file_objects import VirtualFile
 from grid_control.utils.thread_tools import GCLock
-from python_compat import ifilter, imap, lfilter, lmap
+from python_compat import StringBuffer, ifilter, imap, lfilter, lmap, tarfile
 
 class BaseJobFileTarAdaptor(object):
 	def __init__(self, path):
@@ -57,7 +57,7 @@ class DataSplitterIO_V1(object):
 		for jobNum, entry in enumerate(source):
 			if jobNum % 100 == 0:
 				closeSubTar(jobNum - 1, subTarFile, subTarFileObj)
-				subTarFileObj = cStringIO.StringIO()
+				subTarFileObj = StringBuffer()
 				subTarFile = tarfile.open(mode = 'w:gz', fileobj = subTarFileObj)
 				del log
 				log = utils.ActivityLog('%s [%d / %d]' % (message, jobNum, sourceLen))
@@ -102,7 +102,7 @@ class DataSplitterIO_V1(object):
 				if not self._cacheKey == key / 100:
 					self._cacheKey = key / 100
 					subTarFileObj = self._tar.extractfile('%03dXX.tgz' % (key / 100))
-					subTarFileObj = cStringIO.StringIO(gzip.GzipFile(fileobj = subTarFileObj).read()) # 3-4x speedup for sequential access
+					subTarFileObj = StringBuffer(gzip.GzipFile(fileobj = subTarFileObj).read()) # 3-4x speedup for sequential access
 					self._cacheTar = tarfile.open(mode = 'r', fileobj = subTarFileObj)
 				parserMap = { None: str, DataSplitter.NEntries: int, DataSplitter.Skipped: int, 
 					DataSplitter.DatasetID: int, DataSplitter.Invalid: utils.parseBool,
@@ -147,7 +147,7 @@ class DataSplitterIO_V2(object):
 				lastValid = jobNum
 			if jobNum % self.keySize == 0:
 				closeSubTar(jobNum - 1, subTarFile, subTarFileObj)
-				subTarFileObj = cStringIO.StringIO()
+				subTarFileObj = StringBuffer()
 				subTarFile = tarfile.open(mode = 'w:gz', fileobj = subTarFileObj)
 				del log
 				log = utils.ActivityLog('%s [%d / %d]' % (message, jobNum, sourceLen))
@@ -199,7 +199,7 @@ class DataSplitterIO_V2(object):
 				if not self._cacheKey == key / self.keySize:
 					self._cacheKey = key / self.keySize
 					subTarFileObj = self._tar.extractfile('%03dXX.tgz' % (key / self.keySize))
-					subTarFileObj = cStringIO.StringIO(gzip.GzipFile(fileobj = subTarFileObj).read()) # 3-4x speedup for sequential access
+					subTarFileObj = StringBuffer(gzip.GzipFile(fileobj = subTarFileObj).read()) # 3-4x speedup for sequential access
 					self._cacheTar = tarfile.open(mode = 'r', fileobj = subTarFileObj)
 				parserMap = { None: str, DataSplitter.NEntries: int, DataSplitter.Skipped: int, 
 					DataSplitter.DatasetID: int, DataSplitter.Invalid: utils.parseBool,

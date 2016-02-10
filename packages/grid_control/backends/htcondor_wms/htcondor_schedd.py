@@ -641,7 +641,7 @@ class HTCScheddSSH(HTCScheddCLIBase):
 			if taskID:
 				return 'taskID.%s' % taskID
 		return ''
-	_getStagingToken = lru_cache(_getStagingToken, 31)
+	_getStagingToken = lru_cache(_getStagingToken)
 	def getStagingDir(self, htcID = None, taskID = None):
 		token = self._getStagingToken(htcID = htcID, taskID = taskID)
 		try:

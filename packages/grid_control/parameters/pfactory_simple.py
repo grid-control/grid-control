@@ -20,8 +20,9 @@ from grid_control.parameters.psource_data import DataParameterSource
 from grid_control.parameters.psource_file import CSVParameterSource
 from grid_control.parameters.psource_lookup import createLookupHelper
 from grid_control.parameters.psource_meta import ChainParameterSource, CrossParameterSource, RepeatParameterSource, ZipLongParameterSource
+from grid_control.utils.gc_itertools import lchain
 from hpfwk import APIError
-from python_compat import ifilter, imap, irange, lfilter, next
+from python_compat import ifilter, imap, irange, lfilter, next, reduce
 
 def tokenize(value, tokList):
 	(pos, start) = (0, 0)
@@ -49,10 +50,10 @@ def tok2inlinetok(tokens, operatorList):
 	lastTokenExpr = None
 	while token:
 		# insert '*' between two expressions - but not between "<expr> ["
-		if lastTokenExpr and token not in ['[', ']', ')', '>'] + operatorList:
+		if lastTokenExpr and token not in (['[', ']', ')', '>'] + operatorList):
 			yield '*'
 		yield token
-		lastTokenExpr = token not in ['[', '(', '<'] + operatorList
+		lastTokenExpr = token not in (['[', '(', '<'] + operatorList)
 		token = next(tokens, None)
 
 
@@ -192,8 +193,8 @@ class SimpleParameterFactory(BasicParameterFactory):
 
 
 	def _getUserSource(self, pExpr, parent):
-		tokens = tokenize(pExpr, self.precedence.keys() + list('()[]<>'))
-		tokens = list(tok2inlinetok(tokens, self.precedence.keys()))
+		tokens = tokenize(pExpr, lchain([self.precedence.keys(), list('()[]<>')]))
+		tokens = list(tok2inlinetok(tokens, list(self.precedence.keys())))
 		utils.vprint('Parsing parameter string: "%s"' % str.join(' ', imap(str, tokens)), 0)
 		tree = tok2tree(tokens, self.precedence)
 

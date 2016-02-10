@@ -12,7 +12,7 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-import math, time, bisect, random
+import math, time, bisect, random, logging
 from grid_control import utils
 from grid_control.config import ConfigError
 from grid_control.gc_plugin import NamedPlugin
@@ -29,6 +29,8 @@ class JobManager(NamedPlugin):
 	def __init__(self, config, name, task, eventhandler):
 		NamedPlugin.__init__(self, config, name)
 		(self._task, self._eventhandler) = (task, eventhandler)
+		self._log_user = logging.getLogger('user')
+		self._log_user_time = logging.getLogger('user.time')
 		self.jobLimit = config.getInt('jobs', -1, onChange = None)
 		selected = JobSelector.create(config.get('selected', '', onChange = None), task = self._task)
 		jobDBClass = config.getPlugin('jobdb', 'JobDB', cls = JobDB)
@@ -58,7 +60,7 @@ class JobManager(NamedPlugin):
 			try:
 				maxJobs = task.getMaxJobs()
 				if maxJobs and (nJobs > maxJobs):
-					print 'Maximum number of jobs given as %d was truncated to %d' % (nJobs, maxJobs)
+					self._log_user.warning('Maximum number of jobs given as %d was truncated to %d' % (nJobs, maxJobs))
 					nJobs = maxJobs
 			except Exception:
 				pass
@@ -85,17 +87,17 @@ class JobManager(NamedPlugin):
 		self.jobDB.commit(jobNum, jobObj)
 
 		jobNumLen = int(math.log10(max(1, len(self.jobDB))) + 1)
-		utils.vprint('Job %s state changed from %s to %s ' % (str(jobNum).ljust(jobNumLen), Job.enum2str(oldState), Job.enum2str(state)), -1, True, False)
+		jobStatus = ['Job %s state changed from %s to %s ' % (str(jobNum).ljust(jobNumLen), Job.enum2str(oldState), Job.enum2str(state))]
 		if showWMS and jobObj.wmsId:
-			print '(WMS:%s)' % jobObj.wmsId.split('.')[1],
+			jobStatus.append('(WMS:%s)' % jobObj.wmsId.split('.')[1])
 		if (state == Job.SUBMITTED) and (jobObj.attempt > 1):
-			print '(retry #%s)' % (jobObj.attempt - 1)
+			jobStatus.append('(retry #%s)' % (jobObj.attempt - 1))
 		elif (state == Job.QUEUED) and jobObj.get('dest') != 'N/A':
-			print '(%s)' % jobObj.get('dest')
+			jobStatus.append('(%s)' % jobObj.get('dest'))
 		elif (state in [Job.WAITING, Job.ABORTED, Job.DISABLED]) and jobObj.get('reason'):
-			print '(%s)' % jobObj.get('reason')
+			jobStatus.append('(%s)' % jobObj.get('reason'))
 		elif (state == Job.SUCCESS) and jobObj.get('runtime', None) is not None:
-			print '(runtime %s)' % utils.strTime(utils.QM(jobObj.get('runtime') != '', jobObj.get('runtime'), 0))
+			jobStatus.append('(runtime %s)' % utils.strTime(utils.QM(jobObj.get('runtime') != '', jobObj.get('runtime'), 0)))
 		elif (state == Job.FAILED):
 			msg = []
 			if jobObj.get('retcode'):
@@ -108,10 +110,8 @@ class JobManager(NamedPlugin):
 			if jobObj.get('dest'):
 				msg.append(jobObj.get('dest'))
 			if len(msg):
-				print '(%s)' % str.join(' - ', msg),
-			print
-		else:
-			print
+				jobStatus.append('(%s)' % str.join(' - ', msg))
+		self._log_user_time.info(str.join(' ', jobStatus))
 
 
 	def sample(self, jobList, size):
@@ -169,7 +169,7 @@ class JobManager(NamedPlugin):
 				continue
 
 			jobObj.assignId(wmsId)
-			for key, value in data.iteritems():
+			for key, value in data.items():
 				jobObj.set(key, value)
 
 			self._update(jobObj, jobNum, Job.SUBMITTED)
@@ -217,7 +217,7 @@ class JobManager(NamedPlugin):
 		# Cancel jobs which took too long
 		if len(timeoutList):
 			change = True
-			print '\nTimeout for the following jobs:'
+			self._log_user.warning('Timeout for the following jobs:')
 			self.cancel(wms, timeoutList)
 
 		# Process task interventions
@@ -290,7 +290,7 @@ class JobManager(NamedPlugin):
 			mark_cancelled(jobNum)
 
 		if len(jobs) > 0:
-			print '\nThere was a problem with cancelling the following jobs:'
+			self._log_user.warning('There was a problem with cancelling the following jobs:')
 			self._reportClass.getInstance(self.jobDB, self._task, jobs).display()
 			if (interactive and utils.getUserBool('Do you want to mark them as cancelled?', True)) or not interactive:
 				lmap(mark_cancelled, jobs)
@@ -302,14 +302,14 @@ class JobManager(NamedPlugin):
 		selector = AndJobSelector(ClassSelector(JobClass.PROCESSING), JobSelector.create(select, task = self._task))
 		jobs = self.jobDB.getJobs(selector)
 		if jobs:
-			print '\nCancelling the following jobs:'
+			self._log_user.warning('Cancelling the following jobs:')
 			self.cancel(wms, jobs, True)
 
 
 	def reset(self, wms, select):
 		jobs = self.jobDB.getJobs(JobSelector.create(select, task = self._task))
 		if jobs:
-			print '\nResetting the following jobs:'
+			self._log_user.warning('Resetting the following jobs:')
 			self._reportClass.getInstance(self.jobDB, self._task, jobs).display()
 			if utils.getUserBool('Are you sure you want to reset the state of these jobs?', False):
 				self.cancel(wms, self.jobDB.getJobs(ClassSelector(JobClass.PROCESSING), jobs), False, False)

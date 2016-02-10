@@ -1,9 +1,8 @@
 #!/usr/bin/env python
-# -*- coding: iso-8859-1 -*-
 #-------------------------------------------------------------------
 # tarfile.py
 #-------------------------------------------------------------------
-# Copyright (C) 2002 Lars Gustäbel <lars@gustaebel.de>
+# Copyright (C) 2002 Lars Gustaebel <lars@gustaebel.de>
 # All rights reserved.
 #
 # Permission  is  hereby granted,  free  of charge,  to  any person
@@ -34,23 +33,16 @@ __version__ = "$Revision: 81667 $"
 # $Source$
 
 version     = "0.9.0"
-__author__  = "Lars Gustäbel (lars@gustaebel.de)"
+__author__  = "Lars Gustaebel (lars@gustaebel.de)"
 __date__    = "$Date: 2010-06-03 07:34:14 -0500 (Thu, 03 Jun 2010) $"
 __cvsid__   = "$Id: tarfile.py 81667 2010-06-03 12:34:14Z lars.gustaebel $"
-__credits__ = "Gustavo Niemeyer, Niels Gustäbel, Richard Townsend."
+__credits__ = "Gustavo Niemeyer, Niels Gustaebel, Richard Townsend."
 
 #---------
 # Imports
 #---------
-import sys
-import os
-import shutil
-import stat
-import errno
-import time
-import struct
-import copy
-import re
+import copy, errno, os, re, shutil, stat, struct, sys, time
+from python_compat import irange
 
 if not hasattr(os, 'SEEK_SET'):
 	os.SEEK_SET = 0
@@ -202,7 +194,7 @@ def nti(s):
             raise InvalidHeaderError("invalid header")
     else:
         n = 0L
-        for i in xrange(len(s) - 1):
+        for i in irange(len(s) - 1):
             n <<= 8
             n += ord(s[i + 1])
     return n
@@ -228,7 +220,7 @@ def itn(n, digits=8, format=DEFAULT_FORMAT):
             n = struct.unpack("L", struct.pack("l", n))[0]
 
         s = ""
-        for i in xrange(digits - 1):
+        for i in irange(digits - 1):
             s = chr(n & 0377) + s
             n >>= 8
         s = chr(0200) + s
@@ -279,7 +271,7 @@ def copyfileobj(src, dst, length=None):
 
     BUFSIZE = 16 * 1024
     blocks, remainder = divmod(length, BUFSIZE)
-    for b in xrange(blocks):
+    for b in irange(blocks):
         buf = src.read(BUFSIZE)
         if len(buf) < BUFSIZE:
             raise IOError("end of file reached")
@@ -563,7 +555,7 @@ class _Stream:
         """
         if pos - self.pos >= 0:
             blocks, remainder = divmod(pos - self.pos, self.bufsize)
-            for i in xrange(blocks):
+            for i in irange(blocks):
                 self.read(self.bufsize)
             self.read(remainder)
         else:
@@ -1328,7 +1320,7 @@ class TarInfo(object):
         realpos = 0L
         # There are 4 possible sparse structs in the
         # first header.
-        for i in xrange(4):
+        for i in irange(4):
             try:
                 offset = nti(buf[pos:pos + 12])
                 numbytes = nti(buf[pos + 12:pos + 24])
@@ -1349,7 +1341,7 @@ class TarInfo(object):
         while isextended == 1:
             buf = tarfile.fileobj.read(BLOCKSIZE)
             pos = 0
-            for i in xrange(21):
+            for i in irange(21):
                 try:
                     offset = nti(buf[pos:pos + 12])
                     numbytes = nti(buf[pos + 12:pos + 24])

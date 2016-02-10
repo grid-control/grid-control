@@ -19,7 +19,7 @@ from grid_control.backends.wms import BackendError, BasicWMS, WMS
 from grid_control.job_db import Job
 from grid_control.utils.file_objects import VirtualFile
 from hpfwk import AbstractError
-from python_compat import ifilter, imap, lfilter
+from python_compat import ifilter, imap, ismap, lfilter
 
 class LocalWMS(BasicWMS):
 	configSections = BasicWMS.configSections + ['local']
@@ -124,7 +124,9 @@ class LocalWMS(BasicWMS):
 		except Exception:
 			raise BackendError('Unable to create sandbox directory "%s"!' % sandbox)
 		sbPrefix = sandbox.replace(self.sandPath, '').lstrip('/')
-		self.smSBIn.doTransfer(imap(lambda (d, s, t): (d, s, os.path.join(sbPrefix, t)), self._getSandboxFilesIn(module)))
+		def translateTarget(d, s, t):
+			return (d, s, os.path.join(sbPrefix, t))
+		self.smSBIn.doTransfer(ismap(translateTarget, self._getSandboxFilesIn(module)))
 
 		cfgPath = os.path.join(sandbox, '_jobconfig.sh')
 		self._writeJobConfig(cfgPath, jobNum, module, {'GC_SANDBOX': sandbox,

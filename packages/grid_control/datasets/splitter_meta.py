@@ -15,37 +15,37 @@
 from grid_control.datasets.provider_base import DataProvider
 from grid_control.datasets.splitter_basic import FileLevelSplitter
 from hpfwk import AbstractError
-from python_compat import imap, lmap
+from python_compat import imap, sort_inplace
 
 # Split dataset along block and metadata boundaries - using equivalence classes of metadata
 class MetadataSplitter(FileLevelSplitter):
-	def metaCmp(self, metadataNames, block, fiA, fiB):
+	def metaKey(self, metadataNames, block, fi):
 		raise AbstractError
 
 	def splitBlocks(self, blocks):
 		for block in blocks:
 			files = block[DataProvider.FileList]
-			files.sort(lambda a, b: self.metaCmp(block[DataProvider.Metadata], block, a, b))
-			(fileStack, reprElement) = ([], None)
+			sort_inplace(files, key = lambda fi: self.metaKey(block[DataProvider.Metadata], block, fi))
+			(fileStack, reprKey) = ([], None)
 			for fi in files:
-				if reprElement is None:
-					reprElement = fi
-				if self.metaCmp(block[DataProvider.Metadata], block, fi, reprElement) != 0:
+				if reprKey is None:
+					reprKey = self.metaKey(block[DataProvider.Metadata], block, fi)
+				curKey = self.metaKey(block[DataProvider.Metadata], block, fi)
+				if curKey != reprKey:
 					yield self.newBlock(block, fileStack)
-					(fileStack, reprElement) = ([], fi)
+					(fileStack, reprKey) = ([], curKey)
 				fileStack.append(fi)
 			yield self.newBlock(block, fileStack)
 
 
 class UserMetadataSplitter(MetadataSplitter):
-	def metaCmp(self, metadataNames, block, fiA, fiB):
+	def metaKey(self, metadataNames, block, fi):
 		selMetadataNames = self.setup(self.config.getList, block, 'split metadata', [])
 		selMetadataIdx = imap(metadataNames.index, selMetadataNames)
-		getMetadata = lambda fi: lmap(lambda idx: fi[DataProvider.Metadata][idx], selMetadataIdx)
-		return cmp(getMetadata(fiA), getMetadata(fiB))
+		return tuple(imap(lambda idx: fi[DataProvider.Metadata][idx], selMetadataIdx))
 
 
 class RunSplitter(MetadataSplitter):
-	def metaCmp(self, metadataNames, block, fiA, fiB):
+	def metaKey(self, metadataNames, block, fi):
 		mdIdx = metadataNames.index('Runs')
-		return cmp(fiA[DataProvider.Metadata][mdIdx], fiB[DataProvider.Metadata][mdIdx])
+		return fi[DataProvider.Metadata][mdIdx]

@@ -1,4 +1,4 @@
-from python_compat import sorted
+from python_compat import sorted, lrange
 
 """JSON token scanner
 """
@@ -440,7 +440,7 @@ ESCAPE_DCT = {
     '\r': '\\r',
     '\t': '\\t',
 }
-for i in range(0x20):
+for i in lrange(0x20):
     #ESCAPE_DCT.setdefault(chr(i), '\\u{0:04x}'.format(i))
     ESCAPE_DCT.setdefault(chr(i), '\\u%04x' % (i,))
 

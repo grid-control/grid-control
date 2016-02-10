@@ -25,7 +25,7 @@ class DataTask(TaskModule):
 	def setupJobParameters(self, config, pm):
 		config = config.changeView(viewClass = TaggedConfigView, addSections = ['dataset'])
 		self.dataSplitter = None
-		self.dataRefresh = None
+		self.dataRefresh = -1
 		self._forceRefresh = config.getState('resync', detail = 'dataset', default = False)
 		def userRefresh(config, old_obj, cur_obj, cur_entry, obj2str):
 			if ((old_obj == '') and (cur_obj != '')):
@@ -84,7 +84,7 @@ class DataTask(TaskModule):
 
 
 	def canFinish(self):
-		return not (self.dataRefresh > 0)
+		return self.dataRefresh <= 0
 
 
 	def report(self, jobNum):

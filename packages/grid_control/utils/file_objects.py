@@ -1,4 +1,4 @@
-#-#  Copyright 2014 Karlsruhe Institute of Technology
+#-#  Copyright 2014-2016 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -12,8 +12,8 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-import tarfile
-from python_compat import StringBufferBase
+import gzip
+from python_compat import StringBuffer, StringBufferBase, tarfile
 
 class SafeFile(object):
 	def __init__(self, fn, mode = 'r', keepOld = False):
@@ -38,7 +38,27 @@ class VirtualFile(StringBufferBase):
 		self.name = name
 		self.size = len(self.getvalue())
 
+	def read(self, size):
+		return StringBufferBase.read(self, size).encode('ascii')
+
 	def getTarInfo(self):
 		info = tarfile.TarInfo(self.name)
 		info.size = self.size
 		return (info, self)
+
+
+class ZipFile(object):
+	def __init__(self, fn, mode):
+		if mode == 'r':
+			self._reader = StringBuffer(gzip.open(fn, mode).read().decode('ascii'))
+		if mode == 'w':
+			self._writer = gzip.open(fn, mode)
+
+	def write(self, data):
+		self._writer.write(data.encode('ascii'))
+
+	def readline(self):
+		return self._reader.readline()
+
+	def readlines(self):
+		return self._reader.readlines()

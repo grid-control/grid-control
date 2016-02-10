@@ -16,6 +16,7 @@ import os, time, logging
 from grid_control import utils
 from grid_control.gc_plugin import NamedPlugin
 from grid_control.job_db import Job
+from grid_control.utils.thread_tools import start_thread
 from python_compat import imap, lmap
 
 class EventHandler(NamedPlugin):
@@ -119,7 +120,7 @@ class ScriptMonitoring(Monitoring):
 		if script != '':
 			self.runningToken += 1
 			self.running[self.runningToken] = time.time()
-			utils.gcStartThread('Running monitoring script %s' % script,
+			start_thread('Running monitoring script %s' % script,
 				self.scriptThread, self.runningToken, script, jobNum, jobObj)
 			self.cleanupRunning()
 

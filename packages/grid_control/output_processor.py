@@ -34,11 +34,11 @@ class FileInfoProcessor(JobInfoProcessor):
 			result = {}
 			# parse old job info data format for files
 			oldFileFormat = [FileInfoProcessor.Hash, FileInfoProcessor.NameLocal, FileInfoProcessor.NameDest, FileInfoProcessor.Path]
-			for (fileKey, fileData) in ifilter(lambda (key, value): key.startswith('FILE'), jobData.items()):
+			for (fileKey, fileData) in ifilter(lambda key_value: key_value[0].startswith('FILE'), jobData.items()):
 				fileIdx = fileKey.replace('FILE', '').rjust(1, '0')
 				result[int(fileIdx)] = dict(izip(oldFileFormat, fileData.strip('"').split('  ')))
 			# parse new job info data format
-			for (fileKey, fileData) in ifilter(lambda (key, value): key.startswith('OUTPUT_FILE'), jobData.items()):
+			for (fileKey, fileData) in ifilter(lambda key_value: key_value[0].startswith('OUTPUT_FILE'), jobData.items()):
 				(fileIdx, fileProperty) = fileKey.replace('OUTPUT_FILE_', '').split('_')
 				if isinstance(fileData, str):
 					fileData = fileData.strip('"')
