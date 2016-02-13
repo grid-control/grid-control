@@ -153,28 +153,33 @@ def collectExceptionInfos(exType, exValue, exTraceback):
 
 # Formatter class to display exception details
 class ExceptionFormatter(logging.Formatter):
-	def __init__(self, showCode = True, codeContext = 1, showVariables = True, showLongVariables = False, showOnlyLastCode = False):
+	def __init__(self, showCodeContext, showVariables, showFileStack):
 		logging.Formatter.__init__(self)
-		(self._showCode, self._codeContext, self._showOnlyLastCode) = (showCode, codeContext, showOnlyLastCode)
-		(self._showVariables, self._showLongVariables) = (showVariables, showLongVariables)
+		(self._showCodeContext, self._showVariables, self._showFileStack) =\
+			(showCodeContext, showVariables, showFileStack)
 
 	def format(self, record):
 		if not record.exc_info:
 			return logging.Formatter.format(self, record)
 		traceback, infos = collectExceptionInfos(*record.exc_info)
-		if self._showOnlyLastCode:
-			traceback = [traceback[-1]]
 		msg = record.msg + '\n\n'
-		if self._showCode:
-			msg += str.join('\n', formatStack(traceback, codeContext = self._codeContext,
-				showVariables = self._showVariables, showLongVariables = self._showLongVariables)) + '\n\n'
+		if self._showCodeContext > 0:
+			msg += str.join('\n', formatStack(traceback, codeContext = self._showCodeContext - 1,
+				showVariables = self._showVariables > 0, showLongVariables = self._showVariables > 1)) + '\n'
+
+		if self._showFileStack:
+			msg += 'File stack:\n'
+			for tb in traceback:
+				msg += '%s %s %s\n' % (tb.get('trackingID', '') + '|%d' % tb.get('idx', 0), tb['file'], tb['line'])
+		msg += '\n'
+
 		def formatInfos(info):
 			(exValue, exDepth, exID) = info
 			result = '%s%s: %s' % ('  ' * exDepth, exValue.__class__.__name__, exValue)
 			if not isinstance(exValue, NestedException) and (len(exValue.args) > 1):
 				try:
 					result += '\n%s%s  %s' % ('  ' * exDepth, len(exValue.__class__.__name__) * ' ', exValue.args)
-				except:
+				except Exception:
 					pass
 			return result
 		for info in infos:

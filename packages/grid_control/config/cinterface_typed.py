@@ -17,6 +17,7 @@ from grid_control import utils
 from grid_control.config.cinterface_base import ConfigInterface
 from grid_control.config.config_entry import ConfigError, noDefault
 from grid_control.config.cview_base import SimpleConfigView
+from grid_control.utils.parsing import parseBool, parseDict, parseList, parseTime
 from hpfwk import APIError, Plugin
 from python_compat import imap, lmap, user_input
 
@@ -53,7 +54,7 @@ class TypedConfigInterface(ConfigInterface):
 	# Handling boolean config options - feature: true and false are not the only valid expressions
 	def getBool(self, option, default = noDefault, **kwargs):
 		def str2obj(value):
-			result = utils.parseBool(value)
+			result = parseBool(value)
 			if result is None:
 				raise ConfigError('Valid boolean expressions are: "true", "false"')
 			return result
@@ -65,7 +66,7 @@ class TypedConfigInterface(ConfigInterface):
 	def getTime(self, option, default = noDefault, **kwargs):
 		def str2obj(value):
 			try:
-				return utils.parseTime(value) # empty or negative values are mapped to -1
+				return parseTime(value) # empty or negative values are mapped to -1
 			except Exception:
 				raise ConfigError('Valid time expressions have the format: hh[:mm[:ss]]')
 		return self._getInternal('time', utils.strTimeShort, str2obj, None, option, default, **kwargs)
@@ -83,14 +84,14 @@ class TypedConfigInterface(ConfigInterface):
 				result = strfun(srcdict.get(None, parser('')))
 			fmt = '\n\t%%%ds => %%%ds' % (getmax(srckeys), getmax(srcdict.values()))
 			return result + str.join('', imap(lambda k: fmt % (k, strfun(srcdict[k])), srckeys))
-		str2obj = lambda value: utils.parseDict(value, parser)
+		str2obj = lambda value: parseDict(value, parser)
 		def2obj = lambda value: (value, value.keys())
 		return self._getInternal('dictionary', obj2str, str2obj, def2obj, option, default, **kwargs)
 
 	# Get whitespace separated list (space, tab, newline)
 	def getList(self, option, default = noDefault, parseItem = lambda x: x, **kwargs):
 		obj2str = lambda value: '\n' + str.join('\n', imap(str, value))
-		str2obj = lambda value: lmap(parseItem, utils.parseList(value, None))
+		str2obj = lambda value: lmap(parseItem, parseList(value, None))
 		return self._getInternal('list', obj2str, str2obj, None, option, default, **kwargs)
 
 	# Resolve path
@@ -123,15 +124,15 @@ class TypedConfigInterface(ConfigInterface):
 			except Exception:
 				raise ConfigError('Error resolving pattern %s' % pattern)
 
-		str2obj = lambda value: list(patlist2pathlist(utils.parseList(value, None, onEmpty = []), mustExist))
+		str2obj = lambda value: list(patlist2pathlist(parseList(value, None), mustExist))
 		obj2str = lambda value: '\n' + str.join('\n', patlist2pathlist(value, False))
 		return self._getInternal('paths', obj2str, str2obj, None, option, default, **kwargs)
 
 	# Return class - default class is also given in string form!
 	def getPlugin(self, option, default = noDefault,
-			cls = Plugin, tags = [], inherit = False, requirePlugin = True, **kwargs):
+			cls = Plugin, tags = None, inherit = False, requirePlugin = True, **kwargs):
 		def str2obj(value):
-			objList = list(cls.bind(value, self._getPluginPaths(), config = self, inherit = inherit, tags = tags))
+			objList = list(cls.bind(value, self._getPluginPaths(), config = self, inherit = inherit, tags = tags or []))
 			if len(objList) > 1:
 				raise ConfigError('This option only allows to specify a single plugin!')
 			elif objList:
@@ -144,8 +145,8 @@ class TypedConfigInterface(ConfigInterface):
 	# Return composite class - default classes are also given in string form!
 	def getCompositePlugin(self, option, default = noDefault,
 			default_compositor = noDefault, option_compositor = None,
-			cls = Plugin, tags = [], inherit = False, requirePlugin = True, **kwargs):
-		str2obj = lambda value: list(cls.bind(value, self._getPluginPaths(), config = self, inherit = inherit, tags = tags))
+			cls = Plugin, tags = None, inherit = False, requirePlugin = True, **kwargs):
+		str2obj = lambda value: list(cls.bind(value, self._getPluginPaths(), config = self, inherit = inherit, tags = tags or []))
 		obj2str = lambda value: str.join('\n', imap(lambda obj: obj.bindValue(), value))
 		clsList = self._getInternal('composite plugin', obj2str, str2obj, str2obj, option, default, **kwargs)
 		if len(clsList) == 1:
@@ -169,10 +170,10 @@ class SimpleConfigInterface(TypedConfigInterface):
 			return self.getPath(option, default, **kwargs)
 		return self.get(option, default, **kwargs)
 
-	def getFilter(self, option, pluginName):
-		filterExpr = self.getList(option, [])
-		filterCls = self.getPlugin(appendOption(option, 'type'), pluginName, cls = FilterBase)
-		return filterCls.getInstance(filterExpr)
+#	def getFilter(self, option, pluginName):
+#		filterExpr = self.getList(option, [])
+#		filterCls = self.getPlugin(appendOption(option, 'type'), pluginName, cls = FilterBase)
+#		return filterCls.getInstance(filterExpr)
 
 	# Get state - bool stored in hidden "state" section - any given detail overrides global state
 	def getState(self, statename, detail = '', default = False):
@@ -209,7 +210,7 @@ class SimpleConfigInterface(TypedConfigInterface):
 
 	def getChoiceYesNo(self, option, default = noDefault, **kwargs):
 		return self.getChoice(option, [True, False], default,
-			obj2str = lambda obj: {True: 'yes', False: 'no'}.get(obj), str2obj = utils.parseBool, **kwargs)
+			obj2str = {True: 'yes', False: 'no'}.get, str2obj = parseBool, **kwargs)
 
 	def getEnum(self, option, enum, default = noDefault, subset = None, **kwargs):
 		choices = enum.enumValues
@@ -237,6 +238,5 @@ class SimpleConfigInterface(TypedConfigInterface):
 					obj = str2obj(userInput)
 				except Exception:
 					raise ConfigError('Unable to parse %s: %s' % (desc, userInput))
-					continue
 			break
 		return TypedConfigInterface._getInternal(self, desc, obj2str, str2obj, def2obj, option, obj, **kwargs)

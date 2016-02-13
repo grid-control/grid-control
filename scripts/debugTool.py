@@ -13,132 +13,80 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-import sys, optparse, gcSupport
-from gcSupport import Job, JobDB, JobSelector, TaskModule, getConfig
+import os, sys, logging, gcSupport
+from gcSupport import Job, Plugin, getConfig
 from grid_control import utils
 from grid_control.datasets import DataProvider, DataSplitter
-from python_compat import imap, irange, lmap, lzip
+from python_compat import BytesBuffer, imap, irange, lmap, lzip
 
-parser = optparse.OptionParser()
+parser = gcSupport.Options()
+parser.section('back', 'Backend debugging', '%s [<backend specifier>] ...')
+parser.addflag('back', 'backend-list-nodes',     default=False, help='List backend nodes')
+parser.addflag('back', 'backend-list-queues',    default=False, help='List backend queues')
 
-ogBackend = optparse.OptionGroup(parser, 'Backend debugging', '')
-ogBackend.add_option('', '--backend',     dest='backend',     default=None,
-	help='Specify backend')
-ogBackend.add_option('', '--list-nodes',  dest='list_nodes',  default=False, action='store_true',
-	help='List backend nodes')
-ogBackend.add_option('', '--list-queues', dest='list_queues', default=False, action='store_true',
-	help='List backend queues')
-parser.add_option_group(ogBackend)
+parser.section('part', 'Dataset Partition debugging', '%s <path to partition file> ...')
+parser.addtext('part', 'partition-list',         default=None,  help='Select dataset partition information to display')
+parser.addflag('part', 'partition-list-invalid', default=False, help='List invalidated dataset partitions')
+parser.addflag('part', 'partition-check',        default=None,  help='Check dataset partition in specified work directory')
 
-parser.add_option('', '--reset-attempts', dest='resettrys', default=False, action='store_true',
-	help='Reset the attempt counter')
-parser.add_option('-j', '--jdl', dest='jdl', default=False, action='store_true',
-	help='Get JDL file')
-parser.add_option('-J', '--jobs', dest='jobs', default='',
-	help='Display job ids matching selector')
-parser.add_option('-s', '--state', dest='state', default='',
-	help='Force new job state')
-parser.add_option('-S', '--splitting', dest='splitting', default='',
-	help='Show splitting information dataset')
-parser.add_option('', '--splitting-infos', dest='splittingInfos', default='',
-	help='Select displayed splitting information')
-parser.add_option('-i', '--invalid', dest='invalid', default='',
-	help='List invalidated dataset splittings')
-parser.add_option('-D', '--diffdata', dest='diff', default=False, action='store_true',
-	help='Show difference between datasets')
-parser.add_option('-R', '--findremoved', dest='findrm', default=False, action='store_true',
-	help='Find removed blocks')
-parser.add_option('-C', '--checksplitting', dest='checkSplitting', default='',
-	help='Check splitting of dataset in specified work directory')
-parser.add_option('-d', '--decode', dest='decode', default='',
-	help='Decode log files')
-(opts, args) = gcSupport.parseOptions(parser)
+parser.section('jobs', 'Jobs debugging', '%s <config file / job file> ... ')
+parser.addtext('jobs', 'job-selector',           default='',    help='Display jobs matching selector')
+parser.addflag('jobs', 'job-reset-attempts',     default=False, help='Reset the attempt counter')
+parser.addtext('jobs', 'job-force-state',        default='',    help='Force new job state')
+parser.addtext('jobs', 'job-show-jdl',           default='',    help='Show JDL file if available')
 
-# we need exactly one positional argument (config file)
-if opts.jdl or opts.state:
+parser.section('data', 'Dataset debugging', '%s <dataset file> <dataset file> ...')
+parser.addtext('data', 'dataset-show-diff',      default='',    help='Show difference between datasets')
+parser.addtext('data', 'dataset-show-removed',   default='',    help='Find removed dataset blocks')
+
+parser.addtext(None, 'logfile-decode',           default='',    help='Decode log files', short = '-d')
+(opts, args) = parser.parse()
+
+########################################################
+# BACKEND
+
+if opts.backend_list_nodes or opts.backend_list_queues:
+	config = getConfig()
+	backend = str.join(' ', args) or 'local'
+	wms = Plugin.getClass('WMS').getInstance(backend, config, backend)
+	if opts.backend_list_nodes:
+		logging.info(repr(wms.getNodes()))
+	if opts.backend_list_queues:
+		logging.info(repr(wms.getQueues()))
+
+########################################################
+# DATASET PARTITION
+
+if (opts.partition_list is not None) or opts.partition_list_invalid or opts.partition_check:
 	if len(args) != 1:
-		utils.exitWithUsage('%s <job info file>' % sys.argv[0])
-	job = Job.load(args[0])
+		utils.exitWithUsage(parser.section_usage('part'))
+	splitter = DataSplitter.loadState(args[0])
 
-if opts.jobs:
-	config = getConfig(args[0])
-	# Initialise task module
-	taskName = config.get(['task', 'module'])
-	task = TaskModule.open(taskName, config, taskName)
-	jobDB = JobDB(config)
-	selected = JobSelector.create(opts.jobs, task = task)
-	if opts.resettrys:
-		for jobNum in jobDB.getJobsIter(selected):
-			print 'Resetting attempts', jobNum
-			jobinfo = jobDB.get(jobNum)
-			jobinfo.attempt = 0
-			jobinfo.history = {}
-			for key in jobinfo.dict.keys():
-				if key.startswith('history'):
-					jobinfo.dict.pop(key)
-			jobDB.commit(jobNum, jobinfo)
-	print str.join(' ', imap(str, jobDB.getJobsIter(selected)))
+	if opts.partition_list_invalid:
+		def getInvalid():
+			for jobNum in irange(splitter.getMaxJobs()):
+				splitInfo = splitter.getSplitInfo(jobNum)
+				if splitInfo.get(DataSplitter.Invalid, False):
+					yield {0: jobNum}
+		utils.printTabular([(0, 'Job')], getInvalid())
 
+	if opts.partition_list is not None:
+		if opts.partition_list:
+			keyStrings = opts.partition_list.split(',')
+		else:
+			keyStrings = DataSplitter.enumNames
+		keyList = lmap(DataSplitter.str2enum, keyStrings)
+		if None in keyList:
+			logging.warning('Available keys: %r' % DataSplitter.enumNames)
+		def getInfos():
+			for jobNum in irange(splitter.getMaxJobs()):
+				splitInfo = splitter.getSplitInfo(jobNum)
+				tmp = lmap(lambda k: (k, splitInfo.get(k, '')), keyList)
+				yield dict([('jobNum', jobNum)] + tmp)
+		utils.printTabular([('jobNum', 'Job')] + lzip(keyList, keyStrings), getInfos())
 
-if opts.diff:
-	if len(args) != 2:
-		utils.exitWithUsage('%s <dataset source 1> <dataset source 2>' % sys.argv[0])
-	utils.eprint = lambda *x: {}
-	a = DataProvider.getInstance('ListProvider', config, args[0], None)
-	b = DataProvider.getInstance('ListProvider', config, args[1], None)
-	(blocksAdded, blocksMissing, blocksChanged) = DataProvider.resyncSources(a.getBlocks(), b.getBlocks())
-	utils.printTabular([(DataProvider.Dataset, 'Dataset'), (DataProvider.BlockName, 'Block')], blocksMissing)
-
-if opts.findrm:
-	removed = []
-	utils.eprint = lambda *x: {}
-	oldDP = DataProvider.getInstance('ListProvider', config, args[0], None)
-	for new in args[1:]:
-		newDP = DataProvider.getInstance('ListProvider', config, new, None)
-		(blocksAdded, blocksMissing, blocksChanged) = DataProvider.resyncSources(oldDP.getBlocks(), newDP.getBlocks())
-		for block in blocksMissing:
-			tmp = dict(block)
-			tmp[-1] = new
-			removed.append(tmp)
-		oldDP = newDP
-	utils.printTabular([(DataProvider.Dataset, 'Dataset'), (DataProvider.BlockName, 'Block'), (-1, 'Removed in file')], removed)
-
-if opts.invalid:
-	splitter = DataSplitter.loadState(opts.invalid)
-	def getInvalid():
-		for jobNum in irange(splitter.getMaxJobs()):
-			splitInfo = splitter.getSplitInfo(jobNum)
-			if splitInfo.get(DataSplitter.Invalid, False):
-				yield str(jobNum)
-	print str.join(',', getInvalid())
-
-if opts.jdl:
-	print job.get('jdl')
-
-if opts.state:
-	try:
-		newState = getattr(Job, opts.state)
-	except Exception:
-		print 'Invalid state: %s', opts.state
-	oldState = job.state
-	utils.vprint('Job state changed from %s to %s' % (Job.enum2str(oldState), Job.enum2str(newState)), -1, True)
-	job.state = newState
-	utils.safeWrite(open(args[0], 'w'), utils.DictFormat(escapeString = True).format(job.getAll()))
-
-if opts.splitting:
-	splitter = DataSplitter.loadState(opts.splitting)
-	if not opts.checkSplitting:
-		if opts.splittingInfos:
-			keyStrings = opts.splittingInfos.split(',')
-			keyList = lmap(lambda k: getattr(DataSplitter, k), keyStrings)
-			def getInfos():
-				for jobNum in irange(splitter.getMaxJobs()):
-					splitInfo = splitter.getSplitInfo(jobNum)
-					tmp = lmap(lambda k: (k, splitInfo.get(k, '')), keyList)
-					yield dict([('jobNum', jobNum)] + tmp)
-			utils.printTabular([('jobNum', 'Job')] + lzip(keyList, keyStrings), getInfos())
-	else:
-		print 'Checking %d jobs...' % splitter.getMaxJobs()
+	if opts.partition_check:
+		logging.info('Checking %d jobs...' % splitter.getMaxJobs())
 		fail = utils.set()
 		for jobNum in irange(splitter.getMaxJobs()):
 			splitInfo = splitter.getSplitInfo(jobNum)
@@ -154,28 +102,95 @@ if opts.splitting:
 						files = lmap(lambda x: x.strip().strip(','), files.split())
 				def printError(curJ, curS, msg):
 					if curJ != curS:
-						print '%s in job %d (j:%s != s:%s)' % (msg, jobNum, curJ, curS)
+						logging.warning('%s in job %d (j:%s != s:%s)' % (msg, jobNum, curJ, curS))
 						fail.add(jobNum)
 				printError(events, splitInfo[DataSplitter.NEntries], 'Inconsistent number of events')
 				printError(skip, splitInfo[DataSplitter.Skipped], 'Inconsistent number of skipped events')
 				printError(files, splitInfo[DataSplitter.FileList], 'Inconsistent list of files')
 			except Exception:
-				print 'Job %d was never initialized!' % jobNum
-		print str.join('\n', imap(str, fail))
+				logging.warning('Job %d was never initialized!' % jobNum)
+		if fail:
+			logging.warning('Failed: ' + str.join('\n', imap(str, fail)))
 
-if opts.decode:
-	import base64, gzip, StringIO
-	for line in open(opts.decode, 'r').readlines():
+########################################################
+# JOBS
+
+if opts.job_selector or opts.job_reset_attempts or opts.job_force_state or opts.job_show_jdl:
+	if len(args) != 1:
+		utils.exitWithUsage(parser.section_usage('jobs'))
+	config = getConfig(args[0])
+	# Initialise task module
+	taskName = config.get(['task', 'module'])
+	task = Plugin.getInstance(taskName, config, taskName)
+	jobDB = Plugin.getInstance('JobDB', config)
+	selected = Plugin.getClass('JobSelector').create(opts.job_selector, task = task)
+	logging.info('Matching jobs: ' + str.join(' ', imap(str, jobDB.getJobsIter(selected))))
+	if opts.job_reset_attempts:
+		for jobNum in jobDB.getJobsIter(selected):
+			logging.info('Resetting attempts for job %d' % jobNum)
+			jobinfo = jobDB.get(jobNum)
+			jobinfo.attempt = 0
+			jobinfo.history = {}
+			for key in jobinfo.dict.keys():
+				if key.startswith('history'):
+					jobinfo.dict.pop(key)
+			jobDB.commit(jobNum, jobinfo)
+	if opts.job_force_state:
+		newState = Job.str2enum(opts.job_force_state)
+		if newState is None:
+			raise Exception('Invalid state: %s' % opts.job_force_state)
+		for jobNum in jobDB.getJobsIter(selected):
+			jobinfo = jobDB.get(jobNum)
+			oldState = jobinfo.state
+			if oldState == newState:
+				logging.info('Job is already in state %s' % (Job.enum2str(newState)))
+				continue
+			jobinfo.state = newState
+			jobDB.commit(jobNum, jobinfo)
+			logging.info('Job state changed from %s to %s' % (Job.enum2str(oldState), Job.enum2str(newState)))
+	if opts.job_show_jdl:
+		for jobNum in jobDB.getJobsIter(selected):
+			jobinfo = jobDB.get(jobNum)
+			if jobinfo.get('jdl'):
+				logging.info(jobinfo.get('jdl'))
+			else:
+				logging.info('Job %d: No jdl information available!')
+
+if opts.dataset_show_diff:
+	if len(args) != 2:
+		utils.exitWithUsage('%s <dataset source 1> <dataset source 2>' % sys.argv[0])
+	utils.eprint = lambda *x: {}
+	a = DataProvider.getInstance('ListProvider', config, args[0], None)
+	b = DataProvider.getInstance('ListProvider', config, args[1], None)
+	(blocksAdded, blocksMissing, blocksChanged) = DataProvider.resyncSources(a.getBlocks(), b.getBlocks())
+	utils.printTabular([(DataProvider.Dataset, 'Dataset'), (DataProvider.BlockName, 'Block')], blocksMissing)
+
+if opts.dataset_show_removed:
+	if len(args) < 2:
+		utils.exitWithUsage('%s <dataset source 1> <dataset source 2> ... <dataset source N> ' % sys.argv[0])
+	removed = []
+	utils.eprint = lambda *x: {}
+	oldDP = DataProvider.getInstance('ListProvider', config, args[0], None)
+	for new in args[1:]:
+		newDP = DataProvider.getInstance('ListProvider', config, new, None)
+		(blocksAdded, blocksMissing, blocksChanged) = DataProvider.resyncSources(oldDP.getBlocks(), newDP.getBlocks())
+		for block in blocksMissing:
+			tmp = dict(block)
+			tmp[-1] = new
+			removed.append(tmp)
+		oldDP = newDP
+	utils.printTabular([(DataProvider.Dataset, 'Dataset'), (DataProvider.BlockName, 'Block'), (-1, 'Removed in file')], removed)
+
+if opts.logfile_decode:
+	import base64, gzip
+	from grid_control.utils.file_objects import ZipFile
+	if opts.logfile_decode.endswith('.gz'):
+		fp = ZipFile(opts.logfile_decode, 'r')
+	else:
+		fp = open(opts.logfile_decode, 'r')
+
+	for line in fp.readlines():
 		if line.startswith('(B64) '):
-			line = gzip.GzipFile(fileobj = StringIO.StringIO(base64.b64decode(line.replace('(B64) ', '')))).read()
-		print line.rstrip()
-
-if opts.list_nodes or opts.list_queues:
-	config = Config()
-	config.opts = config
-	config.opts.init = True
-	wms = grid_control.WMS.open(opts.backend, config, opts.backend)
-	if opts.list_nodes:
-		print wms.getNodes()
-	if opts.list_queues:
-		print wms.getQueues()
+			buffer = BytesBuffer(base64.b64decode(line.replace('(B64) ', '')))
+			line = gzip.GzipFile(fileobj = buffer).read().decode('ascii')
+		sys.stdout.write(line.rstrip() + '\n')

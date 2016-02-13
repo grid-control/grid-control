@@ -32,7 +32,7 @@ class WMS(NamedPlugin):
 	tagName = 'wms'
 
 	def __init__(self, config, wmsName):
-		wmsName = utils.QM(wmsName, wmsName, self.__class__.__name__).upper().replace('.', '_')
+		wmsName = (wmsName or self.__class__.__name__).upper().replace('.', '_')
 		NamedPlugin.__init__(self, config, wmsName)
 		(self.config, self.wmsName) = (config, wmsName)
 		self._wait_idle = config.getInt('wait idle', 60, onChange = None)
@@ -78,18 +78,18 @@ class WMS(NamedPlugin):
 	def parseJobInfo(fn):
 		log = logging.getLogger('wms')
 		if not os.path.exists(fn):
-			return log.warning('%r does not exist.' % fn)
+			return log.warning('%r does not exist.', fn)
 		try:
 			info_content = open(fn, 'r').read()
 		except Exception:
-			return log.exception('Unable to read %r!' % fn)
+			return log.exception('Unable to read %r!', fn)
 		if not info_content:
 			return log.warning('%r is empty!' % fn)
 		try:
 			data = utils.DictFormat().parse(info_content, keyParser = {None: str})
 			return (data['JOBID'], data['EXITCODE'], data)
 		except Exception:
-			return log.warning('Unable to parse %r!' % fn)
+			return log.warning('Unable to parse %r!', fn)
 	parseJobInfo = staticmethod(parseJobInfo)
 utils.makeEnum(['WALLTIME', 'CPUTIME', 'MEMORY', 'CPUS', 'BACKEND', 'SITES', 'QUEUES', 'SOFTWARE', 'STORAGE'], WMS)
 
@@ -196,52 +196,53 @@ class BasicWMS(WMS):
 				if os.path.exists(target):
 					shutil.rmtree(target)
 			except IOError:
-				log.exception('%r cannot be removed: %s' % target)
+				log.exception('%r cannot be removed', target)
 				return False
 			try:
 				shutil.move(source, target)
 			except IOError:
-				log.exception('Error moving job output directory from %r to %r' % (source, target))
+				log.exception('Error moving job output directory from %r to %r', source, target)
 				return False
 			return True
 
 		retrievedJobs = []
 
-		for inJobNum, dir in self._getJobsOutput(ids):
-			# inJobNum != None, dir == None => Job could not be retrieved
-			if dir is None:
+		for inJobNum, pathName in self._getJobsOutput(ids):
+			# inJobNum != None, pathName == None => Job could not be retrieved
+			if pathName is None:
 				if inJobNum not in retrievedJobs:
 					yield (inJobNum, -1, {}, None)
 				continue
 
-			# inJobNum == None, dir != None => Found leftovers of job retrieval
+			# inJobNum == None, pathName != None => Found leftovers of job retrieval
 			if inJobNum is None:
 				continue
 
-			# inJobNum != None, dir != None => Job retrieval from WMS was ok
-			jobInfo = WMS.parseJobInfo(os.path.join(dir, 'job.info'))
+			# inJobNum != None, pathName != None => Job retrieval from WMS was ok
+			jobFile = os.path.join(pathName, 'job.info')
+			jobInfo = WMS.parseJobInfo(jobFile)
 			if jobInfo:
 				(jobNum, jobExitCode, jobData) = jobInfo
 				if jobNum != inJobNum:
-					raise BackendError('Invalid job id in job file %s' % info)
-				if forceMove(dir, os.path.join(self._outputPath, 'job_%d' % jobNum)):
+					raise BackendError('Invalid job id in job file %s' % jobFile)
+				if forceMove(pathName, os.path.join(self._outputPath, 'job_%d' % jobNum)):
 					retrievedJobs.append(inJobNum)
-					yield (jobNum, jobExitCode, jobData, dir)
+					yield (jobNum, jobExitCode, jobData, pathName)
 				else:
 					yield (jobNum, -1, {}, None)
 				continue
 
-			# Clean empty dirs
-			for subDir in imap(lambda x: x[0], os.walk(dir, topdown=False)):
+			# Clean empty pathNames
+			for subDir in imap(lambda x: x[0], os.walk(pathName, topdown=False)):
 				try:
 					os.rmdir(subDir)
 				except Exception:
 					pass
 
-			if os.path.exists(dir):
+			if os.path.exists(pathName):
 				# Preserve failed job
 				utils.ensureDirExists(self._failPath, 'failed output directory')
-				forceMove(dir, os.path.join(self._failPath, os.path.basename(dir)))
+				forceMove(pathName, os.path.join(self._failPath, os.path.basename(pathName)))
 
 			yield (inJobNum, -1, {}, None)
 
@@ -291,7 +292,7 @@ class BasicWMS(WMS):
 			[VirtualFile('_config.sh', taskConfig), VirtualFile('_varmap.dat', varMapping)]])
 
 
-	def _writeJobConfig(self, cfgPath, jobNum, task, extras = {}):
+	def _writeJobConfig(self, cfgPath, jobNum, task, extras):
 		try:
 			jobEnv = utils.mergeDicts([task.getJobConfig(jobNum), extras])
 			jobEnv['GC_ARGS'] = task.getJobArguments(jobNum).strip()

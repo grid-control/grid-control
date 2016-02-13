@@ -93,14 +93,14 @@ class RegExMatcher(MatcherBase):
 	alias = ['regex']
 
 	def matcher(self, value, selector):
-		return re.search(selector, value) != None
+		return re.search(selector, value) is not None
 
 	def matchWith(self, selector):
 		class FunctionObject(MatcherHolder):
 			def init(self, fixedSelector):
 				self._regex = re.compile(fixedSelector)
 			def match(self, value):
-				return self._regex.search(value) != None
+				return self._regex.search(value) is not None
 		return getFixedFunctionObject(self, FunctionObject, selector)
 
 
@@ -131,7 +131,7 @@ class BlackWhiteMatcher(MatcherBase):
 			def match(self, value):
 				result = None
 				for matchResult in imap(lambda matchFun: matchFun(value), self._pat_ret):
-					if matchResult != None:
+					if matchResult is not None:
 						result = matchResult
 				return result
 		return getFixedFunctionObject(self, FunctionObject, selector)
@@ -165,7 +165,7 @@ class StrictListFilter(Plugin):
 	alias = ['strict', 'require']
 
 	def filterList(self, entries):
-		if entries == None:
+		if entries is None:
 			return self._positive
 		if self._matchFun:
 			return lfilter(self._matchFun.match, entries)
@@ -176,7 +176,7 @@ class MediumListFilter(Plugin):
 	alias = ['try_strict']
 
 	def filterList(self, entries):
-		if entries == None:
+		if entries is None:
 			return self._positive
 		strict_result = lfilter(self._matchFun.match, entries)
 		if strict_result:
@@ -188,6 +188,6 @@ class WeakListFilter(Plugin):
 	alias = ['weak', 'prefer']
 
 	def filterList(self, entries):
-		if entries == None:
+		if entries is None:
 			return self._positive
 		return lfilter(lambda entry: self._matchFun.match(entry) != False, entries)

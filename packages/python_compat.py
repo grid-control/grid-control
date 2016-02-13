@@ -122,10 +122,14 @@ try:	# io >= Python 2.6 (unicode)
 	import StringIO, cStringIO
 	StringBuffer = cStringIO.StringIO
 	StringBufferBase = StringIO.StringIO # its not possible to derive from cStringIO
+	BytesBuffer = StringBuffer
+	bytes2str = lambda x: x
 except Exception:
 	import io
 	StringBuffer = io.StringIO
 	StringBufferBase = io.StringIO
+	BytesBuffer = io.BytesIO
+	bytes2str = lambda x: x.decode('ascii')
 
 try:	# logging.NullHandler >= Python 2.7
 	import logging
@@ -198,21 +202,27 @@ except Exception:
 		(funProxy.fun, funProxy.cache) = (fun, [])
 		return funProxy
 
-if sys.version_info[0:2] < (2, 7):	# missing features in tarfile <= Python 2.6
-	tarfile = __import__('pc_tarfile')
+if sys.version_info[0:2] < (2, 7):	# missing features in tarfile < Python 2.7
+	tarfile = __import__('python_compat_tarfile')
 else:
 	import tarfile
+
+if sys.version_info[0:2] < (2, 6):	# json >= Python 2.6
+	tarfile = __import__('python_compat_tarfile')
+else:
+	import json
 
 if sys.version_info[0] < 3:	# unicode encoding <= Python 3
 	md5_hex = lambda value: md5(value).hexdigest()
 else:
 	md5_hex = lambda value: md5(str(value).encode('utf-8')).hexdigest()
 
-__all__ = ['NullHandler', 'StringBuffer', 'StringBufferBase', 'all', 'any',
+__all__ = ['NullHandler', 'BytesBuffer', 'StringBuffer', 'StringBufferBase',
+	'all', 'any', 'bytes2str',
 	'ifilter', 'imap', 'irange', 'itemgetter', 'izip',
 	'lfilter', 'lmap', 'lrange', 'lzip', 'lru_cache',
 	'md5', 'md5_hex', 'next', 'parsedate', 'rsplit', 'set', 'ismap', 'lsmap',
-	'sorted', 'sort_inplace', 'tarfile', 'user_input']
+	'sorted', 'sort_inplace', 'json', 'tarfile', 'user_input']
 
 if __name__ == '__main__':
 	import os, re, doctest, logging
@@ -221,16 +231,22 @@ if __name__ == '__main__':
 	for (root, dirs, files) in os.walk('.'):
 		if root.startswith('./.'):
 			continue
-		for fn in filter(lambda fn: fn.endswith('.py') and not fn.endswith("python_compat.py"), files):
+		for fn in filter(lambda fn: fn.endswith('.py') and not ("python_compat" in fn), files):
 			fn = os.path.join(root, fn)
-			tmp = open(fn).read().replace('\'zip(', '').replace('def set(', '').replace('def filter(', '').replace('def next(', '').replace('next()', '')
+			tmp = open(fn).read().replace('\'zip(', '').replace('def set(', '').replace('type(range(', '')
+			tmp = tmp.replace('def filter(', '').replace('def next(', '').replace('next()', '')
+			tmp = tmp.replace('python_compat_popen2', '')
 			builtin_avoid = ['filter', 'map', 'range', 'reduce', 'xrange', 'zip']
 			needed = set(filter(lambda name: re.search('[^_\'\/\.a-zA-Z]%s\(' % name, tmp), __all__ + builtin_avoid))
 			needed.update(filter(lambda name: re.search('\(%s\)' % name, tmp), __all__ + builtin_avoid))
+			needed.update(filter(lambda name: re.search('\(%s,' % name, tmp), __all__ + builtin_avoid))
 			needed.update(filter(lambda name: re.search('[^_\'\/\.a-zA-Z]%s\.' % name, tmp), __all__ + builtin_avoid))
 			imported = set()
-			for import_line in filter(lambda line: 'python_compat' in line, tmp.splitlines()):
-				imported.update(map(str.strip, import_line.split(None, 3)[3].split(',')))
+			for iline in filter(lambda line: 'python_compat' in line, tmp.splitlines()):
+				try:
+					imported.update(map(str.strip, iline.split(None, 3)[3].split(',')))
+				except Exception:
+					raise Exception('Unable to parse %r:%r' % (fn, iline))
 			if not needed and ('python_compat' in tmp):
 				logging.critical('%s: python_compat import not needed!' % fn)
 			for feature in needed.difference(imported):

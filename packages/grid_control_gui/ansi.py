@@ -23,7 +23,7 @@ class Console(object):
 	for (name, esc) in attr.items():
 		locals()[name] = esc
 
-	def fmt(cls, data, attr = []):
+	def fmt(cls, data, attr = None):
 		class ColorString(object):
 			def __init__(self, data, attr):
 				(self._data, self._attr) = (data, attr)
@@ -32,7 +32,7 @@ class Console(object):
 			def __str__(self):
 				return '\033[%sm%s\033[0m' % (str.join(';', [Console.RESET] + self._attr), self._data)
 		if sys.stdout.isatty():
-			return ColorString(data, attr)
+			return ColorString(data, attr or [])
 		return data
 	fmt = classmethod(fmt)
 
@@ -69,6 +69,6 @@ class Console(object):
 	def setscrreg(self, top = 0, bottom = 0):
 		self._esc('[%d;%dr' % (top, bottom))
 
-	def addstr(self, data, attr = []):
+	def addstr(self, data, attr = None):
 		self.stdout.write(str(Console.fmt(data, attr)))
 		self.stdout.flush()

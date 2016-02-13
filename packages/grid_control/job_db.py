@@ -184,7 +184,7 @@ class JobDB(Plugin):
 		if jobSelector and self.alwaysSelector:
 			select = lambda *args: jobSelector(*args) and self.alwaysSelector(*args)
 		elif jobSelector or self.alwaysSelector:
-			select = utils.QM(jobSelector, jobSelector, self.alwaysSelector)
+			select = jobSelector or self.alwaysSelector
 		else:
 			for jobNum in subset:
 				yield jobNum

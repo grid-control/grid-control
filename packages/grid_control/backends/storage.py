@@ -26,7 +26,7 @@ class StorageError(NestedException):
 
 ensurePrefix = lambda fn: utils.QM('://' in fn, fn, 'file:////%s' % os.path.abspath(fn).lstrip('/'))
 
-def se_runcmd(cmd, varDict = {}, *urls):
+def se_runcmd(cmd, varDict, *urls):
 	runLib = utils.pathShare('gc-run.lib')
 	args = str.join(' ', imap(lambda x: '"%s"' % ensurePrefix(x).replace('dir://', 'file://'), urls))
 	varString = str.join(' ', imap(lambda x: 'export %s="%s";' % (x, varDict[x]), varDict))

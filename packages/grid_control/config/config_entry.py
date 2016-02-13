@@ -63,7 +63,7 @@ class ConfigEntry(object):
 	def processEntries(cls, entryList):
 		result = None
 		used = []
-		for idx, entry in enumerate(entryList):
+		for entry in entryList:
 			def mkNew(value):
 				return ConfigEntry(entry.section, entry.option, value, '=', '<processed>')
 			if entry.opttype == '=': # Normal, overwriting setting

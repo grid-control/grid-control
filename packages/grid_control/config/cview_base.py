@@ -15,6 +15,7 @@
 import logging
 from grid_control import utils
 from grid_control.config.config_entry import ConfigEntry, ConfigError, noDefault, standardConfigForm
+from grid_control.utils.gc_itertools import ichain
 from hpfwk import AbstractError
 from python_compat import ifilter, imap, lfilter, sorted
 
@@ -138,7 +139,7 @@ class HistoricalConfigView(ConfigView):
 			entries.append(defaultEntry_fallback)
 		self._log.log(logging.DEBUG1, 'Used config entries:')
 		for entry in entries:
-			self._log.log(logging.DEBUG1, '  %s (%s | %s)' % (entry.format(printSection = True), entry.source, entry.order))
+			self._log.log(logging.DEBUG1, '  %s (%s | %s)', entry.format(printSection = True), entry.source, entry.order)
 		curEntry = ConfigEntry.combineEntries(entries)
 		# Ensure that fallback default value is stored in persistent storage
 		if (defaultEntry.value != noDefault) and defaultEntry_fallback.accessed:
@@ -172,28 +173,26 @@ class HistoricalConfigView(ConfigView):
 			description = 'Using default value %s'
 		elif '!' in curEntry.section:
 			description = 'Using dynamic value %s'
-		self._log.log(logging.INFO2, description % curEntry.format(printSection = True))
+		self._log.log(logging.INFO2, description, curEntry.format(printSection = True))
 		return (oldEntry, curEntry)
 
 	def set(self, option_list, value, opttype, source, markAccessed = True):
 		entry = self._createEntry(option_list, value, opttype, source, specific = True, reverse = True)
 		self._curContainer.append(entry)
-		self._log.log(logging.INFO3, 'Setting option %s' % entry.format(printSection = True))
+		self._log.log(logging.INFO3, 'Setting option %s', entry.format(printSection = True))
 		return entry
 
 
 # Simple ConfigView implementation
 class SimpleConfigView(HistoricalConfigView):
 	def __init__(self, name, oldContainer, curContainer, parent = None,
-			setSections = selectorUnchanged, addSections = []):
+			setSections = selectorUnchanged, addSections = None):
 		HistoricalConfigView.__init__(self, name, oldContainer, curContainer, parent)
 		self._initVariable('_cfgSections', None, setSections, addSections, standardConfigForm)
 
 	def _initVariable(self, memberName, default, setValue, addValue, normValues, parseValue = lambda x: [x]):
 		def collect(value):
-			for entries in imap(parseValue, value):
-				for entry in entries:
-					yield entry
+			return list(ichain(imap(parseValue, value)))
 		# Setting initial value of variable
 		result = default
 		if hasattr(self._parent, memberName): # get from parent if available

@@ -14,7 +14,7 @@
 
 from grid_control import utils
 from grid_control.config import ConfigError
-from grid_control.datasets.provider_base import DataProvider
+from grid_control.datasets.provider_base import DataProvider, DatasetError
 from python_compat import lmap, rsplit
 
 # Provides information about a single file
@@ -26,7 +26,7 @@ class FileProvider(DataProvider):
 		DataProvider.__init__(self, config, datasetExpr, datasetNick, datasetID)
 
 		(self._path, self._events, selist) = utils.optSplit(datasetExpr, '|@')
-		self._selist = utils.parseList(selist, delimeter = ',', onEmpty = None)
+		self._selist = utils.parseList(selist, ',') or None
 		if not (self._path and self._events):
 			raise ConfigError('Invalid dataset expression!\nCorrect: /local/path/to/file|events[@SE1,SE2]')
 
@@ -60,53 +60,63 @@ class ListProvider(DataProvider):
 				return self._filter in name
 			return True
 
+		def try_apply(fun, value, desc):
+			try:
+				return fun(value)
+			except Exception:
+				raise DatasetError('Unable to parse %s: %s' % (desc, repr(value)))
+
 		(blockinfo, commonMetadata) = (None, [])
-		for line in open(self._filename, 'rb'):
-			# Found start of block:
-			line = line.strip()
-			if line.startswith(';'):
-				continue
-			elif line.startswith('['):
-				if blockinfo and doFilter(blockinfo):
-					yield blockinfo
-				blockinfo = { DataProvider.Locations: None, DataProvider.FileList: [] }
-				blockname = line.lstrip('[').rstrip(']').split('#')
-				if len(blockname) > 0:
-					blockinfo[DataProvider.Dataset] = blockname[0]
-				if len(blockname) > 1:
-					blockinfo[DataProvider.BlockName] = blockname[1]
-				commonprefix = self._forcePrefix
-				commonMetadata = []
-			elif line != '':
-				tmp = lmap(str.strip, utils.QM('[' in line, line.split(' = ', 1), rsplit(line, '=', 1)))
-				if len(tmp) != 2:
-					raise ConfigError('Malformed entry in dataset file:\n%s' % line)
-				key, value = tmp
-				if key.lower() == 'nickname':
-					blockinfo[DataProvider.Nickname] = value
-				elif key.lower() == 'id':
-					blockinfo[DataProvider.DatasetID] = int(value)
-				elif key.lower() == 'events':
-					blockinfo[DataProvider.NEntries] = int(value)
-				elif key.lower() == 'metadata':
-					blockinfo[DataProvider.Metadata] = eval(value)
-				elif key.lower() == 'metadata common':
-					commonMetadata = eval(value)
-				elif key.lower() == 'se list':
-					blockinfo[DataProvider.Locations] = utils.parseList(value)
-				elif key.lower() == 'prefix':
-					if not self._forcePrefix:
-						commonprefix = value
-				else:
-					if commonprefix:
-						key = '%s/%s' % (commonprefix, key)
-					value = value.split(' ', 1)
-					data = { DataProvider.URL: key, DataProvider.NEntries: int(value[0]) }
-					if commonMetadata:
-						data[DataProvider.Metadata] = commonMetadata
-					if len(value) > 1:
-						data[DataProvider.Metadata] = data.get(DataProvider.Metadata, []) + eval(value[1])
-					blockinfo[DataProvider.FileList].append(data)
-		else:
-			if blockinfo and doFilter(blockinfo):
-				yield blockinfo
+		for idx, line in enumerate(open(self._filename, 'r')):
+			try:
+				# Found start of block:
+				line = line.strip()
+				if line.startswith(';'):
+					continue
+				elif line.startswith('['):
+					if blockinfo and doFilter(blockinfo):
+						yield blockinfo
+					blockinfo = { DataProvider.Locations: None, DataProvider.FileList: [] }
+					blockname = line.lstrip('[').rstrip(']').split('#')
+					if len(blockname) > 0:
+						blockinfo[DataProvider.Dataset] = blockname[0]
+					if len(blockname) > 1:
+						blockinfo[DataProvider.BlockName] = blockname[1]
+					commonprefix = self._forcePrefix
+					commonMetadata = []
+				elif line != '':
+					tmp = lmap(str.strip, utils.QM('[' in line, line.split(' = ', 1), rsplit(line, '=', 1)))
+					if len(tmp) != 2:
+						raise ConfigError('Malformed entry in dataset file:\n%s' % line)
+					key, value = tmp
+					if key.lower() == 'nickname':
+						blockinfo[DataProvider.Nickname] = value
+					elif key.lower() == 'id':
+						blockinfo[DataProvider.DatasetID] = try_apply(int, value, 'dataset ID')
+					elif key.lower() == 'events':
+						blockinfo[DataProvider.NEntries] = try_apply(int, value, 'block entry counter')
+					elif key.lower() == 'metadata':
+						blockinfo[DataProvider.Metadata] = try_apply(eval, value, 'metadata description')
+					elif key.lower() == 'metadata common':
+						commonMetadata = try_apply(eval, value, 'common metadata')
+					elif key.lower() == 'se list':
+						blockinfo[DataProvider.Locations] = try_apply(lambda value: utils.parseList(value, ','), 'block location')
+					elif key.lower() == 'prefix':
+						if not self._forcePrefix:
+							commonprefix = value
+					else:
+						if commonprefix:
+							key = '%s/%s' % (commonprefix, key)
+						value = value.split(' ', 1)
+						data = { DataProvider.URL: key,
+							DataProvider.NEntries: try_apply(int, value[0], 'entries of file %s' % repr(key))}
+						if commonMetadata:
+							data[DataProvider.Metadata] = commonMetadata
+						if len(value) > 1:
+							fileMetadata = try_apply(eval, value[1], 'metadata of file %s' % repr(key))
+							data[DataProvider.Metadata] = data.get(DataProvider.Metadata, []) + fileMetadata
+						blockinfo[DataProvider.FileList].append(data)
+			except Exception:
+				raise DatasetError('Unable to parse %r:%d' % (self._filename, idx))
+		if blockinfo and doFilter(blockinfo):
+			yield blockinfo

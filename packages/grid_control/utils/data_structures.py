@@ -1,4 +1,4 @@
-#-#  Copyright 2014 Karlsruhe Institute of Technology
+#-#  Copyright 2014-2016 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -15,12 +15,11 @@
 from python_compat import set
 
 class UniqueList(object):
-	def __init__(self, values = [], mode = 'first'):
+	def __init__(self, values = None, mode = 'first'):
 		self._set = set()
 		self._list = list()
 		self._mode = mode
-		for value in values:
-			self.append(value)
+		self.extend(values or [])
 
 	def __repr__(self):
 		return '{%s}' % repr(self._list).lstrip('[').rstrip(']')

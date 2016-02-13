@@ -15,8 +15,8 @@
 import re
 from grid_control.datasets.dproc_base import DataProcessor
 from grid_control.datasets.provider_base import DataProvider, DatasetError
-from grid_control.utils import filterBlackWhite, makeEnum
-from python_compat import imap, lfilter, lmap, md5, set
+from grid_control.utils import doBlackWhiteList, makeEnum
+from python_compat import imap, lfilter, lmap, md5_hex, set
 
 class StatsDataProcessor(DataProcessor):
 	def __init__(self, config):
@@ -43,8 +43,8 @@ class EntriesConsistencyDataProcessor(DataProcessor):
 		# Check entry consistency
 		events = sum(imap(lambda x: x[DataProvider.NEntries], block[DataProvider.FileList]))
 		if block.setdefault(DataProvider.NEntries, events) != events:
-			self._log.warning('Inconsistency in block %s#%s: Number of events doesn\'t match (b:%d != f:%d)'
-				% (block[DataProvider.Dataset], block[DataProvider.BlockName], block[DataProvider.NEntries], events))
+			self._log.warning('Inconsistency in block %s#%s: Number of events doesn\'t match (b:%d != f:%d)',
+				block[DataProvider.Dataset], block[DataProvider.BlockName], block[DataProvider.NEntries], events)
 		return block
 
 
@@ -104,7 +104,7 @@ class EntriesCountDataProcessor(DataProcessor):
 			def filterEvents(fi):
 				if self._limitEntries == 0: # already got all requested events
 					return False
-				 # truncate file to requested #entries if file has more events than needed
+				# truncate file to requested #entries if file has more events than needed
 				if fi[DataProvider.NEntries] > self._limitEntries:
 					fi[DataProvider.NEntries] = self._limitEntries
 				block[DataProvider.NEntries] += fi[DataProvider.NEntries]
@@ -133,21 +133,19 @@ class LocationDataProcessor(DataProcessor):
 	def __init__(self, config):
 		DataProcessor.__init__(self, config)
 		self._locationfilter = config.getList('dataset location filter', [])
-		if not self._locationfilter:
-			self._locationfilter = None
 
 	def processBlock(self, block):
 		if block[DataProvider.Locations] is not None:
 			sites = block[DataProvider.Locations]
-			if False and self._locationfilter:
-				sites = filterBlackWhite(sites, self._locationfilter, addUnmatched = True)
-			if False and (sites != None) and (len(sites) == 0) and (len(block[DataProvider.FileList]) != 0):
+			if sites != []:
+				sites = doBlackWhiteList(sites, self._locationfilter)
+			if (sites is not None) and (len(sites) == 0) and (len(block[DataProvider.FileList]) != 0):
 				if not len(block[DataProvider.Locations]):
-					self._log.warning('Block %s#%s is not available at any site!'
-						% (block[DataProvider.Dataset], block[DataProvider.BlockName]))
+					self._log.warning('Block %s#%s is not available at any site!',
+						block[DataProvider.Dataset], block[DataProvider.BlockName])
 				elif not len(sites):
-					self._log.warning('Block %s#%s is not available at any selected site!'
-						% (block[DataProvider.Dataset], block[DataProvider.BlockName]))
+					self._log.warning('Block %s#%s is not available at any selected site!',
+						block[DataProvider.Dataset], block[DataProvider.BlockName])
 			block[DataProvider.Locations] = sites
 		return block
 
@@ -172,9 +170,10 @@ class UniqueDataProcessor(DataProcessor):
 		if self._checkURL != DatasetUniqueMode.ignore:
 			def processFI(fiList):
 				for fi in fiList:
-					urlHash = md5(repr((fi[DataProvider.URL], fi[DataProvider.NEntries], fi.get(DataProvider.Metadata)))).digest()
+					urlHash = md5_hex(repr((fi[DataProvider.URL], fi[DataProvider.NEntries], fi.get(DataProvider.Metadata))))
 					if urlHash in self._recordedURL:
-						msg = 'Multiple occurences of URL: "%s"!' % fi[DataProvider.URL]
+						msg = 'Multiple occurences of URL: %r!' % fi[DataProvider.URL]
+						msg += ' (This check can be configured with %r)' % 'dataset check unique url'
 						if self._checkURL == DatasetUniqueMode.warn:
 							self._log.warning(msg)
 						elif self._checkURL == DatasetUniqueMode.abort:
@@ -189,11 +188,12 @@ class UniqueDataProcessor(DataProcessor):
 
 		# Check uniqueness of blocks
 		if self._checkBlock != DatasetUniqueMode.ignore:
-			blockHash = md5(repr((block.get(DataProvider.Dataset), block[DataProvider.BlockName],
+			blockHash = md5_hex(repr((block.get(DataProvider.Dataset), block[DataProvider.BlockName],
 				recordedBlockURL, block[DataProvider.NEntries],
-				block[DataProvider.Locations], block.get(DataProvider.Metadata)))).digest()
+				block[DataProvider.Locations], block.get(DataProvider.Metadata))))
 			if blockHash in self._recordedBlock:
 				msg = 'Multiple occurences of block: "%s#%s"!' % (block[DataProvider.Dataset], block[DataProvider.BlockName])
+				msg += ' (This check can be configured with %r)' % 'dataset check unique block'
 				if self._checkBlock == DatasetUniqueMode.warn:
 					self._log.warning(msg)
 				elif self._checkBlock == DatasetUniqueMode.abort:

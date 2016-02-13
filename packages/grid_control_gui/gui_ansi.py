@@ -16,9 +16,9 @@ import re, sys, time, signal
 from grid_control import utils
 from grid_control.gui import GUI
 from grid_control_gui.ansi import Console
-from python_compat import ifilter, imap
+from python_compat import ifilter, imap, itemgetter
 
-class GUIStream:
+class GUIStream(object):
 	def __init__(self, stream, screen):
 		(self.stream, self.screen, self.logged) = (stream, screen, True)
 
@@ -36,7 +36,7 @@ class GUIStream:
 			('(?<=Successful jobs:)\s+[1-9]\d*', [Console.COLOR_GREEN, Console.BOLD]),
 			('(?<=SUCCESS:)\s+[1-9]\d*', [Console.COLOR_GREEN, Console.BOLD]),
 		]
-		self.regex = re.compile('(%s)' % '|'.join(imap(lambda (a, b): a, self.attrs)))
+		self.regex = re.compile('(%s)' % '|'.join(imap(itemgetter(0), self.attrs)))
 
 	def _attributes(self, string, pos):
 		""" Retrieve the attributes for a match in string at position pos. """
@@ -107,7 +107,7 @@ class ANSIGUI(GUI):
 			guiWait.lastwait = 0
 
 			# Wrapping ActivityLog functionality
-			class GUILog:
+			class GUILog(object):
 				def __init__(self, message):
 					self.message = '%s...' % message
 					self.show(self.message)

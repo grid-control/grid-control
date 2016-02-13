@@ -17,7 +17,7 @@ from grid_control import utils
 from grid_control.config import createConfigFactory
 from grid_control.datasets.dproc_base import DataProcessor
 from hpfwk import AbstractError, InstanceFactory, NestedException, Plugin
-from python_compat import StringBuffer, ifilter, imap, irange, lmap, lrange, sort_inplace, sorted
+from python_compat import StringBuffer, ifilter, imap, irange, lmap, lrange, md5_hex, sort_inplace, sorted
 
 class DatasetError(NestedException):
 	pass
@@ -36,7 +36,7 @@ class DataProvider(Plugin):
 			'MultiDataProcessor', cls = DataProcessor).getInstance()
 
 
-	def bind(cls, value, modulePaths = [], config = None, **kwargs):
+	def bind(cls, value, modulePaths = None, config = None, **kwargs):
 		defaultProvider = config.get('dataset provider', 'ListProvider')
 
 		for idx, entry in enumerate(ifilter(str.strip, value.splitlines())):
@@ -59,7 +59,6 @@ class DataProvider(Plugin):
 
 	def setPassthrough(self):
 		self._passthrough = True
-		self._nickProducer = None
 
 
 	# Define how often the dataprovider can be queried automatically
@@ -142,8 +141,9 @@ class DataProvider(Plugin):
 
 			writeMetadata = (DataProvider.Metadata in block) and not stripMetadata
 			if writeMetadata:
-				getMetadata = lambda fi, idxList: lmap(lambda idx: fi[DataProvider.Metadata][idx], idxList)
-				metadataHash = lambda fi, idx: utils.md5(repr(fi[DataProvider.Metadata][idx])).digest()
+				def getMetadata(fi, idxList):
+					return lmap(lambda idx: fi[DataProvider.Metadata][idx], idxList)
+				metadataHash = lambda fi, idx: md5_hex(repr(fi[DataProvider.Metadata][idx]))
 				cMetadataIdx = lrange(len(block[DataProvider.Metadata]))
 				cMetadataHash = lmap(lambda idx: metadataHash(block[DataProvider.FileList][0], idx), cMetadataIdx)
 				for fi in block[DataProvider.FileList]: # Identify common metadata
@@ -169,7 +169,7 @@ class DataProvider(Plugin):
 	def saveState(self, path, dataBlocks = None, stripMetadata = False):
 		if dataBlocks is None:
 			dataBlocks = self.getBlocks()
-		DataProvider.saveStateRaw(open(path, 'wb'), dataBlocks, stripMetadata)
+		DataProvider.saveStateRaw(open(path, 'w'), dataBlocks, stripMetadata)
 
 
 	# Load dataset information using ListProvider

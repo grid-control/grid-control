@@ -45,17 +45,14 @@ Sending strings is supported, but they will not be stored in the
 farm's store nor shown in the farm's window in the MonALISA client.
 """
 
-import re
-import xdrlib
-import socket
-import struct
-import StringIO
-import threading
-import time
+import os, re, sys, copy, time, random, socket, struct, xdrlib, threading
+try:
+	import StringIO
+except:
+	from io import StringIO
+sys.path.append(os.path.abspath(os.path.dirname(__file__)))
 import Logger
-import ProcInfo
-import random
-import copy
+sys.path.pop()
 
 #__all__ = ["ApMon"]
 
@@ -189,9 +186,6 @@ class ApMon:
 		self.__configUpdateLock = threading.Lock()
 		self.__configUpdateEvent = threading.Event()
 		self.__configUpdateFinished = threading.Event()
-		self.__bgMonitorLock = threading.Lock()
-		self.__bgMonitorEvent = threading.Event()
-		self.__bgMonitorFinished = threading.Event()
 		# don't allow a user to send more than MAX_MSG messages per second, in average
 		self.__crtTime = 0;
 		self.__prvTime = 0;
@@ -203,19 +197,6 @@ class ApMon:
 		self.logger = Logger.Logger(defaultLogLevel)
 		self.setDestinations(initValue)
 		self.__udpSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-		#if len(self.configAddresses) > 0:
-		#	# if there are addresses that need to be monitored,
-		#	# start config checking and reloading thread
-		#	th = threading.Thread(target=self.__configLoader)
-		#	th.setDaemon(True)  # this is a daemon thread
-		#	th.start()
-		# create the ProcInfo instance
-		self.procInfo = ProcInfo.ProcInfo(self.logger);
-		# self.procInfo.update();
-		# start the background monitoring thread
-		#th = threading.Thread(target=self.__bgMonitor);
-		#th.setDaemon(True);
-		#th.start();
 
 	def sendParams (self, params):
 		"""
@@ -285,100 +266,6 @@ class ApMon:
 			self.__directSendParams(dest, clusterName, nodeName, timeStamp, params);
 		self.__configUpdateLock.release();
 	
-	def addJobToMonitor (self, pid, workDir, clusterName, nodeName):
-		"""
-		Add a new job to monitor.
-		"""
-		self.__bgMonitorLock.acquire();
-		self.monitoredJobs[pid] = {};
-		self.monitoredJobs[pid]['CLUSTER_NAME'] = clusterName;
-		self.monitoredJobs[pid]['NODE_NAME'] = nodeName;
-		self.procInfo.addJobToMonitor(pid, workDir);
-		self.__bgMonitorLock.release();
-		
-	def removeJobToMonitor (self, pid):
-		"""
-		Remove a job from being monitored.
-		"""
-		self.__bgMonitorLock.acquire();
-		self.procInfo.removeJobToMonitor(pid);
-		del self.monitoredJobs[pid];
-		self.__bgMonitorLock.release();
-	
-	def setMonitorClusterNode (self, clusterName, nodeName):
-		"""
-		Set the cluster and node names where to send system related information.
-		"""
-		self.__bgMonitorLock.acquire();
-		if (clusterName is not None) and (clusterName != ""):
-		    self.__defaultSysMonCluster = clusterName;
-		if (nodeName is not None) and (nodeName != ""):
-		    self.__defaultSysMonNode = nodeName;
-		self.__bgMonitorLock.release();
-	
-	def enableBgMonitoring (self, onOff):
-		"""
-		Enable or disable background monitoring. Note that background monitoring information
-		can still be sent if user calls the sendBgMonitoring method.
-		"""
-		self.performBgMonitoring = onOff;
-
-	def sendBgMonitoring (self, mustSend = False):
-		"""
-		Send background monitoring about system and jobs to all interested destinations.
-		If mustSend == True, the information is sent regardles of the elapsed time since last sent
-		If mustSend == False, the data is sent only if the required interval has passed since last sent 
-		"""
-                if len(self.destinations) == 0:
-                        self.logger.log(Logger.WARNING, "Not sending bg monitoring info since no destination is defined.");
-                        return
-		self.__bgMonitorLock.acquire();
-		now = int(time.time());
-		updatedProcInfo = False;
-		for destination, options in self.destinations.iteritems():
-			sysParams = [];
-			jobParams = [];
-			prevRawData = self.destPrevData[destination];
-			# for each destination and its options, check if we have to report any background monitoring data
-			if(options['sys_monitoring'] and (mustSend or options['sys_data_sent'] + options['sys_interval'] <= now)):
-				for param, active in options.items():
-					m = re.match("sys_(.+)", param);
-					if(m is not None and active):
-						param = m.group(1);
-						if not (param == 'monitoring' or param == 'interval' or param == 'data_sent'):
-							sysParams.append(param)
-				options['sys_data_sent'] = now;
-			if(options['job_monitoring'] and (mustSend or options['job_data_sent'] + options['job_interval'] <= now)):
-				for param, active in options.items():
-					m = re.match("job_(.+)", param);
-					if(m is not None and active):
-						param = m.group(1);
-						if not (param == 'monitoring' or param == 'interval' or param == 'data_sent'):
-							jobParams.append(param);
-				options['job_data_sent'] = now;
-			if(options['general_info'] and (mustSend or options['general_data_sent'] + 2 * int(options['sys_interval']) <= now)):
-				for param, active in options.items():
-					if not (param.startswith("sys_") or param.startswith("job_")) and active:
-						if not (param == 'general_info' or param == 'general_data_sent'):
-							sysParams.append(param);
-				options['general_data_sent'] = now;
-				
-			if (not updatedProcInfo) and (((len(sysParams) > 0) or (len(jobParams) > 0))):
-				self.procInfo.update();
-				updatedProcInfo = True;
-
-			sysResults = {}
-			if(len(sysParams) > 0):
-				sysResults = self.procInfo.getSystemData(sysParams, prevRawData)
-			if(len(sysResults) > 0):
-				self.__directSendParams(destination, self.__defaultSysMonCluster, self.__defaultSysMonNode, -1, sysResults)
-			for pid, props in self.monitoredJobs.items():
-				jobResults = {}
-				if(len(jobParams) > 0):
-					jobResults = self.procInfo.getJobData(pid, jobParams)
-				if(len(jobResults) > 0):
-					self.__directSendParams(destination, props['CLUSTER_NAME'], props['NODE_NAME'], -1, jobResults)
-		self.__bgMonitorLock.release();
 
 	def setDestinations(self, initValue):
 		"""
@@ -430,12 +317,6 @@ class ApMon:
 		Stop background threands, close opened sockets. You have to use this function if you want to
 		free all the resources that ApMon takes, and allow it to be garbage-collected.
 		"""
-		#if len(self.configAddresses) > 0:
-		#	self.__configUpdateEvent.set()
-		#	self.__configUpdateFinished.wait()
-		#self.__bgMonitorEvent.set()
-		#self.__bgMonitorFinished.wait()
-		
 		if self.__udpSocket is not None:
 			self.logger.log(Logger.DEBUG, "Closing UDP socket on ApMon object destroy.");
 			self.__udpSocket.close();
@@ -457,7 +338,7 @@ class ApMon:
 				break
 			if self.configRecheck:
 				self.__reloadAddresses()
-				self.logger.log(Logger.DEBUG, "Config reloaded. Seleeping for "+`self.configRecheckInterval`+" sec.");
+				self.logger.log(Logger.DEBUG, "Config reloaded. Seleeping for "+repr(self.configRecheckInterval)+" sec.");
 		self.__configUpdateFinished.set();
 
 	def __reloadAddresses(self):
@@ -505,14 +386,14 @@ class ApMon:
 				host = aDestination.strip()
 				passwd = ""
 		if (not port.isdigit()):
-			self.logger.log(Logger.WARNING, "Bad value for port number "+`port`+" in "+aDestination+" destination");
+			self.logger.log(Logger.WARNING, "Bad value for port number "+repr(port)+" in "+aDestination+" destination");
 			return
 		alreadyAdded = False
 		port = int(port)
 		try:
 			host = socket.gethostbyname(host) # convert hostnames to IP addresses to avoid suffocating DNSs
-		except socket.error, msg:
-			self.logger.log(Logger.ERROR, "Error resolving "+host+": "+str(msg))
+		except socket.error:
+			self.logger.log(Logger.ERROR, "Error resolving "+host)
 			return
 		for h, p, w in tempDestinations.keys():
 			if (h == host) and (p == port):
@@ -520,7 +401,7 @@ class ApMon:
 				break
 		destination = (host, port, passwd)
 		if not alreadyAdded:
-			self.logger.log(Logger.INFO, "Adding destination "+host+':'+`port`+' '+passwd)
+			self.logger.log(Logger.INFO, "Adding destination "+host+':'+repr(port)+' '+passwd)
 			if(self.destinations.has_key(destination)):
 				tempDestinations[destination] = self.destinations[destination]  # reuse previous options
 			else:
@@ -532,7 +413,7 @@ class ApMon:
 			if options != self.__defaultOptions:
 				# we have to overwrite defaults with given options
 				for key, value in options.items():
-					self.logger.log(Logger.NOTICE, "Overwritting option: "+key+" = "+`value`)
+					self.logger.log(Logger.NOTICE, "Overwritting option: "+key+" = "+repr(value))
 					tempDestinations[destination][key] = value
 		else:
 			self.logger.log(Logger.NOTICE, "Destination "+host+":"+str(port)+" "+passwd+" already added. Skipping it");
@@ -552,9 +433,8 @@ class ApMon:
 					return
 			else:
 				confFile = open (confFileName)
-		except IOError, ex:
+		except IOError:
 			self.logger.log(Logger.ERROR, "Cannot open "+confFileName);
-			self.logger.log(Logger.ERROR, "IOError: "+str(ex));
 			return
 		self.logger.log(Logger.INFO, "Adding destinations from "+confFileName);
 		dests = []
@@ -597,19 +477,6 @@ class ApMon:
 		confFile.close ()
 		for line in dests:
 			self.__addDestination(line, tempDestinations, opts)
-	
-	###############################################################################################
-	# Internal functions - Background monitor thread
-	###############################################################################################
-
-	def __bgMonitor (self):
-		while not self.__bgMonitorEvent.isSet():
-			self.__bgMonitorEvent.wait(10)
-			if self.__bgMonitorEvent.isSet():
-				break
-			if self.performBgMonitoring:
-				self.sendBgMonitoring() # send only if the interval has elapsed
-		self.__bgMonitorFinished.set()
 
 	###############################################################################################
 	# Internal helper functions
@@ -638,23 +505,23 @@ class ApMon:
 				af, socktype, proto, canonname, sa = res
 				try:
 					sock = socket.socket(af, socktype, proto)
-				except socket.error, msg:
+				except socket.error:
 					sock = None
-					err = msg
+					err = 'socket.socket(%s, %s, %s)' % (af, socktype, proto)
 					continue
 				try:
 					sock.setsockopt(socket.SOL_SOCKET, socket.SO_SNDTIMEO, struct.pack("ii", timeout, 0))
 					sock.setsockopt(socket.SOL_SOCKET, socket.SO_RCVTIMEO, struct.pack("ii", timeout, 0))
 					sock.connect(sa)
-				except socket.error, msg:
+				except socket.error:
 					sock.close()
 					sock = None
-					err = msg
+					err = 'sock.connect(%s)' % sa
 					continue
 				break
-		except socket.error, msg:
+		except socket.error:
 			sock = None
-			err = msg
+			err = 'socket.error'
 		if sock is None:
 			self.logger.log(Logger.ERROR, "Cannot open "+url)
 			self.logger.log(Logger.ERROR, "SocketError: "+str(err))
@@ -671,7 +538,7 @@ class ApMon:
 				r = re.compile("HTTP/\d.\d (\d+)").match(line)
 				if r is not None:
 					httpStatus = int(r.group(1))
-        		if httpStatus == 200:
+			if httpStatus == 200:
 				return file
 			else:
 				self.logger.log(Logger.ERROR, "Cannot open "+url)
@@ -684,9 +551,8 @@ class ApMon:
 				else:
 					self.logger.log(Logger.ERROR, 'HTTPError: unknown error ['+str(httpStatus)+']')
 				return None
-		except socket.error, msg:
+		except socket.error:
 			self.logger.log(Logger.ERROR, "Cannot open "+url)
-			self.logger.log(Logger.ERROR, "SocketError: "+str(msg))
 			sock.close()
 			return None
 	
@@ -718,7 +584,7 @@ class ApMon:
 		paramsPacker = xdrlib.Packer ()
 		
 		if type(params) == type( {} ):
-			for name, value in params.iteritems():
+			for name, value in params.items():
 				if self.__packParameter(paramsPacker, name, value):
 					sent_params_nr += 1
 		elif type(params) == type( [] ):
@@ -740,8 +606,8 @@ class ApMon:
 		try:
 			self.__udpSocket.sendto(buffer, (host, port))
 			self.logger.log(Logger.NOTICE, "Packet sent to "+host+":"+str(port)+" "+passwd)
-		except socket.error, msg:
-			self.logger.log(Logger.ERROR, "Cannot send packet to "+host+":"+str(port)+" "+passwd+": "+str(msg[1]))
+		except socket.error:
+			self.logger.log(Logger.ERROR, "Cannot send packet to "+host+":"+str(port)+" "+passwd)
 		xdrPacker.reset()
 		paramsPacker.reset()
 	
@@ -759,8 +625,8 @@ class ApMon:
 			self.__packFunctions[typeValue] (xdrPacker, value)
 			self.logger.log(Logger.DEBUG, "Adding parameter "+str(name)+" = "+str(value))
 			return True
-		except Exception, ex:
-			self.logger.log(Logger.WARNING, "Error packing %s = %s; got %s" % (name, str(value), ex))
+		except Exception:
+			self.logger.log(Logger.WARNING, "Error packing %s = %s" % (name, str(value)))
 			return False
 
 	# Destructor

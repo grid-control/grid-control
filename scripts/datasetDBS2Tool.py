@@ -13,8 +13,9 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-import sys, optparse
+import os, sys, optparse
 from gcSupport import Config
+from grid_control.utils import printTabular, wrapList
 from grid_control_cms.lumi_tools import formatLumi, mergeLumi
 from grid_control_cms.provider_dbsv2 import DataProvider, createDBSAPI
 from python_compat import imap, lmap, set
@@ -52,7 +53,7 @@ if opts.lumiranges:
 			lrInfo[ds] = (f(min, 0), f(max, 1))
 	mkDict = lambda (ds, min_max): {0: ds, 1: min_max[0], 2: min_max[1]}
 	print
-	utils.printTabular([(0, 'Dataset'), (1, 'MinRun'), (2, 'MaxRun')], lmap(mkDict, lrInfo.items()))
+	printTabular([(0, 'Dataset'), (1, 'MinRun'), (2, 'MaxRun')], lmap(mkDict, lrInfo.items()))
 	sys.exit(os.EX_OK)
 
 api = createDBSAPI(opts.url)
@@ -77,10 +78,10 @@ elif opts.listlumis:
 		for lumi in fileInfo['LumiList']:
 			rl.append(([int(lumi["RunNumber"]), int(lumi["LumiSectionNumber"])], [int(lumi["RunNumber"]), int(lumi["LumiSectionNumber"])]))
 		print lfn
-		print utils.wrapList(formatLumi(mergeLumi(rl)), 70, ',\n\t')
+		print wrapList(formatLumi(mergeLumi(rl)), 70, ',\n\t')
 		allrl.extend(rl)
 	print "\nComplete dataset:"
-	print utils.wrapList(formatLumi(mergeLumi(allrl)), 70, ',\n\t')
+	print wrapList(formatLumi(mergeLumi(allrl)), 70, ',\n\t')
 
 elif opts.list:
 	for block in api.listBlocks(opts.list):

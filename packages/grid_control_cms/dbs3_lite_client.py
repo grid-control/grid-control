@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-#-#  Copyright 2015 Karlsruhe Institute of Technology
+#-#  Copyright 2015-2016 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -13,9 +13,10 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-import os, json
+import os
 from grid_control.gc_exceptions import UserError
 from grid_control.utils.webservice import RestClient, parseJSON
+from python_compat import json
 
 class DBS3LiteClient(object):
     def __init__(self, url):

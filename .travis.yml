@@ -12,5 +12,10 @@ before_install:
   - pip install 'coverage<4'
 script:
   - coverage run -a go.py docs/examples/ExampleS1_stresstest.conf
+  - coverage run -a packages/gcUpdatePlugins.py # randomized order
+  - coverage run -a packages/gcUpdatePlugins.py
+  - coverage run -a packages/gcUpdatePlugins.py
+  - coverage run -a packages/gcUpdatePlugins.py
+  - coverage run -a packages/gcUpdatePlugins.py
 after_success:
   - codecov

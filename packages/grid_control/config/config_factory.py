@@ -79,9 +79,9 @@ class ConfigFactory(object):
 		# Inform the user about unused options
 		unused = lfilter(lambda entry: (entry.accessed == False) and ('!' not in entry.section), self._view.iterContent())
 		log = logging.getLogger('config.freeze')
-		log.log(logging.INFO1, 'There are %s unused config options!' % len(unused))
+		log.log(logging.INFO1, 'There are %s unused config options!', len(unused))
 		for entry in unused:
-			log.log(logging.INFO1, '\t%s' % entry.format(printSection = True))
+			log.log(logging.INFO1, '\t%s', entry.format(printSection = True))
 		if writeConfig or not os.path.exists(self._oldCfgPath):
 			if not os.path.exists(os.path.dirname(self._oldCfgPath)):
 				os.makedirs(os.path.dirname(self._oldCfgPath))
@@ -92,7 +92,7 @@ class ConfigFactory(object):
 			self._view.write(fp_work, printDefault = True, printUnused = True, printSource = True, printMinimal = True)
 
 
-def createConfigFactory(configFile = None, configDict = {}, useDefaultFiles = True, additional = []):
+def createConfigFactory(configFile = None, configDict = None, useDefaultFiles = True, additional = None):
 	fillerList = []
 	if useDefaultFiles:
 		fillerList.append(DefaultFilesConfigFiller())
@@ -100,5 +100,5 @@ def createConfigFactory(configFile = None, configDict = {}, useDefaultFiles = Tr
 		fillerList.append(GeneralFileConfigFiller([configFile]))
 	if configDict:
 		fillerList.append(DictConfigFiller(configDict))
-	fillerList.extend(additional)
+	fillerList.extend(additional or [])
 	return ConfigFactory(MultiConfigFiller(fillerList), configFile)

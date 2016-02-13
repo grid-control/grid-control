@@ -21,10 +21,10 @@ from python_compat import imap, lmap, lzip, sorted
 
 try:
 	import cherrypy
-except:
+except Exception:
 	cherrypy = None
 
-class CPProgressBar:
+class CPProgressBar(object):
 	def __init__(self, minValue = 0, progress = 0, maxValue = 100, totalWidth = 300):
 		self.width = totalWidth
 		self.done = round(((progress - minValue) / float(maxValue - minValue)) * 100.0)
@@ -37,8 +37,8 @@ class CPProgressBar:
 </div>""" % (self.width, int(self.width * self.done / 100), int(self.done))
 
 
-class TabularHTML:
-	def __init__(self, head, data, fmt = {}, top = True):
+class TabularHTML(object):
+	def __init__(self, head, data, fmt = None, top = True):
 		self.table = """
 <style type="text/css">
 	table {font-size:12px;color:#333333;border-width: 1px;border-color: #7799aa;border-collapse: collapse;}
@@ -46,9 +46,11 @@ class TabularHTML:
 	tr {background-color:#ffffff;}
 	td {font-size:12px;border-width: 1px;padding: 8px;border-style: solid;border-color: #7799aa;}
 </style>"""
-		lookupDict = lmap(lambda (id, name): (id, fmt.get(id, str)), head)
-		headerList = lmap(lambda (id, name): '<th>%s</th>' % name, head)
-		entryList = lambda entry: lmap(lambda (id, fmt): '<td>%s</td>' % fmt(entry.get(id)), lookupDict)
+		fmt = fmt or {}
+		lookupDict = lmap(lambda id_name: (id_name[0], fmt.get(id_name[0], str)), head)
+		headerList = lmap(lambda id_name: '<th>%s</th>' % id_name[1], head)
+		def entryList(entry):
+			return lmap(lambda id_fmt: '<td>%s</td>' % id_fmt[1](entry.get(id_fmt[0])), lookupDict)
 		rowList = [headerList] + lmap(entryList, data)
 		if not top:
 			rowList = lzip(*rowList)

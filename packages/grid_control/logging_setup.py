@@ -15,7 +15,7 @@
 import os, sys, time, logging
 from grid_control.gc_exceptions import GCLogHandler
 from hpfwk import ExceptionFormatter
-from python_compat import set
+from python_compat import irange, set
 
 class LogOnce(logging.Filter):
 	def __init__(self):
@@ -63,27 +63,33 @@ def logging_defaults():
 	getFilteredLogger('user.time.once', LogOnce())
 
 	# Default exception logging to stderr and file in gc / tmp / user directory
+	excFormatterQuiet = ExceptionFormatter(showCodeContext = 0, showVariables = 0, showFileStack = 0)
+	excFormatterVerbose = ExceptionFormatter(showCodeContext = 2, showVariables = 1, showFileStack = 1)
+
 	logException = logging.getLogger("exception")
 	handlerException_stdout = logging.StreamHandler(sys.stderr)
+	handlerException_stdout.setFormatter(excFormatterVerbose)
+	logException.addHandler(handlerException_stdout)
+
 	handlerException_file = None
-	formatterException_stdout = ExceptionFormatter()
 	for fnLog in [os.path.join(os.environ['GC_PACKAGES_PATH'], '..', 'debug.log'), '/tmp/gc.debug.%d' % os.getuid(), '~/gc.debug']:
 		fnLog = os.path.abspath(os.path.normpath(os.path.expanduser(fnLog)))
 		try:
 			handlerException_file = GCLogHandler(fnLog, 'w')
-			formatterException_stdout = ExceptionFormatter(showCode = False, showVariables = False)
+			handlerException_file.setFormatter(excFormatterVerbose)
+			logException.addHandler(handlerException_file)
+			handlerException_stdout.setFormatter(excFormatterQuiet)
 			break
 		except Exception:
 			pass
-	handlerException_stdout.setFormatter(formatterException_stdout)
-	logException.addHandler(handlerException_stdout)
-	if handlerException_file:
-		handlerException_file.setFormatter(ExceptionFormatter())
-		logException.addHandler(handlerException_file)
 	logException.propagate = False
 
 
 def logging_setup(config):
+	logLevelDict = {}
+	for level in irange(51):
+		logLevelDict[logging.getLevelName(level).upper()] = level
+
 	def getLoggerFromOption(option):
 		if ' ' in option: # eg. 'exception handler = stdout' configures the exception handler
 			return logging.getLogger(option.split()[0])
@@ -107,7 +113,7 @@ def logging_setup(config):
 				else:
 					raise Exception('Unknown handler [logging] %s = %s' % (option, dest))
 				if option.startswith('exception'):
-					handler.setFormatter(ExceptionFormatter())
+					handler.setFormatter(ExceptionFormatter(showCodeContext = 2, showVariables = 1, showFileStack = 1))
 				logger.addHandler(handler)
 		elif option.endswith('level'):
 			logger.setLevel(logLevelDict.get(config.get(option, onChange = None).upper(), 0))

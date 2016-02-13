@@ -1,4 +1,4 @@
-#-#  Copyright 2014 Karlsruhe Institute of Technology
+#-#  Copyright 2014-2016 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -17,7 +17,7 @@ from grid_control.job_db import JobClass
 from grid_control.job_selector import ClassSelector
 from grid_control.report import BasicReport
 
-class BasicProgressBar:
+class BasicProgressBar(object):
 	def __init__(self, minValue = 0, maxValue = 100, totalWidth = 16):
 		(self._min, self._max, self._width) = (minValue, maxValue, totalWidth)
 		self.update(0)

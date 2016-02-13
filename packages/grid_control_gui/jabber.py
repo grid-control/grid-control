@@ -12,14 +12,14 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-import os, stat, time, xmpp
+import os, stat, time, logging
 from grid_control.monitoring import Monitoring
 
 class JabberAlarm(Monitoring):
 	alias = ['jabber']
 	configSections = Monitoring.configSections + ['jabber']
 
-	def __init__(self, config, name, task, submodules = []):
+	def __init__(self, config, name, task, submodules = None):
 		Monitoring.__init__(self, config, name, task)
 		self.source_jid = config.get('source jid')
 		self.target_jid = config.get('target jid')
@@ -27,18 +27,24 @@ class JabberAlarm(Monitoring):
 		os.chmod(pwPath, stat.S_IRUSR)
 		# password in variable name removes it from debug log!
 		self.source_password = open(pwPath).read().strip()
+		self._xmpp = None
+		for import_name in ['xmpp', 'grid_control_gui.xmpp']:
+			self._xmpp = __import__(import_name)
+			break
+		if not self._xmpp:
+			raise Exception('Unable to load jabber library!')
 
 	def onTaskFinish(self, nJobs):
-		jid = xmpp.protocol.JID(self.source_jid)
-		cl = xmpp.Client(jid.getDomain(), debug=[])
+		jid = self._xmpp.protocol.JID(self.source_jid)
+		cl = self._xmpp.Client(jid.getDomain(), debug=[])
 		con = cl.connect()
 		if not con:
-			print 'could not connect!'
+			logging.getLogger('user').warning('Could not connect to jabber server!')
 			return
 		auth = cl.auth(jid.getNode(), self.source_password, resource = jid.getResource())
 		if not auth:
-			print 'could not authenticate!'
+			logging.getLogger('user').warning('Could not authenticate to jabber server!')
 			return
 		text = 'Task %s finished!' % self.task.taskID
-		mid = cl.send(xmpp.protocol.Message(self.target_jid, text))
+		mid = cl.send(self._xmpp.protocol.Message(self.target_jid, text))
 		time.sleep(1) # Stay connected until delivered

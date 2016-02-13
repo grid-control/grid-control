@@ -16,7 +16,7 @@ from grid_control import utils
 from grid_control.backends.broker import Broker
 from grid_control.backends.wms import WMS
 from grid_control.utils.gc_itertools import ichain
-from python_compat import lfilter, sorted
+from python_compat import imap, lfilter, lmap, set, sorted
 
 class RandomBroker(Broker):
 	def __init__(self, config, name, userOpt, itemName, discoverFun):
@@ -58,7 +58,7 @@ class CoverageBroker(Broker):
 	def _broker(self, reqs, items):
 		items = Broker._broker(self, reqs, items)
 		if items:
-			items = [items[self._nIndex % len(items)]]
+			items = [sorted(items)[self._nIndex % len(items)]]
 			self._nIndex += 1
 		return items
 
@@ -68,38 +68,32 @@ class SimpleBroker(FilterBroker):
 		FilterBroker.__init__(self, config, name, userOpt, itemName, discoverFun)
 		self._discover(discoverFun)
 
-		def item_cmp(a, b, cmp_fun = cmp):
-			diff = 0 # Return negative if a < b, zero if a == b, positive if a > b
-			for key in ichain([a.keys(), b.keys()]):
-				current_diff = 1
-				if key in a and key in b:
-					current_diff = cmp_fun(a[key], b[key])
-				elif key in a:
-					current_diff = -1
-				if current_diff != 0:
-					if diff == 0:
-						diff = current_diff
-					elif diff != current_diff:
-						return 0
-			return diff
-		class KeyObject(object):
-			def __init__(self, obj, *args):
-				self.obj = self._itemsDiscovered[obj]
-			def __lt__(self, other):
-				return item_cmp(self.obj, other.obj) < 0
-			def __gt__(self, other):
-				return item_cmp(self.obj, other.obj) > 0
-			def __eq__(self, other):
-				return item_cmp(self.obj, other.obj) == 0
-			def __le__(self, other):
-				return item_cmp(self.obj, other.obj) <= 0
-			def __ge__(self, other):
-				return item_cmp(self.obj, other.obj) >= 0
-			def __ne__(self, other):
-				return item_cmp(self.obj, other.obj) != 0
-
 		if self._itemsDiscovered: # Sort discovered items according to requirements
-			self._itemsSorted = sorted(self._itemsDiscovered, key = KeyObject)
+			allItemPropKeys = sorted(set(ichain(self._itemsDiscovered.values())))
+			itemPropTypes = {}
+			for itemPropDict in self._itemsDiscovered.values():
+				for itemPropKey, itemPropValue in itemPropDict.items():
+					itemPropTypesList = itemPropTypes.setdefault(itemPropKey, [])
+					if isinstance(itemPropValue, (int, float)):
+						itemPropTypesList.append(float)
+					elif isinstance(itemPropValue, str):
+						itemPropTypesList.append(str)
+					elif isinstance(itemPropValue, (list, tuple)):
+						itemPropTypesList.append(tuple)
+			for itemPropKey, itemPropTypeList in list(itemPropTypes.items()):
+				if len(set(itemPropTypeList)) != 1: # multiple types or none
+					allItemPropKeys.remove(itemPropKey)
+				else:
+					itemPropTypes[itemPropKey] = itemPropTypeList[0]
+			none_value = {float: 1e10, str: chr(127), tuple: tuple()}
+			def keyFun(x):
+				def enforce_type(key):
+					value = x[1].get(key)
+					if value is None:
+						return none_value[itemPropTypes[key]]
+					return itemPropTypes[key](value)
+				return (tuple(imap(enforce_type, allItemPropKeys)), x[0])
+			self._itemsSorted = lmap(lambda k_v: k_v[0], sorted(self._itemsDiscovered.items(), key = keyFun))
 
 	def _broker(self, reqs, items):
 		if not self._itemsDiscovered:
@@ -107,11 +101,11 @@ class SimpleBroker(FilterBroker):
 		items = utils.QM(self._itemsStart is not None, self._itemsStart, self._itemsSorted) # or discovered items
 
 		# Match items which fulfill the requirements
-		def matcher(props, cmp_fun = cmp):
+		def matcher(props):
 			for key, value in reqs:
-				if key not in props:
+				if key not in props or (props[key] is None):
 					continue
-				if cmp_fun(value, props[key]) >= 0:
+				if not (value < props[key]):
 					return False
 			return True
 		# Apply sort order and give matching entries as preselection to FilterBroker

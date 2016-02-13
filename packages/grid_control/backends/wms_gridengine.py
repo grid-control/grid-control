@@ -111,7 +111,7 @@ class GridEngine(PBSGECommon):
 
 
 	def getNodes(self):
-		(result, active) = (set(), False)
+		result = set()
 		for group in utils.LoggedProcess(self._configExec, '-shgrpl').iter():
 			result.add(group.strip())
 			for host in utils.LoggedProcess(self._configExec, '-shgrp_resolved %s' % group).iter():

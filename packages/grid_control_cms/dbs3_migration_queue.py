@@ -12,7 +12,7 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-import cPickle, logging
+import pickle, logging
 from collections import deque
 from time import time
 from python_compat import set
@@ -51,7 +51,7 @@ class MigrationSubmittedState(object):
                                                  % (self.migration_task, request_status[0]['migration_status']))
             except AttributeError:
                 #simulation
-                print "Simulation"
+                logging.warning("Simulation")
                 request_status = [{'migration_status': 2}]
                 self.migration_task.logger.debug("%s has migration_status=%s"
                                                  % (self.migration_task, request_status[0]['migration_status']))
@@ -179,11 +179,11 @@ class DBS3MigrationQueue(deque):
     @staticmethod
     def read_from_disk(filename):
         with open(filename, 'r') as f:
-            return cPickle.load(f)
+            return pickle.load(f)
 
     def save_to_disk(self, filename):
         with open(filename, 'w') as f:
-            cPickle.dump(self, f)
+            pickle.dump(self, f)
 
 
 def do_migration(queue):

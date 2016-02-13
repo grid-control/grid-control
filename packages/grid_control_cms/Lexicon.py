@@ -12,11 +12,14 @@ and modified
 
 import re
 import string
-import urlparse
+try:
+    from urlparse import urlparse, urlunparse
+except ImportError:
+    from urllib.parse import urlparse, urlunparse
 from hpfwk import NestedException
 
 class InputValidationError(NestedException):
-	pass	# error during input validation for publication in DBS3
+    pass # error during input validation for publication in DBS3
 
 #restriction enforced by DBS. for different types blocks.
 #It could have a strict restriction
@@ -524,7 +527,7 @@ def sanitizeURL(url):
        WANNING: This doesn't check the correctness of url format.
        Don't use ':' in username or password.
     """
-    endpoint_components = urlparse.urlparse(url)
+    endpoint_components = urlparse(url)
     # Cleanly pull out the user/password from the url
     if endpoint_components.port:
         netloc = '%s:%s' % (endpoint_components.hostname,
@@ -533,7 +536,7 @@ def sanitizeURL(url):
         netloc = endpoint_components.hostname
 
     #Build a URL without the username/password information
-    url = urlparse.urlunparse(
+    url = urlunparse(
             [endpoint_components.scheme,
              netloc,
              endpoint_components.path,

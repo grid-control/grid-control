@@ -16,7 +16,6 @@ from grid_control import utils
 from grid_control.parameters.pfactory_base import BasicParameterFactory
 from grid_control.parameters.psource_base import ParameterError, ParameterSource
 from grid_control.parameters.psource_meta import ZipLongParameterSource
-from python_compat import imap
 
 # Parameter factory which evaluates a parameter module string
 class ModularParameterFactory(BasicParameterFactory):
@@ -40,7 +39,9 @@ class ModularParameterFactory(BasicParameterFactory):
 				except Exception:
 					raise ParameterError('Error while creating "%r" with arguments "%r"' % (parameterClass.__name__, args))
 			return wrapper
-		userFun = dict(imap(lambda (key, cls): (key, createWrapper(cls)), ParameterSource.managerMap.items()))
+		userFun = {}
+		for (key, cls) in ParameterSource.managerMap.items():
+			userFun[key] = createWrapper(cls)
 		try:
 			source = eval(pExpr, userFun)
 		except Exception:

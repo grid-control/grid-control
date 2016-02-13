@@ -111,7 +111,7 @@ class GridWMS(BasicWMS):
 			self._writeJobConfig(cfgPath, jobNum, module, {'GC_WC': str.join(' ', wcList)})
 			sandboxOutJDL = lfilter(lambda x: x not in wcList, sbOut) + ['GC_WC.tar.gz']
 		else:
-			self._writeJobConfig(cfgPath, jobNum, module)
+			self._writeJobConfig(cfgPath, jobNum, module, {})
 			sandboxOutJDL = sbOut
 		# Warn about too large sandboxes
 		sbSizes = lmap(os.path.getsize, sbIn)

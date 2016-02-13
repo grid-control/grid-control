@@ -20,22 +20,19 @@ sys.path.append(os.path.abspath(os.path.join(sys.path[0], 'packages')))
 from grid_control import utils
 from grid_control.config import ConfigEntry, createConfigFactory
 from grid_control.config.cfiller_base import ConfigFiller, StringConfigFiller
+from grid_control.gc_exceptions import gc_excepthook
 from grid_control.logging_setup import logging_setup
 from grid_control.workflow import Workflow
-from hpfwk import debugInterruptHandler
+from hpfwk import ExceptionFormatter, debugInterruptHandler
 from python_compat import lfilter
 
 if __name__ == '__main__':
-	global log, handler
-	log = None
-
 	# set up signal handler for interrupts
 	def interrupt(sig, frame):
-		global log, handler
 		utils.abort(True)
-		log = utils.ActivityLog('Quitting grid-control! (This can take a few seconds...)')
-		signal.signal(signal.SIGINT, handler)
-	handler = signal.signal(signal.SIGINT, interrupt)
+		interrupt.log = utils.ActivityLog('Quitting grid-control! (This can take a few seconds...)')
+		signal.signal(signal.SIGINT, interrupt.handler)
+	interrupt.handler = signal.signal(signal.SIGINT, interrupt)
 
 	# set up signal handler for debug session requests
 	signal.signal(signal.SIGURG, debugInterruptHandler)
@@ -81,7 +78,9 @@ if __name__ == '__main__':
 	utils.verbosity(opts.verbosity)
 	logging.getLogger().setLevel(logging.DEFAULT - opts.verbosity)
 	if opts.debug:
-		logging.getLogger('exception').addHandler(logging.StreamHandler(sys.stdout))
+		handler = logging.StreamHandler(sys.stdout)
+		handler.setFormatter(ExceptionFormatter(showCodeContext = 1, showVariables = 1, showFileStack = 1))
+		logging.getLogger('exception').addHandler(handler)
 
 	# we need exactly one positional argument (config file)
 	if len(args) != 1:
@@ -122,7 +121,7 @@ if __name__ == '__main__':
 		# Check work dir validity (default work directory is the config file name)
 		if not os.path.exists(config.getWorkPath()):
 			if not config.getState('init'):
-				logging.getLogger('user').warning('Starting initialization of %s!' % config.getWorkPath())
+				logging.getLogger('user').warning('Starting initialization of %s!', config.getWorkPath())
 				config.setState(True, 'init')
 			if config.getChoiceYesNo('workdir create', True,
 					interactive = 'Do you want to create the working directory %s?' % config.getWorkPath()):
@@ -149,4 +148,7 @@ if __name__ == '__main__':
 		# Run the configured workflow
 		workflow.run()
 
-	sys.exit(main())
+	try:
+		sys.exit(main())
+	except Exception:
+		gc_excepthook(*sys.exc_info())

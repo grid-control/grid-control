@@ -37,7 +37,7 @@ class Broker(NamedPlugin):
 
 	def _broker(self, reqs, items):
 		if items and self._nRandom:
-			return random.sample(items, utils.QM(self._nEntries, self._nEntries, len(items)))
+			return random.sample(items, self._nEntries or len(items))
 		elif items and self._nEntries:
 			return items[:self._nEntries]
 		return items

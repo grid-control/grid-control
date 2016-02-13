@@ -14,6 +14,7 @@
 
 import os, pty, sys, time, errno, fcntl, select, signal, logging, termios, threading
 from grid_control.utils.thread_tools import GCEvent, GCLock, GCQueue
+from hpfwk import AbstractError
 from python_compat import ifilter, imap, irange, lmap
 
 try:
@@ -76,7 +77,7 @@ class Process(object):
 		raise AbstractError
 
 	def restart(self):
-		if self.status(0) == None:
+		if self.status(0) is None:
 			self.kill()
 		self.start()
 
@@ -86,7 +87,7 @@ class Process(object):
 	def finish(self, timeout):
 		result = self.status(timeout)
 		tmp = (result, self.read_stdout(timeout = 0), self.read_stderr(timeout = 0))
-		if result == None:
+		if result is None:
 			raise ProcessTimeout # hard timeout
 		return tmp
 
@@ -99,7 +100,7 @@ class Process(object):
 			timeout -= time.time() - t_start
 			if cond(result):
 				break
-			if state != None: # check before update to make at least one last read from stream
+			if state is not None: # check before update to make at least one last read from stream
 				break
 			state = self.status(0)
 			if timeout < 0:
@@ -189,7 +190,7 @@ class LocalProcess(Process):
 				safeClose(fd)
 			try:
 				os.execv(self._cmd, [self._cmd] + self._args)
-			except:
+			except Exception:
 				sys.stderr.write('Error while calling os.execvp: ' + repr(sys.exc_info()[1]))
 				for fd in irange(0, 3):
 					safeClose(fd)
@@ -216,7 +217,7 @@ class LocalProcess(Process):
 				while not self._process_shutdown.is_set():
 					try:
 						select.select([fd], [], [], 0.2)
-					except:
+					except Exception:
 						pass
 					readToBuffer()
 				readToBuffer() # Final readout after process finished
@@ -232,7 +233,7 @@ class LocalProcess(Process):
 					if local_buffer:
 						try:
 							(rl, write_list, xl) = select.select([], [fd_parent_stdin], [], 0.2)
-						except:
+						except Exception:
 							pass
 						if write_list and not self._process_shutdown.is_set():
 							written = os.write(fd_parent_stdin, local_buffer)
@@ -248,7 +249,7 @@ class LocalProcess(Process):
 				thread_out.start()
 				thread_err = threading.Thread(target = handleOutput, args = (fd_parent_stderr, self._buffer_stderr))
 				thread_err.start()
-				while self._status == None:
+				while self._status is None:
 					try:
 						(pid, sts) = os.waitpid(self._pid, 0) # blocking (with spurious wakeups!)
 					except OSError: # unable to wait for child
@@ -281,7 +282,7 @@ class LocalProcess(Process):
 
 	def status(self, timeout, terminate = False):
 		self._process_finished.wait(timeout, 'process to finish')
-		if self._status != None: # return either signal name or exit code
+		if self._status is not None: # return either signal name or exit code
 			if os.WIFSIGNALED(self._status):
 				return SIGNAL_DICT.get(os.WTERMSIG(self._status), 'SIG_UNKNOWN')
 			elif os.WIFEXITED(self._status):
@@ -289,7 +290,7 @@ class LocalProcess(Process):
 		if terminate:
 			self.kill(signal.SIGTERM)
 			result = self.status(timeout = 1, terminate = False)
-			if result != None:
+			if result is not None:
 				return result
 			self.kill(signal.SIGKILL)
 			return self.status(timeout = 1, terminate = False)

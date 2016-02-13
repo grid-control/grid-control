@@ -172,7 +172,7 @@ class DBS3InputValidation(object):
     @staticmethod
     def validate_json_input(input_key, input_data):
         if isinstance(input_data, dict):
-            for key in input_data.iterkeys():
+            for key in input_data.keys():
                 if key not in DBS3InputValidation._accepted_input_keys[input_key]:
                     raise InputValidationError('%s is not a valid key for %s' % (key, input_key))
                 input_data[key] = DBS3InputValidation.validate_json_input(key, input_data[key])

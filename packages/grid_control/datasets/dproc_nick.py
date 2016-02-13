@@ -51,7 +51,8 @@ class NickNameProducer(DataProcessor):
 class SimpleNickNameProducer(NickNameProducer):
 	def getName(self, oldnick, dataset, block):
 		if oldnick == '':
-			return dataset.replace('/PRIVATE/', '').lstrip('/').split('#')[0].replace('/', '_').replace('__', '_')
+			ds = dataset.replace('/PRIVATE/', '').lstrip('/').split('#')[0]
+			return ds.replace(' ', '').replace('/', '_').replace('__', '_')
 		return oldnick
 
 

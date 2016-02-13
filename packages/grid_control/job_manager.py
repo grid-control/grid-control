@@ -46,6 +46,7 @@ class JobManager(NamedPlugin):
 		self.maxRetry = config.getInt('max retry', -1, onChange = None)
 		self.continuous = config.getBool('continuous', False, onChange = None)
 		self._reportClass = config.getPlugin('abort report', 'LocationReport', cls = Report, onChange = None)
+		self._showBlocker = True
 
 
 	def getMaxJobs(self, task):
@@ -120,7 +121,7 @@ class JobManager(NamedPlugin):
 		return sorted(jobList)
 
 
-	def getSubmissionJobs(self, maxsample, static = {'showBlocker': True}):
+	def getSubmissionJobs(self, maxsample):
 		# Get list of submittable jobs
 		readyList = self.jobDB.getJobs(ClassSelector(JobClass.READY))
 		retryOK = readyList
@@ -130,12 +131,12 @@ class JobManager(NamedPlugin):
 		modOK = lfilter(self._task.canSubmit, readyList)
 		jobList = set.intersection(set(retryOK), set(modOK))
 
-		if static['showBlocker'] and len(readyList) > 0 and len(jobList) == 0: # No submission but ready jobs
+		if self._showBlocker and len(readyList) > 0 and len(jobList) == 0: # No submission but ready jobs
 			err = []
 			err += utils.QM(len(retryOK) > 0 and len(modOK) == 0, [], ['have hit their maximum number of retries'])
 			err += utils.QM(len(retryOK) == 0 and len(modOK) > 0, [], ['are vetoed by the task module'])
 			utils.vprint('All remaining jobs %s!' % str.join(utils.QM(retryOK or modOK, ' or ', ' and '), err), -1, True)
-		static['showBlocker'] = not (len(readyList) > 0 and len(jobList) == 0)
+		self._showBlocker = not (len(readyList) > 0 and len(jobList) == 0)
 
 		# Determine number of jobs to submit
 		submit = len(jobList)
@@ -159,7 +160,8 @@ class JobManager(NamedPlugin):
 			return False
 
 		submitted = []
-		for jobNum, wmsId, data in wms.submitJobs(jobList, self._task):
+		for x in wms.submitJobs(jobList, self._task):
+			jobNum, wmsId, data = x
 			submitted.append(jobNum)
 			jobObj = self.jobDB.get(jobNum, create = True)
 
@@ -364,6 +366,7 @@ class SimpleJobManager(JobManager):
 			utils.vprint('== Verification mode active ==\nSubmission is capped unless the success ratio of a chunk of jobs is sufficent.', level=0)
 			utils.vprint('Enforcing the following (chunksize x ratio) sequence:', level=0)
 			utils.vprint(' > '.join(imap(lambda tpl: '%d x %4.2f'%(tpl[0], tpl[1]), lzip(self.verifyChunks, self.verifyThresh))), level=0)
+		self._unreachableGoal = False
 
 
 	def checkJobList(self, wms, jobList):
@@ -397,7 +400,7 @@ class SimpleJobManager(JobManager):
 
 	# Verification heuristic - check whether enough jobs have succeeded before submitting more
 	# @submitCount: number of jobs to submit
-	def getVerificationSubmitThrottle(self, submitCount, _messageCache = { 'unreachableGoal' : False }):
+	def getVerificationSubmitThrottle(self, submitCount):
 		jobsActive = self.jobDB.getJobsN(ClassSelector(JobClass.PROCESSING))
 		jobsSuccess = self.jobDB.getJobsN(ClassSelector(JobClass.SUCCESS))
 		jobsDone = self.jobDB.getJobsN(ClassSelector(JobClass.PROCESSED))
@@ -406,10 +409,10 @@ class SimpleJobManager(JobManager):
 		try:
 			successRatio = jobsSuccess * 1.0 / self.verifyChunks[verifyIndex]
 			if ( self.verifyChunks[verifyIndex] - jobsDone) + jobsSuccess < self.verifyChunks[verifyIndex]*self.verifyThresh[verifyIndex]:
-				if not _messageCache['unreachableGoal']:
+				if not self._unreachableGoal:
 					utils.vprint('All remaining jobs are vetoed by an unachieveable verification goal.', -1, True)
 					utils.vprint('Current goal: %d successful jobs out of %d' % (self.verifyChunks[verifyIndex]*self.verifyThresh[verifyIndex], self.verifyChunks[verifyIndex]), -1, True)
-					_messageCache['unreachableGoal'] = True
+					self._unreachableGoal = True
 				return 0
 			if successRatio < self.verifyThresh[verifyIndex]:
 				return min(submitCount, self.verifyChunks[verifyIndex]-jobsTotal)

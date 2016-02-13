@@ -8,7 +8,7 @@ def customise_for_gc(process):
 		process.maxEvents = cms.untracked.PSet(
 			input = cms.untracked.int32(max(-1, maxevents))
 		)
-	except:
+	except Exception:
 		pass
 
 	# Dataset related setup
@@ -21,16 +21,16 @@ def customise_for_gc(process):
 		try:
 			secondaryFiles = [__FILE_NAMES2__]
 			process.source.secondaryFileNames = cms.untracked.vstring(secondaryFiles)
-		except:
+		except Exception:
 			pass
 		try:
 			lumirange = [__LUMI_RANGE__]
 			if len(lumirange) > 0:
 				process.source.lumisToProcess = cms.untracked.VLuminosityBlockRange(lumirange)
 				process.maxEvents = cms.untracked.PSet(input = cms.untracked.int32(-1))
-		except:
+		except Exception:
 			pass
-	except:
+	except Exception:
 		pass
 
 	if hasattr(process, 'RandomNumberGeneratorService'):
@@ -46,14 +46,14 @@ def customise_for_gc(process):
 	try:
 		if hasattr(process, 'generator') and process.source.type_() != 'PoolSource':
 			process.source.firstLuminosityBlock = cms.untracked.uint32(1 + __GC_JOB_ID__)
-			print 'Generator random seed:', process.RandomNumberGeneratorService.generator.initialSeed
-	except:
+			print('Generator random seed: %s' process.RandomNumberGeneratorService.generator.initialSeed)
+	except Exception:
 		pass
 
 	# Print GlobalTag for DBS3 registration - output is taken from edmConfigHash
 	try:
-		print 'globaltag:%s' % process.GlobalTag.globaltag.value()
-	except:
+		print('globaltag:%s' % process.GlobalTag.globaltag.value())
+	except exception:
 		pass
 	return (process)
 

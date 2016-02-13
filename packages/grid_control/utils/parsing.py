@@ -12,7 +12,7 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-from python_compat import imap, ismap, lfilter, lmap, reduce, sorted
+from python_compat import imap, ismap, json, lfilter, lmap, reduce, sorted
 
 def removeUnicode(obj):
 	if type(obj) in (list, tuple, set):
@@ -22,7 +22,7 @@ def removeUnicode(obj):
 		obj = oldType(obj)
 	elif isinstance(obj, dict):
 		result = {}
-		for k, v in obj.iteritems():
+		for k, v in obj.items():
 			result[removeUnicode(k)] = removeUnicode(v)
 		return result
 	elif isinstance(obj, unicode):
@@ -31,7 +31,6 @@ def removeUnicode(obj):
 
 
 def parseJSON(data):
-	import json
 	return removeUnicode(json.loads(data))
 
 
@@ -84,10 +83,10 @@ def parseBool(x):
 		return False
 
 
-def parseList(value, delimeter = ',', doFilter = lambda x: x not in ['', '\n'], onEmpty = []):
+def parseList(value, delimeter, doFilter = lambda x: x not in ['', '\n']):
 	if value:
 		return lfilter(doFilter, imap(str.strip, value.split(delimeter)))
-	return onEmpty
+	return []
 
 
 def parseTime(usertime):

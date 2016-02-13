@@ -131,7 +131,7 @@ class FilesFromJobInfo(InfoScanner):
 		try:
 			jobInfo = objStore['JOBINFO']
 			files = ifilter(lambda x: x[0].startswith('file'), jobInfo.items())
-			fileInfos = imap(lambda (x, y): tuple(y.strip('"').split('  ')), files)
+			fileInfos = imap(lambda x_y: tuple(x_y[1].strip('"').split('  ')), files)
 			for (hashMD5, name_local, name_dest, pathSE) in fileInfos:
 				metadata.update({'SE_OUTPUT_HASH_MD5': hashMD5, 'SE_OUTPUT_FILE': name_local,
 					'SE_OUTPUT_BASE': os.path.splitext(name_local)[0], 'SE_OUTPUT_PATH': pathSE})
@@ -185,7 +185,8 @@ class MatchDelimeter(InfoScanner):
 		if len(self.matchDelim) == 2:
 			if os.path.basename(path).count(self.matchDelim[0]) != self.matchDelim[1]:
 				raise StopIteration
-		getVar = lambda (d, s, e): str.join(d, os.path.basename(path).split(d)[s:e])
+		def getVar(d, s, e):
+			return str.join(d, os.path.basename(path).split(d)[s:e])
 		if self.delimDS:
 			metadata['DELIMETER_DS'] = getVar(splitParse(self.delimDS))
 		if self.delimB:
@@ -205,8 +206,9 @@ class ParentLookup(InfoScanner):
 		return ([], utils.QM(self.merge, [], ['PARENT_PATH']))
 
 	def lfnTrans(self, lfn):
-		if lfn and self.looseMatch:
-			trunkPath = lambda x, y: (lambda s: (s[0], os.path.join(x[1], s[1])))(os.path.split(x[0]))
+		if lfn and self.looseMatch: # return looseMatch path elements in reverse order
+			def trunkPath(x, y):
+				return (lambda s: (s[0], os.path.join(x[1], s[1])))(os.path.split(x[0]))
 			return reduce(trunkPath, irange(self.looseMatch), (lfn, ''))[1]
 		return lfn
 

@@ -15,22 +15,14 @@
 # -*- coding: utf-8 -*-
 
 # core modules
-import os
-
-# standard modules
-import logging
-
-# GC modules
-import json
+import os, logging
 from grid_control import utils
+from grid_control.backends.htcondor_wms.htcondor_schedd import HTCScheddFactory
+from grid_control.backends.htcondor_wms.wmsid import HTCJobID
 from grid_control.backends.wms import BasicWMS
 from grid_control.config import ConfigError
 from grid_control.job_db import Job
-
-# HTC modules
-from htcondor_schedd import HTCScheddFactory
-from wmsid import HTCJobID
-from python_compat import lfilter
+from python_compat import json, lfilter
 
 """
 HTCondor backend core
@@ -183,7 +175,7 @@ class HTCondor(BasicWMS):
 				self._writeJobConfig(
 					self.getJobCfgPath(jobNum)[0],
 					jobNum,
-					task
+					task, {}
 					)
 			rawJobInfoMaps = self._schedd.submitJobs(
 				jobSubmitNumList, 

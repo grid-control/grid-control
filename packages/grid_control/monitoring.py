@@ -23,10 +23,10 @@ class EventHandler(NamedPlugin):
 	configSections = NamedPlugin.configSections + ['events']
 	tagName = 'event'
 
-	def __init__(self, config, name, task, submodules = []):
+	def __init__(self, config, name, task, submodules = None):
 		NamedPlugin.__init__(self, config, name)
 		self._log = logging.getLogger('monitoring')
-		(self.config, self.task, self.submodules) = (config, task, submodules)
+		(self.config, self.task, self.submodules) = (config, task, submodules or [])
 
 	def onJobSubmit(self, wms, jobObj, jobNum):
 		for submodule in self.submodules:
@@ -89,7 +89,7 @@ class ScriptMonitoring(Monitoring):
 				self.running.pop(token, None) # lock free: ignore missing tokens
 
 	# Get both task and job config / state dicts
-	def scriptThread(self, token, script, jobNum = None, jobObj = None, allDict = {}):
+	def scriptThread(self, token, script, jobNum = None, jobObj = None, allDict = None):
 		try:
 			tmp = {}
 			if jobNum is not None:
@@ -101,8 +101,8 @@ class ScriptMonitoring(Monitoring):
 			if jobNum is not None:
 				tmp.update(self.task.getJobConfig(jobNum))
 				tmp.update(self.task.getSubmitInfo(jobNum))
-			tmp.update(allDict)
-			for key, value in tmp.iteritems():
+			tmp.update(allDict or {})
+			for key, value in tmp.items():
 				if not key.startswith('GC_'):
 					key = 'GC_' + key
 				os.environ[key] = str(value)
@@ -116,12 +116,12 @@ class ScriptMonitoring(Monitoring):
 			self._log.exception('Error while running user script!')
 		self.running.pop(token, None)
 
-	def runInBackground(self, script, jobNum = None, jobObj = None, addDict =  {}):
+	def runInBackground(self, script, jobNum = None, jobObj = None, addDict = None):
 		if script != '':
 			self.runningToken += 1
 			self.running[self.runningToken] = time.time()
 			start_thread('Running monitoring script %s' % script,
-				self.scriptThread, self.runningToken, script, jobNum, jobObj)
+				self.scriptThread, self.runningToken, script, jobNum, jobObj, addDict)
 			self.cleanupRunning()
 
 	# Called on job submission

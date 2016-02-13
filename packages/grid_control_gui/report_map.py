@@ -13,8 +13,17 @@
 #-#  limitations under the License.
 
 import grid_control_gui.geodb
-import matplotlib.pyplot
-import os, math, numpy, random
+
+try:
+	import matplotlib
+	import matplotlib.pyplot
+except ImportError:
+	matplotlib = None
+try:
+	import numpy
+except ImportError:
+	numpy = None
+import os, math, random
 from python_compat import imap, irange, lfilter, lmap, lzip, sorted
 
 def remove_all_overlap(data):
@@ -45,7 +54,8 @@ def remove_all_overlap(data):
 			result.append(pt)
 	return result
 
-def draw_pie(ax, breakdown, pos, size, piecolor = ['red', 'orange', 'green', 'blue', 'purple']):
+def draw_pie(ax, breakdown, pos, size, piecolor = None):
+	piecolor = piecolor or ['red', 'orange', 'green', 'blue', 'purple']
 	breakdown = [0] + list(numpy.cumsum(breakdown)* 1.0 / sum(breakdown))
 	for i in irange(len(breakdown)-1):
 		x = [0] + numpy.cos(numpy.linspace(2 * math.pi * breakdown[i], 2 * math.pi * breakdown[i+1], 20)).tolist()

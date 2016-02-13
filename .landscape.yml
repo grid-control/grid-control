@@ -3,10 +3,16 @@ ignore-patterns:
   - packages/grid_control/backends/condor_wms/*
   - packages/grid_control/backends/htcondor_wms/*
   - packages/grid_control_cms/DashboardAPI/*
+  - packages/grid_control_cms/share/fragmentForCMSSW.py
   - packages/grid_control_gui/xmpp/*
-  - packages/json.py
-  - packages/popen2.py
-  - packages/python_compat.py
+  - packages/gcUpdatePlugins.py
+  - packages/python_compat*
   - packages/requests/*
-  - packages/tarfile.py
-  - scripts/datasetDBS2Add.py
+python-targets:
+  - 2
+  - 3
+strictness: medium
+pylint:
+  disable:
+    - redefined-builtin
+    - unused-argument

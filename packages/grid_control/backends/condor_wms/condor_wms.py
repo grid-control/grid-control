@@ -14,7 +14,12 @@
 
 # -*- coding: utf-8 -*-
 
-import os, re, glob, time, commands, tempfile
+import os, re, glob, time, tempfile
+
+try:
+	from commands import getoutput
+except:
+	from subprocess import getoutput
 from grid_control import utils
 from grid_control.backends.broker import Broker
 from grid_control.backends.condor_wms.processhandler import ProcessHandler
@@ -101,8 +106,8 @@ class Condor(BasicWMS):
 		# history query is faster with split files - check if and how this is used
 		# default condor_history command works WITHOUT explicitly specified file
 		self.historyFile = None
-		if self.remoteType == poolType.LOCAL and commands.getoutput( self.configValExec + " ENABLE_HISTORY_ROTATION").lower() == "true":
-			self.historyFile = commands.getoutput( self.configValExec + " HISTORY")
+		if self.remoteType == poolType.LOCAL and getoutput( self.configValExec + " ENABLE_HISTORY_ROTATION").lower() == "true":
+			self.historyFile = getoutput( self.configValExec + " HISTORY")
 			if not os.path.isfile(self.historyFile):
 				self.historyFile = None
 		# broker for selecting Sites
@@ -422,7 +427,7 @@ class Condor(BasicWMS):
 			# create the _jobconfig.sh file containing the actual data
 			for jobNum in jobNumList:
 				try:
-					self._writeJobConfig(_getJobCFG(jobNum)[0], jobNum, module)
+					self._writeJobConfig(_getJobCFG(jobNum)[0], jobNum, module, {})
 				except Exception:
 					raise BackendError('Could not write _jobconfig data for %s.' % jobNum)
 

@@ -242,7 +242,7 @@ class CrossParameterSource(MultiParameterSource):
 	def fillParameterInfo(self, pNum, result):
 		for (psource, maxN, prev) in self.quickFill:
 			if maxN:
-				psource.fillParameterInfo((pNum / prev) % maxN, result)
+				psource.fillParameterInfo(int((pNum / prev) % maxN), result)
 			else:
 				psource.fillParameterInfo(pNum, result)
 

@@ -178,7 +178,7 @@ def dlfs_rm(path, msg):
 
 def realmain(opts, args):
 	config = gcSupport.getConfig(configDict = {'access': {'ignore warnings': 'True'}})
-	token = AccessToken.getInstance(opts.token, config, 'access', OSLayer.create(config))
+	token = AccessToken.getInstance(opts.token, config, 'access')#, OSLayer.create(config))
 	(workDir, config, jobDB) = gcSupport.initGC(args)
 	jobList = jobDB.getJobs(ClassSelector(JobClass.SUCCESS))
 

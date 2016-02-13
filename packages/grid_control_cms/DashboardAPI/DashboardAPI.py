@@ -3,11 +3,10 @@
 """
 This is the Dashboard API Module for the Worker Node
 """
-
+import os, sys, time
+sys.path.append(os.path.abspath(os.path.dirname(__file__)))
 import apmon
-import time, sys, os
-from types import DictType, StringType, ListType
-
+sys.path.pop()
 #
 # Methods for manipulating the apmon instance
 #
@@ -40,20 +39,20 @@ def getApmonInstance():
             #print "Creating ApMon with dynamic configuration/url"
             try :
                 apm = apmon.ApMon(apmonUrlList, apmonLoggingLevel);
-            except Exception, e :
+            except Exception:
                 pass
             if apm is not None and not apm.initializedOK():
                 #print "Setting ApMon to static configuration"
                 try :
                     apm.setDestinations(apmonConf)
-                except Exception, e :
+                except Exception:
                     apm = None
             apmonInstance = apm
         if apmonInstance is None :
             #print "Creating ApMon with static configuration"
             try :
                 apmonInstance = apmon.ApMon(apmonConf, apmonLoggingLevel)
-            except Exception, e :
+            except Exception:
                 pass
     return apmonInstance 
 
@@ -67,7 +66,7 @@ def apmonFree() :
         time.sleep(1)
         try :
             apmonInstance.free()
-        except Exception, e :
+        except Exception:
             pass
         apmonInstance = None
     apmonInit = False
@@ -78,15 +77,9 @@ def apmonFree() :
 def apmonSend(taskid, jobid, params) :
     apm = getApmonInstance()
     if apm is not None :
-        if not isinstance(params, DictType) and not isinstance(params, ListType) :
-            params = {'unknown' : '0'}
-        if not isinstance(taskid, StringType) :
-            taskid = 'unknown'
-        if not isinstance(jobid, StringType) :
-            jobid = 'unknown'
         try :
             apm.sendParameters(taskid, jobid, params)
-        except Exception, e:
+        except Exception:
             pass
 
 #
@@ -100,7 +93,7 @@ def logger(msg) :
         fh = open('report.log','a')
         fh.write(msg)
         fh.close
-    except Exception, e :
+    except Exception:
         pass
 
 #
@@ -115,8 +108,6 @@ contextConf = {'MonitorID'    : ('MonitorID', 'unknown'),
 # Method to return the context
 #
 def getContext(overload={}) :
-    if not isinstance(overload, DictType) :
-        overload = {}
     context = {}
     for paramName in contextConf.keys() :
         paramValue = None
@@ -178,10 +169,10 @@ def report(args) :
     taskId = context['MonitorID']
     jobId = context['MonitorJobID']
     logger('SENDING with Task:%s Job:%s' % (taskId, jobId))
-    logger('params : ' + `paramArgs`)
+    logger('params : ' + repr(paramArgs))
     apmonSend(taskId, jobId, paramArgs)
     apmonFree()
-    print "Parameters sent to Dashboard."
+    print("Parameters sent to Dashboard.")
 
 #
 # PYTHON BASED JOB WRAPPER

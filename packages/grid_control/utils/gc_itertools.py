@@ -16,33 +16,33 @@ import itertools
 
 try: # Python <= 2.6
 	ichain = itertools.chain.from_iterable
-except:
+except Exception:
 	ichain = lambda iterables: itertools.chain(*iterables)
 
 def lchain(iterables):
 	return list(ichain(iterables))
 
 def tchain(iterables, timeout = None): # Combines multiple, threaded generators into single generator
-	from grid_control.utils.thread_tools import start_thread, GCQueue
+	from grid_control.utils.thread_tools import start_thread, GCQueue, GCLock
 	threads = []
+	thread_lock = GCLock()
 	result = GCQueue(list)
-	for it in iterables:
+	for idx, it in enumerate(iterables):
 		def generator_thread():
 			try:
 				for item in it:
-					result.put(item)
+					result.put([item])
 			finally:
-				result.put(GCQueue) # Use GCQueue as end-of-generator marker
-		name = 'generator thread'
-		if hasattr(it, 'name'):
-			name = it.name
-		thread_lock.aquire()
-		threads.append(start_thread(name, generator_thread))
+				result.put([GCQueue]) # Use GCQueue as end-of-generator marker
+		thread_lock.acquire()
+		threads.append(start_thread('generator thread %d' % idx, generator_thread))
 		thread_lock.release()
 
 	while len(threads):
-		tmp = queue.get(timeout)
-		if tmp == GCQueue:
-			threads.pop() # which thread is irrelevant - only used as counter
-		else:
-			yield tmp
+		for tmp in result.get(timeout):
+			if tmp == GCQueue:
+				thread_lock.acquire()
+				threads.pop() # which thread is irrelevant - only used as counter
+				thread_lock.release()
+			else:
+				yield tmp

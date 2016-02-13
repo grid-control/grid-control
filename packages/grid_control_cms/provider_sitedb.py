@@ -12,7 +12,7 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-import os, re
+import os, re, logging
 from grid_control.gc_exceptions import UserError
 from grid_control.utils.webservice import RestClient, parseJSON
 from python_compat import ifilter, imap, izip, lfilter, lmap, set
@@ -57,8 +57,7 @@ class SiteDB(object):
         cms_name = cms_name.replace('%', '.*')
         cms_name_regex = re.compile(cms_name)
 
-        psn_site_names = lfilter(lambda site: site['type'] == 'psn' and cms_name_regex.match(site[u'alias']),
-                                self._site_names())
+        psn_site_names = lfilter(lambda site: site['type'] == 'psn' and cms_name_regex.match(site['alias']), self._site_names())
         site_names = set(imap(lambda x: x['site_name'], psn_site_names))
         site_resources = lfilter(lambda x: x['site_name'] in site_names, self._site_resources())
         host_list = lfilter(lambda x: x['type'] == 'SE', site_resources)
@@ -85,8 +84,8 @@ class SiteDB(object):
 
 if __name__ == '__main__':
     site_db = SiteDB()
-    print site_db.dn_to_username(dn='/C=DE/O=GermanGrid/OU=KIT/CN=Manuel Giffels')
-    print site_db.username_to_dn(username='giffels')
-    print site_db.cms_name_to_se(cms_name='T*_PL_Warsaw')
-    print site_db.se_to_cms_name(se='se.polgrid.pl')
-    print site_db.se_to_cms_name(se='se.grid.icm.edu.pl')
+    logging.critical(site_db.dn_to_username(dn='/C=DE/O=GermanGrid/OU=KIT/CN=Manuel Giffels'))
+    logging.critical(site_db.username_to_dn(username='giffels'))
+    logging.critical(site_db.cms_name_to_se(cms_name='T*_PL_Warsaw'))
+    logging.critical(site_db.se_to_cms_name(se='se.polgrid.pl'))
+    logging.critical(site_db.se_to_cms_name(se='se.grid.icm.edu.pl'))

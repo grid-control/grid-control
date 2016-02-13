@@ -21,7 +21,7 @@ from grid_control_cms.dbs3_lite_client import DBS3LiteClient
 from grid_control_cms.dbs3_migration_queue import AlreadyQueued, DBS3MigrationQueue, MigrationTask, do_migration
 from grid_control_cms.provider_sitedb import SiteDB
 from hpfwk import APIError
-from python_compat import NullHandler, imap, izip, md5, reduce, set
+from python_compat import NullHandler, izip, set
 
 def generateDBS3BlockDumps(opts, blocks):
     for block_info in blocks:
@@ -227,25 +227,25 @@ def main():
     blocks = provider.getBlocks()
 
     # 2) Filter datasets
-    if opts.incremental:
+#    if opts.incremental:
         # Query target DBS for all found datasets and perform dataset resync with "supposed" state
-        dNames = set(imap(lambda b: b[DataProvider.Dataset], blocks))
+#        dNames = set(ximap(lambda b: b[DataProvider.Dataset], blocks))
 #        dNames = xfilter(lambda ds: hasDataset(opts.dbsTarget, ds), dNames) - todo
-        config = getConfig(configDict = {None: {'dbs instance': opts.dbsTarget}})
-        oldBlocks = reduce(operator.add, imap(lambda ds: DBSApiv2(config, None, ds, None).getBlocks(), dNames), [])
-        (blocksAdded, blocksMissing, blocksChanged) = DataProvider.resyncSources(oldBlocks, blocks)
-        if len(blocksMissing) or len(blocksChanged):
-            if not utils.getUserBool(' * WARNING: Block structure has changed! Continue?', False):
-                sys.exit(os.EX_OK)
+#        config = getConfig(configDict = {None: {'dbs instance': opts.dbsTarget}})
+#        oldBlocks = xreduce(operator.add, ximap(lambda ds: DBSApiv2(config, None, ds, None).getBlocks(), dNames), [])
+#        (blocksAdded, blocksMissing, blocksChanged) = DataProvider.resyncSources(oldBlocks, blocks)
+#        if len(blocksMissing) or len(blocksChanged):
+#            if not utils.getUserBool(' * WARNING: Block structure has changed! Continue?', False):
+#                sys.exit(os.EX_OK)
         # Search for blocks which were partially added and generate "pseudo"-blocks with left over files
-        setOldBlocks = set(imap(lambda x: x[DataProvider.BlockName], oldBlocks))
-        setAddedBlocks = set(imap(lambda x: x[DataProvider.BlockName], blocksAdded))
-        blockCollision = set.intersection(setOldBlocks, setAddedBlocks)
-        if blockCollision and opts.closeBlock: # Block are closed and contents have changed
-            for block in blocksAdded:
-                if block[DataProvider.BlockName] in blockCollision:
-                    block[DataProvider.BlockName] = utils.strGuid(md5(str(time.time())).hexdigest())
-        blocks = blocksAdded
+#        setOldBlocks = set(ximap(lambda x: x[DataProvider.BlockName], oldBlocks))
+#        setAddedBlocks = set(ximap(lambda x: x[DataProvider.BlockName], blocksAdded))
+#        blockCollision = set.intersection(setOldBlocks, setAddedBlocks)
+#        if blockCollision and opts.closeBlock: # Block are closed and contents have changed
+#            for block in blocksAdded:
+#                if block[DataProvider.BlockName] in blockCollision:
+#                    block[DataProvider.BlockName] = utils.strGuid(xmd5(str(time.time())).hexdigest())
+#        blocks = blocksAdded
 
     # 3) Display dataset properties
     if opts.display_data or opts.display_cfg:

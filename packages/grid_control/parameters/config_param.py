@@ -81,8 +81,8 @@ class ParameterConfig:
 			return value.splitlines()
 		elif ptype == 'expr' or ptype == 'eval':
 			result = eval(value)
-			if isinstance(result, list):
-				return result
+			if isinstance(result, (list, type(range(1)))):
+				return list(result)
 			return [result]
 		elif ptype == 'default':
 			return shlex.split(value)

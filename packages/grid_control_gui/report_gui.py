@@ -19,7 +19,7 @@ from grid_control.report import Report
 from grid_control_gui.ansi import Console
 from python_compat import ifilter, imap, irange, lfilter, lmap, set, sorted
 
-class JobProgressBar:
+class JobProgressBar(object):
 	def __init__(self, total = 100, width = 16, jobsOnFinish = False):
 		(self._total, self._width, self._jobsOnFinish) = (total, width, jobsOnFinish)
 		self.update()
@@ -278,7 +278,8 @@ class GUIReport(AdaptiveReport):
 	def display(self):
 		(catStateDict, catDescDict, catSubcatDict) = self._getCategoryStateSummary()
 		self._catCur = len(catStateDict)
-		sumCat = lambda catKey, states: sum(imap(lambda z: catStateDict[catKey].get(z, 0), states))
+		def sumCat(catKey, states):
+			return sum(imap(lambda z: catStateDict[catKey].get(z, 0), states))
 
 		self.printGUIHeader('Status report for task:')
 		for catKey in catStateDict: #sorted(catStateDict, key = lambda x: -self._categories[x][0]):
@@ -294,5 +295,5 @@ class GUIReport(AdaptiveReport):
 				sumCat(catKey, [Job.ABORTED, Job.CANCELLED, Job.FAILED]))
 			self.printLimited(bar, self.maxX)
 		for x in irange(self._catMax - len(catStateDict)):
-			print ' ' * self.maxX
-			print ' ' * self.maxX
+			sys.stdout.write(' ' * self.maxX + '\n')
+			sys.stdout.write(' ' * self.maxX + '\n')

@@ -20,9 +20,7 @@ class ThreadedMultiWMS(MultiWMS):
 	def _forwardCall(self, args, assignFun, callFun):
 		argMap = self._getMapID2Backend(args, assignFun)
 		def makeGenerator(wmsPrefix):
-			result = callFun(self._wmsMap[wmsPrefix], argMap[wmsPrefix])
-			result.name = wmsPrefix
-			return result
+			return callFun(self._wmsMap[wmsPrefix], argMap[wmsPrefix])
 		activeWMS = ifilter(lambda wmsPrefix: wmsPrefix in argMap, self._wmsMap)
 		for result in tchain(imap(makeGenerator, activeWMS)):
 			yield result

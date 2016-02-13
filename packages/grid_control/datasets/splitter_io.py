@@ -18,7 +18,7 @@ from grid_control.config import ConfigError
 from grid_control.datasets.splitter_base import DataSplitter
 from grid_control.utils.file_objects import VirtualFile
 from grid_control.utils.thread_tools import GCLock
-from python_compat import StringBuffer, ifilter, imap, lfilter, lmap, tarfile
+from python_compat import BytesBuffer, bytes2str, ifilter, imap, lfilter, lmap, tarfile
 
 class BaseJobFileTarAdaptor(object):
 	def __init__(self, path):
@@ -31,8 +31,8 @@ class BaseJobFileTarAdaptor(object):
 		metadata = self._fmt.parse(self._tar.extractfile('Metadata').readlines(), keyParser = {None: str})
 		self.maxJobs = metadata.pop('MaxJobs')
 		self.classname = metadata.pop('ClassName')
-		self.metadata = {'None': dict(ifilter(lambda (k, v): not k.startswith('['), metadata.items()))}
-		for (k, v) in ifilter(lambda (k, v): k.startswith('['), metadata.items()):
+		self.metadata = {'None': dict(ifilter(lambda k_v: not k_v[0].startswith('['), metadata.items()))}
+		for (k, v) in ifilter(lambda k_v: k_v[0].startswith('['), metadata.items()):
 			self.metadata.setdefault('None %s' % k.split(']')[0].lstrip('['), {})[k.split(']')[1].strip()] = v
 		del log
 
@@ -57,7 +57,7 @@ class DataSplitterIO_V1(object):
 		for jobNum, entry in enumerate(source):
 			if jobNum % 100 == 0:
 				closeSubTar(jobNum - 1, subTarFile, subTarFileObj)
-				subTarFileObj = StringBuffer()
+				subTarFileObj = BytesBuffer()
 				subTarFile = tarfile.open(mode = 'w:gz', fileobj = subTarFileObj)
 				del log
 				log = utils.ActivityLog('%s [%d / %d]' % (message, jobNum, sourceLen))
@@ -71,7 +71,8 @@ class DataSplitterIO_V1(object):
 			else:
 				savelist = tmp
 			# Write files with infos / filelist
-			def flat((x, y, z)):
+			def flat(k_s_v):
+				(x, y, z) = k_s_v
 				if x in [DataSplitter.Metadata, DataSplitter.MetadataHeader]:
 					return (x, y, repr(z))
 				elif isinstance(z, list):
@@ -102,11 +103,11 @@ class DataSplitterIO_V1(object):
 				if not self._cacheKey == key / 100:
 					self._cacheKey = key / 100
 					subTarFileObj = self._tar.extractfile('%03dXX.tgz' % (key / 100))
-					subTarFileObj = StringBuffer(gzip.GzipFile(fileobj = subTarFileObj).read()) # 3-4x speedup for sequential access
+					subTarFileObj = BytesBuffer(gzip.GzipFile(fileobj = subTarFileObj).read()) # 3-4x speedup for sequential access
 					self._cacheTar = tarfile.open(mode = 'r', fileobj = subTarFileObj)
 				parserMap = { None: str, DataSplitter.NEntries: int, DataSplitter.Skipped: int, 
 					DataSplitter.DatasetID: int, DataSplitter.Invalid: utils.parseBool,
-					DataSplitter.Locations: utils.parseList, DataSplitter.MetadataHeader: eval,
+					DataSplitter.Locations: lambda x: utils.parseList(x, ','), DataSplitter.MetadataHeader: eval,
 					DataSplitter.Metadata: lambda x: eval(x.strip("'")) }
 				data = self._fmt.parse(self._cacheTar.extractfile('%05d/info' % key).readlines(),
 					keyParser = {None: int}, valueParser = parserMap)
@@ -147,7 +148,7 @@ class DataSplitterIO_V2(object):
 				lastValid = jobNum
 			if jobNum % self.keySize == 0:
 				closeSubTar(jobNum - 1, subTarFile, subTarFileObj)
-				subTarFileObj = StringBuffer()
+				subTarFileObj = BytesBuffer()
 				subTarFile = tarfile.open(mode = 'w:gz', fileobj = subTarFileObj)
 				del log
 				log = utils.ActivityLog('%s [%d / %d]' % (message, jobNum, sourceLen))
@@ -161,7 +162,8 @@ class DataSplitterIO_V2(object):
 			else:
 				savelist = tmp
 			# Write files with infos / filelist
-			def flat((x, y, z)):
+			def flat(k_s_v):
+				(x, y, z) = k_s_v
 				if x in [DataSplitter.Metadata, DataSplitter.MetadataHeader]:
 					return (x, y, repr(z))
 				elif isinstance(z, list):
@@ -199,13 +201,13 @@ class DataSplitterIO_V2(object):
 				if not self._cacheKey == key / self.keySize:
 					self._cacheKey = key / self.keySize
 					subTarFileObj = self._tar.extractfile('%03dXX.tgz' % (key / self.keySize))
-					subTarFileObj = StringBuffer(gzip.GzipFile(fileobj = subTarFileObj).read()) # 3-4x speedup for sequential access
+					subTarFileObj = BytesBuffer(gzip.GzipFile(fileobj = subTarFileObj).read()) # 3-4x speedup for sequential access
 					self._cacheTar = tarfile.open(mode = 'r', fileobj = subTarFileObj)
 				parserMap = { None: str, DataSplitter.NEntries: int, DataSplitter.Skipped: int, 
 					DataSplitter.DatasetID: int, DataSplitter.Invalid: utils.parseBool,
-					DataSplitter.Locations: utils.parseList, DataSplitter.MetadataHeader: eval,
+					DataSplitter.Locations: lambda x: utils.parseList(x, ','), DataSplitter.MetadataHeader: eval,
 					DataSplitter.Metadata: lambda x: eval(x.strip("'")) }
-				fullData = self._cacheTar.extractfile('%05d' % key).readlines()
+				fullData = lmap(bytes2str, self._cacheTar.extractfile('%05d' % key).readlines())
 				data = self._fmt.parse(lfilter(lambda x: not x.startswith('='), fullData),
 					keyParser = {None: int}, valueParser = parserMap)
 				fileList = imap(lambda x: x[1:], ifilter(lambda x: x.startswith('='), fullData))

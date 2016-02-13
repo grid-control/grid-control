@@ -20,10 +20,10 @@ from python_compat import imap, lfilter, lmap
 # Simple ConfigView implementation
 class TaggedConfigView(SimpleConfigView):
 	def __init__(self, name, oldContainer, curContainer, parent = None,
-			setSections = selectorUnchanged, addSections = [],
-			setNames = selectorUnchanged, addNames = [],
-			setTags = selectorUnchanged, addTags = [],
-			setClasses = selectorUnchanged, addClasses = [], inheritSections = False):
+			setSections = selectorUnchanged, addSections = None,
+			setNames = selectorUnchanged, addNames = None,
+			setTags = selectorUnchanged, addTags = None,
+			setClasses = selectorUnchanged, addClasses = None, inheritSections = False):
 		if inheritSections:
 			try:
 				addSections = parent._cfgClassSections + addSections

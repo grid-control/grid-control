@@ -3,13 +3,12 @@ from python_compat import sorted, lrange
 """JSON token scanner
 """
 import re
-c_make_scanner = None
 
 NUMBER_RE = re.compile(
     r'(-?(?:0|[1-9]\d*))(\.\d+)?([eE][-+]?\d+)?',
     (re.VERBOSE | re.MULTILINE | re.DOTALL))
 
-def py_make_scanner(context):
+def make_scanner(context):
     parse_object = context.parse_object
     parse_array = context.parse_array
     parse_string = context.parse_string
@@ -61,14 +60,10 @@ def py_make_scanner(context):
 
     return _scan_once
 
-make_scanner = c_make_scanner or py_make_scanner
-
 """Implementation of JSONDecoder
 """
-import sys
 import struct
-
-c_scanstring = None
+import sys
 
 FLAGS = re.VERBOSE | re.MULTILINE | re.DOTALL
 
@@ -120,8 +115,7 @@ BACKSLASH = {
 
 DEFAULT_ENCODING = "utf-8"
 
-def py_scanstring(s, end, encoding=None, strict=True,
-        _b=BACKSLASH, _m=STRINGCHUNK.match):
+def scanstring(s, end, encoding=None, strict=True):
     """Scan the string s for a JSON string. End is the index of the
     character in s after the quote that started the JSON string.
     Unescapes all valid JSON string escape sequences and raises ValueError
@@ -132,6 +126,8 @@ def py_scanstring(s, end, encoding=None, strict=True,
     after the end quote."""
     if encoding is None:
         encoding = DEFAULT_ENCODING
+    _b = BACKSLASH
+    _m=STRINGCHUNK.match
     chunks = []
     _append = chunks.append
     begin = end - 1
@@ -199,7 +195,6 @@ def py_scanstring(s, end, encoding=None, strict=True,
 
 
 # Use speedup if available
-scanstring = c_scanstring or py_scanstring
 
 WHITESPACE = re.compile(r'[ \t\n\r]*', FLAGS)
 WHITESPACE_STR = ' \t\n\r'
@@ -667,17 +662,10 @@ class JSONEncoder(object):
             return text
 
 
-        if (_one_shot and c_make_encoder is not None
-                and not self.indent and not self.sort_keys):
-            _iterencode = c_make_encoder(
-                markers, self.default, _encoder, self.indent,
-                self.key_separator, self.item_separator, self.sort_keys,
-                self.skipkeys, self.allow_nan)
-        else:
-            _iterencode = _make_iterencode(
-                markers, self.default, _encoder, self.indent, floatstr,
-                self.key_separator, self.item_separator, self.sort_keys,
-                self.skipkeys, _one_shot)
+        _iterencode = _make_iterencode(
+            markers, self.default, _encoder, self.indent, floatstr,
+            self.key_separator, self.item_separator, self.sort_keys,
+            self.skipkeys, _one_shot)
         return _iterencode(o, 0)
 
 def _make_iterencode(markers, _default, _encoder, _indent, _floatstr,
@@ -771,7 +759,7 @@ def _make_iterencode(markers, _default, _encoder, _indent, _floatstr,
         if _sort_keys:
             items = sorted(dct.items(), key=lambda kv: kv[0])
         else:
-            items = dct.iteritems()
+            items = dct.items()
         for key, value in items:
             if isinstance(key, basestring):
                 pass

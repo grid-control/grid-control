@@ -12,7 +12,7 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-import os, re, sys, glob, stat, time, errno, popen2, signal, fnmatch, logging, operator
+import os, re, sys, glob, stat, time, errno, signal, fnmatch, logging, operator, python_compat_popen2
 from grid_control.gc_exceptions import GCError, InstallationError, UserError
 from grid_control.utils.file_objects import VirtualFile
 from grid_control.utils.parsing import parseBool, parseDict, parseInt, parseList, parseStr, parseTime, parseType, strGuid, strTime, strTimeShort
@@ -46,7 +46,7 @@ def getRootName(fn): # Return file name without extension
 pathGC = lambda *args: cleanPath(os.path.join(os.environ['GC_PACKAGES_PATH'], '..', *args))
 pathShare = lambda *args, **kw: cleanPath(os.path.join(os.environ['GC_PACKAGES_PATH'], kw.get('pkg', 'grid_control'), 'share', *args))
 
-def resolvePaths(path, searchPaths = [], mustExist = True, ErrorClass = GCError):
+def resolvePaths(path, searchPaths = None, mustExist = True, ErrorClass = GCError):
 	path = cleanPath(path) # replace $VAR, ~user, \ separators
 	result = []
 	if os.path.isabs(path):
@@ -56,6 +56,7 @@ def resolvePaths(path, searchPaths = [], mustExist = True, ErrorClass = GCError)
 				raise ErrorClass('Could not find file "%s"' % path)
 			return [path] # Return non-existing, absolute path
 	else: # search relative path in search directories
+		searchPaths = searchPaths or []
 		for spath in set(searchPaths):
 			result.extend(glob.glob(cleanPath(os.path.join(spath, path))))
 		if not result:
@@ -65,7 +66,7 @@ def resolvePaths(path, searchPaths = [], mustExist = True, ErrorClass = GCError)
 	return result
 
 
-def resolvePath(path, searchPaths = [], mustExist = True, ErrorClass = GCError):
+def resolvePath(path, searchPaths = None, mustExist = True, ErrorClass = GCError):
 	result = resolvePaths(path, searchPaths, mustExist, ErrorClass)
 	if len(result) > 1:
 		raise ErrorClass('Path "%s" matches multiple files:\n\t%s' % (path, str.join('\n\t', result)))
@@ -122,13 +123,13 @@ class LoggedProcess(object):
 		self._logger.log(logging.DEBUG1, 'External programm called: %s %s' % (self.niceCmd, self.niceArgs))
 		self.stime = time.time()
 		if shell:
-			self.proc = popen2.Popen3('%s %s' % (cmd, args), True)
+			self.proc = python_compat_popen2.Popen3('%s %s' % (cmd, args), True)
 		else:
 			if isinstance(cmd, str):
 				cmd = [cmd]
 			if isinstance(args, str):
 				args = args.split()
-			self.proc = popen2.Popen3( cmd + list(args), True)
+			self.proc = python_compat_popen2.Popen3( cmd + list(args), True)
 
 	def getOutput(self, wait = False):
 		if wait:
@@ -285,10 +286,10 @@ class PersistentDict(dict):
 			self.write({key: value})
 		return value
 
-	def write(self, newdict = {}, update = True):
+	def write(self, newdict = None, update = True):
 		if not update:
 			self.clear()
-		self.update(newdict)
+		self.update(newdict or {})
 		if dict(self.olddict) == dict(self.items()):
 			return
 		try:
@@ -477,7 +478,8 @@ def doBlackWhiteList(value, bwfilter, matcher = str.startswith, onEmpty = None, 
 	(['T2_US_MIT', 'T1_DE_KIT_MSS', 'T1_US_FNAL'], None, None)
 	"""
 	(blacklist, whitelist) = splitBlackWhiteList(bwfilter)
-	checkMatch = lambda item, matchList: True in imap(lambda x: matcher(item, x), matchList)
+	def checkMatch(item, matchList):
+		return True in imap(lambda x: matcher(item, x), matchList)
 	value = lfilter(lambda x: not checkMatch(x, blacklist), QM(value or not preferWL, value, whitelist))
 	if len(whitelist):
 		return lfilter(lambda x: checkMatch(x, whitelist), value)
@@ -492,7 +494,9 @@ class DictFormat(object):
 		self.escapeString = escapeString
 
 	# Parse dictionary lists
-	def parse(self, lines, keyParser = {}, valueParser = {}):
+	def parse(self, lines, keyParser = None, valueParser = None):
+		keyParser = keyParser or {}
+		valueParser = valueParser or {}
 		defaultKeyParser = keyParser.get(None, lambda k: parseType(k.lower()))
 		defaultValueParser = valueParser.get(None, parseType)
 		data = {}
@@ -503,6 +507,8 @@ class DictFormat(object):
 		except Exception:
 			pass
 		for line in lines:
+			if not isinstance(line, str):
+				line = line.decode('utf-8')
 			if self.escapeString:
 				# Switch accumulate on/off when odd number of quotes found
 				if (line.count('"') - line.count('\\"')) % 2 == 1:
@@ -512,10 +518,12 @@ class DictFormat(object):
 					continue
 			else:
 				currentline = line
-			try: # split at first occurence of delimeter and strip spaces around
-				key, value = lmap(str.strip, currentline.split(self.delimeter, 1))
+			# split at first occurence of delimeter and strip spaces around
+			key_value_list = lmap(str.strip, currentline.split(self.delimeter, 1))
+			if len(key_value_list) == 2:
+				key, value = key_value_list
 				currentline = ''
-			except Exception: # in case no delimeter was found
+			else: # in case no delimeter was found
 				currentline = ''
 				continue
 			if self.escapeString:
@@ -688,7 +696,8 @@ class ActivityLog:
 		sys.stdout, sys.stderr = self.saved
 
 
-def printTabular(head, data, fmtString = '', fmt = {}, level = -1):
+def printTabular(head, data, fmtString = '', fmt = None, level = -1):
+	fmt = fmt or {}
 	if printTabular.mode == 'parseable':
 		vprint(str.join("|", imap(lambda x: x[1], head)), level)
 		for entry in data:
@@ -698,7 +707,7 @@ def printTabular(head, data, fmtString = '', fmt = {}, level = -1):
 	if printTabular.mode == 'longlist':
 		def getHeadName(key, name):
 			return name
-		maxhead = max(imap(len, imap(getHeadName, head)))
+		maxhead = max(imap(len, ismap(getHeadName, head)))
 		showLine = False
 		for entry in data:
 			if isinstance(entry, dict):
@@ -725,7 +734,7 @@ def printTabular(head, data, fmtString = '', fmt = {}, level = -1):
 
 	def getKeyLen(key, name):
 		return (key, len(name))
-	lendict = dict(imap(getKeyLen, head))
+	lendict = dict(ismap(getKeyLen, head))
 
 	entries = [] # formatted, but not yet aligned entries
 	for entry in data:
@@ -782,7 +791,7 @@ def printTabular(head, data, fmtString = '', fmt = {}, level = -1):
 
 	def getKeyPaddedName(key, name):
 		return (key, name.center(lendict[key]))
-	headentry = dict(imap(getKeyPaddedName, head))
+	headentry = dict(ismap(getKeyPaddedName, head))
 	# Wrap rows
 	def wrapentries(entries):
 		for idx, entry in enumerate(entries):
@@ -844,7 +853,8 @@ def exitWithUsage(usage, msg = None, helpOpt = True):
 	sys.exit(os.EX_USAGE)
 
 
-def makeEnum(members = [], cls = None, useHash = False):
+def makeEnum(members = None, cls = None, useHash = False):
+	members = members or []
 	if cls:
 		enumID = md5_hex(str(members) + '!' + cls.__name__)[:4]
 	else:
@@ -871,11 +881,14 @@ def makeEnum(members = [], cls = None, useHash = False):
 	return cls
 
 
-def split_advanced(tokens, doEmit, addEmitToken, quotes = ['"', "'"], brackets = ['()', '{}', '[]'], exType = Exception):
+def split_advanced(tokens, doEmit, addEmitToken, quotes = None, brackets = None, exType = Exception):
+	if quotes is None:
+		quotes = ['"', "'"]
+	if brackets is None:
+		brackets = ['()', '{}', '[]']
 	buffer = ''
 	emit_empty_buffer = False
-	stack_quote = []
-	stack_bracket = []
+	(stack_quote, stack_bracket) = ([], [])
 	map_openbracket = dict(imap(lambda x: (x[1], x[0]), brackets))
 	tokens = iter(tokens)
 	token = next(tokens, None)
@@ -898,7 +911,7 @@ def split_advanced(tokens, doEmit, addEmitToken, quotes = ['"', "'"], brackets =
 			if stack_bracket[-1] == map_openbracket[token]:
 				stack_bracket.pop()
 			else:
-				raise ExType('Uneven brackets!')
+				raise exType('Uneven brackets!')
 		if stack_bracket:
 			buffer += token
 			token = next(tokens, None)

@@ -62,12 +62,13 @@ class Plugin(object):
 	classMap = {}
 
 	def getClassNames(cls):
-		if cls.alias not in map(lambda parent: parent.alias, cls.__bases__):
-			return [cls.__name__] + cls.alias
-		return [cls.__name__]
+		for parent in cls.__bases__:
+			if cls.alias == parent.alias:
+				return [cls.__name__]
+		return [cls.__name__] + cls.alias
 	getClassNames = classmethod(getClassNames)
 
-	def getClass(cls, clsName, modulePaths = []):
+	def getClass(cls, clsName, modulePaths = None):
 		log = logging.getLogger('classloader.%s' % cls.__name__)
 		log.log(logging.DEBUG1, 'Loading class %s' % clsName)
 
@@ -92,7 +93,7 @@ class Plugin(object):
 				log.log(logging.DEBUG2, 'Importing module %s' % clsModuleName)
 				oldSysPath = list(sys.path)
 				try:
-					sys.path.extend(modulePaths)
+					sys.path.extend(modulePaths or [])
 					clsModuleList = [__import__(clsModuleName, {}, {}, [clsName])]
 				except Exception:
 					log.log(logging.DEBUG2, 'Unable to import module %s' % clsModuleName)
@@ -136,7 +137,7 @@ class Plugin(object):
 			raise PluginError('Error while creating instance of type %s (%s)' % (clsName, clsType))
 	getInstance = classmethod(getInstance)
 
-	def bind(cls, value, modulePaths = [], **kwargs):
+	def bind(cls, value, modulePaths = None, **kwargs):
 		for entry in value.split():
 			yield InstanceFactory(entry, cls.getClass(entry, modulePaths))
 	bind = classmethod(bind)

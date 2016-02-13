@@ -17,7 +17,7 @@ from grid_control import utils
 from grid_control.config import createConfigFactory, noDefault
 from grid_control.datasets.provider_base import DataProvider
 from hpfwk import AbstractError, NestedException, Plugin
-from python_compat import ifilter, imap, irange, lmap, next, sort_inplace
+from python_compat import ifilter, imap, irange, ismap, lmap, next, sort_inplace
 
 def fast_search(lst, cmp_op):
 	def bisect_left_cmp(lst, cmp_op):
@@ -148,7 +148,8 @@ class DataSplitter(Plugin):
 			if newBlock:
 				modSI[DataSplitter.Locations] = newBlock.get(DataProvider.Locations)
 			# Determine size infos and get started
-			search_url = lambda url: fast_search(oldBlock[DataProvider.FileList], lambda x: cmp(x[DataProvider.URL], url))
+			def search_url(url):
+				return fast_search(oldBlock[DataProvider.FileList], lambda x: cmp(x[DataProvider.URL], url))
 			sizeInfo = lmap(lambda url: search_url(url)[DataProvider.NEntries], modSI[DataSplitter.FileList])
 			extended = []
 			metaIdxLookup = []
@@ -301,7 +302,6 @@ class DataSplitter(Plugin):
 				oldSkip = modSI[DataSplitter.Skipped]
 
 				if changeFile(idx, oldFI, newFI):
-					pass
 					idx += 1
 
 				mode = utils.QM(oldFI[DataProvider.NEntries] < newFI[DataProvider.NEntries], self.mode_expanded, self.mode_shrunken)
@@ -445,7 +445,7 @@ class DataSplitter(Plugin):
 		for section in ifilter(lambda x: x, src.metadata):
 			def meta2prot(k, v):
 				return ('[%s] %s' % (section.replace('None ', ''), k), v)
-			splitter._protocol.update(dict(imap(meta2prot, src.metadata[section].items())))
+			splitter._protocol.update(dict(ismap(meta2prot, src.metadata[section].items())))
 		return splitter
 	loadState = staticmethod(loadState)
 

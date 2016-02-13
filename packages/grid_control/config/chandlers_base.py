@@ -1,4 +1,4 @@
-#-#  Copyright 2014-2015 Karlsruhe Institute of Technology
+#-#  Copyright 2014-2016 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -33,11 +33,12 @@ class changeInitNeeded(object):
 		interaction_def = config.getBool('default', True, onChange = None)
 		interaction_opt = config.getBool(self._option, interaction_def, onChange = None)
 		if interaction_opt:
-			if utils.getUserBool('The option "%s" was changed from the old value:' % cur_entry.format_opt() +
-				'\n\t%s\nto the new value:\n\t%s\nDo you want to abort?' % (obj2str(old_obj), obj2str(cur_obj)), False):
+			msg = 'The option "%s" was changed from the old value:' % cur_entry.format_opt()
+			if utils.getUserBool(msg + ('\n\t> %s\nto the new value:' % obj2str(old_obj).lstrip()) +
+					('\n\t> %s\nDo you want to abort?' % obj2str(cur_obj).lstrip()), False):
 				raise ConfigError('Abort due to unintentional config change!')
 			if not utils.getUserBool('A partial reinitialization (same as --reinit %s) is needed to apply this change! Do you want to continue?' % self._option, True):
-				log.log(logging.INFO1, 'Using stored value %s for option %s' % (obj2str(old_obj), cur_entry.format_opt()))
+				log.log(logging.INFO1, 'Using stored value %s for option %s', obj2str(old_obj), cur_entry.format_opt())
 				return old_obj
 		config.setState(True, 'init', detail = self._option)
 		config.setState(True, 'init', detail = 'config') # This will trigger a write of the new options

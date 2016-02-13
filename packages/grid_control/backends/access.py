@@ -120,8 +120,7 @@ class TimedAccessToken(AccessToken):
 		if (delta > self._minQueryTime) or (timeleft < neededTime and delta > self._maxQueryTime):
 			self._lastUpdate = time.time()
 			timeleft = self._getTimeleft(cached = False)
-			verbosity = utils.QM(timeleft < neededTime, -1, 0)
-			self._logUser.info('Time left for access token "%s": %s' % (self.getObjectName(), utils.strTime(timeleft)))
+			self._logUser.info('Time left for access token "%s": %s', self.getObjectName(), utils.strTime(timeleft))
 		return timeleft >= neededTime
 
 
@@ -215,7 +214,7 @@ class AFSAccessToken(RefreshableAccessToken):
 			return self._cache
 		# Call klist and parse results
 		proc = utils.LoggedProcess(self._klistExec)
-		retCode = proc.wait()
+		proc.wait()
 		self._cache = {}
 		try:
 			for line in proc.getOutput().splitlines():

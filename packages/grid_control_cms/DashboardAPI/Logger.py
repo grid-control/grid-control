@@ -31,8 +31,7 @@
  * MODIFICATIONS.
 """
 
-import time
-import threading
+import time, threading
 
 FATAL	= 0		# When something very bad happened and we should quit
 ERROR   = 1		# Tipically when something important fails
@@ -55,7 +54,7 @@ class Logger:
 		global LEVELS, FATAL, ERROR, WARNING, INFO, NOTICE, DEBUG
 		this.log_lock.acquire();
 		if(level <= this.logLevel):
-			print time.asctime() + ": ApMon["+LEVELS[level]+"]: "+message;
+			print(time.asctime() + ": ApMon["+LEVELS[level]+"]: "+message)
 		this.log_lock.release();
 
 	# Set the logging level

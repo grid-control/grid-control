@@ -19,7 +19,7 @@ from grid_control.datasets.splitter_basic import HybridSplitter
 from grid_control.utils.thread_tools import start_thread
 from grid_control.utils.webservice import readJSON
 from grid_control_cms.lumi_tools import formatLumi, parseLumiFilter, selectLumi
-from python_compat import imap, lfilter, set, sorted
+from python_compat import imap, itemgetter, lfilter, set, sorted
 
 # required format: <dataset path>[@<instance>][#<block>]
 class CMSProvider(DataProvider):
@@ -35,8 +35,8 @@ class CMSProvider(DataProvider):
 			raise ConfigError('Invalid location format: %s' % self.locationFormat)
 
 		(self.datasetPath, self.url, self.datasetBlock) = utils.optSplit(datasetExpr, '@#')
-		self.url = utils.QM(self.url, self.url, config.get('dbs instance', ''))
-		self.datasetBlock = utils.QM(self.datasetBlock, self.datasetBlock, 'all')
+		self.url = self.url or config.get('dbs instance', '')
+		self.datasetBlock = self.datasetBlock or 'all'
 		self.includeLumi = config.getBool('keep lumi metadata', False)
 		self.onlyValid = config.getBool('only valid', True)
 		self.checkUnique = config.getBool('check unique', True)
@@ -131,8 +131,7 @@ class CMSProvider(DataProvider):
 	def getCMSFiles(self, blockPath):
 		lumiDict = {}
 		if self.selectedLumis: # Central lumi query
-			lumiDict = self.getCMSLumisImpl(blockPath)
-			lumiDict = utils.QM(lumiDict, lumiDict, {})
+			lumiDict = self.getCMSLumisImpl(blockPath) or {}
 		for (fileInfo, listLumi) in self.getCMSFilesImpl(blockPath, self.onlyValid, self.selectedLumis):
 			if self.selectedLumis:
 				if not listLumi:
@@ -152,7 +151,7 @@ class CMSProvider(DataProvider):
 							listLumiExt_Lumi.append(lumi)
 					fileInfo[DataProvider.Metadata] = [listLumiExt_Run, listLumiExt_Lumi]
 				else:
-					fileInfo[DataProvider.Metadata] = [list(sorted(set(imap(lambda (run, lumi_list): run, listLumi))))]
+					fileInfo[DataProvider.Metadata] = [sorted(set(imap(itemgetter(0), listLumi)))]
 			yield fileInfo
 
 

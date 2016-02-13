@@ -14,8 +14,11 @@
 
 if __name__ == '__main__':
 	import os, sys, random
-	from python_compat import sorted, set, ifilter, imap
-	blacklist = ['./requests/packages/chardet/chardetect.py']
+	os.chdir(os.path.abspath(os.path.dirname(__file__)))
+	sys.path.append('.')
+	from python_compat import sorted, set, ifilter, imap, any
+
+	blacklist = ['/requests', '/xmpp', 'python_comp']
 	# import everything
 	def recurse(root):
 		tmp = root.lstrip('./').split('/')
@@ -23,8 +26,11 @@ if __name__ == '__main__':
 		random.shuffle(files)
 		for entry in ifilter(lambda x: x != __file__, files):
 			path = os.path.join(root, entry)
-			if entry.startswith('.') or entry.endswith('pyc') or entry.startswith('__') or path in blacklist:
+			if entry.startswith('.') or entry.endswith('pyc') or entry.startswith('__'):
 				continue
+			if any(imap(lambda black: black in path, blacklist)):
+				continue
+
 			if os.path.isdir(path) and os.path.exists(os.path.join(path, '__init__.py')):
 				if tmp == ['']:
 					yield('import %s' % (entry))
@@ -38,7 +44,7 @@ if __name__ == '__main__':
 					yield('from %s import *' % (entry))
 				else:
 					yield('from %s.%s import *' % (str.join('.', tmp), entry))
-	sys.path.append(os.path.dirname(__file__))
+
 
 	def sc(x, y):
 		try:
@@ -57,8 +63,8 @@ if __name__ == '__main__':
 			str = __builtins__.str # undo unicode magic by externals
 			clsList.extend(ifilter(lambda x: sc(x, Plugin), imap(eval, list(dir()))))
 		except Exception:
-			raise
 			print('Unable to exec "%s"!' % imp)
+			raise
 
 	topClasses = [Plugin, NamedPlugin]
 	def getBaseNames(cls):
@@ -82,4 +88,4 @@ if __name__ == '__main__':
 				if cls not in topClasses:
 					outputLine += '%s\t%s\n' % (cls.__module__, str.join(' ', cls.getClassNames()))
 			output.append(outputLine)
-		open(os.path.join(package, '.PLUGINS'), 'wb').write(str.join('\n', output))
+		open(os.path.join(package, '.PLUGINS'), 'w').write(str.join('\n', output))

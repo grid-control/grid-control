@@ -86,7 +86,7 @@ def main():
 					incomplete = True
 				continue
 
-			if not parameterized:
+			if not opts.parameterized:
 				if splitter:
 					splitInfo = splitter.getSplitInfo(jobNum)
 				outputName = splitInfo.get(DataSplitter.Nickname, splitInfo.get(DataSplitter.DatasetID, 0))

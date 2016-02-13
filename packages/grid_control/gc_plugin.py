@@ -25,7 +25,7 @@ class NamedPlugin(Plugin):
 	def getObjectName(self):
 		return self._name
 
-	def bind(cls, value, modulePaths = [], config = None, tags = [], inherit = False, **kwargs):
+	def bind(cls, value, modulePaths = None, config = None, tags = None, inherit = False, **kwargs):
 		while (': ' in value) or (' :' in value):
 			value = value.replace(' :', ':').replace(': ', ':')
 		for entry in value.split():
@@ -40,6 +40,6 @@ class NamedPlugin(Plugin):
 				instanceName = clsNew.__name__.split('.')[-1]
 			config = config.changeView(viewClass = TaggedConfigView,
 				setClasses = [clsNew], setSections = None, setNames = [instanceName],
-				addTags = tags, inheritSections = inherit)
+				addTags = tags or [], inheritSections = inherit)
 			yield InstanceFactory(entry, clsNew, config, instanceName)
 	bind = classmethod(bind)

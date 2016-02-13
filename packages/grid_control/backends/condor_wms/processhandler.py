@@ -145,9 +145,9 @@ class SSHProcessHandler(ProcessHandler):
 				return False
 	def _CleanSocket(self):
 		if not os.path.exists(self.sshLink):
-			print "No Socket %s" % self.sshLink
+			vprint("No Socket %s" % self.sshLink)
 			return True
-		print "Killing Socket %s" % self.sshLink
+		vprint("Killing Socket %s" % self.sshLink)
 		#killSocket = LoggedProcess( " ".join([self.cmd, self.defaultArgs, self.socketArgsDef, "-O exit", self.remoteHost]) )
 		#while killSocket.poll() == -1:
 			#print "poll", killSocket.poll()
@@ -159,7 +159,7 @@ class SSHProcessHandler(ProcessHandler):
 		#print "done", killSocket.poll()
 		timeout = 0
 		while os.path.exists(self.sshLink):
-			print "exists %d" % timeout
+			vprint("exists %d" % timeout)
 			time.sleep(0.5)
 			timeout += 0.5
 			#if timeout == 5:

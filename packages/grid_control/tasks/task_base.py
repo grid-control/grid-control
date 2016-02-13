@@ -144,7 +144,8 @@ class TaskModule(NamedPlugin):
 		return alias
 
 
-	def substVars(self, inp, jobNum = None, addDict = {}, check = True):
+	def substVars(self, inp, jobNum = None, addDict = None, check = True):
+		addDict = addDict or {}
 		allVars = utils.mergeDicts([addDict, self.getTaskConfig()])
 		if jobNum is not None:
 			allVars.update(self.getJobConfig(jobNum))

@@ -88,8 +88,10 @@ class PBS(PBSGECommon):
 				active = False
 			elif active:
 				fields = lmap(str.strip, line.split()[:4])
-				props = ifilter(lambda (k, v): not v.startswith('-'), izip(keys, fields[1:]))
-				queues[fields[0]] = dict(imap(lambda (k, v): (k, parser[k](v)), props))
+				queueInfo = {}
+				for key, value in ifilter(lambda k_v: not k_v[1].startswith('-'), izip(keys, fields[1:])):
+					queueInfo[key] = parser[key](value)
+				queues[fields[0]] = queueInfo
 		return queues
 
 

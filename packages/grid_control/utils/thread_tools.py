@@ -14,7 +14,7 @@
 
 import time, threading
 
-blocking_equivalent = 1e10 # instead of blocking, we wait for this long
+blocking_equivalent = 60*60*24*7 # instead of blocking, we wait for a week
 
 def start_thread(desc, fun, *args, **kargs):
 	thread = threading.Thread(target = fun, args = args, kwargs = kargs)

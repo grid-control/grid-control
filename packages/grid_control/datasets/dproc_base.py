@@ -22,12 +22,13 @@ class DataProcessor(Plugin):
 
 	def process(self, blockIter):
 		for block in blockIter:
-			yield self.processBlock(block)
+			if block is not None:
+				yield self.processBlock(block)
 
 	def processBlock(self, block):
 		raise AbstractError
 
-	def bind(cls, value, modulePaths = [], config = None, **kwargs):
+	def bind(cls, value, modulePaths = None, config = None, **kwargs):
 		for entry in value.split():
 			yield InstanceFactory(entry, cls.getClass(entry, modulePaths), config)
 	bind = classmethod(bind)

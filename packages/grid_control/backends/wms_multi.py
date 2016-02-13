@@ -59,22 +59,26 @@ class MultiWMS(WMS):
 
 
 	def submitJobs(self, jobNumList, task):
-		def brokerJobs(jobNum):
+		def chooseBackend(jobNum):
 			jobReq = self._brokerWMS.brokerAdd(task.getRequirements(jobNum), WMS.BACKEND)
-			return dict(jobReq).get(WMS.BACKEND)[0]
-		return self._forwardCall(jobNumList, brokerJobs, lambda wmsObj, args: wmsObj.submitJobs(args, task))
+			return list(dict(jobReq).get(WMS.BACKEND))[0]
+		return self._forwardCall(jobNumList, chooseBackend, lambda wmsObj, args: wmsObj.submitJobs(args, task))
+
+
+	def _findBackend(self, wmsID_jobNum):
+		return self._splitId(wmsID_jobNum[0])[0]
 
 
 	def checkJobs(self, ids):
-		return self._forwardCall(ids, lambda (wmsId, jobNum): self._splitId(wmsId)[0], lambda wmsObj, args: wmsObj.checkJobs(args))
+		return self._forwardCall(ids, self._findBackend, lambda wmsObj, args: wmsObj.checkJobs(args))
 
 
 	def retrieveJobs(self, ids):
-		return self._forwardCall(ids, lambda (wmsId, jobNum): self._splitId(wmsId)[0], lambda wmsObj, args: wmsObj.retrieveJobs(args))
+		return self._forwardCall(ids, self._findBackend, lambda wmsObj, args: wmsObj.retrieveJobs(args))
 
 
 	def cancelJobs(self, ids):
-		return self._forwardCall(ids, lambda (wmsId, jobNum): self._splitId(wmsId)[0], lambda wmsObj, args: wmsObj.cancelJobs(args))
+		return self._forwardCall(ids, self._findBackend, lambda wmsObj, args: wmsObj.cancelJobs(args))
 
 
 	def _getMapID2Backend(self, args, assignFun):

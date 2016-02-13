@@ -17,6 +17,7 @@ import os, sys, logging
 from grid_control import utils
 from grid_control.config.config_entry import ConfigEntry, ConfigError
 from grid_control.utils.data_structures import UniqueList
+from grid_control.utils.parsing import parseList
 from grid_control.utils.thread_tools import TimeoutException, hang_protection
 from hpfwk import AbstractError, Plugin
 from python_compat import ifilter, imap, irange, ismap, lfilter, lmap, rsplit
@@ -114,9 +115,9 @@ class FileConfigFiller(ConfigFiller):
 		except Exception:
 			raise ConfigError('Error while reading configuration file "%s"!' % configFile)
 
-	def _fillContentFromFile(self, configFile, searchPaths, configContent = {}):
+	def _fillContentFromFile(self, configFile, searchPaths, configContent):
 		log = logging.getLogger(('config.%s' % utils.getRootName(configFile)).rstrip('.'))
-		log.log(logging.INFO1, 'Reading config file %s' % configFile)
+		log.log(logging.INFO1, 'Reading config file %s', configFile)
 		configFile = utils.resolvePath(configFile, searchPaths, ErrorClass = ConfigError)
 		configFileData = open(configFile, 'r').readlines()
 
@@ -125,7 +126,7 @@ class FileConfigFiller(ConfigFiller):
 		self._fillContentFromSingleFile(configFile, configFileData, searchPaths, tmpConfigContent)
 		def getFlatList(section, option):
 			for (opt, value, s) in ifilter(lambda opt_v_s: opt_v_s[0] == option, tmpConfigContent.get(section, [])):
-				for entry in utils.parseList(value, None):
+				for entry in parseList(value, None):
 					yield entry
 
 		newSearchPaths = [os.path.dirname(configFile)]
@@ -166,7 +167,7 @@ class DefaultFilesConfigFiller(FileConfigFiller):
 		if os.environ.get('GC_CONFIG'):
 			defaultCfg.append('$GC_CONFIG')
 		log = logging.getLogger('config.default')
-		log.log(logging.DEBUG1, 'Possible default config files: %s' % str.join(', ', defaultCfg))
+		log.log(logging.DEBUG1, 'Possible default config files: %s', str.join(', ', defaultCfg))
 		fqConfigFiles = lmap(lambda p: utils.resolvePath(p, mustExist = False), hostCfg + defaultCfg)
 		FileConfigFiller.__init__(self, lfilter(os.path.exists, fqConfigFiles), addSearchPath = False)
 

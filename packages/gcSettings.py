@@ -15,13 +15,15 @@
 # This class is used by the grid-control python config file parser
 
 class Settings(object):
+	_config = {}
+
 	def __init__(self, section = None):
 		self._s = section
 
 	def section(self, section, name = '', **tags):
 		tags_list = []
 		for key in tags:
-			tags_list.append('%s:%s' % (k, tags[k]))
+			tags_list.append('%s:%s' % (key, tags[key]))
 		return Settings(('%s %s %s' % (section, name, str.join(' ', tags_list))).strip())
 
 	def set(self, name, value, override = False, append = False, force = False):
@@ -57,5 +59,3 @@ class Settings(object):
 				result[section][opt + mod] = str(val)
 		return result
 	getConfigDict = classmethod(getConfigDict)
-
-Settings._config = {}

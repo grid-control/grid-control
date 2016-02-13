@@ -13,7 +13,7 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-import os, sys, time, fcntl, logging
+import os, sys, time, fcntl, logging, optparse
 
 # add python subdirectory from where exec was started to search path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'packages')))
@@ -28,7 +28,45 @@ from grid_control.job_selector import ClassSelector, JobSelector
 from grid_control.output_processor import FileInfoProcessor, JobInfoProcessor
 from grid_control.report import Report
 from grid_control.tasks import TaskModule
+from hpfwk import Plugin
 from python_compat import ifilter, imap, tarfile
+
+class Options(object):
+	def __init__(self):
+		self._parser = optparse.OptionParser()
+		self._groups = {}
+		self._groups_usage = {}
+
+	def parse(self):
+		return parseOptions(self._parser)
+
+	def _get_group(self, group):
+		if group is None:
+			return self._parser
+		return self._groups[group]
+
+	def section_usage(self, name):
+		return self._groups_usage[name]
+
+	def section(self, name, desc, usage = ''):
+		self._groups_usage[name] = usage
+		if '%s' in usage:
+			self._groups_usage[name] = usage % sys.argv[0]
+			usage = 'Usage: ' + usage % sys.argv[0]
+		self._groups[name] = optparse.OptionGroup(self._parser, desc, usage)
+		self._parser.add_option_group(self._groups[name])
+
+	def addtext(self, group, option, default = None, help = '', short = ''):
+		self._get_group(group).add_option(short, '--' + option, dest = option.replace('-', '_'),
+			default = default, help = help)
+
+	def addflag(self, group, option, default, help, short = ''):
+		if default == False:
+			self._get_group(group).add_option(short, '--' + option, dest = option.replace('-', '_'),
+				default = default, action = 'store_true', help = help)
+		else:
+			self._get_group(group).add_option(short, '--' + option, dest = option.replace('-', '_'),
+				default = default, action = 'store_false', help = help)
 
 class DummyStream(object):
 	def __init__(self, stream):
@@ -41,7 +79,7 @@ class DummyStream(object):
 		return self.__stream.__getattribute__(name)
 
 
-def getConfig(configFile = None, configDict = {}, section = None, additional = []):
+def getConfig(configFile = None, configDict = None, section = None, additional = None):
 	if configDict and section:
 		configDict = {section: configDict}
 	config = createConfigFactory(configFile, configDict, additional = additional).getConfig()
@@ -67,7 +105,7 @@ class FileMutex:
 		self.lockfile = lockfile
 		while os.path.exists(self.lockfile):
 			if first and (time.time() - first > 10):
-				print 'Trying to aquire lock file %s ...' % lockfile
+				logging.info('Trying to aquire lock file %s ...' % lockfile)
 				first = False
 			time.sleep(0.2)
 		self.fd = open(self.lockfile, 'w')
@@ -115,7 +153,7 @@ def getCMSSWInfo(tarPath):
 		try:
 			yield xml.dom.minidom.parse(fwkReport)
 		except Exception:
-			print 'Error while parsing %s' % tarPath
+			logging.exception('Error while parsing %s' % tarPath)
 			raise
 
 

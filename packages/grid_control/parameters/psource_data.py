@@ -16,6 +16,7 @@ import os, time
 from grid_control import utils
 from grid_control.gc_exceptions import UserError
 from grid_control.parameters.psource_base import ParameterInfo, ParameterMetadata, ParameterSource
+from python_compat import md5_hex
 
 class DataParameterSource(ParameterSource):
 	def __init__(self, dataDir, srcName, dataProvider, dataSplitter, dataProc):
@@ -46,7 +47,7 @@ class DataParameterSource(ParameterSource):
 		self.dataProc.process(pNum, splitInfo, result)
 
 	def getHash(self):
-		return utils.md5(str(self.srcName) + str(self.dataSplitter.getMaxJobs())).hexdigest()
+		return md5_hex(str(self.srcName) + str(self.dataSplitter.getMaxJobs()))
 
 	def __repr__(self):
 		return 'data(%s)' % utils.QM(self.srcName == 'data', '', self.srcName)
