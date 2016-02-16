@@ -13,8 +13,7 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-import optparse
-from gcSupport import AccessToken, getConfig, parseOptions
+from gcSupport import AccessToken, Options, getConfig
 from grid_control.utils.webservice import readJSON
 from grid_control_cms.provider_sitedb import SiteDB
 
@@ -22,12 +21,11 @@ def lfn2pfn(node, lfn):
 	return readJSON('https://cmsweb.cern.ch/phedex/datasvc/json/prod/lfn2pfn',
 		{'node': node, 'protocol': 'srmv2', 'lfn': lfn})['phedex']['mapping'][0]['pfn']
 
-
-parser = optparse.OptionParser()
-parser.add_option('-s', '--SE', dest='SE', default=None, help='Resolve LFN on CMS SE into PFN')
-parser.add_option('', '--lfn', dest='lfn', default='/store/user/<hypernews name>', help='Name of default LFN')
-parser.add_option('', '--se-prot', dest='seprot', default='srmv2', help='Name of default SE protocol')
-(opts, args) = parseOptions(parser)
+parser = Options()
+parser.addText(None, 'SE',      default = None, short = '-s', help='Resolve LFN on CMS SE into PFN')
+parser.addText(None, 'lfn',     default='/store/user/<hypernews name>', help='Name of default LFN')
+parser.addText(None, 'se-prot', default='srmv2', help='Name of default SE protocol')
+(opts, args) = parser.parse()
 
 if opts.SE:
 	if '<hypernews name>' in opts.lfn:
@@ -39,8 +37,8 @@ if opts.SE:
 		opts.lfn = opts.lfn.replace('<hypernews name>', hnName)
 
 	tmp = readJSON('https://cmsweb.cern.ch/phedex/datasvc/json/prod/lfn2pfn',
-		{'node': opts.SE, 'protocol': opts.seprot, 'lfn': opts.lfn})['phedex']['mapping']
+		{'node': opts.SE, 'protocol': opts.se_prot, 'lfn': opts.lfn})['phedex']['mapping']
 	for entry in tmp:
 		if len(tmp) > 1:
-			print entry['node'],
-		print entry['pfn']
+			print(entry['node'] + ' ' + entry['pfn'])
+		print(entry['pfn'])

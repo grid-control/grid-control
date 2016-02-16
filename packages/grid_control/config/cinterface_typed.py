@@ -19,7 +19,7 @@ from grid_control.config.config_entry import ConfigError, noDefault
 from grid_control.config.cview_base import SimpleConfigView
 from grid_control.utils.parsing import parseBool, parseDict, parseList, parseTime
 from hpfwk import APIError, Plugin
-from python_compat import imap, lmap, user_input
+from python_compat import identity, imap, lmap, relpath, user_input
 
 def appendOption(option, suffix):
 	if isinstance(option, (list, tuple)):
@@ -75,7 +75,7 @@ class TypedConfigInterface(ConfigInterface):
 
 	# Returns a tuple with (<dictionary>, <keys>) - the keys are sorted by order of appearance
 	# Default key is accessed via key == None (None is never in keys!)
-	def getDict(self, option, default = noDefault, parser = lambda x: x, strfun = lambda x: x, **kwargs):
+	def getDict(self, option, default = noDefault, parser = identity, strfun = identity, **kwargs):
 		def obj2str(value):
 			(srcdict, srckeys) = value
 			getmax = lambda src: max(lmap(lambda x: len(str(x)), src) + [0])
@@ -89,7 +89,7 @@ class TypedConfigInterface(ConfigInterface):
 		return self._getInternal('dictionary', obj2str, str2obj, def2obj, option, default, **kwargs)
 
 	# Get whitespace separated list (space, tab, newline)
-	def getList(self, option, default = noDefault, parseItem = lambda x: x, **kwargs):
+	def getList(self, option, default = noDefault, parseItem = identity, **kwargs):
 		obj2str = lambda value: '\n' + str.join('\n', imap(str, value))
 		str2obj = lambda value: lmap(parseItem, parseList(value, None))
 		return self._getInternal('list', obj2str, str2obj, None, option, default, **kwargs)
@@ -110,7 +110,7 @@ class TypedConfigInterface(ConfigInterface):
 		obj2str = str.__str__
 		str2obj = parsePath
 		if storeRelative:
-			obj2str = lambda value: os.path.relpath(value, self.getWorkPath())
+			obj2str = lambda value: relpath(value, self.getWorkPath())
 			str2obj = lambda value: os.path.join(self.getWorkPath(), parsePath(value))
 		return self._getInternal('path', obj2str, str2obj, None, option, default, **kwargs)
 
@@ -131,6 +131,8 @@ class TypedConfigInterface(ConfigInterface):
 	# Return class - default class is also given in string form!
 	def getPlugin(self, option, default = noDefault,
 			cls = Plugin, tags = None, inherit = False, requirePlugin = True, **kwargs):
+		if isinstance(cls, str):
+			cls = Plugin.getClass(cls)
 		def str2obj(value):
 			objList = list(cls.bind(value, self._getPluginPaths(), config = self, inherit = inherit, tags = tags or []))
 			if len(objList) > 1:
@@ -146,6 +148,8 @@ class TypedConfigInterface(ConfigInterface):
 	def getCompositePlugin(self, option, default = noDefault,
 			default_compositor = noDefault, option_compositor = None,
 			cls = Plugin, tags = None, inherit = False, requirePlugin = True, **kwargs):
+		if isinstance(cls, str):
+			cls = Plugin.getClass(cls)
 		str2obj = lambda value: list(cls.bind(value, self._getPluginPaths(), config = self, inherit = inherit, tags = tags or []))
 		obj2str = lambda value: str.join('\n', imap(lambda obj: obj.bindValue(), value))
 		clsList = self._getInternal('composite plugin', obj2str, str2obj, str2obj, option, default, **kwargs)

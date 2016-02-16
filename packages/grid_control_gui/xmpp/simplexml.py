@@ -18,6 +18,7 @@
 I'm personally using it in many other separate projects. It is designed to be as standalone as possible."""
 
 import xml.parsers.expat
+from python_compat import unicode
 
 def XMLescape(txt):
     """Returns provided string with symbols & < > " replaced by their respective XML entities."""
@@ -90,7 +91,7 @@ class Node(object):
                     self.namespace,self.name = tag.split()
                 else:
                     self.name = tag
-        if isinstance(payload, basestring): payload=[payload]
+        if isinstance(payload, (str, unicode): payload=[payload]
         for i in payload:
             if isinstance(i, Node): self.addChild(node=i)
             else: self.data.append(ustr(i))
@@ -271,7 +272,7 @@ class Node(object):
     def setPayload(self,payload,add=0):
         """ Sets node payload according to the list specified. WARNING: completely replaces all node's
             previous content. If you wish just to add child or CDATA - use addData or addChild methods. """
-        if isinstance(payload, basestring): payload=[payload]
+        if isinstance(payload, (str, unicode)): payload=[payload]
         if add: self.kids+=payload
         else: self.kids=payload
     def setTag(self, name, attrs={}, namespace=None):

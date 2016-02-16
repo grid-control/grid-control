@@ -11,11 +11,14 @@ before_install:
   - pip install codecov
   - pip install 'coverage<4'
 script:
-  - coverage run -a go.py docs/examples/ExampleS1_stresstest.conf
-  - coverage run -a packages/gcUpdatePlugins.py # randomized order
-  - coverage run -a packages/gcUpdatePlugins.py
-  - coverage run -a packages/gcUpdatePlugins.py
-  - coverage run -a packages/gcUpdatePlugins.py
-  - coverage run -a packages/gcUpdatePlugins.py
+  - export WRAPPER='coverage run -a'
+  - $WRAPPER ./go.py -s -o '[jobs] continuous = False' docs/examples/ExampleS1_stresstest.conf
+  - $WRAPPER ./go.py docs/examples/ExampleS1_stresstest.conf
+  - $WRAPPER ./go.py docs/examples/ExampleS1_stresstest.conf
+  - $WRAPPER ./packages/gcUpdatePlugins.py # randomized order
+  - $WRAPPER ./packages/gcUpdatePlugins.py
+  - $WRAPPER ./packages/gcUpdatePlugins.py
+  - $WRAPPER ./packages/gcUpdatePlugins.py
+  - $WRAPPER ./packages/gcUpdatePlugins.py
 after_success:
   - codecov

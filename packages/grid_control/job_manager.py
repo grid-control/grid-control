@@ -61,7 +61,7 @@ class JobManager(NamedPlugin):
 			try:
 				maxJobs = task.getMaxJobs()
 				if maxJobs and (nJobs > maxJobs):
-					self._log_user.warning('Maximum number of jobs given as %d was truncated to %d' % (nJobs, maxJobs))
+					self._log_user.warning('Maximum number of jobs given as %d was truncated to %d', nJobs, maxJobs)
 					nJobs = maxJobs
 			except Exception:
 				pass
@@ -160,8 +160,7 @@ class JobManager(NamedPlugin):
 			return False
 
 		submitted = []
-		for x in wms.submitJobs(jobList, self._task):
-			jobNum, wmsId, data = x
+		for (jobNum, wmsId, data) in wms.submitJobs(jobList, self._task):
 			submitted.append(jobNum)
 			jobObj = self.jobDB.get(jobNum, create = True)
 
@@ -171,7 +170,7 @@ class JobManager(NamedPlugin):
 				continue
 
 			jobObj.assignId(wmsId)
-			for key, value in data.items():
+			for (key, value) in data.items():
 				jobObj.set(key, value)
 
 			self._update(jobObj, jobNum, Job.SUBMITTED)
@@ -187,14 +186,14 @@ class JobManager(NamedPlugin):
 
 	def checkJobList(self, wms, jobList):
 		(change, timeoutList, reported) = (False, [], [])
-		for jobNum, wmsId, state, info in wms.checkJobs(self.wmsArgs(jobList)):
+		for (jobNum, _, state, info) in wms.checkJobs(self.wmsArgs(jobList)):
 			if jobNum in self.offender:
 				self.offender.pop(jobNum)
 			reported.append(jobNum)
 			jobObj = self.jobDB.get(jobNum)
 			if state != jobObj.state:
 				change = True
-				for key, value in info.items():
+				for (key, value) in info.items():
 					jobObj.set(key, value)
 				self._update(jobObj, jobNum, state)
 				self._eventhandler.onJobUpdate(wms, jobObj, jobNum, info)
@@ -240,7 +239,7 @@ class JobManager(NamedPlugin):
 		change = False
 		jobList = self.sample(self.jobDB.getJobs(ClassSelector(JobClass.DONE)), utils.QM(self.continuous, maxsample, -1))
 
-		for jobNum, retCode, data, outputdir in wms.retrieveJobs(self.wmsArgs(jobList)):
+		for (jobNum, retCode, data, outputdir) in wms.retrieveJobs(self.wmsArgs(jobList)):
 			jobObj = self.jobDB.get(jobNum)
 			if jobObj is None:
 				continue

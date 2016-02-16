@@ -86,7 +86,7 @@ class Job:
 
 
 	def getAll(self):
-		data = self.dict
+		data = dict(self.dict)
 		data['status'] = Job.enum2str(self.state)
 		data['attempt'] = self.attempt
 		data['submitted'] = self.submitted

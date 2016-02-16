@@ -272,7 +272,7 @@ class BasicWMS(WMS):
 		depList = set(ichain(imap(lambda x: x.getDependencies(), [task] + smList)))
 		depPaths = lmap(lambda pkg: utils.pathShare('', pkg = pkg), os.listdir(utils.pathGC('packages')))
 		depFiles = lmap(lambda dep: utils.resolvePath('env.%s.sh' % dep, depPaths), depList)
-		taskEnv = dict(ichain(imap(lambda x: x.getTaskConfig().items(), [monitor, task] + smList)))
+		taskEnv = utils.mergeDicts(imap(lambda x: x.getTaskConfig(), [monitor, task] + smList))
 		taskEnv.update({'GC_DEPFILES': str.join(' ', depList), 'GC_USERNAME': self._token.getUsername(),
 			'GC_WMS_NAME': self.wmsName})
 		taskConfig = sorted(utils.DictFormat(escapeString = True).format(taskEnv, format = 'export %s%s%s\n'))

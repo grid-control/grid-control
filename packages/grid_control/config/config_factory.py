@@ -69,15 +69,17 @@ class ConfigFactory(object):
 
 
 	def getConfig(self, **kwargs):
+		result = SimpleConfigInterface(self._view)
 		if kwargs:
-			return SimpleConfigInterface(self._view).changeView(**kwargs)
-		return SimpleConfigInterface(self._view)
+			result = result.changeView(**kwargs)
+		result.factory = self
+		return result
 
 
 	def freezeConfig(self, writeConfig = True):
 		self._curContainer.setReadOnly()
 		# Inform the user about unused options
-		unused = lfilter(lambda entry: (entry.accessed == False) and ('!' not in entry.section), self._view.iterContent())
+		unused = lfilter(lambda entry: ('!' not in entry.section) and not entry.accessed, self._view.iterContent())
 		log = logging.getLogger('config.freeze')
 		log.log(logging.INFO1, 'There are %s unused config options!', len(unused))
 		for entry in unused:
@@ -92,7 +94,7 @@ class ConfigFactory(object):
 			self._view.write(fp_work, printDefault = True, printUnused = True, printSource = True, printMinimal = True)
 
 
-def createConfigFactory(configFile = None, configDict = None, useDefaultFiles = True, additional = None):
+def createConfig(configFile = None, configDict = None, useDefaultFiles = True, additional = None):
 	fillerList = []
 	if useDefaultFiles:
 		fillerList.append(DefaultFilesConfigFiller())
@@ -101,4 +103,4 @@ def createConfigFactory(configFile = None, configDict = None, useDefaultFiles = 
 	if configDict:
 		fillerList.append(DictConfigFiller(configDict))
 	fillerList.extend(additional or [])
-	return ConfigFactory(MultiConfigFiller(fillerList), configFile)
+	return ConfigFactory(MultiConfigFiller(fillerList), configFile).getConfig()

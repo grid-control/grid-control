@@ -26,13 +26,15 @@ class GCLogHandler(logging.FileHandler):
 
 # Exception handler for interactive mode:
 def gc_excepthook(*exc_info):
+	sys.excepthook = sys.__excepthook__
 	try:
 		import grid_control.utils
 		version = grid_control.utils.getVersion()
 	except Exception:
 		version = 'Unknown version'
 	log = logging.getLogger('exception')
-	log.critical('Exception occured in grid-control [%s]' % version, exc_info = exc_info)
+	log.handle(log.makeRecord('exception', logging.CRITICAL, __file__, None,
+		'Exception occured in grid-control [%s]' % version, tuple(), exc_info))
 sys.excepthook = gc_excepthook
 
 class GCError(NestedException):

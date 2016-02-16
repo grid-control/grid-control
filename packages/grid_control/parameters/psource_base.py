@@ -64,7 +64,7 @@ class ParameterSource(Plugin):
 		if interval is not None:
 			self.resyncTime = interval # -1 == always, 0 == disabled, >0 == time in sec between resyncs
 			self.resyncLast = time.time()
-		if force == True:
+		if force:
 			self.resyncLast = None # Force resync on next attempt
 
 	def resyncEnabled(self):

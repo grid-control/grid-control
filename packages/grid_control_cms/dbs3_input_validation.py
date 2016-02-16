@@ -13,175 +13,109 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-from grid_control_cms.Lexicon import DBSUser, InputValidationError, acqname, block, dataset, globalTag, lfn, primdataset, procdataset, searchstr, userprocdataset, validateUrl
+import grid_control_cms.Lexicon
+from python_compat import lmap, unicode
 
-class DBS3InputValidation(object):
-    _accepted_input_keys = {
-        'dataTier': ['data_tier_name'],
-        'blockBulk': ['file_conf_list', 'dataset_conf_list', 'block_parent_list', 'physics_group_name',
-                      'processing_era', 'dataset', 'block', 'acquisition_era', 'primds', 'ds_parent_list', 'files',
-                      'file_parent_list'],
-        'file_conf_list': ['release_version', 'pset_hash', 'pset_name', 'lfn', 'app_name', 'output_module_label',
-                           'global_tag'],
-        'file_output_config_list': ['release_version', 'pset_hash', 'pset_name', 'lfn', 'app_name',
-                                    'output_module_label', 'global_tag'],
-        'file_parent_list': ['file_parent_lfn', 'parent_logical_file_name', 'logical_file_name'],
-        'dataset_conf_list': ['release_version', 'pset_hash', 'pset_name', 'app_name', 'output_module_label',
-                              'global_tag'],
-        'output_configs': ['release_version', 'pset_hash', 'pset_name', 'app_name', 'output_module_label',
-                           'global_tag'],
-        'physics_group_name': [],
-        'processing_era': ['processing_version', 'description', 'create_by', 'creation_date'],
-        'dataset': ['dataset', 'physics_group_name', 'processed_ds_name', 'dataset_access_type', 'data_tier_name',
-                    'output_configs', 'primary_ds_name', 'primary_ds_type', 'acquisition_era_name',
-                    'processing_version', 'xtcrosssection', 'create_by', 'creation_date', 'last_modification_date',
-                    'last_modified_by', 'detail', 'prep_id', 'dataset_id'],
-        'block': ['block_name', 'open_for_writing', 'origin_site_name', 'dataset', 'creation_date', 'creation_date',
-                  'create_by', 'last_modification_date', 'last_modified_by', 'file_count', 'block_size'],
-        'acquisition_era': ['acquisition_era_name', 'description', 'start_date', 'end_date'],
-        'primds': ['primary_ds_type', 'primary_ds_name', 'creation_date', 'create_by'],
-        'files': ['check_sum', 'file_lumi_list', 'event_count', 'file_type', 'logical_file_name', 'file_size',
-                  'file_output_config_list', 'file_parent_list', 'last_modified_by', 'last_modification_date',
-                  'create_by', 'creation_date', 'auto_cross_section', 'adler32', 'dataset', 'block_name', 'md5',
-                  'run_num', 'validFileOnly', 'detail', 'run_num', 'release_version', 'pset_hash', 'app_name',
-                  'output_module_label', 'origin_site_name', 'lumi_list'],
-        'file_lumi_list': ['lumi_section_num', 'run_num'],
-        'migration_rqst': ['migration_url', 'migration_input', 'migration_rqst_id']
-    }
+def dbs3_check(checker, msg):
+	def dbs3_check_int(item):
+		try:
+			checker(item)
+			return item
+		except AssertionError:
+			raise grid_control_cms.Lexicon.InputValidationError(msg % item)
+	return dbs3_check_int
 
-    _validation_function = {
-        'block_name': 'block_name_validation',
-        'dataset': 'dataset_validation',
-        'logical_file_name': 'logical_file_name_validation',
-        'file_parent_lfn': 'logical_file_name_validation',
-        'primary_ds_name': 'primary_dataset_validation',
-        'processed_ds_name': 'processed_dataset_validation',
-        'processing_version': 'processing_version_validation',
-        'acquisition_era_name': 'acquisition_era_name_validation',
-        'global_tag': 'global_tag_validation',
-        'migration_url': 'url_validation',
-        'create_by': 'user_validation',
-        'last_modified_by': 'user_validation'
-    }
+def processed_dataset_validation(item):
+	try:
+		grid_control_cms.Lexicon.procdataset(item)
+		return item
+	except AssertionError:
+		pass
+	try:
+		grid_control_cms.Lexicon.userprocdataset(item)
+		return item
+	except AssertionError:
+		raise
 
-    @staticmethod
-    def acquisition_era_name_validation(item):
-        try:
-            acqname(item)
-        except AssertionError:
-            raise InputValidationError('acquisition_era_name %s does not match input validation for DBS 3 publication'
-                                       % item)
-        else:
-            return item
+def logical_file_name_validation(item):
+	check_lfn = dbs3_check(grid_control_cms.Lexicon.lfn,
+		'lfn %r does not match input validation for DBS 3 publication')
+	if isinstance(item, list):
+		return lmap(check_lfn, item)
+	return check_lfn(item)
 
-    @staticmethod
-    def block_name_validation(item):
-        try:
-            block(item)
-        except AssertionError:
-            raise InputValidationError('block_name %s does not match block name input validation for DBS 3 publication'
-                                       % item)
-        else:
-            return item
+def validate_dbs3_json(input_key, input_data):
+	# define input key groups
+	ikg_create = ['create_by', 'creation_date']
+	ikg_conf = ['app_name', 'output_module_label', 'pset_hash', 'release_version'] # 'pset_name', 'global_tag' only missing in 'files'?
+	ikg_modified = ['last_modification_date', 'last_modified_by']
+	ikg_pds = ['primary_ds_name', 'primary_ds_type']
 
-    @staticmethod
-    def dataset_validation(item):
-        try:
-            dataset(item)
-        except AssertionError:
-            raise InputValidationError('dataset %s does not match dataset input validation for DBS 3 publication'
-                                       % item)
-        else:
-            return item
+	accepted_input_keys = {
+		'acquisition_era': ['acquisition_era_name', 'description', 'end_date', 'start_date'],
+		'block': ['block_name', 'block_size', 'dataset', 'file_count',
+			'open_for_writing', 'origin_site_name'] + ikg_create + ikg_modified,
+		'blockBulk': ['acquisition_era', 'block', 'block_parent_list', 'dataset',
+			'dataset_conf_list', 'ds_parent_list', 'file_conf_list', 'file_parent_list',
+			'files', 'physics_group_name', 'primds', 'processing_era'],
+		'dataTier': ['data_tier_name'],
+		'dataset': ['acquisition_era_name', 'data_tier_name', 'dataset',
+			'dataset_access_type', 'dataset_id', 'detail',
+			'output_configs', 'physics_group_name', 'prep_id',
+			'processed_ds_name','processing_version', 'xtcrosssection'] + ikg_create + ikg_modified + ikg_pds,
+		'dataset_conf_list': ['global_tag', 'pset_name'] + ikg_conf,
+		'file_conf_list': ['global_tag', 'lfn', 'pset_name'] + ikg_conf,
+		'file_lumi_list': ['lumi_section_num', 'run_num'],
+		'file_output_config_list': ['global_tag', 'lfn', 'pset_name'] + ikg_conf,
+		'file_parent_list': ['file_parent_lfn', 'logical_file_name', 'parent_logical_file_name'],
+		'files': ['adler32', 'auto_cross_section', 'block_name', 'check_sum', 'dataset',
+			'detail', 'event_count', 'file_lumi_list', 'file_output_config_list', 'file_parent_list',
+			'file_size', 'file_type', 'logical_file_name', 'lumi_list', 'md5', 'origin_site_name',
+			'run_num', 'validFileOnly'] + ikg_create + ikg_modified + ikg_conf,
+		'migration_rqst': ['migration_input', 'migration_rqst_id', 'migration_url'],
+		'output_configs': ['global_tag', 'pset_name'] + ikg_conf,
+		'physics_group_name': [],
+		'primds': ikg_create + ikg_pds,
+		'processing_era': ['description', 'processing_version'] + ikg_create,
+	}
 
-    @staticmethod
-    def default_validation(key, item):
-        try:
-            searchstr(item)
-        except AssertionError:
-            raise InputValidationError('%s does not match string input validation for key %s in DBS 3 publication'
-                                       % (item, key))
-        else:
-            return item
+	key_validators = {
+		'acquisition_era_name': dbs3_check(grid_control_cms.Lexicon.acqname,
+			'acquisition_era_name %r does not match input validation for DBS 3 publication'),
+		'block_name': dbs3_check(grid_control_cms.Lexicon.block,
+			'block_name %r does not match block name input validation for DBS 3 publication'),
+		'create_by': dbs3_check(grid_control_cms.Lexicon.DBSUser,
+			'create_by user %r does not match input validation for DBS 3 publication'),
+		'dataset': dbs3_check(grid_control_cms.Lexicon.dataset,
+			'dataset %r does not match dataset input validation for DBS 3 publication'),
+		'file_parent_lfn': logical_file_name_validation,
+		'global_tag': dbs3_check(grid_control_cms.Lexicon.global_tag_validation,
+			'global_tag %r does not match global tag validation in DBS 3 publication'),
+		'last_modified_by': dbs3_check(grid_control_cms.Lexicon.DBSUser,
+			'create_by user %r does not match input validation for DBS 3 publication'),
+		'logical_file_name': logical_file_name_validation,
+		'migration_url': dbs3_check(grid_control_cms.Lexicon.validateUrl,
+			'url %r does not match input validation for DBS 3 publication'),
+		'primary_ds_name': dbs3_check(grid_control_cms.Lexicon.primdataset,
+			'primary_dataset %r does not match input validation for DBS 3 publication'),
+		'processed_ds_name': dbs3_check(grid_control_cms.Lexicon.processed_ds_name,
+			'processed_dataset %r does not match input validation for DBS 3 publication'),
+		'processing_version': dbs3_check(grid_control_cms.Lexicon.procversion,
+			'processing_version %r does not match input validation for DBS 3 publication'),
+	}
+	default_validator = dbs3_check(grid_control_cms.Lexicon.searchstr,
+		'%r does not match string input validation for key ' + input_key + ' in DBS 3 publication')
 
-    @staticmethod
-    def global_tag_validation(item):
-        try:
-            globalTag(item)
-        except AssertionError:
-            raise InputValidationError('global_tag %s does not match global tag validation in DBS 3 publication' % item)
-        else:
-            return item
-
-    @staticmethod
-    def logical_file_name_validation(item):
-        def check_lfn(file_name):
-            try:
-                lfn(file_name)
-            except AssertionError:
-                raise InputValidationError('lfn %s does not match lfn input validation for DBS 3 publication'
-                                           % file_name)
-            else:
-                return file_name
-        return [check_lfn(file_name) for file_name in item] if isinstance(item, list) else check_lfn(item)
-
-    @staticmethod
-    def primary_dataset_validation(item):
-        try:
-            primdataset(item)
-        except AssertionError:
-            raise InputValidationError('primary_dataset %s does not match input validation for DBS 3 publication'
-                                       % item)
-        else:
-            return item
-
-    @staticmethod
-    def processed_dataset_validation(item):
-        try:
-            procdataset(item)
-        except AssertionError:
-            pass
-        else:
-            return item
-        try:
-            userprocdataset(item)
-        except AssertionError:
-            raise InputValidationError('processed_dataset %s does not match input validation for DBS 3 publication'
-                                       % item)
-        else:
-            return item
-
-    @staticmethod
-    def url_validation(item):
-        try:
-            validateUrl(item)
-        except AssertionError:
-            raise InputValidationError('url %s does not match input validation for DBS 3 publication' % item)
-        else:
-            return item
-
-    @staticmethod
-    def user_validation(item):
-        try:
-            DBSUser(item)
-        except AssertionError:
-            raise InputValidationError('user %s does not match input validation for DBS 3 publication' % item)
-        else:
-            return item
-
-    @staticmethod
-    def validate_json_input(input_key, input_data):
-        if isinstance(input_data, dict):
-            for key in input_data.keys():
-                if key not in DBS3InputValidation._accepted_input_keys[input_key]:
-                    raise InputValidationError('%s is not a valid key for %s' % (key, input_key))
-                input_data[key] = DBS3InputValidation.validate_json_input(key, input_data[key])
-        elif isinstance(input_data, list):
-            input_data = [DBS3InputValidation.validate_json_input(input_key, entry) for entry in input_data]
-        elif isinstance(input_data, basestring):
-            try:
-                getattr(DBS3InputValidation, DBS3InputValidation._validation_function[input_key])(input_data)
-            except KeyError:
-                DBS3InputValidation.default_validation(input_key, input_data)
-
-        return input_data
+	if isinstance(input_data, dict):
+		if input_key not in accepted_input_keys:
+			raise grid_control_cms.Lexicon.InputValidationError('Unexpected input_key %r' % input_key)
+		for key in input_data.keys():
+			if key not in accepted_input_keys[input_key]:
+				raise grid_control_cms.Lexicon.InputValidationError('%r is not a valid key for %r' % (key, input_key))
+			input_data[key] = validate_dbs3_json(key, input_data[key])
+		return input_data
+	elif isinstance(input_data, list):
+		return lmap(lambda entry: validate_dbs3_json(input_key, entry), input_data)
+	elif isinstance(input_data, (str, unicode)):
+		return key_validators.get(input_key, default_validator)(input_data)
+	raise grid_control_cms.Lexicon.InputValidationError('Unexpected datatype %r' % input_data)

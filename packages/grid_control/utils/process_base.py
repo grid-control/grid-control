@@ -73,7 +73,7 @@ class Process(object):
 	def start(self):
 		raise AbstractError
 
-	def kill(self):
+	def kill(self, sig = signal.SIGTERM):
 		raise AbstractError
 
 	def restart(self):
@@ -81,7 +81,7 @@ class Process(object):
 			self.kill()
 		self.start()
 
-	def status(self, timeout):
+	def status(self, timeout, terminate = False):
 		raise AbstractError
 
 	def finish(self, timeout):
@@ -251,11 +251,11 @@ class LocalProcess(Process):
 				thread_err.start()
 				while self._status is None:
 					try:
-						(pid, sts) = os.waitpid(self._pid, 0) # blocking (with spurious wakeups!)
+						(pid, status) = os.waitpid(self._pid, 0) # blocking (with spurious wakeups!)
 					except OSError: # unable to wait for child
-						(pid, std) = (self._pid, -1)
+						(pid, status) = (self._pid, -1)
 					if pid == self._pid:
-						self._status = sts
+						self._status = status
 				self._process_shutdown.set() # start shutdown of handlers and wait for it to finish
 				self._process_shutdown_stdin.set() # start shutdown of handlers and wait for it to finish
 				self._buffer_stdin.finish() # wakeup process input handler

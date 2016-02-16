@@ -17,7 +17,7 @@ from grid_control import utils
 from grid_control.gc_exceptions import UserError
 from grid_control.job_db import Job
 from hpfwk import AbstractError, Plugin
-from python_compat import imap, ismap, lfilter, lmap, reduce
+from python_compat import identity, imap, ismap, lfilter, lmap, reduce
 
 class JobSelector(Plugin):
 	def create(arg, **kwargs):
@@ -77,7 +77,7 @@ class IDSelector(JobSelector):
 
 
 class RegExSelector(JobSelector):
-	def __init__(self, arg, objParser, regexParser = lambda x: x, **kwargs):
+	def __init__(self, arg, objParser, regexParser = identity, **kwargs):
 		self.rxList = lmap(lambda x: re.compile(regexParser(x)), arg.split(','))
 		self.objParser = objParser
 

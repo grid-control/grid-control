@@ -16,7 +16,7 @@ import re, sys, time, signal
 from grid_control import utils
 from grid_control.gui import GUI
 from grid_control_gui.ansi import Console
-from python_compat import ifilter, imap, itemgetter
+from python_compat import identity, ifilter, imap, itemgetter
 
 class GUIStream(object):
 	def __init__(self, stream, screen):
@@ -64,7 +64,7 @@ class GUIStream(object):
 		return self.stream.__getattribute__(name)
 
 	def dump(cls):
-		for data in ifilter(lambda x: x, GUIStream.backlog):
+		for data in ifilter(identity, GUIStream.backlog):
 			sys.stdout.write(data)
 		sys.stdout.write('\n')
 	dump = classmethod(dump)
@@ -85,10 +85,10 @@ class ANSIGUI(GUI):
 		def wrapper(screen):
 			# Event handling for resizing
 			def onResize(sig, frame):
-				gui._reportHeight = report.getHeight()
+				self._reportHeight = report.getHeight()
 				screen.savePos()
 				(sizey, sizex) = screen.getmaxyx()
-				screen.setscrreg(min(gui._reportHeight + 2, sizey), sizey)
+				screen.setscrreg(min(self._reportHeight + 2, sizey), sizey)
 				utils.printTabular.wraplen = sizex - 5
 				screen.loadPos()
 			screen.erase()

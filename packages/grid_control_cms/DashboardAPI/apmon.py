@@ -48,7 +48,7 @@ farm's store nor shown in the farm's window in the MonALISA client.
 import os, re, sys, copy, time, random, socket, struct, xdrlib, threading
 try:
 	import StringIO
-except:
+except Exception:
 	from io import StringIO
 sys.path.append(os.path.abspath(os.path.dirname(__file__)))
 import Logger

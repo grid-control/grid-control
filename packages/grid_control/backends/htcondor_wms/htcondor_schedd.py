@@ -22,7 +22,7 @@ from grid_control.backends.htcondor_wms.processadapter import ProcessAdapterFact
 from grid_control.backends.htcondor_wms.wmsid import HTCJobID
 from grid_control.backends.wms import BackendError, WMS
 from hpfwk import Plugin
-from python_compat import ismap, lru_cache, md5
+from python_compat import ismap, lmap, lru_cache, md5
 
 """
 This module provides adapter classes for uniformly issuing GC commands to HTCondor Schedds.
@@ -233,10 +233,10 @@ class HTCScheddBase(Plugin):
 		return jdlData
 
 	# GC internals
-	@classmethod
-	def _initLogger(self):
-		self._logger = logging.getLogger('backend.htcschedd.%s' % self.__name__)
-		self._log = self._logger.log
+	def _initLogger(cls):
+		cls._logger = logging.getLogger('backend.htcschedd.%s' % cls.__name__)
+		cls._log = cls._logger.log
+	_initLogger = classmethod(_initLogger)
 
 
 # Schedd interfaced via python
@@ -298,7 +298,6 @@ class HTCScheddCLIBase(HTCScheddBase):
 				pass
 		return rmIDList
 
-	@singleQueryCache(defReturnItem = (0,0,0))
 	def getHTCVersion(self):
 		"""Return the version of the attached HTC installation as tuple(X,Y,Z)"""
 		raise AbstractError
@@ -311,6 +310,7 @@ class HTCScheddCLIBase(HTCScheddBase):
 			except AttributeError:
 				continue
 		return None
+	getHTCVersion = singleQueryCache(defReturnItem = (0,0,0))(getHTCVersion)
 
 	def _prepareSubmit(self, task, jobNumList):
 		raise AbstractError
@@ -367,10 +367,8 @@ class HTCScheddLocal(HTCScheddCLIBase):
 
 	def _prepareSubmit(self, task, jobNumList, queryArguments):
 		jdlFilePath = os.path.join(self.parentPool.getSandboxPath(), 'htc-%s.schedd-%s.jdl' % (self.parentPool.wmsName,md5(self.getURI()).hexdigest()))
-		utils.safeWrite(
-			open(jdlFilePath, 'w'),
-			( line + '\n' for line in self._getJDLData(task, jobNumList, queryArguments))
-			)
+		utils.safeWrite(open(jdlFilePath, 'w'),
+			lmap(lambda line: line + '\n', self._getJDLData(task, jobNumList, queryArguments)))
 		return jdlFilePath
 
 	def _getJDLData(self, task, jobNumList, queryArguments):
@@ -508,8 +506,8 @@ class HTCScheddSSH(HTCScheddCLIBase):
 				retrievedJobs.append(htcID)
 			try:
 				self.cleanStagingDir(htcID = htcID)
-			except Exception as err:
-				self._log( logging.DEFAULT, err.message )
+			except Exception:
+				self._log( logging.DEFAULT, 'Unable to clean staging dir')
 		# clean up task dir if no job(dir)s remain
 		try:
 			statProcess = self._adapter.LoggedExecute('find %s -maxdepth 1 -type d | wc -l' % self.getStagingDir( taskID = htcIDs[0].gctaskID) )
@@ -518,17 +516,15 @@ class HTCScheddSSH(HTCScheddCLIBase):
 				raise BackendError('Failed to check remote dir for cleanup : %s @ %s' % (self.getStagingDir( taskID = htcIDs[0].gctaskID) ))
 			elif (int(checkProcess.getOutput()) == 1):
 				self.cleanStagingDir(taskID = htcIDs[0].gctaskID)
-		except Exception as err:
-			self._log( logging.DEFAULT, err.message )
+		except Exception:
+			self._log( logging.DEFAULT, 'unable to clean task dir')
 		return retrievedJobs
 
 	def _prepareSubmit(self, task, jobNumList, queryArguments):
 		localJdlFilePath = os.path.join(self.parentPool.getSandboxPath(), 'htc-%s.schedd-%s.jdl' % (self.parentPool.wmsName,md5(self.getURI()).hexdigest()))
 		readyJobNumList  = self._stageSubmitFiles(task, jobNumList)
-		utils.safeWrite(
-			open(localJdlFilePath, 'w'),
-			( line + '\n' for line in self._getJDLData(task, readyJobNumList, queryArguments))
-			)
+		utils.safeWrite(open(localJdlFilePath, 'w'),
+			lmap(lambda line: line + '\n', self._getJDLData(task, readyJobNumList, queryArguments)))
 		raise NotImplementedError('JDL must get moved to remote')
 		return jdlFilePath
 
@@ -621,8 +617,8 @@ class HTCScheddSSH(HTCScheddCLIBase):
 						putProcess.logError(self.parentPool.errorLog, brief=True)
 						try:
 							self.cleanStagingDir( htcID = HTCJobID(jobNum, task.taskID))
-						except Exception as err:
-							self._log( logging.INFO1, err.message )
+						except Exception:
+							self._log( logging.INFO1, 'unable to clean staging dir')
 						raise BackendError
 			except BackendError:
 				continue

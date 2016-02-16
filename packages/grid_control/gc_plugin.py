@@ -12,7 +12,6 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-from grid_control.config.cview_tagged import TaggedConfigView
 from hpfwk import InstanceFactory, Plugin
 
 # NamedPlugin provides functionality to name plugin instances
@@ -38,7 +37,7 @@ class NamedPlugin(Plugin):
 			clsNew = cls.getClass(clsName, modulePaths)
 			if not instanceName:
 				instanceName = clsNew.__name__.split('.')[-1]
-			config = config.changeView(viewClass = TaggedConfigView,
+			config = config.changeView(viewClass = 'TaggedConfigView',
 				setClasses = [clsNew], setSections = None, setNames = [instanceName],
 				addTags = tags or [], inheritSections = inherit)
 			yield InstanceFactory(entry, clsNew, config, instanceName)

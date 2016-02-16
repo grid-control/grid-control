@@ -14,21 +14,20 @@
 
 import os, copy
 from grid_control import utils
-from grid_control.config import createConfigFactory, noDefault
+from grid_control.config import createConfig, noDefault
 from grid_control.datasets.provider_base import DataProvider
 from hpfwk import AbstractError, NestedException, Plugin
-from python_compat import ifilter, imap, irange, ismap, lmap, next, sort_inplace
+from python_compat import identity, ifilter, imap, irange, ismap, itemgetter, lmap, next, sort_inplace
 
-def fast_search(lst, cmp_op):
-	def bisect_left_cmp(lst, cmp_op):
-		(lo, hi) = (0, len(lst))
-		while lo < hi:
-			mid = (lo + hi) / 2
-			if cmp_op(lst[mid]) < 0: lo = mid + 1
-			else: hi = mid
-		return lo
-	idx = bisect_left_cmp(lst, cmp_op)
-	if idx < len(lst) and cmp_op(lst[idx]) == 0:
+def fast_search(lst, key_fun, key):
+	(idx, hi) = (0, len(lst))
+	while idx < hi:
+		mid = int((idx + hi) / 2)
+		if key_fun(lst[mid]) < key:
+			idx = mid + 1
+		else:
+			hi = mid
+	if (idx < len(lst)) and (key_fun(lst[idx]) == key):
 		return lst[idx]
 
 ResyncMode = utils.makeEnum(['disable', 'complete', 'changed', 'ignore']) # prio: "disable" overrides "complete", etc.
@@ -46,16 +45,16 @@ class DataSplitter(Plugin):
 		# Resync settings:
 		self.interactive = config.getBool('resync interactive', False, onChange = None)
 		#   behaviour in case of event size changes
-		self.mode_removed = config.getEnum('mode removed', ResyncMode, ResyncMode.complete, subset = ResyncMode.noChanged)
-		self.mode_expanded = config.getEnum('mode expand', ResyncMode, ResyncMode.changed)
-		self.mode_shrunken = config.getEnum('mode shrink', ResyncMode, ResyncMode.changed)
-		self.mode_new = config.getEnum('mode new', ResyncMode, ResyncMode.complete, subset = [ResyncMode.complete, ResyncMode.ignore])
+		self.mode_removed = config.getEnum('resync mode removed', ResyncMode, ResyncMode.complete, subset = ResyncMode.noChanged)
+		self.mode_expanded = config.getEnum('resync mode expand', ResyncMode, ResyncMode.changed)
+		self.mode_shrunken = config.getEnum('resync mode shrink', ResyncMode, ResyncMode.changed)
+		self.mode_new = config.getEnum('resync mode new', ResyncMode, ResyncMode.complete, subset = [ResyncMode.complete, ResyncMode.ignore])
 		#   behaviour in case of metadata changes
 		self.metaOpts = {}
 		for meta in config.getList('resync metadata', [], onChange = None):
-			self.metaOpts[meta] = config.getEnum('mode %s' % meta, ResyncMode, ResyncMode.complete, subset = ResyncMode.noChanged)
+			self.metaOpts[meta] = config.getEnum('resync mode %s' % meta, ResyncMode, ResyncMode.complete, subset = ResyncMode.noChanged)
 		#   behaviour in case of job changes - disable changed jobs, preserve job number of changed jobs or reorder
-		self.resyncOrder = config.getEnum('jobs', ResyncOrder, ResyncOrder.append)
+		self.resyncOrder = config.getEnum('resync jobs', ResyncOrder, ResyncOrder.append)
 
 
 
@@ -120,16 +119,14 @@ class DataSplitter(Plugin):
 
 		# Get block information (oldBlock, newBlock, filesMissing, filesMatched) which splitInfo is based on
 		def getMatchingBlock(splitInfo):
-			# Comparison operator between dataset block and splitting
-			def cmpSplitBlock(dsBlock, splitInfo):
-				if dsBlock[DataProvider.Dataset] == splitInfo[DataSplitter.Dataset]:
-					return cmp(dsBlock[DataProvider.BlockName], splitInfo[DataSplitter.BlockName])
-				return cmp(dsBlock[DataProvider.Dataset], splitInfo[DataSplitter.Dataset])
 			# Search for block in missing and matched blocks
-			result = fast_search(blocksMissing, lambda x: cmpSplitBlock(x, splitInfo))
+			def getBlockKey(dsBlock):
+				return (dsBlock[DataProvider.Dataset], dsBlock[DataProvider.BlockName])
+			splitInfoKey = (splitInfo[DataSplitter.Dataset], splitInfo[DataSplitter.BlockName])
+			result = fast_search(blocksMissing, getBlockKey, splitInfoKey)
 			if result:
 				return (result, None, result[DataProvider.FileList], [])
-			return fast_search(blocksMatching, lambda x: cmpSplitBlock(x[0], splitInfo)) # compare with old block
+			return fast_search(blocksMatching, lambda x: getBlockKey(x[0]), splitInfoKey) # compare with old block
 
 		#######################################
 		# Process modifications of event sizes
@@ -149,7 +146,7 @@ class DataSplitter(Plugin):
 				modSI[DataSplitter.Locations] = newBlock.get(DataProvider.Locations)
 			# Determine size infos and get started
 			def search_url(url):
-				return fast_search(oldBlock[DataProvider.FileList], lambda x: cmp(x[DataProvider.URL], url))
+				return fast_search(oldBlock[DataProvider.FileList], itemgetter(DataProvider.URL), url)
 			sizeInfo = lmap(lambda url: search_url(url)[DataProvider.NEntries], modSI[DataSplitter.FileList])
 			extended = []
 			metaIdxLookup = []
@@ -279,7 +276,7 @@ class DataSplitter(Plugin):
 			while idx < len(modSI[DataSplitter.FileList]):
 				url = modSI[DataSplitter.FileList][idx]
 
-				rmFI = fast_search(filesMissing, lambda x: cmp(x[DataProvider.URL], url))
+				rmFI = fast_search(filesMissing, itemgetter(DataProvider.URL), url)
 				if rmFI:
 					removeFile(idx, rmFI)
 					procMode = min(procMode, self.mode_removed)
@@ -287,7 +284,7 @@ class DataSplitter(Plugin):
 						procMode = min(procMode, self.metaOpts.get(meta, ResyncMode.ignore))
 					continue # dont increase filelist index!
 
-				(oldFI, newFI) = fast_search(filesMatched, lambda x: cmp(x[0][DataProvider.URL], url))
+				(oldFI, newFI) = fast_search(filesMatched, lambda x: x[0][DataProvider.URL], url)
 				if DataProvider.Metadata in newFI:
 					newMetadata.append(newFI[DataProvider.Metadata])
 					for (oldMI, newMI, metaProc) in metaIdxLookup:
@@ -437,12 +434,12 @@ class DataSplitter(Plugin):
 	def loadState(path, cfg = None):
 		src = DataSplitter._getIOHandler().loadState(path)
 		if cfg is None:
-			cfg = createConfigFactory(configDict = src.metadata).getConfig()
+			cfg = createConfig(configDict = src.metadata)
 		splitter = DataSplitter.getInstance(src.classname, cfg)
 		splitter.splitSource = src
 		# Transfer config protocol (in case no split function is called)
 		splitter._protocol = src.metadata['None']
-		for section in ifilter(lambda x: x, src.metadata):
+		for section in ifilter(identity, src.metadata):
 			def meta2prot(k, v):
 				return ('[%s] %s' % (section.replace('None ', ''), k), v)
 			splitter._protocol.update(dict(ismap(meta2prot, src.metadata[section].items())))

@@ -82,7 +82,7 @@ def main():
 			jobInfo = getJobInfo(workDir, jobNum, lambda retCode: retCode == 0)
 			if not jobInfo:
 				if not incomplete:
-					print 'WARNING: Not all jobs have finished - results will be incomplete!'
+					print('WARNING: Not all jobs have finished - results will be incomplete!')
 					incomplete = True
 				continue
 
@@ -115,7 +115,7 @@ def main():
 				sys.exit(os.EX_OK)
 			except Exception:
 				raise
-				print 'Error while parsing framework output of job %s!' % jobNum
+				print('Error while parsing framework output of job %s!' % jobNum)
 				continue
 
 		del log
@@ -130,23 +130,23 @@ def main():
 		del log
 
 		for sample, lumis in lumis.items():
-			print 'Sample:', sample
-			print '========================================='
-			print 'Number of events processed: %12d' % readDict[sample]
-			print '  Number of events written: %12d' % sum(writeDict.get(sample, {}).values())
+			print('Sample: %s' % sample)
+			print('=========================================')
+			print('Number of events processed: %12d' % readDict[sample])
+			print('  Number of events written: %12d' % sum(writeDict.get(sample, {}).values()))
 			if writeDict.get(sample, None):
-				print
+				sys.stdout.write('\n')
 				head = [(0, '          Output filename'), (1, 'Events')]
 				utils.printTabular(head, lmap(lambda pfn: {0: pfn, 1: writeDict[sample][pfn]}, writeDict[sample]))
 			if opts.save_jobjson:
 				outputJSON(lumis, open(os.path.join(workDir, 'processed_%s.json' % sample), 'w'))
-				print 'Saved processed lumi sections in', os.path.join(workDir, 'processed_%s.json' % sample)
+				print('Saved processed lumi sections in ' + os.path.join(workDir, 'processed_%s.json' % sample))
 			if opts.save_jobgc:
-				print
-				print 'List of processed lumisections:'
-				print '-----------------------------------------'
+				sys.stdout.write('\n')
+				print('List of processed lumisections:')
+				print('-----------------------------------------')
 				outputGC(lumis)
-			print
+			sys.stdout.write('\n')
 
 
 	###########################
@@ -170,6 +170,6 @@ def main():
 				start, end = rlrange
 				assert(start[0] == end[0])
 				llist = result.setdefault(start[0], []).extend(irange(start[1], end[1] + 1))
-			print result
+			print(result)
 
 sys.exit(main())

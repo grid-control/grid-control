@@ -18,7 +18,7 @@ from grid_control.utils.file_objects import VirtualFile
 from grid_control.utils.parsing import parseBool, parseDict, parseInt, parseList, parseStr, parseTime, parseType, strGuid, strTime, strTimeShort
 from grid_control.utils.thread_tools import TimeoutException, hang_protection
 from hpfwk import APIError
-from python_compat import ifilter, imap, irange, ismap, izip, lfilter, lmap, lru_cache, lsmap, lzip, md5_hex, next, reduce, set, sorted, tarfile, user_input
+from python_compat import identity, ifilter, imap, irange, ismap, izip, lfilter, lmap, lru_cache, lsmap, lzip, md5_hex, next, reduce, set, sorted, tarfile, user_input
 
 def execWrapper(script, context = None):
 	if context is None:
@@ -675,6 +675,12 @@ class ActivityLog:
 		def __del__(self):
 			self.__activity.clear()
 
+		def flush(self):
+			return self.__stream.flush()
+
+		def isatty(self):
+			return self.__stream.isatty()
+
 		def write(self, data):
 			self.__activity.clear()
 			retVal = self.__stream.write(data)
@@ -726,7 +732,7 @@ def printTabular(head, data, fmtString = '', fmt = None, level = -1):
 	head = list(head)
 	def getKeyFormat(headEntry, fmtString):
 		return (headEntry[0], justFunDict[fmtString])
-	justFun = dict(imap(getKeyFormat, izip(head, fmtString)))
+	justFun = dict(ismap(getKeyFormat, izip(head, fmtString)))
 
 	# adjust to lendict of column (considering escape sequence correction)
 	strippedlen = lambda x: len(re.sub('\33\[\d*(;\d*)*m', '', x))
@@ -822,7 +828,7 @@ printTabular.wraplen = 100
 printTabular.mode = 'default'
 
 
-def getUserInput(text, default, choices, parser = lambda x: x):
+def getUserInput(text, default, choices, parser = identity):
 	while True:
 		try:
 			userinput = user_input('%s %s: ' % (text, '[%s]' % default))

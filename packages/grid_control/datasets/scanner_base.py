@@ -12,22 +12,26 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-from grid_control import utils
+import logging
 from hpfwk import AbstractError, Plugin
-from python_compat import izip
 
 class InfoScanner(Plugin):
 	def __init__(self, config):
-		pass
+		self._log = logging.getLogger('infoscanner')
 
 	def getGuards(self):
 		return ([], [])
 
-	def getEntriesVerbose(self, level, *args):
-		utils.vprint('    ' * level + 'Collecting information with %s...' % self.__class__.__name__, 1)
-		for c, n, l in izip(args, ['Path', 'Metadata', 'Events', 'SE list', 'Objects'], [1, 2, 1, 2, 2]):
-			utils.vprint('    ' * level + '  %s: %s' % (n, c), l)
-		return self.getEntries(*args)
+	def getEntriesVerbose(self, depth, path, metadata, events, seList, objStore):
+		self._log.log(logging.INFO, '    ' * depth + 'Collecting information with %s...', self.__class__.__name__)
+		for level, content, name in [
+				(logging.INFO, path, 'Path'),
+				(logging.INFO1, metadata, 'Metadata'),
+				(logging.INFO, events, 'Events'),
+				(logging.INFO1, seList, 'SE list'),
+				(logging.INFO1, objStore, 'Objects')]:
+			self._log.log(level, '    ' * depth + '  %s: %s', name, content)
+		return self.getEntries(path, metadata, events, seList, objStore)
 
 	def getEntries(self, path, metadata, events, seList, objStore):
 		raise AbstractError

@@ -17,10 +17,11 @@ import os, sys, logging
 from grid_control import utils
 from grid_control.config.config_entry import ConfigEntry, ConfigError
 from grid_control.utils.data_structures import UniqueList
+from grid_control.utils.gc_itertools import ichain
 from grid_control.utils.parsing import parseList
 from grid_control.utils.thread_tools import TimeoutException, hang_protection
 from hpfwk import AbstractError, Plugin
-from python_compat import ifilter, imap, irange, ismap, lfilter, lmap, rsplit
+from python_compat import identity, ifilter, imap, irange, ismap, lfilter, lmap, rsplit
 
 # Class to fill config containers with settings
 class ConfigFiller(Plugin):
@@ -51,8 +52,9 @@ class FileConfigFiller(ConfigFiller):
 				# Allow very basic substitutions with %(option)s syntax
 				def getOptValue(option, value, source):
 					return (option, value)
-				substDict = dict(ismap(getOptValue, configContent.get('default', [])))
-				substDict.update(ismap(getOptValue, configContent.get(section, [])))
+				substDict = dict(ichain([
+					ismap(getOptValue, configContent.get('default', [])),
+					ismap(getOptValue, configContent.get(section, []))]))
 				for (option, value, source) in configContent[section]:
 					# Protection for non-interpolation "%" in value 
 					value = (value.replace('%', '\x01').replace('\x01(', '%(') % substDict).replace('\x01', '%')
@@ -186,7 +188,7 @@ class DictConfigFiller(ConfigFiller):
 # Config filler which collects data from a user string
 class StringConfigFiller(ConfigFiller):
 	def __init__(self, optionList):
-		self._optionList = lfilter(lambda x: x, imap(str.strip, optionList))
+		self._optionList = lfilter(identity, imap(str.strip, optionList))
 
 	def fill(self, container):
 		for uopt in self._optionList:

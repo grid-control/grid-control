@@ -16,7 +16,7 @@
 import os, sys, logging, operator, optparse
 from gcSupport import FileMutex, getConfig, utils
 from grid_control.datasets.provider_base import DataProvider
-from grid_control_cms.dbs3_input_validation import DBS3InputValidation
+from grid_control_cms.dbs3_input_validation import validate_json_input
 from grid_control_cms.dbs3_lite_client import DBS3LiteClient
 from grid_control_cms.dbs3_migration_queue import AlreadyQueued, DBS3MigrationQueue, MigrationTask, do_migration
 from grid_control_cms.provider_sitedb import SiteDB
@@ -117,7 +117,7 @@ def generateDBS3BlockDumps(opts, blocks):
         block_dump[u'processing_era'] = {u'processing_version': 1,
                                         u'description': 'grid-control'}
 
-        yield DBS3InputValidation.validate_json_input('blockBulk', block_dump)
+        yield validate_json_input('blockBulk', block_dump)
 
 
 def main():
@@ -221,7 +221,7 @@ def main():
             config.set('dataset name pattern', '@DS_KEY@')
         provider = DataProvider.getInstance('DBSInfoProvider', config, args[0], None)
 
-    provider.saveState(os.path.join(opts.tmpDir, 'dbs.dat'))
+    DataProvider.saveToFile(os.path.join(opts.tmpDir, 'dbs.dat'), provider.getBlocks())
     if opts.discovery:
         sys.exit(os.EX_OK)
     blocks = provider.getBlocks()

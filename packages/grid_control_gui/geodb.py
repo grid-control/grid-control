@@ -387,8 +387,8 @@ vserv13.hep.phy.cam.ac.uk
 wipp-crm.weizmann.ac.il
 """
 
-	import sys, time, urllib2
-	from python_compat import set, imap, lmap, lfilter, sorted
+	import sys, time
+	from python_compat import set, imap, lmap, lfilter, sorted, urllib2
 
 	def geocode(loc):
 		request = "http://maps.googleapis.com/maps/api/geocode/json?address=%s&sensor=false" % (str.join('.', loc.split('.')[2:]))

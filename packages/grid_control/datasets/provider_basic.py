@@ -15,6 +15,7 @@
 from grid_control import utils
 from grid_control.config import ConfigError
 from grid_control.datasets.provider_base import DataProvider, DatasetError
+from grid_control.utils.parsing import parseList
 from python_compat import lmap, rsplit
 
 # Provides information about a single file
@@ -26,7 +27,7 @@ class FileProvider(DataProvider):
 		DataProvider.__init__(self, config, datasetExpr, datasetNick, datasetID)
 
 		(self._path, self._events, selist) = utils.optSplit(datasetExpr, '|@')
-		self._selist = utils.parseList(selist, ',') or None
+		self._selist = parseList(selist, ',') or None
 		if not (self._path and self._events):
 			raise ConfigError('Invalid dataset expression!\nCorrect: /local/path/to/file|events[@SE1,SE2]')
 
@@ -67,7 +68,8 @@ class ListProvider(DataProvider):
 				raise DatasetError('Unable to parse %s: %s' % (desc, repr(value)))
 
 		(blockinfo, commonMetadata) = (None, [])
-		for idx, line in enumerate(open(self._filename, 'r')):
+		fp = open(self._filename, 'r')
+		for idx, line in enumerate(fp):
 			try:
 				# Found start of block:
 				line = line.strip()
@@ -100,7 +102,7 @@ class ListProvider(DataProvider):
 					elif key.lower() == 'metadata common':
 						commonMetadata = try_apply(eval, value, 'common metadata')
 					elif key.lower() == 'se list':
-						blockinfo[DataProvider.Locations] = try_apply(lambda value: utils.parseList(value, ','), 'block location')
+						blockinfo[DataProvider.Locations] = try_apply(lambda value: parseList(value, ','), value, 'block location')
 					elif key.lower() == 'prefix':
 						if not self._forcePrefix:
 							commonprefix = value
@@ -117,6 +119,8 @@ class ListProvider(DataProvider):
 							data[DataProvider.Metadata] = data.get(DataProvider.Metadata, []) + fileMetadata
 						blockinfo[DataProvider.FileList].append(data)
 			except Exception:
+				fp.close()
 				raise DatasetError('Unable to parse %r:%d' % (self._filename, idx))
 		if blockinfo and doFilter(blockinfo):
 			yield blockinfo
+		fp.close()

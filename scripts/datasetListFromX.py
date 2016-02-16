@@ -13,8 +13,9 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-import sys, gcSupport
-from python_compat import imap
+import sys
+from gcSupport import Plugin, getConfig
+from python_compat import ismap
 
 def addOptions(parser):
 	parser.add_option('-d', '--dataset', dest='dataset name pattern', default='', help='Name pattern of dataset')
@@ -44,11 +45,11 @@ def addOptions(parser):
 
 def discoverDataset(opts, parser, providerName, datasetExpr):
 	def main():
-		configEntries = imap(lambda (k, v): (k, str(v)), parser.values.__dict__.items())
-		config = gcSupport.getConfig(configDict = {'dataset': dict(configEntries)})
-		provider = gcSupport.datasets.DataProvider.getInstance(providerName, config, datasetExpr, None)
+		configEntries = ismap(lambda k, v: (k, str(v)), parser.values.__dict__.items())
+		config = getConfig(configDict = {'dataset': dict(configEntries)})
+		DataProvider = Plugin.getClass('DataProvider')
+		provider = DataProvider.getInstance(providerName, config, datasetExpr, None)
 		if opts.output:
-			provider.saveState(opts.output, None, opts.strip)
-		else:
-			gcSupport.datasets.DataProvider.saveStateRaw(sys.stdout, provider.getBlocks(), opts.strip)
+			return DataProvider.saveToFile(opts.output, provider.getBlocks(), opts.strip)
+		return DataProvider.saveToStream(sys.stdout, provider.getBlocks(), opts.strip)
 	sys.exit(main())

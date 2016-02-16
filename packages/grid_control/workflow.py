@@ -15,7 +15,6 @@
 import logging
 from grid_control import utils
 from grid_control.backends import WMS
-from grid_control.config import TaggedConfigView
 from grid_control.gc_plugin import NamedPlugin
 from grid_control.gui import GUI
 from grid_control.job_manager import JobManager
@@ -53,7 +52,7 @@ class Workflow(NamedPlugin):
 		# Prepare work package
 		self.wms.deployTask(self.task, self.monitor)
 
-		configJobs = config.changeView(viewClass = TaggedConfigView, addSections = ['jobs'], addTags = [self])
+		configJobs = config.changeView(viewClass = 'TaggedConfigView', addSections = ['jobs'], addTags = [self])
 		self._actionList = configJobs.getList('action', ['check', 'retrieve', 'submit'], onChange = None)
 		self.runContinuous = configJobs.getBool('continuous', False, onChange = None)
 

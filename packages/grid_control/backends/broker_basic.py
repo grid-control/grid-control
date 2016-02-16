@@ -16,6 +16,7 @@ from grid_control import utils
 from grid_control.backends.broker import Broker
 from grid_control.backends.wms import WMS
 from grid_control.utils.gc_itertools import ichain
+from grid_control.utils.parsing import parseList
 from python_compat import imap, lfilter, lmap, set, sorted
 
 class RandomBroker(Broker):
@@ -117,7 +118,7 @@ class StorageBroker(Broker):
 	def __init__(self, config, name, userOpt, itemName, discoverFun):
 		Broker.__init__(self, config, name, userOpt, itemName, discoverFun)
 		self._storageDict = config.getDict('%s storage access' % userOpt, {}, onChange = None,
-			parser = lambda x: utils.parseList(x, ' '), strfun = lambda x: str.join(' ', x))[0]
+			parser = lambda x: parseList(x, ' '), strfun = lambda x: str.join(' ', x))[0]
 
 	def _broker(self, reqs, items):
 		result = Broker._broker(self, reqs, items)

@@ -13,10 +13,10 @@
 #-#  limitations under the License.
 
 from grid_control import utils
-from grid_control.utils.gc_itertools import ichain, lchain
+from grid_control.utils.gc_itertools import ichain
 from grid_control.utils.parsing import strDict
 from hpfwk import APIError, NestedException
-from python_compat import imap, lfilter, lmap, set, sorted
+from python_compat import ifilter, imap, lmap, set, sorted
 
 class ConfigError(NestedException):
 	pass
@@ -32,10 +32,10 @@ def standardConfigForm(value):
 		return lmap(lambda x: str(x).strip().lower(), value)
 
 def multi_line_format(value):
-	value_list = lfilter(lambda x: x != '', imap(str.strip, value.strip().splitlines()))
-	if len(value_list) > 1:
-		return '\n\t%s' % str.join('\n\t', value_list)
-	return str.join('\n\t', value_list)
+	result = str.join('\n\t', ifilter(lambda x: x != '', imap(str.strip, value.strip().splitlines())))
+	if '\n' in result:
+		result = '\n\t' + result
+	return result
 
 
 # Holder of config information
@@ -162,8 +162,12 @@ class ConfigContainer(object):
 		entry.order = self._counter
 		self._content.setdefault(entry.option, []).append(entry)
 
-	def getEntries(self, option):
-		return lchain([self._content.get(option, []), self._content_default.get(option, {}).values()])
+	def getEntry(self, option, filterExpr):
+		return ConfigEntry.combineEntries(self.getEntries(option, filterExpr))
+
+	def getEntries(self, option, filterExpr):
+		entryChain = ichain([self._content.get(option, []), self._content_default.get(option, {}).values()])
+		return ifilter(filterExpr, entryChain)
 
 	def getKeys(self):
 		return sorted(set(ichain([self._content.keys(), self._content_default.keys()])))

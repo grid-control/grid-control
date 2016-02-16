@@ -60,9 +60,9 @@ def formatVariables(variables, showLongVariables = False):
 # Function to log source code and variables from frames
 def formatStack(frames, codeContext = 0, showVariables = True, showLongVariables = True):
 	import linecache
+	linecache.checkcache()
 	for frame in frames:
 		# Output relevant code fragment
-		linecache.checkcache(frame['file'])
 		trackingDisplay = ''
 		if frame.get('trackingID') is not None:
 			trackingDisplay = '%s-' % frame['trackingID']
@@ -159,24 +159,25 @@ class ExceptionFormatter(logging.Formatter):
 			(showCodeContext, showVariables, showFileStack)
 
 	def format(self, record):
-		if not record.exc_info:
+		if record.exc_info in [None, (None, None, None)]:
 			return logging.Formatter.format(self, record)
 		traceback, infos = collectExceptionInfos(*record.exc_info)
 		msg = record.msg + '\n\n'
 		if self._showCodeContext > 0:
-			msg += str.join('\n', formatStack(traceback, codeContext = self._showCodeContext - 1,
-				showVariables = self._showVariables > 0, showLongVariables = self._showVariables > 1)) + '\n'
+			stackInfo = formatStack(traceback, codeContext = self._showCodeContext - 1,
+				showVariables = self._showVariables > 0, showLongVariables = self._showVariables > 1)
+			msg += str.join('\n', stackInfo) + '\n'
 
 		if self._showFileStack:
 			msg += 'File stack:\n'
 			for tb in traceback:
-				msg += '%s %s %s\n' % (tb.get('trackingID', '') + '|%d' % tb.get('idx', 0), tb['file'], tb['line'])
+				msg += '%s %s %s (%s)\n' % (tb.get('trackingID', '') + '|%d' % tb.get('idx', 0), tb['file'], tb['line'], tb['fun'])
 		msg += '\n'
 
 		def formatInfos(info):
 			(exValue, exDepth, exID) = info
 			result = '%s%s: %s' % ('  ' * exDepth, exValue.__class__.__name__, exValue)
-			if not isinstance(exValue, NestedException) and (len(exValue.args) > 1):
+			if not isinstance(exValue, NestedException) and hasattr(exValue, 'args') and (len(exValue.args) > 1):
 				try:
 					result += '\n%s%s  %s' % ('  ' * exDepth, len(exValue.__class__.__name__) * ' ', exValue.args)
 				except Exception:

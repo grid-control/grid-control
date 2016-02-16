@@ -14,23 +14,33 @@
 
 from grid_control.utils.parsing import parseJSON
 from hpfwk import AbstractError, NestedException
+from python_compat import bytes2str, identity, json, str2bytes, urllib2
+
+try:
+	from urllib import urlencode
+except Exception:
+	from urllib.parse import urlencode
 
 class RestError(NestedException):
 	pass
 
 
 class RestClientBase(object):
-	def __init__(self, cert = None, default_headers = None, rf_get = None, rf_post = None, rf_put = None, rf_delete = None):
-		self._cert = cert
-		self._headers = default_headers or {'Content-type': 'application/json', 'Accept': 'application/json'}
+	def __init__(self, cert = None, url = None, default_headers = None,
+			process_result = None, process_data = None,
+			rf_get = None, rf_post = None, rf_put = None, rf_delete = None):
+		(self._cert, self._url, self._headers) = (cert, url, default_headers)
 		(self._rf_get, self._rf_post, self._rf_put, self._rf_delete) = (rf_get, rf_post, rf_put, rf_delete)
+		(self._process_result, self._process_data) = (process_result or identity, process_data or urlencode)
 
 	def _get_headers(self, headers):
-		request_headers = dict(self._headers)
+		request_headers = dict(self._headers or {})
 		request_headers.update(headers or {})
 		return request_headers
 
 	def _get_url(self, url, api):
+		if url is None:
+			url = self._url
 		if api:
 			url += '/%s' % api
 		return url
@@ -38,28 +48,33 @@ class RestClientBase(object):
 	def _request(self, request_fun, url, api, headers, **kwargs):
 		raise AbstractError
 
-	def get(self, url, api = None, headers = None, params = None):
-		return self._request(self._rf_get, url, api, headers, params = params)
+	def get(self, url = None, api = None, headers = None, params = None):
+		return self._process_result(self._request(self._rf_get, url, api, headers, params = params))
 
-	def post(self, url, api = None, headers = None, data = None):
-		return self._request(self._rf_post, url, api, headers, data = data)
+	def post(self, url = None, api = None, headers = None, data = None):
+		if data and (self._process_data != identity):
+			data = self._process_data(data)
+		return self._process_result(self._request(self._rf_post, url, api, headers, data = data))
 
-	def put(self, url, api = None, headers = None, params = None, data = None):
-		return self._request(self._rf_put, url, api, headers, params = params, data = data)
+	def put(self, url = None, api = None, headers = None, params = None, data = None):
+		if data and (self._process_data != identity):
+			data = self._process_data(data)
+		return self._process_result(self._request(self._rf_put, url, api, headers, params = params, data = data))
 
-	def delete(self, url, api = None, headers = None, params = None):
-		return self._request(self._rf_delete, url, api, headers, params = params)
+	def delete(self, url = None, api = None, headers = None, params = None):
+		return self._process_result(self._request(self._rf_delete, url, api, headers, params = params))
 
 
 class RequestsRestClient(RestClientBase):
 	_session = None
 
-	def __init__(self, cert = None, default_headers = None):
+	def __init__(self, cert = None, default_headers = None, process_result = None, process_data = None):
 		if not self._session:
 			#disable ssl ca verification errors
 			requests.packages.urllib3.disable_warnings()
 			self._session = requests.Session()
 		RestClientBase.__init__(self, cert = cert, default_headers = default_headers,
+			process_result = process_result, process_data = process_data,
 			rf_get = self._session.get, rf_post = self._session.post,
 			rf_put = self._session.put, rf_delete = self._session.delete)
 
@@ -75,34 +90,34 @@ class RequestsRestClient(RestClientBase):
 
 
 class Urllib2RestClient(RestClientBase):
-	def __init__(self, cert = None, default_headers = None):
+	def __init__(self, cert = None, default_headers = None, process_result = None, process_data = None):
 		RestClientBase.__init__(self, cert = cert, default_headers = default_headers,
+			process_result = process_result, process_data = process_data,
 			rf_get = lambda: 'GET', rf_post = lambda: 'POST',
 			rf_put = lambda: 'PUT', rf_delete = lambda: 'DELETE')
 
-		class HTTPSClientAuthHandler(urllib2.HTTPSHandler):
+		class HTTPSClientAuthHandler(HTTPSHandler):
 			def https_open(self, req):
 				return self.do_open(self.getConnection, req)
 			def getConnection(self, host, timeout = None):
-				return httplib.HTTPSConnection(host, key_file = cert, cert_file = cert)
+				return HTTPSConnection(host, key_file = cert, cert_file = cert)
 		self._https_handler = HTTPSClientAuthHandler
 
 	def _request(self, request_fun, url, api, headers, params = None, data = None):
 		url = self._get_url(url, api)
 		if params:
-			url += '?%s' % urllib.urlencode(params)
+			url += '?%s' % urlencode(params)
 		request_headers = self._get_headers(headers)
 		if data:
-			#necessary to optimize performance of CherryPy
-			request_headers['Content-length'] = str(len(data))
-		request = urllib2.Request(url = url, data = data, headers = request_headers)
+			data = str2bytes(data)
+		request = Request(url = url, data = data, headers = request_headers)
 		request.get_method = request_fun
 		if self._cert:
 			cert_handler = self._https_handler()
-			opener = urllib2.build_opener(cert_handler)
+			opener = build_opener(cert_handler)
 		else:
-			opener = urllib2.build_opener()
-		return opener.open(request).read()
+			opener = build_opener()
+		return bytes2str(opener.open(request).read())
 
 try:
 	import requests
@@ -113,14 +128,27 @@ except Exception: # incompatible dependencies pulled in can cause many types of 
 		ssl._create_default_https_context = ssl._create_unverified_context
 	except Exception:
 		pass
-	import httplib, urllib, urllib2
+	try:
+		from http.client import HTTPSConnection
+		from urllib.request import HTTPSHandler, Request, build_opener
+	except Exception:
+		from httplib import HTTPSConnection
+		HTTPSHandler = urllib2.HTTPSHandler
+		Request = urllib2.Request
+		build_opener = urllib2.build_opener
 	RestClient = Urllib2RestClient # fall back to urllib2
 
 
+class JSONRestClient(RestClient):
+	def __init__(self, cert = None, default_headers = None, process_result = None):
+		RestClient.__init__(self, cert,
+			default_headers or {'Content-Type': 'application/json', 'Accept': 'application/json'},
+			process_result = process_result or parseJSON, process_data = json.dumps)
+
+
 def readURL(url, params = None, headers = None, cert = None):
-	rest_client = RestClient(cert)
-	return rest_client.get(url = url, headers = headers, params = params)
+	return RestClient(cert).get(url = url, headers = headers, params = params)
 
 
 def readJSON(url, params = None, headers = None, cert = None):
-	return parseJSON(readURL(url, params, headers, cert))
+	return JSONRestClient(cert).get(url = url, headers = headers, params = params)

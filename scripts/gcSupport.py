@@ -19,21 +19,18 @@ import os, sys, time, fcntl, logging, optparse
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'packages')))
 
 from grid_control import utils
-from grid_control.backends import WMS, storage
+from grid_control.backends import storage
 from grid_control.backends.access import AccessToken
-from grid_control.config import createConfigFactory
+from grid_control.config import createConfig
 from grid_control.job_db import Job, JobClass, JobDB
-from grid_control.job_manager import JobManager
 from grid_control.job_selector import ClassSelector, JobSelector
 from grid_control.output_processor import FileInfoProcessor, JobInfoProcessor
-from grid_control.report import Report
-from grid_control.tasks import TaskModule
 from hpfwk import Plugin
 from python_compat import ifilter, imap, tarfile
 
 class Options(object):
-	def __init__(self):
-		self._parser = optparse.OptionParser()
+	def __init__(self, usage = None):
+		self._parser = optparse.OptionParser(usage = usage)
 		self._groups = {}
 		self._groups_usage = {}
 
@@ -56,17 +53,24 @@ class Options(object):
 		self._groups[name] = optparse.OptionGroup(self._parser, desc, usage)
 		self._parser.add_option_group(self._groups[name])
 
-	def addtext(self, group, option, default = None, help = '', short = ''):
-		self._get_group(group).add_option(short, '--' + option, dest = option.replace('-', '_'),
+	def addText(self, group, option, default = None, help = '', short = ''):
+		return self._get_group(group).add_option(short, '--' + option, dest = option.replace('-', '_'),
 			default = default, help = help)
 
-	def addflag(self, group, option, default, help, short = ''):
+	def addList(self, group, option, default = None, help = '', short = ''):
+		return self._get_group(group).add_option(short, '--' + option, dest = option.replace('-', '_'),
+			default = default or [], action = 'append', help = help)
+
+	def addAccu(self, group, option, default = 0, help = '', short = ''):
+		return self._get_group(group).add_option(short, '--' + option, dest = option.replace('-', '_'),
+			default = default, action = 'count', help = help)
+
+	def addFlag(self, group, option, default, help, short = ''):
 		if default == False:
-			self._get_group(group).add_option(short, '--' + option, dest = option.replace('-', '_'),
+			return self._get_group(group).add_option(short, '--' + option, dest = option.replace('-', '_'),
 				default = default, action = 'store_true', help = help)
-		else:
-			self._get_group(group).add_option(short, '--' + option, dest = option.replace('-', '_'),
-				default = default, action = 'store_false', help = help)
+		return self._get_group(group).add_option(short, '--' + option, dest = option.replace('-', '_'),
+			default = default, action = 'store_false', help = help)
 
 class DummyStream(object):
 	def __init__(self, stream):
@@ -82,7 +86,7 @@ class DummyStream(object):
 def getConfig(configFile = None, configDict = None, section = None, additional = None):
 	if configDict and section:
 		configDict = {section: configDict}
-	config = createConfigFactory(configFile, configDict, additional = additional).getConfig()
+	config = createConfig(configFile, configDict, additional = additional)
 	if section:
 		return config.changeView(addSections = [section])
 	return config

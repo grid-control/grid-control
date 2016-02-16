@@ -13,49 +13,31 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-import os, sys, random, optparse
-from gcSupport import getConfig, parseOptions, utils
+import os, sys, random
+from gcSupport import Options, getConfig, utils
 from grid_control.datasets import DataSplitter
-from grid_control.parameters import DataParameterSource, ParameterFactory, ParameterInfo, ParameterMetadata, ParameterSource
-from python_compat import ifilter, imap, irange, izip, lfilter, lmap, md5, set, sorted
+from grid_control.parameters import ParameterInfo, ParameterMetadata, ParameterSource
+from python_compat import ifilter, imap, irange, izip, lfilter, lmap, md5_hex, set, sorted
 
 random.seed(0)
 
 usage = '%s [OPTIONS] <parameter definition>' % sys.argv[0]
-parser = optparse.OptionParser(usage=usage)
-parser.add_option('-l', '--list-parameters', dest='listparams', default=False, action='store_true',
-	help='')
-parser.add_option('-M', '--manager',         dest='manager',    default=None,
-	help='Select parameter source manager')
-parser.add_option('-p', '--parameter',       dest='parameters', default=[], action='append',
-	help='Specify parameters')
-parser.add_option('-o', '--output',          dest='output',     default='',
-	help='Show only specified parameters')
-parser.add_option('-s', '--static',          dest='static',     default=False, action='store_true',
-	help='Assume a static parameterset')
-parser.add_option('-a', '--active',          dest='active',     default=False, action='store_true',
-	help='Show activity state')
-parser.add_option('-d', '--disabled',        dest='inactive',   default=False, action='store_true',
-	help='Show disabled parameter sets')
-parser.add_option('-t', '--untracked',       dest='untracked',  default=False, action='store_true',
-	help='Display untracked variables')
-parser.add_option('-c', '--collapse',        dest='collapse',   default=0, action='count',
-	help='Do not collapse dataset infos in display')
-parser.add_option('-I', '--intervention',    dest='intervention', default=False, action='store_true',
-	help='Display intervention tasks')
-parser.add_option('-f', '--force-intervention', dest='forceiv', default=False, action='store_true',
-	help='Simulate dataset intervention')
-parser.add_option('-D', '--dataset',         dest='dataset',    default='',
-	help='Add dataset splitting (use "True" to simulate a dataset)')
-parser.add_option('-i', '--reinit',          dest='init',       default=False, action='store_true',
-	help='Trigger re-init')
-parser.add_option('-r', '--resync',          dest='resync',     default=False, action='store_true',
-	help='Trigger re-sync')
-parser.add_option('-V', '--visible',         dest='visible',    default='',
-	help='Set visible variables')
-parser.add_option('-S', '--save',            dest='save',
-	help='Saves information to specified file')
-(opts, args) = parseOptions(parser)
+parser = Options(usage)
+parser.addAccu(None, 'collapse',           default = 0,     short = '-c', help = 'Do not collapse dataset infos in display')
+parser.addFlag(None, 'active',             default = False, short = '-a', help = 'Show activity state')
+parser.addFlag(None, 'disabled',           default = False, short = '-d', help = 'Show disabled parameter sets')
+parser.addFlag(None, 'force-intervention', default = False, short = '-f', help = 'Simulate dataset intervention')
+parser.addFlag(None, 'intervention',       default = False, short = '-I', help = 'Display intervention tasks')
+parser.addFlag(None, 'list-parameters',    default = False, short = '-l', help = 'Display parameter list')
+parser.addFlag(None, 'static',             default = False, short = '-s', help = 'Assume a static parameterset')
+parser.addFlag(None, 'untracked',          default = False, short = '-t', help = 'Display untracked variables')
+parser.addList(None, 'parameter',          default = [],    short = '-p', help = 'Specify parameters')
+parser.addText(None, 'dataset',            default = '',    short = '-D', help = 'Add dataset splitting (use "True" to simulate a dataset)')
+parser.addText(None, 'manager',            default = None,  short = '-M', help = 'Select parameter source manager')
+parser.addText(None, 'output',             default = '',    short = '-o', help = 'Show only specified parameters')
+parser.addText(None, 'save',               default = '',    short = '-S', help = 'Saves information to specified file')
+parser.addText(None, 'visible',            default = '',    short = '-V', help = 'Set visible variables')
+(opts, args) = parser.parse()
 
 if len(args) != 1:
 	utils.exitWithUsage(usage)
@@ -68,9 +50,9 @@ def main():
 	config = getConfig(configFile, section = 'global')
 	config.changeView(setSections = ['jobs']).set('nseeds', '1', '?=')
 	configParameters = config.changeView(setSections = ['parameters'])
-	if opts.parameters:
+	if opts.parameter:
 		utils.vprint('Provided options:')
-		for p in opts.parameters:
+		for p in opts.parameter:
 			k, v = p.split('=', 1)
 			configParameters.set(k.strip(), v.strip().replace('\\n', '\n'), '=')
 			utils.vprint('\t%s: %s' % (k.strip(), v.strip()))
@@ -84,8 +66,7 @@ def main():
 		config.changeView(setSections = None).write(sys.stdout)
 
 	# Initialize ParameterFactory
-	configTask = config.changeView(setSections = [config.get(['task', 'module'], 'DummyTask')])
-	pm = config.getPlugin('parameter factory', 'SimpleParameterFactory', cls = ParameterFactory).getInstance()
+	pm = config.getPlugin('parameter factory', 'SimpleParameterFactory', cls = 'ParameterFactory').getInstance()
 
 	# Create dataset parameter source
 	class DummySplitter:
@@ -94,7 +75,6 @@ def main():
 		def getSplitInfo(self, pNum):
 			mkEntry = lambda ds, fl, n, nick: { DataSplitter.Dataset: ds, DataSplitter.Nickname: nick,
 				DataSplitter.FileList: fl, DataSplitter.NEntries: n }
-			rndStr = lambda: md5(str(random.random())).hexdigest()[:10]
 			tmp = [ mkEntry('ds1', ['a', 'b'], 23, 'data_1'), mkEntry('ds1', ['1'], 42, 'data_1'),
 				mkEntry('ds2', ['m', 'n'], 123, 'data_2'), mkEntry('ds2', ['x', 'y', 'z'], 987, 'data_3') ]
 			return tmp[pNum]
@@ -121,16 +101,18 @@ def main():
 		dataSplitter = DataSplitter.loadState(opts.dataset)
 
 	if opts.dataset:
+		DataParameterSource = ParameterSource.getClass('DataParameterSource')
 		DataParameterSource.datasetsAvailable['data'] = DataParameterSource(
 			config.getWorkPath(), 'data', None, dataSplitter, DataSplitProcessorTest())
 
 	psource = pm.getSource(config)
 
-	if opts.forceiv:
+	if opts.force_intervention:
+		DataParameterSource = ParameterSource.getClass('DataParameterSource')
 		for dp in DataParameterSource.datasetSources:
 			dp.intervention = (set([1]), set([0]), True)
 
-	if opts.listparams:
+	if opts.list_parameters:
 		result = []
 		needGCParam = False
 		if psource.getMaxJobs() is not None:
@@ -139,7 +121,7 @@ def main():
 				info = psource.getJobInfo(jobNum)
 				if info[ParameterInfo.ACTIVE]:
 					countActive += 1
-				if opts.inactive or info[ParameterInfo.ACTIVE]:
+				if opts.disabled or info[ParameterInfo.ACTIVE]:
 					if not info[ParameterInfo.ACTIVE]:
 						info['GC_PARAM'] = 'N/A'
 					if str(info['GC_PARAM']) != str(jobNum):
@@ -176,7 +158,7 @@ def main():
 				nickname = None
 				if ('DATASETNICK' in pset) and (opts.collapse == 2):
 					nickname = pset.pop('DATASETNICK')
-				h = md5(repr(lmap(lambda key: pset.get(key), stored))).hexdigest()
+				h = md5_hex(repr(lmap(pset.get, stored)))
 				result.setdefault(h, []).append(pset)
 				result_nicks.setdefault(h, set()).add(nickname)
 

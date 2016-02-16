@@ -1,4 +1,4 @@
-#-#  Copyright 2014 Karlsruhe Institute of Technology
+#-#  Copyright 2014-2016 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -35,7 +35,7 @@ def parseKWListIter(kwListIter, jobDelimeter = lambda line: not line):
 		try:
 			key, val = [ obj.strip().replace('"','') for obj in line.split('=',1) ]
 			parseBuffer[key] = val
-		except ValueError as err:
+		except ValueError:
 			pass
 	infoMaps.append(parseBuffer)
 	return [ iMap for iMap in infoMaps if iMap ]

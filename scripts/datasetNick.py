@@ -13,30 +13,26 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-import os, sys, optparse
-from gcSupport import getConfig, parseOptions, utils
-from grid_control.datasets.nickname_base import NickNameProducer
-from grid_control_cms.provider_dbsv3 import DBS3Provider
+import sys
+from gcSupport import Options, Plugin, getConfig, utils
 from python_compat import lmap
 
-usage = '%s [OPTIONS] <DBS dataset path>' % sys.argv[0]
-parser = optparse.OptionParser(usage=usage)
-parser.add_option('-n', '--nickproducer', dest='nprod', default='SimpleNickNameProducer',
-	help='Name of the nickname producer')
-(opts, args) = parseOptions(parser)
+parser = Options('%s [options] <DBS dataset path>' % sys.argv[0])
+parser.addtext(None, 'producer', default = 'SimpleNickNameProducer',
+	help = 'Name of the nickname producer')
+(opts, args) = parser.parse()
 
 def main():
 	if len(args) == 0:
-		print 'Dataset path not specified!'
-		sys.exit(os.EX_USAGE)
+		utils.exitWithUsage('Dataset path not specified!')
 	datasetPath = args[0]
 	if '*' in datasetPath:
-		dbs3 = DBS3Provider(getConfig(), datasetPath, None)
+		dbs3 = Plugin.getInstance('DBS3Provider', getConfig(), datasetPath, None)
 		toProcess = dbs3.getCMSDatasetsImpl(datasetPath)
 	else:
 		toProcess = [datasetPath]
 
-	nProd = NickNameProducer.getInstance(opts.nprod, getConfig())
+	nProd = Plugin.getClass('NickNameProducer').getInstance(opts.producer, getConfig())
 	utils.printTabular(
 		[(0, 'Nickname'), (1, 'Dataset')],
 		lmap(lambda ds: {0: nProd.getName('', ds, None), 1: ds}, toProcess), 'll')

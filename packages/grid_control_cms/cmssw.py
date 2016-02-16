@@ -16,11 +16,13 @@ import os, shutil
 from grid_control import utils
 from grid_control.backends import WMS
 from grid_control.config import ConfigError, noDefault
-from grid_control.datasets import BasicPartitionProcessor, DataSplitter
+from grid_control.datasets import DataSplitter, PartitionProcessor
 from grid_control.tasks.task_data import DataTask
 from grid_control.tasks.task_utils import TaskExecutableWrapper
 from grid_control_cms.lumi_tools import filterLumiFilter, formatLumi, parseLumiFilter
 from python_compat import imap, lfilter
+
+BasicPartitionProcessor = PartitionProcessor.getClass('BasicPartitionProcessor')
 
 class CMSPartitionProcessor(BasicPartitionProcessor):
 	def __init__(self, config):

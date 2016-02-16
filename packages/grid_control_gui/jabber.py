@@ -46,5 +46,5 @@ class JabberAlarm(Monitoring):
 			logging.getLogger('user').warning('Could not authenticate to jabber server!')
 			return
 		text = 'Task %s finished!' % self.task.taskID
-		mid = cl.send(self._xmpp.protocol.Message(self.target_jid, text))
+		cl.send(self._xmpp.protocol.Message(self.target_jid, text))
 		time.sleep(1) # Stay connected until delivered

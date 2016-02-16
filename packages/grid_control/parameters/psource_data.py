@@ -14,8 +14,9 @@
 
 import os, time
 from grid_control import utils
+from grid_control.datasets import DataProvider
 from grid_control.gc_exceptions import UserError
-from grid_control.parameters.psource_base import ParameterInfo, ParameterMetadata, ParameterSource
+from grid_control.parameters.psource_base import ParameterMetadata, ParameterSource
 from python_compat import md5_hex
 
 class DataParameterSource(ParameterSource):
@@ -29,7 +30,7 @@ class DataParameterSource(ParameterSource):
 		elif os.path.exists(self.getDataPath('cache.dat') and self.getDataPath('map.tar')):
 			self.dataSplitter.importState(self.getDataPath('map.tar'))
 		else:
-			self.dataProvider.saveState(self.getDataPath('cache.dat'))
+			DataProvider.saveToFile(self.getDataPath('cache.dat'), self.dataProvider.getBlocks())
 			self.dataSplitter.splitDataset(self.getDataPath('map.tar'), self.dataProvider.getBlocks())
 
 		self.maxN = self.dataSplitter.getMaxJobs()
@@ -59,11 +60,10 @@ class DataParameterSource(ParameterSource):
 		(result_redo, result_disable, result_sizeChange) = ParameterSource.resync(self)
 		if self.resyncEnabled() and self.dataProvider:
 			# Get old and new dataset information
-			from grid_control.datasets import DataProvider
-			old = DataProvider.loadState(self.getDataPath('cache.dat')).getBlocks()
+			old = DataProvider.loadFromFile(self.getDataPath('cache.dat')).getBlocks()
 			self.dataProvider.clearCache()
 			new = self.dataProvider.getBlocks()
-			self.dataProvider.saveState(self.getDataPath('cache-new.dat'))
+			self.dataProvider.saveToFile(self.getDataPath('cache-new.dat'), new)
 
 			# Use old splitting information to synchronize with new dataset infos
 			jobChanges = self.dataSplitter.resyncMapping(self.getDataPath('map-new.tar'), old, new)

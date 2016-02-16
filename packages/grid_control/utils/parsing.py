@@ -12,9 +12,11 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-from python_compat import imap, ismap, json, lfilter, lmap, reduce, sorted
+from python_compat import identity, imap, ismap, json, lfilter, lmap, reduce, set, sorted, unicode
 
 def removeUnicode(obj):
+	if unicode == str:
+		return obj
 	if type(obj) in (list, tuple, set):
 		(obj, oldType) = (list(obj), type(obj))
 		for i, v in enumerate(obj):
@@ -57,7 +59,7 @@ def parseType(value):
 		return value
 
 
-def parseDict(entries, parserValue = lambda x: x, parserKey = lambda x: x):
+def parseDict(entries, parserValue = identity, parserKey = identity):
 	(result, resultParsed, order) = ({}, {}, [])
 	key = None
 	for entry in entries.splitlines():

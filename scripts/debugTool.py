@@ -13,33 +13,33 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-import os, sys, logging, gcSupport
-from gcSupport import Job, Plugin, getConfig
+import os, sys, logging
+from gcSupport import Job, Options, Plugin, getConfig
 from grid_control import utils
 from grid_control.datasets import DataProvider, DataSplitter
 from python_compat import BytesBuffer, imap, irange, lmap, lzip
 
-parser = gcSupport.Options()
+parser = Options()
 parser.section('back', 'Backend debugging', '%s [<backend specifier>] ...')
-parser.addflag('back', 'backend-list-nodes',     default=False, help='List backend nodes')
-parser.addflag('back', 'backend-list-queues',    default=False, help='List backend queues')
+parser.addFlag('back', 'backend-list-nodes',     default=False, help='List backend nodes')
+parser.addFlag('back', 'backend-list-queues',    default=False, help='List backend queues')
 
 parser.section('part', 'Dataset Partition debugging', '%s <path to partition file> ...')
-parser.addtext('part', 'partition-list',         default=None,  help='Select dataset partition information to display')
-parser.addflag('part', 'partition-list-invalid', default=False, help='List invalidated dataset partitions')
-parser.addflag('part', 'partition-check',        default=None,  help='Check dataset partition in specified work directory')
+parser.addText('part', 'partition-list',         default=None,  help='Select dataset partition information to display')
+parser.addFlag('part', 'partition-list-invalid', default=False, help='List invalidated dataset partitions')
+parser.addFlag('part', 'partition-check',        default=None,  help='Check dataset partition in specified work directory')
 
 parser.section('jobs', 'Jobs debugging', '%s <config file / job file> ... ')
-parser.addtext('jobs', 'job-selector',           default='',    help='Display jobs matching selector')
-parser.addflag('jobs', 'job-reset-attempts',     default=False, help='Reset the attempt counter')
-parser.addtext('jobs', 'job-force-state',        default='',    help='Force new job state')
-parser.addtext('jobs', 'job-show-jdl',           default='',    help='Show JDL file if available')
+parser.addText('jobs', 'job-selector',           default='',    help='Display jobs matching selector')
+parser.addFlag('jobs', 'job-reset-attempts',     default=False, help='Reset the attempt counter')
+parser.addText('jobs', 'job-force-state',        default='',    help='Force new job state')
+parser.addText('jobs', 'job-show-jdl',           default='',    help='Show JDL file if available')
 
 parser.section('data', 'Dataset debugging', '%s <dataset file> <dataset file> ...')
-parser.addtext('data', 'dataset-show-diff',      default='',    help='Show difference between datasets')
-parser.addtext('data', 'dataset-show-removed',   default='',    help='Find removed dataset blocks')
+parser.addText('data', 'dataset-show-diff',      default='',    help='Show difference between datasets')
+parser.addText('data', 'dataset-show-removed',   default='',    help='Find removed dataset blocks')
 
-parser.addtext(None, 'logfile-decode',           default='',    help='Decode log files', short = '-d')
+parser.addText(None, 'logfile-decode',           default='',    help='Decode log files', short = '-d')
 (opts, args) = parser.parse()
 
 ########################################################

@@ -16,12 +16,12 @@ import logging
 from grid_control import utils
 from grid_control.config.config_entry import ConfigEntry, ConfigError, noDefault, standardConfigForm
 from grid_control.utils.gc_itertools import ichain
-from hpfwk import AbstractError
-from python_compat import ifilter, imap, lfilter, sorted
+from hpfwk import AbstractError, Plugin
+from python_compat import imap, lfilter, sorted
 
 selectorUnchanged = utils.makeEnum(['selector_unchanged'])
 
-class ConfigView(object):
+class ConfigView(Plugin):
 	def __init__(self, name, parent = None):
 		if not parent:
 			parent = self
@@ -89,6 +89,8 @@ class HistoricalConfigView(ConfigView):
 	def getView(self, viewClass = None, setSections = selectorUnchanged, **kwargs):
 		if not viewClass:
 			viewClass = self.__class__
+		elif isinstance(viewClass, str):
+			viewClass = ConfigView.getClass(viewClass)
 		return viewClass(self.configName, self._oldContainer, self._curContainer, self,
 			setSections = setSections, **kwargs)
 
@@ -118,7 +120,7 @@ class HistoricalConfigView(ConfigView):
 		getOrderedEntryKey = lambda entry: (tuple(imap(removeNone, getFilteredSectionKey(entry))), entry.order)
 		for key in key_list:
 			(entries, entries_reverse) = ([], [])
-			for entry in ifilter(lambda x: getFilteredSectionKey(x) is not None, container.getEntries(key)):
+			for entry in container.getEntries(key, lambda x: getFilteredSectionKey(x) is not None):
 				if entry.section.endswith('!'):
 					entries_reverse.append(entry)
 				else:

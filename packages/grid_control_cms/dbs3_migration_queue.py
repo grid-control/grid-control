@@ -13,7 +13,12 @@
 #-#  limitations under the License.
 
 import pickle, logging
-from collections import deque
+
+try:
+    from collections import deque
+except ImportError:
+    deque = list
+from hpfwk import NestedException
 from time import time
 from python_compat import set
 
@@ -25,7 +30,7 @@ class MigrationRequestedState(object):
         #submit task to DBS 3 migration
         try:
             self.migration_task.migration_request = \
-                self.migration_task.dbs_client.migrateSubmit(self.migration_task.payload)
+                self.migration_task.dbs_client.migrateSubmit(self.migration_task.payload())
         except AttributeError:
             #simulation
             self.migration_task.logger.info("%s has been queued for migration!" % self.migration_task)
@@ -49,13 +54,13 @@ class MigrationSubmittedState(object):
                 request_status = self.migration_task.dbs_client.migrateStatus(migration_rqst_id=migration_request_id)
                 self.migration_task.logger.debug("%s has migration_status=%s"
                                                  % (self.migration_task, request_status[0]['migration_status']))
+                self.last_poll_time = time()
             except AttributeError:
                 #simulation
                 logging.warning("Simulation")
                 request_status = [{'migration_status': 2}]
                 self.migration_task.logger.debug("%s has migration_status=%s"
                                                  % (self.migration_task, request_status[0]['migration_status']))
-            finally:
                 self.last_poll_time = time()
 
             if request_status[0]['migration_status'] == 2:
@@ -101,7 +106,6 @@ class MigrationTask(object):
     def is_failed(self):
         return self.state.__class__ == MigrationFailedState
 
-    @property
     def payload(self):
         return {'migration_url': self.migration_url,
                 'migration_input': self.block_name}
@@ -139,28 +143,12 @@ class MigrationTask(object):
         return True
 
 
-class AlreadyQueued(Exception):
-    def __init__(self, message):
-        self.message = message
-        super(AlreadyQueued, self).__init__(self, "AlreadyQueuedException %s" % self.message)
-
-    def __repr__(self):
-        return '%s %r' % (self.__class__.__name__, self.message)
-
-    def __str__(self):
-        return repr(self.message)
+class AlreadyQueued(NestedException):
+    pass
 
 
-class MigrationFailed(Exception):
-    def __init__(self, message):
-        self.message = message
-        super(MigrationFailed, self).__init__(self, "MigrationFailedException %s" % self.message)
-
-    def __repr__(self):
-        return '%s %r' % (self.__class__.__name__, self.message)
-
-    def __str__(self):
-        return repr(self.message)
+class MigrationFailed(NestedException):
+    pass
 
 
 class DBS3MigrationQueue(deque):
@@ -176,14 +164,12 @@ class DBS3MigrationQueue(deque):
         else:
             raise AlreadyQueued('%s is already queued!' % migration_task)
 
-    @staticmethod
     def read_from_disk(filename):
-        with open(filename, 'r') as f:
-            return pickle.load(f)
+        return pickle.load(open(filename, 'r'))
+    read_from_disk = staticmethod(read_from_disk)
 
     def save_to_disk(self, filename):
-        with open(filename, 'w') as f:
-            pickle.dump(self, f)
+        pickle.dump(self, open(filename, 'w'))
 
 
 def do_migration(queue):
@@ -220,8 +206,8 @@ if __name__ == '__main__':
         try:
             migration_queue.add_migration_task(MigrationTask(block_name=block,
                                                              migration_url='http://a.b.c', dbs_client=None))
-        except AlreadyQueued as aq:
-            logger.warning(aq.message)
+        except AlreadyQueued:
+            logger.exception('Already queued!')
 
     migration_queue.save_to_disk('test.pkl')
     del migration_queue

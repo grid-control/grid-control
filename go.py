@@ -18,13 +18,10 @@ import os, sys, signal, logging, optparse
 # Load grid-control package
 sys.path.append(os.path.abspath(os.path.join(sys.path[0], 'packages')))
 from grid_control import utils
-from grid_control.config import ConfigEntry, createConfigFactory
-from grid_control.config.cfiller_base import ConfigFiller, StringConfigFiller
+from grid_control.config import createConfig
 from grid_control.gc_exceptions import gc_excepthook
 from grid_control.logging_setup import logging_setup
-from grid_control.workflow import Workflow
-from hpfwk import ExceptionFormatter, debugInterruptHandler
-from python_compat import lfilter
+from hpfwk import ExceptionFormatter, Plugin, debugInterruptHandler
 
 if __name__ == '__main__':
 	# set up signal handler for interrupts
@@ -40,9 +37,9 @@ if __name__ == '__main__':
 	# display the 'grid-control' logo and version
 	sys.stdout.write(open(utils.pathShare('logo.txt'), 'r').read())
 	sys.stdout.write('Revision: %s\n' % utils.getVersion())
-	pyver = sys.version_info[0] + sys.version_info[1] / 10.0
-	if pyver < 2.3:
-		utils.deprecated('This python version (%.1f) is not supported anymore!' % pyver)
+	pyver = (sys.version_info[0], sys.version_info[1])
+	if pyver < (2, 3):
+		utils.deprecated('This python version (%d.%d) is not supported anymore!' % pyver)
 
 	usage = 'Syntax: %s [OPTIONS] <config file>\n' % sys.argv[0]
 	parser = optparse.OptionParser(add_help_option=False)
@@ -89,13 +86,12 @@ if __name__ == '__main__':
 		utils.deprecated('Please use the more versatile report tool in the scripts directory!')
 
 	# Config filler which collects data from command line arguments
-	class OptsConfigFiller(ConfigFiller):
+	class OptsConfigFiller(Plugin.getClass('ConfigFiller')):
 		def __init__(self, optParser):
 			self._optParser = optParser
 
 		def fill(self, container):
-			entries = lfilter(lambda entry: entry.section == 'global', container.getEntries('cmdargs'))
-			combinedEntry = ConfigEntry.combineEntries(entries)
+			combinedEntry = container.getEntry('cmdargs', lambda entry: entry.section == 'global')
 			defaultCmdLine = []
 			if combinedEntry:
 				defaultCmdLine = combinedEntry.value.split()
@@ -110,12 +106,11 @@ if __name__ == '__main__':
 			setConfigFromOpt('state!', '#resync', opts.resync)
 			setConfigFromOpt('global', 'gui', opts.gui)
 			setConfigFromOpt('global', 'submission', opts.submission)
-			StringConfigFiller(opts.override).fill(container)
+			Plugin.getInstance('StringConfigFiller', opts.override).fill(container)
 
 	# big try... except block to catch exceptions and show error message
 	def main():
-		configFactory = createConfigFactory(configFile = args[0], additional = [OptsConfigFiller(parser)])
-		config = configFactory.getConfig()
+		config = createConfig(configFile = args[0], additional = [OptsConfigFiller(parser)])
 		logging_setup(config.changeView(setSections = ['logging']))
 
 		# Check work dir validity (default work directory is the config file name)
@@ -129,8 +124,8 @@ if __name__ == '__main__':
 
 		# Create workflow and freeze config settings
 		globalConfig = config.changeView(setSections = ['global'])
-		workflow = globalConfig.getPlugin('workflow', 'Workflow:global', cls = Workflow).getInstance()
-		configFactory.freezeConfig(writeConfig = config.getState('init', detail = 'config'))
+		workflow = globalConfig.getPlugin('workflow', 'Workflow:global', cls = 'Workflow').getInstance()
+		config.factory.freezeConfig(writeConfig = config.getState('init', detail = 'config'))
 
 		# Give config help
 		if opts.help_cfg or opts.help_scfg:
@@ -150,5 +145,7 @@ if __name__ == '__main__':
 
 	try:
 		sys.exit(main())
-	except Exception:
+	except SystemExit:
+		pass
+	except Exception: # coverage overrides sys.excepthook
 		gc_excepthook(*sys.exc_info())

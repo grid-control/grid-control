@@ -14,12 +14,12 @@
 
 import os, sys
 from grid_control import utils
-from grid_control.config import createConfigFactory
+from grid_control.config import createConfig
 from grid_control.datasets import DataProvider, DatasetError
 from grid_control.datasets.scanner_base import InfoScanner
 from grid_control.job_db import Job, JobDB
 from grid_control.job_selector import JobSelector
-from python_compat import ifilter, imap, irange, izip, lfilter, lmap, reduce, set, sorted
+from python_compat import identity, ifilter, imap, irange, izip, lfilter, lmap, reduce, set, sorted
 
 def splitParse(opt):
 	(delim, ds, de) = utils.optSplit(opt, '::')
@@ -31,7 +31,7 @@ class OutputDirsFromConfig(InfoScanner):
 		from grid_control.tasks import TaskModule
 		newVerbosity = utils.verbosity(utils.verbosity() - 3)
 		extConfigFN = config.getPath('source config')
-		extConfig = createConfigFactory(extConfigFN).getConfig(setSections = ['global'])
+		extConfig = createConfig(extConfigFN).changeView(setSections = ['global'])
 		self.extWorkDir = extConfig.getWorkPath()
 		self.extTask = extConfig.getPlugin(['task', 'module'], cls = TaskModule).getInstance()
 		selector = config.get('source job selector', '')
@@ -188,9 +188,9 @@ class MatchDelimeter(InfoScanner):
 		def getVar(d, s, e):
 			return str.join(d, os.path.basename(path).split(d)[s:e])
 		if self.delimDS:
-			metadata['DELIMETER_DS'] = getVar(splitParse(self.delimDS))
+			metadata['DELIMETER_DS'] = getVar(*splitParse(self.delimDS))
 		if self.delimB:
-			metadata['DELIMETER_B'] = getVar(splitParse(self.delimB))
+			metadata['DELIMETER_B'] = getVar(*splitParse(self.delimB))
 		yield (path, metadata, events, seList, objStore)
 
 
@@ -216,13 +216,13 @@ class ParentLookup(InfoScanner):
 		datacachePath = os.path.join(objStore.get('GC_WORKDIR', ''), 'datacache.dat')
 		source = utils.QM((self.source == '') and os.path.exists(datacachePath), datacachePath, self.source)
 		if source and (source not in self.lfnMap):
-			pSource = DataProvider.getInstance('ListProvider', createConfigFactory().getConfig(), source)
+			pSource = DataProvider.getInstance('ListProvider', createConfig(), source)
 			for (n, fl) in imap(lambda b: (b[DataProvider.Dataset], b[DataProvider.FileList]), pSource.getBlocks()):
 				self.lfnMap.setdefault(source, {}).update(dict(imap(lambda fi: (self.lfnTrans(fi[DataProvider.URL]), n), fl)))
 		pList = set()
 		for key in ifilter(lambda k: k in metadata, self.parentKeys):
 			pList.update(imap(lambda pPath: self.lfnMap.get(source, {}).get(self.lfnTrans(pPath)), metadata[key]))
-		metadata['PARENT_PATH'] = lfilter(lambda x: x, pList)
+		metadata['PARENT_PATH'] = lfilter(identity, pList)
 		yield (path, metadata, events, seList, objStore)
 
 

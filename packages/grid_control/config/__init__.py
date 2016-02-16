@@ -13,10 +13,10 @@
 #-#  limitations under the License.
 
 from grid_control.config.chandlers_base import changeImpossible, changeInitNeeded, validNoVar
-from grid_control.config.config_entry import ConfigEntry, ConfigError, noDefault
-from grid_control.config.config_factory import createConfigFactory
-from grid_control.config.cview_base import SimpleConfigView
-from grid_control.config.cview_tagged import TaggedConfigView
+from grid_control.config.config_entry import ConfigError, noDefault
+from grid_control.config.config_factory import createConfig
+
+__all__ = ['changeImpossible', 'changeInitNeeded', 'validNoVar', 'ConfigError', 'noDefault', 'createConfig']
 
 # At the lowest level, all config option values are represented by strings
 # which are encapsulated in the ConfigEntry class, which holds access and source

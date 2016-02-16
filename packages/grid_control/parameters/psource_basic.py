@@ -69,7 +69,7 @@ class SingleParameterSource(ParameterSource):
 		result.append(self.meta)
 
 
-class KeyParameterSource(SingleParameterSource):
+class KeyParameterSource(ParameterSource):
 	def __init__(self, *keys):
 		ParameterSource.__init__(self)
 		self.keys = lmap(lambda key: key.lstrip('!'), keys)

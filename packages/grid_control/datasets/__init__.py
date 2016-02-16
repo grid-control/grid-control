@@ -13,6 +13,8 @@
 #-#  limitations under the License.
 
 from grid_control.datasets.dproc_base import DataProcessor
-from grid_control.datasets.pproc_base import BasicPartitionProcessor, PartitionProcessor
+from grid_control.datasets.pproc_base import PartitionProcessor
 from grid_control.datasets.provider_base import DataProvider, DatasetError
 from grid_control.datasets.splitter_base import DataSplitter
+
+__all__ = ['DataProcessor', 'PartitionProcessor', 'DataProvider', 'DatasetError', 'DataSplitter']

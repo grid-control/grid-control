@@ -223,7 +223,7 @@ def main():
 			sort_inplace(blocks, key = itemgetter(DataProvider.Dataset, DataProvider.BlockName))
 			for b in blocks:
 				sort_inplace(b[DataProvider.FileList], key = itemgetter(DataProvider.URL))
-		provider.saveState(opts.save, blocks)
+		DataProvider.saveToFile(opts.save, blocks)
 		print('Dataset information saved to ./%s' % opts.save)
 
 sys.exit(main())

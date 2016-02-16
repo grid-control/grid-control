@@ -15,7 +15,7 @@
 from grid_control.config.config_entry import standardConfigForm
 from grid_control.config.cview_base import SimpleConfigView, selectorUnchanged
 from hpfwk import APIError
-from python_compat import imap, lfilter, lmap
+from python_compat import identity, imap, lfilter, lmap
 
 # Simple ConfigView implementation
 class TaggedConfigView(SimpleConfigView):
@@ -40,7 +40,7 @@ class TaggedConfigView(SimpleConfigView):
 			except Exception:
 				raise APIError('Class %r does not define a valid tag name!' % t.__class__.__name__)
 			return [(tagName, t.getObjectName().lower())]
-		self._initVariable('_cfgTags', [], setTags, addTags, lambda x: x, makeTagTuple)
+		self._initVariable('_cfgTags', [], setTags, addTags, identity, makeTagTuple)
 		self._cfgTagsOrder = lmap(lambda tagName_tagValue: tagName_tagValue[0], self._cfgTags)
 
 	def __str__(self):

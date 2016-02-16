@@ -14,10 +14,10 @@
 
 import os, sys
 from grid_control import utils
-from grid_control.config import createConfigFactory
+from grid_control.config import createConfig
 from grid_control.datasets.provider_base import DataProvider
 from grid_control.datasets.scanner_base import InfoScanner
-from python_compat import ifilter, imap, lmap, md5, set
+from python_compat import identity, ifilter, imap, lmap, md5_hex, set
 
 class ScanProviderBase(DataProvider):
 	def __init__(self, config, datasetExpr, datasetNick = None, datasetID = 0):
@@ -44,7 +44,7 @@ class ScanProviderBase(DataProvider):
 
 
 	def generateKey(self, keys, base, path, metadata, events, seList, objStore):
-		return md5(repr(base) + repr(seList) + repr(lmap(lambda k: metadata.get(k, None), keys))).hexdigest()
+		return md5_hex(repr(base) + repr(seList) + repr(lmap(metadata.get, keys)))
 
 
 	def generateDatasetName(self, key, data):
@@ -82,7 +82,7 @@ class ScanProviderBase(DataProvider):
 				hashNameDictB[hashB] = (hashDS, self.generateBlockName(hashB, commonB[hashDS][hashB]))
 
 		# Find name <-> key collisions
-		def findCollision(tName, nameDict, varDict, hashKeys, keyFmt = lambda x: x):
+		def findCollision(tName, nameDict, varDict, hashKeys, keyFmt = identity):
 			targetNames = nameDict.values()
 			for name in list(set(targetNames)):
 				targetNames.remove(name)
@@ -113,7 +113,7 @@ class ScanProviderBase(DataProvider):
 				metaKeys = protoBlocks[hashDS][hashB][0][1].keys()
 				def fnProps(path, metadata, events, seList, objStore):
 					return {DataProvider.URL: path, DataProvider.NEntries: events,
-						DataProvider.Metadata: lmap(lambda x: metadata.get(x), metaKeys)}
+						DataProvider.Metadata: lmap(metadata.get, metaKeys)}
 				yield {
 					DataProvider.Dataset: hashNameDictDS[hashDS],
 					DataProvider.BlockName: hashNameDictB[hashB][1],
@@ -155,7 +155,7 @@ class GCProvider(ScanProviderBase):
 			datasetExpr, selector = utils.optSplit(datasetExpr, '%')
 			config.set('source config', datasetExpr)
 			config.set('source job selector', selector)
-		extConfig = createConfigFactory(datasetExpr).getConfig()
+		extConfig = createConfig(datasetExpr)
 		extModule = extConfig.changeView(setSections = ['global']).get(['task', 'module'])
 		if 'ParaMod' in extModule: # handle old config files
 			extModule = extConfig.changeView(setSections = ['ParaMod']).get('module')

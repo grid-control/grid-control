@@ -149,21 +149,21 @@ class ProcessAdapterInterface(Plugin):
 		"""Translate any path to an absolute one in the executing GC domain"""
 		raise AbstractError
 	# general internal functions
-	@classmethod
-	def resolveURI(self, URI = None, **kwargs):
+	def resolveURI(cls, URI = None, **kwargs):
 		"""
 		Extract the adapter information for a given URI
 		
 		raises ValueError if the URI is not compatible
 		"""
 		raise ValueError
+	resolveURI = classmethod(resolveURI)
 	def _initInterfaces(self, **kwargs):
 		raise AbstractError
 
-	@classmethod
-	def _initLogger(self, **kwargs):
-		self._logger = logging.getLogger('process.adapter.%s' % self.__name__)
-		self._log = self._logger.log
+	def _initLogger(cls, **kwargs):
+		cls._logger = logging.getLogger('process.adapter.%s' % cls.__name__)
+		cls._log = cls._logger.log
+	_initLogger = classmethod(_initLogger)
 
 	def _validateConnection(self):
 		"""
@@ -224,26 +224,27 @@ class LocalProcessAdapter(ProcessAdapterInterface):
 		return self.getDomainAbsPath(path)
 
 	# general internal functions
-	@classmethod
-	def resolveURI(self, URI, **kwargs):
+	def resolveURI(cls, URI, **kwargs):
 		if URI == '':
 			return ('', None, None)
 		reMatch = re.search(r'(?:(\w*)://)(?:/(.*))?(.*)',URI)
 		if not reMatch:
 			raise ValueError("URI %s could not be parsed" % URI)
 		( scheme, path, leftover ) = reMatch.group(1,2,3)
-		self._log(logging.DEBUG1, "Resolved URI '%s' as %s" % (URI, { 'scheme' : scheme, 'path' : path, 'remainder' : leftover}) )
-		if ( scheme ) and ( scheme not in self.uriScheme ):
-			raise ValueError("Got URI of scheme '%s', expected '%s'." % (scheme, "' or '".join(self.uriScheme)))
+		cls._log(logging.DEBUG1, "Resolved URI '%s' as %s" % (URI, { 'scheme' : scheme, 'path' : path, 'remainder' : leftover}) )
+		if ( scheme ) and ( scheme not in cls.uriScheme ):
+			raise ValueError("Got URI of scheme '%s', expected '%s'." % (scheme, "' or '".join(cls.uriScheme)))
 		if leftover:
-			raise ValueError("URI '%s' yielded unexpected leftover '%s'. Expected URI form %s." % (URI, leftover, self.uriRepr))
+			raise ValueError("URI '%s' yielded unexpected leftover '%s'. Expected URI form %s." % (URI, leftover, cls.uriRepr))
 		return ( scheme, path )
-	@classmethod
-	def createURI(self, elementMap):
+	resolveURI = classmethod(resolveURI)
+
+	def createURI(cls, elementMap):
 		try:
 			return 'localhost:///%s' % elementMap['path']
 		except Exception:
 			return 'localhost://'
+	createURI = classmethod(createURI)
 
 	def _initInterfaces(self, **kwargs):
 		try:
@@ -395,20 +396,20 @@ class SSHProcessAdapter(ProcessAdapterInterface):
 			)
 
 	# general internal functions
-	@classmethod
-	def resolveURI(self, URI, **kwargs):
+	def resolveURI(cls, URI, **kwargs):
 		reMatch = re.search(r'(?:(\w*)://)?(?:(\w*)@)?([\w.-]*)(?::(\d*))?(?:/(.*))?(.*)',URI)
 		if not reMatch:
 			raise ValueError("URI %s could not be parsed" % URI)
 		( scheme, user, host, port, path, leftover) = reMatch.group(1,2,3,4,5,6)
-		self._log(logging.DEBUG1, "Resolved URI '%s' as %s" % (URI, { 'scheme' : scheme, 'user' : user, 'host' : host, 'port' : port, 'path' : path, 'remainder' : leftover}) )
-		if ( scheme ) and ( scheme not in self.uriScheme ):
-			raise ValueError("Got URI of scheme '%s', expected '%s'." % (scheme, "' or '".join(self.uriScheme)))
+		cls._log(logging.DEBUG1, "Resolved URI '%s' as %s" % (URI, { 'scheme' : scheme, 'user' : user, 'host' : host, 'port' : port, 'path' : path, 'remainder' : leftover}) )
+		if ( scheme ) and ( scheme not in cls.uriScheme ):
+			raise ValueError("Got URI of scheme '%s', expected '%s'." % (scheme, "' or '".join(cls.uriScheme)))
 		if leftover:
-			raise ValueError("URI %s yielded unexpected leftover '%s'. Expected URI form %s." % (URI, leftover, self.uriRepr))
+			raise ValueError("URI %s yielded unexpected leftover '%s'. Expected URI form %s." % (URI, leftover, cls.uriRepr))
 		if not host:
-			raise ValueError("URI %s yielded no hostname. Expected URI form %s." % (URI, self.uriRepr))
+			raise ValueError("URI %s yielded no hostname. Expected URI form %s." % (URI, cls.uriRepr))
 		return ( scheme, user, host, port, path )
+	resolveURI = classmethod(resolveURI)
 
 	def _initInterfaces(self, **kwargs):
 		def makeArgList(*args):

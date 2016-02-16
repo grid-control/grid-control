@@ -42,7 +42,9 @@ class GCDumpParameterSource(ParameterSource):
 
 	def fillParameterInfo(self, pNum, result):
 		result[ParameterInfo.ACTIVE] = not self.values[pNum][0]
-		result.update(ifilter(lambda k_v: k_v[1] is not None, izip(self.keys, self.values[pNum][2])))
+		for (key, value) in izip(self.keys, self.values[pNum][2]):
+			if value is not None:
+				result[key] = value
 
 	def write(cls, fn, pa):
 		fp = ZipFile(fn, 'w')

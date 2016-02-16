@@ -12,7 +12,7 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-from grid_control import utils
+import logging
 from grid_control.parameters.pfactory_base import BasicParameterFactory
 from grid_control.parameters.psource_base import ParameterError, ParameterSource
 from grid_control.parameters.psource_meta import ZipLongParameterSource
@@ -45,7 +45,7 @@ class ModularParameterFactory(BasicParameterFactory):
 		try:
 			source = eval(pExpr, userFun)
 		except Exception:
-			utils.eprint('Available functions: %s' % userFun.keys())
+			logging.getLogger('user').warning('Available functions: %s', userFun.keys())
 			raise
 		return ZipLongParameterSource(parent, source)
 

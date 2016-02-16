@@ -18,7 +18,7 @@ import os, re, glob, time, tempfile
 
 try:
 	from commands import getoutput
-except:
+except Exception:
 	from subprocess import getoutput
 from grid_control import utils
 from grid_control.backends.broker import Broker

@@ -74,6 +74,12 @@ grid_control.config.cfiller_base	MultiConfigFiller
 grid_control.config.cfiller_base	PythonConfigFiller
 grid_control.config.cfiller_base	StringConfigFiller
 
+grid_control.config.cview_base.ConfigView:
+grid_control.config.cview_base	ConfigView
+grid_control.config.cview_base	HistoricalConfigView
+grid_control.config.cview_base	SimpleConfigView
+grid_control.config.cview_tagged	TaggedConfigView
+
 grid_control.config.matcher_base.ListFilterBase:
 grid_control.config.matcher_base	ListFilterBase
 

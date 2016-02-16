@@ -70,10 +70,11 @@ class LocalSBStorageManager(StorageManager):
 
 	def doTransfer(self, listDescSourceTarget):
 		for (desc, source, target) in listDescSourceTarget:
+			target = os.path.join(self.sbPath, target)
 			try:
-				shutil.copy(source, os.path.join(self.sbPath, target))
+				shutil.copy(source, target)
 			except Exception:
-				raise StorageError('Unable to transfer "%s" to "%s"!' % (source, os.path.join(self.sbPath, target)))
+				raise StorageError('Unable to transfer %s "%s" to "%s"!' % (desc, source, target))
 
 
 class SEStorageManager(StorageManager):

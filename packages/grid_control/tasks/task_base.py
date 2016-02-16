@@ -15,7 +15,7 @@
 import os, random
 from grid_control import utils
 from grid_control.backends import WMS
-from grid_control.config import TaggedConfigView, changeInitNeeded
+from grid_control.config import changeInitNeeded
 from grid_control.gc_plugin import NamedPlugin
 from grid_control.parameters import ParameterFactory, ParameterInfo
 from grid_control.utils.gc_itertools import ichain, lchain
@@ -33,7 +33,7 @@ class TaskModule(NamedPlugin):
 		initSandbox = changeInitNeeded('sandbox')
 
 		# Task requirements
-		configJobs = config.changeView(viewClass = TaggedConfigView, addSections = ['jobs'], addTags = [self]) # Move this into parameter manager?
+		configJobs = config.changeView(viewClass = 'TaggedConfigView', addSections = ['jobs'], addTags = [self]) # Move this into parameter manager?
 		self.wallTime = configJobs.getTime('wall time', onChange = None)
 		self.cpuTime = configJobs.getTime('cpu time', self.wallTime, onChange = None)
 		self.cpus = configJobs.getInt('cpus', 1, onChange = None)
@@ -46,7 +46,7 @@ class TaskModule(NamedPlugin):
 		self.taskConfigName = config.getConfigName()
 
 		# Storage setup
-		configStorage = config.changeView(viewClass = TaggedConfigView,
+		configStorage = config.changeView(viewClass = 'TaggedConfigView',
 			setClasses = None, setNames = None, addSections = ['storage'], addTags = [self])
 		self.taskVariables = {
 			# Space limits
@@ -71,7 +71,7 @@ class TaskModule(NamedPlugin):
 		# Init parameter source manager
 		pm = config.getPlugin('parameter factory', 'SimpleParameterFactory',
 			cls = ParameterFactory, inherit = True).getInstance()
-		configParam = config.changeView(viewClass = TaggedConfigView, addSections = ['parameters'], addTags = [self])
+		configParam = config.changeView(viewClass = 'TaggedConfigView', addSections = ['parameters'], addTags = [self])
 		self.setupJobParameters(configParam, pm)
 		self.source = pm.getSource(configParam)
 
@@ -80,15 +80,12 @@ class TaskModule(NamedPlugin):
 		pass
 
 
-	# Read comments with error codes at the beginning of file
+	# Read comments with error codes at the beginning of file: # <code> - description
 	def updateErrorDict(self, fileName):
-		def transform(x, y):
-			return (int(x.strip('# ')), y)
 		for line in ifilter(lambda x: x.startswith('#'), open(fileName, 'r').readlines()):
-			try:
-				yield transform(lmap(str.strip, line.split(' - ', 1)))
-			except Exception:
-				pass
+			tmp = lmap(str.strip, line.lstrip('#').split(' - ', 1))
+			if tmp[0].isdigit() and (len(tmp) == 2):
+				yield (int(tmp[0]), tmp[1])
 
 
 	# Get environment variables for gc_config.sh
@@ -140,7 +137,7 @@ class TaskModule(NamedPlugin):
 			'MY_JOBID': 'GC_JOB_ID', 'MY_JOB': 'GC_JOB_ID', 'JOBID': 'GC_JOB_ID',
 			'CONF': 'GC_CONF', 'TASK_ID': 'GC_TASK_ID'}
 		varNames = self.getVarNames() + transients
-		alias.update(izip(varNames, varNames)) # include reflexive mappings
+		alias.update(dict(izip(varNames, varNames))) # include reflexive mappings
 		return alias
 
 
@@ -210,7 +207,7 @@ class TaskModule(NamedPlugin):
 
 
 	def report(self, jobNum):
-		keys = lfilter(lambda k: k.untracked == False, self.source.getJobKeys())
+		keys = lfilter(lambda k: not k.untracked, self.source.getJobKeys())
 		return utils.filterDict(self.source.getJobInfo(jobNum), kF = lambda k: k in keys)
 
 

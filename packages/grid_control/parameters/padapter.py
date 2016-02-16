@@ -18,7 +18,7 @@ from grid_control.parameters.psource_base import ParameterInfo, ParameterMetadat
 from grid_control.parameters.psource_file import GCDumpParameterSource
 from grid_control.utils.file_objects import ZipFile
 from hpfwk import APIError, Plugin
-from python_compat import ifilter, imap, irange, ismap, itemgetter, lfilter, lmap, md5, set, sort_inplace, sorted
+from python_compat import identity, ifilter, imap, irange, ismap, itemgetter, lfilter, lmap, md5, set, sort_inplace, sorted, str2bytes
 
 class ParameterAdapter(Plugin):
 	def __init__(self, config, source):
@@ -43,7 +43,6 @@ class ParameterAdapter(Plugin):
 		result['GC_PARAM'] = pNum
 		self._source.fillParameterInfo(pNum, result)
 		if self._prune:
-			old = dict(result)
 			result = utils.filterDict(result, vF = lambda v: v != '')
 		return result
 
@@ -125,14 +124,14 @@ class TrackedParameterAdapter(BasicParameterAdapter):
 		self.maxN = int(fp.readline())
 		if not self.maxN:
 			self.maxN = None
-		mapInfo = lfilter(lambda x: x, imap(str.strip, fp.readline().split(',')))
+		mapInfo = ifilter(identity, imap(str.strip, fp.readline().split(',')))
 		self._mapJob2PID = dict(imap(lambda x: tuple(imap(lambda y: int(y.lstrip('!')), x.split(':'))), mapInfo))
 		self._activeMap = {}
 
 	def writeJob2PID(self, fn):
 		fp = ZipFile(fn, 'w')
 		fp.write('%d\n' % max(0, self._rawSource.getMaxParameters()))
-		data = lfilter(lambda jobNum_pNum: jobNum_pNum[0] != jobNum_pNum[1], self._mapJob2PID.items())
+		data = ifilter(lambda jobNum_pNum: jobNum_pNum[0] != jobNum_pNum[1], self._mapJob2PID.items())
 		datastr = lmap(lambda jobNum_pNum: '%d:%d' % jobNum_pNum, data)
 		fp.write('%s\n' % str.join(',', datastr))
 
@@ -156,13 +155,13 @@ class TrackedParameterAdapter(BasicParameterAdapter):
 			return 
 
 		def translatePSource(psource): # Reduces psource output to essential information for diff
-			keys_store = sorted(ifilter(lambda k: k.untracked == False, psource.getJobKeys()))
+			keys_store = sorted(ifilter(lambda k: not k.untracked, psource.getJobKeys()))
 			def translateEntry(meta): # Translates parameter setting into hash
 				tmp = md5()
 				for key in ifilter(lambda k: k in meta, keys_store):
 					if str(meta[key]):
-						tmp.update(key.encode('ascii'))
-						tmp.update(str(meta[key]).encode('ascii'))
+						tmp.update(str2bytes(key))
+						tmp.update(str2bytes(str(meta[key])))
 				return { ParameterInfo.HASH: tmp.hexdigest(), 'GC_PARAM': meta['GC_PARAM'],
 					ParameterInfo.ACTIVE: meta[ParameterInfo.ACTIVE] }
 			if psource.getMaxJobs() is not None:

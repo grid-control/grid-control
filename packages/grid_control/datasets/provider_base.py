@@ -14,7 +14,7 @@
 
 import os, copy, logging
 from grid_control import utils
-from grid_control.config import createConfigFactory
+from grid_control.config import createConfig
 from grid_control.datasets.dproc_base import DataProcessor
 from hpfwk import AbstractError, InstanceFactory, NestedException, Plugin
 from python_compat import StringBuffer, ifilter, imap, irange, lmap, lrange, md5_hex, sort_inplace, sorted
@@ -119,7 +119,7 @@ class DataProvider(Plugin):
 
 
 	# Save dataset information in 'ini'-style => 10x faster to r/w than cPickle
-	def saveStateRaw(stream, dataBlocks, stripMetadata = False):
+	def saveToStream(stream, dataBlocks, stripMetadata = False):
 		writer = StringBuffer()
 		for block in dataBlocks:
 			writer.write('[%s#%s]\n' % (block[DataProvider.Dataset], block[DataProvider.BlockName]))
@@ -163,21 +163,24 @@ class DataProvider(Plugin):
 				writer.write('\n')
 			writer.write('\n')
 		stream.write(writer.getvalue())
-	saveStateRaw = staticmethod(saveStateRaw)
+	saveToStream = staticmethod(saveToStream)
 
 
-	def saveState(self, path, dataBlocks = None, stripMetadata = False):
-		if dataBlocks is None:
-			dataBlocks = self.getBlocks()
-		DataProvider.saveStateRaw(open(path, 'w'), dataBlocks, stripMetadata)
+	def saveToFile(path, dataBlocks, stripMetadata = False):
+		fp = open(path, 'w')
+		try:
+			DataProvider.saveToStream(fp, dataBlocks, stripMetadata)
+		finally:
+			fp.close()
+	saveToFile = staticmethod(saveToFile)
 
 
 	# Load dataset information using ListProvider
-	def loadState(path):
-		config = createConfigFactory(useDefaultFiles = False, configDict = {'dataset': {
-			'nickname check consistency': 'False', 'nickname check collision': 'False'}}).getConfig()
+	def loadFromFile(path):
+		config = createConfig(useDefaultFiles = False, configDict = {'dataset': {
+			'nickname check consistency': 'False', 'nickname check collision': 'False'}})
 		return DataProvider.getInstance('ListProvider', config, path)
-	loadState = staticmethod(loadState)
+	loadFromFile = staticmethod(loadFromFile)
 
 
 	# Returns changes between two sets of blocks in terms of added, missing and changed blocks

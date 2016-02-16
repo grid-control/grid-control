@@ -17,6 +17,7 @@ from grid_control import utils
 from grid_control.config import ConfigError
 from grid_control.datasets.splitter_base import DataSplitter
 from grid_control.utils.file_objects import VirtualFile
+from grid_control.utils.parsing import parseList
 from grid_control.utils.thread_tools import GCLock
 from python_compat import BytesBuffer, bytes2str, ifilter, imap, lfilter, lmap, tarfile
 
@@ -47,6 +48,10 @@ class DataSplitterIO_V1(object):
 		def closeSubTar(jobNum, subTarFile, subTarFileObj):
 			if subTarFile:
 				subTarFile.close()
+				try: # Python 3.2 does not close the wrapping gzip file object if an external file object is given
+					subTarFile.fileobj.close()
+				except Exception:
+					pass
 				subTarFileObj.seek(0)
 				subTarFileInfo = tarfile.TarInfo('%03dXX.tgz' % (jobNum / 100))
 				subTarFileInfo.size = len(subTarFileObj.getvalue())
@@ -107,7 +112,7 @@ class DataSplitterIO_V1(object):
 					self._cacheTar = tarfile.open(mode = 'r', fileobj = subTarFileObj)
 				parserMap = { None: str, DataSplitter.NEntries: int, DataSplitter.Skipped: int, 
 					DataSplitter.DatasetID: int, DataSplitter.Invalid: utils.parseBool,
-					DataSplitter.Locations: lambda x: utils.parseList(x, ','), DataSplitter.MetadataHeader: eval,
+					DataSplitter.Locations: lambda x: parseList(x, ','), DataSplitter.MetadataHeader: eval,
 					DataSplitter.Metadata: lambda x: eval(x.strip("'")) }
 				data = self._fmt.parse(self._cacheTar.extractfile('%05d/info' % key).readlines(),
 					keyParser = {None: int}, valueParser = parserMap)
@@ -136,6 +141,10 @@ class DataSplitterIO_V2(object):
 		def closeSubTar(jobNum, subTarFile, subTarFileObj):
 			if subTarFile:
 				subTarFile.close()
+				try: # Python 3.2 does not close the wrapping gzip file object if an external file object is given
+					subTarFile.fileobj.close()
+				except Exception:
+					pass
 				subTarFileObj.seek(0)
 				subTarFileInfo = tarfile.TarInfo('%03dXX.tgz' % (jobNum / self.keySize))
 				subTarFileInfo.size = len(subTarFileObj.getvalue())
@@ -205,7 +214,7 @@ class DataSplitterIO_V2(object):
 					self._cacheTar = tarfile.open(mode = 'r', fileobj = subTarFileObj)
 				parserMap = { None: str, DataSplitter.NEntries: int, DataSplitter.Skipped: int, 
 					DataSplitter.DatasetID: int, DataSplitter.Invalid: utils.parseBool,
-					DataSplitter.Locations: lambda x: utils.parseList(x, ','), DataSplitter.MetadataHeader: eval,
+					DataSplitter.Locations: lambda x: parseList(x, ','), DataSplitter.MetadataHeader: eval,
 					DataSplitter.Metadata: lambda x: eval(x.strip("'")) }
 				fullData = lmap(bytes2str, self._cacheTar.extractfile('%05d' % key).readlines())
 				data = self._fmt.parse(lfilter(lambda x: not x.startswith('='), fullData),

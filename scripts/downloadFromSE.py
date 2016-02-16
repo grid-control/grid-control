@@ -165,14 +165,14 @@ DEFAULT: The default is to download the SE file and check them with MD5 hashes.
 			time.sleep(60)
 		except KeyboardInterrupt:
 			raise
-			print '\n\nDownload aborted!\n'
+			utils.eprint('\n\nDownload aborted!\n')
 			sys.exit(os.EX_TEMPFAIL)
 
 
 def dlfs_rm(path, msg):
 	procRM = storage.se_rm(path)
 	if procRM.wait() != 0:
-		print '\t\tUnable to remove %s!' % msg
+		utils.eprint('\t\tUnable to remove %s!' % msg)
 		utils.eprint('%s\n\n' % procRM.getMessage())
 
 
@@ -377,7 +377,7 @@ def realmain(opts, args):
 					msg = ''
 				self.output[2*idx] = self.infoline(idx, '(%s)' % self.tr[idx])
 				self.output[2*idx+1] = msg
-				print self, repr(msg)
+				print((self, repr(msg)))
 			def error(self, msg):
 				errorOutput.append(msg)
 			def write(self, msg):
@@ -399,7 +399,7 @@ def realmain(opts, args):
 		while True:
 			screen.erase()
 			screen.loadPos()
-			active = lfilter(lambda (t, d): t.isAlive(), active)
+			active = lfilter(lambda t_d: t_d[0].isAlive(), active)
 			while len(active) < opts.threads and len(todo):
 				display = ThreadDisplay()
 				active.append((start_thread('Download %s' % todo[-1], processSingleJob, todo.pop(), display), display))
@@ -452,11 +452,10 @@ def realmain(opts, args):
 
 	# Print overview
 	if infos:
-		print '\nStatus overview:'
+		print('\nStatus overview:')
 		for (state, num) in infos.items():
 			if num > 0:
-				print '\t%20s: [%d/%d]' % (state, num, len(jobList))
-		print
+				print('\t%20s: [%d/%d]' % (state, num, len(jobList)))
 
 	if ('Downloaded' in infos) and (infos['Downloaded'] == len(jobDB)):
 		return os.EX_OK

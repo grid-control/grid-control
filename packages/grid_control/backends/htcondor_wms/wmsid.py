@@ -31,25 +31,12 @@ class HTCJobID(object):
 			self._infoBlob = ( int(gcJobNum), str(gcTaskID), str(scheddURI), int(clusterID), int(procID) )
 		else:
 			self._infoBlob = ( gcJobNum, gcTaskID, scheddURI, clusterID, procID )
-	@property
-	def gcJobNum(self):
-		return self._infoBlob[0]
-	@property
-	def gcTaskID(self):
-		return self._infoBlob[1]
-	@property
-	def scheddURI(self):
-		return self._infoBlob[2]
-	@property
-	def clusterID(self):
-		return self._infoBlob[3]
-	@property
-	def procID(self):
-		return self._infoBlob[4]
-	@property
-	def rawID(self):
-		"""Return an unambigious raw wmsID string representation"""
-		return '%s.%s.%s.%s.%s' % ( self.scheddURI, self.gcTaskID, self.gcJobNum, self.clusterID, self.procID)
+		self.gcJobNum = self._infoBlob[0]
+		self.gcTaskID = self._infoBlob[1]
+		self.scheddURI = self._infoBlob[2]
+		self.clusterID = self._infoBlob[3]
+		self.procID = self._infoBlob[4]
+		self.rawID = '%s.%s.%s.%s.%s' % ( self.scheddURI, self.gcTaskID, self.gcJobNum, self.clusterID, self.procID)
 	def __len__(self):
 		return 5
 	def __getitem__(self, key):

@@ -12,7 +12,7 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-from python_compat import imap, lmap, sort_inplace
+from python_compat import imap, json, lmap, sort_inplace
 
 def makeint(x):
 	if x.strip().upper() not in ['', 'MAX', 'MIN']:
@@ -20,7 +20,7 @@ def makeint(x):
 
 
 def parseLumiFromJSON(data, select = ''):
-	runs = eval(data)
+	runs = json.loads(data)
 	rr = lmap(makeint, select.split('-') + [''])[:2]
 	for run in imap(int, runs.keys()):
 		if (rr[0] and run < rr[0]) or (rr[1] and run > rr[1]):

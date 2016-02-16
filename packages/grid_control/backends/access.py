@@ -19,7 +19,7 @@ from grid_control import utils
 from grid_control.gc_exceptions import UserError
 from grid_control.gc_plugin import NamedPlugin
 from hpfwk import AbstractError, NestedException
-from python_compat import imap, lmap, rsplit
+from python_compat import identity, imap, lmap, rsplit
 
 class AccessTokenError(NestedException):
 	pass
@@ -104,8 +104,8 @@ class TimedAccessToken(AccessToken):
 		if self._ignoreTime:
 			return True
 		if not self._checkTimeleft(self._lowerLimit + neededTime) and canCurrentlySubmit:
-			self._logUser.warning('Access token (%s) lifetime (%s) does not meet the access and walltime (%s) requirements!' %
-				(self.getObjectName(), utils.strTime(self._getTimeleft(cached = False)), utils.strTime(self._lowerLimit + neededTime)))
+			self._logUser.warning('Access token (%s) lifetime (%s) does not meet the access and walltime (%s) requirements!',
+				self.getObjectName(), utils.strTime(self._getTimeleft(cached = False)), utils.strTime(self._lowerLimit + neededTime))
 			self._logUser.warning('Disabling job submission')
 			return False
 		return True
@@ -160,7 +160,7 @@ class VomsProxy(TimedAccessToken):
 		self._cache = utils.DictFormat(':').parse(proc.getOutput())
 		return self._cache
 
-	def _getProxyInfo(self, key, parse = lambda x: x, cached = True):
+	def _getProxyInfo(self, key, parse = identity, cached = True):
 		info = self._parseProxy(cached)
 		try:
 			return parse(info[key])
@@ -240,7 +240,7 @@ class AFSAccessToken(RefreshableAccessToken):
 				elif line.count(':') == 1:
 					key, value = lmap(str.strip, line.split(':', 1))
 					self._cache[key.lower()] = value
-		except:
+		except Exception:
 			raise AccessTokenError('Unable to parse kerberos ticket information!')
 		return self._cache
 

@@ -14,7 +14,9 @@
 #-#  limitations under the License.
 
 import sys, optparse
-from gcSupport import JobDB, JobSelector, Report, TaskModule, getConfig, parseOptions, utils
+from gcSupport import JobSelector, Plugin, getConfig, parseOptions, utils
+
+Report = Plugin.getClass('Report')
 
 parser = optparse.OptionParser()
 parser.add_option('', '--report', dest='reportClass', default='GUIReport')
@@ -27,7 +29,7 @@ parser.add_option('', '--str', dest='string', default=None)
 (opts, args) = parseOptions(parser)
 
 if opts.reportList:
-	print Report.getClassList()
+	print(Report.getClassList())
 
 if len(args) != 1:
 	utils.exitWithUsage('%s [options] <config file>' % sys.argv[0])
@@ -39,10 +41,10 @@ def main():
 	# Initialise task module
 	task = None
 	if opts.useTask:
-		task = config.getPlugin(['task', 'module'], cls = TaskModule).getInstance()
+		task = config.getPlugin(['task', 'module'], cls = 'TaskModule').getInstance()
 
 	# Initialise job database
-	jobDB = config.getPlugin('jobdb', 'JobDB', cls = JobDB).getInstance(config)
+	jobDB = config.getPlugin('jobdb', 'JobDB', cls = 'JobDB').getInstance(config)
 	log = utils.ActivityLog('Filtering job entries')
 	selected = jobDB.getJobs(JobSelector.create(opts.selector, task = task))
 	del log

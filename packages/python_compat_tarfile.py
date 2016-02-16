@@ -45,9 +45,9 @@ import os, re, sys, copy, stat, time, errno, shutil, struct
 from python_compat import irange
 
 if not hasattr(os, 'SEEK_SET'):
-	os.SEEK_SET = 0
-	os.SEEK_CUR = 1
-	os.SEEK_END = 2
+    os.SEEK_SET = 0
+    os.SEEK_CUR = 1
+    os.SEEK_END = 2
 
 if sys.platform == 'mac':
     # This module needs work for MacOS9, especially in the area of pathname

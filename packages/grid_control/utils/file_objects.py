@@ -13,7 +13,7 @@
 #-#  limitations under the License.
 
 import gzip
-from python_compat import StringBuffer, StringBufferBase, tarfile
+from python_compat import BytesBufferBase, bytes2str, imap, str2bytes, tarfile
 
 class SafeFile(object):
 	def __init__(self, fn, mode = 'r', keepOld = False):
@@ -32,14 +32,11 @@ class SafeFile(object):
 		self._fp.close()
 
 
-class VirtualFile(StringBufferBase):
+class VirtualFile(BytesBufferBase):
 	def __init__(self, name, lines):
-		StringBufferBase.__init__(self, str.join('', lines))
+		BytesBufferBase.__init__(self, str2bytes(str.join('', lines)))
 		self.name = name
 		self.size = len(self.getvalue())
-
-	def read(self, size):
-		return StringBufferBase.read(self, size).encode('ascii')
 
 	def getTarInfo(self):
 		info = tarfile.TarInfo(self.name)
@@ -49,16 +46,16 @@ class VirtualFile(StringBufferBase):
 
 class ZipFile(object):
 	def __init__(self, fn, mode):
-		if mode == 'r':
-			self._reader = StringBuffer(gzip.open(fn, mode).read().decode('ascii'))
-		if mode == 'w':
-			self._writer = gzip.open(fn, mode)
+		self._fp = gzip.open(fn, mode)
 
 	def write(self, data):
-		self._writer.write(data.encode('ascii'))
+		self._fp.write(str2bytes(data))
 
 	def readline(self):
-		return self._reader.readline()
+		return bytes2str(self._fp.readline())
 
 	def readlines(self):
-		return self._reader.readlines()
+		return imap(bytes2str, self._fp.readlines())
+
+	def close(self):
+		return self._fp.close()

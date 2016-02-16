@@ -13,12 +13,11 @@
 #-#  limitations under the License.
 
 import random
-from grid_control.config import TaggedConfigView
 from grid_control.gc_plugin import NamedPlugin
 from grid_control.parameters.config_param import ParameterConfig
 from grid_control.parameters.padapter import ParameterAdapter
 from grid_control.parameters.psource_base import ParameterSource
-from grid_control.parameters.psource_data import DataParameterSource
+from hpfwk import Plugin
 from python_compat import ifilter, imap, irange, lmap
 
 class ParameterFactory(NamedPlugin):
@@ -36,6 +35,7 @@ class ParameterFactory(NamedPlugin):
 
 
 	def getSource(self, config):
+		DataParameterSource = Plugin.getClass('DataParameterSource')
 		source = self._getRawSource(ParameterSource.getInstance('RNGParameterSource'))
 		if DataParameterSource.datasetsAvailable and not DataParameterSource.datasetsUsed:
 			source = ParameterSource.getInstance('CrossParameterSource', DataParameterSource.create(), source)
@@ -48,7 +48,7 @@ class BasicParameterFactory(ParameterFactory):
 		ParameterFactory.__init__(self, config, name)
 
 		# Get constants from [constants <tags...>]
-		configConstants = config.changeView(viewClass = TaggedConfigView,
+		configConstants = config.changeView(viewClass = 'TaggedConfigView',
 			setClasses = None, setSections = ['constants'], addTags = [self])
 		for cName in ifilter(lambda o: not o.endswith(' lookup'), configConstants.getOptions()):
 			self._addConstantPSource(configConstants, cName, cName.upper())

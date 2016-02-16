@@ -13,7 +13,7 @@
 #-#  limitations under the License.
 
 import os, sys, logging
-from hpfwk import NestedException
+from hpfwk.hpf_exceptions import NestedException
 
 class PluginError(NestedException):
 	pass
@@ -70,7 +70,7 @@ class Plugin(object):
 
 	def getClass(cls, clsName, modulePaths = None):
 		log = logging.getLogger('classloader.%s' % cls.__name__)
-		log.log(logging.DEBUG1, 'Loading class %s' % clsName)
+		log.log(logging.DEBUG1, 'Loading class %s', clsName)
 
 		# resolve class name/alias to complete class path 'myplugin -> module.submodule.MyPlugin'
 		clsMap = {}
@@ -90,30 +90,30 @@ class Plugin(object):
 				clsNameParts = clsName.split('.')
 				clsName = clsNameParts[-1]
 				clsModuleName = str.join('.', clsNameParts[:-1])
-				log.log(logging.DEBUG2, 'Importing module %s' % clsModuleName)
+				log.log(logging.DEBUG2, 'Importing module %s', clsModuleName)
 				oldSysPath = list(sys.path)
 				try:
 					sys.path.extend(modulePaths or [])
 					clsModuleList = [__import__(clsModuleName, {}, {}, [clsName])]
 				except Exception:
-					log.log(logging.DEBUG2, 'Unable to import module %s' % clsModuleName)
+					log.log(logging.DEBUG2, 'Unable to import module %s', clsModuleName)
 				sys.path = oldSysPath
 			elif hasattr(sys.modules['__main__'], clsName):
 				clsModuleList.append(sys.modules['__main__'])
 
 			clsLoadedList = []
 			for clsModule in clsModuleList:
-				log.log(logging.DEBUG2, 'Searching for class %s:%s' % (clsModule.__name__, clsName))
+				log.log(logging.DEBUG2, 'Searching for class %s:%s', clsModule.__name__, clsName)
 				try:
 					clsLoadedList.append(getattr(clsModule, clsName))
 				except Exception:
-					log.log(logging.DEBUG2, 'Unable to import class %s:%s' % (clsModule.__name__, clsName))
+					log.log(logging.DEBUG2, 'Unable to import class %s:%s', clsModule.__name__, clsName)
 
 			for clsLoaded in clsLoadedList:
 				if issubclass(clsLoaded, cls):
-					log.log(logging.DEBUG1, 'Successfully loaded class %s' % clsFormat(clsLoaded))
+					log.log(logging.DEBUG1, 'Successfully loaded class %s', clsFormat(clsLoaded))
 					return clsLoaded
-				log.log(logging.DEBUG, '%s is not of type %s!' % (clsFormat(clsLoaded), clsFormat(cls)))
+				log.log(logging.DEBUG, '%s is not of type %s!', clsFormat(clsLoaded), clsFormat(cls))
 
 			clsMapResult = clsMap.get(clsName.lower(), [])
 			if isinstance(clsMapResult, str):

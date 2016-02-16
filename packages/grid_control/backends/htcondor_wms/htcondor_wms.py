@@ -95,10 +95,10 @@ class HTCondor(BasicWMS):
 			"JDL" : config.getList("append opts", []),
 			}
 
-	@classmethod
-	def _initLogger(self):
-		self._logger = logging.getLogger('backend.%s' % self.__name__)
-		self._log = self._logger.log
+	def _initLogger(cls):
+		cls._logger = logging.getLogger('backend.%s' % cls.__name__)
+		cls._log = cls._logger.log
+	_initLogger = classmethod(_initLogger)
 
 	def _initPoolInterfaces(self, config):
 		"""
@@ -294,7 +294,7 @@ class HTCondor(BasicWMS):
 					break
 		return infoDict
 
-	@property
+	
 	def jdlRequirementMap(self):
 		jrm = {}
 		jrm.update(self._jobFeatureMapDef)
@@ -305,3 +305,4 @@ class HTCondor(BasicWMS):
 			if len(jrm[key]) == 1:
 				jrm[key].append('%s')
 		return jrm
+	jdlRequirementMap = property(jdlRequirementMap)

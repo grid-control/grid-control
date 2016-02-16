@@ -14,16 +14,15 @@
 
 import signal
 from grid_control import utils
-from grid_control.config import TaggedConfigView
 from grid_control.datasets import DataProvider, DataSplitter, PartitionProcessor
 from grid_control.gc_exceptions import UserError
-from grid_control.parameters import DataParameterSource, ParameterSource
+from grid_control.parameters import ParameterSource
 from grid_control.tasks.task_base import TaskModule
 from python_compat import lfilter
 
 class DataTask(TaskModule):
 	def setupJobParameters(self, config, pm):
-		config = config.changeView(viewClass = TaggedConfigView, addSections = ['dataset'])
+		config = config.changeView(viewClass = 'TaggedConfigView', addSections = ['dataset'])
 		self.dataSplitter = None
 		self.dataRefresh = -1
 		self._forceRefresh = config.getState('resync', detail = 'dataset', default = False)
@@ -48,6 +47,7 @@ class DataTask(TaskModule):
 		partProcessor = config.getCompositePlugin('partition processor',
 			'BasicPartitionProcessor LocationPartitionProcessor', 'MultiPartitionProcessor',
 			cls = PartitionProcessor).getInstance(config)
+		DataParameterSource = ParameterSource.getClass('DataParameterSource')
 		paramSource = DataParameterSource(config.getWorkPath(), 'data',
 			dataProvider, self.dataSplitter, partProcessor)
 		DataParameterSource.datasetsAvailable['data'] = paramSource
@@ -89,7 +89,7 @@ class DataTask(TaskModule):
 
 	def report(self, jobNum):
 		info = self.source.getJobInfo(jobNum)
-		keys = lfilter(lambda k: k.untracked == False, self.source.getJobKeys())
+		keys = lfilter(lambda k: not k.untracked, self.source.getJobKeys())
 		result = utils.filterDict(info, kF = lambda k: k in keys)
 		if self.dataSplitter:
 			result.pop('DATASETSPLIT')
