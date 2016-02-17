@@ -14,13 +14,14 @@
 
 import os
 from grid_control import utils
+from grid_control.gc_plugin import ConfigurablePlugin
 from grid_control.parameters.psource_base import ParameterInfo, ParameterMetadata, ParameterSource
 from grid_control.parameters.psource_file import GCDumpParameterSource
 from grid_control.utils.file_objects import ZipFile
-from hpfwk import APIError, Plugin
+from hpfwk import APIError
 from python_compat import identity, ifilter, imap, irange, ismap, itemgetter, lfilter, lmap, md5, set, sort_inplace, sorted, str2bytes
 
-class ParameterAdapter(Plugin):
+class ParameterAdapter(ConfigurablePlugin):
 	def __init__(self, config, source):
 		self._source = source
 		self._prune = True
@@ -121,19 +122,25 @@ class TrackedParameterAdapter(BasicParameterAdapter):
 
 	def readJob2PID(self):
 		fp = ZipFile(self._pathJob2PID, 'r')
-		self.maxN = int(fp.readline())
-		if not self.maxN:
-			self.maxN = None
-		mapInfo = ifilter(identity, imap(str.strip, fp.readline().split(',')))
-		self._mapJob2PID = dict(imap(lambda x: tuple(imap(lambda y: int(y.lstrip('!')), x.split(':'))), mapInfo))
-		self._activeMap = {}
+		try:
+			self.maxN = int(fp.readline())
+			if not self.maxN:
+				self.maxN = None
+			mapInfo = ifilter(identity, imap(str.strip, fp.readline().split(',')))
+			self._mapJob2PID = dict(imap(lambda x: tuple(imap(lambda y: int(y.lstrip('!')), x.split(':'))), mapInfo))
+			self._activeMap = {}
+		finally:
+			fp.close()
 
 	def writeJob2PID(self, fn):
 		fp = ZipFile(fn, 'w')
-		fp.write('%d\n' % max(0, self._rawSource.getMaxParameters()))
-		data = ifilter(lambda jobNum_pNum: jobNum_pNum[0] != jobNum_pNum[1], self._mapJob2PID.items())
-		datastr = lmap(lambda jobNum_pNum: '%d:%d' % jobNum_pNum, data)
-		fp.write('%s\n' % str.join(',', datastr))
+		try:
+			fp.write('%d\n' % max(0, self._rawSource.getMaxParameters()))
+			data = ifilter(lambda jobNum_pNum: jobNum_pNum[0] != jobNum_pNum[1], self._mapJob2PID.items())
+			datastr = lmap(lambda jobNum_pNum: '%d:%d' % jobNum_pNum, data)
+			fp.write('%s\n' % str.join(',', datastr))
+		finally:
+			fp.close()
 
 	def getJobInfo(self, jobNum): # Perform mapping between jobNum and parameter number
 		pNum = self._mapJob2PID.get(jobNum, jobNum)

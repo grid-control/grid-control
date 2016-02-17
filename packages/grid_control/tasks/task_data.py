@@ -38,7 +38,7 @@ class DataTask(TaskModule):
 		config.set('default lookup', 'DATASETNICK')
 
 		dataProvider = config.getCompositePlugin('dataset', '', ':MultiDatasetProvider:',
-			cls = DataProvider, requirePlugin = False).getInstance()
+			cls = DataProvider, requirePlugin = False).getBoundInstance()
 		splitterName = config.get('dataset splitter', 'FileBoundarySplitter')
 		splitterClass = dataProvider.checkSplitter(DataSplitter.getClass(splitterName))
 		self.dataSplitter = splitterClass(config)
@@ -46,7 +46,7 @@ class DataTask(TaskModule):
 		# Create and register dataset parameter source
 		partProcessor = config.getCompositePlugin('partition processor',
 			'BasicPartitionProcessor LocationPartitionProcessor', 'MultiPartitionProcessor',
-			cls = PartitionProcessor).getInstance(config)
+			cls = PartitionProcessor).getBoundInstance()
 		DataParameterSource = ParameterSource.getClass('DataParameterSource')
 		paramSource = DataParameterSource(config.getWorkPath(), 'data',
 			dataProvider, self.dataSplitter, partProcessor)

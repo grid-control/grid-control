@@ -14,13 +14,15 @@
 
 import os, time, fnmatch, operator
 from grid_control import utils
-from hpfwk import NestedException, Plugin
+from grid_control.gc_plugin import ConfigurablePlugin
+from grid_control.utils.data_structures import makeEnum
+from hpfwk import NestedException
 from python_compat import imap, irange, reduce
 
 class JobError(NestedException):
 	pass
 
-class Job:
+class Job(object):
 	__internals = ('wmsId', 'status')
 
 	def __init__(self):
@@ -120,11 +122,11 @@ class Job:
 		self.attempt = self.attempt + 1
 		self.submitted = time.time()
 
-utils.makeEnum(['INIT', 'SUBMITTED', 'DISABLED', 'READY', 'WAITING', 'QUEUED', 'ABORTED',
+makeEnum(['INIT', 'SUBMITTED', 'DISABLED', 'READY', 'WAITING', 'QUEUED', 'ABORTED',
 		'RUNNING', 'CANCELLED', 'DONE', 'FAILED', 'SUCCESS'], Job, useHash = False)
 
 
-class JobClass:
+class JobClass(object):
 	mkJobClass = lambda *fList: (reduce(operator.add, imap(lambda f: 1 << f, fList)), fList)
 	ATWMS = mkJobClass(Job.SUBMITTED, Job.WAITING, Job.READY, Job.QUEUED)
 	RUNNING = mkJobClass(Job.RUNNING)
@@ -137,7 +139,7 @@ class JobClass:
 	PROCESSED = mkJobClass(Job.SUCCESS, Job.FAILED, Job.CANCELLED, Job.ABORTED)
 
 
-class JobDB(Plugin):
+class JobDB(ConfigurablePlugin):
 	def __init__(self, config, jobLimit = -1, jobSelector = None):
 		self._dbPath = config.getWorkPath('jobs')
 		self._jobMap = self.readJobs(jobLimit)

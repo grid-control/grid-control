@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 #-#  Copyright 2014-2016 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,79 +14,18 @@
 #-#  limitations under the License.
 
 if __name__ == '__main__':
-	import os, sys, random
-	os.chdir(os.path.abspath(os.path.dirname(__file__)))
-	sys.path.append('.')
-	from python_compat import sorted, set, ifilter, imap, any
+	import os, sys
+	base_dir = os.path.abspath(os.path.dirname(__file__))
+	sys.path.append(base_dir)
+	from hpfwk.hpf_plugin import create_plugin_file
 
-	blacklist = ['/requests', '/xmpp', 'python_comp']
-	# import everything
-	def recurse(root):
-		tmp = root.lstrip('./').split('/')
-		files = os.listdir(root)
-		random.shuffle(files)
-		for entry in ifilter(lambda x: x != __file__, files):
-			path = os.path.join(root, entry)
-			if entry.startswith('.') or entry.endswith('pyc') or entry.startswith('__'):
-				continue
-			if any(imap(lambda black: black in path, blacklist)):
-				continue
+	def select(path):
+		for pat in ['/share', '_compat_', '/requests', '/xmpp']:
+			if pat in path:
+				return False
+		return True
 
-			if os.path.isdir(path) and os.path.exists(os.path.join(path, '__init__.py')):
-				if tmp == ['']:
-					yield('import %s' % (entry))
-				else:
-					yield('from %s import %s' % (str.join('.', tmp), entry))
-				for x in recurse(path):
-					yield x
-			elif os.path.isfile(path) and path.endswith('.py'):
-				entry = entry.replace('.py', '')
-				if tmp == ['']:
-					yield('from %s import *' % (entry))
-				else:
-					yield('from %s.%s import *' % (str.join('.', tmp), entry))
-
-
-	def sc(x, y):
-		try:
-			return issubclass(x, y)
-		except Exception:
-			pass
-		return None
-
-	clsList = []
-	from hpfwk import Plugin
-	from grid_control.gc_plugin import NamedPlugin
-
-	for imp in recurse('.'):
-		try:
-			exec(imp)
-			str = __builtins__.str # undo unicode magic by externals
-			clsList.extend(ifilter(lambda x: sc(x, Plugin), imap(eval, list(dir()))))
-		except Exception:
-			print('Unable to exec "%s"!' % imp)
-			raise
-
-	topClasses = [Plugin, NamedPlugin]
-	def getBaseNames(cls):
-		for topClass in topClasses:
-			if (topClass in cls.__bases__) and (cls not in topClasses):
-				return ['%s.%s' % (cls.__module__, cls.__name__)]
-		result = []
-		for clsBase in cls.__bases__:
-			result.extend(getBaseNames(clsBase))
-		return result
-
-	packages = {}
-	for cls in ifilter(getBaseNames, set(clsList)):
-		packages.setdefault(cls.__module__.split('.')[0], {}).setdefault(str.join(';', getBaseNames(cls)), []).append(cls)
-
-	for package in packages:
-		output = []
-		for baseClass in sorted(packages[package]):
-			outputLine = '%s:\n' % baseClass
-			for cls in sorted(packages[package][baseClass], key = lambda x: (x.__module__, x.__name__)):
-				if cls not in topClasses:
-					outputLine += '%s\t%s\n' % (cls.__module__, str.join(' ', cls.getClassNames()))
-			output.append(outputLine)
-		open(os.path.join(package, '.PLUGINS'), 'w').write(str.join('\n', output))
+	for package in os.listdir(base_dir):
+		package = os.path.abspath(os.path.join(base_dir, package))
+		if os.path.isdir(package):
+			create_plugin_file(package, select)

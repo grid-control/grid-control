@@ -14,7 +14,7 @@
 #-#  limitations under the License.
 
 import os, sys, time, random, optparse, gcSupport, threading
-from gcSupport import AccessToken, ClassSelector, FileInfoProcessor, Job, JobClass, storage, utils
+from gcSupport import ClassSelector, FileInfoProcessor, Job, JobClass, Plugin, storage, utils
 from grid_control.utils.thread_tools import start_thread
 from python_compat import ifilter, imap, irange, lfilter, lmap, md5
 
@@ -178,7 +178,7 @@ def dlfs_rm(path, msg):
 
 def realmain(opts, args):
 	config = gcSupport.getConfig(configDict = {'access': {'ignore warnings': 'True'}})
-	token = AccessToken.getInstance(opts.token, config, 'access')#, OSLayer.create(config))
+	token = Plugin.getClass('AccessToken').createInstance(opts.token, config, 'access')#, OSLayer.create(config))
 	(workDir, config, jobDB) = gcSupport.initGC(args)
 	jobList = jobDB.getJobs(ClassSelector(JobClass.SUCCESS))
 

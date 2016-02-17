@@ -1,262 +1,408 @@
-grid_control.backends.access.AccessToken:
-grid_control.backends.access	AFSAccessToken AFSProxy
-grid_control.backends.access	AccessToken
-grid_control.backends.access	MultiAccessToken
-grid_control.backends.access	RefreshableAccessToken
-grid_control.backends.access	TimedAccessToken
-grid_control.backends.access	TrivialAccessToken TrivialProxy
-grid_control.backends.access	VomsProxy
+  * hpfwk.hpf_plugin Plugin
 
-grid_control.backends.broker.Broker:
-grid_control.backends.broker	Broker
-grid_control.backends.broker_basic	CoverageBroker
-grid_control.backends.broker_basic	FilterBroker
-grid_control.backends.broker_basic	RandomBroker
-grid_control.backends.broker_basic	SimpleBroker
-grid_control.backends.broker_basic	StorageBroker
-grid_control.backends.broker_basic	UserBroker
+   * grid_control.config.cfiller_base ConfigFiller
 
-grid_control.backends.condor_wms.processhandler.ProcessHandler:
-grid_control.backends.condor_wms.processhandler	GSISSHProcessHandler
-grid_control.backends.condor_wms.processhandler	LocalProcessHandler
-grid_control.backends.condor_wms.processhandler	ProcessHandler
-grid_control.backends.condor_wms.processhandler	SSHProcessHandler
+    * grid_control.config.cfiller_base CompatConfigFiller
 
-grid_control.backends.htcondor_wms.htcondor_schedd.HTCScheddBase:
-grid_control.backends.htcondor_wms.htcondor_schedd	HTCScheddBase
-grid_control.backends.htcondor_wms.htcondor_schedd	HTCScheddCLIBase
-grid_control.backends.htcondor_wms.htcondor_schedd	HTCScheddLocal
-grid_control.backends.htcondor_wms.htcondor_schedd	HTCScheddPyBase
-grid_control.backends.htcondor_wms.htcondor_schedd	HTCScheddSSH
-grid_control.backends.htcondor_wms.htcondor_schedd	HTCScheddSpool
+    * grid_control.config.cfiller_base DictConfigFiller
 
-grid_control.backends.htcondor_wms.processadapter.ProcessAdapterInterface:
-grid_control.backends.htcondor_wms.processadapter	GSISSHProcessAdapter
-grid_control.backends.htcondor_wms.processadapter	LocalProcessAdapter
-grid_control.backends.htcondor_wms.processadapter	ProcessAdapterInterface
-grid_control.backends.htcondor_wms.processadapter	SSHProcessAdapter
+     * grid_control.config.cfiller_base PythonConfigFiller
 
-grid_control.backends.storage.StorageManager:
-grid_control.backends.storage	LocalSBStorageManager
-grid_control.backends.storage	SEStorageManager
-grid_control.backends.storage	StorageManager
+    * grid_control.config.cfiller_base FileConfigFiller
 
-grid_control.backends.wms.WMS:
-grid_control.backends.condor_wms.condor_wms	Condor
-grid_control.backends.htcondor_wms.htcondor_wms	HTCondor
-grid_control.backends.wms	BasicWMS
-grid_control.backends.wms	InactiveWMS inactive
-grid_control.backends.wms	WMS
-grid_control.backends.wms_edg	EuropeanDataGrid EDG LCG
-grid_control.backends.wms_glite	Glite
-grid_control.backends.wms_glitewms	GliteWMS grid
-grid_control.backends.wms_glitewms_direct	GliteWMSDirect
-grid_control.backends.wms_grid	GridWMS
-grid_control.backends.wms_gridengine	GridEngine SGE UGE OGE
-grid_control.backends.wms_host	Host Localhost
-grid_control.backends.wms_local	Local
-grid_control.backends.wms_local	LocalWMS
-grid_control.backends.wms_lsf	LSF
-grid_control.backends.wms_multi	MultiWMS
-grid_control.backends.wms_pbs	PBS
-grid_control.backends.wms_pbsge	PBSGECommon
-grid_control.backends.wms_slurm	JMS SLURM
-grid_control.backends.wms_thread	ThreadedMultiWMS
+     * grid_control.config.cfiller_base DefaultFilesConfigFiller
 
-grid_control.config.cfiller_base.ConfigFiller:
-grid_control.config.cfiller_base	CompatConfigFiller
-grid_control.config.cfiller_base	ConfigFiller
-grid_control.config.cfiller_base	DefaultFilesConfigFiller
-grid_control.config.cfiller_base	DictConfigFiller
-grid_control.config.cfiller_base	FileConfigFiller
-grid_control.config.cfiller_base	GeneralFileConfigFiller
-grid_control.config.cfiller_base	MultiConfigFiller
-grid_control.config.cfiller_base	PythonConfigFiller
-grid_control.config.cfiller_base	StringConfigFiller
+    * grid_control.config.cfiller_base MultiConfigFiller
 
-grid_control.config.cview_base.ConfigView:
-grid_control.config.cview_base	ConfigView
-grid_control.config.cview_base	HistoricalConfigView
-grid_control.config.cview_base	SimpleConfigView
-grid_control.config.cview_tagged	TaggedConfigView
+     * grid_control.config.cfiller_base GeneralFileConfigFiller
 
-grid_control.config.matcher_base.ListFilterBase:
-grid_control.config.matcher_base	ListFilterBase
+    * grid_control.config.cfiller_base StringConfigFiller
 
-grid_control.config.matcher_base.MatcherBase:
-grid_control.config.matcher_base	AdvancedBlackWhiteMatcher blackwhite2
-grid_control.config.matcher_base	BasicMatcher
-grid_control.config.matcher_base	BlackWhiteMatcher blackwhite
-grid_control.config.matcher_base	EndMatcher end
-grid_control.config.matcher_base	EqualMatcher equal
-grid_control.config.matcher_base	ExprMatcher expr eval
-grid_control.config.matcher_base	MatcherBase
-grid_control.config.matcher_base	RegExMatcher regex
-grid_control.config.matcher_base	StartMatcher start
+   * grid_control.config.cview_base ConfigView
 
-grid_control.config.matcher_base.MediumListFilter:
-grid_control.config.matcher_base	MediumListFilter try_strict
+    * grid_control.config.cview_base HistoricalConfigView
 
-grid_control.config.matcher_base.StrictListFilter:
-grid_control.config.matcher_base	StrictListFilter strict require
+     * grid_control.config.cview_base SimpleConfigView
 
-grid_control.config.matcher_base.WeakListFilter:
-grid_control.config.matcher_base	WeakListFilter weak prefer
+      * grid_control.config.cview_tagged TaggedConfigView
 
-grid_control.datasets.dproc_base.DataProcessor:
-grid_control.datasets.dproc_base	DataProcessor
-grid_control.datasets.dproc_base	MultiDataProcessor
-grid_control.datasets.dproc_basic	EmptyDataProcessor
-grid_control.datasets.dproc_basic	EntriesConsistencyDataProcessor
-grid_control.datasets.dproc_basic	EntriesCountDataProcessor EventsCountDataProcessor
-grid_control.datasets.dproc_basic	LocationDataProcessor
-grid_control.datasets.dproc_basic	StatsDataProcessor
-grid_control.datasets.dproc_basic	URLCountDataProcessor FileCountDataProcessor
-grid_control.datasets.dproc_basic	URLDataProcessor FileDataProcessor
-grid_control.datasets.dproc_basic	URLRegexDataProcessor FileRegexDataProcessor
-grid_control.datasets.dproc_basic	UniqueDataProcessor
-grid_control.datasets.dproc_conf	PartitionEstimator SplitSettingEstimator
-grid_control.datasets.dproc_nick	InlineNickNameProducer
-grid_control.datasets.dproc_nick	NickNameProducer
-grid_control.datasets.dproc_nick	SimpleNickNameProducer
+   * grid_control.gc_plugin ConfigurablePlugin
 
-grid_control.datasets.pproc_base.PartitionProcessor:
-grid_control.datasets.pproc_base	BasicPartitionProcessor
-grid_control.datasets.pproc_base	LocationPartitionProcessor
-grid_control.datasets.pproc_base	MetaPartitionProcessor
-grid_control.datasets.pproc_base	MultiPartitionProcessor
-grid_control.datasets.pproc_base	PartitionProcessor
+    * grid_control.datasets.dproc_base DataProcessor
 
-grid_control.datasets.provider_base.DataProvider:
-grid_control.datasets.provider_base	DataProvider
-grid_control.datasets.provider_basic	FileProvider file
-grid_control.datasets.provider_basic	ListProvider list
-grid_control.datasets.provider_multi	MultiDatasetProvider
-grid_control.datasets.provider_scan	GCProvider gc
-grid_control.datasets.provider_scan	ScanProvider scan
-grid_control.datasets.provider_scan	ScanProviderBase
+     * grid_control.datasets.dproc_basic EmptyDataProcessor
 
-grid_control.datasets.scanner_base.InfoScanner:
-grid_control.datasets.scanner_base	InfoScanner
-grid_control.datasets.scanner_basic	AddFilePrefix
-grid_control.datasets.scanner_basic	DetermineEvents
-grid_control.datasets.scanner_basic	FilesFromDataProvider
-grid_control.datasets.scanner_basic	FilesFromJobInfo
-grid_control.datasets.scanner_basic	FilesFromLS
-grid_control.datasets.scanner_basic	JobInfoFromOutputDir
-grid_control.datasets.scanner_basic	MatchDelimeter
-grid_control.datasets.scanner_basic	MatchOnFilename
-grid_control.datasets.scanner_basic	MetadataFromTask
-grid_control.datasets.scanner_basic	OutputDirsFromConfig
-grid_control.datasets.scanner_basic	OutputDirsFromWork
-grid_control.datasets.scanner_basic	ParentLookup
+     * grid_control.datasets.dproc_basic EntriesConsistencyDataProcessor
 
-grid_control.datasets.splitter_base.DataSplitter:
-grid_control.datasets.splitter_base	DataSplitter
-grid_control.datasets.splitter_basic	BlockBoundarySplitter
-grid_control.datasets.splitter_basic	FLSplitStacker
-grid_control.datasets.splitter_basic	FileBoundarySplitter
-grid_control.datasets.splitter_basic	FileLevelSplitter
-grid_control.datasets.splitter_basic	HybridSplitter
-grid_control.datasets.splitter_event	EventBoundarySplitter
-grid_control.datasets.splitter_meta	MetadataSplitter
-grid_control.datasets.splitter_meta	RunSplitter
-grid_control.datasets.splitter_meta	UserMetadataSplitter
+     * grid_control.datasets.dproc_basic EntriesCountDataProcessor EventsCountDataProcessor
 
-grid_control.gui.GUI:
-grid_control.gui	GUI
-grid_control.gui	SimpleConsole
+     * grid_control.datasets.dproc_basic LocationDataProcessor
 
-grid_control.job_db.JobDB:
-grid_control.job_db	JobDB
-grid_control.job_db_zip	Migrate2ZippedJobDB
-grid_control.job_db_zip	ZippedJobDB
+     * grid_control.datasets.dproc_base MultiDataProcessor
 
-grid_control.job_manager.JobManager:
-grid_control.job_manager	JobManager
-grid_control.job_manager	SimpleJobManager
+     * grid_control.datasets.dproc_nick NickNameProducer
 
-grid_control.job_selector.JobSelector:
-grid_control.job_selector	AndJobSelector
-grid_control.job_selector	BackendSelector backend wms
-grid_control.job_selector	ClassSelector
-grid_control.job_selector	IDSelector id
-grid_control.job_selector	JobSelector
-grid_control.job_selector	MultiJobSelector
-grid_control.job_selector	NickSelector nick
-grid_control.job_selector	QueueSelector queue
-grid_control.job_selector	RegExSelector
-grid_control.job_selector	SiteSelector site
-grid_control.job_selector	StateSelector state
-grid_control.job_selector	StuckSelector stuck
-grid_control.job_selector	VarSelector var
+      * grid_control.datasets.dproc_nick InlineNickNameProducer
 
-grid_control.monitoring.EventHandler:
-grid_control.monitoring	EventHandler
-grid_control.monitoring	Monitoring
-grid_control.monitoring	MultiMonitor
-grid_control.monitoring	ScriptMonitoring scripts
+      * grid_control.datasets.dproc_nick SimpleNickNameProducer
 
-grid_control.output_processor.OutputProcessor:
-grid_control.output_processor	FileInfoProcessor
-grid_control.output_processor	JobInfoProcessor
-grid_control.output_processor	OutputProcessor
-grid_control.output_processor	SandboxProcessor
-grid_control.output_processor	TaskOutputProcessor
+     * grid_control.datasets.dproc_conf PartitionEstimator SplitSettingEstimator
 
-grid_control.parameters.padapter.ParameterAdapter:
-grid_control.parameters.padapter	BasicParameterAdapter
-grid_control.parameters.padapter	ParameterAdapter
-grid_control.parameters.padapter	TrackedParameterAdapter
+     * grid_control.datasets.dproc_basic StatsDataProcessor
 
-grid_control.parameters.pfactory_base.ParameterFactory:
-grid_control.parameters.pfactory_base	BasicParameterFactory
-grid_control.parameters.pfactory_base	ParameterFactory
-grid_control.parameters.pfactory_modular	ModularParameterFactory
-grid_control.parameters.pfactory_simple	SimpleParameterFactory
+     * grid_control.datasets.dproc_basic URLCountDataProcessor FileCountDataProcessor
 
-grid_control.parameters.psource_base.ParameterSource:
-grid_control.parameters.psource_base	ParameterSource
-grid_control.parameters.psource_basic	CollectParameterSource
-grid_control.parameters.psource_basic	ConstParameterSource
-grid_control.parameters.psource_basic	CounterParameterSource
-grid_control.parameters.psource_basic	FormatterParameterSource
-grid_control.parameters.psource_basic	InternalParameterSource
-grid_control.parameters.psource_basic	KeyParameterSource
-grid_control.parameters.psource_basic	RNGParameterSource
-grid_control.parameters.psource_basic	RequirementParameterSource
-grid_control.parameters.psource_basic	SimpleFileParameterSource
-grid_control.parameters.psource_basic	SimpleParameterSource
-grid_control.parameters.psource_basic	SingleParameterSource
-grid_control.parameters.psource_data	DataParameterSource
-grid_control.parameters.psource_file	CSVParameterSource
-grid_control.parameters.psource_file	GCDumpParameterSource
-grid_control.parameters.psource_lookup	SimpleLookupParameterSource
-grid_control.parameters.psource_lookup	SwitchingLookupParameterSource
-grid_control.parameters.psource_meta	BaseMultiParameterSource
-grid_control.parameters.psource_meta	BaseZipParameterSource
-grid_control.parameters.psource_meta	ChainParameterSource
-grid_control.parameters.psource_meta	CombineParameterSource
-grid_control.parameters.psource_meta	CrossParameterSource
-grid_control.parameters.psource_meta	ErrorParameterSource
-grid_control.parameters.psource_meta	ForwardingParameterSource
-grid_control.parameters.psource_meta	MultiParameterSource
-grid_control.parameters.psource_meta	RangeParameterSource
-grid_control.parameters.psource_meta	RepeatParameterSource
-grid_control.parameters.psource_meta	ZipLongParameterSource
-grid_control.parameters.psource_meta	ZipShortParameterSource
+     * grid_control.datasets.dproc_basic URLDataProcessor FileDataProcessor
 
-grid_control.report.Report:
-grid_control.report	BasicReport
-grid_control.report	LocationReport
-grid_control.report	MultiReport
-grid_control.report	Report
+      * grid_control.datasets.dproc_basic URLRegexDataProcessor FileRegexDataProcessor
 
-grid_control.tasks.task_base.TaskModule:
-grid_control.tasks.task_base	TaskModule
-grid_control.tasks.task_data	DataTask
-grid_control.tasks.task_root	ROOTTask ROOTMod
-grid_control.tasks.task_user	UserTask UserMod
+     * grid_control.datasets.dproc_basic UniqueDataProcessor
 
-grid_control.workflow.Workflow:
-grid_control.workflow	Workflow
+    * grid_control.datasets.provider_base DataProvider
+
+     * grid_control.datasets.provider_basic FileProvider file
+
+     * grid_control.datasets.provider_basic ListProvider list
+
+     * grid_control.datasets.provider_multi MultiDatasetProvider
+
+     * grid_control.datasets.provider_scan ScanProviderBase
+
+      * grid_control.datasets.provider_scan GCProvider gc
+
+      * grid_control.datasets.provider_scan ScanProvider scan
+
+    * grid_control.datasets.splitter_base DataSplitter
+
+     * grid_control.datasets.splitter_event EventBoundarySplitter
+
+     * grid_control.datasets.splitter_basic FileLevelSplitter
+
+      * grid_control.datasets.splitter_basic BlockBoundarySplitter
+
+      * grid_control.datasets.splitter_basic FLSplitStacker
+
+      * grid_control.datasets.splitter_basic FileBoundarySplitter
+
+      * grid_control.datasets.splitter_basic HybridSplitter
+
+      * grid_control.datasets.splitter_meta MetadataSplitter
+
+       * grid_control.datasets.splitter_meta RunSplitter
+
+       * grid_control.datasets.splitter_meta UserMetadataSplitter
+
+    * grid_control.gui GUI
+
+     * grid_control.gui SimpleConsole
+
+    * grid_control.datasets.scanner_base InfoScanner
+
+     * grid_control.datasets.scanner_basic AddFilePrefix
+
+     * grid_control.datasets.scanner_basic DetermineEvents
+
+     * grid_control.datasets.scanner_basic FilesFromDataProvider
+
+     * grid_control.datasets.scanner_basic FilesFromJobInfo
+
+     * grid_control.datasets.scanner_basic FilesFromLS
+
+     * grid_control.datasets.scanner_basic JobInfoFromOutputDir
+
+     * grid_control.datasets.scanner_basic MatchDelimeter
+
+     * grid_control.datasets.scanner_basic MatchOnFilename
+
+     * grid_control.datasets.scanner_basic MetadataFromTask
+
+     * grid_control.datasets.scanner_basic OutputDirsFromConfig
+
+     * grid_control.datasets.scanner_basic OutputDirsFromWork
+
+     * grid_control.datasets.scanner_basic ParentLookup
+
+    * grid_control.job_db JobDB
+
+     * grid_control.job_db_zip ZippedJobDB
+
+      * grid_control.job_db_zip Migrate2ZippedJobDB
+
+    * grid_control.config.matcher_base MatcherBase
+
+     * grid_control.config.matcher_base BasicMatcher
+
+      * grid_control.config.matcher_base EndMatcher end
+
+      * grid_control.config.matcher_base EqualMatcher equal
+
+      * grid_control.config.matcher_base StartMatcher start
+
+     * grid_control.config.matcher_base BlackWhiteMatcher blackwhite
+
+      * grid_control.config.matcher_base AdvancedBlackWhiteMatcher blackwhite2
+
+     * grid_control.config.matcher_base ExprMatcher expr eval
+
+     * grid_control.config.matcher_base RegExMatcher regex
+
+    * grid_control.gc_plugin NamedPlugin
+
+     * grid_control.backends.access AccessToken
+
+      * grid_control.backends.access MultiAccessToken
+
+      * grid_control.backends.access TimedAccessToken
+
+       * grid_control.backends.access RefreshableAccessToken
+
+        * grid_control.backends.access AFSAccessToken AFSProxy
+
+       * grid_control.backends.access VomsProxy
+
+      * grid_control.backends.access TrivialAccessToken TrivialProxy
+
+     * grid_control.backends.broker Broker
+
+      * grid_control.backends.broker_basic CoverageBroker
+
+      * grid_control.backends.broker_basic RandomBroker
+
+      * grid_control.backends.broker_basic StorageBroker
+
+      * grid_control.backends.broker_basic UserBroker
+
+       * grid_control.backends.broker_basic FilterBroker
+
+        * grid_control.backends.broker_basic SimpleBroker
+
+     * grid_control.monitoring EventHandler
+
+      * grid_control.monitoring Monitoring
+
+       * grid_control.monitoring MultiMonitor
+
+       * grid_control.monitoring ScriptMonitoring scripts
+
+     * grid_control.job_manager JobManager
+
+      * grid_control.job_manager SimpleJobManager
+
+     * grid_control.parameters.pfactory_base ParameterFactory
+
+      * grid_control.parameters.pfactory_base BasicParameterFactory
+
+       * grid_control.parameters.pfactory_modular ModularParameterFactory
+
+       * grid_control.parameters.pfactory_simple SimpleParameterFactory
+
+     * grid_control.backends.storage StorageManager
+
+      * grid_control.backends.storage LocalSBStorageManager
+
+      * grid_control.backends.storage SEStorageManager
+
+     * grid_control.tasks.task_base TaskModule
+
+      * grid_control.tasks.task_data DataTask
+
+       * grid_control.tasks.task_user UserTask UserMod
+
+        * grid_control.tasks.task_root ROOTTask ROOTMod
+
+     * grid_control.backends.wms WMS
+
+      * grid_control.backends.wms BasicWMS
+
+       * grid_control.backends.condor_wms.condor_wms Condor
+
+       * grid_control.backends.wms_grid GridWMS
+
+        * grid_control.backends.wms_edg EuropeanDataGrid EDG LCG
+
+        * grid_control.backends.wms_glite Glite
+
+        * grid_control.backends.wms_glitewms GliteWMS grid
+
+         * grid_control.backends.wms_glitewms_direct GliteWMSDirect grid
+
+       * grid_control.backends.htcondor_wms.htcondor_wms HTCondor
+
+       * grid_control.backends.wms_local LocalWMS
+
+        * grid_control.backends.wms_host Host Localhost
+
+        * grid_control.backends.wms_slurm JMS SLURM
+
+        * grid_control.backends.wms_lsf LSF
+
+        * grid_control.backends.wms_pbsge PBSGECommon
+
+         * grid_control.backends.wms_gridengine GridEngine SGE UGE OGE
+
+         * grid_control.backends.wms_pbs PBS
+
+      * grid_control.backends.wms InactiveWMS inactive
+
+      * grid_control.backends.wms_local Local
+
+      * grid_control.backends.wms_multi MultiWMS
+
+       * grid_control.backends.wms_thread ThreadedMultiWMS
+
+     * grid_control.workflow Workflow
+
+    * grid_control.output_processor OutputProcessor
+
+     * grid_control.output_processor JobInfoProcessor
+
+      * grid_control.output_processor FileInfoProcessor
+
+     * grid_control.output_processor TaskOutputProcessor
+
+      * grid_control.output_processor SandboxProcessor
+
+    * grid_control.parameters.padapter ParameterAdapter
+
+     * grid_control.parameters.padapter BasicParameterAdapter
+
+      * grid_control.parameters.padapter TrackedParameterAdapter
+
+    * grid_control.datasets.pproc_base PartitionProcessor
+
+     * grid_control.datasets.pproc_base BasicPartitionProcessor
+
+     * grid_control.datasets.pproc_base LocationPartitionProcessor
+
+     * grid_control.datasets.pproc_base MetaPartitionProcessor
+
+     * grid_control.datasets.pproc_base MultiPartitionProcessor
+
+   * grid_control.backends.htcondor_wms.htcondor_schedd HTCScheddBase
+
+    * grid_control.backends.htcondor_wms.htcondor_schedd HTCScheddCLIBase
+
+     * grid_control.backends.htcondor_wms.htcondor_schedd HTCScheddLocal
+
+      * grid_control.backends.htcondor_wms.htcondor_schedd HTCScheddSpool
+
+     * grid_control.backends.htcondor_wms.htcondor_schedd HTCScheddSSH
+
+    * grid_control.backends.htcondor_wms.htcondor_schedd HTCScheddPyBase
+
+   * grid_control.job_selector JobSelector
+
+    * grid_control.job_selector AndJobSelector
+
+    * grid_control.job_selector ClassSelector
+
+    * grid_control.job_selector IDSelector id
+
+    * grid_control.job_selector MultiJobSelector
+
+    * grid_control.job_selector RegExSelector
+
+     * grid_control.job_selector BackendSelector backend wms
+
+     * grid_control.job_selector NickSelector nick
+
+     * grid_control.job_selector QueueSelector queue
+
+     * grid_control.job_selector SiteSelector site
+
+     * grid_control.job_selector StateSelector state
+
+    * grid_control.job_selector StuckSelector stuck
+
+    * grid_control.job_selector VarSelector var
+
+   * grid_control.config.matcher_base ListFilterBase
+
+   * grid_control.config.matcher_base MediumListFilter try_strict
+
+   * grid_control.parameters.psource_base ParameterSource
+
+    * grid_control.parameters.psource_meta BaseMultiParameterSource
+
+     * grid_control.parameters.psource_meta MultiParameterSource
+
+      * grid_control.parameters.psource_meta BaseZipParameterSource
+
+       * grid_control.parameters.psource_meta ZipLongParameterSource
+
+        * grid_control.parameters.psource_meta CombineParameterSource
+
+       * grid_control.parameters.psource_meta ZipShortParameterSource
+
+      * grid_control.parameters.psource_meta ChainParameterSource
+
+       * grid_control.parameters.psource_meta ErrorParameterSource
+
+      * grid_control.parameters.psource_meta CrossParameterSource
+
+      * grid_control.parameters.psource_meta RepeatParameterSource
+
+    * grid_control.parameters.psource_data DataParameterSource
+
+    * grid_control.parameters.psource_meta ForwardingParameterSource
+
+     * grid_control.parameters.psource_meta RangeParameterSource
+
+    * grid_control.parameters.psource_file GCDumpParameterSource
+
+    * grid_control.parameters.psource_basic InternalParameterSource
+
+     * grid_control.parameters.psource_file CSVParameterSource
+
+    * grid_control.parameters.psource_basic KeyParameterSource
+
+    * grid_control.parameters.psource_basic RequirementParameterSource
+
+    * grid_control.parameters.psource_basic SingleParameterSource
+
+     * grid_control.parameters.psource_basic CollectParameterSource
+
+     * grid_control.parameters.psource_basic ConstParameterSource
+
+     * grid_control.parameters.psource_basic CounterParameterSource
+
+     * grid_control.parameters.psource_basic FormatterParameterSource
+
+     * grid_control.parameters.psource_basic RNGParameterSource
+
+     * grid_control.parameters.psource_lookup SimpleLookupParameterSource
+
+     * grid_control.parameters.psource_basic SimpleParameterSource
+
+      * grid_control.parameters.psource_basic SimpleFileParameterSource
+
+     * grid_control.parameters.psource_lookup SwitchingLookupParameterSource
+
+   * grid_control.backends.htcondor_wms.processadapter ProcessAdapterInterface
+
+    * grid_control.backends.htcondor_wms.processadapter LocalProcessAdapter
+
+    * grid_control.backends.htcondor_wms.processadapter SSHProcessAdapter
+
+     * grid_control.backends.htcondor_wms.processadapter GSISSHProcessAdapter
+
+   * grid_control.backends.condor_wms.processhandler ProcessHandler
+
+    * grid_control.backends.condor_wms.processhandler LocalProcessHandler
+
+    * grid_control.backends.condor_wms.processhandler SSHProcessHandler
+
+     * grid_control.backends.condor_wms.processhandler GSISSHProcessHandler
+
+   * grid_control.report Report
+
+    * grid_control.report BasicReport
+
+    * grid_control.report LocationReport
+
+    * grid_control.report MultiReport
+
+   * grid_control.config.matcher_base StrictListFilter strict require
+
+   * grid_control.config.matcher_base WeakListFilter weak prefer
+

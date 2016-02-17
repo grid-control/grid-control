@@ -75,7 +75,6 @@ class ANSIGUI(GUI):
 	def __init__(self, config, workflow):
 		config.set('report', 'BasicBarReport')
 		GUI.__init__(self, config, workflow)
-		self._report = self._reportClass.getInstance(self._workflow.jobManager.jobDB, self._workflow.task)
 		self._reportHeight = None
 
 	def displayWorkflow(self):
@@ -138,7 +137,6 @@ class ANSIGUI(GUI):
 				sys.stderr = GUIStream(saved[1], screen)
 				workflow.jobCycle(guiWait)
 			finally:
-				if sys.modules['__main__'].log: del sys.modules['__main__'].log
 				sys.stdout, sys.stderr, utils.ActivityLog = saved
 				screen.setscrreg()
 				screen.move(1, 0)

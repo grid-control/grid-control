@@ -4,6 +4,5 @@ packages/grid_control/backends/htcondor_wms/*
 packages/grid_control_cms/DashboardAPI/*
 packages/grid_control_cms/share/fragmentForCMSSW.py
 packages/grid_control_gui/xmpp/*
-packages/gcUpdatePlugins.py
 packages/python_compat*
 packages/requests/*

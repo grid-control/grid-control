@@ -19,6 +19,7 @@ from grid_control import utils
 from grid_control.backends.access import AccessToken
 from grid_control.backends.storage import StorageManager
 from grid_control.gc_plugin import NamedPlugin
+from grid_control.utils.data_structures import makeEnum
 from grid_control.utils.file_objects import VirtualFile
 from grid_control.utils.gc_itertools import ichain, lchain
 from hpfwk import AbstractError, NestedException
@@ -91,7 +92,7 @@ class WMS(NamedPlugin):
 		except Exception:
 			return log.warning('Unable to parse %r!', fn)
 	parseJobInfo = staticmethod(parseJobInfo)
-utils.makeEnum(['WALLTIME', 'CPUTIME', 'MEMORY', 'CPUS', 'BACKEND', 'SITES', 'QUEUES', 'SOFTWARE', 'STORAGE'], WMS)
+makeEnum(['WALLTIME', 'CPUTIME', 'MEMORY', 'CPUS', 'BACKEND', 'SITES', 'QUEUES', 'SOFTWARE', 'STORAGE'], WMS)
 
 
 class InactiveWMS(WMS):
@@ -100,7 +101,7 @@ class InactiveWMS(WMS):
 	def __init__(self, config, wmsName):
 		WMS.__init__(self, config, wmsName)
 		self._token = config.getCompositePlugin(['access token', 'proxy'], 'TrivialAccessToken',
-			'MultiAccessToken', cls = AccessToken, inherit = True, tags = [self]).getInstance()
+			'MultiAccessToken', cls = AccessToken, inherit = True, tags = [self]).getBoundInstance()
 
 	def canSubmit(self, neededTime, canCurrentlySubmit):
 		return True
@@ -139,13 +140,13 @@ class BasicWMS(WMS):
 
 		# Initialise access token, broker and storage manager
 		self._token = config.getCompositePlugin(['access token', 'proxy'], 'TrivialAccessToken',
-			'MultiAccessToken', cls = AccessToken, inherit = True, tags = [self]).getInstance()
+			'MultiAccessToken', cls = AccessToken, inherit = True, tags = [self]).getBoundInstance()
 
 		# UI -> SE -> WN
-		self.smSEIn = config.getPlugin('se input manager', 'SEStorageManager', cls = StorageManager, tags = [self]).getInstance('se', 'se input', 'SE_INPUT')
-		self.smSBIn = config.getPlugin('sb input manager', 'LocalSBStorageManager', cls = StorageManager, tags = [self]).getInstance('sandbox', 'sandbox', 'SB_INPUT')
+		self.smSEIn = config.getPlugin('se input manager', 'SEStorageManager', cls = StorageManager, tags = [self]).getBoundInstance('se', 'se input', 'SE_INPUT')
+		self.smSBIn = config.getPlugin('sb input manager', 'LocalSBStorageManager', cls = StorageManager, tags = [self]).getBoundInstance('sandbox', 'sandbox', 'SB_INPUT')
 		# UI <- SE <- WN
-		self.smSEOut = config.getPlugin('se output manager', 'SEStorageManager', cls = StorageManager, tags = [self]).getInstance('se', 'se output', 'SE_OUTPUT')
+		self.smSEOut = config.getPlugin('se output manager', 'SEStorageManager', cls = StorageManager, tags = [self]).getBoundInstance('se', 'se output', 'SE_OUTPUT')
 		self.smSBOut = None
 
 

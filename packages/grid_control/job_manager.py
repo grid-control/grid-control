@@ -34,10 +34,10 @@ class JobManager(NamedPlugin):
 		self.jobLimit = config.getInt('jobs', -1, onChange = None)
 		selected = JobSelector.create(config.get('selected', '', onChange = None), task = self._task)
 		jobDBClass = config.getPlugin('jobdb', 'JobDB', cls = JobDB)
-		self.jobDB = jobDBClass.getInstance(config, self.getMaxJobs(self._task), selected)
+		self.jobDB = jobDBClass.getBoundInstance(self.getMaxJobs(self._task), selected)
 		self.disableLog = config.getWorkPath('disabled')
 		outputProcessorClass = config.getPlugin('output processor', 'SandboxProcessor', cls = TaskOutputProcessor)
-		self._outputProcessor = outputProcessorClass.getInstance(task)
+		self._outputProcessor = outputProcessorClass.getBoundInstance(task)
 
 		self.timeout = config.getTime('queue timeout', -1, onChange = None)
 		self.inFlight = config.getInt('in flight', -1, onChange = None)
@@ -273,7 +273,7 @@ class JobManager(NamedPlugin):
 		if len(jobs) == 0:
 			return
 		if showJobs:
-			self._reportClass.getInstance(self.jobDB, self._task, jobs).display()
+			self._reportClass.getBoundInstance(self.jobDB, self._task, jobs).display()
 		if interactive and not utils.getUserBool('Do you really want to cancel these jobs?', True):
 			return
 
@@ -292,7 +292,7 @@ class JobManager(NamedPlugin):
 
 		if len(jobs) > 0:
 			self._log_user.warning('There was a problem with cancelling the following jobs:')
-			self._reportClass.getInstance(self.jobDB, self._task, jobs).display()
+			self._reportClass.getBoundInstance(self.jobDB, self._task, jobs).display()
 			if (interactive and utils.getUserBool('Do you want to mark them as cancelled?', True)) or not interactive:
 				lmap(mark_cancelled, jobs)
 		if interactive:
@@ -311,7 +311,7 @@ class JobManager(NamedPlugin):
 		jobs = self.jobDB.getJobs(JobSelector.create(select, task = self._task))
 		if jobs:
 			self._log_user.warning('Resetting the following jobs:')
-			self._reportClass.getInstance(self.jobDB, self._task, jobs).display()
+			self._reportClass.getBoundInstance(self.jobDB, self._task, jobs).display()
 			if utils.getUserBool('Are you sure you want to reset the state of these jobs?', False):
 				self.cancel(wms, self.jobDB.getJobs(ClassSelector(JobClass.PROCESSING), jobs), False, False)
 				for jobNum in jobs:

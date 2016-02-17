@@ -13,26 +13,24 @@
 #-#  limitations under the License.
 
 from grid_control import utils
+from grid_control.gc_plugin import ConfigurablePlugin
 from grid_control.report import Report
 from hpfwk import AbstractError, Plugin
 
-class GUI(Plugin):
+class GUI(ConfigurablePlugin):
 	def __init__(self, config, workflow):
 		self._workflow = workflow
-		self._reportClass = config.getCompositePlugin('report',
-			'BasicReport', 'MultiReport', cls = Report, onChange = None)
 		self._reportOpts = config.get('report options', '', onChange = None)
+		reportCls = config.getCompositePlugin('report', 'BasicReport', 'MultiReport',
+			cls = Report, onChange = None)
+		self._report = reportCls.getBoundInstance(workflow.jobManager.jobDB,
+			workflow.task, configString = self._reportOpts)
 
 	def displayWorkflow(self):
 		raise AbstractError()
 
 
 class SimpleConsole(GUI):
-	def __init__(self, config, workflow):
-		GUI.__init__(self, config, workflow)
-		self._report = self._reportClass.getInstance(self._workflow.jobManager.jobDB,
-			self._workflow.task, configString = self._reportOpts)
-
 	def displayWorkflow(self):
 		utils.vprint(level = -1)
 		self._report.display()

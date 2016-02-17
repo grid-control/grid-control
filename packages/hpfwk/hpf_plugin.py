@@ -42,7 +42,7 @@ class InstanceFactory(object):
 	def getClass(self):
 		return self._cls
 
-	def getInstance(self, *args, **kwargs):
+	def getBoundInstance(self, *args, **kwargs):
 		args = self._args + args
 		kwargs = dict(list(self._kwargs.items()) + list(kwargs.items()))
 		try:
@@ -68,7 +68,7 @@ class Plugin(object):
 		return [cls.__name__] + cls.alias
 	getClassNames = classmethod(getClassNames)
 
-	def getClass(cls, clsName, modulePaths = None):
+	def getClass(cls, clsName):
 		log = logging.getLogger('classloader.%s' % cls.__name__)
 		log.log(logging.DEBUG1, 'Loading class %s', clsName)
 
@@ -93,7 +93,6 @@ class Plugin(object):
 				log.log(logging.DEBUG2, 'Importing module %s', clsModuleName)
 				oldSysPath = list(sys.path)
 				try:
-					sys.path.extend(modulePaths or [])
 					clsModuleList = [__import__(clsModuleName, {}, {}, [clsName])]
 				except Exception:
 					log.log(logging.DEBUG2, 'Unable to import module %s', clsModuleName)
@@ -128,37 +127,129 @@ class Plugin(object):
 	getClassList = classmethod(getClassList)
 
 	# Get an instance of a derived class by specifying the class name and constructor arguments
-	def getInstance(cls, clsName, *args, **kwargs):
+	def createInstance(cls, clsName, *args, **kwargs):
 		clsType = None
 		try:
 			clsType = cls.getClass(clsName)
 			return clsType(*args, **kwargs)
 		except Exception:
 			raise PluginError('Error while creating instance of type %s (%s)' % (clsName, clsType))
-	getInstance = classmethod(getInstance)
+	createInstance = classmethod(createInstance)
 
-	def bind(cls, value, modulePaths = None, **kwargs):
+	def bind(cls, value, **kwargs):
 		for entry in value.split():
-			yield InstanceFactory(entry, cls.getClass(entry, modulePaths))
+			yield InstanceFactory(entry, cls.getClass(entry))
 	bind = classmethod(bind)
 
 Plugin.pkgPaths = []
 
+def safe_import(root, module):
+	old_path = list(sys.path)
+	try:
+		result = __import__(str.join('.', module), {}, {}, module[-1])
+	except Exception:
+		sys.stderr.write('import error: %s %s\n%r' % (root, module, sys.path))
+		raise
+	sys.path = old_path
+	return result
+
+def import_modules(root, selector, package = None):
+	sys.path = [os.path.abspath(root)] + sys.path
+
+	if os.path.exists(os.path.join(root, '__init__.py')):
+		package = (package or []) + [os.path.basename(root)]
+		yield safe_import(root, package)
+	else:
+		package = []
+
+	files = os.listdir(root)
+	__import__('random').shuffle(files)
+	for fn in files:
+		if fn.endswith('.pyc'):
+			os.remove(os.path.join(root, fn))
+	for fn in files:
+		if not selector(os.path.join(root, fn)):
+			continue
+		if os.path.isdir(os.path.join(root, fn)):
+			for module in import_modules(os.path.join(root, fn), selector, package):
+				yield module
+		elif os.path.isfile(os.path.join(root, fn)) and fn.endswith('.py'):
+			yield safe_import(root, package + [fn[:-3]])
+
+	sys.path = sys.path[1:]
+
+def get_plugin_classes(module_iterator):
+	from hpfwk import Plugin
+	for module in module_iterator:
+		try:
+			cls_list = module.__all__
+		except:
+			cls_list = dir(module)
+		for cls_name in cls_list:
+			cls = getattr(module, cls_name)
+			try:
+				if issubclass(cls, Plugin):
+					yield cls
+			except TypeError:
+				pass
+
+def create_plugin_file(package, selector):
+	cls_dict = {}
+	def fill_cls_dict(cls): # return list of dicts that were filled with cls information
+		if cls == object:
+			return [cls_dict]
+		else:
+			result = []
+			for cls_base in cls.__bases__:
+				for cls_base_dict in fill_cls_dict(cls_base):
+					tmp = cls_base_dict.setdefault(cls, {})
+					tmp.setdefault(None, cls)
+					result.append(tmp)
+			return result
+
+	for cls in get_plugin_classes(import_modules(os.path.abspath(package), selector)):
+		if cls.__module__.startswith(os.path.basename(package)):
+			fill_cls_dict(cls)
+
+	if not cls_dict:
+		return
+
+	def write_cls_hierarchy(fp, data, level = 0):
+		if None in data:
+			cls = data.pop(None)
+			fp.write('%s * %s %s\n' % (' ' * level, cls.__module__, str.join(' ', [cls.__name__] + cls.alias)))
+			fp.write('\n')
+		key_order = []
+		for cls in data:
+			key_order.append(tuple((cls.__module__ + '.' + cls.__name__).split('.')[::-1] + [cls]))
+		key_order.sort()
+		for key_info in key_order:
+			write_cls_hierarchy(fp, data[key_info[-1]], level + 1)
+	fp = open(os.path.abspath(os.path.join(package, '.PLUGINS')), 'w')
+	try:
+		write_cls_hierarchy(fp, cls_dict)
+	finally:
+		fp.close()
+
 # Init plugin search paths
 def initPlugins(basePath):
-	# Package discovery
 	for pkgName in os.listdir(basePath):
-		if os.path.isdir(os.path.join(basePath, pkgName)):
-			pluginFile = os.path.join(basePath, pkgName, '.PLUGINS')
-			if os.path.exists(pluginFile):
-				__import__(pkgName) # Trigger initialisation of module
-				for line in open(pluginFile):
-					line = line.strip()
-					if line and line.endswith(':'):
-						baseClass = line.rstrip(':').split('.')[-1]
-					elif line and not line.endswith(':'):
-						tmp = line.split()
-						(modulePath, module) = (tmp[0], tmp[1])
-						for pluginName in tmp[1:]:
-							Plugin.moduleMap.setdefault(pluginName, []).append('%s.%s' % (modulePath, module))
-							Plugin.classMap.setdefault(baseClass, []).append(pluginName)
+		pluginFile = os.path.join(basePath, pkgName, '.PLUGINS')
+		if os.path.exists(pluginFile):
+			__import__(pkgName) # Trigger initialisation of module
+			base_cls_info = {}
+			for line in open(pluginFile):
+				if not line.strip():
+					continue
+				tmp = line.split(' * ')
+				module_info = tmp[1].split()
+				(module_name, cls_name) = (module_info[0], module_info[1])
+				base_cls_level = len(tmp[0])
+				base_cls_info[base_cls_level] = cls_name
+				for level in list(base_cls_info):
+					if level > base_cls_level:
+						base_cls_info.pop(level)
+				for name in module_info[1:]:
+					Plugin.moduleMap.setdefault(name, []).append('%s.%s' % (module_name, cls_name))
+					for base_cls_name in base_cls_info:
+						Plugin.classMap.setdefault(base_cls_name, []).append(name)

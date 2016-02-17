@@ -16,5 +16,5 @@ metadata common = ["M2c"]
 
 [/MY/SKIM3#333]
 nickname = Dataset3
-/bin/sh = 2
+/bin/ash = 2
 /bin/cp = 1

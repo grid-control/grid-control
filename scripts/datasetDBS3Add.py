@@ -214,12 +214,12 @@ def main():
 
     # 1) Get dataset information
     if opts.inputFile:
-        provider = DataProvider.getInstance('ListProvider', getConfig(), opts.inputFile, None)
+        provider = DataProvider.createInstance('ListProvider', getConfig(), opts.inputFile, None)
     else:
         config = getConfig(configDict = {'dataset': dict(parser.values.__dict__)})
         if opts.discovery:
             config.set('dataset name pattern', '@DS_KEY@')
-        provider = DataProvider.getInstance('DBSInfoProvider', config, args[0], None)
+        provider = DataProvider.createInstance('DBSInfoProvider', config, args[0], None)
 
     DataProvider.saveToFile(os.path.join(opts.tmpDir, 'dbs.dat'), provider.getBlocks())
     if opts.discovery:

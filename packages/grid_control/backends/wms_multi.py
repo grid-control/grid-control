@@ -22,19 +22,19 @@ from python_compat import ifilter
 class MultiWMS(WMS):
 	def __init__(self, config, wmsName, wmsList):
 		WMS.__init__(self, config, wmsName)
-		self._defaultWMS = wmsList[0].getInstance()
+		self._defaultWMS = wmsList[0].getBoundInstance()
 		defaultT = self._defaultWMS.getTimings()
 		self._timing = Result(waitOnIdle = defaultT.waitOnIdle, waitBetweenSteps = defaultT.waitBetweenSteps)
 		self._wmsMap = {self._defaultWMS.getObjectName().lower(): self._defaultWMS}
 		for wmsEntry in wmsList[1:]:
-			wmsObj = wmsEntry.getInstance()
+			wmsObj = wmsEntry.getBoundInstance()
 			self._wmsMap[wmsObj.getObjectName().lower()] = wmsObj
 			wmsT = wmsObj.getTimings()
 			self._timing.waitOnIdle = max(self._timing.waitOnIdle, wmsT.waitOnIdle)
 			self._timing.waitBetweenSteps = max(self._timing.waitBetweenSteps, wmsT.waitBetweenSteps)
 
 		self._brokerWMS = config.getPlugin('wms broker', 'RandomBroker',
-			cls = Broker, tags = [self]).getInstance('wms', 'wms', self._wmsMap.keys)
+			cls = Broker, tags = [self]).getBoundInstance('wms', 'wms', self._wmsMap.keys)
 
 
 	def getTimings(self):

@@ -21,7 +21,7 @@ from python_compat import imap, lmap, reduce
 class MultiDatasetProvider(DataProvider):
 	def __init__(self, config, datasetExpr, datasetNick, datasetID, providerProxyList):
 		DataProvider.__init__(self, config, datasetExpr, datasetNick, datasetID)
-		self._providerList = lmap(lambda p: p.getInstance(), providerProxyList)
+		self._providerList = lmap(lambda p: p.getBoundInstance(), providerProxyList)
 		for provider in self._providerList:
 			provider.setPassthrough()
 

@@ -63,7 +63,7 @@ class Monitoring(EventHandler):
 
 class MultiMonitor(Monitoring):
 	def __init__(self, config, name, monitoringProxyList, task):
-		submoduleList = lmap(lambda m: m.getInstance(task), monitoringProxyList)
+		submoduleList = lmap(lambda m: m.getBoundInstance(task), monitoringProxyList)
 		Monitoring.__init__(self, config, name, None, submoduleList)
 
 

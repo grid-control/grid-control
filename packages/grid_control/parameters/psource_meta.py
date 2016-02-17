@@ -193,7 +193,7 @@ class ChainParameterSource(MultiParameterSource):
 ParameterSource.managerMap['chain'] = 'ChainParameterSource'
 
 
-class RepeatParameterSource(ChainParameterSource):
+class RepeatParameterSource(MultiParameterSource):
 	def __init__(self, psource, times):
 		self._psource = psource
 		self.times = times

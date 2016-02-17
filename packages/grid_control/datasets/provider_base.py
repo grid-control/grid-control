@@ -16,27 +16,30 @@ import os, copy, logging
 from grid_control import utils
 from grid_control.config import createConfig
 from grid_control.datasets.dproc_base import DataProcessor
+from grid_control.gc_plugin import ConfigurablePlugin
+from grid_control.utils.data_structures import makeEnum
 from hpfwk import AbstractError, InstanceFactory, NestedException, Plugin
 from python_compat import StringBuffer, ifilter, imap, irange, lmap, lrange, md5_hex, sort_inplace, sorted
 
 class DatasetError(NestedException):
 	pass
 
-class DataProvider(Plugin):
+class DataProvider(ConfigurablePlugin):
 	def __init__(self, config, datasetExpr, datasetNick = None, datasetID = 0):
 		(self._datasetExpr, self._datasetNick, self._datasetID) = (datasetExpr, datasetNick, datasetID)
 		(self._cache, self._passthrough) = (None, False)
 
-		self._stats = DataProcessor.getInstance('StatsDataProcessor', config)
+		self._stats = DataProcessor.createInstance('StatsDataProcessor', config)
 		nickProducerClass = config.getPlugin('nickname source', 'SimpleNickNameProducer', cls = DataProcessor)
-		self._nickProducer = nickProducerClass.getInstance()
+		self._nickProducer = nickProducerClass.getBoundInstance()
 		self._datasetProcessor = config.getCompositePlugin('dataset processor',
 			'EntriesConsistencyDataProcessor URLDataProcessor URLCountDataProcessor ' +
 			'EntriesCountDataProcessor EmptyDataProcessor UniqueDataProcessor LocationDataProcessor',
-			'MultiDataProcessor', cls = DataProcessor).getInstance()
+			'MultiDataProcessor', cls = DataProcessor).getBoundInstance()
 
 
-	def bind(cls, value, modulePaths = None, config = None, **kwargs):
+	def bind(cls, value, **kwargs):
+		config = kwargs.pop('config')
 		defaultProvider = config.get('dataset provider', 'ListProvider')
 
 		for idx, entry in enumerate(ifilter(str.strip, value.splitlines())):
@@ -51,7 +54,7 @@ class DataProvider(Plugin):
 			elif len(temp) == 1:
 				dataset = temp[0]
 
-			clsNew = cls.getClass(provider, modulePaths)
+			clsNew = cls.getClass(provider)
 			bindValue = str.join(':', [nickname, provider, dataset])
 			yield InstanceFactory(bindValue, clsNew, config, dataset, nickname, idx)
 	bind = classmethod(bind)
@@ -179,7 +182,7 @@ class DataProvider(Plugin):
 	def loadFromFile(path):
 		config = createConfig(useDefaultFiles = False, configDict = {'dataset': {
 			'nickname check consistency': 'False', 'nickname check collision': 'False'}})
-		return DataProvider.getInstance('ListProvider', config, path)
+		return DataProvider.createInstance('ListProvider', config, path)
 	loadFromFile = staticmethod(loadFromFile)
 
 
@@ -215,5 +218,5 @@ class DataProvider(Plugin):
 	resyncSources = staticmethod(resyncSources)
 
 # To uncover errors, the enums of DataProvider / DataSplitter do *NOT* match type wise
-utils.makeEnum(['NEntries', 'BlockName', 'Dataset', 'Locations', 'URL', 'FileList',
+makeEnum(['NEntries', 'BlockName', 'Dataset', 'Locations', 'URL', 'FileList',
 	'Nickname', 'DatasetID', 'Metadata', 'Provider', 'ResyncInfo'], DataProvider)

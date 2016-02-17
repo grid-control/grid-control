@@ -106,7 +106,7 @@ if __name__ == '__main__':
 			setConfigFromOpt('state!', '#resync', opts.resync)
 			setConfigFromOpt('global', 'gui', opts.gui)
 			setConfigFromOpt('global', 'submission', opts.submission)
-			Plugin.getInstance('StringConfigFiller', opts.override).fill(container)
+			Plugin.createInstance('StringConfigFiller', opts.override).fill(container)
 
 	# big try... except block to catch exceptions and show error message
 	def main():
@@ -124,7 +124,7 @@ if __name__ == '__main__':
 
 		# Create workflow and freeze config settings
 		globalConfig = config.changeView(setSections = ['global'])
-		workflow = globalConfig.getPlugin('workflow', 'Workflow:global', cls = 'Workflow').getInstance()
+		workflow = globalConfig.getPlugin('workflow', 'Workflow:global', cls = 'Workflow').getBoundInstance()
 		config.factory.freezeConfig(writeConfig = config.getState('init', detail = 'config'))
 
 		# Give config help

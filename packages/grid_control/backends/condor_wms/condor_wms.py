@@ -112,7 +112,7 @@ class Condor(BasicWMS):
 				self.historyFile = None
 		# broker for selecting Sites
 		self.brokerSite = config.getPlugin('site broker', 'UserBroker', cls = Broker,
-			tags = [self]).getInstance('sites', 'sites', self.getSites)
+			tags = [self]).getBoundInstance('sites', 'sites', self.getSites)
 		self.debugFlush()
 
 	def explainError(self, proc, code):
@@ -709,7 +709,7 @@ class Condor(BasicWMS):
 		# prepare commands appropriate for pool type
 		if self.remoteType == poolType.LOCAL or self.remoteType == poolType.SPOOL:
 			self.user=user
-			self.Pool=self.Pool=ProcessHandler.getInstance("LocalProcessHandler")
+			self.Pool=self.Pool=ProcessHandler.createInstance("LocalProcessHandler")
 			# local and remote use condor tools installed locally - get them
 			self.submitExec = utils.resolveInstallPath('condor_submit')
 			self.statusExec = utils.resolveInstallPath('condor_q')
@@ -728,9 +728,9 @@ class Condor(BasicWMS):
 			# ssh type instructions are passed to the remote host via regular ssh/gsissh
 			host="%s%s"%(utils.QM(user,"%s@" % user,""), sched)
 			if self.remoteType == poolType.SSH:
-				self.Pool=ProcessHandler.getInstance("SSHProcessHandler",remoteHost=host , sshLink=config.getWorkPath(".ssh", self.wmsName+host ) )
+				self.Pool=ProcessHandler.createInstance("SSHProcessHandler",remoteHost=host , sshLink=config.getWorkPath(".ssh", self.wmsName+host ) )
 			else:
-				self.Pool=ProcessHandler.getInstance("GSISSHProcessHandler",remoteHost=host , sshLink=config.getWorkPath(".gsissh", self.wmsName+host ) )
+				self.Pool=ProcessHandler.createInstance("GSISSHProcessHandler",remoteHost=host , sshLink=config.getWorkPath(".gsissh", self.wmsName+host ) )
 			# ssh type instructions rely on commands being available on remote pool
 			self.submitExec = 'condor_submit'
 			self.statusExec = 'condor_q'

@@ -47,7 +47,7 @@ class AccessToken(NamedPlugin):
 class MultiAccessToken(AccessToken):
 	def __init__(self, config, name, subtokenBuilder):
 		AccessToken.__init__(self, config, name)
-		self._subtokenList = lmap(lambda tbuilder: tbuilder.getInstance(), subtokenBuilder)
+		self._subtokenList = lmap(lambda tbuilder: tbuilder.getBoundInstance(), subtokenBuilder)
 
 	def getUsername(self):
 		return self._subtokenList[0].getUsername()

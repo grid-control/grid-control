@@ -14,17 +14,15 @@
 
 from grid_control.backends import WMS
 from grid_control.datasets.splitter_base import DataSplitter
+from grid_control.gc_plugin import ConfigurablePlugin
 from grid_control.parameters import ParameterInfo, ParameterMetadata
 from grid_control.utils import filterBlackWhite
 from grid_control.utils.gc_itertools import lchain
-from hpfwk import AbstractError, Plugin
+from hpfwk import AbstractError
 from python_compat import any, imap, lfilter, lmap, set
 
 # Class used by DataParameterSource to convert dataset splittings into parameter data
-class PartitionProcessor(Plugin):
-	def __init__(self, config):
-		pass
-
+class PartitionProcessor(ConfigurablePlugin):
 	def getKeys(self):
 		raise AbstractError
 
@@ -33,9 +31,9 @@ class PartitionProcessor(Plugin):
 
 
 class MultiPartitionProcessor(PartitionProcessor):
-	def __init__(self, processorProxyList, config):
+	def __init__(self, config, processorProxyList):
 		PartitionProcessor.__init__(self, config)
-		self._processorList = lmap(lambda p: p.getInstance(config), processorProxyList)
+		self._processorList = lmap(lambda p: p.getBoundInstance(), processorProxyList)
 
 	def getKeys(self):
 		return lchain(imap(lambda p: p.getKeys(), self._processorList))

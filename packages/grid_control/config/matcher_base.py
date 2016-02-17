@@ -14,6 +14,7 @@
 
 import re
 from grid_control.config.cinterface_typed import appendOption
+from grid_control.gc_plugin import ConfigurablePlugin
 from hpfwk import AbstractError, Plugin
 from python_compat import imap, lfilter
 
@@ -38,7 +39,7 @@ def getFixedFunctionObject(instance, fo, selector):
 
 
 # Matcher class
-class MatcherBase(Plugin):
+class MatcherBase(ConfigurablePlugin):
 	def __init__(self, config, option_prefix):
 		pass
 
@@ -111,7 +112,7 @@ class BlackWhiteMatcher(MatcherBase):
 		MatcherBase.__init__(self, config, option_prefix)
 		baseMatchOpt = appendOption(option_prefix, 'matcher')
 		baseMatchCls = config.getPlugin(baseMatchOpt, 'start', cls = MatcherBase)
-		self._baseMatcher = baseMatchCls.getInstance(config, option_prefix)
+		self._baseMatcher = baseMatchCls.getBoundInstance(config, option_prefix)
 
 	def matcher(self, value, selector):
 		return self.matchWith(selector).match(value)

@@ -48,7 +48,7 @@ def discoverDataset(opts, parser, providerName, datasetExpr):
 		configEntries = ismap(lambda k, v: (k, str(v)), parser.values.__dict__.items())
 		config = getConfig(configDict = {'dataset': dict(configEntries)})
 		DataProvider = Plugin.getClass('DataProvider')
-		provider = DataProvider.getInstance(providerName, config, datasetExpr, None)
+		provider = DataProvider.createInstance(providerName, config, datasetExpr, None)
 		if opts.output:
 			return DataProvider.saveToFile(opts.output, provider.getBlocks(), opts.strip)
 		return DataProvider.saveToStream(sys.stdout, provider.getBlocks(), opts.strip)

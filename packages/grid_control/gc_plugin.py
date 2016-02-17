@@ -14,19 +14,35 @@
 
 from hpfwk import InstanceFactory, Plugin
 
+# ConfigurablePlugin is the base class for plugins that need config as constructor parameter
+class ConfigurablePlugin(Plugin):
+	def __init__(self, config):
+		pass
+
+	def bind(cls, value, **kwargs):
+		config = kwargs.pop('config')
+		for entry in value.split():
+			yield InstanceFactory(entry, cls.getClass(entry), config)
+	bind = classmethod(bind)
+
+
 # NamedPlugin provides functionality to name plugin instances
-class NamedPlugin(Plugin):
+class NamedPlugin(ConfigurablePlugin):
 	tagName = None
 
 	def __init__(self, config, name):
 		self._name = name
+		ConfigurablePlugin.__init__(self, config)
 
 	def getObjectName(self):
 		return self._name
 
-	def bind(cls, value, modulePaths = None, config = None, tags = None, inherit = False, **kwargs):
+	def bind(cls, value, **kwargs):
 		while (': ' in value) or (' :' in value):
 			value = value.replace(' :', ':').replace(': ', ':')
+		config = kwargs.pop('config')
+		tags = kwargs.pop('tags', None)
+		inheritSections = kwargs.pop('inherit', False)
 		for entry in value.split():
 			(clsName, instanceName) = (None, None)
 			tmp = entry.split(':', 1)
@@ -34,11 +50,11 @@ class NamedPlugin(Plugin):
 				(clsName, instanceName) = tmp
 			elif len(tmp) == 1:
 				clsName = tmp[0]
-			clsNew = cls.getClass(clsName, modulePaths)
+			clsNew = cls.getClass(clsName)
 			if not instanceName:
 				instanceName = clsNew.__name__.split('.')[-1]
 			config = config.changeView(viewClass = 'TaggedConfigView',
 				setClasses = [clsNew], setSections = None, setNames = [instanceName],
-				addTags = tags or [], inheritSections = inherit)
+				addTags = tags or [], inheritSections = inheritSections)
 			yield InstanceFactory(entry, clsNew, config, instanceName)
 	bind = classmethod(bind)

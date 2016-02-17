@@ -45,7 +45,7 @@ class Report(Plugin):
 
 class MultiReport(Report):
 	def __init__(self, reportProxyList, *args, **kwargs):
-		self._reportList = lmap(lambda p: p.getInstance(*args, **kwargs), reportProxyList)
+		self._reportList = lmap(lambda p: p.getBoundInstance(*args, **kwargs), reportProxyList)
 
 	def getHeight(self):
 		return sum(imap(lambda r: r.getHeight(), self._reportList))

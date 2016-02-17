@@ -208,5 +208,7 @@ class CMSProvider(DataProvider):
 
 
 class DBS2Provider(CMSProvider):
+	alias = ['dbs2']
+
 	def __init__(self, config, datasetExpr, datasetNick, datasetID = 0):
 		raise DatasetError('CMS deprecated all DBS2 Services in April 2014! Please use DBS3Provider instead.')

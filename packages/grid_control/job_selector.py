@@ -150,7 +150,7 @@ class MultiJobSelector(JobSelector):
 			selectorType = utils.QM(term[0].isdigit(), 'id', 'state')
 			if ':' in term:
 				selectorType = term.split(':', 1)[0]
-			selector = JobSelector.getInstance(selectorType, term.split(':', 1)[-1], **kwargs)
+			selector = JobSelector.createInstance(selectorType, term.split(':', 1)[-1], **kwargs)
 			return lambda jobNum, jobObj: selector.__call__(jobNum, jobObj) == cmpValue
 		orTerms = str.join('+', imap(str.strip, arg.split('+'))).split()
 		self.js = lmap(lambda orTerm: lmap(parseTerm, orTerm.split('+')), orTerms)

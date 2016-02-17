@@ -12,7 +12,7 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-import os, logging
+import os, sys, logging
 from grid_control import utils
 from grid_control.config.cfiller_base import CompatConfigFiller, DefaultFilesConfigFiller, DictConfigFiller, GeneralFileConfigFiller, MultiConfigFiller
 from grid_control.config.cinterface_typed import SimpleConfigInterface
@@ -53,7 +53,7 @@ class ConfigFactory(object):
 		pathWork = tmpInterface.getPath('workdir', os.path.join(wdBase, getName('work')), mustExist = False)
 		self._view.pathDict['<WORKDIR>'] = pathWork # tmpInterface still has undefinied
 		# Set dynamic plugin search path
-		tmpInterface.set('plugin paths', os.getcwd(), '+=')
+		sys.path.extend(tmpInterface.getPaths('plugin paths', [os.getcwd()]))
 
 		# Determine and load stored config settings
 		self._flatCfgPath = os.path.join(pathWork, 'current.conf') # Minimal config file

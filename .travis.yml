@@ -11,14 +11,16 @@ before_install:
   - pip install codecov
   - pip install 'coverage<4'
 script:
+  - ./packages/gcUpdatePlugins.py # randomized order
+  - ./packages/gcUpdatePlugins.py
+  - ./packages/gcUpdatePlugins.py
+  - ./packages/gcUpdatePlugins.py
+  - ./packages/gcUpdatePlugins.py
   - export WRAPPER='coverage run -a'
+  - if [[ $TRAVIS_PYTHON_VERSION == 'pypy'* ]]; then export WRAPPER=''; fi
   - $WRAPPER ./go.py -s -o '[jobs] continuous = False' docs/examples/ExampleS1_stresstest.conf
+  - $WRAPPER ./go.py -G --debug docs/examples/ExampleS1_stresstest.conf
   - $WRAPPER ./go.py docs/examples/ExampleS1_stresstest.conf
-  - $WRAPPER ./go.py docs/examples/ExampleS1_stresstest.conf
-  - $WRAPPER ./packages/gcUpdatePlugins.py # randomized order
-  - $WRAPPER ./packages/gcUpdatePlugins.py
-  - $WRAPPER ./packages/gcUpdatePlugins.py
-  - $WRAPPER ./packages/gcUpdatePlugins.py
-  - $WRAPPER ./packages/gcUpdatePlugins.py
+  - diff ExampleS1_stresstest.list docs/examples/ExampleS1_stresstest.list.ref
 after_success:
   - codecov

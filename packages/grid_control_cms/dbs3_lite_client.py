@@ -25,22 +25,22 @@ class DBS3LiteClient(object):
 		self._proxy_path = os.environ.get('X509_USER_PROXY', '')
 		if not os.path.exists(self._proxy_path):
 			raise UserError('VOMS proxy needed to query DBS3! Environment variable X509_USER_PROXY is "%s"' % self._proxy_path)
-		self._json_rest_client = JSONRestClient(cert = self._proxy_path)
+		self._jrc = JSONRestClient(cert = self._proxy_path)
 
 	def listBlocks(self, **kwargs):
-		return self._json_rest_client.get(url=self._reader_url, api='blocks', params=kwargs)
+		return self._jrc.get(url=self._reader_url, api='blocks', params=kwargs)
 
 	def listFiles(self, **kwargs):
-		return self._json_rest_client.get(url=self._reader_url, api='files', params=kwargs)
+		return self._jrc.get(url=self._reader_url, api='files', params=kwargs)
 
 	def listFileParents(self, **kwargs):
-		return self._json_rest_client.get(url=self._reader_url, api='fileparents', params=kwargs)
+		return self._jrc.get(url=self._reader_url, api='fileparents', params=kwargs)
 
 	def insertBulkBlock(self, data):
-		return self._json_rest_client.post(url=self._writer_url, api='bulkblocks', data=data)
+		return self._jrc.post(url=self._writer_url, api='bulkblocks', data=data)
 
 	def migrateSubmit(self, data):
-		return self._json_rest_client.post(url=self._migrate_url, api='submit', data=data)
+		return self._jrc.post(url=self._migrate_url, api='submit', data=data)
 
 	def migrateStatus(self, **kwargs):
-		return self._json_rest_client.get(url=self._migrate_url, api='status', params=kwargs)
+		return self._jrc.get(url=self._migrate_url, api='status', params=kwargs)

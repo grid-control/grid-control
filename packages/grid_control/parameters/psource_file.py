@@ -24,15 +24,18 @@ class GCDumpParameterSource(ParameterSource):
 	def __init__(self, fn):
 		ParameterSource.__init__(self)
 		fp = ZipFile(fn, 'r')
-		keyline = fp.readline().lstrip('#').strip()
-		self.keys = []
-		if keyline:
-			self.keys = eval(keyline)
-		def parseLine(line):
-			if not line.startswith('#'):
-				pNumStr, stored = lmap(str.strip, line.split('\t', 1))
-				return ('!' in pNumStr, int(pNumStr.rstrip('!')), lmap(eval, stored.split('\t')))
-		self.values = lmap(parseLine, fp.readlines())
+		try:
+			keyline = fp.readline().lstrip('#').strip()
+			self.keys = []
+			if keyline:
+				self.keys = eval(keyline)
+			def parseLine(line):
+				if not line.startswith('#'):
+					pNumStr, stored = lmap(str.strip, line.split('\t', 1))
+					return ('!' in pNumStr, int(pNumStr.rstrip('!')), lmap(eval, stored.split('\t')))
+			self.values = lmap(parseLine, fp.readlines())
+		finally:
+			fp.close()
 
 	def getMaxParameters(self):
 		return len(self.values)
@@ -48,19 +51,22 @@ class GCDumpParameterSource(ParameterSource):
 
 	def write(cls, fn, pa):
 		fp = ZipFile(fn, 'w')
-		keys = sorted(ifilter(lambda p: p.untracked == False, pa.getJobKeys()))
-		fp.write('# %s\n' % keys)
-		maxN = pa.getMaxJobs()
-		if maxN:
-			log = None
-			for jobNum in irange(maxN):
-				del log
-				log = utils.ActivityLog('Writing parameter dump [%d/%d]' % (jobNum + 1, maxN))
-				meta = pa.getJobInfo(jobNum)
-				if meta.get(ParameterInfo.ACTIVE, True):
-					fp.write('%d\t%s\n' % (jobNum, str.join('\t', imap(lambda k: repr(meta.get(k, '')), keys))))
-				else:
-					fp.write('%d!\t%s\n' % (jobNum, str.join('\t', imap(lambda k: repr(meta.get(k, '')), keys))))
+		try:
+			keys = sorted(ifilter(lambda p: p.untracked == False, pa.getJobKeys()))
+			fp.write('# %s\n' % keys)
+			maxN = pa.getMaxJobs()
+			if maxN:
+				log = None
+				for jobNum in irange(maxN):
+					del log
+					log = utils.ActivityLog('Writing parameter dump [%d/%d]' % (jobNum + 1, maxN))
+					meta = pa.getJobInfo(jobNum)
+					if meta.get(ParameterInfo.ACTIVE, True):
+						fp.write('%d\t%s\n' % (jobNum, str.join('\t', imap(lambda k: repr(meta.get(k, '')), keys))))
+					else:
+						fp.write('%d!\t%s\n' % (jobNum, str.join('\t', imap(lambda k: repr(meta.get(k, '')), keys))))
+		finally:
+			fp.close()
 	write = classmethod(write)
 
 

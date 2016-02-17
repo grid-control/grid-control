@@ -33,7 +33,7 @@ class OutputDirsFromConfig(InfoScanner):
 		extConfigFN = config.getPath('source config')
 		extConfig = createConfig(extConfigFN).changeView(setSections = ['global'])
 		self.extWorkDir = extConfig.getWorkPath()
-		self.extTask = extConfig.getPlugin(['task', 'module'], cls = TaskModule).getInstance()
+		self.extTask = extConfig.getPlugin(['task', 'module'], cls = TaskModule).getBoundInstance()
 		selector = config.get('source job selector', '')
 		extJobDB = JobDB(extConfig, jobSelector = lambda jobNum, jobObj: jobObj.state == Job.SUCCESS)
 		self.selected = sorted(extJobDB.getJobs(JobSelector.create(selector, task = self.extTask)))
@@ -145,7 +145,7 @@ class FilesFromJobInfo(InfoScanner):
 class FilesFromDataProvider(InfoScanner):
 	def __init__(self, config):
 		dsPath = config.get('source dataset path')
-		self.source = DataProvider.getInstance('ListProvider', config, dsPath)
+		self.source = DataProvider.createInstance('ListProvider', config, dsPath)
 
 	def getEntries(self, path, metadata, events, seList, objStore):
 		for block in self.source.getBlocks():
@@ -216,7 +216,7 @@ class ParentLookup(InfoScanner):
 		datacachePath = os.path.join(objStore.get('GC_WORKDIR', ''), 'datacache.dat')
 		source = utils.QM((self.source == '') and os.path.exists(datacachePath), datacachePath, self.source)
 		if source and (source not in self.lfnMap):
-			pSource = DataProvider.getInstance('ListProvider', createConfig(), source)
+			pSource = DataProvider.createInstance('ListProvider', createConfig(), source)
 			for (n, fl) in imap(lambda b: (b[DataProvider.Dataset], b[DataProvider.FileList]), pSource.getBlocks()):
 				self.lfnMap.setdefault(source, {}).update(dict(imap(lambda fi: (self.lfnTrans(fi[DataProvider.URL]), n), fl)))
 		pList = set()

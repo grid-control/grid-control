@@ -91,7 +91,8 @@ class Node(object):
                     self.namespace,self.name = tag.split()
                 else:
                     self.name = tag
-        if isinstance(payload, (str, unicode): payload=[payload]
+        if isinstance(payload, (str, unicode)):
+            payload=[payload]
         for i in payload:
             if isinstance(i, Node): self.addChild(node=i)
             else: self.data.append(ustr(i))

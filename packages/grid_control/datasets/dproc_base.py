@@ -13,10 +13,11 @@
 #-#  limitations under the License.
 
 import logging
-from hpfwk import AbstractError, InstanceFactory, Plugin
+from grid_control.gc_plugin import ConfigurablePlugin
+from hpfwk import AbstractError
 from python_compat import lmap
 
-class DataProcessor(Plugin):
+class DataProcessor(ConfigurablePlugin):
 	def __init__(self, config):
 		self._log = logging.getLogger('dataproc')
 
@@ -28,16 +29,11 @@ class DataProcessor(Plugin):
 	def processBlock(self, block):
 		raise AbstractError
 
-	def bind(cls, value, modulePaths = None, config = None, **kwargs):
-		for entry in value.split():
-			yield InstanceFactory(entry, cls.getClass(entry, modulePaths), config)
-	bind = classmethod(bind)
-
 
 class MultiDataProcessor(DataProcessor):
 	def __init__(self, config, processorProxyList):
 		DataProcessor.__init__(self, config)
-		self._processorList = lmap(lambda p: p.getInstance(), processorProxyList)
+		self._processorList = lmap(lambda p: p.getBoundInstance(), processorProxyList)
 
 	def process(self, blockIter):
 		for processor in self._processorList:

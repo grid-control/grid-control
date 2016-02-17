@@ -13,12 +13,13 @@
 #-#  limitations under the License.
 
 import os
-from grid_control import utils
 from grid_control.backends import WMS
-from hpfwk import AbstractError, Plugin
+from grid_control.gc_plugin import ConfigurablePlugin
+from grid_control.utils.data_structures import makeEnum
+from hpfwk import AbstractError
 from python_compat import ifilter, izip
 
-class OutputProcessor(Plugin):
+class OutputProcessor(ConfigurablePlugin):
 	def process(self, dn):
 		raise AbstractError
 
@@ -44,10 +45,10 @@ class FileInfoProcessor(JobInfoProcessor):
 					fileData = fileData.strip('"')
 				result.setdefault(int(fileIdx), {})[FileInfoProcessor.str2enum(fileProperty)] = fileData
 			return result.values()
-utils.makeEnum(['Hash', 'NameLocal', 'NameDest', 'Path'], FileInfoProcessor)
+makeEnum(['Hash', 'NameLocal', 'NameDest', 'Path'], FileInfoProcessor)
 
 class TaskOutputProcessor(OutputProcessor):
-	def __init__(self, task):
+	def __init__(self, config, task):
 		self._task = task
 
 class SandboxProcessor(TaskOutputProcessor):

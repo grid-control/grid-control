@@ -70,7 +70,7 @@ class TaskModule(NamedPlugin):
 
 		# Init parameter source manager
 		pm = config.getPlugin('parameter factory', 'SimpleParameterFactory',
-			cls = ParameterFactory, inherit = True).getInstance()
+			cls = ParameterFactory, inherit = True).getBoundInstance()
 		configParam = config.changeView(viewClass = 'TaggedConfigView', addSections = ['parameters'], addTags = [self])
 		self.setupJobParameters(configParam, pm)
 		self.source = pm.getSource(configParam)

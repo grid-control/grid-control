@@ -15,7 +15,8 @@
 import re
 from grid_control.datasets.dproc_base import DataProcessor
 from grid_control.datasets.provider_base import DataProvider, DatasetError
-from grid_control.utils import doBlackWhiteList, makeEnum
+from grid_control.utils import doBlackWhiteList
+from grid_control.utils.data_structures import makeEnum
 from python_compat import imap, lfilter, lmap, md5_hex, set
 
 class StatsDataProcessor(DataProcessor):

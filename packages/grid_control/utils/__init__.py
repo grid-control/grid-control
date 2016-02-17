@@ -859,34 +859,6 @@ def exitWithUsage(usage, msg = None, helpOpt = True):
 	sys.exit(os.EX_USAGE)
 
 
-def makeEnum(members = None, cls = None, useHash = False):
-	members = members or []
-	if cls:
-		enumID = md5_hex(str(members) + '!' + cls.__name__)[:4]
-	else:
-		enumID = md5_hex(str(members))[:4]
-		cls = type('Enum_%s_%s' % (enumID, str.join('_', members)), (), {})
-
-	def getValue(idx, name):
-		if useHash:
-			return idx + int(enumID, 16)
-		else:
-			return idx
-	values = lsmap(getValue, enumerate(members))
-
-	cls.enumNames = members
-	cls.enumValues = values
-	cls._enumMapNV = dict(izip(cls.enumNames, cls.enumValues))
-	cls._enumMapVN = dict(izip(cls.enumValues, cls.enumNames))
-	if len(cls._enumMapNV) != len(cls._enumMapVN):
-		raise APIError('Invalid enum definition!')
-	cls.enum2str = cls._enumMapVN.get
-	cls.str2enum = cls._enumMapNV.get
-	for name, value in izip(cls.enumNames, cls.enumValues):
-		setattr(cls, name, value)
-	return cls
-
-
 def split_advanced(tokens, doEmit, addEmitToken, quotes = None, brackets = None, exType = Exception):
 	if quotes is None:
 		quotes = ['"', "'"]

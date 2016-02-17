@@ -12,7 +12,7 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-from grid_control import utils
+from grid_control.utils.data_structures import makeEnum
 from grid_control.utils.gc_itertools import ichain
 from grid_control.utils.parsing import strDict
 from hpfwk import APIError, NestedException
@@ -22,7 +22,7 @@ class ConfigError(NestedException):
 	pass
 
 # Placeholder to specify a non-existing default
-noDefault = utils.makeEnum(['noDefault'])
+noDefault = makeEnum(['noDefault'])
 
 # return canonized section or option string
 def standardConfigForm(value):

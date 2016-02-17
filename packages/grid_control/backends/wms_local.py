@@ -32,9 +32,9 @@ class LocalWMS(BasicWMS):
 		BasicWMS.__init__(self, config, name)
 
 		self.brokerSite = config.getPlugin('site broker', 'UserBroker', cls = Broker,
-			inherit = True, tags = [self]).getInstance('sites', 'sites', self.getNodes)
+			inherit = True, tags = [self]).getBoundInstance('sites', 'sites', self.getNodes)
 		self.brokerQueue = config.getPlugin('queue broker', 'UserBroker', cls = Broker,
-			inherit = True, tags = [self]).getInstance('queue', 'queues', self.getQueues)
+			inherit = True, tags = [self]).getBoundInstance('queue', 'queues', self.getQueues)
 
 		self.sandCache = []
 		self.sandPath = config.getPath('sandbox path', config.getWorkPath('sandbox'), mustExist = False)
@@ -229,7 +229,7 @@ class Local(WMS):
 		for cmd, wms in [('sgepasswd', 'OGE'), ('pbs-config', 'PBS'), ('qsub', 'OGE'), ('bsub', 'LSF'), ('job_slurm', 'SLURM')]:
 			try:
 				utils.resolveInstallPath(cmd)
-				return WMS.getInstance(wms, config, name)
+				return WMS.createInstance(wms, config, name)
 			except Exception:
 				pass
-		return WMS.getInstance('PBS', config, name)
+		return WMS.createInstance('PBS', config, name)

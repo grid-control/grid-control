@@ -36,10 +36,10 @@ class ParameterFactory(NamedPlugin):
 
 	def getSource(self, config):
 		DataParameterSource = Plugin.getClass('DataParameterSource')
-		source = self._getRawSource(ParameterSource.getInstance('RNGParameterSource'))
+		source = self._getRawSource(ParameterSource.createInstance('RNGParameterSource'))
 		if DataParameterSource.datasetsAvailable and not DataParameterSource.datasetsUsed:
-			source = ParameterSource.getInstance('CrossParameterSource', DataParameterSource.create(), source)
-		return ParameterAdapter.getInstance(self.adapter, config, source)
+			source = ParameterSource.createInstance('CrossParameterSource', DataParameterSource.create(), source)
+		return ParameterAdapter.createInstance(self.adapter, config, source)
 
 
 class BasicParameterFactory(ParameterFactory):
@@ -60,7 +60,7 @@ class BasicParameterFactory(ParameterFactory):
 		nseeds = configJobs.getInt('nseeds', 10)
 		newSeeds = lmap(lambda x: str(random.randint(0, 10000000)), irange(nseeds))
 		for (idx, seed) in enumerate(configJobs.getList('seeds', newSeeds, persistent = True)):
-			ps = ParameterSource.getInstance('CounterParameterSource', 'SEED_%d' % idx, int(seed))
+			ps = ParameterSource.createInstance('CounterParameterSource', 'SEED_%d' % idx, int(seed))
 			self.constSources.append(ps)
 		self.repeat = config.getInt('repeat', 1, onChange = None) # ALL config.x -> paramconfig.x !
 
@@ -68,16 +68,16 @@ class BasicParameterFactory(ParameterFactory):
 	def _addConstantPSource(self, config, cName, varName):
 		lookupVar = config.get('%s lookup' % cName, '')
 		if lookupVar:
-			ps = ParameterSource.getInstance('LookupParameterSource', varName, config.getDict(cName, {}), lookupVar)
+			ps = ParameterSource.createInstance('LookupParameterSource', varName, config.getDict(cName, {}), lookupVar)
 			self.lookupSources.append(ps)
 		else:
-			ps = ParameterSource.getInstance('ConstParameterSource', varName, config.get(cName).strip())
+			ps = ParameterSource.createInstance('ConstParameterSource', varName, config.get(cName).strip())
 			self.constSources.append(ps)
 
 
 	def _getRawSource(self, parent):
-		source_list = self.constSources + [parent, ParameterSource.getInstance('RequirementParameterSource')]
-		source = ParameterSource.getInstance('ZipLongParameterSource', *source_list)
+		source_list = self.constSources + [parent, ParameterSource.createInstance('RequirementParameterSource')]
+		source = ParameterSource.createInstance('ZipLongParameterSource', *source_list)
 		if self.repeat > 1:
-			source = ParameterSource.getInstance('RepeatParameterSource', source, self.repeat)
+			source = ParameterSource.createInstance('RepeatParameterSource', source, self.repeat)
 		return ParameterFactory._getRawSource(self, source)

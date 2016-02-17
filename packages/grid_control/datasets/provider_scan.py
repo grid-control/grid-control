@@ -29,7 +29,7 @@ class ScanProviderBase(DataProvider):
 		(self.kGuardDS, self.kGuardB) = DSB(config.getList, 'guard override', [])
 		self.kSelectDS = config.getList('dataset key select', [])
 		scanList = config.getList('scanner', datasetExpr)
-		self.scanner = lmap(lambda cls: InfoScanner.getInstance(cls, config), scanList)
+		self.scanner = lmap(lambda cls: InfoScanner.createInstance(cls, config), scanList)
 
 
 	def collectFiles(self):

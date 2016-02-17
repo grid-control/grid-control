@@ -13,7 +13,7 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-from gcSupport import AccessToken, Options, getConfig
+from gcSupport import Options, Plugin, getConfig
 from grid_control.utils.webservice import readJSON
 from grid_control_cms.provider_sitedb import SiteDB
 
@@ -29,7 +29,7 @@ parser.addText(None, 'se-prot', default='srmv2', help='Name of default SE protoc
 
 if opts.SE:
 	if '<hypernews name>' in opts.lfn:
-		token = AccessToken.getInstance('VomsProxy', getConfig(), None)
+		token = Plugin.getClass('AccessToken').createInstance('VomsProxy', getConfig(), None)
 		site_db = SiteDB()
 		hnName = site_db.dn_to_username(dn=token.getFQUsername())
 		if not hnName:

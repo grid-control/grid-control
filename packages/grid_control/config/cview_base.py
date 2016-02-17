@@ -13,13 +13,13 @@
 #-#  limitations under the License.
 
 import logging
-from grid_control import utils
 from grid_control.config.config_entry import ConfigEntry, ConfigError, noDefault, standardConfigForm
+from grid_control.utils.data_structures import makeEnum
 from grid_control.utils.gc_itertools import ichain
 from hpfwk import AbstractError, Plugin
 from python_compat import imap, lfilter, sorted
 
-selectorUnchanged = utils.makeEnum(['selector_unchanged'])
+selectorUnchanged = makeEnum(['selector_unchanged'])
 
 class ConfigView(Plugin):
 	def __init__(self, name, parent = None):

@@ -41,15 +41,15 @@ def main():
 	# Initialise task module
 	task = None
 	if opts.useTask:
-		task = config.getPlugin(['task', 'module'], cls = 'TaskModule').getInstance()
+		task = config.getPlugin(['task', 'module'], cls = 'TaskModule').getBoundInstance()
 
 	# Initialise job database
-	jobDB = config.getPlugin('jobdb', 'JobDB', cls = 'JobDB').getInstance(config)
+	jobDB = config.getPlugin('jobdb', 'JobDB', cls = 'JobDB').getBoundInstance(config)
 	log = utils.ActivityLog('Filtering job entries')
 	selected = jobDB.getJobs(JobSelector.create(opts.selector, task = task))
 	del log
 
-	report = Report.getInstance(opts.reportClass, jobDB, task, selected, opts.string)
+	report = Report.createInstance(opts.reportClass, jobDB, task, selected, opts.string)
 	report.display()
 
 if __name__ == '__main__':

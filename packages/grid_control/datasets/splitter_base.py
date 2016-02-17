@@ -16,7 +16,9 @@ import os, copy
 from grid_control import utils
 from grid_control.config import createConfig, noDefault
 from grid_control.datasets.provider_base import DataProvider
-from hpfwk import AbstractError, NestedException, Plugin
+from grid_control.gc_plugin import ConfigurablePlugin
+from grid_control.utils.data_structures import makeEnum
+from hpfwk import AbstractError, NestedException
 from python_compat import identity, ifilter, imap, irange, ismap, itemgetter, lmap, next, sort_inplace
 
 def fast_search(lst, key_fun, key):
@@ -30,14 +32,14 @@ def fast_search(lst, key_fun, key):
 	if (idx < len(lst)) and (key_fun(lst[idx]) == key):
 		return lst[idx]
 
-ResyncMode = utils.makeEnum(['disable', 'complete', 'changed', 'ignore']) # prio: "disable" overrides "complete", etc.
+ResyncMode = makeEnum(['disable', 'complete', 'changed', 'ignore']) # prio: "disable" overrides "complete", etc.
 ResyncMode.noChanged = [ResyncMode.disable, ResyncMode.complete, ResyncMode.ignore]
-ResyncOrder = utils.makeEnum(['append', 'preserve', 'fillgap', 'reorder']) # reorder mechanism
+ResyncOrder = makeEnum(['append', 'preserve', 'fillgap', 'reorder']) # reorder mechanism
 
 class PartitionError(NestedException):
 	pass
 
-class DataSplitter(Plugin):
+class DataSplitter(ConfigurablePlugin):
 	def __init__(self, config):
 		self.config = config
 		self.splitSource = None
@@ -435,7 +437,7 @@ class DataSplitter(Plugin):
 		src = DataSplitter._getIOHandler().loadState(path)
 		if cfg is None:
 			cfg = createConfig(configDict = src.metadata)
-		splitter = DataSplitter.getInstance(src.classname, cfg)
+		splitter = DataSplitter.createInstance(src.classname, cfg)
 		splitter.splitSource = src
 		# Transfer config protocol (in case no split function is called)
 		splitter._protocol = src.metadata['None']
@@ -446,5 +448,5 @@ class DataSplitter(Plugin):
 		return splitter
 	loadState = staticmethod(loadState)
 
-utils.makeEnum(['Dataset', 'Locations', 'NEntries', 'Skipped', 'FileList', 'Nickname', 'DatasetID',
+makeEnum(['Dataset', 'Locations', 'NEntries', 'Skipped', 'FileList', 'Nickname', 'DatasetID',
 	'CommonPrefix', 'Invalid', 'BlockName', 'MetadataHeader', 'Metadata', 'Comment'], DataSplitter)

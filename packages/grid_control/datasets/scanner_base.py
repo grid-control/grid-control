@@ -13,9 +13,10 @@
 #-#  limitations under the License.
 
 import logging
-from hpfwk import AbstractError, Plugin
+from grid_control.gc_plugin import ConfigurablePlugin
+from hpfwk import AbstractError
 
-class InfoScanner(Plugin):
+class InfoScanner(ConfigurablePlugin):
 	def __init__(self, config):
 		self._log = logging.getLogger('infoscanner')
 

@@ -17,6 +17,7 @@ from grid_control import utils
 from grid_control.config.cinterface_base import ConfigInterface
 from grid_control.config.config_entry import ConfigError, noDefault
 from grid_control.config.cview_base import SimpleConfigView
+from grid_control.utils.data_structures import makeEnum
 from grid_control.utils.parsing import parseBool, parseDict, parseList, parseTime
 from hpfwk import APIError, Plugin
 from python_compat import identity, imap, lmap, relpath, user_input
@@ -32,19 +33,11 @@ class CompositedClassWrapper(object):
 		(self._clsCompositor, self._clsList) = (clsCompositor, clsList)
 
 	# Get single instance by merging multiple sub instances if necessary
-	def getInstance(self, *args, **kwargs):
-		return self._clsCompositor.getInstance(self._clsList, *args, **kwargs)
+	def getBoundInstance(self, *args, **kwargs):
+		return self._clsCompositor.getBoundInstance(self._clsList, *args, **kwargs)
 
 # Config interface class accessing typed data using an string interface provided by configView
 class TypedConfigInterface(ConfigInterface):
-	# Function to retrieve the plugin search paths
-	def _getPluginPaths(self):
-		if self._configView.pathDict.get('plugin_paths') is None:
-			pluginCfg = self.changeView(viewClass = SimpleConfigView, setSections = ['global'])
-			pluginPaths = pluginCfg.getPaths('plugin paths', mustExist = False, onChange = None)
-			self._configView.pathDict['plugin_paths'] = pluginPaths
-		return self._configView.pathDict['plugin_paths']
-
 	# Handling integer config options - using strict integer (de-)serialization
 	def getInt(self, option, default = noDefault, **kwargs):
 		return self._getInternal('int', int.__str__, int, None, option, default, **kwargs)
@@ -134,7 +127,7 @@ class TypedConfigInterface(ConfigInterface):
 		if isinstance(cls, str):
 			cls = Plugin.getClass(cls)
 		def str2obj(value):
-			objList = list(cls.bind(value, self._getPluginPaths(), config = self, inherit = inherit, tags = tags or []))
+			objList = list(cls.bind(value, config = self, inherit = inherit, tags = tags or []))
 			if len(objList) > 1:
 				raise ConfigError('This option only allows to specify a single plugin!')
 			elif objList:
@@ -150,7 +143,7 @@ class TypedConfigInterface(ConfigInterface):
 			cls = Plugin, tags = None, inherit = False, requirePlugin = True, **kwargs):
 		if isinstance(cls, str):
 			cls = Plugin.getClass(cls)
-		str2obj = lambda value: list(cls.bind(value, self._getPluginPaths(), config = self, inherit = inherit, tags = tags or []))
+		str2obj = lambda value: list(cls.bind(value, config = self, inherit = inherit, tags = tags or []))
 		obj2str = lambda value: str.join('\n', imap(lambda obj: obj.bindValue(), value))
 		clsList = self._getInternal('composite plugin', obj2str, str2obj, str2obj, option, default, **kwargs)
 		if len(clsList) == 1:
@@ -165,7 +158,7 @@ class TypedConfigInterface(ConfigInterface):
 		return CompositedClassWrapper(clsCompositor, clsList)
 
 
-CommandType = utils.makeEnum(['executable', 'command'])
+CommandType = makeEnum(['executable', 'command'])
 
 class SimpleConfigInterface(TypedConfigInterface):
 	def getCommand(self, option, default = noDefault, **kwargs):
@@ -177,7 +170,7 @@ class SimpleConfigInterface(TypedConfigInterface):
 #	def getFilter(self, option, pluginName):
 #		filterExpr = self.getList(option, [])
 #		filterCls = self.getPlugin(appendOption(option, 'type'), pluginName, cls = FilterBase)
-#		return filterCls.getInstance(filterExpr)
+#		return filterCls.getBoundInstance(filterExpr)
 
 	# Get state - bool stored in hidden "state" section - any given detail overrides global state
 	def getState(self, statename, detail = '', default = False):

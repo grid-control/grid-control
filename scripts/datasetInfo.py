@@ -74,7 +74,7 @@ def main():
 
 	if os.path.exists(dataset):
 		opts.provider = 'ListProvider'
-	provider = DataProvider.getInstance(opts.provider, config, dataset)
+	provider = DataProvider.createInstance(opts.provider, config, dataset)
 	blocks = provider.getBlocks()
 	if len(blocks) == 0:
 		raise DatasetError('No blocks!')

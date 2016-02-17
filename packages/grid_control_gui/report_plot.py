@@ -32,12 +32,12 @@ try:
 except ImportError:
 	matplotlib = None
 import os, re, logging
-from grid_control import utils
 from grid_control.output_processor import JobInfoProcessor
 from grid_control.report import Report
+from grid_control.utils.data_structures import makeEnum
 from python_compat import irange
 
-JobResultEnum = utils.makeEnum([
+JobResultEnum = makeEnum([
 	"TIMESTAMP_WRAPPER_START",
 	"TIMESTAMP_DEPLOYMENT_START",
 	"TIMESTAMP_DEPLOYMENT_DONE",
