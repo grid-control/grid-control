@@ -21,23 +21,23 @@ from python_compat import imap, irange, izip, lmap, md5_hex
 
 class LookupMatcher:
 	def __init__(self, lookupKeys, lookupFunctions, lookupDictConfig):
-		(self.lookupKeys, self.lookupFunctions) = (lookupKeys, lookupFunctions)
+		(self._lookup_keys, self._lookup_functions) = (lookupKeys, lookupFunctions)
 		if len(lookupDictConfig) == 2 and isinstance(lookupDictConfig[0], dict):
-			self.lookupDict, self.lookupOrder = lookupDictConfig
+			self._lookup_dict, self._lookup_order = lookupDictConfig
 		else:
-			self.lookupDict, self.lookupOrder = ({None: lookupDictConfig}, [])
+			self._lookup_dict, self._lookup_order = ({None: lookupDictConfig}, [])
 
 	def getHash(self):
-		return md5_hex(str(lmap(lambda x: self.lookupDict, self.lookupOrder)))
+		return md5_hex(str(lmap(lambda x: self._lookup_dict, self._lookup_order)))
 
 	def __repr__(self):
-		return 'key(%s)' % str.join(', ', imap(lambda x: "'%s'" % x, self.lookupKeys))
+		return 'key(%s)' % str.join(', ', imap(lambda x: "'%s'" % x, self._lookup_keys))
 
 	def matchRule(self, src):
-		srcValues = lmap(lambda key: src.get(key, None), self.lookupKeys)
-		for lookupValues in self.lookupOrder:
+		srcValues = lmap(lambda key: src.get(key, None), self._lookup_keys)
+		for lookupValues in self._lookup_order:
 			match = True
-			for (sval, lval, lmatch) in izip(srcValues, lookupValues, self.lookupFunctions):
+			for (sval, lval, lmatch) in izip(srcValues, lookupValues, self._lookup_functions):
 				if sval is not None:
 					match = match and lmatch(sval, lval)
 			if match:
@@ -45,7 +45,7 @@ class LookupMatcher:
 
 	def lookup(self, info):
 		rule = self.matchRule(info)
-		return self.lookupDict.get(rule, None)
+		return self._lookup_dict.get(rule, None)
 
 
 def lookupConfigParser(pconfig, key, lookup):
@@ -100,25 +100,25 @@ def lookupConfigParser(pconfig, key, lookup):
 class SimpleLookupParameterSource(SingleParameterSource):
 	def __init__(self, outputKey, lookupKeys, lookupFunctions, lookupDictConfig):
 		SingleParameterSource.__init__(self, outputKey)
-		self.matcher = LookupMatcher(lookupKeys, lookupFunctions, lookupDictConfig)
+		self._matcher = LookupMatcher(lookupKeys, lookupFunctions, lookupDictConfig)
 
 	def fillParameterInfo(self, pNum, result):
-		lookupResult = self.matcher.lookup(result)
+		lookupResult = self._matcher.lookup(result)
 		if lookupResult is None:
 			return
 		elif len(lookupResult) != 1:
 			raise ConfigError("%s can't handle multiple lookup parameter sets!" % self.__class__.__name__)
 		elif lookupResult[0] is not None:
-			result[self.key] = lookupResult[0]
+			result[self._key] = lookupResult[0]
 
-	def show(self, level = 0):
-		ParameterSource.show(self, level, 'var = %s, lookup = %s' % (self.key, str.join(',', self.matcher.lookupKeys)))
+	def show(self):
+		return ['%s: var = %s, lookup = %s' % (self.__class__.__name__, self._key, str.join(',', self._matcher.lookupKeys))]
 
 	def getHash(self):
-		return md5_hex(str(self.key) + self.matcher.getHash())
+		return md5_hex(str(self._key) + self._matcher.getHash())
 
 	def __repr__(self):
-		return "lookup(key('%s'), %s)" % (self.key, repr(self.matcher))
+		return "lookup(key('%s'), %s)" % (self._key, repr(self._matcher))
 
 	def create(cls, pconfig, key, lookup = None):
 		return SimpleLookupParameterSource(*lookupConfigParser(pconfig, key, lookup))
@@ -128,50 +128,50 @@ class SimpleLookupParameterSource(SingleParameterSource):
 class SwitchingLookupParameterSource(SingleParameterSource):
 	def __init__(self, psource, outputKey, lookupKeys, lookupFunctions, lookupDictConfig):
 		SingleParameterSource.__init__(self, outputKey)
-		self.matcher = LookupMatcher(lookupKeys, lookupFunctions, lookupDictConfig)
-		self.psource = psource
-		self.pSpace = self.initPSpace()
+		self._matcher = LookupMatcher(lookupKeys, lookupFunctions, lookupDictConfig)
+		self._psource = psource
+		self._pSpace = self.initPSpace()
 
 	def initPSpace(self):
 		result = []
 		def addEntry(pNum):
 			tmp = {ParameterInfo.ACTIVE: True, ParameterInfo.REQS: []}
-			self.psource.fillParameterInfo(pNum, tmp)
-			lookupResult = self.matcher.lookup(tmp)
+			self._psource.fillParameterInfo(pNum, tmp)
+			lookupResult = self._matcher.lookup(tmp)
 			if lookupResult:
 				for (lookupIdx, tmp) in enumerate(lookupResult):
 					result.append((pNum, lookupIdx))
 
-		if self.psource.getMaxParameters() is None:
+		if self._psource.getMaxParameters() is None:
 			addEntry(None)
 		else:
-			for pNum in irange(self.psource.getMaxParameters()):
+			for pNum in irange(self._psource.getMaxParameters()):
 				addEntry(pNum)
 		if len(result) == 0:
-			utils.vprint('Lookup parameter "%s" has no matching entries!' % self.key, -1)
+			utils.vprint('Lookup parameter "%s" has no matching entries!' % self._key, -1)
 		return result
 
 	def getMaxParameters(self):
-		return len(self.pSpace)
+		return len(self._pSpace)
 
 	def fillParameterInfo(self, pNum, result):
-		if len(self.pSpace) == 0:
-			self.psource.fillParameterInfo(pNum, result)
+		if len(self._pSpace) == 0:
+			self._psource.fillParameterInfo(pNum, result)
 			return
-		subNum, lookupIndex = self.pSpace[pNum]
-		self.psource.fillParameterInfo(subNum, result)
-		result[self.key] = self.matcher.lookup(result)[lookupIndex]
+		subNum, lookupIndex = self._pSpace[pNum]
+		self._psource.fillParameterInfo(subNum, result)
+		result[self._key] = self._matcher.lookup(result)[lookupIndex]
 
 	def fillParameterKeys(self, result):
-		result.append(self.meta)
-		self.psource.fillParameterKeys(result)
+		result.append(self._meta)
+		self._psource.fillParameterKeys(result)
 
 	def resync(self):
 		(result_redo, result_disable, result_sizeChange) = ParameterSource.resync(self)
 		if self.resyncEnabled():
-			(psource_redo, psource_disable, psource_sizeChange) = self.psource.resync()
-			self.pSpace = self.initPSpace()
-			for pNum, pInfo in enumerate(self.pSpace):
+			(psource_redo, psource_disable, psource_sizeChange) = self._psource.resync()
+			self._pSpace = self.initPSpace()
+			for pNum, pInfo in enumerate(self._pSpace):
 				subNum, lookupIndex = pInfo
 				if subNum in psource_redo:
 					result_redo.add(pNum)
@@ -181,14 +181,14 @@ class SwitchingLookupParameterSource(SingleParameterSource):
 		return (result_redo, result_disable, result_sizeChange or psource_sizeChange)
 
 	def getHash(self):
-		return md5_hex(str(self.key) + self.matcher.getHash() + self.psource.getHash())
+		return md5_hex(str(self._key) + self._matcher.getHash() + self._psource.getHash())
 
 	def __repr__(self):
-		return "switch(%r, key('%s'), %s)" % (self.psource, self.key, repr(self.matcher))
+		return "switch(%r, key('%s'), %s)" % (self._psource, self._key, repr(self._matcher))
 
-	def show(self, level = 0):
-		ParameterSource.show(self, level, 'var = %s, lookup = %s' % (self.key, str.join(',', self.matcher.lookupKeys)))
-		self.psource.show(level + 1)
+	def show(self):
+		result = ['%s: var = %s, lookup = %s' % (self.__class__.__name__, self._key, str.join(',', self._matcher.lookupKeys))]
+		return result + lmap(lambda x: '\t' + x, self._psource.show())
 
 	def create(cls, pconfig, psource, key, lookup = None):
 		return SwitchingLookupParameterSource(psource, *lookupConfigParser(pconfig, key, lookup))

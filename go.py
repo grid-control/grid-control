@@ -92,10 +92,12 @@ if __name__ == '__main__':
 
 		def fill(self, container):
 			combinedEntry = container.getEntry('cmdargs', lambda entry: entry.section == 'global')
-			defaultCmdLine = []
+			newCmdLine = sys.argv[1:]
 			if combinedEntry:
-				defaultCmdLine = combinedEntry.value.split()
-			(opts, args) = self._optParser.parse_args(args = defaultCmdLine + sys.argv[1:])
+				newCmdLine = combinedEntry.value.split() + sys.argv[1:]
+			(opts, args) = self._optParser.parse_args(args = newCmdLine)
+			if len(args) != 1:
+				utils.exitWithUsage(usage, 'Invalid command line arguments: %r' % newCmdLine)
 			def setConfigFromOpt(section, option, value):
 				if value is not None:
 					self._addEntry(container, section, option, str(value), '<cmdline>')

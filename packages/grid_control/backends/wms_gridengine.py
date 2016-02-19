@@ -18,6 +18,7 @@ from grid_control.backends.wms import BackendError, WMS
 from grid_control.backends.wms_pbsge import PBSGECommon
 from grid_control.config import ConfigError
 from grid_control.job_db import Job
+from grid_control.utils.parsing import parseTime
 from python_compat import imap, izip, lmap, set
 
 class GridEngine(PBSGECommon):
@@ -99,7 +100,7 @@ class GridEngine(PBSGECommon):
 		queues = {}
 		tags = ['h_vmem', 'h_cpu', 's_rt']
 		reqs = dict(izip(tags, [WMS.MEMORY, WMS.CPUTIME, WMS.WALLTIME]))
-		parser = dict(izip(tags, [int, utils.parseTime, utils.parseTime]))
+		parser = dict(izip(tags, [int, parseTime, parseTime]))
 
 		for queue in imap(str.strip, utils.LoggedProcess(self._configExec, '-sql').iter()):
 			queues[queue] = dict()

@@ -201,10 +201,7 @@ class JobDB(ConfigurablePlugin):
 
 
 	def getJobsN(self, jobSelector = None, subset = None):
-		counter = 0
-		for jobNum in self.getJobsIter(jobSelector, subset):
-			counter += 1
-		return counter
+		return len(self.getJobs(jobSelector, subset)) # fastest method! (iter->list written in C)
 
 
 	def commit(self, jobNum, jobObj):

@@ -47,4 +47,6 @@ class changeInitNeeded(object):
 
 # Validation handler to check for variables in string
 def validNoVar(loc, obj):
-	return utils.checkVar(obj, '%s = %s may not contain variables.' % (loc, obj))
+	if utils.containsVar(obj):
+		raise ConfigError('%s = %s may not contain variables.' % (loc, obj))
+	return obj

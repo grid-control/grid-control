@@ -18,7 +18,7 @@ from grid_control.config import createConfig, noDefault
 from grid_control.datasets.provider_base import DataProvider
 from grid_control.gc_plugin import ConfigurablePlugin
 from grid_control.utils.data_structures import makeEnum
-from hpfwk import AbstractError, NestedException
+from hpfwk import AbstractError, NestedException, Plugin
 from python_compat import identity, ifilter, imap, irange, ismap, itemgetter, lmap, next, sort_inplace
 
 def fast_search(lst, key_fun, key):
@@ -38,6 +38,15 @@ ResyncOrder = makeEnum(['append', 'preserve', 'fillgap', 'reorder']) # reorder m
 
 class PartitionError(NestedException):
 	pass
+
+
+class DataSplitterIO(Plugin):
+	def saveState(self, path, meta, source, sourceLen, message = 'Writing job mapping file'):
+		raise AbstractError
+
+	def loadState(self, path):
+		raise AbstractError
+
 
 class DataSplitter(ConfigurablePlugin):
 	def __init__(self, config):
@@ -410,12 +419,6 @@ class DataSplitter(ConfigurablePlugin):
 		return (resultRedo, resultDisable)
 
 
-	def _getIOHandler(cls):
-		from grid_control.datasets.splitter_io import DataSplitterIO
-		return DataSplitterIO()
-	_getIOHandler = classmethod(_getIOHandler)
-
-
 	# Save as tar file to allow random access to mapping data with little memory overhead
 	def saveState(self, path, source = None, sourceLen = None, message = 'Writing job mapping file'):
 		if source and not sourceLen:
@@ -426,15 +429,15 @@ class DataSplitter(ConfigurablePlugin):
 		# Write metadata to allow reconstruction of data splitter
 		meta = {'ClassName': self.__class__.__name__}
 		meta.update(self._protocol)
-		DataSplitter._getIOHandler().saveState(path, meta, source, sourceLen, message)
+		DataSplitterIO.createInstance('DataSplitterIOAuto').saveState(path, meta, source, sourceLen, message)
 
 
 	def importState(self, path):
-		self.splitSource = DataSplitter._getIOHandler().loadState(path)
+		self.splitSource = DataSplitterIO.createInstance('DataSplitterIOAuto').loadState(path)
 
 
 	def loadState(path, cfg = None):
-		src = DataSplitter._getIOHandler().loadState(path)
+		src = DataSplitterIO.createInstance('DataSplitterIOAuto').loadState(path)
 		if cfg is None:
 			cfg = createConfig(configDict = src.metadata)
 		splitter = DataSplitter.createInstance(src.classname, cfg)

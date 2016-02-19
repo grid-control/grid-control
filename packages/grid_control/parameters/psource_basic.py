@@ -17,25 +17,26 @@ from grid_control import utils
 from grid_control.backends import WMS
 from grid_control.config import ConfigError
 from grid_control.parameters.psource_base import ParameterInfo, ParameterMetadata, ParameterSource
+from grid_control.utils.parsing import parseTime
 from hpfwk import APIError
-from python_compat import lmap, md5_hex
+from python_compat import imap, lmap, md5_hex
 
 class InternalParameterSource(ParameterSource):
 	def __init__(self, values, keys):
 		ParameterSource.__init__(self)
-		(self.values, self.keys) = (values, keys)
+		(self._values, self._keys) = (values, keys)
 
 	def getMaxParameters(self):
-		return len(self.values)
+		return len(self._values)
 
 	def fillParameterInfo(self, pNum, result):
-		result.update(self.values[pNum])
+		result.update(self._values[pNum])
 
 	def fillParameterKeys(self, result):
-		result.extend(self.keys)
+		result.extend(imap(ParameterMetadata, self._keys))
 
 	def getHash(self):
-		return md5_hex(str(self.values) + str(self.keys))
+		return md5_hex(str(self._values) + str(self._keys))
 
 
 class RequirementParameterSource(ParameterSource):
@@ -52,9 +53,9 @@ class RequirementParameterSource(ParameterSource):
 
 	def fillParameterInfo(self, pNum, result):
 		if 'WALLTIME' in result:
-			result[ParameterInfo.REQS].append((WMS.WALLTIME, utils.parseTime(result.pop('WALLTIME'))))
+			result[ParameterInfo.REQS].append((WMS.WALLTIME, parseTime(result.pop('WALLTIME'))))
 		if 'CPUTIME' in result:
-			result[ParameterInfo.REQS].append((WMS.CPUTIME, utils.parseTime(result.pop('CPUTIME'))))
+			result[ParameterInfo.REQS].append((WMS.CPUTIME, parseTime(result.pop('CPUTIME'))))
 		if 'MEMORY' in result:
 			result[ParameterInfo.REQS].append((WMS.MEMORY, int(result.pop('MEMORY'))))
 
@@ -62,24 +63,24 @@ class RequirementParameterSource(ParameterSource):
 class SingleParameterSource(ParameterSource):
 	def __init__(self, key):
 		ParameterSource.__init__(self)
-		self.key = key.lstrip('!')
-		self.meta = ParameterMetadata(self.key, untracked = '!' in key)
+		self._key = key.lstrip('!')
+		self._meta = ParameterMetadata(self._key, untracked = '!' in key)
 
 	def fillParameterKeys(self, result):
-		result.append(self.meta)
+		result.append(self._meta)
 
 
 class KeyParameterSource(ParameterSource):
 	def __init__(self, *keys):
 		ParameterSource.__init__(self)
-		self.keys = lmap(lambda key: key.lstrip('!'), keys)
-		self.meta = lmap(lambda key: ParameterMetadata(key.lstrip('!'), untracked = '!' in key), keys)
+		self._keys = lmap(lambda key: key.lstrip('!'), keys)
+		self._meta = lmap(lambda key: ParameterMetadata(key.lstrip('!'), untracked = '!' in key), keys)
 
 	def fillParameterKeys(self, result):
-		result.extend(self.meta)
+		result.extend(self._meta)
 
 	def __repr__(self):
-		return 'key(%s)' % str.join(', ', self.keys)
+		return 'key(%s)' % str.join(', ', self._keys)
 ParameterSource.managerMap['key'] = 'KeyParameterSource'
 
 
@@ -88,22 +89,22 @@ class SimpleParameterSource(SingleParameterSource):
 		SingleParameterSource.__init__(self, key)
 		if values is None:
 			raise ConfigError('Missing values for %s' % key)
-		self.values = values
+		self._values = values
 
-	def show(self, level = 0):
-		ParameterSource.show(self, level, 'var = %s, len = %d' % (self.key, len(self.values)))
+	def show(self):
+		return ['%s: var = %s, len = %d' % (self.__class__.__name__, self._key, len(self._values))]
 
 	def getMaxParameters(self):
-		return len(self.values)
+		return len(self._values)
 
 	def fillParameterInfo(self, pNum, result):
-		result[self.key] = self.values[pNum]
+		result[self._key] = self._values[pNum]
 
 	def getHash(self):
-		return md5_hex(str(self.key) + str(self.values))
+		return md5_hex(str(self._key) + str(self._values))
 
 	def __repr__(self):
-		return 'var(%s)' % repr(self.meta)
+		return 'var(%s)' % repr(self._meta)
 
 	def create(cls, pconfig, key):
 		return SimpleParameterSource(key, pconfig.getParameter(key.lstrip('!')))
@@ -116,23 +117,23 @@ class SimpleFileParameterSource(SimpleParameterSource):
 		raise APIError('Not yet implemented') # return hash of file content - 
 
 	def __repr__(self):
-		return 'files(%s)' % repr(self.meta)
+		return 'files(%s)' % repr(self._meta)
 ParameterSource.managerMap['files'] = 'SimpleFileParameterSource'
 
 
 class ConstParameterSource(SingleParameterSource):
 	def __init__(self, key, value):
 		SingleParameterSource.__init__(self, key)
-		self.value = value
+		self._value = value
 
-	def show(self, level = 0):
-		ParameterSource.show(self, level, 'const = %s, value = %s' % (self.key, self.value))
+	def show(self):
+		return ['%s: const = %s, value = %s' % (self.__class__.__name__, self._key, self._value)]
 
 	def getHash(self):
-		return md5_hex(str(self.key) + str(self.value))
+		return md5_hex(str(self._key) + str(self._value))
 
 	def fillParameterInfo(self, pNum, result):
-		result[self.key] = self.value
+		result[self._key] = self._value
 
 	def create(cls, pconfig, key, value = None):
 		if value is None:
@@ -147,73 +148,73 @@ class RNGParameterSource(SingleParameterSource):
 		SingleParameterSource.__init__(self, '!%s' % key)
 		(self.low, self.high) = (int(low), int(high))
 
-	def show(self, level = 0):
-		ParameterSource.show(self, level, 'var = %s, range = (%s, %s)' % (self.key, self.low, self.high))
+	def show(self):
+		return ['%s: var = %s, range = (%s, %s)' % (self.__class__.__name__, self._key, self.low, self.high)]
 
 	def fillParameterInfo(self, pNum, result):
-		result[self.key] = random.randint(self.low, self.high)
+		result[self._key] = random.randint(self.low, self.high)
 
 	def getHash(self):
-		return md5_hex(str(self.key) + str([self.low, self.high]))
+		return md5_hex(str(self._key) + str([self.low, self.high]))
 
 	def __repr__(self):
-		return 'rng(%s)' % repr(self.meta).replace('!', '')
+		return 'rng(%s)' % repr(self._meta).replace('!', '')
 ParameterSource.managerMap['rng'] = 'RNGParameterSource'
 
 
 class CounterParameterSource(SingleParameterSource):
 	def __init__(self, key, seed):
 		SingleParameterSource.__init__(self, '!%s' % key)
-		self.seed = seed
+		self._seed = seed
 
-	def show(self, level = 0):
-		ParameterSource.show(self, level, 'var = %s, start = %s' % (self.key, self.seed))
+	def show(self):
+		return ['%s: var = %s, start = %s' % (self.__class__.__name__, self._key, self._seed)]
 
 	def getHash(self):
-		return md5_hex(str(self.key) + str(self.seed))
+		return md5_hex(str(self._key) + str(self._seed))
 
 	def fillParameterInfo(self, pNum, result):
-		result[self.key] = self.seed + result['GC_JOB_ID']
+		result[self._key] = self._seed + result['GC_JOB_ID']
 
 	def __repr__(self):
-		return 'counter(%r, %s)' % (self.meta, self.seed)
+		return 'counter(%r, %s)' % (self._meta, self._seed)
 ParameterSource.managerMap['counter'] = 'CounterParameterSource'
 
 
 class FormatterParameterSource(SingleParameterSource):
 	def __init__(self, key, fmt, source, default = ''):
 		SingleParameterSource.__init__(self, '!%s' % key)
-		(self.fmt, self.source, self.default) = (fmt, source, default)
+		(self._fmt, self._source, self._default) = (fmt, source, default)
 
 	def getHash(self):
-		return md5_hex(str(self.key) + str([self.fmt, self.source, self.default]))
+		return md5_hex(str(self._key) + str([self._fmt, self._source, self._default]))
 
-	def show(self, level = 0):
-		ParameterSource.show(self, level, 'var = %s, fmt = %s, source = %s, default = %s' %
-			(self.key, self.fmt, self.source, self.default))
+	def show(self):
+		return ['%s: var = %s, fmt = %s, source = %s, default = %s' %
+			(self.__class__.__name__, self._key, self._fmt, self._source, self._default)]
 
 	def fillParameterInfo(self, pNum, result):
-		src = utils.parseType(str(result.get(self.source, self.default)))
-		result[self.key] = self.fmt % src
+		src = utils.parseType(str(result.get(self._source, self._default)))
+		result[self._key] = self._fmt % src
 
 	def __repr__(self):
-		return 'format(%r, %r, %r, %r)' % (self.key, self.fmt, self.source, self.default)
+		return 'format(%r, %r, %r, %r)' % (self._key, self._fmt, self._source, self._default)
 ParameterSource.managerMap['format'] = 'FormatterParameterSource'
 
 
 class CollectParameterSource(SingleParameterSource): # Merge parameter values
 	def __init__(self, target, *sources):
 		SingleParameterSource.__init__(self, target)
-		self.srcList = sources
-		self.sources = lmap(lambda regex: re.compile('^%s$' % regex.replace('...', '.*')), list(sources))
+		self._sources_plain = sources
+		self._sources = lmap(lambda regex: re.compile('^%s$' % regex.replace('...', '.*')), list(sources))
 
 	def getHash(self):
-		return md5_hex(str(self.key) + str(self.srcList))
+		return md5_hex(str(self._key) + str(self._sources_plain))
 
 	def fillParameterInfo(self, pNum, result):
-		for src in self.sources:
+		for src in self._sources:
 			for key in result:
 				if src.search(str(key)):
-					result[self.key] = result[key]
+					result[self._key] = result[key]
 					return
 ParameterSource.managerMap['collect'] = 'CollectParameterSource'

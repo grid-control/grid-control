@@ -18,6 +18,7 @@ from grid_control.datasets import DataProvider, DataSplitter, PartitionProcessor
 from grid_control.gc_exceptions import UserError
 from grid_control.parameters import ParameterSource
 from grid_control.tasks.task_base import TaskModule
+from grid_control.utils.parsing import strTime
 from python_compat import lfilter
 
 class DataTask(TaskModule):
@@ -56,7 +57,7 @@ class DataTask(TaskModule):
 		self.dataRefresh = config.getTime('dataset refresh', -1, onChange = None)
 		if self.dataRefresh > 0:
 			paramSource.resyncSetup(interval = max(self.dataRefresh, dataProvider.queryLimit()))
-			utils.vprint('Dataset source will be queried every %s' % utils.strTime(self.dataRefresh), -1)
+			utils.vprint('Dataset source will be queried every %s' % strTime(self.dataRefresh), -1)
 		else:
 			paramSource.resyncSetup(interval = 0)
 		if self._forceRefresh:

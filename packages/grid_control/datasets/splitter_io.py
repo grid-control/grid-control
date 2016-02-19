@@ -15,7 +15,7 @@
 import os, gzip
 from grid_control import utils
 from grid_control.config import ConfigError
-from grid_control.datasets.splitter_base import DataSplitter
+from grid_control.datasets.splitter_base import DataSplitter, DataSplitterIO
 from grid_control.utils.file_objects import VirtualFile
 from grid_control.utils.parsing import parseList
 from grid_control.utils.thread_tools import GCLock
@@ -36,6 +36,26 @@ class BaseJobFileTarAdaptor(object):
 		for (k, v) in ifilter(lambda k_v: k_v[0].startswith('['), metadata.items()):
 			self.metadata.setdefault('None %s' % k.split(']')[0].lstrip('['), {})[k.split(']')[1].strip()] = v
 		del log
+
+
+class DataSplitterIOAuto(DataSplitterIO):
+	def saveState(self, path, meta, source, sourceLen, message = 'Writing job mapping file', version = 2):
+		if version == 1:
+			writer = DataSplitterIO_V1()
+		else:
+			writer = DataSplitterIO_V2()
+		writer.saveState(path, meta, source, sourceLen, message)
+
+	def loadState(self, path):
+		try:
+			version = int(tarfile.open(path, 'r:').extractfile('Version').read())
+		except Exception:
+			version = 1
+		if version == 1:
+			state = DataSplitterIO_V1().loadState(path)
+		else:
+			state = DataSplitterIO_V2().loadState(path)
+		return state
 
 
 class DataSplitterIO_V1(object):
@@ -230,23 +250,3 @@ class DataSplitterIO_V2(object):
 			return JobFileTarAdaptor_V2(path, self.keySize)
 		except Exception:
 			raise ConfigError("No valid dataset splitting found in '%s'." % path)
-
-
-class DataSplitterIO(object):
-	def saveState(self, path, meta, source, sourceLen, message = 'Writing job mapping file', version = 2):
-		if version == 1:
-			writer = DataSplitterIO_V1()
-		else:
-			writer = DataSplitterIO_V2()
-		writer.saveState(path, meta, source, sourceLen, message)
-
-	def loadState(self, path):
-		try:
-			version = int(tarfile.open(path, 'r:').extractfile('Version').read())
-		except Exception:
-			version = 1
-		if version == 1:
-			state = DataSplitterIO_V1().loadState(path)
-		else:
-			state = DataSplitterIO_V2().loadState(path)
-		return state

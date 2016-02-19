@@ -12,37 +12,55 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-import os, time, logging
+import os
 from grid_control import utils
 from grid_control.gc_plugin import NamedPlugin
 from grid_control.job_db import Job
-from grid_control.utils.thread_tools import start_thread
+from grid_control.utils.gc_itertools import lchain
+from grid_control.utils.thread_tools import GCThreadPool
 from python_compat import imap, lmap
 
 class EventHandler(NamedPlugin):
 	configSections = NamedPlugin.configSections + ['events']
 	tagName = 'event'
 
-	def __init__(self, config, name, task, submodules = None):
+	def __init__(self, config, name, task):
 		NamedPlugin.__init__(self, config, name)
-		self._log = logging.getLogger('monitoring')
-		(self.config, self.task, self.submodules) = (config, task, submodules or [])
+		self._task = task
 
 	def onJobSubmit(self, wms, jobObj, jobNum):
-		for submodule in self.submodules:
-			submodule.onJobSubmit(wms, jobObj, jobNum)
+		pass
 
 	def onJobUpdate(self, wms, jobObj, jobNum, data):
-		for submodule in self.submodules:
-			submodule.onJobUpdate(wms, jobObj, jobNum, data)
+		pass
 
 	def onJobOutput(self, wms, jobObj, jobNum, retCode):
-		for submodule in self.submodules:
-			submodule.onJobOutput(wms, jobObj, jobNum, retCode)
+		pass
 
 	def onTaskFinish(self, nJobs):
-		for submodule in self.submodules:
-			submodule.onTaskFinish(nJobs)
+		pass
+
+
+class MultiEventHandler(EventHandler):
+	def __init__(self, config, name, handlerProxyList, task):
+		EventHandler.__init__(self, config, name, task)
+		self._handlers = lmap(lambda p: p.getBoundInstance(task), handlerProxyList)
+
+	def onJobSubmit(self, wms, jobObj, jobNum):
+		for handler in self._handlers:
+			handler.onJobSubmit(wms, jobObj, jobNum)
+
+	def onJobUpdate(self, wms, jobObj, jobNum, data):
+		for handler in self._handlers:
+			handler.onJobUpdate(wms, jobObj, jobNum, data)
+
+	def onJobOutput(self, wms, jobObj, jobNum, retCode):
+		for handler in self._handlers:
+			handler.onJobOutput(wms, jobObj, jobNum, retCode)
+
+	def onTaskFinish(self, nJobs):
+		for handler in self._handlers:
+			handler.onTaskFinish(nJobs)
 
 
 # Monitoring base class with submodule support
@@ -51,20 +69,25 @@ class Monitoring(EventHandler):
 
 	# Script to call later on
 	def getScript(self):
-		return utils.listMapReduce(lambda m: list(m.getScript()), self.submodules)
+		return []
+
+	def getTaskConfig(self):
+		return {}
+
+	def getFiles(self):
+		return []
+
+
+class MultiMonitor(MultiEventHandler, Monitoring):
+	def getScript(self):
+		return lchain(imap(lambda h: h.getScript(), self._handlers))
 
 	def getTaskConfig(self):
 		tmp = {'GC_MONITORING': str.join(' ', imap(os.path.basename, self.getScript()))}
-		return utils.mergeDicts(lmap(lambda m: m.getTaskConfig(), self.submodules) + [tmp])
+		return utils.mergeDicts(lmap(lambda m: m.getTaskConfig(), self._handlers) + [tmp])
 
 	def getFiles(self):
-		return utils.listMapReduce(lambda m: list(m.getFiles()), self.submodules, self.getScript())
-
-
-class MultiMonitor(Monitoring):
-	def __init__(self, config, name, monitoringProxyList, task):
-		submoduleList = lmap(lambda m: m.getBoundInstance(task), monitoringProxyList)
-		Monitoring.__init__(self, config, name, None, submoduleList)
+		return lchain(lmap(lambda h: h.getFiles(), self._handlers) + [self.getScript()])
 
 
 class ScriptMonitoring(Monitoring):
@@ -73,72 +96,60 @@ class ScriptMonitoring(Monitoring):
 
 	def __init__(self, config, name, task):
 		Monitoring.__init__(self, config, name, task)
-		self.silent = config.getBool('silent', True, onChange = None)
-		self.evtSubmit = config.getCommand('on submit', '', onChange = None)
-		self.evtStatus = config.getCommand('on status', '', onChange = None)
-		self.evtOutput = config.getCommand('on output', '', onChange = None)
-		self.evtFinish = config.getCommand('on finish', '', onChange = None)
-		self.running = {}
-		self.runningToken = 0
-		self.runningMax = config.getTime('script runtime', 5, onChange = None)
-
-	def cleanupRunning(self):
-		currentTime = time.time()
-		for (token, startTime) in list(self.running.items()):
-			if currentTime - startTime > self.runningMax:
-				self.running.pop(token, None) # lock free: ignore missing tokens
+		self._silent = config.getBool('silent', True, onChange = None)
+		self._evtSubmit = config.getCommand('on submit', '', onChange = None)
+		self._evtStatus = config.getCommand('on status', '', onChange = None)
+		self._evtOutput = config.getCommand('on output', '', onChange = None)
+		self._evtFinish = config.getCommand('on finish', '', onChange = None)
+		self._runningMax = config.getTime('script runtime', 5, onChange = None)
+		self._workPath = config.getWorkPath()
+		self._tp = GCThreadPool()
 
 	# Get both task and job config / state dicts
-	def scriptThread(self, token, script, jobNum = None, jobObj = None, allDict = None):
+	def _scriptThread(self, script, jobNum = None, jobObj = None, allDict = None):
 		try:
 			tmp = {}
 			if jobNum is not None:
-				tmp.update(self.task.getSubmitInfo(jobNum))
+				tmp.update(self._task.getSubmitInfo(jobNum))
 			if jobObj is not None:
 				tmp.update(jobObj.getAll())
-			tmp['WORKDIR'] = self.config.getWorkPath()
-			tmp.update(self.task.getTaskConfig())
+			tmp['WORKDIR'] = self._workPath
+			tmp.update(self._task.getTaskConfig())
 			if jobNum is not None:
-				tmp.update(self.task.getJobConfig(jobNum))
-				tmp.update(self.task.getSubmitInfo(jobNum))
+				tmp.update(self._task.getJobConfig(jobNum))
+				tmp.update(self._task.getSubmitInfo(jobNum))
 			tmp.update(allDict or {})
 			for key, value in tmp.items():
 				if not key.startswith('GC_'):
 					key = 'GC_' + key
 				os.environ[key] = str(value)
 
-			script = self.task.substVars(script, jobNum, tmp)
-			if self.silent:
+			script = self._task.substVars(script, jobNum, tmp)
+			if self._silent:
 				utils.LoggedProcess(script).wait()
 			else:
 				os.system(script)
 		except Exception:
 			self._log.exception('Error while running user script!')
-		self.running.pop(token, None)
 
-	def runInBackground(self, script, jobNum = None, jobObj = None, addDict = None):
+	def _runInBackground(self, script, jobNum = None, jobObj = None, addDict = None):
 		if script != '':
-			self.runningToken += 1
-			self.running[self.runningToken] = time.time()
-			start_thread('Running monitoring script %s' % script,
-				self.scriptThread, self.runningToken, script, jobNum, jobObj, addDict)
-			self.cleanupRunning()
+			self._tp.start_thread('Running monitoring script %s' % script,
+				self._scriptThread, script, jobNum, jobObj, addDict)
 
 	# Called on job submission
 	def onJobSubmit(self, wms, jobObj, jobNum):
-		self.runInBackground(self.evtSubmit, jobNum, jobObj)
+		self._runInBackground(self._evtSubmit, jobNum, jobObj)
 
 	# Called on job status update
 	def onJobUpdate(self, wms, jobObj, jobNum, data):
-		self.runInBackground(self.evtStatus, jobNum, jobObj, {'STATUS': Job.enum2str(jobObj.state)})
+		self._runInBackground(self._evtStatus, jobNum, jobObj, {'STATUS': Job.enum2str(jobObj.state)})
 
 	# Called on job status update
 	def onJobOutput(self, wms, jobObj, jobNum, retCode):
-		self.runInBackground(self.evtOutput, jobNum, jobObj, {'RETCODE': retCode})
+		self._runInBackground(self._evtOutput, jobNum, jobObj, {'RETCODE': retCode})
 
 	# Called at the end of the task
 	def onTaskFinish(self, nJobs):
-		self.runInBackground(self.evtFinish, addDict = {'NJOBS': nJobs})
-		while self.running:
-			self.cleanupRunning()
-			time.sleep(0.1)
+		self._runInBackground(self._evtFinish, addDict = {'NJOBS': nJobs})
+		self._tp.wait_and_drop(self._runningMax)

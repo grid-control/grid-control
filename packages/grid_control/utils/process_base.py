@@ -56,7 +56,7 @@ class Process(object):
 		if not os.access(cmd, os.X_OK):
 			raise OSError('Unable to execute %r' % cmd)
 		self._log = logging.getLogger('process.%s' % os.path.basename(cmd))
-		self._log.debug('External programm called: %s %s' % (cmd, args))
+		self._log.debug('External programm called: %s %s', cmd, args)
 		(self._cmd, self._args) = (cmd, lmap(str, args))
 		self.start()
 

@@ -15,7 +15,7 @@
 import os, random
 from grid_control import utils
 from grid_control.backends import WMS
-from grid_control.config import changeInitNeeded
+from grid_control.config import ConfigError, changeInitNeeded
 from grid_control.gc_plugin import NamedPlugin
 from grid_control.parameters import ParameterFactory, ParameterInfo
 from grid_control.utils.gc_itertools import ichain, lchain
@@ -66,7 +66,8 @@ class TaskModule(NamedPlugin):
 		self.dependencies = lmap(str.lower, config.getList('depends', [], onChange = initSandbox))
 
 		# Get error messages from gc-run.lib comments
-		self.errorDict = dict(self.updateErrorDict(utils.pathShare('gc-run.lib')))
+		self.errorDict = {}
+		self.updateErrorDict(utils.pathShare('gc-run.lib'))
 
 		# Init parameter source manager
 		pm = config.getPlugin('parameter factory', 'SimpleParameterFactory',
@@ -85,7 +86,7 @@ class TaskModule(NamedPlugin):
 		for line in ifilter(lambda x: x.startswith('#'), open(fileName, 'r').readlines()):
 			tmp = lmap(str.strip, line.lstrip('#').split(' - ', 1))
 			if tmp[0].isdigit() and (len(tmp) == 2):
-				yield (int(tmp[0]), tmp[1])
+				self.errorDict[int(tmp[0])] = tmp[1]
 
 
 	# Get environment variables for gc_config.sh
@@ -148,7 +149,9 @@ class TaskModule(NamedPlugin):
 			allVars.update(self.getJobConfig(jobNum))
 		subst = lambda x: utils.replaceDict(x, allVars, ichain([self.getVarMapping().items(), izip(addDict, addDict)]))
 		result = subst(subst(str(inp)))
-		return utils.checkVar(result, "'%s' contains invalid variable specifiers: '%s'" % (inp, result), check)
+		if check and utils.containsVar(result):
+			raise ConfigError("'%s' contains invalid variable specifiers: '%s'" % (inp, result))
+		return result
 
 
 	def validateVariables(self):

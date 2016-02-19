@@ -12,6 +12,7 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
+import logging
 from hpfwk import InstanceFactory, Plugin
 
 # ConfigurablePlugin is the base class for plugins that need config as constructor parameter
@@ -32,6 +33,7 @@ class NamedPlugin(ConfigurablePlugin):
 
 	def __init__(self, config, name):
 		self._name = name
+		self._log = logging.getLogger('%s.%s' % (self.tagName, name))
 		ConfigurablePlugin.__init__(self, config)
 
 	def getObjectName(self):

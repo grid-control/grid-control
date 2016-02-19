@@ -64,7 +64,6 @@ def tok2tree(value, precedence):
 	token = next(tokens, None)
 	tokStack = []
 	opStack = []
-	prevToken = None
 
 	def clearOPStack(opList):
 		while len(opStack) and (opStack[-1][0] in opList):
@@ -108,7 +107,6 @@ def tok2tree(value, precedence):
 				opStack.append(token)
 		else:
 			tokStack.append(token)
-		prevToken = token
 		token = next(tokens, None)
 
 	clearOPStack(precedence.keys())
@@ -176,9 +174,7 @@ class SimpleParameterFactory(BasicParameterFactory):
 					return [CSVParameterSource.create(self.paramConfig, args[0])]
 				raise APIError('Unknown reference type: "%s"' % refType)
 			else:
-				args_complete = []
-				for expr_list in imap(lambda expr: self.tree2expr(expr), args):
-					args_complete.extend(expr_list)
+				args_complete = lchain(imap(self.tree2expr, args))
 				if operator == '*':
 					return self.combineSources(CrossParameterSource, args_complete)
 				elif operator == '+':

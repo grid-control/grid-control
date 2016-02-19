@@ -13,7 +13,7 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-import os, sys, logging, operator, optparse
+import os, sys, logging, optparse
 from gcSupport import FileMutex, getConfig, utils
 from grid_control.datasets.provider_base import DataProvider
 from grid_control_cms.dbs3_input_validation import validate_json_input
@@ -232,7 +232,7 @@ def main():
 #        dNames = set(ximap(lambda b: b[DataProvider.Dataset], blocks))
 #        dNames = xfilter(lambda ds: hasDataset(opts.dbsTarget, ds), dNames) - todo
 #        config = getConfig(configDict = {None: {'dbs instance': opts.dbsTarget}})
-#        oldBlocks = xreduce(operator.add, ximap(lambda ds: DBSApiv2(config, None, ds, None).getBlocks(), dNames), [])
+#        oldBlocks = xreduce(xoperator.add, ximap(lambda ds: DBSApiv2(config, None, ds, None).getBlocks(), dNames), [])
 #        (blocksAdded, blocksMissing, blocksChanged) = DataProvider.resyncSources(oldBlocks, blocks)
 #        if len(blocksMissing) or len(blocksChanged):
 #            if not utils.getUserBool(' * WARNING: Block structure has changed! Continue?', False):
@@ -244,7 +244,7 @@ def main():
 #        if blockCollision and opts.closeBlock: # Block are closed and contents have changed
 #            for block in blocksAdded:
 #                if block[DataProvider.BlockName] in blockCollision:
-#                    block[DataProvider.BlockName] = utils.strGuid(xmd5(str(time.time())).hexdigest())
+#                    block[DataProvider.BlockName] = strGuid(xmd5(str(time.time())).hexdigest())
 #        blocks = blocksAdded
 
     # 3) Display dataset properties
@@ -266,14 +266,14 @@ def main():
     for blockDump in generateDBS3BlockDumps(opts, blocks):
         if not opts.continue_migration:
             ###initiate the dbs3 to dbs3 migration of parent blocks
-            logger.debug('Checking parentage for block: %s' % blockDump['block']['block_name'])
+            logger.debug('Checking parentage for block: %s', blockDump['block']['block_name'])
             unique_parent_lfns = set((parent[u'parent_logical_file_name'] for parent in blockDump[u'file_parent_list']))
             unique_blocks = set((block['block_name'] for parent_lfn in unique_parent_lfns
                                  for block in dbs3_source_client.listBlocks(logical_file_name=parent_lfn)))
             for block_to_migrate in unique_blocks:
                 if dbs3_target_client.listBlocks(block_name=block_to_migrate):
                     #block already at destination
-                    logger.debug('Block %s is already at destination' % block_to_migrate)
+                    logger.debug('Block %s is already at destination', block_to_migrate)
                     continue
                 migration_task = MigrationTask(block_name=block_to_migrate,
                                                migration_url='https://cmsweb.cern.ch/dbs/prod/global/DBSReader',
@@ -290,7 +290,7 @@ def main():
                                                                                       'dbs3_migration.pkl'))
             except IOError as io_err:
                 msg = "Probably, there is no DBS 3 migration for this dataset ongoing, Dude!"
-                logger.exception('%s\n%s' % (io_err.message, msg))
+                logger.exception('%s\n%s', io_err.message, msg)
                 raise
 
         #wait for all parent blocks migrated to dbs3

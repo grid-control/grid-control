@@ -19,11 +19,12 @@ from grid_control.datasets import DataProvider, DatasetError
 from grid_control.datasets.scanner_base import InfoScanner
 from grid_control.job_db import Job, JobDB
 from grid_control.job_selector import JobSelector
+from grid_control.utils.parsing import parseStr
 from python_compat import identity, ifilter, imap, irange, izip, lfilter, lmap, reduce, set, sorted
 
 def splitParse(opt):
 	(delim, ds, de) = utils.optSplit(opt, '::')
-	return (delim, utils.parseInt(ds), utils.parseInt(de))
+	return (delim, parseStr(ds, int), parseStr(de, int))
 
 # Get output directories from external config file
 class OutputDirsFromConfig(InfoScanner):
@@ -98,7 +99,7 @@ class FilesFromLS(InfoScanner):
 
 	def getEntries(self, path, metadata, events, seList, objStore):
 		metadata['GC_SOURCE_DIR'] = self.path
-		(log, counter) = (None, 0)
+		counter = 0
 		from grid_control.backends.storage import se_ls
 		proc = se_ls(self.path)
 		for fn in proc.iter():

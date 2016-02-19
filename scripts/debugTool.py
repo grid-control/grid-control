@@ -77,7 +77,7 @@ if (opts.partition_list is not None) or opts.partition_list_invalid or opts.part
 			keyStrings = DataSplitter.enumNames
 		keyList = lmap(DataSplitter.str2enum, keyStrings)
 		if None in keyList:
-			logging.warning('Available keys: %r' % DataSplitter.enumNames)
+			logging.warning('Available keys: %r', DataSplitter.enumNames)
 		def getInfos():
 			for jobNum in irange(splitter.getMaxJobs()):
 				splitInfo = splitter.getSplitInfo(jobNum)
@@ -86,7 +86,7 @@ if (opts.partition_list is not None) or opts.partition_list_invalid or opts.part
 		utils.printTabular([('jobNum', 'Job')] + lzip(keyList, keyStrings), getInfos())
 
 	if opts.partition_check:
-		logging.info('Checking %d jobs...' % splitter.getMaxJobs())
+		logging.info('Checking %d jobs...', splitter.getMaxJobs())
 		fail = utils.set()
 		for jobNum in irange(splitter.getMaxJobs()):
 			splitInfo = splitter.getSplitInfo(jobNum)
@@ -102,13 +102,13 @@ if (opts.partition_list is not None) or opts.partition_list_invalid or opts.part
 						files = lmap(lambda x: x.strip().strip(','), files.split())
 				def printError(curJ, curS, msg):
 					if curJ != curS:
-						logging.warning('%s in job %d (j:%s != s:%s)' % (msg, jobNum, curJ, curS))
+						logging.warning('%s in job %d (j:%s != s:%s)', msg, jobNum, curJ, curS)
 						fail.add(jobNum)
 				printError(events, splitInfo[DataSplitter.NEntries], 'Inconsistent number of events')
 				printError(skip, splitInfo[DataSplitter.Skipped], 'Inconsistent number of skipped events')
 				printError(files, splitInfo[DataSplitter.FileList], 'Inconsistent list of files')
 			except Exception:
-				logging.warning('Job %d was never initialized!' % jobNum)
+				logging.warning('Job %d was never initialized!', jobNum)
 		if fail:
 			logging.warning('Failed: ' + str.join('\n', imap(str, fail)))
 
@@ -127,7 +127,7 @@ if opts.job_selector or opts.job_reset_attempts or opts.job_force_state or opts.
 	logging.info('Matching jobs: ' + str.join(' ', imap(str, jobDB.getJobsIter(selected))))
 	if opts.job_reset_attempts:
 		for jobNum in jobDB.getJobsIter(selected):
-			logging.info('Resetting attempts for job %d' % jobNum)
+			logging.info('Resetting attempts for job %d', jobNum)
 			jobinfo = jobDB.get(jobNum)
 			jobinfo.attempt = 0
 			jobinfo.history = {}
@@ -143,11 +143,11 @@ if opts.job_selector or opts.job_reset_attempts or opts.job_force_state or opts.
 			jobinfo = jobDB.get(jobNum)
 			oldState = jobinfo.state
 			if oldState == newState:
-				logging.info('Job is already in state %s' % (Job.enum2str(newState)))
+				logging.info('Job is already in state %s', Job.enum2str(newState))
 				continue
 			jobinfo.state = newState
 			jobDB.commit(jobNum, jobinfo)
-			logging.info('Job state changed from %s to %s' % (Job.enum2str(oldState), Job.enum2str(newState)))
+			logging.info('Job state changed from %s to %s', Job.enum2str(oldState), Job.enum2str(newState))
 	if opts.job_show_jdl:
 		for jobNum in jobDB.getJobsIter(selected):
 			jobinfo = jobDB.get(jobNum)

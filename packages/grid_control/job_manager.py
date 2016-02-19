@@ -20,6 +20,7 @@ from grid_control.job_db import Job, JobClass, JobDB, JobError
 from grid_control.job_selector import AndJobSelector, ClassSelector, JobSelector
 from grid_control.output_processor import TaskOutputProcessor
 from grid_control.report import Report
+from grid_control.utils.parsing import strTime
 from python_compat import ifilter, imap, lfilter, lmap, lzip, set, sorted
 
 class JobManager(NamedPlugin):
@@ -98,7 +99,7 @@ class JobManager(NamedPlugin):
 		elif (state in [Job.WAITING, Job.ABORTED, Job.DISABLED]) and jobObj.get('reason'):
 			jobStatus.append('(%s)' % jobObj.get('reason'))
 		elif (state == Job.SUCCESS) and jobObj.get('runtime', None) is not None:
-			jobStatus.append('(runtime %s)' % utils.strTime(utils.QM(jobObj.get('runtime') != '', jobObj.get('runtime'), 0)))
+			jobStatus.append('(runtime %s)' % strTime(utils.QM(jobObj.get('runtime') != '', jobObj.get('runtime'), 0)))
 		elif (state == Job.FAILED):
 			msg = []
 			if jobObj.get('retcode'):
@@ -334,7 +335,7 @@ class JobManager(NamedPlugin):
 
 		if jobChanges:
 			(redo, disable, sizeChange) = jobChanges
-			if (redo == []) and (disable == []) and (sizeChange == False):
+			if (redo == []) and (disable == []) and (sizeChange is False):
 				return
 			utils.vprint('The task module has requested changes to the job database', -1, True)
 			if sizeChange:

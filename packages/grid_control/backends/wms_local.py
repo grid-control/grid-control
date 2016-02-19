@@ -18,6 +18,7 @@ from grid_control.backends.broker import Broker
 from grid_control.backends.wms import BackendError, BasicWMS, WMS
 from grid_control.job_db import Job
 from grid_control.utils.file_objects import VirtualFile
+from grid_control.utils.gc_itertools import lchain
 from hpfwk import AbstractError
 from python_compat import ifilter, imap, ismap, lfilter
 
@@ -174,7 +175,7 @@ class LocalWMS(BasicWMS):
 				continue
 
 			# Cleanup sandbox
-			outFiles = utils.listMapReduce(lambda pat: glob.glob(os.path.join(path, pat)), self.outputFiles)
+			outFiles = lchain(imap(lambda pat: glob.glob(os.path.join(path, pat)), self.outputFiles))
 			utils.removeFiles(ifilter(lambda x: x not in outFiles, imap(lambda fn: os.path.join(path, fn), os.listdir(path))))
 
 			yield (jobNum, path)

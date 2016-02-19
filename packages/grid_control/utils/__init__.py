@@ -15,10 +15,9 @@
 import os, re, sys, glob, stat, time, errno, signal, fnmatch, logging, operator, python_compat_popen2
 from grid_control.gc_exceptions import GCError, InstallationError, UserError
 from grid_control.utils.file_objects import VirtualFile
-from grid_control.utils.parsing import parseBool, parseDict, parseInt, parseList, parseStr, parseTime, parseType, strGuid, strTime, strTimeShort
+from grid_control.utils.parsing import parseBool, parseType
 from grid_control.utils.thread_tools import TimeoutException, hang_protection
-from hpfwk import APIError
-from python_compat import identity, ifilter, imap, irange, ismap, izip, lfilter, lmap, lru_cache, lsmap, lzip, md5_hex, next, reduce, set, sorted, tarfile, user_input
+from python_compat import identity, ifilter, imap, irange, ismap, izip, lfilter, lmap, lru_cache, lsmap, lzip, next, reduce, set, sorted, tarfile, user_input
 
 def execWrapper(script, context = None):
 	if context is None:
@@ -120,7 +119,7 @@ class LoggedProcess(object):
 		self.niceArgs = QM(niceArgs, niceArgs, args)
 		(self.stdout, self.stderr, self.cmd, self.args) = ([], [], cmd, args)
 		self._logger = logging.getLogger('process.%s' % os.path.basename(cmd))
-		self._logger.log(logging.DEBUG1, 'External programm called: %s %s' % (self.niceCmd, self.niceArgs))
+		self._logger.log(logging.DEBUG1, 'External programm called: %s %s', self.niceCmd, self.niceArgs)
 		self.stime = time.time()
 		if shell:
 			self.proc = python_compat_popen2.Popen3('%s %s' % (cmd, args), True)
@@ -360,22 +359,8 @@ class TwoSidedIterator(object):
 			yield self.allInfo[len(self.allInfo) - self.right]
 
 
-listMapReduce = lambda fun, lst, start = []: reduce(operator.add, imap(fun, lst), start)
-
-def getNamedLogger(prefix, name, instance, postfix = None):
-	if not name:
-		name = instance.__class__.__name__
-	logname = '%s.%s' % (prefix, name.upper().replace('.', '_'))
-	if postfix:
-		logname = '%s.%s' % (logname, postfix)
-	return logging.getLogger(logname)
-
-
-def checkVar(value, message, check = True):
-	if check and max(imap(lambda x: max(x.count('@'), x.count('__')), str(value).split('\n'))) >= 2:
-		from grid_control.config import ConfigError
-		raise ConfigError(message)
-	return value
+def containsVar(value):
+	return max(imap(lambda x: max(x.count('@'), x.count('__')), str(value).split('\n'))) >= 2
 
 
 def accumulate(iterable, empty, doEmit, doAdd = lambda item, buffer: True, opAdd = operator.add):

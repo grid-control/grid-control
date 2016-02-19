@@ -43,7 +43,7 @@ class MultiWMS(WMS):
 
 	def canSubmit(self, neededTime, canCurrentlySubmit):
 		canCurrentlySubmit = self._defaultWMS.canSubmit(neededTime, canCurrentlySubmit)
-		for wmsPrefix, wmsObj in self._wmsMap.items():
+		for wmsObj in self._wmsMap.values():
 			canCurrentlySubmit = wmsObj.canSubmit(neededTime, canCurrentlySubmit)
 		return canCurrentlySubmit
 

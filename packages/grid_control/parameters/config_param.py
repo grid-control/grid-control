@@ -15,6 +15,7 @@
 import shlex
 from grid_control import utils
 from grid_control.config import ConfigError, changeImpossible, noDefault
+from grid_control.utils.parsing import parseDict
 from python_compat import imap, irange, lmap, lzip
 
 def parseTuple(t, delimeter):
@@ -33,9 +34,9 @@ def frange(start, end = None, num = None, steps = None, format = '%g'):
 		steps = (end - start) / (num - 1)
 		num -= 1
 	if (end is not None) and (num is None):
-		steps = utils.QM(steps, steps, 1)
+		steps = steps or 1
 		num = int(1 + (end - start) / steps)
-	result = imap(lambda i: start + utils.QM(steps, steps, 1) * i, irange(num)) + utils.QM(end, [end], [])
+	result = imap(lambda i: start + (steps or 1) * i, irange(num)) + utils.QM(end, [end], [])
 	return lmap(lambda x: format % x, result)
 
 
@@ -123,7 +124,7 @@ class ParameterConfig:
 
 
 	def getOpt(self, var, opt = None):
-		return self.optDict.get((var, opt), ('%s %s' % (var, utils.QM(opt, opt, ''))).replace('\'', ''))
+		return self.optDict.get((var, opt), ('%s %s' % (var, opt or '')).replace('\'', ''))
 
 
 	def get(self, var, opt = None, default = noDefault):
@@ -145,7 +146,7 @@ class ParameterConfig:
 
 	def parseDict(self, varName, value, valueParser):
 		keyTupleDelimeter = self.get(self.getParameterOption(varName), 'key delimeter', ',')
-		return utils.parseDict(value, valueParser, lambda k: parseTuple(k, keyTupleDelimeter))
+		return parseDict(value, valueParser, lambda k: parseTuple(k, keyTupleDelimeter))
 
 
 	def getParameter(self, varName):

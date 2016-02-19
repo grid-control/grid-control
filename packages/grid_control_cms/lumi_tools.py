@@ -101,7 +101,7 @@ def parseLumiFilter(lumiexpr):
 
 
 def filterLumiFilter(runs, lumifilter):
-	""" Check if lumifilter selects the given run/lumi
+	""" Filter lumifilter for entries that contain the given runs
 	>>> formatLumi(filterLumiFilter([2,3,6], [([1, None], [2, None]), ([4, 1], [4, None]), ([5, 1], [None,3])]))
 	['1:MIN-2:MAX', '5:1-9999999:3']
 	>>> formatLumi(filterLumiFilter([2,3,6], [([1, 1], [2, 2]), ([3, 1], [5, 2]), ([5, 2], [7,3])]))
@@ -113,6 +113,7 @@ def filterLumiFilter(runs, lumifilter):
 			if (sel_start is None) or (run >= sel_start):
 				if (sel_end is None) or (run <= sel_end):
 					yield filterEntry
+					break
 
 
 def selectLumi(run_lumi, lumifilter):

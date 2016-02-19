@@ -34,7 +34,7 @@ class InstanceFactory(object):
 		return '%s(%s)' % (self._cls.__name__, str.join(', ', args_str_list))
 
 	def __eq__(self, other): # Used to check for changes compared to old
-		return self._bindValue == other._bindValue
+		return self.bindValue() == other.bindValue()
 
 	def __repr__(self):
 		return '<instance factory for %s>' % self._fmt(self._args, self._kwargs, addEllipsis = True)
@@ -58,55 +58,61 @@ class Plugin(object):
 	alias = []
 	configSections = []
 
-	moduleMap = {}
-	classMap = {}
+	_pluginMap = {}
+	_classMap = {}
+	_clsCache = {}
+
+	def registerClass(cls, module_name, cls_name, alias_list, base_cls_names):
+		cls_path = '%s.%s' % (module_name, cls_name)
+		for name in [cls_name] + alias_list:
+			cls_name_entry = cls._pluginMap.setdefault(name.lower(), [])
+			if cls_path not in cls_name_entry:
+				cls_name_entry.append(cls_path)
+			for base_cls_name in base_cls_names:
+				cls_base_entry = cls._classMap.setdefault(base_cls_name.lower(), [])
+				if {name: cls_name} not in cls_base_entry:
+					cls_base_entry.append({name: cls_name})
+	registerClass = classmethod(registerClass)
 
 	def getClassNames(cls):
 		for parent in cls.__bases__:
-			if cls.alias == parent.alias:
+			if hasattr(parent, 'alias') and (cls.alias == parent.alias):
 				return [cls.__name__]
 		return [cls.__name__] + cls.alias
 	getClassNames = classmethod(getClassNames)
 
-	def getClass(cls, clsName):
-		log = logging.getLogger('classloader.%s' % cls.__name__)
-		log.log(logging.DEBUG1, 'Loading class %s', clsName)
-
+	def _getClass(cls, clsName, log):
 		# resolve class name/alias to complete class path 'myplugin -> module.submodule.MyPlugin'
-		clsMap = {}
-		for (key, value) in cls.moduleMap.items():
-			clsMap[key.lower()] = value
 		clsSearchList = [clsName]
-		clsNameStored = clsName
 		clsFormat = lambda cls: '%s:%s' % (cls.__module__, cls.__name__)
 		clsProcessed = []
 		while clsSearchList:
-			clsName = clsSearchList.pop()
-			if clsName in clsProcessed: # Prevent lookup circles
+			clsSearchName = clsSearchList.pop()
+			if clsSearchName in clsProcessed: # Prevent lookup circles
 				continue
-			clsProcessed.append(clsName)
+			clsProcessed.append(clsSearchName)
 			clsModuleList = []
-			if '.' in clsName: # module.submodule.class specification
-				clsNameParts = clsName.split('.')
-				clsName = clsNameParts[-1]
-				clsModuleName = str.join('.', clsNameParts[:-1])
+			if '.' in clsSearchName: # module.submodule.class specification
+				clsSearchNameParts = clsSearchName.split('.')
+				clsSearchName = clsSearchNameParts[-1]
+				clsModuleName = str.join('.', clsSearchNameParts[:-1])
 				log.log(logging.DEBUG2, 'Importing module %s', clsModuleName)
 				oldSysPath = list(sys.path)
 				try:
-					clsModuleList = [__import__(clsModuleName, {}, {}, [clsName])]
+					clsModuleList = [__import__(clsModuleName, {}, {}, [clsSearchName])]
 				except Exception:
 					log.log(logging.DEBUG2, 'Unable to import module %s', clsModuleName)
 				sys.path = oldSysPath
-			elif hasattr(sys.modules['__main__'], clsName):
+			elif hasattr(sys.modules['__main__'], clsSearchName):
 				clsModuleList.append(sys.modules['__main__'])
 
 			clsLoadedList = []
 			for clsModule in clsModuleList:
-				log.log(logging.DEBUG2, 'Searching for class %s:%s', clsModule.__name__, clsName)
+				log.log(logging.DEBUG2, 'Searching for class %s:%s', clsModule.__name__, clsSearchName)
 				try:
-					clsLoadedList.append(getattr(clsModule, clsName))
+					clsLoadedList.append(getattr(clsModule, clsSearchName))
 				except Exception:
-					log.log(logging.DEBUG2, 'Unable to import class %s:%s', clsModule.__name__, clsName)
+					log.log(logging.DEBUG2, 'Unable to import class %s:%s', clsModule.__name__, clsSearchName)
 
 			for clsLoaded in clsLoadedList:
 				if issubclass(clsLoaded, cls):
@@ -114,16 +120,20 @@ class Plugin(object):
 					return clsLoaded
 				log.log(logging.DEBUG, '%s is not of type %s!', clsFormat(clsLoaded), clsFormat(cls))
 
-			clsMapResult = clsMap.get(clsName.lower(), [])
-			if isinstance(clsMapResult, str):
-				clsSearchList.append(clsMapResult)
-			else:
-				clsSearchList.extend(clsMapResult)
-		raise PluginError('Unable to load %r of type %r - tried:\n\t%s' % (clsNameStored, clsFormat(cls), str.join('\n\t', clsProcessed)))
+			clsSearchList.extend(cls._pluginMap.get(clsSearchName.lower(), []))
+		raise PluginError('Unable to load %r of type %r - tried:\n\t%s' % (clsName, clsFormat(cls), str.join('\n\t', clsProcessed)))
+	_getClass = classmethod(_getClass)
+
+	def getClass(cls, clsName):
+		log = logging.getLogger('classloader.%s' % cls.__name__)
+		log.log(logging.DEBUG1, 'Loading class %s', clsName)
+		if clsName not in cls._clsCache.get(cls, {}):
+			cls._clsCache.setdefault(cls, {})[clsName] = cls._getClass(clsName, log)
+		return cls._clsCache[cls][clsName]
 	getClass = classmethod(getClass)
 
 	def getClassList(cls):
-		return Plugin.classMap.get(cls.__name__, [])
+		return Plugin._classMap.get(cls.__name__, [])
 	getClassList = classmethod(getClassList)
 
 	# Get an instance of a derived class by specifying the class name and constructor arguments
@@ -179,11 +189,10 @@ def import_modules(root, selector, package = None):
 	sys.path = sys.path[1:]
 
 def get_plugin_classes(module_iterator):
-	from hpfwk import Plugin
 	for module in module_iterator:
 		try:
 			cls_list = module.__all__
-		except:
+		except Exception:
 			cls_list = dir(module)
 		for cls_name in cls_list:
 			cls = getattr(module, cls_name)
@@ -217,7 +226,7 @@ def create_plugin_file(package, selector):
 	def write_cls_hierarchy(fp, data, level = 0):
 		if None in data:
 			cls = data.pop(None)
-			fp.write('%s * %s %s\n' % (' ' * level, cls.__module__, str.join(' ', [cls.__name__] + cls.alias)))
+			fp.write('%s * %s %s\n' % (' ' * level, cls.__module__, str.join(' ', cls.getClassNames())))
 			fp.write('\n')
 		key_order = []
 		for cls in data:
@@ -249,7 +258,4 @@ def initPlugins(basePath):
 				for level in list(base_cls_info):
 					if level > base_cls_level:
 						base_cls_info.pop(level)
-				for name in module_info[1:]:
-					Plugin.moduleMap.setdefault(name, []).append('%s.%s' % (module_name, cls_name))
-					for base_cls_name in base_cls_info:
-						Plugin.classMap.setdefault(base_cls_name, []).append(name)
+				Plugin.registerClass(module_name, cls_name, module_info[2:], base_cls_info.values())

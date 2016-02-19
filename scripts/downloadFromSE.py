@@ -164,7 +164,6 @@ DEFAULT: The default is to download the SE file and check them with MD5 hashes.
 				break
 			time.sleep(60)
 		except KeyboardInterrupt:
-			raise
 			utils.eprint('\n\nDownload aborted!\n')
 			sys.exit(os.EX_TEMPFAIL)
 
@@ -242,7 +241,7 @@ def realmain(opts, args):
 			if 'file://' in outFilePath:
 				checkPath = outFilePath
 
-			def monitorFile(path, lock, abort):
+			def monitorFile(fileIdx, path, lock, abort):
 				path = path.replace('file://', '')
 				(csize, osize, stime, otime, lttime) = (0, 0, time.time(), time.time(), time.time())
 				while not lock.acquire(False): # Loop until monitor lock is available
@@ -264,7 +263,7 @@ def realmain(opts, args):
 			copyAbortLock = threading.Lock()
 			monitorLock = threading.Lock()
 			monitorLock.acquire()
-			monitor = start_thread('Download monitor %s' % jobNum, monitorFile, checkPath, monitorLock, copyAbortLock)
+			monitor = start_thread('Download monitor %s' % jobNum, monitorFile, fileIdx, checkPath, monitorLock, copyAbortLock)
 			result = -1
 			procCP = storage.se_copy(os.path.join(pathSE, name_dest), outFilePath, tmp = checkPath)
 			while True:
@@ -353,20 +352,20 @@ def realmain(opts, args):
 				self.jobNum = jobNum
 				self.output = ['Job %5d' % jobNum, '']
 			def infoline(self, fileIdx, msg = ''):
-				return 'Job %5d [%i/%i] %s %s' % (self.jobNum, fileIdx + 1, len(self.files), self.files[fileIdx][2], msg)
+				return 'Job %5d [%i/%i] %s %s' % (self.jobNum, fileIdx + 1, len(self._files), self._files[fileIdx][2], msg)
 			def files(self, files):
-				(self.files, self.output, self.tr) = (files, self.output[1:], ['']*len(files))
+				(self._files, self.output, self.tr) = (files, self.output[1:], ['']*len(files))
 				for x in irange(len(files)):
 					self.output.insert(2*x, self.infoline(x))
 					self.output.insert(2*x+1, '')
 			def file(self, idx, csize = None, osize = None, stime = None, otime = None):
-				(hash, name_local, name_dest, pathSE) = self.files[idx]
+				(hash, name_local, name_dest, pathSE) = self._files[idx]
 				if otime:
 					trfun = lambda sref, tref: gcSupport.prettySize(((csize - sref) / max(1, time.time() - tref)))
 					self.tr[idx] = '%7s avg. - %7s/s inst.' % (gcSupport.prettySize(csize), trfun(0, stime))
 					self.output[2*idx] = self.infoline(idx, '(%s - %7s/s)' % (self.tr[idx], trfun(osize, otime)))
 			def hash(self, idx, hashLocal = None):
-				(hash, name_local, name_dest, pathSE) = self.files[idx]
+				(hash, name_local, name_dest, pathSE) = self._files[idx]
 				if hashLocal:
 					if hash == hashLocal:
 						result = ansi.Console.fmt('MATCH', [ansi.Console.COLOR_GREEN])
@@ -415,10 +414,10 @@ def realmain(opts, args):
 			def init(self, jobNum):
 				sys.stdout.write('Job %d: ' % jobNum)
 			def files(self, files):
-				self.files = files
+				self._files = files
 				sys.stdout.write('The job wrote %d file%s to the SE\n' % (len(files), ('s', '')[len(files) == 1]))
 			def file(self, idx, csize = None, osize = None, stime = None, otime = None):
-				(hash, name_local, name_dest, pathSE) = self.files[idx]
+				(hash, name_local, name_dest, pathSE) = self._files[idx]
 				if otime:
 					tr = lambda sref, tref: gcSupport.prettySize(((csize - sref) / max(1, time.time() - tref)))
 					tmp = name_dest
@@ -431,7 +430,7 @@ def realmain(opts, args):
 					self.write('\t%s' % name_dest)
 					sys.stdout.flush()
 			def hash(self, idx, hashLocal = None):
-				(hash, name_local, name_dest, pathSE) = self.files[idx]
+				(hash, name_local, name_dest, pathSE) = self._files[idx]
 				self.write(' => %s\n' % ('\33[0;91mFAIL\33[0m', '\33[0;92mMATCH\33[0m')[hash == hashLocal])
 				self.write('\t\tRemote site: %s\n' % hash)
 				self.write('\t\t Local site: %s\n' % hashLocal)
@@ -441,7 +440,7 @@ def realmain(opts, args):
 				if msg:
 					self.write('\t' + msg + '\r')
 				else:
-					self.write(' ' * len('\tDeleting file %s from SE...\r' % self.files[idx][2]) + '\r')
+					self.write(' ' * len('\tDeleting file %s from SE...\r' % self._files[idx][2]) + '\r')
 			def write(self, msg):
 				sys.stdout.write(msg)
 			def finish(self):

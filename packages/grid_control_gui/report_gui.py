@@ -16,6 +16,7 @@ import sys
 from grid_control import utils
 from grid_control.job_db import Job
 from grid_control.report import Report
+from grid_control.utils.parsing import parseStr
 from grid_control_gui.ansi import Console
 from python_compat import ifilter, imap, irange, lfilter, lmap, set, sorted
 
@@ -133,7 +134,7 @@ class ModuleReport(CategoryReport):
 		stateCatList = ['WAITING', 'RUNNING', 'FAILED', 'SUCCESS']
 		utils.vprint(level = -1)
 		utils.printTabular(lmap(lambda x: (x, x), sorted(head) + stateCatList),
-			infos, 'c' * len(head), fmt = dict.fromkeys(stateCatList, lambda x: '%7d' % utils.parseInt(x, 0)))
+			infos, 'c' * len(head), fmt = dict.fromkeys(stateCatList, lambda x: '%7d' % parseStr(x, int, 0)))
 		utils.vprint(level = -1)
 
 
@@ -172,7 +173,7 @@ class AdaptiveReport(CategoryReport):
 			return newCatKey
 
 		# Merge successfully completed categories
-		successKey = mergeCats('Completed subtasks', lfilter(lambda catKey:
+		mergeCats('Completed subtasks', lfilter(lambda catKey:
 			(len(catStateDict[catKey]) == 1) and (Job.SUCCESS in catStateDict[catKey]), catStateDict))
 
 		# Next merge steps shouldn't see non-dict catKeys in catDescDict
@@ -288,12 +289,12 @@ class GUIReport(AdaptiveReport):
 			total = sum(catStateDict[catKey].values())
 			self.printLimited(Console.fmt(desc, [Console.BOLD]), self.maxX - 24,
 				'(%5d jobs, %6.2f%%  )' % (total, 100 * completed / float(total)))
-			bar = JobProgressBar(sum(catStateDict[catKey].values()), width = self.maxX - 19)
-			bar.update(completed,
+			progressbar = JobProgressBar(sum(catStateDict[catKey].values()), width = self.maxX - 19)
+			progressbar.update(completed,
 				sumCat(catKey, [Job.SUBMITTED, Job.WAITING, Job.READY, Job.QUEUED]),
 				sumCat(catKey, [Job.RUNNING, Job.DONE]),
 				sumCat(catKey, [Job.ABORTED, Job.CANCELLED, Job.FAILED]))
-			self.printLimited(bar, self.maxX)
-		for x in irange(self._catMax - len(catStateDict)):
+			self.printLimited(progressbar, self.maxX)
+		for dummy in irange(self._catMax - len(catStateDict)):
 			sys.stdout.write(' ' * self.maxX + '\n')
 			sys.stdout.write(' ' * self.maxX + '\n')

@@ -259,7 +259,7 @@ if __name__ == '__main__':
 	for (root, dirs, files) in os.walk('.'):
 		if root.startswith('./.') or ('source_check' in root):
 			continue
-		for fn in filter(lambda fn: fn.endswith('.py') and not ("python_compat" in fn), files):
+		for fn in ifilter(lambda fn: fn.endswith('.py') and not ("python_compat" in fn), files):
 			fn = os.path.join(root, fn)
 			tmp = open(fn).read().replace('\'zip(', '').replace('def set(', '').replace('type(range(', '')
 			tmp = tmp.replace('def filter(', '').replace('def next(', '').replace('next()', '')
@@ -267,11 +267,11 @@ if __name__ == '__main__':
 			builtin_avoid = ['basestring', 'cmp', 'filter', 'map', 'range', 'reduce', 'xrange', 'zip']
 			needed = set()
 			for pattern in ['[^_\'\/\.a-zA-Z]%s\(', '[^_\'\/\.a-zA-Z]%s\.', '\(%s[,\)]', ', %s[,\)]', ' = %s[,\)]']:
-				needed.update(filter(lambda name: re.search(pattern % name, tmp), __all__ + builtin_avoid))
+				needed.update(ifilter(lambda name: re.search(pattern % name, tmp), __all__ + builtin_avoid))
 			imported = set()
-			for iline in filter(lambda line: 'python_compat' in line, tmp.splitlines()):
+			for iline in ifilter(lambda line: 'python_compat' in line, tmp.splitlines()):
 				try:
-					imported.update(map(str.strip, iline.split(None, 3)[3].split(',')))
+					imported.update(imap(str.strip, iline.split(None, 3)[3].split(',')))
 				except Exception:
 					raise Exception('Unable to parse %r:%r' % (fn, iline))
 			if not needed and ('python_compat' in tmp):

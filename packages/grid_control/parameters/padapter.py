@@ -16,7 +16,6 @@ import os
 from grid_control import utils
 from grid_control.gc_plugin import ConfigurablePlugin
 from grid_control.parameters.psource_base import ParameterInfo, ParameterMetadata, ParameterSource
-from grid_control.parameters.psource_file import GCDumpParameterSource
 from grid_control.utils.file_objects import ZipFile
 from hpfwk import APIError
 from python_compat import identity, ifilter, imap, irange, ismap, itemgetter, lfilter, lmap, md5, set, sort_inplace, sorted, str2bytes
@@ -54,7 +53,7 @@ class ParameterAdapter(ConfigurablePlugin):
 		return self._source.resync()
 
 	def show(self):
-		self._source.show()
+		return self._source.show()
 
 
 class BasicParameterAdapter(ParameterAdapter):
@@ -118,7 +117,7 @@ class TrackedParameterAdapter(BasicParameterAdapter):
 			self._resyncInternal()
 		elif doInit: # Write current state
 			self.writeJob2PID(self._pathJob2PID)
-			GCDumpParameterSource.write(self._pathParams, self)
+			ParameterSource.getClass('GCDumpParameterSource').write(self._pathParams, self)
 
 	def readJob2PID(self):
 		fp = ZipFile(self._pathJob2PID, 'r')
@@ -175,7 +174,7 @@ class TrackedParameterAdapter(BasicParameterAdapter):
 				for jobNum in irange(psource.getMaxJobs()):
 					yield translateEntry(psource.getJobInfo(jobNum))
 
-		old = ParameterAdapter(None, GCDumpParameterSource(self._pathParams))
+		old = ParameterAdapter(None, ParameterSource.createInstance('GCDumpParameterSource', self._pathParams))
 		params_old = list(translatePSource(old))
 		new = ParameterAdapter(None, self._rawSource)
 		params_new = list(translatePSource(new))
@@ -228,6 +227,6 @@ class TrackedParameterAdapter(BasicParameterAdapter):
 			self._resyncState = (set(), set(), sizeChange)
 		# Write resynced state
 		self.writeJob2PID(self._pathJob2PID + '.old')
-		GCDumpParameterSource.write(self._pathParams + '.old', self)
+		ParameterSource.getClass('GCDumpParameterSource').write(self._pathParams + '.old', self)
 		os.rename(self._pathJob2PID + '.old', self._pathJob2PID)
 		os.rename(self._pathParams + '.old', self._pathParams)

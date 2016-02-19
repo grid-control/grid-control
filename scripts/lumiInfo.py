@@ -114,7 +114,6 @@ def main():
 			except KeyboardInterrupt:
 				sys.exit(os.EX_OK)
 			except Exception:
-				raise
 				print('Error while parsing framework output of job %s!' % jobNum)
 				continue
 

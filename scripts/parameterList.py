@@ -29,6 +29,7 @@ parser.addFlag(None, 'disabled',           default = False, short = '-d', help =
 parser.addFlag(None, 'force-intervention', default = False, short = '-f', help = 'Simulate dataset intervention')
 parser.addFlag(None, 'intervention',       default = False, short = '-I', help = 'Display intervention tasks')
 parser.addFlag(None, 'list-parameters',    default = False, short = '-l', help = 'Display parameter list')
+parser.addFlag(None, 'show-sources',       default = False, short = '-L', help = 'Show parameter sources')
 parser.addFlag(None, 'static',             default = False, short = '-s', help = 'Assume a static parameterset')
 parser.addFlag(None, 'untracked',          default = False, short = '-t', help = 'Display untracked variables')
 parser.addList(None, 'parameter',          default = [],    short = '-p', help = 'Specify parameters')
@@ -106,6 +107,8 @@ def main():
 			config.getWorkPath(), 'data', None, dataSplitter, DataSplitProcessorTest())
 
 	psource = pm.getSource(config)
+	if opts.show_sources:
+		sys.stdout.write(str.join('\n', psource.show()) + '\n\n')
 
 	if opts.force_intervention:
 		DataParameterSource = ParameterSource.getClass('DataParameterSource')

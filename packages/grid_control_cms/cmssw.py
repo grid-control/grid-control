@@ -19,7 +19,7 @@ from grid_control.config import ConfigError, noDefault
 from grid_control.datasets import DataSplitter, PartitionProcessor
 from grid_control.tasks.task_data import DataTask
 from grid_control.tasks.task_utils import TaskExecutableWrapper
-from grid_control_cms.lumi_tools import filterLumiFilter, formatLumi, parseLumiFilter
+from grid_control_cms.lumi_tools import formatLumi, parseLumiFilter
 from python_compat import imap, lfilter
 
 BasicPartitionProcessor = PartitionProcessor.getClass('BasicPartitionProcessor')
@@ -56,7 +56,7 @@ class CMSSW(DataTask):
 		config.set('dataset splitter', 'EventBoundarySplitter')
 		config.set('partition processor', 'CMSPartitionProcessor LocationPartitionProcessor')
 		DataTask.__init__(self, config, name)
-		self.errorDict.update(dict(self.updateErrorDict(utils.pathShare('gc-run.cmssw.sh', pkg = 'grid_control_cms'))))
+		self.updateErrorDict(utils.pathShare('gc-run.cmssw.sh', pkg = 'grid_control_cms'))
 
 		# SCRAM info
 		scramProject = config.getList('scram project', [])
@@ -289,13 +289,6 @@ class CMSSW(DataTask):
 	def getActiveLumiFilter(self, lumifilter, jobNum = None):
 		getLR = lambda x: str.join(',', imap(lambda x: '"%s"' % x, formatLumi(x)))
 		return getLR(lumifilter) # TODO: Validate subset selection
-		try:
-			splitInfo = self.dataSplitter.getSplitInfo(jobNum)
-			runTag = splitInfo[DataSplitter.MetadataHeader].index("Runs")
-			runList = utils.listMapReduce(lambda m: m[runTag], splitInfo[DataSplitter.Metadata])
-			return getLR(filterLumiFilter(runList, lumifilter))
-		except Exception:
-			return getLR(lumifilter)
 
 
 	def getVarNames(self):

@@ -18,6 +18,7 @@ import os, time, logging
 from grid_control import utils
 from grid_control.gc_exceptions import UserError
 from grid_control.gc_plugin import NamedPlugin
+from grid_control.utils.parsing import parseTime, strTime
 from hpfwk import AbstractError, NestedException
 from python_compat import identity, imap, lmap, rsplit
 
@@ -100,12 +101,12 @@ class TimedAccessToken(AccessToken):
 	def canSubmit(self, neededTime, canCurrentlySubmit):
 		if not self._checkTimeleft(self._lowerLimit):
 			raise UserError('Your access token (%s) only has %d seconds left! (Required are %s)' %
-				(self.getObjectName(), self._getTimeleft(cached = True), utils.strTime(self._lowerLimit)))
+				(self.getObjectName(), self._getTimeleft(cached = True), strTime(self._lowerLimit)))
 		if self._ignoreTime:
 			return True
 		if not self._checkTimeleft(self._lowerLimit + neededTime) and canCurrentlySubmit:
 			self._logUser.warning('Access token (%s) lifetime (%s) does not meet the access and walltime (%s) requirements!',
-				self.getObjectName(), utils.strTime(self._getTimeleft(cached = False)), utils.strTime(self._lowerLimit + neededTime))
+				self.getObjectName(), strTime(self._getTimeleft(cached = False)), strTime(self._lowerLimit + neededTime))
 			self._logUser.warning('Disabling job submission')
 			return False
 		return True
@@ -120,7 +121,7 @@ class TimedAccessToken(AccessToken):
 		if (delta > self._minQueryTime) or (timeleft < neededTime and delta > self._maxQueryTime):
 			self._lastUpdate = time.time()
 			timeleft = self._getTimeleft(cached = False)
-			self._logUser.info('Time left for access token "%s": %s', self.getObjectName(), utils.strTime(timeleft))
+			self._logUser.info('Time left for access token "%s": %s', self.getObjectName(), strTime(timeleft))
 		return timeleft >= neededTime
 
 
@@ -144,7 +145,7 @@ class VomsProxy(TimedAccessToken):
 		return [self._getProxyInfo('path')]
 
 	def _getTimeleft(self, cached):
-		return self._getProxyInfo('timeleft', utils.parseTime, cached)
+		return self._getProxyInfo('timeleft', parseTime, cached)
 
 	def _parseProxy(self, cached = True):
 		# Return cached results if requested

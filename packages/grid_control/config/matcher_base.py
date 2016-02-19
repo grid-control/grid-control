@@ -80,13 +80,17 @@ class EqualMatcher(BasicMatcher):
 class ExprMatcher(MatcherBase):
 	alias = ['expr', 'eval']
 
+	def _getExpr(selector):
+		return eval('lambda value: %s' % selector)
+	_getExpr = staticmethod(_getExpr)
+
 	def matcher(self, value, selector):
-		return eval('lambda value: %s' % selector)(value)
+		return ExprMatcher._getExpr(selector)(value)
 
 	def matchWith(self, selector):
 		class FunctionObject(MatcherHolder):
 			def init(self, fixedSelector):
-				self.match = eval('lambda value: %s' % fixedSelector)
+				self.match = ExprMatcher._getExpr(fixedSelector)
 		return getFixedFunctionObject(self, FunctionObject, selector)
 
 

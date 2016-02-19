@@ -13,8 +13,8 @@
 #-#  limitations under the License.
 
 import sys
-from grid_control import utils
 from grid_control.report import Report
+from grid_control.utils.parsing import strTime
 
 class TimeReport(Report):
 	def __init__(self, jobDB, task, jobs = None, configString = ''):
@@ -32,5 +32,5 @@ class TimeReport(Report):
 			jobObj = self._jobDB.get(jobNum)
 			if jobObj:
 				cpuTime += jobObj.get('runtime', 0)
-		sys.stdout.write('Consumed wall time: %-20s' % utils.strTime(cpuTime))
+		sys.stdout.write('Consumed wall time: %-20s' % strTime(cpuTime))
 		sys.stdout.write('Estimated cost: $%.2f\n' % ((cpuTime / 60. / 60.) * self._dollar_per_hour))

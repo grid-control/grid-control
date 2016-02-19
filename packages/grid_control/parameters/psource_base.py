@@ -43,9 +43,9 @@ class ParameterSource(Plugin):
 	create = classmethod(create)
 
 	def __init__(self):
-		self.resyncInfo = None
-		self.resyncTime = -1 # Default - always resync
-		self.resyncLast = None
+		self._resyncInfo = None
+		self._resyncTime = -1 # Default - always resync
+		self._resyncLast = None
 
 	def getMaxParameters(self):
 		return None
@@ -60,31 +60,31 @@ class ParameterSource(Plugin):
 		return (set(), set(), False) # returns two sets of parameter ids and boolean (redo, disable, sizeChange)
 
 	def resyncSetup(self, interval = None, force = None, info = None):
-		self.resyncInfo = info # User override for base resync infos
+		self._resyncInfo = info # User override for base resync infos
 		if interval is not None:
-			self.resyncTime = interval # -1 == always, 0 == disabled, >0 == time in sec between resyncs
-			self.resyncLast = time.time()
+			self._resyncTime = interval # -1 == always, 0 == disabled, >0 == time in sec between resyncs
+			self._resyncLast = time.time()
 		if force:
-			self.resyncLast = None # Force resync on next attempt
+			self._resyncLast = None # Force resync on next attempt
 
 	def resyncEnabled(self):
-		if (self.resyncLast is None) or (self.resyncTime == -1):
+		if (self._resyncLast is None) or (self._resyncTime == -1):
 			return True
-		if self.resyncTime > 0:
-			if time.time() - self.resyncLast > self.resyncTime:
+		if self._resyncTime > 0:
+			if time.time() - self._resyncLast > self._resyncTime:
 				return True
 		return False
 
 	def resyncFinished(self):
-		self.resyncLast = time.time()
+		self._resyncLast = time.time()
 
 	def resync(self): # needed when parameter values do not change but if meaning / validity of values do
-		if self.resyncEnabled() and self.resyncInfo:
-			return self.resyncInfo
+		if self.resyncEnabled() and self._resyncInfo:
+			return self._resyncInfo
 		return self.resyncCreate()
 
-	def show(self, level = 0, other = ''):
-		utils.vprint(('\t' * level) + self.__class__.__name__ + utils.QM(other, ' [%s]' % other, ''), 1)
+	def show(self):
+		return [self.__class__.__name__ + ':']
 
 	def getHash(self):
 		raise AbstractError

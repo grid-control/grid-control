@@ -16,6 +16,7 @@ import os, time, random, tempfile
 from grid_control import utils
 from grid_control.backends.wms import BackendError
 from grid_control.backends.wms_grid import GridWMS
+from grid_control.utils.parsing import parseStr
 from grid_control.utils.process_base import LocalProcess
 from python_compat import md5, sort_inplace
 
@@ -41,7 +42,7 @@ class DiscoverWMS_Lazy(object): # TODO: Move to broker infrastructure
 			for wms in tmp:
 				isOK, ping, ping_time = tuple(tmp[wms].split(',', 2))
 				if utils.parseBool(isOK):
-					pingDict[wms] = (utils.parseStr(ping, float), utils.parseStr(ping_time, float, 0))
+					pingDict[wms] = (parseStr(ping, float), parseStr(ping_time, float, 0))
 			return (pingDict.keys(), tmp.keys(), pingDict, 0)
 		except Exception:
 			return ([], [], {}, None)
@@ -151,7 +152,7 @@ class GliteWMS(GridWMS):
 		self._submitParams.update({ '-d': None })
 		if self._discovery_module:
 			self._submitParams.update({ '-e': self._discovery_module.getWMS() })
-		if self._useDelegate == False:
+		if self._useDelegate is False:
 			self._submitParams.update({ '-a': ' ' })
 			return True
 		log = tempfile.mktemp('.log')

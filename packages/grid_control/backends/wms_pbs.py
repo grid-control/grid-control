@@ -16,6 +16,7 @@ from grid_control import utils
 from grid_control.backends.wms import BackendError, WMS
 from grid_control.backends.wms_pbsge import PBSGECommon
 from grid_control.job_db import Job
+from grid_control.utils.parsing import parseTime
 from python_compat import ifilter, imap, izip, lmap
 
 class PBS(PBSGECommon):
@@ -80,7 +81,7 @@ class PBS(PBSGECommon):
 	def getQueues(self):
 		(queues, active) = ({}, False)
 		keys = [WMS.MEMORY, WMS.CPUTIME, WMS.WALLTIME]
-		parser = dict(izip(keys, [int, utils.parseTime, utils.parseTime]))
+		parser = dict(izip(keys, [int, parseTime, parseTime]))
 		for line in utils.LoggedProcess(self.statusExec, '-q').iter():
 			if line.startswith('-'):
 				active = True

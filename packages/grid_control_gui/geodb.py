@@ -388,15 +388,14 @@ wipp-crm.weizmann.ac.il
 """
 
 	import sys, time
-	from python_compat import set, imap, lmap, lfilter, sorted, urllib2
+	from grid_control.utils.webservice import JSONRestClient
+	from python_compat import set, imap, lmap, lfilter, sorted
 
+	jrc = JSONRestClient(url = 'http://maps.googleapis.com/maps/api/geocode/json')
 	def geocode(loc):
-		request = "http://maps.googleapis.com/maps/api/geocode/json?address=%s&sensor=false" % (str.join('.', loc.split('.')[2:]))
-		url_info = urllib2.urlopen(request)
-		result = eval(url_info.read())
+		result = jrc.get(params = {'address': str.join('.', loc.split('.')[2:]), 'sensor': 'false'})
 		if 'Placemark' in result:
 			result = lmap(lambda x: (x['address'], tuple(reversed(x['Point']['coordinates'][:2]))), result['Placemark'])
-		url_info.close()
 		return result
 
 	counter = 0

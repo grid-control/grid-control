@@ -14,7 +14,7 @@
 
       * grid_control.monitoring Monitoring
 
-       * grid_control_gui.jabber JabberAlarm jabber
+       * grid_control_gui.event_jabber JabberAlarm jabber
 
    * grid_control.report Report
 

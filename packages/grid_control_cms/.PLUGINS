@@ -2,6 +2,10 @@
 
    * grid_control.gc_plugin ConfigurablePlugin
 
+    * grid_control.datasets.dproc_base DataProcessor
+
+     * grid_control_cms.task_cms LumiDataProcessor
+
     * grid_control.datasets.provider_base DataProvider
 
      * grid_control_cms.provider_cms CMSProvider
@@ -16,7 +20,7 @@
 
       * grid_control.datasets.provider_scan GCProvider gc
 
-       * grid_control_cms.provider_scan_dbs DBSInfoProvider gc
+       * grid_control_cms.provider_scan_dbs DBSInfoProvider
 
     * grid_control.datasets.scanner_base InfoScanner
 
@@ -36,7 +40,7 @@
 
       * grid_control.monitoring Monitoring
 
-       * grid_control_cms.dashboard DashBoard
+       * grid_control_cms.event_dashboard DashBoard
 
      * grid_control.tasks.task_base TaskModule
 
@@ -46,9 +50,13 @@
 
         * grid_control_cms.cmssw_advanced CMSSW_Advanced
 
+       * grid_control_cms.task_cms CMSSW
+
     * grid_control.datasets.pproc_base PartitionProcessor
 
      * grid_control.datasets.pproc_base BasicPartitionProcessor
 
       * grid_control_cms.cmssw CMSPartitionProcessor
+
+      * grid_control_cms.task_cms CMSPartitionProcessor
 

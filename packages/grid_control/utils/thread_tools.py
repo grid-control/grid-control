@@ -12,7 +12,7 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-import time, threading
+import time, logging, threading
 
 blocking_equivalent = 60*60*24*7 # instead of blocking, we wait for a week
 
@@ -75,6 +75,7 @@ class GCLock(object):
 	def release(self):
 		self._lock.release()
 
+# thread-safe communication channel with put / get
 class GCQueue(object):
 	def __init__(self, BufferObject):
 		self._lock = GCLock()
@@ -108,6 +109,60 @@ class GCQueue(object):
 		self._buffer += value
 		self._notify.set()
 		self._lock.release()
+
+# Class to manage a collection of threads
+class GCThreadPool(object):
+	def __init__(self):
+		self._lock = GCLock()
+		self._notify = GCEvent()
+		self._token = 0
+		self._token_time = {}
+		self._token_desc = {}
+		self._log = logging.getLogger('thread_pool')
+
+	def wait_and_drop(self, timeout = None):
+		while True:
+			self._lock.acquire()
+			t_current = time.time()
+			# discard stale threads
+			for token in list(self._token_time):
+				if timeout and (t_current - self._token_time.get(token, 0) > timeout):
+					self._token_time.pop(token, None)
+					self._token_desc.pop(token, None)
+			if not self._token_time: # no active threads
+				self._lock.release()
+				return True
+			self._lock.release()
+			# wait for thread to finish and adapt timeout for next round
+			if (timeout is not None) and (timeout <= 0):
+				return False
+			self._notify.wait(timeout)
+			if timeout is not None:
+				timeout -= time.time() - t_current
+
+	def start_thread(self, desc, fun, *args, **kwargs):
+		self._lock.acquire()
+		self._token += 1
+		self._token_time[self._token] = time.time()
+		self._token_desc[self._token] = desc
+		self._lock.release()
+		thread = threading.Thread(target = self._run_thread, args = (self._token, fun, args, kwargs))
+		thread.setDaemon(True)
+		thread.start()
+
+	def _run_thread(self, token, fun, args, kwargs):
+		try:
+			fun(*args, **kwargs)
+		except Exception:
+			self._lock.acquire()
+			self._log.exception('Exception in thread %r', self._token_desc[token])
+			self._lock.release()
+		self._lock.acquire()
+		self._token_time.pop(token, None)
+		self._token_desc.pop(token, None)
+		self._lock.release()
+		self._notify.set()
+
 
 # Function to protect against hanging system calls
 def hang_protection(fun, timeout = 5):

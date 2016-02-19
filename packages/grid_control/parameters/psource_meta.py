@@ -14,6 +14,7 @@
 
 from grid_control import utils
 from grid_control.parameters.psource_base import ParameterSource
+from grid_control.utils.gc_itertools import ichain
 from hpfwk import AbstractError
 from python_compat import imap, irange, izip, lfilter, lmap, md5_hex, reduce
 
@@ -43,9 +44,8 @@ class ForwardingParameterSource(ParameterSource):
 	def resync(self):
 		return self._psource.resync()
 
-	def show(self, level = 0, other = ''):
-		ParameterSource.show(self, level, other)
-		self._psource.show(level + 1)
+	def show(self):
+		return ParameterSource.show(self) + lmap(lambda x: '\t' + x, self._psource.show())
 
 	def getHash(self):
 		return self._psource.getHash()
@@ -80,8 +80,10 @@ class RangeParameterSource(ForwardingParameterSource):
 		self._posEnd = utils.QM(self._posEndUser is None, self._psource.getMaxParameters() - 1, self._posEndUser)
 		return (result_redo, result_disable, result_sizeChange or (oldPosEnd != self._posEnd))
 
-	def show(self, level = 0):
-		ForwardingParameterSource.show(self, level, 'range = (%s, %s)' % (self._posStart, self._posEnd))
+	def show(self):
+		result = ForwardingParameterSource.show()
+		result[0] += ' range = (%s, %s)' % (self._posStart, self._posEnd)
+		return result
 ParameterSource.managerMap['range'] = 'RangeParameterSource'
 
 
@@ -110,10 +112,10 @@ class BaseMultiParameterSource(ParameterSource):
 		self._maxParameters = self.initMaxParameters()
 		return (result_redo, result_disable, result_sizeChange or (oldMaxParameters != self._maxParameters))
 
-	def show(self, level = 0):
-		ParameterSource.show(self, level)
-		for psource in self._psourceList:
-			psource.show(level + 1)
+	def show(self):
+		result = ParameterSource.show(self)
+		result.extend(imap(lambda x: '\t' + x, ichain(imap(lambda ps: ps.show(), self._psourceList))))
+		return result
 
 	def getHash(self):
 		return md5_hex(str(lmap(lambda p: str(p.getMaxParameters()) + p.getHash(), self._psourceList)))
@@ -211,9 +213,8 @@ class RepeatParameterSource(MultiParameterSource):
 	def fillParameterInfo(self, pNum, result):
 		self._psource.fillParameterInfo(pNum % self.maxN, result)
 
-	def show(self, level = 0):
-		ParameterSource.show(self, level, 'times = %d' % self.times)
-		self._psource.show(level + 1)
+	def show(self):
+		return ParameterSource.show(self) + lmap(lambda x: '\t' + x, self._psource.show())
 
 	def getHash(self):
 		return md5_hex(self._psource.getHash() + str(self.times))

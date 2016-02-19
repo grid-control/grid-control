@@ -19,40 +19,40 @@ from grid_control.parameters.psource_basic import InternalParameterSource
 from grid_control.utils.file_objects import ZipFile
 from python_compat import ifilter, imap, irange, izip, lfilter, lmap, sorted
 
-# Reader for grid-control dump files
+# Reader for grid-control dump files - getHash is not implemented to keep it from being used by users
 class GCDumpParameterSource(ParameterSource):
 	def __init__(self, fn):
 		ParameterSource.__init__(self)
 		fp = ZipFile(fn, 'r')
 		try:
 			keyline = fp.readline().lstrip('#').strip()
-			self.keys = []
+			self._keys = []
 			if keyline:
-				self.keys = eval(keyline)
+				self._keys = eval(keyline)
 			def parseLine(line):
 				if not line.startswith('#'):
 					pNumStr, stored = lmap(str.strip, line.split('\t', 1))
 					return ('!' in pNumStr, int(pNumStr.rstrip('!')), lmap(eval, stored.split('\t')))
-			self.values = lmap(parseLine, fp.readlines())
+			self._values = lmap(parseLine, fp.readlines())
 		finally:
 			fp.close()
 
 	def getMaxParameters(self):
-		return len(self.values)
+		return len(self._values)
 
 	def fillParameterKeys(self, result):
-		result.extend(imap(lambda k: ParameterMetadata(k, untracked = False), self.keys))
+		result.extend(imap(ParameterMetadata, self._keys))
 
 	def fillParameterInfo(self, pNum, result):
-		result[ParameterInfo.ACTIVE] = not self.values[pNum][0]
-		for (key, value) in izip(self.keys, self.values[pNum][2]):
+		result[ParameterInfo.ACTIVE] = not self._values[pNum][0]
+		for (key, value) in izip(self._keys, self._values[pNum][2]):
 			if value is not None:
 				result[key] = value
 
 	def write(cls, fn, pa):
 		fp = ZipFile(fn, 'w')
 		try:
-			keys = sorted(ifilter(lambda p: p.untracked == False, pa.getJobKeys()))
+			keys = sorted(ifilter(lambda p: not p.untracked, pa.getJobKeys()))
 			fp.write('# %s\n' % keys)
 			maxN = pa.getMaxJobs()
 			if maxN:

@@ -85,7 +85,7 @@ class WMS(NamedPlugin):
 		except Exception:
 			return log.exception('Unable to read %r!', fn)
 		if not info_content:
-			return log.warning('%r is empty!' % fn)
+			return log.warning('%r is empty!', fn)
 		try:
 			data = utils.DictFormat().parse(info_content, keyParser = {None: str})
 			return (data['JOBID'], data['EXITCODE'], data)

@@ -164,32 +164,36 @@ def getSeInBandwidth(jobInfo):
 		return fileSize / seInTime
 
 
+def getJobCount(jobInfo):
+	return 1.0
+
+
 def getSeOutAverageBandwithAtTimeSpan(jobInfo, timeStart, timeEnd):
 	if getSeOutRuntime(jobInfo) > 0:
 		return getQuantityAtTimeSpan(jobInfo, timeStart, timeEnd,
 			lambda jinf: (jinf[JobResultEnum.TIMESTAMP_SE_OUT_START], jinf[JobResultEnum.TIMESTAMP_SE_OUT_DONE]),
-			lambda jinf: getSeOutBandwidth(jinf))
+			getSeOutBandwidth)
 
 
 def getSeOutActiveAtTimeSpan(jobInfo, timeStart, timeEnd):
 	if getSeOutRuntime(jobInfo) > 0:
 		return getQuantityAtTimeSpan(jobInfo, timeStart, timeEnd,
 			lambda jinf: (jinf[JobResultEnum.TIMESTAMP_SE_OUT_START], jinf[JobResultEnum.TIMESTAMP_SE_OUT_DONE]),
-			lambda jinf: 1.0)
+			getJobCount)
 
 
 def getSeInAverageBandwithAtTimeSpan(jobInfo, timeStart, timeEnd):
 	if getSeInRuntime(jobInfo) > 0:
 		return getQuantityAtTimeSpan(jobInfo, timeStart, timeEnd,
 			lambda jinf: (jinf[JobResultEnum.TIMESTAMP_SE_IN_START], jinf[JobResultEnum.TIMESTAMP_SE_IN_DONE]),
-			lambda jinf: getSeInBandwidth(jinf))
+			getSeInBandwidth)
 
 
 def getSeInActiveAtTimeSpan(jobInfo, timeStart, timeEnd):
 	if getSeInRuntime(jobInfo) > 0:
 		return getQuantityAtTimeSpan(jobInfo, timeStart, timeEnd,
 			lambda jinf: (jinf[JobResultEnum.TIMESTAMP_SE_IN_START], jinf[JobResultEnum.TIMESTAMP_SE_IN_DONE]),
-			lambda jinf: 1.0)
+			getJobCount)
 
 
 # cumulated transfer sizes
@@ -198,35 +202,35 @@ def getSeOutSizeAtTimeSpan(jobInfo, timeStart, timeEnd):
 	if getSeOutRuntime(jobInfo) > 0:
 		return getCumQuantityAtTimeSpan(jobInfo, timeStart, timeEnd,
 			lambda jinf: (jinf[JobResultEnum.TIMESTAMP_SE_OUT_START], jinf[JobResultEnum.TIMESTAMP_SE_OUT_DONE]),
-			lambda jinf: jobInfo[JobResultEnum.FILESIZE_OUT_TOTAL] / 1000.0)
+			getSeOutFilesize)
 
 
 def getSeInSizeAtTimeSpan(jobInfo, timeStart, timeEnd):
 	if getSeInRuntime(jobInfo) > 0:
 		return getCumQuantityAtTimeSpan(jobInfo, timeStart, timeEnd,
 			lambda jinf: (jinf[JobResultEnum.TIMESTAMP_SE_IN_START], jinf[JobResultEnum.TIMESTAMP_SE_IN_DONE]),
-			lambda jinf: jobInfo[JobResultEnum.FILESIZE_IN_TOTAL] / 1000.0)
+			getSeInFilesize)
 
 
 def getJobActiveAtTimeSpan(jobInfo, timeStart, timeEnd):
 	if getJobRuntime(jobInfo) > 0:
 		return getQuantityAtTimeSpan(jobInfo, timeStart, timeEnd,
 			lambda jinf: (jinf[JobResultEnum.TIMESTAMP_WRAPPER_START], jinf[JobResultEnum.TIMESTAMP_WRAPPER_DONE]),
-			lambda jinf: 1.0)
+			getJobCount)
 
 
 def getEventRateAtTimeSpan(jobInfo, timeStart, timeEnd):
 	if getJobRuntime(jobInfo) > 0:
 		return getQuantityAtTimeSpan(jobInfo, timeStart, timeEnd,
 			lambda jinf: (jinf[JobResultEnum.TIMESTAMP_CMSSW_CMSRUN1_START], jinf[JobResultEnum.TIMESTAMP_CMSSW_CMSRUN1_DONE]),
-			lambda jinf: getEventRate(jinf))
+			getEventRate)
 
 
 def getCompleteRateAtTimeSpan(jobInfo, timeStart, timeEnd):
 	if getJobRuntime(jobInfo) > 0:
 		return getCumQuantityAtTimeSpan(jobInfo, timeStart, timeEnd,
 			lambda jinf: (jinf[JobResultEnum.TIMESTAMP_WRAPPER_START], jinf[JobResultEnum.TIMESTAMP_WRAPPER_DONE]),
-			lambda jinf: 1.0, useEndtime=True)
+			getJobCount, useEndtime=True)
 
 
 def getQuantityAtTimeSpan(jobInfo, timeStart, timeEnd, timingExtract, quantityExtract):
@@ -480,10 +484,10 @@ class PlotReport(Report):
 		self.produceOverallGraph(("se_in_active_total", "Time (s)", "Active Stageins"),
 			(minSeInTime, maxSeInTime), getSeInActiveAtTimeSpan)
 		# total stageout size
-		self.produceOverallGraph(("se_out_cum_size", "Time (s)", "Stageout Cumulated Size (GB)"),
+		self.produceOverallGraph(("se_out_cum_size", "Time (s)", "Stageout Cumulated Size (MB)"),
 			(minSeOutTime, maxSeOutTime), getSeOutSizeAtTimeSpan, cumulate=True)
 		# total stagein size
-		self.produceOverallGraph(("se_in_cum_size", "Time (s)", "Stagein Cumulated Size (GB)"),
+		self.produceOverallGraph(("se_in_cum_size", "Time (s)", "Stagein Cumulated Size (MB)"),
 			(minSeInTime, maxSeInTime), getSeInSizeAtTimeSpan, cumulate=True)
 		# event rate
 		if (minCmsswTime is not None) and (maxCmsswTime is not None):

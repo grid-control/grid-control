@@ -44,7 +44,7 @@ class ObjectsFromCMSSW(InfoScanner):
 
 		tmpCfg = {}
 		cmsswVersion = tar.extractfile('version').read().strip()
-		for cfg in ifilter(lambda x: not '/' in x and x not in ['version', 'files'], tar.getnames()):
+		for cfg in ifilter(lambda x: ('/' not in x) and (x not in ['version', 'files']), tar.getnames()):
 			try:
 				cfgContent = tar.extractfile('%s/config' % cfg).read()
 				cfgHashResult = tar.extractfile('%s/hash' % cfg).readlines()

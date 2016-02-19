@@ -18,7 +18,7 @@ from grid_control.config.cinterface_base import ConfigInterface
 from grid_control.config.config_entry import ConfigError, noDefault
 from grid_control.config.cview_base import SimpleConfigView
 from grid_control.utils.data_structures import makeEnum
-from grid_control.utils.parsing import parseBool, parseDict, parseList, parseTime
+from grid_control.utils.parsing import parseBool, parseDict, parseList, parseTime, strTimeShort
 from hpfwk import APIError, Plugin
 from python_compat import identity, imap, lmap, relpath, user_input
 
@@ -62,9 +62,9 @@ class TypedConfigInterface(ConfigInterface):
 				return parseTime(value) # empty or negative values are mapped to -1
 			except Exception:
 				raise ConfigError('Valid time expressions have the format: hh[:mm[:ss]]')
-		return self._getInternal('time', utils.strTimeShort, str2obj, None, option, default, **kwargs)
+		return self._getInternal('time', strTimeShort, str2obj, None, option, default, **kwargs)
 	def setTime(self, option, value, opttype = '=', source = None):
-		return self._setInternal('time', utils.strTimeShort, option, value, opttype, source)
+		return self._setInternal('time', strTimeShort, option, value, opttype, source)
 
 	# Returns a tuple with (<dictionary>, <keys>) - the keys are sorted by order of appearance
 	# Default key is accessed via key == None (None is never in keys!)

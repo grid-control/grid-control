@@ -68,12 +68,12 @@ class RestClientBase(object):
 class RequestsRestClient(RestClientBase):
 	_session = None
 
-	def __init__(self, cert = None, default_headers = None, process_result = None, process_data = None):
+	def __init__(self, cert = None, url = None, default_headers = None, process_result = None, process_data = None):
 		if not self._session:
 			#disable ssl ca verification errors
 			requests.packages.urllib3.disable_warnings()
 			self._session = requests.Session()
-		RestClientBase.__init__(self, cert = cert, default_headers = default_headers,
+		RestClientBase.__init__(self, cert = cert, url = url, default_headers = default_headers,
 			process_result = process_result, process_data = process_data,
 			rf_get = self._session.get, rf_post = self._session.post,
 			rf_put = self._session.put, rf_delete = self._session.delete)
@@ -90,8 +90,8 @@ class RequestsRestClient(RestClientBase):
 
 
 class Urllib2RestClient(RestClientBase):
-	def __init__(self, cert = None, default_headers = None, process_result = None, process_data = None):
-		RestClientBase.__init__(self, cert = cert, default_headers = default_headers,
+	def __init__(self, cert = None, url = None, default_headers = None, process_result = None, process_data = None):
+		RestClientBase.__init__(self, cert = cert, url = url, default_headers = default_headers,
 			process_result = process_result, process_data = process_data,
 			rf_get = lambda: 'GET', rf_post = lambda: 'POST',
 			rf_put = lambda: 'PUT', rf_delete = lambda: 'DELETE')
@@ -140,8 +140,8 @@ except Exception: # incompatible dependencies pulled in can cause many types of 
 
 
 class JSONRestClient(RestClient):
-	def __init__(self, cert = None, default_headers = None, process_result = None):
-		RestClient.__init__(self, cert,
+	def __init__(self, cert = None, url = None, default_headers = None, process_result = None):
+		RestClient.__init__(self, cert, url,
 			default_headers or {'Content-Type': 'application/json', 'Accept': 'application/json'},
 			process_result = process_result or parseJSON, process_data = json.dumps)
 

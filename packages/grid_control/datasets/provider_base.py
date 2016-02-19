@@ -18,7 +18,7 @@ from grid_control.config import createConfig
 from grid_control.datasets.dproc_base import DataProcessor
 from grid_control.gc_plugin import ConfigurablePlugin
 from grid_control.utils.data_structures import makeEnum
-from hpfwk import AbstractError, InstanceFactory, NestedException, Plugin
+from hpfwk import AbstractError, InstanceFactory, NestedException
 from python_compat import StringBuffer, ifilter, imap, irange, lmap, lrange, md5_hex, sort_inplace, sorted
 
 class DatasetError(NestedException):
@@ -146,7 +146,8 @@ class DataProvider(ConfigurablePlugin):
 			if writeMetadata:
 				def getMetadata(fi, idxList):
 					return lmap(lambda idx: fi[DataProvider.Metadata][idx], idxList)
-				metadataHash = lambda fi, idx: md5_hex(repr(fi[DataProvider.Metadata][idx]))
+				def metadataHash(fi, idx):
+					return md5_hex(repr(fi[DataProvider.Metadata][idx]))
 				cMetadataIdx = lrange(len(block[DataProvider.Metadata]))
 				cMetadataHash = lmap(lambda idx: metadataHash(block[DataProvider.FileList][0], idx), cMetadataIdx)
 				for fi in block[DataProvider.FileList]: # Identify common metadata

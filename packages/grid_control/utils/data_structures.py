@@ -32,12 +32,12 @@ def makeEnum(members = None, cls = None, useHash = False):
 
 	cls.enumNames = members
 	cls.enumValues = values
-	cls._enumMapNV = dict(izip(cls.enumNames, cls.enumValues))
-	cls._enumMapVN = dict(izip(cls.enumValues, cls.enumNames))
-	if len(cls._enumMapNV) != len(cls._enumMapVN):
+	enumMapNV = dict(izip(cls.enumNames, cls.enumValues))
+	enumMapVN = dict(izip(cls.enumValues, cls.enumNames))
+	if len(enumMapNV) != len(enumMapVN):
 		raise APIError('Invalid enum definition!')
-	cls.enum2str = cls._enumMapVN.get
-	cls.str2enum = cls._enumMapNV.get
+	cls.enum2str = enumMapVN.get
+	cls.str2enum = enumMapNV.get
 	for name, value in izip(cls.enumNames, cls.enumValues):
 		setattr(cls, name, value)
 	return cls

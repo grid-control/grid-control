@@ -14,12 +14,11 @@
 
 import os
 from grid_control.backends import WMS
-from grid_control.gc_plugin import ConfigurablePlugin
 from grid_control.utils.data_structures import makeEnum
-from hpfwk import AbstractError
+from hpfwk import AbstractError, Plugin
 from python_compat import ifilter, izip
 
-class OutputProcessor(ConfigurablePlugin):
+class OutputProcessor(Plugin):
 	def process(self, dn):
 		raise AbstractError
 
@@ -48,7 +47,7 @@ class FileInfoProcessor(JobInfoProcessor):
 makeEnum(['Hash', 'NameLocal', 'NameDest', 'Path'], FileInfoProcessor)
 
 class TaskOutputProcessor(OutputProcessor):
-	def __init__(self, config, task):
+	def __init__(self, task):
 		self._task = task
 
 class SandboxProcessor(TaskOutputProcessor):

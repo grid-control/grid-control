@@ -112,8 +112,7 @@ class CPWebserver(GUI):
 			], getJobObjs(),
 			fmt = {
 				'jobNum': lambda x: '<a href="jobs?job=%s">%s</a>' % (x, x),
-				'state': lambda s: Job.enum2str(s),
-				'submitted': fmtTime
+				'state': Job.enum2str, 'submitted': fmtTime
 			}, top = True))
 		result += '</body>'
 		return result

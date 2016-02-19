@@ -66,7 +66,7 @@ class DBSInfoProvider(datasets.GCProvider):
 		return utils.replaceDict(rawDS, data)
 
 	def generateBlockName(self, key, data):
-		return utils.strGuid(key)
+		return strGuid(key)
 
 
 class XMLWriter: # xml.dom.minidom needs a lot of memory - could be replaced by something simpler...
@@ -114,7 +114,7 @@ def getDBSXML(opts, block, dsBlocks):
 
 	if block[DataProvider.Dataset].count('/') != 3:
 		raise Exception('Invalid dataset name: %s' % block[DataProvider.Dataset])
-	if block[DataProvider.BlockName] != utils.strGuid(block[DataProvider.BlockName].replace('-', '')):
+	if block[DataProvider.BlockName] != strGuid(block[DataProvider.BlockName].replace('-', '')):
 		raise Exception('Invalid block name: %s' % block[DataProvider.BlockName])
 
 	dataType = set(getAllM(DBS.TYPE))
@@ -217,7 +217,7 @@ def createDBSXMLDumps(opts, allBlocks):
 	for idx, block in enumerate(allBlocks):
 		log = utils.ActivityLog(' * Creating DBS dump files - [%d / %d]' % (idx, len(allBlocks)))
 		fqBlock, dump = getDBSXML(opts, block, allBlocks)
-		xmlDSPath = os.path.join(opts.tmpDir, utils.strGuid(md5(block[DataProvider.Dataset]).hexdigest()))
+		xmlDSPath = os.path.join(opts.tmpDir, strGuid(md5(block[DataProvider.Dataset]).hexdigest()))
 		if not os.path.exists(xmlDSPath):
 			os.makedirs(xmlDSPath)
 		xmlPath = os.path.join(xmlDSPath, block[DataProvider.BlockName])
@@ -440,7 +440,7 @@ try:
 		if blockCollision and opts.closeBlock: # Block are closed and contents have changed
 			for block in blocksAdded:
 				if block[DataProvider.BlockName] in blockCollision:
-					block[DataProvider.BlockName] = utils.strGuid(md5(str(time.time())).hexdigest())
+					block[DataProvider.BlockName] = strGuid(md5(str(time.time())).hexdigest())
 		blocks = blocksAdded
 
 	# 3) Display dataset properties

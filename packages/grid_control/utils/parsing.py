@@ -36,13 +36,6 @@ def parseJSON(data):
 	return removeUnicode(json.loads(data))
 
 
-def parseInt(value, default = None):
-	try:
-		return int(value)
-	except Exception:
-		return default
-
-
 def parseStr(value, cls, default = None):
 	try:
 		return cls(value)

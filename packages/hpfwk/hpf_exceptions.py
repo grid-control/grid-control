@@ -14,24 +14,24 @@
 
 import sys, logging
 
+def safeRepr(obj, verbose):
+	try:
+		value = repr(obj)
+	except Exception:
+		return 'unable to display!'
+	if (len(value) < 200) or verbose:
+		return value
+	return value[:200] + ' ... [length:%d]' % len(value)
+
 # Function to log local and class variables
 def formatVariables(variables, showLongVariables = False):
-	def safeRepr(obj):
-		try:
-			value = repr(obj)
-		except Exception:
-			return 'unable to display!'
-		if (len(value) < 200) or showLongVariables:
-			return value
-		return value[:200] + ' ... [length:%d]' % len(value)
-
 	maxlen = 0
 	for var in variables:
 		maxlen = max(maxlen, len(var))
 	def display(keys, varDict, varPrefix = ''):
 		keys.sort()
 		for var in keys:
-			value = safeRepr(varDict[var])
+			value = safeRepr(varDict[var], showLongVariables)
 			if 'password' in var:
 				value = '<redacted>'
 			yield '\t\t%s%s = %s' % (varPrefix, var.ljust(maxlen), value)
@@ -42,7 +42,7 @@ def formatVariables(variables, showLongVariables = False):
 		for line in display(list(variables.keys()), variables):
 			yield line
 	if classVariable is not None:
-		yield '\tClass variables (%s):' % safeRepr(classVariable)
+		yield '\tClass variables (%s):' % safeRepr(classVariable, showLongVariables)
 		if hasattr(classVariable, '__dict__'):
 			classVariables = classVariable.__dict__
 		elif hasattr(classVariable, '__slots__'):
@@ -126,7 +126,11 @@ class APIError(NestedException):
 # some error related to abstract functions
 class AbstractError(APIError):
 	def __init__(self):
-		APIError.__init__(self, '%s is an abstract function!' % sys._getframe(1).f_code.co_name)
+		try:
+			fun_name = sys._getframe(1).f_code.co_name
+		except Exception:
+			fun_name = 'The invoked method'
+		APIError.__init__(self, '%s is an abstract function!' % fun_name)
 
 # Collect full traceback and exception context
 def collectExceptionInfos(exType, exValue, exTraceback):
@@ -197,7 +201,10 @@ def debugInterruptHandler(sig, frame):
 	console.push('import rlcompleter, readline')
 	console.push('readline.parse_and_bind("tab: complete")')
 	console.push('readline.set_completer(rlcompleter.Completer(globals()).complete)')
-	stackDict = sys._current_frames()
+	try:
+		stackDict = sys._current_frames()
+	except Exception:
+		stackDict = {}
 	log = logging.getLogger('debug_session')
 	for threadID in stackDict:
 		log.critical('Stack of thread #%d:\n' % threadID + str.join('\n',

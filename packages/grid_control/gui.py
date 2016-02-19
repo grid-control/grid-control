@@ -15,7 +15,7 @@
 from grid_control import utils
 from grid_control.gc_plugin import ConfigurablePlugin
 from grid_control.report import Report
-from hpfwk import AbstractError, Plugin
+from hpfwk import AbstractError
 
 class GUI(ConfigurablePlugin):
 	def __init__(self, config, workflow):

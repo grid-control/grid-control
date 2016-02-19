@@ -22,66 +22,69 @@ from python_compat import md5_hex
 class DataParameterSource(ParameterSource):
 	def __init__(self, dataDir, srcName, dataProvider, dataSplitter, dataProc):
 		ParameterSource.__init__(self)
-		(self.dataDir, self.srcName, self.dataProvider, self.dataSplitter, self.dataProc) = \
+		(self._dataDir, self._srcName, self._dataProvider, self._dataSplitter, self._part_proc) = \
 			(dataDir, srcName, dataProvider, dataSplitter, dataProc)
 
 		if not dataProvider:
 			pass # debug mode - used by scripts - disables resync
 		elif os.path.exists(self.getDataPath('cache.dat') and self.getDataPath('map.tar')):
-			self.dataSplitter.importState(self.getDataPath('map.tar'))
+			self._dataSplitter.importState(self.getDataPath('map.tar'))
 		else:
-			DataProvider.saveToFile(self.getDataPath('cache.dat'), self.dataProvider.getBlocks())
-			self.dataSplitter.splitDataset(self.getDataPath('map.tar'), self.dataProvider.getBlocks())
+			DataProvider.saveToFile(self.getDataPath('cache.dat'), self._dataProvider.getBlocks())
+			self._dataSplitter.splitDataset(self.getDataPath('map.tar'), self._dataProvider.getBlocks())
 
-		self.maxN = self.dataSplitter.getMaxJobs()
-		self.keepOld = True
+		self._maxN = self._dataSplitter.getMaxJobs()
+		self._keepOld = True
 
 	def getMaxParameters(self):
-		return self.maxN
+		return self._maxN
 
 	def fillParameterKeys(self, result):
 		result.append(ParameterMetadata('DATASETSPLIT'))
-		result.extend(self.dataProc.getKeys())
+		result.extend(self._part_proc.getKeys())
 
 	def fillParameterInfo(self, pNum, result):
-		splitInfo = self.dataSplitter.getSplitInfo(pNum)
-		self.dataProc.process(pNum, splitInfo, result)
+		splitInfo = self._dataSplitter.getSplitInfo(pNum)
+		self._part_proc.process(pNum, splitInfo, result)
 
 	def getHash(self):
-		return md5_hex(str(self.srcName) + str(self.dataSplitter.getMaxJobs()))
+		return md5_hex(str(self._srcName) + str(self._dataSplitter.getMaxJobs()))
+
+	def show(self):
+		return ['%s: src = %s' % (self.__class__.__name__, self._srcName)]
 
 	def __repr__(self):
-		return 'data(%s)' % utils.QM(self.srcName == 'data', '', self.srcName)
+		return 'data(%s)' % utils.QM(self._srcName == 'data', '', self._srcName)
 
 	def getDataPath(self, postfix):
-		return os.path.join(self.dataDir, self.srcName + postfix)
+		return os.path.join(self._dataDir, self._srcName + postfix)
 
 	def resync(self):
 		(result_redo, result_disable, result_sizeChange) = ParameterSource.resync(self)
-		if self.resyncEnabled() and self.dataProvider:
+		if self.resyncEnabled() and self._dataProvider:
 			# Get old and new dataset information
 			old = DataProvider.loadFromFile(self.getDataPath('cache.dat')).getBlocks()
-			self.dataProvider.clearCache()
-			new = self.dataProvider.getBlocks()
-			self.dataProvider.saveToFile(self.getDataPath('cache-new.dat'), new)
+			self._dataProvider.clearCache()
+			new = self._dataProvider.getBlocks()
+			self._dataProvider.saveToFile(self.getDataPath('cache-new.dat'), new)
 
 			# Use old splitting information to synchronize with new dataset infos
-			jobChanges = self.dataSplitter.resyncMapping(self.getDataPath('map-new.tar'), old, new)
+			jobChanges = self._dataSplitter.resyncMapping(self.getDataPath('map-new.tar'), old, new)
 			if jobChanges:
 				# Move current splitting to backup and use the new splitting from now on
 				def backupRename(old, cur, new):
-					if self.keepOld:
+					if self._keepOld:
 						os.rename(self.getDataPath(cur), self.getDataPath(old))
 					os.rename(self.getDataPath(new), self.getDataPath(cur))
 				backupRename(  'map-old-%d.tar' % time.time(),   'map.tar',   'map-new.tar')
 				backupRename('cache-old-%d.dat' % time.time(), 'cache.dat', 'cache-new.dat')
-				old_maxN = self.dataSplitter.getMaxJobs()
-				self.dataSplitter.importState(self.getDataPath('map.tar'))
-				self.maxN = self.dataSplitter.getMaxJobs()
-				self.dataSplitter.getMaxJobs()
+				old_maxN = self._dataSplitter.getMaxJobs()
+				self._dataSplitter.importState(self.getDataPath('map.tar'))
+				self._maxN = self._dataSplitter.getMaxJobs()
+				self._dataSplitter.getMaxJobs()
 				result_redo.update(jobChanges[0])
 				result_disable.update(jobChanges[1])
-				result_sizeChange = result_sizeChange or (old_maxN != self.maxN)
+				result_sizeChange = result_sizeChange or (old_maxN != self._maxN)
 			self.resyncFinished()
 		return (result_redo, result_disable, result_sizeChange)
 

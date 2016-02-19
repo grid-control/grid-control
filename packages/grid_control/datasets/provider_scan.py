@@ -17,6 +17,7 @@ from grid_control import utils
 from grid_control.config import createConfig
 from grid_control.datasets.provider_base import DataProvider
 from grid_control.datasets.scanner_base import InfoScanner
+from grid_control.utils.gc_itertools import lchain
 from python_compat import identity, ifilter, imap, lmap, md5_hex, set
 
 class ScanProviderBase(DataProvider):
@@ -61,7 +62,7 @@ class ScanProviderBase(DataProvider):
 		# Split files into blocks/datasets via key functions and determine metadata intersection
 		(protoBlocks, commonDS, commonB) = ({}, {}, {})
 		def getActiveKeys(kUser, kGuard, gIdx):
-			return kUser + utils.QM(kGuard, kGuard, utils.listMapReduce(lambda x: x.getGuards()[gIdx], self.scanner))
+			return kUser + (kGuard or lchain(imap(lambda x: x.getGuards()[gIdx], self.scanner)))
 		keysDS = getActiveKeys(self.kUserDS, self.kGuardDS, 0)
 		keysB = getActiveKeys(self.kUserB, self.kGuardB, 1)
 		for fileInfo in self.collectFiles():

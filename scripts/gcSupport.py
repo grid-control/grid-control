@@ -108,7 +108,7 @@ class FileMutex:
 		self.lockfile = lockfile
 		while os.path.exists(self.lockfile):
 			if first and (time.time() - first > 10):
-				logging.info('Trying to aquire lock file %s ...' % lockfile)
+				logging.info('Trying to aquire lock file %s ...', lockfile)
 				first = False
 			time.sleep(0.2)
 		self.fd = open(self.lockfile, 'w')
@@ -152,11 +152,11 @@ def getCMSSWInfo(tarPath):
 	# Read framework report files to get number of events
 	tarFile = tarfile.open(tarPath, 'r:gz')
 	fwkReports = ifilter(lambda x: os.path.basename(x.name) == 'report.xml', tarFile.getmembers())
-	for fwkReport in imap(lambda fn: tarFile.extractfile(fn), fwkReports):
+	for fwkReport in imap(tarFile.extractfile, fwkReports):
 		try:
 			yield xml.dom.minidom.parse(fwkReport)
 		except Exception:
-			logging.exception('Error while parsing %s' % tarPath)
+			logging.exception('Error while parsing %s', tarPath)
 			raise
 
 

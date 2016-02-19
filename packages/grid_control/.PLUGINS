@@ -184,6 +184,10 @@
 
        * grid_control.monitoring ScriptMonitoring scripts
 
+      * grid_control.monitoring MultiEventHandler
+
+       * grid_control.monitoring MultiMonitor
+
      * grid_control.job_manager JobManager
 
       * grid_control.job_manager SimpleJobManager
@@ -224,7 +228,7 @@
 
         * grid_control.backends.wms_glitewms GliteWMS grid
 
-         * grid_control.backends.wms_glitewms_direct GliteWMSDirect grid
+         * grid_control.backends.wms_glitewms_direct GliteWMSDirect
 
        * grid_control.backends.htcondor_wms.htcondor_wms HTCondor
 
@@ -252,16 +256,6 @@
 
      * grid_control.workflow Workflow
 
-    * grid_control.output_processor OutputProcessor
-
-     * grid_control.output_processor JobInfoProcessor
-
-      * grid_control.output_processor FileInfoProcessor
-
-     * grid_control.output_processor TaskOutputProcessor
-
-      * grid_control.output_processor SandboxProcessor
-
     * grid_control.parameters.padapter ParameterAdapter
 
      * grid_control.parameters.padapter BasicParameterAdapter
@@ -277,6 +271,10 @@
      * grid_control.datasets.pproc_base MetaPartitionProcessor
 
      * grid_control.datasets.pproc_base MultiPartitionProcessor
+
+   * grid_control.datasets.splitter_base DataSplitterIO
+
+    * grid_control.datasets.splitter_io DataSplitterIOAuto
 
    * grid_control.backends.htcondor_wms.htcondor_schedd HTCScheddBase
 
@@ -319,6 +317,16 @@
    * grid_control.config.matcher_base ListFilterBase
 
    * grid_control.config.matcher_base MediumListFilter try_strict
+
+   * grid_control.output_processor OutputProcessor
+
+    * grid_control.output_processor JobInfoProcessor
+
+     * grid_control.output_processor FileInfoProcessor
+
+    * grid_control.output_processor TaskOutputProcessor
+
+     * grid_control.output_processor SandboxProcessor
 
    * grid_control.parameters.psource_base ParameterSource
 

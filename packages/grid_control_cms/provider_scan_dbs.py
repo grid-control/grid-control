@@ -16,6 +16,7 @@ import os
 from grid_control import utils
 from grid_control.datasets.provider_base import DatasetError
 from grid_control.datasets.provider_scan import GCProvider
+from grid_control.utils.parsing import strGuid
 
 class DBSInfoProvider(GCProvider):
 	def __init__(self, config, datasetExpr, datasetNick = None, datasetID = 0):
@@ -66,4 +67,4 @@ class DBSInfoProvider(GCProvider):
 		return utils.replaceDict(rawDS, data)
 
 	def generateBlockName(self, key, data):
-		return utils.strGuid(key)
+		return strGuid(key)
