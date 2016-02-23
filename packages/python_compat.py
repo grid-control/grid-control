@@ -115,7 +115,7 @@ try:	# relpath >= Python 2.6
 except Exception:
 	def relpath(path, start=None):
 		if not path:
-			raise ValueError("no path specified")
+			raise ValueError('no path specified')
 		start_list = lfilter(identity, os.path.abspath(start or os.path.curdir).split(os.path.sep))
 		path_list = lfilter(identity, os.path.abspath(path).split(os.path.sep))
 		i = len(os.path.commonprefix([start_list, path_list]))
@@ -259,7 +259,7 @@ if __name__ == '__main__':
 	for (root, dirs, files) in os.walk('.'):
 		if root.startswith('./.') or ('source_check' in root):
 			continue
-		for fn in ifilter(lambda fn: fn.endswith('.py') and not ("python_compat" in fn), files):
+		for fn in ifilter(lambda fn: fn.endswith('.py') and ('python_compat' not in fn) and ('setup.py' not in fn), files):
 			fn = os.path.join(root, fn)
 			tmp = open(fn).read().replace('\'zip(', '').replace('def set(', '').replace('type(range(', '')
 			tmp = tmp.replace('def filter(', '').replace('def next(', '').replace('next()', '')
@@ -277,6 +277,6 @@ if __name__ == '__main__':
 			if not needed and ('python_compat' in tmp):
 				logging.critical('%s: python_compat import not needed!' % fn)
 			for feature in needed.difference(imported):
-				logging.critical('%s: missing import of "%s"' % (fn, feature))
+				logging.critical('%s: missing import of %s' % (fn, repr(feature)))
 			for feature in imported.difference(needed):
-				logging.critical('%s: unnecessary import of "%s"' % (fn, feature))
+				logging.critical('%s: unnecessary import of %s' % (fn, repr(feature)))

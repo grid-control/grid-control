@@ -1,4 +1,4 @@
-#-#  Copyright 2009-2015 Karlsruhe Institute of Technology
+#-#  Copyright 2009-2016 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -12,7 +12,7 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-def initLogging(initFun = None):
+def init_hpf_logging():
 	import logging
 
 	logLevelDict = {'DEFAULT': 14,
@@ -22,6 +22,3 @@ def initLogging(initFun = None):
 	for name in logLevelDict:
 		setattr(logging, name.upper(), logLevelDict[name]) # Add numerical constant
 		logging.addLevelName(logLevelDict[name], name)     # Register with logging module
-
-	if initFun:
-		initFun()

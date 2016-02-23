@@ -12,9 +12,8 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-from hpfwk.hpf_exceptions import APIError, AbstractError, ExceptionCollector, ExceptionFormatter, NestedException, debugInterruptHandler
-from hpfwk.hpf_logging import initLogging
-from hpfwk.hpf_plugin import InstanceFactory, Plugin, initPlugins
+from hpfwk.hpf_exceptions import APIError, AbstractError, ExceptionCollector, ExceptionFormatter, NestedException, handle_debug_interrupt
+from hpfwk.hpf_plugin import InstanceFactory, Plugin, init_hpf_plugins
 
 __all__ = ['APIError', 'AbstractError', 'ExceptionCollector', 'ExceptionFormatter',
-	'NestedException', 'debugInterruptHandler', 'initLogging', 'InstanceFactory', 'Plugin', 'initPlugins']
+	'InstanceFactory', 'NestedException', 'Plugin', 'handle_debug_interrupt', 'init_hpf_plugins']

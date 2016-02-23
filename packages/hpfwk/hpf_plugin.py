@@ -14,6 +14,9 @@
 
 import os, sys, logging
 from hpfwk.hpf_exceptions import NestedException
+from hpfwk.hpf_logging import init_hpf_logging
+
+init_hpf_logging() # needed for additional logging levels
 
 class PluginError(NestedException):
 	pass
@@ -241,7 +244,7 @@ def create_plugin_file(package, selector):
 		fp.close()
 
 # Init plugin search paths
-def initPlugins(basePath):
+def init_hpf_plugins(basePath):
 	for pkgName in os.listdir(basePath):
 		pluginFile = os.path.join(basePath, pkgName, '.PLUGINS')
 		if os.path.exists(pluginFile):

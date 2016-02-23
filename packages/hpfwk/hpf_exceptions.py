@@ -192,7 +192,7 @@ class ExceptionFormatter(logging.Formatter):
 		return msg
 
 # Signal handler for debug session requests
-def debugInterruptHandler(sig, frame):
+def handle_debug_interrupt(sig, frame):
 	import code
 	variables = {'_frame': frame}
 	variables.update(frame.f_globals)
