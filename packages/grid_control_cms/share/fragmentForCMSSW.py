@@ -46,7 +46,7 @@ def customise_for_gc(process):
 	try:
 		if hasattr(process, 'generator') and process.source.type_() != 'PoolSource':
 			process.source.firstLuminosityBlock = cms.untracked.uint32(1 + __GC_JOB_ID__)
-			print('Generator random seed: %s' process.RandomNumberGeneratorService.generator.initialSeed)
+			print('Generator random seed: %s' % process.RandomNumberGeneratorService.generator.initialSeed)
 	except Exception:
 		pass
 
