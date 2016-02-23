@@ -31,6 +31,11 @@ def standardConfigForm(value):
 			value = [value]
 		return lmap(lambda x: str(x).strip().lower(), value)
 
+def appendOption(option, suffix):
+	if isinstance(option, (list, tuple)):
+		return lmap(lambda x: appendOption(x, suffix), option)
+	return option.rstrip() + ' ' + suffix
+
 def multi_line_format(value):
 	result = str.join('\n\t', ifilter(lambda x: x != '', imap(str.strip, value.strip().splitlines())))
 	if '\n' in result:

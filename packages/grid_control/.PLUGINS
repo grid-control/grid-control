@@ -140,8 +140,6 @@
 
      * grid_control.config.matcher_base BlackWhiteMatcher blackwhite
 
-      * grid_control.config.matcher_base AdvancedBlackWhiteMatcher blackwhite2
-
      * grid_control.config.matcher_base ExprMatcher expr eval
 
      * grid_control.config.matcher_base RegExMatcher regex
@@ -276,6 +274,8 @@
 
     * grid_control.datasets.splitter_io DataSplitterIOAuto
 
+   * grid_control.config.matcher_base DictLookup
+
    * grid_control.backends.htcondor_wms.htcondor_schedd HTCScheddBase
 
     * grid_control.backends.htcondor_wms.htcondor_schedd HTCScheddCLIBase
@@ -316,7 +316,11 @@
 
    * grid_control.config.matcher_base ListFilterBase
 
-   * grid_control.config.matcher_base MediumListFilter try_strict
+    * grid_control.config.matcher_base MediumListFilter try_strict
+
+    * grid_control.config.matcher_base StrictListFilter strict require
+
+    * grid_control.config.matcher_base WeakListFilter weak prefer
 
    * grid_control.output_processor OutputProcessor
 
@@ -407,8 +411,4 @@
     * grid_control.report LocationReport
 
     * grid_control.report MultiReport
-
-   * grid_control.config.matcher_base StrictListFilter strict require
-
-   * grid_control.config.matcher_base WeakListFilter weak prefer
 

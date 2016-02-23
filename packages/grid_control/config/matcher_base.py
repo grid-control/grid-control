@@ -13,10 +13,10 @@
 #-#  limitations under the License.
 
 import re
-from grid_control.config.cinterface_typed import appendOption
+from grid_control.config.config_entry import appendOption
 from grid_control.gc_plugin import ConfigurablePlugin
 from hpfwk import AbstractError, Plugin
-from python_compat import imap, lfilter
+from python_compat import lfilter
 
 class MatcherHolder(object):
 	def __init__(self, selector):
@@ -55,42 +55,48 @@ class MatcherBase(ConfigurablePlugin):
 
 
 class BasicMatcher(MatcherBase):
-	matcher = None
+	matchFunction = None
 
-	def __init__(self, config, option_prefix):
-		MatcherBase.__init__(self, config, option_prefix)
-		self.matcher = self.__class__.matcher
+	def matcher(self, value, selector):
+		return self.__class__.matchFunction(value, selector)
+
+	def matchWith(self, selector):
+		matcher = self.__class__.matchFunction
+		class FunctionObject(MatcherHolder):
+			def match(self, value):
+				return matcher(value, self._selector)
+		return getFixedFunctionObject(self, FunctionObject, selector)
 
 
 class StartMatcher(BasicMatcher):
 	alias = ['start']
-	matcher = str.startswith
+	matchFunction = str.startswith
 
 
 class EndMatcher(BasicMatcher):
 	alias = ['end']
-	matcher = str.endswith
+	matchFunction = str.endswith
 
 
 class EqualMatcher(BasicMatcher):
 	alias = ['equal']
-	matcher = str.__eq__
+	matchFunction = str.__eq__
 
 
 class ExprMatcher(MatcherBase):
 	alias = ['expr', 'eval']
 
-	def _getExpr(selector):
-		return eval('lambda value: %s' % selector)
-	_getExpr = staticmethod(_getExpr)
+	def getExpr(selector):
+		return eval('lambda value: (%s) == True' % selector)
+	getExpr = staticmethod(getExpr)
 
 	def matcher(self, value, selector):
-		return self._getExpr(selector)(value)
+		return ExprMatcher.getExpr(selector)(value)
 
 	def matchWith(self, selector):
 		class FunctionObject(MatcherHolder):
 			def init(self, fixedSelector):
-				self.match = self._getExpr(fixedSelector)
+				self.match = ExprMatcher.getExpr(fixedSelector)
 		return getFixedFunctionObject(self, FunctionObject, selector)
 
 
@@ -119,38 +125,10 @@ class BlackWhiteMatcher(MatcherBase):
 			cls = MatcherBase, pargs = (option_prefix,))
 
 	def matcher(self, value, selector):
-		return self.matchWith(selector).match(value)
-
-	def selectorToMatchFunList(self, selector):
-		for subselector in selector.split():
-			if subselector.startswith('-'):
-				yield lambda value: not self._baseMatcher.matchWith(subselector[1:]).match(value)
-			else:
-				yield self._baseMatcher.matchWith(subselector).match
-
-	def matchWith(self, selector):
-		s2ml = self.selectorToMatchFunList
-		class FunctionObject(MatcherHolder):
-			def init(self, fixedSelector):
-				self._pat_ret = list(s2ml(fixedSelector))
-			def match(self, value):
-				result = None
-				for matchResult in imap(lambda matchFun: matchFun(value), self._pat_ret):
-					if matchResult is not None:
-						result = matchResult
-				return result
-		return getFixedFunctionObject(self, FunctionObject, selector)
-
-
-class AdvancedBlackWhiteMatcher(BlackWhiteMatcher):
-	alias = ['blackwhite2']
-
-	def matcher(self, value, selector):
 		result = None
 		for subselector in selector.split():
-			if subselector.startswith('-'):
-				if self._baseMatcher.matcher(value, subselector[1:]):
-					result = False
+			if subselector.startswith('-') and self._baseMatcher.matcher(value, subselector[1:]):
+				result = False
 			elif self._baseMatcher.matcher(value, subselector):
 				result = True
 		return result
@@ -158,41 +136,61 @@ class AdvancedBlackWhiteMatcher(BlackWhiteMatcher):
 
 class ListFilterBase(Plugin):
 	def __init__(self, selector, matcher):
-		(self._matchFun, self._positive) = (None, None)
+		(self._matchFunction, self._positive) = (None, None)
 		if selector:
-			self._matchFun = matcher.matchWith(selector)
+			self._matchFunction = matcher.matchWith(selector)
 
 	def filterList(self, entries):
 		raise AbstractError
 
 
-class StrictListFilter(Plugin):
+class StrictListFilter(ListFilterBase):
 	alias = ['strict', 'require']
 
 	def filterList(self, entries):
 		if entries is None:
 			return self._positive
-		if self._matchFun:
-			return lfilter(self._matchFun.match, entries)
+		if self._matchFunction:
+			return lfilter(self._matchFunction.match, entries)
 		return entries
 
 
-class MediumListFilter(Plugin):
+class MediumListFilter(ListFilterBase):
 	alias = ['try_strict']
 
 	def filterList(self, entries):
 		if entries is None:
 			return self._positive
-		strict_result = lfilter(self._matchFun.match, entries)
+		strict_result = lfilter(self._matchFunction.match, entries)
 		if strict_result:
 			return strict_result
-		return lfilter(lambda entry: self._matchFun.match(entry) != False, entries)
+		return lfilter(lambda entry: self._matchFunction.match(entry) != False, entries)
 
 
-class WeakListFilter(Plugin):
+class WeakListFilter(ListFilterBase):
 	alias = ['weak', 'prefer']
 
 	def filterList(self, entries):
 		if entries is None:
 			return self._positive
-		return lfilter(lambda entry: self._matchFun.match(entry) != False, entries)
+		return lfilter(lambda entry: self._matchFunction.match(entry) != False, entries)
+
+
+class DictLookup(Plugin):
+	def __init__(self, values, order, matcher, only_first = True, always_default = False):
+		(self._values, self._order, self._matcher) = (values, order, matcher)
+		(self._only_first, self._always_default) = (only_first, always_default)
+
+	def _lookup(self, key):
+		for entry in self._order:
+			if self._matcher.matcher(entry, key):
+				yield self._values[entry]
+
+	def lookup(self, key):
+		result = list(self._lookup(key))
+		if (None in self._values) and (self._always_default or not result):
+			result.append(self._values[None])
+		if not self._only_first:
+			return result
+		elif result:
+			return result[0]

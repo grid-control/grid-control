@@ -15,17 +15,13 @@
 import os, sys
 from grid_control import utils
 from grid_control.config.cinterface_base import ConfigInterface
-from grid_control.config.config_entry import ConfigError, noDefault
+from grid_control.config.config_entry import ConfigError, appendOption, noDefault
 from grid_control.config.cview_base import SimpleConfigView
+from grid_control.config.matcher_base import ListFilterBase
 from grid_control.utils.data_structures import makeEnum
 from grid_control.utils.parsing import parseBool, parseDict, parseList, parseTime, strTimeShort
 from hpfwk import APIError, Plugin
 from python_compat import identity, imap, lmap, relpath, user_input
-
-def appendOption(option, suffix):
-	if isinstance(option, (list, tuple)):
-		return lmap(lambda x: appendOption(x, suffix), option)
-	return option.rstrip() + ' ' + suffix
 
 # Config interface class accessing typed data using an string interface provided by configView
 class TypedConfigInterface(ConfigInterface):
@@ -159,10 +155,9 @@ class SimpleConfigInterface(TypedConfigInterface):
 			return self.getPath(option, default, **kwargs)
 		return self.get(option, default, **kwargs)
 
-#	def getFilter(self, option, pluginName):
-#		filterExpr = self.getList(option, [])
-#		filterCls = self.getPlugin(appendOption(option, 'type'), pluginName, cls = FilterBase)
-#		return filterCls.getBoundInstance(filterExpr)
+	def getFilter(self, option, pluginName, **kwargs):
+		filterExpr = self.get(option, '', **kwargs)
+		return self.getPlugin(appendOption(option, 'type'), pluginName, cls = ListFilterBase)
 
 	# Get state - bool stored in hidden "state" section - any given detail overrides global state
 	def getState(self, statename, detail = '', default = False):
