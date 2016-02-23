@@ -68,7 +68,7 @@ class RangeParameterSource(ForwardingParameterSource):
 		self._psource.fillParameterInfo(pNum + self._posStart, result)
 
 	def resync(self):
-		(result_redo, result_disable, result_sizeChange) = self.resyncCreate()
+		(result_redo, result_disable, result_sizeChange) = ParameterSource.resync(self)
 		(psource_redo, psource_disable, psource_sizeChange) = self._psource.resync()
 		for pNum in psource_redo:
 			if (pNum >= self._posStart) and (pNum <= self._posEnd):
@@ -88,12 +88,16 @@ ParameterSource.managerMap['range'] = 'RangeParameterSource'
 
 
 # Meta processing of parameter psources
-class BaseMultiParameterSource(ParameterSource):
+class MultiParameterSource(ParameterSource):
 	def __init__(self, *psources):
 		ParameterSource.__init__(self)
 		self._psourceList = psources
 		self._psourceMaxList = lmap(lambda p: p.getMaxParameters(), self._psourceList)
 		self._maxParameters = self.initMaxParameters()
+
+	# Get local parameter numbers (result) from psource index (pIdx) and subpsource parameter number (pNum)
+	def _translateNum(self, pIdx, pNum):
+		raise AbstractError
 
 	def getMaxParameters(self):
 		return self._maxParameters
@@ -106,11 +110,21 @@ class BaseMultiParameterSource(ParameterSource):
 			psource.fillParameterKeys(result)
 
 	def resync(self):
-		(result_redo, result_disable, result_sizeChange) = self.resyncCreate()
-		self._psourceMaxList = lmap(lambda p: p.getMaxParameters(), self._psourceList)
 		oldMaxParameters = self._maxParameters
+		# Perform resync of subsources
+		psourceResyncList = lmap(lambda p: p.resync(), self._psourceList)
+		# Update max for _translateNum
+		self._psourceMaxList = lmap(lambda p: p.getMaxParameters(), self._psourceList)
 		self._maxParameters = self.initMaxParameters()
-		return (result_redo, result_disable, result_sizeChange or (oldMaxParameters != self._maxParameters))
+		# translate affected pNums from subsources
+		(result_redo, result_disable, dummy) = ParameterSource.resync(self)
+		for (idx, psource_resync) in enumerate(psourceResyncList):
+			(psource_redo, psource_disable, dummy) = psource_resync
+			for pNum in psource_redo:
+				result_redo.update(self._translateNum(idx, pNum))
+			for pNum in psource_disable:
+				result_disable.update(self._translateNum(idx, pNum))
+		return (result_redo, result_disable, oldMaxParameters != self._maxParameters)
 
 	def show(self):
 		result = ParameterSource.show(self)
@@ -119,24 +133,6 @@ class BaseMultiParameterSource(ParameterSource):
 
 	def getHash(self):
 		return md5_hex(str(lmap(lambda p: str(p.getMaxParameters()) + p.getHash(), self._psourceList)))
-
-
-# Aggregates and propagates results and changes to psources
-class MultiParameterSource(BaseMultiParameterSource):
-	# Get local parameter numbers (result) from psource index (pIdx) and subpsource parameter number (pNum)
-	def translateNum(self, pIdx, pNum):
-		raise AbstractError
-
-	def resync(self):
-		psource_resyncList = lmap(lambda p: p.resync(), self._psourceList)
-		(result_redo, result_disable, result_sizeChange) = BaseMultiParameterSource.resync(self)
-		for (idx, psource_resync) in enumerate(psource_resyncList):
-			(psource_redo, psource_disable, psource_sizeChange) = psource_resync
-			for pNum in psource_redo:
-				result_redo.update(self.translateNum(idx, pNum))
-			for pNum in psource_disable:
-				result_disable.update(self.translateNum(idx, pNum))
-		return (result_redo, result_disable, result_sizeChange)
 
 
 # Base class for psources invoking their sub-psources in parallel
@@ -150,7 +146,7 @@ class BaseZipParameterSource(MultiParameterSource):
 				psource.fillParameterInfo(pNum, result)
 
 	def resync(self): # Quicker version than the general purpose implementation
-		result = self.resyncCreate()
+		result = ParameterSource.resync(self)
 		for psource in self._psourceList:
 			result = combineSyncResult(result, psource.resync())
 		oldMaxParameters = self._maxParameters
@@ -180,7 +176,7 @@ class ChainParameterSource(MultiParameterSource):
 		self.offsetList = lmap(lambda pIdx: sum(self._psourceMaxList[:pIdx]), irange(len(self._psourceList)))
 		return sum(self._psourceMaxList)
 
-	def translateNum(self, pIdx, pNum):
+	def _translateNum(self, pIdx, pNum):
 		return [pNum + self.offsetList[pIdx]]
 
 	def fillParameterInfo(self, pNum, result):
@@ -207,7 +203,7 @@ class RepeatParameterSource(MultiParameterSource):
 			return self.times * self.maxN
 		return self.times
 
-	def translateNum(self, pIdx, pNum):
+	def _translateNum(self, pIdx, pNum):
 		return lmap(lambda i: pNum + i * self.maxN, irange(self.times))
 
 	def fillParameterInfo(self, pNum, result):
@@ -236,14 +232,14 @@ class CrossParameterSource(MultiParameterSource):
 		if maxList:
 			return reduce(lambda a, b: a * b, maxList)
 
-	def translateNum(self, pIdx, pNum):
+	def _translateNum(self, pIdx, pNum):
 		psource, maxN, prev = self.quickFill[pIdx]
-		return lfilter(lambda x: (x / prev) % maxN == pNum, irange(self.getMaxParameters()))
+		return lfilter(lambda x: int(x / prev) % maxN == pNum, irange(self.getMaxParameters()))
 
 	def fillParameterInfo(self, pNum, result):
 		for (psource, maxN, prev) in self.quickFill:
 			if maxN:
-				psource.fillParameterInfo(int((pNum / prev) % maxN), result)
+				psource.fillParameterInfo(int(pNum / prev) % maxN, result)
 			else:
 				psource.fillParameterInfo(pNum, result)
 

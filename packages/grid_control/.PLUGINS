@@ -330,26 +330,6 @@
 
    * grid_control.parameters.psource_base ParameterSource
 
-    * grid_control.parameters.psource_meta BaseMultiParameterSource
-
-     * grid_control.parameters.psource_meta MultiParameterSource
-
-      * grid_control.parameters.psource_meta BaseZipParameterSource
-
-       * grid_control.parameters.psource_meta ZipLongParameterSource
-
-        * grid_control.parameters.psource_meta CombineParameterSource
-
-       * grid_control.parameters.psource_meta ZipShortParameterSource
-
-      * grid_control.parameters.psource_meta ChainParameterSource
-
-       * grid_control.parameters.psource_meta ErrorParameterSource
-
-      * grid_control.parameters.psource_meta CrossParameterSource
-
-      * grid_control.parameters.psource_meta RepeatParameterSource
-
     * grid_control.parameters.psource_data DataParameterSource
 
     * grid_control.parameters.psource_meta ForwardingParameterSource
@@ -363,6 +343,24 @@
      * grid_control.parameters.psource_file CSVParameterSource
 
     * grid_control.parameters.psource_basic KeyParameterSource
+
+    * grid_control.parameters.psource_meta MultiParameterSource
+
+     * grid_control.parameters.psource_meta BaseZipParameterSource
+
+      * grid_control.parameters.psource_meta ZipLongParameterSource
+
+       * grid_control.parameters.psource_meta CombineParameterSource
+
+      * grid_control.parameters.psource_meta ZipShortParameterSource
+
+     * grid_control.parameters.psource_meta ChainParameterSource
+
+      * grid_control.parameters.psource_meta ErrorParameterSource
+
+     * grid_control.parameters.psource_meta CrossParameterSource
+
+     * grid_control.parameters.psource_meta RepeatParameterSource
 
     * grid_control.parameters.psource_basic RequirementParameterSource
 

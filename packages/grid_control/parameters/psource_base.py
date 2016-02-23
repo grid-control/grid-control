@@ -56,9 +56,6 @@ class ParameterSource(Plugin):
 	def fillParameterInfo(self, pNum, result):
 		raise AbstractError
 
-	def resyncCreate(self):
-		return (set(), set(), False) # returns two sets of parameter ids and boolean (redo, disable, sizeChange)
-
 	def resyncSetup(self, interval = None, force = None, info = None):
 		self._resyncInfo = info # User override for base resync infos
 		if interval is not None:
@@ -81,7 +78,7 @@ class ParameterSource(Plugin):
 	def resync(self): # needed when parameter values do not change but if meaning / validity of values do
 		if self.resyncEnabled() and self._resyncInfo:
 			return self._resyncInfo
-		return self.resyncCreate()
+		return (set(), set(), False) # returns two sets of parameter ids and boolean (redo, disable, sizeChange)
 
 	def show(self):
 		return [self.__class__.__name__ + ':']

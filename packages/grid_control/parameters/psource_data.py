@@ -16,11 +16,11 @@ import os, time
 from grid_control import utils
 from grid_control.datasets import DataProvider
 from grid_control.gc_exceptions import UserError
-from grid_control.parameters.psource_base import ParameterMetadata, ParameterSource
+from grid_control.parameters.psource_base import ParameterSource
 from python_compat import md5_hex
 
 class DataParameterSource(ParameterSource):
-	def __init__(self, dataDir, srcName, dataProvider, dataSplitter, dataProc):
+	def __init__(self, dataDir, srcName, dataProvider, dataSplitter, dataProc, keepOld = True):
 		ParameterSource.__init__(self)
 		(self._dataDir, self._srcName, self._dataProvider, self._dataSplitter, self._part_proc) = \
 			(dataDir, srcName, dataProvider, dataSplitter, dataProc)
@@ -34,13 +34,12 @@ class DataParameterSource(ParameterSource):
 			self._dataSplitter.splitDataset(self.getDataPath('map.tar'), self._dataProvider.getBlocks())
 
 		self._maxN = self._dataSplitter.getMaxJobs()
-		self._keepOld = True
+		self._keepOld = keepOld
 
 	def getMaxParameters(self):
 		return self._maxN
 
 	def fillParameterKeys(self, result):
-		result.append(ParameterMetadata('DATASETSPLIT'))
 		result.extend(self._part_proc.getKeys())
 
 	def fillParameterInfo(self, pNum, result):

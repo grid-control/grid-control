@@ -16,7 +16,6 @@ from grid_control.backends import WMS
 from grid_control.datasets.splitter_base import DataSplitter
 from grid_control.gc_plugin import ConfigurablePlugin
 from grid_control.parameters import ParameterInfo, ParameterMetadata
-from grid_control.utils import filterBlackWhite
 from grid_control.utils.gc_itertools import lchain
 from hpfwk import AbstractError
 from python_compat import any, imap, lfilter, lmap, set
@@ -48,8 +47,10 @@ class BasicPartitionProcessor(PartitionProcessor):
 		return str.join(' ', fl)
 
 	def getKeys(self):
-		return lmap(lambda k: ParameterMetadata(k, untracked=True), ['FILE_NAMES', 'MAX_EVENTS',
+		result = lmap(lambda k: ParameterMetadata(k, untracked = True), ['FILE_NAMES', 'MAX_EVENTS',
 			'SKIP_EVENTS', 'DATASETID', 'DATASETPATH', 'DATASETBLOCK', 'DATASETNICK'])
+		result.append(ParameterMetadata('DATASETSPLIT', untracked = False))
+		return result
 
 	def process(self, pNum, splitInfo, result):
 		result.update({
@@ -80,8 +81,8 @@ class LocationPartitionProcessor(PartitionProcessor):
 
 	def process(self, pNum, splitInfo, result):
 		locations = splitInfo.get(DataSplitter.Locations)
-		if locations is not None:
-			locations = filterBlackWhite(locations, self._filter, addUnmatched = True)
+#		if locations is not None:
+#			locations = filterBlackWhite(locations, self._filter, addUnmatched = True)
 		if self._preference:
 			if not locations: # [] or None
 				locations = self._preference

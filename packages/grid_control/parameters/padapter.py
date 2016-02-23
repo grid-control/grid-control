@@ -46,6 +46,12 @@ class ParameterAdapter(ConfigurablePlugin):
 			result = utils.filterDict(result, vF = lambda v: v != '')
 		return result
 
+	def iterJobs(self):
+		maxN = self.getMaxJobs()
+		if maxN is not None:
+			for jobNum in irange(maxN):
+				yield self.getJobInfo(jobNum)
+
 	def canSubmit(self, jobNum): # Use caching to speed up job manager operations
 		return self.getJobInfo(jobNum)[ParameterInfo.ACTIVE]
 
@@ -152,15 +158,15 @@ class TrackedParameterAdapter(BasicParameterAdapter):
 
 	def _resyncInternal(self): # This function is _VERY_ time critical!
 		tmp = self._rawSource.resync() # First ask about psource changes
-		(redo, disable, sizeChange) = (set(tmp[0]), set(tmp[1]), tmp[2])
+		(redoNewPNum, disableNewPNum, sizeChange) = (set(tmp[0]), set(tmp[1]), tmp[2])
 		hashNew = self._rawSource.getHash()
 		hashChange = self.storedHash != hashNew
 		self.storedHash = hashNew
-		if not (redo or disable or sizeChange or hashChange):
+		if not (redoNewPNum or disableNewPNum or sizeChange or hashChange):
 			self._resyncState = None
-			return 
+			return
 
-		def translatePSource(psource): # Reduces psource output to essential information for diff
+		def translatePSource(psource): # Reduces psource output to essential information for diff - faster than keying
 			keys_store = sorted(ifilter(lambda k: not k.untracked, psource.getJobKeys()))
 			def translateEntry(meta): # Translates parameter setting into hash
 				tmp = md5()
@@ -170,9 +176,8 @@ class TrackedParameterAdapter(BasicParameterAdapter):
 						tmp.update(str2bytes(str(meta[key])))
 				return { ParameterInfo.HASH: tmp.hexdigest(), 'GC_PARAM': meta['GC_PARAM'],
 					ParameterInfo.ACTIVE: meta[ParameterInfo.ACTIVE] }
-			if psource.getMaxJobs() is not None:
-				for jobNum in irange(psource.getMaxJobs()):
-					yield translateEntry(psource.getJobInfo(jobNum))
+			for entry in psource.iterJobs():
+				yield translateEntry(entry)
 
 		old = ParameterAdapter(None, ParameterSource.createInstance('GCDumpParameterSource', self._pathParams))
 		params_old = list(translatePSource(old))
@@ -181,11 +186,11 @@ class TrackedParameterAdapter(BasicParameterAdapter):
 
 		mapJob2PID = {}
 		def sameParams(paramsAdded, paramsMissing, paramsSame, oldParam, newParam):
-			if not oldParam[ParameterInfo.ACTIVE] and newParam[ParameterInfo.ACTIVE]:
-				redo.add(newParam['GC_PARAM'])
-			if oldParam[ParameterInfo.ACTIVE] and not newParam[ParameterInfo.ACTIVE]:
-				disable.add(newParam['GC_PARAM'])
 			mapJob2PID[oldParam['GC_PARAM']] = newParam['GC_PARAM']
+			if not oldParam[ParameterInfo.ACTIVE] and newParam[ParameterInfo.ACTIVE]:
+				redoNewPNum.add(newParam['GC_PARAM'])
+			if oldParam[ParameterInfo.ACTIVE] and not newParam[ParameterInfo.ACTIVE]:
+				disableNewPNum.add(newParam['GC_PARAM'])
 		(pAdded, pMissing, pSame) = utils.DiffLists(params_old, params_new, itemgetter(ParameterInfo.HASH), sameParams)
 
 		# Construct complete parameter space psource with missing parameter entries and intervention state
@@ -193,36 +198,35 @@ class TrackedParameterAdapter(BasicParameterAdapter):
 		# <same><added> <missing> | same: both in NEW and OLD, added: only in NEW, missing: only in OLD
 		oldMaxJobs = old.getMaxJobs()
 		# assign sequential job numbers to the added parameter entries
-		sort_inplace(pAdded, key = lambda x: x['GC_PARAM'])
-		for (idx, meta) in enumerate(pAdded):
-			if oldMaxJobs + idx != meta['GC_PARAM']:
-				mapJob2PID[oldMaxJobs + idx] = meta['GC_PARAM']
+		sort_inplace(pAdded, key = itemgetter('GC_PARAM'))
+		for (idx, entry) in enumerate(pAdded):
+			if oldMaxJobs + idx != entry['GC_PARAM']:
+				mapJob2PID[oldMaxJobs + idx] = entry['GC_PARAM']
 
 		missingInfos = []
 		newMaxJobs = new.getMaxJobs()
-		sort_inplace(pMissing, key = lambda x: x['GC_PARAM'])
-		for (idx, meta) in enumerate(pMissing):
-			mapJob2PID[meta['GC_PARAM']] = newMaxJobs + idx
-			tmp = old.getJobInfo(newMaxJobs + idx, meta['GC_PARAM'])
+		sort_inplace(pMissing, key = itemgetter('GC_PARAM'))
+		for (idx, entry) in enumerate(pMissing):
+			mapJob2PID[entry['GC_PARAM']] = newMaxJobs + idx
+			tmp = old.getJobInfo(newMaxJobs + idx, entry['GC_PARAM'])
 			tmp.pop('GC_PARAM')
 			if tmp[ParameterInfo.ACTIVE]:
 				tmp[ParameterInfo.ACTIVE] = False
-				disable.add(newMaxJobs + idx)
+				disableNewPNum.add(newMaxJobs + idx)
 			missingInfos.append(tmp)
 
 		if missingInfos:
-			from grid_control.parameters.psource_meta import ChainParameterSource
-			from grid_control.parameters.psource_basic import InternalParameterSource
 			currentInfoKeys = new.getJobKeys()
 			missingInfoKeys = lfilter(lambda key: key not in currentInfoKeys, old.getJobKeys())
-			self._source = ChainParameterSource(self._rawSource, InternalParameterSource(missingInfos, missingInfoKeys))
+			ps_miss = ParameterSource.createInstance('InternalParameterSource', missingInfos, missingInfoKeys)
+			self._source = ParameterSource.createInstance('ChainParameterSource', self._rawSource, ps_miss)
 
 		self._mapJob2PID = mapJob2PID # Update Job2PID map
-		redo = redo.difference(disable)
-		if redo or disable:
+		redoNewPNum = redoNewPNum.difference(disableNewPNum)
+		if redoNewPNum or disableNewPNum:
 			mapPID2Job = dict(ismap(utils.swap, self._mapJob2PID.items()))
 			translate = lambda pNum: mapPID2Job.get(pNum, pNum)
-			self._resyncState = (set(imap(translate, redo)), set(imap(translate, disable)), sizeChange)
+			self._resyncState = (set(imap(translate, redoNewPNum)), set(imap(translate, disableNewPNum)), sizeChange)
 		elif sizeChange:
 			self._resyncState = (set(), set(), sizeChange)
 		# Write resynced state
