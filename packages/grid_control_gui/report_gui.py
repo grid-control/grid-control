@@ -65,8 +65,10 @@ class CategoryReport(Report):
 		catJobs = {}
 		catDescDict = {}
 		# Assignment of jobs to categories (depending on variables and using datasetnick if available)
+		jobConfig = {}
 		for jobNum in self._jobs:
-			jobConfig = task.getJobConfig(jobNum)
+			if task:
+				jobConfig = task.getJobConfig(jobNum)
 			varList = sorted(ifilter(lambda var: '!' not in repr(var), jobConfig.keys()))
 			if 'DATASETSPLIT' in varList:
 				varList.remove('DATASETSPLIT')
@@ -78,7 +80,7 @@ class CategoryReport(Report):
 		# Kill redundant keys from description
 		commonVars = dict(imap(lambda var: (var, jobConfig[var]), varList)) # seed with last varList
 		for catKey in catDescDict:
-			for key in commonVars.keys():
+			for key in list(commonVars.keys()):
 				if key not in catDescDict[catKey].keys():
 					commonVars.pop(key)
 				elif commonVars[key] != catDescDict[catKey][key]:
@@ -211,7 +213,7 @@ class AdaptiveReport(CategoryReport):
 			deltaGoal = max(0, (len(catDescDict) + len(hiddenDesc)) - self._catMax)
 			varKeyResult = getKeyMergeResults()
 			(varKeyMerge, varKeyMergeDelta) = (None, 0)
-			for varKey in varKeyResult:
+			for varKey in sorted(varKeyResult):
 				delta = sum(imap(len, varKeyResult[varKey])) - len(varKeyResult[varKey])
 				if (delta <= deltaGoal) and (delta > varKeyMergeDelta):
 					(varKeyMerge, varKeyMergeDelta) = (varKey, delta)
@@ -252,7 +254,7 @@ class AdaptiveReport(CategoryReport):
 
 		# Finalize descriptions:
 		if len(catDescDict) == 1:
-			catDescDict[catDescDict.keys()[0]] = 'All jobs'
+			catDescDict[list(catDescDict.keys())[0]] = 'All jobs'
 
 		return (catStateDict, catDescDict, catSubcatDict)
 

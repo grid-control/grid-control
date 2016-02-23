@@ -13,23 +13,26 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-import sys, optparse
-from gcSupport import JobSelector, Plugin, getConfig, parseOptions, utils
+import sys
+from gcSupport import JobSelector, Options, Plugin, getConfig, utils
+
+parser = Options()
+parser.addText(None, 'report',       default = 'GUIReport', short = '-R')
+parser.addFlag(None, 'report-list',  default = False,       short = '-L',
+	help = 'List available report classes')
+parser.addText(None, 'job-selector', default = None,        short = '-J')
+parser.addFlag(None, 'use-task',     default = False,       short = '-T',
+	help='Forward task information to report')
+parser.addText(None, 'string',       default = None)
+(opts, args) = parser.parse()
 
 Report = Plugin.getClass('Report')
 
-parser = optparse.OptionParser()
-parser.add_option('', '--report', dest='reportClass', default='GUIReport')
-parser.add_option('', '--report-list', dest='reportList', default=False, action='store_true',
-	help='List available report classes')
-parser.add_option('-J', '--job-selector', dest='selector', default=None)
-parser.add_option('-T', '--use-task', dest='useTask', default=False, action='store_true',
-	help='Forward task information to report')
-parser.add_option('', '--str', dest='string', default=None)
-(opts, args) = parseOptions(parser)
-
-if opts.reportList:
-	print(Report.getClassList())
+if opts.report_list:
+	msg = 'Available report classes:\n'
+	for entry in Report.getClassList():
+		msg += ' * %s\n' % str.join(' ', entry.values())
+	print(msg)
 
 if len(args) != 1:
 	utils.exitWithUsage('%s [options] <config file>' % sys.argv[0])
@@ -40,16 +43,16 @@ def main():
 
 	# Initialise task module
 	task = None
-	if opts.useTask:
+	if opts.use_task:
 		task = config.getPlugin(['task', 'module'], cls = 'TaskModule')
 
 	# Initialise job database
-	jobDB = config.getPlugin('jobdb', 'JobDB', cls = 'JobDB', pargs = (config,))
+	jobDB = config.getPlugin('jobdb', 'JobDB', cls = 'JobDB')
 	log = utils.ActivityLog('Filtering job entries')
-	selected = jobDB.getJobs(JobSelector.create(opts.selector, task = task))
+	selected = jobDB.getJobs(JobSelector.create(opts.job_selector, task = task))
 	del log
 
-	report = Report.createInstance(opts.reportClass, jobDB, task, selected, opts.string)
+	report = Report.createInstance(opts.report, jobDB, task, selected, opts.string)
 	report.display()
 
 if __name__ == '__main__':

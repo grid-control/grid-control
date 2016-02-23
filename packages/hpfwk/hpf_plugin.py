@@ -133,7 +133,7 @@ class Plugin(object):
 	getClass = classmethod(getClass)
 
 	def getClassList(cls):
-		return Plugin._classMap.get(cls.__name__, [])
+		return Plugin._classMap.get(cls.__name__.lower(), [])
 	getClassList = classmethod(getClassList)
 
 	# Get an instance of a derived class by specifying the class name and constructor arguments
