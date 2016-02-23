@@ -18,7 +18,7 @@ from hpfwk import AbstractError, Plugin
 from python_compat import imap, irange, lmap, lzip
 
 class Report(Plugin):
-	def __init__(self, jobDB, task, jobs = None, configString = ''):
+	def __init__(self, jobDB = None, task = None, jobs = None, configString = ''):
 		if jobs is None:
 			jobs = jobDB.getJobs()
 		(self._jobDB, self._task, self._jobs) = (jobDB, task, jobs)
@@ -44,8 +44,8 @@ class Report(Plugin):
 
 
 class MultiReport(Report):
-	def __init__(self, reportProxyList, *args, **kwargs):
-		self._reportList = lmap(lambda p: p.getBoundInstance(*args, **kwargs), reportProxyList)
+	def __init__(self, reportList, *args, **kwargs):
+		self._reportList = reportList
 
 	def getHeight(self):
 		return sum(imap(lambda r: r.getHeight(), self._reportList))

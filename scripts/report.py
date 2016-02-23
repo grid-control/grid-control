@@ -41,10 +41,10 @@ def main():
 	# Initialise task module
 	task = None
 	if opts.useTask:
-		task = config.getPlugin(['task', 'module'], cls = 'TaskModule').getBoundInstance()
+		task = config.getPlugin(['task', 'module'], cls = 'TaskModule')
 
 	# Initialise job database
-	jobDB = config.getPlugin('jobdb', 'JobDB', cls = 'JobDB').getBoundInstance(config)
+	jobDB = config.getPlugin('jobdb', 'JobDB', cls = 'JobDB', pargs = (config,))
 	log = utils.ActivityLog('Filtering job entries')
 	selected = jobDB.getJobs(JobSelector.create(opts.selector, task = task))
 	del log

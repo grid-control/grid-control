@@ -33,9 +33,9 @@ class LocalWMS(BasicWMS):
 		BasicWMS.__init__(self, config, name)
 
 		self.brokerSite = config.getPlugin('site broker', 'UserBroker', cls = Broker,
-			inherit = True, tags = [self]).getBoundInstance('sites', 'sites', self.getNodes)
+			inherit = True, tags = [self], pargs = ('sites', 'sites', self.getNodes))
 		self.brokerQueue = config.getPlugin('queue broker', 'UserBroker', cls = Broker,
-			inherit = True, tags = [self]).getBoundInstance('queue', 'queues', self.getQueues)
+			inherit = True, tags = [self], pargs = ('queue', 'queues', self.getQueues))
 
 		self.sandCache = []
 		self.sandPath = config.getPath('sandbox path', config.getWorkPath('sandbox'), mustExist = False)

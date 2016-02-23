@@ -21,10 +21,9 @@ class GUI(ConfigurablePlugin):
 	def __init__(self, config, workflow):
 		self._workflow = workflow
 		self._reportOpts = config.get('report options', '', onChange = None)
-		reportCls = config.getCompositePlugin('report', 'BasicReport', 'MultiReport',
-			cls = Report, onChange = None)
-		self._report = reportCls.getBoundInstance(workflow.jobManager.jobDB,
-			workflow.task, configString = self._reportOpts)
+		self._report = config.getCompositePlugin('report', 'BasicReport', 'MultiReport',
+			cls = Report, onChange = None, pargs = (workflow.jobManager.jobDB,
+			workflow.task), pkwargs = {'configString': self._reportOpts})
 
 	def displayWorkflow(self):
 		raise AbstractError()

@@ -48,7 +48,7 @@ parser.addText(None, 'logfile-decode',           default='',    help='Decode log
 if opts.backend_list_nodes or opts.backend_list_queues:
 	config = getConfig()
 	backend = str.join(' ', args) or 'local'
-	wms = Plugin.getClass('WMS').getBoundInstance(backend, config, backend)
+	wms = Plugin.getClass('WMS').createInstance(backend, config, backend)
 	if opts.backend_list_nodes:
 		logging.info(repr(wms.getNodes()))
 	if opts.backend_list_queues:

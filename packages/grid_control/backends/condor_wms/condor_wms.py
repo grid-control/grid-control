@@ -112,7 +112,7 @@ class Condor(BasicWMS):
 				self.historyFile = None
 		# broker for selecting Sites
 		self.brokerSite = config.getPlugin('site broker', 'UserBroker', cls = Broker,
-			tags = [self]).getBoundInstance('sites', 'sites', self.getSites)
+			tags = [self], pargs = ('sites', 'sites', self.getSites))
 		self.debugFlush()
 
 	def explainError(self, proc, code):

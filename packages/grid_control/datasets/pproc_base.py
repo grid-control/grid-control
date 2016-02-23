@@ -30,9 +30,9 @@ class PartitionProcessor(ConfigurablePlugin):
 
 
 class MultiPartitionProcessor(PartitionProcessor):
-	def __init__(self, config, processorProxyList):
+	def __init__(self, config, processorList):
 		PartitionProcessor.__init__(self, config)
-		self._processorList = lmap(lambda p: p.getBoundInstance(), processorProxyList)
+		self._processorList = processorList
 
 	def getKeys(self):
 		return lchain(imap(lambda p: p.getKeys(), self._processorList))

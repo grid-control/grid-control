@@ -85,12 +85,12 @@ class ExprMatcher(MatcherBase):
 	_getExpr = staticmethod(_getExpr)
 
 	def matcher(self, value, selector):
-		return ExprMatcher._getExpr(selector)(value)
+		return self._getExpr(selector)(value)
 
 	def matchWith(self, selector):
 		class FunctionObject(MatcherHolder):
 			def init(self, fixedSelector):
-				self.match = ExprMatcher._getExpr(fixedSelector)
+				self.match = self._getExpr(fixedSelector)
 		return getFixedFunctionObject(self, FunctionObject, selector)
 
 
@@ -115,8 +115,8 @@ class BlackWhiteMatcher(MatcherBase):
 	def __init__(self, config, option_prefix):
 		MatcherBase.__init__(self, config, option_prefix)
 		baseMatchOpt = appendOption(option_prefix, 'matcher')
-		baseMatchCls = config.getPlugin(baseMatchOpt, 'start', cls = MatcherBase)
-		self._baseMatcher = baseMatchCls.getBoundInstance(config, option_prefix)
+		self._baseMatcher = config.getPlugin(baseMatchOpt, 'start',
+			cls = MatcherBase, pargs = (option_prefix,))
 
 	def matcher(self, value, selector):
 		return self.matchWith(selector).match(value)

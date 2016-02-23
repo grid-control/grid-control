@@ -126,7 +126,7 @@ if __name__ == '__main__':
 
 		# Create workflow and freeze config settings
 		globalConfig = config.changeView(setSections = ['global'])
-		workflow = globalConfig.getPlugin('workflow', 'Workflow:global', cls = 'Workflow').getBoundInstance()
+		workflow = globalConfig.getPlugin('workflow', 'Workflow:global', cls = 'Workflow')
 		config.factory.freezeConfig(writeConfig = config.getState('init', detail = 'config'))
 
 		# Give config help

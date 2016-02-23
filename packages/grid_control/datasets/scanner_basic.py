@@ -34,7 +34,7 @@ class OutputDirsFromConfig(InfoScanner):
 		extConfigFN = config.getPath('source config')
 		extConfig = createConfig(extConfigFN).changeView(setSections = ['global'])
 		self.extWorkDir = extConfig.getWorkPath()
-		self.extTask = extConfig.getPlugin(['task', 'module'], cls = TaskModule).getBoundInstance()
+		self.extTask = extConfig.getPlugin(['task', 'module'], cls = TaskModule)
 		selector = config.get('source job selector', '')
 		extJobDB = JobDB(extConfig, jobSelector = lambda jobNum, jobObj: jobObj.state == Job.SUCCESS)
 		self.selected = sorted(extJobDB.getJobs(JobSelector.create(selector, task = self.extTask)))

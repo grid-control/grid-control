@@ -15,7 +15,6 @@
 import logging
 from grid_control.gc_plugin import ConfigurablePlugin
 from hpfwk import AbstractError
-from python_compat import lmap
 
 class DataProcessor(ConfigurablePlugin):
 	def __init__(self, config):
@@ -31,9 +30,9 @@ class DataProcessor(ConfigurablePlugin):
 
 
 class MultiDataProcessor(DataProcessor):
-	def __init__(self, config, processorProxyList):
+	def __init__(self, config, processorList):
 		DataProcessor.__init__(self, config)
-		self._processorList = lmap(lambda p: p.getBoundInstance(), processorProxyList)
+		self._processorList = processorList
 
 	def process(self, blockIter):
 		for processor in self._processorList:

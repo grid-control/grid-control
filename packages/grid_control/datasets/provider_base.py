@@ -30,12 +30,11 @@ class DataProvider(ConfigurablePlugin):
 		(self._cache, self._passthrough) = (None, False)
 
 		self._stats = DataProcessor.createInstance('StatsDataProcessor', config)
-		nickProducerClass = config.getPlugin('nickname source', 'SimpleNickNameProducer', cls = DataProcessor)
-		self._nickProducer = nickProducerClass.getBoundInstance()
+		self._nickProducer = config.getPlugin('nickname source', 'SimpleNickNameProducer', cls = DataProcessor)
 		self._datasetProcessor = config.getCompositePlugin('dataset processor',
 			'EntriesConsistencyDataProcessor URLDataProcessor URLCountDataProcessor ' +
 			'EntriesCountDataProcessor EmptyDataProcessor UniqueDataProcessor LocationDataProcessor',
-			'MultiDataProcessor', cls = DataProcessor).getBoundInstance()
+			'MultiDataProcessor', cls = DataProcessor)
 
 
 	def bind(cls, value, **kwargs):

@@ -48,7 +48,7 @@ class GridWMS(BasicWMS):
 		BasicWMS.__init__(self, config, name)
 
 		self.brokerSite = config.getPlugin('site broker', 'UserBroker',
-			cls = Broker, tags = [self]).getBoundInstance('sites', 'sites', self.getSites)
+			cls = Broker, tags = [self], pargs = ('sites', 'sites', self.getSites))
 		self.vo = config.get('vo', self._token.getGroup())
 
 		self._submitParams = {}

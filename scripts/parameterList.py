@@ -67,7 +67,7 @@ def main():
 		config.changeView(setSections = None).write(sys.stdout)
 
 	# Initialize ParameterFactory
-	pm = config.getPlugin('parameter factory', 'SimpleParameterFactory', cls = 'ParameterFactory').getBoundInstance()
+	pm = config.getPlugin('parameter factory', 'SimpleParameterFactory', cls = 'ParameterFactory')
 
 	# Create dataset parameter source
 	class DummySplitter:

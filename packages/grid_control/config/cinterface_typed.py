@@ -27,15 +27,6 @@ def appendOption(option, suffix):
 		return lmap(lambda x: appendOption(x, suffix), option)
 	return option.rstrip() + ' ' + suffix
 
-# General purpose class factory
-class CompositedClassWrapper(object):
-	def __init__(self, clsCompositor, clsList):
-		(self._clsCompositor, self._clsList) = (clsCompositor, clsList)
-
-	# Get single instance by merging multiple sub instances if necessary
-	def getBoundInstance(self, *args, **kwargs):
-		return self._clsCompositor.getBoundInstance(self._clsList, *args, **kwargs)
-
 # Config interface class accessing typed data using an string interface provided by configView
 class TypedConfigInterface(ConfigInterface):
 	# Handling integer config options - using strict integer (de-)serialization
@@ -121,41 +112,42 @@ class TypedConfigInterface(ConfigInterface):
 		obj2str = lambda value: '\n' + str.join('\n', patlist2pathlist(value, False))
 		return self._getInternal('paths', obj2str, str2obj, None, option, default, **kwargs)
 
-	# Return class - default class is also given in string form!
-	def getPlugin(self, option, default = noDefault,
-			cls = Plugin, tags = None, inherit = False, requirePlugin = True, **kwargs):
+	def _getPluginFactories(self, option, default = noDefault,
+			cls = Plugin, tags = None, inherit = False, requirePlugin = True, singlePlugin = False,
+			desc = 'plugin factories', **kwargs):
 		if isinstance(cls, str):
 			cls = Plugin.getClass(cls)
 		def str2obj(value):
 			objList = list(cls.bind(value, config = self, inherit = inherit, tags = tags or []))
-			if len(objList) > 1:
+			if singlePlugin and len(objList) > 1:
 				raise ConfigError('This option only allows to specify a single plugin!')
-			elif objList:
-				return objList[0]
-			if requirePlugin:
+			if requirePlugin and not objList:
 				raise ConfigError('This option requires to specify a valid plugin!')
-		obj2str = lambda obj: obj.bindValue()
-		return self._getInternal('plugin', obj2str, str2obj, str2obj, option, default, **kwargs)
+			return objList
+		obj2str = lambda value: str.join('\n', imap(lambda obj: obj.bindValue(), value))
+		return self._getInternal(desc, obj2str, str2obj, str2obj, option, default, **kwargs)
+
+	# Return class - default class is also given in string form!
+	def getPlugin(self, option, default = noDefault,
+			cls = Plugin, tags = None, inherit = False, requirePlugin = True, pargs = None, pkwargs = None, **kwargs):
+		factories = self._getPluginFactories(option, default, cls, tags, inherit, requirePlugin,
+			singlePlugin = True, desc = 'plugin', **kwargs)
+		if factories:
+			return factories[0].getBoundInstance(*(pargs or ()), **(pkwargs or {}))
 
 	# Return composite class - default classes are also given in string form!
 	def getCompositePlugin(self, option, default = noDefault,
 			default_compositor = noDefault, option_compositor = None,
-			cls = Plugin, tags = None, inherit = False, requirePlugin = True, **kwargs):
-		if isinstance(cls, str):
-			cls = Plugin.getClass(cls)
-		str2obj = lambda value: list(cls.bind(value, config = self, inherit = inherit, tags = tags or []))
-		obj2str = lambda value: str.join('\n', imap(lambda obj: obj.bindValue(), value))
-		clsList = self._getInternal('composite plugin', obj2str, str2obj, str2obj, option, default, **kwargs)
-		if len(clsList) == 1:
-			return clsList[0]
-		if not clsList:
-			if requirePlugin:
-				raise ConfigError('This option requires to specify a valid plugin!')
-			return
+			cls = Plugin, tags = None, inherit = False, requirePlugin = True,
+			pargs = None, pkwargs = None, **kwargs):
+		clsList = []
+		for factory in self._getPluginFactories(option, default, cls, tags, inherit, requirePlugin,
+				singlePlugin = False, desc = 'composite plugin', **kwargs):
+			clsList.append(factory.getBoundInstance(*(pargs or ()), **(pkwargs or {})))
 		if not option_compositor:
 			option_compositor = appendOption(option, 'manager')
-		clsCompositor = self.getPlugin(option_compositor, default_compositor, cls, tags, inherit, **kwargs)
-		return CompositedClassWrapper(clsCompositor, clsList)
+		return self.getPlugin(option_compositor, default_compositor, cls, tags, inherit,
+			pargs = tuple([clsList] + list(pargs or [])), **kwargs)
 
 
 CommandType = makeEnum(['executable', 'command'])

@@ -42,9 +42,9 @@ class EventHandler(NamedPlugin):
 
 
 class MultiEventHandler(EventHandler):
-	def __init__(self, config, name, handlerProxyList, task):
+	def __init__(self, config, name, handlerList, task):
 		EventHandler.__init__(self, config, name, task)
-		self._handlers = lmap(lambda p: p.getBoundInstance(task), handlerProxyList)
+		self._handlers = handlerList
 
 	def onJobSubmit(self, wms, jobObj, jobNum):
 		for handler in self._handlers:
