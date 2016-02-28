@@ -14,7 +14,7 @@
 
 def initGC():
 	import os, sys
-	basePath = os.path.dirname(os.path.dirname(__file__))
+	basePath = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 	sys.path.insert(1, basePath) # packages bundled with grid-control have priority
 	os.environ['GC_PACKAGES_PATH'] = basePath # Store grid-control base path in enviroment variable
 	from hpfwk import init_hpf_plugins
