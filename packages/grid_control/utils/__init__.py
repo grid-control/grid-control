@@ -423,52 +423,10 @@ def DiffLists(oldList, newList, keyFun, changedFkt, isSorted = False):
 	return (listAdded, listMissing, listChanged)
 
 
-def rawOrderedBlackWhiteList(value, bwfilter, matcher):
-	bwList = lmap(lambda x: (x, x.startswith('-'), QM(x.startswith('-'), x[1:], x)), bwfilter)
-	matchDict = {} # Map for temporary storage of ordered matches - False,True,None are special keys
-	for item in value:
-		matchExprLast = None
-		for (matchOrig, matchBlack, matchExpr) in bwList:
-			if matcher(item, matchExpr):
-				matchExprLast = matchOrig
-		matchDict.setdefault(matchExprLast, []).append(item)
-	for (matchOrig, matchBlack, matchExpr) in bwList:
-		matchDict.setdefault(matchBlack, []).extend(matchDict.get(matchOrig, []))
-	return (matchDict.get(False), matchDict.get(True), matchDict.get(None)) # white, black, unmatched
-
-
-def filterBlackWhite(value, bwfilter, matcher = str.startswith, addUnmatched = False):
-	if (value is None) or (bwfilter is None):
-		return None
-	(white, black, unmatched) = rawOrderedBlackWhiteList(value, bwfilter, matcher)
-	if white is not None:
-		return white + QM(unmatched and addUnmatched, unmatched, [])
-	return QM(unmatched and bwfilter, unmatched, [])
-
-
 def splitBlackWhiteList(bwfilter):
 	blacklist = lmap(lambda x: x[1:], ifilter(lambda x: x.startswith('-'), QM(bwfilter, bwfilter, [])))
 	whitelist = lfilter(lambda x: not x.startswith('-'), QM(bwfilter, bwfilter, []))
 	return (blacklist, whitelist)
-
-
-def doBlackWhiteList(value, bwfilter, matcher = str.startswith, onEmpty = None, preferWL = True):
-	""" Apply black-whitelisting to input list
-	>>> (il, f) = (['T2_US_MIT', 'T1_DE_KIT_MSS', 'T1_US_FNAL'], ['T1', '-T1_DE_KIT'])
-	>>> (doBlackWhiteList(il,    f), doBlackWhiteList([],    f), doBlackWhiteList(None,    f))
-	(['T1_US_FNAL'], ['T1'], ['T1'])
-	>>> (doBlackWhiteList(il,   []), doBlackWhiteList([],   []), doBlackWhiteList(None,   []))
-	(['T2_US_MIT', 'T1_DE_KIT_MSS', 'T1_US_FNAL'], None, None)
-	>>> (doBlackWhiteList(il, None), doBlackWhiteList([], None), doBlackWhiteList(None, None))
-	(['T2_US_MIT', 'T1_DE_KIT_MSS', 'T1_US_FNAL'], None, None)
-	"""
-	(blacklist, whitelist) = splitBlackWhiteList(bwfilter)
-	def checkMatch(item, matchList):
-		return True in imap(lambda x: matcher(item, x), matchList)
-	value = lfilter(lambda x: not checkMatch(x, blacklist), QM(value or not preferWL, value, whitelist))
-	if len(whitelist):
-		return lfilter(lambda x: checkMatch(x, whitelist), value)
-	return QM(value or bwfilter, value, onEmpty)
 
 
 class DictFormat(object):

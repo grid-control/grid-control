@@ -12,9 +12,9 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-from grid_control import utils
 from grid_control.backends.broker import Broker
 from grid_control.backends.wms import WMS
+from grid_control.config import ListOrder
 from grid_control.utils.gc_itertools import ichain
 from grid_control.utils.parsing import parseList
 from python_compat import imap, lfilter, lmap, set, sorted
@@ -33,27 +33,29 @@ class UserBroker(Broker):
 			self._itemsStart = None
 
 
-class FilterBroker(UserBroker):
+class FilterBroker(Broker):
 	def __init__(self, config, name, userOpt, itemName, discoverFun):
-		UserBroker.__init__(self, config, name, userOpt, itemName, discoverFun)
+		Broker.__init__(self, config, name, userOpt, itemName, discoverFun)
+		userFilter = config.getFilter(userOpt, '',
+			defaultMatcher = 'blackwhite', defaultFilter = 'try_strict',
+			defaultOrder = ListOrder.matcher)
+		self._itemsStart = userFilter.getSelector()
 		if self._itemsStart:
 			self._discover(discoverFun)
 		if self._itemsDiscovered:
-			self._itemsStart = utils.filterBlackWhite(self._itemsDiscovered, self._itemsStart, addUnmatched = True)
+			self._itemsStart = userFilter.filterList(self._itemsDiscovered)
 
 
 class CoverageBroker(Broker):
 	def __init__(self, config, name, userOpt, itemName, discoverFun):
 		Broker.__init__(self, config, name, userOpt, itemName, discoverFun)
-		itemsUser = config.getList(userOpt, [], onChange = None)
-		if not itemsUser:
-			itemsUser = None
-		itemsDisc = self._discover(discoverFun).keys()
-		self._itemsStart = itemsDisc
-		if itemsDisc and itemsUser:
-			self._itemsStart = utils.filterBlackWhite(itemsDisc, itemsUser)
-		elif not itemsDisc:
-			self._itemsStart = utils.filterBlackWhite(itemsUser, itemsUser)
+		userFilter = config.getFilter(userOpt, '',
+			defaultMatcher = 'blackwhite', defaultFilter = 'try_strict',
+			defaultOrder = ListOrder.matcher)
+		self._itemsStart = userFilter.filterList(None)
+		itemsDiscover = list(self._discover(discoverFun).keys())
+		if itemsDiscover:
+			self._itemsStart = userFilter.filterList(itemsDiscover)
 		self._nIndex = 0
 
 	def _broker(self, reqs, items):
@@ -99,7 +101,6 @@ class SimpleBroker(FilterBroker):
 	def _broker(self, reqs, items):
 		if not self._itemsDiscovered:
 			return FilterBroker._broker(self, reqs, self._itemsStart) # Use user constrained items
-		items = utils.QM(self._itemsStart is not None, self._itemsStart, self._itemsSorted) # or discovered items
 
 		# Match items which fulfill the requirements
 		def matcher(props):
@@ -110,15 +111,15 @@ class SimpleBroker(FilterBroker):
 					return False
 			return True
 		# Apply sort order and give matching entries as preselection to FilterBroker
-		items = lfilter(lambda x: matcher(self._itemsDiscovered[x]), items)
+		items = lfilter(lambda x: matcher(self._itemsDiscovered[x]), self._itemsStart or self._itemsSorted)
 		return FilterBroker._broker(self, reqs, lfilter(lambda x: x in items, self._itemsSorted))
 
 
 class StorageBroker(Broker):
 	def __init__(self, config, name, userOpt, itemName, discoverFun):
 		Broker.__init__(self, config, name, userOpt, itemName, discoverFun)
-		self._storageDict = config.getDict('%s storage access' % userOpt, {}, onChange = None,
-			parser = lambda x: parseList(x, ' '), strfun = lambda x: str.join(' ', x))[0]
+		self._storageDict = config.getLookup('%s storage access' % userOpt, {}, onChange = None,
+			parser = lambda x: parseList(x, ' '), strfun = lambda x: str.join(' ', x))
 
 	def _broker(self, reqs, items):
 		result = Broker._broker(self, reqs, items)
@@ -127,5 +128,5 @@ class StorageBroker(Broker):
 				if result is None:
 					result = []
 				for rval in rValue:
-					result.extend(self._storageDict.get(rval, []))
+					result.extend(self._storageDict.lookup(rval))
 		return result

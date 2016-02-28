@@ -12,7 +12,7 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-from python_compat import identity, imap, ismap, json, lfilter, lmap, reduce, set, sorted, unicode
+from python_compat import identity, ifilter, imap, json, lfilter, lmap, reduce, set, sorted, unicode
 
 def removeUnicode(obj):
 	if unicode == str:
@@ -101,9 +101,22 @@ def strTime(secs, fmt = '%dh %0.2dmin %0.2dsec'):
 	return ''
 strTimeShort = lambda secs: strTime(secs, '%d:%0.2d:%0.2d')
 
+
 strGuid = lambda guid: '%s-%s-%s-%s-%s' % (guid[:8], guid[8:12], guid[12:16], guid[16:20], guid[20:])
 
-def strDict(d):
-	def fmtKeyValue(key, value):
-		return '%s = %s' % (key, repr(value))
-	return str.join(', ', ismap(fmtKeyValue, sorted(d.items())))
+
+def strDict(d, order = None):
+	if not order:
+		order = sorted(d.keys())
+	order.extend(ifilter(lambda x: x not in order, d.keys()))
+	return str.join(', ', imap(lambda k: '%s = %s' % (k, repr(d[k])), order))
+
+
+def strDictLong(value, parser = identity, strfun = identity):
+	(srcdict, srckeys) = value
+	getmax = lambda src: max(lmap(lambda x: len(str(x)), src) + [0])
+	result = ''
+	if srcdict.get(None) is not None:
+		result = strfun(srcdict.get(None, parser('')))
+	fmt = '\n\t%%%ds => %%%ds' % (getmax(srckeys), getmax(srcdict.values()))
+	return result + str.join('', imap(lambda k: fmt % (k, strfun(srcdict[k])), srckeys))

@@ -15,6 +15,7 @@
 from grid_control.config.chandlers_base import changeImpossible, changeInitNeeded, validNoVar
 from grid_control.config.config_entry import ConfigError, noDefault
 from grid_control.config.config_factory import createConfig
+from grid_control.config.matcher_base import ListFilter, ListOrder, Matcher
 
 __all__ = ['changeImpossible', 'changeInitNeeded', 'validNoVar', 'ConfigError', 'noDefault', 'createConfig']
 

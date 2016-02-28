@@ -14,8 +14,7 @@
 
 import os, gzip
 from grid_control import utils
-from grid_control.config import ConfigError
-from grid_control.datasets.splitter_base import DataSplitter, DataSplitterIO
+from grid_control.datasets.splitter_base import DataSplitter, DataSplitterIO, PartitionError
 from grid_control.utils.file_objects import VirtualFile
 from grid_control.utils.parsing import parseList
 from grid_control.utils.thread_tools import GCLock
@@ -146,7 +145,7 @@ class DataSplitterIO_V1(object):
 		try:
 			return JobFileTarAdaptor_V1(path)
 		except Exception:
-			raise ConfigError("No valid dataset splitting found in '%s'." % path)
+			raise PartitionError("No valid dataset splitting found in '%s'." % path)
 
 class DataSplitterIO_V2(object):
 	def __init__(self):
@@ -249,4 +248,4 @@ class DataSplitterIO_V2(object):
 		try:
 			return JobFileTarAdaptor_V2(path, self.keySize)
 		except Exception:
-			raise ConfigError("No valid dataset splitting found in '%s'." % path)
+			raise PartitionError("No valid dataset splitting found in '%s'." % path)

@@ -89,7 +89,7 @@ class ListProvider(DataProvider):
 				elif line != '':
 					tmp = lmap(str.strip, utils.QM('[' in line, line.split(' = ', 1), rsplit(line, '=', 1)))
 					if len(tmp) != 2:
-						raise ConfigError('Malformed entry in dataset file:\n%s' % line)
+						raise DatasetError('Malformed entry in dataset file:\n%s' % line)
 					key, value = tmp
 					if key.lower() == 'nickname':
 						blockinfo[DataProvider.Nickname] = value

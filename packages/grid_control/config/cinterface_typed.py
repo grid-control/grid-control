@@ -17,11 +17,11 @@ from grid_control import utils
 from grid_control.config.cinterface_base import ConfigInterface
 from grid_control.config.config_entry import ConfigError, appendOption, noDefault
 from grid_control.config.cview_base import SimpleConfigView
-from grid_control.config.matcher_base import ListFilterBase
+from grid_control.config.matcher_base import DictLookup, ListFilter, ListOrder, Matcher
 from grid_control.utils.data_structures import makeEnum
-from grid_control.utils.parsing import parseBool, parseDict, parseList, parseTime, strTimeShort
+from grid_control.utils.parsing import parseBool, parseDict, parseList, parseTime, strDictLong, strTimeShort
 from hpfwk import APIError, Plugin
-from python_compat import identity, imap, lmap, relpath, user_input
+from python_compat import identity, imap, lmap, relpath, sorted, user_input
 
 # Config interface class accessing typed data using an string interface provided by configView
 class TypedConfigInterface(ConfigInterface):
@@ -56,16 +56,9 @@ class TypedConfigInterface(ConfigInterface):
 	# Returns a tuple with (<dictionary>, <keys>) - the keys are sorted by order of appearance
 	# Default key is accessed via key == None (None is never in keys!)
 	def getDict(self, option, default = noDefault, parser = identity, strfun = identity, **kwargs):
-		def obj2str(value):
-			(srcdict, srckeys) = value
-			getmax = lambda src: max(lmap(lambda x: len(str(x)), src) + [0])
-			result = ''
-			if srcdict.get(None) is not None:
-				result = strfun(srcdict.get(None, parser('')))
-			fmt = '\n\t%%%ds => %%%ds' % (getmax(srckeys), getmax(srcdict.values()))
-			return result + str.join('', imap(lambda k: fmt % (k, strfun(srcdict[k])), srckeys))
+		obj2str = lambda value: strDictLong(value, parser, strfun)
 		str2obj = lambda value: parseDict(value, parser)
-		def2obj = lambda value: (value, value.keys())
+		def2obj = lambda value: (value, sorted(value.keys()))
 		return self._getInternal('dictionary', obj2str, str2obj, def2obj, option, default, **kwargs)
 
 	# Get whitespace separated list (space, tab, newline)
@@ -155,9 +148,21 @@ class SimpleConfigInterface(TypedConfigInterface):
 			return self.getPath(option, default, **kwargs)
 		return self.get(option, default, **kwargs)
 
-	def getFilter(self, option, pluginName, **kwargs):
-		filterExpr = self.get(option, '', **kwargs)
-		return self.getPlugin(appendOption(option, 'type'), pluginName, cls = ListFilterBase)
+	def getLookup(self, option, default = noDefault,
+			defaultMatcher = 'start', single = True, includeDefault = False, **kwargs):
+		matcherOpt = appendOption(option, 'matcher')
+		matcherObj = self.getPlugin(matcherOpt, defaultMatcher, cls = Matcher, pargs = (matcherOpt,))
+		(sourceDict, sourceOrder) = self.getDict(option, default, **kwargs)
+		return DictLookup(sourceDict, sourceOrder, matcherObj, single, includeDefault)
+
+	def getFilter(self, option, default = noDefault,
+			defaultMatcher = 'start', defaultFilter = 'strict', defaultOrder = ListOrder.source, **kwargs):
+		matcherOpt = appendOption(option, 'matcher')
+		matcherObj = self.getPlugin(matcherOpt, defaultMatcher, cls = Matcher, pargs = (matcherOpt,))
+		filterExpr = self.get(option, default, **kwargs)
+		filterOrder = self.getEnum(appendOption(option, 'order'), ListOrder, defaultOrder)
+		return self.getPlugin(appendOption(option, 'filter'), defaultFilter, cls = ListFilter,
+			pargs = (filterExpr, matcherObj, filterOrder))
 
 	# Get state - bool stored in hidden "state" section - any given detail overrides global state
 	def getState(self, statename, detail = '', default = False):

@@ -69,9 +69,8 @@ class BasicPartitionProcessor(PartitionProcessor):
 class LocationPartitionProcessor(PartitionProcessor):
 	def __init__(self, config):
 		PartitionProcessor.__init__(self, config)
-		self._filter = config.getList('partition location filter', [], onChange = None)
-		if self._filter == []:
-			self._filter = None
+		self._filter = config.getFilter('partition location filter', '', onChange = None,
+			defaultMatcher = 'blackwhite', defaultFilter = 'weak')
 		self._preference = config.getList('partition location preference', [], onChange = None)
 		self._reqs = config.getBool('partition location requirement', True, onChange = None)
 		self._disable = config.getBool('partition location check', True, onChange = None)
@@ -80,9 +79,7 @@ class LocationPartitionProcessor(PartitionProcessor):
 		return []
 
 	def process(self, pNum, splitInfo, result):
-		locations = splitInfo.get(DataSplitter.Locations)
-#		if locations is not None:
-#			locations = filterBlackWhite(locations, self._filter, addUnmatched = True)
+		locations = self._filter.filterList(splitInfo.get(DataSplitter.Locations))
 		if self._preference:
 			if not locations: # [] or None
 				locations = self._preference

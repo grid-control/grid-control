@@ -26,9 +26,11 @@ class CMSProvider(DataProvider):
 	def __init__(self, config, datasetExpr, datasetNick = None, datasetID = 0):
 		DataProvider.__init__(self, config, datasetExpr, datasetNick, datasetID)
 		# PhEDex blacklist: 'T1_DE_KIT', 'T1_US_FNAL' and '*_Disk' allow user jobs - other T1's dont!
-		self.phedexBL = config.getList('phedex sites', ['-T3_US_FNALLPC'])
-		self.phedexWL = config.getList('phedex t1 accept', ['T1_DE_KIT', 'T1_US_FNAL'])
-		self.phedexT1 = config.get('phedex t1 mode', 'disk').lower()
+		self._phedexFilter = config.getFilter('phedex sites', '-T3_US_FNALLPC',
+			defaultMatcher = 'blackwhite')
+		self._phedexT1Filter = config.getFilter('phedex t1 accept', 'T1_DE_KIT T1_US_FNAL',
+			defaultMatcher = 'blackwhite', defaultFilter = 'weak')
+		self._phedexT1Mode = config.get('phedex t1 mode', 'disk').lower()
 		self.onlyComplete = config.getBool('only complete sites', True)
 		self.locationFormat = config.get('location format', 'hostname').lower() # hostname or sitedb
 		if self.locationFormat not in ['hostname', 'sitedb', 'both']:
@@ -78,12 +80,12 @@ class CMSProvider(DataProvider):
 		# Remove T0 and T1 by default
 		result = not (nameSiteDB.startswith('T0_') or nameSiteDB.startswith('T1_'))
 		# check if listed on the accepted list
-		if self.phedexT1 in ['accept', 'disk']:
-			result = result or (len(utils.filterBlackWhite([nameSiteDB], self.phedexWL)) != 0)
-		if self.phedexT1 == 'disk':
+		if self._phedexT1Mode in ['accept', 'disk']:
+			result = result or (self._phedexT1Filter.filterList([nameSiteDB]) == [nameSiteDB])
+		if self._phedexT1Mode == 'disk':
 			result = result or nameSiteDB.lower().endswith('_disk')
 		# apply phedex blacklist
-		result = result and (len(utils.filterBlackWhite([nameSiteDB], self.phedexBL)) != 0)
+		result = result and (self._phedexFilter.filterList([nameSiteDB]) == [nameSiteDB])
 		# check for completeness at the site
 		result = result and (complete or not self.onlyComplete)
 		return result

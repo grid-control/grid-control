@@ -128,7 +128,7 @@
 
       * grid_control.job_db_zip Migrate2ZippedJobDB
 
-    * grid_control.config.matcher_base MatcherBase
+    * grid_control.config.matcher_base Matcher
 
      * grid_control.config.matcher_base BasicMatcher
 
@@ -164,15 +164,15 @@
 
       * grid_control.backends.broker_basic CoverageBroker
 
+      * grid_control.backends.broker_basic FilterBroker
+
+       * grid_control.backends.broker_basic SimpleBroker
+
       * grid_control.backends.broker_basic RandomBroker
 
       * grid_control.backends.broker_basic StorageBroker
 
       * grid_control.backends.broker_basic UserBroker
-
-       * grid_control.backends.broker_basic FilterBroker
-
-        * grid_control.backends.broker_basic SimpleBroker
 
      * grid_control.monitoring EventHandler
 
@@ -314,7 +314,7 @@
 
     * grid_control.job_selector VarSelector var
 
-   * grid_control.config.matcher_base ListFilterBase
+   * grid_control.config.matcher_base ListFilter
 
     * grid_control.config.matcher_base MediumListFilter try_strict
 

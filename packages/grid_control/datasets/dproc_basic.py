@@ -15,7 +15,6 @@
 import re
 from grid_control.datasets.dproc_base import DataProcessor
 from grid_control.datasets.provider_base import DataProvider, DatasetError
-from grid_control.utils import doBlackWhiteList
 from grid_control.utils.data_structures import makeEnum
 from python_compat import imap, lfilter, lmap, md5_hex, set
 
@@ -133,13 +132,12 @@ class EmptyDataProcessor(DataProcessor):
 class LocationDataProcessor(DataProcessor):
 	def __init__(self, config):
 		DataProcessor.__init__(self, config)
-		self._locationfilter = config.getList('dataset location filter', [])
+		self._locationfilter = config.getFilter('dataset location filter', '',
+			defaultMatcher = 'blackwhite', defaultFilter = 'strict')
 
 	def processBlock(self, block):
 		if block[DataProvider.Locations] is not None:
-			sites = block[DataProvider.Locations]
-			if sites != []:
-				sites = doBlackWhiteList(sites, self._locationfilter)
+			sites = self._locationfilter.filterList(block[DataProvider.Locations])
 			if (sites is not None) and (len(sites) == 0) and (len(block[DataProvider.FileList]) != 0):
 				if not len(block[DataProvider.Locations]):
 					self._log.warning('Block %s#%s is not available at any site!',
