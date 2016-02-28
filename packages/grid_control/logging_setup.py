@@ -62,6 +62,9 @@ def logging_defaults():
 	getFilteredLogger('user.once', LogOnce())
 	getFilteredLogger('user.time.once', LogOnce())
 
+	# External libraries
+	logging.getLogger('requests').setLevel(logging.WARNING)
+
 	# Default exception logging to stderr and file in gc / tmp / user directory
 	excFormatterQuiet = ExceptionFormatter(showCodeContext = 0, showVariables = 0, showFileStack = 0)
 	excFormatterVerbose = ExceptionFormatter(showCodeContext = 2, showVariables = 1, showFileStack = 1)

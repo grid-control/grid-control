@@ -43,9 +43,3 @@ class UserMetadataSplitter(MetadataSplitter):
 		selMetadataNames = self.setup(self.config.getList, block, 'split metadata', [])
 		selMetadataIdx = imap(metadataNames.index, selMetadataNames)
 		return tuple(imap(lambda idx: fi[DataProvider.Metadata][idx], selMetadataIdx))
-
-
-class RunSplitter(MetadataSplitter):
-	def metaKey(self, metadataNames, block, fi):
-		mdIdx = metadataNames.index('Runs')
-		return fi[DataProvider.Metadata][mdIdx]

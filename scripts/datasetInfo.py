@@ -63,18 +63,19 @@ thread_tools.start_thread = noThread
 
 def main():
 	dataset = args[0].strip()
+	if os.path.exists(dataset):
+		opts.provider = 'ListProvider'
 	cfgSettings = {'dbs blacklist T1 *': 'False', 'remove empty blocks *': 'False',
 		'remove empty files *': 'False', 'location format *': opts.locationfmt,
-		'nickname check collision *': 'False'}
+		'nickname check collision *': 'False',
+		'dataset *': dataset, 'dataset provider *': opts.provider}
 	if opts.metadata or opts.blockmetadata:
 		cfgSettings['lumi filter *'] = '-'
 		cfgSettings['keep lumi metadata *'] = 'True'
 
 	config = getConfig(configFile = opts.settings, configDict = {'dataset': cfgSettings})
 
-	if os.path.exists(dataset):
-		opts.provider = 'ListProvider'
-	provider = DataProvider.createInstance(opts.provider, config, dataset)
+	provider = config.getPlugin('dataset', cls = DataProvider)
 	blocks = provider.getBlocks()
 	if len(blocks) == 0:
 		raise DatasetError('No blocks!')
@@ -185,7 +186,7 @@ def main():
 			metadata = utils.QM(block[DataProvider.FileList], mkdict(block[DataProvider.FileList][0]), {})
 			for fileInfo in block[DataProvider.FileList]:
 				utils.intersectDict(metadata, mkdict(fileInfo))
-			printMetadata(metadata.items(), max(imap(len, metadata.keys())))
+			printMetadata(metadata.items(), max([0] + lmap(len, metadata.keys())))
 
 	if opts.liststorage:
 		print('')

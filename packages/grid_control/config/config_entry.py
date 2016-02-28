@@ -107,9 +107,7 @@ class ConfigEntry(object):
 	processEntries = classmethod(processEntries)
 
 	def simplifyEntries(cls, entryList):
-		(result, used) = cls.processEntries(entryList)
-		if used[0].opttype == '=':
-			return [cls.combineEntries(used)]
+		(result_base, used) = cls.processEntries(entryList)
 		# Merge subsequent += and ^= entries
 		def mergeSubsequent(entries):
 			previousEntry = None
@@ -126,7 +124,14 @@ class ConfigEntry(object):
 				previousEntry = entry
 			if previousEntry:
 				yield previousEntry
-		return list(mergeSubsequent(used))
+		if used[0].opttype == '=':
+			result = [cls.combineEntries(used)]
+		else:
+			result = list(mergeSubsequent(used))
+		(result_simplified, used_simplified) = cls.processEntries(result)
+		assert(len(used_simplified) == len(result))
+		assert(result_simplified.value == result_base.value)
+		return result
 	simplifyEntries = classmethod(simplifyEntries)
 
 	def combineEntries(cls, entryList):

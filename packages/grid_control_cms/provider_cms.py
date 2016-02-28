@@ -18,14 +18,19 @@ from grid_control.datasets import DataProvider, DataSplitter, DatasetError
 from grid_control.datasets.splitter_basic import HybridSplitter
 from grid_control.utils.thread_tools import start_thread
 from grid_control.utils.webservice import readJSON
-from grid_control_cms.lumi_tools import formatLumi, parseLumiFilter, selectLumi
-from python_compat import imap, itemgetter, lfilter, set, sorted
+from grid_control_cms.lumi_tools import parseLumiFilter
+from python_compat import sorted
 
 # required format: <dataset path>[@<instance>][#<block>]
 class CMSProvider(DataProvider):
-	def __init__(self, config, datasetExpr, datasetNick = None, datasetID = 0):
+	def __init__(self, config, datasetExpr, datasetNick = None, datasetID = 0,
+			locationFromPhedex = True):
+		self._lumi_filter = parseLumiFilter(config.get('lumi filter', ''))
+		if self._lumi_filter:
+			config.set('dataset processor', 'LumiDataProcessor', '+=')
 		DataProvider.__init__(self, config, datasetExpr, datasetNick, datasetID)
 		# PhEDex blacklist: 'T1_DE_KIT', 'T1_US_FNAL' and '*_Disk' allow user jobs - other T1's dont!
+		self._lumi_query = config.getBool('lumi metadata', self._lumi_filter != [])
 		self._phedexFilter = config.getFilter('phedex sites', '-T3_US_FNALLPC',
 			defaultMatcher = 'blackwhite')
 		self._phedexT1Filter = config.getFilter('phedex t1 accept', 'T1_DE_KIT T1_US_FNAL',
@@ -36,19 +41,10 @@ class CMSProvider(DataProvider):
 		if self.locationFormat not in ['hostname', 'sitedb', 'both']:
 			raise ConfigError('Invalid location format: %s' % self.locationFormat)
 
-		(self.datasetPath, self.url, self.datasetBlock) = utils.optSplit(datasetExpr, '@#')
-		self.url = self.url or config.get('dbs instance', '')
-		self.datasetBlock = self.datasetBlock or 'all'
-		self.includeLumi = config.getBool('keep lumi metadata', False)
+		(self._datasetPath, self._url, self._datasetBlock) = utils.optSplit(datasetExpr, '@#')
+		self._url = self._url or config.get('dbs instance', '')
+		self._datasetBlock = self._datasetBlock or 'all'
 		self.onlyValid = config.getBool('only valid', True)
-		self.checkUnique = config.getBool('check unique', True)
-
-		# This works in tandem with active task module (cmssy.py supports only [section] lumi filter!)
-		self.selectedLumis = parseLumiFilter(config.get('lumi filter', ''))
-		if self.selectedLumis:
-			utils.vprint('Runs/lumi section filter enabled! (%d entries)' % len(self.selectedLumis), -1, once = True)
-			utils.vprint('\tThe following runs and lumi sections are selected:', 1, once = True)
-			utils.vprint('\t' + utils.wrapList(formatLumi(self.selectedLumis), 65, ',\n\t'), 1, once = True)
 
 
 	# Define how often the dataprovider can be queried automatically
@@ -58,22 +54,11 @@ class CMSProvider(DataProvider):
 
 	# Check if splitterClass is valid
 	def checkSplitter(self, splitterClass):
-		if self.selectedLumis and (DataSplitter.Skipped in splitterClass.neededVars()):
-			utils.vprint('Active lumi section filter forced selection of HybridSplitter', -1, once = True)
+		if self._lumi_filter and (DataSplitter.Skipped in splitterClass.neededVars()):
+			self._log.debug('Selected splitter %s is not compatible with active lumi filter!', splitterClass.__name__)
+			self._log.warning('Active lumi section filter forced selection of HybridSplitter')
 			return HybridSplitter
 		return splitterClass
-
-
-	def blockFilter(self, blockname):
-		return (self.datasetBlock == 'all') or (str.split(blockname, '#')[1] == self.datasetBlock)
-
-
-	def lumiFilter(self, lumilist, runkey, lumikey):
-		if self.selectedLumis:
-			for lumi in lumilist:
-				if selectLumi((lumi[runkey], lumi[lumikey]), self.selectedLumis):
-					return True
-		return self.selectedLumis is None
 
 
 	def nodeFilter(self, nameSiteDB, complete):
@@ -112,48 +97,42 @@ class CMSProvider(DataProvider):
 							(blockPath, replica.get('node'), replica.get('se')), -1)
 
 
-	def getCMSDatasets(self):
-		result = [self.datasetPath]
-		if '*' in self.datasetPath:
-			result = list(self.getCMSDatasetsImpl(self.datasetPath))
-			if len(result) == 0:
-				raise DatasetError('No datasets selected by DBS wildcard %s !' % self.datasetPath)
-			utils.vprint('DBS dataset wildcard selected:\n\t%s\n' % str.join('\n\t', result), -1)
-		return result # List of resolved datasetPaths
+	def getDatasets(self):
+		if self._cache_dataset is None:
+			self._cache_dataset = [self._datasetPath]
+			if '*' in self._datasetPath:
+				self._cache_dataset = list(self.getCMSDatasets(self._datasetPath))
+				if not self._cache_dataset:
+					raise DatasetError('No datasets selected by DBS wildcard %s !' % self._datasetPath)
+		return self._cache_dataset
 
 
 	def getCMSBlocks(self, datasetPath, getSites):
-		result = self.getCMSBlocksImpl(datasetPath, getSites)
-		result = lfilter(lambda b: self.blockFilter(b[0]), result)
-		if len(result) == 0:
-			raise DatasetError('Dataset %s does not contain any selected blocks!' % datasetPath)
-		return result # List of (blockname, selist) tuples
+		iter_blockname_selist = self.getCMSBlocksImpl(datasetPath, getSites)
+		n_blocks = 0
+		selected_blocks = False
+		for (blockname, selist) in iter_blockname_selist:
+			n_blocks += 1
+			if (self._datasetBlock != 'all') and (str.split(blockname, '#')[1] != self._datasetBlock):
+				continue
+			selected_blocks = True
+			yield (blockname, selist)
+		if (n_blocks > 0) and not selected_blocks:
+			raise DatasetError('Dataset %r contains %d blocks, but none were selected by %r' % (datasetPath, n_blocks, self._datasetBlock))
 
 
 	def getCMSFiles(self, blockPath):
 		lumiDict = {}
-		if self.selectedLumis: # Central lumi query
+		if self._lumi_query: # central lumi query
 			lumiDict = self.getCMSLumisImpl(blockPath) or {}
-		for (fileInfo, listLumi) in self.getCMSFilesImpl(blockPath, self.onlyValid, self.selectedLumis):
-			if self.selectedLumis:
-				if not listLumi:
-					listLumi = lumiDict.get(fileInfo[DataProvider.URL], [])
-				def acceptLumi():
-					for (run, lumiList) in listLumi:
-						for lumi in lumiList:
-							if selectLumi((run, lumi), self.selectedLumis):
-								return True
-				if not acceptLumi():
-					continue
-				if self.includeLumi:
-					(listLumiExt_Run, listLumiExt_Lumi) = ([], [])
-					for (run, lumi_list) in sorted(listLumi):
-						for lumi in lumi_list:
-							listLumiExt_Run.append(run)
-							listLumiExt_Lumi.append(lumi)
-					fileInfo[DataProvider.Metadata] = [listLumiExt_Run, listLumiExt_Lumi]
-				else:
-					fileInfo[DataProvider.Metadata] = [sorted(set(imap(itemgetter(0), listLumi)))]
+		for (fileInfo, listLumi) in self.getCMSFilesImpl(blockPath, self.onlyValid, self._lumi_query):
+			if not listLumi:
+				listLumi = lumiDict.get(fileInfo[DataProvider.URL], [])
+			(listLumiExt_Run, listLumiExt_Lumi) = ([], [])
+			for (run, lumi_list) in sorted(listLumi):
+				listLumiExt_Run.extend([run] * len(lumi_list))
+				listLumiExt_Lumi.extend(lumi_list)
+			fileInfo[DataProvider.Metadata] = [listLumiExt_Run, listLumiExt_Lumi]
 			yield fileInfo
 
 
@@ -162,37 +141,20 @@ class CMSProvider(DataProvider):
 
 
 	def getGCBlocks(self, usePhedex):
-		blockCache = []
-		for datasetPath in self.getCMSDatasets():
+		for datasetPath in self.getDatasets():
 			counter = 0
 			for (blockPath, listSE) in self.getCMSBlocks(datasetPath, getSites = not usePhedex):
-				if blockPath in blockCache:
-					raise DatasetError('CMS source provided duplicate blocks! %s' % blockPath)
-				blockCache.append(blockPath)
 				result = {}
 				result[DataProvider.Dataset] = blockPath.split('#')[0]
 				result[DataProvider.BlockName] = blockPath.split('#')[1]
 
 				if usePhedex: # Start parallel phedex query
 					dictSE = {}
-					tPhedex = start_thread("Query phedex site info for %s" % blockPath, self.getPhedexSEList, blockPath, dictSE)
+					tPhedex = start_thread('Query phedex site info for %s' % blockPath, self.getPhedexSEList, blockPath, dictSE)
 
-				if self.selectedLumis:
-					result[DataProvider.Metadata] = ['Runs']
-					if self.includeLumi:
-						result[DataProvider.Metadata].append('Lumi')
+				if self._lumi_query:
+					result[DataProvider.Metadata] = ['Runs', 'Lumi']
 				result[DataProvider.FileList] = list(self.getCMSFiles(blockPath))
-				if self.checkUnique:
-					uniqueURLs = set(imap(lambda x: x[DataProvider.URL], result[DataProvider.FileList]))
-					if len(result[DataProvider.FileList]) != len(uniqueURLs):
-						utils.vprint('Warning: The webservice returned %d duplicated files in dataset block %s! Continuing with unique files...' %
-							(len(result[DataProvider.FileList]) - len(uniqueURLs)), -1)
-					uniqueFIs = []
-					for fi in result[DataProvider.FileList]:
-						if fi[DataProvider.URL] in uniqueURLs:
-							uniqueURLs.remove(fi[DataProvider.URL])
-							uniqueFIs.append(fi)
-					result[DataProvider.FileList] = uniqueFIs
 
 				if usePhedex:
 					tPhedex.join()
@@ -203,9 +165,7 @@ class CMSProvider(DataProvider):
 					counter += 1
 					yield result
 
-			if (counter == 0) and self.selectedLumis:
-				raise DatasetError('Dataset %s does not contain the requested run/lumi sections!' % datasetPath)
-			elif counter == 0:
+			if counter == 0:
 				raise DatasetError('Dataset %s does not contain any valid blocks!' % datasetPath)
 
 

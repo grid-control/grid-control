@@ -20,6 +20,7 @@ from hpfwk import NestedException
 
 class InputValidationError(NestedException):
     pass # error during input validation for publication in DBS3
+WMException = InputValidationError
 
 #restriction enforced by DBS. for different types blocks.
 #It could have a strict restriction
@@ -453,7 +454,7 @@ def parseLFN(candidate):
         If you are an operator, this indicates that this machine is likely unstable.\n
         All data should be backed up and the machine removed from production for examination.\n"""
         msg += "Candidate: %s" % candidate
-        raise InputValidationError(msg)
+        raise WMException(msg)
 
 
     final['acquisitionEra']    = parts[0]
@@ -512,7 +513,7 @@ def parseLFNBase(candidate):
         If you are an operator, this indicates that this machine is likely unstable.\n
         All data should be backed up and the machine removed from production for examination.\n"""
         msg += "Candidate: %s" % candidate
-        raise InputValidationError(msg)
+        raise WMException(msg)
 
     final['acquisitionEra']    = parts[0]
     final['primaryDataset']    = parts[1]
@@ -575,18 +576,3 @@ def primaryDatasetType(candidate):
     # to sync with the check() exception when it doesn't match
     raise AssertionError("Invalid primary dataset type : %s should be 'mc' or 'data' or 'test'" % candidate)
 
-def slicedIterator(sourceList, sliceSize):
-    """
-    :param: sourceList: list which need to be sliced
-    :type: list
-    :param: sliceSize: size of the slice
-    :type: int
-    :return: iterator of the sliced list
-    """
-    start = 0
-    end = 0
-
-    while len(sourceList) > end:
-        end = start + sliceSize
-        yield sourceList[start: end]
-        start = end

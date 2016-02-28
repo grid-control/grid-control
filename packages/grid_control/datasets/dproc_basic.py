@@ -155,8 +155,10 @@ DatasetUniqueMode = makeEnum(['warn', 'abort', 'skip', 'ignore', 'record'], useH
 class UniqueDataProcessor(DataProcessor):
 	def __init__(self, config):
 		DataProcessor.__init__(self, config)
-		self._checkURL = config.getEnum('dataset check unique url', DatasetUniqueMode, DatasetUniqueMode.abort)
-		self._checkBlock = config.getEnum('dataset check unique block', DatasetUniqueMode, DatasetUniqueMode.abort)
+		self._checkURLOpt = 'dataset check unique url'
+		self._checkURL = config.getEnum(self._checkURLOpt, DatasetUniqueMode, DatasetUniqueMode.abort)
+		self._checkBlockOpt = 'dataset check unique block'
+		self._checkBlock = config.getEnum(self._checkBlockOpt, DatasetUniqueMode, DatasetUniqueMode.abort)
 
 	def process(self, blockIter):
 		self._recordedURL = set()
@@ -172,7 +174,7 @@ class UniqueDataProcessor(DataProcessor):
 					urlHash = md5_hex(repr((fi[DataProvider.URL], fi[DataProvider.NEntries], fi.get(DataProvider.Metadata))))
 					if urlHash in self._recordedURL:
 						msg = 'Multiple occurences of URL: %r!' % fi[DataProvider.URL]
-						msg += ' (This check can be configured with %r)' % 'dataset check unique url'
+						msg += ' (This check can be configured with %r)' % self._checkURLOpt
 						if self._checkURL == DatasetUniqueMode.warn:
 							self._log.warning(msg)
 						elif self._checkURL == DatasetUniqueMode.abort:
@@ -192,7 +194,7 @@ class UniqueDataProcessor(DataProcessor):
 				block[DataProvider.Locations], block.get(DataProvider.Metadata))))
 			if blockHash in self._recordedBlock:
 				msg = 'Multiple occurences of block: "%s#%s"!' % (block[DataProvider.Dataset], block[DataProvider.BlockName])
-				msg += ' (This check can be configured with %r)' % 'dataset check unique block'
+				msg += ' (This check can be configured with %r)' % self._checkBlockOpt
 				if self._checkBlock == DatasetUniqueMode.warn:
 					self._log.warning(msg)
 				elif self._checkBlock == DatasetUniqueMode.abort:

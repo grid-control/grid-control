@@ -4,7 +4,7 @@
 
     * grid_control.datasets.dproc_base DataProcessor
 
-     * grid_control_cms.task_cms LumiDataProcessor
+     * grid_control_cms.dproc_lumi LumiDataProcessor
 
     * grid_control.datasets.provider_base DataProvider
 
@@ -21,6 +21,14 @@
       * grid_control.datasets.provider_scan GCProvider gc
 
        * grid_control_cms.provider_scan_dbs DBSInfoProvider
+
+    * grid_control.datasets.splitter_base DataSplitter
+
+     * grid_control.datasets.splitter_basic FileLevelSplitter
+
+      * grid_control.datasets.splitter_meta MetadataSplitter
+
+       * grid_control_cms.splitter_lumi RunSplitter
 
     * grid_control.datasets.scanner_base InfoScanner
 

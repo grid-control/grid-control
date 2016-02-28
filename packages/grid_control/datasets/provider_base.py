@@ -19,15 +19,16 @@ from grid_control.datasets.dproc_base import DataProcessor
 from grid_control.gc_plugin import ConfigurablePlugin
 from grid_control.utils.data_structures import makeEnum
 from hpfwk import AbstractError, InstanceFactory, NestedException
-from python_compat import StringBuffer, ifilter, imap, irange, lmap, lrange, md5_hex, sort_inplace, sorted
+from python_compat import StringBuffer, identity, ifilter, imap, irange, lmap, lrange, md5_hex, sort_inplace, sorted
 
 class DatasetError(NestedException):
 	pass
 
 class DataProvider(ConfigurablePlugin):
 	def __init__(self, config, datasetExpr, datasetNick = None, datasetID = 0):
+		self._log = logging.getLogger('user.dataprovider')
 		(self._datasetExpr, self._datasetNick, self._datasetID) = (datasetExpr, datasetNick, datasetID)
-		(self._cache, self._passthrough) = (None, False)
+		(self._cache_block, self._cache_dataset, self._passthrough) = (None, None, False)
 
 		self._stats = DataProcessor.createInstance('StatsDataProcessor', config)
 		self._nickProducer = config.getPlugin('nickname source', 'SimpleNickNameProducer', cls = DataProcessor)
@@ -73,11 +74,22 @@ class DataProvider(ConfigurablePlugin):
 		return splitter
 
 
+	# Default implementation via getBlocks
+	def getDatasets(self):
+		if self._cache_dataset is None:
+			self._cache_dataset = []
+			for block in self.getBlocks():
+				if block[DataProvider.Dataset] not in self._cache_dataset:
+					self._cache_dataset.append(block[DataProvider.Dataset])
+		return self._cache_dataset
+
+
 	# Cached access to list of block dicts, does also the validation checks
 	def getBlocks(self):
 		def prepareBlocks():
 			# Validation, Filtering & Naming:
 			for block in self.getBlocksInternal():
+				assert(block[DataProvider.Dataset])
 				block.setdefault(DataProvider.BlockName, '0')
 				block.setdefault(DataProvider.Provider, self.__class__.__name__)
 				block.setdefault(DataProvider.Locations, None)
@@ -93,20 +105,20 @@ class DataProvider(ConfigurablePlugin):
 						raise DatasetError('Nickname producer failed!')
 				yield block
 
-		if self._cache is None:
+		if self._cache_block is None:
 			log = utils.ActivityLog('Retrieving %s' % self._datasetExpr)
 			if self._passthrough:
-				self._cache = list(self._stats.process(prepareBlocks()))
+				self._cache_block = list(self._stats.process(prepareBlocks()))
 			else:
-				self._cache = list(self._stats.process(self._datasetProcessor.process(prepareBlocks())))
+				self._cache_block = list(self._stats.process(self._datasetProcessor.process(prepareBlocks())))
 			if self._datasetNick:
 				statString = '%s: ' % self._datasetNick
 			else:
 				statString = '%s: ' % self._datasetExpr
 			del log
 			statString += 'Running over %s distributed over %d blocks.' % self._stats.getStats()
-			logging.getLogger('user').info(statString)
-		return self._cache
+			self._log.info(statString)
+		return self._cache_block
 
 
 	# List of block dicts with format
@@ -117,7 +129,8 @@ class DataProvider(ConfigurablePlugin):
 
 
 	def clearCache(self):
-		self._cache = None
+		self._cache_block = None
+		self._cache_dataset = None
 
 
 	# Save dataset information in 'ini'-style => 10x faster to r/w than cPickle
@@ -139,7 +152,7 @@ class DataProvider(ConfigurablePlugin):
 				writer.write('prefix = %s\n' % cPrefix)
 				formatter = lambda x: x.replace(cPrefix + '/', '')
 			else:
-				formatter = lambda x: x
+				formatter = identity
 
 			writeMetadata = (DataProvider.Metadata in block) and not stripMetadata
 			if writeMetadata:

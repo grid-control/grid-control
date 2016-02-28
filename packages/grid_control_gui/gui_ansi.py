@@ -77,6 +77,9 @@ class ANSIGUI(GUI):
 		GUI.__init__(self, config, workflow)
 		self._reportHeight = None
 
+	def getHeight(self):
+		return self._reportHeight
+
 	def displayWorkflow(self):
 		gui = self
 		report = self._report
@@ -87,7 +90,7 @@ class ANSIGUI(GUI):
 				self._reportHeight = report.getHeight()
 				screen.savePos()
 				(sizey, sizex) = screen.getmaxyx()
-				screen.setscrreg(min(self._reportHeight + 2, sizey), sizey)
+				screen.setscrreg(min(self.getHeight() + 2, sizey), sizey)
 				utils.printTabular.wraplen = sizex - 5
 				screen.loadPos()
 			screen.erase()
@@ -116,7 +119,7 @@ class ANSIGUI(GUI):
 						self.show(' ' * len(self.message))
 
 				def show(self, message):
-					if gui._reportHeight != report.getHeight():
+					if gui.getHeight() != report.getHeight():
 						screen.erase()
 						onResize(None, None)
 						sys.stdout.dump()
@@ -124,7 +127,7 @@ class ANSIGUI(GUI):
 					screen.move(0, 0)
 					sys.stdout.logged = False
 					report.display()
-					screen.move(gui._reportHeight + 1, 0)
+					screen.move(gui.getHeight() + 1, 0)
 					sys.stdout.write('%s\n' % message.center(65))
 					sys.stdout.logged = True
 					screen.loadPos()

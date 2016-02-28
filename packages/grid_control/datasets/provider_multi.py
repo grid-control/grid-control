@@ -37,8 +37,23 @@ class MultiDatasetProvider(DataProvider):
 		return getProposal(splitter)
 
 
+	def getDatasets(self):
+		if self._cache_dataset is None:
+			self._cache_dataset = []
+			ec = ExceptionCollector()
+			for provider in self._providerList:
+				try:
+					self._cache_dataset.extend(provider.getDatasets())
+				except Exception:
+					ec.collect()
+				if utils.abort():
+					raise DatasetError('Could not retrieve all datasets!')
+			ec.raise_any(DatasetError('Could not retrieve all datasets!'))
+		return self._cache_dataset
+
+
 	def getBlocks(self):
-		if self._cache is None:
+		if self._cache_block is None:
 			ec = ExceptionCollector()
 			def getAllBlocks():
 				for provider in self._providerList:
@@ -49,7 +64,7 @@ class MultiDatasetProvider(DataProvider):
 						ec.collect()
 					if utils.abort():
 						raise DatasetError('Could not retrieve all datasets!')
-			self._cache = list(self._stats.process(self._datasetProcessor.process(getAllBlocks())))
+			self._cache_block = list(self._stats.process(self._datasetProcessor.process(getAllBlocks())))
 			ec.raise_any(DatasetError('Could not retrieve all datasets!'))
 			logging.getLogger('user').info('Summary: Running over %s distributed over %d blocks.', *self._stats.getStats())
-		return self._cache
+		return self._cache_block

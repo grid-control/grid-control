@@ -16,7 +16,7 @@ import os, gzip
 from grid_control import utils
 from grid_control.datasets.splitter_base import DataSplitter, DataSplitterIO, PartitionError
 from grid_control.utils.file_objects import VirtualFile
-from grid_control.utils.parsing import parseList
+from grid_control.utils.parsing import parseBool, parseList
 from grid_control.utils.thread_tools import GCLock
 from python_compat import BytesBuffer, bytes2str, ifilter, imap, lfilter, lmap, tarfile
 
@@ -130,7 +130,7 @@ class DataSplitterIO_V1(object):
 					subTarFileObj = BytesBuffer(gzip.GzipFile(fileobj = subTarFileObj).read()) # 3-4x speedup for sequential access
 					self._cacheTar = tarfile.open(mode = 'r', fileobj = subTarFileObj)
 				parserMap = { None: str, DataSplitter.NEntries: int, DataSplitter.Skipped: int, 
-					DataSplitter.DatasetID: int, DataSplitter.Invalid: utils.parseBool,
+					DataSplitter.DatasetID: int, DataSplitter.Invalid: parseBool,
 					DataSplitter.Locations: lambda x: parseList(x, ','), DataSplitter.MetadataHeader: eval,
 					DataSplitter.Metadata: lambda x: eval(x.strip("'")) }
 				data = self._fmt.parse(self._cacheTar.extractfile('%05d/info' % key).readlines(),
@@ -232,7 +232,7 @@ class DataSplitterIO_V2(object):
 					subTarFileObj = BytesBuffer(gzip.GzipFile(fileobj = subTarFileObj).read()) # 3-4x speedup for sequential access
 					self._cacheTar = tarfile.open(mode = 'r', fileobj = subTarFileObj)
 				parserMap = { None: str, DataSplitter.NEntries: int, DataSplitter.Skipped: int, 
-					DataSplitter.DatasetID: int, DataSplitter.Invalid: utils.parseBool,
+					DataSplitter.DatasetID: int, DataSplitter.Invalid: parseBool,
 					DataSplitter.Locations: lambda x: parseList(x, ','), DataSplitter.MetadataHeader: eval,
 					DataSplitter.Metadata: lambda x: eval(x.strip("'")) }
 				fullData = lmap(bytes2str, self._cacheTar.extractfile('%05d' % key).readlines())

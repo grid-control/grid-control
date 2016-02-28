@@ -12,11 +12,9 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-import os
-from grid_control import utils
 from grid_control.datasets import DataProvider
 from grid_control.gc_exceptions import UserError
-from grid_control.utils.webservice import readJSON
+from grid_control.utils.webservice import GridJSONRestClient
 from grid_control_cms.provider_cms import CMSProvider
 from python_compat import lmap
 
@@ -26,25 +24,21 @@ class DBS3Provider(CMSProvider):
 
 	def __init__(self, config, datasetExpr, datasetNick = None, datasetID = 0):
 		CMSProvider.__init__(self, config, datasetExpr, datasetNick, datasetID)
-		self.usePhedex = (self.url == '') # Use DBS locality for private samples
-		if self.url == '':
-			self.url = 'https://cmsweb.cern.ch/dbs/prod/global/DBSReader'
-		elif '/' not in self.url: # assume prod instance
-			self.url = 'https://cmsweb.cern.ch/dbs/prod/%s/DBSReader' % self.url
-		elif not self.url.startswith('http'): # eg. prod/phys03
-			self.url = 'https://cmsweb.cern.ch/dbs/%s/DBSReader' % self.url
+		self.usePhedex = (self._url == '') # Use DBS locality for private samples
+		if self._url == '':
+			self._url = 'https://cmsweb.cern.ch/dbs/prod/global/DBSReader'
+		elif '/' not in self._url: # assume prod instance
+			self._url = 'https://cmsweb.cern.ch/dbs/prod/%s/DBSReader' % self._url
+		elif not self._url.startswith('http'): # eg. prod/phys03
+			self._url = 'https://cmsweb.cern.ch/dbs/%s/DBSReader' % self._url
+		self._gjrc = GridJSONRestClient(self._url, 'VOMS proxy needed to query DBS3!', UserError)
 
 
-	def queryDBSv3(self, api, **params):
-		if not os.environ.get('X509_USER_PROXY', ''):
-			raise UserError('VOMS proxy needed to query DBS3! Environment variable X509_USER_PROXY is not set!')
-		proxyPath = utils.resolvePath(os.environ.get('X509_USER_PROXY', ''), mustExist = False)
-		if not os.path.exists(proxyPath):
-			raise UserError('VOMS proxy needed to query DBS3! Environment variable X509_USER_PROXY is "%s"' % proxyPath)
-		return readJSON(self.url + '/%s' % api, params, cert = proxyPath)
+	def queryDBSv3(self, api, **kwargs):
+		return self._gjrc.get(api = api, params = kwargs)
 
 
-	def getCMSDatasetsImpl(self, datasetPath):
+	def getCMSDatasets(self, datasetPath):
 		pd, sd, dt = (datasetPath.lstrip('/') + '/*/*/*').split('/')[:3]
 		tmp = self.queryDBSv3('datasets', primary_ds_name = pd, processed_ds_name = sd, data_tier_name = dt)
 		return lmap(lambda x: x['dataset'], tmp)

@@ -88,8 +88,6 @@
 
       * grid_control.datasets.splitter_meta MetadataSplitter
 
-       * grid_control.datasets.splitter_meta RunSplitter
-
        * grid_control.datasets.splitter_meta UserMetadataSplitter
 
     * grid_control.gui GUI
