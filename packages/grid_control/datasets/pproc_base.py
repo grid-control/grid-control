@@ -25,6 +25,9 @@ class PartitionProcessor(ConfigurablePlugin):
 	def getKeys(self):
 		raise AbstractError
 
+	def getNeededKeys(self, splitter):
+		return []
+
 	def process(self, pNum, splitInfo, result):
 		raise AbstractError
 
@@ -36,6 +39,9 @@ class MultiPartitionProcessor(PartitionProcessor):
 
 	def getKeys(self):
 		return lchain(imap(lambda p: p.getKeys(), self._processorList))
+
+	def getNeededKeys(self, splitter):
+		return lchain(imap(lambda p: p.getNeededKeys(splitter), self._processorList))
 
 	def process(self, pNum, splitInfo, result):
 		for processor in self._processorList:
@@ -51,6 +57,14 @@ class BasicPartitionProcessor(PartitionProcessor):
 			'SKIP_EVENTS', 'DATASETID', 'DATASETPATH', 'DATASETBLOCK', 'DATASETNICK'])
 		result.append(ParameterMetadata('DATASETSPLIT', untracked = False))
 		return result
+
+	def getNeededKeys(self, splitter):
+		enumMap = {
+			DataSplitter.FileList: 'FILE_NAMES',
+			DataSplitter.NEntries: 'MAX_EVENTS',
+			DataSplitter.Skipped: 'SKIP_EVENTS'}
+		for enum in splitter.neededEnums():
+			yield enumMap[enum]
 
 	def process(self, pNum, splitInfo, result):
 		result.update({

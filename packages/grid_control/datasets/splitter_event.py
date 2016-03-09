@@ -17,9 +17,9 @@ from grid_control.datasets.splitter_base import DataSplitter
 from python_compat import next
 
 class EventBoundarySplitter(DataSplitter):
-	def neededVars(cls):
+	def neededEnums(cls):
 		return [DataSplitter.FileList, DataSplitter.Skipped, DataSplitter.NEntries]
-	neededVars = classmethod(neededVars)
+	neededEnums = classmethod(neededEnums)
 
 
 	def _splitJobs(self, fileList, eventsPerJob, firstEvent):

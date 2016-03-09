@@ -36,6 +36,9 @@ class DataParameterSource(ParameterSource):
 		self._maxN = self._dataSplitter.getMaxJobs()
 		self._keepOld = keepOld
 
+	def getNeededDataKeys(self):
+		return self._part_proc.getNeededKeys(self._dataSplitter)
+
 	def getMaxParameters(self):
 		return self._maxN
 

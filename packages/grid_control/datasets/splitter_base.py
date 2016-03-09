@@ -80,9 +80,9 @@ class DataSplitter(ConfigurablePlugin):
 		return self._protocol[pkey]
 
 
-	def neededVars(cls):
+	def neededEnums(cls):
 		return [DataSplitter.FileList]
-	neededVars = classmethod(neededVars)
+	neededEnums = classmethod(neededEnums)
 
 
 	def finaliseJobSplitting(self, block, splitInfo, files = None):
