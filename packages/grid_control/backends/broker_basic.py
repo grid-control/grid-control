@@ -15,9 +15,8 @@
 from grid_control.backends.broker import Broker
 from grid_control.backends.wms import WMS
 from grid_control.config import ListOrder
-from grid_control.utils.gc_itertools import ichain
 from grid_control.utils.parsing import parseList
-from python_compat import imap, lfilter, lmap, set, sorted
+from python_compat import imap, lfilter, lmap, sorted
 
 class RandomBroker(Broker):
 	def __init__(self, config, name, userOpt, itemName, discoverFun):
@@ -71,23 +70,18 @@ class SimpleBroker(FilterBroker):
 		FilterBroker.__init__(self, config, name, userOpt, itemName, discoverFun)
 		self._discover(discoverFun)
 
+		itemPropTypesMap = {int: float, float: float, str: str, list: tuple, tuple: tuple}
 		if self._itemsDiscovered: # Sort discovered items according to requirements
-			allItemPropKeys = sorted(set(ichain(self._itemsDiscovered.values())))
 			itemPropTypes = {}
 			for itemPropDict in self._itemsDiscovered.values():
 				for itemPropKey, itemPropValue in itemPropDict.items():
 					itemPropTypesList = itemPropTypes.setdefault(itemPropKey, [])
-					if isinstance(itemPropValue, (int, float)):
-						itemPropTypesList.append(float)
-					elif isinstance(itemPropValue, str):
-						itemPropTypesList.append(str)
-					elif isinstance(itemPropValue, (list, tuple)):
-						itemPropTypesList.append(tuple)
+					for (iptype, ipmapped) in itemPropTypesMap.items():
+						if isinstance(itemPropValue, iptype):
+							itemPropTypesList.append(ipmapped)
+							break
 			for itemPropKey, itemPropTypeList in list(itemPropTypes.items()):
-				if len(set(itemPropTypeList)) != 1: # multiple types or none
-					allItemPropKeys.remove(itemPropKey)
-				else:
-					itemPropTypes[itemPropKey] = itemPropTypeList[0]
+				itemPropTypes[itemPropKey] = itemPropTypeList[0]
 			none_value = {float: 1e10, str: chr(127), tuple: tuple()}
 			def keyFun(x):
 				def enforce_type(key):
@@ -95,7 +89,7 @@ class SimpleBroker(FilterBroker):
 					if value is None:
 						return none_value[itemPropTypes[key]]
 					return itemPropTypes[key](value)
-				return (tuple(imap(enforce_type, allItemPropKeys)), x[0])
+				return (tuple(imap(enforce_type, sorted(itemPropTypes))), x[0])
 			self._itemsSorted = lmap(lambda k_v: k_v[0], sorted(self._itemsDiscovered.items(), key = keyFun))
 
 	def _broker(self, reqs, items):
