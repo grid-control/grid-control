@@ -19,7 +19,6 @@ from grid_control.config import ConfigError, noDefault
 from grid_control.datasets import DataSplitter, PartitionProcessor
 from grid_control.tasks.task_data import DataTask
 from grid_control.tasks.task_utils import TaskExecutableWrapper
-from grid_control_cms.lumi_tools import formatLumi, parseLumiFilter
 from python_compat import imap, lfilter
 
 BasicPartitionProcessor = PartitionProcessor.getClass('BasicPartitionProcessor')
@@ -54,7 +53,8 @@ class CMSSW(DataTask):
 		config.set('se input timeout', '0:30')
 		config.set('dataset provider', 'DBS3Provider')
 		config.set('dataset splitter', 'EventBoundarySplitter')
-		config.set('partition processor', 'CMSPartitionProcessor LocationPartitionProcessor')
+		config.set('partition processor', 'CMSPartitionProcessor LocationPartitionProcessor LumiPartitionProcessor')
+		config.set('dataset processor', 'LumiDataProcessor', '+=')
 		DataTask.__init__(self, config, name)
 		self.updateErrorDict(utils.pathShare('gc-run.cmssw.sh', pkg = 'grid_control_cms'))
 
@@ -68,9 +68,6 @@ class CMSSW(DataTask):
 				raise ConfigError('SCRAM project needs exactly 2 arguments: PROJECT VERSION')
 		else:
 			self.projectArea = config.getPath('project area')
-
-		# This works in tandem with provider_dbsv2.py !
-		self.selectedLumis = parseLumiFilter(config.get('lumi filter', ''))
 
 		self.useReqs = config.getBool('software requirements', True, onChange = None)
 		self._projectAreaTarballSE = config.getBool(['se project area', 'se runtime'], True)
@@ -201,7 +198,6 @@ class CMSSW(DataTask):
 				str.join(', ', imap(lambda x: '@%s@' % x, self.neededVars())))
 
 
-	# Lumi filter need
 	def neededVars(self):
 		result = []
 		varMap = {
@@ -211,8 +207,6 @@ class CMSSW(DataTask):
 		}
 		if self.dataSplitter:
 			result.extend(imap(lambda x: varMap[x], self.dataSplitter.neededVars()))
-		if self.selectedLumis:
-			result.append('LUMI_RANGE')
 		return result
 
 
@@ -286,17 +280,10 @@ class CMSSW(DataTask):
 		return DataTask.getJobArguments(self, jobNum) + ' ' + self.arguments
 
 
-	def getActiveLumiFilter(self, lumifilter, jobNum = None):
-		getLR = lambda x: str.join(',', imap(lambda x: '"%s"' % x, formatLumi(x)))
-		return getLR(lumifilter) # TODO: Validate subset selection
-
-
 	def getVarNames(self):
 		result = DataTask.getVarNames(self)
 		if self.dataSplitter is None:
 			result.append('MAX_EVENTS')
-		if self.selectedLumis:
-			result.append('LUMI_RANGE')
 		return result
 
 
@@ -305,8 +292,6 @@ class CMSSW(DataTask):
 		data = DataTask.getJobConfig(self, jobNum)
 		if self.dataSplitter is None:
 			data['MAX_EVENTS'] = self.eventsPerJob
-		if self.selectedLumis:
-			data['LUMI_RANGE'] = self.getActiveLumiFilter(self.selectedLumis)
 		return data
 
 

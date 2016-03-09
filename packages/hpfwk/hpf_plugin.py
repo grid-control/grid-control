@@ -89,6 +89,7 @@ class Plugin(object):
 		clsSearchList = [clsName]
 		clsFormat = lambda cls: '%s:%s' % (cls.__module__, cls.__name__)
 		clsProcessed = []
+		clsBadParents = []
 		while clsSearchList:
 			clsSearchName = clsSearchList.pop()
 			if clsSearchName in clsProcessed: # Prevent lookup circles
@@ -118,13 +119,19 @@ class Plugin(object):
 					log.log(logging.DEBUG2, 'Unable to import class %s:%s', clsModule.__name__, clsSearchName)
 
 			for clsLoaded in clsLoadedList:
+				clsBadParents.append(clsLoaded.__name__)
 				if issubclass(clsLoaded, cls):
 					log.log(logging.DEBUG1, 'Successfully loaded class %s', clsFormat(clsLoaded))
 					return clsLoaded
 				log.log(logging.DEBUG, '%s is not of type %s!', clsFormat(clsLoaded), clsFormat(cls))
 
 			clsSearchList.extend(cls._pluginMap.get(clsSearchName.lower(), []))
-		raise PluginError('Unable to load %r of type %r - tried:\n\t%s' % (clsName, clsFormat(cls), str.join('\n\t', clsProcessed)))
+		msg = 'Unable to load %r of type %r\n' % (clsName, clsFormat(cls))
+		if clsProcessed:
+			msg += '\tsearched plugin names:\n\t\t%s\n' % str.join('\n\t\t', clsProcessed)
+		if clsBadParents:
+			msg += '\tfound incompatible plugins:\n\t\t%s\n' % str.join('\n\t\t', clsBadParents)
+		raise PluginError(msg)
 	_getClass = classmethod(_getClass)
 
 	def getClass(cls, clsName):

@@ -222,6 +222,9 @@ class DictLookup(Plugin):
 		(self._values, self._only_first, self._always_default) = (values, only_first, always_default)
 		(self._matcher, self._order) = (matcher, order)
 
+	def empty(self):
+		return not self._values
+
 	def __repr__(self):
 		return '%s(values = {%s}, matcher = %r, only_first = %r, always_default = %r)' % (
 			self.__class__.__name__, strDict(self._values, self._order), self._matcher,

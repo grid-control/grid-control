@@ -4,7 +4,7 @@
 
     * grid_control.datasets.dproc_base DataProcessor
 
-     * grid_control_cms.dproc_lumi LumiDataProcessor
+     * grid_control_cms.lumi_proc LumiDataProcessor
 
     * grid_control.datasets.provider_base DataProvider
 
@@ -58,13 +58,11 @@
 
         * grid_control_cms.cmssw_advanced CMSSW_Advanced
 
-       * grid_control_cms.task_cms CMSSW
-
     * grid_control.datasets.pproc_base PartitionProcessor
 
      * grid_control.datasets.pproc_base BasicPartitionProcessor
 
       * grid_control_cms.cmssw CMSPartitionProcessor
 
-      * grid_control_cms.task_cms CMSPartitionProcessor
+     * grid_control_cms.lumi_proc LumiPartitionProcessor
 
