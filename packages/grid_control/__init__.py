@@ -22,3 +22,5 @@ def initGC():
 	init_hpf_plugins(basePath)
 	logging_defaults()
 initGC()
+
+__version__ = '$Revision: 1658$'[11:-1]

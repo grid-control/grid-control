@@ -28,8 +28,7 @@ class GCLogHandler(logging.FileHandler):
 def gc_excepthook(*exc_info):
 	sys.excepthook = sys.__excepthook__
 	try:
-		import grid_control.utils
-		version = grid_control.utils.getVersion()
+		version = __import__('grid_control').__version__
 	except Exception:
 		version = 'Unknown version'
 	log = logging.getLogger('exception')
