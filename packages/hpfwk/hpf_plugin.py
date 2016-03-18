@@ -84,7 +84,28 @@ class Plugin(object):
 		return [cls.__name__] + cls.alias
 	getClassNames = classmethod(getClassNames)
 
-	def _getClass(cls, clsName, log):
+	def _getClassFromModules(cls, log, clsName, clsModuleList, clsBadParents):
+		clsFormat = lambda cls: '%s:%s' % (cls.__module__, cls.__name__)
+		clsLoadedList = []
+		for clsModule in clsModuleList:
+			log.log(logging.DEBUG2, 'Searching for class %s:%s', clsModule.__name__, clsName)
+			try:
+				clsLoadedList.append(getattr(clsModule, clsName))
+			except Exception:
+				log.log(logging.DEBUG2, 'Unable to import class %s:%s', clsModule.__name__, clsName)
+
+		for clsLoaded in clsLoadedList:
+			try:
+				if issubclass(clsLoaded, cls):
+					log.log(logging.DEBUG1, 'Successfully loaded class %s', clsFormat(clsLoaded))
+					return clsLoaded
+				clsBadParents.append(clsLoaded.__name__)
+				log.log(logging.DEBUG, '%s is not of type %s!', clsFormat(clsLoaded), clsFormat(cls))
+			except Exception:
+				pass
+	_getClassFromModules = classmethod(_getClassFromModules)
+
+	def _getClass(cls, log, clsName):
 		# resolve class name/alias to complete class path 'myplugin -> module.submodule.MyPlugin'
 		clsSearchList = [clsName]
 		clsFormat = lambda cls: '%s:%s' % (cls.__module__, cls.__name__)
@@ -110,20 +131,9 @@ class Plugin(object):
 			elif hasattr(sys.modules['__main__'], clsSearchName):
 				clsModuleList.append(sys.modules['__main__'])
 
-			clsLoadedList = []
-			for clsModule in clsModuleList:
-				log.log(logging.DEBUG2, 'Searching for class %s:%s', clsModule.__name__, clsSearchName)
-				try:
-					clsLoadedList.append(getattr(clsModule, clsSearchName))
-				except Exception:
-					log.log(logging.DEBUG2, 'Unable to import class %s:%s', clsModule.__name__, clsSearchName)
-
-			for clsLoaded in clsLoadedList:
-				clsBadParents.append(clsLoaded.__name__)
-				if issubclass(clsLoaded, cls):
-					log.log(logging.DEBUG1, 'Successfully loaded class %s', clsFormat(clsLoaded))
-					return clsLoaded
-				log.log(logging.DEBUG, '%s is not of type %s!', clsFormat(clsLoaded), clsFormat(cls))
+			result = cls._getClassFromModules(log, clsSearchName, clsModuleList, clsBadParents)
+			if result:
+				return result
 
 			clsSearchList.extend(cls._pluginMap.get(clsSearchName.lower(), []))
 		msg = 'Unable to load %r of type %r\n' % (clsName, clsFormat(cls))
@@ -138,7 +148,7 @@ class Plugin(object):
 		log = logging.getLogger('classloader.%s' % cls.__name__)
 		log.log(logging.DEBUG1, 'Loading class %s', clsName)
 		if clsName not in cls._clsCache.get(cls, {}):
-			cls._clsCache.setdefault(cls, {})[clsName] = cls._getClass(clsName, log)
+			cls._clsCache.setdefault(cls, {})[clsName] = cls._getClass(log, clsName)
 		return cls._clsCache[cls][clsName]
 	getClass = classmethod(getClass)
 
