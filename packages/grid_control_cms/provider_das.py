@@ -13,7 +13,6 @@
 #-#  limitations under the License.
 
 import time
-from grid_control import utils
 from grid_control.datasets import DataProvider
 from grid_control.gc_exceptions import UserError
 from grid_control.utils.parsing import parseJSON
@@ -33,7 +32,7 @@ class DASProvider(CMSProvider):
 		elif not self._url.startswith('http'):
 			self._instance = self._url
 			self._url = ''
-		self._url = utils.QM(self._url == '', 'https://cmsweb.cern.ch/das/cache', self._url)
+		self._url = self._url or 'https://cmsweb.cern.ch/das/cache'
 		self._gjrc = GridJSONRestClient(self._url, 'VOMS proxy needed to query DAS!', UserError)
 
 

@@ -50,12 +50,12 @@ class ScanProviderBase(DataProvider):
 
 	def generateDatasetName(self, key, data):
 		if 'SE_OUTPUT_BASE' in data:
-			return utils.replaceDict(utils.QM(self.nameDS, self.nameDS, '/PRIVATE/@SE_OUTPUT_BASE@'), data)
-		return utils.replaceDict(utils.QM(self.nameDS, self.nameDS, '/PRIVATE/Dataset_%s' % key), data)
+			return utils.replaceDict(self.nameDS or '/PRIVATE/@SE_OUTPUT_BASE@', data)
+		return utils.replaceDict(self.nameDS or ('/PRIVATE/Dataset_%s' % key), data)
 
 
 	def generateBlockName(self, key, data):
-		return utils.replaceDict(utils.QM(self.nameB, self.nameB, key[:8]), data)
+		return utils.replaceDict(self.nameB or key[:8], data)
 
 
 	def getBlocksInternal(self):
@@ -107,7 +107,7 @@ class ScanProviderBase(DataProvider):
 			for hashB in protoBlocks[hashDS]:
 				blockSEList = None
 				for seList in ifilter(lambda s: s is not None, imap(lambda x: x[3], protoBlocks[hashDS][hashB])):
-					blockSEList = utils.QM(blockSEList is None, [], blockSEList)
+					blockSEList = blockSEList or []
 					blockSEList.extend(seList)
 				if blockSEList is not None:
 					blockSEList = list(set(blockSEList))

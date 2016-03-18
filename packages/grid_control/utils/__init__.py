@@ -25,9 +25,6 @@ def execWrapper(script, context = None):
 	exec(script, context)
 	return context
 
-def evalWrapper(expression):
-	return eval(expression)
-
 def QM(cond, a, b):
 	if cond:
 		return a

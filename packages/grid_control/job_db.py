@@ -207,7 +207,6 @@ class JobDB(ConfigurablePlugin):
 	def commit(self, jobNum, jobObj):
 		fp = open(os.path.join(self._dbPath, 'job_%d.txt' % jobNum), 'w')
 		utils.safeWrite(fp, utils.DictFormat(escapeString = True).format(jobObj.getAll()))
-#		if jobObj.state == Job.DISABLED:
 
 
 	def __len__(self):
