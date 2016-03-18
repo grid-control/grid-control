@@ -33,6 +33,8 @@ def gc_excepthook(*exc_info):
 	except Exception:
 		version = 'Unknown version'
 	log = logging.getLogger('exception')
+	if not log.handlers:
+		log.addHandler(logging.StreamHandler(sys.stderr))
 	log.handle(log.makeRecord('exception', logging.CRITICAL, __file__, None,
 		'Exception occured in grid-control [%s]' % version, tuple(), exc_info))
 sys.excepthook = gc_excepthook
