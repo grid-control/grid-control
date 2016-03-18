@@ -46,7 +46,7 @@
 
       * grid_control.datasets.dproc_nick SimpleNickNameProducer
 
-     * grid_control.datasets.dproc_conf PartitionEstimator SplitSettingEstimator
+     * grid_control.datasets.dproc_pestimate PartitionEstimator SplitSettingEstimator
 
      * grid_control.datasets.dproc_basic StatsDataProcessor
 
