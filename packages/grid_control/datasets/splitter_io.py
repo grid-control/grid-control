@@ -16,9 +16,9 @@ import os, gzip
 from grid_control import utils
 from grid_control.datasets.splitter_base import DataSplitter, DataSplitterIO, PartitionError
 from grid_control.utils.file_objects import VirtualFile
-from grid_control.utils.parsing import parseBool, parseList
+from grid_control.utils.parsing import parseBool, parseJSON, parseList
 from grid_control.utils.thread_tools import GCLock
-from python_compat import BytesBuffer, bytes2str, ifilter, imap, lfilter, lmap, tarfile
+from python_compat import BytesBuffer, bytes2str, ifilter, imap, json, lfilter, lmap, tarfile
 
 class BaseJobFileTarAdaptor(object):
 	def __init__(self, path):
@@ -98,7 +98,7 @@ class DataSplitterIO_V1(object):
 			def flat(k_s_v):
 				(x, y, z) = k_s_v
 				if x in [DataSplitter.Metadata, DataSplitter.MetadataHeader]:
-					return (x, y, repr(z))
+					return (x, y, json.dumps(z))
 				elif isinstance(z, list):
 					return (x, y, str.join(',', z))
 				return (x, y, z)
@@ -131,8 +131,9 @@ class DataSplitterIO_V1(object):
 					self._cacheTar = tarfile.open(mode = 'r', fileobj = subTarFileObj)
 				parserMap = { None: str, DataSplitter.NEntries: int, DataSplitter.Skipped: int, 
 					DataSplitter.DatasetID: int, DataSplitter.Invalid: parseBool,
-					DataSplitter.Locations: lambda x: parseList(x, ','), DataSplitter.MetadataHeader: eval,
-					DataSplitter.Metadata: lambda x: eval(x.strip("'")) }
+					DataSplitter.Locations: lambda x: parseList(x, ','),
+					DataSplitter.MetadataHeader: parseJSON,
+					DataSplitter.Metadata: lambda x: parseJSON(x.strip("'")) }
 				data = self._fmt.parse(self._cacheTar.extractfile('%05d/info' % key).readlines(),
 					keyParser = {None: int}, valueParser = parserMap)
 				fileList = self._cacheTar.extractfile('%05d/list' % key).readlines()
@@ -193,7 +194,7 @@ class DataSplitterIO_V2(object):
 			def flat(k_s_v):
 				(x, y, z) = k_s_v
 				if x in [DataSplitter.Metadata, DataSplitter.MetadataHeader]:
-					return (x, y, repr(z))
+					return (x, y, json.dumps(z))
 				elif isinstance(z, list):
 					return (x, y, str.join(',', z))
 				return (x, y, z)
@@ -233,8 +234,9 @@ class DataSplitterIO_V2(object):
 					self._cacheTar = tarfile.open(mode = 'r', fileobj = subTarFileObj)
 				parserMap = { None: str, DataSplitter.NEntries: int, DataSplitter.Skipped: int, 
 					DataSplitter.DatasetID: int, DataSplitter.Invalid: parseBool,
-					DataSplitter.Locations: lambda x: parseList(x, ','), DataSplitter.MetadataHeader: eval,
-					DataSplitter.Metadata: lambda x: eval(x.strip("'")) }
+					DataSplitter.Locations: lambda x: parseList(x, ','),
+					DataSplitter.MetadataHeader: parseJSON,
+					DataSplitter.Metadata: lambda x: parseJSON(x.strip("'")) }
 				fullData = lmap(bytes2str, self._cacheTar.extractfile('%05d' % key).readlines())
 				data = self._fmt.parse(lfilter(lambda x: not x.startswith('='), fullData),
 					keyParser = {None: int}, valueParser = parserMap)

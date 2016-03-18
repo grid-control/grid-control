@@ -17,7 +17,8 @@ from grid_control import utils
 from grid_control.parameters.psource_base import ParameterInfo, ParameterMetadata, ParameterSource
 from grid_control.parameters.psource_basic import InternalParameterSource
 from grid_control.utils.file_objects import ZipFile
-from python_compat import ifilter, imap, irange, izip, lfilter, lmap, sorted
+from grid_control.utils.parsing import parseJSON
+from python_compat import ifilter, imap, irange, izip, json, lfilter, lmap, sorted
 
 # Reader for grid-control dump files - getHash is not implemented to keep it from being used by users
 class GCDumpParameterSource(ParameterSource):
@@ -28,11 +29,11 @@ class GCDumpParameterSource(ParameterSource):
 			keyline = fp.readline().lstrip('#').strip()
 			self._keys = []
 			if keyline:
-				self._keys = eval(keyline)
+				self._keys = parseJSON(keyline)
 			def parseLine(line):
 				if not line.startswith('#'):
 					pNumStr, stored = lmap(str.strip, line.split('\t', 1))
-					return ('!' in pNumStr, int(pNumStr.rstrip('!')), lmap(eval, stored.split('\t')))
+					return ('!' in pNumStr, int(pNumStr.rstrip('!')), lmap(parseJSON, stored.split('\t')))
 			self._values = lmap(parseLine, fp.readlines())
 		finally:
 			fp.close()
@@ -53,7 +54,7 @@ class GCDumpParameterSource(ParameterSource):
 		fp = ZipFile(fn, 'w')
 		try:
 			keys = sorted(ifilter(lambda p: not p.untracked, pa.getJobKeys()))
-			fp.write('# %s\n' % keys)
+			fp.write('# %s\n' % json.dumps(keys))
 			maxN = pa.getMaxJobs()
 			if maxN:
 				log = None
@@ -62,9 +63,9 @@ class GCDumpParameterSource(ParameterSource):
 					log = utils.ActivityLog('Writing parameter dump [%d/%d]' % (jobNum + 1, maxN))
 					meta = pa.getJobInfo(jobNum)
 					if meta.get(ParameterInfo.ACTIVE, True):
-						fp.write('%d\t%s\n' % (jobNum, str.join('\t', imap(lambda k: repr(meta.get(k, '')), keys))))
+						fp.write('%d\t%s\n' % (jobNum, str.join('\t', imap(lambda k: json.dumps(meta.get(k, '')), keys))))
 					else:
-						fp.write('%d!\t%s\n' % (jobNum, str.join('\t', imap(lambda k: repr(meta.get(k, '')), keys))))
+						fp.write('%d!\t%s\n' % (jobNum, str.join('\t', imap(lambda k: json.dumps(meta.get(k, '')), keys))))
 		finally:
 			fp.close()
 	write = classmethod(write)

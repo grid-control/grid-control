@@ -15,7 +15,7 @@
 from grid_control import utils
 from grid_control.config import ConfigError
 from grid_control.datasets.provider_base import DataProvider, DatasetError
-from grid_control.utils.parsing import parseList
+from grid_control.utils.parsing import parseJSON, parseList
 from python_compat import lmap, rsplit
 
 # Provides information about a single file
@@ -98,9 +98,9 @@ class ListProvider(DataProvider):
 					elif key.lower() == 'events':
 						blockinfo[DataProvider.NEntries] = try_apply(int, value, 'block entry counter')
 					elif key.lower() == 'metadata':
-						blockinfo[DataProvider.Metadata] = try_apply(eval, value, 'metadata description')
+						blockinfo[DataProvider.Metadata] = try_apply(parseJSON, value, 'metadata description')
 					elif key.lower() == 'metadata common':
-						commonMetadata = try_apply(eval, value, 'common metadata')
+						commonMetadata = try_apply(parseJSON, value, 'common metadata')
 					elif key.lower() == 'se list':
 						blockinfo[DataProvider.Locations] = try_apply(lambda value: parseList(value, ','), value, 'block location')
 					elif key.lower() == 'prefix':
@@ -115,7 +115,7 @@ class ListProvider(DataProvider):
 						if commonMetadata:
 							data[DataProvider.Metadata] = commonMetadata
 						if len(value) > 1:
-							fileMetadata = try_apply(eval, value[1], 'metadata of file %s' % repr(key))
+							fileMetadata = try_apply(parseJSON, value[1], 'metadata of file %s' % repr(key))
 							data[DataProvider.Metadata] = data.get(DataProvider.Metadata, []) + fileMetadata
 						blockinfo[DataProvider.FileList].append(data)
 			except Exception:

@@ -19,7 +19,7 @@ from grid_control.datasets.dproc_base import DataProcessor
 from grid_control.gc_plugin import ConfigurablePlugin
 from grid_control.utils.data_structures import makeEnum
 from hpfwk import AbstractError, InstanceFactory, NestedException
-from python_compat import StringBuffer, identity, ifilter, imap, irange, lmap, lrange, md5_hex, sort_inplace, sorted
+from python_compat import StringBuffer, identity, ifilter, imap, irange, json, lmap, lrange, md5_hex, sort_inplace, sorted
 
 class DatasetError(NestedException):
 	pass
@@ -157,7 +157,7 @@ class DataProvider(ConfigurablePlugin):
 			writeMetadata = (DataProvider.Metadata in block) and not stripMetadata
 			if writeMetadata:
 				def getMetadata(fi, idxList):
-					return lmap(lambda idx: fi[DataProvider.Metadata][idx], idxList)
+					return json.dumps(lmap(lambda idx: fi[DataProvider.Metadata][idx], idxList))
 				def metadataHash(fi, idx):
 					return md5_hex(repr(fi[DataProvider.Metadata][idx]))
 				cMetadataIdx = lrange(len(block[DataProvider.Metadata]))
@@ -168,7 +168,7 @@ class DataProvider(ConfigurablePlugin):
 				def filterC(common):
 					idxList = ifilter(lambda idx: (idx in cMetadataIdx) == common, irange(len(block[DataProvider.Metadata])))
 					return sorted(idxList, key = lambda idx: block[DataProvider.Metadata][idx])
-				writer.write('metadata = %s\n' % lmap(lambda idx: block[DataProvider.Metadata][idx], filterC(True) + filterC(False)))
+				writer.write('metadata = %s\n' % json.dumps(lmap(lambda idx: block[DataProvider.Metadata][idx], filterC(True) + filterC(False))))
 				if cMetadataIdx:
 					writer.write('metadata common = %s\n' % getMetadata(block[DataProvider.FileList][0], filterC(True)))
 					writeMetadata = len(cMetadataIdx) != len(block[DataProvider.Metadata])

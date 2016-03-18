@@ -33,7 +33,10 @@ def removeUnicode(obj):
 
 
 def parseJSON(data):
-	return removeUnicode(json.loads(data))
+	try:
+		return removeUnicode(json.loads(data))
+	except Exception:
+		return removeUnicode(json.loads(data.replace("'", '"')))
 
 
 def parseStr(value, cls, default = None):
