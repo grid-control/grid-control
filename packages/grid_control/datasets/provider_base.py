@@ -133,6 +133,22 @@ class DataProvider(ConfigurablePlugin):
 		self._cache_dataset = None
 
 
+	def classifyMetadataKeys(block):
+		def metadataHash(fi, idx):
+			return md5_hex(repr(fi[DataProvider.Metadata][idx]))
+		cMetadataIdx = lrange(len(block[DataProvider.Metadata]))
+		cMetadataHash = lmap(lambda idx: metadataHash(block[DataProvider.FileList][0], idx), cMetadataIdx)
+		for fi in block[DataProvider.FileList]: # Identify common metadata
+			for idx in cMetadataIdx:
+				if metadataHash(fi, idx) != cMetadataHash[idx]:
+					cMetadataIdx.remove(idx)
+		def filterC(common):
+			idxList = ifilter(lambda idx: (idx in cMetadataIdx) == common, irange(len(block[DataProvider.Metadata])))
+			return sorted(idxList, key = lambda idx: block[DataProvider.Metadata][idx])
+		return (filterC(True), filterC(False))
+	classifyMetadataKeys = staticmethod(classifyMetadataKeys)
+
+
 	# Save dataset information in 'ini'-style => 10x faster to r/w than cPickle
 	def saveToStream(stream, dataBlocks, stripMetadata = False):
 		writer = StringBuffer()
@@ -156,26 +172,16 @@ class DataProvider(ConfigurablePlugin):
 
 			writeMetadata = (DataProvider.Metadata in block) and not stripMetadata
 			if writeMetadata:
+				(idxListBlock, idxListFile) = DataProvider.classifyMetadataKeys(block)
 				def getMetadata(fi, idxList):
 					return json.dumps(lmap(lambda idx: fi[DataProvider.Metadata][idx], idxList))
-				def metadataHash(fi, idx):
-					return md5_hex(repr(fi[DataProvider.Metadata][idx]))
-				cMetadataIdx = lrange(len(block[DataProvider.Metadata]))
-				cMetadataHash = lmap(lambda idx: metadataHash(block[DataProvider.FileList][0], idx), cMetadataIdx)
-				for fi in block[DataProvider.FileList]: # Identify common metadata
-					for idx in ifilter(lambda idx: metadataHash(fi, idx) != cMetadataHash[idx], cMetadataIdx):
-						cMetadataIdx.remove(idx)
-				def filterC(common):
-					idxList = ifilter(lambda idx: (idx in cMetadataIdx) == common, irange(len(block[DataProvider.Metadata])))
-					return sorted(idxList, key = lambda idx: block[DataProvider.Metadata][idx])
-				writer.write('metadata = %s\n' % json.dumps(lmap(lambda idx: block[DataProvider.Metadata][idx], filterC(True) + filterC(False))))
-				if cMetadataIdx:
-					writer.write('metadata common = %s\n' % getMetadata(block[DataProvider.FileList][0], filterC(True)))
-					writeMetadata = len(cMetadataIdx) != len(block[DataProvider.Metadata])
+				writer.write('metadata = %s\n' % json.dumps(lmap(lambda idx: block[DataProvider.Metadata][idx], idxListBlock + idxListFile)))
+				if idxListBlock:
+					writer.write('metadata common = %s\n' % getMetadata(block[DataProvider.FileList][0], idxListBlock))
 			for fi in block[DataProvider.FileList]:
 				writer.write('%s = %d' % (formatter(fi[DataProvider.URL]), fi[DataProvider.NEntries]))
-				if writeMetadata:
-					writer.write(' %s' % getMetadata(fi, filterC(False)))
+				if writeMetadata and idxListFile:
+					writer.write(' %s' % getMetadata(fi, idxListFile))
 				writer.write('\n')
 			writer.write('\n')
 		stream.write(writer.getvalue())
