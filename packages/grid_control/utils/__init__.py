@@ -16,6 +16,7 @@ import os, re, sys, glob, stat, time, errno, signal, fnmatch, logging, operator,
 from grid_control.gc_exceptions import GCError, InstallationError, UserError
 from grid_control.utils.file_objects import VirtualFile
 from grid_control.utils.parsing import parseBool, parseType
+from grid_control.utils.process_base import LocalProcess
 from grid_control.utils.thread_tools import TimeoutException, hang_protection
 from python_compat import identity, ifilter, imap, irange, ismap, izip, lfilter, lmap, lru_cache, lsmap, lzip, next, reduce, set, sorted, tarfile, user_input
 
