@@ -21,7 +21,7 @@ from grid_control.backends.htcondor_wms.htcondor_utils import parseKWListIter, s
 from grid_control.backends.htcondor_wms.processadapter import ProcessAdapterFactory
 from grid_control.backends.htcondor_wms.wmsid import HTCJobID
 from grid_control.backends.wms import BackendError, WMS
-from hpfwk import Plugin
+from hpfwk import AbstractError, Plugin
 from python_compat import ismap, lmap, lru_cache, md5
 
 """

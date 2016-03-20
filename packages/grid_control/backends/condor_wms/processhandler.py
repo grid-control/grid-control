@@ -12,11 +12,16 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-import os, math, stat, time
+import os, math, stat, time, signal
 from grid_control.backends.wms import BackendError
 from grid_control.config import ConfigError
 from grid_control.utils import LoggedProcess, eprint, resolveInstallPath, vprint
 from hpfwk import AbstractError, NestedException, Plugin
+
+class CondorProcessError(BackendError):
+	def __init__(self, msg, proc):
+		(cmd, status, stdout, stderr) = (proc.cmd, proc.wait(), proc.getOutput(), proc.getError())
+		BackendError.__init__(msg + '\n\tCommand: %s Return code: %s\nstdout: %s\nstderr: %s' % (cmd, status, stdout, stderr))
 
 class TimeoutError(NestedException):
 	pass
@@ -57,7 +62,7 @@ class TimeoutContext(object):
 
 # Process Handler:
 class ProcessHandler(Plugin):
-	def LoggedProcess(self, cmd, args = '', **kwargs):
+	def LoggedExecute(self, cmd, args = '', **kwargs):
 		raise AbstractError
 	def LoggedCopyToRemote(self, source, dest, **kwargs):
 		raise AbstractError
@@ -71,8 +76,8 @@ class LocalProcessHandler(ProcessHandler):
 	cpy="cp -r"
 	def __init__(self, **kwargs):
 		pass
-	# return instance of LoggedProcess with input properly wrapped
-	def LoggedProcess(self, cmd, args = '', **kwargs):
+	# return instance of LoggedExecute with input properly wrapped
+	def LoggedExecute(self, cmd, args = '', **kwargs):
 		return LoggedProcess( cmd , args )
 
 	def LoggedCopyToRemote(self, source, dest, **kwargs):
@@ -112,16 +117,16 @@ class SSHProcessHandler(ProcessHandler):
 		except KeyError:
 			self.sshLink=False
 		# test connection once
-		testProcess = self.LoggedProcess( "exit" )
+		testProcess = self.LoggedExecute( "exit" )
 		if testProcess.wait() != 0:
-			bla = testProcess.getError() 
-			raise BackendError("Failed to validate remote connection.\n	Command: %s Return code: %s\n%s" % ( testProcess.cmd, testProcess.wait(), testProcess.getOutput() ) )
+			testProcess.getError()
+			raise CondorProcessError('Failed to validate remote connection.', testProcess)
 	def __initcommands(self, **kwargs):
 		self.cmd = resolveInstallPath("ssh")
 		self.cpy = resolveInstallPath("scp") + " -r"
 
-	# return instance of LoggedProcess with input properly wrapped
-	def LoggedProcess(self, cmd, args = '', **kwargs):
+	# return instance of LoggedExecute with input properly wrapped
+	def LoggedExecute(self, cmd, args = '', **kwargs):
 		self._socketHandler()
 		return LoggedProcess( " ".join([self.cmd, self.defaultArgs, self.socketArgs, self.remoteHost, self._argFormat(cmd + " " + args)]) )
 	def LoggedCopyToRemote(self, source, dest, **kwargs):
@@ -140,7 +145,7 @@ class SSHProcessHandler(ProcessHandler):
 			timeout += 0.5
 			if timeout == 5:
 				vprint("SSH socket still not available after 5 seconds...\n%s" % self.sshLink, level=1)
-				vprint('Socket process: %s' % (socketProc.cmd), level=2)
+				vprint('Socket process: %s' % (self.__ControlMaster.cmd), level=2)
 			if timeout == 10:
 				return False
 	def _CleanSocket(self):
@@ -148,15 +153,15 @@ class SSHProcessHandler(ProcessHandler):
 			vprint("No Socket %s" % self.sshLink)
 			return True
 		vprint("Killing Socket %s" % self.sshLink)
-		#killSocket = LoggedProcess( " ".join([self.cmd, self.defaultArgs, self.socketArgsDef, "-O exit", self.remoteHost]) )
-		#while killSocket.poll() == -1:
-			#print "poll", killSocket.poll()
-			#time.sleep(0.5)
-			#timeout += 0.5
-			#if timeout == 5:
-				#vprint("Failed to cancel ssh Socket...\n%s" % self.sshLink, level=1)
-				#return False
-		#print "done", killSocket.poll()
+#		killSocket = LoggedProcess( " ".join([self.cmd, self.defaultArgs, self.socketArgsDef, "-O exit", self.remoteHost]) )
+#		while killSocket.poll() == -1:
+#			print "poll", killSocket.poll()
+#			time.sleep(0.5)
+#			timeout += 0.5
+#			if timeout == 5:
+#				vprint("Failed to cancel ssh Socket...\n%s" % self.sshLink, level=1)
+#				return False
+#		print "done", killSocket.poll()
 		timeout = 0
 		while os.path.exists(self.sshLink):
 			vprint("exists %d" % timeout)
@@ -247,7 +252,7 @@ class SSHProcessHandler(ProcessHandler):
 		self.sshLink = self.sshLinkBase+str(self.socketIdNow)
 		self.socketArgsDef = "-o ControlPath=" + self.sshLink
 		# start new socket
-		socketProc = self._CreateSocket(maxSeconds)
+		self._CreateSocket(maxSeconds)
 		self.socketTimestamp = time.time()
 		return self._secureSSHLink()
 
@@ -255,8 +260,8 @@ class SSHProcessHandler(ProcessHandler):
 class GSISSHProcessHandler(SSHProcessHandler):
 	# commands to use - overwritten by inheriting class
 	def __initcommands(self, **kwargs):
-		cmd = resolveInstallPath("gsissh")
-		cpy = resolveInstallPath("gsiscp") + " -r"
+		resolveInstallPath('gsissh')
+		resolveInstallPath('gsiscp')
 
 # Helper class handling commands through remote interfaces
 class RemoteProcessHandler(object):
@@ -316,13 +321,14 @@ class RemoteProcessHandler(object):
 		self.cmd = self.cmd % { "cmdargs" : kwargs.get("cmdargs",""), "args" : kwargs.get("args","") }
 		self.copy = self.copy % { "cpargs" : kwargs.get("cpargs",""), "args" : kwargs.get("args","") }
 		# test connection once
-		ret, out, err = LoggedProcess(self.cmd % { "cmd" : "exit"}).getAll()
+		proc = LoggedProcess(self.cmd % { "cmd" : "exit"})
+		ret, out, err = proc.getAll()
 		if ret!=0:
-			raise BackendError("Validation of remote connection failed!\nTest Command: %s\nReturn Code: %s\nStdOut: %s\nStdErr: %s" % (self.cmd % { "cmd" : "exit"},ret,out,err))
+			raise CondorProcessError('Validation of remote connection failed!', proc)
 		vprint('Remote interface initialized:\n	Cmd: %s\n	Cp : %s' % (self.cmd,self.copy), level=2)
 
-	# return instance of LoggedProcess with input properly wrapped
-	def LoggedProcess(self, cmd, args = '', argFormat=defaultArg):
+	# return instance of LoggedExecute with input properly wrapped
+	def LoggedExecute(self, cmd, args = '', argFormat=defaultArg):
 		if argFormat is defaultArg:
 			argFormat=self.argFormat
 		return LoggedProcess( self.cmd % { "cmd" : argFormat(self, "%s %s" % ( cmd, args )) } )

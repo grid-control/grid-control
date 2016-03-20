@@ -462,7 +462,7 @@ class SSHProcessAdapter(ProcessAdapterInterface):
 				"rm -rf " + kwargs["target"],
 				),
 			lambda **kwargs: "'rm' [via ssh %(URI)s]" % kwargs,
-			lambda **kwargs: "Target: '%(target)'" % kwargs,
+			lambda **kwargs: "Target: '%(target)s'" % kwargs,
 			)
 		self._socketWrapper = CommandContainer(
 			resolveInstallPath("ssh"),

@@ -19,7 +19,7 @@ import os, logging
 from grid_control import utils
 from grid_control.backends.htcondor_wms.htcondor_schedd import HTCScheddFactory
 from grid_control.backends.htcondor_wms.wmsid import HTCJobID
-from grid_control.backends.wms import BasicWMS
+from grid_control.backends.wms import BackendError, BasicWMS
 from grid_control.config import ConfigError
 from grid_control.job_db import Job
 from python_compat import json, lfilter

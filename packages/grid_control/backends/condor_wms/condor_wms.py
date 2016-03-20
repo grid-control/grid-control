@@ -135,7 +135,7 @@ class Condor(BasicWMS):
 				self.debug.write(message)
 	def debugPool(self,timestamp=True,newline=True):
 		if self.debug:
-			self.debugOut(self.Pool.LoggedProcess("echo ", "'pool check'" ).cmd, timestamp, newline)
+			self.debugOut(self.Pool.LoggedExecute("echo ", "'pool check'" ).cmd, timestamp, newline)
 	def debugFlush(self):
 		if self.debug:
 			self.debug.flush()
@@ -161,17 +161,16 @@ class Condor(BasicWMS):
 		return sandpath
 
 # getWorkdirPath: return path to condor output dir for a specific job or basepath
-	def getWorkdirPath(self, jobNum="",_cache={}):
+	def getWorkdirPath(self, jobNum=""):
 		# local and spool make condor access the local sandbox directly
 		if self.remoteType == poolType.LOCAL or self.remoteType == poolType.SPOOL:
 			return self.getSandboxPath(jobNum)
 		# ssh and gsissh require a remote working directory
 		else:
 			remotePath = os.path.join( self.poolWorkDir, 'GCRemote.work.TaskID.' + self.taskID, str(jobNum), '' )
-			mkdirProcess = self.Pool.LoggedProcess("mkdir -p", remotePath )
+			mkdirProcess = self.Pool.LoggedExecute("mkdir -p", remotePath )
 			self.debugOut("Getting Workdir Nmr: %s Dir: %s - retcode %s" % (jobNum,remotePath,mkdirProcess.wait()))
 			if mkdirProcess.wait()==0:
-				_cache[jobNum]=remotePath
 				return remotePath
 			else:
 				if self.explainError(mkdirProcess, mkdirProcess.wait()):
@@ -196,7 +195,7 @@ class Condor(BasicWMS):
 				continue
 			# when working with a remote spool schedd, tell condor to return files
 			if self.remoteType == poolType.SPOOL:
-				transferProcess = self.Pool.LoggedProcess(self.transferExec, '%(jobID)s' % {"jobID" : self._splitId(wmsId) })
+				transferProcess = self.Pool.LoggedExecute(self.transferExec, '%(jobID)s' % {"jobID" : self._splitId(wmsId) })
 				if transferProcess.wait() != 0:
 					if self.explainError(transferProcess, transferProcess.wait()):
 						pass
@@ -211,7 +210,7 @@ class Condor(BasicWMS):
 					else:
 						transferProcess.logError(self.errorLog)
 				# clean up remote working directory
-				cleanupProcess = self.Pool.LoggedProcess('rm -rf %s' % self.getWorkdirPath(jobNum) )
+				cleanupProcess = self.Pool.LoggedExecute('rm -rf %s' % self.getWorkdirPath(jobNum) )
 				self.debugOut("Cleaning up remote workdir: JobID %s\n	%s"%(jobNum,cleanupProcess.cmd))
 				if cleanupProcess.wait() != 0:
 					if self.explainError(cleanupProcess, cleanupProcess.wait()):
@@ -237,7 +236,7 @@ class Condor(BasicWMS):
 		wmsToJobMap = dict(wmsJobIdList)
 
 		activity = utils.ActivityLog('cancelling jobs')
-		cancelProcess = self.Pool.LoggedProcess(self.cancelExec, '%(jobIDs)s' % {"jobIDs" : wmsIdArgument })
+		cancelProcess = self.Pool.LoggedExecute(self.cancelExec, '%(jobIDs)s' % {"jobIDs" : wmsIdArgument })
 
 		# check if canceling actually worked
 		for cancelReturnLine in cancelProcess.iter():
@@ -252,7 +251,7 @@ class Condor(BasicWMS):
 					raise BackendError('Error with canceled condor job:\n%s\nExpected Condor IDs:\n%s\nRemaining condor_rm Output:%s' % (wmsID, wmsIdList, cancelProcess.getMessage() ))
 			# clean up remote work dir
 			if self.remoteType == poolType.SSH or self.remoteType == poolType.GSISSH:
-				cleanupProcess = self.Pool.LoggedProcess('rm -rf %s' % self.getWorkdirPath(jobNum) )
+				cleanupProcess = self.Pool.LoggedExecute('rm -rf %s' % self.getWorkdirPath(jobNum) )
 				self.debugOut("Cleaning up remote workdir:\n	" + cleanupProcess.cmd)
 				if cleanupProcess.wait() != 0:
 					if self.explainError(cleanupProcess, cleanupProcess.wait()):
@@ -278,16 +277,15 @@ class Condor(BasicWMS):
 			self.debugOut("Revising remote working directory for cleanup. Forced CleanUp: %s" % forceCleanup)
 			activity = utils.ActivityLog('revising remote work directory')
 			# check whether there are any remote working directories remaining
-			checkProcess = self.Pool.LoggedProcess('find %s -maxdepth 1 -type d | wc -l' % self.getWorkdirPath() )
+			checkProcess = self.Pool.LoggedExecute('find %s -maxdepth 1 -type d | wc -l' % self.getWorkdirPath() )
 			try:
 				if forceCleanup or ( int(checkProcess.getOutput()) <= 1 ):
-					cleanupProcess = self.Pool.LoggedProcess('rm -rf %s' % self.getWorkdirPath() )
+					cleanupProcess = self.Pool.LoggedExecute('rm -rf %s' % self.getWorkdirPath() )
 					if cleanupProcess.wait()!=0:
 						if self.explainError(cleanupProcess, cleanupProcess.wait()):
-							pass
-						else:
-							cleanupProcess.logError(self.errorLog)
-							raise BackendError("Cleanup Process %s returned: %s" % ( cleanupProcess.cmd, cleanupProcess.getMessage() ) )
+							return
+						cleanupProcess.logError(self.errorLog)
+						raise BackendError("Cleanup Process %s returned: %s" % ( cleanupProcess.cmd, cleanupProcess.getMessage() ) )
 			except Exception:
 				raise BackendError("Exception while cleaning up remote working directory. There might be some junk data left in: %s @ %s" % ( self.getWorkdirPath(), self.Pool.getDomain() ) )
 
@@ -304,7 +302,7 @@ class Condor(BasicWMS):
 		wmsToJobMap = dict(wmsJobIdList)
 
 		activity = utils.ActivityLog('fetching job status')
-		statusProcess = self.Pool.LoggedProcess(self.statusExec, '%(format)s %(jobIDs)s' % {"jobIDs" : wmsIdArgument, "format" : self.statusReturnFormat })
+		statusProcess = self.Pool.LoggedExecute(self.statusExec, '%(format)s %(jobIDs)s' % {"jobIDs" : wmsIdArgument, "format" : self.statusReturnFormat })
 
 		activity = utils.ActivityLog('checking job status')
 		# process all lines of the status executable output
@@ -326,7 +324,6 @@ class Condor(BasicWMS):
 				pass
 			else:
 				statusProcess.logError(self.errorLog, brief=True)
-			reportQueue=False
 
 		self.debugOut("Remaining after condor_q: %s" % wmsIdList)
 		# jobs not in queue have either succeeded or failed - both is considered 'Done' for GC
@@ -348,7 +345,7 @@ class Condor(BasicWMS):
 			# query the history file by file until no more jobs need updating
 			for historyFile in historyList:
 				if len(wmsIdList) > 0:
-					statusProcess = self.Pool.LoggedProcess(self.historyExec, '%(fileQuery)s %(format)s %(jobIDs)s' % {"fileQuery": historyFile, "jobIDs" : " ", "format" : self.statusReturnFormat })
+					statusProcess = self.Pool.LoggedExecute(self.historyExec, '%(fileQuery)s %(format)s %(jobIDs)s' % {"fileQuery": historyFile, "jobIDs" : " ", "format" : self.statusReturnFormat })
 					for statusReturnLine in statusProcess.iter():
 						# test if line starts with a number and was requested
 						try:
@@ -483,7 +480,7 @@ class Condor(BasicWMS):
 			try:
 				# submit all jobs simultaneously and temporarily store verbose (ClassAdd) output
 				activity = utils.ActivityLog('queuing jobs at scheduler')
-				proc = self.Pool.LoggedProcess(self.submitExec, ' -verbose %(JDL)s' % { "JDL": jdlSubmitPath })
+				proc = self.Pool.LoggedExecute(self.submitExec, ' -verbose %(JDL)s' % { "JDL": jdlSubmitPath })
 
 				self.debugOut("AAAAA")
 				# extract the Condor ID (WMS ID) of the jobs from output ClassAds
@@ -540,6 +537,7 @@ class Condor(BasicWMS):
 
 		self.debugOut("o Creating Header")
 		# header for all jobs
+		remove_cond = '( JobStatus == 5 && HoldReasonCode != 16 )' # cancel held jobs - ignore spooling ones
 		jdlData = [
 			'Universe   = ' + self.settings["jdl"]["Universe"],
 			'Executable = ' + gcExec,
@@ -547,11 +545,8 @@ class Condor(BasicWMS):
 			'Log = ' + os.path.join(self.getWorkdirPath(), "GC_Condor.%s.log") % self.taskID,
 			'should_transfer_files = YES',
 			'when_to_transfer_output = ON_EXIT',
-			"periodic_remove = ( " + \
-				# cancel held jobs - ignore spooling ones
-				"( JobStatus == 5 && HoldReasonCode != 16 )"+ \
-				")",
-			]
+			'periodic_remove = ( %s )' % remove_cond,
+		]
 		# properly inject any information retrieval keys into ClassAds - regular attributes do not need injecting
 		for key in self.poolQuery.values():
 			# is this a match string? '+JOB_GLIDEIN_Entry_Name = "$$(GLIDEIN_Entry_Name:Unknown)"' -> MATCH_GLIDEIN_Entry_Name = "CMS_T2_DE_RWTH_grid-ce2" && MATCH_EXP_JOB_GLIDEIN_Entry_Name = "CMS_T2_DE_RWTH_grid-ce2"
@@ -739,18 +734,18 @@ class Condor(BasicWMS):
 			self.transferExec = "false"	# disabled for this type
 			self.configValExec = 'condor_config_val'
 			# test availability of commands
-			testProcess=self.Pool.LoggedProcess("condor_version")
+			testProcess=self.Pool.LoggedExecute("condor_version")
 			self.debugOut("*** Testing remote connectivity:\n%s"%testProcess.cmd)
 			if testProcess.wait()!=0:
 				testProcess.logError(self.errorLog)
 				raise BackendError("Failed to access remote Condor tools! The pool you are submitting to is very likely not configured properly.")
 			# get initial workdir on remote pool
 			if config.get("remote workdir", ''):
-				uName=self.Pool.LoggedProcess("whoami").getOutput().strip()
+				uName=self.Pool.LoggedExecute("whoami").getOutput().strip()
 				self.poolWorkDir=os.path.join(config.get("remote workdir", ''), uName)
-				pwdProcess=self.Pool.LoggedProcess("mkdir -p %s" % self.poolWorkDir )
+				pwdProcess=self.Pool.LoggedExecute("mkdir -p %s" % self.poolWorkDir )
 			else:
-				pwdProcess=self.Pool.LoggedProcess("pwd")
+				pwdProcess=self.Pool.LoggedExecute("pwd")
 				self.poolWorkDir=pwdProcess.getOutput().strip()
 			if pwdProcess.wait()!=0:
 				raise BackendError("Failed to determine, create or verify base work directory on remote host with code %s!\nThere might be a problem with your credentials or authorisation.\nOutput Message: %s\nError Message: %s" % (pwdProcess.wait(),pwdProcess.getOutput(),pwdProcess.getError()) )
