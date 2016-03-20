@@ -24,7 +24,7 @@ class DASProvider(CMSProvider):
 	alias = ['das']
 
 	def __init__(self, config, datasetExpr, datasetNick = None, datasetID = 0):
-		CMSProvider.__init__(self, config, datasetExpr, datasetNick, datasetID, locationFromPhedex = False)
+		CMSProvider.__init__(self, config, datasetExpr, datasetNick, datasetID)
 		self._instance = ''
 		if '/' not in self._url:
 			self._instance = 'prod/%s' % self._url

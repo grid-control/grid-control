@@ -23,8 +23,7 @@ from python_compat import sorted
 
 # required format: <dataset path>[@<instance>][#<block>]
 class CMSProvider(DataProvider):
-	def __init__(self, config, datasetExpr, datasetNick = None, datasetID = 0,
-			locationFromPhedex = True):
+	def __init__(self, config, datasetExpr, datasetNick = None, datasetID = 0):
 		self._lumi_filter = parseLumiFilter(config.get('lumi filter', ''))
 		if self._lumi_filter:
 			config.set('dataset processor', 'LumiDataProcessor', '+=')
