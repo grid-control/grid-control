@@ -93,7 +93,8 @@ class OptsConfigFiller(Plugin.getClass('ConfigFiller')):
 			'global': { 'gui': opts.gui, 'submission': opts.submission },
 			'jobs': { 'max retry': opts.maxRetry, 'action': opts.action,
 				'continuous': opts.continuous, 'selected': opts.selector },
-			'logging': { 'verbosity ?': opts.verbosity, 'debug mode': opts.debug },
+			'logging': { 'level ?': logging.getLevelName(logging.DEFAULT - opts.verbosity),
+				'debug mode': opts.debug },
 		}
 		for section in cmd_line_config_map:
 			for (option, value) in cmd_line_config_map[section].items():

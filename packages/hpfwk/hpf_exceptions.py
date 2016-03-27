@@ -162,6 +162,10 @@ class ExceptionFormatter(logging.Formatter):
 		(self._showCodeContext, self._showVariables, self._showFileStack) =\
 			(showCodeContext, showVariables, showFileStack)
 
+	def __repr__(self):
+		return '%s(code = %r, var = %r, file = %r)' % (self.__class__.__name__,
+			self._showCodeContext, self._showVariables, self._showFileStack)
+
 	def format(self, record):
 		if record.exc_info in [None, (None, None, None)]:
 			return logging.Formatter.format(self, record)

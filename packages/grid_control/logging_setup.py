@@ -14,9 +14,10 @@
 
 import os, sys, time, logging
 from grid_control.gc_exceptions import GCError, GCLogHandler
+from grid_control.utils.data_structures import makeEnum
 from grid_control.utils.file_objects import VirtualFile
 from hpfwk import ExceptionFormatter
-from python_compat import irange, set, tarfile
+from python_compat import irange, lmap, set, sorted, tarfile
 
 class LogOnce(logging.Filter):
 	def __init__(self):
@@ -69,28 +70,29 @@ class ProcessArchiveHandler(logging.Handler):
 			self._log.warning('All logfiles were moved to %s', self._fn)
 
 
-def getFilteredLogger(name, logFilter = None):
-	logger = logging.getLogger(name)
-	if name not in getFilteredLogger._memory: # not setup yet
-		if logFilter:
-			logger.addFilter(logFilter)
-		getFilteredLogger._memory.append(name)
-	return logger
-getFilteredLogger._memory = []
+def setupLogStream(logger_name, log_handler = None, log_filter = None, log_format = None, log_propagate = True):
+	logger = logging.getLogger(logger_name)
+	logger.propagate = log_propagate
+	if log_filter:
+		logger.addFilter(log_filter)
+	if log_handler:
+		for handler in list(logger.handlers):
+			logger.removeHandler(handler)
+		logger.addHandler(log_handler)
+	if log_format:
+		for handler in logger.handlers:
+			handler.setFormatter(logging.Formatter(fmt = log_format, datefmt = '%Y-%m-%d %H:%M:%S'))
 
 
 def logging_defaults():
-	def setupLogStream(logger, logFormat):
-		handler = logging.StreamHandler(sys.stdout)
-		handler.setFormatter(logging.Formatter(fmt=logFormat, datefmt='%Y-%m-%d %H:%M:%S'))
-		logger.addHandler(handler)
-		return logger
-
-	setupLogStream(logging.getLogger(), '%(asctime)s - %(name)s:%(levelname)s - %(message)s')
-	setupLogStream(logging.getLogger('user'), '%(message)s').propagate = False
-	setupLogStream(logging.getLogger('user.time'), '%(asctime)s - %(message)s').propagate = False
-	getFilteredLogger('user.once', LogOnce())
-	getFilteredLogger('user.time.once', LogOnce())
+	setupLogStream('', log_handler = logging.StreamHandler(sys.stdout),
+		log_format = '%(asctime)s - %(name)s:%(levelname)s - %(message)s')
+	setupLogStream('user', log_handler = logging.StreamHandler(sys.stdout),
+		log_format = '%(message)s', log_propagate = False)
+	setupLogStream('user.time', log_handler = logging.StreamHandler(sys.stdout),
+		log_format = '%(asctime)s - %(message)s', log_propagate = False)
+	setupLogStream('user.once', log_filter = LogOnce())
+	setupLogStream('user.time.once', log_filter = LogOnce())
 
 	# External libraries
 	logging.getLogger('requests').setLevel(logging.WARNING)
@@ -120,8 +122,8 @@ def logging_defaults():
 	# Adding log_process_result to Logging class
 	def log_process(self, proc, level = logging.WARNING, files = None):
 		status = proc.status(timeout = 0)
-		record = logging.LogRecord(self.name, level, '<process>', 0,
-			'Process %r finished with exit code %s' % (repr(proc.get_call()), status))
+		record = self.makeRecord(self.name, level, '<process>', 0,
+			'Process %r finished with exit code %s' % (repr(proc.get_call()), status), None, None)
 		record.proc = proc
 		record.call = proc.get_call()
 		record.proc_status = status
@@ -130,45 +132,108 @@ def logging_defaults():
 	logging.Logger.log_process = log_process
 
 
-def logging_setup(config):
-	logLevelDict = {}
-	for level in irange(51):
-		logLevelDict[logging.getLevelName(level).upper()] = level
+# Display logging setup
+def dump_log_setup(level):
+	root = logging.getLogger()
 
-	def getLoggerFromOption(option):
-		if ' ' in option: # eg. 'exception handler = stdout' configures the exception handler
-			return logging.getLogger(option.split()[0])
-		return logging.getLogger() # eg. 'handler = stdout' configures the root handler
-
-	# Configure general setup of loggers - destinations, level and propagation
-	for option in config.getOptions():
-		logger = getLoggerFromOption(option)
-		if option.endswith('handler'): # Contains list of handlers to add to logger
-			# remove any standard handlers:
-			for handler in list(logger.handlers):
-				logger.removeHandler(handler)
-			for dest in config.getList(option, [], onChange = None):
-				if dest == 'stdout':
-					handler = logging.StreamHandler(sys.stdout)
-				elif dest == 'stderr':
-					handler = logging.StreamHandler(sys.stderr)
-				elif dest == 'file':
-					option = option.replace('handler', 'file')
-					handler = logging.FileHandler(config.get(option, onChange = None), 'w')
-				else:
-					raise Exception('Unknown handler [logging] %s = %s' % (option, dest))
-				if option.startswith('exception'):
-					handler.setFormatter(ExceptionFormatter(showCodeContext = 2, showVariables = 1, showFileStack = 1))
-				logger.addHandler(handler)
-		elif option.endswith('level'):
-			logger.setLevel(logLevelDict.get(config.get(option, onChange = None).upper(), 0))
-		elif option.endswith('propagate'):
-			logger.propagate = config.getBool(option, onChange = None)
-
-	# Formatting affects all handlers and needs to be done after the handlers are setup
-	for option in config.getOptions():
-		logger = getLoggerFromOption(option)
-		if option.endswith('format'):
+	def display_logger(indent, logger, name):
+		propagate_symbol = '+'
+		if hasattr(logger, 'propagate') and not logger.propagate:
+			propagate_symbol = 'o'
+		desc = name
+		if hasattr(logger, 'level'):
+			desc += ' (level = %s)' % logging.getLevelName(logger.level)
+		root.log(level, '%s%s %s', '|  ' * indent, propagate_symbol, desc)
+		if hasattr(logger, 'filters'):
+			for lf in logger.filters:
+				desc = lf.__class__.__name__
+				root.log(level, '%s# %s', '|  ' * (indent + 1), desc)
+		if hasattr(logger, 'handlers'):
 			for handler in logger.handlers:
-				fmt = config.get(option, '$(message)s', onChange = None).replace('$', '%')
-				handler.setFormatter(logging.Formatter(fmt))
+				desc = handler.__class__.__name__
+				if isinstance(handler, logging.StreamHandler):
+					desc += '(%s)' % handler.stream.name
+				root.log(level, '%s> %s', '|  ' * (indent + 1), desc)
+				fmt = handler.formatter
+				if fmt:
+					desc = fmt.__class__.__name__
+					if isinstance(fmt, ExceptionFormatter):
+						desc = repr(fmt)
+					elif isinstance(fmt, logging.Formatter):
+						desc += '(%s, %s)' % (repr(getattr(fmt, '_fmt')), repr(fmt.datefmt))
+					root.log(level, '%s|  %% %s', '|  ' * (indent + 1), desc)
+
+	display_logger(0, root, '<root>')
+	for key, logger in sorted(root.manager.loggerDict.items()):
+		display_logger(key.count('.') + 1, logger, key)
+	sys.exit(0)
+
+
+# Configure formatting of handlers
+def logging_configure_handler(config, logger_name, handler_str, handler):
+	def get_handler_option(postfix):
+		return ['%s %s' % (logger_name, postfix), '%s %s %s' % (logger_name, handler_str, postfix)]
+	if logger_name.startswith('exception'):
+		ex_code = config.getInt(get_handler_option('code context'), 2, onChange = None)
+		ex_var = config.getInt(get_handler_option('variables'), 1, onChange = None)
+		ex_file = config.getInt(get_handler_option('file stack'), 1, onChange = None)
+		fmt = ExceptionFormatter(showCodeContext = ex_code, showVariables = ex_var, showFileStack = ex_file)
+	else:
+		fmt_str = config.get(get_handler_option('format'), '$(message)s', onChange = None)
+		fmt = logging.Formatter(fmt_str.replace('$', '%'))
+	handler.setFormatter(fmt)
+	return handler
+
+
+# Configure general setup of loggers - destinations, level and propagation
+def logging_create_handlers(config, logger_name):
+	LogLevelEnum = makeEnum(lmap(lambda level: logging.getLevelName(level).upper(), irange(51)))
+
+	logger = logging.getLogger(logger_name)
+	# Set logging level
+	logger.setLevel(config.getEnum(logger_name + ' level', LogLevelEnum, logger.level, onChange = None))
+	# Set propagate status
+	logger.propagate = config.getBool(logger_name + ' propagate', bool(logger.propagate), onChange = None)
+	# Setup handlers
+	if logger_name + ' handler' in config.getOptions():
+		# remove any standard handlers:
+		for handler in list(logger.handlers):
+			logger.removeHandler(handler)
+		handler_list = config.getList(logger_name + ' handler', [], onChange = None)
+		for handler_str in set(handler_list): # add only unique output handlers
+			if handler_str == 'stdout':
+				handler = logging.StreamHandler(sys.stdout)
+			elif handler_str == 'stderr':
+				handler = logging.StreamHandler(sys.stderr)
+			elif handler_str == 'file':
+				handler = logging.FileHandler(config.get(logger_name + ' file', onChange = None), 'w')
+			elif handler_str == 'debug_file':
+				handler = GCLogHandler(config.get(logger_name + ' debug file', onChange = None), 'w')
+			else:
+				raise Exception('Unknown handler %s for logger %s' % (handler_str, logger_name))
+			logger.addHandler(logging_configure_handler(config, logger_name, handler_str, handler))
+
+
+# Apply configuration to logging setup
+def logging_setup(config):
+	if config.getBool('debug mode', False, onChange = None):
+		config.set('level', 'DEBUG3', '?=')
+		config.set('exception handlers', 'stdout', '+=')
+		config.setInt('exception code context', 2)
+		config.setInt('exception variables', 2)
+		config.setInt('exception file stack', 2)
+
+	# Find logger names in options
+	logger_names = set()
+	for option in config.getOptions():
+		if option in ['debug mode', 'display logger']:
+			pass
+		elif option.count(' ') == 0:
+			logger_names.add('')
+		else:
+			logger_names.add(option.split(' ')[0])
+	for logger_name in logger_names:
+		logging_create_handlers(config, logger_name)
+
+	if config.getBool('display logger', False, onChange = None):
+		dump_log_setup(logging.WARNING)
