@@ -50,7 +50,7 @@ class ConfigInterface(object):
 
 	# Write settings to file
 	def write(self, stream, **kwargs):
-		return self._configView.write(stream, self._configView.iterContent(), **kwargs)
+		return self._configView.write(stream, entries = self._configView.iterContent(), **kwargs)
 
 	# Find config caller
 	def _getCaller(self):

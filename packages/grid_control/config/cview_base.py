@@ -47,16 +47,19 @@ class ConfigView(Plugin):
 	def set(self, option, value, opttype, source, markAccessed = True):
 		raise AbstractError
 
-	def write(self, stream, entries = None, printMinimal = False, printState = False,
-			printUnused = True, printSource = False, printDefault = True, printTight = False):
-		if not entries:
+	def _prepare_write(self, entries = None, printState = False, printUnused = True, printDefault = True):
+		if entries is None:
 			entries = self.iterContent()
-		config = {}
+		result = {}
 		for entry in entries:
 			if printUnused or entry.accessed:
 				if printDefault or not entry.source.startswith('<default'):
 					if printState or not entry.option.startswith('#'):
-						config.setdefault(entry.section, {}).setdefault(entry.option, []).append(entry)
+						result.setdefault(entry.section, {}).setdefault(entry.option, []).append(entry)
+		return result
+
+	def write(self, stream, printMinimal = False, printSource = False, printTight = False, **kwarg):
+		config = self._prepare_write(**kwarg)
 		for section in sorted(config):
 			if not printTight:
 				stream.write('[%s]\n' % section)

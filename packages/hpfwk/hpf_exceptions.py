@@ -127,7 +127,7 @@ class APIError(NestedException):
 class AbstractError(APIError):
 	def __init__(self):
 		try:
-			fun_name = sys._getframe(1).f_code.co_name
+			fun_name = getattr(sys, '_getframe')(1).f_code.co_name # python implementation detail
 		except Exception:
 			fun_name = 'The invoked method'
 		APIError.__init__(self, '%s is an abstract function!' % fun_name)
@@ -179,7 +179,7 @@ class ExceptionFormatter(logging.Formatter):
 		msg += '\n'
 
 		def formatInfos(info):
-			(exValue, exDepth, exID) = info
+			(exValue, exDepth, _) = info
 			result = '%s%s: %s' % ('  ' * exDepth, exValue.__class__.__name__, exValue)
 			if not isinstance(exValue, NestedException) and hasattr(exValue, 'args') and (len(exValue.args) > 1):
 				try:
@@ -202,7 +202,7 @@ def handle_debug_interrupt(sig, frame):
 	console.push('readline.parse_and_bind("tab: complete")')
 	console.push('readline.set_completer(rlcompleter.Completer(globals()).complete)')
 	try:
-		stackDict = sys._current_frames()
+		stackDict = getattr(sys, '_current_frames')() # python implementation detail
 	except Exception:
 		stackDict = {}
 	log = logging.getLogger('debug_session')

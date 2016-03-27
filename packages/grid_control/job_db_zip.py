@@ -40,7 +40,11 @@ class ZippedJobDB(JobDB):
 				for idx, fnTarInfo in enumerate(tar.namelist()):
 					(jobNum, tid) = tuple(imap(lambda s: int(s[1:]), fnTarInfo.split('_', 1)))
 					try:
-						rawData = tar.open(fnTarInfo).read()
+						try:
+							fp = tar.open(fnTarInfo)
+							fp.read()
+						finally:
+							fp.close()
 					except Exception:
 						pass
 				for broken in brokenList:

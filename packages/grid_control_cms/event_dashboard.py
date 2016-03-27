@@ -47,7 +47,7 @@ class DashBoard(Monitoring):
 
 
 	def _publish(self, jobObj, jobNum, taskId, usermsg):
-		(header, backend, rawId) = jobObj.wmsId.split('.', 2)
+		(_, backend, rawId) = jobObj.wmsId.split('.', 2)
 		dashId = '%s_%s' % (jobNum, rawId)
 		if "http" not in jobObj.wmsId:
 			dashId = '%s_https://%s:/%s' % (jobNum, backend, rawId)
@@ -68,8 +68,8 @@ class DashBoard(Monitoring):
 			'scheduler': wms.wmsName, 'vo': token.getGroup()}, self._task.getSubmitInfo(jobNum)])
 
 
-	# Called on job status update
-	def onJobUpdate(self, wms, jobObj, jobNum, data, addMsg = None):
+	# Called on job status update and output
+	def _updateDashboard(self, wms, jobObj, jobNum, data, addMsg):
 		# Translate status into dashboard status message
 		statusDashboard = self._statusMap.get(jobObj.state, 'PENDING')
 		# Update dashboard information
@@ -78,11 +78,15 @@ class DashBoard(Monitoring):
 			self._publish, jobObj, jobNum, taskId, [{'StatusValue': statusDashboard,
 			'StatusValueReason': data.get('reason', statusDashboard).upper(),
 			'StatusEnterTime': data.get('timestamp', time.strftime('%Y-%m-%d_%H:%M:%S', time.localtime())),
-			'StatusDestination': data.get('dest', '') }, addMsg or {}])
+			'StatusDestination': data.get('dest', '') }, addMsg])
+
+
+	def onJobUpdate(self, wms, jobObj, jobNum, data):
+		self._updateDashboard(wms, jobObj, jobNum, jobObj, {})
 
 
 	def onJobOutput(self, wms, jobObj, jobNum, retCode):
-		self.onJobUpdate(wms, jobObj, jobNum, jobObj, {'ExeExitCode': retCode})
+		self._updateDashboard(wms, jobObj, jobNum, jobObj, {'ExeExitCode': retCode})
 
 
 	def onTaskFinish(self, nJobs):

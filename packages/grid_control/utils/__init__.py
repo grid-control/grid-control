@@ -16,7 +16,7 @@ import os, re, sys, glob, stat, time, errno, signal, fnmatch, logging, operator,
 from grid_control.gc_exceptions import GCError, InstallationError, UserError
 from grid_control.utils.file_objects import VirtualFile
 from grid_control.utils.parsing import parseBool, parseType
-from grid_control.utils.process_base import LocalProcess
+from grid_control.utils.process_base import LocalProcess, exit_without_cleanup
 from grid_control.utils.thread_tools import TimeoutException, hang_protection
 from python_compat import identity, ifilter, imap, irange, ismap, izip, lfilter, lmap, lru_cache, lsmap, lzip, next, reduce, set, sorted, tarfile, user_input
 
@@ -108,7 +108,7 @@ def freeSpace(dn, timeout = 5):
 		sys.stderr.write('Unable to get free disk space for directory %s after waiting for %d sec!' % (dn, timeout))
 		sys.stderr.write('The file system is probably hanging or corrupted - try to check the free disk space manually.')
 		sys.stderr.write('Refer to the documentation to disable checking the free disk space - at your own risk')
-		os._exit(os.EX_OSERR)
+		exit_without_cleanup(os.EX_OSERR)
 
 
 ################################################################

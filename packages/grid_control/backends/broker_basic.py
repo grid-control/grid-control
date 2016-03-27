@@ -70,18 +70,8 @@ class SimpleBroker(FilterBroker):
 		FilterBroker.__init__(self, config, name, userOpt, itemName, discoverFun)
 		self._discover(discoverFun)
 
-		itemPropTypesMap = {int: float, float: float, str: str, list: tuple, tuple: tuple}
 		if self._itemsDiscovered: # Sort discovered items according to requirements
-			itemPropTypes = {}
-			for itemPropDict in self._itemsDiscovered.values():
-				for itemPropKey, itemPropValue in itemPropDict.items():
-					itemPropTypesList = itemPropTypes.setdefault(itemPropKey, [])
-					for (iptype, ipmapped) in itemPropTypesMap.items():
-						if isinstance(itemPropValue, iptype):
-							itemPropTypesList.append(ipmapped)
-							break
-			for itemPropKey, itemPropTypeList in list(itemPropTypes.items()):
-				itemPropTypes[itemPropKey] = itemPropTypeList[0]
+			itemPropTypes = self._getPropTypes()
 			none_value = {float: 1e10, str: chr(127), tuple: tuple()}
 			def keyFun(x):
 				def enforce_type(key):
@@ -91,6 +81,19 @@ class SimpleBroker(FilterBroker):
 					return itemPropTypes[key](value)
 				return (tuple(imap(enforce_type, sorted(itemPropTypes))), x[0])
 			self._itemsSorted = lmap(lambda k_v: k_v[0], sorted(self._itemsDiscovered.items(), key = keyFun))
+
+	def _getPropTypes(self): # find conversion method to access properties uniformly
+		itemPropTypesMap = {int: float, float: float, str: str, list: tuple, tuple: tuple}
+		itemPropTypes = {}
+		for itemPropDict in self._itemsDiscovered.values():
+			for itemPropKey, itemPropValue in itemPropDict.items():
+				for (iptype, ipmapped) in itemPropTypesMap.items():
+					if isinstance(itemPropValue, iptype):
+						itemPropTypes.setdefault(itemPropKey, []).append(ipmapped)
+						break
+		for itemPropKey, itemPropTypeList in list(itemPropTypes.items()):
+			itemPropTypes[itemPropKey] = itemPropTypeList[0]
+		return itemPropTypes
 
 	def _broker(self, reqs, items):
 		if not self._itemsDiscovered:

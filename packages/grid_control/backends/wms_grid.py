@@ -365,7 +365,7 @@ class GridWMS(BasicWMS):
 		waitFlag = False
 		for ids in imap(lambda x: allIds[x:x+5], irange(0, len(allIds), 5)):
 			# Delete jobs in groups of 5 - with 5 seconds between groups
-			if waitFlag and utils.wait(5) == False:
+			if waitFlag and not utils.wait(5):
 				break
 			waitFlag = True
 

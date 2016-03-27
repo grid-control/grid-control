@@ -120,7 +120,7 @@ class CategoryReport(Report):
 
 class ModuleReport(CategoryReport):
 	def display(self):
-		(catStateDict, catDescDict, catSubcatDict) = CategoryReport._getCategoryStateSummary(self)
+		(catStateDict, catDescDict, _) = CategoryReport._getCategoryStateSummary(self)
 
 		infos = []
 		head = set()
@@ -146,43 +146,30 @@ class AdaptiveReport(CategoryReport):
 		self._catMax = int(configString)
 		self._catCur = self._catMax
 
-	def _getCategoryStateSummary(self):
-		(catStateDict, catDescDict, catSubcatDict) = CategoryReport._getCategoryStateSummary(self)
-		# Used for quick calculations
-		catLenDict = {}
-		for catKey in catStateDict:
-			catLenDict[catKey] = sum(catStateDict[catKey].values())
+	# Function to merge categories together
+	def _mergeCats(self, catStateDict, catDescDict, catSubcatDict, catLenDict, newCatDesc, catKeyList):
+		if not catKeyList:
+			return
+		newCatKey = max(catStateDict.keys()) + 1
+		newStates = {}
+		newLen = 0
+		newSubcats = 0
+		for catKey in catKeyList:
+			oldStates = catStateDict.pop(catKey)
+			for stateKey in oldStates:
+				newStates[stateKey] = newStates.get(stateKey, 0) + oldStates[stateKey]
+			catDescDict.pop(catKey)
+			newLen += catLenDict.pop(catKey)
+			newSubcats += catSubcatDict.pop(catKey, 1)
+		catStateDict[newCatKey] = newStates
+		catDescDict[newCatKey] = newCatDesc
+		catLenDict[newCatKey] = newLen
+		catSubcatDict[newCatKey] = newSubcats
+		return newCatKey
 
-		# Function to merge categories together
-		def mergeCats(newCatDesc, catKeyList):
-			if not catKeyList:
-				return
-			newCatKey = max(catStateDict.keys()) + 1
-			newStates = {}
-			newLen = 0
-			newSubcats = 0
-			for catKey in catKeyList:
-				oldStates = catStateDict.pop(catKey)
-				for stateKey in oldStates:
-					newStates[stateKey] = newStates.get(stateKey, 0) + oldStates[stateKey]
-				catDescDict.pop(catKey)
-				newLen += catLenDict.pop(catKey)
-				newSubcats += catSubcatDict.pop(catKey, 1)
-			catStateDict[newCatKey] = newStates
-			catDescDict[newCatKey] = newCatDesc
-			catLenDict[newCatKey] = newLen
-			catSubcatDict[newCatKey] = newSubcats
-			return newCatKey
 
-		# Merge successfully completed categories
-		mergeCats('Completed subtasks', lfilter(lambda catKey:
-			(len(catStateDict[catKey]) == 1) and (Job.SUCCESS in catStateDict[catKey]), catStateDict))
-
-		# Next merge steps shouldn't see non-dict catKeys in catDescDict
-		hiddenDesc = {}
-		for catKey in ifilter(lambda catKey: not isinstance(catDescDict[catKey], dict), catDescDict):
-			hiddenDesc[catKey] = catDescDict.pop(catKey)
-
+	# Get dictionary with categories that will get merged when removing a variable
+	def _getKeyMergeResults(self, catDescDict):
 		# Merge parameters to reach category goal - NP hard problem, so be greedy and quick!
 		def eqDict(a, b, k):
 			a = dict(a)
@@ -191,27 +178,27 @@ class AdaptiveReport(CategoryReport):
 			b.pop(k)
 			return a == b
 
-		# Get dictionary with categories that will get merged when removing a variable
-		def getKeyMergeResults():
-			varKeyResult = {}
-			catKeySearchDict = {}
-			for catKey in catDescDict:
-				for varKey in catDescDict[catKey]:
-					if varKey not in catKeySearchDict:
-						catKeySearch = set(catDescDict.keys())
-					else:
-						catKeySearch = catKeySearchDict[varKey]
-					if catKeySearch:
-						matches = lfilter(lambda ck: eqDict(catDescDict[catKey], catDescDict[ck], varKey), catKeySearch)
-						if matches:
-							catKeySearchDict[varKey] = catKeySearch.difference(set(matches))
-							varKeyResult.setdefault(varKey, []).append(matches)
-			return varKeyResult
+		varKeyResult = {}
+		catKeySearchDict = {}
+		for catKey in catDescDict:
+			for varKey in catDescDict[catKey]:
+				if varKey not in catKeySearchDict:
+					catKeySearch = set(catDescDict.keys())
+				else:
+					catKeySearch = catKeySearchDict[varKey]
+				if catKeySearch:
+					matches = lfilter(lambda ck: eqDict(catDescDict[catKey], catDescDict[ck], varKey), catKeySearch)
+					if matches:
+						catKeySearchDict[varKey] = catKeySearch.difference(set(matches))
+						varKeyResult.setdefault(varKey, []).append(matches)
+		return varKeyResult
 
-		# Merge categories till 
+
+	def _mergeCatsWithGoal(self, catStateDict, catDescDict, catSubcatDict, catLenDict, hiddenDesc):
+		# Merge categories till goal is reached
 		while True:
 			deltaGoal = max(0, (len(catDescDict) + len(hiddenDesc)) - self._catMax)
-			varKeyResult = getKeyMergeResults()
+			varKeyResult = self._getKeyMergeResults(catDescDict)
 			(varKeyMerge, varKeyMergeDelta) = (None, 0)
 			for varKey in sorted(varKeyResult):
 				delta = sum(imap(len, varKeyResult[varKey])) - len(varKeyResult[varKey])
@@ -221,12 +208,13 @@ class AdaptiveReport(CategoryReport):
 				for mergeList in varKeyResult[varKeyMerge]:
 					varKeyMergeDesc = dict(catDescDict[mergeList[0]])
 					varKeyMergeDesc.pop(varKeyMerge)
-					mergeCats(varKeyMergeDesc, mergeList)
+					self._mergeCats(catStateDict, catDescDict, catSubcatDict, catLenDict,
+						varKeyMergeDesc, mergeList)
 			else:
 				break
 
-		# Remove redundant variables from description
-		varKeyResult = getKeyMergeResults()
+
+	def _clearCategoryDesc(self, varKeyResult, catDescDict):
 		for varKey in sorted(varKeyResult, reverse = True):
 			if varKey == 'DATASETNICK': # Never remove dataset infos
 				continue
@@ -244,18 +232,35 @@ class AdaptiveReport(CategoryReport):
 						if varKey in catDescDict[catKey]:
 							catDescDict[catKey].pop(varKey)
 
+
+	def _getCategoryStateSummary(self):
+		(catStateDict, catDescDict, catSubcatDict) = CategoryReport._getCategoryStateSummary(self)
+		# Used for quick calculations
+		catLenDict = {}
+		for catKey in catStateDict:
+			catLenDict[catKey] = sum(catStateDict[catKey].values())
+		# Merge successfully completed categories
+		self._mergeCats(catStateDict, catDescDict, catSubcatDict, catLenDict,
+			'Completed subtasks', lfilter(lambda catKey:
+				(len(catStateDict[catKey]) == 1) and (Job.SUCCESS in catStateDict[catKey]), catStateDict))
+		# Next merge steps shouldn't see non-dict catKeys in catDescDict
+		hiddenDesc = {}
+		for catKey in ifilter(lambda catKey: not isinstance(catDescDict[catKey], dict), list(catDescDict)):
+			hiddenDesc[catKey] = catDescDict.pop(catKey)
+		# Merge categories till goal is reached
+		self._mergeCatsWithGoal(catStateDict, catDescDict, catSubcatDict, catLenDict, hiddenDesc)
+		# Remove redundant variables from description
+		varKeyResult = self._getKeyMergeResults(catDescDict)
+		self._clearCategoryDesc(varKeyResult, catDescDict)
 		# Restore hidden descriptions
 		catDescDict.update(hiddenDesc)
-
 		# Enforce category maximum - merge categories with the least amount of jobs
 		if len(catStateDict) != self._catMax:
-			mergeCats('Remaining subtasks', sorted(catStateDict,
-				key = lambda catKey: -catLenDict[catKey])[self._catMax - 1:])
-
+			self._mergeCats(catStateDict, catDescDict, catSubcatDict, catLenDict, 'Remaining subtasks',
+				sorted(catStateDict, key = lambda catKey: -catLenDict[catKey])[self._catMax - 1:])
 		# Finalize descriptions:
 		if len(catDescDict) == 1:
 			catDescDict[list(catDescDict.keys())[0]] = 'All jobs'
-
 		return (catStateDict, catDescDict, catSubcatDict)
 
 

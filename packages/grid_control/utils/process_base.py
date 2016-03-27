@@ -28,6 +28,10 @@ def safeClose(fd):
 	except OSError:
 		pass
 
+def exit_without_cleanup(code):
+	getattr(os, '_exit')(code)
+
+
 class ProcessError(Exception):
 	pass
 
@@ -244,8 +248,8 @@ class LocalProcess(Process):
 				sys.stderr.write('Error while calling %s: ' % invoked + repr(sys.exc_info()[1]))
 				for fd in irange(0, 3):
 					safeClose(fd)
-				os._exit(os.EX_OSERR)
-			os._exit(os.EX_OK)
+				exit_without_cleanup(os.EX_OSERR)
+			exit_without_cleanup(os.EX_OK)
 
 		else: # Still in the parent process - setup threads to communicate with external program
 			safeClose(fd_child_stderr)

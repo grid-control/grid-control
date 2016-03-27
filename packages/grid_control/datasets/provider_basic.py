@@ -42,6 +42,13 @@ class FileProvider(DataProvider):
 		}
 
 
+def try_apply(value, fun, desc):
+	try:
+		return fun(value)
+	except Exception:
+		raise DatasetError('Unable to parse %s: %s' % (desc, repr(value)))
+
+
 # Takes dataset information from an configuration file
 # required format: <path to list of data files>[@<forced prefix>][%[/]<selected dataset>[#<selected block>][#]]
 class ListProvider(DataProvider):
@@ -49,78 +56,100 @@ class ListProvider(DataProvider):
 
 	def __init__(self, config, datasetExpr, datasetNick = None, datasetID = 0):
 		DataProvider.__init__(self, config, datasetExpr, datasetNick, datasetID)
+		self._CommonPrefix = max(self.enumValues) + 1
+		self._CommonMetadata = max(self.enumValues) + 2
+
+		self._handleEntry = {
+			'events': (DataProvider.NEntries, int, 'block entry counter'),
+			'id': (DataProvider.DatasetID, int, 'dataset ID'),
+			'metadata': (DataProvider.Metadata, parseJSON, 'metadata description'),
+			'metadata common': (self._CommonMetadata, parseJSON, 'common metadata'),
+			'nickname': (DataProvider.Nickname, str, 'dataset nickname'),
+			'prefix': (self._CommonPrefix, str, 'common prefix'),
+			'se list': (DataProvider.Locations, lambda value: parseList(value, ','), 'block location'),
+		}
 
 		(path, self._forcePrefix, self._filter) = utils.optSplit(datasetExpr, '@%')
 		self._filename = config.resolvePath(path, True, 'Error resolving dataset file: %s' % path)
 
+	def _createBlock(self, name):
+		result = {
+			DataProvider.Locations: None,
+			DataProvider.FileList: [],
+			self._CommonPrefix: None,
+			self._CommonMetadata: [],
+		}
+		blockName = name.lstrip('[').rstrip(']').split('#')
+		if len(blockName) > 0:
+			result[DataProvider.Dataset] = blockName[0]
+		if len(blockName) > 1:
+			result[DataProvider.BlockName] = blockName[1]
+		return result
 
-	def getBlocksInternal(self):
-		def doFilter(block):
-			if self._filter:
-				name = '/%s#%s#' % (block[DataProvider.Dataset], block.get(DataProvider.BlockName, ''))
-				return self._filter in name
-			return True
+	def _finishBlock(self, block):
+		block.pop(self._CommonPrefix)
+		block.pop(self._CommonMetadata)
+		return block
 
-		def try_apply(fun, value, desc):
-			try:
-				return fun(value)
-			except Exception:
-				raise DatasetError('Unable to parse %s: %s' % (desc, repr(value)))
+	def _parseEntry(self, block, url, value):
+		if self._forcePrefix:
+			url = '%s/%s' % (self._forcePrefix, url)
+		elif block[self._CommonPrefix]:
+			url = '%s/%s' % (block[self._CommonPrefix], url)
+		value = value.split(' ', 1)
+		result = {
+			DataProvider.URL: url,
+			DataProvider.NEntries: try_apply(value[0], int, 'entries of file %s' % repr(url))
+		}
+		if len(value) > 1:
+			fileMetadata = try_apply(value[1], parseJSON, 'metadata of file %s' % repr(url))
+		else:
+			fileMetadata = []
+		if block[self._CommonMetadata] or fileMetadata:
+			result[DataProvider.Metadata] = block[self._CommonMetadata] + fileMetadata
+		return result
 
-		(blockinfo, commonMetadata) = (None, [])
-		fp = open(self._filename, 'r')
-		for idx, line in enumerate(fp):
+	def _parseFile(self, iterator):
+		block = None
+		for idx, line in enumerate(iterator):
 			try:
 				# Found start of block:
 				line = line.strip()
 				if line.startswith(';'):
 					continue
 				elif line.startswith('['):
-					if blockinfo and doFilter(blockinfo):
-						yield blockinfo
-					blockinfo = { DataProvider.Locations: None, DataProvider.FileList: [] }
-					blockname = line.lstrip('[').rstrip(']').split('#')
-					if len(blockname) > 0:
-						blockinfo[DataProvider.Dataset] = blockname[0]
-					if len(blockname) > 1:
-						blockinfo[DataProvider.BlockName] = blockname[1]
-					commonprefix = self._forcePrefix
-					commonMetadata = []
+					if block:
+						yield self._finishBlock(block)
+					block = self._createBlock(line)
 				elif line != '':
 					tmp = lmap(str.strip, utils.QM('[' in line, line.split(' = ', 1), rsplit(line, '=', 1)))
 					if len(tmp) != 2:
 						raise DatasetError('Malformed entry in dataset file:\n%s' % line)
 					key, value = tmp
-					if key.lower() == 'nickname':
-						blockinfo[DataProvider.Nickname] = value
-					elif key.lower() == 'id':
-						blockinfo[DataProvider.DatasetID] = try_apply(int, value, 'dataset ID')
-					elif key.lower() == 'events':
-						blockinfo[DataProvider.NEntries] = try_apply(int, value, 'block entry counter')
-					elif key.lower() == 'metadata':
-						blockinfo[DataProvider.Metadata] = try_apply(parseJSON, value, 'metadata description')
-					elif key.lower() == 'metadata common':
-						commonMetadata = try_apply(parseJSON, value, 'common metadata')
-					elif key.lower() == 'se list':
-						blockinfo[DataProvider.Locations] = try_apply(lambda value: parseList(value, ','), value, 'block location')
-					elif key.lower() == 'prefix':
-						if not self._forcePrefix:
-							commonprefix = value
+					handlerInfo = self._handleEntry.get(key.lower(), None)
+					if handlerInfo:
+						(prop, parser, msg) = handlerInfo
+						block[prop] = try_apply(value, parser, msg)
 					else:
-						if commonprefix:
-							key = '%s/%s' % (commonprefix, key)
-						value = value.split(' ', 1)
-						data = { DataProvider.URL: key,
-							DataProvider.NEntries: try_apply(int, value[0], 'entries of file %s' % repr(key))}
-						if commonMetadata:
-							data[DataProvider.Metadata] = commonMetadata
-						if len(value) > 1:
-							fileMetadata = try_apply(parseJSON, value[1], 'metadata of file %s' % repr(key))
-							data[DataProvider.Metadata] = data.get(DataProvider.Metadata, []) + fileMetadata
-						blockinfo[DataProvider.FileList].append(data)
+						block[DataProvider.FileList].append(self._parseEntry(block, key, value))
 			except Exception:
-				fp.close()
-				raise DatasetError('Unable to parse %r:%d' % (self._filename, idx))
-		if blockinfo and doFilter(blockinfo):
-			yield blockinfo
-		fp.close()
+				raise DatasetError('Unable to parse %s:%d\n\t%s' % (repr(self._filename), idx, repr(line)))
+		if block:
+			yield self._finishBlock(block)
+
+	def getBlocksInternal(self):
+		def _filterBlock(block):
+			if self._filter:
+				name = '/%s#%s#' % (block[DataProvider.Dataset], block.get(DataProvider.BlockName, ''))
+				return self._filter in name
+			return True
+		try:
+			fp = open(self._filename, 'r')
+		except:
+			raise DatasetError('Unable to open dataset file %s' % repr(self._filename))
+		try:
+			for block in self._parseFile(fp):
+				if _filterBlock(block):
+					yield block
+		finally:
+			fp.close()

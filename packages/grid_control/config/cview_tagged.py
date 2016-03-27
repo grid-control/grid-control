@@ -26,7 +26,7 @@ class TaggedConfigView(SimpleConfigView):
 			setClasses = selectorUnchanged, addClasses = None, inheritSections = False):
 		if inheritSections:
 			try:
-				addSections = parent._cfgClassSections + addSections
+				addSections = parent.getClassSections() + addSections
 			except Exception:
 				pass
 		SimpleConfigView.__init__(self, name, oldContainer, curContainer, parent,
@@ -42,6 +42,9 @@ class TaggedConfigView(SimpleConfigView):
 			return [(tagName, t.getObjectName().lower())]
 		self._initVariable('_cfgTags', [], setTags, addTags, identity, makeTagTuple)
 		self._cfgTagsOrder = lmap(lambda tagName_tagValue: tagName_tagValue[0], self._cfgTags)
+
+	def getClassSections(self):
+		return self._cfgClassSections
 
 	def __str__(self):
 		return '<%s(class = %r, sections = %r, names = %r, tags = %r)>' %\

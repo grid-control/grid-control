@@ -21,7 +21,7 @@ from grid_control.utils.gc_itertools import ichain
 from grid_control.utils.parsing import parseList
 from grid_control.utils.thread_tools import TimeoutException, hang_protection
 from hpfwk import AbstractError, Plugin
-from python_compat import identity, ifilter, imap, irange, ismap, lfilter, lmap, rsplit
+from python_compat import identity, imap, irange, ismap, lfilter, lmap, rsplit
 
 # Class to fill config containers with settings
 class ConfigFiller(Plugin):
@@ -46,7 +46,7 @@ class FileConfigFiller(ConfigFiller):
 		searchPaths = []
 		for configFile in self._configFiles:
 			configContent = {}
-			searchPaths.extend(self._fillContentFromFile(configFile, [os.getcwd()], configContent))
+			searchPaths.extend(self._fillContentWithIncludes(configFile, [os.getcwd()], configContent))
 			# Store config settings
 			for section in configContent:
 				# Allow very basic substitutions with %(option)s syntax
@@ -63,87 +63,97 @@ class FileConfigFiller(ConfigFiller):
 		if self._addSearchPath:
 			self._addEntry(container, 'global', 'plugin paths+', searchString, str.join(',', self._configFiles))
 
-	def _fillContentFromSingleFile(self, configFile, configFileData, searchPaths, configContent):
-		try:
-			(self._currentSection, self._currentOption, self._currentValue, self._currentLines) = (None, None, None, None)
-			exceptionIntro = 'Unable to parse config file %s' % configFile
-			def storeOption(exceptionIntro):
-				if not self._currentSection:
-					raise ConfigError(exceptionIntro + '\nFound config option outside of config section!')
-				assert(self._currentOption and (self._currentValue is not None) and self._currentLines)
-				sectionContent = configContent.setdefault(self._currentSection, [])
-				sectionContent.append((self._currentOption, self._currentValue,
-					configFile + ':' + str.join(',', imap(str, self._currentLines))))
-				(self._currentOption, self._currentValue, self._currentLines) = (None, None, None)
-
-			# Not using ConfigParser anymore! Ability to read duplicate options is needed
-			def parseLine(idx, line):
-				exceptionIntroLineInfo = exceptionIntro + ':%d\n\t%r' % (idx, line)
-				try:
-					line = rsplit(line, ';', 1)[0].rstrip()
-				except Exception:
-					raise ConfigError(exceptionIntroLineInfo + '\nUnable to strip comments!')
-				exceptionIntroLineInfo = exceptionIntro + ':%d\n\t%r' % (idx, line) # removed comment
-				if not line.strip() or line.lstrip().startswith('#'): # skip empty lines or comment lines
-					return
-				elif line[0].isspace():
-					try:
-						self._currentValue += '\n' + line.strip()
-						self._currentLines += [idx]
-					except Exception:
-						raise ConfigError(exceptionIntroLineInfo + '\nInvalid indentation!')
-				elif line.startswith('['):
-					if self._currentOption:
-						storeOption(exceptionIntroLineInfo)
-					try:
-						self._currentSection = line[1:line.index(']')].strip()
-						parseLine(idx, line[line.index(']') + 1:].strip())
-					except Exception:
-						raise ConfigError(exceptionIntroLineInfo + '\nUnable to parse config section!')
-				elif '=' in line:
-					if self._currentOption:
-						storeOption(exceptionIntroLineInfo)
-					try:
-						(self._currentOption, self._currentValue) = lmap(str.strip, line.split('=', 1))
-						self._currentLines = [idx]
-					except Exception:
-						raise ConfigError(exceptionIntroLineInfo + '\nUnable to parse config option!')
-				else:
-					raise ConfigError(exceptionIntroLineInfo + '\nPlease use "key = value" syntax or indent values!')
-			for idx, line in enumerate(configFileData):
-				parseLine(idx, line)
-			if self._currentOption:
-				storeOption(exceptionIntro)
-		except Exception:
-			raise ConfigError('Error while reading configuration file "%s"!' % configFile)
-
-	def _fillContentFromFile(self, configFile, searchPaths, configContent):
+	def _fillContentWithIncludes(self, configFile, searchPaths, configContent):
 		log = logging.getLogger(('config.%s' % utils.getRootName(configFile)).rstrip('.'))
 		log.log(logging.INFO1, 'Reading config file %s', configFile)
 		configFile = utils.resolvePath(configFile, searchPaths, ErrorClass = ConfigError)
-		configFileData = open(configFile, 'r').readlines()
+		configFileLines = open(configFile, 'r').readlines()
 
 		# Single pass, non-recursive list retrieval
 		tmpConfigContent = {}
-		self._fillContentFromSingleFile(configFile, configFileData, searchPaths, tmpConfigContent)
+		self._fillContentSingleFile(configFile, configFileLines, searchPaths, tmpConfigContent)
 		def getFlatList(section, option):
-			for (opt, value, s) in ifilter(lambda opt_v_s: opt_v_s[0] == option, tmpConfigContent.get(section, [])):
-				for entry in parseList(value, None):
-					yield entry
+			for (opt, value, src) in tmpConfigContent.get(section, []):
+				try:
+					if opt == option:
+						for entry in parseList(value, None):
+							yield entry
+				except:
+					raise ConfigError('Unable to parse [%s] %s from %s' % (section, option, src))
 
 		newSearchPaths = [os.path.dirname(configFile)]
 		# Add entries from include statement recursively
 		for includeFile in getFlatList('global', 'include'):
-			self._fillContentFromFile(includeFile, searchPaths + newSearchPaths, configContent)
+			self._fillContentWithIncludes(includeFile, searchPaths + newSearchPaths, configContent)
 		# Process all other entries in current file
-		self._fillContentFromSingleFile(configFile, configFileData, searchPaths, configContent)
+		self._fillContentSingleFile(configFile, configFileLines, searchPaths, configContent)
 		# Override entries in current config file
 		for overrideFile in getFlatList('global', 'include override'):
-			self._fillContentFromFile(overrideFile, searchPaths + newSearchPaths, configContent)
+			self._fillContentWithIncludes(overrideFile, searchPaths + newSearchPaths, configContent)
 		# Filter special global options
 		if configContent.get('global', []):
 			configContent['global'] = lfilter(lambda opt_v_s: opt_v_s[0] not in ['include', 'include override'], configContent['global'])
 		return searchPaths + newSearchPaths
+
+	def _fillContentSingleFile(self, configFile, configFileLines, searchPaths, configContent):
+		try:
+			(self._currentSection, self._currentOption, self._currentValue, self._currentIndices) = (None, None, None, None)
+			exceptionIntro = 'Unable to parse config file %s' % configFile
+			for idx, line in enumerate(configFileLines):
+				self._parseLine(exceptionIntro, configContent, configFile, idx, line)
+			if self._currentOption:
+				self._storeOption(exceptionIntro, configContent, configFile)
+		except Exception:
+			raise ConfigError('Error while reading configuration file "%s"!' % configFile)
+
+	# Not using ConfigParser anymore! Ability to read duplicate options is needed
+	def _parseLine(self, exceptionIntro, configContent, configFile, idx, line):
+		exceptionIntroLineInfo = exceptionIntro + ':%d\n\t%r' % (idx, line)
+		try:
+			line = rsplit(line, ';', 1)[0].rstrip()
+		except Exception:
+			raise ConfigError(exceptionIntroLineInfo + '\nUnable to strip comments!')
+		exceptionIntroLineInfo = exceptionIntro + ':%d\n\t%r' % (idx, line) # removed comment
+		if line.lstrip().startswith('#') or not line.strip(): # skip empty lines or comment lines
+			return
+		elif line[0].isspace():
+			try:
+				self._currentValue += '\n' + line.strip()
+				self._currentIndices += [idx]
+			except Exception:
+				raise ConfigError(exceptionIntroLineInfo + '\nInvalid indentation!')
+		elif line.startswith('['):
+			if self._currentOption:
+				self._storeOption(exceptionIntroLineInfo, configContent, configFile)
+			try:
+				self._currentSection = line[1:line.index(']')].strip()
+				self._parseLine(exceptionIntro, configContent, configFile,
+					idx, line[line.index(']') + 1:].strip())
+			except Exception:
+				raise ConfigError(exceptionIntroLineInfo + '\nUnable to parse config section!')
+		elif '=' in line:
+			if self._currentOption:
+				self._storeOption(exceptionIntroLineInfo, configContent, configFile)
+			try:
+				(self._currentOption, self._currentValue) = lmap(str.strip, line.split('=', 1))
+				self._currentIndices = [idx]
+			except Exception:
+				raise ConfigError(exceptionIntroLineInfo + '\nUnable to parse config option!')
+		else:
+			raise ConfigError(exceptionIntroLineInfo + '\nPlease use "key = value" syntax or indent values!')
+
+	def _storeOption(self, exceptionIntro, configContent, configFile):
+		def assert_set(cond, msg):
+			if not cond:
+				raise ConfigError(exceptionIntro + '\n' + msg)
+		assert_set(self._currentSection, 'Found config option outside of config section!')
+		assert_set(self._currentOption, 'Config option is not set!')
+		assert_set(self._currentValue is not None, 'Config value is not set!')
+		assert_set(self._currentIndices, 'Config source not set!')
+		sectionContent = configContent.setdefault(self._currentSection, [])
+		sectionContent.append((self._currentOption, self._currentValue,
+			configFile + ':' + str.join(',', imap(str, self._currentIndices))))
+		(self._currentOption, self._currentValue, self._currentIndices) = (None, None, None)
 
 
 # Config filler which collects data from default config files
