@@ -23,21 +23,29 @@ def lchain(iterables):
 	return list(ichain(iterables))
 
 def tchain(iterables, timeout = None): # Combines multiple, threaded generators into single generator
+	import time
 	from grid_control.utils.thread_tools import start_thread, GCQueue
 	threads = []
-	result = GCQueue(list)
+	result = GCQueue()
 	for idx, it in enumerate(iterables):
-		def generator_thread():
+		def generator_thread(iterator):
 			try:
-				for item in it:
-					result.put([item])
+				for item in iterator:
+					result.put(item)
 			finally:
-				result.put([GCQueue]) # Use GCQueue as end-of-generator marker
-		threads.append(start_thread('generator thread %d' % idx, generator_thread))
+				result.put(GCQueue) # Use GCQueue as end-of-generator marker
+		threads.append(start_thread('generator thread %d' % idx, generator_thread, it))
 
+	if timeout is not None:
+		t_end = time.time() + timeout
 	while len(threads):
-		for tmp in result.get(timeout):
-			if tmp == GCQueue:
-				threads.pop() # which thread is irrelevant - only used as counter
-			else:
-				yield tmp
+		try:
+			if timeout is not None:
+				timeout = max(0, t_end - time.time())
+			tmp = result.get(timeout)
+		except IndexError:
+			break
+		if tmp == GCQueue:
+			threads.pop() # which thread is irrelevant - only used as counter
+		else:
+			yield tmp

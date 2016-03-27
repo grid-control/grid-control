@@ -77,30 +77,33 @@ class GCLock(object):
 
 # thread-safe communication channel with put / get
 class GCQueue(object):
-	def __init__(self, BufferObject):
+	def __init__(self):
 		self._lock = GCLock()
 		self._notify = GCEvent()
 		self._finished = GCEvent()
-		self._buffer_type = BufferObject
-		self._buffer = self._buffer_type()
+		self._queue = []
 
 	def __repr__(self):
-		return '%s(%r)' % (self.__class__.__name__, self._buffer)
+		return '%s(%r)' % (self.__class__.__name__, self._queue)
 
 	def finish(self):
 		self._finished.set()
 		self._notify.set()
 
-	def wait(self, timeout):
+	def wait_get(self, timeout):
 		return self._notify.wait(timeout)
 
-	def get(self, timeout):
+	def get(self, timeout, default = IndexError): # IndexError is a magic value to raise an exception
 		self._notify.wait(timeout)
 		try:
 			self._lock.acquire()
-			result = self._buffer
-			self._buffer = self._buffer_type()
-			if not self._finished.is_set():
+			if not self._queue:
+				if default == IndexError:
+					raise IndexError('Queue is empty!')
+				result = default
+			else:
+				result = self._queue.pop(0)
+			if (not self._finished.is_set()) and (not self._queue):
 				self._notify.clear()
 		finally:
 			self._lock.release()
@@ -109,7 +112,7 @@ class GCQueue(object):
 	def put(self, value):
 		try:
 			self._lock.acquire()
-			self._buffer += value
+			self._queue.append(value)
 			self._notify.set()
 		finally:
 			self._lock.release()

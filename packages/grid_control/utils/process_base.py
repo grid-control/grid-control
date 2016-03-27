@@ -63,8 +63,11 @@ class ProcessReadStream(ProcessStream):
 		ProcessStream.__init__(self, buffer, log)
 		(self._event_shutdown, self._event_finished, self._iter_buffer) = (event_shutdown, event_finished, '')
 
+	def wait(self, timeout):
+		return self._buffer.wait_get(timeout)
+
 	def read(self, timeout):
-		result = self._buffer.get(timeout)
+		result = self._buffer.get(timeout, default = '')
 		if self._log is not None:
 			self._log += result
 		return result
@@ -74,7 +77,7 @@ class ProcessReadStream(ProcessStream):
 		return ProcessStream.read_log(self) or result
 
 	# wait until stream fulfills condition
-	def wait(self, timeout, cond):
+	def read_cond(self, timeout, cond):
 		result = ''
 		status = None
 		timeout_left = timeout
@@ -100,7 +103,7 @@ class ProcessReadStream(ProcessStream):
 				yield self._iter_buffer[:posEOL + 1]
 				self._iter_buffer = self._iter_buffer[posEOL + 1:]
 			# block until new data in buffer / timeout or process is finished
-			tmp = self._buffer.get(timeout)
+			tmp = self._buffer.get(timeout, default = '')
 			if tmp: # new data
 				self._iter_buffer += tmp
 			elif self._event_shutdown.is_set() and not waitedForShutdown: # shutdown in progress
@@ -135,9 +138,9 @@ class Process(object):
 	def __init__(self, cmd, *args, **kwargs):
 		self._event_shutdown = GCEvent()
 		self._event_finished = GCEvent()
-		self._buffer_stdin = GCQueue(str)
-		self._buffer_stdout = GCQueue(str)
-		self._buffer_stderr = GCQueue(str)
+		self._buffer_stdin = GCQueue()
+		self._buffer_stdout = GCQueue()
+		self._buffer_stderr = GCQueue()
 		# Stream setup
 		do_log = kwargs.get('logging', True) or None
 		self.stdout = ProcessReadStream(self._buffer_stdout, self._event_shutdown, self._event_finished, log = do_log)
@@ -199,9 +202,13 @@ class Process(object):
 		return status
 
 	def get_output(self, timeout, raise_errors = False):
-		t_end = time.time() + timeout
-		result = self.stdout.read(timeout)
-		status = self.status(timeout = max(0, t_end - time.time()))
+		status = self.status(timeout)
+		result = ''
+		while True:
+			tmp = self.stdout.read(timeout = 0)
+			result += tmp
+			if not tmp:
+				break
 		if status is None:
 			self.terminate(timeout = 1)
 		if raise_errors and (status is None):
@@ -280,9 +287,9 @@ class LocalProcess(Process):
 				local_buffer = ''
 				while not self._event_shutdown.is_set():
 					if local_buffer: # if local buffer ist leftover from last write - just poll for more
-						local_buffer += self._buffer_stdin.get(timeout = 0)
+						local_buffer += self._buffer_stdin.get(timeout = 0, default = '')
 					else: # empty local buffer - wait for data to process
-						local_buffer = self._buffer_stdin.get(timeout = 1)
+						local_buffer = self._buffer_stdin.get(timeout = 1, default = '')
 					if local_buffer:
 						try:
 							(rl, write_list, xl) = select.select([], [fd_parent_stdin], [], 0.2)
