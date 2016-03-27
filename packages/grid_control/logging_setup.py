@@ -13,9 +13,10 @@
 #-#  limitations under the License.
 
 import os, sys, time, logging
-from grid_control.gc_exceptions import GCLogHandler
+from grid_control.gc_exceptions import GCError, GCLogHandler
+from grid_control.utils.file_objects import VirtualFile
 from hpfwk import ExceptionFormatter
-from python_compat import irange, set
+from python_compat import irange, set, tarfile
 
 class LogOnce(logging.Filter):
 	def __init__(self):
@@ -37,6 +38,35 @@ class LogEveryNsec(logging.Filter):
 		if accept:
 			self._memory[record.msg] = time.time()
 		return accept
+
+
+class ProcessArchiveHandler(logging.Handler):
+	def __init__(self, fn, log = None):
+		logging.Handler.__init__(self)
+		self._fn = fn
+		self._log = log or logging.getLogger('archive')
+
+	def emit(self, record):
+		if record.pathname == '<process>':
+			entry = '%s_%s.%03d' % (record.name, time.strftime('%Y-%m-%d_%H:%M:%S', time.localtime(record.created)), int(record.msecs))
+			files = record.files
+			files['info'] = 'call=%s\nexit=%s\n' % (repr(record.proc.get_call()), record.proc.status(0))
+			files['stdout'] = record.proc.stdout.read_log()
+			files['stderr'] = record.proc.stderr.read_log()
+			files['stdin'] = record.proc.stdin.read_log()
+			try:
+				tar = tarfile.TarFile.open(self._fn, 'a')
+				for key, value in record.additional.items():
+					if os.path.exists(value):
+						value = open(value, 'r').read()
+					fileObj = VirtualFile(os.path.join(entry, key), [value])
+					info, handle = fileObj.getTarInfo()
+					tar.addfile(info, handle)
+					handle.close()
+				tar.close()
+			except:
+				raise GCError('Unable to log results of external call "%s" to "%s"' % (record.proc.get_call(), self._fn))
+			self._log.warning('All logfiles were moved to %s', self._fn)
 
 
 def getFilteredLogger(name, logFilter = None):
