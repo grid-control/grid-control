@@ -22,8 +22,8 @@ from python_compat import BytesBuffer, bytes2str, ifilter, imap, json, lfilter, 
 
 class BaseJobFileTarAdaptor(object):
 	def __init__(self, path):
-		log = utils.ActivityLog('Reading job mapping file')
-		self._mutex = GCLock()
+		log = utils.ActivityLog('Reading dataset partition file')
+		self._lock = GCLock()
 		self._fmt = utils.DictFormat()
 		self._tar = tarfile.open(path, 'r:')
 		(self._cacheKey, self._cacheTar) = (None, None)
@@ -35,6 +35,15 @@ class BaseJobFileTarAdaptor(object):
 		for (k, v) in ifilter(lambda k_v: k_v[0].startswith('['), metadata.items()):
 			self.metadata.setdefault('None %s' % k.split(']')[0].lstrip('['), {})[k.split(']')[1].strip()] = v
 		del log
+
+	def __getitem__(self, key):
+		if key >= self.maxJobs:
+			raise IndexError('Invalid dataset partition %s' % repr(key))
+		try:
+			self._lock.acquire()
+			return self._getPartition(key)
+		finally:
+			self._lock.release()
 
 
 class DataSplitterIOAuto(DataSplitterIO):
@@ -122,8 +131,7 @@ class DataSplitterIO_V1(object):
 
 	def loadState(self, path):
 		class JobFileTarAdaptor_V1(BaseJobFileTarAdaptor):
-			def __getitem__(self, key):
-				self._mutex.acquire()
+			def _getPartition(self, key):
 				if not self._cacheKey == key / 100:
 					self._cacheKey = key / 100
 					subTarFileObj = self._tar.extractfile('%03dXX.tgz' % (key / 100))
@@ -140,7 +148,6 @@ class DataSplitterIO_V1(object):
 				if DataSplitter.CommonPrefix in data:
 					fileList = imap(lambda x: '%s/%s' % (data[DataSplitter.CommonPrefix], x), fileList)
 				data[DataSplitter.FileList] = lmap(str.strip, fileList)
-				self._mutex.release()
 				return data
 
 		try:
@@ -223,10 +230,7 @@ class DataSplitterIO_V2(object):
 				BaseJobFileTarAdaptor.__init__(self, path)
 				self.keySize = keySize
 
-			def __getitem__(self, key):
-				if key >= self.maxJobs:
-					raise IndexError
-				self._mutex.acquire()
+			def _getPartition(self, key):
 				if not self._cacheKey == key / self.keySize:
 					self._cacheKey = key / self.keySize
 					subTarFileObj = self._tar.extractfile('%03dXX.tgz' % (key / self.keySize))
@@ -244,7 +248,6 @@ class DataSplitterIO_V2(object):
 				if DataSplitter.CommonPrefix in data:
 					fileList = imap(lambda x: '%s/%s' % (data[DataSplitter.CommonPrefix], x), fileList)
 				data[DataSplitter.FileList] = lmap(str.strip, fileList)
-				self._mutex.release()
 				return data
 
 		try:
