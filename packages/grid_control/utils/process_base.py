@@ -31,6 +31,9 @@ def safeClose(fd):
 def exit_without_cleanup(code):
 	getattr(os, '_exit')(code)
 
+def waitFD(read = None, write = None, timeout = 0.2):
+	return select.select(read or [], write or [], [], timeout)
+
 
 class ProcessError(Exception):
 	pass
@@ -79,20 +82,17 @@ class ProcessReadStream(ProcessStream):
 	# wait until stream fulfills condition
 	def read_cond(self, timeout, cond):
 		result = ''
-		status = None
-		timeout_left = timeout
+		if timeout is not None:
+			t_end = time.time() + timeout
 		while True:
-			t_start = time.time()
+			if timeout is not None:
+				timeout_left = max(0, t_end - time.time())
 			result += self.read(timeout = timeout_left)
-			timeout_left -= time.time() - t_start
-			if cond(result):
+			if cond(result) or self._event_finished.is_set():
 				break
-			if status is not None: # check before update to make at least one last read from stream
-				break
-			status = self.status(0)
 			if timeout_left < 0:
 				raise ProcessTimeout('Stream result did not fulfill condition after waiting for %d seconds' % timeout)
-		return result
+		yield result
 
 	def iter(self, timeout, timeout_soft = False, timeout_shutdown = 10):
 		waitedForShutdown = False
@@ -118,20 +118,19 @@ class ProcessReadStream(ProcessStream):
 
 
 class ProcessWriteStream(ProcessStream):
-	def __init__(self, buffer, close_token = None, log = None):
+	def __init__(self, buffer, log):
 		ProcessStream.__init__(self, buffer, log)
-		self._close_token = close_token
+		self.EOF = ''
+		self.EOL = ''
+		self.INTR = ''
 
 	def write(self, value, log = True):
 		if log and (self._log is not None):
 			self._log += value
 		self._buffer.put(value)
 
-	def set_eof(self, value):
-		self._close_token = value
-
 	def close(self):
-		self.write(self._close_token)
+		self.write(self.EOF)
 
 
 class Process(object):
@@ -166,8 +165,9 @@ class Process(object):
 		self.start()
 
 	def __repr__(self):
-		return '%s(cmd = %s, args = %s, status = %s, flushed stdout = %r, flushed stderr = %r)' % (
-			self.__class__.__name__, self._cmd, repr(self._args), self.status(0), self.stdout.read_log(), self.stderr.read_log())
+		return '%s(cmd = %s, args = %s, status = %s, stdin log = %r, stdout log = %r, stderr log = %r)' % (
+			self.__class__.__name__, self._cmd, repr(self._args), self.status(0),
+			self.stdin.read_log(), self.stdout.read_log(), self.stderr.read_log())
 
 	def clear_logs(self):
 		self.stdout.clear_log()
@@ -226,119 +226,115 @@ class LocalProcess(Process):
 	def __init__(self, cmd, *args, **kwargs):
 		self._status = None
 		Process.__init__(self, cmd, *args, **kwargs)
-		self.stdin.set_eof(chr(ord(termios.tcgetattr(self._fd_terminal)[6][termios.VEOF])))
 		self._signal_dict = {}
 		for attr in dir(signal):
 			if attr.startswith('SIG') and ('_' not in attr):
 				self._signal_dict[getattr(signal, attr)] = attr
 
 	def start(self):
-		# Setup of file descriptors
-		LocalProcess.fdCreationLock.acquire()
+		# Setup of file descriptors - stdin / stdout via pty, stderr via pipe
 		try:
+			LocalProcess.fdCreationLock.acquire()
+			self._pid, self._fd_terminal = pty.fork()
+			fd_parent_stdin = self._fd_terminal
+			fd_parent_stdout = self._fd_terminal
 			fd_parent_stderr, fd_child_stderr = os.pipe() # Returns (r, w) FDs
 		finally:
 			LocalProcess.fdCreationLock.release()
 
-		self._pid, self._fd_terminal = pty.fork()
-		fd_parent_stdin = self._fd_terminal
-		fd_parent_stdout = self._fd_terminal
 		if self._pid == 0: # We are in the child process - redirect streams and exec external program
 			os.environ['TERM'] = 'vt100'
-			os.dup2(fd_child_stderr, 2)
-			for fd in irange(3, FD_MAX):
-				safeClose(fd)
+			os.dup2(fd_child_stderr, pty.STDERR_FILENO) # set stderr to pipe
+			for fd in irange(0, FD_MAX):
+				if fd not in [pty.STDIN_FILENO, pty.STDOUT_FILENO, pty.STDERR_FILENO]:
+					safeClose(fd)
 			try:
 				os.execv(self._cmd, [self._cmd] + self._args)
 			except Exception:
 				invoked = 'os.execv(%s, [%s] + %s)' % (repr(self._cmd), repr(self._cmd), repr(self._args))
 				sys.stderr.write('Error while calling %s: ' % invoked + repr(sys.exc_info()[1]))
-				for fd in irange(0, 3):
+				for fd in [pty.STDIN_FILENO, pty.STDOUT_FILENO, pty.STDERR_FILENO]:
 					safeClose(fd)
 				exit_without_cleanup(os.EX_OSERR)
 			exit_without_cleanup(os.EX_OK)
 
 		else: # Still in the parent process - setup threads to communicate with external program
 			safeClose(fd_child_stderr)
-			for fd in [fd_parent_stdout, fd_parent_stderr]:
+			for fd in [fd_parent_stdout, fd_parent_stderr]: # enable non-blocking operation on stdout/stderr
 				fcntl.fcntl(fd, fcntl.F_SETFL, os.O_NONBLOCK | fcntl.fcntl(fd, fcntl.F_GETFL))
-			self._event_shutdown_stdin = GCEvent() # flag to start shutdown of input handlers
-
-			def handleOutput(fd, buffer):
-				def readToBuffer():
-					while True:
-						try:
-							tmp = bytes2str(os.read(fd, 32*1024))
-						except OSError:
-							tmp = ''
-						if not tmp:
-							break
-						buffer.put(tmp)
-				while not self._event_shutdown.is_set():
-					try:
-						select.select([fd], [], [], 0.2)
-					except Exception:
-						pass
-					readToBuffer()
-				readToBuffer() # Final readout after process finished
-				safeClose(fd)
-
-			def handleInput():
-				local_buffer = ''
-				while not self._event_shutdown.is_set():
-					if local_buffer: # if local buffer ist leftover from last write - just poll for more
-						local_buffer += self._buffer_stdin.get(timeout = 0, default = '')
-					else: # empty local buffer - wait for data to process
-						local_buffer = self._buffer_stdin.get(timeout = 1, default = '')
-					if local_buffer:
-						try:
-							(rl, write_list, xl) = select.select([], [fd_parent_stdin], [], 0.2)
-						except Exception:
-							pass
-						if write_list and not self._event_shutdown.is_set():
-							written = os.write(fd_parent_stdin, str2bytes(local_buffer))
-							local_buffer = local_buffer[written:]
-					elif self._event_shutdown_stdin.is_set():
-						break
-				safeClose(fd_parent_stdin)
-
-			def checkStatus():
-				thread_in = threading.Thread(target = handleInput)
-				thread_in.start()
-				thread_out = threading.Thread(target = handleOutput, args = (fd_parent_stdout, self._buffer_stdout))
-				thread_out.start()
-				thread_err = threading.Thread(target = handleOutput, args = (fd_parent_stderr, self._buffer_stderr))
-				thread_err.start()
-				while self._status is None:
-					try:
-						(pid, status) = os.waitpid(self._pid, 0) # blocking (with spurious wakeups!)
-					except OSError: # unable to wait for child
-						(pid, status) = (self._pid, -1)
-					if pid == self._pid:
-						self._status = status
-				self._event_shutdown.set() # start shutdown of handlers and wait for it to finish
-				self._event_shutdown_stdin.set() # start shutdown of handlers and wait for it to finish
-				self._buffer_stdin.finish() # wakeup process input handler
-				thread_in.join()
-				thread_out.join()
-				thread_err.join()
-				self._buffer_stdout.finish() # wakeup pending output buffer waits
-				self._buffer_stderr.finish()
-				self._event_finished.set()
-
-			thread = threading.Thread(target = checkStatus)
+			self._setup_terminal() # race with forked child to change terminal settings... 
+			thread = threading.Thread(target = self._interact_with_child, args = (fd_parent_stdin, fd_parent_stdout, fd_parent_stderr))
 			thread.daemon = True
 			thread.start()
-		self.setup_terminal()
 
-	def setup_terminal(self):
+	def _interact_with_child(self, fd_parent_stdin, fd_parent_stdout, fd_parent_stderr):
+		thread_in = threading.Thread(target = self._handle_input, args = (fd_parent_stdin, self._buffer_stdin, self._event_shutdown))
+		thread_in.start()
+		thread_out = threading.Thread(target = self._handle_output, args = (fd_parent_stdout, self._buffer_stdout, self._event_shutdown))
+		thread_out.start()
+		thread_err = threading.Thread(target = self._handle_output, args = (fd_parent_stderr, self._buffer_stderr, self._event_shutdown))
+		thread_err.start()
+		while self._status is None:
+			try:
+				(pid, status) = os.waitpid(self._pid, 0) # blocking (with spurious wakeups!)
+			except OSError: # unable to wait for child
+				(pid, status) = (self._pid, -1)
+			if pid == self._pid:
+				self._status = status
+		self._event_shutdown.set() # start shutdown of handlers and wait for it to finish
+		self._buffer_stdin.finish() # wakeup process input handler
+		thread_in.join()
+		thread_out.join()
+		thread_err.join()
+		for fd in [fd_parent_stdin, fd_parent_stdout, fd_parent_stderr]: # fd_parent_stdin == fd_parent_stdout for pty
+			safeClose(fd)
+		self._buffer_stdout.finish() # wakeup pending output buffer waits
+		self._buffer_stderr.finish()
+		self._event_finished.set()
+
+	def _handle_output(cls, fd, buffer, event_shutdown):
+		def readToBuffer():
+			while True:
+				try:
+					tmp = bytes2str(os.read(fd, 32*1024))
+				except OSError:
+					tmp = ''
+				if not tmp:
+					break
+				buffer.put(tmp)
+		while not event_shutdown.is_set():
+			waitFD(read = [fd])
+			readToBuffer()
+		readToBuffer() # Final readout after process finished
+	_handle_output = classmethod(_handle_output)
+
+	def _handle_input(cls, fd, buffer, event_shutdown):
+		local_buffer = ''
+		while not event_shutdown.is_set():
+			if local_buffer: # if local buffer has leftover bytes from last write - just poll for more
+				local_buffer = buffer.get(timeout = 0, default = '')
+			else: # empty local buffer - wait for data to process
+				local_buffer = buffer.get(timeout = 1, default = '')
+			if local_buffer:
+				waitFD(write = [fd])
+				if not event_shutdown.is_set():
+					try:
+						written = os.write(fd, str2bytes(local_buffer))
+					except OSError:
+						written = 0
+					local_buffer = local_buffer[written:]
+	_handle_input = classmethod(_handle_input)
+
+	def _setup_terminal(self):
 		attr = termios.tcgetattr(self._fd_terminal)
-		attr[1] = attr[1] & (~termios.ONLCR) | termios.ONLRET
-		attr[3] = attr[3] & ~termios.ECHO
+		attr[1] = attr[1] & ~termios.ONLCR # disable \n -> \r\n
+		attr[3] = attr[3] & ~termios.ECHO # disable terminal echo
+		attr[3] = attr[3] | termios.ICANON # enable canonical mode
+		attr[3] = attr[3] | termios.ISIG # enable signals
+		self.stdin.EOF = bytes2str(termios.tcgetattr(self._fd_terminal)[6][termios.VEOF])
+		self.stdin.EOL = bytes2str(termios.tcgetattr(self._fd_terminal)[6][termios.VEOL])
+		self.stdin.INTR = bytes2str(termios.tcgetattr(self._fd_terminal)[6][termios.VINTR])
 		termios.tcsetattr(self._fd_terminal, termios.TCSANOW, attr)
-
-	def write_stdin_eof(self):
-		self.write_stdin(chr(ord(termios.tcgetattr(self._fd_terminal)[6][termios.VEOF])))
 
 	def status(self, timeout, terminate = False):
 		self._event_finished.wait(timeout, 'process to finish')
