@@ -45,7 +45,7 @@ class JobManager(NamedPlugin):
 		self._job_retries = config.getInt('max retry', -1, onChange = None)
 
 		selected = JobSelector.create(config.get('selected', '', onChange = None), task = self._task)
-		self.jobDB = config.getPlugin('jobdb', 'JobDB',
+		self.jobDB = config.getPlugin('job database', 'JobDB',
 			cls = JobDB, pargs = (self.getMaxJobs(self._task), selected))
 		self._disabled_jobs_logfile = config.getWorkPath('disabled')
 		self._outputProcessor = config.getPlugin('output processor', 'SandboxProcessor',
