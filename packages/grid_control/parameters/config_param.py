@@ -81,7 +81,7 @@ class ParameterConfig:
 		elif ptype == 'lines':
 			return value.splitlines()
 		elif ptype == 'expr' or ptype == 'eval':
-			result = eval(value)
+			result = eval(value) # pylint:disable=eval-used
 			if isinstance(result, (list, type(range(1)))):
 				return list(result)
 			return [result]

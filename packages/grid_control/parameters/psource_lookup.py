@@ -77,7 +77,7 @@ def lookupConfigParser(pconfig, key, lookup):
 		elif matchstr == 'equal':
 			matchfun.append(lambda value, pat: value == pat)
 		elif matchstr == 'expr':
-			matchfun.append(lambda value, pat: eval('lambda value: %s' % pat)(value))
+			matchfun.append(lambda value, pat: eval('lambda value: %s' % pat)(value)) # pylint:disable=eval-used
 		elif matchstr == 'regex':
 			class MatchObj:
 				def __init__(self):

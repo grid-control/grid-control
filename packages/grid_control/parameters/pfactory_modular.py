@@ -43,7 +43,7 @@ class ModularParameterFactory(BasicParameterFactory):
 		for (key, cls) in ParameterSource.managerMap.items():
 			userFun[key] = createWrapper(cls)
 		try:
-			source = eval(pExpr, userFun)
+			source = eval(pExpr, userFun) # pylint:disable=eval-used
 		except Exception:
 			logging.getLogger('user').warning('Available functions: %s', userFun.keys())
 			raise

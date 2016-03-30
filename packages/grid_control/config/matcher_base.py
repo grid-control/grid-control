@@ -103,7 +103,7 @@ class ExprMatcher(Matcher):
 	alias = ['expr', 'eval']
 
 	def getExpr(selector):
-		return eval('lambda value: (%s) == True' % selector)
+		return eval('lambda value: (%s) == True' % selector) # pylint:disable=eval-used
 	getExpr = staticmethod(getExpr)
 
 	def getPositive(self, selector):

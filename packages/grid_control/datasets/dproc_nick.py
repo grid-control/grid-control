@@ -62,4 +62,4 @@ class InlineNickNameProducer(NickNameProducer):
 		self._expr = config.get('nickname expr', 'oldnick')
 
 	def getName(self, oldnick, dataset, block):
-		return eval(self._expr)
+		return eval(self._expr) # pylint:disable=eval-used
