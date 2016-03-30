@@ -67,7 +67,7 @@ def gc_cmd_line_parser(cmd_line_args):
 	logging.getLogger().setLevel(logging.DEFAULT - opts.verbosity)
 	if opts.debug: # Setup initial debug handler before it is reconfigured by logging_setup
 		handler = logging.StreamHandler(sys.stdout)
-		handler.setFormatter(ExceptionFormatter(showCodeContext = 1, showVariables = 1, showFileStack = 1))
+		handler.setFormatter(ExceptionFormatter(showCodeContext = 2, showVariables = 1, showFileStack = 1))
 		logging.getLogger('exception').addHandler(handler)
 
 	return (opts, args)
