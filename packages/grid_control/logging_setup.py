@@ -166,7 +166,6 @@ def dump_log_setup(level):
 	display_logger(0, root, '<root>')
 	for key, logger in sorted(root.manager.loggerDict.items()):
 		display_logger(key.count('.') + 1, logger, key)
-	sys.exit(0)
 
 
 # Configure formatting of handlers
