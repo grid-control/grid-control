@@ -31,6 +31,7 @@ class FileInfoProcessor(JobInfoProcessor):
 		jobInfo = JobInfoProcessor.process(self, dn)
 		if jobInfo:
 			(jobNumStored, jobExitCode, jobData) = jobInfo
+			assert(jobNumStored is not None)
 			result = {}
 			# parse old job info data format for files
 			oldFileFormat = [FileInfoProcessor.Hash, FileInfoProcessor.NameLocal, FileInfoProcessor.NameDest, FileInfoProcessor.Path]
