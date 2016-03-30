@@ -25,35 +25,49 @@ def start_thread(desc, fun, *args, **kargs):
 class TimeoutException(Exception):
 	pass
 
-# Event with interruptible, blocking wait (implemented with polling)
+# Event with blocking, interruptible wait and python >= 2.7 return value
 class GCEvent(object):
 	def __init__(self):
-		self._event = threading.Event()
+		self._cond = threading.Condition(threading.Lock())
+		self._flag = False
 
 	def is_set(self):
-		try:
-			return self._event.is_set() # Python > 2.6
-		except Exception:
-			return self._event.isSet()
+		return self._flag
 
 	def set(self):
-		return self._event.set()
+		self._cond.acquire()
+		try:
+			self._flag = True
+			self._cond.notify_all()
+		finally:
+			self._cond.release()
+		return True
 
 	def clear(self):
-		return self._event.clear()
+		self._cond.acquire()
+		try:
+			self._flag = False
+		finally:
+			self._cond.release()
+		return False
 
 	def wait(self, timeout, description = 'event'):
 		if timeout is None:
 			timeout = blocking_equivalent
+		self._cond.acquire()
 		try:
-			return self._event.wait(timeout)
+			try:
+				if not self._flag:
+					self._cond.wait(timeout)
+				return self._flag # return current flag state after wait / wakeup
+			finally:
+				self._cond.release()
 		except KeyboardInterrupt:
 			raise KeyboardInterrupt('Interrupted while waiting for %s' % description)
 
 # Lock with optional acquire timeout
 class GCLock(object):
-	def __init__(self, interval = 0.5):
-		self._interval = interval
+	def __init__(self):
 		self._lock = threading.Lock()
 
 	def acquire(self, timeout = None):
@@ -62,13 +76,18 @@ class GCLock(object):
 				return self._lock.acquire(False)
 			if timeout is None: # Blocking
 				timeout = blocking_equivalent
-			start = time.time()
-			while time.time() - start < timeout: # Polling lock until timeout
+			# using the threading.Condition algorithm for polling the lock
+			t_end = time.time() + timeout
+			dt_sleep = 0.0005
+			while True:
 				lockstate = self._lock.acquire(False)
 				if lockstate:
 					return lockstate
-				time.sleep(self._interval)
-			raise TimeoutException
+				dt_remaining = t_end - time.time()
+				if dt_remaining <= 0:
+					raise TimeoutException
+				dt_sleep = min(dt_sleep * 2, dt_remaining, 0.05)
+				time.sleep(dt_sleep)
 		except KeyboardInterrupt:
 			raise KeyboardInterrupt('Interrupted while waiting to acquire lock')
 
