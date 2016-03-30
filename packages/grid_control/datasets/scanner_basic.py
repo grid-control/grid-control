@@ -29,12 +29,12 @@ def splitParse(opt):
 # Get output directories from external config file
 class OutputDirsFromConfig(InfoScanner):
 	def __init__(self, config):
-		from grid_control.tasks import TaskModule
+		InfoScanner.__init__(self, config)
 		newVerbosity = utils.verbosity(utils.verbosity() - 3)
 		extConfigFN = config.getPath('source config')
 		extConfig = createConfig(extConfigFN).changeView(setSections = ['global'])
 		self.extWorkDir = extConfig.getWorkPath()
-		self.extTask = extConfig.getPlugin(['task', 'module'], cls = TaskModule)
+		self.extTask = extConfig.getPlugin(['task', 'module'], cls = 'TaskModule')
 		selector = config.get('source job selector', '')
 		extJobDB = JobDB(extConfig, jobSelector = lambda jobNum, jobObj: jobObj.state == Job.SUCCESS)
 		self.selected = sorted(extJobDB.getJobs(JobSelector.create(selector, task = self.extTask)))
@@ -52,6 +52,7 @@ class OutputDirsFromConfig(InfoScanner):
 
 class OutputDirsFromWork(InfoScanner):
 	def __init__(self, config):
+		InfoScanner.__init__(self, config)
 		self.extWorkDir = config.get('source directory')
 		self.extOutputDir = os.path.join(self.extWorkDir, 'output')
 
@@ -71,6 +72,7 @@ class OutputDirsFromWork(InfoScanner):
 
 class MetadataFromTask(InfoScanner):
 	def __init__(self, config):
+		InfoScanner.__init__(self, config)
 		ignoreDef = lmap(lambda x: 'SEED_%d' % x, irange(10)) + ['FILE_NAMES',
 			'SB_INPUT_FILES', 'SE_INPUT_FILES', 'SE_INPUT_PATH', 'SE_INPUT_PATTERN',
 			'SB_OUTPUT_FILES', 'SE_OUTPUT_FILES', 'SE_OUTPUT_PATH', 'SE_OUTPUT_PATTERN',
@@ -94,6 +96,7 @@ class MetadataFromTask(InfoScanner):
 
 class FilesFromLS(InfoScanner):
 	def __init__(self, config):
+		InfoScanner.__init__(self, config)
 		self.path = config.get('source directory', '.')
 		self.path = utils.QM('://' in self.path, self.path, utils.cleanPath(self.path))
 
@@ -145,6 +148,7 @@ class FilesFromJobInfo(InfoScanner):
 
 class FilesFromDataProvider(InfoScanner):
 	def __init__(self, config):
+		InfoScanner.__init__(self, config)
 		dsPath = config.get('source dataset path')
 		self.source = DataProvider.createInstance('ListProvider', config, dsPath)
 
@@ -158,6 +162,7 @@ class FilesFromDataProvider(InfoScanner):
 
 class MatchOnFilename(InfoScanner):
 	def __init__(self, config):
+		InfoScanner.__init__(self, config)
 		self.match = config.getList('filename filter', ['*.root'])
 
 	def getEntries(self, path, metadata, events, seList, objStore):
@@ -167,6 +172,7 @@ class MatchOnFilename(InfoScanner):
 
 class AddFilePrefix(InfoScanner):
 	def __init__(self, config):
+		InfoScanner.__init__(self, config)
 		self.prefix = config.get('filename prefix', '')
 
 	def getEntries(self, path, metadata, events, seList, objStore):
@@ -175,6 +181,7 @@ class AddFilePrefix(InfoScanner):
 
 class MatchDelimeter(InfoScanner):
 	def __init__(self, config):
+		InfoScanner.__init__(self, config)
 		self.matchDelim = config.get('delimeter match', '').split(':')
 		self.delimDS = config.get('delimeter dataset key', '')
 		self.delimB = config.get('delimeter block key', '')
@@ -197,6 +204,7 @@ class MatchDelimeter(InfoScanner):
 
 class ParentLookup(InfoScanner):
 	def __init__(self, config):
+		InfoScanner.__init__(self, config)
 		self.parentKeys = config.getList('parent keys', [])
 		self.looseMatch = config.getInt('parent match level', 1)
 		self.source = config.get('parent source', '')
@@ -229,6 +237,7 @@ class ParentLookup(InfoScanner):
 
 class DetermineEvents(InfoScanner):
 	def __init__(self, config):
+		InfoScanner.__init__(self, config)
 		self._eventsCmd = config.get('events command', '')
 		self._eventsKey = config.get('events key', '')
 		self._eventsKeyScale = config.getInt('events key scale', 1)

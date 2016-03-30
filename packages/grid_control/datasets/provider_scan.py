@@ -18,7 +18,7 @@ from grid_control.config import createConfig
 from grid_control.datasets.provider_base import DataProvider
 from grid_control.datasets.scanner_base import InfoScanner
 from grid_control.utils.gc_itertools import lchain
-from python_compat import identity, ifilter, imap, lmap, md5_hex, set
+from python_compat import identity, ifilter, imap, lmap, lsmap, md5_hex, set
 
 class ScanProviderBase(DataProvider):
 	def __init__(self, config, datasetExpr, datasetNick = None, datasetID = 0):
@@ -120,7 +120,7 @@ class ScanProviderBase(DataProvider):
 					DataProvider.BlockName: hashNameDictB[hashB][1],
 					DataProvider.Locations: blockSEList,
 					DataProvider.Metadata: metaKeys,
-					DataProvider.FileList: lmap(fnProps, protoBlocks[hashDS][hashB])
+					DataProvider.FileList: lsmap(fnProps, protoBlocks[hashDS][hashB])
 				}
 
 
