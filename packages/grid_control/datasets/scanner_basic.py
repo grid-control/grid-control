@@ -150,10 +150,10 @@ class FilesFromDataProvider(InfoScanner):
 	def __init__(self, config):
 		InfoScanner.__init__(self, config)
 		dsPath = config.get('source dataset path')
-		self.source = DataProvider.createInstance('ListProvider', config, dsPath)
+		self._source = DataProvider.createInstance('ListProvider', config, dsPath)
 
 	def getEntries(self, path, metadata, events, seList, objStore):
-		for block in self.source.getBlocks():
+		for block in self._source.getBlocks():
 			for fi in block[DataProvider.FileList]:
 				metadata.update({'SRC_DATASET': block[DataProvider.Dataset], 'SRC_BLOCK': block[DataProvider.BlockName]})
 				metadata.update(dict(izip(block.get(DataProvider.Metadata, []), fi.get(DataProvider.Metadata, []))))
@@ -163,74 +163,74 @@ class FilesFromDataProvider(InfoScanner):
 class MatchOnFilename(InfoScanner):
 	def __init__(self, config):
 		InfoScanner.__init__(self, config)
-		self.match = config.getList('filename filter', ['*.root'])
+		self._match = config.getList('filename filter', ['*.root'])
 
 	def getEntries(self, path, metadata, events, seList, objStore):
-		if utils.matchFileName(path, self.match):
+		if utils.matchFileName(path, self._match):
 			yield (path, metadata, events, seList, objStore)
 
 
 class AddFilePrefix(InfoScanner):
 	def __init__(self, config):
 		InfoScanner.__init__(self, config)
-		self.prefix = config.get('filename prefix', '')
+		self._prefix = config.get('filename prefix', '')
 
 	def getEntries(self, path, metadata, events, seList, objStore):
-		yield (self.prefix + path, metadata, events, seList, objStore)
+		yield (self._prefix + path, metadata, events, seList, objStore)
 
 
 class MatchDelimeter(InfoScanner):
 	def __init__(self, config):
 		InfoScanner.__init__(self, config)
-		self.matchDelim = config.get('delimeter match', '').split(':')
-		self.delimDS = config.get('delimeter dataset key', '')
-		self.delimB = config.get('delimeter block key', '')
+		self._matchDelim = config.get('delimeter match', '').split(':')
+		self._delimDS = config.get('delimeter dataset key', '')
+		self._delimB = config.get('delimeter block key', '')
 
 	def getGuards(self):
-		return (utils.QM(self.delimDS, ['DELIMETER_DS'], []), utils.QM(self.delimB, ['DELIMETER_B'], []))
+		return (utils.QM(self._delimDS, ['DELIMETER_DS'], []), utils.QM(self._delimB, ['DELIMETER_B'], []))
 
 	def getEntries(self, path, metadata, events, seList, objStore):
-		if len(self.matchDelim) == 2:
-			if os.path.basename(path).count(self.matchDelim[0]) != self.matchDelim[1]:
+		if len(self._matchDelim) == 2:
+			if os.path.basename(path).count(self._matchDelim[0]) != int(self._matchDelim[1]):
 				raise StopIteration
 		def getVar(d, s, e):
 			return str.join(d, os.path.basename(path).split(d)[s:e])
-		if self.delimDS:
-			metadata['DELIMETER_DS'] = getVar(*splitParse(self.delimDS))
-		if self.delimB:
-			metadata['DELIMETER_B'] = getVar(*splitParse(self.delimB))
+		if self._delimDS:
+			metadata['DELIMETER_DS'] = getVar(*splitParse(self._delimDS))
+		if self._delimB:
+			metadata['DELIMETER_B'] = getVar(*splitParse(self._delimB))
 		yield (path, metadata, events, seList, objStore)
 
 
 class ParentLookup(InfoScanner):
 	def __init__(self, config):
 		InfoScanner.__init__(self, config)
-		self.parentKeys = config.getList('parent keys', [])
-		self.looseMatch = config.getInt('parent match level', 1)
-		self.source = config.get('parent source', '')
-		self.merge = config.getBool('merge parents', False)
-		self.lfnMap = {}
+		self._parentKeys = config.getList('parent keys', [])
+		self._looseMatch = config.getInt('parent match level', 1)
+		self._source = config.get('parent source', '')
+		self._merge = config.getBool('merge parents', False)
+		self._lfnMap = {}
 
 	def getGuards(self):
-		return ([], utils.QM(self.merge, [], ['PARENT_PATH']))
+		return ([], utils.QM(self._merge, [], ['PARENT_PATH']))
 
 	def lfnTrans(self, lfn):
-		if lfn and self.looseMatch: # return looseMatch path elements in reverse order
+		if lfn and self._looseMatch: # return looseMatch path elements in reverse order
 			def trunkPath(x, y):
 				return (lambda s: (s[0], os.path.join(x[1], s[1])))(os.path.split(x[0]))
-			return reduce(trunkPath, irange(self.looseMatch), (lfn, ''))[1]
+			return reduce(trunkPath, irange(self._looseMatch), (lfn, ''))[1]
 		return lfn
 
 	def getEntries(self, path, metadata, events, seList, objStore):
 		datacachePath = os.path.join(objStore.get('GC_WORKDIR', ''), 'datacache.dat')
-		source = utils.QM((self.source == '') and os.path.exists(datacachePath), datacachePath, self.source)
-		if source and (source not in self.lfnMap):
+		source = utils.QM((self._source == '') and os.path.exists(datacachePath), datacachePath, self._source)
+		if source and (source not in self._lfnMap):
 			pSource = DataProvider.createInstance('ListProvider', createConfig(), source)
 			for (n, fl) in imap(lambda b: (b[DataProvider.Dataset], b[DataProvider.FileList]), pSource.getBlocks()):
-				self.lfnMap.setdefault(source, {}).update(dict(imap(lambda fi: (self.lfnTrans(fi[DataProvider.URL]), n), fl)))
+				self._lfnMap.setdefault(source, {}).update(dict(imap(lambda fi: (self.lfnTrans(fi[DataProvider.URL]), n), fl)))
 		pList = set()
-		for key in ifilter(lambda k: k in metadata, self.parentKeys):
-			pList.update(imap(lambda pPath: self.lfnMap.get(source, {}).get(self.lfnTrans(pPath)), metadata[key]))
+		for key in ifilter(lambda k: k in metadata, self._parentKeys):
+			pList.update(imap(lambda pPath: self._lfnMap.get(source, {}).get(self.lfnTrans(pPath)), metadata[key]))
 		metadata['PARENT_PATH'] = lfilter(identity, pList)
 		yield (path, metadata, events, seList, objStore)
 
