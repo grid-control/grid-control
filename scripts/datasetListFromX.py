@@ -15,41 +15,40 @@
 
 import sys
 from gcSupport import Plugin, getConfig
-from python_compat import ismap
 
-def addOptions(parser):
-	parser.add_option('-d', '--dataset', dest='dataset name pattern', default='', help='Name pattern of dataset')
-	parser.add_option('-b', '--block',   dest='block name pattern',   default='', help='Name pattern of block')
-	parser.add_option('-o', '--output',  dest='output',               default='', help='Output filename')
-	parser.add_option('-e', '--events',  dest='events default',       default='-1',
-		help='Number of events in files')
-	parser.add_option('-E', '--events-cmd',        dest='events command',        default='',
-		help='Application used to determine number of events in files')
-	parser.add_option('-y', '--events-empty',      dest='events ignore empty',   default=True, action='store_false',
-		help='Keep empty files with zero events')
-	parser.add_option('-k', '--keep-metadata',     dest='strip',                 default=True, action='store_false',
-		help='Keep metadata in output')
-	parser.add_option('-s', '--selection',         dest='filename filter',       default='*.root',
-		help='File to include in dataset (Default: *.root)')
-	parser.add_option('-S', '--delimeter-select',  dest='delimeter match',       default='',
-		help='<delimeter>:<number of required delimeters>')
-	parser.add_option('-D', '--delimeter-dataset', dest='delimeter dataset key', default='',
-		help='Multi dataset mode - files are sorted into different datasets according to <delimeter>:<start>:<end>')
-	parser.add_option('-B', '--delimeter-block',   dest='delimeter block key',   default='',
-		help='Multi block mode - files are sorted into different blocks according to <delimeter>:<start>:<end>')
-	parser.add_option('-H', '--hash-dataset',      dest='dataset hash keys',     default='',
-		help='Multi dataset mode - files are sorted into different datasets according to hash of variables')
-	parser.add_option('',   '--hash-block',        dest='block hash keys',       default='',
-		help='Multi block mode - files are sorted into different blocks according to hash of variables')
+def addDatasetListOptions(parser):
+	parser.addText(None, 'dataset',           short = '-d', dest = 'dataset name pattern',  default = '',
+		help = 'Name pattern of dataset')
+	parser.addText(None, 'block',             short = '-b', dest = 'block name pattern',    default = '',
+		help = 'Name pattern of block')
+	parser.addText(None, 'output',            short = '-o', dest = 'output',                default = '',
+		help = 'Output filename')
+	parser.addText(None, 'events',            short = '-e', dest = 'events default',        default = '-1',
+		help = 'Number of events in files')
+	parser.addText(None, 'events-cmd',        short = '-E', dest = 'events command',        default = '',
+		help = 'Application used to determine number of events in files')
+	parser.addFlag(None, 'events-empty',      short = '-y', dest = 'events ignore empty',   default = True,
+		help = 'Keep empty files with zero events')
+	parser.addFlag(None, 'keep-metadata',     short = '-k', dest = 'strip',                 default = True,
+		help = 'Keep metadata in output')
+	parser.addText(None, 'selection',         short = '-s', dest = 'filename filter',       default = '*.root',
+		help = 'File to include in dataset (Default: *.root)')
+	parser.addText(None, 'delimeter-select',  short = '-S', dest = 'delimeter match',       default = '',
+		help = '<delimeter>:<number of required delimeters>')
+	parser.addText(None, 'delimeter-dataset', short = '-D', dest = 'delimeter dataset key', default = '',
+		help = 'Multi dataset mode - files are sorted into different datasets according to <delimeter>:<start>:<end>')
+	parser.addText(None, 'delimeter-block',   short = '-B', dest = 'delimeter block key',   default = '',
+		help = 'Multi block mode - files are sorted into different blocks according to <delimeter>:<start>:<end>')
+	parser.addText(None, 'hash-dataset',      short = '-H', dest = 'dataset hash keys',     default = '',
+		help = 'Multi dataset mode - files are sorted into different datasets according to hash of variables')
+	parser.addText(None, 'hash-block',        short = '',   dest = 'block hash keys',       default = '',
+		help = 'Multi block mode - files are sorted into different blocks according to hash of variables')
 
 
-def discoverDataset(opts, parser, providerName, datasetExpr):
-	def main():
-		configEntries = ismap(lambda k, v: (k, str(v)), parser.values.__dict__.items())
-		config = getConfig(configDict = {'dataset': dict(configEntries)})
-		DataProvider = Plugin.getClass('DataProvider')
-		provider = DataProvider.createInstance(providerName, config, datasetExpr, None)
-		if opts.output:
-			return DataProvider.saveToFile(opts.output, provider.getBlocks(), opts.strip)
-		return DataProvider.saveToStream(sys.stdout, provider.getBlocks(), opts.strip)
-	sys.exit(main())
+def discoverDataset(providerName, config_dict):
+	config = getConfig(configDict = {'dataset': config_dict})
+	DataProvider = Plugin.getClass('DataProvider')
+	provider = DataProvider.createInstance(providerName, config, config_dict['dataset'], None)
+	if config_dict['output']:
+		return DataProvider.saveToFile(opts.output, provider.getBlocks(), config_dict['strip'])
+	return DataProvider.saveToStream(sys.stdout, provider.getBlocks(), config_dict['strip'])

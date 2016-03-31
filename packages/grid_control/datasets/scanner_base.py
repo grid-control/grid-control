@@ -24,13 +24,13 @@ class InfoScanner(ConfigurablePlugin):
 		return ([], [])
 
 	def getEntriesVerbose(self, depth, path, metadata, events, seList, objStore):
-		self._log.log(logging.INFO, '    ' * depth + 'Collecting information with %s...', self.__class__.__name__)
+		self._log.log(logging.DEBUG, '    ' * depth + 'Collecting information with %s...', self.__class__.__name__)
 		for level, content, name in [
-				(logging.INFO, path, 'Path'),
-				(logging.INFO1, metadata, 'Metadata'),
-				(logging.INFO, events, 'Events'),
-				(logging.INFO1, seList, 'SE list'),
-				(logging.INFO1, objStore, 'Objects')]:
+				(logging.DEBUG, path, 'Path'),
+				(logging.DEBUG1, metadata, 'Metadata'),
+				(logging.DEBUG, events, 'Events'),
+				(logging.DEBUG1, seList, 'SE list'),
+				(logging.DEBUG1, objStore, 'Objects')]:
 			self._log.log(level, '    ' * depth + '  %s: %s', name, content)
 		return self.getEntries(path, metadata, events, seList, objStore)
 

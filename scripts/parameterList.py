@@ -14,15 +14,14 @@
 #-#  limitations under the License.
 
 import os, sys, random
-from gcSupport import Options, getConfig, utils
+from gcSupport import Options, getConfig, scriptOptions, utils
 from grid_control.datasets import DataSplitter
 from grid_control.parameters import ParameterInfo, ParameterMetadata, ParameterSource
 from python_compat import ifilter, imap, irange, izip, lfilter, lmap, md5_hex, set, sorted
 
 random.seed(0)
 
-usage = '%s [OPTIONS] <parameter definition>' % sys.argv[0]
-parser = Options(usage)
+parser = Options(usage = '%s [OPTIONS] <parameter definition>')
 parser.addAccu(None, 'collapse',           default = 0,     short = '-c', help = 'Do not collapse dataset infos in display')
 parser.addFlag(None, 'active',             default = False, short = '-a', help = 'Show activity state')
 parser.addFlag(None, 'disabled',           default = False, short = '-d', help = 'Show disabled parameter sets')
@@ -32,16 +31,17 @@ parser.addFlag(None, 'list-parameters',    default = False, short = '-l', help =
 parser.addFlag(None, 'show-sources',       default = False, short = '-L', help = 'Show parameter sources')
 parser.addFlag(None, 'static',             default = False, short = '-s', help = 'Assume a static parameterset')
 parser.addFlag(None, 'untracked',          default = False, short = '-t', help = 'Display untracked variables')
+parser.addFlag(None, 'persistent',         default = False, short = '-T', help = 'Work with persistent paramters')
 parser.addList(None, 'parameter',          default = [],    short = '-p', help = 'Specify parameters')
 parser.addText(None, 'dataset',            default = '',    short = '-D', help = 'Add dataset splitting (use "True" to simulate a dataset)')
 parser.addText(None, 'manager',            default = None,  short = '-M', help = 'Select parameter source manager')
 parser.addText(None, 'output',             default = '',    short = '-o', help = 'Show only specified parameters')
 parser.addText(None, 'save',               default = '',    short = '-S', help = 'Saves information to specified file')
 parser.addText(None, 'visible',            default = '',    short = '-V', help = 'Set visible variables')
-(opts, args) = parser.parse()
+options = scriptOptions(parser)
 
-if len(args) != 1:
-	utils.exitWithUsage(usage)
+if len(options.args) != 1:
+	utils.exitWithUsage(parser.usage())
 
 # Create dataset parameter source
 class DummySplitter:
@@ -114,8 +114,9 @@ def setup_config(opts, args):
 		configParameters.set('parameters', str.join(' ', args).replace('\\n', '\n'))
 	if opts.dataset:
 		configParameters.set('default lookup', 'DATASETNICK')
-#	configParameters.set('parameter adapter', 'BasicParameterAdapter', '=') # Don't track parameter changes
-	if opts.verbosity > 2:
+	if not opts.persistent:
+		configParameters.set('parameter adapter', 'BasicParameterAdapter', '=')
+	if utils.verbosity() > 2:
 		config.changeView(setSections = None).write(sys.stdout)
 	return config
 
@@ -153,7 +154,7 @@ def get_parameters(opts, psource):
 				if str(info['GC_PARAM']) != str(jobNum):
 					needGCParam = True
 				result.append(info)
-		if opts.displaymode == 'parseable':
+		if opts.parseable:
 			utils.vprint('Count,%d,%d' % (countActive, psource.getMaxJobs()))
 		else:
 			utils.vprint('Number of parameter points: %d' % psource.getMaxJobs())
@@ -212,7 +213,7 @@ def list_parameters(opts, psource):
 	utils.vprint('')
 	utils.printTabular(head, result)
 
-def main():
+def main(opts, args):
 	psource = get_psource(opts, args)
 
 	if opts.show_sources:
@@ -227,4 +228,4 @@ def main():
 		save_parameters(psource, opts.save)
 
 if __name__ == '__main__':
-	sys.exit(main())
+	sys.exit(main(options.opts, options.args))

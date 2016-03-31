@@ -121,8 +121,7 @@ def generateDBS3BlockDumps(opts, blocks):
 
 
 def main():
-    usage = '%s [OPTIONS] <config file / work directory>' % sys.argv[0]
-    parser = optparse.OptionParser(usage=usage)
+    parser = optparse.OptionParser(usage = '%s [OPTIONS] <config file / work directory>')
     parser.add_option('-G', '--globaltag', dest='globaltag', default='crab2_tag', help='Specify global tag')
     parser.add_option('-F', '--input', dest='inputFile', default=None,
                       help='Specify dbs input file to use instead of scanning job output')

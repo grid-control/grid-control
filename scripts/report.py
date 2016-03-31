@@ -14,9 +14,9 @@
 #-#  limitations under the License.
 
 import sys
-from gcSupport import JobSelector, Options, Plugin, getConfig, utils
+from gcSupport import JobSelector, Options, Plugin, getConfig, scriptOptions, utils
 
-parser = Options()
+parser = Options(usage = '%s [OPTIONS] <config file>')
 parser.addText(None, 'report',       default = 'GUIReport', short = '-R')
 parser.addFlag(None, 'report-list',  default = False,       short = '-L',
 	help = 'List available report classes')
@@ -24,20 +24,20 @@ parser.addText(None, 'job-selector', default = None,        short = '-J')
 parser.addFlag(None, 'use-task',     default = False,       short = '-T',
 	help='Forward task information to report')
 parser.addText(None, 'string',       default = None)
-(opts, args) = parser.parse()
+options = scriptOptions(parser)
 
 Report = Plugin.getClass('Report')
 
-if opts.report_list:
+if options.opts.report_list:
 	msg = 'Available report classes:\n'
 	for entry in Report.getClassList():
 		msg += ' * %s\n' % str.join(' ', entry.values())
 	print(msg)
 
-if len(args) != 1:
-	utils.exitWithUsage('%s [options] <config file>' % sys.argv[0])
+if len(options.args) != 1:
+	utils.exitWithUsage(parser.usage())
 
-def main():
+def main(opts, args):
 	# try to open config file
 	config = getConfig(args[0], section = 'global')
 
@@ -48,12 +48,12 @@ def main():
 
 	# Initialise job database
 	jobDB = config.getPlugin('jobdb', 'JobDB', cls = 'JobDB')
-	log = utils.ActivityLog('Filtering job entries')
+	activity = utils.ActivityLog('Filtering job entries')
 	selected = jobDB.getJobs(JobSelector.create(opts.job_selector, task = task))
-	del log
+	activity.finish()
 
 	report = Report.createInstance(opts.report, jobDB, task, selected, opts.string)
 	report.display()
 
 if __name__ == '__main__':
-	sys.exit(main())
+	sys.exit(main(options.opts, options.args))

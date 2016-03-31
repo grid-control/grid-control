@@ -13,7 +13,7 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-import os, sys, time, fcntl, logging, optparse
+import os, sys, time, fcntl, logging
 
 # add python subdirectory from where exec was started to search path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'packages')))
@@ -24,62 +24,24 @@ from grid_control.config import createConfig
 from grid_control.job_db import Job, JobClass, JobDB
 from grid_control.job_selector import ClassSelector, JobSelector
 from grid_control.output_processor import FileInfoProcessor, JobInfoProcessor
+from grid_control.utils.cmd_options import Options
 from hpfwk import Plugin
 from python_compat import ifilter, imap, tarfile
 
-class Options(object):
-	def __init__(self, usage = None):
-		self._parser = optparse.OptionParser(usage = usage)
-		self._groups = {}
-		self._groups_usage = {}
-
-	def parse(self):
-		return parseOptions(self._parser)
-
-	def _get_group(self, group):
-		if group is None:
-			return self._parser
-		return self._groups[group]
-
-	def section_usage(self, name):
-		return self._groups_usage[name]
-
-	def section(self, name, desc, usage = ''):
-		self._groups_usage[name] = usage
-		if '%s' in usage:
-			self._groups_usage[name] = usage % sys.argv[0]
-			usage = 'Usage: ' + usage % sys.argv[0]
-		self._groups[name] = optparse.OptionGroup(self._parser, desc, usage)
-		self._parser.add_option_group(self._groups[name])
-
-	def addText(self, group, option, default = None, help = '', short = ''):
-		return self._get_group(group).add_option(short, '--' + option, dest = option.replace('-', '_'),
-			default = default, help = help)
-
-	def addList(self, group, option, default = None, help = '', short = ''):
-		return self._get_group(group).add_option(short, '--' + option, dest = option.replace('-', '_'),
-			default = default or [], action = 'append', help = help)
-
-	def addAccu(self, group, option, default = 0, help = '', short = ''):
-		return self._get_group(group).add_option(short, '--' + option, dest = option.replace('-', '_'),
-			default = default, action = 'count', help = help)
-
-	def addFlag(self, group, option, default, help, short = ''):
-		if default == False:
-			return self._get_group(group).add_option(short, '--' + option, dest = option.replace('-', '_'),
-				default = default, action = 'store_true', help = help)
-		return self._get_group(group).add_option(short, '--' + option, dest = option.replace('-', '_'),
-			default = default, action = 'store_false', help = help)
-
-class DummyStream(object):
-	def __init__(self, stream):
-		self.__stream = stream
-		self.log = []
-	def write(self, data):
-		self.log.append(data)
-		return True
-	def __getattr__(self, name):
-		return self.__stream.__getattribute__(name)
+def scriptOptions(parser, args = None, arg_keys = None):
+	parser.addFlag(None, 'parseable', default = False, help = 'Output tabular data in parseable format')
+	parser.addFlag(None, 'pivot',     default = False, help = 'Output pivoted tabular data')
+	parser.addText(None, 'textwidth', default = 100,   help = 'Output tabular data with selected width')
+	parser.addAccu(None, 'verbose',   short = '-v',    help = 'Increase verbosity')
+	(opts, args, config_dict) = parser.parse(args, arg_keys)
+	logging.getLogger().setLevel(logging.DEFAULT - opts.verbose)
+	utils.verbosity(opts.verbose)
+	if opts.parseable:
+		utils.printTabular.mode = 'parseable'
+	elif opts.pivot:
+		utils.printTabular.mode = 'longlist'
+	utils.printTabular.wraplen = int(opts.textwidth)
+	return utils.Result(opts = opts, args = args, config_dict = config_dict)
 
 
 def getConfig(configFile = None, configDict = None, section = None, additional = None):
@@ -89,17 +51,6 @@ def getConfig(configFile = None, configDict = None, section = None, additional =
 	if section:
 		return config.changeView(addSections = [section])
 	return config
-
-
-class Silencer(object):
-	def __init__(self):
-		self.saved = (sys.stdout, sys.stderr)
-		sys.stdout = DummyStream(sys.stdout)
-		sys.stderr = DummyStream(sys.stderr)
-	def __del__(self):
-		del sys.stdout
-		del sys.stderr
-		(sys.stdout, sys.stderr) = self.saved
 
 
 class FileMutex:
@@ -134,19 +85,6 @@ def initGC(args):
 	sys.exit(os.EX_USAGE)
 
 
-def getWorkJobs(args, selector = None):
-	(workDir, config, jobDB) = initGC(args)
-	return (workDir, len(jobDB), jobDB.getJobs(selector))
-
-
-def getJobInfo(workDir, jobNum, retCodeFilter = lambda x: True):
-	jobInfo = JobInfoProcessor().process(os.path.join(workDir, 'output', 'job_%d' % jobNum))
-	if jobInfo:
-		(jobNumStored, jobExitCode, jobData) = jobInfo
-		if retCodeFilter(jobExitCode):
-			return jobInfo
-
-
 def getCMSSWInfo(tarPath):
 	import xml.dom.minidom
 	# Read framework report files to get number of events
@@ -167,20 +105,3 @@ def prettySize(size):
 			continue
 		else:
 			return str(round(size / float(lim / 2**10), 2)) + suf
-
-
-def parseOptions(parser):
-	parser.add_option('',   '--parseable', dest='displaymode', const='parseable', action='store_const',
-		help='Output tabular data in parseable format')
-	parser.add_option('-P', '--pivot',     dest='displaymode', const='longlist',  action='store_const',
-		help='Output pivoted tabular data')
-	parser.add_option('',   '--textwidth', dest='textwidth',   default=100,
-		help='Output tabular data with selected width')
-	parser.add_option('-v', '--verbose',   dest='verbosity',   default=0,         action='count',
-		help='Increase verbosity')
-	(opts, args) = parser.parse_args()
-	logging.getLogger().setLevel(logging.DEFAULT - opts.verbosity)
-	utils.verbosity(opts.verbosity)
-	utils.printTabular.mode = opts.displaymode
-	utils.printTabular.wraplen = int(opts.textwidth)
-	return (opts, args)

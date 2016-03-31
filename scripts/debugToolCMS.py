@@ -13,7 +13,7 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-from gcSupport import Options, Plugin, getConfig
+from gcSupport import Options, Plugin, getConfig, scriptOptions
 from grid_control.utils.webservice import readJSON
 from grid_control_cms.provider_sitedb import SiteDB
 
@@ -25,19 +25,19 @@ parser = Options()
 parser.addText(None, 'SE',      default = None, short = '-s', help='Resolve LFN on CMS SE into PFN')
 parser.addText(None, 'lfn',     default='/store/user/<hypernews name>', help='Name of default LFN')
 parser.addText(None, 'se-prot', default='srmv2', help='Name of default SE protocol')
-(opts, args) = parser.parse()
+options = scriptOptions(parser)
 
-if opts.SE:
-	if '<hypernews name>' in opts.lfn:
+if options.opts.SE:
+	if '<hypernews name>' in options.opts.lfn:
 		token = Plugin.getClass('AccessToken').createInstance('VomsProxy', getConfig(), None)
 		site_db = SiteDB()
 		hnName = site_db.dn_to_username(dn=token.getFQUsername())
 		if not hnName:
 			raise Exception('Unable to map grid certificate to hypernews name!')
-		opts.lfn = opts.lfn.replace('<hypernews name>', hnName)
+		options.opts.lfn = options.opts.lfn.replace('<hypernews name>', hnName)
 
 	tmp = readJSON('https://cmsweb.cern.ch/phedex/datasvc/json/prod/lfn2pfn',
-		{'node': opts.SE, 'protocol': opts.se_prot, 'lfn': opts.lfn})['phedex']['mapping']
+		{'node': options.opts.SE, 'protocol': options.opts.se_prot, 'lfn': options.opts.lfn})['phedex']['mapping']
 	for entry in tmp:
 		if len(tmp) > 1:
 			print(entry['node'] + ' ' + entry['pfn'])

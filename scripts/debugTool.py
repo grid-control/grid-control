@@ -14,7 +14,7 @@
 #-#  limitations under the License.
 
 import os, sys, logging
-from gcSupport import Job, Options, Plugin, getConfig
+from gcSupport import Job, Options, Plugin, getConfig, scriptOptions
 from grid_control import utils
 from grid_control.datasets import DataProvider, DataSplitter
 from python_compat import BytesBuffer, imap, irange, lmap, lzip
@@ -40,7 +40,8 @@ parser.addText('data', 'dataset-show-diff',      default='',    help='Show diffe
 parser.addText('data', 'dataset-show-removed',   default='',    help='Find removed dataset blocks')
 
 parser.addText(None, 'logfile-decode',           default='',    help='Decode log files', short = '-d')
-(opts, args) = parser.parse()
+options = scriptOptions(parser)
+(opts, args) = (options.opts, options.args)
 
 ########################################################
 # BACKEND
@@ -57,36 +58,19 @@ if opts.backend_list_nodes or opts.backend_list_queues:
 ########################################################
 # DATASET PARTITION
 
-if (opts.partition_list is not None) or opts.partition_list_invalid or opts.partition_check:
-	if len(args) != 1:
-		utils.exitWithUsage(parser.section_usage('part'))
-	splitter = DataSplitter.loadState(args[0])
+def partition_invalid(splitter):
+	for jobNum in irange(splitter.getMaxJobs()):
+		splitInfo = splitter.getSplitInfo(jobNum)
+		if splitInfo.get(DataSplitter.Invalid, False):
+			yield {0: jobNum}
 
-	if opts.partition_list_invalid:
-		def getInvalid():
-			for jobNum in irange(splitter.getMaxJobs()):
-				splitInfo = splitter.getSplitInfo(jobNum)
-				if splitInfo.get(DataSplitter.Invalid, False):
-					yield {0: jobNum}
-		utils.printTabular([(0, 'Job')], getInvalid())
+def partition_list(splitter, keyList):
+	for jobNum in irange(splitter.getMaxJobs()):
+		splitInfo = splitter.getSplitInfo(jobNum)
+		tmp = lmap(lambda k: (k, splitInfo.get(k, '')), keyList)
+		yield dict([('jobNum', jobNum)] + tmp)
 
-	if opts.partition_list is not None:
-		if opts.partition_list:
-			keyStrings = opts.partition_list.split(',')
-		else:
-			keyStrings = DataSplitter.enumNames
-		keyList = lmap(DataSplitter.str2enum, keyStrings)
-		if None in keyList:
-			logging.warning('Available keys: %r', DataSplitter.enumNames)
-		def getInfos():
-			for jobNum in irange(splitter.getMaxJobs()):
-				splitInfo = splitter.getSplitInfo(jobNum)
-				tmp = lmap(lambda k: (k, splitInfo.get(k, '')), keyList)
-				yield dict([('jobNum', jobNum)] + tmp)
-		utils.printTabular([('jobNum', 'Job')] + lzip(keyList, keyStrings), getInfos())
-
-	if opts.partition_check:
-		logging.info('Checking %d jobs...', splitter.getMaxJobs())
+def partition_check(splitter):
 		fail = utils.set()
 		for jobNum in irange(splitter.getMaxJobs()):
 			splitInfo = splitter.getSplitInfo(jobNum)
@@ -112,12 +96,67 @@ if (opts.partition_list is not None) or opts.partition_list_invalid or opts.part
 		if fail:
 			logging.warning('Failed: ' + str.join('\n', imap(str, fail)))
 
+if (opts.partition_list is not None) or opts.partition_list_invalid or opts.partition_check:
+	if len(args) != 1:
+		utils.exitWithUsage(parser.usage('part'))
+	splitter = DataSplitter.loadState(args[0])
+
+	if opts.partition_list_invalid:
+		utils.printTabular([(0, 'Job')], partition_invalid(splitter))
+
+	if opts.partition_list is not None:
+		if opts.partition_list:
+			keyStrings = opts.partition_list.split(',')
+		else:
+			keyStrings = DataSplitter.enumNames
+		keyList = lmap(DataSplitter.str2enum, keyStrings)
+		if None in keyList:
+			logging.warning('Available keys: %r', DataSplitter.enumNames)
+		utils.printTabular([('jobNum', 'Job')] + lzip(keyList, keyStrings), partition_list(splitter, keyList))
+
+	if opts.partition_check:
+		logging.info('Checking %d jobs...', splitter.getMaxJobs())
+		partition_check(splitter)
+
 ########################################################
 # JOBS
 
+def jobs_reset_attempts(jobDB, selected):
+	for jobNum in jobDB.getJobsIter(selected):
+		logging.info('Resetting attempts for job %d', jobNum)
+		jobinfo = jobDB.get(jobNum)
+		jobinfo.attempt = 0
+		jobinfo.history = {}
+		for key in jobinfo.dict.keys():
+			if key.startswith('history'):
+				jobinfo.dict.pop(key)
+		jobDB.commit(jobNum, jobinfo)
+
+def jobs_force_state(opts, jobDB, selected):
+	newState = Job.str2enum(opts.job_force_state)
+	if newState is None:
+		raise Exception('Invalid state: %s' % opts.job_force_state)
+	for jobNum in jobDB.getJobsIter(selected):
+		jobinfo = jobDB.get(jobNum)
+		oldState = jobinfo.state
+		if oldState == newState:
+			logging.info('Job is already in state %s', Job.enum2str(newState))
+			continue
+		jobinfo.state = newState
+		jobDB.commit(jobNum, jobinfo)
+		logging.info('Job state changed from %s to %s', Job.enum2str(oldState), Job.enum2str(newState))
+
+def jobs_show_jdl(jobDB, selected):
+	for jobNum in jobDB.getJobsIter(selected):
+		jobinfo = jobDB.get(jobNum)
+		if jobinfo.get('jdl'):
+			logging.info(jobinfo.get('jdl'))
+		else:
+			logging.info('Job %d: No jdl information available!')
+
 if opts.job_selector or opts.job_reset_attempts or opts.job_force_state or opts.job_show_jdl:
 	if len(args) != 1:
-		utils.exitWithUsage(parser.section_usage('jobs'))
+		utils.exitWithUsage(parser.usage('jobs'))
 	config = getConfig(args[0])
 	# Initialise task module
 	taskName = config.get(['task', 'module'])
@@ -126,35 +165,14 @@ if opts.job_selector or opts.job_reset_attempts or opts.job_force_state or opts.
 	selected = Plugin.getClass('JobSelector').create(opts.job_selector, task = task)
 	logging.info('Matching jobs: ' + str.join(' ', imap(str, jobDB.getJobsIter(selected))))
 	if opts.job_reset_attempts:
-		for jobNum in jobDB.getJobsIter(selected):
-			logging.info('Resetting attempts for job %d', jobNum)
-			jobinfo = jobDB.get(jobNum)
-			jobinfo.attempt = 0
-			jobinfo.history = {}
-			for key in jobinfo.dict.keys():
-				if key.startswith('history'):
-					jobinfo.dict.pop(key)
-			jobDB.commit(jobNum, jobinfo)
+		jobs_reset_attempts(jobDB, selected)
 	if opts.job_force_state:
-		newState = Job.str2enum(opts.job_force_state)
-		if newState is None:
-			raise Exception('Invalid state: %s' % opts.job_force_state)
-		for jobNum in jobDB.getJobsIter(selected):
-			jobinfo = jobDB.get(jobNum)
-			oldState = jobinfo.state
-			if oldState == newState:
-				logging.info('Job is already in state %s', Job.enum2str(newState))
-				continue
-			jobinfo.state = newState
-			jobDB.commit(jobNum, jobinfo)
-			logging.info('Job state changed from %s to %s', Job.enum2str(oldState), Job.enum2str(newState))
+		jobs_force_state(opts, jobDB, selected)
 	if opts.job_show_jdl:
-		for jobNum in jobDB.getJobsIter(selected):
-			jobinfo = jobDB.get(jobNum)
-			if jobinfo.get('jdl'):
-				logging.info(jobinfo.get('jdl'))
-			else:
-				logging.info('Job %d: No jdl information available!')
+		jobs_show_jdl(jobDB, selected)
+
+########################################################
+# DATASET INFOS
 
 if opts.dataset_show_diff:
 	if len(args) != 2:

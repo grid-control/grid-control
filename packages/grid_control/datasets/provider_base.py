@@ -111,9 +111,10 @@ class DataProvider(ConfigurablePlugin):
 				self._cache_block = list(self._stats.process(prepareBlocks()))
 			else:
 				self._cache_block = list(self._stats.process(self._datasetProcessor.process(prepareBlocks())))
+			statString = ''
 			if self._datasetNick:
 				statString = '%s: ' % self._datasetNick
-			else:
+			elif self._datasetExpr:
 				statString = '%s: ' % self._datasetExpr
 			del log
 			statString += 'Running over %s distributed over %d blocks.' % self._stats.getStats()

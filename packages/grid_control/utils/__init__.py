@@ -250,7 +250,7 @@ def mergeDicts(dicts):
 
 
 def intersectDict(dictA, dictB):
-	for keyA in dictA.keys():
+	for keyA in list(dictA.keys()):
 		if (keyA in dictB) and (dictA[keyA] != dictB[keyA]):
 			dictA.pop(keyA)
 

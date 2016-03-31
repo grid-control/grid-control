@@ -278,7 +278,6 @@ def registerParent(opts, parentPath):
 		text = ' * Migrating dataset parent... %s (This can take a lot of time!)' % parentPath
 		log = utils.ActivityLog(text)
 		try:
-			quiet = Silencer()
 			for dbsSourceSelected in dbsSources:
 				if hasDataset(dbsSourceSelected, parentPath):
 					DbsMigrateApi(dbsSourceSelected, opts.dbsTarget).migrateDataset(parentPath)

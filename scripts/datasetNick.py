@@ -14,15 +14,15 @@
 #-#  limitations under the License.
 
 import sys
-from gcSupport import Options, Plugin, getConfig, utils
+from gcSupport import Options, Plugin, getConfig, scriptOptions, utils
 from python_compat import lmap
 
 parser = Options('%s [options] <DBS dataset path>' % sys.argv[0])
-parser.addtext(None, 'producer', default = 'SimpleNickNameProducer',
+parser.addText(None, 'producer', default = 'SimpleNickNameProducer',
 	help = 'Name of the nickname producer')
-(opts, args) = parser.parse()
+options = scriptOptions(parser)
 
-def main():
+def main(opts, args):
 	if len(args) == 0:
 		utils.exitWithUsage('Dataset path not specified!')
 	datasetPath = args[0]
@@ -37,4 +37,4 @@ def main():
 		[(0, 'Nickname'), (1, 'Dataset')],
 		lmap(lambda ds: {0: nProd.getName('', ds, None), 1: ds}, toProcess), 'll')
 
-sys.exit(main())
+sys.exit(main(options.opts, options.args))

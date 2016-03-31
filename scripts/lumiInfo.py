@@ -13,37 +13,24 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-import os, sys, optparse
-from gcSupport import getCMSSWInfo, getJobInfo, getWorkJobs, parseOptions, utils
+import os, sys
+from gcSupport import ClassSelector, FileInfoProcessor, JobClass, Options, getCMSSWInfo, initGC, scriptOptions, utils
 from grid_control.datasets import DataSplitter
 from grid_control_cms.lumi_tools import formatLumi, mergeLumi, parseLumiFilter
 from python_compat import imap, irange, lmap, set, sorted
 
-parser = optparse.OptionParser()
+parser = Options()
+parser.section('expr', 'Manipulate lumi filter expressions', '%s <lumi filter expression>')
+parser.addFlag('expr', 'gc',            short = '-G', default = False, help = 'Output grid-control compatible lumi expression')
+parser.addFlag('expr', 'json',          short = '-J', default = False, help = 'Output JSON file with lumi expression')
+parser.addFlag('expr', 'full',          short = '-F', default = False, help = 'Output JSON file with full expression')
 
-usage_le = 'Usage: %s <lumi filter expression>' % sys.argv[0]
-ogManip = optparse.OptionGroup(parser, 'Manipulate lumi filter expressions', usage_le)
-ogManip.add_option('-G', '--gc', dest='save_exprgc', default=False, action='store_true',
-	help='Output grid-control compatible lumi expression')
-ogManip.add_option('-J', '--expr-json', dest='save_exprjson', default=False, action='store_true',
-	help='Output JSON file with lumi expression')
-ogManip.add_option('-F', '--full', dest='save_exprfull', default=False, action='store_true',
-	help='Output JSON file with full expression')
-parser.add_option_group(ogManip)
-
-usage_calc = 'Usage: %s <config file>' % sys.argv[0]
-ogCalc = optparse.OptionGroup(parser, 'Options which allow luminosity related calculations', usage_calc)
-ogCalc.add_option('-g', '--job-gc', dest='save_jobgc', default=False, action='store_true',
-	help='Output grid-control compatible lumi expression for processed lumi sections')
-ogCalc.add_option('-j', '--job-json', dest='save_jobjson', default=False, action='store_true',
-	help='Output JSON file with processed lumi sections')
-ogCalc.add_option('-e', '--job-events', dest='get_events', default=False, action='store_true',
-	help='Get number of events processed')
-ogCalc.add_option("-p", "--parameterized", dest="parameterized", default=False, action="store_true",
-	help="Use output file name to categorize output (useful for parameterized tasks)")
-parser.add_option_group(ogCalc)
-
-(opts, args) = parseOptions(parser)
+parser.section('calc', 'Options which allow luminosity related calculations', '%s <config file>')
+parser.addFlag('calc', 'job-gc',        short = '-g', default = False, help = 'Output grid-control compatible lumi expression for processed lumi sections')
+parser.addFlag('calc', 'job-json',      short = '-j', default = False, help = 'Output JSON file with processed lumi sections')
+parser.addFlag('calc', 'job-events',    short = '-e', default = False, help = 'Get number of events processed')
+parser.addFlag('calc', 'parameterized', short = '-p', default = False, help = 'Use output file name to categorize output (useful for parameterized tasks)')
+options = scriptOptions(parser)
 
 def outputGC(lumis, stream = sys.stdout):
 	stream.write('%s\n' % utils.wrapList(formatLumi(lumis), 60, ',\n'))
@@ -62,113 +49,121 @@ def outputJSON(lumis, stream = sys.stdout):
 	stream.write('%s\n' % str.join(',\n', entries))
 	stream.write('}\n')
 
-###########################
+# Lumi filter manuipulation
+def lumi_expr(opts, args):
+	if len(args) == 0:
+		raise Exception('No arguments given!')
+	try:
+		lumis = parseLumiFilter(str.join(' ', args))
+	except Exception:
+		raise Exception('Could not parse: %s' % str.join(' ', args))
+
+	if opts.gc:
+		outputGC(lumis)
+	if opts.json:
+		outputJSON(lumis)
+	if opts.full:
+		result = {}
+		for rlrange in lumis:
+			start, end = rlrange
+			assert(start[0] == end[0])
+			result.setdefault(start[0], []).extend(irange(start[1], end[1] + 1))
+		print(result)
+
+def iter_jobs(opts, workDir, jobList, splitter):
+	(splitInfo, activity, fip) = ({}, None, FileInfoProcessor())
+	for jobNum in jobList:
+		del activity
+		activity = utils.ActivityLog('Reading job logs - [%d / %d]' % (jobNum, jobList[-1]))
+
+		if opts.parameterized:
+			fi = fip.process(os.path.join(workDir, 'output', 'job_%d' % jobNum))
+			outputName = fi[0][FileInfoProcessor.NameDest].split('.')[0]
+			outputName = outputName.replace('_%d_' % jobNum, '_').replace('/', '_').replace('__', '_')
+		else:
+			if splitter:
+				splitInfo = splitter.getSplitInfo(jobNum)
+			outputName = splitInfo.get(DataSplitter.Nickname, splitInfo.get(DataSplitter.DatasetID, 0))
+		yield (jobNum, outputName)
+	activity.finish()
+
+def process_fwjr(outputName, fwkXML, lumiDict, readDict, writeDict):
+	for run in fwkXML.getElementsByTagName('Run'):
+		for lumi in run.getElementsByTagName('LumiSection'):
+			run_id = int(run.getAttribute('ID'))
+			lumi_id = int(lumi.getAttribute('ID'))
+			lumiDict.setdefault(outputName, {}).setdefault(run_id, set()).add(lumi_id)
+	for outFile in fwkXML.getElementsByTagName('File'):
+		pfn = outFile.getElementsByTagName('PFN')[0].childNodes[0].data
+		if pfn not in writeDict.setdefault(outputName, {}):
+			writeDict[outputName][pfn] = 0
+		writeDict[outputName][pfn] += int(outFile.getElementsByTagName('TotalEvents')[0].childNodes[0].data)
+	for inFile in fwkXML.getElementsByTagName('InputFile'):
+		if outputName not in readDict:
+			readDict[outputName] = 0
+		readDict[outputName] += int(inFile.getElementsByTagName('EventsRead')[0].childNodes[0].data)
+
+def process_jobs(opts, workDir, jobList, splitter):
+	(lumiDict, readDict, writeDict) = ({}, {}, {})
+	for (jobNum, outputName) in iter_jobs(opts, workDir, jobList, splitter):
+		# Read framework report files to get number of events
+		try:
+			outputDir = os.path.join(workDir, 'output', 'job_' + str(jobNum))
+			for fwkXML in getCMSSWInfo(os.path.join(outputDir, 'cmssw.dbs.tar.gz')):
+				process_fwjr(outputName, fwkXML, lumiDict, readDict, writeDict)
+		except KeyboardInterrupt:
+			sys.exit(os.EX_OK)
+		except Exception:
+			raise
+			print('Error while parsing framework output of job %s!' % jobNum)
+			continue
+	return (lumiDict, readDict, writeDict)
+
 # Lumi filter calculations
-###########################
-def main():
-	if opts.save_jobjson or opts.save_jobgc or opts.get_events:
-		(workDir, nJobs, jobList) = getWorkJobs(args)
-		(log, incomplete, splitter, splitInfo) = (None, False, None, {})
-		(lumiDict, readDict, writeDict) = ({}, {}, {})
+def lumi_calc(opts, workDir, jobList, splitter):
+	(lumiDict, readDict, writeDict) = process_jobs(opts, workDir, jobList, splitter)
+
+	activity = utils.ActivityLog('Simplifying lumi sections')
+	lumis = {}
+	for sample in lumiDict:
+		for run in lumiDict[sample]:
+			for lumi in lumiDict[sample][run]:
+				lumis.setdefault(sample, []).append(([run, lumi], [run, lumi]))
+	for sample in lumiDict:
+		lumis[sample] = mergeLumi(lumis[sample])
+	activity.finish()
+
+	for sample, lumis in lumis.items():
+		print('Sample: %s' % sample)
+		print('=========================================')
+		print('Number of events processed: %12d' % readDict[sample])
+		print('  Number of events written: %12d' % sum(writeDict.get(sample, {}).values()))
+		if writeDict.get(sample, None):
+			sys.stdout.write('\n')
+			head = [(0, '          Output filename'), (1, 'Events')]
+			utils.printTabular(head, lmap(lambda pfn: {0: pfn, 1: writeDict[sample][pfn]}, writeDict[sample]))
+		if opts.job_json:
+			outputJSON(lumis, open(os.path.join(workDir, 'processed_%s.json' % sample), 'w'))
+			print('Saved processed lumi sections in ' + os.path.join(workDir, 'processed_%s.json' % sample))
+		if opts.job_gc:
+			sys.stdout.write('\n')
+			print('List of processed lumisections:')
+			print('-----------------------------------------')
+			outputGC(lumis)
+		sys.stdout.write('\n')
+
+def main(opts, args):
+	if opts.gc or opts.json or opts.full:
+		return lumi_expr(opts, args)
+
+	if opts.job_json or opts.job_gc or opts.job_events:
+		(workDir, config, jobDB) = initGC(args)
+		splitter = None
 		try:
 			splitter = DataSplitter.loadState(os.path.join(workDir, 'datamap.tar'))
 		except Exception:
 			pass
-		jobList = sorted(jobList)
+		return lumi_calc(opts, workDir, sorted(jobDB.getJobs(ClassSelector(JobClass.SUCCESS))), splitter)
 
-		for jobNum in jobList:
-			del log
-			log = utils.ActivityLog('Reading job logs - [%d / %d]' % (jobNum, jobList[-1]))
-			jobInfo = getJobInfo(workDir, jobNum, lambda retCode: retCode == 0)
-			if not jobInfo:
-				if not incomplete:
-					print('WARNING: Not all jobs have finished - results will be incomplete!')
-					incomplete = True
-				continue
-
-			if not opts.parameterized:
-				if splitter:
-					splitInfo = splitter.getSplitInfo(jobNum)
-				outputName = splitInfo.get(DataSplitter.Nickname, splitInfo.get(DataSplitter.DatasetID, 0))
-			else:
-				outputName = jobInfo['file'].split()[2].replace("_%d_" % jobNum, '_').replace('/', '_').replace('__', '_')
-
-			# Read framework report files to get number of events
-			try:
-				outputDir = os.path.join(workDir, 'output', 'job_' + str(jobNum))
-				for fwkXML in getCMSSWInfo(os.path.join(outputDir, 'cmssw.dbs.tar.gz')):
-					for run in fwkXML.getElementsByTagName('Run'):
-						for lumi in run.getElementsByTagName('LumiSection'):
-							run_id = int(run.getAttribute('ID'))
-							lumi_id = int(lumi.getAttribute('ID'))
-							lumiDict.setdefault(outputName, {}).setdefault(run_id, set()).add(lumi_id)
-					for outFile in fwkXML.getElementsByTagName('File'):
-						pfn = outFile.getElementsByTagName('PFN')[0].childNodes[0].data
-						if pfn not in writeDict.setdefault(outputName, {}):
-							writeDict[outputName][pfn] = 0
-						writeDict[outputName][pfn] += int(outFile.getElementsByTagName('TotalEvents')[0].childNodes[0].data)
-					for inFile in fwkXML.getElementsByTagName('InputFile'):
-						if outputName not in readDict:
-							readDict[outputName] = 0
-						readDict[outputName] += int(inFile.getElementsByTagName('EventsRead')[0].childNodes[0].data)
-			except KeyboardInterrupt:
-				sys.exit(os.EX_OK)
-			except Exception:
-				print('Error while parsing framework output of job %s!' % jobNum)
-				continue
-
-		del log
-		log = utils.ActivityLog('Simplifying lumi sections')
-		lumis = {}
-		for sample in lumiDict:
-			for run in lumiDict[sample]:
-				for lumi in lumiDict[sample][run]:
-					lumis.setdefault(sample, []).append(([run, lumi], [run, lumi]))
-		for sample in lumiDict:
-			lumis[sample] = mergeLumi(lumis[sample])
-		del log
-
-		for sample, lumis in lumis.items():
-			print('Sample: %s' % sample)
-			print('=========================================')
-			print('Number of events processed: %12d' % readDict[sample])
-			print('  Number of events written: %12d' % sum(writeDict.get(sample, {}).values()))
-			if writeDict.get(sample, None):
-				sys.stdout.write('\n')
-				head = [(0, '          Output filename'), (1, 'Events')]
-				utils.printTabular(head, lmap(lambda pfn: {0: pfn, 1: writeDict[sample][pfn]}, writeDict[sample]))
-			if opts.save_jobjson:
-				outputJSON(lumis, open(os.path.join(workDir, 'processed_%s.json' % sample), 'w'))
-				print('Saved processed lumi sections in ' + os.path.join(workDir, 'processed_%s.json' % sample))
-			if opts.save_jobgc:
-				sys.stdout.write('\n')
-				print('List of processed lumisections:')
-				print('-----------------------------------------')
-				outputGC(lumis)
-			sys.stdout.write('\n')
-
-
-	###########################
-	# Lumi filter manuipulation
-	###########################
-	if opts.save_exprgc or opts.save_exprjson or opts.save_exprfull:
-		if len(args) == 0:
-			raise Exception('No arguments given!')
-		try:
-			lumis = parseLumiFilter(str.join(' ', args))
-		except Exception:
-			raise Exception('Could not parse: %s' % str.join(' ', args))
-
-		if opts.save_exprgc:
-			outputGC(lumis)
-		if opts.save_exprjson:
-			outputJSON(lumis)
-		if opts.save_exprfull:
-			result = {}
-			for rlrange in lumis:
-				start, end = rlrange
-				assert(start[0] == end[0])
-				llist = result.setdefault(start[0], []).extend(irange(start[1], end[1] + 1))
-			print(result)
-
-sys.exit(main())
+if __name__ == '__main__':
+	sys.exit(main(options.opts, options.args))

@@ -91,6 +91,8 @@ class TrackedParameterAdapter(BasicParameterAdapter):
 		self._rawSource = source
 		BasicParameterAdapter.__init__(self, config, source)
 		self._mapJob2PID = {}
+		if not os.path.isdir(config.getWorkPath()):
+			os.makedirs(config.getWorkPath())
 		self._pathJob2PID = config.getWorkPath('params.map.gz')
 		self._pathParams = config.getWorkPath('params.dat.gz')
 

@@ -14,14 +14,14 @@
 #-#  limitations under the License.
 
 import os, sys
-from gcSupport import FileInfoProcessor, JobInfoProcessor, getWorkJobs
+from gcSupport import FileInfoProcessor, JobInfoProcessor, initGC
 from python_compat import sorted
 
 def main():
 	jip = JobInfoProcessor()
 	fip = FileInfoProcessor()
-	(workDir, nJobs, jobList) = getWorkJobs(sys.argv[1:])
-	for jobNum in sorted(jobList):
+	(workDir, config, jobDB) = initGC(sys.argv[1:])
+	for jobNum in sorted(jobDB.getJobs()):
 		if jip.process(os.path.join(workDir, 'output', 'job_%d' % jobNum))[1] == 0:
 			for fileInfo in fip.process(os.path.join(workDir, 'output', 'job_%d' % jobNum)):
 				pathSE = fileInfo[FileInfoProcessor.Path].replace('file://', '').replace('dir://', '')

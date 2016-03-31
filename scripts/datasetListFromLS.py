@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-#-#  Copyright 2010-2014 Karlsruhe Institute of Technology
+#-#  Copyright 2010-2016 Karlsruhe Institute of Technology
 #-#
 #-#  Licensed under the Apache License, Version 2.0 (the "License");
 #-#  you may not use this file except in compliance with the License.
@@ -13,23 +13,19 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-import optparse, gcSupport, datasetListFromX
+import sys, logging
+from datasetListFromX import addDatasetListOptions, discoverDataset
+from gcSupport import Options, scriptOptions
 
-parser = optparse.OptionParser('%prog [options] <data path> <dataset name> <pattern (*.root) / files>')
-parser.add_option('-p', '--path', dest='path', default='.', help='Path to dataset files')
-datasetListFromX.addOptions(parser)
-(opts, args) = gcSupport.parseOptions(parser)
+parser = Options(usage = '%s [OPTIONS] <data path> <dataset name> <pattern (*.root) / files>')
+parser.addText(None, 'path', short = '-p', dest = 'dataset', default = '.', help = 'Path to dataset files')
+addDatasetListOptions(parser)
+options = scriptOptions(parser, arg_keys = ['dataset', 'dataset name pattern', 'filename filter'])
+logging.getLogger('user').setLevel(logging.CRITICAL)
 
-# Positional parameters override options
-if len(args) > 0:
-	opts.path = args[0]
-if len(args) > 1:
-	setattr(opts, 'dataset name pattern', args[1])
-if len(args) > 2:
-	setattr(opts, 'filename filter', str.join(' ', args[2:]))
 def conditionalSet(name, source, sourceKey):
-	if not getattr(opts, name) and getattr(opts, source):
-		setattr(opts, name, sourceKey)
+	if options.config_dict.get(source) and not options.config_dict.get(name):
+		options.config_dict[name] = options.config_dict[source]
 conditionalSet('dataset name pattern', 'delimeter dataset key', '/PRIVATE/@DELIMETER_DS@')
 conditionalSet('block name pattern', 'delimeter block key', '@DELIMETER_B@')
-datasetListFromX.discoverDataset(opts, parser, 'ScanProvider', opts.path)
+sys.exit(discoverDataset('ScanProvider', options.config_dict))
