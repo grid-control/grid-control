@@ -642,8 +642,13 @@ class ActivityLog:
 			sys.stdout = self.WrappedStream(sys.stdout, self.activity)
 			sys.stderr = self.WrappedStream(sys.stderr, self.activity)
 
+	def finish(self):
+		if self.saved is not None:
+			sys.stdout, sys.stderr = self.saved
+		self.saved = None
+
 	def __del__(self):
-		sys.stdout, sys.stderr = self.saved
+		self.finish()
 
 
 def printTabular(head, data, fmtString = '', fmt = None, level = -1):
