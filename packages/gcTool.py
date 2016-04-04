@@ -13,58 +13,61 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-import os, sys, signal, logging, optparse
+import os, sys, signal, logging
 from grid_control import utils
 from grid_control.config import createConfig
 from grid_control.gc_exceptions import gc_excepthook
 from grid_control.logging_setup import logging_setup
+from grid_control.utils.cmd_options import Options
 from hpfwk import ExceptionFormatter, Plugin, handle_debug_interrupt
 
 # grid-control command line parser
 def gc_cmd_line_parser(cmd_line_args):
-	parser = optparse.OptionParser(add_help_option=False)
-	parser.usage = 'Syntax: %s [OPTIONS] <config file>\n' % sys.argv[0]
-	parser.add_option('-h', '--help',          dest='help',       default=False, action='store_true')
-	parser.add_option('',   '--help-conf',     dest='help_cfg',   default=False, action='store_true')
-	parser.add_option('',   '--help-confmin',  dest='help_scfg',  default=False, action='store_true')
-	parser.add_option('-i', '--init',          dest='init',       default=False, action='store_true')
-	parser.add_option('-q', '--resync',        dest='resync',     default=False, action='store_true')
-	parser.add_option('',   '--debug',         dest='debug',      default=False, action='store_true')
-	parser.add_option('-s', '--no-submission', dest='submission', default=True,  action='store_false')
-	parser.add_option('-c', '--continuous',    dest='continuous', default=None,  action='store_true')
-	parser.add_option('-o', '--override',      dest='override',   default=[],    action='append')
-	parser.add_option('-d', '--delete',        dest='delete',     default=None)
-	parser.add_option('',   '--reset',         dest='reset',      default=None)
-	parser.add_option('-a', '--action',        dest='action',     default=None)
-	parser.add_option('-J', '--job-selector',  dest='selector',   default=None)
-	parser.add_option('-m', '--max-retry',     dest='maxRetry',   default=None,  type='int')
-	parser.add_option('-v', '--verbose',       dest='verbosity',  default=0,     action='count')
-	parser.add_option('-G', '--gui',           dest='gui',        action='store_const', const = 'ANSIGUI')
-	parser.add_option('-W', '--webserver',     dest='gui',        action='store_const', const = 'CPWebserver')
+	parser = Options(usage = '%s [OPTIONS] <config file>', add_help_option = False)
+	parser.addBool(None, 'debug',         default = False)
+	parser.addBool(None, 'help-conf',     default = False)
+	parser.addBool(None, 'help-confmin',  default = False)
+	parser.addBool(None, 'continuous',    default = False, short = '-c')
+	parser.addBool(None, 'help',          default = False, short = '-h')
+	parser.addBool(None, 'init',          default = False, short = '-i')
+	parser.addBool(None, 'resync',        default = False, short = '-q')
+	parser.addBool(None, 'no-submission', default = True,  short = '-s', dest = 'submission')
+	parser.addBool(None, 'gui',           default = False, short = '-G', dest = 'gui_ansi')
+	parser.addBool(None, 'webserver',     default = False, short = '-W', dest = 'gui_cp')
+	parser.addAccu(None, 'verbose',       short = '-v')
+	parser.addList(None, 'override',      short = '-o')
+	parser.addText(None, 'delete',        short = '-d')
+	parser.addText(None, 'job-selector',  short = '-J')
+	parser.addText(None, 'max-retry',     short = '-m')
+	parser.addText(None, 'action')
+	parser.addText(None, 'reset')
 	# Deprecated options - refer to new report script instead
-	parser.add_option('-r', '--report',        dest='old_report', default=False, action='store_true')
-	parser.add_option('-R', '--site-report',   dest='old_report', default=False, action='store_true')
-	parser.add_option('-T', '--time-report',   dest='old_report', default=False, action='store_true')
-	parser.add_option('-M', '--task-report',   dest='old_report', default=False, action='store_true')
-	parser.add_option('-D', '--detail-report', dest='old_report', default=False, action='store_true')
-	parser.add_option('',   '--help-vars',     dest='old_report', default=False, action='store_true')
+	for (sopt, lopt) in [('-r', 'report'), ('-R', 'site-report'), ('-T', 'time-report'),
+			('-M', 'task-report'), ('-D', 'detail-report'), ('', 'help-vars')]:
+		parser.addBool(None, lopt, short = sopt, default = False, dest = 'old_report')
 
-	(opts, args) = parser.parse_args(args = cmd_line_args)
+	(opts, args, _) = parser.parse(args = cmd_line_args)
+	opts.gui = None
+	if opts.gui_ansi:
+		opts.gui = 'ANSIGUI'
+	elif opts.gui_cp:
+		opts.gui = 'CPWebserver'
+	opts.continuous = opts.continuous or None # either True or None
 	# Display help
 	if opts.help:
-		sys.stderr.write('%s\n%s\n' % (parser.usage, open(utils.pathShare('help.txt'), 'r').read()))
+		sys.stderr.write('%s\n\n%s\n' % (parser.usage(), open(utils.pathShare('help.txt'), 'r').read()))
 		sys.exit(os.EX_USAGE)
 	# Require single config file argument
 	if len(args) == 0:
-		utils.exitWithUsage(parser.usage, 'Config file not specified!')
+		utils.exitWithUsage(parser.usage(), 'Config file not specified!')
 	elif len(args) > 1:
-		utils.exitWithUsage(parser.usage, 'Invalid command line arguments: %r' % cmd_line_args)
+		utils.exitWithUsage(parser.usage(), 'Invalid command line arguments: %r' % cmd_line_args)
 	# Warn about deprecated report options
 	if opts.old_report:
 		utils.deprecated('Please use the more versatile report tool in the scripts directory!')
 	# Configure preliminary logging
-	utils.verbosity(opts.verbosity)
-	logging.getLogger().setLevel(logging.DEFAULT - opts.verbosity)
+	utils.verbosity(opts.verbose)
+	logging.getLogger().setLevel(logging.DEFAULT - opts.verbose)
 	if opts.debug: # Setup initial debug handler before it is reconfigured by logging_setup
 		handler = logging.StreamHandler(sys.stdout)
 		handler.setFormatter(ExceptionFormatter(showCodeContext = 2, showVariables = 1, showFileStack = 1))
@@ -88,12 +91,12 @@ class OptsConfigFiller(Plugin.getClass('ConfigFiller')):
 				self._addEntry(container, section, option, str(value), '<cmdline>')
 		cmd_line_config_map = {
 			'state!': { '#init': opts.init, '#resync': opts.resync,
-				'#display config': opts.help_cfg, '#display minimal config': opts.help_scfg },
+				'#display config': opts.help_conf, '#display minimal config': opts.help_confmin },
 			'action': { 'delete': opts.delete, 'reset': opts.reset },
 			'global': { 'gui': opts.gui, 'submission': opts.submission },
-			'jobs': { 'max retry': opts.maxRetry, 'action': opts.action,
-				'continuous': opts.continuous, 'selected': opts.selector },
-			'logging': { 'level ?': logging.getLevelName(logging.DEFAULT - opts.verbosity),
+			'jobs': { 'max retry': opts.max_retry, 'action': opts.action,
+				'continuous': opts.continuous, 'selected': opts.job_selector },
+			'logging': { 'level ?': logging.getLevelName(logging.DEFAULT - opts.verbose),
 				'debug mode': opts.debug },
 		}
 		for section in cmd_line_config_map:

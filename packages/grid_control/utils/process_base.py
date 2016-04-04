@@ -15,7 +15,7 @@
 import os, pty, sys, time, errno, fcntl, select, signal, logging, termios, threading
 from grid_control.utils.thread_tools import GCEvent, GCLock, GCQueue
 from hpfwk import AbstractError
-from python_compat import bytes2str, irange, str2bytes
+from python_compat import bytes2str, imap, irange, str2bytes
 
 try:
 	FD_MAX = os.sysconf('SC_OPEN_MAX')
@@ -175,7 +175,7 @@ class Process(object):
 		self.stdin.clear_log()
 
 	def get_call(self):
-		return str.join(' ', [self._cmd] + self._args)
+		return str.join(' ', imap(repr, [self._cmd] + self._args))
 
 	def start(self):
 		raise AbstractError

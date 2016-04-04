@@ -123,7 +123,7 @@ def logging_defaults():
 	def log_process(self, proc, level = logging.WARNING, files = None):
 		status = proc.status(timeout = 0)
 		record = self.makeRecord(self.name, level, '<process>', 0,
-			'Process %r finished with exit code %s' % (repr(proc.get_call()), status), None, None)
+			'Process %s finished with exit code %s' % (proc.get_call(), status), None, None)
 		record.proc = proc
 		record.call = proc.get_call()
 		record.proc_status = status

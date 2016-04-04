@@ -103,7 +103,7 @@ class ANSIGUI(GUI):
 				signal.signal(signal.SIGWINCH, oldHandler)
 				if (time.time() - guiWait.lastwait > 10) and not timeout:
 					tmp = utils.ActivityLog('') # force display update
-					del tmp
+					tmp.finish()
 				guiWait.lastwait = time.time()
 				return result
 			guiWait.lastwait = 0

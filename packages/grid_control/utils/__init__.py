@@ -16,7 +16,7 @@ import os, re, sys, glob, stat, time, errno, signal, fnmatch, logging, operator,
 from grid_control.gc_exceptions import GCError, InstallationError, UserError
 from grid_control.utils.file_objects import VirtualFile
 from grid_control.utils.parsing import parseBool, parseType
-from grid_control.utils.process_base import LocalProcess, exit_without_cleanup
+from grid_control.utils.process_base import exit_without_cleanup
 from grid_control.utils.thread_tools import TimeoutException, hang_protection
 from python_compat import identity, ifilter, imap, irange, ismap, izip, lfilter, lmap, lru_cache, lsmap, lzip, next, reduce, set, sorted, tarfile, user_input
 
@@ -509,16 +509,16 @@ def matchFiles(pathRoot, pattern, pathRel = ''):
 	for name in imap(lambda x: os.path.join(pathRel, x), os.listdir(os.path.join(pathRoot, pathRel))):
 		match = matchFileName(name, pattern)
 		pathAbs = os.path.join(pathRoot, name)
-		if match == False:
+		if match is False:
 			continue
 		elif os.path.islink(pathAbs): # Not excluded symlinks
 			yield (pathAbs, name, True)
 		elif os.path.isdir(pathAbs): # Recurse into directories
-			if match == True: # (backwards compat: add parent directory - not needed?)
+			if match is True: # (backwards compat: add parent directory - not needed?)
 				yield (pathAbs, name, True)
-			for result in matchFiles(pathRoot, QM(match == True, ['*'], pattern), name):
+			for result in matchFiles(pathRoot, QM(match is True, ['*'], pattern), name):
 				yield result
-		elif match == True: # Add matches
+		elif match is True: # Add matches
 			yield (pathAbs, name, True)
 
 
@@ -526,15 +526,15 @@ def genTarball(outFile, fileList):
 	tar = tarfile.open(outFile, 'w:gz')
 	activity = None
 	for (pathAbs, pathRel, pathStatus) in fileList:
-		if pathStatus == True: # Existing file
+		if pathStatus is True: # Existing file
 			tar.add(pathAbs, pathRel, recursive = False)
-		elif pathStatus == False: # Existing file
+		elif pathStatus is False: # Existing file
 			if not os.path.exists(pathAbs):
 				raise UserError('File %s does not exist!' % pathRel)
 			tar.add(pathAbs, pathRel, recursive = False)
 		elif pathStatus is None: # Directory
 			del activity
-			msg = QM(len(pathRel) > 50, pathRel[:15] + '...' + pathRel[len(pathRel)-32:], pathRel)
+			msg = QM(len(pathRel) > 50, pathRel[:15] + '...' + pathRel[-32:], pathRel)
 			activity = ActivityLog('Generating tarball: %s' % msg)
 		else: # File handle
 			info, handle = pathStatus.getTarInfo()
@@ -651,58 +651,97 @@ class ActivityLog:
 		self.finish()
 
 
-def printTabular(head, data, fmtString = '', fmt = None, level = -1):
-	fmt = fmt or {}
-	if printTabular.mode == 'parseable':
-		vprint(str.join("|", imap(lambda x: x[1], head)), level)
+class Table(object):
+	def __init__(self, head, data):
+		pass
+
+
+class ParseableTable(Table):
+	def __init__(self, head, data, delimeter = '|'):
+		head = list(head)
+		self._delimeter = delimeter
+		self._write_line(imap(lambda x: x[1], head))
 		for entry in data:
 			if isinstance(entry, dict):
-				vprint(str.join("|", imap(lambda x: str(entry.get(x[0], '')), head)), level)
-		return
-	if printTabular.mode == 'longlist':
+				self._write_line(imap(lambda x: str(entry.get(x[0], '')), head))
+
+	def _write_line(self, msg_list):
+		sys.stdout.write(str.join(self._delimeter, msg_list) + '\n')
+
+
+class RowTable(Table):
+	def __init__(self, head, data, fmt = None, wrapLen = 100):
+		head = list(head)
 		def getHeadName(key, name):
 			return name
 		maxhead = max(imap(len, ismap(getHeadName, head)))
+		fmt = fmt or {}
 		showLine = False
 		for entry in data:
 			if isinstance(entry, dict):
 				if showLine:
-					vprint((('-' * (maxhead + 2)) + '-+-' + '-' * min(30, printTabular.wraplen - maxhead - 10)), level)
+					self._write_line(('-' * (maxhead + 2)) + '-+-' + '-' * min(30, printTabular.wraplen - maxhead - 10))
 				for (key, name) in head:
-					vprint((name.rjust(maxhead + 2) + ' | ' + str(fmt.get(key, str)(entry.get(key, '')))), level)
+					self._write_line(name.rjust(maxhead + 2) + ' | ' + str(fmt.get(key, str)(entry.get(key, ''))))
 				showLine = True
 			elif showLine:
-				vprint((('=' * (maxhead + 2)) + '=+=' + '=' * min(30, printTabular.wraplen - maxhead - 10)), level)
+				self._write_line(('=' * (maxhead + 2)) + '=+=' + '=' * min(30, printTabular.wraplen - maxhead - 10))
 				showLine = False
-		return
 
-	justFunDict = { 'l': str.ljust, 'r': str.rjust, 'c': str.center }
-	# justFun = {id1: str.center, id2: str.rjust, ...}
-	head = list(head)
-	def getKeyFormat(headEntry, fmtString):
-		return (headEntry[0], justFunDict[fmtString])
-	justFun = dict(ismap(getKeyFormat, izip(head, fmtString)))
+	def _write_line(self, msg):
+		sys.stdout.write(msg + '\n')
 
-	# adjust to lendict of column (considering escape sequence correction)
-	strippedlen = lambda x: len(re.sub('\33\[\d*(;\d*)*m', '', x))
-	just = lambda key, x: justFun.get(key, str.rjust)(x, lendict[key] + len(x) - strippedlen(x))
 
-	def getKeyLen(key, name):
-		return (key, len(name))
-	lendict = dict(ismap(getKeyLen, head))
+class ColumnTable(Table):
+	def __init__(self, head, data, fmtString = '', fmt = None, wrapLen = 100):
+		head = list(head)
+		justFun = self._get_just_fun_dict(head, fmtString)
+		# return formatted, but not yet aligned entries; len dictionary; just function
+		(entries, lendict, just) = self._format_data(head, data, justFun, fmt or {})
+		(headwrap, lendict) = self._wrap_head(head, lendict)
 
-	entries = [] # formatted, but not yet aligned entries
-	for entry in data:
-		if isinstance(entry, dict):
-			tmp = {}
-			for key, name in head:
-				tmp[key] = str(fmt.get(key, str)(entry.get(key, '')))
-				lendict[key] = max(lendict[key], strippedlen(tmp[key]))
-			entries.append(tmp)
-		else:
-			entries.append(entry)
+		def getKeyPaddedName(key, name):
+			return (key, name.center(lendict[key]))
+		headentry = dict(ismap(getKeyPaddedName, head))
+		self._print_table(headwrap, headentry, entries, just, lendict)
 
-	def getGoodPartition(keys, lendict, maxlen): # BestPartition => NP complete
+	def _print_table(self, headwrap, headentry, entries, just, lendict):
+		for (keys, entry) in self._wrap_formatted_data(headwrap, [headentry, '='] + entries):
+			if isinstance(entry, str):
+				decor = lambda x: '%s%s%s' % (entry, x, entry)
+				self._write_line(decor(str.join(decor('+'), lmap(lambda key: entry * lendict[key], keys))))
+			else:
+				self._write_line(' %s ' % str.join(' | ', imap(lambda key: just(key, entry.get(key, '')), keys)))
+
+	def _get_just_fun_dict(self, head, fmtString):
+		justFunDict = { 'l': str.ljust, 'r': str.rjust, 'c': str.center }
+		# justFun = {id1: str.center, id2: str.rjust, ...}
+		def getKeyFormat(headEntry, fmtString):
+			return (headEntry[0], justFunDict[fmtString])
+		return dict(ismap(getKeyFormat, izip(head, fmtString)))
+
+	def _format_data(self, head, data, justFun, fmt):
+		# adjust to lendict of column (considering escape sequence correction)
+		strippedlen = lambda x: len(re.sub('\33\[\d*(;\d*)*m', '', x))
+		just = lambda key, x: justFun.get(key, str.rjust)(x, lendict[key] + len(x) - strippedlen(x))
+
+		def getKeyLen(key, name):
+			return (key, len(name))
+		lendict = dict(ismap(getKeyLen, head))
+
+		result = []
+		for entry in data:
+			if isinstance(entry, dict):
+				tmp = {}
+				for key, _ in head:
+					tmp[key] = str(fmt.get(key, str)(entry.get(key, '')))
+					lendict[key] = max(lendict[key], strippedlen(tmp[key]))
+				result.append(tmp)
+			else:
+				result.append(entry)
+		return (result, lendict, just)
+
+	def _getGoodPartition(self, keys, lendict, maxlen): # BestPartition => NP complete
 		def getFitting(leftkeys):
 			current = 0
 			for key in leftkeys:
@@ -719,36 +758,35 @@ def printTabular(head, data, fmtString = '', fmt = None, level = -1):
 				yield key
 			yield None
 
-	def getAlignedDict(keys, lendict, maxlen):
-		edges = []
-		while len(keys):
-			offset = 2
-			(tmp, keys) = (keys[:keys.index(None)], keys[keys.index(None)+1:])
-			for key in tmp:
-				left = max(0, maxlen - sum(imap(lambda k: lendict[k] + 3, tmp)))
-				for edge in edges:
-					if (edge > offset + lendict[key]) and (edge - (offset + lendict[key]) < left):
-						lendict[key] += edge - (offset + lendict[key])
-						left -= edge - (offset + lendict[key])
-						break
-				edges.append(offset + lendict[key])
-				offset += lendict[key] + 3
-		return lendict
+	def _wrap_head(self, head, lendict):
+		def getAlignedDict(keys, lendict, maxlen):
+			edges = []
+			while len(keys):
+				offset = 2
+				(tmp, keys) = (keys[:keys.index(None)], keys[keys.index(None)+1:])
+				for key in tmp:
+					left = max(0, maxlen - sum(imap(lambda k: lendict[k] + 3, tmp)))
+					for edge in edges:
+						if (edge > offset + lendict[key]) and (edge - (offset + lendict[key]) < left):
+							lendict[key] += edge - (offset + lendict[key])
+							left -= edge - (offset + lendict[key])
+							break
+					edges.append(offset + lendict[key])
+					offset += lendict[key] + 3
+			return lendict
 
-	# Wrap and align columns
-	def getHeadKey(key, name):
-		return key
-	def getPaddedKeyLen(key, length):
-		return (key, length + 2)
-	headwrap = list(getGoodPartition(lsmap(getHeadKey, head),
-		dict(ismap(getPaddedKeyLen, lendict.items())), printTabular.wraplen))
-	lendict = getAlignedDict(headwrap, lendict, printTabular.wraplen)
+		# Wrap and align columns
+		def getHeadKey(key, name):
+			return key
+		def getPaddedKeyLen(key, length):
+			return (key, length + 2)
+		headwrap = list(self._getGoodPartition(lsmap(getHeadKey, head),
+			dict(ismap(getPaddedKeyLen, lendict.items())), printTabular.wraplen))
+		lendict = getAlignedDict(headwrap, lendict, printTabular.wraplen)
+		return (headwrap, lendict)
 
-	def getKeyPaddedName(key, name):
-		return (key, name.center(lendict[key]))
-	headentry = dict(ismap(getKeyPaddedName, head))
 	# Wrap rows
-	def wrapentries(entries):
+	def _wrap_formatted_data(self, headwrap, entries):
 		for idx, entry in enumerate(entries):
 			def doEntry(entry):
 				tmp = []
@@ -763,33 +801,39 @@ def printTabular(head, data, fmtString = '', fmt = None, level = -1):
 					yield x
 				if (idx != 0) and (idx != len(entries) - 1):
 					if None in headwrap[:-1]:
-						yield list(doEntry("~"))[0]
+						yield list(doEntry('~'))[0]
 			else:
 				yield list(doEntry(entry))[0]
 
-	for (keys, entry) in wrapentries([headentry, "="] + entries):
-		if isinstance(entry, str):
-			decor = lambda x: "%s%s%s" % (entry, x, entry)
-			vprint(decor(str.join(decor('+'), lmap(lambda key: entry * lendict[key], keys))), level)
-		else:
-			vprint(' %s ' % str.join(' | ', imap(lambda key: just(key, entry.get(key, '')), keys)), level)
+	def _write_line(self, msg):
+		sys.stdout.write(msg + '\n')
+
+
+def printTabular(head, data, fmtString = '', fmt = None):
+	if printTabular.mode == 'parseable':
+		return ParseableTable(head, data, '|')
+	elif printTabular.mode == 'longlist':
+		return RowTable(head, data, fmt, printTabular.wraplen)
+	return ColumnTable(head, data, fmtString, fmt, printTabular.wraplen)
 printTabular.wraplen = 100
 printTabular.mode = 'default'
 
 
 def getUserInput(text, default, choices, parser = identity):
 	while True:
+		handler = signal.signal(signal.SIGINT, signal.SIG_DFL)
 		try:
 			userinput = user_input('%s %s: ' % (text, '[%s]' % default))
 		except Exception:
-			eprint()
-			sys.exit(os.EX_OK)
+			sys.stdout.write('\n') # continue on next line
+			raise
+		signal.signal(signal.SIGINT, handler)
 		if userinput == '':
 			return parser(default)
 		if parser(userinput) is not None:
 			return parser(userinput)
 		valid = str.join(', ', imap(lambda x: '"%s"' % x, choices[:-1]))
-		eprint('Invalid input! Answer with %s or "%s"' % (valid, choices[-1]))
+		logging.getLogger('user').critical('Invalid input! Answer with %s or "%s"', valid, choices[-1])
 
 
 def getUserBool(text, default):
@@ -808,57 +852,77 @@ def exitWithUsage(usage, msg = None, helpOpt = True):
 	sys.exit(os.EX_USAGE)
 
 
-def split_advanced(tokens, doEmit, addEmitToken, quotes = None, brackets = None, exType = Exception):
+def split_quotes(tokens, quotes = None, exType = Exception):
 	if quotes is None:
 		quotes = ['"', "'"]
-	if brackets is None:
-		brackets = ['()', '{}', '[]']
 	buffer = ''
-	emit_empty_buffer = False
-	(stack_quote, stack_bracket) = ([], [])
-	map_openbracket = dict(imap(lambda x: (x[1], x[0]), brackets))
-	tokens = iter(tokens)
-	token = next(tokens, None)
-	while token:
-		emit_empty_buffer = False
-		# take care of quotations
+	stack_quote = []
+	for token in tokens:
 		if token in quotes:
-			if stack_quote and stack_quote[-1] == token:
+			if stack_quote and (stack_quote[-1] == token):
 				stack_quote.pop()
+				if not stack_quote:
+					buffer += token
+					yield buffer
+					buffer = ''
+					continue
 			else:
 				stack_quote.append(token)
 		if stack_quote:
 			buffer += token
-			token = next(tokens, None)
-			continue
-		# take care of parentheses
-		if token in map_openbracket.values():
-			stack_bracket.append(token)
-		if token in map_openbracket.keys():
-			if stack_bracket[-1] == map_openbracket[token]:
+		else:
+			yield token
+	if stack_quote:
+		raise exType('Quotes are not closed!')
+
+
+def split_brackets(tokens, brackets = None, exType = Exception):
+	if brackets is None:
+		brackets = ['()', '{}', '[]']
+	buffer = ''
+	stack_bracket = []
+	map_close_to_open = dict(imap(lambda x: (x[1], x[0]), brackets))
+	position = 0
+	for token in tokens:
+		position += len(token) # store position for proper error messages
+		if token in map_close_to_open.values():
+			stack_bracket.append((token, position))
+		if token in map_close_to_open.keys():
+			if not stack_bracket:
+				raise exType('Closing bracket %r at position %d is without opening bracket' % (token, position))
+			elif stack_bracket[-1][0] == map_close_to_open[token]:
 				stack_bracket.pop()
+				if not stack_bracket:
+					buffer += token
+					yield buffer
+					buffer = ''
+					continue
 			else:
-				raise exType('Uneven brackets!')
+				raise exType('Closing bracket %r at position %d does not match bracket %r at position %d' % (token, position, stack_bracket[-1][0], stack_bracket[-1][1]))
 		if stack_bracket:
 			buffer += token
-			token = next(tokens, None)
-			continue
-		# take care of low level splitting
-		if not doEmit(token):
-			buffer += token
-			token = next(tokens, None)
-			continue
-		if addEmitToken(token):
-			buffer += token
-		else: # if tokenlist ends with emit token, which is not emited, finish with empty buffer
-			emit_empty_buffer = True
-		yield buffer
-		buffer = ''
-		token = next(tokens, None)
+		else:
+			yield token
+	if stack_bracket:
+		raise exType('Unclosed brackets %s' % str.join(', ', imap(lambda b_pos: '%r at position %d' % b_pos, stack_bracket)))
 
-	if stack_quote or stack_bracket:
-		raise exType('Brackets / quotes not closed!')
-	if buffer or emit_empty_buffer:
+
+def split_advanced(tokens, doEmit, addEmitToken, quotes = None, brackets = None, exType = Exception):
+	buffer = None
+	tokens = split_brackets(split_quotes(tokens, quotes, exType), brackets, exType)
+	token = next(tokens, None)
+	while token:
+		if buffer is None:
+			buffer = ''
+		if doEmit(token):
+			yield buffer
+			buffer = ''
+			if addEmitToken(token):
+				yield token
+		else:
+			buffer += token
+		token = next(tokens, None)
+	if buffer is not None:
 		yield buffer
 
 

@@ -215,6 +215,9 @@ class JobManager(NamedPlugin):
 
 		# Check jobs in the joblist and return changes, timeouts and successfully reported jobs
 		(change, timeoutList, reported) = self._checkJobList(wms, jobList)
+		unreported = len(jobList) - len(reported)
+		if unreported > 0:
+			self._log_user_time.critical('%d jobs did not report their status!', unreported)
 		if change is None: # neither True or False => abort
 			return False
 
@@ -290,6 +293,7 @@ class JobManager(NamedPlugin):
 		jobs.reverse()
 		for (jobNum, wmsId) in wms.cancelJobs(self._wmsArgs(jobs)):
 			# Remove deleted job from todo list and mark as cancelled
+			assert(self.jobDB.get(jobNum).wmsId == wmsId)
 			jobs.remove(jobNum)
 			mark_cancelled(jobNum)
 

@@ -30,8 +30,7 @@ class FileInfoProcessor(JobInfoProcessor):
 	def process(self, dn):
 		jobInfo = JobInfoProcessor.process(self, dn)
 		if jobInfo:
-			(jobNumStored, jobExitCode, jobData) = jobInfo
-			assert(jobNumStored is not None)
+			jobData = jobInfo[2]
 			result = {}
 			# parse old job info data format for files
 			oldFileFormat = [FileInfoProcessor.Hash, FileInfoProcessor.NameLocal, FileInfoProcessor.NameDest, FileInfoProcessor.Path]

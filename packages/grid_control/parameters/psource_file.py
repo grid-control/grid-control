@@ -51,21 +51,22 @@ class GCDumpParameterSource(ParameterSource):
 				result[key] = value
 
 	def write(cls, fn, pa):
-		fp = ZipFile(fn, 'w')
 		try:
+			fp = ZipFile(fn, 'w')
 			keys = sorted(ifilter(lambda p: not p.untracked, pa.getJobKeys()))
 			fp.write('# %s\n' % json.dumps(keys))
 			maxN = pa.getMaxJobs()
 			if maxN:
-				log = None
+				activity = utils.ActivityLog('Writing parameter dump')
 				for jobNum in irange(maxN):
-					del log
-					log = utils.ActivityLog('Writing parameter dump [%d/%d]' % (jobNum + 1, maxN))
+					activity.finish()
+					activity = utils.ActivityLog('Writing parameter dump [%d/%d]' % (jobNum + 1, maxN))
 					meta = pa.getJobInfo(jobNum)
 					if meta.get(ParameterInfo.ACTIVE, True):
 						fp.write('%d\t%s\n' % (jobNum, str.join('\t', imap(lambda k: json.dumps(meta.get(k, '')), keys))))
 					else:
 						fp.write('%d!\t%s\n' % (jobNum, str.join('\t', imap(lambda k: json.dumps(meta.get(k, '')), keys))))
+				activity.finish()
 		finally:
 			fp.close()
 	write = classmethod(write)
@@ -89,7 +90,7 @@ class CSVParameterSource(InternalParameterSource):
 		values = lmap(lambda d: dict(cleanupDict(d)), tmp)
 		InternalParameterSource.__init__(self, values, keys)
 
-	def create(cls, pconfig = None, src = 'CSV'):
+	def create(cls, pconfig = None, src = 'CSV'): # pylint:disable=arguments-differ
 		fn = pconfig.get(src, 'source')
 		return CSVParameterSource(fn, pconfig.get(src, 'format', 'sniffed'))
 	create = classmethod(create)

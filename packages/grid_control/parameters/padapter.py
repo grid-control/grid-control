@@ -119,10 +119,12 @@ class TrackedParameterAdapter(BasicParameterAdapter):
 		if not doResync and not doInit: # Reuse old mapping
 			activity = utils.ActivityLog('Loading cached parameter information')
 			self.readJob2PID()
+			activity.finish()
 		elif doResync: # Perform sync
 			activity = utils.ActivityLog('Syncronizing parameter information')
 			self.storedHash = None
 			self._resyncInternal()
+			activity.finish()
 		elif doInit: # Write current state
 			self.writeJob2PID(self._pathJob2PID)
 			ParameterSource.getClass('GCDumpParameterSource').write(self._pathParams, self)
@@ -149,7 +151,7 @@ class TrackedParameterAdapter(BasicParameterAdapter):
 		finally:
 			fp.close()
 
-	def getJobInfo(self, jobNum): # Perform mapping between jobNum and parameter number
+	def getJobInfo(self, jobNum, pNum = None): # Perform mapping between jobNum and parameter number
 		pNum = self._mapJob2PID.get(jobNum, jobNum)
 		if (pNum < self._source.getMaxParameters()) or (self._source.getMaxParameters() is None):
 			result = BasicParameterAdapter.getJobInfo(self, jobNum, pNum)
@@ -158,17 +160,9 @@ class TrackedParameterAdapter(BasicParameterAdapter):
 		result['GC_JOB_ID'] = jobNum
 		return result
 
-	def _resyncInternal(self): # This function is _VERY_ time critical!
-		tmp = self._rawSource.resync() # First ask about psource changes
-		(redoNewPNum, disableNewPNum, sizeChange) = (set(tmp[0]), set(tmp[1]), tmp[2])
-		hashNew = self._rawSource.getHash()
-		hashChange = self.storedHash != hashNew
-		self.storedHash = hashNew
-		if not (redoNewPNum or disableNewPNum or sizeChange or hashChange):
-			self._resyncState = None
-			return
-
-		def translatePSource(psource): # Reduces psource output to essential information for diff - faster than keying
+	def _diffParams(self, psource_old, psource_new, mapJob2PID, redoNewPNum, disableNewPNum):
+		# Reduces psource output to essential information for diff - faster than keying
+		def translatePSource(psource):
 			keys_store = sorted(ifilter(lambda k: not k.untracked, psource.getJobKeys()))
 			def translateEntry(meta): # Translates parameter setting into hash
 				tmp = md5()
@@ -181,24 +175,30 @@ class TrackedParameterAdapter(BasicParameterAdapter):
 			for entry in psource.iterJobs():
 				yield translateEntry(entry)
 
-		old = ParameterAdapter(None, ParameterSource.createInstance('GCDumpParameterSource', self._pathParams))
-		params_old = list(translatePSource(old))
-		new = ParameterAdapter(None, self._rawSource)
-		params_new = list(translatePSource(new))
+		params_old = list(translatePSource(psource_old))
+		params_new = list(translatePSource(psource_new))
 
-		mapJob2PID = {}
 		def sameParams(paramsAdded, paramsMissing, paramsSame, oldParam, newParam):
 			mapJob2PID[oldParam['GC_PARAM']] = newParam['GC_PARAM']
 			if not oldParam[ParameterInfo.ACTIVE] and newParam[ParameterInfo.ACTIVE]:
 				redoNewPNum.add(newParam['GC_PARAM'])
 			if oldParam[ParameterInfo.ACTIVE] and not newParam[ParameterInfo.ACTIVE]:
 				disableNewPNum.add(newParam['GC_PARAM'])
-		(pAdded, pMissing, pSame) = utils.DiffLists(params_old, params_new, itemgetter(ParameterInfo.HASH), sameParams)
+		return utils.DiffLists(params_old, params_new, itemgetter(ParameterInfo.HASH), sameParams)
 
+
+	def _createAggregatedSource(self, psource_old, psource_new, missingInfos):
+		currentInfoKeys = psource_new.getJobKeys()
+		missingInfoKeys = lfilter(lambda key: key not in currentInfoKeys, psource_old.getJobKeys())
+		ps_miss = ParameterSource.createInstance('InternalParameterSource', missingInfos, missingInfoKeys)
+		return ParameterSource.createInstance('ChainParameterSource', self._rawSource, ps_miss)
+
+
+	def _getResyncSource(self, psource_old, psource_new, mapJob2PID, pAdded, pMissing, disableNewPNum):
 		# Construct complete parameter space psource with missing parameter entries and intervention state
 		# NNNNNNNNNNNNN OOOOOOOOO | source: NEW (==self) and OLD (==from file)
 		# <same><added> <missing> | same: both in NEW and OLD, added: only in NEW, missing: only in OLD
-		oldMaxJobs = old.getMaxJobs()
+		oldMaxJobs = psource_old.getMaxJobs()
 		# assign sequential job numbers to the added parameter entries
 		sort_inplace(pAdded, key = itemgetter('GC_PARAM'))
 		for (idx, entry) in enumerate(pAdded):
@@ -206,11 +206,11 @@ class TrackedParameterAdapter(BasicParameterAdapter):
 				mapJob2PID[oldMaxJobs + idx] = entry['GC_PARAM']
 
 		missingInfos = []
-		newMaxJobs = new.getMaxJobs()
+		newMaxJobs = psource_new.getMaxJobs()
 		sort_inplace(pMissing, key = itemgetter('GC_PARAM'))
 		for (idx, entry) in enumerate(pMissing):
 			mapJob2PID[entry['GC_PARAM']] = newMaxJobs + idx
-			tmp = old.getJobInfo(newMaxJobs + idx, entry['GC_PARAM'])
+			tmp = psource_old.getJobInfo(newMaxJobs + idx, entry['GC_PARAM'])
 			tmp.pop('GC_PARAM')
 			if tmp[ParameterInfo.ACTIVE]:
 				tmp[ParameterInfo.ACTIVE] = False
@@ -218,10 +218,25 @@ class TrackedParameterAdapter(BasicParameterAdapter):
 			missingInfos.append(tmp)
 
 		if missingInfos:
-			currentInfoKeys = new.getJobKeys()
-			missingInfoKeys = lfilter(lambda key: key not in currentInfoKeys, old.getJobKeys())
-			ps_miss = ParameterSource.createInstance('InternalParameterSource', missingInfos, missingInfoKeys)
-			self._source = ParameterSource.createInstance('ChainParameterSource', self._rawSource, ps_miss)
+			return self._createAggregatedSource(psource_old, psource_new, missingInfos)
+		return self._source
+
+	def _resyncInternal(self): # This function is _VERY_ time critical!
+		tmp = self._rawSource.resync() # First ask about psource changes
+		(redoNewPNum, disableNewPNum, sizeChange) = (set(tmp[0]), set(tmp[1]), tmp[2])
+		hashNew = self._rawSource.getHash()
+		hashChange = self.storedHash != hashNew
+		self.storedHash = hashNew
+		if not (redoNewPNum or disableNewPNum or sizeChange or hashChange):
+			self._resyncState = None
+			return
+
+		psource_old = ParameterAdapter(None, ParameterSource.createInstance('GCDumpParameterSource', self._pathParams))
+		psource_new = ParameterAdapter(None, self._rawSource)
+
+		mapJob2PID = {}
+		(pAdded, pMissing, _) = self._diffParams(psource_old, psource_new, mapJob2PID, redoNewPNum, disableNewPNum)
+		self._source = self._getResyncSource(psource_old, psource_new, mapJob2PID, pAdded, pMissing, disableNewPNum)
 
 		self._mapJob2PID = mapJob2PID # Update Job2PID map
 		redoNewPNum = redoNewPNum.difference(disableNewPNum)

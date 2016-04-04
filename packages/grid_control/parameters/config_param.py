@@ -41,12 +41,17 @@ def frange(start, end = None, num = None, steps = None, format = '%g'):
 
 
 def parseParameterOption(option):
-	result = lmap(str.strip, utils.split_advanced(option.lower(), lambda t: t in ')]}', lambda t: True))
-	if len(result) and '(' in result[0]:
-		validChar = lambda c: c.isalnum() or (c in ['_'])
-		result[0] = tuple(utils.accumulate(result[0], '', lambda i, b: not validChar(i), lambda i, b: validChar(i)))
-	elif len(result) == 1:
-		result = lmap(str.strip, result[0].split(' ', 1))
+	# first token is variable / tuple - rest is option specifier: "a option" or "(a,b) option"
+	tokens = list(utils.split_brackets(option.lower()))
+	if len(tokens) and '(' in tokens[0]:
+		# parse tuple in as general way as possible
+		def validChar(c):
+			return c.isalnum() or (c in ['_'])
+		result = [tuple(utils.accumulate(tokens[0], '', lambda i, b: not validChar(i), lambda i, b: validChar(i)))]
+		if tokens[1:]:
+			result.append(str.join('', tokens[1:]).strip())
+	else:
+		result = str.join('', tokens).strip().split(' ', 1)
 	if len(result) == 1:
 		result.append(None)
 	return tuple(result)
@@ -97,24 +102,24 @@ class ParameterConfig:
 	def parseParameterTuple(self, varName, tupleValue, tupleType, varType, varIndex):
 		if tupleType == 'tuple':
 			tupleDelimeter = self.get(self.getParameterOption(varName), 'delimeter', ',')
-			tupleStrings = lmap(str.strip, utils.split_advanced(tupleValue, lambda tok: tok in ')]}', lambda tok: True))
+			tupleStrings = lmap(str.strip, utils.split_advanced(tupleValue, lambda tok: tok in ' \n', lambda tok: False))
 			tupleList = lmap(lambda t: parseTuple(t, tupleDelimeter), tupleStrings)
 		elif tupleType == 'binning':
 			tupleList = lzip(tupleValue.split(), tupleValue.split()[1:])
 
-		def yieldEntries():
-			for tupleEntry in tupleList:
-				try:
-					tmp = self.parseParameter(varName, tupleEntry[varIndex], varType)
-				except Exception:
-					raise ConfigError('Unable to parse %r' % tupleEntry)
-				if isinstance(tmp, list):
-					if len(tmp) != 1:
-						raise ConfigError('[Variable: %s] Tuple entry (%s) expands to multiple variable entries (%s)!' % (varName, tupleEntry[varIndex], tmp))
-					yield tmp[0]
-				else:
-					yield tmp
-		return list(yieldEntries())
+		result = []
+		for tupleEntry in tupleList:
+			try:
+				tmp = self.parseParameter(varName, tupleEntry[varIndex], varType)
+			except Exception:
+				raise ConfigError('Unable to parse %r' % repr((tupleEntry, tupleStrings)))
+			if isinstance(tmp, list):
+				if len(tmp) != 1:
+					raise ConfigError('[Variable: %s] Tuple entry (%s) expands to multiple variable entries (%s)!' % (varName, tupleEntry[varIndex], tmp))
+				result.append(tmp[0])
+			else:
+				result.append(tmp)
+		return result
 
 
 	def onChange(self, config, old_obj, cur_obj, cur_entry, obj2str):

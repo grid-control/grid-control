@@ -35,7 +35,7 @@ class EventBoundarySplitter(DataSplitter):
 				try:
 					fileObj = next(fileListIter);
 				except StopIteration:
-					if len(job[DataSplitter.FileList]):
+					if job[DataSplitter.FileList]:
 						yield job
 					break
 
@@ -75,7 +75,7 @@ class EventBoundarySplitter(DataSplitter):
 
 	def splitDatasetInternal(self, blocks, firstEvent = 0):
 		for block in blocks:
-			eventsPerJob = self.setup(self.config.getInt, block, 'events per job')
+			eventsPerJob = self.setup(self._config.getInt, block, 'events per job')
 			for job in self._splitJobs(block[DataProvider.FileList], eventsPerJob, firstEvent):
 				firstEvent = 0
 				yield self.finaliseJobSplitting(block, job)

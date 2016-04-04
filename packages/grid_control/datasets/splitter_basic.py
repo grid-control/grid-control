@@ -36,9 +36,9 @@ class FileLevelSplitter(DataSplitter):
 class FLSplitStacker(FileLevelSplitter):
 	def splitDatasetInternal(self, blocks, firstEvent = 0):
 		for block in blocks:
-			splitterList = self.setup(self.config.getList, block, 'splitter stack', ['BlockBoundarySplitter'])
-			subSplitter = imap(lambda x: FileLevelSplitter.createInstance(x, self.config), splitterList[:-1])
-			endSplitter = DataSplitter.createInstance(splitterList[-1], self.config)
+			splitterList = self.setup(self._config.getList, block, 'splitter stack', ['BlockBoundarySplitter'])
+			subSplitter = imap(lambda x: FileLevelSplitter.createInstance(x, self._config), splitterList[:-1])
+			endSplitter = DataSplitter.createInstance(splitterList[-1], self._config)
 			for subBlock in reduce(lambda x, y: y.splitBlocks(x), subSplitter, [block]):
 				for splitting in endSplitter.splitDatasetInternal([subBlock]):
 					yield splitting
@@ -55,7 +55,7 @@ class FileBoundarySplitter(FileLevelSplitter):
 	def splitBlocks(self, blocks):
 		for block in blocks:
 			start = 0
-			filesPerJob = self.setup(self.config.getInt, block, 'files per job')
+			filesPerJob = self.setup(self._config.getInt, block, 'files per job')
 			while start < len(block[DataProvider.FileList]):
 				files = block[DataProvider.FileList][start : start + filesPerJob]
 				start += filesPerJob
@@ -68,7 +68,7 @@ class HybridSplitter(FileLevelSplitter):
 	def splitBlocks(self, blocks):
 		for block in blocks:
 			(events, fileStack) = (0, [])
-			eventsPerJob = self.setup(self.config.getInt, block, 'events per job')
+			eventsPerJob = self.setup(self._config.getInt, block, 'events per job')
 			for fileInfo in block[DataProvider.FileList]:
 				if (len(fileStack) > 0) and (events + fileInfo[DataProvider.NEntries] > eventsPerJob):
 					yield self.newBlock(block, fileStack)

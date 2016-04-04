@@ -66,8 +66,8 @@ class Condor(BasicWMS):
 		utils.vprint('Using batch system: Condor/GlideInWMS', -1)
 		BasicWMS.__init__(self, config, wmsName)
 		# special debug out/messages/annotations - may have noticeable effect on storage and performance!
-		if config.get("debugLog", ""):
-			self.debug=open(config.get("debugLog", ""),'a')
+		if config.get('debugLog', ''):
+			self.debug=open(config.get('debugLog', ''),'a')
 		else:
 			self.debug=False
 		######
@@ -85,14 +85,14 @@ class Condor(BasicWMS):
 		"""%(config.getConfigName(),self.taskID,wmsName))
 		# finalize config state by reading values or setting to defaults
 		self.settings={
-			"jdl": {
-				"Universe" : config.get("Universe", "vanilla"),
-				"NotifyEmail" : config.get("NotifyEmail", ""),
-				"ClassAdData" : config.getList("ClassAdData",[]),
-				"JDLData" : config.getList("JDLData",[])
+			'jdl': {
+				'Universe' : config.get('Universe', 'vanilla'),
+				'NotifyEmail' : config.get('NotifyEmail', ''),
+				'ClassAdData' : config.getList('ClassAdData',[]),
+				'JDLData' : config.getList('JDLData',[])
 				},
-			"pool" : {
-				"hosts" : config.getList("PoolHostList",[])
+			'pool' : {
+				'hosts' : config.getList('PoolHostList',[])
 				}
 			}
 		# prepare interfaces for local/remote/ssh pool access
@@ -106,8 +106,8 @@ class Condor(BasicWMS):
 		# history query is faster with split files - check if and how this is used
 		# default condor_history command works WITHOUT explicitly specified file
 		self.historyFile = None
-		if self.remoteType == poolType.LOCAL and getoutput( self.configValExec + " ENABLE_HISTORY_ROTATION").lower() == "true":
-			self.historyFile = getoutput( self.configValExec + " HISTORY")
+		if self.remoteType == poolType.LOCAL and getoutput( self.configValExec + ' ENABLE_HISTORY_ROTATION').lower() == 'true':
+			self.historyFile = getoutput( self.configValExec + ' HISTORY')
 			if not os.path.isfile(self.historyFile):
 				self.historyFile = None
 		# broker for selecting Sites
@@ -121,21 +121,21 @@ class Condor(BasicWMS):
 		return False
 
 	def getSites(self):
-		return self.settings["pool"]["hosts"]
+		return self.settings['pool']['hosts']
 
 	def debugOut(self,message,timestamp=True,newline=True):
 		if self.debug:
 			if newline and timestamp:
-				self.debug.write("[%s] >> %s\n"%(time.asctime(),message))
+				self.debug.write('[%s] >> %s\n' % (time.asctime(),message))
 			elif newline:
-				self.debug.write("%s\n"%message)
+				self.debug.write('%s\n' % message)
 			elif timestamp:
-				self.debug.write("%s"%message)
+				self.debug.write('%s' % message)
 			else:
 				self.debug.write(message)
 	def debugPool(self,timestamp=True,newline=True):
 		if self.debug:
-			self.debugOut(self.Pool.LoggedExecute("echo ", "'pool check'" ).cmd, timestamp, newline)
+			self.debugOut(self.Pool.LoggedExecute('echo ', "'pool check'" ).cmd, timestamp, newline)
 	def debugFlush(self):
 		if self.debug:
 			self.debug.flush()
@@ -151,7 +151,7 @@ class Condor(BasicWMS):
 			return utils.Result(waitOnIdle = 20, waitBetweenSteps = 5)
 
 # getSandbox: return path to sandbox for a specific job or basepath
-	def getSandboxPath(self, jobNum=""):
+	def getSandboxPath(self, jobNum=''):
 		sandpath = os.path.join(self.sandPath, str(jobNum), '' )
 		if not os.path.exists(sandpath):
 			try:
@@ -161,15 +161,15 @@ class Condor(BasicWMS):
 		return sandpath
 
 # getWorkdirPath: return path to condor output dir for a specific job or basepath
-	def getWorkdirPath(self, jobNum=""):
+	def getWorkdirPath(self, jobNum=''):
 		# local and spool make condor access the local sandbox directly
 		if self.remoteType == poolType.LOCAL or self.remoteType == poolType.SPOOL:
 			return self.getSandboxPath(jobNum)
 		# ssh and gsissh require a remote working directory
 		else:
 			remotePath = os.path.join( self.poolWorkDir, 'GCRemote.work.TaskID.' + self.taskID, str(jobNum), '' )
-			mkdirProcess = self.Pool.LoggedExecute("mkdir -p", remotePath )
-			self.debugOut("Getting Workdir Nmr: %s Dir: %s - retcode %s" % (jobNum,remotePath,mkdirProcess.wait()))
+			mkdirProcess = self.Pool.LoggedExecute('mkdir -p', remotePath )
+			self.debugOut('Getting Workdir Nmr: %s Dir: %s - retcode %s' % (jobNum,remotePath,mkdirProcess.wait()))
 			if mkdirProcess.wait()==0:
 				return remotePath
 			else:
@@ -248,7 +248,10 @@ class Condor(BasicWMS):
 					jobNum=wmsToJobMap[wmsID]
 					yield ( jobNum, wmsID)
 				except KeyError:	# mismatch in GC<->Condor mapping
-					raise BackendError('Error with canceled condor job:\n%s\nExpected Condor IDs:\n%s\nRemaining condor_rm Output:%s' % (wmsID, wmsIdList, cancelProcess.getMessage() ))
+					self._log.error('Error with canceled condor job %s', wmsID)
+					self._log.error('\tCondor IDs: %s', wmsIdList)
+					self._log.error('\tProcess message: %s', cancelProcess.getMessage())
+					raise BackendError('Error while cancelling job %s' % wmsID)
 			# clean up remote work dir
 			if self.remoteType == poolType.SSH or self.remoteType == poolType.GSISSH:
 				cleanupProcess = self.Pool.LoggedExecute('rm -rf %s' % self.getWorkdirPath(jobNum) )
@@ -285,20 +288,21 @@ class Condor(BasicWMS):
 						if self.explainError(cleanupProcess, cleanupProcess.wait()):
 							return
 						cleanupProcess.logError(self.errorLog)
-						raise BackendError("Cleanup Process %s returned: %s" % ( cleanupProcess.cmd, cleanupProcess.getMessage() ) )
+						raise BackendError('Cleanup process %s returned: %s' % (cleanupProcess.cmd, cleanupProcess.getMessage()))
 			except Exception:
-				raise BackendError("Exception while cleaning up remote working directory. There might be some junk data left in: %s @ %s" % ( self.getWorkdirPath(), self.Pool.getDomain() ) )
+				self._log.warning('There might be some junk data left in: %s @ %s', self.getWorkdirPath(), self.Pool.getDomain())
+				raise BackendError('Unable to clean up remote working directory')
 
 # checkJobs: Check status of jobs and yield (jobNum, wmsID, status, other data)
 #>>wmsJobIdList: list of (wmsID, JobNum) tuples
 	def checkJobs(self, wmsJobIdList):
 		if len(wmsJobIdList) == 0:
 			raise StopIteration
-		self.debugOut("Started checking: %s" % set(izip(*wmsJobIdList)[0]))
+		self.debugOut('Started checking: %s' % set(izip(*wmsJobIdList)[0]))
 		self.debugPool()
 
 		wmsIdList=self._getRawIDs(wmsJobIdList)
-		wmsIdArgument = " ".join(wmsIdList)
+		wmsIdArgument = ' '.join(wmsIdList)
 		wmsToJobMap = dict(wmsJobIdList)
 
 		activity = utils.ActivityLog('fetching job status')
@@ -345,7 +349,8 @@ class Condor(BasicWMS):
 			# query the history file by file until no more jobs need updating
 			for historyFile in historyList:
 				if len(wmsIdList) > 0:
-					statusProcess = self.Pool.LoggedExecute(self.historyExec, '%(fileQuery)s %(format)s %(jobIDs)s' % {"fileQuery": historyFile, "jobIDs" : " ", "format" : self.statusReturnFormat })
+					statusArgs = '%(fileQuery)s %(format)s %(jobIDs)s' % {"fileQuery": historyFile, "jobIDs" : " ", "format" : self.statusReturnFormat}
+					statusProcess = self.Pool.LoggedExecute(self.historyExec, statusArgs)
 					for statusReturnLine in statusProcess.iter():
 						# test if line starts with a number and was requested
 						try:
@@ -549,7 +554,8 @@ class Condor(BasicWMS):
 		]
 		# properly inject any information retrieval keys into ClassAds - regular attributes do not need injecting
 		for key in self.poolQuery.values():
-			# is this a match string? '+JOB_GLIDEIN_Entry_Name = "$$(GLIDEIN_Entry_Name:Unknown)"' -> MATCH_GLIDEIN_Entry_Name = "CMS_T2_DE_RWTH_grid-ce2" && MATCH_EXP_JOB_GLIDEIN_Entry_Name = "CMS_T2_DE_RWTH_grid-ce2"
+			# is this a match string? '+JOB_GLIDEIN_Entry_Name = "$$(GLIDEIN_Entry_Name:Unknown)"'
+			# -> MATCH_GLIDEIN_Entry_Name = "CMS_T2_DE_RWTH_grid-ce2" && MATCH_EXP_JOB_GLIDEIN_Entry_Name = "CMS_T2_DE_RWTH_grid-ce2"
 			matchKey=re.match("(?:MATCH_EXP_JOB_|MATCH_|JOB_)(.*)",key).groups()[0]
 			if matchKey:
 				inject='+JOB_%s = "$$(%s:Unknown)"' % (matchKey,matchKey)
@@ -577,6 +583,7 @@ class Condor(BasicWMS):
 		for jobNum in jobNumList:
 			self.debugOut("  o Adding Job %s" % jobNum)
 			workdir = self.getWorkdirPath(jobNum)
+			output_files = ",".join([target for (desc, src, target) in self._getSandboxFilesOut(module) if ((src != 'gc.stdout') and (src != 'gc.stderr'))])
 			jdlData.extend([
 				# store matching Grid-Control and Condor ID
 				'+GridControl_GCtoWMSID = "%s@$(Cluster).$(Process)"' % module.getDescription(jobNum).jobName,
@@ -586,7 +593,7 @@ class Condor(BasicWMS):
 				# condor doesn"t execute the job directly. actual job data, files and arguments are accessed by the GC scripts (but need to be copied to the worker)
 				'transfer_input_files = ' + ",".join(transferFiles + [os.path.join(workdir, 'job_%d.var' % jobNum)]),
 				# only copy important files +++ stdout and stderr get remapped but transferred automatically, so don't request them as they would not be found
-				'transfer_output_files = ' + ",".join( [ target for (description, source, target) in self._getSandboxFilesOut(module) if ( ( source != 'gc.stdout' ) and ( source != 'gc.stderr' ) ) ] ),
+				'transfer_output_files = ' + output_files,
 				'initialdir = ' + workdir,
 				'Output = ' + os.path.join(workdir, "gc.stdout"),
 				'Error = '  + os.path.join(workdir, "gc.stderr"),
@@ -613,8 +620,10 @@ class Condor(BasicWMS):
 				(refuseSites, desireSites) = utils.splitBlackWhiteList(reqValue[1])
 				#(blacklist, whitelist) = utils.splitBlackWhiteList(reqValue[1])
 				## sites matching regular expression requirements
-				#refuseRegx=[ site for site in self._siteMap.keys() if True in [ re.search(expression.lower(),siteDescript.lower()) is not None for siteDescript in _siteMap[site] for expression in blacklist ] ]
-				#desireRegx=[ site for site in self._siteMap.keys() if True in [ re.search(expression.lower(),siteDescript.lower()) is not None for siteDescript in _siteMap[site] for expression in whitelist ] ]
+				#refuseRegx=[ site for site in self._siteMap.keys()
+				# if True in [ re.search(bexpr.lower(),siteDescript.lower()) is not None for siteDescript in _siteMap[site] for bexpr in blacklist ] ]
+				#desireRegx=[ site for site in self._siteMap.keys()
+				# if True in [ re.search(bexpr.lower(),siteDescript.lower()) is not None for siteDescript in _siteMap[site] for bexpr in whitelist ] ]
 				## sites specifically matched
 				#refuseSite=[ site for site in self._siteMap.keys() if site.lower() in ap(lambda req: req.lower(), blacklist) ]
 				#desireSite=[ site for site in self._siteMap.keys() if site.lower() in ap(lambda req: req.lower(), whitelist) ]
@@ -700,7 +709,11 @@ class Condor(BasicWMS):
 
 		# get remote destination features
 		user,sched,collector = self._getDestination(config)
-		self.debugOut("Destination:\n	user:%s @ sched:%s via collector:%s" % ( utils.QM(user,user,"<local default>"), utils.QM(sched,sched,"<local default>"),utils.QM(collector,collector,"<local default>")))
+		nice_user = user or "<local default>"
+		nice_sched = sched or "<local default>"
+		nice_collector = collector or "<local default>"
+		self.debugOut("Destination:\n")
+		self.debugOut("\tuser:%s @ sched:%s via collector:%s" % (nice_user, nice_sched, nice_collector))
 		# prepare commands appropriate for pool type
 		if self.remoteType == poolType.LOCAL or self.remoteType == poolType.SPOOL:
 			self.user=user
@@ -748,7 +761,8 @@ class Condor(BasicWMS):
 				pwdProcess=self.Pool.LoggedExecute("pwd")
 				self.poolWorkDir=pwdProcess.getOutput().strip()
 			if pwdProcess.wait()!=0:
-				raise BackendError("Failed to determine, create or verify base work directory on remote host with code %s!\nThere might be a problem with your credentials or authorisation.\nOutput Message: %s\nError Message: %s" % (pwdProcess.wait(),pwdProcess.getOutput(),pwdProcess.getError()) )
+				self._log.critical("Code: %d\nOutput Message: %s\nError Message: %s", pwdProcess.wait(), pwdProcess.getOutput(), pwdProcess.getError())
+				raise BackendError("Failed to determine, create or verify base work directory on remote host")
 
 #_getDestination: read user/sched/collector from config
 	def _getDestination(self,config):

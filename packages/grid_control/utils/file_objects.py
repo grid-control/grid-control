@@ -28,8 +28,13 @@ class SafeFile(object):
 		self._fp.write(value)
 		self._fp.truncate()
 
+	def close(self):
+		if self._fp:
+			self._fp.close()
+		self._fp = None
+
 	def __del__(self):
-		self._fp.close()
+		self.close()
 
 
 class VirtualFile(BytesBufferBase):

@@ -56,6 +56,16 @@ def tok2inlinetok(tokens, operatorList):
 		token = next(tokens, None)
 
 
+def clearOPStack(opList, opStack, tokStack):
+	while len(opStack) and (opStack[-1][0] in opList):
+		operator = opStack.pop()
+		tmp = []
+		for dummy in irange(len(operator) + 1):
+			tmp.append(tokStack.pop())
+		tmp.reverse()
+		tokStack.append((operator[0], tmp))
+
+
 def tok2tree(value, precedence):
 	value = list(value)
 	errorStr = str.join('', imap(str, value))
@@ -63,15 +73,6 @@ def tok2tree(value, precedence):
 	token = next(tokens, None)
 	tokStack = []
 	opStack = []
-
-	def clearOPStack(opList):
-		while len(opStack) and (opStack[-1][0] in opList):
-			operator = opStack.pop()
-			tmp = []
-			for x in irange(len(operator) + 1):
-				tmp.append(tokStack.pop())
-			tmp.reverse()
-			tokStack.append((operator[0], tmp))
 
 	def collectNestedTokens(tokens, left, right, errMsg):
 		level = 1
@@ -99,7 +100,7 @@ def tok2tree(value, precedence):
 			tmp = list(collectNestedTokens(tokens, '[', ']', "Parenthesis error: " + errorStr))
 			tokStack.append(('lookup', [tokStack.pop(), tok2tree(tmp, precedence)]))
 		elif token in precedence:
-			clearOPStack(precedence[token])
+			clearOPStack(precedence[token], opStack, tokStack)
 			if opStack and opStack[-1].startswith(token):
 				opStack[-1] = opStack[-1] + token
 			else:
@@ -108,17 +109,29 @@ def tok2tree(value, precedence):
 			tokStack.append(token)
 		token = next(tokens, None)
 
-	clearOPStack(precedence.keys())
+	clearOPStack(precedence.keys(), opStack, tokStack)
 	assert(len(tokStack) == 1)
 	return tokStack[0]
+
+
+def tree2names(node): # return list of referenced variable names in tree
+	if isinstance(node, tuple):
+		result = []
+		for op_args in node[1:]:
+			for arg in op_args:
+				result.extend(tree2names(arg))
+		return result
+	else:
+		return [node]
 
 
 class SimpleParameterFactory(BasicParameterFactory):
 	def __init__(self, config, name):
 		BasicParameterFactory.__init__(self, config, name)
-		self.pExpr = self.paramConfig.get('parameters', None, '')
+		self._pExpr = self._paramConfig.get('parameters', None, '')
 		self.elevatedSwitch = [] # Switch statements are elevated to global scope
 		self.precedence = {'*': [], '+': ['*'], ',': ['*', '+']}
+
 
 	def combineSources(self, PSourceClass, args):
 		repeat = reduce(lambda a, b: a * b, ifilter(lambda expr: isinstance(expr, int), args), 1)
@@ -133,44 +146,36 @@ class SimpleParameterFactory(BasicParameterFactory):
 			return [RepeatParameterSource(result, repeat)]
 		return [result]
 
-	def tree2expr(self, node):
-		def tree2names(node): # return list of referenced variable names in tree
-			if isinstance(node, tuple):
-				result = []
-				for op_args in node[1:]:
-					for arg in op_args:
-						result.extend(tree2names(arg))
-				return result
+
+	def _createVarSource(self, var_list, lookup_list): # create variable source
+		psource_list = []
+		for (doElevate, PSourceClass, args) in createLookupHelper(self._paramConfig, var_list, lookup_list):
+			if doElevate: # switch needs elevation beyond local scope
+				self.elevatedSwitch.append((PSourceClass, args))
 			else:
-				return [node]
+				psource_list.append(PSourceClass(*args))
+		# Optimize away unnecessary cross operations
+		if len(lfilter(lambda p: p.getMaxParameters() is not None, psource_list)) > 1:
+			return [CrossParameterSource(*psource_list)]
+		return psource_list # simply forward list of psources
 
-		def createVarSource(var_list, lookup_list): # create variable source
-			psource_list = []
-			for (doElevate, PSourceClass, args) in createLookupHelper(self.paramConfig, var_list, lookup_list):
-				if doElevate: # switch needs elevation beyond local scope
-					self.elevatedSwitch.append((PSourceClass, args))
-				else:
-					psource_list.append(PSourceClass(*args))
-			# Optimize away unnecessary cross operations
-			if len(lfilter(lambda p: p.getMaxParameters() is not None, psource_list)) > 1:
-				return [CrossParameterSource(*psource_list)]
-			return psource_list # simply forward list of psources
 
+	def tree2expr(self, node):
 		if isinstance(node, tuple):
 			(operator, args) = node
 			if operator == 'lookup':
 				assert(len(args) == 2)
-				return createVarSource(tree2names(args[0]), tree2names(args[1]))
+				return self._createVarSource(tree2names(args[0]), tree2names(args[1]))
 			elif operator == 'ref':
 				assert(len(args) == 1)
 				refTypeDefault = 'dataset'
 				if args[0] not in DataParameterSource.datasetsAvailable:
 					refTypeDefault = 'csv'
-				refType = self.paramConfig.get(args[0], 'type', refTypeDefault)
+				refType = self._paramConfig.get(args[0], 'type', refTypeDefault)
 				if refType == 'dataset':
-					return [DataParameterSource.create(self.paramConfig, args[0])]
+					return [DataParameterSource.create(self._paramConfig, args[0])]
 				elif refType == 'csv':
-					return [CSVParameterSource.create(self.paramConfig, args[0])]
+					return [CSVParameterSource.create(self._paramConfig, args[0])]
 				raise APIError('Unknown reference type: "%s"' % refType)
 			else:
 				args_complete = lchain(imap(self.tree2expr, args))
@@ -184,7 +189,7 @@ class SimpleParameterFactory(BasicParameterFactory):
 		elif isinstance(node, int):
 			return [node]
 		else:
-			return createVarSource([node], None)
+			return self._createVarSource([node], None)
 
 
 	def _getUserSource(self, pExpr, parent):
@@ -211,6 +216,6 @@ class SimpleParameterFactory(BasicParameterFactory):
 
 
 	def _getRawSource(self, parent):
-		if self.pExpr:
-			parent = self._getUserSource(self.pExpr, parent)
+		if self._pExpr:
+			parent = self._getUserSource(self._pExpr, parent)
 		return BasicParameterFactory._getRawSource(self, parent)

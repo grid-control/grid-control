@@ -17,6 +17,6 @@ from python_compat import lmap
 
 class RunSplitter(DataSplitter.getClass('MetadataSplitter')):
 	def metaKey(self, metadataNames, block, fi):
-		selRunRange = self.setup(self.config.getInt, block, 'run range', 1)
+		selRunRange = self.setup(self._config.getInt, block, 'run range', 1)
 		mdIdx = metadataNames.index('Runs')
 		return lmap(lambda r: int(r / selRunRange), fi[DataProvider.Metadata][mdIdx])

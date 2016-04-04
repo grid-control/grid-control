@@ -50,18 +50,14 @@ class Job(object):
 						wmsId, backend = tuple(data['id'].split('.', 1))
 						data['id'] = 'WMSID.%s.%s' % (backend, wmsId)
 				job.wmsId = data['id']
-			if 'attempt' in data:
-				job.attempt = data['attempt']
-			if 'submitted' in data:
-				job.submitted = data['submitted']
+			for key in ['attempt', 'submitted', 'changed']:
+				if key in data:
+					setattr(job, key, data[key])
 			if 'runtime' not in data:
 				if 'submitted' in data:
 					data['runtime'] = time.time() - float(job.submitted)
 				else:
 					data['runtime'] = 0
-			if 'changed' in data:
-				job.changed = data['changed']
-
 			for key in irange(1, job.attempt + 1):
 				if ('history_' + str(key)).strip() in data:
 					job.history[key] = data['history_' + str(key)]
@@ -147,6 +143,8 @@ class JobDB(ConfigurablePlugin):
 			jobLimit = max(self._jobMap) + 1
 		(self.jobLimit, self.alwaysSelector) = (jobLimit, jobSelector)
 
+	def getWorkPath(self): # TODO: only used by report class
+		return os.path.abspath(os.path.join(self._dbPath, '..'))
 
 	def readJobs(self, jobLimit):
 		try:
@@ -156,7 +154,8 @@ class JobDB(ConfigurablePlugin):
 			raise JobError("Problem creating work directory '%s'" % self._dbPath)
 
 		candidates = fnmatch.filter(os.listdir(self._dbPath), 'job_*.txt')
-		(jobMap, log, maxJobs) = ({}, None, len(candidates))
+		(jobMap, maxJobs) = ({}, len(candidates))
+		activity = utils.ActivityLog('Reading job infos ...')
 		for idx, jobFile in enumerate(candidates):
 			if (jobLimit >= 0) and (len(jobMap) >= jobLimit):
 				utils.eprint('Stopped reading job infos! The number of job infos in the work directory (%d) ' % len(jobMap), newline = False)
@@ -169,8 +168,9 @@ class JobDB(ConfigurablePlugin):
 			jobObj = Job.load(os.path.join(self._dbPath, jobFile))
 			jobMap[jobNum] = jobObj
 			if idx % 100 == 0:
-				del log
-				log = utils.ActivityLog('Reading job infos ... %d [%d%%]' % (idx, (100.0 * idx) / maxJobs))
+				activity.finish()
+				activity = utils.ActivityLog('Reading job infos ... %d [%d%%]' % (idx, (100.0 * idx) / maxJobs))
+		activity.finish()
 		return jobMap
 
 

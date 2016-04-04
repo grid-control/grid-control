@@ -40,6 +40,6 @@ class MetadataSplitter(FileLevelSplitter):
 
 class UserMetadataSplitter(MetadataSplitter):
 	def metaKey(self, metadataNames, block, fi):
-		selMetadataNames = self.setup(self.config.getList, block, 'split metadata', [])
+		selMetadataNames = self.setup(self._config.getList, block, 'split metadata', [])
 		selMetadataIdx = imap(metadataNames.index, selMetadataNames)
 		return tuple(imap(lambda idx: fi[DataProvider.Metadata][idx], selMetadataIdx))

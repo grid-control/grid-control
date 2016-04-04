@@ -60,6 +60,10 @@ class DataProvider(ConfigurablePlugin):
 	bind = classmethod(bind)
 
 
+	def getDatasetExpr(self):
+		return self._datasetExpr
+
+
 	def setPassthrough(self):
 		self._passthrough = True
 
@@ -116,7 +120,7 @@ class DataProvider(ConfigurablePlugin):
 				statString = '%s: ' % self._datasetNick
 			elif self._datasetExpr:
 				statString = '%s: ' % self._datasetExpr
-			del log
+			log.finish()
 			statString += 'Running over %s distributed over %d blocks.' % self._stats.getStats()
 			self._log.info(statString)
 		return self._cache_block

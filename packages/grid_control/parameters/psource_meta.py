@@ -69,7 +69,7 @@ class RangeParameterSource(ForwardingParameterSource):
 
 	def resync(self):
 		(result_redo, result_disable, result_sizeChange) = ParameterSource.resync(self)
-		(psource_redo, psource_disable, psource_sizeChange) = self._psource.resync()
+		(psource_redo, psource_disable, _) = self._psource.resync() # size change is irrelevant if outside of range
 		for pNum in psource_redo:
 			if (pNum >= self._posStart) and (pNum <= self._posEnd):
 				result_redo.add(pNum - self._posStart)
@@ -233,7 +233,7 @@ class CrossParameterSource(MultiParameterSource):
 			return reduce(lambda a, b: a * b, maxList)
 
 	def _translateNum(self, pIdx, pNum):
-		psource, maxN, prev = self.quickFill[pIdx]
+		(_, maxN, prev) = self.quickFill[pIdx] # psource irrelevant for pnum translation
 		return lfilter(lambda x: int(x / prev) % maxN == pNum, irange(self.getMaxParameters()))
 
 	def fillParameterInfo(self, pNum, result):

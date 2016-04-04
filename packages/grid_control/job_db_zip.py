@@ -50,7 +50,7 @@ class ZippedJobDB(JobDB):
 				for broken in brokenList:
 					os.system('zip %s -d %s' % (self._dbFile, broken))
 				utils.eprint('Recover completed!')
-			log = None
+			activity = utils.ActivityLog('Reading job transactions ...')
 			maxJobs = len(tar.namelist())
 			tMap = {}
 			for idx, fnTarInfo in enumerate(tar.namelist()):
@@ -61,8 +61,8 @@ class ZippedJobDB(JobDB):
 				jobMap[jobNum] = Job.loadData(fnTarInfo, data)
 				tMap[jobNum] = tid
 				if idx % 100 == 0:
-					del log
-					log = utils.ActivityLog('Reading job transactions ... %d [%d%%]' % (idx, (100.0 * idx) / maxJobs))
+					activity.finish()
+					activity = utils.ActivityLog('Reading job transactions ... %d [%d%%]' % (idx, (100.0 * idx) / maxJobs))
 
 		self._serial = maxJobs
 		return jobMap
@@ -83,7 +83,7 @@ class Migrate2ZippedJobDB(ZippedJobDB):
 		dbPath = config.getWorkPath('jobs')
 		self._dbFile = config.getWorkPath('jobs.zip')
 		if os.path.exists(dbPath) and os.path.isdir(dbPath) and not os.path.exists(self._dbFile):
-			log = utils.ActivityLog('Converting job database...')
+			activity = utils.ActivityLog('Converting job database...')
 			self._serial = 0
 			try:
 				oldDB = JobDB(config)
@@ -93,6 +93,6 @@ class Migrate2ZippedJobDB(ZippedJobDB):
 			except Exception:
 				utils.removeFiles([self._dbFile])
 				raise
-			del log
+			activity.finish()
 
 		ZippedJobDB.__init__(self, config, jobLimit, jobSelector)

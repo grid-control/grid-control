@@ -12,9 +12,8 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-import re
 from grid_control import utils
-from grid_control.config import ConfigError
+from grid_control.config import ConfigError, Matcher
 from grid_control.parameters.psource_base import ParameterInfo, ParameterSource
 from grid_control.parameters.psource_basic import FormatterParameterSource, KeyParameterSource, SimpleParameterSource, SingleParameterSource
 from python_compat import imap, irange, izip, lmap, md5_hex
@@ -39,7 +38,7 @@ class LookupMatcher:
 			match = True
 			for (sval, lval, lmatch) in izip(srcValues, lookupValues, self._lookup_functions):
 				if sval is not None:
-					match = match and lmatch(sval, lval)
+					match = match and (lmatch.matcher(sval, lval) > 0)
 			if match:
 				return lookupValues
 
@@ -48,53 +47,35 @@ class LookupMatcher:
 		return self._lookup_dict.get(rule, None)
 
 
-def lookupConfigParser(pconfig, key, lookup):
+def lookupConfigParser(pconfig, outputKey, lookupKeys):
 	def collectKeys(src):
 		result = []
 		src.fillParameterKeys(result)
 		return result
-	key = collectKeys(key)[0]
-	if lookup is None:
-		lookup = [pconfig.get('default lookup')]
+	outputKey = collectKeys(outputKey)[0]
+	if lookupKeys is None:
+		lookupKeys = [pconfig.get('default lookup')]
 	else:
-		lookup = collectKeys(lookup)
-	if not lookup or lookup == ['']:
+		lookupKeys = collectKeys(lookupKeys)
+	if not lookupKeys or lookupKeys == ['']:
 		raise ConfigError('Lookup parameter not defined!')
-	matchfun = []
 	defaultMatcher = pconfig.get('', 'default matcher', 'equal')
-	matchstrList = pconfig.get(key.lstrip('!'), 'matcher', defaultMatcher).lower().splitlines()
-	if len(matchstrList) != len(lookup):
+	matchstrList = pconfig.get(outputKey.lstrip('!'), 'matcher', defaultMatcher).lower().splitlines()
+	if len(matchstrList) != len(lookupKeys):
 		if len(matchstrList) == 1:
-			matchstrList = matchstrList * len(lookup)
+			matchstrList = matchstrList * len(lookupKeys)
 		else:
 			raise ConfigError('Match-functions (length %d) and match-keys (length %d) do not match!' %
-				(len(matchstrList), len(lookup)))
-	for matchstr in matchstrList:
-		if matchstr == 'start':
-			matchfun.append(lambda value, pat: value.startswith(pat))
-		elif matchstr == 'end':
-			matchfun.append(lambda value, pat: value.endswith(pat))
-		elif matchstr == 'equal':
-			matchfun.append(lambda value, pat: value == pat)
-		elif matchstr == 'expr':
-			matchfun.append(lambda value, pat: eval('lambda value: %s' % pat)(value)) # pylint:disable=eval-used
-		elif matchstr == 'regex':
-			class MatchObj:
-				def __init__(self):
-					self.expr = {}
-				def __call__(self, value, pat):
-					if pat not in self.expr:
-						self.expr[pat] = re.compile(pat)
-					return self.expr[pat].search(value)
-			matchfun.append(MatchObj())
-		else:
-			raise ConfigError('Invalid matcher selected! "%s"' % matchstr)
-	(content, order) = pconfig.getParameter(key.lstrip('!'))
-	if pconfig.getBool(key.lstrip('!'), 'empty set', False) == False:
+				(len(matchstrList), len(lookupKeys)))
+	matchfun = []
+	for matcherName in matchstrList:
+		matchfun.append(Matcher.createInstance(matcherName, pconfig, outputKey))
+	(content, order) = pconfig.getParameter(outputKey.lstrip('!'))
+	if not pconfig.getBool(outputKey.lstrip('!'), 'empty set', False):
 		for k in content:
 			if len(content[k]) == 0:
 				content[k].append('')
-	return (key, lookup, matchfun, (content, order))
+	return (outputKey, lookupKeys, matchfun, (content, order))
 
 
 class SimpleLookupParameterSource(SingleParameterSource):
@@ -120,7 +101,7 @@ class SimpleLookupParameterSource(SingleParameterSource):
 	def __repr__(self):
 		return "lookup(key('%s'), %s)" % (self._key, repr(self._matcher))
 
-	def create(cls, pconfig, key, lookup = None):
+	def create(cls, pconfig, key, lookup = None): # pylint:disable=arguments-differ
 		return SimpleLookupParameterSource(*lookupConfigParser(pconfig, key, lookup))
 	create = classmethod(create)
 
@@ -172,7 +153,7 @@ class SwitchingLookupParameterSource(SingleParameterSource):
 			(psource_redo, psource_disable, psource_sizeChange) = self._psource.resync()
 			self._pSpace = self.initPSpace()
 			for pNum, pInfo in enumerate(self._pSpace):
-				subNum, lookupIndex = pInfo
+				subNum, _ = pInfo # ignore lookupIndex
 				if subNum in psource_redo:
 					result_redo.add(pNum)
 				if subNum in psource_disable:
@@ -190,7 +171,7 @@ class SwitchingLookupParameterSource(SingleParameterSource):
 		result = ['%s: var = %s, lookup = %s' % (self.__class__.__name__, self._key, str.join(',', self._matcher.lookupKeys))]
 		return result + lmap(lambda x: '\t' + x, self._psource.show())
 
-	def create(cls, pconfig, psource, key, lookup = None):
+	def create(cls, pconfig, psource, key, lookup = None): # pylint:disable=arguments-differ
 		return SwitchingLookupParameterSource(psource, *lookupConfigParser(pconfig, key, lookup))
 	create = classmethod(create)
 
@@ -214,10 +195,9 @@ def createLookupHelper(pconfig, var_list, lookup_list):
 	if lookup_list: # default lookup key
 		lookup_key = KeyParameterSource(*lookup_list)
 
-	# Determine kind of lookup
+	# Determine kind of lookup, [3] == lookupDictConfig, [0] == lookupContent
 	tmp = lookupConfigParser(pconfig, KeyParameterSource(var_name), lookup_key)
-	(outputKey, lookupKeys, lookupFunctions, lookupDictConfig) = tmp
-	(lookupContent, lookupOrder) = lookupDictConfig
+	lookupContent = tmp[3][0]
 	lookupLen = lmap(len, lookupContent.values())
 
 	if (min(lookupLen) == 1) and (max(lookupLen) == 1): # simple lookup sufficient for this setup

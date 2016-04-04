@@ -90,7 +90,7 @@ class DataParameterSource(ParameterSource):
 			self.resyncFinished()
 		return (result_redo, result_disable, result_sizeChange)
 
-	def create(cls, pconfig = None, src = 'data'):
+	def create(cls, pconfig = None, src = 'data'): # pylint:disable=arguments-differ
 		if src not in DataParameterSource.datasetsAvailable:
 			raise UserError('Dataset parameter source "%s" not setup!' % src)
 		result = DataParameterSource.datasetsAvailable[src]

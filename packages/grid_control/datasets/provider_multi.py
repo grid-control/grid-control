@@ -31,7 +31,8 @@ class MultiDatasetProvider(DataProvider):
 
 
 	def checkSplitter(self, splitter):
-		getProposal = lambda x: reduce(lambda prop, prov: prov.checkSplitter(prop), self._providerList, x)
+		def getProposal(x):
+			return reduce(lambda prop, prov: prov.checkSplitter(prop), self._providerList, x)
 		if getProposal(splitter) != getProposal(getProposal(splitter)):
 			raise DatasetError('Dataset providers could not agree on valid dataset splitter!')
 		return getProposal(splitter)

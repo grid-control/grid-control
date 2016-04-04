@@ -58,7 +58,49 @@ class CMSSW(DataTask):
 		DataTask.__init__(self, config, name)
 		self.updateErrorDict(utils.pathShare('gc-run.cmssw.sh', pkg = 'grid_control_cms'))
 
-		# SCRAM info
+		# SCRAM settings
+		self._configureSCRAMSettings(config)
+
+		self.useReqs = config.getBool('software requirements', True, onChange = None)
+		self._projectAreaTarballSE = config.getBool(['se project area', 'se runtime'], True)
+		self._projectAreaTarball = config.getWorkPath('cmssw-project-area.tar.gz')
+
+		# Information about search order for software environment
+		self.searchLoc = self._getCMSSWPaths(config)
+		# Prolog / Epilog script support - warn about old syntax
+		self.prolog = TaskExecutableWrapper(config, 'prolog', '')
+		self.epilog = TaskExecutableWrapper(config, 'epilog', '')
+		if config.getPaths('executable', []) != []:
+			raise ConfigError('Prefix executable and argument options with either prolog or epilog!')
+		self.arguments = config.get('arguments', '')
+
+		# Get cmssw config files and check their existance
+		self.configFiles = list(self._getConfigFiles(config))
+		# Check that for dataset jobs the necessary placeholders are in the config file
+		self.prepare = config.getBool('prepare config', False)
+		fragment = config.getPath('instrumentation fragment', utils.pathShare('fragmentForCMSSW.py', pkg = 'grid_control_cms'))
+		if self.dataSplitter is not None:
+			if config.getState('init', detail = 'sandbox'):
+				if len(self.configFiles) > 0:
+					self.instrumentCfgQueue(self.configFiles, fragment, mustPrepare = True)
+		else:
+			self.eventsPerJob = config.get('events per job', '0')
+			if config.getState('init', detail = 'sandbox') and self.prepare:
+				self.instrumentCfgQueue(self.configFiles, fragment)
+		if not os.path.exists(self._projectAreaTarball):
+			config.setState(True, 'init', detail = 'sandbox')
+		if config.getState('init', detail = 'sandbox'):
+			if os.path.exists(self._projectAreaTarball):
+				if not utils.getUserBool('CMSSW tarball already exists! Do you want to regenerate it?', True):
+					return
+			# Generate CMSSW tarball
+			if self.projectArea:
+				utils.genTarball(self._projectAreaTarball, utils.matchFiles(self.projectArea, self.pattern))
+			if self._projectAreaTarballSE:
+				config.setState(True, 'init', detail = 'storage')
+
+
+	def _configureSCRAMSettings(self, config):
 		scramProject = config.getList('scram project', [])
 		if len(scramProject):
 			self.projectArea = config.getPath('project area', '')
@@ -68,10 +110,6 @@ class CMSSW(DataTask):
 				raise ConfigError('SCRAM project needs exactly 2 arguments: PROJECT VERSION')
 		else:
 			self.projectArea = config.getPath('project area')
-
-		self.useReqs = config.getBool('software requirements', True, onChange = None)
-		self._projectAreaTarballSE = config.getBool(['se project area', 'se runtime'], True)
-		self._projectAreaTarball = config.getWorkPath('cmssw-project-area.tar.gz')
 
 		if len(self.projectArea):
 			defaultPattern = '-.* -config bin lib python module */data *.xml *.sql *.cf[if] *.py -*/.git -*/.svn -*/CVS -*/work.*'
@@ -110,32 +148,26 @@ class CMSSW(DataTask):
 
 		self.scramVersion = config.get('scram version', 'scramv1')
 		if self.scramEnv['SCRAM_PROJECTNAME'] != 'CMSSW':
-			raise ConfigError('Project area not a valid CMSSW project area.')
+			raise ConfigError('Project area contains no CMSSW project')
 
-		# Information about search order for software environment
-		self.searchLoc = []
+
+	def _getCMSSWPaths(self, config):
+		result = []
 		if config.getState('init', detail = 'sandbox'):
 			userPath = config.get('cmssw dir', '')
 			if userPath != '':
-				self.searchLoc.append(('CMSSW_DIR_USER', userPath))
+				result.append(('CMSSW_DIR_USER', userPath))
 			if self.scramEnv.get('RELEASETOP', None):
 				projPath = os.path.normpath('%s/../../../../' % self.scramEnv['RELEASETOP'])
-				self.searchLoc.append(('CMSSW_DIR_PRO', projPath))
-		if len(self.searchLoc):
+				result.append(('CMSSW_DIR_PRO', projPath))
+		if result:
 			utils.vprint('Local jobs will try to use the CMSSW software located here:', -1)
-			for i, loc in enumerate(self.searchLoc):
-				key, value = loc
-				utils.vprint(' %i) %s' % (i + 1, value), -1)
+			for i, loc in enumerate(result):
+				utils.vprint(' %i) %s' % (i + 1, loc[1]), -1)
+		return result
 
-		# Prolog / Epilog script support - warn about old syntax
-		self.prolog = TaskExecutableWrapper(config, 'prolog', '')
-		self.epilog = TaskExecutableWrapper(config, 'epilog', '')
-		if config.getPaths('executable', []) != []:
-			raise ConfigError('Prefix executable and argument options with either prolog or epilog!')
-		self.arguments = config.get('arguments', '')
 
-		# Get cmssw config files and check their existance
-		self.configFiles = []
+	def _getConfigFiles(self, config):
 		cfgDefault = utils.QM(self.prolog.isActive() or self.epilog.isActive(), [], noDefault)
 		for cfgFile in config.getPaths('config file', cfgDefault, mustExist = False):
 			newPath = config.getWorkPath(os.path.basename(cfgFile))
@@ -143,30 +175,7 @@ class CMSSW(DataTask):
 				if not os.path.exists(cfgFile):
 					raise ConfigError('Config file %r not found.' % cfgFile)
 				shutil.copyfile(cfgFile, newPath)
-			self.configFiles.append(newPath)
-
-		# Check that for dataset jobs the necessary placeholders are in the config file
-		self.prepare = config.getBool('prepare config', False)
-		fragment = config.getPath('instrumentation fragment', utils.pathShare('fragmentForCMSSW.py', pkg = 'grid_control_cms'))
-		if self.dataSplitter is not None:
-			if config.getState('init', detail = 'sandbox'):
-				if len(self.configFiles) > 0:
-					self.instrumentCfgQueue(self.configFiles, fragment, mustPrepare = True)
-		else:
-			self.eventsPerJob = config.get('events per job', '0')
-			if config.getState('init', detail = 'sandbox') and self.prepare:
-				self.instrumentCfgQueue(self.configFiles, fragment)
-		if not os.path.exists(self._projectAreaTarball):
-			config.setState(True, 'init', detail = 'sandbox')
-		if config.getState('init', detail = 'sandbox'):
-			if os.path.exists(self._projectAreaTarball):
-				if not utils.getUserBool('CMSSW tarball already exists! Do you want to regenerate it?', True):
-					return
-			# Generate CMSSW tarball
-			if self.projectArea:
-				utils.genTarball(self._projectAreaTarball, utils.matchFiles(self.projectArea, self.pattern))
-			if self._projectAreaTarballSE:
-				config.setState(True, 'init', detail = 'storage')
+			yield newPath
 
 
 	def instrumentCfgQueue(self, cfgFiles, fragment, mustPrepare = False):

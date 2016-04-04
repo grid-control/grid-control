@@ -12,19 +12,20 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-import grid_control_gui.geodb
-
 try:
 	import matplotlib
 	import matplotlib.pyplot
+	from mpl_toolkits.basemap import Basemap
 except ImportError:
 	matplotlib = None
+	BaseMap = None
 try:
 	import numpy
 except ImportError:
 	numpy = None
 import os, math, random
-from python_compat import imap, irange, lfilter, lmap, lzip, sorted
+from grid_control_gui.geodb import getGeoMatch
+from python_compat import ifilter, imap, irange, lfilter, lmap, lzip, sorted
 
 def remove_all_overlap(data):
 	dist2 = lambda a, b: (a['x'] - b['x'])**2 + (a['y'] - b['y'])**2
@@ -62,25 +63,20 @@ def draw_pie(ax, breakdown, pos, size, piecolor = None):
 		y = [0] + numpy.sin(numpy.linspace(2 * math.pi * breakdown[i], 2 * math.pi * breakdown[i+1], 20)).tolist()
 		ax.scatter(pos[0], pos[1], marker=(lzip(x, y), 0), s = size, facecolor = piecolor[i % len(piecolor)])
 
-def drawMap(report):
-	from mpl_toolkits.basemap import Basemap
-	siteinfo = report.getWNInfos()
-	states = ['FAILED', 'WAITING', 'SUCCESS', 'RUNNING']
-	sites = lfilter(lambda x: x not in states, siteinfo)
-	entries = dict(imap(lambda site: (site, lmap(lambda state: siteinfo[site][state]['COUNT'], states)), sites))
-#	entries = {'unl.edu': [276, 0, 246, 0], 'desy.de': [107, 0, 0, 0], 'fnal.gov': [16, 0, 294, 0], 'N/A': [0, 0, 0, 0]}
-
-	posList = []
+def get_positions(entries):
+	result = []
 	for hostname in entries:
-		entry = grid_control_gui.geodb.getGeoMatch(hostname)
+		entry = getGeoMatch(hostname)
 		if not entry:
 			continue
 		(site, lat, lon) = entry
 		stateinfo = entries[hostname]
 		weight = math.log(sum(stateinfo)) / math.log(2) + 1
 		size = 20 * weight
-		posList.append({'pos': (lon, lat), 'weight': weight, 'size': size, 'site': site, 'info': stateinfo})
+		result.append({'pos': (lon, lat), 'weight': weight, 'size': size, 'site': site, 'info': stateinfo})
+	return result
 
+def get_bounds(posList, margin):
 	(lon_l, lat_l) = (lon_h, lat_h) = posList[0]['pos']
 	for pos in posList:
 		lon, lat = pos['pos']
@@ -88,27 +84,42 @@ def drawMap(report):
 		lon_h = max(lon_h, lon)
 		lat_l = min(lat_l, lat)
 		lat_h = max(lat_h, lat)
-	#bounds = [(-60, -120), (60, 120)]
-	#bounds = [(30, -10), (60, 40)]
-	print (lon_l, lat_l)
-	print (lon_h, lat_h)
+	return [(lon_l - margin, lat_l - margin), (lon_h + margin, lat_h + margin)]
 
-	matplotlib.pyplot.subplots_adjust(left=0, right=1, top=1, bottom=0, wspace=0, hspace=0)
-	fig = matplotlib.pyplot.figure(figsize=(12, 6))
-	ax = matplotlib.pyplot.subplot(111)
-	m = Basemap(projection='cyl', lat_0=0, lon_0=0,
-		llcrnrlat=lat_l-10, urcrnrlat=lat_h+10,
-		llcrnrlon=lon_l-10, urcrnrlon=lon_h+10)
-
+def map_positions(m, posList):
 	for pos in posList:
 		x, y = m(*pos['pos'])
 		pos['x'] = x
 		pos['y'] = y
 
+def get_site_status(report):
+	siteinfo = report.getWNInfos()
+	states = ['FAILED', 'WAITING', 'SUCCESS', 'RUNNING']
+	sites = ifilter(lambda x: x not in states, siteinfo)
+	return dict(imap(lambda site: (site, lmap(lambda state: siteinfo[site][state]['COUNT'], states)), sites))
+
+def drawMap(report):
+	entries = get_site_status(report)
+#	entries = {'unl.edu': [276, 0, 246, 0], 'desy.de': [107, 0, 0, 0], 'fnal.gov': [16, 0, 294, 0], 'N/A': [0, 0, 0, 0]}
+	posList = get_positions(entries)
+
+	#bounds = [(-60, -120), (60, 120)]
+	#bounds = [(30, -10), (60, 40)]
+	bounds = get_bounds(posList, margin = 10)
+
+	matplotlib.pyplot.subplots_adjust(left=0, right=1, top=1, bottom=0, wspace=0, hspace=0)
+	fig = matplotlib.pyplot.figure(figsize=(12, 6))
+	ax = matplotlib.pyplot.subplot(111)
+	m = Basemap(projection='cyl', lat_0=0, lon_0=0,
+		llcrnrlon=bounds[0][0], llcrnrlat=bounds[0][1],
+		urcrnrlon=bounds[1][0], urcrnrlat=bounds[1][1],
+	)
+
+	map_positions(m, posList)
 	#posList = remove_all_overlap(posList)
 	#print posList
 
-	axi = m.bluemarble()
+	m.bluemarble()
 	for pos in posList:
 		draw_pie(ax, pos['info'], (pos['x'], pos['y']), pos['size'])
 		ax.text(pos['x']+5, pos['y']+5, pos['site'], color='white', fontsize=8)

@@ -14,7 +14,7 @@
 
 import os, sys
 from grid_control import utils
-from grid_control.config import createConfig
+from grid_control.config import ConfigError, createConfig
 from grid_control.datasets import DataProvider, DatasetError
 from grid_control.datasets.scanner_base import InfoScanner
 from grid_control.job_db import Job, JobDB
@@ -33,41 +33,40 @@ class OutputDirsFromConfig(InfoScanner):
 		newVerbosity = utils.verbosity(utils.verbosity() - 3)
 		extConfigFN = config.getPath('source config')
 		extConfig = createConfig(extConfigFN).changeView(setSections = ['global'])
-		self.extWorkDir = extConfig.getWorkPath()
-		self.extTask = extConfig.getPlugin(['task', 'module'], cls = 'TaskModule')
+		self._extWorkDir = extConfig.getWorkPath()
+		self._extTask = extConfig.getPlugin(['task', 'module'], cls = 'TaskModule')
 		selector = config.get('source job selector', '')
 		extJobDB = JobDB(extConfig, jobSelector = lambda jobNum, jobObj: jobObj.state == Job.SUCCESS)
-		self.selected = sorted(extJobDB.getJobs(JobSelector.create(selector, task = self.extTask)))
+		self._selected = sorted(extJobDB.getJobs(JobSelector.create(selector, task = self._extTask)))
 		utils.verbosity(newVerbosity + 3)
 
 	def getEntries(self, path, metadata, events, seList, objStore):
-		log = None
-		for jobNum in self.selected:
-			del log
-			log = utils.ActivityLog('Reading job logs - [%d / %d]' % (jobNum, self.selected[-1]))
+		for jobNum in self._selected:
+			log = utils.ActivityLog('Reading job logs - [%d / %d]' % (jobNum, self._selected[-1]))
 			metadata['GC_JOBNUM'] = jobNum
-			objStore.update({'GC_TASK': self.extTask, 'GC_WORKDIR': self.extWorkDir})
-			yield (os.path.join(self.extWorkDir, 'output', 'job_%d' % jobNum), metadata, events, seList, objStore)
+			objStore.update({'GC_TASK': self._extTask, 'GC_WORKDIR': self._extWorkDir})
+			yield (os.path.join(self._extWorkDir, 'output', 'job_%d' % jobNum), metadata, events, seList, objStore)
+			log.finish()
 
 
 class OutputDirsFromWork(InfoScanner):
 	def __init__(self, config):
 		InfoScanner.__init__(self, config)
-		self.extWorkDir = config.get('source directory')
-		self.extOutputDir = os.path.join(self.extWorkDir, 'output')
+		self._extWorkDir = config.get('source directory')
+		self._extOutputDir = os.path.join(self._extWorkDir, 'output')
 
 	def getEntries(self, path, metadata, events, seList, objStore):
-		log = None
-		allDirs = ifilter(lambda fn: fn.startswith('job_'), os.listdir(self.extOutputDir))
+		allDirs = ifilter(lambda fn: fn.startswith('job_'), os.listdir(self._extOutputDir))
 		for idx, dirName in enumerate(allDirs):
+			log = utils.ActivityLog('Reading job logs - [%d / %d]' % (idx, len(allDirs)))
 			try:
 				metadata['GC_JOBNUM'] = int(dirName.split('_')[1])
-				objStore['GC_WORKDIR'] = self.extWorkDir
-				del log
-				log = utils.ActivityLog('Reading job logs - [%d / %d]' % (idx, len(allDirs)))
-				yield (os.path.join(self.extOutputDir, dirName), metadata, events, seList, objStore)
+				objStore['GC_WORKDIR'] = self._extWorkDir
+				log.finish()
+				yield (os.path.join(self._extOutputDir, dirName), metadata, events, seList, objStore)
 			except Exception:
 				pass
+			log.finish()
 
 
 class MetadataFromTask(InfoScanner):
@@ -79,7 +78,7 @@ class MetadataFromTask(InfoScanner):
 			'SE_MINFILESIZE', 'DOBREAK', 'MY_RUNTIME', 'GC_RUNTIME', 'MY_JOBID', 'GC_JOB_ID',
 			'GC_VERSION', 'GC_DEPFILES', 'SUBST_FILES', 'SEEDS',
 			'SCRATCH_LL', 'SCRATCH_UL', 'LANDINGZONE_LL', 'LANDINGZONE_UL']
-		self.ignoreVars = config.getList('ignore task vars', ignoreDef)
+		self._ignoreVars = config.getList('ignore task vars', ignoreDef)
 
 	def getEntries(self, path, metadata, events, seList, objStore):
 		newVerbosity = utils.verbosity(utils.verbosity() - 3)
@@ -89,7 +88,7 @@ class MetadataFromTask(InfoScanner):
 				tmp.update(objStore['GC_TASK'].getJobConfig(metadata['GC_JOBNUM']))
 			for (newKey, oldKey) in objStore['GC_TASK'].getVarMapping().items():
 				tmp[newKey] = tmp.get(oldKey)
-			metadata.update(utils.filterDict(tmp, kF = lambda k: k not in self.ignoreVars))
+			metadata.update(utils.filterDict(tmp, kF = lambda k: k not in self._ignoreVars))
 		utils.verbosity(newVerbosity + 3)
 		yield (path, metadata, events, seList, objStore)
 
@@ -97,18 +96,19 @@ class MetadataFromTask(InfoScanner):
 class FilesFromLS(InfoScanner):
 	def __init__(self, config):
 		InfoScanner.__init__(self, config)
-		self.path = config.get('source directory', '.')
-		self.path = utils.QM('://' in self.path, self.path, utils.cleanPath(self.path))
+		self._path = config.get('source directory', '.')
+		self._path = utils.QM('://' in self._path, self._path, utils.cleanPath(self._path))
 
 	def getEntries(self, path, metadata, events, seList, objStore):
-		metadata['GC_SOURCE_DIR'] = self.path
+		metadata['GC_SOURCE_DIR'] = self._path
 		counter = 0
 		from grid_control.backends.storage import se_ls
-		proc = se_ls(self.path)
+		proc = se_ls(self._path)
 		for fn in proc.iter():
 			log = utils.ActivityLog('Reading source directory - [%d]' % counter)
-			yield (os.path.join(self.path, fn.strip()), metadata, events, seList, objStore)
+			yield (os.path.join(self._path, fn.strip()), metadata, events, seList, objStore)
 			counter += 1
+			log.finish()
 		if proc.wait():
 			utils.eprint(proc.getError())
 
@@ -240,14 +240,22 @@ class DetermineEvents(InfoScanner):
 		InfoScanner.__init__(self, config)
 		self._eventsCmd = config.get('events command', '')
 		self._eventsKey = config.get('events key', '')
-		self._eventsKeyScale = config.getInt('events key scale', 1)
+		ev_per_kv = parseStr(config.get('events per key value', ''), float, 1)
+		kv_per_ev = parseStr(config.get('key value per events', ''), float, -1)
+		if self._eventsKey:
+			if ev_per_kv * kv_per_ev >= 0: # one is zero or both are negative/positive
+				raise ConfigError('Invalid value for "events per key value" or "key value per events"!')
+			elif ev_per_kv > 0:
+				self._eventsKeyScale = ev_per_kv
+			else:
+				self._eventsKeyScale = 1.0 / kv_per_ev
 		self._eventsDefault = config.getInt('events default', -1)
 
 	def getEntries(self, path, metadata, events, seList, objStore):
-		if events < 0:
+		if (events is None) or (events < 0):
 			events = self._eventsDefault
 		if self._eventsKey:
-			events = int(metadata.get(self._eventsKey, events)) / self._eventsKeyScale
+			events = max(1, int(int(metadata.get(self._eventsKey, events)) * self._eventsKeyScale))
 		if self._eventsCmd:
 			try:
 				events = int(os.popen('%s %s' % (self._eventsCmd, path)).readlines()[-1])

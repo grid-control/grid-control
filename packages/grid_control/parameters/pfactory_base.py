@@ -27,7 +27,7 @@ class ParameterFactory(NamedPlugin):
 	def __init__(self, config, name):
 		NamedPlugin.__init__(self, config, name)
 		self.adapter = config.get('parameter adapter', 'TrackedParameterAdapter')
-		self.paramConfig = ParameterConfig(config.changeView(setSections = ['parameters']), self.adapter != 'TrackedParameterAdapter')
+		self._paramConfig = ParameterConfig(config.changeView(setSections = ['parameters']), self.adapter != 'TrackedParameterAdapter')
 
 
 	def _getRawSource(self, parent):

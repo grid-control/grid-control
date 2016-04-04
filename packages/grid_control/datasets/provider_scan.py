@@ -23,8 +23,8 @@ from python_compat import identity, ifilter, imap, lmap, lsmap, md5_hex, set
 class ScanProviderBase(DataProvider):
 	def __init__(self, config, datasetExpr, datasetNick = None, datasetID = 0):
 		DataProvider.__init__(self, config, '', datasetNick, datasetID)
-		DSB = lambda cFun, n, *args, **kargs: (cFun('dataset %s' % n, *args, **kargs),
-			cFun('block %s' % n, *args, **kargs))
+		def DSB(cFun, n, *args, **kargs):
+			return (cFun('dataset %s' % n, *args, **kargs), cFun('block %s' % n, *args, **kargs))
 		(self.nameDS, self.nameB) = DSB(config.get, 'name pattern', '')
 		(self.kUserDS, self.kUserB) = DSB(config.getList, 'hash keys', [])
 		(self.kGuardDS, self.kGuardB) = DSB(config.getList, 'guard override', [])
@@ -33,9 +33,9 @@ class ScanProviderBase(DataProvider):
 		self.scanner = lmap(lambda cls: InfoScanner.createInstance(cls, config), scanList)
 
 
-	def collectFiles(self):
+	def _collectFiles(self):
 		def recurse(level, collectorList, args):
-			if len(collectorList):
+			if collectorList:
 				for data in recurse(level - 1, collectorList[:-1], args):
 					for (path, metadata, nEvents, seList, objStore) in collectorList[-1](level, *data):
 						yield (path, dict(metadata), nEvents, seList, objStore)
@@ -44,64 +44,49 @@ class ScanProviderBase(DataProvider):
 		return recurse(len(self.scanner), lmap(lambda x: x.getEntriesVerbose, self.scanner), (None, {}, None, None, {}))
 
 
-	def generateKey(self, keys, base, path, metadata, events, seList, objStore):
+	def _generateKey(self, keys, base, path, metadata, events, seList, objStore):
 		return md5_hex(repr(base) + repr(seList) + repr(lmap(metadata.get, keys)))
 
 
-	def generateDatasetName(self, key, data):
+	def _generateDatasetName(self, key, data):
 		if 'SE_OUTPUT_BASE' in data:
 			return utils.replaceDict(self.nameDS or '/PRIVATE/@SE_OUTPUT_BASE@', data)
 		return utils.replaceDict(self.nameDS or ('/PRIVATE/Dataset_%s' % key), data)
 
 
-	def generateBlockName(self, key, data):
+	def _generateBlockName(self, key, data):
 		return utils.replaceDict(self.nameB or key[:8], data)
 
 
-	def getBlocksInternal(self):
-		# Split files into blocks/datasets via key functions and determine metadata intersection
-		(protoBlocks, commonDS, commonB) = ({}, {}, {})
-		def getActiveKeys(kUser, kGuard, gIdx):
-			return kUser + (kGuard or lchain(imap(lambda x: x.getGuards()[gIdx], self.scanner)))
-		keysDS = getActiveKeys(self.kUserDS, self.kGuardDS, 0)
-		keysB = getActiveKeys(self.kUserB, self.kGuardB, 1)
-		for fileInfo in self.collectFiles():
-			hashDS = self.generateKey(keysDS, None, *fileInfo)
-			hashB = self.generateKey(keysB, hashDS, *fileInfo)
-			if self.kSelectDS and (hashDS not in self.kSelectDS):
-				continue
-			fileInfo[1].update({'DS_KEY': hashDS, 'BLOCK_KEY': hashB})
-			protoBlocks.setdefault(hashDS, {}).setdefault(hashB, []).append(fileInfo)
-			utils.intersectDict(commonDS.setdefault(hashDS, dict(fileInfo[1])), fileInfo[1])
-			utils.intersectDict(commonB.setdefault(hashDS, {}).setdefault(hashB, dict(fileInfo[1])), fileInfo[1])
+	def _getFilteredVarDict(self, varDict, varDictKeyComponents, hashKeys):
+		tmp = varDict
+		for key_component in varDictKeyComponents:
+			tmp = tmp[key_component]
+		result = {}
+		for key, value in ifilter(lambda k_v: k_v[0] in hashKeys, tmp.items()):
+			result[key] = value
+		return result
 
-		# Generate names for blocks/datasets using common metadata
-		(hashNameDictDS, hashNameDictB) = ({}, {})
-		for hashDS in protoBlocks:
-			hashNameDictDS[hashDS] = self.generateDatasetName(hashDS, commonDS[hashDS])
-			for hashB in protoBlocks[hashDS]:
-				hashNameDictB[hashB] = (hashDS, self.generateBlockName(hashB, commonB[hashDS][hashB]))
 
-		# Find name <-> key collisions
-		def findCollision(tName, nameDict, varDict, hashKeys, keyFmt = identity):
-			targetNames = nameDict.values()
-			for name in list(set(targetNames)):
-				targetNames.remove(name)
-			if len(targetNames):
-				ask = True
-				for name in targetNames:
-					utils.eprint("Multiple %s keys are mapped to the same %s name '%s'!" % (tName, tName, keyFmt(name)))
-					for key in nameDict:
-						if nameDict[key] == name:
-							utils.eprint('\t%s hash %s using:' % (tName, keyFmt(key)))
-							for x in ifilter(lambda k_v: k_v[0] in hashKeys, varDict[keyFmt(key)].items()):
-								utils.eprint('\t\t%s = %s' % x)
-					if ask and not utils.getUserBool('Do you want to continue?', False):
-						sys.exit(os.EX_OK)
-					ask = False
-		findCollision('dataset', hashNameDictDS, commonDS, keysDS)
-		findCollision('block', hashNameDictB, commonB, keysB, lambda x: x[1])
+	# Find name <-> key collisions
+	def _findCollision(self, tName, nameDict, varDict, hashKeys, keyFmt, nameFmt = identity):
+		dupesDict = {}
+		for (key, name) in nameDict.items():
+			dupesDict.setdefault(nameFmt(name), []).append(keyFmt(name, key))
+		ask = True
+		for name, key_list in dupesDict.items():
+			if len(key_list) > 1:
+				self._log.critical('Multiple %s keys are mapped to the name %s!', tName, repr(name))
+				for key in key_list:
+					self._log.critical('\t%s hash %s using:', tName, str.join('#', key))
+					for var, value in self._getFilteredVarDict(varDict, key, hashKeys).items():
+						self._log.critical('\t\t%s = %s', var, value)
+				if ask and not utils.getUserBool('Do you want to continue?', False):
+					sys.exit(os.EX_OK)
+				ask = False
 
+
+	def _buildBlocks(self, protoBlocks, hashNameDictDS, hashNameDictB):
 		# Return named dataset
 		for hashDS in protoBlocks:
 			for hashB in protoBlocks[hashDS]:
@@ -122,6 +107,37 @@ class ScanProviderBase(DataProvider):
 					DataProvider.Metadata: metaKeys,
 					DataProvider.FileList: lsmap(fnProps, protoBlocks[hashDS][hashB])
 				}
+
+
+	def getBlocksInternal(self):
+		# Split files into blocks/datasets via key functions and determine metadata intersection
+		(protoBlocks, commonDS, commonB) = ({}, {}, {})
+		def getActiveKeys(kUser, kGuard, gIdx):
+			return kUser + (kGuard or lchain(imap(lambda x: x.getGuards()[gIdx], self.scanner)))
+		keysDS = getActiveKeys(self.kUserDS, self.kGuardDS, 0)
+		keysB = getActiveKeys(self.kUserB, self.kGuardB, 1)
+		for fileInfo in self._collectFiles():
+			hashDS = self._generateKey(keysDS, None, *fileInfo)
+			hashB = self._generateKey(keysB, hashDS, *fileInfo)
+			if self.kSelectDS and (hashDS not in self.kSelectDS):
+				continue
+			fileInfo[1].update({'DS_KEY': hashDS, 'BLOCK_KEY': hashB})
+			protoBlocks.setdefault(hashDS, {}).setdefault(hashB, []).append(fileInfo)
+			utils.intersectDict(commonDS.setdefault(hashDS, dict(fileInfo[1])), fileInfo[1])
+			utils.intersectDict(commonB.setdefault(hashDS, {}).setdefault(hashB, dict(fileInfo[1])), fileInfo[1])
+
+		# Generate names for blocks/datasets using common metadata
+		(hashNameDictDS, hashNameDictB) = ({}, {})
+		for hashDS in protoBlocks:
+			hashNameDictDS[hashDS] = self._generateDatasetName(hashDS, commonDS[hashDS])
+			for hashB in protoBlocks[hashDS]:
+				hashNameDictB[hashB] = (hashDS, self._generateBlockName(hashB, commonB[hashDS][hashB]))
+
+		self._findCollision('dataset', hashNameDictDS, commonDS, keysDS, lambda name, key: [key])
+		self._findCollision('block', hashNameDictB, commonB, keysDS + keysB, lambda name, key: [name[0], key], lambda name: name[1])
+
+		for block in self._buildBlocks(protoBlocks, hashNameDictDS, hashNameDictB):
+			yield block
 
 
 # Get dataset information from storage url

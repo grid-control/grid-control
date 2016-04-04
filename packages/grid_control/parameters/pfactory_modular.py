@@ -21,7 +21,7 @@ from grid_control.parameters.psource_meta import ZipLongParameterSource
 class ModularParameterFactory(BasicParameterFactory):
 	def __init__(self, config, name):
 		BasicParameterFactory.__init__(self, config, name)
-		self.pExpr = self.paramConfig.get('parameters', '')
+		self._pExpr = self._paramConfig.get('parameters', '')
 
 
 	def _getUserSource(self, pExpr, parent):
@@ -35,7 +35,7 @@ class ModularParameterFactory(BasicParameterFactory):
 				except Exception:
 					raise ParameterError('Unable to create parameter source "%r"!' % clsName)
 				try:
-					return parameterClass.create(self.paramConfig, *args)
+					return parameterClass.create(self._paramConfig, *args)
 				except Exception:
 					raise ParameterError('Error while creating "%r" with arguments "%r"' % (parameterClass.__name__, args))
 			return wrapper
@@ -51,4 +51,4 @@ class ModularParameterFactory(BasicParameterFactory):
 
 
 	def _getRawSource(self, parent):
-		return BasicParameterFactory._getRawSource(self, self._getUserSource(self.pExpr, parent))
+		return BasicParameterFactory._getRawSource(self, self._getUserSource(self._pExpr, parent))

@@ -272,6 +272,12 @@
 
     * grid_control.datasets.splitter_io DataSplitterIOAuto
 
+    * grid_control.datasets.splitter_io DataSplitterIOBase
+
+     * grid_control.datasets.splitter_io DataSplitterIO_V1
+
+     * grid_control.datasets.splitter_io DataSplitterIO_V2
+
    * grid_control.config.matcher_base DictLookup
 
    * grid_control.backends.htcondor_wms.htcondor_schedd HTCScheddBase

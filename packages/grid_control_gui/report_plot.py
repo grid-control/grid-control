@@ -35,7 +35,7 @@ import os, re, logging
 from grid_control.output_processor import JobInfoProcessor
 from grid_control.report import Report
 from grid_control.utils.data_structures import makeEnum
-from python_compat import irange
+from python_compat import irange, izip
 
 JobResultEnum = makeEnum([
 	"TIMESTAMP_WRAPPER_START",
@@ -327,25 +327,42 @@ class PlotReport(Report):
 		log = logging.getLogger('PlotReport')
 		log.info("Plotting " + histo[0] + " ...")
 
-		overAllBandwidth = []
-		# not the first and last 5 percent, used for fitting
-		truncatedOverAllBandwidth = []
-
-		timeStep = []
-		truncatedTimeStep = []
-
-		(minTime, maxTime) = timespan
 		trunctationFractionFront = 0.05
 		trunctationFractionBack = 0.3
 
-		relTimeSpan = (maxTime - minTime)
+		relTimeSpan = max(timespan) - min(timespan)
 		# compute the amount of slices, for a small timespan, use every step
 		# for large timespans, use 1000 slices at most
-		slices = min(1000.0, relTimeSpan)
-		stepSize = int(relTimeSpan / slices)
-		truncFront = relTimeSpan * trunctationFractionFront
-		truncBack = relTimeSpan * (1.0 - trunctationFractionBack)
+		stepSize = int(relTimeSpan / min(1000.0, relTimeSpan))
 
+		(timeStep, overAllBandwidth) = \
+			self.collectData(min(timespan), max(timespan), stepSize, cumulate, extractor, jInfos)
+
+		self.plotOverallAll(histo, timeStep, overAllBandwidth)
+		if fit:
+			# not the first and last 5 percent, used for fitting
+			(timeStep, overAllBandwidth) = self.truncateData(timeStep, overAllBandwidth,
+				relTimeSpan * trunctationFractionFront, relTimeSpan * (1.0 - trunctationFractionBack))
+			if timeStep and overAllBandwidth:
+				self.plotOverallTruncated(timeStep, overAllBandwidth, unit, trunctationFractionFront, trunctationFractionBack, relTimeSpan)
+			else:
+				log.info("Skipping fit due to the lack of input data")
+		log.info("done")
+
+	def plotOverallAll(self, histo, timeStep, overAllBandwidth):
+		# make sure the axis are not exactly the same
+		minY = min(overAllBandwidth)
+		maxY = max(overAllBandwidth)
+		if (maxY <= minY):
+			maxY = minY + 1.0
+
+		histo[2].set_ylim(bottom= minY * 0.99, top=maxY * 1.2)
+		histo[2].set_xlim(left=min(timeStep) * 0.99, right=max(timeStep) * 1.01)
+		matplotlib.pyplot.plot(timeStep, overAllBandwidth, color="green")
+
+	def collectData(self, minTime, maxTime, stepSize, cumulate, extractor, jInfos):
+		timeStep = []
+		overAllBandwidth = []
 		for i in irange(minTime, maxTime + 1, stepSize):
 			thisBw = 0
 			currentTimeStep = i - minTime
@@ -361,34 +378,26 @@ class PlotReport(Report):
 					thisBw += val
 
 			overAllBandwidth.append(thisBw)
+		return (timeStep, overAllBandwidth)
+
+	def truncateData(self, timeStep, overAllBandwidth, truncFront, truncBack):
+		truncatedTimeStep = []
+		truncatedOverAllBandwidth = []
+		for currentTimeStep, thisBw in izip(timeStep, overAllBandwidth):
 			if (currentTimeStep > truncFront) and (currentTimeStep < truncBack):
 				truncatedOverAllBandwidth.append(thisBw)
 				truncatedTimeStep.append(currentTimeStep)
+		return (truncatedTimeStep, truncatedOverAllBandwidth)
 
-		# make sure the axis are not exactly the same
-		minY = min(overAllBandwidth)
-		maxY = max(overAllBandwidth)
-		if (maxY <= minY):
-			maxY = minY + 1.0
+	def plotOverallTruncated(self, truncatedTimeStep, truncatedOverAllBandwidth, unit, trunctationFractionFront, trunctationFractionBack, relTimeSpan):
+		fitRes = numpy.polyfit(truncatedTimeStep, truncatedOverAllBandwidth, 0)
 
-		histo[2].set_ylim(bottom= minY * 0.99, top=maxY * 1.2)
-		histo[2].set_xlim(left=min(timeStep) * 0.99, right=max(timeStep) * 1.01)
-		matplotlib.pyplot.plot(timeStep, overAllBandwidth, color="green")
+		avgVal = fitRes[0]
+		matplotlib.pyplot.axhline(y=avgVal, xmin=trunctationFractionFront, xmax=1.0 - trunctationFractionBack,
+			color="black", lw=2)
 
-		if fit:
-			if (len(truncatedTimeStep) == 0) or (len(truncatedOverAllBandwidth) == 0):
-				log.info("Skipping fit due to the lack of input data")
-				return
-			fitRes = numpy.polyfit(truncatedTimeStep, truncatedOverAllBandwidth, 0)
-
-			avgVal = fitRes[0]
-			matplotlib.pyplot.axhline(y=avgVal, xmin=trunctationFractionFront, xmax=1.0 - trunctationFractionBack,
-				color="black", lw=2)
-
-			matplotlib.pyplot.annotate("%.2f" % avgVal + " " + unit, xy=(relTimeSpan * 0.7, avgVal),
-				xytext=(relTimeSpan * 0.75, avgVal * 0.85), backgroundcolor="gray")
-		log.info("done")
-
+		matplotlib.pyplot.annotate("%.2f" % avgVal + " " + unit, xy=(relTimeSpan * 0.7, avgVal),
+			xytext=(relTimeSpan * 0.75, avgVal * 0.85), backgroundcolor="gray")
 
 	def handleMinMaxTiming(self, jResult, minTime, maxTime, stampStart, stampDone):
 		if (minTime is None) or (maxTime is None):
@@ -438,7 +447,7 @@ class PlotReport(Report):
 		minCmsswTime = None
 		maxCmsswTime = None
 
-		workdir = os.path.join(self._jobDB._dbPath, "..")
+		workdir = self._jobDB.getWorkPath()
 		for j in self._jobs:
 			jInfo = JobInfoProcessor().process(os.path.join(workdir, 'output', 'job_%d' % j))
 			if (jInfo is None):

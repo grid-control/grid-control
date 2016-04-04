@@ -106,7 +106,7 @@ class SimpleParameterSource(SingleParameterSource):
 	def __repr__(self):
 		return 'var(%s)' % repr(self._meta)
 
-	def create(cls, pconfig, key):
+	def create(cls, pconfig, key): # pylint:disable=arguments-differ
 		return SimpleParameterSource(key, pconfig.getParameter(key.lstrip('!')))
 	create = classmethod(create)
 ParameterSource.managerMap['var'] = 'SimpleParameterSource'
@@ -135,7 +135,7 @@ class ConstParameterSource(SingleParameterSource):
 	def fillParameterInfo(self, pNum, result):
 		result[self._key] = self._value
 
-	def create(cls, pconfig, key, value = None):
+	def create(cls, pconfig, key, value = None): # pylint:disable=arguments-differ
 		if value is None:
 			value = pconfig.get(key)
 		return ConstParameterSource(key, value)

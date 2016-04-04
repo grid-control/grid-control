@@ -15,9 +15,9 @@
 import os, re
 from grid_control import utils
 from grid_control.config import ConfigError
-from grid_control.datasets import DataProvider
+from grid_control.utils.parsing import strDictLong
 from grid_control_cms.cmssw import CMSSW
-from grid_control_cms.lumi_tools import formatLumi, parseLumiFilter
+from grid_control_cms.lumi_tools import parseLumiFilter
 from python_compat import imap, lfilter, lmap, set, sorted
 
 def fromNM(nm, nickname, default):
@@ -47,8 +47,7 @@ class CMSSW_Advanced(CMSSW):
 		self.nmCName = lmap(str.strip, config.get('nickname constants', '').split())
 		self.nmConst = {}
 		for var in self.nmCName:
-			tmp = config.getDict(var, {})[0]
-			for (nick, value) in tmp.items():
+			for (nick, value) in config.getDict(var, {})[0].items():
 				if value:
 					self.nmConst.setdefault(nick, {})[var] = value
 				else:
@@ -56,17 +55,18 @@ class CMSSW_Advanced(CMSSW):
 			head.append((var, var))
 
 		# Mapping between nickname and lumi filter:
-		if 'lumi filter' in config.getOptions():
-			raise ConfigError("Please use 'nickname lumi filter' instead of 'lumi filter'")
-		lumiParse = lambda x: formatLumi(parseLumiFilter(x))
-		self.nmLumi = config.getDict('nickname lumi filter', {}, parser = lumiParse)[0]
+		if ('lumi filter' in config.getOptions()) and ('nickname lumi filter' in config.getOptions()):
+			raise ConfigError('Please use "lumi filter" exclusively')
+		config.set('lumi filter', strDictLong(config.getDict('nickname lumi filter', {})))
+		self.nmLumi = config.getDict('lumi filter', {}, parser = parseLumiFilter)[0]
 		if self.nmLumi:
-			for dataset in config.get('dataset', '').splitlines():
-				(datasetNick, datasetProvider, datasetExpr) = DataProvider.parseDatasetExpr(config, dataset, None)
-				config.set('dataset %s' % datasetNick, 'lumi filter', str.join(',', utils.flatten(fromNM(self.nmLumi, datasetNick, []))))
-			config.set('lumi filter', str.join(',', self.nmLumi.get(None, [])))
 			head.append((2, 'Lumi filter'))
 
+		self._displaySetup(head)
+		CMSSW.__init__(self, config, name)
+
+
+	def _displaySetup(self, head):
 		utils.vprint('Mapping between nickname and other settings:\n', -1)
 		def report():
 			for nick in sorted(set(self.nmCfg.keys() + self.nmConst.keys() + self.nmLumi.keys())):
@@ -75,7 +75,6 @@ class CMSSW_Advanced(CMSSW):
 				yield utils.mergeDicts([tmp, self.nmConst.get(nick, {})])
 		utils.printTabular(head, report(), 'cl')
 		utils.vprint(level = -1)
-		CMSSW.__init__(self, config, name)
 
 
 	def displayLumi(self, lumi):
@@ -103,9 +102,6 @@ class CMSSW_Advanced(CMSSW):
 		constants = utils.mergeDicts(fromNM(self.nmConst, None, {}) + fromNM(self.nmConst, nick, {}))
 		constants = dict(imap(lambda var: (var, constants.get(var, '')), self.nmCName))
 		data.update(constants)
-		lumifilter = utils.flatten(fromNM(self.nmLumi, nick, ''))
-		if lumifilter:
-			data['LUMI_RANGE'] = parseLumiFilter(str.join(',', lumifilter))
 		return data
 
 
@@ -113,11 +109,10 @@ class CMSSW_Advanced(CMSSW):
 		data = CMSSW.getJobConfig(self, jobNum)
 		nickdata = self.getVarsForNick(data.get('DATASETNICK'))
 		data.update(nickdata)
-		data['LUMI_RANGE'] = self.getActiveLumiFilter(data['LUMI_RANGE'], jobNum)
 		if utils.verbosity() > 0:
 			utils.vprint('Nickname: %s' % data.get('DATASETNICK'), 1)
-			utils.vprint(' * Config files: %s' % data['CMSSW_CONFIG'], 1)
-			utils.vprint(' *   Lumi range: %s' % data['LUMI_RANGE'], 1)
+			utils.vprint(' * Config files: %s' % data.get('CMSSW_CONFIG', ''), 1)
+			utils.vprint(' *   Lumi range: %s' % data.get('LUMI_RANGE', ''), 1)
 			utils.vprint(' *    Variables: %s' % utils.filterDict(nickdata, lambda k: k not in ['CMSSW_CONFIG', 'LUMI_RANGE']), 1)
 		return data
 
