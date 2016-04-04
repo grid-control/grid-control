@@ -22,6 +22,7 @@ from python_compat import identity, ifilter, imap, irange, ismap, itemgetter, lf
 
 class ParameterAdapter(ConfigurablePlugin):
 	def __init__(self, config, source):
+		ConfigurablePlugin.__init__(self, config)
 		self._source = source
 		self._prune = True
 
@@ -74,7 +75,7 @@ class BasicParameterAdapter(ParameterAdapter):
 		return self._activeMap[jobNum]
 
 	def resync(self): # Allow queuing of resync results - (because of external or init trigger)
-		if (self._resyncState is None):
+		if self._resyncState is None:
 			self._resyncInternal()
 		result = self._resyncState
 		if result is not None:

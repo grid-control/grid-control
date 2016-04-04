@@ -45,7 +45,7 @@ class JobProgressBar(object):
 		elif success == self._total:
 			self._bar += '(%s)' % (Console.fmt('finished'.center(21), [Console.COLOR_GREEN]))
 		else:
-			fmt = lambda x: str(x).rjust(5)#int(math.log(self._total) / math.log(10)) + 1)
+			fmt = lambda x: str(x).rjust(5) # int(math.log(self._total) / math.log(10)) + 1)
 			self._bar += '(%s | %s | %s | %s)' % (
 				Console.fmt(fmt(success), [Console.COLOR_GREEN]),
 				Console.fmt(fmt(running), [Console.COLOR_BLUE]),
@@ -290,7 +290,7 @@ class GUIReport(AdaptiveReport):
 			return sum(imap(lambda z: catStateDict[catKey].get(z, 0), states))
 
 		self.printGUIHeader('Status report for task:')
-		for catKey in catStateDict: #sorted(catStateDict, key = lambda x: -self._categories[x][0]):
+		for catKey in catStateDict: # sorted(catStateDict, key = lambda x: -self._categories[x][0]):
 			desc = self._formatDesc(catDescDict[catKey], catSubcatDict.get(catKey, 0))
 			completed = sumCat(catKey, [Job.SUCCESS])
 			total = sum(catStateDict[catKey].values())

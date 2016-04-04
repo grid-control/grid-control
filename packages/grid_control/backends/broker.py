@@ -27,7 +27,7 @@ class Broker(NamedPlugin):
 		self._nRandom = config.getBool('%s randomize' % userOpt, False, onChange = None)
 
 	def _discover(self, discoverFun, cached = True):
-		if not cached or (self._itemsDiscovered == False):
+		if not cached or (self._itemsDiscovered is False):
 			self._itemsDiscovered = discoverFun()
 			msg = 'an unknown number of'
 			if self._itemsDiscovered is not None:

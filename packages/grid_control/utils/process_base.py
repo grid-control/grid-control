@@ -262,7 +262,7 @@ class LocalProcess(Process):
 			safeClose(fd_child_stderr)
 			for fd in [fd_parent_stdout, fd_parent_stderr]: # enable non-blocking operation on stdout/stderr
 				fcntl.fcntl(fd, fcntl.F_SETFL, os.O_NONBLOCK | fcntl.fcntl(fd, fcntl.F_GETFL))
-			self._setup_terminal() # race with forked child to change terminal settings... 
+			self._setup_terminal() # race with forked child to change terminal settings...
 			thread = threading.Thread(target = self._interact_with_child, args = (fd_parent_stdin, fd_parent_stdout, fd_parent_stderr))
 			thread.daemon = True
 			thread.start()

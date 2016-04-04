@@ -56,7 +56,7 @@ class FileConfigFiller(ConfigFiller):
 					ismap(getOptValue, configContent.get('default', [])),
 					ismap(getOptValue, configContent.get(section, []))]))
 				for (option, value, source) in configContent[section]:
-					# Protection for non-interpolation "%" in value 
+					# Protection for non-interpolation "%" in value
 					value = (value.replace('%', '\x01').replace('\x01(', '%(') % substDict).replace('\x01', '%')
 					self._addEntry(container, section, option, value, source)
 		searchString = str.join(' ', UniqueList(searchPaths))

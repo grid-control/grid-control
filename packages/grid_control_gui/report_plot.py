@@ -68,7 +68,7 @@ def extractJobTiming(jInfo, task):
 	total_size_out = 0
 	for (key, val) in jInfo[2].items():
 		enumID = JobResultEnum.str2enum(key)
-		if (enumID is not None):
+		if enumID is not None:
 			jobResult[enumID] = val
 
 		# look for file size information
@@ -81,12 +81,12 @@ def extractJobTiming(jInfo, task):
 	jobResult[JobResultEnum.FILESIZE_IN_TOTAL] = total_size_in
 
 	# look for processed events, if available
-	if (task is not None):
+	if task is not None:
 		jobConfig = task.getJobConfig(jobNum)
 		jobResult[JobResultEnum.EVENT_COUNT] = int(jobConfig["MAX_EVENTS"])
 		# make sure an undefined max event count (-1 in cmssw) is treated
 		# as unkown event count
-		if (jobResult[JobResultEnum.EVENT_COUNT] < 0):
+		if jobResult[JobResultEnum.EVENT_COUNT] < 0:
 			jobResult[JobResultEnum.EVENT_COUNT] = None
 	else:
 		jobResult[JobResultEnum.EVENT_COUNT] = None
@@ -141,7 +141,7 @@ def getSeOutBandwidth(jobInfo):
 	seOutTime = getSeOutRuntime(jobInfo)
 	fileSize = jobInfo[JobResultEnum.FILESIZE_OUT_TOTAL]
 
-	if (seOutTime > 0):
+	if seOutTime > 0:
 		return fileSize / seOutTime
 	else:
 		return None
@@ -160,7 +160,7 @@ def getSeInFilesize(jobInfo):
 def getSeInBandwidth(jobInfo):
 	seInTime = getSeInRuntime(jobInfo)
 	fileSize = jobInfo[JobResultEnum.FILESIZE_IN_TOTAL]
-	if (seInTime > 0):
+	if seInTime > 0:
 		return fileSize / seInTime
 
 
@@ -259,7 +259,7 @@ def getCumQuantityAtTimeSpan(jobInfo, timeStart, timeEnd, timingExtract, quantit
 
 	# simpler version, which does not interpolated between timeslices
 	if useEndtime:
-		if (theEnd < timeStart):
+		if theEnd < timeStart:
 			return quantityExtract(jobInfo)
 		else:
 			return 0
@@ -287,18 +287,18 @@ class PlotReport(Report):
 		fig = matplotlib.pyplot.figure()
 
 		ax = fig.add_subplot(111)
-		ax.set_xlabel(xlabel)  #, ha="left")
+		ax.set_xlabel(xlabel) # ha="left"
 		# y = 0.8 will move the label more to the center
 		ax.set_ylabel(ylabel, va="top", y=0.75, labelpad=20.0)
 
 		return (name, fig, ax)
 
 	def finalizeHistogram(self, plotSet, useLegend=False):
-		if (useLegend):
+		if useLegend:
 			matplotlib.pyplot.legend(loc="upper right", numpoints=1, frameon=False, ncol=2)
 
-		self.imageTypes = ["png", "pdf"]
-		for it in self.imageTypes:
+		imageTypes = ["png", "pdf"]
+		for it in imageTypes:
 			matplotlib.pyplot.savefig(plotSet[0] + "." + it)
 
 	def plotHistogram(self, histo, jobResult, extractor):
@@ -353,7 +353,7 @@ class PlotReport(Report):
 		# make sure the axis are not exactly the same
 		minY = min(overAllBandwidth)
 		maxY = max(overAllBandwidth)
-		if (maxY <= minY):
+		if maxY <= minY:
 			maxY = minY + 1.0
 
 		histo[2].set_ylim(bottom= minY * 0.99, top=maxY * 1.2)
@@ -450,7 +450,7 @@ class PlotReport(Report):
 		workdir = self._jobDB.getWorkPath()
 		for j in self._jobs:
 			jInfo = JobInfoProcessor().process(os.path.join(workdir, 'output', 'job_%d' % j))
-			if (jInfo is None):
+			if jInfo is None:
 				log.info("Ignoring job")
 				continue
 

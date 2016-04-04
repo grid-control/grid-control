@@ -44,7 +44,7 @@ def getFixedFunctionObject(instance, fo, selector):
 # Matcher class
 class Matcher(ConfigurablePlugin):
 	def __init__(self, config, option_prefix):
-		pass
+		ConfigurablePlugin.__init__(self, config)
 
 	def getPositive(self, selector):
 		raise AbstractError

@@ -20,7 +20,7 @@ except ImportError:
     deque = list
 from hpfwk import NestedException
 from time import time
-from python_compat import set
+from python_compat import NullHandler, set
 
 class MigrationRequestedState(object):
     def __init__(self, migration_task):
@@ -196,7 +196,7 @@ if __name__ == '__main__':
     #set-up logging
     logging.basicConfig(format='%(levelname)s: %(message)s')
     logger = logging.getLogger('dbs3-migration')
-    logger.addHandler(logging.NullHandler())
+    logger.addHandler(NullHandler())
     logger.setLevel(logging.DEBUG)
 
     block_names = ['test1', 'test1', 'test2', 'test3', 'test4']

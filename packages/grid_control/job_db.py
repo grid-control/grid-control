@@ -137,6 +137,7 @@ class JobClass(object):
 
 class JobDB(ConfigurablePlugin):
 	def __init__(self, config, jobLimit = -1, jobSelector = None):
+		ConfigurablePlugin.__init__(self, config)
 		self._dbPath = config.getWorkPath('jobs')
 		self._jobMap = self.readJobs(jobLimit)
 		if jobLimit < 0 and len(self._jobMap) > 0:

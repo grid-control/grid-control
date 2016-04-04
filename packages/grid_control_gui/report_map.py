@@ -112,8 +112,7 @@ def drawMap(report):
 	ax = matplotlib.pyplot.subplot(111)
 	m = Basemap(projection='cyl', lat_0=0, lon_0=0,
 		llcrnrlon=bounds[0][0], llcrnrlat=bounds[0][1],
-		urcrnrlon=bounds[1][0], urcrnrlat=bounds[1][1],
-	)
+		urcrnrlon=bounds[1][0], urcrnrlat=bounds[1][1])
 
 	map_positions(m, posList)
 	#posList = remove_all_overlap(posList)

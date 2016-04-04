@@ -50,6 +50,7 @@ class DataSplitterIO(Plugin):
 
 class DataSplitter(ConfigurablePlugin):
 	def __init__(self, config):
+		ConfigurablePlugin.__init__(self, config)
 		self._config = config
 		self.setState(src = None, protocol = {})
 		# Resync settings:
@@ -199,7 +200,7 @@ class DataSplitter(ConfigurablePlugin):
 
 		elif idx == 0:
 			# First file is affected
-			if (newFI[DataProvider.NEntries] > modSI.get(DataSplitter.Skipped, 0)):
+			if newFI[DataProvider.NEntries] > modSI.get(DataSplitter.Skipped, 0):
 				# First file changes and still lives in new partition
 				following = sizeInfo[0] - modSI.get(DataSplitter.Skipped, 0) - modSI[DataSplitter.NEntries]
 				shrinkage = oldFI[DataProvider.NEntries] - newFI[DataProvider.NEntries]
@@ -241,7 +242,7 @@ class DataSplitter(ConfigurablePlugin):
 		for (oldMI, newMI, metaProc) in metaIdxLookup:
 			if (oldMI is None) or (newMI is None):
 				procMode = min(procMode, metaProc) # Metadata was removed
-			elif (oldFI[DataProvider.Metadata][oldMI] != newFI[DataProvider.Metadata][newMI]):
+			elif oldFI[DataProvider.Metadata][oldMI] != newFI[DataProvider.Metadata][newMI]:
 				procMode = min(procMode, metaProc) # Metadata was changed
 		return procMode
 

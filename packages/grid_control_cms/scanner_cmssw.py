@@ -27,6 +27,7 @@ def readTag(base, tag, default = None):
 
 class ObjectsFromCMSSW(InfoScanner):
 	def __init__(self, config):
+		InfoScanner.__init__(self, config)
 		self._importParents = config.getBool('include parent infos', False)
 		self._mergeKey = 'CMSSW_CONFIG_FILE'
 		if config.getBool('merge config infos', True):
@@ -63,8 +64,8 @@ class ObjectsFromCMSSW(InfoScanner):
 				cfgSummary[key] = tmp
 			else:
 				cfgSummary[key] = default
-		searchConfigFile('CMSSW_ANNOTATION', '.*annotation.*=.*cms.untracked.string.*\((.*)\)', None)
-		searchConfigFile('CMSSW_DATATIER', '.*dataTier.*=.*cms.untracked.string.*\((.*)\)', 'USER')
+		searchConfigFile('CMSSW_ANNOTATION', r'.*annotation.*=.*cms.untracked.string.*\((.*)\)', None)
+		searchConfigFile('CMSSW_DATATIER', r'.*dataTier.*=.*cms.untracked.string.*\((.*)\)', 'USER')
 		cfgReport = xml.dom.minidom.parseString(tar.extractfile('%s/report.xml' % cfg).read())
 		evRead = sum(imap(lambda x: int(readTag(x, 'EventsRead')), cfgReport.getElementsByTagName('InputFile')))
 		return (cfgSummary, cfgReport, evRead)
@@ -139,6 +140,7 @@ class ObjectsFromCMSSW(InfoScanner):
 
 class MetadataFromCMSSW(InfoScanner):
 	def __init__(self, config):
+		InfoScanner.__init__(self, config)
 		self.includeConfig = config.getBool('include config infos', False)
 
 	def getEntries(self, path, metadata, events, seList, objStore):
@@ -166,6 +168,7 @@ class SEListFromPath(InfoScanner):
 
 class LFNFromPath(InfoScanner):
 	def __init__(self, config):
+		InfoScanner.__init__(self, config)
 		self.stripPath = config.get('lfn marker', '/store/')
 
 	def getEntries(self, path, metadata, events, seList, objStore):

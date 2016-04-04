@@ -114,7 +114,7 @@ ParameterSource.managerMap['var'] = 'SimpleParameterSource'
 
 class SimpleFileParameterSource(SimpleParameterSource):
 	def getHash(self):
-		raise APIError('Not yet implemented') # return hash of file content - 
+		raise APIError('Not yet implemented') # return hash of file content
 
 	def __repr__(self):
 		return 'files(%s)' % repr(self._meta)

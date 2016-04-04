@@ -21,6 +21,7 @@ from python_compat import irange, lmap, set, sorted, tarfile
 
 class LogOnce(logging.Filter):
 	def __init__(self):
+		logging.Filter.__init__(self)
 		self._memory = set()
 
 	def filter(self, record):
@@ -31,6 +32,7 @@ class LogOnce(logging.Filter):
 
 class LogEveryNsec(logging.Filter):
 	def __init__(self, delta):
+		logging.Filter.__init__(self)
 		self._memory = {}
 		self._delta = delta
 

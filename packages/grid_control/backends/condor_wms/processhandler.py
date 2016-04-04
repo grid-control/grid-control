@@ -34,7 +34,6 @@ class TimeoutContext(object):
 	def __init__(self, duration = 1, exception = TimeoutError):
 		"""
 		Set a timeout to occur in duration, raising exception.
-		
 		This implementation is not thread-safe and only one timeout may be active at a time.
 		"""
 		self._active     = True
@@ -70,7 +69,8 @@ class ProcessHandler(Plugin):
 		raise AbstractError
 	def getDomain(self):
 		raise AbstractError
-	
+
+
 # local Processes - ensures uniform interfacing as with remote connections
 class LocalProcessHandler(ProcessHandler):
 	cpy="cp -r"
@@ -138,7 +138,8 @@ class SSHProcessHandler(ProcessHandler):
 
 	# Socket creation and cleanup
 	def _CreateSocket(self, duration = 60):
-		self.__ControlMaster = LoggedProcess( " ".join([self.cmd, self.defaultArgs, "-o ControlMaster=yes", self.socketArgsDef, self.remoteHost, self._argFormat("sleep %d" % duration)]) )
+		args = [self.cmd, self.defaultArgs, "-o ControlMaster=yes", self.socketArgsDef, self.remoteHost, self._argFormat("sleep %d" % duration)]
+		self.__ControlMaster = LoggedProcess(" ".join(args))
 		timeout = 0
 		while not os.path.exists(self.sshLink):
 			time.sleep(0.5)
@@ -345,4 +346,3 @@ class RemoteProcessHandler(object):
 		if dest.startswith(remoteKey):
 			dest = self.path%{"host":self.host,"path":dest[len(remoteKey):]}
 		return LoggedProcess( self.copy % { "source" : "%s:%s"%(self.host,source), "dest" : dest } )
-

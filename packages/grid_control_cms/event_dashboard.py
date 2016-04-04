@@ -61,11 +61,11 @@ class DashBoard(Monitoring):
 		taskId = self._task.substVars(self._taskname, jobNum, addDict = {'DATASETNICK': ''}).strip('_')
 		self._tp.start_thread("Notifying dashboard about job submission %d" % jobNum,
 			self._publish, jobObj, jobNum, taskId, [{
-			'user': os.environ['LOGNAME'], 'GridName': '/CN=%s' % token.getUsername(), 'CMSUser': token.getUsername(),
-			'tool': 'grid-control', 'JSToolVersion': getVersion(),
-			'SubmissionType':'direct', 'tool_ui': os.environ.get('HOSTNAME', ''),
-			'application': self._app, 'exe': 'shellscript', 'taskType': self._tasktype,
-			'scheduler': wms.wmsName, 'vo': token.getGroup()}, self._task.getSubmitInfo(jobNum)])
+				'user': os.environ['LOGNAME'], 'GridName': '/CN=%s' % token.getUsername(), 'CMSUser': token.getUsername(),
+				'tool': 'grid-control', 'JSToolVersion': getVersion(),
+				'SubmissionType':'direct', 'tool_ui': os.environ.get('HOSTNAME', ''),
+				'application': self._app, 'exe': 'shellscript', 'taskType': self._tasktype,
+				'scheduler': wms.wmsName, 'vo': token.getGroup()}, self._task.getSubmitInfo(jobNum)])
 
 
 	# Called on job status update and output
@@ -76,9 +76,9 @@ class DashBoard(Monitoring):
 		taskId = self._task.substVars(self._taskname, jobNum, addDict = {'DATASETNICK': ''}).strip('_')
 		self._tp.start_thread("Notifying dashboard about status of job %d" % jobNum,
 			self._publish, jobObj, jobNum, taskId, [{'StatusValue': statusDashboard,
-			'StatusValueReason': data.get('reason', statusDashboard).upper(),
-			'StatusEnterTime': data.get('timestamp', time.strftime('%Y-%m-%d_%H:%M:%S', time.localtime())),
-			'StatusDestination': data.get('dest', '') }, addMsg])
+				'StatusValueReason': data.get('reason', statusDashboard).upper(),
+				'StatusEnterTime': data.get('timestamp', time.strftime('%Y-%m-%d_%H:%M:%S', time.localtime())),
+				'StatusDestination': data.get('dest', '') }, addMsg])
 
 
 	def onJobUpdate(self, wms, jobObj, jobNum, data):

@@ -74,11 +74,12 @@ class BasicReport(Report):
 
 		# Print report summary
 		self._printHeader('REPORT SUMMARY:')
-		utils.vprint('Total number of jobs:%9d     Successful jobs:%8d  %3d%%' % \
-			tuple([len(self._jobDB)] + makePer(Job.SUCCESS)), -1)
-		utils.vprint('Jobs assigned to WMS:%9d        Failing jobs:%8d  %3d%%' % \
-			tuple([makeSum(Job.SUBMITTED, Job.WAITING, Job.READY, Job.QUEUED, Job.RUNNING)] +
-			makePer(Job.ABORTED, Job.CANCELLED, Job.FAILED)), -1)
+		njobs_total = len(self._jobDB)
+		jobov_succ = makePer(Job.SUCCESS)
+		utils.vprint('Total number of jobs:%9d     Successful jobs:%8d  %3d%%' % tuple([njobs_total] + jobov_succ), -1)
+		njobs_assigned = makeSum(Job.SUBMITTED, Job.WAITING, Job.READY, Job.QUEUED, Job.RUNNING)
+		jobov_fail = makePer(Job.ABORTED, Job.CANCELLED, Job.FAILED)
+		utils.vprint('Jobs assigned to WMS:%9d        Failing jobs:%8d  %3d%%' % tuple([njobs_assigned] + jobov_fail), -1)
 		utils.vprint(' ' * 65 + '\nDetailed Status Information:      ', -1, newline = False)
 		ignored = len(self._jobDB) - sum(summary)
 		if ignored:
@@ -86,8 +87,7 @@ class BasicReport(Report):
 		else:
 			utils.vprint(' ' * 31, -1)
 		for stateNum, category in enumerate(Job.enumNames):
-			utils.vprint('Jobs  %9s:%8d  %3d%%     ' % tuple([category] + makePer(stateNum)), \
-				-1, newline = stateNum % 2)
+			utils.vprint('Jobs  %9s:%8d  %3d%%     ' % tuple([category] + makePer(stateNum)), -1, newline = stateNum % 2)
 		utils.vprint('-' * 65, -1)
 		return 0
 

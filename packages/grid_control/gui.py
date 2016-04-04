@@ -19,6 +19,7 @@ from hpfwk import AbstractError
 
 class GUI(ConfigurablePlugin):
 	def __init__(self, config, workflow):
+		ConfigurablePlugin.__init__(self, config)
 		self._workflow = workflow
 		self._reportOpts = config.get('report options', '', onChange = None)
 		self._report = config.getCompositePlugin('report', 'BasicReport', 'MultiReport',

@@ -30,7 +30,7 @@ def se_runcmd(cmd, varDict, *urls):
 	runLib = utils.pathShare('gc-run.lib')
 	args = str.join(' ', imap(lambda x: '"%s"' % ensurePrefix(x).replace('dir://', 'file://'), urls))
 	varString = str.join(' ', imap(lambda x: 'export %s="%s";' % (x, varDict[x]), varDict))
-	return utils.LoggedProcess('source %s || exit 99; %s %s %s' % (runLib, varString, cmd, args))
+	return utils.LoggedProcess('. %s || exit 99; %s %s %s' % (runLib, varString, cmd, args))
 
 se_ls = lambda target: se_runcmd('url_ls', {}, target)
 se_rm = lambda target: se_runcmd('print_and_eval "url_rm"', {}, target)

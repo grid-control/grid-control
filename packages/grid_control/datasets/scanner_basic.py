@@ -54,6 +54,7 @@ class OutputDirsFromWork(InfoScanner):
 		InfoScanner.__init__(self, config)
 		self._extWorkDir = config.get('source directory')
 		self._extOutputDir = os.path.join(self._extWorkDir, 'output')
+		self._selector = JobSelector.create(config.get('source job selector', ''))
 
 	def getEntries(self, path, metadata, events, seList, objStore):
 		allDirs = ifilter(lambda fn: fn.startswith('job_'), os.listdir(self._extOutputDir))
@@ -63,7 +64,8 @@ class OutputDirsFromWork(InfoScanner):
 				metadata['GC_JOBNUM'] = int(dirName.split('_')[1])
 				objStore['GC_WORKDIR'] = self._extWorkDir
 				log.finish()
-				yield (os.path.join(self._extOutputDir, dirName), metadata, events, seList, objStore)
+				if self._selector and self._selector(metadata['GC_JOBNUM'], None):
+					yield (os.path.join(self._extOutputDir, dirName), metadata, events, seList, objStore)
 			except Exception:
 				pass
 			log.finish()

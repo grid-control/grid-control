@@ -95,7 +95,7 @@ class DiscoverWMS_Lazy(object): # TODO: Move to broker infrastructure
 			if len(self.matchSites(wms)):
 				self.wms_ok.append(wms)
 			self.pos += 1
-			if self.pos == len(self.wms_all): # mark finished 
+			if self.pos == len(self.wms_all): # mark finished
 				self.wms_ok.append(None)
 		return self.wms_ok
 

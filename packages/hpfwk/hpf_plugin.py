@@ -56,7 +56,7 @@ class InstanceFactory(object):
 	def bindValue(self):
 		return self._bindValue
 
-# Abstract class taking care of dynamic class loading 
+# Abstract class taking care of dynamic class loading
 class Plugin(object):
 	alias = []
 	configSections = []

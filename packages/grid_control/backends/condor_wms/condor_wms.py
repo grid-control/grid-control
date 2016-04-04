@@ -30,7 +30,7 @@ from python_compat import ifilter, irange, izip, lzip, md5, set, sorted
 # if the ssh stuff proves too hack'y: http://www.lag.net/paramiko/
 
 # enum pseudo classes
-class poolType:
+class PoolType:
 	enumTypes = ('LOCAL','SPOOL','SSH','GSISSH')
 	for idx, eType in enumerate(enumTypes):
 		locals()[eType] = idx
@@ -38,20 +38,20 @@ class poolType:
 class Condor(BasicWMS):
 	configSections = BasicWMS.configSections + ['condor']
 	# dictionary mapping vanilla condor job status to GC job status
-	# condor: U = unexpanded (never been run), H = on hold, R = running, I = idle (waiting for a machine to execute on), C = completed, and X = removed. 
+	# condor: U = unexpanded (never been run), H = on hold, R = running, I = idle (waiting for a machine to execute on), C = completed, and X = removed
 	# 0 Unexpanded 	U -- 1	Idle 	I -- 2	Running 	R -- 3	Removed 	X -- 4	Completed 	C -- 5	Held 	H -- 6	Submission_err 	E
 	# GC: 'INIT', 'SUBMITTED', 'DISABLED', 'READY', 'WAITING', 'QUEUED', 'ABORTED', 'RUNNING', 'CANCELLED', 'DONE', 'FAILED', 'SUCCESS'
-	_statusMap = {		# dictionary mapping vanilla condor job status to GC job status
-		'0' : Job.WAITING	,# unexpanded (never been run)
-		'1' : Job.SUBMITTED	,# idle (waiting for a machine to execute on)
-		'2' : Job.RUNNING	,# running
-		'3' : Job.ABORTED	,# removed
-		'4' : Job.DONE	,# completed
-		'5' : Job.WAITING	,#DISABLED	,# on hold
-		'6' : Job.FAILED	,# submit error
+	_statusMap = { # dictionary mapping vanilla condor job status to GC job status
+		'0' : Job.WAITING,   # unexpanded (never been run)
+		'1' : Job.SUBMITTED, # idle (waiting for a machine to execute on)
+		'2' : Job.RUNNING,   # running
+		'3' : Job.ABORTED,   # removed
+		'4' : Job.DONE,      # completed
+		'5' : Job.WAITING,   # DISABLED; on hold
+		'6' : Job.FAILED,    # submit error
 		}
-	_humanMap = {		# dictionary mapping vanilla condor job status to human readable condor status
-		'0' : 'Unexpanded'	,
+	_humanMap = { # dictionary mapping vanilla condor job status to human readable condor status
+		'0' : 'Unexpanded',
 		'1' : 'Idle',
 		'2' : 'Running',
 		'3' : 'Removed',
@@ -73,7 +73,7 @@ class Condor(BasicWMS):
 		######
 		self.taskID = config.get('task id', md5(str(time.time())).hexdigest(), persistent = True) # FIXME!
 		self.debugOut("""
-		
+
 		#############################
 		Initialized Condor/GlideInWMS
 		#############################
@@ -81,7 +81,7 @@ class Condor(BasicWMS):
 		taskID: %s
 		Name:   %s
 		#############################
-		
+
 		"""%(config.getConfigName(),self.taskID,wmsName))
 		# finalize config state by reading values or setting to defaults
 		self.settings={
@@ -106,7 +106,7 @@ class Condor(BasicWMS):
 		# history query is faster with split files - check if and how this is used
 		# default condor_history command works WITHOUT explicitly specified file
 		self.historyFile = None
-		if self.remoteType == poolType.LOCAL and getoutput( self.configValExec + ' ENABLE_HISTORY_ROTATION').lower() == 'true':
+		if self.remoteType == PoolType.LOCAL and getoutput( self.configValExec + ' ENABLE_HISTORY_ROTATION').lower() == 'true':
 			self.historyFile = getoutput( self.configValExec + ' HISTORY')
 			if not os.path.isfile(self.historyFile):
 				self.historyFile = None
@@ -143,9 +143,9 @@ class Condor(BasicWMS):
 
 # overwrite for check/submit/fetch intervals
 	def getTimings(self):
-		if self.remoteType == poolType.SSH or self.remoteType == poolType.GSISSH:
+		if self.remoteType == PoolType.SSH or self.remoteType == PoolType.GSISSH:
 			return utils.Result(waitOnIdle = 30, waitBetweenSteps = 5)
-		elif self.remoteType == poolType.SPOOL:
+		elif self.remoteType == PoolType.SPOOL:
 			return utils.Result(waitOnIdle = 60, waitBetweenSteps = 10)
 		else:
 			return utils.Result(waitOnIdle = 20, waitBetweenSteps = 5)
@@ -163,7 +163,7 @@ class Condor(BasicWMS):
 # getWorkdirPath: return path to condor output dir for a specific job or basepath
 	def getWorkdirPath(self, jobNum=''):
 		# local and spool make condor access the local sandbox directly
-		if self.remoteType == poolType.LOCAL or self.remoteType == poolType.SPOOL:
+		if self.remoteType == PoolType.LOCAL or self.remoteType == PoolType.SPOOL:
 			return self.getSandboxPath(jobNum)
 		# ssh and gsissh require a remote working directory
 		else:
@@ -194,7 +194,7 @@ class Condor(BasicWMS):
 				yield (jobNum, None)
 				continue
 			# when working with a remote spool schedd, tell condor to return files
-			if self.remoteType == poolType.SPOOL:
+			if self.remoteType == PoolType.SPOOL:
 				transferProcess = self.Pool.LoggedExecute(self.transferExec, '%(jobID)s' % {"jobID" : self._splitId(wmsId) })
 				if transferProcess.wait() != 0:
 					if self.explainError(transferProcess, transferProcess.wait()):
@@ -202,7 +202,7 @@ class Condor(BasicWMS):
 					else:
 						transferProcess.logError(self.errorLog)
 			# when working with a remote [gsi]ssh schedd, manually return files
-			elif self.remoteType == poolType.SSH or self.remoteType == poolType.GSISSH:
+			elif self.remoteType == PoolType.SSH or self.remoteType == PoolType.GSISSH:
 				transferProcess = self.Pool.LoggedCopyFromRemote( self.getWorkdirPath(jobNum), self.getSandboxPath())
 				if transferProcess.wait() != 0:
 					if self.explainError(transferProcess, transferProcess.wait()):
@@ -253,7 +253,7 @@ class Condor(BasicWMS):
 					self._log.error('\tProcess message: %s', cancelProcess.getMessage())
 					raise BackendError('Error while cancelling job %s' % wmsID)
 			# clean up remote work dir
-			if self.remoteType == poolType.SSH or self.remoteType == poolType.GSISSH:
+			if self.remoteType == PoolType.SSH or self.remoteType == PoolType.GSISSH:
 				cleanupProcess = self.Pool.LoggedExecute('rm -rf %s' % self.getWorkdirPath(jobNum) )
 				self.debugOut("Cleaning up remote workdir:\n	" + cleanupProcess.cmd)
 				if cleanupProcess.wait() != 0:
@@ -276,7 +276,7 @@ class Condor(BasicWMS):
 # _reviseWorkingDirectory: check remote working directories and clean up when needed
 	def _tidyUpWorkingDirectory(self,forceCleanup=False):
 		# active remote submission should clean up when no jobs remain
-		if self.remoteType == poolType.SSH or self.remoteType == poolType.GSISSH:
+		if self.remoteType == PoolType.SSH or self.remoteType == PoolType.GSISSH:
 			self.debugOut("Revising remote working directory for cleanup. Forced CleanUp: %s" % forceCleanup)
 			activity = utils.ActivityLog('revising remote work directory')
 			# check whether there are any remote working directories remaining
@@ -307,6 +307,7 @@ class Condor(BasicWMS):
 
 		activity = utils.ActivityLog('fetching job status')
 		statusProcess = self.Pool.LoggedExecute(self.statusExec, '%(format)s %(jobIDs)s' % {"jobIDs" : wmsIdArgument, "format" : self.statusReturnFormat })
+		activity.finish()
 
 		activity = utils.ActivityLog('checking job status')
 		# process all lines of the status executable output
@@ -328,6 +329,7 @@ class Condor(BasicWMS):
 				pass
 			else:
 				statusProcess.logError(self.errorLog, brief=True)
+		activity.finish()
 
 		self.debugOut("Remaining after condor_q: %s" % wmsIdList)
 		# jobs not in queue have either succeeded or failed - both is considered 'Done' for GC
@@ -339,7 +341,7 @@ class Condor(BasicWMS):
 				yield ( wmsToJobMap[wmsID], wmsID, Job.DONE, {} )
 		# TODO: querry log on properly configured pool
 		# querying the history can be SLOW! only do when necessary and possible
-		if False and len(wmsIdList) > 0 and self.remoteType != poolType.SPOOL:
+		if False and len(wmsIdList) > 0 and self.remoteType != PoolType.SPOOL:
 			utils.vprint('querrying condor_history', 2)
 			# querying the history can be VERY slow! Only do so bit by bit if possible
 			if self.historyFile:
@@ -435,7 +437,7 @@ class Condor(BasicWMS):
 
 			self.debugOut("Copying to remote")
 			# copy infiles to ssh/gsissh remote pool if required
-			if self.remoteType == poolType.SSH or self.remoteType == poolType.GSISSH:
+			if self.remoteType == PoolType.SSH or self.remoteType == PoolType.GSISSH:
 				activity = utils.ActivityLog('preparing remote scheduler')
 				self.debugOut("Copying to sandbox")
 				workdirBase = self.getWorkdirPath()
@@ -502,6 +504,7 @@ class Condor(BasicWMS):
 						self.debugOut("o : %s" % wmsJobIdList)
 
 				retCode = proc.wait()
+				activity.finish()
 				if (retCode != 0) or ( len(wmsJobIdList) < len(jobNumList) ):
 					if self.explainError(proc, retCode):
 						pass
@@ -527,7 +530,7 @@ class Condor(BasicWMS):
 		# resolve file paths for different pool types
 		# handle gc executable separately
 		gcExec, transferFiles = "",[]
-		if self.remoteType == poolType.SSH or self.remoteType == poolType.GSISSH:
+		if self.remoteType == PoolType.SSH or self.remoteType == PoolType.GSISSH:
 			for description, source, target in self._getSandboxFilesIn(module):
 				if 'gc-run.sh' in target:
 					gcExec=os.path.join(self.getWorkdirPath(), target)
@@ -561,14 +564,14 @@ class Condor(BasicWMS):
 				inject='+JOB_%s = "$$(%s:Unknown)"' % (matchKey,matchKey)
 				jdlData.append(inject)
 				self.debugOut("  o Injected: %s " % inject)
-		
-		if self.remoteType == poolType.SPOOL:
+
+		if self.remoteType == PoolType.SPOOL:
 			# remote submissal requires job data to stay active until retrieved
 			jdlData.extend("leave_in_queue = (JobStatus == 4) && ((StageOutFinish =?= UNDEFINED) || (StageOutFinish == 0))",
 			# Condor should not attempt to assign to local user
 			'+Owner=UNDEFINED')
 		for authFile in self.proxy.getAuthFiles():
-			if not (self.remoteType == poolType.SSH or self.remoteType == poolType.GSISSH):
+			if not (self.remoteType == PoolType.SSH or self.remoteType == PoolType.GSISSH):
 				jdlData.append("x509userproxy = %s" % authFile)
 			else:
 				jdlData.append("x509userproxy = %s" % os.path.join(self.getWorkdirPath(), os.path.basename(authFile)))
@@ -643,8 +646,8 @@ class Condor(BasicWMS):
 			elif reqType == WMS.STORAGE:
 				if ("requestSEs" in self.poolReqs):
 					jdlReq.append( self.poolReqs["requestSEs"] + ' = ' + '"' + ','.join(reqValue) + '"' )
-			
 				#append unused requirements to JDL for debugging
+
 			elif self.debug:
 				self.debugOut("reqType: %s  reqValue: %s"%(reqType,reqValue))
 				self.debugFlush()
@@ -675,7 +678,7 @@ class Condor(BasicWMS):
 							r" -format '%%v ' '%s'" % getSafeQueryKey("HoldReasonSubCode") + \
 							r""" -format '%s ' 'formatTime(QDate,"%m/%d-%H:%M")'""" + \
 							r""" -format '%s ' 'formatTime(CompletionDate,"%m/%d-%H:%M")'""" + \
-							r""" -format '%s ' 'IfThenElse(isUndefined(RemoteHost)==False,RemoteHost,IfThenElse(isUndefined(LastRemoteHost)==False,LastRemoteHost,"NA"))'""" 
+							r""" -format '%s ' 'IfThenElse(isUndefined(RemoteHost)==False,RemoteHost,IfThenElse(isUndefined(LastRemoteHost)==False,LastRemoteHost,"NA"))'"""
 		statusReturnKeys = ["wmsid", "GCID@WMSID", "status", "holdreason", "submit_time", "completion_time", "RemoteHost"]
 		# add pool specific query arguments
 		for queryKey, queryArg in self.poolQuery.items():
@@ -698,14 +701,14 @@ class Condor(BasicWMS):
 		# check submissal type
 		self.remoteType = config.get("remote Type", "").lower()
 		if self.remoteType in ["ssh"]:
-			self.remoteType = poolType.SSH
+			self.remoteType = PoolType.SSH
 		elif self.remoteType in ["gsissh","gssh"]:
-			self.remoteType = poolType.GSISSH
+			self.remoteType = PoolType.GSISSH
 		elif self.remoteType in ["spool","condor","remote"]:
-			self.remoteType = poolType.SPOOL
+			self.remoteType = PoolType.SPOOL
 		else:
-			self.remoteType = poolType.LOCAL
-		self.debugOut("Selected pool type: %s" % poolType.enumTypes[self.remoteType])
+			self.remoteType = PoolType.LOCAL
+		self.debugOut("Selected pool type: %s" % PoolType.enumTypes[self.remoteType])
 
 		# get remote destination features
 		user,sched,collector = self._getDestination(config)
@@ -715,7 +718,7 @@ class Condor(BasicWMS):
 		self.debugOut("Destination:\n")
 		self.debugOut("\tuser:%s @ sched:%s via collector:%s" % (nice_user, nice_sched, nice_collector))
 		# prepare commands appropriate for pool type
-		if self.remoteType == poolType.LOCAL or self.remoteType == poolType.SPOOL:
+		if self.remoteType == PoolType.LOCAL or self.remoteType == PoolType.SPOOL:
 			self.user=user
 			self.Pool=self.Pool=ProcessHandler.createInstance("LocalProcessHandler")
 			# local and remote use condor tools installed locally - get them
@@ -725,7 +728,7 @@ class Condor(BasicWMS):
 			self.cancelExec = utils.resolveInstallPath('condor_rm')
 			self.transferExec = utils.resolveInstallPath('condor_transfer_data')	# submission might spool to another schedd and need to fetch output
 			self.configValExec = utils.resolveInstallPath('condor_config_val')	# service is better when being able to adjust to pool settings
-			if self.remoteType == poolType.SPOOL:
+			if self.remoteType == PoolType.SPOOL:
 				# remote requires adding instructions for accessing remote pool
 				self.submitExec+= " %s %s" % (utils.QM(sched,"-remote %s"%sched,""),utils.QM(collector, "-pool %s"%collector, ""))
 				self.statusExec+= " %s %s" % (utils.QM(sched,"-name %s"%sched,""),utils.QM(collector, "-pool %s"%collector, ""))
@@ -735,7 +738,7 @@ class Condor(BasicWMS):
 		else:
 			# ssh type instructions are passed to the remote host via regular ssh/gsissh
 			host="%s%s"%(utils.QM(user,"%s@" % user,""), sched)
-			if self.remoteType == poolType.SSH:
+			if self.remoteType == PoolType.SSH:
 				self.Pool=ProcessHandler.createInstance("SSHProcessHandler",remoteHost=host , sshLink=config.getWorkPath(".ssh", self.wmsName+host ) )
 			else:
 				self.Pool=ProcessHandler.createInstance("GSISSHProcessHandler",remoteHost=host , sshLink=config.getWorkPath(".gsissh", self.wmsName+host ) )
@@ -766,11 +769,14 @@ class Condor(BasicWMS):
 
 #_getDestination: read user/sched/collector from config
 	def _getDestination(self,config):
-		splitDest = [ item.strip() for item in config.get("remote Dest", "@").split("@") ]
-		user = config.get("remote User", "").strip()
+		splitDest = [ item.strip() for item in config.get('remote Dest', '@').split('@') ]
+		user = config.get('remote User', '').strip()
 		if len(splitDest)==1:
 			return utils.QM(user,user,None),splitDest[0],None
 		elif len(splitDest)==2:
 			return utils.QM(user,user,None),splitDest[0],splitDest[1]
 		else:
-			raise BackendError("Could not parse Configuration setting 'remote Dest'! \nExpected:	[<sched>|<sched>@|<sched>@<collector>]\nFound:	%s"%config.get("remote Dest", "@"))
+			self._log.warning('Could not parse Configuration setting "remote Dest"!')
+			self._log.warning('Expected: [<sched>|<sched>@|<sched>@<collector>]')
+			self._log.warning('Found: %s', config.get('remote Dest', '@'))
+			raise BackendError('Could not parse submit destination')

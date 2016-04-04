@@ -23,7 +23,7 @@ from python_compat import identity, ifilter, imap, irange, ismap, izip, lfilter,
 def execWrapper(script, context = None):
 	if context is None:
 		context = dict()
-	exec(script, context)
+	exec(script, context) # pylint:disable=exec-used
 	return context
 
 def QM(cond, a, b):
@@ -237,7 +237,7 @@ def formatDict(d, fmt = '%s=%r', joinStr = ', '):
 
 class Result(object): # Use with caution! Compared with tuples: +25% accessing, 8x slower instantiation
 	def __init__(self, **kwargs):
-		self.__dict__ = kwargs 
+		self.__dict__ = kwargs
 	def __repr__(self):
 		return 'Result(%s)' % formatDict(self.__dict__, '%s=%r')
 
@@ -652,12 +652,12 @@ class ActivityLog:
 
 
 class Table(object):
-	def __init__(self, head, data):
-		pass
+	pass
 
 
 class ParseableTable(Table):
 	def __init__(self, head, data, delimeter = '|'):
+		Table.__init__(self)
 		head = list(head)
 		self._delimeter = delimeter
 		self._write_line(imap(lambda x: x[1], head))
@@ -671,6 +671,7 @@ class ParseableTable(Table):
 
 class RowTable(Table):
 	def __init__(self, head, data, fmt = None, wrapLen = 100):
+		Table.__init__(self)
 		head = list(head)
 		def getHeadName(key, name):
 			return name
@@ -694,6 +695,7 @@ class RowTable(Table):
 
 class ColumnTable(Table):
 	def __init__(self, head, data, fmtString = '', fmt = None, wrapLen = 100):
+		Table.__init__(self)
 		head = list(head)
 		justFun = self._get_just_fun_dict(head, fmtString)
 		# return formatted, but not yet aligned entries; len dictionary; just function
@@ -722,7 +724,7 @@ class ColumnTable(Table):
 
 	def _format_data(self, head, data, justFun, fmt):
 		# adjust to lendict of column (considering escape sequence correction)
-		strippedlen = lambda x: len(re.sub('\33\[\d*(;\d*)*m', '', x))
+		strippedlen = lambda x: len(re.sub('\033\\[\\d*(;\\d*)*m', '', x))
 		just = lambda key, x: justFun.get(key, str.rjust)(x, lendict[key] + len(x) - strippedlen(x))
 
 		def getKeyLen(key, name):

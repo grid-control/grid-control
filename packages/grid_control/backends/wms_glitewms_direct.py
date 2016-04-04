@@ -27,8 +27,8 @@ try: # gLite 3.2
 	import wmsui_api
 	glStates = wmsui_api.states_names
 	def getStatusDirect(wmsId):
-		jobStatus = wmsui_api.getStatusDirect(wmsui_api.getJobIdfromList([wmsId])[0], 0)
-		return lmap(lambda name: (name.lower(), jobStatus.getAttribute(glStates.index(name))), glStates)
+		jobStatusDirect = wmsui_api.getStatusDirect(wmsui_api.getJobIdfromList([wmsId])[0], 0)
+		return lmap(lambda name: (name.lower(), jobStatusDirect.getAttribute(glStates.index(name))), glStates)
 except Exception: # gLite 3.1
 	try:
 		from glite_wmsui_LbWrapper import Status

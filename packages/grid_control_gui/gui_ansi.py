@@ -27,14 +27,14 @@ class GUIStream(object):
 		# the output written into this stream.  Lookahead expressions
 		# should not overlap with other regular expressions.
 		self.attrs = [
-			('DONE(?!:)', [Console.COLOR_BLUE, Console.BOLD]),
-			('FAILED(?!:)', [Console.COLOR_RED, Console.BOLD]),
-			('SUCCESS(?!:)', [Console.COLOR_GREEN, Console.BOLD]),
-			('(?<=DONE:)\s+[1-9]\d*', [Console.COLOR_BLUE, Console.BOLD]),
-			('(?<=Failing jobs:)\s+[1-9]\d*', [Console.COLOR_RED, Console.BOLD]),
-			('(?<=FAILED:)\s+[1-9]\d*', [Console.COLOR_RED, Console.BOLD]),
-			('(?<=Successful jobs:)\s+[1-9]\d*', [Console.COLOR_GREEN, Console.BOLD]),
-			('(?<=SUCCESS:)\s+[1-9]\d*', [Console.COLOR_GREEN, Console.BOLD]),
+			(r'DONE(?!:)', [Console.COLOR_BLUE, Console.BOLD]),
+			(r'FAILED(?!:)', [Console.COLOR_RED, Console.BOLD]),
+			(r'SUCCESS(?!:)', [Console.COLOR_GREEN, Console.BOLD]),
+			(r'(?<=DONE:)\s+[1-9]\d*', [Console.COLOR_BLUE, Console.BOLD]),
+			(r'(?<=Failing jobs:)\s+[1-9]\d*', [Console.COLOR_RED, Console.BOLD]),
+			(r'(?<=FAILED:)\s+[1-9]\d*', [Console.COLOR_RED, Console.BOLD]),
+			(r'(?<=Successful jobs:)\s+[1-9]\d*', [Console.COLOR_GREEN, Console.BOLD]),
+			(r'(?<=SUCCESS:)\s+[1-9]\d*', [Console.COLOR_GREEN, Console.BOLD]),
 		]
 		self.regex = re.compile('(%s)' % '|'.join(imap(itemgetter(0), self.attrs)))
 

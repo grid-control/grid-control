@@ -107,7 +107,7 @@ class JobManager(NamedPlugin):
 			jobStatus.append('(%s)' % jobObj.get('reason'))
 		elif (state == Job.SUCCESS) and (jobObj.get('runtime', None) is not None):
 			jobStatus.append('(runtime %s)' % strTime(jobObj.get('runtime') or 0))
-		elif (state == Job.FAILED):
+		elif state == Job.FAILED:
 			msg = []
 			retCode = jobObj.get('retcode')
 			if retCode:
@@ -417,7 +417,7 @@ class SimpleJobManager(JobManager):
 		try:
 			successRatio = jobsSuccess * 1.0 / self._verifyChunks[verifyIndex]
 			goal = self._verifyChunks[verifyIndex] * self._verifyThresh[verifyIndex]
-			if (self._verifyChunks[verifyIndex] - jobsDone) + jobsSuccess < goal:
+			if self._verifyChunks[verifyIndex] - jobsDone + jobsSuccess < goal:
 				if not self._unreachableGoal:
 					self._log_user_time.warning('All remaining jobs are vetoed by an unachieveable verification goal!')
 					self._log_user_time.info('Current goal: %d successful jobs out of %d', goal, self._verifyChunks[verifyIndex])

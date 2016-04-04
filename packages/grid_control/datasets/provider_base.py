@@ -26,6 +26,7 @@ class DatasetError(NestedException):
 
 class DataProvider(ConfigurablePlugin):
 	def __init__(self, config, datasetExpr, datasetNick = None, datasetID = 0):
+		ConfigurablePlugin.__init__(self, config)
 		self._log = logging.getLogger('user.dataprovider')
 		(self._datasetExpr, self._datasetNick, self._datasetID) = (datasetExpr, datasetNick, datasetID)
 		(self._cache_block, self._cache_dataset, self._passthrough) = (None, None, False)

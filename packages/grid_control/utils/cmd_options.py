@@ -26,7 +26,8 @@ class Options(object):
 		(opts, cmd_args) = self._parser.parse_args(args = args or sys.argv[1:])
 		config_dict = {}
 		for option in self._dest:
-			config_dict[self._get_normed(option, ' ')] = str(getattr(opts, option))
+			if getattr(opts, option) is not None:
+				config_dict[self._get_normed(option, ' ')] = str(getattr(opts, option))
 		for arg_idx, arg_key in enumerate(arg_keys or []):
 			if arg_idx < len(cmd_args):
 				if arg_idx == len(arg_keys) - 1:
@@ -45,28 +46,28 @@ class Options(object):
 		self._groups[name] = optparse.OptionGroup(self._parser, desc, usage)
 		self._parser.add_option_group(self._groups[name])
 
-	def addText(self, group, option, default = None, help = '', short = '', dest = None):
-		return self._add(group, option, short, default, 'store', help, dest)
+	def addText(self, group, short, option, default = None, help = '', dest = None):
+		return self._add(group, short, option, default, 'store', help, dest)
 
-	def addList(self, group, option, default = None, help = '', short = '', dest = None):
-		return self._add(group, option, short, default or [], 'append', help, dest)
+	def addList(self, group, short, option, default = None, help = '', dest = None):
+		return self._add(group, short, option, default or [], 'append', help, dest)
 
-	def addAccu(self, group, option, default = 0, help = '', short = '', dest = None):
-		return self._add(group, option, short, default, 'count', help, dest)
+	def addAccu(self, group, short, option, default = 0, help = '', dest = None):
+		return self._add(group, short, option, default, 'count', help, dest)
 
-	def addBool(self, group, option, default, help = '', short = '', dest = None):
+	def addBool(self, group, short, option, default, help = '', dest = None):
 		if default is False:
-			return self._add(group, option, short, default, 'store_true', help, dest)
-		return self._add(group, option, short, default, 'store_false', help, dest)
+			return self._add(group, short, option, default, 'store_true', help, dest)
+		return self._add(group, short, option, default, 'store_false', help, dest)
 
-	def addFlag(self, group, option_pair, default, help_pair = ('', ''), short_pair = ('', ''), dest = None):
+	def addFlag(self, group, short_pair, option_pair, default, help_pair = ('', ''), dest = None):
 		if default:
 			self._defaults.append(option_pair[0])
 		else:
 			self._defaults.append(option_pair[1])
 		dest = dest or self._get_normed(option_pair[0], '_')
-		self._add(group, option_pair[1], short_pair[1], default, 'store_false', help_pair[1], dest)
-		return self._add(group, option_pair[0], short_pair[0], default, 'store_true', help_pair[0], dest)
+		self._add(group, short_pair[1], option_pair[1], default, 'store_false', help_pair[1], dest)
+		return self._add(group, short_pair[0], option_pair[0], default, 'store_true', help_pair[0], dest)
 
 	def addFSet(self):
 		pass
@@ -84,9 +85,11 @@ class Options(object):
 			return self._parser
 		return self._groups[group]
 
-	def _add(self, group, option, short, default, action, help_msg, dest):
+	def _add(self, group, short, option, default, action, help_msg, dest):
 		group = self._get_group(group)
 		dest = dest or self._get_normed(option, '_')
 		self._dest.append(dest)
-		return group.add_option(short, '--' + option, dest = dest,
+		if short.strip():
+			short = '-' + short
+		return group.add_option(short.strip(), '--' + option, dest = dest,
 			default = default, action = action, help = help_msg)

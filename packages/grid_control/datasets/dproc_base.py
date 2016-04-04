@@ -18,6 +18,7 @@ from hpfwk import AbstractError
 
 class DataProcessor(ConfigurablePlugin):
 	def __init__(self, config):
+		ConfigurablePlugin.__init__(self, config)
 		self._log = logging.getLogger('dataproc')
 
 	def process(self, blockIter):

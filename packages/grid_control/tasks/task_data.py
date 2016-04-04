@@ -28,7 +28,7 @@ class DataTask(TaskModule):
 		self.dataRefresh = -1
 		self._forceRefresh = config.getState('resync', detail = 'dataset', default = False)
 		def userRefresh(config, old_obj, cur_obj, cur_entry, obj2str):
-			if ((old_obj == '') and (cur_obj != '')):
+			if (old_obj == '') and (cur_obj != ''):
 				raise UserError('It is currently not possible to attach a dataset to a non-dataset task!')
 			self._forceRefresh = True
 			return cur_obj

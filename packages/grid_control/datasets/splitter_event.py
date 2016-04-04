@@ -33,7 +33,7 @@ class EventBoundarySplitter(DataSplitter):
 		while True:
 			if curEvent >= lastEvent:
 				try:
-					fileObj = next(fileListIter);
+					fileObj = next(fileListIter)
 				except StopIteration:
 					if job[DataSplitter.FileList]:
 						yield job
