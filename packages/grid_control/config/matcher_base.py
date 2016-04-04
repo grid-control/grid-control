@@ -12,7 +12,7 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-import re
+import re, fnmatch
 from grid_control.config.config_entry import appendOption, noDefault
 from grid_control.gc_plugin import ConfigurablePlugin
 from grid_control.utils import QM
@@ -64,6 +64,7 @@ class Matcher(ConfigurablePlugin):
 
 	def __repr__(self):
 		return '%s(...)' % self.__class__.__name__
+
 
 class BasicMatcher(Matcher):
 	def matchFunction(value, selector):
@@ -137,6 +138,16 @@ class RegExMatcher(Matcher):
 			def match(self, value):
 				return QM(self._regex.search(value) is not None, 1, -1)
 		return getFixedFunctionObject(self, FunctionObject, selector)
+
+
+class ShellStyleMatcher(RegExMatcher):
+	alias = ['shell']
+
+	def matcher(self, value, selector):
+		return RegExMatcher.matcher(self, value, fnmatch.translate(selector))
+
+	def matchWith(self, selector):
+		return RegExMatcher.matchWith(self, fnmatch.translate(selector))
 
 
 class BlackWhiteMatcher(Matcher):

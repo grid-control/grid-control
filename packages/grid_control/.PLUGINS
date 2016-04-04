@@ -142,6 +142,8 @@
 
      * grid_control.config.matcher_base RegExMatcher regex
 
+      * grid_control.config.matcher_base ShellStyleMatcher shell
+
     * grid_control.gc_plugin NamedPlugin
 
      * grid_control.backends.access AccessToken
