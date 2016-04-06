@@ -20,7 +20,8 @@ from python_compat import sorted
 def main():
 	jip = JobInfoProcessor()
 	fip = FileInfoProcessor()
-	(workDir, config, jobDB) = initGC(sys.argv[1:])
+	(config, jobDB) = initGC(sys.argv[1:])
+	workDir = config.getWorkPath()
 	for jobNum in sorted(jobDB.getJobs()):
 		if jip.process(os.path.join(workDir, 'output', 'job_%d' % jobNum))[1] == 0:
 			for fileInfo in fip.process(os.path.join(workDir, 'output', 'job_%d' % jobNum)):

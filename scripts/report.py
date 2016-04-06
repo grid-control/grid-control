@@ -17,13 +17,11 @@ import sys
 from gcSupport import JobSelector, Options, Plugin, getConfig, scriptOptions, utils
 
 parser = Options(usage = '%s [OPTIONS] <config file>')
-parser.addText(None, 'report',       default = 'GUIReport', short = '-R')
-parser.addFlag(None, 'report-list',  default = False,       short = '-L',
-	help = 'List available report classes')
-parser.addText(None, 'job-selector', default = None,        short = '-J')
-parser.addFlag(None, 'use-task',     default = False,       short = '-T',
-	help='Forward task information to report')
-parser.addText(None, 'string',       default = None)
+parser.addBool(None, 'L', 'report-list',  default = False, help = 'List available report classes')
+parser.addBool(None, 'T', 'use-task',     default = False, help = 'Forward task information to report')
+parser.addText(None, 'R', 'report',       default = 'GUIReport')
+parser.addText(None, 'J', 'job-selector', default = None)
+parser.addText(None, ' ', 'string',       default = None)
 options = scriptOptions(parser)
 
 Report = Plugin.getClass('Report')

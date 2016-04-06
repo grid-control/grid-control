@@ -14,32 +14,32 @@
 # | limitations under the License.
 
 import os, sys, logging
-from gcSupport import Job, Options, Plugin, getConfig, scriptOptions
+from gcSupport import Job, JobSelector, Options, Plugin, getConfig, scriptOptions
 from grid_control import utils
 from grid_control.datasets import DataProvider, DataSplitter
 from python_compat import BytesBuffer, imap, irange, lmap, lzip
 
 parser = Options()
 parser.section('back', 'Backend debugging', '%s [<backend specifier>] ...')
-parser.addFlag('back', 'backend-list-nodes',     default=False, help='List backend nodes')
-parser.addFlag('back', 'backend-list-queues',    default=False, help='List backend queues')
+parser.addBool('back', '', 'backend-list-nodes',     default=False, help='List backend nodes')
+parser.addBool('back', '', 'backend-list-queues',    default=False, help='List backend queues')
 
 parser.section('part', 'Dataset Partition debugging', '%s <path to partition file> ...')
-parser.addText('part', 'partition-list',         default=None,  help='Select dataset partition information to display')
-parser.addFlag('part', 'partition-list-invalid', default=False, help='List invalidated dataset partitions')
-parser.addFlag('part', 'partition-check',        default=None,  help='Check dataset partition in specified work directory')
+parser.addText('part', '', 'partition-list',         default=None,  help='Select dataset partition information to display')
+parser.addBool('part', '', 'partition-list-invalid', default=False, help='List invalidated dataset partitions')
+parser.addBool('part', '', 'partition-check',        default=None,  help='Check dataset partition in specified work directory')
 
 parser.section('jobs', 'Jobs debugging', '%s <config file / job file> ... ')
-parser.addText('jobs', 'job-selector',           default='',    help='Display jobs matching selector')
-parser.addFlag('jobs', 'job-reset-attempts',     default=False, help='Reset the attempt counter')
-parser.addText('jobs', 'job-force-state',        default='',    help='Force new job state')
-parser.addText('jobs', 'job-show-jdl',           default='',    help='Show JDL file if available')
+parser.addText('jobs', '', 'job-selector',           default='',    help='Display jobs matching selector')
+parser.addBool('jobs', '', 'job-reset-attempts',     default=False, help='Reset the attempt counter')
+parser.addText('jobs', '', 'job-force-state',        default='',    help='Force new job state')
+parser.addText('jobs', '', 'job-show-jdl',           default='',    help='Show JDL file if available')
 
 parser.section('data', 'Dataset debugging', '%s <dataset file> <dataset file> ...')
-parser.addText('data', 'dataset-show-diff',      default='',    help='Show difference between datasets')
-parser.addText('data', 'dataset-show-removed',   default='',    help='Find removed dataset blocks')
+parser.addText('data', '', 'dataset-show-diff',      default='',    help='Show difference between datasets')
+parser.addText('data', '', 'dataset-show-removed',   default='',    help='Find removed dataset blocks')
 
-parser.addText(None, 'logfile-decode',           default='',    help='Decode log files', short = '-d')
+parser.addText(None,  'd', 'logfile-decode',         default='',    help='Decode log files')
 options = scriptOptions(parser)
 (opts, args) = (options.opts, options.args)
 
@@ -162,7 +162,7 @@ if opts.job_selector or opts.job_reset_attempts or opts.job_force_state or opts.
 	taskName = config.get(['task', 'module'])
 	task = Plugin.createInstance(taskName, config, taskName)
 	jobDB = Plugin.createInstance('JobDB', config)
-	selected = Plugin.getClass('JobSelector').create(opts.job_selector, task = task)
+	selected = JobSelector.create(opts.job_selector, task = task)
 	logging.info('Matching jobs: ' + str.join(' ', imap(str, jobDB.getJobsIter(selected))))
 	if opts.job_reset_attempts:
 		jobs_reset_attempts(jobDB, selected)

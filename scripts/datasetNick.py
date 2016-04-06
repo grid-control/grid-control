@@ -17,9 +17,8 @@ import sys
 from gcSupport import Options, Plugin, getConfig, scriptOptions, utils
 from python_compat import lmap
 
-parser = Options('%s [options] <DBS dataset path>' % sys.argv[0])
-parser.addText(None, 'producer', default = 'SimpleNickNameProducer',
-	help = 'Name of the nickname producer')
+parser = Options(usage = '%s [OPTIONS] <DBS dataset path>')
+parser.addText(None, '', 'producer', default = 'SimpleNickNameProducer', help = 'Name of the nickname producer')
 options = scriptOptions(parser)
 
 def main(opts, args):

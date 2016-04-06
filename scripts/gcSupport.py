@@ -19,7 +19,6 @@ import os, sys, time, fcntl, logging
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'packages')))
 
 from grid_control import utils
-from grid_control.backends import storage
 from grid_control.config import createConfig
 from grid_control.job_db import Job, JobClass, JobDB
 from grid_control.job_selector import ClassSelector, JobSelector
@@ -29,10 +28,10 @@ from hpfwk import Plugin
 from python_compat import ifilter, imap, tarfile
 
 def scriptOptions(parser, args = None, arg_keys = None):
-	parser.addFlag(None, 'parseable', default = False, help = 'Output tabular data in parseable format')
-	parser.addFlag(None, 'pivot',     default = False, help = 'Output pivoted tabular data')
-	parser.addText(None, 'textwidth', default = 100,   help = 'Output tabular data with selected width')
-	parser.addAccu(None, 'verbose',   short = '-v',    help = 'Increase verbosity')
+	parser.addBool(None, ' ', 'parseable', default = False, help = 'Output tabular data in parseable format')
+	parser.addBool(None, ' ', 'pivot',     default = False, help = 'Output pivoted tabular data')
+	parser.addText(None, ' ', 'textwidth', default = 100,   help = 'Output tabular data with selected width')
+	parser.addAccu(None, 'v', 'verbose',   default = 0,     help = 'Increase verbosity')
 	(opts, args, config_dict) = parser.parse(args, arg_keys)
 	logging.getLogger().setLevel(logging.DEFAULT - opts.verbose)
 	utils.verbosity(opts.verbose)
@@ -41,7 +40,7 @@ def scriptOptions(parser, args = None, arg_keys = None):
 	elif opts.pivot:
 		utils.printTabular.mode = 'longlist'
 	utils.printTabular.wraplen = int(opts.textwidth)
-	return utils.Result(opts = opts, args = args, config_dict = config_dict)
+	return utils.Result(opts = opts, args = args, config_dict = config_dict, parser = parser)
 
 
 def getConfig(configFile = None, configDict = None, section = None, additional = None):
@@ -56,23 +55,28 @@ def getConfig(configFile = None, configDict = None, section = None, additional =
 class FileMutex:
 	def __init__(self, lockfile):
 		first = time.time()
-		self.lockfile = lockfile
-		while os.path.exists(self.lockfile):
+		self._lockfile = lockfile
+		while os.path.exists(self._lockfile):
 			if first and (time.time() - first > 10):
 				logging.info('Trying to aquire lock file %s ...', lockfile)
 				first = False
 			time.sleep(0.2)
-		self.fd = open(self.lockfile, 'w')
-		fcntl.flock(self.fd, fcntl.LOCK_EX)
+		self._fd = open(self._lockfile, 'w')
+		fcntl.flock(self._fd, fcntl.LOCK_EX)
 
-	def __del__(self):
-		fcntl.flock(self.fd, fcntl.LOCK_UN)
+	def release(self):
+		if self._fd:
+			fcntl.flock(self._fd, fcntl.LOCK_UN)
+			self._fd.close()
+			self._fd = None
 		try:
-			if os.path.exists(self.lockfile):
-				os.unlink(self.lockfile)
+			if os.path.exists(self._lockfile):
+				os.unlink(self._lockfile)
 		except Exception:
 			pass
 
+	def __del__(self):
+		self.release()
 
 def initGC(args):
 	if len(args) > 0:
@@ -80,7 +84,7 @@ def initGC(args):
 		userSelector = None
 		if len(args) != 1:
 			userSelector = JobSelector.create(args[1])
-		return (config.getWorkPath(), config, JobDB(config, jobSelector = userSelector))
+		return (config, JobDB(config, jobSelector = userSelector))
 	sys.stderr.write('Syntax: %s <config file> [<job id>, ...]\n\n' % sys.argv[0])
 	sys.exit(os.EX_USAGE)
 
@@ -105,3 +109,7 @@ def prettySize(size):
 			continue
 		else:
 			return str(round(size / float(lim / 2**10), 2)) + suf
+
+__all__ = ['ClassSelector', 'FileInfoProcessor', 'FileMutex', 'Job',
+	'JobClass', 'JobInfoProcessor', 'JobSelector', 'Options', 'Plugin',
+	'getCMSSWInfo', 'getConfig', 'initGC', 'scriptOptions', 'utils']

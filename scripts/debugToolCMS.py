@@ -22,9 +22,9 @@ def lfn2pfn(node, lfn):
 		{'node': node, 'protocol': 'srmv2', 'lfn': lfn})['phedex']['mapping'][0]['pfn']
 
 parser = Options()
-parser.addText(None, 'SE',      default = None, short = '-s', help='Resolve LFN on CMS SE into PFN')
-parser.addText(None, 'lfn',     default='/store/user/<hypernews name>', help='Name of default LFN')
-parser.addText(None, 'se-prot', default='srmv2', help='Name of default SE protocol')
+parser.addText(None, 's', 'SE', default = None,         help = 'Resolve LFN on CMS SE into PFN')
+parser.addText(None, ' ', 'se-prot', default = 'srmv2', help = 'Name of default SE protocol')
+parser.addText(None, ' ', 'lfn',     default = '/store/user/<hypernews name>', help = 'Name of default LFN')
 options = scriptOptions(parser)
 
 if options.opts.SE:

@@ -13,6 +13,7 @@
 # | limitations under the License.
 
 import sys, optparse # pylint:disable=deprecated-module
+from python_compat import ifilter
 
 class Options(object):
 	def __init__(self, usage = '', add_help_option = True):
@@ -21,9 +22,16 @@ class Options(object):
 		self._groups = {}
 		self._groups_usage = {None: self._fmt_usage(usage)}
 		self._defaults = []
+		self._flag_set = {}
 
 	def parse(self, args = None, arg_keys = None):
-		(opts, cmd_args) = self._parser.parse_args(args = args or sys.argv[1:])
+		args = args or sys.argv[1:]
+		(opts, cmd_args) = self._parser.parse_args(args = args)
+		for flag_set_id in self._flag_set:
+			if getattr(opts, '_flag_set_%d' % flag_set_id):
+				flag_set = self._flag_set[flag_set_id].split()
+				self._parser.parse_args(args = flag_set + args, values = opts)
+
 		config_dict = {}
 		for option in self._dest:
 			if getattr(opts, option) is not None:
@@ -66,11 +74,18 @@ class Options(object):
 		else:
 			self._defaults.append(option_pair[1])
 		dest = dest or self._get_normed(option_pair[0], '_')
-		self._add(group, short_pair[1], option_pair[1], default, 'store_false', help_pair[1], dest)
-		return self._add(group, short_pair[0], option_pair[0], default, 'store_true', help_pair[0], dest)
+		self._add(group, short_pair[0], option_pair[0], default, 'store_true', help_pair[0], dest)
+		return self._add(group, short_pair[1], option_pair[1], default, 'store_false', help_pair[1], dest)
 
-	def addFSet(self):
-		pass
+	def addFSet(self, group, short, option, help, flag_set):
+		def is_default(opt):
+			return (self._parser.get_option(opt).default and self._parser.get_option(opt).action == 'store_true') or \
+				(not self._parser.get_option(opt).default and self._parser.get_option(opt).action == 'store_false')
+		if '%s' in help:
+			help = help % str.join(' ', ifilter(lambda x: not is_default(x), flag_set.split()))
+		flag_set_id = len(self._flag_set)
+		self._flag_set[flag_set_id] = flag_set
+		return self._add(group, short, option, False, 'store_true', help, dest = '_flag_set_%d' % flag_set_id)
 
 	def _fmt_usage(self, usage):
 		if '%s' in usage:

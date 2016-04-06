@@ -13,10 +13,11 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-import os, sys, time, random, optparse, gcSupport, threading
-from gcSupport import ClassSelector, FileInfoProcessor, Job, JobClass, Plugin, storage, utils
+import os, sys, time, random, gcSupport, threading
+from gcSupport import ClassSelector, FileInfoProcessor, Job, JobClass, Options, Plugin, utils
+from grid_control.backends.storage import se_copy, se_exists, se_mkdir, se_rm
 from grid_control.utils.thread_tools import start_thread
-from python_compat import ifilter, imap, irange, lfilter, lmap, md5
+from python_compat import imap, irange, lfilter, lmap, md5
 
 def md5sum(filename):
 	m = md5()
@@ -30,155 +31,368 @@ def md5sum(filename):
 			break
 	return m.hexdigest()
 
+def parse_cmd_line():
+	help_msg = '\n\nDEFAULT: The default is to download the SE file and check them with MD5 hashes.'
+	help_msg += '\n * In case all files are transferred sucessfully, the job is marked'
+	help_msg += '\n   as already downloaded, so that the files are not copied again.'
+	help_msg += '\n * Failed transfer attempts will mark the job as failed, so that it'
+	help_msg += '\n   can be resubmitted.'
+	parser = Options(usage = '%s [OPTIONS] <config file>' + help_msg)
 
-def main(args):
-	help = \
-"""
-DEFAULT: The default is to download the SE file and check them with MD5 hashes.
- * In case all files are transferred sucessfully, the job is marked
-   as already downloaded, so that the files are not copied again.
- * Failed transfer attempts will mark the job as failed, so that it
-   can be resubmitted."""
-	parser = optparse.OptionParser(usage = '%prog [options] <config file>\n' + help)
+	def addBoolOpt(group, short_pair, option_base, help_base, default = False,
+			option_prefix_pair = ('', 'no'), help_prefix_pair = ('', 'do not '), dest = None):
+		def create_opt(idx):
+			return str.join('-', option_prefix_pair[idx].split() + option_base.split())
+		def create_help(idx):
+			help_def = ''
+			if (default and (idx == 0)) or ((not default) and (idx == 1)):
+				help_def = ' [Default]'
+			return help_prefix_pair[idx] + help_base + help_def
+		parser.addFlag(group, short_pair, (create_opt(0), create_opt(1)), default = default, dest = dest,
+			help_pair = (create_help(0), create_help(1)))
 
-	def addBoolOpt(optList, optPostfix, dest, default, help, optShort=('', ''), optPrefix=('no', ''), helpPrefix=('do not ', '')):
-		def buildLongOpt(prefix, postfix):
-			if prefix and postfix:
-				return '--%s-%s' % (prefix, postfix)
-			elif prefix and not postfix:
-				return '--' + prefix
-			else:
-				return '--' + postfix
-		optList.add_option(optShort[True], buildLongOpt(optPrefix[True], optPostfix), dest=dest,
-			default=default, action='store_true', help=helpPrefix[True] + help + ('', ' [Default]')[default])
-		optList.add_option(optShort[False], buildLongOpt(optPrefix[False], optPostfix), dest=dest,
-			default=default, action='store_false', help=helpPrefix[False] + help + (' [Default]', '')[default])
+	addBoolOpt(None, 'v ', 'verify-md5',        default = True,  help_base = 'MD5 verification of SE files',
+		help_prefix_pair = ('enable ', 'disable '))
+	addBoolOpt(None, 'l ', 'loop',              default = False, help_base = 'loop over jobs until all files are successfully processed')
+	addBoolOpt(None, 'L ', 'infinite',          default = False, help_base = 'process jobs in an infinite loop')
+	addBoolOpt(None, '  ', 'shuffle',           default = False, help_base = 'shuffle download order')
+	addBoolOpt(None, '  ', '',                  default = False, help_base = 'files which are already on local disk',
+		option_prefix_pair = ('skip-existing', 'overwrite'), help_prefix_pair = ('skip ', 'overwrite '), dest = 'skip_existing')
 
-	addBoolOpt(parser, 'verify-md5', dest='verify',       default=True,  optShort=('', '-v'),
-		help='MD5 verification of SE files', helpPrefix=('disable ', 'enable '))
-	addBoolOpt(parser, 'loop',       dest='loop',         default=False, optShort=('', '-l'),
-		help='loop over jobs until all files are successfully processed')
-	addBoolOpt(parser, 'infinite',   dest='infinite',     default=False, optShort=('', '-L'),
-		help='process jobs in an infinite loop')
-	addBoolOpt(parser, 'shuffle',    dest='shuffle',      default=False,
-		help='shuffle download order')
-	addBoolOpt(parser, '',           dest='skipExisting', default=False, optPrefix=('overwrite', 'skip-existing'),
-		help='files which are already on local disk', helpPrefix=('overwrite ', 'skip '))
+	parser.section('jobs', 'Job state / flag handling')
+	addBoolOpt('jobs', '  ', 'mark-dl',         default = True,  help_base = 'mark sucessfully downloaded jobs as such')
+	addBoolOpt('jobs', '  ', 'mark-dl',         default = False, help_base = 'mark about sucessfully downloaded jobs',
+		option_prefix_pair = ('ignore', 'use'), help_prefix_pair = ('ignore ', 'use '), dest = 'mark_ignore_dl')
+	addBoolOpt('jobs', '  ', 'mark-fail',       default = True,  help_base = 'mark jobs failing verification as such')
+	addBoolOpt('jobs', '  ', 'mark-empty-fail', default = False, help_base = 'mark jobs without any files as failed')
 
-	ogFlags = optparse.OptionGroup(parser, 'Job state / flag handling', '')
-	addBoolOpt(ogFlags, 'mark-dl',   dest='markDL',       default=True,
-		help='mark sucessfully downloaded jobs as such')
-	addBoolOpt(ogFlags, 'mark-dl',   dest='markIgnoreDL', default=False, optPrefix=('use', 'ignore'),
-		help='mark about sucessfully downloaded jobs', helpPrefix=('use ', 'ignore '))
-	addBoolOpt(ogFlags, 'mark-fail', dest='markFailed',   default=True,
-		help='mark jobs failing verification as such')
-	addBoolOpt(ogFlags, 'mark-empty-fail', dest='markEmptyFailed', default=False,
-		help='mark jobs without any files as failed')
-	parser.add_option_group(ogFlags)
-
-	ogFiles = optparse.OptionGroup(parser, 'Local / SE file handling', '')
-	for (optPostfix, dest, help, default) in [
-			('local-ok',   'rmLocalOK',   'files of successful jobs in local directory', False),
-			('local-fail', 'rmLocalFail', 'files of failed jobs in local directory', False),
-			('se-ok',      'rmSEOK',      'files of successful jobs on SE', False),
-			('se-fail',    'rmSEFail',    'files of failed jobs on the SE', False),
+	parser.section('file', 'Local / SE file handling')
+	for (option, help_base) in [
+			('local-ok',   'files of successful jobs in local directory'),
+			('local-fail', 'files of failed jobs in local directory'),
+			('se-ok',      'files of successful jobs on SE'),
+			('se-fail',    'files of failed jobs on the SE'),
 		]:
-		addBoolOpt(ogFiles, optPostfix, dest=dest, default=default, optPrefix=('keep', 'rm'),
-			help=help, helpPrefix=('keep ', 'remove '))
-	parser.add_option_group(ogFiles)
+		addBoolOpt('file', '  ', option, default = False, help_base = help_base,
+			option_prefix_pair = ('rm', 'keep'), help_prefix_pair = ('remove ', 'keep '))
 
-	parser.add_option('-o', '--output',   dest='output', default=None,
-		help='specify the local output directory')
-	parser.add_option('-T', '--token',    dest='token',  default='VomsProxy',
-		help='specify the access token used to determine ability to download - VomsProxy or TrivialAccessToken')
-	parser.add_option('-S', '--selectSE', dest='selectSE',  default=None, action='append',
-		help='specify the SE paths to process')
-	parser.add_option('-r', '--retry',    dest='retry',  default=0,
-		help='how often should a transfer be attempted [Default: 0]')
-	parser.add_option('-t', '--threads',  dest='threads',  default=0, type=int,
-		help='how many parallel download threads should be used to download files [Default: no multithreading]')
-	parser.add_option('', '--slowdown',   dest='slowdown', default=2,
-		help='specify time between downloads [Default: 2 sec]')
-	parser.add_option('', '--show-host',  dest='showHost', default=False, action='store_true',
-		help='show SE hostname during download')
+	parser.addText(None, 'o', 'output',    default = None,
+		help = 'specify the local output directory')
+	parser.addText(None, 'T', 'token',     default = 'VomsProxy',
+		help = 'specify the access token used to determine ability to download - VomsProxy or TrivialAccessToken')
+	parser.addList(None, 'S', 'selectSE',  default = None,
+		help = 'specify the SE paths to process')
+	parser.addText(None, 'r', 'retry',
+		help = 'how often should a transfer be attempted [Default: 0]')
+	parser.addText(None, 't', 'threads',   default = 0,
+		help = 'how many parallel download threads should be used to download files [Default: no multithreading]')
+	parser.addText(None, ' ', 'slowdown',  default = 2,
+		help = 'specify time between downloads [Default: 2 sec]')
+	parser.addBool(None, ' ', 'show-host', default = False,
+		help = 'show SE hostname during download')
 
-	# Shortcut options
-	def withoutDefaults(opts):
-		def isDefault(opt):
-			return (parser.get_option(opt).default and parser.get_option(opt).action == 'store_true') or \
-				(not parser.get_option(opt).default and parser.get_option(opt).action == 'store_false')
-		return str.join(' ', ifilter(lambda x: not isDefault(x), opts.split()))
+	parser.section('short', 'Shortcuts')
+	parser.addFSet('short', 'm', 'move',        help = 'Move files from SE - shorthand for:'.ljust(100) + '%s',
+		flag_set = '--verify-md5 --overwrite --mark-dl --use-mark-dl --mark-fail --rm-se-fail --rm-local-fail --rm-se-ok --keep-local-ok')
+	parser.addFSet('short', 'c', 'copy',        help = 'Copy files from SE - shorthand for:'.ljust(100) + '%s',
+		flag_set = '--verify-md5 --overwrite --mark-dl --use-mark-dl --mark-fail --rm-se-fail --rm-local-fail --keep-se-ok --keep-local-ok')
+	parser.addFSet('short', 'j', 'just-copy',   help = 'Just copy files from SE - shorthand for:'.ljust(100) + '%s',
+		flag_set = '--verify-md5 --skip-existing --no-mark-dl --ignore-mark-dl --no-mark-fail --keep-se-fail --keep-local-fail --keep-se-ok --keep-local-ok')
+	parser.addFSet('short', 's', 'smart-copy',
+		help = 'Copy correct files from SE, but remember already downloaded files and delete corrupt files - shorthand for: '.ljust(100) + '%s',
+		flag_set = '--verify-md5 --mark-dl --mark-fail --rm-se-fail --rm-local-fail --keep-se-ok --keep-local-ok')
+	parser.addFSet('short', 'V', 'just-verify', help = 'Just verify files on SE - shorthand for:'.ljust(100) + '%s',
+		flag_set = '--verify-md5 --no-mark-dl --keep-se-fail --rm-local-fail --keep-se-ok --rm-local-ok --ignore-mark-dl')
+	parser.addFSet('short', 'D', 'just-delete', help = 'Just delete all finished files on SE - shorthand for:'.ljust(100) + '%s',
+		flag_set = '--skip-existing --rm-se-fail --rm-se-ok --rm-local-fail --keep-local-ok --no-mark-dl --ignore-mark-dl')
 
-	ogShort = optparse.OptionGroup(parser, 'Shortcuts', '')
-	optMove = '--verify-md5 --overwrite --mark-dl --use-mark-dl --mark-fail --rm-se-fail --rm-local-fail --rm-se-ok --keep-local-ok'
-	ogShort.add_option('-m', '--move', dest='shMove', default=None, action='store_const', const=optMove,
-		help = 'Move files from SE - shorthand for:'.ljust(100) + withoutDefaults(optMove))
-
-	optCopy = '--verify-md5 --overwrite --mark-dl --use-mark-dl --mark-fail --rm-se-fail --rm-local-fail --keep-se-ok --keep-local-ok'
-	ogShort.add_option('-c', '--copy', dest='shCopy', default=None, action='store_const', const=optCopy,
-		help = 'Copy files from SE - shorthand for:'.ljust(100) + withoutDefaults(optCopy))
-
-	optJCopy = '--verify-md5 --skip-existing --no-mark-dl --ignore-mark-dl --no-mark-fail --keep-se-fail --keep-local-fail --keep-se-ok --keep-local-ok'
-	ogShort.add_option('-j', '--just-copy', dest='shJCopy', default=None, action='store_const', const=optJCopy,
-		help = 'Just copy files from SE - shorthand for:'.ljust(100) + withoutDefaults(optJCopy))
-
-	optSCopy = '--verify-md5 --mark-dl --mark-fail --rm-se-fail --rm-local-fail --keep-se-ok --keep-local-ok'
-	ogShort.add_option('-s', '--smart-copy', dest='shSCopy', default=None, action='store_const', const=optSCopy,
-		help = 'Copy correct files from SE, but remember already downloaded files and delete corrupt files - shorthand for: '.ljust(100) + withoutDefaults(optSCopy))
-
-	optJVerify = '--verify-md5 --no-mark-dl --keep-se-fail --rm-local-fail --keep-se-ok --rm-local-ok --ignore-mark-dl'
-	ogShort.add_option('-V', '--just-verify', dest='shJVerify', default=None, action='store_const', const=optJVerify,
-		help = 'Just verify files on SE - shorthand for:'.ljust(100) + withoutDefaults(optJVerify))
-
-	optJDelete = '--skip-existing --rm-se-fail --rm-se-ok --rm-local-fail --keep-local-ok --no-mark-dl --ignore-mark-dl'
-	ogShort.add_option('-D', '--just-delete', dest='shJDelete', default=None, action='store_const', const=optJDelete,
-		help = 'Just delete all finished files on SE - shorthand for:'.ljust(100) + withoutDefaults(optJDelete))
-	parser.add_option_group(ogShort)
-
-	(opts, args) = parser.parse_args()
-	def processShorthand(optSet):
-		if optSet:
-			parser.parse_args(args = optSet.split() + sys.argv[1:], values = opts)
-	processShorthand(opts.shMove)
-	processShorthand(opts.shCopy)
-	processShorthand(opts.shJCopy)
-	processShorthand(opts.shSCopy)
-	processShorthand(opts.shJVerify)
-	processShorthand(opts.shJDelete)
-
-	# Disable loop mode if it is pointless
-	if (opts.loop and not opts.skipExisting) and (opts.markIgnoreDL or not opts.markDL):
-		sys.stderr.write('Loop mode was disabled to avoid continuously downloading the same files\n')
-		(opts.loop, opts.infinite) = (False, False)
-
-	# we need exactly one positional argument (config file)
-	if len(args) != 1:
-		sys.stderr.write('usage: %s [options] <config file>\n\n' % os.path.basename(sys.argv[0]))
-		sys.stderr.write('Config file not specified!\n')
-		sys.stderr.write('Use --help to get a list of options!\n')
-		sys.exit(os.EX_USAGE)
-
-	while True:
-		try:
-			if (realmain(opts, args) or not opts.loop) and not opts.infinite:
-				break
-			time.sleep(60)
-		except KeyboardInterrupt:
-			utils.eprint('\n\nDownload aborted!\n')
-			sys.exit(os.EX_TEMPFAIL)
+	return parser.parse()
 
 
 def dlfs_rm(path, msg):
-	procRM = storage.se_rm(path)
-	if procRM.wait() != 0:
+	procRM = se_rm(path)
+	if procRM.wait(timeout = 60) != 0:
 		utils.eprint('\t\tUnable to remove %s!' % msg)
 		utils.eprint('%s\n\n' % procRM.getMessage())
 
 
-def realmain(opts, args):
-	config = gcSupport.getConfig(configDict = {'access': {'ignore warnings': 'True'}})
+def transfer_monitor(output, fileIdx, path, lock, abort):
+	path = path.replace('file://', '')
+	(csize, osize, stime, otime, lttime) = (0, 0, time.time(), time.time(), time.time())
+	while not lock.acquire(False): # Loop until monitor lock is available
+		if csize != osize:
+			lttime = time.time()
+		if time.time() - lttime > 5*60: # No size change in the last 5min!
+			output.error('Transfer timeout!')
+			abort.acquire()
+			break
+		if os.path.exists(path):
+			csize = os.path.getsize(path)
+			output.update_progress(fileIdx, csize, osize, stime, otime)
+			(osize, otime) = (csize, time.time())
+		else:
+			stime = time.time()
+		time.sleep(0.1)
+	lock.release()
+
+
+def download_monitored(jobNum, output, fileIdx, checkPath, sourcePath, targetPath):
+	copyAbortLock = threading.Lock()
+	monitorLock = threading.Lock()
+	monitorLock.acquire()
+	monitor = start_thread('Download monitor %s' % jobNum, transfer_monitor, output, fileIdx, checkPath, monitorLock, copyAbortLock)
+	result = -1
+	procCP = se_copy(sourcePath, targetPath, tmp = checkPath)
+	while True:
+		if not copyAbortLock.acquire(False):
+			monitor.join()
+			break
+		copyAbortLock.release()
+		result = procCP.wait(timeout = 0)
+		if result is not None:
+			monitorLock.release()
+			monitor.join()
+			break
+		time.sleep(0.02)
+
+	if result != 0:
+		output.error('Unable to copy file from SE!')
+		output.error(procCP.getMessage())
+		return False
+	return True
+
+
+def download_file(opts, output, jobNum, fileIdx, fileInfo):
+	(hash, _, name_dest, pathSE) = fileInfo
+	output.update_progress(fileIdx)
+
+	# Copy files to local folder
+	outFilePath = os.path.join(opts.output, name_dest)
+	if opts.selectSE:
+		if not (True in imap(lambda s: s in pathSE, opts.selectSE)):
+			output.error('skip file because it is not located on selected SE!')
+			return
+	if opts.skip_existing and (se_exists(outFilePath).wait(timeout = 10) == 0):
+		output.error('skip file as it already exists!')
+		return
+	if se_exists(os.path.dirname(outFilePath)).wait(timeout = 10) != 0:
+		se_mkdir(os.path.dirname(outFilePath)).wait(timeout = 10)
+
+	checkPath = 'file:///tmp/dlfs.%s' % name_dest
+	if 'file://' in outFilePath:
+		checkPath = outFilePath
+
+	if not download_monitored(jobNum, output, fileIdx, checkPath, os.path.join(pathSE, name_dest), outFilePath):
+		return False
+
+	# Verify => compute md5hash
+	if opts.verify_md5:
+		try:
+			hashLocal = md5sum(checkPath.replace('file://', ''))
+			if not ('file://' in outFilePath):
+				dlfs_rm('file://%s' % checkPath, 'SE file')
+		except KeyboardInterrupt:
+			raise
+		except Exception:
+			hashLocal = None
+		output.update_hash(fileIdx, hashLocal)
+		if hash != hashLocal:
+			return False
+	else:
+		output.update_hash(fileIdx)
+	return True
+
+
+def cleanup_files(opts, files, failJob, output):
+	for (fileIdx, fileInfo) in enumerate(files):
+		(_, _, name_dest, pathSE) = fileInfo
+		# Remove downloaded files in case of failure
+		if (failJob and opts.rm_local_fail) or (not failJob and opts.rm_local_ok):
+			output.update_status(fileIdx, 'Deleting file %s from local...' % name_dest)
+			outFilePath = os.path.join(opts.output, name_dest)
+			if se_exists(outFilePath).wait(timeout = 10) == 0:
+				dlfs_rm(outFilePath, 'local file')
+		# Remove SE files in case of failure
+		if (failJob and opts.rm_se_fail) or (not failJob and opts.rm_se_ok):
+			output.update_status(fileIdx, 'Deleting file %s...' % name_dest)
+			dlfs_rm(os.path.join(pathSE, name_dest), 'SE file')
+		output.update_status(fileIdx, None)
+
+
+def download_job_output(opts, incInfo, workDir, jobDB, token, jobNum, output):
+	output.init(jobNum)
+	job = jobDB.get(jobNum)
+	# Only run over finished and not yet downloaded jobs
+	if job.state != Job.SUCCESS:
+		output.error('Job has not yet finished successfully!')
+		return incInfo('Processing')
+	if job.get('download') == 'True' and not opts.mark_ignore_dl:
+		if not int(opts.threads):
+			output.error('All files already downloaded!')
+		return incInfo('Downloaded')
+	retry = int(job.get('download attempt', 0))
+	failJob = False
+
+	if not token.canSubmit(20*60, True):
+		sys.stderr.write('Please renew access token!')
+		sys.exit(os.EX_UNAVAILABLE)
+
+	# Read the file hash entries from job info file
+	files = FileInfoProcessor().process(os.path.join(workDir, 'output', 'job_%d' % jobNum))
+	if files:
+		files = lmap(lambda fi: (fi[FileInfoProcessor.Hash], fi[FileInfoProcessor.NameLocal],
+			fi[FileInfoProcessor.NameDest], fi[FileInfoProcessor.Path]), files)
+	output.update_files(files)
+	if not files:
+		if opts.mark_empty_fail:
+			failJob = True
+		else:
+			return incInfo('Job without output files')
+
+	for (fileIdx, fileInfo) in enumerate(files):
+		failJob = failJob or not download_file(opts, output, jobNum, fileIdx, fileInfo)
+
+	# Ignore the first opts.retry number of failed jobs
+	if failJob and opts.retry and (retry < int(opts.retry)):
+		output.error('Download attempt #%d failed!' % (retry + 1))
+		job.set('download attempt', str(retry + 1))
+		jobDB.commit(jobNum, job)
+		return incInfo('Download attempts')
+
+	cleanup_files(opts, files, failJob, output)
+
+	if failJob:
+		incInfo('Failed downloads')
+		if opts.mark_fail:
+			# Mark job as failed to trigger resubmission
+			job.state = Job.FAILED
+	else:
+		incInfo('Successful download')
+		if opts.mark_dl:
+			# Mark as downloaded
+			job.set('download', 'True')
+
+	# Save new job status infos
+	jobDB.commit(jobNum, job)
+	output.finish()
+	time.sleep(float(opts.slowdown))
+
+
+def download_multithreaded_main(opts, workDir, jobList, incInfo, jobDB, token, DisplayClass, screen, errorOutput):
+	(active, todo) = ([], list(jobList))
+	todo.reverse()
+	screen.move(0, 0)
+	screen.savePos()
+	while True:
+		screen.erase()
+		screen.loadPos()
+		active = lfilter(lambda thread_display: thread_display[0].isAlive(), active)
+		while len(active) < int(opts.threads) and len(todo):
+			display = DisplayClass()
+			active.append((start_thread('Download %s' % todo[-1], download_job_output,
+				opts, incInfo, workDir, jobDB, token, todo.pop(), display), display))
+		for (_, display) in active:
+			sys.stdout.write(str.join('\n', display.output))
+		sys.stdout.write(str.join('\n', ['=' * 50] + errorOutput))
+		sys.stdout.flush()
+		if len(active) == 0:
+			break
+		time.sleep(0.01)
+
+
+def download_multithreaded(opts, workDir, jobList, incInfo, jobDB, token):
+	from grid_control_gui.ansi import Console
+	errorOutput = []
+	class ThreadDisplay:
+		def __init__(self):
+			self.output = []
+		def init(self, jobNum):
+			self.jobNum = jobNum
+			self.output = ['Job %5d' % jobNum, '']
+		def infoline(self, fileIdx, msg = ''):
+			return 'Job %5d [%i/%i] %s %s' % (self.jobNum, fileIdx + 1, len(self._files), self._files[fileIdx][2], msg)
+		def update_files(self, files):
+			(self._files, self.output, self.tr) = (files, self.output[1:], ['']*len(files))
+			for x in irange(len(files)):
+				self.output.insert(2*x, self.infoline(x))
+				self.output.insert(2*x+1, '')
+		def update_progress(self, idx, csize = None, osize = None, stime = None, otime = None):
+			if otime:
+				trfun = lambda sref, tref: gcSupport.prettySize(((csize - sref) / max(1, time.time() - tref)))
+				self.tr[idx] = '%7s avg. - %7s/s inst.' % (gcSupport.prettySize(csize), trfun(0, stime))
+				self.output[2*idx] = self.infoline(idx, '(%s - %7s/s)' % (self.tr[idx], trfun(osize, otime)))
+		def update_hash(self, idx, hashLocal = None):
+			file_hash = self._files[idx][0]
+			if hashLocal:
+				if file_hash == hashLocal:
+					result = Console.fmt('MATCH', [Console.COLOR_GREEN])
+				else:
+					result = Console.fmt('FAIL', [Console.COLOR_RED])
+				msg = '(R:%s L:%s) => %s' % (file_hash, hashLocal, result)
+			else:
+				msg = ''
+			self.output[2*idx] = self.infoline(idx, '(%s)' % self.tr[idx])
+			self.output[2*idx+1] = msg
+			print((self, repr(msg)))
+		def error(self, msg):
+			errorOutput.append(msg)
+		def write(self, msg):
+			self.output.append(msg)
+		def update_status(self, idx, msg):
+			self.output[2*idx] = str.join(' ', [self.infoline(idx, '(%s)' % self.tr[idx])] + msg.split())
+		def finish(self):
+#			self.output.append(str(self.jobNum) + 'FINISHED')
+			pass
+
+	download_multithreaded_main(opts, workDir, jobList, incInfo, jobDB, token, ThreadDisplay, Console(), errorOutput)
+
+
+def download_sequential(opts, workDir, jobList, incInfo, jobDB, token):
+	class DefaultDisplay:
+		def init(self, jobNum):
+			sys.stdout.write('Job %d: ' % jobNum)
+		def update_files(self, files):
+			self._files = files
+			sys.stdout.write('The job wrote %d file%s to the SE\n' % (len(files), ('s', '')[len(files) == 1]))
+		def update_progress(self, idx, csize = None, osize = None, stime = None, otime = None):
+			(_, _, name_dest, pathSE) = self._files[idx]
+			if otime:
+				tr = lambda sref, tref: gcSupport.prettySize(((csize - sref) / max(1, time.time() - tref)))
+				tmp = name_dest
+				if opts.showHost:
+					tmp += ' [%s]' % pathSE.split('//')[-1].split('/')[0].split(':')[0]
+				self.write('\r\t%s (%7s - %7s/s avg. - %7s/s inst.)' % (tmp,
+					gcSupport.prettySize(csize), tr(0, stime), tr(osize, otime)))
+				sys.stdout.flush()
+			else:
+				self.write('\t%s' % name_dest)
+				sys.stdout.flush()
+		def update_hash(self, idx, hashLocal = None):
+			file_hash = self._files[idx][0]
+			self.write(' => %s\n' % ('\33[0;91mFAIL\33[0m', '\33[0;92mMATCH\33[0m')[file_hash == hashLocal])
+			self.write('\t\tRemote site: %s\n' % file_hash)
+			self.write('\t\t Local site: %s\n' % hashLocal)
+		def error(self, msg):
+			sys.stdout.write('\nJob %d: %s' % (jobNum, msg.strip()))
+		def update_status(self, idx, msg):
+			if msg:
+				self.write('\t' + msg + '\r')
+			else:
+				self.write(' ' * len('\tDeleting file %s from SE...\r' % self._files[idx][2]) + '\r')
+		def write(self, msg):
+			sys.stdout.write(msg)
+		def finish(self):
+			sys.stdout.write('\n')
+
+	for jobNum in jobList:
+		download_job_output(opts, incInfo, workDir, jobDB, token, jobNum, DefaultDisplay())
+
+
+def loop_download(opts, args):
+	# Init everything in each loop to pick up changes
+	(config, jobDB) = gcSupport.initGC(args)
 	token = Plugin.getClass('AccessToken').createInstance(opts.token, config, 'access')#, OSLayer.create(config))
-	(workDir, config, jobDB) = gcSupport.initGC(args)
+	workDir = config.getWorkPath()
 	jobList = jobDB.getJobs(ClassSelector(JobClass.SUCCESS))
 
 	# Create SE output dir
@@ -191,263 +405,15 @@ def realmain(opts, args):
 	def incInfo(x):
 		infos[x] = infos.get(x, 0) + 1
 
-	def processSingleJob(jobNum, output):
-		output.init(jobNum)
-		job = jobDB.get(jobNum)
-		# Only run over finished and not yet downloaded jobs
-		if job.state != Job.SUCCESS:
-			output.error('Job has not yet finished successfully!')
-			return incInfo('Processing')
-		if job.get('download') == 'True' and not opts.markIgnoreDL:
-			if not opts.threads:
-				output.error('All files already downloaded!')
-			return incInfo('Downloaded')
-		retry = int(job.get('download attempt', 0))
-		failJob = False
-
-		if not token.canSubmit(20*60, True):
-			sys.stderr.write('Please renew access token!')
-			sys.exit(os.EX_UNAVAILABLE)
-
-		# Read the file hash entries from job info file
-		files = FileInfoProcessor().process(os.path.join(workDir, 'output', 'job_%d' % jobNum))
-		if files:
-			files = lmap(lambda fi: (fi[FileInfoProcessor.Hash], fi[FileInfoProcessor.NameLocal],
-				fi[FileInfoProcessor.NameDest], fi[FileInfoProcessor.Path]), files)
-		output.files(files)
-		if not files:
-			if opts.markEmptyFailed:
-				failJob = True
-			else:
-				return incInfo('Job without output files')
-
-		for (fileIdx, fileInfo) in enumerate(files):
-			(hash, name_local, name_dest, pathSE) = fileInfo
-			output.file(fileIdx)
-
-			# Copy files to local folder
-			outFilePath = os.path.join(opts.output, name_dest)
-			if opts.selectSE:
-				if not (True in imap(lambda s: s in pathSE, opts.selectSE)):
-					output.error('skip file because it is not located on selected SE!')
-					return
-			if opts.skipExisting and (storage.se_exists(outFilePath) == 0):
-				output.error('skip file as it already exists!')
-				return
-			if storage.se_exists(os.path.dirname(outFilePath)).wait() != 0:
-				storage.se_mkdir(os.path.dirname(outFilePath)).wait()
-
-			checkPath = 'file:///tmp/dlfs.%s' % name_dest
-			if 'file://' in outFilePath:
-				checkPath = outFilePath
-
-			def monitorFile(fileIdx, path, lock, abort):
-				path = path.replace('file://', '')
-				(csize, osize, stime, otime, lttime) = (0, 0, time.time(), time.time(), time.time())
-				while not lock.acquire(False): # Loop until monitor lock is available
-					if csize != osize:
-						lttime = time.time()
-					if time.time() - lttime > 5*60: # No size change in the last 5min!
-						output.error('Transfer timeout!')
-						abort.acquire()
-						break
-					if os.path.exists(path):
-						csize = os.path.getsize(path)
-						output.file(fileIdx, csize, osize, stime, otime)
-						(osize, otime) = (csize, time.time())
-					else:
-						stime = time.time()
-					time.sleep(0.1)
-				lock.release()
-
-			copyAbortLock = threading.Lock()
-			monitorLock = threading.Lock()
-			monitorLock.acquire()
-			monitor = start_thread('Download monitor %s' % jobNum, monitorFile, fileIdx, checkPath, monitorLock, copyAbortLock)
-			result = -1
-			procCP = storage.se_copy(os.path.join(pathSE, name_dest), outFilePath, tmp = checkPath)
-			while True:
-				if not copyAbortLock.acquire(False):
-					monitor.join()
-					break
-				copyAbortLock.release()
-				result = procCP.poll()
-				if result != -1:
-					monitorLock.release()
-					monitor.join()
-					break
-				time.sleep(0.02)
-
-			if result != 0:
-				output.error('Unable to copy file from SE!')
-				output.error(procCP.getMessage())
-				failJob = True
-				break
-
-			# Verify => compute md5hash
-			if opts.verify:
-				try:
-					hashLocal = md5sum(checkPath.replace('file://', ''))
-					if not ('file://' in outFilePath):
-						dlfs_rm('file://%s' % checkPath, 'SE file')
-				except KeyboardInterrupt:
-					raise
-				except Exception:
-					hashLocal = None
-				output.hash(fileIdx, hashLocal)
-				if hash != hashLocal:
-					failJob = True
-			else:
-				output.hash(fileIdx)
-
-		# Ignore the first opts.retry number of failed jobs
-		if failJob and opts.retry and (retry < opts.retry):
-			output.error('Download attempt #%d failed!' % (retry + 1))
-			job.set('download attempt', str(retry + 1))
-			jobDB.commit(jobNum, job)
-			return incInfo('Download attempts')
-
-		for (fileIdx, fileInfo) in enumerate(files):
-			(hash, name_local, name_dest, pathSE) = fileInfo
-			# Remove downloaded files in case of failure
-			if (failJob and opts.rmLocalFail) or (not failJob and opts.rmLocalOK):
-				output.status(fileIdx, 'Deleting file %s from local...' % name_dest)
-				outFilePath = os.path.join(opts.output, name_dest)
-				if storage.se_exists(outFilePath).wait() == 0:
-					dlfs_rm(outFilePath, 'local file')
-			# Remove SE files in case of failure
-			if (failJob and opts.rmSEFail)    or (not failJob and opts.rmSEOK):
-				output.status(fileIdx, 'Deleting file %s...' % name_dest)
-				dlfs_rm(os.path.join(pathSE, name_dest), 'SE file')
-			output.status(fileIdx, None)
-
-		if failJob:
-			incInfo('Failed downloads')
-			if opts.markFailed:
-				# Mark job as failed to trigger resubmission
-				job.state = Job.FAILED
-		else:
-			incInfo('Successful download')
-			if opts.markDL:
-				# Mark as downloaded
-				job.set('download', 'True')
-
-		# Save new job status infos
-		jobDB.commit(jobNum, job)
-		output.finish()
-		time.sleep(float(opts.slowdown))
-
 	if opts.shuffle:
 		random.shuffle(jobList)
 	else:
 		jobList.sort()
 
-	if opts.threads:
-		from grid_control_gui import ansi
-		errorOutput = []
-		class ThreadDisplay:
-			def __init__(self):
-				self.output = []
-			def init(self, jobNum):
-				self.jobNum = jobNum
-				self.output = ['Job %5d' % jobNum, '']
-			def infoline(self, fileIdx, msg = ''):
-				return 'Job %5d [%i/%i] %s %s' % (self.jobNum, fileIdx + 1, len(self._files), self._files[fileIdx][2], msg)
-			def files(self, files):
-				(self._files, self.output, self.tr) = (files, self.output[1:], ['']*len(files))
-				for x in irange(len(files)):
-					self.output.insert(2*x, self.infoline(x))
-					self.output.insert(2*x+1, '')
-			def file(self, idx, csize = None, osize = None, stime = None, otime = None):
-				(hash, name_local, name_dest, pathSE) = self._files[idx]
-				if otime:
-					trfun = lambda sref, tref: gcSupport.prettySize(((csize - sref) / max(1, time.time() - tref)))
-					self.tr[idx] = '%7s avg. - %7s/s inst.' % (gcSupport.prettySize(csize), trfun(0, stime))
-					self.output[2*idx] = self.infoline(idx, '(%s - %7s/s)' % (self.tr[idx], trfun(osize, otime)))
-			def hash(self, idx, hashLocal = None):
-				(hash, name_local, name_dest, pathSE) = self._files[idx]
-				if hashLocal:
-					if hash == hashLocal:
-						result = ansi.Console.fmt('MATCH', [ansi.Console.COLOR_GREEN])
-					else:
-						result = ansi.Console.fmt('FAIL', [ansi.Console.COLOR_RED])
-					msg = '(R:%s L:%s) => %s' % (hash, hashLocal, result)
-				else:
-					msg = ''
-				self.output[2*idx] = self.infoline(idx, '(%s)' % self.tr[idx])
-				self.output[2*idx+1] = msg
-				print((self, repr(msg)))
-			def error(self, msg):
-				errorOutput.append(msg)
-			def write(self, msg):
-				self.output.append(msg)
-			def status(self, idx, msg):
-				if msg:
-					self.output[2*idx] = self.infoline(idx, '(%s)' % self.tr[idx]) + ' ' + msg
-				else:
-					self.output[2*idx] = self.infoline(idx, '(%s)' % self.tr[idx])
-			def finish(self):
-#				self.output.append(str(self.jobNum) + 'FINISHED')
-				pass
-
-		(active, todo) = ([], list(jobList))
-		todo.reverse()
-		screen = ansi.Console()
-		screen.move(0, 0)
-		screen.savePos()
-		while True:
-			screen.erase()
-			screen.loadPos()
-			active = lfilter(lambda t_d: t_d[0].isAlive(), active)
-			while len(active) < opts.threads and len(todo):
-				display = ThreadDisplay()
-				active.append((start_thread('Download %s' % todo[-1], processSingleJob, todo.pop(), display), display))
-			for (t, d) in active:
-				sys.stdout.write(str.join('\n', d.output))
-			sys.stdout.write(str.join('\n', ['=' * 50] + errorOutput))
-			sys.stdout.flush()
-			if len(active) == 0:
-				break
-			time.sleep(0.01)
+	if int(opts.threads):
+		download_multithreaded(opts, workDir, jobList, incInfo, jobDB, token)
 	else:
-		class DefaultDisplay:
-			def init(self, jobNum):
-				sys.stdout.write('Job %d: ' % jobNum)
-			def files(self, files):
-				self._files = files
-				sys.stdout.write('The job wrote %d file%s to the SE\n' % (len(files), ('s', '')[len(files) == 1]))
-			def file(self, idx, csize = None, osize = None, stime = None, otime = None):
-				(hash, name_local, name_dest, pathSE) = self._files[idx]
-				if otime:
-					tr = lambda sref, tref: gcSupport.prettySize(((csize - sref) / max(1, time.time() - tref)))
-					tmp = name_dest
-					if opts.showHost:
-						tmp += ' [%s]' % pathSE.split('//')[-1].split('/')[0].split(':')[0]
-					self.write('\r\t%s (%7s - %7s/s avg. - %7s/s inst.)' % (tmp,
-						gcSupport.prettySize(csize), tr(0, stime), tr(osize, otime)))
-					sys.stdout.flush()
-				else:
-					self.write('\t%s' % name_dest)
-					sys.stdout.flush()
-			def hash(self, idx, hashLocal = None):
-				(hash, name_local, name_dest, pathSE) = self._files[idx]
-				self.write(' => %s\n' % ('\33[0;91mFAIL\33[0m', '\33[0;92mMATCH\33[0m')[hash == hashLocal])
-				self.write('\t\tRemote site: %s\n' % hash)
-				self.write('\t\t Local site: %s\n' % hashLocal)
-			def error(self, msg):
-				sys.stdout.write('\nJob %d: %s' % (jobNum, msg.strip()))
-			def status(self, idx, msg):
-				if msg:
-					self.write('\t' + msg + '\r')
-				else:
-					self.write(' ' * len('\tDeleting file %s from SE...\r' % self._files[idx][2]) + '\r')
-			def write(self, msg):
-				sys.stdout.write(msg)
-			def finish(self):
-				sys.stdout.write('\n')
-
-		for jobNum in jobList:
-			processSingleJob(jobNum, DefaultDisplay())
+		download_sequential(opts, workDir, jobList, incInfo, jobDB, token)
 
 	# Print overview
 	if infos:
@@ -456,9 +422,34 @@ def realmain(opts, args):
 			if num > 0:
 				print('\t%20s: [%d/%d]' % (state, num, len(jobList)))
 
-	if ('Downloaded' in infos) and (infos['Downloaded'] == len(jobDB)):
-		return os.EX_OK
-	return os.EX_NOINPUT
+	# return True if download is finished
+	return ('Downloaded' in infos) and (infos['Downloaded'] == len(jobDB))
+
+
+def main(args):
+	(opts, args, _) = parse_cmd_line()
+
+	# Disable loop mode if it is pointless
+	if (opts.loop and not opts.skip_existing) and (opts.mark_ignore_dl or not opts.mark_dl):
+		sys.stderr.write('Loop mode was disabled to avoid continuously downloading the same files\n')
+		(opts.loop, opts.infinite) = (False, False)
+
+	# we need exactly one positional argument (config file)
+	if len(args) != 1:
+		sys.stderr.write('usage: %s [options] <config file>\n\n' % os.path.basename(sys.argv[0]))
+		sys.stderr.write('Config file not specified!\n')
+		sys.stderr.write('Use --help to get a list of options!\n')
+		sys.exit(os.EX_USAGE)
+
+	while True:
+		try:
+			if (loop_download(opts, args) or not opts.loop) and not opts.infinite:
+				break
+			time.sleep(60)
+		except KeyboardInterrupt:
+			utils.eprint('\n\nDownload aborted!\n')
+			sys.exit(os.EX_TEMPFAIL)
+
 
 if __name__ == '__main__':
 	sys.exit(main(sys.argv[1:]))

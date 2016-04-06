@@ -21,15 +21,15 @@ from python_compat import imap, irange, lmap, set, sorted
 
 parser = Options()
 parser.section('expr', 'Manipulate lumi filter expressions', '%s <lumi filter expression>')
-parser.addFlag('expr', 'gc',            short = '-G', default = False, help = 'Output grid-control compatible lumi expression')
-parser.addFlag('expr', 'json',          short = '-J', default = False, help = 'Output JSON file with lumi expression')
-parser.addFlag('expr', 'full',          short = '-F', default = False, help = 'Output JSON file with full expression')
+parser.addBool('expr', 'G', 'gc',            default = False, help = 'Output grid-control compatible lumi expression')
+parser.addBool('expr', 'J', 'json',          default = False, help = 'Output JSON file with lumi expression')
+parser.addBool('expr', 'F', 'full',          default = False, help = 'Output JSON file with full expression')
 
 parser.section('calc', 'Options which allow luminosity related calculations', '%s <config file>')
-parser.addFlag('calc', 'job-gc',        short = '-g', default = False, help = 'Output grid-control compatible lumi expression for processed lumi sections')
-parser.addFlag('calc', 'job-json',      short = '-j', default = False, help = 'Output JSON file with processed lumi sections')
-parser.addFlag('calc', 'job-events',    short = '-e', default = False, help = 'Get number of events processed')
-parser.addFlag('calc', 'parameterized', short = '-p', default = False, help = 'Use output file name to categorize output (useful for parameterized tasks)')
+parser.addBool('calc', 'g', 'job-gc',        default = False, help = 'Output grid-control compatible lumi expression for processed lumi sections')
+parser.addBool('calc', 'j', 'job-json',      default = False, help = 'Output JSON file with processed lumi sections')
+parser.addBool('calc', 'e', 'job-events',    default = False, help = 'Get number of events processed')
+parser.addBool('calc', 'p', 'parameterized', default = False, help = 'Use output file name to categorize output (useful for parameterized tasks)')
 options = scriptOptions(parser)
 
 def outputGC(lumis, stream = sys.stdout):
@@ -114,7 +114,6 @@ def process_jobs(opts, workDir, jobList, splitter):
 		except KeyboardInterrupt:
 			sys.exit(os.EX_OK)
 		except Exception:
-			raise
 			print('Error while parsing framework output of job %s!' % jobNum)
 			continue
 	return (lumiDict, readDict, writeDict)
@@ -157,7 +156,8 @@ def main(opts, args):
 		return lumi_expr(opts, args)
 
 	if opts.job_json or opts.job_gc or opts.job_events:
-		(workDir, config, jobDB) = initGC(args)
+		(config, jobDB) = initGC(args)
+		workDir = config.getWorkPath()
 		splitter = None
 		try:
 			splitter = DataSplitter.loadState(os.path.join(workDir, 'datamap.tar'))

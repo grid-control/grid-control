@@ -18,15 +18,15 @@ from datasetListFromX import addDatasetListOptions, discoverDataset
 from gcSupport import Options, scriptOptions, utils
 
 parser = Options(usage = '%s [OPTIONS] <config file / work directory>')
-parser.addText(None, 'job-selector', short = '-J', dest = 'external job selector', default = '',
+parser.addText(None, 'J', 'job-selector', dest = 'external job selector', default = '',
 	help = 'Specify which jobs to process')
-parser.addText(None, 'event-mode',   short = '-m', dest = 'mode',                  default = 'CMSSW-Out',
+parser.addText(None, 'm', 'event-mode',   dest = 'mode',                  default = 'CMSSW-Out',
 	help = 'Specify how to determine events - available: [CMSSW-Out], CMSSW-In, DataMod')
-parser.addText(None, 'lfn',          short = '-l', dest = 'lfn marker',            default = '/store/',
+parser.addText(None, 'l', 'lfn',          dest = 'lfn marker',            default = '/store/',
 	help = 'Assume everything starting with marker to be a logical file name')
-parser.addFlag(None, 'config',       short = '-c', dest = 'include config infos',  default = False,
+parser.addBool(None, 'c', 'config',       dest = 'include config infos',  default = False,
 	help = 'CMSSW specific: Add configuration data to metadata')
-parser.addFlag(None, 'parents',      short = '-p', dest = 'include parent infos',  default = False,
+parser.addBool(None, 'p', 'parents',      dest = 'include parent infos',  default = False,
 	help = 'CMSSW specific: Add parent infos to metadata')
 addDatasetListOptions(parser)
 options = scriptOptions(parser, arg_keys = ['dataset'])

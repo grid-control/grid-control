@@ -22,22 +22,22 @@ from python_compat import ifilter, imap, irange, izip, lfilter, lmap, md5_hex, s
 random.seed(0)
 
 parser = Options(usage = '%s [OPTIONS] <parameter definition>')
-parser.addAccu(None, 'collapse',           default = 0,     short = '-c', help = 'Do not collapse dataset infos in display')
-parser.addFlag(None, 'active',             default = False, short = '-a', help = 'Show activity state')
-parser.addFlag(None, 'disabled',           default = False, short = '-d', help = 'Show disabled parameter sets')
-parser.addFlag(None, 'force-intervention', default = False, short = '-f', help = 'Simulate dataset intervention')
-parser.addFlag(None, 'intervention',       default = False, short = '-I', help = 'Display intervention tasks')
-parser.addFlag(None, 'list-parameters',    default = False, short = '-l', help = 'Display parameter list')
-parser.addFlag(None, 'show-sources',       default = False, short = '-L', help = 'Show parameter sources')
-parser.addFlag(None, 'static',             default = False, short = '-s', help = 'Assume a static parameterset')
-parser.addFlag(None, 'untracked',          default = False, short = '-t', help = 'Display untracked variables')
-parser.addFlag(None, 'persistent',         default = False, short = '-T', help = 'Work with persistent paramters')
-parser.addList(None, 'parameter',          default = [],    short = '-p', help = 'Specify parameters')
-parser.addText(None, 'dataset',            default = '',    short = '-D', help = 'Add dataset splitting (use "True" to simulate a dataset)')
-parser.addText(None, 'manager',            default = None,  short = '-M', help = 'Select parameter source manager')
-parser.addText(None, 'output',             default = '',    short = '-o', help = 'Show only specified parameters')
-parser.addText(None, 'save',               default = '',    short = '-S', help = 'Saves information to specified file')
-parser.addText(None, 'visible',            default = '',    short = '-V', help = 'Set visible variables')
+parser.addAccu(None, 'c', 'collapse',           default = 0,     help = 'Do not collapse dataset infos in display')
+parser.addBool(None, 'a', 'active',             default = False, help = 'Show activity state')
+parser.addBool(None, 'd', 'disabled',           default = False, help = 'Show disabled parameter sets')
+parser.addBool(None, 'f', 'force-intervention', default = False, help = 'Simulate dataset intervention')
+parser.addBool(None, 'I', 'intervention',       default = False, help = 'Display intervention tasks')
+parser.addBool(None, 'l', 'list-parameters',    default = False, help = 'Display parameter list')
+parser.addBool(None, 'L', 'show-sources',       default = False, help = 'Show parameter sources')
+parser.addBool(None, 's', 'static',             default = False, help = 'Assume a static parameterset')
+parser.addBool(None, 't', 'untracked',          default = False, help = 'Display untracked variables')
+parser.addBool(None, 'T', 'persistent',         default = False, help = 'Work with persistent paramters')
+parser.addList(None, 'p', 'parameter',          default = [],    help = 'Specify parameters')
+parser.addText(None, 'D', 'dataset',            default = '',    help = 'Add dataset splitting (use "True" to simulate a dataset)')
+parser.addText(None, 'M', 'manager',            default = None,  help = 'Select parameter source manager')
+parser.addText(None, 'o', 'output',             default = '',    help = 'Show only specified parameters')
+parser.addText(None, 'S', 'save',               default = '',    help = 'Saves information to specified file')
+parser.addText(None, 'V', 'visible',            default = '',    help = 'Set visible variables')
 options = scriptOptions(parser)
 
 if len(options.args) != 1:
@@ -74,7 +74,7 @@ def force_intervention():
 	for dp in DataParameterSource.datasetSources:
 		dp.intervention = (set([1]), set([0]), True)
 
-def process_intervention(psource):
+def process_intervention(opts, psource):
 	utils.vprint('')
 	tmp = psource.getJobIntervention()
 	if tmp:
@@ -178,7 +178,7 @@ def list_parameters(opts, psource):
 		head = [('COLLATE_JOBS', '# of jobs')]
 		if 'DATASETSPLIT' in stored:
 			stored.remove('DATASETSPLIT')
-			if (opts.collapse == 1):
+			if opts.collapse == 1:
 				stored.append('DATASETNICK')
 				head.append(('DATASETNICK', 'DATASETNICK'))
 			elif opts.collapse == 2:
@@ -223,7 +223,7 @@ def main(opts, args):
 	if opts.force_intervention:
 		force_intervention()
 	if opts.intervention:
-		process_intervention(psource)
+		process_intervention(opts, psource)
 	if opts.save:
 		save_parameters(psource, opts.save)
 
