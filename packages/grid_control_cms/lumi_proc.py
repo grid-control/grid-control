@@ -93,6 +93,11 @@ class LumiPartitionProcessor(PartitionProcessor):
 		PartitionProcessor.__init__(self, config)
 		self._lumi_filter = config.getLookup('lumi filter', {}, parser = parseLumiFilter, strfun = strLumi)
 
+	def getKeys(self):
+		if self._lumi_filter.empty():
+			return []
+		return [ParameterMetadata('LUMI_RANGE', untracked = True)]
+
 	def getNeededKeys(self, splitter):
 		if self._lumi_filter.empty():
 			return []
