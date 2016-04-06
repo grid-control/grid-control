@@ -13,6 +13,7 @@
 # | limitations under the License.
 
 from grid_control.datasets import DataProcessor, DataProvider, DataSplitter, DatasetError, PartitionProcessor
+from grid_control.parameters import ParameterMetadata
 from grid_control.utils.data_structures import makeEnum
 from grid_control.utils.gc_itertools import ichain
 from grid_control_cms.lumi_tools import filterLumiFilter, formatLumi, parseLumiFilter, selectLumi, strLumi
