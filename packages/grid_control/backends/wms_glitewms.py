@@ -17,7 +17,6 @@ from grid_control import utils
 from grid_control.backends.wms import BackendError
 from grid_control.backends.wms_grid import GridWMS
 from grid_control.utils.parsing import parseStr
-from grid_control.utils.process_base import LocalProcess
 from python_compat import md5, sort_inplace
 
 def choice_exp(sample, p = 0.5):
@@ -62,17 +61,20 @@ class DiscoverWMS_Lazy(object): # TODO: Move to broker infrastructure
 		return result
 
 	def matchSites(self, endpoint):
-		checkArgs = ['-a']
-		if endpoint:
-			checkArgs.extend(['-e', endpoint])
-		checkArgs.append(utils.pathShare('null.jdl'))
-
-		proc = LocalProcess(self._exeGliteWMSJobListMatch, *checkArgs)
 		result = []
-		for line in proc.iter_stdout(3):
-			if line.startswith(' - '):
-				result.append(line[3:].strip())
-		if proc.status(timeout = 0) is None:
+		checkArgs = '-a'
+		if endpoint:
+			checkArgs += ' -e %s' % endpoint
+		proc = utils.LoggedProcess(self._exeGliteWMSJobListMatch, checkArgs + ' %s' % utils.pathShare('null.jdl'))
+		def matchThread(): # TODO: integrate timeout into loggedprocess
+			for line in proc.iter():
+				if line.startswith(' - '):
+					result.append(line[3:].strip())
+		thread = utils.gcStartThread('Matching jobs with WMS %s' % endpoint, matchThread)
+		thread.join(timeout = 3)
+		if thread.isAlive():
+			proc.kill()
+			thread.join()
 			self.wms_timeout[endpoint] = self.wms_timeout.get(endpoint, 0) + 1
 			if self.wms_timeout.get(endpoint, 0) > 10: # remove endpoints after 10 failures
 				self.wms_all.remove(endpoint)
