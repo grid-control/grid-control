@@ -64,7 +64,7 @@ class LumiDataProcessor(DataProcessor):
 			yield fi
 
 	def processBlock(self, block):
-		if (not self._lumi_filter) and (self._lumi_keep == LumiKeep.RunLumi):
+		if self._lumi_filter.empty() and ((self._lumi_keep == LumiKeep.RunLumi) or (DataProvider.Metadata not in block)):
 			return block
 		def getMetadataIdx(key):
 			if key in block[DataProvider.Metadata]:
