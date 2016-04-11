@@ -1,5 +1,5 @@
 #!/bin/bash
-# | Copyright 2008-2015 Karlsruhe Institute of Technology
+# | Copyright 2008-2016 Karlsruhe Institute of Technology
 # |
 # | Licensed under the Apache License, Version 2.0 (the "License");
 # | you may not use this file except in compliance with the License.
@@ -133,15 +133,21 @@ if [ "$GC_CMSSWRUN_RETCODE" == "0" ] && [ -n "$CMSSW_CONFIG" ]; then
 
 		echo "Substituting variables..."
 		cat "$CFG_NAME" | var_replacer "$CFG_NAME" > "$DBSDIR/config"
-		cp "$DBSDIR/config" "$CFG_NAME"
 
 		echo "Calculating config file hash..."
+		(
+			echo "import sys, shlex"
+			echo "if not hasattr(sys, 'argv'): sys.argv = ['"$CFG_NAME"'] + shlex.split('"$@"')"
+			cat "$DBSDIR/config"
+		) > "$DBSDIR/hash_config" # ensure arguments are forwarded to config file when running edmConfigHash
+
+		cp "$DBSDIR/hash_config" "$CFG_NAME"
 		edmConfigHash "$CFG_NAME" > "$DBSDIR/hash"
 		CODE=$?
 		if [ "$CODE" != "0" ]; then
 			echo "Problem while hashing config file:"
 			echo "---------------------------"
-			echo "Executing python $CFG_NAME..."
+			echo "Executing python $CFG_NAME (modified for edmConfigHash) ..."
 			python "$CFG_NAME" 2>&1
 			echo "---------------------------"
 			CODE=113
@@ -149,6 +155,7 @@ if [ "$GC_CMSSWRUN_RETCODE" == "0" ] && [ -n "$CMSSW_CONFIG" ]; then
 		fi
 
 		echo "Starting cmsRun..."
+		cp "$DBSDIR/config" "$CFG_NAME"
 		if [ "$GZIP_OUT" = "yes" ]; then
 			(
 				echo "Starting cmsRun with config file $CFG_NAME and arguments $@"
@@ -189,7 +196,7 @@ if [ "$GC_CMSSWRUN_RETCODE" == "0" ] && [ -n "$CMSSW_CONFIG" ]; then
 	GC_CMSSWRUN_RETCODE=$CODE
 fi
 
-# Additional epilog scripts in the CMSSW environment
+# Additional epilog script in the CMSSW environment
 if [ "$GC_CMSSWRUN_RETCODE" == "0" ]; then
 #	for CMSSW_BIN in $CMSSW_EPILOG_EXEC; do
 		_EPILOG_COUNT=1

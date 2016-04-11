@@ -12,7 +12,7 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-import sys, tty, array, fcntl, termios
+import sys, tty, fcntl, struct, termios
 from python_compat import imap
 
 class Console(object):
@@ -48,9 +48,9 @@ class Console(object):
 		self.stdout.flush()
 
 	def getmaxyx(self):
-		size = array.array('B', [0, 0, 0, 0])
-		fcntl.ioctl(0, termios.TIOCGWINSZ, size, True)
-		return (size[0], size[2])
+		winsize_ptr = fcntl.ioctl(0, termios.TIOCGWINSZ, struct.pack("HHHH", 0, 0, 0, 0))
+		winsize = struct.unpack('HHHH', winsize_ptr)
+		return (winsize[0], winsize[1])
 
 	def getyx(self):
 		fd = sys.stdin.fileno()

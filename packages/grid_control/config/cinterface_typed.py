@@ -12,7 +12,7 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-import os, sys
+import os, sys, signal
 from grid_control import utils
 from grid_control.config.cinterface_base import ConfigInterface
 from grid_control.config.config_entry import ConfigError, appendOption, noDefault
@@ -133,6 +133,8 @@ class TypedConfigInterface(ConfigInterface):
 		for factory in self._getPluginFactories(option, default, cls, tags, inherit, requirePlugin,
 				singlePlugin = False, desc = 'composite plugin', **kwargs):
 			clsList.append(factory.getBoundInstance(*(pargs or ()), **(pkwargs or {})))
+		if len(clsList) == 1:
+			return clsList[0]
 		if not option_compositor:
 			option_compositor = appendOption(option, 'manager')
 		return self.getPlugin(option_compositor, default_compositor, cls, tags, inherit,
@@ -215,11 +217,13 @@ class SimpleConfigInterface(TypedConfigInterface):
 		if (default_obj != noDefault) and interactiveDefault:
 			prompt += (' [%s]' % self._getDefaultStr(default_obj, def2obj, obj2str))
 		while True:
+			handler = signal.signal(signal.SIGINT, signal.SIG_DFL)
 			try:
 				userInput = user_input('%s: ' % prompt)
 			except Exception:
 				sys.stdout.write('\n')
 				sys.exit(os.EX_DATAERR)
+			signal.signal(signal.SIGINT, handler)
 			if userInput == '':
 				obj = default_obj
 			else:

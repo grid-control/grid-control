@@ -52,7 +52,7 @@ class ConfigView(Plugin):
 			entries = self.iterContent()
 		result = {}
 		for entry in entries:
-			if printUnused or entry.accessed:
+			if printUnused or entry.used:
 				if printDefault or not entry.source.startswith('<default'):
 					if printState or not entry.option.startswith('#'):
 						result.setdefault(entry.section, {}).setdefault(entry.option, []).append(entry)
@@ -68,16 +68,10 @@ class ConfigView(Plugin):
 				if printMinimal:
 					entryList = ConfigEntry.simplifyEntries(entryList)
 				for entry in entryList:
-					if printTight:
-						stream.write('[%s] ' % section)
-					for idx, line in enumerate(entry.format().splitlines()):
-						if printSource and (idx == 0) and entry.source:
-							if len(line) < 33:
-								stream.write('%-35s; %s\n' % (line, entry.source))
-							else:
-								stream.write('; source: %s\n%s\n' % (entry.source, line))
-						else:
-							stream.write(line + '\n')
+					source = ''
+					if printSource:
+						source = entry.source
+					stream.write(entry.format(printSection = printTight, source = source) + '\n')
 			if not printTight:
 				stream.write('\n')
 
@@ -147,7 +141,7 @@ class HistoricalConfigView(ConfigView):
 			self._log.log(logging.DEBUG1, '  %s (%s | %s)', entry.format(printSection = True), entry.source, entry.order)
 		curEntry = ConfigEntry.combineEntries(entries)
 		# Ensure that fallback default value is stored in persistent storage
-		if (defaultEntry.value != noDefault) and defaultEntry_fallback.accessed:
+		if (defaultEntry.value != noDefault) and defaultEntry_fallback.used:
 			self._curContainer.setDefault(defaultEntry_fallback)
 		return curEntry
 
@@ -172,9 +166,9 @@ class HistoricalConfigView(ConfigView):
 		if curEntry is None:
 			raise ConfigError('"[%s] %s" does not exist!' % (self._getSection(specific = False), option_list[0]))
 		description = 'Using user supplied %s'
-		if persistent and (defaultEntry.accessed or defaultEntry.accessed):
+		if persistent and defaultEntry.used:
 			description = 'Using persistent    %s'
-		elif defaultEntry.accessed or defaultEntry.accessed:
+		elif defaultEntry.used:
 			description = 'Using default value %s'
 		elif '!' in curEntry.section:
 			description = 'Using dynamic value %s'

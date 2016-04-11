@@ -15,6 +15,7 @@
 from grid_control import utils
 from grid_control.gc_plugin import ConfigurablePlugin
 from grid_control.report import Report
+from grid_control.utils.parsing import strTimeShort
 from hpfwk import AbstractError
 
 class GUI(ConfigurablePlugin):
@@ -35,6 +36,8 @@ class SimpleConsole(GUI):
 		utils.vprint(level = -1)
 		self._report.display()
 		utils.vprint(level = -1)
-		if self._workflow.runContinuous:
+		if self._workflow.duration < 0:
 			utils.vprint('Running in continuous mode. Press ^C to exit.', -1)
+		elif self._workflow.duration > 0:
+			utils.vprint('Running for %s' % strTimeShort(self._workflow.duration), -1)
 		self._workflow.jobCycle()

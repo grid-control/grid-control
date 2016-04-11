@@ -46,7 +46,7 @@ class PBSGECommon(LocalWMS):
 		if self._shell:
 			params += ' -S %s' % self._shell
 		# Process job requirements
-		for entry in self._softwareReqs.lookup(reqs.get(WMS.SOFTWARE)):
+		for entry in self._softwareReqs.lookup(reqs.get(WMS.SOFTWARE), is_selector = False):
 			params += ' ' + entry
 		for req in reqMap:
 			if self.checkReq(reqs, req):

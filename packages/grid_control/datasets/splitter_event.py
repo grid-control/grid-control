@@ -73,9 +73,13 @@ class EventBoundarySplitter(DataSplitter):
 				job = { DataSplitter.Skipped: 0, DataSplitter.NEntries: 0, DataSplitter.FileList: [] }
 
 
+	def _initConfig(self, config):
+		self._events_per_job = self._configQuery(config.getInt, 'events per job')
+
+
 	def splitDatasetInternal(self, blocks, firstEvent = 0):
 		for block in blocks:
-			eventsPerJob = self.setup(self._config.getInt, block, 'events per job')
+			eventsPerJob = self._setup(self._events_per_job, block)
 			for job in self._splitJobs(block[DataProvider.FileList], eventsPerJob, firstEvent):
 				firstEvent = 0
 				yield self.finaliseJobSplitting(block, job)

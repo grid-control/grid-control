@@ -99,7 +99,7 @@ def partition_check(splitter):
 if (opts.partition_list is not None) or opts.partition_list_invalid or opts.partition_check:
 	if len(args) != 1:
 		utils.exitWithUsage(parser.usage('part'))
-	splitter = DataSplitter.loadState(args[0])
+	splitter = DataSplitter.loadStateForScript(args[0])
 
 	if opts.partition_list_invalid:
 		utils.printTabular([(0, 'Job')], partition_invalid(splitter))

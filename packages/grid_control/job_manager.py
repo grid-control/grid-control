@@ -360,7 +360,7 @@ class SimpleJobManager(JobManager):
 		JobManager.__init__(self, config, name, task, eventhandler)
 
 		# Job defect heuristic (not persistent!) - remove jobs, which cause errors when doing status queries
-		self._defect_tries = config.getInt('defect tries', 10, onChange = None)
+		self._defect_tries = config.getInt(['defect tries', 'kick offender'], 10, onChange = None)
 		(self._defect_counter, self._defect_raster) = ({}, 0)
 
 		# job verification heuristic - launch jobs in chunks of increasing size if enough jobs succeed

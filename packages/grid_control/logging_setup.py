@@ -67,7 +67,7 @@ class ProcessArchiveHandler(logging.Handler):
 					tar.addfile(info, handle)
 					handle.close()
 				tar.close()
-			except:
+			except Exception:
 				raise GCError('Unable to log results of external call "%s" to "%s"' % (record.proc.get_call(), self._fn))
 			self._log.warning('All logfiles were moved to %s', self._fn)
 
@@ -219,7 +219,7 @@ def logging_create_handlers(config, logger_name):
 def logging_setup(config):
 	if config.getBool('debug mode', False, onChange = None):
 		config.set('level', 'DEBUG3', '?=')
-		config.set('exception handlers', 'stdout', '+=')
+		config.set('exception handler', 'stdout', '+=')
 		config.setInt('exception code context', 2)
 		config.setInt('exception variables', 2)
 		config.setInt('exception file stack', 2)
@@ -232,7 +232,7 @@ def logging_setup(config):
 		elif option.count(' ') == 0:
 			logger_names.add('')
 		else:
-			logger_names.add(option.split(' ')[0])
+			logger_names.add(option.split(' ')[0].strip())
 	for logger_name in logger_names:
 		logging_create_handlers(config, logger_name)
 

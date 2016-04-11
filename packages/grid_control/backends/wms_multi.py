@@ -53,7 +53,6 @@ class MultiWMS(WMS):
 
 
 	def deployTask(self, task, monitor):
-		self._defaultWMS.deployTask(task, monitor)
 		for wmsObj in self._wmsMap.values():
 			wmsObj.deployTask(task, monitor)
 

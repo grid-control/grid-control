@@ -18,8 +18,14 @@ from grid_control.config.config_entry import ConfigError
 
 # Change handler to notify about impossible changes
 def changeImpossible(config, old_obj, cur_obj, cur_entry, obj2str):
-	raise ConfigError('It is *not* possible to change "%s" from %r to %r!' %
-		(cur_entry.format_opt(), obj2str(old_obj).strip(), obj2str(cur_obj).strip()))
+	old_str = obj2str(old_obj).strip()
+	new_str = obj2str(cur_obj).strip()
+	msg = 'It is *not* possible to change "%s"' % cur_entry.format_opt()
+	if len(old_str) + len(new_str) > 40:
+		msg = '%s\n\tfrom: %r\n\t  to: %r' % (msg, old_str, new_str)
+	else:
+		msg = '%s from %r to %r' % (msg, old_str, new_str)
+	raise ConfigError(msg)
 
 
 # Change handler to trigger re-inits

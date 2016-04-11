@@ -178,7 +178,7 @@ class BasicWMS(WMS):
 					yield (None, os.path.basename(fn.name), fn)
 
 		# Package sandbox tar file
-		utils.vprint('Packing sandbox:')
+		self._log.log(logging.INFO1, 'Packing sandbox')
 		sandbox = self._getSandboxName(task)
 		utils.ensureDirExists(os.path.dirname(sandbox), 'sandbox directory')
 		if not os.path.exists(sandbox) or self.config.getState('init', detail = 'sandbox'):

@@ -16,7 +16,7 @@ from grid_control.utils.data_structures import makeEnum
 from grid_control.utils.gc_itertools import ichain
 from grid_control.utils.parsing import strDict
 from hpfwk import APIError, NestedException
-from python_compat import ifilter, imap, lmap, set, sorted
+from python_compat import ifilter, imap, lfilter, lmap, set, sorted
 
 class ConfigError(NestedException):
 	pass
@@ -31,23 +31,18 @@ def standardConfigForm(value):
 			value = [value]
 		return lmap(lambda x: str(x).strip().lower(), value)
 
+
 def appendOption(option, suffix):
 	if isinstance(option, (list, tuple)):
 		return lmap(lambda x: appendOption(x, suffix), option)
 	return option.rstrip() + ' ' + suffix
 
-def multi_line_format(value):
-	result = str.join('\n\t', ifilter(lambda x: x != '', imap(str.strip, value.strip().splitlines())))
-	if '\n' in result:
-		result = '\n\t' + result
-	return result
-
 
 # Holder of config information
 class ConfigEntry(object):
-	def __init__(self, section, option, value, opttype, source, order = None, accessed = False):
+	def __init__(self, section, option, value, opttype, source, order = None, accessed = False, used = False):
 		(self.section, self.option, self.source, self.order) = (section.lower(), option.lower(), source.lower(), order)
-		(self.value, self.opttype, self.accessed) = (value, opttype, accessed)
+		(self.value, self.opttype, self.accessed, self.used) = (value, opttype, accessed, used)
 
 	def __repr__(self):
 		return '%s(%s)' % (self.__class__.__name__, strDict(self.__dict__))
@@ -57,17 +52,41 @@ class ConfigEntry(object):
 			return '<%s> %s' % (self.section.replace('!', ''), self.option)
 		return '[%s] %s' % (self.section, self.option)
 
-	def format(self, printSection = False, printDefault = False, default = noDefault):
+	def format(self, printSection = False, printDefault = False, default = noDefault, source = '', wraplen = 33):
 		if (self.value == noDefault) or (not printDefault and (self.value == default)):
 			return ''
-		result = '%s %s' % (self.opttype, multi_line_format(self.value))
 		if printSection:
-			return '%s %s' % (self.format_opt(), result)
-		return '%s %s' % (self.option, result)
+			prefix = '[%s] %s' % (self.section, self.option)
+		else:
+			prefix = self.option
+		prefix += ' %s' % self.opttype
+
+		line_list = lfilter(lambda x: x != '', imap(str.strip, self.value.strip().splitlines()))
+		if not line_list:
+			line_list = [prefix] # just prefix - without trailing whitespace
+		elif len(line_list) > 1:
+			line_list = [prefix] + line_list # prefix on first line - rest on other lines
+		else:
+			line_list = [prefix + ' ' + line_list[0]] # everything on one line
+
+		result = ''
+		for line in line_list:
+			if not result: # first line:
+				if source and (len(line) >= wraplen):
+					result += '; source: ' + source + '\n'
+				elif source:
+					result = line.ljust(wraplen) + '  ; ' + source + '\n'
+					continue
+			else:
+				result += '\t'
+			result += line + '\n'
+		return result.rstrip()
 
 	def processEntries(cls, entryList):
 		result = None
 		used = []
+		for entry in entryList:
+			entry.accessed = True
 		for entry in entryList:
 			def mkNew(value):
 				return ConfigEntry(entry.section, entry.option, value, '=', '<processed>')
@@ -80,7 +99,7 @@ class ConfigEntry(object):
 					result = entry
 			elif entry.opttype == '*=': # this option can not be changed by other config entries
 				# TODO: notify that subsequent config options will be ignored
-				entry.accessed = True
+				entry.used = True
 				return (entry, [entry])
 			elif entry.opttype == '+=':
 				used.append(entry)
@@ -137,7 +156,7 @@ class ConfigEntry(object):
 	def combineEntries(cls, entryList):
 		(result, used) = cls.processEntries(entryList)
 		for entry in used:
-			entry.accessed = True
+			entry.used = True
 		return result
 	combineEntries = classmethod(combineEntries)
 

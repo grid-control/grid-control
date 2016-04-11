@@ -39,7 +39,7 @@ class BasicProgressBar(object):
 
 		# Print percentage
 		text = str(done) + '%'
-		textPos = (self._width - len(text) + 1) / 2
+		textPos = int((self._width - len(text) + 1) / 2)
 		self._bar = self._bar[0:textPos] + text + self._bar[textPos+len(text):]
 
 	def __str__(self):

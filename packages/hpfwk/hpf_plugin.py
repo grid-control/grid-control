@@ -27,6 +27,8 @@ class InstanceFactory(object):
 		(self._bindValue, self._cls, self._args, self._kwargs) = (bindValue, cls, args, kwargs)
 
 	def _fmt(self, args, kwargs, addEllipsis = False):
+		if not logging.getLogger().isEnabledFor(logging.INFO1):
+			return self._cls.__name__
 		args_str_list = []
 		for arg in args:
 			args_str_list.append(repr(arg))

@@ -40,8 +40,8 @@ class ZippedJobDB(JobDB):
 				for idx, fnTarInfo in enumerate(tar.namelist()):
 					(jobNum, tid) = tuple(imap(lambda s: int(s[1:]), fnTarInfo.split('_', 1)))
 					try:
+						fp = tar.open(fnTarInfo)
 						try:
-							fp = tar.open(fnTarInfo)
 							fp.read()
 						finally:
 							fp.close()
@@ -70,8 +70,8 @@ class ZippedJobDB(JobDB):
 
 	def commit(self, jobNum, jobObj):
 		jobData = str.join('', utils.DictFormat(escapeString = True).format(jobObj.getAll()))
+		tar = zipfile.ZipFile(self._dbFile, 'a', zipfile.ZIP_DEFLATED)
 		try:
-			tar = zipfile.ZipFile(self._dbFile, 'a', zipfile.ZIP_DEFLATED)
 			tar.writestr('J%06d_T%06d' % (jobNum, self._serial), jobData)
 		finally:
 			tar.close()

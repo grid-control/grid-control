@@ -111,12 +111,16 @@ class ANSIGUI(GUI):
 			# Wrapping ActivityLog functionality
 			class GUILog(object):
 				def __init__(self, message):
-					self.message = '%s...' % message
-					self.show(self.message)
+					self._message = '%s...' % message
+					self.show(self._message)
+
+				def finish(self):
+					if hasattr(sys.stdout, 'logged') and self._message:
+						self.show(' ' * len(self._message))
+						self._message = []
 
 				def __del__(self):
-					if hasattr(sys.stdout, 'logged'):
-						self.show(' ' * len(self.message))
+					self.finish()
 
 				def show(self, message):
 					if gui.getHeight() != report.getHeight():

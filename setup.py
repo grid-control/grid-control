@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 
 setup(
 	name='grid-control',
-	version='1.6.53',
+	version='1.7.01',
 	description='The Swiss Army knife of job submission tools',
 	long_description='The Swiss Army knife of job submission tools',
 	url='https://github.com/grid-control/grid-control',

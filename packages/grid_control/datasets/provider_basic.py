@@ -145,7 +145,7 @@ class ListProvider(DataProvider):
 			return True
 		try:
 			fp = open(self._filename, 'r')
-		except:
+		except Exception:
 			raise DatasetError('Unable to open dataset file %s' % repr(self._filename))
 		try:
 			for block in self._parseFile(fp):

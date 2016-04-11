@@ -22,7 +22,8 @@ from hpfwk import AbstractError, Plugin
 from python_compat import lfilter, sorted
 
 class MatcherHolder(object):
-	def __init__(self, selector):
+	def __init__(self, selector, case):
+		self._case = case
 		self._selector = selector
 		self.init(selector)
 
@@ -33,18 +34,21 @@ class MatcherHolder(object):
 		raise AbstractError
 
 	def __repr__(self):
-		return self.__class__.__name__ + '(%s)' % repr(self._selector)
+		if self._case:
+			return self.__class__.__name__ + '(%s)' % self._selector
+		return self.__class__.__name__ + '_ci(%s)' % self._selector
 
 
-def getFixedFunctionObject(instance, fo, selector):
+def getFixedFunctionObject(instance, fo, selector, case):
 	fo.__name__ = instance.__class__.__name__ + '_FixedSelector'
-	return fo(selector)
+	return fo(selector, case)
 
 
 # Matcher class
 class Matcher(ConfigurablePlugin):
-	def __init__(self, config, option_prefix):
+	def __init__(self, config, option_prefix, *kwargs):
 		ConfigurablePlugin.__init__(self, config)
+		self._case = config.getBool(appendOption(option_prefix, 'case sensitive'), default = True)
 
 	def getPositive(self, selector):
 		raise AbstractError
@@ -60,10 +64,10 @@ class Matcher(ConfigurablePlugin):
 		class FunctionObject(MatcherHolder):
 			def match(self, value):
 				return matcher(value, self._selector)
-		return getFixedFunctionObject(self, FunctionObject, selector)
+		return getFixedFunctionObject(self, FunctionObject, selector, self._case)
 
 	def __repr__(self):
-		return '%s(...)' % self.__class__.__name__
+		return '%s(case sensitive = %r)' % (self.__class__.__name__, self._case)
 
 
 class BasicMatcher(Matcher):
@@ -75,14 +79,21 @@ class BasicMatcher(Matcher):
 		return [selector]
 
 	def matcher(self, value, selector):
+		if not self._case:
+			value = value.lower()
+			selector = selector.lower()
 		return QM(self.__class__.matchFunction(value, selector), 1, -1)
 
 	def matchWith(self, selector):
 		matcher = self.__class__.matchFunction
+		if not self._case:
+			selector = selector.lower()
 		class FunctionObject(MatcherHolder):
 			def match(self, value):
+				if not self._case:
+					value = value.lower()
 				return QM(matcher(value, self._selector), 1, -1)
-		return getFixedFunctionObject(self, FunctionObject, selector)
+		return getFixedFunctionObject(self, FunctionObject, selector, self._case)
 
 
 class StartMatcher(BasicMatcher):
@@ -111,15 +122,22 @@ class ExprMatcher(Matcher):
 		return None
 
 	def matcher(self, value, selector):
+		if not self._case:
+			value = value.lower()
+			selector = selector.lower()
 		return QM(ExprMatcher.getExpr(selector)(value), 1, -1)
 
 	def matchWith(self, selector):
+		if not self._case:
+			selector = selector.lower()
 		class FunctionObject(MatcherHolder):
 			def init(self, fixedSelector):
 				self._matcher = ExprMatcher.getExpr(fixedSelector)
 			def match(self, value):
+				if not self._case:
+					value = value.lower()
 				return QM(self._matcher(value), 1, -1)
-		return getFixedFunctionObject(self, FunctionObject, selector)
+		return getFixedFunctionObject(self, FunctionObject, selector, self._case)
 
 
 class RegExMatcher(Matcher):
@@ -129,6 +147,8 @@ class RegExMatcher(Matcher):
 		return None
 
 	def matcher(self, value, selector):
+		if not self._case:
+			value = value.lower()
 		return QM(re.search(selector, value) is not None, 1, -1)
 
 	def matchWith(self, selector):
@@ -136,17 +156,23 @@ class RegExMatcher(Matcher):
 			def init(self, fixedSelector):
 				self._regex = re.compile(fixedSelector)
 			def match(self, value):
+				if not self._case:
+					value = value.lower()
 				return QM(self._regex.search(value) is not None, 1, -1)
-		return getFixedFunctionObject(self, FunctionObject, selector)
+		return getFixedFunctionObject(self, FunctionObject, selector, self._case)
 
 
 class ShellStyleMatcher(RegExMatcher):
 	alias = ['shell']
 
 	def matcher(self, value, selector):
+		if not self._case:
+			selector = selector.lower()
 		return RegExMatcher.matcher(self, value, fnmatch.translate(selector))
 
 	def matchWith(self, selector):
+		if not self._case:
+			selector = selector.lower()
 		return RegExMatcher.matchWith(self, fnmatch.translate(selector))
 
 
@@ -156,7 +182,7 @@ class BlackWhiteMatcher(Matcher):
 	def __init__(self, config, option_prefix):
 		Matcher.__init__(self, config, option_prefix)
 		self._baseMatcher = config.getPlugin(appendOption(option_prefix, 'mode'), 'start',
-			cls = Matcher, pargs = (option_prefix,))
+			cls = Matcher, pargs = (option_prefix))
 
 	def getPositive(self, selector):
 		return lfilter(lambda p: not p.startswith('-'), selector.split())
@@ -241,13 +267,17 @@ class DictLookup(Plugin):
 			self.__class__.__name__, strDict(self._values, self._order), self._matcher,
 			self._only_first, self._always_default)
 
-	def _lookup(self, value):
+	def _lookup(self, value, is_selector):
 		for key in self._order:
-			if self._matcher.matcher(key, value) > 0:
+			if is_selector:
+				match = self._matcher.matcher(key, value)
+			else:
+				match = self._matcher.matcher(value, key)
+			if match > 0:
 				yield self._values[key]
 
-	def lookup(self, value, default = noDefault):
-		result = list(self._lookup(value))
+	def lookup(self, value, default = noDefault, is_selector = True):
+		result = list(self._lookup(value, is_selector))
 		if (None in self._values) and (self._always_default or not result):
 			result.append(self._values[None])
 		if (default != noDefault) and not result:

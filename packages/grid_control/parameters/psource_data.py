@@ -28,7 +28,7 @@ class DataParameterSource(ParameterSource):
 		if not dataProvider:
 			pass # debug mode - used by scripts - disables resync
 		elif os.path.exists(self.getDataPath('cache.dat') and self.getDataPath('map.tar')):
-			self._dataSplitter.importState(self.getDataPath('map.tar'))
+			self._dataSplitter.importPartitions(self.getDataPath('map.tar'))
 		else:
 			DataProvider.saveToFile(self.getDataPath('cache.dat'), self._dataProvider.getBlocks())
 			self._dataSplitter.splitDataset(self.getDataPath('map.tar'), self._dataProvider.getBlocks())
@@ -81,9 +81,8 @@ class DataParameterSource(ParameterSource):
 				backupRename(  'map-old-%d.tar' % time.time(),   'map.tar',   'map-new.tar')
 				backupRename('cache-old-%d.dat' % time.time(), 'cache.dat', 'cache-new.dat')
 				old_maxN = self._dataSplitter.getMaxJobs()
-				self._dataSplitter.importState(self.getDataPath('map.tar'))
+				self._dataSplitter.importPartitions(self.getDataPath('map.tar'))
 				self._maxN = self._dataSplitter.getMaxJobs()
-				self._dataSplitter.getMaxJobs()
 				result_redo.update(jobChanges[0])
 				result_disable.update(jobChanges[1])
 				result_sizeChange = result_sizeChange or (old_maxN != self._maxN)

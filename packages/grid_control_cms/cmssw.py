@@ -270,7 +270,9 @@ class CMSSW(DataTask):
 
 	# Get files for input sandbox
 	def getSBInFiles(self):
-		files = DataTask.getSBInFiles(self) + self.configFiles + self.prolog.getSBInFiles() + self.epilog.getSBInFiles()
+		files = DataTask.getSBInFiles(self) + self.prolog.getSBInFiles() + self.epilog.getSBInFiles()
+		for cfgFile in self.configFiles:
+			files.append(utils.Result(pathAbs = cfgFile, pathRel = os.path.basename(cfgFile)))
 		if len(self.projectArea) and not self._projectAreaTarballSE:
 			files.append(utils.Result(pathAbs = self._projectAreaTarball, pathRel = os.path.basename(self._projectAreaTarball)))
 		return files + [utils.Result(pathAbs = utils.pathShare('gc-run.cmssw.sh', pkg = 'grid_control_cms'), pathRel = 'gc-run.cmssw.sh')]

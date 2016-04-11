@@ -51,8 +51,8 @@ class GCDumpParameterSource(ParameterSource):
 				result[key] = value
 
 	def write(cls, fn, pa):
+		fp = ZipFile(fn, 'w')
 		try:
-			fp = ZipFile(fn, 'w')
 			keys = sorted(ifilter(lambda p: not p.untracked, pa.getJobKeys()))
 			fp.write('# %s\n' % json.dumps(keys))
 			maxN = pa.getMaxJobs()

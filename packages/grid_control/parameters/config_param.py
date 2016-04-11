@@ -156,6 +156,7 @@ class ParameterConfig:
 
 	def getParameter(self, varName):
 		optKey = self.getParameterOption(varName)
+		paramRepeat = int(self.get(optKey, 'repeat', '1'))
 
 		if isinstance(optKey, tuple):
 			varIndex = list(optKey).index(varName.lower())
@@ -164,17 +165,17 @@ class ParameterConfig:
 			varType = self.get(varName, 'type', 'verbatim')
 
 			if '=>' in tupleValue:
-				return self.parseDict(varName, tupleValue,
-					lambda v: self.parseParameterTuple(varName, v, tupleType, varType, varIndex))
-			return self.parseParameterTuple(varName, tupleValue, tupleType, varType, varIndex)
+				if self.getBool(optKey, 'parse dict', True):
+					return self.parseDict(varName, tupleValue,
+						lambda v: paramRepeat * self.parseParameterTuple(varName, v, tupleType, varType, varIndex))
+			return paramRepeat * self.parseParameterTuple(varName, tupleValue, tupleType, varType, varIndex)
 
 		else:
 			varValue = self.get(optKey, None, '')
 			varType = self.get(varName, 'type', 'default')
 
 			if '=>' in varValue:
-				enableDict = self.getBool(optKey, 'parse dict', True)
-				if enableDict:
+				if self.getBool(optKey, 'parse dict', True):
 					return self.parseDict(varName, varValue,
-						lambda v: self.parseParameter(varName, v, varType))
-			return self.parseParameter(varName, varValue, varType)
+						lambda v: paramRepeat * self.parseParameter(varName, v, varType))
+			return paramRepeat * self.parseParameter(varName, varValue, varType)

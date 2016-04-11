@@ -78,7 +78,7 @@ class FileConfigFiller(ConfigFiller):
 					if opt == option:
 						for entry in parseList(value, None):
 							yield entry
-				except:
+				except Exception:
 					raise ConfigError('Unable to parse [%s] %s from %s' % (section, option, src))
 
 		newSearchPaths = [os.path.dirname(configFile)]
@@ -114,8 +114,8 @@ class FileConfigFiller(ConfigFiller):
 		except Exception:
 			raise ConfigError(exceptionIntroLineInfo + '\nUnable to strip comments!')
 		exceptionIntroLineInfo = exceptionIntro + ':%d\n\t%r' % (idx, line) # removed comment
-		if line.lstrip().startswith('#') or not line.strip(): # skip empty lines or comment lines
-			return
+		if line.lstrip().startswith(';') or line.lstrip().startswith('#') or not line.strip():
+			return # skip empty lines or comment lines
 		elif line[0].isspace():
 			try:
 				self._currentValue += '\n' + line.strip()
@@ -214,7 +214,11 @@ class PythonConfigFiller(DictConfigFiller):
 	def __init__(self, configFiles):
 		from gcSettings import Settings
 		for configFile in configFiles:
-			utils.execWrapper(open(configFile), {'Settings': Settings})
+			fp = open(configFile)
+			try:
+				utils.execWrapper(fp.read(), {'Settings': Settings})
+			finally:
+				fp.close()
 		DictConfigFiller.__init__(self, Settings.getConfigDict())
 
 

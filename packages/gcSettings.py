@@ -28,7 +28,7 @@ class Settings(object):
 
 	def set(self, name, value, override = False, append = False, force = False):
 		if isinstance(value, list):
-			value = str.join('\n', value)
+			value = str.join('\n\t', value)
 		mod = dict([(override, '?'), (append, '+'), (force, '*')]).get(True, '')
 		Settings._config.setdefault(self._s, []).append((name.replace('_', ' '), mod, value))
 

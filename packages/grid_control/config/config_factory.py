@@ -81,7 +81,8 @@ class ConfigFactory(object):
 		# Inform the user about unused options
 		unused = lfilter(lambda entry: ('!' not in entry.section) and not entry.accessed, self._view.iterContent())
 		log = logging.getLogger('config.freeze')
-		log.log(logging.INFO1, 'There are %s unused config options!', len(unused))
+		if unused:
+			log.log(logging.INFO1, 'There are %s unused config options!', len(unused))
 		for entry in unused:
 			log.log(logging.INFO1, '\t%s', entry.format(printSection = True))
 		if writeConfig or not os.path.exists(self._oldCfgPath):

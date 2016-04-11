@@ -296,7 +296,7 @@ class GUIReport(AdaptiveReport):
 			total = sum(catStateDict[catKey].values())
 			self.printLimited(Console.fmt(desc, [Console.BOLD]), self.maxX - 24,
 				'(%5d jobs, %6.2f%%  )' % (total, 100 * completed / float(total)))
-			progressbar = JobProgressBar(sum(catStateDict[catKey].values()), width = self.maxX - 19)
+			progressbar = JobProgressBar(sum(catStateDict[catKey].values()), width = max(0, self.maxX - 19))
 			progressbar.update(completed,
 				sumCat(catKey, [Job.SUBMITTED, Job.WAITING, Job.READY, Job.QUEUED]),
 				sumCat(catKey, [Job.RUNNING, Job.DONE]),

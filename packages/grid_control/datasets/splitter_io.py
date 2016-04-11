@@ -31,9 +31,9 @@ class BaseJobFileTarAdaptor(object):
 		metadata = self._fmt.parse(self._tar.extractfile('Metadata').readlines(), keyParser = {None: str})
 		self.maxJobs = metadata.pop('MaxJobs')
 		self.classname = metadata.pop('ClassName')
-		self.metadata = {'None': dict(ifilter(lambda k_v: not k_v[0].startswith('['), metadata.items()))}
+		self.metadata = {'dataset': dict(ifilter(lambda k_v: not k_v[0].startswith('['), metadata.items()))}
 		for (k, v) in ifilter(lambda k_v: k_v[0].startswith('['), metadata.items()):
-			self.metadata.setdefault('None %s' % k.split(']')[0].lstrip('['), {})[k.split(']')[1].strip()] = v
+			self.metadata.setdefault('dataset %s' % k.split(']')[0].lstrip('['), {})[k.split(']')[1].strip()] = v
 		activity.finish()
 
 		self._parserMap = { None: str, DataSplitter.NEntries: int, DataSplitter.Skipped: int,
@@ -53,19 +53,19 @@ class BaseJobFileTarAdaptor(object):
 
 
 class DataSplitterIOAuto(DataSplitterIO):
-	def saveState(self, path, meta, source, sourceLen, message = 'Writing job mapping file'):
+	def saveSplitting(self, path, meta, source, sourceLen, message = 'Writing job mapping file'):
 		writer = DataSplitterIO_V2()
-		writer.saveState(path, meta, source, sourceLen, message)
+		writer.saveSplitting(path, meta, source, sourceLen, message)
 
-	def loadState(self, path):
+	def loadSplitting(self, path):
 		try:
 			version = int(tarfile.open(path, 'r:').extractfile('Version').read())
 		except Exception:
 			version = 1
 		if version == 1:
-			state = DataSplitterIO_V1().loadState(path)
+			state = DataSplitterIO_V1().loadSplitting(path)
 		else:
-			state = DataSplitterIO_V2().loadState(path)
+			state = DataSplitterIO_V2().loadSplitting(path)
 		return state
 
 
@@ -119,7 +119,7 @@ class DataSplitterIOBase(DataSplitterIO):
 		return (x, y, z)
 
 	# Save as tar file to allow random access to mapping data with little memory overhead
-	def saveState(self, path, meta, source, sourceLen, message = 'Writing job mapping file'):
+	def saveSplitting(self, path, meta, source, sourceLen, message = 'Writing job mapping file'):
 		tar = tarfile.open(path, 'w:')
 		self._saveStateToTar(tar, meta, source, sourceLen, message)
 		tar.close()
@@ -153,7 +153,7 @@ class DataSplitterIO_V1(DataSplitterIOBase):
 		self._addToTar(tar, 'Metadata', self._fmt.format(meta))
 		activity.finish()
 
-	def loadState(self, path):
+	def loadSplitting(self, path):
 		class JobFileTarAdaptor_V1(BaseJobFileTarAdaptor):
 			def _getPartition(self, key):
 				if not self._cacheKey == key / 100:
@@ -209,7 +209,7 @@ class DataSplitterIO_V2(DataSplitterIOBase):
 		for (fn, data) in [('Metadata', self._fmt.format(meta)), ('Version', '2')]:
 			self._addToTar(tar, fn, data)
 
-	def loadState(self, path):
+	def loadSplitting(self, path):
 		class JobFileTarAdaptor_V2(BaseJobFileTarAdaptor):
 			def __init__(self, path, keySize):
 				BaseJobFileTarAdaptor.__init__(self, path)

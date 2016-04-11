@@ -67,7 +67,7 @@ def gc_cmd_line_parser(cmd_line_args):
 		utils.deprecated('Please use the more versatile report tool in the scripts directory!')
 	# Configure preliminary logging
 	utils.verbosity(opts.verbose)
-	logging.getLogger().setLevel(logging.DEFAULT - opts.verbose)
+	logging.getLogger().setLevel(max(1, logging.DEFAULT - opts.verbose))
 	if opts.debug: # Setup initial debug handler before it is reconfigured by logging_setup
 		handler = logging.StreamHandler(sys.stdout)
 		handler.setFormatter(ExceptionFormatter(showCodeContext = 2, showVariables = 1, showFileStack = 1))
@@ -94,14 +94,16 @@ class OptsConfigFiller(Plugin.getClass('ConfigFiller')):
 				'#display config': opts.help_conf, '#display minimal config': opts.help_confmin },
 			'action': { 'delete': opts.delete, 'reset': opts.reset },
 			'global': { 'gui': opts.gui, 'submission': opts.submission },
-			'jobs': { 'max retry': opts.max_retry, 'action': opts.action,
-				'continuous': opts.continuous, 'selected': opts.job_selector },
-			'logging': { 'level ?': logging.getLevelName(logging.DEFAULT - opts.verbose),
-				'debug mode': opts.debug },
+			'jobs': { 'max retry': opts.max_retry, 'selected': opts.job_selector },
+			'logging': { 'debug mode': opts.debug },
 		}
 		for section in cmd_line_config_map:
 			for (option, value) in cmd_line_config_map[section].items():
 				setConfigFromOpt(section, option, value)
+		if opts.action is not None:
+			setConfigFromOpt('workflow', 'action', opts.action.replace(',', ' '))
+		if opts.continuous:
+			setConfigFromOpt('workflow', 'duration', -1)
 		Plugin.createInstance('StringConfigFiller', opts.override).fill(container)
 
 # create config instance
@@ -134,8 +136,8 @@ def gc_create_workflow(config):
 	help_cfg = globalConfig.getState('display', detail = 'config')
 	help_scfg = globalConfig.getState('display', detail = 'minimal config')
 	actionConfig = config.changeView(setSections = ['action'])
-	action_delete = actionConfig.get('delete', '')
-	action_reset = actionConfig.get('reset', '')
+	action_delete = actionConfig.get('delete', '', onChange = None)
+	action_reset = actionConfig.get('reset', '', onChange = None)
 
 	# Create workflow and freeze config settings
 	workflow = globalConfig.getPlugin('workflow', 'Workflow:global', cls = 'Workflow')

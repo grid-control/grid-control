@@ -34,9 +34,13 @@ class FileLevelSplitter(DataSplitter):
 
 
 class FLSplitStacker(FileLevelSplitter):
+	def _initConfig(self, config):
+		self._config = config
+		self._splitstack = self._configQuery(config.getList, 'splitter stack', ['BlockBoundarySplitter'])
+
 	def splitDatasetInternal(self, blocks, firstEvent = 0):
 		for block in blocks:
-			splitterList = self.setup(self._config.getList, block, 'splitter stack', ['BlockBoundarySplitter'])
+			splitterList = self._setup(self._splitstack, block)
 			subSplitter = imap(lambda x: FileLevelSplitter.createInstance(x, self._config), splitterList[:-1])
 			endSplitter = DataSplitter.createInstance(splitterList[-1], self._config)
 			for subBlock in reduce(lambda x, y: y.splitBlocks(x), subSplitter, [block]):
@@ -52,10 +56,13 @@ class BlockBoundarySplitter(FileLevelSplitter):
 
 # Split dataset along block boundaries into jobs with 'files per job' files
 class FileBoundarySplitter(FileLevelSplitter):
+	def _initConfig(self, config):
+		self._files_per_job = self._configQuery(config.getInt, 'files per job')
+
 	def splitBlocks(self, blocks):
 		for block in blocks:
 			start = 0
-			filesPerJob = self.setup(self._config.getInt, block, 'files per job')
+			filesPerJob = self._setup(self._files_per_job, block)
 			while start < len(block[DataProvider.FileList]):
 				files = block[DataProvider.FileList][start : start + filesPerJob]
 				start += filesPerJob
@@ -65,10 +72,13 @@ class FileBoundarySplitter(FileLevelSplitter):
 # Split dataset along block and file boundaries into jobs with (mostly <=) 'events per job' events
 # In case of file with #events > 'events per job', use just the single file (=> job has more events!)
 class HybridSplitter(FileLevelSplitter):
+	def _initConfig(self, config):
+		self._events_per_job = self._configQuery(config.getInt, 'events per job')
+
 	def splitBlocks(self, blocks):
 		for block in blocks:
 			(events, fileStack) = (0, [])
-			eventsPerJob = self.setup(self._config.getInt, block, 'events per job')
+			eventsPerJob = self._setup(self._events_per_job, block)
 			for fileInfo in block[DataProvider.FileList]:
 				if (len(fileStack) > 0) and (events + fileInfo[DataProvider.NEntries] > eventsPerJob):
 					yield self.newBlock(block, fileStack)

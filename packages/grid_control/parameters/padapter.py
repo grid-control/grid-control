@@ -145,7 +145,7 @@ class TrackedParameterAdapter(BasicParameterAdapter):
 	def writeJob2PID(self, fn):
 		fp = ZipFile(fn, 'w')
 		try:
-			fp.write('%d\n' % max(0, self._rawSource.getMaxParameters()))
+			fp.write('%d\n' % (self._rawSource.getMaxParameters() or 0))
 			data = ifilter(lambda jobNum_pNum: jobNum_pNum[0] != jobNum_pNum[1], self._mapJob2PID.items())
 			datastr = lmap(lambda jobNum_pNum: '%d:%d' % jobNum_pNum, data)
 			fp.write('%s\n' % str.join(',', datastr))
@@ -154,7 +154,7 @@ class TrackedParameterAdapter(BasicParameterAdapter):
 
 	def getJobInfo(self, jobNum, pNum = None): # Perform mapping between jobNum and parameter number
 		pNum = self._mapJob2PID.get(jobNum, jobNum)
-		if (pNum < self._source.getMaxParameters()) or (self._source.getMaxParameters() is None):
+		if (self._source.getMaxParameters() is None) or (pNum < self._source.getMaxParameters()):
 			result = BasicParameterAdapter.getJobInfo(self, jobNum, pNum)
 		else:
 			result = {ParameterInfo.ACTIVE: False}

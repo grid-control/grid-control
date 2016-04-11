@@ -19,7 +19,7 @@ from grid_control.datasets.provider_base import DataProvider
 from grid_control.gc_plugin import ConfigurablePlugin
 from grid_control.utils.data_structures import makeEnum
 from hpfwk import AbstractError, NestedException, Plugin
-from python_compat import identity, ifilter, imap, irange, ismap, itemgetter, lmap, next, sort_inplace
+from python_compat import imap, irange, itemgetter, lmap, next, sort_inplace
 
 def fast_search(lst, key_fun, key):
 	(idx, hi) = (0, len(lst))
@@ -41,17 +41,16 @@ class PartitionError(NestedException):
 
 
 class DataSplitterIO(Plugin):
-	def saveState(self, path, meta, source, sourceLen, message = 'Writing job mapping file'):
+	def saveSplitting(self, path, meta, source, sourceLen, message = 'Writing job mapping file'):
 		raise AbstractError
 
-	def loadState(self, path):
+	def loadSplitting(self, path):
 		raise AbstractError
 
 
 class DataSplitter(ConfigurablePlugin):
 	def __init__(self, config):
 		ConfigurablePlugin.__init__(self, config)
-		self._config = config
 		self.setState(src = None, protocol = {})
 		# Resync settings:
 		self._interactive = config.getBool('resync interactive', False, onChange = None)
@@ -66,6 +65,7 @@ class DataSplitter(ConfigurablePlugin):
 			self._metaOpts[meta] = config.getEnum('resync mode %s' % meta, ResyncMode, ResyncMode.complete, subset = ResyncMode.noChanged)
 		#   behaviour in case of job changes - disable changed jobs, preserve job number of changed jobs or reorder
 		self._resyncOrder = config.getEnum('resync jobs', ResyncOrder, ResyncOrder.append)
+		self._initConfig(config)
 
 
 	def setState(self, src, protocol):
@@ -73,7 +73,18 @@ class DataSplitter(ConfigurablePlugin):
 		self._protocol = protocol
 
 
-	def setup(self, func, block, item, default = noDefault):
+	def _initConfig(self, config):
+		pass
+
+
+	def _configQuery(self, fun, item, default = noDefault):
+		key = (fun, item, default)
+		self._setup(key, {}) # query once for init
+		return key
+
+
+	def _setup(self, cq_info, block):
+		(func, item, default) = cq_info
 		# make sure non-specific default value is specified (for metadata and resyncs)
 		if item not in self._protocol:
 			self._protocol[item] = func(item, default)
@@ -111,8 +122,8 @@ class DataSplitter(ConfigurablePlugin):
 
 	def splitDataset(self, path, blocks):
 		log = utils.ActivityLog('Splitting dataset into jobs')
-		self.saveState(path, self.splitDatasetInternal(blocks))
-		self.importState(path)
+		self.savePartitions(path, self.splitDatasetInternal(blocks))
+		self.importPartitions(path)
 		log.finish()
 
 
@@ -124,6 +135,23 @@ class DataSplitter(ConfigurablePlugin):
 
 	def getMaxJobs(self):
 		return self._splitSource.maxJobs
+
+
+	# Save as tar file to allow random access to mapping data with little memory overhead
+	def savePartitions(self, path, source = None, sourceLen = None, message = 'Writing job mapping file'):
+		if source and not sourceLen:
+			source = list(source)
+			sourceLen = len(source)
+		elif not source:
+			(source, sourceLen) = (self._splitSource, self.getMaxJobs())
+		# Write metadata to allow reconstruction of data splitter
+		meta = {'ClassName': self.__class__.__name__}
+		meta.update(self._protocol)
+		DataSplitterIO.createInstance('DataSplitterIOAuto').saveSplitting(path, meta, source, sourceLen, message)
+
+
+	def importPartitions(self, path):
+		self._splitSource = DataSplitterIO.createInstance('DataSplitterIOAuto').loadSplitting(path)
 
 
 	# Get block information (oldBlock, newBlock, filesMissing, filesMatched) which splitInfo is based on
@@ -436,7 +464,7 @@ class DataSplitter(ConfigurablePlugin):
 		resultDisable = []
 		newSplitPathTMP = newSplitPath + '.tmp'
 		resyncIter = self._resyncIterator(resultRedo, resultDisable, blocksAdded, blocksMissing, blocksMatching)
-		self.saveState(newSplitPathTMP, resyncIter, sourceLen = self.getMaxJobs(),
+		self.savePartitions(newSplitPathTMP, resyncIter, sourceLen = self.getMaxJobs(),
 			message = 'Performing resynchronization of dataset map (progress is estimated)')
 
 		if self._interactive:
@@ -448,38 +476,25 @@ class DataSplitter(ConfigurablePlugin):
 		return (resultRedo, resultDisable)
 
 
-	# Save as tar file to allow random access to mapping data with little memory overhead
-	def saveState(self, path, source = None, sourceLen = None, message = 'Writing job mapping file'):
-		if source and not sourceLen:
-			source = list(source)
-			sourceLen = len(source)
-		elif not source:
-			(source, sourceLen) = (self._splitSource, self.getMaxJobs())
-		# Write metadata to allow reconstruction of data splitter
-		meta = {'ClassName': self.__class__.__name__}
-		meta.update(self._protocol)
-		DataSplitterIO.createInstance('DataSplitterIOAuto').saveState(path, meta, source, sourceLen, message)
-
-
-	def importState(self, path):
-		self._splitSource = DataSplitterIO.createInstance('DataSplitterIOAuto').loadState(path)
-
-
-	def loadState(path, cfg = None):
-		src = DataSplitterIO.createInstance('DataSplitterIOAuto').loadState(path)
+	def loadPartitionsForScript(path, cfg = None):
+		src = DataSplitterIO.createInstance('DataSplitterIOAuto').loadSplitting(path)
 		# Transfer config protocol (in case no split function is called)
-		protocol = src.metadata['None']
-		for section in ifilter(identity, src.metadata):
-			def meta2prot(k, v):
-				return ('[%s] %s' % (section.replace('None ', ''), k), v)
-			protocol.update(dict(ismap(meta2prot, src.metadata[section].items())))
+		protocol = {}
+		for (section, options) in src.metadata.items():
+			section = section.replace('dataset', '').strip()
+			for (option, value) in options.items():
+				if section:
+					option = '[%s] %s' % (section, option)
+				protocol[option.strip()] = value
+				if cfg is not None:
+					cfg.set(option, str(value))
 		# Create and setup splitter
 		if cfg is None:
 			cfg = createConfig(configDict = src.metadata)
 		splitter = DataSplitter.createInstance(src.classname, cfg)
 		splitter.setState(src, protocol)
 		return splitter
-	loadState = staticmethod(loadState)
+	loadPartitionsForScript = staticmethod(loadPartitionsForScript)
 
 makeEnum(['Dataset', 'Locations', 'NEntries', 'Skipped', 'FileList', 'Nickname', 'DatasetID',
 	'CommonPrefix', 'Invalid', 'BlockName', 'MetadataHeader', 'Metadata', 'Comment'], DataSplitter)

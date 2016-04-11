@@ -148,7 +148,7 @@ class JSONRestClient(RestClient):
 	def _process_json_result(self, value):
 		try:
 			return parseJSON(value)
-		except:
+		except Exception:
 			if not value:
 				raise RestError('Received empty reply')
 			raise RestError('Received invalid JSON reply: %r' % value)

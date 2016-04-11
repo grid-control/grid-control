@@ -12,7 +12,7 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-import logging
+import time, logging
 from grid_control import utils
 from grid_control.backends import WMS
 from grid_control.gc_plugin import NamedPlugin
@@ -30,19 +30,27 @@ class Workflow(NamedPlugin):
 
 	def __init__(self, config, name):
 		NamedPlugin.__init__(self, config, name)
+
+		# Workdir settings
 		self._workDir = config.getWorkPath()
+		self._checkSpace = config.getInt('workdir space', 10, onChange = None)
+
 		# Initialise task module
 		self.task = config.getPlugin(['task', 'module'], cls = TaskModule, tags = [self])
 		utils.vprint('Current task ID: %s' % self.task.taskID, -1)
 		utils.vprint('Task started on %s' % self.task.taskDate, -1)
 
-		# Initialise monitoring module
-		self.monitor = config.getCompositePlugin('monitor', 'scripts', 'MultiMonitor',
-			cls = Monitoring, tags = [self, self.task], pargs = (self.task,))
-
 		# Initialise workload management interface
 		self.wms = config.getCompositePlugin('backend', 'grid', 'MultiWMS',
 			cls = WMS, tags = [self, self.task])
+
+		# Subsequent config calls also include section "jobs":
+		config = config.changeView(viewClass = 'TaggedConfigView',
+			addSections = ['jobs'], addTags = [self])
+
+		# Initialise monitoring module
+		self.monitor = config.getCompositePlugin('monitor', 'scripts', 'MultiMonitor',
+			cls = Monitoring, tags = [self, self.task], pargs = (self.task,))
 
 		# Initialise job database
 		self.jobManager = config.getPlugin('job manager', 'SimpleJobManager',
@@ -51,18 +59,22 @@ class Workflow(NamedPlugin):
 		# Prepare work package
 		self.wms.deployTask(self.task, self.monitor)
 
-		configJobs = config.changeView(viewClass = 'TaggedConfigView', addSections = ['jobs'], addTags = [self])
-		self._actionList = configJobs.getList('action', ['check', 'retrieve', 'submit'], onChange = None)
-		self.runContinuous = configJobs.getBool('continuous', False, onChange = None)
-
-		self._checkSpace = config.getInt('workdir space', 10, onChange = None)
+		# Configure workflow settings
+		self._actionList = config.getList('action', ['check', 'retrieve', 'submit'], onChange = None)
+		self.duration = 0
+		if config.getBool('continuous', False, onChange = None): # legacy option
+			self.duration = -1
+		self.duration = config.getTime('duration', self.duration, onChange = None)
 		self._submitFlag = config.getBool('submission', True, onChange = None)
+
+		# Initialise GUI
 		self._gui = config.getPlugin('gui', 'SimpleConsole', cls = GUI, onChange = None, pargs = (self,))
 
 
 	# Job submission loop
 	def jobCycle(self, wait = utils.wait):
 		wmsTiming = self.wms.getTimings()
+		t_start = time.time()
 		while True:
 			didWait = False
 			# Check whether wms can submit
@@ -86,7 +98,7 @@ class Workflow(NamedPlugin):
 							didWait = wait(wmsTiming.waitBetweenSteps)
 
 			# quit if abort flag is set or not in continuous mode
-			if utils.abort() or not self.runContinuous:
+			if utils.abort() or ((self.duration >= 0) and (time.time() - t_start > self.duration)):
 				break
 			# idle timeout
 			if not didWait:

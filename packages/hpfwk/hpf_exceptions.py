@@ -14,6 +14,12 @@
 
 import sys, logging
 
+def clearException():
+	try: # python 2 needs manual clear of exception information after the exception handler
+		sys.exc_clear()
+	except Exception: # python 3 removed this function
+		pass
+
 def safeRepr(obj, verbose):
 	try:
 		value = repr(obj)
@@ -170,18 +176,20 @@ class ExceptionFormatter(logging.Formatter):
 		if record.exc_info in [None, (None, None, None)]:
 			return logging.Formatter.format(self, record)
 		traceback, infos = collectExceptionInfos(*record.exc_info)
-		msg = record.msg + '\n\n'
+
+		msg = '\n%s\n\n' % record.msg
+		# Code and variable listing
 		if self._showCodeContext > 0:
 			stackInfo = formatStack(traceback, codeContext = self._showCodeContext - 1,
 				showVariables = self._showVariables > 0, showLongVariables = self._showVariables > 1)
 			msg += str.join('\n', stackInfo) + '\n'
-
+		# File stack with line information
 		if self._showFileStack:
 			msg += 'File stack:\n'
 			for tb in traceback:
 				msg += '%s %s %s (%s)\n' % (tb.get('trackingID', '') + '|%d' % tb.get('idx', 0), tb['file'], tb['line'], tb['fun'])
-		msg += '\n'
-
+			msg += '\n'
+		# Exception message tree
 		def formatInfos(info):
 			(exValue, exDepth, _) = info
 			result = '%s%s: %s' % ('  ' * exDepth, exValue.__class__.__name__, exValue)
@@ -193,6 +201,8 @@ class ExceptionFormatter(logging.Formatter):
 			return result
 		for info in infos:
 			msg += formatInfos(info) + '\n'
+			if logging.getLogger().isEnabledFor(logging.INFO1):
+				msg += '\n'
 		return msg
 
 # Signal handler for debug session requests
@@ -222,10 +232,7 @@ class ExceptionCollector(object):
 
 	def collect(self):
 		self._exceptions.append(NestedExceptionHelper(sys.exc_info()[1], sys.exc_info()[2]))
-		try: # python 2 needs manual clear of exception information after the exception handler
-			sys.exc_clear()
-		except Exception: # python 3 removed this function
-			pass
+		clearException()
 
 	def raise_any(self, value):
 		if not self._exceptions:

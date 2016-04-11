@@ -1,0 +1,13 @@
+.gitignore
+.idea
+.svn
+*.log
+*.pyc
+*.conf
+work.*
+/devtools
+/packages/grid_control_cloud
+/packages/grid_control_magic
+/scripts/work/
+/test
+/TODO

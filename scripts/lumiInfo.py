@@ -160,7 +160,7 @@ def main(opts, args):
 		workDir = config.getWorkPath()
 		splitter = None
 		try:
-			splitter = DataSplitter.loadState(os.path.join(workDir, 'datamap.tar'))
+			splitter = DataSplitter.loadStateForScript(os.path.join(workDir, 'datamap.tar'))
 		except Exception:
 			pass
 		return lumi_calc(opts, workDir, sorted(jobDB.getJobs(ClassSelector(JobClass.SUCCESS))), splitter)

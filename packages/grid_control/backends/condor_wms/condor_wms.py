@@ -49,6 +49,7 @@ class Condor(BasicWMS):
 		'4' : Job.DONE,      # completed
 		'5' : Job.WAITING,   # DISABLED; on hold
 		'6' : Job.FAILED,    # submit error
+		'7' : Job.WAITING,   # suspended
 		}
 	_humanMap = { # dictionary mapping vanilla condor job status to human readable condor status
 		'0' : 'Unexpanded',
@@ -57,7 +58,8 @@ class Condor(BasicWMS):
 		'3' : 'Removed',
 		'4' : 'Completed',
 		'5' : 'Held',
-		'6' : 'Submission_err'
+		'6' : 'Submission_err',
+		'7' : 'Suspended',
 		}
 
 # __init__: start Condor based job management
@@ -185,7 +187,7 @@ class Condor(BasicWMS):
 	def _getJobsOutput(self, wmsJobIdList):
 		if not len(wmsJobIdList):
 			raise StopIteration
-		self.debugOut("Started retrieving: %s" % set(izip(*wmsJobIdList)[0]))
+		self.debugOut("Started retrieving: %s" % set(lzip(*wmsJobIdList)[0]))
 
 		activity = utils.ActivityLog('retrieving job outputs')
 		for wmsId, jobNum in wmsJobIdList:
@@ -228,10 +230,10 @@ class Condor(BasicWMS):
 	def cancelJobs(self, wmsJobIdList):
 		if len(wmsJobIdList) == 0:
 			raise StopIteration
-		self.debugOut("Started canceling: %s" % set(izip(*wmsJobIdList)[0]))
+		self.debugOut("Started canceling: %s" % set(lzip(*wmsJobIdList)[0]))
 		self.debugPool()
 
-		wmsIdList=self._getRawIDs(wmsJobIdList)
+		wmsIdList=list(self._getRawIDs(wmsJobIdList))
 		wmsIdArgument = " ".join(wmsIdList)
 		wmsToJobMap = dict(wmsJobIdList)
 
@@ -298,10 +300,10 @@ class Condor(BasicWMS):
 	def checkJobs(self, wmsJobIdList):
 		if len(wmsJobIdList) == 0:
 			raise StopIteration
-		self.debugOut('Started checking: %s' % set(izip(*wmsJobIdList)[0]))
+		self.debugOut('Started checking: %s' % set(lzip(*wmsJobIdList)[0]))
 		self.debugPool()
 
-		wmsIdList=self._getRawIDs(wmsJobIdList)
+		wmsIdList=list(self._getRawIDs(wmsJobIdList))
 		wmsIdArgument = ' '.join(wmsIdList)
 		wmsToJobMap = dict(wmsJobIdList)
 
@@ -472,7 +474,7 @@ class Condor(BasicWMS):
 						copyProcess.logError(self.errorLog, brief=True)
 				self.debugFlush()
 				# copy proxy
-				for authFile in self.proxy.getAuthFiles():
+				for authFile in self._token.getAuthFiles():
 					self.debugOut("Copying proxy")
 					copyProcess = self.Pool.LoggedCopyToRemote(authFile, os.path.join(self.getWorkdirPath(), os.path.basename(authFile)))
 					if copyProcess.wait() != 0:
@@ -570,7 +572,7 @@ class Condor(BasicWMS):
 			jdlData.extend("leave_in_queue = (JobStatus == 4) && ((StageOutFinish =?= UNDEFINED) || (StageOutFinish == 0))",
 			# Condor should not attempt to assign to local user
 			'+Owner=UNDEFINED')
-		for authFile in self.proxy.getAuthFiles():
+		for authFile in self._token.getAuthFiles():
 			if not (self.remoteType == PoolType.SSH or self.remoteType == PoolType.GSISSH):
 				jdlData.append("x509userproxy = %s" % authFile)
 			else:
@@ -613,10 +615,10 @@ class Condor(BasicWMS):
 		return jdlData
 
 	# helper for converting GC requirements to Condor requirements
-	def _getFormattedRequirements(self, jobNum, module):
+	def _getFormattedRequirements(self, jobNum, task):
 		jdlReq=[]
-		# get requirements from module and broker WMS sites
-		reqs = self.brokerSite.brokerAdd(module.getRequirements(jobNum), WMS.SITES)
+		# get requirements from task and broker WMS sites
+		reqs = self.brokerSite.brokerAdd(task.getRequirements(jobNum), WMS.SITES)
 		for reqType, reqValue in reqs:
 
 			if reqType == WMS.SITES:
@@ -641,7 +643,7 @@ class Condor(BasicWMS):
 
 			elif reqType == WMS.WALLTIME:
 				if ("walltimeMin" in self.poolReqs) and reqValue > 0:
-					jdlReq.append( self.poolReqs["walltimeMin"] + ' = ' + '"' + str(int(reqValue)) + '"' )
+					jdlReq.append('%s = %d' % (self.poolReqs["walltimeMin"], reqValue))
 
 			elif reqType == WMS.STORAGE:
 				if ("requestSEs" in self.poolReqs):
@@ -656,6 +658,22 @@ class Condor(BasicWMS):
 				jdlReq.append('# Type: %s' % reqValue )
 
 			#TODO::: GLIDEIN_REQUIRE_GLEXEC_USE, WMS.SOFTWARE, WMS.MEMORY, WMS.CPUS
+		# (HPDA) file location service
+		if "dataFiles" in self.poolReqs:
+			# as per ``formatFileList``
+			# UserMod filelists are space separated                              'File1 File2 File3'
+			# CMSSW filelists are individually quoted and comma+space separated  '"File1", "File2", "File3"'
+			file_list = task.getJobConfig(jobNum).get('FILE_NAMES','').strip()
+			if '", "' in file_list: # CMSSW style
+				file_list = file_list.strip('"').split('", "')
+			else: # UserMod style
+				file_list = file_list.split(' ')
+			if file_list:
+				arg_key = self.poolReqs["dataFiles"]
+				data_file = os.path.join(self.getSandboxPath(jobNum), 'job_%d_files.txt' % jobNum)
+				with open(data_file,"w") as data_file_list:
+					data_file_list.writelines(line + "\n" for line in file_list)
+				jdlReq.append('%s = "%s"'%(arg_key, data_file))
 		return jdlReq
 
 		##
