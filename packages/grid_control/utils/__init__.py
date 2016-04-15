@@ -12,13 +12,15 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-import os, re, sys, glob, stat, time, errno, signal, fnmatch, logging, operator, python_compat_popen2
+import os, sys, glob, stat, time, errno, signal, fnmatch, logging, operator, python_compat_popen2
 from grid_control.gc_exceptions import GCError, InstallationError, UserError
+from grid_control.utils.data_structures import UniqueList
 from grid_control.utils.file_objects import VirtualFile
 from grid_control.utils.parsing import parseBool, parseType
 from grid_control.utils.process_base import exit_without_cleanup
+from grid_control.utils.table import ColumnTable, ParseableTable, RowTable
 from grid_control.utils.thread_tools import TimeoutException, hang_protection
-from python_compat import identity, ifilter, imap, irange, ismap, izip, lfilter, lmap, lru_cache, lsmap, lzip, next, reduce, set, sorted, tarfile, user_input
+from python_compat import any, identity, ifilter, imap, irange, lfilter, lmap, lru_cache, lzip, next, reduce, set, sorted, tarfile, user_input
 
 def execWrapper(script, context = None):
 	if context is None:
@@ -74,7 +76,7 @@ def resolvePath(path, searchPaths = None, mustExist = True, ErrorClass = GCError
 
 
 def resolveInstallPath(path):
-	result = resolvePaths(path, os.environ['PATH'].split(os.pathsep), True, InstallationError)
+	result = resolvePaths(path, UniqueList(os.environ['PATH'].split(os.pathsep)), True, InstallationError)
 	result_exe = lfilter(lambda fn: os.access(fn, os.X_OK), result) # filter executable files
 	if not result_exe:
 		raise InstallationError('Files matching %s:\n\t%s\nare not executable!' % (path, str.join('\n\t', result_exe)))
@@ -119,7 +121,7 @@ class LoggedProcess(object):
 		self.niceCmd = QM(niceCmd, niceCmd, os.path.basename(cmd))
 		self.niceArgs = QM(niceArgs, niceArgs, args)
 		(self.stdout, self.stderr, self.cmd, self.args) = ([], [], cmd, args)
-		self._logger = logging.getLogger('process.%s' % os.path.basename(cmd))
+		self._logger = logging.getLogger('process.%s' % os.path.basename(cmd).lower())
 		self._logger.log(logging.DEBUG1, 'External programm called: %s %s', self.niceCmd, self.niceArgs)
 		self.stime = time.time()
 		if shell:
@@ -148,7 +150,7 @@ class LoggedProcess(object):
 		try:
 			os.kill(self.proc.pid, signal.SIGTERM)
 		except OSError:
-			if sys.exc_info[1].errno != errno.ESRCH: # errno.ESRCH: no such process (already dead)
+			if sys.exc_info()[1].errno != errno.ESRCH: # errno.ESRCH: no such process (already dead)
 				raise
 
 	def iter(self):
@@ -360,10 +362,6 @@ class TwoSidedIterator(object):
 			yield self.allInfo[len(self.allInfo) - self.right]
 
 
-def containsVar(value):
-	return max(imap(lambda x: max(x.count('@'), x.count('__')), str(value).split('\n'))) >= 2
-
-
 def accumulate(iterable, empty, doEmit, doAdd = lambda item, buffer: True, opAdd = operator.add):
 	buf = empty
 	for item in iterable:
@@ -571,12 +569,13 @@ def getVersion():
 	try:
 		version = LoggedProcess('svnversion', '-c %s' % pathGC()).getOutput(True).strip()
 		if version != '':
+			assert(any(imap(str.isdigit, version)))
 			if 'stable' in LoggedProcess('svn info', pathGC()).getOutput(True):
 				return '%s - stable' % version
 			return '%s - testing' % version
 	except Exception:
 		pass
-	return 'unknown'
+	return __import__('grid_control').__version__ + ' or later'
 getVersion = lru_cache(getVersion)
 
 
@@ -649,166 +648,6 @@ class ActivityLog:
 
 	def __del__(self):
 		self.finish()
-
-
-class Table(object):
-	pass
-
-
-class ParseableTable(Table):
-	def __init__(self, head, data, delimeter = '|'):
-		Table.__init__(self)
-		head = list(head)
-		self._delimeter = delimeter
-		self._write_line(imap(lambda x: x[1], head))
-		for entry in data:
-			if isinstance(entry, dict):
-				self._write_line(imap(lambda x: str(entry.get(x[0], '')), head))
-
-	def _write_line(self, msg_list):
-		sys.stdout.write(str.join(self._delimeter, msg_list) + '\n')
-
-
-class RowTable(Table):
-	def __init__(self, head, data, fmt = None, wrapLen = 100):
-		Table.__init__(self)
-		head = list(head)
-		def getHeadName(key, name):
-			return name
-		maxhead = max(imap(len, ismap(getHeadName, head)))
-		fmt = fmt or {}
-		showLine = False
-		for entry in data:
-			if isinstance(entry, dict):
-				if showLine:
-					self._write_line(('-' * (maxhead + 2)) + '-+-' + '-' * min(30, printTabular.wraplen - maxhead - 10))
-				for (key, name) in head:
-					self._write_line(name.rjust(maxhead + 2) + ' | ' + str(fmt.get(key, str)(entry.get(key, ''))))
-				showLine = True
-			elif showLine:
-				self._write_line(('=' * (maxhead + 2)) + '=+=' + '=' * min(30, printTabular.wraplen - maxhead - 10))
-				showLine = False
-
-	def _write_line(self, msg):
-		sys.stdout.write(msg + '\n')
-
-
-class ColumnTable(Table):
-	def __init__(self, head, data, fmtString = '', fmt = None, wrapLen = 100):
-		Table.__init__(self)
-		head = list(head)
-		justFun = self._get_just_fun_dict(head, fmtString)
-		# return formatted, but not yet aligned entries; len dictionary; just function
-		(entries, lendict, just) = self._format_data(head, data, justFun, fmt or {})
-		(headwrap, lendict) = self._wrap_head(head, lendict)
-
-		def getKeyPaddedName(key, name):
-			return (key, name.center(lendict[key]))
-		headentry = dict(ismap(getKeyPaddedName, head))
-		self._print_table(headwrap, headentry, entries, just, lendict)
-
-	def _print_table(self, headwrap, headentry, entries, just, lendict):
-		for (keys, entry) in self._wrap_formatted_data(headwrap, [headentry, '='] + entries):
-			if isinstance(entry, str):
-				decor = lambda x: '%s%s%s' % (entry, x, entry)
-				self._write_line(decor(str.join(decor('+'), lmap(lambda key: entry * lendict[key], keys))))
-			else:
-				self._write_line(' %s ' % str.join(' | ', imap(lambda key: just(key, entry.get(key, '')), keys)))
-
-	def _get_just_fun_dict(self, head, fmtString):
-		justFunDict = { 'l': str.ljust, 'r': str.rjust, 'c': str.center }
-		# justFun = {id1: str.center, id2: str.rjust, ...}
-		def getKeyFormat(headEntry, fmtString):
-			return (headEntry[0], justFunDict[fmtString])
-		return dict(ismap(getKeyFormat, izip(head, fmtString)))
-
-	def _format_data(self, head, data, justFun, fmt):
-		# adjust to lendict of column (considering escape sequence correction)
-		strippedlen = lambda x: len(re.sub('\033\\[\\d*(;\\d*)*m', '', x))
-		just = lambda key, x: justFun.get(key, str.rjust)(x, lendict[key] + len(x) - strippedlen(x))
-
-		def getKeyLen(key, name):
-			return (key, len(name))
-		lendict = dict(ismap(getKeyLen, head))
-
-		result = []
-		for entry in data:
-			if isinstance(entry, dict):
-				tmp = {}
-				for key, _ in head:
-					tmp[key] = str(fmt.get(key, str)(entry.get(key, '')))
-					lendict[key] = max(lendict[key], strippedlen(tmp[key]))
-				result.append(tmp)
-			else:
-				result.append(entry)
-		return (result, lendict, just)
-
-	def _getGoodPartition(self, keys, lendict, maxlen): # BestPartition => NP complete
-		def getFitting(leftkeys):
-			current = 0
-			for key in leftkeys:
-				if current + lendict[key] <= maxlen:
-					current += lendict[key]
-					yield key
-			if current == 0:
-				yield leftkeys[0]
-		unused = list(keys)
-		while len(unused) != 0:
-			for key in list(getFitting(unused)): # list(...) => get fitting keys at once!
-				if key in unused:
-					unused.remove(key)
-				yield key
-			yield None
-
-	def _wrap_head(self, head, lendict):
-		def getAlignedDict(keys, lendict, maxlen):
-			edges = []
-			while len(keys):
-				offset = 2
-				(tmp, keys) = (keys[:keys.index(None)], keys[keys.index(None)+1:])
-				for key in tmp:
-					left = max(0, maxlen - sum(imap(lambda k: lendict[k] + 3, tmp)))
-					for edge in edges:
-						if (edge > offset + lendict[key]) and (edge - (offset + lendict[key]) < left):
-							lendict[key] += edge - (offset + lendict[key])
-							left -= edge - (offset + lendict[key])
-							break
-					edges.append(offset + lendict[key])
-					offset += lendict[key] + 3
-			return lendict
-
-		# Wrap and align columns
-		def getHeadKey(key, name):
-			return key
-		def getPaddedKeyLen(key, length):
-			return (key, length + 2)
-		headwrap = list(self._getGoodPartition(lsmap(getHeadKey, head),
-			dict(ismap(getPaddedKeyLen, lendict.items())), printTabular.wraplen))
-		lendict = getAlignedDict(headwrap, lendict, printTabular.wraplen)
-		return (headwrap, lendict)
-
-	# Wrap rows
-	def _wrap_formatted_data(self, headwrap, entries):
-		for idx, entry in enumerate(entries):
-			def doEntry(entry):
-				tmp = []
-				for key in headwrap:
-					if key is None:
-						yield (tmp, entry)
-						tmp = []
-					else:
-						tmp.append(key)
-			if not isinstance(entry, str):
-				for x in doEntry(entry):
-					yield x
-				if (idx != 0) and (idx != len(entries) - 1):
-					if None in headwrap[:-1]:
-						yield list(doEntry('~'))[0]
-			else:
-				yield list(doEntry(entry))[0]
-
-	def _write_line(self, msg):
-		sys.stdout.write(msg + '\n')
 
 
 def printTabular(head, data, fmtString = '', fmt = None):

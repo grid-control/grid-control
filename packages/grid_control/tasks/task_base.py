@@ -15,9 +15,10 @@
 import os, random
 from grid_control import utils
 from grid_control.backends import WMS
-from grid_control.config import ConfigError, changeInitNeeded
+from grid_control.config import ConfigError, changeInitNeeded, validNoVar
 from grid_control.gc_plugin import NamedPlugin
 from grid_control.parameters import ParameterFactory, ParameterInfo
+from grid_control.utils.file_objects import SafeFile
 from grid_control.utils.gc_itertools import ichain, lchain
 from hpfwk import AbstractError
 from time import strftime, time
@@ -31,6 +32,7 @@ class TaskModule(NamedPlugin):
 	def __init__(self, config, name):
 		NamedPlugin.__init__(self, config, name)
 		initSandbox = changeInitNeeded('sandbox')
+		self._varCheck = validNoVar(config)
 
 		# Task requirements
 		configJobs = config.changeView(viewClass = 'TaggedConfigView', addSections = ['jobs'], addTags = [self]) # Move this into parameter manager?
@@ -70,11 +72,11 @@ class TaskModule(NamedPlugin):
 		self.updateErrorDict(utils.pathShare('gc-run.lib'))
 
 		# Init parameter source manager
-		pm = config.getPlugin('parameter factory', 'SimpleParameterFactory',
+		self._pm = config.getPlugin('parameter factory', 'SimpleParameterFactory',
 			cls = ParameterFactory, inherit = True)
 		configParam = config.changeView(viewClass = 'TaggedConfigView', addSections = ['parameters'], addTags = [self])
-		self.setupJobParameters(configParam, pm)
-		self.source = pm.getSource(configParam)
+		self.setupJobParameters(configParam, self._pm)
+		self.source = self._pm.getSource(configParam)
 
 
 	def setupJobParameters(self, config, pm):
@@ -83,7 +85,7 @@ class TaskModule(NamedPlugin):
 
 	# Read comments with error codes at the beginning of file: # <code> - description
 	def updateErrorDict(self, fileName):
-		for line in ifilter(lambda x: x.startswith('#'), open(fileName, 'r').readlines()):
+		for line in ifilter(lambda x: x.startswith('#'), SafeFile(fileName).readlines()):
 			tmp = lmap(str.strip, line.lstrip('#').split(' - ', 1))
 			if tmp[0].isdigit() and (len(tmp) == 2):
 				self.errorDict[int(tmp[0])] = tmp[1]
@@ -102,6 +104,7 @@ class TaskModule(NamedPlugin):
 			'GC_RUNTIME': self.getCommand(),
 			# Seeds and substitutions
 			'SUBST_FILES': str.join(' ', imap(os.path.basename, self.getSubstFiles())),
+			'GC_SUBST_OLD_STYLE': str('__' in self._varCheck.markers).lower(),
 			# Task infos
 			'GC_TASK_CONF': self.taskConfigName,
 			'GC_TASK_DATE': self.taskDate,
@@ -149,14 +152,16 @@ class TaskModule(NamedPlugin):
 			allVars.update(self.getJobConfig(jobNum))
 		subst = lambda x: utils.replaceDict(x, allVars, ichain([self.getVarMapping().items(), izip(addDict, addDict)]))
 		result = subst(subst(str(inp)))
-		if check and utils.containsVar(result):
+		if check and self._varCheck.check(result):
 			raise ConfigError("'%s' contains invalid variable specifiers: '%s'" % (inp, result))
 		return result
 
 
 	def validateVariables(self):
-		for x in ichain([self.getTaskConfig().values(), self.getJobConfig(0).values()]):
-			self.substVars(x, 0, dict.fromkeys(['X', 'XBASE', 'XEXT', 'GC_DATE', 'GC_TIMESTAMP', 'GC_GUID', 'RANDOM'], ''))
+		example_vars = self.getJobConfig(0)
+		example_vars.update(dict.fromkeys(['X', 'XBASE', 'XEXT', 'GC_DATE', 'GC_TIMESTAMP', 'GC_GUID', 'RANDOM'], ''))
+		for x in ichain([self.getTaskConfig().values(), example_vars.values()]):
+			self.substVars(x, None, example_vars)
 
 
 	# Get job requirements

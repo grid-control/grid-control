@@ -49,10 +49,16 @@ class NickNameProducer(DataProcessor):
 
 
 class SimpleNickNameProducer(NickNameProducer):
+	def __init__(self, config):
+		NickNameProducer.__init__(self, config)
+		self._full_name = config.getBool('nickname full name', True)
+
 	def getName(self, oldnick, dataset, block):
 		if oldnick == '':
 			ds = dataset.replace('/PRIVATE/', '').lstrip('/').split('#')[0]
-			return ds.replace(' ', '').replace('/', '_').replace('__', '_')
+			if self._full_name:
+				return ds.replace(' ', '').replace('/', '_').replace('__', '_')
+			return ds.split('/')[0]
 		return oldnick
 
 

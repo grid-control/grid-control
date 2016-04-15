@@ -21,18 +21,27 @@ class JabberAlarm(Monitoring):
 
 	def __init__(self, config, name, task):
 		Monitoring.__init__(self, config, name, task)
-		self._source_jid = config.get('source jid')
-		self._target_jid = config.get('target jid')
+		self._source_jid = config.get('source jid', onChange = None)
+		self._target_jid = config.get('target jid', onChange = None)
 		pwPath = config.getPath('source password file')
 		os.chmod(pwPath, stat.S_IRUSR)
 		# password in variable name removes it from debug log!
 		self._source_password = open(pwPath).read().strip()
+		try: # xmpp contains many deprecated constructs
+			import warnings
+			warnings.simplefilter('ignore', DeprecationWarning)
+		except Exception:
+			pass
 		self._xmpp = None
-		for import_name in ['xmpp', 'grid_control_gui.xmpp']:
-			self._xmpp = __import__(import_name)
-			break
-		if not self._xmpp:
-			raise Exception('Unable to load jabber library!')
+		try:
+			import xmpp
+			self._xmpp = xmpp
+		except Exception:
+			try:
+				import grid_control_gui.xmpp
+				self._xmpp = grid_control_gui.xmpp
+			except Exception:
+				raise Exception('Unable to load jabber library!')
 
 	def onTaskFinish(self, nJobs):
 		jid = self._xmpp.protocol.JID(self._source_jid)
@@ -45,6 +54,6 @@ class JabberAlarm(Monitoring):
 		if not auth:
 			logging.getLogger('user').warning('Could not authenticate to jabber server!')
 			return
-		text = 'Task %s finished!' % self.task.taskID
+		text = 'Task %s finished!' % self._task.taskID
 		cl.send(self._xmpp.protocol.Message(self._target_jid, text))
 		time.sleep(1) # Stay connected until delivered

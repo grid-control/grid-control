@@ -125,9 +125,12 @@ try:
 	import requests
 	RestClient = RequestsRestClient
 except Exception: # incompatible dependencies pulled in can cause many types of exceptions
-	import ssl # fix ca verification error in Python 2.7.9
-	if hasattr(ssl, '_create_unverified_context'):
-		setattr(ssl, '_create_default_https_context', getattr(ssl, '_create_unverified_context'))
+	try:
+		import ssl # fix ca verification error in Python 2.7.9
+		if hasattr(ssl, '_create_unverified_context'):
+			setattr(ssl, '_create_default_https_context', getattr(ssl, '_create_unverified_context'))
+	except Exception:
+		pass
 	try:
 		from http.client import HTTPSConnection
 		from urllib.request import HTTPSHandler, Request, build_opener

@@ -265,7 +265,7 @@ class Request:
             if hasattr(Request, 'get_' + name):
                 getattr(self, 'get_' + name)()
                 return getattr(self, attr)
-        raise AttributeError, attr
+        raise AttributeError(attr)
 
     def get_method(self):
         if self.has_data():
@@ -294,7 +294,7 @@ class Request:
         if self.type is None:
             self.type, self.__r_type = splittype(self.__original)
             if self.type is None:
-                raise ValueError, "unknown url type: %s" % self.__original
+                raise ValueError("unknown url type: %s" % self.__original)
         return self.type
 
     def get_host(self):

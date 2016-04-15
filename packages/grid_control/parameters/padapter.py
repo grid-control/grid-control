@@ -12,17 +12,19 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-import os
+import os, time, logging
 from grid_control import utils
 from grid_control.gc_plugin import ConfigurablePlugin
 from grid_control.parameters.psource_base import ParameterInfo, ParameterMetadata, ParameterSource
 from grid_control.utils.file_objects import ZipFile
+from grid_control.utils.parsing import strTimeShort
 from hpfwk import APIError
 from python_compat import identity, ifilter, imap, irange, ismap, itemgetter, lfilter, lmap, md5, set, sort_inplace, sorted, str2bytes
 
 class ParameterAdapter(ConfigurablePlugin):
 	def __init__(self, config, source):
 		ConfigurablePlugin.__init__(self, config)
+		self._log = logging.getLogger('padapter')
 		self._source = source
 		self._prune = True
 
@@ -76,7 +78,9 @@ class BasicParameterAdapter(ParameterAdapter):
 
 	def resync(self): # Allow queuing of resync results - (because of external or init trigger)
 		if self._resyncState is None:
+			t_start = time.time()
 			self._resyncInternal()
+			self._log.log(logging.INFO2, 'Finished resync of parameter source (%s)', strTimeShort(time.time() - t_start))
 		result = self._resyncState
 		if result is not None:
 			self._activeMap = {} # invalidate cache on changes
@@ -110,25 +114,33 @@ class TrackedParameterAdapter(BasicParameterAdapter):
 
 		# Find out if resync should be performed
 		userResync = config.getState('resync', detail = 'parameters')
+		config.setState(False, 'resync', detail = 'parameters')
 		needResync = False
 		pHash = self._rawSource.getHash()
 		self.storedHash = config.get('parameter hash', pHash, persistent = True)
 		if self.storedHash != pHash:
 			needResync = True # Resync needed if parameters have changed
+			self._log.info('Parameter hash has changed')
+			self._log.debug('\told hash: %s', self.storedHash)
+			self._log.debug('\tnew hash: %s', pHash)
+			config.setState(True, 'init', detail = 'config')
 		doResync = (userResync or needResync) and not doInit
 
 		if not doResync and not doInit: # Reuse old mapping
 			activity = utils.ActivityLog('Loading cached parameter information')
 			self.readJob2PID()
 			activity.finish()
+			return
 		elif doResync: # Perform sync
 			activity = utils.ActivityLog('Syncronizing parameter information')
 			self.storedHash = None
-			self._resyncInternal()
+			self._resyncState = self.resync()
 			activity.finish()
 		elif doInit: # Write current state
 			self.writeJob2PID(self._pathJob2PID)
 			ParameterSource.getClass('GCDumpParameterSource').write(self._pathParams, self)
+		config.set('parameter hash', self._rawSource.getHash())
+
 
 	def readJob2PID(self):
 		fp = ZipFile(self._pathJob2PID, 'r')
@@ -222,6 +234,7 @@ class TrackedParameterAdapter(BasicParameterAdapter):
 			return self._createAggregatedSource(psource_old, psource_new, missingInfos)
 		return self._source
 
+
 	def _resyncInternal(self): # This function is _VERY_ time critical!
 		tmp = self._rawSource.resync() # First ask about psource changes
 		(redoNewPNum, disableNewPNum, sizeChange) = (set(tmp[0]), set(tmp[1]), tmp[2])
@@ -248,7 +261,7 @@ class TrackedParameterAdapter(BasicParameterAdapter):
 		elif sizeChange:
 			self._resyncState = (set(), set(), sizeChange)
 		# Write resynced state
-		self.writeJob2PID(self._pathJob2PID + '.old')
-		ParameterSource.getClass('GCDumpParameterSource').write(self._pathParams + '.old', self)
-		os.rename(self._pathJob2PID + '.old', self._pathJob2PID)
-		os.rename(self._pathParams + '.old', self._pathParams)
+		self.writeJob2PID(self._pathJob2PID + '.tmp')
+		ParameterSource.getClass('GCDumpParameterSource').write(self._pathParams + '.tmp', self)
+		os.rename(self._pathJob2PID + '.tmp', self._pathJob2PID)
+		os.rename(self._pathParams + '.tmp', self._pathParams)

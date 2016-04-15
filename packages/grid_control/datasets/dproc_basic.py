@@ -33,9 +33,10 @@ class StatsDataProcessor(DataProcessor):
 
 	def process(self, blockIter):
 		for block in blockIter:
-			self._blocks += 1
-			self._entries += block[DataProvider.NEntries]
-			yield block
+			if block:
+				self._blocks += 1
+				self._entries += block[DataProvider.NEntries]
+				yield block
 
 
 class EntriesConsistencyDataProcessor(DataProcessor):

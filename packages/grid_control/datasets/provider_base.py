@@ -90,7 +90,7 @@ class DataProvider(ConfigurablePlugin):
 
 
 	# Cached access to list of block dicts, does also the validation checks
-	def getBlocks(self):
+	def getBlocks(self, silent = True):
 		def prepareBlocks():
 			# Validation, Filtering & Naming:
 			for block in self.getBlocksInternal():
@@ -123,7 +123,8 @@ class DataProvider(ConfigurablePlugin):
 				statString = '%s: ' % self._datasetExpr
 			log.finish()
 			statString += 'Running over %s distributed over %d blocks.' % self._stats.getStats()
-			self._log.info(statString)
+			if not silent:
+				self._log.info(statString)
 		return self._cache_block
 
 

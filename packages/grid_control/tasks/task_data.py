@@ -26,20 +26,25 @@ class DataTask(TaskModule):
 		config = config.changeView(viewClass = 'TaggedConfigView', addSections = ['dataset'])
 		self.dataSplitter = None
 		self.dataRefresh = -1
-		self._forceRefresh = config.getState('resync', detail = 'dataset', default = False)
 		def userRefresh(config, old_obj, cur_obj, cur_entry, obj2str):
 			if (old_obj == '') and (cur_obj != ''):
 				raise UserError('It is currently not possible to attach a dataset to a non-dataset task!')
-			self._forceRefresh = True
+			self._log.info('Dataset setup was changed - forcing resync...')
+			config.setState(True, 'resync', detail = 'dataset')
+			config.setState(True, 'init', detail = 'config') # This will trigger a write of the new options
 			return cur_obj
-		self.dataset = config.get('dataset', '', onChange = userRefresh).strip()
-		if self.dataset == '':
-			return
-		config.set('se output pattern', '@NICK@_job_@GC_JOB_ID@_@X@')
-		config.set('default lookup', 'DATASETNICK')
-
 		dataProvider = config.getCompositePlugin('dataset', '', ':MultiDatasetProvider:',
-			cls = DataProvider, requirePlugin = False)
+			cls = DataProvider, requirePlugin = False, onChange = userRefresh)
+		self._forceRefresh = config.getState('resync', detail = 'dataset')
+		config.setState(False, 'resync', detail = 'dataset')
+		if not dataProvider:
+			return
+
+		tmp_config = config.changeView(viewClass = 'TaggedConfigView', setClasses = None, setNames = None, setTags = [], addSections = ['storage'])
+		tmp_config.set('se output pattern', '@NICK@_job_@GC_JOB_ID@_@X@')
+		tmp_config = config.changeView(viewClass = 'TaggedConfigView', setClasses = None, setNames = None, setTags = [], addSections = ['parameters'])
+		tmp_config.set('default lookup', 'DATASETNICK')
+
 		splitterName = config.get('dataset splitter', 'FileBoundarySplitter')
 		splitterClass = dataProvider.checkSplitter(DataSplitter.getClass(splitterName))
 		self.dataSplitter = splitterClass(config)
@@ -49,21 +54,21 @@ class DataTask(TaskModule):
 			'BasicPartitionProcessor LocationPartitionProcessor', 'MultiPartitionProcessor',
 			cls = PartitionProcessor)
 		DataParameterSource = ParameterSource.getClass('DataParameterSource')
-		paramSource = DataParameterSource(config.getWorkPath(), 'data',
+		self._dataPS = DataParameterSource(config.getWorkPath(), 'data',
 			dataProvider, self.dataSplitter, partProcessor)
-		DataParameterSource.datasetsAvailable['data'] = paramSource
+		DataParameterSource.datasetsAvailable['data'] = self._dataPS
 
 		# Select dataset refresh rate
 		self.dataRefresh = config.getTime('dataset refresh', -1, onChange = None)
 		if self.dataRefresh > 0:
-			paramSource.resyncSetup(interval = max(self.dataRefresh, dataProvider.queryLimit()))
+			self._dataPS.resyncSetup(interval = max(self.dataRefresh, dataProvider.queryLimit()))
 			utils.vprint('Dataset source will be queried every %s' % strTime(self.dataRefresh), -1)
 		else:
-			paramSource.resyncSetup(interval = 0)
+			self._dataPS.resyncSetup(interval = 0)
 		if self._forceRefresh:
-			paramSource.resyncSetup(force = True)
+			self._dataPS.resyncSetup(force = True)
 		def externalRefresh(sig, frame):
-			paramSource.resyncSetup(force = True)
+			self._dataPS.resyncSetup(force = True)
 		signal.signal(signal.SIGUSR2, externalRefresh)
 
 		if self.dataSplitter.getMaxJobs() == 0:

@@ -33,7 +33,7 @@ class NamedPlugin(ConfigurablePlugin):
 
 	def __init__(self, config, name):
 		self._name = name
-		self._log = logging.getLogger('%s.%s' % (self.tagName, name))
+		self._log = logging.getLogger('%s.%s' % (self.tagName.lower(), name.lower()))
 		ConfigurablePlugin.__init__(self, config)
 
 	def getObjectName(self):
@@ -55,8 +55,8 @@ class NamedPlugin(ConfigurablePlugin):
 			clsNew = cls.getClass(clsName)
 			if not instanceName:
 				instanceName = clsNew.__name__.split('.')[-1]
-			config = config.changeView(viewClass = 'TaggedConfigView',
+			config_cls = config.changeView(viewClass = 'TaggedConfigView',
 				setClasses = [clsNew], setSections = None, setNames = [instanceName],
 				addTags = tags or [], inheritSections = inheritSections)
-			yield InstanceFactory(entry, clsNew, config, instanceName)
+			yield InstanceFactory(entry, clsNew, config_cls, instanceName)
 	bind = classmethod(bind)

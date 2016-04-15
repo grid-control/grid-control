@@ -43,6 +43,7 @@ class ParameterSource(Plugin):
 	create = classmethod(create)
 
 	def __init__(self):
+		Plugin.__init__(self)
 		self._resyncInfo = None
 		self._resyncTime = -1 # Default - always resync
 		self._resyncLast = None

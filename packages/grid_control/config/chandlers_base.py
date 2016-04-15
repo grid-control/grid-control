@@ -15,6 +15,7 @@
 import logging
 from grid_control import utils
 from grid_control.config.config_entry import ConfigError
+from python_compat import imap
 
 # Change handler to notify about impossible changes
 def changeImpossible(config, old_obj, cur_obj, cur_entry, obj2str):
@@ -34,7 +35,7 @@ class changeInitNeeded(object):
 		self._option = option
 
 	def __call__(self, config, old_obj, cur_obj, cur_entry, obj2str):
-		log = logging.getLogger('config.onChange.%s' % self._option)
+		log = logging.getLogger('config.onchange.%s' % self._option.lower())
 		config = config.changeView(setSections = ['interactive'])
 		interaction_def = config.getBool('default', True, onChange = None)
 		interaction_opt = config.getBool(self._option, interaction_def, onChange = None)
@@ -52,7 +53,21 @@ class changeInitNeeded(object):
 
 
 # Validation handler to check for variables in string
-def validNoVar(loc, obj):
-	if utils.containsVar(obj):
-		raise ConfigError('%s = %s may not contain variables.' % (loc, obj))
-	return obj
+class validNoVar(object):
+	def __init__(self, config):
+		config = config.changeView(viewClass = 'SimpleConfigView', setSections = ['global'])
+		self.markers = config.getList('variable markers', ['@', '__'])
+		for marker in self.markers:
+			if marker not in ['@', '__']:
+				raise ConfigError('Variable marker %r is not supported!' % marker)
+
+	def check(self, value):
+		for line in str(value).split('\n'):
+			if max(imap(line.count, self.markers)) >= 2:
+				return True
+		return False
+
+	def __call__(self, loc, obj):
+		if self.check(obj):
+			raise ConfigError('%s = %s may not contain variables.' % (loc, obj))
+		return obj

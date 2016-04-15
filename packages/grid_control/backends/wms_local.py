@@ -230,13 +230,14 @@ class Local(WMS):
 		ec = ExceptionCollector()
 		for cmd, wms in [('sgepasswd', 'OGE'), ('pbs-config', 'PBS'), ('qsub', 'OGE'), ('bsub', 'LSF'), ('job_slurm', 'SLURM')]:
 			try:
+				utils.resolveInstallPath(cmd)
+			except Exception:
+				ec.collect()
+				continue
+			try:
 				wmsCls = WMS.getClass(wms)
 			except Exception:
 				raise BackendError('Unable to load backend class %s' % repr(wms))
-			try:
-				utils.resolveInstallPath(cmd)
-				config_wms = config.changeView(viewClass = 'TaggedConfigView', setClasses = [wmsCls])
-				return WMS.createInstance(wms, config_wms, name)
-			except Exception:
-				ec.collect()
+			config_wms = config.changeView(viewClass = 'TaggedConfigView', setClasses = [wmsCls])
+			return WMS.createInstance(wms, config_wms, name)
 		ec.raise_any(BackendError('No valid local backend found!')) # at this point all backends have failed!

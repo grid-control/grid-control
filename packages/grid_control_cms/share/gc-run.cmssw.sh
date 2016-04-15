@@ -136,8 +136,10 @@ if [ "$GC_CMSSWRUN_RETCODE" == "0" ] && [ -n "$CMSSW_CONFIG" ]; then
 
 		echo "Calculating config file hash..."
 		(
+			echo "# grid-control fix for edmConfigHash"
 			echo "import sys, shlex"
 			echo "if not hasattr(sys, 'argv'): sys.argv = ['"$CFG_NAME"'] + shlex.split('"$@"')"
+			echo "####################################"
 			cat "$DBSDIR/config"
 		) > "$DBSDIR/hash_config" # ensure arguments are forwarded to config file when running edmConfigHash
 

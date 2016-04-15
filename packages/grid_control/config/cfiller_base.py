@@ -17,6 +17,7 @@ import os, sys, logging
 from grid_control import utils
 from grid_control.config.config_entry import ConfigEntry, ConfigError
 from grid_control.utils.data_structures import UniqueList
+from grid_control.utils.file_objects import SafeFile
 from grid_control.utils.gc_itertools import ichain
 from grid_control.utils.parsing import parseList
 from grid_control.utils.thread_tools import TimeoutException, hang_protection
@@ -64,10 +65,10 @@ class FileConfigFiller(ConfigFiller):
 			self._addEntry(container, 'global', 'plugin paths+', searchString, str.join(',', self._configFiles))
 
 	def _fillContentWithIncludes(self, configFile, searchPaths, configContent):
-		log = logging.getLogger(('config.%s' % utils.getRootName(configFile)).rstrip('.'))
+		log = logging.getLogger(('config.%s' % utils.getRootName(configFile)).rstrip('.').lower())
 		log.log(logging.INFO1, 'Reading config file %s', configFile)
 		configFile = utils.resolvePath(configFile, searchPaths, ErrorClass = ConfigError)
-		configFileLines = open(configFile, 'r').readlines()
+		configFileLines = SafeFile(configFile).readlines()
 
 		# Single pass, non-recursive list retrieval
 		tmpConfigContent = {}
@@ -214,7 +215,7 @@ class PythonConfigFiller(DictConfigFiller):
 	def __init__(self, configFiles):
 		from gcSettings import Settings
 		for configFile in configFiles:
-			fp = open(configFile)
+			fp = SafeFile(configFile)
 			try:
 				utils.execWrapper(fp.read(), {'Settings': Settings})
 			finally:

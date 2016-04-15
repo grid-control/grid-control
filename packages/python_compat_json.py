@@ -557,7 +557,7 @@ class JSONEncoder(object):
         skipkeys is True, such items are simply skipped.
 
         If *ensure_ascii* is true (the default), all non-ASCII
-        characters in the output are escaped with \uXXXX sequences,
+        characters in the output are escaped with uXXXX sequences,
         and the results are str instances consisting of ASCII
         characters only.  If ensure_ascii is False, a result may be a
         unicode instance.  This usually happens if the input contains
@@ -1025,7 +1025,7 @@ def dump(obj, fp, skipkeys=False, ensure_ascii=True, check_circular=True,
     will be skipped instead of raising a ``TypeError``.
 
     If ``ensure_ascii`` is true (the default), all non-ASCII characters in the
-    output are escaped with ``\uXXXX`` sequences, and the result is a ``str``
+    output are escaped with ``uXXXX`` sequences, and the result is a ``str``
     instance consisting of ASCII characters only.  If ``ensure_ascii`` is
     ``False``, some chunks written to ``fp`` may be ``unicode`` instances.
     This usually happens because the input contains unicode strings or the

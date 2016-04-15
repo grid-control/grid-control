@@ -12,12 +12,13 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-import os, time, fnmatch, operator
+import os, time, fnmatch, logging, operator
 from grid_control import utils
 from grid_control.gc_plugin import ConfigurablePlugin
 from grid_control.utils.data_structures import makeEnum
+from grid_control.utils.file_objects import SafeFile
 from hpfwk import NestedException
-from python_compat import imap, irange, reduce
+from python_compat import imap, irange, reduce, sorted
 
 class JobError(NestedException):
 	pass
@@ -138,6 +139,7 @@ class JobClass(object):
 class JobDB(ConfigurablePlugin):
 	def __init__(self, config, jobLimit = -1, jobSelector = None):
 		ConfigurablePlugin.__init__(self, config)
+		self._log = logging.getLogger('jobs')
 		self._dbPath = config.getWorkPath('jobs')
 		self._jobMap = self.readJobs(jobLimit)
 		if jobLimit < 0 and len(self._jobMap) > 0:
@@ -154,18 +156,22 @@ class JobDB(ConfigurablePlugin):
 		except Exception:
 			raise JobError("Problem creating work directory '%s'" % self._dbPath)
 
-		candidates = fnmatch.filter(os.listdir(self._dbPath), 'job_*.txt')
-		(jobMap, maxJobs) = ({}, len(candidates))
-		activity = utils.ActivityLog('Reading job infos ...')
-		for idx, jobFile in enumerate(candidates):
-			if (jobLimit >= 0) and (len(jobMap) >= jobLimit):
-				utils.eprint('Stopped reading job infos! The number of job infos in the work directory (%d) ' % len(jobMap), newline = False)
-				utils.eprint('is larger than the maximum number of jobs (%d)' % jobLimit)
-				break
+		candidates = []
+		for jobFile in fnmatch.filter(os.listdir(self._dbPath), 'job_*.txt'):
 			try: # 2xsplit is faster than regex
 				jobNum = int(jobFile.split(".")[0].split("_")[1])
 			except Exception:
 				continue
+			candidates.append((jobNum, jobFile))
+
+		(jobMap, maxJobs) = ({}, len(candidates))
+		activity = utils.ActivityLog('Reading job infos ...')
+		idx = 0
+		for (jobNum, jobFile) in sorted(candidates):
+			idx += 1
+			if (jobLimit >= 0) and (jobNum >= jobLimit):
+				self._log.info('Stopped reading job infos at job #%d out of %d available job files', jobNum, len(candidates))
+				break
 			jobObj = Job.load(os.path.join(self._dbPath, jobFile))
 			jobMap[jobNum] = jobObj
 			if idx % 100 == 0:
@@ -206,8 +212,9 @@ class JobDB(ConfigurablePlugin):
 
 
 	def commit(self, jobNum, jobObj):
-		fp = open(os.path.join(self._dbPath, 'job_%d.txt' % jobNum), 'w')
-		utils.safeWrite(fp, utils.DictFormat(escapeString = True).format(jobObj.getAll()))
+		fp = SafeFile(os.path.join(self._dbPath, 'job_%d.txt' % jobNum), 'w')
+		fp.writelines(utils.DictFormat(escapeString = True).format(jobObj.getAll()))
+		fp.close()
 
 
 	def __len__(self):

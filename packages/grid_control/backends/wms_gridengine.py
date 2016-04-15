@@ -37,7 +37,7 @@ class GridEngine(PBSGECommon):
 		reqMap = { WMS.MEMORY: ('h_vmem', lambda m: '%dM' % m),
 			WMS.WALLTIME: ('s_rt', timeStr), WMS.CPUTIME: ('h_cpu', timeStr) }
 		# Restart jobs = no
-		params = ' -r n'
+		params = ' -r n -notify'
 		if self._project:
 			params += ' -P %s' % self._project
 		# Job requirements

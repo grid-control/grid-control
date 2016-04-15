@@ -302,7 +302,7 @@ class PlotReport(Report):
 			matplotlib.pyplot.savefig(plotSet[0] + "." + it)
 
 	def plotHistogram(self, histo, jobResult, extractor):
-		log = logging.getLogger('PlotReport')
+		log = logging.getLogger('report.plotreport')
 		log.info("Plotting " + histo[0] + " ...")
 		runtime = []
 		for res in jobResult:
@@ -324,7 +324,7 @@ class PlotReport(Report):
 		return pl
 
 	def plotOverall(self, histo, jInfos, timespan, extractor, fit=False, unit="MB/s", cumulate=False):
-		log = logging.getLogger('PlotReport')
+		log = logging.getLogger('report.plotreport')
 		log.info("Plotting " + histo[0] + " ...")
 
 		trunctationFractionFront = 0.05
@@ -415,7 +415,7 @@ class PlotReport(Report):
 		self.finalizeHistogram(histogram)
 
 	def produceOverallGraph(self, naming, timespan, lambdaExtractor, fit=False, unit="MB/s", cumulate=False):
-		log = logging.getLogger('PlotReport')
+		log = logging.getLogger('report.plotreport')
 		if (timespan[0] == timespan[1]) or (timespan[0] is None) or (timespan[1] is None):
 			log.info("Skipping plot %s because no timespan is available", naming)
 			return
@@ -429,7 +429,7 @@ class PlotReport(Report):
 		if not matplotlib:
 			raise Exception('Unable to find matplotlib!')
 		self.jobResult = []
-		log = logging.getLogger('PlotReport')
+		log = logging.getLogger('report.plotreport')
 		log.info(str(len(self._jobs)) + " job(s) selected for plots")
 
 		# larger default fonts

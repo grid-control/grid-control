@@ -147,7 +147,7 @@ class Plugin(object):
 	_getClass = classmethod(_getClass)
 
 	def getClass(cls, clsName):
-		log = logging.getLogger('classloader.%s' % cls.__name__)
+		log = logging.getLogger('classloader.%s' % cls.__name__.lower())
 		log.log(logging.DEBUG1, 'Loading class %s', clsName)
 		if clsName not in cls._clsCache.get(cls, {}):
 			cls._clsCache.setdefault(cls, {})[clsName] = cls._getClass(log, clsName)

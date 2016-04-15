@@ -111,11 +111,13 @@ strGuid = lambda guid: '%s-%s-%s-%s-%s' % (guid[:8], guid[8:12], guid[12:16], gu
 def strDict(d, order = None):
 	if not order:
 		order = sorted(d.keys())
+	else:
+		order = list(order)
 	order.extend(ifilter(lambda x: x not in order, d.keys()))
 	return str.join(', ', imap(lambda k: '%s = %s' % (k, repr(d[k])), order))
 
 
-def strDictLong(value, parser = identity, strfun = identity):
+def strDictLong(value, parser = identity, strfun = str):
 	(srcdict, srckeys) = value
 	getmax = lambda src: max(lmap(lambda x: len(str(x)), src) + [0])
 	result = ''

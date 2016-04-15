@@ -37,7 +37,7 @@
 
 # >125 - reserved by POSIX
 
-GC_VERSION="$Revision: 848$"
+GC_VERSION="__GC_VERSION__"
 
 debug_helper() {
 	[ -z "$GC_DEBUG" ] && return
@@ -52,11 +52,30 @@ debug_helper() {
 	echo "$OUTPUT$LINENO - $CMD($@)" 1>&2
 }
 
+gc_trap_handler() {
+	debug_helper $FUNCNAME "$@"
+	echo "trapped signal $1 - aborting!" 1>&2
+	abort
+}
+
+gc_trap() {
+	debug_helper $FUNCNAME "$@"
+	for GC_SIGNAL in 0 1 2 3 10 12 15; do
+		trap "gc_trap_handler $GC_SIGNAL" $GC_SIGNAL
+	done
+}
+
+gc_untrap() {
+	debug_helper $FUNCNAME "$@"
+	trap - 0 1 2 3 10 12 15
+}
+
 fail() {
-	trap - 0 1 2 3 15
+	gc_untrap
 	[ -n "$1" ] && CODE=$1 || CODE=$?
 	GC_DEBUG="true"
 	debug_helper $FUNCNAME "$@"
+	touch "$GC_FAIL_MARKER"
 	echo
 	echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
 	echo "!! FAIL - FAIL - FAIL - FAIL !!"
@@ -69,9 +88,10 @@ fail() {
 }
 
 abort() {
-	trap - 0 1 2 3 15
+	gc_untrap
 	GC_DEBUG="true"
 	debug_helper $FUNCNAME "$@"
+	touch "$GC_FAIL_MARKER"
 	echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" >> $GC_LANDINGZONE/gc.stderr
 	echo "!!     DEBUG INFORMATION     !!" >> $GC_LANDINGZONE/gc.stderr
 	echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" >> $GC_LANDINGZONE/gc.stderr
@@ -81,7 +101,7 @@ abort() {
 	cleanup
 	[ -n "$1" ] && updatejobinfo $1
 	[ -n "$(grep 'EXITCODE=0' $GC_LANDINGZONE/job.info)" ] && updatejobinfo 100
-	trap - 0 1 2 3 15
+	gc_untrap
 	kill4sure $$
 }
 
@@ -280,12 +300,10 @@ var_replacer() {
 		XEXT="$(echo $1 | sed -e 's/\(.*\.\)\(.*\)$/\2/')"
 		echo "BEGIN{srand($JOB_RANDOM)}"
 		echo "{"
+		# new style variable replacement
 		[ -n "$1" ] && echo "	gsub(\"@X@\", \"$1\")"
-		[ -n "$1" ] && echo "	gsub(\"__X__\", \"$1\")"
 		[ -n "$XBASE" ] && echo "	gsub(\"@XBASE@\", \"$XBASE\")"
-		[ -n "$XBASE" ] && echo "	gsub(\"__XBASE__\", \"$XBASE\")"
 		[ -n "$XEXT" ] && echo "	gsub(\"@XEXT@\", \"$XEXT\")"
-		[ -n "$XEXT" ] && echo "	gsub(\"__XEXT__\", \"$XEXT\")"
 		[ -f "${GC_SCRATCH:-.}/_varmap.dat" ] && cat "${GC_SCRATCH:-.}/_varmap.dat" |
 		while read USER_VARNAME REAL_VARNAME; do
 			VARVALUE="${!REAL_VARNAME}"
@@ -294,11 +312,22 @@ var_replacer() {
 			[ -n "$VARVALUE" ] && echo "	gsub(\"^@IF@${USER_VARNAME}@\", \"\")"
 			echo '	gsub("^@IFEQ@'"${USER_VARNAME}"'@'"${VARVALUE_ESC}"'@", "")'
 			echo '	gsub("@'${USER_VARNAME}'@", "'"$VARVALUE_ESC"'")'
-			echo '	gsub("__'${USER_VARNAME}'__", "'"$VARVALUE_ESC"'")'
 		done
-		echo '	gsub("^@IFEQ.*", "")'
-		echo '	gsub("@RANDOM@", int(rand() * 900000000))'
-		echo '	gsub("__RANDOM__", int(rand() * 900000000))'
+		# old style variable replacement
+		if [ "$GC_SUBST_OLD_STYLE" != "false" ]; then
+			echo '	gsub("^@IFEQ.*", "")'
+			echo '	gsub("@RANDOM@", int(rand() * 900000000))'
+			[ -n "$1" ] && echo "	gsub(\"__X__\", \"$1\")"
+			[ -n "$XBASE" ] && echo "	gsub(\"__XBASE__\", \"$XBASE\")"
+			[ -n "$XEXT" ] && echo "	gsub(\"__XEXT__\", \"$XEXT\")"
+			[ -f "${GC_SCRATCH:-.}/_varmap.dat" ] && cat "${GC_SCRATCH:-.}/_varmap.dat" |
+			while read USER_VARNAME REAL_VARNAME; do
+				VARVALUE="${!REAL_VARNAME}"
+				VARVALUE_ESC=`echo "$VARVALUE" | awk '{ gsub("\"", "\\\\\""); print }'`
+				echo '	gsub("__'${USER_VARNAME}'__", "'"$VARVALUE_ESC"'")'
+			done
+			echo '	gsub("__RANDOM__", int(rand() * 900000000))'
+		fi
 		echo '	print'
 		echo '}'
 	) > "$REPLACEFILE"
@@ -577,20 +606,20 @@ url_copy() {
 			SOURCE_URL="`echo "$SOURCE_URL" | sed -e 's@dir://@file://@'`"
 			if [[ "$FILENAMES" == *\** ]]; then
 				# Wildcard used => url_ls
-				SOURCE_PATTERN="__X__"
+				SOURCE_PATTERN="@X@"
 				for PATTERN_1 in "$FILENAMES"; do
-					PATTERN_2="`echo ${SE_INPUT_PATTERN:-__X__} | var_replacer "$PATTERN_1"`"
+					PATTERN_2="`echo ${SE_INPUT_PATTERN:-@X@} | var_replacer "$PATTERN_1"`"
 					(url_ls "$SOURCE_URL" "$PATTERN_2" > "$GC_SCRATCH/_url_ls.dat") 2>&1
 					SOURCE_FILES="$SOURCE_FILES $(< "$GC_SCRATCH/_url_ls.dat")"
 				done
 			else
-				SOURCE_PATTERN="${SE_INPUT_PATTERN:-__X__}"
+				SOURCE_PATTERN="${SE_INPUT_PATTERN:-@X@}"
 				SOURCE_FILES="$FILENAMES"
 			fi
 			;;
 		"file://"*)
 			# copy from WN
-			SOURCE_PATTERN="__X__"
+			SOURCE_PATTERN="@X@"
 			SOURCE_FILES="$(cd "${SOURCE_URL#file://}"; echo $FILENAMES; cd "$OLDPWD")"
 
 			# Check that file size is larger than SE_MINFILESIZE
@@ -608,12 +637,12 @@ url_copy() {
 	case "$TARGET_URL" in
 		"rfio://"* | "gsiftp://"* | "srm://"* | "dir://"*)
 			# copy to SE
-			TARGET_PATTERN="${SE_OUTPUT_PATTERN:-__X__}"
+			TARGET_PATTERN="${SE_OUTPUT_PATTERN:-@X@}"
 			TARGET_URL="`echo "$TARGET_URL" | sed -e 's@dir://@file://@'`"
 			;;
 		"file://"*)
 			# copy to WN
-			TARGET_PATTERN="__X__"
+			TARGET_PATTERN="@X@"
 			;;
 		*)
 			echo "Unsupported URL: $2" && fail 106
@@ -623,8 +652,8 @@ url_copy() {
 	BADCOUNT=0
 	for file in $SOURCE_FILES; do
 		[ -d "$file" ] && continue
-		SOURCE_FN="`echo ${SOURCE_PATTERN:-__X__} | var_replacer $file`"
-		TARGET_FN="`echo ${TARGET_PATTERN:-__X__} | var_replacer $file`"
+		SOURCE_FN="`echo ${SOURCE_PATTERN:-@X@} | var_replacer $file`"
+		TARGET_FN="`echo ${TARGET_PATTERN:-@X@} | var_replacer $file`"
 		[ -n "$TRANSFERLOG" ] && echo "$SOURCE_FN $TARGET_FN" >> "$TRANSFERLOG"
 		print_and_eval "url_copy_single" "$SOURCE_URL/$SOURCE_FN $TARGET_URL/$TARGET_FN"
 		if [ "$?" != "0" ]; then

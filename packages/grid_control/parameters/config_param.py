@@ -85,7 +85,7 @@ class ParameterConfig:
 			return lmap(str.strip, value.split(delimeter))
 		elif ptype == 'lines':
 			return value.splitlines()
-		elif ptype == 'expr' or ptype == 'eval':
+		elif ptype in ('expr', 'eval'):
 			result = eval(value) # pylint:disable=eval-used
 			if isinstance(result, (list, type(range(1)))):
 				return list(result)
@@ -154,9 +154,19 @@ class ParameterConfig:
 		return parseDict(value, valueParser, lambda k: parseTuple(k, keyTupleDelimeter))
 
 
+	def _processParameterList(self, varName, values):
+		result = list(values)
+		for idx, value in enumerate(values):
+			valueRepeat = int(self.get(varName, 'repeat idx %d' % idx, '1'))
+			assert(valueRepeat >= 0)
+			if valueRepeat > 1:
+				result.extend((valueRepeat - 1) * [value])
+		paramRepeat = int(self.get(varName, 'repeat', '1'))
+		return paramRepeat * result
+
+
 	def getParameter(self, varName):
 		optKey = self.getParameterOption(varName)
-		paramRepeat = int(self.get(optKey, 'repeat', '1'))
 
 		if isinstance(optKey, tuple):
 			varIndex = list(optKey).index(varName.lower())
@@ -167,8 +177,8 @@ class ParameterConfig:
 			if '=>' in tupleValue:
 				if self.getBool(optKey, 'parse dict', True):
 					return self.parseDict(varName, tupleValue,
-						lambda v: paramRepeat * self.parseParameterTuple(varName, v, tupleType, varType, varIndex))
-			return paramRepeat * self.parseParameterTuple(varName, tupleValue, tupleType, varType, varIndex)
+						lambda v: self._processParameterList(varName, self.parseParameterTuple(varName, v, tupleType, varType, varIndex)))
+			return self._processParameterList(varName, self.parseParameterTuple(varName, tupleValue, tupleType, varType, varIndex))
 
 		else:
 			varValue = self.get(optKey, None, '')
@@ -177,5 +187,5 @@ class ParameterConfig:
 			if '=>' in varValue:
 				if self.getBool(optKey, 'parse dict', True):
 					return self.parseDict(varName, varValue,
-						lambda v: paramRepeat * self.parseParameter(varName, v, varType))
-			return paramRepeat * self.parseParameter(varName, varValue, varType)
+						lambda v: self._processParameterList(varName, self.parseParameter(varName, v, varType)))
+			return self._processParameterList(varName, self.parseParameter(varName, varValue, varType))

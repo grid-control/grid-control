@@ -151,5 +151,7 @@ class ListProvider(DataProvider):
 			for block in self._parseFile(fp):
 				if _filterBlock(block):
 					yield block
-		finally:
 			fp.close()
+		except Exception:
+			fp.close()
+			raise

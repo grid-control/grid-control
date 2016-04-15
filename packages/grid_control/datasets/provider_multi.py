@@ -53,13 +53,13 @@ class MultiDatasetProvider(DataProvider):
 		return self._cache_dataset
 
 
-	def getBlocks(self):
+	def getBlocks(self, silent = True):
 		if self._cache_block is None:
 			ec = ExceptionCollector()
 			def getAllBlocks():
 				for provider in self._providerList:
 					try:
-						for block in provider.getBlocks():
+						for block in provider.getBlocks(silent):
 							yield block
 					except Exception:
 						ec.collect()

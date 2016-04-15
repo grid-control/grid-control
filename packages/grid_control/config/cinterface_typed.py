@@ -21,7 +21,7 @@ from grid_control.config.matcher_base import DictLookup, ListFilter, ListOrder, 
 from grid_control.utils.data_structures import makeEnum
 from grid_control.utils.parsing import parseBool, parseDict, parseList, parseTime, strDictLong, strTimeShort
 from hpfwk import APIError, Plugin
-from python_compat import identity, imap, lmap, relpath, sorted, user_input
+from python_compat import identity, ifilter, imap, lmap, relpath, sorted, user_input
 
 # Config interface class accessing typed data using an string interface provided by configView
 class TypedConfigInterface(ConfigInterface):
@@ -55,10 +55,10 @@ class TypedConfigInterface(ConfigInterface):
 
 	# Returns a tuple with (<dictionary>, <keys>) - the keys are sorted by order of appearance
 	# Default key is accessed via key == None (None is never in keys!)
-	def getDict(self, option, default = noDefault, parser = identity, strfun = identity, **kwargs):
+	def getDict(self, option, default = noDefault, parser = identity, strfun = str, **kwargs):
 		obj2str = lambda value: strDictLong(value, parser, strfun)
 		str2obj = lambda value: parseDict(value, parser)
-		def2obj = lambda value: (value, sorted(value.keys()))
+		def2obj = lambda value: (value, sorted(ifilter(lambda key: key is not None, value.keys())))
 		return self._getInternal('dictionary', obj2str, str2obj, def2obj, option, default, **kwargs)
 
 	# Get whitespace separated list (space, tab, newline)
@@ -135,6 +135,8 @@ class TypedConfigInterface(ConfigInterface):
 			clsList.append(factory.getBoundInstance(*(pargs or ()), **(pkwargs or {})))
 		if len(clsList) == 1:
 			return clsList[0]
+		elif not clsList: # requirePlugin == False
+			return None
 		if not option_compositor:
 			option_compositor = appendOption(option, 'manager')
 		return self.getPlugin(option_compositor, default_compositor, cls, tags, inherit,
@@ -152,8 +154,11 @@ class SimpleConfigInterface(TypedConfigInterface):
 
 	def getLookup(self, option, default = noDefault,
 			defaultMatcher = 'start', single = True, includeDefault = False, **kwargs):
+		matcherArgs = {}
+		if 'onChange' in kwargs:
+			matcherArgs['onChange'] = kwargs['onChange']
 		matcherOpt = appendOption(option, 'matcher')
-		matcherObj = self.getPlugin(matcherOpt, defaultMatcher, cls = Matcher, pargs = (matcherOpt,))
+		matcherObj = self.getPlugin(matcherOpt, defaultMatcher, cls = Matcher, pargs = (matcherOpt,), **matcherArgs)
 		(sourceDict, sourceOrder) = self.getDict(option, default, **kwargs)
 		return DictLookup(sourceDict, sourceOrder, matcherObj, single, includeDefault)
 
@@ -180,7 +185,7 @@ class SimpleConfigInterface(TypedConfigInterface):
 		return view.set(option, str(value), '=')
 
 	def getChoice(self, option, choices, default = noDefault,
-			obj2str = str.__str__, str2obj = str, def2obj = None, onValid = None, **kwargs):
+			obj2str = str.__str__, str2obj = str, def2obj = None, **kwargs):
 		default_str = self._getDefaultStr(default, def2obj, obj2str)
 		capDefault = lambda value: utils.QM(value == default_str, value.upper(), value.lower())
 		choices_str = str.join('/', imap(capDefault, imap(obj2str, choices)))
@@ -188,14 +193,13 @@ class SimpleConfigInterface(TypedConfigInterface):
 			raise APIError('Invalid default choice "%s" [%s]!' % (default, choices_str))
 		if 'interactive' in kwargs:
 			kwargs['interactive'] += (' [%s]' % choices_str)
-		def myOnValid(loc, obj):
+		def checked_str2obj(value):
+			obj = str2obj(value)
 			if obj not in choices:
-				raise ConfigError('Invalid choice "%s" [%s]!' % (obj, choices_str))
-			if onValid:
-				return onValid(loc, obj)
+				raise ConfigError('Invalid choice "%s" [%s]!' % (value, choices_str))
 			return obj
-		return self._getInternal('choice', obj2str, str2obj, def2obj, option, default,
-			onValid = myOnValid, interactiveDefault = False, **kwargs)
+		return self._getInternal('choice', obj2str, checked_str2obj, def2obj, option, default,
+			interactiveDefault = False, **kwargs)
 	def setChoice(self, option, value, opttype = '=', source = None, obj2str = str.__str__):
 		return self._setInternal('choice', obj2str, option, value, opttype, source)
 

@@ -13,13 +13,15 @@
 # | limitations under the License.
 
 from grid_control import utils
-from grid_control.config import ConfigError
 from grid_control.datasets import DataProvider, DataSplitter, DatasetError
 from grid_control.datasets.splitter_basic import HybridSplitter
+from grid_control.utils.data_structures import makeEnum
 from grid_control.utils.thread_tools import start_thread
 from grid_control.utils.webservice import readJSON
 from grid_control_cms.lumi_tools import parseLumiFilter
 from python_compat import sorted
+
+CMSLocationFormat = makeEnum(['hostname', 'siteDB', 'both'])
 
 # required format: <dataset path>[@<instance>][#<block>]
 class CMSProvider(DataProvider):
@@ -31,14 +33,12 @@ class CMSProvider(DataProvider):
 		# PhEDex blacklist: 'T1_DE_KIT', 'T1_US_FNAL' and '*_Disk' allow user jobs - other T1's dont!
 		self._lumi_query = config.getBool('lumi metadata', self._lumi_filter != [])
 		self._phedexFilter = config.getFilter('phedex sites', '-T3_US_FNALLPC',
-			defaultMatcher = 'blackwhite')
+			defaultMatcher = 'blackwhite', defaultFilter = 'weak')
 		self._phedexT1Filter = config.getFilter('phedex t1 accept', 'T1_DE_KIT T1_US_FNAL',
 			defaultMatcher = 'blackwhite', defaultFilter = 'weak')
 		self._phedexT1Mode = config.get('phedex t1 mode', 'disk').lower()
 		self.onlyComplete = config.getBool('only complete sites', True)
-		self.locationFormat = config.get('location format', 'hostname').lower() # hostname or sitedb
-		if self.locationFormat not in ['hostname', 'sitedb', 'both']:
-			raise ConfigError('Invalid location format: %s' % self.locationFormat)
+		self._locationFormat = config.getEnum('location format', CMSLocationFormat, CMSLocationFormat.hostname)
 
 		(self._datasetPath, self._url, self._datasetBlock) = utils.optSplit(datasetExpr, '@#')
 		self._url = self._url or config.get('dbs instance', '')
@@ -83,11 +83,11 @@ class CMSProvider(DataProvider):
 			for replica in phedexBlock['replica']:
 				if self.nodeFilter(replica['node'], replica['complete'] == 'y'):
 					location = None
-					if self.locationFormat == 'hostname':
+					if self._locationFormat == CMSLocationFormat.hostname:
 						location = replica.get('se')
-					elif self.locationFormat == 'sitedb':
+					elif self._locationFormat == CMSLocationFormat.siteDB:
 						location = replica.get('node')
-					elif self.locationFormat == 'both' and (replica.get('node') or replica.get('se')):
+					elif (self._locationFormat == CMSLocationFormat.both) and (replica.get('node') or replica.get('se')):
 						location = '%s/%s' % (replica.get('node'), replica.get('se'))
 					if location:
 						dictSE[blockPath].append(location)

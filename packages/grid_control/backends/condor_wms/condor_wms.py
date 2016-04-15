@@ -25,7 +25,7 @@ from grid_control.backends.broker import Broker
 from grid_control.backends.condor_wms.processhandler import ProcessHandler
 from grid_control.backends.wms import BackendError, BasicWMS, WMS
 from grid_control.job_db import Job
-from python_compat import ifilter, irange, izip, lzip, md5, set, sorted
+from python_compat import ifilter, irange, izip, lmap, lzip, md5, set, sorted
 
 # if the ssh stuff proves too hack'y: http://www.lag.net/paramiko/
 
@@ -671,8 +671,11 @@ class Condor(BasicWMS):
 			if file_list:
 				arg_key = self.poolReqs["dataFiles"]
 				data_file = os.path.join(self.getSandboxPath(jobNum), 'job_%d_files.txt' % jobNum)
-				with open(data_file,"w") as data_file_list:
-					data_file_list.writelines(line + "\n" for line in file_list)
+				data_file_list = open(data_file,"w")
+				try:
+					data_file_list.writelines(lmap(lambda line: line + "\n", file_list))
+				finally:
+					data_file_list.close()
 				jdlReq.append('%s = "%s"'%(arg_key, data_file))
 		return jdlReq
 

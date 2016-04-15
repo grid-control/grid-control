@@ -359,7 +359,7 @@ def download_sequential(opts, workDir, jobList, incInfo, jobDB, token):
 			if otime:
 				tr = lambda sref, tref: gcSupport.prettySize(((csize - sref) / max(1, time.time() - tref)))
 				tmp = name_dest
-				if opts.showHost:
+				if opts.show_host:
 					tmp += ' [%s]' % pathSE.split('//')[-1].split('/')[0].split(':')[0]
 				self.write('\r\t%s (%7s - %7s/s avg. - %7s/s inst.)' % (tmp,
 					gcSupport.prettySize(csize), tr(0, stime), tr(osize, otime)))

@@ -12,11 +12,11 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-import os, shutil
+import os, logging
 from grid_control import utils
 from grid_control.backends import WMS
 from grid_control.config import ConfigError, noDefault
-from grid_control.datasets import DataSplitter, PartitionProcessor
+from grid_control.datasets import PartitionProcessor
 from grid_control.tasks.task_data import DataTask
 from grid_control.tasks.task_utils import TaskExecutableWrapper
 from python_compat import imap, lfilter
@@ -27,7 +27,7 @@ class CMSPartitionProcessor(BasicPartitionProcessor):
 	def __init__(self, config):
 		BasicPartitionProcessor.__init__(self, config)
 		lfnModifier = config.get('partition lfn modifier', '', onChange = None)
-		lfnModifierShortcuts = config.getDict('lfn modifier dict', {
+		lfnModifierShortcuts = config.getDict('partition lfn modifier dict', {
 			'<xrootd>': 'root://cms-xrd-global.cern.ch//store/',
 			'<xrootd:eu>': 'root://xrootd-cms.infn.it//store/',
 			'<xrootd:us>': 'root://cmsxrootd.fnal.gov//store/',
@@ -75,18 +75,15 @@ class CMSSW(DataTask):
 		self.arguments = config.get('arguments', '')
 
 		# Get cmssw config files and check their existance
-		self.configFiles = list(self._getConfigFiles(config))
 		# Check that for dataset jobs the necessary placeholders are in the config file
-		self.prepare = config.getBool('prepare config', False)
-		fragment = config.getPath('instrumentation fragment', utils.pathShare('fragmentForCMSSW.py', pkg = 'grid_control_cms'))
-		if self.dataSplitter is not None:
-			if config.getState('init', detail = 'sandbox'):
-				if len(self.configFiles) > 0:
-					self.instrumentCfgQueue(self.configFiles, fragment, mustPrepare = True)
-		else:
+		if self.dataSplitter is None:
 			self.eventsPerJob = config.get('events per job', '0')
-			if config.getState('init', detail = 'sandbox') and self.prepare:
-				self.instrumentCfgQueue(self.configFiles, fragment)
+		fragment = config.getPath('instrumentation fragment', utils.pathShare('fragmentForCMSSW.py', pkg = 'grid_control_cms'))
+		self.configFiles = self._processConfigFiles(config, list(self._getConfigFiles(config)), fragment,
+			autoPrepare = config.getBool('instrumentation', True),
+			mustPrepare = (self.dataSplitter is not None))
+
+		# Create project area tarball
 		if not os.path.exists(self._projectAreaTarball):
 			config.setState(True, 'init', detail = 'sandbox')
 		if config.getState('init', detail = 'sandbox'):
@@ -170,53 +167,95 @@ class CMSSW(DataTask):
 	def _getConfigFiles(self, config):
 		cfgDefault = utils.QM(self.prolog.isActive() or self.epilog.isActive(), [], noDefault)
 		for cfgFile in config.getPaths('config file', cfgDefault, mustExist = False):
-			newPath = config.getWorkPath(os.path.basename(cfgFile))
-			if not os.path.exists(newPath):
-				if not os.path.exists(cfgFile):
-					raise ConfigError('Config file %r not found.' % cfgFile)
-				shutil.copyfile(cfgFile, newPath)
-			yield newPath
+			if not os.path.exists(cfgFile):
+				raise ConfigError('Config file %r not found.' % cfgFile)
+			yield cfgFile
 
 
-	def instrumentCfgQueue(self, cfgFiles, fragment, mustPrepare = False):
-		def isInstrumented(cfgName):
-			cfg = open(cfgName, 'r').read()
-			for tag in self.neededVars():
-				if (not '__%s__' % tag in cfg) and (not '@%s@' % tag in cfg):
-					return False
-			return True
-		def doInstrument(cfgName):
-			if not isInstrumented(cfgName) or 'customise_for_gc' not in open(cfgName, 'r').read():
-				utils.vprint('Instrumenting...', os.path.basename(cfgName), -1)
-				open(cfgName, 'a').write(open(fragment, 'r').read())
-			else:
-				utils.vprint('%s already contains customise_for_gc and all needed variables' % os.path.basename(cfgName), -1)
+	def _cfgIsInstrumented(self, fn):
+		fp = open(fn, 'r')
+		try:
+			cfg = fp.read()
+		finally:
+			fp.close()
+		for tag in self.neededVars():
+			if (not '__%s__' % tag in cfg) and (not '@%s@' % tag in cfg):
+				return False
+		return True
 
-		cfgStatus = []
+
+	def _cfgStore(self, source, target, fragment_path = None):
+		fp = open(source, 'r')
+		try:
+			content = fp.read()
+		finally:
+			fp.close()
+		fp = open(target, 'w')
+		try:
+			fp.write(content)
+			if fragment_path:
+				logging.getLogger('user').info('Instrumenting... %s', os.path.basename(source))
+				fragment_fp = open(fragment_path, 'r')
+				fp.write(fragment_fp.read())
+				fragment_fp.close()
+		finally:
+			fp.close()
+
+
+	def _cfgFindUninitialized(self, config, cfgFiles, autoPrepare, mustPrepare):
 		comPath = os.path.dirname(os.path.commonprefix(cfgFiles))
-		for cfg in cfgFiles:
-			cfgStatus.append({0: cfg.split(comPath, 1)[1].lstrip('/'), 1: str(isInstrumented(cfg)), 2: cfg})
-		utils.printTabular([(0, 'Config file'), (1, 'Instrumented')], cfgStatus, 'lc')
 
+		cfgTodo = []
+		cfgStatus = []
 		for cfg in cfgFiles:
-			if self.prepare or not isInstrumented(cfg):
-				if self.prepare or utils.getUserBool('Do you want to prepare %s for running over the dataset?' % cfg, True):
-					doInstrument(cfg)
-		if mustPrepare and not (True in imap(isInstrumented, cfgFiles)):
-			raise ConfigError('A config file must use %s to work properly!' %
-				str.join(', ', imap(lambda x: '@%s@' % x, self.neededVars())))
+			cfg_new = config.getWorkPath(os.path.basename(cfg))
+			cfg_new_exists = os.path.exists(cfg_new)
+			if cfg_new_exists:
+				isInstrumented = self._cfgIsInstrumented(cfg_new)
+				doCopy = False
+			else:
+				isInstrumented = self._cfgIsInstrumented(cfg)
+				doCopy = True
+			doPrepare = (mustPrepare or autoPrepare) and not isInstrumented
+			doCopy = doCopy or doPrepare
+			if doCopy:
+				cfgTodo.append((cfg, cfg_new, doPrepare))
+			cfgStatus.append({1: cfg.split(comPath, 1)[1].lstrip('/'), 2: cfg_new_exists,
+				3: isInstrumented, 4: doPrepare})
+
+		utils.vprint('', -1)
+		utils.printTabular([(1, 'Config file'), (2, 'Work dir'), (3, 'Instrumented'), (4, 'Scheduled')], cfgStatus, 'lccc')
+		utils.vprint('', -1)
+		return cfgTodo
+
+
+	def _processConfigFiles(self, config, cfgFiles, fragment_path, autoPrepare, mustPrepare):
+		# process list of uninitialized config files
+		for (cfg, cfg_new, doPrepare) in self._cfgFindUninitialized(config, cfgFiles, autoPrepare, mustPrepare):
+			if doPrepare and (autoPrepare or utils.getUserBool('Do you want to prepare %s for running over the dataset?' % cfg, True)):
+				self._cfgStore(cfg, cfg_new, fragment_path)
+			else:
+				self._cfgStore(cfg, cfg_new)
+
+		result = []
+		for cfg in cfgFiles:
+			cfg_new = config.getWorkPath(os.path.basename(cfg))
+			if not os.path.exists(cfg_new):
+				raise ConfigError('Config file %r was not copied to the work directory!' % cfg)
+			isInstrumented = self._cfgIsInstrumented(cfg_new)
+			if mustPrepare and not isInstrumented:
+				raise ConfigError('Config file %r must use %s to work properly!' %
+					(cfg, str.join(', ', imap(lambda x: '@%s@' % x, self.neededVars()))))
+			if autoPrepare and not isInstrumented:
+				self._log.warning('Config file %r was not instrumented!', cfg)
+			result.append(cfg_new)
+		return result
 
 
 	def neededVars(self):
-		result = []
-		varMap = {
-			DataSplitter.NEntries: 'MAX_EVENTS',
-			DataSplitter.Skipped: 'SKIP_EVENTS',
-			DataSplitter.FileList: 'FILE_NAMES'
-		}
 		if self.dataSplitter:
-			result.extend(imap(lambda x: varMap[x], self.dataSplitter.neededVars()))
-		return result
+			return self._dataPS.getNeededDataKeys()
+		return []
 
 
 	# Called on job submission

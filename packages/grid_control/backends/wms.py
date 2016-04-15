@@ -20,7 +20,7 @@ from grid_control.backends.access import AccessToken
 from grid_control.backends.storage import StorageManager
 from grid_control.gc_plugin import NamedPlugin
 from grid_control.utils.data_structures import makeEnum
-from grid_control.utils.file_objects import VirtualFile
+from grid_control.utils.file_objects import SafeFile, VirtualFile
 from grid_control.utils.gc_itertools import ichain, lchain
 from hpfwk import AbstractError, NestedException
 from python_compat import imap, izip, lmap, set, sorted
@@ -134,6 +134,12 @@ class BasicWMS(WMS):
 			utils.vprint('Using batch system: %s' % self.wmsName, -1)
 
 		self.errorLog = config.getWorkPath('error.tar')
+		self._runlib = config.getWorkPath('gc-run.lib')
+		if not os.path.exists(self._runlib):
+			fp = SafeFile(self._runlib, 'w')
+			content = SafeFile(utils.pathShare('gc-run.lib')).read()
+			fp.write(content.replace('__GC_VERSION__', __import__('grid_control').__version__))
+			fp.close()
 		self._outputPath = config.getWorkPath('output')
 		utils.ensureDirExists(self._outputPath, 'output directory')
 		self._failPath = config.getWorkPath('fail')
@@ -258,7 +264,7 @@ class BasicWMS(WMS):
 	def _getSandboxFilesIn(self, task):
 		return [
 			('GC Runtime', utils.pathShare('gc-run.sh'), 'gc-run.sh'),
-			('GC Runtime library', utils.pathShare('gc-run.lib'), 'gc-run.lib'),
+			('GC Runtime library', self._runlib, 'gc-run.lib'),
 			('GC Sandbox', self._getSandboxName(task), 'gc-sandbox.tar.gz'),
 		]
 

@@ -30,7 +30,7 @@ class DataParameterSource(ParameterSource):
 		elif os.path.exists(self.getDataPath('cache.dat') and self.getDataPath('map.tar')):
 			self._dataSplitter.importPartitions(self.getDataPath('map.tar'))
 		else:
-			DataProvider.saveToFile(self.getDataPath('cache.dat'), self._dataProvider.getBlocks())
+			DataProvider.saveToFile(self.getDataPath('cache.dat'), self._dataProvider.getBlocks(silent = False))
 			self._dataSplitter.splitDataset(self.getDataPath('map.tar'), self._dataProvider.getBlocks())
 
 		self._maxN = self._dataSplitter.getMaxJobs()
@@ -50,7 +50,7 @@ class DataParameterSource(ParameterSource):
 		self._part_proc.process(pNum, splitInfo, result)
 
 	def getHash(self):
-		return md5_hex(str(self._srcName) + str(self._dataSplitter.getMaxJobs()))
+		return md5_hex(str(self._srcName) + str(self._dataSplitter.getMaxJobs()) + str(self.resyncEnabled()))
 
 	def show(self):
 		return ['%s: src = %s' % (self.__class__.__name__, self._srcName)]

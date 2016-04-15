@@ -24,7 +24,7 @@ class ConfigInterface(object):
 
 	def __init__(self, configView):
 		self._configView = configView
-		self._log = logging.getLogger('config.%s' % self._configView.configName)
+		self._log = logging.getLogger('config.%s' % self._configView.configName.lower())
 
 	def __repr__(self):
 		return '<%s(view = %s)>' % (self.__class__.__name__, self._configView)
@@ -50,7 +50,7 @@ class ConfigInterface(object):
 
 	# Write settings to file
 	def write(self, stream, **kwargs):
-		return self._configView.write(stream, entries = self._configView.iterContent(), **kwargs)
+		return self._configView.write(stream, **kwargs)
 
 	# Find config caller
 	def _getCaller(self):
@@ -71,7 +71,9 @@ class ConfigInterface(object):
 			except Exception:
 				raise APIError('Unable to convert default object: %s' % repr(default_obj))
 			try:
-				return obj2str(default_obj)
+				result = obj2str(default_obj)
+				assert(isinstance(result, str))
+				return result
 			except Exception:
 				raise APIError('Unable to get string representation of default object: %s' % repr(default_obj))
 		return noDefault
@@ -82,6 +84,7 @@ class ConfigInterface(object):
 			try:
 				obj = str2obj(entry.value)
 				entry.value = obj2str(obj) # Update value of entry with formatted data
+				assert(isinstance(entry.value, str))
 				return obj
 			except Exception:
 				raise ConfigError('Unable to parse %s: %s' % (entry_desc + desc,
@@ -103,6 +106,7 @@ class ConfigInterface(object):
 			onChange = defaultOnChange, onValid = defaultOnValid, persistent = False):
 		self._log.log(logging.DEBUG2, 'Config query from: %r', self._getCaller())
 		default_str = self._getDefaultStr(default_obj, def2obj, obj2str)
+		assert((default_str == noDefault) or isinstance(default_str, str))
 
 		# Make sure option is in a consistent format
 		option_list = standardConfigForm(option)

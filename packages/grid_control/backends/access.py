@@ -129,6 +129,7 @@ class VomsProxy(TimedAccessToken):
 	def __init__(self, config, name):
 		TimedAccessToken.__init__(self, config, name)
 		self._infoExec = utils.resolveInstallPath('voms-proxy-info')
+		self._proxyPath = config.get('proxy path', '')
 		self._ignoreWarning = config.getBool('ignore warnings', False, onChange = None)
 		self._cache = None
 
@@ -152,7 +153,10 @@ class VomsProxy(TimedAccessToken):
 		if cached and self._cache:
 			return self._cache
 		# Call voms-proxy-info and parse results
-		proc = utils.LoggedProcess(self._infoExec, '--all')
+		args = '--all'
+		if self._proxyPath:
+			args += ' --file ' + self._proxyPath
+		proc = utils.LoggedProcess(self._infoExec, args)
 		retCode = proc.wait()
 		if (retCode != 0) and not self._ignoreWarning:
 			msg = ('voms-proxy-info output:\n%s\n%s\n' % (proc.getOutput(), proc.getError())).replace('\n\n', '\n')
@@ -223,8 +227,8 @@ class AFSAccessToken(RefreshableAccessToken):
 					issued_expires, principal = rsplit(line, '  ', 1)
 					issued_expires = issued_expires.replace('/', ' ').split()
 					assert(len(issued_expires) % 2 == 0)
-					issued_str = str.join(' ', issued_expires[:len(issued_expires) / 2])
-					expires_str = str.join(' ', issued_expires[len(issued_expires) / 2:])
+					issued_str = str.join(' ', issued_expires[:int(len(issued_expires) / 2)])
+					expires_str = str.join(' ', issued_expires[int(len(issued_expires) / 2):])
 					parseDate = lambda value, format: time.mktime(time.strptime(value, format))
 					if expires_str.count(' ') == 3:
 						if len(expires_str.split()[2]) == 2:

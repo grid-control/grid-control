@@ -12,6 +12,7 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
+import logging
 from grid_control.datasets import DataProcessor, DataProvider, DataSplitter, DatasetError, PartitionProcessor
 from grid_control.parameters import ParameterMetadata
 from grid_control.utils.data_structures import makeEnum
@@ -40,7 +41,7 @@ class LumiDataProcessor(DataProcessor):
 		else:
 			lumi_keep_default = LumiKeep.Run
 			config.setBool('lumi metadata', True)
-			self._log.warning('Runs/lumi section filter enabled!')
+			logging.getLogger('user.once').info('Runs/lumi section filter enabled!')
 		self._lumi_keep = config.getEnum('lumi keep', LumiKeep, lumi_keep_default)
 		self._lumi_strict = config.getBool('strict lumi filter', True)
 
@@ -49,7 +50,7 @@ class LumiDataProcessor(DataProcessor):
 			return True
 		fi_meta = fi[DataProvider.Metadata]
 		for (run, lumi) in izip(fi_meta[idxRuns], fi_meta[idxLumi]):
-			if selectLumi((run, lumi), self._lumi_filter.lookup(block[DataProvider.Nickname])):
+			if selectLumi((run, lumi), self._lumi_filter.lookup(block[DataProvider.Nickname], is_selector = False)):
 				return True
 
 	def _processFI(self, block, idxRuns, idxLumi):
@@ -72,8 +73,13 @@ class LumiDataProcessor(DataProcessor):
 				return block[DataProvider.Metadata].index(key)
 		idxRuns = getMetadataIdx('Runs')
 		idxLumi = getMetadataIdx('Lumi')
-		if self._lumi_filter and ((idxRuns is None) or (idxLumi is None)) and self._lumi_strict:
-			raise DatasetError('Lumi filter active but data source does not provide lumi information!')
+		if not self._lumi_filter.empty():
+			lumi_filter = self._lumi_filter.lookup(block[DataProvider.Nickname], is_selector = False)
+			if lumi_filter and ((idxRuns is None) or (idxLumi is None)) and self._lumi_strict:
+				fqName = block[DataProvider.Dataset]
+				if block[DataProvider.BlockName] != '0':
+					fqName += '#' + block[DataProvider.BlockName]
+				raise DatasetError('Strict lumi filter active but dataset %s does not provide lumi information!' % fqName)
 
 		block[DataProvider.FileList] = list(self._processFI(block, idxRuns, idxLumi))
 		if not block[DataProvider.FileList]:
@@ -106,7 +112,9 @@ class LumiPartitionProcessor(PartitionProcessor):
 
 	def process(self, pNum, splitInfo, result):
 		if not self._lumi_filter.empty():
-			idxRuns = splitInfo[DataSplitter.MetadataHeader].index("Runs")
-			iterRuns = ichain(imap(lambda m: m[idxRuns], splitInfo[DataSplitter.Metadata]))
-			lumi_filter = filterLumiFilter(list(iterRuns), self._lumi_filter.lookup(splitInfo[DataSplitter.Nickname]))
-			result['LUMI_RANGE'] = str.join(',', imap(lambda lr: '"%s"' % lr, formatLumi(lumi_filter)))
+			lumi_filter = self._lumi_filter.lookup(splitInfo[DataSplitter.Nickname], is_selector = False)
+			if lumi_filter:
+				idxRuns = splitInfo[DataSplitter.MetadataHeader].index("Runs")
+				iterRuns = ichain(imap(lambda m: m[idxRuns], splitInfo[DataSplitter.Metadata]))
+				short_lumi_filter = filterLumiFilter(list(iterRuns), lumi_filter)
+				result['LUMI_RANGE'] = str.join(',', imap(lambda lr: '"%s"' % lr, formatLumi(short_lumi_filter)))

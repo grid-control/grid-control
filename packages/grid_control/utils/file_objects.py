@@ -12,29 +12,48 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-import gzip
+import os, gzip
 from python_compat import BytesBufferBase, bytes2str, imap, str2bytes, tarfile
 
 class SafeFile(object):
-	def __init__(self, fn, mode = 'r', keepOld = False):
+	def __init__(self, fn, mode = 'r', keep_old = False):
 		assert(mode in ['r', 'w'])
-		self._mode = mode
-		self._alias = fn
-		if mode == 'w':
-			self._alias = fn + '.tmp'
-		self._fp = open(fn, mode)
+		(self._fn, self._mode, self._keep_old) = (fn, mode, keep_old)
+		if self._mode == 'w':
+			self._fp = open(self._fn + '.tmp', mode)
+		else:
+			self._fp = open(self._fn, mode)
+
+	def readlines(self):
+		return self._fp.readlines()
+
+	def read(self):
+		return self._fp.read()
 
 	def write(self, value):
 		self._fp.write(value)
 		self._fp.truncate()
 
+	def writelines(self, value):
+		self._fp.writelines(value)
+		self._fp.truncate()
+
 	def close(self):
-		if self._fp:
-			self._fp.close()
+		if not self._fp:
+			return
+		self._fp.close()
+		if self._mode == 'w':
+			if self._keep_old:
+				os.rename(self._fn, self._fn + '.old')
+			os.rename(self._fn + '.tmp', self._fn)
 		self._fp = None
 
 	def __del__(self):
-		self.close()
+		if self._fp:
+			self._fp.close()
+
+	def __repr__(self):
+		return '%s(fn = %r, mode = %r, keep_old = %s, handle = %r)' % (self.__class__.__name__, self._fn, self._mode, self._keep_old, self._fp)
 
 
 class VirtualFile(BytesBufferBase):

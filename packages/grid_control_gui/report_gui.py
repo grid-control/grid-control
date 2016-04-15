@@ -114,24 +114,23 @@ class CategoryReport(Report):
 		for jobNum in self._jobs:
 			jobState = self._jobDB.get(jobNum, defaultJob).state
 			catKey = self._job2cat[jobNum]
-			catStateDict[catKey][jobState] = catStateDict.setdefault(catKey, {}).get(jobState, 0) + 1
+			catStateDict[catKey][jobState] = catStateDict.setdefault(catKey, dict()).get(jobState, 0) + 1
 		return (catStateDict, dict(self._catDescDict), {}) # (<state overview>, <descriptions>, <#subcategories>)
 
 
 class ModuleReport(CategoryReport):
 	def display(self):
 		(catStateDict, catDescDict, _) = CategoryReport._getCategoryStateSummary(self)
-
 		infos = []
 		head = set()
 		stateCat = {Job.SUCCESS: 'SUCCESS', Job.FAILED: 'FAILED', Job.RUNNING: 'RUNNING', Job.DONE: 'RUNNING'}
 		for catKey in catDescDict:
-			tmp = catDescDict[catKey]
-			infos.append(tmp)
+			tmp = dict(catDescDict[catKey])
 			head.update(tmp.keys())
 			for stateKey in catStateDict[catKey]:
 				state = stateCat.get(stateKey, 'WAITING')
 				tmp[state] = tmp.get(state, 0) + catStateDict[catKey][stateKey]
+			infos.append(tmp)
 
 		stateCatList = ['WAITING', 'RUNNING', 'FAILED', 'SUCCESS']
 		utils.vprint(level = -1)

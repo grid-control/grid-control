@@ -17,7 +17,8 @@ from grid_control import utils
 from grid_control.backends.wms import BackendError
 from grid_control.backends.wms_grid import GridWMS
 from grid_control.utils.parsing import parseStr
-from python_compat import md5, sort_inplace
+from grid_control.utils.thread_tools import start_thread
+from python_compat import md5_hex, sort_inplace
 
 def choice_exp(sample, p = 0.5):
 	for x in sample:
@@ -30,6 +31,7 @@ class DiscoverWMS_Lazy(object): # TODO: Move to broker infrastructure
 		self.statePath = config.getWorkPath('glitewms.info')
 		(self.wms_ok, self.wms_all, self.pingDict, self.pos) = self.loadState()
 		self.wms_timeout = {}
+		self._full = config.getBool('wms discover full', True, onChange = None)
 		self._exeLCGInfoSites = utils.resolveInstallPath('lcg-infosites')
 		self._exeGliteWMSJobListMatch = utils.resolveInstallPath('glite-wms-job-list-match')
 
@@ -61,6 +63,7 @@ class DiscoverWMS_Lazy(object): # TODO: Move to broker infrastructure
 		return result
 
 	def matchSites(self, endpoint):
+		log = utils.ActivityLog('Discovering available WMS services - testing %s' % endpoint)
 		result = []
 		checkArgs = '-a'
 		if endpoint:
@@ -70,7 +73,7 @@ class DiscoverWMS_Lazy(object): # TODO: Move to broker infrastructure
 			for line in proc.iter():
 				if line.startswith(' - '):
 					result.append(line[3:].strip())
-		thread = utils.gcStartThread('Matching jobs with WMS %s' % endpoint, matchThread)
+		thread = start_thread('Matching jobs with WMS %s' % endpoint, matchThread)
 		thread.join(timeout = 3)
 		if thread.isAlive():
 			proc.kill()
@@ -78,7 +81,9 @@ class DiscoverWMS_Lazy(object): # TODO: Move to broker infrastructure
 			self.wms_timeout[endpoint] = self.wms_timeout.get(endpoint, 0) + 1
 			if self.wms_timeout.get(endpoint, 0) > 10: # remove endpoints after 10 failures
 				self.wms_all.remove(endpoint)
+			log.finish()
 			return []
+		log.finish()
 		return result
 
 	def getSites(self):
@@ -88,6 +93,14 @@ class DiscoverWMS_Lazy(object): # TODO: Move to broker infrastructure
 		if (self.pos is None) or (len(self.wms_all) == 0): # initial discovery
 			self.pos = 0
 			self.wms_all = self.listWMS_all()
+		if self._full:
+			if not self.wms_ok:
+				for wms in self.wms_all:
+					match = self.matchSites(wms)
+					if match:
+						self.wms_ok.append(wms)
+				self.updateState()
+			return self.wms_ok
 		if self.pos == len(self.wms_all): # self.pos = None => perform rediscovery in next step
 			self.pos = 0
 		else:
@@ -105,6 +118,7 @@ class DiscoverWMS_Lazy(object): # TODO: Move to broker infrastructure
 		log = utils.ActivityLog('Discovering available WMS services')
 		wms_best_list = []
 		for wms in self.listWMS_good():
+			log = utils.ActivityLog('Discovering available WMS services - pinging %s' % wms)
 			if wms is None:
 				continue
 			ping, pingtime = self.pingDict.get(wms, (None, 0))
@@ -113,8 +127,13 @@ class DiscoverWMS_Lazy(object): # TODO: Move to broker infrastructure
 				self.pingDict[wms] = (ping, time.time() + 10 * 60 * random.random()) # 10 min variation
 			if ping is not None:
 				wms_best_list.append((wms, ping))
+			log.finish()
+		log.finish()
+		if not wms_best_list:
+			return None
 		sort_inplace(wms_best_list, key = lambda name_ping: name_ping[1])
 		result = choice_exp(wms_best_list)
+		log = utils.ActivityLog('Discovering available WMS services - using %s' % wms)
 		if result is not None:
 			wms, ping = result # reduce timeout by 5min for chosen wms => re-ping every 6 submits
 			self.pingDict[wms] = (ping, self.pingDict[wms][1] + 5*60)
@@ -140,7 +159,7 @@ class GliteWMS(GridWMS):
 		self._useDelegate = config.getBool('try delegate', True, onChange = None)
 		self._forceDelegate = config.getBool('force delegate', False, onChange = None)
 		self._discovery_module = None
-		if config.getBool('discover wms', False, onChange = None):
+		if config.getBool('discover wms', True, onChange = None):
 			self._discovery_module = DiscoverWMS_Lazy(config)
 		self._discover_sites = config.getBool('discover sites', False, onChange = None)
 
@@ -159,7 +178,7 @@ class GliteWMS(GridWMS):
 			return True
 		log = tempfile.mktemp('.log')
 		try:
-			dID = 'GCD' + md5(str(time.time())).hexdigest()[:10]
+			dID = 'GCD' + md5_hex(time.time())[:10]
 			activity = utils.ActivityLog('creating delegate proxy for job submission')
 			proc = utils.LoggedProcess(self._delegateExec, '%s -d %s --noint --logfile "%s"' %
 				(utils.QM(self._configVO, '--config "%s"' % self._configVO, ''), dID, log))

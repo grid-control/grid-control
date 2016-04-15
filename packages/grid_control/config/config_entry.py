@@ -82,11 +82,9 @@ class ConfigEntry(object):
 			result += line + '\n'
 		return result.rstrip()
 
-	def processEntries(cls, entryList):
+	def _processEntries(cls, entryList):
 		result = None
 		used = []
-		for entry in entryList:
-			entry.accessed = True
 		for entry in entryList:
 			def mkNew(value):
 				return ConfigEntry(entry.section, entry.option, value, '=', '<processed>')
@@ -123,7 +121,7 @@ class ConfigEntry(object):
 				else:
 					raise ConfigError('Unable to substract "%s" from non-existing value!' % entry.format_opt())
 		return (result, used)
-	processEntries = classmethod(processEntries)
+	_processEntries = classmethod(_processEntries)
 
 	def simplifyEntries(cls, entryList):
 		(result_base, used) = cls.processEntries(entryList)
@@ -149,9 +147,16 @@ class ConfigEntry(object):
 			result = list(mergeSubsequent(used))
 		(result_simplified, used_simplified) = cls.processEntries(result)
 		assert(len(used_simplified) == len(result))
-		assert(result_simplified.value == result_base.value)
+		assert(result_simplified.value.strip() == result_base.value.strip())
 		return result
 	simplifyEntries = classmethod(simplifyEntries)
+
+	def processEntries(cls, entryList):
+		entryList = list(entryList)
+		for entry in entryList:
+			entry.accessed = True
+		return cls._processEntries(entryList)
+	processEntries = classmethod(processEntries)
 
 	def combineEntries(cls, entryList):
 		(result, used) = cls.processEntries(entryList)

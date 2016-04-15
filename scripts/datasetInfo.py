@@ -51,6 +51,8 @@ def get_dataset_config(opts, args):
 	dataset = args[0].strip()
 	if os.path.exists(dataset):
 		opts.provider = 'ListProvider'
+	else:
+		opts.provider = 'DBS3Provider'
 	cfgSettings = {'dbs blacklist T1 *': 'False', 'remove empty blocks *': 'False',
 		'remove empty files *': 'False', 'location format *': opts.location,
 		'nickname check collision *': 'False',

@@ -60,6 +60,8 @@
 
     * grid_control.datasets.provider_base DataProvider
 
+     * grid_control.datasets.provider_config ConfigDataProvider config
+
      * grid_control.datasets.provider_basic FileProvider file
 
      * grid_control.datasets.provider_basic ListProvider list

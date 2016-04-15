@@ -24,13 +24,14 @@ class DBS3Provider(CMSProvider):
 
 	def __init__(self, config, datasetExpr, datasetNick = None, datasetID = 0):
 		CMSProvider.__init__(self, config, datasetExpr, datasetNick, datasetID)
-		self.usePhedex = (self._url == '') # Use DBS locality for private samples
+		url_global_inst = 'https://cmsweb.cern.ch/dbs/prod/global/DBSReader'
 		if self._url == '':
-			self._url = 'https://cmsweb.cern.ch/dbs/prod/global/DBSReader'
+			self._url = url_global_inst
 		elif '/' not in self._url: # assume prod instance
 			self._url = 'https://cmsweb.cern.ch/dbs/prod/%s/DBSReader' % self._url
 		elif not self._url.startswith('http'): # eg. prod/phys03
 			self._url = 'https://cmsweb.cern.ch/dbs/%s/DBSReader' % self._url
+		self.usePhedex = (self._url == url_global_inst) # Use DBS locality for private samples
 		self._gjrc = GridJSONRestClient(self._url, 'VOMS proxy needed to query DBS3!', UserError)
 
 

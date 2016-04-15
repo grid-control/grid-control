@@ -262,19 +262,23 @@ class DictLookup(Plugin):
 	def empty(self):
 		return not self._values
 
+	def get_values(self):
+		return self._values.values()
+
 	def __repr__(self):
 		return '%s(values = {%s}, matcher = %r, only_first = %r, always_default = %r)' % (
 			self.__class__.__name__, strDict(self._values, self._order), self._matcher,
 			self._only_first, self._always_default)
 
 	def _lookup(self, value, is_selector):
-		for key in self._order:
-			if is_selector:
-				match = self._matcher.matcher(key, value)
-			else:
-				match = self._matcher.matcher(value, key)
-			if match > 0:
-				yield self._values[key]
+		if value is not None:
+			for key in self._order:
+				if is_selector:
+					match = self._matcher.matcher(key, value)
+				else:
+					match = self._matcher.matcher(value, key)
+				if match > 0:
+					yield self._values[key]
 
 	def lookup(self, value, default = noDefault, is_selector = True):
 		result = list(self._lookup(value, is_selector))

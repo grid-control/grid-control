@@ -29,6 +29,10 @@ class TimeoutException(Exception):
 class GCEvent(object):
 	def __init__(self):
 		self._cond = threading.Condition(threading.Lock())
+		try:
+			self._cond_notify_all = self._cond.notify_all
+		except Exception:
+			self._cond_notify_all = self._cond.notifyAll
 		self._flag = False
 
 	def is_set(self):
@@ -38,7 +42,7 @@ class GCEvent(object):
 		self._cond.acquire()
 		try:
 			self._flag = True
-			self._cond.notify_all()
+			self._cond_notify_all()
 		finally:
 			self._cond.release()
 		return True

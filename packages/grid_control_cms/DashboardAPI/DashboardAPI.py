@@ -92,7 +92,7 @@ def logger(msg) :
     try :
         fh = open('report.log','a')
         fh.write(msg)
-        fh.close
+        fh.close()
     except Exception:
         pass
 
@@ -101,20 +101,21 @@ def logger(msg) :
 #
 
 # Format envvar, context var name, context var default value
-contextConf = {'MonitorID'    : ('MonitorID', 'unknown'), 
+contextConf = {'MonitorID'    : ('MonitorID', 'unknown'),
                'MonitorJobID' : ('MonitorJobID', 'unknown') }
 
 #
 # Method to return the context
 #
-def getContext(overload={}) :
+def getContext(overload=None) :
     context = {}
+    overload = overload or {}
     for paramName in contextConf.keys() :
         paramValue = None
-        if overload.has_key(paramName) :
+        if paramName in overload:
             paramValue = overload[paramName]
-        if paramValue is None :    
-            envVar = contextConf[paramName][0] 
+        if paramValue is None :
+            envVar = contextConf[paramName][0]
             paramValue = os.getenv(envVar)
         if paramValue is None :
             defaultValue = contextConf[paramName][1]
@@ -155,7 +156,7 @@ def filterArgs(argValues) :
                 paramValues[paramName] = paramValue 
         else :
             logger('Bad value for parameter :' + paramName) 
-            
+
     return contextValues, paramValues
 
 #
@@ -196,7 +197,7 @@ class DashboardAPI :
         if jobId is not None :
             contextArgs['MonitorJobID'] = jobId
         for key in contextConf.keys() :
-            if not contextArgs.has_key(key) and self.defaultContext[key] is not None :
+            if (key not in contextArgs) and (self.defaultContext[key] is not None):
                 contextArgs[key] = self.defaultContext[key]
         context = getContext(contextArgs)
         taskId = context['MonitorID']

@@ -252,7 +252,8 @@ class DataSplitter(ConfigurablePlugin):
 				# Removal of first file from current partition
 				modSI[DataSplitter.NEntries] += max(0, sizeInfo[idx] - modSI.get(DataSplitter.Skipped, 0) - modSI[DataSplitter.NEntries])
 				modSI[DataSplitter.NEntries] += modSI.get(DataSplitter.Skipped, 0)
-				modSI[DataSplitter.Skipped] = 0
+				if DataSplitter.Skipped in modSI:
+					modSI[DataSplitter.Skipped] = 0
 				removeCompleteFile()
 				return False
 
@@ -281,7 +282,7 @@ class DataSplitter(ConfigurablePlugin):
 		if oldFI[DataProvider.NEntries] == newFI[DataProvider.NEntries]:
 			return (procMode, idx + 1) # go to next file
 		oldEvts = modSI[DataSplitter.NEntries]
-		oldSkip = modSI[DataSplitter.Skipped]
+		oldSkip = modSI.get(DataSplitter.Skipped)
 
 		if self._resyncChangedFileEntries(idx, modSI, jobNum, sizeInfo, oldFI, newFI, newBlock, extended):
 			idx += 1 # True => file index should be increased
@@ -289,7 +290,7 @@ class DataSplitter(ConfigurablePlugin):
 		mode = utils.QM(oldFI[DataProvider.NEntries] < newFI[DataProvider.NEntries], self._mode_expanded, self._mode_shrunken)
 		if mode == ResyncMode.changed:
 				mode = ResyncMode.ignore
-				if (oldEvts != modSI[DataSplitter.NEntries]) or (oldSkip != modSI[DataSplitter.Skipped]):
+				if (oldEvts != modSI[DataSplitter.NEntries]) or (oldSkip != modSI.get(DataSplitter.Skipped)):
 					mode = ResyncMode.complete
 		procMode = min(procMode, mode)
 		return (procMode, idx) # go to next file
@@ -308,7 +309,8 @@ class DataSplitter(ConfigurablePlugin):
 			# Removal of first file from current partition
 			modSI[DataSplitter.NEntries] += max(0, sizeInfo[idx] - modSI.get(DataSplitter.Skipped, 0) - modSI[DataSplitter.NEntries])
 			modSI[DataSplitter.NEntries] += modSI.get(DataSplitter.Skipped, 0)
-			modSI[DataSplitter.Skipped] = 0
+			if DataSplitter.Skipped in modSI:
+				modSI[DataSplitter.Skipped] = 0
 			modSI[DataSplitter.Comment] += '[rm_first] '
 		else:
 			# File in the middle is affected - solution very simple :)

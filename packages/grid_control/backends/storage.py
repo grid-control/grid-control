@@ -81,8 +81,8 @@ class SEStorageManager(StorageManager):
 	def __init__(self, config, name, optDefault, optPrefix, varPrefix):
 		StorageManager.__init__(self, config, name, optDefault, optPrefix, varPrefix)
 		normSEPath = lambda x: utils.QM(x[0] == '/', 'dir:///%s' % x.lstrip('/'), x)
-		self.defPaths = config.getList('%s path' % optDefault, [], onValid = validNoVar, parseItem = normSEPath)
-		self.smPaths = config.getList('%s path' % optPrefix, self.defPaths, onValid = validNoVar, parseItem = normSEPath)
+		self.defPaths = config.getList('%s path' % optDefault, [], onValid = validNoVar(config), parseItem = normSEPath)
+		self.smPaths = config.getList('%s path' % optPrefix, self.defPaths, onValid = validNoVar(config), parseItem = normSEPath)
 		self.smFiles = config.getList('%s files' % optPrefix, [])
 		self.smPattern = config.get('%s pattern' % optPrefix, '@X@')
 		self.smTimeout = config.getTime('%s timeout' % optPrefix, 2*60*60)

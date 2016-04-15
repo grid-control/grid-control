@@ -1,11 +1,22 @@
 #!/usr/bin/env python
+import os
 from setuptools import setup, find_packages
+
+fp = open(os.path.join(os.path.dirname(__file__), 'packages', 'grid_control', '__init__.py'))
+version = None
+try:
+	for line in fp.readlines():
+		if line.startswith('__version__'):
+			version = eval(line.split('=')[1])
+finally:
+	fp.close()
+assert(version)
 
 setup(
 	name='grid-control',
-	version='1.7.01',
+	version=str.join('.', [str(int(version[:-3])), str(int(version[-3])), str(int(version[-2:]))]),
 	description='The Swiss Army knife of job submission tools',
-	long_description='The Swiss Army knife of job submission tools',
+	long_description=open(os.path.join(os.path.dirname(__file__), 'README.rst')).read(),
 	url='https://github.com/grid-control/grid-control',
 	author='Fred Stober et al.',
 	author_email='grid-control-dev@googlegroups.com',

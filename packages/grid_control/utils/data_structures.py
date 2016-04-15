@@ -13,7 +13,7 @@
 # | limitations under the License.
 
 from hpfwk import APIError
-from python_compat import izip, lsmap, md5_hex, set
+from python_compat import imap, izip, lsmap, md5_hex, set
 
 def makeEnum(members = None, cls = None, useHash = False):
 	members = members or []
@@ -32,12 +32,14 @@ def makeEnum(members = None, cls = None, useHash = False):
 
 	cls.enumNames = members
 	cls.enumValues = values
-	enumMapNV = dict(izip(cls.enumNames, cls.enumValues))
+	enumMapNV = dict(izip(imap(str.lower, cls.enumNames), cls.enumValues))
 	enumMapVN = dict(izip(cls.enumValues, cls.enumNames))
 	if len(enumMapNV) != len(enumMapVN):
 		raise APIError('Invalid enum definition!')
+	def str2enum(cls, value, *args, **kwargs):
+		return enumMapNV.get(value.lower(), *args, **kwargs)
 	cls.enum2str = enumMapVN.get
-	cls.str2enum = enumMapNV.get
+	cls.str2enum = classmethod(str2enum)
 	for name, value in izip(cls.enumNames, cls.enumValues):
 		setattr(cls, name, value)
 	return cls

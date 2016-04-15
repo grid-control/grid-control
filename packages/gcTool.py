@@ -35,11 +35,12 @@ def gc_cmd_line_parser(cmd_line_args):
 	parser.addBool(None, 'G', 'gui',           default = False, dest = 'gui_ansi')
 	parser.addBool(None, 'W', 'webserver',     default = False, dest = 'gui_cp')
 	parser.addAccu(None, 'v', 'verbose')
+	parser.addList(None, 'l', 'logging')
 	parser.addList(None, 'o', 'override')
+	parser.addText(None, ' ', 'action')
 	parser.addText(None, 'd', 'delete')
 	parser.addText(None, 'J', 'job-selector')
 	parser.addText(None, 'm', 'max-retry')
-	parser.addText(None, ' ', 'action')
 	parser.addText(None, ' ', 'reset')
 	# Deprecated options - refer to new report script instead
 	for (sopt, lopt) in [('-r', 'report'), ('-R', 'site-report'), ('-T', 'time-report'),
@@ -100,6 +101,11 @@ class OptsConfigFiller(Plugin.getClass('ConfigFiller')):
 		for section in cmd_line_config_map:
 			for (option, value) in cmd_line_config_map[section].items():
 				setConfigFromOpt(section, option, value)
+		for entry in opts.logging:
+			tmp = entry.replace(':', '=').split('=')
+			if len(tmp) == 1:
+				tmp.append('DEBUG')
+			setConfigFromOpt('logging', tmp[0] + ' level', tmp[1])
 		if opts.action is not None:
 			setConfigFromOpt('workflow', 'action', opts.action.replace(',', ' '))
 		if opts.continuous:

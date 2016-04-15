@@ -14,6 +14,22 @@
 
 import os, sys, itertools
 
+def get_builtin(*args):
+	for name in args:
+		module, member = name.split('.', 1)
+		try:
+			result = getattr(__import__(module), member)
+		except Exception:
+			continue
+		__import__('logging').getLogger('python_compat').debug('using %s', name)
+		return result
+	raise Exception('Builtins not found: ' + str.join(',', args))
+
+def get_listified(fun):
+	def function(*args):
+		return list(fun(*args))
+	return function
+
 def identity(x):
 	return x
 
@@ -47,18 +63,12 @@ except Exception:
 			return [str.join(sep, tmp[:len(tmp)-maxsplit])] + tmp[len(tmp)-maxsplit:]
 		return tmp
 
-try:	# set >= Python 2.4
-	set = set
-except Exception:
-	import sets
-	set = sets.Set
-
 try:	# sorted >= Python 2.4
-	sorted = sorted
+	sorted = get_builtin('__builtin__.sorted', 'builtins.sorted')
 	def sort_inplace(unsortedList, key = identity):
 		unsortedList.sort(key = key)
 except Exception:
-	builtin_cmp = cmp
+	builtin_cmp = get_builtin('__builtin__.cmp')
 	def sort_inplace(unsortedList, key = identity):
 		unsortedList.sort(lambda a, b: builtin_cmp(key(a), key(b)))
 	def sorted(unsortedList, key = None, reverse = False):
@@ -80,15 +90,8 @@ except Exception:
 			tmp.reverse()
 		return tmp
 
-try:	# hashlib >= Python 2.5
-	import hashlib
-	md5 = hashlib.md5
-except Exception:
-	import md5
-	md5 = md5.md5
-
 try:	# any >= Python 2.5
-	any = any
+	any = get_builtin('__builtin__.any', 'builtins.any')
 except Exception:
 	def any(iterable):
 		for element in iterable:
@@ -97,7 +100,7 @@ except Exception:
 		return False
 
 try:	# all >= Python 2.5
-	all = all
+	all = get_builtin('__builtin__.all', 'builtins.all')
 except Exception:
 	def all(iterable):
 		for element in iterable:
@@ -125,7 +128,7 @@ except Exception:
 		return os.path.join(*rel_list)
 
 try:	# next >= Python 2.6
-	next = next
+	next = get_builtin('__builtin__.next', 'builtins.next')
 except Exception:
 	def next(it, *default):
 		try:
@@ -158,52 +161,28 @@ except Exception:
 		def emit(self, record):
 			pass
 
-try:	# unicode < Python 3.0
-	unicode = unicode
-except Exception:
-	unicode = str
-
-try:	# raw_input < Python 3.0
-	user_input = raw_input
-except Exception:
-	user_input = input
-
-try:	# itertools.imap < Python 3.0
-	imap = itertools.imap
-	lmap = map
-	ismap = itertools.starmap
-except Exception:
-	imap = map
-	lmap = lambda *args: list(imap(*args))
-	ismap = itertools.starmap
-lsmap = lambda *args: list(ismap(*args))
-
-try:	# itertools.ifilter < Python 3.0
-	ifilter = itertools.ifilter
+if sys.version_info[0] < 3: # moved to iterator output for < Python 3.0
 	lfilter = filter
-except Exception:
-	ifilter = filter
-	def lfilter(*args):
-		return list(filter(*args))
-
-try:	# itertools.izip < Python 3.0
-	izip = itertools.izip
-	lzip = zip
-except Exception:
-	izip = zip
-	lzip = lambda *args: list(zip(*args))
-
-try:	# xrange < Python 3.0
-	irange = xrange
+	lmap = map
 	lrange = range
-except Exception:
-	irange = range
-	lrange = lambda *args: list(range(*args))
+	lzip = zip
+else:
+	lfilter = get_listified(filter)
+	lmap = get_listified(map)
+	lrange = get_listified(range)
+	lzip = get_listified(zip)
 
-try:	# reduce < Python 3.0
-	reduce = reduce
-except Exception:
-	from functools import reduce
+ismap = itertools.starmap
+lsmap = get_listified(ismap)
+ifilter = get_builtin('itertools.ifilter', 'builtins.filter') # itertools.ifilter < Python 3.0
+imap = get_builtin('itertools.imap', 'builtins.map') # itertools.imap < Python 3.0
+irange = get_builtin('__builtin__.xrange', 'builtins.range') # xrange < Python 3.0
+izip = get_builtin('itertools.izip', 'builtins.zip') # itertools.izip < Python 3.0
+reduce = get_builtin('__builtin__.reduce', 'functools.reduce') # reduce < Python 3.0
+unicode = get_builtin('__builtin__.unicode', 'builtins.str') # unicode < Python 3.0
+user_input = get_builtin('__builtin__.raw_input', 'builtins.input') # raw_input < Python 3.0
+md5 = get_builtin('hashlib.md5', 'md5.md5') # hashlib >= Python 2.5
+set = get_builtin('__builtin__.set', 'builtins.set', 'sets.Set') # set >= Python 2.4
 
 try:	# functools.lru_cache >= Python 3.2
 	import functools
@@ -216,7 +195,7 @@ except Exception:
 				if value[0] == (args, kargs):
 					idx = i
 			if idx is not None:
-				(key, item) = funProxy.cache.pop(idx)
+				(_, item) = funProxy.cache.pop(idx)
 			else:
 				item = funProxy.fun(*args, **kargs)
 			funProxy.cache.insert(0, ((args, kargs), item))
@@ -249,7 +228,7 @@ __all__ = ['BytesBuffer', 'BytesBufferBase', 'NullHandler', 'StringBuffer',
 	'all', 'any', 'bytes2str', 'identity', 'itemgetter', 'lru_cache',
 	'ifilter', 'imap', 'irange', 'ismap', 'izip', 'json',
 	'lfilter', 'lmap', 'lrange', 'lsmap', 'lzip', 'md5', 'md5_hex',
-	'next', 'parsedate', 'relpath', 'rsplit', 'set',
+	'next', 'parsedate', 'reduce', 'relpath', 'rsplit', 'set',
 	'sort_inplace', 'sorted', 'str2bytes', 'tarfile', 'urllib2', 'unicode', 'user_input']
 
 if __name__ == '__main__':
@@ -266,7 +245,7 @@ if __name__ == '__main__':
 			tmp = tmp.replace('python_compat_popen2', '')
 			builtin_avoid = ['basestring', 'cmp', 'filter', 'map', 'range', 'reduce', 'xrange', 'zip']
 			needed = set()
-			for pattern in ['[^_\'\/\.a-zA-Z]%s\(', '[^_\'\/\.a-zA-Z]%s\.', '\(%s[,\)]', ', %s[,\)]', ' = %s[,\)]']:
+			for pattern in [r'[^_\'\/\.a-zA-Z]%s\(', r'[^_\'\/\.a-zA-Z]%s\.', r'\(%s[,\)]', r', %s[,\)]', r' = %s[,\)]']:
 				needed.update(ifilter(lambda name: re.search(pattern % name, tmp), __all__ + builtin_avoid))
 			imported = set()
 			for iline in ifilter(lambda line: 'python_compat' in line, tmp.splitlines()):
@@ -275,8 +254,8 @@ if __name__ == '__main__':
 				except Exception:
 					raise Exception('Unable to parse %r:%r' % (fn, iline))
 			if not needed and ('python_compat' in tmp):
-				logging.critical('%s: python_compat import not needed!' % fn)
+				logging.critical('%s: python_compat import not needed!', fn)
 			for feature in needed.difference(imported):
-				logging.critical('%s: missing import of %s' % (fn, repr(feature)))
+				logging.critical('%s: missing import of %s', fn, repr(feature))
 			for feature in imported.difference(needed):
-				logging.critical('%s: unnecessary import of %s' % (fn, repr(feature)))
+				logging.critical('%s: unnecessary import of %s', fn, repr(feature))

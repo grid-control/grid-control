@@ -81,22 +81,21 @@ def parseLumiFilter(lumiexpr):
 		return None
 
 	lumis = []
-	import os
 	from grid_control.config import ConfigError
 	for token in imap(str.strip, lumiexpr.split(',')):
 		token = lmap(str.strip, token.split('|'))
-		if os.path.exists(token[0]):
+		if True in imap(str.isalpha, token[0].lower().replace('min', '').replace('max', '')):
+			if len(token) == 1:
+				token.append('')
 			try:
-				if len(token) == 1:
-					token.append('')
 				lumis.extend(parseLumiFromJSON(open(token[0]).read(), token[1]))
 			except Exception:
-				raise ConfigError('Could not process lumi filter file:\n%s' % token)
+				raise ConfigError('Could not process lumi filter file: %r (filter: %r)' % tuple(token))
 		else:
 			try:
 				lumis.append(parseLumiFromString(token[0]))
 			except Exception:
-				raise ConfigError('Could not process lumi filter expression:\n%s' % token[0])
+				raise ConfigError('Could not process lumi filter expression:\n\t%s' % token[0])
 	return mergeLumi(lumis)
 
 

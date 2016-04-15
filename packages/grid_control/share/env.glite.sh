@@ -1,5 +1,5 @@
 #!/bin/bash
-# | Copyright 2009-2015 Karlsruhe Institute of Technology
+# | Copyright 2009-2016 Karlsruhe Institute of Technology
 # |
 # | Licensed under the Apache License, Version 2.0 (the "License");
 # | you may not use this file except in compliance with the License.
@@ -28,9 +28,11 @@ function gc_find_grid() {
 	export | grep VO_ | sed -e "s/^.*VO_/VO_/" > "$VO_KEEPER"
 
 	if [ -f "$2" ]; then
+		echo "       Found script $2"
 		source "$2"
 	fi
-	if [ -z "$GRID_LOCATION" ]; then
+	if [ -z "$GLITE_LOCATION" ]; then
+		echo "       \$GLITE_LOCATION is empty!"
 		return 1
 	fi
 
@@ -44,29 +46,36 @@ function gc_find_grid() {
 	done > "$VO_REVERT"
 	source "$VO_REVERT"
 	rm "$VO_KEEPER" "$VO_REVERT"
+	export GC_GLITE_TYPE="$1"
 	return 0
 }
 
-if [ -n "$GRID_LOCATION" ]; then
-	echo -n "[GRID-LOCAL] "
+function gc_set_proxy() {
+	# Use proxy from input sandbox if available
+	if [ -s "$GC_SCRATCH/_proxy.dat" ]; then
+		mv "$GC_SCRATCH/_proxy.dat" "$GC_LANDINGZONE/_proxy.dat"
+		chmod 400 "$GC_LANDINGZONE/_proxy.dat"
+		[ ! -s "$X509_USER_PROXY" ] && export X509_USER_PROXY="$GC_LANDINGZONE/_proxy.dat"
+	fi
+	echo "Using GRID proxy $X509_USER_PROXY"
+}
+
+
+if [ -z "$GLITE_LOCATION" ]; then
+	export GC_GLITE_TYPE="LOCAL"
 elif gc_find_grid "CVMFS" $(ls -1t /cvmfs/grid.cern.ch/*/etc/profile.d/setup*.sh 2> /dev/null | head -n 1); then
-	echo -n "[GRID-CVMFS] "
+	:
 elif gc_find_grid "CVMFS - 2nd try" $(ls -1t /cvmfs/grid.cern.ch/*/etc/profile.d/grid*.sh 2> /dev/null | head -n 1); then
-	echo -n "[GRID-CVMFS] "
+	:
 elif gc_find_grid "OSG" "/uscmst1/prod/grid/gLite_SL5.sh"; then
-	echo -n "[GRID-OSG] "
+	:
 elif gc_find_grid "AFS" "/afs/cern.ch/cms/LCG/LCG-2/UI/cms_ui_env.sh"; then
-	echo -n "[GRID-AFS] "
+	:
 else
 	echo "[WARNING] No GRID environment found!"
+	gc_set_proxy # still setting proxy
 	return 1
 fi
-echo "Using GRID UI `glite-version 2> /dev/null` at $GLITE_LOCATION"
+echo "[GRID-$GC_GLITE_TYPE] Using GRID UI `glite-version 2> /dev/null` located at $GLITE_LOCATION"
 
-# Use proxy from input sandbox if available
-if [ -s "$GC_SCRATCH/_proxy.dat" ]; then
-	mv "$GC_SCRATCH/_proxy.dat" "$GC_LANDINGZONE/_proxy.dat"
-	chmod 400 "$GC_LANDINGZONE/_proxy.dat"
-	[ ! -s "$X509_USER_PROXY" ] && export X509_USER_PROXY="$GC_LANDINGZONE/_proxy.dat"
-fi
-echo "Using GRID proxy $X509_USER_PROXY"
+gc_set_proxy

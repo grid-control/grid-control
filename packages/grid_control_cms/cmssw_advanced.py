@@ -12,82 +12,76 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-import os, re
+import os
 from grid_control import utils
 from grid_control.config import ConfigError
+from grid_control.datasets import DataProvider
 from grid_control.utils.parsing import strDictLong
 from grid_control_cms.cmssw import CMSSW
-from grid_control_cms.lumi_tools import parseLumiFilter
-from python_compat import imap, lfilter, lmap, set, sorted
-
-def fromNM(nm, nickname, default):
-	tmp = lfilter(lambda p: p and nickname and re.search(p, nickname), nm)
-	if len(tmp) > 0:
-		return lmap(lambda pattern: nm[pattern], tmp)
-	return [nm.get(None, default)]
+from grid_control_cms.lumi_tools import formatLumi, parseLumiFilter, strLumi
+from python_compat import imap, lmap, set, sorted
 
 class CMSSW_Advanced(CMSSW):
 	configSections = CMSSW.configSections + ['CMSSW_Advanced']
 
 	def __init__(self, config, name):
+		self._name = name # needed for changeView calls before the constructor
 		head = [(0, 'Nickname')]
 
 		# Mapping between nickname and config files:
-		cfgList = config.get('nickname config', '')
-		self.nmCfg = config.getDict('nickname config', {},
-			parser = lambda x: lmap(str.strip, x.split(',')), str = lambda x: str.join(',', x))[0]
-		if cfgList:
+		self._nmCfg = config.getLookup('nickname config', {}, defaultMatcher = 'regex',
+			parser = lambda x: lmap(str.strip, x.split(',')), strfun = lambda x: str.join(',', x))
+		if not self._nmCfg.empty():
 			if 'config file' in config.getOptions():
 				raise ConfigError("Please use 'nickname config' instead of 'config file'")
-			allConfigFiles = utils.flatten(self.nmCfg.values())
+			allConfigFiles = utils.flatten(self._nmCfg.get_values())
 			config.set('config file', str.join('\n', allConfigFiles))
 			head.append((1, 'Config file'))
 
-		# Mapping between nickname and constants:
-		self.nmCName = lmap(str.strip, config.get('nickname constants', '').split())
-		self.nmConst = {}
-		for var in self.nmCName:
-			for (nick, value) in config.getDict(var, {})[0].items():
-				if value:
-					self.nmConst.setdefault(nick, {})[var] = value
-				else:
-					self.nmConst.setdefault(nick, {})[var] = ''
-			head.append((var, var))
+		# Mapping between nickname and constants - only display - work is handled by the 'normal' parameter factory
+		nmCName = config.getList('nickname constants', [], onChange = None)
+		pconfig = config.changeView(viewClass = 'TaggedConfigView', setClasses = None, setNames = None, addSections = ['parameters'])
+		pconfig.set('constants', str.join(' ', nmCName), '+=')
+		for cName in nmCName:
+			pconfig.set(cName + ' matcher', 'regex', '?=')
+			pconfig.set(cName + ' lookup', 'DATASETNICK', '?=')
+			head.append((cName, cName))
 
-		# Mapping between nickname and lumi filter:
+		# Mapping between nickname and lumi filter - only display - work is handled by the 'normal' lumi filter
 		if ('lumi filter' in config.getOptions()) and ('nickname lumi filter' in config.getOptions()):
 			raise ConfigError('Please use "lumi filter" exclusively')
-		config.set('lumi filter', strDictLong(config.getDict('nickname lumi filter', {})))
-		self.nmLumi = config.getDict('lumi filter', {}, parser = parseLumiFilter)[0]
-		if self.nmLumi:
+		config.set('lumi filter matcher', 'regex', '?=')
+		config.set('lumi filter', strDictLong(config.getDict('nickname lumi filter', {}, onChange = None)))
+		self._nmLumi = config.getLookup('lumi filter', {}, parser = parseLumiFilter, strfun = strLumi, onChange = None)
+		if not self._nmLumi.empty():
 			head.append((2, 'Lumi filter'))
 
-		self._displaySetup(head)
 		CMSSW.__init__(self, config, name)
+		self._displaySetup(config.getWorkPath('datacache.dat'), head)
 
 
-	def _displaySetup(self, head):
-		utils.vprint('Mapping between nickname and other settings:\n', -1)
-		def report():
-			for nick in sorted(set(self.nmCfg.keys() + self.nmConst.keys() + self.nmLumi.keys())):
-				tmp = {0: nick, 1: str.join(', ', imap(os.path.basename, self.nmCfg.get(nick, ''))),
-					2: self.displayLumi(self.nmLumi.get(nick, '')) }
-				yield utils.mergeDicts([tmp, self.nmConst.get(nick, {})])
-		utils.printTabular(head, report(), 'cl')
-		utils.vprint(level = -1)
-
-
-	def displayLumi(self, lumi):
-		if len(lumi) > 4:
-			return '%s ... %s (%d entries)' % (lumi[0], lumi[-1], len(lumi))
-		else:
-			return str.join(', ', lumi)
-
-
-	def neededVars(self):
-		if self.nmLumi:
-			return CMSSW.neededVars(self) + ['LUMI_RANGE']
-		return CMSSW.neededVars(self)
+	def _displaySetup(self, dsPath, head):
+		if os.path.exists(dsPath):
+			nickNames = set()
+			for block in DataProvider.loadFromFile(dsPath).getBlocks():
+				nickNames.add(block[DataProvider.Nickname])
+			utils.vprint('Mapping between nickname and other settings:\n', -1)
+			report = []
+			for nick in sorted(nickNames):
+				lumi_filter_str = formatLumi(self._nmLumi.lookup(nick, '', is_selector = False))
+				if len(lumi_filter_str) > 4:
+					nice_lumi_filter = '%s ... %s (%d entries)' % (lumi_filter_str[0], lumi_filter_str[-1], len(lumi_filter_str))
+				else:
+					nice_lumi_filter = str.join(', ', lumi_filter_str)
+				config_files = self._nmCfg.lookup(nick, '', is_selector = False)
+				tmp = {0: nick, 1: str.join(', ', imap(os.path.basename, config_files)), 2: nice_lumi_filter}
+				lookupvars = {'DATASETNICK': nick}
+				for src in self._pm.lookupSources:
+					src.fillParameterInfo(None, lookupvars)
+				tmp.update(lookupvars)
+				report.append(tmp)
+			utils.printTabular(head, report, 'cl')
+			utils.vprint(level = -1)
 
 
 	def getTaskConfig(self):
@@ -97,25 +91,7 @@ class CMSSW_Advanced(CMSSW):
 		return data
 
 
-	def getVarsForNick(self, nick):
-		data = {'CMSSW_CONFIG': str.join(' ', imap(os.path.basename, utils.flatten(fromNM(self.nmCfg, nick, ''))))}
-		constants = utils.mergeDicts(fromNM(self.nmConst, None, {}) + fromNM(self.nmConst, nick, {}))
-		constants = dict(imap(lambda var: (var, constants.get(var, '')), self.nmCName))
-		data.update(constants)
-		return data
-
-
 	def getJobConfig(self, jobNum):
 		data = CMSSW.getJobConfig(self, jobNum)
-		nickdata = self.getVarsForNick(data.get('DATASETNICK'))
-		data.update(nickdata)
-		if utils.verbosity() > 0:
-			utils.vprint('Nickname: %s' % data.get('DATASETNICK'), 1)
-			utils.vprint(' * Config files: %s' % data.get('CMSSW_CONFIG', ''), 1)
-			utils.vprint(' *   Lumi range: %s' % data.get('LUMI_RANGE', ''), 1)
-			utils.vprint(' *    Variables: %s' % utils.filterDict(nickdata, lambda k: k not in ['CMSSW_CONFIG', 'LUMI_RANGE']), 1)
+		data['CMSSW_CONFIG'] = self._nmCfg.lookup(data.get('DATASETNICK'), '', is_selector = False)
 		return data
-
-
-	def getVarNames(self):
-		return CMSSW.getVarNames(self) + self.getJobConfig(0).keys()

@@ -13,12 +13,13 @@
 # | limitations under the License.
 
 import random
+from grid_control.config import Matcher
 from grid_control.gc_plugin import NamedPlugin
 from grid_control.parameters.config_param import ParameterConfig
 from grid_control.parameters.padapter import ParameterAdapter
 from grid_control.parameters.psource_base import ParameterSource
 from hpfwk import Plugin
-from python_compat import ifilter, imap, irange, lmap
+from python_compat import ifilter, irange, lmap
 
 class ParameterFactory(NamedPlugin):
 	configSections = NamedPlugin.configSections + ['parameters']
@@ -53,7 +54,7 @@ class BasicParameterFactory(ParameterFactory):
 		for cName in ifilter(lambda o: not o.endswith(' lookup'), configConstants.getOptions()):
 			self._addConstantPSource(configConstants, cName, cName.upper())
 		# Get constants from [<Module>] constants
-		for cName in imap(str.strip, config.getList('constants', [])):
+		for cName in config.getList('constants', []):
 			self._addConstantPSource(config, cName, cName)
 		# Random number variables
 		configJobs = config.changeView(addSections = ['jobs'])
@@ -66,9 +67,15 @@ class BasicParameterFactory(ParameterFactory):
 
 
 	def _addConstantPSource(self, config, cName, varName):
-		lookupVar = config.get('%s lookup' % cName, '')
+		lookupVar = config.get('%s lookup' % cName, '', onChange = None)
 		if lookupVar:
-			ps = ParameterSource.createInstance('LookupParameterSource', varName, config.getDict(cName, {}), lookupVar)
+			matcher = Matcher.createInstance(config.get('%s matcher' % cName, 'start', onChange = None), config, cName)
+			content = config.getDict(cName, {}, onChange = None)
+			content_fixed = {}
+			content_order = lmap(lambda x: (x,), content[1])
+			for key in content[0]:
+				content_fixed[(key,)] = (content[0][key],)
+			ps = ParameterSource.createInstance('SimpleLookupParameterSource', varName, [lookupVar], [matcher], (content_fixed, content_order))
 			self.lookupSources.append(ps)
 		else:
 			ps = ParameterSource.createInstance('ConstParameterSource', varName, config.get(cName).strip())
@@ -76,7 +83,7 @@ class BasicParameterFactory(ParameterFactory):
 
 
 	def _getRawSource(self, parent):
-		source_list = self.constSources + [parent, ParameterSource.createInstance('RequirementParameterSource')]
+		source_list = self.constSources + [parent, ParameterSource.createInstance('RequirementParameterSource')] + self.lookupSources
 		source = ParameterSource.createInstance('ZipLongParameterSource', *source_list)
 		if self.repeat > 1:
 			source = ParameterSource.createInstance('RepeatParameterSource', source, self.repeat)

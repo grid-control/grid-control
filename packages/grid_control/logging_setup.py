@@ -43,6 +43,27 @@ class LogEveryNsec(logging.Filter):
 		return accept
 
 
+# In contrast to StreamHandler, this logging handler doesn't keep a stream copy
+class StdoutStreamHandler(logging.Handler):
+	def get_stream(self):
+		return sys.stdout
+
+	def emit(self, record):
+		try:
+			stream = self.get_stream()
+			stream.write(self.format(record) + '\n')
+			stream.flush()
+		except (KeyboardInterrupt, SystemExit):
+			raise
+		except Exception:
+			self.handleError(record)
+
+
+class StderrStreamHandler(StdoutStreamHandler):
+	def get_stream(self):
+		return sys.stderr
+
+
 class ProcessArchiveHandler(logging.Handler):
 	def __init__(self, fn, log = None):
 		logging.Handler.__init__(self)
@@ -73,7 +94,7 @@ class ProcessArchiveHandler(logging.Handler):
 
 
 def setupLogStream(logger_name, log_handler = None, log_filter = None, log_format = None, log_propagate = True):
-	logger = logging.getLogger(logger_name)
+	logger = logging.getLogger(logger_name.lower())
 	logger.propagate = log_propagate
 	if log_filter:
 		logger.addFilter(log_filter)
@@ -87,11 +108,11 @@ def setupLogStream(logger_name, log_handler = None, log_filter = None, log_forma
 
 
 def logging_defaults():
-	setupLogStream('', log_handler = logging.StreamHandler(sys.stdout),
+	setupLogStream('', log_handler = StdoutStreamHandler(),
 		log_format = '%(asctime)s - %(name)s:%(levelname)s - %(message)s')
-	setupLogStream('user', log_handler = logging.StreamHandler(sys.stdout),
+	setupLogStream('user', log_handler = StdoutStreamHandler(),
 		log_format = '%(message)s', log_propagate = False)
-	setupLogStream('user.time', log_handler = logging.StreamHandler(sys.stdout),
+	setupLogStream('user.time', log_handler = StdoutStreamHandler(),
 		log_format = '%(asctime)s - %(message)s', log_propagate = False)
 	setupLogStream('user.once', log_filter = LogOnce())
 	setupLogStream('user.time.once', log_filter = LogOnce())
@@ -104,7 +125,7 @@ def logging_defaults():
 	excFormatterVerbose = ExceptionFormatter(showCodeContext = 2, showVariables = 1, showFileStack = 1)
 
 	logException = logging.getLogger("exception")
-	handlerException_stdout = logging.StreamHandler(sys.stderr)
+	handlerException_stdout = StderrStreamHandler()
 	handlerException_stdout.setFormatter(excFormatterVerbose)
 	logException.addHandler(handlerException_stdout)
 
@@ -148,14 +169,10 @@ def dump_log_setup(level):
 		root.log(level, '%s%s %s', '|  ' * indent, propagate_symbol, desc)
 		if hasattr(logger, 'filters'):
 			for lf in logger.filters:
-				desc = lf.__class__.__name__
-				root.log(level, '%s# %s', '|  ' * (indent + 1), desc)
+				root.log(level, '%s# %s', '|  ' * (indent + 1), lf.__class__.__name__)
 		if hasattr(logger, 'handlers'):
 			for handler in logger.handlers:
-				desc = handler.__class__.__name__
-				if isinstance(handler, logging.StreamHandler):
-					desc += '(%s)' % handler.stream.name
-				root.log(level, '%s> %s', '|  ' * (indent + 1), desc)
+				root.log(level, '%s> %s', '|  ' * (indent + 1), handler.__class__.__name__)
 				fmt = handler.formatter
 				if fmt:
 					desc = fmt.__class__.__name__
@@ -190,7 +207,7 @@ def logging_configure_handler(config, logger_name, handler_str, handler):
 def logging_create_handlers(config, logger_name):
 	LogLevelEnum = makeEnum(lmap(lambda level: logging.getLevelName(level).upper(), irange(51)))
 
-	logger = logging.getLogger(logger_name)
+	logger = logging.getLogger(logger_name.lower())
 	# Set logging level
 	logger.setLevel(config.getEnum(logger_name + ' level', LogLevelEnum, logger.level, onChange = None))
 	# Set propagate status
@@ -203,9 +220,9 @@ def logging_create_handlers(config, logger_name):
 		handler_list = config.getList(logger_name + ' handler', [], onChange = None)
 		for handler_str in set(handler_list): # add only unique output handlers
 			if handler_str == 'stdout':
-				handler = logging.StreamHandler(sys.stdout)
+				handler = StdoutStreamHandler()
 			elif handler_str == 'stderr':
-				handler = logging.StreamHandler(sys.stderr)
+				handler = StderrStreamHandler()
 			elif handler_str == 'file':
 				handler = logging.FileHandler(config.get(logger_name + ' file', onChange = None), 'w')
 			elif handler_str == 'debug_file':

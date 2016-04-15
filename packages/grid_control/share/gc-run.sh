@@ -19,24 +19,18 @@ export GC_DOCLEANUP="true"
 source gc-run.lib || exit 101
 
 set +f
-function abort_signal() {
-	debug_helper $FUNCNAME "$@"
-	abort
-}
-for GC_SIGNAL in 0 1 2 3 15; do
-	trap "abort_signal $GC_SIGNAL" $GC_SIGNAL
-done
-
+gc_trap
 export GC_JOB_ID="$1"
 export MY_JOBID="$GC_JOB_ID" # legacy script support
 export GC_LANDINGZONE="`pwd`"
 export GC_MARKER="$GC_LANDINGZONE/RUNNING.$$"
+export GC_FAIL_MARKER="$GC_LANDINGZONE/GCFAIL"
 export GC_SCRATCH="`getscratch`"
 shift
 
 # Print job informations
 echo "JOBID=$GC_JOB_ID"
-echo "grid-control - Version$GC_VERSION"
+echo "grid-control - Version $GC_VERSION"
 echo "running on: `hostname -f 2>&1; uname -a;`"
 lsb_release -a 2> /dev/null
 echo
@@ -90,7 +84,7 @@ source "$GC_SCRATCH/_config.sh"
 
 echo "Prepare variable substitution"
 checkfile "$GC_SCRATCH/_varmap.dat"
-echo "__DATE__: Variable substitution in task __GC_TASK_ID__: __X__" | var_replacer "SUCCESSFUL"
+echo "@DATE@: Variable substitution in task @GC_TASK_ID@: @X@" | var_replacer "SUCCESSFUL"
 checkfile "$GC_SCRATCH/_replace.awk"
 cat "$GC_SCRATCH/_replace.awk" | display_short
 
@@ -199,16 +193,12 @@ GC_PROCESS_ID=$!
 echo "Process $GC_PROCESS_ID is running..."
 echo $GC_PROCESS_ID > $GC_MARKER
 wait $GC_PROCESS_ID
-CODE=$?
+GC_PROCESS_CODE=$?
 echo $$ > $GC_MARKER
 zip_files "$SB_OUTPUT_FILES"
 cd "$GC_LANDINGZONE"
 echo "==========================="
 timestamp "EXECUTION" "DONE"
-
-echo "Process $GC_PROCESS_ID exit code: $CODE"
-updatejobinfo $CODE
-echo
 
 echo "==========================="
 echo
@@ -226,7 +216,7 @@ fi
 timestamp "SE_OUT" "START"
 export LOG_MD5="$GC_LANDINGZONE/SE.log"
 # Copy files to the SE
-if [ $CODE -eq 0 -a -n "$SE_OUTPUT_FILES" ]; then
+if [ $GC_PROCESS_CODE -eq 0 -a -n "$SE_OUTPUT_FILES" ]; then
 	echo "==========================="
 	echo
 	export TRANSFERLOG="$GC_SCRATCH/SE.log"
@@ -283,16 +273,20 @@ fi
 echo "==========================="
 echo
 cleanup
-trap - 0 1 2 3 15
+gc_untrap
+if [ ! -f $GC_FAIL_MARKER ]; then # only write job exit code if nothing failed
+	echo "Process $GC_PROCESS_ID exit code: $GC_PROCESS_CODE"
+	updatejobinfo $GC_PROCESS_CODE
+fi
+echo
 echo "Job $GC_JOB_ID finished - `date`"
 echo "TIME=$GC_WRAPTIME" >> $GC_LANDINGZONE/job.info
 [ -f "$LOG_MD5" ] && cat "$LOG_MD5" >> $GC_LANDINGZONE/job.info
 cat $GC_LANDINGZONE/job.info
 echo
-
 echo "==========================="
 timestamp "WRAPPER" "DONE"
 echo
 timereport
 
-exit $CODE
+exit $GC_PROCESS_CODE

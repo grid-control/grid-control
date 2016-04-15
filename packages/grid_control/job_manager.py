@@ -20,6 +20,7 @@ from grid_control.job_db import Job, JobClass, JobDB, JobError
 from grid_control.job_selector import AndJobSelector, ClassSelector, JobSelector
 from grid_control.output_processor import TaskOutputProcessor
 from grid_control.report import Report
+from grid_control.utils.file_objects import SafeFile
 from grid_control.utils.parsing import strTime
 from python_compat import ifilter, imap, izip, lfilter, lmap, set, sorted
 
@@ -79,7 +80,9 @@ class JobManager(NamedPlugin):
 	def _logDisabledJobs(self):
 		disabled = self.jobDB.getJobs(ClassSelector(JobClass.DISABLED))
 		try:
-			open(self._disabled_jobs_logfile, 'w').write(str.join('\n', imap(str, disabled)))
+			fp = SafeFile(self._disabled_jobs_logfile, 'w')
+			fp.write(str.join('\n', imap(str, disabled)))
+			fp.close()
 		except Exception:
 			raise JobError('Could not write disabled jobs to file %s!' % self._disabled_jobs_logfile)
 		if disabled:
@@ -150,7 +153,7 @@ class JobManager(NamedPlugin):
 			submit = min(submit, self._njobs_inqueue - self.jobDB.getJobsN(ClassSelector(JobClass.ATWMS)))
 		if self._njobs_inflight > 0:
 			submit = min(submit, self._njobs_inflight - self.jobDB.getJobsN(ClassSelector(JobClass.PROCESSING)))
-		if self._continuous:
+		if self._continuous and (maxsample > 0):
 			submit = min(submit, maxsample)
 		submit = max(submit, 0)
 
@@ -217,7 +220,7 @@ class JobManager(NamedPlugin):
 		(change, timeoutList, reported) = self._checkJobList(wms, jobList)
 		unreported = len(jobList) - len(reported)
 		if unreported > 0:
-			self._log_user_time.critical('%d jobs did not report their status!', unreported)
+			self._log_user_time.critical('%d job(s) did not report their status!', unreported)
 		if change is None: # neither True or False => abort
 			return False
 
@@ -344,15 +347,22 @@ class JobManager(NamedPlugin):
 			if (redo == []) and (disable == []) and (sizeChange is False):
 				return
 			self._log_user_time.info('The task module has requested changes to the job database')
-			if sizeChange:
-				newMaxJobs = self.getMaxJobs(self._task)
+			newMaxJobs = self.getMaxJobs(self._task)
+			applied_change = False
+			if newMaxJobs != self.jobDB.jobLimit:
 				self._log_user_time.info('Number of jobs changed from %d to %d', len(self.jobDB), newMaxJobs)
 				self.jobDB.jobLimit = newMaxJobs
-			self.cancel(wms, self.jobDB.getJobs(ClassSelector(JobClass.PROCESSING), redo))
-			resetState(redo, Job.INIT)
-			self.cancel(wms, self.jobDB.getJobs(ClassSelector(JobClass.PROCESSING), disable))
-			resetState(disable, Job.DISABLED)
-			self._log_user_time.info('All requested changes are applied')
+				applied_change = True
+			if redo:
+				self.cancel(wms, self.jobDB.getJobs(ClassSelector(JobClass.PROCESSING), redo))
+				resetState(redo, Job.INIT)
+				applied_change = True
+			if disable:
+				self.cancel(wms, self.jobDB.getJobs(ClassSelector(JobClass.PROCESSING), disable))
+				resetState(disable, Job.DISABLED)
+				applied_change = True
+			if applied_change:
+				self._log_user_time.info('All requested changes are applied')
 
 
 class SimpleJobManager(JobManager):
@@ -370,8 +380,8 @@ class SimpleJobManager(JobManager):
 		if self._verifyChunks:
 			self._verify = True
 			self._verifyThresh += [self._verifyThresh[-1]] * (len(self._verifyChunks) - len(self._verifyThresh))
-			self._log_user_time.info('Verification mode active')
-			self._log_user_time.info('Submission is capped unless the success ratio of a chunk of jobs is sufficent.')
+			self._log_user_time.log(logging.INFO1, 'Verification mode active')
+			self._log_user_time.log(logging.INFO1, 'Submission is capped unless the success ratio of a chunk of jobs is sufficent.')
 			self._log_user_time.debug('Enforcing the following (chunksize x ratio) sequence:')
 			self._log_user_time.debug(str.join(' > ', imap(lambda tpl: '%d x %4.2f'%(tpl[0], tpl[1]), izip(self._verifyChunks, self._verifyThresh))))
 		self._unreachableGoal = False

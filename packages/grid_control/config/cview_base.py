@@ -32,7 +32,7 @@ class ConfigView(Plugin):
 
 	def setConfigName(self, name):
 		self.configName = name
-		self._log = logging.getLogger('config.%s' % name)
+		self._log = logging.getLogger('config.%s' % name.lower())
 
 	def getView(self, setSections = selectorUnchanged, **kwargs):
 		raise AbstractError
@@ -44,12 +44,14 @@ class ConfigView(Plugin):
 	def get(self, option_list, default_str, persistent):
 		raise AbstractError
 
-	def set(self, option, value, opttype, source, markAccessed = True):
+	def set(self, option, value, opttype, source):
 		raise AbstractError
 
+	def _get_write_entries(self):
+		return self.iterContent()
+
 	def _prepare_write(self, entries = None, printState = False, printUnused = True, printDefault = True):
-		if entries is None:
-			entries = self.iterContent()
+		entries = entries or self._get_write_entries()
 		result = {}
 		for entry in entries:
 			if printUnused or entry.used:
@@ -175,7 +177,7 @@ class HistoricalConfigView(ConfigView):
 		self._log.log(logging.INFO2, description, curEntry.format(printSection = True))
 		return (oldEntry, curEntry)
 
-	def set(self, option_list, value, opttype, source, markAccessed = True):
+	def set(self, option_list, value, opttype, source):
 		entry = self._createEntry(option_list, value, opttype, source, specific = True, reverse = True)
 		self._curContainer.append(entry)
 		self._log.log(logging.INFO3, 'Setting option %s', entry.format(printSection = True))
