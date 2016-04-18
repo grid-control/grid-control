@@ -45,8 +45,11 @@ def getRootName(fn): # Return file name without extension
 	bn = os.path.basename(str(fn)).lstrip('.')
 	return QM('.' in bn, str.join('', bn.split('.')[:-1]), bn)
 
-pathGC = lambda *args: cleanPath(os.path.join(os.environ['GC_PACKAGES_PATH'], '..', *args))
-pathShare = lambda *args, **kw: cleanPath(os.path.join(os.environ['GC_PACKAGES_PATH'], kw.get('pkg', 'grid_control'), 'share', *args))
+def pathPKG(*args):
+	return cleanPath(os.path.join(os.environ['GC_PACKAGES_PATH'], *args))
+
+def pathShare(*args, **kw):
+	return pathPKG(kw.get('pkg', 'grid_control'), 'share', *args)
 
 def resolvePaths(path, searchPaths = None, mustExist = True, ErrorClass = GCError):
 	path = cleanPath(path) # replace $VAR, ~user, \ separators
@@ -567,10 +570,10 @@ def eprint(text = '', level = -1, printTime = False, newline = True):
 
 def getVersion():
 	try:
-		version = LoggedProcess('svnversion', '-c %s' % pathGC()).getOutput(True).strip()
+		version = LoggedProcess('svnversion', '-c %s' % pathPKG()).getOutput(True).strip()
 		if version != '':
 			assert(any(imap(str.isdigit, version)))
-			if 'stable' in LoggedProcess('svn info', pathGC()).getOutput(True):
+			if 'stable' in LoggedProcess('svn info', pathPKG()).getOutput(True):
 				return '%s - stable' % version
 			return '%s - testing' % version
 	except Exception:

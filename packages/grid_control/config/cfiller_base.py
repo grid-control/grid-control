@@ -170,12 +170,12 @@ class DefaultFilesConfigFiller(FileConfigFiller):
 				return host
 		try:
 			host = hang_protection(resolve_hostname, timeout = 5)
-			hostCfg = lmap(lambda c: utils.pathGC('config/%s.conf' % host.split('.', c)[-1]), irange(host.count('.') + 1, -1, -1))
+			hostCfg = lmap(lambda c: utils.pathPKG('../config/%s.conf' % host.split('.', c)[-1]), irange(host.count('.') + 1, -1, -1))
 		except TimeoutException:
 			sys.stderr.write('System call to resolve hostname is hanging!\n')
 			sys.stderr.flush()
 			hostCfg = []
-		defaultCfg = ['/etc/grid-control.conf', '~/.grid-control.conf', utils.pathGC('config/default.conf')]
+		defaultCfg = ['/etc/grid-control.conf', '~/.grid-control.conf', utils.pathPKG('../config/default.conf')]
 		if os.environ.get('GC_CONFIG'):
 			defaultCfg.append('$GC_CONFIG')
 		log = logging.getLogger('config.default')

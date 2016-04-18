@@ -280,7 +280,7 @@ class BasicWMS(WMS):
 	def _getSandboxFiles(self, task, monitor, smList):
 		# Prepare all input files
 		depList = set(ichain(imap(lambda x: x.getDependencies(), [task] + smList)))
-		depPaths = lmap(lambda pkg: utils.pathShare('', pkg = pkg), os.listdir(utils.pathGC('packages')))
+		depPaths = lmap(lambda pkg: utils.pathShare('', pkg = pkg), os.listdir(utils.pathPKG()))
 		depFiles = lmap(lambda dep: utils.resolvePath('env.%s.sh' % dep, depPaths), depList)
 		taskEnv = utils.mergeDicts(imap(lambda x: x.getTaskConfig(), [monitor, task] + smList))
 		taskEnv.update({'GC_DEPFILES': str.join(' ', depList), 'GC_USERNAME': self._token.getUsername(),
