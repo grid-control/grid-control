@@ -141,13 +141,18 @@ class ConfigEntry(object):
 				previousEntry = entry
 			if previousEntry:
 				yield previousEntry
+
 		if used[0].opttype == '=':
 			result = [cls.combineEntries(used)]
 		else:
 			result = list(mergeSubsequent(used))
+
 		(result_simplified, used_simplified) = cls.processEntries(result)
 		assert(len(used_simplified) == len(result))
-		assert(result_simplified.value.strip() == result_base.value.strip())
+		if result_simplified and result_base:
+			assert(result_simplified.value.strip() == result_base.value.strip())
+		else:
+			assert(result_simplified == result_base)
 		return result
 	simplifyEntries = classmethod(simplifyEntries)
 
