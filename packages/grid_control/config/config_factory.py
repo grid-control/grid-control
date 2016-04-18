@@ -16,7 +16,7 @@ import os, sys, logging
 from grid_control import utils
 from grid_control.config.cfiller_base import CompatConfigFiller, DefaultFilesConfigFiller, DictConfigFiller, GeneralFileConfigFiller, MultiConfigFiller
 from grid_control.config.cinterface_typed import SimpleConfigInterface
-from grid_control.config.config_entry import ConfigContainer
+from grid_control.config.config_entry import ConfigContainer, ConfigError
 from grid_control.config.cview_base import SimpleConfigView
 from grid_control.utils.data_structures import UniqueList
 from grid_control.utils.file_objects import SafeFile
@@ -34,7 +34,8 @@ class ConfigFactory(object):
 
 		pathMain = os.getcwd()
 		if configFilePath:
-			pathMain = os.path.dirname(utils.resolvePath(configFilePath, searchPaths = [os.getcwd()]))
+			pathMain = os.path.dirname(utils.resolvePath(configFilePath,
+				searchPaths = [os.getcwd()], ErrorClass = ConfigError))
 
 		# Init config containers
 		self._curContainer = ConfigContainer('current')

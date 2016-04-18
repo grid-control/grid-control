@@ -58,7 +58,10 @@ class FileConfigFiller(ConfigFiller):
 					ismap(getOptValue, configContent.get(section, []))]))
 				for (option, value, source) in configContent[section]:
 					# Protection for non-interpolation "%" in value
-					value = (value.replace('%', '\x01').replace('\x01(', '%(') % substDict).replace('\x01', '%')
+					try:
+						value = (value.replace('%', '\x01').replace('\x01(', '%(') % substDict).replace('\x01', '%')
+					except Exception:
+						raise ConfigError('Unable to interpolate value %r with %r' % (value, substDict))
 					self._addEntry(container, section, option, value, source)
 		searchString = str.join(' ', UniqueList(searchPaths))
 		if self._addSearchPath:

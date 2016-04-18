@@ -20,7 +20,7 @@ from grid_control.config.cview_base import SimpleConfigView
 from grid_control.config.matcher_base import DictLookup, ListFilter, ListOrder, Matcher
 from grid_control.utils.data_structures import makeEnum
 from grid_control.utils.parsing import parseBool, parseDict, parseList, parseTime, strDictLong, strTimeShort
-from hpfwk import APIError, Plugin
+from hpfwk import APIError, ExceptionCollector, Plugin
 from python_compat import identity, ifilter, imap, lmap, relpath, sorted, user_input
 
 # Config interface class accessing typed data using an string interface provided by configView
@@ -90,12 +90,14 @@ class TypedConfigInterface(ConfigInterface):
 	# Return multiple resolved paths (each line processed same as getPath)
 	def getPaths(self, option, default = noDefault, mustExist = True, **kwargs):
 		def patlist2pathlist(value, mustExist):
-			try:
-				for pattern in value:
+			ec = ExceptionCollector()
+			for pattern in value:
+				try:
 					for fn in utils.resolvePaths(pattern, self._configView.pathDict.get('search_paths', []), mustExist, ConfigError):
 						yield fn
-			except Exception:
-				raise ConfigError('Error resolving pattern %s' % pattern)
+				except Exception:
+					ec.collect()
+			ec.raise_any(ConfigError('Error resolving paths'))
 
 		str2obj = lambda value: list(patlist2pathlist(parseList(value, None), mustExist))
 		obj2str = lambda value: '\n' + str.join('\n', patlist2pathlist(value, False))

@@ -38,14 +38,17 @@ def tchain(iterables, timeout = None): # Combines multiple, threaded generators 
 
 	if timeout is not None:
 		t_end = time.time() + timeout
-	while len(threads):
-		try:
+	try:
+		while len(threads):
 			if timeout is not None:
 				timeout = max(0, t_end - time.time())
-			tmp = result.get(timeout)
-		except IndexError:
-			break
-		if tmp == GCQueue:
-			threads.pop() # which thread is irrelevant - only used as counter
-		else:
-			yield tmp
+			try:
+				tmp = result.get(timeout)
+			except IndexError: # Empty queue after waiting for timeout
+				break
+			if tmp == GCQueue:
+				threads.pop() # which thread is irrelevant - only used as counter
+			else:
+				yield tmp
+	except Exception:
+		result.finish()
