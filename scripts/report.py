@@ -21,7 +21,7 @@ parser.addBool(None, 'L', 'report-list',  default = False, help = 'List availabl
 parser.addBool(None, 'T', 'use-task',     default = False, help = 'Forward task information to report')
 parser.addText(None, 'R', 'report',       default = 'GUIReport')
 parser.addText(None, 'J', 'job-selector', default = None)
-parser.addText(None, ' ', 'string',       default = None)
+parser.addText(None, ' ', 'string',       default = '')
 options = scriptOptions(parser)
 
 Report = Plugin.getClass('Report')
