@@ -12,7 +12,7 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-from grid_control.backends.broker import Broker
+from grid_control.backends.broker_base import Broker
 from grid_control.backends.wms import WMS
 from grid_control.utils import Result
 from python_compat import ifilter

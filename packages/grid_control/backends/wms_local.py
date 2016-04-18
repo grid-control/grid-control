@@ -14,7 +14,7 @@
 
 import os, glob, time, shutil, tempfile
 from grid_control import utils
-from grid_control.backends.broker import Broker
+from grid_control.backends.broker_base import Broker
 from grid_control.backends.wms import BackendError, BasicWMS, WMS
 from grid_control.job_db import Job
 from grid_control.utils.file_objects import VirtualFile

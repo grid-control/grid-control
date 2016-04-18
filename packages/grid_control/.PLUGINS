@@ -162,7 +162,7 @@
 
       * grid_control.backends.access TrivialAccessToken TrivialProxy
 
-     * grid_control.backends.broker Broker
+     * grid_control.backends.broker_base Broker
 
       * grid_control.backends.broker_basic CoverageBroker
 
