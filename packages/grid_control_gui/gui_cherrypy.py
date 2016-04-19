@@ -12,13 +12,15 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-import os, time, tempfile
+import time
 from grid_control import utils
 from grid_control.gc_exceptions import InstallationError
+from grid_control.gc_plugin import NamedPlugin
 from grid_control.gui import GUI
 from grid_control.job_db import Job
 from grid_control.utils.process_base import LocalProcess
-from python_compat import imap, lmap, lzip, sorted
+from hpfwk import Plugin
+from python_compat import lmap, lzip, set, sorted
 
 try:
 	import cherrypy
@@ -66,6 +68,57 @@ class TabularHTML(object):
 		return self.table
 
 
+def getGraph(instance, graph = None, visited = None):
+	graph = graph or {}
+	visited = visited or set()
+	children = []
+	for attr in dir(instance):
+		child = getattr(instance, attr)
+		try:
+			children.extend(child)
+			children.extend(child.values())
+		except Exception:
+			children.append(child)
+	for child in children:
+		try:
+			if 'grid_control' not in child.__module__:
+				continue
+			if child.__class__.__name__ in ['instancemethod', 'function', 'type']:
+				continue
+			graph.setdefault(instance, []).append(child)
+			if child not in visited:
+				visited.add(child)
+				getGraph(child, graph, visited)
+		except Exception:
+			pass
+	return graph
+
+
+def getNodeLabel(instance):
+	result = instance.__class__.__name__
+	if isinstance(instance, NamedPlugin):
+		if instance.getObjectName().lower() != instance.__class__.__name__.lower():
+			result += ' (%s)' % instance.getObjectName()
+	return result
+
+
+def getNodeParent(cls):
+	clsOld = None
+	while (Plugin not in cls.__bases__) and (clsOld != cls):
+		clsOld = cls
+		try:
+			cls = cls.__bases__[0]
+		except Exception:
+			pass
+
+
+def getNodeColor(instance, color_map):
+	cnum = color_map.setdefault(getNodeParent(instance.__class__), max(color_map.values() + [0]) + 1)
+	if cnum < 12:
+		return '/set312/%d' % cnum
+	return '/set19/%d' % (cnum % 12 + 1)
+
+
 class CPWebserver(GUI):
 	def __init__(self, config, workflow):
 		if not cherrypy:
@@ -77,21 +130,40 @@ class CPWebserver(GUI):
 		self.counter += 1
 		utils.wait(timeout)
 
-	def image(self):
-		cherrypy.response.headers['Content-Type']= 'image/png'
-		nodes = ["MetadataSplitter", "RunSplitter"]
-		edges = [("MetadataSplitter", "RunSplitter")]
-		nodeStr = str.join('', imap(lambda x: '%s [label="%s", fillcolor="/set312/1", style="filled"]\n' % (x, x), nodes))
-		edgeStr = str.join('', imap(lambda x: '%s -> %s' % x, edges))
-		inp = "digraph mygraph { overlap=False; ranksep=1.5; %s; %s; }" % (nodeStr, edgeStr)
+	def _get_workflow_graph(self):
+		graph = getGraph(self._workflow)
+		classCluster= {}
+		for entry in graph:
+			classCluster.setdefault(getNodeParent(entry.__class__), []).append(entry)
 
-		fd, fn = tempfile.mkstemp()
-		os.fdopen(fd, 'w').write(inp)
-		try:
-			proc = LocalProcess('neato', fn, '-Tpng')
-			return proc.get_output(timeout = 20, raise_errors = True)
-		finally:
-			utils.removeFiles([fn])
+		clusters = ''
+
+		globalNodes = []
+		colors = {}
+		for classClusterEntries in classCluster.values():
+			if len(classClusterEntries) == 1:
+				globalNodes.append(classClusterEntries[0])
+			clusters += 'subgraph cluster_0 {'
+			for node in classClusterEntries:
+				clusters += '%s [label="%s", fillcolor="%s", style="filled"]\n' % (hash(node), getNodeLabel(node), getNodeColor(node, colors))
+			clusters += '}\n'
+
+		edgeStr = ''
+		for entry in graph:
+			for child in graph[entry]:
+				try:
+					hEntry = hash(entry)
+					edgeStr += '%s -> %s\n' % (hEntry, hash(child))
+				except Exception:
+					pass
+		return "digraph mygraph { overlap=False; ranksep=1.5; %s; %s; }\n" % (clusters, edgeStr)
+
+	def image(self):
+		proc = LocalProcess('neato', '-Tpng')
+		proc.stdin.write(self._get_workflow_graph())
+		proc.stdin.close()
+		cherrypy.response.headers['Content-Type'] = 'image/png'
+		return proc.get_output(timeout = 20)
 	image.exposed = True
 
 	def jobs(self, *args, **kw):
@@ -136,6 +208,6 @@ class CPWebserver(GUI):
 		cherrypy.server.socket_port = 12345
 		cherrypy.tree.mount(self, '/', {'/' : basic_auth})
 		cherrypy.engine.start()
-		self.jobCycle(wait = self.processQueue)
+		self._workflow.jobCycle(wait = self.processQueue)
 		cherrypy.engine.exit()
 		cherrypy.server.stop()
