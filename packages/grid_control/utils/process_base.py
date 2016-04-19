@@ -91,7 +91,7 @@ class ProcessReadStream(ProcessStream):
 			if cond(result) or self._event_finished.is_set():
 				break
 			if timeout_left < 0:
-				raise ProcessTimeout('Stream result did not fulfill condition after waiting for %d seconds' % timeout)
+				raise ProcessTimeout('Stream result did not fulfill condition after waiting for %s seconds' % timeout)
 		yield result
 
 	def iter(self, timeout, timeout_soft = False, timeout_shutdown = 10):
@@ -112,7 +112,7 @@ class ProcessReadStream(ProcessStream):
 			elif self._event_finished.is_set() or timeout_soft:
 				break # process finished / soft timeout
 			else:
-				raise ProcessTimeout('Stream did not yield more lines after waiting for %d seconds' % timeout) # hard timeout
+				raise ProcessTimeout('Stream did not yield more lines after waiting for %s seconds' % timeout) # hard timeout
 		if self._iter_buffer: # return rest of buffer
 			yield self._iter_buffer
 
@@ -198,10 +198,10 @@ class Process(object):
 		status = self.status(timeout)
 		if status is None:
 			self.terminate(timeout = 1)
-			raise ProcessTimeout('Process is still running after waiting for %d seconds' % timeout) # hard timeout
+			raise ProcessTimeout('Process is still running after waiting for %s seconds' % timeout) # hard timeout
 		return status
 
-	def get_output(self, timeout, raise_errors = False):
+	def get_output(self, timeout, raise_errors = True):
 		status = self.status(timeout)
 		result = ''
 		while True:
@@ -212,7 +212,7 @@ class Process(object):
 		if status is None:
 			self.terminate(timeout = 1)
 		if raise_errors and (status is None):
-			raise ProcessTimeout('Process is still running after waiting for %d seconds' % timeout)
+			raise ProcessTimeout('Process is still running after waiting for %s seconds' % timeout)
 		elif raise_errors and (status != 0):
 			raise ProcessError('Command %s %s returned with exit code %s' % (self._cmd, repr(self._args), status))
 		return result

@@ -17,6 +17,7 @@ from grid_control import utils
 from grid_control.gc_exceptions import InstallationError
 from grid_control.gui import GUI
 from grid_control.job_db import Job
+from grid_control.utils.process_base import LocalProcess
 from python_compat import imap, lmap, lzip, sorted
 
 try:
@@ -86,10 +87,11 @@ class CPWebserver(GUI):
 
 		fd, fn = tempfile.mkstemp()
 		os.fdopen(fd, 'w').write(inp)
-		proc = utils.LoggedProcess('neato', '%s -Tpng' % fn)
-		result = proc.getOutput()
-		utils.removeFiles([fn])
-		return result
+		try:
+			proc = LocalProcess('neato', fn, '-Tpng')
+			return proc.get_output(timeout = 20, raise_errors = True)
+		finally:
+			utils.removeFiles([fn])
 	image.exposed = True
 
 	def jobs(self, *args, **kw):

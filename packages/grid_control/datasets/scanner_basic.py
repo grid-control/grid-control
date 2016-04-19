@@ -106,13 +106,13 @@ class FilesFromLS(InfoScanner):
 		counter = 0
 		from grid_control.backends.storage import se_ls
 		proc = se_ls(self._path)
-		for fn in proc.iter():
+		for fn in proc.stdout.iter(timeout = 60):
 			log = utils.ActivityLog('Reading source directory - [%d]' % counter)
 			yield (os.path.join(self._path, fn.strip()), metadata, events, seList, objStore)
 			counter += 1
 			log.finish()
-		if proc.wait():
-			utils.eprint(proc.getError())
+		if proc.status(timeout = 0) != 0:
+			self._log.log_process(proc)
 
 
 class JobInfoFromOutputDir(InfoScanner):

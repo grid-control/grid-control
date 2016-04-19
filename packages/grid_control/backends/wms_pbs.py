@@ -17,6 +17,7 @@ from grid_control.backends.wms import BackendError, WMS
 from grid_control.backends.wms_pbsge import PBSGECommon
 from grid_control.job_db import Job
 from grid_control.utils.parsing import parseTime
+from grid_control.utils.process_base import LocalProcess
 from python_compat import ifilter, imap, izip, lmap
 
 class PBS(PBSGECommon):
@@ -82,7 +83,8 @@ class PBS(PBSGECommon):
 		(queues, active) = ({}, False)
 		keys = [WMS.MEMORY, WMS.CPUTIME, WMS.WALLTIME]
 		parser = dict(izip(keys, [int, parseTime, parseTime]))
-		for line in utils.LoggedProcess(self.statusExec, '-q').iter():
+		proc = LocalProcess(self.statusExec, '-q')
+		for line in proc.stdout.iter(timeout = 10):
 			if line.startswith('-'):
 				active = True
 			elif line.startswith(' '):
@@ -93,15 +95,18 @@ class PBS(PBSGECommon):
 				for key, value in ifilter(lambda k_v: not k_v[1].startswith('-'), izip(keys, fields[1:])):
 					queueInfo[key] = parser[key](value)
 				queues[fields[0]] = queueInfo
+		proc.status_raise(timeout = 0)
 		return queues
 
 
 	def getNodes(self):
 		result = []
-		for line in utils.LoggedProcess(self._nodesExec).iter():
+		proc = LocalProcess(self._nodesExec)
+		for line in proc.stdout.iter():
 			if not line.startswith(' ') and len(line) > 1:
 				node = line.strip()
 			if ('state = ' in line) and ('down' not in line) and ('offline' not in line):
 				result.append(node)
+		proc.status_raise(timeout = 0)
 		if len(result) > 0:
 			return result

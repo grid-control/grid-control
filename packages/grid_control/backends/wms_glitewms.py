@@ -12,12 +12,12 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-import os, time, random, tempfile
+import os, time, random
 from grid_control import utils
 from grid_control.backends.wms import BackendError
 from grid_control.backends.wms_grid import GridWMS
 from grid_control.utils.parsing import parseStr
-from grid_control.utils.thread_tools import start_thread
+from grid_control.utils.process_base import LocalProcess
 from python_compat import md5_hex, sort_inplace
 
 def choice_exp(sample, p = 0.5):
@@ -57,27 +57,26 @@ class DiscoverWMS_Lazy(object): # TODO: Move to broker infrastructure
 
 	def listWMS_all(self):
 		result = []
-		for line in utils.LoggedProcess(self._exeLCGInfoSites, 'wms').iter():
+		proc = LocalProcess(self._exeLCGInfoSites, 'wms')
+		for line in proc.stdout.iter(timeout = 10):
 			result.append(line.strip())
+		proc.status_raise(timeout = 0)
 		random.shuffle(result)
 		return result
 
 	def matchSites(self, endpoint):
 		log = utils.ActivityLog('Discovering available WMS services - testing %s' % endpoint)
-		result = []
-		checkArgs = '-a'
+		checkArgs = ['-a']
 		if endpoint:
-			checkArgs += ' -e %s' % endpoint
-		proc = utils.LoggedProcess(self._exeGliteWMSJobListMatch, checkArgs + ' %s' % utils.pathShare('null.jdl'))
-		def matchThread(): # TODO: integrate timeout into loggedprocess
-			for line in proc.iter():
-				if line.startswith(' - '):
-					result.append(line[3:].strip())
-		thread = start_thread('Matching jobs with WMS %s' % endpoint, matchThread)
-		thread.join(timeout = 3)
-		if thread.isAlive():
-			proc.kill()
-			thread.join()
+			checkArgs.extend(['-e', endpoint])
+		checkArgs.append(utils.pathShare('null.jdl'))
+
+		proc = LocalProcess(self._exeGliteWMSJobListMatch, *checkArgs)
+		result = []
+		for line in proc.stdout.iter(timeout = 3):
+			if line.startswith(' - '):
+				result.append(line[3:].strip())
+		if proc.status(timeout = 0) is None:
 			self.wms_timeout[endpoint] = self.wms_timeout.get(endpoint, 0) + 1
 			if self.wms_timeout.get(endpoint, 0) > 10: # remove endpoints after 10 failures
 				self.wms_all.remove(endpoint)
@@ -176,23 +175,20 @@ class GliteWMS(GridWMS):
 		if self._useDelegate is False:
 			self._submitParams.update({ '-a': ' ' })
 			return True
-		log = tempfile.mktemp('.log')
-		try:
-			dID = 'GCD' + md5_hex(str(time.time()))[:10]
-			activity = utils.ActivityLog('creating delegate proxy for job submission')
-			proc = utils.LoggedProcess(self._delegateExec, '%s -d %s --noint --logfile "%s"' %
-				(utils.QM(self._configVO, '--config "%s"' % self._configVO, ''), dID, log))
+		dID = 'GCD' + md5_hex(str(time.time()))[:10]
+		activity = utils.ActivityLog('creating delegate proxy for job submission')
+		deletegateArgs = []
+		if self._configVO:
+			deletegateArgs.extend(['--config', self._configVO])
+		proc = LocalProcess(self._delegateExec, '-d', dID, '--noint', '--logfile', '/dev/stderr', *deletegateArgs)
+		output = proc.stdout.read(timeout = 10)
+		if ('glite-wms-job-delegate-proxy Success' in output) and (dID in output):
+			self._submitParams.update({ '-d': dID })
+		del activity
 
-			output = proc.getOutput(wait = True)
-			if ('glite-wms-job-delegate-proxy Success' in output) and (dID in output):
-				self._submitParams.update({ '-d': dID })
-			del activity
-
-			if proc.wait() != 0:
-				proc.logError(self.errorLog, log = log)
-			return (self._submitParams.get('-d', None) is not None)
-		finally:
-			utils.removeFiles([log])
+		if proc.status(timeout = 10, terminate = True) != 0:
+			self._log.log_process(proc)
+		return (self._submitParams.get('-d', None) is not None)
 
 
 	def submitJobs(self, jobNumList, module):

@@ -17,6 +17,7 @@ from grid_control import utils
 from grid_control.backends.broker_base import Broker
 from grid_control.backends.wms import BackendError, BasicWMS, WMS
 from grid_control.job_db import Job
+from grid_control.utils.process_base import LocalProcess
 from hpfwk import APIError
 from python_compat import ifilter, imap, irange, lfilter, lmap, md5, parsedate, tarfile
 
@@ -231,7 +232,7 @@ class GridWMS(BasicWMS):
 
 
 	def explainError(self, proc, code):
-		if 'Keyboard interrupt raised by user' in proc.getError():
+		if 'Keyboard interrupt raised by user' in proc.stderr.read(timeout = 0):
 			return True
 		return False
 
@@ -240,34 +241,36 @@ class GridWMS(BasicWMS):
 	def _submitJob(self, jobNum, module):
 		fd, jdl = tempfile.mkstemp('.jdl')
 		try:
-			data = self.makeJDL(jobNum, module)
-			utils.safeWrite(os.fdopen(fd, 'w'), data)
+			jdlData = self.makeJDL(jobNum, module)
+			utils.safeWrite(os.fdopen(fd, 'w'), jdlData)
 		except Exception:
 			utils.removeFiles([jdl])
 			raise BackendError('Could not write jdl data to %s.' % jdl)
 
 		try:
-			tmp = utils.filterDict(self._submitParams, vF = lambda v: v)
-			params = str.join(' ', imap(lambda x_y: '%s %s' % x_y, tmp.items()))
+			submitArgs = []
+			for key_value in utils.filterDict(self._submitParams, vF = lambda v: v).items():
+				submitArgs.extend(key_value)
+			submitArgs.append(jdl)
 
-			log = tempfile.mktemp('.log')
 			activity = utils.ActivityLog('submitting jobs')
-			proc = utils.LoggedProcess(self._submitExec, '%s --nomsg --noint --logfile "%s" "%s"' % (params, log, jdl))
+			proc = LocalProcess(self._submitExec, '--nomsg', '--noint', '--logfile', '/dev/stderr', *submitArgs)
 
 			wmsId = None
-			for line in ifilter(lambda x: x.startswith('http'), imap(str.strip, proc.iter())):
+			for line in ifilter(lambda x: x.startswith('http'), imap(str.strip, proc.stdout.iter(timeout = 60))):
 				wmsId = line
-			retCode = proc.wait()
+			retCode = proc.status(timeout = 0, terminate = True)
+
 			del activity
 
 			if (retCode != 0) or (wmsId is None):
 				if self.explainError(proc, retCode):
 					pass
 				else:
-					proc.logError(self.errorLog, log = log, jdl = jdl)
+					self._log.log_process(proc, files = {'jdl': utils.safeRead(jdl)})
 		finally:
-			utils.removeFiles([log, jdl])
-		return (jobNum, utils.QM(wmsId, self._createId(wmsId), None), {'jdl': str.join('', data)})
+			utils.removeFiles([jdl])
+		return (jobNum, utils.QM(wmsId, self._createId(wmsId), None), {'jdl': str.join('', jdlData)})
 
 
 	# Check status of jobs and yield (jobNum, wmsID, status, other data)
@@ -277,22 +280,21 @@ class GridWMS(BasicWMS):
 
 		jobNumMap = dict(ids)
 		jobs = self.writeWMSIds(ids)
-		log = tempfile.mktemp('.log')
 
 		activity = utils.ActivityLog('checking job status')
-		proc = utils.LoggedProcess(self._statusExec, '--verbosity 1 --noint --logfile "%s" -i "%s"' % (log, jobs))
-		for data in self._parseStatus(proc.iter()):
+		proc = LocalProcess(self._statusExec, '--verbosity', 1, '--noint', '--logfile', '/dev/stderr', '-i', jobs)
+		for data in self._parseStatus(proc.stdout.iter(timeout = 60)):
 			data['id'] = self._createId(data['id'])
 			yield (jobNumMap.get(data['id']), data['id'], self._statusMap[data['status']], data)
-		retCode = proc.wait()
+		retCode = proc.status(timeout = 0, terminate = True)
 		del activity
 
 		if retCode != 0:
 			if self.explainError(proc, retCode):
 				pass
 			else:
-				proc.logError(self.errorLog, log = log, jobs = jobs)
-		utils.removeFiles([log, jobs])
+				self._log.log_process(proc, files = {'jobs': utils.safeRead(jobs)})
+		utils.removeFiles([jobs])
 
 
 	# Get output of jobs and yield output dirs
@@ -313,16 +315,14 @@ class GridWMS(BasicWMS):
 
 		jobNumMap = dict(ids)
 		jobs = self.writeWMSIds(ids)
-		log = tempfile.mktemp('.log')
 
 		activity = utils.ActivityLog('retrieving job outputs')
-		proc = utils.LoggedProcess(self._outputExec,
-			'--noint --logfile "%s" -i "%s" --dir "%s"' % (log, jobs, tmpPath))
+		proc = LocalProcess(self._outputExec, '--noint', '--logfile', '/dev/stderr', '-i', jobs, '--dir', tmpPath)
 
 		# yield output dirs
 		todo = jobNumMap.values()
 		currentJobNum = None
-		for line in imap(str.strip, proc.iter()):
+		for line in imap(str.strip, proc.stdout.iter(timeout = 60)):
 			if line.startswith(tmpPath):
 				todo.remove(currentJobNum)
 				outputDir = line.strip()
@@ -338,15 +338,15 @@ class GridWMS(BasicWMS):
 				currentJobNum = None
 			else:
 				currentJobNum = jobNumMap.get(self._createId(line), currentJobNum)
-		retCode = proc.wait()
+		retCode = proc.status(timeout = 0, terminate = True)
 		del activity
 
 		if retCode != 0:
-			if 'Keyboard interrupt raised by user' in proc.getError():
-				utils.removeFiles([log, jobs, basePath])
+			if 'Keyboard interrupt raised by user' in proc.stderr.read(timeout = 0):
+				utils.removeFiles([jobs, basePath])
 				raise StopIteration
 			else:
-				proc.logError(self.errorLog, log = log)
+				self._log.log_process(proc, files = {'jobs': utils.safeRead(jobs)})
 			utils.eprint('Trying to recover from error ...')
 			for dirName in os.listdir(basePath):
 				yield (None, os.path.join(basePath, dirName))
@@ -355,7 +355,7 @@ class GridWMS(BasicWMS):
 		for jobNum in todo:
 			yield (jobNum, None)
 
-		utils.removeFiles([log, jobs, basePath])
+		utils.removeFiles([jobs, basePath])
 
 
 	def cancelJobs(self, allIds):
@@ -371,15 +371,14 @@ class GridWMS(BasicWMS):
 
 			jobNumMap = dict(ids)
 			jobs = self.writeWMSIds(ids)
-			log = tempfile.mktemp('.log')
 
 			activity = utils.ActivityLog('cancelling jobs')
-			proc = utils.LoggedProcess(self._cancelExec, '--noint --logfile "%s" -i "%s"' % (log, jobs))
-			retCode = proc.wait()
+			proc = LocalProcess(self._cancelExec, '--noint', '--logfile', '/dev/stderr', '-i', jobs)
+			retCode = proc.status(timeout = 60, terminate = True)
 			del activity
 
 			# select cancelled jobs
-			for deletedWMSId in ifilter(lambda x: x.startswith('- '), proc.iter()):
+			for deletedWMSId in ifilter(lambda x: x.startswith('- '), proc.stdout.iter()):
 				deletedWMSId = self._createId(deletedWMSId.strip('- \n'))
 				yield (jobNumMap.get(deletedWMSId), deletedWMSId)
 
@@ -387,5 +386,5 @@ class GridWMS(BasicWMS):
 				if self.explainError(proc, retCode):
 					pass
 				else:
-					proc.logError(self.errorLog, log = log)
-			utils.removeFiles([log, jobs])
+					self._log.log_process(proc, files = {'jobs': utils.safeRead(jobs)})
+			utils.removeFiles([jobs])

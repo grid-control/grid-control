@@ -111,9 +111,9 @@ def parse_cmd_line():
 
 def dlfs_rm(path, msg):
 	procRM = se_rm(path)
-	if procRM.wait(timeout = 60) != 0:
+	if procRM.status(timeout = 60) != 0:
 		utils.eprint('\t\tUnable to remove %s!' % msg)
-		utils.eprint('%s\n\n' % procRM.getMessage())
+		utils.eprint('%s\n%s\n' % (procRM.stdout.read(timeout = 0), procRM.stderr.read(timeout = 0)))
 
 
 def transfer_monitor(output, fileIdx, path, lock, abort):
@@ -148,7 +148,7 @@ def download_monitored(jobNum, output, fileIdx, checkPath, sourcePath, targetPat
 			monitor.join()
 			break
 		copyAbortLock.release()
-		result = procCP.wait(timeout = 0)
+		result = procCP.status(timeout = 0)
 		if result is not None:
 			monitorLock.release()
 			monitor.join()
@@ -157,7 +157,7 @@ def download_monitored(jobNum, output, fileIdx, checkPath, sourcePath, targetPat
 
 	if result != 0:
 		output.error('Unable to copy file from SE!')
-		output.error(procCP.getMessage())
+		utils.eprint('%s\n%s\n' % (procCP.stdout.read(timeout = 0), procCP.stderr.read(timeout = 0)))
 		return False
 	return True
 
@@ -172,11 +172,11 @@ def download_file(opts, output, jobNum, fileIdx, fileInfo):
 		if not (True in imap(lambda s: s in pathSE, opts.selectSE)):
 			output.error('skip file because it is not located on selected SE!')
 			return
-	if opts.skip_existing and (se_exists(outFilePath).wait(timeout = 10) == 0):
+	if opts.skip_existing and (se_exists(outFilePath).status(timeout = 10) == 0):
 		output.error('skip file as it already exists!')
 		return
-	if se_exists(os.path.dirname(outFilePath)).wait(timeout = 10) != 0:
-		se_mkdir(os.path.dirname(outFilePath)).wait(timeout = 10)
+	if se_exists(os.path.dirname(outFilePath)).status(timeout = 10) != 0:
+		se_mkdir(os.path.dirname(outFilePath)).status(timeout = 10)
 
 	checkPath = 'file:///tmp/dlfs.%s' % name_dest
 	if 'file://' in outFilePath:
@@ -210,7 +210,7 @@ def cleanup_files(opts, files, failJob, output):
 		if (failJob and opts.rm_local_fail) or (not failJob and opts.rm_local_ok):
 			output.update_status(fileIdx, 'Deleting file %s from local...' % name_dest)
 			outFilePath = os.path.join(opts.output, name_dest)
-			if se_exists(outFilePath).wait(timeout = 10) == 0:
+			if se_exists(outFilePath).status(timeout = 10) == 0:
 				dlfs_rm(outFilePath, 'local file')
 		# Remove SE files in case of failure
 		if (failJob and opts.rm_se_fail) or (not failJob and opts.rm_se_ok):

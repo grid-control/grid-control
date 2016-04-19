@@ -17,6 +17,7 @@ from grid_control import utils
 from grid_control.gc_plugin import NamedPlugin
 from grid_control.job_db import Job
 from grid_control.utils.gc_itertools import lchain
+from grid_control.utils.process_base import LocalProcess
 from grid_control.utils.thread_tools import GCThreadPool
 from python_compat import imap, lmap
 
@@ -125,8 +126,9 @@ class ScriptMonitoring(Monitoring):
 				os.environ[key] = str(value)
 
 			script = self._task.substVars(script, jobNum, tmp)
-			if self._silent:
-				utils.LoggedProcess(script).wait()
+			if not self._silent:
+				proc = LocalProcess(script)
+				self._log.info(proc.get_output(timeout = self._runningMax))
 			else:
 				os.system(script)
 		except Exception:

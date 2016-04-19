@@ -19,6 +19,7 @@ from grid_control import utils
 from grid_control.gc_exceptions import UserError
 from grid_control.gc_plugin import NamedPlugin
 from grid_control.utils.parsing import parseTime, strTime
+from grid_control.utils.process_base import LocalProcess
 from hpfwk import AbstractError, NestedException
 from python_compat import identity, imap, lmap, rsplit
 
@@ -153,16 +154,16 @@ class VomsProxy(TimedAccessToken):
 		if cached and self._cache:
 			return self._cache
 		# Call voms-proxy-info and parse results
-		args = '--all'
+		args = ['--all']
 		if self._proxyPath:
-			args += ' --file ' + self._proxyPath
-		proc = utils.LoggedProcess(self._infoExec, args)
-		retCode = proc.wait()
+			args.extend(['--file', self._proxyPath])
+		proc = LocalProcess(self._infoExec, *args)
+		(retCode, stdout, stderr) = proc.finish(timeout = 10)
 		if (retCode != 0) and not self._ignoreWarning:
-			msg = ('voms-proxy-info output:\n%s\n%s\n' % (proc.getOutput(), proc.getError())).replace('\n\n', '\n')
+			msg = ('voms-proxy-info output:\n%s\n%s\n' % (stdout, stderr)).replace('\n\n', '\n')
 			msg += 'If job submission is still possible, you can set [access] ignore warnings = True\n'
 			raise AccessTokenError(msg + 'voms-proxy-info failed with return code %d' % retCode)
-		self._cache = utils.DictFormat(':').parse(proc.getOutput())
+		self._cache = utils.DictFormat(':').parse(stdout)
 		return self._cache
 
 	def _getProxyInfo(self, key, parse = identity, cached = True):
@@ -211,18 +212,17 @@ class AFSAccessToken(RefreshableAccessToken):
 				os.environ[name] = self._authFiles[name]
 
 	def _refreshAccessToken(self):
-		return utils.LoggedProcess(self._kinitExec, '-R').wait()
+		return LocalProcess(self._kinitExec, '-R').finish(timeout = 10)
 
 	def _parseTickets(self, cached = True):
 		# Return cached results if requested
 		if cached and self._cache:
 			return self._cache
 		# Call klist and parse results
-		proc = utils.LoggedProcess(self._klistExec)
-		proc.wait()
+		proc = LocalProcess(self._klistExec)
 		self._cache = {}
 		try:
-			for line in proc.getOutput().splitlines():
+			for line in proc.stdout.iter(timeout = 10):
 				if line.count('@') and (line.count(':') > 1):
 					issued_expires, principal = rsplit(line, '  ', 1)
 					issued_expires = issued_expires.replace('/', ' ').split()
@@ -247,6 +247,7 @@ class AFSAccessToken(RefreshableAccessToken):
 					self._cache[key.lower()] = value
 		except Exception:
 			raise AccessTokenError('Unable to parse kerberos ticket information!')
+		proc.status_raise(timeout = 0)
 		return self._cache
 
 	def _getTimeleft(self, cached):
