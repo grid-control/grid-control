@@ -12,7 +12,7 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-import os, pty, sys, time, errno, fcntl, select, signal, logging, termios, threading
+import os, sys, time, errno, fcntl, select, signal, logging, termios, threading
 from grid_control.utils.thread_tools import GCEvent, GCLock, GCQueue
 from hpfwk import AbstractError
 from python_compat import bytes2str, imap, irange, str2bytes
@@ -233,36 +233,39 @@ class LocalProcess(Process):
 
 	def start(self):
 		# Setup of file descriptors - stdin / stdout via pty, stderr via pipe
+		LocalProcess.fdCreationLock.acquire()
 		try:
-			LocalProcess.fdCreationLock.acquire()
-			self._pid, self._fd_terminal = pty.fork()
-			fd_parent_stdin = self._fd_terminal
-			fd_parent_stdout = self._fd_terminal
+			self._fd_parent_terminal, fd_child_terminal = os.openpty() # terminal is used for stdin / stdout
+			fd_parent_stdin, fd_child_stdin = (self._fd_parent_terminal, fd_child_terminal)
+			fd_parent_stdout, fd_child_stdout = (self._fd_parent_terminal, fd_child_terminal)
 			fd_parent_stderr, fd_child_stderr = os.pipe() # Returns (r, w) FDs
 		finally:
 			LocalProcess.fdCreationLock.release()
 
+		self._setup_terminal()
+		for fd in [fd_parent_stdout, fd_parent_stderr]: # enable non-blocking operation on stdout/stderr
+			fcntl.fcntl(fd, fcntl.F_SETFL, os.O_NONBLOCK | fcntl.fcntl(fd, fcntl.F_GETFL))
+
+		self._pid = os.fork()
 		if self._pid == 0: # We are in the child process - redirect streams and exec external program
 			os.environ['TERM'] = 'vt100'
-			os.dup2(fd_child_stderr, pty.STDERR_FILENO) # set stderr to pipe
-			for fd in irange(0, FD_MAX):
-				if fd not in [pty.STDIN_FILENO, pty.STDOUT_FILENO, pty.STDERR_FILENO]:
-					safeClose(fd)
+			for fd_target, fd_source in enumerate([fd_child_stdin, fd_child_stdout, fd_child_stderr]):
+				os.dup2(fd_source, fd_target) # set stdin/stdout/stderr
+			for fd in irange(3, FD_MAX):
+				safeClose(fd)
 			try:
 				os.execv(self._cmd, [self._cmd] + self._args)
 			except Exception:
 				invoked = 'os.execv(%s, [%s] + %s)' % (repr(self._cmd), repr(self._cmd), repr(self._args))
 				sys.stderr.write('Error while calling %s: ' % invoked + repr(sys.exc_info()[1]))
-				for fd in [pty.STDIN_FILENO, pty.STDOUT_FILENO, pty.STDERR_FILENO]:
+				for fd in [0, 1, 2]:
 					safeClose(fd)
 				exit_without_cleanup(os.EX_OSERR)
 			exit_without_cleanup(os.EX_OK)
 
 		else: # Still in the parent process - setup threads to communicate with external program
+			safeClose(fd_child_terminal)
 			safeClose(fd_child_stderr)
-			for fd in [fd_parent_stdout, fd_parent_stderr]: # enable non-blocking operation on stdout/stderr
-				fcntl.fcntl(fd, fcntl.F_SETFL, os.O_NONBLOCK | fcntl.fcntl(fd, fcntl.F_GETFL))
-			self._setup_terminal() # race with forked child to change terminal settings...
 			thread = threading.Thread(target = self._interact_with_child, args = (fd_parent_stdin, fd_parent_stdout, fd_parent_stderr))
 			thread.daemon = True
 			thread.start()
@@ -326,15 +329,15 @@ class LocalProcess(Process):
 	_handle_input = classmethod(_handle_input)
 
 	def _setup_terminal(self):
-		attr = termios.tcgetattr(self._fd_terminal)
+		attr = termios.tcgetattr(self._fd_parent_terminal)
 		attr[1] = attr[1] & ~termios.ONLCR # disable \n -> \r\n
 		attr[3] = attr[3] & ~termios.ECHO # disable terminal echo
 		attr[3] = attr[3] | termios.ICANON # enable canonical mode
 		attr[3] = attr[3] | termios.ISIG # enable signals
-		self.stdin.EOF = bytes2str(termios.tcgetattr(self._fd_terminal)[6][termios.VEOF])
-		self.stdin.EOL = bytes2str(termios.tcgetattr(self._fd_terminal)[6][termios.VEOL])
-		self.stdin.INTR = bytes2str(termios.tcgetattr(self._fd_terminal)[6][termios.VINTR])
-		termios.tcsetattr(self._fd_terminal, termios.TCSANOW, attr)
+		self.stdin.EOF = bytes2str(termios.tcgetattr(self._fd_parent_terminal)[6][termios.VEOF])
+		self.stdin.EOL = bytes2str(termios.tcgetattr(self._fd_parent_terminal)[6][termios.VEOL])
+		self.stdin.INTR = bytes2str(termios.tcgetattr(self._fd_parent_terminal)[6][termios.VINTR])
+		termios.tcsetattr(self._fd_parent_terminal, termios.TCSANOW, attr)
 
 	def status(self, timeout, terminate = False):
 		self._event_finished.wait(timeout, 'process to finish')
