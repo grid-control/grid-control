@@ -222,7 +222,7 @@ else:
 if sys.version_info[0] < 3:	# unicode encoding <= Python 3
 	md5_hex = lambda value: md5(value).hexdigest()
 else:
-	md5_hex = lambda value: md5(str(value).encode('utf-8')).hexdigest()
+	md5_hex = lambda value: md5(str2bytes(value)).hexdigest()
 
 __all__ = ['BytesBuffer', 'BytesBufferBase', 'NullHandler', 'StringBuffer',
 	'all', 'any', 'bytes2str', 'identity', 'itemgetter', 'lru_cache',

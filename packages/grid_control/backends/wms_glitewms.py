@@ -178,7 +178,7 @@ class GliteWMS(GridWMS):
 			return True
 		log = tempfile.mktemp('.log')
 		try:
-			dID = 'GCD' + md5_hex(time.time())[:10]
+			dID = 'GCD' + md5_hex(str(time.time()))[:10]
 			activity = utils.ActivityLog('creating delegate proxy for job submission')
 			proc = utils.LoggedProcess(self._delegateExec, '%s -d %s --noint --logfile "%s"' %
 				(utils.QM(self._configVO, '--config "%s"' % self._configVO, ''), dID, log))
