@@ -181,12 +181,12 @@ class GliteWMS(GridWMS):
 		if self._configVO:
 			deletegateArgs.extend(['--config', self._configVO])
 		proc = LocalProcess(self._delegateExec, '-d', dID, '--noint', '--logfile', '/dev/stderr', *deletegateArgs)
-		output = proc.stdout.read(timeout = 10)
+		output = proc.get_output(timeout = 10, raise_errors = False)
 		if ('glite-wms-job-delegate-proxy Success' in output) and (dID in output):
 			self._submitParams.update({ '-d': dID })
 		del activity
 
-		if proc.status(timeout = 10, terminate = True) != 0:
+		if proc.status(timeout = 0, terminate = True) != 0:
 			self._log.log_process(proc)
 		return (self._submitParams.get('-d', None) is not None)
 

@@ -71,6 +71,11 @@ class ProcessReadStream(ProcessStream):
 
 	def read(self, timeout):
 		result = self._buffer.get(timeout, default = '')
+		while True:
+			try:
+				result += self._buffer.get(timeout = 0)
+			except IndexError:
+				break
 		if self._log is not None:
 			self._log += result
 		return result
@@ -203,12 +208,7 @@ class Process(object):
 
 	def get_output(self, timeout, raise_errors = True):
 		status = self.status(timeout)
-		result = ''
-		while True:
-			tmp = self.stdout.read(timeout = 0)
-			result += tmp
-			if not tmp:
-				break
+		result = self.stdout.read(timeout = 0)
 		if status is None:
 			self.terminate(timeout = 1)
 		if raise_errors and (status is None):
