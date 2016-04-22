@@ -236,7 +236,7 @@
 
         * grid_control.backends.wms_host Host Localhost
 
-        * grid_control.backends.wms_slurm JMS SLURM
+        * grid_control.backends.wms_jms JMS
 
         * grid_control.backends.wms_lsf LSF
 

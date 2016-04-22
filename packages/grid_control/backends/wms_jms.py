@@ -19,8 +19,7 @@ from grid_control.job_db import Job
 from python_compat import izip, lmap
 
 class JMS(LocalWMS):
-	alias = ['SLURM']
-	configSections = LocalWMS.configSections + ['SLURM', 'JMS']
+	configSections = LocalWMS.configSections + ['JMS']
 	_statusMap = { 's': Job.QUEUED, 'r': Job.RUNNING, 'CG': Job.DONE, 'w': Job.WAITING }
 
 	def __init__(self, config, name):
