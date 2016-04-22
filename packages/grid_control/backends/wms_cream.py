@@ -30,6 +30,7 @@ class CreamWMS(GridWMS):
 		'aborted':   Job.ABORTED,
 		'cancelled': Job.ABORTED,
 		'cleared':   Job.ABORTED,
+		'REGISTERED':     Job.QUEUED,
 		'CANCELLED':      Job.ABORTED,
 		'PENDING':        Job.WAITING,
 		'RUNNING':        Job.RUNNING,
