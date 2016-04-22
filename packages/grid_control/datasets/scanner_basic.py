@@ -57,7 +57,7 @@ class OutputDirsFromWork(InfoScanner):
 		self._selector = JobSelector.create(config.get('source job selector', ''))
 
 	def getEntries(self, path, metadata, events, seList, objStore):
-		allDirs = ifilter(lambda fn: fn.startswith('job_'), os.listdir(self._extOutputDir))
+		allDirs = lfilter(lambda fn: fn.startswith('job_'), os.listdir(self._extOutputDir))
 		for idx, dirName in enumerate(allDirs):
 			log = utils.ActivityLog('Reading job logs - [%d / %d]' % (idx, len(allDirs)))
 			try:
