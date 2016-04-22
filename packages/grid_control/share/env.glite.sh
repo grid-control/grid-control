@@ -63,7 +63,7 @@ function gc_set_proxy() {
 
 if [ -z "$GLITE_LOCATION" ]; then
 	export GC_GLITE_TYPE="LOCAL"
-elif gc_find_grid "CVMFS" $(ls -1t /cvmfs/grid.cern.ch/*/etc/profile.d/setup*.sh 2> /dev/null | head -n 1); then
+elif gc_find_grid "CVMFS" $(ls -1t /cvmfs/grid.cern.ch/emi-ui-3.7.3-1_sl6v2/etc/profile.d/setup-emi3-ui-example.sh 2> /dev/null | head -n 1); then
 	:
 elif gc_find_grid "CVMFS - 2nd try" $(ls -1t /cvmfs/grid.cern.ch/*/etc/profile.d/grid*.sh 2> /dev/null | head -n 1); then
 	:
