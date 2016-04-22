@@ -643,7 +643,7 @@ class Condor(BasicWMS):
 
 			elif reqType == WMS.WALLTIME:
 				if ("walltimeMin" in self.poolReqs) and reqValue > 0:
-					jdlReq.append( self.poolReqs["walltimeMin"] + ' = ' + str(int(reqValue)))
+					jdlReq.append('%s = %d' % (self.poolReqs["walltimeMin"], reqValue))
 
 			elif reqType == WMS.STORAGE:
 				if ("requestSEs" in self.poolReqs):
