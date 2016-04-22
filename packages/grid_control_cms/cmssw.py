@@ -42,7 +42,7 @@ class CMSPartitionProcessor(BasicPartitionProcessor):
 
 	def _formatFileList(self, fl):
 		if self._prefix:
-			fl = imap(lambda fn: self._prefix + fn.split('/store/', 1)[-1])
+			fl = imap(lambda fn: self._prefix + fn.split('/store/', 1)[-1], fl)
 		return str.join(', ', imap(lambda x: '"%s"' % x, fl))
 
 
