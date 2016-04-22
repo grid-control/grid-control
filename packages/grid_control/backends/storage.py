@@ -113,11 +113,11 @@ class SEStorageManager(StorageManager):
 				utils.vprint('Copy %s to SE %d ' % (desc, idx + 1), -1, newline = False)
 				sys.stdout.flush()
 				proc = se_copy(source, os.path.join(sePath, target), self.smForce)
-				if proc.wait() == 0:
+				if proc.status(timeout = 5*60, terminate = True) == 0:
 					utils.vprint('finished', -1)
 				else:
 					utils.vprint('failed', -1)
-					utils.eprint(proc.getMessage())
+					utils.eprint(proc.stderr.read(timeout = 0))
 					utils.eprint('Unable to copy %s! You can try to copy it manually.' % desc)
 					if not utils.getUserBool('Is %s (%s) available on SE %s?' % (desc, source, sePath), False):
 						raise StorageError('%s is missing on SE %s!' % (desc, sePath))
