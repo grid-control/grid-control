@@ -48,7 +48,6 @@ class OutputDirsFromConfig(InfoScanner):
 			yield (os.path.join(self._extWorkDir, 'output', 'job_%d' % jobNum), metadata, events, seList, objStore)
 			log.finish()
 
-
 class OutputDirsFromWork(InfoScanner):
 	def __init__(self, config):
 		InfoScanner.__init__(self, config)
@@ -69,7 +68,6 @@ class OutputDirsFromWork(InfoScanner):
 			except Exception:
 				pass
 			log.finish()
-
 
 class MetadataFromTask(InfoScanner):
 	def __init__(self, config):
@@ -94,7 +92,6 @@ class MetadataFromTask(InfoScanner):
 		utils.verbosity(newVerbosity + 3)
 		yield (path, metadata, events, seList, objStore)
 
-
 class FilesFromLS(InfoScanner):
 	def __init__(self, config):
 		InfoScanner.__init__(self, config)
@@ -114,7 +111,6 @@ class FilesFromLS(InfoScanner):
 		if proc.status(timeout = 0) != 0:
 			self._log.log_process(proc)
 
-
 class JobInfoFromOutputDir(InfoScanner):
 	def getEntries(self, path, metadata, events, seList, objStore):
 		jobInfoPath = os.path.join(path, 'job.info')
@@ -125,7 +121,6 @@ class JobInfoFromOutputDir(InfoScanner):
 				yield (path, metadata, events, seList, objStore)
 		except Exception:
 			pass
-
 
 class FilesFromJobInfo(InfoScanner):
 	def getGuards(self):
@@ -160,6 +155,19 @@ class FilesFromDataProvider(InfoScanner):
 				metadata.update({'SRC_DATASET': block[DataProvider.Dataset], 'SRC_BLOCK': block[DataProvider.BlockName]})
 				metadata.update(dict(izip(block.get(DataProvider.Metadata, []), fi.get(DataProvider.Metadata, []))))
 				yield (fi[DataProvider.URL], metadata, fi[DataProvider.NEntries], block[DataProvider.Locations], objStore)
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 class MatchOnFilename(InfoScanner):
