@@ -62,13 +62,15 @@ class OutputDirsFromWork(InfoScanner):
 			log = utils.ActivityLog('Reading job logs - [%d / %d]' % (idx, len(allDirs)))
 			try:
 				metadata['GC_JOBNUM'] = int(dirName.split('_')[1])
-				objStore['GC_WORKDIR'] = self._extWorkDir
-				log.finish()
-				if self._selector and self._selector(metadata['GC_JOBNUM'], None):
-					yield (os.path.join(self._extOutputDir, dirName), metadata, events, seList, objStore)
 			except Exception:
 				pass
+			objStore['GC_WORKDIR'] = self._extWorkDir
 			log.finish()
+			if self._selector and not self._selector(metadata['GC_JOBNUM'], None):
+				continue
+			elif self._selector is not None:
+				continue
+			yield (os.path.join(self._extOutputDir, dirName), metadata, events, seList, objStore)
 
 
 class MetadataFromTask(InfoScanner):
