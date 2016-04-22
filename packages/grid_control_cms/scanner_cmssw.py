@@ -119,22 +119,24 @@ class ObjectsFromCMSSW(InfoScanner):
 
 	def getEntries(self, path, metadata, events, seList, objStore):
 		jobNum = metadata['GC_JOBNUM']
-		tar = tarfile.open(os.path.join(path, 'cmssw.dbs.tar.gz'), 'r')
-		# Collect infos about transferred files
-		fileSummaryMap = {}
-		try:
-			for rawdata in imap(str.split, tar.extractfile('files').readlines()):
-				fileSummaryMap[rawdata[2]] = {'SE_OUTPUT_HASH_CRC32': rawdata[0], 'SE_OUTPUT_SIZE': int(rawdata[1])}
-			objStore['CMSSW_FILES'] = fileSummaryMap
-		except Exception:
-			raise DatasetError('Could not read CMSSW file infos for job %d!' % jobNum)
-		# Collect infos about CMSSW processing steps
-		cfgSummaryMap = {}
-		self._processSteps(jobNum, tar, cfgSummaryMap, fileSummaryMap)
-		for cfg in cfgSummaryMap:
-			metadata.setdefault('CMSSW_CONFIG_JOBHASH', []).append(cfgSummaryMap[cfg]['CMSSW_CONFIG_HASH'])
-		objStore.update({'CMSSW_CONFIG': cfgSummaryMap, 'CMSSW_FILES': fileSummaryMap})
-		tar.close()
+		cmsRunLog = os.path.join(path, 'cmssw.dbs.tar.gz')
+		if os.path.exists(cmsRunLog):
+			tar = tarfile.open(cmsRunLog, 'r')
+			# Collect infos about transferred files
+			fileSummaryMap = {}
+			try:
+				for rawdata in imap(str.split, tar.extractfile('files').readlines()):
+					fileSummaryMap[rawdata[2]] = {'SE_OUTPUT_HASH_CRC32': rawdata[0], 'SE_OUTPUT_SIZE': int(rawdata[1])}
+				objStore['CMSSW_FILES'] = fileSummaryMap
+			except Exception:
+				raise DatasetError('Could not read CMSSW file infos for job %d!' % jobNum)
+			# Collect infos about CMSSW processing steps
+			cfgSummaryMap = {}
+			self._processSteps(jobNum, tar, cfgSummaryMap, fileSummaryMap)
+			for cfg in cfgSummaryMap:
+				metadata.setdefault('CMSSW_CONFIG_JOBHASH', []).append(cfgSummaryMap[cfg]['CMSSW_CONFIG_HASH'])
+			objStore.update({'CMSSW_CONFIG': cfgSummaryMap, 'CMSSW_FILES': fileSummaryMap})
+			tar.close()
 		yield (path, metadata, events, seList, objStore)
 
 
@@ -144,9 +146,11 @@ class MetadataFromCMSSW(InfoScanner):
 		self.includeConfig = config.getBool('include config infos', False)
 
 	def getEntries(self, path, metadata, events, seList, objStore):
-		metadata.update(objStore['CMSSW_FILES'].get(metadata.get('SE_OUTPUT_FILE')))
+		cmssw_files_dict = objStore.get('CMSSW_FILES', {})
+		metadata.update(cmssw_files_dict.get(metadata.get('SE_OUTPUT_FILE'), {}))
 		if self.includeConfig:
-			metadata.update(objStore['CMSSW_CONFIG'].get(metadata.get('CMSSW_CONFIG_FILE'), {}))
+			cmssw_config_dict = objStore.get('CMSSW_CONFIG', {})
+			metadata.update(cmssw_config_dict.get(metadata.get('CMSSW_CONFIG_FILE'), {}))
 		yield (path, metadata, events, seList, objStore)
 
 

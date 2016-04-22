@@ -20,6 +20,8 @@ from gcSupport import Options, scriptOptions, utils
 parser = Options(usage = '%s [OPTIONS] <config file / work directory>')
 parser.addText(None, 'J', 'job-selector', dest = 'external job selector', default = '',
 	help = 'Specify which jobs to process')
+parser.addText(None, 'i', 'info-scanner',
+	help = 'Specify which info scanner to run')
 parser.addText(None, 'm', 'event-mode',   dest = 'mode',                  default = 'CMSSW-Out',
 	help = 'Specify how to determine events - available: [CMSSW-Out], CMSSW-In, DataMod')
 parser.addText(None, 'l', 'lfn',          dest = 'lfn marker',            default = '/store/',
@@ -35,5 +37,7 @@ options = scriptOptions(parser, arg_keys = ['dataset'])
 if len(options.args) == 0:
 	utils.exitWithUsage(parser.usage())
 tmp = {'cmssw-out': 'CMSSW_EVENTS_WRITE', 'cmssw-in': 'CMSSW_EVENTS_READ', 'datamod': 'MAX_EVENTS'}
+if options.opts.info_scanner:
+	options.config_dict['scanner'] = options.opts.info_scanner.replace(',', ' ')
 options.config_dict['events key'] = tmp.get(options.config_dict['mode'].lower(), '')
 sys.exit(discoverDataset('GCProvider', options.config_dict))
