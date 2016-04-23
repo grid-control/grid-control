@@ -225,6 +225,7 @@ class Process(object):
 class LocalProcess(Process):
 	def __init__(self, cmd, *args, **kwargs):
 		self._status = None
+		self._terminal = kwargs.pop('term', 'vt100')
 		Process.__init__(self, cmd, *args, **kwargs)
 		self._signal_dict = {}
 		for attr in dir(signal):
@@ -248,7 +249,7 @@ class LocalProcess(Process):
 
 		self._pid = os.fork()
 		if self._pid == 0: # We are in the child process - redirect streams and exec external program
-			os.environ['TERM'] = 'vt100'
+			os.environ['TERM'] = self._terminal
 			for fd_target, fd_source in enumerate([fd_child_stdin, fd_child_stdout, fd_child_stderr]):
 				os.dup2(fd_source, fd_target) # set stdin/stdout/stderr
 			for fd in irange(3, FD_MAX):
