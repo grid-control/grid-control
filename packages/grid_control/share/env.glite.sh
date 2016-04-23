@@ -61,7 +61,7 @@ function gc_set_proxy() {
 }
 
 
-if [ -z "$GLITE_LOCATION" ]; then
+if [ -n "$GLITE_LOCATION" ]; then
 	export GC_GLITE_TYPE="LOCAL"
 elif gc_find_grid "CVMFS" $(ls -1t /cvmfs/grid.cern.ch/*/etc/profile.d/setup*.sh 2> /dev/null | head -n 1); then
 	:
