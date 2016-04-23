@@ -63,7 +63,7 @@ class OutputDirsFromWork(InfoScanner):
 			try:
 				metadata['GC_JOBNUM'] = int(dirName.split('_')[1])
 			except Exception:
-				pass
+				continue
 			objStore['GC_WORKDIR'] = self._extWorkDir
 			log.finish()
 			if self._selector and not self._selector(metadata['GC_JOBNUM'], None):
