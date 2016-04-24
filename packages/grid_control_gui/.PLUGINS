@@ -18,6 +18,8 @@
 
    * grid_control.report Report
 
+    * grid_control_gui.report_wms BackendReport
+
     * grid_control.report BasicReport
 
      * grid_control_gui.report_basic BasicBarReport
