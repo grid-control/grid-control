@@ -112,10 +112,13 @@ class DataProvider(ConfigurablePlugin):
 
 		if self._cache_block is None:
 			log = utils.ActivityLog('Retrieving %s' % self._datasetExpr)
-			if self._passthrough:
-				self._cache_block = list(self._stats.process(prepareBlocks()))
-			else:
-				self._cache_block = list(self._stats.process(self._datasetProcessor.process(prepareBlocks())))
+			try:
+				if self._passthrough:
+					self._cache_block = list(self._stats.process(prepareBlocks()))
+				else:
+					self._cache_block = list(self._stats.process(self._datasetProcessor.process(prepareBlocks())))
+			except Exception:
+				raise DatasetError('Unable to retrieve dataset %s' % repr(self._datasetExpr))
 			statString = ''
 			if self._datasetNick:
 				statString = '%s: ' % self._datasetNick
