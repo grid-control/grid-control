@@ -129,17 +129,13 @@ def logging_defaults():
 	handlerException_stdout.setFormatter(excFormatterVerbose)
 	logException.addHandler(handlerException_stdout)
 
-	handlerException_file = None
-	for fnLog in [os.path.join(os.environ['GC_PACKAGES_PATH'], '..', 'debug.log'), '/tmp/gc.debug.%d' % os.getuid(), '~/gc.debug']:
-		fnLog = os.path.abspath(os.path.normpath(os.path.expanduser(fnLog)))
-		try:
-			handlerException_file = GCLogHandler(fnLog, 'w')
-			handlerException_file.setFormatter(excFormatterVerbose)
-			logException.addHandler(handlerException_file)
-			handlerException_stdout.setFormatter(excFormatterQuiet)
-			break
-		except Exception:
-			pass
+	try:
+		handlerException_file = GCLogHandler(None, 'w')
+		handlerException_file.setFormatter(excFormatterVerbose)
+		logException.addHandler(handlerException_file)
+		handlerException_stdout.setFormatter(excFormatterQuiet)
+	except Exception:
+		pass
 	logException.propagate = False
 
 	# Adding log_process_result to Logging class
@@ -226,7 +222,7 @@ def logging_create_handlers(config, logger_name):
 			elif handler_str == 'file':
 				handler = logging.FileHandler(config.get(logger_name + ' file', onChange = None), 'w')
 			elif handler_str == 'debug_file':
-				handler = GCLogHandler(config.get(logger_name + ' debug file', onChange = None), 'w')
+				handler = GCLogHandler(config.get(logger_name + ' debug file', '', onChange = None), 'w')
 			else:
 				raise Exception('Unknown handler %s for logger %s' % (handler_str, logger_name))
 			logger.addHandler(logging_configure_handler(config, logger_name, handler_str, handler))
@@ -236,7 +232,7 @@ def logging_create_handlers(config, logger_name):
 def logging_setup(config):
 	if config.getBool('debug mode', False, onChange = None):
 		config.set('level', 'DEBUG3', '?=')
-		config.set('exception handler', 'stdout', '+=')
+		config.set('exception handler', 'stdout debug_file', '?=')
 		config.setInt('exception code context', 2)
 		config.setInt('exception variables', 2)
 		config.setInt('exception file stack', 2)

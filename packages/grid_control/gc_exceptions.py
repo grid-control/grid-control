@@ -17,8 +17,22 @@ from hpfwk import NestedException
 
 class GCLogHandler(logging.FileHandler):
 	def __init__(self, fn, *args, **kwargs):
-		logging.FileHandler.__init__(self, fn, *args, **kwargs)
+		if not fn:
+			found = False
+			for fn in [os.path.join(os.environ['GC_PACKAGES_PATH'], '..', 'debug.log'), '/tmp/gc.debug.%d' % os.getuid(), '~/gc.debug']:
+				try:
+					fn = os.path.abspath(os.path.normpath(os.path.expanduser(fn)))
+					logging.FileHandler.__init__(self, fn, *args, **kwargs)
+					found = True
+					break
+				except Exception:
+					continue
+			if not found:
+				raise NestedException('Unable to find writeable debug log path!')
+		else:
+			logging.FileHandler.__init__(self, fn, *args, **kwargs)
 		self._fn = os.path.abspath(fn)
+
 	def emit(self, record):
 		logging.FileHandler.emit(self, record)
 		sys.stderr.write('In case this is caused by a bug, please send the log file:\n')
