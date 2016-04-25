@@ -156,7 +156,10 @@ class MetadataFromCMSSW(InfoScanner):
 
 class SEListFromPath(InfoScanner):
 	def getEntries(self, path, metadata, events, seList, objStore):
-		proto, fn = path.split(':', 1)
+		tmp = path.split(':', 1)
+		if len(tmp) == 1:
+			tmp = ['dir', tmp[0]]
+		proto, fn = tmp
 		if proto in ['dir', 'file']:
 			yield (path, metadata, events, ['localhost'], objStore)
 		elif proto in ['rfio']:
