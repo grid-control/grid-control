@@ -12,12 +12,12 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-import time, math
+import math, time
 from grid_control.job_db import Job
 from grid_control.report import Report
 from grid_control.utils import printTabular
 from grid_control.utils.parsing import parseStr, strTimeShort
-from python_compat import lmap, itemgetter, lzip, imap
+from python_compat import imap, itemgetter, lmap, lzip, sorted
 
 class BackendReport(Report):
 	def __init__(self, jobDB, task, jobs = None, configString = ''):
