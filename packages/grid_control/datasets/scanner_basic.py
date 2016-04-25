@@ -26,6 +26,10 @@ def splitParse(opt):
 	(delim, ds, de) = utils.optSplit(opt, '::')
 	return (delim, parseStr(ds, int), parseStr(de, int))
 
+class NullScanner(InfoScanner):
+	def getEntries(self, path, metadata, events, seList, objStore):
+		yield (path, metadata, events, seList, objStore)
+
 # Get output directories from external config file
 class OutputDirsFromConfig(InfoScanner):
 	def __init__(self, config):

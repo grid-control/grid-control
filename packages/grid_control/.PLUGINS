@@ -116,6 +116,8 @@
 
      * grid_control.datasets.scanner_basic MetadataFromTask
 
+     * grid_control.datasets.scanner_basic NullScanner
+
      * grid_control.datasets.scanner_basic OutputDirsFromConfig
 
      * grid_control.datasets.scanner_basic OutputDirsFromWork

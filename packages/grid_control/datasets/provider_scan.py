@@ -29,7 +29,7 @@ class ScanProviderBase(DataProvider):
 		(self.kUserDS, self.kUserB) = DSB(config.getList, 'hash keys', [])
 		(self.kGuardDS, self.kGuardB) = DSB(config.getList, 'guard override', [])
 		self.kSelectDS = config.getList('dataset key select', [])
-		scanList = config.getList('scanner', datasetExpr)
+		scanList = config.getList('scanner', datasetExpr) + ['NullScanner']
 		self.scanner = lmap(lambda cls: InfoScanner.createInstance(cls, config), scanList)
 
 
