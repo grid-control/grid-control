@@ -248,6 +248,8 @@
 
          * grid_control.backends.wms_pbs PBS
 
+        * grid_control.backends.wms_slurm SLURM
+
       * grid_control.backends.wms InactiveWMS inactive
 
       * grid_control.backends.wms_local Local
