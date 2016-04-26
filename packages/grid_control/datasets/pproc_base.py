@@ -116,6 +116,11 @@ class MetaPartitionProcessor(PartitionProcessor):
 	def process(self, pNum, splitInfo, result):
 		for idx, mkey in enumerate(splitInfo.get(DataSplitter.MetadataHeader, [])):
 			if mkey in self._metadata:
-				tmp = set(imap(lambda x: x[idx], splitInfo[DataSplitter.Metadata]))
+				def getMetadataProtected(x):
+					if idx < len(x):
+						return x[idx]
+				tmp = set(imap(getMetadataProtected, splitInfo[DataSplitter.Metadata]))
 				if len(tmp) == 1:
-					result[mkey] = tmp.pop()
+					value = tmp.pop()
+					if value is not None:
+						result[mkey] = value

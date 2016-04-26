@@ -184,6 +184,7 @@ class DataProvider(ConfigurablePlugin):
 			if writeMetadata:
 				(idxListBlock, idxListFile) = DataProvider.classifyMetadataKeys(block)
 				def getMetadata(fi, idxList):
+					idxList = ifilter(lambda idx: idx < len(fi[DataProvider.Metadata]), idxList)
 					return json.dumps(lmap(lambda idx: fi[DataProvider.Metadata][idx], idxList))
 				writer.write('metadata = %s\n' % json.dumps(lmap(lambda idx: block[DataProvider.Metadata][idx], idxListBlock + idxListFile)))
 				if idxListBlock:
