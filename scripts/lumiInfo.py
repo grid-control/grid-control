@@ -26,7 +26,7 @@ parser.addBool('expr', 'J', 'json',          default = False, help = 'Output JSO
 parser.addBool('expr', 'F', 'full',          default = False, help = 'Output JSON file with full expression')
 
 parser.section('calc', 'Options which allow luminosity related calculations', '%s <config file>')
-parser.addBool('calc', 'O', 'output-dir',    default = None,  help = 'Set output directory (default: work directory)')
+parser.addText('calc', 'O', 'output-dir',    default = None,  help = 'Set output directory (default: work directory)')
 parser.addBool('calc', 'g', 'job-gc',        default = False, help = 'Output grid-control compatible lumi expression for processed lumi sections')
 parser.addBool('calc', 'j', 'job-json',      default = False, help = 'Output JSON file with processed lumi sections')
 parser.addBool('calc', 'e', 'job-events',    default = False, help = 'Get number of events processed')
@@ -145,7 +145,7 @@ def lumi_calc(opts, workDir, jobList, splitter):
 		if opts.job_json:
 			json_fn = os.path.join(opts.output_dir or workDir, 'processed_%s.json' % sample)
 			outputJSON(lumis, open(json_fn, 'w'))
-			print('Saved processed lumi sections in ' + os.path.join(workDir, 'processed_%s.json' % sample))
+			print('Saved processed lumi sections in ' + json_fn)
 		if opts.job_gc:
 			sys.stdout.write('\n')
 			print('List of processed lumisections:')
