@@ -89,16 +89,21 @@ class BackendReport(Report):
 		fillDict(displayDict, overview, self._idxList)
 		return displayDict
 
-	def _get_entry(self, stateMap, data, label):
+	def _get_entry_stats(self, stateMap, data):
 		(tmp_m0, tmp_m1, tmp_m2, tmp_ma, tmp_mi) = ({}, {}, {}, {}, {})
-		tmp_mi = {}
 		for rawState in data:
 			state = stateMap.get(rawState, stateMap.get(None))
 			tmp_m0[state] = tmp_m0.get(state, 0) + len(data[rawState])
 			tmp_m1[state] = tmp_m1.get(state, 0) + sum(data[rawState])
-			tmp_m2[state] = tmp_m2.get(state, 0) + sum(imap(lambda x: x*x, data[rawState]))
+			tmp_m2[state] = tmp_m2.get(state, 0) + sum(imap(lambda x: x * x, data[rawState]))
 			tmp_ma[state] = max(data[rawState] + [tmp_ma.get(state, 0)])
 			tmp_mi[state] = min(data[rawState] + [tmp_ma.get(state, 1e10)])
+		for state in tmp_m0:
+			mean = tmp_m1[state] / tmp_m0[state]
+			stddev = math.sqrt(tmp_m2[state] / tmp_m0[state] - mean * mean)
+			yield (state, tmp_m0[state], mean, stddev, tmp_mi[state], tmp_ma[state])
+
+	def _get_entry(self, stateMap, data, label):
 		(result_l1, result_l2, result_l3) = ({}, {}, {})
 		if len(label) > 0:
 			result_l1[''] = [label[0]]
@@ -106,12 +111,10 @@ class BackendReport(Report):
 			result_l2[''] = ['  %s' % label[1]]
 		if len(label) > 2:
 			result_l3[''] = ['    %s' % label[2]] + label[3:]
-		for state in tmp_m0:
-			result_l1[state] = tmp_m0[state]
-			m1 = tmp_m1[state]/tmp_m0[state]
-			stddev = math.sqrt(tmp_m2[state]/tmp_m0[state] - m1*m1)
-			result_l2[state] = '%s +/- %s' % (strTimeShort(m1), strTimeShort(stddev))
-			result_l3[state] = '%s ... %s' % (strTimeShort(tmp_mi[state]), strTimeShort(tmp_ma[state]))
+		for (state, cnt, time_mean, time_stddev, time_min, time_max) in self._get_entry_stats(stateMap, data):
+			result_l1[state] = cnt
+			result_l2[state] = '%s +/- %s' % (strTimeShort(time_mean), strTimeShort(time_stddev))
+			result_l3[state] = '%s ... %s' % (strTimeShort(time_min), strTimeShort(time_max))
 		yield result_l1
 		yield result_l2
 		yield result_l3
