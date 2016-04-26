@@ -51,8 +51,8 @@ class DataTask(TaskModule):
 
 		# Create and register dataset parameter source
 		partProcessor = config.getCompositePlugin('partition processor',
-			'BasicPartitionProcessor LocationPartitionProcessor', 'MultiPartitionProcessor',
-			cls = PartitionProcessor)
+			'TFCPartitionProcessor LocationPartitionProcessor BasicPartitionProcessor',
+			'MultiPartitionProcessor', cls = PartitionProcessor)
 		DataParameterSource = ParameterSource.getClass('DataParameterSource')
 		self._dataPS = DataParameterSource(config.getWorkPath(), 'data',
 			dataProvider, self.dataSplitter, partProcessor)

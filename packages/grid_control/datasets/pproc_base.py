@@ -23,7 +23,7 @@ from python_compat import any, imap, lfilter, lmap, set
 # Class used by DataParameterSource to convert dataset splittings into parameter data
 class PartitionProcessor(ConfigurablePlugin):
 	def getKeys(self):
-		raise AbstractError
+		return []
 
 	def getNeededKeys(self, splitter):
 		return []
@@ -93,9 +93,6 @@ class LocationPartitionProcessor(PartitionProcessor):
 		self._reqs = config.getBool('partition location requirement', True, onChange = None)
 		self._disable = config.getBool('partition location check', True, onChange = None)
 
-	def getKeys(self):
-		return []
-
 	def process(self, pNum, splitInfo, result):
 		locations = self._filter.filterList(splitInfo.get(DataSplitter.Locations))
 		if self._preference:
@@ -130,3 +127,26 @@ class MetaPartitionProcessor(PartitionProcessor):
 					value = tmp.pop()
 					if value is not None:
 						result[mkey] = value
+
+
+class TFCPartitionProcessor(PartitionProcessor):
+	alias = ['tfc']
+
+	def __init__(self, config):
+		PartitionProcessor.__init__(self, config)
+		self._tfc = config.getLookup('partition tfc', {}, onChange = None)
+
+	def _lookup(self, fn, location):
+		prefix = self._tfc.lookup(location, is_selector = False)
+		if prefix:
+			return prefix + fn
+		return fn
+
+	def process(self, pNum, splitInfo, result):
+		fl = splitInfo[DataSplitter.FileList]
+		locations = splitInfo.get(DataSplitter.Locations)
+		if not locations:
+			splitInfo[DataSplitter.FileList] = lmap(lambda fn: self._lookup(fn, None), fl)
+		else:
+			for location in locations:
+				splitInfo[DataSplitter.FileList] = lmap(lambda fn: self._lookup(fn, location), fl)

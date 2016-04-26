@@ -16,33 +16,41 @@ import os, logging
 from grid_control import utils
 from grid_control.backends import WMS
 from grid_control.config import ConfigError, noDefault
-from grid_control.datasets import PartitionProcessor
+from grid_control.datasets import DataSplitter, PartitionProcessor
 from grid_control.tasks.task_data import DataTask
 from grid_control.tasks.task_utils import TaskExecutableWrapper
-from python_compat import imap, lfilter
+from python_compat import imap, lfilter, lmap
 
-BasicPartitionProcessor = PartitionProcessor.getClass('BasicPartitionProcessor')
+class LFNPartitionProcessor(PartitionProcessor):
+	alias = ['lfnprefix']
 
-class CMSPartitionProcessor(BasicPartitionProcessor):
 	def __init__(self, config):
-		BasicPartitionProcessor.__init__(self, config)
+		PartitionProcessor.__init__(self, config)
 		lfnModifier = config.get('partition lfn modifier', '', onChange = None)
 		lfnModifierShortcuts = config.getDict('partition lfn modifier dict', {
-			'<xrootd>': 'root://cms-xrd-global.cern.ch//store/',
-			'<xrootd:eu>': 'root://xrootd-cms.infn.it//store/',
-			'<xrootd:us>': 'root://cmsxrootd.fnal.gov//store/',
+			'<xrootd>': 'root://cms-xrd-global.cern.ch/',
+			'<xrootd:eu>': 'root://xrootd-cms.infn.it/',
+			'<xrootd:us>': 'root://cmsxrootd.fnal.gov/',
 		}, onChange = None)[0]
 		self._prefix = None
 		if lfnModifier == '/':
 			self._prefix = '/store/'
 		elif lfnModifier.lower() in lfnModifierShortcuts:
-			self._prefix = lfnModifierShortcuts[lfnModifier.lower()]
+			self._prefix = lfnModifierShortcuts[lfnModifier.lower()] + '/store/'
 		elif lfnModifier:
 			self._prefix = lfnModifier + '/store/'
 
-	def _formatFileList(self, fl):
+	def process(self, pNum, splitInfo, result):
+		def prefixLFN(lfn):
+			return self._prefix + lfn.split('/store/', 1)[-1]
 		if self._prefix:
-			fl = imap(lambda fn: self._prefix + fn.split('/store/', 1)[-1], fl)
+			splitInfo[DataSplitter.FileList] = lmap(prefixLFN, splitInfo[DataSplitter.FileList])
+
+
+class CMSSWPartitionProcessor(PartitionProcessor.getClass('BasicPartitionProcessor')):
+	alias = ['cmssw']
+
+	def _formatFileList(self, fl):
 		return str.join(', ', imap(lambda x: '"%s"' % x, fl))
 
 
@@ -53,7 +61,8 @@ class CMSSW(DataTask):
 		config.set('se input timeout', '0:30')
 		config.set('dataset provider', 'DBS3Provider')
 		config.set('dataset splitter', 'EventBoundarySplitter')
-		config.set('partition processor', 'CMSPartitionProcessor LocationPartitionProcessor LumiPartitionProcessor')
+		config.set('partition processor',
+			'TFCPartitionProcessor LFNPartitionProcessor LocationPartitionProcessor LumiPartitionProcessor CMSSWPartitionProcessor')
 		config.set('dataset processor', 'LumiDataProcessor', '+=')
 		DataTask.__init__(self, config, name)
 		self.updateErrorDict(utils.pathShare('gc-run.cmssw.sh', pkg = 'grid_control_cms'))

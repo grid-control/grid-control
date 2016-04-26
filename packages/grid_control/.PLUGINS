@@ -276,6 +276,8 @@
 
      * grid_control.datasets.pproc_base MultiPartitionProcessor
 
+     * grid_control.datasets.pproc_base TFCPartitionProcessor tfc
+
    * grid_control.datasets.splitter_base DataSplitterIO
 
     * grid_control.datasets.splitter_io DataSplitterIOAuto

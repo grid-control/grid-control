@@ -62,7 +62,9 @@
 
      * grid_control.datasets.pproc_base BasicPartitionProcessor basic
 
-      * grid_control_cms.cmssw CMSPartitionProcessor
+      * grid_control_cms.cmssw CMSSWPartitionProcessor cmssw
+
+     * grid_control_cms.cmssw LFNPartitionProcessor lfnprefix
 
      * grid_control_cms.lumi_proc LumiPartitionProcessor
 
