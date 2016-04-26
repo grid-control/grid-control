@@ -43,7 +43,7 @@ class CreamWMS(GridWMS):
 	def __init__(self, config, name):
 		GridWMS.__init__(self, config, name)
 		
-		self._nJobsPerChunk = config.getInt('job output chunk size', 10)
+		self._nJobsPerChunk = config.getInt('job chunk size', 10, onChange = None)
 
 		self._submitExec = utils.resolveInstallPath('glite-ce-job-submit')
 		self._statusExec = utils.resolveInstallPath('glite-ce-job-status')
@@ -98,15 +98,15 @@ class CreamWMS(GridWMS):
 		utils.removeFiles([log])
 
 	# Get output of jobs and yield output dirs
-	def _getJobsOutput(self, ids):
-		if len(ids) == 0:
+	def _getJobsOutput(self, allIds):
+		if len(allIds) == 0:
 			raise StopIteration
 
 		basePath = os.path.join(self._outputPath, 'tmp')
 		try:
-			if len(ids) == 1:
+			if len(allIds) == 1:
 				# For single jobs create single subdir
-				tmpPath = os.path.join(basePath, md5(ids[0][0]).hexdigest())
+				tmpPath = os.path.join(basePath, md5(allIds[0][0]).hexdigest())
 			else:
 				tmpPath = basePath
 			utils.ensureDirExists(tmpPath)
@@ -114,9 +114,9 @@ class CreamWMS(GridWMS):
 			raise BackendError('Temporary path "%s" could not be created.' % tmpPath, BackendError)
 		
 		activity = utils.ActivityLog('retrieving job outputs')
-		for idsChunk in [ids[index:index+self._nJobsPerChunk] for index in xrange(0, len(ids), self._nJobsPerChunk)]:
-			jobNumMap = dict(idsChunk)
-			jobs = " ".join(self._getRawIDs(idsChunk))
+		for ids in imap(lambda x: allIds[x:x+self._nJobsPerChunk], irange(0, len(allIds), self._nJobsPerChunk)):
+			jobNumMap = dict(ids)
+			jobs = " ".join(self._getRawIDs(ids))
 			log = tempfile.mktemp('.log')
 
 			#print self._outputExec, '--noint --logfile "%s" --dir "%s" %s' % (log, tmpPath, jobs)
@@ -178,7 +178,7 @@ class CreamWMS(GridWMS):
 			raise StopIteration
 
 		waitFlag = False
-		for ids in imap(lambda x: allIds[x:x+5], irange(0, len(allIds), 5)):
+		for ids in imap(lambda x: allIds[x:x+self._nJobsPerChunk], irange(0, len(allIds), self._nJobsPerChunk)):
 			# Delete jobs in groups of 5 - with 5 seconds between groups
 			if waitFlag and not utils.wait(5):
 				break
