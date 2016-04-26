@@ -49,6 +49,8 @@ class MultiPartitionProcessor(PartitionProcessor):
 
 
 class BasicPartitionProcessor(PartitionProcessor):
+	alias = ['basic']
+
 	def _formatFileList(self, fl):
 		return str.join(' ', fl)
 
@@ -81,6 +83,8 @@ class BasicPartitionProcessor(PartitionProcessor):
 
 
 class LocationPartitionProcessor(PartitionProcessor):
+	alias = ['location']
+
 	def __init__(self, config):
 		PartitionProcessor.__init__(self, config)
 		self._filter = config.getFilter('partition location filter', '', onChange = None,
@@ -106,6 +110,8 @@ class LocationPartitionProcessor(PartitionProcessor):
 
 
 class MetaPartitionProcessor(PartitionProcessor):
+	alias = ['metadata']
+
 	def __init__(self, config):
 		PartitionProcessor.__init__(self, config)
 		self._metadata = config.getList('partition metadata', [])

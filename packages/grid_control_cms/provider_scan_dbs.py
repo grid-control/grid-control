@@ -19,6 +19,8 @@ from grid_control.datasets.provider_scan import GCProvider
 from grid_control.utils.parsing import strGuid
 
 class DBSInfoProvider(GCProvider):
+	alias = ['dbsinfo']
+
 	def __init__(self, config, datasetExpr, datasetNick = None, datasetID = 0):
 		tmp = ['OutputDirsFromConfig', 'MetadataFromModule']
 		if os.path.isdir(datasetExpr):

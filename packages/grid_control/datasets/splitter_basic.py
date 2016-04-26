@@ -34,6 +34,8 @@ class FileLevelSplitter(DataSplitter):
 
 
 class FLSplitStacker(FileLevelSplitter):
+	alias = ['pipeline']
+
 	def _initConfig(self, config):
 		self._config = config
 		self._splitstack = self._configQuery(config.getList, 'splitter stack', ['BlockBoundarySplitter'])
@@ -50,12 +52,16 @@ class FLSplitStacker(FileLevelSplitter):
 
 # Split only along block boundaries
 class BlockBoundarySplitter(FileLevelSplitter):
+	alias = ['blocks']
+
 	def splitBlocks(self, blocks):
 		return blocks
 
 
 # Split dataset along block boundaries into jobs with 'files per job' files
 class FileBoundarySplitter(FileLevelSplitter):
+	alias = ['files']
+
 	def _initConfig(self, config):
 		self._files_per_job = self._configQuery(config.getInt, 'files per job')
 
@@ -72,6 +78,8 @@ class FileBoundarySplitter(FileLevelSplitter):
 # Split dataset along block and file boundaries into jobs with (mostly <=) 'events per job' events
 # In case of file with #events > 'events per job', use just the single file (=> job has more events!)
 class HybridSplitter(FileLevelSplitter):
+	alias = ['hybrid']
+
 	def _initConfig(self, config):
 		self._events_per_job = self._configQuery(config.getInt, 'events per job')
 

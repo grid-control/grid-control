@@ -4,11 +4,11 @@
 
     * grid_control.datasets.dproc_base DataProcessor
 
-     * grid_control_cms.lumi_proc LumiDataProcessor
+     * grid_control_cms.lumi_proc LumiDataProcessor lumi
 
     * grid_control.datasets.provider_base DataProvider
 
-     * grid_control_cms.provider_cms CMSProvider
+     * grid_control_cms.provider_cms CMSBaseProvider
 
       * grid_control_cms.provider_das DASProvider das
 
@@ -20,7 +20,7 @@
 
       * grid_control.datasets.provider_scan GCProvider gc
 
-       * grid_control_cms.provider_scan_dbs DBSInfoProvider
+       * grid_control_cms.provider_scan_dbs DBSInfoProvider dbsinfo
 
     * grid_control.datasets.splitter_base DataSplitter
 
@@ -28,7 +28,7 @@
 
       * grid_control.datasets.splitter_meta MetadataSplitter
 
-       * grid_control_cms.splitter_lumi RunSplitter
+       * grid_control_cms.splitter_lumi RunSplitter runs
 
     * grid_control.datasets.scanner_base InfoScanner
 
@@ -60,7 +60,7 @@
 
     * grid_control.datasets.pproc_base PartitionProcessor
 
-     * grid_control.datasets.pproc_base BasicPartitionProcessor
+     * grid_control.datasets.pproc_base BasicPartitionProcessor basic
 
       * grid_control_cms.cmssw CMSPartitionProcessor
 

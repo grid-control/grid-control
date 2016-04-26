@@ -19,6 +19,8 @@ from grid_control.utils.data_structures import makeEnum
 from python_compat import imap, lfilter, lmap, md5_hex, set
 
 class StatsDataProcessor(DataProcessor):
+	alias = ['stats']
+
 	def __init__(self, config):
 		DataProcessor.__init__(self, config)
 		self._entries = 0
@@ -40,6 +42,8 @@ class StatsDataProcessor(DataProcessor):
 
 
 class EntriesConsistencyDataProcessor(DataProcessor):
+	alias = ['consistency']
+
 	def processBlock(self, block):
 		# Check entry consistency
 		events = sum(imap(lambda x: x[DataProvider.NEntries], block[DataProvider.FileList]))
@@ -50,7 +54,7 @@ class EntriesConsistencyDataProcessor(DataProcessor):
 
 
 class URLDataProcessor(DataProcessor):
-	alias = ['FileDataProcessor']
+	alias = ['ignore', 'FileDataProcessor']
 
 	def __init__(self, config):
 		DataProcessor.__init__(self, config)
@@ -65,7 +69,7 @@ class URLDataProcessor(DataProcessor):
 
 
 class URLRegexDataProcessor(URLDataProcessor):
-	alias = ['FileRegexDataProcessor']
+	alias = ['regex', 'FileRegexDataProcessor']
 
 	def __init__(self, config):
 		URLDataProcessor.__init__(self, config)
@@ -79,7 +83,7 @@ class URLRegexDataProcessor(URLDataProcessor):
 
 
 class URLCountDataProcessor(DataProcessor):
-	alias = ['FileCountDataProcessor']
+	alias = ['files', 'FileCountDataProcessor']
 
 	def __init__(self, config):
 		DataProcessor.__init__(self, config)
@@ -93,7 +97,7 @@ class URLCountDataProcessor(DataProcessor):
 
 
 class EntriesCountDataProcessor(DataProcessor):
-	alias = ['EventsCountDataProcessor']
+	alias = ['events', 'EventsCountDataProcessor']
 
 	def __init__(self, config):
 		DataProcessor.__init__(self, config)
@@ -116,6 +120,8 @@ class EntriesCountDataProcessor(DataProcessor):
 
 
 class EmptyDataProcessor(DataProcessor):
+	alias = ['empty']
+
 	def __init__(self, config):
 		DataProcessor.__init__(self, config)
 		self._emptyFiles = config.getBool('dataset remove empty files', True)
@@ -131,6 +137,8 @@ class EmptyDataProcessor(DataProcessor):
 
 
 class LocationDataProcessor(DataProcessor):
+	alias = ['location']
+
 	def __init__(self, config):
 		DataProcessor.__init__(self, config)
 		self._locationfilter = config.getFilter('dataset location filter', '',
@@ -154,6 +162,8 @@ class LocationDataProcessor(DataProcessor):
 DatasetUniqueMode = makeEnum(['warn', 'abort', 'skip', 'ignore', 'record'], useHash = True)
 
 class UniqueDataProcessor(DataProcessor):
+	alias = ['unique']
+
 	def __init__(self, config):
 		DataProcessor.__init__(self, config)
 		self._checkURLOpt = 'dataset check unique url'

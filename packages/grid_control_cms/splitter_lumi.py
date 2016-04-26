@@ -16,6 +16,8 @@ from grid_control.datasets import DataProvider, DataSplitter
 from python_compat import lmap
 
 class RunSplitter(DataSplitter.getClass('MetadataSplitter')):
+	alias = ['runs']
+
 	def _initConfig(self, config):
 		self._run_range = self._configQuery(config.getInt, 'run range', 1)
 

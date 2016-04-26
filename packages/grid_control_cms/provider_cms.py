@@ -24,7 +24,7 @@ from python_compat import sorted
 CMSLocationFormat = makeEnum(['hostname', 'siteDB', 'both'])
 
 # required format: <dataset path>[@<instance>][#<block>]
-class CMSProvider(DataProvider):
+class CMSBaseProvider(DataProvider):
 	def __init__(self, config, datasetExpr, datasetNick = None, datasetID = 0):
 		self._lumi_filter = parseLumiFilter(config.get('lumi filter', ''))
 		if self._lumi_filter:
@@ -168,7 +168,7 @@ class CMSProvider(DataProvider):
 				raise DatasetError('Dataset %s does not contain any valid blocks!' % datasetPath)
 
 
-class DBS2Provider(CMSProvider):
+class DBS2Provider(CMSBaseProvider):
 	alias = ['dbs2']
 
 	def __init__(self, config, datasetExpr, datasetNick, datasetID = 0):

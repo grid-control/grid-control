@@ -30,13 +30,13 @@
 
     * grid_control.datasets.dproc_base DataProcessor
 
-     * grid_control.datasets.dproc_basic EmptyDataProcessor
+     * grid_control.datasets.dproc_basic EmptyDataProcessor empty
 
-     * grid_control.datasets.dproc_basic EntriesConsistencyDataProcessor
+     * grid_control.datasets.dproc_basic EntriesConsistencyDataProcessor consistency
 
-     * grid_control.datasets.dproc_basic EntriesCountDataProcessor EventsCountDataProcessor
+     * grid_control.datasets.dproc_basic EntriesCountDataProcessor events EventsCountDataProcessor
 
-     * grid_control.datasets.dproc_basic LocationDataProcessor
+     * grid_control.datasets.dproc_basic LocationDataProcessor location
 
      * grid_control.datasets.dproc_base MultiDataProcessor
 
@@ -48,15 +48,15 @@
 
      * grid_control.datasets.dproc_pestimate PartitionEstimator SplitSettingEstimator
 
-     * grid_control.datasets.dproc_basic StatsDataProcessor
+     * grid_control.datasets.dproc_basic StatsDataProcessor stats
 
-     * grid_control.datasets.dproc_basic URLCountDataProcessor FileCountDataProcessor
+     * grid_control.datasets.dproc_basic URLCountDataProcessor files FileCountDataProcessor
 
-     * grid_control.datasets.dproc_basic URLDataProcessor FileDataProcessor
+     * grid_control.datasets.dproc_basic URLDataProcessor ignore FileDataProcessor
 
-      * grid_control.datasets.dproc_basic URLRegexDataProcessor FileRegexDataProcessor
+      * grid_control.datasets.dproc_basic URLRegexDataProcessor regex FileRegexDataProcessor
 
-     * grid_control.datasets.dproc_basic UniqueDataProcessor
+     * grid_control.datasets.dproc_basic UniqueDataProcessor unique
 
     * grid_control.datasets.provider_base DataProvider
 
@@ -76,21 +76,21 @@
 
     * grid_control.datasets.splitter_base DataSplitter
 
-     * grid_control.datasets.splitter_event EventBoundarySplitter
+     * grid_control.datasets.splitter_event EventBoundarySplitter events
 
      * grid_control.datasets.splitter_basic FileLevelSplitter
 
-      * grid_control.datasets.splitter_basic BlockBoundarySplitter
+      * grid_control.datasets.splitter_basic BlockBoundarySplitter blocks
 
-      * grid_control.datasets.splitter_basic FLSplitStacker
+      * grid_control.datasets.splitter_basic FLSplitStacker pipeline
 
-      * grid_control.datasets.splitter_basic FileBoundarySplitter
+      * grid_control.datasets.splitter_basic FileBoundarySplitter files
 
-      * grid_control.datasets.splitter_basic HybridSplitter
+      * grid_control.datasets.splitter_basic HybridSplitter hybrid
 
       * grid_control.datasets.splitter_meta MetadataSplitter
 
-       * grid_control.datasets.splitter_meta UserMetadataSplitter
+       * grid_control.datasets.splitter_meta UserMetadataSplitter metadata
 
     * grid_control.gui GUI
 
@@ -268,11 +268,11 @@
 
     * grid_control.datasets.pproc_base PartitionProcessor
 
-     * grid_control.datasets.pproc_base BasicPartitionProcessor
+     * grid_control.datasets.pproc_base BasicPartitionProcessor basic
 
-     * grid_control.datasets.pproc_base LocationPartitionProcessor
+     * grid_control.datasets.pproc_base LocationPartitionProcessor location
 
-     * grid_control.datasets.pproc_base MetaPartitionProcessor
+     * grid_control.datasets.pproc_base MetaPartitionProcessor metadata
 
      * grid_control.datasets.pproc_base MultiPartitionProcessor
 

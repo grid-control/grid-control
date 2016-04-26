@@ -33,6 +33,8 @@ def removeRunLumi(value, idxRuns, idxLumi):
 
 
 class LumiDataProcessor(DataProcessor):
+	alias = ['lumi']
+
 	def __init__(self, config):
 		DataProcessor.__init__(self, config)
 		self._lumi_filter = config.getLookup('lumi filter', {}, parser = parseLumiFilter, strfun = strLumi)
