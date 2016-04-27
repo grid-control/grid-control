@@ -20,6 +20,8 @@ from grid_control.utils.parsing import parseStr, strTimeShort
 from python_compat import imap, itemgetter, lmap, lzip, sorted
 
 class BackendReport(Report):
+	alias = ['backend']
+
 	def __init__(self, jobDB, task, jobs = None, configString = ''):
 		Report.__init__(self, jobDB, task, jobs, configString)
 		self._levelMap = {'wms': 2, 'endpoint': 3, 'site': 4, 'queue': 5}

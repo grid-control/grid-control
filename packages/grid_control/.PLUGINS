@@ -420,9 +420,11 @@
 
    * grid_control.report Report
 
-    * grid_control.report BasicReport
+    * grid_control.report BasicReport basic
 
-    * grid_control.report LocationReport
+    * grid_control.report LocationReport location
 
     * grid_control.report MultiReport
+
+    * grid_control.report NullReport null
 

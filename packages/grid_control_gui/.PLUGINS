@@ -18,21 +18,21 @@
 
    * grid_control.report Report
 
-    * grid_control_gui.report_wms BackendReport
+    * grid_control_gui.report_wms BackendReport backend
 
-    * grid_control.report BasicReport
+    * grid_control.report BasicReport basic
 
-     * grid_control_gui.report_basic BasicBarReport
+     * grid_control_gui.report_basic BasicBarReport basicbar
 
-    * grid_control_gui.report_gui CategoryReport
+    * grid_control_gui.report_gui CategoryBaseReport
 
-     * grid_control_gui.report_gui AdaptiveReport
+     * grid_control_gui.report_gui AdaptiveBaseReport
 
-      * grid_control_gui.report_gui GUIReport
+      * grid_control_gui.report_gui GUIReport modern
 
-     * grid_control_gui.report_gui ModuleReport
+     * grid_control_gui.report_gui ModuleReport module
 
-    * grid_control_gui.report_plot PlotReport
+    * grid_control_gui.report_plot PlotReport plot
 
-    * grid_control_gui.report_time TimeReport
+    * grid_control_gui.report_time TimeReport time
 

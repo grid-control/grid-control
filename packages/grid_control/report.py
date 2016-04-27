@@ -43,6 +43,13 @@ class Report(Plugin):
 		raise AbstractError
 
 
+class NullReport(Report):
+	alias = ['null']
+
+	def display(self):
+		pass
+
+
 class MultiReport(Report):
 	def __init__(self, reportList, *args, **kwargs):
 		self._reportList = reportList
@@ -56,6 +63,8 @@ class MultiReport(Report):
 
 
 class BasicReport(Report):
+	alias = ['basic']
+
 	def _printHeader(self, message, level = -1):
 		utils.vprint('-'*65, level)
 		utils.vprint(message + self._header.rjust(65 - len(message)), level)
@@ -93,6 +102,8 @@ class BasicReport(Report):
 
 
 class LocationReport(Report):
+	alias = ['location']
+
 	def display(self):
 		reports = []
 		for jobNum in self._jobs:

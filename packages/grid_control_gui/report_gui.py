@@ -59,7 +59,7 @@ class JobProgressBar(object):
 		return str(self._bar)
 
 
-class CategoryReport(Report):
+class CategoryBaseReport(Report):
 	def __init__(self, jobDB, task, jobs = None, configString = ''):
 		Report.__init__(self, jobDB, task, jobs, configString)
 		catJobs = {}
@@ -118,9 +118,11 @@ class CategoryReport(Report):
 		return (catStateDict, dict(self._catDescDict), {}) # (<state overview>, <descriptions>, <#subcategories>)
 
 
-class ModuleReport(CategoryReport):
+class ModuleReport(CategoryBaseReport):
+	alias = ['module']
+
 	def display(self):
-		(catStateDict, catDescDict, _) = CategoryReport._getCategoryStateSummary(self)
+		(catStateDict, catDescDict, _) = CategoryBaseReport._getCategoryStateSummary(self)
 		infos = []
 		head = set()
 		stateCat = {Job.SUCCESS: 'SUCCESS', Job.FAILED: 'FAILED', Job.RUNNING: 'RUNNING', Job.DONE: 'RUNNING'}
@@ -139,9 +141,9 @@ class ModuleReport(CategoryReport):
 		utils.vprint(level = -1)
 
 
-class AdaptiveReport(CategoryReport):
+class AdaptiveBaseReport(CategoryBaseReport):
 	def __init__(self, jobDB, task, jobs = None, configString = ''):
-		CategoryReport.__init__(self, jobDB, task, jobs, configString)
+		CategoryBaseReport.__init__(self, jobDB, task, jobs, configString)
 		self._catMax = int(configString)
 		self._catCur = self._catMax
 
@@ -233,7 +235,7 @@ class AdaptiveReport(CategoryReport):
 
 
 	def _getCategoryStateSummary(self):
-		(catStateDict, catDescDict, catSubcatDict) = CategoryReport._getCategoryStateSummary(self)
+		(catStateDict, catDescDict, catSubcatDict) = CategoryBaseReport._getCategoryStateSummary(self)
 		# Used for quick calculations
 		catLenDict = {}
 		for catKey in catStateDict:
@@ -263,11 +265,13 @@ class AdaptiveReport(CategoryReport):
 		return (catStateDict, catDescDict, catSubcatDict)
 
 
-class GUIReport(AdaptiveReport):
+class GUIReport(AdaptiveBaseReport):
+	alias = ['modern']
+
 	def __init__(self, jobDB, task, jobs = None, configString = ''):
 		(self.maxY, self.maxX) = Console().getmaxyx()
 		self.maxX -= 10 # Padding
-		AdaptiveReport.__init__(self, jobDB, task, jobs, str(int(self.maxY / 5)))
+		AdaptiveBaseReport.__init__(self, jobDB, task, jobs, str(int(self.maxY / 5)))
 
 	def getHeight(self):
 		return self._catCur * 2 + 3

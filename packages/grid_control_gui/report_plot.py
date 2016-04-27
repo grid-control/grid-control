@@ -283,6 +283,8 @@ def getCumQuantityAtTimeSpan(jobInfo, timeStart, timeEnd, timingExtract, quantit
 
 
 class PlotReport(Report):
+	alias = ['plot']
+
 	def initHistogram(self, name, xlabel, ylabel):
 		fig = matplotlib.pyplot.figure()
 
