@@ -28,7 +28,7 @@ class InstanceFactory(object):
 
 	def _fmt(self, args, kwargs, addEllipsis = False):
 		if not logging.getLogger().isEnabledFor(logging.INFO1):
-			return self._cls.__name__
+			return repr('%s.%s' % (self._cls.__module__, self._cls.__name__))
 		args_str_list = []
 		for arg in args:
 			args_str_list.append(repr(arg))
@@ -98,7 +98,6 @@ class Plugin(object):
 			try:
 				clsLoadedList.append(getattr(clsModule, clsName))
 			except Exception:
-				raise
 				log.log(logging.DEBUG2, 'Unable to import class %s:%s', clsModule.__name__, clsName)
 
 		for clsLoaded in clsLoadedList:
@@ -119,8 +118,9 @@ class Plugin(object):
 		log.log(logging.DEBUG2, 'Importing module %s', clsModuleName)
 		oldSysPath = list(sys.path)
 		try:
-			result = __import__(clsModuleName, {}, {}, [clsName])
+			result = [__import__(clsModuleName, {}, {}, [clsName])]
 		except Exception:
+			result = []
 			log.log(logging.DEBUG2, 'Unable to import module %s', clsModuleName)
 		sys.path = oldSysPath
 		return result
@@ -140,7 +140,7 @@ class Plugin(object):
 			clsProcessed.append(clsSearchName)
 			clsModuleList = []
 			if '.' in clsSearchName: # module.submodule.class specification
-				clsModuleList.append(cls._getModule(log, clsSearchName))
+				clsModuleList.extend(cls._getModule(log, clsSearchName))
 				clsSearchName = clsSearchName.split('.')[-1]
 			elif hasattr(sys.modules['__main__'], clsSearchName):
 				clsModuleList.append(sys.modules['__main__'])
