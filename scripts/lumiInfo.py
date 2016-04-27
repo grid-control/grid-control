@@ -72,9 +72,8 @@ def lumi_expr(opts, args):
 		print(result)
 
 def iter_jobs(opts, workDir, jobList, splitter):
-	(splitInfo, activity, fip) = ({}, None, FileInfoProcessor())
+	(splitInfo, fip) = ({}, FileInfoProcessor())
 	for jobNum in jobList:
-		del activity
 		activity = utils.ActivityLog('Reading job logs - [%d / %d]' % (jobNum, jobList[-1]))
 
 		if opts.parameterized:
@@ -86,7 +85,7 @@ def iter_jobs(opts, workDir, jobList, splitter):
 				splitInfo = splitter.getSplitInfo(jobNum)
 			outputName = splitInfo.get(DataSplitter.Nickname, splitInfo.get(DataSplitter.DatasetID, 0))
 		yield (jobNum, outputName)
-	activity.finish()
+		activity.finish()
 
 def process_fwjr(outputName, fwkXML, lumiDict, readDict, writeDict):
 	for run in fwkXML.getElementsByTagName('Run'):
