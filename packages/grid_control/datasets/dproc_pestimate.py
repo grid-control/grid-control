@@ -23,13 +23,12 @@ class PartitionEstimator(DataProcessor):
 		DataProcessor.__init__(self, config)
 		self._targetJobs = config.getInt('target partitions', -1)
 		self._targetJobsDS = config.getInt('target partitions per nickname', -1)
-		self._writeSettings = (self._targetJobs != -1) or (self._targetJobsDS != -1)
 		self._entries = {None: 0}
 		self._files = {None: 0}
 		self._config = config
 
 	def process(self, blockIter):
-		if self._writeSettings:
+		if (self._targetJobs != -1) or (self._targetJobsDS != -1):
 			blocks = lmap(self.processBlock, blockIter)
 			def setSplitParam(config, name, value, target):
 				config.setInt(name, max(1, int(value / float(target) + 0.5)))
