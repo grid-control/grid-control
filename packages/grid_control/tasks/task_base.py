@@ -145,7 +145,7 @@ class TaskModule(NamedPlugin):
 		return alias
 
 
-	def substVars(self, inp, jobNum = None, addDict = None, check = True):
+	def substVars(self, name, inp, jobNum = None, addDict = None, check = True):
 		addDict = addDict or {}
 		allVars = utils.mergeDicts([addDict, self.getTaskConfig()])
 		if jobNum is not None:
@@ -153,15 +153,15 @@ class TaskModule(NamedPlugin):
 		subst = lambda x: utils.replaceDict(x, allVars, ichain([self.getVarMapping().items(), izip(addDict, addDict)]))
 		result = subst(subst(str(inp)))
 		if check and self._varCheck.check(result):
-			raise ConfigError("'%s' contains invalid variable specifiers: '%s'" % (inp, result))
+			raise ConfigError('%s is not allowed to use variables: %s' % (name, inp))
 		return result
 
 
 	def validateVariables(self):
 		example_vars = self.getJobConfig(0)
 		example_vars.update(dict.fromkeys(['X', 'XBASE', 'XEXT', 'GC_DATE', 'GC_TIMESTAMP', 'GC_GUID', 'RANDOM'], ''))
-		for x in ichain([self.getTaskConfig().values(), example_vars.values()]):
-			self.substVars(x, None, example_vars)
+		for name, value in ichain([self.getTaskConfig().items(), example_vars.items()]):
+			self.substVars(name, value, None, example_vars)
 
 
 	# Get job requirements

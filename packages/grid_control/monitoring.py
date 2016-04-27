@@ -125,7 +125,7 @@ class ScriptMonitoring(Monitoring):
 					key = 'GC_' + key
 				os.environ[key] = str(value)
 
-			script = self._task.substVars(script, jobNum, tmp)
+			script = self._task.substVars('monitoring script', script, jobNum, tmp)
 			if not self._silent:
 				proc = LocalProcess(script)
 				self._log.info(proc.get_output(timeout = self._runningMax))

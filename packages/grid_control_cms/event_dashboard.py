@@ -49,36 +49,38 @@ class DashBoard(Monitoring):
 	def _publish(self, jobObj, jobNum, taskId, usermsg):
 		(_, backend, rawId) = jobObj.wmsId.split('.', 2)
 		dashId = '%s_%s' % (jobNum, rawId)
-		if "http" not in jobObj.wmsId:
+		if 'http' not in jobObj.wmsId:
 			dashId = '%s_https://%s:/%s' % (jobNum, backend, rawId)
 		msg = mergeDicts([{'taskId': taskId, 'jobId': dashId, 'sid': rawId}] + usermsg)
 		DashboardAPI(taskId, dashId).publish(**filterDict(msg, vF = lambda v: v is not None))
 
 
+	def _start_publish(self, jobObj, jobNum, desc, message):
+		taskId = self._task.substVars('dashboard task id', self._taskname, jobNum,
+			addDict = {'DATASETNICK': ''}).strip('_')
+		self._tp.start_thread('Notifying dashboard about %s of job %d' % (desc, jobNum),
+			self._publish, jobObj, jobNum, taskId, message)
+
+
 	# Called on job submission
 	def onJobSubmit(self, wms, jobObj, jobNum):
 		token = wms.getAccessToken(jobObj.wmsId)
-		taskId = self._task.substVars(self._taskname, jobNum, addDict = {'DATASETNICK': ''}).strip('_')
-		self._tp.start_thread("Notifying dashboard about job submission %d" % jobNum,
-			self._publish, jobObj, jobNum, taskId, [{
-				'user': os.environ['LOGNAME'], 'GridName': '/CN=%s' % token.getUsername(), 'CMSUser': token.getUsername(),
-				'tool': 'grid-control', 'JSToolVersion': getVersion(),
-				'SubmissionType':'direct', 'tool_ui': os.environ.get('HOSTNAME', ''),
-				'application': self._app, 'exe': 'shellscript', 'taskType': self._tasktype,
-				'scheduler': wms.wmsName, 'vo': token.getGroup()}, self._task.getSubmitInfo(jobNum)])
+		self._start_publish(jobObj, jobNum, 'submission', [{
+			'user': os.environ['LOGNAME'], 'GridName': '/CN=%s' % token.getUsername(), 'CMSUser': token.getUsername(),
+			'tool': 'grid-control', 'JSToolVersion': getVersion(),
+			'SubmissionType':'direct', 'tool_ui': os.environ.get('HOSTNAME', ''),
+			'application': self._app, 'exe': 'shellscript', 'taskType': self._tasktype,
+			'scheduler': wms.wmsName, 'vo': token.getGroup()}, self._task.getSubmitInfo(jobNum)])
 
 
 	# Called on job status update and output
 	def _updateDashboard(self, wms, jobObj, jobNum, data, addMsg):
 		# Translate status into dashboard status message
 		statusDashboard = self._statusMap.get(jobObj.state, 'PENDING')
-		# Update dashboard information
-		taskId = self._task.substVars(self._taskname, jobNum, addDict = {'DATASETNICK': ''}).strip('_')
-		self._tp.start_thread("Notifying dashboard about status of job %d" % jobNum,
-			self._publish, jobObj, jobNum, taskId, [{'StatusValue': statusDashboard,
-				'StatusValueReason': data.get('reason', statusDashboard).upper(),
-				'StatusEnterTime': data.get('timestamp', time.strftime('%Y-%m-%d_%H:%M:%S', time.localtime())),
-				'StatusDestination': data.get('dest', '') }, addMsg])
+		self._start_publish(jobObj, jobNum, 'status', [{'StatusValue': statusDashboard,
+			'StatusValueReason': data.get('reason', statusDashboard).upper(),
+			'StatusEnterTime': data.get('timestamp', time.strftime('%Y-%m-%d_%H:%M:%S', time.localtime())),
+			'StatusDestination': data.get('dest', '') }, addMsg])
 
 
 	def onJobUpdate(self, wms, jobObj, jobNum, data):
