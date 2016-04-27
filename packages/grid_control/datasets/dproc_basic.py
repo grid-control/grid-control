@@ -23,6 +23,9 @@ class StatsDataProcessor(DataProcessor):
 
 	def __init__(self, config):
 		DataProcessor.__init__(self, config)
+		self.reset()
+
+	def reset(self):
 		self._entries = 0
 		self._blocks = 0
 
@@ -31,7 +34,9 @@ class StatsDataProcessor(DataProcessor):
 			units = '%d files' % -self._entries
 		else:
 			units = '%d events' % self._entries
-		return (units, self._blocks)
+		result = (units, self._blocks)
+		self.reset()
+		return result
 
 	def process(self, blockIter):
 		for block in blockIter:
