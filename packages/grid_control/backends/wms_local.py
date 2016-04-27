@@ -94,7 +94,7 @@ class LocalWMS(BasicWMS):
 		for wmsId, jobNum in ids:
 			path = self._getSandbox(wmsId)
 			if path is None:
-				utils.eprint('Sandbox for job %d with wmsId "%s" could not be found' % (jobNum, wmsId))
+				self._log.warning('Sandbox for job %d with wmsId "%s" could not be found', jobNum, wmsId)
 				continue
 			try:
 				shutil.rmtree(path)
@@ -157,9 +157,9 @@ class LocalWMS(BasicWMS):
 		del activity
 
 		if retCode != 0:
-			utils.eprint('WARNING: %s failed:' % self.submitExec)
+			self._log.warning('%s failed:', self.submitExec)
 		elif wmsId is None:
-			utils.eprint('WARNING: %s did not yield job id:\n%s' % (self.submitExec, wmsIdText))
+			self._log.warning('%s did not yield job id:\n%s', self.submitExec, wmsIdText)
 		if wmsId:
 			wmsId = self._createId(wmsId)
 			open(os.path.join(sandbox, wmsId), 'w')
