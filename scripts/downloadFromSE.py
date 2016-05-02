@@ -238,7 +238,7 @@ def download_job_output(opts, incInfo, workDir, jobDB, token, jobNum, output):
 		sys.exit(os.EX_UNAVAILABLE)
 
 	# Read the file hash entries from job info file
-	files = FileInfoProcessor().process(os.path.join(workDir, 'output', 'job_%d' % jobNum))
+	files = FileInfoProcessor().process(os.path.join(workDir, 'output', 'job_%d' % jobNum)) or []
 	if files:
 		files = lmap(lambda fi: (fi[FileInfoProcessor.Hash], fi[FileInfoProcessor.NameLocal],
 			fi[FileInfoProcessor.NameDest], fi[FileInfoProcessor.Path]), files)

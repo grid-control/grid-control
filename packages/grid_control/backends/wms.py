@@ -14,11 +14,12 @@
 
 # Generic base class for workload management systems
 
-import os, glob, shutil, logging
+import os, sys, glob, shutil, logging
 from grid_control import utils
 from grid_control.backends.access import AccessToken
 from grid_control.backends.storage import StorageManager
 from grid_control.gc_plugin import NamedPlugin
+from grid_control.output_processor import JobResult
 from grid_control.utils.data_structures import makeEnum
 from grid_control.utils.file_objects import SafeFile, VirtualFile
 from grid_control.utils.gc_itertools import ichain, lchain
@@ -38,6 +39,8 @@ class WMS(NamedPlugin):
 		(self.config, self.wmsName) = (config, wmsName)
 		self._wait_idle = config.getInt('wait idle', 60, onChange = None)
 		self._wait_work = config.getInt('wait work', 10, onChange = None)
+		self._job_parser = config.getPlugin('job parser', 'JobInfoProcessor',
+			cls = 'JobInfoProcessor', onChange = None)
 
 	def getTimings(self): # Return (waitIdle, wait)
 		return utils.Result(waitOnIdle = self._wait_idle, waitBetweenSteps = self._wait_work)
@@ -75,23 +78,6 @@ class WMS(NamedPlugin):
 	def _getRawIDs(self, ids):
 		for (wmsId, jobNum) in ids:
 			yield self._splitId(wmsId)[1]
-
-	def parseJobInfo(fn):
-		log = logging.getLogger('wms')
-		if not os.path.exists(fn):
-			return log.warning('%r does not exist.', fn)
-		try:
-			info_content = open(fn, 'r').read()
-		except Exception:
-			return log.exception('Unable to read %r!', fn)
-		if not info_content:
-			return log.warning('%r is empty!', fn)
-		try:
-			data = utils.DictFormat().parse(info_content, keyParser = {None: str})
-			return (data['JOBID'], data['EXITCODE'], data)
-		except Exception:
-			return log.warning('Unable to parse %r!', fn)
-	parseJobInfo = staticmethod(parseJobInfo)
 makeEnum(['WALLTIME', 'CPUTIME', 'MEMORY', 'CPUS', 'BACKEND', 'SITES', 'QUEUES', 'SOFTWARE', 'STORAGE'], WMS)
 
 
@@ -230,14 +216,18 @@ class BasicWMS(WMS):
 
 			# inJobNum != None, pathName != None => Job retrieval from WMS was ok
 			jobFile = os.path.join(pathName, 'job.info')
-			jobInfo = WMS.parseJobInfo(jobFile)
+			try:
+				jobInfo = self._job_parser.process(pathName)
+			except Exception:
+				logging.getLogger('wms').exception(sys.exc_info()[1])
+				jobInfo = None
 			if jobInfo:
-				(jobNum, jobExitCode, jobData) = jobInfo
+				jobNum = jobInfo[JobResult.JOBNUM]
 				if jobNum != inJobNum:
 					raise BackendError('Invalid job id in job file %s' % jobFile)
 				if forceMove(pathName, os.path.join(self._outputPath, 'job_%d' % jobNum)):
 					retrievedJobs.append(inJobNum)
-					yield (jobNum, jobExitCode, jobData, pathName)
+					yield (jobNum, jobInfo[JobResult.EXITCODE], jobInfo[JobResult.RAW], pathName)
 				else:
 					yield (jobNum, -1, {}, None)
 				continue

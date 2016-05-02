@@ -42,6 +42,11 @@ class LocalWMS(BasicWMS):
 		self.scratchPath = config.getList('scratch path', ['TMPDIR', '/tmp'], onChange = True)
 		self.submitOpts = config.get('submit options', '', onChange = None)
 		self.memory = config.getInt('memory', -1, onChange = None)
+		try:
+			if not os.path.exists(self.sandPath):
+				os.mkdir(self.sandPath)
+		except Exception:
+			raise BackendError('Unable to create sandbox base directory "%s"!' % self.sandPath)
 
 
 	# Check status of jobs and yield (jobNum, wmsID, status, other data)
@@ -123,9 +128,6 @@ class LocalWMS(BasicWMS):
 		activity = utils.ActivityLog('submitting jobs')
 
 		try:
-			sandbox = self.sandPath # defined here for exception message in case os.mkdir fails
-			if not os.path.exists(self.sandPath):
-				os.mkdir(self.sandPath)
 			sandbox = tempfile.mkdtemp('', '%s.%04d.' % (module.taskID, jobNum), self.sandPath)
 		except Exception:
 			raise BackendError('Unable to create sandbox directory "%s"!' % sandbox)
