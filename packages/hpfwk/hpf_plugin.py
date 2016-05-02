@@ -13,7 +13,7 @@
 # | limitations under the License.
 
 import os, sys, logging
-from hpfwk.hpf_exceptions import NestedException
+from hpfwk.hpf_exceptions import ExceptionCollector, NestedException
 from hpfwk.hpf_logging import init_hpf_logging
 
 init_hpf_logging() # needed for additional logging levels
@@ -90,7 +90,7 @@ class Plugin(object):
 		return [cls.__name__] + cls.alias
 	getClassNames = classmethod(getClassNames)
 
-	def _getClassFromModules(cls, log, clsName, clsModuleList, clsBadParents):
+	def _getClassFromModules(cls, ec, log, clsName, clsModuleList, clsBadParents):
 		clsFormat = lambda cls: '%s:%s' % (cls.__module__, cls.__name__)
 		clsLoadedList = []
 		for clsModule in clsModuleList:
@@ -99,6 +99,7 @@ class Plugin(object):
 				clsLoadedList.append(getattr(clsModule, clsName))
 			except Exception:
 				log.log(logging.DEBUG2, 'Unable to import class %s:%s', clsModule.__name__, clsName)
+				ec.collect()
 
 		for clsLoaded in clsLoadedList:
 			try:
@@ -108,10 +109,10 @@ class Plugin(object):
 				clsBadParents.append(clsLoaded.__name__)
 				log.log(logging.DEBUG, '%s is not of type %s!', clsFormat(clsLoaded), clsFormat(cls))
 			except Exception:
-				pass
+				ec.collect()
 	_getClassFromModules = classmethod(_getClassFromModules)
 
-	def _getModule(cls, log, clsName):
+	def _getModule(cls, ec, log, clsName):
 		clsNameParts = clsName.split('.')
 		clsName = clsNameParts[-1]
 		clsModuleName = str.join('.', clsNameParts[:-1])
@@ -122,6 +123,7 @@ class Plugin(object):
 		except Exception:
 			result = []
 			log.log(logging.DEBUG2, 'Unable to import module %s', clsModuleName)
+			ec.collect()
 		sys.path = oldSysPath
 		return result
 	_getModule = classmethod(_getModule)
@@ -133,6 +135,7 @@ class Plugin(object):
 		clsProcessed = []
 		clsBadParents = []
 		clsFound = False
+		ec = ExceptionCollector()
 		while clsSearchList:
 			_, clsSearchName = clsSearchList.pop()
 			if clsSearchName in clsProcessed: # Prevent lookup circles
@@ -140,12 +143,12 @@ class Plugin(object):
 			clsProcessed.append(clsSearchName)
 			clsModuleList = []
 			if '.' in clsSearchName: # module.submodule.class specification
-				clsModuleList.extend(cls._getModule(log, clsSearchName))
+				clsModuleList.extend(cls._getModule(ec, log, clsSearchName))
 				clsSearchName = clsSearchName.split('.')[-1]
 			elif hasattr(sys.modules['__main__'], clsSearchName):
 				clsModuleList.append(sys.modules['__main__'])
 
-			for result in cls._getClassFromModules(log, clsSearchName, clsModuleList, clsBadParents):
+			for result in cls._getClassFromModules(ec, log, clsSearchName, clsModuleList, clsBadParents):
 				clsFound = True
 				yield result
 			clsSearchList.extend(cls._pluginMap.get(clsSearchName.lower(), []))
@@ -157,6 +160,7 @@ class Plugin(object):
 				msg += '\tsearched plugin names:\n\t\t%s\n' % str.join('\n\t\t', clsProcessed)
 			if clsBadParents:
 				msg += '\tfound incompatible plugins:\n\t\t%s\n' % str.join('\n\t\t', clsBadParents)
+			ec.raise_any(PluginError(msg))
 			raise PluginError(msg)
 	_getClass = classmethod(_getClass)
 
