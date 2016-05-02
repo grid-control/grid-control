@@ -119,13 +119,13 @@ class DataProvider(ConfigurablePlugin):
 					self._cache_block = list(self._stats.process(self._datasetProcessor.process(prepareBlocks())))
 			except Exception:
 				raise DatasetError('Unable to retrieve dataset %s' % repr(self._datasetExpr))
-			statString = ''
+			statString = ' * Dataset '
 			if self._datasetNick:
-				statString = '%s: ' % self._datasetNick
+				statString += repr(self._datasetNick)
 			elif self._datasetExpr:
-				statString = '%s: ' % self._datasetExpr
+				statString += repr(self._datasetExpr)
 			log.finish()
-			statString += 'Running over %s distributed over %d blocks.' % self._stats.getStats()
+			statString += '\tcontains %d block(s) with %s' % self._stats.getStats()
 			if not silent:
 				self._log.info(statString)
 		return self._cache_block

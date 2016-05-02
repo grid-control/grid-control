@@ -46,3 +46,10 @@ class MultiDataProcessor(DataProcessor):
 			if not block:
 				break
 		return block
+
+
+class NullDataProcessor(DataProcessor):
+	alias = ['null']
+
+	def processBlock(self, block):
+		return block

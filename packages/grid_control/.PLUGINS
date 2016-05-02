@@ -46,6 +46,8 @@
 
       * grid_control.datasets.dproc_nick SimpleNickNameProducer
 
+     * grid_control.datasets.dproc_base NullDataProcessor null
+
      * grid_control.datasets.dproc_pestimate PartitionEstimator SplitSettingEstimator
 
      * grid_control.datasets.dproc_basic StatsDataProcessor stats
@@ -53,8 +55,6 @@
      * grid_control.datasets.dproc_basic URLCountDataProcessor files FileCountDataProcessor
 
      * grid_control.datasets.dproc_basic URLDataProcessor ignore FileDataProcessor
-
-      * grid_control.datasets.dproc_basic URLRegexDataProcessor regex FileRegexDataProcessor
 
      * grid_control.datasets.dproc_basic UniqueDataProcessor unique
 

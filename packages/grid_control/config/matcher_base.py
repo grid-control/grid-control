@@ -203,12 +203,23 @@ class BlackWhiteMatcher(Matcher):
 ListOrder = makeEnum(['source', 'matcher'])
 
 class ListFilter(Plugin):
-	def __init__(self, selector, matcher, order):
-		(self._matchFunction, self._positive, self._selector, self._order) = (None, None, None, order)
+	def __init__(self, selector, matcher, order, match_key, negate):
+		(self._matchFunction, self._positive, self._selector, self._order, self._negate) = (None, None, None, order, negate)
 		if selector:
 			self._selector = matcher.parseSelector(selector)
-			self._matchFunction = matcher.matchWith(selector)
 			self._positive = matcher.getPositive(selector)
+			matchObj = matcher.matchWith(selector)
+			if match_key or negate:
+				def match_fun(item):
+					if match_key:
+						item = match_key(item)
+					if negate:
+						return -matchObj.match(item)
+					else:
+						return matchObj.match(item)
+				self._matchFunction = match_fun
+			else:
+				self._matchFunction = matchObj.match
 
 	def getSelector(self):
 		return self._selector
@@ -219,7 +230,7 @@ class ListFilter(Plugin):
 		if not self._matchFunction:
 			return entries
 		if self._order == ListOrder.matcher:
-			entries = sorted(entries, key = self._matchFunction.match)
+			entries = sorted(entries, key = self._matchFunction)
 		return self._filterListImpl(entries)
 
 	def _filterListImpl(self, entries):
@@ -234,24 +245,24 @@ class StrictListFilter(ListFilter):
 	alias = ['strict', 'require']
 
 	def _filterListImpl(self, entries):
-		return lfilter(lambda entry: self._matchFunction.match(entry) > 0, entries)
+		return lfilter(lambda entry: self._matchFunction(entry) > 0, entries)
 
 
 class MediumListFilter(ListFilter):
 	alias = ['try_strict']
 
 	def _filterListImpl(self, entries):
-		strict_result = lfilter(lambda entry: self._matchFunction.match(entry) > 0, entries)
+		strict_result = lfilter(lambda entry: self._matchFunction(entry) > 0, entries)
 		if strict_result:
 			return strict_result
-		return lfilter(lambda entry: self._matchFunction.match(entry) >= 0, entries)
+		return lfilter(lambda entry: self._matchFunction(entry) >= 0, entries)
 
 
 class WeakListFilter(ListFilter):
 	alias = ['weak', 'prefer']
 
 	def _filterListImpl(self, entries):
-		return lfilter(lambda entry: self._matchFunction.match(entry) >= 0, entries)
+		return lfilter(lambda entry: self._matchFunction(entry) >= 0, entries)
 
 
 class DictLookup(Plugin):

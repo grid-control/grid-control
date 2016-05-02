@@ -12,11 +12,10 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-import re
 from grid_control.datasets.dproc_base import DataProcessor
 from grid_control.datasets.provider_base import DataProvider, DatasetError
 from grid_control.utils.data_structures import makeEnum
-from python_compat import imap, lfilter, lmap, md5_hex, set
+from python_compat import imap, itemgetter, lfilter, md5_hex, set
 
 class StatsDataProcessor(DataProcessor):
 	alias = ['stats']
@@ -31,10 +30,10 @@ class StatsDataProcessor(DataProcessor):
 
 	def getStats(self):
 		if self._entries < 0:
-			units = '%d files' % -self._entries
+			units = '%d file(s)' % -self._entries
 		else:
-			units = '%d events' % self._entries
-		result = (units, self._blocks)
+			units = '%d event(s)' % self._entries
+		result = (self._blocks, units)
 		self.reset()
 		return result
 
@@ -63,28 +62,31 @@ class URLDataProcessor(DataProcessor):
 
 	def __init__(self, config):
 		DataProcessor.__init__(self, config)
-		self._ignoreURLs = config.getList(['dataset ignore urls', 'dataset ignore files'], [])
+		internal_config = config.changeView(viewClass = 'SimpleConfigView', setSections = ['dataprocessor'])
+		internal_config.set('dataset processor', 'NullDataProcessor')
+		self._url_filter = config.getFilter(['dataset ignore urls', 'dataset ignore files'], '', negate = True,
+			filterParser = lambda value: self._parseFilter(internal_config, value),
+			filterStr = lambda value: str.join('\n', value.split()),
+			matchKey = itemgetter(DataProvider.URL),
+			defaultMatcher = 'blackwhite', defaultFilter = 'weak')
 
-	def _matchURL(self, url):
-		return url not in self._ignoreURLs
+	def _parseFilter(self, config, value):
+		def getFilterEntries():
+			for pat in value.split():
+				if ':' not in pat.lstrip(':'):
+					yield pat
+				else:
+					for dfac in DataProvider.bind(':%s' % pat.lstrip(':'), config = config):
+						dproc = dfac.getBoundInstance()
+						for block in dproc.getBlocks():
+							for fi in block[DataProvider.FileList]:
+								yield fi[DataProvider.URL]
+		return str.join('\n', getFilterEntries())
 
 	def processBlock(self, block):
-		block[DataProvider.FileList] = lfilter(lambda x: self._matchURL(x[DataProvider.URL]), block[DataProvider.FileList])
+		if self._url_filter.getSelector():
+			block[DataProvider.FileList] = self._url_filter.filterList(block[DataProvider.FileList])
 		return block
-
-
-class URLRegexDataProcessor(URLDataProcessor):
-	alias = ['regex', 'FileRegexDataProcessor']
-
-	def __init__(self, config):
-		URLDataProcessor.__init__(self, config)
-		self._ignoreREs = lmap(re.compile, self._ignoreURLs)
-
-	def _matchURL(self, url):
-		for matcher in self._ignoreREs:
-			if matcher(url):
-				return True
-		return False
 
 
 class URLCountDataProcessor(DataProcessor):
