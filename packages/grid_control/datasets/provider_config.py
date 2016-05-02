@@ -37,6 +37,21 @@ class ConfigDataProvider(DataProvider):
 			config.set('dataset hash', dataset_hash_new)
 
 
+	def _readFileFromConfig(self, config, url, metadata_keys, common_metadata, common_prefix):
+		info = config.get(url, onChange = None)
+		tmp = info.split(' ', 1)
+		fi = {DataProvider.URL: common_prefix + url, DataProvider.NEntries: int(tmp[0])}
+		if common_metadata:
+			fi[DataProvider.Metadata] = common_metadata
+		if len(tmp) == 2:
+			file_metadata = parseJSON(tmp[1])
+			if len(common_metadata) + len(file_metadata) > len(metadata_keys):
+				raise DatasetError('Unable to set %d file metadata items with %d metadata keys (%d common metadata items)' %
+					(len(file_metadata), len(metadata_keys), len(common_metadata)))
+			fi[DataProvider.Metadata] = fi.get(DataProvider.Metadata, []) + file_metadata
+		return fi
+
+
 	def _readBlockFromConfig(self, config, datasetExpr, datasetNick, datasetID):
 		metadata_keys = parseJSON(config.get('metadata', '[]', onChange = None))
 		common_metadata = parseJSON(config.get('metadata common', '[]', onChange = None))
@@ -52,18 +67,7 @@ class ConfigDataProvider(DataProvider):
 			elif url == 'events':
 				has_events = True
 			elif url not in ['dataset hash', 'id', 'metadata', 'metadata common', 'nickname', 'prefix']:
-				info = config.get(url, onChange = None)
-				tmp = info.split(' ', 1)
-				fi = {DataProvider.URL: common_prefix + url, DataProvider.NEntries: int(tmp[0])}
-				if common_metadata:
-					fi[DataProvider.Metadata] = common_metadata
-				if len(tmp) == 2:
-					file_metadata = parseJSON(tmp[1])
-					if len(common_metadata) + len(file_metadata) > len(metadata_keys):
-						raise DatasetError('Unable to set %d file metadata items with %d metadata keys (%d common metadata items)' %
-							(len(file_metadata), len(metadata_keys), len(common_metadata)))
-					fi[DataProvider.Metadata] = fi.get(DataProvider.Metadata, []) + file_metadata
-				file_list.append(fi)
+				file_list.append(self._readFileFromConfig(config, url, metadata_keys, common_metadata, common_prefix))
 		if not file_list:
 			raise DatasetError('There are no dataset files specified for dataset %r' % datasetExpr)
 

@@ -93,7 +93,7 @@ class SimpleLookupParameterSource(SingleParameterSource):
 			result[self._key] = lookupResult[0]
 
 	def show(self):
-		return ['%s: var = %s, lookup = %s' % (self.__class__.__name__, self._key, str.join(',', self._matcher.lookupKeys))]
+		return ['%s: var = %s, lookup = %s' % (self.__class__.__name__, self._key, repr(self._matcher))]
 
 	def getHash(self):
 		return md5_hex(str(self._key) + self._matcher.getHash())
@@ -168,7 +168,7 @@ class SwitchingLookupParameterSource(SingleParameterSource):
 		return "switch(%r, key('%s'), %s)" % (self._psource, self._key, repr(self._matcher))
 
 	def show(self):
-		result = ['%s: var = %s, lookup = %s' % (self.__class__.__name__, self._key, str.join(',', self._matcher.lookupKeys))]
+		result = ['%s: var = %s, lookup = %s' % (self.__class__.__name__, self._key, repr(self._matcher))]
 		return result + lmap(lambda x: '\t' + x, self._psource.show())
 
 	def create(cls, pconfig, psource, key, lookup = None): # pylint:disable=arguments-differ

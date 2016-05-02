@@ -308,3 +308,12 @@ class BasicWMS(WMS):
 
 	def _getJobsOutput(self, ids):
 		raise AbstractError # Return (jobNum, sandbox) for finished jobs
+
+
+class Grid(WMS): # redirector - used to avoid loading the whole grid module just for the default
+	configSections = WMS.configSections + ['grid']
+
+	def __new__(cls, config, name):
+		gridWMS = 'GliteWMS'
+		config = config.changeView(viewClass = 'TaggedConfigView', setClasses = [WMS.getClass(gridWMS)])
+		return WMS.createInstance(gridWMS, config, name)

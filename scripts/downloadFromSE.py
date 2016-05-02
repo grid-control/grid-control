@@ -309,18 +309,18 @@ def download_multithreaded(opts, workDir, jobList, incInfo, jobDB, token):
 		def init(self, jobNum):
 			self.jobNum = jobNum
 			self.output = ['Job %5d' % jobNum, '']
-		def infoline(self, fileIdx, msg = ''):
+		def _infoline(self, fileIdx, msg = ''):
 			return 'Job %5d [%i/%i] %s %s' % (self.jobNum, fileIdx + 1, len(self._files), self._files[fileIdx][2], msg)
 		def update_files(self, files):
 			(self._files, self.output, self.tr) = (files, self.output[1:], ['']*len(files))
 			for x in irange(len(files)):
-				self.output.insert(2*x, self.infoline(x))
+				self.output.insert(2*x, self._infoline(x))
 				self.output.insert(2*x+1, '')
 		def update_progress(self, idx, csize = None, osize = None, stime = None, otime = None):
 			if otime:
 				trfun = lambda sref, tref: gcSupport.prettySize(((csize - sref) / max(1, time.time() - tref)))
 				self.tr[idx] = '%7s avg. - %7s/s inst.' % (gcSupport.prettySize(csize), trfun(0, stime))
-				self.output[2*idx] = self.infoline(idx, '(%s - %7s/s)' % (self.tr[idx], trfun(osize, otime)))
+				self.output[2*idx] = self._infoline(idx, '(%s - %7s/s)' % (self.tr[idx], trfun(osize, otime)))
 		def update_hash(self, idx, hashLocal = None):
 			file_hash = self._files[idx][0]
 			if hashLocal:
@@ -331,15 +331,12 @@ def download_multithreaded(opts, workDir, jobList, incInfo, jobDB, token):
 				msg = '(R:%s L:%s) => %s' % (file_hash, hashLocal, result)
 			else:
 				msg = ''
-			self.output[2*idx] = self.infoline(idx, '(%s)' % self.tr[idx])
+			self.output[2*idx] = self._infoline(idx, '(%s)' % self.tr[idx])
 			self.output[2*idx+1] = msg
-			print((self, repr(msg)))
 		def error(self, msg):
 			errorOutput.append(msg)
-		def write(self, msg):
-			self.output.append(msg)
 		def update_status(self, idx, msg):
-			self.output[2*idx] = str.join(' ', [self.infoline(idx, '(%s)' % self.tr[idx])] + msg.split())
+			self.output[2*idx] = str.join(' ', [self._infoline(idx, '(%s)' % self.tr[idx])] + (msg or '').split())
 		def finish(self):
 #			self.output.append(str(self.jobNum) + 'FINISHED')
 			pass
@@ -361,25 +358,25 @@ def download_sequential(opts, workDir, jobList, incInfo, jobDB, token):
 				tmp = name_dest
 				if opts.show_host:
 					tmp += ' [%s]' % pathSE.split('//')[-1].split('/')[0].split(':')[0]
-				self.write('\r\t%s (%7s - %7s/s avg. - %7s/s inst.)' % (tmp,
+				self._write('\r\t%s (%7s - %7s/s avg. - %7s/s inst.)' % (tmp,
 					gcSupport.prettySize(csize), tr(0, stime), tr(osize, otime)))
 				sys.stdout.flush()
 			else:
-				self.write('\t%s' % name_dest)
+				self._write('\t%s' % name_dest)
 				sys.stdout.flush()
 		def update_hash(self, idx, hashLocal = None):
 			file_hash = self._files[idx][0]
-			self.write(' => %s\n' % ('\33[0;91mFAIL\33[0m', '\33[0;92mMATCH\33[0m')[file_hash == hashLocal])
-			self.write('\t\tRemote site: %s\n' % file_hash)
-			self.write('\t\t Local site: %s\n' % hashLocal)
+			self._write(' => %s\n' % ('\33[0;91mFAIL\33[0m', '\33[0;92mMATCH\33[0m')[file_hash == hashLocal])
+			self._write('\t\tRemote site: %s\n' % file_hash)
+			self._write('\t\t Local site: %s\n' % hashLocal)
 		def error(self, msg):
 			sys.stdout.write('\nJob %d: %s' % (jobNum, msg.strip()))
 		def update_status(self, idx, msg):
 			if msg:
-				self.write('\t' + msg + '\r')
+				self._write('\t' + msg + '\r')
 			else:
-				self.write(' ' * len('\tDeleting file %s from SE...\r' % self._files[idx][2]) + '\r')
-		def write(self, msg):
+				self._write(' ' * len('\tDeleting file %s from SE...\r' % self._files[idx][2]) + '\r')
+		def _write(self, msg):
 			sys.stdout.write(msg)
 		def finish(self):
 			sys.stdout.write('\n')

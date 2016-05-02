@@ -125,7 +125,7 @@ def setup_dataset(config, dataset):
 		utils.vprint('Registering dummy data provider data')
 		dataSplitter = DummySplitter()
 	else:
-		dataSplitter = DataSplitter.loadStateForScript(dataset)
+		dataSplitter = DataSplitter.loadPartitionsForScript(dataset)
 
 	DataParameterSource = ParameterSource.getClass('DataParameterSource')
 	DataParameterSource.datasetsAvailable['data'] = DataParameterSource(

@@ -70,7 +70,7 @@ class MultiAccessToken(AccessToken):
 
 
 class TrivialAccessToken(AccessToken):
-	alias = ['TrivialProxy']
+	alias = ['trivial', 'TrivialProxy']
 
 	def getUsername(self):
 		for var in ('LOGNAME', 'USER', 'LNAME', 'USERNAME'):
@@ -126,7 +126,9 @@ class TimedAccessToken(AccessToken):
 		return timeleft >= neededTime
 
 
-class VomsProxy(TimedAccessToken):
+class VomsAccessToken(TimedAccessToken):
+	alias = ['voms', 'VomsProxy']
+
 	def __init__(self, config, name):
 		TimedAccessToken.__init__(self, config, name)
 		self._infoExec = utils.resolveInstallPath('voms-proxy-info')
@@ -190,7 +192,7 @@ class RefreshableAccessToken(TimedAccessToken):
 
 
 class AFSAccessToken(RefreshableAccessToken):
-	alias = ['AFSProxy']
+	alias = ['afs', 'AFSProxy']
 
 	def __init__(self, config, name):
 		RefreshableAccessToken.__init__(self, config, name)

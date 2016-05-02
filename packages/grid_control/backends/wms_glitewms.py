@@ -132,18 +132,17 @@ class DiscoverWMS_Lazy(object): # TODO: Move to broker infrastructure
 			return None
 		sort_inplace(wms_best_list, key = lambda name_ping: name_ping[1])
 		result = choice_exp(wms_best_list)
-		log = utils.ActivityLog('Discovering available WMS services - using %s' % wms)
 		if result is not None:
+			log = utils.ActivityLog('Discovering available WMS services - using %s' % result)
 			wms, ping = result # reduce timeout by 5min for chosen wms => re-ping every 6 submits
 			self.pingDict[wms] = (ping, self.pingDict[wms][1] + 5*60)
 			result = wms
+			log.finish()
 		self.updateState()
-		del log
 		return result
 
 
 class GliteWMS(GridWMS):
-	alias = ['grid']
 	configSections = GridWMS.configSections + ['glite-wms', 'glitewms'] # backwards compatibility
 
 	def __init__(self, config, name):

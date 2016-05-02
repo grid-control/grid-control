@@ -158,11 +158,11 @@
 
        * grid_control.backends.access RefreshableAccessToken
 
-        * grid_control.backends.access AFSAccessToken AFSProxy
+        * grid_control.backends.access AFSAccessToken afs AFSProxy
 
-       * grid_control.backends.access VomsProxy
+       * grid_control.backends.access VomsAccessToken voms VomsProxy
 
-      * grid_control.backends.access TrivialAccessToken TrivialProxy
+      * grid_control.backends.access TrivialAccessToken trivial TrivialProxy
 
      * grid_control.backends.broker_base Broker
 
@@ -212,9 +212,9 @@
 
       * grid_control.tasks.task_data DataTask
 
-       * grid_control.tasks.task_user UserTask UserMod
+       * grid_control.tasks.task_user UserTask UserMod user script
 
-        * grid_control.tasks.task_root ROOTTask ROOTMod
+        * grid_control.tasks.task_root ROOTTask ROOTMod root
 
      * grid_control.backends.wms WMS
 
@@ -228,7 +228,7 @@
 
         * grid_control.backends.wms_glite Glite
 
-        * grid_control.backends.wms_glitewms GliteWMS grid
+        * grid_control.backends.wms_glitewms GliteWMS
 
          * grid_control.backends.wms_glitewms_direct GliteWMSDirect
 
@@ -249,6 +249,8 @@
          * grid_control.backends.wms_pbs PBS
 
         * grid_control.backends.wms_slurm SLURM
+
+      * grid_control.backends.wms Grid
 
       * grid_control.backends.wms InactiveWMS inactive
 

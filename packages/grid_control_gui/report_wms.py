@@ -125,11 +125,12 @@ class BackendReport(Report):
 		stateMap = dict(self._stateMap)
 
 		def transform(data, label, level):
-			total = data.pop(None)
-			if len(data) > 1:
-				for result in self._get_entry(stateMap, total, ['Total']):
-					yield result
-				yield '='
+			if None in data:
+				total = data.pop(None)
+				if (len(data) > 1):
+					for result in self._get_entry(stateMap, total, ['Total']):
+						yield result
+					yield '='
 			for idx, entry in enumerate(sorted(data)):
 				if level == 1:
 					for result in self._get_entry(stateMap, data[entry], [entry] + label):

@@ -18,7 +18,7 @@ from python_compat import BytesBufferBase, bytes2str, imap, str2bytes, tarfile
 class SafeFile(object):
 	def __init__(self, fn, mode = 'r', keep_old = False):
 		assert(mode in ['r', 'w'])
-		(self._fn, self._mode, self._keep_old) = (fn, mode, keep_old)
+		(self._fn, self._fp, self._mode, self._keep_old) = (fn, None, mode, keep_old)
 		if self._mode == 'w':
 			self._fp = open(self._fn + '.tmp', mode)
 		else:
