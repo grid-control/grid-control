@@ -93,5 +93,5 @@ class CMSSW_Advanced(CMSSW):
 
 	def getJobConfig(self, jobNum):
 		data = CMSSW.getJobConfig(self, jobNum)
-		data['CMSSW_CONFIG'] = self._nmCfg.lookup(data.get('DATASETNICK'), '', is_selector = False)
+		data['CMSSW_CONFIG'] = str.join(' ', self._nmCfg.lookup(data.get('DATASETNICK'), [], is_selector = False))
 		return data
