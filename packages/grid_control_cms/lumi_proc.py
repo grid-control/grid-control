@@ -71,7 +71,7 @@ class LumiDataProcessor(DataProcessor):
 		if self._lumi_filter.empty() and ((self._lumi_keep == LumiKeep.RunLumi) or (DataProvider.Metadata not in block)):
 			return block
 		def getMetadataIdx(key):
-			if key in block[DataProvider.Metadata]:
+			if key in block.get(DataProvider.Metadata, []):
 				return block[DataProvider.Metadata].index(key)
 		idxRuns = getMetadataIdx('Runs')
 		idxLumi = getMetadataIdx('Lumi')
