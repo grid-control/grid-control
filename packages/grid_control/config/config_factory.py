@@ -32,7 +32,10 @@ class ConfigFactory(object):
 				return prefix
 			return 'unnamed'
 
-		pathMain = os.getcwd()
+		try:
+			pathMain = os.getcwd()
+		except Exception:
+			raise ConfigError('The current directory does not exist!')
 		if configFilePath:
 			pathMain = os.path.dirname(utils.resolvePath(configFilePath,
 				searchPaths = [os.getcwd()], ErrorClass = ConfigError))
