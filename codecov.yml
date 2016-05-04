@@ -1,0 +1,10 @@
+codecov:
+  branch: testsuite
+comment:
+  layout: header, changes, diff
+coverage:
+  ignore:
+    - packages/requests/*
+    - packages/python_compat_*
+  status:
+    patch: false
