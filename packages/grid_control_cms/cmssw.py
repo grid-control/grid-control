@@ -64,13 +64,15 @@ class CMSSW(DataTask):
 		config.set('partition processor',
 			'TFCPartitionProcessor LFNPartitionProcessor LocationPartitionProcessor LumiPartitionProcessor CMSSWPartitionProcessor')
 		config.set('dataset processor', 'LumiDataProcessor', '+=')
+		dash_config = config.changeView(viewClass = 'SimpleConfigView', setSections = ['dashboard'])
+		dash_config.set('application', 'cmsRun')
 		DataTask.__init__(self, config, name)
 		self.updateErrorDict(utils.pathShare('gc-run.cmssw.sh', pkg = 'grid_control_cms'))
 
 		# SCRAM settings
 		self._configureSCRAMSettings(config)
 
-		self.useReqs = config.getBool('software requirements', True, onChange = None)
+		self._useReqs = config.getBool('software requirements', True, onChange = None)
 		self._projectAreaTarballSE = config.getBool(['se project area', 'se runtime'], True)
 		self._projectAreaTarball = config.getWorkPath('cmssw-project-area.tar.gz')
 
@@ -281,7 +283,6 @@ class CMSSW(DataTask):
 		data = DataTask.getTaskConfig(self)
 		data.update(dict(self.searchLoc))
 		data['CMSSW_OLD_RELEASETOP'] = self.scramEnv.get('RELEASETOP', None)
-		data['DB_EXEC'] = 'cmsRun'
 		data['SCRAM_ARCH'] = self.scramArch
 		data['SCRAM_VERSION'] = self.scramVersion
 		data['SCRAM_PROJECTVERSION'] = self.scramEnv['SCRAM_PROJECTVERSION']
@@ -303,7 +304,7 @@ class CMSSW(DataTask):
 	# Get job requirements
 	def getRequirements(self, jobNum):
 		reqs = DataTask.getRequirements(self, jobNum)
-		if self.useReqs:
+		if self._useReqs:
 			reqs.append((WMS.SOFTWARE, 'VO-cms-%s' % self.scramArch))
 		return reqs
 

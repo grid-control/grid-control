@@ -35,13 +35,13 @@ class OutputDirsFromConfig(InfoScanner):
 	def __init__(self, config):
 		InfoScanner.__init__(self, config)
 		newVerbosity = utils.verbosity(utils.verbosity() - 3)
-		extConfigFN = config.getPath('source config')
-		extConfig = createConfig(extConfigFN).changeView(setSections = ['global'])
-		self._extWorkDir = extConfig.getWorkPath()
-		self._extTask = extConfig.getPlugin(['task', 'module'], cls = 'TaskModule')
+		ext_config_fn = config.getPath('source config')
+		ext_config = createConfig(ext_config_fn).changeView(setSections = ['global'])
+		self._extWorkDir = ext_config.getWorkPath()
+		self._extTask = ext_config.getPlugin(['task', 'module'], cls = 'TaskModule')
 		selector = config.get('source job selector', '')
-		extJobDB = JobDB(extConfig, jobSelector = lambda jobNum, jobObj: jobObj.state == Job.SUCCESS)
-		self._selected = sorted(extJobDB.getJobs(JobSelector.create(selector, task = self._extTask)))
+		ext_job_db = JobDB(ext_config, jobSelector = lambda jobNum, jobObj: jobObj.state == Job.SUCCESS)
+		self._selected = sorted(ext_job_db.getJobs(JobSelector.create(selector, task = self._extTask)))
 		utils.verbosity(newVerbosity + 3)
 
 	def getEntries(self, path, metadata, events, seList, objStore):

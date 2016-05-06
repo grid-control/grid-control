@@ -40,17 +40,17 @@ class CMSSW_Advanced(CMSSW):
 
 		# Mapping between nickname and constants - only display - work is handled by the 'normal' parameter factory
 		nmCName = config.getList('nickname constants', [], onChange = None)
-		pconfig = config.changeView(viewClass = 'TaggedConfigView', setClasses = None, setNames = None, addSections = ['parameters'])
-		pconfig.set('constants', str.join(' ', nmCName), '+=')
+		param_config = config.changeView(viewClass = 'TaggedConfigView', setClasses = None, setNames = None, addSections = ['parameters'])
+		param_config.set('constants', str.join(' ', nmCName), '+=')
 		for cName in nmCName:
-			pconfig.set(cName + ' matcher', 'regex', '?=')
-			pconfig.set(cName + ' lookup', 'DATASETNICK', '?=')
+			param_config.set(cName + ' matcher', 'regex')
+			param_config.set(cName + ' lookup', 'DATASETNICK')
 			head.append((cName, cName))
 
 		# Mapping between nickname and lumi filter - only display - work is handled by the 'normal' lumi filter
 		if ('lumi filter' in config.getOptions()) and ('nickname lumi filter' in config.getOptions()):
 			raise ConfigError('Please use "lumi filter" exclusively')
-		config.set('lumi filter matcher', 'regex', '?=')
+		config.set('lumi filter matcher', 'regex')
 		config.set('lumi filter', strDictLong(config.getDict('nickname lumi filter', {}, onChange = None)))
 		self._nmLumi = config.getLookup('lumi filter', {}, parser = parseLumiFilter, strfun = strLumi, onChange = None)
 		if not self._nmLumi.empty():

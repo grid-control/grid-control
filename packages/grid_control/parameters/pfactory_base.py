@@ -49,18 +49,18 @@ class BasicParameterFactory(ParameterFactory):
 		ParameterFactory.__init__(self, config, name)
 
 		# Get constants from [constants <tags...>]
-		configConstants = config.changeView(viewClass = 'TaggedConfigView',
+		constants_config = config.changeView(viewClass = 'TaggedConfigView',
 			setClasses = None, setSections = ['constants'], addTags = [self])
-		for cName in ifilter(lambda o: not o.endswith(' lookup'), configConstants.getOptions()):
-			self._addConstantPSource(configConstants, cName, cName.upper())
+		for cName in ifilter(lambda o: not o.endswith(' lookup'), constants_config.getOptions()):
+			self._addConstantPSource(constants_config, cName, cName.upper())
 		# Get constants from [<Module>] constants
 		for cName in config.getList('constants', []):
 			self._addConstantPSource(config, cName, cName)
 		# Random number variables
-		configJobs = config.changeView(addSections = ['jobs'])
-		nseeds = configJobs.getInt('nseeds', 10)
+		jobs_config = config.changeView(addSections = ['jobs'])
+		nseeds = jobs_config.getInt('nseeds', 10)
 		newSeeds = lmap(lambda x: str(random.randint(0, 10000000)), irange(nseeds))
-		for (idx, seed) in enumerate(configJobs.getList('seeds', newSeeds, persistent = True)):
+		for (idx, seed) in enumerate(jobs_config.getList('seeds', newSeeds, persistent = True)):
 			ps = ParameterSource.createInstance('CounterParameterSource', 'SEED_%d' % idx, int(seed))
 			self.constSources.append(ps)
 		self.repeat = config.getInt('repeat', 1, onChange = None) # ALL config.x -> paramconfig.x !

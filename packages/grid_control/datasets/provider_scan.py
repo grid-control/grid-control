@@ -172,10 +172,10 @@ class GCProvider(ScanProviderBase):
 			datasetExpr, selector = utils.optSplit(datasetExpr, '%')
 			config.set('source config', datasetExpr)
 			config.set('source job selector', selector)
-		extConfig = createConfig(datasetExpr)
-		extModule = extConfig.changeView(setSections = ['global']).get(['task', 'module'])
-		if 'ParaMod' in extModule: # handle old config files
-			extModule = extConfig.changeView(setSections = ['ParaMod']).get('module')
-		sGet = lambda scannerDict: scannerDict.get(None) + scannerDict.get(extModule, [])
+		ext_config = createConfig(datasetExpr)
+		ext_task_name = ext_config.changeView(setSections = ['global']).get(['task', 'module'])
+		if 'ParaMod' in ext_task_name: # handle old config files
+			ext_task_name = ext_config.changeView(setSections = ['ParaMod']).get('module')
+		sGet = lambda scannerDict: scannerDict.get(None) + scannerDict.get(ext_task_name, [])
 		sList = sGet(GCProvider.stageDir) + ['JobInfoFromOutputDir', 'FilesFromJobInfo'] + sGet(GCProvider.stageFile) + ['DetermineEvents', 'AddFilePrefix']
 		ScanProviderBase.__init__(self, config, sList, datasetNick, datasetID)

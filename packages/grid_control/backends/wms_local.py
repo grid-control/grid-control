@@ -241,8 +241,8 @@ class Local(WMS):
 				wmsCls = WMS.getClass(wms)
 			except Exception:
 				raise BackendError('Unable to load backend class %s' % repr(wms))
-			config_wms = config.changeView(viewClass = 'TaggedConfigView', setClasses = [wmsCls])
-			return WMS.createInstance(wms, config_wms, name)
+			wms_config = config.changeView(viewClass = 'TaggedConfigView', setClasses = [wmsCls])
+			return WMS.createInstance(wms, wms_config, name)
 		wms = config.get('wms', '')
 		if wms:
 			return createWMS(wms)

@@ -35,12 +35,12 @@ class TaskModule(NamedPlugin):
 		self._varCheck = validNoVar(config)
 
 		# Task requirements
-		configJobs = config.changeView(viewClass = 'TaggedConfigView', addSections = ['jobs'], addTags = [self]) # Move this into parameter manager?
-		self.wallTime = configJobs.getTime('wall time', onChange = None)
-		self.cpuTime = configJobs.getTime('cpu time', self.wallTime, onChange = None)
-		self.cpus = configJobs.getInt('cpus', 1, onChange = None)
-		self.memory = configJobs.getInt('memory', -1, onChange = None)
-		self.nodeTimeout = configJobs.getTime('node timeout', -1, onChange = initSandbox)
+		jobs_config = config.changeView(viewClass = 'TaggedConfigView', addSections = ['jobs'], addTags = [self]) # Move this into parameter manager?
+		self.wallTime = jobs_config.getTime('wall time', onChange = None)
+		self.cpuTime = jobs_config.getTime('cpu time', self.wallTime, onChange = None)
+		self.cpus = jobs_config.getInt('cpus', 1, onChange = None)
+		self.memory = jobs_config.getInt('memory', -1, onChange = None)
+		self.nodeTimeout = jobs_config.getTime('node timeout', -1, onChange = initSandbox)
 
 		# Compute / get task ID
 		self.taskID = config.get('task id', 'GC' + md5_hex(str(time()))[:12], persistent = True)
@@ -48,17 +48,17 @@ class TaskModule(NamedPlugin):
 		self.taskConfigName = config.getConfigName()
 
 		# Storage setup
-		configStorage = config.changeView(viewClass = 'TaggedConfigView',
+		storage_config = config.changeView(viewClass = 'TaggedConfigView',
 			setClasses = None, setNames = None, addSections = ['storage'], addTags = [self])
 		self.taskVariables = {
 			# Space limits
-			'SCRATCH_UL': configStorage.getInt('scratch space used', 5000, onChange = initSandbox),
-			'SCRATCH_LL': configStorage.getInt('scratch space left', 1, onChange = initSandbox),
-			'LANDINGZONE_UL': configStorage.getInt('landing zone space used', 100, onChange = initSandbox),
-			'LANDINGZONE_LL': configStorage.getInt('landing zone space left', 1, onChange = initSandbox),
+			'SCRATCH_UL': storage_config.getInt('scratch space used', 5000, onChange = initSandbox),
+			'SCRATCH_LL': storage_config.getInt('scratch space left', 1, onChange = initSandbox),
+			'LANDINGZONE_UL': storage_config.getInt('landing zone space used', 100, onChange = initSandbox),
+			'LANDINGZONE_LL': storage_config.getInt('landing zone space left', 1, onChange = initSandbox),
 		}
-		configStorage.set('se output pattern', 'job_@GC_JOB_ID@_@X@')
-		self.seMinSize = configStorage.getInt('se min size', -1, onChange = initSandbox)
+		storage_config.set('se output pattern', 'job_@GC_JOB_ID@_@X@')
+		self.seMinSize = storage_config.getInt('se min size', -1, onChange = initSandbox)
 
 		self.sbInputFiles = config.getPaths('input files', [], onChange = initSandbox)
 		self.sbOutputFiles = config.getList('output files', [], onChange = initSandbox)
@@ -74,9 +74,9 @@ class TaskModule(NamedPlugin):
 		# Init parameter source manager
 		self._pm = config.getPlugin('parameter factory', 'SimpleParameterFactory',
 			cls = ParameterFactory, inherit = True)
-		configParam = config.changeView(viewClass = 'TaggedConfigView', addSections = ['parameters'], addTags = [self])
-		self.setupJobParameters(configParam, self._pm)
-		self.source = self._pm.getSource(configParam)
+		param_config = config.changeView(viewClass = 'TaggedConfigView', addSections = ['parameters'], addTags = [self])
+		self.setupJobParameters(param_config, self._pm)
+		self.source = self._pm.getSource(param_config)
 
 
 	def setupJobParameters(self, config, pm):
