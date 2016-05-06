@@ -158,9 +158,9 @@
 
        * grid_control.backends.access RefreshableAccessToken
 
-        * grid_control.backends.access AFSAccessToken afs AFSProxy
+        * grid_control.backends.access_afs AFSAccessToken afs AFSProxy
 
-       * grid_control.backends.access VomsAccessToken voms VomsProxy
+       * grid_control.backends.access_grid VomsAccessToken voms VomsProxy
 
       * grid_control.backends.access TrivialAccessToken trivial TrivialProxy
 
