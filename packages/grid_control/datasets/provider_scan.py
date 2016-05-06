@@ -146,6 +146,7 @@ class ScanProvider(ScanProviderBase):
 	alias = ['scan']
 
 	def __init__(self, config, datasetExpr, datasetNick = None, datasetID = 0):
+		config = config.changeView(viewClass = 'TaggedConfigView', addNames = [md5_hex(datasetExpr)])
 		if '*' in os.path.basename(datasetExpr):
 			config.set('source directory', os.path.dirname(datasetExpr))
 			config.set('filename filter', datasetExpr)
@@ -163,6 +164,7 @@ class GCProvider(ScanProviderBase):
 	stageFile = {None: ['MatchOnFilename', 'MatchDelimeter']}
 
 	def __init__(self, config, datasetExpr, datasetNick = None, datasetID = 0):
+		config = config.changeView(viewClass = 'TaggedConfigView', addNames = [md5_hex(datasetExpr)])
 		if os.path.isdir(datasetExpr):
 			GCProvider.stageDir[None] = ['OutputDirsFromWork']
 			config.set('source directory', datasetExpr)
