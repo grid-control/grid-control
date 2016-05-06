@@ -26,6 +26,7 @@ class DashBoard(Monitoring):
 		Monitoring.__init__(self, config, name, task)
 		jobDesc = task.getDescription(None) # TODO: use the other variables for monitoring
 		self._app = config.get('application', 'shellscript', onChange = None)
+		self._runningMax = config.getInt('dashboard timeout', 5, onChange = None)
 		self._tasktype = config.get('task', jobDesc.jobType or 'analysis', onChange = None)
 		self._taskname = config.get('task name', '@GC_TASK_ID@_@DATASETNICK@', onChange = None)
 		self._statusMap = {Job.DONE: 'DONE', Job.FAILED: 'DONE', Job.SUCCESS: 'DONE',
@@ -91,5 +92,5 @@ class DashBoard(Monitoring):
 		self._updateDashboard(wms, jobObj, jobNum, jobObj, {'ExeExitCode': retCode})
 
 
-	def onTaskFinish(self, nJobs):
-		self._tp.wait_and_drop(timeout = 5)
+	def onFinish(self):
+		self._tp.wait_and_drop(self._runningMax)

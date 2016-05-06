@@ -103,6 +103,7 @@ class Workflow(NamedPlugin):
 			# idle timeout
 			if not didWait:
 				wait(wmsTiming.waitOnIdle)
+		self.monitor.onFinish()
 
 	def run(self):
 		self._gui.displayWorkflow()
