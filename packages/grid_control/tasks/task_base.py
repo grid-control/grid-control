@@ -118,7 +118,7 @@ class TaskModule(NamedPlugin):
 	# Get job dependent environment variables
 	def getJobConfig(self, jobNum):
 		tmp = self.source.getJobInfo(jobNum)
-		return dict(imap(lambda key: (key, tmp.get(key, '')), self.source.getJobKeys()))
+		return dict(imap(lambda key: (str(key), tmp.get(key, '')), self.source.getJobKeys()))
 
 
 	def getTransientVars(self):
