@@ -54,9 +54,11 @@
 
       * grid_control.tasks.task_data DataTask
 
-       * grid_control_cms.cmssw CMSSW
+       * grid_control_cms.cmssw SCRAMTask
 
-        * grid_control_cms.cmssw_advanced CMSSW_Advanced
+        * grid_control_cms.cmssw CMSSW
+
+         * grid_control_cms.cmssw_advanced CMSSW_Advanced
 
     * grid_control.datasets.pproc_base PartitionProcessor
 

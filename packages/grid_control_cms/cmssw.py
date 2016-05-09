@@ -54,7 +54,18 @@ class CMSSWPartitionProcessor(PartitionProcessor.getClass('BasicPartitionProcess
 		return str.join(', ', imap(lambda x: '"%s"' % x, fl))
 
 
-class CMSSW(DataTask):
+class SCRAMTask(DataTask):
+	configSections = DataTask.configSections + ['SCRAMTask']
+
+	def __init__(self, config, name):
+		DataTask.__init__(self, config, name)
+
+
+	def getDependencies(self):
+		return DataTask.getDependencies(self) + ['cmssw']
+
+
+class CMSSW(SCRAMTask):
 	configSections = DataTask.configSections + ['CMSSW']
 
 	def __init__(self, config, name):
@@ -66,7 +77,7 @@ class CMSSW(DataTask):
 		config.set('dataset processor', 'LumiDataProcessor', '+=')
 		dash_config = config.changeView(viewClass = 'SimpleConfigView', setSections = ['dashboard'])
 		dash_config.set('application', 'cmsRun')
-		DataTask.__init__(self, config, name)
+		SCRAMTask.__init__(self, config, name)
 		self.updateErrorDict(utils.pathShare('gc-run.cmssw.sh', pkg = 'grid_control_cms'))
 
 		# SCRAM settings
@@ -76,8 +87,6 @@ class CMSSW(DataTask):
 		self._projectAreaTarballSE = config.getBool(['se project area', 'se runtime'], True)
 		self._projectAreaTarball = config.getWorkPath('cmssw-project-area.tar.gz')
 
-		# Information about search order for software environment
-		self.searchLoc = self._getCMSSWPaths(config)
 		# Prolog / Epilog script support - warn about old syntax
 		self.prolog = TaskExecutableWrapper(config, 'prolog', '')
 		self.epilog = TaskExecutableWrapper(config, 'epilog', '')
@@ -95,8 +104,10 @@ class CMSSW(DataTask):
 			mustPrepare = (self.dataSplitter is not None))
 
 		# Create project area tarball
-		if not os.path.exists(self._projectAreaTarball):
+		if self.projectArea and not os.path.exists(self._projectAreaTarball):
 			config.setState(True, 'init', detail = 'sandbox')
+		# Information about search order for software environment
+		self.searchLoc = self._getCMSSWPaths(config)
 		if config.getState('init', detail = 'sandbox'):
 			if os.path.exists(self._projectAreaTarball):
 				if not utils.getUserBool('CMSSW tarball already exists! Do you want to regenerate it?', True):
@@ -161,17 +172,16 @@ class CMSSW(DataTask):
 
 	def _getCMSSWPaths(self, config):
 		result = []
-		if config.getState('init', detail = 'sandbox'):
-			userPath = config.get('cmssw dir', '')
-			if userPath != '':
-				result.append(('CMSSW_DIR_USER', userPath))
-			if self.scramEnv.get('RELEASETOP', None):
-				projPath = os.path.normpath('%s/../../../../' % self.scramEnv['RELEASETOP'])
-				result.append(('CMSSW_DIR_PRO', projPath))
-		if result:
-			utils.vprint('Local jobs will try to use the CMSSW software located here:', -1)
-			for i, loc in enumerate(result):
-				utils.vprint(' %i) %s' % (i + 1, loc[1]), -1)
+		userPath = config.get(['cmssw dir', 'vo software dir'], '')
+		if userPath:
+			result.append(('CMSSW_DIR_USER', userPath))
+		if self.scramEnv.get('RELEASETOP', None):
+			projPath = os.path.normpath('%s/../../../../' % self.scramEnv['RELEASETOP'])
+			result.append(('CMSSW_DIR_PRO', projPath))
+		log = logging.getLogger('user')
+		log.info('Local jobs will try to use the CMSSW software located here:')
+		for i, loc in enumerate(result):
+			log.info(' %i) %s' % (i + 1, loc[1]))
 		return result
 
 
@@ -266,7 +276,7 @@ class CMSSW(DataTask):
 	def neededVars(self):
 		if self.dataSplitter:
 			return self._dataPS.getNeededDataKeys()
-		return []
+		return ['MAX_EVENTS']
 
 
 	# Called on job submission
@@ -360,7 +370,3 @@ class CMSSW(DataTask):
 		if not result.jobType:
 			result.jobType = 'analysis'
 		return result
-
-
-	def getDependencies(self):
-		return DataTask.getDependencies(self) + ['cmssw']
