@@ -106,4 +106,4 @@ process.RECOSIMoutput_step = cms.EndPath(process.RECOSIMoutput)
 process.schedule = cms.Schedule(process.generation_step,process.genfiltersummary_step,process.endjob_step,process.RECOSIMoutput_step)
 # filter all path with the production filter sequence
 for path in process.paths:
-    getattr(process,path)._seq = process.ProductionFilterSequence * getattr(process,path)._seq 
+    getattr(process,path)._seq = process.ProductionFilterSequence * getattr(process,path)._seq
