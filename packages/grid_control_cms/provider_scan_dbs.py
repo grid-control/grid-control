@@ -22,7 +22,7 @@ class DBSInfoProvider(GCProvider):
 	alias = ['dbsinfo']
 
 	def __init__(self, config, datasetExpr, datasetNick = None, datasetID = 0):
-		tmp = ['OutputDirsFromConfig', 'MetadataFromModule']
+		tmp = ['OutputDirsFromConfig', 'MetadataFromTask']
 		if os.path.isdir(datasetExpr):
 			tmp = ['OutputDirsFromWork']
 		tmp.extend(['JobInfoFromOutputDir', 'ObjectsFromCMSSW', 'FilesFromJobInfo', 'MetadataFromCMSSW',

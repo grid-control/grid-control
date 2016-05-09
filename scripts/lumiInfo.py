@@ -31,6 +31,7 @@ parser.addBool('calc', 'g', 'job-gc',        default = False, help = 'Output gri
 parser.addBool('calc', 'j', 'job-json',      default = False, help = 'Output JSON file with processed lumi sections')
 parser.addBool('calc', 'e', 'job-events',    default = False, help = 'Get number of events processed')
 parser.addBool('calc', 'p', 'parameterized', default = False, help = 'Use output file name to categorize output (useful for parameterized tasks)')
+parser.addBool('calc', ' ', 'replace',   default = 'job_%d_', help = 'Pattern to replace for parameterized jobs (default: job_%%d_')
 options = scriptOptions(parser)
 
 def outputGC(lumis, stream = sys.stdout):
@@ -79,7 +80,7 @@ def iter_jobs(opts, workDir, jobList, splitter):
 		if opts.parameterized:
 			fi = fip.process(os.path.join(workDir, 'output', 'job_%d' % jobNum))
 			outputName = fi[0][FileInfoProcessor.NameDest].split('.')[0]
-			outputName = outputName.replace('_%d_' % jobNum, '_').replace('/', '_').replace('__', '_')
+			outputName = outputName.replace(opts.replace % jobNum, '_').replace('/', '_').replace('__', '_').strip('_')
 		else:
 			if splitter:
 				splitInfo = splitter.getSplitInfo(jobNum)

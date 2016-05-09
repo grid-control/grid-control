@@ -15,7 +15,7 @@
 
 import os, sys, logging
 from gcSupport import FileMutex, Options, getConfig, scriptOptions, utils
-from grid_control.datasets.provider_base import DataProvider
+from grid_control.datasets import DataProvider, DatasetError
 from grid_control_cms.dbs3_input_validation import validate_dbs3_json
 from grid_control_cms.dbs3_lite_client import DBS3LiteClient
 from grid_control_cms.dbs3_migration_queue import AlreadyQueued, DBS3MigrationQueue, MigrationTask, do_migration
@@ -109,7 +109,10 @@ def create_dbs3_proto_blocks(opts, dataset_blocks):
 def create_dbs3_json_blocks(opts, dataset_blocks):
 	for (block, block_dump, block_size, dataset_type) in create_dbs3_proto_blocks(opts, dataset_blocks):
 		dataset = block[DataProvider.Dataset]
-		primary_dataset, processed_dataset, data_tier = dataset[1:].split('/')
+		try:
+			primary_dataset, processed_dataset, data_tier = dataset[1:].split('/')
+		except Exception:
+			raise DatasetError('Dataset name %s is not a valid DBS name!' % dataset)
 
 		# add primary dataset information
 		block_dump['primds'] = {'primary_ds_type': dataset_type, 'primary_ds_name': primary_dataset}
@@ -208,13 +211,13 @@ def discover_blocks(options):
 		workDir = os.path.abspath(os.path.normpath(options.args[0]))
 	else:
 		workDir = getConfig(configFile = options.args[0]).getWorkPath()
-	if not options.tempdir:
-		options.tempdir = os.path.join(workDir, 'dbs')
-	if not os.path.exists(options.tempdir):
-		os.mkdir(options.tempdir)
+	if not options.opts.tempdir:
+		options.opts.tempdir = os.path.join(workDir, 'dbs')
+	if not os.path.exists(options.opts.tempdir):
+		os.mkdir(options.opts.tempdir)
 
 	# get provider with dataset information
-	if options.input_file:
+	if options.opts.input_file:
 		provider = DataProvider.createInstance('ListProvider', getConfig(), options.opts.input_file, None)
 	else:
 		config = getConfig(configDict = {'dataset': options.config_dict})
@@ -315,7 +318,7 @@ def main():
 	if len(options.args) != 1:
 		utils.exitWithUsage(options.parser.usage(), 'Neither work directory nor config file specified!')
 	# Lock file in case several instances of this program are running
-	mutex = FileMutex(os.path.join(options.tempdir, 'datasetDBSAdd.lock'))
+	mutex = FileMutex(os.path.join(options.opts.tempdir, 'datasetDBSAdd.lock'))
 	try:
 		# 1) Get dataset information
 		blocks = discover_blocks(options)
