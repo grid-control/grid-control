@@ -81,7 +81,7 @@ class CSVParameterSource(InternalParameterSource):
 
 		def cleanupDict(d):
 			# strip all key value entries
-			tmp = tuple(imap(lambda item: imap(str.strip, item), d.items()))
+			tmp = tuple(imap(lambda item: lmap(str.strip, item), d.items()))
 			# filter empty parameters
 			return lfilter(lambda k_v: k_v[0] != '', tmp)
 		keys = []
