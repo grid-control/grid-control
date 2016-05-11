@@ -95,6 +95,12 @@ class ConfigEntry(object):
 				if not result:
 					used = [entry]
 					result = entry
+				elif result.opttype == '+=':
+					used.append(entry)
+					result = mkNew(entry.value + '\n' + result.value)
+				elif result.opttype == '^=':
+					used.append(entry)
+					result = mkNew(result.value + '\n' + entry.value)
 			elif entry.opttype == '*=': # this option can not be changed by other config entries
 				# TODO: notify that subsequent config options will be ignored
 				entry.used = True
