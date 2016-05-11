@@ -41,6 +41,7 @@ class LookupMatcher:
 					match = match and (lmatch.matcher(sval, lval) > 0)
 			if match:
 				return lookupValues
+		return tuple([None] * len(srcValues))
 
 	def lookup(self, info):
 		rule = self.matchRule(info)
