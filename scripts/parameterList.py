@@ -131,9 +131,13 @@ def setup_dataset(config, dataset):
 	else:
 		dataSplitter = DataSplitter.loadPartitionsForScript(dataset)
 
+	config = config.changeView(setSections = None)
+	partProcessor = config.getCompositePlugin('partition processor',
+		'TFCPartitionProcessor LocationPartitionProcessor MetaPartitionProcessor BasicPartitionProcessor',
+		'MultiPartitionProcessor', cls = 'PartitionProcessor', onChange = None)
 	DataParameterSource = ParameterSource.getClass('DataParameterSource')
 	DataParameterSource.datasetsAvailable['data'] = DataParameterSource(
-		config.getWorkPath(), 'data', None, dataSplitter, DataSplitProcessorTest())
+		config.getWorkPath(), 'data', None, dataSplitter, partProcessor)
 
 # Initialize ParameterFactory and ParameterSource
 def get_psource(opts, args):
