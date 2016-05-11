@@ -75,9 +75,9 @@ class CMSSW(SCRAMTask):
 		config.set('se input timeout', '0:30')
 		config.set('dataset provider', 'DBS3Provider')
 		config.set('dataset splitter', 'EventBoundarySplitter')
-		config.set('partition processor',
-			'TFCPartitionProcessor LFNPartitionProcessor LocationPartitionProcessor LumiPartitionProcessor CMSSWPartitionProcessor')
 		config.set('dataset processor', 'LumiDataProcessor', '+=')
+		config.set('partition processor', 'TFCPartitionProcessor LocationPartitionProcessor MetaPartitionProcessor ' +
+			'LFNPartitionProcessor LumiPartitionProcessor CMSSWPartitionProcessor')
 		dash_config = config.changeView(viewClass = 'SimpleConfigView', setSections = ['dashboard'])
 		dash_config.set('application', 'cmsRun')
 		SCRAMTask.__init__(self, config, name)
