@@ -39,7 +39,7 @@ def swap(a, b):
 ################################################################
 # Path helper functions
 
-cleanPath = lambda x: os.path.expandvars(os.path.normpath(os.path.expanduser(x.strip())))
+cleanPath = lambda x: os.path.normpath(os.path.expandvars(os.path.expanduser(x.strip())))
 
 def getRootName(fn): # Return file name without extension
 	bn = os.path.basename(str(fn)).lstrip('.')
