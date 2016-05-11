@@ -45,9 +45,9 @@ class MultiPartitionProcessor(PartitionProcessor):
 		PartitionProcessor.__init__(self, config)
 		self._processorList = lfilter(lambda proc: proc.enabled(), processorList)
 		if len(self._processorList) != len(processorList):
-			self._log.log(logging.DEBUG, 'Removed %d disabled partition processors!' % (len(processorList) - len(self._processorList)))
+			self._log.log(logging.DEBUG, 'Removed %d disabled partition processors!', len(processorList) - len(self._processorList))
 			for processor in processorList:
-				self._log.log(logging.DEBUG1, ' %s %s' % ({True: '*', False: ' '}[processor.enabled()], processor.__class__.__name__))
+				self._log.log(logging.DEBUG1, ' %s %s', {True: '*', False: ' '}[processor.enabled()], processor.__class__.__name__)
 
 	def getKeys(self):
 		return lchain(imap(lambda p: p.getKeys(), self._processorList))

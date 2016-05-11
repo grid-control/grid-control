@@ -82,6 +82,13 @@ class ConfigEntry(object):
 			result += line + '\n'
 		return result.rstrip()
 
+	def _processConcat(cls, current_result, a, b): # concat entries a and b
+		if not current_result: # Use value if currently nothing is set
+			return a
+		else: # Prepending value to current value
+			return mkNew(a.value + '\n' + b.value)
+	_processConcat = classmethod(_processConcat)
+
 	def _processEntries(cls, entryList):
 		result = None
 		used = []
@@ -107,16 +114,10 @@ class ConfigEntry(object):
 				return (entry, [entry])
 			elif entry.opttype == '+=':
 				used.append(entry)
-				if not result: # Use value if currently nothing is set
-					result = entry
-				else: # Appending value to current value
-					result = mkNew(result.value + '\n' + entry.value)
+				result = cls._processConcat(result, result, entry)
 			elif entry.opttype == '^=':
 				used.append(entry)
-				if not result: # Use value if currently nothing is set
-					result = entry
-				else: # Prepending value to current value
-					result = mkNew(entry.value + '\n' + result.value)
+				result = cls._processConcat(result, entry, result)
 			elif entry.opttype == '-=':
 				if entry.value.strip() == '': # without arguments: replace by default
 					used = [entry]
