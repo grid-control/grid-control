@@ -14,6 +14,7 @@
 
 import signal
 from grid_control import utils
+from grid_control.config import triggerResync
 from grid_control.datasets import DataProvider, DataSplitter, PartitionProcessor
 from grid_control.gc_exceptions import UserError
 from grid_control.parameters import ParameterSource
@@ -51,8 +52,8 @@ class DataTask(TaskModule):
 
 		# Create and register dataset parameter source
 		partProcessor = config.getCompositePlugin('partition processor',
-			'TFCPartitionProcessor LocationPartitionProcessor BasicPartitionProcessor',
-			'MultiPartitionProcessor', cls = PartitionProcessor)
+			'TFCPartitionProcessor LocationPartitionProcessor MetaPartitionProcessor BasicPartitionProcessor',
+			'MultiPartitionProcessor', cls = PartitionProcessor, onChange = triggerResync(['parameters']))
 		DataParameterSource = ParameterSource.getClass('DataParameterSource')
 		self._dataPS = DataParameterSource(config.getWorkPath(), 'data',
 			dataProvider, self.dataSplitter, partProcessor)

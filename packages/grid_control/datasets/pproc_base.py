@@ -111,7 +111,7 @@ class MetaPartitionProcessor(PartitionProcessor):
 
 	def __init__(self, config):
 		PartitionProcessor.__init__(self, config)
-		self._metadata = config.getList('partition metadata', [])
+		self._metadata = config.getList('partition metadata', [], onChange = None)
 
 	def getKeys(self):
 		return lmap(lambda k: ParameterMetadata(k, untracked=True), self._metadata)

@@ -14,7 +14,7 @@
 
 import os, copy, logging
 from grid_control import utils
-from grid_control.config import createConfig
+from grid_control.config import createConfig, triggerResync
 from grid_control.datasets.dproc_base import DataProcessor
 from grid_control.gc_plugin import ConfigurablePlugin
 from grid_control.utils.data_structures import makeEnum
@@ -36,7 +36,7 @@ class DataProvider(ConfigurablePlugin):
 		self._datasetProcessor = config.getCompositePlugin('dataset processor',
 			'EntriesConsistencyDataProcessor URLDataProcessor URLCountDataProcessor ' +
 			'EntriesCountDataProcessor EmptyDataProcessor UniqueDataProcessor LocationDataProcessor',
-			'MultiDataProcessor', cls = DataProcessor)
+			'MultiDataProcessor', cls = DataProcessor, onChange = triggerResync(['datasets', 'parameters']))
 
 
 	def bind(cls, value, **kwargs):
