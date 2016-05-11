@@ -54,6 +54,7 @@ def discoverDataset(providerName, config_dict):
 		return
 	DataProvider = Plugin.getClass('DataProvider')
 	provider = DataProvider.createInstance(providerName, config, config_dict['dataset'], None)
+	stripMetadata = config_dict['strip'] == 'True'
 	if config_dict['output']:
-		return DataProvider.saveToFile(config_dict['output'], provider.getBlocks(), config_dict['strip'])
-	return DataProvider.saveToStream(sys.stdout, provider.getBlocks(), config_dict['strip'])
+		return DataProvider.saveToFile(config_dict['output'], provider.getBlocks(), stripMetadata)
+	return DataProvider.saveToStream(sys.stdout, provider.getBlocks(), stripMetadata)
