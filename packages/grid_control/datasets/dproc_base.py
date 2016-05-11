@@ -15,11 +15,15 @@
 import logging
 from grid_control.gc_plugin import ConfigurablePlugin
 from hpfwk import AbstractError
+from python_compat import lfilter
 
 class DataProcessor(ConfigurablePlugin):
 	def __init__(self, config):
 		ConfigurablePlugin.__init__(self, config)
 		self._log = logging.getLogger('dataproc')
+
+	def enabled(self):
+		return True
 
 	def process(self, blockIter):
 		for block in blockIter:
@@ -33,7 +37,11 @@ class DataProcessor(ConfigurablePlugin):
 class MultiDataProcessor(DataProcessor):
 	def __init__(self, config, processorList):
 		DataProcessor.__init__(self, config)
-		self._processorList = processorList
+		self._processorList = lfilter(lambda proc: proc.enabled(), processorList)
+		if len(self._processorList) != len(processorList):
+			self._log.log(logging.DEBUG, 'Removed %d disabled dataset processors!' % (len(processorList) - len(self._processorList)))
+			for processor in processorList:
+				self._log.log(logging.DEBUG1, ' %s %s' % ({True: '*', False: ' '}[processor.enabled()], processor.__class__.__name__))
 
 	def process(self, blockIter):
 		for processor in self._processorList:

@@ -12,6 +12,7 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
+import logging
 from grid_control.backends import WMS
 from grid_control.datasets.splitter_base import DataSplitter
 from grid_control.gc_plugin import ConfigurablePlugin
@@ -22,6 +23,13 @@ from python_compat import any, imap, lfilter, lmap, set
 
 # Class used by DataParameterSource to convert dataset splittings into parameter data
 class PartitionProcessor(ConfigurablePlugin):
+	def __init__(self, config):
+		ConfigurablePlugin.__init__(self, config)
+		self._log = logging.getLogger('partproc')
+
+	def enabled(self):
+		return True
+
 	def getKeys(self):
 		return []
 
@@ -35,7 +43,11 @@ class PartitionProcessor(ConfigurablePlugin):
 class MultiPartitionProcessor(PartitionProcessor):
 	def __init__(self, config, processorList):
 		PartitionProcessor.__init__(self, config)
-		self._processorList = processorList
+		self._processorList = lfilter(lambda proc: proc.enabled(), processorList)
+		if len(self._processorList) != len(processorList):
+			self._log.log(logging.DEBUG, 'Removed %d disabled partition processors!' % (len(processorList) - len(self._processorList)))
+			for processor in processorList:
+				self._log.log(logging.DEBUG1, ' %s %s' % ({True: '*', False: ' '}[processor.enabled()], processor.__class__.__name__))
 
 	def getKeys(self):
 		return lchain(imap(lambda p: p.getKeys(), self._processorList))
@@ -93,6 +105,9 @@ class LocationPartitionProcessor(PartitionProcessor):
 		self._reqs = config.getBool('partition location requirement', True, onChange = None)
 		self._disable = config.getBool('partition location check', True, onChange = None)
 
+	def enabled(self):
+		return self._filter.getSelector() or self._preference or self._reqs or self._disable
+
 	def process(self, pNum, splitInfo, result):
 		locations = self._filter.filterList(splitInfo.get(DataSplitter.Locations))
 		if self._preference:
@@ -116,6 +131,9 @@ class MetaPartitionProcessor(PartitionProcessor):
 	def getKeys(self):
 		return lmap(lambda k: ParameterMetadata(k, untracked=True), self._metadata)
 
+	def enabled(self):
+		return self._metadata != []
+
 	def process(self, pNum, splitInfo, result):
 		for idx, mkey in enumerate(splitInfo.get(DataSplitter.MetadataHeader, [])):
 			if mkey in self._metadata:
@@ -135,6 +153,9 @@ class TFCPartitionProcessor(PartitionProcessor):
 	def __init__(self, config):
 		PartitionProcessor.__init__(self, config)
 		self._tfc = config.getLookup('partition tfc', {}, onChange = None)
+
+	def enabled(self):
+		return not self._tfc.empty()
 
 	def _lookup(self, fn, location):
 		prefix = self._tfc.lookup(location, is_selector = False)

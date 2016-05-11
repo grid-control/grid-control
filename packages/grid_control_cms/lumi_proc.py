@@ -110,6 +110,9 @@ class LumiPartitionProcessor(PartitionProcessor):
 			return []
 		return [ParameterMetadata('LUMI_RANGE', untracked = True)]
 
+	def enabled(self):
+		return not self._lumi_filter.empty()
+
 	def getNeededKeys(self, splitter):
 		if self._lumi_filter.empty():
 			return []

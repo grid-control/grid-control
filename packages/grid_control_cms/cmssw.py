@@ -40,6 +40,9 @@ class LFNPartitionProcessor(PartitionProcessor):
 		elif lfnModifier:
 			self._prefix = lfnModifier + '/store/'
 
+	def enabled(self):
+		return self._prefix is not None
+
 	def process(self, pNum, splitInfo, result):
 		def prefixLFN(lfn):
 			return self._prefix + lfn.split('/store/', 1)[-1]

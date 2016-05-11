@@ -83,8 +83,11 @@ class URLDataProcessor(DataProcessor):
 								yield fi[DataProvider.URL]
 		return str.join('\n', getFilterEntries())
 
+	def enabled(self):
+		return self._url_filter.getSelector() is not None
+
 	def processBlock(self, block):
-		if self._url_filter.getSelector():
+		if self.enabled():
 			block[DataProvider.FileList] = self._url_filter.filterList(block[DataProvider.FileList])
 		return block
 
@@ -96,8 +99,11 @@ class URLCountDataProcessor(DataProcessor):
 		DataProcessor.__init__(self, config)
 		self._limitFiles = config.getInt(['dataset limit urls', 'dataset limit files'], -1)
 
+	def enabled(self):
+		return self._limitFiles != -1
+
 	def processBlock(self, block):
-		if self._limitFiles != -1:
+		if self.enabled():
 			block[DataProvider.FileList] = block[DataProvider.FileList][:self._limitFiles]
 			self._limitFiles -= len(block[DataProvider.FileList])
 		return block
@@ -110,8 +116,11 @@ class EntriesCountDataProcessor(DataProcessor):
 		DataProcessor.__init__(self, config)
 		self._limitEntries = config.getInt(['dataset limit entries', 'dataset limit events'], -1)
 
+	def enabled(self):
+		return self._limitEntries != -1
+
 	def processBlock(self, block):
-		if self._limitEntries != -1:
+		if self.enabled():
 			block[DataProvider.NEntries] = 0
 			def filterEvents(fi):
 				if self._limitEntries == 0: # already got all requested events
@@ -133,6 +142,9 @@ class EmptyDataProcessor(DataProcessor):
 		DataProcessor.__init__(self, config)
 		self._emptyFiles = config.getBool('dataset remove empty files', True)
 		self._emptyBlock = config.getBool('dataset remove empty blocks', True)
+
+	def enabled(self):
+		return self._emptyBlock or self._emptyFiles
 
 	def processBlock(self, block):
 		if self._emptyFiles:
@@ -177,6 +189,9 @@ class UniqueDataProcessor(DataProcessor):
 		self._checkURL = config.getEnum(self._checkURLOpt, DatasetUniqueMode, DatasetUniqueMode.abort)
 		self._checkBlockOpt = 'dataset check unique block'
 		self._checkBlock = config.getEnum(self._checkBlockOpt, DatasetUniqueMode, DatasetUniqueMode.abort)
+
+	def enabled(self):
+		return (self._checkURL == DatasetUniqueMode.ignore) and (self._checkBlock == DatasetUniqueMode.ignore)
 
 	def process(self, blockIter):
 		self._recordedURL = set()
