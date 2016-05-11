@@ -34,7 +34,7 @@ class CMSSW_Advanced(CMSSW):
 		if not self._nmCfg.empty():
 			if 'config file' in config.getOptions():
 				raise ConfigError("Please use 'nickname config' instead of 'config file'")
-			allConfigFiles = utils.flatten(self._nmCfg.get_values())
+			allConfigFiles = set(utils.flatten(self._nmCfg.get_values()))
 			config.set('config file', str.join('\n', allConfigFiles))
 			head.append((1, 'Config file'))
 
