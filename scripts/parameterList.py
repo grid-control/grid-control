@@ -102,6 +102,8 @@ def setup_config(opts, args):
 	if os.path.exists(args[0]):
 		configFile = args[0]
 	config = getConfig(configFile, section = 'global')
+	if os.path.exists(config.getWorkPath('datamap.tar')):
+		opts.dataset = config.getWorkPath('datamap.tar')
 	config.changeView(setSections = ['jobs']).set('nseeds', '1', '?=')
 	configParameters = config.changeView(setSections = ['parameters'])
 	if opts.parameter:
