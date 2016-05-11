@@ -12,7 +12,7 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-import os
+import os, shlex
 from grid_control import utils
 from grid_control.gc_plugin import NamedPlugin
 from grid_control.job_db import Job
@@ -134,7 +134,7 @@ class ScriptMonitoring(Monitoring):
 
 			script = self._task.substVars('monitoring script', script, jobNum, tmp)
 			if not self._silent:
-				proc = LocalProcess(script)
+				proc = LocalProcess(*shlex.split(script))
 				self._log.info(proc.get_output(timeout = self._runningMax))
 			else:
 				os.system(script)
