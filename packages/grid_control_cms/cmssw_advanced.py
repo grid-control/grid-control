@@ -65,7 +65,7 @@ class CMSSW_Advanced(CMSSW):
 			nickNames = set()
 			for block in DataProvider.loadFromFile(dsPath).getBlocks():
 				nickNames.add(block[DataProvider.Nickname])
-			utils.vprint('Mapping between nickname and other settings:\n', -1)
+			utils.vprint('Mapping between nickname and other settings:', -1)
 			report = []
 			for nick in sorted(nickNames):
 				lumi_filter_str = formatLumi(self._nmLumi.lookup(nick, '', is_selector = False))
@@ -81,7 +81,6 @@ class CMSSW_Advanced(CMSSW):
 				tmp.update(lookupvars)
 				report.append(tmp)
 			utils.printTabular(head, report, 'cl')
-			utils.vprint(level = -1)
 
 
 	def getTaskConfig(self):

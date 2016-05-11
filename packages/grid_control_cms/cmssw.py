@@ -184,7 +184,9 @@ class CMSSW(SCRAMTask):
 		log = logging.getLogger('user')
 		log.info('Local jobs will try to use the CMSSW software located here:')
 		for i, loc in enumerate(result):
-			log.info(' %i) %s' % (i + 1, loc[1]))
+			log.info(' %i) %s', i + 1, loc[1])
+		if result:
+			log.info('')
 		return result
 
 
@@ -247,9 +249,8 @@ class CMSSW(SCRAMTask):
 			cfgStatus.append({1: cfg.split(comPath, 1)[1].lstrip('/'), 2: cfg_new_exists,
 				3: isInstrumented, 4: doPrepare})
 
-		utils.vprint('', -1)
-		utils.printTabular([(1, 'Config file'), (2, 'Work dir'), (3, 'Instrumented'), (4, 'Scheduled')], cfgStatus, 'lccc')
-		utils.vprint('', -1)
+		if cfgStatus:
+			utils.printTabular([(1, 'Config file'), (2, 'Work dir'), (3, 'Instrumented'), (4, 'Scheduled')], cfgStatus, 'lccc')
 		return cfgTodo
 
 

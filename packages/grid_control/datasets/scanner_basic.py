@@ -12,7 +12,7 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-import os, sys
+import os, sys, logging
 from grid_control import utils
 from grid_control.config import ConfigError, createConfig
 from grid_control.datasets import DataProvider, DatasetError
@@ -34,17 +34,17 @@ class NullScanner(InfoScanner):
 class OutputDirsFromConfig(InfoScanner):
 	def __init__(self, config):
 		InfoScanner.__init__(self, config)
-		newVerbosity = utils.verbosity(utils.verbosity() - 3)
 		ext_config_fn = config.getPath('source config')
 		ext_config = createConfig(ext_config_fn).changeView(setSections = ['global'])
 		self._extWorkDir = ext_config.getWorkPath()
+		logging.getLogger('user').disabled = True
 		self._extWorkflow = ext_config.getPlugin('workflow', 'Workflow:global', cls = 'Workflow',
 			pargs = ('task',))
+		logging.getLogger('user').disabled = False
 		self._extTask = self._extWorkflow.task
 		selector = config.get('source job selector', '')
 		ext_job_db = JobDB(ext_config, jobSelector = lambda jobNum, jobObj: jobObj.state == Job.SUCCESS)
 		self._selected = sorted(ext_job_db.getJobs(JobSelector.create(selector, task = self._extTask)))
-		utils.verbosity(newVerbosity + 3)
 
 	def getEntries(self, path, metadata, events, seList, objStore):
 		for jobNum in self._selected:
