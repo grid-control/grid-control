@@ -95,24 +95,20 @@ timestamp "CMSSW_STARTUP" "DONE"
 
 GC_CMSSWRUN_RETCODE=0
 # Additional prolog scripts in the CMSSW environment
-for CMSSW_BIN in $CMSSW_PROLOG_EXEC; do
-	_PROLOG_COUNT=1
-	timestamp "CMSSW_PROLOG${_PROLOG_COUNT}" "START"
+if [ -n "$CMSSW_PROLOG_EXEC" ]; then
+	timestamp "CMSSW_PROLOG1" "START"
 	echo "---------------------------"
 	echo
-	echo "Starting $CMSSW_BIN with arguments: $CMSSW_PROLOG_ARGS"
-#	checkbin "$CMSSW_BIN"
-	eval "$CMSSW_BIN $CMSSW_PROLOG_ARGS"
+	echo "Starting $CMSSW_PROLOG_EXEC with arguments: $CMSSW_PROLOG_ARGS"
+	eval "$CMSSW_PROLOG_EXEC $CMSSW_PROLOG_ARGS"
 	GC_CMSSWRUN_RETCODE=$?
 	echo
-	timestamp "CMSSW_PROLOG${_PROLOG_COUNT}" "DONE"
-	_PROLOG_COUNT=$[ $_PROLOG_COUNT +1]
-	if [ "$GC_CMSSWRUN_RETCODE" != "0" ];then
-		echo "Prologue $CMSSW_BIN failed with code: $GC_CMSSWRUN_RETCODE"
+	timestamp "CMSSW_PROLOG1" "DONE"
+	if [ "$GC_CMSSWRUN_RETCODE" != "0" ]; then
+		echo "Prologue $CMSSW_EPILOG_EXEC failed with code: $GC_CMSSWRUN_RETCODE"
 		echo "Aborting..."
-		break
 	fi
-done
+fi
 
 echo "---------------------------"
 echo
@@ -200,25 +196,21 @@ if [ "$GC_CMSSWRUN_RETCODE" == "0" ] && [ -n "$CMSSW_CONFIG" ]; then
 fi
 
 # Additional epilog script in the CMSSW environment
-if [ "$GC_CMSSWRUN_RETCODE" == "0" ]; then
-#	for CMSSW_BIN in $CMSSW_EPILOG_EXEC; do
-		_EPILOG_COUNT=1
-		timestamp "CMSSW_EPILOG${_EPILOG_COUNT}" "START"
+if [ -n "$CMSSW_EPILOG_EXEC" ]; then
+	if [ "$GC_CMSSWRUN_RETCODE" == "0" ]; then
+		timestamp "CMSSW_EPILOG1" "START"
 		echo "---------------------------"
 		echo
 		echo "Starting $CMSSW_EPILOG_EXEC with arguments: $CMSSW_EPILOG_ARGS"
-#		checkbin "$CMSSW_BIN"
 		eval "$CMSSW_EPILOG_EXEC $CMSSW_EPILOG_ARGS"
 		GC_CMSSWRUN_RETCODE=$?
 		echo
-		timestamp "CMSSW_EPILOG${_EPILOG_COUNT}" "DONE"
-		_EPILOG_COUNT=$[ $_EPILOG_COUNT +1]
-		if [ "$GC_CMSSWRUN_RETCODE" != "0" ];then
+		timestamp "CMSSW_EPILOG1" "DONE"
+		if [ "$GC_CMSSWRUN_RETCODE" != "0" ]; then
 			echo "Epilogue $CMSSW_EPILOG_EXEC failed with code: $GC_CMSSWRUN_RETCODE"
 			echo "Aborting..."
-#			break
 		fi
-#	done
+	fi
 fi
 
 echo
