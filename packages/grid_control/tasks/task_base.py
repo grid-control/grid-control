@@ -158,7 +158,7 @@ class TaskModule(NamedPlugin):
 
 
 	def validateVariables(self):
-		example_vars = self.getJobConfig(0)
+		example_vars = dict.fromkeys(self.getVarNames(), '')
 		example_vars.update(dict.fromkeys(['X', 'XBASE', 'XEXT', 'GC_DATE', 'GC_TIMESTAMP', 'GC_GUID', 'RANDOM'], ''))
 		for name, value in ichain([self.getTaskConfig().items(), example_vars.items()]):
 			self.substVars(name, value, None, example_vars)
