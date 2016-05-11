@@ -12,7 +12,7 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-from grid_control.config.chandlers_base import changeImpossible, changeInitNeeded, validNoVar
+from grid_control.config.chandlers_base import changeImpossible, changeInitNeeded, triggerResync, validNoVar
 from grid_control.config.config_entry import ConfigError, noDefault
 from grid_control.config.config_factory import createConfig
 from grid_control.config.matcher_base import ListFilter, ListOrder, Matcher

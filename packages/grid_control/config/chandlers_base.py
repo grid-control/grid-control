@@ -32,6 +32,18 @@ def changeImpossible(config, old_obj, cur_obj, cur_entry, obj2str):
 	raise ConfigError(msg)
 
 
+class triggerResync(object):
+	def __init__(self, details):
+		self._details = details
+
+	def __call__(self, config, old_obj, cur_obj, cur_entry, obj2str):
+		logging.getLogger('user').info('%s was changed - triggering resync of %s', cur_entry.format_opt(), str.join(', ', self._details))
+		for detail in self._details:
+			config.setState(True, 'resync', detail = detail)
+		config.setState(True, 'init', detail = 'config') # This will trigger a write of the new options
+		return cur_obj
+
+
 # Change handler to trigger re-inits
 class changeInitNeeded(object):
 	def __init__(self, option):
