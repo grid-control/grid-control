@@ -1,6 +1,7 @@
 #!/bin/bash
 
 echo "Hello World - $@"
+echo "Hello World - $@" >> argfile
 
 export
 export > output.vars1
