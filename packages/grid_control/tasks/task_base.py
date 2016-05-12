@@ -211,7 +211,7 @@ class TaskModule(NamedPlugin):
 
 	def getDescription(self, jobNum): # (task name, job name, job type)
 		return utils.Result(taskName = self.taskID,
-			jobName = self.taskID[:10] + '.' + str(jobNum), jobType = None)
+			jobName = self.taskConfigName + "_" + self.taskID[:10] + '.' + str(jobNum), jobType = None)
 
 
 	def report(self, jobNum):
