@@ -162,8 +162,10 @@ class Process(object):
 				if os.path.exists(os.path.join(path, cmd)):
 					cmd = os.path.join(path, cmd)
 					break
+		if not os.path.exists(cmd):
+			raise ProcessError('%r does not exist' % cmd)
 		if not os.access(cmd, os.X_OK):
-			raise OSError('Unable to execute %r' % cmd)
+			raise ProcessError('%r is not executable' % cmd)
 		self._log = logging.getLogger('process.%s' % os.path.basename(cmd).lower())
 		self._log.debug('External programm called: %s %s', cmd, self._args)
 		self._cmd = cmd
