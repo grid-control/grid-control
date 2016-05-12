@@ -1,9 +1,7 @@
 #!/bin/bash
 
 SRCFILE="${1:-output.vars1}"
-if [ -z "$1" ]; then
-	export
-fi
+echo
 (
 for OUTPUTDIR in $GC_WORKDIR/output/*; do
 	echo $(cat $OUTPUTDIR/$SRCFILE)
