@@ -135,10 +135,8 @@ class ModuleReport(CategoryBaseReport):
 			infos.append(tmp)
 
 		stateCatList = ['WAITING', 'RUNNING', 'FAILED', 'SUCCESS']
-		utils.vprint(level = -1)
 		utils.printTabular(lmap(lambda x: (x, x), sorted(head) + stateCatList),
 			infos, 'c' * len(head), fmt = dict.fromkeys(stateCatList, lambda x: '%7d' % parseStr(x, int, 0)))
-		utils.vprint(level = -1)
 
 
 class AdaptiveBaseReport(CategoryBaseReport):

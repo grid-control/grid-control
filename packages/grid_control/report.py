@@ -120,4 +120,3 @@ class LocationReport(Report):
 			elif jobObj.get('dest', 'N/A') != 'N/A':
 				reports.append({2: ' -> ' + jobObj.get('dest')})
 		utils.printTabular(lzip(irange(3), ['Job', 'Status / Attempt', 'Id / Destination']), reports, 'rcl')
-		utils.vprint()
