@@ -182,7 +182,7 @@ class TaskModule(NamedPlugin):
 		subst = lambda x: utils.replaceDict(x, allVars, ichain([self.getVarMapping().items(), izip(addDict, addDict)]))
 		result = subst(subst(str(inp)))
 		if check and self._varCheck.check(result):
-			raise ConfigError('%s references unknown variables: %s' % (name, inp))
+			raise ConfigError('%s references unknown variables: %s' % (name, result))
 		return result
 
 
