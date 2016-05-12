@@ -152,7 +152,7 @@ class SimpleConfigInterface(TypedConfigInterface):
 		scriptType = self.getEnum(appendOption(option, 'type'), CommandType, CommandType.executable, **kwargs)
 		if scriptType == CommandType.executable:
 			return self.getPath(option, default, **kwargs)
-		return self.get(option, default, **kwargs)
+		return os.path.expandvars(self.get(option, default, **kwargs))
 
 	def getLookup(self, option, default = noDefault,
 			defaultMatcher = 'start', single = True, includeDefault = False, **kwargs):
