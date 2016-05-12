@@ -130,6 +130,12 @@
 
       * grid_control.job_db_zip Migrate2ZippedJobDB
 
+    * grid_control.tasks.task_base JobNamePlugin
+
+     * grid_control.tasks.task_base ConfigurableJobName config
+
+     * grid_control.tasks.task_base DefaultJobName default
+
     * grid_control.config.matcher_base Matcher
 
      * grid_control.config.matcher_base BasicMatcher

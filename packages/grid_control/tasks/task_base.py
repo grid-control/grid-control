@@ -16,13 +16,40 @@ import os, random
 from grid_control import utils
 from grid_control.backends import WMS
 from grid_control.config import ConfigError, changeInitNeeded, validNoVar
-from grid_control.gc_plugin import NamedPlugin
+from grid_control.gc_plugin import ConfigurablePlugin, NamedPlugin
 from grid_control.parameters import ParameterFactory, ParameterInfo
 from grid_control.utils.file_objects import SafeFile
 from grid_control.utils.gc_itertools import ichain, lchain
 from hpfwk import AbstractError
 from time import strftime, time
 from python_compat import ifilter, imap, izip, lfilter, lmap, lru_cache, md5_hex
+
+class JobNamePlugin(ConfigurablePlugin):
+	def __init__(self, config, task):
+		ConfigurablePlugin.__init__(self, config)
+		self._task = task
+
+	def getName(self, jobNum):
+		raise AbstractError
+
+
+class DefaultJobName(JobNamePlugin):
+	alias = ['default']
+
+	def getName(self, jobNum):
+		return self._task.taskID[:10] + '.' + str(jobNum)
+
+
+class ConfigurableJobName(JobNamePlugin):
+	alias = ['config']
+
+	def __init__(self, config, task):
+		JobNamePlugin.__init__(self, config, task)
+		self._name = config.get('job name', '@GC_TASK_ID@.@GC_JOB_ID@', onChange = None)
+
+	def getName(self, jobNum):
+		return self._task.substVars('job name', self._name, jobNum)
+
 
 class TaskModule(NamedPlugin):
 	configSections = NamedPlugin.configSections + ['task']
@@ -46,6 +73,8 @@ class TaskModule(NamedPlugin):
 		self.taskID = config.get('task id', 'GC' + md5_hex(str(time()))[:12], persistent = True)
 		self.taskDate = config.get('task date', strftime('%Y-%m-%d'), persistent = True, onChange = initSandbox)
 		self.taskConfigName = config.getConfigName()
+		self._job_name_generator = config.getPlugin('job name generator', 'DefaultJobName',
+			cls = JobNamePlugin, pargs = (self,))
 
 		# Storage setup
 		storage_config = config.changeView(viewClass = 'TaggedConfigView',
@@ -210,8 +239,8 @@ class TaskModule(NamedPlugin):
 
 
 	def getDescription(self, jobNum): # (task name, job name, job type)
-		return utils.Result(taskName = self.taskID,
-			jobName = self.taskID[:10] + '.' + str(jobNum), jobType = None)
+		return utils.Result(taskName = self.taskID, jobType = None,
+			jobName = self._job_name_generator.getName(jobNum))
 
 
 	def report(self, jobNum):
