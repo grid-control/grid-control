@@ -58,7 +58,7 @@ class OutputDirsFromConfig(InfoScanner):
 class OutputDirsFromWork(InfoScanner):
 	def __init__(self, config):
 		InfoScanner.__init__(self, config)
-		self._extWorkDir = config.get('source directory')
+		self._extWorkDir = config.getPath('source directory')
 		self._extOutputDir = os.path.join(self._extWorkDir, 'output')
 		self._selector = JobSelector.create(config.get('source job selector', ''))
 
