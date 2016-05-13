@@ -155,6 +155,8 @@ class FileConfigFiller(ConfigFiller):
 		assert_set(self._currentValue is not None, 'Config value is not set!')
 		assert_set(self._currentIndices, 'Config source not set!')
 		sectionContent = configContent.setdefault(self._currentSection, [])
+		self._currentValue = self._currentValue.replace('$GC_CONFIG_DIR', os.path.dirname(configFile))
+		self._currentValue = self._currentValue.replace('$GC_CONFIG_FILE', configFile)
 		sectionContent.append((self._currentOption, self._currentValue,
 			configFile + ':' + str.join(',', imap(str, self._currentIndices))))
 		(self._currentOption, self._currentValue, self._currentIndices) = (None, None, None)
