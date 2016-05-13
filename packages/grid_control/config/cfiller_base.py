@@ -22,14 +22,14 @@ from grid_control.utils.gc_itertools import ichain
 from grid_control.utils.parsing import parseList
 from grid_control.utils.thread_tools import TimeoutException, hang_protection
 from hpfwk import AbstractError, Plugin
-from python_compat import identity, imap, irange, ismap, lfilter, lmap, rsplit
+from python_compat import identity, imap, irange, ismap, itemgetter, lfilter, lmap, rsplit
 
 # Class to fill config containers with settings
 class ConfigFiller(Plugin):
 	def _addEntry(self, container, section, option, value, source):
 		option = option.strip()
 		opttype = '='
-		if option[-1] in ['+', '-', '*', '?', '^']:
+		if option[-1] in imap(itemgetter(0), ConfigEntry.OptTypeDesc.keys()):
 			opttype = option[-1] + '='
 			option = option[:-1].strip()
 		container.append(ConfigEntry(section.strip(), option, value.strip(), opttype, source))

@@ -40,6 +40,9 @@ def appendOption(option, suffix):
 
 # Holder of config information
 class ConfigEntry(object):
+	OptTypeDesc = {'?=': 'default', '+=': 'append', '^=': 'prepend', '-=': 'replace',
+		'=': 'override', '*=': 'finalize', '!=': 'modified'}
+
 	def __init__(self, section, option, value, opttype, source, order = None, accessed = False, used = False):
 		(self.section, self.option, self.source, self.order) = (section.lower(), option.lower(), source.lower(), order)
 		(self.value, self.opttype, self.accessed, self.used) = (value, opttype, accessed, used)
@@ -89,47 +92,68 @@ class ConfigEntry(object):
 			return ConfigEntry(entry.section, entry.option, a.value + '\n' + b.value, '=', '<processed>')
 	_processConcat = classmethod(_processConcat)
 
+	def _applyModifiers(cls, entry, modifierList):
+		def mkNew(base, value):
+			return ConfigEntry(base.section, base.option, value, '=', '<processed>')
+		for modifier in modifierList:
+			if modifier.opttype == '+=':
+				if entry:
+					entry = mkNew(entry, entry.value + '\n' + modifier.value)
+				else:
+					entry = mkNew(modifier, modifier.value)
+			elif modifier.opttype == '^=':
+				if entry:
+					entry = mkNew(entry, modifier.value + '\n' + entry.value)
+				else:
+					entry = mkNew(modifier, modifier.value)
+			elif modifier.opttype == '-=':
+				if modifier.value.strip() == '': # without arguments: remove all entries up to this entry
+					entry = None
+				elif entry is not None: # with arguments: remove string from current value
+					entry = mkNew(entry, entry.value.replace(modifier.value.strip(), ''))
+				else:
+					raise ConfigError('Unable to substract "%s" from non-existing value!' % modifier.format_opt())
+		return entry
+	_applyModifiers = classmethod(_applyModifiers)
+
 	def _processEntries(cls, entryList):
 		result = None
 		used = []
+		modifierList = []
 		for entry in entryList:
-			def mkNew(value):
-				return ConfigEntry(entry.section, entry.option, value, '=', '<processed>')
-			if entry.opttype == '=': # Normal, overwriting setting
-				used = [entry]
-				result = entry
-			elif entry.opttype == '?=': # Conditional setting
-				if not result:
-					used = [entry]
-					result = entry
-				elif result.opttype == '+=':
-					used.append(entry)
-					result = mkNew(entry.value + '\n' + result.value)
-				elif result.opttype == '^=':
-					used.append(entry)
-					result = mkNew(result.value + '\n' + entry.value)
-			elif entry.opttype == '*=': # this option can not be changed by other config entries
-				# TODO: notify that subsequent config options will be ignored
-				entry.used = True
-				return (entry, [entry])
-			elif entry.opttype == '+=':
-				used.append(entry)
-				result = cls._processConcat(entry, result, result, entry)
-			elif entry.opttype == '^=':
-				used.append(entry)
-				result = cls._processConcat(entry, result, entry, result)
-			elif entry.opttype == '-=':
-				if entry.value.strip() == '': # without arguments: replace by default
+			if entry.opttype == '-=': # context sensitive option
+				if entry.value.strip() == '': # set-like option
 					used = [entry]
 					result = None
-				elif result: # with arguments: remove string from current value
-					used.append(entry)
-					result = mkNew(result.value.replace(entry.value.strip(), ''))
+					modifierList = []
 				else:
-					raise ConfigError('Unable to substract "%s" from non-existing value!' % entry.format_opt())
+					modifierList.append(entry)
+			if entry.opttype in ['+=', '^=']: # modifier options
+				modifierList.append(entry)
+			elif entry.opttype in ['*=', '!=', '?=', '=']: # set options:
+				if entry.opttype == '*=': # this option can not be changed by other config entries
+					# TODO: notify that subsequent config options will be ignored
+					return (entry, [entry])
+				elif entry.opttype == '=': # set but don't apply collected modifiers
+					used = [entry]
+					result = entry
+					modifierList = []
+				elif entry.opttype == '?=': # Conditional set with applied modifiers
+					if not result:
+						used = [entry] + modifierList
+						result = cls._applyModifiers(entry, modifierList)
+						modifierList = []
+				elif entry.opttype == '!=': # set and apply collected modifiers
+					used = [entry] + modifierList
+					result = cls._applyModifiers(entry, modifierList)
+					modifierList = []
+		if modifierList: # apply remaining modifiers - result can be None
+			used.extend(modifierList)
+			result = cls._applyModifiers(result, modifierList)
 		return (result, used)
 	_processEntries = classmethod(_processEntries)
 
+	# called to simplify entries for a specific option *and* section - sorted by order
 	def simplifyEntries(cls, entryList):
 		(result_base, used) = cls.processEntries(entryList)
 		# Merge subsequent += and ^= entries
@@ -149,7 +173,7 @@ class ConfigEntry(object):
 			if previousEntry:
 				yield previousEntry
 
-		if used[0].opttype == '=':
+		if used[0].opttype in ['*=', '!=', '?=', '=']:
 			result = [cls.combineEntries(used)]
 		else:
 			result = list(mergeSubsequent(used))
