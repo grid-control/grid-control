@@ -188,7 +188,10 @@ def createLookupHelper(pconfig, var_list, lookup_list):
 
 	pvalue = pconfig.getParameter(var_name.lstrip('!'))
 	if isinstance(pvalue, list): # simple parameter source
-		return [(False, SimpleParameterSource, [var_name, pvalue])]
+		if len(pvalue) == 1:
+			return [(False, ConstParameterSource, [var_name, pvalue[0]])]
+		else:
+			return [(False, SimpleParameterSource, [var_name, pvalue])]
 	elif isinstance(pvalue, tuple) and pvalue[0] == 'format':
 		return [(False, FormatterParameterSource, pvalue[1:])]
 
