@@ -18,6 +18,7 @@ from grid_control.config.cfiller_base import CompatConfigFiller, DefaultFilesCon
 from grid_control.config.cinterface_typed import SimpleConfigInterface
 from grid_control.config.config_entry import ConfigContainer, ConfigError
 from grid_control.config.cview_base import SimpleConfigView
+from grid_control.gc_exceptions import GCLogHandler
 from grid_control.utils.data_structures import UniqueList
 from grid_control.utils.file_objects import SafeFile
 from python_compat import lfilter
@@ -117,6 +118,5 @@ def createConfig(configFile = None, configDict = None, useDefaultFiles = True, a
 		fillerList.append(DictConfigFiller(configDict))
 	fillerList.extend(additional or [])
 	config = ConfigFactory(MultiConfigFiller(fillerList), configFile).getConfig()
-	createConfig.instances.append(config)
+	GCLogHandler.config_instances.append(config)
 	return config
-createConfig.instances = []

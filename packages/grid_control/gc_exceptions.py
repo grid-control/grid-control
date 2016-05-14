@@ -38,7 +38,7 @@ class GCLogHandler(logging.FileHandler):
 		try:
 			fp = open(self._fn, 'a')
 			from grid_control.config import createConfig
-			for instance in createConfig.instances:
+			for instance in GCLogHandler.config_instances:
 				fp.write('=' * 20 + '\n')
 				instance.write(fp)
 			fp.close()
@@ -46,6 +46,7 @@ class GCLogHandler(logging.FileHandler):
 			pass
 		sys.stderr.write('In case this is caused by a bug, please send the log file:\n')
 		sys.stderr.write('\t"%s"\nto grid-control-dev@googlegroups.com\n' % self._fn)
+GCLogHandler.config_instances = []
 
 
 # Exception handler for interactive mode:
