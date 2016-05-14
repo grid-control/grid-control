@@ -348,6 +348,8 @@
 
     * grid_control.output_processor JobInfoProcessor
 
+     * grid_control.output_processor DebugJobInfoProcessor
+
      * grid_control.output_processor FileInfoProcessor
 
     * grid_control.output_processor TaskOutputProcessor
