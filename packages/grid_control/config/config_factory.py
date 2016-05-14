@@ -116,4 +116,7 @@ def createConfig(configFile = None, configDict = None, useDefaultFiles = True, a
 	if configDict:
 		fillerList.append(DictConfigFiller(configDict))
 	fillerList.extend(additional or [])
-	return ConfigFactory(MultiConfigFiller(fillerList), configFile).getConfig()
+	config = ConfigFactory(MultiConfigFiller(fillerList), configFile).getConfig()
+	createConfig.instances.append(config)
+	return config
+createConfig.instances = []
