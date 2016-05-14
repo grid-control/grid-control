@@ -82,7 +82,11 @@ def lookupConfigParser(pconfig, outputKey, lookupKeys):
 class SimpleLookupParameterSource(SingleParameterSource):
 	def __init__(self, outputKey, lookupKeys, lookupFunctions, lookupDictConfig):
 		SingleParameterSource.__init__(self, outputKey)
+		self._lookupKeys = lookupKeys
 		self._matcher = LookupMatcher(lookupKeys, lookupFunctions, lookupDictConfig)
+
+	def depends(self):
+		return self._lookupKeys
 
 	def fillParameterInfo(self, pNum, result):
 		lookupResult = self._matcher.lookup(result)
