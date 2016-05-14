@@ -15,7 +15,7 @@
 from grid_control import utils
 from grid_control.config import ConfigError, Matcher
 from grid_control.parameters.psource_base import ParameterInfo, ParameterSource
-from grid_control.parameters.psource_basic import FormatterParameterSource, KeyParameterSource, SimpleParameterSource, SingleParameterSource
+from grid_control.parameters.psource_basic import KeyParameterSource, SingleParameterSource
 from python_compat import imap, irange, izip, lmap, md5_hex
 
 class LookupMatcher:
@@ -41,7 +41,6 @@ class LookupMatcher:
 					match = match and (lmatch.matcher(sval, lval) > 0)
 			if match:
 				return lookupValues
-		return tuple([None] * len(srcValues))
 
 	def lookup(self, info):
 		rule = self.matchRule(info)
@@ -193,11 +192,11 @@ def createLookupHelper(pconfig, var_list, lookup_list):
 	pvalue = pconfig.getParameter(var_name.lstrip('!'))
 	if isinstance(pvalue, list): # simple parameter source
 		if len(pvalue) == 1:
-			return [(False, ConstParameterSource, [var_name, pvalue[0]])]
+			return [(False, ParameterSource.getClass('ConstParameterSource'), [var_name, pvalue[0]])]
 		else:
-			return [(False, SimpleParameterSource, [var_name, pvalue])]
+			return [(False, ParameterSource.getClass('SimpleParameterSource'), [var_name, pvalue])]
 	elif isinstance(pvalue, tuple) and pvalue[0] == 'format':
-		return [(False, FormatterParameterSource, pvalue[1:])]
+		return [(False, ParameterSource.getClass('FormatterParameterSource'), pvalue[1:])]
 
 	lookup_key = None
 	if lookup_list: # default lookup key

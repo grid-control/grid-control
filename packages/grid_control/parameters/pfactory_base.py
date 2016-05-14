@@ -13,13 +13,13 @@
 # | limitations under the License.
 
 import random
-from grid_control.config import Matcher
 from grid_control.gc_plugin import NamedPlugin
 from grid_control.parameters.config_param import ParameterConfig
 from grid_control.parameters.padapter import ParameterAdapter
 from grid_control.parameters.psource_base import ParameterSource
+from grid_control.parameters.psource_lookup import createLookupHelper
 from hpfwk import Plugin
-from python_compat import ifilter, irange, lmap
+from python_compat import identity, ifilter, imap, irange, lfilter, lmap
 
 class ParameterFactory(NamedPlugin):
 	configSections = NamedPlugin.configSections + ['parameters']
@@ -45,17 +45,21 @@ class ParameterFactory(NamedPlugin):
 
 class BasicParameterFactory(ParameterFactory):
 	def __init__(self, config, name):
-		(self.constSources, self.lookupSources) = ([], [])
+		(self.constSources, self.lookupSources, self.elevateSources) = ([], [], [])
 		ParameterFactory.__init__(self, config, name)
 
 		# Get constants from [constants <tags...>]
 		constants_config = config.changeView(viewClass = 'TaggedConfigView',
 			setClasses = None, setSections = ['constants'], addTags = [self])
+		constants_pconfig = ParameterConfig(constants_config, self.adapter != 'TrackedParameterAdapter')
 		for cName in ifilter(lambda o: not o.endswith(' lookup'), constants_config.getOptions()):
-			self._addConstantPSource(constants_config, cName, cName.upper())
+			constants_config.set('%s type' % cName, 'verbatim', '?=')
+			self._registerPSource(constants_pconfig, cName.upper())
 		# Get constants from [<Module>] constants
+		task_pconfig = ParameterConfig(config, self.adapter != 'TrackedParameterAdapter')
 		for cName in config.getList('constants', []):
-			self._addConstantPSource(config, cName, cName)
+			config.set('%s type' % cName, 'verbatim', '?=')
+			self._registerPSource(task_pconfig, cName)
 		# Random number variables
 		jobs_config = config.changeView(addSections = ['jobs'])
 		nseeds = jobs_config.getInt('nseeds', 10)
@@ -66,25 +70,34 @@ class BasicParameterFactory(ParameterFactory):
 		self.repeat = config.getInt('repeat', 1, onChange = None) # ALL config.x -> paramconfig.x !
 
 
-	def _addConstantPSource(self, config, cName, varName):
-		lookupVar = config.get('%s lookup' % cName, '', onChange = None)
-		if lookupVar:
-			matcher = Matcher.createInstance(config.get('%s matcher' % cName, 'start', onChange = None), config, cName)
-			content = config.getDict(cName, {}, onChange = None)
-			content_fixed = {}
-			content_order = lmap(lambda x: (x,), content[1])
-			for key in content[0]:
-				content_fixed[(key,)] = (content[0][key],)
-			ps = ParameterSource.createInstance('SimpleLookupParameterSource', varName, [lookupVar], [matcher], (content_fixed, content_order))
-			self.lookupSources.append(ps)
-		else:
-			ps = ParameterSource.createInstance('ConstParameterSource', varName, config.get(cName).strip())
-			self.constSources.append(ps)
+	def _registerPSource(self, config, varName):
+		def replace_nonalnum(value):
+			if str.isalnum(value):
+				return value
+			return ' '
+		lookup_str = config.get(varName, 'lookup', '')
+		lookup_list = lfilter(identity, str.join('', imap(replace_nonalnum, lookup_str)).split())
+		for (doElevate, PSourceClass, args) in createLookupHelper(config, [varName], lookup_list):
+			if doElevate: # switch needs elevation beyond local scope
+				self.elevateSources.append((PSourceClass, args))
+			else:
+				ps = PSourceClass(*args)
+				if ps.depends():
+					self.lookupSources.append(ps)
+				else:
+					self.constSources.append(ps)
 
 
 	def _getRawSource(self, parent):
-		source_list = self.constSources + [parent, ParameterSource.createInstance('RequirementParameterSource')] + self.lookupSources
+		req_source = ParameterSource.createInstance('RequirementParameterSource')
+		source_list = self.constSources + [parent] + self.lookupSources
+		if not self.elevateSources:
+			source_list.append(req_source)
 		source = ParameterSource.createInstance('ZipLongParameterSource', *source_list)
+		for (PSourceClass, args) in self.elevateSources:
+			source = PSourceClass(source, *args)
+		if self.elevateSources:
+			source = ParameterSource.createInstance('ZipLongParameterSource', source, req_source)
 		if self.repeat > 1:
 			source = ParameterSource.createInstance('RepeatParameterSource', source, self.repeat)
 		return ParameterFactory._getRawSource(self, source)
