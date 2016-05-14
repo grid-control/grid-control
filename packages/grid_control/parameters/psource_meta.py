@@ -267,6 +267,6 @@ ParameterSource.managerMap['variation'] = 'ErrorParameterSource'
 
 
 class CombineParameterSource(ZipLongParameterSource):
-	# combine according to common parameter value
+	# TODO: combine according to common parameter value
 	pass
 ParameterSource.managerMap['combine'] = 'CombineParameterSource'
