@@ -104,7 +104,7 @@ class ScanProviderBase(DataProvider):
 					DataProvider.Dataset: hashNameDictDS[hashDS],
 					DataProvider.BlockName: hashNameDictB[hashB][1],
 					DataProvider.Locations: blockSEList,
-					DataProvider.Metadata: metaKeys,
+					DataProvider.Metadata: list(metaKeys),
 					DataProvider.FileList: lsmap(fnProps, protoBlocks[hashDS][hashB])
 				}
 
