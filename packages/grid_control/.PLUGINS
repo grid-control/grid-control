@@ -50,6 +50,8 @@
 
      * grid_control.datasets.dproc_pestimate PartitionEstimator SplitSettingEstimator
 
+     * grid_control.datasets.dproc_sort SortingDataProcessor sort
+
      * grid_control.datasets.dproc_basic StatsDataProcessor stats
 
      * grid_control.datasets.dproc_basic URLCountDataProcessor files FileCountDataProcessor
