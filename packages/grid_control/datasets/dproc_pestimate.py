@@ -27,6 +27,9 @@ class PartitionEstimator(DataProcessor):
 		self._files = {None: 0}
 		self._config = config
 
+	def enabled(self):
+		return (self._targetJobs != -1) or (self._targetJobsDS != -1)
+
 	def process(self, blockIter):
 		if (self._targetJobs != -1) or (self._targetJobsDS != -1):
 			blocks = lmap(self.processBlock, blockIter)
