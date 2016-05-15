@@ -186,6 +186,7 @@ def run():
 		pass
 	except Exception: # coverage overrides sys.excepthook
 		gc_excepthook(*sys.exc_info())
+		sys.exit(os.EX_SOFTWARE)
 
 if __name__ == '__main__':
 	run()
