@@ -17,7 +17,7 @@ from grid_control.datasets.provider_base import DataProvider
 from python_compat import lmap
 
 class PartitionEstimator(DataProcessor):
-	alias = ['SplitSettingEstimator']
+	alias = ['estimate', 'SplitSettingEstimator']
 
 	def __init__(self, config):
 		DataProcessor.__init__(self, config)

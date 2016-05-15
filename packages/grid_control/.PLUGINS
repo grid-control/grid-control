@@ -42,13 +42,13 @@
 
      * grid_control.datasets.dproc_nick NickNameProducer
 
-      * grid_control.datasets.dproc_nick InlineNickNameProducer
+      * grid_control.datasets.dproc_nick InlineNickNameProducer inline
 
-      * grid_control.datasets.dproc_nick SimpleNickNameProducer
+      * grid_control.datasets.dproc_nick SimpleNickNameProducer simple
 
      * grid_control.datasets.dproc_base NullDataProcessor null
 
-     * grid_control.datasets.dproc_pestimate PartitionEstimator SplitSettingEstimator
+     * grid_control.datasets.dproc_pestimate PartitionEstimator estimate SplitSettingEstimator
 
      * grid_control.datasets.dproc_sort SortingDataProcessor sort
 
