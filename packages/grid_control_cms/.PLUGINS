@@ -70,3 +70,11 @@
 
      * grid_control_cms.lumi_proc LumiPartitionProcessor
 
+   * grid_control.output_processor OutputProcessor
+
+    * grid_control.output_processor JobInfoProcessor
+
+     * grid_control.output_processor DebugJobInfoProcessor
+
+      * grid_control_cms.cmssw CMSSWDebugJobInfoProcessor
+

@@ -17,9 +17,16 @@ from grid_control import utils
 from grid_control.backends import WMS
 from grid_control.config import ConfigError, noDefault
 from grid_control.datasets import DataSplitter, PartitionProcessor
+from grid_control.output_processor import DebugJobInfoProcessor
 from grid_control.tasks.task_data import DataTask
 from grid_control.tasks.task_utils import TaskExecutableWrapper
 from python_compat import imap, lfilter, lmap
+
+class CMSSWDebugJobInfoProcessor(DebugJobInfoProcessor):
+	def __init__(self):
+		DebugJobInfoProcessor.__init__(self)
+		self._display_files.append('cmssw.log.gz')
+
 
 class LFNPartitionProcessor(PartitionProcessor):
 	alias = ['lfnprefix']

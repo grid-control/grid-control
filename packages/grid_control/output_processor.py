@@ -12,7 +12,7 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-import os, sys, logging
+import os, sys, gzip, logging
 from grid_control.utils import DictFormat
 from grid_control.utils.data_structures import makeEnum
 from hpfwk import AbstractError, NestedException, Plugin
@@ -52,6 +52,34 @@ class JobInfoProcessor(OutputProcessor):
 			return {JobResult.JOBNUM: jobNum, JobResult.EXITCODE: exitCode, JobResult.RAW: data}
 		except Exception:
 			raise JobResultError('Job result file %r is incomplete' % fn)
+
+
+class DebugJobInfoProcessor(JobInfoProcessor):
+	def __init__(self):
+		JobInfoProcessor.__init__(self)
+		self._display_files = ['gc.stdout', 'gc.stderr']
+
+	def process(self, dn):
+		result = JobInfoProcessor.process(self, dn)
+		if result[JobResult.EXITCODE] != 0:
+			def _display_logfile(dn, fn):
+				try:
+					full_fn = os.path.join(dn, fn)
+					if os.path.exists(full_fn):
+						if fn.endswith('.gz'):
+							fp = gzip.open(full_fn)
+						else:
+							fp = open(full_fn)
+						sys.stdout.write('%s\n' % fn)
+						sys.stdout.write(fp.read())
+						sys.stdout.write('-' * 50)
+						fp.close()
+				except Exception:
+					raise
+					pass
+			for fn in self._display_files:
+				_display_logfile(dn, fn)
+		return result
 
 
 class FileInfoProcessor(JobInfoProcessor):
