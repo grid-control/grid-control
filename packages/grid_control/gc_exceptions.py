@@ -16,13 +16,14 @@ import os, sys, logging
 from hpfwk import NestedException
 
 class GCLogHandler(logging.FileHandler):
-	def __init__(self, fn, *args, **kwargs):
+	def __init__(self, fn, mode = 'a', *args, **kwargs):
+		self._mode = mode
 		if not fn:
 			found = False
 			for fn in [os.path.join(os.environ['GC_PACKAGES_PATH'], '..', 'debug.log'), '/tmp/gc.debug.%d' % os.getuid(), '~/gc.debug']:
 				try:
 					fn = os.path.abspath(os.path.normpath(os.path.expanduser(fn)))
-					logging.FileHandler.__init__(self, fn, *args, **kwargs)
+					logging.FileHandler.__init__(self, fn, 'a', *args, **kwargs)
 					found = True
 					break
 				except Exception:
@@ -30,20 +31,19 @@ class GCLogHandler(logging.FileHandler):
 			if not found:
 				raise NestedException('Unable to find writeable debug log path!')
 		else:
-			logging.FileHandler.__init__(self, fn, *args, **kwargs)
+			logging.FileHandler.__init__(self, fn, 'a', *args, **kwargs)
 		self._fn = os.path.abspath(fn)
 
 	def emit(self, record):
-		logging.FileHandler.emit(self, record)
 		try:
-			fp = open(self._fn, 'a')
-			from grid_control.config import createConfig
-			for instance in GCLogHandler.config_instances:
-				fp.write('=' * 20 + '\n')
+			fp = open(self._fn, self._mode)
+			for idx, instance in enumerate(GCLogHandler.config_instances):
+				fp.write('-' * 70 + '\n' + ('Config instance %d\n' % idx) + '=' * 70 + '\n')
 				instance.write(fp)
 			fp.close()
 		except Exception:
 			pass
+		logging.FileHandler.emit(self, record)
 		sys.stderr.write('In case this is caused by a bug, please send the log file:\n')
 		sys.stderr.write('\t"%s"\nto grid-control-dev@googlegroups.com\n' % self._fn)
 GCLogHandler.config_instances = []
