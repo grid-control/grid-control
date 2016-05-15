@@ -6,5 +6,6 @@ coverage:
   ignore:
     - packages/requests/*
     - packages/python_compat_*
+    - testsuite/*
   status:
     patch: false
