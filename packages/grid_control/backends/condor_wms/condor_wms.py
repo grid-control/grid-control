@@ -24,16 +24,13 @@ from grid_control import utils
 from grid_control.backends.broker_base import Broker
 from grid_control.backends.condor_wms.processhandler import ProcessHandler
 from grid_control.backends.wms import BackendError, BasicWMS, WMS
+from grid_control.utils.data_structures import makeEnum
 from grid_control.job_db import Job
 from python_compat import ifilter, irange, izip, lmap, lzip, md5, set, sorted
 
 # if the ssh stuff proves too hack'y: http://www.lag.net/paramiko/
+PoolType = makeEnum(['LOCAL','SPOOL','SSH','GSISSH'], useHash = True)
 
-# enum pseudo classes
-class PoolType:
-	enumTypes = ('LOCAL','SPOOL','SSH','GSISSH')
-	for idx, eType in enumerate(enumTypes):
-		locals()[eType] = idx
 
 class Condor(BasicWMS):
 	configSections = BasicWMS.configSections + ['condor']
@@ -720,16 +717,8 @@ class Condor(BasicWMS):
 # _initPoolInterfaces: prepare commands and interfaces according to selected submit type
 	def _initPoolInterfaces(self, config):
 		# check submissal type
-		self.remoteType = config.get("remote Type", "").lower()
-		if self.remoteType in ["ssh"]:
-			self.remoteType = PoolType.SSH
-		elif self.remoteType in ["gsissh","gssh"]:
-			self.remoteType = PoolType.GSISSH
-		elif self.remoteType in ["spool","condor","remote"]:
-			self.remoteType = PoolType.SPOOL
-		else:
-			self.remoteType = PoolType.LOCAL
-		self.debugOut("Selected pool type: %s" % PoolType.enumTypes[self.remoteType])
+		self.remoteType = config.getEnum('remote Type', PoolType, PoolType.LOCAL)
+		self.debugOut("Selected pool type: %s" % PoolType.enum2str(self.remoteType))
 
 		# get remote destination features
 		user,sched,collector = self._getDestination(config)
