@@ -16,8 +16,8 @@ import time, logging, threading
 
 blocking_equivalent = 60*60*24*7 # instead of blocking, we wait for a week
 
-def start_thread(desc, fun, *args, **kargs):
-	thread = threading.Thread(target = fun, args = args, kwargs = kargs)
+def start_thread(desc, fun, *args, **kwargs):
+	thread = threading.Thread(target = fun, args = args, kwargs = kwargs)
 	thread.setDaemon(True)
 	thread.start()
 	return thread
