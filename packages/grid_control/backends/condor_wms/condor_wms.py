@@ -779,8 +779,9 @@ class Condor(BasicWMS):
 
 #_getDestination: read user/sched/collector from config
 	def _getDestination(self,config):
-		splitDest = [ item.strip() for item in config.get('remote Dest', '@').split('@') ]
-		user = config.get('remote User', '').strip()
+		dest = config.get('remote Dest', '@')
+		user = config.get('remote User', '')
+		splitDest = lmap(str.strip, dest.split('@'))
 		if len(splitDest)==1:
 			return utils.QM(user,user,None),splitDest[0],None
 		elif len(splitDest)==2:
