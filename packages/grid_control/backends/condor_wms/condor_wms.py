@@ -24,8 +24,8 @@ from grid_control import utils
 from grid_control.backends.broker_base import Broker
 from grid_control.backends.condor_wms.processhandler import ProcessHandler
 from grid_control.backends.wms import BackendError, BasicWMS, WMS
-from grid_control.utils.data_structures import makeEnum
 from grid_control.job_db import Job
+from grid_control.utils.data_structures import makeEnum
 from python_compat import ifilter, irange, izip, lmap, lzip, md5, set, sorted
 
 # if the ssh stuff proves too hack'y: http://www.lag.net/paramiko/
