@@ -39,7 +39,7 @@ class PBS(PBSGECommon):
 
 	def getSubmitArguments(self, jobNum, jobName, reqs, sandbox, stdout, stderr):
 		reqMap = { WMS.MEMORY: ('pvmem', lambda m: '%dmb' % m) }
-		params = PBSGECommon.getSubmitArguments(self, jobNum, jobName, reqs, sandbox, stdout, stderr, reqMap)
+		params = PBSGECommon.getCommonSubmitArguments(self, jobNum, jobName, reqs, sandbox, stdout, stderr, reqMap)
 		# Job requirements
 		if reqs.get(WMS.QUEUES):
 			params += ' -q %s' % reqs[WMS.QUEUES][0]

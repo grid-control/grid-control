@@ -26,7 +26,7 @@ from grid_control.backends.condor_wms.processhandler import ProcessHandler
 from grid_control.backends.wms import BackendError, BasicWMS, WMS
 from grid_control.job_db import Job
 from grid_control.utils.data_structures import makeEnum
-from python_compat import ifilter, irange, izip, lmap, lzip, md5, set, sorted
+from python_compat import ifilter, imap, irange, izip, lmap, lzip, md5, set, sorted
 
 # if the ssh stuff proves too hack'y: http://www.lag.net/paramiko/
 PoolType = makeEnum(['LOCAL','SPOOL','SSH','GSISSH'], useHash = True)
@@ -218,6 +218,7 @@ class Condor(BasicWMS):
 						cleanupProcess.logError(self.errorLog)
 			yield (jobNum, sandpath)
 		# clean up if necessary
+		activity.finish()
 		self._tidyUpWorkingDirectory()
 		self.debugFlush()
 
@@ -268,6 +269,7 @@ class Condor(BasicWMS):
 			else:
 				cancelProcess.logError(self.errorLog)
 		# clean up if necessary
+		activity.finish()
 		self._tidyUpWorkingDirectory()
 		self.debugFlush()
 
@@ -291,6 +293,7 @@ class Condor(BasicWMS):
 			except Exception:
 				self._log.warning('There might be some junk data left in: %s @ %s', self.getWorkdirPath(), self.Pool.getDomain())
 				raise BackendError('Unable to clean up remote working directory')
+			activity.finish()
 
 # checkJobs: Check status of jobs and yield (jobNum, wmsID, status, other data)
 #>>wmsJobIdList: list of (wmsID, JobNum) tuples
@@ -441,7 +444,7 @@ class Condor(BasicWMS):
 				self.debugOut("Copying to sandbox")
 				workdirBase = self.getWorkdirPath()
 				# TODO: check whether shared remote files already exist and copy otherwise
-				for fileDescr, fileSource, fileTarget in self._getSandboxFilesIn(module):
+				for _, fileSource, fileTarget in self._getSandboxFilesIn(module):
 					copyProcess = self.Pool.LoggedCopyToRemote(fileSource, os.path.join(workdirBase, fileTarget))
 					if copyProcess.wait() != 0:
 						if self.explainError(copyProcess, copyProcess.wait()):
@@ -520,29 +523,34 @@ class Condor(BasicWMS):
 			self.debugOut("Yielded submitted job")
 			self.debugFlush()
 
-# makeJDL: create a JDL file's *content* specifying job data for several Jobs
-#	GridControl handles job data (executable, environment etc) via batch files which are pre-placed in the sandbox refered to by the JDL
-#>>jobNumList: List of jobNums for which to define tasks in this JDL
-	def makeJDLdata(self, jobNumList, module):
-		self.debugOut("VVVVV")
-		self.debugOut("Started preparing: %s " % jobNumList)
+
+	def getExecAndTansfers(self, module):
 		# resolve file paths for different pool types
 		# handle gc executable separately
-		gcExec, transferFiles = "",[]
+		(gcExec, transferFiles) = ('', [])
 		if self.remoteType == PoolType.SSH or self.remoteType == PoolType.GSISSH:
-			for description, source, target in self._getSandboxFilesIn(module):
+			for target in imap(lambda d_s_t: d_s_t[2], self._getSandboxFilesIn(module)):
 				if 'gc-run.sh' in target:
 					gcExec=os.path.join(self.getWorkdirPath(), target)
 				else:
 					transferFiles.append(os.path.join(self.getWorkdirPath(), target))
 		else:
-			for description, source, target in self._getSandboxFilesIn(module):
+			for source in imap(lambda d_s_t: d_s_t[1], self._getSandboxFilesIn(module)):
 				if 'gc-run.sh' in source:
 					gcExec = source
 				else:
 					transferFiles.append(source)
+		return (gcExec, transferFiles)
 
-		self.debugOut("o Creating Header")
+
+# makeJDL: create a JDL file's *content* specifying job data for several Jobs
+#	GridControl handles job data (executable, environment etc) via batch files which are pre-placed in the sandbox refered to by the JDL
+#>>jobNumList: List of jobNums for which to define tasks in this JDL
+	def makeJDLdata(self, jobNumList, module):
+		self.debugOut('VVVVV')
+		self.debugOut('Started preparing: %s ' % jobNumList)
+		(gcExec, transferFiles) = self.getExecAndTansfers(module)
+		self.debugOut('o Creating Header')
 		# header for all jobs
 		remove_cond = '( JobStatus == 5 && HoldReasonCode != 16 )' # cancel held jobs - ignore spooling ones
 		jdlData = [

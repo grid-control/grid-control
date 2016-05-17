@@ -1,4 +1,4 @@
-# | Copyright 2007-2016 Karlsruhe Institute of Technology
+# | Copyright 2016 Karlsruhe Institute of Technology
 # |
 # | Licensed under the Apache License, Version 2.0 (the "License");
 # | you may not use this file except in compliance with the License.
@@ -14,8 +14,8 @@
 
 import os, re, tempfile
 from grid_control import utils
-from grid_control.backends.wms_grid import GridWMS
 from grid_control.backends.wms import BackendError
+from grid_control.backends.wms_grid import GridWMS
 from grid_control.job_db import Job
 from python_compat import imap, irange, md5, tarfile
 
@@ -44,14 +44,13 @@ class CreamWMS(GridWMS):
 		self._cancelExec = utils.resolveInstallPath('glite-ce-job-cancel')
 		self._purgeExec = utils.resolveInstallPath('glite-ce-job-purge')
 		self._submitParams.update({'-r': self._ce, '--config-vo': self._configVO })
-		
-		self._statusRegexLevel0 = [
-			r".*JobID=\[(?P<rawId>\S+)\]\s+Status\s+=\s+\[(?P<status>\S+)\].*",
-			r".*JobID=\[(?P<rawId>\S+)\]\s+For this job CREAM has returned a fault: MethodName=\[(?P<methodName>.*)\] "+
-				"Timestamp=\[(?P<timestamp>.*)\] ErrorCode=\[(?P<errorCode>.*)\] "+
-				"Description=\[(?P<description>.*)\] FaultCause=\[(?P<faultCause>.*)\].*",
-		]
-		self._outputRegex = ".*For JobID \[(?P<rawId>\S+)\] output will be stored in the dir (?P<outputDir>.*)$"
+
+		lvl0_status_ok = r'.*JobID=\[(?P<rawId>\S+)\]\s+Status\s+=\s+\[(?P<status>\S+)\].*'
+		lvl0_status_err = r'.*JobID=\[(?P<rawId>\S+)\]\s+For this job CREAM has returned a fault: MethodName=\[(?P<methodName>.*)\] '
+		lvl0_status_err += r'Timestamp=\[(?P<timestamp>.*)\] ErrorCode=\[(?P<errorCode>.*)\] '
+		lvl0_status_err += r'Description=\[(?P<description>.*)\] FaultCause=\[(?P<faultCause>.*)\].*'
+		self._statusRegexLevel0 = [lvl0_status_ok, lvl0_status_err]
+		self._outputRegex = r'.*For JobID \[(?P<rawId>\S+)\] output will be stored in the dir (?P<outputDir>.*)$'
 		
 		self._useDelegate = False
 		if self._useDelegate is False:
@@ -66,15 +65,15 @@ class CreamWMS(GridWMS):
 			raise StopIteration
 
 		jobNumMap = dict(ids)
-		jobs = " ".join(self._getRawIDs(ids))
+		jobs = ' '.join(self._getRawIDs(ids))
 		log = tempfile.mktemp('.log')
 
 		activity = utils.ActivityLog('checking job status')
 		proc = utils.LoggedProcess(self._statusExec, '--level 0 --logfile "%s" %s' % (log, jobs))
-		for jobOutput in proc.getOutput().split("******")[1:]:
+		for jobOutput in proc.getOutput().split('******')[1:]:
 			data = {}
 			for statusRegexLevel0 in self._statusRegexLevel0:
-				match = re.match(statusRegexLevel0, jobOutput.replace("\n", " "))
+				match = re.match(statusRegexLevel0, jobOutput.replace('\n', ' '))
 				if match:
 					data = match.groupdict()
 					break
@@ -109,7 +108,7 @@ class CreamWMS(GridWMS):
 		activity = utils.ActivityLog('retrieving job outputs')
 		for ids in imap(lambda x: allIds[x:x+self._nJobsPerChunk], irange(0, len(allIds), self._nJobsPerChunk)):
 			jobNumMap = dict(ids)
-			jobs = " ".join(self._getRawIDs(ids))
+			jobs = ' '.join(self._getRawIDs(ids))
 			log = tempfile.mktemp('.log')
 
 			#print self._outputExec, '--noint --logfile "%s" --dir "%s" %s' % (log, basePath, jobs)
@@ -125,10 +124,10 @@ class CreamWMS(GridWMS):
 			for line in imap(str.strip, proc.iter()):
 				match = re.match(self._outputRegex, line)
 				if match:
-					currentJobNum = jobNumMap.get(self._createId(match.groupdict()["rawId"]))
+					currentJobNum = jobNumMap.get(self._createId(match.groupdict()['rawId']))
 					todo.remove(currentJobNum)
-					done.append(match.groupdict()["rawId"])
-					outputDir = match.groupdict()["outputDir"]
+					done.append(match.groupdict()['rawId'])
+					outputDir = match.groupdict()['outputDir']
 					if os.path.exists(outputDir):
 						if 'GC_WC.tar.gz' in os.listdir(outputDir):
 							wildcardTar = os.path.join(outputDir, 'GC_WC.tar.gz')
@@ -178,7 +177,7 @@ class CreamWMS(GridWMS):
 			waitFlag = True
 
 			jobNumMap = dict(ids)
-			jobs = " ".join(self._getRawIDs(ids))
+			jobs = ' '.join(self._getRawIDs(ids))
 			log = tempfile.mktemp('.log')
 
 			activity = utils.ActivityLog('cancelling jobs')

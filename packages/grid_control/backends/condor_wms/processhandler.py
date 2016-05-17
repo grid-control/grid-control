@@ -323,8 +323,8 @@ class RemoteProcessHandler(object):
 		self.copy = self.copy % { "cpargs" : kwargs.get("cpargs",""), "args" : kwargs.get("args","") }
 		# test connection once
 		proc = LoggedProcess(self.cmd % { "cmd" : "exit"})
-		ret, out, err = proc.getAll()
-		if ret!=0:
+		ret = proc.getAll()[0]
+		if ret != 0:
 			raise CondorProcessError('Validation of remote connection failed!', proc)
 		vprint('Remote interface initialized:\n	Cmd: %s\n	Cp : %s' % (self.cmd,self.copy), level=2)
 

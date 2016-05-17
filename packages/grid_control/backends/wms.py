@@ -76,7 +76,7 @@ class WMS(NamedPlugin):
 			return ('grid', wmsId)
 
 	def _getRawIDs(self, ids):
-		for (wmsId, jobNum) in ids:
+		for (wmsId, _) in ids:
 			yield self._splitId(wmsId)[1]
 makeEnum(['WALLTIME', 'CPUTIME', 'MEMORY', 'CPUS', 'BACKEND', 'SITES', 'QUEUES', 'SOFTWARE', 'STORAGE'], WMS)
 

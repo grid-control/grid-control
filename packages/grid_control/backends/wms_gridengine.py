@@ -49,7 +49,7 @@ class GridEngine(PBSGECommon):
 			params += ' -q %s' % str.join(',', imap(lambda node: '%s@%s' % (queue, node), nodes))
 		elif nodes:
 			raise ConfigError('Please also specify queue when selecting nodes!')
-		return params + PBSGECommon.getSubmitArguments(self, jobNum, jobName, reqs, sandbox, stdout, stderr, reqMap)
+		return params + PBSGECommon.getCommonSubmitArguments(self, jobNum, jobName, reqs, sandbox, stdout, stderr, reqMap)
 
 
 	def parseSubmitOutput(self, data):
