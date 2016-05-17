@@ -15,15 +15,15 @@
 from grid_control.datasets import DataProvider
 from grid_control.gc_exceptions import UserError
 from grid_control.utils.webservice import GridJSONRestClient
-from grid_control_cms.provider_cms import CMSProvider
+from grid_control_cms.provider_cms import CMSBaseProvider
 from python_compat import lmap
 
 # required format: <dataset path>[@<instance>][#<block>]
-class DBS3Provider(CMSProvider):
+class DBS3Provider(CMSBaseProvider):
 	alias = ['dbs3', 'dbs']
 
 	def __init__(self, config, datasetExpr, datasetNick = None, datasetID = 0):
-		CMSProvider.__init__(self, config, datasetExpr, datasetNick, datasetID)
+		CMSBaseProvider.__init__(self, config, datasetExpr, datasetNick, datasetID)
 		url_global_inst = 'https://cmsweb.cern.ch/dbs/prod/global/DBSReader'
 		if self._url == '':
 			self._url = url_global_inst

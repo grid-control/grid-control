@@ -47,6 +47,8 @@ class BasicProgressBar(object):
 
 
 class BasicBarReport(BasicReport):
+	alias = ['basicbar']
+
 	def __init__(self, jobDB, task, jobs = None, configString = ''):
 		BasicReport.__init__(self, jobDB, task, jobs, configString)
 		self._bar = BasicProgressBar(0, len(jobDB), 65)

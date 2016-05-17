@@ -21,7 +21,7 @@ try:
 except Exception:
 	from subprocess import getoutput
 from grid_control import utils
-from grid_control.backends.broker import Broker
+from grid_control.backends.broker_base import Broker
 from grid_control.backends.condor_wms.processhandler import ProcessHandler
 from grid_control.backends.wms import BackendError, BasicWMS, WMS
 from grid_control.job_db import Job

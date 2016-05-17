@@ -75,13 +75,13 @@ class GCDumpParameterSource(ParameterSource):
 # Reader for CSV files
 class CSVParameterSource(InternalParameterSource):
 	def __init__(self, fn, format = 'sniffed'):
-		sniffed = csv.Sniffer().sniff(open(fn).read(1024))
+		sniffed = csv.Sniffer().sniff(open(fn).readline())
 		csv.register_dialect('sniffed', sniffed)
 		tmp = list(csv.DictReader(open(fn), dialect = format))
 
 		def cleanupDict(d):
 			# strip all key value entries
-			tmp = tuple(imap(lambda item: imap(str.strip, item), d.items()))
+			tmp = tuple(imap(lambda item: lmap(str.strip, item), d.items()))
 			# filter empty parameters
 			return lfilter(lambda k_v: k_v[0] != '', tmp)
 		keys = []

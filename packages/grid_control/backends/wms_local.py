@@ -14,7 +14,7 @@
 
 import os, glob, time, shutil, tempfile
 from grid_control import utils
-from grid_control.backends.broker import Broker
+from grid_control.backends.broker_base import Broker
 from grid_control.backends.wms import BackendError, BasicWMS, WMS
 from grid_control.job_db import Job
 from grid_control.utils.file_objects import VirtualFile
@@ -42,6 +42,11 @@ class LocalWMS(BasicWMS):
 		self.scratchPath = config.getList('scratch path', ['TMPDIR', '/tmp'], onChange = True)
 		self.submitOpts = config.get('submit options', '', onChange = None)
 		self.memory = config.getInt('memory', -1, onChange = None)
+		try:
+			if not os.path.exists(self.sandPath):
+				os.mkdir(self.sandPath)
+		except Exception:
+			raise BackendError('Unable to create sandbox base directory "%s"!' % self.sandPath)
 
 
 	# Check status of jobs and yield (jobNum, wmsID, status, other data)
@@ -53,15 +58,20 @@ class LocalWMS(BasicWMS):
 		proc = utils.LoggedProcess(self.statusExec, self.getCheckArguments(self._getRawIDs(ids)))
 
 		tmp = {}
+		found_error = False
 		for data in self.parseStatus(proc.iter()):
+			if data.pop(None, None) == 'abort':
+				found_error = True
+				break
 			wmsId = self._createId(data['id'])
 			tmp[wmsId] = (wmsId, self.parseJobState(data['status']), data)
 
-		for wmsId, jobNum in ids:
-			if wmsId not in tmp:
-				yield (jobNum, wmsId, Job.DONE, {})
-			else:
-				yield tuple([jobNum] + list(tmp[wmsId]))
+		if not found_error:
+			for wmsId, jobNum in ids:
+				if wmsId not in tmp:
+					yield (jobNum, wmsId, Job.DONE, {})
+				else:
+					yield tuple([jobNum] + list(tmp[wmsId]))
 
 		retCode = proc.wait()
 		del activity
@@ -89,7 +99,7 @@ class LocalWMS(BasicWMS):
 		for wmsId, jobNum in ids:
 			path = self._getSandbox(wmsId)
 			if path is None:
-				utils.eprint('Sandbox for job %d with wmsId "%s" could not be found' % (jobNum, wmsId))
+				self._log.warning('Sandbox for job %d with wmsId "%s" could not be found', jobNum, wmsId)
 				continue
 			try:
 				shutil.rmtree(path)
@@ -118,9 +128,6 @@ class LocalWMS(BasicWMS):
 		activity = utils.ActivityLog('submitting jobs')
 
 		try:
-			sandbox = self.sandPath # defined here for exception message in case os.mkdir fails
-			if not os.path.exists(self.sandPath):
-				os.mkdir(self.sandPath)
 			sandbox = tempfile.mkdtemp('', '%s.%04d.' % (module.taskID, jobNum), self.sandPath)
 		except Exception:
 			raise BackendError('Unable to create sandbox directory "%s"!' % sandbox)
@@ -152,9 +159,9 @@ class LocalWMS(BasicWMS):
 		del activity
 
 		if retCode != 0:
-			utils.eprint('WARNING: %s failed:' % self.submitExec)
+			self._log.warning('%s failed:', self.submitExec)
 		elif wmsId is None:
-			utils.eprint('WARNING: %s did not yield job id:\n%s' % (self.submitExec, wmsIdText))
+			self._log.warning('%s did not yield job id:\n%s', self.submitExec, wmsIdText)
 		if wmsId:
 			wmsId = self._createId(wmsId)
 			open(os.path.join(sandbox, wmsId), 'w')
@@ -226,18 +233,26 @@ class LocalWMS(BasicWMS):
 
 
 class Local(WMS):
+	configSections = WMS.configSections + ['local']
+
 	def __new__(cls, config, name):
+		def createWMS(wms):
+			try:
+				wmsCls = WMS.getClass(wms)
+			except Exception:
+				raise BackendError('Unable to load backend class %s' % repr(wms))
+			wms_config = config.changeView(viewClass = 'TaggedConfigView', setClasses = [wmsCls])
+			return WMS.createInstance(wms, wms_config, name)
+		wms = config.get('wms', '')
+		if wms:
+			return createWMS(wms)
 		ec = ExceptionCollector()
-		for cmd, wms in [('sgepasswd', 'OGE'), ('pbs-config', 'PBS'), ('qsub', 'OGE'), ('bsub', 'LSF'), ('job_slurm', 'SLURM')]:
+		for cmd, wms in [('sacct', 'SLURM'), ('sgepasswd', 'OGE'), ('pbs-config', 'PBS'),
+				('qsub', 'OGE'), ('bsub', 'LSF'), ('job_slurm', 'JMS')]:
 			try:
 				utils.resolveInstallPath(cmd)
 			except Exception:
 				ec.collect()
 				continue
-			try:
-				wmsCls = WMS.getClass(wms)
-			except Exception:
-				raise BackendError('Unable to load backend class %s' % repr(wms))
-			config_wms = config.changeView(viewClass = 'TaggedConfigView', setClasses = [wmsCls])
-			return WMS.createInstance(wms, config_wms, name)
+			return createWMS(wms)
 		ec.raise_any(BackendError('No valid local backend found!')) # at this point all backends have failed!

@@ -34,23 +34,23 @@ class CMSSW_Advanced(CMSSW):
 		if not self._nmCfg.empty():
 			if 'config file' in config.getOptions():
 				raise ConfigError("Please use 'nickname config' instead of 'config file'")
-			allConfigFiles = utils.flatten(self._nmCfg.get_values())
+			allConfigFiles = sorted(set(utils.flatten(self._nmCfg.get_values())))
 			config.set('config file', str.join('\n', allConfigFiles))
 			head.append((1, 'Config file'))
 
 		# Mapping between nickname and constants - only display - work is handled by the 'normal' parameter factory
 		nmCName = config.getList('nickname constants', [], onChange = None)
-		pconfig = config.changeView(viewClass = 'TaggedConfigView', setClasses = None, setNames = None, addSections = ['parameters'])
-		pconfig.set('constants', str.join(' ', nmCName), '+=')
+		param_config = config.changeView(viewClass = 'TaggedConfigView', setClasses = None, setNames = None, addSections = ['parameters'])
+		param_config.set('constants', str.join(' ', nmCName), '+=')
 		for cName in nmCName:
-			pconfig.set(cName + ' matcher', 'regex', '?=')
-			pconfig.set(cName + ' lookup', 'DATASETNICK', '?=')
+			param_config.set(cName + ' matcher', 'regex')
+			param_config.set(cName + ' lookup', 'DATASETNICK')
 			head.append((cName, cName))
 
 		# Mapping between nickname and lumi filter - only display - work is handled by the 'normal' lumi filter
 		if ('lumi filter' in config.getOptions()) and ('nickname lumi filter' in config.getOptions()):
 			raise ConfigError('Please use "lumi filter" exclusively')
-		config.set('lumi filter matcher', 'regex', '?=')
+		config.set('lumi filter matcher', 'regex')
 		config.set('lumi filter', strDictLong(config.getDict('nickname lumi filter', {}, onChange = None)))
 		self._nmLumi = config.getLookup('lumi filter', {}, parser = parseLumiFilter, strfun = strLumi, onChange = None)
 		if not self._nmLumi.empty():
@@ -65,7 +65,7 @@ class CMSSW_Advanced(CMSSW):
 			nickNames = set()
 			for block in DataProvider.loadFromFile(dsPath).getBlocks():
 				nickNames.add(block[DataProvider.Nickname])
-			utils.vprint('Mapping between nickname and other settings:\n', -1)
+			utils.vprint('Mapping between nickname and other settings:', -1)
 			report = []
 			for nick in sorted(nickNames):
 				lumi_filter_str = formatLumi(self._nmLumi.lookup(nick, '', is_selector = False))
@@ -81,7 +81,6 @@ class CMSSW_Advanced(CMSSW):
 				tmp.update(lookupvars)
 				report.append(tmp)
 			utils.printTabular(head, report, 'cl')
-			utils.vprint(level = -1)
 
 
 	def getTaskConfig(self):
@@ -93,5 +92,6 @@ class CMSSW_Advanced(CMSSW):
 
 	def getJobConfig(self, jobNum):
 		data = CMSSW.getJobConfig(self, jobNum)
-		data['CMSSW_CONFIG'] = self._nmCfg.lookup(data.get('DATASETNICK'), '', is_selector = False)
+		configFiles = self._nmCfg.lookup(data.get('DATASETNICK'), [], is_selector = False)
+		data['CMSSW_CONFIG'] = str.join(' ', imap(os.path.basename, configFiles))
 		return data

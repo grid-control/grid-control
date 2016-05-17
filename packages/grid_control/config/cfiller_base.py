@@ -22,14 +22,14 @@ from grid_control.utils.gc_itertools import ichain
 from grid_control.utils.parsing import parseList
 from grid_control.utils.thread_tools import TimeoutException, hang_protection
 from hpfwk import AbstractError, Plugin
-from python_compat import identity, imap, irange, ismap, lfilter, lmap, rsplit
+from python_compat import identity, imap, irange, ismap, itemgetter, lfilter, lmap, rsplit
 
 # Class to fill config containers with settings
 class ConfigFiller(Plugin):
 	def _addEntry(self, container, section, option, value, source):
 		option = option.strip()
 		opttype = '='
-		if option[-1] in ['+', '-', '*', '?', '^']:
+		if option[-1] in imap(itemgetter(0), ConfigEntry.OptTypeDesc.keys()):
 			opttype = option[-1] + '='
 			option = option[:-1].strip()
 		container.append(ConfigEntry(section.strip(), option, value.strip(), opttype, source))
@@ -58,7 +58,10 @@ class FileConfigFiller(ConfigFiller):
 					ismap(getOptValue, configContent.get(section, []))]))
 				for (option, value, source) in configContent[section]:
 					# Protection for non-interpolation "%" in value
-					value = (value.replace('%', '\x01').replace('\x01(', '%(') % substDict).replace('\x01', '%')
+					try:
+						value = (value.replace('%', '\x01').replace('\x01(', '%(') % substDict).replace('\x01', '%')
+					except Exception:
+						raise ConfigError('Unable to interpolate value %r with %r' % (value, substDict))
 					self._addEntry(container, section, option, value, source)
 		searchString = str.join(' ', UniqueList(searchPaths))
 		if self._addSearchPath:
@@ -152,6 +155,8 @@ class FileConfigFiller(ConfigFiller):
 		assert_set(self._currentValue is not None, 'Config value is not set!')
 		assert_set(self._currentIndices, 'Config source not set!')
 		sectionContent = configContent.setdefault(self._currentSection, [])
+		self._currentValue = self._currentValue.replace('$GC_CONFIG_DIR', os.path.dirname(configFile))
+		self._currentValue = self._currentValue.replace('$GC_CONFIG_FILE', configFile)
 		sectionContent.append((self._currentOption, self._currentValue,
 			configFile + ':' + str.join(',', imap(str, self._currentIndices))))
 		(self._currentOption, self._currentValue, self._currentIndices) = (None, None, None)
@@ -170,12 +175,12 @@ class DefaultFilesConfigFiller(FileConfigFiller):
 				return host
 		try:
 			host = hang_protection(resolve_hostname, timeout = 5)
-			hostCfg = lmap(lambda c: utils.pathGC('config/%s.conf' % host.split('.', c)[-1]), irange(host.count('.') + 1, -1, -1))
+			hostCfg = lmap(lambda c: utils.pathPKG('../config/%s.conf' % host.split('.', c)[-1]), irange(host.count('.') + 1, -1, -1))
 		except TimeoutException:
 			sys.stderr.write('System call to resolve hostname is hanging!\n')
 			sys.stderr.flush()
 			hostCfg = []
-		defaultCfg = ['/etc/grid-control.conf', '~/.grid-control.conf', utils.pathGC('config/default.conf')]
+		defaultCfg = ['/etc/grid-control.conf', '~/.grid-control.conf', utils.pathPKG('../config/default.conf')]
 		if os.environ.get('GC_CONFIG'):
 			defaultCfg.append('$GC_CONFIG')
 		log = logging.getLogger('config.default')

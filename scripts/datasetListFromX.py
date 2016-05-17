@@ -31,6 +31,8 @@ def addDatasetListOptions(parser):
 		help = 'Keep empty files with zero events')
 	parser.addBool(None, 'k', 'keep-metadata',     dest = 'strip',                 default = True,
 		help = 'Keep metadata in output')
+	parser.addBool(None, ' ', 'dump-config',       dest = 'dump config',           default = False,
+		help = 'Dump config settings')
 	parser.addText(None, 's', 'selection',         dest = 'filename filter',       default = '*.root',
 		help = 'File to include in dataset (Default: *.root)')
 	parser.addText(None, 'S', 'delimeter-select',  dest = 'delimeter match',       default = '',
@@ -47,8 +49,12 @@ def addDatasetListOptions(parser):
 
 def discoverDataset(providerName, config_dict):
 	config = getConfig(configDict = {'dataset': config_dict})
+	if config_dict['dump config'] == 'True':
+		config.write(sys.stdout, printDefault = False, printMinimal = True)
+		return
 	DataProvider = Plugin.getClass('DataProvider')
 	provider = DataProvider.createInstance(providerName, config, config_dict['dataset'], None)
+	stripMetadata = config_dict['strip'] == 'True'
 	if config_dict['output']:
-		return DataProvider.saveToFile(config_dict['output'], provider.getBlocks(), config_dict['strip'])
-	return DataProvider.saveToStream(sys.stdout, provider.getBlocks(), config_dict['strip'])
+		return DataProvider.saveToFile(config_dict['output'], provider.getBlocks(), stripMetadata)
+	return DataProvider.saveToStream(sys.stdout, provider.getBlocks(), stripMetadata)

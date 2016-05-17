@@ -28,7 +28,7 @@ class Workflow(NamedPlugin):
 	configSections = NamedPlugin.configSections + ['global', 'workflow']
 	tagName = 'workflow'
 
-	def __init__(self, config, name):
+	def __init__(self, config, name, abort = None):
 		NamedPlugin.__init__(self, config, name)
 
 		# Workdir settings
@@ -37,6 +37,8 @@ class Workflow(NamedPlugin):
 
 		# Initialise task module
 		self.task = config.getPlugin(['task', 'module'], cls = TaskModule, tags = [self])
+		if abort == 'task':
+			return
 		utils.vprint('Current task ID: %s' % self.task.taskID, -1)
 		utils.vprint('Task started on %s' % self.task.taskDate, -1)
 
@@ -103,6 +105,7 @@ class Workflow(NamedPlugin):
 			# idle timeout
 			if not didWait:
 				wait(wmsTiming.waitOnIdle)
+		self.monitor.onFinish()
 
 	def run(self):
 		self._gui.displayWorkflow()

@@ -99,7 +99,7 @@ def parseTime(usertime):
 
 
 def strTime(secs, fmt = '%dh %0.2dmin %0.2dsec'):
-	if secs >= 0:
+	if (secs is not None) and (secs >= 0):
 		return fmt % (secs / 60 / 60, (secs / 60) % 60, secs % 60)
 	return ''
 strTimeShort = lambda secs: strTime(secs, '%d:%0.2d:%0.2d')

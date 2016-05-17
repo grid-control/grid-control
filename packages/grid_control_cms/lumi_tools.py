@@ -12,6 +12,7 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
+import os
 from python_compat import imap, json, lmap, sort_inplace
 
 def makeint(x):
@@ -88,7 +89,10 @@ def parseLumiFilter(lumiexpr):
 			if len(token) == 1:
 				token.append('')
 			try:
-				lumis.extend(parseLumiFromJSON(open(token[0]).read(), token[1]))
+				json_fn = os.path.normpath(os.path.expandvars(os.path.expanduser(token[0].strip())))
+				json_fp = open(json_fn)
+				lumis.extend(parseLumiFromJSON(json_fp.read(), token[1]))
+				json_fp.close()
 			except Exception:
 				raise ConfigError('Could not process lumi filter file: %r (filter: %r)' % tuple(token))
 		else:

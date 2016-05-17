@@ -12,7 +12,7 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-import re, sys
+import re, logging
 from python_compat import imap, ismap, izip, lmap
 
 class Table(object):
@@ -20,8 +20,12 @@ class Table(object):
 
 
 class ConsoleTable(Table):
+	def __init__(self):
+		Table.__init__(self)
+		self._log = logging.getLogger('user')
+
 	def _write_line(self, msg):
-		sys.stdout.write(msg + '\n')
+		self._log.info(msg)
 
 
 class ParseableTable(ConsoleTable):
@@ -38,6 +42,7 @@ class ParseableTable(ConsoleTable):
 class RowTable(ConsoleTable):
 	def __init__(self, head, data, fmt = None, wrapLen = 100):
 		ConsoleTable.__init__(self)
+		self._log.info('')
 		head = list(head)
 		def getHeadName(key, name):
 			return name
@@ -54,6 +59,7 @@ class RowTable(ConsoleTable):
 			elif showLine:
 				self._write_line(('=' * (maxhead + 2)) + '=+=' + '=' * min(30, wrapLen - maxhead - 10))
 				showLine = False
+		self._log.info('')
 
 
 class ColumnTable(ConsoleTable):
@@ -69,7 +75,9 @@ class ColumnTable(ConsoleTable):
 		def getKeyPaddedName(key, name):
 			return (key, name.center(lendict[key]))
 		headentry = dict(ismap(getKeyPaddedName, head))
+		self._log.info('')
 		self._print_table(headwrap, headentry, entries, just, lendict)
+		self._log.info('')
 
 	def _print_table(self, headwrap, headentry, entries, just, lendict):
 		for (keys, entry) in self._wrap_formatted_data(headwrap, [headentry, '='] + entries):

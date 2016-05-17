@@ -88,31 +88,27 @@ echo
 export GC_WORKDIR="`pwd`/workdir"
 export CMSSW_SEARCH_PATH="$CMSSW_SEARCH_PATH:$GC_WORKDIR"
 mkdir -p "$GC_WORKDIR"; cd "$GC_WORKDIR"
-my_move "$GC_SCRATCH" "$GC_WORKDIR" "$SB_INPUT_FILES $SE_INPUT_FILES $CMSSW_PROLOG_SB_In_FILES $CMSSW_EPILOG_SB_In_FILES"
+my_move "$GC_SCRATCH" "$GC_WORKDIR" "$SB_INPUT_FILES $SE_INPUT_FILES $CMSSW_PROLOG_SB_IN_FILES $CMSSW_EPILOG_SB_IN_FILES"
 echo
 echo "==========================="
 timestamp "CMSSW_STARTUP" "DONE"
 
 GC_CMSSWRUN_RETCODE=0
 # Additional prolog scripts in the CMSSW environment
-for CMSSW_BIN in $CMSSW_PROLOG_EXEC; do
-	_PROLOG_COUNT=1
-	timestamp "CMSSW_PROLOG${_PROLOG_COUNT}" "START"
+if [ -n "$CMSSW_PROLOG_EXEC" ]; then
+	timestamp "CMSSW_PROLOG1" "START"
 	echo "---------------------------"
 	echo
-	echo "Starting $CMSSW_BIN with arguments: $CMSSW_PROLOG_ARGS"
-#	checkbin "$CMSSW_BIN"
-	eval "$CMSSW_BIN $CMSSW_PROLOG_ARGS"
+	echo "Starting $CMSSW_PROLOG_EXEC with arguments: $CMSSW_PROLOG_ARGS"
+	eval "$CMSSW_PROLOG_EXEC $CMSSW_PROLOG_ARGS"
 	GC_CMSSWRUN_RETCODE=$?
 	echo
-	timestamp "CMSSW_PROLOG${_PROLOG_COUNT}" "DONE"
-	_PROLOG_COUNT=$[ $_PROLOG_COUNT +1]
-	if [ "$GC_CMSSWRUN_RETCODE" != "0" ];then
-		echo "Prologue $CMSSW_BIN failed with code: $GC_CMSSWRUN_RETCODE"
+	timestamp "CMSSW_PROLOG1" "DONE"
+	if [ "$GC_CMSSWRUN_RETCODE" != "0" ]; then
+		echo "Prologue $CMSSW_EPILOG_EXEC failed with code: $GC_CMSSWRUN_RETCODE"
 		echo "Aborting..."
-		break
 	fi
-done
+fi
 
 echo "---------------------------"
 echo
@@ -123,53 +119,54 @@ if [ "$GC_CMSSWRUN_RETCODE" == "0" ] && [ -n "$CMSSW_CONFIG" ]; then
 	echo
 	cd "$GC_WORKDIR"
 	for CFG_NAME in $CMSSW_CONFIG; do
+		CFG_BASENAME="$(basename $CFG_NAME)"
 		_CMSRUN_COUNT=1
 		timestamp "CMSSW_CMSRUN${_CMSRUN_COUNT}" "START"
 		echo "Config file: $CFG_NAME"
 		echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~"
 		checkfile "$CFG_NAME"
-		DBSDIR="$GC_WORKDIR/cmssw.dbs/$CFG_NAME"
+		DBSDIR="$GC_WORKDIR/cmssw.dbs/$CFG_BASENAME"
 		mkdir -p "$DBSDIR"
 
 		echo "Substituting variables..."
-		cat "$CFG_NAME" | var_replacer "$CFG_NAME" > "$DBSDIR/config"
+		cat "$CFG_NAME" | var_replacer "$CFG_BASENAME" > "$DBSDIR/config"
 
 		echo "Calculating config file hash..."
 		(
 			echo "# grid-control fix for edmConfigHash"
 			echo "import sys, shlex"
-			echo "if not hasattr(sys, 'argv'): sys.argv = ['"$CFG_NAME"'] + shlex.split('"$@"')"
+			echo "if not hasattr(sys, 'argv'): sys.argv = ['"$CFG_BASENAME"'] + shlex.split('"$@"')"
 			echo "####################################"
 			cat "$DBSDIR/config"
 		) > "$DBSDIR/hash_config" # ensure arguments are forwarded to config file when running edmConfigHash
 
-		cp "$DBSDIR/hash_config" "$CFG_NAME"
-		edmConfigHash "$CFG_NAME" > "$DBSDIR/hash"
+		cp "$DBSDIR/hash_config" "$CFG_BASENAME"
+		edmConfigHash "$CFG_BASENAME" > "$DBSDIR/hash"
 		CODE=$?
 		if [ "$CODE" != "0" ]; then
 			echo "Problem while hashing config file:"
 			echo "---------------------------"
-			echo "Executing python $CFG_NAME (modified for edmConfigHash) ..."
-			python "$CFG_NAME" 2>&1
+			echo "Executing python $CFG_BASENAME (modified for edmConfigHash) ..."
+			python "$CFG_BASENAME" 2>&1
 			echo "---------------------------"
 			CODE=113
 			break
 		fi
 
 		echo "Starting cmsRun..."
-		cp "$DBSDIR/config" "$CFG_NAME"
+		cp "$DBSDIR/config" "$CFG_BASENAME"
 		if [ "$GZIP_OUT" = "yes" ]; then
 			(
 				echo "Starting cmsRun with config file $CFG_NAME and arguments $@"
-				cmsRun -j "$DBSDIR/report.xml" -e "$CFG_NAME" $@
+				cmsRun -j "$DBSDIR/report.xml" -e "$CFG_BASENAME" $@
 				echo $? > "$GC_LANDINGZONE/exitcode.txt"
 				echo
 				echo "---------------------------"
 				echo
-			) 2>&1 | gzip -9 > "$CFG_NAME.rawlog.gz"
+			) 2>&1 | gzip -9 > "$CFG_BASENAME.rawlog.gz"
 			[ -f "$GC_LANDINGZONE/exitcode.txt" ] && CODE=$(< "$GC_LANDINGZONE/exitcode.txt") && rm -f "$GC_LANDINGZONE/exitcode.txt"
 		else 
-			cmsRun -j "$DBSDIR/report.xml" -e "$CFG_NAME" $@
+			cmsRun -j "$DBSDIR/report.xml" -e "$CFG_BASENAME" $@
 			CODE=$?
 		fi
 		[ "$CODE" == "" ] && export CODE="-2"
@@ -199,25 +196,21 @@ if [ "$GC_CMSSWRUN_RETCODE" == "0" ] && [ -n "$CMSSW_CONFIG" ]; then
 fi
 
 # Additional epilog script in the CMSSW environment
-if [ "$GC_CMSSWRUN_RETCODE" == "0" ]; then
-#	for CMSSW_BIN in $CMSSW_EPILOG_EXEC; do
-		_EPILOG_COUNT=1
-		timestamp "CMSSW_EPILOG${_EPILOG_COUNT}" "START"
+if [ -n "$CMSSW_EPILOG_EXEC" ]; then
+	if [ "$GC_CMSSWRUN_RETCODE" == "0" ]; then
+		timestamp "CMSSW_EPILOG1" "START"
 		echo "---------------------------"
 		echo
 		echo "Starting $CMSSW_EPILOG_EXEC with arguments: $CMSSW_EPILOG_ARGS"
-#		checkbin "$CMSSW_BIN"
 		eval "$CMSSW_EPILOG_EXEC $CMSSW_EPILOG_ARGS"
 		GC_CMSSWRUN_RETCODE=$?
 		echo
-		timestamp "CMSSW_EPILOG${_EPILOG_COUNT}" "DONE"
-		_EPILOG_COUNT=$[ $_EPILOG_COUNT +1]
-		if [ "$GC_CMSSWRUN_RETCODE" != "0" ];then
+		timestamp "CMSSW_EPILOG1" "DONE"
+		if [ "$GC_CMSSWRUN_RETCODE" != "0" ]; then
 			echo "Epilogue $CMSSW_EPILOG_EXEC failed with code: $GC_CMSSWRUN_RETCODE"
 			echo "Aborting..."
-#			break
 		fi
-#	done
+	fi
 fi
 
 echo

@@ -17,7 +17,7 @@ from grid_control.gc_exceptions import GCError, InstallationError, UserError
 from grid_control.utils.data_structures import UniqueList
 from grid_control.utils.file_objects import VirtualFile
 from grid_control.utils.parsing import parseBool, parseType
-from grid_control.utils.process_base import exit_without_cleanup
+from grid_control.utils.process_base import LocalProcess, exit_without_cleanup
 from grid_control.utils.table import ColumnTable, ParseableTable, RowTable
 from grid_control.utils.thread_tools import TimeoutException, hang_protection
 from python_compat import any, identity, ifilter, imap, irange, lfilter, lmap, lru_cache, lzip, next, reduce, set, sorted, tarfile, user_input
@@ -39,14 +39,17 @@ def swap(a, b):
 ################################################################
 # Path helper functions
 
-cleanPath = lambda x: os.path.expandvars(os.path.normpath(os.path.expanduser(x.strip())))
+cleanPath = lambda x: os.path.normpath(os.path.expandvars(os.path.expanduser(x.strip())))
 
 def getRootName(fn): # Return file name without extension
 	bn = os.path.basename(str(fn)).lstrip('.')
 	return QM('.' in bn, str.join('', bn.split('.')[:-1]), bn)
 
-pathGC = lambda *args: cleanPath(os.path.join(os.environ['GC_PACKAGES_PATH'], '..', *args))
-pathShare = lambda *args, **kw: cleanPath(os.path.join(os.environ['GC_PACKAGES_PATH'], kw.get('pkg', 'grid_control'), 'share', *args))
+def pathPKG(*args):
+	return cleanPath(os.path.join(os.environ['GC_PACKAGES_PATH'], *args))
+
+def pathShare(*args, **kw):
+	return pathPKG(kw.get('pkg', 'grid_control'), 'share', *args)
 
 def resolvePaths(path, searchPaths = None, mustExist = True, ErrorClass = GCError):
 	path = cleanPath(path) # replace $VAR, ~user, \ separators
@@ -304,6 +307,14 @@ class PersistentDict(dict):
 
 ################################################################
 # File IO helper
+
+def safeRead(fn):
+	fp = open(fn)
+	try:
+		return fp.read()
+	finally:
+		fp.close()
+
 
 def safeWrite(fp, content):
 	fp.writelines(content)
@@ -567,10 +578,12 @@ def eprint(text = '', level = -1, printTime = False, newline = True):
 
 def getVersion():
 	try:
-		version = LoggedProcess('svnversion', '-c %s' % pathGC()).getOutput(True).strip()
+		proc_ver = LocalProcess('svnversion', '-c', pathPKG())
+		version = proc_ver.get_output(timeout = 10).strip()
 		if version != '':
 			assert(any(imap(str.isdigit, version)))
-			if 'stable' in LoggedProcess('svn info', pathGC()).getOutput(True):
+			proc_branch = LocalProcess('svn info', pathPKG())
+			if 'stable' in proc_branch.get_output(timeout = 10):
 				return '%s - stable' % version
 			return '%s - testing' % version
 	except Exception:
@@ -769,7 +782,8 @@ def split_advanced(tokens, doEmit, addEmitToken, quotes = None, brackets = None,
 
 def ping_host(host):
 	try:
-		tmp = LoggedProcess('ping', '-Uqnc 1 -W 1 %s' % host).getOutput().splitlines()
+		proc = LocalProcess('ping', '-Uqnc', 1, '-W', 1, host)
+		tmp = proc.get_output(timeout = 1).splitlines()
 		assert(tmp[-1].endswith('ms'))
 		return float(tmp[-1].split('/')[-2]) / 1000.
 	except Exception:

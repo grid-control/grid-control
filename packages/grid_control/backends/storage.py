@@ -16,6 +16,7 @@ import os, sys, shutil
 from grid_control import utils
 from grid_control.config import ConfigError, validNoVar
 from grid_control.gc_plugin import NamedPlugin
+from grid_control.utils.process_base import LocalProcess
 from hpfwk import NestedException
 from python_compat import imap, set
 
@@ -30,7 +31,7 @@ def se_runcmd(cmd, varDict, *urls):
 	runLib = utils.pathShare('gc-run.lib')
 	args = str.join(' ', imap(lambda x: '"%s"' % ensurePrefix(x).replace('dir://', 'file://'), urls))
 	varString = str.join(' ', imap(lambda x: 'export %s="%s";' % (x, varDict[x]), varDict))
-	return utils.LoggedProcess('. %s || exit 99; %s %s %s' % (runLib, varString, cmd, args))
+	return LocalProcess('/bin/bash', '-c', '. %s || exit 99; %s %s %s' % (runLib, varString, cmd, args))
 
 se_ls = lambda target: se_runcmd('url_ls', {}, target)
 se_rm = lambda target: se_runcmd('print_and_eval "url_rm"', {}, target)
@@ -112,11 +113,11 @@ class SEStorageManager(StorageManager):
 				utils.vprint('Copy %s to SE %d ' % (desc, idx + 1), -1, newline = False)
 				sys.stdout.flush()
 				proc = se_copy(source, os.path.join(sePath, target), self.smForce)
-				if proc.wait() == 0:
+				if proc.status(timeout = 5*60, terminate = True) == 0:
 					utils.vprint('finished', -1)
 				else:
 					utils.vprint('failed', -1)
-					utils.eprint(proc.getMessage())
+					utils.eprint(proc.stderr.read(timeout = 0))
 					utils.eprint('Unable to copy %s! You can try to copy it manually.' % desc)
 					if not utils.getUserBool('Is %s (%s) available on SE %s?' % (desc, source, sePath), False):
 						raise StorageError('%s is missing on SE %s!' % (desc, sePath))

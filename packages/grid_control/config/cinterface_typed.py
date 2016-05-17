@@ -20,7 +20,7 @@ from grid_control.config.cview_base import SimpleConfigView
 from grid_control.config.matcher_base import DictLookup, ListFilter, ListOrder, Matcher
 from grid_control.utils.data_structures import makeEnum
 from grid_control.utils.parsing import parseBool, parseDict, parseList, parseTime, strDictLong, strTimeShort
-from hpfwk import APIError, Plugin
+from hpfwk import APIError, ExceptionCollector, Plugin
 from python_compat import identity, ifilter, imap, lmap, relpath, sorted, user_input
 
 # Config interface class accessing typed data using an string interface provided by configView
@@ -90,12 +90,14 @@ class TypedConfigInterface(ConfigInterface):
 	# Return multiple resolved paths (each line processed same as getPath)
 	def getPaths(self, option, default = noDefault, mustExist = True, **kwargs):
 		def patlist2pathlist(value, mustExist):
-			try:
-				for pattern in value:
+			ec = ExceptionCollector()
+			for pattern in value:
+				try:
 					for fn in utils.resolvePaths(pattern, self._configView.pathDict.get('search_paths', []), mustExist, ConfigError):
 						yield fn
-			except Exception:
-				raise ConfigError('Error resolving pattern %s' % pattern)
+				except Exception:
+					ec.collect()
+			ec.raise_any(ConfigError('Error resolving paths'))
 
 		str2obj = lambda value: list(patlist2pathlist(parseList(value, None), mustExist))
 		obj2str = lambda value: '\n' + str.join('\n', patlist2pathlist(value, False))
@@ -150,7 +152,7 @@ class SimpleConfigInterface(TypedConfigInterface):
 		scriptType = self.getEnum(appendOption(option, 'type'), CommandType, CommandType.executable, **kwargs)
 		if scriptType == CommandType.executable:
 			return self.getPath(option, default, **kwargs)
-		return self.get(option, default, **kwargs)
+		return os.path.expandvars(self.get(option, default, **kwargs))
 
 	def getLookup(self, option, default = noDefault,
 			defaultMatcher = 'start', single = True, includeDefault = False, **kwargs):
@@ -162,14 +164,14 @@ class SimpleConfigInterface(TypedConfigInterface):
 		(sourceDict, sourceOrder) = self.getDict(option, default, **kwargs)
 		return DictLookup(sourceDict, sourceOrder, matcherObj, single, includeDefault)
 
-	def getFilter(self, option, default = noDefault,
+	def getFilter(self, option, default = noDefault, matchKey = None, negate = False, filterParser = str, filterStr = str.__str__,
 			defaultMatcher = 'start', defaultFilter = 'strict', defaultOrder = ListOrder.source, **kwargs):
 		matcherOpt = appendOption(option, 'matcher')
 		matcherObj = self.getPlugin(matcherOpt, defaultMatcher, cls = Matcher, pargs = (matcherOpt,))
-		filterExpr = self.get(option, default, **kwargs)
+		filterExpr = self.get(option, default, str2obj = filterParser, obj2str = filterStr, **kwargs)
 		filterOrder = self.getEnum(appendOption(option, 'order'), ListOrder, defaultOrder)
 		return self.getPlugin(appendOption(option, 'filter'), defaultFilter, cls = ListFilter,
-			pargs = (filterExpr, matcherObj, filterOrder))
+			pargs = (filterExpr, matcherObj, filterOrder, matchKey, negate))
 
 	# Get state - bool stored in hidden "state" section - any given detail overrides global state
 	def getState(self, statename, detail = '', default = False):

@@ -16,13 +16,40 @@ import os, random
 from grid_control import utils
 from grid_control.backends import WMS
 from grid_control.config import ConfigError, changeInitNeeded, validNoVar
-from grid_control.gc_plugin import NamedPlugin
+from grid_control.gc_plugin import ConfigurablePlugin, NamedPlugin
 from grid_control.parameters import ParameterFactory, ParameterInfo
 from grid_control.utils.file_objects import SafeFile
 from grid_control.utils.gc_itertools import ichain, lchain
 from hpfwk import AbstractError
 from time import strftime, time
 from python_compat import ifilter, imap, izip, lfilter, lmap, lru_cache, md5_hex
+
+class JobNamePlugin(ConfigurablePlugin):
+	def __init__(self, config, task):
+		ConfigurablePlugin.__init__(self, config)
+		self._task = task
+
+	def getName(self, jobNum):
+		raise AbstractError
+
+
+class DefaultJobName(JobNamePlugin):
+	alias = ['default']
+
+	def getName(self, jobNum):
+		return self._task.taskID[:10] + '.' + str(jobNum)
+
+
+class ConfigurableJobName(JobNamePlugin):
+	alias = ['config']
+
+	def __init__(self, config, task):
+		JobNamePlugin.__init__(self, config, task)
+		self._name = config.get('job name', '@GC_TASK_ID@.@GC_JOB_ID@', onChange = None)
+
+	def getName(self, jobNum):
+		return self._task.substVars('job name', self._name, jobNum)
+
 
 class TaskModule(NamedPlugin):
 	configSections = NamedPlugin.configSections + ['task']
@@ -35,30 +62,32 @@ class TaskModule(NamedPlugin):
 		self._varCheck = validNoVar(config)
 
 		# Task requirements
-		configJobs = config.changeView(viewClass = 'TaggedConfigView', addSections = ['jobs'], addTags = [self]) # Move this into parameter manager?
-		self.wallTime = configJobs.getTime('wall time', onChange = None)
-		self.cpuTime = configJobs.getTime('cpu time', self.wallTime, onChange = None)
-		self.cpus = configJobs.getInt('cpus', 1, onChange = None)
-		self.memory = configJobs.getInt('memory', -1, onChange = None)
-		self.nodeTimeout = configJobs.getTime('node timeout', -1, onChange = initSandbox)
+		jobs_config = config.changeView(viewClass = 'TaggedConfigView', addSections = ['jobs'], addTags = [self]) # Move this into parameter manager?
+		self.wallTime = jobs_config.getTime('wall time', onChange = None)
+		self.cpuTime = jobs_config.getTime('cpu time', self.wallTime, onChange = None)
+		self.cpus = jobs_config.getInt('cpus', 1, onChange = None)
+		self.memory = jobs_config.getInt('memory', -1, onChange = None)
+		self.nodeTimeout = jobs_config.getTime('node timeout', -1, onChange = initSandbox)
 
 		# Compute / get task ID
 		self.taskID = config.get('task id', 'GC' + md5_hex(str(time()))[:12], persistent = True)
 		self.taskDate = config.get('task date', strftime('%Y-%m-%d'), persistent = True, onChange = initSandbox)
 		self.taskConfigName = config.getConfigName()
+		self._job_name_generator = config.getPlugin('job name generator', 'DefaultJobName',
+			cls = JobNamePlugin, pargs = (self,))
 
 		# Storage setup
-		configStorage = config.changeView(viewClass = 'TaggedConfigView',
+		storage_config = config.changeView(viewClass = 'TaggedConfigView',
 			setClasses = None, setNames = None, addSections = ['storage'], addTags = [self])
 		self.taskVariables = {
 			# Space limits
-			'SCRATCH_UL': configStorage.getInt('scratch space used', 5000, onChange = initSandbox),
-			'SCRATCH_LL': configStorage.getInt('scratch space left', 1, onChange = initSandbox),
-			'LANDINGZONE_UL': configStorage.getInt('landing zone space used', 100, onChange = initSandbox),
-			'LANDINGZONE_LL': configStorage.getInt('landing zone space left', 1, onChange = initSandbox),
+			'SCRATCH_UL': storage_config.getInt('scratch space used', 5000, onChange = initSandbox),
+			'SCRATCH_LL': storage_config.getInt('scratch space left', 1, onChange = initSandbox),
+			'LANDINGZONE_UL': storage_config.getInt('landing zone space used', 100, onChange = initSandbox),
+			'LANDINGZONE_LL': storage_config.getInt('landing zone space left', 1, onChange = initSandbox),
 		}
-		configStorage.set('se output pattern', 'job_@GC_JOB_ID@_@X@')
-		self.seMinSize = configStorage.getInt('se min size', -1, onChange = initSandbox)
+		storage_config.set('se output pattern', 'job_@GC_JOB_ID@_@X@')
+		self.seMinSize = storage_config.getInt('se min size', -1, onChange = initSandbox)
 
 		self.sbInputFiles = config.getPaths('input files', [], onChange = initSandbox)
 		self.sbOutputFiles = config.getList('output files', [], onChange = initSandbox)
@@ -74,9 +103,9 @@ class TaskModule(NamedPlugin):
 		# Init parameter source manager
 		self._pm = config.getPlugin('parameter factory', 'SimpleParameterFactory',
 			cls = ParameterFactory, inherit = True)
-		configParam = config.changeView(viewClass = 'TaggedConfigView', addSections = ['parameters'], addTags = [self])
-		self.setupJobParameters(configParam, self._pm)
-		self.source = self._pm.getSource(configParam)
+		param_config = config.changeView(viewClass = 'TaggedConfigView', addSections = ['parameters'], addTags = [self])
+		self.setupJobParameters(param_config, self._pm)
+		self.source = self._pm.getSource(param_config)
 
 
 	def setupJobParameters(self, config, pm):
@@ -118,7 +147,7 @@ class TaskModule(NamedPlugin):
 	# Get job dependent environment variables
 	def getJobConfig(self, jobNum):
 		tmp = self.source.getJobInfo(jobNum)
-		return dict(imap(lambda key: (key, tmp.get(key, '')), self.source.getJobKeys()))
+		return dict(imap(lambda key: (str(key), tmp.get(key, '')), self.source.getJobKeys()))
 
 
 	def getTransientVars(self):
@@ -145,7 +174,7 @@ class TaskModule(NamedPlugin):
 		return alias
 
 
-	def substVars(self, inp, jobNum = None, addDict = None, check = True):
+	def substVars(self, name, inp, jobNum = None, addDict = None, check = True):
 		addDict = addDict or {}
 		allVars = utils.mergeDicts([addDict, self.getTaskConfig()])
 		if jobNum is not None:
@@ -153,15 +182,15 @@ class TaskModule(NamedPlugin):
 		subst = lambda x: utils.replaceDict(x, allVars, ichain([self.getVarMapping().items(), izip(addDict, addDict)]))
 		result = subst(subst(str(inp)))
 		if check and self._varCheck.check(result):
-			raise ConfigError("'%s' contains invalid variable specifiers: '%s'" % (inp, result))
+			raise ConfigError('%s references unknown variables: %s' % (name, result))
 		return result
 
 
 	def validateVariables(self):
-		example_vars = self.getJobConfig(0)
+		example_vars = dict.fromkeys(self.getVarNames(), '')
 		example_vars.update(dict.fromkeys(['X', 'XBASE', 'XEXT', 'GC_DATE', 'GC_TIMESTAMP', 'GC_GUID', 'RANDOM'], ''))
-		for x in ichain([self.getTaskConfig().values(), example_vars.values()]):
-			self.substVars(x, None, example_vars)
+		for name, value in ichain([self.getTaskConfig().items(), example_vars.items()]):
+			self.substVars(name, value, None, example_vars)
 
 
 	# Get job requirements
@@ -210,8 +239,8 @@ class TaskModule(NamedPlugin):
 
 
 	def getDescription(self, jobNum): # (task name, job name, job type)
-		return utils.Result(taskName = self.taskID,
-			jobName = self.taskID[:10] + '.' + str(jobNum), jobType = None)
+		return utils.Result(taskName = self.taskID, jobType = None,
+			jobName = self._job_name_generator.getName(jobNum))
 
 
 	def report(self, jobNum):

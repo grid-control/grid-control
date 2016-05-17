@@ -12,7 +12,7 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-from grid_control.backends.broker import Broker
+from grid_control.backends.broker_base import Broker
 from grid_control.backends.wms import WMS
 from grid_control.utils import Result
 from python_compat import ifilter
@@ -34,7 +34,7 @@ class MultiWMS(WMS):
 			self._timing.waitBetweenSteps = max(self._timing.waitBetweenSteps, wmsT.waitBetweenSteps)
 
 		self._brokerWMS = config.getPlugin('wms broker', 'RandomBroker',
-			cls = Broker, tags = [self], pargs = ('wms', 'wms', self._wmsMap.keys))
+			cls = Broker, inherit = True, tags = [self], pargs = ('wms', 'wms', self._wmsMap.keys))
 
 
 	def getTimings(self):

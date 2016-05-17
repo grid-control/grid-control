@@ -23,4 +23,4 @@ def initGC():
 	logging_defaults()
 initGC()
 
-__version__ = '$Revision: 1701$'[11:-1]
+__version__ = '$Revision: 1764$'[11:-1]

@@ -32,7 +32,7 @@ try:
 except ImportError:
 	matplotlib = None
 import os, re, logging
-from grid_control.output_processor import JobInfoProcessor
+from grid_control.output_processor import JobInfoProcessor, JobResult
 from grid_control.report import Report
 from grid_control.utils.data_structures import makeEnum
 from python_compat import irange, izip
@@ -57,7 +57,7 @@ JobResultEnum = makeEnum([
 
 def extractJobTiming(jInfo, task):
 	jobResult = dict()
-	jobNum = jInfo[0]
+	jobNum = jInfo[JobResult.JOBNUM]
 
 	# intialize all with None
 	for key in JobResultEnum.enumNames:
@@ -66,7 +66,7 @@ def extractJobTiming(jInfo, task):
 
 	total_size_in = 0
 	total_size_out = 0
-	for (key, val) in jInfo[2].items():
+	for (key, val) in jInfo[JobResult.RAW].items():
 		enumID = JobResultEnum.str2enum(key)
 		if enumID is not None:
 			jobResult[enumID] = val
@@ -283,6 +283,8 @@ def getCumQuantityAtTimeSpan(jobInfo, timeStart, timeEnd, timingExtract, quantit
 
 
 class PlotReport(Report):
+	alias = ['plot']
+
 	def initHistogram(self, name, xlabel, ylabel):
 		fig = matplotlib.pyplot.figure()
 
@@ -449,8 +451,9 @@ class PlotReport(Report):
 
 		workdir = self._jobDB.getWorkPath()
 		for j in self._jobs:
-			jInfo = JobInfoProcessor().process(os.path.join(workdir, 'output', 'job_%d' % j))
-			if jInfo is None:
+			try:
+				jInfo = JobInfoProcessor().process(os.path.join(workdir, 'output', 'job_%d' % j))
+			except Exception:
 				log.info("Ignoring job")
 				continue
 

@@ -16,8 +16,9 @@ import os, sys, logging
 from grid_control import utils
 from grid_control.config.cfiller_base import CompatConfigFiller, DefaultFilesConfigFiller, DictConfigFiller, GeneralFileConfigFiller, MultiConfigFiller
 from grid_control.config.cinterface_typed import SimpleConfigInterface
-from grid_control.config.config_entry import ConfigContainer
+from grid_control.config.config_entry import ConfigContainer, ConfigError
 from grid_control.config.cview_base import SimpleConfigView
+from grid_control.gc_exceptions import GCLogHandler
 from grid_control.utils.data_structures import UniqueList
 from grid_control.utils.file_objects import SafeFile
 from python_compat import lfilter
@@ -32,9 +33,13 @@ class ConfigFactory(object):
 				return prefix
 			return 'unnamed'
 
-		pathMain = os.getcwd()
+		try:
+			pathMain = os.getcwd()
+		except Exception:
+			raise ConfigError('The current directory does not exist!')
 		if configFilePath:
-			pathMain = os.path.dirname(utils.resolvePath(configFilePath, searchPaths = [os.getcwd()]))
+			pathMain = os.path.dirname(utils.resolvePath(configFilePath,
+				searchPaths = [os.getcwd()], ErrorClass = ConfigError))
 
 		# Init config containers
 		self._curContainer = ConfigContainer('current')
@@ -112,4 +117,6 @@ def createConfig(configFile = None, configDict = None, useDefaultFiles = True, a
 	if configDict:
 		fillerList.append(DictConfigFiller(configDict))
 	fillerList.extend(additional or [])
-	return ConfigFactory(MultiConfigFiller(fillerList), configFile).getConfig()
+	config = ConfigFactory(MultiConfigFiller(fillerList), configFile).getConfig()
+	GCLogHandler.config_instances.append(config)
+	return config

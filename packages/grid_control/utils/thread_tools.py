@@ -118,8 +118,8 @@ class GCQueue(object):
 
 	def get(self, timeout, default = IndexError): # IndexError is a magic value to raise an exception
 		self._notify.wait(timeout)
+		self._lock.acquire()
 		try:
-			self._lock.acquire()
 			if not self._queue:
 				if default == IndexError:
 					raise IndexError('Queue is empty!')
@@ -133,8 +133,8 @@ class GCQueue(object):
 		return result
 
 	def put(self, value):
+		self._lock.acquire()
 		try:
-			self._lock.acquire()
 			self._queue.append(value)
 			self._notify.set()
 		finally:
@@ -152,8 +152,8 @@ class GCThreadPool(object):
 
 	def wait_and_drop(self, timeout = None):
 		while True:
+			self._lock.acquire()
 			try:
-				self._lock.acquire()
 				t_current = time.time()
 				# discard stale threads
 				for token in list(self._token_time):
@@ -172,8 +172,8 @@ class GCThreadPool(object):
 				timeout -= time.time() - t_current
 
 	def start_thread(self, desc, fun, *args, **kwargs):
+		self._lock.acquire()
 		try:
-			self._lock.acquire()
 			self._token += 1
 			self._token_time[self._token] = time.time()
 			self._token_desc[self._token] = desc
@@ -187,13 +187,13 @@ class GCThreadPool(object):
 		try:
 			fun(*args, **kwargs)
 		except Exception:
+			self._lock.acquire()
 			try:
-				self._lock.acquire()
 				self._log.exception('Exception in thread %r', self._token_desc[token])
 			finally:
 				self._lock.release()
+		self._lock.acquire()
 		try:
-			self._lock.acquire()
 			self._token_time.pop(token, None)
 			self._token_desc.pop(token, None)
 		finally:

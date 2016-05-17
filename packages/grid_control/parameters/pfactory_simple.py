@@ -155,9 +155,9 @@ class SimpleParameterFactory(BasicParameterFactory):
 			else:
 				psource_list.append(PSourceClass(*args))
 		# Optimize away unnecessary cross operations
-		if len(lfilter(lambda p: p.getMaxParameters() is not None, psource_list)) > 1:
-			return [CrossParameterSource(*psource_list)]
-		return psource_list # simply forward list of psources
+		if len(lfilter(lambda p: p.getMaxParameters() is not None, psource_list)) <= 1:
+			return psource_list # simply forward list of psources
+		return [CrossParameterSource(*psource_list)]
 
 
 	def tree2expr(self, node):

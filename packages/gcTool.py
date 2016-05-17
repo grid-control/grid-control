@@ -138,15 +138,15 @@ def gc_create_workflow(config):
 			utils.ensureDirExists(config.getWorkPath(), 'work directory')
 
 	# Query config settings before config is frozen
-	globalConfig = config.changeView(setSections = ['global'])
-	help_cfg = globalConfig.getState('display', detail = 'config')
-	help_scfg = globalConfig.getState('display', detail = 'minimal config')
-	actionConfig = config.changeView(setSections = ['action'])
-	action_delete = actionConfig.get('delete', '', onChange = None)
-	action_reset = actionConfig.get('reset', '', onChange = None)
+	global_config = config.changeView(setSections = ['global'])
+	help_cfg = global_config.getState('display', detail = 'config')
+	help_scfg = global_config.getState('display', detail = 'minimal config')
+	action_config = config.changeView(setSections = ['action'])
+	action_delete = action_config.get('delete', '', onChange = None)
+	action_reset = action_config.get('reset', '', onChange = None)
 
 	# Create workflow and freeze config settings
-	workflow = globalConfig.getPlugin('workflow', 'Workflow:global', cls = 'Workflow')
+	workflow = global_config.getPlugin('workflow', 'Workflow:global', cls = 'Workflow')
 	config.factory.freezeConfig(writeConfig = config.getState('init', detail = 'config'))
 
 	# Give config help
@@ -186,6 +186,7 @@ def run():
 		pass
 	except Exception: # coverage overrides sys.excepthook
 		gc_excepthook(*sys.exc_info())
+		sys.exit(os.EX_SOFTWARE)
 
 if __name__ == '__main__':
 	run()

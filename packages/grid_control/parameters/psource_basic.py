@@ -135,6 +135,9 @@ class ConstParameterSource(SingleParameterSource):
 	def fillParameterInfo(self, pNum, result):
 		result[self._key] = self._value
 
+	def __repr__(self):
+		return 'const(%s, %s)' % (repr(self._key), repr(self._value))
+
 	def create(cls, pconfig, key, value = None): # pylint:disable=arguments-differ
 		if value is None:
 			value = pconfig.get(key)

@@ -26,10 +26,12 @@ parser.addBool('expr', 'J', 'json',          default = False, help = 'Output JSO
 parser.addBool('expr', 'F', 'full',          default = False, help = 'Output JSON file with full expression')
 
 parser.section('calc', 'Options which allow luminosity related calculations', '%s <config file>')
+parser.addText('calc', 'O', 'output-dir',    default = None,  help = 'Set output directory (default: work directory)')
 parser.addBool('calc', 'g', 'job-gc',        default = False, help = 'Output grid-control compatible lumi expression for processed lumi sections')
 parser.addBool('calc', 'j', 'job-json',      default = False, help = 'Output JSON file with processed lumi sections')
 parser.addBool('calc', 'e', 'job-events',    default = False, help = 'Get number of events processed')
 parser.addBool('calc', 'p', 'parameterized', default = False, help = 'Use output file name to categorize output (useful for parameterized tasks)')
+parser.addBool('calc', ' ', 'replace',   default = 'job_%d_', help = 'Pattern to replace for parameterized jobs (default: job_%%d_')
 options = scriptOptions(parser)
 
 def outputGC(lumis, stream = sys.stdout):
@@ -71,21 +73,20 @@ def lumi_expr(opts, args):
 		print(result)
 
 def iter_jobs(opts, workDir, jobList, splitter):
-	(splitInfo, activity, fip) = ({}, None, FileInfoProcessor())
+	(splitInfo, fip) = ({}, FileInfoProcessor())
 	for jobNum in jobList:
-		del activity
 		activity = utils.ActivityLog('Reading job logs - [%d / %d]' % (jobNum, jobList[-1]))
 
 		if opts.parameterized:
 			fi = fip.process(os.path.join(workDir, 'output', 'job_%d' % jobNum))
 			outputName = fi[0][FileInfoProcessor.NameDest].split('.')[0]
-			outputName = outputName.replace('_%d_' % jobNum, '_').replace('/', '_').replace('__', '_')
+			outputName = outputName.replace(opts.replace % jobNum, '_').replace('/', '_').replace('__', '_').strip('_')
 		else:
 			if splitter:
 				splitInfo = splitter.getSplitInfo(jobNum)
 			outputName = splitInfo.get(DataSplitter.Nickname, splitInfo.get(DataSplitter.DatasetID, 0))
 		yield (jobNum, outputName)
-	activity.finish()
+		activity.finish()
 
 def process_fwjr(outputName, fwkXML, lumiDict, readDict, writeDict):
 	for run in fwkXML.getElementsByTagName('Run'):
@@ -132,23 +133,24 @@ def lumi_calc(opts, workDir, jobList, splitter):
 		lumis[sample] = mergeLumi(lumis[sample])
 	activity.finish()
 
-	for sample, lumis in lumis.items():
+	for sample, lumi_list in lumis.items():
 		print('Sample: %s' % sample)
 		print('=========================================')
-		print('Number of events processed: %12d' % readDict[sample])
+		print('Number of events processed: %12s' % readDict.get(sample))
 		print('  Number of events written: %12d' % sum(writeDict.get(sample, {}).values()))
 		if writeDict.get(sample, None):
 			sys.stdout.write('\n')
 			head = [(0, '          Output filename'), (1, 'Events')]
 			utils.printTabular(head, lmap(lambda pfn: {0: pfn, 1: writeDict[sample][pfn]}, writeDict[sample]))
 		if opts.job_json:
-			outputJSON(lumis, open(os.path.join(workDir, 'processed_%s.json' % sample), 'w'))
-			print('Saved processed lumi sections in ' + os.path.join(workDir, 'processed_%s.json' % sample))
+			json_fn = os.path.join(opts.output_dir or workDir, 'processed_%s.json' % sample)
+			outputJSON(lumi_list, open(json_fn, 'w'))
+			print('Saved processed lumi sections in ' + json_fn)
 		if opts.job_gc:
 			sys.stdout.write('\n')
 			print('List of processed lumisections:')
 			print('-----------------------------------------')
-			outputGC(lumis)
+			outputGC(lumi_list)
 		sys.stdout.write('\n')
 
 def main(opts, args):

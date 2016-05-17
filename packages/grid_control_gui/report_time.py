@@ -17,6 +17,8 @@ from grid_control.report import Report
 from grid_control.utils.parsing import strTime
 
 class TimeReport(Report):
+	alias = ['time']
+
 	def __init__(self, jobDB, task, jobs = None, configString = ''):
 		Report.__init__(self, jobDB, task, jobs, configString)
 		self._dollar_per_hour = 0.013
@@ -32,5 +34,7 @@ class TimeReport(Report):
 			jobObj = self._jobDB.get(jobNum)
 			if jobObj:
 				cpuTime += jobObj.get('runtime', 0)
-		sys.stdout.write('Consumed wall time: %-20s' % strTime(cpuTime))
-		sys.stdout.write('Estimated cost: $%.2f\n' % ((cpuTime / 60. / 60.) * self._dollar_per_hour))
+		msg = 'Consumed wall time: %-20s' % strTime(cpuTime)
+		msg += 'Estimated cost: $%.2f\n' % ((cpuTime / 60. / 60.) * self._dollar_per_hour)
+		sys.stdout.write(msg)
+		sys.stdout.flush()

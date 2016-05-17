@@ -234,10 +234,12 @@ class ExceptionCollector(object):
 		self._exceptions.append(NestedExceptionHelper(sys.exc_info()[1], sys.exc_info()[2]))
 		clearException()
 
-	def raise_any(self, value):
+	def raise_any(self, value, collapse = False):
 		if not self._exceptions:
 			return
-		if hasattr(value, 'nested'):
+		if collapse and (len(self._exceptions) == 1):
+			value = self._exceptions[0]
+		elif hasattr(value, 'nested'):
 			value.nested.extend(self._exceptions)
 		self._exceptions = []
 		raise value

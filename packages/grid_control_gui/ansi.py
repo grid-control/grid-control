@@ -12,7 +12,7 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-import sys, tty, fcntl, struct, termios
+import re, sys, tty, fcntl, struct, termios
 from python_compat import imap
 
 class Console(object):
@@ -35,6 +35,10 @@ class Console(object):
 			return ColorString(data, attr or [])
 		return data
 	fmt = classmethod(fmt)
+
+	def fmt_strip(cls, value):
+		return re.sub(r'\x1b(>|=|\[[^A-Za-z]*[A-Za-z])', '', value)
+	fmt_strip = classmethod(fmt_strip)
 
 	def __init__(self):
 		(self.stdout, self.stdin) = (sys.stdout, sys.stdin)

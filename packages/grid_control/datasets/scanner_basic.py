@@ -12,7 +12,7 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-import os, sys
+import os, sys, logging
 from grid_control import utils
 from grid_control.config import ConfigError, createConfig
 from grid_control.datasets import DataProvider, DatasetError
@@ -26,19 +26,25 @@ def splitParse(opt):
 	(delim, ds, de) = utils.optSplit(opt, '::')
 	return (delim, parseStr(ds, int), parseStr(de, int))
 
+class NullScanner(InfoScanner):
+	def getEntries(self, path, metadata, events, seList, objStore):
+		yield (path, metadata, events, seList, objStore)
+
 # Get output directories from external config file
 class OutputDirsFromConfig(InfoScanner):
 	def __init__(self, config):
 		InfoScanner.__init__(self, config)
-		newVerbosity = utils.verbosity(utils.verbosity() - 3)
-		extConfigFN = config.getPath('source config')
-		extConfig = createConfig(extConfigFN).changeView(setSections = ['global'])
-		self._extWorkDir = extConfig.getWorkPath()
-		self._extTask = extConfig.getPlugin(['task', 'module'], cls = 'TaskModule')
+		ext_config_fn = config.getPath('source config')
+		ext_config = createConfig(ext_config_fn).changeView(setSections = ['global'])
+		self._extWorkDir = ext_config.getWorkPath()
+		logging.getLogger('user').disabled = True
+		self._extWorkflow = ext_config.getPlugin('workflow', 'Workflow:global', cls = 'Workflow',
+			pargs = ('task',))
+		logging.getLogger('user').disabled = False
+		self._extTask = self._extWorkflow.task
 		selector = config.get('source job selector', '')
-		extJobDB = JobDB(extConfig, jobSelector = lambda jobNum, jobObj: jobObj.state == Job.SUCCESS)
-		self._selected = sorted(extJobDB.getJobs(JobSelector.create(selector, task = self._extTask)))
-		utils.verbosity(newVerbosity + 3)
+		ext_job_db = JobDB(ext_config, jobSelector = lambda jobNum, jobObj: jobObj.state == Job.SUCCESS)
+		self._selected = sorted(ext_job_db.getJobs(JobSelector.create(selector, task = self._extTask)))
 
 	def getEntries(self, path, metadata, events, seList, objStore):
 		for jobNum in self._selected:
@@ -52,7 +58,7 @@ class OutputDirsFromConfig(InfoScanner):
 class OutputDirsFromWork(InfoScanner):
 	def __init__(self, config):
 		InfoScanner.__init__(self, config)
-		self._extWorkDir = config.get('source directory')
+		self._extWorkDir = config.getPath('source directory')
 		self._extOutputDir = os.path.join(self._extWorkDir, 'output')
 		self._selector = JobSelector.create(config.get('source job selector', ''))
 
@@ -63,7 +69,7 @@ class OutputDirsFromWork(InfoScanner):
 			try:
 				metadata['GC_JOBNUM'] = int(dirName.split('_')[1])
 			except Exception:
-				pass
+				continue
 			objStore['GC_WORKDIR'] = self._extWorkDir
 			log.finish()
 			if self._selector and not self._selector(metadata['GC_JOBNUM'], None):
@@ -108,13 +114,13 @@ class FilesFromLS(InfoScanner):
 		counter = 0
 		from grid_control.backends.storage import se_ls
 		proc = se_ls(self._path)
-		for fn in proc.iter():
+		for fn in proc.stdout.iter(timeout = 60):
 			log = utils.ActivityLog('Reading source directory - [%d]' % counter)
 			yield (os.path.join(self._path, fn.strip()), metadata, events, seList, objStore)
 			counter += 1
 			log.finish()
-		if proc.wait():
-			utils.eprint(proc.getError())
+		if proc.status(timeout = 0) != 0:
+			self._log.log_process(proc)
 
 
 class JobInfoFromOutputDir(InfoScanner):

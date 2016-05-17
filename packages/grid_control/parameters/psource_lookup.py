@@ -15,7 +15,7 @@
 from grid_control import utils
 from grid_control.config import ConfigError, Matcher
 from grid_control.parameters.psource_base import ParameterInfo, ParameterSource
-from grid_control.parameters.psource_basic import FormatterParameterSource, KeyParameterSource, SimpleParameterSource, SingleParameterSource
+from grid_control.parameters.psource_basic import KeyParameterSource, SingleParameterSource
 from python_compat import imap, irange, izip, lmap, md5_hex
 
 class LookupMatcher:
@@ -81,7 +81,11 @@ def lookupConfigParser(pconfig, outputKey, lookupKeys):
 class SimpleLookupParameterSource(SingleParameterSource):
 	def __init__(self, outputKey, lookupKeys, lookupFunctions, lookupDictConfig):
 		SingleParameterSource.__init__(self, outputKey)
+		self._lookupKeys = lookupKeys
 		self._matcher = LookupMatcher(lookupKeys, lookupFunctions, lookupDictConfig)
+
+	def depends(self):
+		return self._lookupKeys
 
 	def fillParameterInfo(self, pNum, result):
 		lookupResult = self._matcher.lookup(result)
@@ -93,7 +97,7 @@ class SimpleLookupParameterSource(SingleParameterSource):
 			result[self._key] = lookupResult[0]
 
 	def show(self):
-		return ['%s: var = %s, lookup = %s' % (self.__class__.__name__, self._key, str.join(',', self._matcher.lookupKeys))]
+		return ['%s: var = %s, lookup = %s' % (self.__class__.__name__, self._key, repr(self._matcher))]
 
 	def getHash(self):
 		return md5_hex(str(self._key) + self._matcher.getHash())
@@ -168,7 +172,7 @@ class SwitchingLookupParameterSource(SingleParameterSource):
 		return "switch(%r, key('%s'), %s)" % (self._psource, self._key, repr(self._matcher))
 
 	def show(self):
-		result = ['%s: var = %s, lookup = %s' % (self.__class__.__name__, self._key, str.join(',', self._matcher.lookupKeys))]
+		result = ['%s: var = %s, lookup = %s' % (self.__class__.__name__, self._key, repr(self._matcher))]
 		return result + lmap(lambda x: '\t' + x, self._psource.show())
 
 	def create(cls, pconfig, psource, key, lookup = None): # pylint:disable=arguments-differ
@@ -187,9 +191,12 @@ def createLookupHelper(pconfig, var_list, lookup_list):
 
 	pvalue = pconfig.getParameter(var_name.lstrip('!'))
 	if isinstance(pvalue, list): # simple parameter source
-		return [(False, SimpleParameterSource, [var_name, pvalue])]
+		if len(pvalue) == 1:
+			return [(False, ParameterSource.getClass('ConstParameterSource'), [var_name, pvalue[0]])]
+		else:
+			return [(False, ParameterSource.getClass('SimpleParameterSource'), [var_name, pvalue])]
 	elif isinstance(pvalue, tuple) and pvalue[0] == 'format':
-		return [(False, FormatterParameterSource, pvalue[1:])]
+		return [(False, ParameterSource.getClass('FormatterParameterSource'), pvalue[1:])]
 
 	lookup_key = None
 	if lookup_list: # default lookup key

@@ -14,7 +14,7 @@
 
 import os, copy, logging
 from grid_control import utils
-from grid_control.config import createConfig
+from grid_control.config import createConfig, triggerResync
 from grid_control.datasets.dproc_base import DataProcessor
 from grid_control.gc_plugin import ConfigurablePlugin
 from grid_control.utils.data_structures import makeEnum
@@ -36,7 +36,7 @@ class DataProvider(ConfigurablePlugin):
 		self._datasetProcessor = config.getCompositePlugin('dataset processor',
 			'EntriesConsistencyDataProcessor URLDataProcessor URLCountDataProcessor ' +
 			'EntriesCountDataProcessor EmptyDataProcessor UniqueDataProcessor LocationDataProcessor',
-			'MultiDataProcessor', cls = DataProcessor)
+			'MultiDataProcessor', cls = DataProcessor, onChange = triggerResync(['datasets', 'parameters']))
 
 
 	def bind(cls, value, **kwargs):
@@ -119,13 +119,13 @@ class DataProvider(ConfigurablePlugin):
 					self._cache_block = list(self._stats.process(self._datasetProcessor.process(prepareBlocks())))
 			except Exception:
 				raise DatasetError('Unable to retrieve dataset %s' % repr(self._datasetExpr))
-			statString = ''
+			statString = ' * Dataset '
 			if self._datasetNick:
-				statString = '%s: ' % self._datasetNick
+				statString += repr(self._datasetNick)
 			elif self._datasetExpr:
-				statString = '%s: ' % self._datasetExpr
+				statString += repr(self._datasetExpr)
 			log.finish()
-			statString += 'Running over %s distributed over %d blocks.' % self._stats.getStats()
+			statString += '\tcontains %d block(s) with %s' % self._stats.getStats()
 			if not silent:
 				self._log.info(statString)
 		return self._cache_block
@@ -184,6 +184,7 @@ class DataProvider(ConfigurablePlugin):
 			if writeMetadata:
 				(idxListBlock, idxListFile) = DataProvider.classifyMetadataKeys(block)
 				def getMetadata(fi, idxList):
+					idxList = ifilter(lambda idx: idx < len(fi[DataProvider.Metadata]), idxList)
 					return json.dumps(lmap(lambda idx: fi[DataProvider.Metadata][idx], idxList))
 				writer.write('metadata = %s\n' % json.dumps(lmap(lambda idx: block[DataProvider.Metadata][idx], idxListBlock + idxListFile)))
 				if idxListBlock:

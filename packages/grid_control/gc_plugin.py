@@ -55,8 +55,8 @@ class NamedPlugin(ConfigurablePlugin):
 			clsNew = cls.getClass(clsName)
 			if not instanceName:
 				instanceName = clsNew.__name__.split('.')[-1]
-			config_cls = config.changeView(viewClass = 'TaggedConfigView',
+			cls_config = config.changeView(viewClass = 'TaggedConfigView',
 				setClasses = [clsNew], setSections = None, setNames = [instanceName],
 				addTags = tags or [], inheritSections = inheritSections)
-			yield InstanceFactory(entry, clsNew, config_cls, instanceName)
+			yield InstanceFactory(entry, clsNew, cls_config, instanceName)
 	bind = classmethod(bind)

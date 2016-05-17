@@ -14,7 +14,7 @@
 # | limitations under the License.
 
 import os, sys
-from gcSupport import FileInfoProcessor, JobInfoProcessor, initGC
+from gcSupport import FileInfoProcessor, JobInfoProcessor, JobResult, initGC
 from python_compat import sorted
 
 def main():
@@ -23,7 +23,7 @@ def main():
 	(config, jobDB) = initGC(sys.argv[1:])
 	workDir = config.getWorkPath()
 	for jobNum in sorted(jobDB.getJobs()):
-		if jip.process(os.path.join(workDir, 'output', 'job_%d' % jobNum))[1] == 0:
+		if jip.process(os.path.join(workDir, 'output', 'job_%d' % jobNum))[JobResult.EXITCODE] == 0:
 			for fileInfo in fip.process(os.path.join(workDir, 'output', 'job_%d' % jobNum)):
 				pathSE = fileInfo[FileInfoProcessor.Path].replace('file://', '').replace('dir://', '')
 				print('%s  %s/%s' % (fileInfo[FileInfoProcessor.Hash], pathSE, fileInfo[FileInfoProcessor.NameDest]))

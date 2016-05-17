@@ -67,5 +67,5 @@ class MultiDatasetProvider(DataProvider):
 						raise DatasetError('Could not retrieve all datasets!')
 			self._cache_block = list(self._stats.process(self._datasetProcessor.process(getAllBlocks())))
 			ec.raise_any(DatasetError('Could not retrieve all datasets!'))
-			logging.getLogger('user').info('Summary: Running over %s distributed over %d blocks.', *self._stats.getStats())
+			logging.getLogger('user').info('Summary: Running over %d block(s) containing %s', *self._stats.getStats())
 		return self._cache_block

@@ -49,6 +49,8 @@ class NickNameProducer(DataProcessor):
 
 
 class SimpleNickNameProducer(NickNameProducer):
+	alias = ['simple']
+
 	def __init__(self, config):
 		NickNameProducer.__init__(self, config)
 		self._full_name = config.getBool('nickname full name', True)
@@ -63,6 +65,8 @@ class SimpleNickNameProducer(NickNameProducer):
 
 
 class InlineNickNameProducer(NickNameProducer):
+	alias = ['inline']
+
 	def __init__(self, config):
 		NickNameProducer.__init__(self, config)
 		self._expr = config.get('nickname expr', 'oldnick')

@@ -19,6 +19,7 @@ from grid_control.backends.wms_pbsge import PBSGECommon
 from grid_control.config import ConfigError
 from grid_control.job_db import Job
 from grid_control.utils.parsing import parseTime
+from grid_control.utils.process_base import LocalProcess
 from python_compat import imap, izip, lmap, set
 
 class GridEngine(PBSGECommon):
@@ -102,20 +103,28 @@ class GridEngine(PBSGECommon):
 		reqs = dict(izip(tags, [WMS.MEMORY, WMS.CPUTIME, WMS.WALLTIME]))
 		parser = dict(izip(tags, [int, parseTime, parseTime]))
 
-		for queue in imap(str.strip, utils.LoggedProcess(self._configExec, '-sql').iter()):
+		proc = LocalProcess(self._configExec, '-sql')
+		for queue in imap(str.strip, proc.stdout.iter(timeout = 10)):
 			queues[queue] = dict()
-			for line in utils.LoggedProcess(self._configExec, '-sq %s' % queue).iter():
+			proc_q = LocalProcess(self._configExec, '-sq %s' % queue)
+			for line in proc_q.stdout.iter(timeout = 10):
 				attr, value = lmap(str.strip, line.split(' ', 1))
 				if (attr in tags) and (value != 'INFINITY'):
 					queues[queue][reqs[attr]] = parser[attr](value)
+			proc_q.status_raise(timeout = 0)
+		proc.status_raise(timeout = 0)
 		return queues
 
 
 	def getNodes(self):
 		result = set()
-		for group in utils.LoggedProcess(self._configExec, '-shgrpl').iter():
+		proc = LocalProcess(self._configExec, '-shgrpl')
+		for group in proc.stdout.iter(timeout = 10):
 			result.add(group.strip())
-			for host in utils.LoggedProcess(self._configExec, '-shgrp_resolved %s' % group).iter():
+			proc_g = LocalProcess(self._configExec, '-shgrp_resolved %s' % group)
+			for host in proc_g.stdout.iter(timeout = 10):
 				result.update(host.split())
+			proc_g.status_raise(timeout = 0)
+		proc.status_raise(timeout = 0)
 		if len(result) > 0:
 			return list(result)

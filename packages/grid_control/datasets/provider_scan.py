@@ -29,7 +29,7 @@ class ScanProviderBase(DataProvider):
 		(self.kUserDS, self.kUserB) = DSB(config.getList, 'hash keys', [])
 		(self.kGuardDS, self.kGuardB) = DSB(config.getList, 'guard override', [])
 		self.kSelectDS = config.getList('dataset key select', [])
-		scanList = config.getList('scanner', datasetExpr)
+		scanList = config.getList('scanner', datasetExpr) + ['NullScanner']
 		self.scanner = lmap(lambda cls: InfoScanner.createInstance(cls, config), scanList)
 
 
@@ -104,7 +104,7 @@ class ScanProviderBase(DataProvider):
 					DataProvider.Dataset: hashNameDictDS[hashDS],
 					DataProvider.BlockName: hashNameDictB[hashB][1],
 					DataProvider.Locations: blockSEList,
-					DataProvider.Metadata: metaKeys,
+					DataProvider.Metadata: list(metaKeys),
 					DataProvider.FileList: lsmap(fnProps, protoBlocks[hashDS][hashB])
 				}
 
@@ -146,6 +146,7 @@ class ScanProvider(ScanProviderBase):
 	alias = ['scan']
 
 	def __init__(self, config, datasetExpr, datasetNick = None, datasetID = 0):
+		config = config.changeView(viewClass = 'TaggedConfigView', addNames = [md5_hex(datasetExpr)])
 		if '*' in os.path.basename(datasetExpr):
 			config.set('source directory', os.path.dirname(datasetExpr))
 			config.set('filename filter', datasetExpr)
@@ -163,6 +164,7 @@ class GCProvider(ScanProviderBase):
 	stageFile = {None: ['MatchOnFilename', 'MatchDelimeter']}
 
 	def __init__(self, config, datasetExpr, datasetNick = None, datasetID = 0):
+		config = config.changeView(viewClass = 'TaggedConfigView', addNames = [md5_hex(datasetExpr)])
 		if os.path.isdir(datasetExpr):
 			GCProvider.stageDir[None] = ['OutputDirsFromWork']
 			config.set('source directory', datasetExpr)
@@ -172,10 +174,10 @@ class GCProvider(ScanProviderBase):
 			datasetExpr, selector = utils.optSplit(datasetExpr, '%')
 			config.set('source config', datasetExpr)
 			config.set('source job selector', selector)
-		extConfig = createConfig(datasetExpr)
-		extModule = extConfig.changeView(setSections = ['global']).get(['task', 'module'])
-		if 'ParaMod' in extModule: # handle old config files
-			extModule = extConfig.changeView(setSections = ['ParaMod']).get('module')
-		sGet = lambda scannerDict: scannerDict.get(None) + scannerDict.get(extModule, [])
+		ext_config = createConfig(datasetExpr)
+		ext_task_name = ext_config.changeView(setSections = ['global']).get(['task', 'module'])
+		if 'ParaMod' in ext_task_name: # handle old config files
+			ext_task_name = ext_config.changeView(setSections = ['ParaMod']).get('module')
+		sGet = lambda scannerDict: scannerDict.get(None) + scannerDict.get(ext_task_name, [])
 		sList = sGet(GCProvider.stageDir) + ['JobInfoFromOutputDir', 'FilesFromJobInfo'] + sGet(GCProvider.stageFile) + ['DetermineEvents', 'AddFilePrefix']
 		ScanProviderBase.__init__(self, config, sList, datasetNick, datasetID)

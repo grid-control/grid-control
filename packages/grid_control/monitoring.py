@@ -12,11 +12,12 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-import os
+import os, shlex
 from grid_control import utils
 from grid_control.gc_plugin import NamedPlugin
 from grid_control.job_db import Job
 from grid_control.utils.gc_itertools import lchain
+from grid_control.utils.process_base import LocalProcess
 from grid_control.utils.thread_tools import GCThreadPool
 from python_compat import imap, lmap
 
@@ -40,6 +41,9 @@ class EventHandler(NamedPlugin):
 	def onTaskFinish(self, nJobs):
 		pass
 
+	def onFinish(self):
+		pass
+
 
 class MultiEventHandler(EventHandler):
 	def __init__(self, config, name, handlerList, task):
@@ -61,6 +65,10 @@ class MultiEventHandler(EventHandler):
 	def onTaskFinish(self, nJobs):
 		for handler in self._handlers:
 			handler.onTaskFinish(nJobs)
+
+	def onFinish(self):
+		for handler in self._handlers:
+			handler.onFinish()
 
 
 # Monitoring base class with submodule support
@@ -101,7 +109,7 @@ class ScriptMonitoring(Monitoring):
 		self._evtStatus = config.getCommand('on status', '', onChange = None)
 		self._evtOutput = config.getCommand('on output', '', onChange = None)
 		self._evtFinish = config.getCommand('on finish', '', onChange = None)
-		self._runningMax = config.getTime('script runtime', 5, onChange = None)
+		self._runningMax = config.getTime('script timeout', 5, onChange = None)
 		self._workPath = config.getWorkPath()
 		self._tp = GCThreadPool()
 
@@ -124,9 +132,10 @@ class ScriptMonitoring(Monitoring):
 					key = 'GC_' + key
 				os.environ[key] = str(value)
 
-			script = self._task.substVars(script, jobNum, tmp)
-			if self._silent:
-				utils.LoggedProcess(script).wait()
+			script = self._task.substVars('monitoring script', script, jobNum, tmp)
+			if not self._silent:
+				proc = LocalProcess(*shlex.split(script))
+				self._log.info(proc.get_output(timeout = self._runningMax))
 			else:
 				os.system(script)
 		except Exception:
@@ -152,4 +161,6 @@ class ScriptMonitoring(Monitoring):
 	# Called at the end of the task
 	def onTaskFinish(self, nJobs):
 		self._runInBackground(self._evtFinish, addDict = {'NJOBS': nJobs})
+
+	def onFinish(self):
 		self._tp.wait_and_drop(self._runningMax)

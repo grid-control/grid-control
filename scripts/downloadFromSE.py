@@ -111,9 +111,9 @@ def parse_cmd_line():
 
 def dlfs_rm(path, msg):
 	procRM = se_rm(path)
-	if procRM.wait(timeout = 60) != 0:
+	if procRM.status(timeout = 60) != 0:
 		utils.eprint('\t\tUnable to remove %s!' % msg)
-		utils.eprint('%s\n\n' % procRM.getMessage())
+		utils.eprint('%s\n%s\n' % (procRM.stdout.read(timeout = 0), procRM.stderr.read(timeout = 0)))
 
 
 def transfer_monitor(output, fileIdx, path, lock, abort):
@@ -148,7 +148,7 @@ def download_monitored(jobNum, output, fileIdx, checkPath, sourcePath, targetPat
 			monitor.join()
 			break
 		copyAbortLock.release()
-		result = procCP.wait(timeout = 0)
+		result = procCP.status(timeout = 0)
 		if result is not None:
 			monitorLock.release()
 			monitor.join()
@@ -157,7 +157,7 @@ def download_monitored(jobNum, output, fileIdx, checkPath, sourcePath, targetPat
 
 	if result != 0:
 		output.error('Unable to copy file from SE!')
-		output.error(procCP.getMessage())
+		utils.eprint('%s\n%s\n' % (procCP.stdout.read(timeout = 0), procCP.stderr.read(timeout = 0)))
 		return False
 	return True
 
@@ -172,11 +172,11 @@ def download_file(opts, output, jobNum, fileIdx, fileInfo):
 		if not (True in imap(lambda s: s in pathSE, opts.selectSE)):
 			output.error('skip file because it is not located on selected SE!')
 			return
-	if opts.skip_existing and (se_exists(outFilePath).wait(timeout = 10) == 0):
+	if opts.skip_existing and (se_exists(outFilePath).status(timeout = 10) == 0):
 		output.error('skip file as it already exists!')
 		return
-	if se_exists(os.path.dirname(outFilePath)).wait(timeout = 10) != 0:
-		se_mkdir(os.path.dirname(outFilePath)).wait(timeout = 10)
+	if se_exists(os.path.dirname(outFilePath)).status(timeout = 10) != 0:
+		se_mkdir(os.path.dirname(outFilePath)).status(timeout = 10)
 
 	checkPath = 'file:///tmp/dlfs.%s' % name_dest
 	if 'file://' in outFilePath:
@@ -210,7 +210,7 @@ def cleanup_files(opts, files, failJob, output):
 		if (failJob and opts.rm_local_fail) or (not failJob and opts.rm_local_ok):
 			output.update_status(fileIdx, 'Deleting file %s from local...' % name_dest)
 			outFilePath = os.path.join(opts.output, name_dest)
-			if se_exists(outFilePath).wait(timeout = 10) == 0:
+			if se_exists(outFilePath).status(timeout = 10) == 0:
 				dlfs_rm(outFilePath, 'local file')
 		# Remove SE files in case of failure
 		if (failJob and opts.rm_se_fail) or (not failJob and opts.rm_se_ok):
@@ -238,7 +238,7 @@ def download_job_output(opts, incInfo, workDir, jobDB, token, jobNum, output):
 		sys.exit(os.EX_UNAVAILABLE)
 
 	# Read the file hash entries from job info file
-	files = FileInfoProcessor().process(os.path.join(workDir, 'output', 'job_%d' % jobNum))
+	files = FileInfoProcessor().process(os.path.join(workDir, 'output', 'job_%d' % jobNum)) or []
 	if files:
 		files = lmap(lambda fi: (fi[FileInfoProcessor.Hash], fi[FileInfoProcessor.NameLocal],
 			fi[FileInfoProcessor.NameDest], fi[FileInfoProcessor.Path]), files)
@@ -309,18 +309,18 @@ def download_multithreaded(opts, workDir, jobList, incInfo, jobDB, token):
 		def init(self, jobNum):
 			self.jobNum = jobNum
 			self.output = ['Job %5d' % jobNum, '']
-		def infoline(self, fileIdx, msg = ''):
+		def _infoline(self, fileIdx, msg = ''):
 			return 'Job %5d [%i/%i] %s %s' % (self.jobNum, fileIdx + 1, len(self._files), self._files[fileIdx][2], msg)
 		def update_files(self, files):
 			(self._files, self.output, self.tr) = (files, self.output[1:], ['']*len(files))
 			for x in irange(len(files)):
-				self.output.insert(2*x, self.infoline(x))
+				self.output.insert(2*x, self._infoline(x))
 				self.output.insert(2*x+1, '')
 		def update_progress(self, idx, csize = None, osize = None, stime = None, otime = None):
 			if otime:
 				trfun = lambda sref, tref: gcSupport.prettySize(((csize - sref) / max(1, time.time() - tref)))
 				self.tr[idx] = '%7s avg. - %7s/s inst.' % (gcSupport.prettySize(csize), trfun(0, stime))
-				self.output[2*idx] = self.infoline(idx, '(%s - %7s/s)' % (self.tr[idx], trfun(osize, otime)))
+				self.output[2*idx] = self._infoline(idx, '(%s - %7s/s)' % (self.tr[idx], trfun(osize, otime)))
 		def update_hash(self, idx, hashLocal = None):
 			file_hash = self._files[idx][0]
 			if hashLocal:
@@ -331,15 +331,12 @@ def download_multithreaded(opts, workDir, jobList, incInfo, jobDB, token):
 				msg = '(R:%s L:%s) => %s' % (file_hash, hashLocal, result)
 			else:
 				msg = ''
-			self.output[2*idx] = self.infoline(idx, '(%s)' % self.tr[idx])
+			self.output[2*idx] = self._infoline(idx, '(%s)' % self.tr[idx])
 			self.output[2*idx+1] = msg
-			print((self, repr(msg)))
 		def error(self, msg):
 			errorOutput.append(msg)
-		def write(self, msg):
-			self.output.append(msg)
 		def update_status(self, idx, msg):
-			self.output[2*idx] = str.join(' ', [self.infoline(idx, '(%s)' % self.tr[idx])] + msg.split())
+			self.output[2*idx] = str.join(' ', [self._infoline(idx, '(%s)' % self.tr[idx])] + (msg or '').split())
 		def finish(self):
 #			self.output.append(str(self.jobNum) + 'FINISHED')
 			pass
@@ -361,25 +358,25 @@ def download_sequential(opts, workDir, jobList, incInfo, jobDB, token):
 				tmp = name_dest
 				if opts.show_host:
 					tmp += ' [%s]' % pathSE.split('//')[-1].split('/')[0].split(':')[0]
-				self.write('\r\t%s (%7s - %7s/s avg. - %7s/s inst.)' % (tmp,
+				self._write('\r\t%s (%7s - %7s/s avg. - %7s/s inst.)' % (tmp,
 					gcSupport.prettySize(csize), tr(0, stime), tr(osize, otime)))
 				sys.stdout.flush()
 			else:
-				self.write('\t%s' % name_dest)
+				self._write('\t%s' % name_dest)
 				sys.stdout.flush()
 		def update_hash(self, idx, hashLocal = None):
 			file_hash = self._files[idx][0]
-			self.write(' => %s\n' % ('\33[0;91mFAIL\33[0m', '\33[0;92mMATCH\33[0m')[file_hash == hashLocal])
-			self.write('\t\tRemote site: %s\n' % file_hash)
-			self.write('\t\t Local site: %s\n' % hashLocal)
+			self._write(' => %s\n' % ('\33[0;91mFAIL\33[0m', '\33[0;92mMATCH\33[0m')[file_hash == hashLocal])
+			self._write('\t\tRemote site: %s\n' % file_hash)
+			self._write('\t\t Local site: %s\n' % hashLocal)
 		def error(self, msg):
 			sys.stdout.write('\nJob %d: %s' % (jobNum, msg.strip()))
 		def update_status(self, idx, msg):
 			if msg:
-				self.write('\t' + msg + '\r')
+				self._write('\t' + msg + '\r')
 			else:
-				self.write(' ' * len('\tDeleting file %s from SE...\r' % self._files[idx][2]) + '\r')
-		def write(self, msg):
+				self._write(' ' * len('\tDeleting file %s from SE...\r' % self._files[idx][2]) + '\r')
+		def _write(self, msg):
 			sys.stdout.write(msg)
 		def finish(self):
 			sys.stdout.write('\n')

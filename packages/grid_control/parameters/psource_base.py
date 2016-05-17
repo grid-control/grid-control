@@ -48,6 +48,9 @@ class ParameterSource(Plugin):
 		self._resyncTime = -1 # Default - always resync
 		self._resyncLast = None
 
+	def depends(self):
+		return []
+
 	def getMaxParameters(self):
 		return None
 

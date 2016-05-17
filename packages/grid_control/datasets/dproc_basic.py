@@ -12,24 +12,30 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-import re
 from grid_control.datasets.dproc_base import DataProcessor
 from grid_control.datasets.provider_base import DataProvider, DatasetError
 from grid_control.utils.data_structures import makeEnum
-from python_compat import imap, lfilter, lmap, md5_hex, set
+from python_compat import imap, itemgetter, lfilter, md5_hex, set
 
 class StatsDataProcessor(DataProcessor):
+	alias = ['stats']
+
 	def __init__(self, config):
 		DataProcessor.__init__(self, config)
+		self.reset()
+
+	def reset(self):
 		self._entries = 0
 		self._blocks = 0
 
 	def getStats(self):
 		if self._entries < 0:
-			units = '%d files' % -self._entries
+			units = '%d file(s)' % -self._entries
 		else:
-			units = '%d events' % self._entries
-		return (units, self._blocks)
+			units = '%d event(s)' % self._entries
+		result = (self._blocks, units)
+		self.reset()
+		return result
 
 	def process(self, blockIter):
 		for block in blockIter:
@@ -40,6 +46,8 @@ class StatsDataProcessor(DataProcessor):
 
 
 class EntriesConsistencyDataProcessor(DataProcessor):
+	alias = ['consistency']
+
 	def processBlock(self, block):
 		# Check entry consistency
 		events = sum(imap(lambda x: x[DataProvider.NEntries], block[DataProvider.FileList]))
@@ -50,57 +58,69 @@ class EntriesConsistencyDataProcessor(DataProcessor):
 
 
 class URLDataProcessor(DataProcessor):
-	alias = ['FileDataProcessor']
+	alias = ['ignore', 'FileDataProcessor']
 
 	def __init__(self, config):
 		DataProcessor.__init__(self, config)
-		self._ignoreURLs = config.getList(['dataset ignore urls', 'dataset ignore files'], [])
+		internal_config = config.changeView(viewClass = 'SimpleConfigView', setSections = ['dataprocessor'])
+		internal_config.set('dataset processor', 'NullDataProcessor')
+		self._url_filter = config.getFilter(['dataset ignore urls', 'dataset ignore files'], '', negate = True,
+			filterParser = lambda value: self._parseFilter(internal_config, value),
+			filterStr = lambda value: str.join('\n', value.split()),
+			matchKey = itemgetter(DataProvider.URL),
+			defaultMatcher = 'blackwhite', defaultFilter = 'weak')
 
-	def _matchURL(self, url):
-		return url not in self._ignoreURLs
+	def _parseFilter(self, config, value):
+		def getFilterEntries():
+			for pat in value.split():
+				if ':' not in pat.lstrip(':'):
+					yield pat
+				else:
+					for dfac in DataProvider.bind(':%s' % pat.lstrip(':'), config = config):
+						dproc = dfac.getBoundInstance()
+						for block in dproc.getBlocks():
+							for fi in block[DataProvider.FileList]:
+								yield fi[DataProvider.URL]
+		return str.join('\n', getFilterEntries())
+
+	def enabled(self):
+		return self._url_filter.getSelector() is not None
 
 	def processBlock(self, block):
-		block[DataProvider.FileList] = lfilter(lambda x: self._matchURL(x[DataProvider.URL]), block[DataProvider.FileList])
+		if self.enabled():
+			block[DataProvider.FileList] = self._url_filter.filterList(block[DataProvider.FileList])
 		return block
 
 
-class URLRegexDataProcessor(URLDataProcessor):
-	alias = ['FileRegexDataProcessor']
-
-	def __init__(self, config):
-		URLDataProcessor.__init__(self, config)
-		self._ignoreREs = lmap(re.compile, self._ignoreURLs)
-
-	def _matchURL(self, url):
-		for matcher in self._ignoreREs:
-			if matcher(url):
-				return True
-		return False
-
-
 class URLCountDataProcessor(DataProcessor):
-	alias = ['FileCountDataProcessor']
+	alias = ['files', 'FileCountDataProcessor']
 
 	def __init__(self, config):
 		DataProcessor.__init__(self, config)
 		self._limitFiles = config.getInt(['dataset limit urls', 'dataset limit files'], -1)
 
+	def enabled(self):
+		return self._limitFiles != -1
+
 	def processBlock(self, block):
-		if self._limitFiles != -1:
+		if self.enabled():
 			block[DataProvider.FileList] = block[DataProvider.FileList][:self._limitFiles]
 			self._limitFiles -= len(block[DataProvider.FileList])
 		return block
 
 
 class EntriesCountDataProcessor(DataProcessor):
-	alias = ['EventsCountDataProcessor']
+	alias = ['events', 'EventsCountDataProcessor']
 
 	def __init__(self, config):
 		DataProcessor.__init__(self, config)
 		self._limitEntries = config.getInt(['dataset limit entries', 'dataset limit events'], -1)
 
+	def enabled(self):
+		return self._limitEntries != -1
+
 	def processBlock(self, block):
-		if self._limitEntries != -1:
+		if self.enabled():
 			block[DataProvider.NEntries] = 0
 			def filterEvents(fi):
 				if self._limitEntries == 0: # already got all requested events
@@ -116,10 +136,15 @@ class EntriesCountDataProcessor(DataProcessor):
 
 
 class EmptyDataProcessor(DataProcessor):
+	alias = ['empty']
+
 	def __init__(self, config):
 		DataProcessor.__init__(self, config)
 		self._emptyFiles = config.getBool('dataset remove empty files', True)
 		self._emptyBlock = config.getBool('dataset remove empty blocks', True)
+
+	def enabled(self):
+		return self._emptyBlock or self._emptyFiles
 
 	def processBlock(self, block):
 		if self._emptyFiles:
@@ -131,6 +156,8 @@ class EmptyDataProcessor(DataProcessor):
 
 
 class LocationDataProcessor(DataProcessor):
+	alias = ['location']
+
 	def __init__(self, config):
 		DataProcessor.__init__(self, config)
 		self._locationfilter = config.getFilter('dataset location filter', '',
@@ -154,12 +181,17 @@ class LocationDataProcessor(DataProcessor):
 DatasetUniqueMode = makeEnum(['warn', 'abort', 'skip', 'ignore', 'record'], useHash = True)
 
 class UniqueDataProcessor(DataProcessor):
+	alias = ['unique']
+
 	def __init__(self, config):
 		DataProcessor.__init__(self, config)
 		self._checkURLOpt = 'dataset check unique url'
 		self._checkURL = config.getEnum(self._checkURLOpt, DatasetUniqueMode, DatasetUniqueMode.abort)
 		self._checkBlockOpt = 'dataset check unique block'
 		self._checkBlock = config.getEnum(self._checkBlockOpt, DatasetUniqueMode, DatasetUniqueMode.abort)
+
+	def enabled(self):
+		return (self._checkURL == DatasetUniqueMode.ignore) and (self._checkBlock == DatasetUniqueMode.ignore)
 
 	def process(self, blockIter):
 		self._recordedURL = set()

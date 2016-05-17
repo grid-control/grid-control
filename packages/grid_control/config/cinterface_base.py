@@ -14,7 +14,7 @@
 
 import os, inspect, logging
 from grid_control.config.chandlers_base import changeImpossible
-from grid_control.config.config_entry import ConfigError, noDefault, standardConfigForm
+from grid_control.config.config_entry import ConfigEntry, ConfigError, noDefault, standardConfigForm
 from hpfwk import APIError
 
 # Config interface class accessing typed data using an string interface provided by configView
@@ -115,7 +115,6 @@ class ConfigInterface(object):
 		return self._processEntries(old_entry, cur_entry, desc, obj2str, str2obj, onChange, onValid)
 
 	def _setInternal(self, desc, obj2str, option, set_obj, opttype, source):
-		mode = {'?=': 'default', '+=': 'append', '^=': 'prepend', '=': 'override'}.get(opttype, 'set')
 		if not source:
 			source = '<%s by %s>' % (desc, self._getCaller())
 		try:
@@ -123,7 +122,7 @@ class ConfigInterface(object):
 		except Exception:
 			raise APIError('Unable to get string representation of set value: %s' % repr(set_obj))
 		entry = self._configView.set(standardConfigForm(option), value, opttype, source)
-		self._log.log(logging.INFO2, 'Setting %s %s %s ', desc, mode, entry.format(printSection = True))
+		self._log.log(logging.INFO2, 'Setting %s %s %s ', desc, ConfigEntry.OptTypeDesc[opttype], entry.format(printSection = True))
 		return entry
 
 	# Handling string config options - whitespace around the value will get discarded

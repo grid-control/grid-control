@@ -21,12 +21,27 @@ from python_compat import imap
 def changeImpossible(config, old_obj, cur_obj, cur_entry, obj2str):
 	old_str = obj2str(old_obj).strip()
 	new_str = obj2str(cur_obj).strip()
+	if old_str == new_str:
+		old_str = repr(old_obj)
+		new_str = repr(cur_obj)
 	msg = 'It is *not* possible to change "%s"' % cur_entry.format_opt()
 	if len(old_str) + len(new_str) > 40:
 		msg = '%s\n\tfrom: %r\n\t  to: %r' % (msg, old_str, new_str)
 	else:
 		msg = '%s from %r to %r' % (msg, old_str, new_str)
 	raise ConfigError(msg)
+
+
+class triggerResync(object):
+	def __init__(self, details):
+		self._details = details
+
+	def __call__(self, config, old_obj, cur_obj, cur_entry, obj2str):
+		logging.getLogger('user').info('%s was changed - triggering resync of %s', cur_entry.format_opt(), str.join(', ', self._details))
+		for detail in self._details:
+			config.setState(True, 'resync', detail = detail)
+		config.setState(True, 'init', detail = 'config') # This will trigger a write of the new options
+		return cur_obj
 
 
 # Change handler to trigger re-inits

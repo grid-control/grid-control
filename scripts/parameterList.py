@@ -34,6 +34,7 @@ parser.addBool(None, 't', 'untracked',          default = False, help = 'Display
 parser.addBool(None, 'T', 'persistent',         default = False, help = 'Work with persistent paramters')
 parser.addList(None, 'p', 'parameter',          default = [],    help = 'Specify parameters')
 parser.addText(None, 'D', 'dataset',            default = '',    help = 'Add dataset splitting (use "True" to simulate a dataset)')
+parser.addText(None, 'j', 'job',                default = None,  help = 'Select job to display (used for unbounded parameter spaces)')
 parser.addText(None, 'M', 'manager',            default = None,  help = 'Select parameter source manager')
 parser.addText(None, 'o', 'output',             default = '',    help = 'Show only specified parameters')
 parser.addText(None, 'S', 'save',               default = '',    help = 'Saves information to specified file')
@@ -101,6 +102,8 @@ def setup_config(opts, args):
 	if os.path.exists(args[0]):
 		configFile = args[0]
 	config = getConfig(configFile, section = 'global')
+	if os.path.exists(config.getWorkPath('datamap.tar')):
+		opts.dataset = config.getWorkPath('datamap.tar')
 	config.changeView(setSections = ['jobs']).set('nseeds', '1', '?=')
 	configParameters = config.changeView(setSections = ['parameters'])
 	if opts.parameter:
@@ -110,14 +113,15 @@ def setup_config(opts, args):
 			configParameters.set(k.strip(), v.strip().replace('\\n', '\n'), '=')
 			utils.vprint('\t%s: %s' % (k.strip(), v.strip()))
 		utils.vprint('')
-	if not os.path.exists(args[0]):
+
+	if configFile is None:
 		configParameters.set('parameters', str.join(' ', args).replace('\\n', '\n'))
-	if opts.dataset:
-		configParameters.set('default lookup', 'DATASETNICK')
-	if not opts.persistent:
-		configParameters.set('parameter adapter', 'BasicParameterAdapter', '=')
-	if utils.verbosity() > 2:
-		config.changeView(setSections = None).write(sys.stdout)
+		if opts.dataset:
+			configParameters.set('default lookup', 'DATASETNICK')
+		if not opts.persistent:
+			configParameters.set('parameter adapter', 'BasicParameterAdapter', '=')
+		if utils.verbosity() > 2:
+			config.changeView(setSections = None).write(sys.stdout)
 	return config
 
 def setup_dataset(config, dataset):
@@ -125,11 +129,15 @@ def setup_dataset(config, dataset):
 		utils.vprint('Registering dummy data provider data')
 		dataSplitter = DummySplitter()
 	else:
-		dataSplitter = DataSplitter.loadStateForScript(dataset)
+		dataSplitter = DataSplitter.loadPartitionsForScript(dataset)
 
+	config = config.changeView(setSections = None)
+	partProcessor = config.getCompositePlugin('partition processor',
+		'TFCPartitionProcessor LocationPartitionProcessor MetaPartitionProcessor BasicPartitionProcessor',
+		'MultiPartitionProcessor', cls = 'PartitionProcessor', onChange = None)
 	DataParameterSource = ParameterSource.getClass('DataParameterSource')
 	DataParameterSource.datasetsAvailable['data'] = DataParameterSource(
-		config.getWorkPath(), 'data', None, dataSplitter, DataSplitProcessorTest())
+		config.getWorkPath(), 'data', None, dataSplitter, partProcessor)
 
 # Initialize ParameterFactory and ParameterSource
 def get_psource(opts, args):
@@ -161,7 +169,11 @@ def get_parameters(opts, psource):
 			if countActive != psource.getMaxJobs():
 				utils.vprint('Number of active parameter points: %d' % countActive)
 	else:
-		result.append(psource.getJobInfo(123))
+		job = 123
+		if opts.job is not None:
+			job = int(opts.job)
+		utils.vprint('Unbounded parameter space found - showing parameters for job %d' % job, -1)
+		result.append(psource.getJobInfo(job))
 	return (result, needGCParam)
 
 def list_parameters(opts, psource):

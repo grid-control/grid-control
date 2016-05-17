@@ -17,14 +17,14 @@ from grid_control.datasets import DataProvider
 from grid_control.gc_exceptions import UserError
 from grid_control.utils.parsing import parseJSON
 from grid_control.utils.webservice import GridJSONRestClient, readURL
-from grid_control_cms.provider_cms import CMSProvider
+from grid_control_cms.provider_cms import CMSBaseProvider
 
 # required format: <dataset path>[@<instance>][#<block>]
-class DASProvider(CMSProvider):
+class DASProvider(CMSBaseProvider):
 	alias = ['das']
 
 	def __init__(self, config, datasetExpr, datasetNick = None, datasetID = 0):
-		CMSProvider.__init__(self, config, datasetExpr, datasetNick, datasetID)
+		CMSBaseProvider.__init__(self, config, datasetExpr, datasetNick, datasetID)
 		self._instance = ''
 		if '/' not in self._url:
 			self._instance = 'prod/%s' % self._url

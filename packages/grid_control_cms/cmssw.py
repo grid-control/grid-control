@@ -16,57 +16,87 @@ import os, logging
 from grid_control import utils
 from grid_control.backends import WMS
 from grid_control.config import ConfigError, noDefault
-from grid_control.datasets import PartitionProcessor
+from grid_control.datasets import DataSplitter, PartitionProcessor
+from grid_control.output_processor import DebugJobInfoProcessor
 from grid_control.tasks.task_data import DataTask
 from grid_control.tasks.task_utils import TaskExecutableWrapper
-from python_compat import imap, lfilter
+from python_compat import imap, lfilter, lmap
 
-BasicPartitionProcessor = PartitionProcessor.getClass('BasicPartitionProcessor')
+class CMSSWDebugJobInfoProcessor(DebugJobInfoProcessor):
+	def __init__(self):
+		DebugJobInfoProcessor.__init__(self)
+		self._display_files.append('cmssw.log.gz')
 
-class CMSPartitionProcessor(BasicPartitionProcessor):
+
+class LFNPartitionProcessor(PartitionProcessor):
+	alias = ['lfnprefix']
+
 	def __init__(self, config):
-		BasicPartitionProcessor.__init__(self, config)
+		PartitionProcessor.__init__(self, config)
 		lfnModifier = config.get('partition lfn modifier', '', onChange = None)
 		lfnModifierShortcuts = config.getDict('partition lfn modifier dict', {
-			'<xrootd>': 'root://cms-xrd-global.cern.ch//store/',
-			'<xrootd:eu>': 'root://xrootd-cms.infn.it//store/',
-			'<xrootd:us>': 'root://cmsxrootd.fnal.gov//store/',
+			'<xrootd>': 'root://cms-xrd-global.cern.ch/',
+			'<xrootd:eu>': 'root://xrootd-cms.infn.it/',
+			'<xrootd:us>': 'root://cmsxrootd.fnal.gov/',
 		}, onChange = None)[0]
 		self._prefix = None
 		if lfnModifier == '/':
 			self._prefix = '/store/'
 		elif lfnModifier.lower() in lfnModifierShortcuts:
-			self._prefix = lfnModifierShortcuts[lfnModifier.lower()]
+			self._prefix = lfnModifierShortcuts[lfnModifier.lower()] + '/store/'
 		elif lfnModifier:
 			self._prefix = lfnModifier + '/store/'
 
-	def _formatFileList(self, fl):
+	def enabled(self):
+		return self._prefix is not None
+
+	def process(self, pNum, splitInfo, result):
+		def prefixLFN(lfn):
+			return self._prefix + lfn.split('/store/', 1)[-1]
 		if self._prefix:
-			fl = imap(lambda fn: self._prefix + fn.split('/store/', 1)[-1])
+			splitInfo[DataSplitter.FileList] = lmap(prefixLFN, splitInfo[DataSplitter.FileList])
+
+
+class CMSSWPartitionProcessor(PartitionProcessor.getClass('BasicPartitionProcessor')):
+	alias = ['cmssw']
+
+	def _formatFileList(self, fl):
 		return str.join(', ', imap(lambda x: '"%s"' % x, fl))
 
 
-class CMSSW(DataTask):
+class SCRAMTask(DataTask):
+	configSections = DataTask.configSections + ['SCRAMTask']
+
+	def __init__(self, config, name):
+		DataTask.__init__(self, config, name)
+
+
+	def getDependencies(self):
+		return DataTask.getDependencies(self) + ['cmssw']
+
+
+class CMSSW(SCRAMTask):
 	configSections = DataTask.configSections + ['CMSSW']
 
 	def __init__(self, config, name):
 		config.set('se input timeout', '0:30')
 		config.set('dataset provider', 'DBS3Provider')
 		config.set('dataset splitter', 'EventBoundarySplitter')
-		config.set('partition processor', 'CMSPartitionProcessor LocationPartitionProcessor LumiPartitionProcessor')
 		config.set('dataset processor', 'LumiDataProcessor', '+=')
-		DataTask.__init__(self, config, name)
+		config.set('partition processor', 'TFCPartitionProcessor LocationPartitionProcessor MetaPartitionProcessor ' +
+			'LFNPartitionProcessor LumiPartitionProcessor CMSSWPartitionProcessor')
+		dash_config = config.changeView(viewClass = 'SimpleConfigView', setSections = ['dashboard'])
+		dash_config.set('application', 'cmsRun')
+		SCRAMTask.__init__(self, config, name)
 		self.updateErrorDict(utils.pathShare('gc-run.cmssw.sh', pkg = 'grid_control_cms'))
 
 		# SCRAM settings
 		self._configureSCRAMSettings(config)
 
-		self.useReqs = config.getBool('software requirements', True, onChange = None)
+		self._useReqs = config.getBool('software requirements', True, onChange = None)
 		self._projectAreaTarballSE = config.getBool(['se project area', 'se runtime'], True)
 		self._projectAreaTarball = config.getWorkPath('cmssw-project-area.tar.gz')
 
-		# Information about search order for software environment
-		self.searchLoc = self._getCMSSWPaths(config)
 		# Prolog / Epilog script support - warn about old syntax
 		self.prolog = TaskExecutableWrapper(config, 'prolog', '')
 		self.epilog = TaskExecutableWrapper(config, 'epilog', '')
@@ -84,8 +114,10 @@ class CMSSW(DataTask):
 			mustPrepare = (self.dataSplitter is not None))
 
 		# Create project area tarball
-		if not os.path.exists(self._projectAreaTarball):
+		if self.projectArea and not os.path.exists(self._projectAreaTarball):
 			config.setState(True, 'init', detail = 'sandbox')
+		# Information about search order for software environment
+		self.searchLoc = self._getCMSSWPaths(config)
 		if config.getState('init', detail = 'sandbox'):
 			if os.path.exists(self._projectAreaTarball):
 				if not utils.getUserBool('CMSSW tarball already exists! Do you want to regenerate it?', True):
@@ -150,17 +182,21 @@ class CMSSW(DataTask):
 
 	def _getCMSSWPaths(self, config):
 		result = []
-		if config.getState('init', detail = 'sandbox'):
-			userPath = config.get('cmssw dir', '')
-			if userPath != '':
-				result.append(('CMSSW_DIR_USER', userPath))
-			if self.scramEnv.get('RELEASETOP', None):
-				projPath = os.path.normpath('%s/../../../../' % self.scramEnv['RELEASETOP'])
-				result.append(('CMSSW_DIR_PRO', projPath))
+		userPath = config.get(['cmssw dir', 'vo software dir'], '')
+		userPathLocal = os.path.abspath(utils.cleanPath(userPath))
+		if os.path.exists(userPathLocal):
+			userPath = userPathLocal
+		if userPath:
+			result.append(('CMSSW_DIR_USER', userPath))
+		if self.scramEnv.get('RELEASETOP', None):
+			projPath = os.path.normpath('%s/../../../../' % self.scramEnv['RELEASETOP'])
+			result.append(('CMSSW_DIR_PRO', projPath))
+		log = logging.getLogger('user')
+		log.info('Local jobs will try to use the CMSSW software located here:')
+		for i, loc in enumerate(result):
+			log.info(' %i) %s', i + 1, loc[1])
 		if result:
-			utils.vprint('Local jobs will try to use the CMSSW software located here:', -1)
-			for i, loc in enumerate(result):
-				utils.vprint(' %i) %s' % (i + 1, loc[1]), -1)
+			log.info('')
 		return result
 
 
@@ -223,9 +259,8 @@ class CMSSW(DataTask):
 			cfgStatus.append({1: cfg.split(comPath, 1)[1].lstrip('/'), 2: cfg_new_exists,
 				3: isInstrumented, 4: doPrepare})
 
-		utils.vprint('', -1)
-		utils.printTabular([(1, 'Config file'), (2, 'Work dir'), (3, 'Instrumented'), (4, 'Scheduled')], cfgStatus, 'lccc')
-		utils.vprint('', -1)
+		if cfgStatus:
+			utils.printTabular([(1, 'Config file'), (2, 'Work dir'), (3, 'Instrumented'), (4, 'Scheduled')], cfgStatus, 'lccc')
 		return cfgTodo
 
 
@@ -255,7 +290,7 @@ class CMSSW(DataTask):
 	def neededVars(self):
 		if self.dataSplitter:
 			return self._dataPS.getNeededDataKeys()
-		return []
+		return ['MAX_EVENTS']
 
 
 	# Called on job submission
@@ -272,7 +307,6 @@ class CMSSW(DataTask):
 		data = DataTask.getTaskConfig(self)
 		data.update(dict(self.searchLoc))
 		data['CMSSW_OLD_RELEASETOP'] = self.scramEnv.get('RELEASETOP', None)
-		data['DB_EXEC'] = 'cmsRun'
 		data['SCRAM_ARCH'] = self.scramArch
 		data['SCRAM_VERSION'] = self.scramVersion
 		data['SCRAM_PROJECTVERSION'] = self.scramEnv['SCRAM_PROJECTVERSION']
@@ -282,11 +316,11 @@ class CMSSW(DataTask):
 		data['CMSSW_CONFIG'] = str.join(' ', imap(os.path.basename, self.configFiles))
 		if self.prolog.isActive():
 			data['CMSSW_PROLOG_EXEC'] = self.prolog.getCommand()
-			data['CMSSW_PROLOG_SB_In_FILES'] = str.join(' ', imap(lambda x: x.pathRel, self.prolog.getSBInFiles()))
+			data['CMSSW_PROLOG_SB_IN_FILES'] = str.join(' ', imap(lambda x: x.pathRel, self.prolog.getSBInFiles()))
 			data['CMSSW_PROLOG_ARGS'] = self.prolog.getArguments()
 		if self.epilog.isActive():
 			data['CMSSW_EPILOG_EXEC'] = self.epilog.getCommand()
-			data['CMSSW_EPILOG_SB_In_FILES'] = str.join(' ', imap(lambda x: x.pathRel, self.epilog.getSBInFiles()))
+			data['CMSSW_EPILOG_SB_IN_FILES'] = str.join(' ', imap(lambda x: x.pathRel, self.epilog.getSBInFiles()))
 			data['CMSSW_EPILOG_ARGS'] = self.epilog.getArguments()
 		return data
 
@@ -294,7 +328,7 @@ class CMSSW(DataTask):
 	# Get job requirements
 	def getRequirements(self, jobNum):
 		reqs = DataTask.getRequirements(self, jobNum)
-		if self.useReqs:
+		if self._useReqs:
 			reqs.append((WMS.SOFTWARE, 'VO-cms-%s' % self.scramArch))
 		return reqs
 
@@ -350,7 +384,3 @@ class CMSSW(DataTask):
 		if not result.jobType:
 			result.jobType = 'analysis'
 		return result
-
-
-	def getDependencies(self):
-		return DataTask.getDependencies(self) + ['cmssw']

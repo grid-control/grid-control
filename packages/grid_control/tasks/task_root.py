@@ -18,7 +18,7 @@ from grid_control.config import ConfigError, changeInitNeeded
 from grid_control.tasks.task_user import UserTask
 
 class ROOTTask(UserTask):
-	alias = ['ROOTMod']
+	alias = ['ROOTMod', 'root']
 	configSections = UserTask.configSections + ['ROOTMod', 'ROOTTask']
 
 	def __init__(self, config, name):

@@ -16,7 +16,7 @@ import os, re, xml.dom.minidom
 from grid_control import utils
 from grid_control.datasets import DatasetError
 from grid_control.datasets.scanner_base import InfoScanner
-from python_compat import ifilter, imap, lfilter, tarfile
+from python_compat import bytes2str, ifilter, imap, lfilter, tarfile
 
 def readTag(base, tag, default = None):
 	try:
@@ -37,8 +37,8 @@ class ObjectsFromCMSSW(InfoScanner):
 
 	def _processCfg(self, tar, cfg):
 		cfgSummary = {}
-		cfgContent = tar.extractfile('%s/config' % cfg).read()
-		cfgHashResult = tar.extractfile('%s/hash' % cfg).readlines()
+		cfgContent = bytes2str(tar.extractfile('%s/config' % cfg).read())
+		cfgHashResult = bytes2str(tar.extractfile('%s/hash' % cfg).read()).splitlines()
 		cfgHash = cfgHashResult[-1].strip()
 		cfgSummary = {'CMSSW_CONFIG_FILE': cfg, 'CMSSW_CONFIG_HASH': cfgHash}
 		cfgSummary['CMSSW_CONFIG_CONTENT'] = self._cfgStore.setdefault(cfgSummary[self._mergeKey], cfgContent)
@@ -66,7 +66,7 @@ class ObjectsFromCMSSW(InfoScanner):
 				cfgSummary[key] = default
 		searchConfigFile('CMSSW_ANNOTATION', r'.*annotation.*=.*cms.untracked.string.*\((.*)\)', None)
 		searchConfigFile('CMSSW_DATATIER', r'.*dataTier.*=.*cms.untracked.string.*\((.*)\)', 'USER')
-		cfgReport = xml.dom.minidom.parseString(tar.extractfile('%s/report.xml' % cfg).read())
+		cfgReport = xml.dom.minidom.parseString(bytes2str(tar.extractfile('%s/report.xml' % cfg).read()))
 		evRead = sum(imap(lambda x: int(readTag(x, 'EventsRead')), cfgReport.getElementsByTagName('InputFile')))
 		return (cfgSummary, cfgReport, evRead)
 
@@ -102,7 +102,7 @@ class ObjectsFromCMSSW(InfoScanner):
 		return (fileSummary, pfn)
 
 	def _processSteps(self, jobNum, tar, cfgSummaryMap, fileSummaryMap):
-		cmsswVersion = tar.extractfile('version').read().strip()
+		cmsswVersion = bytes2str(tar.extractfile('version').read()).strip()
 		for cfg in ifilter(lambda x: ('/' not in x) and (x not in ['version', 'files']), tar.getnames()):
 			try:
 				(cfgSummary, cfgReport, evRead) = self._processCfg(tar, cfg)
@@ -125,7 +125,7 @@ class ObjectsFromCMSSW(InfoScanner):
 			# Collect infos about transferred files
 			fileSummaryMap = {}
 			try:
-				for rawdata in imap(str.split, tar.extractfile('files').readlines()):
+				for rawdata in imap(lambda value: bytes2str(value).split(), tar.extractfile('files').readlines()):
 					fileSummaryMap[rawdata[2]] = {'SE_OUTPUT_HASH_CRC32': rawdata[0], 'SE_OUTPUT_SIZE': int(rawdata[1])}
 				objStore['CMSSW_FILES'] = fileSummaryMap
 			except Exception:
@@ -156,7 +156,10 @@ class MetadataFromCMSSW(InfoScanner):
 
 class SEListFromPath(InfoScanner):
 	def getEntries(self, path, metadata, events, seList, objStore):
-		proto, fn = path.split(':', 1)
+		tmp = path.split(':', 1)
+		if len(tmp) == 1:
+			tmp = ['dir', tmp[0]]
+		proto, fn = tmp
 		if proto in ['dir', 'file']:
 			yield (path, metadata, events, ['localhost'], objStore)
 		elif proto in ['rfio']:

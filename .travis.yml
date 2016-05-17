@@ -17,10 +17,14 @@ script:
   - ./packages/gcUpdatePlugins.py
   - ./packages/gcUpdatePlugins.py
   - export WRAPPER='coverage run -a'
+  - ./setup.py install
+  - rm -rf packages
+  - ls
+  - export GC_SCRIPT=$VIRTUAL_ENV/bin/gridcontrol
   - if [[ $TRAVIS_PYTHON_VERSION == 'pypy'* ]]; then export WRAPPER=''; fi
-  - $WRAPPER ./go.py -s -o '[jobs] continuous = False' docs/examples/ExampleS1_stresstest.conf
-  - $WRAPPER ./go.py -G --debug docs/examples/ExampleS1_stresstest.conf
-  - $WRAPPER ./go.py docs/examples/ExampleS1_stresstest.conf
+  - $WRAPPER $GC_SCRIPT -s -o '[jobs] continuous = False' docs/examples/ExampleS1_stresstest.conf
+  - $WRAPPER $GC_SCRIPT -G --debug docs/examples/ExampleS1_stresstest.conf
+  - $WRAPPER $GC_SCRIPT docs/examples/ExampleS1_stresstest.conf
   - diff ExampleS1_stresstest.list docs/examples/ExampleS1_stresstest.list.ref
 after_success:
   - codecov

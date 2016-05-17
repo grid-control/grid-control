@@ -12,25 +12,85 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-import os
-from grid_control.backends import WMS
+import os, sys, gzip, logging
+from grid_control.utils import DictFormat
 from grid_control.utils.data_structures import makeEnum
-from hpfwk import AbstractError, Plugin
+from hpfwk import AbstractError, NestedException, Plugin
 from python_compat import ifilter, izip
 
 class OutputProcessor(Plugin):
 	def process(self, dn):
 		raise AbstractError
 
+class JobResultError(NestedException):
+	pass
+
+JobResult = makeEnum(['JOBNUM', 'EXITCODE', 'RAW'], useHash = True)
+
 class JobInfoProcessor(OutputProcessor):
+	def __init__(self):
+		OutputProcessor.__init__(self)
+		self._df = DictFormat()
+
 	def process(self, dn):
-		return WMS.parseJobInfo(os.path.join(dn, 'job.info'))
+		fn = os.path.join(dn, 'job.info')
+		if not os.path.exists(fn):
+			raise JobResultError('Job result file %r does not exist' % fn)
+		try:
+			info_content = open(fn, 'r').read()
+		except Exception:
+			raise JobResultError('Unable to read job result file %r' % fn)
+		if not info_content:
+			raise JobResultError('Job result file %r is empty' % fn)
+		try:
+			data = self._df.parse(info_content, keyParser = {None: str})
+		except Exception:
+			raise JobResultError('Unable to parse job result file %r' % fn)
+		try:
+			jobNum = data.pop('JOBID')
+			exitCode = data.pop('EXITCODE')
+			return {JobResult.JOBNUM: jobNum, JobResult.EXITCODE: exitCode, JobResult.RAW: data}
+		except Exception:
+			raise JobResultError('Job result file %r is incomplete' % fn)
+
+
+class DebugJobInfoProcessor(JobInfoProcessor):
+	def __init__(self):
+		JobInfoProcessor.__init__(self)
+		self._display_files = ['gc.stdout', 'gc.stderr']
+
+	def process(self, dn):
+		result = JobInfoProcessor.process(self, dn)
+		if result[JobResult.EXITCODE] != 0:
+			def _display_logfile(dn, fn):
+				try:
+					full_fn = os.path.join(dn, fn)
+					if os.path.exists(full_fn):
+						if fn.endswith('.gz'):
+							fp = gzip.open(full_fn)
+						else:
+							fp = open(full_fn)
+						sys.stdout.write('%s\n' % fn)
+						sys.stdout.write(fp.read())
+						sys.stdout.write('-' * 50)
+						fp.close()
+				except Exception:
+					raise
+					pass
+			for fn in self._display_files:
+				_display_logfile(dn, fn)
+		return result
+
 
 class FileInfoProcessor(JobInfoProcessor):
 	def process(self, dn):
-		jobInfo = JobInfoProcessor.process(self, dn)
+		try:
+			jobInfo = JobInfoProcessor.process(self, dn)
+		except Exception:
+			logging.getLogger('wms').warning(sys.exc_info()[1])
+			jobInfo = None
 		if jobInfo:
-			jobData = jobInfo[2]
+			jobData = jobInfo[JobResult.RAW]
 			result = {}
 			# parse old job info data format for files
 			oldFileFormat = [FileInfoProcessor.Hash, FileInfoProcessor.NameLocal, FileInfoProcessor.NameDest, FileInfoProcessor.Path]
@@ -46,9 +106,11 @@ class FileInfoProcessor(JobInfoProcessor):
 			return list(result.values())
 makeEnum(['Hash', 'NameLocal', 'NameDest', 'Path'], FileInfoProcessor)
 
+
 class TaskOutputProcessor(OutputProcessor):
 	def __init__(self, task):
 		self._task = task
+
 
 class SandboxProcessor(TaskOutputProcessor):
 	def process(self, dn):

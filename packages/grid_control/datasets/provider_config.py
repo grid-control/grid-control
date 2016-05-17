@@ -37,8 +37,26 @@ class ConfigDataProvider(DataProvider):
 			config.set('dataset hash', dataset_hash_new)
 
 
+	def _readFileFromConfig(self, config, url, metadata_keys, common_metadata, common_prefix):
+		info = config.get(url, onChange = None)
+		tmp = info.split(' ', 1)
+		fi = {DataProvider.URL: common_prefix + url, DataProvider.NEntries: int(tmp[0])}
+		if common_metadata:
+			fi[DataProvider.Metadata] = common_metadata
+		if len(tmp) == 2:
+			file_metadata = parseJSON(tmp[1])
+			if len(common_metadata) + len(file_metadata) > len(metadata_keys):
+				raise DatasetError('Unable to set %d file metadata items with %d metadata keys (%d common metadata items)' %
+					(len(file_metadata), len(metadata_keys), len(common_metadata)))
+			fi[DataProvider.Metadata] = fi.get(DataProvider.Metadata, []) + file_metadata
+		return fi
+
+
 	def _readBlockFromConfig(self, config, datasetExpr, datasetNick, datasetID):
+		metadata_keys = parseJSON(config.get('metadata', '[]', onChange = None))
 		common_metadata = parseJSON(config.get('metadata common', '[]', onChange = None))
+		if len(common_metadata) > len(metadata_keys):
+			raise DatasetError('Unable to set %d common metadata items with %d metadata keys' % (len(common_metadata), len(metadata_keys)))
 		common_prefix = config.get('prefix', '', onChange = None)
 		file_list = []
 		has_events = False
@@ -49,14 +67,7 @@ class ConfigDataProvider(DataProvider):
 			elif url == 'events':
 				has_events = True
 			elif url not in ['dataset hash', 'id', 'metadata', 'metadata common', 'nickname', 'prefix']:
-				info = config.get(url, onChange = None)
-				tmp = info.split(' ', 1)
-				fi = {DataProvider.URL: common_prefix + url, DataProvider.NEntries: int(tmp[0])}
-				if common_metadata:
-					fi[DataProvider.Metadata] = common_metadata
-				if len(tmp) == 2:
-					fi[DataProvider.Metadata] = fi.get(DataProvider.Metadata, []) + parseJSON(tmp[1])
-				file_list.append(fi)
+				file_list.append(self._readFileFromConfig(config, url, metadata_keys, common_metadata, common_prefix))
 		if not file_list:
 			raise DatasetError('There are no dataset files specified for dataset %r' % datasetExpr)
 
@@ -64,9 +75,10 @@ class ConfigDataProvider(DataProvider):
 			DataProvider.Nickname: config.get('nickname', datasetNick, onChange = None),
 			DataProvider.DatasetID: config.getInt('id', datasetID, onChange = None),
 			DataProvider.Dataset: datasetExpr,
-			DataProvider.Metadata: parseJSON(config.get('metadata', '[]', onChange = None)),
 			DataProvider.FileList: sorted(file_list, key = lambda fi: fi[DataProvider.URL]),
 		}
+		if metadata_keys:
+			result[DataProvider.Metadata] = metadata_keys
 		if has_events:
 			result[DataProvider.NEntries] = config.getInt('events', -1, onChange = None)
 		if has_se_list:

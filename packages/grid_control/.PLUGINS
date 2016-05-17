@@ -30,33 +30,35 @@
 
     * grid_control.datasets.dproc_base DataProcessor
 
-     * grid_control.datasets.dproc_basic EmptyDataProcessor
+     * grid_control.datasets.dproc_basic EmptyDataProcessor empty
 
-     * grid_control.datasets.dproc_basic EntriesConsistencyDataProcessor
+     * grid_control.datasets.dproc_basic EntriesConsistencyDataProcessor consistency
 
-     * grid_control.datasets.dproc_basic EntriesCountDataProcessor EventsCountDataProcessor
+     * grid_control.datasets.dproc_basic EntriesCountDataProcessor events EventsCountDataProcessor
 
-     * grid_control.datasets.dproc_basic LocationDataProcessor
+     * grid_control.datasets.dproc_basic LocationDataProcessor location
 
      * grid_control.datasets.dproc_base MultiDataProcessor
 
      * grid_control.datasets.dproc_nick NickNameProducer
 
-      * grid_control.datasets.dproc_nick InlineNickNameProducer
+      * grid_control.datasets.dproc_nick InlineNickNameProducer inline
 
-      * grid_control.datasets.dproc_nick SimpleNickNameProducer
+      * grid_control.datasets.dproc_nick SimpleNickNameProducer simple
 
-     * grid_control.datasets.dproc_pestimate PartitionEstimator SplitSettingEstimator
+     * grid_control.datasets.dproc_base NullDataProcessor null
 
-     * grid_control.datasets.dproc_basic StatsDataProcessor
+     * grid_control.datasets.dproc_pestimate PartitionEstimator estimate SplitSettingEstimator
 
-     * grid_control.datasets.dproc_basic URLCountDataProcessor FileCountDataProcessor
+     * grid_control.datasets.dproc_sort SortingDataProcessor sort
 
-     * grid_control.datasets.dproc_basic URLDataProcessor FileDataProcessor
+     * grid_control.datasets.dproc_basic StatsDataProcessor stats
 
-      * grid_control.datasets.dproc_basic URLRegexDataProcessor FileRegexDataProcessor
+     * grid_control.datasets.dproc_basic URLCountDataProcessor files FileCountDataProcessor
 
-     * grid_control.datasets.dproc_basic UniqueDataProcessor
+     * grid_control.datasets.dproc_basic URLDataProcessor ignore FileDataProcessor
+
+     * grid_control.datasets.dproc_basic UniqueDataProcessor unique
 
     * grid_control.datasets.provider_base DataProvider
 
@@ -76,21 +78,21 @@
 
     * grid_control.datasets.splitter_base DataSplitter
 
-     * grid_control.datasets.splitter_event EventBoundarySplitter
+     * grid_control.datasets.splitter_event EventBoundarySplitter events
 
      * grid_control.datasets.splitter_basic FileLevelSplitter
 
-      * grid_control.datasets.splitter_basic BlockBoundarySplitter
+      * grid_control.datasets.splitter_basic BlockBoundarySplitter blocks
 
-      * grid_control.datasets.splitter_basic FLSplitStacker
+      * grid_control.datasets.splitter_basic FLSplitStacker pipeline
 
-      * grid_control.datasets.splitter_basic FileBoundarySplitter
+      * grid_control.datasets.splitter_basic FileBoundarySplitter files
 
-      * grid_control.datasets.splitter_basic HybridSplitter
+      * grid_control.datasets.splitter_basic HybridSplitter hybrid
 
       * grid_control.datasets.splitter_meta MetadataSplitter
 
-       * grid_control.datasets.splitter_meta UserMetadataSplitter
+       * grid_control.datasets.splitter_meta UserMetadataSplitter metadata
 
     * grid_control.gui GUI
 
@@ -116,6 +118,8 @@
 
      * grid_control.datasets.scanner_basic MetadataFromTask
 
+     * grid_control.datasets.scanner_basic NullScanner
+
      * grid_control.datasets.scanner_basic OutputDirsFromConfig
 
      * grid_control.datasets.scanner_basic OutputDirsFromWork
@@ -127,6 +131,12 @@
      * grid_control.job_db_zip ZippedJobDB
 
       * grid_control.job_db_zip Migrate2ZippedJobDB
+
+    * grid_control.tasks.task_base JobNamePlugin
+
+     * grid_control.tasks.task_base ConfigurableJobName config
+
+     * grid_control.tasks.task_base DefaultJobName default
 
     * grid_control.config.matcher_base Matcher
 
@@ -156,13 +166,13 @@
 
        * grid_control.backends.access RefreshableAccessToken
 
-        * grid_control.backends.access AFSAccessToken AFSProxy
+        * grid_control.backends.access_afs AFSAccessToken afs AFSProxy
 
-       * grid_control.backends.access VomsProxy
+       * grid_control.backends.access_grid VomsAccessToken voms VomsProxy
 
-      * grid_control.backends.access TrivialAccessToken TrivialProxy
+      * grid_control.backends.access TrivialAccessToken trivial TrivialProxy
 
-     * grid_control.backends.broker Broker
+     * grid_control.backends.broker_base Broker
 
       * grid_control.backends.broker_basic CoverageBroker
 
@@ -210,9 +220,9 @@
 
       * grid_control.tasks.task_data DataTask
 
-       * grid_control.tasks.task_user UserTask UserMod
+       * grid_control.tasks.task_user UserTask UserMod user script
 
-        * grid_control.tasks.task_root ROOTTask ROOTMod
+        * grid_control.tasks.task_root ROOTTask ROOTMod root
 
      * grid_control.backends.wms WMS
 
@@ -228,7 +238,7 @@
 
         * grid_control.backends.wms_glite Glite
 
-        * grid_control.backends.wms_glitewms GliteWMS grid
+        * grid_control.backends.wms_glitewms GliteWMS
 
          * grid_control.backends.wms_glitewms_direct GliteWMSDirect
 
@@ -238,7 +248,7 @@
 
         * grid_control.backends.wms_host Host Localhost
 
-        * grid_control.backends.wms_slurm JMS SLURM
+        * grid_control.backends.wms_jms JMS
 
         * grid_control.backends.wms_lsf LSF
 
@@ -247,6 +257,10 @@
          * grid_control.backends.wms_gridengine GridEngine SGE UGE OGE
 
          * grid_control.backends.wms_pbs PBS
+
+        * grid_control.backends.wms_slurm SLURM
+
+      * grid_control.backends.wms Grid
 
       * grid_control.backends.wms InactiveWMS inactive
 
@@ -266,13 +280,15 @@
 
     * grid_control.datasets.pproc_base PartitionProcessor
 
-     * grid_control.datasets.pproc_base BasicPartitionProcessor
+     * grid_control.datasets.pproc_base BasicPartitionProcessor basic
 
-     * grid_control.datasets.pproc_base LocationPartitionProcessor
+     * grid_control.datasets.pproc_base LocationPartitionProcessor location
 
-     * grid_control.datasets.pproc_base MetaPartitionProcessor
+     * grid_control.datasets.pproc_base MetaPartitionProcessor metadata
 
      * grid_control.datasets.pproc_base MultiPartitionProcessor
+
+     * grid_control.datasets.pproc_base TFCPartitionProcessor tfc
 
    * grid_control.datasets.splitter_base DataSplitterIO
 
@@ -335,6 +351,8 @@
    * grid_control.output_processor OutputProcessor
 
     * grid_control.output_processor JobInfoProcessor
+
+     * grid_control.output_processor DebugJobInfoProcessor
 
      * grid_control.output_processor FileInfoProcessor
 
@@ -416,9 +434,11 @@
 
    * grid_control.report Report
 
-    * grid_control.report BasicReport
+    * grid_control.report BasicReport basic
 
-    * grid_control.report LocationReport
+    * grid_control.report LocationReport location
 
     * grid_control.report MultiReport
+
+    * grid_control.report NullReport null
 
