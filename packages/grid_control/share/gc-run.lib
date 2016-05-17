@@ -584,6 +584,7 @@ url_copy_single() {
 		*)
 			echo "Unsupported copy from $1 to $2" >&2 && fail 106;;
 	esac
+	print_and_eval "url_exists" "$2"
 }
 
 # Copy one file at a time (1) -> (2) (overwrite existing files)
