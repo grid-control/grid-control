@@ -75,8 +75,7 @@ class DebugJobInfoProcessor(JobInfoProcessor):
 						sys.stdout.write('-' * 50)
 						fp.close()
 				except Exception:
-					raise
-					pass
+					sys.stdout.write('Unable to display %s\n' % fn)
 			for fn in self._display_files:
 				_display_logfile(dn, fn)
 		return result

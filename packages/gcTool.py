@@ -128,19 +128,20 @@ def gc_create_workflow(config):
 	# Configure logging settings
 	logging_setup(config.changeView(setSections = ['logging']))
 
+	global_config = config.changeView(setSections = ['global'])
 	# Check work dir validity (default work directory is the config file name)
-	if not os.path.exists(config.getWorkPath()):
-		if not config.getState('init'):
-			logging.getLogger('user').warning('Starting initialization of %s!', config.getWorkPath())
-			config.setState(True, 'init')
-		if config.getChoiceYesNo('workdir create', True,
-				interactive = 'Do you want to create the working directory %s?' % config.getWorkPath()):
-			utils.ensureDirExists(config.getWorkPath(), 'work directory')
+	if not os.path.exists(global_config.getWorkPath()):
+		if not global_config.getState('init'):
+			logging.getLogger('user').warning('Starting initialization of %s!', global_config.getWorkPath())
+			global_config.setState(True, 'init')
+		if global_config.getChoiceYesNo('workdir create', True,
+				interactive = 'Do you want to create the working directory %s?' % global_config.getWorkPath()):
+			utils.ensureDirExists(global_config.getWorkPath(), 'work directory')
 
 	# Query config settings before config is frozen
-	global_config = config.changeView(setSections = ['global'])
 	help_cfg = global_config.getState('display', detail = 'config')
 	help_scfg = global_config.getState('display', detail = 'minimal config')
+
 	action_config = config.changeView(setSections = ['action'])
 	action_delete = action_config.get('delete', '', onChange = None)
 	action_reset = action_config.get('reset', '', onChange = None)

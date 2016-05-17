@@ -13,11 +13,14 @@
 # | limitations under the License.
 
 import logging
+from grid_control.config import triggerResync
 from grid_control.gc_plugin import ConfigurablePlugin
 from hpfwk import AbstractError
 from python_compat import lfilter
 
 class DataProcessor(ConfigurablePlugin):
+	triggerDataResync = triggerResync(['datasets', 'parameters'])
+
 	def __init__(self, config):
 		ConfigurablePlugin.__init__(self, config)
 		self._log = logging.getLogger('dataproc')

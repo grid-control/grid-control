@@ -192,7 +192,8 @@ class AddFilePrefix(InfoScanner):
 class MatchDelimeter(InfoScanner):
 	def __init__(self, config):
 		InfoScanner.__init__(self, config)
-		self._matchDelim = config.get('delimeter match', '').split(':')
+		matchDelim = config.get('delimeter match', '')
+		self._matchDelim = matchDelim.split(':')
 		self._delimDS = config.get('delimeter dataset key', '')
 		self._delimB = config.get('delimeter block key', '')
 
