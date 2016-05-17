@@ -42,6 +42,8 @@ class CreamWMS(GridWMS):
 	
 	def __init__(self, config, name):
 		GridWMS.__init__(self, config, name)
+		
+		self._nJobsPerChunk = config.getInt('job output chunk size', 10)
 
 		self._submitExec = utils.resolveInstallPath('glite-ce-job-submit')
 		self._statusExec = utils.resolveInstallPath('glite-ce-job-status')
@@ -110,48 +112,52 @@ class CreamWMS(GridWMS):
 			utils.ensureDirExists(tmpPath)
 		except Exception:
 			raise BackendError('Temporary path "%s" could not be created.' % tmpPath, BackendError)
-
-		jobNumMap = dict(ids)
-		jobs = " ".join(self._getRawIDs(ids))
-		log = tempfile.mktemp('.log')
-
+		
 		activity = utils.ActivityLog('retrieving job outputs')
-		proc = utils.LoggedProcess(self._outputExec,
-			'--noint --logfile "%s" --dir "%s" %s' % (log, tmpPath, jobs))
+		for idsChunk in [ids[index:index+self._nJobsPerChunk] for index in xrange(0, len(ids), self._nJobsPerChunk)]:
+			jobNumMap = dict(idsChunk)
+			jobs = " ".join(self._getRawIDs(idsChunk))
+			log = tempfile.mktemp('.log')
 
-		# yield output dirs
-		todo = jobNumMap.values()
-		done = []
-		currentJobNum = None
-		for line in imap(str.strip, proc.iter()):
-			match = re.match(self._outputRegex, line)
-			if match:
-				currentJobNum = jobNumMap.get(self._createId(match.groupdict()["rawId"]))
-				todo.remove(currentJobNum)
-				done.append(match.groupdict()["rawId"])
-				outputDir = match.groupdict()["outputDir"]
-				if os.path.exists(outputDir):
-					if 'GC_WC.tar.gz' in os.listdir(outputDir):
-						wildcardTar = os.path.join(outputDir, 'GC_WC.tar.gz')
-						try:
-							tarfile.TarFile.open(wildcardTar, 'r:gz').extractall(outputDir)
-							os.unlink(wildcardTar)
-						except Exception:
-							utils.eprint("Can't unpack output files contained in %s" % wildcardTar)
-				yield (currentJobNum, outputDir)
-				currentJobNum = None
-		retCode = proc.wait()
+			#print self._outputExec, '--noint --logfile "%s" --dir "%s" %s' % (log, tmpPath, jobs)
+			#import sys
+			#sys.exit(1)
+			proc = utils.LoggedProcess(self._outputExec,
+				'--noint --logfile "%s" --dir "%s" %s' % (log, tmpPath, jobs))
+
+			# yield output dirs
+			todo = jobNumMap.values()
+			done = []
+			currentJobNum = None
+			for line in imap(str.strip, proc.iter()):
+				match = re.match(self._outputRegex, line)
+				if match:
+					currentJobNum = jobNumMap.get(self._createId(match.groupdict()["rawId"]))
+					todo.remove(currentJobNum)
+					done.append(match.groupdict()["rawId"])
+					outputDir = match.groupdict()["outputDir"]
+					if os.path.exists(outputDir):
+						if 'GC_WC.tar.gz' in os.listdir(outputDir):
+							wildcardTar = os.path.join(outputDir, 'GC_WC.tar.gz')
+							try:
+								tarfile.TarFile.open(wildcardTar, 'r:gz').extractall(outputDir)
+								os.unlink(wildcardTar)
+							except Exception:
+								utils.eprint("Can't unpack output files contained in %s" % wildcardTar)
+					yield (currentJobNum, outputDir)
+					currentJobNum = None
+			retCode = proc.wait()
+
+			if retCode != 0:
+				if 'Keyboard interrupt raised by user' in proc.getError():
+					utils.removeFiles([log, jobs, basePath])
+					raise StopIteration
+				else:
+					proc.logError(self.errorLog, log = log)
+				utils.eprint('Trying to recover from error ...')
+				for dirName in os.listdir(basePath):
+					yield (None, os.path.join(basePath, dirName))
 		del activity
-
-		if retCode != 0:
-			if 'Keyboard interrupt raised by user' in proc.getError():
-				utils.removeFiles([log, jobs, basePath])
-				raise StopIteration
-			else:
-				proc.logError(self.errorLog, log = log)
-			utils.eprint('Trying to recover from error ...')
-			for dirName in os.listdir(basePath):
-				yield (None, os.path.join(basePath, dirName))
 
 		# return unretrievable jobs
 		for jobNum in todo:
@@ -165,7 +171,6 @@ class CreamWMS(GridWMS):
 				pass
 			else:
 				proc.logError(self.errorLog, log = purgeLog, jobs = done)
-
 		utils.removeFiles([log, purgeLog, basePath])
 
 	def cancelJobs(self, allIds):
