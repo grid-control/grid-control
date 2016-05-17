@@ -232,6 +232,8 @@
 
        * grid_control.backends.wms_grid GridWMS
 
+        * grid_control.backends.wms_cream CreamWMS cream
+
         * grid_control.backends.wms_edg EuropeanDataGrid EDG LCG
 
         * grid_control.backends.wms_glite Glite
