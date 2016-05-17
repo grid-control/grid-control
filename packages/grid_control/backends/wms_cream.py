@@ -46,10 +46,10 @@ class CreamWMS(GridWMS):
 		self._submitParams.update({'-r': self._ce, '--config-vo': self._configVO })
 		
 		self._statusRegexLevel0 = [
-			".*JobID=\[(?P<rawId>\S+)\]\s+Status\s+=\s+\[(?P<status>\S+)\].*",
-			".*JobID=\[(?P<rawId>\S+)\]\s+For this job CREAM has returned a fault: MethodName=\[(?P<methodName>.*)\] "+
-					"Timestamp=\[(?P<timestamp>.*)\] ErrorCode=\[(?P<errorCode>.*)\] "+
-					"Description=\[(?P<description>.*)\] FaultCause=\[(?P<faultCause>.*)\].*"
+			r".*JobID=\[(?P<rawId>\S+)\]\s+Status\s+=\s+\[(?P<status>\S+)\].*",
+			r".*JobID=\[(?P<rawId>\S+)\]\s+For this job CREAM has returned a fault: MethodName=\[(?P<methodName>.*)\] "+
+				"Timestamp=\[(?P<timestamp>.*)\] ErrorCode=\[(?P<errorCode>.*)\] "+
+				"Description=\[(?P<description>.*)\] FaultCause=\[(?P<faultCause>.*)\].*",
 		]
 		self._outputRegex = ".*For JobID \[(?P<rawId>\S+)\] output will be stored in the dir (?P<outputDir>.*)$"
 		
