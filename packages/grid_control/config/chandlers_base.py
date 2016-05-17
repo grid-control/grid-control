@@ -38,7 +38,7 @@ class triggerResync(object):
 
 	def __call__(self, config, old_obj, cur_obj, cur_entry, obj2str):
 		log_user = logging.getLogger('user')
-		log_user.info('%s was changed' % cur_entry.format_opt())
+		log_user.info('%s was changed', cur_entry.format_opt())
 		needed_details = lfilter(lambda detail: not config.getState('resync', detail), self._details)
 		if not needed_details:
 			return cur_obj
