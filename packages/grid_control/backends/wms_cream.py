@@ -17,7 +17,7 @@ from grid_control import utils
 from grid_control.backends.wms_grid import GridWMS
 from grid_control.backends.wms import BackendError
 from grid_control.job_db import Job
-from python_compat import ifilter, imap, irange, md5
+from python_compat import imap, irange, md5, tarfile
 
 class CreamWMS(GridWMS):
 	alias = ['cream']
