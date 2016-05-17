@@ -20,10 +20,12 @@ class NickNameProducer(DataProcessor):
 	def __init__(self, config):
 		DataProcessor.__init__(self, config)
 		# Ensure the same nickname is used consistently in all blocks of a dataset
-		self._checkConsistency = config.getBool('nickname check consistency', True)
+		self._checkConsistency = config.getBool('nickname check consistency', True,
+			onChange = DataProcessor.triggerDataResync)
 		self._checkConsistencyData = {}
 		# Check if two different datasets have the same nickname
-		self._checkCollision = config.getBool('nickname check collision', True)
+		self._checkCollision = config.getBool('nickname check collision', True,
+			onChange = DataProcessor.triggerDataResync)
 		self._checkCollisionData = {}
 
 	# Get nickname and check for collisions
@@ -53,7 +55,7 @@ class SimpleNickNameProducer(NickNameProducer):
 
 	def __init__(self, config):
 		NickNameProducer.__init__(self, config)
-		self._full_name = config.getBool('nickname full name', True)
+		self._full_name = config.getBool('nickname full name', True, onChange = DataProcessor.triggerDataResync)
 
 	def getName(self, oldnick, dataset, block):
 		if oldnick == '':
@@ -69,7 +71,7 @@ class InlineNickNameProducer(NickNameProducer):
 
 	def __init__(self, config):
 		NickNameProducer.__init__(self, config)
-		self._expr = config.get('nickname expr', 'oldnick')
+		self._expr = config.get('nickname expr', 'oldnick', onChange = DataProcessor.triggerDataResync)
 
 	def getName(self, oldnick, dataset, block):
 		return eval(self._expr) # pylint:disable=eval-used
