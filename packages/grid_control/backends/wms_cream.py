@@ -47,7 +47,9 @@ class CreamWMS(GridWMS):
 		
 		self._statusRegexLevel0 = [
 			".*JobID=\[(?P<rawId>\S+)\]\s+Status\s+=\s+\[(?P<status>\S+)\].*",
-			".*JobID=\[(?P<rawId>\S+)\]\s+For this job CREAM has returned a fault: MethodName=\[(?P<methodName>.*)\] Timestamp=\[(?P<timestamp>.*)\] ErrorCode=\[(?P<errorCode>.*)\] Description=\[(?P<description>.*)\] FaultCause=\[(?P<faultCause>.*)\].*"
+			".*JobID=\[(?P<rawId>\S+)\]\s+For this job CREAM has returned a fault: MethodName=\[(?P<methodName>.*)\] "+
+					"Timestamp=\[(?P<timestamp>.*)\] ErrorCode=\[(?P<errorCode>.*)\] "+
+					"Description=\[(?P<description>.*)\] FaultCause=\[(?P<faultCause>.*)\].*"
 		]
 		self._outputRegex = ".*For JobID \[(?P<rawId>\S+)\] output will be stored in the dir (?P<outputDir>.*)$"
 		
@@ -99,12 +101,10 @@ class CreamWMS(GridWMS):
 		try:
 			if len(allIds) == 1:
 				# For single jobs create single subdir
-				tmpPath = os.path.join(basePath, md5(allIds[0][0]).hexdigest())
-			else:
-				tmpPath = basePath
-			utils.ensureDirExists(tmpPath)
+				basePath = os.path.join(basePath, md5(allIds[0][0]).hexdigest())
+			utils.ensureDirExists(basePath)
 		except Exception:
-			raise BackendError('Temporary path "%s" could not be created.' % tmpPath, BackendError)
+			raise BackendError('Temporary path "%s" could not be created.' % basePath, BackendError)
 		
 		activity = utils.ActivityLog('retrieving job outputs')
 		for ids in imap(lambda x: allIds[x:x+self._nJobsPerChunk], irange(0, len(allIds), self._nJobsPerChunk)):
@@ -112,11 +112,11 @@ class CreamWMS(GridWMS):
 			jobs = " ".join(self._getRawIDs(ids))
 			log = tempfile.mktemp('.log')
 
-			#print self._outputExec, '--noint --logfile "%s" --dir "%s" %s' % (log, tmpPath, jobs)
+			#print self._outputExec, '--noint --logfile "%s" --dir "%s" %s' % (log, basePath, jobs)
 			#import sys
 			#sys.exit(1)
 			proc = utils.LoggedProcess(self._outputExec,
-				'--noint --logfile "%s" --dir "%s" %s' % (log, tmpPath, jobs))
+				'--noint --logfile "%s" --dir "%s" %s' % (log, basePath, jobs))
 
 			# yield output dirs
 			todo = jobNumMap.values()
@@ -143,7 +143,7 @@ class CreamWMS(GridWMS):
 
 			if retCode != 0:
 				if 'Keyboard interrupt raised by user' in proc.getError():
-					utils.removeFiles([log, jobs, basePath])
+					utils.removeFiles([log, basePath])
 					raise StopIteration
 				else:
 					proc.logError(self.errorLog, log = log)
