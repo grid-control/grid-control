@@ -31,13 +31,6 @@ class CreamWMS(GridWMS):
 		'DONE-OK':        Job.DONE,
 		'IDLE':           Job.QUEUED,
 		'REALLY-RUNNING': Job.RUNNING,
-		#'ready':     Job.READY,
-		#'submitted': Job.SUBMITTED,
-		#'queued':    Job.QUEUED,
-		#'scheduled': Job.QUEUED,
-		#'aborted':   Job.ABORTED,
-		#'cancelled': Job.ABORTED,
-		#'cleared':   Job.ABORTED,
 	}
 	
 	def __init__(self, config, name):
