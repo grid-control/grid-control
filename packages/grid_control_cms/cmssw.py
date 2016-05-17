@@ -161,8 +161,9 @@ class CMSSW(SCRAMTask):
 				if key not in self.scramEnv:
 					raise ConfigError('Installed program in project area not recognized.')
 
-			archs = lfilter(lambda x: os.path.isdir(os.path.join(scramPath, x)) and not x.startswith('.'), os.listdir(scramPath))
-			self.scramArch = config.get('scram arch', (archs + [noDefault])[0])
+			default_archs = lfilter(lambda x: os.path.isdir(os.path.join(scramPath, x)) and not x.startswith('.'), os.listdir(scramPath)) + [noDefault]
+			default_arch = default_archs[0]
+			self.scramArch = config.get('scram arch', default_arch)
 			try:
 				fp = open(os.path.join(scramPath, self.scramArch, 'Environment'), 'r')
 				self.scramEnv.update(utils.DictFormat().parse(fp, keyParser = {None: str}))

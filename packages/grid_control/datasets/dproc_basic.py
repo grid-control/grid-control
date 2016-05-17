@@ -207,7 +207,7 @@ class UniqueDataProcessor(DataProcessor):
 					urlHash = md5_hex(repr((fi[DataProvider.URL], fi[DataProvider.NEntries], fi.get(DataProvider.Metadata))))
 					if urlHash in self._recordedURL:
 						msg = 'Multiple occurences of URL: %r!' % fi[DataProvider.URL]
-						msg += ' (This check can be configured with %r)' % self._checkURLOpt
+						msg += ' (This check can be configured with %r)' % 'dataset check unique url'
 						if self._checkURL == DatasetUniqueMode.warn:
 							self._log.warning(msg)
 						elif self._checkURL == DatasetUniqueMode.abort:
@@ -227,7 +227,7 @@ class UniqueDataProcessor(DataProcessor):
 				block[DataProvider.Locations], block.get(DataProvider.Metadata))))
 			if blockHash in self._recordedBlock:
 				msg = 'Multiple occurences of block: "%s#%s"!' % (block[DataProvider.Dataset], block[DataProvider.BlockName])
-				msg += ' (This check can be configured with %r)' % self._checkBlockOpt
+				msg += ' (This check can be configured with %r)' % 'dataset check unique block'
 				if self._checkBlock == DatasetUniqueMode.warn:
 					self._log.warning(msg)
 				elif self._checkBlock == DatasetUniqueMode.abort:

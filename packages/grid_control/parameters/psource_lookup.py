@@ -60,7 +60,8 @@ def lookupConfigParser(pconfig, outputKey, lookupKeys):
 	if not lookupKeys or lookupKeys == ['']:
 		raise ConfigError('Lookup parameter not defined!')
 	defaultMatcher = pconfig.get('', 'default matcher', 'equal')
-	matchstrList = pconfig.get(outputKey.lstrip('!'), 'matcher', defaultMatcher).lower().splitlines()
+	matchstr = pconfig.get(outputKey.lstrip('!'), 'matcher', defaultMatcher)
+	matchstrList = matchstr.lower().splitlines()
 	if len(matchstrList) != len(lookupKeys):
 		if len(matchstrList) == 1:
 			matchstrList = matchstrList * len(lookupKeys)
