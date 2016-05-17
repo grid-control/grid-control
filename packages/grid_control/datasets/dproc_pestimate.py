@@ -21,8 +21,8 @@ class PartitionEstimator(DataProcessor):
 
 	def __init__(self, config):
 		DataProcessor.__init__(self, config)
-		self._targetJobs = config.getInt('target partitions', -1)
-		self._targetJobsDS = config.getInt('target partitions per nickname', -1)
+		self._targetJobs = config.getInt('target partitions', -1, onChange = DataProcessor.triggerDataResync)
+		self._targetJobsDS = config.getInt('target partitions per nickname', -1, onChange = DataProcessor.triggerDataResync)
 		self._entries = {None: 0}
 		self._files = {None: 0}
 		self._config = config

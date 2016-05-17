@@ -15,7 +15,7 @@
 import logging
 from grid_control import utils
 from grid_control.config.config_entry import ConfigError
-from python_compat import imap
+from python_compat import imap, lfilter
 
 # Change handler to notify about impossible changes
 def changeImpossible(config, old_obj, cur_obj, cur_entry, obj2str):
@@ -37,10 +37,17 @@ class triggerResync(object):
 		self._details = details
 
 	def __call__(self, config, old_obj, cur_obj, cur_entry, obj2str):
-		logging.getLogger('user').info('%s was changed - triggering resync of %s', cur_entry.format_opt(), str.join(', ', self._details))
-		for detail in self._details:
+		log_user = logging.getLogger('user')
+		log_user.info('%s was changed' % cur_entry.format_opt())
+		needed_details = lfilter(lambda detail: not config.getState('resync', detail), self._details)
+		if not needed_details:
+			return cur_obj
+		log_user.info('Triggering resync of %s', str.join(', ', needed_details))
+		for detail in needed_details:
 			config.setState(True, 'resync', detail = detail)
-		config.setState(True, 'init', detail = 'config') # This will trigger a write of the new options
+		if not config.getState('init', detail = 'config'):
+			log_user.info('The configuration was changed - triggering storage of new config options')
+			config.setState(True, 'init', detail = 'config') # This will trigger a write of the new options
 		return cur_obj
 
 
@@ -51,7 +58,7 @@ class changeInitNeeded(object):
 
 	def __call__(self, config, old_obj, cur_obj, cur_entry, obj2str):
 		log = logging.getLogger('config.onchange.%s' % self._option.lower())
-		config = config.changeView(setSections = ['interactive'])
+		config = config.changeView(viewClass = 'SimpleConfigView', setSections = ['interactive'])
 		interaction_def = config.getBool('default', True, onChange = None)
 		interaction_opt = config.getBool(self._option, interaction_def, onChange = None)
 		if interaction_opt:

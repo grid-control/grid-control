@@ -68,7 +68,8 @@ class URLDataProcessor(DataProcessor):
 			filterParser = lambda value: self._parseFilter(internal_config, value),
 			filterStr = lambda value: str.join('\n', value.split()),
 			matchKey = itemgetter(DataProvider.URL),
-			defaultMatcher = 'blackwhite', defaultFilter = 'weak')
+			defaultMatcher = 'blackwhite', defaultFilter = 'weak',
+			onChange = DataProcessor.triggerDataResync)
 
 	def _parseFilter(self, config, value):
 		def getFilterEntries():
@@ -97,7 +98,8 @@ class URLCountDataProcessor(DataProcessor):
 
 	def __init__(self, config):
 		DataProcessor.__init__(self, config)
-		self._limitFiles = config.getInt(['dataset limit urls', 'dataset limit files'], -1)
+		self._limitFiles = config.getInt(['dataset limit urls', 'dataset limit files'], -1,
+			onChange = DataProcessor.triggerDataResync)
 
 	def enabled(self):
 		return self._limitFiles != -1
@@ -114,7 +116,8 @@ class EntriesCountDataProcessor(DataProcessor):
 
 	def __init__(self, config):
 		DataProcessor.__init__(self, config)
-		self._limitEntries = config.getInt(['dataset limit entries', 'dataset limit events'], -1)
+		self._limitEntries = config.getInt(['dataset limit entries', 'dataset limit events'], -1,
+			onChange = DataProcessor.triggerDataResync)
 
 	def enabled(self):
 		return self._limitEntries != -1
@@ -140,8 +143,8 @@ class EmptyDataProcessor(DataProcessor):
 
 	def __init__(self, config):
 		DataProcessor.__init__(self, config)
-		self._emptyFiles = config.getBool('dataset remove empty files', True)
-		self._emptyBlock = config.getBool('dataset remove empty blocks', True)
+		self._emptyFiles = config.getBool('dataset remove empty files', True, onChange = DataProcessor.triggerDataResync)
+		self._emptyBlock = config.getBool('dataset remove empty blocks', True, onChange = DataProcessor.triggerDataResync)
 
 	def enabled(self):
 		return self._emptyBlock or self._emptyFiles
@@ -161,7 +164,8 @@ class LocationDataProcessor(DataProcessor):
 	def __init__(self, config):
 		DataProcessor.__init__(self, config)
 		self._locationfilter = config.getFilter('dataset location filter', '',
-			defaultMatcher = 'blackwhite', defaultFilter = 'strict')
+			defaultMatcher = 'blackwhite', defaultFilter = 'strict',
+			onChange = DataProcessor.triggerDataResync)
 
 	def processBlock(self, block):
 		if block[DataProvider.Locations] is not None:
@@ -185,10 +189,10 @@ class UniqueDataProcessor(DataProcessor):
 
 	def __init__(self, config):
 		DataProcessor.__init__(self, config)
-		self._checkURLOpt = 'dataset check unique url'
-		self._checkURL = config.getEnum(self._checkURLOpt, DatasetUniqueMode, DatasetUniqueMode.abort)
-		self._checkBlockOpt = 'dataset check unique block'
-		self._checkBlock = config.getEnum(self._checkBlockOpt, DatasetUniqueMode, DatasetUniqueMode.abort)
+		self._checkURL = config.getEnum('dataset check unique url', DatasetUniqueMode, DatasetUniqueMode.abort,
+			onChange = DataProcessor.triggerDataResync)
+		self._checkBlock = config.getEnum('dataset check unique block', DatasetUniqueMode, DatasetUniqueMode.abort,
+			onChange = DataProcessor.triggerDataResync)
 
 	def enabled(self):
 		return (self._checkURL == DatasetUniqueMode.ignore) and (self._checkBlock == DatasetUniqueMode.ignore)
