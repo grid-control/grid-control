@@ -24,7 +24,7 @@ from python_compat import lfilter
 
 class DataTask(TaskModule):
 	def setupJobParameters(self, config, pm):
-		config = config.changeView(viewClass = 'TaggedConfigView', addSections = ['dataset'])
+		data_config = config.changeView(viewClass = 'TaggedConfigView', addSections = ['dataset'])
 		self.dataSplitter = None
 		self.dataRefresh = -1
 		def userRefresh(config, old_obj, cur_obj, cur_entry, obj2str):
@@ -34,33 +34,33 @@ class DataTask(TaskModule):
 			config.setState(True, 'resync', detail = 'dataset')
 			config.setState(True, 'init', detail = 'config') # This will trigger a write of the new options
 			return cur_obj
-		dataProvider = config.getCompositePlugin('dataset', '', ':MultiDatasetProvider:',
+		dataProvider = data_config.getCompositePlugin('dataset', '', ':MultiDatasetProvider:',
 			cls = DataProvider, requirePlugin = False, onChange = userRefresh)
 		self._forceRefresh = config.getState('resync', detail = 'dataset')
 		config.setState(False, 'resync', detail = 'dataset')
 		if not dataProvider:
 			return
 
-		tmp_config = config.changeView(viewClass = 'TaggedConfigView', setClasses = None, setNames = None, setTags = [], addSections = ['storage'])
+		tmp_config = data_config.changeView(viewClass = 'TaggedConfigView', setClasses = None, setNames = None, setTags = [], addSections = ['storage'])
 		tmp_config.set('se output pattern', '@NICK@_job_@GC_JOB_ID@_@X@')
-		tmp_config = config.changeView(viewClass = 'TaggedConfigView', setClasses = None, setNames = None, setTags = [], addSections = ['parameters'])
+		tmp_config = data_config.changeView(viewClass = 'TaggedConfigView', setClasses = None, setNames = None, setTags = [], addSections = ['parameters'])
 		tmp_config.set('default lookup', 'DATASETNICK')
 
-		splitterName = config.get('dataset splitter', 'FileBoundarySplitter')
+		splitterName = data_config.get('dataset splitter', 'FileBoundarySplitter')
 		splitterClass = dataProvider.checkSplitter(DataSplitter.getClass(splitterName))
-		self.dataSplitter = splitterClass(config)
+		self.dataSplitter = splitterClass(data_config)
 
 		# Create and register dataset parameter source
-		partProcessor = config.getCompositePlugin('partition processor',
+		partProcessor = data_config.getCompositePlugin('partition processor',
 			'TFCPartitionProcessor LocationPartitionProcessor MetaPartitionProcessor BasicPartitionProcessor',
 			'MultiPartitionProcessor', cls = PartitionProcessor, onChange = triggerResync(['parameters']))
 		DataParameterSource = ParameterSource.getClass('DataParameterSource')
-		self._dataPS = DataParameterSource(config.getWorkPath(), 'data',
+		self._dataPS = DataParameterSource(data_config.getWorkPath(), 'data',
 			dataProvider, self.dataSplitter, partProcessor)
 		DataParameterSource.datasetsAvailable['data'] = self._dataPS
 
 		# Select dataset refresh rate
-		self.dataRefresh = config.getTime('dataset refresh', -1, onChange = None)
+		self.dataRefresh = data_config.getTime('dataset refresh', -1, onChange = None)
 		if self.dataRefresh > 0:
 			self._dataPS.resyncSetup(interval = max(self.dataRefresh, dataProvider.queryLimit()))
 			utils.vprint('Dataset source will be queried every %s' % strTime(self.dataRefresh), -1)

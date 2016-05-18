@@ -40,9 +40,9 @@ class PartitionEstimator(DataProcessor):
 				setSplitParam(self._config, 'events per job', self._entries.pop(None), self._targetJobs)
 			if self._targetJobsDS:
 				for nick in self._files:
-					config = self._config.changeView(setSections = ['dataset %s' % nick])
-					setSplitParam(config, 'files per job', self._files[nick], self._targetJobs)
-					setSplitParam(config, 'events per job', self._entries[nick], self._targetJobs)
+					block_config = self._config.changeView(setSections = ['dataset %s' % nick])
+					setSplitParam(block_config, 'files per job', self._files[nick], self._targetJobs)
+					setSplitParam(block_config, 'events per job', self._entries[nick], self._targetJobs)
 			return blocks
 		else:
 			return blockIter

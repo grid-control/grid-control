@@ -58,9 +58,9 @@ class changeInitNeeded(object):
 
 	def __call__(self, config, old_obj, cur_obj, cur_entry, obj2str):
 		log = logging.getLogger('config.onchange.%s' % self._option.lower())
-		config = config.changeView(viewClass = 'SimpleConfigView', setSections = ['interactive'])
-		interaction_def = config.getBool('default', True, onChange = None)
-		interaction_opt = config.getBool(self._option, interaction_def, onChange = None)
+		int_config = config.changeView(viewClass = 'SimpleConfigView', setSections = ['interactive'])
+		interaction_def = int_config.getBool('default', True, onChange = None)
+		interaction_opt = int_config.getBool(self._option, interaction_def, onChange = None)
 		if interaction_opt:
 			msg = 'The option "%s" was changed from the old value:' % cur_entry.format_opt()
 			if utils.getUserBool(msg + ('\n\t> %s\nto the new value:' % obj2str(old_obj).lstrip()) +
@@ -77,8 +77,8 @@ class changeInitNeeded(object):
 # Validation handler to check for variables in string
 class validNoVar(object):
 	def __init__(self, config):
-		config = config.changeView(viewClass = 'SimpleConfigView', setSections = ['global'])
-		self.markers = config.getList('variable markers', ['@', '__'])
+		global_config = config.changeView(viewClass = 'SimpleConfigView', setSections = ['global'])
+		self.markers = global_config.getList('variable markers', ['@', '__'])
 		for marker in self.markers:
 			if marker not in ['@', '__']:
 				raise ConfigError('Variable marker %r is not supported!' % marker)

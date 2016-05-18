@@ -54,12 +54,12 @@ class ConfigFactory(object):
 		self._view.pathDict['search_paths'] = UniqueList([os.getcwd(), pathMain])
 
 		# Determine work directory using config interface with "global" scope
-		tmpInterface = SimpleConfigInterface(self._view.getView(setSections = ['global']))
-		wdBase = tmpInterface.getPath('workdir base', pathMain, mustExist = False)
-		pathWork = tmpInterface.getPath('workdir', os.path.join(wdBase, getName('work')), mustExist = False)
-		self._view.pathDict['<WORKDIR>'] = pathWork # tmpInterface still has undefinied
+		tmp_config = SimpleConfigInterface(self._view.getView(setSections = ['global']))
+		wdBase = tmp_config.getPath('workdir base', pathMain, mustExist = False)
+		pathWork = tmp_config.getPath('workdir', os.path.join(wdBase, getName('work')), mustExist = False)
+		self._view.pathDict['<WORKDIR>'] = pathWork # tmp_config still has undefinied
 		# Set dynamic plugin search path
-		sys.path.extend(tmpInterface.getPaths('plugin paths', [os.getcwd()]))
+		sys.path.extend(tmp_config.getPaths('plugin paths', [os.getcwd()]))
 
 		# Determine and load stored config settings
 		self._flatCfgPath = os.path.join(pathWork, 'current.conf') # Minimal config file
@@ -71,7 +71,7 @@ class ConfigFactory(object):
 			oldContainer.setReadOnly()
 
 		# Get persistent variables - only possible after oldContainer was enabled
-		self._view.setConfigName(tmpInterface.get('config id', getName(), persistent = True))
+		self._view.setConfigName(tmp_config.get('config id', getName(), persistent = True))
 
 
 	def getConfig(self, **kwargs):

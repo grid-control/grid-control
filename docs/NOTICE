@@ -15,6 +15,7 @@ Maintained by: Fred Stober             <grid-control-dev@googlegroups.com>
                Matthias Wolf           <matthias.wolf.60@nd.edu>
                Volker Buege            <v.buege@enbw.com>
                Jochen Ott              <ott@ekp.uni-karlsruhe.de>
+               Thomas Müller           <tmuller@cern.ch>
                Manuel Zeise            <manuel.zeise@sap.com>
                Joram Berger            <joram.berger@cern.ch>
                Klaus Rabbertz          <klaus.rabbertz@cern.ch>
@@ -34,7 +35,6 @@ Maintained by: Fred Stober             <grid-control-dev@googlegroups.com>
                Hauke Held              <hauke.held@kit.edu>
                Gregor Kasieczka        <gregor.kasieczka@cern.ch>
                Jasmin Kiefer           <jasmin.gruschke@sap.com>
-               Thomas Müller           <tmuller@cern.ch>
                Thomas Scharrer         <uhddv@student.kit.edu>
 
                (in order of development activity - excluding libraries)

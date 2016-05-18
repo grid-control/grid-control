@@ -70,14 +70,14 @@ class BasicParameterFactory(ParameterFactory):
 		self.repeat = config.getInt('repeat', 1, onChange = None) # ALL config.x -> paramconfig.x !
 
 
-	def _registerPSource(self, config, varName):
+	def _registerPSource(self, pconfig, varName):
 		def replace_nonalnum(value):
 			if str.isalnum(value):
 				return value
 			return ' '
-		lookup_str = config.get(varName, 'lookup', '')
+		lookup_str = pconfig.get(varName, 'lookup', '')
 		lookup_list = lfilter(identity, str.join('', imap(replace_nonalnum, lookup_str)).split())
-		for (doElevate, PSourceClass, args) in createLookupHelper(config, [varName], lookup_list):
+		for (doElevate, PSourceClass, args) in createLookupHelper(pconfig, [varName], lookup_list):
 			if doElevate: # switch needs elevation beyond local scope
 				self.elevateSources.append((PSourceClass, args))
 			else:

@@ -47,30 +47,30 @@ class Workflow(NamedPlugin):
 			cls = WMS, tags = [self, self.task])
 
 		# Subsequent config calls also include section "jobs":
-		config = config.changeView(viewClass = 'TaggedConfigView',
+		jobs_config = config.changeView(viewClass = 'TaggedConfigView',
 			addSections = ['jobs'], addTags = [self])
 
 		# Initialise monitoring module
-		self.monitor = config.getCompositePlugin('monitor', 'scripts', 'MultiMonitor',
+		self.monitor = jobs_config.getCompositePlugin('monitor', 'scripts', 'MultiMonitor',
 			cls = Monitoring, tags = [self, self.task], pargs = (self.task,))
 
 		# Initialise job database
-		self.jobManager = config.getPlugin('job manager', 'SimpleJobManager',
+		self.jobManager = jobs_config.getPlugin('job manager', 'SimpleJobManager',
 			cls = JobManager, tags = [self, self.task, self.wms], pargs = (self.task, self.monitor))
 
 		# Prepare work package
 		self.wms.deployTask(self.task, self.monitor)
 
 		# Configure workflow settings
-		self._actionList = config.getList('action', ['check', 'retrieve', 'submit'], onChange = None)
+		self._actionList = jobs_config.getList('action', ['check', 'retrieve', 'submit'], onChange = None)
 		self.duration = 0
-		if config.getBool('continuous', False, onChange = None): # legacy option
+		if jobs_config.getBool('continuous', False, onChange = None): # legacy option
 			self.duration = -1
-		self.duration = config.getTime('duration', self.duration, onChange = None)
-		self._submitFlag = config.getBool('submission', True, onChange = None)
+		self.duration = jobs_config.getTime('duration', self.duration, onChange = None)
+		self._submitFlag = jobs_config.getBool('submission', True, onChange = None)
 
 		# Initialise GUI
-		self._gui = config.getPlugin('gui', 'SimpleConsole', cls = GUI, onChange = None, pargs = (self,))
+		self._gui = jobs_config.getPlugin('gui', 'SimpleConsole', cls = GUI, onChange = None, pargs = (self,))
 
 
 	# Job submission loop
