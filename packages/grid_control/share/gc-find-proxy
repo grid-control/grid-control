@@ -1,0 +1,29 @@
+#!/bin/bash
+# | Copyright 2009-2016 Karlsruhe Institute of Technology
+# |
+# | Licensed under the Apache License, Version 2.0 (the "License");
+# | you may not use this file except in compliance with the License.
+# | You may obtain a copy of the License at
+# |
+# |     http://www.apache.org/licenses/LICENSE-2.0
+# |
+# | Unless required by applicable law or agreed to in writing, software
+# | distributed under the License is distributed on an "AS IS" BASIS,
+# | WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# | See the License for the specific language governing permissions and
+# | limitations under the License.
+
+# grid-control: https://ekptrac.physik.uni-karlsruhe.de/trac/grid-control
+
+# Use proxy from input sandbox if available
+if [ -s "$GC_SCRATCH/_proxy.dat" ]; then
+	mv "$GC_SCRATCH/_proxy.dat" "$GC_LANDINGZONE/_proxy.dat"
+	chmod 400 "$GC_LANDINGZONE/_proxy.dat"
+	[ ! -s "$X509_USER_PROXY" ] && export X509_USER_PROXY="$GC_LANDINGZONE/_proxy.dat"
+fi
+if [ -n "$X509_USER_PROXY" ]; then
+	echo "Using GRID proxy '$X509_USER_PROXY'"
+else
+	echo "No GRID proxy available!"
+	echo "no_proxy" > "${GC_RESULT_DIR}gc-result"
+fi
