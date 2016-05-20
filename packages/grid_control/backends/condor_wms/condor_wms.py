@@ -653,36 +653,50 @@ class Condor(BasicWMS):
 			elif reqType == WMS.STORAGE:
 				if ("requestSEs" in self.poolReqs):
 					jdlReq.append( self.poolReqs["requestSEs"] + ' = ' + '"' + ','.join(reqValue) + '"' )
-				#append unused requirements to JDL for debugging
 
+			elif reqType == WMS.MEMORY and reqValue > 0:
+					jdlReq.append('request_memory = %dM' % reqValue)
+
+			elif reqType == WMS.CPUS and reqValue > 0:
+					jdlReq.append('request_cpus = %d' % reqValue)
+
+			#append unused requirements to JDL for debugging
 			elif self.debug:
-				self.debugOut("reqType: %s  reqValue: %s"%(reqType,reqValue))
+				self.debugOut("reqType: %s  reqValue: %s" % (reqType,reqValue))
 				self.debugFlush()
 				jdlReq.append('# Unused Requirement:')
 				jdlReq.append('# Type: %s' % reqType )
-				jdlReq.append('# Type: %s' % reqValue )
+				jdlReq.append('# Value: %s' % reqValue )
 
-			#TODO::: GLIDEIN_REQUIRE_GLEXEC_USE, WMS.SOFTWARE, WMS.MEMORY, WMS.CPUS
+			#TODO::: GLIDEIN_REQUIRE_GLEXEC_USE, WMS.SOFTWARE
+
 		# (HPDA) file location service
 		if "dataFiles" in self.poolReqs:
-			# as per ``formatFileList``
-			# UserMod filelists are space separated                              'File1 File2 File3'
-			# CMSSW filelists are individually quoted and comma+space separated  '"File1", "File2", "File3"'
-			file_list = task.getJobConfig(jobNum).get('FILE_NAMES','').strip()
-			if '", "' in file_list: # CMSSW style
-				file_list = file_list.strip('"').split('", "')
-			else: # UserMod style
-				file_list = file_list.split(' ')
-			if file_list:
-				arg_key = self.poolReqs["dataFiles"]
-				data_file = os.path.join(self.getSandboxPath(jobNum), 'job_%d_files.txt' % jobNum)
-				data_file_list = open(data_file,"w")
-				try:
-					data_file_list.writelines(lmap(lambda line: line + "\n", file_list))
-				finally:
-					data_file_list.close()
-				jdlReq.append('%s = "%s"'%(arg_key, data_file))
+			jdlReq += self._getRequirementsFileList(jobNum, task)
 		return jdlReq
+
+	def _getRequirementsFileList(self, jobNum, task):
+		jdlFileList = []
+		# as per ``formatFileList``
+		# UserMod filelists are space separated                              'File1 File2 File3'
+		# CMSSW filelists are individually quoted and comma+space separated  '"File1", "File2", "File3"'
+		file_list = task.getJobConfig(jobNum).get('FILE_NAMES','').strip()
+		if '", "' in file_list:  # CMSSW style
+			file_list = file_list.strip('"').split('", "')
+		else:  # UserMod style
+			file_list = file_list.split(' ')
+
+		if file_list:
+			arg_key = self.poolReqs["dataFiles"]
+			data_file = os.path.join(self.getSandboxPath(jobNum),'job_%d_files.txt' % jobNum)
+			data_file_list = open(data_file,"w")
+			try:
+				data_file_list.writelines(lmap(lambda line: line + "\n",file_list))
+			finally:
+				data_file_list.close()
+			jdlFileList.append('%s = "%s"' % (arg_key,data_file))
+
+		return jdlFileList
 
 		##
 		##	Pool access functions
