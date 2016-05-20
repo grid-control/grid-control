@@ -184,9 +184,10 @@ class CMSSW(SCRAMTask):
 	def _getCMSSWPaths(self, config):
 		result = []
 		userPath = config.get(['cmssw dir', 'vo software dir'], '')
-		userPathLocal = os.path.abspath(utils.cleanPath(userPath))
-		if os.path.exists(userPathLocal):
-			userPath = userPathLocal
+		if userPath:
+			userPathLocal = os.path.abspath(utils.cleanPath(userPath))
+			if os.path.exists(userPathLocal):
+				userPath = userPathLocal
 		if userPath:
 			result.append(('CMSSW_DIR_USER', userPath))
 		if self.scramEnv.get('RELEASETOP', None):
