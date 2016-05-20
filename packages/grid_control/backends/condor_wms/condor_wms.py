@@ -653,16 +653,24 @@ class Condor(BasicWMS):
 			elif reqType == WMS.STORAGE:
 				if ("requestSEs" in self.poolReqs):
 					jdlReq.append( self.poolReqs["requestSEs"] + ' = ' + '"' + ','.join(reqValue) + '"' )
-				#append unused requirements to JDL for debugging
 
+			elif reqType == WMS.MEMORY:
+				if reqValue > 0:
+					jdlReq.append('request_memory = %dM' % reqValue)
+
+			elif reqType == WMS.CPUS:
+				if reqValue > 0:
+					jdlReq.append('request_cpus = %d' % reqValue)
+
+			#append unused requirements to JDL for debugging
 			elif self.debug:
 				self.debugOut("reqType: %s  reqValue: %s"%(reqType,reqValue))
 				self.debugFlush()
 				jdlReq.append('# Unused Requirement:')
 				jdlReq.append('# Type: %s' % reqType )
-				jdlReq.append('# Type: %s' % reqValue )
+				jdlReq.append('# Value: %s' % reqValue )
 
-			#TODO::: GLIDEIN_REQUIRE_GLEXEC_USE, WMS.SOFTWARE, WMS.MEMORY, WMS.CPUS
+			#TODO::: GLIDEIN_REQUIRE_GLEXEC_USE, WMS.SOFTWARE
 		# (HPDA) file location service
 		if "dataFiles" in self.poolReqs:
 			# as per ``formatFileList``
