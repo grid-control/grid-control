@@ -31,7 +31,7 @@ class DBS3Provider(CMSBaseProvider):
 			self._url = 'https://cmsweb.cern.ch/dbs/prod/%s/DBSReader' % self._url
 		elif not self._url.startswith('http'): # eg. prod/phys03
 			self._url = 'https://cmsweb.cern.ch/dbs/%s/DBSReader' % self._url
-		self.usePhedex = (self._url == url_global_inst) # Use DBS locality for private samples
+		self._usePhedex = (self._url == url_global_inst) # Use DBS locality for private samples
 		self._gjrc = GridJSONRestClient(self._url, 'VOMS proxy needed to query DBS3!', UserError)
 
 
@@ -69,4 +69,4 @@ class DBS3Provider(CMSBaseProvider):
 
 
 	def getBlocksInternal(self):
-		return self.getGCBlocks(usePhedex = self.usePhedex)
+		return self.getGCBlocks(usePhedex = self._usePhedex)
