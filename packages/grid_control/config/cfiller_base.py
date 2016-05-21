@@ -50,18 +50,7 @@ class FileConfigFiller(ConfigFiller):
 			searchPaths.extend(self._fillContentWithIncludes(configFile, [os.getcwd()], configContent))
 			# Store config settings
 			for section in configContent:
-				# Allow very basic substitutions with %(option)s syntax
-				def getOptValue(option, value, source):
-					return (option, value)
-				substDict = dict(ichain([
-					ismap(getOptValue, configContent.get('default', [])),
-					ismap(getOptValue, configContent.get(section, []))]))
 				for (option, value, source) in configContent[section]:
-					# Protection for non-interpolation "%" in value
-					try:
-						value = (value.replace('%', '\x01').replace('\x01(', '%(') % substDict).replace('\x01', '%')
-					except Exception:
-						raise ConfigError('Unable to interpolate value %r with %r' % (value, substDict))
 					self._addEntry(container, section, option, value, source)
 		searchString = str.join(' ', UniqueList(searchPaths))
 		if self._addSearchPath:

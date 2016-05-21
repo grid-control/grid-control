@@ -116,7 +116,7 @@ class ConfigEntry(object):
 		return entry
 	_applyModifiers = classmethod(_applyModifiers)
 
-	def _processEntries(cls, entryList):
+	def processEntriesRaw(cls, entryList):
 		result = None
 		used = []
 		modifierList = []
@@ -134,7 +134,7 @@ class ConfigEntry(object):
 				if entry.opttype == '*=': # this option can not be changed by other config entries
 					# TODO: notify that subsequent config options will be ignored
 					return (entry, [entry])
-				elif entry.opttype == '=': # set but don't apply collected modifiers
+				elif entry.opttype == '=': # set but don't apply collected modifiers - subsequent modifiers apply!
 					used = [entry]
 					result = entry
 					modifierList = []
@@ -151,7 +151,7 @@ class ConfigEntry(object):
 			used.extend(modifierList)
 			result = cls._applyModifiers(result, modifierList)
 		return (result, used)
-	_processEntries = classmethod(_processEntries)
+	processEntriesRaw = classmethod(processEntriesRaw)
 
 	# called to simplify entries for a specific option *and* section - sorted by order
 	def simplifyEntries(cls, entryList):
@@ -191,7 +191,7 @@ class ConfigEntry(object):
 		entryList = list(entryList)
 		for entry in entryList:
 			entry.accessed = True
-		return cls._processEntries(entryList)
+		return cls.processEntriesRaw(entryList)
 	processEntries = classmethod(processEntries)
 
 	def combineEntries(cls, entryList):
@@ -209,6 +209,32 @@ class ConfigContainer(object):
 		self._counter = 0
 		self._content = {}
 		self._content_default = {}
+
+	def resolve(self):
+		so_entries_dict = {}
+		for option in self._content:
+			for entry in self._content[option]:
+				so_entries_dict.setdefault(entry.section, {}).setdefault(entry.option, []).append(entry)
+		so_value_dict = {}
+		for section in so_entries_dict:
+			for option in so_entries_dict[section]:
+				try:
+					result = ConfigEntry.processEntriesRaw(so_entries_dict[section][option])[0].value
+				except ConfigError: # eg. by '-=' without value
+					result = ''
+				so_value_dict.setdefault(section, {})[option] = result
+		for option in self._content:
+			for entry in self._content[option]:
+				subst_dict = dict(so_value_dict.get('default', {}))
+				subst_dict.update(so_value_dict.get('global', {}))
+				subst_dict.update(so_value_dict.get(entry.section, {}))
+				try: # Protection for non-interpolation "%" in value
+					value = (entry.value.replace('%', '\x01').replace('\x01(', '%(') % subst_dict).replace('\x01', '%')
+				except Exception:
+					raise ConfigError('Unable to interpolate value %r with %r' % (entry.value, subst_dict))
+				if entry.value != value:
+					entry.value = value
+					entry.source = entry.source + ' [interpolated]'
 
 	def setReadOnly(self):
 		self._read_only = True

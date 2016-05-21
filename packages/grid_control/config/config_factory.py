@@ -45,6 +45,8 @@ class ConfigFactory(object):
 		self._curContainer = ConfigContainer('current')
 		if filler: # Read in the current configuration ...
 			filler.fill(self._curContainer)
+		self._curContainer.resolve() # resolve interpolations
+
 		logging.getLogger('config.stored').propagate = False
 		oldContainer = ConfigContainer('stored')
 		oldContainer.enabled = False
