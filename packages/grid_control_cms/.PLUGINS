@@ -62,7 +62,7 @@
 
     * grid_control.datasets.pproc_base PartitionProcessor
 
-     * grid_control.datasets.pproc_base BasicPartitionProcessor basic
+     * grid_control.datasets.pproc_basic BasicPartitionProcessor basic
 
       * grid_control_cms.cmssw CMSSWPartitionProcessor cmssw
 

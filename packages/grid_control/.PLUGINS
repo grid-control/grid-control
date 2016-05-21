@@ -280,15 +280,15 @@
 
     * grid_control.datasets.pproc_base PartitionProcessor
 
-     * grid_control.datasets.pproc_base BasicPartitionProcessor basic
+     * grid_control.datasets.pproc_basic BasicPartitionProcessor basic
 
-     * grid_control.datasets.pproc_base LocationPartitionProcessor location
+     * grid_control.datasets.pproc_basic LocationPartitionProcessor location
 
-     * grid_control.datasets.pproc_base MetaPartitionProcessor metadata
+     * grid_control.datasets.pproc_basic MetaPartitionProcessor metadata
 
      * grid_control.datasets.pproc_base MultiPartitionProcessor
 
-     * grid_control.datasets.pproc_base TFCPartitionProcessor tfc
+     * grid_control.datasets.pproc_basic TFCPartitionProcessor tfc
 
    * grid_control.datasets.splitter_base DataSplitterIO
 
