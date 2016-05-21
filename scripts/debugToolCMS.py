@@ -14,30 +14,29 @@
 # | limitations under the License.
 
 from gcSupport import Options, Plugin, getConfig, scriptOptions
-from grid_control.utils.webservice import readJSON
+from grid_control.utils.webservice import JSONRestClient
 from grid_control_cms.provider_sitedb import SiteDB
 
-def lfn2pfn(node, lfn):
-	return readJSON('https://cmsweb.cern.ch/phedex/datasvc/json/prod/lfn2pfn',
-		{'node': node, 'protocol': 'srmv2', 'lfn': lfn})['phedex']['mapping'][0]['pfn']
+def lfn2pfn(node, lfn, prot = 'srmv2'):
+	return JSONRestClient().get(url = 'https://cmsweb.cern.ch/phedex/datasvc/json/prod/lfn2pfn',
+		params = {'node': node, 'protocol': prot, 'lfn': lfn})['phedex']['mapping']
 
 parser = Options()
-parser.addText(None, 's', 'SE', default = None,         help = 'Resolve LFN on CMS SE into PFN')
+parser.addText(None, 's', 'se',      default = None,    help = 'Resolve LFN on CMS SE into PFN')
 parser.addText(None, ' ', 'se-prot', default = 'srmv2', help = 'Name of default SE protocol')
 parser.addText(None, ' ', 'lfn',     default = '/store/user/<hypernews name>', help = 'Name of default LFN')
 options = scriptOptions(parser)
 
-if options.opts.SE:
+if options.opts.se:
 	if '<hypernews name>' in options.opts.lfn:
-		token = Plugin.getClass('AccessToken').createInstance('VomsProxy', getConfig(), None)
+		token = Plugin.getClass('AccessToken').createInstance('VomsProxy', getConfig(), 'token')
 		site_db = SiteDB()
 		hnName = site_db.dn_to_username(dn=token.getFQUsername())
 		if not hnName:
 			raise Exception('Unable to map grid certificate to hypernews name!')
 		options.opts.lfn = options.opts.lfn.replace('<hypernews name>', hnName)
 
-	tmp = readJSON('https://cmsweb.cern.ch/phedex/datasvc/json/prod/lfn2pfn',
-		{'node': options.opts.SE, 'protocol': options.opts.se_prot, 'lfn': options.opts.lfn})['phedex']['mapping']
+	tmp = lfn2pfn(node = options.opts.se, prot = options.opts.se_prot, lfn = options.opts.lfn)
 	for entry in tmp:
 		if len(tmp) > 1:
 			print(entry['node'] + ' ' + entry['pfn'])

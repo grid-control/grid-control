@@ -176,11 +176,3 @@ class GridJSONRestClient(JSONRestClient):
 		if not os.path.exists(proxyPath):
 			raise self._cert_errror_cls(self._fmt_cert_error('Environment variable X509_USER_PROXY is "%s"' % proxyPath))
 		return JSONRestClient._request(self, request_fun, url, api, headers, params, data)
-
-
-def readURL(url, params = None, headers = None, cert = None):
-	return RestClient(cert).get(url = url, headers = headers, params = params)
-
-
-def readJSON(url, params = None, headers = None, cert = None):
-	return JSONRestClient(cert).get(url = url, headers = headers, params = params)

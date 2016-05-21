@@ -4,8 +4,15 @@ comment:
   layout: header, changes, diff
 coverage:
   ignore:
+    - packages/grid_control/backends/htcondor_wms/*
+    - packages/grid_control_cms/DashboardAPI/*
+    - packages/grid_control_cms/Lexicon.py
+    - packages/grid_control_cms/share/fragmentForCMSSW.py
+    - packages/grid_control_gui/xmpp/*
+    - packages/python_compat_json.py
+    - packages/python_compat_tarfile.py
+    - packages/python_compat_urllib2.py
     - packages/requests/*
-    - packages/python_compat_*
     - testsuite/*
   status:
     patch: false

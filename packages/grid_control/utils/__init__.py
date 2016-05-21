@@ -790,6 +790,16 @@ def ping_host(host):
 		return None
 
 
+def display_selection(log, items_before, items_after, message, formatter):
+	if len(items_before) != len(items_after):
+		log.log(logging.DEBUG, message, (len(items_before) - len(items_after)))
+		for item in items_before:
+			if item in items_after:
+				log.log(logging.DEBUG1, ' * %s', formatter(item))
+			else:
+				log.log(logging.DEBUG1, '   %s', formatter(item))
+
+
 if __name__ == '__main__':
 	import doctest
 	doctest.testmod()

@@ -36,7 +36,7 @@ class Workflow(NamedPlugin):
 		self._checkSpace = config.getInt('workdir space', 10, onChange = None)
 
 		# Initialise task module
-		self.task = config.getPlugin(['task', 'module'], cls = TaskModule, tags = [self])
+		self.task = config.getPlugin(['module', 'task'], cls = TaskModule, tags = [self])
 		if abort == 'task':
 			return
 		utils.vprint('Current task ID: %s' % self.task.taskID, -1)

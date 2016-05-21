@@ -64,7 +64,7 @@ class URLDataProcessor(DataProcessor):
 		DataProcessor.__init__(self, config)
 		internal_config = config.changeView(viewClass = 'SimpleConfigView', setSections = ['dataprocessor'])
 		internal_config.set('dataset processor', 'NullDataProcessor')
-		self._url_filter = config.getFilter(['dataset ignore urls', 'dataset ignore files'], '', negate = True,
+		self._url_filter = config.getFilter(['dataset ignore files', 'dataset ignore urls'], '', negate = True,
 			filterParser = lambda value: self._parseFilter(internal_config, value),
 			filterStr = lambda value: str.join('\n', value.split()),
 			matchKey = itemgetter(DataProvider.URL),
@@ -98,7 +98,7 @@ class URLCountDataProcessor(DataProcessor):
 
 	def __init__(self, config):
 		DataProcessor.__init__(self, config)
-		self._limitFiles = config.getInt(['dataset limit urls', 'dataset limit files'], -1,
+		self._limitFiles = config.getInt(['dataset limit files', 'dataset limit urls'], -1,
 			onChange = DataProcessor.triggerDataResync)
 
 	def enabled(self):
@@ -116,7 +116,7 @@ class EntriesCountDataProcessor(DataProcessor):
 
 	def __init__(self, config):
 		DataProcessor.__init__(self, config)
-		self._limitEntries = config.getInt(['dataset limit entries', 'dataset limit events'], -1,
+		self._limitEntries = config.getInt(['dataset limit events', 'dataset limit entries'], -1,
 			onChange = DataProcessor.triggerDataResync)
 
 	def enabled(self):

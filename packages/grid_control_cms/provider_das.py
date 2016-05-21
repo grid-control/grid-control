@@ -15,9 +15,17 @@
 import time
 from grid_control.datasets import DataProvider
 from grid_control.gc_exceptions import UserError
-from grid_control.utils.parsing import parseJSON
-from grid_control.utils.webservice import GridJSONRestClient, readURL
+from grid_control.utils.webservice import GridJSONRestClient
 from grid_control_cms.provider_cms import CMSBaseProvider
+
+class DASRetry(Exception):
+	pass
+
+class DASRestClient(GridJSONRestClient):
+	def _process_json_result(self, value):
+		if len(value) == 32:
+			raise DASRetry
+		return GridJSONRestClient._process_json_result(self, value)
 
 # required format: <dataset path>[@<instance>][#<block>]
 class DASProvider(CMSBaseProvider):
@@ -26,15 +34,16 @@ class DASProvider(CMSBaseProvider):
 	def __init__(self, config, datasetExpr, datasetNick = None, datasetID = 0):
 		CMSBaseProvider.__init__(self, config, datasetExpr, datasetNick, datasetID)
 		self._instance = ''
-		if '/' not in self._url:
+		if not self._url:
+			pass
+		elif '/' not in self._url:
 			self._instance = 'prod/%s' % self._url
 			self._url = ''
 		elif not self._url.startswith('http'):
 			self._instance = self._url
 			self._url = ''
 		self._url = self._url or 'https://cmsweb.cern.ch/das/cache'
-		self._gjrc = GridJSONRestClient(self._url, 'VOMS proxy needed to query DAS!', UserError)
-
+		self._gjrc = DASRestClient(self._url, 'VOMS proxy needed to query DAS!', UserError)
 
 
 	def queryDAS(self, query):
@@ -42,32 +51,45 @@ class DASProvider(CMSBaseProvider):
 			query += ' instance=%s' % self._instance
 		(start, sleep) = (time.time(), 0.4)
 		while time.time() - start < 60:
-			tmp = readURL(self._url, {'input': query}, {'Accept': 'application/json'})
-			if len(tmp) != 32:
-				return parseJSON(tmp.replace('\'', '"'))['data']
-			time.sleep(sleep)
-			sleep += 0.4
+			try:
+				return self._gjrc.get(params = {'input': query})['data']
+			except DASRetry:
+				time.sleep(sleep)
+				sleep += 0.4
 
 
 	def getCMSDatasets(self, datasetPath):
-		for ds1 in self.queryDAS('dataset dataset=%s' % datasetPath):
-			for ds2 in ds1['dataset']:
-				yield ds2['name']
+		for datasetInfo in self.queryDAS('dataset dataset=%s' % datasetPath):
+			for serviceResult in datasetInfo['dataset']:
+				yield serviceResult['name']
 
 
 	def getCMSBlocksImpl(self, datasetPath, getSites):
-		for b1 in self.queryDAS('block dataset=%s' % datasetPath):
-			for b2 in b1['block']:
-				if 'replica' in b2:
+		for blockInfo in self.queryDAS('block dataset=%s' % datasetPath):
+			listSE = None
+			origin = []
+			name = None
+			for serviceResult in blockInfo['block']:
+				name = serviceResult.get('name', name)
+				if 'replica' in serviceResult:
 					listSE = []
-					for replica in b2['replica']:
-						if self.nodeFilter(replica['site'], replica['complete'] == 'y'):
+					for replica in serviceResult['replica']:
+						if self._nodeFilter(replica['site'], replica['complete'] == 'y'):
 							listSE.append(replica['se'])
-					yield (b2['name'], listSE)
+				if 'origin_site_name' in serviceResult:
+					origin = [serviceResult['origin_site_name']]
+			if listSE is None:
+				listSE = origin
+			if name:
+				yield (name, listSE)
 
 
 	def getCMSFilesImpl(self, blockPath, onlyValid, queryLumi):
-		for f1 in self.queryDAS('file block=%s' % blockPath):
-			for f2 in f1['file']:
-				if 'nevents' in f2:
-					yield ({DataProvider.URL: f2['name'], DataProvider.NEntries: f2['nevents']}, None)
+		for fileInfo in self.queryDAS('file block=%s' % blockPath):
+			for serviceResult in fileInfo['file']:
+				if 'nevents' in serviceResult:
+					yield ({DataProvider.URL: serviceResult['name'], DataProvider.NEntries: serviceResult['nevents']}, None)
+
+
+	def getBlocksInternal(self):
+		return self.getGCBlocks(usePhedex = False)

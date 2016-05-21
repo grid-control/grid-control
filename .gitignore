@@ -3,6 +3,7 @@
 .svn
 *.log
 *.pyc
+docgen*.json
 work.*
 /devtools
 /packages/grid_control_cloud

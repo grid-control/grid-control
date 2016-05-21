@@ -38,6 +38,7 @@ class JobManager(NamedPlugin):
 		self._njobs_inflight = config.getInt('in flight', -1, onChange = None)
 		self._njobs_inqueue = config.getInt('in queue', -1, onChange = None)
 
+		self._chunks_enabled = config.getBool('chunks enabled', True, onChange = None)
 		self._chunks_submit = config.getInt('chunks submit', 100, onChange = None)
 		self._chunks_check = config.getInt('chunks check', 100, onChange = None)
 		self._chunks_retrieve = config.getInt('chunks retrieve', 100, onChange = None)
@@ -53,7 +54,6 @@ class JobManager(NamedPlugin):
 			cls = TaskOutputProcessor, pargs = (task,))
 
 		self._do_shuffle = config.getBool('shuffle', False, onChange = None)
-		self._continuous = config.getBool('continuous', False, onChange = None)
 		self._reportClass = Report.getClass(config.get('abort report', 'LocationReport', onChange = None))
 		self._showBlocker = True
 
@@ -153,7 +153,7 @@ class JobManager(NamedPlugin):
 			submit = min(submit, self._njobs_inqueue - self.jobDB.getJobsN(ClassSelector(JobClass.ATWMS)))
 		if self._njobs_inflight > 0:
 			submit = min(submit, self._njobs_inflight - self.jobDB.getJobsN(ClassSelector(JobClass.PROCESSING)))
-		if self._continuous and (maxsample > 0):
+		if self._chunks_enabled and (maxsample > 0):
 			submit = min(submit, maxsample)
 		submit = max(submit, 0)
 
@@ -214,7 +214,7 @@ class JobManager(NamedPlugin):
 
 
 	def check(self, wms):
-		jobList = self._sample(self.jobDB.getJobs(ClassSelector(JobClass.PROCESSING)), utils.QM(self._continuous, self._chunks_check, -1))
+		jobList = self._sample(self.jobDB.getJobs(ClassSelector(JobClass.PROCESSING)), utils.QM(self._chunks_enabled, self._chunks_check, -1))
 
 		# Check jobs in the joblist and return changes, timeouts and successfully reported jobs
 		(change, timeoutList, reported) = self._checkJobList(wms, jobList)
@@ -246,7 +246,7 @@ class JobManager(NamedPlugin):
 
 	def retrieve(self, wms):
 		change = False
-		jobList = self._sample(self.jobDB.getJobs(ClassSelector(JobClass.DONE)), utils.QM(self._continuous, self._chunks_retrieve, -1))
+		jobList = self._sample(self.jobDB.getJobs(ClassSelector(JobClass.DONE)), utils.QM(self._chunks_enabled, self._chunks_retrieve, -1))
 
 		for (jobNum, retCode, data, outputdir) in wms.retrieveJobs(self._wmsArgs(jobList)):
 			jobObj = self.jobDB.get(jobNum)
@@ -370,7 +370,7 @@ class SimpleJobManager(JobManager):
 		JobManager.__init__(self, config, name, task, eventhandler)
 
 		# Job defect heuristic (not persistent!) - remove jobs, which cause errors when doing status queries
-		self._defect_tries = config.getInt(['defect tries', 'kick offender'], 10, onChange = None)
+		self._defect_tries = config.getInt(['kick offender', 'defect tries'], 10, onChange = None)
 		(self._defect_counter, self._defect_raster) = ({}, 0)
 
 		# job verification heuristic - launch jobs in chunks of increasing size if enough jobs succeed

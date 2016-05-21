@@ -210,9 +210,8 @@ class DataProvider(ConfigurablePlugin):
 
 	# Load dataset information using ListProvider
 	def loadFromFile(path):
-		config = createConfig(useDefaultFiles = False, configDict = {'dataset': {
-			'nickname check consistency': 'False', 'nickname check collision': 'False'}})
-		return DataProvider.createInstance('ListProvider', config, path)
+		return DataProvider.createInstance('ListProvider', createConfig(useDefaultFiles = False,
+			configDict = {'dataset': {'dataset processor': 'NullDataProcessor'}}), path)
 	loadFromFile = staticmethod(loadFromFile)
 
 

@@ -17,6 +17,7 @@ from grid_control.backends import WMS
 from grid_control.datasets.splitter_base import DataSplitter
 from grid_control.gc_plugin import ConfigurablePlugin
 from grid_control.parameters import ParameterInfo, ParameterMetadata
+from grid_control.utils import display_selection
 from grid_control.utils.gc_itertools import lchain
 from hpfwk import AbstractError
 from python_compat import any, imap, lfilter, lmap, set
@@ -43,11 +44,13 @@ class PartitionProcessor(ConfigurablePlugin):
 class MultiPartitionProcessor(PartitionProcessor):
 	def __init__(self, config, processorList):
 		PartitionProcessor.__init__(self, config)
-		self._processorList = lfilter(lambda proc: proc.enabled(), processorList)
-		if len(self._processorList) != len(processorList):
-			self._log.log(logging.DEBUG, 'Removed %d disabled partition processors!', len(processorList) - len(self._processorList))
-			for processor in processorList:
-				self._log.log(logging.DEBUG1, ' %s %s', {True: '*', False: ' '}[processor.enabled()], processor.__class__.__name__)
+		(self._processorList, processorNames) = ([], [])
+		for proc in processorList:
+			if proc.enabled() and proc.__class__.__name__ not in processorNames:
+				self._processorList.append(proc)
+				processorNames.append(proc.__class__.__name__)
+		display_selection(self._log, processorList, self._processorList,
+			'Removed %d inactive partition processors!', lambda item: item.__class__.__name__)
 
 	def getKeys(self):
 		return lchain(imap(lambda p: p.getKeys(), self._processorList))

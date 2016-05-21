@@ -18,7 +18,7 @@ from grid_control.datasets import DataProvider, DataSplitter, DatasetError
 from grid_control.datasets.splitter_basic import HybridSplitter
 from grid_control.utils.data_structures import makeEnum
 from grid_control.utils.thread_tools import start_thread
-from grid_control.utils.webservice import readJSON
+from grid_control.utils.webservice import JSONRestClient
 from grid_control_cms.lumi_tools import parseLumiFilter, strLumi
 from python_compat import sorted
 
@@ -33,8 +33,9 @@ class CMSBaseProvider(DataProvider):
 		if not self._lumi_filter.empty():
 			config.set('dataset processor', 'LumiDataProcessor', '+=')
 		DataProvider.__init__(self, config, datasetExpr, datasetNick, datasetID)
-		# PhEDex blacklist: 'T1_DE_KIT', 'T1_US_FNAL' and '*_Disk' allow user jobs - other T1's dont!
+		# LumiDataProcessor instantiated in DataProcessor.__ini__ will set lumi metadata as well
 		self._lumi_query = config.getBool('lumi metadata', not self._lumi_filter.empty(), onChange = changeTrigger)
+		# PhEDex blacklist: 'T1_DE_KIT', 'T1_US_FNAL' and '*_Disk' allow user jobs - other T1's dont!
 		self._phedexFilter = config.getFilter('phedex sites', '-T3_US_FNALLPC',
 			defaultMatcher = 'blackwhite', defaultFilter = 'weak', onChange = changeTrigger)
 		self._phedexT1Filter = config.getFilter('phedex t1 accept', 'T1_DE_KIT T1_US_FNAL',
@@ -42,6 +43,7 @@ class CMSBaseProvider(DataProvider):
 		self._phedexT1Mode = config.getEnum('phedex t1 mode', PhedexT1Mode, PhedexT1Mode.disk, onChange = changeTrigger)
 		self.onlyComplete = config.getBool('only complete sites', True, onChange = changeTrigger)
 		self._locationFormat = config.getEnum('location format', CMSLocationFormat, CMSLocationFormat.hostname, onChange = changeTrigger)
+		self._pjrc = JSONRestClient(url = 'https://cmsweb.cern.ch/phedex/datasvc/json/prod/blockreplicas')
 
 		(self._datasetPath, self._url, self._datasetBlock) = utils.optSplit(datasetExpr, '@#')
 		self._url = self._url or config.get('dbs instance', '')
@@ -63,7 +65,7 @@ class CMSBaseProvider(DataProvider):
 		return splitterClass
 
 
-	def nodeFilter(self, nameSiteDB, complete):
+	def _nodeFilter(self, nameSiteDB, complete):
 		# Remove T0 and T1 by default
 		result = not (nameSiteDB.startswith('T0_') or nameSiteDB.startswith('T1_'))
 		# check if listed on the accepted list
@@ -79,12 +81,11 @@ class CMSBaseProvider(DataProvider):
 
 
 	# Get dataset se list from PhEDex (perhaps concurrent with listFiles)
-	def getPhedexSEList(self, blockPath, dictSE):
+	def _getPhedexSEList(self, blockPath, dictSE):
 		dictSE[blockPath] = []
-		url = 'https://cmsweb.cern.ch/phedex/datasvc/json/prod/blockreplicas'
-		for phedexBlock in readJSON(url, {'block': blockPath})['phedex']['block']:
+		for phedexBlock in self._pjrc.get(params = {'block': blockPath})['phedex']['block']:
 			for replica in phedexBlock['replica']:
-				if self.nodeFilter(replica['node'], replica['complete'] == 'y'):
+				if self._nodeFilter(replica['node'], replica['complete'] == 'y'):
 					location = None
 					if self._locationFormat == CMSLocationFormat.hostname:
 						location = replica.get('se')
@@ -123,19 +124,26 @@ class CMSBaseProvider(DataProvider):
 			raise DatasetError('Dataset %r contains %d blocks, but none were selected by %r' % (datasetPath, n_blocks, self._datasetBlock))
 
 
-	def getCMSFiles(self, blockPath):
+	def fillCMSFiles(self, block, blockPath):
+		lumi_used = False
 		lumiDict = {}
 		if self._lumi_query: # central lumi query
-			lumiDict = self.getCMSLumisImpl(blockPath) or {}
+			lumiDict = self.getCMSLumisImpl(blockPath)
+		fileList = []
 		for (fileInfo, listLumi) in self.getCMSFilesImpl(blockPath, self.onlyValid, self._lumi_query):
-			if not listLumi:
+			if lumiDict and not listLumi:
 				listLumi = lumiDict.get(fileInfo[DataProvider.URL], [])
-			(listLumiExt_Run, listLumiExt_Lumi) = ([], [])
-			for (run, lumi_list) in sorted(listLumi):
-				listLumiExt_Run.extend([run] * len(lumi_list))
-				listLumiExt_Lumi.extend(lumi_list)
-			fileInfo[DataProvider.Metadata] = [listLumiExt_Run, listLumiExt_Lumi]
-			yield fileInfo
+			if listLumi:
+				(listLumiExt_Run, listLumiExt_Lumi) = ([], [])
+				for (run, lumi_list) in sorted(listLumi):
+					listLumiExt_Run.extend([run] * len(lumi_list))
+					listLumiExt_Lumi.extend(lumi_list)
+				fileInfo[DataProvider.Metadata] = [listLumiExt_Run, listLumiExt_Lumi]
+				lumi_used = True
+			fileList.append(fileInfo)
+		if lumi_used:
+			block.setdefault(DataProvider.Metadata, []).extend(['Runs', 'Lumi'])
+		block[DataProvider.FileList] = fileList
 
 
 	def getCMSLumisImpl(self, blockPath):
@@ -152,15 +160,12 @@ class CMSBaseProvider(DataProvider):
 
 				if usePhedex: # Start parallel phedex query
 					dictSE = {}
-					tPhedex = start_thread('Query phedex site info for %s' % blockPath, self.getPhedexSEList, blockPath, dictSE)
-
-				if self._lumi_query:
-					result[DataProvider.Metadata] = ['Runs', 'Lumi']
-				result[DataProvider.FileList] = list(self.getCMSFiles(blockPath))
-
-				if usePhedex:
+					tPhedex = start_thread('Query phedex site info for %s' % blockPath, self._getPhedexSEList, blockPath, dictSE)
+					self.fillCMSFiles(result, blockPath)
 					tPhedex.join()
 					listSE = dictSE.get(blockPath)
+				else:
+					self.fillCMSFiles(result, blockPath)
 				result[DataProvider.Locations] = listSE
 
 				if len(result[DataProvider.FileList]):

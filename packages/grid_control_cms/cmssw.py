@@ -94,7 +94,7 @@ class CMSSW(SCRAMTask):
 		self._configureSCRAMSettings(config)
 
 		self._useReqs = config.getBool('software requirements', True, onChange = None)
-		self._projectAreaTarballSE = config.getBool(['se project area', 'se runtime'], True)
+		self._projectAreaTarballSE = config.getBool(['se runtime', 'se project area'], True)
 		self._projectAreaTarball = config.getWorkPath('cmssw-project-area.tar.gz')
 
 		# Prolog / Epilog script support - warn about old syntax
@@ -141,8 +141,8 @@ class CMSSW(SCRAMTask):
 			self.projectArea = config.getPath('project area')
 
 		if len(self.projectArea):
-			defaultPattern = '-.* -config bin lib python module */data *.xml *.sql *.cf[if] *.py -*/.git -*/.svn -*/CVS -*/work.*'
-			self.pattern = config.getList('area files', defaultPattern.split())
+			self.pattern = config.getList('area files', ['-.*', '-config', 'bin', 'lib', 'python', 'module',
+				'*/data', '*.xml', '*.sql', '*.db', '*.cf[if]', '*.py', '-*/.git', '-*/.svn', '-*/CVS', '-*/work.*'])
 
 			if os.path.exists(self.projectArea):
 				utils.vprint('Project area found in: %s' % self.projectArea, -1)

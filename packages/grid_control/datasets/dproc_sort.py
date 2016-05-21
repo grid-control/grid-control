@@ -24,9 +24,10 @@ class SortingDataProcessor(DataProcessor):
 		self._sortDS = config.getBool('dataset sort', False, onChange = DataProcessor.triggerDataResync)
 		self._sortBlock = config.getBool('dataset block sort', False, onChange = DataProcessor.triggerDataResync)
 		self._sortFiles = config.getBool('dataset files sort', False, onChange = DataProcessor.triggerDataResync)
+		self._sortLocation = config.getBool('dataset location sort', False, onChange = DataProcessor.triggerDataResync)
 
 	def enabled(self):
-		return self._sortDS or self._sortBlock or self._sortFiles
+		return self._sortDS or self._sortBlock or self._sortFiles or self._sortLocation
 
 	def process(self, blockIter):
 		if self._sortDS:
@@ -46,4 +47,6 @@ class SortingDataProcessor(DataProcessor):
 		for block in blockIter:
 			if self._sortFiles:
 				sort_inplace(block[DataProvider.FileList], key = itemgetter(DataProvider.URL))
+			if self._sortLocation:
+				sort_inplace(block[DataProvider.Locations])
 			yield block

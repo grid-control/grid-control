@@ -15,8 +15,8 @@
 import logging
 from grid_control.config import triggerResync
 from grid_control.gc_plugin import ConfigurablePlugin
+from grid_control.utils import display_selection
 from hpfwk import AbstractError
-from python_compat import lfilter
 
 class DataProcessor(ConfigurablePlugin):
 	triggerDataResync = triggerResync(['datasets', 'parameters'])
@@ -30,8 +30,9 @@ class DataProcessor(ConfigurablePlugin):
 
 	def process(self, blockIter):
 		for block in blockIter:
-			if block is not None:
-				yield self.processBlock(block)
+			result = self.processBlock(block)
+			if result is not None:
+				yield result
 
 	def processBlock(self, block):
 		raise AbstractError
@@ -40,23 +41,18 @@ class DataProcessor(ConfigurablePlugin):
 class MultiDataProcessor(DataProcessor):
 	def __init__(self, config, processorList):
 		DataProcessor.__init__(self, config)
-		self._processorList = lfilter(lambda proc: proc.enabled(), processorList)
-		if len(self._processorList) != len(processorList):
-			self._log.log(logging.DEBUG, 'Removed %d disabled dataset processors!', (len(processorList) - len(self._processorList)))
-			for processor in processorList:
-				self._log.log(logging.DEBUG1, ' %s %s', {True: '*', False: ' '}[processor.enabled()], processor.__class__.__name__)
+		(self._processorList, processorNames) = ([], [])
+		for proc in processorList:
+			if proc.enabled() and proc.__class__.__name__ not in processorNames:
+				self._processorList.append(proc)
+				processorNames.append(proc.__class__.__name__)
+		display_selection(self._log, processorList, self._processorList,
+			'Removed %d inactive dataset processors!', lambda item: item.__class__.__name__)
 
 	def process(self, blockIter):
 		for processor in self._processorList:
 			blockIter = processor.process(blockIter)
 		return blockIter
-
-	def processBlock(self, block):
-		for processor in self._processorList:
-			block = processor.processBlock(block)
-			if not block:
-				break
-		return block
 
 
 class NullDataProcessor(DataProcessor):
