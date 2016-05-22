@@ -136,22 +136,25 @@ class RequirementsPartitionProcessor(PartitionProcessor):
 
 	def __init__(self, config):
 		PartitionProcessor.__init__(self, config)
-		self._entryscale = config.getLookup('partition tfc', {}, onChange = None)
+		self._wtfactor = config.getFloat('partition walltime factor', -1, onChange = None)
+		self._wtoffset = config.getFloat('partition walltime offset', 0, onChange = None)
+		self._ctfactor = config.getFloat('partition cputime factor', -1, onChange = None)
+		self._ctoffset = config.getFloat('partition cputime offset', 0, onChange = None)
+		self._memfactor = config.getFloat('partition memory factor', -1, onChange = None)
+		self._memoffset = config.getFloat('partition memory offset', 0, onChange = None)
 
 	def enabled(self):
-		return not self._tfc.empty()
+		return any(imap(lambda x: x > 0, [self._wtfactor, self._ctfactor, self._memfactor,
+			self._wtoffset, self._ctoffset, self._memoffset]))
 
-	def _lookup(self, fn, location):
-		prefix = self._tfc.lookup(location, is_selector = False)
-		if prefix:
-			return prefix + fn
-		return fn
+	def _addReq(self, result, splitInfo, scale, offset, enum):
+		value = offset
+		if factor > 0:
+			value += scale * splitInfo[DataSplitter.NEntries]
+		if value > 0:
+			result[ParameterInfo.REQS].append((enum, int(value)))
 
 	def process(self, pNum, splitInfo, result):
-		fl = splitInfo[DataSplitter.FileList]
-		locations = splitInfo.get(DataSplitter.Locations)
-		if not locations:
-			splitInfo[DataSplitter.FileList] = lmap(lambda fn: self._lookup(fn, None), fl)
-		else:
-			for location in locations:
-				splitInfo[DataSplitter.FileList] = lmap(lambda fn: self._lookup(fn, location), fl)
+		self._addReq(result, splitInfo, self._wtfactor, self._wtoffset, WMS.WALLTIME)
+		self._addReq(result, splitInfo, self._ctfactor, self._ctoffset, WMS.CPUTIME)
+		self._addReq(result, splitInfo, self._memfactor, self._memoffset, WMS.MEMORY)

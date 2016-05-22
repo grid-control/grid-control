@@ -31,6 +31,10 @@ class TypedConfigInterface(ConfigInterface):
 	def setInt(self, option, value, opttype = '=', source = None):
 		return self._setInternal('int', int.__str__, option, value, opttype, source)
 
+	# Handling floating point config options - using strict float (de-)serialization
+	def getFloat(self, option, default = noDefault, **kwargs):
+		return self._getInternal('float', float.__str__, float, None, option, default, **kwargs)
+
 	# Handling boolean config options - feature: true and false are not the only valid expressions
 	def getBool(self, option, default = noDefault, **kwargs):
 		def str2obj(value):
