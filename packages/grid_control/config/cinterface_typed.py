@@ -174,7 +174,7 @@ class SimpleConfigInterface(TypedConfigInterface):
 		matcherObj = self.getPlugin(matcherOpt, defaultMatcher, cls = Matcher, pargs = (matcherOpt,))
 		filterExpr = self.get(option, default, str2obj = filterParser, obj2str = filterStr, **kwargs)
 		filterOrder = self.getEnum(appendOption(option, 'order'), ListOrder, defaultOrder)
-		return self.getPlugin(appendOption(option, 'filter'), defaultFilter, cls = ListFilter,
+		return self.getPlugin(appendOption(option, 'plugin'), defaultFilter, cls = ListFilter,
 			pargs = (filterExpr, matcherObj, filterOrder, matchKey, negate))
 
 	# Get state - bool stored in hidden "state" section - any given detail overrides global state
