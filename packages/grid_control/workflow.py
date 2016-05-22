@@ -68,6 +68,7 @@ class Workflow(NamedPlugin):
 			self.duration = -1
 		self.duration = jobs_config.getTime('duration', self.duration, onChange = None)
 		self._submitFlag = jobs_config.getBool('submission', True, onChange = None)
+		self._submitTime = jobs_config.getTime('submission time requirement', self.task.wallTime, onChange = None)
 
 		# Initialise GUI
 		self._gui = jobs_config.getPlugin('gui', 'SimpleConsole', cls = GUI, onChange = None, pargs = (self,))
@@ -80,7 +81,7 @@ class Workflow(NamedPlugin):
 		while True:
 			didWait = False
 			# Check whether wms can submit
-			if not self.wms.canSubmit(self.task.wallTime, self._submitFlag):
+			if not self.wms.canSubmit(self._submitTime, self._submitFlag):
 				self._submitFlag = False
 			# Check free disk space
 			spaceLogger = logging.getLogger('user.space')

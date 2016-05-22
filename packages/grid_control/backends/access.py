@@ -100,7 +100,7 @@ class TimedAccessToken(AccessToken):
 		if not self._checkTimeleft(self._lowerLimit):
 			raise UserError('Your access token (%s) only has %d seconds left! (Required are %s)' %
 				(self.getObjectName(), self._getTimeleft(cached = True), strTime(self._lowerLimit)))
-		if self._ignoreTime:
+		if self._ignoreTime or (neededTime < 0):
 			return True
 		if not self._checkTimeleft(self._lowerLimit + neededTime) and canCurrentlySubmit:
 			self._logUser.warning('Access token (%s) lifetime (%s) does not meet the access and walltime (%s) requirements!',
