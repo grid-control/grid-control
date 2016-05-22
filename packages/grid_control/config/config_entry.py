@@ -218,10 +218,13 @@ class ConfigContainer(object):
 		so_value_dict = {}
 		for section in so_entries_dict:
 			for option in so_entries_dict[section]:
+				result = ''
 				try:
-					result = ConfigEntry.processEntriesRaw(so_entries_dict[section][option])[0].value
+					(entry, used) = ConfigEntry.processEntriesRaw(so_entries_dict[section][option])
+					if entry:
+						result = entry.value
 				except ConfigError: # eg. by '-=' without value
-					result = ''
+					pass
 				so_value_dict.setdefault(section, {})[option] = result
 		for option in self._content:
 			for entry in self._content[option]:
