@@ -147,10 +147,10 @@ class RequirementsPartitionProcessor(PartitionProcessor):
 		return any(imap(lambda x: x > 0, [self._wtfactor, self._ctfactor, self._memfactor,
 			self._wtoffset, self._ctoffset, self._memoffset]))
 
-	def _addReq(self, result, splitInfo, scale, offset, enum):
+	def _addReq(self, result, splitInfo, factor, offset, enum):
 		value = offset
 		if factor > 0:
-			value += scale * splitInfo[DataSplitter.NEntries]
+			value += factor * splitInfo[DataSplitter.NEntries]
 		if value > 0:
 			result[ParameterInfo.REQS].append((enum, int(value)))
 

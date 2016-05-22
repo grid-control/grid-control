@@ -220,7 +220,7 @@ class ConfigContainer(object):
 			for option in so_entries_dict[section]:
 				result = ''
 				try:
-					(entry, used) = ConfigEntry.processEntriesRaw(so_entries_dict[section][option])
+					entry = ConfigEntry.processEntriesRaw(so_entries_dict[section][option])[0]
 					if entry:
 						result = entry.value
 				except ConfigError: # eg. by '-=' without value
