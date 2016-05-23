@@ -418,6 +418,8 @@
 
      * grid_control.parameters.psource_lookup SwitchingLookupParameterSource
 
+     * grid_control.parameters.psource_basic TransformParameterSource
+
    * grid_control.backends.htcondor_wms.processadapter ProcessAdapterInterface
 
     * grid_control.backends.htcondor_wms.processadapter LocalProcessAdapter

@@ -205,6 +205,30 @@ class FormatterParameterSource(SingleParameterSource):
 ParameterSource.managerMap['format'] = 'FormatterParameterSource'
 
 
+class TransformParameterSource(SingleParameterSource):
+	def __init__(self, key, fmt, default = ''):
+		SingleParameterSource.__init__(self, '!%s' % key)
+		(self._fmt, self._default) = (fmt, default)
+
+	def getHash(self):
+		return md5_hex(str(self._key) + str([self._fmt, self._default]))
+
+	def show(self):
+		return ['%s: var = %s, fmt = %s, default = %s' %
+			(self.__class__.__name__, self._key, self._fmt, self._default)]
+
+	def fillParameterInfo(self, pNum, result):
+		tmp = dict(imap(lambda k_v: (str(k_v[0]), utils.parseType(str(k_v[1]))), result.items()))
+		try:
+			result[self._key] = eval(self._fmt, tmp) # pylint:disable=eval-used
+		except Exception:
+			result[self._key] = self._default
+
+	def __repr__(self):
+		return 'transform(%r, %r, %r)' % (self._key, self._fmt, self._default)
+ParameterSource.managerMap['transform'] = 'TransformParameterSource'
+
+
 class CollectParameterSource(SingleParameterSource): # Merge parameter values
 	def __init__(self, target, *sources):
 		SingleParameterSource.__init__(self, target)
