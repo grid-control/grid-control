@@ -12,8 +12,7 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-import re, sys, tty, fcntl, struct, termios
-from python_compat import imap
+import re, sys, fcntl, struct, termios
 
 class Console(object):
 	attr = {'COLOR_BLACK': '30', 'COLOR_RED': '31', 'COLOR_GREEN': '32',
@@ -55,17 +54,6 @@ class Console(object):
 		winsize_ptr = fcntl.ioctl(0, termios.TIOCGWINSZ, struct.pack("HHHH", 0, 0, 0, 0))
 		winsize = struct.unpack('HHHH', winsize_ptr)
 		return (winsize[0], winsize[1])
-
-	def getyx(self):
-		fd = sys.stdin.fileno()
-		state = termios.tcgetattr(fd)
-		tty.setraw(fd)
-		self._esc('[6n')
-		output = ''
-		while not output.endswith('R'):
-			output += sys.stdin.read(1)
-		termios.tcsetattr(fd, termios.TCSADRAIN, state)
-		return tuple(imap(int, output[2:-1].split(';')))
 
 	def move(self, row, col):
 		self._esc('[%d;%dH' % (row, col))
