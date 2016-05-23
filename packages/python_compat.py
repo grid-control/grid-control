@@ -241,10 +241,10 @@ if __name__ == '__main__':
 			tmp = tmp.replace('python_compat_popen2', '')
 			builtin_avoid = ['basestring', 'cmp', 'filter', 'map', 'range', 'reduce', 'xrange', 'zip']
 			needed = set()
-			for pattern in [r'[^_\'\/\.a-zA-Z]%s\(', r'[^_\'\/\.a-zA-Z]%s\.', r'\(%s[,\)]', r', %s[,\)]', r' = %s[,\)]']:
+			for pattern in [r' %s,', r'[^_\'\/\.a-zA-Z]%s\(', r'[^_\'\/\.a-zA-Z]%s\.', r'\(%s[,\)]', r', %s[,\)]', r' = %s[,\)]']:
 				needed.update(ifilter(lambda name: re.search(pattern % name, tmp), __all__ + builtin_avoid))
 			imported = set()
-			for iline in ifilter(lambda line: 'python_compat' in line, tmp.splitlines()):
+			for iline in ifilter(lambda line: 'python_compat ' in line, tmp.splitlines()):
 				try:
 					imported.update(imap(str.strip, iline.split(None, 3)[3].split(',')))
 				except Exception:
