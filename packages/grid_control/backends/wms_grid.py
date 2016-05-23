@@ -55,7 +55,7 @@ class GridWMS(BasicWMS):
 		self._submitParams = {}
 		self._ce = config.get('ce', '', onChange = None)
 		self._configVO = config.getPath('config', '', onChange = None)
-		self._warnSBSize = config.getInt('warn sb size', 5 * 1024 * 1024)
+		self._warnSBSize = config.getInt('warn sb size', 5, onChange = None)
 		self._jobPath = config.getWorkPath('jobs')
 
 	def getSites(self):
@@ -116,7 +116,7 @@ class GridWMS(BasicWMS):
 			sandboxOutJDL = sbOut
 		# Warn about too large sandboxes
 		sbSizes = lmap(os.path.getsize, sbIn)
-		if sbSizes and (self._warnSBSize > 0) and (sum(sbSizes) > self._warnSBSize):
+		if sbSizes and (self._warnSBSize > 0) and (sum(sbSizes) > self._warnSBSize * 1024 * 1024):
 			if not utils.getUserBool('Sandbox is very large (%d bytes) and can cause issues with the WMS! Do you want to continue?' % sum(sbSizes), False):
 				sys.exit(os.EX_OK)
 			self._warnSBSize = 0

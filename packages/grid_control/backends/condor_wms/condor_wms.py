@@ -65,10 +65,10 @@ class Condor(BasicWMS):
 		utils.vprint('Using batch system: Condor/GlideInWMS', -1)
 		BasicWMS.__init__(self, config, wmsName)
 		# special debug out/messages/annotations - may have noticeable effect on storage and performance!
-		if config.get('debugLog', ''):
-			self.debug=open(config.get('debugLog', ''),'a')
-		else:
-			self.debug=False
+		debugLogFN = config.get('debugLog', '')
+		self.debug = False
+		if debugLogFN:
+			self.debug = open(debugLogFN, 'a')
 		######
 		self.taskID = config.get('task id', md5(str(time.time())).hexdigest(), persistent = True) # FIXME!
 		self.debugOut("""
@@ -788,10 +788,11 @@ class Condor(BasicWMS):
 				testProcess.logError(self.errorLog)
 				raise BackendError("Failed to access remote Condor tools! The pool you are submitting to is very likely not configured properly.")
 			# get initial workdir on remote pool
-			if config.get("remote workdir", ''):
-				uName=self.Pool.LoggedExecute("whoami").getOutput().strip()
-				self.poolWorkDir=os.path.join(config.get("remote workdir", ''), uName)
-				pwdProcess=self.Pool.LoggedExecute("mkdir -p %s" % self.poolWorkDir )
+			remote_workdir = config.get("remote workdir", '')
+			if remote_workdir:
+				uName = self.Pool.LoggedExecute("whoami").getOutput().strip()
+				self.poolWorkDir = os.path.join(remote_workdir, uName)
+				pwdProcess = self.Pool.LoggedExecute("mkdir -p %s" % self.poolWorkDir )
 			else:
 				pwdProcess=self.Pool.LoggedExecute("pwd")
 				self.poolWorkDir=pwdProcess.getOutput().strip()
@@ -804,12 +805,12 @@ class Condor(BasicWMS):
 		dest = config.get('remote Dest', '@')
 		user = config.get('remote User', '')
 		splitDest = lmap(str.strip, dest.split('@'))
-		if len(splitDest)==1:
-			return utils.QM(user,user,None),splitDest[0],None
-		elif len(splitDest)==2:
-			return utils.QM(user,user,None),splitDest[0],splitDest[1]
+		if len(splitDest) == 1:
+			return utils.QM(user, user, None), splitDest[0], None
+		elif len(splitDest) == 2:
+			return utils.QM(user, user, None), splitDest[0], splitDest[1]
 		else:
 			self._log.warning('Could not parse Configuration setting "remote Dest"!')
 			self._log.warning('Expected: [<sched>|<sched>@|<sched>@<collector>]')
-			self._log.warning('Found: %s', config.get('remote Dest', '@'))
+			self._log.warning('Found: %s', dest)
 			raise BackendError('Could not parse submit destination')

@@ -90,9 +90,9 @@ class TimedAccessToken(AccessToken):
 	def __init__(self, config, name):
 		AccessToken.__init__(self, config, name)
 		self._lowerLimit = config.getTime('min lifetime', 300, onChange = None)
-		self._maxQueryTime = config.getTime('max query time',  5 * 60, onChange = None)
-		self._minQueryTime = config.getTime('min query time', 30 * 60, onChange = None)
-		self._ignoreTime = config.getBool('ignore walltime', False, onChange = None)
+		self._maxQueryTime = config.getTime(['max query time', 'urgent query time'],  5 * 60, onChange = None)
+		self._minQueryTime = config.getTime(['min query time', 'query time'], 30 * 60, onChange = None)
+		self._ignoreTime = config.getBool(['ignore walltime', 'ignore needed time'], False, onChange = None)
 		self._lastUpdate = 0
 		self._logUser = logging.getLogger('user.time')
 
