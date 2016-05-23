@@ -35,7 +35,7 @@ parser.addBool(None, 'T', 'persistent',         default = False, help = 'Work wi
 parser.addList(None, 'p', 'parameter',          default = [],    help = 'Specify parameters')
 parser.addText(None, 'D', 'dataset',            default = '',    help = 'Add dataset splitting (use "True" to simulate a dataset)')
 parser.addText(None, 'j', 'job',                default = None,  help = 'Select job to display (used for unbounded parameter spaces)')
-parser.addText(None, 'M', 'manager',            default = None,  help = 'Select parameter source manager')
+parser.addText(None, 'F', 'factory',            default = None,  help = 'Select parameter source factory')
 parser.addText(None, 'o', 'output',             default = '',    help = 'Show only specified parameters')
 parser.addText(None, 'S', 'save',               default = '',    help = 'Saves information to specified file')
 parser.addText(None, 'V', 'visible',            default = '',    help = 'Set visible variables')
@@ -142,7 +142,7 @@ def setup_dataset(config, dataset):
 # Initialize ParameterFactory and ParameterSource
 def get_psource(opts, args):
 	config = setup_config(opts, args)
-	pm = config.getPlugin('parameter factory', 'SimpleParameterFactory', cls = 'ParameterFactory')
+	pm = config.getPlugin('parameter factory', opts.factory or 'SimpleParameterFactory', cls = 'ParameterFactory')
 	if opts.dataset:
 		setup_dataset(config, opts.dataset)
 	return pm.getSource(config)
