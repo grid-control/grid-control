@@ -212,12 +212,8 @@ else:
 
 if sys.version_info[0:2] < (2, 7):	# missing features in json / tarfile / urllib2 < Python 2.7
 	tarfile = __import__('python_compat_tarfile')
-	urllib2 = __import__('python_compat_urllib2')
-elif sys.version_info[0] < 3:
-	import tarfile, urllib2
 else:
 	import tarfile
-	urllib2 = None
 
 if sys.version_info[0] < 3:	# unicode encoding <= Python 3
 	md5_hex = lambda value: md5(value).hexdigest()
@@ -229,7 +225,7 @@ __all__ = ['BytesBuffer', 'BytesBufferBase', 'NullHandler', 'StringBuffer',
 	'ifilter', 'imap', 'irange', 'ismap', 'izip', 'json',
 	'lfilter', 'lmap', 'lrange', 'lsmap', 'lzip', 'md5', 'md5_hex',
 	'next', 'parsedate', 'reduce', 'relpath', 'rsplit', 'set',
-	'sort_inplace', 'sorted', 'str2bytes', 'tarfile', 'urllib2', 'unicode', 'user_input']
+	'sort_inplace', 'sorted', 'str2bytes', 'tarfile', 'unicode', 'user_input']
 
 if __name__ == '__main__':
 	import re, doctest, logging

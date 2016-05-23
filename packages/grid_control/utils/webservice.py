@@ -13,133 +13,67 @@
 # | limitations under the License.
 
 import os, logging
+from grid_control.utils.data_structures import makeEnum
 from grid_control.utils.parsing import parseJSON
-from hpfwk import AbstractError, NestedException
-from python_compat import bytes2str, identity, json, str2bytes, urllib2
+from hpfwk import AbstractError, NestedException, Plugin
+from python_compat import identity, json
 
 try:
 	from urllib import urlencode
 except Exception:
 	from urllib.parse import urlencode
 
+
 class RestError(NestedException):
 	pass
 
 
-class RestClientBase(object):
+class RestSession(Plugin):
+	def __init__(self):
+		pass
+
+	def request(self, mode, url, headers, params = None, data = None, cert = None):
+		raise AbstractError
+makeEnum(['GET', 'PUT', 'POST', 'DELETE'], RestSession)
+
+
+class RestClient(object):
 	def __init__(self, cert = None, url = None, default_headers = None,
-			process_result = None, process_data = None,
-			rf_get = None, rf_post = None, rf_put = None, rf_delete = None):
+			process_result = None, process_data = None, session = None):
 		self._log = logging.getLogger('webservice')
 		(self._cert, self._url, self._headers) = (cert, url, default_headers)
-		(self._rf_get, self._rf_post, self._rf_put, self._rf_delete) = (rf_get, rf_post, rf_put, rf_delete)
 		(self._process_result, self._process_data) = (process_result or identity, process_data or urlencode)
+		if not session:
+			try:
+				session = RestSession.createInstance('RequestsSession')
+			except Exception: # incompatible dependencies pulled in can cause many types of exceptions
+				session = RestSession.createInstance('Urllib2Session')
+		self._session = session
 
-	def _get_headers(self, headers):
+	def _request(self, mode, url, api, headers, params = None, data = None):
 		request_headers = dict(self._headers or {})
 		request_headers.update(headers or {})
-		return request_headers
-
-	def _get_url(self, url, api):
 		if url is None:
 			url = self._url
 		if api:
 			url += '/%s' % api
-		return url
-
-	def _request(self, request_fun, url, api, headers, params = None, data = None):
-		raise AbstractError
+		return self._session.request(mode, url = url, headers = request_headers, params = params, data = data, cert = self._cert)
 
 	def get(self, url = None, api = None, headers = None, params = None):
-		return self._process_result(self._request(self._rf_get, url, api, headers, params = params))
+		return self._process_result(self._request(RestSession.GET, url, api, headers, params = params))
 
 	def post(self, url = None, api = None, headers = None, data = None):
 		if data and (self._process_data != identity):
 			data = self._process_data(data)
-		return self._process_result(self._request(self._rf_post, url, api, headers, data = data))
+		return self._process_result(self._request(RestSession.POST, url, api, headers, data = data))
 
 	def put(self, url = None, api = None, headers = None, params = None, data = None):
 		if data and (self._process_data != identity):
 			data = self._process_data(data)
-		return self._process_result(self._request(self._rf_put, url, api, headers, params = params, data = data))
+		return self._process_result(self._request(RestSession.PUT, url, api, headers, params = params, data = data))
 
 	def delete(self, url = None, api = None, headers = None, params = None):
-		return self._process_result(self._request(self._rf_delete, url, api, headers, params = params))
-
-
-class RequestsRestClient(RestClientBase):
-	_session = None
-
-	def __init__(self, cert = None, url = None, default_headers = None, process_result = None, process_data = None):
-		if not self._session:
-			#disable ssl ca verification errors
-			requests.packages.urllib3.disable_warnings()
-			self._session = requests.Session()
-		RestClientBase.__init__(self, cert = cert, url = url, default_headers = default_headers,
-			process_result = process_result, process_data = process_data,
-			rf_get = self._session.get, rf_post = self._session.post,
-			rf_put = self._session.put, rf_delete = self._session.delete)
-
-	def _request(self, request_fun, url, api, headers, params = None, data = None):
-		request_headers = self._get_headers(headers)
-		response = request_fun(url = self._get_url(url, api), verify = False,
-			cert = self._cert, headers = request_headers, params = params, data = data)
-		try:
-			response.raise_for_status()
-		except Exception:
-			raise RestError('Request result: %s' % response.text)
-		return response.text
-
-
-class Urllib2RestClient(RestClientBase):
-	def __init__(self, cert = None, url = None, default_headers = None, process_result = None, process_data = None):
-		RestClientBase.__init__(self, cert = cert, url = url, default_headers = default_headers,
-			process_result = process_result, process_data = process_data,
-			rf_get = lambda: 'GET', rf_post = lambda: 'POST',
-			rf_put = lambda: 'PUT', rf_delete = lambda: 'DELETE')
-
-		class HTTPSClientAuthHandler(HTTPSHandler):
-			def https_open(self, req):
-				return self.do_open(self.getConnection, req)
-			def getConnection(self, host, timeout = None):
-				return HTTPSConnection(host, key_file = cert, cert_file = cert)
-		self._https_handler = HTTPSClientAuthHandler
-
-	def _request(self, request_fun, url, api, headers, params = None, data = None):
-		url = self._get_url(url, api)
-		if params:
-			url += '?%s' % urlencode(params)
-		request_headers = self._get_headers(headers)
-		if data:
-			data = str2bytes(data)
-		request = Request(url = url, data = data, headers = request_headers)
-		request.get_method = request_fun
-		if self._cert:
-			cert_handler = self._https_handler()
-			opener = build_opener(cert_handler)
-		else:
-			opener = build_opener()
-		return bytes2str(opener.open(request).read())
-
-try:
-	import requests
-	RestClient = RequestsRestClient
-except Exception: # incompatible dependencies pulled in can cause many types of exceptions
-	try:
-		import ssl # fix ca verification error in Python 2.7.9
-		if hasattr(ssl, '_create_unverified_context'):
-			setattr(ssl, '_create_default_https_context', getattr(ssl, '_create_unverified_context'))
-	except Exception:
-		pass
-	try:
-		from http.client import HTTPSConnection
-		from urllib.request import HTTPSHandler, Request, build_opener
-	except Exception:
-		from httplib import HTTPSConnection
-		HTTPSHandler = urllib2.HTTPSHandler
-		Request = urllib2.Request
-		build_opener = urllib2.build_opener
-	RestClient = Urllib2RestClient # fall back to urllib2
+		return self._process_result(self._request(RestSession.DELETE, url, api, headers, params = params))
 
 
 class JSONRestClient(RestClient):

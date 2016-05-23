@@ -446,3 +446,9 @@
 
     * grid_control.report NullReport null
 
+   * grid_control.utils.webservice RestSession
+
+    * grid_control.utils.webservice_requests RequestsSession
+
+    * grid_control.utils.webservice_urllib2 Urllib2Session
+
