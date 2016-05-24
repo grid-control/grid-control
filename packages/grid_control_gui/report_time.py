@@ -21,9 +21,7 @@ class TimeReport(Report):
 
 	def __init__(self, jobDB, task, jobs = None, configString = ''):
 		Report.__init__(self, jobDB, task, jobs, configString)
-		self._dollar_per_hour = 0.013
-		if configString:
-			self._dollar_per_hour = float(configString)
+		self._dollar_per_hour = float(configString or 0.013)
 
 	def getHeight(self):
 		return 1

@@ -44,7 +44,6 @@ class GUIStream(object):
 			match = re.search(expr, string)
 			if match and match.start() == pos:
 				return attr
-		return 0
 
 	def write(self, data):
 		if self.logged:
