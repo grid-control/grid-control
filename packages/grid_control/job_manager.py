@@ -228,7 +228,7 @@ class JobManager(NamedPlugin):
 		if len(timeoutList):
 			change = True
 			self._log_user.warning('Timeout for the following jobs:')
-			self.cancel(wms, timeoutList)
+			self.cancel(wms, timeoutList, interactive = False, showJobs = True)
 
 		# Process task interventions
 		self._processIntervention(wms, self._task.getIntervention())
@@ -278,7 +278,7 @@ class JobManager(NamedPlugin):
 		return change
 
 
-	def cancel(self, wms, jobs, interactive = False, showJobs = True):
+	def cancel(self, wms, jobs, interactive, showJobs):
 		if len(jobs) == 0:
 			return
 		if showJobs:
@@ -314,7 +314,7 @@ class JobManager(NamedPlugin):
 		jobs = self.jobDB.getJobs(selector)
 		if jobs:
 			self._log_user.warning('Cancelling the following jobs:')
-			self.cancel(wms, jobs, True)
+			self.cancel(wms, jobs, interactive = True, showJobs = True)
 
 
 	def reset(self, wms, select):
@@ -323,7 +323,7 @@ class JobManager(NamedPlugin):
 			self._log_user.warning('Resetting the following jobs:')
 			self._reportClass(self.jobDB, self._task, jobs).display()
 			if utils.getUserBool('Are you sure you want to reset the state of these jobs?', False):
-				self.cancel(wms, self.jobDB.getJobs(ClassSelector(JobClass.PROCESSING), jobs), False, False)
+				self.cancel(wms, self.jobDB.getJobs(ClassSelector(JobClass.PROCESSING), jobs), interactive = False, showJobs = False)
 				for jobNum in jobs:
 					self.jobDB.commit(jobNum, Job())
 
@@ -354,11 +354,11 @@ class JobManager(NamedPlugin):
 				self.jobDB.jobLimit = newMaxJobs
 				applied_change = True
 			if redo:
-				self.cancel(wms, self.jobDB.getJobs(ClassSelector(JobClass.PROCESSING), redo))
+				self.cancel(wms, self.jobDB.getJobs(ClassSelector(JobClass.PROCESSING), redo), interactive = False, showJobs = True)
 				resetState(redo, Job.INIT)
 				applied_change = True
 			if disable:
-				self.cancel(wms, self.jobDB.getJobs(ClassSelector(JobClass.PROCESSING), disable))
+				self.cancel(wms, self.jobDB.getJobs(ClassSelector(JobClass.PROCESSING), disable), interactive = False, showJobs = True)
 				resetState(disable, Job.DISABLED)
 				applied_change = True
 			if applied_change:
