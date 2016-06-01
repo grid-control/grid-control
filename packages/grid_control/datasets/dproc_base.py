@@ -15,7 +15,7 @@
 import logging
 from grid_control.config import triggerResync
 from grid_control.gc_plugin import ConfigurablePlugin
-from grid_control.utils import display_selection
+from grid_control.utils import display_selection, filter_processors
 from hpfwk import AbstractError
 
 class DataProcessor(ConfigurablePlugin):
@@ -41,11 +41,7 @@ class DataProcessor(ConfigurablePlugin):
 class MultiDataProcessor(DataProcessor):
 	def __init__(self, config, processorList):
 		DataProcessor.__init__(self, config)
-		(self._processorList, processorNames) = ([], [])
-		for proc in processorList:
-			if proc.enabled() and proc.__class__.__name__ not in processorNames:
-				self._processorList.append(proc)
-				processorNames.append(proc.__class__.__name__)
+		self._processorList = filter_processors(processorList)
 		display_selection(self._log, processorList, self._processorList,
 			'Removed %d inactive dataset processors!', lambda item: item.__class__.__name__)
 

@@ -800,6 +800,15 @@ def display_selection(log, items_before, items_after, message, formatter):
 				log.log(logging.DEBUG1, '   %s', formatter(item))
 
 
+def filter_processors(processorList, id_fun = lambda proc: proc.__class__.__name__):
+	(result, processorIDs) = ([], [])
+	for proc in processorList:
+		if proc.enabled() and (id_fun(proc) not in processorIDs):
+			result.append(proc)
+			processorIDs.append(id_fun(proc))
+	return result
+
+
 if __name__ == '__main__':
 	import doctest
 	doctest.testmod()
