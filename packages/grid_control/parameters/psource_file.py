@@ -62,10 +62,11 @@ class GCDumpParameterSource(ParameterSource):
 					activity.finish()
 					activity = utils.ActivityLog('Writing parameter dump [%d/%d]' % (jobNum + 1, maxN))
 					meta = pa.getJobInfo(jobNum)
+					meta_str = str.join('\t', imap(lambda k: json.dumps(meta.get(k, '')), keys))
 					if meta.get(ParameterInfo.ACTIVE, True):
-						fp.write('%d\t%s\n' % (jobNum, str.join('\t', imap(lambda k: json.dumps(meta.get(k, '')), keys))))
+						fp.write('%d\t%s\n' % (jobNum, meta_str))
 					else:
-						fp.write('%d!\t%s\n' % (jobNum, str.join('\t', imap(lambda k: json.dumps(meta.get(k, '')), keys))))
+						fp.write('%d!\t%s\n' % (jobNum, meta_str))
 				activity.finish()
 		finally:
 			fp.close()

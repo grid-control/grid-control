@@ -59,8 +59,9 @@ def draw_pie(ax, breakdown, pos, size, piecolor = None):
 	piecolor = piecolor or ['red', 'orange', 'green', 'blue', 'purple']
 	breakdown = [0] + list(numpy.cumsum(breakdown)* 1.0 / sum(breakdown))
 	for i in irange(len(breakdown)-1):
-		x = [0] + numpy.cos(numpy.linspace(2 * math.pi * breakdown[i], 2 * math.pi * breakdown[i+1], 20)).tolist()
-		y = [0] + numpy.sin(numpy.linspace(2 * math.pi * breakdown[i], 2 * math.pi * breakdown[i+1], 20)).tolist()
+		fracs = numpy.linspace(2 * math.pi * breakdown[i], 2 * math.pi * breakdown[i+1], 20)
+		x = [0] + numpy.cos(fracs).tolist()
+		y = [0] + numpy.sin(fracs).tolist()
 		ax.scatter(pos[0], pos[1], marker=(lzip(x, y), 0), s = size, facecolor = piecolor[i % len(piecolor)])
 
 def get_positions(entries):

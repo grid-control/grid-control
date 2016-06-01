@@ -20,6 +20,7 @@ from grid_control.gc_plugin import ConfigurablePlugin, NamedPlugin
 from grid_control.parameters import ParameterFactory, ParameterInfo
 from grid_control.utils.file_objects import SafeFile
 from grid_control.utils.gc_itertools import ichain, lchain
+from grid_control.utils.parsing import strGuid
 from hpfwk import AbstractError
 from time import strftime, time
 from python_compat import ifilter, imap, izip, lfilter, lmap, lru_cache, md5_hex
@@ -151,9 +152,8 @@ class TaskModule(NamedPlugin):
 
 
 	def getTransientVars(self):
-		hx = str.join("", imap(lambda x: "%02x" % x, imap(random.randrange, [256]*16)))
 		return {'GC_DATE': strftime("%F"), 'GC_TIMESTAMP': strftime("%s"),
-			'GC_GUID': '%s-%s-%s-%s-%s' % (hx[:8], hx[8:12], hx[12:16], hx[16:20], hx[20:]),
+			'GC_GUID': strGuid(str.join("", imap(lambda x: "%02x" % x, imap(random.randrange, [256]*16)))),
 			'RANDOM': str(random.randrange(0, 900000000))}
 
 
