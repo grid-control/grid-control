@@ -47,6 +47,6 @@ if [ -n "$GC_DELAY_OUTPUT" ]; then
 	mv "$GC_LOCALSCRATCH/gc.stdout.tmp" "$GC_DELAY_OUTPUT"
 	mv "$GC_LOCALSCRATCH/gc.stderr.tmp" "$GC_DELAY_ERROR"
 else
-	./gc-run.sh ${GC_JOB_ID}
+	./gc-run.sh "${GC_JOB_ID}"
 fi
 [ -n "$GC_LOCALSCRATCH" ] && rmdir "$GC_LOCALSCRATCH"

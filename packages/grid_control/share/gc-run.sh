@@ -22,7 +22,7 @@ set +f
 gc_trap
 export GC_JOB_ID="$1"
 export MY_JOBID="$GC_JOB_ID" # legacy script support
-export GC_LANDINGZONE="`pwd`"
+export GC_LANDINGZONE="$(pwd)"
 export GC_MARKER="$GC_LANDINGZONE/RUNNING.$$"
 export GC_FAIL_MARKER="$GC_LANDINGZONE/GCFAIL"
 export GC_SCRATCH="`getscratch`"

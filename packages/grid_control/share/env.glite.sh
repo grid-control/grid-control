@@ -20,7 +20,7 @@ echo "Searching for GRID environment..."
 # Limit memory used by java tools
 export _JAVA_OPTIONS="-Xms128m -Xmx512m"
 
-function gc_find_grid() {
+gc_find_grid() {
 	echo "[GRID] Searching in $1"
 	# Save local VO environment variables
 	VO_KEEPER="${GC_LANDINGZONE:-/tmp}/env.grid.old"
@@ -29,7 +29,10 @@ function gc_find_grid() {
 
 	if [ -f "$2" ]; then
 		echo "       Found script $2"
-		source "$2"
+		source "$2" # shellcheck source=/dev/null
+	else
+		echo "       Script '$2' does not exist!"
+		return 1
 	fi
 	if [ -z "$GLITE_LOCATION" ]; then
 		echo "       \$GLITE_LOCATION is empty!"
@@ -37,20 +40,19 @@ function gc_find_grid() {
 	fi
 
 	# We want to keep the local VO environment variables
-	export | grep VO_ | sed -e "s/^.*VO_/VO_/;s/=/ /" | while read VAR VALUE; do
-		if [ $(grep $VAR "$VO_KEEPER") ]; then
-			echo export $(grep $VAR "$VO_KEEPER")
+	export | grep VO_ | sed -e "s/^.*VO_/VO_/;s/=/ /" | while read -r VAR _; do
+		if grep -q "$VAR" "$VO_KEEPER"; then
+			echo "export $(grep "$VAR" "$VO_KEEPER")"
 		else
 			echo "export $VAR=''"
 		fi
 	done > "$VO_REVERT"
-	source "$VO_REVERT"
+	source "$VO_REVERT" # shellcheck source=/dev/null
 	rm "$VO_KEEPER" "$VO_REVERT"
-	export GC_GLITE_TYPE="$1"
 	return 0
 }
 
-function gc_set_proxy() {
+gc_set_proxy() {
 	# Use proxy from input sandbox if available
 	if [ -s "$GC_SCRATCH/_proxy.dat" ]; then
 		mv "$GC_SCRATCH/_proxy.dat" "$GC_LANDINGZONE/_proxy.dat"
@@ -60,24 +62,23 @@ function gc_set_proxy() {
 	echo "Using GRID proxy $X509_USER_PROXY"
 }
 
-
 if [ -n "$GLITE_LOCATION" ]; then
-	export GC_GLITE_TYPE="LOCAL"
-elif gc_find_grid "USER" $GC_GLITE_LOCATION; then
-	:
+	GC_GLITE_TYPE="LOCAL"
+elif gc_find_grid "USER" "$GC_GLITE_LOCATION"; then
+	GC_GLITE_TYPE="USER"
 elif gc_find_grid "CVMFS" $(ls -1t /cvmfs/grid.cern.ch/*/etc/profile.d/setup*.sh 2> /dev/null | head -n 1); then
-	:
+	GC_GLITE_TYPE="CVMFS"
 elif gc_find_grid "CVMFS - 2nd try" $(ls -1t /cvmfs/grid.cern.ch/*/etc/profile.d/grid*.sh 2> /dev/null | head -n 1); then
-	:
+	GC_GLITE_TYPE="CVMFS-2"
 elif gc_find_grid "OSG" "/uscmst1/prod/grid/gLite_SL5.sh"; then
-	:
+	GC_GLITE_TYPE="OSG"
 elif gc_find_grid "AFS" "/afs/cern.ch/cms/LCG/LCG-2/UI/cms_ui_env.sh"; then
-	:
+	GC_GLITE_TYPE="AFS"
 else
 	echo "[WARNING] No GRID environment found!"
 	gc_set_proxy # still setting proxy
 	return 1
 fi
-echo "[GRID-$GC_GLITE_TYPE] Using GRID UI `glite-version 2> /dev/null` located at $GLITE_LOCATION"
+echo "[GRID-$GC_GLITE_TYPE] Using GRID UI $(glite-version 2> /dev/null) located at '$GLITE_LOCATION'"
 
 gc_set_proxy
