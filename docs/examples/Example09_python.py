@@ -18,4 +18,4 @@ cfg.usertask.dataset = ['Example05_dataset.dbs', ':file:/bin/sh|3', ':file:/bin/
 cfg.usertask.set('files per job', 2)
 
 print(cfg)
-print("=" * 20)
+print('=' * 20)

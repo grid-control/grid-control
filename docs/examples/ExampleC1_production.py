@@ -24,7 +24,7 @@ process.load('Configuration.StandardSequences.FrontierConditions_GlobalTag_cff')
 process.maxEvents = cms.untracked.PSet(input = cms.untracked.int32(1))
 
 # Input source
-process.source = cms.Source("EmptySource")
+process.source = cms.Source('EmptySource')
 process.options = cms.untracked.PSet()
 
 # Production Info
@@ -36,7 +36,7 @@ process.configurationMetadata = cms.untracked.PSet(
 
 # Output definition
 
-process.RECOSIMoutput = cms.OutputModule("PoolOutputModule",
+process.RECOSIMoutput = cms.OutputModule('PoolOutputModule',
     splitLevel = cms.untracked.int32(0),
     eventAutoFlushCompressedSize = cms.untracked.int32(5242880),
     outputCommands = process.RECOSIMEventContent.outputCommands,
@@ -53,11 +53,11 @@ process.RECOSIMoutput = cms.OutputModule("PoolOutputModule",
 # Additional output definition
 
 # Other statements
-process.genstepfilter.triggerConditions=cms.vstring("generation_step")
+process.genstepfilter.triggerConditions=cms.vstring('generation_step')
 from Configuration.AlCa.GlobalTag import GlobalTag
 process.GlobalTag = GlobalTag(process.GlobalTag, 'auto:mc', '')
 
-process.generator = cms.EDFilter("Pythia6GeneratorFilter",
+process.generator = cms.EDFilter('Pythia6GeneratorFilter',
     pythiaPylistVerbosity = cms.untracked.int32(0),
     filterEfficiency = cms.untracked.double(1.0),
     pythiaHepMCVerbosity = cms.untracked.bool(False),

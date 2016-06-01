@@ -1,2 +1,2 @@
 import FWCore.ParameterSet.Config as cms
-process = cms.Process("minimal")
+process = cms.Process('minimal')
