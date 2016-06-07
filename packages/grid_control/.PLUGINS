@@ -448,7 +448,7 @@
 
    * grid_control.utils.webservice RestSession
 
-    * grid_control.utils.webservice_requests RequestsSession
+    * grid_control.utils.webservice_requests RequestsSession requests
 
-    * grid_control.utils.webservice_urllib2 Urllib2Session
+    * grid_control.utils.webservice_urllib2 Urllib2Session urllib2
 

@@ -45,10 +45,9 @@ class RestClient(object):
 		(self._process_result, self._process_data) = (process_result or identity, process_data or urlencode)
 		if not session:
 			try:
-				session = RestSession.createInstance('RequestsSession')
+				self._session = RestSession.createInstance('RequestsSession')
 			except Exception: # incompatible dependencies pulled in can cause many types of exceptions
-				session = RestSession.createInstance('Urllib2Session')
-		self._session = session
+				self._session = RestSession.createInstance('Urllib2Session')
 
 	def _request(self, mode, url, api, headers, params = None, data = None):
 		request_headers = dict(self._headers or {})
