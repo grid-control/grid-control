@@ -15,7 +15,7 @@
 
 from gcSupport import Options, Plugin, getConfig, scriptOptions
 from grid_control.utils.webservice import JSONRestClient
-from grid_control_cms.provider_sitedb import SiteDB
+from grid_control_cms.sitedb import SiteDB
 
 def lfn2pfn(node, lfn, prot = 'srmv2'):
 	return JSONRestClient().get(url = 'https://cmsweb.cern.ch/phedex/datasvc/json/prod/lfn2pfn',

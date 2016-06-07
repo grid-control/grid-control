@@ -107,5 +107,5 @@ class GridJSONRestClient(JSONRestClient):
 			raise self._cert_errror_cls(self._fmt_cert_error('Environment variable X509_USER_PROXY is not set!'))
 		proxyPath = os.path.expandvars(os.path.normpath(os.path.expanduser(self._cert)))
 		if not os.path.exists(proxyPath):
-			raise self._cert_errror_cls(self._fmt_cert_error('Environment variable X509_USER_PROXY is "%s"' % proxyPath))
+			raise self._cert_errror_cls(self._fmt_cert_error('Environment variable X509_USER_PROXY points to missing file "%s"' % proxyPath))
 		return JSONRestClient._request(self, request_fun, url, api, headers, params, data)

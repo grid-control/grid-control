@@ -19,7 +19,7 @@ from grid_control.datasets import DataProvider, DatasetError
 from grid_control_cms.dbs3_input_validation import validate_dbs3_json
 from grid_control_cms.dbs3_lite_client import DBS3LiteClient
 from grid_control_cms.dbs3_migration_queue import AlreadyQueued, DBS3MigrationQueue, MigrationTask, do_migration
-from grid_control_cms.provider_sitedb import SiteDB
+from grid_control_cms.sitedb import SiteDB
 from python_compat import imap, izip, json, lmap, md5_hex, set
 
 def create_dbs3_json_files(opts, block_info, block_dump):

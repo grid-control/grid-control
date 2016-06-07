@@ -25,13 +25,13 @@ def unflatten_json(data):
 
 class SiteDB(object):
 	def __init__(self, url = None):
-		self._gjrc = GridJSONRestClient(url = url or 'https://cmsweb.cern.ch/sitedb/data/prod/')
+		self._gjrc = GridJSONRestClient(url or 'https://cmsweb.cern.ch/sitedb/data/prod/', 'VOMS proxy needed to query siteDB!')
 
 	def _query(self, api, match = None):
 		params = None
 		if match:
 			params = {'match': match}
-		return unflatten_json(self._gjrc.get(api, params = params))
+		return unflatten_json(self._gjrc.get(api = api, params = params))
 
 	def _people(self, username = None):
 		return self._query('people', username)
@@ -64,12 +64,3 @@ class SiteDB(object):
 	def username_to_dn(self, username):
 		for user in self._people(username = username):
 			return user['dn']
-
-
-if __name__ == '__main__':
-	site_db = SiteDB()
-	logging.critical(site_db.dn_to_username(dn='/C=DE/O=GermanGrid/OU=KIT/CN=Manuel Giffels'))
-	logging.critical(site_db.username_to_dn(username='giffels'))
-	logging.critical(site_db.cms_name_to_se(cms_name='T*_PL_Warsaw'))
-	logging.critical(site_db.se_to_cms_name(se='se.polgrid.pl'))
-	logging.critical(site_db.se_to_cms_name(se='se.grid.icm.edu.pl'))
