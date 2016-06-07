@@ -104,7 +104,8 @@ class ConfigInterface(object):
 
 	def _getInternal(self, desc, obj2str, str2obj, def2obj, option, default_obj,
 			onChange = defaultOnChange, onValid = defaultOnValid, persistent = False):
-		self._log.log(logging.DEBUG2, 'Config query from: %r', self._getCaller())
+		if self._log.isEnabledFor(logging.DEBUG2):
+			self._log.log(logging.DEBUG2, 'Config query from: %r', self._getCaller())
 		default_str = self._getDefaultStr(default_obj, def2obj, obj2str)
 		assert((default_str == noDefault) or isinstance(default_str, str))
 

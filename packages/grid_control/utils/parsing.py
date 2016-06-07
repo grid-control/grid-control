@@ -17,11 +17,10 @@ from python_compat import identity, ifilter, imap, json, lfilter, lmap, reduce, 
 def removeUnicode(obj):
 	if unicode == str:
 		return obj
-	if type(obj) in (list, tuple, set):
-		(obj, oldType) = (list(obj), type(obj))
-		for i, v in enumerate(obj):
-			obj[i] = removeUnicode(v)
-		obj = oldType(obj)
+	elif type(obj) == list:
+		obj = lmap(removeUnicode, obj)
+	elif type(obj) in (tuple, set):
+		obj = type(obj)(imap(removeUnicode, obj))
 	elif isinstance(obj, dict):
 		result = {}
 		for k, v in obj.items():
