@@ -12,10 +12,10 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-from grid_control import utils
 from grid_control.config import triggerResync
 from grid_control.datasets import DataProvider, DataSplitter, DatasetError
 from grid_control.datasets.splitter_basic import HybridSplitter
+from grid_control.utils import optSplit
 from grid_control.utils.data_structures import makeEnum
 from grid_control.utils.thread_tools import start_thread
 from grid_control.utils.webservice import JSONRestClient
@@ -45,7 +45,7 @@ class CMSBaseProvider(DataProvider):
 		self._locationFormat = config.getEnum('location format', CMSLocationFormat, CMSLocationFormat.hostname, onChange = changeTrigger)
 		self._pjrc = JSONRestClient(url = 'https://cmsweb.cern.ch/phedex/datasvc/json/prod/blockreplicas')
 
-		(self._datasetPath, self._url, self._datasetBlock) = utils.optSplit(datasetExpr, '@#')
+		(self._datasetPath, self._url, self._datasetBlock) = optSplit(datasetExpr, '@#')
 		self._url = self._url or config.get('dbs instance', '')
 		self._datasetBlock = self._datasetBlock or 'all'
 		self.onlyValid = config.getBool('only valid', True, onChange = changeTrigger)
@@ -96,8 +96,8 @@ class CMSBaseProvider(DataProvider):
 					if location:
 						dictSE[blockPath].append(location)
 					else:
-						utils.vprint('Warning: Dataset block %s replica at %s / %s is skipped!' %
-							(blockPath, replica.get('node'), replica.get('se')), -1)
+						self._log.warning('Dataset block %s replica at %s / %s is skipped!',
+							blockPath, replica.get('node'), replica.get('se'))
 
 
 	def getDatasets(self):
