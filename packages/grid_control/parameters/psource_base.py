@@ -13,7 +13,7 @@
 # | limitations under the License.
 
 import time
-from grid_control import utils
+from grid_control.utils.data_structures import makeEnum
 from hpfwk import AbstractError, NestedException, Plugin
 from python_compat import set
 
@@ -21,10 +21,7 @@ class ParameterError(NestedException):
 	pass
 
 
-class ParameterInfo:
-	reqTypes = ('ACTIVE', 'HASH', 'REQS')
-	for idx, reqType in enumerate(reqTypes):
-		locals()[reqType] = idx
+ParameterInfo = makeEnum(['ACTIVE', 'HASH', 'REQS', 'FILES'])
 
 
 class ParameterMetadata(str):
@@ -34,7 +31,9 @@ class ParameterMetadata(str):
 		return obj
 
 	def __repr__(self):
-		return "'%s'" % utils.QM(self.untracked, '!%s' % self, self)
+		if self.untracked:
+			return "'!%s'" % self
+		return "'%s'" % self
 
 
 class ParameterSource(Plugin):
