@@ -87,3 +87,23 @@ class ParameterSource(Plugin):
 
 	def getHash(self):
 		raise AbstractError
+
+
+class NullParameterSource(ParameterSource):
+	alias = ['null']
+
+	def create(cls, pconfig):
+		return cls()
+	create = classmethod(create)
+
+	def fillParameterKeys(self, result):
+		pass
+
+	def fillParameterInfo(self, pNum, result):
+		pass
+
+	def getHash(self):
+		raise ''
+
+	def __repr__(self):
+		return 'null()'
