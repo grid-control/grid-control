@@ -70,6 +70,10 @@ class BasicParameterFactory(ParameterFactory):
 			cls = ParameterFactory, inherit = True)
 
 
+	def getLookupSources(self): # HACK: For CMSSW_Advanced variable display
+		return (list(self._lookupSources), list(self._nestedSources))
+
+
 	def _registerPSource(self, pconfig, varName):
 		def replace_nonalnum(value):
 			if str.isalnum(value):

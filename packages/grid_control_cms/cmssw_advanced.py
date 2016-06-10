@@ -12,7 +12,7 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-import os
+import os, logging
 from grid_control import utils
 from grid_control.config import ConfigError
 from grid_control.datasets import DataProvider
@@ -65,8 +65,12 @@ class CMSSW_Advanced(CMSSW):
 			nickNames = set()
 			for block in DataProvider.loadFromFile(dsPath).getBlocks():
 				nickNames.add(block[DataProvider.Nickname])
-			utils.vprint('Mapping between nickname and other settings:', -1)
+			log = logging.getLogger('user')
+			log.info('Mapping between nickname and other settings:')
 			report = []
+			(ps_basic, ps_nested) = self._pfactory.getLookupSources()
+			if ps_nested:
+				log.info('This list doesn\'t show "nickname constants" with multiple values!')
 			for nick in sorted(nickNames):
 				lumi_filter_str = formatLumi(self._nmLumi.lookup(nick, '', is_selector = False))
 				if len(lumi_filter_str) > 4:
@@ -76,7 +80,7 @@ class CMSSW_Advanced(CMSSW):
 				config_files = self._nmCfg.lookup(nick, '', is_selector = False)
 				tmp = {0: nick, 1: str.join(', ', imap(os.path.basename, config_files)), 2: nice_lumi_filter}
 				lookupvars = {'DATASETNICK': nick}
-				for src in self._pm.lookupSources:
+				for src in ps_basic:
 					src.fillParameterInfo(None, lookupvars)
 				tmp.update(lookupvars)
 				report.append(tmp)
