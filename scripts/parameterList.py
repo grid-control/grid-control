@@ -16,7 +16,7 @@
 import os, sys, random
 from gcSupport import Options, getConfig, scriptOptions, utils
 from grid_control.datasets import DataSplitter
-from grid_control.parameters import ParameterInfo, ParameterMetadata, ParameterSource
+from grid_control.parameters import ParameterAdapter, ParameterInfo, ParameterMetadata, ParameterSource
 from python_compat import ifilter, imap, irange, izip, lfilter, lmap, md5_hex, set, sorted
 
 random.seed(0)
@@ -29,7 +29,6 @@ parser.addBool(None, 'f', 'force-intervention', default = False, help = 'Simulat
 parser.addBool(None, 'I', 'intervention',       default = False, help = 'Display intervention tasks')
 parser.addBool(None, 'l', 'list-parameters',    default = False, help = 'Display parameter list')
 parser.addBool(None, 'L', 'show-sources',       default = False, help = 'Show parameter sources')
-parser.addBool(None, 's', 'static',             default = False, help = 'Assume a static parameterset')
 parser.addBool(None, 't', 'untracked',          default = False, help = 'Display untracked variables')
 parser.addBool(None, 'T', 'persistent',         default = False, help = 'Work with persistent paramters')
 parser.addList(None, 'p', 'parameter',          default = [],    help = 'Specify parameters')
@@ -118,8 +117,6 @@ def setup_config(opts, args):
 		configParameters.set('parameters', str.join(' ', args).replace('\\n', '\n'))
 		if opts.dataset:
 			configParameters.set('default lookup', 'DATASETNICK')
-		if not opts.persistent:
-			configParameters.set('parameter adapter', 'BasicParameterAdapter', '=')
 		if utils.verbosity() > 2:
 			config.changeView(setSections = None).write(sys.stdout)
 	return config
@@ -145,7 +142,10 @@ def get_psource(opts, args):
 	pm = config.getPlugin('parameter factory', opts.factory or 'SimpleParameterFactory', cls = 'ParameterFactory')
 	if opts.dataset:
 		setup_dataset(config, opts.dataset)
-	return pm.getSource(config)
+	adapter = 'BasicParameterAdapter'
+	if opts.persistent:
+		adapter = 'TrackedParameterAdapter'
+	return ParameterAdapter.createInstance(adapter, config, pm.getSource())
 
 def get_parameters(opts, psource):
 	result = []
