@@ -13,7 +13,7 @@
 # | limitations under the License.
 
 from grid_control import utils
-from grid_control.parameters.psource_base import ParameterSource
+from grid_control.parameters.psource_base import NullParameterSource, ParameterSource
 from grid_control.utils.gc_itertools import ichain
 from hpfwk import AbstractError
 from python_compat import imap, irange, izip, lfilter, lmap, md5_hex, reduce
@@ -26,6 +26,7 @@ def combineSyncResult(a, b, sc_fun = lambda x, y: x or y):
 	redo_a.update(redo_b)
 	disable_a.update(disable_b)
 	return (redo_a, disable_a, sc_fun(sizeChange_a, sizeChange_b))
+
 
 class ForwardingParameterSource(ParameterSource):
 	def __init__(self, psource):
@@ -88,13 +89,28 @@ class RangeParameterSource(ForwardingParameterSource):
 		return result
 
 
+def strip_null_sources(psources):
+	return lfilter(lambda p: not isinstance(p, NullParameterSource), psources)
+
+
 # Meta processing of parameter psources
 class MultiParameterSource(ParameterSource):
+	def __new__(cls, *psources):
+		psources = strip_null_sources(psources)
+		if len(psources) == 1:
+			return psources[0]
+		elif not psources:
+			return NullParameterSource()
+		return ParameterSource.__new__(cls)
+
 	def __init__(self, *psources):
 		ParameterSource.__init__(self)
-		self._psourceList = psources
+		self._psourceList = strip_null_sources(psources)
 		self._psourceMaxList = lmap(lambda p: p.getMaxParameters(), self._psourceList)
 		self._maxParameters = self._initMaxParameters()
+
+	def getInputSources(self):
+		return list(self._psourceList)
 
 	# Get local parameter numbers (result) from psource index (pIdx) and subpsource parameter number (pNum)
 	def _translateNum(self, pIdx, pNum):
@@ -136,6 +152,16 @@ class MultiParameterSource(ParameterSource):
 		return md5_hex(str(lmap(lambda p: str(p.getMaxParameters()) + p.getHash(), self._psourceList)))
 
 
+def simplify_nested_sources(cls, psources):
+	result = []
+	for ps in psources:
+		if isinstance(ps, cls):
+			result.extend(ps.getInputSources())
+		else:
+			result.append(ps)
+	return result
+
+
 # Base class for psources invoking their sub-psources in parallel
 class BaseZipParameterSource(MultiParameterSource):
 	def fillParameterInfo(self, pNum, result):
@@ -161,8 +187,12 @@ class ZipShortParameterSource(BaseZipParameterSource):
 		if len(maxN):
 			return min(maxN)
 
+
 class ZipLongParameterSource(BaseZipParameterSource):
 	alias = ['zip']
+
+	def __init__(self, *psources):
+		BaseZipParameterSource.__init__(self, *simplify_nested_sources(ZipLongParameterSource, psources))
 
 	def _initMaxParameters(self):
 		maxN = lfilter(lambda n: n is not None, self._psourceMaxList)
@@ -197,6 +227,13 @@ class ChainParameterSource(MultiParameterSource):
 class RepeatParameterSource(MultiParameterSource):
 	alias = ['repeat']
 
+	def __new__(cls, psource, times):
+		if times == 0:
+			return NullParameterSource()
+		elif times == 1:
+			return psource
+		return MultiParameterSource.__new__(cls, psource, psource) # suppress simplification in MultiparameterSource.__new__
+
 	def __init__(self, psource, times):
 		self._psource = psource
 		self._times = times
@@ -227,7 +264,17 @@ class RepeatParameterSource(MultiParameterSource):
 class CrossParameterSource(MultiParameterSource):
 	alias = ['cross']
 
+	def __new__(cls, *psources):
+		psources = strip_null_sources(psources)
+		if len(lfilter(lambda p: p.getMaxParameters() is not None, psources)) < 2:
+			return ZipLongParameterSource(*psources)
+		return MultiParameterSource.__new__(cls, *psources)
+
+	def __init__(self, *psources):
+		MultiParameterSource.__init__(self, *simplify_nested_sources(CrossParameterSource, psources))
+
 	def _initMaxParameters(self):
+		self.quickFill = []
 		self._quickFill = []
 		prev = 1
 		for (psource, maxN) in izip(self._psourceList, self._psourceMaxList):
@@ -257,6 +304,7 @@ class ErrorParameterSource(ChainParameterSource):
 	alias = ['variation']
 
 	def __init__(self, *psources):
+		psources = strip_null_sources(psources)
 		self._rawpsources = psources
 		central = lmap(lambda p: RangeParameterSource(p, 0, 0), psources)
 		chain = [ZipLongParameterSource(*central)]
