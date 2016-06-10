@@ -206,9 +206,9 @@
 
       * grid_control.parameters.pfactory_base BasicParameterFactory
 
-       * grid_control.parameters.pfactory_modular ModularParameterFactory
+      * grid_control.parameters.pfactory_modular ModularParameterFactory
 
-       * grid_control.parameters.pfactory_simple SimpleParameterFactory
+      * grid_control.parameters.pfactory_simple SimpleParameterFactory
 
      * grid_control.backends.storage StorageManager
 

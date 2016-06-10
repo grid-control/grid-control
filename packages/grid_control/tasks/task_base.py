@@ -17,7 +17,7 @@ from grid_control import utils
 from grid_control.backends import WMS
 from grid_control.config import ConfigError, changeInitNeeded, validNoVar
 from grid_control.gc_plugin import ConfigurablePlugin, NamedPlugin
-from grid_control.parameters import ParameterFactory, ParameterInfo
+from grid_control.parameters import ParameterAdapter, ParameterFactory, ParameterInfo
 from grid_control.utils.file_objects import SafeFile
 from grid_control.utils.gc_itertools import ichain, lchain
 from grid_control.utils.parsing import strGuid
@@ -103,10 +103,10 @@ class TaskModule(NamedPlugin):
 
 		# Init parameter source manager
 		self._setupJobParameters(config)
-		self._pm = config.getPlugin('parameter factory', 'SimpleParameterFactory',
-			cls = ParameterFactory, inherit = True)
-		param_config = config.changeView(viewClass = 'TaggedConfigView', addSections = ['parameters'], addTags = [self])
-		self.source = self._pm.getSource(param_config)
+		self._pfactory = config.getPlugin('internal parameter factory', 'BasicParameterFactory',
+			cls = ParameterFactory, tags = [self], inherit = True)
+		self.source = config.getPlugin('parameter adapter', 'TrackedParameterAdapter',
+			cls = ParameterAdapter, pargs = (self._pfactory.getSource(),))
 
 
 	def _setupJobParameters(self, config):

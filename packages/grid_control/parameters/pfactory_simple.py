@@ -14,7 +14,8 @@
 
 from grid_control import utils
 from grid_control.config import ConfigError
-from grid_control.parameters.pfactory_base import BasicParameterFactory
+from grid_control.parameters.pfactory_base import ParameterFactory
+from grid_control.parameters.psource_base import NullParameterSource, ParameterSource
 from grid_control.parameters.psource_data import DataParameterSource
 from grid_control.parameters.psource_file import CSVParameterSource
 from grid_control.parameters.psource_lookup import createLookupHelper
@@ -125,12 +126,12 @@ def tree2names(node): # return list of referenced variable names in tree
 		return [node]
 
 
-class SimpleParameterFactory(BasicParameterFactory):
+class SimpleParameterFactory(ParameterFactory):
 	def __init__(self, config, name):
-		BasicParameterFactory.__init__(self, config, name)
-		self._pExpr = self._paramConfig.get('parameters', None, '')
-		self.elevatedSwitch = [] # Switch statements are elevated to global scope
-		self.precedence = {'*': [], '+': ['*'], ',': ['*', '+']}
+		ParameterFactory.__init__(self, config, name)
+		self._pExpr = config.get('parameters', '')
+		self._elevatedSwitch = [] # Switch statements are elevated to global scope
+		self._precedence = {'*': [], '+': ['*'], ',': ['*', '+']}
 
 
 	def combineSources(self, PSourceClass, args):
@@ -151,7 +152,7 @@ class SimpleParameterFactory(BasicParameterFactory):
 		psource_list = []
 		for (doElevate, PSourceClass, args) in createLookupHelper(self._paramConfig, var_list, lookup_list):
 			if doElevate: # switch needs elevation beyond local scope
-				self.elevatedSwitch.append((PSourceClass, args))
+				self._elevatedSwitch.append((PSourceClass, args))
 			else:
 				psource_list.append(PSourceClass(*args))
 		# Optimize away unnecessary cross operations
@@ -160,7 +161,7 @@ class SimpleParameterFactory(BasicParameterFactory):
 		return [CrossParameterSource(*psource_list)]
 
 
-	def tree2expr(self, node):
+	def _tree2expr(self, node):
 		if isinstance(node, tuple):
 			(operator, args) = node
 			if operator == 'lookup':
@@ -178,7 +179,7 @@ class SimpleParameterFactory(BasicParameterFactory):
 					return [CSVParameterSource.create(self._paramConfig, args[0])]
 				raise APIError('Unknown reference type: "%s"' % refType)
 			else:
-				args_complete = lchain(imap(self.tree2expr, args))
+				args_complete = lchain(imap(self._tree2expr, args))
 				if operator == '*':
 					return self.combineSources(CrossParameterSource, args_complete)
 				elif operator == '+':
@@ -192,30 +193,18 @@ class SimpleParameterFactory(BasicParameterFactory):
 			return self._createVarSource([node], None)
 
 
-	def _getUserSource(self, pExpr, parent):
-		tokens = tokenize(pExpr, lchain([self.precedence.keys(), list('()[]<>')]))
-		tokens = list(tok2inlinetok(tokens, list(self.precedence.keys())))
+	def getSource(self):
+		if not self._pExpr:
+			return NullParameterSource()
+		tokens = tokenize(self._pExpr, lchain([self._precedence.keys(), list('()[]<>')]))
+		tokens = list(tok2inlinetok(tokens, list(self._precedence.keys())))
 		utils.vprint('Parsing parameter string: "%s"' % str.join(' ', imap(str, tokens)), 0)
-		tree = tok2tree(tokens, self.precedence)
+		tree = tok2tree(tokens, self._precedence)
 
-		source_list = self.tree2expr(tree)
-		if DataParameterSource.datasetsAvailable and not DataParameterSource.datasetsUsed:
-			source_list.insert(0, DataParameterSource.create())
-		if parent:
-			source_list.append(parent)
-		if len(lfilter(lambda p: p.getMaxParameters() is not None, source_list)) > 1:
-			source = self.combineSources(CrossParameterSource, source_list)
-		else:
-			source = self.combineSources(ZipLongParameterSource, source_list) # zip more efficient
+		source = self.combineSources(CrossParameterSource, self._tree2expr(tree))
 		assert(len(source) == 1)
 		source = source[0]
-		for (PSourceClass, args) in self.elevatedSwitch:
+		for (PSourceClass, args) in self._elevatedSwitch:
 			source = PSourceClass(source, *args)
 		utils.vprint('Parsing output: %r' % source, 0)
 		return source
-
-
-	def _getRawSource(self, parent):
-		if self._pExpr:
-			parent = self._getUserSource(self._pExpr, parent)
-		return BasicParameterFactory._getRawSource(self, parent)

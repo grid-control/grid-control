@@ -14,7 +14,7 @@
 
 import shlex
 from grid_control import utils
-from grid_control.config import ConfigError, changeImpossible, noDefault
+from grid_control.config import ConfigError, noDefault
 from grid_control.utils.parsing import parseDict
 from python_compat import imap, irange, lmap, lzip
 
@@ -72,8 +72,8 @@ def parseParameterOptions(options):
 
 
 class ParameterConfig:
-	def __init__(self, config, static):
-		(self._config, self._changes, self.static) = (config, [], static)
+	def __init__(self, config):
+		(self._config, self._changes) = (config, [])
 		(self._varDict, self._optDict) = parseParameterOptions(config.getOptions())
 
 
@@ -123,8 +123,6 @@ class ParameterConfig:
 
 
 	def _onChange(self, config, old_obj, cur_obj, cur_entry, obj2str):
-		if self.static:
-			return changeImpossible(config, old_obj, cur_obj, cur_entry, obj2str)
 		self._changes.append((old_obj, cur_obj, cur_entry, obj2str))
 		return cur_obj
 
