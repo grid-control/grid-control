@@ -206,9 +206,9 @@
 
       * grid_control.parameters.pfactory_base BasicParameterFactory
 
-      * grid_control.parameters.pfactory_modular ModularParameterFactory
+      * grid_control.parameters.pfactory_modular ModularParameterFactory modular
 
-      * grid_control.parameters.pfactory_simple SimpleParameterFactory
+      * grid_control.parameters.pfactory_simple SimpleParameterFactory simple
 
      * grid_control.backends.storage StorageManager
 
@@ -371,6 +371,8 @@
     * grid_control.parameters.psource_meta ForwardingParameterSource
 
      * grid_control.parameters.psource_meta RangeParameterSource range
+
+     * grid_control.parameters.psource_meta SubSpaceParameterSource pspace
 
     * grid_control.parameters.psource_file GCDumpParameterSource
 

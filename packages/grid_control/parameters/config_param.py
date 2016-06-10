@@ -158,6 +158,10 @@ class ParameterConfig:
 		print(repr(self._changes))
 
 
+	def getConfig(self):
+		return self._config
+
+
 	def get(self, var, opt = None, default = noDefault):
 		return self._config.get(self._getOpt(var, opt), default, onChange = self._onChange)
 

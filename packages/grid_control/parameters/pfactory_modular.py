@@ -18,6 +18,8 @@ from grid_control.parameters.psource_base import NullParameterSource, ParameterE
 
 # Parameter factory which evaluates a parameter module string
 class ModularParameterFactory(ParameterFactory):
+	alias = ['modular']
+
 	def __init__(self, config, name):
 		ParameterFactory.__init__(self, config, name)
 		self._pExpr = config.get('parameters', '')

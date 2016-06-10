@@ -47,10 +47,10 @@ def tok2inlinetok(tokens, operatorList):
 	lastTokenExpr = None
 	while token:
 		# insert '*' between two expressions - but not between "<expr> ["
-		if lastTokenExpr and token not in (['[', ']', ')', '>'] + operatorList):
+		if lastTokenExpr and token not in (['[', ']', ')', '>', '}'] + operatorList):
 			yield '*'
 		yield token
-		lastTokenExpr = token not in (['[', '(', '<'] + operatorList)
+		lastTokenExpr = token not in (['[', '(', '<', '{'] + operatorList)
 		token = next(tokens, None)
 
 
@@ -97,6 +97,9 @@ def tok2tree(value, precedence):
 		elif token == '[':
 			tmp = list(collectNestedTokens(tokens, '[', ']', "Parenthesis error: " + errorStr))
 			tokStack.append(('lookup', [tokStack.pop(), tok2tree(tmp, precedence)]))
+		elif token == '{':
+			tmp = list(collectNestedTokens(tokens, '{', '}', "Parenthesis error: " + errorStr))
+			tokStack.append(('pspace', tmp))
 		elif token in precedence:
 			clearOPStack(precedence[token], opStack, tokStack)
 			if opStack and opStack[-1].startswith(token):
@@ -124,6 +127,8 @@ def tree2names(node): # return list of referenced variable names in tree
 
 
 class SimpleParameterFactory(ParameterFactory):
+	alias = ['simple']
+
 	def __init__(self, config, name):
 		ParameterFactory.__init__(self, config, name)
 		self._pExpr = config.get('parameters', '')
@@ -174,6 +179,14 @@ class SimpleParameterFactory(ParameterFactory):
 				elif refType == 'csv':
 					return [ParameterSource.getClass('CSVParameterSource').create(self._paramConfig, args[0])]
 				raise APIError('Unknown reference type: "%s"' % refType)
+			elif operator == 'pspace':
+				SubSpaceParameterSource = ParameterSource.getClass('SubSpaceParameterSource')
+				if len(args) == 1:
+					return [SubSpaceParameterSource.create(self._paramConfig, args[0])]
+				elif len(args) == 3:
+					return [SubSpaceParameterSource.create(self._paramConfig, args[2], args[0])]
+				else:
+					raise APIError('Invalid subspace reference!: %r' % args)
 			else:
 				args_complete = lchain(imap(self._tree2expr, args))
 				if operator == '*':
@@ -192,7 +205,7 @@ class SimpleParameterFactory(ParameterFactory):
 	def getSource(self):
 		if not self._pExpr:
 			return NullParameterSource()
-		tokens = tokenize(self._pExpr, lchain([self._precedence.keys(), list('()[]<>')]))
+		tokens = tokenize(self._pExpr, lchain([self._precedence.keys(), list('()[]<>{}')]))
 		tokens = list(tok2inlinetok(tokens, list(self._precedence.keys())))
 		utils.vprint('Parsing parameter string: "%s"' % str.join(' ', imap(str, tokens)), 0)
 		tree = tok2tree(tokens, self._precedence)

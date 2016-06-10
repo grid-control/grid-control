@@ -15,7 +15,7 @@
 from grid_control import utils
 from grid_control.parameters.psource_base import NullParameterSource, ParameterSource
 from grid_control.utils.gc_itertools import ichain
-from hpfwk import AbstractError
+from hpfwk import AbstractError, Plugin
 from python_compat import imap, irange, izip, lfilter, lmap, md5_hex, reduce, sort_inplace
 
 def combineSyncResult(a, b, sc_fun = lambda x, y: x or y):
@@ -50,6 +50,26 @@ class ForwardingParameterSource(ParameterSource):
 
 	def getHash(self):
 		return self._psource.getHash()
+
+
+class SubSpaceParameterSource(ForwardingParameterSource):
+	alias = ['pspace']
+
+	def __init__(self, name, factory):
+		(self._name, self._factory) = (name, factory)
+		ForwardingParameterSource.__init__(self, factory.getSource())
+
+	def __repr__(self):
+		if self._factory.__class__.__name__ == 'SimpleParameterFactory':
+			return 'pspace(%r)' % self._name
+		return 'pspace(%r, %r)' % (self._name, self._factory.__class__.__name__)
+
+	def create(cls, pconfig = None, name = 'subspace', factory = 'SimpleParameterFactory'): # pylint:disable=arguments-differ
+		ParameterFactory = Plugin.getClass('ParameterFactory')
+		config = pconfig.getConfig().changeView(viewClass = 'SimpleConfigView', setSections = [name])
+		factory = ParameterFactory.createInstance(factory, config, name)
+		return SubSpaceParameterSource(name, factory)
+	create = classmethod(create)
 
 
 class RangeParameterSource(ForwardingParameterSource):
