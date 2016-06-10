@@ -80,6 +80,8 @@ def lookupConfigParser(pconfig, outputKey, lookupKeys):
 
 
 class SimpleLookupParameterSource(SingleParameterSource):
+	alias = ['lookup']
+
 	def __init__(self, outputKey, lookupKeys, lookupFunctions, lookupDictConfig):
 		SingleParameterSource.__init__(self, outputKey)
 		self._lookupKeys = lookupKeys
@@ -112,6 +114,8 @@ class SimpleLookupParameterSource(SingleParameterSource):
 
 
 class SwitchingLookupParameterSource(SingleParameterSource):
+	alias = ['switch']
+
 	def __init__(self, psource, outputKey, lookupKeys, lookupFunctions, lookupDictConfig):
 		SingleParameterSource.__init__(self, outputKey)
 		self._matcher = LookupMatcher(lookupKeys, lookupFunctions, lookupDictConfig)

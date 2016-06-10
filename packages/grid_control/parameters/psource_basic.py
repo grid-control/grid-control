@@ -13,12 +13,10 @@
 # | limitations under the License.
 
 import re, random
-from grid_control import utils
 from grid_control.backends import WMS
 from grid_control.config import ConfigError
 from grid_control.parameters.psource_base import ParameterInfo, ParameterMetadata, ParameterSource
-from grid_control.utils.parsing import parseTime
-from hpfwk import APIError
+from grid_control.utils.parsing import parseTime, parseType
 from python_compat import imap, lmap, md5_hex
 
 class InternalParameterSource(ParameterSource):
@@ -71,6 +69,8 @@ class SingleParameterSource(ParameterSource):
 
 
 class KeyParameterSource(ParameterSource):
+	alias = ['key']
+
 	def __init__(self, *keys):
 		ParameterSource.__init__(self)
 		self._keys = lmap(lambda key: key.lstrip('!'), keys)
@@ -81,10 +81,11 @@ class KeyParameterSource(ParameterSource):
 
 	def __repr__(self):
 		return 'key(%s)' % str.join(', ', self._keys)
-ParameterSource.managerMap['key'] = 'KeyParameterSource'
 
 
 class SimpleParameterSource(SingleParameterSource):
+	alias = ['var']
+
 	def __init__(self, key, values):
 		SingleParameterSource.__init__(self, key)
 		if values is None:
@@ -109,19 +110,11 @@ class SimpleParameterSource(SingleParameterSource):
 	def create(cls, pconfig, key): # pylint:disable=arguments-differ
 		return SimpleParameterSource(key, pconfig.getParameter(key.lstrip('!')))
 	create = classmethod(create)
-ParameterSource.managerMap['var'] = 'SimpleParameterSource'
-
-
-class SimpleFileParameterSource(SimpleParameterSource):
-	def getHash(self):
-		raise APIError('Not yet implemented') # return hash of file content
-
-	def __repr__(self):
-		return 'files(%s)' % repr(self._meta)
-ParameterSource.managerMap['files'] = 'SimpleFileParameterSource'
 
 
 class ConstParameterSource(SingleParameterSource):
+	alias = ['const']
+
 	def __init__(self, key, value):
 		SingleParameterSource.__init__(self, key)
 		self._value = value
@@ -143,10 +136,11 @@ class ConstParameterSource(SingleParameterSource):
 			value = pconfig.get(key)
 		return ConstParameterSource(key, value)
 	create = classmethod(create)
-ParameterSource.managerMap['const'] = 'ConstParameterSource'
 
 
 class RNGParameterSource(SingleParameterSource):
+	alias = ['rng']
+
 	def __init__(self, key = 'JOB_RANDOM', low = 1e6, high = 1e7-1):
 		SingleParameterSource.__init__(self, '!%s' % key)
 		(self.low, self.high) = (int(low), int(high))
@@ -162,10 +156,11 @@ class RNGParameterSource(SingleParameterSource):
 
 	def __repr__(self):
 		return 'rng(%s)' % repr(self._meta).replace('!', '')
-ParameterSource.managerMap['rng'] = 'RNGParameterSource'
 
 
 class CounterParameterSource(SingleParameterSource):
+	alias = ['counter']
+
 	def __init__(self, key, seed):
 		SingleParameterSource.__init__(self, '!%s' % key)
 		self._seed = seed
@@ -181,10 +176,11 @@ class CounterParameterSource(SingleParameterSource):
 
 	def __repr__(self):
 		return 'counter(%r, %s)' % (self._meta, self._seed)
-ParameterSource.managerMap['counter'] = 'CounterParameterSource'
 
 
 class FormatterParameterSource(SingleParameterSource):
+	alias = ['format']
+
 	def __init__(self, key, fmt, source, default = ''):
 		SingleParameterSource.__init__(self, '!%s' % key)
 		(self._fmt, self._source, self._default) = (fmt, source, default)
@@ -197,15 +193,16 @@ class FormatterParameterSource(SingleParameterSource):
 			(self.__class__.__name__, self._key, self._fmt, self._source, self._default)]
 
 	def fillParameterInfo(self, pNum, result):
-		src = utils.parseType(str(result.get(self._source, self._default)))
+		src = parseType(str(result.get(self._source, self._default)))
 		result[self._key] = self._fmt % src
 
 	def __repr__(self):
 		return 'format(%r, %r, %r, %r)' % (self._key, self._fmt, self._source, self._default)
-ParameterSource.managerMap['format'] = 'FormatterParameterSource'
 
 
 class TransformParameterSource(SingleParameterSource):
+	alias = ['transform']
+
 	def __init__(self, key, fmt, default = ''):
 		SingleParameterSource.__init__(self, '!%s' % key)
 		(self._fmt, self._default) = (fmt, default)
@@ -218,7 +215,7 @@ class TransformParameterSource(SingleParameterSource):
 			(self.__class__.__name__, self._key, self._fmt, self._default)]
 
 	def fillParameterInfo(self, pNum, result):
-		tmp = dict(imap(lambda k_v: (str(k_v[0]), utils.parseType(str(k_v[1]))), result.items()))
+		tmp = dict(imap(lambda k_v: (str(k_v[0]), parseType(str(k_v[1]))), result.items()))
 		try:
 			result[self._key] = eval(self._fmt, tmp) # pylint:disable=eval-used
 		except Exception:
@@ -226,10 +223,11 @@ class TransformParameterSource(SingleParameterSource):
 
 	def __repr__(self):
 		return 'transform(%r, %r, %r)' % (self._key, self._fmt, self._default)
-ParameterSource.managerMap['transform'] = 'TransformParameterSource'
 
 
 class CollectParameterSource(SingleParameterSource): # Merge parameter values
+	alias = ['collect']
+
 	def __init__(self, target, *sources):
 		SingleParameterSource.__init__(self, target)
 		self._sources_plain = sources
@@ -244,4 +242,3 @@ class CollectParameterSource(SingleParameterSource): # Merge parameter values
 				if src.search(str(key)):
 					result[self._key] = result[key]
 					return
-ParameterSource.managerMap['collect'] = 'CollectParameterSource'

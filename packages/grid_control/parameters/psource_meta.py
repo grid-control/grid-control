@@ -52,6 +52,8 @@ class ForwardingParameterSource(ParameterSource):
 
 
 class RangeParameterSource(ForwardingParameterSource):
+	alias = ['range']
+
 	def __init__(self, psource, posStart = None, posEnd = None):
 		ForwardingParameterSource.__init__(self, psource)
 		self._posStart = utils.QM(posStart is None, 0, posStart)
@@ -84,7 +86,6 @@ class RangeParameterSource(ForwardingParameterSource):
 		result = ForwardingParameterSource.show()
 		result[0] += ' range = (%s, %s)' % (self._posStart, self._posEnd)
 		return result
-ParameterSource.managerMap['range'] = 'RangeParameterSource'
 
 
 # Meta processing of parameter psources
@@ -161,6 +162,8 @@ class ZipShortParameterSource(BaseZipParameterSource):
 			return min(maxN)
 
 class ZipLongParameterSource(BaseZipParameterSource):
+	alias = ['zip']
+
 	def initMaxParameters(self):
 		maxN = lfilter(lambda n: n is not None, self._psourceMaxList)
 		if len(maxN):
@@ -168,10 +171,11 @@ class ZipLongParameterSource(BaseZipParameterSource):
 
 	def __repr__(self):
 		return 'zip(%s)' % str.join(', ', imap(repr, self._psourceList))
-ParameterSource.managerMap['zip'] = 'ZipLongParameterSource'
 
 
 class ChainParameterSource(MultiParameterSource):
+	alias = ['chain']
+
 	def initMaxParameters(self):
 		self.offsetList = lmap(lambda pIdx: sum(self._psourceMaxList[:pIdx]), irange(len(self._psourceList)))
 		return sum(self._psourceMaxList)
@@ -188,10 +192,11 @@ class ChainParameterSource(MultiParameterSource):
 
 	def __repr__(self):
 		return 'chain(%s)' % str.join(', ', imap(repr, self._psourceList))
-ParameterSource.managerMap['chain'] = 'ChainParameterSource'
 
 
 class RepeatParameterSource(MultiParameterSource):
+	alias = ['repeat']
+
 	def __init__(self, psource, times):
 		self._psource = psource
 		self.times = times
@@ -217,10 +222,11 @@ class RepeatParameterSource(MultiParameterSource):
 
 	def __repr__(self):
 		return 'repeat(%s, %d)' % (repr(self._psource), self.times)
-ParameterSource.managerMap['repeat'] = 'RepeatParameterSource'
 
 
 class CrossParameterSource(MultiParameterSource):
+	alias = ['cross']
+
 	def initMaxParameters(self):
 		self.quickFill = []
 		prev = 1
@@ -245,10 +251,11 @@ class CrossParameterSource(MultiParameterSource):
 
 	def __repr__(self):
 		return 'cross(%s)' % str.join(', ', imap(repr, self._psourceList))
-ParameterSource.managerMap['cross'] = 'CrossParameterSource'
 
 
 class ErrorParameterSource(ChainParameterSource):
+	alias = ['variation']
+
 	def __init__(self, *psources):
 		self.rawpsources = psources
 		central = lmap(lambda p: RangeParameterSource(p, 0, 0), psources)
@@ -263,10 +270,10 @@ class ErrorParameterSource(ChainParameterSource):
 	def fillParameterKeys(self, result):
 		for psource in self.rawpsources:
 			psource.fillParameterKeys(result)
-ParameterSource.managerMap['variation'] = 'ErrorParameterSource'
 
 
 class CombineParameterSource(ZipLongParameterSource):
-	# TODO: combine according to common parameter value
-	pass
-ParameterSource.managerMap['combine'] = 'CombineParameterSource'
+	alias = ['combine']
+	def __init__(self, *psources):
+		# TODO: combine according to common parameter value
+		raise AbstractError('Not yet implemented!')

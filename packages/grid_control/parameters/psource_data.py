@@ -20,6 +20,8 @@ from grid_control.parameters.psource_base import ParameterSource
 from python_compat import md5_hex
 
 class DataParameterSource(ParameterSource):
+	alias = ['data']
+
 	def __init__(self, dataDir, srcName, dataProvider, dataSplitter, dataProc, keepOld = True):
 		ParameterSource.__init__(self)
 		(self._dataDir, self._srcName, self._dataProvider, self._dataSplitter, self._part_proc) = \
@@ -99,4 +101,3 @@ class DataParameterSource(ParameterSource):
 
 DataParameterSource.datasetsAvailable = {}
 DataParameterSource.datasetsUsed = []
-ParameterSource.managerMap['data'] = 'DataParameterSource'

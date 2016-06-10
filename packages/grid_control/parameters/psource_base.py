@@ -17,11 +17,10 @@ from grid_control.utils.data_structures import makeEnum
 from hpfwk import AbstractError, NestedException, Plugin
 from python_compat import set
 
+ParameterInfo = makeEnum(['ACTIVE', 'HASH', 'REQS', 'FILES'])
+
 class ParameterError(NestedException):
 	pass
-
-
-ParameterInfo = makeEnum(['ACTIVE', 'HASH', 'REQS', 'FILES'])
 
 
 class ParameterMetadata(str):
@@ -88,5 +87,3 @@ class ParameterSource(Plugin):
 
 	def getHash(self):
 		raise AbstractError
-
-ParameterSource.managerMap = {}

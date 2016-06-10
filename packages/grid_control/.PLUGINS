@@ -364,61 +364,63 @@
 
    * grid_control.parameters.psource_base ParameterSource
 
-    * grid_control.parameters.psource_data DataParameterSource
+    * grid_control.parameters.psource_input ConstInputFileParameterSource
+
+    * grid_control.parameters.psource_data DataParameterSource data
 
     * grid_control.parameters.psource_meta ForwardingParameterSource
 
-     * grid_control.parameters.psource_meta RangeParameterSource
+     * grid_control.parameters.psource_meta RangeParameterSource range
 
     * grid_control.parameters.psource_file GCDumpParameterSource
 
     * grid_control.parameters.psource_basic InternalParameterSource
 
-     * grid_control.parameters.psource_file CSVParameterSource
+     * grid_control.parameters.psource_file CSVParameterSource csv
 
-    * grid_control.parameters.psource_basic KeyParameterSource
+    * grid_control.parameters.psource_basic KeyParameterSource key
 
     * grid_control.parameters.psource_meta MultiParameterSource
 
      * grid_control.parameters.psource_meta BaseZipParameterSource
 
-      * grid_control.parameters.psource_meta ZipLongParameterSource
+      * grid_control.parameters.psource_meta ZipLongParameterSource zip
 
-       * grid_control.parameters.psource_meta CombineParameterSource
+       * grid_control.parameters.psource_meta CombineParameterSource combine
 
       * grid_control.parameters.psource_meta ZipShortParameterSource
 
-     * grid_control.parameters.psource_meta ChainParameterSource
+     * grid_control.parameters.psource_meta ChainParameterSource chain
 
-      * grid_control.parameters.psource_meta ErrorParameterSource
+      * grid_control.parameters.psource_meta ErrorParameterSource variation
 
-     * grid_control.parameters.psource_meta CrossParameterSource
+     * grid_control.parameters.psource_meta CrossParameterSource cross
 
-     * grid_control.parameters.psource_meta RepeatParameterSource
+     * grid_control.parameters.psource_meta RepeatParameterSource repeat
 
     * grid_control.parameters.psource_basic RequirementParameterSource
 
     * grid_control.parameters.psource_basic SingleParameterSource
 
-     * grid_control.parameters.psource_basic CollectParameterSource
+     * grid_control.parameters.psource_basic CollectParameterSource collect
 
-     * grid_control.parameters.psource_basic ConstParameterSource
+     * grid_control.parameters.psource_basic ConstParameterSource const
 
-     * grid_control.parameters.psource_basic CounterParameterSource
+     * grid_control.parameters.psource_basic CounterParameterSource counter
 
-     * grid_control.parameters.psource_basic FormatterParameterSource
+     * grid_control.parameters.psource_basic FormatterParameterSource format
 
-     * grid_control.parameters.psource_basic RNGParameterSource
+     * grid_control.parameters.psource_basic RNGParameterSource rng
 
-     * grid_control.parameters.psource_lookup SimpleLookupParameterSource
+     * grid_control.parameters.psource_lookup SimpleLookupParameterSource lookup
 
-     * grid_control.parameters.psource_basic SimpleParameterSource
+     * grid_control.parameters.psource_basic SimpleParameterSource var
 
-      * grid_control.parameters.psource_basic SimpleFileParameterSource
+      * grid_control.parameters.psource_input SimpleFileParameterSource files
 
-     * grid_control.parameters.psource_lookup SwitchingLookupParameterSource
+     * grid_control.parameters.psource_lookup SwitchingLookupParameterSource switch
 
-     * grid_control.parameters.psource_basic TransformParameterSource
+     * grid_control.parameters.psource_basic TransformParameterSource transform
 
    * grid_control.backends.htcondor_wms.processadapter ProcessAdapterInterface
 

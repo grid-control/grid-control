@@ -40,8 +40,10 @@ class ModularParameterFactory(BasicParameterFactory):
 					raise ParameterError('Error while creating "%r" with arguments "%r"' % (parameterClass.__name__, args))
 			return wrapper
 		userFun = {}
-		for (key, cls) in ParameterSource.managerMap.items():
-			userFun[key] = createWrapper(cls)
+		for clsInfo in ParameterSource.getClassList():
+			for clsName in clsInfo.keys():
+				if clsName != clsInfo[clsName] and (clsName != 'depth'):
+					userFun[clsName] = createWrapper(clsInfo[clsName])
 		try:
 			source = eval(pExpr, userFun) # pylint:disable=eval-used
 		except Exception:

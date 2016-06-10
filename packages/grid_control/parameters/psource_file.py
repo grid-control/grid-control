@@ -75,6 +75,8 @@ class GCDumpParameterSource(ParameterSource):
 
 # Reader for CSV files
 class CSVParameterSource(InternalParameterSource):
+	alias = ['csv']
+
 	def __init__(self, fn, format = 'sniffed'):
 		sniffed = csv.Sniffer().sniff(open(fn).readline())
 		csv.register_dialect('sniffed', sniffed)
@@ -95,4 +97,3 @@ class CSVParameterSource(InternalParameterSource):
 		fn = pconfig.get(src, 'source')
 		return CSVParameterSource(fn, pconfig.get(src, 'format', 'sniffed'))
 	create = classmethod(create)
-ParameterSource.managerMap['csv'] = 'CSVParameterSource'
