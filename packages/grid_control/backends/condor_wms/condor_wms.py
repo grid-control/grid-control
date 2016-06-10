@@ -132,9 +132,11 @@ class Condor(BasicWMS):
 				self.debug.write('%s' % message)
 			else:
 				self.debug.write(message)
+
 	def debugPool(self,timestamp=True,newline=True):
 		if self.debug:
 			self.debugOut(self.Pool.LoggedExecute('echo ', "'pool check'" ).cmd, timestamp, newline)
+
 	def debugFlush(self):
 		if self.debug:
 			self.debug.flush()
@@ -672,10 +674,11 @@ class Condor(BasicWMS):
 
 		# (HPDA) file location service
 		if "dataFiles" in self.poolReqs:
-			jdlReq += self._getRequirementsFileList(jobNum, task)
+			jdlReq.extend(self._getRequirementsFileList(jobNum, task))
 		return jdlReq
 
 	def _getRequirementsFileList(self, jobNum, task):
+		#TODO: Replace with a dedictaed PartitionProcessor to split HDPA file lists.
 		jdlFileList = []
 		# as per ``formatFileList``
 		# UserMod filelists are space separated                              'File1 File2 File3'
@@ -686,7 +689,7 @@ class Condor(BasicWMS):
 		else:  # UserMod style
 			file_list = file_list.split(' ')
 
-		if file_list:
+		if len(file_list) > 1 or len(file_list[0]) > 1:
 			arg_key = self.poolReqs["dataFiles"]
 			data_file = os.path.join(self.getSandboxPath(jobNum),'job_%d_files.txt' % jobNum)
 			data_file_list = open(data_file,"w")
