@@ -94,7 +94,7 @@ class MultiParameterSource(ParameterSource):
 		ParameterSource.__init__(self)
 		self._psourceList = psources
 		self._psourceMaxList = lmap(lambda p: p.getMaxParameters(), self._psourceList)
-		self._maxParameters = self.initMaxParameters()
+		self._maxParameters = self._initMaxParameters()
 
 	# Get local parameter numbers (result) from psource index (pIdx) and subpsource parameter number (pNum)
 	def _translateNum(self, pIdx, pNum):
@@ -103,7 +103,7 @@ class MultiParameterSource(ParameterSource):
 	def getMaxParameters(self):
 		return self._maxParameters
 
-	def initMaxParameters(self):
+	def _initMaxParameters(self):
 		raise AbstractError
 
 	def fillParameterKeys(self, result):
@@ -116,7 +116,7 @@ class MultiParameterSource(ParameterSource):
 		psourceResyncList = lmap(lambda p: p.resync(), self._psourceList)
 		# Update max for _translateNum
 		self._psourceMaxList = lmap(lambda p: p.getMaxParameters(), self._psourceList)
-		self._maxParameters = self.initMaxParameters()
+		self._maxParameters = self._initMaxParameters()
 		# translate affected pNums from subsources
 		(result_redo, result_disable, dummy) = ParameterSource.resync(self)
 		for (idx, psource_resync) in enumerate(psourceResyncList):
@@ -151,12 +151,12 @@ class BaseZipParameterSource(MultiParameterSource):
 		for psource in self._psourceList:
 			result = combineSyncResult(result, psource.resync())
 		oldMaxParameters = self._maxParameters
-		self._maxParameters = self.initMaxParameters()
+		self._maxParameters = self._initMaxParameters()
 		return (result[0], result[1], oldMaxParameters != self._maxParameters)
 
 
 class ZipShortParameterSource(BaseZipParameterSource):
-	def initMaxParameters(self):
+	def _initMaxParameters(self):
 		maxN = lfilter(lambda n: n is not None, self._psourceMaxList)
 		if len(maxN):
 			return min(maxN)
@@ -164,7 +164,7 @@ class ZipShortParameterSource(BaseZipParameterSource):
 class ZipLongParameterSource(BaseZipParameterSource):
 	alias = ['zip']
 
-	def initMaxParameters(self):
+	def _initMaxParameters(self):
 		maxN = lfilter(lambda n: n is not None, self._psourceMaxList)
 		if len(maxN):
 			return max(maxN)
@@ -176,12 +176,12 @@ class ZipLongParameterSource(BaseZipParameterSource):
 class ChainParameterSource(MultiParameterSource):
 	alias = ['chain']
 
-	def initMaxParameters(self):
-		self.offsetList = lmap(lambda pIdx: sum(self._psourceMaxList[:pIdx]), irange(len(self._psourceList)))
+	def _initMaxParameters(self):
+		self._offsetList = lmap(lambda pIdx: sum(self._psourceMaxList[:pIdx]), irange(len(self._psourceList)))
 		return sum(self._psourceMaxList)
 
 	def _translateNum(self, pIdx, pNum):
-		return [pNum + self.offsetList[pIdx]]
+		return [pNum + self._offsetList[pIdx]]
 
 	def fillParameterInfo(self, pNum, result):
 		limit = 0
@@ -199,17 +199,17 @@ class RepeatParameterSource(MultiParameterSource):
 
 	def __init__(self, psource, times):
 		self._psource = psource
-		self.times = times
+		self._times = times
 		MultiParameterSource.__init__(self, psource)
 
-	def initMaxParameters(self):
+	def _initMaxParameters(self):
 		self.maxN = self._psource.getMaxParameters()
 		if self.maxN is not None:
-			return self.times * self.maxN
-		return self.times
+			return self._times * self.maxN
+		return self._times
 
 	def _translateNum(self, pIdx, pNum):
-		return lmap(lambda i: pNum + i * self.maxN, irange(self.times))
+		return lmap(lambda i: pNum + i * self.maxN, irange(self._times))
 
 	def fillParameterInfo(self, pNum, result):
 		self._psource.fillParameterInfo(pNum % self.maxN, result)
@@ -218,20 +218,20 @@ class RepeatParameterSource(MultiParameterSource):
 		return ParameterSource.show(self) + lmap(lambda x: '\t' + x, self._psource.show())
 
 	def getHash(self):
-		return md5_hex(self._psource.getHash() + str(self.times))
+		return md5_hex(self._psource.getHash() + str(self._times))
 
 	def __repr__(self):
-		return 'repeat(%s, %d)' % (repr(self._psource), self.times)
+		return 'repeat(%s, %d)' % (repr(self._psource), self._times)
 
 
 class CrossParameterSource(MultiParameterSource):
 	alias = ['cross']
 
-	def initMaxParameters(self):
-		self.quickFill = []
+	def _initMaxParameters(self):
+		self._quickFill = []
 		prev = 1
 		for (psource, maxN) in izip(self._psourceList, self._psourceMaxList):
-			self.quickFill.append((psource, maxN, prev))
+			self._quickFill.append((psource, maxN, prev))
 			if maxN:
 				prev *= maxN
 		maxList = lfilter(lambda n: n is not None, self._psourceMaxList)
@@ -239,11 +239,11 @@ class CrossParameterSource(MultiParameterSource):
 			return reduce(lambda a, b: a * b, maxList)
 
 	def _translateNum(self, pIdx, pNum):
-		(_, maxN, prev) = self.quickFill[pIdx] # psource irrelevant for pnum translation
+		(_, maxN, prev) = self._quickFill[pIdx] # psource irrelevant for pnum translation
 		return lfilter(lambda x: int(x / prev) % maxN == pNum, irange(self.getMaxParameters()))
 
 	def fillParameterInfo(self, pNum, result):
-		for (psource, maxN, prev) in self.quickFill:
+		for (psource, maxN, prev) in self._quickFill:
 			if maxN:
 				psource.fillParameterInfo(int(pNum / prev) % maxN, result)
 			else:
@@ -257,7 +257,7 @@ class ErrorParameterSource(ChainParameterSource):
 	alias = ['variation']
 
 	def __init__(self, *psources):
-		self.rawpsources = psources
+		self._rawpsources = psources
 		central = lmap(lambda p: RangeParameterSource(p, 0, 0), psources)
 		chain = [ZipLongParameterSource(*central)]
 		for pidx, p in enumerate(psources):
@@ -268,12 +268,30 @@ class ErrorParameterSource(ChainParameterSource):
 		ChainParameterSource.__init__(self, *chain)
 
 	def fillParameterKeys(self, result):
-		for psource in self.rawpsources:
+		for psource in self._rawpsources:
 			psource.fillParameterKeys(result)
 
 
 class CombineParameterSource(ZipLongParameterSource):
 	alias = ['combine']
-	def __init__(self, *psources):
-		# TODO: combine according to common parameter value
-		raise AbstractError('Not yet implemented!')
+	def __init__(self, psource1, psource2, var1, var2 = None):
+		psource1_values = {}
+		for (pNum1, value) in self._iterParamItems(psource1, var1):
+			psource1_values.setdefault(value, []).append(pNum1)
+		self._combine_idx = []
+		for (pNum2, value) in self._iterParamItems(psource2, var2 or var1):
+			for pNum1 in psource1_values.get(value, []):
+				self._combine_idx.append((pNum1, pNum2))
+		sort_inplace(self._combine_idx)
+		raise AbstractError
+
+	def _iterParamItems(psource, var):
+		def getValue(psource, pNum, var):
+			result = {}
+			psource.fillParameterInfo(pNum, result)
+			return result.get(var)
+		if psource.getMaxParameters() is None:
+			yield (-1, getValue(psource, None, var))
+		else:
+			for pNum in irange(psource.getMaxParameters()):
+				yield (pNum, getValue(psource, pNum, var))
