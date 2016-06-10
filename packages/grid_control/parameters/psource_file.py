@@ -78,9 +78,13 @@ class CSVParameterSource(InternalParameterSource):
 	alias = ['csv']
 
 	def __init__(self, fn, format = 'sniffed'):
+		(self._fn, self._format) = (fn, format)
 		sniffed = csv.Sniffer().sniff(open(fn).readline())
 		csv.register_dialect('sniffed', sniffed)
 		tmp = list(csv.DictReader(open(fn), dialect = format))
+		for entry in tmp:
+			if None in entry.values():
+				raise Exception('Malformed entry in csv file %r: %r' % (fn, entry))
 
 		def cleanupDict(d):
 			# strip all key value entries
@@ -92,6 +96,9 @@ class CSVParameterSource(InternalParameterSource):
 			keys = lmap(ParameterMetadata, tmp[0].keys())
 		values = lmap(lambda d: dict(cleanupDict(d)), tmp)
 		InternalParameterSource.__init__(self, values, keys)
+
+	def __repr__(self):
+		return 'csv(%r, %r)' % (self._fn, self._format)
 
 	def create(cls, pconfig = None, src = 'CSV'): # pylint:disable=arguments-differ
 		fn = pconfig.get(src, 'source')

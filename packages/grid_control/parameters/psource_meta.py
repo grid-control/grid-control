@@ -16,7 +16,7 @@ from grid_control import utils
 from grid_control.parameters.psource_base import NullParameterSource, ParameterSource
 from grid_control.utils.gc_itertools import ichain
 from hpfwk import AbstractError
-from python_compat import imap, irange, izip, lfilter, lmap, md5_hex, reduce
+from python_compat import imap, irange, izip, lfilter, lmap, md5_hex, reduce, sort_inplace
 
 def combineSyncResult(a, b, sc_fun = lambda x, y: x or y):
 	if a is None:
@@ -227,7 +227,7 @@ class ChainParameterSource(MultiParameterSource):
 class RepeatParameterSource(MultiParameterSource):
 	alias = ['repeat']
 
-	def __new__(cls, psource, times):
+	def __new__(cls, psource, times): # pylint:disable=arguments-differ
 		if times == 0:
 			return NullParameterSource()
 		elif times == 1:
@@ -333,7 +333,7 @@ class CombineParameterSource(ZipLongParameterSource):
 		sort_inplace(self._combine_idx)
 		raise AbstractError
 
-	def _iterParamItems(psource, var):
+	def _iterParamItems(self, psource, var):
 		def getValue(psource, pNum, var):
 			result = {}
 			psource.fillParameterInfo(pNum, result)
