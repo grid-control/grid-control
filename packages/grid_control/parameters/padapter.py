@@ -26,7 +26,6 @@ class ParameterAdapter(ConfigurablePlugin):
 		ConfigurablePlugin.__init__(self, config)
 		self._log = logging.getLogger('padapter')
 		self._source = source
-		self._prune = True
 
 	def getMaxJobs(self):
 		return self._source.getMaxParameters()
@@ -45,9 +44,7 @@ class ParameterAdapter(ConfigurablePlugin):
 		result['GC_JOB_ID'] = jobNum
 		result['GC_PARAM'] = pNum
 		self._source.fillParameterInfo(pNum, result)
-		if self._prune:
-			result = utils.filterDict(result, vF = lambda v: v != '')
-		return result
+		return utils.filterDict(result, vF = lambda v: v != '')
 
 	def iterJobs(self):
 		maxN = self.getMaxJobs()
@@ -117,32 +114,32 @@ class TrackedParameterAdapter(BasicParameterAdapter):
 		config.setState(False, 'resync', detail = 'parameters')
 		needResync = False
 		pHash = self._rawSource.getHash()
-		self.storedHash = config.get('parameter hash', pHash, persistent = True)
-		if self.storedHash != pHash:
+		self._storedHash = config.get('parameter hash', pHash, persistent = True)
+		if self._storedHash != pHash:
 			needResync = True # Resync needed if parameters have changed
 			self._log.info('Parameter hash has changed')
-			self._log.debug('\told hash: %s', self.storedHash)
+			self._log.debug('\told hash: %s', self._storedHash)
 			self._log.debug('\tnew hash: %s', pHash)
 			config.setState(True, 'init', detail = 'config')
 		doResync = (userResync or needResync) and not doInit
 
 		if not doResync and not doInit: # Reuse old mapping
 			activity = utils.ActivityLog('Loading cached parameter information')
-			self.readJob2PID()
+			self._readJob2PID()
 			activity.finish()
 			return
 		elif doResync: # Perform sync
 			activity = utils.ActivityLog('Syncronizing parameter information')
-			self.storedHash = None
+			self._storedHash = None
 			self._resyncState = self.resync()
 			activity.finish()
 		elif doInit: # Write current state
-			self.writeJob2PID(self._pathJob2PID)
+			self._writeJob2PID(self._pathJob2PID)
 			ParameterSource.getClass('GCDumpParameterSource').write(self._pathParams, self)
 		config.set('parameter hash', self._rawSource.getHash())
 
 
-	def readJob2PID(self):
+	def _readJob2PID(self):
 		fp = ZipFile(self._pathJob2PID, 'r')
 		try:
 			self.maxN = int(fp.readline())
@@ -154,7 +151,8 @@ class TrackedParameterAdapter(BasicParameterAdapter):
 		finally:
 			fp.close()
 
-	def writeJob2PID(self, fn):
+
+	def _writeJob2PID(self, fn):
 		fp = ZipFile(fn, 'w')
 		try:
 			fp.write('%d\n' % (self._rawSource.getMaxParameters() or 0))
@@ -164,6 +162,7 @@ class TrackedParameterAdapter(BasicParameterAdapter):
 		finally:
 			fp.close()
 
+
 	def getJobInfo(self, jobNum, pNum = None): # Perform mapping between jobNum and parameter number
 		pNum = self._mapJob2PID.get(jobNum, jobNum)
 		if (self._source.getMaxParameters() is None) or (pNum < self._source.getMaxParameters()):
@@ -172,6 +171,7 @@ class TrackedParameterAdapter(BasicParameterAdapter):
 			result = {ParameterInfo.ACTIVE: False}
 		result['GC_JOB_ID'] = jobNum
 		return result
+
 
 	def _diffParams(self, psource_old, psource_new, mapJob2PID, redoNewPNum, disableNewPNum):
 		# Reduces psource output to essential information for diff - faster than keying
@@ -239,8 +239,8 @@ class TrackedParameterAdapter(BasicParameterAdapter):
 		tmp = self._rawSource.resync() # First ask about psource changes
 		(redoNewPNum, disableNewPNum, sizeChange) = (set(tmp[0]), set(tmp[1]), tmp[2])
 		hashNew = self._rawSource.getHash()
-		hashChange = self.storedHash != hashNew
-		self.storedHash = hashNew
+		hashChange = self._storedHash != hashNew
+		self._storedHash = hashNew
 		if not (redoNewPNum or disableNewPNum or sizeChange or hashChange):
 			self._resyncState = None
 			return
@@ -261,7 +261,7 @@ class TrackedParameterAdapter(BasicParameterAdapter):
 		elif sizeChange:
 			self._resyncState = (set(), set(), sizeChange)
 		# Write resynced state
-		self.writeJob2PID(self._pathJob2PID + '.tmp')
+		self._writeJob2PID(self._pathJob2PID + '.tmp')
 		ParameterSource.getClass('GCDumpParameterSource').write(self._pathParams + '.tmp', self)
 		os.rename(self._pathJob2PID + '.tmp', self._pathJob2PID)
 		os.rename(self._pathParams + '.tmp', self._pathParams)

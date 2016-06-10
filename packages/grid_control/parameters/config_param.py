@@ -73,15 +73,15 @@ def parseParameterOptions(options):
 
 class ParameterConfig:
 	def __init__(self, config, static):
-		(self.config, self.static) = (config, static)
-		(self.varDict, self.optDict) = parseParameterOptions(config.getOptions())
+		(self._config, self._changes, self.static) = (config, [], static)
+		(self._varDict, self._optDict) = parseParameterOptions(config.getOptions())
 
 
-	def parseParameter(self, varName, value, ptype):
+	def _parseParameter(self, varName, value, ptype):
 		if ptype == 'verbatim':
 			return [value]
 		elif ptype == 'split':
-			delimeter = self.get(self.getParameterOption(varName), 'delimeter', ',')
+			delimeter = self.get(self._getParameterOption(varName), 'delimeter', ',')
 			return lmap(str.strip, value.split(delimeter))
 		elif ptype == 'lines':
 			return value.splitlines()
@@ -93,15 +93,15 @@ class ParameterConfig:
 		elif ptype == 'default':
 			return shlex.split(value)
 		elif ptype == 'format':
-			fsource = self.get(self.getParameterOption(varName), 'source')
-			fdefault = self.get(self.getParameterOption(varName), 'default', '')
+			fsource = self.get(self._getParameterOption(varName), 'source')
+			fdefault = self.get(self._getParameterOption(varName), 'default', '')
 			return (ptype, varName, value, fsource, fdefault)
 		raise ConfigError('[Variable: %s] Invalid parameter type: %s' % (varName, ptype))
 
 
-	def parseParameterTuple(self, varName, tupleValue, tupleType, varType, varIndex):
+	def _parseParameterTuple(self, varName, tupleValue, tupleType, varType, varIndex):
 		if tupleType == 'tuple':
-			tupleDelimeter = self.get(self.getParameterOption(varName), 'delimeter', ',')
+			tupleDelimeter = self.get(self._getParameterOption(varName), 'delimeter', ',')
 			tupleStrings = lmap(str.strip, utils.split_advanced(tupleValue, lambda tok: tok in ' \n', lambda tok: False))
 			tupleList = lmap(lambda t: parseTuple(t, tupleDelimeter), tupleStrings)
 		elif tupleType == 'binning':
@@ -110,7 +110,7 @@ class ParameterConfig:
 		result = []
 		for tupleEntry in tupleList:
 			try:
-				tmp = self.parseParameter(varName, tupleEntry[varIndex], varType)
+				tmp = self._parseParameter(varName, tupleEntry[varIndex], varType)
 			except Exception:
 				raise ConfigError('Unable to parse %r' % repr((tupleEntry, tupleStrings)))
 			if isinstance(tmp, list):
@@ -122,35 +122,26 @@ class ParameterConfig:
 		return result
 
 
-	def onChange(self, config, old_obj, cur_obj, cur_entry, obj2str):
+	def _onChange(self, config, old_obj, cur_obj, cur_entry, obj2str):
 		if self.static:
 			return changeImpossible(config, old_obj, cur_obj, cur_entry, obj2str)
+		self._changes.append((old_obj, cur_obj, cur_entry, obj2str))
 		return cur_obj
 
 
-	def getOpt(self, var, opt = None):
-		return self.optDict.get((var, opt), ('%s %s' % (var, opt or '')).replace('\'', ''))
+	def _getOpt(self, var, opt = None):
+		return self._optDict.get((var, opt), ('%s %s' % (var, opt or '')).replace('\'', ''))
 
 
-	def get(self, var, opt = None, default = noDefault):
-		result = self.config.get(self.getOpt(var, opt), default, onChange = self.onChange)
-		return result
-
-
-	def getBool(self, var, opt = None, default = noDefault):
-		result = self.config.getBool(self.getOpt(var, opt), default, onChange = self.onChange)
-		return result
-
-
-	def getParameterOption(self, varName):
+	def _getParameterOption(self, varName):
 		try:
-			return self.varDict[varName.lower()]
+			return self._varDict[varName.lower()]
 		except Exception:
 			raise ConfigError('Variable %s is undefined' % varName)
 
 
-	def parseDict(self, varName, value, valueParser):
-		keyTupleDelimeter = self.get(self.getParameterOption(varName), 'key delimeter', ',')
+	def _parseDict(self, varName, value, valueParser):
+		keyTupleDelimeter = self.get(self._getParameterOption(varName), 'key delimeter', ',')
 		return parseDict(value, valueParser, lambda k: parseTuple(k, keyTupleDelimeter))
 
 
@@ -165,8 +156,20 @@ class ParameterConfig:
 		return paramRepeat * result
 
 
+	def showChanges(self):
+		print(repr(self._changes))
+
+
+	def get(self, var, opt = None, default = noDefault):
+		return self._config.get(self._getOpt(var, opt), default, onChange = self._onChange)
+
+
+	def getBool(self, var, opt = None, default = noDefault):
+		return self._config.getBool(self._getOpt(var, opt), default, onChange = self._onChange)
+
+
 	def getParameter(self, varName):
-		optKey = self.getParameterOption(varName)
+		optKey = self._getParameterOption(varName)
 
 		if isinstance(optKey, tuple):
 			varIndex = list(optKey).index(varName.lower())
@@ -176,9 +179,9 @@ class ParameterConfig:
 
 			if '=>' in tupleValue:
 				if self.getBool(optKey, 'parse dict', True):
-					return self.parseDict(varName, tupleValue,
-						lambda v: self._processParameterList(varName, self.parseParameterTuple(varName, v, tupleType, varType, varIndex)))
-			return self._processParameterList(varName, self.parseParameterTuple(varName, tupleValue, tupleType, varType, varIndex))
+					return self._parseDict(varName, tupleValue,
+						lambda v: self._processParameterList(varName, self._parseParameterTuple(varName, v, tupleType, varType, varIndex)))
+			return self._processParameterList(varName, self._parseParameterTuple(varName, tupleValue, tupleType, varType, varIndex))
 
 		else:
 			varValue = self.get(optKey, None, '')
@@ -186,6 +189,6 @@ class ParameterConfig:
 
 			if '=>' in varValue:
 				if self.getBool(optKey, 'parse dict', True):
-					return self.parseDict(varName, varValue,
-						lambda v: self._processParameterList(varName, self.parseParameter(varName, v, varType)))
-			return self._processParameterList(varName, self.parseParameter(varName, varValue, varType))
+					return self._parseDict(varName, varValue,
+						lambda v: self._processParameterList(varName, self._parseParameter(varName, v, varType)))
+			return self._processParameterList(varName, self._parseParameter(varName, varValue, varType))

@@ -23,10 +23,10 @@ from grid_control.utils.parsing import strTime
 from python_compat import lfilter
 
 class DataTask(TaskModule):
-	def setupJobParameters(self, config, pm):
+	def _setupJobParameters(self, config):
 		data_config = config.changeView(viewClass = 'TaggedConfigView', addSections = ['dataset'])
 		self.dataSplitter = None
-		self.dataRefresh = -1
+		self._data_refresh = -1
 		def userRefresh(config, old_obj, cur_obj, cur_entry, obj2str):
 			if (old_obj == '') and (cur_obj != ''):
 				raise UserError('It is currently not possible to attach a dataset to a non-dataset task!')
@@ -60,10 +60,10 @@ class DataTask(TaskModule):
 		DataParameterSource.datasetsAvailable['data'] = self._dataPS
 
 		# Select dataset refresh rate
-		self.dataRefresh = data_config.getTime('dataset refresh', -1, onChange = None)
-		if self.dataRefresh > 0:
-			self._dataPS.resyncSetup(interval = max(self.dataRefresh, dataProvider.queryLimit()))
-			utils.vprint('Dataset source will be queried every %s' % strTime(self.dataRefresh), -1)
+		self._data_refresh = data_config.getTime('dataset refresh', -1, onChange = None)
+		if self._data_refresh > 0:
+			self._dataPS.resyncSetup(interval = max(self._data_refresh, dataProvider.queryLimit()))
+			utils.vprint('Dataset source will be queried every %s' % strTime(self._data_refresh), -1)
 		else:
 			self._dataPS.resyncSetup(interval = 0)
 		if self._forceRefresh:
@@ -91,7 +91,7 @@ class DataTask(TaskModule):
 
 
 	def canFinish(self):
-		return self.dataRefresh <= 0
+		return self._data_refresh <= 0
 
 
 	def report(self, jobNum):
