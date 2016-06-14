@@ -201,7 +201,7 @@ def list_parameters(opts, psource):
 			nickname = None
 			if ('DATASETNICK' in pset) and (opts.collapse == 2):
 				nickname = pset.pop('DATASETNICK')
-			h = md5_hex(repr(lmap(pset.get, stored)))
+			h = md5_hex(repr(lmap(lambda key: pset.get(str(key)), stored)))
 			result.setdefault(h, []).append(pset)
 			result_nicks.setdefault(h, set()).add(nickname)
 
