@@ -54,7 +54,7 @@ class BasicBarReport(BasicReport):
 		self._bar = BasicProgressBar(0, len(jobDB), 65)
 
 	def getHeight(self):
-		return 15
+		return BasicReport.getHeight(self) + 1
 
 	def display(self):
 		BasicReport.display(self)

@@ -161,6 +161,29 @@ class SimpleParameterFactory(ParameterFactory):
 		return [ParameterSource.createInstance('CrossParameterSource', *psource_list)]
 
 
+	def _createRef(self, arg):
+		refTypeDefault = 'dataset'
+		DataParameterSource = ParameterSource.getClass('DataParameterSource')
+		if arg not in DataParameterSource.datasetsAvailable:
+			refTypeDefault = 'csv'
+		refType = self._paramConfig.get(arg, 'type', refTypeDefault)
+		if refType == 'dataset':
+			return [DataParameterSource.create(self._paramConfig, arg)]
+		elif refType == 'csv':
+			return [ParameterSource.getClass('CSVParameterSource').create(self._paramConfig, arg)]
+		raise APIError('Unknown reference type: "%s"' % refType)
+
+
+	def _createPSpace(self, args):
+		SubSpaceParameterSource = ParameterSource.getClass('SubSpaceParameterSource')
+		if len(args) == 1:
+			return [SubSpaceParameterSource.create(self._paramConfig, args[0])]
+		elif len(args) == 3:
+			return [SubSpaceParameterSource.create(self._paramConfig, args[2], args[0])]
+		else:
+			raise APIError('Invalid subspace reference!: %r' % args)
+
+
 	def _tree2expr(self, node):
 		if isinstance(node, tuple):
 			(operator, args) = node
@@ -169,24 +192,9 @@ class SimpleParameterFactory(ParameterFactory):
 				return self._createVarSource(tree2names(args[0]), tree2names(args[1]))
 			elif operator == 'ref':
 				assert(len(args) == 1)
-				refTypeDefault = 'dataset'
-				DataParameterSource = ParameterSource.getClass('DataParameterSource')
-				if args[0] not in DataParameterSource.datasetsAvailable:
-					refTypeDefault = 'csv'
-				refType = self._paramConfig.get(args[0], 'type', refTypeDefault)
-				if refType == 'dataset':
-					return [DataParameterSource.create(self._paramConfig, args[0])]
-				elif refType == 'csv':
-					return [ParameterSource.getClass('CSVParameterSource').create(self._paramConfig, args[0])]
-				raise APIError('Unknown reference type: "%s"' % refType)
+				return self._createRef(args[0])
 			elif operator == 'pspace':
-				SubSpaceParameterSource = ParameterSource.getClass('SubSpaceParameterSource')
-				if len(args) == 1:
-					return [SubSpaceParameterSource.create(self._paramConfig, args[0])]
-				elif len(args) == 3:
-					return [SubSpaceParameterSource.create(self._paramConfig, args[2], args[0])]
-				else:
-					raise APIError('Invalid subspace reference!: %r' % args)
+				return self._createPSpace(args)
 			else:
 				args_complete = lchain(imap(self._tree2expr, args))
 				if operator == '*':

@@ -13,34 +13,30 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-import os
 from grid_control.gc_exceptions import UserError
-from grid_control.utils.webservice import JSONRestClient
+from grid_control.utils.webservice import GridJSONRestClient
 
 class DBS3LiteClient(object):
 	def __init__(self, url):
 		self._reader_url = '%s/%s' % (url, 'DBSReader')
 		self._writer_url = '%s/%s' % (url, 'DBSWriter')
 		self._migrate_url = '%s/%s' % (url, 'DBSMigrate')
-		self._proxy_path = os.environ.get('X509_USER_PROXY', '')
-		if not os.path.exists(self._proxy_path):
-			raise UserError('VOMS proxy needed to query DBS3! Environment variable X509_USER_PROXY is "%s"' % self._proxy_path)
-		self._jrc = JSONRestClient(cert = self._proxy_path)
+		self._gjrc = GridJSONRestClient(cert_errror_msg = 'VOMS proxy needed to query DBS3!', cert_errror_cls = UserError)
 
 	def listBlocks(self, **kwargs):
-		return self._jrc.get(url=self._reader_url, api='blocks', params=kwargs)
+		return self._gjrc.get(url=self._reader_url, api='blocks', params=kwargs)
 
 	def listFiles(self, **kwargs):
-		return self._jrc.get(url=self._reader_url, api='files', params=kwargs)
+		return self._gjrc.get(url=self._reader_url, api='files', params=kwargs)
 
 	def listFileParents(self, **kwargs):
-		return self._jrc.get(url=self._reader_url, api='fileparents', params=kwargs)
+		return self._gjrc.get(url=self._reader_url, api='fileparents', params=kwargs)
 
 	def insertBulkBlock(self, data):
-		return self._jrc.post(url=self._writer_url, api='bulkblocks', data=data)
+		return self._gjrc.post(url=self._writer_url, api='bulkblocks', data=data)
 
 	def migrateSubmit(self, data):
-		return self._jrc.post(url=self._migrate_url, api='submit', data=data)
+		return self._gjrc.post(url=self._migrate_url, api='submit', data=data)
 
 	def migrateStatus(self, **kwargs):
-		return self._jrc.get(url=self._migrate_url, api='status', params=kwargs)
+		return self._gjrc.get(url=self._migrate_url, api='status', params=kwargs)
