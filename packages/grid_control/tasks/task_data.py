@@ -90,10 +90,6 @@ class DataTask(TaskModule):
 		return utils.mergeDicts([TaskModule.getSubmitInfo(self, jobNum), submitInfo])
 
 
-	def canFinish(self):
-		return self._data_refresh <= 0
-
-
 	def report(self, jobNum):
 		info = self.source.getJobInfo(jobNum)
 		keys = lfilter(lambda k: not k.untracked, self.source.getJobKeys())

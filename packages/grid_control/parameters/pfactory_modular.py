@@ -13,21 +13,14 @@
 # | limitations under the License.
 
 import logging
-from grid_control.parameters.pfactory_base import ParameterFactory
-from grid_control.parameters.psource_base import NullParameterSource, ParameterError, ParameterSource
+from grid_control.parameters.pfactory_base import UserParameterFactory
+from grid_control.parameters.psource_base import ParameterError, ParameterSource
 
 # Parameter factory which evaluates a parameter module string
-class ModularParameterFactory(ParameterFactory):
+class ModularParameterFactory(UserParameterFactory):
 	alias = ['modular']
 
-	def __init__(self, config, name):
-		ParameterFactory.__init__(self, config, name)
-		self._pExpr = config.get('parameters', '')
-
-
-	def getSource(self):
-		if not self._pExpr:
-			return NullParameterSource()
+	def _getUserSource(self, pExpr):
 		# Wrap psource factory functions
 		def createWrapper(clsName):
 			def wrapper(*args):
@@ -46,7 +39,7 @@ class ModularParameterFactory(ParameterFactory):
 				if clsName != clsInfo[clsName] and (clsName != 'depth'):
 					userFun[clsName] = createWrapper(clsInfo[clsName])
 		try:
-			return eval(self._pExpr, userFun) # pylint:disable=eval-used
+			return eval(pExpr, userFun) # pylint:disable=eval-used
 		except Exception:
 			logging.getLogger('user').warning('Available functions: %s', userFun.keys())
 			raise

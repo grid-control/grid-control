@@ -52,8 +52,11 @@ class ParameterAdapter(ConfigurablePlugin):
 			for jobNum in irange(maxN):
 				yield self.getJobInfo(jobNum)
 
-	def canSubmit(self, jobNum): # Use caching to speed up job manager operations
+	def canSubmit(self, jobNum):
 		return self.getJobInfo(jobNum)[ParameterInfo.ACTIVE]
+
+	def canFinish(self):
+		return self._source.canFinish()
 
 	def resync(self):
 		return self._source.resync()

@@ -13,10 +13,10 @@
 # | limitations under the License.
 
 from grid_control import utils
-from grid_control.parameters.psource_base import NullParameterSource, ParameterSource
+from grid_control.parameters.psource_base import NullParameterSource, ParameterError, ParameterSource
 from grid_control.utils.gc_itertools import ichain
 from hpfwk import AbstractError, Plugin
-from python_compat import imap, irange, izip, lfilter, lmap, md5_hex, reduce, sort_inplace
+from python_compat import all, imap, irange, izip, lfilter, lmap, md5_hex, reduce, sort_inplace
 
 def combineSyncResult(a, b, sc_fun = lambda x, y: x or y):
 	if a is None:
@@ -42,6 +42,9 @@ class ForwardingParameterSource(ParameterSource):
 	def fillParameterInfo(self, pNum, result):
 		self._psource.fillParameterInfo(pNum, result)
 
+	def canFinish(self):
+		return self._psource.canFinish()
+
 	def resync(self):
 		return self._psource.resync()
 
@@ -64,11 +67,17 @@ class SubSpaceParameterSource(ForwardingParameterSource):
 			return 'pspace(%r)' % self._name
 		return 'pspace(%r, %r)' % (self._name, self._factory.__class__.__name__)
 
+	def show(self):
+		return ['%s: name = %s, factory = %s' % (self.__class__.__name__, self._name, self._factory.__class__.__name__)] +\
+			lmap(lambda x: '\t' + x, self._psource.show())
+
 	def create(cls, pconfig = None, name = 'subspace', factory = 'SimpleParameterFactory'): # pylint:disable=arguments-differ
-		ParameterFactory = Plugin.getClass('ParameterFactory')
-		config = pconfig.getConfig().changeView(viewClass = 'SimpleConfigView', setSections = [name])
-		factory = ParameterFactory.createInstance(factory, config, name)
-		return SubSpaceParameterSource(name, factory)
+		try:
+			ParameterFactory = Plugin.getClass('ParameterFactory')
+			config = pconfig.getConfig(viewClass = 'SimpleConfigView', addSections = [name])
+			return SubSpaceParameterSource(name, ParameterFactory.createInstance(factory, config))
+		except:
+			raise ParameterError('Unable to create subspace %r using factory %r' % (name, factory))
 	create = classmethod(create)
 
 
@@ -128,6 +137,9 @@ class MultiParameterSource(ParameterSource):
 		self._psourceList = strip_null_sources(psources)
 		self._psourceMaxList = lmap(lambda p: p.getMaxParameters(), self._psourceList)
 		self._maxParameters = self._initMaxParameters()
+
+	def canFinish(self):
+		return all(imap(lambda p: p.canFinish(), self._psourceList))
 
 	def getInputSources(self):
 		return list(self._psourceList)
@@ -227,6 +239,9 @@ class ChainParameterSource(MultiParameterSource):
 	alias = ['chain']
 
 	def _initMaxParameters(self):
+		if None in self._psourceMaxList:
+			prob_sources = lfilter(lambda p: p.getMaxParameters() is None, self._psourceList)
+			raise ParameterError('Unable to chain unlimited sources: %s' % repr(str.join(', ', imap(repr, prob_sources))))
 		self._offsetList = lmap(lambda pIdx: sum(self._psourceMaxList[:pIdx]), irange(len(self._psourceList)))
 		return sum(self._psourceMaxList)
 

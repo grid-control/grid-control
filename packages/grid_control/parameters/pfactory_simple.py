@@ -12,14 +12,13 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-from grid_control import utils
 from grid_control.config import ConfigError
-from grid_control.parameters.pfactory_base import ParameterFactory
+from grid_control.parameters.pfactory_base import UserParameterFactory
 from grid_control.parameters.psource_base import NullParameterSource, ParameterSource
 from grid_control.parameters.psource_lookup import createLookupHelper
 from grid_control.utils.gc_itertools import lchain
 from hpfwk import APIError
-from python_compat import ifilter, imap, irange, lfilter, next, reduce
+from python_compat import ifilter, imap, irange, lfilter, lmap, next, reduce
 
 def tokenize(value, tokList):
 	(pos, start) = (0, 0)
@@ -126,13 +125,12 @@ def tree2names(node): # return list of referenced variable names in tree
 		return [node]
 
 
-class SimpleParameterFactory(ParameterFactory):
+class SimpleParameterFactory(UserParameterFactory):
 	alias = ['simple']
 
-	def __init__(self, config, name):
-		ParameterFactory.__init__(self, config, name)
-		self._pExpr = config.get('parameters', '')
-		self._elevatedSwitch = [] # Switch statements are elevated to global scope
+	def __init__(self, config):
+		UserParameterFactory.__init__(self, config)
+		self._nestedSources = [] # Switch statements are elevated to global scope
 		self._precedence = {'*': [], '+': ['*'], ',': ['*', '+']}
 
 
@@ -141,24 +139,23 @@ class SimpleParameterFactory(ParameterFactory):
 		args = lfilter(lambda expr: not isinstance(expr, int), args)
 		if args:
 			result = ParameterSource.createInstance(clsName, *args)
-		else:
-			return utils.QM(repeat > 1, [repeat], [])
-		if repeat > 1:
-			return [ParameterSource.createInstance('RepeatParameterSource', result, repeat)]
-		return [result]
+			if repeat > 1:
+				return ParameterSource.createInstance('RepeatParameterSource', result, repeat)
+			return result
+		elif repeat > 1:
+			return repeat
+		return NullParameterSource()
 
 
 	def _createVarSource(self, var_list, lookup_list): # create variable source
 		psource_list = []
 		for (doElevate, PSourceClass, args) in createLookupHelper(self._paramConfig, var_list, lookup_list):
 			if doElevate: # switch needs elevation beyond local scope
-				self._elevatedSwitch.append((PSourceClass, args))
+				self._nestedSources.append((PSourceClass, args))
 			else:
 				psource_list.append(PSourceClass(*args))
 		# Optimize away unnecessary cross operations
-		if len(lfilter(lambda p: p.getMaxParameters() is not None, psource_list)) <= 1:
-			return psource_list # simply forward list of psources
-		return [ParameterSource.createInstance('CrossParameterSource', *psource_list)]
+		return ParameterSource.createInstance('CrossParameterSource', *psource_list)
 
 
 	def _createRef(self, arg):
@@ -168,18 +165,18 @@ class SimpleParameterFactory(ParameterFactory):
 			refTypeDefault = 'csv'
 		refType = self._paramConfig.get(arg, 'type', refTypeDefault)
 		if refType == 'dataset':
-			return [DataParameterSource.create(self._paramConfig, arg)]
+			return DataParameterSource.create(self._paramConfig, arg)
 		elif refType == 'csv':
-			return [ParameterSource.getClass('CSVParameterSource').create(self._paramConfig, arg)]
+			return ParameterSource.getClass('CSVParameterSource').create(self._paramConfig, arg)
 		raise APIError('Unknown reference type: "%s"' % refType)
 
 
 	def _createPSpace(self, args):
 		SubSpaceParameterSource = ParameterSource.getClass('SubSpaceParameterSource')
 		if len(args) == 1:
-			return [SubSpaceParameterSource.create(self._paramConfig, args[0])]
+			return SubSpaceParameterSource.create(self._paramConfig, args[0])
 		elif len(args) == 3:
-			return [SubSpaceParameterSource.create(self._paramConfig, args[2], args[0])]
+			return SubSpaceParameterSource.create(self._paramConfig, args[2], args[0])
 		else:
 			raise APIError('Invalid subspace reference!: %r' % args)
 
@@ -196,7 +193,7 @@ class SimpleParameterFactory(ParameterFactory):
 			elif operator == 'pspace':
 				return self._createPSpace(args)
 			else:
-				args_complete = lchain(imap(self._tree2expr, args))
+				args_complete = lmap(self._tree2expr, args)
 				if operator == '*':
 					return self._combineSources('CrossParameterSource', args_complete)
 				elif operator == '+':
@@ -205,23 +202,17 @@ class SimpleParameterFactory(ParameterFactory):
 					return self._combineSources('ZipLongParameterSource', args_complete)
 				raise APIError('Unknown token: "%s"' % operator)
 		elif isinstance(node, int):
-			return [node]
+			return node
 		else:
 			return self._createVarSource([node], None)
 
 
-	def getSource(self):
-		if not self._pExpr:
-			return NullParameterSource()
-		tokens = tokenize(self._pExpr, lchain([self._precedence.keys(), list('()[]<>{}')]))
+	def _getUserSource(self, pExpr):
+		tokens = tokenize(pExpr, lchain([self._precedence.keys(), list('()[]<>{}')]))
 		tokens = list(tok2inlinetok(tokens, list(self._precedence.keys())))
-		utils.vprint('Parsing parameter string: "%s"' % str.join(' ', imap(str, tokens)), 0)
+		self._log.debug('Parsing parameter string: "%s"', str.join(' ', imap(str, tokens)))
 		tree = tok2tree(tokens, self._precedence)
-
-		source = self._combineSources('CrossParameterSource', self._tree2expr(tree))
-		assert(len(source) == 1)
-		source = source[0]
-		for (PSourceClass, args) in self._elevatedSwitch:
+		source = self._tree2expr(tree)
+		for (PSourceClass, args) in self._nestedSources:
 			source = PSourceClass(source, *args)
-		utils.vprint('Parsing output: %r' % source, 0)
 		return source

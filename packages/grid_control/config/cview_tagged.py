@@ -24,7 +24,7 @@ class TaggedConfigView(SimpleConfigView):
 			setNames = selectorUnchanged, addNames = None,
 			setTags = selectorUnchanged, addTags = None,
 			setClasses = selectorUnchanged, addClasses = None, inheritSections = False):
-		if inheritSections and parent:
+		if inheritSections and isinstance(parent, TaggedConfigView):
 			addSections = (parent.getClassSections() or []) + (addSections or [])
 		SimpleConfigView.__init__(self, name, oldContainer, curContainer, parent,
 			setSections = setSections, addSections = addSections)

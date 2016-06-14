@@ -202,14 +202,6 @@
 
       * grid_control.job_manager SimpleJobManager
 
-     * grid_control.parameters.pfactory_base ParameterFactory
-
-      * grid_control.parameters.pfactory_base BasicParameterFactory
-
-      * grid_control.parameters.pfactory_modular ModularParameterFactory modular
-
-      * grid_control.parameters.pfactory_simple SimpleParameterFactory simple
-
      * grid_control.backends.storage StorageManager
 
       * grid_control.backends.storage LocalSBStorageManager
@@ -277,6 +269,16 @@
      * grid_control.parameters.padapter BasicParameterAdapter
 
       * grid_control.parameters.padapter TrackedParameterAdapter
+
+    * grid_control.parameters.pfactory_base ParameterFactory
+
+     * grid_control.parameters.pfactory_base BasicParameterFactory
+
+     * grid_control.parameters.pfactory_base UserParameterFactory
+
+      * grid_control.parameters.pfactory_modular ModularParameterFactory modular
+
+      * grid_control.parameters.pfactory_simple SimpleParameterFactory simple
 
     * grid_control.datasets.pproc_base PartitionProcessor
 

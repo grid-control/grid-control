@@ -155,11 +155,11 @@ class ParameterConfig:
 
 
 	def showChanges(self):
-		print(repr(self._changes))
+		pass
 
 
-	def getConfig(self):
-		return self._config
+	def getConfig(self, *args, **kwargs):
+		return self._config.changeView(*args, **kwargs)
 
 
 	def get(self, var, opt = None, default = noDefault):

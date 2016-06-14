@@ -12,28 +12,46 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-import random
-from grid_control.gc_plugin import NamedPlugin
+import random, logging
+from grid_control.gc_plugin import ConfigurablePlugin
 from grid_control.parameters.config_param import ParameterConfig
-from grid_control.parameters.psource_base import ParameterSource
+from grid_control.parameters.psource_base import NullParameterSource, ParameterError, ParameterSource
 from grid_control.parameters.psource_lookup import createLookupHelper
 from hpfwk import AbstractError, Plugin
 from python_compat import identity, ifilter, imap, irange, lfilter, lmap
 
-class ParameterFactory(NamedPlugin):
+class ParameterFactory(ConfigurablePlugin):
 	tagName = 'parameters'
-
-	def __init__(self, config, name):
-		NamedPlugin.__init__(self, config, name)
-		self._paramConfig = ParameterConfig(config)
 
 	def getSource(self):
 		raise AbstractError
 
 
+class UserParameterFactory(ParameterFactory):
+	def __init__(self, config):
+		ParameterFactory.__init__(self, config)
+		self._log = logging.getLogger('parameterfactory')
+		self._paramConfig = ParameterConfig(config)
+		self._pExpr = config.get('parameters', '', onChange = None)
+
+	def _getUserSource(self, pExpr):
+		raise AbstractError
+
+	def getSource(self):
+		if not self._pExpr:
+			return NullParameterSource()
+		self._log.debug('Parsing parameter expression: %s', repr(self._pExpr))
+		try:
+			source = self._getUserSource(self._pExpr)
+		except:
+			raise ParameterError('Unable to parse parameter expression %r' % self._pExpr)
+		self._log.debug('Parsed parameter source: %s', repr(source))
+		return source
+
+
 class BasicParameterFactory(ParameterFactory):
-	def __init__(self, config, name):
-		ParameterFactory.__init__(self, config, name)
+	def __init__(self, config):
+		ParameterFactory.__init__(self, config)
 		(self._constSources, self._lookupSources, self._nestedSources) = ([], [], [])
 
 		# Random number variables
@@ -48,13 +66,14 @@ class BasicParameterFactory(ParameterFactory):
 
 		# Get constants from [constants <tags...>]
 		constants_config = config.changeView(viewClass = 'TaggedConfigView',
-			setClasses = None, setSections = ['constants'], setNames = None, addTags = [self])
+			setClasses = None, setSections = ['constants'], setNames = None)
 		constants_pconfig = ParameterConfig(constants_config)
 		for cName in ifilter(lambda o: not o.endswith(' lookup'), constants_config.getOptions()):
 			constants_config.set('%s type' % cName, 'verbatim', '?=')
 			self._registerPSource(constants_pconfig, cName.upper())
 
-		param_config = config.changeView(addSections = ['parameters'])
+		param_config = config.changeView(viewClass = 'TaggedConfigView',
+			setClasses = None, addSections = ['parameters'], inheritSections = True)
 
 		# Get constants from [<Module>] constants
 		task_pconfig = ParameterConfig(param_config)
@@ -64,10 +83,9 @@ class BasicParameterFactory(ParameterFactory):
 
 		# Get global repeat value from 'parameters' section
 		self._repeat = param_config.getInt('repeat', 1, onChange = None)
-		self._req = config.getBool('translate requirements', True, onChange = None)
-
-		self._pfactory = config.getPlugin('parameter factory', 'SimpleParameterFactory:parameters',
-			cls = ParameterFactory, inherit = True)
+		self._req = param_config.getBool('translate requirements', True, onChange = None)
+		self._pfactory = param_config.getPlugin('parameter factory', 'SimpleParameterFactory',
+			cls = ParameterFactory)
 
 
 	def getLookupSources(self): # HACK: For CMSSW_Advanced variable display

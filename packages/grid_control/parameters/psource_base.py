@@ -46,6 +46,9 @@ class ParameterSource(Plugin):
 		self._resyncTime = -1 # Default - always resync
 		self._resyncLast = None
 
+	def canFinish(self):
+		return True
+
 	def depends(self):
 		return []
 
@@ -103,7 +106,7 @@ class NullParameterSource(ParameterSource):
 		pass
 
 	def getHash(self):
-		raise ''
+		return ''
 
 	def __repr__(self):
 		return 'null()'

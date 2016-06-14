@@ -139,7 +139,7 @@ def setup_dataset(config, dataset):
 # Initialize ParameterFactory and ParameterSource
 def get_psource(opts, args):
 	config = setup_config(opts, args)
-	pm = config.getPlugin('parameter factory', opts.factory or 'SimpleParameterFactory', cls = 'ParameterFactory')
+	pm = config.getPlugin('internal parameter factory', opts.factory or 'BasicParameterFactory', cls = 'ParameterFactory')
 	if opts.dataset:
 		setup_dataset(config, opts.dataset)
 	adapter = 'BasicParameterAdapter'

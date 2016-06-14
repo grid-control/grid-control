@@ -249,7 +249,7 @@ class TaskModule(NamedPlugin):
 
 
 	def canFinish(self):
-		return True
+		return self.source.canFinish()
 
 
 	def canSubmit(self, jobNum):
