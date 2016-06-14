@@ -390,7 +390,7 @@
 
       * grid_control.parameters.psource_meta ZipLongParameterSource zip
 
-       * grid_control.parameters.psource_meta CombineParameterSource combine
+       * grid_control.parameters.psource_devel CombineParameterSource combine
 
       * grid_control.parameters.psource_meta ZipShortParameterSource
 

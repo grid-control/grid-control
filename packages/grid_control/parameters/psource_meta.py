@@ -16,7 +16,7 @@ from grid_control import utils
 from grid_control.parameters.psource_base import NullParameterSource, ParameterError, ParameterSource
 from grid_control.utils.gc_itertools import ichain
 from hpfwk import AbstractError, Plugin
-from python_compat import all, imap, irange, izip, lfilter, lmap, md5_hex, reduce, sort_inplace
+from python_compat import all, imap, irange, izip, lfilter, lmap, md5_hex, reduce
 
 def combineSyncResult(a, b, sc_fun = lambda x, y: x or y):
 	if a is None:
@@ -353,28 +353,3 @@ class ErrorParameterSource(ChainParameterSource):
 	def fillParameterKeys(self, result):
 		for psource in self._rawpsources:
 			psource.fillParameterKeys(result)
-
-
-class CombineParameterSource(ZipLongParameterSource):
-	alias = ['combine']
-	def __init__(self, psource1, psource2, var1, var2 = None):
-		psource1_values = {}
-		for (pNum1, value) in self._iterParamItems(psource1, var1):
-			psource1_values.setdefault(value, []).append(pNum1)
-		self._combine_idx = []
-		for (pNum2, value) in self._iterParamItems(psource2, var2 or var1):
-			for pNum1 in psource1_values.get(value, []):
-				self._combine_idx.append((pNum1, pNum2))
-		sort_inplace(self._combine_idx)
-		raise AbstractError
-
-	def _iterParamItems(self, psource, var):
-		def getValue(psource, pNum, var):
-			result = {}
-			psource.fillParameterInfo(pNum, result)
-			return result.get(var)
-		if psource.getMaxParameters() is None:
-			yield (-1, getValue(psource, None, var))
-		else:
-			for pNum in irange(psource.getMaxParameters()):
-				yield (pNum, getValue(psource, pNum, var))
