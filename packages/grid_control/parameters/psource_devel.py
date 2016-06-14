@@ -12,8 +12,8 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
+from grid_control.parameters.psource_meta import ZipLongParameterSource
 from hpfwk import AbstractError
-from psource_meta import ZipLongParameterSource
 from python_compat import irange, sort_inplace
 
 class CombineParameterSource(ZipLongParameterSource):
