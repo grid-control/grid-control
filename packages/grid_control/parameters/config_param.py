@@ -31,13 +31,11 @@ def frange(start, end = None, num = None, steps = None, format = '%g'):
 	if (end is not None) and (num is not None) and (steps is not None):
 		raise ConfigError('frange: Overdetermined parameters!')
 	if (end is not None) and (num is not None) and (steps is None):
-		steps = (end - start) / (num - 1)
-		num -= 1
+		steps = float(end - start) / (num - 1)
 	if (end is not None) and (num is None):
 		steps = steps or 1
 		num = int(1 + (end - start) / steps)
-	result = imap(lambda i: start + (steps or 1) * i, irange(num)) + utils.QM(end, [end], [])
-	return lmap(lambda x: format % x, result)
+	return lmap(lambda x: format % x, imap(lambda i: start + (steps or 1) * i, irange(num)))
 
 
 def parseParameterOption(option):
@@ -144,6 +142,8 @@ class ParameterConfig:
 
 
 	def _processParameterList(self, varName, values):
+		if isinstance(values, tuple):
+			return values
 		result = list(values)
 		for idx, value in enumerate(values):
 			valueRepeat = int(self.get(varName, 'repeat idx %d' % idx, '1'))

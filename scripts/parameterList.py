@@ -17,7 +17,7 @@ import os, sys, random
 from gcSupport import Options, getConfig, scriptOptions, utils
 from grid_control.datasets import DataSplitter
 from grid_control.parameters import ParameterAdapter, ParameterInfo, ParameterMetadata, ParameterSource
-from python_compat import ifilter, imap, irange, izip, lfilter, lmap, md5_hex, set, sorted
+from python_compat import ifilter, imap, izip, lfilter, lmap, md5_hex, set, sorted
 
 random.seed(0)
 
@@ -139,7 +139,9 @@ def setup_dataset(config, dataset):
 # Initialize ParameterFactory and ParameterSource
 def get_psource(opts, args):
 	config = setup_config(opts, args)
-	pm = config.getPlugin('internal parameter factory', opts.factory or 'BasicParameterFactory', cls = 'ParameterFactory')
+	if opts.factory:
+		config.set('parameter factory', opts.factory)
+	pm = config.getPlugin('internal parameter factory', 'BasicParameterFactory', cls = 'ParameterFactory')
 	if opts.dataset:
 		setup_dataset(config, opts.dataset)
 	adapter = 'BasicParameterAdapter'
@@ -152,14 +154,13 @@ def get_parameters(opts, psource):
 	needGCParam = False
 	if psource.getMaxJobs() is not None:
 		countActive = 0
-		for jobNum in irange(psource.getMaxJobs()):
-			info = psource.getJobInfo(jobNum)
+		for info in psource.iterJobs():
 			if info[ParameterInfo.ACTIVE]:
 				countActive += 1
 			if opts.disabled or info[ParameterInfo.ACTIVE]:
 				if not info[ParameterInfo.ACTIVE]:
 					info['GC_PARAM'] = 'N/A'
-				if str(info['GC_PARAM']) != str(jobNum):
+				if str(info['GC_PARAM']) != str(info['GC_JOB_ID']):
 					needGCParam = True
 				result.append(info)
 		if opts.parseable:

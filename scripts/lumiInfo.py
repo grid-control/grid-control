@@ -135,13 +135,14 @@ def lumi_calc(opts, workDir, jobList, splitter):
 
 	for sample, lumi_list in lumis.items():
 		print('Sample: %s' % sample)
-		print('=========================================')
-		print('Number of events processed: %12s' % readDict.get(sample))
-		print('  Number of events written: %12d' % sum(writeDict.get(sample, {}).values()))
-		if writeDict.get(sample, None):
-			sys.stdout.write('\n')
-			head = [(0, '          Output filename'), (1, 'Events')]
-			utils.printTabular(head, lmap(lambda pfn: {0: pfn, 1: writeDict[sample][pfn]}, writeDict[sample]))
+		if opts.job_events:
+			print('=========================================')
+			print('Number of events processed: %12s' % readDict.get(sample))
+			print('  Number of events written: %12d' % sum(writeDict.get(sample, {}).values()))
+			if writeDict.get(sample, None):
+				sys.stdout.write('\n')
+				head = [(0, '          Output filename'), (1, 'Events')]
+				utils.printTabular(head, lmap(lambda pfn: {0: pfn, 1: writeDict[sample][pfn]}, writeDict[sample]))
 		if opts.job_json:
 			json_fn = os.path.join(opts.output_dir or workDir, 'processed_%s.json' % sample)
 			outputJSON(lumi_list, open(json_fn, 'w'))
