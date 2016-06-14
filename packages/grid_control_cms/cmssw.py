@@ -355,6 +355,8 @@ class CMSSW(SCRAMTask):
 
 	# Get files for output sandbox
 	def getSBOutFiles(self):
+		if not self.configFiles:
+			return DataTask.getSBOutFiles(self)
 		return DataTask.getSBOutFiles(self) + utils.QM(self.gzipOut, ['cmssw.log.gz'], []) + ['cmssw.dbs.tar.gz']
 
 
