@@ -14,7 +14,7 @@
 
 from grid_control.datasets.provider_base import DataProvider, DatasetError
 from grid_control.utils.parsing import parseJSON, parseList
-from python_compat import md5_hex, sorted
+from python_compat import StringBuffer, md5_hex, sorted
 
 # Provides dataset information from a config file
 # required format: <config section>
@@ -27,8 +27,10 @@ class ConfigDataProvider(DataProvider):
 		ds_config = config.changeView(viewClass = 'SimpleConfigView', setSections = ['datasource %s' % datasetExpr])
 		self._block = self._readBlockFromConfig(ds_config, datasetExpr, datasetNick, datasetID)
 
-		dataset_hash_new = md5_hex(repr(self._block))
-		dataset_hash_old = ds_config.get('dataset hash', dataset_hash_new, persistent = True)
+		buffer = StringBuffer()
+		DataProvider.saveToStream(buffer, [self._block])
+		dataset_hash_new = md5_hex(buffer.getvalue())
+		dataset_hash_old = ds_config.get('dataset hash', dataset_hash_new, persistent = True, onChange = None)
 		self._request_resync = dataset_hash_new != dataset_hash_old
 		if self._request_resync:
 			self._log.critical('Dataset %r changed', datasetExpr)
@@ -75,6 +77,7 @@ class ConfigDataProvider(DataProvider):
 			DataProvider.Nickname: ds_config.get('nickname', datasetNick, onChange = None),
 			DataProvider.DatasetID: ds_config.getInt('id', datasetID, onChange = None),
 			DataProvider.Dataset: datasetExpr,
+			DataProvider.BlockName: '0',
 			DataProvider.FileList: sorted(file_list, key = lambda fi: fi[DataProvider.URL]),
 		}
 		if metadata_keys:

@@ -201,7 +201,7 @@ def logging_configure_handler(config, logger_name, handler_str, handler):
 
 # Configure general setup of loggers - destinations, level and propagation
 def logging_create_handlers(config, logger_name):
-	LogLevelEnum = makeEnum(lmap(lambda level: logging.getLevelName(level).upper(), irange(51)))
+	LogLevelEnum = makeEnum(lmap(lambda level: logging.getLevelName(level).upper(), irange(51)), useHash = False)
 
 	logger = logging.getLogger(logger_name.lower())
 	# Set logging level

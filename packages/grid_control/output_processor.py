@@ -25,7 +25,7 @@ class OutputProcessor(Plugin):
 class JobResultError(NestedException):
 	pass
 
-JobResult = makeEnum(['JOBNUM', 'EXITCODE', 'RAW'], useHash = True)
+JobResult = makeEnum(['JOBNUM', 'EXITCODE', 'RAW'])
 
 class JobInfoProcessor(OutputProcessor):
 	def __init__(self):

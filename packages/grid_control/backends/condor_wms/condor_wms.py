@@ -29,7 +29,7 @@ from grid_control.utils.data_structures import makeEnum
 from python_compat import ifilter, imap, irange, izip, lmap, lzip, md5, set, sorted
 
 # if the ssh stuff proves too hack'y: http://www.lag.net/paramiko/
-PoolType = makeEnum(['LOCAL','SPOOL','SSH','GSISSH'], useHash = True)
+PoolType = makeEnum(['LOCAL','SPOOL','SSH','GSISSH'])
 
 
 class Condor(BasicWMS):

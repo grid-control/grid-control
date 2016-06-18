@@ -15,7 +15,7 @@
 from hpfwk import APIError
 from python_compat import imap, izip, lsmap, md5_hex, set
 
-def makeEnum(members = None, cls = None, useHash = False):
+def makeEnum(members = None, cls = None, useHash = True):
 	members = members or []
 	if cls:
 		enumID = md5_hex(str(members) + '!' + cls.__name__)[:4]

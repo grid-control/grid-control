@@ -499,4 +499,4 @@ class DataSplitter(ConfigurablePlugin):
 	loadPartitionsForScript = staticmethod(loadPartitionsForScript)
 
 makeEnum(['Dataset', 'Locations', 'NEntries', 'Skipped', 'FileList', 'Nickname', 'DatasetID',
-	'CommonPrefix', 'Invalid', 'BlockName', 'MetadataHeader', 'Metadata', 'Comment'], DataSplitter)
+	'CommonPrefix', 'Invalid', 'BlockName', 'MetadataHeader', 'Metadata', 'Comment'], DataSplitter, useHash = False)

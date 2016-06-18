@@ -182,7 +182,7 @@ class LocationDataProcessor(DataProcessor):
 
 
 # Enum to specify how to react to multiple occurences of something
-DatasetUniqueMode = makeEnum(['warn', 'abort', 'skip', 'ignore', 'record'], useHash = True)
+DatasetUniqueMode = makeEnum(['warn', 'abort', 'skip', 'ignore', 'record'])
 
 class UniqueDataProcessor(DataProcessor):
 	alias = ['unique']
