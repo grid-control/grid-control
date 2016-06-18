@@ -139,14 +139,15 @@ def logging_defaults():
 	logException.propagate = False
 
 	# Adding log_process_result to Logging class
-	def log_process(self, proc, level = logging.WARNING, files = None):
+	def log_process(self, proc, level = logging.WARNING, files = None,
+			message = 'Process %(call)s finished with exit code %(proc_status)s'):
 		status = proc.status(timeout = 0)
-		record = self.makeRecord(self.name, level, '<process>', 0,
-			'Process %s finished with exit code %s' % (proc.get_call(), status), None, None)
+		record = self.makeRecord(self.name, level, '<process>', 0, message, None, None)
 		record.proc = proc
 		record.call = proc.get_call()
 		record.proc_status = status
 		record.files = files or {}
+		record.msg = record.msg % record.__dict__
 		self.handle(record)
 	logging.Logger.log_process = log_process
 
