@@ -46,9 +46,11 @@ def getFixedFunctionObject(instance, fo, selector, case):
 
 # Matcher class
 class Matcher(ConfigurablePlugin):
-	def __init__(self, config, option_prefix, *kwargs):
+	def __init__(self, config, option_prefix, case_override = None, **kwargs):
 		ConfigurablePlugin.__init__(self, config)
-		self._case = config.getBool(appendOption(option_prefix, 'case sensitive'), default = True)
+		self._case = case_override
+		if case_override is None:
+			self._case = config.getBool(appendOption(option_prefix, 'case sensitive'), default = True, **kwargs)
 
 	def getPositive(self, selector):
 		raise AbstractError
@@ -179,10 +181,10 @@ class ShellStyleMatcher(RegExMatcher):
 class BlackWhiteMatcher(Matcher):
 	alias = ['blackwhite']
 
-	def __init__(self, config, option_prefix):
-		Matcher.__init__(self, config, option_prefix)
+	def __init__(self, config, option_prefix, case_override = None, **kwargs):
+		Matcher.__init__(self, config, option_prefix, case_override, **kwargs)
 		self._baseMatcher = config.getPlugin(appendOption(option_prefix, 'mode'), 'start',
-			cls = Matcher, pargs = (option_prefix))
+			cls = Matcher, pargs = (option_prefix, self._case), pkwargs = kwargs, **kwargs)
 
 	def getPositive(self, selector):
 		return lfilter(lambda p: not p.startswith('-'), selector.split())
@@ -204,7 +206,8 @@ ListOrder = makeEnum(['source', 'matcher'])
 
 class ListFilter(Plugin):
 	def __init__(self, selector, matcher, order, match_key, negate):
-		(self._matchFunction, self._positive, self._selector, self._order, self._negate) = (None, None, None, order, negate)
+		(self._matcher, self._matchFunction) = (matcher, None)
+		(self._positive, self._selector, self._order, self._negate) = (None, None, order, negate)
 		if selector:
 			self._selector = matcher.parseSelector(selector)
 			self._positive = matcher.getPositive(selector)
@@ -237,8 +240,8 @@ class ListFilter(Plugin):
 		raise AbstractError
 
 	def __repr__(self):
-		return '%s(matcher = %r, positive = %r, order = %r)' % (self.__class__.__name__,
-			self._matchFunction, self._positive, ListOrder.enum2str(self._order))
+		return '%s(matcher = %r, positive = %r, order = %r, negate = %r)' % (self.__class__.__name__,
+			self._matcher, self._positive, ListOrder.enum2str(self._order), self._negate)
 
 
 class StrictListFilter(ListFilter):

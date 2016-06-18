@@ -64,6 +64,7 @@ class URLDataProcessor(DataProcessor):
 		DataProcessor.__init__(self, config)
 		internal_config = config.changeView(viewClass = 'SimpleConfigView', setSections = ['dataprocessor'])
 		internal_config.set('dataset processor', 'NullDataProcessor')
+		config.set('dataset ignore urls matcher case sensitive', 'False')
 		self._url_filter = config.getFilter(['dataset ignore files', 'dataset ignore urls'], '', negate = True,
 			filterParser = lambda value: self._parseFilter(internal_config, value),
 			filterStr = lambda value: str.join('\n', value.split()),
