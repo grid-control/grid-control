@@ -14,9 +14,12 @@
 
 import os, re, xml.dom.minidom
 from grid_control import utils
+from grid_control.config import triggerResync
 from grid_control.datasets import DatasetError
 from grid_control.datasets.scanner_base import InfoScanner
 from python_compat import bytes2str, ifilter, imap, lfilter, tarfile
+
+triggerDataResync = triggerResync(['datasets', 'parameters'])
 
 def readTag(base, tag, default = None):
 	try:
@@ -28,9 +31,9 @@ def readTag(base, tag, default = None):
 class ObjectsFromCMSSW(InfoScanner):
 	def __init__(self, config):
 		InfoScanner.__init__(self, config)
-		self._importParents = config.getBool('include parent infos', False)
+		self._importParents = config.getBool('include parent infos', False, onChange = triggerResync(['datasets', 'parameters']))
 		self._mergeKey = 'CMSSW_CONFIG_FILE'
-		if config.getBool('merge config infos', True):
+		if config.getBool('merge config infos', True, onChange = triggerResync(['datasets', 'parameters'])):
 			self._mergeKey = 'CMSSW_CONFIG_HASH'
 		self._cfgStore = {}
 		self._gtStore = {}
@@ -143,7 +146,7 @@ class ObjectsFromCMSSW(InfoScanner):
 class MetadataFromCMSSW(InfoScanner):
 	def __init__(self, config):
 		InfoScanner.__init__(self, config)
-		self.includeConfig = config.getBool('include config infos', False)
+		self.includeConfig = config.getBool('include config infos', False, onChange = triggerResync(['datasets', 'parameters']))
 
 	def getEntries(self, path, metadata, events, seList, objStore):
 		cmssw_files_dict = objStore.get('CMSSW_FILES', {})
@@ -176,7 +179,7 @@ class SEListFromPath(InfoScanner):
 class LFNFromPath(InfoScanner):
 	def __init__(self, config):
 		InfoScanner.__init__(self, config)
-		self.stripPath = config.get('lfn marker', '/store/')
+		self.stripPath = config.get('lfn marker', '/store/', onChange = triggerResync(['datasets', 'parameters']))
 
 	def getEntries(self, path, metadata, events, seList, objStore):
 		if self.stripPath and self.stripPath in path:

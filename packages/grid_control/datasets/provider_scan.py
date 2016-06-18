@@ -21,15 +21,15 @@ from grid_control.utils.gc_itertools import lchain
 from python_compat import identity, ifilter, imap, lmap, lsmap, md5_hex, set
 
 class ScanProviderBase(DataProvider):
-	def __init__(self, config, datasetExpr, datasetNick = None, datasetID = 0):
-		DataProvider.__init__(self, config, '', datasetNick, datasetID)
+	def __init__(self, config, datasetExpr, datasetNick, datasetID, sList):
+		DataProvider.__init__(self, config, datasetExpr, datasetNick, datasetID)
 		def DSB(cFun, n, *args, **kargs):
 			return (cFun('dataset %s' % n, *args, **kargs), cFun('block %s' % n, *args, **kargs))
 		(self.nameDS, self.nameB) = DSB(config.get, 'name pattern', '')
 		(self.kUserDS, self.kUserB) = DSB(config.getList, 'hash keys', [])
 		(self.kGuardDS, self.kGuardB) = DSB(config.getList, 'guard override', [])
 		self.kSelectDS = config.getList('dataset key select', [])
-		scanList = config.getList('scanner', datasetExpr) + ['NullScanner']
+		scanList = config.getList('scanner', sList) + ['NullScanner']
 		self.scanner = lmap(lambda cls: InfoScanner.createInstance(cls, config), scanList)
 
 
@@ -109,7 +109,7 @@ class ScanProviderBase(DataProvider):
 				}
 
 
-	def getBlocksInternal(self):
+	def _getBlocksInternal(self):
 		# Split files into blocks/datasets via key functions and determine metadata intersection
 		(protoBlocks, commonDS, commonB) = ({}, {}, {})
 		def getActiveKeys(kUser, kGuard, gIdx):
@@ -153,7 +153,7 @@ class ScanProvider(ScanProviderBase):
 		else:
 			ds_config.set('source directory', datasetExpr)
 		defScanner = ['FilesFromLS', 'MatchOnFilename', 'MatchDelimeter', 'DetermineEvents', 'AddFilePrefix']
-		ScanProviderBase.__init__(self, ds_config, defScanner, datasetNick, datasetID)
+		ScanProviderBase.__init__(self, ds_config, datasetExpr, datasetNick, datasetID, defScanner)
 
 
 # Get dataset information just from grid-control instance
@@ -180,4 +180,4 @@ class GCProvider(ScanProviderBase):
 			ext_task_name = ext_config.changeView(setSections = ['ParaMod']).get('module')
 		sGet = lambda scannerDict: scannerDict.get(None) + scannerDict.get(ext_task_name, [])
 		sList = sGet(GCProvider.stageDir) + ['JobInfoFromOutputDir', 'FilesFromJobInfo'] + sGet(GCProvider.stageFile) + ['DetermineEvents', 'AddFilePrefix']
-		ScanProviderBase.__init__(self, ds_config, sList, datasetNick, datasetID)
+		ScanProviderBase.__init__(self, ds_config, datasetExpr, datasetNick, datasetID, sList)

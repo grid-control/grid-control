@@ -68,5 +68,5 @@ class DBS3Provider(CMSBaseProvider):
 		return result
 
 
-	def getBlocksInternal(self):
+	def _getBlocksInternal(self):
 		return self.getGCBlocks(usePhedex = self._usePhedex)

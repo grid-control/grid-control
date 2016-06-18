@@ -180,7 +180,7 @@ if opts.dataset_show_diff:
 	utils.eprint = lambda *x: {}
 	a = DataProvider.createInstance('ListProvider', config, args[0], None)
 	b = DataProvider.createInstance('ListProvider', config, args[1], None)
-	(blocksAdded, blocksMissing, blocksChanged) = DataProvider.resyncSources(a.getBlocks(), b.getBlocks())
+	(blocksAdded, blocksMissing, blocksChanged) = DataProvider.resyncSources(a.getBlocks(show_stats = False), b.getBlocks(show_stats = False))
 	utils.printTabular([(DataProvider.Dataset, 'Dataset'), (DataProvider.BlockName, 'Block')], blocksMissing)
 
 if opts.dataset_show_removed:
@@ -191,7 +191,7 @@ if opts.dataset_show_removed:
 	oldDP = DataProvider.createInstance('ListProvider', config, args[0], None)
 	for new in args[1:]:
 		newDP = DataProvider.createInstance('ListProvider', config, new, None)
-		(blocksAdded, blocksMissing, blocksChanged) = DataProvider.resyncSources(oldDP.getBlocks(), newDP.getBlocks())
+		(blocksAdded, blocksMissing, blocksChanged) = DataProvider.resyncSources(oldDP.getBlocks(show_stats = False), newDP.getBlocks(show_stats = False))
 		for block in blocksMissing:
 			tmp = dict(block)
 			tmp[-1] = new

@@ -334,10 +334,16 @@ class JobManager(NamedPlugin):
 			jobSet = set(jobs)
 			for jobNum in jobs:
 				jobObj = self.jobDB.get(jobNum)
-				if jobObj and jobObj.state in [ Job.INIT, Job.DISABLED, Job.ABORTED, Job.CANCELLED, Job.DONE, Job.FAILED, Job.SUCCESS ]:
+				if not jobObj:
+					jobObj = Job()
+					self.jobDB.commit(jobNum, jobObj)
+					self._update(jobObj, jobNum, newState)
+					jobSet.remove(jobNum)
+				elif jobObj.state in [ Job.INIT, Job.DISABLED, Job.ABORTED, Job.CANCELLED, Job.DONE, Job.FAILED, Job.SUCCESS ]:
 					self._update(jobObj, jobNum, newState)
 					jobSet.remove(jobNum)
 					jobObj.attempt = 0
+
 			if len(jobSet) > 0:
 				output = (Job.enum2str(newState), str.join(', ', imap(str, jobSet)))
 				raise JobError('For the following jobs it was not possible to reset the state to %s:\n%s' % output)

@@ -91,5 +91,5 @@ class DASProvider(CMSBaseProvider):
 					yield ({DataProvider.URL: serviceResult['name'], DataProvider.NEntries: serviceResult['nevents']}, None)
 
 
-	def getBlocksInternal(self):
+	def _getBlocksInternal(self):
 		return self.getGCBlocks(usePhedex = False)

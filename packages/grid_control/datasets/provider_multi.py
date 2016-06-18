@@ -12,8 +12,8 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-import logging
 from grid_control import utils
+from grid_control.datasets.dproc_base import DataProcessor, NullDataProcessor
 from grid_control.datasets.provider_base import DataProvider, DatasetError
 from hpfwk import ExceptionCollector
 from python_compat import imap, reduce
@@ -21,9 +21,8 @@ from python_compat import imap, reduce
 class MultiDatasetProvider(DataProvider):
 	def __init__(self, config, datasetExpr, datasetNick, datasetID, providerList):
 		DataProvider.__init__(self, config, datasetExpr, datasetNick, datasetID)
+		self._stats = DataProcessor.createInstance('SimpleStatsDataProcessor', config, self._log, 'Summary: Running over ')
 		self._providerList = providerList
-		for provider in self._providerList:
-			provider.setPassthrough()
 
 
 	def queryLimit(self):
@@ -53,19 +52,24 @@ class MultiDatasetProvider(DataProvider):
 		return self._cache_dataset
 
 
-	def getBlocks(self, silent = True):
+	def getBlocks(self, show_stats):
+		statsProcessor = NullDataProcessor(config = None)
+		if show_stats:
+			statsProcessor = self._stats
 		if self._cache_block is None:
 			ec = ExceptionCollector()
 			def getAllBlocks():
 				for provider in self._providerList:
 					try:
-						for block in provider.getBlocks(silent):
+						for block in provider.getBlocksNormed():
 							yield block
 					except Exception:
 						ec.collect()
 					if utils.abort():
 						raise DatasetError('Could not retrieve all datasets!')
-			self._cache_block = list(self._stats.process(self._datasetProcessor.process(getAllBlocks())))
+			try:
+				self._cache_block = list(statsProcessor.process(self._datasetProcessor.process(getAllBlocks())))
+			except Exception:
+				raise DatasetError('Unable to run datasets through processing pipeline!')
 			ec.raise_any(DatasetError('Could not retrieve all datasets!'))
-			logging.getLogger('user').info('Summary: Running over %d block(s) containing %s', *self._stats.getStats())
 		return self._cache_block

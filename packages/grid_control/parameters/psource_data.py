@@ -32,8 +32,8 @@ class DataParameterSource(ParameterSource):
 		elif os.path.exists(self.getDataPath('cache.dat') and self.getDataPath('map.tar')):
 			self._dataSplitter.importPartitions(self.getDataPath('map.tar'))
 		else:
-			DataProvider.saveToFile(self.getDataPath('cache.dat'), self._dataProvider.getBlocks(silent = False))
-			self._dataSplitter.splitDataset(self.getDataPath('map.tar'), self._dataProvider.getBlocks())
+			DataProvider.saveToFile(self.getDataPath('cache.dat'), self._dataProvider.getBlocks(show_stats = False))
+			self._dataSplitter.splitDataset(self.getDataPath('map.tar'), self._dataProvider.getBlocks(show_stats = False))
 
 		self._maxN = self._dataSplitter.getMaxJobs()
 		self._keepOld = keepOld
@@ -70,9 +70,9 @@ class DataParameterSource(ParameterSource):
 		(result_redo, result_disable, result_sizeChange) = ParameterSource.resync(self)
 		if self.resyncEnabled() and self._dataProvider:
 			# Get old and new dataset information
-			old = DataProvider.loadFromFile(self.getDataPath('cache.dat')).getBlocks()
+			old = DataProvider.loadFromFile(self.getDataPath('cache.dat')).getBlocks(show_stats = False)
 			self._dataProvider.clearCache()
-			new = self._dataProvider.getBlocks()
+			new = self._dataProvider.getBlocks(show_stats = False)
 			self._dataProvider.saveToFile(self.getDataPath('cache-new.dat'), new)
 
 			# Use old splitting information to synchronize with new dataset infos

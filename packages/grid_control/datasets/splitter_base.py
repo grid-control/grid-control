@@ -281,6 +281,11 @@ class DataSplitter(ConfigurablePlugin):
 			procMode = self._resyncChangedFileMetadata(oldFI, newFI, metaIdxLookup, newMetadata, procMode)
 		if oldFI[DataProvider.NEntries] == newFI[DataProvider.NEntries]:
 			return (procMode, idx + 1) # go to next file
+		elif oldFI[DataProvider.NEntries] * newFI[DataProvider.NEntries] < 0:
+			raise PartitionError('Unable to change %r from %d to %d entries!' % (newFI[DataProvider.LFN],
+				oldFI[DataProvider.NEntries], newFI[DataProvider.NEntries]))
+		elif newFI[DataProvider.NEntries] < 0:
+			return (procMode, idx + 1) # go to next file
 		oldEvts = modSI[DataSplitter.NEntries]
 		oldSkip = modSI.get(DataSplitter.Skipped)
 
@@ -301,22 +306,23 @@ class DataSplitter(ConfigurablePlugin):
 		modSI[DataSplitter.Comment] += '[rm] ' + rmFI[DataProvider.URL]
 		modSI[DataSplitter.Comment] += '-%d ' % rmFI[DataProvider.NEntries]
 
-		if idx == len(modSI[DataSplitter.FileList]) - 1:
-			# Removal of last file from current partition
-			modSI[DataSplitter.NEntries] = sum(sizeInfo) - modSI.get(DataSplitter.Skipped, 0)
-			modSI[DataSplitter.Comment] += '[rm_last] '
-		elif idx == 0:
-			# Removal of first file from current partition
-			modSI[DataSplitter.NEntries] += max(0, sizeInfo[idx] - modSI.get(DataSplitter.Skipped, 0) - modSI[DataSplitter.NEntries])
-			modSI[DataSplitter.NEntries] += modSI.get(DataSplitter.Skipped, 0)
-			if DataSplitter.Skipped in modSI:
-				modSI[DataSplitter.Skipped] = 0
-			modSI[DataSplitter.Comment] += '[rm_first] '
-		else:
-			# File in the middle is affected - solution very simple :)
-			modSI[DataSplitter.Comment] += '[rm_middle] '
+		if rmFI[DataProvider.NEntries] > 0:
+			if idx == len(modSI[DataSplitter.FileList]) - 1:
+				# Removal of last file from current partition
+				modSI[DataSplitter.NEntries] = sum(sizeInfo) - modSI.get(DataSplitter.Skipped, 0)
+				modSI[DataSplitter.Comment] += '[rm_last] '
+			elif idx == 0:
+				# Removal of first file from current partition
+				modSI[DataSplitter.NEntries] += max(0, sizeInfo[idx] - modSI.get(DataSplitter.Skipped, 0) - modSI[DataSplitter.NEntries])
+				modSI[DataSplitter.NEntries] += modSI.get(DataSplitter.Skipped, 0)
+				if DataSplitter.Skipped in modSI:
+					modSI[DataSplitter.Skipped] = 0
+				modSI[DataSplitter.Comment] += '[rm_first] '
+			else:
+				# File in the middle is affected - solution very simple :)
+				modSI[DataSplitter.Comment] += '[rm_middle] '
+			modSI[DataSplitter.NEntries] -= rmFI[DataProvider.NEntries]
 
-		modSI[DataSplitter.NEntries] -= rmFI[DataProvider.NEntries]
 		modSI[DataSplitter.FileList].pop(idx)
 		sizeInfo.pop(idx)
 
@@ -355,9 +361,10 @@ class DataSplitter(ConfigurablePlugin):
 		metaIdxLookup = self._resyncGetMatchingMetadata(oldBlock, newBlock)
 
 		extended = utils.QM(doExpandOutside, [], None)
+		old_entries = modSI[DataSplitter.NEntries]
 		(procMode, newMetadata) = self._resyncFiles(modSI, jobNum, sizeInfo, filesMissing, filesMatched, newBlock, metaIdxLookup, extended)
 		# Disable invalid / invalidated partitions
-		if (len(modSI[DataSplitter.FileList]) == 0) or (modSI[DataSplitter.NEntries] <= 0):
+		if (len(modSI[DataSplitter.FileList]) == 0) or (old_entries * modSI[DataSplitter.NEntries] <= 0):
 			procMode = ResyncMode.disable
 
 		if procMode == ResyncMode.disable:

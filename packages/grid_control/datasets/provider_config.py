@@ -12,9 +12,11 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
+import copy
+from grid_control.config import triggerResync
 from grid_control.datasets.provider_base import DataProvider, DatasetError
 from grid_control.utils.parsing import parseJSON, parseList
-from python_compat import StringBuffer, md5_hex, sorted
+from python_compat import sorted
 
 # Provides dataset information from a config file
 # required format: <config section>
@@ -27,16 +29,10 @@ class ConfigDataProvider(DataProvider):
 		ds_config = config.changeView(viewClass = 'SimpleConfigView', setSections = ['datasource %s' % datasetExpr])
 		self._block = self._readBlockFromConfig(ds_config, datasetExpr, datasetNick, datasetID)
 
-		buffer = StringBuffer()
-		DataProvider.saveToStream(buffer, [self._block])
-		dataset_hash_new = md5_hex(buffer.getvalue())
-		dataset_hash_old = ds_config.get('dataset hash', dataset_hash_new, persistent = True, onChange = None)
-		self._request_resync = dataset_hash_new != dataset_hash_old
-		if self._request_resync:
+		def onChange(config, old_obj, cur_obj, cur_entry, obj2str):
 			self._log.critical('Dataset %r changed', datasetExpr)
-			ds_config.setState(True, 'resync', detail = 'dataset')
-			ds_config.setState(True, 'resync', detail = 'parameters')
-			ds_config.set('dataset hash', dataset_hash_new)
+			return triggerResync(['datasets', 'parameters'])(config, old_obj, cur_obj, cur_entry, obj2str)
+		ds_config.get('dataset hash', self.getHash(), persistent = True, onChange = onChange)
 
 
 	def _readFileFromConfig(self, ds_config, url, metadata_keys, common_metadata, common_prefix):
@@ -89,5 +85,5 @@ class ConfigDataProvider(DataProvider):
 		return result
 
 
-	def getBlocksInternal(self):
-		yield self._block
+	def _getBlocksInternal(self):
+		yield copy.deepcopy(self._block) # dataset processors can modify metadata inplace

@@ -17,34 +17,6 @@ from grid_control.datasets.provider_base import DataProvider, DatasetError
 from grid_control.utils.data_structures import makeEnum
 from python_compat import imap, itemgetter, lfilter, md5_hex, set
 
-class StatsDataProcessor(DataProcessor):
-	alias = ['stats']
-
-	def __init__(self, config):
-		DataProcessor.__init__(self, config)
-		self.reset()
-
-	def reset(self):
-		self._entries = 0
-		self._blocks = 0
-
-	def getStats(self):
-		if self._entries < 0:
-			units = '%d file(s)' % -self._entries
-		else:
-			units = '%d event(s)' % self._entries
-		result = (self._blocks, units)
-		self.reset()
-		return result
-
-	def process(self, blockIter):
-		for block in blockIter:
-			if block:
-				self._blocks += 1
-				self._entries += block[DataProvider.NEntries]
-				yield block
-
-
 class EntriesConsistencyDataProcessor(DataProcessor):
 	alias = ['consistency']
 
@@ -80,7 +52,7 @@ class URLDataProcessor(DataProcessor):
 				else:
 					for dfac in DataProvider.bind(':%s' % pat.lstrip(':'), config = config):
 						dproc = dfac.getBoundInstance()
-						for block in dproc.getBlocks():
+						for block in dproc.getBlocksNormed():
 							for fi in block[DataProvider.FileList]:
 								yield fi[DataProvider.URL]
 		return str.join('\n', getFilterEntries())

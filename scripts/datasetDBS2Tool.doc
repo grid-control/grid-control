@@ -44,7 +44,7 @@ if opts.lumiranges:
 	dummyConfig = getConfig(configDict={'dummy': {'lumi filter': '-', 'dbs blacklist T1': False,
 		'remove empty blocks': False, 'remove empty files': False}})
 	provider = DataProvider.create(dummyConfig, 'dummy', opts.lumiranges, 'DBSApiv2')
-	blocks = provider.getBlocks()
+	blocks = provider.getBlocks(show_stats = False)
 	lrInfo = {}
 	for block in blocks[:-1]:
 		ds = block[DataProvider.Dataset]

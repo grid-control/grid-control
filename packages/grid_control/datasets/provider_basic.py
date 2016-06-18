@@ -32,7 +32,7 @@ class FileProvider(DataProvider):
 			raise ConfigError('Invalid dataset expression!\nCorrect: /local/path/to/file|events[@SE1,SE2]')
 
 
-	def getBlocksInternal(self):
+	def _getBlocksInternal(self):
 		yield {
 			DataProvider.Dataset: self._path,
 			DataProvider.Locations: self._selist,
@@ -137,7 +137,7 @@ class ListProvider(DataProvider):
 		if block:
 			yield self._finishBlock(block)
 
-	def getBlocksInternal(self):
+	def _getBlocksInternal(self):
 		def _filterBlock(block):
 			if self._filter:
 				name = '/%s#%s#' % (block[DataProvider.Dataset], block.get(DataProvider.BlockName, ''))

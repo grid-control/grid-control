@@ -223,7 +223,7 @@ def discover_blocks(options):
 		config = getConfig(configDict = {'dataset': options.config_dict})
 		provider = DataProvider.createInstance('DBSInfoProvider', config, options.args[0], None)
 
-	blocks = provider.getBlocks()
+	blocks = provider.getBlocks(show_stats = False)
 	DataProvider.saveToFile(os.path.join(options.opts.tempdir, 'dbs.dat'), blocks)
 	if options.opts.discovery:
 		sys.exit(os.EX_OK)
@@ -237,7 +237,7 @@ def filter_blocks(opts, blocks):
 #		dNames = set(ximap(lambda b: b[DataProvider.Dataset], blocks))
 #		dNames = xfilter(lambda ds: hasDataset(opts.dbsTarget, ds), dNames) - todo
 #		config = getConfig(configDict = {None: {'dbs instance': opts.dbsTarget}})
-#		oldBlocks = xreduce(xoperator.add, ximap(lambda ds: DBSApiv2(config, None, ds, None).getBlocks(), dNames), [])
+#		oldBlocks = xreduce(xoperator.add, ximap(lambda ds: DBSApiv2(config, None, ds, None).getBlocks(show_stats = False), dNames), [])
 #		(blocksAdded, blocksMissing, blocksChanged) = DataProvider.resyncSources(oldBlocks, blocks)
 #		if len(blocksMissing) or len(blocksChanged):
 #			if not utils.getUserBool(' * WARNING: Block structure has changed! Continue?', False):

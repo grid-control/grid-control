@@ -15,7 +15,7 @@
 import os, copy, logging
 from grid_control import utils
 from grid_control.config import createConfig, triggerResync
-from grid_control.datasets.dproc_base import DataProcessor
+from grid_control.datasets.dproc_base import DataProcessor, NullDataProcessor
 from grid_control.gc_plugin import ConfigurablePlugin
 from grid_control.utils.data_structures import makeEnum
 from hpfwk import AbstractError, InstanceFactory, NestedException
@@ -24,14 +24,16 @@ from python_compat import StringBuffer, identity, ifilter, imap, irange, json, l
 class DatasetError(NestedException):
 	pass
 
+
 class DataProvider(ConfigurablePlugin):
 	def __init__(self, config, datasetExpr, datasetNick = None, datasetID = 0):
 		ConfigurablePlugin.__init__(self, config)
 		self._log = logging.getLogger('user.dataprovider')
 		(self._datasetExpr, self._datasetNick, self._datasetID) = (datasetExpr, datasetNick, datasetID)
-		(self._cache_block, self._cache_dataset, self._passthrough) = (None, None, False)
+		(self._cache_block, self._cache_dataset) = (None, None)
 
-		self._stats = DataProcessor.createInstance('StatsDataProcessor', config)
+		self._stats = DataProcessor.createInstance('SimpleStatsDataProcessor', config, self._log,
+			' * Dataset %s:\n\tcontains ' % repr(datasetNick or datasetExpr))
 		self._nickProducer = config.getPlugin('nickname source', 'SimpleNickNameProducer', cls = DataProcessor)
 		self._datasetProcessor = config.getCompositePlugin('dataset processor',
 			'EntriesConsistencyDataProcessor URLDataProcessor URLCountDataProcessor ' +
@@ -65,10 +67,6 @@ class DataProvider(ConfigurablePlugin):
 		return self._datasetExpr
 
 
-	def setPassthrough(self):
-		self._passthrough = True
-
-
 	# Define how often the dataprovider can be queried automatically
 	def queryLimit(self):
 		return 60 # 1 minute delay minimum
@@ -83,17 +81,37 @@ class DataProvider(ConfigurablePlugin):
 	def getDatasets(self):
 		if self._cache_dataset is None:
 			self._cache_dataset = []
-			for block in self.getBlocks():
+			for block in self.getBlocks(show_stats = True):
 				if block[DataProvider.Dataset] not in self._cache_dataset:
 					self._cache_dataset.append(block[DataProvider.Dataset])
 		return self._cache_dataset
 
 
 	# Cached access to list of block dicts, does also the validation checks
-	def getBlocks(self, silent = True):
-		def prepareBlocks():
-			# Validation, Filtering & Naming:
-			for block in self.getBlocksInternal():
+	def getBlocks(self, show_stats):
+		statsProcessor = NullDataProcessor(config = None)
+		if show_stats:
+			statsProcessor = self._stats
+		if self._cache_block is None:
+			try:
+				self._cache_block = list(statsProcessor.process(self._datasetProcessor.process(self.getBlocksNormed())))
+			except Exception:
+				raise DatasetError('Unable to run dataset %s through processing pipeline!' % repr(self._datasetExpr))
+		return self._cache_block
+
+
+	# List of block dicts with format
+	# { NEntries: 123, Dataset: '/path/to/data', Block: 'abcd-1234', Locations: ['site1','site2'],
+	#   Filelist: [{URL: '/path/to/file1', NEntries: 100}, {URL: '/path/to/file2', NEntries: 23}]}
+	def _getBlocksInternal(self):
+		raise AbstractError
+
+
+	def getBlocksNormed(self):
+		log = utils.ActivityLog('Retrieving %s' % self._datasetExpr)
+		try:
+			# Validation, Naming:
+			for block in self._getBlocksInternal():
 				assert(block[DataProvider.Dataset])
 				block.setdefault(DataProvider.BlockName, '0')
 				block.setdefault(DataProvider.Provider, self.__class__.__name__)
@@ -109,33 +127,9 @@ class DataProvider(ConfigurablePlugin):
 					if not block:
 						raise DatasetError('Nickname producer failed!')
 				yield block
-
-		if self._cache_block is None:
-			log = utils.ActivityLog('Retrieving %s' % self._datasetExpr)
-			try:
-				if self._passthrough:
-					self._cache_block = list(self._stats.process(prepareBlocks()))
-				else:
-					self._cache_block = list(self._stats.process(self._datasetProcessor.process(prepareBlocks())))
-			except Exception:
-				raise DatasetError('Unable to retrieve dataset %s' % repr(self._datasetExpr))
-			statString = ' * Dataset '
-			if self._datasetNick:
-				statString += repr(self._datasetNick)
-			elif self._datasetExpr:
-				statString += repr(self._datasetExpr)
-			log.finish()
-			statString += '\tcontains %d block(s) with %s' % self._stats.getStats()
-			if not silent:
-				self._log.info(statString)
-		return self._cache_block
-
-
-	# List of block dicts with format
-	# { NEntries: 123, Dataset: '/path/to/data', Block: 'abcd-1234', Locations: ['site1','site2'],
-	#   Filelist: [{URL: '/path/to/file1', NEntries: 100}, {URL: '/path/to/file2', NEntries: 23}]}
-	def getBlocksInternal(self):
-		raise AbstractError
+		except Exception:
+			raise DatasetError('Unable to retrieve dataset %s' % repr(self._datasetExpr))
+		log.finish()
 
 
 	def clearCache(self):
@@ -157,6 +151,12 @@ class DataProvider(ConfigurablePlugin):
 			return sorted(idxList, key = lambda idx: block[DataProvider.Metadata][idx])
 		return (filterC(True), filterC(False))
 	classifyMetadataKeys = staticmethod(classifyMetadataKeys)
+
+
+	def getHash(self):
+		buffer = StringBuffer()
+		DataProvider.saveToStream(buffer, self._datasetProcessor.process(self.getBlocksNormed()))
+		return md5_hex(buffer.getvalue())
 
 
 	# Save dataset information in 'ini'-style => 10x faster to r/w than cPickle

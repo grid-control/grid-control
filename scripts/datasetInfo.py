@@ -192,7 +192,7 @@ def list_infos(blocks):
 
 def save_dataset(opts, provider):
 	print('')
-	blocks = provider.getBlocks()
+	blocks = provider.getBlocks(show_stats = False)
 	if opts.ordered:
 		sort_inplace(blocks, key = itemgetter(DataProvider.Dataset, DataProvider.BlockName))
 		for b in blocks:
@@ -204,7 +204,7 @@ def main(opts, args):
 	config = get_dataset_config(opts, args)
 
 	provider = config.getPlugin('dataset', cls = DataProvider)
-	blocks = provider.getBlocks()
+	blocks = provider.getBlocks(show_stats = False)
 	if len(blocks) == 0:
 		raise DatasetError('No blocks!')
 
