@@ -15,7 +15,7 @@
 import os, sys, time, errno, fcntl, select, signal, logging, termios, threading
 from grid_control.utils.thread_tools import GCEvent, GCLock, GCQueue
 from hpfwk import AbstractError
-from python_compat import bytes2str, imap, irange, str2bytes
+from python_compat import bytes2str, imap, irange, set, str2bytes
 
 try:
 	FD_MAX = os.sysconf('SC_OPEN_MAX')
@@ -267,8 +267,8 @@ class LocalProcess(Process):
 			exit_without_cleanup(os.EX_OK)
 
 		else: # Still in the parent process - setup threads to communicate with external program
-			safeClose(fd_child_terminal)
-			safeClose(fd_child_stderr)
+			os.close(fd_child_terminal)
+			os.close(fd_child_stderr)
 			thread = threading.Thread(target = self._interact_with_child, args = (fd_parent_stdin, fd_parent_stdout, fd_parent_stderr))
 			thread.daemon = True
 			thread.start()
@@ -292,8 +292,8 @@ class LocalProcess(Process):
 		thread_in.join()
 		thread_out.join()
 		thread_err.join()
-		for fd in [fd_parent_stdin, fd_parent_stdout, fd_parent_stderr]: # fd_parent_stdin == fd_parent_stdout for pty
-			safeClose(fd)
+		for fd in set([fd_parent_stdin, fd_parent_stdout, fd_parent_stderr]): # fd_parent_stdin == fd_parent_stdout for pty
+			os.close(fd)
 		self._buffer_stdout.finish() # wakeup pending output buffer waits
 		self._buffer_stderr.finish()
 		self._event_finished.set()

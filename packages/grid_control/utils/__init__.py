@@ -460,29 +460,32 @@ class DictFormat(object):
 		except Exception:
 			pass
 		for line in lines:
-			if not isinstance(line, str):
-				line = line.decode('utf-8')
-			if self.escapeString:
-				# Switch accumulate on/off when odd number of quotes found
-				if (line.count('"') - line.count('\\"')) % 2 == 1:
-					doAdd = not doAdd
-				currentline += line
-				if doAdd:
+			try:
+				if not isinstance(line, str):
+					line = line.decode('utf-8')
+				if self.escapeString:
+					# Switch accumulate on/off when odd number of quotes found
+					if (line.count('"') - line.count('\\"')) % 2 == 1:
+						doAdd = not doAdd
+					currentline += line
+					if doAdd:
+						continue
+				else:
+					currentline = line
+				# split at first occurence of delimeter and strip spaces around
+				key_value_list = lmap(str.strip, currentline.split(self.delimeter, 1))
+				if len(key_value_list) == 2:
+					key, value = key_value_list
+					currentline = ''
+				else: # in case no delimeter was found
+					currentline = ''
 					continue
-			else:
-				currentline = line
-			# split at first occurence of delimeter and strip spaces around
-			key_value_list = lmap(str.strip, currentline.split(self.delimeter, 1))
-			if len(key_value_list) == 2:
-				key, value = key_value_list
-				currentline = ''
-			else: # in case no delimeter was found
-				currentline = ''
-				continue
-			if self.escapeString:
-				value = value.strip('"').replace('\\"', '"').replace('\\$', '$')
-			key = keyParser.get(key, defaultKeyParser)(key)
-			data[key] = valueParser.get(key, defaultValueParser)(value) # do .encode('utf-8') ?
+				if self.escapeString:
+					value = value.strip('"').replace('\\"', '"').replace('\\$', '$')
+				key = keyParser.get(key, defaultKeyParser)(key)
+				data[key] = valueParser.get(key, defaultValueParser)(value) # do .encode('utf-8') ?
+			except Exception:
+				raise GCError('Invalid dict format in %s' % repr(line))
 		if doAdd:
 			raise GCError('Invalid dict format in %s' % repr(lines))
 		return data
