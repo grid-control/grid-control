@@ -17,11 +17,12 @@ from grid_control.backends.wms import WMS
 from grid_control.backends.wms_local import LocalWMS
 
 class PBSGECommon(LocalWMS):
-	def __init__(self, config, name):
+	def __init__(self, config, name, checkExecutor):
 		LocalWMS.__init__(self, config, name,
 			submitExec = utils.resolveInstallPath('qsub'),
 			statusExec = utils.resolveInstallPath('qstat'),
-			cancelExec = utils.resolveInstallPath('qdel'))
+			cancelExec = utils.resolveInstallPath('qdel'),
+			checkExecutor = checkExecutor)
 		self._shell = config.get('shell', '', onChange = None)
 		self._account = config.get('account', '', onChange = None)
 		self._delay = config.getBool('delay output', False, onChange = None)

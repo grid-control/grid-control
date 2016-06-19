@@ -14,82 +14,74 @@
 
 import os, re, tempfile
 from grid_control import utils
+from grid_control.backends.backend_tools import CheckInfo, CheckJobsViaArguments
 from grid_control.backends.wms import BackendError
 from grid_control.backends.wms_grid import GridWMS
 from grid_control.job_db import Job
 from python_compat import imap, irange, md5, tarfile
 
+class CREAM_CheckJobs(CheckJobsViaArguments):
+	def __init__(self, config):
+		CheckJobsViaArguments.__init__(self, config)
+		self._check_exec = utils.resolveInstallPath('glite-ce-job-status')
+		self._status_map = {
+			'ABORTED':        Job.ABORTED,
+			'CANCELLED':      Job.ABORTED,
+			'DONE-FAILED':    Job.DONE,
+			'DONE-OK':        Job.DONE,
+			'HELD':           Job.WAITING,
+			'IDLE':           Job.QUEUED,
+			'PENDING':        Job.WAITING,
+			'REALLY-RUNNING': Job.RUNNING,
+			'REGISTERED':     Job.QUEUED,
+			'RUNNING':        Job.RUNNING,
+			'UNKNOWN':        Job.UNKNOWN,
+		}
+
+	def _arguments(self, wmsIDs):
+		return [self._check_exec, '--level', '0', '--logfile', '/dev/stderr'] + wmsIDs
+
+	def _parse(self, proc):
+		job_info = {}
+		for line in proc.stdout.iter(self._timeout):
+			line = line.lstrip('*').strip()
+			try:
+				(key, value) = imap(str.strip, line.split('=', 1))
+			except Exception:
+				continue
+			key = key.lower()
+			value = value[1:-1]
+			if key == 'jobid':
+				yield job_info
+				job_info = {CheckInfo.WMSID: value}
+			elif key == 'status':
+				job_info[CheckInfo.RAW_STATUS] = value
+			elif value:
+				job_info[key] = value
+		yield job_info
+
+
 class CreamWMS(GridWMS):
 	alias = ['cream']
 
-	_statusMap = {
-		'REGISTERED':     Job.QUEUED,
-		'CANCELLED':      Job.ABORTED,
-		'PENDING':        Job.WAITING,
-		'RUNNING':        Job.RUNNING,
-		'DONE-FAILED':    Job.ABORTED,
-		'DONE-OK':        Job.DONE,
-		'IDLE':           Job.QUEUED,
-		'REALLY-RUNNING': Job.RUNNING,
-	}
-	
 	def __init__(self, config, name):
-		GridWMS.__init__(self, config, name)
-		
+		GridWMS.__init__(self, config, name, checkExecutor = CREAM_CheckJobs(config))
 		self._nJobsPerChunk = config.getInt('job chunk size', 10, onChange = None)
 
 		self._submitExec = utils.resolveInstallPath('glite-ce-job-submit')
-		self._statusExec = utils.resolveInstallPath('glite-ce-job-status')
 		self._outputExec = utils.resolveInstallPath('glite-ce-job-output')
 		self._cancelExec = utils.resolveInstallPath('glite-ce-job-cancel')
 		self._purgeExec = utils.resolveInstallPath('glite-ce-job-purge')
 		self._submitParams.update({'-r': self._ce, '--config-vo': self._configVO })
 
-		lvl0_status_ok = r'.*JobID=\[(?P<rawId>\S+)\]\s+Status\s+=\s+\[(?P<status>\S+)\].*'
-		lvl0_status_err = r'.*JobID=\[(?P<rawId>\S+)\]\s+For this job CREAM has returned a fault: MethodName=\[(?P<methodName>.*)\] '
-		lvl0_status_err += r'Timestamp=\[(?P<timestamp>.*)\] ErrorCode=\[(?P<errorCode>.*)\] '
-		lvl0_status_err += r'Description=\[(?P<description>.*)\] FaultCause=\[(?P<faultCause>.*)\].*'
-		self._statusRegexLevel0 = [lvl0_status_ok, lvl0_status_err]
 		self._outputRegex = r'.*For JobID \[(?P<rawId>\S+)\] output will be stored in the dir (?P<outputDir>.*)$'
 		
 		self._useDelegate = False
 		if self._useDelegate is False:
 			self._submitParams.update({ '-a': ' ' })
-	
+
 	def makeJDL(self, jobNum, module):
 		return ['[\n'] + GridWMS.makeJDL(self, jobNum, module) + ['OutputSandboxBaseDestUri = "gsiftp://localhost";\n]']
-	
-	# Check status of jobs and yield (jobNum, wmsID, status, other data)
-	def checkJobs(self, ids):
-		if len(ids) == 0:
-			raise StopIteration
-
-		jobNumMap = dict(ids)
-		jobs = ' '.join(self._getRawIDs(ids))
-		log = tempfile.mktemp('.log')
-
-		activity = utils.ActivityLog('checking job status')
-		proc = utils.LoggedProcess(self._statusExec, '--level 0 --logfile "%s" %s' % (log, jobs))
-		for jobOutput in proc.getOutput().split('******')[1:]:
-			data = {}
-			for statusRegexLevel0 in self._statusRegexLevel0:
-				match = re.match(statusRegexLevel0, jobOutput.replace('\n', ' '))
-				if match:
-					data = match.groupdict()
-					break
-			data['id'] = self._createId(data['rawId'])
-			yield (jobNumMap.get(data['id']), data['id'], self._statusMap[data.get('status', 'DONE-FAILED')], data)
-		
-		retCode = proc.wait()
-		del activity
-
-		if retCode != 0:
-			if self.explainError(proc, retCode):
-				pass
-			else:
-				proc.logError(self.errorLog, log = log, jobs = jobs)
-		
-		utils.removeFiles([log])
 
 	# Get output of jobs and yield output dirs
 	def _getJobsOutput(self, allIds):

@@ -12,8 +12,9 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-import os, sys, copy, time, tempfile
+import os, sys, calendar, tempfile
 from grid_control import utils
+from grid_control.backends.backend_tools import CheckInfo, CheckJobsViaStdin
 from grid_control.backends.broker_base import Broker
 from grid_control.backends.wms import BackendError, BasicWMS, WMS
 from grid_control.job_db import Job
@@ -21,32 +22,92 @@ from grid_control.utils.process_base import LocalProcess
 from hpfwk import APIError
 from python_compat import ifilter, imap, irange, lfilter, lmap, md5, parsedate, tarfile
 
+GridStatusMap = {
+	'aborted':   Job.ABORTED,
+	'cancelled': Job.ABORTED,
+	'cleared':   Job.ABORTED,
+	'done':      Job.DONE,
+	'failed':    Job.ABORTED,
+	'queued':    Job.QUEUED,
+	'ready':     Job.READY,
+	'running':   Job.RUNNING,
+	'scheduled': Job.QUEUED,
+	'submitted': Job.SUBMITTED,
+	'waiting':   Job.WAITING,
+}
+
+
 def jdlEscape(value):
 	repl = { '\\': r'\\', '\"': r'\"', '\n': r'\n' }
 	return '"' + str.join('', imap(lambda char: repl.get(char, char), value)) + '"'
 
 
+class Grid_CheckJobs(CheckJobsViaStdin):
+	def __init__(self, config, check_exec):
+		CheckJobsViaStdin.__init__(self, config)
+		self._check_exec = check_exec
+		self._status_map = GridStatusMap
+
+	def _arguments(self):
+		return [self._check_exec, '--verbosity', 1, '--noint', '--logfile', '/dev/stderr', '-i', '/dev/stdin']
+
+	def _stdin_message(self, wmsIDs):
+		return str.join('\n', wmsIDs)
+
+	def _fill(self, job_info, key, value):
+		if key.startswith('current status'):
+			if 'failed' in value:
+				value = 'failed'
+			job_info[CheckInfo.RAW_STATUS] = value.split('(')[0].split()[0].lower()
+		elif key.startswith('destination'):
+			try:
+				dest_info = value.split('/', 1)
+				job_info[CheckInfo.SITE] = dest_info[0].strip()
+				job_info[CheckInfo.QUEUE] = dest_info[1].strip()
+			except Exception:
+				return
+		elif key.startswith('status reason'):
+			job_info['reason'] = value
+		elif key.startswith('reached') or key.startswith('submitted'):
+			try:
+				job_info['timestamp'] = int(calendar.timegm(parsedate(value)))
+			except Exception:
+				return
+		elif key.startswith('bookkeeping information'):
+			return
+		elif value:
+			job_info[key] = value
+
+	def _parse(self, proc):
+		job_info = {}
+		discard = False
+		for line in proc.stdout.iter(self._timeout):
+			if discard or ('log file created' in line.lower()):
+				discard = True
+				continue
+			try:
+				(key, value) = imap(str.strip, line.split(':', 1))
+			except Exception:
+				continue
+
+			key = key.lower()
+			if key.startswith('status info'):
+				yield job_info
+				job_info = {CheckInfo.WMSID: value}
+			else:
+				self._fill(job_info, key, value)
+		yield job_info
+
+	def _handleError(self, proc):
+		self._filter_proc_log(proc, self._errormsg, discardlist = ['Keyboard interrupt raised by user'])
+
+
 class GridWMS(BasicWMS):
 	configSections = BasicWMS.configSections + ['grid']
 
-	_statusMap = {
-		'ready':     Job.READY,
-		'submitted': Job.SUBMITTED,
-		'waiting':   Job.WAITING,
-		'queued':    Job.QUEUED,
-		'scheduled': Job.QUEUED,
-		'running':   Job.RUNNING,
-		'aborted':   Job.ABORTED,
-		'cancelled': Job.ABORTED,
-		'failed':    Job.ABORTED,
-		'done':      Job.DONE,
-		'cleared':   Job.ABORTED
-	}
-
-
-	def __init__(self, config, name):
+	def __init__(self, config, name, checkExecutor):
 		config.set('access token', 'VomsProxy')
-		BasicWMS.__init__(self, config, name)
+		BasicWMS.__init__(self, config, name, checkExecutor)
 
 		self.brokerSite = config.getPlugin('site broker', 'UserBroker',
 			cls = Broker, tags = [self], pargs = ('sites', 'sites', self.getSites))
@@ -57,6 +118,7 @@ class GridWMS(BasicWMS):
 		self._configVO = config.getPath('config', '', onChange = None)
 		self._warnSBSize = config.getInt('warn sb size', 5, onChange = None)
 		self._jobPath = config.getWorkPath('jobs')
+
 
 	def getSites(self):
 		return None
@@ -150,87 +212,6 @@ class GridWMS(BasicWMS):
 		return jobs
 
 
-	def _parseStatus(self, lines):
-		cur = None
-
-		def format(data):
-			data = copy.copy(data)
-			status = data['status'].lower()
-			try:
-				if status.find('failed') >=0:
-					status = 'failed'
-				else:
-					status = status.split('(')[0].split()[0]
-			except Exception:
-				pass
-			data['status'] = status
-			try:
-				data['timestamp'] = int(time.mktime(parsedate(data['timestamp'])))
-			except Exception:
-				pass
-			return data
-
-		for line in lines:
-			try:
-				key, value = line.split(':', 1)
-			except Exception:
-				continue
-			key = key.strip().lower()
-			value = value.strip()
-
-			if key.startswith('status info'):
-				key = 'id'
-			elif key.startswith('current status'):
-				key = 'status'
-			elif key.startswith('status reason'):
-				key = 'reason'
-			elif key.startswith('destination'):
-				key = 'dest'
-			elif key.startswith('reached') or key.startswith('submitted'):
-				key = 'timestamp'
-			else:
-				continue
-
-			if key == 'id':
-				if cur is not None:
-					try:
-						yield format(cur)
-					except Exception:
-						pass
-				cur = { 'id': value }
-			else:
-				cur[key] = value
-
-		if cur is not None:
-			try:
-				yield format(cur)
-			except Exception:
-				pass
-
-
-	def _parseStatusX(self, lines):
-		adder = lambda a, b: utils.QM('=====' not in b and b != '\n', a + b, a)
-		remap = { 'destination': 'dest', 'status reason': 'reason',
-			'status info for the job': 'id', 'current status': 'status',
-			'submitted': 'timestamp', 'reached': 'timestamp', 'exit code': 'gridexit' }
-		for section in utils.accumulate(lines, lambda x, buf: ('='*70) in x, '', opAdd = adder):
-			data = utils.DictFormat(':').parse(str.join('', section), keyParser = {None: lambda k: remap.get(k, str)})
-			data = utils.filterDict(data, vF = lambda v: v)
-			if data:
-				try:
-					if 'failed' in data['status']:
-						data['status'] = 'failed'
-					else:
-						data['status'] = data['status'].split()[0].lower()
-				except Exception:
-					pass
-				try:
-					data['timestamp'] = int(time.mktime(parsedate(data['timestamp'])))
-				except Exception:
-					pass
-				yield data
-
-
 	def explainError(self, proc, code):
 		if 'Keyboard interrupt raised by user' in proc.stderr.read(timeout = 0):
 			return True
@@ -271,30 +252,6 @@ class GridWMS(BasicWMS):
 		finally:
 			utils.removeFiles([jdl])
 		return (jobNum, utils.QM(wmsId, self._createId(wmsId), None), {'jdl': str.join('', jdlData)})
-
-
-	# Check status of jobs and yield (jobNum, wmsID, status, other data)
-	def checkJobs(self, ids):
-		if len(ids) == 0:
-			raise StopIteration
-
-		jobNumMap = dict(ids)
-		jobs = self.writeWMSIds(ids)
-
-		activity = utils.ActivityLog('checking job status')
-		proc = LocalProcess(self._statusExec, '--verbosity', 1, '--noint', '--logfile', '/dev/stderr', '-i', jobs)
-		for data in self._parseStatus(proc.stdout.iter(timeout = 60)):
-			data['id'] = self._createId(data['id'])
-			yield (jobNumMap.get(data['id']), data['id'], self._statusMap[data['status']], data)
-		retCode = proc.status(timeout = 0, terminate = True)
-		del activity
-
-		if retCode != 0:
-			if self.explainError(proc, retCode):
-				pass
-			else:
-				self._log.log_process(proc, files = {'jobs': utils.safeRead(jobs)})
-		utils.removeFiles([jobs])
 
 
 	# Get output of jobs and yield output dirs

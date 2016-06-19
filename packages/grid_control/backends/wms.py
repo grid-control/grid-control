@@ -17,8 +17,10 @@
 import os, sys, glob, shutil, logging
 from grid_control import utils
 from grid_control.backends.access import AccessToken
+from grid_control.backends.backend_tools import CheckInfo
 from grid_control.backends.storage import StorageManager
 from grid_control.gc_plugin import NamedPlugin
+from grid_control.job_db import Job
 from grid_control.output_processor import JobResult
 from grid_control.utils.data_structures import makeEnum
 from grid_control.utils.file_objects import SafeFile, VirtualFile
@@ -48,7 +50,7 @@ class WMS(NamedPlugin):
 	def canSubmit(self, neededTime, canCurrentlySubmit):
 		raise AbstractError
 
-	def getAccessToken(self, wmsId):
+	def getAccessToken(self, gcID):
 		raise AbstractError # Return access token instance responsible for this wmsId
 
 	def deployTask(self, task, monitor):
@@ -57,13 +59,13 @@ class WMS(NamedPlugin):
 	def submitJobs(self, jobNumList, task): # jobNumList = [1, 2, ...]
 		raise AbstractError # Return (jobNum, wmsId, data) for successfully submitted jobs
 
-	def checkJobs(self, ids): # ids = [(WMS-61226, 1), (WMS-61227, 2), ...]
+	def checkJobs(self, gcID_jobNum_List): # gcID_jobNum_List = [(WMS-61226, 1), (WMS-61227, 2), ...]
 		raise AbstractError # Return (jobNum, wmsId, state, info) for active jobs
 
-	def retrieveJobs(self, ids):
+	def retrieveJobs(self, gcID_jobNum_List):
 		raise AbstractError # Return (jobNum, retCode, data, outputdir) for retrived jobs
 
-	def cancelJobs(self, ids):
+	def cancelJobs(self, gcID_jobNum_List):
 		raise AbstractError # Return (jobNum, wmsId) for cancelled jobs
 
 	def _createId(self, wmsIdRaw):
@@ -75,45 +77,25 @@ class WMS(NamedPlugin):
 		elif wmsId.startswith('http'): # legacy support
 			return ('grid', wmsId)
 
-	def _getRawIDs(self, ids):
-		for (wmsId, _) in ids:
+	def _getRawIDs(self, gcID_jobNum_List):
+		for (wmsId, _) in gcID_jobNum_List:
 			yield self._splitId(wmsId)[1]
+
+	def _mapIDs(self, gcID_jobNum_List):
+		result = {}
+		for (gcID, _) in gcID_jobNum_List:
+			wmsID = self._splitId(gcID)[1]
+			result[wmsID] = gcID
+		return result
 makeEnum(['WALLTIME', 'CPUTIME', 'MEMORY', 'CPUS', 'BACKEND', 'SITES', 'QUEUES', 'SOFTWARE', 'STORAGE'], WMS)
 
 
-class InactiveWMS(WMS):
-	alias = ['inactive']
-
-	def __init__(self, config, wmsName):
-		WMS.__init__(self, config, wmsName)
-		self._token = config.getCompositePlugin(['proxy', 'access token'], 'TrivialAccessToken',
-			'MultiAccessToken', cls = AccessToken, inherit = True, tags = [self])
-
-	def canSubmit(self, neededTime, canCurrentlySubmit):
-		return True
-
-	def getAccessToken(self, wmsId):
-		return self._token
-
-	def deployTask(self, task, monitor):
-		return
-
-	def submitJobs(self, jobNumList, task): # jobNumList = [1, 2, ...]
-		utils.vprint('Inactive WMS (%s): Discarded submission of %d jobs' % (self.wmsName, len(jobNumList)), -1)
-
-	def checkJobs(self, ids): # ids = [(WMS-61226, 1), (WMS-61227, 2), ...]
-		utils.vprint('Inactive WMS (%s): Discarded check of %d jobs' % (self.wmsName, len(ids)), -1)
-
-	def retrieveJobs(self, ids):
-		utils.vprint('Inactive WMS (%s): Discarded retrieval of %d jobs' % (self.wmsName, len(ids)), -1)
-
-	def cancelJobs(self, ids):
-		utils.vprint('Inactive WMS (%s): Discarded abort of %d jobs' % (self.wmsName, len(ids)), -1)
-
-
 class BasicWMS(WMS):
-	def __init__(self, config, wmsName):
+	def __init__(self, config, wmsName, checkExecutor):
 		WMS.__init__(self, config, wmsName)
+		self._check_executor = checkExecutor
+		self._check_executor.setup(self._log)
+
 		if self.wmsName != self.__class__.__name__.upper():
 			utils.vprint('Using batch system: %s (%s)' % (self.__class__.__name__, self.wmsName), -1)
 		else:
@@ -149,7 +131,7 @@ class BasicWMS(WMS):
 		return self._token.canSubmit(neededTime, canCurrentlySubmit)
 
 
-	def getAccessToken(self, wmsId):
+	def getAccessToken(self, gcID):
 		return self._token
 
 
@@ -184,7 +166,30 @@ class BasicWMS(WMS):
 			yield self._submitJob(jobNum, task)
 
 
-	def retrieveJobs(self, ids): # Process output sandboxes returned by getJobsOutput
+	# Check status of jobs and yield (jobNum, wmsID, status, other data)
+	def checkJobs(self, gcID_jobNum_List):
+		if not gcID_jobNum_List:
+			raise StopIteration
+
+		activity = utils.ActivityLog('checking job status')
+		gcID_jobNum_Map = dict(gcID_jobNum_List)
+		wmsID_gcID_Map = self._mapIDs(gcID_jobNum_List)
+		wmsIDs = list(wmsID_gcID_Map.keys())
+
+		for (wmsID, job_status, job_info) in self._check_executor.execute(wmsIDs):
+			gcID = wmsID_gcID_Map.get(wmsID)
+			if gcID:
+				for key in CheckInfo.enumValues:
+					if key in job_info:
+						job_info[CheckInfo.enum2str(key)] = job_info.pop(key)
+				yield (gcID_jobNum_Map.pop(gcID), gcID, job_status, job_info)
+
+		for gcID in gcID_jobNum_Map:
+			yield (gcID_jobNum_Map[gcID], gcID, Job.UNKNOWN, {})
+		activity.finish()
+
+
+	def retrieveJobs(self, gcID_jobNum_List): # Process output sandboxes returned by getJobsOutput
 		log = logging.getLogger('wms')
 		# Function to force moving a directory
 		def forceMove(source, target):
@@ -203,7 +208,7 @@ class BasicWMS(WMS):
 
 		retrievedJobs = []
 
-		for inJobNum, pathName in self._getJobsOutput(ids):
+		for inJobNum, pathName in self._getJobsOutput(gcID_jobNum_List):
 			# inJobNum != None, pathName == None => Job could not be retrieved
 			if pathName is None:
 				if inJobNum not in retrievedJobs:
@@ -217,17 +222,17 @@ class BasicWMS(WMS):
 			# inJobNum != None, pathName != None => Job retrieval from WMS was ok
 			jobFile = os.path.join(pathName, 'job.info')
 			try:
-				jobInfo = self._job_parser.process(pathName)
+				job_info = self._job_parser.process(pathName)
 			except Exception:
 				logging.getLogger('wms').exception(sys.exc_info()[1])
-				jobInfo = None
-			if jobInfo:
-				jobNum = jobInfo[JobResult.JOBNUM]
+				job_info = None
+			if job_info:
+				jobNum = job_info[JobResult.JOBNUM]
 				if jobNum != inJobNum:
 					raise BackendError('Invalid job id in job file %s' % jobFile)
 				if forceMove(pathName, os.path.join(self._outputPath, 'job_%d' % jobNum)):
 					retrievedJobs.append(inJobNum)
-					yield (jobNum, jobInfo[JobResult.EXITCODE], jobInfo[JobResult.RAW], pathName)
+					yield (jobNum, job_info[JobResult.EXITCODE], job_info[JobResult.RAW], pathName)
 				else:
 					yield (jobNum, -1, {}, None)
 				continue
@@ -306,7 +311,7 @@ class BasicWMS(WMS):
 		raise AbstractError # Return (jobNum, wmsId, data) for successfully submitted jobs
 
 
-	def _getJobsOutput(self, ids):
+	def _getJobsOutput(self, gcID_jobNum_List):
 		raise AbstractError # Return (jobNum, sandbox) for finished jobs
 
 

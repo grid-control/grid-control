@@ -14,23 +14,42 @@
 
 import os, glob, time, shutil, tempfile
 from grid_control import utils
+from grid_control.backends.backend_tools import CheckJobs
 from grid_control.backends.broker_base import Broker
 from grid_control.backends.wms import BackendError, BasicWMS, WMS
 from grid_control.job_db import Job
 from grid_control.utils.file_objects import VirtualFile
 from grid_control.utils.gc_itertools import lchain
 from hpfwk import AbstractError, ExceptionCollector
-from python_compat import ifilter, imap, ismap, lfilter
+from python_compat import ifilter, imap, ismap, lfilter, set
+
+class LocalCheckJobs(CheckJobs):
+	def __init__(self, config, executor):
+		CheckJobs.__init__(self, config)
+		self._executor = executor
+
+	def setup(self, log):
+		self._executor.setup(log)
+
+	def execute(self, wmsIDs): # yields list of (wmsID, job_status, job_info)
+		checked_ids = set()
+		for (wmsID, job_status, job_info) in self._executor.execute(wmsIDs):
+			checked_ids.add(wmsID)
+			yield (wmsID, job_status, job_info)
+		for wmsID in wmsIDs:
+			if wmsID not in checked_ids:
+				yield (wmsID, Job.DONE, {})
+
 
 class LocalWMS(BasicWMS):
 	configSections = BasicWMS.configSections + ['local']
 
-	def __init__(self, config, name, submitExec, statusExec, cancelExec):
+	def __init__(self, config, name, submitExec, cancelExec, checkExecutor):
 		config.set('broker', 'RandomBroker')
 		config.setInt('wait idle', 20)
 		config.setInt('wait work', 5)
-		(self.submitExec, self.statusExec, self.cancelExec) = (submitExec, statusExec, cancelExec)
-		BasicWMS.__init__(self, config, name)
+		(self.submitExec, self.cancelExec) = (submitExec, cancelExec)
+		BasicWMS.__init__(self, config, name, LocalCheckJobs(config, checkExecutor))
 
 		self.brokerSite = config.getPlugin('site broker', 'UserBroker', cls = Broker,
 			inherit = True, tags = [self], pargs = ('sites', 'sites', self.getNodes))
@@ -47,39 +66,6 @@ class LocalWMS(BasicWMS):
 				os.mkdir(self.sandPath)
 		except Exception:
 			raise BackendError('Unable to create sandbox base directory "%s"!' % self.sandPath)
-
-
-	# Check status of jobs and yield (jobNum, wmsID, status, other data)
-	def checkJobs(self, ids):
-		if not len(ids):
-			raise StopIteration
-
-		activity = utils.ActivityLog('checking job status')
-		proc = utils.LoggedProcess(self.statusExec, self.getCheckArguments(self._getRawIDs(ids)))
-
-		tmp = {}
-		found_error = False
-		for data in self.parseStatus(proc.iter()):
-			if data.pop(None, None) == 'abort':
-				found_error = True
-				break
-			wmsId = self._createId(data['id'])
-			tmp[wmsId] = (wmsId, self.parseJobState(data['status']), data)
-
-		if not found_error:
-			for wmsId, jobNum in ids:
-				if wmsId not in tmp:
-					yield (jobNum, wmsId, Job.DONE, {})
-				else:
-					yield tuple([jobNum] + list(tmp[wmsId]))
-
-		retCode = proc.wait()
-		del activity
-
-		if retCode != 0:
-			for line in proc.getError().splitlines():
-				if not self.unknownID() in line:
-					utils.eprint(line)
 
 
 	def cancelJobs(self, ids):
@@ -202,7 +188,7 @@ class LocalWMS(BasicWMS):
 		return None
 
 	def parseJobState(self, state):
-		return self._statusMap[state]
+		return self._status_map[state]
 
 	def getCancelArguments(self, wmsIds):
 		return str.join(' ', wmsIds)
@@ -222,12 +208,6 @@ class LocalWMS(BasicWMS):
 		raise AbstractError
 
 	def unknownID(self):
-		raise AbstractError
-
-	def parseStatus(self, status):
-		raise AbstractError
-
-	def getCheckArguments(self, wmsIds):
 		raise AbstractError
 
 

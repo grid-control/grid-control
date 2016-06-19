@@ -13,9 +13,37 @@
 # | limitations under the License.
 
 from grid_control import utils
+from grid_control.backends.backend_tools import CheckInfo, CheckJobsViaArguments
 from grid_control.backends.wms_local import LocalWMS
 from grid_control.job_db import Job
 from python_compat import ifilter, imap, izip, lmap, next
+
+class Host_CheckJobs(CheckJobsViaArguments):
+	def __init__(self, config):
+		CheckJobsViaArguments.__init__(self, config)
+		self._check_exec = utils.resolveInstallPath('ps')
+
+	def _arguments(self, wmsIDs):
+		return [self._check_exec, 'wwup'] + wmsIDs
+
+	def _parse_status(self, value, default):
+		if 'Z' in value:
+			return Job.CANCEL
+		return Job.RUNNING
+
+	def _parse(self, proc):
+		status_iter = proc.stdout.iter(self._timeout)
+		head = lmap(lambda x: x.strip('%').lower(), next(status_iter, '').split())
+		for entry in imap(str.strip, status_iter):
+			job_info = dict(izip(head, ifilter(lambda x: x != '', entry.split(None, len(head) - 1))))
+			job_info[CheckInfo.WMSID] = job_info.pop('pid')
+			job_info[CheckInfo.RAW_STATUS] = job_info.pop('stat')
+			job_info.update({CheckInfo.QUEUE: 'localqueue', CheckInfo.WN: 'localhost'})
+			yield job_info
+
+	def _handleError(self, proc):
+		self._filter_proc_log(proc, self._errormsg, blacklist = ['Unknown Job Id'], log_empty = False)
+
 
 class Host(LocalWMS):
 	alias = ['Localhost']
@@ -24,8 +52,8 @@ class Host(LocalWMS):
 	def __init__(self, config, name):
 		LocalWMS.__init__(self, config, name,
 			submitExec = utils.pathShare('gc-host.sh'),
-			statusExec = utils.resolveInstallPath('ps'),
-			cancelExec = utils.resolveInstallPath('kill'))
+			cancelExec = utils.resolveInstallPath('kill'),
+			checkExecutor = Host_CheckJobs(config))
 
 
 	def unknownID(self):
@@ -42,22 +70,6 @@ class Host(LocalWMS):
 
 	def parseSubmitOutput(self, data):
 		return data.strip()
-
-
-	def parseStatus(self, status):
-		head = lmap(lambda x: x.strip('%').lower(), next(status, '').split())
-		for entry in imap(str.strip, status):
-			jobinfo = dict(izip(head, ifilter(lambda x: x != '', entry.split(None, len(head) - 1))))
-			jobinfo.update({'id': jobinfo.get('pid'), 'status': 'R', 'dest': 'localhost/localqueue'})
-			yield jobinfo
-
-
-	def parseJobState(self, state):
-		return Job.RUNNING
-
-
-	def getCheckArguments(self, wmsIds):
-		return 'wwup %s' % str.join(' ', wmsIds)
 
 
 	def getCancelArguments(self, wmsIds):

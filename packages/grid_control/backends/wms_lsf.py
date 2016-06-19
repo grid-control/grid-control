@@ -13,27 +13,52 @@
 # | limitations under the License.
 
 from grid_control import utils
+from grid_control.backends.backend_tools import CheckInfo, CheckJobsViaArguments
 from grid_control.backends.wms import BackendError, WMS
 from grid_control.backends.wms_local import LocalWMS
 from grid_control.job_db import Job
-from python_compat import izip, next
+from python_compat import identity, ifilter, izip, next
+
+class LSF_CheckJobs(CheckJobsViaArguments):
+	def __init__(self, config):
+		CheckJobsViaArguments.__init__(self, config)
+		self._check_exec = utils.resolveInstallPath('bjobs')
+		self._status_map = {
+			'PEND':  Job.QUEUED,  'PSUSP': Job.WAITING,
+			'USUSP': Job.WAITING, 'SSUSP': Job.WAITING,
+			'RUN':   Job.RUNNING, 'DONE':  Job.DONE,
+			'WAIT':  Job.WAITING, 'EXIT':  Job.FAILED,
+			'UNKWN': Job.FAILED,  'ZOMBI': Job.FAILED,
+		}
+
+	def _arguments(self, wmsIDs):
+		return [self._check_exec, '-aw'] + wmsIDs
+
+	def _parse(self, proc):
+		status_iter = proc.stdout.iter(self._timeout)
+		next(status_iter)
+		tmpHead = [CheckInfo.WMSID, 'user', CheckInfo.RAW_STATUS, CheckInfo.QUEUE, 'from', CheckInfo.WN, 'job_name']
+		for line in ifilter(identity, status_iter):
+			try:
+				tmp = line.split()
+				job_info = dict(izip(tmpHead, tmp[:7]))
+				job_info['submit_time'] = str.join(' ', tmp[7:10])
+				yield job_info
+			except Exception:
+				raise BackendError('Error reading job info:\n%s' % line)
+
+	def _handleError(self, proc):
+		self._filter_proc_log(proc, self._errormsg, blacklist = ['is not found'])
+
 
 class LSF(LocalWMS):
 	configSections = LocalWMS.configSections + ['LSF']
-	_statusMap = {
-		'PEND':  Job.QUEUED,  'PSUSP': Job.WAITING,
-		'USUSP': Job.WAITING, 'SSUSP': Job.WAITING,
-		'RUN':   Job.RUNNING, 'DONE':  Job.DONE,
-		'WAIT':  Job.WAITING, 'EXIT':  Job.FAILED,
-		# Better options?
-		'UNKWN': Job.FAILED,  'ZOMBI': Job.FAILED,
-	}
 
 	def __init__(self, config, name):
 		LocalWMS.__init__(self, config, name,
 			submitExec = utils.resolveInstallPath('bsub'),
-			statusExec = utils.resolveInstallPath('bjobs'),
-			cancelExec = utils.resolveInstallPath('bkill'))
+			cancelExec = utils.resolveInstallPath('bkill'),
+			checkExecutor = LSF_CheckJobs(config))
 
 
 	def unknownID(self):
@@ -62,27 +87,6 @@ class LSF(LocalWMS):
 	def parseSubmitOutput(self, data):
 		# Job <34020017> is submitted to queue <1nh>.
 		return data.split()[1].strip('<>').strip()
-
-
-	def parseStatus(self, status):
-		next(status)
-		tmpHead = ['id', 'user', 'status', 'queue', 'from', 'dest_host', 'job_name']
-		for jobline in status:
-			if jobline != '':
-				try:
-					tmp = jobline.split()
-					jobinfo = dict(izip(tmpHead, tmp[:7]))
-					jobinfo['submit_time'] = str.join(' ', tmp[7:10])
-					jobinfo['dest'] = 'N/A'
-					if jobinfo['dest_host'] != '-':
-						jobinfo['dest'] = '%s/%s' % (jobinfo['dest_host'], jobinfo['queue'])
-					yield jobinfo
-				except Exception:
-					raise BackendError('Error reading job info:\n%s' % jobline)
-
-
-	def getCheckArguments(self, wmsIds):
-		return '-aw %s' % str.join(' ', wmsIds)
 
 
 	def getCancelArguments(self, wmsIds):

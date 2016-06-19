@@ -13,20 +13,50 @@
 # | limitations under the License.
 
 from grid_control import utils
+from grid_control.backends.backend_tools import CheckInfo, CheckJobsViaArguments
 from grid_control.backends.wms import WMS
 from grid_control.backends.wms_local import LocalWMS
 from grid_control.job_db import Job
-from python_compat import izip, lmap
+from python_compat import identity, ifilter, izip, lmap, next
+
+class JMS_CheckJobs(CheckJobsViaArguments):
+	def __init__(self, config):
+		CheckJobsViaArguments.__init__(self, config)
+		self._check_exec = utils.resolveInstallPath('job_queue')
+		self._status_map = {'s': Job.QUEUED, 'r': Job.RUNNING, 'CG': Job.DONE, 'w': Job.WAITING}
+
+	def _arguments(self, wmsIDs):
+		return [self._check_exec, '-l'] + wmsIDs
+
+	def _parse(self, proc):
+		tmpHead = [CheckInfo.WMSID, 'user', 'group', 'job_name', CheckInfo.QUEUE, 'partition',
+			'nodes', 'cpu_time', 'wall_time', 'memory', 'queue_time', CheckInfo.RAW_STATUS]
+		status_iter = ifilter(identity, proc.stdout.iter(self._timeout))
+		next(status_iter)
+		next(status_iter)
+		for line in status_iter:
+			tmp = lmap(lambda x: x.strip(), line.replace('\x1b(B', '').replace('\x1b[m', '').split())
+			job_info = dict(izip(tmpHead, tmp[:12]))
+			if len(tmp) > 12:
+				job_info['start_time'] = tmp[12]
+			if len(tmp) > 13:
+				job_info['kill_time'] = tmp[13]
+			if len(tmp) > 14:
+				job_info[CheckInfo.WN] = tmp[14]
+			yield job_info
+
+	def _handleError(self, proc):
+		self._filter_proc_log(proc, self._errormsg, blacklist = ['not in queue', 'tput: No value for $TERM'])
+
 
 class JMS(LocalWMS):
 	configSections = LocalWMS.configSections + ['JMS']
-	_statusMap = { 's': Job.QUEUED, 'r': Job.RUNNING, 'CG': Job.DONE, 'w': Job.WAITING }
 
 	def __init__(self, config, name):
 		LocalWMS.__init__(self, config, name,
 			submitExec = utils.resolveInstallPath('job_submit'),
-			statusExec = utils.resolveInstallPath('job_queue'),
-			cancelExec = utils.resolveInstallPath('job_cancel'))
+			cancelExec = utils.resolveInstallPath('job_cancel'),
+			checkExecutor = JMS_CheckJobs(config))
 
 
 	def unknownID(self):
@@ -57,29 +87,6 @@ class JMS(LocalWMS):
 	def parseSubmitOutput(self, data):
 		# job_submit: Job 121195 has been submitted.
 		return data.split()[2].strip()
-
-
-	def parseStatus(self, status):
-		tmpHead = ['id', 'user', 'group', 'job_name', 'queue', 'partition',
-			'nodes', 'cpu_time', 'wall_time', 'memory', 'queue_time', 'status']
-		for jobline in str.join('', list(status)).split('\n')[2:]:
-			if jobline == '':
-				continue
-			tmp = lmap(lambda x: x.strip('\x1b(B'), jobline.replace('\x1b[m', '').split())
-			jobinfo = dict(izip(tmpHead, tmp[:12]))
-			jobinfo['dest'] = 'N/A'
-			if len(tmp) > 12:
-				jobinfo['start_time'] = tmp[12]
-			if len(tmp) > 13:
-				jobinfo['kill_time'] = tmp[13]
-			if len(tmp) > 14:
-				jobinfo['dest_hosts'] = tmp[14]
-				jobinfo['dest'] = '%s.localhost/%s' % (jobinfo['dest_hosts'], jobinfo['queue'])
-			yield jobinfo
-
-
-	def getCheckArguments(self, wmsIds):
-		return '-l %s' % str.join(' ', wmsIds)
 
 
 	def getCancelArguments(self, wmsIds):

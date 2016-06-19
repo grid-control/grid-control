@@ -120,7 +120,7 @@ class Job(object):
 		self.submitted = time.time()
 
 makeEnum(['INIT', 'SUBMITTED', 'DISABLED', 'READY', 'WAITING', 'QUEUED', 'ABORTED',
-		'RUNNING', 'ERROR', 'UNKNOWN', 'CANCELLED', 'DONE', 'FAILED', 'SUCCESS'], Job)
+		'RUNNING', 'CANCEL', 'UNKNOWN', 'CANCELLED', 'DONE', 'FAILED', 'SUCCESS'], Job)
 
 
 class JobClass(object):

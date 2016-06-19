@@ -28,6 +28,40 @@
 
    * grid_control.gc_plugin ConfigurablePlugin
 
+    * grid_control.backends.backend_tools BackendExecutor
+
+     * grid_control.backends.backend_tools CheckJobs
+
+      * grid_control.backends.backend_tools CheckJobsWithProcess
+
+       * grid_control.backends.backend_tools CheckJobsViaArguments
+
+        * grid_control.backends.wms_arc ARC_CheckJobs
+
+        * grid_control.backends.wms_cream CREAM_CheckJobs
+
+        * grid_control.backends.wms_condor Condor_CheckJobs
+
+        * grid_control.backends.wms_gridengine GridEngine_CheckJobs
+
+        * grid_control.backends.wms_host Host_CheckJobs
+
+        * grid_control.backends.wms_jms JMS_CheckJobs
+
+        * grid_control.backends.wms_lsf LSF_CheckJobs
+
+        * grid_control.backends.wms_pbs PBS_CheckJobs
+
+        * grid_control.backends.wms_slurm SLURM_CheckJobs
+
+       * grid_control.backends.backend_tools CheckJobsViaStdin
+
+        * grid_control.backends.wms_grid Grid_CheckJobs
+
+      * grid_control.backends.wms_glitewms_direct GliteWMSDirect_CheckJobs
+
+      * grid_control.backends.wms_local LocalCheckJobs
+
     * grid_control.datasets.dproc_base DataProcessor
 
      * grid_control.datasets.dproc_basic EmptyDataProcessor empty
@@ -256,7 +290,7 @@
 
       * grid_control.backends.wms Grid
 
-      * grid_control.backends.wms InactiveWMS inactive
+      * grid_control.backends.wms_inactive InactiveWMS inactive
 
       * grid_control.backends.wms_local Local
 

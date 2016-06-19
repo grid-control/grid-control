@@ -13,31 +13,50 @@
 # | limitations under the License.
 
 from grid_control import utils
-from grid_control.backends import WMS
+from grid_control.backends.backend_tools import CheckInfo, CheckJobsViaArguments
+from grid_control.backends.wms import BackendError, WMS
 from grid_control.backends.wms_local import LocalWMS
 from grid_control.job_db import Job
-from python_compat import sorted
+from python_compat import identity, ifilter
+
+class SLURM_CheckJobs(CheckJobsViaArguments):
+	def __init__(self, config):
+		CheckJobsViaArguments.__init__(self, config)
+		self._check_exec = utils.resolveInstallPath('sacct')
+		self._status_map = {
+			'PENDING': Job.WAITING,    # idle (waiting for a machine to execute on)
+			'RUNNING': Job.RUNNING,    # running
+			'COMPLETED': Job.DONE,     # running
+			'COMPLETING': Job.DONE,    # running
+			'CANCELLED+': Job.ABORTED, # removed
+			'NODE_FAIL': Job.ABORTED,  # removed
+			'CANCELLED': Job.ABORTED,  # removed
+			'FAILED': Job.FAILED,      # submit error
+		}
+
+	def _arguments(self, wmsIDs):
+		return [self._check_exec, '-n', '-o', 'jobid,partition,state,exitcode', '-j', str.join(',', wmsIDs)]
+
+	def _parse(self, proc):
+		for line in ifilter(identity, proc.stdout.iter(self._timeout)):
+			if 'error' in line.lower():
+				raise BackendError('Unable to parse status line %s' % repr(line))
+			tmp = line.split()
+			try:
+				wmsID = str(int(tmp[0]))
+			except Exception:
+				continue
+			yield {CheckInfo.WMSID: wmsID, CheckInfo.RAW_STATUS: tmp[2], CheckInfo.QUEUE: tmp[1]}
+
 
 class SLURM(LocalWMS):
 	configSections = LocalWMS.configSections + ['SLURM']
-	_statusMap = { # dictionary mapping vanilla condor job status to GC job status
-		#'0' : Job.WAITING	,# unexpanded (never been run)
-		'PENDING' : Job.WAITING	,# idle (waiting for a machine to execute on)
-		'RUNNING' : Job.RUNNING	,# running
-		'COMPLETED' : Job.DONE	,# running
-		'COMPLETING' : Job.DONE	,# running
-		'CANCELLED+' : Job.ABORTED	,# removed
-		'NODE_FAIL' : Job.ABORTED	,# removed
-		'CANCELLED' : Job.ABORTED	,# removed
-		#'5' : Job.WAITING	,#DISABLED	,# on hold
-		'FAILED' : Job.FAILED	,# submit error
-		}
 
 	def __init__(self, config, wmsName = None):
 		LocalWMS.__init__(self, config, wmsName,
 			submitExec = utils.resolveInstallPath('sbatch'),
-			statusExec = utils.resolveInstallPath('sacct'),
-			cancelExec = utils.resolveInstallPath('scancel'))
+			cancelExec = utils.resolveInstallPath('scancel'),
+			checkExecutor = SLURM_CheckJobs(config))
 
 
 	def unknownID(self):
@@ -61,35 +80,6 @@ class SLURM(LocalWMS):
 	def parseSubmitOutput(self, data):
 		# job_submit: Job 121195 has been submitted.
 		return int(data.split()[3].strip())
-
-	def parseStatus(self, status):
-		for jobline in str.join('', list(status)).split('\n'):
-			if 'error' in jobline.lower():
-				self._log.warning('got error: %r', jobline)
-				yield {None: 'abort'}
-			if jobline == '':
-				continue
-
-			jobinfo = dict()
-
-			jl = jobline.split()
-			try:
-				jobid = int(jl[0])
-			except Exception:
-				continue
-
-			if not jl[2] in self._statusMap.keys():
-				self._log.warning('unable to parse status=%r %r %r', jl, jl[2], sorted(list(self._statusMap.keys())))
-				continue
-
-			jobinfo['id'] = jobid
-			jobinfo['queue'] = jl[1]
-			jobinfo['status'] = jl[2]
-			yield jobinfo
-
-
-	def getCheckArguments(self, wmsIds):
-		return '-n -o jobid,partition,state,exitcode -j %s' % str.join(',', wmsIds)
 
 
 	def getCancelArguments(self, wmsIds):

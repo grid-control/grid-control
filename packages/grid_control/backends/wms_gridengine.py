@@ -14,6 +14,7 @@
 
 import os, xml.dom.minidom
 from grid_control import utils
+from grid_control.backends.backend_tools import CheckInfo, CheckJobsViaArguments
 from grid_control.backends.wms import BackendError, WMS
 from grid_control.backends.wms_pbsge import PBSGECommon
 from grid_control.config import ConfigError
@@ -22,13 +23,69 @@ from grid_control.utils.parsing import parseTime
 from grid_control.utils.process_base import LocalProcess
 from python_compat import imap, izip, lmap, set
 
+class GridEngine_CheckJobs(CheckJobsViaArguments):
+	def __init__(self, config, user = None):
+		CheckJobsViaArguments.__init__(self, config)
+		self._user = user
+		self._check_exec = utils.resolveInstallPath('qstat')
+
+	def _arguments(self, wmsIDs):
+		args = [self._check_exec, '-xml']
+		if self._user:
+			args.extend(['-u', self._user])
+		return args
+
+	def _parse(self, proc):
+		proc.status(timeout = self._timeout)
+		status_string = proc.stdout.read(timeout = 0)
+		# qstat gives invalid xml in <unknown_jobs> node
+		unknown_start = status_string.find('<unknown_jobs')
+		unknown_jobs_string = ''
+		if unknown_start >= 0:
+			unknown_end_tag = '</unknown_jobs>'
+			unknown_end = status_string.find(unknown_end_tag) + len(unknown_end_tag)
+			unknown_jobs_string = status_string[unknown_start:unknown_end]
+			unknown_jobs_string_fixed = unknown_jobs_string.replace('<>', '<unknown_job>').replace('</>', '</unknown_job>')
+			status_string = status_string.replace(unknown_jobs_string, unknown_jobs_string_fixed)
+		try:
+			dom = xml.dom.minidom.parseString(status_string)
+		except Exception:
+			raise BackendError("Couldn't parse qstat XML output!")
+		for job_node in dom.getElementsByTagName('job_list'):
+			job_info = {}
+			try:
+				for node in job_node.childNodes:
+					if node.nodeType != xml.dom.minidom.Node.ELEMENT_NODE:
+						continue
+					if node.hasChildNodes():
+						job_info[str(node.nodeName)] = str(node.childNodes[0].nodeValue)
+				job_info[CheckInfo.WMSID] = job_info.pop('JB_job_number')
+				job_info[CheckInfo.RAW_STATUS] = job_info.pop('state')
+				if 'queue_name' in job_info:
+					queue, node = job_info['queue_name'].split('@')
+					job_info[CheckInfo.QUEUE] = queue
+					job_info[CheckInfo.WN] = node
+			except Exception:
+				raise BackendError('Error reading job info:\n%s' % job_node.toxml())
+			yield job_info
+
+	def _parse_status(self, value, default):
+		if True in imap(lambda x: x in value, ['E', 'e']):
+			return Job.CANCEL
+		if True in imap(lambda x: x in value, ['h', 's', 'S', 'T', 'w']):
+			return Job.QUEUED
+		if True in imap(lambda x: x in value, ['r', 't']):
+			return Job.RUNNING
+		return Job.READY
+
+
 class GridEngine(PBSGECommon):
 	alias = ['SGE', 'UGE', 'OGE']
 	configSections = PBSGECommon.configSections + ['GridEngine'] + alias
 
 	def __init__(self, config, name):
-		PBSGECommon.__init__(self, config, name)
 		self._user = config.get('user', os.environ.get('LOGNAME', ''), onChange = None)
+		PBSGECommon.__init__(self, config, name, checkExecutor = GridEngine_CheckJobs(config, self._user))
 		self._project = config.get('project name', '', onChange = None)
 		self._configExec = utils.resolveInstallPath('qconf')
 
@@ -55,42 +112,6 @@ class GridEngine(PBSGECommon):
 	def parseSubmitOutput(self, data):
 		# Your job 424992 ("test.sh") has been submitted
 		return data.split()[2].strip()
-
-
-	def parseStatus(self, status):
-		try:
-			dom = xml.dom.minidom.parseString(str.join('', status))
-		except Exception:
-			raise BackendError("Couldn't parse qstat XML output!")
-		for jobentry in dom.getElementsByTagName('job_list'):
-			jobinfo = {}
-			try:
-				for node in jobentry.childNodes:
-					if node.nodeType != xml.dom.minidom.Node.ELEMENT_NODE:
-						continue
-					if node.hasChildNodes():
-						jobinfo[str(node.nodeName)] = str(node.childNodes[0].nodeValue)
-				jobinfo['id'] = jobinfo['JB_job_number']
-				jobinfo['status'] = jobinfo['state']
-				jobinfo['dest'] = 'N/A'
-				if 'queue_name' in jobinfo:
-					queue, node = jobinfo['queue_name'].split('@')
-					jobinfo['dest'] = '%s/%s' % (node, queue)
-			except Exception:
-				raise BackendError('Error reading job info:\n%s' % jobentry.toxml())
-			yield jobinfo
-
-
-	def parseJobState(self, state):
-		if True in imap(lambda x: x in state, ['h', 's', 'S', 'T', 'w']):
-			return Job.QUEUED
-		if True in imap(lambda x: x in state, ['r', 't']):
-			return Job.RUNNING
-		return Job.READY
-
-
-	def getCheckArguments(self, wmsIds):
-		return '-xml' + utils.QM(self._user, ' -u %s' % self._user, '')
 
 
 	def getCancelArguments(self, wmsIds):

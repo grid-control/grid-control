@@ -14,7 +14,7 @@
 
 # -*- coding: utf-8 -*-
 
-import os, re, glob, time, tempfile
+import os, re, time, tempfile
 
 try:
 	from commands import getoutput
@@ -24,9 +24,9 @@ from grid_control import utils
 from grid_control.backends.broker_base import Broker
 from grid_control.backends.condor_wms.processhandler import ProcessHandler
 from grid_control.backends.wms import BackendError, BasicWMS, WMS
-from grid_control.job_db import Job
+from grid_control.backends.wms_condor import Condor_CheckJobs
 from grid_control.utils.data_structures import makeEnum
-from python_compat import ifilter, imap, irange, izip, lmap, lzip, md5, set, sorted
+from python_compat import imap, irange, lmap, lzip, md5, set
 
 # if the ssh stuff proves too hack'y: http://www.lag.net/paramiko/
 PoolType = makeEnum(['LOCAL','SPOOL','SSH','GSISSH'])
@@ -38,32 +38,12 @@ class Condor(BasicWMS):
 	# condor: U = unexpanded (never been run), H = on hold, R = running, I = idle (waiting for a machine to execute on), C = completed, and X = removed
 	# 0 Unexpanded 	U -- 1	Idle 	I -- 2	Running 	R -- 3	Removed 	X -- 4	Completed 	C -- 5	Held 	H -- 6	Submission_err 	E
 	# GC: 'INIT', 'SUBMITTED', 'DISABLED', 'READY', 'WAITING', 'QUEUED', 'ABORTED', 'RUNNING', 'CANCELLED', 'DONE', 'FAILED', 'SUCCESS'
-	_statusMap = { # dictionary mapping vanilla condor job status to GC job status
-		'0' : Job.WAITING,   # unexpanded (never been run)
-		'1' : Job.SUBMITTED, # idle (waiting for a machine to execute on)
-		'2' : Job.RUNNING,   # running
-		'3' : Job.ABORTED,   # removed
-		'4' : Job.DONE,      # completed
-		'5' : Job.WAITING,   # DISABLED; on hold
-		'6' : Job.FAILED,    # submit error
-		'7' : Job.WAITING,   # suspended
-		}
-	_humanMap = { # dictionary mapping vanilla condor job status to human readable condor status
-		'0' : 'Unexpanded',
-		'1' : 'Idle',
-		'2' : 'Running',
-		'3' : 'Removed',
-		'4' : 'Completed',
-		'5' : 'Held',
-		'6' : 'Submission_err',
-		'7' : 'Suspended',
-		}
 
 # __init__: start Condor based job management
 #>>config: Config class extended dictionary
 	def __init__(self, config, wmsName):
 		utils.vprint('Using batch system: Condor/GlideInWMS', -1)
-		BasicWMS.__init__(self, config, wmsName)
+		BasicWMS.__init__(self, config, wmsName, checkExecutor = Condor_CheckJobs(config))
 		# special debug out/messages/annotations - may have noticeable effect on storage and performance!
 		debugLogFN = config.get('debugLog', '')
 		self.debug = False
@@ -99,7 +79,6 @@ class Condor(BasicWMS):
 		# load keys for condor pool ClassAds
 		self.poolReqs  = config.getDict('poolArgs req', {})[0]
 		self.poolQuery = config.getDict('poolArgs query', {})[0]
-		self._formatStatusReturnQuery(config)
 		# Sandbox base path where individual job data is stored, staged and returned to
 		self.sandPath = config.getPath('sandbox path', config.getWorkPath('sandbox'), mustExist = False)
 		# history query is faster with split files - check if and how this is used
@@ -296,115 +275,6 @@ class Condor(BasicWMS):
 				self._log.warning('There might be some junk data left in: %s @ %s', self.getWorkdirPath(), self.Pool.getDomain())
 				raise BackendError('Unable to clean up remote working directory')
 			activity.finish()
-
-# checkJobs: Check status of jobs and yield (jobNum, wmsID, status, other data)
-#>>wmsJobIdList: list of (wmsID, JobNum) tuples
-	def checkJobs(self, wmsJobIdList):
-		if len(wmsJobIdList) == 0:
-			raise StopIteration
-		self.debugOut('Started checking: %s' % set(lzip(*wmsJobIdList)[0]))
-		self.debugPool()
-
-		wmsIdList=list(self._getRawIDs(wmsJobIdList))
-		wmsIdArgument = ' '.join(wmsIdList)
-		wmsToJobMap = dict(wmsJobIdList)
-
-		activity = utils.ActivityLog('fetching job status')
-		statusProcess = self.Pool.LoggedExecute(self.statusExec, '%(format)s %(jobIDs)s' % {"jobIDs" : wmsIdArgument, "format" : self.statusReturnFormat })
-		activity.finish()
-
-		activity = utils.ActivityLog('checking job status')
-		# process all lines of the status executable output
-		utils.vprint('querrying condor_q', 2)
-		for statusReturnLine in statusProcess.iter():
-			try:
-				# test if wmsID job was requested, then extact data and remove from check list
-				if statusReturnLine.split()[0] in wmsIdList:
-					( jobID, wmsID, status, jobinfo ) = self._statusReturnLineRead(statusReturnLine)
-					wmsIdList.remove(wmsID)
-					yield ( jobID, self._createId(wmsID), status, jobinfo )
-			except Exception:
-				raise BackendError('Error reading job status info:\n%s' % statusReturnLine)
-
-		# cleanup after final yield
-		retCode = statusProcess.wait()
-		if retCode != 0:
-			if self.explainError(statusProcess, retCode):
-				pass
-			else:
-				statusProcess.logError(self.errorLog, brief=True)
-		activity.finish()
-
-		self.debugOut("Remaining after condor_q: %s" % wmsIdList)
-		# jobs not in queue have either succeeded or failed - both is considered 'Done' for GC
-		# if no additional information is required, consider everything we couldn't find as done
-		if retCode == 0:
-			for wmsID in list(wmsIdList):
-				wmsIdList.remove(wmsID)
-				wmsID=self._createId(wmsID)
-				yield ( wmsToJobMap[wmsID], wmsID, Job.DONE, {} )
-		# TODO: querry log on properly configured pool
-		# querying the history can be SLOW! only do when necessary and possible
-		if False and len(wmsIdList) > 0 and self.remoteType != PoolType.SPOOL:
-			utils.vprint('querrying condor_history', 2)
-			# querying the history can be VERY slow! Only do so bit by bit if possible
-			if self.historyFile:
-				historyList = sorted([ "-f "+ file for file in ifilter(os.path.isfile, glob.glob(self.historyFile+"*")) ])
-			else:
-				historyList=[""]
-			# query the history file by file until no more jobs need updating
-			for historyFile in historyList:
-				if len(wmsIdList) > 0:
-					statusArgs = '%(fileQuery)s %(format)s %(jobIDs)s' % {"fileQuery": historyFile, "jobIDs" : " ", "format" : self.statusReturnFormat}
-					statusProcess = self.Pool.LoggedExecute(self.historyExec, statusArgs)
-					for statusReturnLine in statusProcess.iter():
-						# test if line starts with a number and was requested
-						try:
-							# test if wmsID job was requested, then extact data and remove from check list
-							if statusReturnLine.split()[0] in wmsIdList:
-								( jobID, wmsID, status, jobinfo ) = self._statusReturnLineRead(statusReturnLine)
-								wmsIdList.remove(wmsID)
-								yield ( jobID, self._createId(wmsID), status, jobinfo )
-						except Exception:
-							raise BackendError('Error reading job status info:\n%s' % statusReturnLine)
-
-					# cleanup after final yield
-					retCode = statusProcess.wait()
-					if retCode != 0:
-						if self.explainError(statusProcess, retCode):
-							pass
-						else:
-							statusProcess.logError(self.errorLog, brief=True)
-		self.debugFlush()
-
-
-	# helper: process output line from call to condor_q or condor_history
-	#>>line: output from condor_q or condor_history
-	def _statusReturnLineRead(self,line):
-		try:
-			statusReturnValues = line.split()
-			# transform output string to dictionary
-			jobinfo = dict(izip(self.statusReturnKeys, statusReturnValues))
-			# extract GC and WMS ID, check for consistency
-			jobID,wmsID=jobinfo['GCID@WMSID'].split('@')
-			if (wmsID != jobinfo['wmsid']):
-				raise BackendError("Critical! Unable to match jobs in queue! \n CondorID: %s	Expected: %s \n%s" % ( jobinfo['wmsid'], wmsID, line ))
-			jobinfo['jobid']=int(jobID)
-			del jobinfo['GCID@WMSID']
-			# extract Host and Queue data
-			if "@" in jobinfo["RemoteHost"]:
-				jobinfo['dest'] = jobinfo["RemoteHost"].split("@")[1] + ': /' + jobinfo.get("Queue","")
-			else:
-				jobinfo['dest'] = jobinfo["RemoteHost"]
-			del jobinfo["RemoteHost"]
-			if "Queue" in jobinfo:
-				del jobinfo["Queue"]
-			# convert status to appropriate format
-			status = self._statusMap[jobinfo['status']]
-			jobinfo['status'] = self._humanMap[jobinfo['status']]
-			return ( jobinfo['jobid'], jobinfo['wmsid'], status, jobinfo )
-		except Exception:
-			raise BackendError('Error reading job info:\n%s' % line)
 
 
 # submitJobs: Submit a number of jobs and yield (jobNum, WMS ID, other data) sequentially
@@ -705,36 +575,6 @@ class Condor(BasicWMS):
 		##	Pool access functions
 		##	mainly implements remote pool wrappers/interfaces
 
-# _createStatusReturnFormat: set query strings for condor_q and condor_history based on backend state
-	def _formatStatusReturnQuery(self, config):
-		self.debugOut("Formatting Status Return String")
-		# return a safe request with default fallback
-		def getSafeQueryKey(ClassAdKey, default='"NA"'):
-			return r"IfThenElse(isUndefined(%(key)s)==False,%(key)s,%(def)s)" % { "key" : ClassAdKey, "def" : default}
-		# Dummy for producing empty format specifier
-		statusReturnBlank=r"""'IfThenElse(isUndefined(ClusterId),"","")'"""
-		# default query string and matching dictionary keys
-		statusReturnFormat= r"-format '%d.' ClusterId -format '%d ' ProcId" + \
-							r" -format '%s ' GridControl_GCIDtoWMSID" + \
-							r" -format '%d ' JobStatus" + \
-							r" -format '%%v:' '%s'" % getSafeQueryKey("HoldReasonCode") + \
-							r" -format '%%v ' '%s'" % getSafeQueryKey("HoldReasonSubCode") + \
-							r""" -format '%s ' 'formatTime(QDate,"%m/%d-%H:%M")'""" + \
-							r""" -format '%s ' 'formatTime(CompletionDate,"%m/%d-%H:%M")'""" + \
-							r""" -format '%s ' 'IfThenElse(isUndefined(RemoteHost)==False,RemoteHost,IfThenElse(isUndefined(LastRemoteHost)==False,LastRemoteHost,"NA"))'"""
-		statusReturnKeys = ["wmsid", "GCID@WMSID", "status", "holdreason", "submit_time", "completion_time", "RemoteHost"]
-		# add pool specific query arguments
-		for queryKey, queryArg in self.poolQuery.items():
-			statusReturnFormat+=r" -format '%%v' '%s'" % getSafeQueryKey(queryArg)
-			statusReturnKeys.append(queryKey)
-		# end query string line
-		statusReturnFormat+=r" -format '%%s\n' %s" % statusReturnBlank
-		self.statusReturnFormat=statusReturnFormat
-		self.statusReturnKeys=statusReturnKeys
-		self.debugOut("statusReturnKeys: %s" % ",".join(self.statusReturnKeys))
-		self.debugOut("statusReturnFormat %s" % self.statusReturnFormat)
-
-
 	# remote submissal requires different access to Condor tools
 	# local	: remote == ""			=> condor_q job.jdl
 	# remote: remote == <pool>		=> condor_q -remote <pool> job.jdl
@@ -758,7 +598,6 @@ class Condor(BasicWMS):
 			self.Pool=self.Pool=ProcessHandler.createInstance("LocalProcessHandler")
 			# local and remote use condor tools installed locally - get them
 			self.submitExec = utils.resolveInstallPath('condor_submit')
-			self.statusExec = utils.resolveInstallPath('condor_q')
 			self.historyExec = utils.resolveInstallPath('condor_history')	# completed/failed jobs are stored outside the queue
 			self.cancelExec = utils.resolveInstallPath('condor_rm')
 			self.transferExec = utils.resolveInstallPath('condor_transfer_data')	# submission might spool to another schedd and need to fetch output
@@ -766,7 +605,6 @@ class Condor(BasicWMS):
 			if self.remoteType == PoolType.SPOOL:
 				# remote requires adding instructions for accessing remote pool
 				self.submitExec+= " %s %s" % (utils.QM(sched,"-remote %s"%sched,""),utils.QM(collector, "-pool %s"%collector, ""))
-				self.statusExec+= " %s %s" % (utils.QM(sched,"-name %s"%sched,""),utils.QM(collector, "-pool %s"%collector, ""))
 				self.historyExec = "false"	# disabled for this type
 				self.cancelExec+= " %s %s" % (utils.QM(sched,"-name %s"%sched,""),utils.QM(collector, "-pool %s"%collector, ""))
 				self.transferExec+= " %s %s" % (utils.QM(sched,"-name %s"%sched,""),utils.QM(collector, "-pool %s"%collector, ""))
@@ -779,7 +617,6 @@ class Condor(BasicWMS):
 				self.Pool=ProcessHandler.createInstance("GSISSHProcessHandler",remoteHost=host , sshLink=config.getWorkPath(".gsissh", self.wmsName+host ) )
 			# ssh type instructions rely on commands being available on remote pool
 			self.submitExec = 'condor_submit'
-			self.statusExec = 'condor_q'
 			self.historyExec = 'condor_history'
 			self.cancelExec = 'condor_rm'
 			self.transferExec = "false"	# disabled for this type

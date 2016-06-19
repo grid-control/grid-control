@@ -15,7 +15,7 @@
 import os, time, random
 from grid_control import utils
 from grid_control.backends.wms import BackendError
-from grid_control.backends.wms_grid import GridWMS
+from grid_control.backends.wms_grid import GridWMS, Grid_CheckJobs
 from grid_control.utils.parsing import parseStr
 from grid_control.utils.process_base import LocalProcess
 from python_compat import md5_hex, sort_inplace
@@ -145,12 +145,12 @@ class DiscoverWMS_Lazy(object): # TODO: Move to broker infrastructure
 class GliteWMS(GridWMS):
 	configSections = GridWMS.configSections + ['glite-wms', 'glitewms'] # backwards compatibility
 
-	def __init__(self, config, name):
-		GridWMS.__init__(self, config, name)
+	def __init__(self, config, name, checkExecutor = None):
+		GridWMS.__init__(self, config, name,
+			checkExecutor = checkExecutor or Grid_CheckJobs(config, 'glite-wms-job-status'))
 
 		self._delegateExec = utils.resolveInstallPath('glite-wms-job-delegate-proxy')
 		self._submitExec = utils.resolveInstallPath('glite-wms-job-submit')
-		self._statusExec = utils.resolveInstallPath('glite-wms-job-status')
 		self._outputExec = utils.resolveInstallPath('glite-wms-job-output')
 		self._cancelExec = utils.resolveInstallPath('glite-wms-job-cancel')
 		self._submitParams.update({'-r': self._ce, '--config': self._configVO})
