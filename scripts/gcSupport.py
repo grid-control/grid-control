@@ -20,7 +20,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'p
 
 from grid_control import utils
 from grid_control.config import createConfig
-from grid_control.job_db import Job, JobClass, JobDB
+from grid_control.job_db import Job, JobClass
 from grid_control.job_selector import ClassSelector, JobSelector
 from grid_control.output_processor import FileInfoProcessor, JobInfoProcessor, JobResult
 from grid_control.utils.cmd_options import Options
@@ -84,7 +84,7 @@ def initGC(args):
 		userSelector = None
 		if len(args) != 1:
 			userSelector = JobSelector.create(args[1])
-		return (config, JobDB(config, jobSelector = userSelector))
+		return (config, Plugin.createInstance('TextFileJobDB', config, jobSelector = userSelector))
 	sys.stderr.write('Syntax: %s <config file> [<job id>, ...]\n\n' % sys.argv[0])
 	sys.exit(os.EX_USAGE)
 

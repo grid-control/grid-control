@@ -45,7 +45,7 @@ def main(opts, args):
 		task = config.getPlugin(['task', 'module'], cls = 'TaskModule')
 
 	# Initialise job database
-	jobDB = config.getPlugin('job database', 'JobDB', cls = 'JobDB')
+	jobDB = config.getPlugin('job database', 'TextFileJobDB', cls = 'JobDB')
 	activity = utils.ActivityLog('Filtering job entries')
 	selected = jobDB.getJobs(JobSelector.create(opts.job_selector, task = task))
 	activity.finish()

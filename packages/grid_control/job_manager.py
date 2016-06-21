@@ -47,8 +47,8 @@ class JobManager(NamedPlugin):
 		self._job_retries = config.getInt('max retry', -1, onChange = None)
 
 		selected = JobSelector.create(config.get('selected', '', onChange = None), task = self._task)
-		self.jobDB = config.getPlugin('job database', 'JobDB',
-			cls = JobDB, pargs = (self.getMaxJobs(self._task), selected))
+		self.jobDB = config.getPlugin('job database', 'TextFileJobDB',
+			cls = JobDB, pargs = (self.getMaxJobs(self._task), selected), onChange = None)
 		self._disabled_jobs_logfile = config.getWorkPath('disabled')
 		self._outputProcessor = config.getPlugin('output processor', 'SandboxProcessor',
 			cls = TaskOutputProcessor, pargs = (task,))
@@ -134,9 +134,8 @@ class JobManager(NamedPlugin):
 		# Get list of submittable jobs
 		readyList = self.jobDB.getJobs(ClassSelector(JobClass.READY))
 		retryOK = readyList
-		defaultJob = Job()
 		if self._job_retries >= 0:
-			retryOK = lfilter(lambda x: self.jobDB.get(x, defaultJob).attempt - 1 < self._job_retries, readyList)
+			retryOK = lfilter(lambda x: self.jobDB.getJobTransient(x).attempt - 1 < self._job_retries, readyList)
 		modOK = lfilter(self._task.canSubmit, readyList)
 		jobList = set.intersection(set(retryOK), set(modOK))
 
@@ -163,14 +162,14 @@ class JobManager(NamedPlugin):
 
 
 	def _wmsArgs(self, jobList):
-		return lmap(lambda jobNum: (self.jobDB.get(jobNum).wmsId, jobNum), jobList)
+		return lmap(lambda jobNum: (self.jobDB.getJob(jobNum).wmsId, jobNum), jobList)
 
 
 	def _checkJobList(self, wms, jobList):
 		(change, timeoutList, reported) = (False, [], [])
 		for (jobNum, _, state, info) in wms.checkJobs(self._wmsArgs(jobList)):
 			reported.append(jobNum)
-			jobObj = self.jobDB.get(jobNum)
+			jobObj = self.jobDB.getJob(jobNum)
 			if state != jobObj.state:
 				change = True
 				for (key, value) in info.items():
@@ -195,7 +194,7 @@ class JobManager(NamedPlugin):
 		submitted = []
 		for (jobNum, wmsId, data) in wms.submitJobs(jobList, self._task):
 			submitted.append(jobNum)
-			jobObj = self.jobDB.get(jobNum, create = True)
+			jobObj = self.jobDB.getJobPersistent(jobNum)
 
 			if wmsId is None:
 				# Could not register at WMS
@@ -249,7 +248,7 @@ class JobManager(NamedPlugin):
 		jobList = self._sample(self.jobDB.getJobs(ClassSelector(JobClass.DONE)), utils.QM(self._chunks_enabled, self._chunks_retrieve, -1))
 
 		for (jobNum, retCode, data, outputdir) in wms.retrieveJobs(self._wmsArgs(jobList)):
-			jobObj = self.jobDB.get(jobNum)
+			jobObj = self.jobDB.getJob(jobNum)
 			if jobObj is None:
 				continue
 
@@ -287,7 +286,7 @@ class JobManager(NamedPlugin):
 			return
 
 		def mark_cancelled(jobNum):
-			jobObj = self.jobDB.get(jobNum)
+			jobObj = self.jobDB.getJob(jobNum)
 			if jobObj is None:
 				return
 			self._update(jobObj, jobNum, Job.CANCELLED)
@@ -296,7 +295,7 @@ class JobManager(NamedPlugin):
 		jobs.reverse()
 		for (jobNum, wmsId) in wms.cancelJobs(self._wmsArgs(jobs)):
 			# Remove deleted job from todo list and mark as cancelled
-			assert(self.jobDB.get(jobNum).wmsId == wmsId)
+			assert(self.jobDB.getJob(jobNum).wmsId == wmsId)
 			jobs.remove(jobNum)
 			mark_cancelled(jobNum)
 
@@ -333,13 +332,8 @@ class JobManager(NamedPlugin):
 		def resetState(jobs, newState):
 			jobSet = set(jobs)
 			for jobNum in jobs:
-				jobObj = self.jobDB.get(jobNum)
-				if not jobObj:
-					jobObj = Job()
-					self.jobDB.commit(jobNum, jobObj)
-					self._update(jobObj, jobNum, newState)
-					jobSet.remove(jobNum)
-				elif jobObj.state in [ Job.INIT, Job.DISABLED, Job.ABORTED, Job.CANCELLED, Job.DONE, Job.FAILED, Job.SUCCESS ]:
+				jobObj = self.jobDB.getJobPersistent(jobNum)
+				if jobObj.state in [Job.INIT, Job.DISABLED, Job.ABORTED, Job.CANCELLED, Job.DONE, Job.FAILED, Job.SUCCESS]:
 					self._update(jobObj, jobNum, newState)
 					jobSet.remove(jobNum)
 					jobObj.attempt = 0
@@ -355,9 +349,9 @@ class JobManager(NamedPlugin):
 			self._log_user_time.info('The task module has requested changes to the job database')
 			newMaxJobs = self.getMaxJobs(self._task)
 			applied_change = False
-			if newMaxJobs != self.jobDB.jobLimit:
+			if newMaxJobs != len(self.jobDB):
 				self._log_user_time.info('Number of jobs changed from %d to %d', len(self.jobDB), newMaxJobs)
-				self.jobDB.jobLimit = newMaxJobs
+				self.jobDB.setJobLimit(newMaxJobs)
 				applied_change = True
 			if redo:
 				self.cancel(wms, self.jobDB.getJobs(ClassSelector(JobClass.PROCESSING), redo), interactive = False, showJobs = True)

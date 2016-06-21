@@ -29,7 +29,7 @@ class TimeReport(Report):
 	def display(self):
 		cpuTime = 0
 		for jobNum in self._jobs:
-			jobObj = self._jobDB.get(jobNum)
+			jobObj = self._jobDB.getJob(jobNum)
 			if jobObj:
 				cpuTime += jobObj.get('runtime', 0)
 		msg = 'Consumed wall time: %-20s' % strTime(cpuTime)

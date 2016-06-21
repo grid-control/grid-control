@@ -164,9 +164,11 @@
 
     * grid_control.job_db JobDB
 
-     * grid_control.job_db_zip ZippedJobDB
+     * grid_control.job_db TextFileJobDB
 
-      * grid_control.job_db_zip Migrate2ZippedJobDB
+      * grid_control.job_db_zip ZippedJobDB
+
+       * grid_control.job_db_zip Migrate2ZippedJobDB
 
     * grid_control.tasks.task_base JobNamePlugin
 

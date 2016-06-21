@@ -175,7 +175,7 @@ class CPWebserver(GUI):
 			result += str(TabularHTML(lzip(sorted(info), sorted(info)), [info], top = False))
 		def getJobObjs():
 			for jobNum in self.jobMgr.jobDB.getJobs():
-				result = self.jobMgr.jobDB.get(jobNum).__dict__
+				result = self.jobMgr.jobDB.getJobTransient(jobNum).__dict__
 				result['jobNum'] = jobNum
 				result.update(result['dict'])
 				yield result

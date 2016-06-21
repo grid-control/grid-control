@@ -221,16 +221,16 @@ def cleanup_files(opts, files, failJob, output):
 
 def download_job_output(opts, incInfo, workDir, jobDB, token, jobNum, output):
 	output.init(jobNum)
-	job = jobDB.get(jobNum)
+	jobObj = jobDB.getJob(jobNum)
 	# Only run over finished and not yet downloaded jobs
-	if job.state != Job.SUCCESS:
+	if jobObj.state != Job.SUCCESS:
 		output.error('Job has not yet finished successfully!')
 		return incInfo('Processing')
-	if job.get('download') == 'True' and not opts.mark_ignore_dl:
+	if jobObj.get('download') == 'True' and not opts.mark_ignore_dl:
 		if not int(opts.threads):
 			output.error('All files already downloaded!')
 		return incInfo('Downloaded')
-	retry = int(job.get('download attempt', 0))
+	retry = int(jobObj.get('download attempt', 0))
 	failJob = False
 
 	if not token.canSubmit(20*60, True):
@@ -255,8 +255,8 @@ def download_job_output(opts, incInfo, workDir, jobDB, token, jobNum, output):
 	# Ignore the first opts.retry number of failed jobs
 	if failJob and opts.retry and (retry < int(opts.retry)):
 		output.error('Download attempt #%d failed!' % (retry + 1))
-		job.set('download attempt', str(retry + 1))
-		jobDB.commit(jobNum, job)
+		jobObj.set('download attempt', str(retry + 1))
+		jobDB.commit(jobNum, jobObj)
 		return incInfo('Download attempts')
 
 	cleanup_files(opts, files, failJob, output)
@@ -265,15 +265,15 @@ def download_job_output(opts, incInfo, workDir, jobDB, token, jobNum, output):
 		incInfo('Failed downloads')
 		if opts.mark_fail:
 			# Mark job as failed to trigger resubmission
-			job.state = Job.FAILED
+			jobObj.state = Job.FAILED
 	else:
 		incInfo('Successful download')
 		if opts.mark_dl:
 			# Mark as downloaded
-			job.set('download', 'True')
+			jobObj.set('download', 'True')
 
 	# Save new job status infos
-	jobDB.commit(jobNum, job)
+	jobDB.commit(jobNum, jobObj)
 	output.finish()
 	time.sleep(float(opts.slowdown))
 

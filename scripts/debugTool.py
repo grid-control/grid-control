@@ -124,33 +124,33 @@ if (opts.partition_list is not None) or opts.partition_list_invalid or opts.part
 def jobs_reset_attempts(jobDB, selected):
 	for jobNum in jobDB.getJobsIter(selected):
 		logging.info('Resetting attempts for job %d', jobNum)
-		jobinfo = jobDB.get(jobNum)
-		jobinfo.attempt = 0
-		jobinfo.history = {}
-		for key in jobinfo.dict.keys():
+		jobObj = jobDB.getJob(jobNum)
+		jobObj.attempt = 0
+		jobObj.history = {}
+		for key in jobObj.dict.keys():
 			if key.startswith('history'):
-				jobinfo.dict.pop(key)
-		jobDB.commit(jobNum, jobinfo)
+				jobObj.dict.pop(key)
+		jobDB.commit(jobNum, jobObj)
 
 def jobs_force_state(opts, jobDB, selected):
 	newState = Job.str2enum(opts.job_force_state)
 	if newState is None:
 		raise Exception('Invalid state: %s' % opts.job_force_state)
 	for jobNum in jobDB.getJobsIter(selected):
-		jobinfo = jobDB.get(jobNum)
-		oldState = jobinfo.state
+		jobObj = jobDB.getJob(jobNum)
+		oldState = jobObj.state
 		if oldState == newState:
 			logging.info('Job is already in state %s', Job.enum2str(newState))
 			continue
-		jobinfo.state = newState
-		jobDB.commit(jobNum, jobinfo)
+		jobObj.state = newState
+		jobDB.commit(jobNum, jobObj)
 		logging.info('Job state changed from %s to %s', Job.enum2str(oldState), Job.enum2str(newState))
 
 def jobs_show_jdl(jobDB, selected):
 	for jobNum in jobDB.getJobsIter(selected):
-		jobinfo = jobDB.get(jobNum)
-		if jobinfo.get('jdl'):
-			logging.info(jobinfo.get('jdl'))
+		jobObj = jobDB.getJob(jobNum)
+		if jobObj.get('jdl'):
+			logging.info(jobObj.get('jdl'))
 		else:
 			logging.info('Job %d: No jdl information available!')
 
@@ -161,7 +161,7 @@ if opts.job_selector or opts.job_reset_attempts or opts.job_force_state or opts.
 	# Initialise task module
 	taskName = config.get(['task', 'module'])
 	task = Plugin.createInstance(taskName, config, taskName)
-	jobDB = Plugin.createInstance('JobDB', config)
+	jobDB = Plugin.createInstance('TextFileJobDB', config)
 	selected = JobSelector.create(opts.job_selector, task = task)
 	logging.info('Matching jobs: ' + str.join(' ', imap(str, jobDB.getJobsIter(selected))))
 	if opts.job_reset_attempts:

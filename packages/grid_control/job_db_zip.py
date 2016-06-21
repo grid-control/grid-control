@@ -14,15 +14,15 @@
 
 import os, zipfile
 from grid_control import utils
-from grid_control.job_db import Job, JobDB
+from grid_control.job_db import Job, TextFileJobDB
 from python_compat import imap
 
-class ZippedJobDB(JobDB):
+class ZippedJobDB(TextFileJobDB):
 	def __init__(self, config, jobLimit = -1, jobSelector = None):
 		self._dbFile = config.getWorkPath('jobs.zip')
-		JobDB.__init__(self, config, jobLimit, jobSelector)
+		TextFileJobDB.__init__(self, config, jobLimit, jobSelector)
 
-	def readJobs(self, jobLimit):
+	def _readJobs(self, jobLimit):
 		jobMap = {}
 		maxJobs = 0
 		if os.path.exists(self._dbFile):
@@ -57,16 +57,17 @@ class ZippedJobDB(JobDB):
 				(jobNum, tid) = tuple(imap(lambda s: int(s[1:]), fnTarInfo.split('_', 1)))
 				if tid < tMap.get(jobNum, 0):
 					continue
-				data = utils.DictFormat(escapeString = True).parse(tar.open(fnTarInfo).read())
+				try:
+					data = utils.DictFormat(escapeString = True).parse(tar.open(fnTarInfo).read())
+				except:
+					continue
 				jobMap[jobNum] = Job.loadData(fnTarInfo, data)
 				tMap[jobNum] = tid
 				if idx % 100 == 0:
 					activity.finish()
 					activity = utils.ActivityLog('Reading job transactions ... %d [%d%%]' % (idx, (100.0 * idx) / maxJobs))
-
 		self._serial = maxJobs
 		return jobMap
-
 
 	def commit(self, jobNum, jobObj):
 		jobData = str.join('', utils.DictFormat(escapeString = True).format(jobObj.getAll()))
@@ -76,6 +77,7 @@ class ZippedJobDB(JobDB):
 		finally:
 			tar.close()
 		self._serial += 1
+		self._jobMap[jobNum] = jobObj
 
 
 class Migrate2ZippedJobDB(ZippedJobDB):
@@ -86,13 +88,12 @@ class Migrate2ZippedJobDB(ZippedJobDB):
 			activity = utils.ActivityLog('Converting job database...')
 			self._serial = 0
 			try:
-				oldDB = JobDB(config)
-				oldDB.readJobs(-1)
+				oldDB = TextFileJobDB(config)
+				oldDB._readJobs(-1)
 				for jobNum in oldDB.getJobs():
 					self.commit(jobNum, oldDB.get(jobNum))
 			except Exception:
 				utils.removeFiles([self._dbFile])
 				raise
 			activity.finish()
-
 		ZippedJobDB.__init__(self, config, jobLimit, jobSelector)

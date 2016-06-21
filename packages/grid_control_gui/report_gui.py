@@ -110,9 +110,8 @@ class CategoryBaseReport(Report):
 
 	def _getCategoryStateSummary(self):
 		catStateDict = {}
-		defaultJob = Job()
 		for jobNum in self._jobs:
-			jobState = self._jobDB.get(jobNum, defaultJob).state
+			jobState = self._jobDB.getJobTransient(jobNum).state
 			catKey = self._job2cat[jobNum]
 			catStateDict[catKey][jobState] = catStateDict.setdefault(catKey, dict()).get(jobState, 0) + 1
 		return (catStateDict, dict(self._catDescDict), {}) # (<state overview>, <descriptions>, <#subcategories>)

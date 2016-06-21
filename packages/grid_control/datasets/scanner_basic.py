@@ -17,7 +17,7 @@ from grid_control import utils
 from grid_control.config import ConfigError, createConfig, triggerResync
 from grid_control.datasets import DataProvider, DatasetError
 from grid_control.datasets.scanner_base import InfoScanner
-from grid_control.job_db import Job, JobDB
+from grid_control.job_db import Job
 from grid_control.job_selector import JobSelector
 from grid_control.utils.parsing import parseStr
 from python_compat import identity, ifilter, imap, irange, izip, lfilter, lmap, reduce, set, sorted
@@ -45,7 +45,8 @@ class OutputDirsFromConfig(InfoScanner):
 		logging.getLogger('user').disabled = False
 		self._extTask = self._extWorkflow.task
 		selector = config.get('source job selector', '', onChange = triggerDataResync)
-		ext_job_db = JobDB(ext_config, jobSelector = lambda jobNum, jobObj: jobObj.state == Job.SUCCESS)
+		ext_job_db = ext_config.getPlugin('job database', 'TextFileJobDB', cls = 'JobDB',
+			pkwargs = {'jobSelector': lambda jobNum, jobObj: jobObj.state == Job.SUCCESS}, onChange = None)
 		self._selected = sorted(ext_job_db.getJobs(JobSelector.create(selector, task = self._extTask)))
 
 	def getEntries(self, path, metadata, events, seList, objStore):

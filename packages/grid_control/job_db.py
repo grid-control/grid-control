@@ -17,7 +17,7 @@ from grid_control import utils
 from grid_control.gc_plugin import ConfigurablePlugin
 from grid_control.utils.data_structures import makeEnum
 from grid_control.utils.file_objects import SafeFile
-from hpfwk import NestedException
+from hpfwk import AbstractError, NestedException
 from python_compat import imap, irange, reduce, sorted
 
 class JobError(NestedException):
@@ -140,16 +140,61 @@ class JobDB(ConfigurablePlugin):
 	def __init__(self, config, jobLimit = -1, jobSelector = None):
 		ConfigurablePlugin.__init__(self, config)
 		self._log = logging.getLogger('jobs')
-		self._dbPath = config.getWorkPath('jobs')
-		self._jobMap = self.readJobs(jobLimit)
-		if jobLimit < 0 and len(self._jobMap) > 0:
-			jobLimit = max(self._jobMap) + 1
-		(self.jobLimit, self.alwaysSelector) = (jobLimit, jobSelector)
+		(self._jobLimit, self._alwaysSelector) = (jobLimit, jobSelector)
+		(self._defaultJob, self._workPath) = (Job(), config.getWorkPath())
+
+	def setJobLimit(self, value):
+		self._jobLimit = value
+
+	def __len__(self):
+		return self._jobLimit
 
 	def getWorkPath(self): # TODO: only used by report class
-		return os.path.abspath(os.path.join(self._dbPath, '..'))
+		return self._workPath
 
-	def readJobs(self, jobLimit):
+	def getJobsIter(self, jobSelector = None, subset = None):
+		if subset is None:
+			subset = irange(self._jobLimit)
+		if jobSelector and self._alwaysSelector:
+			select = lambda *args: jobSelector(*args) and self._alwaysSelector(*args)
+		elif jobSelector or self._alwaysSelector:
+			select = jobSelector or self._alwaysSelector
+		else:
+			for jobNum in subset:
+				yield jobNum
+			raise StopIteration
+		for jobNum in subset:
+			if select(jobNum, self.getJobTransient(jobNum)):
+				yield jobNum
+
+	def getJobs(self, jobSelector = None, subset = None):
+		return list(self.getJobsIter(jobSelector, subset))
+
+	def getJobsN(self, jobSelector = None, subset = None):
+		return len(self.getJobs(jobSelector, subset)) # fastest method! (iter->list written in C)
+
+	def getJob(self, jobNum):
+		raise AbstractError
+
+	def getJobTransient(self, jobNum):
+		raise AbstractError
+
+	def getJobPersistent(self, jobNum):
+		raise AbstractError
+
+	def commit(self, jobNum, jobObj):
+		raise AbstractError
+
+
+class TextFileJobDB(JobDB):
+	def __init__(self, config, jobLimit = -1, jobSelector = None):
+		JobDB.__init__(self, config, jobLimit, jobSelector)
+		self._dbPath = config.getWorkPath('jobs')
+		self._jobMap = self._readJobs(self._jobLimit)
+		if self._jobLimit < 0 and len(self._jobMap) > 0:
+			self._jobLimit = max(self._jobMap) + 1
+
+	def _readJobs(self, jobLimit):
 		try:
 			if not os.path.exists(self._dbPath):
 				os.mkdir(self._dbPath)
@@ -180,42 +225,17 @@ class JobDB(ConfigurablePlugin):
 		activity.finish()
 		return jobMap
 
+	def getJob(self, jobNum):
+		return self._jobMap.get(jobNum)
 
-	def get(self, jobNum, default = None, create = False):
-		if create:
-			self._jobMap[jobNum] = self._jobMap.get(jobNum, Job())
-		return self._jobMap.get(jobNum, default)
+	def getJobTransient(self, jobNum):
+		return self._jobMap.get(jobNum, self._defaultJob)
 
-
-	def getJobsIter(self, jobSelector = None, subset = None):
-		if subset is None:
-			subset = irange(self.jobLimit)
-		if jobSelector and self.alwaysSelector:
-			select = lambda *args: jobSelector(*args) and self.alwaysSelector(*args)
-		elif jobSelector or self.alwaysSelector:
-			select = jobSelector or self.alwaysSelector
-		else:
-			for jobNum in subset:
-				yield jobNum
-			raise StopIteration
-		for jobNum in subset:
-			if select(jobNum, self.get(jobNum, Job())):
-				yield jobNum
-
-
-	def getJobs(self, jobSelector = None, subset = None):
-		return list(self.getJobsIter(jobSelector, subset))
-
-
-	def getJobsN(self, jobSelector = None, subset = None):
-		return len(self.getJobs(jobSelector, subset)) # fastest method! (iter->list written in C)
-
+	def getJobPersistent(self, jobNum):
+		return self._jobMap.get(jobNum, Job())
 
 	def commit(self, jobNum, jobObj):
 		fp = SafeFile(os.path.join(self._dbPath, 'job_%d.txt' % jobNum), 'w')
 		fp.writelines(utils.DictFormat(escapeString = True).format(jobObj.getAll()))
 		fp.close()
-
-
-	def __len__(self):
-		return self.jobLimit
+		self._jobMap[jobNum] = jobObj
