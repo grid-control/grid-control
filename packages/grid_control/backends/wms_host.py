@@ -13,18 +13,15 @@
 # | limitations under the License.
 
 from grid_control import utils
-from grid_control.backends.backend_tools import CheckInfo, CheckJobsViaArguments
+from grid_control.backends.backend_tools import CheckInfo, CheckJobsWithProcess, ProcessCreatorAppendArguments
 from grid_control.backends.wms_local import LocalWMS
 from grid_control.job_db import Job
 from python_compat import ifilter, imap, izip, lmap, next
 
-class Host_CheckJobs(CheckJobsViaArguments):
+class Host_CheckJobs(CheckJobsWithProcess):
 	def __init__(self, config):
-		CheckJobsViaArguments.__init__(self, config)
-		self._check_exec = utils.resolveInstallPath('ps')
-
-	def _arguments(self, wmsIDs):
-		return [self._check_exec, 'wwup'] + wmsIDs
+		CheckJobsWithProcess.__init__(self, config,
+			ProcessCreatorAppendArguments(config, 'ps', ['wwup']))
 
 	def _parse_status(self, value, default):
 		if 'Z' in value:

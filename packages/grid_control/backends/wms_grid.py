@@ -14,7 +14,7 @@
 
 import os, sys, calendar, tempfile
 from grid_control import utils
-from grid_control.backends.backend_tools import CheckInfo, CheckJobsViaStdin
+from grid_control.backends.backend_tools import CheckInfo, CheckJobsWithProcess, ProcessCreatorViaStdin
 from grid_control.backends.broker_base import Broker
 from grid_control.backends.wms import BackendError, BasicWMS, WMS
 from grid_control.job_db import Job
@@ -42,17 +42,22 @@ def jdlEscape(value):
 	return '"' + str.join('', imap(lambda char: repl.get(char, char), value)) + '"'
 
 
-class Grid_CheckJobs(CheckJobsViaStdin):
-	def __init__(self, config, check_exec):
-		CheckJobsViaStdin.__init__(self, config)
-		self._check_exec = check_exec
-		self._status_map = GridStatusMap
+class Grid_ProcessCreator(ProcessCreatorViaStdin):
+	def __init__(self, config, cmd, args):
+		ProcessCreatorViaStdin.__init__(self, config)
+		(self._cmd, self._args) = (utils.resolveInstallPath(cmd), args)
 
 	def _arguments(self):
-		return [self._check_exec, '--verbosity', 1, '--noint', '--logfile', '/dev/stderr', '-i', '/dev/stdin']
+		return [self._cmd] + self._args
 
 	def _stdin_message(self, wmsIDs):
 		return str.join('\n', wmsIDs)
+
+
+class Grid_CheckJobs(CheckJobsWithProcess):
+	def __init__(self, config, check_exec):
+		CheckJobsWithProcess.__init__(self, config, Grid_ProcessCreator(config, check_exec,
+			['--verbosity', 1, '--noint', '--logfile', '/dev/stderr', '-i', '/dev/stdin']), GridStatusMap)
 
 	def _fill(self, job_info, key, value):
 		if key.startswith('current status'):

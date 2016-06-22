@@ -14,17 +14,17 @@
 
 import os, re, tempfile
 from grid_control import utils
-from grid_control.backends.backend_tools import CheckInfo, CheckJobsViaArguments
+from grid_control.backends.backend_tools import CheckInfo, CheckJobsWithProcess, ProcessCreatorAppendArguments
 from grid_control.backends.wms import BackendError
 from grid_control.backends.wms_grid import GridWMS
 from grid_control.job_db import Job
 from python_compat import imap, irange, md5, tarfile
 
-class CREAM_CheckJobs(CheckJobsViaArguments):
+class CREAM_CheckJobs(CheckJobsWithProcess):
 	def __init__(self, config):
-		CheckJobsViaArguments.__init__(self, config)
-		self._check_exec = utils.resolveInstallPath('glite-ce-job-status')
-		self._status_map = {
+		proc_factory = ProcessCreatorAppendArguments(config,
+			'glite-ce-job-status', ['--level', '0', '--logfile', '/dev/stderr'])
+		CheckJobsWithProcess.__init__(self, config, proc_factory, status_map = {
 			'ABORTED':        Job.ABORTED,
 			'CANCELLED':      Job.ABORTED,
 			'DONE-FAILED':    Job.DONE,
@@ -36,10 +36,7 @@ class CREAM_CheckJobs(CheckJobsViaArguments):
 			'REGISTERED':     Job.QUEUED,
 			'RUNNING':        Job.RUNNING,
 			'UNKNOWN':        Job.UNKNOWN,
-		}
-
-	def _arguments(self, wmsIDs):
-		return [self._check_exec, '--level', '0', '--logfile', '/dev/stderr'] + wmsIDs
+		})
 
 	def _parse(self, proc):
 		job_info = {}

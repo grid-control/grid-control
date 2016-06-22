@@ -12,16 +12,14 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-from grid_control import utils
-from grid_control.backends.backend_tools import CheckInfo, CheckJobsViaArguments
+from grid_control.backends.backend_tools import CheckInfo, CheckJobsWithProcess, ProcessCreatorAppendArguments
 from grid_control.job_db import Job
 from python_compat import imap
 
-class ARC_CheckJobs(CheckJobsViaArguments):
+class ARC_CheckJobs(CheckJobsWithProcess):
 	def __init__(self, config):
-		CheckJobsViaArguments.__init__(self, config)
-		self._check_exec = utils.resolveInstallPath('arcstat')
-		self._status_map = {
+		CheckJobsWithProcess.__init__(self, config,
+			ProcessCreatorAppendArguments(config, 'arcstat', ['-all']), status_map = {
 			'accepted': Job.QUEUED,
 			'deleted': Job.ABORTED,
 			'failed': Job.ABORTED,
@@ -34,10 +32,7 @@ class ARC_CheckJobs(CheckJobsViaArguments):
 			'queuing': Job.QUEUED,
 			'running': Job.RUNNING,
 			'submitting': Job.SUBMITTED,
-		}
-
-	def _arguments(self, wmsIDs):
-		return [self._check_exec, '-all'] + wmsIDs
+		})
 
 	def _parse(self, proc):
 		job_info = {}

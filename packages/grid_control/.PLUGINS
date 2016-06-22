@@ -30,37 +30,41 @@
 
     * grid_control.backends.backend_tools BackendExecutor
 
+     * grid_control.backends.backend_tools CancelJobs
+
+      * grid_control.backends.backend_tools CancelJobsWithProcess
+
      * grid_control.backends.backend_tools CheckJobs
 
       * grid_control.backends.backend_tools CheckJobsWithProcess
 
-       * grid_control.backends.backend_tools CheckJobsViaArguments
+       * grid_control.backends.wms_arc ARC_CheckJobs
 
-        * grid_control.backends.wms_arc ARC_CheckJobs
+       * grid_control.backends.wms_cream CREAM_CheckJobs
 
-        * grid_control.backends.wms_cream CREAM_CheckJobs
+       * grid_control.backends.wms_condor Condor_CheckJobs
 
-        * grid_control.backends.wms_condor Condor_CheckJobs
+       * grid_control.backends.wms_gridengine GridEngine_CheckJobs
 
-        * grid_control.backends.wms_gridengine GridEngine_CheckJobs
+       * grid_control.backends.wms_grid Grid_CheckJobs
 
-        * grid_control.backends.wms_host Host_CheckJobs
+       * grid_control.backends.wms_host Host_CheckJobs
 
-        * grid_control.backends.wms_jms JMS_CheckJobs
+       * grid_control.backends.wms_jms JMS_CheckJobs
 
-        * grid_control.backends.wms_lsf LSF_CheckJobs
+       * grid_control.backends.wms_lsf LSF_CheckJobs
 
-        * grid_control.backends.wms_pbs PBS_CheckJobs
+       * grid_control.backends.wms_pbs PBS_CheckJobs
 
-        * grid_control.backends.wms_slurm SLURM_CheckJobs
-
-       * grid_control.backends.backend_tools CheckJobsViaStdin
-
-        * grid_control.backends.wms_grid Grid_CheckJobs
+       * grid_control.backends.wms_slurm SLURM_CheckJobs
 
       * grid_control.backends.wms_glitewms_direct GliteWMSDirect_CheckJobs
 
       * grid_control.backends.wms_local LocalCheckJobs
+
+     * grid_control.backends.backend_tools ChunkedExecutor
+
+     * grid_control.backends.backend_tools PurgeJobs
 
     * grid_control.datasets.dproc_base DataProcessor
 
@@ -164,7 +168,7 @@
 
     * grid_control.job_db JobDB
 
-     * grid_control.job_db TextFileJobDB
+     * grid_control.job_db_text TextFileJobDB
 
       * grid_control.job_db_zip ZippedJobDB
 
@@ -331,6 +335,18 @@
      * grid_control.datasets.pproc_basic RequirementsPartitionProcessor reqs
 
      * grid_control.datasets.pproc_basic TFCPartitionProcessor tfc
+
+    * grid_control.backends.backend_tools ProcessCreator
+
+     * grid_control.backends.backend_tools ProcessCreatorViaArguments
+
+      * grid_control.backends.wms_gridengine GridEngine_CheckJobsProcessCreator
+
+      * grid_control.backends.backend_tools ProcessCreatorAppendArguments
+
+     * grid_control.backends.backend_tools ProcessCreatorViaStdin
+
+      * grid_control.backends.wms_grid Grid_ProcessCreator
 
    * grid_control.datasets.splitter_base DataSplitterIO
 

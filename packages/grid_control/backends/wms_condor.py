@@ -12,16 +12,14 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-from grid_control import utils
-from grid_control.backends.backend_tools import CheckInfo, CheckJobsViaArguments
+from grid_control.backends.backend_tools import CheckInfo, CheckJobsWithProcess, ProcessCreatorAppendArguments
 from grid_control.job_db import Job
 from python_compat import imap
 
-class Condor_CheckJobs(CheckJobsViaArguments):
+class Condor_CheckJobs(CheckJobsWithProcess):
 	def __init__(self, config):
-		CheckJobsViaArguments.__init__(self, config)
-		self._check_exec = utils.resolveInstallPath('condor_q')
-		self._status_map = {
+		CheckJobsWithProcess.__init__(self, config,
+			ProcessCreatorAppendArguments(config, 'condor_q', ['-long']), status_map = {
 			0: Job.WAITING,   # unexpanded (never been run)
 			1: Job.READY,     # idle (waiting for a machine to execute on)
 			2: Job.RUNNING,   # running
@@ -30,10 +28,7 @@ class Condor_CheckJobs(CheckJobsViaArguments):
 			5: Job.WAITING,   # DISABLED; on hold
 			6: Job.FAILED,    # submit error
 			7: Job.WAITING,   # suspended
-		}
-
-	def _arguments(self, wmsIDs):
-		return [self._check_exec, '-long'] + wmsIDs
+		})
 
 	def _parse(self, proc):
 		job_info = {}

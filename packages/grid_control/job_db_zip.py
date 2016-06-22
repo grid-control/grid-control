@@ -14,7 +14,7 @@
 
 import os, zipfile
 from grid_control import utils
-from grid_control.job_db import TextFileJobDB
+from grid_control.job_db_text import TextFileJobDB
 from python_compat import imap
 
 class ZippedJobDB(TextFileJobDB):

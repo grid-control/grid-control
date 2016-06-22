@@ -13,17 +13,17 @@
 # | limitations under the License.
 
 from grid_control import utils
-from grid_control.backends.backend_tools import CheckInfo, CheckJobsViaArguments
+from grid_control.backends.backend_tools import CheckInfo, CheckJobsWithProcess, ProcessCreatorAppendArguments
 from grid_control.backends.wms import BackendError, WMS
 from grid_control.backends.wms_local import LocalWMS
 from grid_control.job_db import Job
 from python_compat import identity, ifilter
 
-class SLURM_CheckJobs(CheckJobsViaArguments):
+class SLURM_CheckJobs(CheckJobsWithProcess):
 	def __init__(self, config):
-		CheckJobsViaArguments.__init__(self, config)
-		self._check_exec = utils.resolveInstallPath('sacct')
-		self._status_map = {
+		proc_factory = ProcessCreatorAppendArguments(config,
+			'sacct', ['-n', '-o', 'jobid,partition,state,exitcode', '-j'], lambda wmsIDs: [str.join(',', wmsIDs)])
+		CheckJobsWithProcess.__init__(self, config, proc_factory, status_map = {
 			'PENDING': Job.WAITING,    # idle (waiting for a machine to execute on)
 			'RUNNING': Job.RUNNING,    # running
 			'COMPLETED': Job.DONE,     # running
@@ -31,11 +31,8 @@ class SLURM_CheckJobs(CheckJobsViaArguments):
 			'CANCELLED+': Job.ABORTED, # removed
 			'NODE_FAIL': Job.ABORTED,  # removed
 			'CANCELLED': Job.ABORTED,  # removed
-			'FAILED': Job.FAILED,      # submit error
-		}
-
-	def _arguments(self, wmsIDs):
-		return [self._check_exec, '-n', '-o', 'jobid,partition,state,exitcode', '-j', str.join(',', wmsIDs)]
+			'FAILED': Job.ABORTED,     # submit error
+		})
 
 	def _parse(self, proc):
 		for line in ifilter(identity, proc.stdout.iter(self._timeout)):

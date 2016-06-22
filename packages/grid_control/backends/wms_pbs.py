@@ -13,7 +13,7 @@
 # | limitations under the License.
 
 from grid_control import utils
-from grid_control.backends.backend_tools import CheckInfo, CheckJobsViaArguments
+from grid_control.backends.backend_tools import CheckInfo, CheckJobsWithProcess, ProcessCreatorAppendArguments
 from grid_control.backends.wms import BackendError, WMS
 from grid_control.backends.wms_pbsge import PBSGECommon
 from grid_control.job_db import Job
@@ -21,21 +21,16 @@ from grid_control.utils.parsing import parseTime
 from grid_control.utils.process_base import LocalProcess
 from python_compat import identity, ifilter, imap, izip, lmap
 
-class PBS_CheckJobs(CheckJobsViaArguments):
+class PBS_CheckJobs(CheckJobsWithProcess):
 	def __init__(self, config, fqid_fun = identity):
-		CheckJobsViaArguments.__init__(self, config)
-		self._fqid = fqid_fun
-		self._check_exec = utils.resolveInstallPath('qstat')
-		self._status_map = {
+		proc_factory = ProcessCreatorAppendArguments(config, 'qstat', ['-f'], lambda wmsIDs: lmap(fqid_fun, wmsIDs))
+		CheckJobsWithProcess.__init__(self, config, proc_factory, status_map = {
 			'H': Job.SUBMITTED, 'S': Job.SUBMITTED,
 			'W': Job.WAITING,   'Q': Job.QUEUED,
 			'R': Job.RUNNING,   'C': Job.DONE,
 			'E': Job.DONE,      'T': Job.DONE,
-			'fail': Job.FAILED, 'success': Job.SUCCESS
-		}
-
-	def _arguments(self, wmsIDs):
-		return [self._check_exec, '-f'] + lmap(self._fqid, wmsIDs)
+			'fail': Job.DONE,   'success': Job.DONE,
+		})
 
 	def _parse(self, proc):
 		for section in utils.accumulate(proc.stdout.iter(self._timeout), '', lambda x, buf: x == '\n'):

@@ -13,26 +13,22 @@
 # | limitations under the License.
 
 from grid_control import utils
-from grid_control.backends.backend_tools import CheckInfo, CheckJobsViaArguments
+from grid_control.backends.backend_tools import CheckInfo, CheckJobsWithProcess, ProcessCreatorAppendArguments
 from grid_control.backends.wms import BackendError, WMS
 from grid_control.backends.wms_local import LocalWMS
 from grid_control.job_db import Job
 from python_compat import identity, ifilter, izip, next
 
-class LSF_CheckJobs(CheckJobsViaArguments):
+class LSF_CheckJobs(CheckJobsWithProcess):
 	def __init__(self, config):
-		CheckJobsViaArguments.__init__(self, config)
-		self._check_exec = utils.resolveInstallPath('bjobs')
-		self._status_map = {
+		CheckJobsWithProcess.__init__(self, config,
+			ProcessCreatorAppendArguments(config, 'bjobs', ['-aw']), status_map = {
 			'PEND':  Job.QUEUED,  'PSUSP': Job.WAITING,
 			'USUSP': Job.WAITING, 'SSUSP': Job.WAITING,
 			'RUN':   Job.RUNNING, 'DONE':  Job.DONE,
 			'WAIT':  Job.WAITING, 'EXIT':  Job.FAILED,
 			'UNKWN': Job.FAILED,  'ZOMBI': Job.FAILED,
-		}
-
-	def _arguments(self, wmsIDs):
-		return [self._check_exec, '-aw'] + wmsIDs
+		})
 
 	def _parse(self, proc):
 		status_iter = proc.stdout.iter(self._timeout)

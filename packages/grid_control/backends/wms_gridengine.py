@@ -14,7 +14,7 @@
 
 import os, xml.dom.minidom
 from grid_control import utils
-from grid_control.backends.backend_tools import CheckInfo, CheckJobsViaArguments
+from grid_control.backends.backend_tools import CheckInfo, CheckJobsWithProcess, ProcessCreatorViaArguments
 from grid_control.backends.wms import BackendError, WMS
 from grid_control.backends.wms_pbsge import PBSGECommon
 from grid_control.config import ConfigError
@@ -23,17 +23,21 @@ from grid_control.utils.parsing import parseTime
 from grid_control.utils.process_base import LocalProcess
 from python_compat import imap, izip, lmap, set
 
-class GridEngine_CheckJobs(CheckJobsViaArguments):
-	def __init__(self, config, user = None):
-		CheckJobsViaArguments.__init__(self, config)
-		self._user = user
-		self._check_exec = utils.resolveInstallPath('qstat')
+class GridEngine_CheckJobsProcessCreator(ProcessCreatorViaArguments):
+	def __init__(self, config):
+		ProcessCreatorViaArguments.__init__(self, config)
+		self._cmd = utils.resolveInstallPath('qstat')
+		self._user = config.get('user', os.environ.get('LOGNAME', ''), onChange = None)
 
 	def _arguments(self, wmsIDs):
-		args = [self._check_exec, '-xml']
-		if self._user:
-			args.extend(['-u', self._user])
-		return args
+		if not self._user:
+			return [self._cmd, '-xml']
+		return [self._cmd, '-xml', '-u', self._user]
+
+
+class GridEngine_CheckJobs(CheckJobsWithProcess):
+	def __init__(self, config, user = None):
+		CheckJobsWithProcess.__init__(self, config, GridEngine_CheckJobsProcessCreator(config))
 
 	def _parse(self, proc):
 		proc.status(timeout = self._timeout)
@@ -84,8 +88,7 @@ class GridEngine(PBSGECommon):
 	configSections = PBSGECommon.configSections + ['GridEngine'] + alias
 
 	def __init__(self, config, name):
-		self._user = config.get('user', os.environ.get('LOGNAME', ''), onChange = None)
-		PBSGECommon.__init__(self, config, name, checkExecutor = GridEngine_CheckJobs(config, self._user))
+		PBSGECommon.__init__(self, config, name, checkExecutor = GridEngine_CheckJobs(config))
 		self._project = config.get('project name', '', onChange = None)
 		self._configExec = utils.resolveInstallPath('qconf')
 

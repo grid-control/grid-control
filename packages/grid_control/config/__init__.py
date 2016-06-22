@@ -13,11 +13,11 @@
 # | limitations under the License.
 
 from grid_control.config.chandlers_base import changeImpossible, changeInitNeeded, triggerResync, validNoVar
-from grid_control.config.config_entry import ConfigError, noDefault
+from grid_control.config.config_entry import ConfigError, appendOption, noDefault
 from grid_control.config.config_factory import createConfig
 from grid_control.config.matcher_base import ListFilter, ListOrder, Matcher
 
-__all__ = ['ConfigError', 'ListFilter', 'ListOrder', 'Matcher', 'changeImpossible',
+__all__ = ['ConfigError', 'ListFilter', 'ListOrder', 'Matcher', 'appendOption', 'changeImpossible',
 	'changeInitNeeded', 'createConfig', 'noDefault', 'triggerResync', 'validNoVar']
 
 # At the lowest level, all config option values are represented by strings
