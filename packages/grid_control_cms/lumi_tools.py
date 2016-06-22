@@ -119,6 +119,26 @@ def filterLumiFilter(runs, lumifilter):
 					break
 
 
+def selectRun(run, lumifilter):
+	""" Check if lumifilter selects the given run/lumi
+	>>> selectRun(1, [([1, None], [2, None])])
+	True
+	>>> selectRun(2, [([1, 3], [5, 12])])
+	True
+	>>> selectRun(6, [([1, 3], [5, 12])])
+	False
+	>>> selectRun(9, [([3, 23], [None, None])])
+	True
+	"""
+	for (sel_start, sel_end) in lumifilter:
+		(sel_start_run, sel_start_lumi) = sel_start
+		(sel_end_run, sel_end_lumi) = sel_end
+		if (sel_start_run is None) or (run >= sel_start_run):
+			if (sel_end_run is None) or (run <= sel_end_run):
+				return True
+	return False
+
+
 def selectLumi(run_lumi, lumifilter):
 	""" Check if lumifilter selects the given run/lumi
 	>>> selectLumi((1,2), [([1, None], [2, None])])

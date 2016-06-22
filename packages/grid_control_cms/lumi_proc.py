@@ -18,10 +18,11 @@ from grid_control.datasets import DataProcessor, DataProvider, DataSplitter, Dat
 from grid_control.parameters import ParameterMetadata
 from grid_control.utils.data_structures import makeEnum
 from grid_control.utils.gc_itertools import ichain
-from grid_control_cms.lumi_tools import filterLumiFilter, formatLumi, parseLumiFilter, selectLumi, strLumi
-from python_compat import imap, izip, set
+from grid_control_cms.lumi_tools import filterLumiFilter, formatLumi, parseLumiFilter, selectLumi, selectRun, strLumi
+from python_compat import any, imap, izip, set
 
 LumiKeep = makeEnum(['RunLumi', 'Run', 'none'])
+LumiMode = makeEnum(['strict', 'weak'])
 
 def removeRunLumi(value, idxRuns, idxLumi):
 	if (idxRuns is not None) and (idxLumi is not None):
@@ -47,20 +48,28 @@ class LumiDataProcessor(DataProcessor):
 			config.setBool('lumi metadata', True)
 			logging.getLogger('user.once').info('Runs/lumi section filter enabled!')
 		self._lumi_keep = config.getEnum('lumi keep', LumiKeep, lumi_keep_default, onChange = changeTrigger)
-		self._lumi_strict = config.getBool('strict lumi filter', True, onChange = changeTrigger)
+		self._lumi_strict = config.getEnum('lumi filter strictness', LumiMode, LumiMode.strict, onChange = changeTrigger)
 
-	def _acceptLumi(self, block, fi, idxRuns, idxLumi):
+	def _acceptRun(self, block, fi, idxRuns, lumi_filter):
+		if idxRuns is None:
+			return True
+		return any(imap(lambda run: selectRun(run, lumi_filter), fi[DataProvider.Metadata][idxRuns]))
+
+	def _acceptLumi(self, block, fi, idxRuns, idxLumi, lumi_filter):
 		if (idxRuns is None) or (idxLumi is None):
 			return True
-		fi_meta = fi[DataProvider.Metadata]
-		for (run, lumi) in izip(fi_meta[idxRuns], fi_meta[idxLumi]):
-			if selectLumi((run, lumi), self._lumi_filter.lookup(block[DataProvider.Nickname], is_selector = False)):
-				return True
+		return any(imap(lambda run_lumi: selectLumi(run_lumi, lumi_filter),
+			izip(fi[DataProvider.Metadata][idxRuns], fi[DataProvider.Metadata][idxLumi])))
 
 	def _processFI(self, block, idxRuns, idxLumi):
 		for fi in block[DataProvider.FileList]:
-			if (not self._lumi_filter.empty()) and not self._acceptLumi(block, fi, idxRuns, idxLumi):
-				continue
+			if not self._lumi_filter.empty(): # Filter files by run / lumi
+				lumi_filter = self._lumi_filter.lookup(block[DataProvider.Nickname], is_selector = False)
+				if (self._lumi_strict == LumiMode.strict) and not self._acceptLumi(block, fi, idxRuns, idxLumi, lumi_filter):
+					continue
+				elif (self._lumi_strict == LumiMode.weak) and not self._acceptRun(block, fi, idxRuns, lumi_filter):
+					continue
+			# Prune metadata
 			if (self._lumi_keep == LumiKeep.Run) and (idxLumi is not None):
 				if idxRuns is not None:
 					fi[DataProvider.Metadata][idxRuns] = list(set(fi[DataProvider.Metadata][idxRuns]))
@@ -79,22 +88,20 @@ class LumiDataProcessor(DataProcessor):
 		idxLumi = getMetadataIdx('Lumi')
 		if not self._lumi_filter.empty():
 			lumi_filter = self._lumi_filter.lookup(block[DataProvider.Nickname], is_selector = False)
-			if lumi_filter and ((idxRuns is None) or (idxLumi is None)) and self._lumi_strict:
-				fqName = block[DataProvider.Dataset]
-				if block[DataProvider.BlockName] != '0':
-					fqName += '#' + block[DataProvider.BlockName]
-				raise DatasetError('Strict lumi filter active but dataset %s does not provide lumi information!' % fqName)
+			if lumi_filter and (self._lumi_strict == LumiMode.strict) and ((idxRuns is None) or (idxLumi is None)):
+				raise DatasetError('Strict lumi filter active but dataset %s does not provide lumi information!' % DataProvider.bName(block))
+			elif lumi_filter and (self._lumi_strict == LumiMode.weak) and (idxRuns is None):
+				raise DatasetError('Weak lumi filter active but dataset %s does not provide run information!' % DataProvider.bName(block))
 
 		block[DataProvider.FileList] = list(self._processFI(block, idxRuns, idxLumi))
 		if not block[DataProvider.FileList]:
 			return
 		block[DataProvider.NEntries] = sum(imap(lambda fi: fi[DataProvider.NEntries], block[DataProvider.FileList]))
+		# Prune metadata
 		if self._lumi_keep == LumiKeep.RunLumi:
 			return block
 		elif self._lumi_keep == LumiKeep.Run:
-			if idxLumi is not None:
-				block[DataProvider.Metadata].pop(idxLumi)
-			return block
+			idxRuns = None
 		removeRunLumi(block[DataProvider.Metadata], idxRuns, idxLumi)
 		return block
 

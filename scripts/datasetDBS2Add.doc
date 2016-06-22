@@ -86,7 +86,7 @@ class XMLWriter: # xml.dom.minidom needs a lot of memory - could be replaced by 
 
 
 def getDBSXML(opts, block, dsBlocks):
-	fqBlock = '%s#%s' % (block[DataProvider.Dataset], block[DataProvider.BlockName])
+	fqBlock = DataProvider.bName(block)
 	validBlock = re.compile(r'^(/[a-zA-Z0-9\.\-_]{1,100}){3}#[a-zA-Z0-9\.\-_]{1,100}$')
 	if validBlock.match(fqBlock) == None:
 		raise UserException('Invalid block name: %s' % fqBlock)

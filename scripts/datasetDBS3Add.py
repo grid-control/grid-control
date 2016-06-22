@@ -86,7 +86,7 @@ def create_dbs3_proto_blocks(opts, dataset_blocks):
 			block_dump = {'dataset_conf_list': [], 'files': [], 'file_conf_list': [], 'file_parent_list': []}
 			(block_size, block_dataset_types) = create_dbs3_json_files(opts, block, block_dump)
 			if len(block_dataset_types) > 1:
-				raise Exception('Data and MC files are mixed in block %s#%s' % (dataset, block[DataProvider.BlockName]))
+				raise Exception('Data and MC files are mixed in block %s' % DataProvider.bName(block))
 			elif len(block_dataset_types) == 1:
 				yield (block, block_dump, block_size, block_dataset_types.pop())
 			else:
@@ -131,9 +131,8 @@ def create_dbs3_json_blocks(opts, dataset_blocks):
 		except IndexError:
 			origin_site_name = 'UNKNOWN'
 
-		block_dump['block'] = {'block_name': '%s#%s' % (dataset, block[DataProvider.BlockName]),
-			'file_count': len(block[DataProvider.FileList]),
-			'block_size': block_size, 'origin_site_name': origin_site_name}
+		block_dump['block'] = {'block_name': DataProvider.bName(block), 'block_size': block_size,
+			'file_count': len(block[DataProvider.FileList]), 'origin_site_name': origin_site_name}
 		if opts.do_close_blocks:
 			block_dump['block']['open_for_writing'] = 0
 		else:

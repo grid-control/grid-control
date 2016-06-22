@@ -24,8 +24,8 @@ class EntriesConsistencyDataProcessor(DataProcessor):
 		# Check entry consistency
 		events = sum(imap(lambda x: x[DataProvider.NEntries], block[DataProvider.FileList]))
 		if block.setdefault(DataProvider.NEntries, events) != events:
-			self._log.warning('Inconsistency in block %s#%s: Number of events doesn\'t match (b:%d != f:%d)',
-				block[DataProvider.Dataset], block[DataProvider.BlockName], block[DataProvider.NEntries], events)
+			self._log.warning('Inconsistency in block %s: Number of events doesn\'t match (b:%d != f:%d)',
+				DataProvider.bName(block), block[DataProvider.NEntries], events)
 		return block
 
 
@@ -145,11 +145,9 @@ class LocationDataProcessor(DataProcessor):
 			sites = self._locationfilter.filterList(block[DataProvider.Locations])
 			if (sites is not None) and (len(sites) == 0) and (len(block[DataProvider.FileList]) != 0):
 				if not len(block[DataProvider.Locations]):
-					self._log.warning('Block %s#%s is not available at any site!',
-						block[DataProvider.Dataset], block[DataProvider.BlockName])
+					self._log.warning('Block %s is not available at any site!', DataProvider.bName(block))
 				elif not len(sites):
-					self._log.warning('Block %s#%s is not available at any selected site!',
-						block[DataProvider.Dataset], block[DataProvider.BlockName])
+					self._log.warning('Block %s is not available at any selected site!', DataProvider.bName(block))
 			block[DataProvider.Locations] = sites
 		return block
 
@@ -203,7 +201,7 @@ class UniqueDataProcessor(DataProcessor):
 				recordedBlockURL, block[DataProvider.NEntries],
 				block[DataProvider.Locations], block.get(DataProvider.Metadata))))
 			if blockHash in self._recordedBlock:
-				msg = 'Multiple occurences of block: "%s#%s"!' % (block[DataProvider.Dataset], block[DataProvider.BlockName])
+				msg = 'Multiple occurences of block: "%s"!' % DataProvider.bName(block)
 				msg += ' (This check can be configured with %r)' % 'dataset check unique block'
 				if self._checkBlock == DatasetUniqueMode.warn:
 					self._log.warning(msg)

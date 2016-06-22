@@ -63,6 +63,13 @@ class DataProvider(ConfigurablePlugin):
 	bind = classmethod(bind)
 
 
+	def bName(cls, block):
+		if block.get(DataProvider.BlockName, '') in ['', '0']:
+			return block[DataProvider.Dataset]
+		return block[DataProvider.Dataset] + '#' + block[DataProvider.BlockName]
+	bName = classmethod(bName)
+
+
 	def getDatasetExpr(self):
 		return self._datasetExpr
 
@@ -163,7 +170,7 @@ class DataProvider(ConfigurablePlugin):
 	def saveToStream(stream, dataBlocks, stripMetadata = False):
 		writer = StringBuffer()
 		for block in dataBlocks:
-			writer.write('[%s#%s]\n' % (block[DataProvider.Dataset], block[DataProvider.BlockName]))
+			writer.write('[%s]\n' % DataProvider.bName(block))
 			if DataProvider.Nickname in block:
 				writer.write('nickname = %s\n' % block[DataProvider.Nickname])
 			if DataProvider.DatasetID in block:
