@@ -41,7 +41,7 @@ class AndJobSelector(JobSelector): # Internally used
 
 class ClassSelector(JobSelector):
 	def __init__(self, arg, **kwargs):
-		self.states = arg[1]
+		self.states = arg.states
 
 	def __call__(self, jobNum, jobObj):
 		return jobObj.state in self.states
@@ -114,7 +114,7 @@ class StateSelector(RegExSelector):
 	alias = ['state']
 
 	def __init__(self, arg, **kwargs):
-		predef = {'TODO': 'SUBMITTED,WAITING,READY,QUEUED', 'ALL': str.join(',', Job.enumNames)}
+		predef = {'TODO': 'SUBMITTED,WAITING,READY,QUEUED,UNKNOWN', 'ALL': str.join(',', Job.enumNames)}
 		RegExSelector.__init__(self, predef.get(arg.upper(), arg), None, lambda x: '^%s.*' % x.upper())
 		stateList = reduce(operator.add, imap(lambda x: lfilter(x.match, Job.enumNames), self.rxList))
 		self.states = lmap(Job.str2enum, stateList)

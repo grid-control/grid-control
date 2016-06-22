@@ -14,7 +14,7 @@
 
 import os, zipfile
 from grid_control import utils
-from grid_control.job_db import Job, TextFileJobDB
+from grid_control.job_db import TextFileJobDB
 from python_compat import imap
 
 class ZippedJobDB(TextFileJobDB):
@@ -58,10 +58,10 @@ class ZippedJobDB(TextFileJobDB):
 				if tid < tMap.get(jobNum, 0):
 					continue
 				try:
-					data = utils.DictFormat(escapeString = True).parse(tar.open(fnTarInfo).read())
-				except:
+					data = self._fmt.parse(tar.open(fnTarInfo).read())
+				except Exception:
 					continue
-				jobMap[jobNum] = Job.loadData(fnTarInfo, data)
+				jobMap[jobNum] = self._create_job_obj(fnTarInfo, data)
 				tMap[jobNum] = tid
 				if idx % 100 == 0:
 					activity.finish()
@@ -70,7 +70,7 @@ class ZippedJobDB(TextFileJobDB):
 		return jobMap
 
 	def commit(self, jobNum, jobObj):
-		jobData = str.join('', utils.DictFormat(escapeString = True).format(jobObj.getAll()))
+		jobData = str.join('', self._fmt.format(self._serialize_job_obj(jobObj)))
 		tar = zipfile.ZipFile(self._dbFile, 'a', zipfile.ZIP_DEFLATED)
 		try:
 			tar.writestr('J%06d_T%06d' % (jobNum, self._serial), jobData)
@@ -89,7 +89,6 @@ class Migrate2ZippedJobDB(ZippedJobDB):
 			self._serial = 0
 			try:
 				oldDB = TextFileJobDB(config)
-				oldDB._readJobs(-1)
 				for jobNum in oldDB.getJobs():
 					self.commit(jobNum, oldDB.get(jobNum))
 			except Exception:

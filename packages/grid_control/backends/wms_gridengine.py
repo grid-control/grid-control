@@ -71,7 +71,7 @@ class GridEngine_CheckJobs(CheckJobsViaArguments):
 
 	def _parse_status(self, value, default):
 		if True in imap(lambda x: x in value, ['E', 'e']):
-			return Job.CANCEL
+			return Job.UNKNOWN
 		if True in imap(lambda x: x in value, ['h', 's', 'S', 'T', 'w']):
 			return Job.QUEUED
 		if True in imap(lambda x: x in value, ['r', 't']):

@@ -28,7 +28,7 @@ class Host_CheckJobs(CheckJobsViaArguments):
 
 	def _parse_status(self, value, default):
 		if 'Z' in value:
-			return Job.CANCEL
+			return Job.UNKNOWN
 		return Job.RUNNING
 
 	def _parse(self, proc):

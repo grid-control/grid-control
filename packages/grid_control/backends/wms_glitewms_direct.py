@@ -41,7 +41,7 @@ class GliteWMSDirect_CheckJobs(CheckJobs):
 						job_info[CheckInfo.QUEUE] = dest_info[1].strip()
 					except Exception:
 						pass
-				yield (wmsID, self._status_map.get(job_info[CheckInfo.RAW_STATUS], Job.CANCEL), job_info)
+				yield (wmsID, self._status_map.get(job_info[CheckInfo.RAW_STATUS], Job.UNKNOWN), job_info)
 			except Exception:
 				ec.collect()
 				if utils.abort():

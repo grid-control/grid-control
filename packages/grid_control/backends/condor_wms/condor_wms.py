@@ -25,6 +25,7 @@ from grid_control.backends.broker_base import Broker
 from grid_control.backends.condor_wms.processhandler import ProcessHandler
 from grid_control.backends.wms import BackendError, BasicWMS, WMS
 from grid_control.backends.wms_condor import Condor_CheckJobs
+from grid_control.backends.wms_local import LocalCheckJobs
 from grid_control.utils.data_structures import makeEnum
 from python_compat import imap, irange, lmap, lzip, md5, set
 
@@ -43,7 +44,7 @@ class Condor(BasicWMS):
 #>>config: Config class extended dictionary
 	def __init__(self, config, wmsName):
 		utils.vprint('Using batch system: Condor/GlideInWMS', -1)
-		BasicWMS.__init__(self, config, wmsName, checkExecutor = Condor_CheckJobs(config))
+		BasicWMS.__init__(self, config, wmsName, checkExecutor = LocalCheckJobs(config, Condor_CheckJobs(config)))
 		# special debug out/messages/annotations - may have noticeable effect on storage and performance!
 		debugLogFN = config.get('debugLog', '')
 		self.debug = False

@@ -14,7 +14,7 @@
 
 import sys
 from grid_control import utils
-from grid_control.job_db import Job
+from grid_control.job_db import Job, JobClass
 from grid_control.report import Report
 from grid_control.utils.parsing import parseStr
 from grid_control_gui.ansi import Console
@@ -298,7 +298,7 @@ class GUIReport(AdaptiveBaseReport):
 				'(%5d jobs, %6.2f%%  )' % (total, 100 * completed / float(total)))
 			progressbar = JobProgressBar(sum(catStateDict[catKey].values()), width = max(0, self.maxX - 19))
 			progressbar.update(completed,
-				sumCat(catKey, [Job.SUBMITTED, Job.WAITING, Job.READY, Job.QUEUED]),
+				sumCat(catKey, JobClass.ATWMS.states),
 				sumCat(catKey, [Job.RUNNING, Job.DONE]),
 				sumCat(catKey, [Job.ABORTED, Job.CANCELLED, Job.FAILED]))
 			self.printLimited(progressbar, self.maxX)

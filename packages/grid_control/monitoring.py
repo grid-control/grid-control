@@ -15,7 +15,6 @@
 import os, shlex
 from grid_control import utils
 from grid_control.gc_plugin import NamedPlugin
-from grid_control.job_db import Job
 from grid_control.utils.gc_itertools import lchain
 from grid_control.utils.process_base import LocalProcess
 from grid_control.utils.thread_tools import GCThreadPool
@@ -120,7 +119,8 @@ class ScriptMonitoring(Monitoring):
 			if jobNum is not None:
 				tmp.update(self._task.getSubmitInfo(jobNum))
 			if jobObj is not None:
-				tmp.update(jobObj.getAll())
+				for key, value in jobObj.get_dict().items():
+					tmp[key.upper()] = value
 			tmp['WORKDIR'] = self._workPath
 			tmp.update(self._task.getTaskConfig())
 			if jobNum is not None:
@@ -152,7 +152,7 @@ class ScriptMonitoring(Monitoring):
 
 	# Called on job status update
 	def onJobUpdate(self, wms, jobObj, jobNum, data):
-		self._runInBackground(self._evtStatus, jobNum, jobObj, {'STATUS': Job.enum2str(jobObj.state)})
+		self._runInBackground(self._evtStatus, jobNum, jobObj)
 
 	# Called on job status update
 	def onJobOutput(self, wms, jobObj, jobNum, retCode):

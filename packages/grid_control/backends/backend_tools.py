@@ -79,7 +79,7 @@ class CheckJobsWithProcess(CheckJobs):
 
 	def _parse_job_info(self, job_info): # return (wmsID, job_status, job_info)
 		try:
-			job_status = self._parse_status(job_info.get(CheckInfo.RAW_STATUS), Job.CANCEL)
+			job_status = self._parse_status(job_info.get(CheckInfo.RAW_STATUS), Job.UNKNOWN)
 			return (job_info.pop(CheckInfo.WMSID), job_status, job_info)
 		except Exception:
 			raise BackendError('Unable to parse job info %s' % repr(job_info))

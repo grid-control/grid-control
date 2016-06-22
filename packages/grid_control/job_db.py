@@ -12,23 +12,18 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-import os, time, fnmatch, logging, operator
-from grid_control import utils
+import time, logging
 from grid_control.gc_plugin import ConfigurablePlugin
 from grid_control.utils.data_structures import makeEnum
-from grid_control.utils.file_objects import SafeFile
 from hpfwk import AbstractError, NestedException
-from python_compat import imap, irange, reduce, sorted
+from python_compat import irange
 
 class JobError(NestedException):
 	pass
 
 class Job(object):
-	__internals = ('wmsId', 'status')
-
 	def __init__(self):
 		self.state = Job.INIT
-		self.nextstate = None
 		self.attempt = 0
 		self.history = {}
 		self.wmsId = None
@@ -37,66 +32,9 @@ class Job(object):
 		self.dict = {}
 
 
-	def loadData(cls, name, data):
-		try:
-			job = Job()
-			job.state = Job.str2enum(data.get('status'), Job.FAILED)
-
-			if 'id' in data:
-				if not data['id'].startswith('WMSID'): # Legacy support
-					data['legacy'] = data['id']
-					if data['id'].startswith('https'):
-						data['id'] = 'WMSID.GLITEWMS.%s' % data['id']
-					else:
-						wmsId, backend = tuple(data['id'].split('.', 1))
-						data['id'] = 'WMSID.%s.%s' % (backend, wmsId)
-				job.wmsId = data['id']
-			for key in ['attempt', 'submitted', 'changed']:
-				if key in data:
-					setattr(job, key, data[key])
-			if 'runtime' not in data:
-				if 'submitted' in data:
-					data['runtime'] = time.time() - float(job.submitted)
-				else:
-					data['runtime'] = 0
-			for key in irange(1, job.attempt + 1):
-				if ('history_' + str(key)).strip() in data:
-					job.history[key] = data['history_' + str(key)]
-
-			for i in cls.__internals:
-				try:
-					del data[i]
-				except Exception:
-					pass
-			job.dict = data
-		except Exception:
-			raise JobError('Unable to parse data in %s:\n%r' % (name, data))
-		return job
-	loadData = classmethod(loadData)
-
-
-	def load(cls, name):
-		try:
-			data = utils.DictFormat(escapeString = True).parse(open(name))
-		except Exception:
-			raise JobError('Invalid format in %s' % name)
-		return Job.loadData(name, data)
-	load = classmethod(load)
-
-
-	def getAll(self):
-		data = dict(self.dict)
-		data['status'] = Job.enum2str(self.state)
-		data['attempt'] = self.attempt
-		data['submitted'] = self.submitted
-		data['changed'] = self.changed
-		for key, value in self.history.items():
-			data['history_' + str(key)] = value
-		if self.wmsId is not None:
-			data['id'] = self.wmsId
-			if self.dict.get('legacy', None): # Legacy support
-				data['id'] = self.dict.pop('legacy')
-		return data
+	def get_dict(self):
+		return {'id': self.wmsId, 'status': Job.enum2str(self.state),
+			'attempt': self.attempt, 'submitted': self.submitted, 'changed': self.changed}
 
 
 	def set(self, key, value):
@@ -123,17 +61,26 @@ makeEnum(['INIT', 'SUBMITTED', 'DISABLED', 'READY', 'WAITING', 'QUEUED', 'ABORTE
 		'RUNNING', 'CANCEL', 'UNKNOWN', 'CANCELLED', 'DONE', 'FAILED', 'SUCCESS'], Job)
 
 
+class JobClassHolder(object):
+	def __init__(self, *states):
+		self.states = []
+		for state in states:
+			if isinstance(state, JobClassHolder):
+				self.states.extend(state.states)
+			else:
+				self.states.append(state)
+
+
 class JobClass(object):
-	mkJobClass = lambda *fList: (reduce(operator.add, imap(lambda f: 1 << f, fList)), fList)
-	ATWMS = mkJobClass(Job.SUBMITTED, Job.WAITING, Job.READY, Job.QUEUED)
-	RUNNING = mkJobClass(Job.RUNNING)
-	PROCESSING = mkJobClass(Job.SUBMITTED, Job.WAITING, Job.READY, Job.QUEUED, Job.RUNNING)
-	READY = mkJobClass(Job.INIT, Job.FAILED, Job.ABORTED, Job.CANCELLED)
-	DONE = mkJobClass(Job.DONE)
-	SUCCESS = mkJobClass(Job.SUCCESS)
-	DISABLED = mkJobClass(Job.DISABLED)
-	ENDSTATE = mkJobClass(Job.SUCCESS, Job.DISABLED)
-	PROCESSED = mkJobClass(Job.SUCCESS, Job.FAILED, Job.CANCELLED, Job.ABORTED)
+	ATWMS = JobClassHolder(Job.SUBMITTED, Job.WAITING, Job.READY, Job.QUEUED, Job.UNKNOWN)
+	PROCESSING = JobClassHolder(Job.SUBMITTED, Job.WAITING, Job.READY, Job.QUEUED, Job.UNKNOWN, Job.RUNNING)
+	CANCEL = JobClassHolder(Job.CANCEL)
+	DONE = JobClassHolder(Job.DONE)
+	DISABLED = JobClassHolder(Job.DISABLED)
+	ENDSTATE = JobClassHolder(Job.SUCCESS, Job.DISABLED)
+	PROCESSED = JobClassHolder(Job.SUCCESS, Job.FAILED, Job.CANCELLED, Job.ABORTED)
+	READY = JobClassHolder(Job.INIT, Job.FAILED, Job.ABORTED, Job.CANCELLED)
+	SUCCESS = JobClassHolder(Job.SUCCESS)
 
 
 class JobDB(ConfigurablePlugin):
@@ -186,13 +133,81 @@ class JobDB(ConfigurablePlugin):
 		raise AbstractError
 
 
+import os, time, fnmatch
+from grid_control import utils
+from grid_control.job_db import Job, JobDB, JobError
+from grid_control.utils.file_objects import SafeFile
+from python_compat import irange, sorted
+
 class TextFileJobDB(JobDB):
 	def __init__(self, config, jobLimit = -1, jobSelector = None):
 		JobDB.__init__(self, config, jobLimit, jobSelector)
 		self._dbPath = config.getWorkPath('jobs')
+		self._fmt = utils.DictFormat(escapeString = True)
 		self._jobMap = self._readJobs(self._jobLimit)
 		if self._jobLimit < 0 and len(self._jobMap) > 0:
 			self._jobLimit = max(self._jobMap) + 1
+
+
+	def _serialize_job_obj(self, job_obj):
+		data = dict(job_obj.dict)
+		data['status'] = Job.enum2str(job_obj.state)
+		data['attempt'] = job_obj.attempt
+		data['submitted'] = job_obj.submitted
+		data['changed'] = job_obj.changed
+		for key, value in job_obj.history.items():
+			data['history_' + str(key)] = value
+		if job_obj.wmsId is not None:
+			data['id'] = job_obj.wmsId
+			if job_obj.dict.get('legacy', None): # Legacy support
+				data['id'] = job_obj.dict.pop('legacy')
+		return data
+
+
+	def _create_job_obj(self, name, data):
+		try:
+			job = Job()
+			job.state = Job.str2enum(data.get('status'), Job.FAILED)
+
+			if 'id' in data:
+				if not data['id'].startswith('WMSID'): # Legacy support
+					data['legacy'] = data['id']
+					if data['id'].startswith('https'):
+						data['id'] = 'WMSID.GLITEWMS.%s' % data['id']
+					else:
+						wmsId, backend = tuple(data['id'].split('.', 1))
+						data['id'] = 'WMSID.%s.%s' % (backend, wmsId)
+				job.wmsId = data['id']
+			for key in ['attempt', 'submitted', 'changed']:
+				if key in data:
+					setattr(job, key, data[key])
+			if 'runtime' not in data:
+				if 'submitted' in data:
+					data['runtime'] = time.time() - float(job.submitted)
+				else:
+					data['runtime'] = 0
+			for key in irange(1, job.attempt + 1):
+				if ('history_' + str(key)).strip() in data:
+					job.history[key] = data['history_' + str(key)]
+
+			for i in ('wmsId', 'status'):
+				try:
+					del data[i]
+				except Exception:
+					pass
+			job.dict = data
+		except Exception:
+			raise JobError('Unable to parse data in %s:\n%r' % (name, data))
+		return job
+
+
+	def _load_job(self, name):
+		try:
+			data = self._fmt.parse(open(name))
+		except Exception:
+			raise JobError('Invalid format in %s' % name)
+		return self._create_job_obj(name, data)
+
 
 	def _readJobs(self, jobLimit):
 		try:
@@ -217,7 +232,7 @@ class TextFileJobDB(JobDB):
 			if (jobLimit >= 0) and (jobNum >= jobLimit):
 				self._log.info('Stopped reading job infos at job #%d out of %d available job files', jobNum, len(candidates))
 				break
-			jobObj = Job.load(os.path.join(self._dbPath, jobFile))
+			jobObj = self._load_job(os.path.join(self._dbPath, jobFile))
 			jobMap[jobNum] = jobObj
 			if idx % 100 == 0:
 				activity.finish()
@@ -225,17 +240,21 @@ class TextFileJobDB(JobDB):
 		activity.finish()
 		return jobMap
 
+
 	def getJob(self, jobNum):
 		return self._jobMap.get(jobNum)
+
 
 	def getJobTransient(self, jobNum):
 		return self._jobMap.get(jobNum, self._defaultJob)
 
+
 	def getJobPersistent(self, jobNum):
 		return self._jobMap.get(jobNum, Job())
 
+
 	def commit(self, jobNum, jobObj):
 		fp = SafeFile(os.path.join(self._dbPath, 'job_%d.txt' % jobNum), 'w')
-		fp.writelines(utils.DictFormat(escapeString = True).format(jobObj.getAll()))
+		fp.writelines(self._fmt.format(self._serialize_job_obj(jobObj)))
 		fp.close()
 		self._jobMap[jobNum] = jobObj
