@@ -103,6 +103,8 @@ class BasicReport(Report):
 			utils.vprint(' ' * 31, -1)
 		for idx, sid_sname in enumerate(izip(Job.enumValues, Job.enumNames)):
 			utils.vprint('Jobs  %9s:%8d  %3d%%     ' % tuple([sid_sname[1]] + makePer(sid_sname[0])), -1, newline = idx % 2)
+		if len(Job.enumValues) % 2:
+			utils.vprint('', -1)
 		utils.vprint('-' * 65, -1)
 		return 0
 

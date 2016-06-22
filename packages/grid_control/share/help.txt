@@ -27,7 +27,10 @@
 	                         --- Display options ---
 	-G, --gui                Run in GUI mode
 	-v, --verbose            Give detailed information during run
-                                (use multiple times to increase verbosity)
+	                         (use multiple times to increase verbosity)
+	-l, --logging <opt>      Specify logger and log level using "<logger>:<level>"
+	                         (<level>: ERROR, CRITICAL, WARNING, INFO..INFO3, DEBUG...DEBUG3)
+	--debug                  Enable debug mode with high verbosity
 
 	                         --- Job selectors ---
 	                         The following job selectors are supported:

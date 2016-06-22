@@ -33,7 +33,6 @@ def gc_cmd_line_parser(cmd_line_args):
 	parser.addBool(None, 'q', 'resync',        default = False)
 	parser.addBool(None, 's', 'no-submission', default = True,  dest = 'submission')
 	parser.addBool(None, 'G', 'gui',           default = False, dest = 'gui_ansi')
-	parser.addBool(None, 'W', 'webserver',     default = False, dest = 'gui_cp')
 	parser.addAccu(None, 'v', 'verbose')
 	parser.addList(None, 'l', 'logging')
 	parser.addList(None, 'o', 'override')
@@ -51,8 +50,6 @@ def gc_cmd_line_parser(cmd_line_args):
 	opts.gui = None
 	if opts.gui_ansi:
 		opts.gui = 'ANSIGUI'
-	elif opts.gui_cp:
-		opts.gui = 'CPWebserver'
 	opts.continuous = opts.continuous or None # either True or None
 	# Display help
 	if opts.help:

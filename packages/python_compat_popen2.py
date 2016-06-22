@@ -87,7 +87,10 @@ class Popen3:
     def wait(self):
         """Wait for and return the exit status of the child process."""
         if self.sts < 0:
-            pid, sts = os.waitpid(self.pid, 0)
+            try:
+                pid, sts = os.waitpid(self.pid, 0)
+            except os.error:
+                pid, sts = (None, None)
             if pid == self.pid:
                 self.sts = sts
                 _active.remove(self)

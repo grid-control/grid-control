@@ -131,8 +131,7 @@ def selectRun(run, lumifilter):
 	True
 	"""
 	for (sel_start, sel_end) in lumifilter:
-		(sel_start_run, sel_start_lumi) = sel_start
-		(sel_end_run, sel_end_lumi) = sel_end
+		(sel_start_run, sel_end_run) = (sel_start[0], sel_end[0])
 		if (sel_start_run is None) or (run >= sel_start_run):
 			if (sel_end_run is None) or (run <= sel_end_run):
 				return True
