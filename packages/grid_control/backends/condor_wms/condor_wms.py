@@ -413,6 +413,9 @@ class Condor(BasicWMS):
 					gcExec = source
 				else:
 					transferFiles.append(source)
+		if self.settings["jdl"]["Universe"].lower() == "docker":                
+			gcExec="./gc-run.sh"                                                
+			transferFiles.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))+'/share/gc-run.sh')
 		return (gcExec, transferFiles)
 
 
