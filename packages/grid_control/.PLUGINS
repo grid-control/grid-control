@@ -206,11 +206,15 @@
 
       * grid_control.backends.access TimedAccessToken
 
+       * grid_control.backends.access_grid GridAccessToken
+
+        * grid_control.backends.access_arc ARCAccessToken arc arcproxy
+
+        * grid_control.backends.access_voms VomsAccessToken voms VomsProxy
+
        * grid_control.backends.access RefreshableAccessToken
 
         * grid_control.backends.access_afs AFSAccessToken afs AFSProxy
-
-       * grid_control.backends.access_grid VomsAccessToken voms VomsProxy
 
       * grid_control.backends.access TrivialAccessToken trivial TrivialProxy
 

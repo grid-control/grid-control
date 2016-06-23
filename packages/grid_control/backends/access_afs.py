@@ -12,8 +12,6 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-# Generic base class for authentication proxies GCSCF:
-
 import os, time
 from grid_control.backends.access import AccessTokenError, RefreshableAccessToken
 from grid_control.utils import resolveInstallPath
