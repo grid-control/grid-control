@@ -33,9 +33,13 @@ class DataProcessor(ConfigurablePlugin):
 			result = self.processBlock(block)
 			if result is not None:
 				yield result
+		self._finished()
 
 	def processBlock(self, block):
 		raise AbstractError
+
+	def _finished(self):
+		pass
 
 
 class MultiDataProcessor(DataProcessor):

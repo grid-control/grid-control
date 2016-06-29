@@ -168,14 +168,14 @@ class SimpleConfigInterface(TypedConfigInterface):
 		(sourceDict, sourceOrder) = self.getDict(option, default, **kwargs)
 		return DictLookup(sourceDict, sourceOrder, matcherObj, single, includeDefault)
 
-	def getFilter(self, option, default = noDefault, matchKey = None, negate = False, filterParser = str, filterStr = str.__str__,
+	def getFilter(self, option, default = noDefault, negate = False, filterParser = str, filterStr = str.__str__,
 			defaultMatcher = 'start', defaultFilter = 'strict', defaultOrder = ListOrder.source, **kwargs):
 		matcherOpt = appendOption(option, 'matcher')
 		matcherObj = self.getPlugin(matcherOpt, defaultMatcher, cls = Matcher, pargs = (matcherOpt,), pkwargs = kwargs)
 		filterExpr = self.get(option, default, str2obj = filterParser, obj2str = filterStr, **kwargs)
 		filterOrder = self.getEnum(appendOption(option, 'order'), ListOrder, defaultOrder, **kwargs)
 		return self.getPlugin(appendOption(option, 'plugin'), defaultFilter, cls = ListFilter,
-			pargs = (filterExpr, matcherObj, filterOrder, matchKey, negate), **kwargs)
+			pargs = (filterExpr, matcherObj, filterOrder, negate), **kwargs)
 
 	# Get state - bool stored in hidden "state" section - any given detail overrides global state
 	def getState(self, statename, detail = '', default = False):

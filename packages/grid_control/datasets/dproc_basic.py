@@ -40,7 +40,6 @@ class URLDataProcessor(DataProcessor):
 		self._url_filter = config.getFilter(['dataset ignore files', 'dataset ignore urls'], '', negate = True,
 			filterParser = lambda value: self._parseFilter(internal_config, value),
 			filterStr = lambda value: str.join('\n', value.split()),
-			matchKey = itemgetter(DataProvider.URL),
 			defaultMatcher = 'blackwhite', defaultFilter = 'weak',
 			onChange = DataProcessor.triggerDataResync)
 
@@ -62,7 +61,7 @@ class URLDataProcessor(DataProcessor):
 
 	def processBlock(self, block):
 		if self.enabled():
-			block[DataProvider.FileList] = self._url_filter.filterList(block[DataProvider.FileList])
+			block[DataProvider.FileList] = self._url_filter.filterList(block[DataProvider.FileList], itemgetter(DataProvider.URL))
 		return block
 
 
@@ -118,17 +117,26 @@ class EmptyDataProcessor(DataProcessor):
 		DataProcessor.__init__(self, config)
 		self._emptyFiles = config.getBool('dataset remove empty files', True, onChange = DataProcessor.triggerDataResync)
 		self._emptyBlock = config.getBool('dataset remove empty blocks', True, onChange = DataProcessor.triggerDataResync)
+		(self._removedFiles, self._removedBlocks) = (0, 0)
 
 	def enabled(self):
 		return self._emptyBlock or self._emptyFiles
 
 	def processBlock(self, block):
 		if self._emptyFiles:
+			n_files = len(block[DataProvider.FileList])
 			block[DataProvider.FileList] = lfilter(lambda fi: fi[DataProvider.NEntries] != 0, block[DataProvider.FileList])
+			self._removedFiles += n_files - len(block[DataProvider.FileList])
 		if self._emptyBlock:
 			if (block[DataProvider.NEntries] == 0) or not block[DataProvider.FileList]:
+				self._removedBlocks += 1
 				return
 		return block
+
+	def _finished(self):
+		if self._removedFiles or self._removedBlocks:
+			self._log.warning('Empty files removed: %d, Empty blocks removed %d', self._removedFiles, self._removedBlocks)
+		(self._removedFiles, self._removedBlocks) = (0, 0)
 
 
 class LocationDataProcessor(DataProcessor):

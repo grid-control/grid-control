@@ -12,7 +12,7 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-import re, fnmatch
+import re, fnmatch, logging
 from grid_control.config.config_entry import appendOption, noDefault
 from grid_control.gc_plugin import ConfigurablePlugin
 from grid_control.utils import QM
@@ -51,6 +51,9 @@ class Matcher(ConfigurablePlugin):
 		self._case = case_override
 		if case_override is None:
 			self._case = config.getBool(appendOption(option_prefix, 'case sensitive'), default = True, **kwargs)
+		self._log = logging.getLogger('matcher.%s' % option_prefix)
+		if not self._log.isEnabledFor(logging.DEBUG1):
+			self._log = None
 
 	def getPositive(self, selector):
 		raise AbstractError
@@ -199,27 +202,24 @@ class BlackWhiteMatcher(Matcher):
 				result = -(idx + 1)
 			elif self._baseMatcher.matcher(value, subselector) > 0:
 				result = idx + 1
+			if self._log:
+				self._log.log(logging.DEBUG1, 'matching value %s against %s: %s', value, subselector, result)
 		return result
 
 
 ListOrder = makeEnum(['source', 'matcher'])
 
 class ListFilter(Plugin):
-	def __init__(self, selector, matcher, order, match_key, negate):
+	def __init__(self, selector, matcher, order, negate):
 		(self._matcher, self._matchFunction) = (matcher, None)
 		(self._positive, self._selector, self._order, self._negate) = (None, None, order, negate)
 		if selector:
 			self._selector = matcher.parseSelector(selector)
 			self._positive = matcher.getPositive(selector)
 			matchObj = matcher.matchWith(selector)
-			if match_key or negate:
+			if negate:
 				def match_fun(item):
-					if match_key:
-						item = match_key(item)
-					if negate:
-						return -matchObj.match(item)
-					else:
-						return matchObj.match(item)
+					return -matchObj.match(item)
 				self._matchFunction = match_fun
 			else:
 				self._matchFunction = matchObj.match
@@ -227,16 +227,21 @@ class ListFilter(Plugin):
 	def getSelector(self):
 		return self._selector
 
-	def filterList(self, entries):
+	def filterList(self, entries, key = None):
 		if entries is None:
 			return self._positive
 		if not self._matchFunction:
 			return entries
+		if key is None:
+			matchFunction = self._matchFunction
+		else:
+			def matchFunction(item):
+				return self._matchFunction(key(item))
 		if self._order == ListOrder.matcher:
-			entries = sorted(entries, key = self._matchFunction)
-		return self._filterListImpl(entries)
+			entries = sorted(entries, key = matchFunction)
+		return self._filterListImpl(entries, matchFunction)
 
-	def _filterListImpl(self, entries):
+	def _filterListImpl(self, entries, matchFunction):
 		raise AbstractError
 
 	def __repr__(self):
@@ -247,25 +252,25 @@ class ListFilter(Plugin):
 class StrictListFilter(ListFilter):
 	alias = ['strict', 'require']
 
-	def _filterListImpl(self, entries):
-		return lfilter(lambda entry: self._matchFunction(entry) > 0, entries)
+	def _filterListImpl(self, entries, matchFunction):
+		return lfilter(lambda entry: matchFunction(entry) > 0, entries)
 
 
 class MediumListFilter(ListFilter):
 	alias = ['try_strict']
 
-	def _filterListImpl(self, entries):
-		strict_result = lfilter(lambda entry: self._matchFunction(entry) > 0, entries)
+	def _filterListImpl(self, entries, matchFunction):
+		strict_result = lfilter(lambda entry: matchFunction(entry) > 0, entries)
 		if strict_result:
 			return strict_result
-		return lfilter(lambda entry: self._matchFunction(entry) >= 0, entries)
+		return lfilter(lambda entry: matchFunction(entry) >= 0, entries)
 
 
 class WeakListFilter(ListFilter):
 	alias = ['weak', 'prefer']
 
-	def _filterListImpl(self, entries):
-		return lfilter(lambda entry: self._matchFunction(entry) >= 0, entries)
+	def _filterListImpl(self, entries, matchFunction):
+		return lfilter(lambda entry: matchFunction(entry) >= 0, entries)
 
 
 class DictLookup(Plugin):
