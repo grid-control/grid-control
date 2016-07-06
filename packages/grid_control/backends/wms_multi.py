@@ -15,7 +15,7 @@
 from grid_control.backends.broker_base import Broker
 from grid_control.backends.wms import WMS
 from grid_control.utils import Result
-from python_compat import ifilter
+from python_compat import ifilter, lmap
 
 # Distribute to WMS according to job id prefix
 
@@ -68,16 +68,18 @@ class MultiWMS(WMS):
 		return self._splitId(gcID_jobNum[0])[0]
 
 
-	def checkJobs(self, gcID_jobNum_List):
-		return self._forwardCall(gcID_jobNum_List, self._findBackend, lambda wmsObj, args: wmsObj.checkJobs(args))
+	def checkJobs(self, gcIDs):
+		tmp = lmap(lambda gcID: (gcID, None), gcIDs)
+		return self._forwardCall(tmp, self._findBackend, lambda wmsObj, args: wmsObj.checkJobs(lmap(lambda x: x[0], args)))
+
+
+	def cancelJobs(self, gcIDs):
+		tmp = lmap(lambda gcID: (gcID, None), gcIDs)
+		return self._forwardCall(tmp, self._findBackend, lambda wmsObj, args: wmsObj.cancelJobs(lmap(lambda x: x[0], args)))
 
 
 	def retrieveJobs(self, gcID_jobNum_List):
 		return self._forwardCall(gcID_jobNum_List, self._findBackend, lambda wmsObj, args: wmsObj.retrieveJobs(args))
-
-
-	def cancelJobs(self, gcID_jobNum_List):
-		return self._forwardCall(gcID_jobNum_List, self._findBackend, lambda wmsObj, args: wmsObj.cancelJobs(args))
 
 
 	def _getMapID2Backend(self, args, assignFun):

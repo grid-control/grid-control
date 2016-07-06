@@ -13,9 +13,11 @@
 # | limitations under the License.
 
 from grid_control import utils
-from grid_control.backends.backend_tools import CheckInfo, CheckJobsWithProcess, ProcessCreatorAppendArguments
+from grid_control.backends.aspect_cancel import CancelJobsWithProcessBlind
+from grid_control.backends.aspect_status import CheckInfo, CheckJobsWithProcess
+from grid_control.backends.backend_tools import ProcessCreatorAppendArguments
 from grid_control.backends.wms import BackendError, WMS
-from grid_control.backends.wms_local import LocalWMS
+from grid_control.backends.wms_local import LocalCheckJobs, LocalWMS
 from grid_control.job_db import Job
 from python_compat import identity, ifilter, izip, next
 
@@ -53,12 +55,8 @@ class LSF(LocalWMS):
 	def __init__(self, config, name):
 		LocalWMS.__init__(self, config, name,
 			submitExec = utils.resolveInstallPath('bsub'),
-			cancelExec = utils.resolveInstallPath('bkill'),
-			checkExecutor = LSF_CheckJobs(config))
-
-
-	def unknownID(self):
-		return 'is not found'
+			cancelExecutor = CancelJobsWithProcessBlind(config, 'bkill', unknownID = 'is not found'),
+			checkExecutor = LocalCheckJobs(config, LSF_CheckJobs(config)))
 
 
 	def getJobArguments(self, jobNum, sandbox):
@@ -83,7 +81,3 @@ class LSF(LocalWMS):
 	def parseSubmitOutput(self, data):
 		# Job <34020017> is submitted to queue <1nh>.
 		return data.split()[1].strip('<>').strip()
-
-
-	def getCancelArguments(self, wmsIds):
-		return str.join(' ', wmsIds)

@@ -16,6 +16,7 @@ import os, math, stat, time, signal
 from grid_control.backends.wms import BackendError
 from grid_control.config import ConfigError
 from grid_control.utils import LoggedProcess, eprint, resolveInstallPath, vprint
+from grid_control.utils.data_structures import makeEnum
 from hpfwk import AbstractError, NestedException, Plugin
 
 class CondorProcessError(BackendError):
@@ -267,10 +268,7 @@ class GSISSHProcessHandler(SSHProcessHandler):
 # Helper class handling commands through remote interfaces
 class RemoteProcessHandler(object):
 	# enum for connection type - LOCAL exists to ensure uniform interfacing with local programms if needed
-	class RPHType:
-		enumList = ('LOCAL', 'SSH', 'GSISSH')
-		for idx, eType in enumerate(enumList):
-			locals()[eType] = idx
+	RPHType = makeEnum(['LOCAL', 'SSH', 'GSISSH'])
 
 	# helper functions - properly prepare argument string for passing via interface
 	def _argFormatSSH(self, args):
@@ -303,7 +301,7 @@ class RemoteProcessHandler(object):
 		self.cmd=False
 		# pick requested remote connection
 		try:
-			self.remoteType = getattr(self.RPHType, remoteType.upper())
+			self.remoteType = self.RPHType.str2enum(remoteType)
 			self.cmd = self.RPHTemplate[self.remoteType]["command"]
 			self.copy = self.RPHTemplate[self.remoteType]["copy"]
 			self.path = self.RPHTemplate[self.remoteType]["path"]
@@ -317,7 +315,7 @@ class RemoteProcessHandler(object):
 				self.copy = self.copy % { "rhost" : kwargs["host"] }
 				self.host = kwargs["host"]
 			except Exception:
-				raise ConfigError("Request to initialize RemoteProcessHandler of type %s without remote host." % self.RPHType.enumList[self.remoteType])
+				raise ConfigError("Request to initialize RemoteProcessHandler of type %s without remote host." % self.RPHType.enum2str(self.remoteType))
 		# add default arguments for all commands
 		self.cmd = self.cmd % { "cmdargs" : kwargs.get("cmdargs",""), "args" : kwargs.get("args","") }
 		self.copy = self.copy % { "cpargs" : kwargs.get("cpargs",""), "args" : kwargs.get("args","") }

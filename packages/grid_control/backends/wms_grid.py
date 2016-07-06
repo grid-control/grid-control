@@ -14,13 +14,15 @@
 
 import os, sys, calendar, tempfile
 from grid_control import utils
-from grid_control.backends.backend_tools import CheckInfo, CheckJobsWithProcess, ProcessCreatorViaStdin
+from grid_control.backends.aspect_cancel import CancelJobsWithProcess
+from grid_control.backends.aspect_status import CheckInfo, CheckJobsWithProcess
+from grid_control.backends.backend_tools import ProcessCreatorViaStdin
 from grid_control.backends.broker_base import Broker
 from grid_control.backends.wms import BackendError, BasicWMS, WMS
 from grid_control.job_db import Job
 from grid_control.utils.process_base import LocalProcess
 from hpfwk import APIError
-from python_compat import ifilter, imap, irange, lfilter, lmap, md5, parsedate, tarfile
+from python_compat import ifilter, imap, lfilter, lmap, md5, parsedate, tarfile
 
 GridStatusMap = {
 	'aborted':   Job.ABORTED,
@@ -107,12 +109,21 @@ class Grid_CheckJobs(CheckJobsWithProcess):
 		self._filter_proc_log(proc, self._errormsg, discardlist = ['Keyboard interrupt raised by user'])
 
 
+class Grid_CancelJobs(CancelJobsWithProcess):
+	def _parse(self, wmsIDs, proc): # yield list of (wmsID, job_status)
+		for line in ifilter(lambda x: x.startswith('- '), proc.stdout.iter()):
+			yield line.strip('- \n')
+
+
 class GridWMS(BasicWMS):
 	configSections = BasicWMS.configSections + ['grid']
-
-	def __init__(self, config, name, checkExecutor):
+	def __init__(self, config, name, checkExecutor, cancelExecutor = None, cancelExec = None):
 		config.set('access token', 'VomsProxy')
-		BasicWMS.__init__(self, config, name, checkExecutor)
+		if cancelExecutor is None:
+			assert(cancelExec is not None)
+			cancelExecutor = Grid_CancelJobs(config, Grid_ProcessCreator(config, cancelExec,
+				['--noint', '--logfile', '/dev/stderr', '-i', '/dev/stdin']))
+		BasicWMS.__init__(self, config, name, checkExecutor = checkExecutor, cancelExecutor = cancelExecutor)
 
 		self.brokerSite = config.getPlugin('site broker', 'UserBroker',
 			cls = Broker, tags = [self], pargs = ('sites', 'sites', self.getSites))
@@ -318,35 +329,3 @@ class GridWMS(BasicWMS):
 			yield (jobNum, None)
 
 		utils.removeFiles([jobs, basePath])
-
-
-	def cancelJobs(self, allIds):
-		if len(allIds) == 0:
-			raise StopIteration
-
-		waitFlag = False
-		for ids in imap(lambda x: allIds[x:x+5], irange(0, len(allIds), 5)):
-			# Delete jobs in groups of 5 - with 5 seconds between groups
-			if waitFlag and not utils.wait(5):
-				break
-			waitFlag = True
-
-			jobNumMap = dict(ids)
-			jobs = self.writeWMSIds(ids)
-
-			activity = utils.ActivityLog('cancelling jobs')
-			proc = LocalProcess(self._cancelExec, '--noint', '--logfile', '/dev/stderr', '-i', jobs)
-			retCode = proc.status(timeout = 60, terminate = True)
-			del activity
-
-			# select cancelled jobs
-			for deletedWMSId in ifilter(lambda x: x.startswith('- '), proc.stdout.iter()):
-				deletedWMSId = self._createId(deletedWMSId.strip('- \n'))
-				yield (jobNumMap.get(deletedWMSId), deletedWMSId)
-
-			if retCode != 0:
-				if self.explainError(proc, retCode):
-					pass
-				else:
-					self._log.log_process(proc, files = {'jobs': utils.safeRead(jobs)})
-			utils.removeFiles([jobs])

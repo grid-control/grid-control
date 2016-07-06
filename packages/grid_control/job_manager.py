@@ -43,41 +43,45 @@ class JobManager(NamedPlugin):
 		self._chunks_check = config.getInt('chunks check', 100, onChange = None)
 		self._chunks_retrieve = config.getInt('chunks retrieve', 100, onChange = None)
 
-		self._job_timeout = config.getTime('queue timeout', -1, onChange = None)
+		self._timeout_unknown = config.getTime('unknown timeout', -1, onChange = None)
+		self._timeout_queue = config.getTime('queue timeout', -1, onChange = None)
 		self._job_retries = config.getInt('max retry', -1, onChange = None)
 
 		selected = JobSelector.create(config.get('selected', '', onChange = None), task = self._task)
 		self.jobDB = config.getPlugin('job database', 'TextFileJobDB',
-			cls = JobDB, pargs = (self.getMaxJobs(self._task), selected), onChange = None)
+			cls = JobDB, pargs = (self._get_max_jobs(self._task), selected), onChange = None)
 		self._disabled_jobs_logfile = config.getWorkPath('disabled')
 		self._outputProcessor = config.getPlugin('output processor', 'SandboxProcessor',
 			cls = TaskOutputProcessor, pargs = (task,))
 
 		self._do_shuffle = config.getBool('shuffle', False, onChange = None)
 		self._reportClass = Report.getClass(config.get('abort report', 'LocationReport', onChange = None))
-		self._showBlocker = True
+		self._show_blocker = True
 
 
-	def getMaxJobs(self, task):
-		nJobs = self._njobs_limit
-		if nJobs < 0:
-			# No valid number of jobs given in config file - task has to provide number of jobs
-			nJobs = task.getMaxJobs()
-			if nJobs is None:
-				raise ConfigError("Task module doesn't provide max number of Jobs!")
-		else:
-			# Task module doesn't have to provide number of jobs
-			try:
-				maxJobs = task.getMaxJobs()
-				if maxJobs and (nJobs > maxJobs):
-					self._log_user.warning('Maximum number of jobs given as %d was truncated to %d', nJobs, maxJobs)
-					nJobs = maxJobs
-			except Exception:
-				pass
-		return nJobs
+	def _get_chunk_size(self, user_size, default = -1):
+		if self._chunks_enabled and (user_size > 0):
+			return user_size
+		return default
 
 
-	def _logDisabledJobs(self):
+	def _get_max_jobs(self, task):
+		njobs_user = self._njobs_limit
+		njobs_task = task.getMaxJobs()
+		if njobs_task is None: # Task module doesn't define a maximum number of jobs
+			if njobs_user < 0: # User didn't specify a maximum number of jobs
+				raise ConfigError('Task module doesn\'t provide max number of Jobs. User specified number of jobs needed!')
+			elif njobs_user >= 0: # Run user specified number of jobs
+				return njobs_user
+		if njobs_user < 0: # No user specified limit => run all jobs
+			return njobs_task
+		njobs_min = min(njobs_user, njobs_task)
+		if njobs_user < njobs_task:
+			self._log_user.warning('Maximum number of jobs in task (%d) was truncated to %d', njobs_task, njobs_min)
+		return njobs_min
+
+
+	def _log_disabled_jobs(self):
 		disabled = self.jobDB.getJobs(ClassSelector(JobClass.DISABLED))
 		try:
 			fp = SafeFile(self._disabled_jobs_logfile, 'w')
@@ -90,7 +94,7 @@ class JobManager(NamedPlugin):
 			self._log_user_time.debug('Please refer to %s for a complete list of disabled jobs.', self._disabled_jobs_logfile)
 
 
-	def _update(self, jobObj, jobNum, state, showWMS = False):
+	def _update(self, jobObj, jobNum, state, showWMS = False, message = None):
 		if jobObj.state == state:
 			return
 
@@ -100,6 +104,8 @@ class JobManager(NamedPlugin):
 
 		jobNumLen = int(math.log10(max(1, len(self.jobDB))) + 1)
 		jobStatus = ['Job %s state changed from %s to %s ' % (str(jobNum).ljust(jobNumLen), Job.enum2str(oldState), Job.enum2str(state))]
+		if message is not None:
+			jobStatus.append(message)
 		if showWMS and jobObj.wmsId:
 			jobStatus.append('(WMS:%s)' % jobObj.wmsId.split('.')[1])
 		if (state == Job.SUBMITTED) and (jobObj.attempt > 1):
@@ -130,46 +136,98 @@ class JobManager(NamedPlugin):
 		return sorted(jobList)
 
 
-	def _getSubmissionJobs(self, maxsample):
-		# Get list of submittable jobs
-		readyList = self.jobDB.getJobs(ClassSelector(JobClass.READY))
-		retryOK = readyList
-		if self._job_retries >= 0:
-			retryOK = lfilter(lambda x: self.jobDB.getJobTransient(x).attempt - 1 < self._job_retries, readyList)
-		modOK = lfilter(self._task.canSubmit, readyList)
-		jobList = set.intersection(set(retryOK), set(modOK))
+	def _get_map_gcID_jobnum(self, jobnum_list):
+		return dict(imap(lambda jobnum: (self.jobDB.getJob(jobnum).wmsId, jobnum), jobnum_list))
 
-		if self._showBlocker and readyList and not jobList: # No submission but ready jobs
+
+	def _get_enabled_jobs(self, jobnum_list_ready):
+		(n_mod_ok, n_retry_ok, jobnum_list_enabled) = (0, 0, [])
+		for jobnum in jobnum_list_ready:
+			job_obj = self.jobDB.getJobTransient(jobnum)
+			can_retry = (self._job_retries < 0) or (job_obj.attempt - 1 < self._job_retries)
+			can_submit = self._task.canSubmit(jobnum)
+			if can_retry:
+				n_retry_ok += 1
+			if can_submit:
+				n_mod_ok += 1
+			if can_submit and can_retry:
+				jobnum_list_enabled.append(jobnum)
+			if can_submit and (job_obj.state == Job.DISABLED): # recover jobs
+				self._update(job_obj, jobnum, Job.INIT, message = 'reenabled by task module')
+			elif not can_submit and (job_obj.state != Job.DISABLED): # disable invalid jobs
+				self._update(self.jobDB.getJobPersistent(jobnum), jobnum, Job.DISABLED, message = 'disabled by task module')
+		return (n_mod_ok, n_retry_ok, jobnum_list_enabled)
+
+
+	def _submit_get_jobs(self):
+		# Get list of submittable jobs
+		jobnum_list_ready = self.jobDB.getJobs(ClassSelector(JobClass.SUBMIT_CANDIDATES))
+		(n_mod_ok, n_retry_ok, jobnum_list) = self._get_enabled_jobs(jobnum_list_ready)
+
+		if self._show_blocker and jobnum_list_ready and not jobnum_list: # No submission but ready jobs
 			err = []
-			err += utils.QM((len(retryOK) > 0) and (len(modOK) == 0), [], ['have hit their maximum number of retries'])
-			err += utils.QM((len(retryOK) == 0) and (len(modOK) > 0), [], ['are vetoed by the task module'])
-			self._log_user_time.warning('All remaining jobs %s!', str.join(utils.QM(retryOK or modOK, ' or ', ' and '), err))
-		self._showBlocker = not (len(readyList) > 0 and len(jobList) == 0)
+			err += utils.QM((n_retry_ok > 0) and (n_mod_ok == 0), [], ['have hit their maximum number of retries'])
+			err += utils.QM((n_retry_ok == 0) and (n_mod_ok > 0), [], ['are vetoed by the task module'])
+			self._log_user_time.warning('All remaining jobs %s!', str.join(utils.QM(n_retry_ok or n_mod_ok, ' or ', ' and '), err))
+		self._show_blocker = not (len(jobnum_list_ready) > 0 and len(jobnum_list) == 0)
 
 		# Determine number of jobs to submit
-		submit = len(jobList)
+		submit = len(jobnum_list)
 		if self._njobs_inqueue > 0:
 			submit = min(submit, self._njobs_inqueue - self.jobDB.getJobsN(ClassSelector(JobClass.ATWMS)))
 		if self._njobs_inflight > 0:
 			submit = min(submit, self._njobs_inflight - self.jobDB.getJobsN(ClassSelector(JobClass.PROCESSING)))
-		if self._chunks_enabled and (maxsample > 0):
-			submit = min(submit, maxsample)
+		if self._chunks_enabled and (self._chunks_submit > 0):
+			submit = min(submit, self._chunks_submit)
 		submit = max(submit, 0)
 
 		if self._do_shuffle:
-			return self._sample(jobList, submit)
-		return sorted(jobList)[:submit]
+			return self._sample(jobnum_list, submit)
+		return sorted(jobnum_list)[:submit]
 
 
-	def _wmsArgs(self, jobList):
-		return lmap(lambda jobNum: (self.jobDB.getJob(jobNum).wmsId, jobNum), jobList)
+	def submit(self, wms):
+		jobnum_list = self._submit_get_jobs()
+		if len(jobnum_list) == 0:
+			return False
+
+		submitted = []
+		for (jobnum, wmsId, data) in wms.submitJobs(jobnum_list, self._task):
+			submitted.append(jobnum)
+			job_obj = self.jobDB.getJobPersistent(jobnum)
+
+			if wmsId is None:
+				# Could not register at WMS
+				self._update(job_obj, jobnum, Job.FAILED)
+				continue
+
+			job_obj.assignId(wmsId)
+			for (key, value) in data.items():
+				job_obj.set(key, value)
+
+			self._update(job_obj, jobnum, Job.SUBMITTED)
+			self._eventhandler.onJobSubmit(wms, job_obj, jobnum)
+			if utils.abort():
+				return False
+		return len(submitted) != 0
+
+
+	def _check_jobs_raw(self, wms, jobnum_list): # ask wms and yield (jobnum, job_obj, job_status, job_info)
+		gcID_jobnum_Map = self._get_map_gcID_jobnum(jobnum_list)
+		for (gcID, job_state, job_info) in wms.checkJobs(gcID_jobnum_Map.keys()):
+			if not utils.abort():
+				jobnum = gcID_jobnum_Map.pop(gcID, None)
+				if jobnum is not None:
+					yield (jobnum, self.jobDB.getJob(jobnum), job_state, job_info)
+		for jobnum in gcID_jobnum_Map.values(): # missing jobs are returned with Job.UNKNOWN state
+			yield (jobnum, self.jobDB.getJob(jobnum), Job.UNKNOWN, {})
 
 
 	def _checkJobList(self, wms, jobList):
 		(change, timeoutList, reported) = (False, [], [])
-		for (jobNum, _, state, info) in wms.checkJobs(self._wmsArgs(jobList)):
-			reported.append(jobNum)
-			jobObj = self.jobDB.getJob(jobNum)
+		for (jobNum, jobObj, state, info) in self._check_jobs_raw(wms, jobList):
+			if state != Job.UNKNOWN:
+				reported.append(jobNum)
 			if state != jobObj.state:
 				change = True
 				for (key, value) in info.items():
@@ -179,37 +237,14 @@ class JobManager(NamedPlugin):
 			else:
 				# If a job stays too long in an inital state, cancel it
 				if jobObj.state in (Job.SUBMITTED, Job.WAITING, Job.READY, Job.QUEUED):
-					if self._job_timeout > 0 and time.time() - jobObj.submitted > self._job_timeout:
+					if self._timeout_queue > 0 and time.time() - jobObj.submitted > self._timeout_queue:
+						timeoutList.append(jobNum)
+				if jobObj.state == Job.UNKNOWN:
+					if self._timeout_unknown > 0 and time.time() - jobObj.submitted > self._timeout_unknown:
 						timeoutList.append(jobNum)
 			if utils.abort():
 				return (None, timeoutList, reported)
 		return (change, timeoutList, reported)
-
-
-	def submit(self, wms):
-		jobList = self._getSubmissionJobs(self._chunks_submit)
-		if len(jobList) == 0:
-			return False
-
-		submitted = []
-		for (jobNum, wmsId, data) in wms.submitJobs(jobList, self._task):
-			submitted.append(jobNum)
-			jobObj = self.jobDB.getJobPersistent(jobNum)
-
-			if wmsId is None:
-				# Could not register at WMS
-				self._update(jobObj, jobNum, Job.FAILED)
-				continue
-
-			jobObj.assignId(wmsId)
-			for (key, value) in data.items():
-				jobObj.set(key, value)
-
-			self._update(jobObj, jobNum, Job.SUBMITTED)
-			self._eventhandler.onJobSubmit(wms, jobObj, jobNum)
-			if utils.abort():
-				return False
-		return len(submitted) != 0
 
 
 	def check(self, wms):
@@ -234,13 +269,17 @@ class JobManager(NamedPlugin):
 
 		# Quit when all jobs are finished
 		if self.jobDB.getJobsN(ClassSelector(JobClass.ENDSTATE)) == len(self.jobDB):
-			self._logDisabledJobs()
+			self._log_disabled_jobs()
 			self._eventhandler.onTaskFinish(len(self.jobDB))
 			if self._task.canFinish():
 				self._log_user_time.info('Task successfully completed. Quitting grid-control!')
 				utils.abort(True)
 
 		return change
+
+
+	def _wmsArgs(self, jobList):
+		return lmap(lambda jobNum: (self.jobDB.getJob(jobNum).wmsId, jobNum), jobList)
 
 
 	def retrieve(self, wms):
@@ -277,11 +316,11 @@ class JobManager(NamedPlugin):
 		return change
 
 
-	def cancel(self, wms, jobs, interactive, showJobs):
-		if len(jobs) == 0:
+	def cancel(self, wms, jobnum_list, interactive, showJobs):
+		if len(jobnum_list) == 0:
 			return
 		if showJobs:
-			self._reportClass(self.jobDB, self._task, jobs).display()
+			self._reportClass(self.jobDB, self._task, jobnum_list).display()
 		if interactive and not utils.getUserBool('Do you really want to cancel these jobs?', True):
 			return
 
@@ -292,18 +331,19 @@ class JobManager(NamedPlugin):
 			self._update(jobObj, jobNum, Job.CANCELLED)
 			self._eventhandler.onJobUpdate(wms, jobObj, jobNum, {'reason': 'cancelled'})
 
-		jobs.reverse()
-		for (jobNum, wmsId) in wms.cancelJobs(self._wmsArgs(jobs)):
+		jobnum_list.reverse()
+		gcID_jobnum_map = self._get_map_gcID_jobnum(jobnum_list)
+		gcIDs = sorted(gcID_jobnum_map, key = lambda gcID: -gcID_jobnum_map[gcID])
+		for gcID in wms.cancelJobs(gcIDs):
 			# Remove deleted job from todo list and mark as cancelled
-			assert(self.jobDB.getJob(jobNum).wmsId == wmsId)
-			jobs.remove(jobNum)
-			mark_cancelled(jobNum)
+			mark_cancelled(gcID_jobnum_map.pop(gcID))
 
-		if len(jobs) > 0:
+		if gcID_jobnum_map:
+			jobnum_list = list(gcID_jobnum_map.values())
 			self._log_user.warning('There was a problem with cancelling the following jobs:')
-			self._reportClass(self.jobDB, self._task, jobs).display()
+			self._reportClass(self.jobDB, self._task, jobnum_list).display()
 			if (interactive and utils.getUserBool('Do you want to mark them as cancelled?', True)) or not interactive:
-				lmap(mark_cancelled, jobs)
+				lmap(mark_cancelled, jobnum_list)
 		if interactive:
 			utils.wait(2)
 
@@ -347,7 +387,7 @@ class JobManager(NamedPlugin):
 			if (redo == []) and (disable == []) and (sizeChange is False):
 				return
 			self._log_user_time.info('The task module has requested changes to the job database')
-			newMaxJobs = self.getMaxJobs(self._task)
+			newMaxJobs = self._get_max_jobs(self._task)
 			applied_change = False
 			if newMaxJobs != len(self.jobDB):
 				self._log_user_time.info('Number of jobs changed from %d to %d', len(self.jobDB), newMaxJobs)
@@ -387,38 +427,16 @@ class SimpleJobManager(JobManager):
 		self._unreachableGoal = False
 
 
-	def _checkJobList(self, wms, jobList):
-		if self._defect_tries:
-			nDefect = len(self._defect_counter) # Waiting list gets larger in case reported == []
-			waitList = self._sample(self._defect_counter, nDefect - max(1, int(nDefect / 2**self._defect_raster)))
-			jobList = lfilter(lambda x: x not in waitList, jobList)
-
-		(change, timeoutList, reported) = JobManager._checkJobList(self, wms, jobList)
-		for jobNum in reported:
-			self._defect_counter.pop(jobNum, None)
-
-		if self._defect_tries and (change is not None):
-			self._defect_raster = utils.QM(reported, 1, self._defect_raster + 1) # make 'raster' iteratively smaller
-			for jobNum in ifilter(lambda x: x not in reported, jobList):
-				self._defect_counter[jobNum] = self._defect_counter.get(jobNum, 0) + 1
-			kickList = lfilter(lambda jobNum: self._defect_counter[jobNum] >= self._defect_tries, self._defect_counter)
-			for jobNum in set(kickList + utils.QM((len(reported) == 0) and (len(jobList) == 1), jobList, [])):
-				timeoutList.append(jobNum)
-				self._defect_counter.pop(jobNum)
-
-		return (change, timeoutList, reported)
-
-
-	def _getSubmissionJobs(self, maxsample):
-		result = JobManager._getSubmissionJobs(self, maxsample)
+	def _submit_get_jobs(self):
+		result = JobManager._submit_get_jobs(self)
 		if self._verify:
-			return result[:self._getVerificationSubmitThrottle(len(result))]
+			return result[:self._submit_get_jobs_throttled(len(result))]
 		return result
 
 
 	# Verification heuristic - check whether enough jobs have succeeded before submitting more
 	# @submitCount: number of jobs to submit
-	def _getVerificationSubmitThrottle(self, submitCount):
+	def _submit_get_jobs_throttled(self, submitCount):
 		jobsActive = self.jobDB.getJobsN(ClassSelector(JobClass.PROCESSING))
 		jobsSuccess = self.jobDB.getJobsN(ClassSelector(JobClass.SUCCESS))
 		jobsDone = self.jobDB.getJobsN(ClassSelector(JobClass.PROCESSED))
@@ -442,3 +460,25 @@ class SimpleJobManager(JobManager):
 			self._log_user_time.debug('Verification submission throttle disabled')
 			self._verify = False
 			return submitCount
+
+
+	def _checkJobList(self, wms, jobList):
+		if self._defect_tries:
+			nDefect = len(self._defect_counter) # Waiting list gets larger in case reported == []
+			waitList = self._sample(self._defect_counter, nDefect - max(1, int(nDefect / 2**self._defect_raster)))
+			jobList = lfilter(lambda x: x not in waitList, jobList)
+
+		(change, timeoutList, reported) = JobManager._checkJobList(self, wms, jobList)
+		for jobNum in reported:
+			self._defect_counter.pop(jobNum, None)
+
+		if self._defect_tries and (change is not None):
+			self._defect_raster = utils.QM(reported, 1, self._defect_raster + 1) # make 'raster' iteratively smaller
+			for jobNum in ifilter(lambda x: x not in reported, jobList):
+				self._defect_counter[jobNum] = self._defect_counter.get(jobNum, 0) + 1
+			kickList = lfilter(lambda jobNum: self._defect_counter[jobNum] >= self._defect_tries, self._defect_counter)
+			for jobNum in set(kickList + utils.QM((len(reported) == 0) and (len(jobList) == 1), jobList, [])):
+				timeoutList.append(jobNum)
+				self._defect_counter.pop(jobNum)
+
+		return (change, timeoutList, reported)
