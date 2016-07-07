@@ -13,9 +13,11 @@
 # | limitations under the License.
 
 from grid_control import utils
-from grid_control.backends.backend_tools import CheckInfo, CheckJobsWithProcess, ProcessCreatorAppendArguments
+from grid_control.backends.aspect_cancel import CancelJobsWithProcessBlind
+from grid_control.backends.aspect_status import CheckInfo, CheckJobsWithProcess
+from grid_control.backends.backend_tools import ProcessCreatorAppendArguments
 from grid_control.backends.wms import WMS
-from grid_control.backends.wms_local import LocalWMS
+from grid_control.backends.wms_local import LocalCheckJobs, LocalWMS
 from grid_control.job_db import Job
 from python_compat import identity, ifilter, izip, lmap, next
 
@@ -52,12 +54,8 @@ class JMS(LocalWMS):
 	def __init__(self, config, name):
 		LocalWMS.__init__(self, config, name,
 			submitExec = utils.resolveInstallPath('job_submit'),
-			cancelExec = utils.resolveInstallPath('job_cancel'),
-			checkExecutor = JMS_CheckJobs(config))
-
-
-	def unknownID(self):
-		return 'not in queue !'
+			checkExecutor = LocalCheckJobs(config, JMS_CheckJobs(config)),
+			cancelExecutor = CancelJobsWithProcessBlind(config, 'job_cancel', unknownID = 'not in queue !'))
 
 
 	def getJobArguments(self, jobNum, sandbox):
@@ -84,7 +82,3 @@ class JMS(LocalWMS):
 	def parseSubmitOutput(self, data):
 		# job_submit: Job 121195 has been submitted.
 		return data.split()[2].strip()
-
-
-	def getCancelArguments(self, wmsIds):
-		return str.join(' ', wmsIds)

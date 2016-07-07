@@ -14,7 +14,8 @@
 
 import os, glob, time, shutil, tempfile
 from grid_control import utils
-from grid_control.backends.backend_tools import CheckJobs
+from grid_control.backends.aspect_cancel import CancelAndPurgeJobs, CancelJobs
+from grid_control.backends.aspect_status import CheckJobs
 from grid_control.backends.broker_base import Broker
 from grid_control.backends.wms import BackendError, BasicWMS, WMS
 from grid_control.job_db import Job
@@ -29,6 +30,7 @@ class LocalCheckJobs(CheckJobs):
 		self._executor = executor
 
 	def setup(self, log):
+		CheckJobs.setup(self, log)
 		self._executor.setup(log)
 
 	def execute(self, wmsIDs): # yields list of (wmsID, job_status, job_info)
@@ -41,72 +43,74 @@ class LocalCheckJobs(CheckJobs):
 				yield (wmsID, Job.DONE, {})
 
 
+class SandboxHelper(object):
+	def __init__(self, config):
+		self._cache = []
+		self._path = config.getPath('sandbox path', config.getWorkPath('sandbox'), mustExist = False)
+		try:
+			if not os.path.exists(self._path):
+				os.mkdir(self._path)
+		except Exception:
+			raise BackendError('Unable to create sandbox base directory "%s"!' % self._path)
+
+	def get_path(self):
+		return self._path
+
+	def get_sandbox(self, gcID):
+		# Speed up function by caching result of listdir
+		def searchSandbox(source):
+			for path in imap(lambda sbox: os.path.join(self._path, sbox), source):
+				if os.path.exists(os.path.join(path, gcID)):
+					return path
+		result = searchSandbox(self._cache)
+		if result:
+			return result
+		oldCache = self._cache[:]
+		self._cache = lfilter(lambda x: os.path.isdir(os.path.join(self._path, x)), os.listdir(self._path))
+		return searchSandbox(ifilter(lambda x: x not in oldCache, self._cache))
+
+
+class LocalPurgeJobs(CancelJobs):
+	def __init__(self, config, sandbox_helper):
+		CancelJobs.__init__(self, config)
+		self._sandbox_helper = sandbox_helper
+
+	def execute(self, wmsIDs, wmsName): # yields list of (wmsID, job_status, job_info)
+		activity = utils.ActivityLog('waiting for jobs to finish')
+		time.sleep(5)
+		for wmsID in wmsIDs:
+			path = self._sandbox_helper.get_sandbox('WMSID.%s.%s' % (wmsName, wmsID))
+			if path is None:
+				self._log.warning('Sandbox for job %r could not be found', wmsID)
+				continue
+			try:
+				shutil.rmtree(path)
+			except Exception:
+				raise BackendError('Sandbox for job %r could not be deleted', wmsID)
+			yield wmsID
+		activity.finish()
+
+
 class LocalWMS(BasicWMS):
 	configSections = BasicWMS.configSections + ['local']
 
-	def __init__(self, config, name, submitExec, cancelExec, checkExecutor):
+	def __init__(self, config, name, submitExec, checkExecutor, cancelExecutor):
 		config.set('broker', 'RandomBroker')
 		config.setInt('wait idle', 20)
 		config.setInt('wait work', 5)
-		(self.submitExec, self.cancelExec) = (submitExec, cancelExec)
-		BasicWMS.__init__(self, config, name, LocalCheckJobs(config, checkExecutor))
+		self.submitExec = submitExec
+		self._sandbox_helper = SandboxHelper(config)
+		BasicWMS.__init__(self, config, name, checkExecutor = checkExecutor,
+			cancelExecutor = CancelAndPurgeJobs(config, cancelExecutor, LocalPurgeJobs(config, self._sandbox_helper)))
 
 		self.brokerSite = config.getPlugin('site broker', 'UserBroker', cls = Broker,
 			inherit = True, tags = [self], pargs = ('sites', 'sites', self.getNodes))
 		self.brokerQueue = config.getPlugin('queue broker', 'UserBroker', cls = Broker,
 			inherit = True, tags = [self], pargs = ('queue', 'queues', self.getQueues))
 
-		self.sandCache = []
-		self.sandPath = config.getPath('sandbox path', config.getWorkPath('sandbox'), mustExist = False)
 		self.scratchPath = config.getList('scratch path', ['TMPDIR', '/tmp'], onChange = True)
 		self.submitOpts = config.get('submit options', '', onChange = None)
 		self.memory = config.getInt('memory', -1, onChange = None)
-		try:
-			if not os.path.exists(self.sandPath):
-				os.mkdir(self.sandPath)
-		except Exception:
-			raise BackendError('Unable to create sandbox base directory "%s"!' % self.sandPath)
-
-
-	def cancelJobs(self, ids):
-		if not len(ids):
-			raise StopIteration
-
-		activity = utils.ActivityLog('cancelling jobs')
-		proc = utils.LoggedProcess(self.cancelExec, self.getCancelArguments(self._getRawIDs(ids)))
-		if proc.wait() != 0:
-			for line in proc.getError().splitlines():
-				if not self.unknownID() in line:
-					utils.eprint(line.strip())
-		del activity
-
-		activity = utils.ActivityLog('waiting for jobs to finish')
-		time.sleep(5)
-		for wmsId, jobNum in ids:
-			path = self._getSandbox(wmsId)
-			if path is None:
-				self._log.warning('Sandbox for job %d with wmsId "%s" could not be found', jobNum, wmsId)
-				continue
-			try:
-				shutil.rmtree(path)
-			except Exception:
-				raise BackendError('Sandbox for job %d with wmsId "%s" could not be deleted' % (jobNum, wmsId))
-			yield (jobNum, wmsId)
-		del activity
-
-
-	def _getSandbox(self, wmsId):
-		# Speed up function by caching result of listdir
-		def searchSandbox(source):
-			for path in imap(lambda sbox: os.path.join(self.sandPath, sbox), source):
-				if os.path.exists(os.path.join(path, wmsId)):
-					return path
-		result = searchSandbox(self.sandCache)
-		if result:
-			return result
-		oldCache = self.sandCache[:]
-		self.sandCache = lfilter(lambda x: os.path.isdir(os.path.join(self.sandPath, x)), os.listdir(self.sandPath))
-		return searchSandbox(ifilter(lambda x: x not in oldCache, self.sandCache))
 
 
 	# Submit job and yield (jobNum, WMS ID, other data)
@@ -114,10 +118,10 @@ class LocalWMS(BasicWMS):
 		activity = utils.ActivityLog('submitting jobs')
 
 		try:
-			sandbox = tempfile.mkdtemp('', '%s.%04d.' % (module.taskID, jobNum), self.sandPath)
+			sandbox = tempfile.mkdtemp('', '%s.%04d.' % (module.taskID, jobNum), self._sandbox_helper.get_path())
 		except Exception:
 			raise BackendError('Unable to create sandbox directory "%s"!' % sandbox)
-		sbPrefix = sandbox.replace(self.sandPath, '').lstrip('/')
+		sbPrefix = sandbox.replace(self._sandbox_helper.get_path(), '').lstrip('/')
 		def translateTarget(d, s, t):
 			return (d, s, os.path.join(sbPrefix, t))
 		self.smSBIn.doTransfer(ismap(translateTarget, self._getSandboxFilesIn(module)))
@@ -161,7 +165,7 @@ class LocalWMS(BasicWMS):
 
 		activity = utils.ActivityLog('retrieving job outputs')
 		for wmsId, jobNum in ids:
-			path = self._getSandbox(wmsId)
+			path = self._sandbox_helper.get_sandbox(wmsId)
 			if path is None:
 				yield (jobNum, None)
 				continue
@@ -187,12 +191,6 @@ class LocalWMS(BasicWMS):
 	def getNodes(self):
 		return None
 
-	def parseJobState(self, state):
-		return self._status_map[state]
-
-	def getCancelArguments(self, wmsIds):
-		return str.join(' ', wmsIds)
-
 	def checkReq(self, reqs, req, test = lambda x: x > 0):
 		if req in reqs:
 			return test(reqs[req])
@@ -205,9 +203,6 @@ class LocalWMS(BasicWMS):
 		raise AbstractError
 
 	def parseSubmitOutput(self, data):
-		raise AbstractError
-
-	def unknownID(self):
 		raise AbstractError
 
 

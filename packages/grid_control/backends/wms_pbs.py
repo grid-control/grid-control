@@ -13,13 +13,16 @@
 # | limitations under the License.
 
 from grid_control import utils
-from grid_control.backends.backend_tools import CheckInfo, CheckJobsWithProcess, ProcessCreatorAppendArguments
+from grid_control.backends.aspect_cancel import CancelJobsWithProcessBlind
+from grid_control.backends.aspect_status import CheckInfo, CheckJobsWithProcess
+from grid_control.backends.backend_tools import ProcessCreatorAppendArguments
 from grid_control.backends.wms import BackendError, WMS
+from grid_control.backends.wms_local import LocalCheckJobs
 from grid_control.backends.wms_pbsge import PBSGECommon
 from grid_control.job_db import Job
 from grid_control.utils.parsing import parseTime
 from grid_control.utils.process_base import LocalProcess
-from python_compat import identity, ifilter, imap, izip, lmap
+from python_compat import identity, ifilter, izip, lmap
 
 class PBS_CheckJobs(CheckJobsWithProcess):
 	def __init__(self, config, fqid_fun = identity):
@@ -51,8 +54,11 @@ class PBS(PBSGECommon):
 	configSections = PBSGECommon.configSections + ['PBS']
 
 	def __init__(self, config, name):
+		cancelExecutor = CancelJobsWithProcessBlind(config, 'qdel',
+			fmt = lambda wmsIDs: lmap(self._fqid, wmsIDs), unknownID = 'Unknown Job Id')
 		PBSGECommon.__init__(self, config, name,
-			checkExecutor = PBS_CheckJobs(config, self._fqid))
+			cancelExecutor = cancelExecutor,
+			checkExecutor = LocalCheckJobs(config, PBS_CheckJobs(config, self._fqid)))
 		self._nodesExec = utils.resolveInstallPath('pbsnodes')
 		self._server = config.get('server', '', onChange = None)
 
@@ -77,10 +83,6 @@ class PBS(PBSGECommon):
 	def parseSubmitOutput(self, data):
 		# 1667161.ekpplusctl.ekpplus.cluster
 		return data.split('.')[0].strip()
-
-
-	def getCancelArguments(self, wmsIds):
-		return str.join(' ', imap(self._fqid, wmsIds))
 
 
 	def getQueues(self):

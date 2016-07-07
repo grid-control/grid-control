@@ -14,8 +14,11 @@
 
 import os, xml.dom.minidom
 from grid_control import utils
-from grid_control.backends.backend_tools import CheckInfo, CheckJobsWithProcess, ProcessCreatorViaArguments
+from grid_control.backends.aspect_cancel import CancelJobsWithProcessBlind
+from grid_control.backends.aspect_status import CheckInfo, CheckJobsWithProcess
+from grid_control.backends.backend_tools import ProcessCreatorViaArguments
 from grid_control.backends.wms import BackendError, WMS
+from grid_control.backends.wms_local import LocalCheckJobs
 from grid_control.backends.wms_pbsge import PBSGECommon
 from grid_control.config import ConfigError
 from grid_control.job_db import Job
@@ -88,7 +91,11 @@ class GridEngine(PBSGECommon):
 	configSections = PBSGECommon.configSections + ['GridEngine'] + alias
 
 	def __init__(self, config, name):
-		PBSGECommon.__init__(self, config, name, checkExecutor = GridEngine_CheckJobs(config))
+		cancelExecutor = CancelJobsWithProcessBlind(config, 'qdel',
+			fmt = lambda wmsIDs: [str.join(',', wmsIDs)], unknownID = ['Unknown Job Id'])
+		PBSGECommon.__init__(self, config, name,
+			cancelExecutor = cancelExecutor,
+			checkExecutor = LocalCheckJobs(config, GridEngine_CheckJobs(config)))
 		self._project = config.get('project name', '', onChange = None)
 		self._configExec = utils.resolveInstallPath('qconf')
 
@@ -115,10 +122,6 @@ class GridEngine(PBSGECommon):
 	def parseSubmitOutput(self, data):
 		# Your job 424992 ("test.sh") has been submitted
 		return data.split()[2].strip()
-
-
-	def getCancelArguments(self, wmsIds):
-		return str.join(',', wmsIds)
 
 
 	def getQueues(self):

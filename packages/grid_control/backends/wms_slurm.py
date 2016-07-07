@@ -13,9 +13,11 @@
 # | limitations under the License.
 
 from grid_control import utils
-from grid_control.backends.backend_tools import CheckInfo, CheckJobsWithProcess, ProcessCreatorAppendArguments
+from grid_control.backends.aspect_cancel import CancelJobsWithProcessBlind
+from grid_control.backends.aspect_status import CheckInfo, CheckJobsWithProcess
+from grid_control.backends.backend_tools import ProcessCreatorAppendArguments
 from grid_control.backends.wms import BackendError, WMS
-from grid_control.backends.wms_local import LocalWMS
+from grid_control.backends.wms_local import LocalCheckJobs, LocalWMS
 from grid_control.job_db import Job
 from python_compat import identity, ifilter
 
@@ -52,12 +54,8 @@ class SLURM(LocalWMS):
 	def __init__(self, config, wmsName = None):
 		LocalWMS.__init__(self, config, wmsName,
 			submitExec = utils.resolveInstallPath('sbatch'),
-			cancelExec = utils.resolveInstallPath('scancel'),
-			checkExecutor = SLURM_CheckJobs(config))
-
-
-	def unknownID(self):
-		return 'not in queue !'
+			checkExecutor = LocalCheckJobs(config, SLURM_CheckJobs(config)),
+			cancelExecutor = CancelJobsWithProcessBlind(config, 'scancel', unknownID = 'not in queue !'))
 
 
 	def getJobArguments(self, jobNum, sandbox):
@@ -77,7 +75,3 @@ class SLURM(LocalWMS):
 	def parseSubmitOutput(self, data):
 		# job_submit: Job 121195 has been submitted.
 		return int(data.split()[3].strip())
-
-
-	def getCancelArguments(self, wmsIds):
-		return str.join(' ', wmsIds)

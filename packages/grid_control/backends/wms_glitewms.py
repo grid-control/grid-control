@@ -147,12 +147,12 @@ class GliteWMS(GridWMS):
 
 	def __init__(self, config, name, checkExecutor = None):
 		GridWMS.__init__(self, config, name,
-			checkExecutor = checkExecutor or Grid_CheckJobs(config, 'glite-wms-job-status'))
+			checkExecutor = checkExecutor or Grid_CheckJobs(config, 'glite-wms-job-status'),
+			cancelExec = 'glite-wms-job-cancel')
 
 		self._delegateExec = utils.resolveInstallPath('glite-wms-job-delegate-proxy')
 		self._submitExec = utils.resolveInstallPath('glite-wms-job-submit')
 		self._outputExec = utils.resolveInstallPath('glite-wms-job-output')
-		self._cancelExec = utils.resolveInstallPath('glite-wms-job-cancel')
 		self._submitParams.update({'-r': self._ce, '--config': self._configVO})
 		self._useDelegate = config.getBool('try delegate', True, onChange = None)
 		self._forceDelegate = config.getBool('force delegate', False, onChange = None)

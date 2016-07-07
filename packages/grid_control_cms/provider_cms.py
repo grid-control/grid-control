@@ -20,10 +20,10 @@ from grid_control.utils.data_structures import makeEnum
 from grid_control.utils.thread_tools import start_thread
 from grid_control.utils.webservice import JSONRestClient
 from grid_control_cms.lumi_tools import parseLumiFilter, strLumi
-from python_compat import sorted
+from grid_control_cms.sitedb import SiteDB
+from python_compat import itemgetter, lfilter, sorted
 
 CMSLocationFormat = makeEnum(['hostname', 'siteDB', 'both'])
-PhedexT1Mode = makeEnum(['accept', 'disk', 'none'])
 
 # required format: <dataset path>[@<instance>][#<block>]
 class CMSBaseProvider(DataProvider):
@@ -35,15 +35,14 @@ class CMSBaseProvider(DataProvider):
 		DataProvider.__init__(self, config, datasetExpr, datasetNick, datasetID)
 		# LumiDataProcessor instantiated in DataProcessor.__ini__ will set lumi metadata as well
 		self._lumi_query = config.getBool('lumi metadata', not self._lumi_filter.empty(), onChange = changeTrigger)
-		# PhEDex blacklist: 'T1_DE_KIT', 'T1_US_FNAL' and '*_Disk' allow user jobs - other T1's dont!
-		self._phedexFilter = config.getFilter('phedex sites', '-T3_US_FNALLPC',
-			defaultMatcher = 'blackwhite', defaultFilter = 'weak', onChange = changeTrigger)
-		self._phedexT1Filter = config.getFilter('phedex t1 accept', 'T1_DE_KIT T1_US_FNAL',
-			defaultMatcher = 'blackwhite', defaultFilter = 'weak', onChange = changeTrigger)
-		self._phedexT1Mode = config.getEnum('phedex t1 mode', PhedexT1Mode, PhedexT1Mode.disk, onChange = changeTrigger)
-		self.onlyComplete = config.getBool('only complete sites', True, onChange = changeTrigger)
+		config.set('phedex sites matcher mode', 'shell', '?=')
+		# PhEDex blacklist: 'T1_*_Disk nodes allow user jobs - other T1's dont!
+		self._phedexFilter = config.getFilter('phedex sites', '-* T1_*_Disk T2_* T3_*',
+			defaultMatcher = 'blackwhite', defaultFilter = 'strict', onChange = changeTrigger)
+		self._onlyComplete = config.getBool('only complete sites', True, onChange = changeTrigger)
 		self._locationFormat = config.getEnum('location format', CMSLocationFormat, CMSLocationFormat.hostname, onChange = changeTrigger)
 		self._pjrc = JSONRestClient(url = 'https://cmsweb.cern.ch/phedex/datasvc/json/prod/blockreplicas')
+		self._sitedb = SiteDB()
 
 		(self._datasetPath, self._url, self._datasetBlock) = optSplit(datasetExpr, '@#')
 		self._url = self._url or config.get('dbs instance', '')
@@ -65,39 +64,63 @@ class CMSBaseProvider(DataProvider):
 		return splitterClass
 
 
-	def _nodeFilter(self, nameSiteDB, complete):
-		# Remove T0 and T1 by default
-		result = not (nameSiteDB.startswith('T0_') or nameSiteDB.startswith('T1_'))
-		# check if listed on the accepted list
-		if self._phedexT1Mode in [PhedexT1Mode.disk, PhedexT1Mode.accept]:
-			result = result or (self._phedexT1Filter.filterList([nameSiteDB]) == [nameSiteDB])
-		if self._phedexT1Mode == PhedexT1Mode.disk:
-			result = result or nameSiteDB.lower().endswith('_disk')
-		# apply phedex blacklist
-		result = result and (self._phedexFilter.filterList([nameSiteDB]) == [nameSiteDB])
-		# check for completeness at the site
-		result = result and (complete or not self.onlyComplete)
-		return result
+	def _replicaLocation(self, replica_info):
+		(name_node, name_hostname, _) = replica_info
+		if self._locationFormat == CMSLocationFormat.siteDB:
+			yield name_node
+		else:
+			if name_hostname is not None:
+				name_hostnames = [name_hostname]
+			else:
+				name_hostnames = self._sitedb.cms_name_to_se(name_node)
+			for name_hostname in name_hostnames:
+				if self._locationFormat == CMSLocationFormat.hostname:
+					yield name_hostname
+				else:
+					yield '%s/%s' % (name_node, name_hostname)
+
+
+	def _fmtLocations(self, replica_infos):
+		for replica_info in replica_infos:
+			(_, _, completed) = replica_info
+			if completed:
+				for entry in self._replicaLocation(replica_info):
+					yield entry
+			else:
+				for entry in self._replicaLocation(replica_info):
+					yield '(%s)' % entry
+
+
+	def _processReplicas(self, blockPath, replica_infos):
+		def empty_with_warning(*args):
+			self._log.warning(*args)
+			return []
+		def expanded_replica_locations(replica_infos):
+			for replica_info in replica_infos:
+				for entry in self._replicaLocation(replica_info):
+					yield entry
+
+		if not replica_infos:
+			return empty_with_warning('Dataset block %r has no replica information!', blockPath)
+		replica_infos_selected = self._phedexFilter.filterList(replica_infos, key = itemgetter(0))
+		if not replica_infos_selected:
+			return empty_with_warning('Dataset block %r is not available at the selected locations!\nAvailable locations: %s', blockPath,
+				str.join(', ', self._fmtLocations(replica_infos)))
+		if not self._onlyComplete:
+			return list(expanded_replica_locations(replica_infos_selected))
+		replica_infos_complete = lfilter(lambda nn_nh_c: nn_nh_c[2], replica_infos_selected)
+		if not replica_infos_complete:
+			return empty_with_warning('Dataset block %r is not completely available at the selected locations!\nAvailable locations: %s', blockPath,
+				str.join(', ', self._fmtLocations(replica_infos)))
+		return list(expanded_replica_locations(replica_infos_complete))
 
 
 	# Get dataset se list from PhEDex (perhaps concurrent with listFiles)
-	def _getPhedexSEList(self, blockPath, dictSE):
-		dictSE[blockPath] = []
+	def _getPhedexReplicas(self, blockPath, dictReplicas):
+		dictReplicas[blockPath] = []
 		for phedexBlock in self._pjrc.get(params = {'block': blockPath})['phedex']['block']:
 			for replica in phedexBlock['replica']:
-				if self._nodeFilter(replica['node'], replica['complete'] == 'y'):
-					location = None
-					if self._locationFormat == CMSLocationFormat.hostname:
-						location = replica.get('se')
-					elif self._locationFormat == CMSLocationFormat.siteDB:
-						location = replica.get('node')
-					elif (self._locationFormat == CMSLocationFormat.both) and (replica.get('node') or replica.get('se')):
-						location = '%s/%s' % (replica.get('node'), replica.get('se'))
-					if location:
-						dictSE[blockPath].append(location)
-					else:
-						self._log.warning('Dataset block %s replica at %s / %s is skipped!',
-							blockPath, replica.get('node'), replica.get('se'))
+				dictReplicas[blockPath].append((replica['node'], replica.get('se'), replica['complete'] == 'y'))
 
 
 	def getDatasets(self):
@@ -153,20 +176,20 @@ class CMSBaseProvider(DataProvider):
 	def getGCBlocks(self, usePhedex):
 		for datasetPath in self.getDatasets():
 			counter = 0
-			for (blockPath, listSE) in self.getCMSBlocks(datasetPath, getSites = not usePhedex):
+			for (blockPath, replica_infos) in self.getCMSBlocks(datasetPath, getSites = not usePhedex):
 				result = {}
 				result[DataProvider.Dataset] = blockPath.split('#')[0]
 				result[DataProvider.BlockName] = blockPath.split('#')[1]
 
 				if usePhedex: # Start parallel phedex query
-					dictSE = {}
-					tPhedex = start_thread('Query phedex site info for %s' % blockPath, self._getPhedexSEList, blockPath, dictSE)
+					dictReplicas = {}
+					tPhedex = start_thread('Query phedex site info for %s' % blockPath, self._getPhedexReplicas, blockPath, dictReplicas)
 					self.fillCMSFiles(result, blockPath)
 					tPhedex.join()
-					listSE = dictSE.get(blockPath)
+					replica_infos = dictReplicas.get(blockPath)
 				else:
 					self.fillCMSFiles(result, blockPath)
-				result[DataProvider.Locations] = listSE
+				result[DataProvider.Locations] = self._processReplicas(blockPath, replica_infos)
 
 				if len(result[DataProvider.FileList]):
 					counter += 1

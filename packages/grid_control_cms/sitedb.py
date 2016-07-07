@@ -18,10 +18,14 @@ from python_compat import ifilter, imap, izip, lmap, set
 
 class SiteDB(object):
 	def __init__(self, url = None):
-		self._gjrc = GridJSONRestClient(url or 'https://cmsweb.cern.ch/sitedb/data/prod', 'VOMS proxy needed to query siteDB!')
+		self._url = url or 'https://cmsweb.cern.ch/sitedb/data/prod'
+		self._gjrc = GridJSONRestClient(self._url, 'VOMS proxy needed to query siteDB!')
 
 	def _query(self, api, **kwargs):
-		data = self._gjrc.get(api = api, params = kwargs or None)
+		key = (self._url, api, tuple(kwargs.items()))
+		if key not in SiteDB.queryCache:
+			SiteDB.queryCache[key] = self._gjrc.get(api = api, params = kwargs or None)
+		data = SiteDB.queryCache[key]
 		columns = data['desc']['columns']
 		for row in data['result']:
 			yield dict(izip(columns, row))
@@ -45,3 +49,4 @@ class SiteDB(object):
 	def username_to_dn(self, username):
 		for user in self._query('people', match = username):
 			return user['dn']
+SiteDB.queryCache = {}

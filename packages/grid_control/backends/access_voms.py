@@ -12,16 +12,24 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-from grid_control import utils
-from grid_control.backends.wms_grid import GridWMS, Grid_CheckJobs
+# Generic base class for authentication proxies GCSCF:
 
-class Glite(GridWMS):
+from grid_control.backends.access_grid import GridAccessToken
+from grid_control.utils.parsing import parseTime
+
+class VomsAccessToken(GridAccessToken):
+	alias = ['voms', 'VomsProxy']
+
 	def __init__(self, config, name):
-		utils.deprecated('Please use the GliteWMS backend for grid jobs!')
-		GridWMS.__init__(self, config, name,
-			checkExecutor = Grid_CheckJobs(config, 'glite-job-status'),
-			cancelExec = 'glite-job-cancel')
+		GridAccessToken.__init__(self, config, name, 'voms-proxy-info')
 
-		self._submitExec = utils.resolveInstallPath('glite-job-submit')
-		self._outputExec = utils.resolveInstallPath('glite-job-output')
-		self._submitParams.update({'-r': self._ce, '--config-vo': self._configVO })
+	def _getProxyArgs(self):
+		if self._proxyPath:
+			return ['--all', '--file', self._proxyPath]
+		return ['--all']
+
+	def getAuthFiles(self):
+		return [self._getProxyInfo('path')]
+
+	def _getTimeleft(self, cached):
+		return self._getProxyInfo('timeleft', parseTime, cached)

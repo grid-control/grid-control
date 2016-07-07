@@ -30,13 +30,27 @@
 
     * grid_control.backends.backend_tools BackendExecutor
 
-     * grid_control.backends.backend_tools CancelJobs
+     * grid_control.backends.aspect_cancel CancelJobs
 
-      * grid_control.backends.backend_tools CancelJobsWithProcess
+      * grid_control.backends.aspect_cancel CancelAndPurgeJobs
 
-     * grid_control.backends.backend_tools CheckJobs
+      * grid_control.backends.aspect_cancel CancelJobsWithProcess
 
-      * grid_control.backends.backend_tools CheckJobsWithProcess
+       * grid_control.backends.wms_arc ARC_CancelJobs
+
+       * grid_control.backends.aspect_cancel CancelJobsWithProcessBlind
+
+        * grid_control.backends.wms_host Host_CancelJobs
+
+       * grid_control.backends.wms_condor Condor_CancelJobs
+
+       * grid_control.backends.wms_grid Grid_CancelJobs
+
+      * grid_control.backends.wms_local LocalPurgeJobs
+
+     * grid_control.backends.aspect_status CheckJobs
+
+      * grid_control.backends.aspect_status CheckJobsWithProcess
 
        * grid_control.backends.wms_arc ARC_CheckJobs
 
@@ -63,8 +77,6 @@
       * grid_control.backends.wms_local LocalCheckJobs
 
      * grid_control.backends.backend_tools ChunkedExecutor
-
-     * grid_control.backends.backend_tools PurgeJobs
 
     * grid_control.datasets.dproc_base DataProcessor
 
@@ -206,11 +218,15 @@
 
       * grid_control.backends.access TimedAccessToken
 
+       * grid_control.backends.access_grid GridAccessToken
+
+        * grid_control.backends.access_arc ARCAccessToken arc arcproxy
+
+        * grid_control.backends.access_voms VomsAccessToken voms VomsProxy
+
        * grid_control.backends.access RefreshableAccessToken
 
         * grid_control.backends.access_afs AFSAccessToken afs AFSProxy
-
-       * grid_control.backends.access_grid VomsAccessToken voms VomsProxy
 
       * grid_control.backends.access TrivialAccessToken trivial TrivialProxy
 

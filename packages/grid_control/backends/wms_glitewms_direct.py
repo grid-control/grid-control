@@ -14,7 +14,7 @@
 
 import os, sys
 from grid_control import utils
-from grid_control.backends.backend_tools import CheckInfo, CheckJobs
+from grid_control.backends.aspect_status import CheckInfo, CheckJobs
 from grid_control.backends.wms import BackendError
 from grid_control.backends.wms_glitewms import GliteWMS
 from grid_control.backends.wms_grid import GridStatusMap

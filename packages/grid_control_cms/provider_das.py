@@ -17,6 +17,7 @@ from grid_control.datasets import DataProvider
 from grid_control.gc_exceptions import UserError
 from grid_control.utils.webservice import GridJSONRestClient
 from grid_control_cms.provider_cms import CMSBaseProvider
+from python_compat import lmap
 
 class DASRetry(Exception):
 	pass
@@ -66,22 +67,19 @@ class DASProvider(CMSBaseProvider):
 
 	def getCMSBlocksImpl(self, datasetPath, getSites):
 		for blockInfo in self.queryDAS('block dataset=%s' % datasetPath):
-			listSE = None
+			replica_infos = None
 			origin = []
 			name = None
 			for serviceResult in blockInfo['block']:
 				name = serviceResult.get('name', name)
 				if 'replica' in serviceResult:
-					listSE = []
-					for replica in serviceResult['replica']:
-						if self._nodeFilter(replica['site'], replica['complete'] == 'y'):
-							listSE.append(replica['se'])
+					replica_infos = lmap(lambda r: (r['site'], r['se'], r['complete'] == 'y'), serviceResult['replica'])
 				if 'origin_site_name' in serviceResult:
-					origin = [serviceResult['origin_site_name']]
-			if listSE is None:
-				listSE = origin
+					origin = [(serviceResult['origin_site_name'], None, True)]
+			if replica_infos is None:
+				replica_infos = origin
 			if name:
-				yield (name, listSE)
+				yield (name, replica_infos)
 
 
 	def getCMSFilesImpl(self, blockPath, onlyValid, queryLumi):

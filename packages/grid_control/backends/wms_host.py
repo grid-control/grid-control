@@ -13,8 +13,10 @@
 # | limitations under the License.
 
 from grid_control import utils
-from grid_control.backends.backend_tools import CheckInfo, CheckJobsWithProcess, ProcessCreatorAppendArguments
-from grid_control.backends.wms_local import LocalWMS
+from grid_control.backends.aspect_cancel import CancelJobsWithProcessBlind
+from grid_control.backends.aspect_status import CheckInfo, CheckJobsWithProcess
+from grid_control.backends.backend_tools import ProcessCreatorAppendArguments
+from grid_control.backends.wms_local import LocalCheckJobs, LocalWMS
 from grid_control.job_db import Job
 from python_compat import ifilter, imap, izip, lmap, next
 
@@ -42,6 +44,14 @@ class Host_CheckJobs(CheckJobsWithProcess):
 		self._filter_proc_log(proc, self._errormsg, blacklist = ['Unknown Job Id'], log_empty = False)
 
 
+class Host_CancelJobs(CancelJobsWithProcessBlind):
+	def __init__(self, config):
+		CancelJobsWithProcessBlind.__init__(self, config, 'kill', ['-9'], unknownID = 'No such process')
+
+	def _handleError(self, proc):
+		self._filter_proc_log(proc, self._errormsg, blacklist = self._blacklist, log_empty = False)
+
+
 class Host(LocalWMS):
 	alias = ['Localhost']
 	configSections = LocalWMS.configSections + ['Localhost', 'Host']
@@ -49,12 +59,8 @@ class Host(LocalWMS):
 	def __init__(self, config, name):
 		LocalWMS.__init__(self, config, name,
 			submitExec = utils.pathShare('gc-host.sh'),
-			cancelExec = utils.resolveInstallPath('kill'),
-			checkExecutor = Host_CheckJobs(config))
-
-
-	def unknownID(self):
-		return 'Unknown Job Id'
+			checkExecutor = LocalCheckJobs(config, Host_CheckJobs(config)),
+			cancelExecutor = Host_CancelJobs(config))
 
 
 	def getJobArguments(self, jobNum, sandbox):
@@ -67,7 +73,3 @@ class Host(LocalWMS):
 
 	def parseSubmitOutput(self, data):
 		return data.strip()
-
-
-	def getCancelArguments(self, wmsIds):
-		return '-9 %s' % str.join(' ', wmsIds)

@@ -14,7 +14,9 @@
 
 import os, re, tempfile
 from grid_control import utils
-from grid_control.backends.backend_tools import CheckInfo, CheckJobsWithProcess, ProcessCreatorAppendArguments
+from grid_control.backends.aspect_cancel import CancelAndPurgeJobs, CancelJobsWithProcessBlind
+from grid_control.backends.aspect_status import CheckInfo, CheckJobsWithProcess
+from grid_control.backends.backend_tools import ChunkedExecutor, ProcessCreatorAppendArguments
 from grid_control.backends.wms import BackendError
 from grid_control.backends.wms_grid import GridWMS
 from grid_control.job_db import Job
@@ -62,13 +64,16 @@ class CreamWMS(GridWMS):
 	alias = ['cream']
 
 	def __init__(self, config, name):
-		GridWMS.__init__(self, config, name, checkExecutor = CREAM_CheckJobs(config))
+		cancelExecutor = CancelAndPurgeJobs(config,
+			CancelJobsWithProcessBlind(config, 'glite-ce-job-cancel', ['--noint', '--logfile', '/dev/stderr']),
+			CancelJobsWithProcessBlind(config, 'glite-ce-job-purge', ['--noint', '--logfile', '/dev/stderr']))
+		GridWMS.__init__(self, config, name, checkExecutor = CREAM_CheckJobs(config),
+			cancelExecutor = ChunkedExecutor(config, 'cancel', cancelExecutor))
+
 		self._nJobsPerChunk = config.getInt('job chunk size', 10, onChange = None)
 
 		self._submitExec = utils.resolveInstallPath('glite-ce-job-submit')
 		self._outputExec = utils.resolveInstallPath('glite-ce-job-output')
-		self._cancelExec = utils.resolveInstallPath('glite-ce-job-cancel')
-		self._purgeExec = utils.resolveInstallPath('glite-ce-job-purge')
 		self._submitParams.update({'-r': self._ce, '--config-vo': self._configVO })
 
 		self._outputRegex = r'.*For JobID \[(?P<rawId>\S+)\] output will be stored in the dir (?P<outputDir>.*)$'
@@ -153,45 +158,3 @@ class CreamWMS(GridWMS):
 			else:
 				proc.logError(self.errorLog, log = purgeLog, jobs = done)
 		utils.removeFiles([log, purgeLog, basePath])
-
-	def cancelJobs(self, allIds):
-		if len(allIds) == 0:
-			raise StopIteration
-
-		waitFlag = False
-		for ids in imap(lambda x: allIds[x:x+self._nJobsPerChunk], irange(0, len(allIds), self._nJobsPerChunk)):
-			# Delete jobs in groups of 5 - with 5 seconds between groups
-			if waitFlag and not utils.wait(5):
-				break
-			waitFlag = True
-
-			jobNumMap = dict(ids)
-			jobs = ' '.join(self._getRawIDs(ids))
-			log = tempfile.mktemp('.log')
-
-			activity = utils.ActivityLog('cancelling jobs')
-			proc = utils.LoggedProcess(self._cancelExec, '--noint --logfile "%s" %s' % (log, jobs))
-			retCode = proc.wait()
-			del activity
-
-			# select cancelled jobs
-			for rawId in self._getRawIDs(ids):
-				deletedWMSId = self._createId(rawId)
-				yield (jobNumMap.get(deletedWMSId), deletedWMSId)
-
-			if retCode != 0:
-				if self.explainError(proc, retCode):
-					pass
-				else:
-					proc.logError(self.errorLog, log = log)
-		
-			purgeLog = tempfile.mktemp('.log')
-			purgeProc = utils.LoggedProcess(self._purgeExec, '--noint --logfile "%s" %s' % (purgeLog, jobs))
-			retCode = purgeProc.wait()
-			if retCode != 0:
-				if self.explainError(purgeProc, retCode):
-					pass
-				else:
-					proc.logError(self.errorLog, log = purgeLog, jobs = jobs)
-			
-			utils.removeFiles([log, purgeLog])

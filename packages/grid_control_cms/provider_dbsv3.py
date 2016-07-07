@@ -48,7 +48,7 @@ class DBS3Provider(CMSBaseProvider):
 	def getCMSBlocksImpl(self, datasetPath, getSites):
 		def getNameSEList(blockinfo):
 			if getSites:
-				return (blockinfo['block_name'], [blockinfo['origin_site_name']])
+				return (blockinfo['block_name'], [(blockinfo['origin_site_name'], None, True)])
 			return (blockinfo['block_name'], None)
 		return lmap(getNameSEList, self.queryDBSv3('blocks', dataset = datasetPath, detail = getSites))
 
