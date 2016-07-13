@@ -151,7 +151,18 @@ class TypedConfigInterface(ConfigInterface):
 
 CommandType = makeEnum(['executable', 'command'])
 
+
 class SimpleConfigInterface(TypedConfigInterface):
+	def __init__(self, configView):
+		TypedConfigInterface.__init__(self, configView)
+		# global switch to enable / disable interactive option queries
+		self._config_interactive = self.changeView(interfaceClass = TypedConfigInterface,
+			viewClass = SimpleConfigView, setSections = ['interactive'])
+		self._interactive_enabled = self._config_interactive.getBool('default', True, onChange = None)
+
+	def isInteractive(self, option, default):
+		return self._config_interactive.getBool(option, self._interactive_enabled and default, onChange = None)
+
 	def getCommand(self, option, default = noDefault, **kwargs):
 		scriptType = self.getEnum(appendOption(option, 'type'), CommandType, CommandType.executable, **kwargs)
 		if scriptType == CommandType.executable:
@@ -197,15 +208,15 @@ class SimpleConfigInterface(TypedConfigInterface):
 		choices_str = str.join('/', imap(capDefault, imap(obj2str, choices)))
 		if (default != noDefault) and (default not in choices):
 			raise APIError('Invalid default choice "%s" [%s]!' % (default, choices_str))
-		if 'interactive' in kwargs:
-			kwargs['interactive'] += (' [%s]' % choices_str)
+		if 'interactive_msg' in kwargs:
+			kwargs['interactive_msg'] += (' [%s]' % choices_str)
 		def checked_str2obj(value):
 			obj = str2obj(value)
 			if obj not in choices:
 				raise ConfigError('Invalid choice "%s" [%s]!' % (value, choices_str))
 			return obj
 		return self._getInternal('choice', obj2str, checked_str2obj, def2obj, option, default,
-			interactiveDefault = False, **kwargs)
+			interactive_msg_append_default = False, **kwargs)
 	def setChoice(self, option, value, opttype = '=', source = None, obj2str = str.__str__):
 		return self._setInternal('choice', obj2str, option, value, opttype, source)
 
@@ -219,27 +230,28 @@ class SimpleConfigInterface(TypedConfigInterface):
 			choices = subset
 		return self.getChoice(option, choices, default, obj2str = enum.enum2str, str2obj = enum.str2enum, **kwargs)
 
+	def prompt(self, prompt):
+		return user_input('%s: ' % prompt)
+
 	def _getInternal(self, desc, obj2str, str2obj, def2obj, option, default_obj,
-			interactive = None, interactiveDefault = True, **kwargs):
-		if (not interactive) or (option in self.getOptions()):
-			return TypedConfigInterface._getInternal(self, desc, obj2str, str2obj, def2obj, option, default_obj, **kwargs)
-		prompt = interactive
-		if (default_obj != noDefault) and interactiveDefault:
-			prompt += (' [%s]' % self._getDefaultStr(default_obj, def2obj, obj2str))
-		while True:
-			handler = signal.signal(signal.SIGINT, signal.SIG_DFL)
-			try:
-				userInput = user_input('%s: ' % prompt)
-			except Exception:
-				sys.stdout.write('\n')
-				sys.exit(os.EX_DATAERR)
-			signal.signal(signal.SIGINT, handler)
-			if userInput == '':
-				obj = default_obj
-			else:
+			interactive = True, interactive_msg = None, interactive_msg_append_default = True, **kwargs):
+		if interactive_msg and self.isInteractive(option, interactive):
+			prompt = interactive_msg
+			if (default_obj != noDefault) and interactive_msg_append_default:
+				prompt += (' [%s]' % self._getDefaultStr(default_obj, def2obj, obj2str))
+			while True:
+				handler = signal.signal(signal.SIGINT, signal.SIG_DFL)
 				try:
-					obj = str2obj(userInput)
+					user_input = self.prompt(prompt).strip()
 				except Exception:
-					raise ConfigError('Unable to parse %s: %s' % (desc, userInput))
-			break
-		return TypedConfigInterface._getInternal(self, desc, obj2str, str2obj, def2obj, option, obj, **kwargs)
+					sys.stdout.write('\n')
+					sys.exit(os.EX_DATAERR)
+				signal.signal(signal.SIGINT, handler)
+				if user_input != '':
+					try:
+						default_obj = str2obj(user_input)
+					except Exception:
+						sys.stdout.write('Unable to parse %s: %s\n' % (desc, user_input))
+						continue
+				break
+		return TypedConfigInterface._getInternal(self, desc, obj2str, str2obj, def2obj, option, default_obj, **kwargs)

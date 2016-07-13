@@ -53,7 +53,7 @@ class DataSplitter(ConfigurablePlugin):
 		ConfigurablePlugin.__init__(self, config)
 		self.setState(src = None, protocol = {})
 		# Resync settings:
-		self._interactive = config.getBool('resync interactive', False, onChange = None)
+		self._interactive = config.isInteractive('partition resync', False)
 		#   behaviour in case of event size changes
 		self._mode_removed = config.getEnum('resync mode removed', ResyncMode, ResyncMode.complete, subset = ResyncMode.noChanged)
 		self._mode_expanded = config.getEnum('resync mode expand', ResyncMode, ResyncMode.changed)

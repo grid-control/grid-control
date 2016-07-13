@@ -132,7 +132,7 @@ def gc_create_workflow(config):
 			logging.getLogger('user').warning('Starting initialization of %s!', global_config.getWorkPath())
 			global_config.setState(True, 'init')
 		if global_config.getChoiceYesNo('workdir create', True,
-				interactive = 'Do you want to create the working directory %s?' % global_config.getWorkPath()):
+				interactive_msg = 'Do you want to create the working directory %s?' % global_config.getWorkPath()):
 			utils.ensureDirExists(global_config.getWorkPath(), 'work directory')
 
 	# Query config settings before config is frozen

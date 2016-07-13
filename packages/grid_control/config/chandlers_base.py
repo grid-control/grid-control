@@ -58,10 +58,7 @@ class changeInitNeeded(object):
 
 	def __call__(self, config, old_obj, cur_obj, cur_entry, obj2str):
 		log = logging.getLogger('config.onchange.%s' % self._option.lower())
-		int_config = config.changeView(viewClass = 'SimpleConfigView', setSections = ['interactive'])
-		interaction_def = int_config.getBool('default', True, onChange = None)
-		interaction_opt = int_config.getBool(self._option, interaction_def, onChange = None)
-		if interaction_opt:
+		if config.isInteractive(self._option, default = True):
 			msg = 'The option "%s" was changed from the old value:' % cur_entry.format_opt()
 			if utils.getUserBool(msg + ('\n\t> %s\nto the new value:' % obj2str(old_obj).lstrip()) +
 					('\n\t> %s\nDo you want to abort?' % obj2str(cur_obj).lstrip()), False):
