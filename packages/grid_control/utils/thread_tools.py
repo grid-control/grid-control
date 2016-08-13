@@ -13,17 +13,65 @@
 # | limitations under the License.
 
 import time, logging, threading
+from python_compat import get_current_thread, get_thread_name
 
 blocking_equivalent = 60*60*24*7 # instead of blocking, we wait for a week
 
+# Lock with optional acquire timeout
+class GCLock(object):
+	def __init__(self, lock = None):
+		self._lock = lock or threading.Lock()
+
+	def acquire(self, timeout = None):
+		try:
+			if timeout == 0: # Non-blocking
+				return self._lock.acquire(False)
+			if timeout is None: # Blocking
+				timeout = blocking_equivalent
+			# using the threading.Condition algorithm for polling the lock
+			t_end = time.time() + timeout
+			dt_sleep = 0.0005
+			while True:
+				lockstate = self._lock.acquire(False)
+				if lockstate:
+					return lockstate
+				dt_remaining = t_end - time.time()
+				if dt_remaining <= 0:
+					raise TimeoutException
+				dt_sleep = min(dt_sleep * 2, dt_remaining, 0.05)
+				time.sleep(dt_sleep)
+		except KeyboardInterrupt:
+			raise KeyboardInterrupt('Interrupted while waiting to acquire lock')
+
+	def release(self):
+		self._lock.release()
+
+
+def create_thread(fun, *args, **kwargs):
+	# determine thread name (name contains parentage)
+	create_thread.lock.acquire()
+	try:
+		create_thread.counter += 1
+	finally:
+		create_thread.lock.release()
+	parent_thread_name = get_thread_name(get_current_thread())
+	new_thread_name = '%s-%d' % (parent_thread_name, create_thread.counter)
+	# create new thread
+	return threading.Thread(name = new_thread_name, target = fun, args = args, kwargs = kwargs)
+create_thread.counter = 0
+create_thread.lock = GCLock()
+
+
 def start_thread(desc, fun, *args, **kwargs):
-	thread = threading.Thread(target = fun, args = args, kwargs = kwargs)
+	thread = create_thread(fun, *args, **kwargs)
 	thread.setDaemon(True)
 	thread.start()
 	return thread
 
+
 class TimeoutException(Exception):
 	pass
+
 
 # Event with blocking, interruptible wait and python >= 2.7 return value
 class GCEvent(object):
@@ -69,34 +117,6 @@ class GCEvent(object):
 		except KeyboardInterrupt:
 			raise KeyboardInterrupt('Interrupted while waiting for %s' % description)
 
-# Lock with optional acquire timeout
-class GCLock(object):
-	def __init__(self):
-		self._lock = threading.Lock()
-
-	def acquire(self, timeout = None):
-		try:
-			if timeout == 0: # Non-blocking
-				return self._lock.acquire(False)
-			if timeout is None: # Blocking
-				timeout = blocking_equivalent
-			# using the threading.Condition algorithm for polling the lock
-			t_end = time.time() + timeout
-			dt_sleep = 0.0005
-			while True:
-				lockstate = self._lock.acquire(False)
-				if lockstate:
-					return lockstate
-				dt_remaining = t_end - time.time()
-				if dt_remaining <= 0:
-					raise TimeoutException
-				dt_sleep = min(dt_sleep * 2, dt_remaining, 0.05)
-				time.sleep(dt_sleep)
-		except KeyboardInterrupt:
-			raise KeyboardInterrupt('Interrupted while waiting to acquire lock')
-
-	def release(self):
-		self._lock.release()
 
 # thread-safe communication channel with put / get
 class GCQueue(object):
@@ -140,6 +160,7 @@ class GCQueue(object):
 		finally:
 			self._lock.release()
 
+
 # Class to manage a collection of threads
 class GCThreadPool(object):
 	def __init__(self):
@@ -162,11 +183,14 @@ class GCThreadPool(object):
 						self._token_desc.pop(token, None)
 				if not self._token_time: # no active threads
 					return True
+				# drop all threads if timeout is reached
+				if (timeout is not None) and (timeout <= 0):
+					self._token_time = {}
+					self._token_desc = {}
+					return False
 			finally:
 				self._lock.release()
 			# wait for thread to finish and adapt timeout for next round
-			if (timeout is not None) and (timeout <= 0):
-				return False
 			self._notify.wait(timeout)
 			if timeout is not None:
 				timeout -= time.time() - t_current
@@ -179,9 +203,7 @@ class GCThreadPool(object):
 			self._token_desc[self._token] = desc
 		finally:
 			self._lock.release()
-		thread = threading.Thread(target = self._run_thread, args = (self._token, fun, args, kwargs))
-		thread.setDaemon(True)
-		thread.start()
+		start_thread(desc, self._run_thread, self._token, fun, args, kwargs)
 
 	def _run_thread(self, token, fun, args, kwargs):
 		try:
@@ -209,7 +231,7 @@ def hang_protection(fun, timeout = 5):
 			result[None] = fun()
 		except Exception:
 			result[None] = None
-	t = threading.Thread(target = hang_protection_wrapper)
+	t = create_thread(hang_protection_wrapper)
 	t.start()
 	t.join(timeout)
 	if None not in result:

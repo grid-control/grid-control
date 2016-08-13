@@ -12,11 +12,11 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-import time, logging
+import sys, time, logging
 from grid_control import utils
 from grid_control.backends import WMS
 from grid_control.gc_plugin import NamedPlugin
-from grid_control.gui import GUI
+from grid_control.gui import GUI, SimpleActivityStream
 from grid_control.job_manager import JobManager
 from grid_control.logging_setup import LogEveryNsec
 from grid_control.monitoring import Monitoring
@@ -31,6 +31,10 @@ class Workflow(NamedPlugin):
 	def __init__(self, config, name, abort = None):
 		NamedPlugin.__init__(self, config, name)
 
+		# Initial activity stream
+		sys.stdout = SimpleActivityStream(sys.stdout, register_callback = True)
+		sys.stderr = SimpleActivityStream(sys.stderr)
+
 		# Workdir settings
 		self._workDir = config.getWorkPath()
 		self._checkSpace = config.getInt('workdir space', 10, onChange = None)
@@ -39,8 +43,10 @@ class Workflow(NamedPlugin):
 		self.task = config.getPlugin(['module', 'task'], cls = TaskModule, tags = [self])
 		if abort == 'task':
 			return
-		utils.vprint('Current task ID: %s' % self.task.taskID, -1)
-		utils.vprint('Task started on %s' % self.task.taskDate, -1)
+
+		log = logging.getLogger('user.workflow')
+		log.log(logging.INFO, 'Current task ID: %s', self.task.taskID)
+		log.log(logging.INFO, 'Task started on: %s', self.task.taskDate)
 
 		# Initialise workload management interface
 		self.wms = config.getCompositePlugin('backend', 'grid', 'MultiWMS',
@@ -58,8 +64,13 @@ class Workflow(NamedPlugin):
 		self.jobManager = jobs_config.getPlugin('job manager', 'SimpleJobManager',
 			cls = JobManager, tags = [self, self.task, self.wms], pargs = (self.task, self.monitor))
 
+		if abort == 'jobmanager':
+			return
+
 		# Prepare work package
-		self.wms.deployTask(self.task, self.monitor)
+		self.wms.deployTask(self.task, self.monitor,
+			transferSE = config.getState('init', detail = 'storage'),
+			transferSB = config.getState('init', detail = 'sandbox'))
 
 		# Configure workflow settings
 		self._actionList = jobs_config.getList('action', ['check', 'retrieve', 'submit'], onChange = None)
@@ -71,7 +82,8 @@ class Workflow(NamedPlugin):
 		self._submitTime = jobs_config.getTime('submission time requirement', self.task.wallTime, onChange = None)
 
 		# Initialise GUI
-		self._gui = jobs_config.getPlugin('gui', 'SimpleConsole', cls = GUI, onChange = None, pargs = (self,))
+		(sys.stdout, sys.stderr) = (sys.stdout.finish(), sys.stderr.finish())
+		self._gui = config.getPlugin('gui', 'SimpleConsole', cls = GUI, onChange = None, pargs = (self,))
 
 
 	# Job submission loop

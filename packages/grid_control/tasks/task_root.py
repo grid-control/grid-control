@@ -12,7 +12,7 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-import os
+import os, logging
 from grid_control import utils
 from grid_control.config import ConfigError, changeInitNeeded
 from grid_control.tasks.task_user import UserTask
@@ -26,7 +26,7 @@ class ROOTTask(UserTask):
 		self._rootpath = config.get('root path', os.environ.get('ROOTSYS', ''), persistent = True, onChange = changeInitNeeded('sandbox'))
 		if not self._rootpath:
 			raise ConfigError('Either set environment variable "ROOTSYS" or set option "root path"!')
-		utils.vprint('Using the following ROOT path: %s' % self._rootpath, -1)
+		logging.getLogger('user').info('Using the following ROOT path: %s', self._rootpath)
 
 		# Special handling for executables bundled with ROOT
 		self._executable = config.get('executable', onChange = changeInitNeeded('sandbox'))

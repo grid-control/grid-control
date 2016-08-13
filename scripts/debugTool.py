@@ -177,7 +177,6 @@ if opts.job_selector or opts.job_reset_attempts or opts.job_force_state or opts.
 if opts.dataset_show_diff:
 	if len(args) != 2:
 		utils.exitWithUsage('%s <dataset source 1> <dataset source 2>' % sys.argv[0])
-	utils.eprint = lambda *x: {}
 	a = DataProvider.createInstance('ListProvider', config, args[0], None)
 	b = DataProvider.createInstance('ListProvider', config, args[1], None)
 	(blocksAdded, blocksMissing, blocksChanged) = DataProvider.resyncSources(a.getBlocks(show_stats = False), b.getBlocks(show_stats = False))
@@ -187,7 +186,6 @@ if opts.dataset_show_removed:
 	if len(args) < 2:
 		utils.exitWithUsage('%s <dataset source 1> <dataset source 2> ... <dataset source N> ' % sys.argv[0])
 	removed = []
-	utils.eprint = lambda *x: {}
 	oldDP = DataProvider.createInstance('ListProvider', config, args[0], None)
 	for new in args[1:]:
 		newDP = DataProvider.createInstance('ListProvider', config, new, None)
@@ -212,3 +210,4 @@ if opts.logfile_decode:
 			buffer = BytesBuffer(base64.b64decode(line.replace('(B64) ', '')))
 			line = gzip.GzipFile(fileobj = buffer).read().decode('ascii')
 		sys.stdout.write(line.rstrip() + '\n')
+	fp.close()

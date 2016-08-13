@@ -98,39 +98,43 @@ class FileConfigFiller(ConfigFiller):
 		except Exception:
 			raise ConfigError('Error while reading configuration file "%s"!' % configFile)
 
+	def _parseLineStripComments(self, exceptionIntro, configContent, configFile, idx, line):
+		return rsplit(line, ';', 1)[0].rstrip()
+
+	def _parseLineContinueOption(self, exceptionIntro, configContent, configFile, idx, line):
+		self._currentValue += '\n' + line.strip()
+		self._currentIndices += [idx]
+
+	def _parseLineSection(self, exceptionIntro, configContent, configFile, idx, line):
+		self._currentSection = line[1:line.index(']')].strip()
+		self._parseLine(exceptionIntro, configContent, configFile, idx, line[line.index(']') + 1:].strip())
+
+	def _parseLineOption(self, exceptionIntro, configContent, configFile, idx, line):
+		(self._currentOption, self._currentValue) = lmap(str.strip, line.split('=', 1))
+		self._currentIndices = [idx]
+
 	# Not using ConfigParser anymore! Ability to read duplicate options is needed
 	def _parseLine(self, exceptionIntro, configContent, configFile, idx, line):
-		exceptionIntroLineInfo = exceptionIntro + ':%d\n\t%r' % (idx, line)
-		try:
-			line = rsplit(line, ';', 1)[0].rstrip()
-		except Exception:
-			raise ConfigError(exceptionIntroLineInfo + '\nUnable to strip comments!')
-		exceptionIntroLineInfo = exceptionIntro + ':%d\n\t%r' % (idx, line) # removed comment
+		def protected_call(fun, exceptionMsg, line):
+			try:
+				return fun(exceptionIntro, configContent, configFile, idx, line)
+			except Exception:
+				raise ConfigError(exceptionIntro + ':%d\n\t%r\n' % (idx, line) + exceptionMsg)
+
+		line = protected_call(self._parseLineStripComments, 'Unable to strip comments!', line)
+		exceptionIntroLineInfo = exceptionIntro + ':%d\n\t%r\n' % (idx, line)
 		if line.lstrip().startswith(';') or line.lstrip().startswith('#') or not line.strip():
 			return # skip empty lines or comment lines
 		elif line[0].isspace():
-			try:
-				self._currentValue += '\n' + line.strip()
-				self._currentIndices += [idx]
-			except Exception:
-				raise ConfigError(exceptionIntroLineInfo + '\nInvalid indentation!')
+			protected_call(self._parseLineContinueOption, 'Invalid indentation!', line)
 		elif line.startswith('['):
 			if self._currentOption:
 				self._storeOption(exceptionIntroLineInfo, configContent, configFile)
-			try:
-				self._currentSection = line[1:line.index(']')].strip()
-				self._parseLine(exceptionIntro, configContent, configFile,
-					idx, line[line.index(']') + 1:].strip())
-			except Exception:
-				raise ConfigError(exceptionIntroLineInfo + '\nUnable to parse config section!')
+			protected_call(self._parseLineSection, 'Unable to parse config section!', line)
 		elif '=' in line:
 			if self._currentOption:
 				self._storeOption(exceptionIntroLineInfo, configContent, configFile)
-			try:
-				(self._currentOption, self._currentValue) = lmap(str.strip, line.split('=', 1))
-				self._currentIndices = [idx]
-			except Exception:
-				raise ConfigError(exceptionIntroLineInfo + '\nUnable to parse config option!')
+			protected_call(self._parseLineOption, 'Unable to parse config option!', line)
 		else:
 			raise ConfigError(exceptionIntroLineInfo + '\nPlease use "key = value" syntax or indent values!')
 
@@ -198,10 +202,13 @@ class StringConfigFiller(ConfigFiller):
 		for uopt in self._optionList:
 			try:
 				section, tmp = tuple(uopt.lstrip('[').split(']', 1))
+			except Exception:
+				raise ConfigError('Unable to parse section in %s' % repr(uopt))
+			try:
 				option, value = tuple(imap(str.strip, tmp.split('=', 1)))
 				self._addEntry(container, section, option, value, '<cmdline override>')
 			except Exception:
-				raise ConfigError('Unable to parse option %s' % uopt)
+				raise ConfigError('Unable to parse option in %s' % repr(uopt))
 
 
 # Class to fill config containers with settings from a python config file

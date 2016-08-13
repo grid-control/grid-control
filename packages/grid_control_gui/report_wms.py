@@ -13,11 +13,23 @@
 # | limitations under the License.
 
 import math, time
+from grid_control.config import ConfigError
 from grid_control.job_db import Job
-from grid_control.report import Report
+from grid_control.report import LocationReport, Report
 from grid_control.utils import printTabular
 from grid_control.utils.parsing import parseStr, strTimeShort
 from python_compat import imap, itemgetter, lmap, lzip, sorted
+
+class LocationHistoryReport(LocationReport):
+	alias = ['history']
+
+	def _add_details(self, reports, jobObj):
+		history = jobObj.history.items()
+		history.reverse()
+		for at, dest in history:
+			if dest != 'N/A':
+				reports.append({1: at, 2: ' -> ' + dest})
+
 
 class BackendReport(Report):
 	alias = ['backend']
@@ -29,6 +41,8 @@ class BackendReport(Report):
 		configString = configString.replace('history', '')
 		self._idxList = lmap(lambda x: self._levelMap[x.lower()], configString.split())
 		self._idxList.reverse()
+		if not self._idxList:
+			raise ConfigError('Backend report was not configured!')
 		self._stateMap = [(None, 'WAITING'), (Job.RUNNING, 'RUNNING'),
 			(Job.FAILED, 'FAILED'), (Job.SUCCESS, 'SUCCESS')]
 
@@ -57,10 +71,10 @@ class BackendReport(Report):
 					dest_info = [dest]
 				else:
 					dest_info = dest.split('/')
-				wmsName = jobObj.wmsId.split('.')[1]
+				wmsName = jobObj.gcID.split('.')[1]
 				endpoint = 'N/A'
-				if 'http:' in jobObj.wmsId:
-					endpoint = jobObj.wmsId.split(':')[1].split('/')[0]
+				if 'http:' in jobObj.gcID:
+					endpoint = jobObj.gcID.split(':')[1].split('/')[0]
 				result.append([state, time_info, wmsName, endpoint] + dest_info)
 		return result
 

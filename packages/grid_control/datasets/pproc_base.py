@@ -14,7 +14,7 @@
 
 import logging
 from grid_control.gc_plugin import ConfigurablePlugin
-from grid_control.utils import display_selection, filter_processors
+from grid_control.utils import prune_processors
 from grid_control.utils.gc_itertools import lchain
 from hpfwk import AbstractError
 from python_compat import imap
@@ -41,15 +41,14 @@ class PartitionProcessor(ConfigurablePlugin):
 class MultiPartitionProcessor(PartitionProcessor):
 	def __init__(self, config, processorList):
 		PartitionProcessor.__init__(self, config)
-		self._processorList = filter_processors(processorList)
-		display_selection(self._log, processorList, self._processorList,
-			'Removed %d inactive partition processors!', lambda item: item.__class__.__name__)
+		do_prune = config.getBool('partition processor prune', True, onChange = None)
+		self._processorList = prune_processors(do_prune, processorList, self._log, 'Removed %d inactive partition processors!')
 
 	def getKeys(self):
-		return lchain(imap(lambda p: p.getKeys(), self._processorList))
+		return lchain(imap(lambda p: p.getKeys() or [], self._processorList))
 
 	def getNeededKeys(self, splitter):
-		return lchain(imap(lambda p: p.getNeededKeys(splitter), self._processorList))
+		return lchain(imap(lambda p: p.getNeededKeys(splitter) or [], self._processorList))
 
 	def process(self, pNum, splitInfo, result):
 		for processor in self._processorList:

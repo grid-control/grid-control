@@ -13,10 +13,10 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-import os, sys, time, random, gcSupport, threading
+import os, sys, time, random, gcSupport
 from gcSupport import ClassSelector, FileInfoProcessor, Job, JobClass, Options, Plugin, utils
 from grid_control.backends.storage import se_copy, se_exists, se_mkdir, se_rm
-from grid_control.utils.thread_tools import start_thread
+from grid_control.utils.thread_tools import GCLock, start_thread
 from python_compat import imap, irange, lfilter, lmap, md5
 
 def md5sum(filename):
@@ -137,8 +137,8 @@ def transfer_monitor(output, fileIdx, path, lock, abort):
 
 
 def download_monitored(jobNum, output, fileIdx, checkPath, sourcePath, targetPath):
-	copyAbortLock = threading.Lock()
-	monitorLock = threading.Lock()
+	copyAbortLock = GCLock()
+	monitorLock = GCLock()
 	monitorLock.acquire()
 	monitor = start_thread('Download monitor %s' % jobNum, transfer_monitor, output, fileIdx, checkPath, monitorLock, copyAbortLock)
 	result = -1
@@ -341,7 +341,7 @@ def download_multithreaded(opts, workDir, jobList, incInfo, jobDB, token):
 #			self.output.append(str(self.jobNum) + 'FINISHED')
 			pass
 
-	download_multithreaded_main(opts, workDir, jobList, incInfo, jobDB, token, ThreadDisplay, Console(), errorOutput)
+	download_multithreaded_main(opts, workDir, jobList, incInfo, jobDB, token, ThreadDisplay, Console(sys.stdout), errorOutput)
 
 
 def download_sequential(opts, workDir, jobList, incInfo, jobDB, token):

@@ -16,7 +16,7 @@ from grid_control import utils
 from grid_control.datasets.dproc_base import DataProcessor, NullDataProcessor
 from grid_control.datasets.provider_base import DataProvider, DatasetError
 from hpfwk import ExceptionCollector
-from python_compat import imap, reduce
+from python_compat import imap, reduce, set
 
 class MultiDatasetProvider(DataProvider):
 	def __init__(self, config, datasetExpr, datasetNick, datasetID, providerList):
@@ -39,17 +39,17 @@ class MultiDatasetProvider(DataProvider):
 
 	def getDatasets(self):
 		if self._cache_dataset is None:
-			self._cache_dataset = []
+			self._cache_dataset = set()
 			ec = ExceptionCollector()
 			for provider in self._providerList:
 				try:
-					self._cache_dataset.extend(provider.getDatasets())
+					self._cache_dataset.update(provider.getDatasets())
 				except Exception:
 					ec.collect()
 				if utils.abort():
 					raise DatasetError('Could not retrieve all datasets!')
 			ec.raise_any(DatasetError('Could not retrieve all datasets!'))
-		return self._cache_dataset
+		return list(self._cache_dataset)
 
 
 	def getBlocks(self, show_stats):

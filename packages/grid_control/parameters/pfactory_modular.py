@@ -15,6 +15,7 @@
 import logging
 from grid_control.parameters.pfactory_base import UserParameterFactory
 from grid_control.parameters.psource_base import ParameterError, ParameterSource
+from python_compat import ifilter, sorted
 
 # Parameter factory which evaluates a parameter module string
 class ModularParameterFactory(UserParameterFactory):
@@ -24,22 +25,18 @@ class ModularParameterFactory(UserParameterFactory):
 		# Wrap psource factory functions
 		def createWrapper(clsName):
 			def wrapper(*args):
-				try:
-					parameterClass = ParameterSource.getClass(clsName)
-				except Exception:
-					raise ParameterError('Unable to create parameter source "%r"!' % clsName)
+				parameterClass = ParameterSource.getClass(clsName)
 				try:
 					return parameterClass.create(self._paramConfig, *args)
 				except Exception:
-					raise ParameterError('Error while creating "%r" with arguments "%r"' % (parameterClass.__name__, args))
+					raise ParameterError('Error while creating %r with arguments %r' % (parameterClass.__name__, args))
 			return wrapper
 		userFun = {}
 		for clsInfo in ParameterSource.getClassList():
-			for clsName in clsInfo.keys():
-				if clsName != clsInfo[clsName] and (clsName != 'depth'):
-					userFun[clsName] = createWrapper(clsInfo[clsName])
+			for clsName in ifilter(lambda name: name != 'depth', clsInfo.keys()):
+				userFun[clsName] = createWrapper(clsName)
 		try:
-			return eval(pExpr, userFun) # pylint:disable=eval-used
+			return eval(pExpr, dict(userFun)) # pylint:disable=eval-used
 		except Exception:
-			logging.getLogger('user').warning('Available functions: %s', userFun.keys())
+			logging.getLogger('user').warning('Available functions: %s', sorted(userFun.keys()))
 			raise

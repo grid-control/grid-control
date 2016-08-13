@@ -18,11 +18,12 @@ class Console(object):
 	attr = {'COLOR_BLACK': '30', 'COLOR_RED': '31', 'COLOR_GREEN': '32',
 		'COLOR_YELLOW': '33', 'COLOR_BLUE': '34', 'COLOR_MAGENTA': '35',
 		'COLOR_CYAN': '36', 'COLOR_WHITE': '37', 'BOLD': '1', 'RESET': '0'}
-	cmd = {'savePos': '7', 'loadPos': '8', 'eraseDown': '[J', 'erase': '[2J'}
+	cmd = {'savePos': '7', 'loadPos': '8', 'eraseDown': '[J', 'erase': '[2J',
+		'hideCursor': '[?25l', 'showCursor': '[?25h'}
 	for (name, esc) in attr.items():
 		locals()[name] = esc
 
-	def fmt(cls, data, attr = None):
+	def fmt(cls, data, attr = None, force_ansi = False):
 		class ColorString(object):
 			def __init__(self, data, attr):
 				(self._data, self._attr) = (data, attr)
@@ -30,7 +31,7 @@ class Console(object):
 				return len(self._data)
 			def __str__(self):
 				return '\033[%sm%s\033[0m' % (str.join(';', [Console.RESET] + self._attr), self._data)
-		if sys.stdout.isatty():
+		if force_ansi or sys.stdout.isatty():
 			return ColorString(data, attr or [])
 		return data
 	fmt = classmethod(fmt)
@@ -39,16 +40,16 @@ class Console(object):
 		return re.sub(r'\x1b(>|=|\[[^A-Za-z]*[A-Za-z])', '', value)
 	fmt_strip = classmethod(fmt_strip)
 
-	def __init__(self):
-		(self.stdout, self.stdin) = (sys.stdout, sys.stdin)
+	def __init__(self, stream):
+		self._stream = stream
 		def callFactory(x):
 			return lambda: self._esc(x)
 		for (proc, esc) in Console.cmd.items():
 			setattr(self, proc, callFactory(esc))
 
 	def _esc(self, data):
-		self.stdout.write('\033' + data)
-		self.stdout.flush()
+		self._stream.write('\033' + data)
+		self._stream.flush()
 
 	def getmaxyx(self):
 		winsize_ptr = fcntl.ioctl(0, termios.TIOCGWINSZ, struct.pack("HHHH", 0, 0, 0, 0))
@@ -62,5 +63,5 @@ class Console(object):
 		self._esc('[%d;%dr' % (top, bottom))
 
 	def addstr(self, data, attr = None):
-		self.stdout.write(str(Console.fmt(data, attr)))
-		self.stdout.flush()
+		self._stream.write(str(Console.fmt(data, attr)))
+		self._stream.flush()

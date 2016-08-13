@@ -20,6 +20,7 @@ from grid_control.backends.backend_tools import ChunkedExecutor, ProcessCreatorA
 from grid_control.backends.wms import BackendError
 from grid_control.backends.wms_grid import GridWMS
 from grid_control.job_db import Job
+from grid_control.utils.activity import Activity
 from python_compat import imap, irange, md5, tarfile
 
 class CREAM_CheckJobs(CheckJobsWithProcess):
@@ -109,7 +110,7 @@ class CreamWMS(GridWMS):
 		except Exception:
 			raise BackendError('Temporary path "%s" could not be created.' % basePath, BackendError)
 		
-		activity = utils.ActivityLog('retrieving job outputs')
+		activity = Activity('retrieving %d job outputs' % len(allIds))
 		for ids in imap(lambda x: allIds[x:x+self._nJobsPerChunk], irange(0, len(allIds), self._nJobsPerChunk)):
 			jobNumMap = dict(ids)
 			jobs = ' '.join(self._getRawIDs(ids))
@@ -150,7 +151,7 @@ class CreamWMS(GridWMS):
 				utils.eprint('Trying to recover from error ...')
 				for dirName in os.listdir(basePath):
 					yield (None, os.path.join(basePath, dirName))
-		del activity
+		activity.finish()
 
 		# return unretrievable jobs
 		for jobNum in todo:

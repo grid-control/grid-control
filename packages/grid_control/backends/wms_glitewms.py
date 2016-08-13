@@ -16,6 +16,7 @@ import os, time, random
 from grid_control import utils
 from grid_control.backends.wms import BackendError
 from grid_control.backends.wms_grid import GridWMS, Grid_CancelJobs, Grid_CheckJobs
+from grid_control.utils.activity import Activity
 from grid_control.utils.parsing import parseStr
 from grid_control.utils.process_base import LocalProcess
 from python_compat import md5_hex, sort_inplace
@@ -65,7 +66,7 @@ class DiscoverWMS_Lazy(object): # TODO: Move to broker infrastructure
 		return result
 
 	def matchSites(self, endpoint):
-		log = utils.ActivityLog('Discovering available WMS services - testing %s' % endpoint)
+		activity = Activity('Discovering available WMS services - testing %s' % endpoint)
 		checkArgs = ['-a']
 		if endpoint:
 			checkArgs.extend(['-e', endpoint])
@@ -76,13 +77,12 @@ class DiscoverWMS_Lazy(object): # TODO: Move to broker infrastructure
 		for line in proc.stdout.iter(timeout = 3):
 			if line.startswith(' - '):
 				result.append(line[3:].strip())
+		activity.finish()
 		if proc.status(timeout = 0) is None:
 			self.wms_timeout[endpoint] = self.wms_timeout.get(endpoint, 0) + 1
 			if self.wms_timeout.get(endpoint, 0) > 10: # remove endpoints after 10 failures
 				self.wms_all.remove(endpoint)
-			log.finish()
 			return []
-		log.finish()
 		return result
 
 	def getSites(self):
@@ -114,10 +114,10 @@ class DiscoverWMS_Lazy(object): # TODO: Move to broker infrastructure
 		return self.wms_ok
 
 	def getWMS(self):
-		log = utils.ActivityLog('Discovering available WMS services')
+		activity = Activity('Discovering available WMS services')
 		wms_best_list = []
 		for wms in self.listWMS_good():
-			log = utils.ActivityLog('Discovering available WMS services - pinging %s' % wms)
+			activity_wms = Activity('pinging WMS %s' % wms)
 			if wms is None:
 				continue
 			ping, pingtime = self.pingDict.get(wms, (None, 0))
@@ -126,18 +126,18 @@ class DiscoverWMS_Lazy(object): # TODO: Move to broker infrastructure
 				self.pingDict[wms] = (ping, time.time() + 10 * 60 * random.random()) # 10 min variation
 			if ping is not None:
 				wms_best_list.append((wms, ping))
-			log.finish()
-		log.finish()
+			activity_wms.finish()
+		activity.finish()
 		if not wms_best_list:
 			return None
 		sort_inplace(wms_best_list, key = lambda name_ping: name_ping[1])
 		result = choice_exp(wms_best_list)
 		if result is not None:
-			log = utils.ActivityLog('Discovering available WMS services - using %s' % result)
+			activity = Activity('selecting WMS %s' % result)
 			wms, ping = result # reduce timeout by 5min for chosen wms => re-ping every 6 submits
 			self.pingDict[wms] = (ping, self.pingDict[wms][1] + 5*60)
 			result = wms
-			log.finish()
+			activity.finish()
 		self.updateState()
 		return result
 
@@ -175,7 +175,7 @@ class GliteWMS(GridWMS):
 			self._submitParams.update({ '-a': ' ' })
 			return True
 		dID = 'GCD' + md5_hex(str(time.time()))[:10]
-		activity = utils.ActivityLog('creating delegate proxy for job submission')
+		activity = Activity('creating delegate proxy for job submission')
 		deletegateArgs = []
 		if self._configVO:
 			deletegateArgs.extend(['--config', self._configVO])
@@ -183,7 +183,7 @@ class GliteWMS(GridWMS):
 		output = proc.get_output(timeout = 10, raise_errors = False)
 		if ('glite-wms-job-delegate-proxy Success' in output) and (dID in output):
 			self._submitParams.update({ '-d': dID })
-		del activity
+		activity.finish()
 
 		if proc.status(timeout = 0, terminate = True) != 0:
 			self._log.log_process(proc)

@@ -660,4 +660,4 @@ class HTCScheddSSH(HTCScheddCLIBase):
 		if rmdirProcess.wait(timeout = self._adapterMaxWait):
 			rmdirProcess.logError(self.parentPool.errorLog, brief=True)
 			raise BackendError('Failed to clean remote dir : %s @ %s' % (stageDirPath, self.getDomain()))
-		del(self._stageDirCache[token])
+		del self._stageDirCache[token]

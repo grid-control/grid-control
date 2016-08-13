@@ -17,7 +17,7 @@ from grid_control import utils
 from grid_control.config import triggerResync
 from grid_control.datasets import DatasetError
 from grid_control.datasets.scanner_base import InfoScanner
-from python_compat import bytes2str, ifilter, imap, lfilter, tarfile
+from python_compat import all, bytes2str, ifilter, imap, lfilter, tarfile
 
 triggerDataResync = triggerResync(['datasets', 'parameters'])
 
@@ -26,6 +26,13 @@ def readTag(base, tag, default = None):
 		return str(base.getElementsByTagName(tag)[0].childNodes[0].data)
 	except Exception:
 		return default
+
+
+def readList(base, container, items):
+	try:
+		return base.getElementsByTagName(container)[0].getElementsByTagName(items)
+	except Exception:
+		return []
 
 
 class ObjectsFromCMSSW(InfoScanner):
@@ -37,6 +44,8 @@ class ObjectsFromCMSSW(InfoScanner):
 			self._mergeKey = 'CMSSW_CONFIG_HASH'
 		self._cfgStore = {}
 		self._gtStore = {}
+		self._regexAnnotation = re.compile(r'.*annotation.*=.*cms.untracked.string.*\((.*)\)')
+		self._regexDataTier = re.compile(r'.*dataTier.*=.*cms.untracked.string.*\((.*)\)')
 
 	def _processCfg(self, tar, cfg):
 		cfgSummary = {}
@@ -60,15 +69,11 @@ class ObjectsFromCMSSW(InfoScanner):
 		# Get annotation from config content
 		def searchConfigFile(key, regex, default):
 			try:
-				tmp = re.compile(regex).search(cfgContent.group(1).strip('\"\' '))
+				cfgSummary[key] = regex.search(cfgContent).group(1).strip('\"\' ') or default
 			except Exception:
-				tmp = None
-			if tmp:
-				cfgSummary[key] = tmp
-			else:
 				cfgSummary[key] = default
-		searchConfigFile('CMSSW_ANNOTATION', r'.*annotation.*=.*cms.untracked.string.*\((.*)\)', None)
-		searchConfigFile('CMSSW_DATATIER', r'.*dataTier.*=.*cms.untracked.string.*\((.*)\)', 'USER')
+		searchConfigFile('CMSSW_ANNOTATION', self._regexAnnotation, None)
+		searchConfigFile('CMSSW_DATATIER', self._regexDataTier, 'USER')
 		cfgReport = xml.dom.minidom.parseString(bytes2str(tar.extractfile('%s/report.xml' % cfg).read()))
 		evRead = sum(imap(lambda x: int(readTag(x, 'EventsRead')), cfgReport.getElementsByTagName('InputFile')))
 		return (cfgSummary, cfgReport, evRead)
@@ -78,7 +83,7 @@ class ObjectsFromCMSSW(InfoScanner):
 			'CMSSW_EVENTS_WRITE': int(readTag(outputFile, 'TotalEvents'))}
 		# Read lumisection infos
 		lumis = []
-		for run in outputFile.getElementsByTagName('Runs')[0].getElementsByTagName('Run'):
+		for run in readList(outputFile, 'Runs', 'Run'):
 			runId = int(run.getAttribute('ID'))
 			for lumi in run.getElementsByTagName('LumiSection'):
 				lumis.append((runId, int(lumi.getAttribute('ID'))))
@@ -86,11 +91,7 @@ class ObjectsFromCMSSW(InfoScanner):
 
 		# Read parent infos
 		if self._importParents:
-			try:
-				inputs = outputFile.getElementsByTagName('Inputs')[0].getElementsByTagName('Input')
-			except Exception:
-				inputs = []
-
+			inputs = readList(outputFile, 'Inputs', 'Input')
 			fileSummary.update({'CMSSW_PARENT_PFN': [], 'CMSSW_PARENT_LFN': []})
 
 			for inputFileElement in inputs:
@@ -190,5 +191,5 @@ class LFNFromPath(InfoScanner):
 
 class FilterEDMFiles(InfoScanner):
 	def getEntries(self, path, metadata, events, seList, objStore):
-		if not (False in imap(lambda x: x in metadata, ['CMSSW_EVENTS_WRITE', 'CMSSW_CONFIG_FILE'])):
+		if all(imap(lambda x: x in metadata, ['CMSSW_EVENTS_WRITE', 'CMSSW_CONFIG_FILE'])):
 			yield (path, metadata, events, seList, objStore)

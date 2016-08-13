@@ -12,12 +12,24 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-import os, math, stat, time, signal
+import os, sys, math, stat, time, signal
 from grid_control.backends.wms import BackendError
 from grid_control.config import ConfigError
-from grid_control.utils import LoggedProcess, ensureDirExists, eprint, resolveInstallPath, vprint
+from grid_control.utils import LoggedProcess, QM, ensureDirExists, eprint, resolveInstallPath, verbosity
 from grid_control.utils.data_structures import makeEnum
 from hpfwk import AbstractError, NestedException, Plugin
+
+def vprint(text = '', level = 0, printTime = False, newline = True, once = False):
+	if verbosity() > level:
+		if once:
+			if text in vprint.log:
+				return
+			vprint.log.append(text)
+		if printTime:
+			sys.stdout.write('%s - ' % time.strftime('%Y-%m-%d %H:%M:%S', time.localtime()))
+		sys.stdout.write('%s%s' % (text, QM(newline, '\n', '')))
+vprint.log = []
+
 
 class CondorProcessError(BackendError):
 	def __init__(self, msg, proc):

@@ -27,6 +27,7 @@ class Options(object):
 	def parse(self, args = None, arg_keys = None):
 		args = args or sys.argv[1:]
 		(opts, cmd_args) = self._parser.parse_args(args = args)
+		# re-run option parser with found flag sets
 		for flag_set_id in self._flag_set:
 			if getattr(opts, '_flag_set_%d' % flag_set_id):
 				flag_set = self._flag_set[flag_set_id].split()
@@ -36,6 +37,7 @@ class Options(object):
 		for option in self._dest:
 			if getattr(opts, option) is not None:
 				config_dict[self._get_normed(option, ' ')] = str(getattr(opts, option))
+		# store positional arguments in config dict (using supplied arg_keys)
 		for arg_idx, arg_key in enumerate(arg_keys or []):
 			if arg_idx < len(cmd_args):
 				if arg_idx == len(arg_keys) - 1:

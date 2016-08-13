@@ -113,20 +113,18 @@ class LumiPartitionProcessor(PartitionProcessor):
 		self._lumi_filter = config.getLookup('lumi filter', {}, parser = parseLumiFilter, strfun = strLumi, onChange = changeTrigger)
 
 	def getKeys(self):
-		if self._lumi_filter.empty():
-			return []
-		return [ParameterMetadata('LUMI_RANGE', untracked = True)]
+		if self.enabled():
+			return [ParameterMetadata('LUMI_RANGE', untracked = True)]
 
 	def enabled(self):
 		return not self._lumi_filter.empty()
 
 	def getNeededKeys(self, splitter):
-		if self._lumi_filter.empty():
-			return []
-		return ['LUMI_RANGE']
+		if self.enabled():
+			return ['LUMI_RANGE']
 
 	def process(self, pNum, splitInfo, result):
-		if not self._lumi_filter.empty():
+		if self.enabled():
 			lumi_filter = self._lumi_filter.lookup(splitInfo[DataSplitter.Nickname], is_selector = False)
 			if lumi_filter:
 				idxRuns = splitInfo[DataSplitter.MetadataHeader].index("Runs")

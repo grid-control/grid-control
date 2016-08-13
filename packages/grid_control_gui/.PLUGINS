@@ -20,9 +20,7 @@
 
     * grid_control_gui.report_wms BackendReport backend
 
-    * grid_control.report BasicReport basic
-
-     * grid_control_gui.report_basic BasicBarReport basicbar
+    * grid_control_gui.report_textbar BarReport bar
 
     * grid_control_gui.report_gui CategoryBaseReport
 
@@ -32,7 +30,15 @@
 
      * grid_control_gui.report_gui ModuleReport module
 
+    * grid_control_gui.report_colorbar ColorBarReport cbar
+
+    * grid_control.report LocationReport location
+
+     * grid_control_gui.report_wms LocationHistoryReport history
+
     * grid_control_gui.report_plot PlotReport plot
 
     * grid_control_gui.report_time TimeReport time
+
+    * grid_control_gui.report_vars VariablesReport variables vars
 

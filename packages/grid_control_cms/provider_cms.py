@@ -28,26 +28,31 @@ CMSLocationFormat = makeEnum(['hostname', 'siteDB', 'both'])
 # required format: <dataset path>[@<instance>][#<block>]
 class CMSBaseProvider(DataProvider):
 	def __init__(self, config, datasetExpr, datasetNick = None, datasetID = 0):
-		changeTrigger = triggerResync(['datasets', 'parameters'])
-		self._lumi_filter = config.getLookup('lumi filter', {}, parser = parseLumiFilter, strfun = strLumi, onChange = changeTrigger)
+		self._changeTrigger = triggerResync(['datasets', 'parameters'])
+		self._lumi_filter = config.getLookup('lumi filter', {}, parser = parseLumiFilter, strfun = strLumi, onChange = self._changeTrigger)
 		if not self._lumi_filter.empty():
 			config.set('dataset processor', 'LumiDataProcessor', '+=')
 		DataProvider.__init__(self, config, datasetExpr, datasetNick, datasetID)
 		# LumiDataProcessor instantiated in DataProcessor.__ini__ will set lumi metadata as well
-		self._lumi_query = config.getBool('lumi metadata', not self._lumi_filter.empty(), onChange = changeTrigger)
+		self._lumi_query = config.getBool('lumi metadata', not self._lumi_filter.empty(), onChange = self._changeTrigger)
 		config.set('phedex sites matcher mode', 'shell', '?=')
 		# PhEDex blacklist: 'T1_*_Disk nodes allow user jobs - other T1's dont!
 		self._phedexFilter = config.getFilter('phedex sites', '-* T1_*_Disk T2_* T3_*',
-			defaultMatcher = 'blackwhite', defaultFilter = 'strict', onChange = changeTrigger)
-		self._onlyComplete = config.getBool('only complete sites', True, onChange = changeTrigger)
-		self._locationFormat = config.getEnum('location format', CMSLocationFormat, CMSLocationFormat.hostname, onChange = changeTrigger)
+			defaultMatcher = 'blackwhite', defaultFilter = 'strict', onChange = self._changeTrigger)
+		self._onlyComplete = config.getBool('only complete sites', True, onChange = self._changeTrigger)
+		self._locationFormat = config.getEnum('location format', CMSLocationFormat, CMSLocationFormat.hostname, onChange = self._changeTrigger)
 		self._pjrc = JSONRestClient(url = 'https://cmsweb.cern.ch/phedex/datasvc/json/prod/blockreplicas')
 		self._sitedb = SiteDB()
 
-		(self._datasetPath, self._url, self._datasetBlock) = optSplit(datasetExpr, '@#')
-		self._url = self._url or config.get('dbs instance', '')
+		(self._datasetPath, self._datasetInstance, self._datasetBlock) = optSplit(datasetExpr, '@#')
+		instance_default = config.get('dbs instance', '', onChange = self._changeTrigger)
+		self._datasetInstance = self._datasetInstance or instance_default
+		if not self._datasetInstance:
+			self._datasetInstance = 'prod/global'
+		elif '/' not in self._datasetInstance:
+			self._datasetInstance = 'prod/%s' % self._datasetInstance
 		self._datasetBlock = self._datasetBlock or 'all'
-		self.onlyValid = config.getBool('only valid', True, onChange = changeTrigger)
+		self.onlyValid = config.getBool('only valid', True, onChange = self._changeTrigger)
 
 
 	# Define how often the dataprovider can be queried automatically
@@ -127,14 +132,14 @@ class CMSBaseProvider(DataProvider):
 		if self._cache_dataset is None:
 			self._cache_dataset = [self._datasetPath]
 			if '*' in self._datasetPath:
-				self._cache_dataset = list(self.getCMSDatasets(self._datasetPath))
+				self._cache_dataset = list(self._getCMSDatasets(self._datasetPath))
 				if not self._cache_dataset:
 					raise DatasetError('No datasets selected by DBS wildcard %s !' % self._datasetPath)
 		return self._cache_dataset
 
 
-	def getCMSBlocks(self, datasetPath, getSites):
-		iter_blockname_selist = self.getCMSBlocksImpl(datasetPath, getSites)
+	def _getCMSBlocks(self, datasetPath, getSites):
+		iter_blockname_selist = self._getCMSBlocksImpl(datasetPath, getSites)
 		n_blocks = 0
 		selected_blocks = False
 		for (blockname, selist) in iter_blockname_selist:
@@ -147,13 +152,13 @@ class CMSBaseProvider(DataProvider):
 			raise DatasetError('Dataset %r contains %d blocks, but none were selected by %r' % (datasetPath, n_blocks, self._datasetBlock))
 
 
-	def fillCMSFiles(self, block, blockPath):
+	def _fillCMSFiles(self, block, blockPath):
 		lumi_used = False
 		lumiDict = {}
 		if self._lumi_query: # central lumi query
-			lumiDict = self.getCMSLumisImpl(blockPath)
+			lumiDict = self._getCMSLumisImpl(blockPath)
 		fileList = []
-		for (fileInfo, listLumi) in self.getCMSFilesImpl(blockPath, self.onlyValid, self._lumi_query):
+		for (fileInfo, listLumi) in self._getCMSFilesImpl(blockPath, self.onlyValid, self._lumi_query):
 			if lumiDict and not listLumi:
 				listLumi = lumiDict.get(fileInfo[DataProvider.URL], [])
 			if listLumi:
@@ -169,14 +174,14 @@ class CMSBaseProvider(DataProvider):
 		block[DataProvider.FileList] = fileList
 
 
-	def getCMSLumisImpl(self, blockPath):
+	def _getCMSLumisImpl(self, blockPath):
 		return None
 
 
-	def getGCBlocks(self, usePhedex):
+	def _getGCBlocks(self, usePhedex):
 		for datasetPath in self.getDatasets():
 			counter = 0
-			for (blockPath, replica_infos) in self.getCMSBlocks(datasetPath, getSites = not usePhedex):
+			for (blockPath, replica_infos) in self._getCMSBlocks(datasetPath, getSites = not usePhedex):
 				result = {}
 				result[DataProvider.Dataset] = blockPath.split('#')[0]
 				result[DataProvider.BlockName] = blockPath.split('#')[1]
@@ -184,11 +189,11 @@ class CMSBaseProvider(DataProvider):
 				if usePhedex: # Start parallel phedex query
 					dictReplicas = {}
 					tPhedex = start_thread('Query phedex site info for %s' % blockPath, self._getPhedexReplicas, blockPath, dictReplicas)
-					self.fillCMSFiles(result, blockPath)
+					self._fillCMSFiles(result, blockPath)
 					tPhedex.join()
 					replica_infos = dictReplicas.get(blockPath)
 				else:
-					self.fillCMSFiles(result, blockPath)
+					self._fillCMSFiles(result, blockPath)
 				result[DataProvider.Locations] = self._processReplicas(blockPath, replica_infos)
 
 				if len(result[DataProvider.FileList]):
@@ -202,5 +207,5 @@ class CMSBaseProvider(DataProvider):
 class DBS2Provider(CMSBaseProvider):
 	alias = ['dbs2']
 
-	def __init__(self, config, datasetExpr, datasetNick, datasetID = 0):
+	def __init__(self, config, datasetExpr, datasetNick = None, datasetID = 0):
 		raise DatasetError('CMS deprecated all DBS2 Services in April 2014! Please use DBS3Provider instead.')

@@ -12,25 +12,29 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-import sys
+from grid_control.job_selector import JobSelector
 from grid_control.report import Report
-from grid_control.utils.parsing import strTime
-from python_compat import ifilter, imap
+from grid_control.utils import printTabular
+from python_compat import imap, lzip, set, sorted
 
-class TimeReport(Report):
-	alias = ['time']
+class VariablesReport(Report):
+	alias = ['variables', 'vars']
 
 	def __init__(self, jobDB, task, jobs = None, configString = ''):
 		Report.__init__(self, jobDB, task, jobs, configString)
-		self._dollar_per_hour = float(configString or 0.013)
-
-	def getHeight(self):
-		return 1
+		self._selector = JobSelector.create(configString, task = task)
 
 	def display(self):
-		job_runtimes = imap(lambda jobNum: self._jobDB.getJobTransient(jobNum).get('runtime', 0), self._jobs)
-		cpuTime = sum(ifilter(lambda rt: rt > 0, job_runtimes))
-		msg = 'Consumed wall time: %-20s' % strTime(cpuTime)
-		msg += 'Estimated cost: $%.2f\n' % ((cpuTime / 60. / 60.) * self._dollar_per_hour)
-		sys.stdout.write(msg)
-		sys.stdout.flush()
+		taskConfig = self._task.getTaskConfig()
+		header = lzip(taskConfig, taskConfig)
+		header.extend(imap(lambda key: (key, '<%s>' % key), self._task.getTransientVars()))
+		variables = set()
+		entries = []
+		for jobNum in self._jobDB.getJobs(self._selector):
+			jobConfig = self._task.getJobConfig(jobNum)
+			variables.update(jobConfig)
+			entry = dict(taskConfig)
+			entry.update(self._task.getTransientVars())
+			entry.update(jobConfig)
+			entries.append(entry)
+		printTabular(sorted(header + lzip(variables, variables)), entries)

@@ -15,6 +15,7 @@
 import os, time, fnmatch
 from grid_control import utils
 from grid_control.job_db import Job, JobDB, JobError
+from grid_control.utils.activity import Activity
 from grid_control.utils.file_objects import SafeFile
 from python_compat import irange, sorted
 
@@ -36,8 +37,8 @@ class TextFileJobDB(JobDB):
 		data['changed'] = job_obj.changed
 		for key, value in job_obj.history.items():
 			data['history_' + str(key)] = value
-		if job_obj.wmsId is not None:
-			data['id'] = job_obj.wmsId
+		if job_obj.gcID is not None:
+			data['id'] = job_obj.gcID
 			if job_obj.dict.get('legacy', None): # Legacy support
 				data['id'] = job_obj.dict.pop('legacy')
 		return data
@@ -54,14 +55,14 @@ class TextFileJobDB(JobDB):
 					if data['id'].startswith('https'):
 						data['id'] = 'WMSID.GLITEWMS.%s' % data['id']
 					else:
-						wmsId, backend = tuple(data['id'].split('.', 1))
-						data['id'] = 'WMSID.%s.%s' % (backend, wmsId)
-				job.wmsId = data['id']
+						gcID, backend = tuple(data['id'].split('.', 1))
+						data['id'] = 'WMSID.%s.%s' % (backend, gcID)
+				job.gcID = data['id']
 			for key in ['attempt', 'submitted', 'changed']:
 				if key in data:
 					setattr(job, key, data[key])
 			if 'runtime' not in data:
-				if 'submitted' in data:
+				if 'submitted' in data and (job.submitted > 0):
 					data['runtime'] = time.time() - float(job.submitted)
 				else:
 					data['runtime'] = 0
@@ -69,7 +70,7 @@ class TextFileJobDB(JobDB):
 				if ('history_' + str(key)).strip() in data:
 					job.history[key] = data['history_' + str(key)]
 
-			for i in ('wmsId', 'status'):
+			for i in ('gcID', 'status'):
 				try:
 					del data[i]
 				except Exception:
@@ -89,11 +90,7 @@ class TextFileJobDB(JobDB):
 
 
 	def _readJobs(self, jobLimit):
-		try:
-			if not os.path.exists(self._dbPath):
-				os.mkdir(self._dbPath)
-		except Exception:
-			raise JobError("Problem creating work directory '%s'" % self._dbPath)
+		utils.ensureDirExists(self._dbPath, 'job database directory', JobError)
 
 		candidates = []
 		for jobFile in fnmatch.filter(os.listdir(self._dbPath), 'job_*.txt'):
@@ -104,7 +101,7 @@ class TextFileJobDB(JobDB):
 			candidates.append((jobNum, jobFile))
 
 		(jobMap, maxJobs) = ({}, len(candidates))
-		activity = utils.ActivityLog('Reading job infos ...')
+		activity = Activity('Reading job infos')
 		idx = 0
 		for (jobNum, jobFile) in sorted(candidates):
 			idx += 1
@@ -114,8 +111,7 @@ class TextFileJobDB(JobDB):
 			jobObj = self._load_job(os.path.join(self._dbPath, jobFile))
 			jobMap[jobNum] = jobObj
 			if idx % 100 == 0:
-				activity.finish()
-				activity = utils.ActivityLog('Reading job infos ... %d [%d%%]' % (idx, (100.0 * idx) / maxJobs))
+				activity.update('Reading job infos %d [%d%%]' % (idx, (100.0 * idx) / maxJobs))
 		activity.finish()
 		return jobMap
 

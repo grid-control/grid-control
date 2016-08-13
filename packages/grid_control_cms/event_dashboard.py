@@ -39,18 +39,21 @@ class DashBoard(Monitoring):
 
 
 	def getTaskConfig(self):
-		return { 'TASK_NAME': self._taskname, 'DB_EXEC': self._app, 'DATASETNICK': '' }
+		result = {'TASK_NAME': self._taskname, 'DB_EXEC': self._app, 'DATASETNICK': ''}
+		result.update(Monitoring.getTaskConfig(self))
+		return result
 
 
 	def getFiles(self):
+		yield pathShare('mon.dashboard.sh', pkg = 'grid_control_cms')
 		for fn in ('DashboardAPI.py', 'Logger.py', 'apmon.py', 'report.py'):
 			yield pathShare('..', 'DashboardAPI', fn, pkg = 'grid_control_cms')
 
 
 	def _publish(self, jobObj, jobNum, taskId, usermsg):
-		(_, backend, rawId) = jobObj.wmsId.split('.', 2)
+		(_, backend, rawId) = jobObj.gcID.split('.', 2)
 		dashId = '%s_%s' % (jobNum, rawId)
-		if 'http' not in jobObj.wmsId:
+		if 'http' not in jobObj.gcID:
 			dashId = '%s_https://%s:/%s' % (jobNum, backend, rawId)
 		msg = mergeDicts([{'taskId': taskId, 'jobId': dashId, 'sid': rawId}] + usermsg)
 		DashboardAPI(taskId, dashId).publish(**filterDict(msg, vF = lambda v: v is not None))
@@ -65,13 +68,17 @@ class DashBoard(Monitoring):
 
 	# Called on job submission
 	def onJobSubmit(self, wms, jobObj, jobNum):
-		token = wms.getAccessToken(jobObj.wmsId)
+		token = wms.getAccessToken(jobObj.gcID)
+		jobInfo = self._task.getJobConfig(jobNum)
 		self._start_publish(jobObj, jobNum, 'submission', [{
 			'user': os.environ['LOGNAME'], 'GridName': '/CN=%s' % token.getUsername(), 'CMSUser': token.getUsername(),
 			'tool': 'grid-control', 'JSToolVersion': getVersion(),
 			'SubmissionType':'direct', 'tool_ui': os.environ.get('HOSTNAME', ''),
-			'application': self._app, 'exe': 'shellscript', 'taskType': self._tasktype,
-			'scheduler': wms.wmsName, 'vo': token.getGroup()}, self._task.getSubmitInfo(jobNum)])
+			'application': jobInfo.get('SCRAM_PROJECTVERSION', self._app),
+			'exe': jobInfo.get('CMSSW_EXEC', 'shellscript'), 'taskType': self._tasktype,
+			'scheduler': wms.wmsName, 'vo': token.getGroup(),
+			'nevtJob': jobInfo.get('MAX_EVENTS', 0),
+			'datasetFull': jobInfo.get('DATASETPATH', 'none')}])
 
 
 	# Called on job status update and output

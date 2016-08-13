@@ -15,7 +15,8 @@
 import os, time, logging
 from grid_control import utils
 from grid_control.gc_plugin import ConfigurablePlugin
-from grid_control.parameters.psource_base import ParameterInfo, ParameterMetadata, ParameterSource
+from grid_control.parameters.psource_base import ParameterError, ParameterInfo, ParameterMetadata, ParameterSource
+from grid_control.utils.activity import Activity
 from grid_control.utils.file_objects import ZipFile
 from grid_control.utils.parsing import strTimeShort
 from hpfwk import APIError
@@ -96,8 +97,7 @@ class TrackedParameterAdapter(BasicParameterAdapter):
 		self._rawSource = source
 		BasicParameterAdapter.__init__(self, config, source)
 		self._mapJob2PID = {}
-		if not os.path.isdir(config.getWorkPath()):
-			os.makedirs(config.getWorkPath())
+		utils.ensureDirExists(config.getWorkPath(), 'parameter storage directory', ParameterError)
 		self._pathJob2PID = config.getWorkPath('params.map.gz')
 		self._pathParams = config.getWorkPath('params.dat.gz')
 
@@ -127,12 +127,12 @@ class TrackedParameterAdapter(BasicParameterAdapter):
 		doResync = (userResync or needResync) and not doInit
 
 		if not doResync and not doInit: # Reuse old mapping
-			activity = utils.ActivityLog('Loading cached parameter information')
+			activity = Activity('Loading cached parameter information')
 			self._readJob2PID()
 			activity.finish()
 			return
 		elif doResync: # Perform sync
-			activity = utils.ActivityLog('Syncronizing parameter information')
+			activity = Activity('Syncronizing parameter information')
 			self._storedHash = None
 			self._resyncState = self.resync()
 			activity.finish()

@@ -17,6 +17,7 @@ from grid_control import utils
 from grid_control.config import createConfig, noDefault
 from grid_control.datasets.provider_base import DataProvider
 from grid_control.gc_plugin import ConfigurablePlugin
+from grid_control.utils.activity import Activity
 from grid_control.utils.data_structures import makeEnum
 from hpfwk import AbstractError, NestedException, Plugin
 from python_compat import imap, irange, itemgetter, lmap, next, sort_inplace
@@ -121,10 +122,10 @@ class DataSplitter(ConfigurablePlugin):
 
 
 	def splitDataset(self, path, blocks):
-		log = utils.ActivityLog('Splitting dataset into jobs')
+		activity = Activity('Splitting dataset into jobs')
 		self.savePartitions(path, self.splitDatasetInternal(blocks))
 		self.importPartitions(path)
-		log.finish()
+		activity.finish()
 
 
 	def getSplitInfo(self, jobNum):
@@ -462,11 +463,11 @@ class DataSplitter(ConfigurablePlugin):
 
 
 	def resyncMapping(self, newSplitPath, oldBlocks, newBlocks):
-		log = utils.ActivityLog('Performing resynchronization of dataset')
+		activity = Activity('Performing resynchronization of dataset')
 		(blocksAdded, blocksMissing, blocksMatching) = DataProvider.resyncSources(oldBlocks, newBlocks)
 		for rmBlock in blocksMissing: # Files in matching blocks are already sorted
 			sort_inplace(rmBlock[DataProvider.FileList], key = lambda x: x[DataProvider.URL])
-		log.finish()
+		activity.finish()
 
 		# User overview and setup starts here
 		resultRedo = []

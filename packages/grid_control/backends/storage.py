@@ -12,10 +12,11 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-import os, sys, shutil
+import os, shutil, logging
 from grid_control import utils
 from grid_control.config import ConfigError, validNoVar
 from grid_control.gc_plugin import NamedPlugin
+from grid_control.utils.activity import Activity
 from grid_control.utils.process_base import LocalProcess
 from hpfwk import NestedException
 from python_compat import imap, set
@@ -110,14 +111,15 @@ class SEStorageManager(StorageManager):
 			if not self.smPaths:
 				raise ConfigError("%s can't be transferred because '%s path wasn't set" % (desc, self.smOptPrefix))
 			for idx, sePath in enumerate(set(self.smPaths)):
-				utils.vprint('Copy %s to SE %d ' % (desc, idx + 1), -1, newline = False)
-				sys.stdout.flush()
+				activity = Activity('Copy %s to SE %d ' % (desc, idx + 1))
 				proc = se_copy(source, os.path.join(sePath, target), self.smForce)
-				if proc.status(timeout = 5*60, terminate = True) == 0:
-					utils.vprint('finished', -1)
+				proc.status(timeout = 5*60, terminate = True)
+				activity.finish()
+				if proc.status(timeout = 0) == 0:
+					logging.getLogger('user').info('Copy %s to SE %d finished', desc, idx + 1)
 				else:
-					utils.vprint('failed', -1)
-					utils.eprint(proc.stderr.read(timeout = 0))
-					utils.eprint('Unable to copy %s! You can try to copy it manually.' % desc)
+					logging.getLogger('user').info('Copy %s to SE %d failed', desc, idx + 1)
+					self._log.critical(proc.stderr.read(timeout = 0))
+					self._log.critical('Unable to copy %s! You can try to copy it manually.', desc)
 					if not utils.getUserBool('Is %s (%s) available on SE %s?' % (desc, source, sePath), False):
 						raise StorageError('%s is missing on SE %s!' % (desc, sePath))

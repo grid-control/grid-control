@@ -17,9 +17,10 @@ from grid_control import utils
 from grid_control.config import createConfig, triggerResync
 from grid_control.datasets.dproc_base import DataProcessor, NullDataProcessor
 from grid_control.gc_plugin import ConfigurablePlugin
+from grid_control.utils.activity import Activity
 from grid_control.utils.data_structures import makeEnum
 from hpfwk import AbstractError, InstanceFactory, NestedException
-from python_compat import StringBuffer, identity, ifilter, imap, irange, json, lmap, lrange, md5_hex, sort_inplace, sorted
+from python_compat import StringBuffer, identity, ifilter, imap, irange, json, lmap, lrange, md5_hex, set, sort_inplace, sorted
 
 class DatasetError(NestedException):
 	pass
@@ -36,7 +37,7 @@ class DataProvider(ConfigurablePlugin):
 			' * Dataset %s:\n\tcontains ' % repr(datasetNick or datasetExpr))
 		self._nickProducer = config.getPlugin('nickname source', 'SimpleNickNameProducer', cls = DataProcessor)
 		self._datasetProcessor = config.getCompositePlugin('dataset processor',
-			'EntriesConsistencyDataProcessor URLDataProcessor URLCountDataProcessor ' +
+			'NickNameConsistencyProcessor EntriesConsistencyDataProcessor URLDataProcessor URLCountDataProcessor ' +
 			'EntriesCountDataProcessor EmptyDataProcessor UniqueDataProcessor LocationDataProcessor',
 			'MultiDataProcessor', cls = DataProcessor, onChange = triggerResync(['datasets', 'parameters']))
 
@@ -63,6 +64,14 @@ class DataProvider(ConfigurablePlugin):
 	bind = classmethod(bind)
 
 
+	def getBlocksFromExpr(cls, config, datasetExpr):
+		for dp_factory in DataProvider.bind(datasetExpr, config = config):
+			dproc = dp_factory.getBoundInstance()
+			for block in dproc.getBlocksNormed():
+				yield block
+	getBlocksFromExpr = classmethod(getBlocksFromExpr)
+
+
 	def bName(cls, block):
 		if block.get(DataProvider.BlockName, '') in ['', '0']:
 			return block[DataProvider.Dataset]
@@ -87,11 +96,10 @@ class DataProvider(ConfigurablePlugin):
 	# Default implementation via getBlocks
 	def getDatasets(self):
 		if self._cache_dataset is None:
-			self._cache_dataset = []
+			self._cache_dataset = set()
 			for block in self.getBlocks(show_stats = True):
-				if block[DataProvider.Dataset] not in self._cache_dataset:
-					self._cache_dataset.append(block[DataProvider.Dataset])
-		return self._cache_dataset
+				self._cache_dataset.add(block[DataProvider.Dataset])
+		return list(self._cache_dataset)
 
 
 	# Cached access to list of block dicts, does also the validation checks
@@ -115,7 +123,7 @@ class DataProvider(ConfigurablePlugin):
 
 
 	def getBlocksNormed(self):
-		log = utils.ActivityLog('Retrieving %s' % self._datasetExpr)
+		activity = Activity('Retrieving %s' % self._datasetExpr)
 		try:
 			# Validation, Naming:
 			for block in self._getBlocksInternal():
@@ -136,7 +144,7 @@ class DataProvider(ConfigurablePlugin):
 				yield block
 		except Exception:
 			raise DatasetError('Unable to retrieve dataset %s' % repr(self._datasetExpr))
-		log.finish()
+		activity.finish()
 
 
 	def clearCache(self):
@@ -146,7 +154,8 @@ class DataProvider(ConfigurablePlugin):
 
 	def classifyMetadataKeys(block):
 		def metadataHash(fi, idx):
-			return md5_hex(repr(fi[DataProvider.Metadata][idx]))
+			if idx < len(fi[DataProvider.Metadata]):
+				return md5_hex(repr(fi[DataProvider.Metadata][idx]))
 		cMetadataIdx = lrange(len(block[DataProvider.Metadata]))
 		cMetadataHash = lmap(lambda idx: metadataHash(block[DataProvider.FileList][0], idx), cMetadataIdx)
 		for fi in block[DataProvider.FileList]: # Identify common metadata

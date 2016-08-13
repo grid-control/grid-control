@@ -12,8 +12,7 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-import random
-from grid_control import utils
+import random, logging
 from grid_control.gc_plugin import NamedPlugin
 
 class Broker(NamedPlugin):
@@ -32,7 +31,7 @@ class Broker(NamedPlugin):
 			msg = 'an unknown number of'
 			if self._itemsDiscovered is not None:
 				msg = str(len(self._itemsDiscovered))
-			utils.vprint('Broker discovered %s %s' % (msg, self._itemName))
+			logging.getLogger('user').info('Broker discovered %s %s', msg, self._itemName)
 		return self._itemsDiscovered
 
 	def _broker(self, reqs, items):

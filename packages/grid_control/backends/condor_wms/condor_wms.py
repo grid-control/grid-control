@@ -28,6 +28,7 @@ from grid_control.backends.condor_wms.processhandler import ProcessHandler
 from grid_control.backends.wms import BackendError, BasicWMS, WMS
 from grid_control.backends.wms_condor import Condor_CancelJobs, Condor_CheckJobs
 from grid_control.backends.wms_local import LocalPurgeJobs, SandboxHelper
+from grid_control.utils.activity import Activity
 from grid_control.utils.data_structures import makeEnum
 from python_compat import imap, irange, lmap, lzip, md5, set
 
@@ -167,7 +168,7 @@ class Condor(BasicWMS):
 			raise StopIteration
 		self.debugOut("Started retrieving: %s" % set(lzip(*wmsJobIdList)[0]))
 
-		activity = utils.ActivityLog('retrieving job outputs')
+		activity = Activity('retrieving job outputs')
 		for gcID, jobNum in wmsJobIdList:
 			sandpath = self.getSandboxPath(jobNum)
 			if sandpath is None:
@@ -209,7 +210,7 @@ class Condor(BasicWMS):
 		# active remote submission should clean up when no jobs remain
 		if self.remoteType == PoolType.SSH or self.remoteType == PoolType.GSISSH:
 			self.debugOut("Revising remote working directory for cleanup. Forced CleanUp: %s" % forceCleanup)
-			activity = utils.ActivityLog('revising remote work directory')
+			activity = Activity('revising remote work directory')
 			# check whether there are any remote working directories remaining
 			checkProcess = self.Pool.LoggedExecute('find %s -maxdepth 1 -type d | wc -l' % self.getWorkdirPath() )
 			try:
@@ -239,7 +240,7 @@ class Condor(BasicWMS):
 			# get the full job config path and basename
 			def _getJobCFG(jobNum):
 				return os.path.join(self.getSandboxPath(jobNum), 'job_%d.var' % jobNum), 'job_%d.var' % jobNum
-			activity = utils.ActivityLog('preparing jobs')
+			activity = Activity('preparing jobs')
 			# construct a temporary JDL for this batch of jobs
 			jdlDescriptor, jdlFilePath = tempfile.mkstemp(suffix='.jdl')
 			jdlSubmitPath = jdlFilePath
@@ -261,7 +262,7 @@ class Condor(BasicWMS):
 			self.debugOut("Copying to remote")
 			# copy infiles to ssh/gsissh remote pool if required
 			if self.remoteType == PoolType.SSH or self.remoteType == PoolType.GSISSH:
-				activity = utils.ActivityLog('preparing remote scheduler')
+				activity = Activity('preparing remote scheduler')
 				self.debugOut("Copying to sandbox")
 				workdirBase = self.getWorkdirPath()
 				# TODO: check whether shared remote files already exist and copy otherwise
@@ -309,7 +310,7 @@ class Condor(BasicWMS):
 			self.debugOut("Starting jobs")
 			try:
 				# submit all jobs simultaneously and temporarily store verbose (ClassAdd) output
-				activity = utils.ActivityLog('queuing jobs at scheduler')
+				activity = Activity('queuing jobs at scheduler')
 				proc = self.Pool.LoggedExecute(self.submitExec, ' -verbose %(JDL)s' % { "JDL": jdlSubmitPath })
 
 				self.debugOut("AAAAA")

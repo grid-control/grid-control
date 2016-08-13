@@ -58,6 +58,9 @@ class InstanceFactory(object):
 	def bindValue(self):
 		return self._bindValue
 
+def clsFormat(cls):
+	return '%s:%s' % (cls.__module__, cls.__name__)
+
 # Abstract class taking care of dynamic class loading
 class Plugin(object):
 	alias = []
@@ -98,8 +101,7 @@ class Plugin(object):
 			try:
 				clsLoadedList.append(getattr(clsModule, clsName))
 			except Exception:
-				log.log(logging.DEBUG2, 'Unable to import class %s:%s', clsModule.__name__, clsName)
-				ec.collect()
+				ec.collect(logging.DEBUG2, 'Unable to import class %s:%s', clsModule.__name__, clsName)
 
 		for clsLoaded in clsLoadedList:
 			try:
@@ -118,24 +120,18 @@ class Plugin(object):
 		clsModuleName = str.join('.', clsNameParts[:-1])
 		log.log(logging.DEBUG2, 'Importing module %s', clsModuleName)
 		oldSysPath = list(sys.path)
+		result = []
 		try:
 			result = [__import__(clsModuleName, {}, {}, [clsName])]
 		except Exception:
-			result = []
-			log.log(logging.DEBUG2, 'Unable to import module %s', clsModuleName)
-			ec.collect()
+			ec.collect(logging.DEBUG2, 'Unable to import module %s', clsModuleName)
 		sys.path = oldSysPath
 		return result
 	_getModule = classmethod(_getModule)
 
-	def _getClass(cls, log, clsName):
+	def _getClass(cls, ec, log, clsName, clsProcessed, clsBadParents):
 		# resolve class name/alias to complete class path 'myplugin -> module.submodule.MyPlugin'
 		clsSearchList = [(0, clsName)]
-		clsFormat = lambda cls: '%s:%s' % (cls.__module__, cls.__name__)
-		clsProcessed = []
-		clsBadParents = []
-		clsFound = False
-		ec = ExceptionCollector()
 		while clsSearchList:
 			_, clsSearchName = clsSearchList.pop()
 			if clsSearchName in clsProcessed: # Prevent lookup circles
@@ -149,11 +145,20 @@ class Plugin(object):
 				clsModuleList.append(sys.modules['__main__'])
 
 			for result in cls._getClassFromModules(ec, log, clsSearchName, clsModuleList, clsBadParents):
-				clsFound = True
 				yield result
 			clsSearchList.extend(cls._pluginMap.get(clsSearchName.lower(), []))
 			clsSearchList.sort() # sort by class inheritance depth
+	_getClass = classmethod(_getClass)
 
+	def _getClassChecked(cls, log, clsName):
+		clsFound = []
+		clsProcessed = []
+		clsBadParents = []
+		ec = ExceptionCollector(log)
+		for result in cls._getClass(ec, log, clsName, clsProcessed, clsBadParents):
+			if result not in clsFound:
+				clsFound.append(result)
+				yield result
 		if not clsFound:
 			msg = 'Unable to load %r of type %r\n' % (clsName, clsFormat(cls))
 			if clsProcessed:
@@ -162,19 +167,19 @@ class Plugin(object):
 				msg += '\tfound incompatible plugins:\n\t\t%s\n' % str.join('\n\t\t', clsBadParents)
 			ec.raise_any(PluginError(msg))
 			raise PluginError(msg)
-	_getClass = classmethod(_getClass)
+	_getClassChecked = classmethod(_getClassChecked)
 
 	def getAllClasses(cls, clsName):
 		log = logging.getLogger('classloader.%s' % cls.__name__.lower())
 		log.log(logging.DEBUG1, 'Loading all classes %s', clsName)
-		return list(cls._getClass(log, clsName))
+		return list(cls._getClassChecked(log, clsName))
 	getAllClasses = classmethod(getAllClasses)
 
 	def getClass(cls, clsName):
 		log = logging.getLogger('classloader.%s' % cls.__name__.lower())
 		log.log(logging.DEBUG1, 'Loading class %s', clsName)
 		if clsName not in cls._clsCache.get(cls, {}):
-			for result in cls._getClass(log, clsName):
+			for result in cls._getClassChecked(log, clsName):
 				cls._clsCache.setdefault(cls, {})[clsName] = result
 				break # return only first class
 		return cls._clsCache[cls][clsName]
@@ -268,9 +273,6 @@ def create_plugin_file(package, selector):
 		if cls.__module__.startswith(os.path.basename(package)):
 			fill_cls_dict(cls)
 
-	if not cls_dict:
-		return
-
 	def write_cls_hierarchy(fp, data, level = 0):
 		if None in data:
 			cls = data.pop(None)
@@ -282,28 +284,30 @@ def create_plugin_file(package, selector):
 		key_order.sort()
 		for key_info in key_order:
 			write_cls_hierarchy(fp, data[key_info[-1]], level + 1)
-	fp = open(os.path.abspath(os.path.join(package, '.PLUGINS')), 'w')
-	try:
-		write_cls_hierarchy(fp, cls_dict)
-	finally:
-		fp.close()
+
+	if cls_dict:
+		fp = open(os.path.abspath(os.path.join(package, '.PLUGINS')), 'w')
+		try:
+			write_cls_hierarchy(fp, cls_dict)
+		finally:
+			fp.close()
+		return cls_dict
 
 # Init plugin search paths
 def init_hpf_plugins(basePath):
-	for pkgName in os.listdir(basePath):
-		pluginFile = os.path.join(basePath, pkgName, '.PLUGINS')
-		if os.path.exists(pluginFile):
-			__import__(pkgName) # Trigger initialisation of module
-			base_cls_info = {}
-			for line in open(pluginFile):
-				if not line.strip():
-					continue
-				tmp = line.split(' * ')
-				module_info = tmp[1].split()
-				(module_name, cls_name) = (module_info[0], module_info[1])
-				base_cls_level = len(tmp[0])
-				base_cls_info[base_cls_level] = cls_name
-				for level in list(base_cls_info):
-					if level > base_cls_level:
-						base_cls_info.pop(level)
-				Plugin.registerClass(module_name, cls_name, module_info[2:], base_cls_info.values())
+	pluginFile = os.path.join(basePath, '.PLUGINS')
+	if os.path.exists(pluginFile):
+		__import__(os.path.basename(basePath)) # Trigger initialisation of module
+		base_cls_info = {}
+		for line in open(pluginFile):
+			if not line.strip():
+				continue
+			tmp = line.split(' * ')
+			module_info = tmp[1].split()
+			(module_name, cls_name) = (module_info[0], module_info[1])
+			base_cls_level = len(tmp[0])
+			base_cls_info[base_cls_level] = cls_name
+			for level in list(base_cls_info):
+				if level > base_cls_level:
+					base_cls_info.pop(level)
+			Plugin.registerClass(module_name, cls_name, module_info[2:], base_cls_info.values())

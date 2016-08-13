@@ -14,7 +14,7 @@
 # | limitations under the License.
 
 import sys
-from gcSupport import JobSelector, Options, Plugin, getConfig, scriptOptions, utils
+from gcSupport import Activity, JobSelector, Options, Plugin, displayPluginList, getConfig, getPluginList, scriptOptions, utils
 
 parser = Options(usage = '%s [OPTIONS] <config file>')
 parser.addBool(None, 'L', 'report-list',  default = False, help = 'List available report classes')
@@ -27,10 +27,8 @@ options = scriptOptions(parser)
 Report = Plugin.getClass('Report')
 
 if options.opts.report_list:
-	msg = 'Available report classes:\n'
-	for entry in Report.getClassList():
-		msg += ' * %s\n' % str.join(' ', entry.values())
-	print(msg)
+	sys.stderr.write('Available report classes:\n')
+	displayPluginList(getPluginList('Report'))
 
 if len(options.args) != 1:
 	utils.exitWithUsage(parser.usage())
@@ -42,11 +40,11 @@ def main(opts, args):
 	# Initialise task module
 	task = None
 	if opts.use_task:
-		task = config.getPlugin(['task', 'module'], cls = 'TaskModule')
+		task = config.getPlugin('workflow', 'Workflow:global', cls = 'Workflow', pargs = ('task',)).task
 
 	# Initialise job database
 	jobDB = config.getPlugin('job database', 'TextFileJobDB', cls = 'JobDB')
-	activity = utils.ActivityLog('Filtering job entries')
+	activity = Activity('Filtering job entries')
 	selected = jobDB.getJobs(JobSelector.create(opts.job_selector, task = task))
 	activity.finish()
 

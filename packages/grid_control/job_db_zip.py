@@ -15,6 +15,7 @@
 import os, zipfile
 from grid_control import utils
 from grid_control.job_db_text import TextFileJobDB
+from grid_control.utils.activity import Activity
 from python_compat import imap
 
 class ZippedJobDB(TextFileJobDB):
@@ -50,7 +51,7 @@ class ZippedJobDB(TextFileJobDB):
 				for broken in brokenList:
 					os.system('zip %s -d %s' % (self._dbFile, broken))
 				utils.eprint('Recover completed!')
-			activity = utils.ActivityLog('Reading job transactions ...')
+			activity = Activity('Reading job transactions')
 			maxJobs = len(tar.namelist())
 			tMap = {}
 			for idx, fnTarInfo in enumerate(tar.namelist()):
@@ -64,8 +65,8 @@ class ZippedJobDB(TextFileJobDB):
 				jobMap[jobNum] = self._create_job_obj(fnTarInfo, data)
 				tMap[jobNum] = tid
 				if idx % 100 == 0:
-					activity.finish()
-					activity = utils.ActivityLog('Reading job transactions ... %d [%d%%]' % (idx, (100.0 * idx) / maxJobs))
+					activity.update('Reading job transactions %d [%d%%]' % (idx, (100.0 * idx) / maxJobs))
+			activity.finish()
 		self._serial = maxJobs
 		return jobMap
 
@@ -85,7 +86,7 @@ class Migrate2ZippedJobDB(ZippedJobDB):
 		dbPath = config.getWorkPath('jobs')
 		self._dbFile = config.getWorkPath('jobs.zip')
 		if os.path.exists(dbPath) and os.path.isdir(dbPath) and not os.path.exists(self._dbFile):
-			activity = utils.ActivityLog('Converting job database...')
+			activity = Activity('Converting job database')
 			self._serial = 0
 			try:
 				oldDB = TextFileJobDB(config)

@@ -107,7 +107,11 @@ class BackendSelector(RegExSelector):
 	alias = ['backend', 'wms']
 
 	def __init__(self, arg, **kwargs):
-		RegExSelector.__init__(self, arg, lambda num, obj: obj.get('id', '..').split('.')[1])
+		def parseID(gcID):
+			if gcID and (gcID.count('.') == 2):
+				return gcID.split('.')[1]
+			return ''
+		RegExSelector.__init__(self, arg, lambda num, obj: parseID(obj.gcID))
 
 
 class StateSelector(RegExSelector):

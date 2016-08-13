@@ -23,11 +23,8 @@ selectorUnchanged = makeEnum(['selector_unchanged'])
 
 class ConfigView(Plugin):
 	def __init__(self, name, parent = None):
-		if not parent:
-			parent = self
-		self._parent = parent
 		self.pathDict = {}
-		self.pathDict.update(parent.pathDict) # inherit path dict from parent
+		self.pathDict.update((parent or self).pathDict) # inherit path dict from parent
 		self.setConfigName(name)
 
 	def setConfigName(self, name):
@@ -50,11 +47,13 @@ class ConfigView(Plugin):
 	def _get_write_entries(self):
 		return self.iterContent()
 
-	def _prepare_write(self, entries = None, printState = False, printUnused = True, printDefault = True):
+	def _prepare_write(self, entries = None, printState = False, printUnused = True, printDefault = True, printWorkdir = False):
 		entries = entries or self._get_write_entries()
 		result = {}
 		for entry in entries:
-			if printUnused or entry.used:
+			if printWorkdir and entry.option == 'workdir':
+				result.setdefault(entry.section, {}).setdefault(entry.option, []).append(entry)
+			elif printUnused or entry.used:
 				if printDefault or not entry.source.startswith('<default'):
 					if printState or not entry.option.startswith('#'):
 						result.setdefault(entry.section, {}).setdefault(entry.option, []).append(entry)
@@ -103,7 +102,7 @@ class HistoricalConfigView(ConfigView):
 		section = self._getSection(specific)
 		if reverse:
 			section += '!'
-		return ConfigEntry(section, option_list[0], value, opttype, source)
+		return ConfigEntry(section, option_list[-1], value, opttype, source)
 
 	def _matchEntries(self, container, option_list = None):
 		key_list = container.getKeys()
@@ -166,7 +165,7 @@ class HistoricalConfigView(ConfigView):
 		(defaultEntry, defaultEntry_fallback) = self._getDefaultEntries(option_list, default_str, persistent, oldEntry)
 		curEntry = self._getEntry(option_list, defaultEntry, defaultEntry_fallback)
 		if curEntry is None:
-			raise ConfigError('"[%s] %s" does not exist!' % (self._getSection(specific = False), option_list[0]))
+			raise ConfigError('"[%s] %s" does not exist!' % (self._getSection(specific = False), option_list[-1]))
 		description = 'Using user supplied %s'
 		if persistent and defaultEntry.used:
 			description = 'Using persistent    %s'
@@ -188,16 +187,16 @@ class HistoricalConfigView(ConfigView):
 class SimpleConfigView(HistoricalConfigView):
 	def __init__(self, name, oldContainer, curContainer, parent = None,
 			setSections = selectorUnchanged, addSections = None):
-		HistoricalConfigView.__init__(self, name, oldContainer, curContainer, parent)
-		self._initVariable('_cfgSections', None, setSections, addSections, standardConfigForm)
+		HistoricalConfigView.__init__(self, name, oldContainer, curContainer, parent or self)
+		self._initVariable(parent or self, '_cfgSections', None, setSections, addSections, standardConfigForm)
 
-	def _initVariable(self, memberName, default, setValue, addValue, normValues, parseValue = lambda x: [x]):
+	def _initVariable(self, parent, memberName, default, setValue, addValue, normValues, parseValue = lambda x: [x]):
 		def collect(value):
 			return list(ichain(imap(parseValue, value)))
 		# Setting initial value of variable
 		result = default
-		if hasattr(self._parent, memberName): # get from parent if available
-			result = getattr(self._parent, memberName)
+		if hasattr(parent, memberName): # get from parent if available
+			result = getattr(parent, memberName)
 		if setValue is None:
 			result = setValue
 		elif setValue != selectorUnchanged:

@@ -21,6 +21,7 @@ from grid_control.backends.aspect_status import CheckInfo
 from grid_control.backends.storage import StorageManager
 from grid_control.gc_plugin import NamedPlugin
 from grid_control.output_processor import JobResult
+from grid_control.utils.activity import Activity
 from grid_control.utils.data_structures import makeEnum
 from grid_control.utils.file_objects import SafeFile, VirtualFile
 from grid_control.utils.gc_itertools import ichain, lchain
@@ -182,7 +183,7 @@ class BasicWMS(WMS):
 
 	def _run_executor(self, desc, executor, fmt, gcIDs, *args):
 		# Perform some action with the executor, translate wmsID -> gcID and format the result
-		activity = utils.ActivityLog(desc)
+		activity = Activity(desc)
 		wmsID_gcID_Map = self._get_map_wmsID_gcID(gcIDs)
 		wmsIDs = list(wmsID_gcID_Map.keys())
 

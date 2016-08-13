@@ -13,7 +13,7 @@
 # | limitations under the License.
 
 import re, logging
-from python_compat import imap, ismap, izip, lmap
+from python_compat import imap, ismap, izip, json, lmap
 
 class Table(object):
 	pass
@@ -37,6 +37,11 @@ class ParseableTable(ConsoleTable):
 		for entry in data:
 			if isinstance(entry, dict):
 				self._write_line(str.join(self._delimeter, imap(lambda x: str(entry.get(x[0], '')), head)))
+
+
+class JSONTable(ConsoleTable):
+	def __init__(self, head, data):
+		self._write_line(json.dumps({'data': data, 'header': head}, sort_keys = True))
 
 
 class RowTable(ConsoleTable):

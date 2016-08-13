@@ -59,7 +59,7 @@ def formatVariables(variables, showLongVariables = False):
 			for line in display(list(classVariables.keys()), classVariables, 'self.'):
 				yield line
 		except Exception:
-			yield '\t\t<unable to acces class>'
+			yield '\t\t<unable to access class>'
 	if variables:
 		yield ''
 
@@ -129,13 +129,16 @@ class NestedException(Exception):
 class APIError(NestedException):
 	pass
 
+def impl_detail(module, name, args, fun, default): # access some python implementation detail with default
+	try:
+		return fun(getattr(module, name)(*args))
+	except Exception:
+		return default
+
 # some error related to abstract functions
 class AbstractError(APIError):
 	def __init__(self):
-		try:
-			fun_name = getattr(sys, '_getframe')(1).f_code.co_name # python implementation detail
-		except Exception:
-			fun_name = 'The invoked method'
+		fun_name = impl_detail(sys, '_getframe', (2,), lambda x: x.f_code.co_name, 'The invoked method')
 		APIError.__init__(self, '%s is an abstract function!' % fun_name)
 
 # Collect full traceback and exception context
@@ -177,7 +180,7 @@ class ExceptionFormatter(logging.Formatter):
 			return logging.Formatter.format(self, record)
 		traceback, infos = collectExceptionInfos(*record.exc_info)
 
-		msg = '\n%s\n\n' % record.msg
+		msg = '\n%s\n\n' % (record.msg % record.args)
 		# Code and variable listing
 		if self._showCodeContext > 0:
 			stackInfo = formatStack(traceback, codeContext = self._showCodeContext - 1,
@@ -193,7 +196,7 @@ class ExceptionFormatter(logging.Formatter):
 		def formatInfos(info):
 			(exValue, exDepth, _) = info
 			result = '%s%s: %s' % ('  ' * exDepth, exValue.__class__.__name__, exValue)
-			if not isinstance(exValue, NestedException) and hasattr(exValue, 'args') and (len(exValue.args) > 1):
+			if not isinstance(exValue, NestedException) and hasattr(exValue, 'args') and (len(exValue.args) >= 1):
 				try:
 					result += '\n%s%s  %s' % ('  ' * exDepth, len(exValue.__class__.__name__) * ' ', exValue.args)
 				except Exception:
@@ -205,41 +208,44 @@ class ExceptionFormatter(logging.Formatter):
 				msg += '\n'
 		return msg
 
-# Signal handler for debug session requests
-def handle_debug_interrupt(sig, frame):
-	import code
+# Signal handler for state dump requests
+def handle_dump_interrupt(sig, frame):
 	variables = {'_frame': frame}
 	variables.update(frame.f_globals)
 	variables.update(frame.f_locals)
+	log = logging.getLogger('debug_session')
+	for (threadID, frame) in impl_detail(sys, '_current_frames', (), lambda x: x, {}).items():
+		log.critical('Stack of thread #%d:\n' % threadID + str.join('\n',
+			formatStack(parseFrame(frame), codeContext = 0, showVariables = False)))
+	return variables
+
+def create_debug_console(variables):
+	import code
 	console = code.InteractiveConsole(variables)
 	console.push('import rlcompleter, readline')
 	console.push('readline.parse_and_bind("tab: complete")')
 	console.push('readline.set_completer(rlcompleter.Completer(globals()).complete)')
-	try:
-		stackDict = getattr(sys, '_current_frames')() # python implementation detail
-	except Exception:
-		stackDict = {}
-	log = logging.getLogger('debug_session')
-	for threadID in stackDict:
-		log.critical('Stack of thread #%d:\n' % threadID + str.join('\n',
-			formatStack(parseFrame(stackDict[threadID]), codeContext = 0, showVariables = False)))
-	console.interact('debug mode enabled!')
+	return console
+
+# Signal handler for debug session requests
+def handle_debug_interrupt(sig, frame):
+	create_debug_console(handle_dump_interrupt(sig, frame)).interact('debug mode enabled!')
 
 # Utility class to collect multiple exceptions and throw them at a later time
 class ExceptionCollector(object):
-	def __init__(self):
-		self._exceptions = []
+	def __init__(self, log = None):
+		(self._exceptions, self._log) = ([], log)
 
-	def collect(self):
+	def collect(self, *args):
+		if self._log:
+			self._log.log(*args)
 		self._exceptions.append(NestedExceptionHelper(sys.exc_info()[1], sys.exc_info()[2]))
 		clearException()
 
-	def raise_any(self, value, collapse = False):
+	def raise_any(self, value):
 		if not self._exceptions:
 			return
-		if collapse and (len(self._exceptions) == 1):
-			value = self._exceptions[0]
-		elif hasattr(value, 'nested'):
+		if hasattr(value, 'nested'):
 			value.nested.extend(self._exceptions)
 		self._exceptions = []
 		raise value

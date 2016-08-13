@@ -52,8 +52,10 @@ class JobManager(NamedPlugin):
 			cls = JobDB, pargs = (self._get_max_jobs(self._task), selected), onChange = None)
 		self._disabled_jobs_logfile = config.getWorkPath('disabled')
 		self._outputProcessor = config.getPlugin('output processor', 'SandboxProcessor',
-			cls = TaskOutputProcessor, pargs = (task,))
+			cls = TaskOutputProcessor)
 
+		self._interactive_delete = config.isInteractive('delete jobs', True)
+		self._interactive_reset = config.isInteractive('reset jobs', True)
 		self._do_shuffle = config.getBool('shuffle', False, onChange = None)
 		self._reportClass = Report.getClass(config.get('abort report', 'LocationReport', onChange = None))
 		self._show_blocker = True
@@ -106,8 +108,8 @@ class JobManager(NamedPlugin):
 		jobStatus = ['Job %s state changed from %s to %s ' % (str(jobNum).ljust(jobNumLen), Job.enum2str(oldState), Job.enum2str(state))]
 		if message is not None:
 			jobStatus.append(message)
-		if showWMS and jobObj.wmsId:
-			jobStatus.append('(WMS:%s)' % jobObj.wmsId.split('.')[1])
+		if showWMS and jobObj.gcID:
+			jobStatus.append('(WMS:%s)' % jobObj.gcID.split('.')[1])
 		if (state == Job.SUBMITTED) and (jobObj.attempt > 1):
 			jobStatus.append('(retry #%s)' % (jobObj.attempt - 1))
 		elif (state == Job.QUEUED) and (jobObj.get('dest') != 'N/A'):
@@ -121,7 +123,7 @@ class JobManager(NamedPlugin):
 			retCode = jobObj.get('retcode')
 			if retCode:
 				msg.append('error code: %d' % retCode)
-				if (utils.verbosity() > 0) and (retCode in self._task.errorDict):
+				if self._log_user_time.isEnabledFor(logging.DEBUG) and (retCode in self._task.errorDict):
 					msg.append(self._task.errorDict[retCode])
 			if jobObj.get('dest'):
 				msg.append(jobObj.get('dest'))
@@ -137,7 +139,7 @@ class JobManager(NamedPlugin):
 
 
 	def _get_map_gcID_jobnum(self, jobnum_list):
-		return dict(imap(lambda jobnum: (self.jobDB.getJob(jobnum).wmsId, jobnum), jobnum_list))
+		return dict(imap(lambda jobnum: (self.jobDB.getJob(jobnum).gcID, jobnum), jobnum_list))
 
 
 	def _get_enabled_jobs(self, jobnum_list_ready):
@@ -192,16 +194,16 @@ class JobManager(NamedPlugin):
 			return False
 
 		submitted = []
-		for (jobnum, wmsId, data) in wms.submitJobs(jobnum_list, self._task):
+		for (jobnum, gcID, data) in wms.submitJobs(jobnum_list, self._task):
 			submitted.append(jobnum)
 			job_obj = self.jobDB.getJobPersistent(jobnum)
 
-			if wmsId is None:
+			if gcID is None:
 				# Could not register at WMS
 				self._update(job_obj, jobnum, Job.FAILED)
 				continue
 
-			job_obj.assignId(wmsId)
+			job_obj.assignId(gcID)
 			for (key, value) in data.items():
 				job_obj.set(key, value)
 
@@ -281,7 +283,7 @@ class JobManager(NamedPlugin):
 
 
 	def _wmsArgs(self, jobList):
-		return lmap(lambda jobNum: (self.jobDB.getJob(jobNum).wmsId, jobNum), jobList)
+		return lmap(lambda jobNum: (self.jobDB.getJob(jobNum).gcID, jobNum), jobList)
 
 
 	def retrieve(self, wms):
@@ -301,7 +303,7 @@ class JobManager(NamedPlugin):
 				state = Job.FAILED
 
 			if state == Job.SUCCESS:
-				if not self._outputProcessor.process(outputdir):
+				if not self._outputProcessor.process(outputdir, self._task):
 					retCode = 108
 					state = Job.FAILED
 
@@ -344,7 +346,7 @@ class JobManager(NamedPlugin):
 			jobnum_list = list(gcID_jobnum_map.values())
 			self._log_user.warning('There was a problem with cancelling the following jobs:')
 			self._reportClass(self.jobDB, self._task, jobnum_list).display()
-			if (interactive and utils.getUserBool('Do you want to mark them as cancelled?', True)) or not interactive:
+			if (not interactive) or utils.getUserBool('Do you want to mark them as cancelled?', True):
 				lmap(mark_cancelled, jobnum_list)
 		if interactive:
 			utils.wait(2)
@@ -355,7 +357,7 @@ class JobManager(NamedPlugin):
 		jobs = self.jobDB.getJobs(selector)
 		if jobs:
 			self._log_user.warning('Cancelling the following jobs:')
-			self.cancel(wms, jobs, interactive = True, showJobs = True)
+			self.cancel(wms, jobs, interactive = self._interactive_delete, showJobs = True)
 
 
 	def reset(self, wms, select):
@@ -363,7 +365,7 @@ class JobManager(NamedPlugin):
 		if jobs:
 			self._log_user.warning('Resetting the following jobs:')
 			self._reportClass(self.jobDB, self._task, jobs).display()
-			if utils.getUserBool('Are you sure you want to reset the state of these jobs?', False):
+			if self._interactive_reset or utils.getUserBool('Are you sure you want to reset the state of these jobs?', False):
 				self.cancel(wms, self.jobDB.getJobs(ClassSelector(JobClass.PROCESSING), jobs), interactive = False, showJobs = False)
 				for jobNum in jobs:
 					self.jobDB.commit(jobNum, Job())

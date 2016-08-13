@@ -12,8 +12,8 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-import os, sys, time, errno, fcntl, select, signal, logging, termios, threading
-from grid_control.utils.thread_tools import GCEvent, GCLock, GCQueue
+import os, sys, time, errno, fcntl, select, signal, logging, termios
+from grid_control.utils.thread_tools import GCEvent, GCLock, GCQueue, create_thread
 from hpfwk import AbstractError
 from python_compat import bytes2str, imap, irange, set, str2bytes
 
@@ -105,6 +105,8 @@ class ProcessReadStream(ProcessStream):
 			# yield lines from buffer
 			while self._iter_buffer.find('\n') != -1:
 				posEOL = self._iter_buffer.find('\n')
+				if self._log is not None:
+					self._log += self._iter_buffer[:posEOL + 1]
 				yield self._iter_buffer[:posEOL + 1]
 				self._iter_buffer = self._iter_buffer[posEOL + 1:]
 			# block until new data in buffer / timeout or process is finished
@@ -119,6 +121,8 @@ class ProcessReadStream(ProcessStream):
 			else:
 				raise ProcessTimeout('Stream did not yield more lines after waiting for %s seconds' % timeout) # hard timeout
 		if self._iter_buffer: # return rest of buffer
+			if self._log is not None:
+				self._log += self._iter_buffer
 			yield self._iter_buffer
 
 
@@ -156,7 +160,7 @@ class Process(object):
 		for arg in args:
 			self._args.append(str(arg))
 		if not cmd:
-			raise RuntimeError('Invalid executable!')
+			raise ProcessError('Invalid executable!')
 		if not os.path.isabs(cmd): # Resolve executable path
 			for path in os.environ.get('PATH', '').split(os.pathsep):
 				if os.path.exists(os.path.join(path, cmd)):
@@ -269,16 +273,16 @@ class LocalProcess(Process):
 		else: # Still in the parent process - setup threads to communicate with external program
 			os.close(fd_child_terminal)
 			os.close(fd_child_stderr)
-			thread = threading.Thread(target = self._interact_with_child, args = (fd_parent_stdin, fd_parent_stdout, fd_parent_stderr))
+			thread = create_thread(self._interact_with_child, fd_parent_stdin, fd_parent_stdout, fd_parent_stderr)
 			thread.daemon = True
 			thread.start()
 
 	def _interact_with_child(self, fd_parent_stdin, fd_parent_stdout, fd_parent_stderr):
-		thread_in = threading.Thread(target = self._handle_input, args = (fd_parent_stdin, self._buffer_stdin, self._event_shutdown))
+		thread_in = create_thread(self._handle_input, fd_parent_stdin, self._buffer_stdin, self._event_shutdown)
 		thread_in.start()
-		thread_out = threading.Thread(target = self._handle_output, args = (fd_parent_stdout, self._buffer_stdout, self._event_shutdown))
+		thread_out = create_thread(self._handle_output, fd_parent_stdout, self._buffer_stdout, self._event_shutdown)
 		thread_out.start()
-		thread_err = threading.Thread(target = self._handle_output, args = (fd_parent_stderr, self._buffer_stderr, self._event_shutdown))
+		thread_err = create_thread(self._handle_output, fd_parent_stderr, self._buffer_stderr, self._event_shutdown)
 		thread_err.start()
 		while self._status is None:
 			try:

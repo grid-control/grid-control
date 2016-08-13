@@ -24,20 +24,21 @@ class TaggedConfigView(SimpleConfigView):
 			setNames = selectorUnchanged, addNames = None,
 			setTags = selectorUnchanged, addTags = None,
 			setClasses = selectorUnchanged, addClasses = None, inheritSections = False):
+		parent = parent or self
 		if inheritSections and isinstance(parent, TaggedConfigView):
 			addSections = (parent.getClassSections() or []) + (addSections or [])
 		SimpleConfigView.__init__(self, name, oldContainer, curContainer, parent,
 			setSections = setSections, addSections = addSections)
 
-		self._initVariable('_cfgClassSections', None, setClasses, addClasses, standardConfigForm, lambda x: x.configSections)
-		self._initVariable('_cfgNames', [], setNames, addNames, standardConfigForm)
+		self._initVariable(parent, '_cfgClassSections', None, setClasses, addClasses, standardConfigForm, lambda x: x.configSections)
+		self._initVariable(parent, '_cfgNames', [], setNames, addNames, standardConfigForm)
 		def makeTagTuple(t):
 			try:
 				tagName = t.tagName.lower()
 			except Exception:
 				raise APIError('Class %r does not define a valid tag name!' % t.__class__.__name__)
 			return [(tagName, t.getObjectName().lower())]
-		self._initVariable('_cfgTags', [], setTags, addTags, identity, makeTagTuple)
+		self._initVariable(parent, '_cfgTags', [], setTags, addTags, identity, makeTagTuple)
 		self._cfgTagsOrder = lmap(lambda tagName_tagValue: tagName_tagValue[0], self._cfgTags)
 
 	def getClassSections(self):

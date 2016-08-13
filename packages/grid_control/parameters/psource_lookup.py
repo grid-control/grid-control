@@ -12,9 +12,9 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-from grid_control import utils
+import logging
 from grid_control.config import ConfigError, Matcher
-from grid_control.parameters.psource_base import ParameterInfo, ParameterSource
+from grid_control.parameters.psource_base import ParameterError, ParameterInfo, ParameterSource
 from grid_control.parameters.psource_basic import KeyParameterSource, SingleParameterSource
 from python_compat import imap, irange, izip, lmap, md5_hex
 
@@ -122,10 +122,13 @@ class SwitchingLookupParameterSource(SingleParameterSource):
 		self._psource = psource
 		self._pSpace = self.initPSpace()
 
+	def getUsedSources(self):
+		return [self] + self._psource.getUsedSources()
+
 	def initPSpace(self):
 		result = []
 		def addEntry(pNum):
-			tmp = {ParameterInfo.ACTIVE: True, ParameterInfo.REQS: []}
+			tmp = {ParameterInfo.ACTIVE: True, ParameterInfo.REQS: [], 'GC_JOB_ID': pNum, 'GC_PARAM': pNum}
 			self._psource.fillParameterInfo(pNum, tmp)
 			lookupResult = self._matcher.lookup(tmp)
 			if lookupResult:
@@ -133,12 +136,12 @@ class SwitchingLookupParameterSource(SingleParameterSource):
 					result.append((pNum, lookupIdx))
 
 		if self._psource.getMaxParameters() is None:
-			addEntry(None)
+			raise ParameterError('Unable to use %r with an infinite parameter space!' % self.__class__.__name__)
 		else:
 			for pNum in irange(self._psource.getMaxParameters()):
 				addEntry(pNum)
 		if len(result) == 0:
-			utils.vprint('Lookup parameter "%s" has no matching entries!' % self._key, -1)
+			logging.getLogger('user').critical('Lookup parameter "%s" has no matching entries!', self._key)
 		return result
 
 	def getMaxParameters(self):

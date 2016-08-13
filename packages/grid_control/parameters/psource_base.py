@@ -88,6 +88,9 @@ class ParameterSource(Plugin):
 	def show(self):
 		return [self.__class__.__name__ + ':']
 
+	def getUsedSources(self):
+		return [self]
+
 	def getHash(self):
 		raise AbstractError
 

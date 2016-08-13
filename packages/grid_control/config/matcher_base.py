@@ -35,13 +35,19 @@ class MatcherHolder(object):
 
 	def __repr__(self):
 		if self._case:
-			return self.__class__.__name__ + '(%s)' % self._selector
-		return self.__class__.__name__ + '_ci(%s)' % self._selector
+			return self.__class__.__name__ + '(%s)' % repr(self._selector)
+		return self.__class__.__name__ + '_ci(%s)' % repr(self._selector)
 
 
 def getFixedFunctionObject(instance, fo, selector, case):
 	fo.__name__ = instance.__class__.__name__ + '_FixedSelector'
 	return fo(selector, case)
+
+
+def getCase(case, value):
+	if not case:
+		return value.lower()
+	return value
 
 
 # Matcher class
@@ -68,7 +74,7 @@ class Matcher(ConfigurablePlugin):
 		matcher = self.matcher
 		class FunctionObject(MatcherHolder):
 			def match(self, value):
-				return matcher(value, self._selector)
+				return matcher(value, getCase(self._case, self._selector))
 		return getFixedFunctionObject(self, FunctionObject, selector, self._case)
 
 	def __repr__(self):
@@ -84,21 +90,14 @@ class BasicMatcher(Matcher):
 		return [selector]
 
 	def matcher(self, value, selector):
-		if not self._case:
-			value = value.lower()
-			selector = selector.lower()
-		return QM(self.__class__.matchFunction(value, selector), 1, -1)
+		return QM(self.__class__.matchFunction(getCase(self._case, value), getCase(self._case, selector)), 1, -1)
 
 	def matchWith(self, selector):
 		matcher = self.__class__.matchFunction
-		if not self._case:
-			selector = selector.lower()
 		class FunctionObject(MatcherHolder):
 			def match(self, value):
-				if not self._case:
-					value = value.lower()
-				return QM(matcher(value, self._selector), 1, -1)
-		return getFixedFunctionObject(self, FunctionObject, selector, self._case)
+				return QM(matcher(getCase(self._case, value), self._selector), 1, -1)
+		return getFixedFunctionObject(self, FunctionObject, getCase(self._case, selector), self._case)
 
 
 class StartMatcher(BasicMatcher):
@@ -127,58 +126,54 @@ class ExprMatcher(Matcher):
 		return None
 
 	def matcher(self, value, selector):
-		if not self._case:
-			value = value.lower()
-			selector = selector.lower()
-		return QM(ExprMatcher.getExpr(selector)(value), 1, -1)
+		return QM(ExprMatcher.getExpr(getCase(self._case, selector))(getCase(self._case, value)), 1, -1)
 
 	def matchWith(self, selector):
-		if not self._case:
-			selector = selector.lower()
 		class FunctionObject(MatcherHolder):
 			def init(self, fixedSelector):
 				self._matcher = ExprMatcher.getExpr(fixedSelector)
 			def match(self, value):
-				if not self._case:
-					value = value.lower()
-				return QM(self._matcher(value), 1, -1)
-		return getFixedFunctionObject(self, FunctionObject, selector, self._case)
+				return QM(self._matcher(getCase(self._case, value)), 1, -1)
+		return getFixedFunctionObject(self, FunctionObject, getCase(self._case, selector), self._case)
 
 
 class RegExMatcher(Matcher):
 	alias = ['regex']
 
+	def __init__(self, config, option_prefix, case_override = None, **kwargs):
+		Matcher.__init__(self, config, option_prefix, case_override = None, **kwargs)
+		self._case_regex = self._case
+
 	def getPositive(self, selector):
 		return None
 
 	def matcher(self, value, selector):
-		if not self._case:
-			value = value.lower()
-		return QM(re.search(selector, value) is not None, 1, -1)
+		return QM(re.search(getCase(self._case_regex, selector), getCase(self._case, value)) is not None, 1, -1)
 
 	def matchWith(self, selector):
 		class FunctionObject(MatcherHolder):
 			def init(self, fixedSelector):
 				self._regex = re.compile(fixedSelector)
 			def match(self, value):
-				if not self._case:
-					value = value.lower()
-				return QM(self._regex.search(value) is not None, 1, -1)
-		return getFixedFunctionObject(self, FunctionObject, selector, self._case)
+				return QM(self._regex.search(getCase(self._case, value)) is not None, 1, -1)
+		return getFixedFunctionObject(self, FunctionObject, getCase(self._case_regex, selector), self._case)
 
 
 class ShellStyleMatcher(RegExMatcher):
 	alias = ['shell']
 
+	def __init__(self, config, option_prefix, case_override = None, **kwargs):
+		RegExMatcher.__init__(self, config, option_prefix, case_override = None, **kwargs)
+		self._case_regex = True
+
+	def _translate(self, selector):
+		return fnmatch.translate(getCase(self._case, selector))
+
 	def matcher(self, value, selector):
-		if not self._case:
-			selector = selector.lower()
-		return RegExMatcher.matcher(self, value, fnmatch.translate(selector))
+		return RegExMatcher.matcher(self, value, self._translate(selector))
 
 	def matchWith(self, selector):
-		if not self._case:
-			selector = selector.lower()
-		return RegExMatcher.matchWith(self, fnmatch.translate(selector))
+		return RegExMatcher.matchWith(self, self._translate(selector))
 
 
 class BlackWhiteMatcher(Matcher):
@@ -188,6 +183,9 @@ class BlackWhiteMatcher(Matcher):
 		Matcher.__init__(self, config, option_prefix, case_override, **kwargs)
 		self._baseMatcher = config.getPlugin(appendOption(option_prefix, 'mode'), 'start',
 			cls = Matcher, pargs = (option_prefix, self._case), pkwargs = kwargs, **kwargs)
+
+	def __repr__(self):
+		return '%s(base matcher = %r)' % (self.__class__.__name__, self._baseMatcher)
 
 	def getPositive(self, selector):
 		return lfilter(lambda p: not p.startswith('-'), selector.split())
@@ -203,7 +201,7 @@ class BlackWhiteMatcher(Matcher):
 			elif self._baseMatcher.matcher(value, subselector) > 0:
 				result = idx + 1
 			if self._log:
-				self._log.log(logging.DEBUG1, 'matching value %s against %s: %s', value, subselector, result)
+				self._log.log(logging.DEBUG1, 'matching value %s against selector %s: %s', value, subselector, result)
 		return result
 
 

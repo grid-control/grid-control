@@ -13,7 +13,7 @@ cfg.jobs.wall_time = '1:00'
 cfg.section('jobs').jobs = 2
 
 cfg.usertask.executable = 'Example02_local.sh'
-cfg.usertask.set('arguments', 'arg1 arg2 arg3')
+cfg.usertask.set('arguments', '0 arg1 arg2 arg3')
 cfg.usertask.dataset = ['Example05_dataset.dbs', ':file:/bin/sh|3', ':file:/bin/bash|3']
 cfg.usertask.set('files per job', 2)
 

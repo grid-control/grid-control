@@ -26,14 +26,14 @@ class Job(object):
 		self.state = Job.INIT
 		self.attempt = 0
 		self.history = {}
-		self.wmsId = None
+		self.gcID = None
 		self.submitted = 0
 		self.changed = 0
 		self.dict = {}
 
 
 	def get_dict(self):
-		return {'id': self.wmsId, 'status': Job.enum2str(self.state),
+		return {'id': self.gcID, 'status': Job.enum2str(self.state),
 			'attempt': self.attempt, 'submitted': self.submitted, 'changed': self.changed}
 
 
@@ -51,9 +51,9 @@ class Job(object):
 		self.history[self.attempt] = self.dict.get('dest', 'N/A')
 
 
-	def assignId(self, wmsId):
+	def assignId(self, gcID):
 		self.dict['legacy'] = None # Legacy support
-		self.wmsId = wmsId
+		self.gcID = gcID
 		self.attempt = self.attempt + 1
 		self.submitted = time.time()
 
@@ -63,22 +63,19 @@ makeEnum(['INIT', 'SUBMITTED', 'DISABLED', 'READY', 'WAITING', 'QUEUED', 'ABORTE
 
 class JobClassHolder(object):
 	def __init__(self, *states):
-		self.states = []
-		for state in states:
-			if isinstance(state, JobClassHolder):
-				self.states.extend(state.states)
-			else:
-				self.states.append(state)
+		self.states = states
 
 
 class JobClass(object):
 	ATWMS = JobClassHolder(Job.SUBMITTED, Job.WAITING, Job.READY, Job.QUEUED, Job.UNKNOWN)
-	PROCESSING = JobClassHolder(Job.SUBMITTED, Job.WAITING, Job.READY, Job.QUEUED, Job.UNKNOWN, Job.RUNNING)
 	CANCEL = JobClassHolder(Job.CANCEL)
-	DONE = JobClassHolder(Job.DONE)
 	DISABLED = JobClassHolder(Job.DISABLED)
+	DONE = JobClassHolder(Job.DONE)
 	ENDSTATE = JobClassHolder(Job.SUCCESS, Job.DISABLED)
 	PROCESSED = JobClassHolder(Job.SUCCESS, Job.FAILED, Job.CANCELLED, Job.ABORTED)
+	PROCESSING = JobClassHolder(Job.SUBMITTED, Job.WAITING, Job.READY, Job.QUEUED, Job.UNKNOWN, Job.RUNNING)
+	RUNNING_DONE = JobClassHolder(Job.RUNNING, Job.DONE)
+	FAILING = JobClassHolder(Job.FAILED, Job.ABORTED, Job.CANCELLED)
 	SUBMIT_CANDIDATES = JobClassHolder(Job.INIT, Job.FAILED, Job.ABORTED, Job.CANCELLED)
 	SUCCESS = JobClassHolder(Job.SUCCESS)
 

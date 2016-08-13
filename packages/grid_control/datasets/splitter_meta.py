@@ -46,5 +46,14 @@ class UserMetadataSplitter(MetadataSplitter):
 
 	def metaKey(self, metadataNames, block, fi):
 		selMetadataNames = self._setup(self._metadata, block)
-		selMetadataIdx = imap(metadataNames.index, selMetadataNames)
-		return tuple(imap(lambda idx: fi[DataProvider.Metadata][idx], selMetadataIdx))
+		selMetadataIdx = []
+		for selMetadataName in selMetadataNames:
+			if selMetadataName in metadataNames:
+				selMetadataIdx.append(metadataNames.index(selMetadataName))
+			else:
+				selMetadataIdx.append(-1)
+		def query_metadata(idx):
+			if (idx >= 0) and (idx < len(fi[DataProvider.Metadata])):
+				return fi[DataProvider.Metadata][idx]
+			return ''
+		return tuple(imap(query_metadata, selMetadataIdx))

@@ -106,11 +106,11 @@ class FileInfoProcessor(JobInfoProcessor):
 makeEnum(['Hash', 'NameLocal', 'NameDest', 'Path'], FileInfoProcessor)
 
 
-class TaskOutputProcessor(OutputProcessor):
-	def __init__(self, task):
-		self._task = task
+class TaskOutputProcessor(Plugin):
+	def process(self, dn, task):
+		raise AbstractError
 
 
 class SandboxProcessor(TaskOutputProcessor):
-	def process(self, dn):
+	def process(self, dn, task):
 		return True

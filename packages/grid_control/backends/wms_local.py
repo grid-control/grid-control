@@ -17,6 +17,7 @@ from grid_control import utils
 from grid_control.backends.aspect_cancel import CancelAndPurgeJobs, CancelJobs
 from grid_control.backends.broker_base import Broker
 from grid_control.backends.wms import BackendError, BasicWMS, WMS
+from grid_control.utils.activity import Activity
 from grid_control.utils.file_objects import VirtualFile
 from grid_control.utils.gc_itertools import lchain
 from hpfwk import AbstractError, ExceptionCollector
@@ -55,7 +56,7 @@ class LocalPurgeJobs(CancelJobs):
 		self._sandbox_helper = sandbox_helper
 
 	def execute(self, wmsIDs, wmsName): # yields list of purged (wmsID,)
-		activity = utils.ActivityLog('waiting for jobs to finish')
+		activity = Activity('waiting for jobs to finish')
 		time.sleep(5)
 		for wmsID in wmsIDs:
 			path = self._sandbox_helper.get_sandbox('WMSID.%s.%s' % (wmsName, wmsID))
@@ -106,7 +107,7 @@ class LocalWMS(BasicWMS):
 
 	# Submit job and yield (jobNum, WMS ID, other data)
 	def _submitJob(self, jobNum, module):
-		activity = utils.ActivityLog('submitting jobs')
+		activity = Activity('submitting job %d' % jobNum)
 
 		try:
 			sandbox = tempfile.mkdtemp('', '%s.%04d.' % (module.taskID, jobNum), self._sandbox_helper.get_path())
@@ -136,7 +137,7 @@ class LocalWMS(BasicWMS):
 		except Exception:
 			gcID = None
 
-		del activity
+		activity.finish()
 
 		if retCode != 0:
 			self._log.warning('%s failed:', self.submitExec)
@@ -154,7 +155,7 @@ class LocalWMS(BasicWMS):
 		if not len(ids):
 			raise StopIteration
 
-		activity = utils.ActivityLog('retrieving job outputs')
+		activity = Activity('retrieving %d job outputs' % len(ids))
 		for gcID, jobNum in ids:
 			path = self._sandbox_helper.get_sandbox(gcID)
 			if path is None:
@@ -166,7 +167,7 @@ class LocalWMS(BasicWMS):
 			utils.removeFiles(ifilter(lambda x: x not in outFiles, imap(lambda fn: os.path.join(path, fn), os.listdir(path))))
 
 			yield (jobNum, path)
-		del activity
+		activity.finish()
 
 
 	def _getSandboxFiles(self, module, monitor, smList):

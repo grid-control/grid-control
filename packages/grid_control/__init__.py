@@ -18,8 +18,9 @@ def initGC():
 	sys.path.insert(1, basePath) # packages bundled with grid-control have priority
 	os.environ['GC_PACKAGES_PATH'] = basePath # Store grid-control base path in enviroment variable
 	from hpfwk import init_hpf_plugins
+	for pkgName in os.listdir(basePath):
+		init_hpf_plugins(os.path.join(basePath, pkgName))
 	from grid_control.logging_setup import logging_defaults
-	init_hpf_plugins(basePath)
 	logging_defaults()
 initGC()
 

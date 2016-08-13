@@ -22,6 +22,7 @@ from grid_control.backends.htcondor_wms.wmsid import HTCJobID
 from grid_control.backends.wms import BackendError, BasicWMS
 from grid_control.config import ConfigError
 from grid_control.job_db import Job
+from grid_control.utils.activity import Activity
 from python_compat import json, lfilter
 
 """
@@ -161,11 +162,11 @@ class HTCondor(BasicWMS):
 	# Primary backend actions
 	def submitJobs(self, jobNumList, task):
 		requestLen = len(jobNumList)
-		activity = utils.ActivityLog('Submitting jobs... (--%)')
+		activity = Activity('Submitting jobs (--%)')
 		while jobNumList:
 			jobSubmitNumList = jobNumList[-self._schedd.getSubmitScale():]
-			del(jobNumList[-self._schedd.getSubmitScale():])
-			activity = utils.ActivityLog('Submitting jobs... (%2d%%)'%(100*(requestLen-len(jobNumList))/requestLen))
+			del jobNumList[-self._schedd.getSubmitScale():]
+			activity = Activity('Submitting jobs (%2d%%)'%(100*(requestLen-len(jobNumList))/requestLen))
 			for jobNum in jobSubmitNumList:
 				self._writeJobConfig(
 					self.getJobCfgPath(jobNum)[0],
@@ -185,12 +186,12 @@ class HTCondor(BasicWMS):
 					self._createGcId(htcID),
 					jobInfoMaps[htcID]
 					)
-		del(activity)
+		activity.finish()
 
 	def checkJobs(self, wmsJobIdList):
 		if not len(wmsJobIdList):
 			raise StopIteration
-		activity   = utils.ActivityLog('Checking jobs...')
+		activity   = Activity('Checking jobs')
 		assert not bool(lfilter( lambda htcid: htcid.scheddURI != self._schedd.getURI(), self._splitGcRequests(wmsJobIdList))), 'Bug! Got jobs at Schedds %s, but servicing only Schedd %s' % (lfilter( lambda itr: itr.scheddURI != self._schedd.getURI(), self._splitGcRequests(wmsJobIdList)), self._schedd.getURI())
 		rawJobInfoMaps = self._schedd.checkJobs(
 			self._splitGcRequests(wmsJobIdList),
@@ -205,12 +206,12 @@ class HTCondor(BasicWMS):
 				self._statusMap[jobInfoMaps[htcID]['state']][0],
 				jobInfoMaps[htcID]
 				)
-		del(activity)
+		activity.finish()
 
 	def _getJobsOutput(self, wmsJobIdList):
 		if not len(wmsJobIdList):
 			raise StopIteration
-		activity   = utils.ActivityLog('Fetching jobs...')
+		activity   = Activity('Fetching jobs')
 		assert not bool(lfilter( lambda htcid: htcid.scheddURI != self._schedd.getURI(), self._splitGcRequests(wmsJobIdList))), 'Bug! Got jobs at Schedds %s, but servicing only Schedd %s' % (lfilter( lambda itr: itr.scheddURI != self._schedd.getURI(), self._splitGcRequests(wmsJobIdList)), self._schedd.getURI())
 		returnedJobs = self._schedd.getJobsOutput(
 			self._splitGcRequests(wmsJobIdList)
@@ -221,12 +222,12 @@ class HTCondor(BasicWMS):
 				htcID.gcJobNum,
 				self.getSandboxPath(htcID.gcJobNum)
 				)
-		del activity
+		activity.finish()
 	
 	def cancelJobs(self, wmsJobIdList):
 		if not len(wmsJobIdList):
 			raise StopIteration
-		activity   = utils.ActivityLog('Canceling jobs...')
+		activity   = Activity('Canceling jobs')
 		assert not bool(lfilter( lambda htcid: htcid.scheddURI != self._schedd.getURI(), self._splitGcRequests(wmsJobIdList))), 'Bug! Got jobs at Schedds %s, but servicing only Schedd %s' % (lfilter( lambda itr: itr.scheddURI != self._schedd.getURI(), self._splitGcRequests(wmsJobIdList)), self._schedd.getURI())
 		canceledJobs = self._schedd.cancelJobs(
 			self._splitGcRequests(wmsJobIdList)
@@ -237,7 +238,7 @@ class HTCondor(BasicWMS):
 				htcJobID.gcJobNum,
 				self._createGcId(htcJobID)
 				)
-		del activity
+		activity.finish()
 
 	# GC/WMS/Job ID converters
 	def _createGcId(self, htcID):

@@ -39,18 +39,16 @@ class SafeFile(object):
 		self._fp.truncate()
 
 	def close(self):
-		if not self._fp:
-			return
-		self._fp.close()
-		if self._mode == 'w':
-			if self._keep_old:
-				os.rename(self._fn, self._fn + '.old')
-			os.rename(self._fn + '.tmp', self._fn)
-		self._fp = None
-
-	def __del__(self):
 		if self._fp:
 			self._fp.close()
+			if self._mode == 'w':
+				if self._keep_old:
+					os.rename(self._fn, self._fn + '.old')
+				os.rename(self._fn + '.tmp', self._fn)
+			self._fp = None
+
+	def __del__(self):
+		self.close()
 
 	def __repr__(self):
 		return '%s(fn = %r, mode = %r, keep_old = %s, handle = %r)' % (self.__class__.__name__, self._fn, self._mode, self._keep_old, self._fp)

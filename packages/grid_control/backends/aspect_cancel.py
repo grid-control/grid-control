@@ -15,6 +15,7 @@
 import time
 from grid_control import utils
 from grid_control.backends.backend_tools import BackendExecutor, ProcessCreatorAppendArguments
+from grid_control.utils.activity import Activity
 from hpfwk import AbstractError
 from python_compat import identity, lmap
 
@@ -74,7 +75,7 @@ class CancelAndPurgeJobs(CancelJobs):
 	def execute(self, wmsIDs, wmsName): # yields list of (wmsID,)
 		marked_wmsIDs = lmap(lambda result: result[0], self._cancel_executor.execute(wmsIDs, wmsName))
 		time.sleep(5)
-		activity = utils.ActivityLog('purging jobs')
+		activity = Activity('Purging jobs')
 		for result in self._purge_executor.execute(marked_wmsIDs, wmsName):
 			yield result
 		activity.finish()

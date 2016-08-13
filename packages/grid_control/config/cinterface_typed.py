@@ -21,7 +21,7 @@ from grid_control.config.matcher_base import DictLookup, ListFilter, ListOrder, 
 from grid_control.utils.data_structures import makeEnum
 from grid_control.utils.parsing import parseBool, parseDict, parseList, parseTime, strDictLong, strTimeShort
 from hpfwk import APIError, ExceptionCollector, Plugin
-from python_compat import identity, ifilter, imap, lmap, relpath, sorted, user_input
+from python_compat import any, identity, ifilter, imap, lmap, relpath, sorted, user_input
 
 # Config interface class accessing typed data using an string interface provided by configView
 class TypedConfigInterface(ConfigInterface):
@@ -79,16 +79,16 @@ class TypedConfigInterface(ConfigInterface):
 			raise ConfigError(errorMsg)
 
 	# Return resolved path (search paths given in pathDict['search_paths'])
-	def getPath(self, option, default = noDefault, mustExist = True, storeRelative = False, **kwargs):
+	def getPath(self, option, default = noDefault, mustExist = True, relative = None, **kwargs):
 		def parsePath(value):
 			if value == '':
 				return ''
 			return self.resolvePath(value, mustExist, 'Error resolving path %s' % value)
 		obj2str = str.__str__
 		str2obj = parsePath
-		if storeRelative:
-			obj2str = lambda value: relpath(value, self.getWorkPath())
-			str2obj = lambda value: os.path.join(self.getWorkPath(), parsePath(value))
+		if relative:
+			obj2str = lambda value: relpath(value, relative)
+			str2obj = lambda value: os.path.join(relative, parsePath(value))
 		return self._getInternal('path', obj2str, str2obj, None, option, default, **kwargs)
 
 	# Return multiple resolved paths (each line processed same as getPath)
@@ -155,13 +155,20 @@ CommandType = makeEnum(['executable', 'command'])
 class SimpleConfigInterface(TypedConfigInterface):
 	def __init__(self, configView):
 		TypedConfigInterface.__init__(self, configView)
-		# global switch to enable / disable interactive option queries
-		self._config_interactive = self.changeView(interfaceClass = TypedConfigInterface,
-			viewClass = SimpleConfigView, setSections = ['interactive'])
-		self._interactive_enabled = self._config_interactive.getBool('default', True, onChange = None)
+		self._interactive_enabled = None # delay config query
 
 	def isInteractive(self, option, default):
-		return self._config_interactive.getBool(option, self._interactive_enabled and default, onChange = None)
+		if isinstance(option, list):
+			user_option_exists = any(imap(lambda opt: opt in self.getOptions(), option))
+		else:
+			user_option_exists = option in self.getOptions()
+		# global switch to enable / disable interactive option queries
+		config_interactive = self.changeView(interfaceClass = TypedConfigInterface,
+			viewClass = SimpleConfigView, setSections = ['interactive'])
+		if self._interactive_enabled is None:
+			self._interactive_enabled = config_interactive.getBool('default', True, onChange = None)
+		icfg = config_interactive.getBool(appendOption(option, 'interactive'), self._interactive_enabled and default, onChange = None)
+		return icfg and not user_option_exists
 
 	def getCommand(self, option, default = noDefault, **kwargs):
 		scriptType = self.getEnum(appendOption(option, 'type'), CommandType, CommandType.executable, **kwargs)
@@ -178,6 +185,13 @@ class SimpleConfigInterface(TypedConfigInterface):
 		matcherObj = self.getPlugin(matcherOpt, defaultMatcher, cls = Matcher, pargs = (matcherOpt,), **matcherArgs)
 		(sourceDict, sourceOrder) = self.getDict(option, default, **kwargs)
 		return DictLookup(sourceDict, sourceOrder, matcherObj, single, includeDefault)
+
+	def getMatcher(self, option, default = noDefault, defaultMatcher = 'start', negate = False,
+			filterParser = str, filterStr = str.__str__, **kwargs):
+		matcherOpt = appendOption(option, 'matcher')
+		matcherObj = self.getPlugin(matcherOpt, defaultMatcher, cls = Matcher, pargs = (matcherOpt,), pkwargs = kwargs)
+		filterExpr = self.get(option, default, str2obj = filterParser, obj2str = filterStr, **kwargs)
+		return matcherObj.matchWith(filterExpr)
 
 	def getFilter(self, option, default = noDefault, negate = False, filterParser = str, filterStr = str.__str__,
 			defaultMatcher = 'start', defaultFilter = 'strict', defaultOrder = ListOrder.source, **kwargs):
@@ -235,6 +249,7 @@ class SimpleConfigInterface(TypedConfigInterface):
 
 	def _getInternal(self, desc, obj2str, str2obj, def2obj, option, default_obj,
 			interactive = True, interactive_msg = None, interactive_msg_append_default = True, **kwargs):
+		# interactive mode only overrides default values from the code
 		if interactive_msg and self.isInteractive(option, interactive):
 			prompt = interactive_msg
 			if (default_obj != noDefault) and interactive_msg_append_default:

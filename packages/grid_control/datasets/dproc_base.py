@@ -15,7 +15,7 @@
 import logging
 from grid_control.config import triggerResync
 from grid_control.gc_plugin import ConfigurablePlugin
-from grid_control.utils import display_selection, filter_processors
+from grid_control.utils import prune_processors
 from hpfwk import AbstractError
 
 class DataProcessor(ConfigurablePlugin):
@@ -24,15 +24,22 @@ class DataProcessor(ConfigurablePlugin):
 	def __init__(self, config):
 		ConfigurablePlugin.__init__(self, config)
 		self._log = logging.getLogger('dataproc')
+		self._log_debug = None
+		if self._log.isEnabledFor(logging.DEBUG):
+			self._log_debug = self._log
 
 	def enabled(self):
 		return True
 
 	def process(self, blockIter):
 		for block in blockIter:
+			if self._log_debug:
+				self._log_debug.debug('%s is processing block %s...' % (self, repr(block)))
 			result = self.processBlock(block)
 			if result is not None:
 				yield result
+			if self._log_debug:
+				self._log_debug.debug('%s process result: %s' % (self, repr(result)))
 		self._finished()
 
 	def processBlock(self, block):
@@ -45,9 +52,8 @@ class DataProcessor(ConfigurablePlugin):
 class MultiDataProcessor(DataProcessor):
 	def __init__(self, config, processorList):
 		DataProcessor.__init__(self, config)
-		self._processorList = filter_processors(processorList)
-		display_selection(self._log, processorList, self._processorList,
-			'Removed %d inactive dataset processors!', lambda item: item.__class__.__name__)
+		do_prune = config.getBool('dataset processor prune', True, onChange = DataProcessor.triggerDataResync)
+		self._processorList = prune_processors(do_prune, processorList, self._log, 'Removed %d inactive dataset processors!')
 
 	def process(self, blockIter):
 		for processor in self._processorList:

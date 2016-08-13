@@ -15,8 +15,8 @@
 import os, sys, time, logging
 from grid_control.gc_exceptions import GCError, GCLogHandler
 from grid_control.utils.data_structures import makeEnum
-from grid_control.utils.file_objects import VirtualFile
-from hpfwk import ExceptionFormatter
+from grid_control.utils.file_objects import SafeFile, VirtualFile
+from hpfwk import AbstractError, ExceptionFormatter
 from python_compat import irange, lmap, set, sorted, tarfile
 
 class LogOnce(logging.Filter):
@@ -44,9 +44,9 @@ class LogEveryNsec(logging.Filter):
 
 
 # In contrast to StreamHandler, this logging handler doesn't keep a stream copy
-class StdoutStreamHandler(logging.Handler):
+class GCStreamHandler(logging.Handler):
 	def get_stream(self):
-		return sys.stdout
+		raise AbstractError()
 
 	def emit(self, record):
 		try:
@@ -59,7 +59,12 @@ class StdoutStreamHandler(logging.Handler):
 			self.handleError(record)
 
 
-class StderrStreamHandler(StdoutStreamHandler):
+class StdoutStreamHandler(GCStreamHandler):
+	def get_stream(self):
+		return sys.stdout
+
+
+class StderrStreamHandler(GCStreamHandler):
 	def get_stream(self):
 		return sys.stderr
 
@@ -82,7 +87,7 @@ class ProcessArchiveHandler(logging.Handler):
 				tar = tarfile.TarFile.open(self._fn, 'a')
 				for key, value in record.additional.items():
 					if os.path.exists(value):
-						value = open(value, 'r').read()
+						value = SafeFile(value).read()
 					fileObj = VirtualFile(os.path.join(entry, key), [value])
 					info, handle = fileObj.getTarInfo()
 					tar.addfile(info, handle)

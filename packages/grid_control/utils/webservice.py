@@ -46,17 +46,20 @@ class RestClient(object):
 		if not session:
 			try:
 				self._session = RestSession.createInstance('RequestsSession')
-			except Exception: # incompatible dependencies pulled in can cause many types of exceptions
+			except Exception: # pulling in incompatible dependencies can cause many different types of exceptions
 				self._session = RestSession.createInstance('Urllib2Session')
 
 	def _request(self, mode, url, api, headers, params = None, data = None):
-		request_headers = dict(self._headers or {})
-		request_headers.update(headers or {})
+		hdr = dict(self._headers or {})
+		hdr.update(headers or {})
 		if url is None:
 			url = self._url
 		if api:
 			url += '/%s' % api
-		return self._session.request(mode, url = url, headers = request_headers, params = params, data = data, cert = self._cert)
+		try:
+			return self._session.request(mode, url = url, headers = hdr, params = params, data = data, cert = self._cert)
+		except Exception:
+			raise RestError('Unable to query %r (params: %r, cert: %r, session: %r)' % (url, params, self._cert, self._session.__class__.__name__))
 
 	def get(self, url = None, api = None, headers = None, params = None):
 		return self._process_result(self._request(RestSession.GET, url, api, headers, params = params))
@@ -82,11 +85,11 @@ class JSONRestClient(RestClient):
 			process_result = process_result or self._process_json_result, process_data = json.dumps)
 
 	def _process_json_result(self, value):
+		if not value:
+			raise RestError('Received empty reply')
 		try:
 			return parseJSON(value)
 		except Exception:
-			if not value:
-				raise RestError('Received empty reply')
 			raise RestError('Received invalid JSON reply: %r' % value)
 
 

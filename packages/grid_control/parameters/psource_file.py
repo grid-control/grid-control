@@ -13,9 +13,9 @@
 # | limitations under the License.
 
 import csv
-from grid_control import utils
 from grid_control.parameters.psource_base import ParameterInfo, ParameterMetadata, ParameterSource
 from grid_control.parameters.psource_basic import InternalParameterSource
+from grid_control.utils.activity import Activity
 from grid_control.utils.file_objects import ZipFile
 from grid_control.utils.parsing import parseJSON
 from python_compat import ifilter, imap, irange, izip, json, lfilter, lmap, sorted
@@ -57,10 +57,9 @@ class GCDumpParameterSource(ParameterSource):
 			fp.write('# %s\n' % json.dumps(keys))
 			maxN = pa.getMaxJobs()
 			if maxN:
-				activity = utils.ActivityLog('Writing parameter dump')
+				activity = Activity('Writing parameter dump')
 				for jobNum in irange(maxN):
-					activity.finish()
-					activity = utils.ActivityLog('Writing parameter dump [%d/%d]' % (jobNum + 1, maxN))
+					activity.update('Writing parameter dump [%d/%d]' % (jobNum + 1, maxN))
 					meta = pa.getJobInfo(jobNum)
 					meta_str = str.join('\t', imap(lambda k: json.dumps(meta.get(k, '')), keys))
 					if meta.get(ParameterInfo.ACTIVE, True):

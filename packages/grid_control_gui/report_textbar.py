@@ -15,7 +15,7 @@
 import sys
 from grid_control.job_db import JobClass
 from grid_control.job_selector import ClassSelector
-from grid_control.report import BasicReport
+from grid_control.report import Report
 
 class BasicProgressBar(object):
 	def __init__(self, minValue = 0, maxValue = 100, totalWidth = 16):
@@ -46,17 +46,16 @@ class BasicProgressBar(object):
 		return str(self._bar)
 
 
-class BasicBarReport(BasicReport):
-	alias = ['basicbar']
+class BarReport(Report):
+	alias = ['bar']
 
 	def __init__(self, jobDB, task, jobs = None, configString = ''):
-		BasicReport.__init__(self, jobDB, task, jobs, configString)
+		Report.__init__(self, jobDB, task, jobs, configString)
 		self._bar = BasicProgressBar(0, len(jobDB), 65)
 
 	def getHeight(self):
-		return BasicReport.getHeight(self) + 1
+		return 1
 
 	def display(self):
-		BasicReport.display(self)
 		self._bar.update(len(self._jobDB.getJobs(ClassSelector(JobClass.SUCCESS))))
 		sys.stdout.write(str(self._bar) + '\n')

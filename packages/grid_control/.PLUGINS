@@ -102,9 +102,15 @@
 
     * grid_control.datasets.dproc_base DataProcessor
 
-     * grid_control.datasets.dproc_basic EmptyDataProcessor empty
+     * grid_control.datasets.dproc_check DataChecker
 
-     * grid_control.datasets.dproc_basic EntriesConsistencyDataProcessor consistency
+      * grid_control.datasets.dproc_check EntriesConsistencyDataProcessor consistency
+
+      * grid_control.datasets.dproc_check NickNameConsistencyProcessor nickconsistency
+
+      * grid_control.datasets.dproc_check UniqueDataProcessor unique
+
+     * grid_control.datasets.dproc_basic EmptyDataProcessor empty
 
      * grid_control.datasets.dproc_basic EntriesCountDataProcessor events EventsCountDataProcessor
 
@@ -131,8 +137,6 @@
      * grid_control.datasets.dproc_basic URLCountDataProcessor files FileCountDataProcessor
 
      * grid_control.datasets.dproc_basic URLDataProcessor ignore FileDataProcessor
-
-     * grid_control.datasets.dproc_basic UniqueDataProcessor unique
 
     * grid_control.datasets.provider_base DataProvider
 
@@ -452,13 +456,7 @@
 
      * grid_control.output_processor FileInfoProcessor
 
-    * grid_control.output_processor TaskOutputProcessor
-
-     * grid_control.output_processor SandboxProcessor
-
    * grid_control.parameters.psource_base ParameterSource
-
-    * grid_control.parameters.psource_input ConstInputFileParameterSource
 
     * grid_control.parameters.psource_data DataParameterSource data
 
@@ -496,7 +494,7 @@
 
     * grid_control.parameters.psource_base NullParameterSource null
 
-    * grid_control.parameters.psource_basic RequirementParameterSource
+    * grid_control.parameters.psource_basic RequirementParameterSource req
 
     * grid_control.parameters.psource_basic SingleParameterSource
 
@@ -513,8 +511,6 @@
      * grid_control.parameters.psource_lookup SimpleLookupParameterSource lookup
 
      * grid_control.parameters.psource_basic SimpleParameterSource var
-
-      * grid_control.parameters.psource_input SimpleFileParameterSource files
 
      * grid_control.parameters.psource_lookup SwitchingLookupParameterSource switch
 
@@ -551,4 +547,8 @@
     * grid_control.utils.webservice_requests RequestsSession requests
 
     * grid_control.utils.webservice_urllib2 Urllib2Session urllib2
+
+   * grid_control.output_processor TaskOutputProcessor
+
+    * grid_control.output_processor SandboxProcessor
 

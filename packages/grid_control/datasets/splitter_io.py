@@ -15,6 +15,7 @@
 import os, gzip
 from grid_control import utils
 from grid_control.datasets.splitter_base import DataSplitter, DataSplitterIO, PartitionError
+from grid_control.utils.activity import Activity
 from grid_control.utils.file_objects import VirtualFile
 from grid_control.utils.parsing import parseBool, parseJSON, parseList
 from grid_control.utils.thread_tools import GCLock
@@ -22,7 +23,7 @@ from python_compat import BytesBuffer, bytes2str, ifilter, imap, json, lfilter, 
 
 class BaseJobFileTarAdaptor(object):
 	def __init__(self, path):
-		activity = utils.ActivityLog('Reading dataset partition file')
+		activity = Activity('Reading dataset partition file')
 		self._lock = GCLock()
 		self._fmt = utils.DictFormat()
 		self._tar = tarfile.open(path, 'r:')
@@ -124,19 +125,24 @@ class DataSplitterIOBase(DataSplitterIO):
 		self._saveStateToTar(tar, meta, source, sourceLen, message)
 		tar.close()
 
+	def loadSplitting(self, path):
+		try:
+			return self._loadStateFromTar(path)
+		except Exception:
+			raise PartitionError("No valid dataset splitting found in '%s'." % path)
+
 
 class DataSplitterIO_V1(DataSplitterIOBase):
 	# Save as tar file to allow random access to mapping data with little memory overhead
 	def _saveStateToTar(self, tar, meta, source, sourceLen, message):
 		# Write the splitting info grouped into subtarfiles
-		activity = utils.ActivityLog(message)
+		activity = Activity(message)
 		(jobNum, subTar) = (-1, None)
 		for jobNum, entry in enumerate(source):
 			if jobNum % 100 == 0:
 				self._closeSubTar(tar, subTar)
 				subTar = self._createSubTar('%03dXX.tgz' % int(jobNum / 100))
-				activity.finish()
-				activity = utils.ActivityLog('%s [%d / %d]' % (message, jobNum, sourceLen))
+				activity.update('%s [%d / %d]' % (message, jobNum, sourceLen))
 			# Determine shortest way to store file list
 			tmp = entry.pop(DataSplitter.FileList)
 			savelist = self._getReducedFileList(entry, tmp) # can modify entry
@@ -153,7 +159,7 @@ class DataSplitterIO_V1(DataSplitterIOBase):
 		self._addToTar(tar, 'Metadata', self._fmt.format(meta))
 		activity.finish()
 
-	def loadSplitting(self, path):
+	def _loadStateFromTar(self, path):
 		class JobFileTarAdaptor_V1(BaseJobFileTarAdaptor):
 			def _getPartition(self, key):
 				if not self._cacheKey == key / 100:
@@ -163,16 +169,12 @@ class DataSplitterIO_V1(DataSplitterIOBase):
 					self._cacheTar = tarfile.open(mode = 'r', fileobj = subTarFileObj)
 				data = self._fmt.parse(self._cacheTar.extractfile('%05d/info' % key).readlines(),
 					keyParser = {None: int}, valueParser = self._parserMap)
-				fileList = self._cacheTar.extractfile('%05d/list' % key).readlines()
+				fileList = lmap(bytes2str, self._cacheTar.extractfile('%05d/list' % key).readlines())
 				if DataSplitter.CommonPrefix in data:
 					fileList = imap(lambda x: '%s/%s' % (data[DataSplitter.CommonPrefix], x), fileList)
 				data[DataSplitter.FileList] = lmap(str.strip, fileList)
 				return data
-
-		try:
-			return JobFileTarAdaptor_V1(path)
-		except Exception:
-			raise PartitionError("No valid dataset splitting found in '%s'." % path)
+		return JobFileTarAdaptor_V1(path)
 
 
 class DataSplitterIO_V2(DataSplitterIOBase):
@@ -182,7 +184,7 @@ class DataSplitterIO_V2(DataSplitterIOBase):
 
 	def _saveStateToTar(self, tar, meta, source, sourceLen, message):
 		# Write the splitting info grouped into subtarfiles
-		activity = utils.ActivityLog(message)
+		activity = Activity(message)
 		(jobNum, lastValid, subTar) = (-1, -1, None)
 		for jobNum, entry in enumerate(source):
 			if not entry.get(DataSplitter.Invalid, False):
@@ -190,8 +192,7 @@ class DataSplitterIO_V2(DataSplitterIOBase):
 			if jobNum % self._keySize == 0:
 				self._closeSubTar(tar, subTar)
 				subTar = self._createSubTar('%03dXX.tgz' % int(jobNum / self._keySize))
-				activity.finish()
-				activity = utils.ActivityLog('%s [%d / %d]' % (message, jobNum, sourceLen))
+				activity.update('%s [%d / %d]' % (message, jobNum, sourceLen))
 			# Determine shortest way to store file list
 			tmp = entry.pop(DataSplitter.FileList)
 			savelist = self._getReducedFileList(entry, tmp) # can modify entry
@@ -209,7 +210,7 @@ class DataSplitterIO_V2(DataSplitterIOBase):
 		for (fn, data) in [('Metadata', self._fmt.format(meta)), ('Version', '2')]:
 			self._addToTar(tar, fn, data)
 
-	def loadSplitting(self, path):
+	def _loadStateFromTar(self, path):
 		class JobFileTarAdaptor_V2(BaseJobFileTarAdaptor):
 			def __init__(self, path, keySize):
 				BaseJobFileTarAdaptor.__init__(self, path)
@@ -229,8 +230,4 @@ class DataSplitterIO_V2(DataSplitterIOBase):
 					fileList = imap(lambda x: '%s/%s' % (data[DataSplitter.CommonPrefix], x), fileList)
 				data[DataSplitter.FileList] = lmap(str.strip, fileList)
 				return data
-
-		try:
-			return JobFileTarAdaptor_V2(path, self._keySize)
-		except Exception:
-			raise PartitionError("No valid dataset splitting found in '%s'." % path)
+		return JobFileTarAdaptor_V2(path, self._keySize)

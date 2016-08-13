@@ -14,7 +14,7 @@
 # | limitations under the License.
 
 import os, sys
-from gcSupport import ClassSelector, FileInfoProcessor, JobClass, Options, getCMSSWInfo, initGC, scriptOptions, utils
+from gcSupport import Activity, ClassSelector, FileInfoProcessor, JobClass, Options, getCMSSWInfo, initGC, scriptOptions, utils
 from grid_control.datasets import DataSplitter
 from grid_control_cms.lumi_tools import formatLumi, mergeLumi, parseLumiFilter
 from python_compat import imap, irange, lmap, set, sorted
@@ -74,8 +74,9 @@ def lumi_expr(opts, args):
 
 def iter_jobs(opts, workDir, jobList, splitter):
 	(splitInfo, fip) = ({}, FileInfoProcessor())
+	activity = Activity('Reading job logs')
 	for jobNum in jobList:
-		activity = utils.ActivityLog('Reading job logs - [%d / %d]' % (jobNum, jobList[-1]))
+		activity.update('Reading job logs - [%d / %d]' % (jobNum, jobList[-1]))
 
 		if opts.parameterized:
 			fi = fip.process(os.path.join(workDir, 'output', 'job_%d' % jobNum))
@@ -86,7 +87,7 @@ def iter_jobs(opts, workDir, jobList, splitter):
 				splitInfo = splitter.getSplitInfo(jobNum)
 			outputName = splitInfo.get(DataSplitter.Nickname, splitInfo.get(DataSplitter.DatasetID, 0))
 		yield (jobNum, outputName)
-		activity.finish()
+	activity.finish()
 
 def process_fwjr(outputName, fwkXML, lumiDict, readDict, writeDict):
 	for run in fwkXML.getElementsByTagName('Run'):
@@ -123,7 +124,7 @@ def process_jobs(opts, workDir, jobList, splitter):
 def lumi_calc(opts, workDir, jobList, splitter):
 	(lumiDict, readDict, writeDict) = process_jobs(opts, workDir, jobList, splitter)
 
-	activity = utils.ActivityLog('Simplifying lumi sections')
+	activity = Activity('Simplifying lumi sections')
 	lumis = {}
 	for sample in lumiDict:
 		for run in lumiDict[sample]:

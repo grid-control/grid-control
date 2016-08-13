@@ -34,22 +34,16 @@ class DASProvider(CMSBaseProvider):
 
 	def __init__(self, config, datasetExpr, datasetNick = None, datasetID = 0):
 		CMSBaseProvider.__init__(self, config, datasetExpr, datasetNick, datasetID)
-		self._instance = ''
-		if not self._url:
-			pass
-		elif '/' not in self._url:
-			self._instance = 'prod/%s' % self._url
-			self._url = ''
-		elif not self._url.startswith('http'):
-			self._instance = self._url
-			self._url = ''
-		self._url = self._url or 'https://cmsweb.cern.ch/das/cache'
+		self._url = config.get('das instance', 'https://cmsweb.cern.ch/das/cache', onChange = self._changeTrigger)
+		if self._datasetInstance.startswith('http'):
+			self._url = self._datasetInstance
+			self._datasetInstance = ''
 		self._gjrc = DASRestClient(self._url, 'VOMS proxy needed to query DAS!', UserError)
 
 
-	def queryDAS(self, query):
-		if self._instance:
-			query += ' instance=%s' % self._instance
+	def _queryDAS(self, query):
+		if self._datasetInstance not in ('', 'prod/global'):
+			query += ' instance=%s' % self._datasetInstance
 		(start, sleep) = (time.time(), 0.4)
 		while time.time() - start < 60:
 			try:
@@ -59,14 +53,14 @@ class DASProvider(CMSBaseProvider):
 				sleep += 0.4
 
 
-	def getCMSDatasets(self, datasetPath):
-		for datasetInfo in self.queryDAS('dataset dataset=%s' % datasetPath):
+	def _getCMSDatasets(self, datasetPath):
+		for datasetInfo in self._queryDAS('dataset dataset=%s' % datasetPath):
 			for serviceResult in datasetInfo['dataset']:
 				yield serviceResult['name']
 
 
-	def getCMSBlocksImpl(self, datasetPath, getSites):
-		for blockInfo in self.queryDAS('block dataset=%s' % datasetPath):
+	def _getCMSBlocksImpl(self, datasetPath, getSites):
+		for blockInfo in self._queryDAS('block dataset=%s' % datasetPath):
 			replica_infos = None
 			origin = []
 			name = None
@@ -82,12 +76,12 @@ class DASProvider(CMSBaseProvider):
 				yield (name, replica_infos)
 
 
-	def getCMSFilesImpl(self, blockPath, onlyValid, queryLumi):
-		for fileInfo in self.queryDAS('file block=%s' % blockPath):
+	def _getCMSFilesImpl(self, blockPath, onlyValid, queryLumi):
+		for fileInfo in self._queryDAS('file block=%s' % blockPath):
 			for serviceResult in fileInfo['file']:
 				if 'nevents' in serviceResult:
 					yield ({DataProvider.URL: serviceResult['name'], DataProvider.NEntries: serviceResult['nevents']}, None)
 
 
 	def _getBlocksInternal(self):
-		return self.getGCBlocks(usePhedex = False)
+		return self._getGCBlocks(usePhedex = False)

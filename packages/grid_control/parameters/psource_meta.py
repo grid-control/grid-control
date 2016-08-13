@@ -14,7 +14,7 @@
 
 from grid_control import utils
 from grid_control.parameters.psource_base import NullParameterSource, ParameterError, ParameterSource
-from grid_control.utils.gc_itertools import ichain
+from grid_control.utils.gc_itertools import ichain, lchain
 from hpfwk import AbstractError, Plugin
 from python_compat import all, imap, irange, izip, lfilter, lmap, md5_hex, reduce
 
@@ -50,6 +50,9 @@ class ForwardingParameterSource(ParameterSource):
 
 	def show(self):
 		return ParameterSource.show(self) + lmap(lambda x: '\t' + x, self._psource.show())
+
+	def getUsedSources(self):
+		return [self] + self._psource.getUsedSources()
 
 	def getHash(self):
 		return self._psource.getHash()
@@ -113,7 +116,7 @@ class RangeParameterSource(ForwardingParameterSource):
 		return (result_redo, result_disable, result_sizeChange or (oldPosEnd != self._posEnd))
 
 	def show(self):
-		result = ForwardingParameterSource.show()
+		result = ForwardingParameterSource.show(self)
 		result[0] += ' range = (%s, %s)' % (self._posStart, self._posEnd)
 		return result
 
@@ -137,6 +140,9 @@ class MultiParameterSource(ParameterSource):
 		self._psourceList = strip_null_sources(psources)
 		self._psourceMaxList = lmap(lambda p: p.getMaxParameters(), self._psourceList)
 		self._maxParameters = self._initMaxParameters()
+
+	def getUsedSources(self):
+		return [self] + lchain(imap(lambda ps: ps.getUsedSources(), self._psourceList))
 
 	def canFinish(self):
 		return all(imap(lambda p: p.canFinish(), self._psourceList))
@@ -287,7 +293,9 @@ class RepeatParameterSource(MultiParameterSource):
 		self._psource.fillParameterInfo(pNum % self.maxN, result)
 
 	def show(self):
-		return ParameterSource.show(self) + lmap(lambda x: '\t' + x, self._psource.show())
+		result = ParameterSource.show(self)
+		result[0] += ' count = %d' % self._times
+		return result + lmap(lambda x: '\t' + x, self._psource.show())
 
 	def getHash(self):
 		return md5_hex(self._psource.getHash() + str(self._times))

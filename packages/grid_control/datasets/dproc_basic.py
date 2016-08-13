@@ -13,21 +13,8 @@
 # | limitations under the License.
 
 from grid_control.datasets.dproc_base import DataProcessor
-from grid_control.datasets.provider_base import DataProvider, DatasetError
-from grid_control.utils.data_structures import makeEnum
-from python_compat import imap, itemgetter, lfilter, md5_hex, set
-
-class EntriesConsistencyDataProcessor(DataProcessor):
-	alias = ['consistency']
-
-	def processBlock(self, block):
-		# Check entry consistency
-		events = sum(imap(lambda x: x[DataProvider.NEntries], block[DataProvider.FileList]))
-		if block.setdefault(DataProvider.NEntries, events) != events:
-			self._log.warning('Inconsistency in block %s: Number of events doesn\'t match (b:%d != f:%d)',
-				DataProvider.bName(block), block[DataProvider.NEntries], events)
-		return block
-
+from grid_control.datasets.provider_base import DataProvider
+from python_compat import itemgetter, lfilter
 
 class URLDataProcessor(DataProcessor):
 	alias = ['ignore', 'FileDataProcessor']
@@ -49,11 +36,9 @@ class URLDataProcessor(DataProcessor):
 				if ':' not in pat.lstrip(':'):
 					yield pat
 				else:
-					for dfac in DataProvider.bind(':%s' % pat.lstrip(':'), config = config):
-						dproc = dfac.getBoundInstance()
-						for block in dproc.getBlocksNormed():
-							for fi in block[DataProvider.FileList]:
-								yield fi[DataProvider.URL]
+					for block in DataProvider.getBlocksFromExpr(config, ':%s' % pat.lstrip(':')):
+						for fi in block[DataProvider.FileList]:
+							yield fi[DataProvider.URL]
 		return str.join('\n', getFilterEntries())
 
 	def enabled(self):
@@ -157,65 +142,4 @@ class LocationDataProcessor(DataProcessor):
 				elif not len(sites):
 					self._log.warning('Block %s is not available at any selected site!', DataProvider.bName(block))
 			block[DataProvider.Locations] = sites
-		return block
-
-
-# Enum to specify how to react to multiple occurences of something
-DatasetUniqueMode = makeEnum(['warn', 'abort', 'skip', 'ignore', 'record'])
-
-class UniqueDataProcessor(DataProcessor):
-	alias = ['unique']
-
-	def __init__(self, config):
-		DataProcessor.__init__(self, config)
-		self._checkURL = config.getEnum('dataset check unique url', DatasetUniqueMode, DatasetUniqueMode.abort,
-			onChange = DataProcessor.triggerDataResync)
-		self._checkBlock = config.getEnum('dataset check unique block', DatasetUniqueMode, DatasetUniqueMode.abort,
-			onChange = DataProcessor.triggerDataResync)
-
-	def enabled(self):
-		return (self._checkURL == DatasetUniqueMode.ignore) and (self._checkBlock == DatasetUniqueMode.ignore)
-
-	def process(self, blockIter):
-		self._recordedURL = set()
-		self._recordedBlock = set()
-		return DataProcessor.process(self, blockIter)
-
-	def processBlock(self, block):
-		# Check uniqueness of URLs
-		recordedBlockURL = []
-		if self._checkURL != DatasetUniqueMode.ignore:
-			def processFI(fiList):
-				for fi in fiList:
-					urlHash = md5_hex(repr((fi[DataProvider.URL], fi[DataProvider.NEntries], fi.get(DataProvider.Metadata))))
-					if urlHash in self._recordedURL:
-						msg = 'Multiple occurences of URL: %r!' % fi[DataProvider.URL]
-						msg += ' (This check can be configured with %r)' % 'dataset check unique url'
-						if self._checkURL == DatasetUniqueMode.warn:
-							self._log.warning(msg)
-						elif self._checkURL == DatasetUniqueMode.abort:
-							raise DatasetError(msg)
-						elif self._checkURL == DatasetUniqueMode.skip:
-							continue
-					self._recordedURL.add(urlHash)
-					recordedBlockURL.append(urlHash)
-					yield fi
-			block[DataProvider.FileList] = list(processFI(block[DataProvider.FileList]))
-			recordedBlockURL.sort()
-
-		# Check uniqueness of blocks
-		if self._checkBlock != DatasetUniqueMode.ignore:
-			blockHash = md5_hex(repr((block.get(DataProvider.Dataset), block[DataProvider.BlockName],
-				recordedBlockURL, block[DataProvider.NEntries],
-				block[DataProvider.Locations], block.get(DataProvider.Metadata))))
-			if blockHash in self._recordedBlock:
-				msg = 'Multiple occurences of block: "%s"!' % DataProvider.bName(block)
-				msg += ' (This check can be configured with %r)' % 'dataset check unique block'
-				if self._checkBlock == DatasetUniqueMode.warn:
-					self._log.warning(msg)
-				elif self._checkBlock == DatasetUniqueMode.abort:
-					raise DatasetError(msg)
-				elif self._checkBlock == DatasetUniqueMode.skip:
-					return None
-			self._recordedBlock.add(blockHash)
 		return block

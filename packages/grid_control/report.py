@@ -12,7 +12,7 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-import sys
+import sys, logging
 from grid_control import utils
 from grid_control.job_db import Job
 from hpfwk import AbstractError, Plugin
@@ -25,6 +25,7 @@ class Report(Plugin):
 		(self._jobDB, self._task, self._jobs) = (jobDB, task, jobs)
 		# FIXME: really store task for later access? maybe just use task during init run?
 		self._header = self._getHeader(45)
+		self._log = logging.getLogger('report')
 
 	def _getHeader(self, maxLen = 45):
 		if not self._task or not self._task.taskConfigName:
@@ -71,6 +72,7 @@ class BasicReport(Report):
 		if newline:
 			content += '\n'
 		sys.stdout.write(content)
+		sys.stdout.flush()
 
 	def _printHeader(self, message, level = -1, width = 65):
 		self._write_line('-' * width, width)
@@ -95,22 +97,30 @@ class BasicReport(Report):
 		njobs_assigned = makeSum(Job.SUBMITTED, Job.WAITING, Job.READY, Job.QUEUED, Job.RUNNING)
 		jobov_fail = makePer(Job.ABORTED, Job.CANCELLED, Job.FAILED)
 		self._write_line('Jobs assigned to WMS:%9d        Failing jobs:%8d  %3d%%' % tuple([njobs_assigned] + jobov_fail))
-		self._write_line('\nDetailed Status Information:      ', newline = False)
+		self._write_line('')
 		ignored = len(self._jobDB) - sum(summary.values())
+		ignored_str = ''
 		if ignored:
-			utils.vprint('(Jobs    IGNORED:%8d  %3d%%)' % (ignored, ignored / len(self._jobDB) * 100.0), -1)
-		else:
-			utils.vprint(' ' * 31, -1)
-		for idx, sid_sname in enumerate(izip(Job.enumValues, Job.enumNames)):
-			utils.vprint('Jobs  %9s:%8d  %3d%%     ' % tuple([sid_sname[1]] + makePer(sid_sname[0])), -1, newline = idx % 2)
-		if len(Job.enumValues) % 2:
-			utils.vprint('', -1)
-		utils.vprint('-' * 65, -1)
+			ignored_str = '(Jobs    IGNORED:%8d  %3d%%)' % (ignored, ignored / len(self._jobDB) * 100.0)
+		self._write_line('Detailed Status Information:      ' + ignored_str)
+		tmp = []
+		for (sid, sname) in izip(Job.enumValues, Job.enumNames):
+			tmp.append('Jobs  %9s:%8d  %3d%%' % tuple([sname] + makePer(sid)))
+			if len(tmp) == 2:
+				self._write_line(str.join('     ', tmp))
+				tmp = []
+		if tmp:
+			self._write_line(tmp[0])
+		self._write_line('-' * 65)
 		return 0
 
 
 class LocationReport(Report):
 	alias = ['location']
+
+	def _add_details(self, reports, jobObj):
+		if jobObj.get('dest', 'N/A') != 'N/A':
+			reports.append({2: ' -> ' + jobObj.get('dest')})
 
 	def display(self):
 		reports = []
@@ -118,13 +128,6 @@ class LocationReport(Report):
 			jobObj = self._jobDB.getJob(jobNum)
 			if not jobObj or (jobObj.state == Job.INIT):
 				continue
-			reports.append({0: jobNum, 1: Job.enum2str(jobObj.state), 2: jobObj.wmsId})
-			if utils.verbosity() > 0:
-				history = jobObj.history.items()
-				history.reverse()
-				for at, dest in history:
-					if dest != 'N/A':
-						reports.append({1: at, 2: ' -> ' + dest})
-			elif jobObj.get('dest', 'N/A') != 'N/A':
-				reports.append({2: ' -> ' + jobObj.get('dest')})
+			reports.append({0: jobNum, 1: Job.enum2str(jobObj.state), 2: jobObj.gcID})
+			self._add_details(reports, jobObj)
 		utils.printTabular(lzip(irange(3), ['Job', 'Status / Attempt', 'Id / Destination']), reports, 'rcl')

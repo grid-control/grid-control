@@ -20,6 +20,7 @@ from grid_control.backends.backend_tools import ProcessCreatorViaStdin
 from grid_control.backends.broker_base import Broker
 from grid_control.backends.wms import BackendError, BasicWMS, WMS
 from grid_control.job_db import Job
+from grid_control.utils.activity import Activity
 from grid_control.utils.file_objects import SafeFile
 from grid_control.utils.process_base import LocalProcess
 from hpfwk import APIError
@@ -253,7 +254,7 @@ class GridWMS(BasicWMS):
 				submitArgs.extend(key_value)
 			submitArgs.append(jdl)
 
-			activity = utils.ActivityLog('submitting jobs')
+			activity = Activity('submitting job %d' % jobNum)
 			proc = LocalProcess(self._submitExec, '--nomsg', '--noint', '--logfile', '/dev/stderr', *submitArgs)
 
 			gcID = None
@@ -261,7 +262,7 @@ class GridWMS(BasicWMS):
 				gcID = line
 			retCode = proc.status(timeout = 0, terminate = True)
 
-			del activity
+			activity.finish()
 
 			if (retCode != 0) or (gcID is None):
 				if self.explainError(proc, retCode):
@@ -292,7 +293,7 @@ class GridWMS(BasicWMS):
 		jobNumMap = dict(ids)
 		jobs = self.writeWMSIds(ids)
 
-		activity = utils.ActivityLog('retrieving job outputs')
+		activity = Activity('retrieving %d job outputs' % len(ids))
 		proc = LocalProcess(self._outputExec, '--noint', '--logfile', '/dev/stderr', '-i', jobs, '--dir', tmpPath)
 
 		# yield output dirs
@@ -315,7 +316,7 @@ class GridWMS(BasicWMS):
 			else:
 				currentJobNum = jobNumMap.get(self._createId(line), currentJobNum)
 		retCode = proc.status(timeout = 0, terminate = True)
-		del activity
+		activity.finish()
 
 		if retCode != 0:
 			if 'Keyboard interrupt raised by user' in proc.stderr.read(timeout = 0):

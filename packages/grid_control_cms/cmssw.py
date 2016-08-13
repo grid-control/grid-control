@@ -20,7 +20,7 @@ from grid_control.datasets import DataSplitter, PartitionProcessor
 from grid_control.output_processor import DebugJobInfoProcessor
 from grid_control.tasks.task_data import DataTask
 from grid_control.tasks.task_utils import TaskExecutableWrapper
-from python_compat import imap, lfilter, lmap
+from python_compat import ifilter, imap, lmap, sorted
 
 class CMSSWDebugJobInfoProcessor(DebugJobInfoProcessor):
 	def __init__(self):
@@ -58,7 +58,7 @@ class LFNPartitionProcessor(PartitionProcessor):
 
 
 class CMSSWPartitionProcessor(PartitionProcessor.getClass('BasicPartitionProcessor')):
-	alias = ['cmssw']
+	alias = ['cmsswpart']
 
 	def _formatFileList(self, fl):
 		return str.join(', ', imap(lambda x: '"%s"' % x, fl))
@@ -70,13 +70,75 @@ class SCRAMTask(DataTask):
 	def __init__(self, config, name):
 		DataTask.__init__(self, config, name)
 
+		# SCRAM settings
+		scramArchDefault = noDefault
+		scramProject = config.getList('scram project', [])
+		if scramProject: # manual scram setup
+			if len(scramProject) != 2:
+				raise ConfigError('%r needs exactly 2 arguments: <PROJECT> <VERSION>' % 'scram project')
+			self._projectArea = None
+			self._projectAreaPattern = None
+			self._scramProject = scramProject[0]
+			self._scramProjectVersion = scramProject[1]
+			# ensure project area is not used
+			if 'project area' in config.getOptions():
+				raise ConfigError('Cannot specify both %r and %r' % ('scram project', 'project area'))
+
+		else: # scram setup used from project area
+			self._projectArea = config.getPath('project area')
+			self._projectAreaPattern = config.getList('area files', ['-.*', '-config', 'bin', 'lib', 'python', 'module',
+				'*/data', '*.xml', '*.sql', '*.db', '*.cf[if]', '*.py', '-*/.git', '-*/.svn', '-*/CVS', '-*/work.*'])
+			logging.getLogger('user').info('Project area found in: %s', self._projectArea)
+
+			# try to determine scram settings from environment settings
+			scramPath = os.path.join(self._projectArea, '.SCRAM')
+			try:
+				fp = open(os.path.join(scramPath, 'Environment'), 'r')
+				scramEnv = utils.DictFormat().parse(fp, keyParser = {None: str})
+			except Exception:
+				raise ConfigError('Project area file %s/Environment cannot be parsed!' % scramPath)
+
+			try:
+				self._scramProject = scramEnv['SCRAM_PROJECTNAME']
+				self._scramProjectVersion = scramEnv['SCRAM_PROJECTVERSION']
+			except:
+				raise ConfigError('Installed program in project area not recognized.')
+
+			for arch_dir in sorted(ifilter(lambda dn: os.path.isdir(os.path.join(scramPath, dn)), os.listdir(scramPath))):
+				scramArchDefault = arch_dir
+
+		self._scramVersion = config.get('scram version', 'scramv1')
+		self._scramArch = config.get('scram arch', scramArchDefault)
+
+		self._scramReqs = []
+		if config.getBool('scram arch requirements', True, onChange = None):
+			self._scramReqs.append((WMS.SOFTWARE, 'VO-cms-%s' % self._scramArch))
+		if config.getBool('scram project requirements', False, onChange = None):
+			self._scramReqs.append((WMS.SOFTWARE, 'VO-cms-%s' % self._scramProject))
+		if config.getBool('scram project version requirements', False, onChange = None):
+			self._scramReqs.append((WMS.SOFTWARE, 'VO-cms-%s' % self._scramProjectVersion))
+
+
+	# Get job requirements
+	def getRequirements(self, jobNum):
+		return DataTask.getRequirements(self, jobNum) + self._scramReqs
+
+
+	def getTaskConfig(self):
+		data = DataTask.getTaskConfig(self)
+		data['SCRAM_VERSION'] = self._scramVersion
+		data['SCRAM_ARCH'] = self._scramArch
+		data['SCRAM_PROJECTNAME'] = self._scramProject
+		data['SCRAM_PROJECTVERSION'] = self._scramProjectVersion
+		return data
+
 
 	def getDependencies(self):
 		return DataTask.getDependencies(self) + ['cmssw']
 
 
 class CMSSW(SCRAMTask):
-	configSections = DataTask.configSections + ['CMSSW']
+	configSections = SCRAMTask.configSections + ['CMSSW']
 
 	def __init__(self, config, name):
 		config.set('se input timeout', '0:30')
@@ -88,12 +150,20 @@ class CMSSW(SCRAMTask):
 		dash_config = config.changeView(viewClass = 'SimpleConfigView', setSections = ['dashboard'])
 		dash_config.set('application', 'cmsRun')
 		SCRAMTask.__init__(self, config, name)
+		if self._scramProject != 'CMSSW':
+			raise ConfigError('Project area contains no CMSSW project')
+
+		self._oldReleaseTop = None
+		if self._projectArea:
+			try:
+				fp = open(os.path.join(self._projectArea, '.SCRAM', self._scramArch, 'Environment'), 'r')
+				scramEnv = utils.DictFormat().parse(fp, keyParser = {None: str})
+			except Exception:
+				raise ConfigError('Project area file .SCRAM/%s/Environment cannot be parsed!' % self._scramArch)
+			self._oldReleaseTop = scramEnv.get('RELEASETOP', None)
+
 		self.updateErrorDict(utils.pathShare('gc-run.cmssw.sh', pkg = 'grid_control_cms'))
 
-		# SCRAM settings
-		self._configureSCRAMSettings(config)
-
-		self._useReqs = config.getBool('software requirements', True, onChange = None)
 		self._projectAreaTarballSE = config.getBool(['se runtime', 'se project area'], True)
 		self._projectAreaTarball = config.getWorkPath('cmssw-project-area.tar.gz')
 
@@ -107,14 +177,14 @@ class CMSSW(SCRAMTask):
 		# Get cmssw config files and check their existance
 		# Check that for dataset jobs the necessary placeholders are in the config file
 		if self.dataSplitter is None:
-			self.eventsPerJob = config.get('events per job', '0')
+			self.eventsPerJob = config.get('events per job', '0') # this can be a variable like @USER_EVENTS@!
 		fragment = config.getPath('instrumentation fragment', utils.pathShare('fragmentForCMSSW.py', pkg = 'grid_control_cms'))
 		self.configFiles = self._processConfigFiles(config, list(self._getConfigFiles(config)), fragment,
 			autoPrepare = config.getBool('instrumentation', True),
 			mustPrepare = (self.dataSplitter is not None))
 
 		# Create project area tarball
-		if self.projectArea and not os.path.exists(self._projectAreaTarball):
+		if self._projectArea and not os.path.exists(self._projectAreaTarball):
 			config.setState(True, 'init', detail = 'sandbox')
 		# Information about search order for software environment
 		self.searchLoc = self._getCMSSWPaths(config)
@@ -123,62 +193,10 @@ class CMSSW(SCRAMTask):
 				if not utils.getUserBool('CMSSW tarball already exists! Do you want to regenerate it?', True):
 					return
 			# Generate CMSSW tarball
-			if self.projectArea:
-				utils.genTarball(self._projectAreaTarball, utils.matchFiles(self.projectArea, self.pattern))
+			if self._projectArea:
+				utils.genTarball(self._projectAreaTarball, utils.matchFiles(self._projectArea, self._projectAreaPattern))
 			if self._projectAreaTarballSE:
 				config.setState(True, 'init', detail = 'storage')
-
-
-	def _configureSCRAMSettings(self, config):
-		scramProject = config.getList('scram project', [])
-		if len(scramProject):
-			self.projectArea = config.getPath('project area', '')
-			if len(self.projectArea):
-				raise ConfigError('Cannot specify both SCRAM project and project area')
-			if len(scramProject) != 2:
-				raise ConfigError('SCRAM project needs exactly 2 arguments: PROJECT VERSION')
-		else:
-			self.projectArea = config.getPath('project area')
-
-		if len(self.projectArea):
-			self.pattern = config.getList('area files', ['-.*', '-config', 'bin', 'lib', 'python', 'module',
-				'*/data', '*.xml', '*.sql', '*.db', '*.cf[if]', '*.py', '-*/.git', '-*/.svn', '-*/CVS', '-*/work.*'])
-
-			if os.path.exists(self.projectArea):
-				utils.vprint('Project area found in: %s' % self.projectArea, -1)
-			else:
-				raise ConfigError('Specified config area %r does not exist!' % self.projectArea)
-
-			scramPath = os.path.join(self.projectArea, '.SCRAM')
-			# try to open it
-			try:
-				fp = open(os.path.join(scramPath, 'Environment'), 'r')
-				self.scramEnv = utils.DictFormat().parse(fp, keyParser = {None: str})
-			except Exception:
-				raise ConfigError('Project area file %s/.SCRAM/Environment cannot be parsed!' % self.projectArea)
-
-			for key in ['SCRAM_PROJECTNAME', 'SCRAM_PROJECTVERSION']:
-				if key not in self.scramEnv:
-					raise ConfigError('Installed program in project area not recognized.')
-
-			default_archs = lfilter(lambda x: os.path.isdir(os.path.join(scramPath, x)) and not x.startswith('.'), os.listdir(scramPath)) + [noDefault]
-			default_arch = default_archs[0]
-			self.scramArch = config.get('scram arch', default_arch)
-			try:
-				fp = open(os.path.join(scramPath, self.scramArch, 'Environment'), 'r')
-				self.scramEnv.update(utils.DictFormat().parse(fp, keyParser = {None: str}))
-			except Exception:
-				raise ConfigError('Project area file .SCRAM/%s/Environment cannot be parsed!' % self.scramArch)
-		else:
-			self.scramEnv = {
-				'SCRAM_PROJECTNAME': scramProject[0],
-				'SCRAM_PROJECTVERSION': scramProject[1]
-			}
-			self.scramArch = config.get('scram arch')
-
-		self.scramVersion = config.get('scram version', 'scramv1')
-		if self.scramEnv['SCRAM_PROJECTNAME'] != 'CMSSW':
-			raise ConfigError('Project area contains no CMSSW project')
 
 
 	def _getCMSSWPaths(self, config):
@@ -190,8 +208,8 @@ class CMSSW(SCRAMTask):
 				userPath = userPathLocal
 		if userPath:
 			result.append(('CMSSW_DIR_USER', userPath))
-		if self.scramEnv.get('RELEASETOP', None):
-			projPath = os.path.normpath('%s/../../../../' % self.scramEnv['RELEASETOP'])
+		if self._oldReleaseTop:
+			projPath = os.path.normpath('%s/../../../../' % self._oldReleaseTop)
 			result.append(('CMSSW_DIR_PRO', projPath))
 		log = logging.getLogger('user')
 		log.info('Local jobs will try to use the CMSSW software located here:')
@@ -295,27 +313,16 @@ class CMSSW(SCRAMTask):
 		return ['MAX_EVENTS']
 
 
-	# Called on job submission
-	def getSubmitInfo(self, jobNum):
-		result = DataTask.getSubmitInfo(self, jobNum)
-		result.update({'application': self.scramEnv['SCRAM_PROJECTVERSION'], 'exe': 'cmsRun'})
-		if self.dataSplitter is None:
-			result.update({'nevtJob': self.eventsPerJob})
-		return result
-
-
 	# Get environment variables for gc_config.sh
 	def getTaskConfig(self):
-		data = DataTask.getTaskConfig(self)
+		data = SCRAMTask.getTaskConfig(self)
 		data.update(dict(self.searchLoc))
-		data['CMSSW_OLD_RELEASETOP'] = self.scramEnv.get('RELEASETOP', None)
-		data['SCRAM_ARCH'] = self.scramArch
-		data['SCRAM_VERSION'] = self.scramVersion
-		data['SCRAM_PROJECTVERSION'] = self.scramEnv['SCRAM_PROJECTVERSION']
 		data['GZIP_OUT'] = utils.QM(self.gzipOut, 'yes', 'no')
 		data['SE_RUNTIME'] = utils.QM(self._projectAreaTarballSE, 'yes', 'no')
-		data['HAS_RUNTIME'] = utils.QM(len(self.projectArea), 'yes', 'no')
+		data['HAS_RUNTIME'] = utils.QM(self._projectArea, 'yes', 'no')
+		data['CMSSW_EXEC'] = 'cmsRun'
 		data['CMSSW_CONFIG'] = str.join(' ', imap(os.path.basename, self.configFiles))
+		data['CMSSW_OLD_RELEASETOP'] = self._oldReleaseTop
 		if self.prolog.isActive():
 			data['CMSSW_PROLOG_EXEC'] = self.prolog.getCommand()
 			data['CMSSW_PROLOG_SB_IN_FILES'] = str.join(' ', imap(lambda x: x.pathRel, self.prolog.getSBInFiles()))
@@ -327,28 +334,20 @@ class CMSSW(SCRAMTask):
 		return data
 
 
-	# Get job requirements
-	def getRequirements(self, jobNum):
-		reqs = DataTask.getRequirements(self, jobNum)
-		if self._useReqs:
-			reqs.append((WMS.SOFTWARE, 'VO-cms-%s' % self.scramArch))
-		return reqs
-
-
 	# Get files to be transfered via SE (description, source, target)
 	def getSEInFiles(self):
-		files = DataTask.getSEInFiles(self)
-		if len(self.projectArea) and self._projectAreaTarballSE:
+		files = SCRAMTask.getSEInFiles(self)
+		if self._projectArea and self._projectAreaTarballSE:
 			return files + [('CMSSW tarball', self._projectAreaTarball, self.taskID + '.tar.gz')]
 		return files
 
 
 	# Get files for input sandbox
 	def getSBInFiles(self):
-		files = DataTask.getSBInFiles(self) + self.prolog.getSBInFiles() + self.epilog.getSBInFiles()
+		files = SCRAMTask.getSBInFiles(self) + self.prolog.getSBInFiles() + self.epilog.getSBInFiles()
 		for cfgFile in self.configFiles:
 			files.append(utils.Result(pathAbs = cfgFile, pathRel = os.path.basename(cfgFile)))
-		if len(self.projectArea) and not self._projectAreaTarballSE:
+		if self._projectArea and not self._projectAreaTarballSE:
 			files.append(utils.Result(pathAbs = self._projectAreaTarball, pathRel = os.path.basename(self._projectAreaTarball)))
 		return files + [utils.Result(pathAbs = utils.pathShare('gc-run.cmssw.sh', pkg = 'grid_control_cms'), pathRel = 'gc-run.cmssw.sh')]
 
@@ -356,8 +355,8 @@ class CMSSW(SCRAMTask):
 	# Get files for output sandbox
 	def getSBOutFiles(self):
 		if not self.configFiles:
-			return DataTask.getSBOutFiles(self)
-		return DataTask.getSBOutFiles(self) + utils.QM(self.gzipOut, ['cmssw.log.gz'], []) + ['cmssw.dbs.tar.gz']
+			return SCRAMTask.getSBOutFiles(self)
+		return SCRAMTask.getSBOutFiles(self) + utils.QM(self.gzipOut, ['cmssw.log.gz'], []) + ['cmssw.dbs.tar.gz']
 
 
 	def getCommand(self):
@@ -365,11 +364,11 @@ class CMSSW(SCRAMTask):
 
 
 	def getJobArguments(self, jobNum):
-		return DataTask.getJobArguments(self, jobNum) + ' ' + self.arguments
+		return SCRAMTask.getJobArguments(self, jobNum) + ' ' + self.arguments
 
 
 	def getVarNames(self):
-		result = DataTask.getVarNames(self)
+		result = SCRAMTask.getVarNames(self)
 		if self.dataSplitter is None:
 			result.append('MAX_EVENTS')
 		return result
@@ -377,14 +376,14 @@ class CMSSW(SCRAMTask):
 
 	# Get job dependent environment variables
 	def getJobConfig(self, jobNum):
-		data = DataTask.getJobConfig(self, jobNum)
+		data = SCRAMTask.getJobConfig(self, jobNum)
 		if self.dataSplitter is None:
 			data['MAX_EVENTS'] = self.eventsPerJob
 		return data
 
 
 	def getDescription(self, jobNum): # (task name, job name, type)
-		result = DataTask.getDescription(self, jobNum)
+		result = SCRAMTask.getDescription(self, jobNum)
 		if not result.jobType:
 			result.jobType = 'analysis'
 		return result

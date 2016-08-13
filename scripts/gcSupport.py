@@ -23,9 +23,10 @@ from grid_control.config import createConfig
 from grid_control.job_db import Job, JobClass
 from grid_control.job_selector import ClassSelector, JobSelector
 from grid_control.output_processor import FileInfoProcessor, JobInfoProcessor, JobResult
+from grid_control.utils.activity import Activity
 from grid_control.utils.cmd_options import Options
 from hpfwk import Plugin
-from python_compat import ifilter, imap, tarfile
+from python_compat import ifilter, imap, lmap, sorted, tarfile
 
 def scriptOptions(parser, args = None, arg_keys = None):
 	parser.addBool(None, ' ', 'parseable', default = False, help = 'Output tabular data in parseable format')
@@ -34,7 +35,6 @@ def scriptOptions(parser, args = None, arg_keys = None):
 	parser.addAccu(None, 'v', 'verbose',   default = 0,     help = 'Increase verbosity')
 	(opts, args, config_dict) = parser.parse(args, arg_keys)
 	logging.getLogger().setLevel(logging.DEFAULT - opts.verbose)
-	utils.verbosity(opts.verbose)
 	if opts.parseable:
 		utils.printTabular.mode = 'parseable'
 	elif opts.pivot:
@@ -110,6 +110,38 @@ def prettySize(size):
 		else:
 			return str(round(size / float(lim / 2**10), 2)) + suf
 
-__all__ = ['ClassSelector', 'FileInfoProcessor', 'FileMutex', 'Job',
-	'JobClass', 'JobInfoProcessor', 'JobResult', 'JobSelector', 'Options', 'Plugin',
-	'getCMSSWInfo', 'getConfig', 'initGC', 'scriptOptions', 'utils']
+def getPluginList(pluginName):
+	aliasDict = {}
+	for entry in Plugin.getClass(pluginName).getClassList():
+		depth = entry.pop('depth', 0)
+		(alias, name) = entry.popitem()
+		aliasDict.setdefault(name, []).append((depth, alias))
+	aliasDict.pop(pluginName)
+
+	tableList = []
+	for name in aliasDict:
+		# sorted by length of name and depth
+		by_len_depth = sorted(aliasDict[name], key = lambda d_a: (-len(d_a[1]), d_a[0]))
+		# sorted by depth and name
+		by_depth_name = sorted(aliasDict[name], key = lambda d_a: (d_a[0], d_a[1]))
+		new_name = by_len_depth.pop()[1]
+		aliasList = lmap(lambda d_a: d_a[1], by_depth_name)
+		aliasList.remove(new_name)
+		entry = {'Name': new_name, 'Alias': str.join(', ', aliasList)}
+		if ('Multi' not in name) and ('Base' not in name):
+			tableList.append(entry)
+	return tableList
+
+def displayPluginList(clsList):
+	header = [('Name', 'Name')]
+	fmtString = 'l'
+	for entry in clsList:
+		if entry['Alias']:
+			header.append(('Alias', 'Alternate names'))
+			fmtString = 'rl'
+			break
+	utils.printTabular(header, sorted(clsList, key = lambda x: x['Name'].lower()), fmtString = fmtString)
+
+__all__ = ['Activity', 'ClassSelector', 'FileInfoProcessor', 'FileMutex', 'Job',
+	'JobClass', 'JobInfoProcessor', 'JobResult', 'JobSelector', 'Options', 'Plugin', 'displayPluginList',
+	'getCMSSWInfo', 'getConfig', 'getPluginList', 'initGC', 'scriptOptions', 'utils']

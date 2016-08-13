@@ -21,10 +21,12 @@ class Settings(object):
 		self._s = section
 
 	def section(self, section, name = '', **tags):
-		tags_list = []
+		section_parts = [section]
+		if name:
+			section_parts.append(name)
 		for key in tags:
-			tags_list.append('%s:%s' % (key, tags[key]))
-		return Settings(('%s %s %s' % (section, name, str.join(' ', tags_list))).strip())
+			section_parts.append('%s:%s' % (key, tags[key]))
+		return Settings(str.join(' ', section_parts))
 
 	def set(self, name, value, override = False, append = False, force = False):
 		if isinstance(value, list):
@@ -44,7 +46,9 @@ class Settings(object):
 
 	def __str__(self):
 		result = []
-		for section in Settings._config:
+		sections = list(Settings._config.keys()) # manual sort for older python versions
+		sections.sort()
+		for section in sections:
 			result.append('[%s]' % section)
 			for entry in Settings._config[section]:
 				result.append('%s %s= %s' % entry)

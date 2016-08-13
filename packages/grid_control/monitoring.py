@@ -79,7 +79,7 @@ class Monitoring(EventHandler):
 		return []
 
 	def getTaskConfig(self):
-		return {}
+		return {'GC_MONITORING': str.join(' ', imap(os.path.basename, self.getScript()))}
 
 	def getFiles(self):
 		return []
@@ -90,7 +90,7 @@ class MultiMonitor(MultiEventHandler, Monitoring):
 		return lchain(imap(lambda h: h.getScript(), self._handlers))
 
 	def getTaskConfig(self):
-		tmp = {'GC_MONITORING': str.join(' ', imap(os.path.basename, self.getScript()))}
+		tmp = Monitoring.getTaskConfig(self)
 		return utils.mergeDicts(lmap(lambda m: m.getTaskConfig(), self._handlers) + [tmp])
 
 	def getFiles(self):
@@ -116,8 +116,6 @@ class ScriptMonitoring(Monitoring):
 	def _scriptThread(self, script, jobNum = None, jobObj = None, allDict = None):
 		try:
 			tmp = {}
-			if jobNum is not None:
-				tmp.update(self._task.getSubmitInfo(jobNum))
 			if jobObj is not None:
 				for key, value in jobObj.get_dict().items():
 					tmp[key.upper()] = value
@@ -125,7 +123,6 @@ class ScriptMonitoring(Monitoring):
 			tmp.update(self._task.getTaskConfig())
 			if jobNum is not None:
 				tmp.update(self._task.getJobConfig(jobNum))
-				tmp.update(self._task.getSubmitInfo(jobNum))
 			tmp.update(allDict or {})
 			for key, value in tmp.items():
 				if not key.startswith('GC_'):

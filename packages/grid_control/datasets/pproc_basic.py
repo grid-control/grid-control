@@ -73,6 +73,8 @@ class LocationPartitionProcessor(PartitionProcessor):
 				locations = self._preference
 			elif any(imap(lambda x: x in self._preference, locations)): # preferred location available
 				locations = lfilter(lambda x: x in self._preference, locations)
+		if (splitInfo.get(DataSplitter.Locations) is None) and not locations:
+			return
 		if self._reqs and (locations is not None):
 			result[ParameterInfo.REQS].append((WMS.STORAGE, locations))
 		if self._disable:
@@ -136,12 +138,12 @@ class RequirementsPartitionProcessor(PartitionProcessor):
 
 	def __init__(self, config):
 		PartitionProcessor.__init__(self, config)
-		self._wtfactor = config.getFloat('partition walltime factor', -1, onChange = None)
-		self._wtoffset = config.getFloat('partition walltime offset', 0, onChange = None)
-		self._ctfactor = config.getFloat('partition cputime factor', -1, onChange = None)
-		self._ctoffset = config.getFloat('partition cputime offset', 0, onChange = None)
-		self._memfactor = config.getFloat('partition memory factor', -1, onChange = None)
-		self._memoffset = config.getFloat('partition memory offset', 0, onChange = None)
+		self._wtfactor = config.getFloat('partition walltime factor', -1., onChange = None)
+		self._wtoffset = config.getFloat('partition walltime offset', 0., onChange = None)
+		self._ctfactor = config.getFloat('partition cputime factor', -1., onChange = None)
+		self._ctoffset = config.getFloat('partition cputime offset', 0., onChange = None)
+		self._memfactor = config.getFloat('partition memory factor', -1., onChange = None)
+		self._memoffset = config.getFloat('partition memory offset', 0., onChange = None)
 
 	def enabled(self):
 		return any(imap(lambda x: x > 0, [self._wtfactor, self._ctfactor, self._memfactor,

@@ -18,8 +18,10 @@ from grid_control import utils
 from grid_control.config import createConfig
 from grid_control.gc_exceptions import gc_excepthook
 from grid_control.logging_setup import logging_setup
+from grid_control.utils.activity import Activity
 from grid_control.utils.cmd_options import Options
-from hpfwk import ExceptionFormatter, Plugin, handle_debug_interrupt
+from grid_control.utils.file_objects import SafeFile
+from hpfwk import ExceptionFormatter, Plugin, handle_debug_interrupt, init_hpf_plugins
 
 # grid-control command line parser
 def gc_cmd_line_parser(cmd_line_args):
@@ -53,8 +55,7 @@ def gc_cmd_line_parser(cmd_line_args):
 	opts.continuous = opts.continuous or None # either True or None
 	# Display help
 	if opts.help:
-		sys.stderr.write('%s\n\n%s\n' % (parser.usage(), open(utils.pathShare('help.txt'), 'r').read()))
-		sys.exit(os.EX_USAGE)
+		utils.exitWithUsage(parser.usage(), open(utils.pathShare('help.txt'), 'r').read(), show_help = False)
 	# Require single config file argument
 	if len(args) == 0:
 		utils.exitWithUsage(parser.usage(), 'Config file not specified!')
@@ -110,14 +111,14 @@ class OptsConfigFiller(Plugin.getClass('ConfigFiller')):
 		Plugin.createInstance('StringConfigFiller', opts.override).fill(container)
 
 # create config instance
-def gc_create_config(cmd_line_args):
+def gc_create_config(cmd_line_args, **kwargs):
 	(_, args) = gc_cmd_line_parser(cmd_line_args)
-	return createConfig(configFile = args[0], additional = [OptsConfigFiller(cmd_line_args)])
+	return createConfig(configFile = args[0], additional = [OptsConfigFiller(cmd_line_args)], **kwargs)
 
 # set up signal handler for interrupts
 def handle_abort_interrupt(sig, frame):
 	utils.abort(True)
-	handle_abort_interrupt.log = utils.ActivityLog('Quitting grid-control! (This can take a few seconds...)')
+	handle_abort_interrupt.log = Activity('Quitting grid-control! (This can take a few seconds...)', parent = 'root')
 	signal.signal(signal.SIGINT, signal.SIG_DFL)
 
 # create workflow from config and do initial processing steps
@@ -134,6 +135,8 @@ def gc_create_workflow(config):
 		if global_config.getChoiceYesNo('workdir create', True,
 				interactive_msg = 'Do you want to create the working directory %s?' % global_config.getWorkPath()):
 			utils.ensureDirExists(global_config.getWorkPath(), 'work directory')
+	for package_paths in global_config.getPaths('package paths', []):
+		init_hpf_plugins(package_paths)
 
 	# Query config settings before config is frozen
 	help_cfg = global_config.getState('display', detail = 'config')
@@ -163,28 +166,28 @@ def gc_create_workflow(config):
 
 	return workflow
 
-def run():
+def run(args = None, intro = True):
 	# set up signal handler for interrupts and debug session requests
 	signal.signal(signal.SIGINT, handle_abort_interrupt)
 	signal.signal(signal.SIGURG, handle_debug_interrupt)
 
 	# display the 'grid-control' logo and version
-	sys.stdout.write(open(utils.pathShare('logo.txt'), 'r').read())
-	sys.stdout.write('Revision: %s\n' % utils.getVersion())
+	if intro and not os.environ.get('GC_DISABLE_INTRO'):
+		sys.stdout.write(SafeFile(utils.pathShare('logo.txt'), 'r').read())
+		sys.stdout.write('Revision: %s\n' % utils.getVersion())
 	pyver = (sys.version_info[0], sys.version_info[1])
 	if pyver < (2, 3):
 		utils.deprecated('This python version (%d.%d) is not supported anymore!' % pyver)
+	Activity.root = Activity('Running grid-control', name = 'root') # top level activity instance
 
 	# main try... except block to catch exceptions and show error message
 	try:
-		config = gc_create_config(sys.argv[1:])
+		config = gc_create_config(args or sys.argv[1:])
 		workflow = gc_create_workflow(config)
-		sys.exit(workflow.run())
-	except SystemExit:
-		pass
+		try:
+			sys.exit(workflow.run())
+		finally:
+			sys.stdout.write('\n')
 	except Exception: # coverage overrides sys.excepthook
 		gc_excepthook(*sys.exc_info())
 		sys.exit(os.EX_SOFTWARE)
-
-if __name__ == '__main__':
-	run()

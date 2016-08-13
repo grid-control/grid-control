@@ -56,19 +56,16 @@ class BasicParameterFactory(ParameterFactory):
 
 		# Random number variables
 		jobs_config = config.changeView(addSections = ['jobs'])
-		for name in jobs_config.getList('random variables', ['JOB_RANDOM'], onChange = None):
-			self._constSources.append(ParameterSource.createInstance('RNGParameterSource', name))
+		self._randomVariables = jobs_config.getList('random variables', ['JOB_RANDOM'], onChange = None)
 		nseeds = jobs_config.getInt('nseeds', 10)
 		newSeeds = lmap(lambda x: str(random.randint(0, 10000000)), irange(nseeds))
-		for (idx, seed) in enumerate(jobs_config.getList('seeds', newSeeds, persistent = True)):
-			ps = ParameterSource.createInstance('CounterParameterSource', 'SEED_%d' % idx, int(seed))
-			self._constSources.append(ps)
+		self._randomSeeds = jobs_config.getList('seeds', newSeeds, persistent = True)
 
 		# Get constants from [constants <tags...>]
 		constants_config = config.changeView(viewClass = 'TaggedConfigView',
 			setClasses = None, setSections = ['constants'], setNames = None)
 		constants_pconfig = ParameterConfig(constants_config)
-		for cName in ifilter(lambda o: not o.endswith(' lookup'), constants_config.getOptions()):
+		for cName in ifilter(lambda opt: ' ' not in opt, constants_config.getOptions()):
 			constants_config.set('%s type' % cName, 'verbatim', '?=')
 			self._registerPSource(constants_pconfig, cName.upper())
 
@@ -111,16 +108,20 @@ class BasicParameterFactory(ParameterFactory):
 
 
 	def _useAvailableDataSource(self, source):
-		DataParameterSource = Plugin.getClass('DataParameterSource')
-		if DataParameterSource.datasetsAvailable and not DataParameterSource.datasetsUsed:
-			if source is not None:
-				return ParameterSource.createInstance('CrossParameterSource', DataParameterSource.create(), source)
-			return DataParameterSource.create()
+		usedSources = source.getUsedSources()
+		for dataSource in Plugin.getClass('DataParameterSource').datasetsAvailable.values():
+			if dataSource not in usedSources:
+				source = ParameterSource.createInstance('CrossParameterSource', dataSource, source)
 		return source
 
 
 	def getSource(self):
-		source_list = self._constSources + [self._pfactory.getSource()] + self._lookupSources
+		source_list = []
+		for name in self._randomVariables:
+			source_list.append(ParameterSource.createInstance('RNGParameterSource', name))
+		for (idx, seed) in enumerate(self._randomSeeds):
+			source_list.append(ParameterSource.createInstance('CounterParameterSource', 'SEED_%d' % idx, int(seed)))
+		source_list += self._constSources + [self._pfactory.getSource()] + self._lookupSources
 		source = ParameterSource.createInstance('ZipLongParameterSource', *source_list)
 		for (PSourceClass, args) in self._nestedSources:
 			source = PSourceClass(source, *args)

@@ -38,6 +38,8 @@ class InternalParameterSource(ParameterSource):
 
 
 class RequirementParameterSource(ParameterSource):
+	alias = ['req']
+
 	def fillParameterKeys(self, result):
 		for key in ['WALLTIME', 'CPUTIME', 'MEMORY']:
 			if key in result:
@@ -189,7 +191,7 @@ class FormatterParameterSource(SingleParameterSource):
 		return md5_hex(str(self._key) + str([self._fmt, self._source, self._default]))
 
 	def show(self):
-		return ['%s: var = %s, fmt = %s, source = %s, default = %s' %
+		return ['%s: var = %s, fmt = %r, source = %s, default = %r' %
 			(self.__class__.__name__, self._key, self._fmt, self._source, self._default)]
 
 	def fillParameterInfo(self, pNum, result):
@@ -211,7 +213,7 @@ class TransformParameterSource(SingleParameterSource):
 		return md5_hex(str(self._key) + str([self._fmt, self._default]))
 
 	def show(self):
-		return ['%s: var = %s, fmt = %s, default = %s' %
+		return ['%s: var = %s, expr = %r, default = %r' %
 			(self.__class__.__name__, self._key, self._fmt, self._default)]
 
 	def fillParameterInfo(self, pNum, result):

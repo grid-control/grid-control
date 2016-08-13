@@ -39,11 +39,11 @@ class CMSSW_Advanced(CMSSW):
 		self._nmCfg = config.getLookup('nickname config', {}, defaultMatcher = 'regex',
 			parser = lambda x: lmap(str.strip, x.split(',')), strfun = lambda x: str.join(',', x))
 		if not self._nmCfg.empty():
-			if 'config file' in config.getOptions():
-				raise ConfigError("Please use 'nickname config' instead of 'config file'")
 			allConfigFiles = sorted(set(utils.flatten(self._nmCfg.get_values())))
 			config.set('config file', str.join('\n', allConfigFiles))
 			head.append((1, 'Config file'))
+		elif config.get('config file', ''):
+			raise ConfigError("Please use 'nickname config' instead of 'config file'")
 
 		# Mapping between nickname and constants - only display - work is handled by the 'normal' parameter factory
 		nmCName = config.getList('nickname constants', [], onChange = None)
@@ -55,10 +55,9 @@ class CMSSW_Advanced(CMSSW):
 			head.append((cName, cName))
 
 		# Mapping between nickname and lumi filter - only display - work is handled by the 'normal' lumi filter
-		if ('lumi filter' in config.getOptions()) and ('nickname lumi filter' in config.getOptions()):
-			raise ConfigError('Please use "lumi filter" exclusively')
 		config.set('lumi filter matcher', 'regex')
-		config.set('lumi filter', strDictLong(config.getDict('nickname lumi filter', {}, onChange = None)))
+		if 'nickname lumi filter' in config.getOptions():
+			config.set('lumi filter', strDictLong(config.getDict('nickname lumi filter', {}, onChange = None)))
 		self._nmLumi = config.getLookup('lumi filter', {}, parser = parseLumiFilter, strfun = strLumi, onChange = None)
 		if not self._nmLumi.empty():
 			head.append((2, 'Lumi filter'))

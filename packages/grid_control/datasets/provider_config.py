@@ -50,6 +50,18 @@ class ConfigDataProvider(DataProvider):
 		return fi
 
 
+	def _createBlockInfo(self, ds_config, datasetExpr, datasetNick, datasetID):
+		datasetNameParts = datasetExpr.split('#', 1)
+		if len(datasetNameParts) == 1:
+			datasetNameParts.append('0')
+		return {
+			DataProvider.Nickname: ds_config.get('nickname', datasetNick or '', onChange = None),
+			DataProvider.DatasetID: ds_config.getInt('id', datasetID, onChange = None),
+			DataProvider.Dataset: datasetNameParts[0],
+			DataProvider.BlockName: datasetNameParts[1],
+		}
+
+
 	def _readBlockFromConfig(self, ds_config, datasetExpr, datasetNick, datasetID):
 		metadata_keys = parseJSON(ds_config.get('metadata', '[]', onChange = None))
 		common_metadata = parseJSON(ds_config.get('metadata common', '[]', onChange = None))
@@ -69,13 +81,8 @@ class ConfigDataProvider(DataProvider):
 		if not file_list:
 			raise DatasetError('There are no dataset files specified for dataset %r' % datasetExpr)
 
-		result = {
-			DataProvider.Nickname: ds_config.get('nickname', datasetNick, onChange = None),
-			DataProvider.DatasetID: ds_config.getInt('id', datasetID, onChange = None),
-			DataProvider.Dataset: datasetExpr,
-			DataProvider.BlockName: '0',
-			DataProvider.FileList: sorted(file_list, key = lambda fi: fi[DataProvider.URL]),
-		}
+		result = self._createBlockInfo(ds_config, datasetExpr, datasetNick, datasetID)
+		result[DataProvider.FileList] = sorted(file_list, key = lambda fi: fi[DataProvider.URL])
 		if metadata_keys:
 			result[DataProvider.Metadata] = metadata_keys
 		if has_events:

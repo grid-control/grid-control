@@ -85,13 +85,6 @@ class ConfigEntry(object):
 			result += line + '\n'
 		return result.rstrip()
 
-	def _processConcat(cls, entry, current_result, a, b): # concat entries a and b
-		if not current_result: # Use value if currently nothing is set
-			return a
-		else: # Prepending value to current value
-			return ConfigEntry(entry.section, entry.option, a.value + '\n' + b.value, '=', '<processed>')
-	_processConcat = classmethod(_processConcat)
-
 	def _applyModifiers(cls, entry, modifierList):
 		def mkNew(base, value):
 			return ConfigEntry(base.section, base.option, value, '=', '<processed>')

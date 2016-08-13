@@ -13,7 +13,7 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-import os, sys, random
+import os, sys, random, logging
 from gcSupport import Options, getConfig, scriptOptions, utils
 from grid_control.datasets import DataSplitter
 from grid_control.parameters import ParameterAdapter, ParameterInfo, ParameterMetadata, ParameterSource
@@ -43,6 +43,8 @@ options = scriptOptions(parser)
 if len(options.args) != 1:
 	utils.exitWithUsage(parser.usage())
 
+log = logging.getLogger('user')
+
 # Create dataset parameter source
 class DummySplitter:
 	def getMaxJobs(self):
@@ -71,29 +73,29 @@ class DataSplitProcessorTest:
 
 def force_intervention():
 	DataParameterSource = ParameterSource.getClass('DataParameterSource')
-	for dp in DataParameterSource.datasetSources:
+	for dp in DataParameterSource.datasetsAvailable.values():
 		dp.intervention = (set([1]), set([0]), True)
 
 def process_intervention(opts, psource):
-	utils.vprint('')
+	log.info('')
 	tmp = psource.getJobIntervention()
 	if tmp:
 		if opts.displaymode == 'parseable':
-			utils.vprint('R: %s' % str.join(',', imap(str, tmp[0])))
-			utils.vprint('D: %s' % str.join(',', imap(str, tmp[1])))
+			log.info('R: %s', str.join(',', imap(str, tmp[0])))
+			log.info('D: %s', str.join(',', imap(str, tmp[1])))
 		else:
-			utils.vprint('   Redo: %r' % tmp[0])
-			utils.vprint('Disable: %r' % tmp[1])
+			log.info('   Redo: %s', repr(tmp[0]))
+			log.info('Disable: %s', repr(tmp[1]))
 	else:
 		if opts.displaymode == 'parseable':
-			utils.vprint('NOINT')
+			log.info('NOINT')
 		else:
-			utils.vprint('No intervention')
+			log.info('No intervention')
 
 def save_parameters(psource, fn):
-	utils.vprint('')
+	log.info('')
 	ParameterSource.getClass('GCDumpParameterSource').write(fn, psource)
-	utils.vprint('Parameter information saved to ./%s' % fn)
+	log.info('Parameter information saved to ./%s', fn)
 
 def setup_config(opts, args):
 	# Set config based on settings from config file or command line
@@ -106,24 +108,24 @@ def setup_config(opts, args):
 	config.changeView(setSections = ['jobs']).set('nseeds', '1', '?=')
 	configParameters = config.changeView(setSections = ['parameters'])
 	if opts.parameter:
-		utils.vprint('Provided options:')
+		log.info('Provided options:')
 		for p in opts.parameter:
 			k, v = p.split('=', 1)
 			configParameters.set(k.strip(), v.strip().replace('\\n', '\n'), '=')
-			utils.vprint('\t%s: %s' % (k.strip(), v.strip()))
-		utils.vprint('')
+			log.info('\t%s: %s', k.strip(), v.strip())
+		log.info('')
 
 	if configFile is None:
 		configParameters.set('parameters', str.join(' ', args).replace('\\n', '\n'))
 		if opts.dataset:
 			configParameters.set('default lookup', 'DATASETNICK')
-		if utils.verbosity() > 2:
+		if opts.verbose > 2:
 			config.changeView(setSections = None).write(sys.stdout)
 	return config
 
 def setup_dataset(config, dataset):
 	if dataset.lower() == 'true':
-		utils.vprint('Registering dummy data provider data')
+		log.info('Registering dummy data provider data')
 		dataSplitter = DummySplitter()
 	else:
 		dataSplitter = DataSplitter.loadPartitionsForScript(dataset)
@@ -164,16 +166,16 @@ def get_parameters(opts, psource):
 					needGCParam = True
 				result.append(info)
 		if opts.parseable:
-			utils.vprint('Count,%d,%d' % (countActive, psource.getMaxJobs()))
+			log.info('Count,%d,%d', countActive, psource.getMaxJobs())
 		else:
-			utils.vprint('Number of parameter points: %d' % psource.getMaxJobs())
+			log.info('Number of parameter points: %d', psource.getMaxJobs())
 			if countActive != psource.getMaxJobs():
-				utils.vprint('Number of active parameter points: %d' % countActive)
+				log.info('Number of active parameter points: %d', countActive)
 	else:
 		job = 123
 		if opts.job is not None:
 			job = int(opts.job)
-		utils.vprint('Unbounded parameter space found - showing parameters for job %d' % job, -1)
+		log.info('Unbounded parameter space found - showing parameters for job %d', job)
 		result.append(psource.getJobInfo(job))
 	return (result, needGCParam)
 
@@ -223,7 +225,7 @@ def list_parameters(opts, psource):
 	head.extend(sorted(izip(stored, stored)))
 	if opts.untracked:
 		head.extend(sorted(imap(lambda n: (n, '(%s)' % n), ifilter(lambda n: n not in ['GC_PARAM', 'GC_JOB_ID'], untracked))))
-	utils.vprint('')
+	log.info('')
 	utils.printTabular(head, result)
 
 def main(opts, args):

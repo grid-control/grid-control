@@ -18,46 +18,8 @@ from grid_control.job_db import Job, JobClass
 from grid_control.report import Report
 from grid_control.utils.parsing import parseStr
 from grid_control_gui.ansi import Console
+from grid_control_gui.report_colorbar import JobProgressBar
 from python_compat import ifilter, imap, irange, lfilter, lmap, set, sorted
-
-class JobProgressBar(object):
-	def __init__(self, total = 100, width = 16, jobsOnFinish = False):
-		(self._total, self._width, self._jobsOnFinish) = (total, width, jobsOnFinish)
-		self.update()
-
-	def update(self, success = 0, queued = 0, running = 0, failed = 0):
-		# Compute variables
-		complete = self._width - 31
-		blocks_ok   = int(round(success / float(self._total) * complete))
-		blocks_proc = int(round(queued / float(self._total) * complete))
-		blocks_run  = int(round(running / float(self._total) * complete))
-		blocks_fail = min(complete - blocks_ok - blocks_proc - blocks_run,
-			int(round(failed / float(self._total) * complete)))
-		self._bar  = str(Console.fmt('=' * blocks_ok, [Console.COLOR_GREEN]))
-		self._bar += str(Console.fmt('=' * blocks_run, [Console.COLOR_BLUE]))
-		self._bar += str(Console.fmt('=' * blocks_proc, [Console.COLOR_WHITE]))
-		self._bar += ' ' * (complete - blocks_ok - blocks_proc - blocks_run - blocks_fail)
-		self._bar += str(Console.fmt('=' * blocks_fail, [Console.COLOR_RED]))
-		self._bar = '[%s] ' % self._bar
-		if success == self._total and self._jobsOnFinish:
-			self._bar += '(%s |%s)' % (Console.fmt('%5d' % self._total, [Console.COLOR_GREEN]),
-				Console.fmt('finished'.center(14), [Console.COLOR_GREEN]))
-		elif success == self._total:
-			self._bar += '(%s)' % (Console.fmt('finished'.center(21), [Console.COLOR_GREEN]))
-		else:
-			fmt = lambda x: str(x).rjust(5) # int(math.log(self._total) / math.log(10)) + 1)
-			self._bar += '(%s | %s | %s | %s)' % (
-				Console.fmt(fmt(success), [Console.COLOR_GREEN]),
-				Console.fmt(fmt(running), [Console.COLOR_BLUE]),
-				Console.fmt(fmt(queued), [Console.COLOR_WHITE]),
-				Console.fmt(fmt(failed), [Console.COLOR_RED]))
-
-	def __len__(self):
-		return self._width
-
-	def __str__(self):
-		return str(self._bar)
-
 
 class CategoryBaseReport(Report):
 	def __init__(self, jobDB, task, jobs = None, configString = ''):
@@ -66,6 +28,7 @@ class CategoryBaseReport(Report):
 		catDescDict = {}
 		# Assignment of jobs to categories (depending on variables and using datasetnick if available)
 		jobConfig = {}
+		varList = []
 		for jobNum in self._jobs:
 			if task:
 				jobConfig = task.getJobConfig(jobNum)
@@ -266,7 +229,7 @@ class GUIReport(AdaptiveBaseReport):
 	alias = ['modern']
 
 	def __init__(self, jobDB, task, jobs = None, configString = ''):
-		(self.maxY, self.maxX) = Console().getmaxyx()
+		(self.maxY, self.maxX) = Console(sys.stdout).getmaxyx()
 		self.maxX -= 10 # Padding
 		AdaptiveBaseReport.__init__(self, jobDB, task, jobs, str(int(self.maxY / 5)))
 

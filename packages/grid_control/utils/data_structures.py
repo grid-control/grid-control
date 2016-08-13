@@ -46,14 +46,13 @@ def makeEnum(members = None, cls = None, useHash = True):
 
 
 class UniqueList(object):
-	def __init__(self, values = None, mode = 'first'):
+	def __init__(self, values = None):
 		self._set = set()
 		self._list = list()
-		self._mode = mode
 		self.extend(values or [])
 
 	def __repr__(self):
-		return '{%s}' % repr(self._list).lstrip('[').rstrip(']')
+		return '<%s>' % repr(self._list)[1:-1]
 
 	def __contains__(self, value):
 		return value in self._set
@@ -65,14 +64,7 @@ class UniqueList(object):
 		if value not in self:
 			self._set.add(value)
 			self._list.append(value)
-		elif self._mode == 'last':
-			self._list.remove(value)
-			self._list.append(value)
 
 	def extend(self, values):
 		for value in values:
 			self.append(value)
-
-	def remove(self, value):
-		self._set.remove(value)
-		self._list.remove(value)

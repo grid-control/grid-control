@@ -42,13 +42,13 @@ class DataParameterSource(ParameterSource):
 		return self._resyncTime == 0
 
 	def getNeededDataKeys(self):
-		return self._part_proc.getNeededKeys(self._dataSplitter)
+		return self._part_proc.getNeededKeys(self._dataSplitter) or []
 
 	def getMaxParameters(self):
 		return self._maxN
 
 	def fillParameterKeys(self, result):
-		result.extend(self._part_proc.getKeys())
+		result.extend(self._part_proc.getKeys() or [])
 
 	def fillParameterInfo(self, pNum, result):
 		splitInfo = self._dataSplitter.getSplitInfo(pNum)
@@ -97,10 +97,7 @@ class DataParameterSource(ParameterSource):
 	def create(cls, pconfig = None, src = 'data'): # pylint:disable=arguments-differ
 		if src not in DataParameterSource.datasetsAvailable:
 			raise UserError('Dataset parameter source "%s" not setup!' % src)
-		result = DataParameterSource.datasetsAvailable[src]
-		DataParameterSource.datasetsUsed.append(result)
-		return result
+		return DataParameterSource.datasetsAvailable[src]
 	create = classmethod(create)
 
 DataParameterSource.datasetsAvailable = {}
-DataParameterSource.datasetsUsed = []

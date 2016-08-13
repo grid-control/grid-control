@@ -82,7 +82,7 @@ class AFSAccessToken(RefreshableAccessToken):
 	def _getTimeleft(self, cached):
 		info = self._parseTickets(cached)['tickets']
 		time_current = time.time()
-		time_end = time_current
+		time_end = 0
 		for ticket in info:
 			if (self._tickets and (ticket not in self._tickets)) or not ticket:
 				continue

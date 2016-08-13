@@ -15,12 +15,10 @@
 import time
 from grid_control import utils
 from grid_control.gc_exceptions import InstallationError
-from grid_control.gc_plugin import NamedPlugin
 from grid_control.gui import GUI
 from grid_control.job_db import Job
-from grid_control.utils.process_base import LocalProcess
-from hpfwk import Plugin
-from python_compat import lmap, lzip, set, sorted
+from grid_control_gui.plugin_graph import get_graph_image, get_workflow_graph
+from python_compat import lmap, lzip, sorted
 
 try:
 	import cherrypy
@@ -68,57 +66,6 @@ class TabularHTML(object):
 		return self.table
 
 
-def getGraph(instance, graph = None, visited = None):
-	graph = graph or {}
-	visited = visited or set()
-	children = []
-	for attr in dir(instance):
-		child = getattr(instance, attr)
-		try:
-			children.extend(child)
-			children.extend(child.values())
-		except Exception:
-			children.append(child)
-	for child in children:
-		try:
-			if 'grid_control' not in child.__module__:
-				continue
-			if child.__class__.__name__ in ['instancemethod', 'function', 'type']:
-				continue
-			graph.setdefault(instance, []).append(child)
-			if child not in visited:
-				visited.add(child)
-				getGraph(child, graph, visited)
-		except Exception:
-			pass
-	return graph
-
-
-def getNodeLabel(instance):
-	result = instance.__class__.__name__
-	if isinstance(instance, NamedPlugin):
-		if instance.getObjectName().lower() != instance.__class__.__name__.lower():
-			result += ' (%s)' % instance.getObjectName()
-	return result
-
-
-def getNodeParent(cls):
-	clsOld = None
-	while (Plugin not in cls.__bases__) and (clsOld != cls):
-		clsOld = cls
-		try:
-			cls = cls.__bases__[0]
-		except Exception:
-			pass
-
-
-def getNodeColor(instance, color_map):
-	cnum = color_map.setdefault(getNodeParent(instance.__class__), max(color_map.values() + [0]) + 1)
-	if cnum < 12:
-		return '/set312/%d' % cnum
-	return '/set19/%d' % (cnum % 12 + 1)
-
-
 class CPWebserver(GUI):
 	def __init__(self, config, workflow):
 		if not cherrypy:
@@ -130,40 +77,9 @@ class CPWebserver(GUI):
 		self.counter += 1
 		utils.wait(timeout)
 
-	def _get_workflow_graph(self):
-		graph = getGraph(self._workflow)
-		classCluster= {}
-		for entry in graph:
-			classCluster.setdefault(getNodeParent(entry.__class__), []).append(entry)
-
-		clusters = ''
-
-		globalNodes = []
-		colors = {}
-		for classClusterEntries in classCluster.values():
-			if len(classClusterEntries) == 1:
-				globalNodes.append(classClusterEntries[0])
-			clusters += 'subgraph cluster_0 {'
-			for node in classClusterEntries:
-				clusters += '%s [label="%s", fillcolor="%s", style="filled"]\n' % (hash(node), getNodeLabel(node), getNodeColor(node, colors))
-			clusters += '}\n'
-
-		edgeStr = ''
-		for entry in graph:
-			for child in graph[entry]:
-				try:
-					hEntry = hash(entry)
-					edgeStr += '%s -> %s\n' % (hEntry, hash(child))
-				except Exception:
-					pass
-		return "digraph mygraph { overlap=False; ranksep=1.5; %s; %s; }\n" % (clusters, edgeStr)
-
 	def image(self):
-		proc = LocalProcess('neato', '-Tpng')
-		proc.stdin.write(self._get_workflow_graph())
-		proc.stdin.close()
 		cherrypy.response.headers['Content-Type'] = 'image/png'
-		return proc.get_output(timeout = 20)
+		return get_graph_image(get_workflow_graph(self._workflow))
 	image.exposed = True
 
 	def jobs(self, *args, **kw):
@@ -171,18 +87,18 @@ class CPWebserver(GUI):
 		result += str(CPProgressBar(0, min(100, self.counter), 100, 300))
 		if 'job' in kw:
 			jobNum = int(kw['job'])
-			info = self.task.getJobConfig(jobNum)
+			info = self._workflow.task.getJobConfig(jobNum)
 			result += str(TabularHTML(lzip(sorted(info), sorted(info)), [info], top = False))
 		def getJobObjs():
-			for jobNum in self.jobMgr.jobDB.getJobs():
-				result = self.jobMgr.jobDB.getJobTransient(jobNum).__dict__
+			for jobNum in self._workflow.jobManager.jobDB.getJobs():
+				result = self._workflow.jobManager.jobDB.getJobTransient(jobNum).__dict__
 				result['jobNum'] = jobNum
 				result.update(result['dict'])
 				yield result
 		fmtTime = lambda t: time.strftime('%Y-%m-%d %T', time.localtime(t))
 		result += str(TabularHTML([
 				('jobNum', 'Job'), ('state', 'Status'), ('attempt', 'Attempt'),
-				('wmsId', 'WMS ID'), ('dest', 'Destination'), ('submitted', 'Submitted')
+				('gcID', 'WMS ID'), ('dest', 'Destination'), ('submitted', 'Submitted')
 			], getJobObjs(),
 			fmt = {
 				'jobNum': lambda x: '<a href="jobs?job=%s">%s</a>' % (x, x),

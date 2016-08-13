@@ -14,7 +14,7 @@
 
 from grid_control.datasets.dproc_base import DataProcessor
 from grid_control.datasets.provider_base import DataProvider
-from python_compat import lmap
+from python_compat import identity, ifilter, lmap
 
 class PartitionEstimator(DataProcessor):
 	alias = ['estimate', 'SplitSettingEstimator']
@@ -30,19 +30,20 @@ class PartitionEstimator(DataProcessor):
 	def enabled(self):
 		return (self._targetJobs != -1) or (self._targetJobsDS != -1)
 
+	def _setSplitParam(self, config, name, value):
+		config.setInt(name, max(1, int(value / float(self._targetJobs) + 0.5)))
+
 	def process(self, blockIter):
 		if (self._targetJobs != -1) or (self._targetJobsDS != -1):
 			blocks = lmap(self.processBlock, blockIter)
-			def setSplitParam(config, name, value, target):
-				config.setInt(name, max(1, int(value / float(target) + 0.5)))
 			if self._targetJobs:
-				setSplitParam(self._config, 'files per job', self._files.pop(None), self._targetJobs)
-				setSplitParam(self._config, 'events per job', self._entries.pop(None), self._targetJobs)
+				self._setSplitParam(self._config, 'files per job', self._files[None])
+				self._setSplitParam(self._config, 'events per job', self._entries[None])
 			if self._targetJobsDS:
-				for nick in self._files:
+				for nick in ifilter(identity, self._files):
 					block_config = self._config.changeView(setSections = ['dataset %s' % nick])
-					setSplitParam(block_config, 'files per job', self._files[nick], self._targetJobs)
-					setSplitParam(block_config, 'events per job', self._entries[nick], self._targetJobs)
+					self._setSplitParam(block_config, 'files per job', self._files[nick])
+					self._setSplitParam(block_config, 'events per job', self._entries[nick])
 			return blocks
 		else:
 			return blockIter

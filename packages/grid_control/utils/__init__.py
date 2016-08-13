@@ -14,13 +14,14 @@
 
 import os, sys, glob, stat, time, errno, signal, fnmatch, logging, operator, python_compat_popen2
 from grid_control.gc_exceptions import GCError, InstallationError, UserError
+from grid_control.utils.activity import Activity
 from grid_control.utils.data_structures import UniqueList
 from grid_control.utils.file_objects import VirtualFile
-from grid_control.utils.parsing import parseBool, parseType
+from grid_control.utils.parsing import parseBool, parseType, strDict
 from grid_control.utils.process_base import LocalProcess, exit_without_cleanup
 from grid_control.utils.table import ColumnTable, ParseableTable, RowTable
 from grid_control.utils.thread_tools import TimeoutException, hang_protection
-from python_compat import any, identity, ifilter, imap, irange, lfilter, lmap, lru_cache, lzip, next, reduce, set, sorted, tarfile, user_input
+from python_compat import any, identity, ifilter, imap, irange, lfilter, lmap, lru_cache, lzip, next, reduce, sorted, tarfile, user_input
 
 def execWrapper(script, context = None):
 	if context is None:
@@ -55,15 +56,15 @@ def resolvePaths(path, searchPaths = None, mustExist = True, ErrorClass = GCErro
 	path = cleanPath(path) # replace $VAR, ~user, \ separators
 	result = []
 	if os.path.isabs(path):
-		result.extend(glob.glob(path)) # Resolve wildcards for existing files
+		result.extend(sorted(glob.glob(path))) # Resolve wildcards for existing files
 		if not result:
 			if mustExist:
 				raise ErrorClass('Could not find file "%s"' % path)
 			return [path] # Return non-existing, absolute path
 	else: # search relative path in search directories
 		searchPaths = searchPaths or []
-		for spath in set(searchPaths):
-			result.extend(glob.glob(cleanPath(os.path.join(spath, path))))
+		for spath in UniqueList(searchPaths):
+			result.extend(sorted(glob.glob(cleanPath(os.path.join(spath, path)))))
 		if not result:
 			if mustExist:
 				raise ErrorClass('Could not find file "%s" in \n\t%s' % (path, str.join('\n\t', searchPaths)))
@@ -86,12 +87,13 @@ def resolveInstallPath(path):
 	return result_exe[0]
 
 
-def ensureDirExists(dn, name = 'directory'):
+def ensureDirExists(dn, name = 'directory', ExceptionClass = GCError):
 	if not os.path.exists(dn):
 		try:
 			os.makedirs(dn)
 		except Exception:
-			raise GCError('Problem creating %s "%s"' % (name, dn))
+			raise ExceptionClass('Problem creating %s "%s"' % (name, dn))
+	return dn
 
 
 def freeSpace(dn, timeout = 5):
@@ -236,15 +238,11 @@ def abort(new = None):
 ################################################################
 # Dictionary tools
 
-def formatDict(d, fmt = '%s=%r', joinStr = ', '):
-	return str.join(joinStr, imap(lambda k: fmt % (k, d[k]), sorted(d)))
-
-
 class Result(object): # Use with caution! Compared with tuples: +25% accessing, 8x slower instantiation
 	def __init__(self, **kwargs):
 		self.__dict__ = kwargs
 	def __repr__(self):
-		return 'Result(%s)' % formatDict(self.__dict__, '%s=%r')
+		return 'Result(%s)' % strDict(self.__dict__)
 
 
 def mergeDicts(dicts):
@@ -307,14 +305,6 @@ class PersistentDict(dict):
 
 ################################################################
 # File IO helper
-
-def safeRead(fn):
-	fp = open(fn)
-	try:
-		return fp.read()
-	finally:
-		fp.close()
-
 
 def safeWrite(fp, content):
 	fp.writelines(content)
@@ -536,7 +526,7 @@ def matchFiles(pathRoot, pattern, pathRel = ''):
 
 def genTarball(outFile, fileList):
 	tar = tarfile.open(outFile, 'w:gz')
-	activity = None
+	activity = Activity('Generating tarball')
 	for (pathAbs, pathRel, pathStatus) in fileList:
 		if pathStatus is True: # Existing file
 			tar.add(pathAbs, pathRel, recursive = False)
@@ -545,9 +535,7 @@ def genTarball(outFile, fileList):
 				raise UserError('File %s does not exist!' % pathRel)
 			tar.add(pathAbs, pathRel, recursive = False)
 		elif pathStatus is None: # Directory
-			del activity
-			msg = QM(len(pathRel) > 50, pathRel[:15] + '...' + pathRel[-32:], pathRel)
-			activity = ActivityLog('Generating tarball: %s' % msg)
+			activity.update('Generating tarball: %s' % pathRel)
 		else: # File handle
 			info, handle = pathStatus.getTarInfo()
 			info.mtime = time.time()
@@ -556,20 +544,8 @@ def genTarball(outFile, fileList):
 				info.mode += stat.S_IXUSR + stat.S_IXGRP + stat.S_IXOTH
 			tar.addfile(info, handle)
 			handle.close()
-	del activity
+	activity.finish()
 	tar.close()
-
-
-def vprint(text = '', level = 0, printTime = False, newline = True, once = False):
-	if verbosity() > level:
-		if once:
-			if text in vprint.log:
-				return
-			vprint.log.append(text)
-		if printTime:
-			sys.stdout.write('%s - ' % time.strftime('%Y-%m-%d %H:%M:%S', time.localtime()))
-		sys.stdout.write('%s%s' % (text, QM(newline, '\n', '')))
-vprint.log = []
 
 
 def eprint(text = '', level = -1, printTime = False, newline = True):
@@ -596,74 +572,15 @@ getVersion = lru_cache(getVersion)
 
 
 def wait(timeout):
-	shortStep = lmap(lambda x: (x, 1), irange(max(timeout - 5, 0), timeout))
-	for x, w in lmap(lambda x: (x, 5), irange(0, timeout - 5, 5)) + shortStep:
+	activity = Activity('Waiting', parent = 'root')
+	for elapsed in irange(timeout):
 		if abort():
 			return False
-		log = ActivityLog('waiting for %d seconds' % (timeout - x))
-		time.sleep(w)
-		del log
+		if (elapsed % 5 == 0) or (elapsed < 5):
+			activity.update('Waiting for %d seconds' % (timeout - elapsed))
+		time.sleep(1)
+	activity.finish()
 	return True
-
-
-class ActivityLog:
-	class Activity:
-		def __init__(self, stream, message):
-			self.stream = stream
-			self.message = '%s...' % message
-			self.status = False
-
-		def run(self):
-			if not self.status:
-				self.stream.write(self.message)
-				self.stream.flush()
-				self.status = True
-
-		def clear(self):
-			if self.status:
-				self.stream.write('\r%s\r' % (' ' * len(self.message)))
-				self.stream.flush()
-				self.status = False
-
-	class WrappedStream:
-		def __init__(self, stream, activity):
-			self.__stream = stream
-			self.__activity = activity
-			self.__activity.run()
-
-		def __del__(self):
-			self.__activity.clear()
-
-		def flush(self):
-			return self.__stream.flush()
-
-		def isatty(self):
-			return self.__stream.isatty()
-
-		def write(self, data):
-			self.__activity.clear()
-			retVal = self.__stream.write(data)
-			if data.endswith('\n'):
-				self.__activity.run()
-			return retVal
-
-		def __getattr__(self, name):
-			return self.__stream.__getattribute__(name)
-
-	def __init__(self, message):
-		self.saved = (sys.stdout, sys.stderr)
-		if sys.stdout.isatty():
-			self.activity = self.Activity(sys.stdout, message)
-			sys.stdout = self.WrappedStream(sys.stdout, self.activity)
-			sys.stderr = self.WrappedStream(sys.stderr, self.activity)
-
-	def finish(self):
-		if self.saved is not None:
-			sys.stdout, sys.stderr = self.saved
-		self.saved = None
-
-	def __del__(self):
-		self.finish()
 
 
 def printTabular(head, data, fmtString = '', fmt = None):
@@ -698,14 +615,14 @@ def getUserBool(text, default):
 
 
 def deprecated(text):
-	eprint('%s\n[DEPRECATED] %s' % (open(pathShare('fail.txt'), 'r').read(), text))
+	sys.stderr.write('%s\n[DEPRECATED] %s\n' % (open(pathShare('fail.txt'), 'r').read(), text))
 	if not getUserBool('Do you want to continue?', False):
 		sys.exit(os.EX_TEMPFAIL)
 
 
-def exitWithUsage(usage, msg = None, helpOpt = True):
+def exitWithUsage(usage, msg = None, show_help = True):
+	sys.stderr.write('Syntax: %s\n%s' % (usage, QM(show_help, 'Use --help to get a list of options!\n', '')))
 	sys.stderr.write(QM(msg, '%s\n' % msg, ''))
-	sys.stderr.write('Syntax: %s\n%s' % (usage, QM(helpOpt, 'Use --help to get a list of options!\n', '')))
 	sys.exit(os.EX_USAGE)
 
 
@@ -784,8 +701,8 @@ def split_advanced(tokens, doEmit, addEmitToken, quotes = None, brackets = None,
 
 
 def ping_host(host):
+	proc = LocalProcess('ping', '-Uqnc', 1, '-W', 1, host)
 	try:
-		proc = LocalProcess('ping', '-Uqnc', 1, '-W', 1, host)
 		tmp = proc.get_output(timeout = 1).splitlines()
 		assert(tmp[-1].endswith('ms'))
 		return float(tmp[-1].split('/')[-2]) / 1000.
@@ -810,6 +727,14 @@ def filter_processors(processorList, id_fun = lambda proc: proc.__class__.__name
 			result.append(proc)
 			processorIDs.append(id_fun(proc))
 	return result
+
+
+def prune_processors(do_prune, processorList, log, message, formatter = None, id_fun = None):
+	def get_class_name(proc):
+		return proc.__class__.__name__
+	selected = filter_processors(processorList, id_fun or get_class_name)
+	display_selection(log, processorList, selected, message, formatter or get_class_name)
+	return selected
 
 
 if __name__ == '__main__':

@@ -34,7 +34,7 @@ class DBSInfoProvider(GCProvider):
 		GCProvider.__init__(self, config, datasetExpr, datasetNick, datasetID)
 		self._discovery = config.getBool('discovery', False)
 
-	def generateDatasetName(self, key, data):
+	def _generateDatasetName(self, key, data):
 		if self._discovery:
 			return GCProvider.generateDatasetName(self, key, data)
 		if 'CMSSW_DATATIER' not in data:
@@ -68,5 +68,5 @@ class DBSInfoProvider(GCProvider):
 			raise DatasetError('Invalid dataset name supplied: %r\nresulting in %s' % (self.nameDS, rawDS))
 		return utils.replaceDict(rawDS, data)
 
-	def generateBlockName(self, key, data):
+	def _generateBlockName(self, key, data):
 		return strGuid(key)

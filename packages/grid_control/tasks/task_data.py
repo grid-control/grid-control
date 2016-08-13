@@ -12,7 +12,7 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-import signal
+import signal, logging
 from grid_control import utils
 from grid_control.config import triggerResync
 from grid_control.datasets import DataProvider, DataSplitter, PartitionProcessor
@@ -20,10 +20,10 @@ from grid_control.gc_exceptions import UserError
 from grid_control.parameters import ParameterSource
 from grid_control.tasks.task_base import TaskModule
 from grid_control.utils.parsing import strTime
-from python_compat import lfilter
 
 class DataTask(TaskModule):
 	def _setupJobParameters(self, config):
+		TaskModule._setupJobParameters(self, config)
 		data_config = config.changeView(viewClass = 'TaggedConfigView', addSections = ['dataset'])
 		self.dataSplitter = None
 		self._data_refresh = -1
@@ -63,7 +63,7 @@ class DataTask(TaskModule):
 		self._data_refresh = data_config.getTime('dataset refresh', -1, onChange = None)
 		if self._data_refresh > 0:
 			self._dataPS.resyncSetup(interval = max(self._data_refresh, dataProvider.queryLimit()))
-			utils.vprint('Dataset source will be queried every %s' % strTime(self._data_refresh), -1)
+			logging.getLogger('user').info('Dataset source will be queried every %s', strTime(self._data_refresh))
 		else:
 			self._dataPS.resyncSetup(interval = 0)
 		if self._forceRefresh:
@@ -80,23 +80,3 @@ class DataTask(TaskModule):
 		if self.dataSplitter:
 			return utils.mergeDicts([TaskModule.getVarMapping(self), {'NICK': 'DATASETNICK'}])
 		return TaskModule.getVarMapping(self)
-
-
-	# Called on job submission
-	def getSubmitInfo(self, jobNum):
-		jobInfo = self.source.getJobInfo(jobNum)
-		submitInfo = {'nevtJob': jobInfo.get('MAX_EVENTS', 0),
-			'datasetFull': jobInfo.get('DATASETPATH', 'none')}
-		return utils.mergeDicts([TaskModule.getSubmitInfo(self, jobNum), submitInfo])
-
-
-	def report(self, jobNum):
-		info = self.source.getJobInfo(jobNum)
-		keys = lfilter(lambda k: not k.untracked, self.source.getJobKeys())
-		result = utils.filterDict(info, kF = lambda k: k in keys)
-		if self.dataSplitter:
-			result.pop('DATASETSPLIT')
-			result['Dataset'] = info.get('DATASETNICK', info.get('DATASETPATH', None))
-		elif not keys:
-			result[' '] = 'All jobs'
-		return result

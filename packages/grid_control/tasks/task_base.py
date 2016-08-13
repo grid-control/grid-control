@@ -23,7 +23,7 @@ from grid_control.utils.gc_itertools import ichain, lchain
 from grid_control.utils.parsing import strGuid
 from hpfwk import AbstractError
 from time import strftime, time
-from python_compat import ifilter, imap, izip, lfilter, lmap, lru_cache, md5_hex
+from python_compat import ifilter, imap, izip, lmap, lru_cache, md5_hex
 
 class JobNamePlugin(ConfigurablePlugin):
 	def __init__(self, config, task):
@@ -243,22 +243,12 @@ class TaskModule(NamedPlugin):
 			jobName = self._job_name_generator.getName(jobNum))
 
 
-	def report(self, jobNum):
-		keys = lfilter(lambda k: not k.untracked, self.source.getJobKeys())
-		return utils.filterDict(self.source.getJobInfo(jobNum), kF = lambda k: k in keys)
-
-
 	def canFinish(self):
 		return self.source.canFinish()
 
 
 	def canSubmit(self, jobNum):
 		return self.source.canSubmit(jobNum)
-
-
-	# Called on job submission
-	def getSubmitInfo(self, jobNum):
-		return {}
 
 
 	# Intervene in job management - return None or (redoJobs, disableJobs)

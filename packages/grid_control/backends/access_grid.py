@@ -57,4 +57,4 @@ class GridAccessToken(TimedAccessToken):
 		try:
 			return parse(info[key])
 		except Exception:
-			raise AccessTokenError("Can't access %s in proxy information:\n%s" % (key, info))
+			raise AccessTokenError("Can't access %r in proxy information:\n%s" % (key, info))
