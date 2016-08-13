@@ -28,15 +28,47 @@
 
    * grid_control.gc_plugin ConfigurablePlugin
 
+    * grid_control.backends.backend_tools BackendDiscovery
+
+     * grid_control.backends.wms_gridengine GridEngine_Discover_Nodes
+
+     * grid_control.backends.wms_gridengine GridEngine_Discover_Queues
+
+     * grid_control.backends.wms_pbs PBS_Discover_Nodes
+
+     * grid_control.backends.wms_pbs PBS_Discover_Queues
+
     * grid_control.backends.backend_tools BackendExecutor
 
-     * grid_control.backends.backend_tools CancelJobs
+     * grid_control.backends.aspect_cancel CancelJobs
 
-      * grid_control.backends.backend_tools CancelJobsWithProcess
+      * grid_control.backends.aspect_cancel CancelAndPurgeJobs
 
-     * grid_control.backends.backend_tools CheckJobs
+      * grid_control.backends.aspect_cancel CancelJobsWithProcess
 
-      * grid_control.backends.backend_tools CheckJobsWithProcess
+       * grid_control.backends.aspect_cancel CancelJobsWithProcessBlind
+
+        * grid_control.backends.wms_arc ARC_CancelJobs
+
+        * grid_control.backends.wms_cream CREAM_CancelJobs
+
+        * grid_control.backends.wms_cream CREAM_PurgeJobs
+
+        * grid_control.backends.wms_host Host_CancelJobs
+
+        * grid_control.backends.wms_lsf LSF_CancelJobs
+
+       * grid_control.backends.wms_condor Condor_CancelJobs
+
+       * grid_control.backends.wms_grid Grid_CancelJobs
+
+      * grid_control.backends.wms_local LocalPurgeJobs
+
+     * grid_control.backends.aspect_status CheckJobs
+
+      * grid_control.backends.aspect_status CheckJobsMissingState
+
+      * grid_control.backends.aspect_status CheckJobsWithProcess
 
        * grid_control.backends.wms_arc ARC_CheckJobs
 
@@ -60,11 +92,13 @@
 
       * grid_control.backends.wms_glitewms_direct GliteWMSDirect_CheckJobs
 
-      * grid_control.backends.wms_local LocalCheckJobs
-
      * grid_control.backends.backend_tools ChunkedExecutor
 
-     * grid_control.backends.backend_tools PurgeJobs
+     * grid_control.backends.aspect_output RetrieveJobs
+
+      * grid_control.backends.aspect_output RetrieveAndPurgeJobs
+
+      * grid_control.backends.aspect_output RetrieveJobsEmulateWildcard
 
     * grid_control.datasets.dproc_base DataProcessor
 

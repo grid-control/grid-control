@@ -14,13 +14,16 @@
 
 import os, sys, calendar, tempfile
 from grid_control import utils
-from grid_control.backends.backend_tools import CheckInfo, CheckJobsWithProcess, ProcessCreatorViaStdin
+from grid_control.backends.aspect_cancel import CancelJobsWithProcess
+from grid_control.backends.aspect_status import CheckInfo, CheckJobsWithProcess
+from grid_control.backends.backend_tools import ProcessCreatorViaStdin
 from grid_control.backends.broker_base import Broker
 from grid_control.backends.wms import BackendError, BasicWMS, WMS
 from grid_control.job_db import Job
+from grid_control.utils.file_objects import SafeFile
 from grid_control.utils.process_base import LocalProcess
 from hpfwk import APIError
-from python_compat import ifilter, imap, irange, lfilter, lmap, md5, parsedate, tarfile
+from python_compat import ifilter, imap, lfilter, lmap, md5, parsedate, tarfile
 
 GridStatusMap = {
 	'aborted':   Job.ABORTED,
@@ -56,8 +59,9 @@ class Grid_ProcessCreator(ProcessCreatorViaStdin):
 
 class Grid_CheckJobs(CheckJobsWithProcess):
 	def __init__(self, config, check_exec):
-		CheckJobsWithProcess.__init__(self, config, Grid_ProcessCreator(config, check_exec,
-			['--verbosity', 1, '--noint', '--logfile', '/dev/stderr', '-i', '/dev/stdin']), GridStatusMap)
+		proc_factory = Grid_ProcessCreator(config, check_exec,
+			['--verbosity', 1, '--noint', '--logfile', '/dev/stderr', '-i', '/dev/stdin'])
+		CheckJobsWithProcess.__init__(self, config, proc_factory, status_map = GridStatusMap)
 
 	def _fill(self, job_info, key, value):
 		if key.startswith('current status'):
@@ -107,12 +111,22 @@ class Grid_CheckJobs(CheckJobsWithProcess):
 		self._filter_proc_log(proc, self._errormsg, discardlist = ['Keyboard interrupt raised by user'])
 
 
+class Grid_CancelJobs(CancelJobsWithProcess):
+	def __init__(self, config, cancel_exec):
+		proc_factory = Grid_ProcessCreator(config, cancel_exec,
+			['--noint', '--logfile', '/dev/stderr', '-i', '/dev/stdin'])
+		CancelJobsWithProcess.__init__(self, config, proc_factory)
+
+	def _parse(self, wmsIDs, proc): # yield list of (wmsID, job_status)
+		for line in ifilter(lambda x: x.startswith('- '), proc.stdout.iter(self._timeout)):
+			yield (line.strip('- \n'),)
+
+
 class GridWMS(BasicWMS):
 	configSections = BasicWMS.configSections + ['grid']
-
-	def __init__(self, config, name, checkExecutor):
+	def __init__(self, config, name, checkExecutor, cancelExecutor):
 		config.set('access token', 'VomsProxy')
-		BasicWMS.__init__(self, config, name, checkExecutor)
+		BasicWMS.__init__(self, config, name, checkExecutor = checkExecutor, cancelExecutor = cancelExecutor)
 
 		self.brokerSite = config.getPlugin('site broker', 'UserBroker',
 			cls = Broker, tags = [self], pargs = ('sites', 'sites', self.getSites))
@@ -242,21 +256,21 @@ class GridWMS(BasicWMS):
 			activity = utils.ActivityLog('submitting jobs')
 			proc = LocalProcess(self._submitExec, '--nomsg', '--noint', '--logfile', '/dev/stderr', *submitArgs)
 
-			wmsId = None
+			gcID = None
 			for line in ifilter(lambda x: x.startswith('http'), imap(str.strip, proc.stdout.iter(timeout = 60))):
-				wmsId = line
+				gcID = line
 			retCode = proc.status(timeout = 0, terminate = True)
 
 			del activity
 
-			if (retCode != 0) or (wmsId is None):
+			if (retCode != 0) or (gcID is None):
 				if self.explainError(proc, retCode):
 					pass
 				else:
-					self._log.log_process(proc, files = {'jdl': utils.safeRead(jdl)})
+					self._log.log_process(proc, files = {'jdl': SafeFile(jdl).read()})
 		finally:
 			utils.removeFiles([jdl])
-		return (jobNum, utils.QM(wmsId, self._createId(wmsId), None), {'jdl': str.join('', jdlData)})
+		return (jobNum, utils.QM(gcID, self._createId(gcID), None), {'jdl': str.join('', jdlData)})
 
 
 	# Get output of jobs and yield output dirs
@@ -308,7 +322,7 @@ class GridWMS(BasicWMS):
 				utils.removeFiles([jobs, basePath])
 				raise StopIteration
 			else:
-				self._log.log_process(proc, files = {'jobs': utils.safeRead(jobs)})
+				self._log.log_process(proc, files = {'jobs': SafeFile(jobs).read()})
 			utils.eprint('Trying to recover from error ...')
 			for dirName in os.listdir(basePath):
 				yield (None, os.path.join(basePath, dirName))
@@ -318,35 +332,3 @@ class GridWMS(BasicWMS):
 			yield (jobNum, None)
 
 		utils.removeFiles([jobs, basePath])
-
-
-	def cancelJobs(self, allIds):
-		if len(allIds) == 0:
-			raise StopIteration
-
-		waitFlag = False
-		for ids in imap(lambda x: allIds[x:x+5], irange(0, len(allIds), 5)):
-			# Delete jobs in groups of 5 - with 5 seconds between groups
-			if waitFlag and not utils.wait(5):
-				break
-			waitFlag = True
-
-			jobNumMap = dict(ids)
-			jobs = self.writeWMSIds(ids)
-
-			activity = utils.ActivityLog('cancelling jobs')
-			proc = LocalProcess(self._cancelExec, '--noint', '--logfile', '/dev/stderr', '-i', jobs)
-			retCode = proc.status(timeout = 60, terminate = True)
-			del activity
-
-			# select cancelled jobs
-			for deletedWMSId in ifilter(lambda x: x.startswith('- '), proc.stdout.iter()):
-				deletedWMSId = self._createId(deletedWMSId.strip('- \n'))
-				yield (jobNumMap.get(deletedWMSId), deletedWMSId)
-
-			if retCode != 0:
-				if self.explainError(proc, retCode):
-					pass
-				else:
-					self._log.log_process(proc, files = {'jobs': utils.safeRead(jobs)})
-			utils.removeFiles([jobs])

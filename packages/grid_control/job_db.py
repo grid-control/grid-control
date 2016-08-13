@@ -79,7 +79,7 @@ class JobClass(object):
 	DISABLED = JobClassHolder(Job.DISABLED)
 	ENDSTATE = JobClassHolder(Job.SUCCESS, Job.DISABLED)
 	PROCESSED = JobClassHolder(Job.SUCCESS, Job.FAILED, Job.CANCELLED, Job.ABORTED)
-	READY = JobClassHolder(Job.INIT, Job.FAILED, Job.ABORTED, Job.CANCELLED)
+	SUBMIT_CANDIDATES = JobClassHolder(Job.INIT, Job.FAILED, Job.ABORTED, Job.CANCELLED)
 	SUCCESS = JobClassHolder(Job.SUCCESS)
 
 

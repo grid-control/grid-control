@@ -13,13 +13,15 @@
 # | limitations under the License.
 
 from grid_control import utils
-from grid_control.backends.backend_tools import CheckInfo, CheckJobsWithProcess, ProcessCreatorAppendArguments
+from grid_control.backends.aspect_cancel import CancelJobsWithProcessBlind
+from grid_control.backends.aspect_status import CheckInfo, CheckJobsMissingState, CheckJobsWithProcess
+from grid_control.backends.backend_tools import BackendDiscovery, ProcessCreatorAppendArguments
 from grid_control.backends.wms import BackendError, WMS
 from grid_control.backends.wms_pbsge import PBSGECommon
 from grid_control.job_db import Job
 from grid_control.utils.parsing import parseTime
 from grid_control.utils.process_base import LocalProcess
-from python_compat import identity, ifilter, imap, izip, lmap
+from python_compat import identity, ifilter, izip, lmap
 
 class PBS_CheckJobs(CheckJobsWithProcess):
 	def __init__(self, config, fqid_fun = identity):
@@ -47,13 +49,56 @@ class PBS_CheckJobs(CheckJobsWithProcess):
 			yield job_info
 
 
+class PBS_Discover_Nodes(BackendDiscovery):
+	def __init__(self, config):
+		BackendDiscovery.__init__(self, config)
+		self._exec = utils.resolveInstallPath('pbsnodes')
+
+	def discover(self):
+		proc = LocalProcess(self._exec)
+		for line in proc.stdout.iter(timeout = 10):
+			if not line.startswith(' ') and len(line) > 1:
+				node = line.strip()
+			if ('state = ' in line) and ('down' not in line) and ('offline' not in line):
+				yield {'name': node}
+		proc.status_raise(timeout = 0)
+
+
+class PBS_Discover_Queues(BackendDiscovery):
+	def __init__(self, config):
+		BackendDiscovery.__init__(self, config)
+		self._exec = utils.resolveInstallPath('qstat')
+
+	def discover(self):
+		active = False
+		keys = [WMS.MEMORY, WMS.CPUTIME, WMS.WALLTIME]
+		parser = dict(izip(keys, [int, parseTime, parseTime]))
+		proc = LocalProcess(self._exec, '-q')
+		for line in proc.stdout.iter(timeout = 10):
+			if line.startswith('-'):
+				active = True
+			elif line.startswith(' '):
+				active = False
+			elif active:
+				fields = lmap(str.strip, line.split()[:4])
+				queueInfo = {'name': fields[0]}
+				for key, value in ifilter(lambda k_v: not k_v[1].startswith('-'), izip(keys, fields[1:])):
+					queueInfo[key] = parser[key](value)
+				yield queueInfo
+		proc.status_raise(timeout = 0)
+
+
 class PBS(PBSGECommon):
 	configSections = PBSGECommon.configSections + ['PBS']
 
 	def __init__(self, config, name):
+		cancelExecutor = CancelJobsWithProcessBlind(config, 'qdel',
+			fmt = lambda wmsIDs: lmap(self._fqid, wmsIDs), unknownID = 'Unknown Job Id')
 		PBSGECommon.__init__(self, config, name,
-			checkExecutor = PBS_CheckJobs(config, self._fqid))
-		self._nodesExec = utils.resolveInstallPath('pbsnodes')
+			cancelExecutor = cancelExecutor,
+			checkExecutor = CheckJobsMissingState(config, PBS_CheckJobs(config, self._fqid)))
+		self._nodes_finder = PBS_Discover_Nodes(config)
+		self._queues_finder = PBS_Discover_Queues(config)
 		self._server = config.get('server', '', onChange = None)
 
 
@@ -77,40 +122,3 @@ class PBS(PBSGECommon):
 	def parseSubmitOutput(self, data):
 		# 1667161.ekpplusctl.ekpplus.cluster
 		return data.split('.')[0].strip()
-
-
-	def getCancelArguments(self, wmsIds):
-		return str.join(' ', imap(self._fqid, wmsIds))
-
-
-	def getQueues(self):
-		(queues, active) = ({}, False)
-		keys = [WMS.MEMORY, WMS.CPUTIME, WMS.WALLTIME]
-		parser = dict(izip(keys, [int, parseTime, parseTime]))
-		proc = LocalProcess(self.statusExec, '-q')
-		for line in proc.stdout.iter(timeout = 10):
-			if line.startswith('-'):
-				active = True
-			elif line.startswith(' '):
-				active = False
-			elif active:
-				fields = lmap(str.strip, line.split()[:4])
-				queueInfo = {}
-				for key, value in ifilter(lambda k_v: not k_v[1].startswith('-'), izip(keys, fields[1:])):
-					queueInfo[key] = parser[key](value)
-				queues[fields[0]] = queueInfo
-		proc.status_raise(timeout = 0)
-		return queues
-
-
-	def getNodes(self):
-		result = []
-		proc = LocalProcess(self._nodesExec)
-		for line in proc.stdout.iter():
-			if not line.startswith(' ') and len(line) > 1:
-				node = line.strip()
-			if ('state = ' in line) and ('down' not in line) and ('offline' not in line):
-				result.append(node)
-		proc.status_raise(timeout = 0)
-		if len(result) > 0:
-			return result

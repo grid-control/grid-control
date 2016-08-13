@@ -28,17 +28,17 @@ class InactiveWMS(WMS):
 	def getAccessToken(self, gcID):
 		return self._token
 
-	def deployTask(self, task, monitor):
+	def deployTask(self, task, monitor, transferSE, transferSB):
 		return
 
 	def submitJobs(self, jobNumList, task): # jobNumList = [1, 2, ...]
 		self._log.warning('Discarded submission of %d jobs', len(jobNumList))
 
-	def checkJobs(self, gcID_jobNum_List): # gcID_jobNum_List = [(WMS-61226, 1), (WMS-61227, 2), ...]
-		self._log.warning('Discarded check of %d jobs', len(gcID_jobNum_List))
+	def checkJobs(self, gcIDs): # Check status and return (gcID, job_state, job_info) for active jobs
+		self._log.warning('Discarded check of %d jobs', len(gcIDs))
 
-	def retrieveJobs(self, gcID_jobNum_List):
-		self._log.warning('Discarded retrieval of %d jobs', len(gcID_jobNum_List))
+	def retrieveJobs(self, gcIDs):
+		self._log.warning('Discarded retrieval of %d jobs', len(gcIDs))
 
-	def cancelJobs(self, gcID_jobNum_List):
-		self._log.warning('Discarded abort of %d jobs', len(gcID_jobNum_List))
+	def cancelJobs(self, gcIDs):
+		self._log.warning('Discarded abort of %d jobs', len(gcIDs))

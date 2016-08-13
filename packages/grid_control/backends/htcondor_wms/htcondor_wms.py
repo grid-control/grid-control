@@ -156,12 +156,7 @@ class HTCondor(BasicWMS):
 
 	def getSandboxPath(self, subdirToken=""):
 		sandpath = os.path.join(self._sandboxDir, str(subdirToken), '' )
-		if not os.path.exists(sandpath):
-			try:
-				os.makedirs(sandpath)
-			except Exception:
-				raise BackendError('Error accessing or creating sandbox directory:\n	%s' % sandpath)
-		return sandpath
+		return utils.ensureDirExists(sandpath, 'sandbox directory', BackendError)
 
 	# Primary backend actions
 	def submitJobs(self, jobNumList, task):
@@ -182,7 +177,7 @@ class HTCondor(BasicWMS):
 				task,
 				self._getQueryArgs()
 				)
-			# Yield (jobNum, wmsId, other data) per jobZ
+			# Yield (jobNum, gcID, other data) per jobZ
 			jobInfoMaps = self._digestQueueInfoMaps(rawJobInfoMaps)
 			for htcID in jobInfoMaps:
 				yield (
@@ -201,7 +196,7 @@ class HTCondor(BasicWMS):
 			self._splitGcRequests(wmsJobIdList),
 			self._getQueryArgs()
 			)
-		# Yield (jobNum, wmsId, state, other data) per active jobs
+		# Yield (jobNum, gcID, state, other data) per active jobs
 		jobInfoMaps = self._digestQueueInfoMaps(rawJobInfoMaps)
 		for htcID in jobInfoMaps:
 			yield (

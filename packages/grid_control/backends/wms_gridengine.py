@@ -14,14 +14,16 @@
 
 import os, xml.dom.minidom
 from grid_control import utils
-from grid_control.backends.backend_tools import CheckInfo, CheckJobsWithProcess, ProcessCreatorViaArguments
+from grid_control.backends.aspect_cancel import CancelJobsWithProcessBlind
+from grid_control.backends.aspect_status import CheckInfo, CheckJobsMissingState, CheckJobsWithProcess
+from grid_control.backends.backend_tools import BackendDiscovery, ProcessCreatorViaArguments
 from grid_control.backends.wms import BackendError, WMS
 from grid_control.backends.wms_pbsge import PBSGECommon
 from grid_control.config import ConfigError
 from grid_control.job_db import Job
 from grid_control.utils.parsing import parseTime
 from grid_control.utils.process_base import LocalProcess
-from python_compat import imap, izip, lmap, set
+from python_compat import any, imap, izip, lmap, set, sorted
 
 class GridEngine_CheckJobsProcessCreator(ProcessCreatorViaArguments):
 	def __init__(self, config):
@@ -74,13 +76,55 @@ class GridEngine_CheckJobs(CheckJobsWithProcess):
 			yield job_info
 
 	def _parse_status(self, value, default):
-		if True in imap(lambda x: x in value, ['E', 'e']):
+		if any(imap(lambda x: x in value, ['E', 'e'])):
 			return Job.UNKNOWN
-		if True in imap(lambda x: x in value, ['h', 's', 'S', 'T', 'w']):
+		if any(imap(lambda x: x in value, ['h', 's', 'S', 'T', 'w'])):
 			return Job.QUEUED
-		if True in imap(lambda x: x in value, ['r', 't']):
+		if any(imap(lambda x: x in value, ['r', 't'])):
 			return Job.RUNNING
 		return Job.READY
+
+
+class GridEngine_Discover_Nodes(BackendDiscovery):
+	def __init__(self, config):
+		BackendDiscovery.__init__(self, config)
+		self._configExec = utils.resolveInstallPath('qconf')
+
+	def discover(self):
+		nodes = set()
+		proc = LocalProcess(self._configExec, '-shgrpl')
+		for group in proc.stdout.iter(timeout = 10):
+			yield {'name': group.strip()}
+			proc_g = LocalProcess(self._configExec, '-shgrp_resolved', group)
+			for host_list in proc_g.stdout.iter(timeout = 10):
+				nodes.update(host_list.split())
+			proc_g.status_raise(timeout = 0)
+		for host in sorted(nodes):
+			yield {'name': host.strip()}
+		proc.status_raise(timeout = 0)
+
+
+class GridEngine_Discover_Queues(BackendDiscovery):
+	def __init__(self, config):
+		BackendDiscovery.__init__(self, config)
+		self._configExec = utils.resolveInstallPath('qconf')
+
+	def discover(self):
+		tags = ['h_vmem', 'h_cpu', 's_rt']
+		reqs = dict(izip(tags, [WMS.MEMORY, WMS.CPUTIME, WMS.WALLTIME]))
+		parser = dict(izip(tags, [int, parseTime, parseTime]))
+
+		proc = LocalProcess(self._configExec, '-sql')
+		for queue in imap(str.strip, proc.stdout.iter(timeout = 10)):
+			proc_q = LocalProcess(self._configExec, '-sq', queue)
+			queueInfo = {'name': queue}
+			for line in proc_q.stdout.iter(timeout = 10):
+				attr, value = lmap(str.strip, line.split(' ', 1))
+				if (attr in tags) and (value != 'INFINITY'):
+					queueInfo[reqs[attr]] = parser[attr](value)
+			proc_q.status_raise(timeout = 0)
+			yield queueInfo
+		proc.status_raise(timeout = 0)
 
 
 class GridEngine(PBSGECommon):
@@ -88,7 +132,11 @@ class GridEngine(PBSGECommon):
 	configSections = PBSGECommon.configSections + ['GridEngine'] + alias
 
 	def __init__(self, config, name):
-		PBSGECommon.__init__(self, config, name, checkExecutor = GridEngine_CheckJobs(config))
+		cancelExecutor = CancelJobsWithProcessBlind(config, 'qdel',
+			fmt = lambda wmsIDs: [str.join(',', wmsIDs)], unknownID = ['Unknown Job Id'])
+		PBSGECommon.__init__(self, config, name,
+			cancelExecutor = cancelExecutor,
+			checkExecutor = CheckJobsMissingState(config, GridEngine_CheckJobs(config)))
 		self._project = config.get('project name', '', onChange = None)
 		self._configExec = utils.resolveInstallPath('qconf')
 
@@ -115,40 +163,3 @@ class GridEngine(PBSGECommon):
 	def parseSubmitOutput(self, data):
 		# Your job 424992 ("test.sh") has been submitted
 		return data.split()[2].strip()
-
-
-	def getCancelArguments(self, wmsIds):
-		return str.join(',', wmsIds)
-
-
-	def getQueues(self):
-		queues = {}
-		tags = ['h_vmem', 'h_cpu', 's_rt']
-		reqs = dict(izip(tags, [WMS.MEMORY, WMS.CPUTIME, WMS.WALLTIME]))
-		parser = dict(izip(tags, [int, parseTime, parseTime]))
-
-		proc = LocalProcess(self._configExec, '-sql')
-		for queue in imap(str.strip, proc.stdout.iter(timeout = 10)):
-			queues[queue] = dict()
-			proc_q = LocalProcess(self._configExec, '-sq %s' % queue)
-			for line in proc_q.stdout.iter(timeout = 10):
-				attr, value = lmap(str.strip, line.split(' ', 1))
-				if (attr in tags) and (value != 'INFINITY'):
-					queues[queue][reqs[attr]] = parser[attr](value)
-			proc_q.status_raise(timeout = 0)
-		proc.status_raise(timeout = 0)
-		return queues
-
-
-	def getNodes(self):
-		result = set()
-		proc = LocalProcess(self._configExec, '-shgrpl')
-		for group in proc.stdout.iter(timeout = 10):
-			result.add(group.strip())
-			proc_g = LocalProcess(self._configExec, '-shgrp_resolved %s' % group)
-			for host in proc_g.stdout.iter(timeout = 10):
-				result.update(host.split())
-			proc_g.status_raise(timeout = 0)
-		proc.status_raise(timeout = 0)
-		if len(result) > 0:
-			return list(result)

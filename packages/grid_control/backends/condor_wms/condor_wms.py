@@ -21,11 +21,13 @@ try:
 except Exception:
 	from subprocess import getoutput
 from grid_control import utils
+from grid_control.backends.aspect_cancel import CancelAndPurgeJobs
+from grid_control.backends.aspect_status import CheckJobsMissingState
 from grid_control.backends.broker_base import Broker
 from grid_control.backends.condor_wms.processhandler import ProcessHandler
 from grid_control.backends.wms import BackendError, BasicWMS, WMS
-from grid_control.backends.wms_condor import Condor_CheckJobs
-from grid_control.backends.wms_local import LocalCheckJobs
+from grid_control.backends.wms_condor import Condor_CancelJobs, Condor_CheckJobs
+from grid_control.backends.wms_local import LocalPurgeJobs, SandboxHelper
 from grid_control.utils.data_structures import makeEnum
 from python_compat import imap, irange, lmap, lzip, md5, set
 
@@ -43,8 +45,10 @@ class Condor(BasicWMS):
 # __init__: start Condor based job management
 #>>config: Config class extended dictionary
 	def __init__(self, config, wmsName):
-		utils.vprint('Using batch system: Condor/GlideInWMS', -1)
-		BasicWMS.__init__(self, config, wmsName, checkExecutor = LocalCheckJobs(config, Condor_CheckJobs(config)))
+		self._sandbox_helper = SandboxHelper(config)
+		BasicWMS.__init__(self, config, wmsName,
+			checkExecutor = CheckJobsMissingState(config, Condor_CheckJobs(config)),
+			cancelExecutor = CancelAndPurgeJobs(config, Condor_CancelJobs(config), LocalPurgeJobs(config, self._sandbox_helper)))
 		# special debug out/messages/annotations - may have noticeable effect on storage and performance!
 		debugLogFN = config.get('debugLog', '')
 		self.debug = False
@@ -134,12 +138,7 @@ class Condor(BasicWMS):
 # getSandbox: return path to sandbox for a specific job or basepath
 	def getSandboxPath(self, jobNum=''):
 		sandpath = os.path.join(self.sandPath, str(jobNum), '' )
-		if not os.path.exists(sandpath):
-			try:
-				os.makedirs(sandpath)
-			except Exception:
-				raise BackendError('Error accessing or creating sandbox directory:\n	%s' % sandpath)
-		return sandpath
+		return utils.ensureDirExists(sandpath, 'sandbox directory', BackendError)
 
 # getWorkdirPath: return path to condor output dir for a specific job or basepath
 	def getWorkdirPath(self, jobNum=''):
@@ -169,14 +168,14 @@ class Condor(BasicWMS):
 		self.debugOut("Started retrieving: %s" % set(lzip(*wmsJobIdList)[0]))
 
 		activity = utils.ActivityLog('retrieving job outputs')
-		for wmsId, jobNum in wmsJobIdList:
+		for gcID, jobNum in wmsJobIdList:
 			sandpath = self.getSandboxPath(jobNum)
 			if sandpath is None:
 				yield (jobNum, None)
 				continue
 			# when working with a remote spool schedd, tell condor to return files
 			if self.remoteType == PoolType.SPOOL:
-				transferProcess = self.Pool.LoggedExecute(self.transferExec, '%(jobID)s' % {"jobID" : self._splitId(wmsId) })
+				transferProcess = self.Pool.LoggedExecute(self.transferExec, '%(jobID)s' % {"jobID" : self._splitId(gcID) })
 				if transferProcess.wait() != 0:
 					if self.explainError(transferProcess, transferProcess.wait()):
 						pass
@@ -199,57 +198,6 @@ class Condor(BasicWMS):
 					else:
 						cleanupProcess.logError(self.errorLog)
 			yield (jobNum, sandpath)
-		# clean up if necessary
-		activity.finish()
-		self._tidyUpWorkingDirectory()
-		self.debugFlush()
-
-
-# cancelJobs: remove jobs from queue and yield (wmsID, jobNum) of cancelled jobs
-#>>wmsJobIdList: list of (wmsID, JobNum) tuples
-	def cancelJobs(self, wmsJobIdList):
-		if len(wmsJobIdList) == 0:
-			raise StopIteration
-		self.debugOut("Started canceling: %s" % set(lzip(*wmsJobIdList)[0]))
-		self.debugPool()
-
-		wmsIdList=list(self._getRawIDs(wmsJobIdList))
-		wmsIdArgument = " ".join(wmsIdList)
-		wmsToJobMap = dict(wmsJobIdList)
-
-		activity = utils.ActivityLog('cancelling jobs')
-		cancelProcess = self.Pool.LoggedExecute(self.cancelExec, '%(jobIDs)s' % {"jobIDs" : wmsIdArgument })
-
-		# check if canceling actually worked
-		for cancelReturnLine in cancelProcess.iter():
-			if ( cancelReturnLine!= '\n' ) and ( 'marked for removal' in cancelReturnLine ):
-				try:
-					wmsID=cancelReturnLine.split()[1]
-					wmsIdList.remove(wmsID)
-					wmsID=self._createId(wmsID)
-					jobNum=wmsToJobMap[wmsID]
-					yield ( jobNum, wmsID)
-				except KeyError:	# mismatch in GC<->Condor mapping
-					self._log.error('Error with canceled condor job %s', wmsID)
-					self._log.error('\tCondor IDs: %s', wmsIdList)
-					self._log.error('\tProcess message: %s', cancelProcess.getMessage())
-					raise BackendError('Error while cancelling job %s' % wmsID)
-			# clean up remote work dir
-			if self.remoteType == PoolType.SSH or self.remoteType == PoolType.GSISSH:
-				cleanupProcess = self.Pool.LoggedExecute('rm -rf %s' % self.getWorkdirPath(jobNum) )
-				self.debugOut("Cleaning up remote workdir:\n	" + cleanupProcess.cmd)
-				if cleanupProcess.wait() != 0:
-					if self.explainError(cleanupProcess, cleanupProcess.wait()):
-						pass
-					else:
-						cleanupProcess.logError(self.errorLog)
-
-		retCode = cancelProcess.wait()
-		if retCode != 0:
-			if self.explainError(cancelProcess, retCode):
-				pass
-			else:
-				cancelProcess.logError(self.errorLog)
 		# clean up if necessary
 		activity.finish()
 		self._tidyUpWorkingDirectory()
@@ -645,7 +593,7 @@ class Condor(BasicWMS):
 				raise BackendError("Failed to determine, create or verify base work directory on remote host")
 
 #_getDestination: read user/sched/collector from config
-	def _getDestination(self,config):
+	def _getDestination(self, config):
 		dest = config.get('remote Dest', '@')
 		user = config.get('remote User', '')
 		splitDest = lmap(str.strip, dest.split('@'))

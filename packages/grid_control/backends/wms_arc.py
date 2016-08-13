@@ -12,7 +12,9 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-from grid_control.backends.backend_tools import CheckInfo, CheckJobsWithProcess, ProcessCreatorAppendArguments
+from grid_control.backends.aspect_cancel import CancelJobsWithProcessBlind
+from grid_control.backends.aspect_status import CheckInfo, CheckJobsWithProcess
+from grid_control.backends.backend_tools import ProcessCreatorAppendArguments
 from grid_control.job_db import Job
 from python_compat import imap
 
@@ -51,3 +53,8 @@ class ARC_CheckJobs(CheckJobsWithProcess):
 			elif value:
 				job_info[key] = value
 		yield job_info
+
+
+class ARC_CancelJobs(CancelJobsWithProcessBlind):
+	def __init__(self, config):
+		CancelJobsWithProcessBlind.__init__(self, config, 'arckill')

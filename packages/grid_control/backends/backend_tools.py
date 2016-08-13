@@ -15,16 +15,12 @@
 from grid_control import utils
 from grid_control.config import appendOption
 from grid_control.gc_plugin import ConfigurablePlugin
-from grid_control.job_db import Job
-from grid_control.utils.data_structures import makeEnum
 from grid_control.utils.process_base import LocalProcess
 from hpfwk import AbstractError, NestedException
 from python_compat import any, identity, ifilter, imap, irange, lmap
 
 class BackendError(NestedException):
 	pass
-
-CheckInfo = makeEnum(['WMSID', 'RAW_STATUS', 'QUEUE', 'WN', 'SITE'])
 
 
 class ProcessCreator(ConfigurablePlugin):
@@ -83,10 +79,10 @@ class BackendExecutor(ConfigurablePlugin):
 			if is_on_list(line, discardlist): # line on discard list -> dont log
 				return
 			if not is_on_list(line, blacklist): # line not on blacklist -> do log
-				return self._log.log_process(proc, message)
+				return self._log.log_process(proc, message = message)
 			do_log = False # don't log if all stderr lines are blacklisted
 		if do_log:
-			return self._log.log_process(proc)
+			return self._log.log_process(proc, message = message)
 
 
 class ChunkedExecutor(BackendExecutor):
@@ -99,80 +95,16 @@ class ChunkedExecutor(BackendExecutor):
 	def setup(self, log):
 		self._executor.setup(log)
 
-	def execute(self, wmsIDs):
+	def execute(self, wmsIDs, *args, **kwargs):
 		do_wait = False
 		for wmsIDChunk in imap(lambda x: wmsIDs[x:x + self._chunk_size], irange(0, len(wmsIDs), self._chunk_size)):
 			if do_wait and not utils.wait(self._chunk_time):
 				break
 			do_wait = True
-			for result in self._executor.execute(wmsIDChunk):
+			for result in self._executor.execute(wmsIDChunk, *args, **kwargs):
 				yield result
 
 
-class CheckJobs(BackendExecutor):
-	def execute(self, wmsIDs): # yields list of (wmsID, job_status, job_info)
+class BackendDiscovery(ConfigurablePlugin):
+	def discover(self):
 		raise AbstractError
-
-
-class CheckJobsWithProcess(CheckJobs):
-	def __init__(self, config, proc_factory, status_map = None):
-		CheckJobs.__init__(self, config)
-		self._timeout = config.getInt('check timeout', 60, onChange = None)
-		self._errormsg = 'Job status command returned with exit code %(code)s'
-		(self._proc_factory, self._status_map) = (proc_factory, status_map or {})
-
-	def execute(self, wmsIDs): # yields list of (wmsID, job_status, job_info)
-		proc = self._proc_factory.create_proc(wmsIDs)
-		for job_info in self._parse(proc):
-			if job_info and not utils.abort():
-				yield self._parse_job_info(job_info)
-		if proc.status(timeout = 0, terminate = True) != 0:
-			self._handleError(proc)
-
-	def _parse(self, proc): # return job_info(s)
-		raise AbstractError
-
-	def _parse_status(self, value, default):
-		return self._status_map.get(value, default)
-
-	def _parse_job_info(self, job_info): # return (wmsID, job_status, job_info)
-		try:
-			job_status = self._parse_status(job_info.get(CheckInfo.RAW_STATUS), Job.UNKNOWN)
-			return (job_info.pop(CheckInfo.WMSID), job_status, job_info)
-		except Exception:
-			raise BackendError('Unable to parse job info %s' % repr(job_info))
-
-	def _handleError(self, proc):
-		self._filter_proc_log(proc, self._errormsg)
-
-
-class CancelJobs(BackendExecutor):
-	def execute(self, wmsIDs): # yields list of (wmsID, job_status)
-		raise AbstractError
-
-
-class CancelJobsWithProcess(CancelJobs):
-	def __init__(self, config, proc_factory):
-		CancelJobs.__init__(self, config)
-		self._timeout = config.getInt('cancel timeout', 60, onChange = None)
-		self._errormsg = 'Job cancel command returned with exit code %(code)s'
-		self._proc_factory = proc_factory
-
-	def _parse(self, proc): # yield list of (wmsID, job_status)
-		raise AbstractError
-
-	def execute(self, wmsIDs):
-		proc = self._proc_factory.create_proc(wmsIDs)
-		for result in self._parse(proc):
-			if not utils.abort():
-				yield result
-		if proc.status(timeout = 0, terminate = True) != 0:
-			self._handleError(proc)
-
-	def _handleError(self, proc):
-		self._filter_proc_log(proc, self._errormsg)
-
-
-class PurgeJobs(BackendExecutor):
-	def execute(self):
-		pass

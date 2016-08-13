@@ -14,7 +14,7 @@
 
 import os, sys
 from grid_control import utils
-from grid_control.backends.backend_tools import CheckInfo, CheckJobs
+from grid_control.backends.aspect_status import CheckInfo, CheckJobs
 from grid_control.backends.wms import BackendError
 from grid_control.backends.wms_glitewms import GliteWMS
 from grid_control.backends.wms_grid import GridStatusMap
@@ -51,24 +51,28 @@ class GliteWMSDirect_CheckJobs(CheckJobs):
 
 class GliteWMSDirect(GliteWMS):
 	def __init__(self, config, name):
-		glite = os.environ.get('GLITE_WMS_LOCATION', os.environ.get('GLITE_LOCATION', ''))
+		glite_path = os.environ.get('GLITE_WMS_LOCATION', os.environ.get('GLITE_LOCATION', ''))
+		stored_sys_path = list(sys.path)
 		for p in ['lib', 'lib64', os.path.join('lib', 'python'), os.path.join('lib64', 'python')]:
-			sys.path.append(os.path.join(glite, p))
+			sys.path.append(os.path.join(glite_path, p))
 
 		try: # gLite 3.2
 			import wmsui_api
 			glStates = wmsui_api.states_names
-			def getStatusDirect(wmsId):
-				jobStatusDirect = wmsui_api.getStatusDirect(wmsui_api.getJobIdfromList([wmsId])[0], 0)
-				return lmap(lambda name: (name.lower(), jobStatusDirect.getAttribute(glStates.index(name))), glStates)
+			def getStatusDirect(wmsID):
+				try: # new parameter json
+					jobStatus = wmsui_api.getStatus(wmsui_api.getJobIdfromList(None, [wmsID])[0], 0)
+				except Exception:
+					jobStatus = wmsui_api.getStatus(wmsui_api.getJobIdfromList([wmsID])[0], 0)
+				return lmap(lambda name: (name.lower(), jobStatus.getAttribute(glStates.index(name))), glStates)
 		except Exception: # gLite 3.1
 			try:
 				from glite_wmsui_LbWrapper import Status
 				import Job
 				wrStatus = Status()
 				jobStatus = Job.JobStatus(wrStatus)
-				def getStatusDirect(wmsId):
-					wrStatus.getStatusDirect(wmsId, 0)
+				def getStatusDirect(wmsID):
+					wrStatus.getStatus(wmsID, 0)
 					err, apiMsg = wrStatus.get_error()
 					if err:
 						raise BackendError(apiMsg)
@@ -76,6 +80,7 @@ class GliteWMSDirect(GliteWMS):
 					return lzip(imap(str.lower, jobStatus.states_names), info[0:jobStatus.ATTR_MAX])
 			except Exception:
 				getStatusDirect = None
+		sys.path = stored_sys_path
 
 		checkExecutor = None
 		if getStatusDirect:

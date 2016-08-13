@@ -13,7 +13,7 @@
 # | limitations under the License.
 
 from grid_control import utils
-from grid_control.backends.wms_grid import GridWMS, Grid_CheckJobs, jdlEscape
+from grid_control.backends.wms_grid import GridWMS, Grid_CancelJobs, Grid_CheckJobs, jdlEscape
 from python_compat import imap
 
 class EuropeanDataGrid(GridWMS):
@@ -21,11 +21,11 @@ class EuropeanDataGrid(GridWMS):
 
 	def __init__(self, config, name):
 		GridWMS.__init__(self, config, name,
-			checkExecutor = Grid_CheckJobs(config, 'edg-job-status'))
+			checkExecutor = Grid_CheckJobs(config, 'edg-job-status'),
+			cancelExecutor = Grid_CancelJobs(config, 'edg-job-cancel'))
 
 		self._submitExec = utils.resolveInstallPath('edg-job-submit')
 		self._outputExec = utils.resolveInstallPath('edg-job-get-output')
-		self._cancelExec = utils.resolveInstallPath('edg-job-cancel')
 		self._submitParams.update({'-r': self._ce, '--config-vo': self._configVO })
 
 
