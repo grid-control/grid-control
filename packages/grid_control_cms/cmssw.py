@@ -176,12 +176,12 @@ class CMSSW(SCRAMTask):
 
 		# Get cmssw config files and check their existance
 		# Check that for dataset jobs the necessary placeholders are in the config file
-		if self.dataSplitter is None:
+		if self._dataSplitter is None:
 			self.eventsPerJob = config.get('events per job', '0') # this can be a variable like @USER_EVENTS@!
 		fragment = config.getPath('instrumentation fragment', utils.pathShare('fragmentForCMSSW.py', pkg = 'grid_control_cms'))
 		self.configFiles = self._processConfigFiles(config, list(self._getConfigFiles(config)), fragment,
 			autoPrepare = config.getBool('instrumentation', True),
-			mustPrepare = (self.dataSplitter is not None))
+			mustPrepare = (self._dataSplitter is not None))
 
 		# Create project area tarball
 		if self._projectArea and not os.path.exists(self._projectAreaTarball):
@@ -308,8 +308,8 @@ class CMSSW(SCRAMTask):
 
 
 	def neededVars(self):
-		if self.dataSplitter:
-			return self._dataPS.getNeededDataKeys()
+		if self._dataSplitter:
+			return self._partProcessor.getNeededKeys(self._dataSplitter) or []
 		return ['MAX_EVENTS']
 
 
@@ -369,7 +369,7 @@ class CMSSW(SCRAMTask):
 
 	def getVarNames(self):
 		result = SCRAMTask.getVarNames(self)
-		if self.dataSplitter is None:
+		if self._dataSplitter is None:
 			result.append('MAX_EVENTS')
 		return result
 
@@ -377,7 +377,7 @@ class CMSSW(SCRAMTask):
 	# Get job dependent environment variables
 	def getJobConfig(self, jobNum):
 		data = SCRAMTask.getJobConfig(self, jobNum)
-		if self.dataSplitter is None:
+		if self._dataSplitter is None:
 			data['MAX_EVENTS'] = self.eventsPerJob
 		return data
 

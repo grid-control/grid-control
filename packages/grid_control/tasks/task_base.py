@@ -102,14 +102,15 @@ class TaskModule(NamedPlugin):
 		self.updateErrorDict(utils.pathShare('gc-run.lib'))
 
 		# Init parameter source manager
-		self._setupJobParameters(config)
+		psrc_repository = {}
+		self._setupJobParameters(config, psrc_repository)
 		self._pfactory = config.getPlugin('internal parameter factory', 'BasicParameterFactory',
-			cls = ParameterFactory, tags = [self], inherit = True)
+			cls = ParameterFactory, pargs = (psrc_repository,), tags = [self], inherit = True)
 		self.source = config.getPlugin('parameter adapter', 'TrackedParameterAdapter',
 			cls = ParameterAdapter, pargs = (self._pfactory.getSource(),))
 
 
-	def _setupJobParameters(self, config):
+	def _setupJobParameters(self, config, psrc_repository):
 		pass
 
 

@@ -402,6 +402,8 @@
 
    * grid_control.config.matcher_base DictLookup
 
+   * grid_control.datasets.provider_scan GCProviderSetup GCProviderSetup_TaskModule
+
    * grid_control.backends.htcondor_wms.htcondor_schedd HTCScheddBase
 
     * grid_control.backends.htcondor_wms.htcondor_schedd HTCScheddCLIBase

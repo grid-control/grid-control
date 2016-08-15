@@ -19,10 +19,10 @@ from python_compat import identity, ifilter, lmap
 class PartitionEstimator(DataProcessor):
 	alias = ['estimate', 'SplitSettingEstimator']
 
-	def __init__(self, config):
-		DataProcessor.__init__(self, config)
-		self._targetJobs = config.getInt('target partitions', -1, onChange = DataProcessor.triggerDataResync)
-		self._targetJobsDS = config.getInt('target partitions per nickname', -1, onChange = DataProcessor.triggerDataResync)
+	def __init__(self, config, onChange):
+		DataProcessor.__init__(self, config, onChange)
+		self._targetJobs = config.getInt('target partitions', -1, onChange = onChange)
+		self._targetJobsDS = config.getInt('target partitions per nickname', -1, onChange = onChange)
 		self._entries = {None: 0}
 		self._files = {None: 0}
 		self._config = config

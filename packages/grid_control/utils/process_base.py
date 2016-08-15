@@ -15,21 +15,7 @@
 import os, sys, time, errno, fcntl, select, signal, logging, termios
 from grid_control.utils.thread_tools import GCEvent, GCLock, GCQueue, create_thread
 from hpfwk import AbstractError
-from python_compat import bytes2str, imap, irange, set, str2bytes
-
-try:
-	FD_MAX = os.sysconf('SC_OPEN_MAX')
-except (AttributeError, ValueError):
-	FD_MAX = 256
-
-def safeClose(fd):
-	try:
-		os.close(fd)
-	except OSError:
-		pass
-
-def exit_without_cleanup(code):
-	getattr(os, '_exit')(code)
+from python_compat import bytes2str, imap, set, str2bytes
 
 def waitFD(read = None, write = None, timeout = 0.2):
 	return select.select(read or [], write or [], [], timeout)
@@ -144,6 +130,8 @@ class ProcessWriteStream(ProcessStream):
 
 class Process(object):
 	def __init__(self, cmd, *args, **kwargs):
+		self._time_started = None
+		self._time_finished = None
 		self._event_shutdown = GCEvent()
 		self._event_finished = GCEvent()
 		self._buffer_stdin = GCQueue()
@@ -163,8 +151,9 @@ class Process(object):
 			raise ProcessError('Invalid executable!')
 		if not os.path.isabs(cmd): # Resolve executable path
 			for path in os.environ.get('PATH', '').split(os.pathsep):
-				if os.path.exists(os.path.join(path, cmd)):
-					cmd = os.path.join(path, cmd)
+				candidate = os.path.join(path, cmd)
+				if os.path.exists(candidate) and os.access(candidate, os.X_OK):
+					cmd = candidate
 					break
 		if not os.path.exists(cmd):
 			raise ProcessError('%r does not exist' % cmd)
@@ -174,6 +163,12 @@ class Process(object):
 		self._log.debug('External programm called: %s %s', cmd, self._args)
 		self._cmd = cmd
 		self.start()
+
+	def get_runtime(self):
+		if self._time_started is not None:
+			if self._time_finished is not None:
+				return self._time_finished - self._time_started
+			return time.time() - self._time_started
 
 	def __repr__(self):
 		return '%s(cmd = %s, args = %s, status = %s, stdin log = %r, stdout log = %r, stderr log = %r)' % (
@@ -230,7 +225,7 @@ class Process(object):
 
 class LocalProcess(Process):
 	def __init__(self, cmd, *args, **kwargs):
-		self._status = None
+		(self._status, self._runtime) = (None, None)
 		self._terminal = kwargs.pop('term', 'vt100')
 		Process.__init__(self, cmd, *args, **kwargs)
 		self._signal_dict = {}
@@ -254,21 +249,11 @@ class LocalProcess(Process):
 			fcntl.fcntl(fd, fcntl.F_SETFL, os.O_NONBLOCK | fcntl.fcntl(fd, fcntl.F_GETFL))
 
 		self._pid = os.fork()
+		self._time_started = time.time()
+		self._time_ended = None
 		if self._pid == 0: # We are in the child process - redirect streams and exec external program
-			os.environ['TERM'] = self._terminal
-			for fd_target, fd_source in enumerate([fd_child_stdin, fd_child_stdout, fd_child_stderr]):
-				os.dup2(fd_source, fd_target) # set stdin/stdout/stderr
-			for fd in irange(3, FD_MAX):
-				safeClose(fd)
-			try:
-				os.execv(self._cmd, [self._cmd] + self._args)
-			except Exception:
-				invoked = 'os.execv(%s, [%s] + %s)' % (repr(self._cmd), repr(self._cmd), repr(self._args))
-				sys.stderr.write('Error while calling %s: ' % invoked + repr(sys.exc_info()[1]))
-				for fd in [0, 1, 2]:
-					safeClose(fd)
-				exit_without_cleanup(os.EX_OSERR)
-			exit_without_cleanup(os.EX_OK)
+			from grid_control.utils.process_child import run_process
+			run_process(self._cmd, [self._cmd] + self._args, fd_child_stdin, fd_child_stdout, fd_child_stderr, self._terminal)
 
 		else: # Still in the parent process - setup threads to communicate with external program
 			os.close(fd_child_terminal)
@@ -288,9 +273,10 @@ class LocalProcess(Process):
 			try:
 				(pid, status) = os.waitpid(self._pid, 0) # blocking (with spurious wakeups!)
 			except OSError: # unable to wait for child
-				(pid, status) = (self._pid, -1)
+				(pid, status) = (self._pid, False) # False == 'OS_ABORT'
 			if pid == self._pid:
 				self._status = status
+		self._time_ended = time.time()
 		self._event_shutdown.set() # start shutdown of handlers and wait for it to finish
 		self._buffer_stdin.finish() # wakeup process input handler
 		thread_in.join()
@@ -348,7 +334,9 @@ class LocalProcess(Process):
 
 	def status(self, timeout, terminate = False):
 		self._event_finished.wait(timeout, 'process to finish')
-		if self._status is not None: # return either signal name or exit code
+		if self._status is False:
+			return 'OS_ABORT'
+		elif self._status is not None: # return either signal name or exit code
 			if os.WIFSIGNALED(self._status):
 				return self._signal_dict.get(os.WTERMSIG(self._status), 'SIG_UNKNOWN')
 			elif os.WIFEXITED(self._status):

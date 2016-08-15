@@ -19,8 +19,8 @@ from python_compat import itemgetter, lfilter
 class URLDataProcessor(DataProcessor):
 	alias = ['ignore', 'FileDataProcessor']
 
-	def __init__(self, config):
-		DataProcessor.__init__(self, config)
+	def __init__(self, config, onChange):
+		DataProcessor.__init__(self, config, onChange)
 		internal_config = config.changeView(viewClass = 'SimpleConfigView', setSections = ['dataprocessor'])
 		internal_config.set('dataset processor', 'NullDataProcessor')
 		config.set('dataset ignore urls matcher case sensitive', 'False')
@@ -28,7 +28,7 @@ class URLDataProcessor(DataProcessor):
 			filterParser = lambda value: self._parseFilter(internal_config, value),
 			filterStr = lambda value: str.join('\n', value.split()),
 			defaultMatcher = 'blackwhite', defaultFilter = 'weak',
-			onChange = DataProcessor.triggerDataResync)
+			onChange = onChange)
 
 	def _parseFilter(self, config, value):
 		def getFilterEntries():
@@ -53,10 +53,10 @@ class URLDataProcessor(DataProcessor):
 class URLCountDataProcessor(DataProcessor):
 	alias = ['files', 'FileCountDataProcessor']
 
-	def __init__(self, config):
-		DataProcessor.__init__(self, config)
+	def __init__(self, config, onChange):
+		DataProcessor.__init__(self, config, onChange)
 		self._limitFiles = config.getInt(['dataset limit files', 'dataset limit urls'], -1,
-			onChange = DataProcessor.triggerDataResync)
+			onChange = onChange)
 
 	def enabled(self):
 		return self._limitFiles != -1
@@ -71,10 +71,10 @@ class URLCountDataProcessor(DataProcessor):
 class EntriesCountDataProcessor(DataProcessor):
 	alias = ['events', 'EventsCountDataProcessor']
 
-	def __init__(self, config):
-		DataProcessor.__init__(self, config)
+	def __init__(self, config, onChange):
+		DataProcessor.__init__(self, config, onChange)
 		self._limitEntries = config.getInt(['dataset limit events', 'dataset limit entries'], -1,
-			onChange = DataProcessor.triggerDataResync)
+			onChange = onChange)
 
 	def enabled(self):
 		return self._limitEntries != -1
@@ -98,10 +98,10 @@ class EntriesCountDataProcessor(DataProcessor):
 class EmptyDataProcessor(DataProcessor):
 	alias = ['empty']
 
-	def __init__(self, config):
-		DataProcessor.__init__(self, config)
-		self._emptyFiles = config.getBool('dataset remove empty files', True, onChange = DataProcessor.triggerDataResync)
-		self._emptyBlock = config.getBool('dataset remove empty blocks', True, onChange = DataProcessor.triggerDataResync)
+	def __init__(self, config, onChange):
+		DataProcessor.__init__(self, config, onChange)
+		self._emptyFiles = config.getBool('dataset remove empty files', True, onChange = onChange)
+		self._emptyBlock = config.getBool('dataset remove empty blocks', True, onChange = onChange)
 		(self._removedFiles, self._removedBlocks) = (0, 0)
 
 	def enabled(self):
@@ -127,11 +127,11 @@ class EmptyDataProcessor(DataProcessor):
 class LocationDataProcessor(DataProcessor):
 	alias = ['location']
 
-	def __init__(self, config):
-		DataProcessor.__init__(self, config)
+	def __init__(self, config, onChange):
+		DataProcessor.__init__(self, config, onChange)
 		self._locationfilter = config.getFilter('dataset location filter', '',
 			defaultMatcher = 'blackwhite', defaultFilter = 'strict',
-			onChange = DataProcessor.triggerDataResync)
+			onChange = onChange)
 
 	def processBlock(self, block):
 		if block[DataProvider.Locations] is not None:

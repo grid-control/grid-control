@@ -19,12 +19,12 @@ from python_compat import itemgetter, sort_inplace, sorted
 class SortingDataProcessor(DataProcessor):
 	alias = ['sort']
 
-	def __init__(self, config):
-		DataProcessor.__init__(self, config)
-		self._sortDS = config.getBool('dataset sort', False, onChange = DataProcessor.triggerDataResync)
-		self._sortBlock = config.getBool('dataset block sort', False, onChange = DataProcessor.triggerDataResync)
-		self._sortFiles = config.getBool('dataset files sort', False, onChange = DataProcessor.triggerDataResync)
-		self._sortLocation = config.getBool('dataset location sort', False, onChange = DataProcessor.triggerDataResync)
+	def __init__(self, config, onChange):
+		DataProcessor.__init__(self, config, onChange)
+		self._sortDS = config.getBool('dataset sort', False, onChange = onChange)
+		self._sortBlock = config.getBool('dataset block sort', False, onChange = onChange)
+		self._sortFiles = config.getBool('dataset files sort', False, onChange = onChange)
+		self._sortLocation = config.getBool('dataset location sort', False, onChange = onChange)
 
 	def enabled(self):
 		return self._sortDS or self._sortBlock or self._sortFiles or self._sortLocation

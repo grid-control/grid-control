@@ -16,10 +16,17 @@ import os, re, xml.dom.minidom
 from grid_control import utils
 from grid_control.config import triggerResync
 from grid_control.datasets import DatasetError
+from grid_control.datasets.provider_scan import GCProviderSetup
 from grid_control.datasets.scanner_base import InfoScanner
 from python_compat import all, bytes2str, ifilter, imap, lfilter, tarfile
 
 triggerDataResync = triggerResync(['datasets', 'parameters'])
+
+class GCProviderSetup_CMSSW(GCProviderSetup):
+	scan_pipeline = ['ObjectsFromCMSSW', 'JobInfoFromOutputDir', 'FilesFromJobInfo',
+		'MatchOnFilename', 'MatchDelimeter', 'MetadataFromCMSSW', 'SEListFromPath',
+		'LFNFromPath', 'DetermineEvents', 'AddFilePrefix']
+
 
 def readTag(base, tag, default = None):
 	try:

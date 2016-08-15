@@ -94,21 +94,26 @@ class JSONRestClient(RestClient):
 
 
 class GridJSONRestClient(JSONRestClient):
-	def __init__(self, url = None, cert_errror_msg = '', cert_errror_cls = Exception, cert = None):
-		(self._cert_errror_msg, self._cert_errror_cls) = (cert_errror_msg, cert_errror_cls)
-		if cert is None:
-			cert = os.environ.get('X509_USER_PROXY', '')
-		JSONRestClient.__init__(self, cert = cert, url = url)
-		if (not cert) or (not os.path.exists(cert)):
-			self._log.warning(self._fmt_cert_error('Unable to use this grid webservice!'))
+	def __init__(self, url = None, cert_error_msg = '', cert_error_cls = Exception):
+		(self._cert_error_msg, self._cert_error_cls) = (cert_error_msg, cert_error_cls)
+		JSONRestClient.__init__(self, url = url)
+		try:
+			self._get_current_cert()
+		except Exception:
+			self._log.warning(self._fmt_cert_error('Using this webservice requires a valid grid proxy!'))
 
 	def _fmt_cert_error(self, msg):
-		return (self._cert_errror_msg + ' ' + msg).strip()
+		return (self._cert_error_msg + ' ' + msg).strip()
+
+	def _get_current_cert(self):
+		cert = os.environ.get('X509_USER_PROXY', '')
+		if not cert:
+			raise self._cert_error_cls(self._fmt_cert_error('Environment variable X509_USER_PROXY is not set!'))
+		cert = os.path.expandvars(os.path.normpath(os.path.expanduser(cert)))
+		if os.path.exists(cert) and os.path.isfile(cert) and os.access(cert, os.R_OK):
+			return cert
+		raise self._cert_error_cls(self._fmt_cert_error('Environment variable X509_USER_PROXY points to invalid path "%s"' % cert))
 
 	def _request(self, request_fun, url, api, headers, params = None, data = None):
-		if not self._cert:
-			raise self._cert_errror_cls(self._fmt_cert_error('Environment variable X509_USER_PROXY is not set!'))
-		proxyPath = os.path.expandvars(os.path.normpath(os.path.expanduser(self._cert)))
-		if not os.path.exists(proxyPath):
-			raise self._cert_errror_cls(self._fmt_cert_error('Environment variable X509_USER_PROXY points to missing file "%s"' % proxyPath))
+		self._cert = self._get_current_cert()
 		return JSONRestClient._request(self, request_fun, url, api, headers, params, data)

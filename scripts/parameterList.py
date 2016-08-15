@@ -71,9 +71,10 @@ class DataSplitProcessorTest:
 			'DATASETSPLIT': pNum,
 		})
 
+repository = {}
+
 def force_intervention():
-	DataParameterSource = ParameterSource.getClass('DataParameterSource')
-	for dp in DataParameterSource.datasetsAvailable.values():
+	for dp in repository:
 		dp.intervention = (set([1]), set([0]), True)
 
 def process_intervention(opts, psource):
@@ -134,8 +135,7 @@ def setup_dataset(config, dataset):
 	partProcessor = config.getCompositePlugin('partition processor',
 		'TFCPartitionProcessor LocationPartitionProcessor MetaPartitionProcessor BasicPartitionProcessor',
 		'MultiPartitionProcessor', cls = 'PartitionProcessor', onChange = None)
-	DataParameterSource = ParameterSource.getClass('DataParameterSource')
-	DataParameterSource.datasetsAvailable['data'] = DataParameterSource(
+	repository['dataset:data'] = ParameterSource.createInstance('DataParameterSource',
 		config.getWorkPath(), 'data', None, dataSplitter, partProcessor)
 
 # Initialize ParameterFactory and ParameterSource
@@ -143,7 +143,7 @@ def get_psource(opts, args):
 	config = setup_config(opts, args)
 	if opts.factory:
 		config.set('parameter factory', opts.factory)
-	pm = config.getPlugin('internal parameter factory', 'BasicParameterFactory', cls = 'ParameterFactory')
+	pm = config.getPlugin('internal parameter factory', 'BasicParameterFactory', cls = 'ParameterFactory', pargs = (repository,))
 	if opts.dataset:
 		setup_dataset(config, opts.dataset)
 	adapter = 'BasicParameterAdapter'

@@ -37,18 +37,17 @@ def removeRunLumi(value, idxRuns, idxLumi):
 class LumiDataProcessor(DataProcessor):
 	alias = ['lumi']
 
-	def __init__(self, config):
-		DataProcessor.__init__(self, config)
-		changeTrigger = triggerResync(['datasets', 'parameters'])
-		self._lumi_filter = config.getLookup('lumi filter', {}, parser = parseLumiFilter, strfun = strLumi, onChange = changeTrigger)
+	def __init__(self, config, onChange):
+		DataProcessor.__init__(self, config, onChange)
+		self._lumi_filter = config.getLookup('lumi filter', {}, parser = parseLumiFilter, strfun = strLumi, onChange = onChange)
 		if self._lumi_filter.empty():
 			lumi_keep_default = LumiKeep.none
 		else:
 			lumi_keep_default = LumiKeep.Run
 			config.setBool('lumi metadata', True)
 			logging.getLogger('user.once').info('Runs/lumi section filter enabled!')
-		self._lumi_keep = config.getEnum('lumi keep', LumiKeep, lumi_keep_default, onChange = changeTrigger)
-		self._lumi_strict = config.getEnum('lumi filter strictness', LumiMode, LumiMode.strict, onChange = changeTrigger)
+		self._lumi_keep = config.getEnum('lumi keep', LumiKeep, lumi_keep_default, onChange = onChange)
+		self._lumi_strict = config.getEnum('lumi filter strictness', LumiMode, LumiMode.strict, onChange = onChange)
 
 	def _acceptRun(self, block, fi, idxRuns, lumi_filter):
 		if idxRuns is None:

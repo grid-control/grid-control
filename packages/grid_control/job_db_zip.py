@@ -30,8 +30,7 @@ class ZippedJobDB(TextFileJobDB):
 			try:
 				tar = zipfile.ZipFile(self._dbFile, 'r', zipfile.ZIP_DEFLATED)
 			except Exception: # Try to recover job archive
-				utils.eprint('=' * 40 + '\nStarting recovery of broken job database')
-				utils.eprint(' => Answer "y" if asked "Is this a single-disk archive?"!\n' + '=' * 40)
+				self._log.warning('=' * 40 + '\nStarting recovery of broken job database => Answer "y" if asked "Is this a single-disk archive?"!\n' + '=' * 40)
 				os.system('zip -FF %s --out %s.tmp 2> /dev/null' % (self._dbFile, self._dbFile))
 				os.rename(self._dbFile, self._dbFile + '.broken')
 				os.rename(self._dbFile + '.tmp', self._dbFile)

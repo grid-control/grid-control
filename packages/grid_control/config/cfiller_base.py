@@ -26,12 +26,15 @@ from python_compat import identity, imap, irange, itemgetter, lfilter, lmap, rsp
 # Class to fill config containers with settings
 class ConfigFiller(Plugin):
 	def _addEntry(self, container, section, option, value, source):
-		option = option.strip()
 		opttype = '='
-		if option[-1] in imap(itemgetter(0), ConfigEntry.OptTypeDesc.keys()):
-			opttype = option[-1] + '='
-			option = option[:-1].strip()
-		container.append(ConfigEntry(section.strip(), option, value.strip(), opttype, source))
+		try:
+			option = option.strip()
+			if option[-1] in imap(itemgetter(0), ConfigEntry.OptTypeDesc.keys()):
+				opttype = option[-1] + '='
+				option = option[:-1].strip()
+			container.append(ConfigEntry(section.strip(), option, value.strip(), opttype, source))
+		except Exception:
+			raise ConfigError('Unable to register config value [%s] %s %s %s (from %s)' % (section, option, opttype, value, source))
 
 	def fill(self, container):
 		raise AbstractError

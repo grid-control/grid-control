@@ -18,10 +18,10 @@ from grid_control.utils.activity import Activity
 from grid_control.utils.data_structures import UniqueList
 from grid_control.utils.file_objects import VirtualFile
 from grid_control.utils.parsing import parseBool, parseType, strDict
-from grid_control.utils.process_base import LocalProcess, exit_without_cleanup
+from grid_control.utils.process_base import LocalProcess
 from grid_control.utils.table import ColumnTable, ParseableTable, RowTable
 from grid_control.utils.thread_tools import TimeoutException, hang_protection
-from python_compat import any, identity, ifilter, imap, irange, lfilter, lmap, lru_cache, lzip, next, reduce, sorted, tarfile, user_input
+from python_compat import any, exit_without_cleanup, identity, ifilter, imap, irange, lfilter, lmap, lru_cache, lzip, next, reduce, sorted, tarfile, user_input
 
 def execWrapper(script, context = None):
 	if context is None:
@@ -380,18 +380,6 @@ def wrapList(value, length, delimLines = ',\n', delimEntries = ', '):
 	counter = lambda item, buffer: len(item) + sum(imap(len, buffer)) + 2*len(buffer) > length
 	wrapped = accumulate(value, [], counter, opAdd = lambda x, y: x + [y])
 	return str.join(delimLines, imap(lambda x: str.join(delimEntries, x), wrapped))
-
-
-def flatten(lists):
-	result = []
-	for x in lists:
-		try:
-			if isinstance(x, str):
-				raise
-			result.extend(x)
-		except Exception:
-			result.append(x)
-	return result
 
 
 def DiffLists(oldList, newList, keyFun, changedFkt, isSorted = False):

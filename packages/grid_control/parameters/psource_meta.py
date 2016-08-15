@@ -74,11 +74,11 @@ class SubSpaceParameterSource(ForwardingParameterSource):
 		return ['%s: name = %s, factory = %s' % (self.__class__.__name__, self._name, self._factory.__class__.__name__)] +\
 			lmap(lambda x: '\t' + x, self._psource.show())
 
-	def create(cls, pconfig = None, name = 'subspace', factory = 'SimpleParameterFactory'): # pylint:disable=arguments-differ
+	def create(cls, pconfig, repository, name = 'subspace', factory = 'SimpleParameterFactory'): # pylint:disable=arguments-differ
 		try:
 			ParameterFactory = Plugin.getClass('ParameterFactory')
 			config = pconfig.getConfig(viewClass = 'SimpleConfigView', addSections = [name])
-			return SubSpaceParameterSource(name, ParameterFactory.createInstance(factory, config))
+			return SubSpaceParameterSource(name, ParameterFactory.createInstance(factory, config, repository))
 		except:
 			raise ParameterError('Unable to create subspace %r using factory %r' % (name, factory))
 	create = classmethod(create)

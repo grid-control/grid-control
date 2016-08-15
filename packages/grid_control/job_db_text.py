@@ -24,7 +24,10 @@ class TextFileJobDB(JobDB):
 		JobDB.__init__(self, config, jobLimit, jobSelector)
 		self._dbPath = config.getWorkPath('jobs')
 		self._fmt = utils.DictFormat(escapeString = True)
-		self._jobMap = self._readJobs(self._jobLimit)
+		try:
+			self._jobMap = self._readJobs(self._jobLimit)
+		except Exception:
+			raise JobError('Unable to read stored job information!')
 		if self._jobLimit < 0 and len(self._jobMap) > 0:
 			self._jobLimit = max(self._jobMap) + 1
 
@@ -38,26 +41,26 @@ class TextFileJobDB(JobDB):
 		for key, value in job_obj.history.items():
 			data['history_' + str(key)] = value
 		if job_obj.gcID is not None:
-			data['id'] = job_obj.gcID
-			if job_obj.dict.get('legacy', None): # Legacy support
-				data['id'] = job_obj.dict.pop('legacy')
+			data['id'] = job_obj.dict.get('legacy_gcID', None) or job_obj.gcID # store legacy gcID
 		return data
 
 
 	def _create_job_obj(self, name, data):
 		try:
 			job = Job()
-			job.state = Job.str2enum(data.get('status'), Job.FAILED)
+			job.state = Job.str2enum(data.pop('status'), Job.UNKNOWN)
 
 			if 'id' in data:
-				if not data['id'].startswith('WMSID'): # Legacy support
-					data['legacy'] = data['id']
-					if data['id'].startswith('https'):
-						data['id'] = 'WMSID.GLITEWMS.%s' % data['id']
+				gcID = data.pop('id')
+				if not gcID.startswith('WMSID'): # Legacy support
+					data['legacy_gcID'] = gcID
+					if gcID.startswith('https'):
+						gcID = 'WMSID.GLITEWMS.%s' % gcID
 					else:
-						gcID, backend = tuple(data['id'].split('.', 1))
-						data['id'] = 'WMSID.%s.%s' % (backend, gcID)
-				job.gcID = data['id']
+						wmsID, wmsName = tuple(gcID.split('.', 1))
+						gcID = 'WMSID.%s.%s' % (wmsName, wmsID)
+				job.gcID = gcID
+
 			for key in ['attempt', 'submitted', 'changed']:
 				if key in data:
 					setattr(job, key, data[key])
@@ -69,12 +72,6 @@ class TextFileJobDB(JobDB):
 			for key in irange(1, job.attempt + 1):
 				if ('history_' + str(key)).strip() in data:
 					job.history[key] = data['history_' + str(key)]
-
-			for i in ('gcID', 'status'):
-				try:
-					del data[i]
-				except Exception:
-					pass
 			job.dict = data
 		except Exception:
 			raise JobError('Unable to parse data in %s:\n%r' % (name, data))
@@ -106,7 +103,8 @@ class TextFileJobDB(JobDB):
 		for (jobNum, jobFile) in sorted(candidates):
 			idx += 1
 			if (jobLimit >= 0) and (jobNum >= jobLimit):
-				self._log.info('Stopped reading job infos at job #%d out of %d available job files', jobNum, len(candidates))
+				self._log.info('Stopped reading job infos at job #%d out of %d available job files, since the limit of %d jobs is reached',
+					jobNum, len(candidates), jobLimit)
 				break
 			jobObj = self._load_job(os.path.join(self._dbPath, jobFile))
 			jobMap[jobNum] = jobObj

@@ -188,6 +188,7 @@ user_input = get_compat('__builtin__.raw_input', 'builtins.input') # raw_input <
 md5 = get_compat('hashlib.md5', 'md5.md5') # hashlib >= Python 2.5
 set = get_compat('__builtin__.set', 'builtins.set', 'sets.Set') # set >= Python 2.4
 get_current_thread = get_compat('threading.current_thread', 'threading.currentThread') # current_thread >= Python 2.6
+exit_without_cleanup = get_compat('os._exit')
 
 def get_thread_name(t):
 	try: # Python >= 2.6
@@ -233,7 +234,8 @@ else:
 
 
 __all__ = ['BytesBuffer', 'BytesBufferBase', 'NullHandler', 'StringBuffer',
-	'all', 'any', 'bytes2str', 'get_current_thread', 'get_thread_name', 'identity', 'itemgetter', 'lru_cache',
+	'all', 'any', 'bytes2str', 'exit_without_cleanup',
+	'get_current_thread', 'get_thread_name', 'identity', 'itemgetter', 'lru_cache',
 	'ifilter', 'imap', 'irange', 'ismap', 'izip', 'json',
 	'lfilter', 'lmap', 'lrange', 'lsmap', 'lzip', 'md5', 'md5_hex',
 	'next', 'parsedate', 'reduce', 'relpath', 'rsplit', 'set',

@@ -23,6 +23,7 @@ from grid_control.backends.wms import BackendError, BasicWMS
 from grid_control.config import ConfigError
 from grid_control.job_db import Job
 from grid_control.utils.activity import Activity
+from grid_control.utils.gc_itertools import lchain
 from python_compat import json, lfilter
 
 """
@@ -84,11 +85,11 @@ class HTCondor(BasicWMS):
 		'MEMORY' : ['request_memory', '%dMB'],
 		}
 	# Initialization
-	def __init__(self, config, wmsName):
+	def __init__(self, config, name):
 		self._initLogger()
-		BasicWMS.__init__(self, config, wmsName)
+		BasicWMS.__init__(self, config, name)
 		# setup the connection to pools and their interfaces
-		self._sandboxDir  = config.getPath('sandbox path', config.getWorkPath('sandbox.%s'%wmsName), mustExist = False)
+		self._sandboxDir  = config.getPath('sandbox path', config.getWorkPath('sandbox.%s' % name), mustExist = False)
 		self._initPoolInterfaces(config)
 		self._jobSettings = {
 			"Universe" : config.get("universe", "vanilla"),
@@ -268,7 +269,7 @@ class HTCondor(BasicWMS):
 	def _getQueryArgs(self):
 		"""ClassAd names to query Condor with"""
 		qqM = self._getQueueQueryMap()
-		return utils.flatten(qqM.values())
+		return lchain(qqM.values())
 	def _digestQueueInfoMaps(self, queueInfoMaps):
 		result = {}
 		for htcID in queueInfoMaps:

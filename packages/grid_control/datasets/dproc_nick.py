@@ -32,9 +32,9 @@ class NickNameProducer(DataProcessor):
 class SimpleNickNameProducer(NickNameProducer):
 	alias = ['simple']
 
-	def __init__(self, config):
-		NickNameProducer.__init__(self, config)
-		self._full_name = config.getBool('nickname full name', True, onChange = DataProcessor.triggerDataResync)
+	def __init__(self, config, onChange):
+		NickNameProducer.__init__(self, config, onChange)
+		self._full_name = config.getBool('nickname full name', True, onChange = onChange)
 
 	def getName(self, oldnick, dataset, block):
 		if oldnick == '':
@@ -48,9 +48,9 @@ class SimpleNickNameProducer(NickNameProducer):
 class InlineNickNameProducer(NickNameProducer):
 	alias = ['inline']
 
-	def __init__(self, config):
-		NickNameProducer.__init__(self, config)
-		self._expr = config.get('nickname expr', 'oldnick', onChange = DataProcessor.triggerDataResync)
+	def __init__(self, config, onChange):
+		NickNameProducer.__init__(self, config, onChange)
+		self._expr = config.get('nickname expr', 'oldnick', onChange = onChange)
 
 	def getName(self, oldnick, dataset, block):
 		return eval(self._expr) # pylint:disable=eval-used

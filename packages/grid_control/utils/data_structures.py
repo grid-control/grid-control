@@ -36,8 +36,8 @@ def makeEnum(members = None, cls = None, useHash = True):
 	enumMapVN = dict(izip(cls.enumValues, cls.enumNames))
 	if len(enumMapNV) != len(enumMapVN):
 		raise APIError('Invalid enum definition!')
-	def str2enum(cls, value, *args, **kwargs):
-		return enumMapNV.get(value.lower(), *args, **kwargs)
+	def str2enum(cls, value, *args):
+		return enumMapNV.get(value.lower(), *args)
 	cls.enum2str = enumMapVN.get
 	cls.str2enum = classmethod(str2enum)
 	for name, value in izip(cls.enumNames, cls.enumValues):

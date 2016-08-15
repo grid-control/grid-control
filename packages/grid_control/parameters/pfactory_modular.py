@@ -27,7 +27,7 @@ class ModularParameterFactory(UserParameterFactory):
 			def wrapper(*args):
 				parameterClass = ParameterSource.getClass(clsName)
 				try:
-					return parameterClass.create(self._paramConfig, *args)
+					return parameterClass.create(self._paramConfig, self._repository, *args)
 				except Exception:
 					raise ParameterError('Error while creating %r with arguments %r' % (parameterClass.__name__, args))
 			return wrapper

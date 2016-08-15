@@ -51,8 +51,8 @@ class SLURM_CheckJobs(CheckJobsWithProcess):
 class SLURM(LocalWMS):
 	configSections = LocalWMS.configSections + ['SLURM']
 
-	def __init__(self, config, wmsName = None):
-		LocalWMS.__init__(self, config, wmsName,
+	def __init__(self, config, name):
+		LocalWMS.__init__(self, config, name,
 			submitExec = utils.resolveInstallPath('sbatch'),
 			checkExecutor = CheckJobsMissingState(config, SLURM_CheckJobs(config)),
 			cancelExecutor = CancelJobsWithProcessBlind(config, 'scancel', unknownID = 'not in queue !'))

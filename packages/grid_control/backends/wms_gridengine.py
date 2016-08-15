@@ -136,7 +136,9 @@ class GridEngine(PBSGECommon):
 			fmt = lambda wmsIDs: [str.join(',', wmsIDs)], unknownID = ['Unknown Job Id'])
 		PBSGECommon.__init__(self, config, name,
 			cancelExecutor = cancelExecutor,
-			checkExecutor = CheckJobsMissingState(config, GridEngine_CheckJobs(config)))
+			checkExecutor = CheckJobsMissingState(config, GridEngine_CheckJobs(config)),
+			nodesFinder = GridEngine_Discover_Nodes(config),
+			queuesFinder = GridEngine_Discover_Queues(config))
 		self._project = config.get('project name', '', onChange = None)
 		self._configExec = utils.resolveInstallPath('qconf')
 

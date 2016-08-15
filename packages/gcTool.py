@@ -111,9 +111,12 @@ class OptsConfigFiller(Plugin.getClass('ConfigFiller')):
 		Plugin.createInstance('StringConfigFiller', opts.override).fill(container)
 
 # create config instance
-def gc_create_config(cmd_line_args, **kwargs):
-	(_, args) = gc_cmd_line_parser(cmd_line_args)
-	return createConfig(configFile = args[0], additional = [OptsConfigFiller(cmd_line_args)], **kwargs)
+def gc_create_config(cmd_line_args = None, **kwargs):
+	if cmd_line_args is not None:
+		(_, args) = gc_cmd_line_parser(cmd_line_args)
+		kwargs.setdefault('configFile', args[0])
+		kwargs.setdefault('additional', []).append(OptsConfigFiller(cmd_line_args))
+	return createConfig(register = True, **kwargs)
 
 # set up signal handler for interrupts
 def handle_abort_interrupt(sig, frame):

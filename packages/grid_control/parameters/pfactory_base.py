@@ -17,19 +17,23 @@ from grid_control.gc_plugin import ConfigurablePlugin
 from grid_control.parameters.config_param import ParameterConfig
 from grid_control.parameters.psource_base import NullParameterSource, ParameterError, ParameterSource
 from grid_control.parameters.psource_lookup import createLookupHelper
-from hpfwk import AbstractError, Plugin
+from hpfwk import AbstractError
 from python_compat import identity, ifilter, imap, irange, lfilter, lmap
 
 class ParameterFactory(ConfigurablePlugin):
 	tagName = 'parameters'
+
+	def __init__(self, config, repository):
+		ConfigurablePlugin.__init__(self, config)
+		self._repository = repository
 
 	def getSource(self):
 		raise AbstractError
 
 
 class UserParameterFactory(ParameterFactory):
-	def __init__(self, config):
-		ParameterFactory.__init__(self, config)
+	def __init__(self, config, repository):
+		ParameterFactory.__init__(self, config, repository)
 		self._log = logging.getLogger('parameterfactory')
 		self._paramConfig = ParameterConfig(config)
 		self._pExpr = config.get('parameters', '', onChange = None)
@@ -50,8 +54,8 @@ class UserParameterFactory(ParameterFactory):
 
 
 class BasicParameterFactory(ParameterFactory):
-	def __init__(self, config):
-		ParameterFactory.__init__(self, config)
+	def __init__(self, config, repository):
+		ParameterFactory.__init__(self, config, repository)
 		(self._constSources, self._lookupSources, self._nestedSources) = ([], [], [])
 
 		# Random number variables
@@ -82,7 +86,7 @@ class BasicParameterFactory(ParameterFactory):
 		self._repeat = param_config.getInt('repeat', 1, onChange = None)
 		self._req = param_config.getBool('translate requirements', True, onChange = None)
 		self._pfactory = param_config.getPlugin('parameter factory', 'SimpleParameterFactory',
-			cls = ParameterFactory)
+			cls = ParameterFactory, pargs = (repository,))
 
 
 	def getLookupSources(self): # HACK: For CMSSW_Advanced variable display
@@ -109,8 +113,8 @@ class BasicParameterFactory(ParameterFactory):
 
 	def _useAvailableDataSource(self, source):
 		usedSources = source.getUsedSources()
-		for dataSource in Plugin.getClass('DataParameterSource').datasetsAvailable.values():
-			if dataSource not in usedSources:
+		for (srcName, dataSource) in self._repository.items():
+			if srcName.startswith('dataset:') and (dataSource not in usedSources):
 				source = ParameterSource.createInstance('CrossParameterSource', dataSource, source)
 		return source
 

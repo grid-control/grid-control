@@ -76,7 +76,7 @@ class DashBoard(Monitoring):
 			'SubmissionType':'direct', 'tool_ui': os.environ.get('HOSTNAME', ''),
 			'application': jobInfo.get('SCRAM_PROJECTVERSION', self._app),
 			'exe': jobInfo.get('CMSSW_EXEC', 'shellscript'), 'taskType': self._tasktype,
-			'scheduler': wms.wmsName, 'vo': token.getGroup(),
+			'scheduler': wms.getObjectName(), 'vo': token.getGroup(),
 			'nevtJob': jobInfo.get('MAX_EVENTS', 0),
 			'datasetFull': jobInfo.get('DATASETPATH', 'none')}])
 

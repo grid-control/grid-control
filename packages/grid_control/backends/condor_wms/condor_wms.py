@@ -45,9 +45,9 @@ class Condor(BasicWMS):
 
 # __init__: start Condor based job management
 #>>config: Config class extended dictionary
-	def __init__(self, config, wmsName):
+	def __init__(self, config, name):
 		self._sandbox_helper = SandboxHelper(config)
-		BasicWMS.__init__(self, config, wmsName,
+		BasicWMS.__init__(self, config, name,
 			checkExecutor = CheckJobsMissingState(config, Condor_CheckJobs(config)),
 			cancelExecutor = CancelAndPurgeJobs(config, Condor_CancelJobs(config), LocalPurgeJobs(config, self._sandbox_helper)))
 		# special debug out/messages/annotations - may have noticeable effect on storage and performance!
@@ -67,7 +67,7 @@ class Condor(BasicWMS):
 		Name:   %s
 		#############################
 
-		"""%(config.getConfigName(),self.taskID,wmsName))
+		""" % (config.getConfigName(), self.taskID, name))
 		# finalize config state by reading values or setting to defaults
 		self.settings={
 			'jdl': {
@@ -424,7 +424,7 @@ class Condor(BasicWMS):
 				'+GridControl_GCtoWMSID = "%s@$(Cluster).$(Process)"' % module.getDescription(jobNum).jobName,
 				'+GridControl_GCIDtoWMSID = "%s@$(Cluster).$(Process)"' % jobNum,
 				# publish the WMS id for Dashboard
-				'environment = CONDOR_WMS_DASHID=https://%s:/$(Cluster).$(Process)' % self.wmsName,
+				'environment = CONDOR_WMS_DASHID=https://%s:/$(Cluster).$(Process)' % self._name,
 				# condor doesn"t execute the job directly. actual job data, files and arguments are accessed by the GC scripts (but need to be copied to the worker)
 				'transfer_input_files = ' + ",".join(transferFiles + [os.path.join(workdir, 'job_%d.var' % jobNum)]),
 				# only copy important files +++ stdout and stderr get remapped but transferred automatically, so don't request them as they would not be found
@@ -565,9 +565,9 @@ class Condor(BasicWMS):
 			# ssh type instructions are passed to the remote host via regular ssh/gsissh
 			host="%s%s"%(utils.QM(user,"%s@" % user,""), sched)
 			if self.remoteType == PoolType.SSH:
-				self.Pool=ProcessHandler.createInstance("SSHProcessHandler",remoteHost=host , sshLink=config.getWorkPath(".ssh", self.wmsName+host ) )
+				self.Pool=ProcessHandler.createInstance("SSHProcessHandler", remoteHost = host, sshLink = config.getWorkPath(".ssh", self._name + host))
 			else:
-				self.Pool=ProcessHandler.createInstance("GSISSHProcessHandler",remoteHost=host , sshLink=config.getWorkPath(".gsissh", self.wmsName+host ) )
+				self.Pool=ProcessHandler.createInstance("GSISSHProcessHandler", remoteHost = host, sshLink = config.getWorkPath(".gsissh", self._name + host))
 			# ssh type instructions rely on commands being available on remote pool
 			self.submitExec = 'condor_submit'
 			self.historyExec = 'condor_history'

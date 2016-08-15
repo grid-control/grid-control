@@ -16,6 +16,7 @@ import os, logging
 from grid_control import utils
 from grid_control.config import ConfigError
 from grid_control.datasets import DataProvider
+from grid_control.utils.gc_itertools import ichain
 from grid_control.utils.parsing import strDictLong
 from grid_control_cms.cmssw import CMSSW
 from grid_control_cms.lumi_tools import formatLumi, parseLumiFilter, strLumi
@@ -39,7 +40,7 @@ class CMSSW_Advanced(CMSSW):
 		self._nmCfg = config.getLookup('nickname config', {}, defaultMatcher = 'regex',
 			parser = lambda x: lmap(str.strip, x.split(',')), strfun = lambda x: str.join(',', x))
 		if not self._nmCfg.empty():
-			allConfigFiles = sorted(set(utils.flatten(self._nmCfg.get_values())))
+			allConfigFiles = sorted(set(ichain(self._nmCfg.get_values())))
 			config.set('config file', str.join('\n', allConfigFiles))
 			head.append((1, 'Config file'))
 		elif config.get('config file', ''):

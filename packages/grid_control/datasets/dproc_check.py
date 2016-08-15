@@ -32,10 +32,10 @@ class DataChecker(DataProcessor):
 class EntriesConsistencyDataProcessor(DataChecker):
 	alias = ['consistency']
 
-	def __init__(self, config):
-		DataChecker.__init__(self, config)
+	def __init__(self, config, onChange):
+		DataChecker.__init__(self, config, onChange)
 		self._mode = config.getEnum('dataset check entry consistency', DatasetCheckMode,
-			DatasetCheckMode.abort, onChange = DataProcessor.triggerDataResync)
+			DatasetCheckMode.abort, onChange = onChange)
 
 	def enabled(self):
 		return self._mode != DatasetCheckMode.ignore
@@ -52,15 +52,15 @@ class EntriesConsistencyDataProcessor(DataChecker):
 class NickNameConsistencyProcessor(DataChecker):
 	alias = ['nickconsistency']
 
-	def __init__(self, config):
-		DataChecker.__init__(self, config)
+	def __init__(self, config, onChange):
+		DataChecker.__init__(self, config, onChange)
 		# Ensure the same nickname is used consistently in all blocks of a dataset
 		self._checkConsistency = config.getEnum('dataset check nickname consistency', DatasetCheckMode,
-			DatasetCheckMode.abort, onChange = DataProcessor.triggerDataResync)
+			DatasetCheckMode.abort, onChange = onChange)
 		self._checkConsistencyData = {}
 		# Check if two different datasets have the same nickname
 		self._checkCollision = config.getEnum('dataset check nickname collision', DatasetCheckMode,
-			DatasetCheckMode.abort, onChange = DataProcessor.triggerDataResync)
+			DatasetCheckMode.abort, onChange = onChange)
 		self._checkCollisionData = {}
 
 	def enabled(self):
@@ -85,12 +85,10 @@ class NickNameConsistencyProcessor(DataChecker):
 class UniqueDataProcessor(DataChecker):
 	alias = ['unique']
 
-	def __init__(self, config):
-		DataChecker.__init__(self, config)
-		self._checkURL = config.getEnum('dataset check unique url', DatasetUniqueMode, DatasetUniqueMode.abort,
-			onChange = DataProcessor.triggerDataResync)
-		self._checkBlock = config.getEnum('dataset check unique block', DatasetUniqueMode, DatasetUniqueMode.abort,
-			onChange = DataProcessor.triggerDataResync)
+	def __init__(self, config, onChange):
+		DataChecker.__init__(self, config, onChange)
+		self._checkURL = config.getEnum('dataset check unique url', DatasetUniqueMode, DatasetUniqueMode.abort, onChange = onChange)
+		self._checkBlock = config.getEnum('dataset check unique block', DatasetUniqueMode, DatasetUniqueMode.abort, onChange = onChange)
 
 	def enabled(self):
 		return (self._checkURL != DatasetUniqueMode.ignore) or (self._checkBlock != DatasetUniqueMode.ignore)

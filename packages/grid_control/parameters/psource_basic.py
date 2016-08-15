@@ -109,7 +109,7 @@ class SimpleParameterSource(SingleParameterSource):
 	def __repr__(self):
 		return 'var(%s)' % repr(self._meta)
 
-	def create(cls, pconfig, key): # pylint:disable=arguments-differ
+	def create(cls, pconfig, repository, key): # pylint:disable=arguments-differ
 		return SimpleParameterSource(key, pconfig.getParameter(key.lstrip('!')))
 	create = classmethod(create)
 
@@ -133,7 +133,7 @@ class ConstParameterSource(SingleParameterSource):
 	def __repr__(self):
 		return 'const(%s, %s)' % (repr(self._key), repr(self._value))
 
-	def create(cls, pconfig, key, value = None): # pylint:disable=arguments-differ
+	def create(cls, pconfig, repository, key, value = None): # pylint:disable=arguments-differ
 		if value is None:
 			value = pconfig.get(key)
 		return ConstParameterSource(key, value)

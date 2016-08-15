@@ -128,8 +128,8 @@ def tree2names(node): # return list of referenced variable names in tree
 class SimpleParameterFactory(UserParameterFactory):
 	alias = ['simple']
 
-	def __init__(self, config):
-		UserParameterFactory.__init__(self, config)
+	def __init__(self, config, repository):
+		UserParameterFactory.__init__(self, config, repository)
 		self._nestedSources = [] # Switch statements are elevated to global scope
 		self._precedence = {'*': [], '+': ['*'], ',': ['*', '+']}
 
@@ -161,22 +161,22 @@ class SimpleParameterFactory(UserParameterFactory):
 	def _createRef(self, arg):
 		refTypeDefault = 'dataset'
 		DataParameterSource = ParameterSource.getClass('DataParameterSource')
-		if arg not in DataParameterSource.datasetsAvailable:
+		if 'dataset:' + arg not in self._repository:
 			refTypeDefault = 'csv'
 		refType = self._paramConfig.get(arg, 'type', refTypeDefault)
 		if refType == 'dataset':
-			return DataParameterSource.create(self._paramConfig, arg)
+			return DataParameterSource.create(self._paramConfig, self._repository, arg)
 		elif refType == 'csv':
-			return ParameterSource.getClass('CSVParameterSource').create(self._paramConfig, arg)
+			return ParameterSource.getClass('CSVParameterSource').create(self._paramConfig, self._repository, arg)
 		raise APIError('Unknown reference type: "%s"' % refType)
 
 
 	def _createPSpace(self, args):
 		SubSpaceParameterSource = ParameterSource.getClass('SubSpaceParameterSource')
 		if len(args) == 1:
-			return SubSpaceParameterSource.create(self._paramConfig, args[0])
+			return SubSpaceParameterSource.create(self._paramConfig, self._repository, args[0])
 		elif len(args) == 3:
-			return SubSpaceParameterSource.create(self._paramConfig, args[2], args[0])
+			return SubSpaceParameterSource.create(self._paramConfig, self._repository, args[2], args[0])
 		else:
 			raise APIError('Invalid subspace reference!: %r' % args)
 

@@ -99,7 +99,7 @@ class CSVParameterSource(InternalParameterSource):
 	def __repr__(self):
 		return 'csv(%r, %r)' % (self._fn, self._format)
 
-	def create(cls, pconfig = None, src = 'CSV'): # pylint:disable=arguments-differ
+	def create(cls, pconfig, repository, src = 'CSV'): # pylint:disable=arguments-differ
 		fn = pconfig.get(src, 'source')
 		return CSVParameterSource(fn, pconfig.get(src, 'format', 'sniffed'))
 	create = classmethod(create)

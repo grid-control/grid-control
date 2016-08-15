@@ -16,8 +16,8 @@ from grid_control.datasets.dproc_base import DataProcessor
 from grid_control.datasets.provider_base import DataProvider
 
 class StatsDataProcessor(DataProcessor):
-	def __init__(self, config):
-		DataProcessor.__init__(self, config)
+	def __init__(self, config, onChange):
+		DataProcessor.__init__(self, config, onChange)
 
 	def _reset(self):
 		self._entries = 0
@@ -33,8 +33,8 @@ class StatsDataProcessor(DataProcessor):
 
 
 class SimpleStatsDataProcessor(StatsDataProcessor):
-	def __init__(self, config, log, msg):
-		StatsDataProcessor.__init__(self, config)
+	def __init__(self, config, onChange, log, msg):
+		StatsDataProcessor.__init__(self, config, onChange)
 		(self._log, self._msg) = (log, msg)
 
 	def _getStats(self):

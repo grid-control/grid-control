@@ -21,7 +21,7 @@ from python_compat import imap, reduce, set
 class MultiDatasetProvider(DataProvider):
 	def __init__(self, config, datasetExpr, datasetNick, datasetID, providerList):
 		DataProvider.__init__(self, config, datasetExpr, datasetNick, datasetID)
-		self._stats = DataProcessor.createInstance('SimpleStatsDataProcessor', config, self._log, 'Summary: Running over ')
+		self._stats = DataProcessor.createInstance('SimpleStatsDataProcessor', config, None, self._log, 'Summary: Running over ')
 		self._providerList = providerList
 
 
@@ -53,7 +53,7 @@ class MultiDatasetProvider(DataProvider):
 
 
 	def getBlocks(self, show_stats):
-		statsProcessor = NullDataProcessor(config = None)
+		statsProcessor = NullDataProcessor(config = None, onChange = None)
 		if show_stats:
 			statsProcessor = self._stats
 		if self._cache_block is None:

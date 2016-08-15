@@ -17,8 +17,8 @@ from grid_control.backends import WMS
 class InactiveWMS(WMS):
 	alias = ['inactive']
 
-	def __init__(self, config, wmsName):
-		WMS.__init__(self, config, wmsName)
+	def __init__(self, config, name):
+		WMS.__init__(self, config, name)
 		self._token = config.getCompositePlugin(['proxy', 'access token'], 'TrivialAccessToken',
 			'MultiAccessToken', cls = 'AccessToken', inherit = True, tags = [self])
 

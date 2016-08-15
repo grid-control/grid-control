@@ -36,7 +36,7 @@ class ParameterMetadata(str):
 
 
 class ParameterSource(Plugin):
-	def create(cls, pconfig, *args, **kwargs):
+	def create(cls, pconfig, repository, *args, **kwargs):
 		return cls(*args, **kwargs)
 	create = classmethod(create)
 
@@ -98,7 +98,7 @@ class ParameterSource(Plugin):
 class NullParameterSource(ParameterSource):
 	alias = ['null']
 
-	def create(cls, pconfig):
+	def create(cls, pconfig, repository):
 		return cls()
 	create = classmethod(create)
 

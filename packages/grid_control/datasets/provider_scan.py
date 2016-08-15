@@ -19,6 +19,7 @@ from grid_control.datasets.provider_base import DataProvider
 from grid_control.datasets.scanner_base import InfoScanner
 from grid_control.utils.data_structures import UniqueList
 from grid_control.utils.gc_itertools import lchain
+from hpfwk import Plugin, PluginError
 from python_compat import identity, ifilter, imap, itemgetter, lmap, lsmap, md5_hex, sorted
 
 class ScanProviderBase(DataProvider):
@@ -169,21 +170,25 @@ class ScanProvider(ScanProviderBase):
 		ScanProviderBase.__init__(self, ds_config, datasetExpr, datasetNick, datasetID, defScanner)
 
 
+# This class is used to disentangle the TaskModule and GCProvider class - without any direct dependencies / imports
+class GCProviderSetup(Plugin):
+	alias = ['GCProviderSetup_TaskModule']
+	scan_pipeline = ['JobInfoFromOutputDir', 'FilesFromJobInfo', 'MatchOnFilename', 'MatchDelimeter', 'DetermineEvents', 'AddFilePrefix']
+
+
 # Get dataset information just from grid-control instance
 # required format: <path to config file / workdir> [%<job selector]
 class GCProvider(ScanProviderBase):
 	alias = ['gc']
-	stageDir = {}
-	stageFile = {None: ['MatchOnFilename', 'MatchDelimeter']}
 
 	def __init__(self, config, datasetExpr, datasetNick = None, datasetID = 0):
 		ds_config = config.changeView(viewClass = 'TaggedConfigView', addNames = [md5_hex(datasetExpr)])
 		if os.path.isdir(datasetExpr):
-			GCProvider.stageDir[None] = ['OutputDirsFromWork']
+			scan_pipeline = ['OutputDirsFromWork']
 			ds_config.set('source directory', datasetExpr)
 			datasetExpr = os.path.join(datasetExpr, 'work.conf')
 		else:
-			GCProvider.stageDir[None] = ['OutputDirsFromConfig', 'MetadataFromTask']
+			scan_pipeline = ['OutputDirsFromConfig', 'MetadataFromTask']
 			datasetExpr, selector = utils.optSplit(datasetExpr, '%')
 			ds_config.set('source config', datasetExpr)
 			ds_config.set('source job selector', selector)
@@ -191,6 +196,12 @@ class GCProvider(ScanProviderBase):
 		ext_task_name = ext_config.changeView(setSections = ['global']).get(['module', 'task'])
 		if 'ParaMod' in ext_task_name: # handle old config files
 			ext_task_name = ext_config.changeView(setSections = ['ParaMod']).get('module')
-		sGet = lambda scannerDict: scannerDict.get(None) + scannerDict.get(ext_task_name, [])
-		sList = sGet(GCProvider.stageDir) + ['JobInfoFromOutputDir', 'FilesFromJobInfo'] + sGet(GCProvider.stageFile) + ['DetermineEvents', 'AddFilePrefix']
-		ScanProviderBase.__init__(self, ds_config, datasetExpr, datasetNick, datasetID, sList)
+		ext_task_cls = Plugin.getClass(ext_task_name)
+		for ext_task_cls in Plugin.getClass(ext_task_name).iterClassBases():
+			try:
+				scan_holder = GCProviderSetup.getClass('GCProviderSetup_' + ext_task_cls.__name__)
+			except PluginError:
+				continue
+			scan_pipeline += scan_holder.scan_pipeline
+			break
+		ScanProviderBase.__init__(self, ds_config, datasetExpr, datasetNick, datasetID, scan_pipeline)

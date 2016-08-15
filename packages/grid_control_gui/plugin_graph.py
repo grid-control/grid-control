@@ -71,9 +71,7 @@ def getNodeParent(cls):
 
 def getNodeColor(instance, color_map):
 	cnum = color_map.setdefault(getNodeParent(instance.__class__), max(color_map.values() + [0]) + 1)
-	if cnum < 12:
-		return '/set312/%d' % cnum
-	return '/set19/%d' % (cnum % 12 + 1)
+	return '/set312/%d' % (cnum % 12 + 1)
 
 
 def get_workflow_graph(workflow):
@@ -85,10 +83,10 @@ def get_workflow_graph(workflow):
 
 	globalNodes = []
 	colors = {}
-	for classClusterEntries in classCluster.values():
+	for (cluster_id, classClusterEntries) in enumerate(classCluster.values()):
 		if len(classClusterEntries) == 1:
 			globalNodes.append(classClusterEntries[0])
-		clusters += 'subgraph cluster_0 {'
+		clusters += 'subgraph cluster_%d {' % cluster_id
 		for node in classClusterEntries:
 			clusters += '%s [label="%s", fillcolor="%s", style="filled"];\n' % (getNodeName(node), getNodeLabel(node), getNodeColor(node, colors))
 		clusters += '}\n'

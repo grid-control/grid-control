@@ -41,9 +41,6 @@ class DataParameterSource(ParameterSource):
 	def canFinish(self):
 		return self._resyncTime == 0
 
-	def getNeededDataKeys(self):
-		return self._part_proc.getNeededKeys(self._dataSplitter) or []
-
 	def getMaxParameters(self):
 		return self._maxN
 
@@ -94,10 +91,9 @@ class DataParameterSource(ParameterSource):
 			self.resyncFinished()
 		return (result_redo, result_disable, result_sizeChange)
 
-	def create(cls, pconfig = None, src = 'data'): # pylint:disable=arguments-differ
-		if src not in DataParameterSource.datasetsAvailable:
+	def create(cls, pconfig, repository, src = 'data'): # pylint:disable=arguments-differ
+		src_key = 'dataset:%s' % src
+		if src_key not in repository:
 			raise UserError('Dataset parameter source "%s" not setup!' % src)
-		return DataParameterSource.datasetsAvailable[src]
+		return repository[src_key]
 	create = classmethod(create)
-
-DataParameterSource.datasetsAvailable = {}

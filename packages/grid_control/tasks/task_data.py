@@ -22,10 +22,10 @@ from grid_control.tasks.task_base import TaskModule
 from grid_control.utils.parsing import strTime
 
 class DataTask(TaskModule):
-	def _setupJobParameters(self, config):
-		TaskModule._setupJobParameters(self, config)
+	def _setupJobParameters(self, config, psrc_repository):
+		TaskModule._setupJobParameters(self, config, psrc_repository)
 		data_config = config.changeView(viewClass = 'TaggedConfigView', addSections = ['dataset'])
-		self.dataSplitter = None
+		self._dataSplitter = None
 		self._data_refresh = -1
 		def userRefresh(config, old_obj, cur_obj, cur_entry, obj2str):
 			if (old_obj == '') and (cur_obj != ''):
@@ -48,35 +48,35 @@ class DataTask(TaskModule):
 
 		splitterName = data_config.get('dataset splitter', 'FileBoundarySplitter')
 		splitterClass = dataProvider.checkSplitter(DataSplitter.getClass(splitterName))
-		self.dataSplitter = splitterClass(data_config)
+		self._dataSplitter = splitterClass(data_config)
 
 		# Create and register dataset parameter source
-		partProcessor = data_config.getCompositePlugin('partition processor',
+		self._partProcessor = data_config.getCompositePlugin('partition processor',
 			'TFCPartitionProcessor LocationPartitionProcessor MetaPartitionProcessor BasicPartitionProcessor',
 			'MultiPartitionProcessor', cls = PartitionProcessor, onChange = triggerResync(['parameters']))
 		DataParameterSource = ParameterSource.getClass('DataParameterSource')
-		self._dataPS = DataParameterSource(data_config.getWorkPath(), 'data',
-			dataProvider, self.dataSplitter, partProcessor)
-		DataParameterSource.datasetsAvailable['data'] = self._dataPS
+		dataPS = DataParameterSource(data_config.getWorkPath(), 'data',
+			dataProvider, self._dataSplitter, self._partProcessor)
+		psrc_repository['dataset:data'] = dataPS
 
 		# Select dataset refresh rate
 		self._data_refresh = data_config.getTime('dataset refresh', -1, onChange = None)
 		if self._data_refresh > 0:
-			self._dataPS.resyncSetup(interval = max(self._data_refresh, dataProvider.queryLimit()))
+			dataPS.resyncSetup(interval = max(self._data_refresh, dataProvider.queryLimit()))
 			logging.getLogger('user').info('Dataset source will be queried every %s', strTime(self._data_refresh))
 		else:
-			self._dataPS.resyncSetup(interval = 0)
+			dataPS.resyncSetup(interval = 0)
 		if self._forceRefresh:
-			self._dataPS.resyncSetup(force = True)
+			dataPS.resyncSetup(force = True)
 		def externalRefresh(sig, frame):
-			self._dataPS.resyncSetup(force = True)
+			dataPS.resyncSetup(force = True)
 		signal.signal(signal.SIGUSR2, externalRefresh)
 
-		if self.dataSplitter.getMaxJobs() == 0:
+		if self._dataSplitter.getMaxJobs() == 0:
 			raise UserError('There are no events to process')
 
 
 	def getVarMapping(self):
-		if self.dataSplitter:
+		if self._dataSplitter:
 			return utils.mergeDicts([TaskModule.getVarMapping(self), {'NICK': 'DATASETNICK'}])
 		return TaskModule.getVarMapping(self)

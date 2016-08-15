@@ -52,7 +52,6 @@ class Job(object):
 
 
 	def assignId(self, gcID):
-		self.dict['legacy'] = None # Legacy support
 		self.gcID = gcID
 		self.attempt = self.attempt + 1
 		self.submitted = time.time()

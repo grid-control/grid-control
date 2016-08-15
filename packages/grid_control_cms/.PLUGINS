@@ -70,6 +70,10 @@
 
      * grid_control_cms.lumi_proc LumiPartitionProcessor
 
+   * grid_control.datasets.provider_scan GCProviderSetup GCProviderSetup_TaskModule
+
+    * grid_control_cms.scanner_cmssw GCProviderSetup_CMSSW
+
    * grid_control.output_processor OutputProcessor
 
     * grid_control.output_processor JobInfoProcessor

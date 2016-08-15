@@ -13,15 +13,12 @@
 # | limitations under the License.
 
 import logging
-from grid_control.config import triggerResync
 from grid_control.gc_plugin import ConfigurablePlugin
 from grid_control.utils import prune_processors
 from hpfwk import AbstractError
 
 class DataProcessor(ConfigurablePlugin):
-	triggerDataResync = triggerResync(['datasets', 'parameters'])
-
-	def __init__(self, config):
+	def __init__(self, config, onChange):
 		ConfigurablePlugin.__init__(self, config)
 		self._log = logging.getLogger('dataproc')
 		self._log_debug = None
@@ -50,9 +47,9 @@ class DataProcessor(ConfigurablePlugin):
 
 
 class MultiDataProcessor(DataProcessor):
-	def __init__(self, config, processorList):
-		DataProcessor.__init__(self, config)
-		do_prune = config.getBool('dataset processor prune', True, onChange = DataProcessor.triggerDataResync)
+	def __init__(self, config, processorList, onChange):
+		DataProcessor.__init__(self, config, onChange)
+		do_prune = config.getBool('dataset processor prune', True, onChange = onChange)
 		self._processorList = prune_processors(do_prune, processorList, self._log, 'Removed %d inactive dataset processors!')
 
 	def process(self, blockIter):

@@ -196,11 +196,12 @@ class ExceptionFormatter(logging.Formatter):
 		def formatInfos(info):
 			(exValue, exDepth, _) = info
 			result = '%s%s: %s' % ('  ' * exDepth, exValue.__class__.__name__, exValue)
-			if not isinstance(exValue, NestedException) and hasattr(exValue, 'args') and (len(exValue.args) >= 1):
-				try:
-					result += '\n%s%s  %s' % ('  ' * exDepth, len(exValue.__class__.__name__) * ' ', exValue.args)
-				except Exception:
-					pass
+			if not isinstance(exValue, NestedException) and hasattr(exValue, 'args'):
+				if ((len(exValue.args) == 1) and (str(exValue.args[0]) not in str(exValue))) or (len(exValue.args) > 1):
+					try:
+						result += '\n%s%s  %s' % ('  ' * exDepth, len(exValue.__class__.__name__) * ' ', exValue.args)
+					except Exception:
+						pass
 			return result
 		for info in infos:
 			msg += formatInfos(info) + '\n'
@@ -237,7 +238,7 @@ class ExceptionCollector(object):
 		(self._exceptions, self._log) = ([], log)
 
 	def collect(self, *args):
-		if self._log:
+		if self._log and args:
 			self._log.log(*args)
 		self._exceptions.append(NestedExceptionHelper(sys.exc_info()[1], sys.exc_info()[2]))
 		clearException()

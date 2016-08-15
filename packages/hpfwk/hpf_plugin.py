@@ -86,6 +86,14 @@ class Plugin(object):
 					cls_base_entry.append(tmp)
 	registerClass = classmethod(registerClass)
 
+	def iterClassBases(cls):
+		yield cls
+		for parent in cls.__bases__:
+			if issubclass(parent, Plugin):
+				for entry in parent.iterClassBases():
+					yield entry
+	iterClassBases = classmethod(iterClassBases)
+
 	def getClassNames(cls):
 		for parent in cls.__bases__:
 			if hasattr(parent, 'alias') and (cls.alias == parent.alias):
@@ -310,4 +318,9 @@ def init_hpf_plugins(basePath):
 			for level in list(base_cls_info):
 				if level > base_cls_level:
 					base_cls_info.pop(level)
-			Plugin.registerClass(module_name, cls_name, module_info[2:], base_cls_info.values())
+			base_cls_list = []
+			base_cls_info_list = list(base_cls_info.items())
+			base_cls_info_list.sort()
+			for (_, base_cls_name) in base_cls_info_list:
+				base_cls_list.append(base_cls_name)
+			Plugin.registerClass(module_name, cls_name, module_info[2:], base_cls_list)

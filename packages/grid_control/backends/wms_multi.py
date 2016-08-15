@@ -20,8 +20,8 @@ from python_compat import ifilter, lmap
 # Distribute to WMS according to job id prefix
 
 class MultiWMS(WMS):
-	def __init__(self, config, wmsName, wmsList):
-		WMS.__init__(self, config, wmsName)
+	def __init__(self, config, name, wmsList):
+		WMS.__init__(self, config, name)
 		self._defaultWMS = wmsList[0]
 		defaultT = self._defaultWMS.getTimings()
 		self._timing = Result(waitOnIdle = defaultT.waitOnIdle, waitBetweenSteps = defaultT.waitBetweenSteps)
@@ -87,7 +87,7 @@ class MultiWMS(WMS):
 		for arg in args: # Assign args to backends
 			backend = assignFun(arg)
 			if not backend:
-				backend = self._defaultWMS.wmsName
+				backend = self._defaultWMS.getObjectName()
 			argMap.setdefault(backend.lower(), []).append(arg)
 		return argMap
 

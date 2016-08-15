@@ -45,10 +45,9 @@ class WMS(NamedPlugin):
 	configSections = NamedPlugin.configSections + ['wms', 'backend']
 	tagName = 'wms'
 
-	def __init__(self, config, wmsName):
-		wmsName = (wmsName or self.__class__.__name__).upper().replace('.', '_')
-		NamedPlugin.__init__(self, config, wmsName)
-		self.wmsName = wmsName
+	def __init__(self, config, name):
+		name = (name or self.__class__.__name__).upper().replace('.', '_')
+		NamedPlugin.__init__(self, config, name)
 		self._wait_idle = config.getInt('wait idle', 60, onChange = None)
 		self._wait_work = config.getInt('wait work', 10, onChange = None)
 		self._job_parser = config.getPlugin('job parser', 'JobInfoProcessor',
@@ -79,13 +78,10 @@ class WMS(NamedPlugin):
 		raise AbstractError # Return (jobNum, retCode, data, outputdir) for retrived jobs
 
 	def _createId(self, wmsID):
-		return 'WMSID.%s.%s' % (self.wmsName, wmsID)
+		return 'WMSID.%s.%s' % (self._name, wmsID)
 
 	def _splitId(self, gcID):
-		if gcID.startswith('WMSID'): # local wms
-			return tuple(gcID.split('.', 2)[1:])
-		elif gcID.startswith('http'): # legacy support
-			return ('grid', gcID)
+		return tuple(gcID.split('.', 2)[1:])
 
 	def _getRawIDs(self, gcID_jobNum_List):
 		for (gcID, _) in gcID_jobNum_List:
@@ -103,17 +99,17 @@ makeEnum(['WALLTIME', 'CPUTIME', 'MEMORY', 'CPUS', 'BACKEND', 'SITES', 'QUEUES',
 
 
 class BasicWMS(WMS):
-	def __init__(self, config, wmsName, checkExecutor, cancelExecutor):
-		WMS.__init__(self, config, wmsName)
+	def __init__(self, config, name, checkExecutor, cancelExecutor):
+		WMS.__init__(self, config, name)
 		for executor in [checkExecutor, cancelExecutor]:
 			executor.setup(self._log)
 		(self._check_executor, self._cancel_executor) = (checkExecutor, cancelExecutor)
 
 		log_user = logging.getLogger('user.backend')
-		if self.wmsName != self.__class__.__name__.upper():
-			log_user.info('Using batch system: %s (%s)', self.__class__.__name__, self.wmsName)
+		if self._name != self.__class__.__name__.upper():
+			log_user.info('Using batch system: %s (%s)', self.__class__.__name__, self._name)
 		else:
-			log_user.info('Using batch system: %s', self.wmsName)
+			log_user.info('Using batch system: %s', self._name)
 
 		self.errorLog = config.getWorkPath('error.tar')
 		self._runlib = config.getWorkPath('gc-run.lib')
@@ -208,7 +204,7 @@ class BasicWMS(WMS):
 
 
 	def cancelJobs(self, gcIDs):
-		return self._run_executor('cancelling jobs', self._cancel_executor, identity, gcIDs, self.wmsName)
+		return self._run_executor('cancelling jobs', self._cancel_executor, identity, gcIDs, self._name)
 
 
 	def retrieveJobs(self, gcID_jobNum_List): # Process output sandboxes returned by getJobsOutput
@@ -274,7 +270,7 @@ class BasicWMS(WMS):
 
 
 	def _getSandboxName(self, task):
-		return os.path.join(self._filecachePath, task.taskID, self.wmsName, 'gc-sandbox.tar.gz')
+		return os.path.join(self._filecachePath, task.taskID, self._name, 'gc-sandbox.tar.gz')
 
 
 	def _getSandboxFilesIn(self, task):
@@ -300,7 +296,7 @@ class BasicWMS(WMS):
 		depFiles = lmap(lambda dep: utils.resolvePath('env.%s.sh' % dep, depPaths), depList)
 		taskEnv = utils.mergeDicts(imap(lambda x: x.getTaskConfig(), [monitor, task] + smList))
 		taskEnv.update({'GC_DEPFILES': str.join(' ', depList), 'GC_USERNAME': self._token.getUsername(),
-			'GC_WMS_NAME': self.wmsName})
+			'GC_WMS_NAME': self._name})
 		taskConfig = sorted(utils.DictFormat(escapeString = True).format(taskEnv, format = 'export %s%s%s\n'))
 		varMappingDict = dict(izip(monitor.getTaskConfig().keys(), monitor.getTaskConfig().keys()))
 		varMappingDict.update(task.getVarMapping())

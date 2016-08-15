@@ -32,14 +32,17 @@ class DataProvider(ConfigurablePlugin):
 		self._log = logging.getLogger('user.dataprovider')
 		(self._datasetExpr, self._datasetNick, self._datasetID) = (datasetExpr, datasetNick, datasetID)
 		(self._cache_block, self._cache_dataset) = (None, None)
+		self._dataset_query_interval = config.getTime('dataset default query interval', 60, onChange = None)
 
-		self._stats = DataProcessor.createInstance('SimpleStatsDataProcessor', config, self._log,
+		triggerDataResync = triggerResync(['datasets', 'parameters'])
+		self._stats = DataProcessor.createInstance('SimpleStatsDataProcessor', config, triggerDataResync, self._log,
 			' * Dataset %s:\n\tcontains ' % repr(datasetNick or datasetExpr))
-		self._nickProducer = config.getPlugin('nickname source', 'SimpleNickNameProducer', cls = DataProcessor)
+		self._nickProducer = config.getPlugin('nickname source', 'SimpleNickNameProducer',
+			cls = DataProcessor, pargs = (triggerDataResync,), onChange = triggerDataResync)
 		self._datasetProcessor = config.getCompositePlugin('dataset processor',
 			'NickNameConsistencyProcessor EntriesConsistencyDataProcessor URLDataProcessor URLCountDataProcessor ' +
-			'EntriesCountDataProcessor EmptyDataProcessor UniqueDataProcessor LocationDataProcessor',
-			'MultiDataProcessor', cls = DataProcessor, onChange = triggerResync(['datasets', 'parameters']))
+			'EntriesCountDataProcessor EmptyDataProcessor UniqueDataProcessor LocationDataProcessor', 'MultiDataProcessor',
+			cls = DataProcessor, pargs = (triggerDataResync,), onChange = triggerDataResync)
 
 
 	def bind(cls, value, **kwargs):
@@ -85,7 +88,7 @@ class DataProvider(ConfigurablePlugin):
 
 	# Define how often the dataprovider can be queried automatically
 	def queryLimit(self):
-		return 60 # 1 minute delay minimum
+		return self._dataset_query_interval
 
 
 	# Check if splitter is valid
@@ -104,7 +107,7 @@ class DataProvider(ConfigurablePlugin):
 
 	# Cached access to list of block dicts, does also the validation checks
 	def getBlocks(self, show_stats):
-		statsProcessor = NullDataProcessor(config = None)
+		statsProcessor = NullDataProcessor(config = None, onChange = None)
 		if show_stats:
 			statsProcessor = self._stats
 		if self._cache_block is None:
@@ -216,6 +219,8 @@ class DataProvider(ConfigurablePlugin):
 
 
 	def saveToFile(path, dataBlocks, stripMetadata = False):
+		if os.path.dirname(path):
+			utils.ensureDirExists(os.path.dirname(path), 'dataset cache directory')
 		fp = open(path, 'w')
 		try:
 			DataProvider.saveToStream(fp, dataBlocks, stripMetadata)

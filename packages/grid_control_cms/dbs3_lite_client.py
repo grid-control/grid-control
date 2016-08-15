@@ -21,7 +21,7 @@ class DBS3LiteClient(object):
 		self._reader_url = '%s/%s' % (url, 'DBSReader')
 		self._writer_url = '%s/%s' % (url, 'DBSWriter')
 		self._migrate_url = '%s/%s' % (url, 'DBSMigrate')
-		self._gjrc = GridJSONRestClient(cert_errror_msg = 'VOMS proxy needed to query DBS3!', cert_errror_cls = UserError)
+		self._gjrc = GridJSONRestClient(cert_error_msg = 'VOMS proxy needed to query DBS3!', cert_error_cls = UserError)
 
 	def listBlocks(self, **kwargs):
 		return self._gjrc.get(url=self._reader_url, api='blocks', params=kwargs)

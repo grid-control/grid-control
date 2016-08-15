@@ -29,7 +29,7 @@ class GCLock(object):
 			if timeout is None: # Blocking
 				timeout = blocking_equivalent
 			# using the threading.Condition algorithm for polling the lock
-			t_end = time.time() + timeout
+			t_end = time.time() + timeout # TODO: protect against time unloading during shutdown
 			dt_sleep = 0.0005
 			while True:
 				lockstate = self._lock.acquire(False)

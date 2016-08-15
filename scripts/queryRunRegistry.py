@@ -13,15 +13,15 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-import sys
 try:
 	from xmlrpclib import ServerProxy
 except ImportError:
 	from xmlrpc.client import ServerProxy
+import sys
 from gcSupport import utils
 from grid_control_cms.lumi_tools import formatLumi, mergeLumi, parseLumiFromJSON
 
 server = ServerProxy('http://pccmsdqm04.cern.ch/runregistry/xmlrpc')
 data = server.DataExporter.export('RUNLUMISECTION', 'GLOBAL', 'json', {'groupName': 'Collisions10'})
 runs = parseLumiFromJSON(data)
-sys.stdout.write('lumi filter = %s\n' % utils.wrapList(formatLumi(mergeLumi(runs)), 60, ',\n\t'), -1)
+sys.stdout.write('lumi filter = %s\n' % utils.wrapList(formatLumi(mergeLumi(runs)), 60, ',\n\t'))

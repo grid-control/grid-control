@@ -108,7 +108,7 @@ class SimpleLookupParameterSource(SingleParameterSource):
 	def __repr__(self):
 		return "lookup(key('%s'), %s)" % (self._key, repr(self._matcher))
 
-	def create(cls, pconfig, key, lookup = None): # pylint:disable=arguments-differ
+	def create(cls, pconfig, repository, key, lookup = None): # pylint:disable=arguments-differ
 		return SimpleLookupParameterSource(*lookupConfigParser(pconfig, key, lookup))
 	create = classmethod(create)
 
@@ -183,7 +183,7 @@ class SwitchingLookupParameterSource(SingleParameterSource):
 		result = ['%s: var = %s, lookup = %s' % (self.__class__.__name__, self._key, repr(self._matcher))]
 		return result + lmap(lambda x: '\t' + x, self._psource.show())
 
-	def create(cls, pconfig, psource, key, lookup = None): # pylint:disable=arguments-differ
+	def create(cls, pconfig, repository, psource, key, lookup = None): # pylint:disable=arguments-differ
 		return SwitchingLookupParameterSource(psource, *lookupConfigParser(pconfig, key, lookup))
 	create = classmethod(create)
 
