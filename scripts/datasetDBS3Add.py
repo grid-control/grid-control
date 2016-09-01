@@ -267,8 +267,8 @@ def process_dbs3_json_blocks(opts, block_dump_iter):
 	if opts.do_import:
 		return dump_dbs3_json(opts.tempdir, block_dump_iter)
 	# set-up dbs clients
-	dbs3_target_client = DBS3LiteClient(url = opts.dbsTarget)
-	dbs3_source_client = DBS3LiteClient(url = opts.dbsSource)
+	dbs3_target_client = DBS3LiteClient(url = opts.target_instance)
+	dbs3_source_client = DBS3LiteClient(url = opts.source_instance)
 	dbs3_migration_queue = DBS3MigrationQueue()
 	dbs3_migration_file = os.path.join(opts.tempdir, 'dbs3_migration.pkl')
 

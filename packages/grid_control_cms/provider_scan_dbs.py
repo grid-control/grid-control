@@ -36,11 +36,11 @@ class DBSInfoProvider(GCProvider):
 
 	def _generateDatasetName(self, key, data):
 		if self._discovery:
-			return GCProvider.generateDatasetName(self, key, data)
+			return GCProvider._generateDatasetName(self, key, data)
 		if 'CMSSW_DATATIER' not in data:
 			raise DatasetError('Incompatible data tiers in dataset: %s' % data)
 		getPathComponents = lambda path: utils.QM(path, tuple(path.strip('/').split('/')), ())
-		userPath = getPathComponents(self.nameDS)
+		userPath = getPathComponents(self._ds_name)
 
 		(primary, processed, tier) = (None, None, None)
 		# In case of a child dataset, use the parent infos to construct new path
@@ -65,7 +65,7 @@ class DBSInfoProvider(GCProvider):
 
 		rawDS = '/%s/%s/%s' % (primary, processed, tier)
 		if None in (primary, processed, tier):
-			raise DatasetError('Invalid dataset name supplied: %r\nresulting in %s' % (self.nameDS, rawDS))
+			raise DatasetError('Invalid dataset name supplied: %r\nresulting in %s' % (self._ds_name, rawDS))
 		return utils.replaceDict(rawDS, data)
 
 	def _generateBlockName(self, key, data):
