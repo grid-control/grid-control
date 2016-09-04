@@ -13,10 +13,9 @@
 # | limitations under the License.
 
 from grid_control.utils.data_structures import makeEnum
-from grid_control.utils.gc_itertools import ichain
 from grid_control.utils.parsing import strDict
-from hpfwk import APIError, NestedException
-from python_compat import ifilter, imap, lfilter, lmap, set, sorted
+from hpfwk import APIError, NestedException, clear_current_exception
+from python_compat import ichain, ifilter, imap, lfilter, lmap, set, sorted
 
 class ConfigError(NestedException):
 	pass
@@ -217,7 +216,7 @@ class ConfigContainer(object):
 					if entry:
 						result = entry.value
 				except ConfigError: # eg. by '-=' without value
-					pass
+					clear_current_exception()
 				so_value_dict.setdefault(section, {})[option] = result
 		for option in self._content:
 			for entry in self._content[option]:

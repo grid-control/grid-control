@@ -312,7 +312,7 @@ class PlotReport(Report):
 			if val is not None:
 				runtime.append(val)
 
-		if len(runtime) == 0:
+		if not runtime:
 			log.info("Skipping " + histo[0] + ", no input data")
 			return None
 

@@ -14,6 +14,7 @@
 
 import sys
 from grid_control.utils.webservice import RestSession
+from hpfwk import clear_current_exception
 from python_compat import bytes2str, str2bytes
 
 try:
@@ -21,7 +22,7 @@ try:
 	if hasattr(ssl, '_create_unverified_context'):
 		setattr(ssl, '_create_default_https_context', getattr(ssl, '_create_unverified_context'))
 except Exception:
-	pass
+	clear_current_exception()
 
 try:
 	from http.client import HTTPSConnection

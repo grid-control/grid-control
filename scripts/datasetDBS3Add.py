@@ -296,7 +296,7 @@ def process_dbs3_json_blocks(opts, block_dump_iter):
 			try:
 				dbs3_migration_queue = DBS3MigrationQueue.read_from_disk(dbs3_migration_file)
 			except IOError:
-				logger.exception('Probably, there is no DBS 3 migration for this dataset ongoing!')
+				logger.exception('Probably, there is no DBS 3 migration for this dataset ongoing')
 				raise
 
 		# wait for all parent blocks migrated to dbs3

@@ -12,7 +12,7 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-import signal, logging
+import signal
 from grid_control import utils
 from grid_control.config import triggerResync
 from grid_control.datasets import DataProvider, DataSplitter, PartitionProcessor
@@ -26,18 +26,10 @@ class DataTask(TaskModule):
 		TaskModule._setupJobParameters(self, config, psrc_repository)
 		data_config = config.changeView(viewClass = 'TaggedConfigView', addSections = ['dataset'])
 		self._dataSplitter = None
-		self._data_refresh = -1
-		def userRefresh(config, old_obj, cur_obj, cur_entry, obj2str):
-			if (old_obj == '') and (cur_obj != ''):
-				raise UserError('It is currently not possible to attach a dataset to a non-dataset task!')
-			self._log.info('Dataset setup was changed - forcing resync...')
-			config.setState(True, 'resync', detail = 'dataset')
-			config.setState(True, 'init', detail = 'config') # This will trigger a write of the new options
-			return cur_obj
 		dataProvider = data_config.getCompositePlugin('dataset', '', ':MultiDatasetProvider:',
-			cls = DataProvider, requirePlugin = False, onChange = userRefresh)
-		self._forceRefresh = config.getState('resync', detail = 'dataset')
-		config.setState(False, 'resync', detail = 'dataset')
+			cls = DataProvider, requirePlugin = False, onChange = triggerResync(['datasets', 'parameters']))
+		self._forceRefresh = config.getState('resync', detail = 'datasets')
+		config.setState(False, 'resync', detail = 'datasets')
 		if not dataProvider:
 			return
 
@@ -54,26 +46,24 @@ class DataTask(TaskModule):
 		self._partProcessor = data_config.getCompositePlugin('partition processor',
 			'TFCPartitionProcessor LocationPartitionProcessor MetaPartitionProcessor BasicPartitionProcessor',
 			'MultiPartitionProcessor', cls = PartitionProcessor, onChange = triggerResync(['parameters']))
-		DataParameterSource = ParameterSource.getClass('DataParameterSource')
-		dataPS = DataParameterSource(data_config.getWorkPath(), 'data',
-			dataProvider, self._dataSplitter, self._partProcessor)
-		psrc_repository['dataset:data'] = dataPS
+		dataPS = ParameterSource.createInstance('DataParameterSource', data_config.getWorkPath(), 'data',
+			dataProvider, self._dataSplitter, self._partProcessor, psrc_repository)
 
 		# Select dataset refresh rate
-		self._data_refresh = data_config.getTime('dataset refresh', -1, onChange = None)
-		if self._data_refresh > 0:
-			dataPS.resyncSetup(interval = max(self._data_refresh, dataProvider.queryLimit()))
-			logging.getLogger('user').info('Dataset source will be queried every %s', strTime(self._data_refresh))
-		else:
-			dataPS.resyncSetup(interval = 0)
-		if self._forceRefresh:
-			dataPS.resyncSetup(force = True)
+		data_refresh = data_config.getTime('dataset refresh', -1, onChange = None)
+		if data_refresh >= 0:
+			data_refresh = max(data_refresh, dataProvider.queryLimit())
+			self._log.info('Dataset source will be queried every %s', strTime(data_refresh))
+		dataPS.resyncSetup(interval = data_refresh, force = self._forceRefresh)
 		def externalRefresh(sig, frame):
+			self._log.info('External signal triggered resync of dataset source')
 			dataPS.resyncSetup(force = True)
 		signal.signal(signal.SIGUSR2, externalRefresh)
 
 		if self._dataSplitter.getMaxJobs() == 0:
-			raise UserError('There are no events to process')
+			if data_refresh < 0:
+				raise UserError('Currently used dataset does not provide jobs to process')
+			self._log.warning('Currently used dataset does not provide jobs to process')
 
 
 	def getVarMapping(self):

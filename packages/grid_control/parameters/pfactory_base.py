@@ -34,7 +34,7 @@ class ParameterFactory(ConfigurablePlugin):
 class UserParameterFactory(ParameterFactory):
 	def __init__(self, config, repository):
 		ParameterFactory.__init__(self, config, repository)
-		self._log = logging.getLogger('parameterfactory')
+		self._log = logging.getLogger('parameters.factory')
 		self._paramConfig = ParameterConfig(config)
 		self._pExpr = config.get('parameters', '', onChange = None)
 
@@ -104,7 +104,7 @@ class BasicParameterFactory(ParameterFactory):
 			if doElevate: # switch needs elevation beyond local scope
 				self._nestedSources.append((PSourceClass, args))
 			else:
-				ps = PSourceClass(*args)
+				ps = PSourceClass.createInstance(PSourceClass.__name__, *args)
 				if ps.depends():
 					self._lookupSources.append(ps)
 				else:

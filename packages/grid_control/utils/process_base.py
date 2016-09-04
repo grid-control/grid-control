@@ -12,9 +12,9 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-import os, sys, time, errno, fcntl, select, signal, logging, termios
+import os, time, errno, fcntl, select, signal, logging, termios
 from grid_control.utils.thread_tools import GCEvent, GCLock, GCQueue, create_thread
-from hpfwk import AbstractError
+from hpfwk import AbstractError, get_current_exception
 from python_compat import bytes2str, imap, set, str2bytes
 
 def waitFD(read = None, write = None, timeout = 0.2):
@@ -36,6 +36,9 @@ class ProcessStream(object):
 		if self._log is not None:
 			return self._log
 		return ''
+
+	def reset_buffer(self):
+		self._buffer.reset()
 
 	def clear_log(self):
 		result = self._log
@@ -81,9 +84,9 @@ class ProcessReadStream(ProcessStream):
 			result += self.read(timeout = timeout_left)
 			if cond(result) or self._event_finished.is_set():
 				break
-			if timeout_left < 0:
-				raise ProcessTimeout('Stream result did not fulfill condition after waiting for %s seconds' % timeout)
-		yield result
+			if timeout_left <= 0:
+				raise ProcessTimeout('Stream result %r did not fulfill condition after waiting for %s seconds' % (result, timeout))
+		return result
 
 	def iter(self, timeout, timeout_soft = False, timeout_shutdown = 10):
 		waitedForShutdown = False
@@ -137,11 +140,12 @@ class Process(object):
 		self._buffer_stdin = GCQueue()
 		self._buffer_stdout = GCQueue()
 		self._buffer_stderr = GCQueue()
+		self._env = kwargs.pop('environment', None) or dict(os.environ)
 		# Stream setup
-		do_log = kwargs.get('logging', True) or None
-		self.stdout = ProcessReadStream(self._buffer_stdout, self._event_shutdown, self._event_finished, log = do_log)
-		self.stderr = ProcessReadStream(self._buffer_stderr, self._event_shutdown, self._event_finished, log = do_log)
-		self.stdin = ProcessWriteStream(self._buffer_stdin, log = do_log)
+		self._do_log = kwargs.pop('logging', True) or None
+		self.stdout = ProcessReadStream(self._buffer_stdout, self._event_shutdown, self._event_finished, log = self._do_log)
+		self.stderr = ProcessReadStream(self._buffer_stderr, self._event_shutdown, self._event_finished, log = self._do_log)
+		self.stdin = ProcessWriteStream(self._buffer_stdin, log = self._do_log)
 		self.clear_logs() # reset log to proper start value
 
 		self._args = []
@@ -171,9 +175,10 @@ class Process(object):
 			return time.time() - self._time_started
 
 	def __repr__(self):
-		return '%s(cmd = %s, args = %s, status = %s, stdin log = %r, stdout log = %r, stderr log = %r)' % (
-			self.__class__.__name__, self._cmd, repr(self._args), self.status(0),
-			self.stdin.read_log(), self.stdout.read_log(), self.stderr.read_log())
+		msg = 'cmd = %s, args = %s, status = %s' % (self._cmd, repr(self._args), self.status(0))
+		if self._do_log:
+			msg += ', stdin log = %r, stdout log = %r, stderr log = %r' % (self.stdin.read_log(), self.stdout.read_log(), self.stderr.read_log())
+		return '%s(%s)' % (self.__class__.__name__, msg)
 
 	def clear_logs(self):
 		self.stdout.clear_log()
@@ -184,6 +189,15 @@ class Process(object):
 		return str.join(' ', imap(repr, [self._cmd] + self._args))
 
 	def start(self):
+		self.clear_logs()
+		self._event_shutdown.clear()
+		self._event_finished.clear()
+		self.stdout.reset_buffer()
+		self.stderr.reset_buffer()
+		self.stdin.reset_buffer()
+		return self._start()
+
+	def _start(self):
 		raise AbstractError
 
 	def terminate(self, timeout):
@@ -192,10 +206,12 @@ class Process(object):
 	def kill(self, sig = signal.SIGTERM):
 		raise AbstractError
 
-	def restart(self):
-		if self.status(0) is None:
-			self.kill()
+	def restart(self, timeout):
+		if self.status(timeout = 0) is None:
+			self.terminate(timeout)
+		result = self.status(0)
 		self.start()
+		return result
 
 	def status(self, timeout, terminate = False):
 		raise AbstractError
@@ -225,15 +241,17 @@ class Process(object):
 
 class LocalProcess(Process):
 	def __init__(self, cmd, *args, **kwargs):
-		(self._status, self._runtime) = (None, None)
-		self._terminal = kwargs.pop('term', 'vt100')
-		Process.__init__(self, cmd, *args, **kwargs)
 		self._signal_dict = {}
 		for attr in dir(signal):
 			if attr.startswith('SIG') and ('_' not in attr):
 				self._signal_dict[getattr(signal, attr)] = attr
+		terminal = kwargs.pop('term', 'vt100')
+		Process.__init__(self, cmd, *args, **kwargs)
+		if terminal is not None:
+			self._env['TERM'] = terminal
 
-	def start(self):
+	def _start(self):
+		(self._status, self._runtime, self._pid) = (None, None, None)
 		# Setup of file descriptors - stdin / stdout via pty, stderr via pipe
 		LocalProcess.fdCreationLock.acquire()
 		try:
@@ -248,33 +266,36 @@ class LocalProcess(Process):
 		for fd in [fd_parent_stdout, fd_parent_stderr]: # enable non-blocking operation on stdout/stderr
 			fcntl.fcntl(fd, fcntl.F_SETFL, os.O_NONBLOCK | fcntl.fcntl(fd, fcntl.F_GETFL))
 
-		self._pid = os.fork()
+		pid = os.fork()
 		self._time_started = time.time()
 		self._time_ended = None
-		if self._pid == 0: # We are in the child process - redirect streams and exec external program
+		if pid == 0: # We are in the child process - redirect streams and exec external program
 			from grid_control.utils.process_child import run_process
-			run_process(self._cmd, [self._cmd] + self._args, fd_child_stdin, fd_child_stdout, fd_child_stderr, self._terminal)
+			run_process(self._cmd, [self._cmd] + self._args, fd_child_stdin, fd_child_stdout, fd_child_stderr, self._env)
 
 		else: # Still in the parent process - setup threads to communicate with external program
 			os.close(fd_child_terminal)
 			os.close(fd_child_stderr)
-			thread = create_thread(self._interact_with_child, fd_parent_stdin, fd_parent_stdout, fd_parent_stderr)
-			thread.daemon = True
-			thread.start()
+			self._pid = pid
+			self._start_thread('interact', True, pid, self._interact_with_child, pid, fd_parent_stdin, fd_parent_stdout, fd_parent_stderr)
 
-	def _interact_with_child(self, fd_parent_stdin, fd_parent_stdout, fd_parent_stderr):
-		thread_in = create_thread(self._handle_input, fd_parent_stdin, self._buffer_stdin, self._event_shutdown)
-		thread_in.start()
-		thread_out = create_thread(self._handle_output, fd_parent_stdout, self._buffer_stdout, self._event_shutdown)
-		thread_out.start()
-		thread_err = create_thread(self._handle_output, fd_parent_stderr, self._buffer_stderr, self._event_shutdown)
-		thread_err.start()
+	def _start_thread(self, desc, daemon, pid, *args):
+		thread = create_thread(*args)
+		thread.daemon = daemon
+		thread.desc = desc + ' (%d:%r)' % (pid, [self._cmd] + self._args)
+		thread.start()
+		return thread
+
+	def _interact_with_child(self, pid, fd_parent_stdin, fd_parent_stdout, fd_parent_stderr):
+		thread_in = self._start_thread('stdin', False, pid, self._handle_input, fd_parent_stdin, self._buffer_stdin, self._event_shutdown)
+		thread_out = self._start_thread('stdout', False, pid, self._handle_output, fd_parent_stdout, self._buffer_stdout, self._event_shutdown)
+		thread_err = self._start_thread('stderr', False, pid, self._handle_output, fd_parent_stderr, self._buffer_stderr, self._event_shutdown)
 		while self._status is None:
 			try:
-				(pid, status) = os.waitpid(self._pid, 0) # blocking (with spurious wakeups!)
+				(result_pid, status) = os.waitpid(pid, 0) # blocking (with spurious wakeups!)
 			except OSError: # unable to wait for child
-				(pid, status) = (self._pid, False) # False == 'OS_ABORT'
-			if pid == self._pid:
+				(result_pid, status) = (pid, False) # False == 'OS_ABORT'
+			if result_pid == pid:
 				self._status = status
 		self._time_ended = time.time()
 		self._event_shutdown.set() # start shutdown of handlers and wait for it to finish
@@ -360,7 +381,7 @@ class LocalProcess(Process):
 			try:
 				os.kill(self._pid, sig)
 			except OSError:
-				if sys.exc_info()[1].errno != errno.ESRCH: # errno.ESRCH: no such process (already dead)
+				if get_current_exception().errno != errno.ESRCH: # errno.ESRCH: no such process (already dead)
 					raise
 
 LocalProcess.fdCreationLock = GCLock()

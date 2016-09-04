@@ -14,32 +14,43 @@
 
 import os, time
 from grid_control import utils
-from grid_control.datasets import DataProvider
+from grid_control.datasets import DataProvider, DatasetError
 from grid_control.gc_exceptions import UserError
-from grid_control.parameters.psource_base import ParameterSource
-from python_compat import md5_hex
+from grid_control.parameters.psource_base import LimitedResyncParameterSource
+from grid_control.utils.activity import Activity
+from python_compat import md5_hex, set
 
-class DataParameterSource(ParameterSource):
+class DataParameterSource(LimitedResyncParameterSource):
 	alias = ['data']
 
-	def __init__(self, dataDir, srcName, dataProvider, dataSplitter, dataProc, keepOld = True):
-		ParameterSource.__init__(self)
-		(self._dataDir, self._srcName, self._dataProvider, self._dataSplitter, self._part_proc) = \
-			(dataDir, srcName, dataProvider, dataSplitter, dataProc)
+	def __init__(self, dataDir, srcName, dataProvider, dataSplitter, dataProc, repository, keepOld = True):
+		LimitedResyncParameterSource.__init__(self)
+		(self._dn, self._name, self._data_provider, self._data_splitter, self._part_proc, self._keepOld) = \
+			(dataDir, srcName, dataProvider, dataSplitter, dataProc, keepOld)
+		repository['dataset:%s' % srcName] = self
+		self.resyncSetup(interval = -1)
 
-		if not dataProvider:
-			pass # debug mode - used by scripts - disables resync
-		elif os.path.exists(self.getDataPath('cache.dat') and self.getDataPath('map.tar')):
-			self._dataSplitter.importPartitions(self.getDataPath('map.tar'))
+		if not dataProvider: # debug mode - used by scripts - disables resync
+			self._maxN = self._data_splitter.getMaxJobs()
+			return
+
+		# look for aborted resyncs - and try to restore old state if possible
+		if self._existsDataPath('cache.dat.resync') and self._existsDataPath('map.tar.resync'):
+			utils.renameFile(self._getDataPath('cache.dat.resync'), self._getDataPath('cache.dat'))
+			utils.renameFile(self._getDataPath('map.tar.resync'), self._getDataPath('map.tar'))
+		elif self._existsDataPath('cache.dat.resync') or self._existsDataPath('map.tar.resync'):
+			raise DatasetError('Found broken resync state')
+
+		if self._existsDataPath('cache.dat') and self._existsDataPath('map.tar'):
+			self._data_splitter.importPartitions(self._getDataPath('map.tar'))
 		else:
-			DataProvider.saveToFile(self.getDataPath('cache.dat'), self._dataProvider.getBlocks(show_stats = False))
-			self._dataSplitter.splitDataset(self.getDataPath('map.tar'), self._dataProvider.getBlocks(show_stats = False))
+			DataProvider.saveToFile(self._getDataPath('cache.dat'), self._data_provider.getBlocks(show_stats = False))
+			self._data_splitter.splitDataset(self._getDataPath('map.tar'), self._data_provider.getBlocks(show_stats = False))
 
-		self._maxN = self._dataSplitter.getMaxJobs()
-		self._keepOld = keepOld
+		self._maxN = self._data_splitter.getMaxJobs()
 
 	def canFinish(self):
-		return self._resyncTime == 0
+		return self._resyncInterval < 0
 
 	def getMaxParameters(self):
 		return self._maxN
@@ -48,48 +59,51 @@ class DataParameterSource(ParameterSource):
 		result.extend(self._part_proc.getKeys() or [])
 
 	def fillParameterInfo(self, pNum, result):
-		splitInfo = self._dataSplitter.getSplitInfo(pNum)
+		splitInfo = self._data_splitter.getSplitInfo(pNum)
 		self._part_proc.process(pNum, splitInfo, result)
 
 	def getHash(self):
-		return md5_hex(str(self._srcName) + str(self._dataSplitter.getMaxJobs()) + str(self.resyncEnabled()))
+		if self._resync_enabled():
+			return md5_hex(repr(time.time()))
+		return md5_hex(repr([self._name, self._data_splitter.getMaxJobs()]))
 
 	def show(self):
-		return ['%s: src = %s' % (self.__class__.__name__, self._srcName)]
+		return ['%s: src = %s' % (self.__class__.__name__, self._name)]
 
 	def __repr__(self):
-		return 'data(%s)' % utils.QM(self._srcName == 'data', '', self._srcName)
+		return 'data(%s)' % utils.QM(self._name == 'data', '', self._name)
 
-	def getDataPath(self, postfix):
-		return os.path.join(self._dataDir, self._srcName + postfix)
+	def _getDataPath(self, postfix):
+		return os.path.join(self._dn, self._name + postfix)
 
-	def resync(self):
-		(result_redo, result_disable, result_sizeChange) = ParameterSource.resync(self)
-		if self.resyncEnabled() and self._dataProvider:
+	def _existsDataPath(self, postfix):
+		return os.path.exists(os.path.join(self._dn, self._name + postfix))
+
+	def _resync(self):
+		if self._data_provider:
+			activity = Activity('Performing resync of datasource %r' % self._name)
 			# Get old and new dataset information
-			old = DataProvider.loadFromFile(self.getDataPath('cache.dat')).getBlocks(show_stats = False)
-			self._dataProvider.clearCache()
-			new = self._dataProvider.getBlocks(show_stats = False)
-			self._dataProvider.saveToFile(self.getDataPath('cache-new.dat'), new)
+			ds_old = DataProvider.loadFromFile(self._getDataPath('cache.dat')).getBlocks(show_stats = False)
+			self._data_provider.clearCache()
+			ds_new = self._data_provider.getBlocks(show_stats = False)
+			self._data_provider.saveToFile(self._getDataPath('cache-new.dat'), ds_new)
 
 			# Use old splitting information to synchronize with new dataset infos
-			jobChanges = self._dataSplitter.resyncMapping(self.getDataPath('map-new.tar'), old, new)
-			if jobChanges:
+			old_maxN = self._data_splitter.getMaxJobs()
+			jobChanges = self._data_splitter.resyncMapping(self._getDataPath('map-new.tar'), ds_old, ds_new)
+			activity.finish()
+			if jobChanges is not None:
 				# Move current splitting to backup and use the new splitting from now on
 				def backupRename(old, cur, new):
 					if self._keepOld:
-						os.rename(self.getDataPath(cur), self.getDataPath(old))
-					os.rename(self.getDataPath(new), self.getDataPath(cur))
+						os.rename(self._getDataPath(cur), self._getDataPath(old))
+					os.rename(self._getDataPath(new), self._getDataPath(cur))
 				backupRename(  'map-old-%d.tar' % time.time(),   'map.tar',   'map-new.tar')
 				backupRename('cache-old-%d.dat' % time.time(), 'cache.dat', 'cache-new.dat')
-				old_maxN = self._dataSplitter.getMaxJobs()
-				self._dataSplitter.importPartitions(self.getDataPath('map.tar'))
-				self._maxN = self._dataSplitter.getMaxJobs()
-				result_redo.update(jobChanges[0])
-				result_disable.update(jobChanges[1])
-				result_sizeChange = result_sizeChange or (old_maxN != self._maxN)
-			self.resyncFinished()
-		return (result_redo, result_disable, result_sizeChange)
+				self._data_splitter.importPartitions(self._getDataPath('map.tar'))
+				self._maxN = self._data_splitter.getMaxJobs()
+				self._log.debug('Dataset resync finished: %d -> %d partitions', old_maxN, self._maxN)
+				return (set(jobChanges[0]), set(jobChanges[1]), old_maxN != self._maxN)
 
 	def create(cls, pconfig, repository, src = 'data'): # pylint:disable=arguments-differ
 		src_key = 'dataset:%s' % src

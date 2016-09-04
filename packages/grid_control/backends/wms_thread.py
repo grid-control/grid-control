@@ -13,7 +13,7 @@
 # | limitations under the License.
 
 from grid_control.backends.wms_multi import MultiWMS
-from grid_control.utils.gc_itertools import tchain
+from grid_control.utils.thread_tools import tchain
 from python_compat import ifilter, imap
 
 class ThreadedMultiWMS(MultiWMS):

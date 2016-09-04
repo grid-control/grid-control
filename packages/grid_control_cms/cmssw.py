@@ -92,12 +92,7 @@ class SCRAMTask(DataTask):
 
 			# try to determine scram settings from environment settings
 			scramPath = os.path.join(self._projectArea, '.SCRAM')
-			try:
-				fp = open(os.path.join(scramPath, 'Environment'), 'r')
-				scramEnv = utils.DictFormat().parse(fp, keyParser = {None: str})
-			except Exception:
-				raise ConfigError('Project area file %s/Environment cannot be parsed!' % scramPath)
-
+			scramEnv = self._parse_scram_file(os.path.join(scramPath, 'Environment'))
 			try:
 				self._scramProject = scramEnv['SCRAM_PROJECTNAME']
 				self._scramProjectVersion = scramEnv['SCRAM_PROJECTVERSION']
@@ -137,6 +132,17 @@ class SCRAMTask(DataTask):
 		return DataTask.getDependencies(self) + ['cmssw']
 
 
+	def _parse_scram_file(self, fn):
+		try:
+			fp = open(fn, 'r')
+			try:
+				return utils.DictFormat().parse(fp, keyParser = {None: str})
+			finally:
+				fp.close()
+		except Exception:
+			raise ConfigError('Project area file %s cannot be parsed!' % fn)
+
+
 class CMSSW(SCRAMTask):
 	configSections = SCRAMTask.configSections + ['CMSSW']
 
@@ -155,12 +161,7 @@ class CMSSW(SCRAMTask):
 
 		self._oldReleaseTop = None
 		if self._projectArea:
-			try:
-				fp = open(os.path.join(self._projectArea, '.SCRAM', self._scramArch, 'Environment'), 'r')
-				scramEnv = utils.DictFormat().parse(fp, keyParser = {None: str})
-			except Exception:
-				raise ConfigError('Project area file .SCRAM/%s/Environment cannot be parsed!' % self._scramArch)
-			self._oldReleaseTop = scramEnv.get('RELEASETOP', None)
+			self._oldReleaseTop = self._parse_scram_file(os.path.join(self._projectArea, '.SCRAM', self._scramArch, 'Environment')).get('RELEASETOP', None)
 
 		self.updateErrorDict(utils.pathShare('gc-run.cmssw.sh', pkg = 'grid_control_cms'))
 

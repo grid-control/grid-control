@@ -12,7 +12,7 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-from python_compat import identity, ifilter, imap, json, lfilter, lmap, reduce, set, sorted, unicode
+from python_compat import identity, ifilter, imap, json, lfilter, lmap, next, reduce, set, sorted, unicode
 
 def removeUnicode(obj):
 	if unicode == str:
@@ -124,3 +124,70 @@ def strDictLong(value, parser = identity, strfun = str):
 		result = strfun(srcdict.get(None, parser('')))
 	fmt = '\n\t%%%ds => %%%ds' % (getmax(srckeys), getmax(srcdict.values()))
 	return result + str.join('', imap(lambda k: fmt % (k, strfun(srcdict[k])), srckeys))
+
+
+def split_with_stack(tokens, process_token, exMsg, exType = Exception):
+	buffer = ''
+	stack = []
+	position = 0
+	for token in tokens:
+		position += len(token) # store position for proper error messages
+		if process_token(position, token, stack): # check if buffer should be emitted
+			buffer += token
+			yield buffer
+			buffer = ''
+		elif stack:
+			buffer += token
+		else:
+			yield token
+	if stack:
+		raise exType(exMsg % str.join('; ', imap(lambda item_pos: '%r at position %d' % item_pos, stack)))
+
+
+def split_quotes(tokens, quotes = None, exType = Exception):
+	quotes = quotes or ['"', "'"]
+	def _split_quotes(position, token, stack):
+		if token in quotes:
+			if stack and (stack[-1][0] == token):
+				stack.pop()
+				if not stack:
+					return True
+			else:
+				stack.append((token, position))
+	return split_with_stack(tokens, _split_quotes, 'Unclosed quotes: %s', exType)
+
+
+def split_brackets(tokens, brackets = None, exType = Exception):
+	map_close_to_open = dict(imap(lambda x: (x[1], x[0]), brackets or ['()', '{}', '[]']))
+	def _split_brackets(position, token, stack):
+		if token in map_close_to_open.values():
+			stack.append((token, position))
+		elif token in map_close_to_open.keys():
+			if not stack:
+				raise exType('Closing bracket %r at position %d is without opening bracket' % (token, position))
+			elif stack[-1][0] == map_close_to_open[token]:
+				stack.pop()
+				if not stack:
+					return True
+			else:
+				raise exType('Closing bracket %r at position %d does not match bracket %r at position %d' % (token, position, stack[-1][0], stack[-1][1]))
+	return split_with_stack(tokens, _split_brackets, 'Unclosed brackets: %s', exType)
+
+
+def split_advanced(tokens, doEmit, addEmitToken, quotes = None, brackets = None, exType = Exception):
+	buffer = None
+	tokens = split_brackets(split_quotes(tokens, quotes, exType), brackets, exType)
+	token = next(tokens, None)
+	while token:
+		if buffer is None:
+			buffer = ''
+		if doEmit(token):
+			yield buffer
+			buffer = ''
+			if addEmitToken(token):
+				yield token
+		else:
+			buffer += token
+		token = next(tokens, None)
+	if buffer is not None:
+		yield buffer

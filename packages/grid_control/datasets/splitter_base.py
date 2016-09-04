@@ -14,7 +14,7 @@
 
 import os, copy
 from grid_control import utils
-from grid_control.config import createConfig, noDefault
+from grid_control.config import create_config, noDefault
 from grid_control.datasets.provider_base import DataProvider
 from grid_control.gc_plugin import ConfigurablePlugin
 from grid_control.utils.activity import Activity
@@ -42,7 +42,7 @@ class PartitionError(NestedException):
 
 
 class DataSplitterIO(Plugin):
-	def saveSplitting(self, path, meta, source, sourceLen, message = 'Writing job mapping file'):
+	def saveSplitting(self, path, meta, source, sourceLenHint, message = 'Writing job mapping file'):
 		raise AbstractError
 
 	def loadSplitting(self, path):
@@ -103,7 +103,7 @@ class DataSplitter(ConfigurablePlugin):
 
 	def finaliseJobSplitting(self, block, splitInfo, files = None):
 		# Copy infos from block
-		for prop in ['Dataset', 'BlockName', 'DatasetID', 'Nickname', 'Locations']:
+		for prop in ['Dataset', 'BlockName', 'Nickname', 'Locations']:
 			if getattr(DataProvider, prop) in block:
 				splitInfo[getattr(DataSplitter, prop)] = block[getattr(DataProvider, prop)]
 		if DataProvider.Metadata in block:
@@ -139,16 +139,16 @@ class DataSplitter(ConfigurablePlugin):
 
 
 	# Save as tar file to allow random access to mapping data with little memory overhead
-	def savePartitions(self, path, source = None, sourceLen = None, message = 'Writing job mapping file'):
-		if source and not sourceLen:
+	def savePartitions(self, path, source = None, sourceLenHint = None, message = 'Writing job mapping file'):
+		if source and not sourceLenHint:
 			source = list(source)
-			sourceLen = len(source)
+			sourceLenHint = len(source)
 		elif not source:
-			(source, sourceLen) = (self._splitSource, self.getMaxJobs())
+			(source, sourceLenHint) = (self._splitSource, self.getMaxJobs())
 		# Write metadata to allow reconstruction of data splitter
 		meta = {'ClassName': self.__class__.__name__}
 		meta.update(self._protocol)
-		DataSplitterIO.createInstance('DataSplitterIOAuto').saveSplitting(path, meta, source, sourceLen, message)
+		DataSplitterIO.createInstance('DataSplitterIOAuto').saveSplitting(path, meta, source, sourceLenHint, message)
 
 
 	def importPartitions(self, path):
@@ -183,7 +183,7 @@ class DataSplitter(ConfigurablePlugin):
 
 	# Process changed files in partition - returns True if file index should be increased
 	def _resyncChangedFileEntries(self, idx, modSI, jobNum, sizeInfo, oldFI, newFI, newBlock, extended):
-		modSI[DataSplitter.Comment] += '[changed] ' + oldFI[DataProvider.URL]
+		modSI[DataSplitter.Comment] += ' [changed] ' + oldFI[DataProvider.URL]
 		modSI[DataSplitter.Comment] += (' -%d ' % oldFI[DataProvider.NEntries])
 		modSI[DataSplitter.Comment] += (' +%d ' % newFI[DataProvider.NEntries])
 
@@ -474,13 +474,13 @@ class DataSplitter(ConfigurablePlugin):
 		resultDisable = []
 		newSplitPathTMP = newSplitPath + '.tmp'
 		resyncIter = self._resyncIterator(resultRedo, resultDisable, blocksAdded, blocksMissing, blocksMatching)
-		self.savePartitions(newSplitPathTMP, resyncIter, sourceLen = self.getMaxJobs(),
+		self.savePartitions(newSplitPathTMP, resyncIter, sourceLenHint = self.getMaxJobs(),
 			message = 'Performing resynchronization of dataset map (progress is estimated)')
 
 		if self._interactive:
 			# TODO: print info and ask
 			if not utils.getUserBool('Do you want to use the new dataset partition?', False):
-				return None
+				return
 		os.rename(newSplitPathTMP, newSplitPath)
 
 		return (resultRedo, resultDisable)
@@ -500,11 +500,11 @@ class DataSplitter(ConfigurablePlugin):
 					cfg.set(option, str(value))
 		# Create and setup splitter
 		if cfg is None:
-			cfg = createConfig(configDict = src.metadata)
+			cfg = create_config(configDict = src.metadata)
 		splitter = DataSplitter.createInstance(src.classname, cfg)
 		splitter.setState(src, protocol)
 		return splitter
 	loadPartitionsForScript = staticmethod(loadPartitionsForScript)
 
-makeEnum(['Dataset', 'Locations', 'NEntries', 'Skipped', 'FileList', 'Nickname', 'DatasetID',
+makeEnum(['Dataset', 'Locations', 'NEntries', 'Skipped', 'FileList', 'Nickname', 'DatasetID', # DatasetID is legacy
 	'CommonPrefix', 'Invalid', 'BlockName', 'MetadataHeader', 'Metadata', 'Comment'], DataSplitter, useHash = False)

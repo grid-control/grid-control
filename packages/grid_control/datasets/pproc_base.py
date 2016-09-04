@@ -15,15 +15,14 @@
 import logging
 from grid_control.gc_plugin import ConfigurablePlugin
 from grid_control.utils import prune_processors
-from grid_control.utils.gc_itertools import lchain
 from hpfwk import AbstractError
-from python_compat import imap
+from python_compat import imap, lchain
 
 # Class used by DataParameterSource to convert dataset splittings into parameter data
 class PartitionProcessor(ConfigurablePlugin):
 	def __init__(self, config):
 		ConfigurablePlugin.__init__(self, config)
-		self._log = logging.getLogger('partproc')
+		self._log = logging.getLogger('dataset.partition.processor')
 
 	def enabled(self):
 		return True

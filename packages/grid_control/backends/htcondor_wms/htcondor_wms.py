@@ -23,8 +23,7 @@ from grid_control.backends.wms import BackendError, BasicWMS
 from grid_control.config import ConfigError
 from grid_control.job_db import Job
 from grid_control.utils.activity import Activity
-from grid_control.utils.gc_itertools import lchain
-from python_compat import json, lfilter
+from python_compat import json, lchain, lfilter
 
 """
 HTCondor backend core

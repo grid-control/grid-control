@@ -14,11 +14,11 @@
 
 from grid_control.config.chandlers_base import changeImpossible, changeInitNeeded, triggerResync, validNoVar
 from grid_control.config.config_entry import ConfigError, appendOption, noDefault
-from grid_control.config.config_factory import createConfig
+from grid_control.config.config_factory import create_config
 from grid_control.config.matcher_base import ListFilter, ListOrder, Matcher
 
-__all__ = ['ConfigError', 'ListFilter', 'ListOrder', 'Matcher', 'appendOption', 'changeImpossible',
-	'changeInitNeeded', 'createConfig', 'noDefault', 'triggerResync', 'validNoVar']
+__all__ = ['appendOption', 'changeImpossible', 'changeInitNeeded', 'ConfigError', 'create_config',
+	'ListFilter', 'ListOrder', 'Matcher', 'noDefault', 'triggerResync', 'validNoVar']
 
 # At the lowest level, all config option values are represented by strings
 # which are encapsulated in the ConfigEntry class, which holds access and source

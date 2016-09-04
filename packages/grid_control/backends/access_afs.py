@@ -30,7 +30,7 @@ class AFSAccessToken(RefreshableAccessToken):
 		self._backupTickets(config)
 		self._tickets = config.getList('tickets', [], onChange = None)
 
-	def _backupTickets(self, config):
+	def _backupTickets(self, config): # TODO: thread safety of os.environ changes / fix for remote backends
 		import stat, shutil
 		for name in self._authFiles: # store kerberos files in work directory for persistency
 			if name in os.environ:

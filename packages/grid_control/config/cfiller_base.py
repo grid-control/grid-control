@@ -68,13 +68,10 @@ class FileConfigFiller(ConfigFiller):
 		tmpConfigContent = {}
 		self._fillContentSingleFile(configFile, configFileLines, searchPaths, tmpConfigContent)
 		def getFlatList(section, option):
-			for (opt, value, src) in tmpConfigContent.get(section, []):
-				try:
-					if opt == option:
-						for entry in parseList(value, None):
-							yield entry
-				except Exception:
-					raise ConfigError('Unable to parse [%s] %s from %s' % (section, option, src))
+			for (opt, value, _) in tmpConfigContent.get(section, []):
+				if opt == option:
+					for entry in parseList(value, None):
+						yield entry
 
 		newSearchPaths = [os.path.dirname(configFile)]
 		# Add entries from include statement recursively

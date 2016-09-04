@@ -13,6 +13,7 @@
 # | limitations under the License.
 
 import time, logging, threading
+from hpfwk import ExceptionCollector, NestedException, get_current_exception
 from python_compat import get_current_thread, get_thread_name
 
 blocking_equivalent = 60*60*24*7 # instead of blocking, we wait for a week
@@ -133,6 +134,15 @@ class GCQueue(object):
 		self._finished.set()
 		self._notify.set()
 
+	def reset(self):
+		self._lock.acquire()
+		try:
+			self._queue = []
+			self._finished.clear()
+			self._notify.clear()
+		finally:
+			self._lock.release()
+
 	def wait_get(self, timeout):
 		return self._notify.wait(timeout)
 
@@ -170,6 +180,7 @@ class GCThreadPool(object):
 		self._token_time = {}
 		self._token_desc = {}
 		self._log = logging.getLogger('thread_pool')
+		self._ex_collector = ExceptionCollector(self._log)
 
 	def wait_and_drop(self, timeout = None):
 		while True:
@@ -211,7 +222,7 @@ class GCThreadPool(object):
 		except Exception:
 			self._lock.acquire()
 			try:
-				self._log.exception('Exception in thread %r', self._token_desc[token])
+				self._ex_collector.collect(logging.ERROR, 'Exception in thread %r', self._token_desc[token], exc_info = get_current_exception())
 			finally:
 				self._lock.release()
 		self._lock.acquire()
@@ -237,3 +248,36 @@ def hang_protection(fun, timeout = 5):
 	if None not in result:
 		raise TimeoutException
 	return result[None]
+
+
+# Combines multiple, threaded generators into single generator
+def tchain(iterables, timeout = None):
+	threads = []
+	result = GCQueue()
+	ec = ExceptionCollector()
+	for idx, it in enumerate(iterables):
+		def generator_thread(iterator): # TODO: Python 3.5 hickup related to pep 479?
+			try:
+				try:
+					for item in iterator:
+						result.put(item)
+				finally:
+					result.put(GCQueue) # Use GCQueue as end-of-generator marker
+			except Exception:
+				ec.collect()
+		threads.append(start_thread('generator thread %d' % idx, generator_thread, it))
+
+	if timeout is not None:
+		t_end = time.time() + timeout
+	while len(threads):
+		if timeout is not None:
+			timeout = max(0, t_end - time.time())
+		try:
+			tmp = result.get(timeout)
+		except IndexError: # Empty queue after waiting for timeout
+			break
+		if tmp == GCQueue:
+			threads.pop() # which thread is irrelevant - only used as counter
+		else:
+			yield tmp
+	ec.raise_any(NestedException('Caught exception during threaded chain'))

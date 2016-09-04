@@ -15,8 +15,9 @@
 def init_hpf_logging():
 	import logging
 
-	logLevelDict = {'DEFAULT': 14,
-		'INFO1': 13, 'INFO2': 12, 'INFO3': 11, 'DEBUG1': 9, 'DEBUG2': 8, 'DEBUG3': 7}
+	logLevelDict = {'DEFAULT': logging.INFO - 1,
+		'INFO1': logging.DEBUG + 3, 'INFO2': logging.DEBUG + 2, 'INFO3': logging.DEBUG + 1,
+		'DEBUG1': logging.DEBUG - 1, 'DEBUG2': logging.DEBUG - 2, 'DEBUG3': logging.DEBUG - 3}
 
 	# Register new log levels
 	for name in logLevelDict:

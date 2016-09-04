@@ -94,7 +94,6 @@ class TimedAccessToken(AccessToken):
 		self._minQueryTime = config.getTime(['min query time', 'query time'], 30 * 60, onChange = None)
 		self._ignoreTime = config.getBool(['ignore walltime', 'ignore needed time'], False, onChange = None)
 		self._lastUpdate = 0
-		self._logUser = logging.getLogger('user.time')
 
 	def canSubmit(self, neededTime, canCurrentlySubmit):
 		if not self._checkTimeleft(self._lowerLimit):
@@ -103,9 +102,9 @@ class TimedAccessToken(AccessToken):
 		if self._ignoreTime or (neededTime < 0):
 			return True
 		if not self._checkTimeleft(self._lowerLimit + neededTime) and canCurrentlySubmit:
-			self._logUser.warning('Access token (%s) lifetime (%s) does not meet the access and walltime (%s) requirements!',
+			self._log.log_time(logging.WARNING, 'Access token (%s) lifetime (%s) does not meet the access and walltime (%s) requirements!',
 				self.getObjectName(), strTime(self._getTimeleft(cached = False)), strTime(self._lowerLimit + neededTime))
-			self._logUser.warning('Disabling job submission')
+			self._log.log_time(logging.WARNING, 'Disabling job submission')
 			return False
 		return True
 
@@ -119,7 +118,7 @@ class TimedAccessToken(AccessToken):
 		if (delta > self._minQueryTime) or (timeleft < neededTime and delta > self._maxQueryTime):
 			self._lastUpdate = time.time()
 			timeleft = self._getTimeleft(cached = False)
-			self._logUser.info('Time left for access token "%s": %s', self.getObjectName(), strTime(timeleft))
+			self._log.log_time(logging.INFO, 'Time left for access token "%s": %s', self.getObjectName(), strTime(timeleft))
 		return timeleft >= neededTime
 
 

@@ -21,7 +21,7 @@ from grid_control.backends.htcondor_wms.htcondor_utils import parseKWListIter, s
 from grid_control.backends.htcondor_wms.processadapter import ProcessAdapterFactory
 from grid_control.backends.htcondor_wms.wmsid import HTCJobID
 from grid_control.backends.wms import BackendError, WMS
-from hpfwk import AbstractError, Plugin
+from hpfwk import AbstractError, Plugin, clear_current_exception
 from python_compat import ismap, lmap, lru_cache, md5
 
 """
@@ -178,7 +178,7 @@ class HTCScheddBase(Plugin):
 				matchKey=re.match("(?:MATCH_EXP_JOB_|MATCH_|JOB_)(.*)",key).group(1)
 				jdlData['Head']['+JOB_%s'%matchKey] = "$$(%s:Unknown)" % matchKey
 			except AttributeError:
-				pass
+				clear_current_exception()
 		for line in self.parentPool._jobSettings["ClassAd"]:
 			jdlData.append( '+' + line )
 		for line in self.parentPool._jobSettings["JDL"]:
@@ -228,7 +228,7 @@ class HTCScheddBase(Plugin):
 				if int(reqValue) <= 0:
 					continue
 			except TypeError:
-				pass
+				clear_current_exception()
 			self._log(logging.INFO3, "Requirement '%s' cannot be mapped to pool and will be ignored!" % WMS.reqTypes[reqType])
 		return jdlData
 
@@ -295,7 +295,7 @@ class HTCScheddCLIBase(HTCScheddBase):
 				rmList.remove((htcID.clusterID,htcID.procID))
 				rmIDList.append(htcID)
 			except ValueError:
-				pass
+				clear_current_exception()
 		return rmIDList
 
 	def getHTCVersion(self):
@@ -383,7 +383,7 @@ class HTCScheddLocal(HTCScheddCLIBase):
 				'use_x509userproxy       = True',
 				])
 		except Exception:
-			pass
+			clear_current_exception()
 		for jobNum in jobNumList:
 			jdlData.extend(self._getRequirementJdlData(task, jobNum))
 			jobStageDir = self.getStagingDir(htcID = HTCJobID(gcJobNum=jobNum, gcTaskID=task.taskID))
@@ -585,7 +585,7 @@ class HTCScheddSSH(HTCScheddCLIBase):
 			for authFile in parentPool.proxy.getauthFiles():
 				proxyFile = ('User Proxy', authFile, os.path.join(self.getStagingDir(taskID = task.taskID), os.path.basename(authFile)))
 		except Exception:
-			pass
+			clear_current_exception()
 		jobFileMap = {}
 		for jobNum in jobNumList:
 			jcFull, jcBase = self.getJobCfgPath(jobNum)

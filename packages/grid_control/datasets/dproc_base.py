@@ -20,7 +20,7 @@ from hpfwk import AbstractError
 class DataProcessor(ConfigurablePlugin):
 	def __init__(self, config, onChange):
 		ConfigurablePlugin.__init__(self, config)
-		self._log = logging.getLogger('dataproc')
+		self._log = logging.getLogger('dataset.provider.processor')
 		self._log_debug = None
 		if self._log.isEnabledFor(logging.DEBUG):
 			self._log_debug = self._log

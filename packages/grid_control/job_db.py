@@ -82,7 +82,7 @@ class JobClass(object):
 class JobDB(ConfigurablePlugin):
 	def __init__(self, config, jobLimit = -1, jobSelector = None):
 		ConfigurablePlugin.__init__(self, config)
-		self._log = logging.getLogger('jobs')
+		self._log = logging.getLogger('jobs.db')
 		(self._jobLimit, self._alwaysSelector) = (jobLimit, jobSelector)
 		(self._defaultJob, self._workPath) = (Job(), config.getWorkPath())
 
@@ -98,6 +98,7 @@ class JobDB(ConfigurablePlugin):
 	def getJobsIter(self, jobSelector = None, subset = None):
 		if subset is None:
 			subset = irange(self._jobLimit)
+
 		if jobSelector and self._alwaysSelector:
 			select = lambda *args: jobSelector(*args) and self._alwaysSelector(*args)
 		elif jobSelector or self._alwaysSelector:
@@ -105,10 +106,10 @@ class JobDB(ConfigurablePlugin):
 		else:
 			for jobNum in subset:
 				yield jobNum
-			raise StopIteration
-		for jobNum in subset:
-			if select(jobNum, self.getJobTransient(jobNum)):
-				yield jobNum
+		if jobSelector or self._alwaysSelector:
+			for jobNum in subset:
+				if select(jobNum, self.getJobTransient(jobNum)):
+					yield jobNum
 
 	def getJobs(self, jobSelector = None, subset = None):
 		return list(self.getJobsIter(jobSelector, subset))

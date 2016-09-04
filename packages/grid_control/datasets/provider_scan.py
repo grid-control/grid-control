@@ -14,17 +14,16 @@
 
 import os, sys
 from grid_control import utils
-from grid_control.config import appendOption, createConfig
+from grid_control.config import appendOption, create_config
 from grid_control.datasets.provider_base import DataProvider
 from grid_control.datasets.scanner_base import InfoScanner
 from grid_control.utils.data_structures import UniqueList
-from grid_control.utils.gc_itertools import lchain
 from hpfwk import Plugin, PluginError
-from python_compat import identity, ifilter, imap, itemgetter, lmap, lsmap, md5_hex, sorted
+from python_compat import identity, ifilter, imap, itemgetter, lchain, lmap, lsmap, md5_hex, sorted
 
 class ScanProviderBase(DataProvider):
-	def __init__(self, config, datasetExpr, datasetNick, datasetID, sList):
-		DataProvider.__init__(self, config, datasetExpr, datasetNick, datasetID)
+	def __init__(self, config, datasetExpr, datasetNick, sList):
+		DataProvider.__init__(self, config, datasetExpr, datasetNick)
 		(self._ds_select, self._ds_name, self._ds_keys_user, self._ds_keys_guard) = self._setup(config, 'dataset')
 		(self._b_select, self._b_name, self._b_keys_user, self._b_keys_guard) = self._setup(config, 'block')
 		scanList = config.getList('scanner', sList) + ['NullScanner']
@@ -82,11 +81,11 @@ class ScanProviderBase(DataProvider):
 		ask = True
 		for name, key_list in sorted(dupesDict.items()):
 			if len(key_list) > 1:
-				self._log.critical('Multiple %s keys are mapped to the name %s!', tName, repr(name))
+				self._log.warn('Multiple %s keys are mapped to the name %s!', tName, repr(name))
 				for key in sorted(key_list):
-					self._log.critical('\t%s hash %s using:', tName, str.join('#', key))
+					self._log.warn('\t%s hash %s using:', tName, str.join('#', key))
 					for var, value in self._getFilteredVarDict(varDict, key, hashKeys).items():
-						self._log.critical('\t\t%s = %s', var, value)
+						self._log.warn('\t\t%s = %s', var, value)
 				if ask and not utils.getUserBool('Do you want to continue?', False):
 					sys.exit(os.EX_OK)
 				ask = False
@@ -153,7 +152,7 @@ class ScanProviderBase(DataProvider):
 class ScanProvider(ScanProviderBase):
 	alias = ['scan']
 
-	def __init__(self, config, datasetExpr, datasetNick = None, datasetID = 0):
+	def __init__(self, config, datasetExpr, datasetNick = None):
 		ds_config = config.changeView(viewClass = 'TaggedConfigView', addNames = [md5_hex(datasetExpr)])
 		basename = os.path.basename(datasetExpr)
 		firstScanner = 'FilesFromLS'
@@ -167,7 +166,7 @@ class ScanProvider(ScanProviderBase):
 			ds_config.set('filename filter', '')
 			firstScanner = 'FilesFromDataProvider'
 		defScanner = [firstScanner, 'MatchOnFilename', 'MatchDelimeter', 'DetermineEvents', 'AddFilePrefix']
-		ScanProviderBase.__init__(self, ds_config, datasetExpr, datasetNick, datasetID, defScanner)
+		ScanProviderBase.__init__(self, ds_config, datasetExpr, datasetNick, defScanner)
 
 
 # This class is used to disentangle the TaskModule and GCProvider class - without any direct dependencies / imports
@@ -181,7 +180,7 @@ class GCProviderSetup(Plugin):
 class GCProvider(ScanProviderBase):
 	alias = ['gc']
 
-	def __init__(self, config, datasetExpr, datasetNick = None, datasetID = 0):
+	def __init__(self, config, datasetExpr, datasetNick = None):
 		ds_config = config.changeView(viewClass = 'TaggedConfigView', addNames = [md5_hex(datasetExpr)])
 		if os.path.isdir(datasetExpr):
 			scan_pipeline = ['OutputDirsFromWork']
@@ -192,7 +191,7 @@ class GCProvider(ScanProviderBase):
 			datasetExpr, selector = utils.optSplit(datasetExpr, '%')
 			ds_config.set('source config', datasetExpr)
 			ds_config.set('source job selector', selector)
-		ext_config = createConfig(datasetExpr)
+		ext_config = create_config(datasetExpr)
 		ext_task_name = ext_config.changeView(setSections = ['global']).get(['module', 'task'])
 		if 'ParaMod' in ext_task_name: # handle old config files
 			ext_task_name = ext_config.changeView(setSections = ['ParaMod']).get('module')
@@ -204,4 +203,4 @@ class GCProvider(ScanProviderBase):
 				continue
 			scan_pipeline += scan_holder.scan_pipeline
 			break
-		ScanProviderBase.__init__(self, ds_config, datasetExpr, datasetNick, datasetID, scan_pipeline)
+		ScanProviderBase.__init__(self, ds_config, datasetExpr, datasetNick, scan_pipeline)

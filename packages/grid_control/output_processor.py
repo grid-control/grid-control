@@ -12,11 +12,11 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-import os, sys, gzip, logging
+import os, gzip, logging
 from grid_control.utils import DictFormat
 from grid_control.utils.data_structures import makeEnum
-from hpfwk import AbstractError, NestedException, Plugin
-from python_compat import ifilter, izip
+from hpfwk import AbstractError, NestedException, Plugin, get_current_exception
+from python_compat import bytes2str, ifilter, izip
 
 class OutputProcessor(Plugin):
 	def process(self, dn):
@@ -34,48 +34,51 @@ class JobInfoProcessor(OutputProcessor):
 
 	def process(self, dn):
 		fn = os.path.join(dn, 'job.info')
-		if not os.path.exists(fn):
-			raise JobResultError('Job result file %r does not exist' % fn)
 		try:
-			info_content = open(fn, 'r').read()
+			if not os.path.exists(fn):
+				raise JobResultError('Job result file %r does not exist' % fn)
+			try:
+				info_content = open(fn, 'r').read()
+			except Exception:
+				raise JobResultError('Unable to read job result file %r' % fn)
+			if not info_content:
+				raise JobResultError('Job result file %r is empty' % fn)
+			data = self._df.parse(info_content, keyParser = {None: str}) # impossible to fail
+			try:
+				jobNum = data.pop('JOBID')
+				exitCode = data.pop('EXITCODE')
+				return {JobResult.JOBNUM: jobNum, JobResult.EXITCODE: exitCode, JobResult.RAW: data}
+			except Exception:
+				raise JobResultError('Job result file %r is incomplete' % fn)
 		except Exception:
-			raise JobResultError('Unable to read job result file %r' % fn)
-		if not info_content:
-			raise JobResultError('Job result file %r is empty' % fn)
-		try:
-			data = self._df.parse(info_content, keyParser = {None: str})
-		except Exception:
-			raise JobResultError('Unable to parse job result file %r' % fn)
-		try:
-			jobNum = data.pop('JOBID')
-			exitCode = data.pop('EXITCODE')
-			return {JobResult.JOBNUM: jobNum, JobResult.EXITCODE: exitCode, JobResult.RAW: data}
-		except Exception:
-			raise JobResultError('Job result file %r is incomplete' % fn)
+			raise JobResultError('Unable to process output directory %r' % dn)
 
 
 class DebugJobInfoProcessor(JobInfoProcessor):
 	def __init__(self):
 		JobInfoProcessor.__init__(self)
+		self._log = logging.getLogger('jobs.output')
 		self._display_files = ['gc.stdout', 'gc.stderr']
 
 	def process(self, dn):
 		result = JobInfoProcessor.process(self, dn)
 		if result[JobResult.EXITCODE] != 0:
 			def _display_logfile(dn, fn):
-				try:
-					full_fn = os.path.join(dn, fn)
-					if os.path.exists(full_fn):
+				full_fn = os.path.join(dn, fn)
+				if os.path.exists(full_fn):
+					try:
 						if fn.endswith('.gz'):
 							fp = gzip.open(full_fn)
+							content = bytes2str(fp.read())
 						else:
 							fp = open(full_fn)
-						sys.stdout.write('%s\n' % fn)
-						sys.stdout.write(fp.read())
-						sys.stdout.write('-' * 50)
+							content = fp.read()
+						self._log.error(fn + '\n' + content + '-' * 50)
 						fp.close()
-				except Exception:
-					sys.stdout.write('Unable to display %s\n' % fn)
+					except Exception:
+						self._log.exception('Unable to display %s', fn)
+				else:
+					self._log.error('Log file does not exist: %s', fn)
 			for fn in self._display_files:
 				_display_logfile(dn, fn)
 		return result
@@ -83,11 +86,11 @@ class DebugJobInfoProcessor(JobInfoProcessor):
 
 class FileInfoProcessor(JobInfoProcessor):
 	def process(self, dn):
+		jobInfo = None
 		try:
 			jobInfo = JobInfoProcessor.process(self, dn)
-		except Exception:
-			logging.getLogger('wms').warning(sys.exc_info()[1])
-			jobInfo = None
+		except JobResultError:
+			logging.getLogger('jobs.results').warning('Unable to process job information', exc_info = get_current_exception())
 		if jobInfo:
 			jobData = jobInfo[JobResult.RAW]
 			result = {}

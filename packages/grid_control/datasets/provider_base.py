@@ -14,7 +14,7 @@
 
 import os, copy, logging
 from grid_control import utils
-from grid_control.config import createConfig, triggerResync
+from grid_control.config import create_config, triggerResync
 from grid_control.datasets.dproc_base import DataProcessor, NullDataProcessor
 from grid_control.gc_plugin import ConfigurablePlugin
 from grid_control.utils.activity import Activity
@@ -27,10 +27,10 @@ class DatasetError(NestedException):
 
 
 class DataProvider(ConfigurablePlugin):
-	def __init__(self, config, datasetExpr, datasetNick = None, datasetID = 0):
+	def __init__(self, config, datasetExpr, datasetNick = None):
 		ConfigurablePlugin.__init__(self, config)
-		self._log = logging.getLogger('user.dataprovider')
-		(self._datasetExpr, self._datasetNick, self._datasetID) = (datasetExpr, datasetNick, datasetID)
+		self._log = logging.getLogger('dataset.provider')
+		(self._datasetExpr, self._datasetNick) = (datasetExpr, datasetNick)
 		(self._cache_block, self._cache_dataset) = (None, None)
 		self._dataset_query_interval = config.getTime('dataset default query interval', 60, onChange = None)
 
@@ -49,7 +49,7 @@ class DataProvider(ConfigurablePlugin):
 		config = kwargs.pop('config')
 		defaultProvider = config.get('dataset provider', 'ListProvider')
 
-		for idx, entry in enumerate(ifilter(str.strip, value.splitlines())):
+		for entry in ifilter(str.strip, value.splitlines()):
 			(nickname, provider, dataset) = ('', defaultProvider, None)
 			temp = lmap(str.strip, entry.split(':', 2))
 			if len(temp) == 3:
@@ -63,7 +63,7 @@ class DataProvider(ConfigurablePlugin):
 
 			clsNew = cls.getClass(provider)
 			bindValue = str.join(':', [nickname, provider, dataset])
-			yield InstanceFactory(bindValue, clsNew, config, dataset, nickname, idx)
+			yield InstanceFactory(bindValue, clsNew, config, dataset, nickname)
 	bind = classmethod(bind)
 
 
@@ -134,8 +134,6 @@ class DataProvider(ConfigurablePlugin):
 				block.setdefault(DataProvider.BlockName, '0')
 				block.setdefault(DataProvider.Provider, self.__class__.__name__)
 				block.setdefault(DataProvider.Locations, None)
-				if self._datasetID:
-					block[DataProvider.DatasetID] = self._datasetID
 				events = sum(imap(lambda x: x[DataProvider.NEntries], block[DataProvider.FileList]))
 				block.setdefault(DataProvider.NEntries, events)
 				if self._datasetNick:
@@ -174,19 +172,21 @@ class DataProvider(ConfigurablePlugin):
 
 	def getHash(self):
 		buffer = StringBuffer()
-		DataProvider.saveToStream(buffer, self._datasetProcessor.process(self.getBlocksNormed()))
+		for _ in DataProvider.saveToStream(buffer, self._datasetProcessor.process(self.getBlocksNormed())):
+			pass
 		return md5_hex(buffer.getvalue())
 
 
 	# Save dataset information in 'ini'-style => 10x faster to r/w than cPickle
 	def saveToStream(stream, dataBlocks, stripMetadata = False):
 		writer = StringBuffer()
+		write_separator = False
 		for block in dataBlocks:
+			if write_separator:
+				writer.write('\n')
 			writer.write('[%s]\n' % DataProvider.bName(block))
 			if DataProvider.Nickname in block:
 				writer.write('nickname = %s\n' % block[DataProvider.Nickname])
-			if DataProvider.DatasetID in block:
-				writer.write('id = %d\n' % block[DataProvider.DatasetID])
 			if DataProvider.NEntries in block:
 				writer.write('events = %d\n' % block[DataProvider.NEntries])
 			if block.get(DataProvider.Locations) is not None:
@@ -213,8 +213,11 @@ class DataProvider(ConfigurablePlugin):
 				if writeMetadata and idxListFile:
 					writer.write(' %s' % getMetadata(fi, idxListFile))
 				writer.write('\n')
-			writer.write('\n')
-		stream.write(writer.getvalue())
+			stream.write(writer.getvalue())
+			writer.seek(0)
+			writer.truncate(0)
+			write_separator = True
+			yield block
 	saveToStream = staticmethod(saveToStream)
 
 
@@ -223,7 +226,8 @@ class DataProvider(ConfigurablePlugin):
 			utils.ensureDirExists(os.path.dirname(path), 'dataset cache directory')
 		fp = open(path, 'w')
 		try:
-			DataProvider.saveToStream(fp, dataBlocks, stripMetadata)
+			for _ in DataProvider.saveToStream(fp, dataBlocks, stripMetadata):
+				pass
 		finally:
 			fp.close()
 	saveToFile = staticmethod(saveToFile)
@@ -231,7 +235,7 @@ class DataProvider(ConfigurablePlugin):
 
 	# Load dataset information using ListProvider
 	def loadFromFile(path):
-		return DataProvider.createInstance('ListProvider', createConfig(useDefaultFiles = False,
+		return DataProvider.createInstance('ListProvider', create_config(
 			configDict = {'dataset': {'dataset processor': 'NullDataProcessor'}}), path)
 	loadFromFile = staticmethod(loadFromFile)
 
@@ -269,4 +273,4 @@ class DataProvider(ConfigurablePlugin):
 
 # To uncover errors, the enums of DataProvider / DataSplitter do *NOT* match type wise
 makeEnum(['NEntries', 'BlockName', 'Dataset', 'Locations', 'URL', 'FileList',
-	'Nickname', 'DatasetID', 'Metadata', 'Provider', 'ResyncInfo'], DataProvider)
+	'Nickname', 'Metadata', 'Provider', 'ResyncInfo'], DataProvider)

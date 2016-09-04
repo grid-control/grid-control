@@ -17,6 +17,7 @@ from grid_control import utils
 from grid_control.backends.aspect_cancel import CancelAndPurgeJobs, CancelJobsWithProcessBlind
 from grid_control.backends.aspect_status import CheckInfo, CheckJobsWithProcess
 from grid_control.backends.backend_tools import ChunkedExecutor, ProcessCreatorAppendArguments
+from grid_control.backends.logged_process import LoggedProcess
 from grid_control.backends.wms import BackendError
 from grid_control.backends.wms_grid import GridWMS
 from grid_control.job_db import Job
@@ -116,7 +117,7 @@ class CreamWMS(GridWMS):
 			jobs = ' '.join(self._getRawIDs(ids))
 			log = tempfile.mktemp('.log')
 
-			proc = utils.LoggedProcess(self._outputExec,
+			proc = LoggedProcess(self._outputExec,
 				'--noint --logfile "%s" --dir "%s" %s' % (log, basePath, jobs))
 
 			# yield output dirs
@@ -137,7 +138,7 @@ class CreamWMS(GridWMS):
 								tarfile.TarFile.open(wildcardTar, 'r:gz').extractall(outputDir)
 								os.unlink(wildcardTar)
 							except Exception:
-								utils.eprint("Can't unpack output files contained in %s" % wildcardTar)
+								self._log.error('Can\'t unpack output files contained in %s', wildcardTar)
 					yield (currentJobNum, outputDir)
 					currentJobNum = None
 			retCode = proc.wait()
@@ -148,7 +149,7 @@ class CreamWMS(GridWMS):
 					raise StopIteration
 				else:
 					proc.logError(self.errorLog, log = log)
-				utils.eprint('Trying to recover from error ...')
+				self._log.error('Trying to recover from error ...')
 				for dirName in os.listdir(basePath):
 					yield (None, os.path.join(basePath, dirName))
 		activity.finish()
@@ -158,7 +159,8 @@ class CreamWMS(GridWMS):
 			yield (jobNum, None)
 		
 		purgeLog = tempfile.mktemp('.log')
-		purgeProc = utils.LoggedProcess(self._purgeExec, '--noint --logfile "%s" %s' % (purgeLog, " ".join(done)))
+		purgeProc = LoggedProcess(utils.resolveInstallPath('glite-ce-job-purge'),
+			'--noint --logfile "%s" %s' % (purgeLog, str.join(' ', done)))
 		retCode = purgeProc.wait()
 		if retCode != 0:
 			if self.explainError(purgeProc, retCode):

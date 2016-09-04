@@ -12,7 +12,6 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-import logging
 from grid_control.config import ConfigError, Matcher
 from grid_control.parameters.psource_base import ParameterError, ParameterInfo, ParameterSource
 from grid_control.parameters.psource_basic import KeyParameterSource, SingleParameterSource
@@ -83,9 +82,9 @@ class SimpleLookupParameterSource(SingleParameterSource):
 	alias = ['lookup']
 
 	def __init__(self, outputKey, lookupKeys, lookupFunctions, lookupDictConfig):
-		SingleParameterSource.__init__(self, outputKey)
 		self._lookupKeys = lookupKeys
 		self._matcher = LookupMatcher(lookupKeys, lookupFunctions, lookupDictConfig)
+		SingleParameterSource.__init__(self, outputKey, [outputKey, self._matcher.getHash()])
 
 	def depends(self):
 		return self._lookupKeys
@@ -102,9 +101,6 @@ class SimpleLookupParameterSource(SingleParameterSource):
 	def show(self):
 		return ['%s: var = %s, lookup = %s' % (self.__class__.__name__, self._key, repr(self._matcher))]
 
-	def getHash(self):
-		return md5_hex(str(self._key) + self._matcher.getHash())
-
 	def __repr__(self):
 		return "lookup(key('%s'), %s)" % (self._key, repr(self._matcher))
 
@@ -117,10 +113,13 @@ class SwitchingLookupParameterSource(SingleParameterSource):
 	alias = ['switch']
 
 	def __init__(self, psource, outputKey, lookupKeys, lookupFunctions, lookupDictConfig):
-		SingleParameterSource.__init__(self, outputKey)
+		SingleParameterSource.__init__(self, outputKey, [])
 		self._matcher = LookupMatcher(lookupKeys, lookupFunctions, lookupDictConfig)
 		self._psource = psource
 		self._pSpace = self.initPSpace()
+
+	def getHash(self):
+		return md5_hex(str(self._key) + self._matcher.getHash() + self._psource.getHash())
 
 	def getUsedSources(self):
 		return [self] + self._psource.getUsedSources()
@@ -141,7 +140,7 @@ class SwitchingLookupParameterSource(SingleParameterSource):
 			for pNum in irange(self._psource.getMaxParameters()):
 				addEntry(pNum)
 		if len(result) == 0:
-			logging.getLogger('user').critical('Lookup parameter "%s" has no matching entries!', self._key)
+			self._log.critical('Lookup parameter "%s" has no matching entries!', self._key)
 		return result
 
 	def getMaxParameters(self):
@@ -160,21 +159,16 @@ class SwitchingLookupParameterSource(SingleParameterSource):
 		self._psource.fillParameterKeys(result)
 
 	def resync(self):
-		(result_redo, result_disable, result_sizeChange) = ParameterSource.resync(self)
-		if self.resyncEnabled():
-			(psource_redo, psource_disable, psource_sizeChange) = self._psource.resync()
-			self._pSpace = self.initPSpace()
-			for pNum, pInfo in enumerate(self._pSpace):
-				subNum, _ = pInfo # ignore lookupIndex
-				if subNum in psource_redo:
-					result_redo.add(pNum)
-				if subNum in psource_disable:
-					result_disable.add(pNum)
-			self.resyncFinished()
-		return (result_redo, result_disable, result_sizeChange or psource_sizeChange)
-
-	def getHash(self):
-		return md5_hex(str(self._key) + self._matcher.getHash() + self._psource.getHash())
+		(result_redo, result_disable, _) = ParameterSource.EmptyResyncResult()
+		(psource_redo, psource_disable, psource_sizeChange) = self._psource.resync()
+		self._pSpace = self.initPSpace()
+		for pNum, pInfo in enumerate(self._pSpace):
+			subNum, _ = pInfo # ignore lookupIndex
+			if subNum in psource_redo:
+				result_redo.add(pNum)
+			if subNum in psource_disable:
+				result_disable.add(pNum)
+		return (result_redo, result_disable, psource_sizeChange)
 
 	def __repr__(self):
 		return "switch(%r, key('%s'), %s)" % (self._psource, self._key, repr(self._matcher))

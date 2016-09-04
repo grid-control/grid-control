@@ -27,12 +27,12 @@ CMSLocationFormat = makeEnum(['hostname', 'siteDB', 'both'])
 
 # required format: <dataset path>[@<instance>][#<block>]
 class CMSBaseProvider(DataProvider):
-	def __init__(self, config, datasetExpr, datasetNick = None, datasetID = 0):
+	def __init__(self, config, datasetExpr, datasetNick = None):
 		self._changeTrigger = triggerResync(['datasets', 'parameters'])
 		self._lumi_filter = config.getLookup('lumi filter', {}, parser = parseLumiFilter, strfun = strLumi, onChange = self._changeTrigger)
 		if not self._lumi_filter.empty():
 			config.set('dataset processor', 'LumiDataProcessor', '+=')
-		DataProvider.__init__(self, config, datasetExpr, datasetNick, datasetID)
+		DataProvider.__init__(self, config, datasetExpr, datasetNick)
 		# LumiDataProcessor instantiated in DataProcessor.__ini__ will set lumi metadata as well
 		self._lumi_query = config.getBool('lumi metadata', not self._lumi_filter.empty(), onChange = self._changeTrigger)
 		config.set('phedex sites matcher mode', 'shell', '?=')
@@ -207,5 +207,5 @@ class CMSBaseProvider(DataProvider):
 class DBS2Provider(CMSBaseProvider):
 	alias = ['dbs2']
 
-	def __init__(self, config, datasetExpr, datasetNick = None, datasetID = 0):
+	def __init__(self, config, datasetExpr, datasetNick = None):
 		raise DatasetError('CMS deprecated all DBS2 Services in April 2014! Please use DBS3Provider instead.')

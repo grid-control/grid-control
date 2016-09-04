@@ -13,7 +13,7 @@
 # | limitations under the License.
 
 import os, sys, logging
-from hpfwk.hpf_exceptions import ExceptionCollector, NestedException
+from hpfwk.hpf_exceptions import ExceptionCollector, NestedException, clear_current_exception
 from hpfwk.hpf_logging import init_hpf_logging
 
 init_hpf_logging() # needed for additional logging levels
@@ -27,8 +27,9 @@ class InstanceFactory(object):
 		(self._bindValue, self._cls, self._args, self._kwargs) = (bindValue, cls, args, kwargs)
 
 	def _fmt(self, args, kwargs, addEllipsis = False):
+		cls_name = '%s.%s' % (self._cls.__module__, self._cls.__name__)
 		if not logging.getLogger().isEnabledFor(logging.INFO1):
-			return repr('%s.%s' % (self._cls.__module__, self._cls.__name__))
+			return repr(cls_name)
 		args_str_list = []
 		for arg in args:
 			args_str_list.append(repr(arg))
@@ -36,7 +37,7 @@ class InstanceFactory(object):
 			args_str_list.append('%s=%r' % k_v)
 		if addEllipsis:
 			args_str_list.append('...')
-		return '%s(%s)' % (self._cls.__name__, str.join(', ', args_str_list))
+		return cls_name + '(%s)' % str.join(', ', args_str_list)
 
 	def __eq__(self, other): # Used to check for changes compared to old
 		return self.bindValue() == other.bindValue()
@@ -199,12 +200,7 @@ class Plugin(object):
 
 	# Get an instance of a derived class by specifying the class name and constructor arguments
 	def createInstance(cls, clsName, *args, **kwargs):
-		clsType = None
-		try:
-			clsType = cls.getClass(clsName)
-			return clsType(*args, **kwargs)
-		except Exception:
-			raise PluginError('Error while creating instance of type %s (%s)' % (clsName, clsType))
+		return InstanceFactory(clsName, cls.getClass(clsName), *args, **kwargs).getBoundInstance() # For uniform error output
 	createInstance = classmethod(createInstance)
 
 	def bind(cls, value, **kwargs):
@@ -261,7 +257,7 @@ def get_plugin_classes(module_iterator):
 				if issubclass(cls, Plugin):
 					yield cls
 			except TypeError:
-				pass
+				clear_current_exception()
 
 def create_plugin_file(package, selector):
 	cls_dict = {}

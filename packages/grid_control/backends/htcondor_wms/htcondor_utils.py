@@ -12,6 +12,8 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
+from hpfwk import clear_current_exception
+
 def chmodNumPerms(args = ''):
 	perm = 0
 	if 'r' in args:
@@ -36,7 +38,7 @@ def parseKWListIter(kwListIter, jobDelimeter = lambda line: not line):
 			key, val = [ obj.strip().replace('"','') for obj in line.split('=',1) ]
 			parseBuffer[key] = val
 		except ValueError:
-			pass
+			clear_current_exception()
 	infoMaps.append(parseBuffer)
 	return [ iMap for iMap in infoMaps if iMap ]
 

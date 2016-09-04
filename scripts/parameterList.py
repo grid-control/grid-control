@@ -59,12 +59,11 @@ class DummySplitter:
 class DataSplitProcessorTest:
 	def getKeys(self):
 		return lmap(lambda k: ParameterMetadata(k, untracked=True),
-			['DATASETINFO', 'DATASETID', 'DATASETPATH', 'DATASETBLOCK', 'DATASETNICK'])
+			['DATASETINFO', 'DATASETPATH', 'DATASETBLOCK', 'DATASETNICK'])
 
 	def process(self, pNum, splitInfo, result):
 		result.update({
 			'DATASETINFO': '',
-			'DATASETID': splitInfo.get(DataSplitter.DatasetID, None),
 			'DATASETPATH': splitInfo.get(DataSplitter.Dataset, None),
 			'DATASETBLOCK': splitInfo.get(DataSplitter.BlockName, None),
 			'DATASETNICK': splitInfo.get(DataSplitter.Nickname, None),
@@ -135,8 +134,8 @@ def setup_dataset(config, dataset):
 	partProcessor = config.getCompositePlugin('partition processor',
 		'TFCPartitionProcessor LocationPartitionProcessor MetaPartitionProcessor BasicPartitionProcessor',
 		'MultiPartitionProcessor', cls = 'PartitionProcessor', onChange = None)
-	repository['dataset:data'] = ParameterSource.createInstance('DataParameterSource',
-		config.getWorkPath(), 'data', None, dataSplitter, partProcessor)
+	ParameterSource.createInstance('DataParameterSource', config.getWorkPath(), 'data',
+		None, dataSplitter, partProcessor, repository)
 
 # Initialize ParameterFactory and ParameterSource
 def get_psource(opts, args):

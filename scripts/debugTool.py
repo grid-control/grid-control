@@ -99,16 +99,16 @@ def partition_check(splitter):
 if (opts.partition_list is not None) or opts.partition_list_invalid or opts.partition_check:
 	if len(args) != 1:
 		utils.exitWithUsage(parser.usage('part'))
-	splitter = DataSplitter.loadStateForScript(args[0])
+	splitter = DataSplitter.loadPartitionsForScript(args[0])
 
 	if opts.partition_list_invalid:
 		utils.printTabular([(0, 'Job')], partition_invalid(splitter))
 
 	if opts.partition_list is not None:
-		if opts.partition_list:
-			keyStrings = opts.partition_list.split(',')
-		else:
+		if opts.partition_list in ('', 'all'):
 			keyStrings = DataSplitter.enumNames
+		else:
+			keyStrings = opts.partition_list.split(',')
 		keyList = lmap(DataSplitter.str2enum, keyStrings)
 		if None in keyList:
 			logging.warning('Available keys: %r', DataSplitter.enumNames)

@@ -17,11 +17,12 @@ from grid_control import utils
 from grid_control.datasets.provider_base import DatasetError
 from grid_control.datasets.provider_scan import GCProvider
 from grid_control.utils.parsing import strGuid
+from hpfwk import clear_current_exception
 
 class DBSInfoProvider(GCProvider):
 	alias = ['dbsinfo']
 
-	def __init__(self, config, datasetExpr, datasetNick = None, datasetID = 0):
+	def __init__(self, config, datasetExpr, datasetNick = None):
 		tmp = ['OutputDirsFromConfig', 'MetadataFromTask']
 		if os.path.isdir(datasetExpr):
 			tmp = ['OutputDirsFromWork']
@@ -31,7 +32,7 @@ class DBSInfoProvider(GCProvider):
 		config.set('include config infos', 'True')
 		config.set('parent keys', 'CMSSW_PARENT_LFN CMSSW_PARENT_PFN')
 		config.set('events key', 'CMSSW_EVENTS_WRITE')
-		GCProvider.__init__(self, config, datasetExpr, datasetNick, datasetID)
+		GCProvider.__init__(self, config, datasetExpr, datasetNick)
 		self._discovery = config.getBool('discovery', False)
 
 	def _generateDatasetName(self, key, data):
@@ -51,7 +52,7 @@ class DBSInfoProvider(GCProvider):
 				try:
 					(primary, processed, tier) = getPathComponents(parent)
 				except Exception:
-					pass
+					clear_current_exception()
 		if (primary is None) and (len(userPath) > 0):
 			primary = userPath[0]
 			userPath = userPath[1:]

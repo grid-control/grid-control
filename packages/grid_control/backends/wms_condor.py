@@ -13,7 +13,7 @@
 # | limitations under the License.
 
 from grid_control.backends.aspect_cancel import CancelJobsWithProcess
-from grid_control.backends.aspect_status import CheckInfo, CheckJobsWithProcess
+from grid_control.backends.aspect_status import CheckInfo, CheckJobsWithProcess, CheckStatus
 from grid_control.backends.backend_tools import ProcessCreatorAppendArguments
 from grid_control.job_db import Job
 from python_compat import imap
@@ -52,6 +52,11 @@ class Condor_CheckJobs(CheckJobsWithProcess):
 			elif 'date' in key.lower():
 				job_info[key] = value
 		yield job_info
+
+	def _handleError(self, proc):
+		if proc.status(timeout = 0) and ('Failed to fetch ads' in proc.stderr.read_log()):
+			self._status = CheckStatus.ERROR
+		CheckJobsWithProcess._handleError(self, proc)
 
 
 class Condor_CancelJobs(CancelJobsWithProcess):

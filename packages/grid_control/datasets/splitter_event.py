@@ -31,12 +31,11 @@ class EventBoundarySplitter(DataSplitter):
 		lastEvent = 0
 		curSkip = 0
 		fileListIter = iter(fileList)
-		job = { DataSplitter.Skipped: 0, DataSplitter.NEntries: 0, DataSplitter.FileList: [] }
+		job = {DataSplitter.Skipped: 0, DataSplitter.NEntries: 0, DataSplitter.FileList: []}
 		while True:
 			if curEvent >= lastEvent:
-				try:
-					fileObj = next(fileListIter)
-				except StopIteration:
+				fileObj = next(fileListIter, None)
+				if fileObj is None:
 					if job[DataSplitter.FileList]:
 						yield job
 					break
@@ -59,7 +58,7 @@ class EventBoundarySplitter(DataSplitter):
 			if succEvent - nextEvent < available:
 				available = succEvent - nextEvent
 
-			if not len(job[DataSplitter.FileList]):
+			if not job[DataSplitter.FileList]:
 				job[DataSplitter.Skipped] = curSkip
 
 			job[DataSplitter.NEntries] += available
@@ -72,7 +71,7 @@ class EventBoundarySplitter(DataSplitter):
 			if nextEvent >= succEvent:
 				succEvent += eventsPerJob
 				yield job
-				job = { DataSplitter.Skipped: 0, DataSplitter.NEntries: 0, DataSplitter.FileList: [] }
+				job = {DataSplitter.Skipped: 0, DataSplitter.NEntries: 0, DataSplitter.FileList: []}
 
 
 	def _initConfig(self, config):

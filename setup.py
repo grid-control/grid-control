@@ -7,7 +7,7 @@ version = None
 try:
 	for line in fp.readlines():
 		if line.startswith('__version__'):
-			version = eval(line.split('=')[1])
+			version = eval(line.split('=')[1]) # pylint:disable=eval-used
 finally:
 	fp.close()
 assert(version)

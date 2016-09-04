@@ -22,6 +22,7 @@ def initGC():
 		init_hpf_plugins(os.path.join(basePath, pkgName))
 	from grid_control.logging_setup import logging_defaults
 	logging_defaults()
+
 initGC()
 
 __version__ = '$Revision: 1913$'[11:-1]

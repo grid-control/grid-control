@@ -176,6 +176,12 @@ else:
 	lrange = get_listified(range)
 	lzip = get_listified(zip)
 
+try: # Python <= 2.6
+	ichain = itertools.chain.from_iterable
+except Exception:
+	ichain = lambda iterables: itertools.chain(*iterables)
+lchain = get_listified(ichain)
+
 ismap = itertools.starmap
 lsmap = get_listified(ismap)
 ifilter = get_compat('itertools.ifilter', 'builtins.filter') # itertools.ifilter < Python 3.0
@@ -184,7 +190,7 @@ irange = get_compat('__builtin__.xrange', 'builtins.range') # xrange < Python 3.
 izip = get_compat('itertools.izip', 'builtins.zip') # itertools.izip < Python 3.0
 reduce = get_compat('__builtin__.reduce', 'functools.reduce') # reduce < Python 3.0
 unicode = get_compat('__builtin__.unicode', 'builtins.str') # unicode < Python 3.0
-user_input = get_compat('__builtin__.raw_input', 'builtins.input') # raw_input < Python 3.0
+get_user_input = get_compat('__builtin__.raw_input', 'builtins.input') # raw_input < Python 3.0
 md5 = get_compat('hashlib.md5', 'md5.md5') # hashlib >= Python 2.5
 set = get_compat('__builtin__.set', 'builtins.set', 'sets.Set') # set >= Python 2.4
 get_current_thread = get_compat('threading.current_thread', 'threading.currentThread') # current_thread >= Python 2.6
@@ -233,13 +239,12 @@ else:
 	md5_hex = lambda value: md5(str2bytes(value)).hexdigest()
 
 
-__all__ = ['BytesBuffer', 'BytesBufferBase', 'NullHandler', 'StringBuffer',
-	'all', 'any', 'bytes2str', 'exit_without_cleanup',
-	'get_current_thread', 'get_thread_name', 'identity', 'itemgetter', 'lru_cache',
-	'ifilter', 'imap', 'irange', 'ismap', 'izip', 'json',
-	'lfilter', 'lmap', 'lrange', 'lsmap', 'lzip', 'md5', 'md5_hex',
-	'next', 'parsedate', 'reduce', 'relpath', 'rsplit', 'set',
-	'sort_inplace', 'sorted', 'str2bytes', 'tarfile', 'unicode', 'user_input']
+__all__ = ['all', 'any', 'bytes2str', 'BytesBuffer', 'BytesBufferBase', 'exit_without_cleanup',
+	'get_current_thread', 'get_thread_name', 'get_user_input',
+	'ichain', 'identity', 'ifilter', 'imap', 'irange', 'ismap', 'itemgetter', 'izip', 'json',
+	'lchain', 'lfilter', 'lmap', 'lrange', 'lru_cache', 'lsmap', 'lzip', 'md5', 'md5_hex',
+	'next', 'NullHandler', 'parsedate', 'reduce', 'relpath', 'rsplit', 'set',
+	'sort_inplace', 'sorted', 'str2bytes', 'StringBuffer', 'tarfile', 'unicode']
 
 if __name__ == '__main__':
 	import re, doctest, logging

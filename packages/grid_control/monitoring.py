@@ -15,10 +15,9 @@
 import os, shlex
 from grid_control import utils
 from grid_control.gc_plugin import NamedPlugin
-from grid_control.utils.gc_itertools import lchain
 from grid_control.utils.process_base import LocalProcess
 from grid_control.utils.thread_tools import GCThreadPool
-from python_compat import imap, lmap
+from python_compat import imap, lchain, lmap
 
 class EventHandler(NamedPlugin):
 	configSections = NamedPlugin.configSections + ['events']
@@ -124,19 +123,22 @@ class ScriptMonitoring(Monitoring):
 			if jobNum is not None:
 				tmp.update(self._task.getJobConfig(jobNum))
 			tmp.update(allDict or {})
+			env = dict(os.environ)
 			for key, value in tmp.items():
 				if not key.startswith('GC_'):
 					key = 'GC_' + key
-				os.environ[key] = str(value)
+				env[key] = str(value)
 
 			script = self._task.substVars('monitoring script', script, jobNum, tmp)
 			if not self._silent:
-				proc = LocalProcess(*shlex.split(script))
-				self._log.info(proc.get_output(timeout = self._runningMax))
+				proc = LocalProcess(*shlex.split(script), **{'environment': env})
+				proc_output = proc.get_output(timeout = self._runningMax)
+				if proc_output.strip():
+					self._log.info(proc_output.strip())
 			else:
 				os.system(script)
 		except Exception:
-			self._log.exception('Error while running user script!')
+			self._log.exception('Error while running user script')
 
 	def _runInBackground(self, script, jobNum = None, jobObj = None, addDict = None):
 		if script != '':

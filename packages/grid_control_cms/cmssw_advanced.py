@@ -16,11 +16,10 @@ import os, logging
 from grid_control import utils
 from grid_control.config import ConfigError
 from grid_control.datasets import DataProvider
-from grid_control.utils.gc_itertools import ichain
 from grid_control.utils.parsing import strDictLong
 from grid_control_cms.cmssw import CMSSW
 from grid_control_cms.lumi_tools import formatLumi, parseLumiFilter, strLumi
-from python_compat import imap, lmap, set, sorted
+from python_compat import ichain, imap, lmap, set, sorted
 
 def formatLumiNice(lumis):
 	lumi_filter_str = formatLumi(lumis)

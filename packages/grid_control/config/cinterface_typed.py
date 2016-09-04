@@ -21,7 +21,7 @@ from grid_control.config.matcher_base import DictLookup, ListFilter, ListOrder, 
 from grid_control.utils.data_structures import makeEnum
 from grid_control.utils.parsing import parseBool, parseDict, parseList, parseTime, strDictLong, strTimeShort
 from hpfwk import APIError, ExceptionCollector, Plugin
-from python_compat import any, identity, ifilter, imap, lmap, relpath, sorted, user_input
+from python_compat import any, get_user_input, identity, ifilter, imap, lmap, relpath, sorted
 
 # Config interface class accessing typed data using an string interface provided by configView
 class TypedConfigInterface(ConfigInterface):
@@ -245,7 +245,7 @@ class SimpleConfigInterface(TypedConfigInterface):
 		return self.getChoice(option, choices, default, obj2str = enum.enum2str, str2obj = enum.str2enum, **kwargs)
 
 	def prompt(self, prompt):
-		return user_input('%s: ' % prompt)
+		return get_user_input('%s: ' % prompt)
 
 	def _getInternal(self, desc, obj2str, str2obj, def2obj, option, default_obj,
 			interactive = True, interactive_msg = None, interactive_msg_append_default = True, **kwargs):

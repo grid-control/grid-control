@@ -14,6 +14,7 @@
 # | limitations under the License.
 
 import grid_control_cms.Lexicon
+from hpfwk import clear_current_exception
 from python_compat import lmap, unicode
 
 def dbs3_check(checker, msg):
@@ -30,7 +31,7 @@ def processed_dataset_validation(item):
 		grid_control_cms.Lexicon.procdataset(item)
 		return item
 	except AssertionError:
-		pass
+		clear_current_exception()
 	try:
 		grid_control_cms.Lexicon.userprocdataset(item)
 		return item
@@ -89,8 +90,8 @@ def validate_dbs3_json(input_key, input_data):
 		'dataset': dbs3_check(grid_control_cms.Lexicon.dataset,
 			'dataset %r does not match dataset input validation for DBS 3 publication'),
 		'file_parent_lfn': logical_file_name_validation,
-		#'global_tag': dbs3_check(grid_control_cms.Lexicon.global_tag_validation,
-		#	'global_tag %r does not match global tag validation in DBS 3 publication'), ## not implement so far
+		'global_tag': dbs3_check(grid_control_cms.Lexicon.globalTag,
+			'global_tag %r does not match global tag validation in DBS 3 publication'),
 		'last_modified_by': dbs3_check(grid_control_cms.Lexicon.DBSUser,
 			'create_by user %r does not match input validation for DBS 3 publication'),
 		'logical_file_name': logical_file_name_validation,
@@ -98,8 +99,8 @@ def validate_dbs3_json(input_key, input_data):
 			'url %r does not match input validation for DBS 3 publication'),
 		'primary_ds_name': dbs3_check(grid_control_cms.Lexicon.primdataset,
 			'primary_dataset %r does not match input validation for DBS 3 publication'),
-		#'processed_ds_name': dbs3_check(grid_control_cms.Lexicon.processed_ds_name,
-		#	'processed_dataset %r does not match input validation for DBS 3 publication'), ## not implement so far
+		'processed_ds_name': dbs3_check(processed_dataset_validation,
+			'processed_dataset %r does not match input validation for DBS 3 publication'),
 		'processing_version': dbs3_check(grid_control_cms.Lexicon.procversion,
 			'processing_version %r does not match input validation for DBS 3 publication'),
 	}
@@ -118,5 +119,5 @@ def validate_dbs3_json(input_key, input_data):
 		return lmap(lambda entry: validate_dbs3_json(input_key, entry), input_data)
 	elif isinstance(input_data, (str, unicode)):
 		return key_validators.get(input_key, default_validator)(input_data)
-	return input_data ## need to implement checks for int and bool values
-	raise grid_control_cms.Lexicon.InputValidationError('Unexpected datatype %r' % input_data)
+	# raise grid_control_cms.Lexicon.InputValidationError('Unexpected datatype %r' % input_data)
+	return input_data # need to implement checks for int and bool values

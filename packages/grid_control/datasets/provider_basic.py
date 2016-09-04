@@ -23,8 +23,8 @@ from python_compat import lmap, rsplit
 class FileProvider(DataProvider):
 	alias = ['file']
 
-	def __init__(self, config, datasetExpr, datasetNick = None, datasetID = 0):
-		DataProvider.__init__(self, config, datasetExpr, datasetNick, datasetID)
+	def __init__(self, config, datasetExpr, datasetNick = None):
+		DataProvider.__init__(self, config, datasetExpr, datasetNick)
 
 		(self._path, self._events, selist) = utils.optSplit(datasetExpr, '|@')
 		self._selist = parseList(selist, ',') or None
@@ -54,14 +54,14 @@ def try_apply(value, fun, desc):
 class ListProvider(DataProvider):
 	alias = ['list']
 
-	def __init__(self, config, datasetExpr, datasetNick = None, datasetID = 0):
-		DataProvider.__init__(self, config, datasetExpr, datasetNick, datasetID)
+	def __init__(self, config, datasetExpr, datasetNick = None):
+		DataProvider.__init__(self, config, datasetExpr, datasetNick)
 		self._CommonPrefix = max(self.enumValues) + 1
 		self._CommonMetadata = max(self.enumValues) + 2
 
 		self._handleEntry = {
 			'events': (DataProvider.NEntries, int, 'block entry counter'),
-			'id': (DataProvider.DatasetID, int, 'dataset ID'),
+			'id': (None, None, 'dataset ID'), # legacy key - skip
 			'metadata': (DataProvider.Metadata, parseJSON, 'metadata description'),
 			'metadata common': (self._CommonMetadata, parseJSON, 'common metadata'),
 			'nickname': (DataProvider.Nickname, str, 'dataset nickname'),
@@ -129,7 +129,8 @@ class ListProvider(DataProvider):
 					handlerInfo = self._handleEntry.get(key.lower(), None)
 					if handlerInfo:
 						(prop, parser, msg) = handlerInfo
-						block[prop] = try_apply(value, parser, msg)
+						if prop is not None:
+							block[prop] = try_apply(value, parser, msg)
 					else:
 						block[DataProvider.FileList].append(self._parseEntry(block, key, value))
 			except Exception:

@@ -16,12 +16,12 @@ import os, glob, time, shutil, tempfile
 from grid_control import utils
 from grid_control.backends.aspect_cancel import CancelAndPurgeJobs, CancelJobs
 from grid_control.backends.broker_base import Broker
+from grid_control.backends.logged_process import LoggedProcess
 from grid_control.backends.wms import BackendError, BasicWMS, WMS
 from grid_control.utils.activity import Activity
 from grid_control.utils.file_objects import VirtualFile
-from grid_control.utils.gc_itertools import lchain
 from hpfwk import AbstractError, ExceptionCollector
-from python_compat import ifilter, imap, ismap, lfilter, lmap
+from python_compat import ifilter, imap, ismap, lchain, lfilter, lmap
 
 class SandboxHelper(object):
 	def __init__(self, config):
@@ -127,7 +127,7 @@ class LocalWMS(BasicWMS):
 
 		(stdout, stderr) = (os.path.join(sandbox, 'gc.stdout'), os.path.join(sandbox, 'gc.stderr'))
 		jobName = module.getDescription(jobNum).jobName
-		proc = utils.LoggedProcess(self.submitExec, '%s %s "%s" %s' % (self.submitOpts,
+		proc = LoggedProcess(self.submitExec, '%s %s "%s" %s' % (self.submitOpts,
 			self.getSubmitArguments(jobNum, jobName, reqs, sandbox, stdout, stderr),
 			utils.pathShare('gc-local.sh'), self.getJobArguments(jobNum, sandbox)))
 		retCode = proc.wait()

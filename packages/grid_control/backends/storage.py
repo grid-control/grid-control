@@ -12,7 +12,7 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-import os, shutil, logging
+import os, shutil
 from grid_control import utils
 from grid_control.config import ConfigError, validNoVar
 from grid_control.gc_plugin import NamedPlugin
@@ -116,9 +116,9 @@ class SEStorageManager(StorageManager):
 				proc.status(timeout = 5*60, terminate = True)
 				activity.finish()
 				if proc.status(timeout = 0) == 0:
-					logging.getLogger('user').info('Copy %s to SE %d finished', desc, idx + 1)
+					self._log.info('Copy %s to SE %d finished', desc, idx + 1)
 				else:
-					logging.getLogger('user').info('Copy %s to SE %d failed', desc, idx + 1)
+					self._log.info('Copy %s to SE %d failed', desc, idx + 1)
 					self._log.critical(proc.stderr.read(timeout = 0))
 					self._log.critical('Unable to copy %s! You can try to copy it manually.', desc)
 					if not utils.getUserBool('Is %s (%s) available on SE %s?' % (desc, source, sePath), False):

@@ -14,7 +14,7 @@
 
 from grid_control.gc_plugin import ConfigurablePlugin, NamedPlugin
 from grid_control.utils.process_base import LocalProcess
-from hpfwk import Plugin
+from hpfwk import Plugin, clear_current_exception
 from python_compat import any, imap, md5_hex, set, sorted
 
 def getGraph(instance, graph = None, visited = None):
@@ -41,7 +41,7 @@ def getGraph(instance, graph = None, visited = None):
 				visited.add(child)
 				getGraph(child, graph, visited)
 		except Exception:
-			pass
+			clear_current_exception()
 	return graph
 
 

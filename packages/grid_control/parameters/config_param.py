@@ -15,13 +15,13 @@
 import shlex
 from grid_control import utils
 from grid_control.config import ConfigError, noDefault
-from grid_control.utils.parsing import parseDict
+from grid_control.utils.parsing import parseDict, split_advanced, split_brackets
 from python_compat import imap, irange, lmap, lzip
 
 def parseTuple(t, delimeter):
 	t = t.strip()
 	if t.startswith('('):
-		return tuple(imap(str.strip, utils.split_advanced(t[1:-1], lambda tok: tok == delimeter, lambda tok: False)))
+		return tuple(imap(str.strip, split_advanced(t[1:-1], lambda tok: tok == delimeter, lambda tok: False)))
 	return (t,)
 
 
@@ -40,7 +40,7 @@ def frange(start, end = None, num = None, steps = None, format = '%g'):
 
 def parseParameterOption(option):
 	# first token is variable / tuple - rest is option specifier: "a option" or "(a,b) option"
-	tokens = list(utils.split_brackets(option.lower()))
+	tokens = list(split_brackets(option.lower()))
 	if len(tokens) and '(' in tokens[0]:
 		# parse tuple in as general way as possible
 		def validChar(c):
@@ -100,7 +100,7 @@ class ParameterConfig:
 	def _parseParameterTuple(self, varName, tupleValue, tupleType, varType, varIndex):
 		if tupleType == 'tuple':
 			tupleDelimeter = self.get(self._getParameterOption(varName), 'delimeter', ',')
-			tupleStrings = lmap(str.strip, utils.split_advanced(tupleValue, lambda tok: tok in ' \n', lambda tok: False))
+			tupleStrings = lmap(str.strip, split_advanced(tupleValue, lambda tok: tok in ' \n', lambda tok: False))
 			tupleList = lmap(lambda t: parseTuple(t, tupleDelimeter), tupleStrings)
 		elif tupleType == 'binning':
 			tupleList = lzip(tupleValue.split(), tupleValue.split()[1:])

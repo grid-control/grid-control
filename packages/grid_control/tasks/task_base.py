@@ -19,11 +19,10 @@ from grid_control.config import ConfigError, changeInitNeeded, validNoVar
 from grid_control.gc_plugin import ConfigurablePlugin, NamedPlugin
 from grid_control.parameters import ParameterAdapter, ParameterFactory, ParameterInfo
 from grid_control.utils.file_objects import SafeFile
-from grid_control.utils.gc_itertools import ichain, lchain
 from grid_control.utils.parsing import strGuid
 from hpfwk import AbstractError
 from time import strftime, time
-from python_compat import ifilter, imap, izip, lmap, lru_cache, md5_hex
+from python_compat import ichain, ifilter, imap, izip, lchain, lmap, lru_cache, md5_hex
 
 class JobNamePlugin(ConfigurablePlugin):
 	def __init__(self, config, task):
@@ -94,7 +93,7 @@ class TaskModule(NamedPlugin):
 		self.sbOutputFiles = config.getList('output files', [], onChange = initSandbox)
 		self.gzipOut = config.getBool('gzip output', True, onChange = initSandbox)
 
-		self.substFiles = config.getList('subst files', [], onChange = initSandbox)
+		self._subst_files = config.getList('subst files', [], onChange = initSandbox)
 		self.dependencies = lmap(str.lower, config.getList('depends', [], onChange = initSandbox))
 
 		# Get error messages from gc-run.lib comments
@@ -220,7 +219,7 @@ class TaskModule(NamedPlugin):
 
 	# Get files whose content will be subject to variable substitution
 	def getSubstFiles(self):
-		return list(self.substFiles)
+		return list(self._subst_files)
 
 
 	def getCommand(self):
@@ -252,6 +251,6 @@ class TaskModule(NamedPlugin):
 		return self.source.canSubmit(jobNum)
 
 
-	# Intervene in job management - return None or (redoJobs, disableJobs)
+	# Intervene in job management - return (redoJobs, disableJobs, sizeChange)
 	def getIntervention(self):
 		return self.source.resync()

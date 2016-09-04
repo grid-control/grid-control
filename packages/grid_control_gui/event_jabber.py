@@ -14,6 +14,7 @@
 
 import os, stat, time, logging
 from grid_control.monitoring import Monitoring
+from hpfwk import clear_current_exception
 
 class JabberAlarm(Monitoring):
 	alias = ['jabber']
@@ -31,7 +32,7 @@ class JabberAlarm(Monitoring):
 			import warnings
 			warnings.simplefilter('ignore', DeprecationWarning)
 		except Exception:
-			pass
+			clear_current_exception()
 		self._xmpp = None
 		try:
 			import xmpp

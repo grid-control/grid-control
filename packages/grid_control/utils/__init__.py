@@ -12,16 +12,16 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-import os, sys, glob, stat, time, errno, signal, fnmatch, logging, operator, python_compat_popen2
+import os, sys, glob, stat, time, signal, fnmatch, logging, operator
 from grid_control.gc_exceptions import GCError, InstallationError, UserError
 from grid_control.utils.activity import Activity
 from grid_control.utils.data_structures import UniqueList
-from grid_control.utils.file_objects import VirtualFile
 from grid_control.utils.parsing import parseBool, parseType, strDict
 from grid_control.utils.process_base import LocalProcess
 from grid_control.utils.table import ColumnTable, ParseableTable, RowTable
 from grid_control.utils.thread_tools import TimeoutException, hang_protection
-from python_compat import any, exit_without_cleanup, identity, ifilter, imap, irange, lfilter, lmap, lru_cache, lzip, next, reduce, sorted, tarfile, user_input
+from hpfwk import clear_current_exception
+from python_compat import exit_without_cleanup, get_user_input, identity, ifilter, imap, irange, lfilter, lmap, lru_cache, lzip, next, reduce, sorted, tarfile
 
 def execWrapper(script, context = None):
 	if context is None:
@@ -112,107 +112,11 @@ def freeSpace(dn, timeout = 5):
 	try:
 		return hang_protection(freeSpace_int, timeout)
 	except TimeoutException:
-		sys.stderr.write('Unable to get free disk space for directory %s after waiting for %d sec!' % (dn, timeout))
-		sys.stderr.write('The file system is probably hanging or corrupted - try to check the free disk space manually.')
-		sys.stderr.write('Refer to the documentation to disable checking the free disk space - at your own risk')
+		sys.stderr.write(
+			'Unable to get free disk space for directory %s after waiting for %d sec!\n' % (dn, timeout) +
+			'The file system is probably hanging or corrupted - try to check the free disk space manually. ' +
+			'Refer to the documentation to disable checking the free disk space - at your own risk')
 		exit_without_cleanup(os.EX_OSERR)
-
-
-################################################################
-# Process management functions
-
-class LoggedProcess(object):
-	def __init__(self, cmd, args = '', niceCmd = None, niceArgs = None, shell = True):
-		self.niceCmd = QM(niceCmd, niceCmd, os.path.basename(cmd))
-		self.niceArgs = QM(niceArgs, niceArgs, args)
-		(self.stdout, self.stderr, self.cmd, self.args) = ([], [], cmd, args)
-		self._logger = logging.getLogger('process.%s' % os.path.basename(cmd).lower())
-		self._logger.log(logging.DEBUG1, 'External programm called: %s %s', self.niceCmd, self.niceArgs)
-		self.stime = time.time()
-		if shell:
-			self.proc = python_compat_popen2.Popen3('%s %s' % (cmd, args), True)
-		else:
-			if isinstance(cmd, str):
-				cmd = [cmd]
-			if isinstance(args, str):
-				args = args.split()
-			self.proc = python_compat_popen2.Popen3( cmd + list(args), True)
-
-	def getOutput(self, wait = False):
-		if wait:
-			self.wait()
-		self.stdout.extend(self.proc.fromchild.readlines())
-		return str.join('', self.stdout)
-
-	def getError(self):
-		self.stderr.extend(self.proc.childerr.readlines())
-		return str.join('', self.stderr)
-
-	def getMessage(self):
-		return self.getOutput() + '\n' + self.getError()
-
-	def kill(self):
-		try:
-			os.kill(self.proc.pid, signal.SIGTERM)
-		except OSError:
-			if sys.exc_info()[1].errno != errno.ESRCH: # errno.ESRCH: no such process (already dead)
-				raise
-
-	def iter(self):
-		while True:
-			try:
-				line = self.proc.fromchild.readline()
-			except Exception:
-				abort(True)
-				break
-			if not line:
-				break
-			self.stdout.append(line)
-			yield line
-
-	def wait(self, timeout = -1, kill = True):
-		if not timeout > 0:
-			return self.proc.wait()
-		while self.poll() < 0 and timeout > ( time.time() - self.stime ):
-			time.sleep(1)
-		if kill and timeout > ( time.time() - self.stime ):
-			self.kill()
-		return self.poll()
-
-	def poll(self):
-		return self.proc.poll()
-
-	def getAll(self):
-		self.stdout.extend(self.proc.fromchild.readlines())
-		self.stderr.extend(self.proc.childerr.readlines())
-		return (self.wait(), self.stdout, self.stderr)
-
-	def logError(self, target, brief=False, **kwargs): # Can also log content of additional files via kwargs
-		now = time.time()
-		entry = '%s.%s' % (time.strftime('%Y-%m-%d_%H:%M:%S', time.localtime(now)), ('%.5f' % (now - int(now)))[2:])
-		eprint('WARNING: %s failed with code %d' % (self.niceCmd, self.wait()), printTime=True)
-		if not brief:
-			eprint('\n%s' % self.getError(), printTime=True)
-
-		try:
-			tar = tarfile.TarFile.open(target, 'a')
-			data = {'retCode': self.wait(), 'exec': self.cmd, 'args': self.args}
-			files = [VirtualFile(os.path.join(entry, 'info'), DictFormat().format(data))]
-			kwargs.update({'stdout': self.getOutput(), 'stderr': self.getError()})
-			for key, value in kwargs.items():
-				try:
-					content = open(value, 'r').readlines()
-				except Exception:
-					content = [value]
-				files.append(VirtualFile(os.path.join(entry, key), content))
-			for fileObj in files:
-				info, handle = fileObj.getTarInfo()
-				tar.addfile(info, handle)
-				handle.close()
-			tar.close()
-		except Exception:
-			raise GCError('Unable to log errors of external process "%s" to "%s"' % (self.niceCmd, target))
-		eprint('All logfiles were moved to %s' % target)
 
 
 ################################################################
@@ -225,10 +129,6 @@ def globalSetupProxy(fun, default, new = None):
 		return fun.setting
 	except Exception:
 		return default
-
-
-def verbosity(new = None):
-	return globalSetupProxy(verbosity, 0, new)
 
 
 def abort(new = None):
@@ -259,7 +159,7 @@ def intersectDict(dictA, dictB):
 
 
 def replaceDict(result, allVars, varMapping = None):
-	for (virtual, real) in QM(varMapping, varMapping, lzip(allVars.keys(), allVars.keys())):
+	for (virtual, real) in (varMapping or lzip(allVars.keys(), allVars.keys())):
 		for delim in ['@', '__']:
 			result = result.replace(delim + virtual + delim, str(allVars.get(real, '')))
 	return result
@@ -280,7 +180,7 @@ class PersistentDict(dict):
 		try:
 			self.update(self.fmt.parse(open(filename), keyParser = keyParser))
 		except Exception:
-			pass
+			clear_current_exception()
 		self.olddict = self.items()
 
 	def get(self, key, default = None, autoUpdate = True):
@@ -312,6 +212,12 @@ def safeWrite(fp, content):
 	fp.close()
 
 
+def renameFile(old, new):
+	if os.path.exists(new):
+		os.unlink(new)
+	os.rename(old, new)
+
+
 def removeFiles(args):
 	for item in args:
 		try:
@@ -320,7 +226,7 @@ def removeFiles(args):
 			else:
 				os.unlink(item)
 		except Exception:
-			pass
+			clear_current_exception()
 
 
 ################################################################
@@ -345,7 +251,7 @@ def optSplit(opt, delim, empty = ''):
 			return [str.join(prefix, tmp)] + oldResult[1:] + [new[:otherDelim]]
 		except Exception:
 			return oldResult + ['']
-	result = lmap(str.strip, reduce(getDelimeterPart, delim, [opt]))
+	result = imap(str.strip, reduce(getDelimeterPart, delim, [opt]))
 	return tuple(imap(lambda x: QM(x == '', empty, x), result))
 
 ################################################################
@@ -412,8 +318,8 @@ def DiffLists(oldList, newList, keyFun, changedFkt, isSorted = False):
 
 
 def splitBlackWhiteList(bwfilter):
-	blacklist = lmap(lambda x: x[1:], ifilter(lambda x: x.startswith('-'), QM(bwfilter, bwfilter, [])))
-	whitelist = lfilter(lambda x: not x.startswith('-'), QM(bwfilter, bwfilter, []))
+	blacklist = lmap(lambda x: x[1:], ifilter(lambda x: x.startswith('-'), bwfilter or []))
+	whitelist = lfilter(lambda x: not x.startswith('-'), bwfilter or [])
 	return (blacklist, whitelist)
 
 
@@ -436,7 +342,7 @@ class DictFormat(object):
 		try:
 			lines = lines.splitlines()
 		except Exception:
-			pass
+			clear_current_exception()
 		for line in lines:
 			try:
 				if not isinstance(line, str):
@@ -536,36 +442,29 @@ def genTarball(outFile, fileList):
 	tar.close()
 
 
-def eprint(text = '', level = -1, printTime = False, newline = True):
-	if verbosity() > level:
-		if printTime:
-			sys.stderr.write('%s - ' % time.strftime('%Y-%m-%d %H:%M:%S', time.localtime()))
-		sys.stderr.write('%s%s' % (text, QM(newline, '\n', '')))
-
-
 def getVersion():
 	try:
 		proc_ver = LocalProcess('svnversion', '-c', pathPKG())
 		version = proc_ver.get_output(timeout = 10).strip()
 		if version != '':
-			assert(any(imap(str.isdigit, version)))
+			assert(lfilter(str.isdigit, version))
 			proc_branch = LocalProcess('svn info', pathPKG())
 			if 'stable' in proc_branch.get_output(timeout = 10):
 				return '%s - stable' % version
 			return '%s - testing' % version
 	except Exception:
-		pass
+		clear_current_exception()
 	return __import__('grid_control').__version__ + ' or later'
 getVersion = lru_cache(getVersion)
 
 
 def wait(timeout):
 	activity = Activity('Waiting', parent = 'root')
-	for elapsed in irange(timeout):
+	for remaining in irange(timeout, 0, -1):
 		if abort():
 			return False
-		if (elapsed % 5 == 0) or (elapsed < 5):
-			activity.update('Waiting for %d seconds' % (timeout - elapsed))
+		if (remaining == timeout) or (remaining < 5) or (remaining % 5 == 0):
+			activity.update('Waiting for %d seconds' % remaining)
 		time.sleep(1)
 	activity.finish()
 	return True
@@ -585,7 +484,7 @@ def getUserInput(text, default, choices, parser = identity):
 	while True:
 		handler = signal.signal(signal.SIGINT, signal.SIG_DFL)
 		try:
-			userinput = user_input('%s %s: ' % (text, '[%s]' % default))
+			userinput = get_user_input('%s %s: ' % (text, '[%s]' % default))
 		except Exception:
 			sys.stdout.write('\n') # continue on next line
 			raise
@@ -595,7 +494,7 @@ def getUserInput(text, default, choices, parser = identity):
 		if parser(userinput) is not None:
 			return parser(userinput)
 		valid = str.join(', ', imap(lambda x: '"%s"' % x, choices[:-1]))
-		logging.getLogger('user').critical('Invalid input! Answer with %s or "%s"', valid, choices[-1])
+		logging.getLogger('console').critical('Invalid input! Answer with %s or "%s"', valid, choices[-1])
 
 
 def getUserBool(text, default):
@@ -612,80 +511,6 @@ def exitWithUsage(usage, msg = None, show_help = True):
 	sys.stderr.write('Syntax: %s\n%s' % (usage, QM(show_help, 'Use --help to get a list of options!\n', '')))
 	sys.stderr.write(QM(msg, '%s\n' % msg, ''))
 	sys.exit(os.EX_USAGE)
-
-
-def split_quotes(tokens, quotes = None, exType = Exception):
-	if quotes is None:
-		quotes = ['"', "'"]
-	buffer = ''
-	stack_quote = []
-	for token in tokens:
-		if token in quotes:
-			if stack_quote and (stack_quote[-1] == token):
-				stack_quote.pop()
-				if not stack_quote:
-					buffer += token
-					yield buffer
-					buffer = ''
-					continue
-			else:
-				stack_quote.append(token)
-		if stack_quote:
-			buffer += token
-		else:
-			yield token
-	if stack_quote:
-		raise exType('Quotes are not closed!')
-
-
-def split_brackets(tokens, brackets = None, exType = Exception):
-	if brackets is None:
-		brackets = ['()', '{}', '[]']
-	buffer = ''
-	stack_bracket = []
-	map_close_to_open = dict(imap(lambda x: (x[1], x[0]), brackets))
-	position = 0
-	for token in tokens:
-		position += len(token) # store position for proper error messages
-		if token in map_close_to_open.values():
-			stack_bracket.append((token, position))
-		if token in map_close_to_open.keys():
-			if not stack_bracket:
-				raise exType('Closing bracket %r at position %d is without opening bracket' % (token, position))
-			elif stack_bracket[-1][0] == map_close_to_open[token]:
-				stack_bracket.pop()
-				if not stack_bracket:
-					buffer += token
-					yield buffer
-					buffer = ''
-					continue
-			else:
-				raise exType('Closing bracket %r at position %d does not match bracket %r at position %d' % (token, position, stack_bracket[-1][0], stack_bracket[-1][1]))
-		if stack_bracket:
-			buffer += token
-		else:
-			yield token
-	if stack_bracket:
-		raise exType('Unclosed brackets %s' % str.join(', ', imap(lambda b_pos: '%r at position %d' % b_pos, stack_bracket)))
-
-
-def split_advanced(tokens, doEmit, addEmitToken, quotes = None, brackets = None, exType = Exception):
-	buffer = None
-	tokens = split_brackets(split_quotes(tokens, quotes, exType), brackets, exType)
-	token = next(tokens, None)
-	while token:
-		if buffer is None:
-			buffer = ''
-		if doEmit(token):
-			yield buffer
-			buffer = ''
-			if addEmitToken(token):
-				yield token
-		else:
-			buffer += token
-		token = next(tokens, None)
-	if buffer is not None:
-		yield buffer
 
 
 def ping_host(host):
@@ -723,8 +548,3 @@ def prune_processors(do_prune, processorList, log, message, formatter = None, id
 	selected = filter_processors(processorList, id_fun or get_class_name)
 	display_selection(log, processorList, selected, message, formatter or get_class_name)
 	return selected
-
-
-if __name__ == '__main__':
-	import doctest
-	doctest.testmod()

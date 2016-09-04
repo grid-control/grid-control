@@ -79,21 +79,29 @@ class BackendExecutor(ConfigurablePlugin):
 			if is_on_list(line, discardlist): # line on discard list -> dont log
 				return
 			if not is_on_list(line, blacklist): # line not on blacklist -> do log
-				return self._log.log_process(proc, message = message)
+				return self._log.log_process(proc, msg = message)
 			do_log = False # don't log if all stderr lines are blacklisted
 		if do_log:
-			return self._log.log_process(proc, message = message)
+			return self._log.log_process(proc, msg = message)
 
 
-class ChunkedExecutor(BackendExecutor):
-	def __init__(self, config, option_prefix, executor, def_chunk_size = 5, def_chunk_interval = 5):
+class ForwardingExecutor(BackendExecutor):
+	def __init__(self, config, executor):
 		BackendExecutor.__init__(self, config)
 		self._executor = executor
-		self._chunk_size = config.getInt(appendOption(option_prefix, 'chunk size'), def_chunk_size, onChange = None)
-		self._chunk_time = config.getInt(appendOption(option_prefix, 'chunk interval'), def_chunk_interval, onChange = None)
 
 	def setup(self, log):
 		self._executor.setup(log)
+
+	def get_status(self): # FIXME: not part of the BackendExecutor interface!
+		return self._executor.get_status()
+
+
+class ChunkedExecutor(ForwardingExecutor):
+	def __init__(self, config, option_prefix, executor, def_chunk_size = 5, def_chunk_interval = 5):
+		ForwardingExecutor.__init__(self, config, executor)
+		self._chunk_size = config.getInt(appendOption(option_prefix, 'chunk size'), def_chunk_size, onChange = None)
+		self._chunk_time = config.getInt(appendOption(option_prefix, 'chunk interval'), def_chunk_interval, onChange = None)
 
 	def execute(self, wmsIDs, *args, **kwargs):
 		do_wait = False

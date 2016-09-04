@@ -19,8 +19,8 @@ from hpfwk import ExceptionCollector
 from python_compat import imap, reduce, set
 
 class MultiDatasetProvider(DataProvider):
-	def __init__(self, config, datasetExpr, datasetNick, datasetID, providerList):
-		DataProvider.__init__(self, config, datasetExpr, datasetNick, datasetID)
+	def __init__(self, config, datasetExpr, datasetNick, providerList):
+		DataProvider.__init__(self, config, datasetExpr, datasetNick)
 		self._stats = DataProcessor.createInstance('SimpleStatsDataProcessor', config, None, self._log, 'Summary: Running over ')
 		self._providerList = providerList
 

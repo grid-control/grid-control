@@ -1,13 +1,13 @@
 #from gcSettings import Settings
-#   this import is only needed to execute the script standalone
+#   this import is only needed to execute the script standalone - it is not needed when running it with go.py
 #   (<GCDIR>/packages needs to be in your PYTHONPATH - or grid-control was properly installed)
 
 import time
 print(time.time())
 
 cfg = Settings()
+cfg.Global.backend = 'Host'
 cfg.workflow.task = 'UserTask'
-cfg.workflow.backend = 'Host'
 
 cfg.jobs.wall_time = '1:00'
 cfg.section('jobs').jobs = 2

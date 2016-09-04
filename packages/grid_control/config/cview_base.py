@@ -15,9 +15,8 @@
 import logging
 from grid_control.config.config_entry import ConfigEntry, ConfigError, noDefault, standardConfigForm
 from grid_control.utils.data_structures import makeEnum
-from grid_control.utils.gc_itertools import ichain
 from hpfwk import AbstractError, Plugin
-from python_compat import imap, lfilter, sorted
+from python_compat import ichain, imap, lfilter, sorted
 
 selectorUnchanged = makeEnum(['selector_unchanged'])
 

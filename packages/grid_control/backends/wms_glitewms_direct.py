@@ -19,7 +19,7 @@ from grid_control.backends.wms import BackendError
 from grid_control.backends.wms_glitewms import GliteWMS
 from grid_control.backends.wms_grid import GridStatusMap
 from grid_control.job_db import Job
-from hpfwk import ExceptionCollector
+from hpfwk import ExceptionCollector, clear_current_exception
 from python_compat import imap, lmap, lzip
 
 class GliteWMSDirect_CheckJobs(CheckJobs):
@@ -40,7 +40,7 @@ class GliteWMSDirect_CheckJobs(CheckJobs):
 						job_info[CheckInfo.SITE] = dest_info[0].strip()
 						job_info[CheckInfo.QUEUE] = dest_info[1].strip()
 					except Exception:
-						pass
+						clear_current_exception()
 				yield (wmsID, self._status_map.get(job_info[CheckInfo.RAW_STATUS], Job.UNKNOWN), job_info)
 			except Exception:
 				ec.collect()

@@ -25,7 +25,7 @@ from python_compat import identity, ifilter, imap, irange, ismap, itemgetter, lf
 class ParameterAdapter(ConfigurablePlugin):
 	def __init__(self, config, source):
 		ConfigurablePlugin.__init__(self, config)
-		self._log = logging.getLogger('padapter')
+		self._log = logging.getLogger('parameters.adapter')
 		self._source = source
 
 	def getMaxJobs(self):
@@ -59,37 +59,54 @@ class ParameterAdapter(ConfigurablePlugin):
 	def canFinish(self):
 		return self._source.canFinish()
 
-	def resync(self):
-		return self._source.resync()
-
 	def show(self):
 		return self._source.show()
 
+	def resync(self, force = False):
+		return self._source.resync()
 
-class BasicParameterAdapter(ParameterAdapter):
+
+class ResyncParameterAdapter(ParameterAdapter):
 	def __init__(self, config, source):
 		ParameterAdapter.__init__(self, config, source)
+		self._source_hash = source.getHash()
+		self._resync_state = ParameterSource.EmptyResyncResult()
+
+	def resync(self, force = False): # Do not overwrite resync results - eg. from external or init trigger
+		source_hash = self._source.getHash()
+		if (self._resync_state == ParameterSource.EmptyResyncResult()) and ((source_hash != self._source_hash) or force):
+			activity = Activity('Syncronizing parameter information')
+			t_start = time.time()
+			try:
+				self._resync_state = self._resync()
+			except Exception:
+				raise ParameterError('Unable to resync parameters!')
+			self._source_hash = self._source.getHash()
+			activity.finish()
+			self._log.log(logging.INFO, 'Finished resync of parameter source (%s)', strTimeShort(time.time() - t_start))
+		result = self._resync_state
+		self._resync_state = ParameterSource.EmptyResyncResult()
+		return result
+
+	def _resync(self):
+		return self._source.resync()
+
+
+class BasicParameterAdapter(ResyncParameterAdapter):
+	def __init__(self, config, source):
+		ResyncParameterAdapter.__init__(self, config, source)
 		self._activeMap = {}
-		self._resyncState = None
 
 	def canSubmit(self, jobNum): # Use caching to speed up job manager operations
 		if jobNum not in self._activeMap:
 			self._activeMap[jobNum] = ParameterAdapter.canSubmit(self, jobNum)
 		return self._activeMap[jobNum]
 
-	def resync(self): # Allow queuing of resync results - (because of external or init trigger)
-		if self._resyncState is None:
-			t_start = time.time()
-			self._resyncInternal()
-			self._log.log(logging.INFO2, 'Finished resync of parameter source (%s)', strTimeShort(time.time() - t_start))
-		result = self._resyncState
-		if result is not None:
+	def resync(self, force = False):
+		result = ResyncParameterAdapter.resync(self, force)
+		if result not in (None, ParameterSource.EmptyResyncResult()):
 			self._activeMap = {} # invalidate cache on changes
-		self._resyncState = None
 		return result
-
-	def _resyncInternal(self):
-		self._resyncState = self._source.resync()
 
 
 class TrackedParameterAdapter(BasicParameterAdapter):
@@ -107,7 +124,7 @@ class TrackedParameterAdapter(BasicParameterAdapter):
 		if not (os.path.exists(self._pathParams) and os.path.exists(self._pathJob2PID)):
 			needInit = True # Init needed if no parameter log exists
 		if userInit and not needInit and (source.getMaxParameters() is not None):
-			utils.eprint('Re-Initialization will overwrite the current mapping between jobs and parameter/dataset content! This can lead to invalid results!')
+			self._log.warning('Re-Initialization will overwrite the current mapping between jobs and parameter/dataset content! This can lead to invalid results!')
 			if utils.getUserBool('Do you want to perform a syncronization between the current mapping and the new one to avoid this?', True):
 				userInit = False
 		doInit = userInit or needInit
@@ -132,10 +149,8 @@ class TrackedParameterAdapter(BasicParameterAdapter):
 			activity.finish()
 			return
 		elif doResync: # Perform sync
-			activity = Activity('Syncronizing parameter information')
 			self._storedHash = None
-			self._resyncState = self.resync()
-			activity.finish()
+			self._resync_state = self.resync(force = True)
 		elif doInit: # Write current state
 			self._writeJob2PID(self._pathJob2PID)
 			ParameterSource.getClass('GCDumpParameterSource').write(self._pathParams, self)
@@ -238,15 +253,14 @@ class TrackedParameterAdapter(BasicParameterAdapter):
 		return self._source
 
 
-	def _resyncInternal(self): # This function is _VERY_ time critical!
+	def _resync(self): # This function is _VERY_ time critical!
 		tmp = self._rawSource.resync() # First ask about psource changes
 		(redoNewPNum, disableNewPNum, sizeChange) = (set(tmp[0]), set(tmp[1]), tmp[2])
 		hashNew = self._rawSource.getHash()
 		hashChange = self._storedHash != hashNew
 		self._storedHash = hashNew
 		if not (redoNewPNum or disableNewPNum or sizeChange or hashChange):
-			self._resyncState = None
-			return
+			return ParameterSource.EmptyResyncResult()
 
 		psource_old = ParameterAdapter(None, ParameterSource.createInstance('GCDumpParameterSource', self._pathParams))
 		psource_new = ParameterAdapter(None, self._rawSource)
@@ -256,15 +270,15 @@ class TrackedParameterAdapter(BasicParameterAdapter):
 		self._source = self._getResyncSource(psource_old, psource_new, mapJob2PID, pAdded, pMissing, disableNewPNum)
 
 		self._mapJob2PID = mapJob2PID # Update Job2PID map
-		redoNewPNum = redoNewPNum.difference(disableNewPNum)
-		if redoNewPNum or disableNewPNum:
-			mapPID2Job = dict(ismap(utils.swap, self._mapJob2PID.items()))
-			translate = lambda pNum: mapPID2Job.get(pNum, pNum)
-			self._resyncState = (set(imap(translate, redoNewPNum)), set(imap(translate, disableNewPNum)), sizeChange)
-		elif sizeChange:
-			self._resyncState = (set(), set(), sizeChange)
 		# Write resynced state
 		self._writeJob2PID(self._pathJob2PID + '.tmp')
 		ParameterSource.getClass('GCDumpParameterSource').write(self._pathParams + '.tmp', self)
 		os.rename(self._pathJob2PID + '.tmp', self._pathJob2PID)
 		os.rename(self._pathParams + '.tmp', self._pathParams)
+
+		redoNewPNum = redoNewPNum.difference(disableNewPNum)
+		if redoNewPNum or disableNewPNum:
+			mapPID2Job = dict(ismap(utils.swap, self._mapJob2PID.items()))
+			translate = lambda pNum: mapPID2Job.get(pNum, pNum)
+			return (set(imap(translate, redoNewPNum)), set(imap(translate, disableNewPNum)), sizeChange)
+		return (set(), set(), sizeChange)

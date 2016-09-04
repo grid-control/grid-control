@@ -18,7 +18,7 @@ class Console(object):
 	attr = {'COLOR_BLACK': '30', 'COLOR_RED': '31', 'COLOR_GREEN': '32',
 		'COLOR_YELLOW': '33', 'COLOR_BLUE': '34', 'COLOR_MAGENTA': '35',
 		'COLOR_CYAN': '36', 'COLOR_WHITE': '37', 'BOLD': '1', 'RESET': '0'}
-	cmd = {'savePos': '7', 'loadPos': '8', 'eraseDown': '[J', 'erase': '[2J',
+	cmd = {'savePos': '7', 'loadPos': '8', 'eraseDown': '[J', 'eraseLine': '[K', 'erase': '[2J',
 		'hideCursor': '[?25l', 'showCursor': '[?25h'}
 	for (name, esc) in attr.items():
 		locals()[name] = esc
@@ -48,8 +48,9 @@ class Console(object):
 			setattr(self, proc, callFactory(esc))
 
 	def _esc(self, data):
-		self._stream.write('\033' + data)
-		self._stream.flush()
+		if self._stream.isatty():
+			self._stream.write('\033' + data)
+			self._stream.flush()
 
 	def getmaxyx(self):
 		winsize_ptr = fcntl.ioctl(0, termios.TIOCGWINSZ, struct.pack("HHHH", 0, 0, 0, 0))

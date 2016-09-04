@@ -12,7 +12,6 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-import logging
 from grid_control.parameters.pfactory_base import UserParameterFactory
 from grid_control.parameters.psource_base import ParameterError, ParameterSource
 from python_compat import ifilter, sorted
@@ -38,5 +37,5 @@ class ModularParameterFactory(UserParameterFactory):
 		try:
 			return eval(pExpr, dict(userFun)) # pylint:disable=eval-used
 		except Exception:
-			logging.getLogger('user').warning('Available functions: %s', sorted(userFun.keys()))
+			self._log.warning('Available functions: %s', sorted(userFun.keys()))
 			raise

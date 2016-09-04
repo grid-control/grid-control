@@ -37,16 +37,16 @@ class triggerResync(object):
 		self._details = details
 
 	def __call__(self, config, old_obj, cur_obj, cur_entry, obj2str):
-		log_user = logging.getLogger('user')
-		log_user.info('%s was changed', cur_entry.format_opt())
+		log = logging.getLogger('config.changes')
+		log.info('The config option %r was changed', cur_entry.format_opt())
 		needed_details = lfilter(lambda detail: not config.getState('resync', detail), self._details)
 		if not needed_details:
 			return cur_obj
-		log_user.info('Triggering resync of %s', str.join(', ', needed_details))
+		log.info('Triggering resync of %s', str.join(', ', needed_details))
 		for detail in needed_details:
 			config.setState(True, 'resync', detail = detail)
 		if not config.getState('init', detail = 'config'):
-			log_user.info('The configuration was changed - triggering storage of new config options')
+			log.info('The configuration was changed - triggering storage of new config options')
 			config.setState(True, 'init', detail = 'config') # This will trigger a write of the new options
 		return cur_obj
 

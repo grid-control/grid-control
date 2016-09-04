@@ -310,7 +310,7 @@ class GridWMS(BasicWMS):
 							tarfile.TarFile.open(wildcardTar, 'r:gz').extractall(outputDir)
 							os.unlink(wildcardTar)
 						except Exception:
-							utils.eprint("Can't unpack output files contained in %s" % wildcardTar)
+							self._log.error('Can\'t unpack output files contained in %s', wildcardTar)
 				yield (currentJobNum, line.strip())
 				currentJobNum = None
 			else:
@@ -324,7 +324,7 @@ class GridWMS(BasicWMS):
 				raise StopIteration
 			else:
 				self._log.log_process(proc, files = {'jobs': SafeFile(jobs).read()})
-			utils.eprint('Trying to recover from error ...')
+			self._log.error('Trying to recover from error ...')
 			for dirName in os.listdir(basePath):
 				yield (None, os.path.join(basePath, dirName))
 

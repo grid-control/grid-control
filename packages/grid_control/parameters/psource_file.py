@@ -78,10 +78,16 @@ class CSVParameterSource(InternalParameterSource):
 
 	def __init__(self, fn, format = 'sniffed'):
 		(self._fn, self._format) = (fn, format)
-		sniffed = csv.Sniffer().sniff(open(fn).readline())
-		csv.register_dialect('sniffed', sniffed)
-		tmp = list(csv.DictReader(open(fn), dialect = format))
+		fp = open(fn)
+		try:
+			first_line = fp.readline()
+			sniffed = csv.Sniffer().sniff(first_line)
+			csv.register_dialect('sniffed', sniffed)
+			tmp = list(csv.DictReader(fp, first_line.strip().split(sniffed.delimiter) + [None], dialect = format))
+		finally:
+			fp.close()
 		for entry in tmp:
+			entry.pop(None, None)
 			if None in entry.values():
 				raise Exception('Malformed entry in csv file %r: %r' % (fn, entry))
 

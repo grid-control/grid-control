@@ -22,7 +22,7 @@ class Table(object):
 class ConsoleTable(Table):
 	def __init__(self):
 		Table.__init__(self)
-		self._log = logging.getLogger('user')
+		self._log = logging.getLogger('console')
 
 	def _write_line(self, msg):
 		self._log.info(msg)

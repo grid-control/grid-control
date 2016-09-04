@@ -26,7 +26,7 @@ class ROOTTask(UserTask):
 		self._rootpath = config.get('root path', os.environ.get('ROOTSYS', ''), persistent = True, onChange = changeInitNeeded('sandbox'))
 		if not self._rootpath:
 			raise ConfigError('Either set environment variable "ROOTSYS" or set option "root path"!')
-		logging.getLogger('user').info('Using the following ROOT path: %s', self._rootpath)
+		logging.getLogger('task').info('Using the following ROOT path: %s', self._rootpath)
 
 		# Special handling for executables bundled with ROOT
 		self._executable = config.get('executable', onChange = changeInitNeeded('sandbox'))

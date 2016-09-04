@@ -22,7 +22,7 @@ parser.addText(None, '', 'producer', default = 'SimpleNickNameProducer', help = 
 options = scriptOptions(parser)
 
 def main(opts, args):
-	if len(args) == 0:
+	if not args:
 		utils.exitWithUsage('Dataset path not specified!')
 	datasetPath = args[0]
 	if '*' in datasetPath:

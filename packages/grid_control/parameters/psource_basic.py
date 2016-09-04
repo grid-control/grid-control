@@ -15,13 +15,13 @@
 import re, random
 from grid_control.backends import WMS
 from grid_control.config import ConfigError
-from grid_control.parameters.psource_base import ParameterInfo, ParameterMetadata, ParameterSource
+from grid_control.parameters.psource_base import ImmutableParameterSource, ParameterInfo, ParameterMetadata, ParameterSource
 from grid_control.utils.parsing import parseTime, parseType
-from python_compat import imap, lmap, md5_hex
+from python_compat import imap, lmap
 
-class InternalParameterSource(ParameterSource):
+class InternalParameterSource(ImmutableParameterSource):
 	def __init__(self, values, keys):
-		ParameterSource.__init__(self)
+		ImmutableParameterSource.__init__(self, (values, keys))
 		(self._values, self._keys) = (values, keys)
 
 	def getMaxParameters(self):
@@ -32,9 +32,6 @@ class InternalParameterSource(ParameterSource):
 
 	def fillParameterKeys(self, result):
 		result.extend(imap(ParameterMetadata, self._keys))
-
-	def getHash(self):
-		return md5_hex(str(self._values) + str(self._keys))
 
 
 class RequirementParameterSource(ParameterSource):
@@ -60,9 +57,9 @@ class RequirementParameterSource(ParameterSource):
 			result[ParameterInfo.REQS].append((WMS.MEMORY, int(result.pop('MEMORY'))))
 
 
-class SingleParameterSource(ParameterSource):
-	def __init__(self, key):
-		ParameterSource.__init__(self)
+class SingleParameterSource(ImmutableParameterSource):
+	def __init__(self, key, hash_src_list):
+		ImmutableParameterSource.__init__(self, hash_src_list)
 		self._key = key.lstrip('!')
 		self._meta = ParameterMetadata(self._key, untracked = '!' in key)
 
@@ -89,7 +86,7 @@ class SimpleParameterSource(SingleParameterSource):
 	alias = ['var']
 
 	def __init__(self, key, values):
-		SingleParameterSource.__init__(self, key)
+		SingleParameterSource.__init__(self, key, [key, values])
 		if values is None:
 			raise ConfigError('Missing values for %s' % key)
 		self._values = values
@@ -103,9 +100,6 @@ class SimpleParameterSource(SingleParameterSource):
 	def fillParameterInfo(self, pNum, result):
 		result[self._key] = self._values[pNum]
 
-	def getHash(self):
-		return md5_hex(str(self._key) + str(self._values))
-
 	def __repr__(self):
 		return 'var(%s)' % repr(self._meta)
 
@@ -118,14 +112,11 @@ class ConstParameterSource(SingleParameterSource):
 	alias = ['const']
 
 	def __init__(self, key, value):
-		SingleParameterSource.__init__(self, key)
+		SingleParameterSource.__init__(self, key, [key, value])
 		self._value = value
 
 	def show(self):
 		return ['%s: const = %s, value = %s' % (self.__class__.__name__, self._key, self._value)]
-
-	def getHash(self):
-		return md5_hex(str(self._key) + str(self._value))
 
 	def fillParameterInfo(self, pNum, result):
 		result[self._key] = self._value
@@ -144,17 +135,14 @@ class RNGParameterSource(SingleParameterSource):
 	alias = ['rng']
 
 	def __init__(self, key = 'JOB_RANDOM', low = 1e6, high = 1e7-1):
-		SingleParameterSource.__init__(self, '!%s' % key)
-		(self.low, self.high) = (int(low), int(high))
+		SingleParameterSource.__init__(self, '!%s' % key, [key, low, high])
+		(self._low, self._high) = (int(low), int(high))
 
 	def show(self):
-		return ['%s: var = %s, range = (%s, %s)' % (self.__class__.__name__, self._key, self.low, self.high)]
+		return ['%s: var = %s, range = (%s, %s)' % (self.__class__.__name__, self._key, self._low, self._high)]
 
 	def fillParameterInfo(self, pNum, result):
-		result[self._key] = random.randint(self.low, self.high)
-
-	def getHash(self):
-		return md5_hex(str(self._key) + str([self.low, self.high]))
+		result[self._key] = random.randint(self._low, self._high)
 
 	def __repr__(self):
 		return 'rng(%s)' % repr(self._meta).replace('!', '')
@@ -164,14 +152,11 @@ class CounterParameterSource(SingleParameterSource):
 	alias = ['counter']
 
 	def __init__(self, key, seed):
-		SingleParameterSource.__init__(self, '!%s' % key)
+		SingleParameterSource.__init__(self, '!%s' % key, [key, seed])
 		self._seed = seed
 
 	def show(self):
 		return ['%s: var = %s, start = %s' % (self.__class__.__name__, self._key, self._seed)]
-
-	def getHash(self):
-		return md5_hex(str(self._key) + str(self._seed))
 
 	def fillParameterInfo(self, pNum, result):
 		result[self._key] = self._seed + result['GC_JOB_ID']
@@ -184,11 +169,8 @@ class FormatterParameterSource(SingleParameterSource):
 	alias = ['format']
 
 	def __init__(self, key, fmt, source, default = ''):
-		SingleParameterSource.__init__(self, '!%s' % key)
+		SingleParameterSource.__init__(self, '!%s' % key, [key, fmt, source, default])
 		(self._fmt, self._source, self._default) = (fmt, source, default)
-
-	def getHash(self):
-		return md5_hex(str(self._key) + str([self._fmt, self._source, self._default]))
 
 	def show(self):
 		return ['%s: var = %s, fmt = %r, source = %s, default = %r' %
@@ -206,11 +188,8 @@ class TransformParameterSource(SingleParameterSource):
 	alias = ['transform']
 
 	def __init__(self, key, fmt, default = ''):
-		SingleParameterSource.__init__(self, '!%s' % key)
+		SingleParameterSource.__init__(self, '!%s' % key, [key, fmt, default])
 		(self._fmt, self._default) = (fmt, default)
-
-	def getHash(self):
-		return md5_hex(str(self._key) + str([self._fmt, self._default]))
 
 	def show(self):
 		return ['%s: var = %s, expr = %r, default = %r' %
@@ -230,13 +209,10 @@ class TransformParameterSource(SingleParameterSource):
 class CollectParameterSource(SingleParameterSource): # Merge parameter values
 	alias = ['collect']
 
-	def __init__(self, target, *sources):
-		SingleParameterSource.__init__(self, target)
+	def __init__(self, key, *sources):
+		SingleParameterSource.__init__(self, key, [key, sources])
 		self._sources_plain = sources
 		self._sources = lmap(lambda regex: re.compile('^%s$' % regex.replace('...', '.*')), list(sources))
-
-	def getHash(self):
-		return md5_hex(str(self._key) + str(self._sources_plain))
 
 	def fillParameterInfo(self, pNum, result):
 		for src in self._sources:

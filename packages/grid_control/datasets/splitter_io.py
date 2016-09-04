@@ -19,6 +19,7 @@ from grid_control.utils.activity import Activity
 from grid_control.utils.file_objects import VirtualFile
 from grid_control.utils.parsing import parseBool, parseJSON, parseList
 from grid_control.utils.thread_tools import GCLock
+from hpfwk import clear_current_exception
 from python_compat import BytesBuffer, bytes2str, ifilter, imap, json, lfilter, lmap, tarfile
 
 class BaseJobFileTarAdaptor(object):
@@ -95,7 +96,7 @@ class DataSplitterIOBase(DataSplitterIO):
 			try: # Python 3.2 does not close the wrapping gzip file object if an external file object is given
 				subTarFile.fileobj.close()
 			except Exception:
-				pass
+				clear_current_exception()
 			subTarFileObj.seek(0)
 			subTarFileInfo = tarfile.TarInfo(subTarFileName)
 			subTarFileInfo.size = len(subTarFileObj.getvalue())

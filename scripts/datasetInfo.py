@@ -17,6 +17,7 @@ import os, sys
 from gcSupport import Options, getConfig, scriptOptions, utils
 from grid_control.datasets import DataProvider, DatasetError
 from grid_control.utils import thread_tools
+from hpfwk import clear_current_exception
 from python_compat import imap, itemgetter, izip, lmap, lzip, set, sort_inplace, sorted
 
 usage = '%s [OPTIONS] <DBS dataset path> | <dataset cache file>' % sys.argv[0]
@@ -166,7 +167,7 @@ def list_config_entries(opts, blocks, provider):
 					else:
 						block[DataProvider.Nickname] = dsName
 				except Exception:
-					pass
+					clear_current_exception()
 			if DataProvider.Nickname in block:
 				nick = block[DataProvider.Nickname]
 				infos[dsName][DataProvider.Nickname] = nick

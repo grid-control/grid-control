@@ -16,9 +16,8 @@ from grid_control.config import ConfigError
 from grid_control.parameters.pfactory_base import UserParameterFactory
 from grid_control.parameters.psource_base import NullParameterSource, ParameterSource
 from grid_control.parameters.psource_lookup import createLookupHelper
-from grid_control.utils.gc_itertools import lchain
 from hpfwk import APIError
-from python_compat import ifilter, imap, irange, lfilter, lmap, next, reduce
+from python_compat import ifilter, imap, irange, lchain, lfilter, lmap, next, reduce
 
 def tokenize(value, tokList):
 	(pos, start) = (0, 0)
@@ -214,5 +213,5 @@ class SimpleParameterFactory(UserParameterFactory):
 		tree = tok2tree(tokens, self._precedence)
 		source = self._tree2expr(tree)
 		for (PSourceClass, args) in self._nestedSources:
-			source = PSourceClass(source, *args)
+			source = PSourceClass.createInstance(PSourceClass.__name__, source, *args)
 		return source

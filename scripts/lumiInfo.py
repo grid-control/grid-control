@@ -17,6 +17,7 @@ import os, sys
 from gcSupport import Activity, ClassSelector, FileInfoProcessor, JobClass, Options, getCMSSWInfo, initGC, scriptOptions, utils
 from grid_control.datasets import DataSplitter
 from grid_control_cms.lumi_tools import formatLumi, mergeLumi, parseLumiFilter
+from hpfwk import clear_current_exception
 from python_compat import imap, irange, lmap, set, sorted
 
 parser = Options()
@@ -85,7 +86,7 @@ def iter_jobs(opts, workDir, jobList, splitter):
 		else:
 			if splitter:
 				splitInfo = splitter.getSplitInfo(jobNum)
-			outputName = splitInfo.get(DataSplitter.Nickname, splitInfo.get(DataSplitter.DatasetID, 0))
+			outputName = splitInfo.get(DataSplitter.Nickname, splitInfo.get(DataSplitter.Dataset, '').replace('/', '_'))
 		yield (jobNum, outputName)
 	activity.finish()
 
@@ -164,9 +165,9 @@ def main(opts, args):
 		workDir = config.getWorkPath()
 		splitter = None
 		try:
-			splitter = DataSplitter.loadStateForScript(os.path.join(workDir, 'datamap.tar'))
+			splitter = DataSplitter.loadPartitionsForScript(os.path.join(workDir, 'datamap.tar'))
 		except Exception:
-			pass
+			clear_current_exception()
 		return lumi_calc(opts, workDir, sorted(jobDB.getJobs(ClassSelector(JobClass.SUCCESS))), splitter)
 
 if __name__ == '__main__':

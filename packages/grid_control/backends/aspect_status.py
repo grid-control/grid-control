@@ -12,6 +12,7 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
+import logging
 from grid_control import utils
 from grid_control.backends.backend_tools import BackendError, BackendExecutor
 from grid_control.job_db import Job
@@ -20,10 +21,14 @@ from hpfwk import AbstractError
 from python_compat import set
 
 CheckInfo = makeEnum(['WMSID', 'RAW_STATUS', 'QUEUE', 'WN', 'SITE'])
+CheckStatus = makeEnum(['OK', 'ERROR'])
 
 class CheckJobs(BackendExecutor):
 	def execute(self, wmsIDs): # yields list of (wmsID, job_status, job_info)
 		raise AbstractError
+
+	def get_status(self):
+		return CheckStatus.OK
 
 
 class CheckJobsMissingState(CheckJobs):
@@ -40,25 +45,33 @@ class CheckJobsMissingState(CheckJobs):
 		for (wmsID, job_status, job_info) in self._executor.execute(wmsIDs):
 			checked_ids.add(wmsID)
 			yield (wmsID, job_status, job_info)
-		for wmsID in wmsIDs:
-			if wmsID not in checked_ids:
-				yield (wmsID, self._missing_state, {})
+		if self._executor.get_status() == CheckStatus.OK:
+			for wmsID in wmsIDs:
+				if wmsID not in checked_ids:
+					yield (wmsID, self._missing_state, {})
 
 
 class CheckJobsWithProcess(CheckJobs):
 	def __init__(self, config, proc_factory, status_map = None):
 		CheckJobs.__init__(self, config)
-		self._timeout = config.getInt('check timeout', 60, onChange = None)
+		self._timeout = config.getTime('check timeout', 60, onChange = None)
+		self._log_everything = config.getBool('check promiscuous', False, onChange = None)
 		self._errormsg = 'Job status command returned with exit code %(proc_status)s'
-		(self._proc_factory, self._status_map) = (proc_factory, status_map or {})
+		(self._status, self._proc_factory, self._status_map) = (CheckStatus.OK, proc_factory, status_map or {})
 
 	def execute(self, wmsIDs): # yields list of (wmsID, job_status, job_info)
+		self._status = CheckStatus.OK
 		proc = self._proc_factory.create_proc(wmsIDs)
 		for job_info in self._parse(proc):
 			if job_info and not utils.abort():
 				yield self._parse_job_info(job_info)
 		if proc.status(timeout = 0, terminate = True) != 0:
 			self._handleError(proc)
+		if self._log_everything:
+			self._log.log_process(proc, level = logging.DEBUG, msg = 'Finished checking jobs')
+
+	def get_status(self):
+		return self._status
 
 	def _parse(self, proc): # return job_info(s)
 		raise AbstractError

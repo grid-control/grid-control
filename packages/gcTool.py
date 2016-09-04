@@ -15,16 +15,16 @@
 
 import os, sys, signal, logging
 from grid_control import utils
-from grid_control.config import createConfig
+from grid_control.config import create_config
 from grid_control.gc_exceptions import gc_excepthook
 from grid_control.logging_setup import logging_setup
 from grid_control.utils.activity import Activity
 from grid_control.utils.cmd_options import Options
 from grid_control.utils.file_objects import SafeFile
-from hpfwk import ExceptionFormatter, Plugin, handle_debug_interrupt, init_hpf_plugins
+from hpfwk import Plugin, handle_debug_interrupt, init_hpf_plugins
 
 # grid-control command line parser
-def gc_cmd_line_parser(cmd_line_args):
+def parse_cmd_line(cmd_line_args):
 	parser = Options(usage = '%s [OPTIONS] <config file>', add_help_option = False)
 	parser.addBool(None, ' ', 'debug',         default = False)
 	parser.addBool(None, ' ', 'help-conf',     default = False)
@@ -65,13 +65,7 @@ def gc_cmd_line_parser(cmd_line_args):
 	if opts.old_report:
 		utils.deprecated('Please use the more versatile report tool in the scripts directory!')
 	# Configure preliminary logging
-	utils.verbosity(opts.verbose)
 	logging.getLogger().setLevel(max(1, logging.DEFAULT - opts.verbose))
-	if opts.debug: # Setup initial debug handler before it is reconfigured by logging_setup
-		handler = logging.StreamHandler(sys.stdout)
-		handler.setFormatter(ExceptionFormatter(showCodeContext = 2, showVariables = 1, showFileStack = 1))
-		logging.getLogger('exception').addHandler(handler)
-
 	return (opts, args)
 
 # Config filler which collects data from command line arguments
@@ -84,7 +78,7 @@ class OptsConfigFiller(Plugin.getClass('ConfigFiller')):
 		newCmdLine = self._cmd_line_args
 		if combinedEntry:
 			newCmdLine = combinedEntry.value.split() + self._cmd_line_args
-		(opts, _) = gc_cmd_line_parser(newCmdLine)
+		(opts, _) = parse_cmd_line(newCmdLine)
 		def setConfigFromOpt(section, option, value):
 			if value is not None:
 				self._addEntry(container, section, option, str(value), '<cmdline>')
@@ -113,19 +107,23 @@ class OptsConfigFiller(Plugin.getClass('ConfigFiller')):
 # create config instance
 def gc_create_config(cmd_line_args = None, **kwargs):
 	if cmd_line_args is not None:
-		(_, args) = gc_cmd_line_parser(cmd_line_args)
+		(_, args) = parse_cmd_line(cmd_line_args)
 		kwargs.setdefault('configFile', args[0])
 		kwargs.setdefault('additional', []).append(OptsConfigFiller(cmd_line_args))
-	return createConfig(register = True, **kwargs)
+	return create_config(register = True, **kwargs)
 
 # set up signal handler for interrupts
-def handle_abort_interrupt(sig, frame):
+def handle_abort_interrupt(signum, frame):
 	utils.abort(True)
 	handle_abort_interrupt.log = Activity('Quitting grid-control! (This can take a few seconds...)', parent = 'root')
-	signal.signal(signal.SIGINT, signal.SIG_DFL)
+	signal.signal(signum, signal.SIG_DFL)
 
 # create workflow from config and do initial processing steps
 def gc_create_workflow(config):
+	# set up signal handler for interrupts and debug session requests
+	signal.signal(signal.SIGURG, handle_debug_interrupt)
+	signal.signal(signal.SIGINT, handle_abort_interrupt)
+
 	# Configure logging settings
 	logging_setup(config.changeView(setSections = ['logging']))
 
@@ -170,10 +168,6 @@ def gc_create_workflow(config):
 	return workflow
 
 def run(args = None, intro = True):
-	# set up signal handler for interrupts and debug session requests
-	signal.signal(signal.SIGINT, handle_abort_interrupt)
-	signal.signal(signal.SIGURG, handle_debug_interrupt)
-
 	# display the 'grid-control' logo and version
 	if intro and not os.environ.get('GC_DISABLE_INTRO'):
 		sys.stdout.write(SafeFile(utils.pathShare('logo.txt'), 'r').read())
@@ -185,12 +179,14 @@ def run(args = None, intro = True):
 
 	# main try... except block to catch exceptions and show error message
 	try:
-		config = gc_create_config(args or sys.argv[1:])
+		config = gc_create_config(args or sys.argv[1:], useDefaultFiles = True)
 		workflow = gc_create_workflow(config)
 		try:
 			sys.exit(workflow.run())
 		finally:
 			sys.stdout.write('\n')
+	except SystemExit: # avoid getting caught for Python < 2.5 
+		raise
 	except Exception: # coverage overrides sys.excepthook
 		gc_excepthook(*sys.exc_info())
 		sys.exit(os.EX_SOFTWARE)

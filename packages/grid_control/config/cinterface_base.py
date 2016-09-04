@@ -104,27 +104,35 @@ class ConfigInterface(object):
 
 	def _getInternal(self, desc, obj2str, str2obj, def2obj, option, default_obj,
 			onChange = defaultOnChange, onValid = defaultOnValid, persistent = False):
-		if self._log.isEnabledFor(logging.DEBUG2):
-			self._log.log(logging.DEBUG2, 'Config query from: %r', self._getCaller())
-		default_str = self._getDefaultStr(default_obj, def2obj, obj2str)
-		assert((default_str == noDefault) or isinstance(default_str, str))
-
 		# Make sure option is in a consistent format
 		option_list = standardConfigForm(option)
-		self._log.log(logging.DEBUG1, 'Config query for config option %r', str.join(' / ', option_list))
-		(old_entry, cur_entry) = self._configView.get(option_list, default_str, persistent = persistent)
-		return self._processEntries(old_entry, cur_entry, desc, obj2str, str2obj, onChange, onValid)
+		try:
+			if self._log.isEnabledFor(logging.DEBUG2):
+				self._log.log(logging.DEBUG2, 'Config query from: %r', self._getCaller())
+			default_str = self._getDefaultStr(default_obj, def2obj, obj2str)
+			assert((default_str == noDefault) or isinstance(default_str, str))
+
+			self._log.log(logging.DEBUG1, 'Config query for config option %r', str.join(' / ', option_list))
+			(old_entry, cur_entry) = self._configView.get(option_list, default_str, persistent = persistent)
+			return self._processEntries(old_entry, cur_entry, desc, obj2str, str2obj, onChange, onValid)
+		except Exception:
+			if default_obj == noDefault:
+				raise ConfigError('Unable to get %r from option %r (no default)' % (desc, str.join(' / ', option_list)))
+			raise ConfigError('Unable to get %r from option %r (default: %r)' % (desc, str.join(' / ', option_list), repr(default_obj)))
 
 	def _setInternal(self, desc, obj2str, option, set_obj, opttype, source):
-		if not source:
-			source = '<%s by %s>' % (desc, self._getCaller())
 		try:
-			value = obj2str(set_obj)
+			if not source:
+				source = '<%s by %s>' % (desc, self._getCaller())
+			try:
+				value = obj2str(set_obj)
+			except Exception:
+				raise APIError('Unable to get string representation of set value: %s' % repr(set_obj))
+			entry = self._configView.set(standardConfigForm(option), value, opttype, source)
+			self._log.log(logging.INFO2, 'Setting %s %s %s ', desc, ConfigEntry.OptTypeDesc[opttype], entry.format(printSection = True))
+			return entry
 		except Exception:
-			raise APIError('Unable to get string representation of set value: %s' % repr(set_obj))
-		entry = self._configView.set(standardConfigForm(option), value, opttype, source)
-		self._log.log(logging.INFO2, 'Setting %s %s %s ', desc, ConfigEntry.OptTypeDesc[opttype], entry.format(printSection = True))
-		return entry
+			raise ConfigError('Unable to set %s %r to %r (source: %r)' % (desc, option, repr(set_obj), source))
 
 	# Handling string config options - whitespace around the value will get discarded
 	def get(self, option, default = noDefault, obj2str = str.__str__, str2obj = str, **kwargs):

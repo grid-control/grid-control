@@ -44,9 +44,8 @@ class Workflow(NamedPlugin):
 		if abort == 'task':
 			return
 
-		log = logging.getLogger('user.workflow')
-		log.log(logging.INFO, 'Current task ID: %s', self.task.taskID)
-		log.log(logging.INFO, 'Task started on: %s', self.task.taskDate)
+		self._log.log(logging.INFO, 'Current task ID: %s', self.task.taskID)
+		self._log.log(logging.INFO, 'Task started on: %s', self.task.taskDate)
 
 		# Initialise workload management interface
 		self.wms = config.getCompositePlugin('backend', 'grid', 'MultiWMS',
@@ -87,7 +86,7 @@ class Workflow(NamedPlugin):
 
 
 	# Job submission loop
-	def jobCycle(self, wait = utils.wait):
+	def process(self, wait = utils.wait):
 		wmsTiming = self.wms.getTimings()
 		t_start = time.time()
 		while True:
@@ -96,8 +95,8 @@ class Workflow(NamedPlugin):
 			if not self.wms.canSubmit(self._submitTime, self._submitFlag):
 				self._submitFlag = False
 			# Check free disk space
-			spaceLogger = logging.getLogger('user.space')
-			spaceLogger.addFilter(LogEveryNsec(5 * 60))
+			spaceLogger = logging.getLogger('workflow.space')
+			spaceLogger.addFilter(LogEveryNsec(interval = 5 * 60))
 			if (self._checkSpace > 0) and utils.freeSpace(self._workDir) < self._checkSpace:
 				spaceLogger.warning('Not enough space left in working directory')
 			else:

@@ -83,25 +83,25 @@ class BasicReport(Report):
 		return 8 + int((len(Job.enumNames) + 1) / 2)
 
 	def display(self):
+		njobs_total = len(self._jobDB)
 		summary = dict(imap(lambda x: (x, 0.0), Job.enumValues))
 		for jobNum in self._jobs:
 			summary[self._jobDB.getJobTransient(jobNum).state] += 1
 		makeSum = lambda *states: sum(imap(lambda z: summary[z], states))
-		makePer = lambda *states: [makeSum(*states), round(makeSum(*states) / len(self._jobDB) * 100.0)]
+		makePer = lambda *states: [makeSum(*states), round(makeSum(*states) / max(1, njobs_total) * 100.0)]
 
 		# Print report summary
 		self._printHeader('REPORT SUMMARY:')
-		njobs_total = len(self._jobDB)
 		jobov_succ = makePer(Job.SUCCESS)
 		self._write_line('Total number of jobs:%9d     Successful jobs:%8d  %3d%%' % tuple([njobs_total] + jobov_succ))
 		njobs_assigned = makeSum(Job.SUBMITTED, Job.WAITING, Job.READY, Job.QUEUED, Job.RUNNING)
 		jobov_fail = makePer(Job.ABORTED, Job.CANCELLED, Job.FAILED)
 		self._write_line('Jobs assigned to WMS:%9d        Failing jobs:%8d  %3d%%' % tuple([njobs_assigned] + jobov_fail))
 		self._write_line('')
-		ignored = len(self._jobDB) - sum(summary.values())
+		ignored = njobs_total - sum(summary.values())
 		ignored_str = ''
 		if ignored:
-			ignored_str = '(Jobs    IGNORED:%8d  %3d%%)' % (ignored, ignored / len(self._jobDB) * 100.0)
+			ignored_str = '(Jobs    IGNORED:%8d  %3d%%)' % (ignored, ignored / max(1, njobs_total) * 100.0)
 		self._write_line('Detailed Status Information:      ' + ignored_str)
 		tmp = []
 		for (sid, sname) in izip(Job.enumValues, Job.enumNames):
@@ -112,7 +112,6 @@ class BasicReport(Report):
 		if tmp:
 			self._write_line(tmp[0])
 		self._write_line('-' * 65)
-		return 0
 
 
 class LocationReport(Report):

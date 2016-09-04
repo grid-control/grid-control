@@ -20,24 +20,23 @@ try:
 except (AttributeError, ValueError):
 	FD_MAX = 256
 
-def safeClose(fd):
+def close_safe(fd):
 	try:
 		os.close(fd)
 	except OSError:
 		pass
 
-def run_process(cmd, args, fd_child_stdin, fd_child_stdout, fd_child_stderr, term):
-	os.environ['TERM'] = term
+def run_process(cmd, args, fd_child_stdin, fd_child_stdout, fd_child_stderr, env):
 	for fd_target, fd_source in enumerate([fd_child_stdin, fd_child_stdout, fd_child_stderr]):
 		os.dup2(fd_source, fd_target) # set stdin/stdout/stderr
 	for fd in irange(3, FD_MAX):
-		safeClose(fd)
+		close_safe(fd)
 	try:
-		os.execv(cmd, args)
+		os.execve(cmd, args, env)
 	except Exception:
 		err_msg = 'Error while calling os.execv(%s, %s):' % (repr(cmd), repr(args))
 		sys.stderr.write(err_msg + repr(sys.exc_info()[1]))
 		for fd in [0, 1, 2]:
-			safeClose(fd)
+			close_safe(fd)
 		exit_without_cleanup(os.EX_OSERR)
 	exit_without_cleanup(os.EX_OK)

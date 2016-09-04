@@ -12,12 +12,13 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-import time
+import time, logging
 from grid_control.utils.data_structures import makeEnum
 from hpfwk import AbstractError, NestedException, Plugin
-from python_compat import set
+from python_compat import md5_hex, set
 
 ParameterInfo = makeEnum(['ACTIVE', 'HASH', 'REQS', 'FILES'])
+
 
 class ParameterError(NestedException):
 	pass
@@ -36,15 +37,17 @@ class ParameterMetadata(str):
 
 
 class ParameterSource(Plugin):
+	def EmptyResyncResult(cls):
+		return (set(), set(), False)
+	EmptyResyncResult = classmethod(EmptyResyncResult)
+
 	def create(cls, pconfig, repository, *args, **kwargs):
 		return cls(*args, **kwargs)
 	create = classmethod(create)
 
 	def __init__(self):
+		self._log = logging.getLogger('parameters.source')
 		Plugin.__init__(self)
-		self._resyncInfo = None
-		self._resyncTime = -1 # Default - always resync
-		self._resyncLast = None
 
 	def canFinish(self):
 		return True
@@ -61,29 +64,8 @@ class ParameterSource(Plugin):
 	def fillParameterInfo(self, pNum, result):
 		raise AbstractError
 
-	def resyncSetup(self, interval = None, force = None, info = None):
-		self._resyncInfo = info # User override for base resync infos
-		if interval is not None:
-			self._resyncTime = interval # -1 == always, 0 == disabled, >0 == time in sec between resyncs
-			self._resyncLast = time.time()
-		if force:
-			self._resyncLast = None # Force resync on next attempt
-
-	def resyncEnabled(self):
-		if (self._resyncLast is None) or (self._resyncTime == -1):
-			return True
-		if self._resyncTime > 0:
-			if time.time() - self._resyncLast > self._resyncTime:
-				return True
-		return False
-
-	def resyncFinished(self):
-		self._resyncLast = time.time()
-
-	def resync(self): # needed when parameter values do not change but if meaning / validity of values do
-		if self.resyncEnabled() and self._resyncInfo:
-			return self._resyncInfo
-		return (set(), set(), False) # returns two sets of parameter ids and boolean (redo, disable, sizeChange)
+	def resync(self): # only needed if the parameters are opaque references (like partition idx)
+		return ParameterSource.EmptyResyncResult()
 
 	def show(self):
 		return [self.__class__.__name__ + ':']
@@ -93,6 +75,46 @@ class ParameterSource(Plugin):
 
 	def getHash(self):
 		raise AbstractError
+
+
+class ImmutableParameterSource(ParameterSource):
+	def __init__(self, hash_src_list):
+		ParameterSource.__init__(self)
+		self._hash = md5_hex(repr(hash_src_list))
+
+	def getHash(self):
+		return self._hash
+
+
+class LimitedResyncParameterSource(ParameterSource):
+	def __init__(self):
+		ParameterSource.__init__(self)
+		(self._resyncInterval, self._resyncForce, self._resyncLast) = (0, False, time.time())
+
+	def resyncSetup(self, interval = None, force = None):
+		if interval is not None:
+			self._resyncInterval = interval
+		if force is not None:
+			self._resyncForce = force
+
+	def _resync_enabled(self):
+		return self._resyncForce or (self._resyncInterval >= 0 and (abs(time.time() - self._resyncLast) >= self._resyncInterval))
+
+	def getHash(self):
+		if self._resync_enabled():
+			return md5_hex(repr(time.time()))
+		return self._hash
+
+	def resync(self): # only needed if the parameters are opaque references (like partition index)
+		result = None
+		if self._resync_enabled():
+			result = self._resync()
+			self._resyncForce = False
+			self._resyncLast = time.time()
+		return result or ParameterSource.EmptyResyncResult()
+
+	def _resync(self):
+		pass
 
 
 class NullParameterSource(ParameterSource):

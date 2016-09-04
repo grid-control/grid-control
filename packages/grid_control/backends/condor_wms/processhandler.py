@@ -12,24 +12,13 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-import os, sys, math, stat, time, signal
+import os, math, stat, time, signal, logging
+from grid_control.backends.logged_process import LoggedProcess
 from grid_control.backends.wms import BackendError
 from grid_control.config import ConfigError
-from grid_control.utils import LoggedProcess, QM, ensureDirExists, eprint, resolveInstallPath, verbosity
+from grid_control.utils import ensureDirExists, resolveInstallPath
 from grid_control.utils.data_structures import makeEnum
 from hpfwk import AbstractError, NestedException, Plugin
-
-def vprint(text = '', level = 0, printTime = False, newline = True, once = False):
-	if verbosity() > level:
-		if once:
-			if text in vprint.log:
-				return
-			vprint.log.append(text)
-		if printTime:
-			sys.stdout.write('%s - ' % time.strftime('%Y-%m-%d %H:%M:%S', time.localtime()))
-		sys.stdout.write('%s%s' % (text, QM(newline, '\n', '')))
-vprint.log = []
-
 
 class CondorProcessError(BackendError):
 	def __init__(self, msg, proc):
@@ -74,6 +63,8 @@ class TimeoutContext(object):
 
 # Process Handler:
 class ProcessHandler(Plugin):
+	def __init__(self, **kwargs):
+		self._log = logging.getLogger('backend.condor')
 	def LoggedExecute(self, cmd, args = '', **kwargs):
 		raise AbstractError
 	def LoggedCopyToRemote(self, source, dest, **kwargs):
@@ -87,8 +78,6 @@ class ProcessHandler(Plugin):
 # local Processes - ensures uniform interfacing as with remote connections
 class LocalProcessHandler(ProcessHandler):
 	cpy="cp -r"
-	def __init__(self, **kwargs):
-		pass
 	# return instance of LoggedExecute with input properly wrapped
 	def LoggedExecute(self, cmd, args = '', **kwargs):
 		return LoggedProcess( cmd , args )
@@ -111,6 +100,7 @@ class SSHProcessHandler(ProcessHandler):
 	# older versions of ssh/gsissh will propagate an end of master incorrectly to children - rotate sockets
 	socketIdNow=0
 	def __init__(self, **kwargs):
+		ProcessHandler.__init__(self, **kwargs)
 		self.__initcommands(**kwargs)
 		self.defaultArgs="-vvv -o BatchMode=yes -o ForwardX11=no " + kwargs.get("defaultArgs","")
 		self.socketArgs=""
@@ -158,31 +148,31 @@ class SSHProcessHandler(ProcessHandler):
 			time.sleep(0.5)
 			timeout += 0.5
 			if timeout == 5:
-				vprint("SSH socket still not available after 5 seconds...\n%s" % self.sshLink, level=1)
-				vprint('Socket process: %s' % (self.__ControlMaster.cmd), level=2)
+				self._log.log(logging.INFO1, 'SSH socket still not available after 5 seconds...\n%s', self.sshLink)
+				self._log.log(logging.INFO2, 'Socket process: %s', self.__ControlMaster.cmd)
 			if timeout == 10:
 				return False
 	def _CleanSocket(self):
 		if not os.path.exists(self.sshLink):
-			vprint("No Socket %s" % self.sshLink)
+			self._log.error('No Socket %s', self.sshLink)
 			return True
-		vprint("Killing Socket %s" % self.sshLink)
+		self._log.info('Killing Socket %s', self.sshLink)
 #		killSocket = LoggedProcess( " ".join([self.cmd, self.defaultArgs, self.socketArgsDef, "-O exit", self.remoteHost]) )
 #		while killSocket.poll() == -1:
 #			print "poll", killSocket.poll()
 #			time.sleep(0.5)
 #			timeout += 0.5
 #			if timeout == 5:
-#				vprint("Failed to cancel ssh Socket...\n%s" % self.sshLink, level=1)
+#				self._log.log(logging.INFO1, 'Failed to cancel ssh Socket...\n%s', self.sshLink)
 #				return False
 #		print "done", killSocket.poll()
 		timeout = 0
 		while os.path.exists(self.sshLink):
-			vprint("exists %d" % timeout)
+			self._log.error('exists %d', timeout)
 			time.sleep(0.5)
 			timeout += 0.5
 			#if timeout == 5:
-			#	vprint("Failed to remove ssh Socket...\n%s" % self.sshLink, level=1)
+			#	self._log.log(logging.INFO1, 'Failed to remove ssh Socket...\n%s', self.sshLink)
 			#	return False
 		return True
 
@@ -206,7 +196,7 @@ class SSHProcessHandler(ProcessHandler):
 				if self.socketArgs!="":
 					self.socketArgs=""
 				if self.socketFailCount>maxFailCount:
-					eprint("Failed to create secure socket %s more than %s times!\nDisabling further attempts." % (self.sshLink,maxFailCount))
+					self._log.error('Failed to create secure socket %s more than %s times!\nDisabling further attempts.', self.sshLink, maxFailCount)
 					self.sshLink=False
 
 	# make sure the link file and directory are properly protected
@@ -307,6 +297,7 @@ class RemoteProcessHandler(object):
 			},
 		}
 	def __init__(self, remoteType="", **kwargs):
+		self._log = logging.getLogger('backend.condor')
 		self.cmd=False
 		# pick requested remote connection
 		try:
@@ -333,7 +324,7 @@ class RemoteProcessHandler(object):
 		ret = proc.getAll()[0]
 		if ret != 0:
 			raise CondorProcessError('Validation of remote connection failed!', proc)
-		vprint('Remote interface initialized:\n	Cmd: %s\n	Cp : %s' % (self.cmd,self.copy), level=2)
+		self._log.log(logging.INFO2, 'Remote interface initialized:\n\tCmd: %s\n\tCp : %s', self.cmd, self.copy)
 
 	# return instance of LoggedExecute with input properly wrapped
 	def LoggedExecute(self, cmd, args = '', argFormat=defaultArg):

@@ -62,6 +62,7 @@ class GUIStream(object):
 				idx += match.end()
 				match = self._match_any_attr.search(data[idx:])
 			self._console.addstr(data[idx:])
+			self._console.eraseLine()
 			return True
 		finally:
 			self._lock.release()
@@ -72,8 +73,9 @@ class GUIStream(object):
 	def dump(self):
 		stored_logged = self.logged
 		self.logged = False
-		for data in ifilter(identity, self._log):
-			self.write(data)
+		for data in str.join('', ifilter(identity, self._log)).splitlines():
+			self._console.eraseLine()
+			self.write(data + '\n')
 		self.logged = stored_logged
 
 
@@ -167,7 +169,7 @@ class ANSIGUI(GUI):
 
 	def displayWorkflow(self):
 		if not sys.stdout.isatty():
-			return self._workflow.jobCycle(self._wait)
+			return self._workflow.process(self._wait)
 
 		self._console = Console(sys.stdout)
 		self._new_stdout = GUIStream(sys.stdout, self._console, self._lock)
@@ -178,7 +180,7 @@ class ANSIGUI(GUI):
 			(sys.stdout, sys.stderr) = (self._new_stdout, self._new_stderr)
 			self._console.erase()
 			self._schedule_update_layout()
-			self._workflow.jobCycle(self._wait)
+			self._workflow.process(self._wait)
 		finally:
 			(sys.stdout, sys.stderr) = (self._stored_stdout, self._stored_stderr)
 			self._console.setscrreg()

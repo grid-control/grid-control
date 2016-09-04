@@ -194,7 +194,7 @@ class GliteWMS(GridWMS):
 		if not self.bulkSubmissionBegin(): # Trying to delegate proxy failed
 			if self._forceDelegate: # User switched on forcing delegation => exception
 				raise BackendError('Unable to delegate proxy!')
-			utils.eprint('Unable to delegate proxy! Continue with automatic delegation...')
+			self._log.error('Unable to delegate proxy! Continue with automatic delegation...')
 			self._submitParams.update({ '-a': ' ' })
 			self._useDelegate = False
 		for submitInfo in GridWMS.submitJobs(self, jobNumList, module):

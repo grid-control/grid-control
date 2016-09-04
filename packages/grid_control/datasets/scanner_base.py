@@ -19,7 +19,7 @@ from hpfwk import AbstractError
 class InfoScanner(ConfigurablePlugin):
 	def __init__(self, config):
 		ConfigurablePlugin.__init__(self, config)
-		self._log = logging.getLogger('infoscanner')
+		self._log = logging.getLogger('dataset.provider.infoscanner')
 
 	def getGuards(self):
 		return ([], [])

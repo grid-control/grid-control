@@ -13,11 +13,13 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-import os, sys, time, random, gcSupport
-from gcSupport import ClassSelector, FileInfoProcessor, Job, JobClass, Options, Plugin, utils
+import os, sys, time, random, logging, gcSupport
+from gcSupport import ClassSelector, FileInfoProcessor, Job, JobClass, Options, Plugin
 from grid_control.backends.storage import se_copy, se_exists, se_mkdir, se_rm
 from grid_control.utils.thread_tools import GCLock, start_thread
 from python_compat import imap, irange, lfilter, lmap, md5
+
+log = logging.getLogger()
 
 def md5sum(filename):
 	m = md5()
@@ -112,8 +114,8 @@ def parse_cmd_line():
 def dlfs_rm(path, msg):
 	procRM = se_rm(path)
 	if procRM.status(timeout = 60) != 0:
-		utils.eprint('\t\tUnable to remove %s!' % msg)
-		utils.eprint('%s\n%s\n' % (procRM.stdout.read(timeout = 0), procRM.stderr.read(timeout = 0)))
+		log.critical('\t\tUnable to remove %s!', msg)
+		log.critical('%s\n%s\n', procRM.stdout.read(timeout = 0), procRM.stderr.read(timeout = 0))
 
 
 def transfer_monitor(output, fileIdx, path, lock, abort):
@@ -157,7 +159,7 @@ def download_monitored(jobNum, output, fileIdx, checkPath, sourcePath, targetPat
 
 	if result != 0:
 		output.error('Unable to copy file from SE!')
-		utils.eprint('%s\n%s\n' % (procCP.stdout.read(timeout = 0), procCP.stderr.read(timeout = 0)))
+		log.critical('%s\n%s\n', procCP.stdout.read(timeout = 0), procCP.stderr.read(timeout = 0))
 		return False
 	return True
 
@@ -444,9 +446,8 @@ def main(args):
 				break
 			time.sleep(60)
 		except KeyboardInterrupt:
-			utils.eprint('\n\nDownload aborted!\n')
+			log.critical('\n\nDownload aborted!\n')
 			sys.exit(os.EX_TEMPFAIL)
-
 
 if __name__ == '__main__':
 	sys.exit(main(sys.argv[1:]))

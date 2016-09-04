@@ -12,6 +12,7 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
+import logging
 from grid_control.datasets.dproc_base import DataProcessor
 from grid_control.datasets.provider_base import DataProvider
 from python_compat import itemgetter, lfilter
@@ -120,7 +121,7 @@ class EmptyDataProcessor(DataProcessor):
 
 	def _finished(self):
 		if self._removedFiles or self._removedBlocks:
-			self._log.warning('Empty files removed: %d, Empty blocks removed %d', self._removedFiles, self._removedBlocks)
+			self._log.log(logging.INFO1, 'Empty files removed: %d, Empty blocks removed %d', self._removedFiles, self._removedBlocks)
 		(self._removedFiles, self._removedBlocks) = (0, 0)
 
 

@@ -35,7 +35,7 @@ class Settings(object):
 		Settings._config.setdefault(self._s, []).append((name.replace('_', ' '), mod, value))
 
 	def __getattribute__(self, name):
-		if name in ['_s', 'section', 'set']:
+		if name in ['_s', 'section', 'set', 'getConfigDict']:
 			return object.__getattribute__(self, name)
 		return self.section(name)
 

@@ -34,7 +34,7 @@ addDatasetListOptions(parser)
 options = scriptOptions(parser, arg_keys = ['dataset'])
 
 # Positional parameters override options
-if len(options.args) == 0:
+if not options.args:
 	utils.exitWithUsage(parser.usage())
 tmp = {'cmssw-out': 'CMSSW_EVENTS_WRITE', 'cmssw-in': 'CMSSW_EVENTS_READ', 'datamod': 'MAX_EVENTS'}
 if options.opts.info_scanner:

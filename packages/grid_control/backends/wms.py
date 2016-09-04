@@ -14,7 +14,7 @@
 
 # Generic base class for workload management systems
 
-import os, sys, glob, shutil, logging
+import os, glob, shutil, logging
 from grid_control import utils
 from grid_control.backends.access import AccessToken
 from grid_control.backends.aspect_status import CheckInfo
@@ -24,9 +24,8 @@ from grid_control.output_processor import JobResult
 from grid_control.utils.activity import Activity
 from grid_control.utils.data_structures import makeEnum
 from grid_control.utils.file_objects import SafeFile, VirtualFile
-from grid_control.utils.gc_itertools import ichain, lchain
-from hpfwk import AbstractError, NestedException
-from python_compat import identity, imap, izip, lmap, set, sorted
+from hpfwk import AbstractError, NestedException, clear_current_exception
+from python_compat import ichain, identity, imap, izip, lchain, lmap, set, sorted
 
 class BackendError(NestedException):
 	pass
@@ -105,11 +104,10 @@ class BasicWMS(WMS):
 			executor.setup(self._log)
 		(self._check_executor, self._cancel_executor) = (checkExecutor, cancelExecutor)
 
-		log_user = logging.getLogger('user.backend')
 		if self._name != self.__class__.__name__.upper():
-			log_user.info('Using batch system: %s (%s)', self.__class__.__name__, self._name)
+			self._log.info('Using batch system: %s (%s)', self.__class__.__name__, self._name)
 		else:
-			log_user.info('Using batch system: %s', self._name)
+			self._log.info('Using batch system: %s', self._name)
 
 		self.errorLog = config.getWorkPath('error.tar')
 		self._runlib = config.getWorkPath('gc-run.lib')
@@ -123,9 +121,7 @@ class BasicWMS(WMS):
 		utils.ensureDirExists(self._outputPath, 'output directory')
 		self._failPath = config.getWorkPath('fail')
 
-		# Initialise access token, broker and storage manager
-		self._token = config.getCompositePlugin(['proxy', 'access token'], 'TrivialAccessToken',
-			'MultiAccessToken', cls = AccessToken, inherit = True, tags = [self])
+		# Initialise access token and storage managers
 
 		# UI -> SE -> WN
 		self.smSEIn = config.getPlugin('se input manager', 'SEStorageManager', cls = StorageManager,
@@ -136,6 +132,9 @@ class BasicWMS(WMS):
 		self.smSEOut = config.getPlugin('se output manager', 'SEStorageManager', cls = StorageManager,
 			tags = [self], pargs = ('se', 'se output', 'SE_OUTPUT'))
 		self.smSBOut = None
+
+		self._token = config.getCompositePlugin(['proxy', 'access token'], 'TrivialAccessToken',
+			'MultiAccessToken', cls = AccessToken, inherit = True, tags = [self])
 
 
 	def canSubmit(self, neededTime, canCurrentlySubmit):
@@ -173,7 +172,7 @@ class BasicWMS(WMS):
 	def submitJobs(self, jobNumList, task):
 		for jobNum in jobNumList:
 			if utils.abort():
-				raise StopIteration
+				break
 			yield self._submitJob(jobNum, task)
 
 
@@ -241,7 +240,7 @@ class BasicWMS(WMS):
 			try:
 				job_info = self._job_parser.process(pathName)
 			except Exception:
-				self._log.exception(sys.exc_info()[1])
+				self._log.exception('Unable to parse job.info')
 				job_info = None
 			if job_info:
 				jobNum = job_info[JobResult.JOBNUM]
@@ -259,7 +258,7 @@ class BasicWMS(WMS):
 				try:
 					os.rmdir(subDir)
 				except Exception:
-					pass
+					clear_current_exception()
 
 			if os.path.exists(pathName):
 				# Preserve failed job

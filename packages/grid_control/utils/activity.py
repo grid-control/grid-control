@@ -117,4 +117,4 @@ Activity.lock = GCLock()
 Activity.counter = 0
 Activity.running_by_thread_name = {}
 Activity.callbacks = []
-Activity.root = None
+Activity.root = Activity('Running grid-control', name = 'root')

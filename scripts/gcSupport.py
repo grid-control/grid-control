@@ -19,13 +19,13 @@ import os, sys, time, fcntl, logging
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'packages')))
 
 from grid_control import utils
-from grid_control.config import createConfig
+from grid_control.config import create_config
 from grid_control.job_db import Job, JobClass
 from grid_control.job_selector import ClassSelector, JobSelector
 from grid_control.output_processor import FileInfoProcessor, JobInfoProcessor, JobResult
 from grid_control.utils.activity import Activity
 from grid_control.utils.cmd_options import Options
-from hpfwk import Plugin
+from hpfwk import Plugin, clear_current_exception
 from python_compat import ifilter, imap, lmap, sorted, tarfile
 
 def scriptOptions(parser, args = None, arg_keys = None):
@@ -46,7 +46,7 @@ def scriptOptions(parser, args = None, arg_keys = None):
 def getConfig(configFile = None, configDict = None, section = None, additional = None):
 	if configDict and section:
 		configDict = {section: configDict}
-	config = createConfig(configFile, configDict, additional = additional)
+	config = create_config(configFile, configDict, useDefaultFiles = True, additional = additional)
 	if section:
 		return config.changeView(addSections = [section])
 	return config
@@ -73,7 +73,7 @@ class FileMutex:
 			if os.path.exists(self._lockfile):
 				os.unlink(self._lockfile)
 		except Exception:
-			pass
+			clear_current_exception()
 
 	def __del__(self):
 		self.release()
@@ -142,6 +142,6 @@ def displayPluginList(clsList):
 			break
 	utils.printTabular(header, sorted(clsList, key = lambda x: x['Name'].lower()), fmtString = fmtString)
 
-__all__ = ['Activity', 'ClassSelector', 'FileInfoProcessor', 'FileMutex', 'Job',
-	'JobClass', 'JobInfoProcessor', 'JobResult', 'JobSelector', 'Options', 'Plugin', 'displayPluginList',
-	'getCMSSWInfo', 'getConfig', 'getPluginList', 'initGC', 'scriptOptions', 'utils']
+__all__ = ['Activity', 'ClassSelector', 'displayPluginList', 'FileInfoProcessor', 'FileMutex',
+	'getCMSSWInfo', 'getConfig', 'getPluginList', 'initGC', 'Job', 'JobClass', 'JobInfoProcessor',
+	'JobResult', 'JobSelector', 'Options', 'Plugin', 'scriptOptions', 'utils']

@@ -23,11 +23,11 @@ from python_compat import sorted
 class ConfigDataProvider(DataProvider):
 	alias = ['config']
 
-	def __init__(self, config, datasetExpr, datasetNick = None, datasetID = 0):
-		DataProvider.__init__(self, config, datasetExpr, datasetNick, datasetID)
+	def __init__(self, config, datasetExpr, datasetNick = None):
+		DataProvider.__init__(self, config, datasetExpr, datasetNick)
 
 		ds_config = config.changeView(viewClass = 'SimpleConfigView', setSections = ['datasource %s' % datasetExpr])
-		self._block = self._readBlockFromConfig(ds_config, datasetExpr, datasetNick, datasetID)
+		self._block = self._readBlockFromConfig(ds_config, datasetExpr, datasetNick)
 
 		def onChange(config, old_obj, cur_obj, cur_entry, obj2str):
 			self._log.critical('Dataset %r changed', datasetExpr)
@@ -50,19 +50,18 @@ class ConfigDataProvider(DataProvider):
 		return fi
 
 
-	def _createBlockInfo(self, ds_config, datasetExpr, datasetNick, datasetID):
+	def _createBlockInfo(self, ds_config, datasetExpr, datasetNick):
 		datasetNameParts = datasetExpr.split('#', 1)
 		if len(datasetNameParts) == 1:
 			datasetNameParts.append('0')
 		return {
 			DataProvider.Nickname: ds_config.get('nickname', datasetNick or '', onChange = None),
-			DataProvider.DatasetID: ds_config.getInt('id', datasetID, onChange = None),
 			DataProvider.Dataset: datasetNameParts[0],
 			DataProvider.BlockName: datasetNameParts[1],
 		}
 
 
-	def _readBlockFromConfig(self, ds_config, datasetExpr, datasetNick, datasetID):
+	def _readBlockFromConfig(self, ds_config, datasetExpr, datasetNick):
 		metadata_keys = parseJSON(ds_config.get('metadata', '[]', onChange = None))
 		common_metadata = parseJSON(ds_config.get('metadata common', '[]', onChange = None))
 		if len(common_metadata) > len(metadata_keys):
@@ -76,12 +75,12 @@ class ConfigDataProvider(DataProvider):
 				has_se_list = True
 			elif url == 'events':
 				has_events = True
-			elif url not in ['dataset hash', 'id', 'metadata', 'metadata common', 'nickname', 'prefix']:
+			elif url not in ['dataset hash', 'metadata', 'metadata common', 'nickname', 'prefix']:
 				file_list.append(self._readFileFromConfig(ds_config, url, metadata_keys, common_metadata, common_prefix))
 		if not file_list:
 			raise DatasetError('There are no dataset files specified for dataset %r' % datasetExpr)
 
-		result = self._createBlockInfo(ds_config, datasetExpr, datasetNick, datasetID)
+		result = self._createBlockInfo(ds_config, datasetExpr, datasetNick)
 		result[DataProvider.FileList] = sorted(file_list, key = lambda fi: fi[DataProvider.URL])
 		if metadata_keys:
 			result[DataProvider.Metadata] = metadata_keys

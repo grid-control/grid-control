@@ -8,12 +8,14 @@ global options
     Identifier for the current configuration
   * ``delete`` = <job selector> (default: '')
     The unfinished jobs selected by this expression are cancelled.
-  * ``package paths`` = <list of paths> (default: [])
+  * ``package paths`` = <list of paths> (default: '')
     Specify paths to additional grid-control packages with user defined plugins that are outside of the base package directory
-  * ``plugin paths`` = <list of paths> (default: ['<current directory>'])
+  * ``plugin paths`` = <list of paths> (default: '<current directory>')
     Specifies paths that are used to search for plugins
   * ``reset`` = <job selector> (default: '')
     The jobs selected by this expression are reset to the INIT state
+  * ``variable markers`` = <list of values> (default: '@ __')
+    Specifies how variables are marked
   * ``workdir`` = <path> (default: <workdir base>/work.<config file name>)
     Location of the grid-control work directory. Usually based on the name of the config file
   * ``workdir base`` = <path> (default: <config file path>)
@@ -104,6 +106,8 @@ backend options
     Specify access token plugins that are necessary for job submission
   * access token manager = <plugin> (Default: 'MultiAccessToken')
     Specifiy compositor class to merge the different plugins given in ``access token``
+  * ``cancel timeout`` = <duration hh[:mm[:ss]]> (default: 00:01:00)
+    Specify timeout of the process that is used to cancel jobs
   * ``sb input manager`` = <plugin[:name]> (default: 'LocalSBStorageManager')
     Specify transfer manager plugin to transfer sandbox input files
   * ``se input manager`` = <plugin[:name]> (default: 'SEStorageManager')
@@ -120,7 +124,7 @@ CMSSW options
     List of files that should be taken from the CMSSW project area for running the job
   * ``arguments`` = <text> (default: '')
     Arguments that will be passed to the *cmsRun* call
-  * ``config file`` = <list of paths> (default: <name:cfgDefault>)
+  * ``config file`` = <list of paths> (default: <no default> or '' if prolog / epilog script is given)
     List of config files that will be sequentially processed by *cmsRun* calls
   * ``cpu time`` = <duration hh[:mm[:ss]]> (default: <wall time>)
     Requested cpu time
@@ -132,7 +136,7 @@ CMSSW options
     This sets the variable MAX_EVENTS if no datasets are present
   * ``gzip output`` = <boolean> (default: True)
     Toggle the compression of the job log files for stdout and stderr
-  * ``input files`` = <list of paths> (default: [])
+  * ``input files`` = <list of paths> (default: '')
     List of files that should be transferred to the landing zone of the job on the worker node. Only for small files - send large files via SE!
   * ``instrumentation`` = <boolean> (default: True)
     Toggle to control the instrumentation of CMSSW config files for running over data / initializing the RNG for MC production
@@ -194,7 +198,7 @@ CMSSW_Advanced options
     List of files that should be taken from the CMSSW project area for running the job
   * ``arguments`` = <text> (default: '')
     Arguments that will be passed to the *cmsRun* call
-  * ``config file`` = <list of paths> (default: <name:cfgDefault>)
+  * ``config file`` = <list of paths> (default: <no default> or '' if prolog / epilog script is given)
     List of config files that will be sequentially processed by *cmsRun* calls
   * ``cpu time`` = <duration hh[:mm[:ss]]> (default: <wall time>)
     Requested cpu time
@@ -206,7 +210,7 @@ CMSSW_Advanced options
     This sets the variable MAX_EVENTS if no datasets are present
   * ``gzip output`` = <boolean> (default: True)
     Toggle the compression of the job log files for stdout and stderr
-  * ``input files`` = <list of paths> (default: [])
+  * ``input files`` = <list of paths> (default: '')
     List of files that should be transferred to the landing zone of the job on the worker node. Only for small files - send large files via SE!
   * ``instrumentation`` = <boolean> (default: True)
     Toggle to control the instrumentation of CMSSW config files for running over data / initializing the RNG for MC production
@@ -275,6 +279,7 @@ dataset options
   * dataset manager = <plugin> (Default: ':MultiDatasetProvider:')
     Specifiy compositor class to merge the different plugins given in ``dataset``
   * ``dataset default query interval`` = <duration hh[:mm[:ss]]> (default: 00:01:00)
+    Specify the default limit for the dataset query interval
   * ``dataset processor`` = <list of plugins> (default: 'NickNameConsistencyProcessor EntriesConsistencyDataProcessor URLDataProcessor URLCountDataProcessor ' 'EntriesCountDataProcessor EmptyDataProcessor UniqueDataProcessor LocationDataProcessor')
     Specify list of plugins that process datasets before the partitioning
   * dataset processor manager = <plugin> (Default: 'MultiDataProcessor')
@@ -306,20 +311,6 @@ dataset options
   * ``resync mode shrink`` = <enum: disable|complete|changed|ignore> (default: changed)
     Sets the resync mode for shrunken files
 
-ConfigDataProvider._createBlockInfo options
--------------------------------------------
-
-  * ``id`` = <integer> (default: <determined by dataset order>)
-    Specify total number of events in the dataset
-  * ``nickname`` = <text> (default: <manual>)
-    Specify the dataset nickname
-
-SandboxHelper options
----------------------
-
-  * ``sandbox path`` = <path> (default: <workdir>/sandbox)
-    Specify the sandbox path
-
 TaskExecutableWrapper options
 -----------------------------
 
@@ -330,21 +321,37 @@ TaskExecutableWrapper options
   * ``[<prefix>] send executable`` = <boolean> (default: True)
     Toggle to control if the specified executable should be send together with the job
 
+interactive options
+-------------------
+
+  * ``<option name>`` = <boolean>
+    Toggle to switch interactive questions on and off
+  * ``delete jobs`` = <boolean> (default: True)
+    Toggle interactivity of job deletion requests
+  * ``partition resync`` = <boolean> (default: False)
+    Toggle interactivity of dataset resyncs
+  * ``reset jobs`` = <boolean> (default: True)
+    Toggle interactivity of job reset requests
+
 logging options
 ---------------
 
   * ``<logger name> file`` = <text>
-    Logfile used by file logger
+    Log file used by file logger
   * ``<logger name> <handler> code context / <logger name> code context`` = <integer> (default: 2)
     Number of code context lines in shown exception logs
+  * ``<logger name> <handler> detail lower limit / <logger name> detail lower limit`` = <enum: LEVEL 0..50|NOTSET|DEBUG3...DEBUG|INFO3..INFO|DEFAULT|WARNING|ERROR|CRITICAL> (default: DEBUG)
+    Logging messages below this log level will use the long form output
+  * ``<logger name> <handler> detail upper limit / <logger name> detail upper limit`` = <enum: LEVEL 0..50|NOTSET|DEBUG3...DEBUG|INFO3..INFO|DEFAULT|WARNING|ERROR|CRITICAL> (default: ERROR)
+    Logging messages above this log level will use the long form output
   * ``<logger name> <handler> file stack / <logger name> file stack`` = <integer> (default: 1)
-    Level of detail for file stack information shown exception logs
-  * ``<logger name> <handler> format / <logger name> format`` = <text> (default: '$(message)s')
-    Format of log entries
+    Level of detail for file stack information shown in exception logs
+  * ``<logger name> <handler> tree / <logger name> tree`` = <integer> (default: 2)
+    Level of detail for exception tree information shown in exception logs
   * ``<logger name> <handler> variables / <logger name> variables`` = <integer> (default: 1)
-    Level of detail for variable information shown exception logs
-  * ``<logger name> debug file`` = <text> (default: '')
-    Logfile used by debug file logger
+    Level of detail for variable information shown in exception logs
+  * ``<logger name> debug file`` = <list of paths> (default: '"<gc dir>/debug.log" "/tmp/gc.debug.<uid>.<pid>" "~/gc.debug"')
+    Logfile used by debug file logger. In case multiple paths are specified, the first usable path will be used.
   * ``<logger name> handler`` = <list of values> (default: '')
     List of log handlers
   * ``<logger name> level`` = <enum: LEVEL 0..50|NOTSET|DEBUG3...DEBUG|INFO3..INFO|DEFAULT|WARNING|ERROR|CRITICAL> (default: <depends on the logger>)
@@ -362,12 +369,6 @@ parameters options
   * ``parameters`` = <text> (default: '')
     Specify the parameter expression that defines the parameter space. The syntax depends on the used parameter factory.
 
-validNoVar options
-------------------
-
-  * ``variable markers`` = <list of values> (default: '@ __')
-    Specifies how variables are marked
-
 GUI options
 -----------
 
@@ -384,16 +385,12 @@ Matcher options
   * ``<prefix> case sensitive`` = <boolean>
     Toggle case sensitivity for the matcher
 
-CancelJobsWithProcess options
------------------------------
-
-  * ``cancel timeout`` = <integer> (default: 60)
-    Specify timeout of the process that is used to cancel jobs
-
 CheckJobsWithProcess options
 ----------------------------
 
-  * ``check timeout`` = <integer> (default: 60)
+  * ``check promiscuous`` = <boolean> (default: False)
+    Toggle the indiscriminate logging of the job status tool output
+  * ``check timeout`` = <duration hh[:mm[:ss]]> (default: 00:01:00)
     Specify timeout of the process that is used to check the job status
 
 EmptyDataProcessor options
@@ -431,7 +428,7 @@ LumiDataProcessor options
     Specifiy matcher plugin that is used to match the lookup expressions
   * ``lumi filter strictness`` = <enum: strict|weak> (default: strict)
     Specify if the lumi filter requires the run and lumi information (strict) or just the run information (weak)
-  * ``lumi keep`` = <enum: RunLumi|Run|none> (default: <name:lumi_keep_default>)
+  * ``lumi keep`` = <enum: RunLumi|Run|none> (default: <Run/none depending on active/inactive lumi filter>)
     Specify which lumi metadata to retain
 
 MultiDataProcessor options
@@ -523,7 +520,7 @@ CMSBaseProvider options
     Specify lumi filter for the dataset (as nickname dependent dictionary)
   * ``lumi filter matcher`` = <plugin> (Default: start)
     Specifiy matcher plugin that is used to match the lookup expressions
-  * ``lumi metadata`` = <boolean> (default: <manual>)
+  * ``lumi metadata`` = <boolean> (default: <True/False for active/inactive lumi filter>)
     Toggle the retrieval of lumi metadata
   * ``only complete sites`` = <boolean> (default: True)
     Toggle the inclusion of incomplete sites in the dataset location information
@@ -549,16 +546,12 @@ ConfigDataProvider options
     List of metadata keys in the dataset
   * ``metadata common`` = <text> (default: '[]')
     Specify metadata values in JSON format that are common to all files in the dataset
+  * ``nickname`` = <text> (default: <determined by dataset expression>)
+    Specify the dataset nickname
   * ``prefix`` = <text> (default: '')
     Specify the common prefix of URLs in the dataset
   * ``se list`` = <text> (default: '')
     Specify list of locations where the dataset is available
-
-ScanProviderBase options
-------------------------
-
-  * ``scanner`` = <list of values> (default: <name:sList>)
-    Specify list of info scanner plugins to retrieve dataset informations
 
 DASProvider options
 -------------------
@@ -573,7 +566,7 @@ DASProvider options
     Specify lumi filter for the dataset (as nickname dependent dictionary)
   * ``lumi filter matcher`` = <plugin> (Default: start)
     Specifiy matcher plugin that is used to match the lookup expressions
-  * ``lumi metadata`` = <boolean> (default: <manual>)
+  * ``lumi metadata`` = <boolean> (default: <True/False for active/inactive lumi filter>)
     Toggle the retrieval of lumi metadata
   * ``only complete sites`` = <boolean> (default: True)
     Toggle the inclusion of incomplete sites in the dataset location information
@@ -599,7 +592,7 @@ ScanProvider options
     Specify list of dataset or block hashes that are selected for this data source
   * ``<prefix> name pattern`` = <text> (default: '')
     Specify the name pattern for the dataset or block (using variables that are common to all files in the dataset or block)
-  * ``scanner`` = <list of values> (default: <name:sList>)
+  * ``scanner`` = <list of values> (default: <depends on other configuration options>)
     Specify list of info scanner plugins to retrieve dataset informations
 
 DBSInfoProvider options
@@ -607,8 +600,44 @@ DBSInfoProvider options
 
   * ``discovery`` = <boolean> (default: False)
     Toggle discovery only mode (without DBS consistency checks)
-  * ``scanner`` = <list of values> (default: <name:sList>)
+  * ``scanner`` = <list of values> (default: <depends on other configuration options>)
     Specify list of info scanner plugins to retrieve dataset informations
+
+EventBoundarySplitter options
+-----------------------------
+
+  * ``events per job`` = <integer>
+    Set granularity of dataset splitter
+
+FLSplitStacker options
+----------------------
+
+  * ``splitter stack`` = <list of plugins> (default: 'BlockBoundarySplitter')
+    Specify sequence of dataset splitters. All dataset splitters except for the last one have to be of type 'FileLevelSplitter', splitting only along file boundaries.
+
+FileBoundarySplitter options
+----------------------------
+
+  * ``files per job`` = <integer>
+    Set granularity of dataset splitter
+
+HybridSplitter options
+----------------------
+
+  * ``events per job`` = <integer>
+    Set guideline for the granularity of the dataset splitter
+
+RunSplitter options
+-------------------
+
+  * ``run range`` = <integer> (default: 1)
+    Specify number of sequential runs that are processed per job
+
+UserMetadataSplitter options
+----------------------------
+
+  * ``split metadata`` = <list of values> (default: '')
+    Specify the name of the metadata variable that is used to partition the dataset into equivalence classes.
 
 AddFilePrefix options
 ---------------------
@@ -797,7 +826,7 @@ AFSAccessToken options
     Specify the minimal lifetime of the proxy that is required to enable job submission
   * ``query time / min query time`` = <duration hh[:mm[:ss]]> (default: 00:30:00)
     Specify the interval in which queries are performed
-  * ``tickets`` = <list of values> (default: all tickets ([]))
+  * ``tickets`` = <list of values> (default: <all tickets: ''>)
     Specify the subset of kerberos tickets to check the access token lifetime
   * ``urgent query time / max query time`` = <duration hh[:mm[:ss]]> (default: 00:05:00)
     Specify the interval in which queries are performed when the time is running out
@@ -939,7 +968,7 @@ SCRAMTask options
     List of environment setup scripts that the jobs depend on
   * ``gzip output`` = <boolean> (default: True)
     Toggle the compression of the job log files for stdout and stderr
-  * ``input files`` = <list of paths> (default: [])
+  * ``input files`` = <list of paths> (default: '')
     List of files that should be transferred to the landing zone of the job on the worker node. Only for small files - send large files via SE!
   * ``internal parameter factory`` = <plugin> (default: 'BasicParameterFactory')
     Specify the parameter factory plugin that is used to generate the basic grid-control parameters
@@ -999,7 +1028,7 @@ ROOTTask options
     List of environment setup scripts that the jobs depend on
   * ``gzip output`` = <boolean> (default: True)
     Toggle the compression of the job log files for stdout and stderr
-  * ``input files`` = <list of paths> (default: [])
+  * ``input files`` = <list of paths> (default: '')
     List of files that should be transferred to the landing zone of the job on the worker node. Only for small files - send large files via SE!
   * ``internal parameter factory`` = <plugin> (default: 'BasicParameterFactory')
     Specify the parameter factory plugin that is used to generate the basic grid-control parameters
@@ -1051,6 +1080,8 @@ Local options
 
   * ``job parser`` = <plugin> (default: 'JobInfoProcessor')
     Specify plugin that checks the output sandbox of the job and returns with the job status
+  * ``sandbox path`` = <path> (default: <workdir>/sandbox)
+    Specify the sandbox path
   * ``wait idle`` = <integer> (default: 60)
     Wait for the specified duration if the job cycle was idle
   * ``wait work`` = <integer> (default: 10)
@@ -1141,7 +1172,7 @@ HTCondor options
     Specify plugin that checks the output sandbox of the job and returns with the job status
   * ``poolconfig`` = <list of values> (default: '')
     Specify the list of pool config files
-  * ``sandbox path`` = <path> (default: <call:config.getWorkPath('sandbox.<name:name>')>)
+  * ``sandbox path`` = <path> (default: <workdir>/sandbox.<wms name>)
     Specify the sandbox path
   * ``schedduri`` = <text> (default: '')
     Specify URI of the schedd

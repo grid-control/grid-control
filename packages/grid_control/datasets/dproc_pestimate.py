@@ -14,6 +14,7 @@
 
 from grid_control.datasets.dproc_base import DataProcessor
 from grid_control.datasets.provider_base import DataProvider
+from hpfwk import clear_current_exception
 from python_compat import identity, ifilter, lmap
 
 class PartitionEstimator(DataProcessor):
@@ -28,25 +29,27 @@ class PartitionEstimator(DataProcessor):
 		self._config = config
 
 	def enabled(self):
-		return (self._targetJobs != -1) or (self._targetJobsDS != -1)
+		return (self._targetJobs > 0) or (self._targetJobsDS > 0)
 
-	def _setSplitParam(self, config, name, value):
-		config.setInt(name, max(1, int(value / float(self._targetJobs) + 0.5)))
+	def _setSplitParam(self, config, name, work_units, target_partitions):
+		try:
+			config.setInt(name, max(1, int(work_units / float(target_partitions) + 0.5)))
+		except Exception:
+			clear_current_exception()
 
 	def process(self, blockIter):
-		if (self._targetJobs != -1) or (self._targetJobsDS != -1):
+		if self.enabled() and not self._config.getState('resync', detail = 'datasets'):
 			blocks = lmap(self.processBlock, blockIter)
-			if self._targetJobs:
-				self._setSplitParam(self._config, 'files per job', self._files[None])
-				self._setSplitParam(self._config, 'events per job', self._entries[None])
-			if self._targetJobsDS:
+			if self._targetJobs > 0:
+				self._setSplitParam(self._config, 'files per job', self._files[None], self._targetJobs)
+				self._setSplitParam(self._config, 'events per job', self._entries[None], self._targetJobs)
+			if self._targetJobsDS > 0:
 				for nick in ifilter(identity, self._files):
 					block_config = self._config.changeView(setSections = ['dataset %s' % nick])
-					self._setSplitParam(block_config, 'files per job', self._files[nick])
-					self._setSplitParam(block_config, 'events per job', self._entries[nick])
+					self._setSplitParam(block_config, 'files per job', self._files[nick], self._targetJobsDS)
+					self._setSplitParam(block_config, 'events per job', self._entries[nick], self._targetJobsDS)
 			return blocks
-		else:
-			return blockIter
+		return blockIter
 
 	def processBlock(self, block):
 		def inc(key):

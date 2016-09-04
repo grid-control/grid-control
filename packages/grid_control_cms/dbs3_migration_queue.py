@@ -207,7 +207,7 @@ if __name__ == '__main__':
             migration_queue.add_migration_task(MigrationTask(block_name=block,
                                                              migration_url='http://a.b.c', dbs_client=None))
         except AlreadyQueued:
-            logger.exception('Already queued!')
+            logger.exception('Already queued')
 
     migration_queue.save_to_disk('test.pkl')
     del migration_queue

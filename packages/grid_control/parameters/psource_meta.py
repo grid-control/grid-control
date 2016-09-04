@@ -12,11 +12,9 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-from grid_control import utils
 from grid_control.parameters.psource_base import NullParameterSource, ParameterError, ParameterSource
-from grid_control.utils.gc_itertools import ichain, lchain
 from hpfwk import AbstractError, Plugin
-from python_compat import all, imap, irange, izip, lfilter, lmap, md5_hex, reduce
+from python_compat import all, ichain, imap, irange, izip, lchain, lfilter, lmap, md5_hex, reduce
 
 def combineSyncResult(a, b, sc_fun = lambda x, y: x or y):
 	if a is None:
@@ -89,9 +87,13 @@ class RangeParameterSource(ForwardingParameterSource):
 
 	def __init__(self, psource, posStart = None, posEnd = None):
 		ForwardingParameterSource.__init__(self, psource)
-		self._posStart = utils.QM(posStart is None, 0, posStart)
-		self._posEndUser = posEnd
-		self._posEnd = utils.QM(self._posEndUser is None, self._psource.getMaxParameters() - 1, self._posEndUser)
+		(self._posStart, self._posEndUser) = (posStart or 0, posEnd)
+		self._posEnd = self._getPosEnd()
+
+	def _getPosEnd(self):
+		if self._posEndUser is None:
+			return self._psource.getMaxParameters() - 1
+		return self._posEndUser
 
 	def getMaxParameters(self):
 		return self._posEnd - self._posStart + 1
@@ -103,17 +105,17 @@ class RangeParameterSource(ForwardingParameterSource):
 		self._psource.fillParameterInfo(pNum + self._posStart, result)
 
 	def resync(self):
-		(result_redo, result_disable, result_sizeChange) = ParameterSource.resync(self)
+		(result_redo, result_disable, _) = ParameterSource.EmptyResyncResult() # empty resync result
 		(psource_redo, psource_disable, _) = self._psource.resync() # size change is irrelevant if outside of range
-		for pNum in psource_redo:
-			if (pNum >= self._posStart) and (pNum <= self._posEnd):
-				result_redo.add(pNum - self._posStart)
-		for pNum in psource_disable:
-			if (pNum >= self._posStart) and (pNum <= self._posEnd):
-				result_disable.add(pNum - self._posStart)
+		def translate(source, target):
+			for pNum in source:
+				if (pNum >= self._posStart) and (pNum <= self._posEnd):
+					target.add(pNum - self._posStart)
+		translate(psource_redo, result_redo)
+		translate(psource_disable, result_disable)
 		oldPosEnd = self._posEnd
-		self._posEnd = utils.QM(self._posEndUser is None, self._psource.getMaxParameters() - 1, self._posEndUser)
-		return (result_redo, result_disable, result_sizeChange or (oldPosEnd != self._posEnd))
+		self._posEnd = self._getPosEnd()
+		return (result_redo, result_disable, oldPosEnd != self._posEnd)
 
 	def show(self):
 		result = ForwardingParameterSource.show(self)
@@ -172,9 +174,9 @@ class MultiParameterSource(ParameterSource):
 		self._psourceMaxList = lmap(lambda p: p.getMaxParameters(), self._psourceList)
 		self._maxParameters = self._initMaxParameters()
 		# translate affected pNums from subsources
-		(result_redo, result_disable, dummy) = ParameterSource.resync(self)
+		(result_redo, result_disable, _) = ParameterSource.EmptyResyncResult()
 		for (idx, psource_resync) in enumerate(psourceResyncList):
-			(psource_redo, psource_disable, dummy) = psource_resync
+			(psource_redo, psource_disable, _) = psource_resync
 			for pNum in psource_redo:
 				result_redo.update(self._translateNum(idx, pNum))
 			for pNum in psource_disable:
@@ -211,10 +213,11 @@ class BaseZipParameterSource(MultiParameterSource):
 				psource.fillParameterInfo(pNum, result)
 
 	def resync(self): # Quicker version than the general purpose implementation
-		result = ParameterSource.resync(self)
+		result = ParameterSource.EmptyResyncResult()
 		for psource in self._psourceList:
 			result = combineSyncResult(result, psource.resync())
 		oldMaxParameters = self._maxParameters
+		self._psourceMaxList = lmap(lambda p: p.getMaxParameters(), self._psourceList)
 		self._maxParameters = self._initMaxParameters()
 		return (result[0], result[1], oldMaxParameters != self._maxParameters)
 
@@ -239,30 +242,6 @@ class ZipLongParameterSource(BaseZipParameterSource):
 
 	def __repr__(self):
 		return 'zip(%s)' % str.join(', ', imap(repr, self._psourceList))
-
-
-class ChainParameterSource(MultiParameterSource):
-	alias = ['chain']
-
-	def _initMaxParameters(self):
-		if None in self._psourceMaxList:
-			prob_sources = lfilter(lambda p: p.getMaxParameters() is None, self._psourceList)
-			raise ParameterError('Unable to chain unlimited sources: %s' % repr(str.join(', ', imap(repr, prob_sources))))
-		self._offsetList = lmap(lambda pIdx: sum(self._psourceMaxList[:pIdx]), irange(len(self._psourceList)))
-		return sum(self._psourceMaxList)
-
-	def _translateNum(self, pIdx, pNum):
-		return [pNum + self._offsetList[pIdx]]
-
-	def fillParameterInfo(self, pNum, result):
-		limit = 0
-		for (psource, maxN) in izip(self._psourceList, self._psourceMaxList):
-			if pNum < limit + maxN:
-				return psource.fillParameterInfo(pNum - limit, result)
-			limit += maxN
-
-	def __repr__(self):
-		return 'chain(%s)' % str.join(', ', imap(repr, self._psourceList))
 
 
 class RepeatParameterSource(MultiParameterSource):
@@ -317,7 +296,6 @@ class CrossParameterSource(MultiParameterSource):
 		MultiParameterSource.__init__(self, *simplify_nested_sources(CrossParameterSource, psources))
 
 	def _initMaxParameters(self):
-		self.quickFill = []
 		self._quickFill = []
 		prev = 1
 		for (psource, maxN) in izip(self._psourceList, self._psourceMaxList):
@@ -341,6 +319,30 @@ class CrossParameterSource(MultiParameterSource):
 
 	def __repr__(self):
 		return 'cross(%s)' % str.join(', ', imap(repr, self._psourceList))
+
+
+class ChainParameterSource(MultiParameterSource):
+	alias = ['chain']
+
+	def _initMaxParameters(self):
+		if None in self._psourceMaxList:
+			prob_sources = lfilter(lambda p: p.getMaxParameters() is None, self._psourceList)
+			raise ParameterError('Unable to chain unlimited sources: %s' % repr(str.join(', ', imap(repr, prob_sources))))
+		self._offsetList = lmap(lambda pIdx: sum(self._psourceMaxList[:pIdx]), irange(len(self._psourceList)))
+		return sum(self._psourceMaxList)
+
+	def _translateNum(self, pIdx, pNum):
+		return [pNum + self._offsetList[pIdx]]
+
+	def fillParameterInfo(self, pNum, result):
+		limit = 0
+		for (psource, maxN) in izip(self._psourceList, self._psourceMaxList):
+			if pNum < limit + maxN:
+				return psource.fillParameterInfo(pNum - limit, result)
+			limit += maxN
+
+	def __repr__(self):
+		return 'chain(%s)' % str.join(', ', imap(repr, self._psourceList))
 
 
 class ErrorParameterSource(ChainParameterSource):

@@ -22,8 +22,8 @@ from python_compat import lmap
 class DBS3Provider(CMSBaseProvider):
 	alias = ['dbs3', 'dbs']
 
-	def __init__(self, config, datasetExpr, datasetNick = None, datasetID = 0):
-		CMSBaseProvider.__init__(self, config, datasetExpr, datasetNick, datasetID)
+	def __init__(self, config, datasetExpr, datasetNick = None):
+		CMSBaseProvider.__init__(self, config, datasetExpr, datasetNick)
 		if self._datasetInstance.startswith('http'):
 			self._url = self._datasetInstance
 		else:

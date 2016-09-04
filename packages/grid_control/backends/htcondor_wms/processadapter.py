@@ -27,9 +27,10 @@ import tempfile
 import time
 
 # GC modules
+from grid_control.backends.logged_process import LoggedProcess
 from grid_control.backends.wms import BackendError
 from grid_control.gc_exceptions import InstallationError
-from grid_control.utils import LoggedProcess, ensureDirExists, resolveInstallPath
+from grid_control.utils import ensureDirExists, resolveInstallPath
 from hpfwk import AbstractError, Plugin
 from python_compat import irange, lru_cache
 

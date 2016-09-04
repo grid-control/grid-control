@@ -27,7 +27,7 @@ class CancelJobs(BackendExecutor):
 class CancelJobsWithProcess(CancelJobs):
 	def __init__(self, config, proc_factory):
 		CancelJobs.__init__(self, config)
-		self._timeout = config.getInt('cancel timeout', 60, onChange = None)
+		self._timeout = config.getTime('cancel timeout', 60, onChange = None)
 		self._errormsg = 'Job cancel command returned with exit code %(proc_status)s'
 		self._proc_factory = proc_factory
 

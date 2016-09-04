@@ -12,14 +12,12 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-import logging
 from grid_control.config import triggerResync
 from grid_control.datasets import DataProcessor, DataProvider, DataSplitter, DatasetError, PartitionProcessor
 from grid_control.parameters import ParameterMetadata
 from grid_control.utils.data_structures import makeEnum
-from grid_control.utils.gc_itertools import ichain
 from grid_control_cms.lumi_tools import filterLumiFilter, formatLumi, parseLumiFilter, selectLumi, selectRun, strLumi
-from python_compat import any, imap, izip, set
+from python_compat import any, ichain, imap, izip, set
 
 LumiKeep = makeEnum(['RunLumi', 'Run', 'none'])
 LumiMode = makeEnum(['strict', 'weak'])
@@ -45,7 +43,7 @@ class LumiDataProcessor(DataProcessor):
 		else:
 			lumi_keep_default = LumiKeep.Run
 			config.setBool('lumi metadata', True)
-			logging.getLogger('user.once').info('Runs/lumi section filter enabled!')
+			self._log.info('Runs/lumi section filter enabled!')
 		self._lumi_keep = config.getEnum('lumi keep', LumiKeep, lumi_keep_default, onChange = onChange)
 		self._lumi_strict = config.getEnum('lumi filter strictness', LumiMode, LumiMode.strict, onChange = onChange)
 

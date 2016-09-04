@@ -158,4 +158,3 @@ class BackendReport(Report):
 		header = [('', 'Category')] + lzip(displayStates, displayStates)
 		printTabular(header, transform(stats, [], len(self._idxList)),
 			fmtString = 'l' + 'c'*len(stateMap), fmt = {'': lambda x: str.join(' ', x)})
-		return 0

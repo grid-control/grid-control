@@ -14,7 +14,7 @@
 
 import os, logging
 from grid_control import utils
-from grid_control.config import ConfigError, createConfig, triggerResync
+from grid_control.config import ConfigError, create_config, triggerResync
 from grid_control.datasets import DataProvider, DatasetError
 from grid_control.datasets.scanner_base import InfoScanner
 from grid_control.job_db import Job
@@ -34,12 +34,12 @@ class OutputDirsFromConfig(InfoScanner):
 	def __init__(self, config):
 		InfoScanner.__init__(self, config)
 		ext_config_fn = config.getPath('source config', onChange = triggerDataResync)
-		ext_config = createConfig(ext_config_fn).changeView(setSections = ['global'])
+		ext_config = create_config(ext_config_fn, useDefaultFiles = True).changeView(setSections = ['global'])
 		self._extWorkDir = ext_config.getWorkPath()
-		logging.getLogger('user').disabled = True
+		logging.getLogger().disabled = True
 		self._extWorkflow = ext_config.getPlugin('workflow', 'Workflow:global', cls = 'Workflow',
 			pargs = ('task',))
-		logging.getLogger('user').disabled = False
+		logging.getLogger().disabled = False
 		self._extTask = self._extWorkflow.task
 		selector = config.get('source job selector', '', onChange = triggerDataResync)
 		ext_job_db = ext_config.getPlugin('job database', 'TextFileJobDB', cls = 'JobDB',
@@ -238,12 +238,10 @@ class MatchDelimeter(InfoScanner):
 				raise DatasetError('Unable to modifiy %s: %r' % (key, value))
 
 	def getEntries(self, path, metadata, events, seList, objStore):
-		if len(self._matchDelim) == 2:
-			if os.path.basename(path).count(self._matchDelim[0]) != int(self._matchDelim[1]):
-				raise StopIteration
-		self._process('DELIMETER_DS', self._ds, path, metadata)
-		self._process('DELIMETER_B', self._b, path, metadata)
-		yield (path, metadata, events, seList, objStore)
+		if (len(self._matchDelim) != 2) or os.path.basename(path).count(self._matchDelim[0]) == int(self._matchDelim[1]):
+			self._process('DELIMETER_DS', self._ds, path, metadata)
+			self._process('DELIMETER_B', self._b, path, metadata)
+			yield (path, metadata, events, seList, objStore)
 
 
 class ParentLookup(InfoScanner):
@@ -254,7 +252,7 @@ class ParentLookup(InfoScanner):
 		self._looseMatch = config.getInt('parent match level', 1, onChange = triggerDataResync)
 		self._merge = config.getBool('merge parents', False, onChange = triggerDataResync)
 		self._lfnMapCache = {}
-		self._empty_config = createConfig()
+		self._empty_config = create_config()
 		self._readParents(config, self._source)
 
 	def getGuards(self):

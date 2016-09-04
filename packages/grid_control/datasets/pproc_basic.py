@@ -26,7 +26,7 @@ class BasicPartitionProcessor(PartitionProcessor):
 
 	def getKeys(self):
 		result = lmap(lambda k: ParameterMetadata(k, untracked = True), ['FILE_NAMES', 'MAX_EVENTS',
-			'SKIP_EVENTS', 'DATASETID', 'DATASETPATH', 'DATASETBLOCK', 'DATASETNICK'])
+			'SKIP_EVENTS', 'DATASETPATH', 'DATASETBLOCK', 'DATASETNICK'])
 		result.append(ParameterMetadata('DATASETSPLIT', untracked = False))
 		return result
 
@@ -43,7 +43,6 @@ class BasicPartitionProcessor(PartitionProcessor):
 			'FILE_NAMES': self._formatFileList(splitInfo[DataSplitter.FileList]),
 			'MAX_EVENTS': splitInfo[DataSplitter.NEntries],
 			'SKIP_EVENTS': splitInfo.get(DataSplitter.Skipped, 0),
-			'DATASETID': splitInfo.get(DataSplitter.DatasetID, None),
 			'DATASETPATH': splitInfo.get(DataSplitter.Dataset, None),
 			'DATASETBLOCK': splitInfo.get(DataSplitter.BlockName, None),
 			'DATASETNICK': splitInfo.get(DataSplitter.Nickname, None),
@@ -89,7 +88,7 @@ class MetaPartitionProcessor(PartitionProcessor):
 		self._metadata = config.getList('partition metadata', [], onChange = None)
 
 	def getKeys(self):
-		return lmap(lambda k: ParameterMetadata(k, untracked=True), self._metadata)
+		return lmap(lambda k: ParameterMetadata(k, untracked = True), self._metadata)
 
 	def enabled(self):
 		return self._metadata != []
