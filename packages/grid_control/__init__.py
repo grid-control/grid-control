@@ -25,4 +25,4 @@ def initGC():
 
 initGC()
 
-__version__ = '$Revision: 1913$'[11:-1]
+__version__ = '$Revision: 1941$'[11:-1]
