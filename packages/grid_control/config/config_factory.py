@@ -53,13 +53,13 @@ class ConfigFactory(object):
 
 		# Create config view and temporary config interface
 		self._view = SimpleConfigView(getName(), oldContainer, self._curContainer)
-		self._view.pathDict['search_paths'] = UniqueList([os.getcwd(), pathMain])
+		self._view.config_vault['path:search'] = UniqueList([os.getcwd(), pathMain])
 
 		# Determine work directory using config interface with "global" scope
 		tmp_config = SimpleConfigInterface(self._view.getView(setSections = ['global']))
 		wdBase = tmp_config.getPath('workdir base', pathMain, mustExist = False)
 		pathWork = tmp_config.getPath('workdir', os.path.join(wdBase, getName('work')), mustExist = False)
-		self._view.pathDict['<WORKDIR>'] = pathWork # tmp_config still has undefinied
+		self._view.config_vault['path:workdir'] = pathWork # tmp_config still has undefinied
 		# Set dynamic plugin search path
 		sys.path.extend(tmp_config.getPaths('plugin paths', [os.getcwd()]))
 

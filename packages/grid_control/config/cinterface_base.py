@@ -38,7 +38,7 @@ class ConfigInterface(object):
 		return self._configView.configName
 
 	def getWorkPath(self, *fnList):
-		return os.path.join(self._configView.pathDict['<WORKDIR>'], *fnList)
+		return os.path.join(self._configView.config_vault['path:workdir'], *fnList)
 
 	# Get all selected options
 	def getOptions(self):

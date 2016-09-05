@@ -74,11 +74,11 @@ class TypedConfigInterface(ConfigInterface):
 	# Resolve path
 	def resolvePath(self, value, mustExist, errorMsg):
 		try:
-			return utils.resolvePath(value, self._configView.pathDict.get('search_paths', []), mustExist, ConfigError)
+			return utils.resolvePath(value, self._configView.config_vault.get('path:search', []), mustExist, ConfigError)
 		except Exception:
 			raise ConfigError(errorMsg)
 
-	# Return resolved path (search paths given in pathDict['search_paths'])
+	# Return resolved path (search paths given in config_vault['path:search'])
 	def getPath(self, option, default = noDefault, mustExist = True, relative = None, **kwargs):
 		def parsePath(value):
 			if value == '':
@@ -97,7 +97,7 @@ class TypedConfigInterface(ConfigInterface):
 			ec = ExceptionCollector()
 			for pattern in value:
 				try:
-					for fn in utils.resolvePaths(pattern, self._configView.pathDict.get('search_paths', []), mustExist, ConfigError):
+					for fn in utils.resolvePaths(pattern, self._configView.config_vault.get('path:search', []), mustExist, ConfigError):
 						yield fn
 				except Exception:
 					ec.collect()
