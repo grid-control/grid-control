@@ -23,14 +23,14 @@ selectorUnchanged = makeEnum(['selector_unchanged'])
 class ConfigView(Plugin):
 	def __init__(self, name, parent = None):
 		self.config_vault = {}
-		self.config_vault.update((parent or self).config_vault) # inherit path dict from parent
+		self.config_vault = (parent or self).config_vault # used shared config vault from parent if present
 		self.setConfigName(name)
 
 	def setConfigName(self, name):
 		self.configName = name
 		self._log = logging.getLogger('config.%s' % name.lower())
 
-	def getView(self, setSections = selectorUnchanged, **kwargs):
+	def getView(self, viewClass = None, **kwargs):
 		raise AbstractError
 
 	def iterContent(self):
@@ -83,13 +83,12 @@ class HistoricalConfigView(ConfigView):
 		self._oldContainer = oldContainer
 		self._curContainer = curContainer
 
-	def getView(self, viewClass = None, setSections = selectorUnchanged, **kwargs):
+	def getView(self, viewClass = None, **kwargs):
 		if not viewClass:
 			viewClass = self.__class__
 		elif isinstance(viewClass, str):
 			viewClass = ConfigView.getClass(viewClass)
-		return viewClass(self.configName, self._oldContainer, self._curContainer, self,
-			setSections = setSections, **kwargs)
+		return viewClass(self.configName, self._oldContainer, self._curContainer, self, **kwargs)
 
 	def _getSection(self, specific):
 		raise AbstractError

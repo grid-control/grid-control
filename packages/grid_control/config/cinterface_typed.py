@@ -19,6 +19,7 @@ from grid_control.config.config_entry import ConfigError, appendOption, noDefaul
 from grid_control.config.cview_base import SimpleConfigView
 from grid_control.config.matcher_base import DictLookup, ListFilter, ListOrder, Matcher
 from grid_control.utils.data_structures import makeEnum
+from grid_control.utils.thread_tools import GCEvent
 from grid_control.utils.parsing import parseBool, parseDict, parseList, parseTime, strDictLong, strTimeShort
 from hpfwk import APIError, ExceptionCollector, Plugin
 from python_compat import any, get_user_input, identity, ifilter, imap, lmap, relpath, sorted
@@ -156,6 +157,12 @@ class SimpleConfigInterface(TypedConfigInterface):
 	def __init__(self, configView):
 		TypedConfigInterface.__init__(self, configView)
 		self._interactive_enabled = None # delay config query
+
+	def getEvent(self, name):
+		vault_key = 'event:%s' % name
+		if vault_key not in self._view.config_vault:
+			self._view.config_vault[vault_key] = GCEvent()
+		return self._view.config_vault[vault_key]
 
 	def isInteractive(self, option, default):
 		if isinstance(option, list):
