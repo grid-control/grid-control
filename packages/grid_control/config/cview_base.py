@@ -23,7 +23,7 @@ selectorUnchanged = makeEnum(['selector_unchanged'])
 class ConfigView(Plugin):
 	def __init__(self, name, parent = None):
 		self.config_vault = {}
-		self.config_vault.update((parent or self).config_vault) # inherit path dict from parent
+		self.config_vault = (parent or self).config_vault # used shared config vault from parent if present
 		self.setConfigName(name)
 
 	def setConfigName(self, name):
