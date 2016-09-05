@@ -12,7 +12,7 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-import os, stat, time, logging
+import os, stat, time
 from grid_control.monitoring import Monitoring
 from hpfwk import clear_current_exception
 
@@ -49,11 +49,11 @@ class JabberAlarm(Monitoring):
 		cl = self._xmpp.Client(jid.getDomain(), debug=[])
 		con = cl.connect()
 		if not con:
-			logging.getLogger('user').warning('Could not connect to jabber server!')
+			self._log.warning('Could not connect to jabber server!')
 			return
 		auth = cl.auth(jid.getNode(), self._source_password, resource = jid.getResource())
 		if not auth:
-			logging.getLogger('user').warning('Could not authenticate to jabber server!')
+			self._log.warning('Could not authenticate to jabber server!')
 			return
 		text = 'Task %s finished!' % self._task.taskID
 		cl.send(self._xmpp.protocol.Message(self._target_jid, text))

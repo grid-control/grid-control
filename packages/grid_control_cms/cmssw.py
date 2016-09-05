@@ -12,7 +12,7 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-import os, logging
+import os
 from grid_control import utils
 from grid_control.backends import WMS
 from grid_control.config import ConfigError, noDefault
@@ -98,7 +98,7 @@ class SCRAMTask(DataTask):
 			self._projectArea = config.getPath('project area')
 			self._projectAreaPattern = config.getList('area files', ['-.*', '-config', 'bin', 'lib', 'python', 'module',
 				'*/data', '*.xml', '*.sql', '*.db', '*.cf[if]', '*.py', '-*/.git', '-*/.svn', '-*/CVS', '-*/work.*'])
-			logging.getLogger('user').info('Project area found in: %s', self._projectArea)
+			self._log.info('Project area found in: %s', self._projectArea)
 
 			# try to determine scram settings from environment settings
 			scramPath = os.path.join(self._projectArea, '.SCRAM')
@@ -222,12 +222,11 @@ class CMSSW(SCRAMTask):
 		if self._oldReleaseTop:
 			projPath = os.path.normpath('%s/../../../../' % self._oldReleaseTop)
 			result.append(('CMSSW_DIR_PRO', projPath))
-		log = logging.getLogger('user')
-		log.info('Local jobs will try to use the CMSSW software located here:')
+		self._log.info('Local jobs will try to use the CMSSW software located here:')
 		for i, loc in enumerate(result):
-			log.info(' %i) %s', i + 1, loc[1])
+			self._log.info(' %i) %s', i + 1, loc[1])
 		if result:
-			log.info('')
+			self._log.info('')
 		return result
 
 
@@ -261,7 +260,7 @@ class CMSSW(SCRAMTask):
 		try:
 			fp.write(content)
 			if fragment_path:
-				logging.getLogger('user').info('Instrumenting... %s', os.path.basename(source))
+				self._log.info('Instrumenting... %s', os.path.basename(source))
 				fragment_fp = open(fragment_path, 'r')
 				fp.write(fragment_fp.read())
 				fragment_fp.close()

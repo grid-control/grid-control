@@ -43,7 +43,7 @@ options = scriptOptions(parser)
 if len(options.args) != 1:
 	utils.exitWithUsage(parser.usage())
 
-log = logging.getLogger('user')
+log = logging.getLogger()
 
 # Create dataset parameter source
 class DummySplitter:

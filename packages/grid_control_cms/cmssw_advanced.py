@@ -12,7 +12,7 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-import os, logging
+import os
 from grid_control import utils
 from grid_control.config import ConfigError
 from grid_control.datasets import DataProvider
@@ -71,12 +71,11 @@ class CMSSW_Advanced(CMSSW):
 			nickNames = set()
 			for block in DataProvider.loadFromFile(dsPath).getBlocks(show_stats = False):
 				nickNames.add(block[DataProvider.Nickname])
-			log = logging.getLogger('user')
-			log.info('Mapping between nickname and other settings:')
+			self._log.info('Mapping between nickname and other settings:')
 			report = []
 			(ps_basic, ps_nested) = self._pfactory.getLookupSources()
 			if ps_nested:
-				log.info('This list doesn\'t show "nickname constants" with multiple values!')
+				self._log.info('This list doesn\'t show "nickname constants" with multiple values!')
 			for nick in sorted(nickNames):
 				tmp = {'DATASETNICK': nick}
 				for src in ps_basic:

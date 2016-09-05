@@ -131,7 +131,7 @@ def gc_create_workflow(config):
 	# Check work dir validity (default work directory is the config file name)
 	if not os.path.exists(global_config.getWorkPath()):
 		if not global_config.getState('init'):
-			logging.getLogger('user').warning('Starting initialization of %s!', global_config.getWorkPath())
+			logging.getLogger('workflow').warning('Starting initialization of %s!', global_config.getWorkPath())
 			global_config.setState(True, 'init')
 		if global_config.getChoiceYesNo('workdir create', True,
 				interactive_msg = 'Do you want to create the working directory %s?' % global_config.getWorkPath()):

@@ -21,7 +21,6 @@ parser = Options(usage = '%s [OPTIONS] <data path> <dataset name> <pattern (*.ro
 parser.addText(None, 'p', 'path', dest = 'dataset', default = '.', help = 'Path to dataset files')
 addDatasetListOptions(parser)
 options = scriptOptions(parser, arg_keys = ['dataset', 'dataset name pattern', 'filename filter'])
-logging.getLogger('user').setLevel(logging.CRITICAL)
 
 def conditionalSet(name, source, sourceKey):
 	if options.config_dict.get(source) and not options.config_dict.get(name):
