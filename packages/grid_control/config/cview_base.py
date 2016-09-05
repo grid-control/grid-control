@@ -30,7 +30,7 @@ class ConfigView(Plugin):
 		self.configName = name
 		self._log = logging.getLogger('config.%s' % name.lower())
 
-	def getView(self, setSections = selectorUnchanged, **kwargs):
+	def getView(self, viewClass = None, **kwargs):
 		raise AbstractError
 
 	def iterContent(self):
@@ -83,13 +83,12 @@ class HistoricalConfigView(ConfigView):
 		self._oldContainer = oldContainer
 		self._curContainer = curContainer
 
-	def getView(self, viewClass = None, setSections = selectorUnchanged, **kwargs):
+	def getView(self, viewClass = None, **kwargs):
 		if not viewClass:
 			viewClass = self.__class__
 		elif isinstance(viewClass, str):
 			viewClass = ConfigView.getClass(viewClass)
-		return viewClass(self.configName, self._oldContainer, self._curContainer, self,
-			setSections = setSections, **kwargs)
+		return viewClass(self.configName, self._oldContainer, self._curContainer, self, **kwargs)
 
 	def _getSection(self, specific):
 		raise AbstractError
