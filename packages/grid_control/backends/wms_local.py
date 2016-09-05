@@ -27,11 +27,7 @@ class SandboxHelper(object):
 	def __init__(self, config):
 		self._cache = []
 		self._path = config.getPath('sandbox path', config.getWorkPath('sandbox'), mustExist = False)
-		try:
-			if not os.path.exists(self._path):
-				os.mkdir(self._path)
-		except Exception:
-			raise BackendError('Unable to create sandbox base directory "%s"!' % self._path)
+		utils.ensureDirExists(self._path, 'sandbox base', BackendError)
 
 	def get_path(self):
 		return self._path

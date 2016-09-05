@@ -180,7 +180,7 @@ class BasicWMS(WMS):
 		# Perform some action with the executor, translate wmsID -> gcID and format the result
 		activity = Activity(desc)
 		wmsID_gcID_Map = self._get_map_wmsID_gcID(gcIDs)
-		wmsIDs = list(wmsID_gcID_Map.keys())
+		wmsIDs = sorted(wmsID_gcID_Map.keys())
 
 		for result in executor.execute(wmsIDs, *args):
 			wmsID = result[0] # result[0] is the wmsID by convention

@@ -13,8 +13,16 @@
 # | limitations under the License.
 
 from grid_control import utils
-from grid_control.backends.wms_grid import GridWMS, Grid_CancelJobs, Grid_CheckJobs, jdlEscape
+from grid_control.backends.jdl_writer import JDLWriter
+from grid_control.backends.wms_grid import GridWMS, Grid_CancelJobs, Grid_CheckJobs
 from python_compat import imap
+
+class EDGJDL(JDLWriter):
+	def _format_reqs_storage(self, locations):
+		if locations:
+			location_iter = imap(lambda x: '(target.GlueSEUniqueID == %s)' % self._escape(x), locations)
+			return 'anyMatch(other.storage.CloseSEs, %s)' % str.join(' || ', location_iter)
+
 
 class EuropeanDataGrid(GridWMS):
 	alias = ['EDG', 'LCG']
@@ -22,14 +30,9 @@ class EuropeanDataGrid(GridWMS):
 	def __init__(self, config, name):
 		GridWMS.__init__(self, config, name,
 			checkExecutor = Grid_CheckJobs(config, 'edg-job-status'),
-			cancelExecutor = Grid_CancelJobs(config, 'edg-job-cancel'))
+			cancelExecutor = Grid_CancelJobs(config, 'edg-job-cancel'),
+			jdlWriter = EDGJDL())
 
 		self._submitExec = utils.resolveInstallPath('edg-job-submit')
 		self._outputExec = utils.resolveInstallPath('edg-job-get-output')
 		self._submitParams.update({'-r': self._ce, '--config-vo': self._configVO })
-
-
-	def storageReq(self, sites):
-		fmt = lambda x: '(target.GlueSEUniqueID == %s)' % jdlEscape(x)
-		if sites:
-			return 'anyMatch(other.storage.CloseSEs, ' + str.join(' || ', imap(fmt, sites)) + ')'

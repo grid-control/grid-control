@@ -18,12 +18,12 @@ from grid_control.backends.aspect_cancel import CancelJobsWithProcess
 from grid_control.backends.aspect_status import CheckInfo, CheckJobsWithProcess
 from grid_control.backends.backend_tools import ProcessCreatorViaStdin
 from grid_control.backends.broker_base import Broker
+from grid_control.backends.jdl_writer import JDLWriter
 from grid_control.backends.wms import BackendError, BasicWMS, WMS
 from grid_control.job_db import Job
 from grid_control.utils.activity import Activity
 from grid_control.utils.file_objects import SafeFile
 from grid_control.utils.process_base import LocalProcess
-from hpfwk import APIError
 from python_compat import ifilter, imap, lfilter, lmap, md5, parsedate, tarfile
 
 GridStatusMap = {
@@ -125,7 +125,7 @@ class Grid_CancelJobs(CancelJobsWithProcess):
 
 class GridWMS(BasicWMS):
 	configSections = BasicWMS.configSections + ['grid']
-	def __init__(self, config, name, checkExecutor, cancelExecutor):
+	def __init__(self, config, name, checkExecutor, cancelExecutor, jdlWriter = None):
 		config.set('access token', 'VomsProxy')
 		BasicWMS.__init__(self, config, name, checkExecutor = checkExecutor, cancelExecutor = cancelExecutor)
 
@@ -138,51 +138,11 @@ class GridWMS(BasicWMS):
 		self._configVO = config.getPath('config', '', onChange = None)
 		self._warnSBSize = config.getInt('warn sb size', 5, onChange = None)
 		self._jobPath = config.getWorkPath('jobs')
+		self._jdl_writer = jdlWriter or JDLWriter()
 
 
 	def getSites(self):
 		return None
-
-
-	def storageReq(self, sites):
-		fmt = lambda x: 'Member(%s, other.GlueCESEBindGroupSEUniqueID)' % jdlEscape(x)
-		if sites:
-			return '( %s )' % str.join(' || ', imap(fmt, sites))
-
-
-	def sitesReq(self, sites):
-		fmt = lambda x: 'RegExp(%s, other.GlueCEUniqueID)' % jdlEscape(x)
-		(blacklist, whitelist) = utils.splitBlackWhiteList(sites)
-		sitereqs = lmap(lambda x: '!' + fmt(x), blacklist)
-		if len(whitelist):
-			sitereqs.append('(%s)' % str.join(' || ', imap(fmt, whitelist)))
-		if sitereqs:
-			return '( %s )' % str.join(' && ', sitereqs)
-
-
-	def _formatRequirements(self, reqs):
-		result = ['other.GlueHostNetworkAdapterOutboundIP']
-		for reqType, arg in reqs:
-			if reqType == WMS.SOFTWARE:
-				result.append('Member(%s, other.GlueHostApplicationSoftwareRunTimeEnvironment)' % jdlEscape(arg))
-			elif reqType == WMS.WALLTIME:
-				if arg > 0:
-					result.append('(other.GlueCEPolicyMaxWallClockTime >= %d)' % int((arg + 59) / 60))
-			elif reqType == WMS.CPUTIME:
-				if arg > 0:
-					result.append('(other.GlueCEPolicyMaxCPUTime >= %d)' % int((arg + 59) / 60))
-			elif reqType == WMS.MEMORY:
-				if arg > 0:
-					result.append('(other.GlueHostMainMemoryRAMSize >= %d)' % arg)
-			elif reqType == WMS.STORAGE:
-				result.append(self.storageReq(arg))
-			elif reqType == WMS.SITES:
-				result.append(self.sitesReq(arg))
-			elif reqType == WMS.CPUS:
-				pass # Handle number of cpus in makeJDL
-			else:
-				raise APIError('Unknown requirement type %s or argument %r' % (WMS.reqTypes[reqType], arg))
-		return str.join(' && ', ifilter(lambda x: x is not None, result))
 
 
 	def makeJDL(self, jobNum, module):
@@ -212,15 +172,11 @@ class GridWMS(BasicWMS):
 			'StdError': '"gc.stderr"',
 			'InputSandbox': formatStrList(sbIn + [cfgPath]),
 			'OutputSandbox': formatStrList(sandboxOutJDL),
-			'Requirements': self._formatRequirements(reqs),
 			'VirtualOrganisation': '"%s"' % self.vo,
 			'Rank': '-other.GlueCEStateEstimatedResponseTime',
 			'RetryCount': 2
 		}
-		cpus = dict(reqs).get(WMS.CPUS, 1)
-		if cpus > 1:
-			contents['CpuNumber'] = cpus
-		return utils.DictFormat(' = ').format(contents, format = '%s%s%s;\n')
+		return self._jdl_writer.format(reqs, contents)
 
 
 	def writeWMSIds(self, ids):

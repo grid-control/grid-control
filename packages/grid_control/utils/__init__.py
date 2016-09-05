@@ -377,7 +377,7 @@ class DictFormat(object):
 	# Format dictionary list
 	def format(self, entries, printNone = False, fkt = lambda x_y_z: x_y_z, format = '%s%s%s\n'):
 		result = []
-		for key in entries.keys():
+		for key in sorted(entries.keys()):
 			value = entries[key]
 			if value is None and not printNone:
 				continue

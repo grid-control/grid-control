@@ -15,7 +15,7 @@
 from grid_control.backends.broker_base import Broker
 from grid_control.backends.wms import WMS
 from grid_control.utils import Result
-from python_compat import ifilter, lmap
+from python_compat import ifilter, lmap, sorted
 
 # Distribute to WMS according to job id prefix
 
@@ -49,7 +49,7 @@ class MultiWMS(WMS):
 
 
 	def getAccessToken(self, gcID):
-		return self._wmsMap.get(self._splitId(gcID)[0], self._defaultWMS).getAccessToken(gcID)
+		return self._wmsMap.get(self._splitId(gcID)[0].lower(), self._defaultWMS).getAccessToken(gcID)
 
 
 	def deployTask(self, task, monitor, transferSE, transferSB):
@@ -94,7 +94,7 @@ class MultiWMS(WMS):
 
 	def _forwardCall(self, args, assignFun, callFun):
 		argMap = self._getMapID2Backend(args, assignFun)
-		for wmsPrefix in ifilter(lambda wmsPrefix: wmsPrefix in argMap, self._wmsMap):
+		for wmsPrefix in ifilter(lambda wmsPrefix: wmsPrefix in argMap, sorted(self._wmsMap)):
 			wms = self._wmsMap[wmsPrefix]
 			for result in callFun(wms, argMap[wmsPrefix]):
 				yield result

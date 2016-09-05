@@ -89,7 +89,7 @@ class CreamWMS(GridWMS):
 		self._submitParams.update({'-r': self._ce, '--config-vo': self._configVO })
 
 		self._outputRegex = r'.*For JobID \[(?P<rawId>\S+)\] output will be stored in the dir (?P<outputDir>.*)$'
-		
+
 		self._useDelegate = False
 		if self._useDelegate is False:
 			self._submitParams.update({ '-a': ' ' })
@@ -157,7 +157,7 @@ class CreamWMS(GridWMS):
 		# return unretrievable jobs
 		for jobNum in todo:
 			yield (jobNum, None)
-		
+
 		purgeLog = tempfile.mktemp('.log')
 		purgeProc = LoggedProcess(utils.resolveInstallPath('glite-ce-job-purge'),
 			'--noint --logfile "%s" %s' % (purgeLog, str.join(' ', done)))
