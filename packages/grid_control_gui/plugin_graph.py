@@ -22,26 +22,37 @@ def getGraph(instance, graph = None, visited = None):
 	visited = visited or set()
 	children = []
 	for attr in dir(instance):
-		child = getattr(instance, attr)
 		try:
-			children.extend(child)
-			children.extend(child.values())
+			child = getattr(instance, attr)
+			try:
+				children.extend(child)
+				children.extend(child.values())
+			except Exception:
+				children.append(child)
 		except Exception:
-			children.append(child)
+			print instance, attr
+			pass
 	for child in children:
-		try:
-			if 'grid_control' not in child.__module__:
-				continue
-			if child.__class__.__name__ in ['instancemethod', 'function', 'type']:
-				continue
-			if child in (None, True, False):
-				continue
-			graph.setdefault(instance, []).append(child)
-			if child not in visited:
-				visited.add(child)
-				getGraph(child, graph, visited)
-		except Exception:
-			clear_current_exception()
+		child_module = ''
+		if hasattr(child, '__module__'):
+			child_module = child.__module__ or ''
+		child_name = ''
+		if hasattr(child, '__name__'):
+			child_name = child.__name__ or ''
+		child_class_name = child.__class__.__name__ or ''
+
+		if 'grid_control' not in child_module:
+			continue
+		if 'testsuite' in child_name:
+			continue
+		if child_class_name in ['instancemethod', 'function', 'type', 'method-wrapper']:
+			continue
+		if child in (None, True, False):
+			continue
+		graph.setdefault(instance, []).append(child)
+		if child not in visited:
+			visited.add(child)
+			getGraph(child, graph, visited)
 	return graph
 
 
