@@ -102,6 +102,8 @@ class DataProvider(ConfigurablePlugin):
 			self._cache_dataset = set()
 			for block in self.getBlocks(show_stats = True):
 				self._cache_dataset.add(block[DataProvider.Dataset])
+				if utils.abort():
+					raise DatasetError('Received abort request during dataset name retrieval!')
 		return list(self._cache_dataset)
 
 
