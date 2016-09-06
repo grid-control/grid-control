@@ -135,7 +135,7 @@ class RNGParameterSource(SingleParameterSource):
 	alias = ['rng']
 
 	def __init__(self, key = 'JOB_RANDOM', low = 1e6, high = 1e7-1):
-		SingleParameterSource.__init__(self, '!%s' % key, [key, low, high])
+		SingleParameterSource.__init__(self, '!%s' % key.lstrip('!'), [key, low, high])
 		(self._low, self._high) = (int(low), int(high))
 
 	def show(self):
@@ -152,7 +152,7 @@ class CounterParameterSource(SingleParameterSource):
 	alias = ['counter']
 
 	def __init__(self, key, seed):
-		SingleParameterSource.__init__(self, '!%s' % key, [key, seed])
+		SingleParameterSource.__init__(self, '!%s' % key.lstrip(), [key, seed])
 		self._seed = seed
 
 	def show(self):

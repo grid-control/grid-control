@@ -29,6 +29,8 @@ class LookupMatcher:
 		return md5_hex(str(lmap(lambda x: self._lookup_dict, self._lookup_order)))
 
 	def __repr__(self):
+		if len(self._lookup_keys) == 1:
+			return repr(self._lookup_keys[0])
 		return 'key(%s)' % str.join(', ', imap(lambda x: "'%s'" % x, self._lookup_keys))
 
 	def matchRule(self, src):

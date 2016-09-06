@@ -90,6 +90,12 @@ class RangeParameterSource(ForwardingParameterSource):
 		(self._posStart, self._posEndUser) = (posStart or 0, posEnd)
 		self._posEnd = self._getPosEnd()
 
+	def __repr__(self):
+		param_list = [str(self._posStart)]
+		if self._posEndUser is not None:
+			param_list.append(str(self._posEndUser))
+		return 'range(%r, %s)' % (self._psource, str.join(', ', param_list))
+
 	def _getPosEnd(self):
 		if self._posEndUser is None:
 			return self._psource.getMaxParameters() - 1
@@ -189,7 +195,10 @@ class MultiParameterSource(ParameterSource):
 		return result
 
 	def getHash(self):
-		return md5_hex(str(lmap(lambda p: str(p.getMaxParameters()) + p.getHash(), self._psourceList)))
+		return md5_hex(self.__class__.__name__ + str(lmap(lambda p: p.getHash(), self._psourceList)))
+
+	def __repr__(self):
+		return '%s(%s)' % (self.alias[0], str.join(', ', imap(repr, self._psourceList)))
 
 
 def simplify_nested_sources(cls, psources):
@@ -223,6 +232,8 @@ class BaseZipParameterSource(MultiParameterSource):
 
 
 class ZipShortParameterSource(BaseZipParameterSource):
+	alias = ['szip']
+
 	def _initMaxParameters(self):
 		maxN = lfilter(lambda n: n is not None, self._psourceMaxList)
 		if len(maxN):
@@ -239,9 +250,6 @@ class ZipLongParameterSource(BaseZipParameterSource):
 		maxN = lfilter(lambda n: n is not None, self._psourceMaxList)
 		if len(maxN):
 			return max(maxN)
-
-	def __repr__(self):
-		return 'zip(%s)' % str.join(', ', imap(repr, self._psourceList))
 
 
 class RepeatParameterSource(MultiParameterSource):
@@ -317,9 +325,6 @@ class CrossParameterSource(MultiParameterSource):
 			else:
 				psource.fillParameterInfo(pNum, result)
 
-	def __repr__(self):
-		return 'cross(%s)' % str.join(', ', imap(repr, self._psourceList))
-
 
 class ChainParameterSource(MultiParameterSource):
 	alias = ['chain']
@@ -341,9 +346,6 @@ class ChainParameterSource(MultiParameterSource):
 				return psource.fillParameterInfo(pNum - limit, result)
 			limit += maxN
 
-	def __repr__(self):
-		return 'chain(%s)' % str.join(', ', imap(repr, self._psourceList))
-
 
 class ErrorParameterSource(ChainParameterSource):
 	alias = ['variation']
@@ -363,3 +365,6 @@ class ErrorParameterSource(ChainParameterSource):
 	def fillParameterKeys(self, result):
 		for psource in self._rawpsources:
 			psource.fillParameterKeys(result)
+
+	def __repr__(self):
+		return 'variation(%s)' % str.join(', ', imap(repr, self._rawpsources))
