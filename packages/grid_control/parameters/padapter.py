@@ -31,6 +31,9 @@ class ParameterAdapter(ConfigurablePlugin):
 	def getMaxJobs(self):
 		return self._source.getMaxParameters()
 
+	def getUsedSources(self):
+		return self._source.getUsedSources()
+
 	def getJobKeys(self):
 		result = lmap(lambda k: ParameterMetadata(k, untracked=True), ['GC_JOB_ID', 'GC_PARAM'])
 		self._source.fillParameterKeys(result)
