@@ -227,16 +227,18 @@ fi
 timestamp "SE_OUT" "START"
 export LOG_MD5="$GC_LANDINGZONE/SE.log"
 
-# Remove dataset files copied via SRM, if available:
+# Remove dataset files copied via SRM, if copied together with se output files to scratch directory:
 if [ -n "$DATASET_SRM_FILES" ]; then
         echo "==========================="
         echo
-        echo "Remove dataset files copied via SRM"
+        echo "Remove dataset input files copied via SRM, if in scratch directory"
         echo "Change to scratch directory"
         cd $GC_SCRATCH
         for DATASET_SRM_FILE in $DATASET_SRM_FILES; do
-                echo "Removing $(basename $DATASET_SRM_FILE)"
-                rm "$(basename $DATASET_SRM_FILE)"
+                if [ -f "$(basename $DATASET_SRM_FILE)" ] ; then
+                        echo "Removing $(basename $DATASET_SRM_FILE)"
+                        rm "$(basename $DATASET_SRM_FILE)"
+                fi
         done
         echo "Change back to start directory"
         cd -
