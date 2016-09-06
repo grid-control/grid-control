@@ -48,45 +48,13 @@ class LookupMatcher:
 		return self._lookup_dict.get(rule, None)
 
 
-def lookupConfigParser(pconfig, outputKey, lookupKeys):
-	def collectKeys(src):
-		result = []
-		src.fillParameterKeys(result)
-		return result
-	outputKey = collectKeys(outputKey)[0]
-	if lookupKeys is None:
-		lookupKeys = [pconfig.get('default lookup')]
-	else:
-		lookupKeys = collectKeys(lookupKeys)
-	if not lookupKeys or lookupKeys == ['']:
-		raise ConfigError('Lookup parameter not defined!')
-	defaultMatcher = pconfig.get('', 'default matcher', 'equal')
-	matchstr = pconfig.get(outputKey.lstrip('!'), 'matcher', defaultMatcher)
-	matchstrList = matchstr.lower().splitlines()
-	if len(matchstrList) != len(lookupKeys):
-		if len(matchstrList) == 1:
-			matchstrList = matchstrList * len(lookupKeys)
-		else:
-			raise ConfigError('Match-functions (length %d) and match-keys (length %d) do not match!' %
-				(len(matchstrList), len(lookupKeys)))
-	matchfun = []
-	for matcherName in matchstrList:
-		matchfun.append(Matcher.createInstance(matcherName, pconfig, outputKey))
-	(content, order) = pconfig.getParameter(outputKey.lstrip('!'))
-	if not pconfig.getBool(outputKey.lstrip('!'), 'empty set', False):
-		for k in content:
-			if len(content[k]) == 0:
-				content[k].append('')
-	return (outputKey, lookupKeys, matchfun, (content, order))
-
-
 class SimpleLookupParameterSource(SingleParameterSource):
 	alias = ['lookup']
 
-	def __init__(self, outputKey, lookupKeys, lookupFunctions, lookupDictConfig):
+	def __init__(self, vn_output, lookupKeys, lookupFunctions, lookupDictConfig):
 		self._lookupKeys = lookupKeys
 		self._matcher = LookupMatcher(lookupKeys, lookupFunctions, lookupDictConfig)
-		SingleParameterSource.__init__(self, outputKey, [outputKey, self._matcher.getHash()])
+		SingleParameterSource.__init__(self, vn_output, [vn_output, self._matcher.getHash()])
 
 	def depends(self):
 		return self._lookupKeys
@@ -104,24 +72,24 @@ class SimpleLookupParameterSource(SingleParameterSource):
 		return ['%s: var = %s, lookup = %s' % (self.__class__.__name__, self._key, repr(self._matcher))]
 
 	def __repr__(self):
-		return "lookup(key('%s'), %s)" % (self._key, repr(self._matcher))
+		return "lookup('%s', %s)" % (self._key, repr(self._matcher))
 
 	def create(cls, pconfig, repository, key, lookup = None): # pylint:disable=arguments-differ
-		return SimpleLookupParameterSource(*lookupConfigParser(pconfig, key, lookup))
+		return SimpleLookupParameterSource(*parse_lookup_create_args(pconfig, key, lookup))
 	create = classmethod(create)
 
 
 class SwitchingLookupParameterSource(SingleParameterSource):
 	alias = ['switch']
 
-	def __init__(self, psource, outputKey, lookupKeys, lookupFunctions, lookupDictConfig):
-		SingleParameterSource.__init__(self, outputKey, [])
+	def __init__(self, psource, vn_output, lookupKeys, lookupFunctions, lookupDictConfig):
+		SingleParameterSource.__init__(self, vn_output, [])
 		self._matcher = LookupMatcher(lookupKeys, lookupFunctions, lookupDictConfig)
 		self._psource = psource
 		self._pSpace = self.initPSpace()
 
 	def getHash(self):
-		return md5_hex(str(self._key) + self._matcher.getHash() + self._psource.getHash())
+		return md5_hex(self._key + self._matcher.getHash() + self._psource.getHash())
 
 	def getUsedSources(self):
 		return [self] + self._psource.getUsedSources()
@@ -173,41 +141,84 @@ class SwitchingLookupParameterSource(SingleParameterSource):
 		return (result_redo, result_disable, psource_sizeChange)
 
 	def __repr__(self):
-		return "switch(%r, key('%s'), %s)" % (self._psource, self._key, repr(self._matcher))
+		return "switch(%r, '%s', %s)" % (self._psource, self._key, repr(self._matcher))
 
 	def show(self):
 		result = ['%s: var = %s, lookup = %s' % (self.__class__.__name__, self._key, repr(self._matcher))]
 		return result + lmap(lambda x: '\t' + x, self._psource.show())
 
 	def create(cls, pconfig, repository, psource, key, lookup = None): # pylint:disable=arguments-differ
-		return SwitchingLookupParameterSource(psource, *lookupConfigParser(pconfig, key, lookup))
+		return SwitchingLookupParameterSource(psource, *parse_lookup_create_args(pconfig, key, lookup))
 	create = classmethod(create)
 
 
-def createLookupHelper(pconfig, var_list, lookup_list):
-	# Return list of (doElevate, PSourceClass, arguments) entries
-	if len(var_list) != 1: # multi-lookup handling
+def parse_lookup_create_args(pconfig, user_output, user_lookup_list):
+	# Transform output and lookup input: eg. key('A', 'B') -> ['A', 'B']
+	def keys_to_vn_list(src):
 		result = []
-		for var_name in var_list:
-			result.extend(createLookupHelper(pconfig, [var_name], lookup_list))
-		return result
-	var_name = var_list[0]
+		src.fillParameterKeys(result)
+		return lmap(lambda meta: meta.value, result)
+	if isinstance(user_output, str):
+		vn_output = user_output
+	else:
+		vn_output = keys_to_vn_list(user_output)[0]
+	if isinstance(user_lookup_list, str):
+		vn_lookup_list = user_lookup_list.split()
+	elif user_lookup_list is not None:
+		vn_lookup_list = keys_to_vn_list(user_lookup_list)
+	else: # no lookup information given - query config for default lookup variable
+		vn_lookup_list = [pconfig.get('default lookup')]
+	if not vn_lookup_list or vn_lookup_list == ['']:
+		raise ConfigError('Lookup parameter not defined!')
 
-	pvalue = pconfig.getParameter(var_name.lstrip('!'))
+	# configure lookup matcher
+	name_matcher_default = pconfig.get('', 'default matcher', 'equal')
+	name_matcher_raw = pconfig.get(vn_output, 'matcher', name_matcher_default)
+	name_matcher_list = name_matcher_raw.lower().splitlines()
+	if len(name_matcher_list) == 1: # single matcher given - extend to same length as lookup_list
+		name_matcher_list = name_matcher_list * len(vn_lookup_list)
+	elif len(name_matcher_list) != len(vn_lookup_list):
+		raise ConfigError('Match-functions (length %d) and match-keys (length %d) do not match!' %
+			(len(name_matcher_list), len(vn_lookup_list)))
+	matcher_list = []
+	for name_matcher in name_matcher_list:
+		matcher_list.append(Matcher.createInstance(name_matcher, pconfig, vn_output))
+
+	# configure lookup dictionary
+	(lookup_content, lookup_order) = pconfig.getParameter(vn_output)
+	if not pconfig.getBool(vn_output, 'empty set', False):
+		for k in lookup_content:
+			if len(lookup_content[k]) == 0:
+				lookup_content[k].append('')
+	return (vn_output, vn_lookup_list, matcher_list, (lookup_content, lookup_order))
+
+
+def createLookupHelper(pconfig, vn_output_list, vn_lookup_list):
+	# Return list of (doElevate, PSourceClass, arguments) entries
+	if len(vn_output_list) != 1: # multi-lookup handling
+		result = []
+		for var_name in vn_output_list:
+			assert(isinstance(var_name, str))
+			result.extend(createLookupHelper(pconfig, [var_name], vn_lookup_list))
+		return result
+	vn_output = vn_output_list[0]
+	assert(isinstance(vn_output, str))
+
+	pvalue = pconfig.getParameter(vn_output.lstrip('!'))
 	if isinstance(pvalue, list): # simple parameter source
 		if len(pvalue) == 1:
-			return [(False, ParameterSource.getClass('ConstParameterSource'), [var_name, pvalue[0]])]
+			return [(False, ParameterSource.getClass('ConstParameterSource'), [vn_output, pvalue[0]])]
 		else:
-			return [(False, ParameterSource.getClass('SimpleParameterSource'), [var_name, pvalue])]
+			return [(False, ParameterSource.getClass('SimpleParameterSource'), [vn_output, pvalue])]
 	elif isinstance(pvalue, tuple) and pvalue[0] == 'format':
 		return [(False, ParameterSource.getClass('FormatterParameterSource'), pvalue[1:])]
 
 	lookup_key = None
-	if lookup_list: # default lookup key
-		lookup_key = KeyParameterSource(*lookup_list)
+	if vn_lookup_list: # default lookup key
+		lookup_key = KeyParameterSource(*vn_lookup_list)
 
 	# Determine kind of lookup, [3] == lookupDictConfig, [0] == lookupContent
-	tmp = lookupConfigParser(pconfig, KeyParameterSource(var_name), lookup_key)
+	tmp = parse_lookup_create_args(pconfig, KeyParameterSource(vn_output), lookup_key)
 	lookupContent = tmp[3][0]
 	lookupLen = lmap(len, lookupContent.values())
 
