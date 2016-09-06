@@ -112,10 +112,14 @@ class BasicParameterFactory(ParameterFactory):
 
 
 	def _useAvailableDataSource(self, source):
-		usedSources = source.getUsedSources()
+		used_sources = source.getUsedSources()
+		unused_data_sources = []
 		for (srcName, dataSource) in self._repository.items():
-			if srcName.startswith('dataset:') and (dataSource not in usedSources):
-				source = ParameterSource.createInstance('CrossParameterSource', dataSource, source)
+			if srcName.startswith('dataset:') and (dataSource not in used_sources):
+				unused_data_sources.append(dataSource)
+		if unused_data_sources:
+			chained_data_sources = ParameterSource.createInstance('ChainParameterSource', *unused_data_sources)
+			source = ParameterSource.createInstance('CrossParameterSource', chained_data_sources, source)
 		return source
 
 
