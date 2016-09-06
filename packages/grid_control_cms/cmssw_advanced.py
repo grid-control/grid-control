@@ -19,7 +19,7 @@ from grid_control.datasets import DataProvider
 from grid_control.utils.parsing import strDictLong
 from grid_control_cms.cmssw import CMSSW
 from grid_control_cms.lumi_tools import formatLumi, parseLumiFilter, strLumi
-from python_compat import ichain, imap, lmap, set, sorted
+from python_compat import ichain, imap, lmap, set, sorted, lfilter
 
 def formatLumiNice(lumis):
 	lumi_filter_str = formatLumi(lumis)
@@ -73,12 +73,10 @@ class CMSSW_Advanced(CMSSW):
 				nickNames.add(block[DataProvider.Nickname])
 			self._log.info('Mapping between nickname and other settings:')
 			report = []
-			(ps_basic, ps_nested) = self._pfactory.getLookupSources()
-			if ps_nested:
-				self._log.info('This list doesn\'t show "nickname constants" with multiple values!')
+			ps_lookup = lfilter(lambda ps: 'DATASETNICK' in ps.depends(), self.source.getUsedSources())
 			for nick in sorted(nickNames):
 				tmp = {'DATASETNICK': nick}
-				for src in ps_basic:
+				for src in ps_lookup:
 					src.fillParameterInfo(None, tmp)
 				tmp[1] = str.join(', ', imap(os.path.basename, self._nmCfg.lookup(nick, '', is_selector = False)))
 				tmp[2] = formatLumiNice(self._nmLumi.lookup(nick, '', is_selector = False))
