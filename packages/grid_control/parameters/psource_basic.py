@@ -16,13 +16,14 @@ import re, random
 from grid_control.backends import WMS
 from grid_control.config import ConfigError
 from grid_control.parameters.psource_base import ImmutableParameterSource, ParameterInfo, ParameterMetadata, ParameterSource
-from grid_control.utils.parsing import parseTime, parseType
+from grid_control.utils.parsing import parseTime, parseType, strDict
 from python_compat import imap, lmap
 
 class InternalParameterSource(ImmutableParameterSource):
-	def __init__(self, values, keys):
-		ImmutableParameterSource.__init__(self, (values, keys))
-		(self._values, self._keys) = (values, keys)
+	def __init__(self, values, metas):
+		(self._values, self._metas) = (values, metas)
+		self._keys = lmap(lambda pm: pm.get_value(), metas)
+		ImmutableParameterSource.__init__(self, (values, self._keys))
 
 	def getMaxParameters(self):
 		return len(self._values)
@@ -31,7 +32,10 @@ class InternalParameterSource(ImmutableParameterSource):
 		result.update(self._values[pNum])
 
 	def fillParameterKeys(self, result):
-		result.extend(imap(ParameterMetadata, self._keys))
+		result.extend(self._metas)
+
+	def __repr__(self):
+		return '<internal:%s=%s>' % (str.join('|', self._keys), self.getHash())
 
 
 class RequirementParameterSource(ParameterSource):
@@ -101,7 +105,7 @@ class SimpleParameterSource(SingleParameterSource):
 		result[self._key] = self._values[pNum]
 
 	def __repr__(self):
-		return 'var(%s)' % repr(self._meta)
+		return 'var(%r)' % self._meta.get_value()
 
 	def create(cls, pconfig, repository, key): # pylint:disable=arguments-differ
 		return SimpleParameterSource(key, pconfig.getParameter(key.lstrip('!')))
@@ -122,7 +126,7 @@ class ConstParameterSource(SingleParameterSource):
 		result[self._key] = self._value
 
 	def __repr__(self):
-		return 'const(%s, %s)' % (repr(self._key), repr(self._value))
+		return 'const(%r, %s)' % (self._meta.get_value(), repr(self._value))
 
 	def create(cls, pconfig, repository, key, value = None): # pylint:disable=arguments-differ
 		if value is None:
@@ -145,7 +149,7 @@ class RNGParameterSource(SingleParameterSource):
 		result[self._key] = random.randint(self._low, self._high)
 
 	def __repr__(self):
-		return 'rng(%s)' % repr(self._meta).replace('!', '')
+		return 'rng(%r)' % self._meta.get_value()
 
 
 class CounterParameterSource(SingleParameterSource):
@@ -162,7 +166,7 @@ class CounterParameterSource(SingleParameterSource):
 		result[self._key] = self._seed + result['GC_JOB_ID']
 
 	def __repr__(self):
-		return 'counter(%r, %s)' % (self._meta, self._seed)
+		return 'counter(%r, %s)' % (self._meta.get_value(), self._seed)
 
 
 class FormatterParameterSource(SingleParameterSource):

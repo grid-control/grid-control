@@ -27,13 +27,18 @@ class ParameterError(NestedException):
 class ParameterMetadata(str):
 	def __new__(cls, value, untracked = False):
 		obj = str.__new__(cls, value)
+		obj.value = value
 		obj.untracked = untracked
 		return obj
 
-	def __repr__(self):
+#class ParameterMetadata(object):
+#	def __init__(self, value, untracked = False):
+#		(self.value, self.untracked) = (value, untracked)
+
+	def get_value(self):
 		if self.untracked:
-			return "'!%s'" % self
-		return "'%s'" % self
+			return '!' + self.value
+		return self.value
 
 
 class ParameterSource(Plugin):
