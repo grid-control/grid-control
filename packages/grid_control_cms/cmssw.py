@@ -56,8 +56,8 @@ class LFNPartitionProcessor(PartitionProcessor):
 		return result
 
 	def process(self, pNum, splitInfo, result):
-                def modify_filelist_for_srm(filelist):
-                        return lmap(lambda f: "file://" + f.split('/')[-1], filelist)
+		def modify_filelist_for_srm(filelist):
+			return lmap(lambda f: "file://" + f.split('/')[-1], filelist)
 		def prefixLFN(lfn):
 			return self._prefix + lfn.split('/store/', 1)[-1]
 		if self._prefix:
