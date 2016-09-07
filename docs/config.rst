@@ -574,7 +574,7 @@ UniqueDataProcessor options
 InlineNickNameProducer options
 ------------------------------
 
-  * ``<datasource> nickname expr / nickname expr`` = <text> (default: 'oldnick')
+  * ``<datasource> nickname expr / nickname expr`` = <text> (default: 'current_nickname')
     Specify a python expression (using the variables dataset, block and oldnick) to generate the dataset nickname for the block
 
 SimpleNickNameProducer options

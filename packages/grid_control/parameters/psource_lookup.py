@@ -18,26 +18,23 @@ from grid_control.parameters.psource_basic import KeyParameterSource, SinglePara
 from python_compat import imap, irange, izip, lmap, md5_hex
 
 class LookupMatcher:
-	def __init__(self, lookupKeys, lookupFunctions, lookupDictConfig):
-		(self._lookup_keys, self._lookup_functions) = (lookupKeys, lookupFunctions)
-		if len(lookupDictConfig) == 2 and isinstance(lookupDictConfig[0], dict):
-			self._lookup_dict, self._lookup_order = lookupDictConfig
-		else:
-			self._lookup_dict, self._lookup_order = ({None: lookupDictConfig}, [])
+	def __init__(self, vn_lookup_list, matcher_list, lookup_content, lookup_order):
+		(self._vn_lookup_list, self._matcher_list) = (vn_lookup_list, matcher_list)
+		(self._lookup_dict, self._lookup_order) = (lookup_content, lookup_order)
 
 	def getHash(self):
 		return md5_hex(str(lmap(lambda x: self._lookup_dict, self._lookup_order)))
 
 	def __repr__(self):
-		if len(self._lookup_keys) == 1:
-			return repr(self._lookup_keys[0])
-		return 'key(%s)' % str.join(', ', imap(lambda x: "'%s'" % x, self._lookup_keys))
+		if len(self._vn_lookup_list) == 1:
+			return repr(self._vn_lookup_list[0])
+		return 'key(%s)' % str.join(', ', imap(lambda x: "'%s'" % x, self._vn_lookup_list))
 
 	def matchRule(self, src):
-		srcValues = lmap(lambda key: src.get(key, None), self._lookup_keys)
+		srcValues = lmap(lambda key: src.get(key, None), self._vn_lookup_list)
 		for lookupValues in self._lookup_order:
 			match = True
-			for (sval, lval, lmatch) in izip(srcValues, lookupValues, self._lookup_functions):
+			for (sval, lval, lmatch) in izip(srcValues, lookupValues, self._matcher_list):
 				if sval is not None:
 					match = match and (lmatch.matcher(sval, lval) > 0)
 			if match:
@@ -51,13 +48,13 @@ class LookupMatcher:
 class SimpleLookupParameterSource(SingleParameterSource):
 	alias = ['lookup']
 
-	def __init__(self, vn_output, lookupKeys, lookupFunctions, lookupDictConfig):
-		self._lookupKeys = lookupKeys
-		self._matcher = LookupMatcher(lookupKeys, lookupFunctions, lookupDictConfig)
+	def __init__(self, vn_output, vn_lookup_list, matcher_list, lookup_content, lookup_order):
+		self._vn_lookup_list = vn_lookup_list
+		self._matcher = LookupMatcher(vn_lookup_list, matcher_list, lookup_content, lookup_order)
 		SingleParameterSource.__init__(self, vn_output, [vn_output, self._matcher.getHash()])
 
 	def depends(self):
-		return self._lookupKeys
+		return self._vn_lookup_list
 
 	def fillParameterInfo(self, pNum, result):
 		lookupResult = self._matcher.lookup(result)
@@ -82,9 +79,9 @@ class SimpleLookupParameterSource(SingleParameterSource):
 class SwitchingLookupParameterSource(SingleParameterSource):
 	alias = ['switch']
 
-	def __init__(self, psource, vn_output, lookupKeys, lookupFunctions, lookupDictConfig):
+	def __init__(self, psource, vn_output, vn_lookup_list, matcher_list, lookup_content, lookup_order):
 		SingleParameterSource.__init__(self, vn_output, [])
-		self._matcher = LookupMatcher(lookupKeys, lookupFunctions, lookupDictConfig)
+		self._matcher = LookupMatcher(vn_lookup_list, matcher_list, lookup_content, lookup_order)
 		self._psource = psource
 		self._pSpace = self.initPSpace()
 
@@ -190,7 +187,7 @@ def parse_lookup_create_args(pconfig, user_output, user_lookup_list):
 		for k in lookup_content:
 			if len(lookup_content[k]) == 0:
 				lookup_content[k].append('')
-	return (vn_output, vn_lookup_list, matcher_list, (lookup_content, lookup_order))
+	return (vn_output, vn_lookup_list, matcher_list, lookup_content, lookup_order)
 
 
 def createLookupHelper(pconfig, vn_output_list, vn_lookup_list):
@@ -217,12 +214,12 @@ def createLookupHelper(pconfig, vn_output_list, vn_lookup_list):
 	if vn_lookup_list: # default lookup key
 		lookup_key = KeyParameterSource(*vn_lookup_list)
 
-	# Determine kind of lookup, [3] == lookupDictConfig, [0] == lookupContent
+	# Determine kind of lookup, [3] == lookup_content
 	tmp = parse_lookup_create_args(pconfig, KeyParameterSource(vn_output), lookup_key)
-	lookupContent = tmp[3][0]
-	lookupLen = lmap(len, lookupContent.values())
+	lookup_content = tmp[3]
+	lookup_len = lmap(len, lookup_content.values())
 
-	if (min(lookupLen) == 1) and (max(lookupLen) == 1): # simple lookup sufficient for this setup
+	if (min(lookup_len) == 1) and (max(lookup_len) == 1): # simple lookup sufficient for this setup
 		return [(False, SimpleLookupParameterSource, list(tmp))]
 	# switch needs elevation beyond local scope
 	return [(True, SwitchingLookupParameterSource, list(tmp))]

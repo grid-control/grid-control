@@ -16,7 +16,6 @@ import re
 from grid_control.utils.webservice import GridJSONRestClient
 from python_compat import ifilter, imap, izip, lmap, set
 
-
 class SiteDB(object):
 	def __init__(self, url = None):
 		self._url = url or 'https://cmsweb.cern.ch/sitedb/data/prod'

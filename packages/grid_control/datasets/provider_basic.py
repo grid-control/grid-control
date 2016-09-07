@@ -151,6 +151,7 @@ class ListProvider(DataProvider):
 		try:
 			for block in self._parseFile(fp):
 				if _filterBlock(block):
+					self._raise_on_abort()
 					yield block
 			fp.close()
 		except Exception:

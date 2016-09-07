@@ -18,9 +18,9 @@ from grid_control.backends import WMS
 from grid_control.config import ConfigError, noDefault
 from grid_control.datasets import DataSplitter, PartitionProcessor
 from grid_control.output_processor import DebugJobInfoProcessor
+from grid_control.parameters import ParameterMetadata
 from grid_control.tasks.task_data import DataTask
 from grid_control.tasks.task_utils import TaskExecutableWrapper
-from grid_control.parameters import ParameterMetadata
 from python_compat import ifilter, imap, lmap, set, sorted
 
 class CMSSWDebugJobInfoProcessor(DebugJobInfoProcessor):
@@ -52,19 +52,18 @@ class LFNPartitionProcessor(PartitionProcessor):
 		return self._prefix is not None
 
 	def getKeys(self):
-		result = lmap(lambda k: ParameterMetadata(k, untracked = True), ['DATASET_SRM_FILES'])
-		return result
+		return lmap(lambda k: ParameterMetadata(k, untracked = True), ['DATASET_SRM_FILES'])
 
 	def process(self, pNum, splitInfo, result):
 		def modify_filelist_for_srm(filelist):
-			return lmap(lambda f: "file://" + f.split('/')[-1], filelist)
-		def prefixLFN(lfn):
+			return lmap(lambda f: 'file://' + f.split('/')[-1], filelist)
+		def prefix_lfn(lfn):
 			return self._prefix + lfn.split('/store/', 1)[-1]
 		if self._prefix:
-			splitInfo[DataSplitter.FileList] = lmap(prefixLFN, splitInfo[DataSplitter.FileList])
-			if "srm" in self._prefix:
-                                result.update({'DATASET_SRM_FILES': str.join(' ', splitInfo[DataSplitter.FileList])})
-                                splitInfo[DataSplitter.FileList] = modify_filelist_for_srm(splitInfo[DataSplitter.FileList])
+			splitInfo[DataSplitter.FileList] = lmap(prefix_lfn, splitInfo[DataSplitter.FileList])
+			if 'srm' in self._prefix:
+				result.update({'DATASET_SRM_FILES': str.join(' ', splitInfo[DataSplitter.FileList])})
+				splitInfo[DataSplitter.FileList] = modify_filelist_for_srm(splitInfo[DataSplitter.FileList])
 
 
 class CMSSWPartitionProcessor(PartitionProcessor.getClass('BasicPartitionProcessor')):

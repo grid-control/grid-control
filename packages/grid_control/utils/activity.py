@@ -51,8 +51,11 @@ class Activity(object):
 			pname = self._parent.name
 		return '%s(name: %r, msg: %r, lvl: %s, depth: %d, parent: %s)' % (self.__class__.__name__, self.name, self._message, self._level, self.depth, pname)
 
-	def getMessage(self):
-		return self._message
+	def getMessage(self, prefix = '', postfix = '...', truncate = None, last = 35):
+		message = prefix + self._message + postfix
+		if (truncate is not None) and (len(self._message) > truncate):
+			message = message[:truncate - last - 3] + '...' + message[-last:]
+		return message
 
 	def _iter_possible_parents(self, current_thread_name): # yield activities in current and parent threads
 		stack = list(Activity.running_by_thread_name.get(current_thread_name, []))

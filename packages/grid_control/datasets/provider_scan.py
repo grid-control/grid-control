@@ -44,6 +44,7 @@ class ScanProviderBase(DataProvider):
 				for data in recurse(level - 1, collectorList[:-1], args):
 					for (path, metadata, nEvents, seList, objStore) in collectorList[-1](level, *data):
 						yield (path, dict(metadata), nEvents, seList, objStore)
+						self._raise_on_abort()
 			else:
 				yield args
 		return recurse(len(self._scanner), lmap(lambda x: x.getEntriesVerbose, self._scanner), (None, {}, None, None, {}))

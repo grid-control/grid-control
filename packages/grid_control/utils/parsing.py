@@ -15,7 +15,7 @@
 from python_compat import identity, ifilter, imap, json, lfilter, lmap, next, reduce, set, sorted, unicode
 
 def removeUnicode(obj):
-	if unicode == str:
+	if unicode == str: # protection against certain external & invasive compatibility layers
 		return obj
 	elif type(obj) == list:
 		obj = lmap(removeUnicode, obj)
