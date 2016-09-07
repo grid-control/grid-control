@@ -12,14 +12,14 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-import os, glob, time, shutil, tempfile
+import os, glob, time, shlex, shutil, tempfile
 from grid_control import utils
 from grid_control.backends.aspect_cancel import CancelAndPurgeJobs, CancelJobs
 from grid_control.backends.broker_base import Broker
-from grid_control.backends.logged_process import LoggedProcess
 from grid_control.backends.wms import BackendError, BasicWMS, WMS
 from grid_control.utils.activity import Activity
 from grid_control.utils.file_objects import VirtualFile
+from grid_control.utils.process_base import LocalProcess
 from hpfwk import AbstractError, ExceptionCollector
 from python_compat import ifilter, imap, ismap, lchain, lfilter, lmap
 
@@ -123,11 +123,13 @@ class LocalWMS(BasicWMS):
 
 		(stdout, stderr) = (os.path.join(sandbox, 'gc.stdout'), os.path.join(sandbox, 'gc.stderr'))
 		jobName = module.getDescription(jobNum).jobName
-		proc = LoggedProcess(self.submitExec, '%s %s "%s" %s' % (self.submitOpts,
-			self.getSubmitArguments(jobNum, jobName, reqs, sandbox, stdout, stderr),
-			utils.pathShare('gc-local.sh'), self.getJobArguments(jobNum, sandbox)))
-		retCode = proc.wait()
-		gcIDText = proc.getOutput().strip().strip('\n')
+		submit_args = shlex.split(self.submitOpts)
+		submit_args.extend(shlex.split(self.getSubmitArguments(jobNum, jobName, reqs, sandbox, stdout, stderr)))
+		submit_args.append(utils.pathShare('gc-local.sh'))
+		submit_args.extend(shlex.split(self.getJobArguments(jobNum, sandbox)))
+		proc = LocalProcess(self.submitExec, *submit_args)
+		retCode = proc.status(timeout = 20, terminate = True)
+		gcIDText = proc.stdout.read(timeout = 0).strip().strip('\n')
 		try:
 			gcID = self.parseSubmitOutput(gcIDText)
 		except Exception:
@@ -143,7 +145,7 @@ class LocalWMS(BasicWMS):
 			gcID = self._createId(gcID)
 			open(os.path.join(sandbox, gcID), 'w')
 		else:
-			proc.logError(self.errorLog)
+			self._log.log_process(proc)
 		return (jobNum, utils.QM(gcID, gcID, None), {'sandbox': sandbox})
 
 
