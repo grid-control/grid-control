@@ -59,9 +59,9 @@ class ForwardingParameterSource(ParameterSource):
 class SubSpaceParameterSource(ForwardingParameterSource):
 	alias = ['pspace']
 
-	def __init__(self, name, factory):
+	def __init__(self, name, factory, repository):
 		(self._name, self._factory) = (name, factory)
-		ForwardingParameterSource.__init__(self, factory.getSource())
+		ForwardingParameterSource.__init__(self, factory.getSource(repository))
 
 	def __repr__(self):
 		if self._factory.__class__.__name__ == 'SimpleParameterFactory':
@@ -76,7 +76,7 @@ class SubSpaceParameterSource(ForwardingParameterSource):
 		try:
 			ParameterFactory = Plugin.getClass('ParameterFactory')
 			config = pconfig.getConfig(viewClass = 'SimpleConfigView', addSections = [name])
-			return SubSpaceParameterSource(name, ParameterFactory.createInstance(factory, config, repository))
+			return SubSpaceParameterSource(name, ParameterFactory.createInstance(factory, config), repository)
 		except:
 			raise ParameterError('Unable to create subspace %r using factory %r' % (name, factory))
 	create = classmethod(create)

@@ -69,7 +69,8 @@ def lumi_expr(opts, args):
 		result = {}
 		for rlrange in lumis:
 			start, end = rlrange
-			assert(start[0] == end[0])
+			if start[0] != end[0]:
+				raise Exception('Lumi filter term contains different runs: %r' % rlrange)
 			result.setdefault(start[0], []).extend(irange(start[1], end[1] + 1))
 		print(result)
 

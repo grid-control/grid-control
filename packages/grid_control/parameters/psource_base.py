@@ -24,16 +24,10 @@ class ParameterError(NestedException):
 	pass
 
 
-class ParameterMetadata(str):
-	def __new__(cls, value, untracked = False):
-		obj = str.__new__(cls, value)
-		obj.value = value
-		obj.untracked = untracked
-		return obj
-
-#class ParameterMetadata(object):
-#	def __init__(self, value, untracked = False):
-#		(self.value, self.untracked) = (value, untracked)
+#class ParameterMetadata(str):
+class ParameterMetadata(object):
+	def __init__(self, value, untracked = False):
+		(self.value, self.untracked) = (value, untracked)
 
 	def get_value(self):
 		if self.untracked:

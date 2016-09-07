@@ -22,13 +22,13 @@ from python_compat import lmap
 class DBS3Provider(CMSBaseProvider):
 	alias = ['dbs3', 'dbs']
 
-	def __init__(self, config, datasetExpr, datasetNick = None):
-		CMSBaseProvider.__init__(self, config, datasetExpr, datasetNick)
+	def __init__(self, config, datasource_name, dataset_expr, dataset_nick = None):
+		CMSBaseProvider.__init__(self, config, datasource_name, dataset_expr, dataset_nick)
 		if self._datasetInstance.startswith('http'):
 			self._url = self._datasetInstance
 		else:
 			self._url = 'https://cmsweb.cern.ch/dbs/%s/DBSReader' % self._datasetInstance
-		self._usePhedex = (self._url == 'https://cmsweb.cern.ch/dbs/prod/global/DBSReader') # Use DBS locality for private samples
+		self._use_phedex = (self._url == 'https://cmsweb.cern.ch/dbs/prod/global/DBSReader') # Use DBS locality for private samples
 		self._gjrc = GridJSONRestClient(self._url, 'VOMS proxy needed to query DBS3!', UserError)
 
 
@@ -65,4 +65,4 @@ class DBS3Provider(CMSBaseProvider):
 
 
 	def _getBlocksInternal(self):
-		return self._getGCBlocks(usePhedex = self._usePhedex)
+		return self._getGCBlocks(usePhedex = self._use_phedex)

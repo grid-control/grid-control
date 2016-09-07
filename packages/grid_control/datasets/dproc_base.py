@@ -18,9 +18,10 @@ from grid_control.utils import prune_processors
 from hpfwk import AbstractError
 
 class DataProcessor(ConfigurablePlugin):
-	def __init__(self, config, onChange):
+	def __init__(self, config, datasource_name, onChange):
 		ConfigurablePlugin.__init__(self, config)
-		self._log = logging.getLogger('dataset.provider.processor')
+		self._datasource_name = datasource_name
+		self._log = logging.getLogger('%s.provider.processor' % datasource_name)
 		self._log_debug = None
 		if self._log.isEnabledFor(logging.DEBUG):
 			self._log_debug = self._log
@@ -28,18 +29,18 @@ class DataProcessor(ConfigurablePlugin):
 	def enabled(self):
 		return True
 
-	def process(self, blockIter):
-		for block in blockIter:
+	def process(self, block_iter):
+		for block in block_iter:
 			if self._log_debug:
 				self._log_debug.debug('%s is processing block %s...' % (self, repr(block)))
-			result = self.processBlock(block)
+			result = self.process_block(block)
 			if result is not None:
 				yield result
 			if self._log_debug:
 				self._log_debug.debug('%s process result: %s' % (self, repr(result)))
 		self._finished()
 
-	def processBlock(self, block):
+	def process_block(self, block):
 		raise AbstractError
 
 	def _finished(self):
@@ -47,19 +48,19 @@ class DataProcessor(ConfigurablePlugin):
 
 
 class MultiDataProcessor(DataProcessor):
-	def __init__(self, config, processorList, onChange):
-		DataProcessor.__init__(self, config, onChange)
-		do_prune = config.getBool('dataset processor prune', True, onChange = onChange)
-		self._processorList = prune_processors(do_prune, processorList, self._log, 'Removed %d inactive dataset processors!')
+	def __init__(self, config, processorList, datasource_name, onChange):
+		DataProcessor.__init__(self, config, datasource_name, onChange)
+		do_prune = config.getBool('%s processor prune' % datasource_name, True, onChange = onChange)
+		self._processor_list = prune_processors(do_prune, processorList, self._log, 'Removed %d inactive dataset processors!')
 
-	def process(self, blockIter):
-		for processor in self._processorList:
-			blockIter = processor.process(blockIter)
-		return blockIter
+	def process(self, block_iter):
+		for processor in self._processor_list:
+			block_iter = processor.process(block_iter)
+		return block_iter
 
 
 class NullDataProcessor(DataProcessor):
 	alias = ['null']
 
-	def processBlock(self, block):
+	def process_block(self, block):
 		return block

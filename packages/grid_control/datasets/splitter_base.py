@@ -50,11 +50,12 @@ class DataSplitterIO(Plugin):
 
 
 class DataSplitter(ConfigurablePlugin):
-	def __init__(self, config):
+	def __init__(self, config, datasource_name):
 		ConfigurablePlugin.__init__(self, config)
+		self._datasource_name = datasource_name
 		self.setState(src = None, protocol = {})
 		# Resync settings:
-		self._interactive = config.isInteractive('partition resync', False)
+		self._interactive = config.isInteractive(['partition resync', '%s partition resync' % datasource_name], False)
 		#   behaviour in case of event size changes
 		self._mode_removed = config.getEnum('resync mode removed', ResyncMode, ResyncMode.complete, subset = ResyncMode.noChanged)
 		self._mode_expanded = config.getEnum('resync mode expand', ResyncMode, ResyncMode.changed)
@@ -501,7 +502,7 @@ class DataSplitter(ConfigurablePlugin):
 		# Create and setup splitter
 		if cfg is None:
 			cfg = create_config(configDict = src.metadata)
-		splitter = DataSplitter.createInstance(src.classname, cfg)
+		splitter = DataSplitter.createInstance(src.classname, cfg, 'dataset')
 		splitter.setState(src, protocol)
 		return splitter
 	loadPartitionsForScript = staticmethod(loadPartitionsForScript)

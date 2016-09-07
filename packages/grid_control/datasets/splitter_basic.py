@@ -43,8 +43,8 @@ class FLSplitStacker(FileLevelSplitter):
 	def splitDatasetInternal(self, blocks, firstEvent = 0):
 		for block in blocks:
 			splitterList = self._setup(self._splitstack, block)
-			subSplitter = imap(lambda x: FileLevelSplitter.createInstance(x, self._config), splitterList[:-1])
-			endSplitter = DataSplitter.createInstance(splitterList[-1], self._config)
+			subSplitter = imap(lambda x: FileLevelSplitter.createInstance(x, self._config, self._datasource_name), splitterList[:-1])
+			endSplitter = DataSplitter.createInstance(splitterList[-1], self._config, self._datasource_name)
 			for subBlock in reduce(lambda x, y: y.splitBlocks(x), subSplitter, [block]):
 				for splitting in endSplitter.splitDatasetInternal([subBlock]):
 					yield splitting

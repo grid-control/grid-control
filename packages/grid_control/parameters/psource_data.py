@@ -23,14 +23,14 @@ from python_compat import md5_hex, set
 class DataParameterSource(LimitedResyncParameterSource):
 	alias = ['data']
 
-	def __init__(self, dataDir, srcName, dataProvider, dataSplitter, dataProc, repository, keepOld = True):
+	def __init__(self, dn, ds_name, data_provider, data_splitter, data_proc, repository, keep_old = True):
 		LimitedResyncParameterSource.__init__(self)
-		(self._dn, self._name, self._data_provider, self._data_splitter, self._part_proc, self._keepOld) = \
-			(dataDir, srcName, dataProvider, dataSplitter, dataProc, keepOld)
-		repository['dataset:%s' % srcName] = self
+		(self._dn, self._name, self._data_provider, self._data_splitter, self._part_proc, self._keep_old) = \
+			(dn, ds_name, data_provider, data_splitter, data_proc, keep_old)
+		repository['dataset:%s' % ds_name] = self
 		self.resyncSetup(interval = -1)
 
-		if not dataProvider: # debug mode - used by scripts - disables resync
+		if not data_provider: # debug mode - used by scripts - disables resync
 			self._maxN = self._data_splitter.getMaxJobs()
 			return
 
@@ -48,6 +48,12 @@ class DataParameterSource(LimitedResyncParameterSource):
 			self._data_splitter.splitDataset(self._getDataPath('map.tar'), self._data_provider.getBlocks(show_stats = False))
 
 		self._maxN = self._data_splitter.getMaxJobs()
+
+	def get_name(self):
+		return self._name
+
+	def getNeededDatasetParameters(self):
+		return self._part_proc.getNeededKeys(self._data_splitter) or []
 
 	def canFinish(self):
 		return self._resyncInterval < 0
@@ -95,7 +101,7 @@ class DataParameterSource(LimitedResyncParameterSource):
 			if jobChanges is not None:
 				# Move current splitting to backup and use the new splitting from now on
 				def backupRename(old, cur, new):
-					if self._keepOld:
+					if self._keep_old:
 						os.rename(self._getDataPath(cur), self._getDataPath(old))
 					os.rename(self._getDataPath(new), self._getDataPath(cur))
 				backupRename(  'map-old-%d.tar' % time.time(),   'map.tar',   'map-new.tar')

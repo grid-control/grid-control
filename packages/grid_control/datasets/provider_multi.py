@@ -19,19 +19,19 @@ from hpfwk import ExceptionCollector
 from python_compat import imap, reduce, set
 
 class MultiDatasetProvider(DataProvider):
-	def __init__(self, config, datasetExpr, datasetNick, providerList):
-		DataProvider.__init__(self, config, datasetExpr, datasetNick)
-		self._stats = DataProcessor.createInstance('SimpleStatsDataProcessor', config, None, self._log, 'Summary: Running over ')
-		self._providerList = providerList
+	def __init__(self, config, datasource_name, dataset_expr, dataset_nick, providerList):
+		DataProvider.__init__(self, config, datasource_name, dataset_expr, dataset_nick)
+		self._stats = DataProcessor.createInstance('SimpleStatsDataProcessor', config, 'dataset', None, self._log, 'Summary: Running over ')
+		self._provider_list = providerList
 
 
 	def queryLimit(self):
-		return max(imap(lambda x: x.queryLimit(), self._providerList))
+		return max(imap(lambda x: x.queryLimit(), self._provider_list))
 
 
 	def checkSplitter(self, splitter):
 		def getProposal(x):
-			return reduce(lambda prop, prov: prov.checkSplitter(prop), self._providerList, x)
+			return reduce(lambda prop, prov: prov.checkSplitter(prop), self._provider_list, x)
 		if getProposal(splitter) != getProposal(getProposal(splitter)):
 			raise DatasetError('Dataset providers could not agree on valid dataset splitter!')
 		return getProposal(splitter)
@@ -41,7 +41,7 @@ class MultiDatasetProvider(DataProvider):
 		if self._cache_dataset is None:
 			self._cache_dataset = set()
 			ec = ExceptionCollector()
-			for provider in self._providerList:
+			for provider in self._provider_list:
 				try:
 					self._cache_dataset.update(provider.getDatasets())
 				except Exception:
@@ -53,22 +53,22 @@ class MultiDatasetProvider(DataProvider):
 
 
 	def getBlocks(self, show_stats):
-		statsProcessor = NullDataProcessor(config = None, onChange = None)
+		statsProcessor = NullDataProcessor(config = None, datasource_name = 'dataset', onChange = None)
 		if show_stats:
 			statsProcessor = self._stats
 		if self._cache_block is None:
 			ec = ExceptionCollector()
 			def getAllBlocks():
-				for provider in self._providerList:
+				for provider in self._provider_list:
 					try:
-						for block in provider.getBlocksNormed():
+						for block in provider.get_blocks_raw():
 							yield block
 					except Exception:
 						ec.collect()
 					if utils.abort():
 						raise DatasetError('Could not retrieve all datasets!')
 			try:
-				self._cache_block = list(statsProcessor.process(self._datasetProcessor.process(getAllBlocks())))
+				self._cache_block = list(statsProcessor.process(self._dataset_processor.process(getAllBlocks())))
 			except Exception:
 				raise DatasetError('Unable to run datasets through processing pipeline!')
 			ec.raise_any(DatasetError('Could not retrieve all datasets!'))

@@ -35,17 +35,20 @@ def removeRunLumi(value, idxRuns, idxLumi):
 class LumiDataProcessor(DataProcessor):
 	alias = ['lumi']
 
-	def __init__(self, config, onChange):
-		DataProcessor.__init__(self, config, onChange)
-		self._lumi_filter = config.getLookup('lumi filter', {}, parser = parseLumiFilter, strfun = strLumi, onChange = onChange)
+	def __init__(self, config, datasource_name, onChange):
+		DataProcessor.__init__(self, config, datasource_name, onChange)
+		self._lumi_filter = config.getLookup(['lumi filter', '%s lumi filter' % datasource_name],
+			default = {}, parser = parseLumiFilter, strfun = strLumi, onChange = onChange)
 		if self._lumi_filter.empty():
 			lumi_keep_default = LumiKeep.none
 		else:
 			lumi_keep_default = LumiKeep.Run
-			config.setBool('lumi metadata', True)
+			config.setBool('%s lumi metadata' % datasource_name, True)
 			self._log.info('Runs/lumi section filter enabled!')
-		self._lumi_keep = config.getEnum('lumi keep', LumiKeep, lumi_keep_default, onChange = onChange)
-		self._lumi_strict = config.getEnum('lumi filter strictness', LumiMode, LumiMode.strict, onChange = onChange)
+		self._lumi_keep = config.getEnum(['lumi keep', '%s lumi keep' % datasource_name],
+			LumiKeep, lumi_keep_default, onChange = onChange)
+		self._lumi_strict = config.getEnum(['lumi filter strictness', '%s lumi filter strictness' % datasource_name],
+			LumiMode, LumiMode.strict, onChange = onChange)
 
 	def _acceptRun(self, block, fi, idxRuns, lumi_filter):
 		if idxRuns is None:
@@ -75,7 +78,7 @@ class LumiDataProcessor(DataProcessor):
 				removeRunLumi(fi[DataProvider.Metadata], idxRuns, idxLumi)
 			yield fi
 
-	def processBlock(self, block):
+	def process_block(self, block):
 		if self._lumi_filter.empty() and ((self._lumi_keep == LumiKeep.RunLumi) or (DataProvider.Metadata not in block)):
 			return block
 		def getMetadataIdx(key):
@@ -104,10 +107,11 @@ class LumiDataProcessor(DataProcessor):
 
 
 class LumiPartitionProcessor(PartitionProcessor):
-	def __init__(self, config):
-		PartitionProcessor.__init__(self, config)
+	def __init__(self, config, datasource_name):
+		PartitionProcessor.__init__(self, config, datasource_name)
 		changeTrigger = triggerResync(['datasets', 'parameters'])
-		self._lumi_filter = config.getLookup('lumi filter', {}, parser = parseLumiFilter, strfun = strLumi, onChange = changeTrigger)
+		self._lumi_filter = config.getLookup(['lumi filter', '%s lumi filter' % datasource_name],
+			default = {}, parser = parseLumiFilter, strfun = strLumi, onChange = changeTrigger)
 
 	def getKeys(self):
 		if self.enabled():

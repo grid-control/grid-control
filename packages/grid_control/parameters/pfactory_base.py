@@ -18,35 +18,31 @@ from grid_control.parameters.config_param import ParameterConfig
 from grid_control.parameters.psource_base import NullParameterSource, ParameterError, ParameterSource
 from grid_control.parameters.psource_lookup import createLookupHelper
 from hpfwk import AbstractError
-from python_compat import identity, ifilter, imap, irange, lfilter, lmap
+from python_compat import identity, ifilter, imap, irange, lfilter, lmap, sorted
 
 class ParameterFactory(ConfigurablePlugin):
 	tagName = 'parameters'
-
-	def __init__(self, config, repository):
-		ConfigurablePlugin.__init__(self, config)
-		self._repository = repository
 
 	def getSource(self):
 		raise AbstractError
 
 
 class UserParameterFactory(ParameterFactory):
-	def __init__(self, config, repository):
-		ParameterFactory.__init__(self, config, repository)
+	def __init__(self, config):
+		ParameterFactory.__init__(self, config)
 		self._log = logging.getLogger('parameters.factory')
 		self._paramConfig = ParameterConfig(config)
 		self._pExpr = config.get('parameters', '', onChange = None)
 
-	def _getUserSource(self, pExpr):
+	def _getUserSource(self, pExpr, respository):
 		raise AbstractError
 
-	def getSource(self):
+	def getSource(self, respository):
 		if not self._pExpr:
 			return NullParameterSource()
 		self._log.debug('Parsing parameter expression: %s', repr(self._pExpr))
 		try:
-			source = self._getUserSource(self._pExpr)
+			source = self._getUserSource(self._pExpr, respository)
 		except:
 			raise ParameterError('Unable to parse parameter expression %r' % self._pExpr)
 		self._log.debug('Parsed parameter source: %s', repr(source))
@@ -54,8 +50,8 @@ class UserParameterFactory(ParameterFactory):
 
 
 class BasicParameterFactory(ParameterFactory):
-	def __init__(self, config, repository):
-		ParameterFactory.__init__(self, config, repository)
+	def __init__(self, config):
+		ParameterFactory.__init__(self, config)
 		(self._constSources, self._lookupSources, self._nestedSources) = ([], [], [])
 
 		# Random number variables
@@ -85,8 +81,7 @@ class BasicParameterFactory(ParameterFactory):
 		# Get global repeat value from 'parameters' section
 		self._repeat = param_config.getInt('repeat', 1, onChange = None)
 		self._req = param_config.getBool('translate requirements', True, onChange = None)
-		self._pfactory = param_config.getPlugin('parameter factory', 'SimpleParameterFactory',
-			cls = ParameterFactory, pargs = (repository,))
+		self._pfactory = param_config.getPlugin('parameter factory', 'SimpleParameterFactory', cls = ParameterFactory)
 
 
 	def _registerPSource(self, pconfig, varName):
@@ -107,10 +102,10 @@ class BasicParameterFactory(ParameterFactory):
 					self._constSources.append(ps)
 
 
-	def _useAvailableDataSource(self, source):
+	def _useAvailableDataSource(self, source, repository):
 		used_sources = source.getUsedSources()
 		unused_data_sources = []
-		for (srcName, dataSource) in self._repository.items():
+		for (srcName, dataSource) in sorted(repository.items()):
 			if srcName.startswith('dataset:') and (dataSource not in used_sources):
 				unused_data_sources.append(dataSource)
 		if unused_data_sources:
@@ -119,18 +114,18 @@ class BasicParameterFactory(ParameterFactory):
 		return source
 
 
-	def getSource(self):
+	def getSource(self, repository):
 		source_list = []
 		for name in self._randomVariables:
 			source_list.append(ParameterSource.createInstance('RNGParameterSource', name))
 		for (idx, seed) in enumerate(self._randomSeeds):
 			source_list.append(ParameterSource.createInstance('CounterParameterSource', 'SEED_%d' % idx, int(seed)))
-		source_list += self._constSources + [self._pfactory.getSource()] + self._lookupSources
+		source_list += self._constSources + [self._pfactory.getSource(repository)] + self._lookupSources
 		source = ParameterSource.createInstance('ZipLongParameterSource', *source_list)
 		for (PSourceClass, args) in self._nestedSources:
 			source = PSourceClass(source, *args)
 		if self._req:
 			req_source = ParameterSource.createInstance('RequirementParameterSource')
 			source = ParameterSource.createInstance('ZipLongParameterSource', source, req_source)
-		source = self._useAvailableDataSource(source)
+		source = self._useAvailableDataSource(source, repository)
 		return ParameterSource.createInstance('RepeatParameterSource', source, self._repeat)

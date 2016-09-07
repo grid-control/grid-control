@@ -21,7 +21,7 @@ from grid_control.output_processor import DebugJobInfoProcessor
 from grid_control.tasks.task_data import DataTask
 from grid_control.tasks.task_utils import TaskExecutableWrapper
 from grid_control.parameters import ParameterMetadata
-from python_compat import ifilter, imap, lmap, sorted
+from python_compat import ifilter, imap, lmap, set, sorted
 
 class CMSSWDebugJobInfoProcessor(DebugJobInfoProcessor):
 	def __init__(self):
@@ -32,10 +32,10 @@ class CMSSWDebugJobInfoProcessor(DebugJobInfoProcessor):
 class LFNPartitionProcessor(PartitionProcessor):
 	alias = ['lfnprefix']
 
-	def __init__(self, config):
-		PartitionProcessor.__init__(self, config)
-		lfnModifier = config.get('partition lfn modifier', '', onChange = None)
-		lfnModifierShortcuts = config.getDict('partition lfn modifier dict', {
+	def __init__(self, config, datasource_name):
+		PartitionProcessor.__init__(self, config, datasource_name)
+		lfnModifier = config.get(['partition lfn modifier', '%s partition lfn modifier' % datasource_name], '', onChange = None)
+		lfnModifierShortcuts = config.getDict(['partition lfn modifier dict', '%s partition lfn modifier dict' % datasource_name], {
 			'<xrootd>': 'root://cms-xrd-global.cern.ch/',
 			'<xrootd:eu>': 'root://xrootd-cms.infn.it/',
 			'<xrootd:us>': 'root://cmsxrootd.fnal.gov/',
@@ -97,7 +97,7 @@ class SCRAMTask(DataTask):
 		else: # scram setup used from project area
 			self._projectArea = config.getPath('project area')
 			self._projectAreaPattern = config.getList('area files', ['-.*', '-config', 'bin', 'lib', 'python', 'module',
-				'*/data', '*.xml', '*.sql', '*.db', '*.cf[if]', '*.py', '-*/.git', '-*/.svn', '-*/CVS', '-*/work.*'])
+				'*/data', '*.xml', '*.sql', '*.db', '*.cf[if]', '*.py', '-*/.git', '-*/.svn', '-*/CVS', '-*/work.*']) + ['*.pcm'] # FIXME
 			self._log.info('Project area found in: %s', self._projectArea)
 
 			# try to determine scram settings from environment settings
@@ -165,7 +165,10 @@ class CMSSW(SCRAMTask):
 			'LFNPartitionProcessor LumiPartitionProcessor CMSSWPartitionProcessor')
 		dash_config = config.changeView(viewClass = 'SimpleConfigView', setSections = ['dashboard'])
 		dash_config.set('application', 'cmsRun')
+
+		self._neededVars = set()
 		SCRAMTask.__init__(self, config, name)
+
 		if self._scramProject != 'CMSSW':
 			raise ConfigError('Project area contains no CMSSW project')
 
@@ -187,12 +190,13 @@ class CMSSW(SCRAMTask):
 
 		# Get cmssw config files and check their existance
 		# Check that for dataset jobs the necessary placeholders are in the config file
-		if self._dataSplitter is None:
+		if not self._has_dataset:
 			self.eventsPerJob = config.get('events per job', '0') # this can be a variable like @USER_EVENTS@!
+			self._neededVars.add('MAX_EVENTS')
 		fragment = config.getPath('instrumentation fragment', utils.pathShare('fragmentForCMSSW.py', pkg = 'grid_control_cms'))
 		self.configFiles = self._processConfigFiles(config, list(self._getConfigFiles(config)), fragment,
 			autoPrepare = config.getBool('instrumentation', True),
-			mustPrepare = (self._dataSplitter is not None))
+			mustPrepare = self._has_dataset)
 
 		# Create project area tarball
 		if self._projectArea and not os.path.exists(self._projectAreaTarball):
@@ -208,6 +212,13 @@ class CMSSW(SCRAMTask):
 				utils.genTarball(self._projectAreaTarball, utils.matchFiles(self._projectArea, self._projectAreaPattern))
 			if self._projectAreaTarballSE:
 				config.setState(True, 'init', detail = 'storage')
+
+
+	def _create_datasource(self, config, name, psrc_repository):
+		psrc_data = SCRAMTask._create_datasource(self, config, name, psrc_repository)
+		if psrc_data is not None:
+			self._neededVars.update(psrc_data.getNeededDatasetParameters())
+		return psrc_data
 
 
 	def _getCMSSWPaths(self, config):
@@ -244,7 +255,7 @@ class CMSSW(SCRAMTask):
 			cfg = fp.read()
 		finally:
 			fp.close()
-		for tag in self.neededVars():
+		for tag in self._neededVars:
 			if (not '__%s__' % tag in cfg) and (not '@%s@' % tag in cfg):
 				return False
 		return True
@@ -310,17 +321,11 @@ class CMSSW(SCRAMTask):
 			isInstrumented = self._cfgIsInstrumented(cfg_new)
 			if mustPrepare and not isInstrumented:
 				raise ConfigError('Config file %r must use %s to work properly!' %
-					(cfg, str.join(', ', imap(lambda x: '@%s@' % x, self.neededVars()))))
+					(cfg, str.join(', ', imap(lambda x: '@%s@' % x, sorted(self._neededVars)))))
 			if autoPrepare and not isInstrumented:
 				self._log.warning('Config file %r was not instrumented!', cfg)
 			result.append(cfg_new)
 		return result
-
-
-	def neededVars(self):
-		if self._dataSplitter:
-			return self._partProcessor.getNeededKeys(self._dataSplitter) or []
-		return ['MAX_EVENTS']
 
 
 	# Get environment variables for gc_config.sh
@@ -379,7 +384,7 @@ class CMSSW(SCRAMTask):
 
 	def getVarNames(self):
 		result = SCRAMTask.getVarNames(self)
-		if self._dataSplitter is None:
+		if not self._has_dataset:
 			result.append('MAX_EVENTS')
 		return result
 
@@ -387,7 +392,7 @@ class CMSSW(SCRAMTask):
 	# Get job dependent environment variables
 	def getJobConfig(self, jobNum):
 		data = SCRAMTask.getJobConfig(self, jobNum)
-		if self._dataSplitter is None:
+		if not self._has_dataset:
 			data['MAX_EVENTS'] = self.eventsPerJob
 		return data
 

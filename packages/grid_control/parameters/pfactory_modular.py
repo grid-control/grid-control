@@ -20,13 +20,13 @@ from python_compat import ifilter, sorted
 class ModularParameterFactory(UserParameterFactory):
 	alias = ['modular']
 
-	def _getUserSource(self, pExpr):
+	def _getUserSource(self, pExpr, repository):
 		# Wrap psource factory functions
 		def createWrapper(clsName):
 			def wrapper(*args):
 				parameterClass = ParameterSource.getClass(clsName)
 				try:
-					return parameterClass.create(self._paramConfig, self._repository, *args)
+					return parameterClass.create(self._paramConfig, repository, *args)
 				except Exception:
 					raise ParameterError('Error while creating %r with arguments %r' % (parameterClass.__name__, args))
 			return wrapper

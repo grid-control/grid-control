@@ -15,12 +15,14 @@
 import logging
 from grid_control import utils
 from grid_control.gc_plugin import ConfigurablePlugin
+from grid_control.datasets.provider_base import DatasetError
 from hpfwk import AbstractError
 
 class InfoScanner(ConfigurablePlugin):
-	def __init__(self, config):
+	def __init__(self, config, datasource_name):
 		ConfigurablePlugin.__init__(self, config)
-		self._log = logging.getLogger('dataset.provider.infoscanner')
+		self._log = logging.getLogger('%s.provider.infoscanner' % datasource_name)
+		self._datasource_name = datasource_name
 
 	def getGuards(self):
 		return ([], [])

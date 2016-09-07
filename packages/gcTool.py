@@ -74,14 +74,14 @@ class OptsConfigFiller(Plugin.getClass('ConfigFiller')):
 		self._cmd_line_args = cmd_line_args
 
 	def fill(self, container):
-		combinedEntry = container.getEntry('cmdargs', lambda entry: entry.section == 'global')
-		newCmdLine = self._cmd_line_args
-		if combinedEntry:
-			newCmdLine = combinedEntry.value.split() + self._cmd_line_args
-		(opts, _) = parse_cmd_line(newCmdLine)
-		def setConfigFromOpt(section, option, value):
+		combined_entry = container.getEntry('cmdargs', lambda entry: entry.section == 'global')
+		new_cmd_line = self._cmd_line_args
+		if combined_entry:
+			new_cmd_line = combined_entry.value.split() + self._cmd_line_args
+		(opts, _) = parse_cmd_line(new_cmd_line)
+		def set_config_from_opt(section, option, value):
 			if value is not None:
-				self._addEntry(container, section, option, str(value), '<cmdline>')
+				self._add_entry(container, section, option, str(value), '<cmdline>')
 		cmd_line_config_map = {
 			'state!': { '#init': opts.init, '#resync': opts.resync,
 				'#display config': opts.help_conf, '#display minimal config': opts.help_confmin },
@@ -92,16 +92,16 @@ class OptsConfigFiller(Plugin.getClass('ConfigFiller')):
 		}
 		for section in cmd_line_config_map:
 			for (option, value) in cmd_line_config_map[section].items():
-				setConfigFromOpt(section, option, value)
+				set_config_from_opt(section, option, value)
 		for entry in opts.logging:
 			tmp = entry.replace(':', '=').split('=')
 			if len(tmp) == 1:
 				tmp.append('DEBUG')
-			setConfigFromOpt('logging', tmp[0] + ' level', tmp[1])
+			set_config_from_opt('logging', tmp[0] + ' level', tmp[1])
 		if opts.action is not None:
-			setConfigFromOpt('workflow', 'action', opts.action.replace(',', ' '))
+			set_config_from_opt('workflow', 'action', opts.action.replace(',', ' '))
 		if opts.continuous:
-			setConfigFromOpt('workflow', 'duration', -1)
+			set_config_from_opt('workflow', 'duration', -1)
 		Plugin.createInstance('StringConfigFiller', opts.override).fill(container)
 
 # create config instance
@@ -149,7 +149,7 @@ def gc_create_workflow(config):
 
 	# Create workflow and freeze config settings
 	workflow = global_config.getPlugin('workflow', 'Workflow:global', cls = 'Workflow')
-	config.factory.freezeConfig(writeConfig = config.getState('init', detail = 'config'))
+	config.factory.freeze(write_config = config.getState('init', detail = 'config'))
 
 	# Give config help
 	if help_cfg or help_scfg:
@@ -185,7 +185,7 @@ def run(args = None, intro = True):
 			sys.exit(workflow.run())
 		finally:
 			sys.stdout.write('\n')
-	except SystemExit: # avoid getting caught for Python < 2.5 
+	except SystemExit: # avoid getting caught for Python < 2.5
 		raise
 	except Exception: # coverage overrides sys.excepthook
 		gc_excepthook(*sys.exc_info())

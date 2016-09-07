@@ -18,39 +18,40 @@ from hpfwk import AbstractError
 
 class NickNameProducer(DataProcessor):
 	# Get nickname and check for collisions
-	def processBlock(self, block):
+	def process_block(self, block):
 		blockDS = block[DataProvider.Dataset]
-		oldNick = block.get(DataProvider.Nickname, '')
-		block[DataProvider.Nickname] = self.getName(oldNick, blockDS, block)
+		current_nickname = block.get(DataProvider.Nickname, '')
+		block[DataProvider.Nickname] = self.getName(current_nickname, blockDS, block)
 		return block
 
 	# Overwritten by users / other implementations
-	def getName(self, oldnick, dataset, block):
+	def getName(self, current_nickname, dataset, block):
 		raise AbstractError
 
 
 class SimpleNickNameProducer(NickNameProducer):
 	alias = ['simple']
 
-	def __init__(self, config, onChange):
-		NickNameProducer.__init__(self, config, onChange)
-		self._full_name = config.getBool('nickname full name', True, onChange = onChange)
+	def __init__(self, config, datasource_name, onChange):
+		NickNameProducer.__init__(self, config, datasource_name, onChange)
+		self._full_name = config.getBool(['nickname full name', '%s nickname full name' % datasource_name],
+			True, onChange = onChange)
 
-	def getName(self, oldnick, dataset, block):
-		if oldnick == '':
+	def getName(self, current_nickname, dataset, block):
+		if current_nickname == '':
 			ds = dataset.replace('/PRIVATE/', '').lstrip('/').split('#')[0]
 			if self._full_name:
 				return ds.replace(' ', '').replace('/', '_').replace('__', '_')
 			return ds.split('/')[0]
-		return oldnick
+		return current_nickname
 
 
 class InlineNickNameProducer(NickNameProducer):
 	alias = ['inline']
 
-	def __init__(self, config, onChange):
-		NickNameProducer.__init__(self, config, onChange)
-		self._expr = config.get('nickname expr', 'oldnick', onChange = onChange)
+	def __init__(self, config, datasource_name, onChange):
+		NickNameProducer.__init__(self, config, datasource_name, onChange)
+		self._expr = config.get(['nickname expr', '%s nickname expr' % datasource_name], 'current_nickname', onChange = onChange)
 
-	def getName(self, oldnick, dataset, block):
+	def getName(self, current_nickname, dataset, block):
 		return eval(self._expr) # pylint:disable=eval-used

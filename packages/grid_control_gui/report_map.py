@@ -24,7 +24,7 @@ try:
 except ImportError:
 	numpy = None
 import os, math, random
-from grid_control_gui.geodb import getGeoMatch
+from grid_control_gui.geodb import get_geo_match
 from python_compat import ifilter, imap, irange, lfilter, lmap, lzip, sorted
 
 def remove_all_overlap(data):
@@ -67,7 +67,7 @@ def draw_pie(ax, breakdown, pos, size, piecolor = None):
 def get_positions(entries):
 	result = []
 	for hostname in entries:
-		entry = getGeoMatch(hostname)
+		entry = get_geo_match(hostname)
 		if not entry:
 			continue
 		(site, lat, lon) = entry

@@ -91,7 +91,8 @@ geoDict = {
 	'sinica.edu.tw': (25.043459, 121.614486),
 }
 
-def getGeoMatch(hostname):
+
+def get_geo_match(hostname):
 	result = None
 	for site in geoDict:
 		if hostname.endswith(site):
@@ -392,6 +393,7 @@ wipp-crm.weizmann.ac.il
 	from python_compat import set, imap, lmap, lfilter, sorted
 
 	jrc = JSONRestClient(url = 'http://maps.googleapis.com/maps/api/geocode/json')
+
 	def geocode(loc):
 		result = jrc.get(params = {'address': str.join('.', loc.split('.')[2:]), 'sensor': 'false'})
 		if 'Placemark' in result:
@@ -402,7 +404,7 @@ wipp-crm.weizmann.ac.il
 	used = set()
 	for line in imap(str.strip, allCEs.splitlines()):
 		time.sleep(0.2)
-		match = getGeoMatch(line)
+		match = get_geo_match(line)
 		if not match:
 			counter += 1
 			sys.stderr.write('\t%r: %r\n' % (line, geocode(line)))

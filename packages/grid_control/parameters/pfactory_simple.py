@@ -127,8 +127,8 @@ def tree2names(node): # return list of referenced variable names in tree
 class SimpleParameterFactory(UserParameterFactory):
 	alias = ['simple']
 
-	def __init__(self, config, repository):
-		UserParameterFactory.__init__(self, config, repository)
+	def __init__(self, config):
+		UserParameterFactory.__init__(self, config)
 		self._nestedSources = [] # Switch statements are elevated to global scope
 		self._precedence = {'*': [], '+': ['*'], ',': ['*', '+']}
 
@@ -157,30 +157,30 @@ class SimpleParameterFactory(UserParameterFactory):
 		return ParameterSource.createInstance('CrossParameterSource', *psource_list)
 
 
-	def _createRef(self, arg):
+	def _createRef(self, arg, repository):
 		refTypeDefault = 'dataset'
 		DataParameterSource = ParameterSource.getClass('DataParameterSource')
-		if 'dataset:' + arg not in self._repository:
+		if 'dataset:' + arg not in repository:
 			refTypeDefault = 'csv'
 		refType = self._paramConfig.get(arg, 'type', refTypeDefault)
 		if refType == 'dataset':
-			return DataParameterSource.create(self._paramConfig, self._repository, arg)
+			return DataParameterSource.create(self._paramConfig, repository, arg)
 		elif refType == 'csv':
-			return ParameterSource.getClass('CSVParameterSource').create(self._paramConfig, self._repository, arg)
+			return ParameterSource.getClass('CSVParameterSource').create(self._paramConfig, repository, arg)
 		raise APIError('Unknown reference type: "%s"' % refType)
 
 
-	def _createPSpace(self, args):
+	def _createPSpace(self, args, repository):
 		SubSpaceParameterSource = ParameterSource.getClass('SubSpaceParameterSource')
 		if len(args) == 1:
-			return SubSpaceParameterSource.create(self._paramConfig, self._repository, args[0])
+			return SubSpaceParameterSource.create(self._paramConfig, repository, args[0])
 		elif len(args) == 3:
-			return SubSpaceParameterSource.create(self._paramConfig, self._repository, args[2], args[0])
+			return SubSpaceParameterSource.create(self._paramConfig, repository, args[2], args[0])
 		else:
 			raise APIError('Invalid subspace reference!: %r' % args)
 
 
-	def _tree2expr(self, node):
+	def _tree2expr(self, node, repository):
 		if isinstance(node, tuple):
 			(operator, args) = node
 			if operator == 'lookup':
@@ -188,11 +188,11 @@ class SimpleParameterFactory(UserParameterFactory):
 				return self._createVarSource(tree2names(args[0]), tree2names(args[1]))
 			elif operator == 'ref':
 				assert(len(args) == 1)
-				return self._createRef(args[0])
+				return self._createRef(args[0], repository)
 			elif operator == 'pspace':
-				return self._createPSpace(args)
+				return self._createPSpace(args, repository)
 			else:
-				args_complete = lmap(self._tree2expr, args)
+				args_complete = lmap(lambda node: self._tree2expr(node, repository), args)
 				if operator == '*':
 					return self._combineSources('CrossParameterSource', args_complete)
 				elif operator == '+':
@@ -206,12 +206,12 @@ class SimpleParameterFactory(UserParameterFactory):
 			return self._createVarSource([node], None)
 
 
-	def _getUserSource(self, pExpr):
+	def _getUserSource(self, pExpr, repository):
 		tokens = tokenize(pExpr, lchain([self._precedence.keys(), list('()[]<>{}')]))
 		tokens = list(tok2inlinetok(tokens, list(self._precedence.keys())))
 		self._log.debug('Parsing parameter string: "%s"', str.join(' ', imap(str, tokens)))
 		tree = tok2tree(tokens, self._precedence)
-		source = self._tree2expr(tree)
+		source = self._tree2expr(tree, repository)
 		for (PSourceClass, args) in self._nestedSources:
 			source = PSourceClass.createInstance(PSourceClass.__name__, source, *args)
 		return source

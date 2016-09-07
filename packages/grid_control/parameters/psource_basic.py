@@ -16,7 +16,7 @@ import re, random
 from grid_control.backends import WMS
 from grid_control.config import ConfigError
 from grid_control.parameters.psource_base import ImmutableParameterSource, ParameterInfo, ParameterMetadata, ParameterSource
-from grid_control.utils.parsing import parseTime, parseType, strDict
+from grid_control.utils.parsing import parseTime, parseType
 from python_compat import imap, lmap
 
 class InternalParameterSource(ImmutableParameterSource):
