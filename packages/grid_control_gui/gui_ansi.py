@@ -137,9 +137,7 @@ class ANSIGUI(GUI):
 	def _update_status(self):
 		activity_message = None
 		for activity in Activity.root.get_children():
-			activity_message = activity.getMessage() + '...'
-			if len(activity_message) > 75:
-				activity_message = activity_message[:37] + '...' + activity_message[-35:]
+			activity_message = activity.getMessage(truncate = 75)
 
 		self._console.move(self._reportHeight + 1, 0)
 		self._new_stdout.logged = False

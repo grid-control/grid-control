@@ -12,7 +12,6 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-from grid_control import utils
 from grid_control.datasets.dproc_base import DataProcessor, NullDataProcessor
 from grid_control.datasets.provider_base import DataProvider, DatasetError
 from hpfwk import ExceptionCollector
@@ -37,6 +36,10 @@ class MultiDatasetProvider(DataProvider):
 		return getProposal(splitter)
 
 
+	def get_dataset_expr(self):
+		return str.join(' ', imap(lambda p: p.get_dataset_expr(), self._provider_list))
+
+
 	def getDatasets(self):
 		if self._cache_dataset is None:
 			self._cache_dataset = set()
@@ -46,8 +49,6 @@ class MultiDatasetProvider(DataProvider):
 					self._cache_dataset.update(provider.getDatasets())
 				except Exception:
 					ec.collect()
-				if utils.abort():
-					raise DatasetError('Could not retrieve all datasets!')
 			ec.raise_any(DatasetError('Could not retrieve all datasets!'))
 		return list(self._cache_dataset)
 
@@ -65,11 +66,10 @@ class MultiDatasetProvider(DataProvider):
 							yield block
 					except Exception:
 						ec.collect()
-					if utils.abort():
-						raise DatasetError('Could not retrieve all datasets!')
 			try:
 				self._cache_block = list(statsProcessor.process(self._dataset_processor.process(getAllBlocks())))
 			except Exception:
 				raise DatasetError('Unable to run datasets through processing pipeline!')
 			ec.raise_any(DatasetError('Could not retrieve all datasets!'))
+			self._raise_on_abort()
 		return self._cache_block

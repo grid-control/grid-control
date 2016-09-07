@@ -15,7 +15,7 @@
 import logging
 from grid_control.datasets.dproc_base import DataProcessor
 from grid_control.datasets.provider_base import DataProvider
-from python_compat import itemgetter, lfilter
+from python_compat import imap, itemgetter, lfilter
 
 class URLDataProcessor(DataProcessor):
 	alias = ['ignore', 'FileDataProcessor']
@@ -63,6 +63,7 @@ class URLCountDataProcessor(DataProcessor):
 
 	def process_block(self, block):
 		if self.enabled():
+			block[DataProvider.NEntries] -= sum(imap(itemgetter(DataProvider.NEntries), block[DataProvider.FileList][self._limit_files:]))
 			block[DataProvider.FileList] = block[DataProvider.FileList][:self._limit_files]
 			self._limit_files -= len(block[DataProvider.FileList])
 		return block

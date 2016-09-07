@@ -189,7 +189,7 @@ class GridWMS(BasicWMS):
 
 
 	def explainError(self, proc, code):
-		if 'Keyboard interrupt raised by user' in proc.stderr.read(timeout = 0):
+		if 'Keyboard interrupt raised by user' in proc.stderr.read_log():
 			return True
 		return False
 

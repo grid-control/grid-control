@@ -23,34 +23,34 @@ class ConfigInterface(object):
 	defaultOnValid = None
 
 	def __init__(self, configView):
-		self._configView = configView
-		self._log = logging.getLogger('config.%s' % self._configView.configName.lower())
+		self._config_view = configView
+		self._log = logging.getLogger('config.%s' % self._config_view.configName.lower())
 
 	def __repr__(self):
-		return '<%s(view = %s)>' % (self.__class__.__name__, self._configView)
+		return '<%s(view = %s)>' % (self.__class__.__name__, self._config_view)
 
 	def changeView(self, interfaceClass = None, **kwargs):
 		if not interfaceClass:
 			interfaceClass = self.__class__
-		return interfaceClass(self._configView.getView(**kwargs))
+		return interfaceClass(self._config_view.getView(**kwargs))
 
 	def getConfigName(self):
-		return self._configView.configName
+		return self._config_view.configName
 
 	def getWorkPath(self, *fnList):
-		return os.path.join(self._configView.config_vault['path:workdir'], *fnList)
+		return os.path.join(self._config_view.config_vault['path:workdir'], *fnList)
 
 	# Get all selected options
 	def getOptions(self):
 		result = []
-		for entry in self._configView.iterContent():
+		for entry in self._config_view.iterContent():
 			if entry.option not in result:
 				result.append(entry.option)
 		return result
 
 	# Write settings to file
 	def write(self, stream, **kwargs):
-		return self._configView.write(stream, **kwargs)
+		return self._config_view.write(stream, **kwargs)
 
 	# Find config caller
 	def _getCaller(self):
@@ -113,7 +113,7 @@ class ConfigInterface(object):
 			assert((default_str == noDefault) or isinstance(default_str, str))
 
 			self._log.log(logging.DEBUG1, 'Config query for config option %r', str.join(' / ', option_list))
-			(old_entry, cur_entry) = self._configView.get(option_list, default_str, persistent = persistent)
+			(old_entry, cur_entry) = self._config_view.get(option_list, default_str, persistent = persistent)
 			return self._processEntries(old_entry, cur_entry, desc, obj2str, str2obj, onChange, onValid)
 		except Exception:
 			if default_obj == noDefault:
@@ -128,7 +128,7 @@ class ConfigInterface(object):
 				value = obj2str(set_obj)
 			except Exception:
 				raise APIError('Unable to get string representation of set value: %s' % repr(set_obj))
-			entry = self._configView.set(standardConfigForm(option), value, opttype, source)
+			entry = self._config_view.set(standardConfigForm(option), value, opttype, source)
 			self._log.log(logging.INFO2, 'Setting %s %s %s ', desc, ConfigEntry.OptTypeDesc[opttype], entry.format(printSection = True))
 			return entry
 		except Exception:

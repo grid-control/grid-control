@@ -161,6 +161,7 @@ class CMSBaseProvider(DataProvider):
 			lumiDict = self._getCMSLumisImpl(blockPath)
 		fileList = []
 		for (fileInfo, listLumi) in self._getCMSFilesImpl(blockPath, self._only_valid, self._lumi_query):
+			self._raise_on_abort()
 			if lumiDict and not listLumi:
 				listLumi = lumiDict.get(fileInfo[DataProvider.URL], [])
 			if listLumi:

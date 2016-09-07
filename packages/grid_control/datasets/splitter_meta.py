@@ -25,7 +25,7 @@ class MetadataSplitter(FileLevelSplitter):
 	def splitBlocks(self, blocks):
 		for block in blocks:
 			files = block[DataProvider.FileList]
-			sort_inplace(files, key = lambda fi: self.metaKey(block[DataProvider.Metadata], block, fi))
+			sort_inplace(files, key = lambda fi: self.metaKey(block.get(DataProvider.Metadata, []), block, fi))
 			(fileStack, reprKey) = ([], None)
 			for fi in files:
 				if reprKey is None:

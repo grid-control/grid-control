@@ -75,7 +75,7 @@ class TypedConfigInterface(ConfigInterface):
 	# Resolve path
 	def resolvePath(self, value, mustExist, errorMsg):
 		try:
-			return utils.resolvePath(value, self._configView.config_vault.get('path:search', []), mustExist, ConfigError)
+			return utils.resolvePath(value, self._config_view.config_vault.get('path:search', []), mustExist, ConfigError)
 		except Exception:
 			raise ConfigError(errorMsg)
 
@@ -98,7 +98,7 @@ class TypedConfigInterface(ConfigInterface):
 			ec = ExceptionCollector()
 			for pattern in value:
 				try:
-					for fn in utils.resolvePaths(pattern, self._configView.config_vault.get('path:search', []), mustExist, ConfigError):
+					for fn in utils.resolvePaths(pattern, self._config_view.config_vault.get('path:search', []), mustExist, ConfigError):
 						yield fn
 				except Exception:
 					ec.collect()
@@ -120,7 +120,7 @@ class TypedConfigInterface(ConfigInterface):
 			if requirePlugin and not objList:
 				raise ConfigError('This option requires to specify a valid plugin!')
 			return objList
-		obj2str = lambda value: str.join('\n', imap(lambda obj: obj.bindValue(), value))
+		obj2str = lambda value: str.join('\n', imap(lambda obj: obj.bind_value(), value))
 		return self._getInternal(desc, obj2str, str2obj, str2obj, option, default, **kwargs)
 
 	# Return class - default class is also given in string form!
@@ -160,9 +160,9 @@ class SimpleConfigInterface(TypedConfigInterface):
 
 	def getEvent(self, name):
 		vault_key = 'event:%s' % name
-		if vault_key not in self._view.config_vault:
-			self._view.config_vault[vault_key] = GCEvent()
-		return self._view.config_vault[vault_key]
+		if vault_key not in self._config_view.config_vault:
+			self._config_view.config_vault[vault_key] = GCEvent()
+		return self._config_view.config_vault[vault_key]
 
 	def isInteractive(self, option, default):
 		if isinstance(option, list):

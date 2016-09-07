@@ -216,10 +216,10 @@ def get_dataset_info(opts, args):
 	else:
 		print('Dataset: %s' % blocks[0][DataProvider.Dataset])
 		headerbase = []
-	return (datasets, blocks, headerbase)
+	return (provider, datasets, blocks, headerbase)
 
 def main(opts, args):
-	(datasets, blocks, headerbase) = get_dataset_info(opts, args)
+	(provider, datasets, blocks, headerbase) = get_dataset_info(opts, args)
 
 	if opts.list_datasets:
 		list_datasets(blocks)

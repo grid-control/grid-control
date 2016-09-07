@@ -60,9 +60,7 @@ class SimpleActivityStream(object):
 		activity_message = None
 		if Activity.root:
 			for activity in Activity.root.get_children():
-				activity_message = activity.getMessage() + '...'
-				if len(activity_message) > 75:
-					activity_message = activity_message[:37] + '...' + activity_message[-35:]
+				activity_message = activity.getMessage(truncate = 75)
 		if self._old_message is not None:
 			self._stream.write('\r%s\r' % (' ' * len(self._old_message)))
 		self._old_message = activity_message
@@ -88,11 +86,11 @@ class SimpleConsole(GUI):
 			self._log.info('Running in continuous mode. Press ^C to exit.')
 		elif self._workflow.duration > 0:
 			self._log.info('Running for %s', strTimeShort(self._workflow.duration))
-		if not sys.stdout.isatty():
-			return self._workflow.process()
-		sys.stdout = SimpleActivityStream(sys.stdout, register_callback = True)
-		sys.stderr = SimpleActivityStream(sys.stderr)
+		if sys.stdout.isatty():
+			sys.stdout = SimpleActivityStream(sys.stdout, register_callback = True)
+			sys.stderr = SimpleActivityStream(sys.stderr)
 		try:
 			return self._workflow.process()
 		finally:
-			(sys.stdout, sys.stderr) = (sys.stdout.finish(), sys.stderr.finish())
+			if sys.stdout.isatty():
+				(sys.stdout, sys.stderr) = (sys.stdout.finish(), sys.stderr.finish())

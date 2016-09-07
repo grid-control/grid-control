@@ -13,9 +13,7 @@
 # | limitations under the License.
 
 import logging
-from grid_control import utils
 from grid_control.gc_plugin import ConfigurablePlugin
-from grid_control.datasets.provider_base import DatasetError
 from hpfwk import AbstractError
 
 class InfoScanner(ConfigurablePlugin):
@@ -36,8 +34,6 @@ class InfoScanner(ConfigurablePlugin):
 				(logging.DEBUG1, seList, 'SE list'),
 				(logging.DEBUG1, objStore, 'Objects')]:
 			self._log.log(level, '    ' * depth + '  %s: %s', name, content)
-		if utils.abort():
-			raise DatasetError('Received abort request during dataset scan!')
 		return self.getEntries(path, metadata, events, seList, objStore)
 
 	def getEntries(self, path, metadata, events, seList, objStore):

@@ -49,27 +49,27 @@ class FileConfigFiller(ConfigFiller):
 	def fill(self, container):
 		search_paths = []
 		for config_file in self._config_file_list:
-			content_config = {}
-			search_paths.extend(self._fill_content_deep(config_file, [os.getcwd()], content_config))
+			content_configfile = {}
+			search_paths.extend(self._fill_content_deep(config_file, [os.getcwd()], content_configfile))
 			# Store config settings
-			for section in content_config:
-				for (option, value, source) in content_config[section]:
+			for section in content_configfile:
+				for (option, value, source) in content_configfile[section]:
 					self._add_entry(container, section, option, value, source)
 		searchString = str.join(' ', UniqueList(search_paths))
 		if self._add_search_path:
 			self._add_entry(container, 'global', 'plugin paths+', searchString, str.join(',', self._config_file_list))
 
-	def _fill_content_deep(self, config_file, search_paths, content_config):
+	def _fill_content_deep(self, config_file, search_paths, content_configfile):
 		log = logging.getLogger(('config.%s' % utils.getRootName(config_file)).rstrip('.').lower())
 		log.log(logging.INFO1, 'Reading config file %s', config_file)
 		config_file = utils.resolvePath(config_file, search_paths, ErrorClass = ConfigError)
 		config_file_lines = SafeFile(config_file).readlines()
 
 		# Single pass, non-recursive list retrieval
-		tmp_content_config = {}
-		self._fill_content_shallow(config_file, config_file_lines, search_paths, tmp_content_config)
+		tmp_content_configfile = {}
+		self._fill_content_shallow(config_file, config_file_lines, search_paths, tmp_content_configfile)
 		def getFlatList(section, option):
-			for (opt, value, _) in tmp_content_config.get(section, []):
+			for (opt, value, _) in tmp_content_configfile.get(section, []):
 				if opt == option:
 					for entry in parseList(value, None):
 						yield entry
@@ -77,48 +77,48 @@ class FileConfigFiller(ConfigFiller):
 		newsearch_paths = [os.path.dirname(config_file)]
 		# Add entries from include statement recursively
 		for includeFile in getFlatList('global', 'include'):
-			self._fill_content_deep(includeFile, search_paths + newsearch_paths, content_config)
+			self._fill_content_deep(includeFile, search_paths + newsearch_paths, content_configfile)
 		# Process all other entries in current file
-		self._fill_content_shallow(config_file, config_file_lines, search_paths, content_config)
+		self._fill_content_shallow(config_file, config_file_lines, search_paths, content_configfile)
 		# Override entries in current config file
 		for overrideFile in getFlatList('global', 'include override'):
-			self._fill_content_deep(overrideFile, search_paths + newsearch_paths, content_config)
+			self._fill_content_deep(overrideFile, search_paths + newsearch_paths, content_configfile)
 		# Filter special global options
-		if content_config.get('global', []):
-			content_config['global'] = lfilter(lambda opt_v_s: opt_v_s[0] not in ['include', 'include override'], content_config['global'])
+		if content_configfile.get('global', []):
+			content_configfile['global'] = lfilter(lambda opt_v_s: opt_v_s[0] not in ['include', 'include override'], content_configfile['global'])
 		return search_paths + newsearch_paths
 
-	def _fill_content_shallow(self, config_file, config_file_lines, search_paths, content_config):
+	def _fill_content_shallow(self, config_file, config_file_lines, search_paths, content_configfile):
 		try:
 			(self._current_section, self._current_option, self._current_value, self._current_indices) = (None, None, None, None)
 			exception_intro = 'Unable to parse config file %s' % config_file
 			for idx, line in enumerate(config_file_lines):
-				self._parse_line(exception_intro, content_config, config_file, idx, line)
+				self._parse_line(exception_intro, content_configfile, config_file, idx, line)
 			if self._current_option:
-				self._store_option(exception_intro, content_config, config_file)
+				self._store_option(exception_intro, content_configfile, config_file)
 		except Exception:
 			raise ConfigError('Error while reading configuration file "%s"!' % config_file)
 
-	def _parse_line_strip_comments(self, exception_intro, content_config, config_file, idx, line):
+	def _parse_line_strip_comments(self, exception_intro, content_configfile, config_file, idx, line):
 		return rsplit(line, ';', 1)[0].rstrip()
 
-	def _parse_line_continue_option(self, exception_intro, content_config, config_file, idx, line):
+	def _parse_line_continue_option(self, exception_intro, content_configfile, config_file, idx, line):
 		self._current_value += '\n' + line.strip()
 		self._current_indices += [idx]
 
-	def _parse_line_section(self, exception_intro, content_config, config_file, idx, line):
+	def _parse_line_section(self, exception_intro, content_configfile, config_file, idx, line):
 		self._current_section = line[1:line.index(']')].strip()
-		self._parse_line(exception_intro, content_config, config_file, idx, line[line.index(']') + 1:].strip())
+		self._parse_line(exception_intro, content_configfile, config_file, idx, line[line.index(']') + 1:].strip())
 
-	def _parse_line_option(self, exception_intro, content_config, config_file, idx, line):
+	def _parse_line_option(self, exception_intro, content_configfile, config_file, idx, line):
 		(self._current_option, self._current_value) = lmap(str.strip, line.split('=', 1))
 		self._current_indices = [idx]
 
 	# Not using ConfigParser anymore! Ability to read duplicate options is needed
-	def _parse_line(self, exception_intro, content_config, config_file, idx, line):
+	def _parse_line(self, exception_intro, content_configfile, config_file, idx, line):
 		def protected_call(fun, exceptionMsg, line):
 			try:
-				return fun(exception_intro, content_config, config_file, idx, line)
+				return fun(exception_intro, content_configfile, config_file, idx, line)
 			except Exception:
 				raise ConfigError(exception_intro + ':%d\n\t%r\n' % (idx, line) + exceptionMsg)
 
@@ -130,16 +130,16 @@ class FileConfigFiller(ConfigFiller):
 			protected_call(self._parse_line_continue_option, 'Invalid indentation!', line)
 		elif line.startswith('['):
 			if self._current_option:
-				self._store_option(exception_introLineInfo, content_config, config_file)
+				self._store_option(exception_introLineInfo, content_configfile, config_file)
 			protected_call(self._parse_line_section, 'Unable to parse config section!', line)
 		elif '=' in line:
 			if self._current_option:
-				self._store_option(exception_introLineInfo, content_config, config_file)
+				self._store_option(exception_introLineInfo, content_configfile, config_file)
 			protected_call(self._parse_line_option, 'Unable to parse config option!', line)
 		else:
 			raise ConfigError(exception_introLineInfo + '\nPlease use "key = value" syntax or indent values!')
 
-	def _store_option(self, exception_intro, content_config, config_file):
+	def _store_option(self, exception_intro, content_configfile, config_file):
 		def assert_set(cond, msg):
 			if not cond:
 				raise ConfigError(exception_intro + '\n' + msg)
@@ -147,7 +147,7 @@ class FileConfigFiller(ConfigFiller):
 		assert_set(self._current_option, 'Config option is not set!')
 		assert_set(self._current_value is not None, 'Config value is not set!')
 		assert_set(self._current_indices, 'Config source not set!')
-		content_section = content_config.setdefault(self._current_section, [])
+		content_section = content_configfile.setdefault(self._current_section, [])
 		self._current_value = self._current_value.replace('$GC_CONFIG_DIR', os.path.dirname(config_file))
 		self._current_value = self._current_value.replace('$GC_CONFIG_FILE', config_file)
 		content_section.append((self._current_option, self._current_value,
