@@ -19,8 +19,8 @@ from grid_control.config.config_entry import ConfigError, appendOption, noDefaul
 from grid_control.config.cview_base import SimpleConfigView
 from grid_control.config.matcher_base import DictLookup, ListFilter, ListOrder, Matcher
 from grid_control.utils.data_structures import makeEnum
-from grid_control.utils.thread_tools import GCEvent
 from grid_control.utils.parsing import parseBool, parseDict, parseList, parseTime, strDictLong, strTimeShort
+from grid_control.utils.thread_tools import GCEvent
 from hpfwk import APIError, ExceptionCollector, Plugin
 from python_compat import any, get_user_input, identity, ifilter, imap, lmap, relpath, sorted
 

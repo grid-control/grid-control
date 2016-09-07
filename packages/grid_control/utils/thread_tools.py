@@ -251,7 +251,7 @@ def hang_protection(fun, timeout = 5):
 
 
 # Combines multiple, threaded generators into single generator
-def tchain(iterables, timeout = None):
+def tchain(iterables, timeout = None, ex_cls = NestedException, ex_msg = 'Caught exception during threaded chain'):
 	threads = []
 	result = GCQueue()
 	ec = ExceptionCollector()
@@ -280,4 +280,4 @@ def tchain(iterables, timeout = None):
 			threads.pop() # which thread is irrelevant - only used as counter
 		else:
 			yield tmp
-	ec.raise_any(NestedException('Caught exception during threaded chain'))
+	ec.raise_any(ex_cls(ex_msg))

@@ -102,14 +102,14 @@ class TaskModule(NamedPlugin):
 
 		# Init parameter source manager
 		psrc_repository = {}
-		self._setupJobParameters(config, psrc_repository)
-		self._pfactory = config.getPlugin('internal parameter factory', 'BasicParameterFactory',
-			cls = ParameterFactory, pargs = (psrc_repository,), tags = [self], inherit = True)
+		self._setup_repository(config, psrc_repository)
+		pfactory = config.getPlugin('internal parameter factory', 'BasicParameterFactory',
+			cls = ParameterFactory, tags = [self], inherit = True)
 		self.source = config.getPlugin('parameter adapter', 'TrackedParameterAdapter',
-			cls = ParameterAdapter, pargs = (self._pfactory.getSource(),))
+			cls = ParameterAdapter, pargs = (pfactory.getSource(psrc_repository),))
 
 
-	def _setupJobParameters(self, config, psrc_repository):
+	def _setup_repository(self, config, psrc_repository):
 		pass
 
 
@@ -148,7 +148,7 @@ class TaskModule(NamedPlugin):
 	# Get job dependent environment variables
 	def getJobConfig(self, jobNum):
 		tmp = self.source.getJobInfo(jobNum)
-		return dict(imap(lambda key: (str(key), tmp.get(key, '')), self.source.getJobKeys()))
+		return dict(imap(lambda key: (key.value, tmp.get(key.value, '')), self.source.getJobKeys()))
 
 
 	def getTransientVars(self):
@@ -159,7 +159,7 @@ class TaskModule(NamedPlugin):
 
 	def getVarNames(self):
 		# Take task variables and the variables from the parameter source
-		return lchain([self.getTaskConfig().keys(), self.source.getJobKeys()])
+		return lchain([self.getTaskConfig().keys(), imap(lambda key: key.value, self.source.getJobKeys())])
 
 
 	def getVarMapping(self):

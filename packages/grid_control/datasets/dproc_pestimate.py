@@ -20,38 +20,39 @@ from python_compat import identity, ifilter, lmap
 class PartitionEstimator(DataProcessor):
 	alias = ['estimate', 'SplitSettingEstimator']
 
-	def __init__(self, config, onChange):
-		DataProcessor.__init__(self, config, onChange)
-		self._targetJobs = config.getInt('target partitions', -1, onChange = onChange)
-		self._targetJobsDS = config.getInt('target partitions per nickname', -1, onChange = onChange)
+	def __init__(self, config, datasource_name, onChange):
+		DataProcessor.__init__(self, config, datasource_name, onChange)
+		self._target_jobs = config.getInt(['target partitions', '%s target partitions' % datasource_name], -1, onChange = onChange)
+		self._target_jobs_ds = config.getInt(['target partitions per nickname', '%s target partitions per nickname' % datasource_name], -1, onChange = onChange)
 		self._entries = {None: 0}
 		self._files = {None: 0}
 		self._config = config
 
 	def enabled(self):
-		return (self._targetJobs > 0) or (self._targetJobsDS > 0)
+		return (self._target_jobs > 0) or (self._target_jobs_ds > 0)
 
-	def _setSplitParam(self, config, name, work_units, target_partitions):
+	def _set_split_opt(self, config, name, work_units, target_partitions):
 		try:
 			config.setInt(name, max(1, int(work_units / float(target_partitions) + 0.5)))
 		except Exception:
 			clear_current_exception()
 
-	def process(self, blockIter):
+	def process(self, block_iter):
 		if self.enabled() and not self._config.getState('resync', detail = 'datasets'):
-			blocks = lmap(self.processBlock, blockIter)
-			if self._targetJobs > 0:
-				self._setSplitParam(self._config, 'files per job', self._files[None], self._targetJobs)
-				self._setSplitParam(self._config, 'events per job', self._entries[None], self._targetJobs)
-			if self._targetJobsDS > 0:
+			blocks = lmap(self.process_block, block_iter)
+			if self._target_jobs > 0:
+				self._set_split_opt(self._config, 'files per job', self._files[None], self._target_jobs)
+				self._set_split_opt(self._config, 'events per job', self._entries[None], self._target_jobs)
+			if self._target_jobs_ds > 0:
 				for nick in ifilter(identity, self._files):
 					block_config = self._config.changeView(setSections = ['dataset %s' % nick])
-					self._setSplitParam(block_config, 'files per job', self._files[nick], self._targetJobsDS)
-					self._setSplitParam(block_config, 'events per job', self._entries[nick], self._targetJobsDS)
+					self._set_split_opt(block_config, 'files per job', self._files[nick], self._target_jobs_ds)
+					self._set_split_opt(block_config, 'events per job', self._entries[nick], self._target_jobs_ds)
+			self._config = None
 			return blocks
-		return blockIter
+		return block_iter
 
-	def processBlock(self, block):
+	def process_block(self, block):
 		def inc(key):
 			self._files[key] = self._files.get(key, 0) + len(block[DataProvider.FileList])
 			self._entries[key] = self._entries.get(key, 0) + block[DataProvider.NEntries]

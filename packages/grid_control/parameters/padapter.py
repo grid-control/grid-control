@@ -197,15 +197,16 @@ class TrackedParameterAdapter(BasicParameterAdapter):
 	def _diffParams(self, psource_old, psource_new, mapJob2PID, redoNewPNum, disableNewPNum):
 		# Reduces psource output to essential information for diff - faster than keying
 		def translatePSource(psource):
-			keys_store = sorted(ifilter(lambda k: not k.untracked, psource.getJobKeys()))
-			def translateEntry(meta): # Translates parameter setting into hash
+			keys_store = sorted(ifilter(lambda k: not k.untracked, psource.getJobKeys()), key = lambda k: k.value)
+			def translateEntry(pspace_point): # Translates parameter setting into hash
 				tmp = md5()
-				for key in ifilter(lambda k: k in meta, keys_store):
-					if str(meta[key]):
-						tmp.update(str2bytes(key))
-						tmp.update(str2bytes(str(meta[key])))
-				return { ParameterInfo.HASH: tmp.hexdigest(), 'GC_PARAM': meta['GC_PARAM'],
-					ParameterInfo.ACTIVE: meta[ParameterInfo.ACTIVE] }
+				for key in ifilter(lambda k: k.value in pspace_point, keys_store):
+					value = str(pspace_point[key.value])
+					if value:
+						tmp.update(str2bytes(key.value))
+						tmp.update(str2bytes(value))
+				return {ParameterInfo.HASH: tmp.hexdigest(), 'GC_PARAM': pspace_point['GC_PARAM'],
+					ParameterInfo.ACTIVE: pspace_point[ParameterInfo.ACTIVE]}
 			for entry in psource.iterJobs():
 				yield translateEntry(entry)
 
@@ -222,8 +223,8 @@ class TrackedParameterAdapter(BasicParameterAdapter):
 
 
 	def _createAggregatedSource(self, psource_old, psource_new, missingInfos):
-		currentInfoKeys = psource_new.getJobKeys()
-		missingInfoKeys = lfilter(lambda key: key not in currentInfoKeys, psource_old.getJobKeys())
+		currentInfoKeys = lmap(lambda key: key.value, psource_new.getJobKeys())
+		missingInfoKeys = lfilter(lambda key: key.value not in currentInfoKeys, psource_old.getJobKeys())
 		ps_miss = ParameterSource.createInstance('InternalParameterSource', missingInfos, missingInfoKeys)
 		return ParameterSource.createInstance('ChainParameterSource', self._rawSource, ps_miss)
 

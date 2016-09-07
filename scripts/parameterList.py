@@ -73,7 +73,7 @@ class DataSplitProcessorTest:
 repository = {}
 
 def force_intervention():
-	for dp in repository:
+	for dp in repository.values():
 		dp.intervention = (set([1]), set([0]), True)
 
 def process_intervention(opts, psource):
@@ -133,7 +133,7 @@ def setup_dataset(config, dataset):
 	config = config.changeView(setSections = None)
 	partProcessor = config.getCompositePlugin('partition processor',
 		'TFCPartitionProcessor LocationPartitionProcessor MetaPartitionProcessor BasicPartitionProcessor',
-		'MultiPartitionProcessor', cls = 'PartitionProcessor', onChange = None)
+		'MultiPartitionProcessor', cls = 'PartitionProcessor', onChange = None, pargs = ('dataset',))
 	ParameterSource.createInstance('DataParameterSource', config.getWorkPath(), 'data',
 		None, dataSplitter, partProcessor, repository)
 
@@ -142,13 +142,13 @@ def get_psource(opts, args):
 	config = setup_config(opts, args)
 	if opts.factory:
 		config.set('parameter factory', opts.factory)
-	pm = config.getPlugin('internal parameter factory', 'BasicParameterFactory', cls = 'ParameterFactory', pargs = (repository,))
+	pm = config.getPlugin('internal parameter factory', 'BasicParameterFactory', cls = 'ParameterFactory')
 	if opts.dataset:
 		setup_dataset(config, opts.dataset)
 	adapter = 'BasicParameterAdapter'
 	if opts.persistent:
 		adapter = 'TrackedParameterAdapter'
-	return ParameterAdapter.createInstance(adapter, config, pm.getSource())
+	return ParameterAdapter.createInstance(adapter, config, pm.getSource(repository))
 
 def get_parameters(opts, psource):
 	result = []
@@ -182,8 +182,8 @@ def list_parameters(opts, psource):
 	(result, needGCParam) = get_parameters(opts, psource)
 	enabledOutput = opts.output.split(',')
 	output = lfilter(lambda k: not opts.output or k in enabledOutput, psource.getJobKeys())
-	stored = lfilter(lambda k: k.untracked == False, output)
-	untracked = lfilter(lambda k: k.untracked == True, output)
+	stored = lmap(lambda k: k.value, ifilter(lambda k: k.untracked == False, output))
+	untracked = lmap(lambda k: k.value, ifilter(lambda k: k.untracked == True, output))
 
 	if opts.collapse > 0:
 		result_old = result
@@ -224,7 +224,6 @@ def list_parameters(opts, psource):
 	head.extend(sorted(izip(stored, stored)))
 	if opts.untracked:
 		head.extend(sorted(imap(lambda n: (n, '(%s)' % n), ifilter(lambda n: n not in ['GC_PARAM', 'GC_JOB_ID'], untracked))))
-	log.info('')
 	utils.printTabular(head, result)
 
 def main(opts, args):

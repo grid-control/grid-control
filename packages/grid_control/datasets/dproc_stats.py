@@ -16,15 +16,15 @@ from grid_control.datasets.dproc_base import DataProcessor
 from grid_control.datasets.provider_base import DataProvider
 
 class StatsDataProcessor(DataProcessor):
-	def __init__(self, config, onChange):
-		DataProcessor.__init__(self, config, onChange)
+	def __init__(self, config, datasource_name, onChange):
+		DataProcessor.__init__(self, config, datasource_name, onChange)
 
 	def _reset(self):
 		self._entries = 0
 		self._blocks = 0
 		self._files = 0
 
-	def processBlock(self, block):
+	def process_block(self, block):
 		if block:
 			self._blocks += 1
 			self._files += len(block[DataProvider.FileList])
@@ -33,11 +33,11 @@ class StatsDataProcessor(DataProcessor):
 
 
 class SimpleStatsDataProcessor(StatsDataProcessor):
-	def __init__(self, config, onChange, log, msg):
-		StatsDataProcessor.__init__(self, config, onChange)
+	def __init__(self, config, datasource_name, onChange, log, msg):
+		StatsDataProcessor.__init__(self, config, datasource_name, onChange)
 		(self._log, self._msg) = (log, msg)
 
-	def _getStats(self):
+	def _get_stats(self):
 		stats = []
 		def addStat(value, singular, plural):
 			if stats:
@@ -53,8 +53,8 @@ class SimpleStatsDataProcessor(StatsDataProcessor):
 		addStat(self._entries, 'entry', 'entries')
 		return str.join(' ', stats)
 
-	def process(self, blockIter):
+	def process(self, block_iter):
 		self._reset()
-		for block in StatsDataProcessor.process(self, blockIter):
+		for block in StatsDataProcessor.process(self, block_iter):
 			yield block
-		self._log.info('%s%s', self._msg, self._getStats() or 'nothing!')
+		self._log.info('%s%s', self._msg, self._get_stats() or 'nothing!')

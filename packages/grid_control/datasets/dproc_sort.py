@@ -19,34 +19,34 @@ from python_compat import itemgetter, sort_inplace, sorted
 class SortingDataProcessor(DataProcessor):
 	alias = ['sort']
 
-	def __init__(self, config, onChange):
-		DataProcessor.__init__(self, config, onChange)
-		self._sortDS = config.getBool('dataset sort', False, onChange = onChange)
-		self._sortBlock = config.getBool('dataset block sort', False, onChange = onChange)
-		self._sortFiles = config.getBool('dataset files sort', False, onChange = onChange)
-		self._sortLocation = config.getBool('dataset location sort', False, onChange = onChange)
+	def __init__(self, config, datasource_name, onChange):
+		DataProcessor.__init__(self, config, datasource_name, onChange)
+		self._sort_ds = config.getBool('%s sort' % datasource_name, False, onChange = onChange)
+		self._sort_block = config.getBool('%s block sort' % datasource_name, False, onChange = onChange)
+		self._sort_files = config.getBool('%s files sort' % datasource_name, False, onChange = onChange)
+		self._sort_location = config.getBool('%s location sort' % datasource_name, False, onChange = onChange)
 
 	def enabled(self):
-		return self._sortDS or self._sortBlock or self._sortFiles or self._sortLocation
+		return self._sort_ds or self._sort_block or self._sort_files or self._sort_location
 
-	def process(self, blockIter):
-		if self._sortDS:
+	def process(self, block_iter):
+		if self._sort_ds:
 			dsCache = {}
-			for block in blockIter:
+			for block in block_iter:
 				dsCache.setdefault(block[DataProvider.Dataset], []).append(block)
 			def ds_generator():
 				for ds in sorted(dsCache):
-					if self._sortBlock:
+					if self._sort_block:
 						sort_inplace(dsCache[ds], key = itemgetter(DataProvider.BlockName))
 					for block in dsCache[ds]:
 						yield block
-			blockIter = ds_generator()
-		elif self._sortBlock:
-			blockIter = sorted(blockIter, key = itemgetter(DataProvider.BlockName))
+			block_iter = ds_generator()
+		elif self._sort_block:
+			block_iter = sorted(block_iter, key = itemgetter(DataProvider.BlockName))
 		# Yield blocks
-		for block in blockIter:
-			if self._sortFiles:
+		for block in block_iter:
+			if self._sort_files:
 				sort_inplace(block[DataProvider.FileList], key = itemgetter(DataProvider.URL))
-			if self._sortLocation:
+			if self._sort_location:
 				sort_inplace(block[DataProvider.Locations])
 			yield block

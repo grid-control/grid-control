@@ -23,16 +23,16 @@ from python_compat import sorted
 class ConfigDataProvider(DataProvider):
 	alias = ['config']
 
-	def __init__(self, config, datasetExpr, datasetNick = None):
-		DataProvider.__init__(self, config, datasetExpr, datasetNick)
+	def __init__(self, config, datasource_name, dataset_expr, dataset_nick = None):
+		DataProvider.__init__(self, config, datasource_name, dataset_expr, dataset_nick)
 
-		ds_config = config.changeView(viewClass = 'SimpleConfigView', setSections = ['datasource %s' % datasetExpr])
-		self._block = self._readBlockFromConfig(ds_config, datasetExpr, datasetNick)
+		ds_config = config.changeView(viewClass = 'SimpleConfigView', setSections = ['datasource %s' % dataset_expr])
+		self._block = self._readBlockFromConfig(ds_config, dataset_expr, dataset_nick)
 
 		def onChange(config, old_obj, cur_obj, cur_entry, obj2str):
-			self._log.critical('Dataset %r changed', datasetExpr)
+			self._log.critical('Dataset %r changed', dataset_expr)
 			return triggerResync(['datasets', 'parameters'])(config, old_obj, cur_obj, cur_entry, obj2str)
-		ds_config.get('dataset hash', self.getHash(), persistent = True, onChange = onChange)
+		ds_config.get('%s hash' % datasource_name, self.getHash(), persistent = True, onChange = onChange)
 
 
 	def _readFileFromConfig(self, ds_config, url, metadata_keys, common_metadata, common_prefix):
@@ -50,18 +50,18 @@ class ConfigDataProvider(DataProvider):
 		return fi
 
 
-	def _createBlockInfo(self, ds_config, datasetExpr, datasetNick):
-		datasetNameParts = datasetExpr.split('#', 1)
+	def _createBlockInfo(self, ds_config, dataset_expr, dataset_nick):
+		datasetNameParts = dataset_expr.split('#', 1)
 		if len(datasetNameParts) == 1:
 			datasetNameParts.append('0')
 		return {
-			DataProvider.Nickname: ds_config.get('nickname', datasetNick or '', onChange = None),
+			DataProvider.Nickname: ds_config.get('nickname', dataset_nick or '', onChange = None),
 			DataProvider.Dataset: datasetNameParts[0],
 			DataProvider.BlockName: datasetNameParts[1],
 		}
 
 
-	def _readBlockFromConfig(self, ds_config, datasetExpr, datasetNick):
+	def _readBlockFromConfig(self, ds_config, dataset_expr, dataset_nick):
 		metadata_keys = parseJSON(ds_config.get('metadata', '[]', onChange = None))
 		common_metadata = parseJSON(ds_config.get('metadata common', '[]', onChange = None))
 		if len(common_metadata) > len(metadata_keys):
@@ -78,9 +78,9 @@ class ConfigDataProvider(DataProvider):
 			elif url not in ['dataset hash', 'metadata', 'metadata common', 'nickname', 'prefix']:
 				file_list.append(self._readFileFromConfig(ds_config, url, metadata_keys, common_metadata, common_prefix))
 		if not file_list:
-			raise DatasetError('There are no dataset files specified for dataset %r' % datasetExpr)
+			raise DatasetError('There are no dataset files specified for dataset %r' % dataset_expr)
 
-		result = self._createBlockInfo(ds_config, datasetExpr, datasetNick)
+		result = self._createBlockInfo(ds_config, dataset_expr, dataset_nick)
 		result[DataProvider.FileList] = sorted(file_list, key = lambda fi: fi[DataProvider.URL])
 		if metadata_keys:
 			result[DataProvider.Metadata] = metadata_keys

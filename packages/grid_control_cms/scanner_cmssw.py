@@ -43,16 +43,16 @@ def readList(base, container, items):
 
 
 class ObjectsFromCMSSW(InfoScanner):
-	def __init__(self, config):
-		InfoScanner.__init__(self, config)
-		self._importParents = config.getBool('include parent infos', False, onChange = triggerResync(['datasets', 'parameters']))
-		self._mergeKey = 'CMSSW_CONFIG_FILE'
+	def __init__(self, config, datasource_name):
+		InfoScanner.__init__(self, config, datasource_name)
+		self._import_parents = config.getBool('include parent infos', False, onChange = triggerResync(['datasets', 'parameters']))
+		self._merge_key = 'CMSSW_CONFIG_FILE'
 		if config.getBool('merge config infos', True, onChange = triggerResync(['datasets', 'parameters'])):
-			self._mergeKey = 'CMSSW_CONFIG_HASH'
-		self._cfgStore = {}
-		self._gtStore = {}
-		self._regexAnnotation = re.compile(r'.*annotation.*=.*cms.untracked.string.*\((.*)\)')
-		self._regexDataTier = re.compile(r'.*dataTier.*=.*cms.untracked.string.*\((.*)\)')
+			self._merge_key = 'CMSSW_CONFIG_HASH'
+		self._stored_config = {}
+		self._stored_globaltag = {}
+		self._regex_annotation = re.compile(r'.*annotation.*=.*cms.untracked.string.*\((.*)\)')
+		self._regex_datatier = re.compile(r'.*dataTier.*=.*cms.untracked.string.*\((.*)\)')
 
 	def _processCfg(self, tar, cfg):
 		cfgSummary = {}
@@ -60,27 +60,27 @@ class ObjectsFromCMSSW(InfoScanner):
 		cfgHashResult = bytes2str(tar.extractfile('%s/hash' % cfg).read()).splitlines()
 		cfgHash = cfgHashResult[-1].strip()
 		cfgSummary = {'CMSSW_CONFIG_FILE': cfg, 'CMSSW_CONFIG_HASH': cfgHash}
-		cfgSummary['CMSSW_CONFIG_CONTENT'] = self._cfgStore.setdefault(cfgSummary[self._mergeKey], cfgContent)
+		cfgSummary['CMSSW_CONFIG_CONTENT'] = self._stored_config.setdefault(cfgSummary[self._merge_key], cfgContent)
 		# Read global tag from config file - first from hash file, then from config file
-		if cfgHash not in self._gtStore:
+		if cfgHash not in self._stored_globaltag:
 			gtLines = lfilter(lambda x: x.startswith('globaltag:'), cfgHashResult)
 			if gtLines:
-				self._gtStore[cfgHash] = gtLines[-1].split(':')[1].strip()
-		if cfgHash not in self._gtStore:
+				self._stored_globaltag[cfgHash] = gtLines[-1].split(':')[1].strip()
+		if cfgHash not in self._stored_globaltag:
 			try:
 				cfgContentEnv = utils.execWrapper(cfgContent)
-				self._gtStore[cfgHash] = cfgContentEnv['process'].GlobalTag.globaltag.value()
+				self._stored_globaltag[cfgHash] = cfgContentEnv['process'].GlobalTag.globaltag.value()
 			except Exception:
-				self._gtStore[cfgHash] = 'unknown:All'
-		cfgSummary['CMSSW_GLOBALTAG'] = self._gtStore[cfgHash]
+				self._stored_globaltag[cfgHash] = 'unknown:All'
+		cfgSummary['CMSSW_GLOBALTAG'] = self._stored_globaltag[cfgHash]
 		# Get annotation from config content
 		def searchConfigFile(key, regex, default):
 			try:
 				cfgSummary[key] = regex.search(cfgContent).group(1).strip('\"\' ') or default
 			except Exception:
 				cfgSummary[key] = default
-		searchConfigFile('CMSSW_ANNOTATION', self._regexAnnotation, None)
-		searchConfigFile('CMSSW_DATATIER', self._regexDataTier, 'USER')
+		searchConfigFile('CMSSW_ANNOTATION', self._regex_annotation, None)
+		searchConfigFile('CMSSW_DATATIER', self._regex_datatier, 'USER')
 		cfgReport = xml.dom.minidom.parseString(bytes2str(tar.extractfile('%s/report.xml' % cfg).read()))
 		evRead = sum(imap(lambda x: int(readTag(x, 'EventsRead')), cfgReport.getElementsByTagName('InputFile')))
 		return (cfgSummary, cfgReport, evRead)
@@ -97,7 +97,7 @@ class ObjectsFromCMSSW(InfoScanner):
 		fileSummary['CMSSW_LUMIS'] = lumis
 
 		# Read parent infos
-		if self._importParents:
+		if self._import_parents:
 			inputs = readList(outputFile, 'Inputs', 'Input')
 			fileSummary.update({'CMSSW_PARENT_PFN': [], 'CMSSW_PARENT_LFN': []})
 
@@ -152,14 +152,14 @@ class ObjectsFromCMSSW(InfoScanner):
 
 
 class MetadataFromCMSSW(InfoScanner):
-	def __init__(self, config):
-		InfoScanner.__init__(self, config)
-		self.includeConfig = config.getBool('include config infos', False, onChange = triggerResync(['datasets', 'parameters']))
+	def __init__(self, config, datasource_name):
+		InfoScanner.__init__(self, config, datasource_name)
+		self._include_config = config.getBool('include config infos', False, onChange = triggerResync(['datasets', 'parameters']))
 
 	def getEntries(self, path, metadata, events, seList, objStore):
 		cmssw_files_dict = objStore.get('CMSSW_FILES', {})
 		metadata.update(cmssw_files_dict.get(metadata.get('SE_OUTPUT_FILE'), {}))
-		if self.includeConfig:
+		if self._include_config:
 			cmssw_config_dict = objStore.get('CMSSW_CONFIG', {})
 			metadata.update(cmssw_config_dict.get(metadata.get('CMSSW_CONFIG_FILE'), {}))
 		yield (path, metadata, events, seList, objStore)
@@ -185,13 +185,13 @@ class SEListFromPath(InfoScanner):
 
 
 class LFNFromPath(InfoScanner):
-	def __init__(self, config):
-		InfoScanner.__init__(self, config)
-		self.stripPath = config.get('lfn marker', '/store/', onChange = triggerResync(['datasets', 'parameters']))
+	def __init__(self, config, datasource_name):
+		InfoScanner.__init__(self, config, datasource_name)
+		self._strip_path = config.get('lfn marker', '/store/', onChange = triggerResync(['datasets', 'parameters']))
 
 	def getEntries(self, path, metadata, events, seList, objStore):
-		if self.stripPath and self.stripPath in path:
-			yield (self.stripPath + path.split(self.stripPath, 1)[1], metadata, events, seList, objStore)
+		if self._strip_path and self._strip_path in path:
+			yield (self._strip_path + path.split(self._strip_path, 1)[1], metadata, events, seList, objStore)
 		else:
 			yield (path, metadata, events, seList, objStore)
 

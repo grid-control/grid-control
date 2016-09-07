@@ -514,7 +514,7 @@
 
        * grid_control.parameters.psource_devel CombineParameterSource combine
 
-      * grid_control.parameters.psource_meta ZipShortParameterSource
+      * grid_control.parameters.psource_meta ZipShortParameterSource szip
 
      * grid_control.parameters.psource_meta ChainParameterSource chain
 
