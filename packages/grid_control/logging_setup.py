@@ -308,5 +308,7 @@ def logging_setup(config):
 	for logger_name in logger_names:
 		logging_create_handlers(config, logger_name)
 
+	logging.getLogger().addHandler(ProcessArchiveHandler(config.getWorkPath('error.tar')))
+
 	if display_logger:
 		dump_log_setup(logging.WARNING)

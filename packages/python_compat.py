@@ -62,20 +62,20 @@ except Exception:
 		>>> rsplit('a.b.c.d.e.f.g', '.', 2)
 		['a.b.c.d.e', 'f', 'g']
 		"""
-		tmp = x.split(sep)
-		if len(tmp) > 1:
-			return [str.join(sep, tmp[:len(tmp)-maxsplit])] + tmp[len(tmp)-maxsplit:]
-		return tmp
+		str_parts = x.split(sep)
+		if len(str_parts) > 1:
+			return [str.join(sep, str_parts[:len(str_parts)-maxsplit])] + str_parts[len(str_parts)-maxsplit:]
+		return str_parts
 
 try:	# sorted >= Python 2.4
 	sorted = get_compat('__builtin__.sorted', 'builtins.sorted')
-	def sort_inplace(unsortedList, key = identity):
-		unsortedList.sort(key = key)
+	def sort_inplace(unsorted_iterable, key = identity):
+		unsorted_iterable.sort(key = key)
 except Exception:
 	builtin_cmp = get_compat('__builtin__.cmp')
-	def sort_inplace(unsortedList, key = identity):
-		unsortedList.sort(lambda a, b: builtin_cmp(key(a), key(b)))
-	def sorted(unsortedList, key = None, reverse = False):
+	def sort_inplace(unsorted_iterable, key = identity):
+		unsorted_iterable.sort(lambda a, b: builtin_cmp(key(a), key(b)))
+	def sorted(unsorted_iterable, key = None, reverse = False):
 		""" Sort list by either using the function key that returns
 		the key to sort by - default is the identity function.
 		>>> sorted([4, 3, 1, 5, 2])
@@ -85,14 +85,14 @@ except Exception:
 		>>> sorted(['spam', 'ham', 'cheese'], key=len)
 		['ham', 'spam', 'cheese']
 		"""
-		tmp = list(unsortedList)
+		unsorted_list = list(unsorted_iterable)
 		if key:
-			sort_inplace(tmp, key = key)
+			sort_inplace(unsorted_list, key = key)
 		else:
-			tmp.sort()
+			unsorted_list.sort()
 		if reverse:
-			tmp.reverse()
-		return tmp
+			unsorted_list.reverse()
+		return unsorted_list
 
 try:	# any >= Python 2.5
 	any = get_compat('__builtin__.any', 'builtins.any')

@@ -17,12 +17,13 @@ from grid_control.utils.thread_tools import GCEvent, GCLock, GCQueue, create_thr
 from hpfwk import AbstractError, get_current_exception
 from python_compat import bytes2str, imap, set, str2bytes
 
-def waitFD(read = None, write = None, timeout = 0.2):
+def wait_fd(read = None, write = None, timeout = 0.2):
 	return select.select(read or [], write or [], [], timeout)
 
 
 class ProcessError(Exception):
 	pass
+
 
 class ProcessTimeout(ProcessError):
 	pass
@@ -89,21 +90,21 @@ class ProcessReadStream(ProcessStream):
 		return result
 
 	def iter(self, timeout, timeout_soft = False, timeout_shutdown = 10):
-		waitedForShutdown = False
+		waited_for_shutdown = False
 		while True:
 			# yield lines from buffer
 			while self._iter_buffer.find('\n') != -1:
-				posEOL = self._iter_buffer.find('\n')
+				pos_eol = self._iter_buffer.find('\n')
 				if self._log is not None:
-					self._log += self._iter_buffer[:posEOL + 1]
-				yield self._iter_buffer[:posEOL + 1]
-				self._iter_buffer = self._iter_buffer[posEOL + 1:]
+					self._log += self._iter_buffer[:pos_eol + 1]
+				yield self._iter_buffer[:pos_eol + 1]
+				self._iter_buffer = self._iter_buffer[pos_eol + 1:]
 			# block until new data in buffer / timeout or process is finished
 			tmp = self._buffer.get(timeout, default = '')
 			if tmp: # new data
 				self._iter_buffer += tmp
-			elif self._event_shutdown.is_set() and not waitedForShutdown: # shutdown in progress
-				waitedForShutdown = True
+			elif self._event_shutdown.is_set() and not waited_for_shutdown: # shutdown in progress
+				waited_for_shutdown = True
 				self._event_finished.wait(timeout_shutdown, 'process shutdown to complete') # wait for shutdown to complete
 			elif self._event_finished.is_set() or timeout_soft:
 				break # process finished / soft timeout
@@ -268,7 +269,7 @@ class LocalProcess(Process):
 
 		pid = os.fork()
 		self._time_started = time.time()
-		self._time_ended = None
+		self._time_finished = None
 		if pid == 0: # We are in the child process - redirect streams and exec external program
 			from grid_control.utils.process_child import run_process
 			run_process(self._cmd, [self._cmd] + self._args, fd_child_stdin, fd_child_stdout, fd_child_stderr, self._env)
@@ -297,7 +298,7 @@ class LocalProcess(Process):
 				(result_pid, status) = (pid, False) # False == 'OS_ABORT'
 			if result_pid == pid:
 				self._status = status
-		self._time_ended = time.time()
+		self._time_finished = time.time()
 		self._event_shutdown.set() # start shutdown of handlers and wait for it to finish
 		self._buffer_stdin.finish() # wakeup process input handler
 		thread_in.join()
@@ -310,19 +311,19 @@ class LocalProcess(Process):
 		self._event_finished.set()
 
 	def _handle_output(cls, fd, buffer, event_shutdown):
-		def readToBuffer():
+		def read_to_buffer():
 			while True:
 				try:
-					tmp = bytes2str(os.read(fd, 32*1024))
+					tmp = bytes2str(os.read(fd, 32 * 1024))
 				except OSError:
 					tmp = ''
 				if not tmp:
 					break
 				buffer.put(tmp)
 		while not event_shutdown.is_set():
-			waitFD(read = [fd])
-			readToBuffer()
-		readToBuffer() # Final readout after process finished
+			wait_fd(read = [fd])
+			read_to_buffer()
+		read_to_buffer() # Final readout after process finished
 	_handle_output = classmethod(_handle_output)
 
 	def _handle_input(cls, fd, buffer, event_shutdown):
@@ -333,7 +334,7 @@ class LocalProcess(Process):
 			else: # empty local buffer - wait for data to process
 				local_buffer = buffer.get(timeout = 1, default = '')
 			if local_buffer:
-				waitFD(write = [fd])
+				wait_fd(write = [fd])
 				if not event_shutdown.is_set():
 					try:
 						written = os.write(fd, str2bytes(local_buffer))
