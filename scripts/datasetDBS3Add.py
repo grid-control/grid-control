@@ -46,8 +46,8 @@ def create_dbs3_json_files(opts, block_info, block_dump):
 		})
 
 		# add file parentage information
-		block_dump['file_parent_list'].extend(imap(lambda parent_lfn:
-			{'logical_file_name': lfn, 'parent_logical_file_name': parent_lfn}, metadata_info['CMSSW_PARENT_LFN']))
+		#block_dump['file_parent_list'].extend(imap(lambda parent_lfn: 
+		#	{'logical_file_name': lfn, 'parent_logical_file_name': parent_lfn}, metadata_info['CMSSW_PARENT_LFN'])) ## Not working so far. Need futher fixes
 
 		# fill file / dataset configurations
 		dataset_conf_dict = {'release_version': metadata_info['CMSSW_VERSION'],
@@ -254,7 +254,7 @@ def filter_blocks(opts, blocks):
 
 def dump_dbs3_json(dn, block_dump_iter):
 	for blockDump in block_dump_iter:
-		fp = open(os.path.join(dn, blockDump['block']['block_name'] + '.json'), 'w')
+		fp = open(os.path.join(dn, blockDump['block']['block_name'].strip('/').replace('/','_') + '.json'), 'w')
 		json.dump(blockDump, fp)
 		fp.close()
 
