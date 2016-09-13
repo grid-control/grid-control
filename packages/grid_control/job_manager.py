@@ -30,8 +30,9 @@ class JobManager(NamedPlugin):
 
 	def __init__(self, config, name, task, eventhandler):
 		NamedPlugin.__init__(self, config, name)
-		(self._task, self._eventhandler) = (task, eventhandler)
+		self._eventhandler = eventhandler
 		self._log = logging.getLogger('jobs.manager')
+		self._error_dict = dict(task.errorDict)
 
 		self._njobs_limit = config.getInt('jobs', -1, onChange = None)
 		self._njobs_inflight = config.getInt('in flight', -1, onChange = None)
@@ -46,9 +47,9 @@ class JobManager(NamedPlugin):
 		self._timeout_queue = config.getTime('queue timeout', -1, onChange = None)
 		self._job_retries = config.getInt('max retry', -1, onChange = None)
 
-		selected = JobSelector.create(config.get('selected', '', onChange = None), task = self._task)
+		selected = JobSelector.create(config.get('selected', '', onChange = None), task = task)
 		self.jobDB = config.getPlugin('job database', 'TextFileJobDB',
-			cls = JobDB, pargs = (self._get_max_jobs(self._task), selected), onChange = None)
+			cls = JobDB, pargs = (self._get_max_jobs(task), selected), onChange = None)
 		self._disabled_jobs_logfile = config.getWorkPath('disabled')
 		self._outputProcessor = config.getPlugin('output processor', 'SandboxProcessor',
 			cls = TaskOutputProcessor)
@@ -60,6 +61,10 @@ class JobManager(NamedPlugin):
 		self._show_blocker = True
 
 
+	def finish(self):
+		self._eventhandler.onFinish()
+
+
 	def _get_chunk_size(self, user_size, default = -1):
 		if self._chunks_enabled and (user_size > 0):
 			return user_size
@@ -68,7 +73,7 @@ class JobManager(NamedPlugin):
 
 	def _get_max_jobs(self, task):
 		njobs_user = self._njobs_limit
-		njobs_task = task.getMaxJobs()
+		njobs_task = task.get_job_len()
 		if njobs_task is None: # Task module doesn't define a maximum number of jobs
 			if njobs_user < 0: # User didn't specify a maximum number of jobs
 				raise ConfigError('Task module doesn\'t provide max number of Jobs. User specified number of jobs needed!')
@@ -122,8 +127,8 @@ class JobManager(NamedPlugin):
 			retCode = jobObj.get('retcode')
 			if retCode:
 				msg.append('error code: %d' % retCode)
-				if self._log.isEnabledFor(logging.DEBUG) and (retCode in self._task.errorDict):
-					msg.append(self._task.errorDict[retCode])
+				if self._log.isEnabledFor(logging.DEBUG) and (retCode in self._error_dict):
+					msg.append(self._error_dict[retCode])
 			if jobObj.get('dest'):
 				msg.append(jobObj.get('dest'))
 			if len(msg):
@@ -141,12 +146,12 @@ class JobManager(NamedPlugin):
 		return dict(imap(lambda jobnum: (self.jobDB.getJob(jobnum).gcID, jobnum), jobnum_list))
 
 
-	def _get_enabled_jobs(self, jobnum_list_ready):
+	def _get_enabled_jobs(self, task, jobnum_list_ready):
 		(n_mod_ok, n_retry_ok, jobnum_list_enabled) = (0, 0, [])
 		for jobnum in jobnum_list_ready:
 			job_obj = self.jobDB.getJobTransient(jobnum)
 			can_retry = (self._job_retries < 0) or (job_obj.attempt - 1 < self._job_retries)
-			can_submit = self._task.canSubmit(jobnum)
+			can_submit = task.can_submit(jobnum)
 			if can_retry:
 				n_retry_ok += 1
 			if can_submit:
@@ -160,10 +165,10 @@ class JobManager(NamedPlugin):
 		return (n_mod_ok, n_retry_ok, jobnum_list_enabled)
 
 
-	def _submit_get_jobs(self):
+	def _submit_get_jobs(self, task):
 		# Get list of submittable jobs
 		jobnum_list_ready = self.jobDB.getJobs(ClassSelector(JobClass.SUBMIT_CANDIDATES))
-		(n_mod_ok, n_retry_ok, jobnum_list) = self._get_enabled_jobs(jobnum_list_ready)
+		(n_mod_ok, n_retry_ok, jobnum_list) = self._get_enabled_jobs(task, jobnum_list_ready)
 
 		if self._show_blocker and jobnum_list_ready and not jobnum_list: # No submission but ready jobs
 			err = []
@@ -187,13 +192,13 @@ class JobManager(NamedPlugin):
 		return sorted(jobnum_list)[:submit]
 
 
-	def submit(self, wms):
-		jobnum_list = self._submit_get_jobs()
+	def submit(self, task, wms):
+		jobnum_list = self._submit_get_jobs(task)
 		if len(jobnum_list) == 0:
 			return False
 
 		submitted = []
-		for (jobnum, gcID, data) in wms.submitJobs(jobnum_list, self._task):
+		for (jobnum, gcID, data) in wms.submitJobs(jobnum_list, task):
 			submitted.append(jobnum)
 			job_obj = self.jobDB.getJobPersistent(jobnum)
 
@@ -250,7 +255,7 @@ class JobManager(NamedPlugin):
 		return (change, timeoutList, reported)
 
 
-	def check(self, wms):
+	def check(self, task, wms):
 		jobList = self._sample(self.jobDB.getJobs(ClassSelector(JobClass.PROCESSING)), utils.QM(self._chunks_enabled, self._chunks_check, -1))
 
 		# Check jobs in the joblist and return changes, timeouts and successfully reported jobs
@@ -265,16 +270,16 @@ class JobManager(NamedPlugin):
 		if len(timeoutList):
 			change = True
 			self._log.warning('Timeout for the following jobs:')
-			self.cancel(wms, timeoutList, interactive = False, showJobs = True)
+			self.cancel(task, wms, timeoutList, interactive = False, showJobs = True)
 
 		# Process task interventions
-		self._processIntervention(wms, self._task.getIntervention())
+		self._processIntervention(task, wms)
 
 		# Quit when all jobs are finished
 		if self.jobDB.getJobsN(ClassSelector(JobClass.ENDSTATE)) == len(self.jobDB):
 			self._log_disabled_jobs()
 			self._eventhandler.onTaskFinish(len(self.jobDB))
-			if self._task.canFinish():
+			if task.can_finish():
 				self._log.log_time(logging.INFO, 'Task successfully completed. Quitting grid-control!')
 				utils.abort(True)
 
@@ -285,7 +290,7 @@ class JobManager(NamedPlugin):
 		return lmap(lambda jobNum: (self.jobDB.getJob(jobNum).gcID, jobNum), jobList)
 
 
-	def retrieve(self, wms):
+	def retrieve(self, task, wms):
 		change = False
 		jobList = self._sample(self.jobDB.getJobs(ClassSelector(JobClass.DONE)), utils.QM(self._chunks_enabled, self._chunks_retrieve, -1))
 
@@ -302,7 +307,7 @@ class JobManager(NamedPlugin):
 				state = Job.FAILED
 
 			if state == Job.SUCCESS:
-				if not self._outputProcessor.process(outputdir, self._task):
+				if not self._outputProcessor.process(outputdir, task):
 					retCode = 108
 					state = Job.FAILED
 
@@ -319,11 +324,11 @@ class JobManager(NamedPlugin):
 		return change
 
 
-	def cancel(self, wms, jobnum_list, interactive, showJobs):
+	def cancel(self, task, wms, jobnum_list, interactive, showJobs):
 		if len(jobnum_list) == 0:
 			return
 		if showJobs:
-			self._reportClass(self.jobDB, self._task, jobnum_list).display()
+			self._reportClass(self.jobDB, task, jobnum_list).display()
 		if interactive and not utils.getUserBool('Do you really want to cancel these jobs?', True):
 			return
 
@@ -344,34 +349,34 @@ class JobManager(NamedPlugin):
 		if gcID_jobnum_map:
 			jobnum_list = list(gcID_jobnum_map.values())
 			self._log.warning('There was a problem with cancelling the following jobs:')
-			self._reportClass(self.jobDB, self._task, jobnum_list).display()
+			self._reportClass(self.jobDB, task, jobnum_list).display()
 			if (not interactive) or utils.getUserBool('Do you want to mark them as cancelled?', True):
 				lmap(mark_cancelled, jobnum_list)
 		if interactive:
 			utils.wait(2)
 
 
-	def delete(self, wms, select):
-		selector = AndJobSelector(ClassSelector(JobClass.PROCESSING), JobSelector.create(select, task = self._task))
+	def delete(self, task, wms, select):
+		selector = AndJobSelector(ClassSelector(JobClass.PROCESSING), JobSelector.create(select, task = task))
 		jobs = self.jobDB.getJobs(selector)
 		if jobs:
 			self._log.warning('Cancelling the following jobs:')
-			self.cancel(wms, jobs, interactive = self._interactive_delete, showJobs = True)
+			self.cancel(task, wms, jobs, interactive = self._interactive_delete, showJobs = True)
 
 
-	def reset(self, wms, select):
-		jobs = self.jobDB.getJobs(JobSelector.create(select, task = self._task))
+	def reset(self, task, wms, select):
+		jobs = self.jobDB.getJobs(JobSelector.create(select, task = task))
 		if jobs:
 			self._log.warning('Resetting the following jobs:')
-			self._reportClass(self.jobDB, self._task, jobs).display()
+			self._reportClass(self.jobDB, task, jobs).display()
 			if self._interactive_reset or utils.getUserBool('Are you sure you want to reset the state of these jobs?', False):
-				self.cancel(wms, self.jobDB.getJobs(ClassSelector(JobClass.PROCESSING), jobs), interactive = False, showJobs = False)
+				self.cancel(task, wms, self.jobDB.getJobs(ClassSelector(JobClass.PROCESSING), jobs), interactive = False, showJobs = False)
 				for jobNum in jobs:
 					self.jobDB.commit(jobNum, Job())
 
 
 	# Process changes of job states requested by task module
-	def _processIntervention(self, wms, jobChanges):
+	def _processIntervention(self, task, wms):
 		def resetState(jobs, newState):
 			jobSet = set(jobs)
 			for jobNum in jobs:
@@ -385,22 +390,22 @@ class JobManager(NamedPlugin):
 				output = (Job.enum2str(newState), str.join(', ', imap(str, jobSet)))
 				raise JobError('For the following jobs it was not possible to reset the state to %s:\n%s' % output)
 
-		(redo, disable, sizeChange) = jobChanges
-		if (not redo) and (not disable) and (not sizeChange):
+		(redo, disable, size_change) = task.getIntervention()
+		if (not redo) and (not disable) and (not size_change):
 			return
 		self._log.log_time(logging.INFO, 'The task module has requested changes to the job database')
-		newMaxJobs = self._get_max_jobs(self._task)
+		newMaxJobs = self._get_max_jobs(task)
 		applied_change = False
 		if newMaxJobs != len(self.jobDB):
 			self._log.log_time(logging.INFO, 'Number of jobs changed from %d to %d', len(self.jobDB), newMaxJobs)
 			self.jobDB.setJobLimit(newMaxJobs)
 			applied_change = True
 		if redo:
-			self.cancel(wms, self.jobDB.getJobs(ClassSelector(JobClass.PROCESSING), redo), interactive = False, showJobs = True)
+			self.cancel(task, wms, self.jobDB.getJobs(ClassSelector(JobClass.PROCESSING), redo), interactive = False, showJobs = True)
 			resetState(redo, Job.INIT)
 			applied_change = True
 		if disable:
-			self.cancel(wms, self.jobDB.getJobs(ClassSelector(JobClass.PROCESSING), disable), interactive = False, showJobs = True)
+			self.cancel(task, wms, self.jobDB.getJobs(ClassSelector(JobClass.PROCESSING), disable), interactive = False, showJobs = True)
 			resetState(disable, Job.DISABLED)
 			applied_change = True
 		if applied_change:
@@ -429,8 +434,8 @@ class SimpleJobManager(JobManager):
 		self._unreachableGoal = False
 
 
-	def _submit_get_jobs(self):
-		result = JobManager._submit_get_jobs(self)
+	def _submit_get_jobs(self, task):
+		result = JobManager._submit_get_jobs(self, task)
 		if self._verify:
 			return result[:self._submit_get_jobs_throttled(len(result))]
 		return result

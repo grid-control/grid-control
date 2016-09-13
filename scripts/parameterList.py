@@ -47,7 +47,7 @@ log = logging.getLogger()
 
 # Create dataset parameter source
 class DummySplitter:
-	def getMaxJobs(self):
+	def get_job_len(self):
 		return 3
 	def getSplitInfo(self, pNum):
 		mkEntry = lambda ds, fl, n, nick: { DataSplitter.Dataset: ds, DataSplitter.Nickname: nick,
@@ -57,7 +57,7 @@ class DummySplitter:
 		return tmp[pNum]
 
 class DataSplitProcessorTest:
-	def getKeys(self):
+	def get_partition_parameter_metadata(self):
 		return lmap(lambda k: ParameterMetadata(k, untracked=True),
 			['DATASETINFO', 'DATASETPATH', 'DATASETBLOCK', 'DATASETNICK'])
 
@@ -138,7 +138,7 @@ def setup_dataset(config, dataset):
 		None, dataSplitter, partProcessor, repository)
 
 # Initialize ParameterFactory and ParameterSource
-def get_psource(opts, args):
+def get_psrc(opts, args):
 	config = setup_config(opts, args)
 	if opts.factory:
 		config.set('parameter factory', opts.factory)
@@ -148,14 +148,14 @@ def get_psource(opts, args):
 	adapter = 'BasicParameterAdapter'
 	if opts.persistent:
 		adapter = 'TrackedParameterAdapter'
-	return ParameterAdapter.createInstance(adapter, config, pm.getSource(repository))
+	return ParameterAdapter.createInstance(adapter, config, pm.get_source(repository))
 
 def get_parameters(opts, psource):
 	result = []
 	needGCParam = False
-	if psource.getMaxJobs() is not None:
+	if psource.get_job_len() is not None:
 		countActive = 0
-		for info in psource.iterJobs():
+		for info in psource.iter_jobs():
 			if info[ParameterInfo.ACTIVE]:
 				countActive += 1
 			if opts.disabled or info[ParameterInfo.ACTIVE]:
@@ -165,23 +165,23 @@ def get_parameters(opts, psource):
 					needGCParam = True
 				result.append(info)
 		if opts.parseable:
-			log.info('Count,%d,%d', countActive, psource.getMaxJobs())
+			log.info('Count,%d,%d', countActive, psource.get_job_len())
 		else:
-			log.info('Number of parameter points: %d', psource.getMaxJobs())
-			if countActive != psource.getMaxJobs():
+			log.info('Number of parameter points: %d', psource.get_job_len())
+			if countActive != psource.get_job_len():
 				log.info('Number of active parameter points: %d', countActive)
 	else:
 		job = 123
 		if opts.job is not None:
 			job = int(opts.job)
 		log.info('Unbounded parameter space found - showing parameters for job %d', job)
-		result.append(psource.getJobInfo(job))
+		result.append(psource.get_job_content(job))
 	return (result, needGCParam)
 
 def list_parameters(opts, psource):
 	(result, needGCParam) = get_parameters(opts, psource)
 	enabledOutput = opts.output.split(',')
-	output = lfilter(lambda k: not opts.output or k in enabledOutput, psource.getJobKeys())
+	output = lfilter(lambda k: not opts.output or k in enabledOutput, psource.get_job_metadata())
 	stored = lmap(lambda k: k.value, ifilter(lambda k: k.untracked == False, output))
 	untracked = lmap(lambda k: k.value, ifilter(lambda k: k.untracked == True, output))
 
@@ -227,7 +227,7 @@ def list_parameters(opts, psource):
 	utils.printTabular(head, result)
 
 def main(opts, args):
-	psource = get_psource(opts, args)
+	psource = get_psrc(opts, args)
 
 	if opts.show_sources:
 		sys.stdout.write(str.join('\n', psource.show()) + '\n\n')

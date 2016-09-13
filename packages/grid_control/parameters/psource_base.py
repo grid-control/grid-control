@@ -29,6 +29,9 @@ class ParameterMetadata(object):
 	def __init__(self, value, untracked = False):
 		(self.value, self.untracked) = (value, untracked)
 
+	def __repr__(self):
+		return self.get_value()
+
 	def get_value(self):
 		if self.untracked:
 			return '!' + self.value
@@ -48,20 +51,26 @@ class ParameterSource(Plugin):
 		self._log = logging.getLogger('parameters.source')
 		Plugin.__init__(self)
 
-	def canFinish(self):
+	def can_finish(self):
 		return True
 
 	def depends(self):
 		return []
 
-	def getMaxParameters(self):
+	def fill_parameter_content(self, pNum, result):
+		raise AbstractError
+
+	def fill_parameter_metadata(self, result):
+		raise AbstractError
+
+	def get_hash(self):
+		raise AbstractError
+
+	def get_parameter_len(self):
 		return None
 
-	def fillParameterKeys(self, result):
-		raise AbstractError
-
-	def fillParameterInfo(self, pNum, result):
-		raise AbstractError
+	def get_used_psrc_list(self):
+		return [self]
 
 	def resync(self): # only needed if the parameters are opaque references (like partition idx)
 		return ParameterSource.EmptyResyncResult()
@@ -69,19 +78,13 @@ class ParameterSource(Plugin):
 	def show(self):
 		return [self.__class__.__name__ + ':']
 
-	def getUsedSources(self):
-		return [self]
-
-	def getHash(self):
-		raise AbstractError
-
 
 class ImmutableParameterSource(ParameterSource):
 	def __init__(self, hash_src_list):
 		ParameterSource.__init__(self)
 		self._hash = md5_hex(repr(hash_src_list))
 
-	def getHash(self):
+	def get_hash(self):
 		return self._hash
 
 
@@ -90,16 +93,7 @@ class LimitedResyncParameterSource(ParameterSource):
 		ParameterSource.__init__(self)
 		(self._resyncInterval, self._resyncForce, self._resyncLast) = (0, False, time.time())
 
-	def resyncSetup(self, interval = None, force = None):
-		if interval is not None:
-			self._resyncInterval = interval
-		if force is not None:
-			self._resyncForce = force
-
-	def _resync_enabled(self):
-		return self._resyncForce or (self._resyncInterval >= 0 and (abs(time.time() - self._resyncLast) >= self._resyncInterval))
-
-	def getHash(self):
+	def get_hash(self):
 		if self._resync_enabled():
 			return md5_hex(repr(time.time()))
 		return self._hash
@@ -112,8 +106,17 @@ class LimitedResyncParameterSource(ParameterSource):
 			self._resyncLast = time.time()
 		return result or ParameterSource.EmptyResyncResult()
 
+	def resyncSetup(self, interval = None, force = None):
+		if interval is not None:
+			self._resyncInterval = interval
+		if force is not None:
+			self._resyncForce = force
+
 	def _resync(self):
 		pass
+
+	def _resync_enabled(self):
+		return self._resyncForce or (self._resyncInterval >= 0 and (abs(time.time() - self._resyncLast) >= self._resyncInterval))
 
 
 class NullParameterSource(ParameterSource):
@@ -123,14 +126,14 @@ class NullParameterSource(ParameterSource):
 		return cls()
 	create = classmethod(create)
 
-	def fillParameterKeys(self, result):
-		pass
-
-	def fillParameterInfo(self, pNum, result):
-		pass
-
-	def getHash(self):
-		return ''
-
 	def __repr__(self):
 		return 'null()'
+
+	def fill_parameter_content(self, pNum, result):
+		pass
+
+	def fill_parameter_metadata(self, result):
+		pass
+
+	def get_hash(self):
+		return ''

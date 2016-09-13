@@ -27,9 +27,9 @@ class MultiWMS(WMS):
 		self._timing = Result(waitOnIdle = defaultT.waitOnIdle, waitBetweenSteps = defaultT.waitBetweenSteps)
 		self._wmsMap = {self._defaultWMS.getObjectName().lower(): self._defaultWMS}
 		for wmsEntry in wmsList[1:]:
-			wmsObj = wmsEntry
-			self._wmsMap[wmsObj.getObjectName().lower()] = wmsObj
-			wmsT = wmsObj.getTimings()
+			wms_obj = wmsEntry
+			self._wmsMap[wms_obj.getObjectName().lower()] = wms_obj
+			wmsT = wms_obj.getTimings()
 			self._timing.waitOnIdle = max(self._timing.waitOnIdle, wmsT.waitOnIdle)
 			self._timing.waitBetweenSteps = max(self._timing.waitBetweenSteps, wmsT.waitBetweenSteps)
 
@@ -41,10 +41,10 @@ class MultiWMS(WMS):
 		return self._timing
 
 
-	def canSubmit(self, neededTime, canCurrentlySubmit):
-		canCurrentlySubmit = self._defaultWMS.canSubmit(neededTime, canCurrentlySubmit)
-		for wmsObj in self._wmsMap.values():
-			canCurrentlySubmit = wmsObj.canSubmit(neededTime, canCurrentlySubmit)
+	def can_submit(self, neededTime, canCurrentlySubmit):
+		canCurrentlySubmit = self._defaultWMS.can_submit(neededTime, canCurrentlySubmit)
+		for wms_obj in self._wmsMap.values():
+			canCurrentlySubmit = wms_obj.can_submit(neededTime, canCurrentlySubmit)
 		return canCurrentlySubmit
 
 
@@ -53,15 +53,15 @@ class MultiWMS(WMS):
 
 
 	def deployTask(self, task, monitor, transferSE, transferSB):
-		for wmsObj in self._wmsMap.values():
-			wmsObj.deployTask(task, monitor, transferSE, transferSB)
+		for wms_obj in self._wmsMap.values():
+			wms_obj.deployTask(task, monitor, transferSE, transferSB)
 
 
 	def submitJobs(self, jobNumList, task):
 		def chooseBackend(jobNum):
 			jobReq = self._brokerWMS.brokerAdd(task.getRequirements(jobNum), WMS.BACKEND)
 			return list(dict(jobReq).get(WMS.BACKEND))[0]
-		return self._forwardCall(jobNumList, chooseBackend, lambda wmsObj, args: wmsObj.submitJobs(args, task))
+		return self._forwardCall(jobNumList, chooseBackend, lambda wms_obj, args: wms_obj.submitJobs(args, task))
 
 
 	def _findBackend(self, gcID_jobNum):
@@ -70,24 +70,23 @@ class MultiWMS(WMS):
 
 	def checkJobs(self, gcIDs):
 		tmp = lmap(lambda gcID: (gcID, None), gcIDs)
-		return self._forwardCall(tmp, self._findBackend, lambda wmsObj, args: wmsObj.checkJobs(lmap(lambda x: x[0], args)))
+		return self._forwardCall(tmp, self._findBackend, lambda wms_obj, args: wms_obj.checkJobs(lmap(lambda x: x[0], args)))
 
 
 	def cancelJobs(self, gcIDs):
 		tmp = lmap(lambda gcID: (gcID, None), gcIDs)
-		return self._forwardCall(tmp, self._findBackend, lambda wmsObj, args: wmsObj.cancelJobs(lmap(lambda x: x[0], args)))
+		return self._forwardCall(tmp, self._findBackend, lambda wms_obj, args: wms_obj.cancelJobs(lmap(lambda x: x[0], args)))
 
 
 	def retrieveJobs(self, gcID_jobNum_List):
-		return self._forwardCall(gcID_jobNum_List, self._findBackend, lambda wmsObj, args: wmsObj.retrieveJobs(args))
+		return self._forwardCall(gcID_jobNum_List, self._findBackend, lambda wms_obj, args: wms_obj.retrieveJobs(args))
 
 
 	def _getMapID2Backend(self, args, assignFun):
 		argMap = {}
+		default_backend = self._defaultWMS.getObjectName()
 		for arg in args: # Assign args to backends
-			backend = assignFun(arg)
-			if not backend:
-				backend = self._defaultWMS.getObjectName()
+			backend = assignFun(arg) or default_backend
 			argMap.setdefault(backend.lower(), []).append(arg)
 		return argMap
 

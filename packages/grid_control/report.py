@@ -22,21 +22,22 @@ class Report(Plugin):
 	def __init__(self, jobDB = None, task = None, jobs = None, configString = ''):
 		if jobs is None:
 			jobs = jobDB.getJobs()
-		(self._jobDB, self._task, self._jobs) = (jobDB, task, jobs)
+		(self._jobDB, self._jobs, self._task_id, self._task_name) = (jobDB, jobs, '', '')
+		if task is not None:
+			(self._task_id, self._task_name) = (task.taskID, task.taskConfigName)
 		# FIXME: really store task for later access? maybe just use task during init run?
 		self._header = self._getHeader(45)
 		self._log = logging.getLogger('report')
 
 	def _getHeader(self, maxLen = 45):
-		if not self._task or not self._task.taskConfigName:
-			return ''
-		tmp = self._task.taskConfigName + ' / ' + self._task.taskID
-		if len(tmp) < maxLen:
+		tmp = self._task_name + ' / ' + self._task_id
+		if self._task_id and self._task_name and (len(tmp) < maxLen):
 			return tmp
-		tmp = self._task.taskConfigName
-		if len(tmp) < maxLen:
-			return tmp
-		return self._task.taskID
+		elif self._task_name and (len(self._task_name) < maxLen):
+			return self._task_name
+		elif self._task_id:
+			return self._task_id
+		return ''
 
 	def getHeight(self):
 		return 0

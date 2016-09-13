@@ -37,8 +37,7 @@ class OutputDirsFromConfig(InfoScanner):
 		ext_config = create_config(ext_config_fn, useDefaultFiles = True).changeView(setSections = ['global'])
 		self._ext_work_dir = ext_config.getWorkPath()
 		logging.getLogger().disabled = True
-		self._ext_workflow = ext_config.getPlugin('workflow', 'Workflow:global', cls = 'Workflow',
-			pargs = ('task',))
+		self._ext_workflow = ext_config.getPlugin('workflow', 'Workflow:global', cls = 'Workflow', pargs = ('task',))
 		logging.getLogger().disabled = False
 		self._ext_task = self._ext_workflow.task
 		selector = config.get('source job selector', '', onChange = triggerDataResync)

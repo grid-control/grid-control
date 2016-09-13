@@ -54,7 +54,7 @@ class MultiDatasetProvider(DataProvider):
 
 
 	def getBlocks(self, show_stats):
-		statsProcessor = NullDataProcessor(config = None, datasource_name = 'dataset', onChange = None)
+		statsProcessor = NullDataProcessor()
 		if show_stats:
 			statsProcessor = self._stats
 		if self._cache_block is None:

@@ -49,5 +49,5 @@ class JobDef(object):
 		other.files.extend(self.files)
 		# FIX requirements!
 
-	def getHash(self):
+	def get_hash(self):
 		return None

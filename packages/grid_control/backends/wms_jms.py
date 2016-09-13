@@ -44,7 +44,7 @@ class JMS_CheckJobs(CheckJobsWithProcess):
 				job_info[CheckInfo.WN] = tmp[14]
 			yield job_info
 
-	def _handleError(self, proc):
+	def _handle_error(self, proc):
 		self._filter_proc_log(proc, self._errormsg, blacklist = ['not in queue', 'tput: No value for $TERM'])
 
 

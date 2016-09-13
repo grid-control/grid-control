@@ -53,10 +53,10 @@ class Condor_CheckJobs(CheckJobsWithProcess):
 				job_info[key] = value
 		yield job_info
 
-	def _handleError(self, proc):
+	def _handle_error(self, proc):
 		if proc.status(timeout = 0) and ('Failed to fetch ads' in proc.stderr.read_log()):
 			self._status = CheckStatus.ERROR
-		CheckJobsWithProcess._handleError(self, proc)
+		CheckJobsWithProcess._handle_error(self, proc)
 
 
 class Condor_CancelJobs(CancelJobsWithProcess):

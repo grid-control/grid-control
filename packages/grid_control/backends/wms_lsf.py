@@ -45,7 +45,7 @@ class LSF_CheckJobs(CheckJobsWithProcess):
 			except Exception:
 				raise BackendError('Error reading job info:\n%s' % line)
 
-	def _handleError(self, proc):
+	def _handle_error(self, proc):
 		self._filter_proc_log(proc, self._errormsg, blacklist = ['is not found'])
 
 

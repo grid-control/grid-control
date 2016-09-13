@@ -107,13 +107,14 @@ strTimeShort = lambda secs: strTime(secs, '%d:%0.2d:%0.2d')
 strGuid = lambda guid: '%s-%s-%s-%s-%s' % (guid[:8], guid[8:12], guid[12:16], guid[16:20], guid[20:])
 
 
-def strDict(d, order = None):
-	if not order:
-		order = sorted(d.keys())
+def strDict(d, keys_order = None):
+	keys_sorted = sorted(d.keys(), key = repr)
+	if keys_order is None:
+		keys_order = keys_sorted
 	else:
-		order = list(order)
-	order.extend(ifilter(lambda x: x not in order, d.keys()))
-	return str.join(', ', imap(lambda k: '%s = %s' % (k, repr(d[k])), order))
+		keys_order = list(keys_order)
+	keys_order.extend(ifilter(lambda x: x not in keys_order, keys_sorted))
+	return str.join(', ', imap(lambda k: '%s = %s' % (k, repr(d.get(k))), keys_order))
 
 
 def strDictLong(value, parser = identity, strfun = str):

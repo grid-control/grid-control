@@ -39,7 +39,7 @@ class AccessToken(NamedPlugin):
 	def getAuthFiles(self):
 		raise AbstractError
 
-	def canSubmit(self, neededTime, canCurrentlySubmit):
+	def can_submit(self, neededTime, canCurrentlySubmit):
 		raise AbstractError
 
 
@@ -60,9 +60,9 @@ class MultiAccessToken(AccessToken):
 	def getAuthFiles(self):
 		return self._subtokenList[0].getAuthFiles()
 
-	def canSubmit(self, neededTime, canCurrentlySubmit):
+	def can_submit(self, neededTime, canCurrentlySubmit):
 		for subtoken in self._subtokenList:
-			canCurrentlySubmit = canCurrentlySubmit and subtoken.canSubmit(neededTime, canCurrentlySubmit)
+			canCurrentlySubmit = canCurrentlySubmit and subtoken.can_submit(neededTime, canCurrentlySubmit)
 		return canCurrentlySubmit
 
 
@@ -82,7 +82,7 @@ class TrivialAccessToken(AccessToken):
 	def getAuthFiles(self):
 		return []
 
-	def canSubmit(self, neededTime, canCurrentlySubmit):
+	def can_submit(self, neededTime, canCurrentlySubmit):
 		return True
 
 
@@ -95,7 +95,7 @@ class TimedAccessToken(AccessToken):
 		self._ignoreTime = config.getBool(['ignore walltime', 'ignore needed time'], False, onChange = None)
 		self._lastUpdate = 0
 
-	def canSubmit(self, neededTime, canCurrentlySubmit):
+	def can_submit(self, neededTime, canCurrentlySubmit):
 		if not self._checkTimeleft(self._lowerLimit):
 			raise UserError('Your access token (%s) only has %d seconds left! (Required are %s)' %
 				(self.getObjectName(), self._getTimeleft(cached = True), strTime(self._lowerLimit)))

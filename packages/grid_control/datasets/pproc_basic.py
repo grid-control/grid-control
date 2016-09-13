@@ -31,14 +31,14 @@ class BasicPartitionProcessor(PartitionProcessor):
 	def _formatFileList(self, fl):
 		return str.join(' ', fl)
 
-	def getKeys(self):
+	def get_partition_parameter_metadata(self):
 		result = lmap(lambda k: ParameterMetadata(k, untracked = True), [
 			self._vn_file_names, self._vn_max_events, self._vn_skip_events,
 			self._vn_prefix + 'PATH', self._vn_prefix + 'BLOCK', self._vn_prefix + 'NICK'])
 		result.append(ParameterMetadata(self._vn_prefix + 'SPLIT', untracked = False))
 		return result
 
-	def getNeededKeys(self, splitter):
+	def get_needed_keys(self, splitter):
 		enumMap = {
 			DataSplitter.FileList: self._vn_file_names,
 			DataSplitter.NEntries: self._vn_max_events,
@@ -99,7 +99,7 @@ class MetaPartitionProcessor(PartitionProcessor):
 		self._metadata = config.getList(['partition metadata', '%s partition metadata' % datasource_name],
 			[], onChange = None)
 
-	def getKeys(self):
+	def get_partition_parameter_metadata(self):
 		return lmap(lambda k: ParameterMetadata(k, untracked = True), self._metadata)
 
 	def enabled(self):

@@ -260,5 +260,5 @@ class ConfigContainer(object):
 		entryChain = ichain([self._content.get(option, []), self._content_default.get(option, {}).values()])
 		return ifilter(filterExpr, entryChain)
 
-	def getKeys(self):
+	def get_options(self):
 		return sorted(set(ichain([self._content.keys(), self._content_default.keys()])))

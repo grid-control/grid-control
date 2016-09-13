@@ -42,7 +42,7 @@ class DataTask(TaskModule):
 		# Register signal handler for manual dataset refresh
 		def externalRefresh(sig, frame):
 			for psrc in psrc_list:
-				self._log.info('External signal triggered resync of datasource %r' % psrc.get_name())
+				self._log.info('External signal triggered resync of datasource %r', psrc.get_name())
 				psrc.resyncSetup(force = True)
 		signal.signal(signal.SIGUSR2, externalRefresh)
 
@@ -74,7 +74,7 @@ class DataTask(TaskModule):
 				data_refresh = max(data_refresh, dataProvider.queryLimit())
 				self._log.info('Dataset source will be queried every %s', strTime(data_refresh))
 			data_ps.resyncSetup(interval = data_refresh, force = config.getState('resync', detail = 'datasets'))
-			if dataSplitter.getMaxJobs() == 0:
+			if dataSplitter.get_job_len() == 0:
 				if data_refresh < 0:
 					raise UserError('Currently used dataset does not provide jobs to process')
 				self._log.warning('Currently used dataset does not provide jobs to process')

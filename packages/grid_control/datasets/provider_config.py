@@ -23,8 +23,8 @@ from python_compat import sorted
 class ConfigDataProvider(DataProvider):
 	alias = ['config']
 
-	def __init__(self, config, datasource_name, dataset_expr, dataset_nick = None):
-		DataProvider.__init__(self, config, datasource_name, dataset_expr, dataset_nick)
+	def __init__(self, config, datasource_name, dataset_expr, dataset_nick = None, dataset_proc = None):
+		DataProvider.__init__(self, config, datasource_name, dataset_expr, dataset_nick, dataset_proc)
 
 		ds_config = config.changeView(viewClass = 'SimpleConfigView', setSections = ['datasource %s' % dataset_expr])
 		self._block = self._readBlockFromConfig(ds_config, dataset_expr, dataset_nick)
@@ -32,7 +32,7 @@ class ConfigDataProvider(DataProvider):
 		def onChange(config, old_obj, cur_obj, cur_entry, obj2str):
 			self._log.critical('Dataset %r changed', dataset_expr)
 			return triggerResync(['datasets', 'parameters'])(config, old_obj, cur_obj, cur_entry, obj2str)
-		ds_config.get('%s hash' % datasource_name, self.getHash(), persistent = True, onChange = onChange)
+		ds_config.get('%s hash' % datasource_name, self.get_hash(), persistent = True, onChange = onChange)
 
 
 	def _readFileFromConfig(self, ds_config, url, metadata_keys, common_metadata, common_prefix):

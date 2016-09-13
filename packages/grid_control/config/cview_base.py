@@ -103,7 +103,7 @@ class HistoricalConfigView(ConfigView):
 		return ConfigEntry(section, option_list[-1], value, opttype, source)
 
 	def _matchEntries(self, container, option_list = None):
-		key_list = container.getKeys()
+		key_list = container.get_options()
 		if option_list is not None:
 			key_list = lfilter(lambda key: key in key_list, option_list)
 

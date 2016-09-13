@@ -23,8 +23,8 @@ from python_compat import lmap, rsplit
 class FileProvider(DataProvider):
 	alias = ['file']
 
-	def __init__(self, config, datasource_name, dataset_expr, dataset_nick = None):
-		DataProvider.__init__(self, config, datasource_name, dataset_expr, dataset_nick)
+	def __init__(self, config, datasource_name, dataset_expr, dataset_nick = None, dataset_proc = None):
+		DataProvider.__init__(self, config, datasource_name, dataset_expr, dataset_nick, dataset_proc)
 
 		(self._path, self._events, selist) = utils.optSplit(dataset_expr, '|@')
 		self._selist = parseList(selist, ',') or None
@@ -54,8 +54,8 @@ def try_apply(value, fun, desc):
 class ListProvider(DataProvider):
 	alias = ['list']
 
-	def __init__(self, config, datasource_name, dataset_expr, dataset_nick = None):
-		DataProvider.__init__(self, config, datasource_name, dataset_expr, dataset_nick)
+	def __init__(self, config, datasource_name, dataset_expr, dataset_nick = None, dataset_proc = None):
+		DataProvider.__init__(self, config, datasource_name, dataset_expr, dataset_nick, dataset_proc)
 		self._common_prefix = max(self.enumValues) + 1
 		self._common_metadata = max(self.enumValues) + 2
 

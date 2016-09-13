@@ -18,6 +18,7 @@ from python_compat import irange, sort_inplace
 
 class CombineParameterSource(ZipLongParameterSource):
 	alias = ['combine']
+
 	def __init__(self, psource1, psource2, var1, var2 = None):
 		psource1_values = {}
 		for (pNum1, value) in self._iterParamItems(psource1, var1):
@@ -32,10 +33,10 @@ class CombineParameterSource(ZipLongParameterSource):
 	def _iterParamItems(self, psource, var):
 		def getValue(psource, pNum, var):
 			result = {}
-			psource.fillParameterInfo(pNum, result)
+			psource.fill_parameter_content(pNum, result)
 			return result.get(var)
-		if psource.getMaxParameters() is None:
+		if psource.get_parameter_len() is None:
 			yield (-1, getValue(psource, None, var))
 		else:
-			for pNum in irange(psource.getMaxParameters()):
+			for pNum in irange(psource.get_parameter_len()):
 				yield (pNum, getValue(psource, pNum, var))

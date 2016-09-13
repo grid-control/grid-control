@@ -20,22 +20,16 @@ from python_compat import identity, ifilter, lmap
 class PartitionEstimator(DataProcessor):
 	alias = ['estimate', 'SplitSettingEstimator']
 
-	def __init__(self, config, datasource_name, onChange):
-		DataProcessor.__init__(self, config, datasource_name, onChange)
-		self._target_jobs = config.getInt(['target partitions', '%s target partitions' % datasource_name], -1, onChange = onChange)
-		self._target_jobs_ds = config.getInt(['target partitions per nickname', '%s target partitions per nickname' % datasource_name], -1, onChange = onChange)
+	def __init__(self, config, datasource_name, on_change):
+		DataProcessor.__init__(self, config, datasource_name, on_change)
+		self._target_jobs = config.getInt(['target partitions', '%s target partitions' % datasource_name], -1, onChange = on_change)
+		self._target_jobs_ds = config.getInt(['target partitions per nickname', '%s target partitions per nickname' % datasource_name], -1, onChange = on_change)
 		self._entries = {None: 0}
 		self._files = {None: 0}
 		self._config = config
 
 	def enabled(self):
 		return (self._target_jobs > 0) or (self._target_jobs_ds > 0)
-
-	def _set_split_opt(self, config, name, work_units, target_partitions):
-		try:
-			config.setInt(name, max(1, int(work_units / float(target_partitions) + 0.5)))
-		except Exception:
-			clear_current_exception()
 
 	def process(self, block_iter):
 		if self.enabled() and not self._config.getState('resync', detail = 'datasets'):
@@ -60,3 +54,9 @@ class PartitionEstimator(DataProcessor):
 		if block.get(DataProvider.Nickname):
 			inc(block.get(DataProvider.Nickname))
 		return block
+
+	def _set_split_opt(self, config, name, work_units, target_partitions):
+		try:
+			config.setInt(name, max(1, int(work_units / float(target_partitions) + 0.5)))
+		except Exception:
+			clear_current_exception()

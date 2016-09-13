@@ -55,7 +55,7 @@ class WMS(NamedPlugin):
 	def getTimings(self): # Return (waitIdle, wait)
 		return utils.Result(waitOnIdle = self._wait_idle, waitBetweenSteps = self._wait_work)
 
-	def canSubmit(self, neededTime, canCurrentlySubmit):
+	def can_submit(self, neededTime, canCurrentlySubmit):
 		raise AbstractError
 
 	def getAccessToken(self, gcID):
@@ -137,8 +137,8 @@ class BasicWMS(WMS):
 			'MultiAccessToken', cls = AccessToken, inherit = True, tags = [self])
 
 
-	def canSubmit(self, neededTime, canCurrentlySubmit):
-		return self._token.canSubmit(neededTime, canCurrentlySubmit)
+	def can_submit(self, neededTime, canCurrentlySubmit):
+		return self._token.can_submit(neededTime, canCurrentlySubmit)
 
 
 	def getAccessToken(self, gcID):
