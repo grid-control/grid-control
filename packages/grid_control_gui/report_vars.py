@@ -23,6 +23,7 @@ class VariablesReport(Report):
 	def __init__(self, jobDB, task, jobs = None, configString = ''):
 		Report.__init__(self, jobDB, task, jobs, configString)
 		self._selector = JobSelector.create(configString, task = task)
+		self._task = task
 
 	def display(self):
 		taskConfig = self._task.getTaskConfig()

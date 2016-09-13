@@ -65,5 +65,8 @@ class NullDataProcessor(DataProcessor):
 	def __init__(self, config = None, datasource_name = None, on_change = None):
 		DataProcessor.__init__(self, config, datasource_name, on_change)
 
+	def __repr__(self):
+		return '%s()' % self.__class__.__name__
+
 	def process_block(self, block):
 		return block
