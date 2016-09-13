@@ -40,9 +40,9 @@ class CancelJobsWithProcess(CancelJobs):
 			if not utils.abort():
 				yield result
 		if proc.status(timeout = 0, terminate = True) != 0:
-			self._handleError(proc)
+			self._handle_error(proc)
 
-	def _handleError(self, proc):
+	def _handle_error(self, proc):
 		self._filter_proc_log(proc, self._errormsg)
 
 
@@ -58,7 +58,7 @@ class CancelJobsWithProcessBlind(CancelJobsWithProcess):
 		proc.status(self._timeout, terminate = True)
 		return lmap(lambda wmsID: (wmsID,), wmsIDs)
 
-	def _handleError(self, proc):
+	def _handle_error(self, proc):
 		self._filter_proc_log(proc, self._errormsg, blacklist = self._blacklist, log_empty = False)
 
 

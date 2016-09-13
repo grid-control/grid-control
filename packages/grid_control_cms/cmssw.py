@@ -51,7 +51,7 @@ class LFNPartitionProcessor(PartitionProcessor):
 	def enabled(self):
 		return self._prefix is not None
 
-	def getKeys(self):
+	def get_partition_parameter_metadata(self):
 		return lmap(lambda k: ParameterMetadata(k, untracked = True), ['DATASET_SRM_FILES'])
 
 	def process(self, pNum, splitInfo, result):
@@ -216,7 +216,7 @@ class CMSSW(SCRAMTask):
 	def _create_datasource(self, config, name, psrc_repository):
 		psrc_data = SCRAMTask._create_datasource(self, config, name, psrc_repository)
 		if psrc_data is not None:
-			self._neededVars.update(psrc_data.getNeededDatasetParameters())
+			self._neededVars.update(psrc_data.get_needed_dataset_keys())
 		return psrc_data
 
 

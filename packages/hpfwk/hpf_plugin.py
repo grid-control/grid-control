@@ -109,19 +109,19 @@ class Plugin(object):
 	def _get_class_from_modules(cls, ec, log, cls_name, cls_module_list, cls_bad_parents):
 		clsLoadedList = []
 		for clsModule in cls_module_list:
-			log.log(logging.DEBUG2, 'Searching for class %s:%s', clsModule.__name__, cls_name)
+			log.log(logging.DEBUG3, 'Searching for class %s:%s', clsModule.__name__, cls_name)
 			try:
 				clsLoadedList.append(getattr(clsModule, cls_name))
 			except Exception:
-				ec.collect(logging.DEBUG2, 'Unable to import class %s:%s', clsModule.__name__, cls_name)
+				ec.collect(logging.DEBUG3, 'Unable to import class %s:%s', clsModule.__name__, cls_name)
 
 		for clsLoaded in clsLoadedList:
 			try:
 				if issubclass(clsLoaded, cls):
-					log.log(logging.DEBUG1, 'Successfully loaded class %s', get_fq_class_name(clsLoaded))
+					log.log(logging.DEBUG, 'Successfully loaded class %s', get_fq_class_name(clsLoaded))
 					yield clsLoaded
 				cls_bad_parents.append(clsLoaded.__name__)
-				log.log(logging.DEBUG, '%s is not of type %s!', get_fq_class_name(clsLoaded), get_fq_class_name(cls))
+				log.log(logging.DEBUG1, '%s is not of type %s!', get_fq_class_name(clsLoaded), get_fq_class_name(cls))
 			except Exception:
 				ec.collect()
 	_get_class_from_modules = classmethod(_get_class_from_modules)
@@ -130,13 +130,13 @@ class Plugin(object):
 		cls_name_parts = cls_name.split('.')
 		cls_name = cls_name_parts[-1]
 		cls_module_name = str.join('.', cls_name_parts[:-1])
-		log.log(logging.DEBUG2, 'Importing module %s', cls_module_name)
+		log.log(logging.DEBUG3, 'Importing module %s', cls_module_name)
 		old_sys_path = list(sys.path)
 		result = []
 		try:
 			result = [__import__(cls_module_name, {}, {}, [cls_name])]
 		except Exception:
-			ec.collect(logging.DEBUG2, 'Unable to import module %s', cls_module_name)
+			ec.collect(logging.DEBUG3, 'Unable to import module %s', cls_module_name)
 		sys.path = old_sys_path
 		return result
 	_get_module = classmethod(_get_module)
@@ -189,7 +189,7 @@ class Plugin(object):
 
 	def getClass(cls, cls_name):
 		log = logging.getLogger('classloader.%s' % cls.__name__.lower())
-		log.log(logging.DEBUG1, 'Loading class %s', cls_name)
+		log.log(logging.DEBUG2, 'Loading class %s', cls_name)
 		if cls_name not in cls._cls_cache.get(cls, {}):
 			for result in cls._get_class_checked(log, cls_name):
 				cls._cls_cache.setdefault(cls, {})[cls_name] = result

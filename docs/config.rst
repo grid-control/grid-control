@@ -6,14 +6,10 @@ global options
 
   * ``config id`` = <text> (default: <config file name w/o extension> or 'unnamed')
     Identifier for the current configuration
-  * ``delete`` = <job selector> (default: '')
-    The unfinished jobs selected by this expression are cancelled.
   * ``package paths`` = <list of paths> (default: '')
     Specify paths to additional grid-control packages with user defined plugins that are outside of the base package directory
   * ``plugin paths`` = <list of paths> (default: '<current directory>')
     Specifies paths that are used to search for plugins
-  * ``reset`` = <job selector> (default: '')
-    The jobs selected by this expression are reset to the INIT state
   * ``variable markers`` = <list of values> (default: '@ __')
     Specifies how variables are marked
   * ``workdir`` = <path> (default: <workdir base>/work.<config file name>)
@@ -394,6 +390,14 @@ TaskExecutableWrapper options
     Path to the executable
   * ``[<prefix>] send executable`` = <boolean> (default: True)
     Toggle to control if the specified executable should be send together with the job
+
+action options
+--------------
+
+  * ``delete`` = <job selector> (default: '')
+    The unfinished jobs selected by this expression are cancelled.
+  * ``reset`` = <job selector> (default: '')
+    The jobs selected by this expression are reset to the INIT state
 
 interactive options
 -------------------

@@ -19,60 +19,39 @@ from grid_control.parameters.psource_lookup import createLookupHelper
 from hpfwk import APIError
 from python_compat import ifilter, imap, irange, lchain, lfilter, lmap, next, reduce
 
-def tokenize(value, tokList):
-	(pos, start) = (0, 0)
-	while pos < len(value):
-		start = pos
-		if (value[pos] == '!') or value[pos].isalpha():
-			pos += 1
-			validChar = lambda c: c.isalnum() or (c in ['_'])
-			while (pos < len(value)) and validChar(value[pos]):
-				pos += 1
-			yield value[start:pos]
-			continue
-		if value[pos].isdigit():
-			while (pos < len(value)) and value[pos].isdigit():
-				pos += 1
-			yield int(value[start:pos])
-			continue
-		if value[pos] in tokList:
-			yield value[pos]
-		pos += 1
-
-
-def tok2inlinetok(tokens, operatorList):
-	token = next(tokens, None)
-	lastTokenExpr = None
-	while token:
-		# insert '*' between two expressions - but not between "<expr> ["
-		if lastTokenExpr and token not in (['[', ']', ')', '>', '}'] + operatorList):
-			yield '*'
-		yield token
-		lastTokenExpr = token not in (['[', '(', '<', '{'] + operatorList)
-		token = next(tokens, None)
-
-
-def clearOPStack(opList, opStack, tokStack):
-	while len(opStack) and (opStack[-1][0] in opList):
-		operator = opStack.pop()
+def clear_operator_stack(operator_list, operator_stack, token_stack):
+	while len(operator_stack) and (operator_stack[-1][0] in operator_list):
+		operator = operator_stack.pop()
 		tmp = []
 		for dummy in irange(len(operator) + 1):
-			tmp.append(tokStack.pop())
+			tmp.append(token_stack.pop())
 		tmp.reverse()
-		tokStack.append((operator[0], tmp))
+		token_stack.append((operator[0], tmp))
+
+
+def tok2inlinetok(token_iter, operator_list):
+	token = next(token_iter, None)
+	prev_token_was_expr = None
+	while token:
+		# insert '*' between two expressions - but not between "<expr> ["
+		if prev_token_was_expr and token not in (['[', ']', ')', '>', '}'] + operator_list):
+			yield '*'
+		yield token
+		prev_token_was_expr = token not in (['[', '(', '<', '{'] + operator_list)
+		token = next(token_iter, None)
 
 
 def tok2tree(value, precedence):
 	value = list(value)
-	errorStr = str.join('', imap(str, value))
-	tokens = iter(value)
-	token = next(tokens, None)
-	tokStack = []
-	opStack = []
+	error_template = str.join('', imap(str, value))
+	token_iter = iter(value)
+	token = next(token_iter, None)
+	token_stack = []
+	operator_stack = []
 
-	def collectNestedTokens(tokens, left, right, errMsg):
+	def collect_nested_tokens(token_iter, left, right, error_msg):
 		level = 1
-		token = next(tokens, None)
+		token = next(token_iter, None)
 		while token:
 			if token == left:
 				level += 1
@@ -81,36 +60,57 @@ def tok2tree(value, precedence):
 				if level == 0:
 					break
 			yield token
-			token = next(tokens, None)
+			token = next(token_iter, None)
 		if level != 0:
-			raise ConfigError(errMsg)
+			raise ConfigError(error_msg)
 
 	while token:
 		if token == '(':
-			tmp = list(collectNestedTokens(tokens, '(', ')', "Parenthesis error: " + errorStr))
-			tokStack.append(tok2tree(tmp, precedence))
+			tmp = list(collect_nested_tokens(token_iter, '(', ')', "Parenthesis error: " + error_template))
+			token_stack.append(tok2tree(tmp, precedence))
 		elif token == '<':
-			tmp = list(collectNestedTokens(tokens, '<', '>', "Parenthesis error: " + errorStr))
-			tokStack.append(('ref', tmp))
+			tmp = list(collect_nested_tokens(token_iter, '<', '>', "Parenthesis error: " + error_template))
+			token_stack.append(('ref', tmp))
 		elif token == '[':
-			tmp = list(collectNestedTokens(tokens, '[', ']', "Parenthesis error: " + errorStr))
-			tokStack.append(('lookup', [tokStack.pop(), tok2tree(tmp, precedence)]))
+			tmp = list(collect_nested_tokens(token_iter, '[', ']', "Parenthesis error: " + error_template))
+			token_stack.append(('lookup', [token_stack.pop(), tok2tree(tmp, precedence)]))
 		elif token == '{':
-			tmp = list(collectNestedTokens(tokens, '{', '}', "Parenthesis error: " + errorStr))
-			tokStack.append(('pspace', tmp))
+			tmp = list(collect_nested_tokens(token_iter, '{', '}', "Parenthesis error: " + error_template))
+			token_stack.append(('pspace', tmp))
 		elif token in precedence:
-			clearOPStack(precedence[token], opStack, tokStack)
-			if opStack and opStack[-1].startswith(token):
-				opStack[-1] = opStack[-1] + token
+			clear_operator_stack(precedence[token], operator_stack, token_stack)
+			if operator_stack and operator_stack[-1].startswith(token):
+				operator_stack[-1] = operator_stack[-1] + token
 			else:
-				opStack.append(token)
+				operator_stack.append(token)
 		else:
-			tokStack.append(token)
-		token = next(tokens, None)
+			token_stack.append(token)
+		token = next(token_iter, None)
 
-	clearOPStack(precedence.keys(), opStack, tokStack)
-	assert(len(tokStack) == 1)
-	return tokStack[0]
+	clear_operator_stack(precedence.keys(), operator_stack, token_stack)
+	assert(len(token_stack) == 1)
+	return token_stack[0]
+
+
+def tokenize(value, token_list):
+	(pos, start) = (0, 0)
+	while pos < len(value):
+		start = pos
+		if (value[pos] == '!') or value[pos].isalpha():
+			pos += 1
+			valid_char = lambda c: c.isalnum() or (c in ['_'])
+			while (pos < len(value)) and valid_char(value[pos]):
+				pos += 1
+			yield value[start:pos]
+			continue
+		if value[pos].isdigit():
+			while (pos < len(value)) and value[pos].isdigit():
+				pos += 1
+			yield int(value[start:pos])
+			continue
+		if value[pos] in token_list:
+			yield value[pos]
+		pos += 1
 
 
 def tree2names(node): # return list of referenced variable names in tree
@@ -129,15 +129,14 @@ class SimpleParameterFactory(UserParameterFactory):
 
 	def __init__(self, config):
 		UserParameterFactory.__init__(self, config)
-		self._nestedSources = [] # Switch statements are elevated to global scope
+		self._psrc_list_nested = [] # Switch statements are elevated to global scope
 		self._precedence = {'*': [], '+': ['*'], ',': ['*', '+']}
 
-
-	def _combineSources(self, clsName, args):
+	def _combine_psrc_list(self, cls_name, args):
 		repeat = reduce(lambda a, b: a * b, ifilter(lambda expr: isinstance(expr, int), args), 1)
 		args = lfilter(lambda expr: not isinstance(expr, int), args)
 		if args:
-			result = ParameterSource.createInstance(clsName, *args)
+			result = ParameterSource.createInstance(cls_name, *args)
 			if repeat > 1:
 				return ParameterSource.createInstance('RepeatParameterSource', result, repeat)
 			return result
@@ -145,73 +144,68 @@ class SimpleParameterFactory(UserParameterFactory):
 			return repeat
 		return NullParameterSource()
 
+	def _create_psrc_pspace(self, args, repository):
+		SubSpaceParameterSource = ParameterSource.getClass('SubSpaceParameterSource')
+		if len(args) == 1:
+			return SubSpaceParameterSource.create(self._parameter_config, repository, args[0])
+		elif len(args) == 3:
+			return SubSpaceParameterSource.create(self._parameter_config, repository, args[2], args[0])
+		else:
+			raise APIError('Invalid subspace reference!: %r' % args)
 
-	def _createVarSource(self, var_list, lookup_list): # create variable source
+	def _create_psrc_ref(self, arg, repository):
+		ref_type_default = 'dataset'
+		DataParameterSource = ParameterSource.getClass('DataParameterSource')
+		if 'dataset:' + arg not in repository:
+			ref_type_default = 'csv'
+		ref_type = self._parameter_config.get(arg, 'type', ref_type_default)
+		if ref_type == 'dataset':
+			return DataParameterSource.create(self._parameter_config, repository, arg)
+		elif ref_type == 'csv':
+			return ParameterSource.getClass('CSVParameterSource').create(self._parameter_config, repository, arg)
+		raise APIError('Unknown reference type: "%s"' % ref_type)
+
+	def _create_psrc_var(self, var_list, lookup_list): # create variable source
 		psource_list = []
-		for (doElevate, PSourceClass, args) in createLookupHelper(self._paramConfig, var_list, lookup_list):
-			if doElevate: # switch needs elevation beyond local scope
-				self._nestedSources.append((PSourceClass, args))
+		for (is_nested, PSourceClass, args) in createLookupHelper(self._parameter_config, var_list, lookup_list):
+			if is_nested: # switch needs elevation beyond local scope
+				self._psrc_list_nested.append((PSourceClass, args))
 			else:
 				psource_list.append(PSourceClass(*args))
 		# Optimize away unnecessary cross operations
 		return ParameterSource.createInstance('CrossParameterSource', *psource_list)
 
-
-	def _createRef(self, arg, repository):
-		refTypeDefault = 'dataset'
-		DataParameterSource = ParameterSource.getClass('DataParameterSource')
-		if 'dataset:' + arg not in repository:
-			refTypeDefault = 'csv'
-		refType = self._paramConfig.get(arg, 'type', refTypeDefault)
-		if refType == 'dataset':
-			return DataParameterSource.create(self._paramConfig, repository, arg)
-		elif refType == 'csv':
-			return ParameterSource.getClass('CSVParameterSource').create(self._paramConfig, repository, arg)
-		raise APIError('Unknown reference type: "%s"' % refType)
-
-
-	def _createPSpace(self, args, repository):
-		SubSpaceParameterSource = ParameterSource.getClass('SubSpaceParameterSource')
-		if len(args) == 1:
-			return SubSpaceParameterSource.create(self._paramConfig, repository, args[0])
-		elif len(args) == 3:
-			return SubSpaceParameterSource.create(self._paramConfig, repository, args[2], args[0])
-		else:
-			raise APIError('Invalid subspace reference!: %r' % args)
-
+	def _get_source_user(self, pexpr, repository):
+		token_iter = tokenize(pexpr, lchain([self._precedence.keys(), list('()[]<>{}')]))
+		token_list = list(tok2inlinetok(token_iter, list(self._precedence.keys())))
+		self._log.debug('Parsing parameter string: "%s"', str.join(' ', imap(str, token_list)))
+		tree = tok2tree(token_list, self._precedence)
+		source = self._tree2expr(tree, repository)
+		for (PSourceClass, args) in self._psrc_list_nested:
+			source = PSourceClass.createInstance(PSourceClass.__name__, source, *args)
+		return source
 
 	def _tree2expr(self, node, repository):
 		if isinstance(node, tuple):
 			(operator, args) = node
 			if operator == 'lookup':
 				assert(len(args) == 2)
-				return self._createVarSource(tree2names(args[0]), tree2names(args[1]))
+				return self._create_psrc_var(tree2names(args[0]), tree2names(args[1]))
 			elif operator == 'ref':
 				assert(len(args) == 1)
-				return self._createRef(args[0], repository)
+				return self._create_psrc_ref(args[0], repository)
 			elif operator == 'pspace':
-				return self._createPSpace(args, repository)
+				return self._create_psrc_pspace(args, repository)
 			else:
 				args_complete = lmap(lambda node: self._tree2expr(node, repository), args)
 				if operator == '*':
-					return self._combineSources('CrossParameterSource', args_complete)
+					return self._combine_psrc_list('CrossParameterSource', args_complete)
 				elif operator == '+':
-					return self._combineSources('ChainParameterSource', args_complete)
+					return self._combine_psrc_list('ChainParameterSource', args_complete)
 				elif operator == ',':
-					return self._combineSources('ZipLongParameterSource', args_complete)
+					return self._combine_psrc_list('ZipLongParameterSource', args_complete)
 				raise APIError('Unknown token: "%s"' % operator)
 		elif isinstance(node, int):
 			return node
 		else:
-			return self._createVarSource([node], None)
-
-
-	def _getUserSource(self, pExpr, repository):
-		tokens = tokenize(pExpr, lchain([self._precedence.keys(), list('()[]<>{}')]))
-		tokens = list(tok2inlinetok(tokens, list(self._precedence.keys())))
-		self._log.debug('Parsing parameter string: "%s"', str.join(' ', imap(str, tokens)))
-		tree = tok2tree(tokens, self._precedence)
-		source = self._tree2expr(tree, repository)
-		for (PSourceClass, args) in self._nestedSources:
-			source = PSourceClass.createInstance(PSourceClass.__name__, source, *args)
-		return source
+			return self._create_psrc_var([node], None)

@@ -56,18 +56,18 @@ class Workflow(NamedPlugin):
 			addSections = ['jobs'], addTags = [self])
 
 		# Initialise monitoring module
-		self.monitor = jobs_config.getCompositePlugin('monitor', 'scripts', 'MultiMonitor',
+		monitor = jobs_config.getCompositePlugin('monitor', 'scripts', 'MultiMonitor',
 			cls = Monitoring, tags = [self, self.task], pargs = (self.task,))
 
 		# Initialise job database
 		self.jobManager = jobs_config.getPlugin('job manager', 'SimpleJobManager',
-			cls = JobManager, tags = [self, self.task, self.wms], pargs = (self.task, self.monitor))
+			cls = JobManager, tags = [self, self.task, self.wms], pargs = (self.task, monitor))
 
 		if abort == 'jobmanager':
 			return
 
 		# Prepare work package
-		self.wms.deployTask(self.task, self.monitor,
+		self.wms.deployTask(self.task, monitor,
 			transferSE = config.getState('init', detail = 'storage'),
 			transferSB = config.getState('init', detail = 'sandbox'))
 
@@ -92,7 +92,7 @@ class Workflow(NamedPlugin):
 		while True:
 			didWait = False
 			# Check whether wms can submit
-			if not self.wms.canSubmit(self._submitTime, self._submitFlag):
+			if not self.wms.can_submit(self._submitTime, self._submitFlag):
 				self._submitFlag = False
 			# Check free disk space
 			spaceLogger = logging.getLogger('workflow.space')
@@ -102,13 +102,13 @@ class Workflow(NamedPlugin):
 			else:
 				for action in imap(str.lower, self._actionList):
 					if action.startswith('c') and not utils.abort():   # check for jobs
-						if self.jobManager.check(self.wms):
+						if self.jobManager.check(self.task, self.wms):
 							didWait = wait(wmsTiming.waitBetweenSteps)
 					elif action.startswith('r') and not utils.abort(): # retrieve finished jobs
-						if self.jobManager.retrieve(self.wms):
+						if self.jobManager.retrieve(self.task, self.wms):
 							didWait = wait(wmsTiming.waitBetweenSteps)
 					elif action.startswith('s') and not utils.abort() and self._submitFlag:
-						if self.jobManager.submit(self.wms):
+						if self.jobManager.submit(self.task, self.wms):
 							didWait = wait(wmsTiming.waitBetweenSteps)
 
 			# quit if abort flag is set or not in continuous mode
@@ -117,7 +117,7 @@ class Workflow(NamedPlugin):
 			# idle timeout
 			if not didWait:
 				wait(wmsTiming.waitOnIdle)
-		self.monitor.onFinish()
+		self.jobManager.finish()
 
 	def run(self):
 		self._gui.displayWorkflow()

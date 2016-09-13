@@ -130,12 +130,12 @@ class DataSplitter(ConfigurablePlugin):
 
 
 	def getSplitInfo(self, jobNum):
-		if jobNum >= self.getMaxJobs():
+		if jobNum >= self.get_job_len():
 			raise PartitionError('Job %d out of range for available dataset' % jobNum)
 		return self._splitSource[jobNum]
 
 
-	def getMaxJobs(self):
+	def get_job_len(self):
 		return self._splitSource.maxJobs
 
 
@@ -145,7 +145,7 @@ class DataSplitter(ConfigurablePlugin):
 			source = list(source)
 			sourceLenHint = len(source)
 		elif not source:
-			(source, sourceLenHint) = (self._splitSource, self.getMaxJobs())
+			(source, sourceLenHint) = (self._splitSource, self.get_job_len())
 		# Write metadata to allow reconstruction of data splitter
 		meta = {'ClassName': self.__class__.__name__}
 		meta.update(self._protocol)
@@ -400,7 +400,7 @@ class DataSplitter(ConfigurablePlugin):
 	def _resyncIterator_raw(self, blocksAdded, blocksMissing, blocksMatching):
 		extList = []
 		# Perform resync of existing partitions
-		for jobNum in irange(self.getMaxJobs()):
+		for jobNum in irange(self.get_job_len()):
 			(splitInfo, modSplitInfo, procMode, extended) = self._resyncExistingPartitions(jobNum, blocksAdded, blocksMissing, blocksMatching)
 			if (self._resyncOrder == ResyncOrder.append) and (procMode == ResyncMode.complete):
 				extList.append(modSplitInfo) # add modified partition to list of new partitions
@@ -475,7 +475,7 @@ class DataSplitter(ConfigurablePlugin):
 		resultDisable = []
 		newSplitPathTMP = newSplitPath + '.tmp'
 		resyncIter = self._resyncIterator(resultRedo, resultDisable, blocksAdded, blocksMissing, blocksMatching)
-		self.savePartitions(newSplitPathTMP, resyncIter, sourceLenHint = self.getMaxJobs(),
+		self.savePartitions(newSplitPathTMP, resyncIter, sourceLenHint = self.get_job_len(),
 			message = 'Performing resynchronization of dataset map (progress is estimated)')
 
 		if self._interactive:

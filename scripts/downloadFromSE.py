@@ -235,7 +235,7 @@ def download_job_output(opts, incInfo, workDir, jobDB, token, jobNum, output):
 	retry = int(jobObj.get('download attempt', 0))
 	failJob = False
 
-	if not token.canSubmit(20*60, True):
+	if not token.can_submit(20*60, True):
 		sys.stderr.write('Please renew access token!')
 		sys.exit(os.EX_UNAVAILABLE)
 

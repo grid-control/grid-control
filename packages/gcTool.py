@@ -17,7 +17,7 @@ import os, sys, signal, logging
 from grid_control import utils
 from grid_control.config import create_config
 from grid_control.gc_exceptions import gc_excepthook
-from grid_control.logging_setup import logging_setup
+from grid_control.logging_setup import logging_setup, parse_logging_args
 from grid_control.utils.activity import Activity
 from grid_control.utils.cmd_options import Options
 from grid_control.utils.file_objects import SafeFile
@@ -68,6 +68,7 @@ def parse_cmd_line(cmd_line_args):
 	logging.getLogger().setLevel(max(1, logging.DEFAULT - opts.verbose))
 	return (opts, args)
 
+
 # Config filler which collects data from command line arguments
 class OptsConfigFiller(Plugin.getClass('ConfigFiller')):
 	def __init__(self, cmd_line_args):
@@ -93,16 +94,15 @@ class OptsConfigFiller(Plugin.getClass('ConfigFiller')):
 		for section in cmd_line_config_map:
 			for (option, value) in cmd_line_config_map[section].items():
 				set_config_from_opt(section, option, value)
-		for entry in opts.logging:
-			tmp = entry.replace(':', '=').split('=')
-			if len(tmp) == 1:
-				tmp.append('DEBUG')
-			set_config_from_opt('logging', tmp[0] + ' level', tmp[1])
+		for (logger_name, logger_level) in parse_logging_args(opts.logging):
+			set_config_from_opt('logging', logger_name + ' level', logger_level)
 		if opts.action is not None:
 			set_config_from_opt('workflow', 'action', opts.action.replace(',', ' '))
 		if opts.continuous:
 			set_config_from_opt('workflow', 'duration', -1)
-		Plugin.createInstance('StringConfigFiller', opts.override).fill(container)
+		if opts.override:
+			Plugin.createInstance('StringConfigFiller', opts.override).fill(container)
+
 
 # create config instance
 def gc_create_config(cmd_line_args = None, **kwargs):
@@ -112,11 +112,19 @@ def gc_create_config(cmd_line_args = None, **kwargs):
 		kwargs.setdefault('additional', []).append(OptsConfigFiller(cmd_line_args))
 	return create_config(register = True, **kwargs)
 
+
 # set up signal handler for interrupts
 def handle_abort_interrupt(signum, frame):
 	utils.abort(True)
 	handle_abort_interrupt.log = Activity('Quitting grid-control! (This can take a few seconds...)', parent = 'root')
 	signal.signal(signum, signal.SIG_DFL)
+
+
+def get_actions(config):
+	action_delete = config.get('delete', '', onChange = None)
+	action_reset = config.get('reset', '', onChange = None)
+	return (action_delete, action_reset)
+
 
 # create workflow from config and do initial processing steps
 def gc_create_workflow(config):
@@ -143,9 +151,7 @@ def gc_create_workflow(config):
 	help_cfg = global_config.getState('display', detail = 'config')
 	help_scfg = global_config.getState('display', detail = 'minimal config')
 
-	action_config = config.changeView(setSections = ['action'])
-	action_delete = action_config.get('delete', '', onChange = None)
-	action_reset = action_config.get('reset', '', onChange = None)
+	(action_delete, action_reset) = get_actions(config.changeView(setSections = ['action']))
 
 	# Create workflow and freeze config settings
 	workflow = global_config.getPlugin('workflow', 'Workflow:global', cls = 'Workflow')
@@ -159,13 +165,14 @@ def gc_create_workflow(config):
 
 	# Check if user requested deletion / reset of jobs
 	if action_delete:
-		workflow.jobManager.delete(workflow.wms, action_delete)
+		workflow.jobManager.delete(workflow.task, workflow.wms, action_delete)
 		sys.exit(os.EX_OK)
 	if action_reset:
-		workflow.jobManager.reset(workflow.wms, action_reset)
+		workflow.jobManager.reset(workflow.task, workflow.wms, action_reset)
 		sys.exit(os.EX_OK)
 
 	return workflow
+
 
 def run(args = None, intro = True):
 	# display the 'grid-control' logo and version

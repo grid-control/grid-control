@@ -108,7 +108,7 @@ class Grid_CheckJobs(CheckJobsWithProcess):
 				self._fill(job_info, key, value)
 		yield job_info
 
-	def _handleError(self, proc):
+	def _handle_error(self, proc):
 		self._filter_proc_log(proc, self._errormsg, discardlist = ['Keyboard interrupt raised by user'])
 
 

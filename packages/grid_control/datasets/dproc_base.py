@@ -18,7 +18,7 @@ from grid_control.utils import prune_processors
 from hpfwk import AbstractError
 
 class DataProcessor(ConfigurablePlugin):
-	def __init__(self, config, datasource_name, onChange):
+	def __init__(self, config, datasource_name, on_change):
 		ConfigurablePlugin.__init__(self, config)
 		self._datasource_name = datasource_name
 		self._log = logging.getLogger('%s.provider.processor' % datasource_name)
@@ -48,9 +48,9 @@ class DataProcessor(ConfigurablePlugin):
 
 
 class MultiDataProcessor(DataProcessor):
-	def __init__(self, config, processorList, datasource_name, onChange):
-		DataProcessor.__init__(self, config, datasource_name, onChange)
-		do_prune = config.getBool('%s processor prune' % datasource_name, True, onChange = onChange)
+	def __init__(self, config, processorList, datasource_name, on_change):
+		DataProcessor.__init__(self, config, datasource_name, on_change)
+		do_prune = config.getBool('%s processor prune' % datasource_name, True, onChange = on_change)
 		self._processor_list = prune_processors(do_prune, processorList, self._log, 'Removed %d inactive dataset processors!')
 
 	def process(self, block_iter):
@@ -61,6 +61,9 @@ class MultiDataProcessor(DataProcessor):
 
 class NullDataProcessor(DataProcessor):
 	alias = ['null']
+
+	def __init__(self, config = None, datasource_name = None, on_change = None):
+		DataProcessor.__init__(self, config, datasource_name, on_change)
 
 	def process_block(self, block):
 		return block

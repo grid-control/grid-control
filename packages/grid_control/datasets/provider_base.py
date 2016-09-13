@@ -27,7 +27,7 @@ class DatasetError(NestedException):
 
 
 class DataProvider(ConfigurablePlugin):
-	def __init__(self, config, datasource_name, dataset_expr, dataset_nick = None):
+	def __init__(self, config, datasource_name, dataset_expr, dataset_nick = None, dataset_proc = None):
 		ConfigurablePlugin.__init__(self, config)
 		self._log = logging.getLogger('%s.provider' % datasource_name)
 		(self._datasource_name, self._dataset_expr, self._dataset_nick) = (datasource_name, dataset_expr, dataset_nick)
@@ -35,11 +35,11 @@ class DataProvider(ConfigurablePlugin):
 		self._dataset_query_interval = config.getTime('%s default query interval' % datasource_name, 60, onChange = None)
 
 		triggerDataResync = triggerResync(['datasets', 'parameters'])
-		self._stats = DataProcessor.createInstance('SimpleStatsDataProcessor', config, datasource_name, triggerDataResync, self._log,
-			' * Dataset %s:\n\tcontains ' % repr(dataset_nick or dataset_expr))
+		self._stats = dataset_proc or DataProcessor.createInstance('SimpleStatsDataProcessor', config, datasource_name,
+			triggerDataResync, self._log, ' * Dataset %s:\n\tcontains ' % repr(dataset_nick or dataset_expr))
 		self._nick_producer = config.getPlugin(['nickname source', '%s nickname source' % datasource_name], 'SimpleNickNameProducer',
 			cls = DataProcessor, pargs = (datasource_name, triggerDataResync), onChange = triggerDataResync)
-		self._dataset_processor = config.getCompositePlugin('%s processor' % datasource_name,
+		self._dataset_processor = dataset_proc or config.getCompositePlugin('%s processor' % datasource_name,
 			'NickNameConsistencyProcessor EntriesConsistencyDataProcessor URLDataProcessor URLCountDataProcessor ' +
 			'EntriesCountDataProcessor EmptyDataProcessor UniqueDataProcessor LocationDataProcessor', 'MultiDataProcessor',
 			cls = DataProcessor, pargs = (datasource_name, triggerDataResync), onChange = triggerDataResync)
@@ -50,6 +50,7 @@ class DataProvider(ConfigurablePlugin):
 		datasource_name = kwargs.pop('datasource_name', 'dataset')
 		defaultProvider = config.get('%s provider' % datasource_name, 'ListProvider')
 
+		instance_args = []
 		for entry in ifilter(str.strip, value.splitlines()):
 			(nickname, provider, dataset) = ('', defaultProvider, None)
 			temp = lmap(str.strip, entry.split(':', 2))
@@ -64,7 +65,11 @@ class DataProvider(ConfigurablePlugin):
 
 			clsNew = cls.getClass(provider)
 			bindValue = str.join(':', [nickname, provider, dataset])
-			yield InstanceFactory(bindValue, clsNew, config, datasource_name, dataset, nickname)
+			instance_args.append([bindValue, clsNew, config, datasource_name, dataset, nickname])
+		for instance_arg in instance_args:
+			if len(instance_args) > 1:
+				instance_arg.append(NullDataProcessor()) # setting dataset_proc
+			yield InstanceFactory(*instance_arg)
 	bind = classmethod(bind)
 
 
@@ -115,7 +120,7 @@ class DataProvider(ConfigurablePlugin):
 
 	# Cached access to list of block dicts, does also the validation checks
 	def getBlocks(self, show_stats):
-		statsProcessor = NullDataProcessor(config = None, datasource_name = 'dataset', onChange = None)
+		statsProcessor = NullDataProcessor()
 		if show_stats:
 			statsProcessor = self._stats
 		if self._cache_block is None:
@@ -178,7 +183,7 @@ class DataProvider(ConfigurablePlugin):
 	_classify_metadata_keys = staticmethod(_classify_metadata_keys)
 
 
-	def getHash(self):
+	def get_hash(self):
 		buffer = StringBuffer()
 		for _ in DataProvider.saveToStream(buffer, self._dataset_processor.process(self.get_blocks_raw())):
 			pass

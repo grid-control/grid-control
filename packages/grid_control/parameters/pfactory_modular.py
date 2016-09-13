@@ -20,22 +20,22 @@ from python_compat import ifilter, sorted
 class ModularParameterFactory(UserParameterFactory):
 	alias = ['modular']
 
-	def _getUserSource(self, pExpr, repository):
+	def _get_source_user(self, pexpr, repository):
 		# Wrap psource factory functions
-		def createWrapper(clsName):
+		def create_wrapper(cls_name):
 			def wrapper(*args):
-				parameterClass = ParameterSource.getClass(clsName)
+				parameterClass = ParameterSource.getClass(cls_name)
 				try:
-					return parameterClass.create(self._paramConfig, repository, *args)
+					return parameterClass.create(self._parameter_config, repository, *args)
 				except Exception:
 					raise ParameterError('Error while creating %r with arguments %r' % (parameterClass.__name__, args))
 			return wrapper
-		userFun = {}
-		for clsInfo in ParameterSource.getClassList():
-			for clsName in ifilter(lambda name: name != 'depth', clsInfo.keys()):
-				userFun[clsName] = createWrapper(clsName)
+		user_functions = {}
+		for cls_info in ParameterSource.getClassList():
+			for cls_name in ifilter(lambda name: name != 'depth', cls_info.keys()):
+				user_functions[cls_name] = create_wrapper(cls_name)
 		try:
-			return eval(pExpr, dict(userFun)) # pylint:disable=eval-used
+			return eval(pexpr, dict(user_functions)) # pylint:disable=eval-used
 		except Exception:
-			self._log.warning('Available functions: %s', sorted(userFun.keys()))
+			self._log.warning('Available functions: %s', sorted(user_functions.keys()))
 			raise

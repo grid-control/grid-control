@@ -22,6 +22,7 @@ from grid_control import utils
 from grid_control.config import create_config
 from grid_control.job_db import Job, JobClass
 from grid_control.job_selector import ClassSelector, JobSelector
+from grid_control.logging_setup import LogLevelEnum, parse_logging_args
 from grid_control.output_processor import FileInfoProcessor, JobInfoProcessor, JobResult
 from grid_control.utils.activity import Activity
 from grid_control.utils.cmd_options import Options
@@ -33,8 +34,11 @@ def scriptOptions(parser, args = None, arg_keys = None):
 	parser.addBool(None, ' ', 'pivot',     default = False, help = 'Output pivoted tabular data')
 	parser.addText(None, ' ', 'textwidth', default = 100,   help = 'Output tabular data with selected width')
 	parser.addAccu(None, 'v', 'verbose',   default = 0,     help = 'Increase verbosity')
+	parser.addList(None, ' ', 'logging',                    help = 'Increase verbosity')
 	(opts, args, config_dict) = parser.parse(args, arg_keys)
 	logging.getLogger().setLevel(logging.DEFAULT - opts.verbose)
+	for (logger_name, logger_level) in parse_logging_args(opts.logging):
+		logging.getLogger(logger_name).setLevel(LogLevelEnum.str2enum(logger_level))
 	if opts.parseable:
 		utils.printTabular.mode = 'parseable'
 	elif opts.pivot:

@@ -59,20 +59,20 @@ if opts.backend_list_nodes or opts.backend_list_queues:
 # DATASET PARTITION
 
 def partition_invalid(splitter):
-	for jobNum in irange(splitter.getMaxJobs()):
+	for jobNum in irange(splitter.get_job_len()):
 		splitInfo = splitter.getSplitInfo(jobNum)
 		if splitInfo.get(DataSplitter.Invalid, False):
 			yield {0: jobNum}
 
 def partition_list(splitter, keyList):
-	for jobNum in irange(splitter.getMaxJobs()):
+	for jobNum in irange(splitter.get_job_len()):
 		splitInfo = splitter.getSplitInfo(jobNum)
 		tmp = lmap(lambda k: (k, splitInfo.get(k, '')), keyList)
 		yield dict([('jobNum', jobNum)] + tmp)
 
 def partition_check(splitter):
 		fail = utils.set()
-		for jobNum in irange(splitter.getMaxJobs()):
+		for jobNum in irange(splitter.get_job_len()):
 			splitInfo = splitter.getSplitInfo(jobNum)
 			try:
 				(events, skip, files) = (0, 0, [])
@@ -115,7 +115,7 @@ if (opts.partition_list is not None) or opts.partition_list_invalid or opts.part
 		utils.printTabular([('jobNum', 'Job')] + lzip(keyList, keyStrings), partition_list(splitter, keyList))
 
 	if opts.partition_check:
-		logging.info('Checking %d jobs...', splitter.getMaxJobs())
+		logging.info('Checking %d jobs...', splitter.get_job_len())
 		partition_check(splitter)
 
 ########################################################

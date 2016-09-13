@@ -19,7 +19,7 @@ from python_compat import any, imap, set, sorted
 
 def getGraph(instance, graph = None, visited = None):
 	graph = graph or {}
-	visited = visited or set()
+
 	children = []
 	for attr in dir(instance):
 		try:
@@ -31,6 +31,8 @@ def getGraph(instance, graph = None, visited = None):
 				children.append(child)
 		except Exception:
 			pass
+
+	visited = visited or set()
 	for child in children:
 		child_module = ''
 		if hasattr(child, '__module__'):
@@ -52,7 +54,8 @@ def getGraph(instance, graph = None, visited = None):
 		if child not in visited:
 			visited.add(child)
 			getGraph(child, graph, visited)
-	return graph
+
+	return (graph, list(visited))
 
 
 def getNodeName(instance, node_names):
@@ -60,9 +63,12 @@ def getNodeName(instance, node_names):
 
 
 def getNodeLabel(instance):
-	names = [instance.__class__.__name__]
+	names = [instance.__class__.__name__, repr(instance)]
 	if hasattr(instance.__class__, 'alias'):
-		names.extend(instance.__class__.alias)
+		if hasattr(instance.__class__, 'tagName'):
+			names.extend(imap(lambda alias: '%s:%s' % (instance.tagName, alias), instance.__class__.alias))
+		elif len(repr(instance)) > len(instance.__class__.__name__):
+			names.extend(instance.__class__.alias)
 	result = sorted(names, key = len)[0]
 	if isinstance(instance, NamedPlugin):
 		if instance.getObjectName().lower() != instance.__class__.__name__.lower():

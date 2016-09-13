@@ -12,7 +12,7 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-import os, random
+import os, random, logging
 from grid_control import utils
 from grid_control.backends import WMS
 from grid_control.config import ConfigError, changeInitNeeded, validNoVar
@@ -25,30 +25,26 @@ from time import strftime, time
 from python_compat import ichain, ifilter, imap, izip, lchain, lmap, lru_cache, md5_hex
 
 class JobNamePlugin(ConfigurablePlugin):
-	def __init__(self, config, task):
-		ConfigurablePlugin.__init__(self, config)
-		self._task = task
-
-	def getName(self, jobNum):
+	def getName(self, task, jobNum):
 		raise AbstractError
 
 
 class DefaultJobName(JobNamePlugin):
 	alias = ['default']
 
-	def getName(self, jobNum):
-		return self._task.taskID[:10] + '.' + str(jobNum)
+	def getName(self, task, jobNum):
+		return task.taskID[:10] + '.' + str(jobNum)
 
 
 class ConfigurableJobName(JobNamePlugin):
 	alias = ['config']
 
-	def __init__(self, config, task):
+	def __init__(self, config):
 		JobNamePlugin.__init__(self, config, task)
 		self._name = config.get('job name', '@GC_TASK_ID@.@GC_JOB_ID@', onChange = None)
 
-	def getName(self, jobNum):
-		return self._task.substVars('job name', self._name, jobNum)
+	def getName(self, task, jobNum):
+		return task.substVars('job name', self._name, jobNum)
 
 
 class TaskModule(NamedPlugin):
@@ -73,8 +69,7 @@ class TaskModule(NamedPlugin):
 		self.taskID = config.get('task id', 'GC' + md5_hex(str(time()))[:12], persistent = True)
 		self.taskDate = config.get('task date', strftime('%Y-%m-%d'), persistent = True, onChange = initSandbox)
 		self.taskConfigName = config.getConfigName()
-		self._job_name_generator = config.getPlugin('job name generator', 'DefaultJobName',
-			cls = JobNamePlugin, pargs = (self,))
+		self._job_name_generator = config.getPlugin('job name generator', 'DefaultJobName', cls = JobNamePlugin)
 
 		# Storage setup
 		storage_config = config.changeView(viewClass = 'TaggedConfigView',
@@ -106,7 +101,8 @@ class TaskModule(NamedPlugin):
 		pfactory = config.getPlugin('internal parameter factory', 'BasicParameterFactory',
 			cls = ParameterFactory, tags = [self], inherit = True)
 		self.source = config.getPlugin('parameter adapter', 'TrackedParameterAdapter',
-			cls = ParameterAdapter, pargs = (pfactory.getSource(psrc_repository),))
+			cls = ParameterAdapter, pargs = (pfactory.get_source(psrc_repository),))
+		self._log.log(logging.DEBUG3, 'Using parameter adapter %s', repr(self.source))
 
 
 	def _setup_repository(self, config, psrc_repository):
@@ -147,8 +143,8 @@ class TaskModule(NamedPlugin):
 
 	# Get job dependent environment variables
 	def getJobConfig(self, jobNum):
-		tmp = self.source.getJobInfo(jobNum)
-		return dict(imap(lambda key: (key.value, tmp.get(key.value, '')), self.source.getJobKeys()))
+		tmp = self.source.get_job_content(jobNum)
+		return dict(imap(lambda key: (key.value, tmp.get(key.value, '')), self.source.get_job_metadata()))
 
 
 	def getTransientVars(self):
@@ -159,7 +155,7 @@ class TaskModule(NamedPlugin):
 
 	def getVarNames(self):
 		# Take task variables and the variables from the parameter source
-		return lchain([self.getTaskConfig().keys(), imap(lambda key: key.value, self.source.getJobKeys())])
+		return lchain([self.getTaskConfig().keys(), imap(lambda key: key.value, self.source.get_job_metadata())])
 
 
 	def getVarMapping(self):
@@ -200,7 +196,7 @@ class TaskModule(NamedPlugin):
 			(WMS.CPUTIME, self.cpuTime),
 			(WMS.MEMORY, self.memory),
 			(WMS.CPUS, self.cpus)
-		] + self.source.getJobInfo(jobNum)[ParameterInfo.REQS]
+		] + self.source.get_job_content(jobNum)[ParameterInfo.REQS]
 
 
 	def getSEInFiles(self):
@@ -230,8 +226,8 @@ class TaskModule(NamedPlugin):
 		return ''
 
 
-	def getMaxJobs(self):
-		return self.source.getMaxJobs()
+	def get_job_len(self):
+		return self.source.get_job_len()
 
 
 	def getDependencies(self):
@@ -240,17 +236,17 @@ class TaskModule(NamedPlugin):
 
 	def getDescription(self, jobNum): # (task name, job name, job type)
 		return utils.Result(taskName = self.taskID, jobType = None,
-			jobName = self._job_name_generator.getName(jobNum))
+			jobName = self._job_name_generator.getName(task = self, jobNum = jobNum))
 
 
-	def canFinish(self):
-		return self.source.canFinish()
+	def can_finish(self):
+		return self.source.can_finish()
 
 
-	def canSubmit(self, jobNum):
-		return self.source.canSubmit(jobNum)
+	def can_submit(self, jobNum):
+		return self.source.can_submit(jobNum)
 
 
-	# Intervene in job management - return (redoJobs, disableJobs, sizeChange)
+	# Intervene in job management - return (redoJobs, disableJobs, size_change)
 	def getIntervention(self):
 		return self.source.resync()

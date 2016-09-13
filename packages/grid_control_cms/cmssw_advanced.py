@@ -73,11 +73,11 @@ class CMSSW_Advanced(CMSSW):
 				nickNames.add(block[DataProvider.Nickname])
 			self._log.info('Mapping between nickname and other settings:')
 			report = []
-			ps_lookup = lfilter(lambda ps: 'DATASETNICK' in ps.depends(), self.source.getUsedSources())
+			ps_lookup = lfilter(lambda ps: 'DATASETNICK' in ps.depends(), self.source.get_used_psrc_list())
 			for nick in sorted(nickNames):
 				tmp = {'DATASETNICK': nick}
 				for src in ps_lookup:
-					src.fillParameterInfo(None, tmp)
+					src.fill_parameter_content(None, tmp)
 				tmp[1] = str.join(', ', imap(os.path.basename, self._nmCfg.lookup(nick, '', is_selector = False)))
 				tmp[2] = formatLumiNice(self._nmLumi.lookup(nick, '', is_selector = False))
 				report.append(tmp)
