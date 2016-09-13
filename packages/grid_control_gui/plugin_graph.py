@@ -94,30 +94,34 @@ def getNodeColor(instance, color_map):
 
 
 def get_workflow_graph(workflow):
-	graph = getGraph(workflow)
-	classCluster = {}
-	for entry in graph:
-		classCluster.setdefault(getNodeParent(entry.__class__), []).append(entry)
-	clusters = ''
+	(graph, node_list) = getGraph(workflow)
 
-	globalNodes = []
-	colors = {}
-	node_names = {}
-	for (cluster_id, classClusterEntries) in enumerate(classCluster.values()):
-		if len(classClusterEntries) == 1:
-			globalNodes.append(classClusterEntries[0])
-		clusters += 'subgraph cluster_%d {' % cluster_id
-		for node in classClusterEntries:
-			clusters += '%s [label="%s", fillcolor="%s", style="filled"];\n' % (getNodeName(node, node_names), getNodeLabel(node), getNodeColor(node, colors))
-		clusters += '}\n'
+	# Process nodes
+	node_str_list = []
+	map_node2name = {}
+	map_node2color = {}
+	for node in sorted(node_list, key = lambda x: x.__class__.__name__):
+		node_props = {
+			'label': '"%s"' % getNodeLabel(node),
+			'fillcolor': '"%s"' % getNodeColor(node, map_node2color),
+			'style': '"filled"',
+		}
+		if node == workflow:
+			node_props['root'] = 'True'
+		node_prop_str = str.join('; ', imap(lambda key: '%s = %s' % (key, node_props[key]), node_props))
+		node_str_list.append('%s [%s];\n' % (getNodeName(node, map_node2name), node_prop_str))
 
-	edgeStr = ''
+	# Process edges
+	edge_str_list = []
 	for entry in sorted(graph, key = lambda x: x.__class__.__name__):
 		for child in sorted(set(graph[entry]), key = lambda x: x.__class__.__name__):
-			edgeStr += '%s -> %s;\n' % (getNodeName(entry, node_names), getNodeName(child, node_names))
-	header = 'digraph mygraph {\nmargin=0;\noverlap=scale;splines=True;\n'
-	footer = '}\n'
-	return header + clusters + edgeStr + footer
+			edge_str_list.append('%s -> %s;\n' % (getNodeName(entry, map_node2name), getNodeName(child, map_node2name)))
+
+	cluster_str_list = []
+
+	dot_format_string = ['digraph mygraph {\nmargin=0;\nedge [len=2];\noverlap=compress;splines=True;\n']
+	dot_format_string += node_str_list + cluster_str_list + edge_str_list + ['}\n']
+	return str.join('', dot_format_string)
 
 
 def get_graph_image(graph_dot):
