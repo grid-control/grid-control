@@ -53,7 +53,7 @@ class RequirementParameterSource(ParameterSource):
 			if key in result:
 				result.remove(key)
 
-	def get_hash(self):
+	def get_psrc_hash(self):
 		return ''
 
 
@@ -64,7 +64,7 @@ class InternalParameterSource(ImmutableParameterSource):
 		ImmutableParameterSource.__init__(self, (lmap(strDict, values), self._keys))
 
 	def __repr__(self):
-		return '<internal:%s=%s>' % (str.join('|', self._keys), self.get_hash())
+		return '<internal:%s=%s>' % (str.join('|', self._keys), self.get_psrc_hash())
 
 	def fill_parameter_content(self, pNum, result):
 		result.update(self._values[pNum])
@@ -112,16 +112,16 @@ class ConstParameterSource(SingleParameterSource):
 	def __repr__(self):
 		return 'const(%r, %s)' % (self._meta.get_value(), repr(self._value))
 
-	def create(cls, pconfig, repository, key, value = None): # pylint:disable=arguments-differ
+	def create_psrc(cls, pconfig, repository, key, value = None): # pylint:disable=arguments-differ
 		if value is None:
 			value = pconfig.get(key)
 		return ConstParameterSource(key, value)
-	create = classmethod(create)
+	create_psrc = classmethod(create_psrc)
 
 	def fill_parameter_content(self, pNum, result):
 		result[self._key] = self._value
 
-	def show(self):
+	def show_psrc(self):
 		return ['%s: const = %s, value = %s' % (self.__class__.__name__, self._key, self._value)]
 
 
@@ -138,7 +138,7 @@ class CounterParameterSource(SingleParameterSource):
 	def fill_parameter_content(self, pNum, result):
 		result[self._key] = self._seed + result['GC_JOB_ID']
 
-	def show(self):
+	def show_psrc(self):
 		return ['%s: var = %s, start = %s' % (self.__class__.__name__, self._key, self._seed)]
 
 
@@ -156,7 +156,7 @@ class FormatterParameterSource(SingleParameterSource):
 		src = parseType(str(result.get(self._source, self._default)))
 		result[self._key] = self._fmt % src
 
-	def show(self):
+	def show_psrc(self):
 		return ['%s: var = %s, fmt = %r, source = %s, default = %r' %
 			(self.__class__.__name__, self._key, self._fmt, self._source, self._default)]
 
@@ -174,7 +174,7 @@ class RNGParameterSource(SingleParameterSource):
 	def fill_parameter_content(self, pNum, result):
 		result[self._key] = random.randint(self._low, self._high)
 
-	def show(self):
+	def show_psrc(self):
 		return ['%s: var = %s, range = (%s, %s)' % (self.__class__.__name__, self._key, self._low, self._high)]
 
 
@@ -190,9 +190,9 @@ class SimpleParameterSource(SingleParameterSource):
 	def __repr__(self):
 		return 'var(%r)' % self._meta.get_value()
 
-	def create(cls, pconfig, repository, key): # pylint:disable=arguments-differ
+	def create_psrc(cls, pconfig, repository, key): # pylint:disable=arguments-differ
 		return SimpleParameterSource(key, pconfig.get_parameter(key.lstrip('!')))
-	create = classmethod(create)
+	create_psrc = classmethod(create_psrc)
 
 	def fill_parameter_content(self, pNum, result):
 		result[self._key] = self._values[pNum]
@@ -200,7 +200,7 @@ class SimpleParameterSource(SingleParameterSource):
 	def get_parameter_len(self):
 		return len(self._values)
 
-	def show(self):
+	def show_psrc(self):
 		return ['%s: var = %s, len = %d' % (self.__class__.__name__, self._key, len(self._values))]
 
 
@@ -221,6 +221,6 @@ class TransformParameterSource(SingleParameterSource):
 		except Exception:
 			result[self._key] = self._default
 
-	def show(self):
+	def show_psrc(self):
 		return ['%s: var = %s, expr = %r, default = %r' %
 			(self.__class__.__name__, self._key, self._fmt, self._default)]

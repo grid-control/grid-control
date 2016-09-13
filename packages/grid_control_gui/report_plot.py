@@ -429,7 +429,7 @@ class PlotReport(Report):
 		self.plotOverall(histogram, self.jobResult, timespan, lambdaExtractor, fit, unit, cumulate)
 		self.finalizeHistogram(histogram)
 
-	def display(self):
+	def display(self, job_db):
 		if not numpy:
 			raise Exception('Unable to find numpy!')
 		if not matplotlib:
@@ -453,7 +453,7 @@ class PlotReport(Report):
 		minCmsswTime = None
 		maxCmsswTime = None
 
-		workdir = self._jobDB.getWorkPath()
+		workdir = job_db.getWorkPath()
 		for j in self._jobs:
 			try:
 				jInfo = JobInfoProcessor().process(os.path.join(workdir, 'output', 'job_%d' % j))

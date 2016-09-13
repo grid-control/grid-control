@@ -20,7 +20,7 @@ from grid_control.utils.file_objects import ZipFile
 from grid_control.utils.parsing import parseJSON, strDict
 from python_compat import ifilter, imap, irange, izip, json, lfilter, lmap, sorted
 
-class GCDumpParameterSource(ParameterSource): # Reader for grid-control dump files - get_hash is not implemented to keep it from being used by users
+class GCDumpParameterSource(ParameterSource): # Reader for grid-control dump files - get_psrc_hash is not implemented to keep it from being used by users
 	def __init__(self, fn):
 		ParameterSource.__init__(self)
 		fp = ZipFile(fn, 'r')
@@ -105,7 +105,7 @@ class CSVParameterSource(InternalParameterSource): # Reader for CSV files
 			return 'csv(%r)' % self._fn
 		return 'csv(%r, %r)' % (self._fn, self._format)
 
-	def create(cls, pconfig, repository, src = 'CSV'): # pylint:disable=arguments-differ
+	def create_psrc(cls, pconfig, repository, src = 'CSV'): # pylint:disable=arguments-differ
 		fn = pconfig.get(src, 'source')
 		return CSVParameterSource(fn, pconfig.get(src, 'format', 'sniffed'))
-	create = classmethod(create)
+	create_psrc = classmethod(create_psrc)

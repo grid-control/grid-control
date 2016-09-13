@@ -120,4 +120,4 @@ class Workflow(NamedPlugin):
 		self.jobManager.finish()
 
 	def run(self):
-		self._gui.displayWorkflow()
+		self._gui.displayWorkflow(workflow = self)

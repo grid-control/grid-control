@@ -15,7 +15,7 @@
 from grid_control.config import ConfigError
 from grid_control.parameters.pfactory_base import UserParameterFactory
 from grid_control.parameters.psource_base import NullParameterSource, ParameterSource
-from grid_control.parameters.psource_lookup import createLookupHelper
+from grid_control.parameters.psource_lookup import parse_lookup_factory_args
 from hpfwk import APIError
 from python_compat import ifilter, imap, irange, lchain, lfilter, lmap, next, reduce
 
@@ -147,9 +147,9 @@ class SimpleParameterFactory(UserParameterFactory):
 	def _create_psrc_pspace(self, args, repository):
 		SubSpaceParameterSource = ParameterSource.getClass('SubSpaceParameterSource')
 		if len(args) == 1:
-			return SubSpaceParameterSource.create(self._parameter_config, repository, args[0])
+			return SubSpaceParameterSource.create_psrc(self._parameter_config, repository, args[0])
 		elif len(args) == 3:
-			return SubSpaceParameterSource.create(self._parameter_config, repository, args[2], args[0])
+			return SubSpaceParameterSource.create_psrc(self._parameter_config, repository, args[2], args[0])
 		else:
 			raise APIError('Invalid subspace reference!: %r' % args)
 
@@ -160,14 +160,14 @@ class SimpleParameterFactory(UserParameterFactory):
 			ref_type_default = 'csv'
 		ref_type = self._parameter_config.get(arg, 'type', ref_type_default)
 		if ref_type == 'dataset':
-			return DataParameterSource.create(self._parameter_config, repository, arg)
+			return DataParameterSource.create_psrc(self._parameter_config, repository, arg)
 		elif ref_type == 'csv':
-			return ParameterSource.getClass('CSVParameterSource').create(self._parameter_config, repository, arg)
+			return ParameterSource.getClass('CSVParameterSource').create_psrc(self._parameter_config, repository, arg)
 		raise APIError('Unknown reference type: "%s"' % ref_type)
 
 	def _create_psrc_var(self, var_list, lookup_list): # create variable source
 		psource_list = []
-		for (is_nested, PSourceClass, args) in createLookupHelper(self._parameter_config, var_list, lookup_list):
+		for (is_nested, PSourceClass, args) in parse_lookup_factory_args(self._parameter_config, var_list, lookup_list):
 			if is_nested: # switch needs elevation beyond local scope
 				self._psrc_list_nested.append((PSourceClass, args))
 			else:

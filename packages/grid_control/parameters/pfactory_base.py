@@ -16,7 +16,7 @@ import random, logging
 from grid_control.gc_plugin import ConfigurablePlugin
 from grid_control.parameters.config_param import ParameterConfig
 from grid_control.parameters.psource_base import NullParameterSource, ParameterError, ParameterSource
-from grid_control.parameters.psource_lookup import createLookupHelper
+from grid_control.parameters.psource_lookup import parse_lookup_factory_args
 from hpfwk import AbstractError
 from python_compat import identity, ifilter, imap, irange, lfilter, lmap, sorted
 
@@ -84,12 +84,12 @@ class BasicParameterFactory(ParameterFactory):
 			return ' '
 		lookup_str = pconfig.get(varName, 'lookup', '')
 		lookup_list = lfilter(identity, str.join('', imap(replace_nonalnum, lookup_str)).split())
-		for (is_nested, PSourceClass, args) in createLookupHelper(pconfig, [varName], lookup_list):
+		for (is_nested, PSourceClass, args) in parse_lookup_factory_args(pconfig, [varName], lookup_list):
 			if is_nested: # switch needs elevation beyond local scope
 				self._psrc_list_nested.append((PSourceClass, args))
 			else:
 				ps = PSourceClass.createInstance(PSourceClass.__name__, *args)
-				if ps.depends():
+				if ps.get_parameter_deps():
 					self._psrc_list_lookup.append(ps)
 				else:
 					self._psrc_list_const.append(ps)

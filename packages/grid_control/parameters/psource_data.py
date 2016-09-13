@@ -55,12 +55,12 @@ class DataParameterSource(LimitedResyncParameterSource):
 	def can_finish(self):
 		return self._resyncInterval < 0
 
-	def create(cls, pconfig, repository, src = 'data'): # pylint:disable=arguments-differ
+	def create_psrc(cls, pconfig, repository, src = 'data'): # pylint:disable=arguments-differ
 		src_key = 'dataset:%s' % src
 		if src_key not in repository:
 			raise UserError('Dataset parameter source "%s" not setup!' % src)
 		return repository[src_key]
-	create = classmethod(create)
+	create_psrc = classmethod(create_psrc)
 
 	def fill_parameter_content(self, pNum, result):
 		splitInfo = self._data_splitter.getSplitInfo(pNum)
@@ -68,11 +68,6 @@ class DataParameterSource(LimitedResyncParameterSource):
 
 	def fill_parameter_metadata(self, result):
 		result.extend(self._part_proc.get_partition_parameter_metadata() or [])
-
-	def get_hash(self):
-		if self._resync_enabled():
-			return md5_hex(repr(time.time()))
-		return md5_hex(repr([self._name, self._data_splitter.get_job_len()]))
 
 	def get_name(self):
 		return self._name
@@ -83,7 +78,12 @@ class DataParameterSource(LimitedResyncParameterSource):
 	def get_parameter_len(self):
 		return self._maxN
 
-	def show(self):
+	def get_psrc_hash(self):
+		if self._resync_enabled():
+			return md5_hex(repr(time.time()))
+		return md5_hex(repr([self._name, self._data_splitter.get_job_len()]))
+
+	def show_psrc(self):
 		return ['%s: src = %s' % (self.__class__.__name__, self._name)]
 
 	def _exists_data_path(self, postfix):
@@ -92,7 +92,7 @@ class DataParameterSource(LimitedResyncParameterSource):
 	def _get_data_path(self, postfix):
 		return os.path.join(self._dn, self._name + postfix)
 
-	def _resync(self):
+	def _resync_psrc(self):
 		if self._data_provider:
 			activity = Activity('Performing resync of datasource %r' % self._name)
 			# Get old and new dataset information

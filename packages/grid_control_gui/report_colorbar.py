@@ -71,10 +71,10 @@ class ColorBarReport(Report):
 	def getHeight(self):
 		return 1
 
-	def display(self):
+	def display(self, job_db):
 		self._bar.update(
-			len(self._jobDB.getJobs(ClassSelector(JobClass.SUCCESS))),
-			len(self._jobDB.getJobs(ClassSelector(JobClass.ATWMS))),
-			len(self._jobDB.getJobs(ClassSelector(JobClass.RUNNING_DONE))),
-			len(self._jobDB.getJobs(ClassSelector(JobClass.FAILING))))
+			len(job_db.getJobs(ClassSelector(JobClass.SUCCESS))),
+			len(job_db.getJobs(ClassSelector(JobClass.ATWMS))),
+			len(job_db.getJobs(ClassSelector(JobClass.RUNNING_DONE))),
+			len(job_db.getJobs(ClassSelector(JobClass.FAILING))))
 		sys.stdout.write(str(self._bar) + '\n')

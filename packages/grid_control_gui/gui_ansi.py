@@ -165,9 +165,9 @@ class ANSIGUI(GUI):
 		self._draw(self._update_report)
 		self._draw(self._update_status)
 
-	def displayWorkflow(self):
+	def displayWorkflow(self, workflow):
 		if not sys.stdout.isatty():
-			return self._workflow.process(self._wait)
+			return workflow.process(self._wait)
 
 		self._console = Console(sys.stdout)
 		self._new_stdout = GUIStream(sys.stdout, self._console, self._lock)
@@ -178,7 +178,7 @@ class ANSIGUI(GUI):
 			(sys.stdout, sys.stderr) = (self._new_stdout, self._new_stderr)
 			self._console.erase()
 			self._schedule_update_layout()
-			self._workflow.process(self._wait)
+			workflow.process(self._wait)
 		finally:
 			(sys.stdout, sys.stderr) = (self._stored_stdout, self._stored_stderr)
 			self._console.setscrreg()

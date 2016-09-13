@@ -46,6 +46,8 @@ def getGraph(instance, graph = None, visited = None):
 			continue
 		if 'testsuite' in child_name:
 			continue
+		if not issubclass(child.__class__, Plugin):
+			continue
 		if child_class_name in ['instancemethod', 'function', 'type', 'method-wrapper']:
 			continue
 		if child in (None, True, False):
