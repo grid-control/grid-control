@@ -66,7 +66,7 @@ class ParameterAdapter(ConfigurablePlugin):
 				yield self.get_job_content(job_num)
 
 	def resync(self, force = False):
-		return self._psrc.resync()
+		return self._psrc.resync_psrc()
 
 	def show(self):
 		return self._psrc.show()
@@ -75,11 +75,11 @@ class ParameterAdapter(ConfigurablePlugin):
 class ResyncParameterAdapter(ParameterAdapter):
 	def __init__(self, config, source):
 		ParameterAdapter.__init__(self, config, source)
-		self._psrc_hash = source.get_hash()
+		self._psrc_hash = source.get_psrc_hash()
 		self._resync_state = ParameterSource.EmptyResyncResult()
 
 	def resync(self, force = False): # Do not overwrite resync results - eg. from external or init trigger
-		source_hash = self._psrc.get_hash()
+		source_hash = self._psrc.get_psrc_hash()
 		if (self._resync_state == ParameterSource.EmptyResyncResult()) and ((source_hash != self._psrc_hash) or force):
 			activity = Activity('Syncronizing parameter information')
 			t_start = time.time()
@@ -87,7 +87,7 @@ class ResyncParameterAdapter(ParameterAdapter):
 				self._resync_state = self._resync()
 			except Exception:
 				raise ParameterError('Unable to resync parameters!')
-			self._psrc_hash = self._psrc.get_hash()
+			self._psrc_hash = self._psrc.get_psrc_hash()
 			activity.finish()
 			self._log.log(logging.INFO, 'Finished resync of parameter source (%s)', strTimeShort(time.time() - t_start))
 		result = self._resync_state
@@ -95,7 +95,7 @@ class ResyncParameterAdapter(ParameterAdapter):
 		return result
 
 	def _resync(self):
-		return self._psrc.resync()
+		return self._psrc.resync_psrc()
 
 
 class BasicParameterAdapter(ResyncParameterAdapter):
@@ -139,7 +139,7 @@ class TrackedParameterAdapter(BasicParameterAdapter):
 		resync_requested = config.getState('resync', detail = 'parameters')
 		config.setState(False, 'resync', detail = 'parameters')
 		resync_needed = False
-		psrc_hash = self._psrc_raw.get_hash()
+		psrc_hash = self._psrc_raw.get_psrc_hash()
 		self._psrc_hash_stored = config.get('parameter hash', psrc_hash, persistent = True)
 		if self._psrc_hash_stored != psrc_hash:
 			resync_needed = True # Resync needed if parameters have changed
@@ -160,7 +160,7 @@ class TrackedParameterAdapter(BasicParameterAdapter):
 		elif do_init: # Write current state
 			self._write_job_num2pnum(self._path_job_num2pnum)
 			ParameterSource.getClass('GCDumpParameterSource').write(self._path_params, self)
-		config.set('parameter hash', self._psrc_raw.get_hash())
+		config.set('parameter hash', self._psrc_raw.get_psrc_hash())
 
 	def get_job_content(self, job_num, pnum = None): # Perform mapping between job_num and parameter number
 		pnum = self._map_job_num2pnum.get(job_num, job_num)
@@ -241,9 +241,9 @@ class TrackedParameterAdapter(BasicParameterAdapter):
 			fp.close()
 
 	def _resync(self): # This function is _VERY_ time critical!
-		tmp = self._psrc_raw.resync() # First ask about psrc changes
+		tmp = self._psrc_raw.resync_psrc() # First ask about psrc changes
 		(result_redo, result_disable, size_change) = (set(tmp[0]), set(tmp[1]), tmp[2])
-		psrc_hash_new = self._psrc_raw.get_hash()
+		psrc_hash_new = self._psrc_raw.get_psrc_hash()
 		psrc_hash_changed = self._psrc_hash_stored != psrc_hash_new
 		self._psrc_hash_stored = psrc_hash_new
 		if not (result_redo or result_disable or size_change or psrc_hash_changed):

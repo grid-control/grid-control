@@ -22,7 +22,7 @@ class Report(Plugin):
 	def __init__(self, jobDB = None, task = None, jobs = None, configString = ''):
 		if jobs is None:
 			jobs = jobDB.getJobs()
-		(self._jobDB, self._jobs, self._task_id, self._task_name) = (jobDB, jobs, '', '')
+		(self._jobs, self._task_id, self._task_name) = (jobs, '', '')
 		if task is not None:
 			(self._task_id, self._task_name) = (task.taskID, task.taskConfigName)
 		# FIXME: really store task for later access? maybe just use task during init run?
@@ -42,14 +42,14 @@ class Report(Plugin):
 	def getHeight(self):
 		return 0
 
-	def display(self):
+	def show_report(self, job_db):
 		raise AbstractError
 
 
 class NullReport(Report):
 	alias = ['null']
 
-	def display(self):
+	def show_report(self, job_db):
 		pass
 
 
@@ -60,9 +60,9 @@ class MultiReport(Report):
 	def getHeight(self):
 		return sum(imap(lambda r: r.getHeight(), self._reportList))
 
-	def display(self):
+	def show_report(self, job_db):
 		for report in self._reportList:
-			report.display()
+			report.show_report(job_db)
 
 
 class BasicReport(Report):
@@ -83,11 +83,11 @@ class BasicReport(Report):
 	def getHeight(self):
 		return 8 + int((len(Job.enumNames) + 1) / 2)
 
-	def display(self):
-		njobs_total = len(self._jobDB)
+	def show_report(self, job_db):
+		njobs_total = len(job_db)
 		summary = dict(imap(lambda x: (x, 0.0), Job.enumValues))
 		for jobNum in self._jobs:
-			summary[self._jobDB.getJobTransient(jobNum).state] += 1
+			summary[job_db.getJobTransient(jobNum).state] += 1
 		makeSum = lambda *states: sum(imap(lambda z: summary[z], states))
 		makePer = lambda *states: [makeSum(*states), round(makeSum(*states) / max(1, njobs_total) * 100.0)]
 
@@ -122,10 +122,10 @@ class LocationReport(Report):
 		if jobObj.get('dest', 'N/A') != 'N/A':
 			reports.append({2: ' -> ' + jobObj.get('dest')})
 
-	def display(self):
+	def show_report(self, job_db):
 		reports = []
 		for jobNum in self._jobs:
-			jobObj = self._jobDB.getJob(jobNum)
+			jobObj = job_db.getJob(jobNum)
 			if not jobObj or (jobObj.state == Job.INIT):
 				continue
 			reports.append({0: jobNum, 1: Job.enum2str(jobObj.state), 2: jobObj.gcID})

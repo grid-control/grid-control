@@ -38,7 +38,7 @@ class BackendReport(Report):
 		Report.__init__(self, jobDB, task, jobs, configString)
 		self._levelMap = {'wms': 2, 'endpoint': 3, 'site': 4, 'queue': 5}
 		self._useHistory = ('history' in configString)
-		configString = configString.replace('history', '')
+		configString = configString.replace('history', '') or 'wms'
 		self._idxList = lmap(lambda x: self._levelMap[x.lower()], configString.split())
 		self._idxList.reverse()
 		if not self._idxList:
@@ -46,11 +46,11 @@ class BackendReport(Report):
 		self._stateMap = [(None, 'WAITING'), (Job.RUNNING, 'RUNNING'),
 			(Job.FAILED, 'FAILED'), (Job.SUCCESS, 'SUCCESS')]
 
-	def _getReportInfos(self):
+	def _getReportInfos(self, job_db):
 		result = []
 		t_now = time.time()
 		for jobNum in self._jobs:
-			jobObj = self._jobDB.getJobTransient(jobNum)
+			jobObj = job_db.getJobTransient(jobNum)
 			runtime = parseStr(jobObj.get('runtime'), int, 0)
 			for attempt in jobObj.history:
 				if (attempt != jobObj.attempt) and not self._useHistory:
@@ -78,8 +78,8 @@ class BackendReport(Report):
 				result.append([state, time_info, wmsName, endpoint] + dest_info)
 		return result
 
-	def _getHierachicalStats(self):
-		overview = self._getReportInfos()
+	def _getHierachicalStats(self, job_db):
+		overview = self._getReportInfos(job_db)
 		def fillDict(result, items, idx_list = None, indent = 0):
 			if not idx_list:
 				for entry in items:
@@ -134,7 +134,7 @@ class BackendReport(Report):
 		yield result_l2
 		yield result_l3
 
-	def display(self):
+	def display(self, job_db):
 		stateMap = dict(self._stateMap)
 
 		def transform(data, label, level):
@@ -153,7 +153,7 @@ class BackendReport(Report):
 						yield result
 				if idx != len(data) - 1:
 					yield '-'
-		stats = self._getHierachicalStats()
+		stats = self._getHierachicalStats(job_db)
 		displayStates = lmap(itemgetter(1), self._stateMap)
 		header = [('', 'Category')] + lzip(displayStates, displayStates)
 		printTabular(header, transform(stats, [], len(self._idxList)),

@@ -328,7 +328,7 @@ class JobManager(NamedPlugin):
 		if len(jobnum_list) == 0:
 			return
 		if showJobs:
-			self._reportClass(self.jobDB, task, jobnum_list).display()
+			self._reportClass(self.jobDB, task, jobnum_list).display(self.jobDB)
 		if interactive and not utils.getUserBool('Do you really want to cancel these jobs?', True):
 			return
 
@@ -349,7 +349,7 @@ class JobManager(NamedPlugin):
 		if gcID_jobnum_map:
 			jobnum_list = list(gcID_jobnum_map.values())
 			self._log.warning('There was a problem with cancelling the following jobs:')
-			self._reportClass(self.jobDB, task, jobnum_list).display()
+			self._reportClass(self.jobDB, task, jobnum_list).display(self.jobDB)
 			if (not interactive) or utils.getUserBool('Do you want to mark them as cancelled?', True):
 				lmap(mark_cancelled, jobnum_list)
 		if interactive:
@@ -368,7 +368,7 @@ class JobManager(NamedPlugin):
 		jobs = self.jobDB.getJobs(JobSelector.create(select, task = task))
 		if jobs:
 			self._log.warning('Resetting the following jobs:')
-			self._reportClass(self.jobDB, task, jobs).display()
+			self._reportClass(self.jobDB, task, jobs).display(self.jobDB)
 			if self._interactive_reset or utils.getUserBool('Are you sure you want to reset the state of these jobs?', False):
 				self.cancel(task, wms, self.jobDB.getJobs(ClassSelector(JobClass.PROCESSING), jobs), interactive = False, showJobs = False)
 				for jobNum in jobs:

@@ -56,6 +56,6 @@ class BarReport(Report):
 	def getHeight(self):
 		return 1
 
-	def display(self):
-		self._bar.update(len(self._jobDB.getJobs(ClassSelector(JobClass.SUCCESS))))
+	def display(self, job_db):
+		self._bar.update(len(job_db.getJobs(ClassSelector(JobClass.SUCCESS))))
 		sys.stdout.write(str(self._bar) + '\n')
