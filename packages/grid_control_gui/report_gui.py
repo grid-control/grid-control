@@ -243,7 +243,7 @@ class GUIReport(AdaptiveBaseReport):
 
 	def printGUIHeader(self, message):
 		self.printLimited('-' * (self.maxX - 24), self.maxX)
-		self.printLimited('%s %s' % (message, self._getHeader(self.maxX - len(message) - 1)), self.maxX)
+		self.printLimited('%s %s' % (message, self._get_header(self.maxX - len(message) - 1)), self.maxX)
 		self.printLimited('-' * (self.maxX - 24), self.maxX)
 
 	def display(self):

@@ -26,10 +26,10 @@ class Report(Plugin):
 		if task is not None:
 			(self._task_id, self._task_name) = (task.taskID, task.taskConfigName)
 		# FIXME: really store task for later access? maybe just use task during init run?
-		self._header = self._getHeader(45)
+		self._header = self._get_header(45)
 		self._log = logging.getLogger('report')
 
-	def _getHeader(self, maxLen = 45):
+	def _get_header(self, maxLen = 45):
 		tmp = self._task_name + ' / ' + self._task_id
 		if self._task_id and self._task_name and (len(tmp) < maxLen):
 			return tmp
