@@ -26,13 +26,15 @@ class PartitionEstimator(DataProcessor):
 		self._target_jobs_ds = config.getInt(['target partitions per nickname', '%s target partitions per nickname' % datasource_name], -1, onChange = on_change)
 		self._entries = {None: 0}
 		self._files = {None: 0}
-		self._config = config
+		self._config = None
+		if self.enabled():
+			self._config = config
 
 	def enabled(self):
 		return (self._target_jobs > 0) or (self._target_jobs_ds > 0)
 
 	def process(self, block_iter):
-		if self.enabled() and not self._config.getState('resync', detail = 'datasets'):
+		if self.enabled() and self._config:
 			blocks = lmap(self.process_block, block_iter)
 			if self._target_jobs > 0:
 				self._set_split_opt(self._config, 'files per job', self._files[None], self._target_jobs)

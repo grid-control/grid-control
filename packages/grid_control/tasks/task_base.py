@@ -40,7 +40,7 @@ class ConfigurableJobName(JobNamePlugin):
 	alias = ['config']
 
 	def __init__(self, config):
-		JobNamePlugin.__init__(self, config, task)
+		JobNamePlugin.__init__(self, config)
 		self._name = config.get('job name', '@GC_TASK_ID@.@GC_JOB_ID@', onChange = None)
 
 	def getName(self, task, jobNum):
