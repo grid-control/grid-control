@@ -8,15 +8,12 @@ python:
   - "3.5"
   - "pypy"
   - "pypy3"
+os:
+  - linux
 before_install:
   - pip install codecov
   - pip install 'coverage<4'
 script:
-  - ./packages/gcUpdatePlugins.py # randomized order
-  - ./packages/gcUpdatePlugins.py
-  - ./packages/gcUpdatePlugins.py
-  - ./packages/gcUpdatePlugins.py
-  - ./packages/gcUpdatePlugins.py
   - export WRAPPER='coverage run -a'
   - ./setup.py install > setup.log 2>&1 || cat setup.log
   - rm -rf packages
@@ -28,8 +25,96 @@ script:
   - $WRAPPER $GC_SCRIPT --reset INIT docs/examples/ExampleS1_stresstest.conf
   - $WRAPPER $GC_SCRIPT -o '[jobs] continuous = False' docs/examples/ExampleS1_stresstest.conf
   - $WRAPPER $GC_SCRIPT -o '[interactive] default = False' -d ALL docs/examples/ExampleS1_stresstest.conf
-  - $WRAPPER $GC_SCRIPT -G --debug docs/examples/ExampleS1_stresstest.conf
+  - $WRAPPER $GC_SCRIPT -G --debug docs/examples/ExampleS1_stresstest.conf --logging config=INFO --logging classloader
+  - $WRAPPER $GC_SCRIPT -G docs/examples/ExampleS1_stresstest.conf > test.ansi
+  - $WRAPPER $GC_SCRIPT -o '[global] gui = NullGUI' docs/examples/ExampleS1_stresstest.conf
   - $WRAPPER $GC_SCRIPT docs/examples/ExampleS1_stresstest.conf
   - diff ExampleS1_stresstest.list docs/examples/ExampleS1_stresstest.list.ref
+  - $WRAPPER $GC_SCRIPT docs/examples/ExampleS2_stresscms1.conf
+  - $WRAPPER $GC_SCRIPT docs/examples/ExampleS2_stresscms1.conf --help-conf
+  - $WRAPPER $GC_SCRIPT docs/examples/ExampleS2_stresscms1.conf --help-confmin
+  - $WRAPPER $GC_SCRIPT docs/examples/ExampleS2_stresscms1.conf -cm 1
+  - $WRAPPER $GC_SCRIPT docs/examples/ExampleS2_stresscms1.conf
+  - $WRAPPER $GC_SCRIPT docs/examples/ExampleS2_stresscms2.conf
+  - $WRAPPER $GC_SCRIPT docs/examples/ExampleS2_stresscms2.conf -cm 1
+  - $WRAPPER $GC_SCRIPT docs/examples/ExampleS2_stresscms2.conf
+  - $WRAPPER $GC_SCRIPT docs/examples/ExampleS2_stresscms3.conf
+  - $WRAPPER $GC_SCRIPT docs/examples/ExampleS2_stresscms3.conf -cm 1
+  - $WRAPPER $GC_SCRIPT docs/examples/ExampleS2_stresscms3.conf
+  - diff ExampleS2_stresscms3.list docs/examples/ExampleS2_stresscms3.list.ref
+  - $WRAPPER ./scripts/downloadFromSE.py || echo
+  - $WRAPPER ./scripts/downloadFromSE.py docs/examples/ExampleS1_stresstest.conf -T trivial --slowdown=0
+  - $WRAPPER ./scripts/parameterList.py || echo
+  - $WRAPPER ./scripts/parameterList.py "A B <data>" -D True -p "A=1 2 3" -p "B=x y" -lcc --logging INFO2
+  - $WRAPPER ./scripts/parameterList.py docs/examples/ExampleS1_stresstest.conf -TlcLv -D docs/examples/work.ExampleS1_stresstest/datamap.tar
+  - $WRAPPER ./scripts/datasetListFromGC.py || echo
+  - $WRAPPER ./scripts/datasetListFromGC.py docs/examples/ExampleS1_stresstest.conf --dump-config
+  - $WRAPPER ./scripts/datasetListFromGC.py docs/examples/ExampleS1_stresstest.conf -i OutputDirsFromConfig,JobInfoFromOutputDir,FilesFromJobInfo -d @SE_OUTPUT_FILE@
+  - $WRAPPER ./scripts/datasetListFromGC.py docs/examples/ExampleS1_stresstest.conf -s '*' -D'.:-1:' -d '@DELIMETER_DS@' -o output.dbs
+  - $WRAPPER ./scripts/lumiInfo.py -G || echo
+  - $WRAPPER ./scripts/lumiInfo.py -G x || echo
+  - $WRAPPER ./scripts/lumiInfo.py -F 1-2 || echo
+  - $WRAPPER ./scripts/lumiInfo.py -J 1-2 || echo
+  - $WRAPPER ./scripts/lumiInfo.py -GJF 123:1-123:10
+  - $WRAPPER ./scripts/lumiInfo.py -gjep docs/examples/ExampleS2_stresscms1.conf
+  - $WRAPPER ./scripts/report.py | echo
+  - $WRAPPER ./scripts/report.py --report-list -T -R variables docs/examples/ExampleS2_stresscms2.conf --pivot
+  - $WRAPPER ./testsuite/backend/TEST_backend.py
+  - $WRAPPER ./testsuite/backend/TEST_broker.py
+  - $WRAPPER ./testsuite/backend/TEST_cancel.py
+  - $WRAPPER ./testsuite/backend/TEST_discover.py
+  - $WRAPPER ./testsuite/backend/TEST_jdl.py
+  - $WRAPPER ./testsuite/backend/TEST_proxy.py
+  - $WRAPPER ./testsuite/backend/TEST_status.py
+  - $WRAPPER ./testsuite/cms/TEST_cmssw.py
+  - $WRAPPER ./testsuite/cms/TEST_cmssw_scanner.py
+  - $WRAPPER ./testsuite/cms/TEST_lumifilter.py
+  - $WRAPPER ./testsuite/cms/TEST_lumiproc.py
+  - $WRAPPER ./testsuite/cms/TEST_lumitools.py
+  - $WRAPPER ./testsuite/cms/TEST_provider_cms.py
+  - $WRAPPER ./testsuite/cms/TEST_provider_das.py
+  - $WRAPPER ./testsuite/cms/TEST_sitedb.py
+  - $WRAPPER ./testsuite/config/TEST_configAPI1.py
+  - $WRAPPER ./testsuite/config/TEST_configAPI2.py
+  - $WRAPPER ./testsuite/config/TEST_configAPI3.py
+  - $WRAPPER ./testsuite/config/TEST_configAPI4.py
+  - $WRAPPER ./testsuite/config/TEST_configHandlers.py
+  - $WRAPPER ./testsuite/config/TEST_configParser.py
+  - $WRAPPER ./testsuite/config/TEST_config.py
+  - $WRAPPER ./testsuite/config/TEST_configTyped.py
+  - $WRAPPER ./testsuite/config/TEST_configView.py
+  - $WRAPPER ./testsuite/config/TEST_interactive.py
+  - $WRAPPER ./testsuite/config/TEST_matcher.py
+  - $WRAPPER ./testsuite/datasets/TEST_dataresync1.py
+  - $WRAPPER ./testsuite/datasets/TEST_dataresync2.py
+  - $WRAPPER ./testsuite/datasets/TEST_dataresync3.py
+  - $WRAPPER ./testsuite/datasets/TEST_dataresync4.py
+  - $WRAPPER ./testsuite/datasets/TEST_dataresync5.py
+  - $WRAPPER ./testsuite/datasets/TEST_dataresync_meta.py
+  - $WRAPPER ./testsuite/datasets/TEST_dataresync_reorder.py
+  - $WRAPPER ./testsuite/datasets/TEST_processor.py
+  - $WRAPPER ./testsuite/datasets/TEST_provider.py
+  - $WRAPPER ./testsuite/datasets/TEST_scanner.py
+  - $WRAPPER ./testsuite/datasets/TEST_splitter.py
+  - $WRAPPER ./testsuite/datasets/TEST_taskresync.py
+  - $WRAPPER ./testsuite/parameters/TEST_config_param.py
+  - $WRAPPER ./testsuite/parameters/TEST_padapter1.py
+  - $WRAPPER ./testsuite/parameters/TEST_padapter.py
+  - $WRAPPER ./testsuite/parameters/TEST_pfactory.py
+  - $WRAPPER ./testsuite/parameters/TEST_pproc.py
+  - $WRAPPER ./testsuite/parameters/TEST_psource.py
+  - $WRAPPER ./testsuite/TEST_exception.py
+  - $WRAPPER ./testsuite/TEST_go.py
+  - $WRAPPER ./testsuite/TEST_gui.py
+  - $WRAPPER ./testsuite/TEST_jobdb.py
+  - $WRAPPER ./testsuite/TEST_jobselector.py
+  - $WRAPPER ./testsuite/TEST_logging.py
+  - $WRAPPER ./testsuite/TEST_monitoring.py
+  - $WRAPPER ./testsuite/TEST_output_processor.py
+  - $WRAPPER ./testsuite/TEST_plugins.py
+  - $WRAPPER ./testsuite/TEST_process.py
+  - $WRAPPER ./testsuite/TEST_task.py
+  - $WRAPPER ./testsuite/TEST_utils.py
+  - $WRAPPER ./testsuite/TEST_webservice.py
 after_success:
   - codecov

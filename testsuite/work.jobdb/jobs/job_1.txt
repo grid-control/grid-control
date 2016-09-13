@@ -1,0 +1,22 @@
+status="SUCCESS"
+jdl="VirtualOrganisation = \"cms\";
+OutputSandbox = { \"gc.stdout\", \"gc.stderr\", \"job.info\", \"cmssw.log.gz\", \"cmssw.dbs.tar.gz\" };
+Executable = \"gc-run.sh\";
+Requirements = other.GlueHostNetworkAdapterOutboundIP && (other.GlueCEPolicyMaxWallClockTime >= 360) && (other.GlueCEPolicyMaxCPUTime >= 360) && ( Member(\"cmssrm-fzk.gridka.de\", other.GlueCESEBindGroupSEUniqueID) || Member(\"cmssrm-fzk.gridka.de\", other.GlueCESEBindGroupSEUniqueID) ) && Member(\"VO-cms-CMSSW_4_4_2\", other.GlueHostApplicationSoftwareRunTimeEnvironment) && Member(\"VO-cms-slc5_amd64_gcc434\", other.GlueHostApplicationSoftwareRunTimeEnvironment) && ( !RegExp(\"samtests\", other.GlueCEUniqueID) && !RegExp(\"cmsprodhi\", other.GlueCEUniqueID) && !RegExp(\"ifca\", other.GlueCEUniqueID) );
+Arguments = \"1\";
+StdError = \"gc.stderr\";
+StdOutput = \"gc.stdout\";
+RetryCount = 2;
+InputSandbox = { \"/usr/users/stober/grid-control.BE/packages/grid_control/share/gc-run.sh\", \"/usr/users/stober/grid-control.BE/packages/grid_control/share/gc-run.lib\", \"/portal/ekpcms5/home/stober/CMSSW_4_4_2/src/Kappa/Skimming/work.2011-11-28_FS_442/sandbox.tar.gz\", \"/portal/ekpcms5/home/stober/CMSSW_4_4_2/src/Kappa/Skimming/work.2011-11-28_FS_442/jobs/job_1.var\" };
+Rank = -other.GlueCEStateEstimatedResponseTime;
+"
+attempt=1
+retcode=0
+dest="cream-1-fzk.gridka.de:8443/cream-pbs-cmsXL"
+timestamp=1322491453
+submitted=1322491455.17
+history_1="cream-1-fzk.gridka.de:8443/cream-pbs-cmsXL"
+reason="Job Terminated Successfully"
+download="True"
+runtime=36046
+id="https://grid-lb3.desy.de:9000/31DhvVNua7TXsvvpuOx7UQ"

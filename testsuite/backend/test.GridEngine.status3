@@ -1,0 +1,37 @@
+<?xml version='1.0'?>
+<job_info  xmlns:xsd="http://gridengine.sunsource.net/source/browse/*checkout*/gridengine/source/dist/util/resources/schemas/qstat/qstat.xsd?revision=1.11">
+  <queue_info>
+    <job_list state="running">
+      <JB_jobnumber>6323</JB_jobnumber>
+      <JAT_prio>0.55077</JAT_prio>
+      <JB_name>GC11e8a12f.12</JB_name>
+      <JB_owner>stober</JB_owner>
+      <state>r</state>
+      <JAT_start_time>2010-11-04T20:28:38</JAT_start_time>
+      <queue_name>short@ekpplus008.ekpplus.cluster</queue_name>
+      <slots>1</slots>
+    </job_list>
+    <job_list state="running">
+      <JB_jobnumber>6324</JB_jobnumber>
+      <JAT_prio>0.55071</JAT_prio>
+      <JB_name>GC11e8a12f.13</JB_name>
+      <JB_owner>stober</JB_owner>
+      <state>t</state>
+      <JAT_start_time>2010-11-04T20:28:38</JAT_start_time>
+      <queue_name>short@ekpplus001.ekpplus.cluster</queue_name>
+      <slots>1</slots>
+    </job_list>
+  </queue_info>
+  <job_info>
+    <job_list state="pending">
+      <JB_jobnumber>6350</JB_jobnumber>
+      <JAT_prio>0.55025</JAT_prio>
+      <JB_name>GC11e8a12f.38</JB_name>
+      <JB_owner>stober</JB_owner>
+      <state>Eqw</state>
+      <JB_submission_time>2010-11-04T20:28:34</JB_submission_time>
+      <queue_name></queue_name>
+      <slots>1</slots>
+    </job_list>
+    <job_list state="pending">
+      <JB_jobnumber>6352</JB_jobnumber>

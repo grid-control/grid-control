@@ -1,0 +1,5 @@
+JOBID=0
+EXITCODE=0
+TIME=17
+FILE="dc5310668534534957283c8d07be51e5  output.exp  Dataset1_job_0_output.exp  dir:///home/fred/grid-control/docs/XXX"
+FILE1="6e63ef4f3c68d0fe35c3ead00a990c13  output.hallo  Dataset1_job_0_output.hallo  dir:///home/fred/grid-control/docs/XXX"

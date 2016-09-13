@@ -1,0 +1,23 @@
+[/MinimumBias/Commissioning10-SD_Mu-Jun14thSkim_v1/RECO#f95a8d7e-f710-458d-8d0f-0d58a7667256]
+se list = cmssrm.fnal.gov,bsrm-1.t2.ucsd.edu,cmssrm.fnal.gov,sbgse1.in2p3.fr,cmssrm.hep.wisc.edu,srm.ihepa.ufl.edu,t2-srm-02.lnl.infn.it,lcgsedc01.jinr.ru,caf.cern.ch,srm.unl.edu,storm.ifca.es
+metadata = ['Runs']
+3240252F.root = 5 [[132651]]
+66690367.root = 9 [[134704,132651]]
+FA648234.root = 6 [[134704]]
+
+[/MinimumBias/Commissioning10-SD_Mu-Jun14thSkim_v1/RECO#b97fa5ba-925c-4bdb-98c9-bd92340f7440]
+se list = cmssrm.fnal.gov,bsrm-1.t2.ucsd.edu,cmssrm.fnal.gov,sbgse1.in2p3.fr,cmssrm.hep.wisc.edu,srm.ihepa.ufl.edu,t2-srm-02.lnl.infn.it,lcgsedc01.jinr.ru,caf.cern.ch,srm.unl.edu,storm.ifca.es
+metadata = ['Runs']
+04F2FC24.root = 8 [[134655]]
+047B67E9.root = 4 [[134946]]
+
+[/MinimumBias/Commissioning10-SD_Mu-Jun14thSkim_v1/RECO#3bd6f9d3-aae2-4e94-ac5b-4eedd0a57a97]
+se list = cmssrm.fnal.gov,bsrm-1.t2.ucsd.edu,cmssrm.fnal.gov,sbgse1.in2p3.fr,cmssrm.hep.wisc.edu,srm.ihepa.ufl.edu,t2-srm-02.lnl.infn.it,lcgsedc01.jinr.ru,caf.cern.ch,srm.unl.edu,storm.ifca.es
+metadata = ['Runs']
+880C71DC.root = 6 [[135130]]
+2AE92A85.root = 9 [[135146]]
+FA07400E.root = 8 [[135131]]
+F8D11ADA.root = 2 [[135130]]
+E62E1DFF.root = 2 [[134648]]
+7E81320A.root = 9 [[135131]]
+720D3ADD.root = 4 [[135130]]

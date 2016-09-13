@@ -1,0 +1,198 @@
+#!/usr/bin/env python
+
+import os, sys, random
+import xml.sax.xmlreader
+import xml.sax.saxutils
+try:
+	from hashlib import md5
+except Exception:
+	from md5 import md5
+if sys.version_info[0] < 3:	# unicode encoding <= Python 3
+	md5_hex = lambda value: md5(value).hexdigest()
+else:
+	md5_hex = lambda value: md5(value.encode('utf-8')).hexdigest()
+
+# Thin wrapper around xml.sax.saxutils.XMLGenerator - plus nice indentation
+class XMLWriter:
+	def __init__(self, output):
+		self.output = output
+		self.doc = xml.sax.saxutils.XMLGenerator(output)
+		self.elementStack = []
+		self.hasContent = False
+
+	def finish(self):
+		if len(self.elementStack) > 0:
+			raise Exception('Not all xml elements are closed!')
+		self.doc.endDocument()
+		self.output.flush()
+
+	def startElement(self, name, element_content = None, **attr):
+		attr = dict(map(lambda k_v: (str(k_v[0]), str(k_v[1])), filter(lambda k_v: k_v[1], attr.items())))
+		sax_attr = xml.sax.xmlreader.AttributesImpl(attr)
+		self.doc.characters('\t' * len(self.elementStack))
+		self.doc.startElement(name, sax_attr)
+		self.hasContent = (element_content != None)
+		if self.hasContent:
+			self.doc.characters(str(element_content))
+		else:
+			self.doc.characters('\n')
+		self.elementStack.append(name)
+
+	def endElement(self, check_name = None):
+		name = self.elementStack.pop()
+		if check_name and (check_name != name):
+			raise Exception('Unexpected element closed %s != %s' % (name, check_name))
+		if not self.hasContent:
+			self.doc.characters('\t' * len(self.elementStack))
+		self.doc.endElement(name)
+		self.doc.characters('\n')
+		self.hasContent = False
+
+	def singleElement(self, name, element_content = None, **attr):
+		self.startElement(name, element_content, **attr)
+		self.endElement()
+
+report = None
+config = None
+args = []
+arg_iter = iter(sys.argv[1:])
+for opt in arg_iter:
+	if opt == '-j':
+		try:
+			report = arg_iter.next()
+		except Exception:
+			report = next(arg_iter)
+	elif opt == '-e':
+		pass
+	else:
+		config = opt
+		args.extend(arg_iter)
+if config is not None:
+	assert(os.path.exists(config))
+	assert(config.endswith('.py'))
+print('Arguments: %r %r' % (config, args))
+
+fp = open(config)
+setup = {}
+current = None
+gen_lumi = None
+for line in fp:
+	if (not setup.get('files')) and ('primaryFiles' in line):
+		try:
+			setup['files'] = list(map(lambda x: x.strip().strip('"'), line.split('=')[1].lstrip('[').rstrip(']').split(',')))
+			current = None
+		except:
+			pass
+	for key in ['TFileService', 'PoolOutputModule']:
+		if key in line:
+			current = key
+	if current and ('fileName' in line):
+		try:
+			setup[current] = line.split('fileName')[1].replace('"', "'").split("'")[1]
+		except:
+			pass
+	if 'maxevents = ' in line:
+		try:
+			setup['maxevents'] = int(line.split('=')[-1])
+		except:
+			pass
+		try:
+			setup['maxevents'] = int(line.split('=')[-1].split('(')[1].split(')')[0])
+		except:
+			pass
+	if 'firstLuminosityBlock' in line:
+		try:
+			gen_lumi = eval(line.split('=')[1].split('(')[1].split(')')[0])
+		except:
+			pass
+fp.close()
+
+files = []
+for lfn in setup.get('files', []):
+	print("Running over file ... %s" % lfn)
+	random.seed(int(md5_hex(lfn), 16))
+	events = random.randint(1000, 9000)
+	run_start = random.randint(150000, 170000)
+	fileinfo = {'events': events, 'lfn': lfn, 'pfn': 'dcap://dccmsdcap.gridka.de:22125/' + lfn.split('/', 1)[-1], 'runs': {}}
+	for run in range(run_start, run_start + random.randint(1, 3)):
+		lumi_start = random.randint(100, 900)
+		fileinfo['runs'].setdefault(run, []).extend(range(lumi_start, lumi_start + random.randint(1, 20)))
+	files.append(fileinfo)
+
+for key in ['TFileService', 'PoolOutputModule']:
+	if key in setup:
+		fp = open(setup[key], 'w')
+		fp.write('%s\n' % key)
+		fp.write('%r\n' % args)
+		for fileinfo in files:
+			fp.write('\tinput: %s\n' % fileinfo['lfn'])
+		fp.close()
+
+fp = open(report, 'w')
+tmp = XMLWriter(fp)
+tmp.startElement('FrameworkJobReport')
+if 'TFileService' in setup:
+	tmp.startElement('AnalysisFile')
+	tmp.singleElement('FileName', setup['TFileService'])
+	tmp.singleElement('Source', Value = 'TFileService')
+	tmp.endElement()
+
+for fileinfo in files:
+	tmp.startElement('InputFile')
+	tmp.singleElement('LFN', fileinfo['lfn'])
+	tmp.singleElement('PFN', fileinfo['pfn'])
+	tmp.singleElement('EventsRead', fileinfo['events'])
+	tmp.startElement('Runs')
+	for run in sorted(fileinfo['runs']):
+		tmp.startElement('Run', ID = run)
+		for lumi in sorted(set(fileinfo['runs'][run])):
+			tmp.singleElement('LumiSection', ID = lumi)
+		tmp.endElement()
+	tmp.endElement()
+	tmp.endElement()
+
+if 'PoolOutputModule' in setup:
+	tmp.startElement('File')
+	tmp.singleElement('LFN')
+	tmp.singleElement('PFN', setup['PoolOutputModule'])
+	if files:
+		events = int(0.95 * sum(map(lambda fi: fi['events'], files)))
+	elif 'maxevents' in setup:
+		events = setup['maxevents']
+	else:
+		events = int(md5_hex(setup['PoolOutputModule']), 16) % 100000
+	tmp.singleElement('TotalEvents', events)
+	tmp.singleElement('DataType', 'Data')
+
+	runlumi = {}
+	for fileinfo in files:
+		for run in fileinfo['runs']:
+			runlumi.setdefault(run, []).extend(fileinfo['runs'][run])
+	if not files:
+		if gen_lumi is not None:
+			runlumi[1] = [gen_lumi]
+		else:
+			runlumi[1] = [int(md5_hex(setup['PoolOutputModule']), 16) % 100]
+
+	if runlumi:
+		tmp.startElement('Runs')
+		for run in sorted(runlumi):
+				tmp.startElement('Run', ID = run)
+				for lumi in sorted(set(runlumi[run])):
+					tmp.singleElement('LumiSection', ID = lumi)
+				tmp.endElement()
+		tmp.endElement()
+
+	if files:
+		tmp.startElement('Inputs')
+		for fileinfo in files:
+			tmp.startElement('Input')
+			tmp.singleElement('LFN', fileinfo['lfn'])
+			tmp.singleElement('PFN', fileinfo['pfn'])
+			tmp.endElement()
+		tmp.endElement()
+
+	tmp.endElement()
+tmp.endElement()
+tmp.finish()
+fp.close()

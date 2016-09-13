@@ -1,0 +1,22 @@
+[/MY/DATASET#storage1]
+se list = SE1.siteA,SE2.siteA
+/path/file1 = 10
+
+[/MY/DATASET#storage2]
+/path/file2 = 10
+
+[/MY/DATASET#storage3]
+se list =
+/path/file3 = 10
+
+[/MY/DATASET#storage4]
+se list = SE2.siteA,SE3.siteB
+/path/file4 = 10
+
+[/MY/DATASET#storage5]
+se list = SE4.siteB
+/path/file5 = 10
+
+[/MY/DATASET#storage6]
+se list = SE1.siteA,SE3.siteB,SE5.siteA
+/path/file6 = 10

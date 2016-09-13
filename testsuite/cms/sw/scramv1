@@ -1,0 +1,24 @@
+#!/bin/bash
+
+case "$1" in
+	"list")
+		echo "List of CMSSW Versions..."
+		exit 0
+		;;
+	"project")
+		if [ "$2" == "CMSSW" ]; then
+			echo "Creating project directory"
+			mkdir $3
+			exit 0
+		fi
+		;;
+	"runtime")
+		if [ "$2" == "-sh" ]; then
+			echo "export CMSSW_BASE=$PWD"
+			echo "export CMSSW_RELEASE_BASE=$PWD"
+			exit 0
+		fi
+		;;
+esac
+
+exit 1

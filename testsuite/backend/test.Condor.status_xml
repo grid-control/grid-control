@@ -1,0 +1,244 @@
+<?xml version="1.0"?>
+<!DOCTYPE classads SYSTEM "classads.dtd">
+<classads>
+
+<c>
+    <a n="MaxHosts"><i>1</i></a>
+    <a n="Env"><s>CONDOR_WMS_DASHID=https://CONDOR:/78905.0</s></a>
+    <a n="User"><s>stober@physik.uni-karlsruhe.de</s></a>
+    <a n="EncryptExecuteDirectory"><b v="f"/></a>
+    <a n="OnExitHold"><b v="f"/></a>
+    <a n="CoreSize"><i>0</i></a>
+    <a n="MachineAttrCpus0"><i>1</i></a>
+    <a n="WantRemoteSyscalls"><b v="f"/></a>
+    <a n="MyType"><s>Job</s></a>
+    <a n="Rank"><r>0.0</r></a>
+    <a n="CumulativeSuspensionTime"><i>0</i></a>
+    <a n="MinHosts"><i>1</i></a>
+    <a n="PeriodicHold"><b v="f"/></a>
+    <a n="PeriodicRemove"><e>( ( JobStatus == 5 &amp;&amp; HoldReasonCode != 16 ) )</e></a>
+    <a n="Err"><s>/usr/users/stober/grid-control/work.condor/sandbox/0/gc.stderr</s></a>
+    <a n="ProcId"><i>0</i></a>
+    <a n="EnteredCurrentStatus"><i>1466285012</i></a>
+    <a n="UserLog"><s>/usr/users/stober/grid-control/work.condor/sandbox/GC_Condor.ea8ff1ec1e059d9d1a4f80440533b413.log</s></a>
+    <a n="NumJobStarts"><i>0</i></a>
+    <a n="JobUniverse"><i>5</i></a>
+    <a n="In"><s>/dev/null</s></a>
+    <a n="Requirements"><e>( ( TARGET.CLOUD_SITE == "BWFORCLUSTER" ) ) &amp;&amp; ( ( ( INPUT_FILES is undefined ) || ( HPDA_Route is true ) || ( ( CurrentTime - QDate ) &gt; ( 10 * 3 ) ) ) ) &amp;&amp; ( TARGET.Arch == "X86_64" ) &amp;&amp; ( TARGET.OpSys == "LINUX" ) &amp;&amp; ( TARGET.Disk &gt;= RequestDisk ) &amp;&amp; ( TARGET.Memory &gt;= RequestMemory ) &amp;&amp; ( TARGET.HasFileTransfer )</e></a>
+    <a n="PublicClaimId"><s>&lt;10.17.147.62:9618&gt;#1466284428#23#...</s></a>
+    <a n="ClusterId"><i>78905</i></a>
+    <a n="WhenToTransferOutput"><s>ON_EXIT</s></a>
+    <a n="LastMatchTime"><i>1466285012</i></a>
+    <a n="CompletionDate"><i>0</i></a>
+    <a n="x509UserProxyVOName"><s>cms</s></a>
+    <a n="BufferSize"><i>524288</i></a>
+    <a n="REMOTE_JOB"><b v="t"/></a>
+    <a n="StartdPrincipal"><s>execute-side@matchsession/132.230.0.110</s></a>
+    <a n="TargetType"><s>Machine</s></a>
+    <a n="LeaveJobInQueue"><b v="f"/></a>
+    <a n="x509UserProxyExpiration"><i>1466975919</i></a>
+    <a n="RequestWalltime"><i>3600</i></a>
+    <a n="JobNotification"><i>0</i></a>
+    <a n="Owner"><s>stober</s></a>
+    <a n="CondorPlatform"><s>$CondorPlatform: X86_64-RedHat_6.7 $</s></a>
+    <a n="CommittedTime"><i>0</i></a>
+    <a n="x509userproxy"><s>/tmp/x509up_u12043</s></a>
+    <a n="QDate"><i>1466285011</i></a>
+    <a n="JobLeaseDuration"><i>2400</i></a>
+    <a n="TransferIn"><b v="f"/></a>
+    <a n="ExitStatus"><i>0</i></a>
+    <a n="StartdIpAddr"><s>&lt;10.17.147.62:9618?CCBID=129.13.133.34:9618%3faddrs%3d129.13.133.34-9618%26noUDP%26sock%3dcollector#100104&amp;addrs=10.17.147.62-9618&amp;noUDP&amp;sock=2449_6a02_4&gt;</s></a>
+    <a n="NumJobMatches"><i>1</i></a>
+    <a n="RootDir"><s>/</s></a>
+    <a n="JobCurrentStartDate"><i>1466285012</i></a>
+    <a n="GlobalJobId"><s>ekpcms6.physik.uni-karlsruhe.de#78905.0#1466285011</s></a>
+    <a n="CurrentHosts"><i>1</i></a>
+    <a n="RemoteSysCpu"><r>0.0</r></a>
+    <a n="TotalSuspensions"><i>0</i></a>
+    <a n="x509UserProxyFirstFQAN"><s>/cms/dcms/Role=NULL/Capability=NULL</s></a>
+    <a n="WantCheckpoint"><b v="f"/></a>
+    <a n="LastJobLeaseRenewal"><i>1466285113</i></a>
+    <a n="x509userproxysubject"><s>/C=DE/O=GermanGrid/OU=uni-hamburg/CN=Fred Markus Stober</s></a>
+    <a n="Args"><s>0</s></a>
+    <a n="TransferInput"><s>/usr/users/stober/grid-control/work.condor/gc-run.lib,/usr/users/stober/grid-control/work.condor/files/GCfe3c56398706/CONDOR/gc-sandbox.tar.gz,/usr/users/stober/grid-control/work.condor/sandbox/0/job_0.var</s></a>
+    <a n="GridControl_GCtoWMSID"><s>GCfe3c5639.0@78905.0</s></a>
+    <a n="PeriodicRelease"><b v="f"/></a>
+    <a n="NumCkpts_RAW"><i>0</i></a>
+    <a n="CondorVersion"><s>$CondorVersion: 8.4.3 Jan 22 2016 BuildID: RH-8.4.3-1.el6 $</s></a>
+    <a n="Out"><s>/usr/users/stober/grid-control/work.condor/sandbox/0/gc.stdout</s></a>
+    <a n="ShouldTransferFiles"><s>YES</s></a>
+    <a n="DiskUsage"><i>32</i></a>
+    <a n="JobRunCount"><i>1</i></a>
+    <a n="CumulativeSlotTime"><i>0</i></a>
+    <a n="CommittedSlotTime"><i>0</i></a>
+    <a n="LocalUserCpu"><r>0.0</r></a>
+    <a n="NotifyUser"><s></s></a>
+    <a n="JobStartDate"><i>1466285012</i></a>
+    <a n="ExitBySignal"><b v="f"/></a>
+    <a n="StreamErr"><b v="f"/></a>
+    <a n="TransferringInput"><b v="f"/></a>
+    <a n="DelegatedProxyExpiration"><i>1466371412</i></a>
+    <a n="NumSystemHolds"><i>0</i></a>
+    <a n="NumRestarts"><i>0</i></a>
+    <a n="OrigMaxHosts"><i>1</i></a>
+    <a n="RequestDisk"><e>DiskUsage</e></a>
+    <a n="EnvDelim"><s>;</s></a>
+    <a n="JobPrio"><i>0</i></a>
+    <a n="NumCkpts"><i>0</i></a>
+    <a n="BufferBlockSize"><i>32768</i></a>
+    <a n="ImageSize"><i>10</i></a>
+    <a n="RemoteHost"><s>slot1@moab-vm-702139.bwforcluster</s></a>
+    <a n="DiskUsage_RAW"><i>32</i></a>
+    <a n="CommittedSuspensionTime"><i>0</i></a>
+    <a n="x509UserProxyEmail"><s>fred.stober@desy.de</s></a>
+    <a n="Cmd"><s>/usr/users/stober/grid-control/packages/grid_control/share/gc-run.sh</s></a>
+    <a n="LocalSysCpu"><r>0.0</r></a>
+    <a n="Iwd"><s>/usr/users/stober/grid-control/work.condor/sandbox/0/</s></a>
+    <a n="GridControl_GCIDtoWMSID"><s>0@78905.0</s></a>
+    <a n="TransferInputSizeMB"><i>0</i></a>
+    <a n="ServerTime"><i>1466285295</i></a>
+    <a n="LastSuspensionTime"><i>0</i></a>
+    <a n="ExecutableSize_RAW"><i>9</i></a>
+    <a n="BytesSent"><r>0.0</r></a>
+    <a n="TransferOutput"><s>job.info,job.stdout.gz,job.stderr.gz</s></a>
+    <a n="JobStatus"><i>2</i></a>
+    <a n="ShadowBday"><i>1466285012</i></a>
+    <a n="ExecutableSize"><i>10</i></a>
+    <a n="MachineAttrSlotWeight0"><i>1</i></a>
+    <a n="ImageSize_RAW"><i>9</i></a>
+    <a n="RemoteWallClockTime"><r>0.0</r></a>
+    <a n="OnExitRemove"><b v="t"/></a>
+    <a n="RemoteSlotID"><i>1</i></a>
+    <a n="StreamOut"><b v="f"/></a>
+    <a n="BytesRecvd"><r>3.105500000000000E+04</r></a>
+    <a n="RequestMemory"><e>ifthenelse(MemoryUsage isnt undefined,MemoryUsage,( ImageSize + 1023 ) / 1024)</e></a>
+    <a n="RemoteUserCpu"><r>0.0</r></a>
+    <a n="NiceUser"><b v="f"/></a>
+    <a n="NumShadowStarts"><i>1</i></a>
+    <a n="TransferQueued"><b v="f"/></a>
+    <a n="RequestCpus"><i>1</i></a>
+    <a n="WantRemoteIO"><b v="t"/></a>
+    <a n="x509UserProxyFQAN"><s>/C=DE/O=GermanGrid/OU=uni-hamburg/CN=Fred Markus Stober,/cms/dcms/Role=NULL/Capability=NULL,/cms/Role=NULL/Capability=NULL</s></a>
+    <a n="LastJobStatus"><i>1</i></a>
+</c>
+<c>
+    <a n="MaxHosts"><i>1</i></a>
+    <a n="Env"><s>CONDOR_WMS_DASHID=https://CONDOR:/78905.1</s></a>
+    <a n="User"><s>stober@physik.uni-karlsruhe.de</s></a>
+    <a n="EncryptExecuteDirectory"><b v="f"/></a>
+    <a n="OnExitHold"><b v="f"/></a>
+    <a n="CoreSize"><i>0</i></a>
+    <a n="MachineAttrCpus0"><i>1</i></a>
+    <a n="WantRemoteSyscalls"><b v="f"/></a>
+    <a n="MyType"><s>Job</s></a>
+    <a n="Rank"><r>0.0</r></a>
+    <a n="CumulativeSuspensionTime"><i>0</i></a>
+    <a n="MinHosts"><i>1</i></a>
+    <a n="PeriodicHold"><b v="f"/></a>
+    <a n="PeriodicRemove"><e>( ( JobStatus == 5 &amp;&amp; HoldReasonCode != 16 ) )</e></a>
+    <a n="Err"><s>/usr/users/stober/grid-control/work.condor/sandbox/1/gc.stderr</s></a>
+    <a n="ProcId"><i>1</i></a>
+    <a n="EnteredCurrentStatus"><i>1466285012</i></a>
+    <a n="UserLog"><s>/usr/users/stober/grid-control/work.condor/sandbox/GC_Condor.ea8ff1ec1e059d9d1a4f80440533b413.log</s></a>
+    <a n="NumJobStarts"><i>0</i></a>
+    <a n="JobUniverse"><i>5</i></a>
+    <a n="In"><s>/dev/null</s></a>
+    <a n="Requirements"><e>( ( TARGET.CLOUD_SITE == "BWFORCLUSTER" ) ) &amp;&amp; ( ( ( INPUT_FILES is undefined ) || ( HPDA_Route is true ) || ( ( CurrentTime - QDate ) &gt; ( 10 * 3 ) ) ) ) &amp;&amp; ( TARGET.Arch == "X86_64" ) &amp;&amp; ( TARGET.OpSys == "LINUX" ) &amp;&amp; ( TARGET.Disk &gt;= RequestDisk ) &amp;&amp; ( TARGET.Memory &gt;= RequestMemory ) &amp;&amp; ( TARGET.HasFileTransfer )</e></a>
+    <a n="PublicClaimId"><s>&lt;10.17.147.62:9618&gt;#1466284428#21#...</s></a>
+    <a n="ClusterId"><i>78905</i></a>
+    <a n="WhenToTransferOutput"><s>ON_EXIT</s></a>
+    <a n="LastMatchTime"><i>1466285012</i></a>
+    <a n="CompletionDate"><i>0</i></a>
+    <a n="x509UserProxyVOName"><s>cms</s></a>
+    <a n="BufferSize"><i>524288</i></a>
+    <a n="REMOTE_JOB"><b v="t"/></a>
+    <a n="StartdPrincipal"><s>execute-side@matchsession/132.230.0.110</s></a>
+    <a n="TargetType"><s>Machine</s></a>
+    <a n="LeaveJobInQueue"><b v="f"/></a>
+    <a n="x509UserProxyExpiration"><i>1466975919</i></a>
+    <a n="RequestWalltime"><i>3600</i></a>
+    <a n="JobNotification"><i>0</i></a>
+    <a n="Owner"><s>stober</s></a>
+    <a n="CondorPlatform"><s>$CondorPlatform: X86_64-RedHat_6.7 $</s></a>
+    <a n="CommittedTime"><i>0</i></a>
+    <a n="x509userproxy"><s>/tmp/x509up_u12043</s></a>
+    <a n="QDate"><i>1466285011</i></a>
+    <a n="JobLeaseDuration"><i>2400</i></a>
+    <a n="TransferIn"><b v="f"/></a>
+    <a n="ExitStatus"><i>0</i></a>
+    <a n="StartdIpAddr"><s>&lt;10.17.147.62:9618?CCBID=129.13.133.34:9618%3faddrs%3d129.13.133.34-9618%26noUDP%26sock%3dcollector#100104&amp;addrs=10.17.147.62-9618&amp;noUDP&amp;sock=2449_6a02_4&gt;</s></a>
+    <a n="NumJobMatches"><i>1</i></a>
+    <a n="RootDir"><s>/</s></a>
+    <a n="JobCurrentStartDate"><i>1466285012</i></a>
+    <a n="GlobalJobId"><s>ekpcms6.physik.uni-karlsruhe.de#78905.1#1466285011</s></a>
+    <a n="CurrentHosts"><i>1</i></a>
+    <a n="RemoteSysCpu"><r>0.0</r></a>
+    <a n="TotalSuspensions"><i>0</i></a>
+    <a n="x509UserProxyFirstFQAN"><s>/cms/dcms/Role=NULL/Capability=NULL</s></a>
+    <a n="WantCheckpoint"><b v="f"/></a>
+    <a n="LastJobLeaseRenewal"><i>1466285113</i></a>
+    <a n="x509userproxysubject"><s>/C=DE/O=GermanGrid/OU=uni-hamburg/CN=Fred Markus Stober</s></a>
+    <a n="Args"><s>1</s></a>
+    <a n="TransferInput"><s>/usr/users/stober/grid-control/work.condor/gc-run.lib,/usr/users/stober/grid-control/work.condor/files/GCfe3c56398706/CONDOR/gc-sandbox.tar.gz,/usr/users/stober/grid-control/work.condor/sandbox/1/job_1.var</s></a>
+    <a n="GridControl_GCtoWMSID"><s>GCfe3c5639.1@78905.1</s></a>
+    <a n="PeriodicRelease"><b v="f"/></a>
+    <a n="NumCkpts_RAW"><i>0</i></a>
+    <a n="CondorVersion"><s>$CondorVersion: 8.4.3 Jan 22 2016 BuildID: RH-8.4.3-1.el6 $</s></a>
+    <a n="Out"><s>/usr/users/stober/grid-control/work.condor/sandbox/1/gc.stdout</s></a>
+    <a n="ShouldTransferFiles"><s>YES</s></a>
+    <a n="DiskUsage"><i>32</i></a>
+    <a n="JobRunCount"><i>1</i></a>
+    <a n="CumulativeSlotTime"><i>0</i></a>
+    <a n="CommittedSlotTime"><i>0</i></a>
+    <a n="LocalUserCpu"><r>0.0</r></a>
+    <a n="NotifyUser"><s></s></a>
+    <a n="JobStartDate"><i>1466285012</i></a>
+    <a n="ExitBySignal"><b v="f"/></a>
+    <a n="StreamErr"><b v="f"/></a>
+    <a n="TransferringInput"><b v="f"/></a>
+    <a n="DelegatedProxyExpiration"><i>1466371412</i></a>
+    <a n="NumSystemHolds"><i>0</i></a>
+    <a n="NumRestarts"><i>0</i></a>
+    <a n="OrigMaxHosts"><i>1</i></a>
+    <a n="RequestDisk"><e>DiskUsage</e></a>
+    <a n="EnvDelim"><s>;</s></a>
+    <a n="JobPrio"><i>0</i></a>
+    <a n="NumCkpts"><i>0</i></a>
+    <a n="BufferBlockSize"><i>32768</i></a>
+    <a n="ImageSize"><i>10</i></a>
+    <a n="RemoteHost"><s>slot2@moab-vm-702139.bwforcluster</s></a>
+    <a n="DiskUsage_RAW"><i>32</i></a>
+    <a n="CommittedSuspensionTime"><i>0</i></a>
+    <a n="x509UserProxyEmail"><s>fred.stober@desy.de</s></a>
+    <a n="Cmd"><s>/usr/users/stober/grid-control/packages/grid_control/share/gc-run.sh</s></a>
+    <a n="LocalSysCpu"><r>0.0</r></a>
+    <a n="Iwd"><s>/usr/users/stober/grid-control/work.condor/sandbox/1/</s></a>
+    <a n="GridControl_GCIDtoWMSID"><s>1@78905.1</s></a>
+    <a n="TransferInputSizeMB"><i>0</i></a>
+    <a n="ServerTime"><i>1466285295</i></a>
+    <a n="LastSuspensionTime"><i>0</i></a>
+    <a n="ExecutableSize_RAW"><i>9</i></a>
+    <a n="BytesSent"><r>0.0</r></a>
+    <a n="TransferOutput"><s>job.info,job.stdout.gz,job.stderr.gz</s></a>
+    <a n="JobStatus"><i>2</i></a>
+    <a n="ShadowBday"><i>1466285012</i></a>
+    <a n="ExecutableSize"><i>10</i></a>
+    <a n="MachineAttrSlotWeight0"><i>1</i></a>
+    <a n="ImageSize_RAW"><i>9</i></a>
+    <a n="RemoteWallClockTime"><r>0.0</r></a>
+    <a n="OnExitRemove"><b v="t"/></a>
+    <a n="RemoteSlotID"><i>2</i></a>
+    <a n="StreamOut"><b v="f"/></a>
+    <a n="BytesRecvd"><r>3.105500000000000E+04</r></a>
+    <a n="RequestMemory"><e>ifthenelse(MemoryUsage isnt undefined,MemoryUsage,( ImageSize + 1023 ) / 1024)</e></a>
+    <a n="RemoteUserCpu"><r>0.0</r></a>
+    <a n="NiceUser"><b v="f"/></a>
+    <a n="NumShadowStarts"><i>1</i></a>
+    <a n="TransferQueued"><b v="f"/></a>
+    <a n="RequestCpus"><i>1</i></a>
+    <a n="WantRemoteIO"><b v="t"/></a>
+    <a n="x509UserProxyFQAN"><s>/C=DE/O=GermanGrid/OU=uni-hamburg/CN=Fred Markus Stober,/cms/dcms/Role=NULL/Capability=NULL,/cms/Role=NULL/Capability=NULL</s></a>
+    <a n="LastJobStatus"><i>1</i></a>
+</c>
+</classads>
+

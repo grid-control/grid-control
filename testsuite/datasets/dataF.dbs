@@ -1,0 +1,6 @@
+[/MY/DATASET#fail]
+id = 123
+events = 200
+/path/file0 = 10
+/path/file1 = 5
+/path/file2 = 15

@@ -1,0 +1,45 @@
+[/MY/DATASET#unchanged]
+/path/UC1 = 10
+/path/UC2 = 5
+/path/UC3 = 15
+
+[/MY/DATASET#mix]
+/path/MX1 = 15
+/path/MX2 = 5
+/path/MX3 = 10
+
+[/MY/DATASET#expand]
+/path/EX1 = 5
+/path/EX2 = 10
+/path/EX3 = 15
+/path/EX4 = 5
+
+[/MY/DATASET#add]
+/path/AD1 = 15
+/path/AD2 = 5
+/path/AD3 = 10
+
+[/MY/DATASET#remove]
+/path/RM1 = 5
+/path/RM2 = 10
+/path/RM3 = 15
+/path/RM4 = 10
+
+[/MY/DATASET#shrink]
+/path/SH1 = 5
+/path/SH2 = 20
+/path/SH3 = 15
+/path/SH4 = 20
+/path/SH0 = 10
+
+[/MY/DATASET#replace]
+/path/RP1 = 15
+/path/RP2 = 10
+/path/RP3 = 5
+
+[/MY/DATASET#block-remove]
+/path/BR1 = 10
+
+[/MY/DATASET1#block-sechange]
+se list = SE1,SE5
+/path/SE1 = 10

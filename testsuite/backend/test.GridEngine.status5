@@ -1,0 +1,15 @@
+<?xml version='1.0'?>
+<job_info  xmlns:xsd="http://gridengine.sunsource.net/source/browse/*checkout*/gridengine/source/dist/util/resources/schemas/qstat/qstat.xsd?revision=1.11">
+  <job_info>
+    <job_list state="xxx">
+      <JB_jobnumber>6352</JB_jobnumber>
+      <JAT_prio>0.00000</JAT_prio>
+      <JB_name>GC11e8a12f.40</JB_name>
+      <JB_owner>stober</JB_owner>
+      <state>xxx</state>
+      <JB_submission_time>2010-11-04T20:28:38</JB_submission_time>
+      <queue_name></queue_name>
+      <slots>1</slots>
+    </job_list>
+  </job_info>
+</job_info>

@@ -1,0 +1,11 @@
+JOBID     USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
+103506916 stober  PEND  8nm        lxplus235      -        GC81e0208d.0 Nov  4 20:07
+103506921 stober  PEND  8nm        lxplus235      -        GC81e0208d.3 Nov  4 20:07
+103506923 stober  PEND  8nm        lxplus235      -        GC81e0208d.4 Nov  4 20:07
+103606918 stober  RUN   8nm        lxplus235   lxbsu0606   GC81e0208d.7 Nov  4 20:07
+103606919 stober  RUN   8nm        lxplus235   lxbsu0647   GC81e0208d.8 Nov  4 20:07
+103606921 stober  RUN   8nm        lxplus235   lxbsq1446   GC81e0208d.9 Nov  4 20:07
+103606923 stober  DONE  8nm        lxplus235   lxbsq0620   GC81e0208d.5 Nov  4 20:07
+103507052 stober  PEND  8nm        lxplus235      -        GC81e0208d.10 Nov  4 20:09
+103507054 stober  PEND  8nm        lxplus235      -        GC81e0208d.11 Nov  4 20:09
+103507056 stober  PEND  8nm        lxplus235      -        GC81e0208d.13 Nov  4 20:09

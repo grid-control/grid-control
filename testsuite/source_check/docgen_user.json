@@ -1,0 +1,1437 @@
+{
+	"api": {
+		"get": {
+			"api_text": "Configuration value",
+			"short": "<text>"
+		},
+		"get_bool": {
+			"api_text": "Allows to specify a boolean value with true/false, 1/0, yes/no, ...",
+			"format": "'True' or 'False'",
+			"short": "<boolean>"
+		},
+		"get_choice_yes_no": {
+			"api_text": "Allows to specify a command for later execution",
+			"short": "<boolean>"
+		},
+		"get_command": {
+			"add_options": [
+				{
+					"desc_line": "Specifiy the type of command",
+					"opt_line": "``%(option_display)s type`` = <enum: <enum_values:CommandType>> (Default: executable)"
+				}
+			],
+			"api_text": "Allows to specify a command for later execution",
+			"short": "<command or path>"
+		},
+		"get_composited_plugin": {
+			"add_options": [
+				{
+					"desc_line": "Specifiy compositor class to merge the different plugins given in ``%(option_display)s``",
+					"opt_line": "%(option_display)s manager = <plugin> (Default: %(compositor)s)"
+				}
+			],
+			"api_text": "Allows to specify multiple plugins that are composited ",
+			"short": "<list of %(plugin_plural)s>"
+		},
+		"get_dict": {
+			"api_text": "Allows to specify a space or newline separated list of values",
+			"format": "<default value>\n  <key_1> => <value_2>\n  ...\n  <key_n> => <value_n>\n",
+			"short": "<dictionary>"
+		},
+		"get_enum": {
+			"api_text": "",
+			"format": "<default value>\n  <key_1> => <value_2>\n  ...\n  <key_n> => <value_n>\n",
+			"short": "<enum: %(enum_values)s>"
+		},
+		"get_filter": {
+			"add_options": [
+				{
+					"desc_line": "Specifiy matcher plugin that is used to match filter expressions",
+					"opt_line": "``%(option_display)s matcher`` = <plugin> (Default: %(default_matcher)s)"
+				},
+				{
+					"desc_line": "Specifiy matcher plugin that is used to match filter expressions",
+					"opt_line": "``%(option_display)s plugin`` = <plugin> (Default: %(default_filter)s)"
+				},
+				{
+					"desc_line": "Specifiy the order of the filtered list",
+					"opt_line": "``%(option_display)s order`` = <enum: <enum_values:ListOrder>> (Default: %(default_order)s)"
+				}
+			],
+			"api_text": "Allows to specify a filter expression. The details of the filter setup is provided by the option '<opt> matcher'",
+			"short": "<filter option>"
+		},
+		"get_float": {
+			"api_text": "Allows to specify an floating point value",
+			"short": "<float>"
+		},
+		"get_int": {
+			"api_text": "Allows to specify an integer value",
+			"short": "<integer>"
+		},
+		"get_list": {
+			"api_text": "Allows to specify a space or newline separated list of values",
+			"short": "<list of values>"
+		},
+		"get_lookup": {
+			"add_options": [
+				{
+					"desc_line": "Specifiy matcher plugin that is used to match the lookup expressions",
+					"opt_line": "``%(option_display)s matcher`` = <plugin> (Default: %(default_matcher)s)"
+				}
+			],
+			"api_text": "Allows to define values that depend on other parameters",
+			"format": "<default value>\n  <key_1> => <value_2>\n  ...\n  <key_n> => <value_n>\n",
+			"short": "<lookup specifier>"
+		},
+		"get_matcher": {
+			"add_options": [
+				{
+					"desc_line": "Specifiy matcher plugin that is used to match filter expressions",
+					"opt_line": "``%(option_display)s matcher`` = <plugin> (Default: %(default_matcher)s)"
+				}
+			],
+			"api_text": "Allows to specify a matcher expression. The details of the matcher setup is provided by the option '<opt> matcher'",
+			"short": "<filter option>"
+		},
+		"get_path": {
+			"api_text": "Allows to specify a single path",
+			"short": "<path>"
+		},
+		"get_path_list": {
+			"api_text": "Allows to specify multiple paths.",
+			"short": "<list of paths>"
+		},
+		"get_plugin": {
+			"api_text": "Allows to specify a single plugin. Plugins can be specified in different ways:\n * grid_control.user_mod.UserTask (fully qualified path) \n * user_mod.UserTask (lookup in grid_control is default) \n * UserTask (short form in case of import by __init__.py)",
+			"short": "<%(plugin_singular)s>"
+		},
+		"get_time": {
+			"api_text": "Allows to specify times / durations",
+			"format": "hh[:mm[:ss]]",
+			"short": "<duration %(format)s>"
+		},
+		"is_interactive": {
+			"location": "interactive",
+			"short": "<boolean>"
+		}
+	},
+	"enums": {
+		"LumiKeep": {
+			"<desc>": "This enums allows to specify how much CMS metadata should be retained",
+			"RunLumi": "Keep both run and lumi information"
+		},
+		"ResyncMode": {
+			"<desc>": "This enums allows to specify how to handle changes in the underlying dataset",
+			"changed": "only jobs with changes in the area are reprocessed",
+			"complete": "all jobs with affected files need to be reprocessed",
+			"disable": "disable affected jobs",
+			"ignore": "ignore changes"
+		}
+	},
+	"format": {
+		"output_default": "(default: %s)",
+		"output_desc": "%(user_text)s",
+		"output_opt": "``%(option_display)s%(output_altopt)s`` = %(short)s %(output_default)s"
+	},
+	"location_blacklist": [
+		"Broker",
+		"DataTask",
+		"JobManager",
+		"LocalWMS",
+		"ParameterConfig.get",
+		"ParameterConfig.get_bool",
+		"PBSGECommon",
+		"RefreshableAccessToken",
+		"SCRAMTask",
+		"TaskModule",
+		"TimedAccessToken",
+		"WMS"
+	],
+	"location_force": [
+		"UserTask"
+	],
+	"location_remap": {
+		"BasicWMS": "backend",
+		"CMSSW._getCMSSWPaths": "CMSSW",
+		"CMSSW._getConfigFiles": "CMSSW",
+		"CancelJobsWithProcess": "backend",
+		"ChunkedExecutor": "backend",
+		"Condor._getDestination": "Condor",
+		"Condor._initPoolInterfaces": "Condor",
+		"ConfigDataProvider._read_block": "ConfigDataProvider",
+		"ConfigDataProvider._read_fi": "ConfigDataProvider",
+		"ConfigFactory": "global",
+		"DataProvider": "dataset",
+		"DataProvider.bind": "dataset",
+		"DataTask._create_datasource": "DataTask",
+		"DataTask._setup_repository": "DataTask",
+		"DiscoverWMS_Lazy": "GliteWMS",
+		"EventBoundarySplitter._configure_splitter": "EventBoundarySplitter",
+		"FLSplitStacker._configure_splitter": "FLSplitStacker",
+		"FileBoundarySplitter._configure_splitter": "FileBoundarySplitter",
+		"GridEngine_CheckJobsProcessCreator": "GridEngine",
+		"HTCondor._initPoolInterfaces": "HTCondor",
+		"HybridSplitter._configure_splitter": "HybridSplitter",
+		"Local.__new__": "Local",
+		"NoVarCheck": "global",
+		"PartitionResyncHandler": "dataset",
+		"RunSplitter._configure_splitter": "RunSplitter",
+		"SandboxHelper": "Local",
+		"ScanProviderBase.__init__._get_active_hash_input": "ScanProviderBase",
+		"ScanProviderBase.__init__._setup": "ScanProviderBase",
+		"UserMetadataSplitter._configure_splitter": "UserMetadataSplitter",
+		"UserParameterFactory": "parameters",
+		"gc_create_workflow": "global",
+		"get_actions": "action",
+		"logging_configure_handler": "logging",
+		"logging_create_handlers": "logging",
+		"logging_setup": "logging"
+	},
+	"location_whitelist": [
+		"global",
+		"Workflow",
+		"SimpleJobManager",
+		"backend",
+		"UserTask",
+		"CMSSW",
+		"CMSSW_Advanced",
+		"dataset"
+	],
+	"manual options": {
+		"global": [
+			{
+				"api": "get_list",
+				"example": "-G -c",
+				"example_text": "Here, -G -c enables the GUI and continuous mode",
+				"option": "cmdargs",
+				"user_text": "Automatically added command line arguments"
+			},
+			{
+				"api": "get_list",
+				"example": "common.conf",
+				"force": true,
+				"location": "global",
+				"option": "include",
+				"user_text": "List of additional config files which provide default values. These config files are processed in addition to the files: /etc/grid-control.conf, ~/.grid-control.conf and <GCDIR>/default.conf"
+			},
+			{
+				"api": "get_list",
+				"example": "common.conf",
+				"force": true,
+				"location": "global",
+				"option": "include override",
+				"user_text": "List of additional config files which provide default values. These config files are processed in addition to the files: /etc/grid-control.conf, ~/.grid-control.conf and <GCDIR>/default.conf"
+			}
+		],
+		"interactive": [
+			{
+				"api": "get_bool",
+				"option": "HALLO",
+				"user_text": "Toggle to switch the default value for interactive questions on and off"
+			}
+		]
+	},
+	"option_map": {
+		"<name:broker_prefix>": "<broker name>",
+		"<name:datasource_name>": "<datasource>",
+		"<name:handler_name>": "<handler>",
+		"<name:logger_name>": "<logger name>",
+		"<name:storage_channel>": "<storage channel>",
+		"<name:storage_type>": "<storage type>"
+	},
+	"options": {
+		"<attr:option>": {
+			"default_map": {
+				"<name:interaction_def>": "<given by 'default' option>"
+			},
+			"option_display": "<option name>",
+			"user_text": "Toggle to switch interactive questions on and off"
+		},
+		"<call:self._get_var_opt(<name:varexpr>, <name:suffix>)>": {
+			"default_map": {
+				"<name:default>": "''"
+			},
+			"disable_dupe_check": true,
+			"option_display": "<name of variable> or <tuple with variable> [<option name for variable>]",
+			"user_text": "Specify value(s) of variable"
+		},
+		"<name:broker_prefix> entries": {
+			"default_map": {
+				"0": "no limit (0)"
+			},
+			"user_text": "Specify the number of broker results to store in the job requirements"
+		},
+		"<name:broker_prefix> randomize": {
+			"user_text": "Toggle the randomization of broker results"
+		},
+		"<name:broker_prefix> storage access": {
+			"user_text": "Specify the lookup dictionary that maps storage requirements into other kinds of requirements"
+		},
+		"<name:datasource_name>": {
+			"short": "<list of [<nickname> : [<protocol> :]] <dataset specifier> >",
+			"user_text": "List of datasets to process (including optional nickname and dataset provider information)"
+		},
+		"<name:datasource_name> block sort": {
+			"user_text": "Toggle sorting of dataset blocks"
+		},
+		"<name:datasource_name> check entry consistency": {
+			"user_text": "Toggle check for consistency between the number of events given in the block and and the files"
+		},
+		"<name:datasource_name> check nickname collision": {
+			"user_text": "Toggle nickname collision checks between datasets"
+		},
+		"<name:datasource_name> check nickname consistency": {
+			"user_text": "Toggle check for consistency of nicknames between blocks in the same dataset"
+		},
+		"<name:datasource_name> check unique block": {
+			"user_text": "Specify how to react to duplicated dataset and blockname combinations"
+		},
+		"<name:datasource_name> check unique url": {
+			"user_text": "Specify how to react to duplicated urls in the dataset"
+		},
+		"<name:datasource_name> default query interval": {
+			"user_text": "Specify the default limit for the dataset query interval"
+		},
+		"<name:datasource_name> files sort": {
+			"user_text": "Toggle sorting of dataset files"
+		},
+		"<name:datasource_name> hash": {
+			"disabled": true
+		},
+		"<name:datasource_name> ignore urls": {
+			"user_text": "Specify list of url / data sources to remove from the dataset"
+		},
+		"<name:datasource_name> limit entries": {
+			"user_text": "Specify the number of events after which addition files in the dataset are discarded"
+		},
+		"<name:datasource_name> limit urls": {
+			"user_text": "Specify the number of files after which addition files in the dataset are discarded"
+		},
+		"<name:datasource_name> location filter": {
+			"user_text": "Specify dataset location filter. Dataset without locations have the filter whitelist applied"
+		},
+		"<name:datasource_name> location sort": {
+			"user_text": "Toggle sorting of dataset locations"
+		},
+		"<name:datasource_name> lumi filter": {
+			"disable_dupe_check": true,
+			"user_text": "Specify lumi filter for the dataset (as nickname dependent dictionary)"
+		},
+		"<name:datasource_name> lumi filter strictness": {
+			"user_text": "Specify if the lumi filter requires the run and lumi information (strict) or just the run information (weak)"
+		},
+		"<name:datasource_name> lumi keep": {
+			"default_map": {
+				"<name:lumi_keep_default>": "<Run/none depending on active/inactive lumi filter>"
+			},
+			"user_text": "Specify which lumi metadata to retain"
+		},
+		"<name:datasource_name> lumi metadata": {
+			"default_map": {
+				"<manual>": "<True/False for active/inactive lumi filter>"
+			},
+			"user_text": "Toggle the retrieval of lumi metadata"
+		},
+		"<name:datasource_name> nickname expr": {
+			"user_text": "Specify a python expression (using the variables dataset, block and oldnick) to generate the dataset nickname for the block"
+		},
+		"<name:datasource_name> nickname full name": {
+			"user_text": "Toggle if the nickname should be constructed from the complete dataset name or from the first part"
+		},
+		"<name:datasource_name> nickname source": {
+			"user_text": "Specify nickname plugin that determines the nickname for datasets"
+		},
+		"<name:datasource_name> partition cputime factor": {
+			"user_text": "Specify how the requested cpu time scales with the number of entries in the partition"
+		},
+		"<name:datasource_name> partition cputime offset": {
+			"user_text": "Specify the offset of the requested cpu time"
+		},
+		"<name:datasource_name> partition lfn modifier": {
+			"user_text": "Specify a LFN prefix or prefix shortcut ('/': reduce to LFN)"
+		},
+		"<name:datasource_name> partition lfn modifier dict": {
+			"user_text": "Specify a dictionary with lfn modifier shortcuts"
+		},
+		"<name:datasource_name> partition location check": {
+			"user_text": "Toggle the deactivation of partitions without storage locations"
+		},
+		"<name:datasource_name> partition location filter": {
+			"user_text": "Specify filter for dataset locations"
+		},
+		"<name:datasource_name> partition location preference": {
+			"user_text": "Specify dataset location preferences"
+		},
+		"<name:datasource_name> partition location requirement": {
+			"user_text": "Add dataset location to job requirements"
+		},
+		"<name:datasource_name> partition memory factor": {
+			"user_text": "Specify how the requested memory scales with the number of entries in the partition"
+		},
+		"<name:datasource_name> partition memory offset": {
+			"user_text": "Specify the offset of the requested memory"
+		},
+		"<name:datasource_name> partition metadata": {
+			"user_text": "Specify list of dataset metadata to forward to the job environment"
+		},
+		"<name:datasource_name> partition processor": {
+			"user_text": "Specify list of plugins that process partitions"
+		},
+		"<name:datasource_name> partition processor prune": {
+			"user_text": "Toggle the removal of unused partition processors from the partition processing pipeline"
+		},
+		"<name:datasource_name> partition resync": {
+			"user_text": "Toggle interactivity of dataset resyncs"
+		},
+		"<name:datasource_name> partition tfc": {
+			"user_text": "Specify a dataset location dependent trivial file catalogue with file name prefixes"
+		},
+		"<name:datasource_name> partition variable file names": {
+			"user_text": "Specify variable name containing the list of file names"
+		},
+		"<name:datasource_name> partition variable max events": {
+			"user_text": "Specify variable name containing the number of events to process"
+		},
+		"<name:datasource_name> partition variable prefix": {
+			"default_map": {
+				"<call:datasource_name.upper()>": "'DATASET'"
+			},
+			"user_text": "Specify prefix for variables containing dataset information"
+		},
+		"<name:datasource_name> partition variable skip events": {
+			"user_text": "Specify variable name containing the number of events to skip"
+		},
+		"<name:datasource_name> partition walltime factor": {
+			"user_text": "Specify how the requested wall time scales with the number of entries in the partition"
+		},
+		"<name:datasource_name> partition walltime offset": {
+			"user_text": "Specify the offset of the requested wall time"
+		},
+		"<name:datasource_name> processor": {
+			"user_text": "Specify list of plugins that process datasets before the partitioning"
+		},
+		"<name:datasource_name> processor prune": {
+			"user_text": "Toggle the removal of unused dataset processors from the dataset processing pipeline"
+		},
+		"<name:datasource_name> provider": {
+			"user_text": "Specify the name of the default dataset provider"
+		},
+		"<name:datasource_name> refresh": {
+			"default_map": {
+				"-1": "disabled (-1)"
+			},
+			"user_text": "Specify the interval to check for changes in the used datasets"
+		},
+		"<name:datasource_name> remove empty blocks": {
+			"user_text": "Toggle removal of empty blocks (without files) from the dataset"
+		},
+		"<name:datasource_name> remove empty files": {
+			"user_text": "Toggle removal of empty files (without entries) from the dataset"
+		},
+		"<name:datasource_name> sort": {
+			"user_text": "Toggle sorting of datasets"
+		},
+		"<name:datasource_name> splitter": {
+			"short": "<plugin>",
+			"user_text": "Specify the dataset splitter plugin to partition the dataset"
+		},
+		"<name:datasource_name> target partitions": {
+			"user_text": "Specify the number of partitions the splitter should aim for"
+		},
+		"<name:datasource_name> target partitions per nickname": {
+			"user_text": "Specify the number of partitions per nickname the splitter should aim for"
+		},
+		"<name:logger_name> <name:handler_name> code context": {
+			"user_text": "Number of code context lines in shown exception logs"
+		},
+		"<name:logger_name> <name:handler_name> detail lower limit": {
+			"default_map": {
+				"<attr:DEBUG>": "DEBUG"
+			},
+			"enum_values": "LEVEL 0..50|NOTSET|DEBUG3...DEBUG|INFO3..INFO|DEFAULT|WARNING|ERROR|CRITICAL",
+			"user_text": "Logging messages below this log level will use the long form output"
+		},
+		"<name:logger_name> <name:handler_name> detail upper limit": {
+			"default_map": {
+				"<attr:ERROR>": "ERROR"
+			},
+			"enum_values": "LEVEL 0..50|NOTSET|DEBUG3...DEBUG|INFO3..INFO|DEFAULT|WARNING|ERROR|CRITICAL",
+			"user_text": "Logging messages above this log level will use the long form output"
+		},
+		"<name:logger_name> <name:handler_name> file stack": {
+			"user_text": "Level of detail for file stack information shown in exception logs"
+		},
+		"<name:logger_name> <name:handler_name> tree": {
+			"user_text": "Level of detail for exception tree information shown in exception logs"
+		},
+		"<name:logger_name> <name:handler_name> variables": {
+			"user_text": "Level of detail for variable information shown in exception logs"
+		},
+		"<name:logger_name> debug file": {
+			"default_map": {
+				"<call:get_debug_file_candidates()>": "'\"<gc dir>/debug.log\" \"/tmp/gc.debug.<uid>.<pid>\" \"~/gc.debug\"'"
+			},
+			"user_text": "Logfile used by debug file logger. In case multiple paths are specified, the first usable path will be used."
+		},
+		"<name:logger_name> file": {
+			"user_text": "Log file used by file logger"
+		},
+		"<name:logger_name> handler": {
+			"user_text": "List of log handlers"
+		},
+		"<name:logger_name> level": {
+			"default_map": {
+				"<attr:level>": "<depends on the logger>"
+			},
+			"enum_values": "LEVEL 0..50|NOTSET|DEBUG3...DEBUG|INFO3..INFO|DEFAULT|WARNING|ERROR|CRITICAL",
+			"user_text": "Logging level of log handlers"
+		},
+		"<name:logger_name> propagate": {
+			"default_map": {
+				"<call:bool(<attr:propagate>)>": "<depends on the logger>"
+			},
+			"user_text": "Toggle log propagation"
+		},
+		"<name:prefix> arguments": {
+			"option_display": "[<prefix>] arguments",
+			"user_text": "Specify arguments for the executable"
+		},
+		"<name:prefix> executable": {
+			"default_map": {
+				"<name:executable_default>": "<no default> or ''"
+			},
+			"disable_dupe_check": true,
+			"option_display": "[<prefix>] executable",
+			"user_text": "Path to the executable"
+		},
+		"<name:prefix> send executable": {
+			"option_display": "[<prefix>] send executable",
+			"user_text": "Toggle to control if the specified executable should be send together with the job"
+		},
+		"<name:storage_channel> files": {
+			"user_text": "Specify the files that are transferred over this storage channel"
+		},
+		"<name:storage_channel> force": {
+			"user_text": "Specify the files that are transferred over this storage channel"
+		},
+		"<name:storage_channel> path": {
+			"default_map": {
+				"<attr:defPaths>": "given by '<storage channel class> path'"
+			},
+			"user_text": "Specify the transport URLs that are used to transfer files over this storage channel"
+		},
+		"<name:storage_channel> pattern": {
+			"user_text": "Specify the pattern that is used to translate local to remote file names"
+		},
+		"<name:storage_channel> timeout": {
+			"user_text": "Specify the transfer timeout for files over this storage channel"
+		},
+		"<name:url>": {
+			"option_display": "<dataset URL>",
+			"short": "<int> [<metadata in JSON format>]",
+			"user_text": "The option name corresponds to the URL of the dataset file. The value consists of the number of entry and some optional file metadata"
+		},
+		"<prefix> case sensitive": {
+			"user_text": "Toggle case sensitivity for the matcher"
+		},
+		"<prefix> chunk interval": {
+			"default_map": {
+				"<name:def_chunk_interval>": "<depends on the process>"
+			},
+			"user_text": "Specify the interval between (submit, check, ...) chunks"
+		},
+		"<prefix> chunk size": {
+			"default_map": {
+				"<name:def_chunk_size>": "<depends on the process>"
+			},
+			"user_text": "Specify the size of (submit, check, ...) chunks"
+		},
+		"<prefix> guard override": {
+			"default_map": {
+				"<call:lchain(<call:imap(<manual>, <attr:scanner_list>)>)>": "<taken from the selected info scanners>"
+			},
+			"user_text": "Override the list of guard keys that are preventing files from being in the same datasets or block"
+		},
+		"<prefix> hash keys": {
+			"user_text": "Specify list of keys that are used to determine the datasets or block assigment of files"
+		},
+		"<prefix> key select": {
+			"user_text": "Specify list of dataset or block hashes that are selected for this data source"
+		},
+		"<prefix> mode": {
+			"user_text": "Specify the matcher plugin that is used to match the subexpressions of the filter"
+		},
+		"<prefix> name pattern": {
+			"user_text": "Specify the name pattern for the dataset or block (using variables that are common to all files in the dataset or block)"
+		},
+		"BasicWMS:access token": {
+			"user_text": "Specify access token plugins that are necessary for job submission"
+		},
+		"CMSSW._getConfigFiles:config file": {
+			"default_map": {
+				"<name:cfgDefault>": "<no default> or '' if prolog / epilog script is given"
+			},
+			"user_text": "List of config files that will be sequentially processed by *cmsRun* calls"
+		},
+		"CMSSW:events per job": {
+			"example": 5000,
+			"user_text": "This sets the variable MAX_EVENTS if no datasets are present"
+		},
+		"CMSSW:executable": {
+			"disabled": true
+		},
+		"CMSSW_Advanced:config file": {
+			"default_map": {
+				"": "<no default> or '' if prolog / epilog script is given"
+			},
+			"user_text": "List of config files that will be sequentially processed by *cmsRun* calls"
+		},
+		"CMSSW_Advanced:lumi filter": {
+			"disabled": true
+		},
+		"Condor:task id": {
+			"default_map": {
+				"<call:md5(...).hexdigest()>": "<md5 hash>"
+			},
+			"user_text": "Persistent condor task identifier that is generated at the start of the task"
+		},
+		"CoverageBroker:<name:broker_prefix>": {
+			"user_text": "Specify the subset of entries that is stored sequentially in the job requirements"
+		},
+		"DashBoard:task": {
+			"default_map": {
+				"<manual>": "<'analysis' but can be overridden by task>"
+			},
+			"user_text": "Specify the task type reported to dashboard"
+		},
+		"EventBoundarySplitter._configure_splitter:events per job": {
+			"example": 5000,
+			"user_text": "Set granularity of dataset splitter"
+		},
+		"FLSplitStacker._configure_splitter:splitter stack": {
+			"short": "<list of plugins>",
+			"user_text": "Specify sequence of dataset splitters. All dataset splitters except for the last one have to be of type 'FileLevelSplitter', splitting only along file boundaries."
+		},
+		"FileBoundarySplitter._configure_splitter:files per job": {
+			"example": 10,
+			"user_text": "Set granularity of dataset splitter"
+		},
+		"FilesFromLS:source directory": {
+			"user_text": "Specify source directory that is queried for dataset files"
+		},
+		"FilterBroker:<name:broker_prefix>": {
+			"user_text": "Specify the filter expression to select entries given to the broker"
+		},
+		"HTCondor:sandbox path": {
+			"default_map": {
+				"<call:config.get_work_path('sandbox.<name:name>')>": "<workdir>/sandbox.<wms name>"
+			},
+			"user_text": "Specify the sandbox path"
+		},
+		"HybridSplitter._configure_splitter:events per job": {
+			"example": 5000,
+			"user_text": "Set guideline for the granularity of the dataset splitter"
+		},
+		"InactiveWMS:access token": {
+			"user_text": "Specify access token plugins that are necessary for job submission"
+		},
+		"LocalSBStorageManager:<name:storage_type> path": {
+			"default_map": {
+				"<call:config.get_work_path('sandbox')>": "<workdir>/sandbox"
+			},
+			"user_text": "Specify the default transport URL that is used to transfer files over this type of storage channel"
+		},
+		"LocalWMS:memory": {
+			"default_map": {
+				"-1": "unspecified (-1)"
+			},
+			"user_text": "Requested memory in MB by the batch system"
+		},
+		"OutputDirsFromConfig:source job selector": {
+			"user_text": "Specify job selector to apply to jobs in the task"
+		},
+		"OutputDirsFromConfig:workflow": {
+			"user_text": "Specifies the workflow that is read from the config file"
+		},
+		"OutputDirsFromWork:source directory": {
+			"user_text": "Specify source directory that is queried for output directories of the task"
+		},
+		"OutputDirsFromWork:source job selector": {
+			"user_text": "Specify job selector to apply to jobs in the task"
+		},
+		"ROOTTask:executable": {
+			"user_text": "Path to the executable"
+		},
+		"SEStorageManager:<name:storage_channel> path": {
+			"user_text": "Specify the default transport URL(s) that are used to transfer files over this type of storage channel"
+		},
+		"TaskModule:memory": {
+			"default_map": {
+				"-1": "unspecified (-1)"
+			},
+			"user_text": "Requested memory in MB. Some batch farms have very low default memory limits in which case it is necessary to specify this option!"
+		},
+		"TaskModule:task id": {
+			"default_map": {
+				"GC <manual>": "GCxxxxxxxxxxxx"
+			},
+			"user_text": "Persistent task identifier that is generated at the start of the task",
+			"variable": "GC_TASK_ID"
+		},
+		"UserBroker:<name:broker_prefix>": {
+			"user_text": "Specify the list of user settings for the broker"
+		},
+		"Workflow:task": {
+			"user_text": "Select the task module to run"
+		},
+		"abort report": {
+			"user_text": "Specify report plugin to display in case of job cancellations"
+		},
+		"access refresh": {
+			"user_text": "Specify the lifetime threshold at which the access token is renewed"
+		},
+		"account": {
+			"user_text": "Specify fairshare account"
+		},
+		"action": {
+			"example": "check submit",
+			"user_text": "Specify the actions and the order in which grid-control should perform them"
+		},
+		"append info": {
+			"user_text": "List of classAds to manually add to the job submission file"
+		},
+		"append opts": {
+			"user_text": "List of jdl lines to manually add to the job submission file"
+		},
+		"application": {
+			"user_text": "Specify the name of the application that is reported to dashboard"
+		},
+		"area files": {
+			"user_text": "List of files that should be taken from the CMSSW project area for running the job"
+		},
+		"arguments": {
+			"user_text": "Arguments that will be passed to the *cmsRun* call"
+		},
+		"backend": {
+			"user_text": "Select the backend to use for job submission"
+		},
+		"cancel timeout": {
+			"user_text": "Specify timeout of the process that is used to cancel jobs"
+		},
+		"ce": {
+			"user_text": "Specify CE for job submission"
+		},
+		"check promiscuous": {
+			"user_text": "Toggle the indiscriminate logging of the job status tool output"
+		},
+		"check timeout": {
+			"user_text": "Specify timeout of the process that is used to check the job status"
+		},
+		"chunks check": {
+			"user_text": "Specify maximal number of jobs to check in each job cycle"
+		},
+		"chunks enabled": {
+			"user_text": "Toggle to control if only a chunk of jobs are processed each job cycle"
+		},
+		"chunks retrieve": {
+			"user_text": "Specify maximal number of jobs to retrieve in each job cycle"
+		},
+		"chunks submit": {
+			"user_text": "Specify maximal number of jobs to submit in each job cycle"
+		},
+		"classaddata": {
+			"user_text": "List of classAds to manually add to the job submission file"
+		},
+		"config": {
+			"user_text": "Specify the config file with grid settings"
+		},
+		"config id": {
+			"call": {
+				"_get_name()": "<config file name w/o extension> or 'unnamed'"
+			},
+			"user_text": "Identifier for the current configuration"
+		},
+		"constants": {
+			"user_text": "Specify the list of constant names that is queried for values"
+		},
+		"continuous": {
+			"user_text": "Enable continuous running mode"
+		},
+		"cpu time": {
+			"default_map": {
+				"<attr:wallTime>": "<wall time>"
+			},
+			"user_text": "Requested cpu time"
+		},
+		"cpus": {
+			"user_text": "Requested number of cpus per node"
+		},
+		"das instance": {
+			"user_text": "Specify url to the DAS instance that is used to query the datasets"
+		},
+		"dashboard timeout": {
+			"user_text": "Specify the timeout for dashboard interactions"
+		},
+		"dataset name assignment": {
+			"user_text": "Toggle interactive question about issues with the bijectivity of the dataset / block name assignments in the scan provider"
+		},
+		"datasource names": {
+			"user_text": "Specify list of data sources that will be created for use in the parameter space definition"
+		},
+		"dbs instance": {
+			"default_map": {
+				"''": "'prod/global'"
+			},
+			"user_text": "Specify the default dbs instance (by url or instance identifier) to use for dataset queries"
+		},
+		"debug mode": {
+			"user_text": "Toggle debug mode (detailed exception output on stdout)"
+		},
+		"debuglog": {
+			"disable_dupe_check": true,
+			"user_text": "Path to a debug log file"
+		},
+		"defect tries": {
+			"example": 4,
+			"user_text": "Threshold for dropping jobs causing status retrieval errors"
+		},
+		"delay output": {
+			"user_text": "Toggle between direct output of stdout/stderr to the sandbox or indirect output to local tmp during job execution"
+		},
+		"delete": {
+			"short": "<job selector>",
+			"user_text": "The unfinished jobs selected by this expression are cancelled."
+		},
+		"delete jobs": {
+			"user_text": "Toggle interactivity of job deletion requests"
+		},
+		"delimeter block key": {
+			"short": "<delimeter>:<start>:<end>",
+			"user_text": "Specify the the delimeter and range to derive a block key"
+		},
+		"delimeter block modifier": {
+			"user_text": "Specify a python expression to modify the delimeter block key - using the variable 'value'"
+		},
+		"delimeter dataset key": {
+			"short": "<delimeter>:<start>:<end>",
+			"user_text": "Specify the the delimeter and range to derive a dataset key"
+		},
+		"delimeter dataset modifier": {
+			"user_text": "Specify a python expression to modify the delimeter dataset key - using the variable 'value'"
+		},
+		"delimeter match": {
+			"short": "<delimeter>:<count>",
+			"user_text": "Specify the the delimeter and number of delimeters that have to be in the dataset file"
+		},
+		"depends": {
+			"user_text": "List of environment setup scripts that the jobs depend on"
+		},
+		"discover sites": {
+			"user_text": "Toggle the automatic discovery of matching CEs"
+		},
+		"discover wms": {
+			"user_text": "Toggle the automatic discovery of WMS endpoints"
+		},
+		"discovery": {
+			"user_text": "Toggle discovery only mode (without DBS consistency checks)"
+		},
+		"display logger": {
+			"user_text": "Toggle display of logging structure"
+		},
+		"duration": {
+			"default_map": {
+				"<attr:duration>": "<continuous mode on: infinite (-1), off: exit immediately (0)>"
+			},
+			"user_text": "Maximal duration of the job processing pass. The default depends on the value of the 'continuous' option. "
+		},
+		"entries command": {
+			"user_text": "Specify command that, given the file name as argument, returns with the number of entries in the file"
+		},
+		"entries default": {
+			"user_text": "Specify the default number of entries in a dataset file"
+		},
+		"entries key": {
+			"user_text": "Specify a variable from the available metadata that contains the number of entries in a dataset file"
+		},
+		"entries per key value": {
+			"user_text": "Specify the conversion factor between the number of entries in a dataset file and the metadata key"
+		},
+		"events": {
+			"default_map": {
+				"-1": "automatic (-1)"
+			},
+			"user_text": "Specify total number of events in the dataset"
+		},
+		"filename filter": {
+			"user_text": "Specify filename filter to select files for the dataset"
+		},
+		"filename prefix": {
+			"user_text": "Specify prefix that is prepended to the dataset file names"
+		},
+		"force delegate": {
+			"user_text": "Toggle the enforcement of proxy delegation to the WMS"
+		},
+		"gc_create_workflow:workflow": {
+			"user_text": "Specifies the workflow that is being run"
+		},
+		"gui": {
+			"user_text": "Specify GUI plugin to handle the user interaction"
+		},
+		"gzip output": {
+			"user_text": "Toggle the compression of the job log files for stdout and stderr"
+		},
+		"ignore needed time": {
+			"user_text": "Toggle if the needed time influences the decision if the proxy allows job submission"
+		},
+		"ignore task vars": {
+			"default_map": {
+				"<name:ignore_list_default>": "<list of common task vars>"
+			},
+			"user_text": "Specifiy the list of task variables that is not included in the dataset metadata"
+		},
+		"ignore warnings": {
+			"user_text": "Toggle check for non-zero exit code from voms-proxy-info"
+		},
+		"in flight": {
+			"default_map": {
+				"-1": "no limit (-1)"
+			},
+			"example": 10,
+			"user_text": "Maximum number of concurrently submitted jobs"
+		},
+		"in queue": {
+			"default_map": {
+				"-1": "no limit (-1)"
+			},
+			"example": -1,
+			"user_text": "Maximum number of queued jobs"
+		},
+		"include config infos": {
+			"user_text": "Toggle the inclusion of config information in the dataset metadata"
+		},
+		"include parent infos": {
+			"user_text": "Toggle the inclusion of parentage information in the dataset metadata"
+		},
+		"input files": {
+			"user_text": "List of files that should be transferred to the landing zone of the job on the worker node. Only for small files - send large files via SE!"
+		},
+		"instrumentation": {
+			"user_text": "Toggle to control the instrumentation of CMSSW config files for running over data / initializing the RNG for MC production"
+		},
+		"instrumentation fragment": {
+			"default_map": {
+				"<call:utils.get_path_share('fragmentForCMSSW.py')>": "<grid-control cms package>/share/fragmentForCMSSW.py"
+			},
+			"user_text": "Path to the instrumentation fragment that is appended to the CMSSW config file if instrumentation is enabled"
+		},
+		"internal parameter factory": {
+			"user_text": "Specify the parameter factory plugin that is used to generate the basic grid-control parameters"
+		},
+		"jdldata": {
+			"user_text": "List of jdl lines to manually add to the job submission file"
+		},
+		"job chunk size": {
+			"user_text": "Specify size of job submission chunks"
+		},
+		"job database": {
+			"disable_dupe_check": true,
+			"user_text": "Specify job database plugin that is used to store job information"
+		},
+		"job manager": {
+			"user_text": "Specify the job management plugin to handle the job cycle"
+		},
+		"job name": {
+			"user_text": "Specify the job name template for the job name given to the backend"
+		},
+		"job name generator": {
+			"user_text": "Specify the job name plugin that generates the job name that is given to the backend"
+		},
+		"job parser": {
+			"user_text": "Specify plugin that checks the output sandbox of the job and returns with the job status"
+		},
+		"jobs": {
+			"default_map": {
+				"-1": "no limit (-1)"
+			},
+			"example": 27,
+			"user_text": "Maximum number of jobs (truncated to task maximum)"
+		},
+		"landing zone space left": {
+			"user_text": "Minimum amount of disk space (in MB) that the job has to leave in the landing zone directory while running"
+		},
+		"landing zone space used": {
+			"user_text": "Maximum amount of disk space (in MB) that the job is allowed to use in the landing zone directory while running"
+		},
+		"lfn marker": {
+			"user_text": "Specifiy the string that marks the beginning of the LFN"
+		},
+		"location format": {
+			"user_text": "Specify the format of the DBS location information"
+		},
+		"max retry": {
+			"default_map": {
+				"-1": "no limit (-1)"
+			},
+			"example": 4,
+			"user_text": "Number of resubmission attempts for failed jobs"
+		},
+		"merge config infos": {
+			"user_text": "Toggle the merging of config file information according to config file hashes instead of config file names"
+		},
+		"merge parents": {
+			"user_text": "Toggle the merging of dataset blocks with different parent paths"
+		},
+		"metadata": {
+			"user_text": "List of metadata keys in the dataset"
+		},
+		"metadata common": {
+			"user_text": "Specify metadata values in JSON format that are common to all files in the dataset"
+		},
+		"min lifetime": {
+			"user_text": "Specify the minimal lifetime of the proxy that is required to enable job submission"
+		},
+		"monitor": {
+			"user_text": "Specify monitor plugins to track the task / job progress"
+		},
+		"nickname": {
+			"default_map": {
+				"<manual>": "<determined by dataset expression>"
+			},
+			"user_text": "Specify the dataset nickname"
+		},
+		"nickname config": {
+			"user_text": "Allows to specify a dictionary with list of config files that will be sequentially processed by *cmsRun* calls. The dictionary key is the job dependent dataset nickname"
+		},
+		"nickname constants": {
+			"user_text": "Allows to specify a list of nickname dependent variables. The value of the variables is specified separately in the form of a dictionary. (This option is deprecated, since *all* variables support this functionality now!)"
+		},
+		"nickname lumi filter": {
+			"user_text": "Allows to specify a dictionary with nickname dependent lumi filter expressions. (This option is deprecated, since the normal option ``lumi filter`` already supports this!)"
+		},
+		"node timeout": {
+			"default_map": {
+				"-1": "disabled (-1)"
+			},
+			"user_text": "Cancel job after some time on worker node"
+		},
+		"notifyemail": {
+			"user_text": "Specify the email address for job notifications"
+		},
+		"nseeds": {
+			"example": 20,
+			"user_text": "Number of random seeds to generate"
+		},
+		"on finish": {
+			"user_text": "Specify script that is executed when grid-control is exited"
+		},
+		"on output": {
+			"user_text": "Specify script that is executed when the job output is retrieved"
+		},
+		"on status": {
+			"user_text": "Specify script that is executed when the job status changes"
+		},
+		"on submit": {
+			"user_text": "Specify script that is executed when a job is submitted"
+		},
+		"only complete sites": {
+			"user_text": "Toggle the inclusion of incomplete sites in the dataset location information"
+		},
+		"only valid": {
+			"user_text": "Toggle the inclusion of files marked as invalid dataset"
+		},
+		"output files": {
+			"user_text": "List of files that should be transferred to the job output directory on the submission machine. Only for small files - send large files via SE!"
+		},
+		"output processor": {
+			"user_text": "Specify plugin that processes the output sandbox of successful jobs"
+		},
+		"package paths": {
+			"user_text": "Specify paths to additional grid-control packages with user defined plugins that are outside of the base package directory"
+		},
+		"parameter adapter": {
+			"user_text": "Specify the parameter adapter plugin that translates parameter point to job number"
+		},
+		"parameter factory": {
+			"user_text": "Specify the parameter factory plugin that is used to generate the parameter space of the task"
+		},
+		"parameter hash": {
+			"disabled": true
+		},
+		"parameters": {
+			"user_text": "Specify the parameter expression that defines the parameter space. The syntax depends on the used parameter factory."
+		},
+		"parent keys": {
+			"user_text": "Specify the dataset metadata keys that contain parentage information"
+		},
+		"parent match level": {
+			"user_text": "Specify the number of path components that is used to match parent files from the parent dataset and the used parent LFN. (0 == full match)"
+		},
+		"parent source": {
+			"user_text": "Specify the dataset specifier from which the parent information is taken"
+		},
+		"phedex sites": {
+			"user_text": "Toggle the inclusion of files marked as invalid dataset"
+		},
+		"plugin paths": {
+			"call": {
+				"os.getcwd()": "<current directory>"
+			},
+			"user_text": "Specifies paths that are used to search for plugins"
+		},
+		"poolargs query": {
+			"user_text": "Specify keys for condor pool ClassAds"
+		},
+		"poolargs req": {
+			"user_text": "Specify keys for condor pool ClassAds"
+		},
+		"poolconfig": {
+			"user_text": "Specify the list of pool config files"
+		},
+		"poolhostlist": {
+			"user_text": "Specify list of pool hosts"
+		},
+		"prefix": {
+			"user_text": "Specify the common prefix of URLs in the dataset"
+		},
+		"project area": {
+			"default": "<depends on ``scram arch`` and ``scram project``>",
+			"disable_dupe_check": true,
+			"user_text": "Specify location of the CMSSW project area that should be send with the job. Instead of the CMSSW project area, it is possible to specify ``scram arch`` and ``scram project`` to use a fresh CMSSW project."
+		},
+		"project name": {
+			"user_text": "Specify project name for batch fairshare"
+		},
+		"proxy path": {
+			"user_text": "Specify the path to the proxy file that is used to check"
+		},
+		"query time": {
+			"user_text": "Specify the interval in which queries are performed"
+		},
+		"queue broker": {
+			"user_text": "Specify broker plugin to select the queue for job submission"
+		},
+		"queue timeout": {
+			"default_map": {
+				"-1": "disabled (-1)"
+			},
+			"example": "2:00:00",
+			"user_text": "Resubmit jobs after staying some time in initial state"
+		},
+		"random variables": {
+			"user_text": "Specify list of variable names that will contain random values on the worker node"
+		},
+		"remote dest": {
+			"user_text": "Specify remote destination"
+		},
+		"remote type": {
+			"user_text": "Specify the type of remote destination"
+		},
+		"remote user": {
+			"user_text": "Specify user at remote destination"
+		},
+		"remote workdir": {
+			"user_text": "Specify work directory at the remote destination"
+		},
+		"repeat": {
+			"user_text": "Specify the number of jobs that each parameter space point spawns"
+		},
+		"report": {
+			"user_text": "Type of report to display during operations"
+		},
+		"report options": {
+			"user_text": "Specify options for the report plugin"
+		},
+		"reset": {
+			"short": "<job selector>",
+			"user_text": "The jobs selected by this expression are reset to the INIT state"
+		},
+		"reset jobs": {
+			"user_text": "Toggle interactivity of job reset requests"
+		},
+		"resync jobs": {
+			"user_text": "Specify how resynced jobs should be handled"
+		},
+		"resync metadata": {
+			"user_text": "List of metadata keys that have configuration options to specify how metadata changes are handled by a dataset resync"
+		},
+		"resync mode <name:metadata_name>": {
+			"option_display": "resync mode <metadata key>",
+			"user_text": "Specify how changes in the given metadata key affect partitions during resync"
+		},
+		"resync mode added": {
+			"user_text": "Sets the resync mode for new files"
+		},
+		"resync mode expand": {
+			"user_text": "Sets the resync mode for expanded files"
+		},
+		"resync mode removed": {
+			"user_text": "Sets the resync mode for removed files"
+		},
+		"resync mode shrink": {
+			"user_text": "Sets the resync mode for shrunken files"
+		},
+		"root path": {
+			"default_map": {
+				"<call:os.environ.get('ROOTSYS', '')>": "${ROOTSYS}"
+			},
+			"user_text": "Path to the ROOT installation"
+		},
+		"run range": {
+			"user_text": "Specify number of sequential runs that are processed per job"
+		},
+		"sandbox path": {
+			"default_map": {
+				"<call:config.get_work_path('sandbox')>": "<workdir>/sandbox"
+			},
+			"disable_dupe_check": true,
+			"user_text": "Specify the sandbox path"
+		},
+		"sb input manager": {
+			"user_text": "Specify transfer manager plugin to transfer sandbox input files"
+		},
+		"scanner": {
+			"default_map": {
+				"<name:scanner_list_default>": "<depends on other configuration options>"
+			},
+			"user_text": "Specify list of info scanner plugins to retrieve dataset informations"
+		},
+		"schedduri": {
+			"user_text": "Specify URI of the schedd"
+		},
+		"scram arch": {
+			"default": "<depends on ``project area``>",
+			"disable_dupe_check": true,
+			"example": "slc7_amd64_gcc777",
+			"user_text": "Specify scram architecture that should be used by the job (eg. '%(example)s'). When using an existing CMSSW project area with ``project area``, this option uses the default value taken from the project area."
+		},
+		"scram arch requirements": {
+			"user_text": "Toggle the inclusion of the scram architecture in the job requirements"
+		},
+		"scram project": {
+			"example": "CMSSW CMSSW_9_9_9",
+			"user_text": "Specify scram project that should be used by the job (eg. '%(example)s')"
+		},
+		"scram project requirements": {
+			"user_text": "Toggle the inclusion of the scram project name in the job requirements"
+		},
+		"scram project version requirements": {
+			"user_text": "Toggle the inclusion of the scram project version in the job requirements"
+		},
+		"scram version": {
+			"user_text": "Specify scram version that should be used by the job."
+		},
+		"scratch path": {
+			"user_text": "Specify the list of scratch environment variables and paths to search for the scratch directory"
+		},
+		"scratch space left": {
+			"user_text": "Minimum amount of disk space (in MB) that the job has to leave in the scratch directory while running. If the landing zone itself is the scratch space, the scratch thresholds apply"
+		},
+		"scratch space used": {
+			"user_text": "Maximum amount of disk space (in MB) that the job is allowed to use in the scratch directory while running. If the landing zone itself is the scratch space, the scratch thresholds apply"
+		},
+		"script timeout": {
+			"user_text": "Specify the maximal script runtime after which the script is aborted"
+		},
+		"se input manager": {
+			"user_text": "Specify transfer manager plugin to transfer SE input files"
+		},
+		"se list": {
+			"user_text": "Specify list of locations where the dataset is available"
+		},
+		"se min size": {
+			"default_map": {
+				"-1": "disabled (%(default_raw)s)"
+			},
+			"user_text": "SE output files below this file size (in MB) trigger a job failure"
+		},
+		"se output manager": {
+			"user_text": "Specify transfer manager plugin to transfer SE output files"
+		},
+		"se project area": {
+			"user_text": "Toggle to specify how the CMSSW project area should be transferred to the worker node"
+		},
+		"seeds": {
+			"default_map": {
+				"<name:seeds_new>": "Generate <nseeds> random seeds"
+			},
+			"example": "32 51 346, 234",
+			"user_text": "Random seeds used in the job via @SEED_j@\n\t@SEED_0@ = 32, 33, 34, ... for first, second, third job\n\t@SEED_1@ = 51, 52, 53, ... for first, second, third job"
+		},
+		"selected": {
+			"example": "var:KEY=VALUE",
+			"user_text": "Apply general job selector"
+		},
+		"server": {
+			"user_text": "Specify the PBS batch server"
+		},
+		"shell": {
+			"user_text": "Specify the shell to use for job execution"
+		},
+		"shuffle": {
+			"user_text": "Submit jobs in random order"
+		},
+		"silent": {
+			"user_text": "Do not show output of event scripts"
+		},
+		"site broker": {
+			"disable_dupe_check": true,
+			"user_text": "Specify broker plugin to select the site for job submission"
+		},
+		"software requirement map": {
+			"user_text": "Specify a dictionary to map job requirements into submission options"
+		},
+		"source config": {
+			"user_text": "Specify source config file that contains the workflow whose output is queried for dataset files"
+		},
+		"source dataset path": {
+			"user_text": "Specify path to dataset file that provides the input to the info scanner pipeline"
+		},
+		"source jid": {
+			"example": "bot@jabber.example",
+			"user_text": "source account of the jabber messages"
+		},
+		"source password file": {
+			"example": "/path/to/secret.passwd",
+			"user_text": "path to password file of the source account"
+		},
+		"source recurse": {
+			"user_text": "Toggle recursion into directories. This is only possible for local source directories!"
+		},
+		"split metadata": {
+			"user_text": "Specify the name of the metadata variable that is used to partition the dataset into equivalence classes."
+		},
+		"submission": {
+			"user_text": "Toggle to control the submission of jobs"
+		},
+		"submission time requirement": {
+			"default_map": {
+				"<attr:wallTime>": "<wall time>"
+			},
+			"user_text": "Toggle to control the submission of jobs"
+		},
+		"submit options": {
+			"user_text": "Specify additional job submission options"
+		},
+		"subst files": {
+			"user_text": "List of files that will be subjected to variable substituion"
+		},
+		"target jid": {
+			"example": "user@jabber.example",
+			"user_text": "target account of the jabber messages"
+		},
+		"task date": {
+			"default_map": {
+				"<call:strftime('%Y-%m-%d')>": "current date: YYYY-MM-DD"
+			},
+			"user_text": "Persistent date when the task was started.",
+			"variable": "GC_TASK_DATE"
+		},
+		"task name": {
+			"user_text": "Specify the task name reported to dashboard"
+		},
+		"tickets": {
+			"default_map": {
+				"''": "<all tickets: ''>"
+			},
+			"user_text": "Specify the subset of kerberos tickets to check the access token lifetime"
+		},
+		"translate requirements": {
+			"user_text": "Toggle the translation of the parameters WALLTIME, CPUTIME and MEMORY into job requirements"
+		},
+		"try delegate": {
+			"user_text": "Toggle the attempt to do proxy delegation to the WMS"
+		},
+		"universe": {
+			"disable_dupe_check": true,
+			"user_text": "Specify the name of the Condor universe"
+		},
+		"unknown timeout": {
+			"default_map": {
+				"-1": "disabled (-1)"
+			},
+			"user_text": "Cancel jobs without status information after staying in this state for the specified time"
+		},
+		"urgent query time": {
+			"user_text": "Specify the interval in which queries are performed when the time is running out"
+		},
+		"user": {
+			"default_map": {
+				"<call:os.environ.get('LOGNAME', '')>": "${LOGNAME}"
+			},
+			"user_text": "Specify batch system user name"
+		},
+		"variable markers": {
+			"allowed": "@ and/or __",
+			"example": "@",
+			"user_text": "Specifies how variables are marked"
+		},
+		"verify chunks": {
+			"user_text": "List of job chunk sizes that are enabled after passing the configured verification thresholds"
+		},
+		"verify threshold": {
+			"user_text": "List of job verification thresholds that enable the configured job chunk sizes"
+		},
+		"vo": {
+			"default_map": {
+				"<call:self._token.getGroup()>": "<group from the access token>"
+			},
+			"user_text": "Specify the VO used for job submission"
+		},
+		"vo software dir": {
+			"user_text": "This option allows to override of the VO_CMS_SW_DIR environment variable"
+		},
+		"wait idle": {
+			"user_text": "Wait for the specified duration if the job cycle was idle"
+		},
+		"wait work": {
+			"user_text": "Wait for the specified duration during the work steps of the job cycle"
+		},
+		"wall time": {
+			"user_text": "Requested wall time also used for checking the proxy lifetime"
+		},
+		"warn sb size": {
+			"user_text": "Warning threshold for large sandboxes (in MB)"
+		},
+		"wms": {
+			"user_text": "Override automatic discovery of local backend"
+		},
+		"wms broker": {
+			"user_text": "Specify broker plugin to select the WMS for job submission"
+		},
+		"wms discover full": {
+			"user_text": "Toggle between full and lazy WMS endpoint discovery"
+		},
+		"workdir": {
+			"default_map": {
+				"<name:workdir_default>": "<workdir base>/work.<config file name>"
+			},
+			"location": "global",
+			"user_text": "Location of the grid-control work directory. Usually based on the name of the config file"
+		},
+		"workdir base": {
+			"default_map": {
+				"<name:path_main>": "<config file path>"
+			},
+			"user_text": "Directory where the default workdir is created"
+		},
+		"workdir create": {
+			"user_text": "Skip interactive question about workdir creation"
+		},
+		"workdir space": {
+			"example": 50,
+			"location": "global",
+			"user_text": "Lower space limit in the work directory. Monitoring can be deactived with 0"
+		}
+	},
+	"plugin_details": {
+		"NamedPlugin": [
+			"plugin[:name]",
+			"plugin[:name] ..."
+		],
+		"Plugin": [
+			"plugin",
+			"plugins"
+		]
+	}
+}

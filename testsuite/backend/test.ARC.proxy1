@@ -1,0 +1,14 @@
+Subject: /C=DE/O=GermanGrid/OU=uni-hamburg/CN=Fred Markus Stober/CN=1496665672
+Issuer: /C=DE/O=GermanGrid/OU=uni-hamburg/CN=Fred Markus Stober
+Identity: /C=DE/O=GermanGrid/OU=uni-hamburg/CN=Fred Markus Stober
+Time left for proxy: 1 year 12 days 19 hours 56 minutes 56 seconds
+Proxy path: /afs/desy.de/user/s/stober/.globus/proxy_grid
+Proxy type: X.509 Proxy Certificate Profile RFC compliant impersonation proxy - RFC inheritAll proxy
+====== AC extension information for VO cms ======
+VO        : cms
+subject   : /C=DE/O=GermanGrid/OU=uni-hamburg/CN=Fred Markus Stober
+issuer    : /DC=ch/DC=cern/OU=computers/CN=lcg-voms2.cern.ch
+uri       : lcg-voms2.cern.ch:15002
+attribute : /cms/Role=NULL/Capability=NULL
+attribute : /cms/dcms/Role=NULL/Capability=NULL
+Time left for AC: 11 hours 59 minutes 18 seconds

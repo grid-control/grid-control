@@ -1,0 +1,5 @@
+#!/bin/sh
+
+cat ${GC_TEST_STDOUT:-/dev/null}
+cat ${GC_TEST_STDERR:-/dev/null} >&2
+exit ${GC_TEST_RET:-0}

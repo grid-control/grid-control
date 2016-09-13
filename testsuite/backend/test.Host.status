@@ -1,0 +1,4 @@
+USER       PID %CPU %MEM    VSZ   RSS TTY      STAT START   TIME COMMAND
+stober   12862  0.0  0.0  63792  1244 pts/62   SN   20:33   0:00 /bin/bash /usr/users/stober/grid-control/share/local.sh
+stober   12868  0.0  0.0  63792  1244 pts/62   SN   20:33   0:00 /bin/bash /usr/users/stober/grid-control/share/local.sh
+stober   12878  0.0  0.0  63792  1244 pts/62   Z    20:33   0:00 /bin/bash /usr/users/stober/grid-control/share/local.sh

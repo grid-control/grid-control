@@ -1,0 +1,7 @@
+[/Metadata/Test]
+metadata = ['KEY1', 'KEY2', 'KEY3']
+se list = SE123
+file1 = 10 ['Value1', 'Value2', 'Value3a']
+file2 = 10 ['Value1', 'Value2', 'Value3b']
+file3 = 10 ['Value1', 'Value2', 'Value3c']
+filex = 10 ['Value1', 'TEST']

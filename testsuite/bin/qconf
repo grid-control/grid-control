@@ -1,0 +1,620 @@
+#!/bin/sh
+
+if [ "$1" = "-sep" ]; then
+cat << EOF
+HOST                      PROCESSOR        ARCH
+===============================================
+tcx010.naf.desy.de                8  lx26-amd64
+tcx011.naf.desy.de                8  lx26-amd64
+tcx012.naf.desy.de                8  lx26-amd64
+tcx013.naf.desy.de                8  lx26-amd64
+tcx014.naf.desy.de                8  lx26-amd64
+tcx015.naf.desy.de                8  lx26-amd64
+tcx016.naf.desy.de                8  lx26-amd64
+tcx017.naf.desy.de                8  lx26-amd64
+tcx018.naf.desy.de                8  lx26-amd64
+tcx019.naf.desy.de                8  lx26-amd64
+tcx01a.naf.desy.de                8  lx26-amd64
+tcx01b.naf.desy.de                8  lx26-amd64
+tcx01c.naf.desy.de                8  lx26-amd64
+tcx01d.naf.desy.de                8  lx26-amd64
+tcx01e.naf.desy.de                8  lx26-amd64
+tcx021.naf.desy.de                8  lx26-amd64
+tcx022.naf.desy.de                8  lx26-amd64
+tcx023.naf.desy.de                8  lx26-amd64
+tcx024.naf.desy.de                8  lx26-amd64
+tcx025.naf.desy.de                8  lx26-amd64
+tcx026.naf.desy.de                8  lx26-amd64
+tcx027.naf.desy.de                8  lx26-amd64
+tcx028.naf.desy.de                8  lx26-amd64
+tcx029.naf.desy.de                8  lx26-amd64
+tcx02a.naf.desy.de                8  lx26-amd64
+tcx02b.naf.desy.de                8  lx26-amd64
+tcx02c.naf.desy.de                8  lx26-amd64
+tcx02d.naf.desy.de                8  lx26-amd64
+tcx02e.naf.desy.de                8  lx26-amd64
+tcx02f.naf.desy.de                8  lx26-amd64
+tcx030.naf.desy.de                8  lx26-amd64
+tcx031.naf.desy.de                8  lx26-amd64
+tcx033.naf.desy.de                8  lx26-amd64
+tcx035.naf.desy.de                8  lx26-amd64
+tcx036.naf.desy.de                8  lx26-amd64
+tcx037.naf.desy.de                8  lx26-amd64
+tcx038.naf.desy.de                8  lx26-amd64
+tcx039.naf.desy.de                8  lx26-amd64
+tcx03a.naf.desy.de                8  lx26-amd64
+tcx03b.naf.desy.de                8  lx26-amd64
+tcx03c.naf.desy.de                8  lx26-amd64
+tcx03d.naf.desy.de                8  lx26-amd64
+tcx03e.naf.desy.de                8  lx26-amd64
+tcx03f.naf.desy.de                8  lx26-amd64
+tcx041.naf.desy.de                8  lx26-amd64
+tcx042.naf.desy.de                8  lx26-amd64
+tcx043.naf.desy.de                8  lx26-amd64
+tcx045.naf.desy.de                8  lx26-amd64
+tcx046.naf.desy.de                8  lx26-amd64
+tcx047.naf.desy.de                8  lx26-amd64
+tcx048.naf.desy.de                8  lx26-amd64
+tcx049.naf.desy.de                8  lx26-amd64
+tcx04a.naf.desy.de                8  lx26-amd64
+tcx04b.naf.desy.de                8  lx26-amd64
+tcx04c.naf.desy.de                8  lx26-amd64
+tcx04d.naf.desy.de                8  lx26-amd64
+tcx04e.naf.desy.de                8  lx26-amd64
+tcx04f.naf.desy.de                8  lx26-amd64
+tcx050.naf.desy.de                8  lx26-amd64
+tcx053.naf.desy.de                8  lx26-amd64
+tcx054.naf.desy.de                8  lx26-amd64
+tcx055.naf.desy.de                8  lx26-amd64
+tcx056.naf.desy.de                8  lx26-amd64
+tcx057.naf.desy.de                8  lx26-amd64
+tcx058.naf.desy.de                8  lx26-amd64
+tcx059.naf.desy.de                8  lx26-amd64
+tcx05a.naf.desy.de                8  lx26-amd64
+tcx05b.naf.desy.de                8  lx26-amd64
+tcx05c.naf.desy.de                8  lx26-amd64
+tcx05d.naf.desy.de                8  lx26-amd64
+tcx05e.naf.desy.de                8  lx26-amd64
+tcx05f.naf.desy.de                8  lx26-amd64
+tcx063.naf.desy.de                8  lx26-amd64
+tcx064.naf.desy.de                8  lx26-amd64
+tcx065.naf.desy.de                8  lx26-amd64
+tcx066.naf.desy.de                8  lx26-amd64
+tcx067.naf.desy.de                8  lx26-amd64
+tcx068.naf.desy.de                8  lx26-amd64
+tcx069.naf.desy.de                8  lx26-amd64
+tcx06a.naf.desy.de                8  lx26-amd64
+tcx06b.naf.desy.de                8  lx26-amd64
+tcx06c.naf.desy.de                8  lx26-amd64
+tcx06d.naf.desy.de                8  lx26-amd64
+tcx06e.naf.desy.de                8  lx26-amd64
+tcx06f.naf.desy.de                8  lx26-amd64
+tcx071.naf.desy.de                8  lx26-amd64
+tcx072.naf.desy.de                8  lx26-amd64
+tcx073.naf.desy.de                8  lx26-amd64
+tcx074.naf.desy.de                8  lx26-amd64
+tcx075.naf.desy.de                8  lx26-amd64
+tcx076.naf.desy.de                8  lx26-amd64
+tcx077.naf.desy.de                8  lx26-amd64
+tcx078.naf.desy.de                8  lx26-amd64
+tcx079.naf.desy.de                8  lx26-amd64
+tcx07a.naf.desy.de                8  lx26-amd64
+tcx07b.naf.desy.de                8  lx26-amd64
+tcx07c.naf.desy.de                8  lx26-amd64
+tcx07d.naf.desy.de                8  lx26-amd64
+tcx07e.naf.desy.de                8  lx26-amd64
+tcx07f.naf.desy.de                8  lx26-amd64
+tcx082.naf.desy.de                8  lx26-amd64
+tcx083.naf.desy.de                8  lx26-amd64
+tcx084.naf.desy.de                8  lx26-amd64
+tcx085.naf.desy.de                8  lx26-amd64
+tcx086.naf.desy.de                8  lx26-amd64
+tcx087.naf.desy.de                8  lx26-amd64
+tcx088.naf.desy.de                8  lx26-amd64
+tcx089.naf.desy.de                8  lx26-amd64
+tcx08a.naf.desy.de                8  lx26-amd64
+tcx08b.naf.desy.de                8  lx26-amd64
+tcx08c.naf.desy.de                8  lx26-amd64
+tcx08d.naf.desy.de                8  lx26-amd64
+tcx08e.naf.desy.de                8  lx26-amd64
+tcx08f.naf.desy.de                8  lx26-amd64
+tcx090.naf.desy.de                8  lx26-amd64
+tcx091.naf.desy.de                8  lx26-amd64
+tcx092.naf.desy.de                8  lx26-amd64
+tcx093.naf.desy.de                8  lx26-amd64
+tcx094.naf.desy.de                8  lx26-amd64
+tcx095.naf.desy.de                8  lx26-amd64
+tcx096.naf.desy.de                8  lx26-amd64
+tcx097.naf.desy.de                8  lx26-amd64
+tcx098.naf.desy.de                8  lx26-amd64
+tcx099.naf.desy.de                8  lx26-amd64
+tcx09a.naf.desy.de                8  lx26-amd64
+tcx09b.naf.desy.de                8  lx26-amd64
+tcx09c.naf.desy.de                8  lx26-amd64
+tcx09d.naf.desy.de                8  lx26-amd64
+tcx09e.naf.desy.de                8  lx26-amd64
+tcx09f.naf.desy.de                8  lx26-amd64
+tcx100.naf.desy.de                8  lx26-amd64
+tcx101.naf.desy.de               16  lx26-amd64
+tcx102.naf.desy.de                8  lx26-amd64
+tcx103.naf.desy.de                8  lx26-amd64
+tcx104.naf.desy.de                8  lx26-amd64
+tcx105.naf.desy.de                8  lx26-amd64
+tcx106.naf.desy.de                8  lx26-amd64
+tcx107.naf.desy.de                8  lx26-amd64
+tcx108.naf.desy.de                8  lx26-amd64
+tcx109.naf.desy.de                8  lx26-amd64
+tcx10a.naf.desy.de                8  lx26-amd64
+tcx10b.naf.desy.de                8  lx26-amd64
+tcx10c.naf.desy.de                8  lx26-amd64
+tcx10d.naf.desy.de                8  lx26-amd64
+tcx10e.naf.desy.de                8  lx26-amd64
+tcx10f.naf.desy.de                8  lx26-amd64
+tcx110.naf.desy.de                8  lx26-amd64
+tcx111.naf.desy.de                8  lx26-amd64
+tcx112.naf.desy.de                8  lx26-amd64
+tcx113.naf.desy.de                8  lx26-amd64
+tcx114.naf.desy.de                8  lx26-amd64
+tcx115.naf.desy.de                8  lx26-amd64
+tcx116.naf.desy.de                8  lx26-amd64
+tcx117.naf.desy.de                8  lx26-amd64
+tcx118.naf.desy.de                8  lx26-amd64
+tcx119.naf.desy.de                8  lx26-amd64
+tcx11a.naf.desy.de                8  lx26-amd64
+tcx11b.naf.desy.de                8  lx26-amd64
+tcx11c.naf.desy.de                8  lx26-amd64
+tcx11d.naf.desy.de                8  lx26-amd64
+tcx11e.naf.desy.de                8  lx26-amd64
+tcx11f.naf.desy.de                8  lx26-amd64
+tcx122.naf.desy.de                8  lx26-amd64
+tcx123.naf.desy.de                8  lx26-amd64
+tcx124.naf.desy.de                8  lx26-amd64
+tcx125.naf.desy.de                8  lx26-amd64
+tcx126.naf.desy.de                8  lx26-amd64
+tcx127.naf.desy.de                8  lx26-amd64
+tcx128.naf.desy.de                8  lx26-amd64
+tcx129.naf.desy.de                8  lx26-amd64
+tcx12a.naf.desy.de               16  lx26-amd64
+tcx12b.naf.desy.de                8  lx26-amd64
+tcx12c.naf.desy.de                8  lx26-amd64
+tcx12d.naf.desy.de                8  lx26-amd64
+tcx12e.naf.desy.de                8  lx26-amd64
+tcx12f.naf.desy.de                8  lx26-amd64
+tcx130.naf.desy.de                8  lx26-amd64
+tcx131.naf.desy.de                8  lx26-amd64
+tcx132.naf.desy.de                8  lx26-amd64
+tcx133.naf.desy.de                8  lx26-amd64
+tcx134.naf.desy.de                8  lx26-amd64
+tcx135.naf.desy.de                8  lx26-amd64
+tcx136.naf.desy.de                8  lx26-amd64
+tcx137.naf.desy.de                8  lx26-amd64
+tcx138.naf.desy.de                8  lx26-amd64
+tcx139.naf.desy.de                8  lx26-amd64
+tcx13a.naf.desy.de                8  lx26-amd64
+tcx13b.naf.desy.de                8  lx26-amd64
+tcx13c.naf.desy.de                8  lx26-amd64
+tcx13d.naf.desy.de                8  lx26-amd64
+tcx13e.naf.desy.de                8  lx26-amd64
+tcx13f.naf.desy.de                8  lx26-amd64
+===============================================
+SUM                            1552
+EOF
+fi
+
+if [ "$1" = "-sql" ]; then
+cat << EOF
+12h.q
+15m.q
+1h.q
+48h.q
+7d.q
+multicore.q
+proof.q
+EOF
+fi
+
+if [ "$1" = "-shgrpl" ]; then
+cat << EOF
+@12core
+@1week
+@24core
+@48core
+@8core
+@allhosts
+@hyperthreading
+@maintenance
+EOF
+fi
+
+if [ "$1" = "-shgrp_resolved" ]; then
+cat << EOF
+tcx140.naf.desy.de tcx142.naf.desy.de tcx143.naf.desy.de tcx144.naf.desy.de tcx145.naf.desy.de
+EOF
+fi
+
+[ "$1" != "-sq" ] && exit 0
+
+if [ "$2" = "12h.q" ]; then
+cat << EOF
+qname                 12h.q
+hostlist              @allhosts
+seq_no                0
+load_thresholds       np_load_avg=0.95
+suspend_thresholds    NONE
+nsuspend              1
+suspend_interval      00:05:00
+priority              0
+min_cpu_interval      00:05:00
+processors            UNDEFINED
+qtype                 BATCH INTERACTIVE
+ckpt_list             NONE
+pe_list               mpi multicore multicore-mpi proof
+rerun                 TRUE
+slots                 7
+tmpdir                /tmp
+shell                 /bin/zsh
+prolog                NONE
+epilog                NONE
+shell_start_mode      posix_compliant
+starter_method        NONE
+suspend_method        NONE
+resume_method         NONE
+terminate_method      NONE
+notify                00:00:60
+owner_list            NONE
+user_lists            NONE
+xuser_lists           NONE
+subordinate_list      NONE
+complex_values        NONE
+projects              NONE
+xprojects             NONE
+calendar              NONE
+initial_state         default
+s_rt                  12:15:00
+h_rt                  12:30:00
+s_cpu                 12:00:00
+h_cpu                 12:05:00
+s_fsize               INFINITY
+h_fsize               INFINITY
+s_data                INFINITY
+h_data                INFINITY
+s_stack               INFINITY
+h_stack               INFINITY
+s_core                0
+h_core                0
+s_rss                 INFINITY
+h_rss                 INFINITY
+s_vmem                INFINITY
+h_vmem                INFINITY
+EOF
+fi
+
+if [ "$2" = "15m.q" ]; then
+cat << EOF
+qname                 15m.q
+hostlist              @allhosts
+seq_no                0
+load_thresholds       np_load_avg=1.25
+suspend_thresholds    NONE
+nsuspend              1
+suspend_interval      00:05:00
+priority              0
+min_cpu_interval      00:05:00
+processors            UNDEFINED
+qtype                 BATCH INTERACTIVE
+ckpt_list             NONE
+pe_list               multicore multicore-mpi proof
+rerun                 TRUE
+slots                 10
+tmpdir                /tmp
+shell                 /bin/zsh
+prolog                NONE
+epilog                NONE
+shell_start_mode      posix_compliant
+starter_method        NONE
+suspend_method        NONE
+resume_method         NONE
+terminate_method      NONE
+notify                00:00:60
+owner_list            NONE
+user_lists            NONE
+xuser_lists           NONE
+subordinate_list      NONE
+complex_values        NONE
+projects              NONE
+xprojects             NONE
+calendar              NONE
+initial_state         default
+s_rt                  00:20:00
+h_rt                  00:25:00
+s_cpu                 00:15:00
+h_cpu                 00:15:30
+s_fsize               INFINITY
+h_fsize               INFINITY
+s_data                INFINITY
+h_data                INFINITY
+s_stack               INFINITY
+h_stack               INFINITY
+s_core                0
+h_core                0
+s_rss                 INFINITY
+h_rss                 INFINITY
+s_vmem                INFINITY
+h_vmem                INFINITY
+EOF
+fi
+
+if [ "$2" = "1h.q" ]; then
+cat << EOF
+qname                 1h.q
+hostlist              @allhosts
+seq_no                0
+load_thresholds       np_load_avg=1.05
+suspend_thresholds    NONE
+nsuspend              1
+suspend_interval      00:05:00
+priority              0
+min_cpu_interval      00:05:00
+processors            UNDEFINED
+qtype                 BATCH INTERACTIVE
+ckpt_list             NONE
+pe_list               mpi multicore multicore-mpi proof
+rerun                 TRUE
+slots                 8
+tmpdir                /tmp
+shell                 /bin/zsh
+prolog                NONE
+epilog                NONE
+shell_start_mode      posix_compliant
+starter_method        NONE
+suspend_method        NONE
+resume_method         NONE
+terminate_method      NONE
+notify                00:00:60
+owner_list            NONE
+user_lists            NONE
+xuser_lists           NONE
+subordinate_list      NONE
+complex_values        NONE
+projects              NONE
+xprojects             NONE
+calendar              NONE
+initial_state         default
+s_rt                  01:05:00
+h_rt                  01:10:00
+s_cpu                 01:00:00
+h_cpu                 01:05:00
+s_fsize               INFINITY
+h_fsize               INFINITY
+s_data                INFINITY
+h_data                INFINITY
+s_stack               INFINITY
+h_stack               INFINITY
+s_core                0
+h_core                0
+s_rss                 INFINITY
+h_rss                 INFINITY
+s_vmem                INFINITY
+h_vmem                INFINITY
+EOF
+fi
+
+if [ "$2" = "48h.q" ]; then
+cat << EOF
+qname                 48h.q
+hostlist              @allhosts
+seq_no                0
+load_thresholds       np_load_avg=0.9
+suspend_thresholds    NONE
+nsuspend              1
+suspend_interval      00:05:00
+priority              0
+min_cpu_interval      00:05:00
+processors            UNDEFINED
+qtype                 BATCH INTERACTIVE
+ckpt_list             NONE
+pe_list               mpi multicore multicore-mpi proof
+rerun                 TRUE
+slots                 6
+tmpdir                /tmp
+shell                 /bin/zsh
+prolog                NONE
+epilog                NONE
+shell_start_mode      posix_compliant
+starter_method        NONE
+suspend_method        NONE
+resume_method         NONE
+terminate_method      NONE
+notify                00:00:60
+owner_list            NONE
+user_lists            NONE
+xuser_lists           NONE
+subordinate_list      NONE
+complex_values        NONE
+projects              NONE
+xprojects             NONE
+calendar              NONE
+initial_state         default
+s_rt                  54:00:00
+h_rt                  54:15:00
+s_cpu                 48:00:00
+h_cpu                 48:05:00
+s_fsize               INFINITY
+h_fsize               INFINITY
+s_data                INFINITY
+h_data                INFINITY
+s_stack               INFINITY
+h_stack               INFINITY
+s_core                0
+h_core                0
+s_rss                 INFINITY
+h_rss                 INFINITY
+s_vmem                INFINITY
+h_vmem                INFINITY
+EOF
+fi
+
+if [ "$2" = "7d.q" ]; then
+cat << EOF
+qname                 7d.q
+hostlist              @1week
+seq_no                0
+load_thresholds       np_load_avg=0.95
+suspend_thresholds    NONE
+nsuspend              1
+suspend_interval      00:05:00
+priority              0
+min_cpu_interval      00:05:00
+processors            UNDEFINED
+qtype                 BATCH INTERACTIVE
+ckpt_list             NONE
+pe_list               multicore multicore-mpi proof
+rerun                 TRUE
+slots                 8
+tmpdir                /tmp
+shell                 /bin/zsh
+prolog                NONE
+epilog                NONE
+shell_start_mode      posix_compliant
+starter_method        NONE
+suspend_method        NONE
+resume_method         NONE
+terminate_method      NONE
+notify                00:00:60
+owner_list            NONE
+user_lists            NONE
+xuser_lists           NONE
+subordinate_list      NONE
+complex_values        NONE
+projects              NONE
+xprojects             NONE
+calendar              NONE
+initial_state         default
+s_rt                  171:15:00
+h_rt                  171:30:00
+s_cpu                 168:05:00
+h_cpu                 168:15:00
+s_fsize               INFINITY
+h_fsize               INFINITY
+s_data                INFINITY
+h_data                INFINITY
+s_stack               INFINITY
+h_stack               INFINITY
+s_core                0
+h_core                0
+s_rss                 INFINITY
+h_rss                 INFINITY
+s_vmem                INFINITY
+h_vmem                INFINITY
+EOF
+fi
+
+if [ "$2" = "multicore.q" ]; then
+cat << EOF
+qname                 multicore.q
+hostlist              @allhosts
+seq_no                0
+load_thresholds       np_load_avg=1.1
+suspend_thresholds    NONE
+nsuspend              1
+suspend_interval      00:05:00
+priority              0
+min_cpu_interval      00:05:00
+processors            UNDEFINED
+qtype                 INTERACTIVE
+ckpt_list             NONE
+pe_list               multicore
+rerun                 TRUE
+slots                 8
+tmpdir                /tmp
+shell                 /bin/zsh
+prolog                NONE
+epilog                NONE
+shell_start_mode      posix_compliant
+starter_method        NONE
+suspend_method        NONE
+resume_method         NONE
+terminate_method      NONE
+notify                00:00:60
+owner_list            NONE
+user_lists            NONE
+xuser_lists           NONE
+subordinate_list      NONE
+complex_values        NONE
+projects              NONE
+xprojects             NONE
+calendar              NONE
+initial_state         default
+s_rt                  48:05:00
+h_rt                  48:10:00
+s_cpu                 48:00:00
+h_cpu                 48:05:00
+s_fsize               INFINITY
+h_fsize               INFINITY
+s_data                INFINITY
+h_data                INFINITY
+s_stack               INFINITY
+h_stack               INFINITY
+s_core                0
+h_core                0
+s_rss                 INFINITY
+h_rss                 INFINITY
+s_vmem                INFINITY
+h_vmem                INFINITY
+EOF
+fi
+
+if [ "$2" = "proof.q" ]; then
+cat << EOF
+qname                 proof.q
+hostlist              @allhosts
+seq_no                0
+load_thresholds       np_load_avg=1.33
+suspend_thresholds    NONE
+nsuspend              1
+suspend_interval      00:05:00
+priority              0
+min_cpu_interval      00:05:00
+processors            UNDEFINED
+qtype                 NONE
+ckpt_list             NONE
+pe_list               proof
+rerun                 TRUE
+slots                 10
+tmpdir                /tmp
+shell                 /bin/zsh
+prolog                NONE
+epilog                NONE
+shell_start_mode      posix_compliant
+starter_method        NONE
+suspend_method        NONE
+resume_method         NONE
+terminate_method      NONE
+notify                00:00:60
+owner_list            NONE
+user_lists            NONE
+xuser_lists           NONE
+subordinate_list      NONE
+complex_values        NONE
+projects              NONE
+xprojects             NONE
+calendar              NONE
+initial_state         default
+s_rt                  6:05:00
+h_rt                  6:10:00
+s_cpu                 6:00:00
+h_cpu                 6:05:00
+s_fsize               INFINITY
+h_fsize               INFINITY
+s_data                INFINITY
+h_data                INFINITY
+s_stack               INFINITY
+h_stack               INFINITY
+s_core                0
+h_core                0
+s_rss                 INFINITY
+h_rss                 INFINITY
+s_vmem                INFINITY
+h_vmem                INFINITY
+EOF
+fi

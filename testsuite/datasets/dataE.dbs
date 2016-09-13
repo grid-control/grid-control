@@ -1,0 +1,16 @@
+[/MY/DATASET#easy1]
+se list = SE4
+/path/file0 = 10
+/path/file1 = 5
+/path/file2 = 15
+
+[/MY/DATASET#easy2]
+/path/file3 = 10
+/path/file5 = 5
+
+[/MY/DATASET#easy3]
+se list =
+/path/file6 = 10
+/path/file7 = 5
+/path/file8 = 10
+/path/file9 = 15

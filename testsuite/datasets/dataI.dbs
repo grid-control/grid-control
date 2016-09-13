@@ -1,0 +1,6 @@
+[/Metadata/Test]
+metadata = ['KEY1', 'KEY2', 'KEY3']
+file1 = 10 ['Value11', 'Value12', 'Value13']
+file2 = 10 ['Value21', 'Value22', 'Value23']
+file3 = 10 ['Value31', 'Value32', 'Value33']
+filex = 10 ['TEST']

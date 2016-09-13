@@ -1,0 +1,55 @@
+#!/usr/bin/env python
+
+import os, datetime
+
+afs5_date = '%m/%d/%y %H:%M:%S'
+afs5_template = """
+Ticket cache: FILE:/tmp/krb5cc_23382_SjokIf
+Default principal: stober@DESY.DE
+
+Valid starting     Expires            Service principal
+%(start_date)s  %(end_date)s  krbtgt/DESY.DE@DESY.DE
+        renew until %(renew_date)s
+%(start_date)s  %(end_date)s  afs/desy.de@DESY.DE
+        renew until %(renew_date)s"""
+
+afs4_date = '%b %d %H:%M:%S %Y'
+afs4_template = """
+Credentials cache: FILE:/tmp/krb5cc_23382_PCgBHn
+        Principal: stober@DESY.DE
+    Cache version: 4
+
+Server: krbtgt/DESY.DE@DESY.DE
+Client: stober@DESY.DE
+Ticket etype: aes256-cts-hmac-sha1-96, kvno 12
+Ticket length: 266
+Auth time:  %(start_date)s
+End time:   %(end_date)s
+Renew till: %(renew_date)s
+Ticket flags: forwardable, renewable, initial
+Addresses: addressless
+
+Server: afs/desy.de@DESY.DE
+Client: stober@DESY.DE
+Ticket etype: aes256-cts-hmac-sha1-96, kvno 1
+Ticket length: 282
+Auth time:  %(start_date)s
+Start time: %(start_date)s
+End time:   %(end_date)s
+Renew till: %(renew_date)s
+Ticket flags: forwardable, renewable, transited-policy-checked
+Addresses: addressless
+"""
+
+date_fmt = afs5_date
+template = afs5_template
+if os.environ.get('GC_TEST_MODE') == 'AFS4':
+	date_fmt = afs4_date
+	template = afs4_template
+
+def f(days):
+	result = datetime.datetime.now() + datetime.timedelta(days = days)
+	return result.strftime(date_fmt)
+
+tmp = {'start_date': f(days = -1), 'end_date': f(days = +1), 'renew_date': f(days = +2)}
+print (template % tmp).lstrip()

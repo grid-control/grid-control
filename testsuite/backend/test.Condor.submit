@@ -1,0 +1,648 @@
+Submitting job(s)
+** Proc 78925.0:
+BufferSize = 524288
+NiceUser = false
+CoreSize = 0
+CumulativeSlotTime = 0
+OnExitHold = false
+RequestCpus = 1
+BufferBlockSize = 32768
+Err = "/usr/users/stober/grid-control/work.condor/sandbox/0/gc.stderr"
+x509userproxy = "/tmp/x509up_u12043"
+ImageSize = 9
+EnvDelim = ";"
+WantCheckpoint = false
+CommittedTime = 0
+WhenToTransferOutput = "ON_EXIT"
+TargetType = "Machine"
+Cmd = "/usr/users/stober/grid-control/packages/grid_control/share/gc-run.sh"
+JobUniverse = 5
+ExitBySignal = false
+TransferIn = false
+REMOTE_JOB = true
+Iwd = "/usr/users/stober/grid-control/work.condor/sandbox/0/"
+NumRestarts = 0
+EncryptExecuteDirectory = false
+CommittedSuspensionTime = 0
+RequestWalltime = 3600
+Owner = "stober"
+NumSystemHolds = 0
+CumulativeSuspensionTime = 0
+Requirements = ( ( TARGET.CLOUD_SITE == "BWFORCLUSTER" ) ) && ( ( ( INPUT_FILES =?= undefined ) || ( HPDA_Route =?= true ) || ( ( CurrentTime - QDate ) > ( 10 * 3 ) ) ) ) && ( TARGET.Arch == "X86_64" ) && ( TARGET.OpSys == "LINUX" ) && ( TARGET.Disk >= RequestDisk ) && ( TARGET.Memory >= RequestMemory ) && ( TARGET.HasFileTransfer )
+RequestDisk = DiskUsage
+MinHosts = 1
+JobNotification = 0
+TransferOutput = "job.info,job.stdout.gz,job.stderr.gz"
+NumCkpts = 0
+LastSuspensionTime = 0
+NumJobStarts = 0
+WantRemoteSyscalls = false
+JobLeaseDuration = 2400
+JobPrio = 0
+RootDir = "/"
+CurrentHosts = 0
+x509UserProxyExpiration = 1466975919
+StreamOut = false
+WantRemoteIO = true
+OnExitRemove = true
+GridControl_GCtoWMSID = "GCbccfd1a5.0@78925.0"
+DiskUsage = 32
+In = "/dev/null"
+PeriodicRemove = ( ( JobStatus == 5 && HoldReasonCode != 16 ) )
+ExecutableSize = 9
+TransferInput = "/usr/users/stober/grid-control/work.condor/gc-run.lib,/usr/users/stober/grid-control/work.condor/files/GCbccfd1a52c28/CONDOR/gc-sandbox.tar.gz,/usr/users/stober/grid-control/work.condor/sandbox/0/job_0.var"
+RemoteUserCpu = 0.0
+LocalUserCpu = 0.0
+RemoteSysCpu = 0.0
+LocalSysCpu = 0.0
+CompletionDate = 0
+RemoteWallClockTime = 0.0
+Rank = 0.0
+x509UserProxyFQAN = "/C=DE/O=GermanGrid/OU=uni-hamburg/CN=Fred Markus Stober,/cms/dcms/Role=NULL/Capability=NULL,/cms/Role=NULL/Capability=NULL"
+LeaveJobInQueue = false
+x509UserProxyEmail = "fred.stober@desy.de"
+CondorVersion = "$CondorVersion: 8.4.3 Jan 22 2016 BuildID: RH-8.4.3-1.el6 $"
+MyType = "Job"
+StreamErr = false
+PeriodicHold = false
+x509UserProxyFirstFQAN = "/cms/dcms/Role=NULL/Capability=NULL"
+Out = "/usr/users/stober/grid-control/work.condor/sandbox/0/gc.stdout"
+UserLog = "/usr/users/stober/grid-control/work.condor/sandbox/GC_Condor.8b7787fe384fdcdd24b495bb977ec1e3.log"
+JobStatus = 1
+PeriodicRelease = false
+GridControl_GCIDtoWMSID = "0@78925.0"
+Args = "0"
+RequestMemory = ifthenelse(MemoryUsage =!= undefined,MemoryUsage,( ImageSize + 1023 ) / 1024)
+MaxHosts = 1
+TotalSuspensions = 0
+CommittedSlotTime = 0
+x509userproxysubject = "/C=DE/O=GermanGrid/OU=uni-hamburg/CN=Fred Markus Stober"
+NotifyUser = ""
+x509UserProxyVOName = "cms"
+Env = "CONDOR_WMS_DASHID=https://CONDOR:/78925.0"
+TransferInputSizeMB = 0
+CondorPlatform = "$CondorPlatform: X86_64-RedHat_6.7 $"
+ShouldTransferFiles = "YES"
+ExitStatus = 0
+QDate = 1466289756
+EnteredCurrentStatus = 1466289756
+
+** Proc 78925.1:
+BufferSize = 524288
+NiceUser = false
+CoreSize = 0
+OnExitHold = false
+RequestCpus = 1
+Err = "/usr/users/stober/grid-control/work.condor/sandbox/1/gc.stderr"
+BufferBlockSize = 32768
+x509userproxy = "/tmp/x509up_u12043"
+ImageSize = 9
+EnvDelim = ";"
+WantCheckpoint = false
+WhenToTransferOutput = "ON_EXIT"
+Cmd = "/usr/users/stober/grid-control/packages/grid_control/share/gc-run.sh"
+TransferIn = false
+REMOTE_JOB = true
+Iwd = "/usr/users/stober/grid-control/work.condor/sandbox/1/"
+EncryptExecuteDirectory = false
+RequestWalltime = 3600
+RequestDisk = DiskUsage
+Requirements = ( ( TARGET.CLOUD_SITE == "BWFORCLUSTER" ) ) && ( ( ( INPUT_FILES =?= undefined ) || ( HPDA_Route =?= true ) || ( ( CurrentTime - QDate ) > ( 10 * 3 ) ) ) ) && ( TARGET.Arch == "X86_64" ) && ( TARGET.OpSys == "LINUX" ) && ( TARGET.Disk >= RequestDisk ) && ( TARGET.Memory >= RequestMemory ) && ( TARGET.HasFileTransfer )
+MinHosts = 1
+JobNotification = 0
+TransferOutput = "job.info,job.stdout.gz,job.stderr.gz"
+WantRemoteSyscalls = false
+JobLeaseDuration = 2400
+JobPrio = 0
+RootDir = "/"
+CurrentHosts = 0
+x509UserProxyExpiration = 1466975919
+StreamOut = false
+WantRemoteIO = true
+OnExitRemove = true
+GridControl_GCtoWMSID = "GCbccfd1a5.1@78925.1"
+DiskUsage = 32
+In = "/dev/null"
+PeriodicRemove = ( ( JobStatus == 5 && HoldReasonCode != 16 ) )
+ExecutableSize = 9
+TransferInput = "/usr/users/stober/grid-control/work.condor/gc-run.lib,/usr/users/stober/grid-control/work.condor/files/GCbccfd1a52c28/CONDOR/gc-sandbox.tar.gz,/usr/users/stober/grid-control/work.condor/sandbox/1/job_1.var"
+Rank = 0.0
+x509UserProxyFQAN = "/C=DE/O=GermanGrid/OU=uni-hamburg/CN=Fred Markus Stober,/cms/dcms/Role=NULL/Capability=NULL,/cms/Role=NULL/Capability=NULL"
+LeaveJobInQueue = false
+x509UserProxyEmail = "fred.stober@desy.de"
+StreamErr = false
+PeriodicHold = false
+x509UserProxyFirstFQAN = "/cms/dcms/Role=NULL/Capability=NULL"
+Out = "/usr/users/stober/grid-control/work.condor/sandbox/1/gc.stdout"
+UserLog = "/usr/users/stober/grid-control/work.condor/sandbox/GC_Condor.8b7787fe384fdcdd24b495bb977ec1e3.log"
+JobStatus = 1
+PeriodicRelease = false
+GridControl_GCIDtoWMSID = "1@78925.1"
+Args = "1"
+MaxHosts = 1
+RequestMemory = ifthenelse(MemoryUsage =!= undefined,MemoryUsage,( ImageSize + 1023 ) / 1024)
+x509userproxysubject = "/C=DE/O=GermanGrid/OU=uni-hamburg/CN=Fred Markus Stober"
+NotifyUser = ""
+x509UserProxyVOName = "cms"
+Env = "CONDOR_WMS_DASHID=https://CONDOR:/78925.1"
+TransferInputSizeMB = 0
+ShouldTransferFiles = "YES"
+EnteredCurrentStatus = 1466289756
+
+** Proc 78925.2:
+BufferSize = 524288
+NiceUser = false
+CoreSize = 0
+OnExitHold = false
+RequestCpus = 1
+Err = "/usr/users/stober/grid-control/work.condor/sandbox/2/gc.stderr"
+BufferBlockSize = 32768
+x509userproxy = "/tmp/x509up_u12043"
+ImageSize = 9
+EnvDelim = ";"
+WantCheckpoint = false
+WhenToTransferOutput = "ON_EXIT"
+Cmd = "/usr/users/stober/grid-control/packages/grid_control/share/gc-run.sh"
+TransferIn = false
+REMOTE_JOB = true
+Iwd = "/usr/users/stober/grid-control/work.condor/sandbox/2/"
+EncryptExecuteDirectory = false
+RequestWalltime = 3600
+RequestDisk = DiskUsage
+Requirements = ( ( TARGET.CLOUD_SITE == "BWFORCLUSTER" ) ) && ( ( ( INPUT_FILES =?= undefined ) || ( HPDA_Route =?= true ) || ( ( CurrentTime - QDate ) > ( 10 * 3 ) ) ) ) && ( TARGET.Arch == "X86_64" ) && ( TARGET.OpSys == "LINUX" ) && ( TARGET.Disk >= RequestDisk ) && ( TARGET.Memory >= RequestMemory ) && ( TARGET.HasFileTransfer )
+MinHosts = 1
+JobNotification = 0
+TransferOutput = "job.info,job.stdout.gz,job.stderr.gz"
+WantRemoteSyscalls = false
+JobLeaseDuration = 2400
+JobPrio = 0
+RootDir = "/"
+CurrentHosts = 0
+x509UserProxyExpiration = 1466975919
+StreamOut = false
+WantRemoteIO = true
+OnExitRemove = true
+GridControl_GCtoWMSID = "GCbccfd1a5.2@78925.2"
+DiskUsage = 32
+In = "/dev/null"
+PeriodicRemove = ( ( JobStatus == 5 && HoldReasonCode != 16 ) )
+ExecutableSize = 9
+TransferInput = "/usr/users/stober/grid-control/work.condor/gc-run.lib,/usr/users/stober/grid-control/work.condor/files/GCbccfd1a52c28/CONDOR/gc-sandbox.tar.gz,/usr/users/stober/grid-control/work.condor/sandbox/2/job_2.var"
+Rank = 0.0
+x509UserProxyFQAN = "/C=DE/O=GermanGrid/OU=uni-hamburg/CN=Fred Markus Stober,/cms/dcms/Role=NULL/Capability=NULL,/cms/Role=NULL/Capability=NULL"
+LeaveJobInQueue = false
+x509UserProxyEmail = "fred.stober@desy.de"
+StreamErr = false
+PeriodicHold = false
+x509UserProxyFirstFQAN = "/cms/dcms/Role=NULL/Capability=NULL"
+Out = "/usr/users/stober/grid-control/work.condor/sandbox/2/gc.stdout"
+UserLog = "/usr/users/stober/grid-control/work.condor/sandbox/GC_Condor.8b7787fe384fdcdd24b495bb977ec1e3.log"
+JobStatus = 1
+PeriodicRelease = false
+GridControl_GCIDtoWMSID = "2@78925.2"
+Args = "2"
+MaxHosts = 1
+RequestMemory = ifthenelse(MemoryUsage =!= undefined,MemoryUsage,( ImageSize + 1023 ) / 1024)
+x509userproxysubject = "/C=DE/O=GermanGrid/OU=uni-hamburg/CN=Fred Markus Stober"
+NotifyUser = ""
+x509UserProxyVOName = "cms"
+Env = "CONDOR_WMS_DASHID=https://CONDOR:/78925.2"
+TransferInputSizeMB = 0
+ShouldTransferFiles = "YES"
+EnteredCurrentStatus = 1466289756
+
+** Proc 78925.3:
+BufferSize = 524288
+NiceUser = false
+CoreSize = 0
+OnExitHold = false
+RequestCpus = 1
+Err = "/usr/users/stober/grid-control/work.condor/sandbox/3/gc.stderr"
+BufferBlockSize = 32768
+x509userproxy = "/tmp/x509up_u12043"
+ImageSize = 9
+EnvDelim = ";"
+WantCheckpoint = false
+WhenToTransferOutput = "ON_EXIT"
+Cmd = "/usr/users/stober/grid-control/packages/grid_control/share/gc-run.sh"
+TransferIn = false
+REMOTE_JOB = true
+Iwd = "/usr/users/stober/grid-control/work.condor/sandbox/3/"
+EncryptExecuteDirectory = false
+RequestWalltime = 3600
+RequestDisk = DiskUsage
+Requirements = ( ( TARGET.CLOUD_SITE == "BWFORCLUSTER" ) ) && ( ( ( INPUT_FILES =?= undefined ) || ( HPDA_Route =?= true ) || ( ( CurrentTime - QDate ) > ( 10 * 3 ) ) ) ) && ( TARGET.Arch == "X86_64" ) && ( TARGET.OpSys == "LINUX" ) && ( TARGET.Disk >= RequestDisk ) && ( TARGET.Memory >= RequestMemory ) && ( TARGET.HasFileTransfer )
+MinHosts = 1
+JobNotification = 0
+TransferOutput = "job.info,job.stdout.gz,job.stderr.gz"
+WantRemoteSyscalls = false
+JobLeaseDuration = 2400
+JobPrio = 0
+RootDir = "/"
+CurrentHosts = 0
+x509UserProxyExpiration = 1466975919
+StreamOut = false
+WantRemoteIO = true
+OnExitRemove = true
+GridControl_GCtoWMSID = "GCbccfd1a5.3@78925.3"
+DiskUsage = 32
+In = "/dev/null"
+PeriodicRemove = ( ( JobStatus == 5 && HoldReasonCode != 16 ) )
+ExecutableSize = 9
+TransferInput = "/usr/users/stober/grid-control/work.condor/gc-run.lib,/usr/users/stober/grid-control/work.condor/files/GCbccfd1a52c28/CONDOR/gc-sandbox.tar.gz,/usr/users/stober/grid-control/work.condor/sandbox/3/job_3.var"
+Rank = 0.0
+x509UserProxyFQAN = "/C=DE/O=GermanGrid/OU=uni-hamburg/CN=Fred Markus Stober,/cms/dcms/Role=NULL/Capability=NULL,/cms/Role=NULL/Capability=NULL"
+LeaveJobInQueue = false
+x509UserProxyEmail = "fred.stober@desy.de"
+StreamErr = false
+PeriodicHold = false
+x509UserProxyFirstFQAN = "/cms/dcms/Role=NULL/Capability=NULL"
+Out = "/usr/users/stober/grid-control/work.condor/sandbox/3/gc.stdout"
+UserLog = "/usr/users/stober/grid-control/work.condor/sandbox/GC_Condor.8b7787fe384fdcdd24b495bb977ec1e3.log"
+JobStatus = 1
+PeriodicRelease = false
+GridControl_GCIDtoWMSID = "3@78925.3"
+Args = "3"
+MaxHosts = 1
+RequestMemory = ifthenelse(MemoryUsage =!= undefined,MemoryUsage,( ImageSize + 1023 ) / 1024)
+x509userproxysubject = "/C=DE/O=GermanGrid/OU=uni-hamburg/CN=Fred Markus Stober"
+NotifyUser = ""
+x509UserProxyVOName = "cms"
+Env = "CONDOR_WMS_DASHID=https://CONDOR:/78925.3"
+TransferInputSizeMB = 0
+ShouldTransferFiles = "YES"
+EnteredCurrentStatus = 1466289756
+
+** Proc 78925.4:
+BufferSize = 524288
+NiceUser = false
+CoreSize = 0
+OnExitHold = false
+RequestCpus = 1
+Err = "/usr/users/stober/grid-control/work.condor/sandbox/4/gc.stderr"
+BufferBlockSize = 32768
+x509userproxy = "/tmp/x509up_u12043"
+ImageSize = 9
+EnvDelim = ";"
+WantCheckpoint = false
+WhenToTransferOutput = "ON_EXIT"
+Cmd = "/usr/users/stober/grid-control/packages/grid_control/share/gc-run.sh"
+TransferIn = false
+REMOTE_JOB = true
+Iwd = "/usr/users/stober/grid-control/work.condor/sandbox/4/"
+EncryptExecuteDirectory = false
+RequestWalltime = 3600
+RequestDisk = DiskUsage
+Requirements = ( ( TARGET.CLOUD_SITE == "BWFORCLUSTER" ) ) && ( ( ( INPUT_FILES =?= undefined ) || ( HPDA_Route =?= true ) || ( ( CurrentTime - QDate ) > ( 10 * 3 ) ) ) ) && ( TARGET.Arch == "X86_64" ) && ( TARGET.OpSys == "LINUX" ) && ( TARGET.Disk >= RequestDisk ) && ( TARGET.Memory >= RequestMemory ) && ( TARGET.HasFileTransfer )
+MinHosts = 1
+JobNotification = 0
+TransferOutput = "job.info,job.stdout.gz,job.stderr.gz"
+WantRemoteSyscalls = false
+JobLeaseDuration = 2400
+JobPrio = 0
+RootDir = "/"
+CurrentHosts = 0
+x509UserProxyExpiration = 1466975919
+StreamOut = false
+WantRemoteIO = true
+OnExitRemove = true
+GridControl_GCtoWMSID = "GCbccfd1a5.4@78925.4"
+DiskUsage = 32
+In = "/dev/null"
+PeriodicRemove = ( ( JobStatus == 5 && HoldReasonCode != 16 ) )
+ExecutableSize = 9
+TransferInput = "/usr/users/stober/grid-control/work.condor/gc-run.lib,/usr/users/stober/grid-control/work.condor/files/GCbccfd1a52c28/CONDOR/gc-sandbox.tar.gz,/usr/users/stober/grid-control/work.condor/sandbox/4/job_4.var"
+Rank = 0.0
+x509UserProxyFQAN = "/C=DE/O=GermanGrid/OU=uni-hamburg/CN=Fred Markus Stober,/cms/dcms/Role=NULL/Capability=NULL,/cms/Role=NULL/Capability=NULL"
+LeaveJobInQueue = false
+x509UserProxyEmail = "fred.stober@desy.de"
+StreamErr = false
+PeriodicHold = false
+x509UserProxyFirstFQAN = "/cms/dcms/Role=NULL/Capability=NULL"
+Out = "/usr/users/stober/grid-control/work.condor/sandbox/4/gc.stdout"
+UserLog = "/usr/users/stober/grid-control/work.condor/sandbox/GC_Condor.8b7787fe384fdcdd24b495bb977ec1e3.log"
+JobStatus = 1
+PeriodicRelease = false
+GridControl_GCIDtoWMSID = "4@78925.4"
+Args = "4"
+MaxHosts = 1
+RequestMemory = ifthenelse(MemoryUsage =!= undefined,MemoryUsage,( ImageSize + 1023 ) / 1024)
+x509userproxysubject = "/C=DE/O=GermanGrid/OU=uni-hamburg/CN=Fred Markus Stober"
+NotifyUser = ""
+x509UserProxyVOName = "cms"
+Env = "CONDOR_WMS_DASHID=https://CONDOR:/78925.4"
+TransferInputSizeMB = 0
+ShouldTransferFiles = "YES"
+EnteredCurrentStatus = 1466289756
+
+** Proc 78925.5:
+BufferSize = 524288
+NiceUser = false
+CoreSize = 0
+OnExitHold = false
+RequestCpus = 1
+Err = "/usr/users/stober/grid-control/work.condor/sandbox/5/gc.stderr"
+BufferBlockSize = 32768
+x509userproxy = "/tmp/x509up_u12043"
+ImageSize = 9
+EnvDelim = ";"
+WantCheckpoint = false
+WhenToTransferOutput = "ON_EXIT"
+Cmd = "/usr/users/stober/grid-control/packages/grid_control/share/gc-run.sh"
+TransferIn = false
+REMOTE_JOB = true
+Iwd = "/usr/users/stober/grid-control/work.condor/sandbox/5/"
+EncryptExecuteDirectory = false
+RequestWalltime = 3600
+RequestDisk = DiskUsage
+Requirements = ( ( TARGET.CLOUD_SITE == "BWFORCLUSTER" ) ) && ( ( ( INPUT_FILES =?= undefined ) || ( HPDA_Route =?= true ) || ( ( CurrentTime - QDate ) > ( 10 * 3 ) ) ) ) && ( TARGET.Arch == "X86_64" ) && ( TARGET.OpSys == "LINUX" ) && ( TARGET.Disk >= RequestDisk ) && ( TARGET.Memory >= RequestMemory ) && ( TARGET.HasFileTransfer )
+MinHosts = 1
+JobNotification = 0
+TransferOutput = "job.info,job.stdout.gz,job.stderr.gz"
+WantRemoteSyscalls = false
+JobLeaseDuration = 2400
+JobPrio = 0
+RootDir = "/"
+CurrentHosts = 0
+x509UserProxyExpiration = 1466975919
+StreamOut = false
+WantRemoteIO = true
+OnExitRemove = true
+GridControl_GCtoWMSID = "GCbccfd1a5.5@78925.5"
+DiskUsage = 32
+In = "/dev/null"
+PeriodicRemove = ( ( JobStatus == 5 && HoldReasonCode != 16 ) )
+ExecutableSize = 9
+TransferInput = "/usr/users/stober/grid-control/work.condor/gc-run.lib,/usr/users/stober/grid-control/work.condor/files/GCbccfd1a52c28/CONDOR/gc-sandbox.tar.gz,/usr/users/stober/grid-control/work.condor/sandbox/5/job_5.var"
+Rank = 0.0
+x509UserProxyFQAN = "/C=DE/O=GermanGrid/OU=uni-hamburg/CN=Fred Markus Stober,/cms/dcms/Role=NULL/Capability=NULL,/cms/Role=NULL/Capability=NULL"
+LeaveJobInQueue = false
+x509UserProxyEmail = "fred.stober@desy.de"
+StreamErr = false
+PeriodicHold = false
+x509UserProxyFirstFQAN = "/cms/dcms/Role=NULL/Capability=NULL"
+Out = "/usr/users/stober/grid-control/work.condor/sandbox/5/gc.stdout"
+UserLog = "/usr/users/stober/grid-control/work.condor/sandbox/GC_Condor.8b7787fe384fdcdd24b495bb977ec1e3.log"
+JobStatus = 1
+PeriodicRelease = false
+GridControl_GCIDtoWMSID = "5@78925.5"
+Args = "5"
+MaxHosts = 1
+RequestMemory = ifthenelse(MemoryUsage =!= undefined,MemoryUsage,( ImageSize + 1023 ) / 1024)
+x509userproxysubject = "/C=DE/O=GermanGrid/OU=uni-hamburg/CN=Fred Markus Stober"
+NotifyUser = ""
+x509UserProxyVOName = "cms"
+Env = "CONDOR_WMS_DASHID=https://CONDOR:/78925.5"
+TransferInputSizeMB = 0
+ShouldTransferFiles = "YES"
+EnteredCurrentStatus = 1466289756
+
+** Proc 78925.6:
+BufferSize = 524288
+NiceUser = false
+CoreSize = 0
+OnExitHold = false
+RequestCpus = 1
+Err = "/usr/users/stober/grid-control/work.condor/sandbox/6/gc.stderr"
+BufferBlockSize = 32768
+x509userproxy = "/tmp/x509up_u12043"
+ImageSize = 9
+EnvDelim = ";"
+WantCheckpoint = false
+WhenToTransferOutput = "ON_EXIT"
+Cmd = "/usr/users/stober/grid-control/packages/grid_control/share/gc-run.sh"
+TransferIn = false
+REMOTE_JOB = true
+Iwd = "/usr/users/stober/grid-control/work.condor/sandbox/6/"
+EncryptExecuteDirectory = false
+RequestWalltime = 3600
+RequestDisk = DiskUsage
+Requirements = ( ( TARGET.CLOUD_SITE == "BWFORCLUSTER" ) ) && ( ( ( INPUT_FILES =?= undefined ) || ( HPDA_Route =?= true ) || ( ( CurrentTime - QDate ) > ( 10 * 3 ) ) ) ) && ( TARGET.Arch == "X86_64" ) && ( TARGET.OpSys == "LINUX" ) && ( TARGET.Disk >= RequestDisk ) && ( TARGET.Memory >= RequestMemory ) && ( TARGET.HasFileTransfer )
+MinHosts = 1
+JobNotification = 0
+TransferOutput = "job.info,job.stdout.gz,job.stderr.gz"
+WantRemoteSyscalls = false
+JobLeaseDuration = 2400
+JobPrio = 0
+RootDir = "/"
+CurrentHosts = 0
+x509UserProxyExpiration = 1466975919
+StreamOut = false
+WantRemoteIO = true
+OnExitRemove = true
+GridControl_GCtoWMSID = "GCbccfd1a5.6@78925.6"
+DiskUsage = 32
+In = "/dev/null"
+PeriodicRemove = ( ( JobStatus == 5 && HoldReasonCode != 16 ) )
+ExecutableSize = 9
+TransferInput = "/usr/users/stober/grid-control/work.condor/gc-run.lib,/usr/users/stober/grid-control/work.condor/files/GCbccfd1a52c28/CONDOR/gc-sandbox.tar.gz,/usr/users/stober/grid-control/work.condor/sandbox/6/job_6.var"
+Rank = 0.0
+x509UserProxyFQAN = "/C=DE/O=GermanGrid/OU=uni-hamburg/CN=Fred Markus Stober,/cms/dcms/Role=NULL/Capability=NULL,/cms/Role=NULL/Capability=NULL"
+LeaveJobInQueue = false
+x509UserProxyEmail = "fred.stober@desy.de"
+StreamErr = false
+PeriodicHold = false
+x509UserProxyFirstFQAN = "/cms/dcms/Role=NULL/Capability=NULL"
+Out = "/usr/users/stober/grid-control/work.condor/sandbox/6/gc.stdout"
+UserLog = "/usr/users/stober/grid-control/work.condor/sandbox/GC_Condor.8b7787fe384fdcdd24b495bb977ec1e3.log"
+JobStatus = 1
+PeriodicRelease = false
+GridControl_GCIDtoWMSID = "6@78925.6"
+Args = "6"
+MaxHosts = 1
+RequestMemory = ifthenelse(MemoryUsage =!= undefined,MemoryUsage,( ImageSize + 1023 ) / 1024)
+x509userproxysubject = "/C=DE/O=GermanGrid/OU=uni-hamburg/CN=Fred Markus Stober"
+NotifyUser = ""
+x509UserProxyVOName = "cms"
+Env = "CONDOR_WMS_DASHID=https://CONDOR:/78925.6"
+TransferInputSizeMB = 0
+ShouldTransferFiles = "YES"
+EnteredCurrentStatus = 1466289756
+
+** Proc 78925.7:
+BufferSize = 524288
+NiceUser = false
+CoreSize = 0
+OnExitHold = false
+RequestCpus = 1
+Err = "/usr/users/stober/grid-control/work.condor/sandbox/7/gc.stderr"
+BufferBlockSize = 32768
+x509userproxy = "/tmp/x509up_u12043"
+ImageSize = 9
+EnvDelim = ";"
+WantCheckpoint = false
+WhenToTransferOutput = "ON_EXIT"
+Cmd = "/usr/users/stober/grid-control/packages/grid_control/share/gc-run.sh"
+TransferIn = false
+REMOTE_JOB = true
+Iwd = "/usr/users/stober/grid-control/work.condor/sandbox/7/"
+EncryptExecuteDirectory = false
+RequestWalltime = 3600
+RequestDisk = DiskUsage
+Requirements = ( ( TARGET.CLOUD_SITE == "BWFORCLUSTER" ) ) && ( ( ( INPUT_FILES =?= undefined ) || ( HPDA_Route =?= true ) || ( ( CurrentTime - QDate ) > ( 10 * 3 ) ) ) ) && ( TARGET.Arch == "X86_64" ) && ( TARGET.OpSys == "LINUX" ) && ( TARGET.Disk >= RequestDisk ) && ( TARGET.Memory >= RequestMemory ) && ( TARGET.HasFileTransfer )
+MinHosts = 1
+JobNotification = 0
+TransferOutput = "job.info,job.stdout.gz,job.stderr.gz"
+WantRemoteSyscalls = false
+JobLeaseDuration = 2400
+JobPrio = 0
+RootDir = "/"
+CurrentHosts = 0
+x509UserProxyExpiration = 1466975919
+StreamOut = false
+WantRemoteIO = true
+OnExitRemove = true
+GridControl_GCtoWMSID = "GCbccfd1a5.7@78925.7"
+DiskUsage = 32
+In = "/dev/null"
+PeriodicRemove = ( ( JobStatus == 5 && HoldReasonCode != 16 ) )
+ExecutableSize = 9
+TransferInput = "/usr/users/stober/grid-control/work.condor/gc-run.lib,/usr/users/stober/grid-control/work.condor/files/GCbccfd1a52c28/CONDOR/gc-sandbox.tar.gz,/usr/users/stober/grid-control/work.condor/sandbox/7/job_7.var"
+Rank = 0.0
+x509UserProxyFQAN = "/C=DE/O=GermanGrid/OU=uni-hamburg/CN=Fred Markus Stober,/cms/dcms/Role=NULL/Capability=NULL,/cms/Role=NULL/Capability=NULL"
+LeaveJobInQueue = false
+x509UserProxyEmail = "fred.stober@desy.de"
+StreamErr = false
+PeriodicHold = false
+x509UserProxyFirstFQAN = "/cms/dcms/Role=NULL/Capability=NULL"
+Out = "/usr/users/stober/grid-control/work.condor/sandbox/7/gc.stdout"
+UserLog = "/usr/users/stober/grid-control/work.condor/sandbox/GC_Condor.8b7787fe384fdcdd24b495bb977ec1e3.log"
+JobStatus = 1
+PeriodicRelease = false
+GridControl_GCIDtoWMSID = "7@78925.7"
+Args = "7"
+MaxHosts = 1
+RequestMemory = ifthenelse(MemoryUsage =!= undefined,MemoryUsage,( ImageSize + 1023 ) / 1024)
+x509userproxysubject = "/C=DE/O=GermanGrid/OU=uni-hamburg/CN=Fred Markus Stober"
+NotifyUser = ""
+x509UserProxyVOName = "cms"
+Env = "CONDOR_WMS_DASHID=https://CONDOR:/78925.7"
+TransferInputSizeMB = 0
+ShouldTransferFiles = "YES"
+EnteredCurrentStatus = 1466289756
+
+** Proc 78925.8:
+BufferSize = 524288
+NiceUser = false
+CoreSize = 0
+OnExitHold = false
+RequestCpus = 1
+Err = "/usr/users/stober/grid-control/work.condor/sandbox/8/gc.stderr"
+BufferBlockSize = 32768
+x509userproxy = "/tmp/x509up_u12043"
+ImageSize = 9
+EnvDelim = ";"
+WantCheckpoint = false
+WhenToTransferOutput = "ON_EXIT"
+Cmd = "/usr/users/stober/grid-control/packages/grid_control/share/gc-run.sh"
+TransferIn = false
+REMOTE_JOB = true
+Iwd = "/usr/users/stober/grid-control/work.condor/sandbox/8/"
+EncryptExecuteDirectory = false
+RequestWalltime = 3600
+RequestDisk = DiskUsage
+Requirements = ( ( TARGET.CLOUD_SITE == "BWFORCLUSTER" ) ) && ( ( ( INPUT_FILES =?= undefined ) || ( HPDA_Route =?= true ) || ( ( CurrentTime - QDate ) > ( 10 * 3 ) ) ) ) && ( TARGET.Arch == "X86_64" ) && ( TARGET.OpSys == "LINUX" ) && ( TARGET.Disk >= RequestDisk ) && ( TARGET.Memory >= RequestMemory ) && ( TARGET.HasFileTransfer )
+MinHosts = 1
+JobNotification = 0
+TransferOutput = "job.info,job.stdout.gz,job.stderr.gz"
+WantRemoteSyscalls = false
+JobLeaseDuration = 2400
+JobPrio = 0
+RootDir = "/"
+CurrentHosts = 0
+x509UserProxyExpiration = 1466975919
+StreamOut = false
+WantRemoteIO = true
+OnExitRemove = true
+GridControl_GCtoWMSID = "GCbccfd1a5.8@78925.8"
+DiskUsage = 32
+In = "/dev/null"
+PeriodicRemove = ( ( JobStatus == 5 && HoldReasonCode != 16 ) )
+ExecutableSize = 9
+TransferInput = "/usr/users/stober/grid-control/work.condor/gc-run.lib,/usr/users/stober/grid-control/work.condor/files/GCbccfd1a52c28/CONDOR/gc-sandbox.tar.gz,/usr/users/stober/grid-control/work.condor/sandbox/8/job_8.var"
+Rank = 0.0
+x509UserProxyFQAN = "/C=DE/O=GermanGrid/OU=uni-hamburg/CN=Fred Markus Stober,/cms/dcms/Role=NULL/Capability=NULL,/cms/Role=NULL/Capability=NULL"
+LeaveJobInQueue = false
+x509UserProxyEmail = "fred.stober@desy.de"
+StreamErr = false
+PeriodicHold = false
+x509UserProxyFirstFQAN = "/cms/dcms/Role=NULL/Capability=NULL"
+Out = "/usr/users/stober/grid-control/work.condor/sandbox/8/gc.stdout"
+UserLog = "/usr/users/stober/grid-control/work.condor/sandbox/GC_Condor.8b7787fe384fdcdd24b495bb977ec1e3.log"
+JobStatus = 1
+PeriodicRelease = false
+GridControl_GCIDtoWMSID = "8@78925.8"
+Args = "8"
+MaxHosts = 1
+RequestMemory = ifthenelse(MemoryUsage =!= undefined,MemoryUsage,( ImageSize + 1023 ) / 1024)
+x509userproxysubject = "/C=DE/O=GermanGrid/OU=uni-hamburg/CN=Fred Markus Stober"
+NotifyUser = ""
+x509UserProxyVOName = "cms"
+Env = "CONDOR_WMS_DASHID=https://CONDOR:/78925.8"
+TransferInputSizeMB = 0
+ShouldTransferFiles = "YES"
+EnteredCurrentStatus = 1466289756
+
+** Proc 78925.9:
+BufferSize = 524288
+NiceUser = false
+CoreSize = 0
+OnExitHold = false
+RequestCpus = 1
+Err = "/usr/users/stober/grid-control/work.condor/sandbox/9/gc.stderr"
+BufferBlockSize = 32768
+x509userproxy = "/tmp/x509up_u12043"
+ImageSize = 9
+EnvDelim = ";"
+WantCheckpoint = false
+WhenToTransferOutput = "ON_EXIT"
+Cmd = "/usr/users/stober/grid-control/packages/grid_control/share/gc-run.sh"
+TransferIn = false
+REMOTE_JOB = true
+Iwd = "/usr/users/stober/grid-control/work.condor/sandbox/9/"
+EncryptExecuteDirectory = false
+RequestWalltime = 3600
+RequestDisk = DiskUsage
+Requirements = ( ( TARGET.CLOUD_SITE == "BWFORCLUSTER" ) ) && ( ( ( INPUT_FILES =?= undefined ) || ( HPDA_Route =?= true ) || ( ( CurrentTime - QDate ) > ( 10 * 3 ) ) ) ) && ( TARGET.Arch == "X86_64" ) && ( TARGET.OpSys == "LINUX" ) && ( TARGET.Disk >= RequestDisk ) && ( TARGET.Memory >= RequestMemory ) && ( TARGET.HasFileTransfer )
+MinHosts = 1
+JobNotification = 0
+TransferOutput = "job.info,job.stdout.gz,job.stderr.gz"
+WantRemoteSyscalls = false
+JobLeaseDuration = 2400
+JobPrio = 0
+RootDir = "/"
+CurrentHosts = 0
+x509UserProxyExpiration = 1466975919
+StreamOut = false
+WantRemoteIO = true
+OnExitRemove = true
+GridControl_GCtoWMSID = "GCbccfd1a5.9@78925.9"
+DiskUsage = 32
+In = "/dev/null"
+PeriodicRemove = ( ( JobStatus == 5 && HoldReasonCode != 16 ) )
+ExecutableSize = 9
+TransferInput = "/usr/users/stober/grid-control/work.condor/gc-run.lib,/usr/users/stober/grid-control/work.condor/files/GCbccfd1a52c28/CONDOR/gc-sandbox.tar.gz,/usr/users/stober/grid-control/work.condor/sandbox/9/job_9.var"
+Rank = 0.0
+x509UserProxyFQAN = "/C=DE/O=GermanGrid/OU=uni-hamburg/CN=Fred Markus Stober,/cms/dcms/Role=NULL/Capability=NULL,/cms/Role=NULL/Capability=NULL"
+LeaveJobInQueue = false
+x509UserProxyEmail = "fred.stober@desy.de"
+StreamErr = false
+PeriodicHold = false
+x509UserProxyFirstFQAN = "/cms/dcms/Role=NULL/Capability=NULL"
+Out = "/usr/users/stober/grid-control/work.condor/sandbox/9/gc.stdout"
+UserLog = "/usr/users/stober/grid-control/work.condor/sandbox/GC_Condor.8b7787fe384fdcdd24b495bb977ec1e3.log"
+JobStatus = 1
+PeriodicRelease = false
+GridControl_GCIDtoWMSID = "9@78925.9"
+Args = "9"
+MaxHosts = 1
+RequestMemory = ifthenelse(MemoryUsage =!= undefined,MemoryUsage,( ImageSize + 1023 ) / 1024)
+x509userproxysubject = "/C=DE/O=GermanGrid/OU=uni-hamburg/CN=Fred Markus Stober"
+NotifyUser = ""
+x509UserProxyVOName = "cms"
+Env = "CONDOR_WMS_DASHID=https://CONDOR:/78925.9"
+TransferInputSizeMB = 0
+ShouldTransferFiles = "YES"
+EnteredCurrentStatus = 1466289756
+
+
