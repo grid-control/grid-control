@@ -69,7 +69,7 @@ class ParameterAdapter(ConfigurablePlugin):
 		return self._psrc.resync_psrc()
 
 	def show(self):
-		return self._psrc.show()
+		return self._psrc.show_psrc()
 
 
 class ResyncParameterAdapter(ParameterAdapter):

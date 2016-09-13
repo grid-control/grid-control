@@ -113,14 +113,14 @@ class LumiPartitionProcessor(PartitionProcessor):
 		self._lumi_filter = config.getLookup(['lumi filter', '%s lumi filter' % datasource_name],
 			default = {}, parser = parseLumiFilter, strfun = strLumi, onChange = changeTrigger)
 
-	def get_partition_parameter_metadata(self):
+	def get_partition_metadata(self):
 		if self.enabled():
 			return [ParameterMetadata('LUMI_RANGE', untracked = True)]
 
 	def enabled(self):
 		return not self._lumi_filter.empty()
 
-	def get_needed_keys(self, splitter):
+	def get_needed_vn_list(self, splitter):
 		if self.enabled():
 			return ['LUMI_RANGE']
 

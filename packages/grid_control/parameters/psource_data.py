@@ -67,13 +67,13 @@ class DataParameterSource(LimitedResyncParameterSource):
 		self._part_proc.process(pNum, splitInfo, result)
 
 	def fill_parameter_metadata(self, result):
-		result.extend(self._part_proc.get_partition_parameter_metadata() or [])
+		result.extend(self._part_proc.get_partition_metadata() or [])
 
 	def get_name(self):
 		return self._name
 
 	def get_needed_dataset_keys(self):
-		return self._part_proc.get_needed_keys(self._data_splitter) or []
+		return self._part_proc.get_needed_vn_list(self._data_splitter) or []
 
 	def get_parameter_len(self):
 		return self._maxN

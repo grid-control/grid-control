@@ -73,7 +73,7 @@ class CMSSW_Advanced(CMSSW):
 				nickNames.add(block[DataProvider.Nickname])
 			self._log.info('Mapping between nickname and other settings:')
 			report = []
-			ps_lookup = lfilter(lambda ps: 'DATASETNICK' in ps.depends(), self.source.get_used_psrc_list())
+			ps_lookup = lfilter(lambda ps: 'DATASETNICK' in ps.get_parameter_deps(), self.source.get_used_psrc_list())
 			for nick in sorted(nickNames):
 				tmp = {'DATASETNICK': nick}
 				for src in ps_lookup:

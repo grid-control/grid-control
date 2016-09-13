@@ -51,7 +51,7 @@ class LFNPartitionProcessor(PartitionProcessor):
 	def enabled(self):
 		return self._prefix is not None
 
-	def get_partition_parameter_metadata(self):
+	def get_partition_metadata(self):
 		return lmap(lambda k: ParameterMetadata(k, untracked = True), ['DATASET_SRM_FILES'])
 
 	def process(self, pNum, splitInfo, result):

@@ -57,7 +57,7 @@ class DummySplitter:
 		return tmp[pNum]
 
 class DataSplitProcessorTest:
-	def get_partition_parameter_metadata(self):
+	def get_partition_metadata(self):
 		return lmap(lambda k: ParameterMetadata(k, untracked=True),
 			['DATASETINFO', 'DATASETPATH', 'DATASETBLOCK', 'DATASETNICK'])
 

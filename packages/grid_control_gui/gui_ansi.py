@@ -91,7 +91,7 @@ class ANSIGUI(GUI):
 		self._last_report = 0
 		self._old_size = None
 
-	def _draw(self, fun):
+	def _draw(self, fun, *args):
 		new_size = self._console.getmaxyx()
 		if self._old_size != new_size:
 			self._old_size = new_size
@@ -100,21 +100,21 @@ class ANSIGUI(GUI):
 		self._console.hideCursor()
 		self._console.savePos()
 		try:
-			fun()
+			fun(*args)
 		finally:
 			self._console.loadPos()
 			self._console.showCursor()
 			self._lock.release()
 
 	# Event handling for resizing
-	def _update_layout(self):
+	def _update_layout(self, job_db):
 		(sizey, sizex) = self._console.getmaxyx()
 		self._old_size = (sizey, sizex)
 		self._reportHeight = self._report.getHeight()
 		self._console.erase()
 		self._console.setscrreg(min(self._reportHeight + self._statusHeight + 1, sizey), sizey)
 		utils.printTabular.wraplen = sizex - 5
-		self._update_all()
+		self._update_all(job_db)
 
 	def _schedule_update_layout(self, sig = None, frame = None):
 		start_thread('update layout', self._draw, self._update_layout) # using new thread to ensure RLock is free
@@ -125,13 +125,13 @@ class ANSIGUI(GUI):
 		signal.signal(signal.SIGWINCH, oldHandler)
 		return result
 
-	def _update_report(self):
+	def _update_report(self, job_db):
 		if time.time() - self._last_report < 1:
 			return
 		self._last_report = time.time()
 		self._console.move(0, 0)
 		self._new_stdout.logged = False
-		self._report.display()
+		self._report.show_report(job_db)
 		self._new_stdout.logged = True
 
 	def _update_status(self):
@@ -155,14 +155,14 @@ class ANSIGUI(GUI):
 		self._console.eraseDown()
 		self._new_stdout.dump()
 
-	def _update_all(self):
+	def _update_all(self, job_db):
 		self._last_report = 0
-		self._update_report()
+		self._update_report(job_db)
 		self._update_status()
 		self._update_log()
 
-	def _schedule_update_report_status(self):
-		self._draw(self._update_report)
+	def _schedule_update_report_status(self, job_db):
+		self._draw(self._update_report, job_db)
 		self._draw(self._update_status)
 
 	def displayWorkflow(self, workflow):
@@ -172,7 +172,7 @@ class ANSIGUI(GUI):
 		self._console = Console(sys.stdout)
 		self._new_stdout = GUIStream(sys.stdout, self._console, self._lock)
 		self._new_stderr = GUIStream(sys.stderr, self._console, self._lock)
-		Activity.callbacks.append(self._schedule_update_report_status)
+		Activity.callbacks.append(lambda: self._schedule_update_report_status(workflow.jobManager.jobDB))
 		try:
 			# Main cycle - GUI mode
 			(sys.stdout, sys.stderr) = (self._new_stdout, self._new_stderr)
@@ -183,4 +183,4 @@ class ANSIGUI(GUI):
 			(sys.stdout, sys.stderr) = (self._stored_stdout, self._stored_stderr)
 			self._console.setscrreg()
 			self._console.erase()
-			self._update_all()
+			self._update_all(workflow.jobManager.jobDB)

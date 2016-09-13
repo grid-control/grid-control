@@ -22,8 +22,8 @@ from hpfwk import Plugin, PluginError
 from python_compat import identity, ifilter, imap, itemgetter, lchain, lmap, lsmap, md5_hex, sorted
 
 class ScanProviderBase(DataProvider):
-	def __init__(self, config, datasource_name, dataset_expr, datasetNick, sList):
-		DataProvider.__init__(self, config, datasource_name, dataset_expr, datasetNick)
+	def __init__(self, config, datasource_name, dataset_expr, datasetNick, dataset_proc, sList):
+		DataProvider.__init__(self, config, datasource_name, dataset_expr, datasetNick, dataset_proc)
 		(self._ds_select, self._ds_name, self._ds_keys_user, self._ds_keys_guard) = self._setup(config, 'dataset')
 		(self._b_select, self._b_name, self._b_keys_user, self._b_keys_guard) = self._setup(config, 'block')
 		scanList = config.getList('scanner', sList) + ['NullScanner']
@@ -153,7 +153,7 @@ class ScanProviderBase(DataProvider):
 class ScanProvider(ScanProviderBase):
 	alias = ['scan']
 
-	def __init__(self, config, datasource_name, dataset_expr, datasetNick = None):
+	def __init__(self, config, datasource_name, dataset_expr, datasetNick = None, dataset_proc = None):
 		ds_config = config.changeView(viewClass = 'TaggedConfigView', addNames = [md5_hex(dataset_expr)])
 		basename = os.path.basename(dataset_expr)
 		firstScanner = 'FilesFromLS'
@@ -167,7 +167,7 @@ class ScanProvider(ScanProviderBase):
 			ds_config.set('filename filter', '')
 			firstScanner = 'FilesFromDataProvider'
 		defScanner = [firstScanner, 'MatchOnFilename', 'MatchDelimeter', 'DetermineEvents', 'AddFilePrefix']
-		ScanProviderBase.__init__(self, ds_config, datasource_name, dataset_expr, datasetNick, defScanner)
+		ScanProviderBase.__init__(self, ds_config, datasource_name, dataset_expr, datasetNick, dataset_proc, defScanner)
 
 
 # This class is used to disentangle the TaskModule and GCProvider class - without any direct dependencies / imports
@@ -181,7 +181,7 @@ class GCProviderSetup(Plugin):
 class GCProvider(ScanProviderBase):
 	alias = ['gc']
 
-	def __init__(self, config, datasource_name, dataset_expr, datasetNick = None):
+	def __init__(self, config, datasource_name, dataset_expr, datasetNick = None, dataset_proc = None):
 		ds_config = config.changeView(viewClass = 'TaggedConfigView', addNames = [md5_hex(dataset_expr)])
 		if os.path.isdir(dataset_expr):
 			scan_pipeline = ['OutputDirsFromWork']
@@ -204,4 +204,4 @@ class GCProvider(ScanProviderBase):
 				continue
 			scan_pipeline += scan_holder.scan_pipeline
 			break
-		ScanProviderBase.__init__(self, ds_config, datasource_name, dataset_expr, datasetNick, scan_pipeline)
+		ScanProviderBase.__init__(self, ds_config, datasource_name, dataset_expr, datasetNick, dataset_proc, scan_pipeline)

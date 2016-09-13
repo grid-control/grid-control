@@ -429,7 +429,7 @@ class PlotReport(Report):
 		self.plotOverall(histogram, self.jobResult, timespan, lambdaExtractor, fit, unit, cumulate)
 		self.finalizeHistogram(histogram)
 
-	def display(self, job_db):
+	def show_report(self, job_db):
 		if not numpy:
 			raise Exception('Unable to find numpy!')
 		if not matplotlib:

@@ -23,6 +23,8 @@ from python_compat import set
 CheckInfo = makeEnum(['WMSID', 'RAW_STATUS', 'QUEUE', 'WN', 'SITE'])
 CheckStatus = makeEnum(['OK', 'ERROR'])
 
+# TODO: Error Handler Plugins - logging, exception, errorcode - with abort / continue
+
 class CheckJobs(BackendExecutor):
 	def execute(self, wmsIDs): # yields list of (wmsID, job_status, job_info)
 		raise AbstractError
