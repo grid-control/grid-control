@@ -78,7 +78,7 @@ class SimpleConsole(GUI):
 	def displayWorkflow(self, workflow):
 		if self._report.getHeight():
 			self._log.info('')
-		self._report.display()
+		self._report.show_report(workflow.jobManager.jobDB)
 		if self._report.getHeight():
 			self._log.info('')
 		if workflow.duration < 0:

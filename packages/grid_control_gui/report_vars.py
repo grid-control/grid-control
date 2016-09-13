@@ -25,7 +25,7 @@ class VariablesReport(Report):
 		self._task = task
 		self._selector = JobSelector.create(configString, task = task)
 
-	def display(self, job_db):
+	def show_report(self, job_db):
 		taskConfig = self._task.getTaskConfig()
 		header = lzip(taskConfig, taskConfig)
 		header.extend(imap(lambda key: (key, '<%s>' % key), self._task.getTransientVars()))

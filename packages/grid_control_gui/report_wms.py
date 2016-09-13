@@ -134,7 +134,7 @@ class BackendReport(Report):
 		yield result_l2
 		yield result_l3
 
-	def display(self, job_db):
+	def show_report(self, job_db):
 		stateMap = dict(self._stateMap)
 
 		def transform(data, label, level):

@@ -83,7 +83,7 @@ class CategoryBaseReport(Report):
 class ModuleReport(CategoryBaseReport):
 	alias = ['module']
 
-	def display(self, job_db):
+	def show_report(self, job_db):
 		(catStateDict, catDescDict, _) = CategoryBaseReport._getCategoryStateSummary(self, job_db)
 		infos = []
 		head = set()
@@ -246,7 +246,7 @@ class GUIReport(AdaptiveBaseReport):
 		self.printLimited('%s %s' % (message, self._get_header(self.maxX - len(message) - 1)), self.maxX)
 		self.printLimited('-' * (self.maxX - 24), self.maxX)
 
-	def display(self, job_db):
+	def show_report(self, job_db):
 		(catStateDict, catDescDict, catSubcatDict) = self._getCategoryStateSummary(job_db)
 		self._catCur = len(catStateDict)
 		def sumCat(catKey, states):

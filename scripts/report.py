@@ -48,7 +48,7 @@ def main(opts, args):
 
 	report = config.getCompositePlugin('transient report', opts.report, 'MultiReport', cls = 'Report',
 		pargs = (jobDB, task, selected, opts.string))
-	report.display(jobDB)
+	report.show_report(jobDB)
 
 if __name__ == '__main__':
 	sys.exit(main(options.opts, options.args))
