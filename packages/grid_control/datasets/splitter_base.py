@@ -164,13 +164,13 @@ class DataSplitter(ConfigurablePlugin):
 	def _resync_get_matching_block(self, partition, blocksMissing, blocksMatching):
 		# Get block information (oldBlock, newBlock, filesMissing, filesMatched) which partition is based on
 		# Search for block in missing and matched blocks
-		def getBlockKey(dsBlock):
+		def get_block_key(dsBlock):
 			return (dsBlock[DataProvider.Dataset], dsBlock[DataProvider.BlockName])
 		partitionKey = (partition[DataSplitter.Dataset], partition[DataSplitter.BlockName])
-		result = fast_search(blocksMissing, getBlockKey, partitionKey)
+		result = fast_search(blocksMissing, get_block_key, partitionKey)
 		if result:
 			return (result, None, result[DataProvider.FileList], [])
-		return fast_search(blocksMatching, lambda x: getBlockKey(x[0]), partitionKey) # compare with old block
+		return fast_search(blocksMatching, lambda x: get_block_key(x[0]), partitionKey) # compare with old block
 
 
 	def _resync_get_matching_metadata(self, oldBlock, newBlock):
@@ -491,7 +491,7 @@ class DataSplitter(ConfigurablePlugin):
 		return (resultRedo, resultDisable)
 
 
-	def loadPartitionsForScript(path, cfg = None):
+	def load_partitions_for_script(path, cfg = None):
 		src = DataSplitterIO.createInstance('DataSplitterIOAuto').loadSplitting(path)
 		# Transfer config protocol (in case no split function is called)
 		protocol = {}
@@ -509,7 +509,7 @@ class DataSplitter(ConfigurablePlugin):
 		splitter = DataSplitter.createInstance(src.classname, cfg, 'dataset')
 		splitter.setState(src, protocol)
 		return splitter
-	loadPartitionsForScript = staticmethod(loadPartitionsForScript)
+	load_partitions_for_script = staticmethod(load_partitions_for_script)
 
 makeEnum(['Dataset', 'Locations', 'NEntries', 'Skipped', 'FileList', 'Nickname', 'DatasetID', # DatasetID is legacy
 	'CommonPrefix', 'Invalid', 'BlockName', 'MetadataHeader', 'Metadata', 'Comment'], DataSplitter, useHash = False)

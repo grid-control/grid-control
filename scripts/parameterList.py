@@ -128,7 +128,7 @@ def setup_dataset(config, dataset):
 		log.info('Registering dummy data provider data')
 		dataSplitter = DummySplitter()
 	else:
-		dataSplitter = DataSplitter.loadPartitionsForScript(dataset)
+		dataSplitter = DataSplitter.load_partitions_for_script(dataset)
 
 	config = config.changeView(setSections = None)
 	partProcessor = config.getCompositePlugin('partition processor',
