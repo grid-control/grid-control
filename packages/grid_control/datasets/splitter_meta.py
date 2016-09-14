@@ -19,18 +19,18 @@ from python_compat import imap, sort_inplace
 
 # Split dataset along block and metadata boundaries - using equivalence classes of metadata
 class MetadataSplitter(FileLevelSplitter):
-	def metaKey(self, metadataNames, block, fi):
+	def _get_metadata_key(self, metadataNames, block, fi):
 		raise AbstractError
 
 	def _proto_partition_blocks(self, blocks):
 		for block in blocks:
 			files = block[DataProvider.FileList]
-			sort_inplace(files, key = lambda fi: self.metaKey(block.get(DataProvider.Metadata, []), block, fi))
+			sort_inplace(files, key = lambda fi: self._get_metadata_key(block.get(DataProvider.Metadata, []), block, fi))
 			(fileStack, reprKey) = ([], None)
 			for fi in files:
 				if reprKey is None:
-					reprKey = self.metaKey(block[DataProvider.Metadata], block, fi)
-				curKey = self.metaKey(block[DataProvider.Metadata], block, fi)
+					reprKey = self._get_metadata_key(block[DataProvider.Metadata], block, fi)
+				curKey = self._get_metadata_key(block[DataProvider.Metadata], block, fi)
 				if curKey != reprKey:
 					yield self._create_partition(block, fileStack)
 					(fileStack, reprKey) = ([], curKey)
@@ -44,7 +44,7 @@ class UserMetadataSplitter(MetadataSplitter):
 	def _configure_splitter(self, config):
 		self._metadata = self._query_config(config.getList, 'split metadata', [])
 
-	def metaKey(self, metadataNames, block, fi):
+	def _get_metadata_key(self, metadataNames, block, fi):
 		selMetadataNames = self._setup(self._metadata, block)
 		selMetadataIdx = []
 		for selMetadataName in selMetadataNames:
