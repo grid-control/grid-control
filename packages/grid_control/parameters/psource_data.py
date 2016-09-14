@@ -42,7 +42,7 @@ class DataParameterSource(LimitedResyncParameterSource):
 			raise DatasetError('Found broken resync state')
 
 		if self._exists_data_path('cache.dat') and self._exists_data_path('map.tar'):
-			self._data_splitter.importPartitions(self._get_data_path('map.tar'))
+			self._data_splitter.import_partitions(self._get_data_path('map.tar'))
 		else:
 			DataProvider.saveToFile(self._get_data_path('cache.dat'), self._data_provider.getBlocks(show_stats = False))
 			self._data_splitter.partition_block(self._get_data_path('map.tar'), self._data_provider.getBlocks(show_stats = False))
@@ -113,7 +113,7 @@ class DataParameterSource(LimitedResyncParameterSource):
 					os.rename(self._get_data_path(new), self._get_data_path(cur))
 				backupRename(  'map-old-%d.tar' % time.time(),   'map.tar',   'map-new.tar')
 				backupRename('cache-old-%d.dat' % time.time(), 'cache.dat', 'cache-new.dat')
-				self._data_splitter.importPartitions(self._get_data_path('map.tar'))
+				self._data_splitter.import_partitions(self._get_data_path('map.tar'))
 				self._len = self._data_splitter.get_partition_len()
 				self._log.debug('Dataset resync finished: %d -> %d partitions', old_len, self._len)
 				return (set(jobChanges[0]), set(jobChanges[1]), old_len != self._len)

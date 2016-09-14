@@ -125,7 +125,7 @@ class DataSplitter(ConfigurablePlugin):
 	def partition_block(self, path, blocks):
 		activity = Activity('Splitting dataset into jobs')
 		self.save_partitions(path, self._partition_block(blocks))
-		self.importPartitions(path)
+		self.import_partitions(path)
 		activity.finish()
 
 
@@ -157,7 +157,7 @@ class DataSplitter(ConfigurablePlugin):
 		DataSplitterIO.createInstance('DataSplitterIOAuto').saveSplitting(path, meta, source, sourceLenHint, message)
 
 
-	def importPartitions(self, path):
+	def import_partitions(self, path):
 		self._splitSource = DataSplitterIO.createInstance('DataSplitterIOAuto').loadSplitting(path)
 
 
