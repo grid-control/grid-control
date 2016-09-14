@@ -20,18 +20,18 @@ from python_compat import lmap, imap, sort_inplace
 
 # Split dataset along block and metadata boundaries - using equivalence classes of metadata
 class MetadataSplitter(FileLevelSplitter):
-	def _classify_fileinfo(self, metadata_key_list, block, fi):
+	def _get_fi_class(self, metadata_key_list, block, fi):
 		raise AbstractError
 
 	def _proto_partition_blocks(self, blocks):
 		for block in blocks:
 			files = block[DataProvider.FileList]
-			sort_inplace(files, key = lambda fi: self._classify_fileinfo(block.get(DataProvider.Metadata, []), block, fi))
+			sort_inplace(files, key = lambda fi: self._get_fi_class(block.get(DataProvider.Metadata, []), block, fi))
 			(fi_list, reprKey) = ([], None)
 			for fi in files:
 				if reprKey is None:
-					reprKey = self._classify_fileinfo(block[DataProvider.Metadata], block, fi)
-				curKey = self._classify_fileinfo(block[DataProvider.Metadata], block, fi)
+					reprKey = self._get_fi_class(block[DataProvider.Metadata], block, fi)
+				curKey = self._get_fi_class(block[DataProvider.Metadata], block, fi)
 				if curKey != reprKey:
 					yield self._create_partition(block, fi_list)
 					(fi_list, reprKey) = ([], curKey)
@@ -45,7 +45,7 @@ class UserMetadataSplitter(MetadataSplitter):
 	def _configure_splitter(self, config):
 		self._metadata_user_list = self._query_config(config.getList, 'split metadata', [])
 
-	def _classify_fileinfo(self, metadata_key_list, block, fi):
+	def _get_fi_class(self, metadata_key_list, block, fi):
 		metadata_selected_list = self._setup(self._metadata_user_list, block)
 		metadata_idx_list = lmap(lambda metadata_key: safe_index(metadata_key_list, metadata_key), metadata_selected_list)
 
