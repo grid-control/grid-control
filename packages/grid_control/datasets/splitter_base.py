@@ -309,7 +309,7 @@ class DataSplitter(ConfigurablePlugin):
 
 
 	# Remove files from partition
-	def _resyncRemovedFile(self, idx, modSI, sizeInfo, rmFI):
+	def _resync_removed_file(self, idx, modSI, sizeInfo, rmFI):
 		modSI[DataSplitter.Comment] += '[rm] ' + rmFI[DataProvider.URL]
 		modSI[DataSplitter.Comment] += '-%d ' % rmFI[DataProvider.NEntries]
 
@@ -349,7 +349,7 @@ class DataSplitter(ConfigurablePlugin):
 		while idx < len(modSI[DataSplitter.FileList]):
 			rmFI = fast_search(filesMissing, itemgetter(DataProvider.URL), modSI[DataSplitter.FileList][idx])
 			if rmFI:
-				procMode = min(procMode, self._resyncRemovedFile(idx, modSI, sizeInfo, rmFI))
+				procMode = min(procMode, self._resync_removed_file(idx, modSI, sizeInfo, rmFI))
 			else:
 				(oldFI, newFI) = fast_search(filesMatched, lambda x: x[0][DataProvider.URL], modSI[DataSplitter.FileList][idx])
 				(procMode, idx) = self._resync_changed_file(procMode, idx, modSI, partition_num, sizeInfo, newBlock, extended, oldFI, newFI, newMetadata, metaIdxLookup)
