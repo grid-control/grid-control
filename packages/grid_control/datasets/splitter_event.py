@@ -28,6 +28,7 @@ class EventBoundarySplitter(DataSplitter):
 			for proto_partition in self._partition_block(block[DataProvider.FileList], self._setup(self._events_per_job, block), event_first):
 				event_first = 0
 				yield self._finish_partition(block, proto_partition)
+
 	def _configure_splitter(self, config):
 		self._events_per_job = self._query_config(config.getInt, 'events per job')
 
@@ -79,4 +80,3 @@ class EventBoundarySplitter(DataSplitter):
 				event_succ += events_per_job
 				yield proto_partition
 				proto_partition = {DataSplitter.Skipped: 0, DataSplitter.NEntries: 0, DataSplitter.FileList: []}
-

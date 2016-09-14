@@ -20,9 +20,6 @@ from python_compat import imap, lmap, sort_inplace
 
 # Split dataset along block and metadata boundaries - using equivalence classes of metadata
 class MetadataSplitter(FileLevelSplitter):
-	def _get_fi_class(self, metadata_key_list, block, fi):
-		raise AbstractError
-
 	def divide_blocks(self, block_iter):
 		for block in block_iter:
 			fi_list = block[DataProvider.FileList]
@@ -37,6 +34,9 @@ class MetadataSplitter(FileLevelSplitter):
 					(partition_fi_list, fi_class_active) = ([], fi_class_current)
 				partition_fi_list.append(fi)
 			yield self._create_sub_block(block, partition_fi_list)
+
+	def _get_fi_class(self, metadata_key_list, block, fi):
+		raise AbstractError
 
 
 class UserMetadataSplitter(MetadataSplitter):

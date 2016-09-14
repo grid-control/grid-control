@@ -45,7 +45,7 @@ class DataSplitterIO(Plugin):
 	def import_partition_source(self, path):
 		raise AbstractError
 
-	def save_partition_source(self, path, meta, source, sourceLenHint, message = 'Writing job mapping file'):
+	def save_partition_source(self, path, meta, source, source_len_hint, message = 'Writing job mapping file'):
 		raise AbstractError
 
 
@@ -114,6 +114,9 @@ class DataSplitter(ConfigurablePlugin):
 		self.import_partitions(path)
 		activity.finish()
 
+	def partition_blocks_raw(self, blocks, event_first = 0):
+		raise AbstractError
+
 	def resync_partitions(self, newSplitPath, oldBlocks, newBlocks):
 		activity = Activity('Performing resynchronization of dataset')
 		(blocksAdded, blocksMissing, blocksMatching) = DataProvider.resyncSources(oldBlocks, newBlocks)
@@ -126,7 +129,7 @@ class DataSplitter(ConfigurablePlugin):
 		resultDisable = []
 		newSplitPathTMP = newSplitPath + '.tmp'
 		resyncIter = self._resync_iter(resultRedo, resultDisable, blocksAdded, blocksMissing, blocksMatching)
-		self.save_partitions(newSplitPathTMP, resyncIter, sourceLenHint = self.get_partition_len(),
+		self.save_partitions(newSplitPathTMP, resyncIter, source_len_hint = self.get_partition_len(),
 			message = 'Performing resynchronization of dataset map (progress is estimated)')
 
 		if self._interactive:
@@ -137,17 +140,17 @@ class DataSplitter(ConfigurablePlugin):
 
 		return (resultRedo, resultDisable)
 
-	def save_partitions(self, path, source = None, sourceLenHint = None, message = 'Writing job mapping file'):
+	def save_partitions(self, path, source = None, source_len_hint = None, message = 'Writing job mapping file'):
 		# Save as tar file to allow random access to mapping data with little memory overhead
-		if source and not sourceLenHint:
+		if source and not source_len_hint:
 			source = list(source)
-			sourceLenHint = len(source)
+			source_len_hint = len(source)
 		elif not source:
-			(source, sourceLenHint) = (self._partition_source, self.get_partition_len())
+			(source, source_len_hint) = (self._partition_source, self.get_partition_len())
 		# Write metadata to allow reconstruction of data splitter
 		meta = {'ClassName': self.__class__.__name__}
 		meta.update(self._protocol)
-		DataSplitterIO.createInstance('DataSplitterIOAuto').save_partition_source(path, meta, source, sourceLenHint, message)
+		DataSplitterIO.createInstance('DataSplitterIOAuto').save_partition_source(path, meta, source, source_len_hint, message)
 
 	def set_state(self, src, protocol):
 		self._partition_source = src
@@ -170,9 +173,6 @@ class DataSplitter(ConfigurablePlugin):
 			if DataProvider.Metadata in block:
 				partition[DataSplitter.Metadata] = lmap(lambda x: x[DataProvider.Metadata], files)
 		return partition
-
-	def partition_blocks_raw(self, blocks, event_first = 0):
-		raise AbstractError
 
 	def _query_config(self, fun, item, default = noDefault):
 		key = (fun, item, default)
