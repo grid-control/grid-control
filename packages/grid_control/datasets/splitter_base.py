@@ -393,11 +393,11 @@ class DataSplitter(ConfigurablePlugin):
 		if DataSplitter.Comment not in partition:
 			partition[DataSplitter.Comment] = 'src: %d ' % partition_num
 		if partition.get(DataSplitter.Invalid, False):
-			return (partition, partition, ResyncMode.ignore, [])
+			return (partition, ResyncMode.ignore, [])
 		modpartition = copy.deepcopy(partition)
 		(oldBlock, newBlock, filesMissing, filesMatched) = self._resyncGetMatchingBlock(modpartition, blocksMissing, blocksMatching)
 		(procMode, extended) = self._resyncPartition(modpartition, partition_num, oldBlock, newBlock, filesMissing, filesMatched, doExpandOutside = True)
-		return (partition, modpartition, procMode, extended)
+		return (modpartition, procMode, extended)
 
 
 	# Process partitions
