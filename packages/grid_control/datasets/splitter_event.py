@@ -23,6 +23,11 @@ class EventBoundarySplitter(DataSplitter):
 		return [DataSplitter.FileList, DataSplitter.Skipped, DataSplitter.NEntries]
 	get_needed_enums = classmethod(get_needed_enums)
 
+	def partition_blocks_raw(self, block_iter, event_first = 0):
+		for block in block_iter:
+			for proto_partition in self._partition_block(block[DataProvider.FileList], self._setup(self._events_per_job, block), event_first):
+				event_first = 0
+				yield self._finish_partition(block, proto_partition)
 	def _configure_splitter(self, config):
 		self._events_per_job = self._query_config(config.getInt, 'events per job')
 
@@ -75,8 +80,3 @@ class EventBoundarySplitter(DataSplitter):
 				yield proto_partition
 				proto_partition = {DataSplitter.Skipped: 0, DataSplitter.NEntries: 0, DataSplitter.FileList: []}
 
-	def partition_blocks_raw(self, block_iter, event_first = 0):
-		for block in block_iter:
-			for proto_partition in self._partition_block(block[DataProvider.FileList], self._setup(self._events_per_job, block), event_first):
-				event_first = 0
-				yield self._finish_partition(block, proto_partition)
