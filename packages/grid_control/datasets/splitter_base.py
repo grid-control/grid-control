@@ -144,8 +144,8 @@ class DataSplitter(ConfigurablePlugin):
 		return self._splitSource.maxJobs
 
 
-	# Save as tar file to allow random access to mapping data with little memory overhead
 	def save_partitions(self, path, source = None, sourceLenHint = None, message = 'Writing job mapping file'):
+		# Save as tar file to allow random access to mapping data with little memory overhead
 		if source and not sourceLenHint:
 			source = list(source)
 			sourceLenHint = len(source)
@@ -161,8 +161,8 @@ class DataSplitter(ConfigurablePlugin):
 		self._splitSource = DataSplitterIO.createInstance('DataSplitterIOAuto').loadSplitting(path)
 
 
-	# Get block information (oldBlock, newBlock, filesMissing, filesMatched) which partition is based on
 	def _resync_get_matching_block(self, partition, blocksMissing, blocksMatching):
+		# Get block information (oldBlock, newBlock, filesMissing, filesMatched) which partition is based on
 		# Search for block in missing and matched blocks
 		def getBlockKey(dsBlock):
 			return (dsBlock[DataProvider.Dataset], dsBlock[DataProvider.BlockName])
@@ -173,8 +173,8 @@ class DataSplitter(ConfigurablePlugin):
 		return fast_search(blocksMatching, lambda x: getBlockKey(x[0]), partitionKey) # compare with old block
 
 
-	# Get list of matching metadata indices
 	def _resync_get_matching_metadata(self, oldBlock, newBlock):
+		# Get list of matching metadata indices
 		result = []
 		for meta in self._metadata_resync_option:
 			(oldIdx, newIdx) = (None, None)
@@ -187,8 +187,8 @@ class DataSplitter(ConfigurablePlugin):
 		return result
 
 
-	# Process changed files in partition - returns True if file index should be increased
 	def _resync_changed_file_entries(self, idx, modSI, partition_num, sizeInfo, oldFI, newFI, newBlock, extended):
+		# Process changed files in partition - returns True if file index should be increased
 		modSI[DataSplitter.Comment] += ' [changed] ' + oldFI[DataProvider.URL]
 		modSI[DataSplitter.Comment] += (' -%d ' % oldFI[DataProvider.NEntries])
 		modSI[DataSplitter.Comment] += (' +%d ' % newFI[DataProvider.NEntries])
@@ -308,8 +308,8 @@ class DataSplitter(ConfigurablePlugin):
 		return (procMode, idx) # go to next file
 
 
-	# Remove files from partition
 	def _resync_removed_file(self, idx, modSI, sizeInfo, rmFI):
+		# Remove files from partition
 		modSI[DataSplitter.Comment] += '[rm] ' + rmFI[DataProvider.URL]
 		modSI[DataSplitter.Comment] += '-%d ' % rmFI[DataProvider.NEntries]
 
@@ -339,8 +339,8 @@ class DataSplitter(ConfigurablePlugin):
 		return procMode
 
 
-	# resync a single file in the partition, return next file index to process
 	def _resync_files(self, modSI, partition_num, sizeInfo, filesMissing, filesMatched, newBlock, metaIdxLookup, extended):
+		# resync a single file in the partition, return next file index to process
 		# Select processing mode for job (disable > complete > changed > ignore) [ie. disable overrides all] using min
 		# Result: one of [disable, complete, ignore] (changed -> complete or igore)
 		idx = 0
@@ -356,9 +356,9 @@ class DataSplitter(ConfigurablePlugin):
 		return (procMode, newMetadata)
 
 
-	# Resync single partition
-	# With doExpandOutside, gc tries to handle expanding files via the partition function
-	def _resyncPartition(self, modSI, partition_num, oldBlock, newBlock, filesMissing, filesMatched, doExpandOutside):
+	def _resync_partition(self, modSI, partition_num, oldBlock, newBlock, filesMissing, filesMatched, doExpandOutside):
+		# Resync single partition
+		# With doExpandOutside, gc tries to handle expanding files via the partition function
 		if newBlock: # copy new location information
 			modSI[DataSplitter.Locations] = newBlock.get(DataProvider.Locations)
 		# Determine old size infos and get started
@@ -396,12 +396,12 @@ class DataSplitter(ConfigurablePlugin):
 			return (partition, ResyncMode.ignore, [])
 		modpartition = copy.deepcopy(partition)
 		(oldBlock, newBlock, filesMissing, filesMatched) = self._resync_get_matching_block(modpartition, blocksMissing, blocksMatching)
-		(procMode, extended) = self._resyncPartition(modpartition, partition_num, oldBlock, newBlock, filesMissing, filesMatched, doExpandOutside = True)
+		(procMode, extended) = self._resync_partition(modpartition, partition_num, oldBlock, newBlock, filesMissing, filesMatched, doExpandOutside = True)
 		return (modpartition, procMode, extended)
 
 
-	# Process partitions
 	def _resyncIterator_raw(self, blocksAdded, blocksMissing, blocksMatching):
+		# Process partitions
 		extList = []
 		# Perform resync of existing partitions
 		for (partition_num, partition) in enumerate(self.iter_partitions()):
@@ -422,8 +422,8 @@ class DataSplitter(ConfigurablePlugin):
 				yield (None, newpartition, ResyncMode.ignore)
 
 
-	# Sort resynced partitions into updated and added lists
 	def _resyncIterator_sort(self, blocksAdded, blocksMissing, blocksMatching):
+		# Sort resynced partitions into updated and added lists
 		(splitUpdated, splitAdded) = ([], [])
 		for (partition_num, partition, procMode) in self._resyncIterator_raw(blocksAdded, blocksMissing, blocksMatching):
 			if partition_num is not None: # Separate existing and new partitions
@@ -433,8 +433,8 @@ class DataSplitter(ConfigurablePlugin):
 		return (splitUpdated, splitAdded)
 
 
-	# Use reordering if setup - log interventions (disable, redo) according to procMode
 	def _resyncIterator(self, resultRedo, resultDisable, blocksAdded, blocksMissing, blocksMatching):
+		# Use reordering if setup - log interventions (disable, redo) according to procMode
 		def getReorderIterator(mainIter, altIter): # alt source is used if main source contains invalid entries
 			for (partition_num, partition, procMode) in mainIter:
 				if partition.get(DataSplitter.Invalid, False) or (procMode == ResyncMode.disable):
