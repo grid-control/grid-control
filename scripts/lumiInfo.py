@@ -86,7 +86,7 @@ def iter_jobs(opts, workDir, jobList, splitter):
 			outputName = outputName.replace(opts.replace % jobNum, '_').replace('/', '_').replace('__', '_').strip('_')
 		else:
 			if splitter:
-				splitInfo = splitter.getSplitInfo(jobNum)
+				splitInfo = splitter.get_partition(jobNum)
 			outputName = splitInfo.get(DataSplitter.Nickname, splitInfo.get(DataSplitter.Dataset, '').replace('/', '_'))
 		yield (jobNum, outputName)
 	activity.finish()

@@ -49,7 +49,7 @@ log = logging.getLogger()
 class DummySplitter:
 	def get_job_len(self):
 		return 3
-	def getSplitInfo(self, pNum):
+	def get_partition(self, pNum):
 		mkEntry = lambda ds, fl, n, nick: { DataSplitter.Dataset: ds, DataSplitter.Nickname: nick,
 			DataSplitter.FileList: fl, DataSplitter.NEntries: n }
 		tmp = [ mkEntry('ds1', ['a', 'b'], 23, 'data_1'), mkEntry('ds1', ['1'], 42, 'data_1'),

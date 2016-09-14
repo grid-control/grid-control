@@ -63,7 +63,7 @@ class DataParameterSource(LimitedResyncParameterSource):
 	create_psrc = classmethod(create_psrc)
 
 	def fill_parameter_content(self, pNum, result):
-		splitInfo = self._data_splitter.getSplitInfo(pNum)
+		splitInfo = self._data_splitter.get_partition(pNum)
 		self._part_proc.process(pNum, splitInfo, result)
 
 	def fill_parameter_metadata(self, result):

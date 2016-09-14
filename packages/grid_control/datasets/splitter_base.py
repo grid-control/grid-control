@@ -129,7 +129,7 @@ class DataSplitter(ConfigurablePlugin):
 		activity.finish()
 
 
-	def getSplitInfo(self, jobNum):
+	def get_partition(self, jobNum):
 		if jobNum >= self.get_job_len():
 			raise PartitionError('Job %d out of range for available dataset' % jobNum)
 		return self._splitSource[jobNum]
@@ -385,7 +385,7 @@ class DataSplitter(ConfigurablePlugin):
 
 
 	def _resyncExistingPartitions(self, jobNum, blocksAdded, blocksMissing, blocksMatching):
-		splitInfo = self.getSplitInfo(jobNum)
+		splitInfo = self.get_partition(jobNum)
 		if DataSplitter.Comment not in splitInfo:
 			splitInfo[DataSplitter.Comment] = 'src: %d ' % jobNum
 		if splitInfo.get(DataSplitter.Invalid, False):

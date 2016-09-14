@@ -60,20 +60,20 @@ if opts.backend_list_nodes or opts.backend_list_queues:
 
 def partition_invalid(splitter):
 	for jobNum in irange(splitter.get_job_len()):
-		splitInfo = splitter.getSplitInfo(jobNum)
+		splitInfo = splitter.get_partition(jobNum)
 		if splitInfo.get(DataSplitter.Invalid, False):
 			yield {0: jobNum}
 
 def partition_list(splitter, keyList):
 	for jobNum in irange(splitter.get_job_len()):
-		splitInfo = splitter.getSplitInfo(jobNum)
+		splitInfo = splitter.get_partition(jobNum)
 		tmp = lmap(lambda k: (k, splitInfo.get(k, '')), keyList)
 		yield dict([('jobNum', jobNum)] + tmp)
 
 def partition_check(splitter):
 		fail = utils.set()
 		for jobNum in irange(splitter.get_job_len()):
-			splitInfo = splitter.getSplitInfo(jobNum)
+			splitInfo = splitter.get_partition(jobNum)
 			try:
 				(events, skip, files) = (0, 0, [])
 				for line in open(os.path.join(opts.checkSplitting, 'jobs', 'job_%d.var' % jobNum)).readlines():
