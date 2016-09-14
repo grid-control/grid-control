@@ -188,7 +188,7 @@ class DataSplitter(ConfigurablePlugin):
 
 
 	# Process changed files in partition - returns True if file index should be increased
-	def _resyncChangedFileEntries(self, idx, modSI, partition_num, sizeInfo, oldFI, newFI, newBlock, extended):
+	def _resync_changed_file_entries(self, idx, modSI, partition_num, sizeInfo, oldFI, newFI, newBlock, extended):
 		modSI[DataSplitter.Comment] += ' [changed] ' + oldFI[DataProvider.URL]
 		modSI[DataSplitter.Comment] += (' -%d ' % oldFI[DataProvider.NEntries])
 		modSI[DataSplitter.Comment] += (' +%d ' % newFI[DataProvider.NEntries])
@@ -296,7 +296,7 @@ class DataSplitter(ConfigurablePlugin):
 		oldEvts = modSI[DataSplitter.NEntries]
 		oldSkip = modSI.get(DataSplitter.Skipped)
 
-		if self._resyncChangedFileEntries(idx, modSI, partition_num, sizeInfo, oldFI, newFI, newBlock, extended):
+		if self._resync_changed_file_entries(idx, modSI, partition_num, sizeInfo, oldFI, newFI, newBlock, extended):
 			idx += 1 # True => file index should be increased
 
 		mode = utils.QM(oldFI[DataProvider.NEntries] < newFI[DataProvider.NEntries], self._mode_expanded, self._mode_shrunken)
