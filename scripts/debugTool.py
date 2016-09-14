@@ -59,42 +59,39 @@ if opts.backend_list_nodes or opts.backend_list_queues:
 # DATASET PARTITION
 
 def partition_invalid(splitter):
-	for jobNum in irange(splitter.get_job_len()):
-		splitInfo = splitter.get_partition(jobNum)
+	for (partition_num, splitInfo) in enumerate(splitter.iter_partitions()):
 		if splitInfo.get(DataSplitter.Invalid, False):
-			yield {0: jobNum}
+			yield {0: partition_num}
 
 def partition_list(splitter, keyList):
-	for jobNum in irange(splitter.get_job_len()):
-		splitInfo = splitter.get_partition(jobNum)
+	for (partition_num, splitInfo) in enumerate(splitter.iter_partitions()):
 		tmp = lmap(lambda k: (k, splitInfo.get(k, '')), keyList)
-		yield dict([('jobNum', jobNum)] + tmp)
+		yield dict([('partition_num', partition_num)] + tmp)
 
 def partition_check(splitter):
-		fail = utils.set()
-		for jobNum in irange(splitter.get_job_len()):
-			splitInfo = splitter.get_partition(jobNum)
-			try:
-				(events, skip, files) = (0, 0, [])
-				for line in open(os.path.join(opts.checkSplitting, 'jobs', 'job_%d.var' % jobNum)).readlines():
-					if 'MAX_EVENTS' in line:
-						events = int(line.split('MAX_EVENTS', 1)[1].replace('=', ''))
-					if 'SKIP_EVENTS' in line:
-						skip = int(line.split('SKIP_EVENTS', 1)[1].replace('=', ''))
-					if 'FILE_NAMES' in line:
-						files = line.split('FILE_NAMES', 1)[1].replace('=', '').replace('\"', '').replace('\\', '')
-						files = lmap(lambda x: x.strip().strip(','), files.split())
-				def printError(curJ, curS, msg):
-					if curJ != curS:
-						logging.warning('%s in job %d (j:%s != s:%s)', msg, jobNum, curJ, curS)
-						fail.add(jobNum)
-				printError(events, splitInfo[DataSplitter.NEntries], 'Inconsistent number of events')
-				printError(skip, splitInfo[DataSplitter.Skipped], 'Inconsistent number of skipped events')
-				printError(files, splitInfo[DataSplitter.FileList], 'Inconsistent list of files')
-			except Exception:
-				logging.warning('Job %d was never initialized!', jobNum)
-		if fail:
-			logging.warning('Failed: ' + str.join('\n', imap(str, fail)))
+	fail = utils.set()
+	for (partition_num, splitInfo) in enumerate(splitter.iter_partitions()):
+		try:
+			(events, skip, files) = (0, 0, [])
+			for line in open(os.path.join(opts.checkSplitting, 'jobs', 'job_%d.var' % partition_num)).readlines():
+				if 'MAX_EVENTS' in line:
+					events = int(line.split('MAX_EVENTS', 1)[1].replace('=', ''))
+				if 'SKIP_EVENTS' in line:
+					skip = int(line.split('SKIP_EVENTS', 1)[1].replace('=', ''))
+				if 'FILE_NAMES' in line:
+					files = line.split('FILE_NAMES', 1)[1].replace('=', '').replace('\"', '').replace('\\', '')
+					files = lmap(lambda x: x.strip().strip(','), files.split())
+			def printError(curJ, curS, msg):
+				if curJ != curS:
+					logging.warning('%s in job %d (j:%s != s:%s)', msg, partition_num, curJ, curS)
+					fail.add(partition_num)
+			printError(events, splitInfo[DataSplitter.NEntries], 'Inconsistent number of events')
+			printError(skip, splitInfo[DataSplitter.Skipped], 'Inconsistent number of skipped events')
+			printError(files, splitInfo[DataSplitter.FileList], 'Inconsistent list of files')
+		except Exception:
+			logging.warning('Job %d was never initialized!', partition_num)
+	if fail:
+		logging.warning('Failed: ' + str.join('\n', imap(str, fail)))
 
 if (opts.partition_list is not None) or opts.partition_list_invalid or opts.partition_check:
 	if len(args) != 1:
@@ -112,10 +109,10 @@ if (opts.partition_list is not None) or opts.partition_list_invalid or opts.part
 		keyList = lmap(DataSplitter.str2enum, keyStrings)
 		if None in keyList:
 			logging.warning('Available keys: %r', DataSplitter.enumNames)
-		utils.printTabular([('jobNum', 'Job')] + lzip(keyList, keyStrings), partition_list(splitter, keyList))
+		utils.printTabular([('partition_num', 'Job')] + lzip(keyList, keyStrings), partition_list(splitter, keyList))
 
 	if opts.partition_check:
-		logging.info('Checking %d jobs...', splitter.get_job_len())
+		logging.info('Checking %d jobs...', splitter.get_partition_len())
 		partition_check(splitter)
 
 ########################################################
