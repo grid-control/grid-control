@@ -45,7 +45,7 @@ class DataParameterSource(LimitedResyncParameterSource):
 			self._data_splitter.import_partitions(self._get_data_path('map.tar'))
 		else:
 			DataProvider.saveToFile(self._get_data_path('cache.dat'), self._data_provider.getBlocks(show_stats = False))
-			self._data_splitter.partition_block(self._get_data_path('map.tar'), self._data_provider.getBlocks(show_stats = False))
+			self._data_splitter.partition_blocks(self._get_data_path('map.tar'), self._data_provider.getBlocks(show_stats = False))
 
 		self._len = self._data_splitter.get_partition_len()
 

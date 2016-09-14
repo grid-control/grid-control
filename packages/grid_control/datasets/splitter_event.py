@@ -78,7 +78,7 @@ class EventBoundarySplitter(DataSplitter):
 		self._events_per_job = self._query_config(config.getInt, 'events per job')
 
 
-	def _partition_blocks(self, blocks, firstEvent = 0):
+	def _partition_blockss(self, blocks, firstEvent = 0):
 		for block in blocks:
 			eventsPerJob = self._setup(self._events_per_job, block)
 			for job in self._splitJobs(block[DataProvider.FileList], eventsPerJob, firstEvent):

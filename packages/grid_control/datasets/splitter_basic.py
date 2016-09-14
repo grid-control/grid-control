@@ -28,7 +28,7 @@ class FileLevelSplitter(DataSplitter):
 		new[DataProvider.NEntries] = sum(imap(lambda x: x[DataProvider.NEntries], filelist))
 		return new
 
-	def _partition_blocks(self, blocks, firstEvent = 0):
+	def _partition_blockss(self, blocks, firstEvent = 0):
 		for block in self.splitBlocks(blocks):
 			yield self._finish_partition(block, dict(), block[DataProvider.FileList])
 
@@ -40,13 +40,13 @@ class FLSplitStacker(FileLevelSplitter):
 		self._config = config
 		self._splitstack = self._query_config(config.getList, 'splitter stack', ['BlockBoundarySplitter'])
 
-	def _partition_blocks(self, blocks, firstEvent = 0):
+	def _partition_blockss(self, blocks, firstEvent = 0):
 		for block in blocks:
 			splitterList = self._setup(self._splitstack, block)
 			subSplitter = imap(lambda x: FileLevelSplitter.createInstance(x, self._config, self._datasource_name), splitterList[:-1])
 			endSplitter = DataSplitter.createInstance(splitterList[-1], self._config, self._datasource_name)
 			for subBlock in reduce(lambda x, y: y.splitBlocks(x), subSplitter, [block]):
-				for splitting in endSplitter._partition_blocks([subBlock]):
+				for splitting in endSplitter._partition_blockss([subBlock]):
 					yield splitting
 
 
