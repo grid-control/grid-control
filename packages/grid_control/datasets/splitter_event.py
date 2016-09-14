@@ -83,4 +83,4 @@ class EventBoundarySplitter(DataSplitter):
 			eventsPerJob = self._setup(self._events_per_job, block)
 			for job in self._splitJobs(block[DataProvider.FileList], eventsPerJob, firstEvent):
 				firstEvent = 0
-				yield self._finalise_partition(block, job)
+				yield self._finish_partition(block, job)
