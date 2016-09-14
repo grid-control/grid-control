@@ -433,7 +433,7 @@ class DataSplitter(ConfigurablePlugin):
 		return (splitUpdated, splitAdded)
 
 
-	def _resyncIterator(self, resultRedo, resultDisable, blocksAdded, blocksMissing, blocksMatching):
+	def _resync_iter(self, resultRedo, resultDisable, blocksAdded, blocksMissing, blocksMatching):
 		# Use reordering if setup - log interventions (disable, redo) according to procMode
 		def getReorderIterator(mainIter, altIter): # alt source is used if main source contains invalid entries
 			for (partition_num, partition, procMode) in mainIter:
@@ -478,7 +478,7 @@ class DataSplitter(ConfigurablePlugin):
 		resultRedo = []
 		resultDisable = []
 		newSplitPathTMP = newSplitPath + '.tmp'
-		resyncIter = self._resyncIterator(resultRedo, resultDisable, blocksAdded, blocksMissing, blocksMatching)
+		resyncIter = self._resync_iter(resultRedo, resultDisable, blocksAdded, blocksMissing, blocksMatching)
 		self.save_partitions(newSplitPathTMP, resyncIter, sourceLenHint = self.get_partition_len(),
 			message = 'Performing resynchronization of dataset map (progress is estimated)')
 
