@@ -124,7 +124,7 @@ class DataSplitter(ConfigurablePlugin):
 
 	def partition_block(self, path, blocks):
 		activity = Activity('Splitting dataset into jobs')
-		self.savePartitions(path, self._partition_block(blocks))
+		self.save_partitions(path, self._partition_block(blocks))
 		self.importPartitions(path)
 		activity.finish()
 
@@ -145,7 +145,7 @@ class DataSplitter(ConfigurablePlugin):
 
 
 	# Save as tar file to allow random access to mapping data with little memory overhead
-	def savePartitions(self, path, source = None, sourceLenHint = None, message = 'Writing job mapping file'):
+	def save_partitions(self, path, source = None, sourceLenHint = None, message = 'Writing job mapping file'):
 		if source and not sourceLenHint:
 			source = list(source)
 			sourceLenHint = len(source)
@@ -479,7 +479,7 @@ class DataSplitter(ConfigurablePlugin):
 		resultDisable = []
 		newSplitPathTMP = newSplitPath + '.tmp'
 		resyncIter = self._resyncIterator(resultRedo, resultDisable, blocksAdded, blocksMissing, blocksMatching)
-		self.savePartitions(newSplitPathTMP, resyncIter, sourceLenHint = self.get_partition_len(),
+		self.save_partitions(newSplitPathTMP, resyncIter, sourceLenHint = self.get_partition_len(),
 			message = 'Performing resynchronization of dataset map (progress is estimated)')
 
 		if self._interactive:
