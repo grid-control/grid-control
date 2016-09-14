@@ -340,7 +340,7 @@ class DataSplitter(ConfigurablePlugin):
 
 
 	# resync a single file in the partition, return next file index to process
-	def _resyncFiles(self, modSI, partition_num, sizeInfo, filesMissing, filesMatched, newBlock, metaIdxLookup, extended):
+	def _resync_files(self, modSI, partition_num, sizeInfo, filesMissing, filesMatched, newBlock, metaIdxLookup, extended):
 		# Select processing mode for job (disable > complete > changed > ignore) [ie. disable overrides all] using min
 		# Result: one of [disable, complete, ignore] (changed -> complete or igore)
 		idx = 0
@@ -369,7 +369,7 @@ class DataSplitter(ConfigurablePlugin):
 
 		extended = utils.QM(doExpandOutside, [], None)
 		old_entries = modSI[DataSplitter.NEntries]
-		(procMode, newMetadata) = self._resyncFiles(modSI, partition_num, sizeInfo, filesMissing, filesMatched, newBlock, metaIdxLookup, extended)
+		(procMode, newMetadata) = self._resync_files(modSI, partition_num, sizeInfo, filesMissing, filesMatched, newBlock, metaIdxLookup, extended)
 		# Disable invalid / invalidated partitions
 		if (len(modSI[DataSplitter.FileList]) == 0) or (old_entries * modSI[DataSplitter.NEntries] <= 0):
 			procMode = ResyncMode.disable
