@@ -25,51 +25,51 @@ class EventBoundarySplitter(DataSplitter):
 
 
 	def _partition_block(self, fi_list, events_per_job, event_first):
-		nextEvent = event_first
-		succEvent = nextEvent + events_per_job
-		curEvent = 0
-		lastEvent = 0
-		curSkip = 0
-		fi_listIter = iter(fi_list)
+		event_next = event_first
+		event_succ = event_next + events_per_job
+		event_current = 0
+		event_prev = 0
+		skip_current = 0
+		fi_iter = iter(fi_list)
 		proto_partition = {DataSplitter.Skipped: 0, DataSplitter.NEntries: 0, DataSplitter.FileList: []}
 		while True:
-			if curEvent >= lastEvent:
-				fileObj = next(fi_listIter, None)
-				if fileObj is None:
+			if event_current >= event_prev:
+				fi = next(fi_iter, None)
+				if fi is None:
 					if proto_partition[DataSplitter.FileList]:
 						yield proto_partition
 					break
 
-				nEvents = fileObj[DataProvider.NEntries]
-				if nEvents < 0:
+				event_count = fi[DataProvider.NEntries]
+				if event_count < 0:
 					raise DatasetError('EventBoundarySplitter does not support files with a negative number of events!')
-				curEvent = lastEvent
-				lastEvent = curEvent + nEvents
-				curSkip = 0
+				event_current = event_prev
+				event_prev = event_current + event_count
+				skip_current = 0
 
-			if nextEvent >= lastEvent:
-				curEvent = lastEvent
+			if event_next >= event_prev:
+				event_current = event_prev
 				continue
 
-			curSkip += nextEvent - curEvent
-			curEvent = nextEvent
+			skip_current += event_next - event_current
+			event_current = event_next
 
-			available = lastEvent - curEvent
-			if succEvent - nextEvent < available:
-				available = succEvent - nextEvent
+			available = event_prev - event_current
+			if event_succ - event_next < available:
+				available = event_succ - event_next
 
 			if not proto_partition[DataSplitter.FileList]:
-				proto_partition[DataSplitter.Skipped] = curSkip
+				proto_partition[DataSplitter.Skipped] = skip_current
 
 			proto_partition[DataSplitter.NEntries] += available
-			nextEvent += available
+			event_next += available
 
-			proto_partition[DataSplitter.FileList].append(fileObj[DataProvider.URL])
-			if DataProvider.Metadata in fileObj:
-				proto_partition.setdefault(DataSplitter.Metadata, []).append(fileObj[DataProvider.Metadata])
+			proto_partition[DataSplitter.FileList].append(fi[DataProvider.URL])
+			if DataProvider.Metadata in fi:
+				proto_partition.setdefault(DataSplitter.Metadata, []).append(fi[DataProvider.Metadata])
 
-			if nextEvent >= succEvent:
-				succEvent += events_per_job
+			if event_next >= event_succ:
+				event_succ += events_per_job
 				yield proto_partition
 				proto_partition = {DataSplitter.Skipped: 0, DataSplitter.NEntries: 0, DataSplitter.FileList: []}
 

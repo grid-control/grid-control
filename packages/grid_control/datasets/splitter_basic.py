@@ -22,11 +22,11 @@ class FileLevelSplitter(DataSplitter):
 	def _proto_partition_blocks(self, block_iter):
 		raise AbstractError
 
-	def _create_partition(self, old, filelist):
-		new = dict(old)
-		new[DataProvider.FileList] = filelist
-		new[DataProvider.NEntries] = sum(imap(lambda x: x[DataProvider.NEntries], filelist))
-		return new
+	def _create_partition(self, proto_partition, fi_list):
+		partition = dict(proto_partition)
+		partition[DataProvider.FileList] = fi_list
+		partition[DataProvider.NEntries] = sum(imap(lambda x: x[DataProvider.NEntries], fi_list))
+		return partition
 
 	def _partition_blocks(self, block_iter, event_first = 0):
 		for proto_partition in self._proto_partition_blocks(block_iter):
@@ -85,12 +85,12 @@ class HybridSplitter(FileLevelSplitter):
 
 	def _proto_partition_blocks(self, block_iter):
 		for block in block_iter:
-			(events, fileStack) = (0, [])
+			(events, fi_list) = (0, [])
 			eventsPerJob = self._setup(self._events_per_job, block)
 			for fileInfo in block[DataProvider.FileList]:
-				if (len(fileStack) > 0) and (events + fileInfo[DataProvider.NEntries] > eventsPerJob):
-					yield self._create_partition(block, fileStack)
-					(events, fileStack) = (0, [])
-				fileStack.append(fileInfo)
+				if (len(fi_list) > 0) and (events + fileInfo[DataProvider.NEntries] > eventsPerJob):
+					yield self._create_partition(block, fi_list)
+					(events, fi_list) = (0, [])
+				fi_list.append(fileInfo)
 				events += fileInfo[DataProvider.NEntries]
-			yield self._create_partition(block, fileStack)
+			yield self._create_partition(block, fi_list)
