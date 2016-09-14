@@ -29,12 +29,12 @@ class BasicPartitionProcessor(PartitionProcessor):
 		self._vn_prefix = config.get(['partition variable prefix', '%s partition variable prefix' % datasource_name], 'DATASET', onChange = None)
 
 	def get_needed_vn_list(self, splitter):
-		enumMap = {
+		map_splitter_enum2vn = {
 			DataSplitter.FileList: self._vn_file_names,
 			DataSplitter.NEntries: self._vn_max_events,
 			DataSplitter.Skipped: self._vn_skip_events}
 		for enum in splitter.neededEnums():
-			yield enumMap[enum]
+			yield map_splitter_enum2vn[enum]
 
 	def get_partition_metadata(self):
 		result = lmap(lambda k: ParameterMetadata(k, untracked = True), [

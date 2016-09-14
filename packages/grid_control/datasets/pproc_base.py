@@ -34,7 +34,7 @@ class PartitionProcessor(ConfigurablePlugin):
 	def get_partition_metadata(self):
 		return []
 
-	def process(self, pNum, splitInfo, result):
+	def process(self, pnum, partition_info, result):
 		raise AbstractError
 
 
@@ -50,6 +50,6 @@ class MultiPartitionProcessor(PartitionProcessor):
 	def get_partition_metadata(self):
 		return lchain(imap(lambda p: p.get_partition_metadata() or [], self._processor_list))
 
-	def process(self, pNum, splitInfo, result):
+	def process(self, pnum, partition_info, result):
 		for processor in self._processor_list:
-			processor.process(pNum, splitInfo, result)
+			processor.process(pnum, partition_info, result)

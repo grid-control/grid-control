@@ -31,7 +31,7 @@ class DataParameterSource(LimitedResyncParameterSource):
 		self.resyncSetup(interval = -1)
 
 		if not data_provider: # debug mode - used by scripts - disables resync
-			self._maxN = self._data_splitter.get_job_len()
+			self._len = self._data_splitter.get_job_len()
 			return
 
 		# look for aborted resyncs - and try to restore old state if possible
@@ -47,7 +47,7 @@ class DataParameterSource(LimitedResyncParameterSource):
 			DataProvider.saveToFile(self._get_data_path('cache.dat'), self._data_provider.getBlocks(show_stats = False))
 			self._data_splitter.splitDataset(self._get_data_path('map.tar'), self._data_provider.getBlocks(show_stats = False))
 
-		self._maxN = self._data_splitter.get_job_len()
+		self._len = self._data_splitter.get_job_len()
 
 	def __repr__(self):
 		return 'data(%s)' % utils.QM(self._name == 'data', '', self._name)
@@ -76,7 +76,7 @@ class DataParameterSource(LimitedResyncParameterSource):
 		return self._part_proc.get_needed_vn_list(self._data_splitter) or []
 
 	def get_parameter_len(self):
-		return self._maxN
+		return self._len
 
 	def get_psrc_hash(self):
 		if self._resync_enabled():
@@ -102,7 +102,7 @@ class DataParameterSource(LimitedResyncParameterSource):
 			self._data_provider.saveToFile(self._get_data_path('cache-new.dat'), ds_new)
 
 			# Use old splitting information to synchronize with new dataset infos
-			old_maxN = self._data_splitter.get_job_len()
+			old_len = self._data_splitter.get_job_len()
 			jobChanges = self._data_splitter.resyncMapping(self._get_data_path('map-new.tar'), ds_old, ds_new)
 			activity.finish()
 			if jobChanges is not None:
@@ -114,6 +114,6 @@ class DataParameterSource(LimitedResyncParameterSource):
 				backupRename(  'map-old-%d.tar' % time.time(),   'map.tar',   'map-new.tar')
 				backupRename('cache-old-%d.dat' % time.time(), 'cache.dat', 'cache-new.dat')
 				self._data_splitter.importPartitions(self._get_data_path('map.tar'))
-				self._maxN = self._data_splitter.get_job_len()
-				self._log.debug('Dataset resync finished: %d -> %d partitions', old_maxN, self._maxN)
-				return (set(jobChanges[0]), set(jobChanges[1]), old_maxN != self._maxN)
+				self._len = self._data_splitter.get_job_len()
+				self._log.debug('Dataset resync finished: %d -> %d partitions', old_len, self._len)
+				return (set(jobChanges[0]), set(jobChanges[1]), old_len != self._len)
