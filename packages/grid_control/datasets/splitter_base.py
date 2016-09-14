@@ -118,7 +118,7 @@ class DataSplitter(ConfigurablePlugin):
 		return partition
 
 
-	def _partition_blocks(self, blocks, firstEvent = 0):
+	def _partition_blocks(self, blocks, event_first = 0):
 		raise AbstractError
 
 

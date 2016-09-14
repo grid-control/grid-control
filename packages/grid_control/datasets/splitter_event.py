@@ -24,20 +24,20 @@ class EventBoundarySplitter(DataSplitter):
 	get_needed_enums = classmethod(get_needed_enums)
 
 
-	def _splitJobs(self, fileList, eventsPerJob, firstEvent):
-		nextEvent = firstEvent
-		succEvent = nextEvent + eventsPerJob
+	def _partition_block(self, fi_list, events_per_job, event_first):
+		nextEvent = event_first
+		succEvent = nextEvent + events_per_job
 		curEvent = 0
 		lastEvent = 0
 		curSkip = 0
-		fileListIter = iter(fileList)
-		job = {DataSplitter.Skipped: 0, DataSplitter.NEntries: 0, DataSplitter.FileList: []}
+		fi_listIter = iter(fi_list)
+		proto_partition = {DataSplitter.Skipped: 0, DataSplitter.NEntries: 0, DataSplitter.FileList: []}
 		while True:
 			if curEvent >= lastEvent:
-				fileObj = next(fileListIter, None)
+				fileObj = next(fi_listIter, None)
 				if fileObj is None:
-					if job[DataSplitter.FileList]:
-						yield job
+					if proto_partition[DataSplitter.FileList]:
+						yield proto_partition
 					break
 
 				nEvents = fileObj[DataProvider.NEntries]
@@ -58,29 +58,28 @@ class EventBoundarySplitter(DataSplitter):
 			if succEvent - nextEvent < available:
 				available = succEvent - nextEvent
 
-			if not job[DataSplitter.FileList]:
-				job[DataSplitter.Skipped] = curSkip
+			if not proto_partition[DataSplitter.FileList]:
+				proto_partition[DataSplitter.Skipped] = curSkip
 
-			job[DataSplitter.NEntries] += available
+			proto_partition[DataSplitter.NEntries] += available
 			nextEvent += available
 
-			job[DataSplitter.FileList].append(fileObj[DataProvider.URL])
+			proto_partition[DataSplitter.FileList].append(fileObj[DataProvider.URL])
 			if DataProvider.Metadata in fileObj:
-				job.setdefault(DataSplitter.Metadata, []).append(fileObj[DataProvider.Metadata])
+				proto_partition.setdefault(DataSplitter.Metadata, []).append(fileObj[DataProvider.Metadata])
 
 			if nextEvent >= succEvent:
-				succEvent += eventsPerJob
-				yield job
-				job = {DataSplitter.Skipped: 0, DataSplitter.NEntries: 0, DataSplitter.FileList: []}
+				succEvent += events_per_job
+				yield proto_partition
+				proto_partition = {DataSplitter.Skipped: 0, DataSplitter.NEntries: 0, DataSplitter.FileList: []}
 
 
 	def _configure_splitter(self, config):
 		self._events_per_job = self._query_config(config.getInt, 'events per job')
 
 
-	def _partition_blocks(self, blocks, firstEvent = 0):
-		for block in blocks:
-			eventsPerJob = self._setup(self._events_per_job, block)
-			for job in self._splitJobs(block[DataProvider.FileList], eventsPerJob, firstEvent):
-				firstEvent = 0
-				yield self._finish_partition(block, job)
+	def _partition_blocks(self, block_iter, event_first = 0):
+		for block in block_iter:
+			for proto_partition in self._partition_block(block[DataProvider.FileList], self._setup(self._events_per_job, block), event_first):
+				event_first = 0
+				yield self._finish_partition(block, proto_partition)
