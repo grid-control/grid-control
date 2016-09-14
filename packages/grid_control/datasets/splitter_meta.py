@@ -19,7 +19,7 @@ from python_compat import imap, sort_inplace
 
 # Split dataset along block and metadata boundaries - using equivalence classes of metadata
 class MetadataSplitter(FileLevelSplitter):
-	def _get_metadata_key(self, metadataNames, block, fi):
+	def _get_metadata_key(self, metadata_key_list, block, fi):
 		raise AbstractError
 
 	def _proto_partition_blocks(self, blocks):
@@ -44,12 +44,12 @@ class UserMetadataSplitter(MetadataSplitter):
 	def _configure_splitter(self, config):
 		self._metadata = self._query_config(config.getList, 'split metadata', [])
 
-	def _get_metadata_key(self, metadataNames, block, fi):
+	def _get_metadata_key(self, metadata_key_list, block, fi):
 		selMetadataNames = self._setup(self._metadata, block)
 		selMetadataIdx = []
 		for selMetadataName in selMetadataNames:
-			if selMetadataName in metadataNames:
-				selMetadataIdx.append(metadataNames.index(selMetadataName))
+			if selMetadataName in metadata_key_list:
+				selMetadataIdx.append(metadata_key_list.index(selMetadataName))
 			else:
 				selMetadataIdx.append(-1)
 		def query_metadata(idx):
