@@ -74,7 +74,7 @@ class EventBoundarySplitter(DataSplitter):
 				job = {DataSplitter.Skipped: 0, DataSplitter.NEntries: 0, DataSplitter.FileList: []}
 
 
-	def _init_config(self, config):
+	def _configure_splitter(self, config):
 		self._events_per_job = self._query_config(config.getInt, 'events per job')
 
 

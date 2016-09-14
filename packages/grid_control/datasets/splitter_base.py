@@ -67,7 +67,7 @@ class DataSplitter(ConfigurablePlugin):
 			self._metadata_resync_option[meta] = config.getEnum('resync mode %s' % meta, ResyncMode, ResyncMode.complete, subset = ResyncMode.noChanged)
 		#   behaviour in case of job changes - disable changed jobs, preserve job number of changed jobs or reorder
 		self._resyncOrder = config.getEnum('resync jobs', ResyncOrder, ResyncOrder.append)
-		self._init_config(config)
+		self._configure_splitter(config)
 
 
 	def setState(self, src, protocol):
@@ -75,7 +75,7 @@ class DataSplitter(ConfigurablePlugin):
 		self._protocol = protocol
 
 
-	def _init_config(self, config):
+	def _configure_splitter(self, config):
 		pass
 
 
