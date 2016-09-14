@@ -13,10 +13,10 @@
 # | limitations under the License.
 
 from grid_control.datasets.provider_base import DataProvider
-from grid_control.utils import safe_index
 from grid_control.datasets.splitter_basic import FileLevelSplitter
+from grid_control.utils import safe_index
 from hpfwk import AbstractError
-from python_compat import lmap, imap, sort_inplace
+from python_compat import imap, lmap, sort_inplace
 
 # Split dataset along block and metadata boundaries - using equivalence classes of metadata
 class MetadataSplitter(FileLevelSplitter):
@@ -25,18 +25,18 @@ class MetadataSplitter(FileLevelSplitter):
 
 	def _proto_partition_blocks(self, blocks):
 		for block in blocks:
-			files = block[DataProvider.FileList]
-			sort_inplace(files, key = lambda fi: self._get_fi_class(block.get(DataProvider.Metadata, []), block, fi))
-			(fi_list, reprKey) = ([], None)
-			for fi in files:
-				if reprKey is None:
-					reprKey = self._get_fi_class(block[DataProvider.Metadata], block, fi)
-				curKey = self._get_fi_class(block[DataProvider.Metadata], block, fi)
-				if curKey != reprKey:
-					yield self._create_partition(block, fi_list)
-					(fi_list, reprKey) = ([], curKey)
-				fi_list.append(fi)
-			yield self._create_partition(block, fi_list)
+			fi_list = block[DataProvider.FileList]
+			sort_inplace(fi_list, key = lambda fi: self._get_fi_class(block.get(DataProvider.Metadata, []), block, fi))
+			(partition_fi_list, fi_class_active) = ([], None)
+			for fi in fi_list:
+				if fi_class_active is None:
+					fi_class_active = self._get_fi_class(block[DataProvider.Metadata], block, fi)
+				fi_class_current = self._get_fi_class(block[DataProvider.Metadata], block, fi)
+				if fi_class_current != fi_class_active:
+					yield self._create_partition(block, partition_fi_list)
+					(partition_fi_list, fi_class_active) = ([], fi_class_current)
+				partition_fi_list.append(fi)
+			yield self._create_partition(block, partition_fi_list)
 
 
 class UserMetadataSplitter(MetadataSplitter):
