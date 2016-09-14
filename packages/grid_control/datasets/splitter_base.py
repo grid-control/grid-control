@@ -66,7 +66,7 @@ class DataSplitter(ConfigurablePlugin):
 		for meta in config.getList('resync metadata', [], onChange = None):
 			self._metadata_resync_option[meta] = config.getEnum('resync mode %s' % meta, ResyncMode, ResyncMode.complete, subset = ResyncMode.noChanged)
 		#   behaviour in case of job changes - disable changed jobs, preserve job number of changed jobs or reorder
-		self._resyncOrder = config.getEnum('resync jobs', ResyncOrder, ResyncOrder.append)
+		self._resync_order = config.getEnum('resync jobs', ResyncOrder, ResyncOrder.append)
 		self._configure_splitter(config)
 
 	def get_needed_enums(cls):
@@ -362,10 +362,10 @@ class DataSplitter(ConfigurablePlugin):
 			for extInfo in altIter:
 				yield (None, extInfo[1], ResyncMode.ignore)
 
-		if self._resyncOrder == ResyncOrder.fillgap:
+		if self._resync_order == ResyncOrder.fillgap:
 			splitUpdated, splitAdded = self._resync_iter_sort(blocksAdded, blocksMissing, blocksMatching)
 			resyncIter = getReorderIterator(splitUpdated, iter(splitAdded))
-		elif self._resyncOrder == ResyncOrder.reorder:
+		elif self._resync_order == ResyncOrder.reorder:
 			splitUpdated, splitAdded = self._resync_iter_sort(blocksAdded, blocksMissing, blocksMatching)
 			tsi = utils.TwoSidedIterator(splitUpdated + splitAdded)
 			resyncIter = getReorderIterator(tsi.forward(), tsi.backward())
@@ -386,7 +386,7 @@ class DataSplitter(ConfigurablePlugin):
 		# Perform resync of existing partitions
 		for (partition_num, partition) in enumerate(self.iter_partitions()):
 			(modpartition, procMode, extended) = self._resync_existing_partitions(partition_num, partition, blocksAdded, blocksMissing, blocksMatching)
-			if (self._resyncOrder == ResyncOrder.append) and (procMode == ResyncMode.complete):
+			if (self._resync_order == ResyncOrder.append) and (procMode == ResyncMode.complete):
 				extList.append(modpartition) # add modified partition to list of new partitions
 				modpartition = copy.copy(partition) # replace current partition with a fresh copy that is marked as invalid
 				modpartition[DataSplitter.Invalid] = True
