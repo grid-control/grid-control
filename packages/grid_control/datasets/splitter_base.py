@@ -174,7 +174,7 @@ class DataSplitter(ConfigurablePlugin):
 
 
 	# Get list of matching metadata indices
-	def _resyncGetMatchingMetadata(self, oldBlock, newBlock):
+	def _resync_get_matching_metadata(self, oldBlock, newBlock):
 		result = []
 		for meta in self._metadata_resync_option:
 			(oldIdx, newIdx) = (None, None)
@@ -365,7 +365,7 @@ class DataSplitter(ConfigurablePlugin):
 		def search_url(url):
 			return fast_search(oldBlock[DataProvider.FileList], itemgetter(DataProvider.URL), url)
 		sizeInfo = lmap(lambda url: search_url(url)[DataProvider.NEntries], modSI[DataSplitter.FileList])
-		metaIdxLookup = self._resyncGetMatchingMetadata(oldBlock, newBlock)
+		metaIdxLookup = self._resync_get_matching_metadata(oldBlock, newBlock)
 
 		extended = utils.QM(doExpandOutside, [], None)
 		old_entries = modSI[DataSplitter.NEntries]
