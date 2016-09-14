@@ -19,23 +19,23 @@ from python_compat import imap, sort_inplace
 
 # Split dataset along block and metadata boundaries - using equivalence classes of metadata
 class MetadataSplitter(FileLevelSplitter):
-	def _get_metadata_key(self, metadata_key_list, block, fi):
+	def _classify_fi(self, metadata_key_list, block, fi):
 		raise AbstractError
 
 	def _proto_partition_blocks(self, blocks):
 		for block in blocks:
 			files = block[DataProvider.FileList]
-			sort_inplace(files, key = lambda fi: self._get_metadata_key(block.get(DataProvider.Metadata, []), block, fi))
-			(fileStack, reprKey) = ([], None)
+			sort_inplace(files, key = lambda fi: self._classify_fi(block.get(DataProvider.Metadata, []), block, fi))
+			(fi_list, reprKey) = ([], None)
 			for fi in files:
 				if reprKey is None:
-					reprKey = self._get_metadata_key(block[DataProvider.Metadata], block, fi)
-				curKey = self._get_metadata_key(block[DataProvider.Metadata], block, fi)
+					reprKey = self._classify_fi(block[DataProvider.Metadata], block, fi)
+				curKey = self._classify_fi(block[DataProvider.Metadata], block, fi)
 				if curKey != reprKey:
-					yield self._create_partition(block, fileStack)
-					(fileStack, reprKey) = ([], curKey)
-				fileStack.append(fi)
-			yield self._create_partition(block, fileStack)
+					yield self._create_partition(block, fi_list)
+					(fi_list, reprKey) = ([], curKey)
+				fi_list.append(fi)
+			yield self._create_partition(block, fi_list)
 
 
 class UserMetadataSplitter(MetadataSplitter):
@@ -44,7 +44,7 @@ class UserMetadataSplitter(MetadataSplitter):
 	def _configure_splitter(self, config):
 		self._metadata_user_list = self._query_config(config.getList, 'split metadata', [])
 
-	def _get_metadata_key(self, metadata_key_list, block, fi):
+	def _classify_fi(self, metadata_key_list, block, fi):
 		metadata_idx_list = []
 		metadata_selected_list = self._setup(self._metadata_user_list, block)
 		for metadata_selected in metadata_selected_list:
