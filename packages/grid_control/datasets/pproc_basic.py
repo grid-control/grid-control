@@ -28,7 +28,7 @@ class BasicPartitionProcessor(PartitionProcessor):
 		self._vn_skip_events = config.get(['partition variable skip events', '%s partition variable skip events' % datasource_name], 'SKIP_EVENTS', onChange = None)
 		self._vn_prefix = config.get(['partition variable prefix', '%s partition variable prefix' % datasource_name], 'DATASET', onChange = None)
 
-	def get_needed_keys(self, splitter):
+	def get_needed_vn_list(self, splitter):
 		enumMap = {
 			DataSplitter.FileList: self._vn_file_names,
 			DataSplitter.NEntries: self._vn_max_events,

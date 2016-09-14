@@ -120,7 +120,7 @@ class LumiPartitionProcessor(PartitionProcessor):
 	def enabled(self):
 		return not self._lumi_filter.empty()
 
-	def get_needed_keys(self, splitter):
+	def get_needed_vn_list(self, splitter):
 		if self.enabled():
 			return ['LUMI_RANGE']
 

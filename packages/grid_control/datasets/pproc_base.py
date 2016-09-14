@@ -28,7 +28,7 @@ class PartitionProcessor(ConfigurablePlugin):
 	def enabled(self):
 		return True
 
-	def get_needed_keys(self, splitter):
+	def get_needed_vn_list(self, splitter):
 		return []
 
 	def get_partition_metadata(self):
@@ -44,8 +44,8 @@ class MultiPartitionProcessor(PartitionProcessor):
 		do_prune = config.getBool(['partition processor prune', '%s partition processor prune' % datasource_name], True, onChange = None)
 		self._processor_list = prune_processors(do_prune, processorList, self._log, 'Removed %d inactive partition processors!')
 
-	def get_needed_keys(self, splitter):
-		return lchain(imap(lambda p: p.get_needed_keys(splitter) or [], self._processor_list))
+	def get_needed_vn_list(self, splitter):
+		return lchain(imap(lambda p: p.get_needed_vn_list(splitter) or [], self._processor_list))
 
 	def get_partition_metadata(self):
 		return lchain(imap(lambda p: p.get_partition_metadata() or [], self._processor_list))
