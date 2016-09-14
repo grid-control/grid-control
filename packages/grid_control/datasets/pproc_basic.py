@@ -45,7 +45,7 @@ class BasicPartitionProcessor(PartitionProcessor):
 
 	def process(self, pNum, splitInfo, result):
 		result.update({
-			self._vn_file_names: self._formatFileList(splitInfo[DataSplitter.FileList]),
+			self._vn_file_names: self._format_(splitInfo[DataSplitter.FileList]),
 			self._vn_max_events: splitInfo[DataSplitter.NEntries],
 			self._vn_skip_events: splitInfo.get(DataSplitter.Skipped, 0),
 			self._vn_prefix + 'PATH': splitInfo.get(DataSplitter.Dataset, None),
@@ -59,7 +59,7 @@ class BasicPartitionProcessor(PartitionProcessor):
 		result[ParameterInfo.ACTIVE] = result[ParameterInfo.ACTIVE] and not splitInfo.get(DataSplitter.Invalid, False)
 
 
-	def _formatFileList(self, fl):
+	def _format_(self, fl):
 		return str.join(' ', fl)
 
 class LocationPartitionProcessor(PartitionProcessor):
