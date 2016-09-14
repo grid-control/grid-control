@@ -13,6 +13,7 @@
 # | limitations under the License.
 
 from grid_control.config.config_entry import standardConfigForm
+from grid_control.utils import safe_index
 from grid_control.config.cview_base import SimpleConfigView, selectorUnchanged
 from hpfwk import APIError
 from python_compat import identity, imap, lfilter, lmap
@@ -60,13 +61,8 @@ class TaggedConfigView(SimpleConfigView):
 			elif token:
 				curNames.append(token)
 
-		def myIndex(src, value):
-			try:
-				return src.index(value)
-			except Exception:
-				return None
-		idxClass = myIndex(self._cfgClassSections, curSection)
-		idxSection = myIndex(self._cfgSections, curSection)
+		idxClass = safe_index(self._cfgClassSections, curSection)
+		idxSection = safe_index(self._cfgSections, curSection)
 		if (not self._cfgClassSections) and (not self._cfgSections):
 			idxSection = 0
 		if (idxClass is not None) or (idxSection is not None): # Section is selected by class or manually

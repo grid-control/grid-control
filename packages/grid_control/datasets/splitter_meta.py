@@ -42,18 +42,19 @@ class UserMetadataSplitter(MetadataSplitter):
 	alias = ['metadata']
 
 	def _configure_splitter(self, config):
-		self._metadata = self._query_config(config.getList, 'split metadata', [])
+		self._metadata_user_list = self._query_config(config.getList, 'split metadata', [])
 
 	def _get_metadata_key(self, metadata_key_list, block, fi):
-		selMetadataNames = self._setup(self._metadata, block)
-		selMetadataIdx = []
-		for selMetadataName in selMetadataNames:
-			if selMetadataName in metadata_key_list:
-				selMetadataIdx.append(metadata_key_list.index(selMetadataName))
+		metadata_idx_list = []
+		metadata_selected_list = self._setup(self._metadata_user_list, block)
+		for metadata_selected in metadata_selected_list:
+			if metadata_selected in metadata_key_list:
+				metadata_idx_list.append(metadata_key_list.index(metadata_selected))
 			else:
-				selMetadataIdx.append(-1)
+				metadata_idx_list.append(-1)
+
 		def query_metadata(idx):
 			if (idx >= 0) and (idx < len(fi[DataProvider.Metadata])):
 				return fi[DataProvider.Metadata][idx]
 			return ''
-		return tuple(imap(query_metadata, selMetadataIdx))
+		return tuple(imap(query_metadata, metadata_idx_list))
