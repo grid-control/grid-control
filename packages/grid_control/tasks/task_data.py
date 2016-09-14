@@ -74,7 +74,7 @@ class DataTask(TaskModule):
 				data_refresh = max(data_refresh, dataProvider.queryLimit())
 				self._log.info('Dataset source will be queried every %s', strTime(data_refresh))
 			data_ps.resyncSetup(interval = data_refresh, force = config.getState('resync', detail = 'datasets'))
-			if dataSplitter.get_job_len() == 0:
+			if dataSplitter.get_partition_len() == 0:
 				if data_refresh < 0:
 					raise UserError('Currently used dataset does not provide jobs to process')
 				self._log.warning('Currently used dataset does not provide jobs to process')
