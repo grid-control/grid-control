@@ -59,15 +59,15 @@ class DataSplitterIOAuto(DataSplitterIO):
 		writer = DataSplitterIO_V2()
 		writer.save_partition_source(path, meta, source, sourceLen, message)
 
-	def loadSplitting(self, path):
+	def import_partition_source(self, path):
 		try:
 			version = int(tarfile.open(path, 'r:').extractfile('Version').read())
 		except Exception:
 			version = 1
 		if version == 1:
-			state = DataSplitterIO_V1().loadSplitting(path)
+			state = DataSplitterIO_V1().import_partition_source(path)
 		else:
-			state = DataSplitterIO_V2().loadSplitting(path)
+			state = DataSplitterIO_V2().import_partition_source(path)
 		return state
 
 
@@ -126,7 +126,7 @@ class DataSplitterIOBase(DataSplitterIO):
 		self._saveStateToTar(tar, meta, source, sourceLen, message)
 		tar.close()
 
-	def loadSplitting(self, path):
+	def import_partition_source(self, path):
 		try:
 			return self._loadStateFromTar(path)
 		except Exception:

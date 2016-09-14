@@ -45,7 +45,7 @@ class DataSplitterIO(Plugin):
 	def save_partition_source(self, path, meta, source, sourceLenHint, message = 'Writing job mapping file'):
 		raise AbstractError
 
-	def loadSplitting(self, path):
+	def import_partition_source(self, path):
 		raise AbstractError
 
 
@@ -158,7 +158,7 @@ class DataSplitter(ConfigurablePlugin):
 
 
 	def import_partitions(self, path):
-		self._partition_source = DataSplitterIO.createInstance('DataSplitterIOAuto').loadSplitting(path)
+		self._partition_source = DataSplitterIO.createInstance('DataSplitterIOAuto').import_partition_source(path)
 
 
 	def _resync_get_matching_block(self, partition, blocksMissing, blocksMatching):
@@ -492,7 +492,7 @@ class DataSplitter(ConfigurablePlugin):
 
 
 	def load_partitions_for_script(path, cfg = None):
-		src = DataSplitterIO.createInstance('DataSplitterIOAuto').loadSplitting(path)
+		src = DataSplitterIO.createInstance('DataSplitterIOAuto').import_partition_source(path)
 		# Transfer config protocol (in case no split function is called)
 		protocol = {}
 		for (section, options) in src.metadata.items():
