@@ -22,7 +22,7 @@ class FileLevelSplitter(DataSplitter):
 	def splitBlocks(self, blocks):
 		raise AbstractError
 
-	def newBlock(self, old, filelist):
+	def _create_partition(self, old, filelist):
 		new = dict(old)
 		new[DataProvider.FileList] = filelist
 		new[DataProvider.NEntries] = sum(imap(lambda x: x[DataProvider.NEntries], filelist))
@@ -72,7 +72,7 @@ class FileBoundarySplitter(FileLevelSplitter):
 			while start < len(block[DataProvider.FileList]):
 				files = block[DataProvider.FileList][start : start + filesPerJob]
 				start += filesPerJob
-				yield self.newBlock(block, files)
+				yield self._create_partition(block, files)
 
 
 # Split dataset along block and file boundaries into jobs with (mostly <=) 'events per job' events
@@ -89,8 +89,8 @@ class HybridSplitter(FileLevelSplitter):
 			eventsPerJob = self._setup(self._events_per_job, block)
 			for fileInfo in block[DataProvider.FileList]:
 				if (len(fileStack) > 0) and (events + fileInfo[DataProvider.NEntries] > eventsPerJob):
-					yield self.newBlock(block, fileStack)
+					yield self._create_partition(block, fileStack)
 					(events, fileStack) = (0, [])
 				fileStack.append(fileInfo)
 				events += fileInfo[DataProvider.NEntries]
-			yield self.newBlock(block, fileStack)
+			yield self._create_partition(block, fileStack)

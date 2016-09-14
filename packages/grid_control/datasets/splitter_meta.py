@@ -32,10 +32,10 @@ class MetadataSplitter(FileLevelSplitter):
 					reprKey = self.metaKey(block[DataProvider.Metadata], block, fi)
 				curKey = self.metaKey(block[DataProvider.Metadata], block, fi)
 				if curKey != reprKey:
-					yield self.newBlock(block, fileStack)
+					yield self._create_partition(block, fileStack)
 					(fileStack, reprKey) = ([], curKey)
 				fileStack.append(fi)
-			yield self.newBlock(block, fileStack)
+			yield self._create_partition(block, fileStack)
 
 
 class UserMetadataSplitter(MetadataSplitter):
