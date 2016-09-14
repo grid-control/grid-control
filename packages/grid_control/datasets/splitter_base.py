@@ -422,7 +422,7 @@ class DataSplitter(ConfigurablePlugin):
 				yield (None, newpartition, ResyncMode.ignore)
 
 
-	def _resyncIterator_sort(self, blocksAdded, blocksMissing, blocksMatching):
+	def _resync_iter_sort(self, blocksAdded, blocksMissing, blocksMatching):
 		# Sort resynced partitions into updated and added lists
 		(splitUpdated, splitAdded) = ([], [])
 		for (partition_num, partition, procMode) in self._resync_iter_raw(blocksAdded, blocksMissing, blocksMatching):
@@ -449,10 +449,10 @@ class DataSplitter(ConfigurablePlugin):
 				yield (None, extInfo[1], ResyncMode.ignore)
 
 		if self._resyncOrder == ResyncOrder.fillgap:
-			splitUpdated, splitAdded = self._resyncIterator_sort(blocksAdded, blocksMissing, blocksMatching)
+			splitUpdated, splitAdded = self._resync_iter_sort(blocksAdded, blocksMissing, blocksMatching)
 			resyncIter = getReorderIterator(splitUpdated, iter(splitAdded))
 		elif self._resyncOrder == ResyncOrder.reorder:
-			splitUpdated, splitAdded = self._resyncIterator_sort(blocksAdded, blocksMissing, blocksMatching)
+			splitUpdated, splitAdded = self._resync_iter_sort(blocksAdded, blocksMissing, blocksMatching)
 			tsi = utils.TwoSidedIterator(splitUpdated + splitAdded)
 			resyncIter = getReorderIterator(tsi.forward(), tsi.backward())
 		else:
