@@ -106,6 +106,8 @@ class DataSplitter(ConfigurablePlugin):
 		splitter = DataSplitter.createInstance(src.classname, cfg, 'dataset')
 		splitter.set_state(src, protocol)
 		return splitter
+	load_partitions_for_script = staticmethod(load_partitions_for_script)
+
 	def set_state(self, src, protocol):
 		self._partition_source = src
 		self._protocol = protocol
@@ -129,7 +131,6 @@ class DataSplitter(ConfigurablePlugin):
 			self._protocol[pkey] = func(item, default)
 		return self._protocol[pkey]
 
-	load_partitions_for_script = staticmethod(load_partitions_for_script)
 
 	def partition_blocks(self, path, blocks):
 		activity = Activity('Splitting dataset into jobs')
