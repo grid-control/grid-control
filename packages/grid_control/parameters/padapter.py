@@ -115,6 +115,36 @@ class BasicParameterAdapter(ResyncParameterAdapter):
 		return result
 
 
+def translate_pa2pspi_list(pa): # Reduces parameter adapter output to essential information for diff - faster than keying
+	meta_list = sorted(ifilter(lambda k: not k.untracked, pa.get_job_metadata()), key = lambda k: k.value)
+	def translate_psp(psp): # Translates parameter space point into hash
+		tmp = md5()
+		for key in ifilter(lambda k: k.value in psp, meta_list):
+			value = str(psp[key.value])
+			if value:
+				tmp.update(str2bytes(key.value))
+				tmp.update(str2bytes(value))
+		return {ParameterInfo.HASH: tmp.hexdigest(), 'GC_PARAM': psp['GC_PARAM'],
+			ParameterInfo.ACTIVE: psp[ParameterInfo.ACTIVE]}
+	for entry in pa.iter_jobs():
+		yield translate_psp(entry)
+
+
+def diff_pspi_list(pa_old, pa_new, result_redo, result_disable):
+	map_job_num2pnum = {}
+	def handle_same_psp(pspi_list_added, pspi_list_missing, pspi_list_same, pspi_old, pspi_new):
+		map_job_num2pnum[pspi_old['GC_PARAM']] = pspi_new['GC_PARAM']
+		if not pspi_old[ParameterInfo.ACTIVE] and pspi_new[ParameterInfo.ACTIVE]:
+			result_redo.add(pspi_new['GC_PARAM'])
+		if pspi_old[ParameterInfo.ACTIVE] and not pspi_new[ParameterInfo.ACTIVE]:
+			result_disable.add(pspi_new['GC_PARAM'])
+	# pspi_list_changed is ignored, since it is already processed by the change handler above
+	(pspi_list_added, pspi_list_missing, _) = utils.DiffLists(
+		translate_pa2pspi_list(pa_old), translate_pa2pspi_list(pa_new),
+		itemgetter(ParameterInfo.HASH), handle_same_psp)
+	return (map_job_num2pnum, pspi_list_added, pspi_list_missing)
+
+
 class TrackedParameterAdapter(BasicParameterAdapter):
 	def __init__(self, config, source):
 		self._psrc_raw = source
@@ -171,55 +201,29 @@ class TrackedParameterAdapter(BasicParameterAdapter):
 		result['GC_JOB_ID'] = job_num
 		return result
 
-	def _create_aggregated_source(self, psrc_old, psrc_new, missingInfos):
-		meta_list_current = lmap(lambda key: key.value, psrc_new.get_job_metadata())
-		meta_list_missing = lfilter(lambda key: key.value not in meta_list_current, psrc_old.get_job_metadata())
+	def _create_aggregated_source(self, pa_old, pa_new, missingInfos):
+		meta_list_current = lmap(lambda key: key.value, pa_new.get_job_metadata())
+		meta_list_missing = lfilter(lambda key: key.value not in meta_list_current, pa_old.get_job_metadata())
 		psrc_missing = ParameterSource.createInstance('InternalParameterSource', missingInfos, meta_list_missing)
 		return ParameterSource.createInstance('ChainParameterSource', self._psrc_raw, psrc_missing)
 
-	def _diff_psp_list(self, psrc_old, psrc_new, map_job_num2pnum, result_redo, result_disable):
-		def translate_psrc(psrc): # Reduces psrc output to essential information for diff - faster than keying
-			meta_list = sorted(ifilter(lambda k: not k.untracked, psrc.get_job_metadata()), key = lambda k: k.value)
-			def translate_psp(psp): # Translates parameter setting into hash
-				tmp = md5()
-				for key in ifilter(lambda k: k.value in psp, meta_list):
-					value = str(psp[key.value])
-					if value:
-						tmp.update(str2bytes(key.value))
-						tmp.update(str2bytes(value))
-				return {ParameterInfo.HASH: tmp.hexdigest(), 'GC_PARAM': psp['GC_PARAM'],
-					ParameterInfo.ACTIVE: psp[ParameterInfo.ACTIVE]}
-			for entry in psrc.iter_jobs():
-				yield translate_psp(entry)
-
-		psp_hash_list_old = list(translate_psrc(psrc_old))
-		psp_hash_list_new = list(translate_psrc(psrc_new))
-
-		def handle_same_psp(psp_list_added, psp_list_missing, psp_list_same, psp_old, psp_new):
-			map_job_num2pnum[psp_old['GC_PARAM']] = psp_new['GC_PARAM']
-			if not psp_old[ParameterInfo.ACTIVE] and psp_new[ParameterInfo.ACTIVE]:
-				result_redo.add(psp_new['GC_PARAM'])
-			if psp_old[ParameterInfo.ACTIVE] and not psp_new[ParameterInfo.ACTIVE]:
-				result_disable.add(psp_new['GC_PARAM'])
-		return utils.DiffLists(psp_hash_list_old, psp_hash_list_new, itemgetter(ParameterInfo.HASH), handle_same_psp)
-
-	def _get_resync_source(self, psrc_old, psrc_new, map_job_num2pnum, psp_list_added, psp_list_missing, result_disable):
-		# Construct complete parameter space psrc with missing parameter entries and intervention state
+	def _get_resync_source(self, pa_old, pa_new, map_job_num2pnum, psp_list_added, psp_list_missing, result_disable):
+		# Construct complete parameter space pa with missing parameter entries and intervention state
 		# NNNNNNNNNNNNN OOOOOOOOO | source: NEW (==self) and OLD (==from file)
 		# <same><added> <missing> | same: both in NEW and OLD, added: only in NEW, missing: only in OLD
-		psrc_old_len = psrc_old.get_job_len()
+		pa_old_len = pa_old.get_job_len()
 		# assign sequential job numbers to the added parameter entries
 		sort_inplace(psp_list_added, key = itemgetter('GC_PARAM'))
-		for (idx, entry) in enumerate(psp_list_added):
-			if psrc_old_len + idx != entry['GC_PARAM']:
-				map_job_num2pnum[psrc_old_len + idx] = entry['GC_PARAM']
+		for (idx, pspi_added) in enumerate(psp_list_added):
+			if pa_old_len + idx != pspi_added['GC_PARAM']:
+				map_job_num2pnum[pa_old_len + idx] = pspi_added['GC_PARAM']
 
 		missingInfos = []
-		newMaxJobs = psrc_new.get_job_len()
+		newMaxJobs = pa_new.get_job_len()
 		sort_inplace(psp_list_missing, key = itemgetter('GC_PARAM'))
-		for (idx, entry) in enumerate(psp_list_missing):
-			map_job_num2pnum[entry['GC_PARAM']] = newMaxJobs + idx
-			tmp = psrc_old.get_job_content(newMaxJobs + idx, entry['GC_PARAM'])
+		for (idx, psp_missing) in enumerate(psp_list_missing):
+			map_job_num2pnum[psp_missing['GC_PARAM']] = newMaxJobs + idx
+			tmp = pa_old.get_job_content(newMaxJobs + idx, psp_missing['GC_PARAM'])
 			tmp.pop('GC_PARAM')
 			if tmp[ParameterInfo.ACTIVE]:
 				tmp[ParameterInfo.ACTIVE] = False
@@ -227,7 +231,7 @@ class TrackedParameterAdapter(BasicParameterAdapter):
 			missingInfos.append(tmp)
 
 		if missingInfos:
-			return self._create_aggregated_source(psrc_old, psrc_new, missingInfos)
+			return self._create_aggregated_source(pa_old, pa_new, missingInfos)
 		return self._psrc
 
 	def _read_job_num2pnum(self):
@@ -249,12 +253,11 @@ class TrackedParameterAdapter(BasicParameterAdapter):
 		if not (result_redo or result_disable or size_change or psrc_hash_changed):
 			return ParameterSource.EmptyResyncResult()
 
-		psrc_old = ParameterAdapter(None, ParameterSource.createInstance('GCDumpParameterSource', self._path_params))
-		psrc_new = ParameterAdapter(None, self._psrc_raw)
+		pa_old = ParameterAdapter(None, ParameterSource.createInstance('GCDumpParameterSource', self._path_params))
+		pa_new = ParameterAdapter(None, self._psrc_raw)
 
-		map_job_num2pnum = {}
-		(psp_list_added, psp_list_missing, _) = self._diff_psp_list(psrc_old, psrc_new, map_job_num2pnum, result_redo, result_disable)
-		self._psrc = self._get_resync_source(psrc_old, psrc_new, map_job_num2pnum, psp_list_added, psp_list_missing, result_disable)
+		(map_job_num2pnum, pspi_list_added, pspi_list_missing) = diff_pspi_list(pa_old, pa_new, result_redo, result_disable)
+		self._psrc = self._get_resync_source(pa_old, pa_new, map_job_num2pnum, pspi_list_added, pspi_list_missing, result_disable)
 
 		self._map_job_num2pnum = map_job_num2pnum # Update Job2PID map
 		# Write resynced state
