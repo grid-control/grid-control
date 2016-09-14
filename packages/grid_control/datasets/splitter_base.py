@@ -283,7 +283,7 @@ class DataSplitter(ConfigurablePlugin):
 		return procMode
 
 
-	def _resyncChangedFile(self, procMode, idx, modSI, partition_num, sizeInfo, newBlock, extended, oldFI, newFI, newMetadata, metaIdxLookup):
+	def _resync_changed_file(self, procMode, idx, modSI, partition_num, sizeInfo, newBlock, extended, oldFI, newFI, newMetadata, metaIdxLookup):
 		if DataProvider.Metadata in newFI:
 			procMode = self._resync_changed_file_metadata(oldFI, newFI, metaIdxLookup, newMetadata, procMode)
 		if oldFI[DataProvider.NEntries] == newFI[DataProvider.NEntries]:
@@ -352,7 +352,7 @@ class DataSplitter(ConfigurablePlugin):
 				procMode = min(procMode, self._resyncRemovedFile(idx, modSI, sizeInfo, rmFI))
 			else:
 				(oldFI, newFI) = fast_search(filesMatched, lambda x: x[0][DataProvider.URL], modSI[DataSplitter.FileList][idx])
-				(procMode, idx) = self._resyncChangedFile(procMode, idx, modSI, partition_num, sizeInfo, newBlock, extended, oldFI, newFI, newMetadata, metaIdxLookup)
+				(procMode, idx) = self._resync_changed_file(procMode, idx, modSI, partition_num, sizeInfo, newBlock, extended, oldFI, newFI, newMetadata, metaIdxLookup)
 		return (procMode, newMetadata)
 
 
