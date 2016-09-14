@@ -400,7 +400,7 @@ class DataSplitter(ConfigurablePlugin):
 		return (modpartition, procMode, extended)
 
 
-	def _resyncIterator_raw(self, blocksAdded, blocksMissing, blocksMatching):
+	def _resync_iter_raw(self, blocksAdded, blocksMissing, blocksMatching):
 		# Process partitions
 		extList = []
 		# Perform resync of existing partitions
@@ -425,7 +425,7 @@ class DataSplitter(ConfigurablePlugin):
 	def _resyncIterator_sort(self, blocksAdded, blocksMissing, blocksMatching):
 		# Sort resynced partitions into updated and added lists
 		(splitUpdated, splitAdded) = ([], [])
-		for (partition_num, partition, procMode) in self._resyncIterator_raw(blocksAdded, blocksMissing, blocksMatching):
+		for (partition_num, partition, procMode) in self._resync_iter_raw(blocksAdded, blocksMissing, blocksMatching):
 			if partition_num is not None: # Separate existing and new partitions
 				splitUpdated.append((partition_num, partition, procMode))
 			else:
@@ -456,7 +456,7 @@ class DataSplitter(ConfigurablePlugin):
 			tsi = utils.TwoSidedIterator(splitUpdated + splitAdded)
 			resyncIter = getReorderIterator(tsi.forward(), tsi.backward())
 		else:
-			resyncIter = self._resyncIterator_raw(blocksAdded, blocksMissing, blocksMatching)
+			resyncIter = self._resync_iter_raw(blocksAdded, blocksMissing, blocksMatching)
 
 		for (partition_num, partition, procMode) in resyncIter:
 			if partition_num:
