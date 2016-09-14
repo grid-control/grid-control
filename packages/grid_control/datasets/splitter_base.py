@@ -110,7 +110,7 @@ class DataSplitter(ConfigurablePlugin):
 
 	def partition_blocks(self, path, blocks):
 		activity = Activity('Splitting dataset into jobs')
-		self.save_partitions(path, self._partition_blocks(blocks))
+		self.save_partitions(path, self.partition_blocks_raw(blocks))
 		self.import_partitions(path)
 		activity.finish()
 
@@ -171,7 +171,7 @@ class DataSplitter(ConfigurablePlugin):
 				partition[DataSplitter.Metadata] = lmap(lambda x: x[DataProvider.Metadata], files)
 		return partition
 
-	def _partition_blocks(self, blocks, event_first = 0):
+	def partition_blocks_raw(self, blocks, event_first = 0):
 		raise AbstractError
 
 	def _query_config(self, fun, item, default = noDefault):
@@ -212,7 +212,7 @@ class DataSplitter(ConfigurablePlugin):
 		def expandOutside():
 			fileList = newBlock.pop(DataProvider.FileList)
 			newBlock[DataProvider.FileList] = [newFI]
-			for extSplit in self._partition_blocks([newBlock], oldFI[DataProvider.NEntries]):
+			for extSplit in self.partition_blocks_raw([newBlock], oldFI[DataProvider.NEntries]):
 				extSplit[DataSplitter.Comment] = 'src: %d [ext_1]' % partition_num
 				extended.append(extSplit)
 			newBlock[DataProvider.FileList] = fileList
@@ -398,7 +398,7 @@ class DataSplitter(ConfigurablePlugin):
 			yield (None, extpartition, ResyncMode.ignore)
 		# Yield completely new partitions
 		if self._mode_new == ResyncMode.complete:
-			for newpartition in self._partition_blocks(blocksAdded):
+			for newpartition in self.partition_blocks_raw(blocksAdded):
 				yield (None, newpartition, ResyncMode.ignore)
 
 	def _resync_iter_sort(self, blocksAdded, blocksMissing, blocksMatching):
