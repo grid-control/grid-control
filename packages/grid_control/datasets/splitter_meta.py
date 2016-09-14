@@ -33,10 +33,10 @@ class MetadataSplitter(FileLevelSplitter):
 					fi_class_active = self._get_fi_class(block[DataProvider.Metadata], block, fi)
 				fi_class_current = self._get_fi_class(block[DataProvider.Metadata], block, fi)
 				if fi_class_current != fi_class_active:
-					yield self._create_partition(block, partition_fi_list)
+					yield self._create_proto_block(block, partition_fi_list)
 					(partition_fi_list, fi_class_active) = ([], fi_class_current)
 				partition_fi_list.append(fi)
-			yield self._create_partition(block, partition_fi_list)
+			yield self._create_proto_block(block, partition_fi_list)
 
 
 class UserMetadataSplitter(MetadataSplitter):

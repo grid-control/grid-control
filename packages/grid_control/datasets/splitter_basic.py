@@ -15,22 +15,47 @@
 from grid_control.datasets.provider_base import DataProvider
 from grid_control.datasets.splitter_base import DataSplitter
 from hpfwk import AbstractError
-from python_compat import imap, reduce
+from python_compat import imap, reduce, itemgetter
 
-# Base class for (stackable) splitters with file level granularity
 class FileLevelSplitter(DataSplitter):
-	def _proto_partition_blocks(self, block_iter):
-		raise AbstractError
-
-	def _create_partition(self, proto_partition, fi_list):
+	# Base class for (stackable) splitters with file level granularity
+	def _create_proto_block(self, proto_partition, fi_list):
 		partition = dict(proto_partition)
 		partition[DataProvider.FileList] = fi_list
-		partition[DataProvider.NEntries] = sum(imap(lambda x: x[DataProvider.NEntries], fi_list))
+		partition[DataProvider.NEntries] = sum(imap(itemgetter(DataProvider.NEntries), fi_list))
 		return partition
 
 	def _partition_blocks(self, block_iter, event_first = 0):
 		for proto_partition in self._proto_partition_blocks(block_iter):
 			yield self._finish_partition(proto_partition, dict(), proto_partition[DataProvider.FileList])
+
+	def _proto_partition_blocks(self, block_iter):
+		raise AbstractError
+
+
+class BlockBoundarySplitter(FileLevelSplitter):
+	# Split only along block boundaries
+	alias = ['blocks']
+
+	def _proto_partition_blocks(self, block_iter):
+		return block_iter
+
+
+class FileBoundarySplitter(FileLevelSplitter):
+	# Split dataset along block boundaries into jobs with 'files per job' files
+	alias = ['files']
+
+	def _configure_splitter(self, config):
+		self._files_per_job = self._query_config(config.getInt, 'files per job')
+
+	def _proto_partition_blocks(self, block_iter):
+		for block in block_iter:
+			fi_idx_start = 0
+			files_per_job = self._setup(self._files_per_job, block)
+			while fi_idx_start < len(block[DataProvider.FileList]):
+				fi_list = block[DataProvider.FileList][fi_idx_start : fi_idx_start + files_per_job]
+				fi_idx_start += files_per_job
+				yield self._create_proto_block(block, fi_list)
 
 
 class FLSplitStacker(FileLevelSplitter):
@@ -50,34 +75,9 @@ class FLSplitStacker(FileLevelSplitter):
 					yield splitting
 
 
-# Split only along block boundaries
-class BlockBoundarySplitter(FileLevelSplitter):
-	alias = ['blocks']
-
-	def _proto_partition_blocks(self, block_iter):
-		return block_iter
-
-
-# Split dataset along block boundaries into jobs with 'files per job' files
-class FileBoundarySplitter(FileLevelSplitter):
-	alias = ['files']
-
-	def _configure_splitter(self, config):
-		self._files_per_job = self._query_config(config.getInt, 'files per job')
-
-	def _proto_partition_blocks(self, block_iter):
-		for block in block_iter:
-			start = 0
-			filesPerJob = self._setup(self._files_per_job, block)
-			while start < len(block[DataProvider.FileList]):
-				files = block[DataProvider.FileList][start : start + filesPerJob]
-				start += filesPerJob
-				yield self._create_partition(block, files)
-
-
-# Split dataset along block and file boundaries into jobs with (mostly <=) 'events per job' events
-# In case of file with #events > 'events per job', use just the single file (=> job has more events!)
 class HybridSplitter(FileLevelSplitter):
+	# Split dataset along block and file boundaries into jobs with (mostly <=) 'events per job' events
+	# In case of file with #events > 'events per job', use just the single file (=> job has more events!)
 	alias = ['hybrid']
 
 	def _configure_splitter(self, config):
@@ -89,8 +89,8 @@ class HybridSplitter(FileLevelSplitter):
 			eventsPerJob = self._setup(self._events_per_job, block)
 			for fileInfo in block[DataProvider.FileList]:
 				if (len(fi_list) > 0) and (events + fileInfo[DataProvider.NEntries] > eventsPerJob):
-					yield self._create_partition(block, fi_list)
+					yield self._create_proto_block(block, fi_list)
 					(events, fi_list) = (0, [])
 				fi_list.append(fileInfo)
 				events += fileInfo[DataProvider.NEntries]
-			yield self._create_partition(block, fi_list)
+			yield self._create_proto_block(block, fi_list)
