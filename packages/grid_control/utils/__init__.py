@@ -39,7 +39,7 @@ def swap(a, b):
 
 def safe_index(indexable, idx, default = None):
 	try:
-		return indexable[idx]
+		return indexable.index(idx)
 	except Exception:
 		return default
 
