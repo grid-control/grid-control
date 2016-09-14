@@ -270,9 +270,10 @@ class LocalProcess(Process):
 		pid = os.fork()
 		self._time_started = time.time()
 		self._time_finished = None
+		fd_map = {0: fd_child_stdin, 1: fd_child_stdout, 2: fd_child_stderr}
 		if pid == 0: # We are in the child process - redirect streams and exec external program
-			from grid_control.utils.process_child import run_process
-			run_process(self._cmd, [self._cmd] + self._args, fd_child_stdin, fd_child_stdout, fd_child_stderr, self._env)
+			from grid_control.utils.process_child import run_command
+			run_command(self._cmd, [self._cmd] + self._args, fd_map, self._env)
 
 		else: # Still in the parent process - setup threads to communicate with external program
 			os.close(fd_child_terminal)
