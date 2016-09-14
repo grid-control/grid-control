@@ -69,7 +69,7 @@ class LFNPartitionProcessor(PartitionProcessor):
 class CMSSWPartitionProcessor(PartitionProcessor.getClass('BasicPartitionProcessor')):
 	alias = ['cmsswpart']
 
-	def _formatFileList(self, fl):
+	def _format_file_list(self, fl):
 		return str.join(', ', imap(lambda x: '"%s"' % x, fl))
 
 
