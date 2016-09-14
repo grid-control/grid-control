@@ -15,28 +15,36 @@
 import os, sys
 from python_compat import exit_without_cleanup, irange
 
-try:
-	FD_MAX = os.sysconf('SC_OPEN_MAX')
-except (AttributeError, ValueError):
-	FD_MAX = 256
-
 def close_safe(fd):
 	try:
 		os.close(fd)
-	except OSError:
+	except Exception:
 		pass
 
-def run_process(cmd, args, fd_child_stdin, fd_child_stdout, fd_child_stderr, env):
-	for fd_target, fd_source in enumerate([fd_child_stdin, fd_child_stdout, fd_child_stderr]):
+
+def run_command(cmd, args, fd_map, env): # run command by replacing the current process
+	for fd_target, fd_source in fd_map.items():
 		os.dup2(fd_source, fd_target) # set stdin/stdout/stderr
-	for fd in irange(3, FD_MAX):
+	try:
+		fd_max = os.sysconf('SC_OPEN_MAX')
+	except Exception:
+		fd_max = 256
+	for fd in irange(3, fd_max): # close inherited file descriptors except for std{in/out/err}
 		close_safe(fd)
 	try:
-		os.execve(cmd, args, env)
+		os.execve(cmd, args, env) # replace process - this command DOES NOT RETURN if successful!
 	except Exception:
-		err_msg = 'Error while calling os.execv(%s, %s):' % (repr(cmd), repr(args))
-		sys.stderr.write(err_msg + repr(sys.exc_info()[1]))
-		for fd in [0, 1, 2]:
-			close_safe(fd)
-		exit_without_cleanup(os.EX_OSERR)
-	exit_without_cleanup(os.EX_OK)
+		pass
+	error_message_list = [
+		'== grid-control process error ==',
+		'        pid: %s' % os.getpid(),
+		'     fd map: %s' % repr(fd_map),
+		'environment: %s' % repr(env),
+		'    command: %s' % repr(cmd),
+		'  arguments: %s' % repr(args),
+		'  exception: %s' % repr(sys.exc_info()[1]),
+	]
+	sys.stderr.write(str.join('\n', error_message_list))
+	for fd in [0, 1, 2]:
+		close_safe(fd)
+	exit_without_cleanup(os.EX_OSERR) # exit forked process with OS error
