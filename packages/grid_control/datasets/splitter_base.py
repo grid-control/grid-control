@@ -108,30 +108,6 @@ class DataSplitter(ConfigurablePlugin):
 		return splitter
 	load_partitions_for_script = staticmethod(load_partitions_for_script)
 
-	def set_state(self, src, protocol):
-		self._partition_source = src
-		self._protocol = protocol
-
-	def _configure_splitter(self, config):
-		pass
-
-	def _query_config(self, fun, item, default = noDefault):
-		key = (fun, item, default)
-		self._setup(key, {}) # query once for init
-		return key
-
-	def _setup(self, cq_info, block):
-		(func, item, default) = cq_info
-		# make sure non-specific default value is specified (for metadata and resyncs)
-		if item not in self._protocol:
-			self._protocol[item] = func(item, default)
-		skey = block.get(DataProvider.Nickname, 'unknown')
-		pkey = ('[%s] %s' % (skey, item)).strip()
-		if pkey not in self._protocol:
-			self._protocol[pkey] = func(item, default)
-		return self._protocol[pkey]
-
-
 	def partition_blocks(self, path, blocks):
 		activity = Activity('Splitting dataset into jobs')
 		self.save_partitions(path, self._partition_blocks(blocks))
@@ -173,6 +149,13 @@ class DataSplitter(ConfigurablePlugin):
 		meta.update(self._protocol)
 		DataSplitterIO.createInstance('DataSplitterIOAuto').save_partition_source(path, meta, source, sourceLenHint, message)
 
+	def set_state(self, src, protocol):
+		self._partition_source = src
+		self._protocol = protocol
+
+	def _configure_splitter(self, config):
+		pass
+
 	def _finish_partition(self, block, partition, files = None):
 		# Copy infos from block
 		for prop in ['Dataset', 'BlockName', 'Nickname', 'Locations']:
@@ -190,6 +173,11 @@ class DataSplitter(ConfigurablePlugin):
 
 	def _partition_blocks(self, blocks, event_first = 0):
 		raise AbstractError
+
+	def _query_config(self, fun, item, default = noDefault):
+		key = (fun, item, default)
+		self._setup(key, {}) # query once for init
+		return key
 
 	def _resync_changed_file(self, procMode, idx, modSI, partition_num, sizeInfo, newBlock, extended, oldFI, newFI, newMetadata, metaIdxLookup):
 		if DataProvider.Metadata in newFI:
@@ -484,6 +472,18 @@ class DataSplitter(ConfigurablePlugin):
 		for meta in modSI.get(DataSplitter.MetadataHeader, []):
 			procMode = min(procMode, self._metadata_resync_option.get(meta, ResyncMode.ignore))
 		return procMode
+
+	def _setup(self, cq_info, block):
+		(func, item, default) = cq_info
+		# make sure non-specific default value is specified (for metadata and resyncs)
+		if item not in self._protocol:
+			self._protocol[item] = func(item, default)
+		skey = block.get(DataProvider.Nickname, 'unknown')
+		pkey = ('[%s] %s' % (skey, item)).strip()
+		if pkey not in self._protocol:
+			self._protocol[pkey] = func(item, default)
+		return self._protocol[pkey]
+
 
 makeEnum(['Dataset', 'Locations', 'NEntries', 'Skipped', 'FileList', 'Nickname', 'DatasetID', # DatasetID is legacy
 	'CommonPrefix', 'Invalid', 'BlockName', 'MetadataHeader', 'Metadata', 'Comment'], DataSplitter, useHash = False)
