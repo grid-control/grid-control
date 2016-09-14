@@ -122,7 +122,7 @@ class DataSplitter(ConfigurablePlugin):
 		raise AbstractError
 
 
-	def splitDataset(self, path, blocks):
+	def partition_block(self, path, blocks):
 		activity = Activity('Splitting dataset into jobs')
 		self.savePartitions(path, self._partition_block(blocks))
 		self.importPartitions(path)
