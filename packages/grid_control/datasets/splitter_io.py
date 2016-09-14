@@ -55,9 +55,9 @@ class BaseJobFileTarAdaptor(object):
 
 
 class DataSplitterIOAuto(DataSplitterIO):
-	def saveSplitting(self, path, meta, source, sourceLen, message = 'Writing job mapping file'):
+	def save_partition_source(self, path, meta, source, sourceLen, message = 'Writing job mapping file'):
 		writer = DataSplitterIO_V2()
-		writer.saveSplitting(path, meta, source, sourceLen, message)
+		writer.save_partition_source(path, meta, source, sourceLen, message)
 
 	def loadSplitting(self, path):
 		try:
@@ -121,7 +121,7 @@ class DataSplitterIOBase(DataSplitterIO):
 		return (x, y, z)
 
 	# Save as tar file to allow random access to mapping data with little memory overhead
-	def saveSplitting(self, path, meta, source, sourceLen, message = 'Writing job mapping file'):
+	def save_partition_source(self, path, meta, source, sourceLen, message = 'Writing job mapping file'):
 		tar = tarfile.open(path, 'w:')
 		self._saveStateToTar(tar, meta, source, sourceLen, message)
 		tar.close()
