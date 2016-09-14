@@ -18,7 +18,7 @@ from grid_control.parameters.psource_basic import InternalParameterSource
 from grid_control.utils.activity import Activity
 from grid_control.utils.file_objects import ZipFile
 from grid_control.utils.parsing import parseJSON, strDict
-from python_compat import ifilter, imap, irange, izip, json, lfilter, lmap, sorted
+from python_compat import ifilter, imap, izip, json, lfilter, lmap, sorted
 
 class GCDumpParameterSource(ParameterSource): # Reader for grid-control dump files - get_psrc_hash is not implemented to keep it from being used by users
 	def __init__(self, fn):
@@ -49,23 +49,20 @@ class GCDumpParameterSource(ParameterSource): # Reader for grid-control dump fil
 	def get_parameter_len(self):
 		return len(self._values)
 
-	def write(cls, fn, pa):
+	def write(cls, fn, ps_len, ps_metadata, psp_iter): # write parameter part of parameter adapter
 		fp = ZipFile(fn, 'w')
 		try:
-			keys = sorted(lmap(lambda p: p.value, ifilter(lambda p: not p.untracked, pa.get_job_metadata())))
-			fp.write('# %s\n' % json.dumps(keys))
-			psrc_len = pa.get_job_len()
-			if psrc_len:
-				activity = Activity('Writing parameter dump')
-				for job_num in irange(psrc_len):
-					activity.update('Writing parameter dump [%d/%d]' % (job_num + 1, psrc_len))
-					meta = pa.get_job_content(job_num)
-					meta_str = str.join('\t', imap(lambda k: json.dumps(meta.get(k, '')), keys))
-					if meta.get(ParameterInfo.ACTIVE, True):
-						fp.write('%d\t%s\n' % (job_num, meta_str))
-					else:
-						fp.write('%d!\t%s\n' % (job_num, meta_str))
-				activity.finish()
+			vn_list = sorted(lmap(lambda p: p.value, ifilter(lambda p: not p.untracked, ps_metadata)))
+			fp.write('# %s\n' % json.dumps(vn_list))
+			activity = Activity('Writing parameter dump')
+			for job_num, psp in enumerate(psp_iter):
+				activity.update('Writing parameter dump [%d/%d]' % (job_num + 1, ps_len))
+				psp_str = str.join('\t', imap(lambda k: json.dumps(psp.get(k, '')), vn_list))
+				if psp.get(ParameterInfo.ACTIVE, True):
+					fp.write('%d\t%s\n' % (job_num, psp_str))
+				else:
+					fp.write('%d!\t%s\n' % (job_num, psp_str))
+			activity.finish()
 		finally:
 			fp.close()
 	write = classmethod(write)

@@ -62,8 +62,16 @@ class MultiParameterSource(ParameterSource): # Meta processing of parameter psrc
 		return all(imap(lambda p: p.can_finish(), self._psrc_list))
 
 	def fill_parameter_metadata(self, result):
+		map_vn2psrc = {}
 		for psrc in self._psrc_list:
-			psrc.fill_parameter_metadata(result)
+			metadata_list = []
+			psrc.fill_parameter_metadata(metadata_list)
+			for metadata in metadata_list:
+				vn = metadata.value
+				if vn in map_vn2psrc:
+					raise ParameterError('Collisions of parameter %s between %s and %s' % (metadata.get_value(), psrc, map_vn2psrc[vn]))
+				map_vn2psrc[vn] = psrc
+				result.append(metadata)
 
 	def get_parameter_len(self):
 		return self._psrc_max
@@ -142,9 +150,9 @@ class BaseZipParameterSource(MultiParameterSource): # Base class for psrc_list i
 		MultiParameterSource.__init__(self, *simplify_nested_sources(self.__class__, psrc_list))
 
 	def fill_parameter_content(self, pnum, result):
-		for (psrc, maxN) in izip(self._psrc_list, self._psrc_max_list):
-			if maxN is not None:
-				if pnum < maxN:
+		for (psrc, psrc_len) in izip(self._psrc_list, self._psrc_max_list):
+			if psrc_len is not None:
+				if pnum < psrc_len:
 					psrc.fill_parameter_content(pnum, result)
 			else:
 				psrc.fill_parameter_content(pnum, result)
@@ -174,6 +182,23 @@ class ChainParameterSource(MultiParameterSource):
 				return psrc.fill_parameter_content(pnum - limit, result)
 			limit += psrc_max
 
+	def fill_parameter_metadata(self, result):
+		map_vn2tracking_status = {}
+		map_vn2psrc_list = {}
+		for psrc in self._psrc_list:
+			metadata_list = []
+			psrc.fill_parameter_metadata(metadata_list)
+			for metadata in metadata_list:
+				vn = metadata.value
+				tracking_status = map_vn2tracking_status.setdefault(vn, metadata.untracked)
+				if tracking_status != metadata.untracked:
+					raise ParameterError('Collisions of tracking status for parameter %s between %s and %s' % (
+						metadata.value, psrc, str.join('; ', imap(repr, map_vn2psrc_list[vn]))))
+				if vn not in map_vn2psrc_list:
+					result.append(metadata)
+				map_vn2psrc_list.setdefault(vn, []).append(psrc)
+
+
 	def _init_psrc_max(self):
 		if None in self._psrc_max_list:
 			prob_sources = lfilter(lambda p: p.get_parameter_len() is None, self._psrc_list)
@@ -183,7 +208,6 @@ class ChainParameterSource(MultiParameterSource):
 
 	def _translate_pnum(self, psrc_idx, pnum):
 		return [pnum + self._offset_list[psrc_idx]]
-
 
 class CrossParameterSource(MultiParameterSource):
 	alias = ['cross']
@@ -288,6 +312,9 @@ class RepeatParameterSource(MultiParameterSource):
 	def fill_parameter_content(self, pnum, result):
 		self._psrc.fill_parameter_content(pnum % self._psrc_child_max, result)
 
+	def fill_parameter_metadata(self, result):
+		self._psrc.fill_parameter_metadata(result)
+
 	def get_psrc_hash(self):
 		return md5_hex(self._psrc.get_psrc_hash() + str(self._times))
 
@@ -349,10 +376,6 @@ class ErrorParameterSource(ChainParameterSource):
 
 	def __repr__(self):
 		return 'variation(%s)' % str.join(', ', imap(repr, self._psrc_list_raw))
-
-	def fill_parameter_metadata(self, result):
-		for psrc in self._psrc_list_raw:
-			psrc.fill_parameter_metadata(result)
 
 
 class ZipLongParameterSource(BaseZipParameterSource):
