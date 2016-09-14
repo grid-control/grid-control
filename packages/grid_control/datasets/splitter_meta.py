@@ -22,7 +22,7 @@ class MetadataSplitter(FileLevelSplitter):
 	def metaKey(self, metadataNames, block, fi):
 		raise AbstractError
 
-	def splitBlocks(self, blocks):
+	def _proto_partition_blocks(self, blocks):
 		for block in blocks:
 			files = block[DataProvider.FileList]
 			sort_inplace(files, key = lambda fi: self.metaKey(block.get(DataProvider.Metadata, []), block, fi))

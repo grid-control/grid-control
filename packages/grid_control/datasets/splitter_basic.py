@@ -19,7 +19,7 @@ from python_compat import imap, reduce
 
 # Base class for (stackable) splitters with file level granularity
 class FileLevelSplitter(DataSplitter):
-	def splitBlocks(self, blocks):
+	def _proto_partition_blocks(self, blocks):
 		raise AbstractError
 
 	def _create_partition(self, old, filelist):
@@ -29,8 +29,8 @@ class FileLevelSplitter(DataSplitter):
 		return new
 
 	def _partition_blocks(self, blocks, firstEvent = 0):
-		for block in self.splitBlocks(blocks):
-			yield self._finish_partition(block, dict(), block[DataProvider.FileList])
+		for proto_partition in self._proto_partition_blocks(blocks):
+			yield self._finish_partition(proto_partition, dict(), proto_partition[DataProvider.FileList])
 
 
 class FLSplitStacker(FileLevelSplitter):
@@ -45,7 +45,7 @@ class FLSplitStacker(FileLevelSplitter):
 			splitterList = self._setup(self._splitstack, block)
 			subSplitter = imap(lambda x: FileLevelSplitter.createInstance(x, self._config, self._datasource_name), splitterList[:-1])
 			endSplitter = DataSplitter.createInstance(splitterList[-1], self._config, self._datasource_name)
-			for subBlock in reduce(lambda x, y: y.splitBlocks(x), subSplitter, [block]):
+			for subBlock in reduce(lambda x, y: y._proto_partition_blocks(x), subSplitter, [block]):
 				for splitting in endSplitter._partition_blocks([subBlock]):
 					yield splitting
 
@@ -54,7 +54,7 @@ class FLSplitStacker(FileLevelSplitter):
 class BlockBoundarySplitter(FileLevelSplitter):
 	alias = ['blocks']
 
-	def splitBlocks(self, blocks):
+	def _proto_partition_blocks(self, blocks):
 		return blocks
 
 
@@ -65,7 +65,7 @@ class FileBoundarySplitter(FileLevelSplitter):
 	def _configure_splitter(self, config):
 		self._files_per_job = self._query_config(config.getInt, 'files per job')
 
-	def splitBlocks(self, blocks):
+	def _proto_partition_blocks(self, blocks):
 		for block in blocks:
 			start = 0
 			filesPerJob = self._setup(self._files_per_job, block)
@@ -83,7 +83,7 @@ class HybridSplitter(FileLevelSplitter):
 	def _configure_splitter(self, config):
 		self._events_per_job = self._query_config(config.getInt, 'events per job')
 
-	def splitBlocks(self, blocks):
+	def _proto_partition_blocks(self, blocks):
 		for block in blocks:
 			(events, fileStack) = (0, [])
 			eventsPerJob = self._setup(self._events_per_job, block)
