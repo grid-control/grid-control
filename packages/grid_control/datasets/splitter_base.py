@@ -102,7 +102,7 @@ class DataSplitter(ConfigurablePlugin):
 	neededEnums = classmethod(neededEnums)
 
 
-	def finaliseJobSplitting(self, block, splitInfo, files = None):
+	def _finalise_partition(self, block, splitInfo, files = None):
 		# Copy infos from block
 		for prop in ['Dataset', 'BlockName', 'Nickname', 'Locations']:
 			if getattr(DataProvider, prop) in block:

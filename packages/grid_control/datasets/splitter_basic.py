@@ -30,7 +30,7 @@ class FileLevelSplitter(DataSplitter):
 
 	def splitDatasetInternal(self, blocks, firstEvent = 0):
 		for block in self.splitBlocks(blocks):
-			yield self.finaliseJobSplitting(block, dict(), block[DataProvider.FileList])
+			yield self._finalise_partition(block, dict(), block[DataProvider.FileList])
 
 
 class FLSplitStacker(FileLevelSplitter):
