@@ -62,9 +62,9 @@ class DataSplitter(ConfigurablePlugin):
 		self._mode_shrunken = config.getEnum('resync mode shrink', ResyncMode, ResyncMode.changed)
 		self._mode_new = config.getEnum('resync mode new', ResyncMode, ResyncMode.complete, subset = [ResyncMode.complete, ResyncMode.ignore])
 		#   behaviour in case of metadata changes
-		self._metaOpts = {}
+		self._metadata_resync_option = {}
 		for meta in config.getList('resync metadata', [], onChange = None):
-			self._metaOpts[meta] = config.getEnum('resync mode %s' % meta, ResyncMode, ResyncMode.complete, subset = ResyncMode.noChanged)
+			self._metadata_resync_option[meta] = config.getEnum('resync mode %s' % meta, ResyncMode, ResyncMode.complete, subset = ResyncMode.noChanged)
 		#   behaviour in case of job changes - disable changed jobs, preserve job number of changed jobs or reorder
 		self._resyncOrder = config.getEnum('resync jobs', ResyncOrder, ResyncOrder.append)
 		self._init_config(config)
@@ -171,14 +171,14 @@ class DataSplitter(ConfigurablePlugin):
 	# Get list of matching metadata indices
 	def _resyncGetMatchingMetadata(self, oldBlock, newBlock):
 		result = []
-		for meta in self._metaOpts:
+		for meta in self._metadata_resync_option:
 			(oldIdx, newIdx) = (None, None)
 			if oldBlock and (meta in oldBlock.get(DataProvider.Metadata, [])):
 				oldIdx = oldBlock[DataProvider.Metadata].index(meta)
 			if newBlock and (meta in newBlock.get(DataProvider.Metadata, [])):
 				newIdx = newBlock[DataProvider.Metadata].index(meta)
 			if (oldIdx is not None) or (newIdx is not None):
-				result.append((oldIdx, newIdx, self._metaOpts[meta]))
+				result.append((oldIdx, newIdx, self._metadata_resync_option[meta]))
 		return result
 
 
@@ -330,7 +330,7 @@ class DataSplitter(ConfigurablePlugin):
 
 		procMode = self._mode_removed
 		for meta in modSI.get(DataSplitter.MetadataHeader, []):
-			procMode = min(procMode, self._metaOpts.get(meta, ResyncMode.ignore))
+			procMode = min(procMode, self._metadata_resync_option.get(meta, ResyncMode.ignore))
 		return procMode
 
 
