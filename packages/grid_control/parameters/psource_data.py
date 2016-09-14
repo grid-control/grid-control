@@ -103,7 +103,7 @@ class DataParameterSource(LimitedResyncParameterSource):
 
 			# Use old splitting information to synchronize with new dataset infos
 			old_len = self._data_splitter.get_partition_len()
-			jobChanges = self._data_splitter.resyncMapping(self._get_data_path('map-new.tar'), ds_old, ds_new)
+			jobChanges = self._data_splitter.resync_partitions(self._get_data_path('map-new.tar'), ds_old, ds_new)
 			activity.finish()
 			if jobChanges is not None:
 				# Move current splitting to backup and use the new splitting from now on

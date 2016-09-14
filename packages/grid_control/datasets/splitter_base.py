@@ -467,7 +467,7 @@ class DataSplitter(ConfigurablePlugin):
 			yield partition
 
 
-	def resyncMapping(self, newSplitPath, oldBlocks, newBlocks):
+	def resync_partitions(self, newSplitPath, oldBlocks, newBlocks):
 		activity = Activity('Performing resynchronization of dataset')
 		(blocksAdded, blocksMissing, blocksMatching) = DataProvider.resyncSources(oldBlocks, newBlocks)
 		for rmBlock in blocksMissing: # Files in matching blocks are already sorted
