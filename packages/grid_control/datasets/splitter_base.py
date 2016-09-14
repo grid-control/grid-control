@@ -484,6 +484,5 @@ class DataSplitter(ConfigurablePlugin):
 			self._protocol[pkey] = func(item, default)
 		return self._protocol[pkey]
 
-
 makeEnum(['Dataset', 'Locations', 'NEntries', 'Skipped', 'FileList', 'Nickname', 'DatasetID', # DatasetID is legacy
 	'CommonPrefix', 'Invalid', 'BlockName', 'MetadataHeader', 'Metadata', 'Comment'], DataSplitter, useHash = False)
