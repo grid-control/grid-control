@@ -162,7 +162,7 @@ class DataSplitter(ConfigurablePlugin):
 
 
 	# Get block information (oldBlock, newBlock, filesMissing, filesMatched) which partition is based on
-	def _resyncGetMatchingBlock(self, partition, blocksMissing, blocksMatching):
+	def _resync_get_matching_block(self, partition, blocksMissing, blocksMatching):
 		# Search for block in missing and matched blocks
 		def getBlockKey(dsBlock):
 			return (dsBlock[DataProvider.Dataset], dsBlock[DataProvider.BlockName])
@@ -395,7 +395,7 @@ class DataSplitter(ConfigurablePlugin):
 		if partition.get(DataSplitter.Invalid, False):
 			return (partition, ResyncMode.ignore, [])
 		modpartition = copy.deepcopy(partition)
-		(oldBlock, newBlock, filesMissing, filesMatched) = self._resyncGetMatchingBlock(modpartition, blocksMissing, blocksMatching)
+		(oldBlock, newBlock, filesMissing, filesMatched) = self._resync_get_matching_block(modpartition, blocksMissing, blocksMatching)
 		(procMode, extended) = self._resyncPartition(modpartition, partition_num, oldBlock, newBlock, filesMissing, filesMatched, doExpandOutside = True)
 		return (modpartition, procMode, extended)
 
