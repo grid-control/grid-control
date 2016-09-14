@@ -33,7 +33,7 @@ class BasicPartitionProcessor(PartitionProcessor):
 			DataSplitter.FileList: self._vn_file_names,
 			DataSplitter.NEntries: self._vn_max_events,
 			DataSplitter.Skipped: self._vn_skip_events}
-		for enum in splitter.neededEnums():
+		for enum in splitter.get_needed_enums():
 			yield map_splitter_enum2vn[enum]
 
 	def get_partition_metadata(self):

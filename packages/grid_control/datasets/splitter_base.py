@@ -97,9 +97,9 @@ class DataSplitter(ConfigurablePlugin):
 		return self._protocol[pkey]
 
 
-	def neededEnums(cls):
+	def get_needed_enums(cls):
 		return [DataSplitter.FileList]
-	neededEnums = classmethod(neededEnums)
+	get_needed_enums = classmethod(get_needed_enums)
 
 
 	def _finish_partition(self, block, partition, files = None):

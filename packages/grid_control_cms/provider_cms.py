@@ -64,7 +64,7 @@ class CMSBaseProvider(DataProvider):
 
 	# Check if splitterClass is valid
 	def checkSplitter(self, splitterClass):
-		if (DataSplitter.Skipped in splitterClass.neededEnums()) and not self._lumi_filter.empty():
+		if (DataSplitter.Skipped in splitterClass.get_needed_enums()) and not self._lumi_filter.empty():
 			self._log.debug('Selected splitter %s is not compatible with active lumi filter!', splitterClass.__name__)
 			self._log.warning('Active lumi section filter forced selection of HybridSplitter')
 			return HybridSplitter

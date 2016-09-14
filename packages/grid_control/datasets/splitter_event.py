@@ -19,9 +19,9 @@ from python_compat import next
 class EventBoundarySplitter(DataSplitter):
 	alias = ['events']
 
-	def neededEnums(cls):
+	def get_needed_enums(cls):
 		return [DataSplitter.FileList, DataSplitter.Skipped, DataSplitter.NEntries]
-	neededEnums = classmethod(neededEnums)
+	get_needed_enums = classmethod(get_needed_enums)
 
 
 	def _splitJobs(self, fileList, eventsPerJob, firstEvent):
