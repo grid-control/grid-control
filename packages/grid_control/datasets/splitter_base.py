@@ -389,7 +389,7 @@ class DataSplitter(ConfigurablePlugin):
 		return (procMode, extended or [])
 
 
-	def _resyncExistingPartitions(self, partition_num, partition, blocksAdded, blocksMissing, blocksMatching):
+	def _resync_existing_partitions(self, partition_num, partition, blocksAdded, blocksMissing, blocksMatching):
 		if DataSplitter.Comment not in partition:
 			partition[DataSplitter.Comment] = 'src: %d ' % partition_num
 		if partition.get(DataSplitter.Invalid, False):
@@ -405,7 +405,7 @@ class DataSplitter(ConfigurablePlugin):
 		extList = []
 		# Perform resync of existing partitions
 		for (partition_num, partition) in enumerate(self.iter_partitions()):
-			(modpartition, procMode, extended) = self._resyncExistingPartitions(partition_num, partition, blocksAdded, blocksMissing, blocksMatching)
+			(modpartition, procMode, extended) = self._resync_existing_partitions(partition_num, partition, blocksAdded, blocksMissing, blocksMatching)
 			if (self._resyncOrder == ResyncOrder.append) and (procMode == ResyncMode.complete):
 				extList.append(modpartition) # add modified partition to list of new partitions
 				modpartition = copy.copy(partition) # replace current partition with a fresh copy that is marked as invalid
