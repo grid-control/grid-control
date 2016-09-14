@@ -118,13 +118,13 @@ class DataSplitter(ConfigurablePlugin):
 		return partition
 
 
-	def splitDatasetInternal(self, blocks, firstEvent = 0):
+	def _partition_block(self, blocks, firstEvent = 0):
 		raise AbstractError
 
 
 	def splitDataset(self, path, blocks):
 		activity = Activity('Splitting dataset into jobs')
-		self.savePartitions(path, self.splitDatasetInternal(blocks))
+		self.savePartitions(path, self._partition_block(blocks))
 		self.importPartitions(path)
 		activity.finish()
 
@@ -206,7 +206,7 @@ class DataSplitter(ConfigurablePlugin):
 		def expandOutside():
 			fileList = newBlock.pop(DataProvider.FileList)
 			newBlock[DataProvider.FileList] = [newFI]
-			for extSplit in self.splitDatasetInternal([newBlock], oldFI[DataProvider.NEntries]):
+			for extSplit in self._partition_block([newBlock], oldFI[DataProvider.NEntries]):
 				extSplit[DataSplitter.Comment] = 'src: %d [ext_1]' % partition_num
 				extended.append(extSplit)
 			newBlock[DataProvider.FileList] = fileList
@@ -418,7 +418,7 @@ class DataSplitter(ConfigurablePlugin):
 			yield (None, extpartition, ResyncMode.ignore)
 		# Yield completely new partitions
 		if self._mode_new == ResyncMode.complete:
-			for newpartition in self.splitDatasetInternal(blocksAdded):
+			for newpartition in self._partition_block(blocksAdded):
 				yield (None, newpartition, ResyncMode.ignore)
 
 
