@@ -19,7 +19,7 @@ from python_compat import imap, reduce, itemgetter
 
 class FileLevelSplitter(DataSplitter):
 	# Base class for (stackable) splitters with file level granularity
-	def _create_proto_block(self, proto_partition, fi_list):
+	def _create_sub_block(self, proto_partition, fi_list):
 		partition = dict(proto_partition)
 		partition[DataProvider.FileList] = fi_list
 		partition[DataProvider.NEntries] = sum(imap(itemgetter(DataProvider.NEntries), fi_list))
@@ -55,7 +55,7 @@ class FileBoundarySplitter(FileLevelSplitter):
 			while fi_idx_start < len(block[DataProvider.FileList]):
 				fi_list = block[DataProvider.FileList][fi_idx_start : fi_idx_start + files_per_job]
 				fi_idx_start += files_per_job
-				yield self._create_proto_block(block, fi_list)
+				yield self._create_sub_block(block, fi_list)
 
 
 class FLSplitStacker(FileLevelSplitter):
@@ -89,8 +89,8 @@ class HybridSplitter(FileLevelSplitter):
 			eventsPerJob = self._setup(self._events_per_job, block)
 			for fileInfo in block[DataProvider.FileList]:
 				if (len(fi_list) > 0) and (events + fileInfo[DataProvider.NEntries] > eventsPerJob):
-					yield self._create_proto_block(block, fi_list)
+					yield self._create_sub_block(block, fi_list)
 					(events, fi_list) = (0, [])
 				fi_list.append(fileInfo)
 				events += fileInfo[DataProvider.NEntries]
-			yield self._create_proto_block(block, fi_list)
+			yield self._create_sub_block(block, fi_list)
