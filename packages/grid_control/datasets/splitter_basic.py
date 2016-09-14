@@ -26,10 +26,10 @@ class FileLevelSplitter(DataSplitter):
 		return partition
 
 	def _partition_blocks(self, block_iter, event_first = 0):
-		for proto_partition in self._proto_partition_blocks(block_iter):
+		for proto_partition in self._divide_blocks(block_iter):
 			yield self._finish_partition(proto_partition, dict(), proto_partition[DataProvider.FileList])
 
-	def _proto_partition_blocks(self, block_iter):
+	def _divide_blocks(self, block_iter):
 		raise AbstractError
 
 
@@ -37,7 +37,7 @@ class BlockBoundarySplitter(FileLevelSplitter):
 	# Split only along block boundaries
 	alias = ['blocks']
 
-	def _proto_partition_blocks(self, block_iter):
+	def _divide_blocks(self, block_iter):
 		return block_iter
 
 
@@ -48,7 +48,7 @@ class FileBoundarySplitter(FileLevelSplitter):
 	def _configure_splitter(self, config):
 		self._files_per_job = self._query_config(config.getInt, 'files per job')
 
-	def _proto_partition_blocks(self, block_iter):
+	def _divide_blocks(self, block_iter):
 		for block in block_iter:
 			fi_idx_start = 0
 			files_per_job = self._setup(self._files_per_job, block)
@@ -70,7 +70,7 @@ class FLSplitStacker(FileLevelSplitter):
 			splitterList = self._setup(self._splitstack, block)
 			subSplitter = imap(lambda x: FileLevelSplitter.createInstance(x, self._config, self._datasource_name), splitterList[:-1])
 			endSplitter = DataSplitter.createInstance(splitterList[-1], self._config, self._datasource_name)
-			for subBlock in reduce(lambda x, y: y._proto_partition_blocks(x), subSplitter, [block]):
+			for subBlock in reduce(lambda x, y: y._divide_blocks(x), subSplitter, [block]):
 				for splitting in endSplitter._partition_blocks([subBlock]):
 					yield splitting
 
@@ -83,7 +83,7 @@ class HybridSplitter(FileLevelSplitter):
 	def _configure_splitter(self, config):
 		self._events_per_job = self._query_config(config.getInt, 'events per job')
 
-	def _proto_partition_blocks(self, block_iter):
+	def _divide_blocks(self, block_iter):
 		for block in block_iter:
 			(events, fi_list) = (0, [])
 			eventsPerJob = self._setup(self._events_per_job, block)
