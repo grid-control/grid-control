@@ -26,7 +26,7 @@
 
      * grid_control.datasets.splitter_basic FileLevelSplitter
 
-      * grid_control.datasets.splitter_meta MetadataSplitter
+      * grid_control.datasets.splitter_meta FileClassSplitter
 
        * grid_control_cms.splitter_lumi RunSplitter runs
 

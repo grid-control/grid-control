@@ -14,25 +14,27 @@
 
 import os, inspect, logging
 from grid_control.config.chandlers_base import changeImpossible
-from grid_control.config.config_entry import ConfigEntry, ConfigError, noDefault, standardConfigForm
+from grid_control.config.config_entry import ConfigEntry, ConfigError, standardConfigForm
+from grid_control.utils.data_structures import makeEnum
 from hpfwk import APIError
+from python_compat import unspecified, when_unspecified
 
 # Config interface class accessing typed data using an string interface provided by configView
 class ConfigInterface(object):
-	defaultOnChange = changeImpossible
-	defaultOnValid = None
-
-	def __init__(self, configView):
+	def __init__(self, configView, default_on_change = unspecified, default_on_valid = unspecified):
 		self._config_view = configView
+		self._default_on_change = when_unspecified(default_on_change, changeImpossible)
+		self._default_on_valid = when_unspecified(default_on_valid, None)
 		self._log = logging.getLogger('config.%s' % self._config_view.configName.lower())
 
 	def __repr__(self):
 		return '<%s(view = %s)>' % (self.__class__.__name__, self._config_view)
 
-	def changeView(self, interfaceClass = None, **kwargs):
-		if not interfaceClass:
-			interfaceClass = self.__class__
-		return interfaceClass(self._config_view.getView(**kwargs))
+	def changeView(self, interfaceClass = None, default_on_change = unspecified, default_on_valid = unspecified, **kwargs):
+		interfaceClass = interfaceClass or self.__class__
+		return interfaceClass(self._config_view.getView(**kwargs),
+			when_unspecified(default_on_change, self._default_on_change),
+			when_unspecified(default_on_valid, self._default_on_valid))
 
 	def getConfigName(self):
 		return self._config_view.configName
@@ -64,7 +66,7 @@ class ConfigInterface(object):
 
 	def _getDefaultStr(self, default_obj, def2obj, obj2str):
 		# First transform default into string if applicable
-		if default_obj != noDefault:
+		if not unspecified(default_obj):
 			try:
 				if def2obj:
 					default_obj = def2obj(default_obj)
@@ -76,7 +78,7 @@ class ConfigInterface(object):
 				return result
 			except Exception:
 				raise APIError('Unable to get string representation of default object: %s' % repr(default_obj))
-		return noDefault
+		return unspecified
 
 	def _processEntries(self, old_entry, cur_entry, desc, obj2str, str2obj, onChange, onValid):
 		# Wrap parsing of object
@@ -103,20 +105,24 @@ class ConfigInterface(object):
 		return cur_obj
 
 	def _getInternal(self, desc, obj2str, str2obj, def2obj, option, default_obj,
-			onChange = defaultOnChange, onValid = defaultOnValid, persistent = False):
+			onChange = unspecified, onValid = unspecified, persistent = False):
 		# Make sure option is in a consistent format
 		option_list = standardConfigForm(option)
 		try:
 			if self._log.isEnabledFor(logging.DEBUG2):
 				self._log.log(logging.DEBUG2, 'Config query from: %r', self._getCaller())
 			default_str = self._getDefaultStr(default_obj, def2obj, obj2str)
-			assert((default_str == noDefault) or isinstance(default_str, str))
+			assert(unspecified(default_str) or isinstance(default_str, str))
 
 			self._log.log(logging.DEBUG1, 'Config query for config option %r', str.join(' / ', option_list))
 			(old_entry, cur_entry) = self._config_view.get(option_list, default_str, persistent = persistent)
+			if onChange == unspecified:
+				onChange = self._default_on_change
+			if onValid == unspecified:
+				onValid = self._default_on_valid
 			return self._processEntries(old_entry, cur_entry, desc, obj2str, str2obj, onChange, onValid)
 		except Exception:
-			if default_obj == noDefault:
+			if unspecified(default_obj):
 				raise ConfigError('Unable to get %r from option %r (no default)' % (desc, str.join(' / ', option_list)))
 			raise ConfigError('Unable to get %r from option %r (default: %r)' % (desc, str.join(' / ', option_list), repr(default_obj)))
 
@@ -135,7 +141,7 @@ class ConfigInterface(object):
 			raise ConfigError('Unable to set %s %r to %r (source: %r)' % (desc, option, repr(set_obj), source))
 
 	# Handling string config options - whitespace around the value will get discarded
-	def get(self, option, default = noDefault, obj2str = str.__str__, str2obj = str, **kwargs):
+	def get(self, option, default = unspecified, obj2str = str.__str__, str2obj = str, **kwargs):
 		return self._getInternal('string', obj2str, str2obj, None, option, default, **kwargs)
 	def set(self, option, value, opttype = '=', source = None, obj2str = str.__str__):
 		return self._setInternal('string', obj2str, option, value, opttype, source)

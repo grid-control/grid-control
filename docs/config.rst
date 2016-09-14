@@ -1340,9 +1340,7 @@ LFNPartitionProcessor options
 LocationPartitionProcessor options
 ----------------------------------
 
-  * ``<datasource> partition location check / partition location check`` = <boolean> (default: True)
-    Toggle the deactivation of partitions without storage locations
-  * ``<datasource> partition location filter / partition location filter`` = <filter option> (default: '')
+  * ``<datasource> partition location filter / partition location filter`` = <filter option>
     Specify filter for dataset locations
   * ``<datasource> partition location filter matcher`` = <plugin> (Default: 'blackwhite')
     Specifiy matcher plugin that is used to match filter expressions
@@ -1350,6 +1348,8 @@ LocationPartitionProcessor options
     Specifiy matcher plugin that is used to match filter expressions
   * ``<datasource> partition location filter order`` = <enum: source|matcher> (Default: source)
     Specifiy the order of the filtered list
+  * ``<datasource> partition location check / partition location check`` = <boolean> (default: True)
+    Toggle the deactivation of partitions without storage locations
   * ``<datasource> partition location preference / partition location preference`` = <list of values> (default: '')
     Specify dataset location preferences
   * ``<datasource> partition location requirement / partition location requirement`` = <boolean> (default: True)
@@ -1378,15 +1378,15 @@ MultiPartitionProcessor options
 RequirementsPartitionProcessor options
 --------------------------------------
 
-  * ``<datasource> partition cputime factor / partition cputime factor`` = <float> (default: -1.0)
+  * ``<datasource> partition cputime factor / partition cputime factor`` = <float> (default: 0.0)
     Specify how the requested cpu time scales with the number of entries in the partition
   * ``<datasource> partition cputime offset / partition cputime offset`` = <float> (default: 0.0)
     Specify the offset of the requested cpu time
-  * ``<datasource> partition memory factor / partition memory factor`` = <float> (default: -1.0)
+  * ``<datasource> partition memory factor / partition memory factor`` = <float> (default: 0.0)
     Specify how the requested memory scales with the number of entries in the partition
   * ``<datasource> partition memory offset / partition memory offset`` = <float> (default: 0.0)
     Specify the offset of the requested memory
-  * ``<datasource> partition walltime factor / partition walltime factor`` = <float> (default: -1.0)
+  * ``<datasource> partition walltime factor / partition walltime factor`` = <float> (default: 0.0)
     Specify how the requested wall time scales with the number of entries in the partition
   * ``<datasource> partition walltime offset / partition walltime offset`` = <float> (default: 0.0)
     Specify the offset of the requested wall time

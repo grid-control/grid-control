@@ -15,6 +15,7 @@
 from grid_control.config import triggerResync
 from grid_control.datasets import DataProcessor, DataProvider, DataSplitter, DatasetError, PartitionProcessor
 from grid_control.parameters import ParameterMetadata
+from grid_control.utils import safe_index
 from grid_control.utils.data_structures import makeEnum
 from grid_control_cms.lumi_tools import filterLumiFilter, formatLumi, parseLumiFilter, selectLumi, selectRun, strLumi
 from python_compat import any, ichain, imap, izip, set
@@ -81,11 +82,8 @@ class LumiDataProcessor(DataProcessor):
 	def process_block(self, block):
 		if self._lumi_filter.empty() and ((self._lumi_keep == LumiKeep.RunLumi) or (DataProvider.Metadata not in block)):
 			return block
-		def getMetadataIdx(key):
-			if key in block.get(DataProvider.Metadata, []):
-				return block[DataProvider.Metadata].index(key)
-		idxRuns = getMetadataIdx('Runs')
-		idxLumi = getMetadataIdx('Lumi')
+		idxRuns = safe_index(block.get(DataProvider.Metadata, []), 'Runs')
+		idxLumi = safe_index(block.get(DataProvider.Metadata, []), 'Lumi')
 		if not self._lumi_filter.empty():
 			lumi_filter = self._lumi_filter.lookup(block[DataProvider.Nickname], is_selector = False)
 			if lumi_filter and (self._lumi_strict == LumiMode.strict) and ((idxRuns is None) or (idxLumi is None)):
@@ -128,7 +126,7 @@ class LumiPartitionProcessor(PartitionProcessor):
 		if self.enabled():
 			lumi_filter = self._lumi_filter.lookup(splitInfo[DataSplitter.Nickname], is_selector = False)
 			if lumi_filter:
-				idxRuns = splitInfo[DataSplitter.MetadataHeader].index("Runs")
+				idxRuns = splitInfo[DataSplitter.MetadataHeader].index('Runs')
 				iterRuns = ichain(imap(lambda m: m[idxRuns], splitInfo[DataSplitter.Metadata]))
 				short_lumi_filter = filterLumiFilter(list(iterRuns), lumi_filter)
 				result['LUMI_RANGE'] = str.join(',', imap(lambda lr: '"%s"' % lr, formatLumi(short_lumi_filter)))

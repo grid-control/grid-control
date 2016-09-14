@@ -35,7 +35,7 @@ class ConfigDataProvider(DataProvider):
 		ds_config.get('%s hash' % datasource_name, self.get_hash(), persistent = True, onChange = onChange)
 
 
-	def _readFileFromConfig(self, ds_config, url, metadata_keys, common_metadata, common_prefix):
+	def _readFileFromConfig(self, ds_config, url, metadata_name_list, common_metadata, common_prefix):
 		info = ds_config.get(url, onChange = None)
 		tmp = info.split(' ', 1)
 		fi = {DataProvider.URL: common_prefix + url, DataProvider.NEntries: int(tmp[0])}
@@ -43,9 +43,9 @@ class ConfigDataProvider(DataProvider):
 			fi[DataProvider.Metadata] = common_metadata
 		if len(tmp) == 2:
 			file_metadata = parseJSON(tmp[1])
-			if len(common_metadata) + len(file_metadata) > len(metadata_keys):
+			if len(common_metadata) + len(file_metadata) > len(metadata_name_list):
 				raise DatasetError('Unable to set %d file metadata items with %d metadata keys (%d common metadata items)' %
-					(len(file_metadata), len(metadata_keys), len(common_metadata)))
+					(len(file_metadata), len(metadata_name_list), len(common_metadata)))
 			fi[DataProvider.Metadata] = fi.get(DataProvider.Metadata, []) + file_metadata
 		return fi
 
@@ -62,10 +62,10 @@ class ConfigDataProvider(DataProvider):
 
 
 	def _readBlockFromConfig(self, ds_config, dataset_expr, dataset_nick):
-		metadata_keys = parseJSON(ds_config.get('metadata', '[]', onChange = None))
+		metadata_name_list = parseJSON(ds_config.get('metadata', '[]', onChange = None))
 		common_metadata = parseJSON(ds_config.get('metadata common', '[]', onChange = None))
-		if len(common_metadata) > len(metadata_keys):
-			raise DatasetError('Unable to set %d common metadata items with %d metadata keys' % (len(common_metadata), len(metadata_keys)))
+		if len(common_metadata) > len(metadata_name_list):
+			raise DatasetError('Unable to set %d common metadata items with %d metadata keys' % (len(common_metadata), len(metadata_name_list)))
 		common_prefix = ds_config.get('prefix', '', onChange = None)
 		file_list = []
 		has_events = False
@@ -76,14 +76,14 @@ class ConfigDataProvider(DataProvider):
 			elif url == 'events':
 				has_events = True
 			elif url not in ['dataset hash', 'metadata', 'metadata common', 'nickname', 'prefix']:
-				file_list.append(self._readFileFromConfig(ds_config, url, metadata_keys, common_metadata, common_prefix))
+				file_list.append(self._readFileFromConfig(ds_config, url, metadata_name_list, common_metadata, common_prefix))
 		if not file_list:
 			raise DatasetError('There are no dataset files specified for dataset %r' % dataset_expr)
 
 		result = self._createBlockInfo(ds_config, dataset_expr, dataset_nick)
 		result[DataProvider.FileList] = sorted(file_list, key = lambda fi: fi[DataProvider.URL])
-		if metadata_keys:
-			result[DataProvider.Metadata] = metadata_keys
+		if metadata_name_list:
+			result[DataProvider.Metadata] = metadata_name_list
 		if has_events:
 			result[DataProvider.NEntries] = ds_config.getInt('events', -1, onChange = None)
 		if has_se_list:

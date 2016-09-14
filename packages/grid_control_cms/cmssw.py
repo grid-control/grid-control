@@ -15,13 +15,13 @@
 import os
 from grid_control import utils
 from grid_control.backends import WMS
-from grid_control.config import ConfigError, noDefault
+from grid_control.config import ConfigError
 from grid_control.datasets import DataSplitter, PartitionProcessor
 from grid_control.output_processor import DebugJobInfoProcessor
 from grid_control.parameters import ParameterMetadata
 from grid_control.tasks.task_data import DataTask
 from grid_control.tasks.task_utils import TaskExecutableWrapper
-from python_compat import ifilter, imap, lmap, set, sorted
+from python_compat import ifilter, imap, lmap, set, sorted, unspecified
 
 class CMSSWDebugJobInfoProcessor(DebugJobInfoProcessor):
 	def __init__(self):
@@ -69,7 +69,7 @@ class LFNPartitionProcessor(PartitionProcessor):
 class CMSSWPartitionProcessor(PartitionProcessor.getClass('BasicPartitionProcessor')):
 	alias = ['cmsswpart']
 
-	def _formatFileList(self, fl):
+	def _format_file_list(self, fl):
 		return str.join(', ', imap(lambda x: '"%s"' % x, fl))
 
 
@@ -80,7 +80,7 @@ class SCRAMTask(DataTask):
 		DataTask.__init__(self, config, name)
 
 		# SCRAM settings
-		scramArchDefault = noDefault
+		scramArchDefault = unspecified
 		scramProject = config.getList('scram project', [])
 		if scramProject: # manual scram setup
 			if len(scramProject) != 2:
@@ -241,7 +241,7 @@ class CMSSW(SCRAMTask):
 
 
 	def _getConfigFiles(self, config):
-		cfgDefault = utils.QM(self.prolog.isActive() or self.epilog.isActive(), [], noDefault)
+		cfgDefault = utils.QM(self.prolog.isActive() or self.epilog.isActive(), [], unspecified)
 		for cfgFile in config.getPaths('config file', cfgDefault, mustExist = False):
 			if not os.path.exists(cfgFile):
 				raise ConfigError('Config file %r not found.' % cfgFile)

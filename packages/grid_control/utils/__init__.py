@@ -37,6 +37,12 @@ def QM(cond, a, b):
 def swap(a, b):
 	return (b, a)
 
+def safe_index(indexable, idx, default = None):
+	try:
+		return indexable.index(idx)
+	except Exception:
+		return default
+
 ################################################################
 # Path helper functions
 

@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # | Copyright 2014-2016 Karlsruhe Institute of Technology
 # |
 # | Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,21 +12,22 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-if __name__ == '__main__':
-	import os, sys
-	base_dir = os.path.abspath(os.path.dirname(__file__))
-	sys.path.append(base_dir)
-	from hpfwk.hpf_plugin import create_plugin_file
+from grid_control.datasets.dproc_base import DataProcessor
+from grid_control.datasets.provider_base import DataProvider
+from grid_control.utils.data_structures import makeEnum
+from hpfwk import AbstractError
 
-	def select(path):
-		for pat in ['/share', '_compat_', '/requests', '/xmpp']:
-			if pat in path:
-				return False
-		return True
+DataProcessorMergeMode = makeEnum(['intersection', 'union', 'separate'])
 
-	package_list = os.listdir(base_dir)
-	package_list.sort()
-	for package in package_list:
-		package = os.path.abspath(os.path.join(base_dir, package))
-		if os.path.isdir(package):
-			create_plugin_file(package, select)
+class MergeDataProcessor(DataProcessor):
+	alias = ['merge']
+
+	def process(self, block_iter):
+		pass
+
+
+class SplitDataProcessor(DataProcessor):
+	alias = ['split']
+
+	def process_block(self, block):
+		raise AbstractError

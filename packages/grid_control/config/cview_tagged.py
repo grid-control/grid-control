@@ -13,17 +13,18 @@
 # | limitations under the License.
 
 from grid_control.config.config_entry import standardConfigForm
-from grid_control.config.cview_base import SimpleConfigView, selectorUnchanged
+from grid_control.config.cview_base import SimpleConfigView
+from grid_control.utils import safe_index
 from hpfwk import APIError
-from python_compat import identity, imap, lfilter, lmap
+from python_compat import identity, imap, lfilter, lmap, unspecified
 
 # Simple ConfigView implementation
 class TaggedConfigView(SimpleConfigView):
 	def __init__(self, name, oldContainer, curContainer, parent = None,
-			setSections = selectorUnchanged, addSections = None,
-			setNames = selectorUnchanged, addNames = None,
-			setTags = selectorUnchanged, addTags = None,
-			setClasses = selectorUnchanged, addClasses = None, inheritSections = False):
+			setSections = unspecified, addSections = None,
+			setNames = unspecified, addNames = None,
+			setTags = unspecified, addTags = None,
+			setClasses = unspecified, addClasses = None, inheritSections = False):
 		parent = parent or self
 		if inheritSections and isinstance(parent, TaggedConfigView):
 			addSections = (parent.getClassSections() or []) + (addSections or [])
@@ -60,21 +61,16 @@ class TaggedConfigView(SimpleConfigView):
 			elif token:
 				curNames.append(token)
 
-		def myIndex(src, value):
-			try:
-				return src.index(value)
-			except Exception:
-				return None
-		idxClass = myIndex(self._cfgClassSections, curSection)
-		idxSection = myIndex(self._cfgSections, curSection)
+		idxClass = safe_index(self._cfgClassSections, curSection)
+		idxSection = safe_index(self._cfgSections, curSection)
 		if (not self._cfgClassSections) and (not self._cfgSections):
 			idxSection = 0
 		if (idxClass is not None) or (idxSection is not None): # Section is selected by class or manually
-			idxNames = tuple(imap(lambda n: myIndex(self._cfgNames, n), curNames))
+			idxNames = tuple(imap(lambda n: safe_index(self._cfgNames, n), curNames))
 			if None not in idxNames: # All names in current section are selected
 				curTagNames = lfilter(lambda tn: tn in curTags, self._cfgTagsOrder)
 				curTagNamesLeft = lfilter(lambda tn: tn not in self._cfgTagsOrder, curTags)
-				idxTags = lmap(lambda tn: myIndex(self._cfgTags, (tn, curTags[tn])), curTagNames)
+				idxTags = lmap(lambda tn: safe_index(self._cfgTags, (tn, curTags[tn])), curTagNames)
 				if (None not in idxTags) and not curTagNamesLeft:
 					return (idxClass, idxSection, idxNames, idxTags)
 

@@ -13,13 +13,13 @@
 # | limitations under the License.
 
 import re, fnmatch, logging
-from grid_control.config.config_entry import appendOption, noDefault
+from grid_control.config.config_entry import appendOption
 from grid_control.gc_plugin import ConfigurablePlugin
 from grid_control.utils import QM
 from grid_control.utils.data_structures import makeEnum
 from grid_control.utils.parsing import strDict
 from hpfwk import AbstractError, Plugin
-from python_compat import lfilter, sorted
+from python_compat import lfilter, sorted, unspecified
 
 class MatcherHolder(object):
 	def __init__(self, selector, case):
@@ -297,11 +297,11 @@ class DictLookup(Plugin):
 				if match > 0:
 					yield self._values[key]
 
-	def lookup(self, value, default = noDefault, is_selector = True):
+	def lookup(self, value, default = unspecified, is_selector = True):
 		result = list(self._lookup(value, is_selector))
 		if (None in self._values) and (self._always_default or not result):
 			result.append(self._values[None])
-		if (default != noDefault) and not result:
+		if not (result or unspecified(default)):
 			result.append(default)
 		if not self._only_first:
 			return result

@@ -23,6 +23,15 @@ from hpfwk import clear_current_exception
 from python_compat import BytesBuffer, bytes2str, ifilter, imap, json, lfilter, lmap, tarfile
 
 class BaseJobFileTarAdaptor(object):
+	def __getitem__(self, key):
+		if key >= self.maxJobs:
+			raise IndexError('Invalid dataset partition %s' % repr(key))
+		try:
+			self._lock.acquire()
+			return self._getPartition(key)
+		finally:
+			self._lock.release()
+
 	def __init__(self, path):
 		activity = Activity('Reading dataset partition file')
 		self._lock = GCLock()
@@ -44,44 +53,35 @@ class BaseJobFileTarAdaptor(object):
 			DataSplitter.MetadataHeader: parseJSON,
 			DataSplitter.Metadata: lambda x: parseJSON(x.strip("'")) }
 
-	def __getitem__(self, key):
-		if key >= self.maxJobs:
-			raise IndexError('Invalid dataset partition %s' % repr(key))
-		try:
-			self._lock.acquire()
-			return self._getPartition(key)
-		finally:
-			self._lock.release()
-
 
 class DataSplitterIOAuto(DataSplitterIO):
-	def saveSplitting(self, path, meta, source, sourceLen, message = 'Writing job mapping file'):
-		writer = DataSplitterIO_V2()
-		writer.saveSplitting(path, meta, source, sourceLen, message)
-
-	def loadSplitting(self, path):
+	def import_partition_source(self, path):
 		try:
 			version = int(tarfile.open(path, 'r:').extractfile('Version').read())
 		except Exception:
 			version = 1
 		if version == 1:
-			state = DataSplitterIO_V1().loadSplitting(path)
+			state = DataSplitterIO_V1().import_partition_source(path)
 		else:
-			state = DataSplitterIO_V2().loadSplitting(path)
+			state = DataSplitterIO_V2().import_partition_source(path)
 		return state
+
+	def save_partition_source(self, path, meta, source, sourceLen, message = 'Writing job mapping file'):
+		writer = DataSplitterIO_V2()
+		writer.save_partition_source(path, meta, source, sourceLen, message)
 
 
 class DataSplitterIOBase(DataSplitterIO):
 	def __init__(self):
 		self._fmt = utils.DictFormat() # use a single instance to save time
 
+	def _addToSubTar(self, subTarTuple, name, data):
+		self._addToTar(subTarTuple[0], name, data)
+
 	def _addToTar(self, tar, name, data):
 		info, fileObj = VirtualFile(name, data).getTarInfo()
 		tar.addfile(info, fileObj)
 		fileObj.close()
-
-	def _addToSubTar(self, subTarTuple, name, data):
-		self._addToTar(subTarTuple[0], name, data)
 
 	def _createSubTar(self, subTarFileName):
 		subTarFileObj = BytesBuffer()
@@ -121,20 +121,37 @@ class DataSplitterIOBase(DataSplitterIO):
 		return (x, y, z)
 
 	# Save as tar file to allow random access to mapping data with little memory overhead
-	def saveSplitting(self, path, meta, source, sourceLen, message = 'Writing job mapping file'):
-		tar = tarfile.open(path, 'w:')
-		self._saveStateToTar(tar, meta, source, sourceLen, message)
-		tar.close()
-
-	def loadSplitting(self, path):
+	def import_partition_source(self, path):
 		try:
 			return self._loadStateFromTar(path)
 		except Exception:
 			raise PartitionError("No valid dataset splitting found in '%s'." % path)
 
+	def save_partition_source(self, path, meta, source, sourceLen, message = 'Writing job mapping file'):
+		tar = tarfile.open(path, 'w:')
+		self._saveStateToTar(tar, meta, source, sourceLen, message)
+		tar.close()
+
 
 class DataSplitterIO_V1(DataSplitterIOBase):
 	# Save as tar file to allow random access to mapping data with little memory overhead
+	def _loadStateFromTar(self, path):
+		class JobFileTarAdaptor_V1(BaseJobFileTarAdaptor):
+			def _getPartition(self, key):
+				if not self._cacheKey == key / 100:
+					self._cacheKey = key / 100
+					subTarFileObj = self._tar.extractfile('%03dXX.tgz' % (key / 100))
+					subTarFileObj = BytesBuffer(gzip.GzipFile(fileobj = subTarFileObj).read()) # 3-4x speedup for sequential access
+					self._cacheTar = tarfile.open(mode = 'r', fileobj = subTarFileObj)
+				data = self._fmt.parse(self._cacheTar.extractfile('%05d/info' % key).readlines(),
+					keyParser = {None: int}, valueParser = self._parserMap)
+				fileList = lmap(bytes2str, self._cacheTar.extractfile('%05d/list' % key).readlines())
+				if DataSplitter.CommonPrefix in data:
+					fileList = imap(lambda x: '%s/%s' % (data[DataSplitter.CommonPrefix], x), fileList)
+				data[DataSplitter.FileList] = lmap(str.strip, fileList)
+				return data
+		return JobFileTarAdaptor_V1(path)
+
 	def _saveStateToTar(self, tar, meta, source, sourceLen, message):
 		# Write the splitting info grouped into subtarfiles
 		activity = Activity(message)
@@ -160,28 +177,33 @@ class DataSplitterIO_V1(DataSplitterIOBase):
 		self._addToTar(tar, 'Metadata', self._fmt.format(meta))
 		activity.finish()
 
-	def _loadStateFromTar(self, path):
-		class JobFileTarAdaptor_V1(BaseJobFileTarAdaptor):
-			def _getPartition(self, key):
-				if not self._cacheKey == key / 100:
-					self._cacheKey = key / 100
-					subTarFileObj = self._tar.extractfile('%03dXX.tgz' % (key / 100))
-					subTarFileObj = BytesBuffer(gzip.GzipFile(fileobj = subTarFileObj).read()) # 3-4x speedup for sequential access
-					self._cacheTar = tarfile.open(mode = 'r', fileobj = subTarFileObj)
-				data = self._fmt.parse(self._cacheTar.extractfile('%05d/info' % key).readlines(),
-					keyParser = {None: int}, valueParser = self._parserMap)
-				fileList = lmap(bytes2str, self._cacheTar.extractfile('%05d/list' % key).readlines())
-				if DataSplitter.CommonPrefix in data:
-					fileList = imap(lambda x: '%s/%s' % (data[DataSplitter.CommonPrefix], x), fileList)
-				data[DataSplitter.FileList] = lmap(str.strip, fileList)
-				return data
-		return JobFileTarAdaptor_V1(path)
-
 
 class DataSplitterIO_V2(DataSplitterIOBase):
 	def __init__(self):
 		DataSplitterIOBase.__init__(self)
 		self._keySize = 100
+
+	def _loadStateFromTar(self, path):
+		class JobFileTarAdaptor_V2(BaseJobFileTarAdaptor):
+			def __init__(self, path, keySize):
+				BaseJobFileTarAdaptor.__init__(self, path)
+				self._keySize = keySize
+
+			def _getPartition(self, key):
+				if not self._cacheKey == key / self._keySize:
+					self._cacheKey = key / self._keySize
+					subTarFileObj = self._tar.extractfile('%03dXX.tgz' % (key / self._keySize))
+					subTarFileObj = BytesBuffer(gzip.GzipFile(fileobj = subTarFileObj).read()) # 3-4x speedup for sequential access
+					self._cacheTar = tarfile.open(mode = 'r', fileobj = subTarFileObj)
+				fullData = lmap(bytes2str, self._cacheTar.extractfile('%05d' % key).readlines())
+				data = self._fmt.parse(lfilter(lambda x: not x.startswith('='), fullData),
+					keyParser = {None: int}, valueParser = self._parserMap)
+				fileList = imap(lambda x: x[1:], ifilter(lambda x: x.startswith('='), fullData))
+				if DataSplitter.CommonPrefix in data:
+					fileList = imap(lambda x: '%s/%s' % (data[DataSplitter.CommonPrefix], x), fileList)
+				data[DataSplitter.FileList] = lmap(str.strip, fileList)
+				return data
+		return JobFileTarAdaptor_V2(path, self._keySize)
 
 	def _saveStateToTar(self, tar, meta, source, sourceLen, message):
 		# Write the splitting info grouped into subtarfiles
@@ -210,25 +232,3 @@ class DataSplitterIO_V2(DataSplitterIOBase):
 		meta['MaxJobs'] = lastValid + 1
 		for (fn, data) in [('Metadata', self._fmt.format(meta)), ('Version', '2')]:
 			self._addToTar(tar, fn, data)
-
-	def _loadStateFromTar(self, path):
-		class JobFileTarAdaptor_V2(BaseJobFileTarAdaptor):
-			def __init__(self, path, keySize):
-				BaseJobFileTarAdaptor.__init__(self, path)
-				self._keySize = keySize
-
-			def _getPartition(self, key):
-				if not self._cacheKey == key / self._keySize:
-					self._cacheKey = key / self._keySize
-					subTarFileObj = self._tar.extractfile('%03dXX.tgz' % (key / self._keySize))
-					subTarFileObj = BytesBuffer(gzip.GzipFile(fileobj = subTarFileObj).read()) # 3-4x speedup for sequential access
-					self._cacheTar = tarfile.open(mode = 'r', fileobj = subTarFileObj)
-				fullData = lmap(bytes2str, self._cacheTar.extractfile('%05d' % key).readlines())
-				data = self._fmt.parse(lfilter(lambda x: not x.startswith('='), fullData),
-					keyParser = {None: int}, valueParser = self._parserMap)
-				fileList = imap(lambda x: x[1:], ifilter(lambda x: x.startswith('='), fullData))
-				if DataSplitter.CommonPrefix in data:
-					fileList = imap(lambda x: '%s/%s' % (data[DataSplitter.CommonPrefix], x), fileList)
-				data[DataSplitter.FileList] = lmap(str.strip, fileList)
-				return data
-		return JobFileTarAdaptor_V2(path, self._keySize)

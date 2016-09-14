@@ -31,7 +31,7 @@ class DataParameterSource(LimitedResyncParameterSource):
 		self.resyncSetup(interval = -1)
 
 		if not data_provider: # debug mode - used by scripts - disables resync
-			self._len = self._data_splitter.get_job_len()
+			self._len = self._data_splitter.get_partition_len()
 			return
 
 		# look for aborted resyncs - and try to restore old state if possible
@@ -42,12 +42,12 @@ class DataParameterSource(LimitedResyncParameterSource):
 			raise DatasetError('Found broken resync state')
 
 		if self._exists_data_path('cache.dat') and self._exists_data_path('map.tar'):
-			self._data_splitter.importPartitions(self._get_data_path('map.tar'))
+			self._data_splitter.import_partitions(self._get_data_path('map.tar'))
 		else:
 			DataProvider.saveToFile(self._get_data_path('cache.dat'), self._data_provider.getBlocks(show_stats = False))
-			self._data_splitter.splitDataset(self._get_data_path('map.tar'), self._data_provider.getBlocks(show_stats = False))
+			self._data_splitter.partition_blocks(self._get_data_path('map.tar'), self._data_provider.getBlocks(show_stats = False))
 
-		self._len = self._data_splitter.get_job_len()
+		self._len = self._data_splitter.get_partition_len()
 
 	def __repr__(self):
 		return 'data(%s)' % utils.QM(self._name == 'data', '', self._name)
@@ -63,7 +63,7 @@ class DataParameterSource(LimitedResyncParameterSource):
 	create_psrc = classmethod(create_psrc)
 
 	def fill_parameter_content(self, pNum, result):
-		splitInfo = self._data_splitter.getSplitInfo(pNum)
+		splitInfo = self._data_splitter.get_partition(pNum)
 		self._part_proc.process(pNum, splitInfo, result)
 
 	def fill_parameter_metadata(self, result):
@@ -81,7 +81,7 @@ class DataParameterSource(LimitedResyncParameterSource):
 	def get_psrc_hash(self):
 		if self._resync_enabled():
 			return md5_hex(repr(time.time()))
-		return md5_hex(repr([self._name, self._data_splitter.get_job_len()]))
+		return md5_hex(repr([self._name, self._data_splitter.get_partition_len()]))
 
 	def show_psrc(self):
 		return ['%s: src = %s' % (self.__class__.__name__, self._name)]
@@ -102,8 +102,8 @@ class DataParameterSource(LimitedResyncParameterSource):
 			self._data_provider.saveToFile(self._get_data_path('cache-new.dat'), ds_new)
 
 			# Use old splitting information to synchronize with new dataset infos
-			old_len = self._data_splitter.get_job_len()
-			jobChanges = self._data_splitter.resyncMapping(self._get_data_path('map-new.tar'), ds_old, ds_new)
+			old_len = self._data_splitter.get_partition_len()
+			jobChanges = self._data_splitter.resync_partitions(self._get_data_path('map-new.tar'), ds_old, ds_new)
 			activity.finish()
 			if jobChanges is not None:
 				# Move current splitting to backup and use the new splitting from now on
@@ -113,7 +113,7 @@ class DataParameterSource(LimitedResyncParameterSource):
 					os.rename(self._get_data_path(new), self._get_data_path(cur))
 				backupRename(  'map-old-%d.tar' % time.time(),   'map.tar',   'map-new.tar')
 				backupRename('cache-old-%d.dat' % time.time(), 'cache.dat', 'cache-new.dat')
-				self._data_splitter.importPartitions(self._get_data_path('map.tar'))
-				self._len = self._data_splitter.get_job_len()
+				self._data_splitter.import_partitions(self._get_data_path('map.tar'))
+				self._len = self._data_splitter.get_partition_len()
 				self._log.debug('Dataset resync finished: %d -> %d partitions', old_len, self._len)
 				return (set(jobChanges[0]), set(jobChanges[1]), old_len != self._len)

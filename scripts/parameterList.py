@@ -47,9 +47,10 @@ log = logging.getLogger()
 
 # Create dataset parameter source
 class DummySplitter:
-	def get_job_len(self):
+	def get_partition_len(self):
 		return 3
-	def getSplitInfo(self, pNum):
+
+	def get_partition(self, pNum):
 		mkEntry = lambda ds, fl, n, nick: { DataSplitter.Dataset: ds, DataSplitter.Nickname: nick,
 			DataSplitter.FileList: fl, DataSplitter.NEntries: n }
 		tmp = [ mkEntry('ds1', ['a', 'b'], 23, 'data_1'), mkEntry('ds1', ['1'], 42, 'data_1'),
@@ -128,7 +129,7 @@ def setup_dataset(config, dataset):
 		log.info('Registering dummy data provider data')
 		dataSplitter = DummySplitter()
 	else:
-		dataSplitter = DataSplitter.loadPartitionsForScript(dataset)
+		dataSplitter = DataSplitter.load_partitions_for_script(dataset)
 
 	config = config.changeView(setSections = None)
 	partProcessor = config.getCompositePlugin('partition processor',
