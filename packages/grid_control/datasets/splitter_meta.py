@@ -35,7 +35,7 @@ class MetadataSplitter(FileLevelSplitter):
 				partition_fi_list.append(fi)
 			yield self._create_sub_block(block, partition_fi_list)
 
-	def _get_fi_class(self, metadata_key_list, block, fi):
+	def _get_fi_class(self, metadata_name_list, block, fi):
 		raise AbstractError
 
 
@@ -45,9 +45,9 @@ class UserMetadataSplitter(MetadataSplitter):
 	def _configure_splitter(self, config):
 		self._metadata_user_list = self._query_config(config.getList, 'split metadata', [])
 
-	def _get_fi_class(self, metadata_key_list, block, fi):
+	def _get_fi_class(self, metadata_name_list, block, fi):
 		metadata_selected_list = self._setup(self._metadata_user_list, block)
-		metadata_idx_list = lmap(lambda metadata_key: safe_index(metadata_key_list, metadata_key), metadata_selected_list)
+		metadata_idx_list = lmap(lambda metadata_name: safe_index(metadata_name_list, metadata_name), metadata_selected_list)
 
 		def query_metadata(idx):
 			if (idx is not None) and (idx < len(fi[DataProvider.Metadata])):

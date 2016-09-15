@@ -72,7 +72,7 @@ class FLSplitStacker(FileLevelSplitter):
 
 	def _configure_splitter(self, config):
 		self._config = config
-		self._splitter_list = self._query_config(config.getList, 'splitter stack', ['BlockBoundarySplitter'])
+		self._splitter_name_list = self._query_config(config.getList, 'splitter stack', ['BlockBoundarySplitter'])
 
 
 class HybridSplitter(FileLevelSplitter):
