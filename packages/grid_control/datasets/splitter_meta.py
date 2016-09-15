@@ -42,7 +42,7 @@ class UserMetadataSplitter(MetadataSplitter):
 	alias = ['metadata']
 
 	def _initConfig(self, config):
-		self._metadata = self._configQuery(config.getList, 'split metadata', [])
+		self._metadata = self._query_config(config.getList, 'split metadata', [])
 
 	def metaKey(self, metadataNames, block, fi):
 		selMetadataNames = self._setup(self._metadata, block)

@@ -79,7 +79,7 @@ class DataSplitter(ConfigurablePlugin):
 		pass
 
 
-	def _configQuery(self, fun, item, default = noDefault):
+	def _query_config(self, fun, item, default = noDefault):
 		key = (fun, item, default)
 		self._setup(key, {}) # query once for init
 		return key

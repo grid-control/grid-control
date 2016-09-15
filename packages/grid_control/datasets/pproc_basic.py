@@ -43,24 +43,24 @@ class BasicPartitionProcessor(PartitionProcessor):
 		result.append(ParameterMetadata(self._vn_prefix + 'SPLIT', untracked = False))
 		return result
 
-	def process(self, pNum, splitInfo, result):
+	def process(self, pnum, partition_info, result):
 		result.update({
-			self._vn_file_names: self._format_file_list(splitInfo[DataSplitter.FileList]),
-			self._vn_max_events: splitInfo[DataSplitter.NEntries],
-			self._vn_skip_events: splitInfo.get(DataSplitter.Skipped, 0),
-			self._vn_prefix + 'PATH': splitInfo.get(DataSplitter.Dataset, None),
-			self._vn_prefix + 'BLOCK': splitInfo.get(DataSplitter.BlockName, None),
-			self._vn_prefix + 'NICK': splitInfo.get(DataSplitter.Nickname, None),
+			self._vn_file_names: self._format_file_list(partition_info[DataSplitter.FileList]),
+			self._vn_max_events: partition_info[DataSplitter.NEntries],
+			self._vn_skip_events: partition_info.get(DataSplitter.Skipped, 0),
+			self._vn_prefix + 'PATH': partition_info.get(DataSplitter.Dataset, None),
+			self._vn_prefix + 'BLOCK': partition_info.get(DataSplitter.BlockName, None),
+			self._vn_prefix + 'NICK': partition_info.get(DataSplitter.Nickname, None),
 		})
 		if self._datasource_name == 'dataset':
-			result[self._vn_prefix + 'SPLIT'] = pNum
+			result[self._vn_prefix + 'SPLIT'] = pnum
 		else:
-			result[self._vn_prefix + 'SPLIT'] = '%s:%d' % (self._datasource_name, pNum)
-		result[ParameterInfo.ACTIVE] = result[ParameterInfo.ACTIVE] and not splitInfo.get(DataSplitter.Invalid, False)
-
+			result[self._vn_prefix + 'SPLIT'] = '%s:%d' % (self._datasource_name, pnum)
+		result[ParameterInfo.ACTIVE] = result[ParameterInfo.ACTIVE] and not partition_info.get(DataSplitter.Invalid, False)
 
 	def _format_file_list(self, fl):
 		return str.join(' ', fl)
+
 
 class LocationPartitionProcessor(PartitionProcessor):
 	alias = ['location']
@@ -68,7 +68,7 @@ class LocationPartitionProcessor(PartitionProcessor):
 	def __init__(self, config, datasource_name):
 		PartitionProcessor.__init__(self, config, datasource_name)
 		self._filter = config.getFilter(['partition location filter', '%s partition location filter' % datasource_name],
-			'', onChange = None, defaultMatcher = 'blackwhite', defaultFilter = 'weak')
+			default = '', onChange = None, defaultMatcher = 'blackwhite', defaultFilter = 'weak')
 		self._preference = config.getList(['partition location preference', '%s partition location preference' % datasource_name], [], onChange = None)
 		self._reqs = config.getBool(['partition location requirement', '%s partition location requirement' % datasource_name], True, onChange = None)
 		self._disable = config.getBool(['partition location check', '%s partition location check' % datasource_name], True, onChange = None)
@@ -76,14 +76,14 @@ class LocationPartitionProcessor(PartitionProcessor):
 	def enabled(self):
 		return self._filter.getSelector() or self._preference or self._reqs or self._disable
 
-	def process(self, pNum, splitInfo, result):
-		locations = self._filter.filterList(splitInfo.get(DataSplitter.Locations))
+	def process(self, pnum, partition_info, result):
+		locations = self._filter.filterList(partition_info.get(DataSplitter.Locations))
 		if self._preference:
 			if not locations: # [] or None
 				locations = self._preference
 			elif any(imap(lambda x: x in self._preference, locations)): # preferred location available
 				locations = lfilter(lambda x: x in self._preference, locations)
-		if (splitInfo.get(DataSplitter.Locations) is None) and not locations:
+		if (partition_info.get(DataSplitter.Locations) is None) and not locations:
 			return
 		if self._reqs and (locations is not None):
 			result[ParameterInfo.REQS].append((WMS.STORAGE, locations))
@@ -96,26 +96,25 @@ class MetaPartitionProcessor(PartitionProcessor):
 
 	def __init__(self, config, datasource_name):
 		PartitionProcessor.__init__(self, config, datasource_name)
-		self._metadata = config.getList(['partition metadata', '%s partition metadata' % datasource_name],
-			[], onChange = None)
+		self._metadata_list = config.getList(['partition metadata', '%s partition metadata' % datasource_name], [], onChange = None)
 
 	def enabled(self):
-		return self._metadata != []
+		return self._metadata_list != []
 
 	def get_partition_metadata(self):
-		return lmap(lambda k: ParameterMetadata(k, untracked = True), self._metadata)
+		return lmap(lambda k: ParameterMetadata(k, untracked = True), self._metadata_list)
 
-	def process(self, pNum, splitInfo, result):
-		for idx, mkey in enumerate(splitInfo.get(DataSplitter.MetadataHeader, [])):
-			if mkey in self._metadata:
-				def getMetadataProtected(x):
+	def process(self, pnum, partition_info, result):
+		for idx, metadata_key in enumerate(partition_info.get(DataSplitter.MetadataHeader, [])):
+			if metadata_key in self._metadata_list:
+				def get_metadata_protected(x):
 					if idx < len(x):
 						return x[idx]
-				tmp = set(imap(getMetadataProtected, splitInfo[DataSplitter.Metadata]))
+				tmp = set(imap(get_metadata_protected, partition_info[DataSplitter.Metadata]))
 				if len(tmp) == 1:
 					value = tmp.pop()
 					if value is not None:
-						result[mkey] = value
+						result[metadata_key] = value
 
 
 class RequirementsPartitionProcessor(PartitionProcessor):
@@ -123,27 +122,29 @@ class RequirementsPartitionProcessor(PartitionProcessor):
 
 	def __init__(self, config, datasource_name):
 		PartitionProcessor.__init__(self, config, datasource_name)
-		self._wtfactor = config.getFloat(['partition walltime factor', '%s partition walltime factor' % datasource_name], -1., onChange = None)
-		self._wtoffset = config.getFloat(['partition walltime offset', '%s partition walltime offset' % datasource_name], 0., onChange = None)
-		self._ctfactor = config.getFloat(['partition cputime factor', '%s partition cputime factor' % datasource_name], -1., onChange = None)
-		self._ctoffset = config.getFloat(['partition cputime offset', '%s partition cputime offset' % datasource_name], 0., onChange = None)
-		self._memfactor = config.getFloat(['partition memory factor', '%s partition memory factor' % datasource_name], -1., onChange = None)
-		self._memoffset = config.getFloat(['partition memory offset', '%s partition memory offset' % datasource_name], 0., onChange = None)
+		self._wt_offset = config.getFloat(['partition walltime offset', '%s partition walltime offset' % datasource_name], 0., onChange = None)
+		self._wt_factor = config.getFloat(['partition walltime factor', '%s partition walltime factor' % datasource_name], 0., onChange = None)
+		self._ct_offset = config.getFloat(['partition cputime offset', '%s partition cputime offset' % datasource_name], 0., onChange = None)
+		self._ct_factor = config.getFloat(['partition cputime factor', '%s partition cputime factor' % datasource_name], 0., onChange = None)
+		self._mem_offset = config.getFloat(['partition memory offset', '%s partition memory offset' % datasource_name], 0., onChange = None)
+		self._mem_factor = config.getFloat(['partition memory factor', '%s partition memory factor' % datasource_name], 0., onChange = None)
 
 	def enabled(self):
-		return any(imap(lambda x: x > 0, [self._wtfactor, self._ctfactor, self._memfactor,
-			self._wtoffset, self._ctoffset, self._memoffset]))
+		return any(imap(lambda x: x > 0, [self._wt_factor, self._ct_factor, self._mem_factor,
+			self._wt_offset, self._ct_offset, self._mem_offset]))
 
-	def process(self, pNum, splitInfo, result):
-		self._addReq(result, splitInfo, self._wtfactor, self._wtoffset, WMS.WALLTIME)
-		self._addReq(result, splitInfo, self._ctfactor, self._ctoffset, WMS.CPUTIME)
-		self._addReq(result, splitInfo, self._memfactor, self._memoffset, WMS.MEMORY)
-	def _addReq(self, result, splitInfo, factor, offset, enum):
+	def process(self, pnum, partition_info, result):
+		self._add_requirement(result, partition_info, self._wt_factor, self._wt_offset, WMS.WALLTIME)
+		self._add_requirement(result, partition_info, self._ct_factor, self._ct_offset, WMS.CPUTIME)
+		self._add_requirement(result, partition_info, self._mem_factor, self._mem_offset, WMS.MEMORY)
+
+	def _add_requirement(self, result, partition_info, factor, offset, enum):
 		value = offset
 		if factor > 0:
-			value += factor * splitInfo[DataSplitter.NEntries]
+			value += factor * partition_info[DataSplitter.NEntries]
 		if value > 0:
 			result[ParameterInfo.REQS].append((enum, int(value)))
+
 
 class TFCPartitionProcessor(PartitionProcessor):
 	alias = ['tfc']
@@ -155,19 +156,17 @@ class TFCPartitionProcessor(PartitionProcessor):
 	def enabled(self):
 		return not self._tfc.empty()
 
-	def process(self, pNum, splitInfo, result):
-		fl = splitInfo[DataSplitter.FileList]
-		locations = splitInfo.get(DataSplitter.Locations)
+	def process(self, pnum, partition_info, result):
+		fl = partition_info[DataSplitter.FileList]
+		locations = partition_info.get(DataSplitter.Locations)
 		if not locations:
-			splitInfo[DataSplitter.FileList] = lmap(lambda fn: self._lookup(fn, None), fl)
+			partition_info[DataSplitter.FileList] = lmap(lambda fn: self._lookup(fn, None), fl)
 		else:
 			for location in locations:
-				splitInfo[DataSplitter.FileList] = lmap(lambda fn: self._lookup(fn, location), fl)
-
+				partition_info[DataSplitter.FileList] = lmap(lambda fn: self._lookup(fn, location), fl)
 
 	def _lookup(self, fn, location):
 		prefix = self._tfc.lookup(location, is_selector = False)
 		if prefix:
 			return prefix + fn
 		return fn
-

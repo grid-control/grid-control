@@ -38,7 +38,7 @@ class FLSplitStacker(FileLevelSplitter):
 
 	def _initConfig(self, config):
 		self._config = config
-		self._splitstack = self._configQuery(config.getList, 'splitter stack', ['BlockBoundarySplitter'])
+		self._splitstack = self._query_config(config.getList, 'splitter stack', ['BlockBoundarySplitter'])
 
 	def splitDatasetInternal(self, blocks, firstEvent = 0):
 		for block in blocks:
@@ -63,7 +63,7 @@ class FileBoundarySplitter(FileLevelSplitter):
 	alias = ['files']
 
 	def _initConfig(self, config):
-		self._files_per_job = self._configQuery(config.getInt, 'files per job')
+		self._files_per_job = self._query_config(config.getInt, 'files per job')
 
 	def splitBlocks(self, blocks):
 		for block in blocks:
@@ -81,7 +81,7 @@ class HybridSplitter(FileLevelSplitter):
 	alias = ['hybrid']
 
 	def _initConfig(self, config):
-		self._events_per_job = self._configQuery(config.getInt, 'events per job')
+		self._events_per_job = self._query_config(config.getInt, 'events per job')
 
 	def splitBlocks(self, blocks):
 		for block in blocks:

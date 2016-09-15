@@ -19,7 +19,7 @@ class RunSplitter(DataSplitter.getClass('MetadataSplitter')):
 	alias = ['runs']
 
 	def _initConfig(self, config):
-		self._run_range = self._configQuery(config.getInt, 'run range', 1)
+		self._run_range = self._query_config(config.getInt, 'run range', 1)
 
 	def metaKey(self, metadataNames, block, fi):
 		selRunRange = self._setup(self._run_range, block)

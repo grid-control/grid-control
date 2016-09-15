@@ -75,7 +75,7 @@ class EventBoundarySplitter(DataSplitter):
 
 
 	def _initConfig(self, config):
-		self._events_per_job = self._configQuery(config.getInt, 'events per job')
+		self._events_per_job = self._query_config(config.getInt, 'events per job')
 
 
 	def splitDatasetInternal(self, blocks, firstEvent = 0):
