@@ -21,7 +21,7 @@ class RunSplitter(DataSplitter.getClass('MetadataSplitter')):
 	def _configure_splitter(self, config):
 		self._run_range = self._query_config(config.getInt, 'run range', 1)
 
-	def _get_fi_class(self, metadata_key_list, block, fi):
+	def _get_fi_class(self, metadata_name_list, block, fi):
 		selected_run_range = self._setup(self._run_range, block)
-		metadata_idx = metadata_key_list.index('Runs')
+		metadata_idx = metadata_name_list.index('Runs')
 		return tuple(imap(lambda r: int(r / selected_run_range), fi[DataProvider.Metadata][metadata_idx]))

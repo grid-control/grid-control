@@ -105,8 +105,8 @@ class MetaPartitionProcessor(PartitionProcessor):
 		return lmap(lambda k: ParameterMetadata(k, untracked = True), self._metadata_list)
 
 	def process(self, pnum, partition_info, result):
-		for idx, metadata_key in enumerate(partition_info.get(DataSplitter.MetadataHeader, [])):
-			if metadata_key in self._metadata_list:
+		for idx, metadata_name in enumerate(partition_info.get(DataSplitter.MetadataHeader, [])):
+			if metadata_name in self._metadata_list:
 				def get_metadata_protected(x):
 					if idx < len(x):
 						return x[idx]
@@ -114,7 +114,7 @@ class MetaPartitionProcessor(PartitionProcessor):
 				if len(tmp) == 1:
 					value = tmp.pop()
 					if value is not None:
-						result[metadata_key] = value
+						result[metadata_name] = value
 
 
 class RequirementsPartitionProcessor(PartitionProcessor):
