@@ -18,36 +18,37 @@ from grid_control.utils import safe_index
 from hpfwk import AbstractError
 from python_compat import imap, lmap, sort_inplace
 
-# Split dataset along block and metadata boundaries - using equivalence classes of metadata
-class MetadataSplitter(FileLevelSplitter):
+# Split dataset along block and class boundaries - using equivalence classes of file properties
+class FileClassSplitter(FileLevelSplitter):
 	def divide_blocks(self, block_iter):
 		for block in block_iter:
 			fi_list = block[DataProvider.FileList]
-			sort_inplace(fi_list, key = lambda fi: self._get_fi_class(block.get(DataProvider.Metadata, []), block, fi))
-			(partition_fi_list, fi_class_active) = ([], None)
+			sort_inplace(fi_list, key = lambda fi: self._get_fi_class(fi, block))
+			partition_fi_list = []
+			if fi_list:
+				fi_class_active = self._get_fi_class(fi_list[0], block)
 			for fi in fi_list:
-				if fi_class_active is None:
-					fi_class_active = self._get_fi_class(block[DataProvider.Metadata], block, fi)
-				fi_class_current = self._get_fi_class(block[DataProvider.Metadata], block, fi)
+				fi_class_current = self._get_fi_class(fi, block)
 				if fi_class_current != fi_class_active:
 					yield self._create_sub_block(block, partition_fi_list)
 					(partition_fi_list, fi_class_active) = ([], fi_class_current)
 				partition_fi_list.append(fi)
 			yield self._create_sub_block(block, partition_fi_list)
 
-	def _get_fi_class(self, metadata_name_list, block, fi):
+	def _get_fi_class(self, fi, block):
 		raise AbstractError
 
 
-class UserMetadataSplitter(MetadataSplitter):
+class UserMetadataSplitter(FileClassSplitter):
 	alias = ['metadata']
 
 	def _configure_splitter(self, config):
 		self._metadata_user_list = self._query_config(config.getList, 'split metadata', [])
 
-	def _get_fi_class(self, metadata_name_list, block, fi):
-		metadata_selected_list = self._setup(self._metadata_user_list, block)
-		metadata_idx_list = lmap(lambda metadata_name: safe_index(metadata_name_list, metadata_name), metadata_selected_list)
+	def _get_fi_class(self, fi, block):
+		metadata_name_list = block.get(DataProvider.Metadata, [])
+		metadata_name_list_selected = self._setup(self._metadata_user_list, block)
+		metadata_idx_list = lmap(lambda metadata_name: safe_index(metadata_name_list, metadata_name), metadata_name_list_selected)
 
 		def query_metadata(idx):
 			if (idx is not None) and (idx < len(fi[DataProvider.Metadata])):
