@@ -13,18 +13,18 @@
 # | limitations under the License.
 
 from grid_control.config.config_entry import standardConfigForm
-from grid_control.config.cview_base import SimpleConfigView, selectorUnchanged
+from grid_control.config.cview_base import SimpleConfigView
 from grid_control.utils import safe_index
 from hpfwk import APIError
-from python_compat import identity, imap, lfilter, lmap
+from python_compat import identity, imap, lfilter, lmap, unspecified
 
 # Simple ConfigView implementation
 class TaggedConfigView(SimpleConfigView):
 	def __init__(self, name, oldContainer, curContainer, parent = None,
-			setSections = selectorUnchanged, addSections = None,
-			setNames = selectorUnchanged, addNames = None,
-			setTags = selectorUnchanged, addTags = None,
-			setClasses = selectorUnchanged, addClasses = None, inheritSections = False):
+			setSections = unspecified, addSections = None,
+			setNames = unspecified, addNames = None,
+			setTags = unspecified, addTags = None,
+			setClasses = unspecified, addClasses = None, inheritSections = False):
 		parent = parent or self
 		if inheritSections and isinstance(parent, TaggedConfigView):
 			addSections = (parent.getClassSections() or []) + (addSections or [])

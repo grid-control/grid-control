@@ -14,9 +14,9 @@
 
 import shlex
 from grid_control import utils
-from grid_control.config import ConfigError, noDefault
+from grid_control.config import ConfigError
 from grid_control.utils.parsing import parseDict, split_advanced, split_brackets
-from python_compat import imap, irange, lmap, lzip
+from python_compat import imap, irange, lmap, lzip, unspecified
 
 def frange(start, end = None, num = None, steps = None, format = '%g'):
 	if (end is None) and (num is None):
@@ -74,7 +74,7 @@ class ParameterConfig:
 		(self._config, self._changes) = (config, [])
 		(self._map_vn2varexpr, self._map_varexpr_suffix2opt) = parse_parameter_option_list(config.getOptions())
 
-	def get(self, varexpr, suffix = None, default = noDefault):
+	def get(self, varexpr, suffix = None, default = unspecified):
 		return self._config.get(self._get_opt(varexpr, suffix), default, onChange = self._on_change)
 
 	def get_config(self, *args, **kwargs):
@@ -98,7 +98,7 @@ class ParameterConfig:
 				return self._process_parameter_list(vn, self._parse_parameter(vn, value, parameter_type))
 			return self._handle_dict(vn, parameter_value, parse_value)
 
-	def getBool(self, varexpr, suffix = None, default = noDefault): # needed for Matcher configuration
+	def getBool(self, varexpr, suffix = None, default = unspecified): # needed for Matcher configuration
 		return self._config.getBool(self._get_opt(varexpr, suffix), default, onChange = self._on_change)
 
 	def show_changes(self):

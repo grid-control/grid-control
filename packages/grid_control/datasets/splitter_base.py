@@ -14,13 +14,13 @@
 
 import os, copy
 from grid_control import utils
-from grid_control.config import create_config, noDefault
+from grid_control.config import create_config
 from grid_control.datasets.provider_base import DataProvider
 from grid_control.gc_plugin import ConfigurablePlugin
 from grid_control.utils.activity import Activity
 from grid_control.utils.data_structures import makeEnum
 from hpfwk import AbstractError, NestedException, Plugin
-from python_compat import imap, irange, itemgetter, lmap, next, sort_inplace
+from python_compat import imap, irange, itemgetter, lmap, next, sort_inplace, unspecified
 
 def fast_search(lst, key_fun, key):
 	(idx, hi) = (0, len(lst))
@@ -36,6 +36,7 @@ def fast_search(lst, key_fun, key):
 ResyncMode = makeEnum(['disable', 'complete', 'changed', 'ignore']) # prio: "disable" overrides "complete", etc.
 ResyncMode.noChanged = [ResyncMode.disable, ResyncMode.complete, ResyncMode.ignore]
 ResyncOrder = makeEnum(['append', 'preserve', 'fillgap', 'reorder']) # reorder mechanism
+
 
 class PartitionError(NestedException):
 	pass
@@ -180,7 +181,7 @@ class DataSplitter(ConfigurablePlugin):
 				partition[DataSplitter.Metadata] = lmap(itemgetter(DataProvider.Metadata), fi_list)
 		return partition
 
-	def _query_config(self, config_fun, option, default = noDefault):
+	def _query_config(self, config_fun, option, default = unspecified):
 		config_key = (config_fun, option, default)
 		self._setup(config_key, {}) # query once for init
 		return config_key
@@ -225,12 +226,12 @@ class DataSplitter(ConfigurablePlugin):
 			block_new[DataProvider.FileList] = fileList
 			size_list[idx_fi] = fi_new[DataProvider.NEntries]
 
-		def removeCompleteFile():
+		def remove_complete_file():
 			partition_mod[DataSplitter.NEntries] -= fi_old[DataProvider.NEntries]
 			partition_mod[DataSplitter.FileList].pop(idx_fi)
 			size_list.pop(idx_fi)
 
-		def replaceCompleteFile():
+		def replace_complete_file():
 			partition_mod[DataSplitter.NEntries] += fi_new[DataProvider.NEntries]
 			partition_mod[DataSplitter.NEntries] -= fi_old[DataProvider.NEntries]
 			size_list[idx_fi] = fi_new[DataProvider.NEntries]
@@ -243,13 +244,13 @@ class DataSplitter(ConfigurablePlugin):
 					expand_outside()
 					partition_mod[DataSplitter.Comment] += '[last_add_1] '
 				else:
-					replaceCompleteFile()
+					replace_complete_file()
 					partition_mod[DataSplitter.Comment] += '[last_add_2] '
 			elif coverLast > fi_new[DataProvider.NEntries]:
 				# Change of last file, which changes current coverage
 				partition_mod[DataSplitter.NEntries] -= coverLast
 				partition_mod[DataSplitter.NEntries] += fi_old[DataProvider.NEntries]
-				replaceCompleteFile()
+				replace_complete_file()
 				partition_mod[DataSplitter.Comment] += '[last_add_3] '
 			else:
 				# Change of last file outside of current partition
@@ -267,7 +268,7 @@ class DataSplitter(ConfigurablePlugin):
 					if following < shrinkage:
 						# Covered area of first file shrinks
 						partition_mod[DataSplitter.NEntries] += following
-						replaceCompleteFile()
+						replace_complete_file()
 						partition_mod[DataSplitter.Comment] += '[first_add_1] '
 					else:
 						# First file changes outside of current partition
@@ -276,7 +277,7 @@ class DataSplitter(ConfigurablePlugin):
 				else:
 					# Change of first file ending in current partition - One could try to
 					# 'reverse fix' expanding files to allow expansion via adding only the expanding part
-					replaceCompleteFile()
+					replace_complete_file()
 					partition_mod[DataSplitter.Comment] += '[first_add_3] '
 			else:
 				# Removal of first file from current partition
@@ -284,14 +285,14 @@ class DataSplitter(ConfigurablePlugin):
 				partition_mod[DataSplitter.NEntries] += partition_mod.get(DataSplitter.Skipped, 0)
 				if DataSplitter.Skipped in partition_mod:
 					partition_mod[DataSplitter.Skipped] = 0
-				removeCompleteFile()
+				remove_complete_file()
 				return False
 
 		else:
 			# File in the middle is affected - solution very simple :)
 			# Replace file - expanding files could be swapped to the (fully contained) end
 			# to allow expansion via adding only the expanding part
-			replaceCompleteFile()
+			replace_complete_file()
 			partition_mod[DataSplitter.Comment] += '[middle_add_1] '
 		return True
 
@@ -379,13 +380,16 @@ class DataSplitter(ConfigurablePlugin):
 		else:
 			resync_iter = self._resync_iter_raw(block_list_added, block_list_missing, block_list_matching)
 
-		for (partition_num, partition, proc_mode) in resync_iter:
-			if partition_num:
-				if proc_mode == ResyncMode.complete:
-					result_redo.append(partition_num)
-				if proc_mode == ResyncMode.disable:
-					result_disable.append(partition_num)
-			yield partition
+		try:
+			for (partition_num, partition, proc_mode) in resync_iter:
+				if partition_num:
+					if proc_mode == ResyncMode.complete:
+						result_redo.append(partition_num)
+					if proc_mode == ResyncMode.disable:
+						result_disable.append(partition_num)
+				yield partition
+		except Exception:
+			raise PartitionError('Unable to resync %r' % self._datasource_name)
 
 	def _resync_iter_raw(self, block_list_added, block_list_missing, block_list_matching):
 		# Process partitions

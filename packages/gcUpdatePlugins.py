@@ -25,7 +25,9 @@ if __name__ == '__main__':
 				return False
 		return True
 
-	for package in os.listdir(base_dir):
+	package_list = os.listdir(base_dir)
+	package_list.sort()
+	for package in package_list:
 		package = os.path.abspath(os.path.join(base_dir, package))
 		if os.path.isdir(package):
 			create_plugin_file(package, select)

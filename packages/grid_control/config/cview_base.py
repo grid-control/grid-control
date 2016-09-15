@@ -13,12 +13,10 @@
 # | limitations under the License.
 
 import logging
-from grid_control.config.config_entry import ConfigEntry, ConfigError, noDefault, standardConfigForm
+from grid_control.config.config_entry import ConfigEntry, ConfigError, standardConfigForm
 from grid_control.utils.data_structures import makeEnum
 from hpfwk import AbstractError, Plugin
-from python_compat import ichain, imap, lfilter, sorted
-
-selectorUnchanged = makeEnum(['selector_unchanged'])
+from python_compat import ichain, imap, lfilter, sorted, unspecified
 
 class ConfigView(Plugin):
 	def __init__(self, name, parent = None):
@@ -129,18 +127,18 @@ class HistoricalConfigView(ConfigView):
 		return self._matchEntries(self._curContainer)
 
 	def _getEntry(self, option_list, defaultEntry, defaultEntry_fallback):
-		if defaultEntry.value != noDefault:
+		if not unspecified(defaultEntry.value):
 			self._curContainer.setDefault(defaultEntry)
 		# Assemble matching config entries and combine them
 		entries = self._matchEntries(self._curContainer, option_list)
-		if defaultEntry.value != noDefault:
+		if not unspecified(defaultEntry.value):
 			entries.append(defaultEntry_fallback)
 		self._log.log(logging.DEBUG1, 'Used config entries:')
 		for entry in entries:
 			self._log.log(logging.DEBUG1, '  %s (%s | %s)', entry.format(printSection = True), entry.source, entry.order)
 		curEntry = ConfigEntry.combineEntries(entries)
 		# Ensure that fallback default value is stored in persistent storage
-		if (defaultEntry.value != noDefault) and defaultEntry_fallback.used:
+		if defaultEntry_fallback.used and not unspecified(defaultEntry.value):
 			self._curContainer.setDefault(defaultEntry_fallback)
 		return curEntry
 
@@ -184,7 +182,7 @@ class HistoricalConfigView(ConfigView):
 # Simple ConfigView implementation
 class SimpleConfigView(HistoricalConfigView):
 	def __init__(self, name, oldContainer, curContainer, parent = None,
-			setSections = selectorUnchanged, addSections = None):
+			setSections = unspecified, addSections = None):
 		HistoricalConfigView.__init__(self, name, oldContainer, curContainer, parent or self)
 		self._initVariable(parent or self, '_cfgSections', None, setSections, addSections, standardConfigForm)
 
@@ -197,7 +195,7 @@ class SimpleConfigView(HistoricalConfigView):
 			result = getattr(parent, memberName)
 		if setValue is None:
 			result = setValue
-		elif setValue != selectorUnchanged:
+		elif not unspecified(setValue):
 			result = normValues(list(collect(setValue)))
 		# Add to settings
 		if addValue and (result is not None):

@@ -118,6 +118,8 @@
 
      * grid_control.datasets.dproc_basic LocationDataProcessor location
 
+     * grid_control.datasets.dproc_merge MergeDataProcessor merge
+
      * grid_control.datasets.dproc_base MultiDataProcessor
 
      * grid_control.datasets.dproc_nick NickNameProducer
@@ -131,6 +133,8 @@
      * grid_control.datasets.dproc_pestimate PartitionEstimator estimate SplitSettingEstimator
 
      * grid_control.datasets.dproc_sort SortingDataProcessor sort
+
+     * grid_control.datasets.dproc_merge SplitDataProcessor split
 
      * grid_control.datasets.dproc_stats StatsDataProcessor
 
@@ -168,11 +172,11 @@
 
       * grid_control.datasets.splitter_basic FileBoundarySplitter files
 
-      * grid_control.datasets.splitter_basic HybridSplitter hybrid
-
-      * grid_control.datasets.splitter_meta MetadataSplitter
+      * grid_control.datasets.splitter_meta FileClassSplitter
 
        * grid_control.datasets.splitter_meta UserMetadataSplitter metadata
+
+      * grid_control.datasets.splitter_basic HybridSplitter hybrid
 
     * grid_control.gui GUI
 

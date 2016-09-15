@@ -14,7 +14,7 @@
 
 import os, sys, itertools
 
-def get_compat(*args):
+def _get_compat(*args):
 	for name in args:
 		module, member = name.split('.', 1)
 		try:
@@ -25,13 +25,21 @@ def get_compat(*args):
 		return result
 	raise Exception('Builtins not found: ' + str.join(',', args))
 
-def get_listified(fun):
+def _get_listified(fun):
 	def function(*args):
 		return list(fun(*args))
 	return function
 
 def identity(x):
 	return x
+
+def unspecified(value):
+	return value == unspecified
+
+def when_unspecified(value, result):
+	if value == unspecified:
+		return result
+	return value
 
 try:	# itemgetter >= Python 2.4
 	from operator import itemgetter
@@ -68,11 +76,11 @@ except Exception:
 		return str_parts
 
 try:	# sorted >= Python 2.4
-	sorted = get_compat('__builtin__.sorted', 'builtins.sorted')
+	sorted = _get_compat('__builtin__.sorted', 'builtins.sorted')
 	def sort_inplace(unsorted_iterable, key = identity):
 		unsorted_iterable.sort(key = key)
 except Exception:
-	builtin_cmp = get_compat('__builtin__.cmp')
+	builtin_cmp = _get_compat('__builtin__.cmp')
 	def sort_inplace(unsorted_iterable, key = identity):
 		unsorted_iterable.sort(lambda a, b: builtin_cmp(key(a), key(b)))
 	def sorted(unsorted_iterable, key = None, reverse = False):
@@ -95,7 +103,7 @@ except Exception:
 		return unsorted_list
 
 try:	# any >= Python 2.5
-	any = get_compat('__builtin__.any', 'builtins.any')
+	any = _get_compat('__builtin__.any', 'builtins.any')
 except Exception:
 	def any(iterable):
 		for element in iterable:
@@ -104,7 +112,7 @@ except Exception:
 		return False
 
 try:	# all >= Python 2.5
-	all = get_compat('__builtin__.all', 'builtins.all')
+	all = _get_compat('__builtin__.all', 'builtins.all')
 except Exception:
 	def all(iterable):
 		for element in iterable:
@@ -132,7 +140,7 @@ except Exception:
 		return os.path.join(*rel_list)
 
 try:	# next >= Python 2.6
-	next = get_compat('__builtin__.next', 'builtins.next')
+	next = _get_compat('__builtin__.next', 'builtins.next')
 except Exception:
 	def next(it, *default):
 		try:
@@ -171,30 +179,30 @@ if sys.version_info[0] < 3: # moved to iterator output for < Python 3.0
 	lrange = range
 	lzip = zip
 else:
-	lfilter = get_listified(filter)
-	lmap = get_listified(map)
-	lrange = get_listified(range)
-	lzip = get_listified(zip)
+	lfilter = _get_listified(filter)
+	lmap = _get_listified(map)
+	lrange = _get_listified(range)
+	lzip = _get_listified(zip)
 
 try: # Python <= 2.6
 	ichain = itertools.chain.from_iterable
 except Exception:
 	ichain = lambda iterables: itertools.chain(*iterables)
-lchain = get_listified(ichain)
+lchain = _get_listified(ichain)
 
 ismap = itertools.starmap
-lsmap = get_listified(ismap)
-ifilter = get_compat('itertools.ifilter', 'builtins.filter') # itertools.ifilter < Python 3.0
-imap = get_compat('itertools.imap', 'builtins.map') # itertools.imap < Python 3.0
-irange = get_compat('__builtin__.xrange', 'builtins.range') # xrange < Python 3.0
-izip = get_compat('itertools.izip', 'builtins.zip') # itertools.izip < Python 3.0
-reduce = get_compat('__builtin__.reduce', 'functools.reduce') # reduce < Python 3.0
-unicode = get_compat('__builtin__.unicode', 'builtins.str') # unicode < Python 3.0
-get_user_input = get_compat('__builtin__.raw_input', 'builtins.input') # raw_input < Python 3.0
-md5 = get_compat('hashlib.md5', 'md5.md5') # hashlib >= Python 2.5
-set = get_compat('__builtin__.set', 'builtins.set', 'sets.Set') # set >= Python 2.4
-get_current_thread = get_compat('threading.current_thread', 'threading.currentThread') # current_thread >= Python 2.6
-exit_without_cleanup = get_compat('os._exit')
+lsmap = _get_listified(ismap)
+ifilter = _get_compat('itertools.ifilter', 'builtins.filter') # itertools.ifilter < Python 3.0
+imap = _get_compat('itertools.imap', 'builtins.map') # itertools.imap < Python 3.0
+irange = _get_compat('__builtin__.xrange', 'builtins.range') # xrange < Python 3.0
+izip = _get_compat('itertools.izip', 'builtins.zip') # itertools.izip < Python 3.0
+reduce = _get_compat('__builtin__.reduce', 'functools.reduce') # reduce < Python 3.0
+unicode = _get_compat('__builtin__.unicode', 'builtins.str') # unicode < Python 3.0
+get_user_input = _get_compat('__builtin__.raw_input', 'builtins.input') # raw_input < Python 3.0
+md5 = _get_compat('hashlib.md5', 'md5.md5') # hashlib >= Python 2.5
+set = _get_compat('__builtin__.set', 'builtins.set', 'sets.Set') # set >= Python 2.4
+get_current_thread = _get_compat('threading.current_thread', 'threading.currentThread') # current_thread >= Python 2.6
+exit_without_cleanup = _get_compat('os._exit')
 
 def get_thread_name(t):
 	try: # Python >= 2.6
@@ -238,13 +246,12 @@ if sys.version_info[0] < 3:	# unicode encoding <= Python 3
 else:
 	md5_hex = lambda value: md5(str2bytes(value)).hexdigest()
 
-
 __all__ = ['all', 'any', 'bytes2str', 'BytesBuffer', 'BytesBufferBase', 'exit_without_cleanup',
 	'get_current_thread', 'get_thread_name', 'get_user_input',
 	'ichain', 'identity', 'ifilter', 'imap', 'irange', 'ismap', 'itemgetter', 'izip', 'json',
 	'lchain', 'lfilter', 'lmap', 'lrange', 'lru_cache', 'lsmap', 'lzip', 'md5', 'md5_hex',
 	'next', 'NullHandler', 'parsedate', 'reduce', 'relpath', 'rsplit', 'set',
-	'sort_inplace', 'sorted', 'str2bytes', 'StringBuffer', 'tarfile', 'unicode']
+	'sort_inplace', 'sorted', 'str2bytes', 'StringBuffer', 'tarfile', 'unicode', 'unspecified']
 
 if __name__ == '__main__':
 	import re, doctest, logging
