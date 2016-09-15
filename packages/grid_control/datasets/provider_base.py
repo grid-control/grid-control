@@ -166,7 +166,7 @@ class DataProvider(ConfigurablePlugin):
 		self._cache_dataset = None
 
 
-	def _classify_metadata_keys(block):
+	def _classify_metadata_name_list(block):
 		def metadataHash(fi, idx):
 			if idx < len(fi[DataProvider.Metadata]):
 				return md5_hex(repr(fi[DataProvider.Metadata][idx]))
@@ -180,7 +180,7 @@ class DataProvider(ConfigurablePlugin):
 			idxList = ifilter(lambda idx: (idx in cMetadataIdx) == common, irange(len(block[DataProvider.Metadata])))
 			return sorted(idxList, key = lambda idx: block[DataProvider.Metadata][idx])
 		return (filterC(True), filterC(False))
-	_classify_metadata_keys = staticmethod(_classify_metadata_keys)
+	_classify_metadata_name_list = staticmethod(_classify_metadata_name_list)
 
 
 	def get_hash(self):
@@ -214,7 +214,7 @@ class DataProvider(ConfigurablePlugin):
 
 			writeMetadata = (DataProvider.Metadata in block) and not stripMetadata
 			if writeMetadata:
-				(idxListBlock, idxListFile) = DataProvider._classify_metadata_keys(block)
+				(idxListBlock, idxListFile) = DataProvider._classify_metadata_name_list(block)
 				def getMetadata(fi, idxList):
 					idxList = ifilter(lambda idx: idx < len(fi[DataProvider.Metadata]), idxList)
 					return json.dumps(lmap(lambda idx: fi[DataProvider.Metadata][idx], idxList))
