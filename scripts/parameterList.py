@@ -47,8 +47,9 @@ log = logging.getLogger()
 
 # Create dataset parameter source
 class DummySplitter:
-	def get_job_len(self):
+	def get_partition_len(self):
 		return 3
+
 	def get_partition(self, pNum):
 		mkEntry = lambda ds, fl, n, nick: { DataSplitter.Dataset: ds, DataSplitter.Nickname: nick,
 			DataSplitter.FileList: fl, DataSplitter.NEntries: n }
