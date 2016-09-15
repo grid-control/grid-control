@@ -12,7 +12,9 @@
 #-#  See the License for the specific language governing permissions and
 #-#  limitations under the License.
 
-import os, sys, itertools
+import os, sys, logging, itertools
+
+_log = logging.getLogger('python_compat')
 
 def _get_compat(*args):
 	for name in args:
@@ -21,7 +23,7 @@ def _get_compat(*args):
 			result = getattr(__import__(module), member)
 		except Exception:
 			continue
-		__import__('logging').getLogger('python_compat').debug('using %s', name)
+		_log.debug('using %s', name)
 		return result
 	raise Exception('Builtins not found: ' + str.join(',', args))
 
@@ -71,18 +73,21 @@ except Exception:
 		['a.b.c.d.e', 'f', 'g']
 		"""
 		str_parts = x.split(sep)
-		if len(str_parts) > 1:
+		if (maxsplit is not None) and (len(str_parts) > 1):
 			return [str.join(sep, str_parts[:len(str_parts)-maxsplit])] + str_parts[len(str_parts)-maxsplit:]
 		return str_parts
 
 try:	# sorted >= Python 2.4
 	sorted = _get_compat('__builtin__.sorted', 'builtins.sorted')
-	def sort_inplace(unsorted_iterable, key = identity):
+	def sort_inplace(unsorted_iterable, key = None):
 		unsorted_iterable.sort(key = key)
 except Exception:
 	builtin_cmp = _get_compat('__builtin__.cmp')
-	def sort_inplace(unsorted_iterable, key = identity):
-		unsorted_iterable.sort(lambda a, b: builtin_cmp(key(a), key(b)))
+	def sort_inplace(unsorted_iterable, key = None):
+		if key is None:
+			unsorted_iterable.sort()
+		else:
+			unsorted_iterable.sort(lambda a, b: builtin_cmp(key(a), key(b)))
 	def sorted(unsorted_iterable, key = None, reverse = False):
 		""" Sort list by either using the function key that returns
 		the key to sort by - default is the identity function.
@@ -142,12 +147,12 @@ except Exception:
 try:	# next >= Python 2.6
 	next = _get_compat('__builtin__.next', 'builtins.next')
 except Exception:
-	def next(it, *default):
+	def next(it, default = unspecified, *args):
 		try:
 			return it.next()
 		except Exception:
-			if default:
-				return default[0]
+			if not unspecified(default):
+				return default
 			raise
 
 try:	# io >= Python 2.6 (unicode)
@@ -165,14 +170,6 @@ except Exception:
 	bytes2str = lambda x: x.decode('utf-8')
 	str2bytes = lambda x: x.encode('utf-8')
 
-try:	# logging.NullHandler >= Python 2.7
-	import logging
-	NullHandler = logging.NullHandler
-except Exception:
-	class NullHandler(logging.Handler):
-		def emit(self, record):
-			pass
-
 if sys.version_info[0] < 3: # moved to iterator output for < Python 3.0
 	lfilter = filter
 	lmap = map
@@ -184,7 +181,7 @@ else:
 	lrange = _get_listified(range)
 	lzip = _get_listified(zip)
 
-try: # Python <= 2.6
+try:	# Python <= 2.6
 	ichain = itertools.chain.from_iterable
 except Exception:
 	ichain = lambda iterables: itertools.chain(*iterables)

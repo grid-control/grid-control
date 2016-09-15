@@ -301,7 +301,7 @@ class DictLookup(Plugin):
 		result = list(self._lookup(value, is_selector))
 		if (None in self._values) and (self._always_default or not result):
 			result.append(self._values[None])
-		if unspecified(default) and not result:
+		if not (result or unspecified(default)):
 			result.append(default)
 		if not self._only_first:
 			return result

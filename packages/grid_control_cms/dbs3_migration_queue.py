@@ -20,7 +20,7 @@ except ImportError:
     deque = list
 from hpfwk import NestedException
 from time import time
-from python_compat import NullHandler, set
+from python_compat import set
 
 class MigrationRequestedState(object):
     def __init__(self, migration_task):
@@ -193,11 +193,9 @@ def do_migration(queue):
 
 
 if __name__ == '__main__':
-    #set-up logging
-    logging.basicConfig(format='%(levelname)s: %(message)s')
+    from grid_control.logging_setup import logging_defaults
+    logging_defaults()
     logger = logging.getLogger('dbs3-migration')
-    logger.addHandler(NullHandler())
-    logger.setLevel(logging.DEBUG)
 
     block_names = ['test1', 'test1', 'test2', 'test3', 'test4']
     migration_queue = DBS3MigrationQueue()
