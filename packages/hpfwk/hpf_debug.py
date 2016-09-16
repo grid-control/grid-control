@@ -15,9 +15,8 @@
 import sys, logging, threading
 from hpfwk.hpf_exceptions import NestedException, NestedExceptionHelper, clear_current_exception, impl_detail, parse_frame
 
-def collect_exception_infos(exception_type, exValue, exception_traceback):
+def collect_exception_infos(exception_type, exception_value, exception_traceback):
 	# Collect full traceback and exception context
-	topLevel = NestedExceptionHelper(exValue, exception_traceback)
 
 	exInfo = []
 	def collectRecursive(ex, cur_depth = -1, trackingID = 'T'):
@@ -35,7 +34,7 @@ def collect_exception_infos(exception_type, exValue, exception_traceback):
 				frame['trackingID'] = trackingID
 				yield frame
 
-	traceback = list(collectRecursive(topLevel))
+	traceback = list(collectRecursive(NestedExceptionHelper(exception_value, exception_traceback)))
 	return (traceback, exInfo) # skipping top-level exception helper
 
 def repr_safe(obj, verbose):
@@ -107,14 +106,14 @@ def format_ex_tree(ex_info_list, showExStack = 2):
 	if showExStack == 1:
 		ex_info_list = ex_info_list[-2:]
 	for info in ex_info_list:
-		(exValue, exDepth, _) = info
+		(exception_value, exDepth, _) = info
 		if showExStack == 1:
 			exDepth = 0
-		result = '%s%s: %s' % ('  ' * exDepth, exValue.__class__.__name__, exValue)
-		if (showExStack > 1) and hasattr(exValue, 'args') and not isinstance(exValue, NestedException):
-			if ((len(exValue.args) == 1) and (str(exValue.args[0]) not in str(exValue))) or (len(exValue.args) > 1):
+		result = '%s%s: %s' % ('  ' * exDepth, exception_value.__class__.__name__, exception_value)
+		if (showExStack > 1) and hasattr(exception_value, 'args') and not isinstance(exception_value, NestedException):
+			if ((len(exception_value.args) == 1) and (str(exception_value.args[0]) not in str(exception_value))) or (len(exception_value.args) > 1):
 				try:
-					result += '\n%s%s  %s' % ('  ' * exDepth, len(exValue.__class__.__name__) * ' ', exValue.args)
+					result += '\n%s%s  %s' % ('  ' * exDepth, len(exception_value.__class__.__name__) * ' ', exception_value.args)
 				except Exception:
 					clear_current_exception()
 		ex_msg_list.append(result)
