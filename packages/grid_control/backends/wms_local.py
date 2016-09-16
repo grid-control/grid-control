@@ -20,8 +20,11 @@ from grid_control.backends.wms import BackendError, BasicWMS, WMS
 from grid_control.utils.activity import Activity
 from grid_control.utils.file_objects import VirtualFile
 from grid_control.utils.process_base import LocalProcess
+from grid_control.utils.thread_tools import GCLock
 from hpfwk import AbstractError, ExceptionCollector
 from python_compat import ifilter, imap, ismap, lchain, lfilter, lmap
+
+local_purge_lock = GCLock()
 
 class SandboxHelper(object):
 	def __init__(self, config):
@@ -59,10 +62,13 @@ class LocalPurgeJobs(CancelJobs):
 			if path is None:
 				self._log.warning('Sandbox for job %r could not be found', wmsID)
 				continue
+			local_purge_lock.acquire()
 			try:
 				shutil.rmtree(path)
 			except Exception:
+				local_purge_lock.release()
 				raise BackendError('Sandbox for job %r could not be deleted', wmsID)
+			local_purge_lock.release()
 			yield (wmsID,)
 		activity.finish()
 
