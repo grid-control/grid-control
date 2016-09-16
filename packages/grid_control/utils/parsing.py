@@ -127,7 +127,7 @@ def strDictLong(value, parser = identity, strfun = str):
 	return result + str.join('', imap(lambda k: fmt % (k, strfun(srcdict[k])), srckeys))
 
 
-def split_with_stack(tokens, process_token, exMsg, exType = Exception):
+def split_with_stack(tokens, process_token, exMsg, exception_type = Exception):
 	buffer = ''
 	stack = []
 	position = 0
@@ -142,10 +142,10 @@ def split_with_stack(tokens, process_token, exMsg, exType = Exception):
 		else:
 			yield token
 	if stack:
-		raise exType(exMsg % str.join('; ', imap(lambda item_pos: '%r at position %d' % item_pos, stack)))
+		raise exception_type(exMsg % str.join('; ', imap(lambda item_pos: '%r at position %d' % item_pos, stack)))
 
 
-def split_quotes(tokens, quotes = None, exType = Exception):
+def split_quotes(tokens, quotes = None, exception_type = Exception):
 	quotes = quotes or ['"', "'"]
 	def _split_quotes(position, token, stack):
 		if token in quotes:
@@ -155,29 +155,29 @@ def split_quotes(tokens, quotes = None, exType = Exception):
 					return True
 			else:
 				stack.append((token, position))
-	return split_with_stack(tokens, _split_quotes, 'Unclosed quotes: %s', exType)
+	return split_with_stack(tokens, _split_quotes, 'Unclosed quotes: %s', exception_type)
 
 
-def split_brackets(tokens, brackets = None, exType = Exception):
+def split_brackets(tokens, brackets = None, exception_type = Exception):
 	map_close_to_open = dict(imap(lambda x: (x[1], x[0]), brackets or ['()', '{}', '[]']))
 	def _split_brackets(position, token, stack):
 		if token in map_close_to_open.values():
 			stack.append((token, position))
 		elif token in map_close_to_open.keys():
 			if not stack:
-				raise exType('Closing bracket %r at position %d is without opening bracket' % (token, position))
+				raise exception_type('Closing bracket %r at position %d is without opening bracket' % (token, position))
 			elif stack[-1][0] == map_close_to_open[token]:
 				stack.pop()
 				if not stack:
 					return True
 			else:
-				raise exType('Closing bracket %r at position %d does not match bracket %r at position %d' % (token, position, stack[-1][0], stack[-1][1]))
-	return split_with_stack(tokens, _split_brackets, 'Unclosed brackets: %s', exType)
+				raise exception_type('Closing bracket %r at position %d does not match bracket %r at position %d' % (token, position, stack[-1][0], stack[-1][1]))
+	return split_with_stack(tokens, _split_brackets, 'Unclosed brackets: %s', exception_type)
 
 
-def split_advanced(tokens, doEmit, addEmitToken, quotes = None, brackets = None, exType = Exception):
+def split_advanced(tokens, doEmit, addEmitToken, quotes = None, brackets = None, exception_type = Exception):
 	buffer = None
-	tokens = split_brackets(split_quotes(tokens, quotes, exType), brackets, exType)
+	tokens = split_brackets(split_quotes(tokens, quotes, exception_type), brackets, exception_type)
 	token = next(tokens, None)
 	while token:
 		if buffer is None:

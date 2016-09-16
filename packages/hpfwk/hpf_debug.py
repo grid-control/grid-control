@@ -15,8 +15,8 @@
 import sys, logging, threading
 from hpfwk.hpf_exceptions import NestedException, NestedExceptionHelper, clear_current_exception, impl_detail, parse_frame
 
-# Collect full traceback and exception context
-def collect_exception_infos(exType, exValue, exTraceback):
+def collect_exception_infos(exception_type, exValue, exTraceback):
+	# Collect full traceback and exception context
 	topLevel = NestedExceptionHelper(exValue, exTraceback)
 
 	exInfo = []
@@ -47,8 +47,8 @@ def repr_safe(obj, verbose):
 		return value
 	return value[:200] + ' ... [length:%d]' % len(value)
 
-# Function to log local and class variables
 def format_variables(variables, showLongVariables = False):
+	# Function to log local and class variables
 	maxlen = 0
 	for var in variables:
 		maxlen = max(maxlen, len(var))
@@ -81,8 +81,8 @@ def format_variables(variables, showLongVariables = False):
 	if variables or (classVariable is not None):
 		yield ''
 
-# Function to log source code and variables from frames
 def format_stack(frames, codeContext = 0, showVariables = True, showLongVariables = True):
+	# Function to log source code and variables from frames
 	import linecache
 	linecache.checkcache()
 	for frame in frames:
@@ -147,8 +147,8 @@ def format_exception(exc_info, showCodeContext = 0, showVariables = 0, showFileS
 
 	return str.join('\n', msg_parts)
 
-# Signal handler for state dump requests
 def handle_dump_interrupt(sig, frame):
+	# Signal handler for state dump requests
 	variables = {'_frame': frame}
 	if frame:
 		variables.update(frame.f_globals)
@@ -178,6 +178,6 @@ def create_debug_console(variables):
 	console.push('readline.set_completer(rlcompleter.Completer(globals()).complete)')
 	return console
 
-# Signal handler for debug session requests
 def handle_debug_interrupt(sig = None, frame = None):
+	# Signal handler for debug session requests
 	create_debug_console(handle_dump_interrupt(sig, frame)).interact('debug mode enabled!')
