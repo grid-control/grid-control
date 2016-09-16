@@ -67,9 +67,9 @@ def parse_frame(frame):
 	return _parse_helper(_parse_frame, frame)
 
 class NestedExceptionHelper(object):
-	def __init__(self, exValue, exTraceback):
+	def __init__(self, exValue, exception_traceback):
 		self.nested = [exValue]
-		self.traceback = parse_traceback(exTraceback)
+		self.traceback = parse_traceback(exception_traceback)
 
 class NestedException(Exception):
 	# nested exception base class

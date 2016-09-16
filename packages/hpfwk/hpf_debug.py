@@ -15,9 +15,9 @@
 import sys, logging, threading
 from hpfwk.hpf_exceptions import NestedException, NestedExceptionHelper, clear_current_exception, impl_detail, parse_frame
 
-def collect_exception_infos(exception_type, exValue, exTraceback):
+def collect_exception_infos(exception_type, exValue, exception_traceback):
 	# Collect full traceback and exception context
-	topLevel = NestedExceptionHelper(exValue, exTraceback)
+	topLevel = NestedExceptionHelper(exValue, exception_traceback)
 
 	exInfo = []
 	def collectRecursive(ex, cur_depth = -1, trackingID = 'T'):
