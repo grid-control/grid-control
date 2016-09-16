@@ -12,7 +12,6 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-from grid_control.utils.data_structures import makeEnum
 from grid_control.utils.parsing import strDict
 from hpfwk import APIError, NestedException, clear_current_exception
 from python_compat import ichain, ifilter, imap, lfilter, lmap, set, sorted, unspecified

@@ -1,4 +1,4 @@
-# | Copyright 2014-2016 Karlsruhe Institute of Technology
+# | Copyright 2009-2016 Karlsruhe Institute of Technology
 # |
 # | Licensed under the Apache License, Version 2.0 (the "License");
 # | you may not use this file except in compliance with the License.
@@ -13,7 +13,6 @@
 # | limitations under the License.
 
 from grid_control.datasets.dproc_base import DataProcessor
-from grid_control.datasets.provider_base import DataProvider
 from grid_control.utils.data_structures import makeEnum
 from hpfwk import AbstractError
 

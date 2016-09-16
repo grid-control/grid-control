@@ -15,7 +15,6 @@
 import os, inspect, logging
 from grid_control.config.chandlers_base import changeImpossible
 from grid_control.config.config_entry import ConfigEntry, ConfigError, standardConfigForm
-from grid_control.utils.data_structures import makeEnum
 from hpfwk import APIError
 from python_compat import unspecified, when_unspecified
 
