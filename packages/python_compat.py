@@ -248,7 +248,8 @@ __all__ = ['all', 'any', 'bytes2str', 'BytesBuffer', 'BytesBufferBase', 'exit_wi
 	'ichain', 'identity', 'ifilter', 'imap', 'irange', 'ismap', 'itemgetter', 'izip', 'json',
 	'lchain', 'lfilter', 'lmap', 'lrange', 'lru_cache', 'lsmap', 'lzip', 'md5', 'md5_hex',
 	'next', 'NullHandler', 'parsedate', 'reduce', 'relpath', 'rsplit', 'set',
-	'sort_inplace', 'sorted', 'str2bytes', 'StringBuffer', 'tarfile', 'unicode', 'unspecified']
+	'sort_inplace', 'sorted', 'str2bytes', 'StringBuffer', 'tarfile', 'unicode',
+	'unspecified', 'when_unspecified']
 
 if __name__ == '__main__':
 	import re, doctest, logging

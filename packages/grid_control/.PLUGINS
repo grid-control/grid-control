@@ -118,7 +118,7 @@
 
      * grid_control.datasets.dproc_basic LocationDataProcessor location
 
-     * grid_control.datasets.dproc_merge MergeDataProcessor merge
+     * grid_control.datasets.dproc_reorg MergeDataProcessor merge
 
      * grid_control.datasets.dproc_base MultiDataProcessor
 
@@ -134,7 +134,7 @@
 
      * grid_control.datasets.dproc_sort SortingDataProcessor sort
 
-     * grid_control.datasets.dproc_merge SplitDataProcessor split
+     * grid_control.datasets.dproc_reorg SplitDataProcessor split
 
      * grid_control.datasets.dproc_stats StatsDataProcessor
 

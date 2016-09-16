@@ -14,7 +14,6 @@
 
 import logging
 from grid_control.config.config_entry import ConfigEntry, ConfigError, standardConfigForm
-from grid_control.utils.data_structures import makeEnum
 from hpfwk import AbstractError, Plugin
 from python_compat import ichain, imap, lfilter, sorted, unspecified
 

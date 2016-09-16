@@ -15,7 +15,7 @@
 from grid_control.datasets.provider_base import DataProvider
 from grid_control.datasets.splitter_base import DataSplitter
 from hpfwk import AbstractError
-from python_compat import imap, reduce, itemgetter
+from python_compat import imap, itemgetter, reduce
 
 class FileLevelSplitter(DataSplitter):
 	# Base class for (stackable) splitters with file level granularity

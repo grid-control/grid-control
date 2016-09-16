@@ -17,7 +17,7 @@ import os, sys, logging
 from gcSupport import Job, JobSelector, Options, Plugin, getConfig, scriptOptions
 from grid_control import utils
 from grid_control.datasets import DataProvider, DataSplitter
-from python_compat import BytesBuffer, imap, irange, lmap, lzip
+from python_compat import BytesBuffer, imap, lmap, lzip
 
 parser = Options()
 parser.section('back', 'Backend debugging', '%s [<backend specifier>] ...')
