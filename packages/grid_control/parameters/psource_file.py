@@ -20,6 +20,47 @@ from grid_control.utils.file_objects import ZipFile
 from grid_control.utils.parsing import parseJSON, strDict
 from python_compat import ifilter, imap, izip, json, lfilter, lmap, sorted
 
+
+class CSVParameterSource(InternalParameterSource): # Reader for CSV files
+	alias_list = ['csv']
+
+	def __init__(self, fn, format = 'sniffed'):
+		(self._fn, self._format) = (fn, format)
+		fp = open(fn)
+		try:
+			first_line = fp.readline()
+			sniffed = csv.Sniffer().sniff(first_line)
+			csv.register_dialect('sniffed', sniffed)
+			tmp = list(csv.DictReader(fp, first_line.strip().split(sniffed.delimiter) + [None], dialect = format))
+		finally:
+			fp.close()
+		for entry in tmp:
+			entry.pop(None, None)
+			if None in entry.values():
+				raise ParameterError('Malformed entry in csv file %r: {%s}' % (fn, strDict(entry)))
+
+		def cleanup_dict(d):
+			# strip all key value entries
+			tmp = tuple(imap(lambda item: lmap(str.strip, item), d.items()))
+			# filter empty parameters
+			return lfilter(lambda k_v: k_v[0] != '', tmp)
+		keys = []
+		if len(tmp):
+			keys = sorted(imap(ParameterMetadata, tmp[0].keys()), key = lambda k: k.value)
+		values = lmap(lambda d: dict(cleanup_dict(d)), tmp)
+		InternalParameterSource.__init__(self, values, keys)
+
+	def __repr__(self):
+		if self._format == 'sniffed':
+			return 'csv(%r)' % self._fn
+		return 'csv(%r, %r)' % (self._fn, self._format)
+
+	def create_psrc(cls, pconfig, repository, src = 'CSV'): # pylint:disable=arguments-differ
+		fn = pconfig.get(src, 'source')
+		return CSVParameterSource(fn, pconfig.get(src, 'format', 'sniffed'))
+	create_psrc = classmethod(create_psrc)
+
+
 class GCDumpParameterSource(ParameterSource): # Reader for grid-control dump files - get_psrc_hash is not implemented to keep it from being used by users
 	def __init__(self, fn):
 		ParameterSource.__init__(self)
@@ -66,43 +107,3 @@ class GCDumpParameterSource(ParameterSource): # Reader for grid-control dump fil
 		finally:
 			fp.close()
 	write = classmethod(write)
-
-
-class CSVParameterSource(InternalParameterSource): # Reader for CSV files
-	alias = ['csv']
-
-	def __init__(self, fn, format = 'sniffed'):
-		(self._fn, self._format) = (fn, format)
-		fp = open(fn)
-		try:
-			first_line = fp.readline()
-			sniffed = csv.Sniffer().sniff(first_line)
-			csv.register_dialect('sniffed', sniffed)
-			tmp = list(csv.DictReader(fp, first_line.strip().split(sniffed.delimiter) + [None], dialect = format))
-		finally:
-			fp.close()
-		for entry in tmp:
-			entry.pop(None, None)
-			if None in entry.values():
-				raise ParameterError('Malformed entry in csv file %r: {%s}' % (fn, strDict(entry)))
-
-		def cleanup_dict(d):
-			# strip all key value entries
-			tmp = tuple(imap(lambda item: lmap(str.strip, item), d.items()))
-			# filter empty parameters
-			return lfilter(lambda k_v: k_v[0] != '', tmp)
-		keys = []
-		if len(tmp):
-			keys = sorted(imap(ParameterMetadata, tmp[0].keys()), key = lambda k: k.value)
-		values = lmap(lambda d: dict(cleanup_dict(d)), tmp)
-		InternalParameterSource.__init__(self, values, keys)
-
-	def __repr__(self):
-		if self._format == 'sniffed':
-			return 'csv(%r)' % self._fn
-		return 'csv(%r, %r)' % (self._fn, self._format)
-
-	def create_psrc(cls, pconfig, repository, src = 'CSV'): # pylint:disable=arguments-differ
-		fn = pconfig.get(src, 'source')
-		return CSVParameterSource(fn, pconfig.get(src, 'format', 'sniffed'))
-	create_psrc = classmethod(create_psrc)

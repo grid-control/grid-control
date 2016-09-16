@@ -17,8 +17,9 @@ from grid_control.datasets.dproc_base import DataProcessor
 from grid_control.datasets.provider_base import DataProvider
 from python_compat import imap, itemgetter, lfilter
 
+
 class EmptyDataProcessor(DataProcessor):
-	alias = ['empty']
+	alias_list = ['empty']
 
 	def __init__(self, config, datasource_name, on_change):
 		DataProcessor.__init__(self, config, datasource_name, on_change)
@@ -47,7 +48,7 @@ class EmptyDataProcessor(DataProcessor):
 
 
 class EntriesCountDataProcessor(DataProcessor):
-	alias = ['events', 'EventsCountDataProcessor']
+	alias_list = ['events', 'EventsCountDataProcessor']
 
 	def __init__(self, config, datasource_name, on_change):
 		DataProcessor.__init__(self, config, datasource_name, on_change)
@@ -73,7 +74,7 @@ class EntriesCountDataProcessor(DataProcessor):
 
 
 class LocationDataProcessor(DataProcessor):
-	alias = ['location']
+	alias_list = ['location']
 
 	def __init__(self, config, datasource_name, on_change):
 		DataProcessor.__init__(self, config, datasource_name, on_change)
@@ -93,7 +94,7 @@ class LocationDataProcessor(DataProcessor):
 
 
 class URLCountDataProcessor(DataProcessor):
-	alias = ['files', 'FileCountDataProcessor']
+	alias_list = ['files', 'FileCountDataProcessor']
 
 	def __init__(self, config, datasource_name, on_change):
 		DataProcessor.__init__(self, config, datasource_name, on_change)
@@ -111,7 +112,7 @@ class URLCountDataProcessor(DataProcessor):
 
 
 class URLDataProcessor(DataProcessor):
-	alias = ['ignore', 'FileDataProcessor']
+	alias_list = ['ignore', 'FileDataProcessor']
 
 	def __init__(self, config, datasource_name, on_change):
 		DataProcessor.__init__(self, config, datasource_name, on_change)

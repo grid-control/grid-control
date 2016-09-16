@@ -18,6 +18,7 @@ from grid_control.utils.data_structures import makeEnum
 from hpfwk import AbstractError, NestedException, Plugin, get_current_exception
 from python_compat import bytes2str, ifilter, izip
 
+
 class OutputProcessor(Plugin):
 	def process(self, dn):
 		raise AbstractError

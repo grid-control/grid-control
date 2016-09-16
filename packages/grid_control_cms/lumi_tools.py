@@ -15,6 +15,7 @@
 import os
 from python_compat import imap, json, lmap, sort_inplace
 
+
 def makeint(x):
 	if x.strip().upper() not in ['', 'MAX', 'MIN']:
 		return int(x)

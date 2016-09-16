@@ -20,6 +20,7 @@ from grid_control.parameters.psource_lookup import parse_lookup_factory_args
 from hpfwk import AbstractError
 from python_compat import identity, ifilter, imap, irange, lfilter, lmap, sorted
 
+
 class ParameterFactory(ConfigurablePlugin):
 	tagName = 'parameters'
 
@@ -64,18 +65,18 @@ class BasicParameterFactory(ParameterFactory):
 	def get_source(self, repository):
 		source_list = []
 		for name in self._random_variables:
-			source_list.append(ParameterSource.createInstance('RNGParameterSource', name))
+			source_list.append(ParameterSource.create_instance('RNGParameterSource', name))
 		for (idx, seed) in enumerate(self._random_seeds):
-			source_list.append(ParameterSource.createInstance('CounterParameterSource', 'SEED_%d' % idx, int(seed)))
+			source_list.append(ParameterSource.create_instance('CounterParameterSource', 'SEED_%d' % idx, int(seed)))
 		source_list += self._psrc_list_const + [self._pfactory.get_source(repository)] + self._psrc_list_lookup
-		source = ParameterSource.createInstance('ZipLongParameterSource', *source_list)
+		source = ParameterSource.create_instance('ZipLongParameterSource', *source_list)
 		for (PSourceClass, args) in self._psrc_list_nested:
 			source = PSourceClass(source, *args)
 		if self._req:
-			req_source = ParameterSource.createInstance('RequirementParameterSource')
-			source = ParameterSource.createInstance('ZipLongParameterSource', source, req_source)
+			req_source = ParameterSource.create_instance('RequirementParameterSource')
+			source = ParameterSource.create_instance('ZipLongParameterSource', source, req_source)
 		source = self._use_available_data_psrc(source, repository)
-		return ParameterSource.createInstance('RepeatParameterSource', source, self._repeat)
+		return ParameterSource.create_instance('RepeatParameterSource', source, self._repeat)
 
 	def _register_psrc(self, pconfig, varName):
 		def replace_nonalnum(value):
@@ -88,7 +89,7 @@ class BasicParameterFactory(ParameterFactory):
 			if is_nested: # switch needs elevation beyond local scope
 				self._psrc_list_nested.append((PSourceClass, args))
 			else:
-				ps = PSourceClass.createInstance(PSourceClass.__name__, *args)
+				ps = PSourceClass.create_instance(PSourceClass.__name__, *args)
 				if ps.get_parameter_deps():
 					self._psrc_list_lookup.append(ps)
 				else:
@@ -101,8 +102,8 @@ class BasicParameterFactory(ParameterFactory):
 			if srcName.startswith('dataset:') and (dataSource not in used_sources):
 				unused_data_sources.append(dataSource)
 		if unused_data_sources:
-			chained_data_sources = ParameterSource.createInstance('ChainParameterSource', *unused_data_sources)
-			source = ParameterSource.createInstance('CrossParameterSource', chained_data_sources, source)
+			chained_data_sources = ParameterSource.create_instance('ChainParameterSource', *unused_data_sources)
+			source = ParameterSource.create_instance('CrossParameterSource', chained_data_sources, source)
 		return source
 
 

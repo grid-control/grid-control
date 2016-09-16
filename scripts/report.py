@@ -14,7 +14,8 @@
 # | limitations under the License.
 
 import sys
-from gcSupport import Activity, JobSelector, Options, Plugin, displayPluginList, getConfig, getPluginList, scriptOptions, utils
+from gcSupport import Activity, JobSelector, Options, displayPluginList, getConfig, getPluginList, scriptOptions, utils
+
 
 parser = Options(usage = '%s [OPTIONS] <config file>')
 parser.addBool(None, 'L', 'report-list',  default = False, help = 'List available report classes')

@@ -18,10 +18,11 @@ from grid_control.datasets.provider_base import DataProvider, DatasetError
 from grid_control.utils.parsing import parseJSON, parseList
 from python_compat import lmap, rsplit
 
+
 # Provides information about a single file
 # required format: <path to data file>|<number of events>[@SE1,SE2]
 class FileProvider(DataProvider):
-	alias = ['file']
+	alias_list = ['file']
 
 	def __init__(self, config, datasource_name, dataset_expr, dataset_nick = None, dataset_proc = None):
 		DataProvider.__init__(self, config, datasource_name, dataset_expr, dataset_nick, dataset_proc)
@@ -52,7 +53,7 @@ def try_apply(value, fun, desc):
 # Takes dataset information from an configuration file
 # required format: <path to list of data files>[@<forced prefix>][%[/]<selected dataset>[#<selected block>][#]]
 class ListProvider(DataProvider):
-	alias = ['list']
+	alias_list = ['list']
 
 	def __init__(self, config, datasource_name, dataset_expr, dataset_nick = None, dataset_proc = None):
 		DataProvider.__init__(self, config, datasource_name, dataset_expr, dataset_nick, dataset_proc)

@@ -20,8 +20,9 @@ from grid_control.utils import printTabular
 from grid_control.utils.parsing import parseStr, strTimeShort
 from python_compat import imap, itemgetter, lmap, lzip, sorted
 
+
 class LocationHistoryReport(LocationReport):
-	alias = ['history']
+	alias_list = ['history']
 
 	def _add_details(self, reports, jobObj):
 		history = jobObj.history.items()
@@ -32,7 +33,7 @@ class LocationHistoryReport(LocationReport):
 
 
 class BackendReport(Report):
-	alias = ['backend']
+	alias_list = ['backend']
 
 	def __init__(self, jobDB, task, jobs = None, configString = ''):
 		Report.__init__(self, jobDB, task, jobs, configString)
@@ -85,14 +86,14 @@ class BackendReport(Report):
 				for entry in items:
 					result.setdefault(entry[0], []).append(entry[1])
 				return result
-			def getClassKey(entry):
+			def _get_category_key(entry):
 				idx = idx_list[0]
 				if idx < len(entry):
 					return entry[idx]
 				return 'N/A'
 			classMap = {}
 			for entry in items:
-				classMap.setdefault(getClassKey(entry), []).append(entry)
+				classMap.setdefault(_get_category_key(entry), []).append(entry)
 			tmp = {}
 			for classKey in classMap:
 				childInfo = fillDict(result.setdefault(classKey, {}), classMap[classKey], idx_list[1:], indent + 1)

@@ -17,6 +17,7 @@ from grid_control.datasets.provider_base import DataProvider, DatasetError
 from grid_control.utils.data_structures import makeEnum
 from python_compat import imap, md5_hex, set
 
+
 # Enum to specify how to react to multiple occurences of something
 DatasetUniqueMode = makeEnum(['warn', 'abort', 'skip', 'ignore', 'record'])
 DatasetCheckMode = makeEnum(['warn', 'abort', 'ignore'])
@@ -30,7 +31,7 @@ class DataChecker(DataProcessor):
 
 
 class EntriesConsistencyDataProcessor(DataChecker):
-	alias = ['consistency']
+	alias_list = ['consistency']
 
 	def __init__(self, config, datasource_name, on_change):
 		DataChecker.__init__(self, config, datasource_name, on_change)
@@ -50,7 +51,7 @@ class EntriesConsistencyDataProcessor(DataChecker):
 
 
 class NickNameConsistencyProcessor(DataChecker):
-	alias = ['nickconsistency']
+	alias_list = ['nickconsistency']
 
 	def __init__(self, config, datasource_name, on_change):
 		DataChecker.__init__(self, config, datasource_name, on_change)
@@ -82,7 +83,7 @@ class NickNameConsistencyProcessor(DataChecker):
 
 
 class UniqueDataProcessor(DataChecker):
-	alias = ['unique']
+	alias_list = ['unique']
 
 	def __init__(self, config, datasource_name, on_change):
 		DataChecker.__init__(self, config, datasource_name, on_change)

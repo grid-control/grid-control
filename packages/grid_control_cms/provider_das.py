@@ -19,6 +19,7 @@ from grid_control.utils.webservice import GridJSONRestClient
 from grid_control_cms.provider_cms import CMSBaseProvider
 from python_compat import lmap
 
+
 class DASRetry(Exception):
 	pass
 
@@ -30,7 +31,7 @@ class DASRestClient(GridJSONRestClient):
 
 # required format: <dataset path>[@<instance>][#<block>]
 class DASProvider(CMSBaseProvider):
-	alias = ['das']
+	alias_list = ['das']
 
 	def __init__(self, config, datasource_name, dataset_expr, dataset_nick = None):
 		CMSBaseProvider.__init__(self, config, datasource_name, dataset_expr, dataset_nick)

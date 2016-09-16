@@ -21,6 +21,7 @@ import sys
 from gcSupport import utils
 from grid_control_cms.lumi_tools import formatLumi, mergeLumi, parseLumiFromJSON
 
+
 server = ServerProxy('http://pccmsdqm04.cern.ch/runregistry/xmlrpc')
 data = server.DataExporter.export('RUNLUMISECTION', 'GLOBAL', 'json', {'groupName': 'Collisions10'})
 runs = parseLumiFromJSON(data)

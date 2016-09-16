@@ -21,6 +21,7 @@ from grid_control.utils.parsing import strDict
 from hpfwk import AbstractError, Plugin
 from python_compat import lfilter, sorted, unspecified
 
+
 class MatcherHolder(object):
 	def __init__(self, selector, case):
 		self._case = case
@@ -101,22 +102,22 @@ class BasicMatcher(Matcher):
 
 
 class StartMatcher(BasicMatcher):
-	alias = ['start']
+	alias_list = ['start']
 	matchFunction = str.startswith
 
 
 class EndMatcher(BasicMatcher):
-	alias = ['end']
+	alias_list = ['end']
 	matchFunction = str.endswith
 
 
 class EqualMatcher(BasicMatcher):
-	alias = ['equal']
+	alias_list = ['equal']
 	matchFunction = str.__eq__
 
 
 class ExprMatcher(Matcher):
-	alias = ['expr', 'eval']
+	alias_list = ['expr', 'eval']
 
 	def getExpr(selector):
 		return eval('lambda value: (%s) == True' % selector) # pylint:disable=eval-used
@@ -138,7 +139,7 @@ class ExprMatcher(Matcher):
 
 
 class RegExMatcher(Matcher):
-	alias = ['regex']
+	alias_list = ['regex']
 
 	def __init__(self, config, option_prefix, case_override = None, **kwargs):
 		Matcher.__init__(self, config, option_prefix, case_override = None, **kwargs)
@@ -160,7 +161,7 @@ class RegExMatcher(Matcher):
 
 
 class ShellStyleMatcher(RegExMatcher):
-	alias = ['shell']
+	alias_list = ['shell']
 
 	def __init__(self, config, option_prefix, case_override = None, **kwargs):
 		RegExMatcher.__init__(self, config, option_prefix, case_override = None, **kwargs)
@@ -177,7 +178,7 @@ class ShellStyleMatcher(RegExMatcher):
 
 
 class BlackWhiteMatcher(Matcher):
-	alias = ['blackwhite']
+	alias_list = ['blackwhite']
 
 	def __init__(self, config, option_prefix, case_override = None, **kwargs):
 		Matcher.__init__(self, config, option_prefix, case_override, **kwargs)
@@ -248,14 +249,14 @@ class ListFilter(Plugin):
 
 
 class StrictListFilter(ListFilter):
-	alias = ['strict', 'require']
+	alias_list = ['strict', 'require']
 
 	def _filterListImpl(self, entries, matchFunction):
 		return lfilter(lambda entry: matchFunction(entry) > 0, entries)
 
 
 class MediumListFilter(ListFilter):
-	alias = ['try_strict']
+	alias_list = ['try_strict']
 
 	def _filterListImpl(self, entries, matchFunction):
 		strict_result = lfilter(lambda entry: matchFunction(entry) > 0, entries)
@@ -265,7 +266,7 @@ class MediumListFilter(ListFilter):
 
 
 class WeakListFilter(ListFilter):
-	alias = ['weak', 'prefer']
+	alias_list = ['weak', 'prefer']
 
 	def _filterListImpl(self, entries, matchFunction):
 		return lfilter(lambda entry: matchFunction(entry) >= 0, entries)

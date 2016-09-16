@@ -18,8 +18,9 @@ from grid_control.datasets.splitter_base import DataSplitter
 from grid_control.parameters import ParameterInfo, ParameterMetadata
 from python_compat import any, imap, lfilter, lmap, set
 
+
 class BasicPartitionProcessor(PartitionProcessor):
-	alias = ['basic']
+	alias_list = ['basic']
 
 	def __init__(self, config, datasource_name):
 		PartitionProcessor.__init__(self, config, datasource_name)
@@ -63,7 +64,7 @@ class BasicPartitionProcessor(PartitionProcessor):
 
 
 class LocationPartitionProcessor(PartitionProcessor):
-	alias = ['location']
+	alias_list = ['location']
 
 	def __init__(self, config, datasource_name):
 		PartitionProcessor.__init__(self, config, datasource_name)
@@ -92,7 +93,7 @@ class LocationPartitionProcessor(PartitionProcessor):
 
 
 class MetaPartitionProcessor(PartitionProcessor):
-	alias = ['metadata']
+	alias_list = ['metadata']
 
 	def __init__(self, config, datasource_name):
 		PartitionProcessor.__init__(self, config, datasource_name)
@@ -118,7 +119,7 @@ class MetaPartitionProcessor(PartitionProcessor):
 
 
 class RequirementsPartitionProcessor(PartitionProcessor):
-	alias = ['reqs']
+	alias_list = ['reqs']
 
 	def __init__(self, config, datasource_name):
 		PartitionProcessor.__init__(self, config, datasource_name)
@@ -147,7 +148,7 @@ class RequirementsPartitionProcessor(PartitionProcessor):
 
 
 class TFCPartitionProcessor(PartitionProcessor):
-	alias = ['tfc']
+	alias_list = ['tfc']
 
 	def __init__(self, config, datasource_name):
 		PartitionProcessor.__init__(self, config, datasource_name)

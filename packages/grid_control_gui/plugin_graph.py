@@ -17,6 +17,7 @@ from grid_control.utils.process_base import LocalProcess
 from hpfwk import Plugin
 from python_compat import any, imap, set, sorted
 
+
 def getGraph(instance, graph = None, visited = None):
 	graph = graph or {}
 
@@ -66,11 +67,11 @@ def getNodeName(instance, node_names):
 
 def getNodeLabel(instance):
 	names = [instance.__class__.__name__, repr(instance)]
-	if hasattr(instance.__class__, 'alias'):
+	if hasattr(instance.__class__, 'alias_list'):
 		if hasattr(instance.__class__, 'tagName'):
-			names.extend(imap(lambda alias: '%s:%s' % (instance.tagName, alias), instance.__class__.alias))
+			names.extend(imap(lambda alias: '%s:%s' % (instance.tagName, alias), instance.__class__.alias_list))
 		elif len(repr(instance)) > len(instance.__class__.__name__):
-			names.extend(instance.__class__.alias)
+			names.extend(instance.__class__.alias_list)
 	result = sorted(names, key = len)[0]
 	if isinstance(instance, NamedPlugin):
 		if instance.getObjectName().lower() != instance.__class__.__name__.lower():
@@ -91,7 +92,7 @@ def getNodeParent(cls):
 
 
 def getNodeColor(instance, color_map):
-	cnum = color_map.setdefault(getNodeParent(instance.__class__), max(color_map.values() + [0]) + 1)
+	cnum = color_map.setdefault(getNodeParent(instance.__class__), max(list(color_map.values()) + [0]) + 1)
 	return '/set312/%d' % (cnum % 12 + 1)
 
 

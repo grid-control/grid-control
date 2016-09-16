@@ -24,6 +24,7 @@ from grid_control.backends.wms import BackendError, WMS
 from hpfwk import AbstractError, Plugin, clear_current_exception
 from python_compat import ismap, lmap, lru_cache, md5
 
+
 """
 This module provides adapter classes for uniformly issuing GC commands to HTCondor Schedds.
 """

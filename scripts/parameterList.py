@@ -19,6 +19,7 @@ from grid_control.datasets import DataSplitter
 from grid_control.parameters import ParameterAdapter, ParameterInfo, ParameterMetadata, ParameterSource
 from python_compat import ifilter, imap, izip, lfilter, lmap, md5_hex, set, sorted
 
+
 random.seed(0)
 
 parser = Options(usage = '%s [OPTIONS] <parameter definition>')
@@ -95,7 +96,7 @@ def process_intervention(opts, psource):
 
 def save_parameters(psource, fn):
 	log.info('')
-	ParameterSource.getClass('GCDumpParameterSource').write(fn, psource)
+	ParameterSource.get_class('GCDumpParameterSource').write(fn, psource)
 	log.info('Parameter information saved to ./%s', fn)
 
 def setup_config(opts, args):
@@ -135,7 +136,7 @@ def setup_dataset(config, dataset):
 	partProcessor = config.getCompositePlugin('partition processor',
 		'TFCPartitionProcessor LocationPartitionProcessor MetaPartitionProcessor BasicPartitionProcessor',
 		'MultiPartitionProcessor', cls = 'PartitionProcessor', onChange = None, pargs = ('dataset',))
-	ParameterSource.createInstance('DataParameterSource', config.getWorkPath(), 'data',
+	ParameterSource.create_instance('DataParameterSource', config.getWorkPath(), 'data',
 		None, dataSplitter, partProcessor, repository)
 
 # Initialize ParameterFactory and ParameterSource
@@ -149,7 +150,7 @@ def get_psrc(opts, args):
 	adapter = 'BasicParameterAdapter'
 	if opts.persistent:
 		adapter = 'TrackedParameterAdapter'
-	return ParameterAdapter.createInstance(adapter, config, pm.get_source(repository))
+	return ParameterAdapter.create_instance(adapter, config, pm.get_source(repository))
 
 def get_parameters(opts, psource):
 	result = []

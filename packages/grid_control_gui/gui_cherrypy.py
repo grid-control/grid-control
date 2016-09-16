@@ -20,6 +20,7 @@ from grid_control.job_db import Job
 from grid_control_gui.plugin_graph import get_graph_image, get_workflow_graph
 from python_compat import lmap, lzip, sorted
 
+
 try:
 	import cherrypy
 except Exception:

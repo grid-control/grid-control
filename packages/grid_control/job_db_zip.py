@@ -19,6 +19,7 @@ from grid_control.utils.activity import Activity
 from hpfwk import clear_current_exception
 from python_compat import imap
 
+
 class ZippedJobDB(TextFileJobDB):
 	def __init__(self, config, jobLimit = -1, jobSelector = None):
 		self._dbFile = config.getWorkPath('jobs.zip')

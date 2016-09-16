@@ -18,6 +18,7 @@ from grid_control.utils.parsing import parseJSON
 from hpfwk import AbstractError, NestedException, Plugin
 from python_compat import identity, json
 
+
 try:
 	from urllib import urlencode
 except Exception:
@@ -45,9 +46,9 @@ class RestClient(object):
 		(self._process_result, self._process_data) = (process_result or identity, process_data or urlencode)
 		if not session:
 			try:
-				self._session = RestSession.createInstance('RequestsSession')
+				self._session = RestSession.create_instance('RequestsSession')
 			except Exception: # pulling in incompatible dependencies can cause many different types of exceptions
-				self._session = RestSession.createInstance('Urllib2Session')
+				self._session = RestSession.create_instance('Urllib2Session')
 
 	def _request(self, mode, url, api, headers, params = None, data = None):
 		hdr = dict(self._headers or {})

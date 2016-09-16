@@ -17,6 +17,7 @@ from grid_control.backends.backend_tools import BackendExecutor
 from hpfwk import AbstractError
 from python_compat import tarfile
 
+
 class RetrieveJobs(BackendExecutor):
 	def execute(self, wmsIDs): # yields list of (wmsID, local_output_dir)
 		raise AbstractError

@@ -17,6 +17,7 @@ import sys
 from datasetListFromX import addDatasetListOptions, discoverDataset
 from gcSupport import Options, scriptOptions, utils
 
+
 parser = Options(usage = '%s [OPTIONS] <config file / work directory>')
 parser.addText(None, 'J', 'job-selector', dest = 'external job selector', default = '',
 	help = 'Specify which jobs to process')

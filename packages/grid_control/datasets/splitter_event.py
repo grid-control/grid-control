@@ -16,8 +16,9 @@ from grid_control.datasets.provider_base import DataProvider, DatasetError
 from grid_control.datasets.splitter_base import DataSplitter
 from python_compat import next
 
+
 class EventBoundarySplitter(DataSplitter):
-	alias = ['events']
+	alias_list = ['events']
 
 	def get_needed_enums(cls):
 		return [DataSplitter.FileList, DataSplitter.Skipped, DataSplitter.NEntries]

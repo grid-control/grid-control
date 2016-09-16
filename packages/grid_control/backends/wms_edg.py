@@ -17,6 +17,7 @@ from grid_control.backends.jdl_writer import JDLWriter
 from grid_control.backends.wms_grid import GridWMS, Grid_CancelJobs, Grid_CheckJobs
 from python_compat import imap
 
+
 class EDGJDL(JDLWriter):
 	def _format_reqs_storage(self, locations):
 		if locations:
@@ -25,7 +26,7 @@ class EDGJDL(JDLWriter):
 
 
 class EuropeanDataGrid(GridWMS):
-	alias = ['EDG', 'LCG']
+	alias_list = ['EDG', 'LCG']
 
 	def __init__(self, config, name):
 		GridWMS.__init__(self, config, name,

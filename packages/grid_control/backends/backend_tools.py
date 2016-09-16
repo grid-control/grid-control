@@ -19,6 +19,7 @@ from grid_control.utils.process_base import LocalProcess
 from hpfwk import AbstractError, NestedException
 from python_compat import any, identity, ifilter, imap, irange, lmap
 
+
 class BackendError(NestedException):
 	pass
 

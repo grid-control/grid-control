@@ -16,6 +16,7 @@ import logging
 from grid_control.gc_plugin import ConfigurablePlugin
 from hpfwk import AbstractError
 
+
 class InfoScanner(ConfigurablePlugin):
 	def __init__(self, config, datasource_name):
 		ConfigurablePlugin.__init__(self, config)

@@ -20,6 +20,7 @@ from grid_control.utils import ensureDirExists, resolveInstallPath
 from grid_control.utils.data_structures import makeEnum
 from hpfwk import AbstractError, NestedException, Plugin
 
+
 class CondorProcessError(BackendError):
 	def __init__(self, msg, proc):
 		(cmd, status, stdout, stderr) = (proc.cmd, proc.wait(), proc.getOutput(), proc.getError())

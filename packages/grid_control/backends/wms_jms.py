@@ -21,6 +21,7 @@ from grid_control.backends.wms_local import LocalWMS
 from grid_control.job_db import Job
 from python_compat import identity, ifilter, izip, lmap, next
 
+
 class JMS_CheckJobs(CheckJobsWithProcess):
 	def __init__(self, config):
 		CheckJobsWithProcess.__init__(self, config,
@@ -49,7 +50,7 @@ class JMS_CheckJobs(CheckJobsWithProcess):
 
 
 class JMS(LocalWMS):
-	configSections = LocalWMS.configSections + ['JMS']
+	config_section_list = LocalWMS.config_section_list + ['JMS']
 
 	def __init__(self, config, name):
 		LocalWMS.__init__(self, config, name,

@@ -20,6 +20,7 @@ from grid_control_cms.lumi_tools import formatLumi, mergeLumi, parseLumiFilter
 from hpfwk import clear_current_exception
 from python_compat import imap, irange, lmap, set, sorted
 
+
 parser = Options()
 parser.section('expr', 'Manipulate lumi filter expressions', '%s <lumi filter expression>')
 parser.addBool('expr', 'G', 'gc',            default = False, help = 'Output grid-control compatible lumi expression')
@@ -70,7 +71,7 @@ def lumi_expr(opts, args):
 		for rlrange in lumis:
 			start, end = rlrange
 			if start[0] != end[0]:
-				raise Exception('Lumi filter term contains different runs: %r' % rlrange)
+				raise Exception('Lumi filter term contains different runs: %s' % repr(rlrange))
 			result.setdefault(start[0], []).extend(irange(start[1], end[1] + 1))
 		print(result)
 

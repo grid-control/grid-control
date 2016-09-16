@@ -20,6 +20,7 @@ from grid_control.backends.wms_local import LocalWMS
 from grid_control.job_db import Job
 from python_compat import ifilter, imap, izip, lmap, next
 
+
 class Host_CheckJobs(CheckJobsWithProcess):
 	def __init__(self, config):
 		CheckJobsWithProcess.__init__(self, config,
@@ -53,8 +54,8 @@ class Host_CancelJobs(CancelJobsWithProcessBlind):
 
 
 class Host(LocalWMS):
-	alias = ['Localhost']
-	configSections = LocalWMS.configSections + ['Localhost', 'Host']
+	alias_list = ['Localhost']
+	config_section_list = LocalWMS.config_section_list + ['Localhost', 'Host']
 
 	def __init__(self, config, name):
 		LocalWMS.__init__(self, config, name,

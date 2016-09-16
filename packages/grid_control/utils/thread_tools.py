@@ -16,6 +16,7 @@ import time, logging, threading
 from hpfwk import ExceptionCollector, NestedException, get_current_exception
 from python_compat import get_current_thread, get_thread_name
 
+
 blocking_equivalent = 60*60*24*7 # instead of blocking, we wait for a week
 
 # Lock with optional acquire timeout
@@ -55,10 +56,10 @@ def create_thread(fun, *args, **kwargs):
 		create_thread.counter += 1
 	finally:
 		create_thread.lock.release()
-	parent_thread_name = get_thread_name(get_current_thread())
-	new_thread_name = '%s-%d' % (parent_thread_name, create_thread.counter)
+	thread_name_parent = get_thread_name(get_current_thread()).replace('Mainthread', 'T')
+	thread_name_new = '%s-%d' % (thread_name_parent, create_thread.counter)
 	# create new thread
-	return threading.Thread(name = new_thread_name, target = fun, args = args, kwargs = kwargs)
+	return threading.Thread(name = thread_name_new, target = fun, args = args, kwargs = kwargs)
 create_thread.counter = 0
 create_thread.lock = GCLock()
 

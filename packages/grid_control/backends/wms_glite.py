@@ -15,6 +15,7 @@
 from grid_control import utils
 from grid_control.backends.wms_grid import GridWMS, Grid_CancelJobs, Grid_CheckJobs
 
+
 class Glite(GridWMS):
 	def __init__(self, config, name):
 		utils.deprecated('Please use the GliteWMS backend for grid jobs!')

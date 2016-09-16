@@ -24,6 +24,7 @@ from grid_control.utils.thread_tools import GCEvent
 from hpfwk import APIError, ExceptionCollector, Plugin
 from python_compat import any, get_user_input, identity, ifilter, imap, lmap, relpath, sorted, unspecified
 
+
 # Config interface class accessing typed data using an string interface provided by configView
 class TypedConfigInterface(ConfigInterface):
 	# Handling integer config options - using strict integer (de-)serialization
@@ -112,7 +113,7 @@ class TypedConfigInterface(ConfigInterface):
 			cls = Plugin, tags = None, inherit = False, requirePlugin = True, singlePlugin = False,
 			desc = 'plugin factories', **kwargs):
 		if isinstance(cls, str):
-			cls = Plugin.getClass(cls)
+			cls = Plugin.get_class(cls)
 		def str2obj(value):
 			objList = list(cls.bind(value, config = self, inherit = inherit, tags = tags or []))
 			if singlePlugin and len(objList) > 1:
@@ -120,7 +121,7 @@ class TypedConfigInterface(ConfigInterface):
 			if requirePlugin and not objList:
 				raise ConfigError('This option requires to specify a valid plugin!')
 			return objList
-		obj2str = lambda value: str.join('\n', imap(lambda obj: obj.bind_value(), value))
+		obj2str = lambda value: str.join('\n', imap(lambda obj: obj.get_bind_value(), value))
 		return self._getInternal(desc, obj2str, str2obj, str2obj, option, default, **kwargs)
 
 	# Return class - default class is also given in string form!
@@ -129,7 +130,7 @@ class TypedConfigInterface(ConfigInterface):
 		factories = self._getPluginFactories(option, default, cls, tags, inherit, requirePlugin,
 			singlePlugin = True, desc = 'plugin', **kwargs)
 		if factories:
-			return factories[0].getBoundInstance(*(pargs or ()), **(pkwargs or {}))
+			return factories[0].create_instance_bound(*(pargs or ()), **(pkwargs or {}))
 
 	# Return composite class - default classes are also given in string form!
 	def getCompositePlugin(self, option, default = unspecified,
@@ -139,7 +140,7 @@ class TypedConfigInterface(ConfigInterface):
 		clsList = []
 		for factory in self._getPluginFactories(option, default, cls, tags, inherit, requirePlugin,
 				singlePlugin = False, desc = 'composite plugin', **kwargs):
-			clsList.append(factory.getBoundInstance(*(pargs or ()), **(pkwargs or {})))
+			clsList.append(factory.create_instance_bound(*(pargs or ()), **(pkwargs or {})))
 		if len(clsList) == 1:
 			return clsList[0]
 		elif not clsList: # requirePlugin == False

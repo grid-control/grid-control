@@ -15,8 +15,9 @@
 from grid_control.backends.access_grid import GridAccessToken
 from python_compat import imap, izip
 
+
 class ARCAccessToken(GridAccessToken):
-	alias = ['arc', 'arcproxy']
+	alias_list = ['arc', 'arcproxy']
 
 	def __init__(self, config, name):
 		GridAccessToken.__init__(self, config, name, 'arcproxy')

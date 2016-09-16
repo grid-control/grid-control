@@ -17,6 +17,7 @@ from grid_control import utils
 from grid_control.config.config_entry import ConfigError
 from python_compat import imap, lfilter
 
+
 # Change handler to notify about impossible changes
 def changeImpossible(config, old_obj, cur_obj, cur_entry, obj2str):
 	old_str = obj2str(old_obj).strip()

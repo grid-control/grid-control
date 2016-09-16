@@ -18,6 +18,7 @@ from grid_control.job_selector import ClassSelector
 from grid_control.report import Report
 from grid_control_gui.ansi import Console
 
+
 class JobProgressBar(object):
 	def __init__(self, total = 100, width = 16, displayText = True, jobsOnFinish = False):
 		(self._total, self._width) = (total, width)
@@ -62,7 +63,7 @@ class JobProgressBar(object):
 
 
 class ColorBarReport(Report):
-	alias = ['cbar']
+	alias_list = ['cbar']
 
 	def __init__(self, jobDB, task, jobs = None, configString = ''):
 		Report.__init__(self, jobDB, task, jobs, configString)

@@ -23,6 +23,7 @@ from grid_control.utils.parsing import parseTime
 from grid_control.utils.process_base import LocalProcess
 from python_compat import identity, ifilter, izip, lmap
 
+
 class PBS_CheckJobs(CheckJobsWithProcess):
 	def __init__(self, config, fqid_fun = identity):
 		proc_factory = ProcessCreatorAppendArguments(config, 'qstat', ['-f'], lambda wmsIDs: lmap(fqid_fun, wmsIDs))
@@ -89,7 +90,7 @@ class PBS_Discover_Queues(BackendDiscovery):
 
 
 class PBS(PBSGECommon):
-	configSections = PBSGECommon.configSections + ['PBS']
+	config_section_list = PBSGECommon.config_section_list + ['PBS']
 
 	def __init__(self, config, name):
 		cancelExecutor = CancelJobsWithProcessBlind(config, 'qdel',

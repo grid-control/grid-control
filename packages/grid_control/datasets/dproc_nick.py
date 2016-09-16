@@ -16,6 +16,7 @@ from grid_control.datasets.dproc_base import DataProcessor
 from grid_control.datasets.provider_base import DataProvider
 from hpfwk import AbstractError
 
+
 class NickNameProducer(DataProcessor):
 	def get_name(self, current_nickname, dataset, block): # Overwritten by users / other implementations
 		raise AbstractError
@@ -32,7 +33,7 @@ class NickNameProducer(DataProcessor):
 
 
 class InlineNickNameProducer(NickNameProducer):
-	alias = ['inline']
+	alias_list = ['inline']
 
 	def __init__(self, config, datasource_name, on_change):
 		NickNameProducer.__init__(self, config, datasource_name, on_change)
@@ -44,7 +45,7 @@ class InlineNickNameProducer(NickNameProducer):
 
 
 class SimpleNickNameProducer(NickNameProducer):
-	alias = ['simple']
+	alias_list = ['simple']
 
 	def __init__(self, config, datasource_name, on_change):
 		NickNameProducer.__init__(self, config, datasource_name, on_change)

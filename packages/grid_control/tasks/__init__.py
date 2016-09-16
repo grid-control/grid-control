@@ -14,4 +14,5 @@
 
 from grid_control.tasks.task_base import TaskModule
 
+
 __all__ = ['TaskModule']

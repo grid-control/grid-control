@@ -16,8 +16,9 @@ from grid_control.parameters.psource_meta import ZipLongParameterSource
 from hpfwk import AbstractError
 from python_compat import irange, sort_inplace
 
+
 class CombineParameterSource(ZipLongParameterSource):
-	alias = ['combine'] # FIXME: conventions!
+	alias_list = ['combine'] # FIXME: conventions!
 
 	def __init__(self, psource1, psource2, var1, var2 = None):
 		psource1_values = {}

@@ -22,6 +22,7 @@ from grid_control.utils.parsing import strTimeShort
 from hpfwk import APIError
 from python_compat import identity, ifilter, imap, irange, ismap, itemgetter, lfilter, lmap, md5, set, sort_inplace, sorted, str2bytes
 
+
 class ParameterAdapter(ConfigurablePlugin):
 	def __init__(self, config, source):
 		ConfigurablePlugin.__init__(self, config)
@@ -129,7 +130,7 @@ def create_placeholder_psrc(pa_old, pa_new, map_job_num2pnum, pspi_list_missing,
 		psp_list_missing.append(psp_missing)
 	meta_list_current = lmap(lambda key: key.value, pa_new.get_job_metadata())
 	meta_list_missing = lfilter(lambda key: key.value not in meta_list_current, pa_old.get_job_metadata())
-	return ParameterSource.createInstance('InternalParameterSource', psp_list_missing, meta_list_missing)
+	return ParameterSource.create_instance('InternalParameterSource', psp_list_missing, meta_list_missing)
 
 
 def diff_pspi_list(pa_old, pa_new, result_redo, result_disable):
@@ -214,7 +215,7 @@ class TrackedParameterAdapter(BasicParameterAdapter):
 			self._resync_state = self.resync(force = True)
 		elif do_init: # Write current state
 			self._write_job_num2pnum(self._path_job_num2pnum)
-			ParameterSource.getClass('GCDumpParameterSource').write(self._path_params,
+			ParameterSource.get_class('GCDumpParameterSource').write(self._path_params,
 				self.get_job_len(), self.get_job_metadata(), self.iter_jobs())
 		config.set('parameter hash', self._psrc_raw.get_psrc_hash())
 
@@ -246,7 +247,7 @@ class TrackedParameterAdapter(BasicParameterAdapter):
 		if not (result_redo or result_disable or size_change or psrc_hash_changed):
 			return ParameterSource.EmptyResyncResult()
 
-		pa_old = ParameterAdapter(None, ParameterSource.createInstance('GCDumpParameterSource', self._path_params))
+		pa_old = ParameterAdapter(None, ParameterSource.create_instance('GCDumpParameterSource', self._path_params))
 		pa_new = ParameterAdapter(None, self._psrc_raw)
 
 		(map_job_num2pnum, pspi_list_added, pspi_list_missing) = diff_pspi_list(pa_old, pa_new, result_redo, result_disable)
@@ -257,12 +258,12 @@ class TrackedParameterAdapter(BasicParameterAdapter):
 			extend_map_job_num2pnum(map_job_num2pnum, pa_old.get_job_len(), pspi_list_added)
 		if pspi_list_missing: # extend the parameter source by placeholders for the missing parameter space points
 			psrc_missing = create_placeholder_psrc(pa_old, pa_new, map_job_num2pnum, pspi_list_missing, result_disable)
-			self._psrc = ParameterSource.createInstance('ChainParameterSource', self._psrc_raw, psrc_missing)
+			self._psrc = ParameterSource.create_instance('ChainParameterSource', self._psrc_raw, psrc_missing)
 
 		self._map_job_num2pnum = map_job_num2pnum # Update Job2PID map
 		# Write resynced state
 		self._write_job_num2pnum(self._path_job_num2pnum + '.tmp')
-		ParameterSource.getClass('GCDumpParameterSource').write(self._path_params + '.tmp',
+		ParameterSource.get_class('GCDumpParameterSource').write(self._path_params + '.tmp',
 			self.get_job_len(), self.get_job_metadata(), self.iter_jobs())
 		os.rename(self._path_job_num2pnum + '.tmp', self._path_job_num2pnum)
 		os.rename(self._path_params + '.tmp', self._path_params)

@@ -16,17 +16,18 @@ from grid_control.datasets.dproc_base import DataProcessor
 from grid_control.utils.data_structures import makeEnum
 from hpfwk import AbstractError
 
+
 DataProcessorMergeMode = makeEnum(['intersection', 'union', 'separate'])
 
 class MergeDataProcessor(DataProcessor):
-	alias = ['merge']
+	alias_list = ['merge']
 
 	def process(self, block_iter):
 		pass
 
 
 class SplitDataProcessor(DataProcessor):
-	alias = ['split']
+	alias_list = ['split']
 
 	def process_block(self, block):
 		raise AbstractError

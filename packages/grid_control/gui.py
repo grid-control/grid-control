@@ -19,6 +19,7 @@ from grid_control.utils.activity import Activity
 from grid_control.utils.parsing import strTimeShort
 from hpfwk import AbstractError
 
+
 class GUI(ConfigurablePlugin):
 	def __init__(self, config, workflow):
 		ConfigurablePlugin.__init__(self, config)

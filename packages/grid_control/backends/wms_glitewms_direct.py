@@ -22,6 +22,7 @@ from grid_control.job_db import Job
 from hpfwk import ExceptionCollector, clear_current_exception
 from python_compat import imap, lmap, lzip
 
+
 class GliteWMSDirect_CheckJobs(CheckJobs):
 	def __init__(self, config, status_fun):
 		CheckJobs.__init__(self, config)

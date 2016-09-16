@@ -18,6 +18,7 @@ from grid_control.utils import safe_index
 from hpfwk import APIError
 from python_compat import identity, imap, lfilter, lmap, unspecified
 
+
 # Simple ConfigView implementation
 class TaggedConfigView(SimpleConfigView):
 	def __init__(self, name, oldContainer, curContainer, parent = None,
@@ -27,11 +28,11 @@ class TaggedConfigView(SimpleConfigView):
 			setClasses = unspecified, addClasses = None, inheritSections = False):
 		parent = parent or self
 		if inheritSections and isinstance(parent, TaggedConfigView):
-			addSections = (parent.getClassSections() or []) + (addSections or [])
+			addSections = (parent.get_class_section_list() or []) + (addSections or [])
 		SimpleConfigView.__init__(self, name, oldContainer, curContainer, parent,
 			setSections = setSections, addSections = addSections)
 
-		self._initVariable(parent, '_cfgClassSections', None, setClasses, addClasses, standardConfigForm, lambda x: x.configSections)
+		self._initVariable(parent, '_cfgClassSections', None, setClasses, addClasses, standardConfigForm, lambda x: x.config_section_list)
 		self._initVariable(parent, '_cfgNames', [], setNames, addNames, standardConfigForm)
 		def makeTagTuple(t):
 			try:
@@ -42,7 +43,7 @@ class TaggedConfigView(SimpleConfigView):
 		self._initVariable(parent, '_cfgTags', [], setTags, addTags, identity, makeTagTuple)
 		self._cfgTagsOrder = lmap(lambda tagName_tagValue: tagName_tagValue[0], self._cfgTags)
 
-	def getClassSections(self):
+	def get_class_section_list(self):
 		return self._cfgClassSections
 
 	def __str__(self):

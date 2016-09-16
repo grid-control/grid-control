@@ -15,6 +15,7 @@
 from grid_control.datasets.dproc_base import DataProcessor
 from grid_control.datasets.provider_base import DataProvider
 
+
 class StatsDataProcessor(DataProcessor):
 	def __init__(self, config, datasource_name, on_change):
 		DataProcessor.__init__(self, config, datasource_name, on_change)

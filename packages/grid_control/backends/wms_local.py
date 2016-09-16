@@ -24,6 +24,7 @@ from grid_control.utils.thread_tools import GCLock
 from hpfwk import AbstractError, ExceptionCollector
 from python_compat import ifilter, imap, ismap, lchain, lfilter, lmap
 
+
 local_purge_lock = GCLock()
 
 class SandboxHelper(object):
@@ -66,6 +67,7 @@ class LocalPurgeJobs(CancelJobs):
 			try:
 				shutil.rmtree(path)
 			except Exception:
+				self._log.critical('Unable to delete directory %r: %r', path, os.listdir(path))
 				local_purge_lock.release()
 				raise BackendError('Sandbox for job %r could not be deleted', wmsID)
 			local_purge_lock.release()
@@ -74,7 +76,7 @@ class LocalPurgeJobs(CancelJobs):
 
 
 class LocalWMS(BasicWMS):
-	configSections = BasicWMS.configSections + ['local']
+	config_section_list = BasicWMS.config_section_list + ['local']
 
 	def __init__(self, config, name, submitExec, checkExecutor, cancelExecutor, nodesFinder = None, queuesFinder = None):
 		config.set('broker', 'RandomBroker')
@@ -197,16 +199,16 @@ class LocalWMS(BasicWMS):
 
 
 class Local(WMS):
-	configSections = WMS.configSections + ['local']
+	config_section_list = WMS.config_section_list + ['local']
 
 	def __new__(cls, config, name):
 		def createWMS(wms):
 			try:
-				wmsCls = WMS.getClass(wms)
+				wmsCls = WMS.get_class(wms)
 			except Exception:
 				raise BackendError('Unable to load backend class %s' % repr(wms))
 			wms_config = config.changeView(viewClass = 'TaggedConfigView', setClasses = [wmsCls])
-			return WMS.createInstance(wms, wms_config, name)
+			return WMS.create_instance(wms, wms_config, name)
 		wms = config.get('wms', '')
 		if wms:
 			return createWMS(wms)

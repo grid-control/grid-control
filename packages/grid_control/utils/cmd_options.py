@@ -15,6 +15,7 @@
 import sys, optparse # pylint:disable=deprecated-module
 from python_compat import ifilter
 
+
 class Options(object):
 	def __init__(self, usage = '', add_help_option = True):
 		self._parser = optparse.OptionParser(usage = self._fmt_usage(usage), add_help_option = add_help_option)

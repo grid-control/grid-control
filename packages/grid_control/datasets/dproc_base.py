@@ -17,6 +17,7 @@ from grid_control.gc_plugin import ConfigurablePlugin
 from grid_control.utils import prune_processors
 from hpfwk import AbstractError
 
+
 class DataProcessor(ConfigurablePlugin):
 	def __init__(self, config, datasource_name, on_change):
 		ConfigurablePlugin.__init__(self, config)
@@ -60,7 +61,7 @@ class MultiDataProcessor(DataProcessor):
 
 
 class NullDataProcessor(DataProcessor):
-	alias = ['null']
+	alias_list = ['null']
 
 	def __init__(self, config = None, datasource_name = None, on_change = None):
 		DataProcessor.__init__(self, config, datasource_name, on_change)

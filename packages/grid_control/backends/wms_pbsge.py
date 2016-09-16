@@ -16,6 +16,7 @@ from grid_control import utils
 from grid_control.backends.wms import WMS
 from grid_control.backends.wms_local import LocalWMS
 
+
 class PBSGECommon(LocalWMS):
 	def __init__(self, config, name, checkExecutor, cancelExecutor, nodesFinder, queuesFinder):
 		LocalWMS.__init__(self, config, name,

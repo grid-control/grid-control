@@ -17,6 +17,7 @@ from grid_control.backends.wms import WMS
 from grid_control.utils import Result
 from python_compat import ifilter, lmap, sorted
 
+
 # Distribute to WMS according to job id prefix
 
 class MultiWMS(WMS):

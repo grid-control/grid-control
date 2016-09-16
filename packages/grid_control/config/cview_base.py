@@ -17,6 +17,7 @@ from grid_control.config.config_entry import ConfigEntry, ConfigError, standardC
 from hpfwk import AbstractError, Plugin
 from python_compat import ichain, imap, lfilter, sorted, unspecified
 
+
 class ConfigView(Plugin):
 	def __init__(self, name, parent = None):
 		self.config_vault = {}
@@ -84,7 +85,7 @@ class HistoricalConfigView(ConfigView):
 		if not viewClass:
 			viewClass = self.__class__
 		elif isinstance(viewClass, str):
-			viewClass = ConfigView.getClass(viewClass)
+			viewClass = ConfigView.get_class(viewClass)
 		return viewClass(self.configName, self._oldContainer, self._curContainer, self, **kwargs)
 
 	def _getSection(self, specific):

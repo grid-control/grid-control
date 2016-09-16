@@ -17,6 +17,7 @@ import grid_control_cms.Lexicon
 from hpfwk import clear_current_exception
 from python_compat import lmap, unicode
 
+
 def dbs3_check(checker, msg):
 	def dbs3_check_int(item):
 		try:

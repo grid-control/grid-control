@@ -18,6 +18,7 @@ from grid_control.config import ConfigError
 from grid_control.utils.parsing import parseDict, split_advanced, split_brackets
 from python_compat import imap, irange, lmap, lzip, unspecified
 
+
 def frange(start, end = None, num = None, steps = None, format = '%g'):
 	if (end is None) and (num is None):
 		raise ConfigError('frange: No exit condition!')

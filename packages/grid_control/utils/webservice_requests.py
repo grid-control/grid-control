@@ -15,8 +15,9 @@
 import requests
 from grid_control.utils.webservice import RestError, RestSession
 
+
 class RequestsSession(RestSession):
-	alias = ['requests']
+	alias_list = ['requests']
 	_session = None
 
 	def __init__(self):

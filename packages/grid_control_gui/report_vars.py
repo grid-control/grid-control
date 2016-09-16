@@ -17,8 +17,9 @@ from grid_control.report import Report
 from grid_control.utils import printTabular
 from python_compat import imap, lzip, set, sorted
 
+
 class VariablesReport(Report):
-	alias = ['variables', 'vars']
+	alias_list = ['variables', 'vars']
 
 	def __init__(self, jobDB, task, jobs = None, configString = ''):
 		Report.__init__(self, jobDB, task, jobs, configString)

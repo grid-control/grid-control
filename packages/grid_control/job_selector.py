@@ -20,6 +20,7 @@ from grid_control.utils.parsing import parseTime
 from hpfwk import AbstractError, Plugin
 from python_compat import identity, imap, ismap, lfilter, lmap, reduce
 
+
 class JobSelector(Plugin):
 	def create(arg, **kwargs):
 		if arg:
@@ -48,7 +49,7 @@ class ClassSelector(JobSelector):
 
 
 class StuckSelector(JobSelector):
-	alias = ['stuck']
+	alias_list = ['stuck']
 
 	def __init__(self, arg, **kwargs):
 		self._time_threshold = parseTime(arg)
@@ -58,7 +59,7 @@ class StuckSelector(JobSelector):
 
 
 class IDSelector(JobSelector):
-	alias = ['id']
+	alias_list = ['id']
 
 	def __init__(self, arg, **kwargs):
 		idList = imap(lambda x: x.split('-'), arg.split(','))
@@ -90,21 +91,21 @@ class RegExSelector(JobSelector):
 
 
 class SiteSelector(RegExSelector):
-	alias = ['site']
+	alias_list = ['site']
 
 	def __init__(self, arg, **kwargs):
 		RegExSelector.__init__(self, arg, lambda num, obj: obj.get('dest', '').split('/')[0].split(':')[0])
 
 
 class QueueSelector(RegExSelector):
-	alias = ['queue']
+	alias_list = ['queue']
 
 	def __init__(self, arg, **kwargs):
 		RegExSelector.__init__(self, arg, lambda num, obj: obj.get('dest', '').split('/')[-1].split(':')[0])
 
 
 class BackendSelector(RegExSelector):
-	alias = ['backend', 'wms']
+	alias_list = ['backend', 'wms']
 
 	def __init__(self, arg, **kwargs):
 		def parseID(gcID):
@@ -115,7 +116,7 @@ class BackendSelector(RegExSelector):
 
 
 class StateSelector(RegExSelector):
-	alias = ['state']
+	alias_list = ['state']
 
 	def __init__(self, arg, **kwargs):
 		predef = {'TODO': 'SUBMITTED,WAITING,READY,QUEUED,UNKNOWN', 'ALL': str.join(',', Job.enumNames)}
@@ -128,7 +129,7 @@ class StateSelector(RegExSelector):
 
 
 class VarSelector(JobSelector):
-	alias = ['var']
+	alias_list = ['var']
 
 	def __init__(self, arg, **kwargs):
 		self._rxDict = lmap(lambda x: (x.split('=', 1)[0], re.compile(x.split('=', 1)[1])), arg.split(','))
@@ -141,7 +142,7 @@ class VarSelector(JobSelector):
 
 
 class NickSelector(RegExSelector):
-	alias = ['nick']
+	alias_list = ['nick']
 
 	def __init__(self, arg, **kwargs):
 		RegExSelector.__init__(self, arg, lambda jobNum, jobObj: kwargs['task'].getJobConfig(jobNum).get('DATASETNICK', ''))
@@ -155,7 +156,7 @@ class MultiJobSelector(JobSelector):
 			selectorType = utils.QM(term[0].isdigit(), 'id', 'state')
 			if ':' in term:
 				selectorType = term.split(':', 1)[0]
-			selector = JobSelector.createInstance(selectorType, term.split(':', 1)[-1], **kwargs)
+			selector = JobSelector.create_instance(selectorType, term.split(':', 1)[-1], **kwargs)
 			if negate:
 				return lambda jobNum, jobObj: not selector.__call__(jobNum, jobObj)
 			return selector.__call__

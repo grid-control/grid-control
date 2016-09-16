@@ -23,6 +23,7 @@ from grid_control.utils.thread_tools import TimeoutException, hang_protection
 from hpfwk import AbstractError, Plugin
 from python_compat import identity, imap, irange, itemgetter, lfilter, lmap, rsplit
 
+
 # Class to fill config containers with settings
 class ConfigFiller(Plugin):
 	def _add_entry(self, container, section, option, value, source):

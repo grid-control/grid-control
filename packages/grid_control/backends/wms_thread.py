@@ -16,6 +16,7 @@ from grid_control.backends.wms_multi import MultiWMS
 from grid_control.utils.thread_tools import tchain
 from python_compat import ifilter, imap
 
+
 class ThreadedMultiWMS(MultiWMS):
 	def _forwardCall(self, args, assignFun, callFun):
 		argMap = self._getMapID2Backend(args, assignFun)

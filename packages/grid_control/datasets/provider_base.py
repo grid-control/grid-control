@@ -22,6 +22,7 @@ from grid_control.utils.data_structures import makeEnum
 from hpfwk import AbstractError, InstanceFactory, NestedException
 from python_compat import StringBuffer, identity, ifilter, imap, irange, json, lmap, lrange, md5_hex, set, sort_inplace, sorted
 
+
 class DatasetError(NestedException):
 	pass
 
@@ -35,7 +36,7 @@ class DataProvider(ConfigurablePlugin):
 		self._dataset_query_interval = config.getTime('%s default query interval' % datasource_name, 60, onChange = None)
 
 		triggerDataResync = triggerResync(['datasets', 'parameters'])
-		self._stats = dataset_proc or DataProcessor.createInstance('SimpleStatsDataProcessor', config, datasource_name,
+		self._stats = dataset_proc or DataProcessor.create_instance('SimpleStatsDataProcessor', config, datasource_name,
 			triggerDataResync, self._log, ' * Dataset %s:\n\tcontains ' % repr(dataset_nick or dataset_expr))
 		self._nick_producer = config.getPlugin(['nickname source', '%s nickname source' % datasource_name], 'SimpleNickNameProducer',
 			cls = DataProcessor, pargs = (datasource_name, triggerDataResync), onChange = triggerDataResync)
@@ -63,7 +64,7 @@ class DataProvider(ConfigurablePlugin):
 			elif len(temp) == 1:
 				dataset = temp[0]
 
-			clsNew = cls.getClass(provider)
+			clsNew = cls.get_class(provider)
 			bindValue = str.join(':', [nickname, provider, dataset])
 			instance_args.append([bindValue, clsNew, config, datasource_name, dataset, nickname])
 		for instance_arg in instance_args:
@@ -75,7 +76,7 @@ class DataProvider(ConfigurablePlugin):
 
 	def getBlocksFromExpr(cls, config, dataset_expr):
 		for dp_factory in DataProvider.bind(dataset_expr, config = config):
-			dproc = dp_factory.getBoundInstance()
+			dproc = dp_factory.create_instance_bound()
 			for block in dproc.get_blocks_raw():
 				yield block
 	getBlocksFromExpr = classmethod(getBlocksFromExpr)
@@ -88,13 +89,13 @@ class DataProvider(ConfigurablePlugin):
 	bName = classmethod(bName)
 
 
+	def get_dataset_expr(self):
+		return self._dataset_expr
+
+
 	def _raise_on_abort(self):
 		if utils.abort():
 			raise DatasetError('Received abort request during retrieval of %r' % self.get_dataset_expr())
-
-
-	def get_dataset_expr(self):
-		return self._dataset_expr
 
 
 	# Define how often the dataprovider can be queried automatically
@@ -248,7 +249,7 @@ class DataProvider(ConfigurablePlugin):
 
 	# Load dataset information using ListProvider
 	def loadFromFile(path):
-		return DataProvider.createInstance('ListProvider', create_config(
+		return DataProvider.create_instance('ListProvider', create_config(
 			configDict = {'dataset': {'dataset processor': 'NullDataProcessor'}}), 'dataset', path)
 	loadFromFile = staticmethod(loadFromFile)
 

@@ -21,6 +21,7 @@ from grid_control.utils.parsing import parseStr
 from grid_control.utils.process_base import LocalProcess
 from python_compat import md5_hex, sort_inplace
 
+
 def choice_exp(sample, p = 0.5):
 	for x in sample:
 		if random.random() < p:
@@ -143,7 +144,7 @@ class DiscoverWMS_Lazy(object): # TODO: Move to broker infrastructure
 
 
 class GliteWMS(GridWMS):
-	configSections = GridWMS.configSections + ['glite-wms', 'glitewms'] # backwards compatibility
+	config_section_list = GridWMS.config_section_list + ['glite-wms', 'glitewms'] # backwards compatibility
 
 	def __init__(self, config, name, checkExecutor = None):
 		GridWMS.__init__(self, config, name,

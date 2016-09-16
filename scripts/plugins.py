@@ -15,6 +15,7 @@
 
 from gcSupport import Options, displayPluginList, getPluginList, scriptOptions, utils
 
+
 parser = Options(usage = '%s <BasePlugin>')
 options = scriptOptions(parser)
 if not options.args:

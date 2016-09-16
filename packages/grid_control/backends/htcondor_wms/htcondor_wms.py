@@ -25,6 +25,7 @@ from grid_control.job_db import Job
 from grid_control.utils.activity import Activity
 from python_compat import json, lchain, lfilter
 
+
 """
 HTCondor backend core
  This module provides the backend for HTCondor pools of version 8+.
@@ -52,7 +53,7 @@ a link copy. For convention with other backends, these correspond to:
 """
 
 class HTCondor(BasicWMS):
-	configSections = BasicWMS.configSections + ['htcondor']
+	config_section_list = BasicWMS.config_section_list + ['htcondor']
 	"""
 	Backend for HTCondor 8+
 	"""

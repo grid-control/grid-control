@@ -20,6 +20,7 @@ from grid_control.utils import thread_tools
 from hpfwk import clear_current_exception
 from python_compat import imap, itemgetter, izip, lmap, lzip, set, sort_inplace, sorted
 
+
 usage = '%s [OPTIONS] <DBS dataset path> | <dataset cache file>' % sys.argv[0]
 parser = Options(usage)
 parser.addBool(None, 'l', 'list-datasets',  default = False, help = 'Show list of all datasets in query / file')
@@ -177,7 +178,7 @@ def list_config_entries(opts, blocks, provider):
 				infos[dsName][DataProvider.URL] = block[DataProvider.FileList][0][DataProvider.URL]
 	for dsID, dsName in enumerate(order):
 		info = infos[dsName]
-		providerName = sorted(provider.getClassNames(), key = len)[0]
+		providerName = sorted(provider.get_class_name_list(), key = len)[0]
 		nickname = info.get(DataProvider.Nickname, 'nick%d' % dsID).rjust(maxnick)
 		filterExpr = utils.QM(providerName == 'list', ' %% %s' % info[DataProvider.Dataset], '')
 		print('\t%s : %s : %s%s' % (nickname, providerName, provider.get_dataset_expr(), filterExpr))

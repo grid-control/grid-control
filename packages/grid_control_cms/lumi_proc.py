@@ -20,6 +20,7 @@ from grid_control.utils.data_structures import makeEnum
 from grid_control_cms.lumi_tools import filterLumiFilter, formatLumi, parseLumiFilter, selectLumi, selectRun, strLumi
 from python_compat import any, ichain, imap, izip, set
 
+
 LumiKeep = makeEnum(['RunLumi', 'Run', 'none'])
 LumiMode = makeEnum(['strict', 'weak'])
 
@@ -34,7 +35,7 @@ def removeRunLumi(value, idxRuns, idxLumi):
 
 
 class LumiDataProcessor(DataProcessor):
-	alias = ['lumi']
+	alias_list = ['lumi']
 
 	def __init__(self, config, datasource_name, onChange):
 		DataProcessor.__init__(self, config, datasource_name, onChange)

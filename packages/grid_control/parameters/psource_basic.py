@@ -19,43 +19,6 @@ from grid_control.parameters.psource_base import ImmutableParameterSource, Param
 from grid_control.utils.parsing import parseTime, parseType, strDict
 from python_compat import imap, lmap
 
-class KeyParameterSource(ParameterSource):
-	alias = ['key']
-
-	def __init__(self, *keys):
-		ParameterSource.__init__(self)
-		self._keys = lmap(lambda key: key.lstrip('!'), keys)
-		self._meta = lmap(lambda key: ParameterMetadata(key.lstrip('!'), untracked = '!' in key), keys)
-
-	def __repr__(self):
-		return 'key(%s)' % str.join(', ', self._keys)
-
-	def fill_parameter_metadata(self, result):
-		result.extend(self._meta)
-
-
-class RequirementParameterSource(ParameterSource):
-	alias = ['req']
-
-	def __repr__(self):
-		return 'req()'
-
-	def fill_parameter_content(self, pNum, result):
-		if 'WALLTIME' in result:
-			result[ParameterInfo.REQS].append((WMS.WALLTIME, parseTime(result.pop('WALLTIME'))))
-		if 'CPUTIME' in result:
-			result[ParameterInfo.REQS].append((WMS.CPUTIME, parseTime(result.pop('CPUTIME'))))
-		if 'MEMORY' in result:
-			result[ParameterInfo.REQS].append((WMS.MEMORY, int(result.pop('MEMORY'))))
-
-	def fill_parameter_metadata(self, result):
-		for key in ['WALLTIME', 'CPUTIME', 'MEMORY']:
-			if key in result:
-				result.remove(key)
-
-	def get_psrc_hash(self):
-		return ''
-
 
 class InternalParameterSource(ImmutableParameterSource):
 	def __init__(self, values, metas):
@@ -87,7 +50,7 @@ class SingleParameterSource(ImmutableParameterSource):
 
 
 class CollectParameterSource(SingleParameterSource): # Merge parameter values
-	alias = ['collect']
+	alias_list = ['collect']
 
 	def __init__(self, key, *vn_list):
 		SingleParameterSource.__init__(self, key, [key, vn_list])
@@ -103,7 +66,7 @@ class CollectParameterSource(SingleParameterSource): # Merge parameter values
 
 
 class ConstParameterSource(SingleParameterSource):
-	alias = ['const']
+	alias_list = ['const']
 
 	def __init__(self, key, value):
 		SingleParameterSource.__init__(self, key, [key, value])
@@ -126,7 +89,7 @@ class ConstParameterSource(SingleParameterSource):
 
 
 class CounterParameterSource(SingleParameterSource):
-	alias = ['counter']
+	alias_list = ['counter']
 
 	def __init__(self, key, seed):
 		SingleParameterSource.__init__(self, '!%s' % key.lstrip(), [key, seed])
@@ -143,7 +106,7 @@ class CounterParameterSource(SingleParameterSource):
 
 
 class FormatterParameterSource(SingleParameterSource):
-	alias = ['format']
+	alias_list = ['format']
 
 	def __init__(self, key, fmt, source, default = ''):
 		SingleParameterSource.__init__(self, '!%s' % key, [key, fmt, source, default])
@@ -162,7 +125,7 @@ class FormatterParameterSource(SingleParameterSource):
 
 
 class RNGParameterSource(SingleParameterSource):
-	alias = ['rng']
+	alias_list = ['rng']
 
 	def __init__(self, key = 'JOB_RANDOM', low = 1e6, high = 1e7-1):
 		SingleParameterSource.__init__(self, '!%s' % key.lstrip('!'), [key, low, high])
@@ -179,7 +142,7 @@ class RNGParameterSource(SingleParameterSource):
 
 
 class SimpleParameterSource(SingleParameterSource):
-	alias = ['var']
+	alias_list = ['var']
 
 	def __init__(self, key, values):
 		SingleParameterSource.__init__(self, key, [key, values])
@@ -205,7 +168,7 @@ class SimpleParameterSource(SingleParameterSource):
 
 
 class TransformParameterSource(SingleParameterSource):
-	alias = ['transform']
+	alias_list = ['transform']
 
 	def __init__(self, key, fmt, default = ''):
 		SingleParameterSource.__init__(self, '!%s' % key, [key, fmt, default])
@@ -224,3 +187,41 @@ class TransformParameterSource(SingleParameterSource):
 	def show_psrc(self):
 		return ['%s: var = %s, expr = %r, default = %r' %
 			(self.__class__.__name__, self._key, self._fmt, self._default)]
+
+
+class KeyParameterSource(ParameterSource):
+	alias_list = ['key']
+
+	def __init__(self, *keys):
+		ParameterSource.__init__(self)
+		self._keys = lmap(lambda key: key.lstrip('!'), keys)
+		self._meta = lmap(lambda key: ParameterMetadata(key.lstrip('!'), untracked = '!' in key), keys)
+
+	def __repr__(self):
+		return 'key(%s)' % str.join(', ', self._keys)
+
+	def fill_parameter_metadata(self, result):
+		result.extend(self._meta)
+
+
+class RequirementParameterSource(ParameterSource):
+	alias_list = ['req']
+
+	def __repr__(self):
+		return 'req()'
+
+	def fill_parameter_content(self, pNum, result):
+		if 'WALLTIME' in result:
+			result[ParameterInfo.REQS].append((WMS.WALLTIME, parseTime(result.pop('WALLTIME'))))
+		if 'CPUTIME' in result:
+			result[ParameterInfo.REQS].append((WMS.CPUTIME, parseTime(result.pop('CPUTIME'))))
+		if 'MEMORY' in result:
+			result[ParameterInfo.REQS].append((WMS.MEMORY, int(result.pop('MEMORY'))))
+
+	def fill_parameter_metadata(self, result):
+		for key in ['WALLTIME', 'CPUTIME', 'MEMORY']:
+			if key in result:
+				result.remove(key)
+
+	def get_psrc_hash(self):
+		return ''

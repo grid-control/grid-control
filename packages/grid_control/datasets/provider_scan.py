@@ -21,13 +21,14 @@ from grid_control.utils.data_structures import UniqueList
 from hpfwk import Plugin, PluginError
 from python_compat import identity, ifilter, imap, itemgetter, lchain, lmap, lsmap, md5_hex, sorted
 
+
 class ScanProviderBase(DataProvider):
 	def __init__(self, config, datasource_name, dataset_expr, datasetNick, dataset_proc, sList):
 		DataProvider.__init__(self, config, datasource_name, dataset_expr, datasetNick, dataset_proc)
 		(self._ds_select, self._ds_name, self._ds_keys_user, self._ds_keys_guard) = self._setup(config, 'dataset')
 		(self._b_select, self._b_name, self._b_keys_user, self._b_keys_guard) = self._setup(config, 'block')
 		scanList = config.getList('scanner', sList) + ['NullScanner']
-		self._scanner = lmap(lambda cls: InfoScanner.createInstance(cls, config, datasource_name), scanList)
+		self._scanner = lmap(lambda cls: InfoScanner.create_instance(cls, config, datasource_name), scanList)
 
 
 	def _setup(self, config, prefix):
@@ -151,7 +152,7 @@ class ScanProviderBase(DataProvider):
 # Get dataset information from storage url
 # required format: <storage url>
 class ScanProvider(ScanProviderBase):
-	alias = ['scan']
+	alias_list = ['scan']
 
 	def __init__(self, config, datasource_name, dataset_expr, datasetNick = None, dataset_proc = None):
 		ds_config = config.changeView(viewClass = 'TaggedConfigView', addNames = [md5_hex(dataset_expr)])
@@ -172,14 +173,14 @@ class ScanProvider(ScanProviderBase):
 
 # This class is used to disentangle the TaskModule and GCProvider class - without any direct dependencies / imports
 class GCProviderSetup(Plugin):
-	alias = ['GCProviderSetup_TaskModule']
+	alias_list = ['GCProviderSetup_TaskModule']
 	scan_pipeline = ['JobInfoFromOutputDir', 'FilesFromJobInfo', 'MatchOnFilename', 'MatchDelimeter', 'DetermineEvents', 'AddFilePrefix']
 
 
 # Get dataset information just from grid-control instance
 # required format: <path to config file / workdir> [%<job selector]
 class GCProvider(ScanProviderBase):
-	alias = ['gc']
+	alias_list = ['gc']
 
 	def __init__(self, config, datasource_name, dataset_expr, datasetNick = None, dataset_proc = None):
 		ds_config = config.changeView(viewClass = 'TaggedConfigView', addNames = [md5_hex(dataset_expr)])
@@ -196,10 +197,10 @@ class GCProvider(ScanProviderBase):
 		ext_task_name = ext_config.changeView(setSections = ['global']).get(['module', 'task'])
 		if 'ParaMod' in ext_task_name: # handle old config files
 			ext_task_name = ext_config.changeView(setSections = ['ParaMod']).get('module')
-		ext_task_cls = Plugin.getClass(ext_task_name)
-		for ext_task_cls in Plugin.getClass(ext_task_name).iterClassBases():
+		ext_task_cls = Plugin.get_class(ext_task_name)
+		for ext_task_cls in Plugin.get_class(ext_task_name).iter_class_bases():
 			try:
-				scan_holder = GCProviderSetup.getClass('GCProviderSetup_' + ext_task_cls.__name__)
+				scan_holder = GCProviderSetup.get_class('GCProviderSetup_' + ext_task_cls.__name__)
 			except PluginError:
 				continue
 			scan_pipeline += scan_holder.scan_pipeline

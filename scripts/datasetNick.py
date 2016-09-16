@@ -17,6 +17,7 @@ import sys
 from gcSupport import Options, Plugin, getConfig, scriptOptions, utils
 from python_compat import lmap
 
+
 parser = Options(usage = '%s [OPTIONS] <DBS dataset path>')
 parser.addText(None, '', 'producer', default = 'SimpleNickNameProducer', help = 'Name of the nickname producer')
 options = scriptOptions(parser)
@@ -26,12 +27,12 @@ def main(opts, args):
 		utils.exitWithUsage('Dataset path not specified!')
 	datasetPath = args[0]
 	if '*' in datasetPath:
-		dbs3 = Plugin.createInstance('DBS3Provider', getConfig(), datasetPath, None)
+		dbs3 = Plugin.create_instance('DBS3Provider', getConfig(), datasetPath, None)
 		toProcess = dbs3.getCMSDatasetsImpl(datasetPath)
 	else:
 		toProcess = [datasetPath]
 
-	nProd = Plugin.getClass('NickNameProducer').createInstance(opts.producer, getConfig())
+	nProd = Plugin.get_class('NickNameProducer').create_instance(opts.producer, getConfig())
 	utils.printTabular(
 		[(0, 'Nickname'), (1, 'Dataset')],
 		lmap(lambda ds: {0: nProd.getName('', ds, None), 1: ds}, toProcess), 'll')

@@ -20,6 +20,7 @@ from grid_control.utils.data_structures import makeEnum
 from hpfwk import AbstractError
 from python_compat import set
 
+
 CheckInfo = makeEnum(['WMSID', 'RAW_STATUS', 'QUEUE', 'WN', 'SITE'])
 CheckStatus = makeEnum(['OK', 'ERROR'])
 

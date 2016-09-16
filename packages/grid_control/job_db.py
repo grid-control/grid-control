@@ -18,6 +18,7 @@ from grid_control.utils.data_structures import makeEnum
 from hpfwk import AbstractError, NestedException
 from python_compat import irange
 
+
 class JobError(NestedException):
 	pass
 

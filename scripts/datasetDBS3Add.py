@@ -22,6 +22,7 @@ from grid_control_cms.dbs3_migration_queue import AlreadyQueued, DBS3MigrationQu
 from grid_control_cms.sitedb import SiteDB
 from python_compat import imap, izip, json, lmap, md5_hex, set
 
+
 def create_dbs3_json_files(opts, block_info, block_dump):
 	block_size = 0
 	dataset_type = set()
@@ -217,10 +218,10 @@ def discover_blocks(options):
 
 	# get provider with dataset information
 	if options.opts.input_file:
-		provider = DataProvider.createInstance('ListProvider', getConfig(), options.opts.input_file, None)
+		provider = DataProvider.create_instance('ListProvider', getConfig(), options.opts.input_file, None)
 	else:
 		config = getConfig(configDict = {'dataset': options.config_dict})
-		provider = DataProvider.createInstance('DBSInfoProvider', config, options.args[0], None)
+		provider = DataProvider.create_instance('DBSInfoProvider', config, options.args[0], None)
 
 	blocks = provider.getBlocks(show_stats = False)
 	DataProvider.saveToFile(os.path.join(options.opts.tempdir, 'dbs.dat'), blocks)

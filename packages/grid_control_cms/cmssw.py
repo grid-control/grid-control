@@ -23,6 +23,7 @@ from grid_control.tasks.task_data import DataTask
 from grid_control.tasks.task_utils import TaskExecutableWrapper
 from python_compat import ifilter, imap, lmap, set, sorted, unspecified
 
+
 class CMSSWDebugJobInfoProcessor(DebugJobInfoProcessor):
 	def __init__(self):
 		DebugJobInfoProcessor.__init__(self)
@@ -30,7 +31,7 @@ class CMSSWDebugJobInfoProcessor(DebugJobInfoProcessor):
 
 
 class LFNPartitionProcessor(PartitionProcessor):
-	alias = ['lfnprefix']
+	alias_list = ['lfnprefix']
 
 	def __init__(self, config, datasource_name):
 		PartitionProcessor.__init__(self, config, datasource_name)
@@ -66,15 +67,15 @@ class LFNPartitionProcessor(PartitionProcessor):
 				splitInfo[DataSplitter.FileList] = modify_filelist_for_srm(splitInfo[DataSplitter.FileList])
 
 
-class CMSSWPartitionProcessor(PartitionProcessor.getClass('BasicPartitionProcessor')):
-	alias = ['cmsswpart']
+class CMSSWPartitionProcessor(PartitionProcessor.get_class('BasicPartitionProcessor')):
+	alias_list = ['cmsswpart']
 
 	def _format_file_list(self, fl):
 		return str.join(', ', imap(lambda x: '"%s"' % x, fl))
 
 
 class SCRAMTask(DataTask):
-	configSections = DataTask.configSections + ['SCRAMTask']
+	config_section_list = DataTask.config_section_list + ['SCRAMTask']
 
 	def __init__(self, config, name):
 		DataTask.__init__(self, config, name)
@@ -153,7 +154,7 @@ class SCRAMTask(DataTask):
 
 
 class CMSSW(SCRAMTask):
-	configSections = SCRAMTask.configSections + ['CMSSW']
+	config_section_list = SCRAMTask.config_section_list + ['CMSSW']
 
 	def __init__(self, config, name):
 		config.set('se input timeout', '0:30')

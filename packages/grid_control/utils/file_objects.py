@@ -15,6 +15,7 @@
 import os, gzip
 from python_compat import BytesBufferBase, bytes2str, imap, str2bytes, tarfile
 
+
 class SafeFile(object):
 	def __init__(self, fn, mode = 'r', keep_old = False):
 		assert(mode in ['r', 'w'])

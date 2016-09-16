@@ -23,6 +23,7 @@ from grid_control_cms.lumi_tools import parseLumiFilter, strLumi
 from grid_control_cms.sitedb import SiteDB
 from python_compat import itemgetter, lfilter, sorted
 
+
 CMSLocationFormat = makeEnum(['hostname', 'siteDB', 'both'])
 
 # required format: <dataset path>[@<instance>][#<block>]
@@ -208,7 +209,7 @@ class CMSBaseProvider(DataProvider):
 
 
 class DBS2Provider(CMSBaseProvider):
-	alias = ['dbs2']
+	alias_list = ['dbs2']
 
 	def __init__(self, config, datasource_name, dataset_expr, dataset_nick = None):
 		raise DatasetError('CMS deprecated all DBS2 Services in April 2014! Please use DBS3Provider instead.')

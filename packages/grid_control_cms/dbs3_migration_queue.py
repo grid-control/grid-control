@@ -14,6 +14,7 @@
 
 import pickle, logging
 
+
 try:
     from collections import deque
 except ImportError:
@@ -21,6 +22,7 @@ except ImportError:
 from hpfwk import NestedException
 from time import time
 from python_compat import set
+
 
 class MigrationRequestedState(object):
     def __init__(self, migration_task):

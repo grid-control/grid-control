@@ -18,9 +18,10 @@ from grid_control.utils.webservice import GridJSONRestClient
 from grid_control_cms.provider_cms import CMSBaseProvider
 from python_compat import lmap
 
+
 # required format: <dataset path>[@<instance>][#<block>]
 class DBS3Provider(CMSBaseProvider):
-	alias = ['dbs3', 'dbs']
+	alias_list = ['dbs3', 'dbs']
 
 	def __init__(self, config, datasource_name, dataset_expr, dataset_nick = None):
 		CMSBaseProvider.__init__(self, config, datasource_name, dataset_expr, dataset_nick)

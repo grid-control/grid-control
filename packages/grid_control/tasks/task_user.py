@@ -17,9 +17,10 @@ from grid_control.tasks.task_data import DataTask
 from grid_control.tasks.task_utils import TaskExecutableWrapper
 from python_compat import lmap
 
+
 class UserTask(DataTask):
-	alias = ['UserMod', 'user', 'script']
-	configSections = DataTask.configSections + ['UserMod', 'UserTask']
+	alias_list = ['UserMod', 'user', 'script']
+	config_section_list = DataTask.config_section_list + ['UserMod', 'UserTask']
 
 	def __init__(self, config, name):
 		DataTask.__init__(self, config, name)

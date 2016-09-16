@@ -23,14 +23,15 @@ from grid_control.utils.activity import Activity
 from grid_control.utils.parsing import parseStr
 from python_compat import identity, ifilter, imap, irange, izip, lfilter, lmap, set, sorted
 
+
 class NullScanner(InfoScanner):
 	def getEntries(self, path, metadata, events, seList, objStore):
 		yield (path, metadata, events, seList, objStore)
 
 triggerDataResync = triggerResync(['datasets', 'parameters'])
 
-# Get output directories from external config file
 class OutputDirsFromConfig(InfoScanner):
+	# Get output directories from external config file
 	def __init__(self, config, datasource_name):
 		InfoScanner.__init__(self, config, datasource_name)
 		ext_config_fn = config.getPath('source config', onChange = triggerDataResync)
@@ -171,7 +172,7 @@ class FilesFromDataProvider(InfoScanner):
 	def __init__(self, config, datasource_name):
 		InfoScanner.__init__(self, config, datasource_name)
 		dsPath = config.get('source dataset path', onChange = triggerDataResync)
-		self._source = DataProvider.createInstance('ListProvider', config, 'source dataset', dsPath)
+		self._source = DataProvider.create_instance('ListProvider', config, 'source dataset', dsPath)
 
 	def getEntries(self, path, metadata, events, seList, objStore):
 		for block in self._source.getBlocks(show_stats = False):

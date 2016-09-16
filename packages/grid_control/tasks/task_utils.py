@@ -17,6 +17,7 @@ from grid_control import utils
 from grid_control.config import changeInitNeeded
 from python_compat import unspecified
 
+
 class TaskExecutableWrapper:
 	def __init__(self, config, prefix = '', exeDefault = unspecified):
 		initSandbox = changeInitNeeded('sandbox')

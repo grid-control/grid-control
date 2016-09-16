@@ -17,6 +17,7 @@ import os, sys
 from gcSupport import FileInfoProcessor, JobInfoProcessor, JobResult, initGC
 from python_compat import sorted
 
+
 def main():
 	jip = JobInfoProcessor()
 	fip = FileInfoProcessor()

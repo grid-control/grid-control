@@ -25,6 +25,7 @@ from grid_control.utils.parsing import parseTime
 from grid_control.utils.process_base import LocalProcess
 from python_compat import any, imap, izip, lmap, set, sorted
 
+
 class GridEngine_CheckJobsProcessCreator(ProcessCreatorViaArguments):
 	def __init__(self, config):
 		ProcessCreatorViaArguments.__init__(self, config)
@@ -128,8 +129,8 @@ class GridEngine_Discover_Queues(BackendDiscovery):
 
 
 class GridEngine(PBSGECommon):
-	alias = ['SGE', 'UGE', 'OGE']
-	configSections = PBSGECommon.configSections + ['GridEngine'] + alias
+	alias_list = ['SGE', 'UGE', 'OGE']
+	config_section_list = PBSGECommon.config_section_list + ['GridEngine'] + alias_list
 
 	def __init__(self, config, name):
 		cancelExecutor = CancelJobsWithProcessBlind(config, 'qdel',

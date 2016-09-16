@@ -16,6 +16,7 @@
 from grid_control.gc_exceptions import UserError
 from grid_control.utils.webservice import GridJSONRestClient
 
+
 class DBS3LiteClient(object):
 	def __init__(self, url):
 		self._reader_url = '%s/%s' % (url, 'DBSReader')

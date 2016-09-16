@@ -15,8 +15,6 @@
 
 import os, sys
 
+
 sys.path.append(os.path.abspath(os.path.join(sys.path[0], 'packages')))
-
-from gcTool import run
-
-run()
+__import__('gcTool').run()

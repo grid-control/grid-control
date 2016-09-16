@@ -17,9 +17,10 @@ from grid_control import utils
 from grid_control.config import ConfigError, changeInitNeeded
 from grid_control.tasks.task_user import UserTask
 
+
 class ROOTTask(UserTask):
-	alias = ['ROOTMod', 'root']
-	configSections = UserTask.configSections + ['ROOTMod', 'ROOTTask']
+	alias_list = ['ROOTMod', 'root']
+	config_section_list = UserTask.config_section_list + ['ROOTMod', 'ROOTTask']
 
 	def __init__(self, config, name):
 		# Determine ROOT path from previous settings / environment / config file

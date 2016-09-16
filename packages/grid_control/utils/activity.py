@@ -17,6 +17,7 @@ from grid_control.utils.thread_tools import GCLock
 from hpfwk import APIError
 from python_compat import get_current_thread, get_thread_name, imap, rsplit, set
 
+
 class Activity(object):
 	def __init__(self, message = None, level = logging.INFO, name = None, parent = None):
 		(self.name, self._level, self._message, self._parent, self._children) = (name, level, None, None, [])

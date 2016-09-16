@@ -18,6 +18,7 @@ from grid_control.utils import safe_index
 from hpfwk import AbstractError
 from python_compat import imap, lmap, sort_inplace
 
+
 # Split dataset along block and class boundaries - using equivalence classes of file properties
 class FileClassSplitter(FileLevelSplitter):
 	def divide_blocks(self, block_iter):
@@ -40,7 +41,7 @@ class FileClassSplitter(FileLevelSplitter):
 
 
 class UserMetadataSplitter(FileClassSplitter):
-	alias = ['metadata']
+	alias_list = ['metadata']
 
 	def _configure_splitter(self, config):
 		self._metadata_user_list = self._query_config(config.getList, 'split metadata', [])

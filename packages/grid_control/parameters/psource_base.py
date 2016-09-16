@@ -17,14 +17,13 @@ from grid_control.utils.data_structures import makeEnum
 from hpfwk import AbstractError, NestedException, Plugin
 from python_compat import md5_hex, set
 
-ParameterInfo = makeEnum(['ACTIVE', 'HASH', 'REQS', 'FILES'])
 
+ParameterInfo = makeEnum(['ACTIVE', 'HASH', 'REQS', 'FILES'])
 
 class ParameterError(NestedException):
 	pass
 
 
-#class ParameterMetadata(str):
 class ParameterMetadata(object):
 	def __init__(self, value, untracked = False):
 		(self.value, self.untracked) = (value, untracked)
@@ -39,20 +38,20 @@ class ParameterMetadata(object):
 
 
 class ParameterSource(Plugin):
-	def EmptyResyncResult(cls):
-		return (set(), set(), False)
-	EmptyResyncResult = classmethod(EmptyResyncResult)
-
-	def create_psrc(cls, pconfig, repository, *args, **kwargs):
-		return cls(*args, **kwargs)
-	create_psrc = classmethod(create_psrc)
-
 	def __init__(self):
 		self._log = logging.getLogger('parameters.source')
 		Plugin.__init__(self)
 
 	def can_finish(self):
 		return True
+
+	def create_psrc(cls, pconfig, repository, *args, **kwargs):
+		return cls(*args, **kwargs)
+	create_psrc = classmethod(create_psrc)
+
+	def EmptyResyncResult(cls):
+		return (set(), set(), False)
+	EmptyResyncResult = classmethod(EmptyResyncResult)
 
 	def fill_parameter_content(self, pNum, result):
 		raise AbstractError
@@ -96,7 +95,7 @@ class LimitedResyncParameterSource(ParameterSource):
 	def get_psrc_hash(self):
 		if self._resync_enabled():
 			return md5_hex(repr(time.time()))
-		return self._hash
+		return self._get_psrc_hash()
 
 	def resync_psrc(self): # only needed if the parameters are opaque references (like partition index)
 		result = None
@@ -112,6 +111,9 @@ class LimitedResyncParameterSource(ParameterSource):
 		if force is not None:
 			self._resyncForce = force
 
+	def _get_psrc_hash(self):
+		raise AbstractError
+
 	def _resync_enabled(self):
 		return self._resyncForce or (self._resyncInterval >= 0 and (abs(time.time() - self._resyncLast) >= self._resyncInterval))
 
@@ -120,14 +122,14 @@ class LimitedResyncParameterSource(ParameterSource):
 
 
 class NullParameterSource(ParameterSource):
-	alias = ['null']
+	alias_list = ['null']
+
+	def __repr__(self):
+		return 'null()'
 
 	def create_psrc(cls, pconfig, repository):
 		return cls()
 	create_psrc = classmethod(create_psrc)
-
-	def __repr__(self):
-		return 'null()'
 
 	def fill_parameter_content(self, pNum, result):
 		pass

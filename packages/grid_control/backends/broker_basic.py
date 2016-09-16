@@ -18,6 +18,7 @@ from grid_control.config import ListOrder
 from grid_control.utils.parsing import parseList
 from python_compat import imap, lfilter, lmap, sorted
 
+
 class RandomBroker(Broker):
 	def __init__(self, config, name, broker_prefix, itemName, discoverFun):
 		Broker.__init__(self, config, name, broker_prefix, itemName, discoverFun)

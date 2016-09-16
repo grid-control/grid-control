@@ -27,6 +27,7 @@ from grid_control.utils.file_objects import SafeFile, VirtualFile
 from hpfwk import AbstractError, NestedException, clear_current_exception
 from python_compat import ichain, identity, imap, izip, lchain, lmap, set, sorted
 
+
 class BackendError(NestedException):
 	pass
 
@@ -41,7 +42,7 @@ BackendJobState = makeEnum([
 ])
 
 class WMS(NamedPlugin):
-	configSections = NamedPlugin.configSections + ['wms', 'backend']
+	config_section_list = NamedPlugin.config_section_list + ['wms', 'backend']
 	tagName = 'wms'
 
 	def __init__(self, config, name):
@@ -332,9 +333,9 @@ class BasicWMS(WMS):
 
 
 class Grid(WMS): # redirector - used to avoid loading the whole grid module just for the default
-	configSections = WMS.configSections + ['grid']
+	config_section_list = WMS.config_section_list + ['grid']
 
 	def __new__(cls, config, name):
 		gridWMS = 'GliteWMS'
-		grid_config = config.changeView(viewClass = 'TaggedConfigView', setClasses = [WMS.getClass(gridWMS)])
-		return WMS.createInstance(gridWMS, grid_config, name)
+		grid_config = config.changeView(viewClass = 'TaggedConfigView', setClasses = [WMS.get_class(gridWMS)])
+		return WMS.create_instance(gridWMS, grid_config, name)

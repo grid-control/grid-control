@@ -15,7 +15,8 @@
 import os, sys
 from python_compat import exit_without_cleanup, irange
 
-def close_safe(fd):
+
+def _safe_close(fd):
 	try:
 		os.close(fd)
 	except Exception:
@@ -30,7 +31,7 @@ def run_command(cmd, args, fd_map, env): # run command by replacing the current 
 	except Exception:
 		fd_max = 256
 	for fd in irange(3, fd_max): # close inherited file descriptors except for std{in/out/err}
-		close_safe(fd)
+		_safe_close(fd)
 	try:
 		os.execve(cmd, args, env) # replace process - this command DOES NOT RETURN if successful!
 	except Exception:
@@ -46,5 +47,5 @@ def run_command(cmd, args, fd_map, env): # run command by replacing the current 
 	]
 	sys.stderr.write(str.join('\n', error_message_list))
 	for fd in [0, 1, 2]:
-		close_safe(fd)
+		_safe_close(fd)
 	exit_without_cleanup(os.EX_OSERR) # exit forked process with OS error

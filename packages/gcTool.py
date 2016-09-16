@@ -23,6 +23,7 @@ from grid_control.utils.cmd_options import Options
 from grid_control.utils.file_objects import SafeFile
 from hpfwk import Plugin, handle_debug_interrupt, init_hpf_plugins
 
+
 # grid-control command line parser
 def parse_cmd_line(cmd_line_args):
 	parser = Options(usage = '%s [OPTIONS] <config file>', add_help_option = False)
@@ -70,7 +71,7 @@ def parse_cmd_line(cmd_line_args):
 
 
 # Config filler which collects data from command line arguments
-class OptsConfigFiller(Plugin.getClass('ConfigFiller')):
+class OptsConfigFiller(Plugin.get_class('ConfigFiller')):
 	def __init__(self, cmd_line_args):
 		self._cmd_line_args = cmd_line_args
 
@@ -101,7 +102,7 @@ class OptsConfigFiller(Plugin.getClass('ConfigFiller')):
 		if opts.continuous:
 			set_config_from_opt('workflow', 'duration', -1)
 		if opts.override:
-			Plugin.createInstance('StringConfigFiller', opts.override).fill(container)
+			Plugin.create_instance('StringConfigFiller', opts.override).fill(container)
 
 
 # create config instance

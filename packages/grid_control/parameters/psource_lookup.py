@@ -17,6 +17,7 @@ from grid_control.parameters.psource_base import ParameterError, ParameterInfo, 
 from grid_control.parameters.psource_basic import KeyParameterSource, SingleParameterSource
 from python_compat import imap, irange, izip, lmap, md5_hex
 
+
 def parse_lookup_create_args(pconfig, output_user, lookup_user_list):
 	# Transform output and lookup input: eg. key('A', 'B') -> ['A', 'B']
 	def keys_to_vn_list(src):
@@ -47,7 +48,7 @@ def parse_lookup_create_args(pconfig, output_user, lookup_user_list):
 			(len(name_matcher_list), len(lookup_vn_list)))
 	lookup_matcher_list = []
 	for name_matcher in name_matcher_list:
-		lookup_matcher_list.append(Matcher.createInstance(name_matcher, pconfig, output_vn))
+		lookup_matcher_list.append(Matcher.create_instance(name_matcher, pconfig, output_vn))
 
 	# configure lookup dictionary
 	(lookup_dict, lookup_order) = pconfig.get_parameter(output_vn)
@@ -72,11 +73,11 @@ def parse_lookup_factory_args(pconfig, output_vn_list, lookup_vn_list):
 	parameter_value = pconfig.get_parameter(output_vn.lstrip('!'))
 	if isinstance(parameter_value, list): # simple parameter source
 		if len(parameter_value) == 1:
-			return [(False, ParameterSource.getClass('ConstParameterSource'), [output_vn, parameter_value[0]])]
+			return [(False, ParameterSource.get_class('ConstParameterSource'), [output_vn, parameter_value[0]])]
 		else:
-			return [(False, ParameterSource.getClass('SimpleParameterSource'), [output_vn, parameter_value])]
+			return [(False, ParameterSource.get_class('SimpleParameterSource'), [output_vn, parameter_value])]
 	elif isinstance(parameter_value, tuple) and parameter_value[0] == 'format':
-		return [(False, ParameterSource.getClass('FormatterParameterSource'), parameter_value[1:])]
+		return [(False, ParameterSource.get_class('FormatterParameterSource'), parameter_value[1:])]
 
 	lookup_vn = None
 	if lookup_vn_list: # default lookup key
@@ -122,7 +123,7 @@ class LookupHelper(object):
 
 
 class SimpleLookupParameterSource(SingleParameterSource):
-	alias = ['lookup']
+	alias_list = ['lookup']
 
 	def __init__(self, output_vn, lookup_vn_list, lookup_matcher_list, lookup_dict, lookup_order):
 		self._lookup_vn_list = lookup_vn_list
@@ -153,7 +154,7 @@ class SimpleLookupParameterSource(SingleParameterSource):
 
 
 class SwitchingLookupParameterSource(SingleParameterSource):
-	alias = ['switch']
+	alias_list = ['switch']
 
 	def __init__(self, psrc, output_vn, lookup_vn_list, lookup_matcher_list, lookup_dict, lookup_order):
 		SingleParameterSource.__init__(self, output_vn, [])

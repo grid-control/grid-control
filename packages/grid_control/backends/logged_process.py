@@ -19,6 +19,7 @@ from grid_control.utils.file_objects import VirtualFile
 from hpfwk import get_current_exception
 from python_compat import tarfile
 
+
 class LoggedProcess(object):
 	def __init__(self, cmd, args = '', niceCmd = None, niceArgs = None, shell = True):
 		self.niceCmd = QM(niceCmd, niceCmd, os.path.basename(cmd))

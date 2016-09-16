@@ -17,6 +17,7 @@ from grid_control.job_db import JobClass
 from grid_control.job_selector import ClassSelector
 from grid_control.report import Report
 
+
 class BasicProgressBar(object):
 	def __init__(self, minValue = 0, maxValue = 100, totalWidth = 16):
 		(self._min, self._max, self._width) = (minValue, maxValue, totalWidth)
@@ -47,7 +48,7 @@ class BasicProgressBar(object):
 
 
 class BarReport(Report):
-	alias = ['bar']
+	alias_list = ['bar']
 
 	def __init__(self, jobDB, task, jobs = None, configString = ''):
 		Report.__init__(self, jobDB, task, jobs, configString)

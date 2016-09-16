@@ -19,6 +19,7 @@ from grid_control.backends.storage import se_copy, se_exists, se_mkdir, se_rm
 from grid_control.utils.thread_tools import GCLock, start_thread
 from python_compat import imap, irange, lfilter, lmap, md5
 
+
 log = logging.getLogger()
 
 def md5sum(filename):
@@ -390,7 +391,7 @@ def download_sequential(opts, workDir, jobList, incInfo, jobDB, token):
 def loop_download(opts, args):
 	# Init everything in each loop to pick up changes
 	(config, jobDB) = gcSupport.initGC(args)
-	token = Plugin.getClass('AccessToken').createInstance(opts.token, config, 'access')#, OSLayer.create(config))
+	token = Plugin.get_class('AccessToken').create_instance(opts.token, config, 'access')#, OSLayer.create(config))
 	workDir = config.getWorkPath()
 	jobList = jobDB.getJobs(ClassSelector(JobClass.SUCCESS))
 

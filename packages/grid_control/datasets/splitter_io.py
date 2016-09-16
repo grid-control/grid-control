@@ -22,6 +22,7 @@ from grid_control.utils.thread_tools import GCLock
 from hpfwk import clear_current_exception
 from python_compat import BytesBuffer, bytes2str, ifilter, imap, json, lfilter, lmap, tarfile
 
+
 class BaseJobFileTarAdaptor(object):
 	def __getitem__(self, key):
 		if key >= self.maxJobs:

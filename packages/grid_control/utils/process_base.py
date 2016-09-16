@@ -17,6 +17,7 @@ from grid_control.utils.thread_tools import GCEvent, GCLock, GCQueue, create_thr
 from hpfwk import AbstractError, get_current_exception
 from python_compat import bytes2str, imap, set, str2bytes
 
+
 def wait_fd(read = None, write = None, timeout = 0.2):
 	return select.select(read or [], write or [], [], timeout)
 

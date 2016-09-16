@@ -247,12 +247,12 @@ __all__ = ['all', 'any', 'bytes2str', 'BytesBuffer', 'BytesBufferBase', 'exit_wi
 	'get_current_thread', 'get_thread_name', 'get_user_input',
 	'ichain', 'identity', 'ifilter', 'imap', 'irange', 'ismap', 'itemgetter', 'izip', 'json',
 	'lchain', 'lfilter', 'lmap', 'lrange', 'lru_cache', 'lsmap', 'lzip', 'md5', 'md5_hex',
-	'next', 'NullHandler', 'parsedate', 'reduce', 'relpath', 'rsplit', 'set',
+	'next', 'parsedate', 'reduce', 'relpath', 'rsplit', 'set',
 	'sort_inplace', 'sorted', 'str2bytes', 'StringBuffer', 'tarfile', 'unicode',
 	'unspecified', 'when_unspecified']
 
 if __name__ == '__main__':
-	import re, doctest, logging
+	import re, doctest
 	logging.basicConfig()
 	doctest.testmod()
 	for (root, dirs, files) in os.walk('.'):

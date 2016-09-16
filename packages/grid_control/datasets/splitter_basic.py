@@ -17,6 +17,7 @@ from grid_control.datasets.splitter_base import DataSplitter
 from hpfwk import AbstractError
 from python_compat import imap, itemgetter, reduce
 
+
 class FileLevelSplitter(DataSplitter):
 	# Base class for (stackable) splitters with file level granularity
 	def divide_blocks(self, block_iter):
@@ -35,15 +36,32 @@ class FileLevelSplitter(DataSplitter):
 
 class BlockBoundarySplitter(FileLevelSplitter):
 	# Split only along block boundaries
-	alias = ['blocks']
+	alias_list = ['blocks']
 
 	def divide_blocks(self, block_iter):
 		return block_iter
 
 
+class FLSplitStacker(FileLevelSplitter):
+	alias_list = ['pipeline']
+
+	def partition_blocks_raw(self, block_iter, event_first = 0):
+		for block in block_iter:
+			splitter_name_list = self._setup(self._splitter_name_list, block)
+			splitter_iter = imap(lambda x: FileLevelSplitter.create_instance(x, self._config, self._datasource_name), splitter_name_list[:-1])
+			splitter_final = DataSplitter.create_instance(splitter_name_list[-1], self._config, self._datasource_name)
+			for sub_block in reduce(lambda x, y: y.divide_blocks(x), splitter_iter, [block]):
+				for partition in splitter_final.partition_blocks_raw([sub_block]):
+					yield partition
+
+	def _configure_splitter(self, config):
+		self._config = config
+		self._splitter_name_list = self._query_config(config.getList, 'splitter stack', ['BlockBoundarySplitter'])
+
+
 class FileBoundarySplitter(FileLevelSplitter):
 	# Split dataset along block boundaries into jobs with 'files per job' files
-	alias = ['files']
+	alias_list = ['files']
 
 	def divide_blocks(self, block_iter):
 		for block in block_iter:
@@ -58,27 +76,10 @@ class FileBoundarySplitter(FileLevelSplitter):
 		self._files_per_job = self._query_config(config.getInt, 'files per job')
 
 
-class FLSplitStacker(FileLevelSplitter):
-	alias = ['pipeline']
-
-	def partition_blocks_raw(self, block_iter, event_first = 0):
-		for block in block_iter:
-			splitter_name_list = self._setup(self._splitter_name_list, block)
-			splitter_iter = imap(lambda x: FileLevelSplitter.createInstance(x, self._config, self._datasource_name), splitter_name_list[:-1])
-			splitter_final = DataSplitter.createInstance(splitter_name_list[-1], self._config, self._datasource_name)
-			for sub_block in reduce(lambda x, y: y.divide_blocks(x), splitter_iter, [block]):
-				for partition in splitter_final.partition_blocks_raw([sub_block]):
-					yield partition
-
-	def _configure_splitter(self, config):
-		self._config = config
-		self._splitter_name_list = self._query_config(config.getList, 'splitter stack', ['BlockBoundarySplitter'])
-
-
 class HybridSplitter(FileLevelSplitter):
 	# Split dataset along block and file boundaries into jobs with (mostly <=) 'events per job' events
 	# In case of file with #events > 'events per job', use just the single file (=> job has more events!)
-	alias = ['hybrid']
+	alias_list = ['hybrid']
 
 	def divide_blocks(self, block_iter):
 		for block in block_iter:

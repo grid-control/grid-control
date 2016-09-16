@@ -18,10 +18,11 @@ from grid_control.datasets.provider_base import DataProvider, DatasetError
 from grid_control.utils.parsing import parseJSON, parseList
 from python_compat import sorted
 
+
 # Provides dataset information from a config file
 # required format: <config section>
 class ConfigDataProvider(DataProvider):
-	alias = ['config']
+	alias_list = ['config']
 
 	def __init__(self, config, datasource_name, dataset_expr, dataset_nick = None, dataset_proc = None):
 		DataProvider.__init__(self, config, datasource_name, dataset_expr, dataset_nick, dataset_proc)

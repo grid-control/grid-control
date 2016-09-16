@@ -20,11 +20,12 @@ from grid_control.gc_plugin import NamedPlugin
 from grid_control.utils.parsing import strTime
 from hpfwk import AbstractError, NestedException
 
+
 class AccessTokenError(NestedException):
 	pass
 
 class AccessToken(NamedPlugin):
-	configSections = NamedPlugin.configSections + ['proxy', 'access']
+	config_section_list = NamedPlugin.config_section_list + ['proxy', 'access']
 	tagName = 'access'
 
 	def getUsername(self):
@@ -67,7 +68,7 @@ class MultiAccessToken(AccessToken):
 
 
 class TrivialAccessToken(AccessToken):
-	alias = ['trivial', 'TrivialProxy']
+	alias_list = ['trivial', 'TrivialProxy']
 
 	def getUsername(self):
 		for var in ('LOGNAME', 'USER', 'LNAME', 'USERNAME'):

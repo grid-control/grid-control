@@ -19,6 +19,7 @@ from grid_control.parameters.psource_lookup import parse_lookup_factory_args
 from hpfwk import APIError
 from python_compat import ifilter, imap, irange, lchain, lfilter, lmap, next, reduce
 
+
 def clear_operator_stack(operator_list, operator_stack, token_stack):
 	while len(operator_stack) and (operator_stack[-1][0] in operator_list):
 		operator = operator_stack.pop()
@@ -125,7 +126,7 @@ def tree2names(node): # return list of referenced variable names in tree
 
 
 class SimpleParameterFactory(UserParameterFactory):
-	alias = ['simple']
+	alias_list = ['simple']
 
 	def __init__(self, config):
 		UserParameterFactory.__init__(self, config)
@@ -136,16 +137,16 @@ class SimpleParameterFactory(UserParameterFactory):
 		repeat = reduce(lambda a, b: a * b, ifilter(lambda expr: isinstance(expr, int), args), 1)
 		args = lfilter(lambda expr: not isinstance(expr, int), args)
 		if args:
-			result = ParameterSource.createInstance(cls_name, *args)
+			result = ParameterSource.create_instance(cls_name, *args)
 			if repeat > 1:
-				return ParameterSource.createInstance('RepeatParameterSource', result, repeat)
+				return ParameterSource.create_instance('RepeatParameterSource', result, repeat)
 			return result
 		elif repeat > 1:
 			return repeat
 		return NullParameterSource()
 
 	def _create_psrc_pspace(self, args, repository):
-		SubSpaceParameterSource = ParameterSource.getClass('SubSpaceParameterSource')
+		SubSpaceParameterSource = ParameterSource.get_class('SubSpaceParameterSource')
 		if len(args) == 1:
 			return SubSpaceParameterSource.create_psrc(self._parameter_config, repository, args[0])
 		elif len(args) == 3:
@@ -155,14 +156,14 @@ class SimpleParameterFactory(UserParameterFactory):
 
 	def _create_psrc_ref(self, arg, repository):
 		ref_type_default = 'dataset'
-		DataParameterSource = ParameterSource.getClass('DataParameterSource')
+		DataParameterSource = ParameterSource.get_class('DataParameterSource')
 		if 'dataset:' + arg not in repository:
 			ref_type_default = 'csv'
 		ref_type = self._parameter_config.get(arg, 'type', ref_type_default)
 		if ref_type == 'dataset':
 			return DataParameterSource.create_psrc(self._parameter_config, repository, arg)
 		elif ref_type == 'csv':
-			return ParameterSource.getClass('CSVParameterSource').create_psrc(self._parameter_config, repository, arg)
+			return ParameterSource.get_class('CSVParameterSource').create_psrc(self._parameter_config, repository, arg)
 		raise APIError('Unknown reference type: "%s"' % ref_type)
 
 	def _create_psrc_var(self, var_list, lookup_list): # create variable source
@@ -173,7 +174,7 @@ class SimpleParameterFactory(UserParameterFactory):
 			else:
 				psource_list.append(PSourceClass(*args))
 		# Optimize away unnecessary cross operations
-		return ParameterSource.createInstance('CrossParameterSource', *psource_list)
+		return ParameterSource.create_instance('CrossParameterSource', *psource_list)
 
 	def _get_source_user(self, pexpr, repository):
 		token_iter = tokenize(pexpr, lchain([self._precedence.keys(), list('()[]<>{}')]))
@@ -182,7 +183,7 @@ class SimpleParameterFactory(UserParameterFactory):
 		tree = tok2tree(token_list, self._precedence)
 		source = self._tree2expr(tree, repository)
 		for (PSourceClass, args) in self._psrc_list_nested:
-			source = PSourceClass.createInstance(PSourceClass.__name__, source, *args)
+			source = PSourceClass.create_instance(PSourceClass.__name__, source, *args)
 		return source
 
 	def _tree2expr(self, node, repository):

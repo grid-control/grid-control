@@ -16,8 +16,9 @@ from grid_control.datasets.dproc_base import DataProcessor
 from grid_control.datasets.provider_base import DataProvider
 from python_compat import itemgetter, sort_inplace, sorted
 
+
 class SortingDataProcessor(DataProcessor):
-	alias = ['sort']
+	alias_list = ['sort']
 
 	def __init__(self, config, datasource_name, on_change):
 		DataProcessor.__init__(self, config, datasource_name, on_change)

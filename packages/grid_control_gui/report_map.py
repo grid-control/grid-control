@@ -27,6 +27,7 @@ import os, math, random
 from grid_control_gui.geodb import get_geo_match
 from python_compat import ifilter, imap, irange, lfilter, lmap, lzip, sorted
 
+
 def remove_all_overlap(data):
 	dist2 = lambda a, b: (a['x'] - b['x'])**2 + (a['y'] - b['y'])**2
 	check_overlap = lambda a, b: dist2(a, b) < (a['weight'] + b['weight'])**2

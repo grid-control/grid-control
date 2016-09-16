@@ -20,8 +20,9 @@ from grid_control.parameters.psource_base import LimitedResyncParameterSource
 from grid_control.utils.activity import Activity
 from python_compat import md5_hex, set
 
+
 class DataParameterSource(LimitedResyncParameterSource):
-	alias = ['data']
+	alias_list = ['data']
 
 	def __init__(self, dn, ds_name, data_provider, data_splitter, data_proc, repository, keep_old = True):
 		LimitedResyncParameterSource.__init__(self)
@@ -78,11 +79,6 @@ class DataParameterSource(LimitedResyncParameterSource):
 	def get_parameter_len(self):
 		return self._len
 
-	def get_psrc_hash(self):
-		if self._resync_enabled():
-			return md5_hex(repr(time.time()))
-		return md5_hex(repr([self._name, self._data_splitter.get_partition_len()]))
-
 	def show_psrc(self):
 		return ['%s: src = %s' % (self.__class__.__name__, self._name)]
 
@@ -91,6 +87,9 @@ class DataParameterSource(LimitedResyncParameterSource):
 
 	def _get_data_path(self, postfix):
 		return os.path.join(self._dn, self._name + postfix)
+
+	def _get_psrc_hash(self):
+		return md5_hex(repr([self._name, self._data_splitter.get_partition_len()]))
 
 	def _resync_psrc(self):
 		if self._data_provider:

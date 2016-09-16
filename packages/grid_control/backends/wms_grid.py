@@ -26,6 +26,7 @@ from grid_control.utils.file_objects import SafeFile
 from grid_control.utils.process_base import LocalProcess
 from python_compat import ifilter, imap, lfilter, lmap, md5, parsedate, tarfile
 
+
 GridStatusMap = {
 	'aborted':   Job.ABORTED,
 	'cancelled': Job.ABORTED,
@@ -124,7 +125,7 @@ class Grid_CancelJobs(CancelJobsWithProcess):
 
 
 class GridWMS(BasicWMS):
-	configSections = BasicWMS.configSections + ['grid']
+	config_section_list = BasicWMS.config_section_list + ['grid']
 	def __init__(self, config, name, checkExecutor, cancelExecutor, jdlWriter = None):
 		config.set('access token', 'VomsProxy')
 		BasicWMS.__init__(self, config, name, checkExecutor = checkExecutor, cancelExecutor = cancelExecutor)

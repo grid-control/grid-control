@@ -21,6 +21,7 @@ from grid_control_cms.cmssw import CMSSW
 from grid_control_cms.lumi_tools import formatLumi, parseLumiFilter, strLumi
 from python_compat import ichain, imap, lfilter, lmap, set, sorted
 
+
 def formatLumiNice(lumis):
 	lumi_filter_str = formatLumi(lumis)
 	if len(lumi_filter_str) < 5:
@@ -29,7 +30,7 @@ def formatLumiNice(lumis):
 
 
 class CMSSW_Advanced(CMSSW):
-	configSections = CMSSW.configSections + ['CMSSW_Advanced']
+	config_section_list = CMSSW.config_section_list + ['CMSSW_Advanced']
 
 	def __init__(self, config, name):
 		self._name = name # needed for changeView calls before the constructor

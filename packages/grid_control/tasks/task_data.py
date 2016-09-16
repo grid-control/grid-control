@@ -21,6 +21,7 @@ from grid_control.parameters import ParameterSource
 from grid_control.tasks.task_base import TaskModule
 from grid_control.utils.parsing import strTime
 
+
 class DataTask(TaskModule):
 	def _setup_repository(self, config, psrc_repository):
 		TaskModule._setup_repository(self, config, psrc_repository)
@@ -55,7 +56,7 @@ class DataTask(TaskModule):
 
 		if dataProvider is not None:
 			splitterName = config.get('%s splitter' % datasource_name, 'FileBoundarySplitter')
-			splitterClass = dataProvider.checkSplitter(DataSplitter.getClass(splitterName))
+			splitterClass = dataProvider.checkSplitter(DataSplitter.get_class(splitterName))
 			dataSplitter = splitterClass(config, datasource_name)
 
 			# Create and register dataset parameter source
@@ -64,7 +65,7 @@ class DataTask(TaskModule):
 				'MultiPartitionProcessor', cls = PartitionProcessor, onChange = triggerResync(['parameters']),
 				pargs = (datasource_name,))
 
-			data_ps = ParameterSource.createInstance('DataParameterSource', config.getWorkPath(),
+			data_ps = ParameterSource.create_instance('DataParameterSource', config.getWorkPath(),
 				datasource_name.replace('dataset', 'data'), # needed for backwards compatible file names: datacache/datamap
 				dataProvider, dataSplitter, partProcessor, psrc_repository)
 

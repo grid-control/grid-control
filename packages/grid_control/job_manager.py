@@ -24,8 +24,9 @@ from grid_control.utils.file_objects import SafeFile
 from grid_control.utils.parsing import strTime
 from python_compat import ifilter, imap, izip, lfilter, lmap, set, sorted
 
+
 class JobManager(NamedPlugin):
-	configSections = NamedPlugin.configSections + ['jobs']
+	config_section_list = NamedPlugin.config_section_list + ['jobs']
 	tagName = 'jobmgr'
 
 	def __init__(self, config, name, task, eventhandler):
@@ -57,7 +58,7 @@ class JobManager(NamedPlugin):
 		self._interactive_delete = config.isInteractive('delete jobs', True)
 		self._interactive_reset = config.isInteractive('reset jobs', True)
 		self._do_shuffle = config.getBool('shuffle', False, onChange = None)
-		self._reportClass = Report.getClass(config.get('abort report', 'LocationReport', onChange = None))
+		self._reportClass = Report.get_class(config.get('abort report', 'LocationReport', onChange = None))
 		self._show_blocker = True
 
 

@@ -19,6 +19,7 @@ from grid_control.utils.activity import Activity
 from grid_control.utils.file_objects import SafeFile
 from python_compat import irange, sorted
 
+
 class TextFileJobDB(JobDB):
 	def __init__(self, config, jobLimit = -1, jobSelector = None):
 		JobDB.__init__(self, config, jobLimit, jobSelector)

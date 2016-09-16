@@ -21,6 +21,7 @@ from grid_control_gui.ansi import Console
 from grid_control_gui.report_colorbar import JobProgressBar
 from python_compat import ifilter, imap, irange, lfilter, lmap, set, sorted
 
+
 class CategoryBaseReport(Report):
 	def __init__(self, jobDB, task, jobs = None, configString = ''):
 		Report.__init__(self, jobDB, task, jobs, configString)
@@ -81,7 +82,7 @@ class CategoryBaseReport(Report):
 
 
 class ModuleReport(CategoryBaseReport):
-	alias = ['module']
+	alias_list = ['module']
 
 	def show_report(self, job_db):
 		(catStateDict, catDescDict, _) = CategoryBaseReport._getCategoryStateSummary(self, job_db)
@@ -226,7 +227,7 @@ class AdaptiveBaseReport(CategoryBaseReport):
 
 
 class GUIReport(AdaptiveBaseReport):
-	alias = ['modern']
+	alias_list = ['modern']
 
 	def __init__(self, jobDB, task, jobs = None, configString = ''):
 		(self.maxY, self.maxX) = Console(sys.stdout).getmaxyx()

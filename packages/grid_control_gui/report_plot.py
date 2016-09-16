@@ -37,6 +37,7 @@ from grid_control.report import Report
 from grid_control.utils.data_structures import makeEnum
 from python_compat import irange, izip
 
+
 JobResultEnum = makeEnum([
 	"TIMESTAMP_WRAPPER_START",
 	"TIMESTAMP_DEPLOYMENT_START",
@@ -283,7 +284,7 @@ def getCumQuantityAtTimeSpan(jobInfo, timeStart, timeEnd, timingExtract, quantit
 
 
 class PlotReport(Report):
-	alias = ['plot']
+	alias_list = ['plot']
 
 	def __init__(self, jobDB, task, jobs = None, configString = ''):
 		Report.__init__(self, jobDB, task, jobs, configString)

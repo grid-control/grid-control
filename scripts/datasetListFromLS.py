@@ -17,6 +17,7 @@ import sys
 from datasetListFromX import addDatasetListOptions, discoverDataset
 from gcSupport import Options, scriptOptions
 
+
 parser = Options(usage = '%s [OPTIONS] <data path> <dataset name> <pattern (*.root) / files>')
 parser.addText(None, 'p', 'path',    dest = 'dataset',        default = '.',
 	help = 'Path to dataset files')

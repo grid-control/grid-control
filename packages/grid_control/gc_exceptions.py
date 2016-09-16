@@ -15,6 +15,7 @@
 import os, sys, logging
 from hpfwk import NestedException, clear_current_exception
 
+
 (initial_stdout, initial_stderr, initial_excepthook) = (sys.stdout, sys.stderr, sys.excepthook)
 
 # This handler stores several pieces of debug information in a file

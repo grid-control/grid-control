@@ -18,6 +18,7 @@ from grid_control.utils.process_base import LocalProcess
 from hpfwk import AbstractError
 from python_compat import identity
 
+
 class GridAccessToken(TimedAccessToken):
 	def __init__(self, config, name, proxy_exec):
 		TimedAccessToken.__init__(self, config, name)

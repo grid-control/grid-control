@@ -15,6 +15,7 @@
 preserved_for_later_use = """
 from webservice_api import readJSON
 
+
 class CMSOverlay:
 	def __init__(self, config):
 		ConfigOverlay.__init__(self, config)

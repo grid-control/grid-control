@@ -426,7 +426,7 @@ logging options
     Level of detail for file stack information shown in exception logs
   * ``<logger name> <handler> tree / <logger name> tree`` = <integer> (default: 2)
     Level of detail for exception tree information shown in exception logs
-  * ``<logger name> <handler> variables / <logger name> variables`` = <integer> (default: 1)
+  * ``<logger name> <handler> variables / <logger name> variables`` = <integer> (default: 200)
     Level of detail for variable information shown in exception logs
   * ``<logger name> debug file`` = <list of paths> (default: '"<gc dir>/debug.log" "/tmp/gc.debug.<uid>.<pid>" "~/gc.debug"')
     Logfile used by debug file logger. In case multiple paths are specified, the first usable path will be used.

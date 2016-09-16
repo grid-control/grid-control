@@ -20,6 +20,7 @@ from grid_control.utils.thread_tools import GCLock
 from hpfwk import AbstractError, clear_current_exception, format_exception
 from python_compat import irange, lmap, set, sorted, tarfile
 
+
 LogLevelEnum = makeEnum(lmap(lambda level: logging.getLevelName(level).upper(), irange(51)), useHash = False)
 
 class LogEveryNsec(logging.Filter):
@@ -158,7 +159,7 @@ def get_debug_file_candidates():
 
 
 def logging_defaults():
-	formatter_verbose = GCFormatter(ex_context = 2, ex_vars = 1, ex_fstack = 1, ex_tree = 2)
+	formatter_verbose = GCFormatter(ex_context = 2, ex_vars = 200, ex_fstack = 1, ex_tree = 2)
 	root_logger = clean_logger()
 	root_logger.manager.loggerDict.clear()
 	root_logger.setLevel(logging.DEFAULT)
@@ -244,7 +245,7 @@ def logging_configure_handler(config, logger_name, handler_str, handler):
 		details_lt = config.getEnum(get_handler_option('detail lower limit'), LogLevelEnum, logging.DEBUG, onChange = None),
 		details_gt = config.getEnum(get_handler_option('detail upper limit'), LogLevelEnum, logging.ERROR, onChange = None),
 		ex_context = config.getInt(get_handler_option('code context'), 2, onChange = None),
-		ex_vars = config.getInt(get_handler_option('variables'), 1, onChange = None),
+		ex_vars = config.getInt(get_handler_option('variables'), 200, onChange = None),
 		ex_fstack = config.getInt(get_handler_option('file stack'), 1, onChange = None),
 		ex_tree = config.getInt(get_handler_option('tree'), 2, onChange = None))
 	handler.setFormatter(fmt)
@@ -289,7 +290,7 @@ def logging_setup(config):
 		config.set('detail upper limit', 'NOTSET', '?=')
 		config.set('abort handler', 'stdout debug_file', '?=')
 		config.setInt('abort code context', 2, '?=')
-		config.setInt('abort variables', 2, '?=')
+		config.setInt('abort variables', 1000, '?=')
 		config.setInt('abort file stack', 2, '?=')
 		config.setInt('abort tree', 2, '?=')
 	display_logger = config.getBool('display logger', False, onChange = None)

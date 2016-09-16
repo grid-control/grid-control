@@ -21,6 +21,7 @@ from grid_control.backends.wms_local import LocalWMS
 from grid_control.job_db import Job
 from python_compat import identity, ifilter
 
+
 class SLURM_CheckJobs(CheckJobsWithProcess):
 	def __init__(self, config):
 		proc_factory = ProcessCreatorAppendArguments(config,
@@ -49,7 +50,7 @@ class SLURM_CheckJobs(CheckJobsWithProcess):
 
 
 class SLURM(LocalWMS):
-	configSections = LocalWMS.configSections + ['SLURM']
+	config_section_list = LocalWMS.config_section_list + ['SLURM']
 
 	def __init__(self, config, name):
 		LocalWMS.__init__(self, config, name,

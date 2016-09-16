@@ -24,6 +24,7 @@ from grid_control.utils.activity import Activity
 from grid_control.utils.process_base import LocalProcess
 from python_compat import imap, irange, md5, tarfile
 
+
 class CREAM_CheckJobs(CheckJobsWithProcess):
 	def __init__(self, config):
 		proc_factory = ProcessCreatorAppendArguments(config,
@@ -75,7 +76,7 @@ class CREAM_CancelJobs(CancelJobsWithProcessBlind):
 
 
 class CreamWMS(GridWMS):
-	alias = ['cream']
+	alias_list = ['cream']
 
 	def __init__(self, config, name):
 		cancelExecutor = CancelAndPurgeJobs(config, CREAM_CancelJobs(config), CREAM_PurgeJobs(config))

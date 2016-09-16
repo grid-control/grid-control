@@ -23,6 +23,7 @@ from grid_control.utils.data_structures import UniqueList
 from grid_control.utils.file_objects import SafeFile
 from python_compat import lfilter
 
+
 # Main config interface
 class ConfigFactory(object):
 	def __init__(self, filler = None, config_file_path = None):

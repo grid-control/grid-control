@@ -16,6 +16,7 @@
 import sys
 from gcSupport import Plugin, getConfig
 
+
 def addDatasetListOptions(parser):
 	parser.addText(None, 'd', 'dataset',           dest = 'dataset name pattern',  default = '',
 		help = 'Name pattern of dataset')
@@ -49,8 +50,8 @@ def addDatasetListOptions(parser):
 
 def discoverDataset(providerName, config_dict):
 	config = getConfig(configDict = {'dataset': config_dict}).changeView(setSections = ['dataset'])
-	DataProvider = Plugin.getClass('DataProvider')
-	provider = DataProvider.createInstance(providerName, config, 'dataset', config_dict['dataset'], None)
+	DataProvider = Plugin.get_class('DataProvider')
+	provider = DataProvider.create_instance(providerName, config, 'dataset', config_dict['dataset'], None)
 	if config_dict['dump config'] == 'True':
 		config.write(sys.stdout, printDefault = True, printMinimal = True)
 		return

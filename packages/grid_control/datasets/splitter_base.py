@@ -22,6 +22,7 @@ from grid_control.utils.data_structures import makeEnum
 from hpfwk import AbstractError, NestedException, Plugin
 from python_compat import imap, irange, itemgetter, lmap, next, sort_inplace, unspecified
 
+
 def fast_search(lst, key_fun, key):
 	(idx, hi) = (0, len(lst))
 	while idx < hi:
@@ -40,14 +41,6 @@ ResyncOrder = makeEnum(['append', 'preserve', 'fillgap', 'reorder']) # reorder m
 
 class PartitionError(NestedException):
 	pass
-
-
-class DataSplitterIO(Plugin):
-	def import_partition_source(self, path):
-		raise AbstractError
-
-	def save_partition_source(self, path, splitter_info_dict_dict, partition_iter, partition_len_hint, message = 'Writing job mapping file'):
-		raise AbstractError
 
 
 class DataSplitter(ConfigurablePlugin):
@@ -88,7 +81,7 @@ class DataSplitter(ConfigurablePlugin):
 		return self._partition_source.maxJobs
 
 	def import_partitions(self, path):
-		splitter_io = DataSplitterIO.createInstance('DataSplitterIOAuto')
+		splitter_io = DataSplitterIO.create_instance('DataSplitterIOAuto')
 		self._partition_source = splitter_io.import_partition_source(path)
 
 	def iter_partitions(self):
@@ -96,7 +89,7 @@ class DataSplitter(ConfigurablePlugin):
 			yield self._partition_source[partition_num]
 
 	def load_partitions_for_script(path, config = None):
-		partition_source = DataSplitterIO.createInstance('DataSplitterIOAuto').import_partition_source(path)
+		partition_source = DataSplitterIO.create_instance('DataSplitterIOAuto').import_partition_source(path)
 		# Transfer config protocol (in case no split function is called)
 		config_protocol = {}
 		for (section, options) in partition_source.metadata.items():
@@ -110,7 +103,7 @@ class DataSplitter(ConfigurablePlugin):
 		# Create and setup splitter
 		if config is None:
 			config = create_config(configDict = partition_source.metadata)
-		splitter = DataSplitter.createInstance(partition_source.classname, config, 'dataset')
+		splitter = DataSplitter.create_instance(partition_source.classname, config, 'dataset')
 		splitter.set_state(partition_source, config_protocol)
 		return splitter
 	load_partitions_for_script = staticmethod(load_partitions_for_script)
@@ -156,7 +149,7 @@ class DataSplitter(ConfigurablePlugin):
 		# Write splitter_info_dict to allow reconstruction of data splitter
 		splitter_info_dict_dict = {'ClassName': self.__class__.__name__}
 		splitter_info_dict_dict.update(self._config_protocol)
-		splitter_io = DataSplitterIO.createInstance('DataSplitterIOAuto')
+		splitter_io = DataSplitterIO.create_instance('DataSplitterIOAuto')
 		splitter_io.save_partition_source(path, splitter_info_dict_dict, partition_iter, partition_len_hint, message)
 
 	def set_state(self, partition_source, config_protocol):
@@ -497,3 +490,11 @@ class DataSplitter(ConfigurablePlugin):
 
 makeEnum(['Dataset', 'Locations', 'NEntries', 'Skipped', 'FileList', 'Nickname', 'DatasetID', # DatasetID is legacy
 	'CommonPrefix', 'Invalid', 'BlockName', 'MetadataHeader', 'Metadata', 'Comment'], DataSplitter, useHash = False)
+
+
+class DataSplitterIO(Plugin):
+	def import_partition_source(self, path):
+		raise AbstractError
+
+	def save_partition_source(self, path, splitter_info_dict_dict, partition_iter, partition_len_hint, message = 'Writing job mapping file'):
+		raise AbstractError

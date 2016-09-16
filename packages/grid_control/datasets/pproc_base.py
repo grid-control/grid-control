@@ -18,6 +18,7 @@ from grid_control.utils import prune_processors
 from hpfwk import AbstractError
 from python_compat import imap, lchain
 
+
 # Class used by DataParameterSource to convert dataset splittings into parameter data
 class PartitionProcessor(ConfigurablePlugin):
 	def __init__(self, config, datasource_name):

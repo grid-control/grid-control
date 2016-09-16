@@ -24,20 +24,21 @@ from hpfwk import AbstractError
 from time import strftime, time
 from python_compat import ichain, ifilter, imap, izip, lchain, lmap, lru_cache, md5_hex
 
+
 class JobNamePlugin(ConfigurablePlugin):
 	def getName(self, task, jobNum):
 		raise AbstractError
 
 
 class DefaultJobName(JobNamePlugin):
-	alias = ['default']
+	alias_list = ['default']
 
 	def getName(self, task, jobNum):
 		return task.taskID[:10] + '.' + str(jobNum)
 
 
 class ConfigurableJobName(JobNamePlugin):
-	alias = ['config']
+	alias_list = ['config']
 
 	def __init__(self, config):
 		JobNamePlugin.__init__(self, config)
@@ -48,7 +49,7 @@ class ConfigurableJobName(JobNamePlugin):
 
 
 class TaskModule(NamedPlugin):
-	configSections = NamedPlugin.configSections + ['task']
+	config_section_list = NamedPlugin.config_section_list + ['task']
 	tagName = 'task'
 
 	# Read configuration options and init vars
@@ -162,12 +163,12 @@ class TaskModule(NamedPlugin):
 		# Transient variables
 		transients = ['GC_DATE', 'GC_TIMESTAMP', 'GC_GUID'] # these variables are determined on the WN
 		# Alias vars: Eg. __MY_JOB__ will access $GC_JOB_ID - used mostly for compatibility
-		alias = {'DATE': 'GC_DATE', 'TIMESTAMP': 'GC_TIMESTAMP', 'GUID': 'GC_GUID',
+		var_alias_map = {'DATE': 'GC_DATE', 'TIMESTAMP': 'GC_TIMESTAMP', 'GUID': 'GC_GUID',
 			'MY_JOBID': 'GC_JOB_ID', 'MY_JOB': 'GC_JOB_ID', 'JOBID': 'GC_JOB_ID', 'GC_JOBID': 'GC_JOB_ID',
 			'CONF': 'GC_CONF', 'TASK_ID': 'GC_TASK_ID'}
 		varNames = self.getVarNames() + transients
-		alias.update(dict(izip(varNames, varNames))) # include reflexive mappings
-		return alias
+		var_alias_map.update(dict(izip(varNames, varNames))) # include reflexive mappings
+		return var_alias_map
 
 
 	def substVars(self, name, inp, jobNum = None, addDict = None, check = True):

@@ -15,6 +15,7 @@
 
 import os, sys, time, fcntl, logging
 
+
 # add python subdirectory from where exec was started to search path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'packages')))
 
@@ -28,6 +29,7 @@ from grid_control.utils.activity import Activity
 from grid_control.utils.cmd_options import Options
 from hpfwk import Plugin, clear_current_exception
 from python_compat import ifilter, imap, lmap, sorted, tarfile
+
 
 def scriptOptions(parser, args = None, arg_keys = None):
 	parser.addBool(None, ' ', 'parseable', default = False, help = 'Output tabular data in parseable format')
@@ -88,7 +90,7 @@ def initGC(args):
 		userSelector = None
 		if len(args) != 1:
 			userSelector = JobSelector.create(args[1])
-		return (config, Plugin.createInstance('TextFileJobDB', config, jobSelector = userSelector))
+		return (config, Plugin.create_instance('TextFileJobDB', config, jobSelector = userSelector))
 	sys.stderr.write('Syntax: %s <config file> [<job id>, ...]\n\n' % sys.argv[0])
 	sys.exit(os.EX_USAGE)
 
@@ -116,7 +118,8 @@ def prettySize(size):
 
 def getPluginList(pluginName):
 	aliasDict = {}
-	for entry in Plugin.getClass(pluginName).getClassList():
+	cls = Plugin.get_class(pluginName)
+	for entry in cls.get_class_info_list():
 		depth = entry.pop('depth', 0)
 		(alias, name) = entry.popitem()
 		aliasDict.setdefault(name, []).append((depth, alias))

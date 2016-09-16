@@ -18,6 +18,7 @@ from grid_control.config.config_entry import ConfigEntry, ConfigError, standardC
 from hpfwk import APIError
 from python_compat import unspecified, when_unspecified
 
+
 # Config interface class accessing typed data using an string interface provided by configView
 class ConfigInterface(object):
 	def __init__(self, configView, default_on_change = unspecified, default_on_valid = unspecified):

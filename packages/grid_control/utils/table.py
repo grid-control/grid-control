@@ -15,6 +15,7 @@
 import re, logging
 from python_compat import imap, ismap, izip, json, lmap
 
+
 class Table(object):
 	pass
 

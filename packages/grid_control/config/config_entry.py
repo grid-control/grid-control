@@ -16,6 +16,7 @@ from grid_control.utils.parsing import strDict
 from hpfwk import APIError, NestedException, clear_current_exception
 from python_compat import ichain, ifilter, imap, lfilter, lmap, set, sorted, unspecified
 
+
 class ConfigError(NestedException):
 	pass
 

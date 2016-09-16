@@ -19,6 +19,7 @@ from grid_control.utils.activity import Activity
 from hpfwk import AbstractError
 from python_compat import identity, lmap
 
+
 class CancelJobs(BackendExecutor):
 	def execute(self, wmsIDs, wmsName): # yields list of (wmsID,)
 		raise AbstractError

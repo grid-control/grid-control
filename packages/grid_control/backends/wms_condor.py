@@ -18,6 +18,7 @@ from grid_control.backends.backend_tools import ProcessCreatorAppendArguments
 from grid_control.job_db import Job
 from python_compat import imap
 
+
 class Condor_CheckJobs(CheckJobsWithProcess):
 	def __init__(self, config):
 		CheckJobsWithProcess.__init__(self, config,
