@@ -69,7 +69,7 @@ def parse_tuple(t, delimeter):
 	return (t,)
 
 
-class ParameterConfig:
+class ParameterConfig(object):
 	def __init__(self, config):
 		(self._config, self._changes) = (config, [])
 		(self._map_vn2varexpr, self._map_varexpr_suffix2opt) = parse_parameter_option_list(config.getOptions())

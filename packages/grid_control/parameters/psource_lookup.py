@@ -93,7 +93,7 @@ def parse_lookup_factory_args(pconfig, output_vn_list, lookup_vn_list):
 	return [(True, SwitchingLookupParameterSource, list(tmp))]
 
 
-class LookupHelper:
+class LookupHelper(object):
 	def __init__(self, lookup_vn_list, lookup_matcher_list, lookup_dict, lookup_order):
 		(self._lookup_vn_list, self._lookup_matcher_list) = (lookup_vn_list, lookup_matcher_list)
 		(self._lookup_dict, self._lookup_order) = (lookup_dict, lookup_order)
