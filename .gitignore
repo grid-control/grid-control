@@ -1,6 +1,5 @@
 config/default.conf
 *devtool*
-/devtools
 docgen*.json
 incubator_*
 *.log
