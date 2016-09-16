@@ -17,27 +17,28 @@ from hpfwk.hpf_exceptions import NestedException, NestedExceptionHelper, clear_c
 
 def collect_exception_infos(exception_type, exception_value, exception_traceback):
 	# Collect full traceback and exception context
+	exception_start = NestedExceptionHelper(exception_value, exception_traceback)
 
-	exInfo = []
-	def collectRecursive(ex, cur_depth = -1, trackingID = 'T'):
-		if not isinstance(ex, NestedExceptionHelper):
+	exception_info_list = []
+	def collect_exception_infos_recursive(exception, cur_depth = -1, exception_id = 'T'):
+		if not isinstance(exception, NestedExceptionHelper):
 			cur_depth += 1
-			exInfo.append((ex, cur_depth, trackingID))
-		if hasattr(ex, 'traceback') and hasattr(ex, 'nested'): # decent
-			for frame in ex.traceback[:-1]: # yield all frames except for the final raise statement
-				frame['trackingID'] = trackingID
+			exception_info_list.append((exception, cur_depth, exception_id))
+		if hasattr(exception, 'traceback') and hasattr(exception, 'nested'): # decent
+			for frame in exception.traceback[:-1]: # yield all frames except for the final raise statement
+				frame['exception_id'] = exception_id
 				yield frame
-			for idx, exNested in enumerate(ex.nested):
-				for frame in collectRecursive(exNested, cur_depth, trackingID + '|%d' % idx):
+			for idx, exception_nested in enumerate(exception.nested):
+				for frame in collect_exception_infos_recursive(exception_nested, cur_depth, exception_id + '|%d' % idx):
 					yield frame
-			for frame in ex.traceback[-1:]:
-				frame['trackingID'] = trackingID
+			for frame in exception.traceback[-1:]:
+				frame['exception_id'] = exception_id
 				yield frame
 
-	traceback = list(collectRecursive(NestedExceptionHelper(exception_value, exception_traceback)))
-	return (traceback, exInfo) # skipping top-level exception helper
+	traceback = list(collect_exception_infos_recursive(exception_start))
+	return (traceback, exception_info_list) # skipping top-level exception helper
 
-def repr_safe(obj, verbose):
+def _safe_repr(obj, verbose):
 	try:
 		value = repr(obj)
 	except Exception:
@@ -54,7 +55,7 @@ def format_variables(variables, showLongVariables = False):
 	def display(keys, varDict, varPrefix = ''):
 		keys.sort()
 		for var in keys:
-			value = repr_safe(varDict[var], showLongVariables)
+			value = _safe_repr(varDict[var], showLongVariables)
 			if 'password' in var:
 				value = '<redacted>'
 			yield '\t\t%s%s = %s' % (varPrefix, var.ljust(maxlen), value)
@@ -65,7 +66,7 @@ def format_variables(variables, showLongVariables = False):
 		for line in display(list(variables.keys()), variables):
 			yield line
 	if classVariable is not None:
-		yield '\tClass variables (%s):' % repr_safe(classVariable, showLongVariables)
+		yield '\tClass variables (%s):' % _safe_repr(classVariable, showLongVariables)
 		if hasattr(classVariable, '__dict__'):
 			classVariables = classVariable.__dict__
 		elif hasattr(classVariable, '__slots__'):
@@ -87,8 +88,8 @@ def format_stack(frames, codeContext = 0, showVariables = True, showLongVariable
 	for frame in frames:
 		# Output relevant code fragment
 		trackingDisplay = ''
-		if frame.get('trackingID') is not None:
-			trackingDisplay = '%s-' % frame['trackingID']
+		if frame.get('exception_id') is not None:
+			trackingDisplay = '%s-' % frame['exception_id']
 		yield 'Stack #%s%02d [%s:%d] %s' % (trackingDisplay, frame['idx'], frame['file'], frame['line'], frame['fun'])
 		fmtLine = lambda line: linecache.getline(frame['file'], line).rstrip().replace('\t', '  ')
 		for delta_line in range(-codeContext, codeContext + 1):
@@ -137,7 +138,7 @@ def format_exception(exc_info, showCodeContext = 0, showVariables = 0, showFileS
 		if showFileStack > 0:
 			msg_fstack = 'File stack:\n'
 			for tb in traceback:
-				msg_fstack += '%s %s %s (%s)\n' % (tb.get('trackingID', '') + '|%d' % tb.get('idx', 0), tb['file'], tb['line'], tb['fun'])
+				msg_fstack += '%s %s %s (%s)\n' % (tb.get('exception_id', '') + '|%d' % tb.get('idx', 0), tb['file'], tb['line'], tb['fun'])
 			msg_parts.append(msg_fstack)
 
 		# Exception message tree
