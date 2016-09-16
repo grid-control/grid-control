@@ -23,14 +23,18 @@ def impl_detail(module, name, args, default, fun = lambda x: x):
 	except Exception:
 		return default
 
+
 def get_current_exception():
 	return sys.exc_info()[1]
+
 
 def get_current_traceback():
 	return sys.exc_info()[2]
 
+
 def clear_current_exception():
 	return impl_detail(sys, 'exc_clear', args = (), default = None)
+
 
 def _parse_helper(fun, *args):
 	result = []
@@ -39,6 +43,7 @@ def _parse_helper(fun, *args):
 	fun(result, *args)
 	os.chdir(cwd)
 	return result
+
 
 def parse_traceback(traceback):
 	# Parse traceback information
@@ -51,6 +56,7 @@ def parse_traceback(traceback):
 				'locals': dict(traceback.tb_frame.f_locals)})
 			traceback = traceback.tb_next
 	return _parse_helper(_parse_traceback, traceback)
+
 
 def parse_frame(frame):
 	# Parse stack frame
@@ -66,10 +72,12 @@ def parse_frame(frame):
 			entry['idx'] = idx
 	return _parse_helper(_parse_frame, frame)
 
+
 class NestedExceptionHelper(object):
 	def __init__(self, exception_value, exception_traceback):
 		self.nested = [exception_value]
 		self.traceback = parse_traceback(exception_traceback)
+
 
 class NestedException(Exception):
 	# nested exception base class
@@ -82,15 +90,18 @@ class NestedException(Exception):
 			self.traceback = parse_traceback(get_current_traceback())
 		Exception.__init__(self, *args, **kwargs)
 
+
 class APIError(NestedException):
 	# some error in using the API
 	pass
+
 
 class AbstractError(APIError):
 	# some error related to abstract functions
 	def __init__(self):
 		fun_name = impl_detail(sys, '_getframe', args = (2,), fun = lambda x: x.f_code.co_name, default = 'The invoked method')
 		APIError.__init__(self, '%s is an abstract function!' % fun_name)
+
 
 class ExceptionCollector(object):
 	# Utility class to collect multiple exceptions and throw them at a later time

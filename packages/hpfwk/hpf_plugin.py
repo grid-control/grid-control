@@ -74,12 +74,14 @@ class Plugin(object):
 	_plugin_map = {}
 	_cls_map = {}
 	_cls_cache = {}
+	_cls_bases = {}
 
 	def register_class(cls, module_name, cls_name, alias_list, base_cls_names):
 		cls_path = '%s.%s' % (module_name, cls_name)
 		depth = len(base_cls_names)
 		for name in [cls_name] + alias_list:
 			cls_name_entry = cls._plugin_map.setdefault(name.lower(), [])
+			cls._cls_bases[name.lower()] = base_cls_names
 			if cls_path not in cls_name_entry:
 				if name != cls_name:
 					depth = len(base_cls_names) + 1

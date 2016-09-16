@@ -19,12 +19,10 @@ from python_compat import md5_hex, set
 
 ParameterInfo = makeEnum(['ACTIVE', 'HASH', 'REQS', 'FILES'])
 
-
 class ParameterError(NestedException):
 	pass
 
 
-#class ParameterMetadata(str):
 class ParameterMetadata(object):
 	def __init__(self, value, untracked = False):
 		(self.value, self.untracked) = (value, untracked)
