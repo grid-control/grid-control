@@ -16,8 +16,8 @@ import os, sys
 
 hpf_startup_directory = os.getcwd()
 
-# access some python implementation detail with default
 def impl_detail(module, name, args, default, fun = lambda x: x):
+	# access some python implementation detail with default
 	try:
 		return fun(getattr(module, name)(*args))
 	except Exception:
@@ -40,8 +40,8 @@ def _parse_helper(fun, *args):
 	os.chdir(cwd)
 	return result
 
-# Parse traceback information
 def parse_traceback(traceback):
+	# Parse traceback information
 	def _parse_traceback(result, traceback):
 		while traceback:
 			result.append({'idx': len(result) + 1,
@@ -52,8 +52,8 @@ def parse_traceback(traceback):
 			traceback = traceback.tb_next
 	return _parse_helper(_parse_traceback, traceback)
 
-# Parse stack frame
 def parse_frame(frame):
+	# Parse stack frame
 	def _parse_frame(result, frame):
 		while frame:
 			result.insert(0, {
@@ -71,8 +71,8 @@ class NestedExceptionHelper(object):
 		self.nested = [exValue]
 		self.traceback = parse_traceback(exTraceback)
 
-# nested exception base class
 class NestedException(Exception):
+	# nested exception base class
 	def __init__(self, *args, **kwargs):
 		self.nested = []
 		self.traceback = []
@@ -82,18 +82,18 @@ class NestedException(Exception):
 			self.traceback = parse_traceback(get_current_traceback())
 		Exception.__init__(self, *args, **kwargs)
 
-# some error in using the API
 class APIError(NestedException):
+	# some error in using the API
 	pass
 
-# some error related to abstract functions
 class AbstractError(APIError):
+	# some error related to abstract functions
 	def __init__(self):
 		fun_name = impl_detail(sys, '_getframe', args = (2,), fun = lambda x: x.f_code.co_name, default = 'The invoked method')
 		APIError.__init__(self, '%s is an abstract function!' % fun_name)
 
-# Utility class to collect multiple exceptions and throw them at a later time
 class ExceptionCollector(object):
+	# Utility class to collect multiple exceptions and throw them at a later time
 	def __init__(self, log = None):
 		(self._exceptions, self._log) = ([], log)
 
