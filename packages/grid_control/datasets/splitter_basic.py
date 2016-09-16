@@ -41,23 +41,6 @@ class BlockBoundarySplitter(FileLevelSplitter):
 		return block_iter
 
 
-class FileBoundarySplitter(FileLevelSplitter):
-	# Split dataset along block boundaries into jobs with 'files per job' files
-	alias = ['files']
-
-	def divide_blocks(self, block_iter):
-		for block in block_iter:
-			fi_idx_start = 0
-			files_per_job = self._setup(self._files_per_job, block)
-			while fi_idx_start < len(block[DataProvider.FileList]):
-				fi_list = block[DataProvider.FileList][fi_idx_start : fi_idx_start + files_per_job]
-				fi_idx_start += files_per_job
-				yield self._create_sub_block(block, fi_list)
-
-	def _configure_splitter(self, config):
-		self._files_per_job = self._query_config(config.getInt, 'files per job')
-
-
 class FLSplitStacker(FileLevelSplitter):
 	alias = ['pipeline']
 
@@ -73,6 +56,23 @@ class FLSplitStacker(FileLevelSplitter):
 	def _configure_splitter(self, config):
 		self._config = config
 		self._splitter_name_list = self._query_config(config.getList, 'splitter stack', ['BlockBoundarySplitter'])
+
+
+class FileBoundarySplitter(FileLevelSplitter):
+	# Split dataset along block boundaries into jobs with 'files per job' files
+	alias = ['files']
+
+	def divide_blocks(self, block_iter):
+		for block in block_iter:
+			fi_idx_start = 0
+			files_per_job = self._setup(self._files_per_job, block)
+			while fi_idx_start < len(block[DataProvider.FileList]):
+				fi_list = block[DataProvider.FileList][fi_idx_start : fi_idx_start + files_per_job]
+				fi_idx_start += files_per_job
+				yield self._create_sub_block(block, fi_list)
+
+	def _configure_splitter(self, config):
+		self._files_per_job = self._query_config(config.getInt, 'files per job')
 
 
 class HybridSplitter(FileLevelSplitter):
