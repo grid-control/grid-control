@@ -211,7 +211,7 @@ class Plugin(object):
 	bind = classmethod(bind)
 
 
-def safe_import(root, module):
+def _safe_import(root, module):
 	old_path = list(sys.path)
 	try:
 		result = __import__(str.join('.', module), {}, {}, module[-1])
@@ -227,7 +227,7 @@ def import_modules(root, selector, package = None):
 
 	if os.path.exists(os.path.join(root, '__init__.py')):
 		package = (package or []) + [os.path.basename(root)]
-		yield safe_import(root, package)
+		yield _safe_import(root, package)
 	else:
 		package = []
 
@@ -243,7 +243,7 @@ def import_modules(root, selector, package = None):
 			for module in import_modules(os.path.join(root, fn), selector, package):
 				yield module
 		elif os.path.isfile(os.path.join(root, fn)) and fn.endswith('.py'):
-			yield safe_import(root, package + [fn[:-3]])
+			yield _safe_import(root, package + [fn[:-3]])
 
 	sys.path = sys.path[1:]
 
