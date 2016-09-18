@@ -120,7 +120,7 @@ class TypedConfigInterface(ConfigInterface):
 			if requirePlugin and not objList:
 				raise ConfigError('This option requires to specify a valid plugin!')
 			return objList
-		obj2str = lambda value: str.join('\n', imap(lambda obj: obj.bind_value(), value))
+		obj2str = lambda value: str.join('\n', imap(lambda obj: obj.get_bind_value(), value))
 		return self._getInternal(desc, obj2str, str2obj, str2obj, option, default, **kwargs)
 
 	# Return class - default class is also given in string form!

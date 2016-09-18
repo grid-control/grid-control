@@ -25,10 +25,10 @@ class PluginError(NestedException):
 
 # Wrapper class to fix plugin arguments
 class InstanceFactory(object):
-	def __init__(self, bind_value, cls, *args, **kwargs):
-		(self._bind_value, self._cls, self._args, self._kwargs) = (bind_value, cls, args, kwargs)
+	def __init__(self, get_bind_value, cls, *args, **kwargs):
+		(self._get_bind_value, self._cls, self._args, self._kwargs) = (get_bind_value, cls, args, kwargs)
 
-	def _fmt(self, args, kwargs, add_ellipsis = False):
+	def _format_call(self, args, kwargs, add_ellipsis = False):
 		cls_name = '%s.%s' % (self._cls.__module__, self._cls.__name__)
 		if not logging.getLogger().isEnabledFor(logging.INFO1):
 			return repr(cls_name)
@@ -42,10 +42,10 @@ class InstanceFactory(object):
 		return cls_name + '(%s)' % str.join(', ', args_str_list)
 
 	def __eq__(self, other): # Used to check for changes compared to old
-		return self.bind_value() == other.bind_value()
+		return self.get_bind_value() == other.get_bind_value()
 
 	def __repr__(self):
-		return '<instance factory for %s>' % self._fmt(self._args, self._kwargs, add_ellipsis = True)
+		return '<instance factory for %s>' % self._format_call(self._args, self._kwargs, add_ellipsis = True)
 
 	def getClass(self):
 		return self._cls
@@ -56,10 +56,10 @@ class InstanceFactory(object):
 		try:
 			return self._cls(*args, **kwargs)
 		except Exception:
-			raise PluginError('Error while creating instance: %s' % self._fmt(args, kwargs))
+			raise PluginError('Error while creating instance: %s' % self._format_call(args, kwargs))
 
-	def bind_value(self):
-		return self._bind_value
+	def get_bind_value(self):
+		return self._get_bind_value
 
 
 def get_fq_class_name(cls):
