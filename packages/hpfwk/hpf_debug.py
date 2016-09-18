@@ -85,7 +85,7 @@ def _format_variables(variable_dict, truncate_len = 200):
 		yield ''
 
 
-def format_stack(frame_list, code_context = 0, showVariables = True, truncate_len = 200):
+def _format_stack(frame_list, code_context = 0, showVariables = True, truncate_len = 200):
 	# Function to log source code and variables from frames
 	import linecache
 	linecache.checkcache()
@@ -135,7 +135,7 @@ def format_exception(exc_info, showcode_context = 0, showVariables = 0, showFile
 
 		# Code and variable listing
 		if showcode_context > 0:
-			stackInfo = format_stack(traceback, code_context = showcode_context - 1,
+			stackInfo = _format_stack(traceback, code_context = showcode_context - 1,
 				showVariables = showVariables > 0, truncate_len = showVariables > 1)
 			msg_parts.append(str.join('\n', stackInfo))
 
@@ -172,7 +172,7 @@ def handle_dump_interrupt(sig, frame):
 		log.info('Stack of threads is not available!')
 	for (threadID, frame) in frames_by_threadID.items():
 		log.info('Stack of thread #%d:\n' % threadID + str.join('\n',
-			format_stack(parse_frame(frame), code_context = 0, showVariables = False)))
+			_format_stack(parse_frame(frame), code_context = 0, showVariables = False)))
 	return variables
 
 def create_debug_console(variables):
