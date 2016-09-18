@@ -108,28 +108,28 @@ def _format_stack(frame_list, code_context = 0, show_variables = True, truncate_
 				yield line
 
 
-def _format_ex_tree(ex_info_list, showExStack = 2):
+def _format_ex_tree(ex_info_list, exception_stack_mode = 2):
 	ex_msg_list = []
-	if showExStack == 1:
+	if exception_stack_mode == 1:
 		ex_info_list = ex_info_list[-2:]
 	for info in ex_info_list:
 		(exception_value, exDepth, _) = info
-		if showExStack == 1:
+		if exception_stack_mode == 1:
 			exDepth = 0
 		result = '%s%s: %s' % ('  ' * exDepth, exception_value.__class__.__name__, exception_value)
-		if (showExStack > 1) and hasattr(exception_value, 'args') and not isinstance(exception_value, NestedException):
+		if (exception_stack_mode > 1) and hasattr(exception_value, 'args') and not isinstance(exception_value, NestedException):
 			if ((len(exception_value.args) == 1) and (str(exception_value.args[0]) not in str(exception_value))) or (len(exception_value.args) > 1):
 				try:
 					result += '\n%s%s  %s' % ('  ' * exDepth, len(exception_value.__class__.__name__) * ' ', exception_value.args)
 				except Exception:
 					clear_current_exception()
 		ex_msg_list.append(result)
-	if showExStack > 1:
+	if exception_stack_mode > 1:
 		return str.join('\n', ex_msg_list)
 	return str.join(' - ', ex_msg_list)
 
 
-def format_exception(exc_info, showcode_context = 0, show_variables = 0, showFileStack = 0, showExStack = 1):
+def format_exception(exc_info, showcode_context = 0, show_variables = 0, showFileStack = 0, exception_stack_mode = 1):
 	msg_parts = []
 
 	if exc_info not in [None, (None, None, None)]:
@@ -149,8 +149,8 @@ def format_exception(exc_info, showcode_context = 0, show_variables = 0, showFil
 			msg_parts.append(msg_fstack)
 
 		# Exception message tree
-		if showExStack > 0:
-			msg_parts.append(_format_ex_tree(ex_info_list, showExStack))
+		if exception_stack_mode > 0:
+			msg_parts.append(_format_ex_tree(ex_info_list, exception_stack_mode))
 
 	return str.join('\n', msg_parts)
 
