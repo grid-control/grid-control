@@ -129,7 +129,7 @@ class TypedConfigInterface(ConfigInterface):
 		factories = self._getPluginFactories(option, default, cls, tags, inherit, requirePlugin,
 			singlePlugin = True, desc = 'plugin', **kwargs)
 		if factories:
-			return factories[0].getBoundInstance(*(pargs or ()), **(pkwargs or {}))
+			return factories[0].create_instance_bound(*(pargs or ()), **(pkwargs or {}))
 
 	# Return composite class - default classes are also given in string form!
 	def getCompositePlugin(self, option, default = unspecified,
@@ -139,7 +139,7 @@ class TypedConfigInterface(ConfigInterface):
 		clsList = []
 		for factory in self._getPluginFactories(option, default, cls, tags, inherit, requirePlugin,
 				singlePlugin = False, desc = 'composite plugin', **kwargs):
-			clsList.append(factory.getBoundInstance(*(pargs or ()), **(pkwargs or {})))
+			clsList.append(factory.create_instance_bound(*(pargs or ()), **(pkwargs or {})))
 		if len(clsList) == 1:
 			return clsList[0]
 		elif not clsList: # requirePlugin == False

@@ -75,7 +75,7 @@ class DataProvider(ConfigurablePlugin):
 
 	def getBlocksFromExpr(cls, config, dataset_expr):
 		for dp_factory in DataProvider.bind(dataset_expr, config = config):
-			dproc = dp_factory.getBoundInstance()
+			dproc = dp_factory.create_instance_bound()
 			for block in dproc.get_blocks_raw():
 				yield block
 	getBlocksFromExpr = classmethod(getBlocksFromExpr)

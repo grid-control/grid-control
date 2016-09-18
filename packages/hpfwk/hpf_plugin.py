@@ -26,7 +26,7 @@ class PluginError(NestedException):
 # Wrapper class to fix plugin arguments
 class InstanceFactory(object):
 	def __init__(self, get_bind_value, cls, *args, **kwargs):
-		(self._get_bind_value, self._cls, self._args, self._kwargs) = (get_bind_value, cls, args, kwargs)
+		(self._bind_value, self._cls, self._args, self._kwargs) = (get_bind_value, cls, args, kwargs)
 
 	def _format_call(self, args, kwargs, add_ellipsis = False):
 		cls_name = '%s.%s' % (self._cls.__module__, self._cls.__name__)
@@ -50,7 +50,7 @@ class InstanceFactory(object):
 	def getClass(self):
 		return self._cls
 
-	def getBoundInstance(self, *args, **kwargs):
+	def create_instance_bound(self, *args, **kwargs):
 		args = self._args + args
 		kwargs = dict(list(self._kwargs.items()) + list(kwargs.items()))
 		try:
@@ -59,7 +59,7 @@ class InstanceFactory(object):
 			raise PluginError('Error while creating instance: %s' % self._format_call(args, kwargs))
 
 	def get_bind_value(self):
-		return self._get_bind_value
+		return self._bind_value
 
 
 def get_fq_class_name(cls):
@@ -205,7 +205,7 @@ class Plugin(object):
 
 	# Get an instance of a derived class by specifying the class name and constructor arguments
 	def createInstance(cls, cls_name, *args, **kwargs):
-		return InstanceFactory(cls_name, cls.getClass(cls_name), *args, **kwargs).getBoundInstance() # For uniform error output
+		return InstanceFactory(cls_name, cls.getClass(cls_name), *args, **kwargs).create_instance_bound() # For uniform error output
 	createInstance = classmethod(createInstance)
 
 	def bind(cls, value, **kwargs):
