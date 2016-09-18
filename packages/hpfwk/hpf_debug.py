@@ -91,7 +91,8 @@ def format_stack(frames, codeContext = 0, showVariables = True, showLongVariable
 		if frame.get('exception_id') is not None:
 			trackingDisplay = '%s-' % frame['exception_id']
 		yield 'Stack #%s%02d [%s:%d] %s' % (trackingDisplay, frame['idx'], frame['file'], frame['line'], frame['fun'])
-		fmtLine = lambda line: linecache.getline(frame['file'], line).rstrip().replace('\t', '  ')
+		def fmtLine(line):
+			return linecache.getline(frame['file'], line).rstrip().replace('\t', '  ')
 		for delta_line in range(-codeContext, codeContext + 1):
 			if delta_line == 0:
 				yield '\t=>| %s' % fmtLine(frame['line'] + delta_line)

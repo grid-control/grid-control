@@ -88,13 +88,13 @@ class DataProvider(ConfigurablePlugin):
 	bName = classmethod(bName)
 
 
+	def get_dataset_expr(self):
+		return self._dataset_expr
+
+
 	def _raise_on_abort(self):
 		if utils.abort():
 			raise DatasetError('Received abort request during retrieval of %r' % self.get_dataset_expr())
-
-
-	def get_dataset_expr(self):
-		return self._dataset_expr
 
 
 	# Define how often the dataprovider can be queried automatically
