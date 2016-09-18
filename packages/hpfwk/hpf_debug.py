@@ -15,12 +15,12 @@
 import sys, logging, threading
 from hpfwk.hpf_exceptions import NestedException, NestedExceptionHelper, clear_current_exception, impl_detail, parse_frame
 
-def collect_exception_infos(exception_type, exception_value, exception_traceback):
+def _collect_exception_infos(exception_type, exception_value, exception_traceback):
 	# Collect full traceback and exception context
 	exception_start = NestedExceptionHelper(exception_value, exception_traceback)
 
 	exception_info_list = []
-	def collect_exception_infos_recursive(exception, cur_depth = -1, exception_id = 'T'):
+	def _collect_exception_infos_recursive(exception, cur_depth = -1, exception_id = 'T'):
 		if not isinstance(exception, NestedExceptionHelper):
 			cur_depth += 1
 			exception_info_list.append((exception, cur_depth, exception_id))
@@ -29,13 +29,13 @@ def collect_exception_infos(exception_type, exception_value, exception_traceback
 				frame['exception_id'] = exception_id
 				yield frame
 			for idx, exception_nested in enumerate(exception.nested):
-				for frame in collect_exception_infos_recursive(exception_nested, cur_depth, exception_id + '|%d' % idx):
+				for frame in _collect_exception_infos_recursive(exception_nested, cur_depth, exception_id + '|%02d' % idx):
 					yield frame
 			for frame in exception.traceback[-1:]:
 				frame['exception_id'] = exception_id
 				yield frame
 
-	traceback = list(collect_exception_infos_recursive(exception_start))
+	traceback = list(_collect_exception_infos_recursive(exception_start))
 	return (traceback, exception_info_list) # skipping top-level exception helper
 
 
@@ -49,7 +49,7 @@ def _safe_repr(obj, truncate_len):
 	return repr_str[:truncate_len] + ' ... [length:%d]' % len(repr_str)
 
 
-def format_variables(variable_dict, truncate_len = 200):
+def _format_variables(variable_dict, truncate_len = 200):
 	# Function to log local and class variables
 	max_vn_len = 0
 	for vn in variable_dict:
@@ -104,7 +104,7 @@ def format_stack(frame_list, code_context = 0, showVariables = True, truncate_le
 				yield '\t  | %s' % get_source_code(frame['line'] + delta_line_num)
 		yield ''
 		if showVariables:
-			for line in format_variables(frame['locals'], truncate_len):
+			for line in _format_variables(frame['locals'], truncate_len):
 				yield line
 
 def format_ex_tree(ex_info_list, showExStack = 2):
@@ -131,7 +131,7 @@ def format_exception(exc_info, showcode_context = 0, showVariables = 0, showFile
 	msg_parts = []
 
 	if exc_info not in [None, (None, None, None)]:
-		traceback, ex_info_list = collect_exception_infos(*exc_info)
+		traceback, ex_info_list = _collect_exception_infos(*exc_info)
 
 		# Code and variable listing
 		if showcode_context > 0:
