@@ -49,7 +49,7 @@ def _safe_repr(obj, truncate_len):
 	return repr_str[:truncate_len] + ' ... [length:%d]' % len(repr_str)
 
 
-def _format_variables(variable_dict, truncate_len = 200):
+def _format_variables(variable_dict, truncate_len):
 	# Function to log local and class variables
 	max_vn_len = 0
 	for vn in variable_dict:
@@ -85,7 +85,7 @@ def _format_variables(variable_dict, truncate_len = 200):
 		yield ''
 
 
-def _format_stack(frame_list, code_context = 0, showVariables = True, truncate_len = 200):
+def _format_stack(frame_list, code_context = 0, show_variables = True, truncate_len = 200):
 	# Function to log source code and variables from frames
 	import linecache
 	linecache.checkcache()
@@ -103,9 +103,10 @@ def _format_stack(frame_list, code_context = 0, showVariables = True, truncate_l
 			else:
 				yield '\t  | %s' % get_source_code(frame['line'] + delta_line_num)
 		yield ''
-		if showVariables:
+		if show_variables:
 			for line in _format_variables(frame['locals'], truncate_len):
 				yield line
+
 
 def _format_ex_tree(ex_info_list, showExStack = 2):
 	ex_msg_list = []
@@ -127,7 +128,8 @@ def _format_ex_tree(ex_info_list, showExStack = 2):
 		return str.join('\n', ex_msg_list)
 	return str.join(' - ', ex_msg_list)
 
-def format_exception(exc_info, showcode_context = 0, showVariables = 0, showFileStack = 0, showExStack = 1):
+
+def format_exception(exc_info, showcode_context = 0, show_variables = 0, showFileStack = 0, showExStack = 1):
 	msg_parts = []
 
 	if exc_info not in [None, (None, None, None)]:
@@ -136,7 +138,7 @@ def format_exception(exc_info, showcode_context = 0, showVariables = 0, showFile
 		# Code and variable listing
 		if showcode_context > 0:
 			stackInfo = _format_stack(traceback, code_context = showcode_context - 1,
-				showVariables = showVariables > 0, truncate_len = showVariables > 1)
+				show_variables = show_variables > 0, truncate_len = show_variables > 1)
 			msg_parts.append(str.join('\n', stackInfo))
 
 		# File stack with line information
@@ -151,6 +153,7 @@ def format_exception(exc_info, showcode_context = 0, showVariables = 0, showFile
 			msg_parts.append(_format_ex_tree(ex_info_list, showExStack))
 
 	return str.join('\n', msg_parts)
+
 
 def handle_dump_interrupt(sig, frame):
 	# Signal handler for state dump requests
@@ -172,8 +175,9 @@ def handle_dump_interrupt(sig, frame):
 		log.info('Stack of threads is not available!')
 	for (threadID, frame) in frames_by_threadID.items():
 		log.info('Stack of thread #%d:\n' % threadID + str.join('\n',
-			_format_stack(parse_frame(frame), code_context = 0, showVariables = False)))
+			_format_stack(parse_frame(frame), code_context = 0, show_variables = False)))
 	return variables
+
 
 def create_debug_console(variables):
 	import code
@@ -182,6 +186,7 @@ def create_debug_console(variables):
 	console.push('readline.parse_and_bind("tab: complete")')
 	console.push('readline.set_completer(rlcompleter.Completer(globals()).complete)')
 	return console
+
 
 def handle_debug_interrupt(sig = None, frame = None):
 	# Signal handler for debug session requests
