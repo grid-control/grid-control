@@ -107,7 +107,7 @@ def _format_stack(frame_list, code_context = 0, showVariables = True, truncate_l
 			for line in _format_variables(frame['locals'], truncate_len):
 				yield line
 
-def format_ex_tree(ex_info_list, showExStack = 2):
+def _format_ex_tree(ex_info_list, showExStack = 2):
 	ex_msg_list = []
 	if showExStack == 1:
 		ex_info_list = ex_info_list[-2:]
@@ -148,7 +148,7 @@ def format_exception(exc_info, showcode_context = 0, showVariables = 0, showFile
 
 		# Exception message tree
 		if showExStack > 0:
-			msg_parts.append(format_ex_tree(ex_info_list, showExStack))
+			msg_parts.append(_format_ex_tree(ex_info_list, showExStack))
 
 	return str.join('\n', msg_parts)
 
