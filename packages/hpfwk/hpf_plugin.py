@@ -37,7 +37,6 @@ def create_plugin_file(package, selector):
 	for cls in get_plugin_list(import_modules(os.path.abspath(package), selector)):
 		if cls.__module__.startswith(os.path.basename(package)):
 			fill_cls_dict(cls)
-	print cls
 
 	def write_cls_hierarchy(fp, data, level = 0):
 		if None in data:
