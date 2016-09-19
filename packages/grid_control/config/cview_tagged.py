@@ -27,7 +27,7 @@ class TaggedConfigView(SimpleConfigView):
 			setClasses = unspecified, addClasses = None, inheritSections = False):
 		parent = parent or self
 		if inheritSections and isinstance(parent, TaggedConfigView):
-			addSections = (parent.getClassSections() or []) + (addSections or [])
+			addSections = (parent.get_class_section_list() or []) + (addSections or [])
 		SimpleConfigView.__init__(self, name, oldContainer, curContainer, parent,
 			setSections = setSections, addSections = addSections)
 
@@ -42,7 +42,7 @@ class TaggedConfigView(SimpleConfigView):
 		self._initVariable(parent, '_cfgTags', [], setTags, addTags, identity, makeTagTuple)
 		self._cfgTagsOrder = lmap(lambda tagName_tagValue: tagName_tagValue[0], self._cfgTags)
 
-	def getClassSections(self):
+	def get_class_section_list(self):
 		return self._cfgClassSections
 
 	def __str__(self):

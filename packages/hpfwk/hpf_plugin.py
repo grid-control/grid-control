@@ -21,7 +21,7 @@ init_hpf_logging() # needed for additional logging levels
 def create_plugin_file(package, selector):
 	cls_dict = {}
 
-	def fill_cls_dict(cls):
+	def _fill_cls_dict(cls):
 		# return list of dicts that were filled with cls information
 		if cls == object:
 			return [cls_dict]
@@ -36,9 +36,9 @@ def create_plugin_file(package, selector):
 
 	for cls in get_plugin_list(import_modules(os.path.abspath(package), selector)):
 		if cls.__module__.startswith(os.path.basename(package)):
-			fill_cls_dict(cls)
+			_fill_cls_dict(cls)
 
-	def write_cls_hierarchy(fp, data, level = 0):
+	def _write_cls_hierarchy(fp, data, level = 0):
 		if None in data:
 			cls = data.pop(None)
 			fp.write('%s * %s %s\n' % (' ' * level, cls.__module__, str.join(' ', cls.get_class_names())))
@@ -53,7 +53,7 @@ def create_plugin_file(package, selector):
 	if cls_dict:
 		fp = open(os.path.abspath(os.path.join(package, '.PLUGINS')), 'w')
 		try:
-			write_cls_hierarchy(fp, cls_dict)
+			_write_cls_hierarchy(fp, cls_dict)
 		finally:
 			fp.close()
 		return cls_dict
@@ -168,19 +168,20 @@ class Plugin(object):
 	register_class = classmethod(register_class)
 
 
-	def iter_class_bases(cls):
-		yield cls
-		for parent in cls.__bases__:
-			if issubclass(parent, Plugin):
-				for entry in parent.iter_class_bases():
+	def iter_class_bases(cls, add_current_cls = True):
+		if add_current_cls:
+			yield cls
+		for parent_cls in cls.__bases__:
+			if issubclass(parent_cls, Plugin):
+				for entry in parent_cls.iter_class_bases():
 					yield entry
 	iter_class_bases = classmethod(iter_class_bases)
 
 
 	def get_class_names(cls):
-		for parent in cls.__bases__:
-			if hasattr(parent, 'alias') and (cls.alias == parent.alias):
-				return [cls.__name__]
+		for parent_cls in cls.__bases__:
+			if hasattr(parent_cls, 'alias') and (cls.alias == parent_cls.alias):
+				return [cls.__name__] # class aliases are not inherited
 		return [cls.__name__] + cls.alias
 	get_class_names = classmethod(get_class_names)
 
