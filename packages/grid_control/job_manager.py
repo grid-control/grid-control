@@ -25,7 +25,7 @@ from grid_control.utils.parsing import strTime
 from python_compat import ifilter, imap, izip, lfilter, lmap, set, sorted
 
 class JobManager(NamedPlugin):
-	configSections = NamedPlugin.configSections + ['jobs']
+	config_section_list = NamedPlugin.config_section_list + ['jobs']
 	tagName = 'jobmgr'
 
 	def __init__(self, config, name, task, eventhandler):

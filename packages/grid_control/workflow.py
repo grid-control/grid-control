@@ -25,7 +25,7 @@ from python_compat import imap
 
 # Workflow class
 class Workflow(NamedPlugin):
-	configSections = NamedPlugin.configSections + ['global', 'workflow']
+	config_section_list = NamedPlugin.config_section_list + ['global', 'workflow']
 	tagName = 'workflow'
 
 	def __init__(self, config, name, abort = None):

@@ -20,7 +20,7 @@ from grid_control.utils.thread_tools import GCThreadPool
 from python_compat import imap, lchain, lmap
 
 class EventHandler(NamedPlugin):
-	configSections = NamedPlugin.configSections + ['events']
+	config_section_list = NamedPlugin.config_section_list + ['events']
 	tagName = 'event'
 
 	def __init__(self, config, name, task):
@@ -98,7 +98,7 @@ class MultiMonitor(MultiEventHandler, Monitoring):
 
 class ScriptMonitoring(Monitoring):
 	alias = ['scripts']
-	configSections = EventHandler.configSections + ['scripts']
+	config_section_list = EventHandler.config_section_list + ['scripts']
 
 	def __init__(self, config, name, task):
 		Monitoring.__init__(self, config, name, task)

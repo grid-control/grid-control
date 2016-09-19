@@ -41,7 +41,7 @@ BackendJobState = makeEnum([
 ])
 
 class WMS(NamedPlugin):
-	configSections = NamedPlugin.configSections + ['wms', 'backend']
+	config_section_list = NamedPlugin.config_section_list + ['wms', 'backend']
 	tagName = 'wms'
 
 	def __init__(self, config, name):
@@ -332,7 +332,7 @@ class BasicWMS(WMS):
 
 
 class Grid(WMS): # redirector - used to avoid loading the whole grid module just for the default
-	configSections = WMS.configSections + ['grid']
+	config_section_list = WMS.config_section_list + ['grid']
 
 	def __new__(cls, config, name):
 		gridWMS = 'GliteWMS'

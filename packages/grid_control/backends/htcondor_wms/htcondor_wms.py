@@ -52,7 +52,7 @@ a link copy. For convention with other backends, these correspond to:
 """
 
 class HTCondor(BasicWMS):
-	configSections = BasicWMS.configSections + ['htcondor']
+	config_section_list = BasicWMS.config_section_list + ['htcondor']
 	"""
 	Backend for HTCondor 8+
 	"""

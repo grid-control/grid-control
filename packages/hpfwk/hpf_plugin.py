@@ -143,7 +143,7 @@ def _safe_import(root, module):
 class Plugin(object):
 	# Abstract class taking care of dynamic class loading
 	alias = []
-	configSections = []
+	config_section_list = []
 
 	_plugin_map = {}
 	_cls_map = {}
@@ -152,17 +152,17 @@ class Plugin(object):
 
 	def register_class(cls, module_name, cls_name, alias_list, base_cls_names):
 		cls_path = '%s.%s' % (module_name, cls_name)
-		depth = len(base_cls_names)
+		cls_depth = len(base_cls_names)
 		for name in [cls_name] + alias_list:
 			cls_name_entry = cls._plugin_map.setdefault(name.lower(), [])
 			cls._cls_bases[name.lower()] = base_cls_names
 			if cls_path not in cls_name_entry:
 				if name != cls_name:
-					depth = len(base_cls_names) + 1
-				cls_name_entry.append((-depth, cls_path))
+					cls_depth = len(base_cls_names) + 1
+				cls_name_entry.append((-cls_depth, cls_path))
 			for base_cls_name in base_cls_names:
 				cls_base_entry = cls._cls_map.setdefault(base_cls_name.lower(), [])
-				tmp = {name: cls_name, 'depth': depth}
+				tmp = {name: cls_name, 'depth': cls_depth}
 				if tmp not in cls_base_entry:
 					cls_base_entry.append(tmp)
 	register_class = classmethod(register_class)

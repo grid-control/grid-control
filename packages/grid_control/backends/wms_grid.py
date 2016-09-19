@@ -124,7 +124,7 @@ class Grid_CancelJobs(CancelJobsWithProcess):
 
 
 class GridWMS(BasicWMS):
-	configSections = BasicWMS.configSections + ['grid']
+	config_section_list = BasicWMS.config_section_list + ['grid']
 	def __init__(self, config, name, checkExecutor, cancelExecutor, jdlWriter = None):
 		config.set('access token', 'VomsProxy')
 		BasicWMS.__init__(self, config, name, checkExecutor = checkExecutor, cancelExecutor = cancelExecutor)

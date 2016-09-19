@@ -48,7 +48,7 @@ class ConfigurableJobName(JobNamePlugin):
 
 
 class TaskModule(NamedPlugin):
-	configSections = NamedPlugin.configSections + ['task']
+	config_section_list = NamedPlugin.config_section_list + ['task']
 	tagName = 'task'
 
 	# Read configuration options and init vars

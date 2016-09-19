@@ -129,7 +129,7 @@ class GridEngine_Discover_Queues(BackendDiscovery):
 
 class GridEngine(PBSGECommon):
 	alias = ['SGE', 'UGE', 'OGE']
-	configSections = PBSGECommon.configSections + ['GridEngine'] + alias
+	config_section_list = PBSGECommon.config_section_list + ['GridEngine'] + alias
 
 	def __init__(self, config, name):
 		cancelExecutor = CancelJobsWithProcessBlind(config, 'qdel',

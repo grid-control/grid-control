@@ -55,7 +55,7 @@ class LSF_CancelJobs(CancelJobsWithProcessBlind):
 
 
 class LSF(LocalWMS):
-	configSections = LocalWMS.configSections + ['LSF']
+	config_section_list = LocalWMS.config_section_list + ['LSF']
 
 	def __init__(self, config, name):
 		LocalWMS.__init__(self, config, name,

@@ -49,7 +49,7 @@ class JMS_CheckJobs(CheckJobsWithProcess):
 
 
 class JMS(LocalWMS):
-	configSections = LocalWMS.configSections + ['JMS']
+	config_section_list = LocalWMS.config_section_list + ['JMS']
 
 	def __init__(self, config, name):
 		LocalWMS.__init__(self, config, name,

@@ -37,7 +37,7 @@ PoolType = makeEnum(['LOCAL','SPOOL','SSH','GSISSH'])
 
 
 class Condor(BasicWMS):
-	configSections = BasicWMS.configSections + ['condor']
+	config_section_list = BasicWMS.config_section_list + ['condor']
 	# dictionary mapping vanilla condor job status to GC job status
 	# condor: U = unexpanded (never been run), H = on hold, R = running, I = idle (waiting for a machine to execute on), C = completed, and X = removed
 	# 0 Unexpanded 	U -- 1	Idle 	I -- 2	Running 	R -- 3	Removed 	X -- 4	Completed 	C -- 5	Held 	H -- 6	Submission_err 	E

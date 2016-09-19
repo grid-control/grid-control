@@ -74,7 +74,7 @@ class LocalPurgeJobs(CancelJobs):
 
 
 class LocalWMS(BasicWMS):
-	configSections = BasicWMS.configSections + ['local']
+	config_section_list = BasicWMS.config_section_list + ['local']
 
 	def __init__(self, config, name, submitExec, checkExecutor, cancelExecutor, nodesFinder = None, queuesFinder = None):
 		config.set('broker', 'RandomBroker')
@@ -197,7 +197,7 @@ class LocalWMS(BasicWMS):
 
 
 class Local(WMS):
-	configSections = WMS.configSections + ['local']
+	config_section_list = WMS.config_section_list + ['local']
 
 	def __new__(cls, config, name):
 		def createWMS(wms):

@@ -16,7 +16,7 @@ import random
 from grid_control.gc_plugin import NamedPlugin
 
 class Broker(NamedPlugin):
-	configSections = NamedPlugin.configSections + ['broker']
+	config_section_list = NamedPlugin.config_section_list + ['broker']
 	tagName = 'broker'
 
 	def __init__(self, config, name, broker_prefix, itemName, discoverFun):

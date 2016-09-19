@@ -89,7 +89,7 @@ class PBS_Discover_Queues(BackendDiscovery):
 
 
 class PBS(PBSGECommon):
-	configSections = PBSGECommon.configSections + ['PBS']
+	config_section_list = PBSGECommon.config_section_list + ['PBS']
 
 	def __init__(self, config, name):
 		cancelExecutor = CancelJobsWithProcessBlind(config, 'qdel',

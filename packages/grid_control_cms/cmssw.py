@@ -74,7 +74,7 @@ class CMSSWPartitionProcessor(PartitionProcessor.getClass('BasicPartitionProcess
 
 
 class SCRAMTask(DataTask):
-	configSections = DataTask.configSections + ['SCRAMTask']
+	config_section_list = DataTask.config_section_list + ['SCRAMTask']
 
 	def __init__(self, config, name):
 		DataTask.__init__(self, config, name)
@@ -153,7 +153,7 @@ class SCRAMTask(DataTask):
 
 
 class CMSSW(SCRAMTask):
-	configSections = SCRAMTask.configSections + ['CMSSW']
+	config_section_list = SCRAMTask.config_section_list + ['CMSSW']
 
 	def __init__(self, config, name):
 		config.set('se input timeout', '0:30')

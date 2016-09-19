@@ -54,7 +54,7 @@ class Host_CancelJobs(CancelJobsWithProcessBlind):
 
 class Host(LocalWMS):
 	alias = ['Localhost']
-	configSections = LocalWMS.configSections + ['Localhost', 'Host']
+	config_section_list = LocalWMS.config_section_list + ['Localhost', 'Host']
 
 	def __init__(self, config, name):
 		LocalWMS.__init__(self, config, name,

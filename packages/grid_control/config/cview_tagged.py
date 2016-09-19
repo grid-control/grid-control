@@ -31,7 +31,7 @@ class TaggedConfigView(SimpleConfigView):
 		SimpleConfigView.__init__(self, name, oldContainer, curContainer, parent,
 			setSections = setSections, addSections = addSections)
 
-		self._initVariable(parent, '_cfgClassSections', None, setClasses, addClasses, standardConfigForm, lambda x: x.configSections)
+		self._initVariable(parent, '_cfgClassSections', None, setClasses, addClasses, standardConfigForm, lambda x: x.config_section_list)
 		self._initVariable(parent, '_cfgNames', [], setNames, addNames, standardConfigForm)
 		def makeTagTuple(t):
 			try:
