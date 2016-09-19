@@ -47,9 +47,6 @@ class InstanceFactory(object):
 	def __repr__(self):
 		return '<instance factory for %s>' % self._format_call(self._args, self._kwargs, add_ellipsis = True)
 
-	def getClass(self):
-		return self._cls
-
 	def create_instance_bound(self, *args, **kwargs):
 		args = self._args + args
 		kwargs = dict(list(self._kwargs.items()) + list(kwargs.items()))
@@ -93,13 +90,13 @@ class Plugin(object):
 					cls_base_entry.append(tmp)
 	register_class = classmethod(register_class)
 
-	def iterClassBases(cls):
+	def iter_class_bases(cls):
 		yield cls
 		for parent in cls.__bases__:
 			if issubclass(parent, Plugin):
-				for entry in parent.iterClassBases():
+				for entry in parent.iter_class_bases():
 					yield entry
-	iterClassBases = classmethod(iterClassBases)
+	iter_class_bases = classmethod(iter_class_bases)
 
 	def getClassNames(cls):
 		for parent in cls.__bases__:

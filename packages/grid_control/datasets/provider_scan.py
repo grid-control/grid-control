@@ -197,7 +197,7 @@ class GCProvider(ScanProviderBase):
 		if 'ParaMod' in ext_task_name: # handle old config files
 			ext_task_name = ext_config.changeView(setSections = ['ParaMod']).get('module')
 		ext_task_cls = Plugin.getClass(ext_task_name)
-		for ext_task_cls in Plugin.getClass(ext_task_name).iterClassBases():
+		for ext_task_cls in Plugin.getClass(ext_task_name).iter_class_bases():
 			try:
 				scan_holder = GCProviderSetup.getClass('GCProviderSetup_' + ext_task_cls.__name__)
 			except PluginError:
