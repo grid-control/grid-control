@@ -159,7 +159,7 @@ class MultiParameterSource(ParameterSource): # Meta processing of parameter psrc
 		return ParameterSource.__new__(cls)
 
 	def __repr__(self):
-		return '%s(%s)' % (self.alias[0], str.join(', ', imap(repr, self._psrc_list)))
+		return '%s(%s)' % (self.alias_list[0], str.join(', ', imap(repr, self._psrc_list)))
 
 	def can_finish(self):
 		return all(imap(lambda p: p.can_finish(), self._psrc_list))

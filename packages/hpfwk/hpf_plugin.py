@@ -28,7 +28,7 @@ def create_plugin_file(package, selector):
 		else:
 			result = []
 			for cls_base in cls.__bases__:
-				for cls_base_dict in fill_cls_dict(cls_base):
+				for cls_base_dict in _fill_cls_dict(cls_base):
 					tmp = cls_base_dict.setdefault(cls, {})
 					tmp.setdefault(None, cls)
 					result.append(tmp)
@@ -48,7 +48,7 @@ def create_plugin_file(package, selector):
 			key_order.append(tuple((cls.__module__ + '.' + cls.__name__).split('.')[::-1] + [cls]))
 		key_order.sort()
 		for key_info in key_order:
-			write_cls_hierarchy(fp, data[key_info[-1]], level + 1)
+			_write_cls_hierarchy(fp, data[key_info[-1]], level + 1)
 
 	if cls_dict:
 		fp = open(os.path.abspath(os.path.join(package, '.PLUGINS')), 'w')
@@ -232,9 +232,9 @@ class Plugin(object):
 
 	def get_class_name_list(cls):
 		for parent_cls in cls.__bases__:
-			if hasattr(parent_cls, 'alias') and (cls.alias == parent_cls.alias):
+			if hasattr(parent_cls, 'alias_list') and (cls.alias_list == parent_cls.alias_list):
 				return [cls.__name__] # class aliases are not inherited
-		return [cls.__name__] + cls.alias
+		return [cls.__name__] + cls.alias_list
 	get_class_name_list = classmethod(get_class_name_list)
 
 

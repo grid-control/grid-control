@@ -167,7 +167,7 @@ class TaskModule(NamedPlugin):
 			'CONF': 'GC_CONF', 'TASK_ID': 'GC_TASK_ID'}
 		varNames = self.getVarNames() + transients
 		var_alias_map.update(dict(izip(varNames, varNames))) # include reflexive mappings
-		return alias
+		return var_alias_map
 
 
 	def substVars(self, name, inp, jobNum = None, addDict = None, check = True):
