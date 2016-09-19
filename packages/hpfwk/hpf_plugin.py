@@ -180,11 +180,11 @@ class Plugin(object):
 			raise PluginError(msg)
 	_get_class_checked = classmethod(_get_class_checked)
 
-	def getAllClasses(cls, cls_name):
+	def get_class_list(cls, cls_name):
 		log = logging.getLogger('classloader.%s' % cls.__name__.lower())
 		log.log(logging.DEBUG1, 'Loading all classes %s', cls_name)
 		return list(cls._get_class_checked(log, cls_name))
-	getAllClasses = classmethod(getAllClasses)
+	get_class_list = classmethod(get_class_list)
 
 	def getClass(cls, cls_name):
 		log = logging.getLogger('classloader.%s' % cls.__name__.lower())
