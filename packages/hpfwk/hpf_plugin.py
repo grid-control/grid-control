@@ -98,12 +98,12 @@ class Plugin(object):
 					yield entry
 	iter_class_bases = classmethod(iter_class_bases)
 
-	def getClassNames(cls):
+	def get_class_names(cls):
 		for parent in cls.__bases__:
 			if hasattr(parent, 'alias') and (cls.alias == parent.alias):
 				return [cls.__name__]
 		return [cls.__name__] + cls.alias
-	getClassNames = classmethod(getClassNames)
+	get_class_names = classmethod(get_class_names)
 
 	def _get_class_from_modules(cls, ec, log, cls_name, cls_module_list, cls_bad_parents):
 		clsLoadedList = []
@@ -284,7 +284,7 @@ def create_plugin_file(package, selector):
 	def write_cls_hierarchy(fp, data, level = 0):
 		if None in data:
 			cls = data.pop(None)
-			fp.write('%s * %s %s\n' % (' ' * level, cls.__module__, str.join(' ', cls.getClassNames())))
+			fp.write('%s * %s %s\n' % (' ' * level, cls.__module__, str.join(' ', cls.get_class_names())))
 			fp.write('\n')
 		key_order = []
 		for cls in data:
