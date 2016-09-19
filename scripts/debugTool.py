@@ -49,7 +49,7 @@ options = scriptOptions(parser)
 if opts.backend_list_nodes or opts.backend_list_queues:
 	config = getConfig()
 	backend = str.join(' ', args) or 'local'
-	wms = Plugin.getClass('WMS').createInstance(backend, config, backend)
+	wms = Plugin.getClass('WMS').create_instance(backend, config, backend)
 	if opts.backend_list_nodes:
 		logging.info(repr(wms.getNodes()))
 	if opts.backend_list_queues:
@@ -157,8 +157,8 @@ if opts.job_selector or opts.job_reset_attempts or opts.job_force_state or opts.
 	config = getConfig(args[0])
 	# Initialise task module
 	taskName = config.get(['task', 'module'])
-	task = Plugin.createInstance(taskName, config, taskName)
-	jobDB = Plugin.createInstance('TextFileJobDB', config)
+	task = Plugin.create_instance(taskName, config, taskName)
+	jobDB = Plugin.create_instance('TextFileJobDB', config)
 	selected = JobSelector.create(opts.job_selector, task = task)
 	logging.info('Matching jobs: ' + str.join(' ', imap(str, jobDB.getJobsIter(selected))))
 	if opts.job_reset_attempts:
@@ -174,8 +174,8 @@ if opts.job_selector or opts.job_reset_attempts or opts.job_force_state or opts.
 if opts.dataset_show_diff:
 	if len(args) != 2:
 		utils.exitWithUsage('%s <dataset source 1> <dataset source 2>' % sys.argv[0])
-	a = DataProvider.createInstance('ListProvider', config, args[0], None)
-	b = DataProvider.createInstance('ListProvider', config, args[1], None)
+	a = DataProvider.create_instance('ListProvider', config, args[0], None)
+	b = DataProvider.create_instance('ListProvider', config, args[1], None)
 	(blocksAdded, blocksMissing, blocksChanged) = DataProvider.resyncSources(a.getBlocks(show_stats = False), b.getBlocks(show_stats = False))
 	utils.printTabular([(DataProvider.Dataset, 'Dataset'), (DataProvider.BlockName, 'Block')], blocksMissing)
 
@@ -183,9 +183,9 @@ if opts.dataset_show_removed:
 	if len(args) < 2:
 		utils.exitWithUsage('%s <dataset source 1> <dataset source 2> ... <dataset source N> ' % sys.argv[0])
 	removed = []
-	oldDP = DataProvider.createInstance('ListProvider', config, args[0], None)
+	oldDP = DataProvider.create_instance('ListProvider', config, args[0], None)
 	for new in args[1:]:
-		newDP = DataProvider.createInstance('ListProvider', config, new, None)
+		newDP = DataProvider.create_instance('ListProvider', config, new, None)
 		(blocksAdded, blocksMissing, blocksChanged) = DataProvider.resyncSources(oldDP.getBlocks(show_stats = False), newDP.getBlocks(show_stats = False))
 		for block in blocksMissing:
 			tmp = dict(block)

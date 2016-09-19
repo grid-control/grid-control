@@ -171,7 +171,7 @@ class FilesFromDataProvider(InfoScanner):
 	def __init__(self, config, datasource_name):
 		InfoScanner.__init__(self, config, datasource_name)
 		dsPath = config.get('source dataset path', onChange = triggerDataResync)
-		self._source = DataProvider.createInstance('ListProvider', config, 'source dataset', dsPath)
+		self._source = DataProvider.create_instance('ListProvider', config, 'source dataset', dsPath)
 
 	def getEntries(self, path, metadata, events, seList, objStore):
 		for block in self._source.getBlocks(show_stats = False):

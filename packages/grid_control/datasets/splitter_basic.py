@@ -47,8 +47,8 @@ class FLSplitStacker(FileLevelSplitter):
 	def partition_blocks_raw(self, block_iter, event_first = 0):
 		for block in block_iter:
 			splitter_name_list = self._setup(self._splitter_name_list, block)
-			splitter_iter = imap(lambda x: FileLevelSplitter.createInstance(x, self._config, self._datasource_name), splitter_name_list[:-1])
-			splitter_final = DataSplitter.createInstance(splitter_name_list[-1], self._config, self._datasource_name)
+			splitter_iter = imap(lambda x: FileLevelSplitter.create_instance(x, self._config, self._datasource_name), splitter_name_list[:-1])
+			splitter_final = DataSplitter.create_instance(splitter_name_list[-1], self._config, self._datasource_name)
 			for sub_block in reduce(lambda x, y: y.divide_blocks(x), splitter_iter, [block]):
 				for partition in splitter_final.partition_blocks_raw([sub_block]):
 					yield partition

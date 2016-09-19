@@ -35,7 +35,7 @@ class DataProvider(ConfigurablePlugin):
 		self._dataset_query_interval = config.getTime('%s default query interval' % datasource_name, 60, onChange = None)
 
 		triggerDataResync = triggerResync(['datasets', 'parameters'])
-		self._stats = dataset_proc or DataProcessor.createInstance('SimpleStatsDataProcessor', config, datasource_name,
+		self._stats = dataset_proc or DataProcessor.create_instance('SimpleStatsDataProcessor', config, datasource_name,
 			triggerDataResync, self._log, ' * Dataset %s:\n\tcontains ' % repr(dataset_nick or dataset_expr))
 		self._nick_producer = config.getPlugin(['nickname source', '%s nickname source' % datasource_name], 'SimpleNickNameProducer',
 			cls = DataProcessor, pargs = (datasource_name, triggerDataResync), onChange = triggerDataResync)
@@ -248,7 +248,7 @@ class DataProvider(ConfigurablePlugin):
 
 	# Load dataset information using ListProvider
 	def loadFromFile(path):
-		return DataProvider.createInstance('ListProvider', create_config(
+		return DataProvider.create_instance('ListProvider', create_config(
 			configDict = {'dataset': {'dataset processor': 'NullDataProcessor'}}), 'dataset', path)
 	loadFromFile = staticmethod(loadFromFile)
 

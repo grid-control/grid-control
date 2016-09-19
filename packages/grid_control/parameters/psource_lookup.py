@@ -47,7 +47,7 @@ def parse_lookup_create_args(pconfig, output_user, lookup_user_list):
 			(len(name_matcher_list), len(lookup_vn_list)))
 	lookup_matcher_list = []
 	for name_matcher in name_matcher_list:
-		lookup_matcher_list.append(Matcher.createInstance(name_matcher, pconfig, output_vn))
+		lookup_matcher_list.append(Matcher.create_instance(name_matcher, pconfig, output_vn))
 
 	# configure lookup dictionary
 	(lookup_dict, lookup_order) = pconfig.get_parameter(output_vn)

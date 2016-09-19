@@ -64,7 +64,7 @@ class DataTask(TaskModule):
 				'MultiPartitionProcessor', cls = PartitionProcessor, onChange = triggerResync(['parameters']),
 				pargs = (datasource_name,))
 
-			data_ps = ParameterSource.createInstance('DataParameterSource', config.getWorkPath(),
+			data_ps = ParameterSource.create_instance('DataParameterSource', config.getWorkPath(),
 				datasource_name.replace('dataset', 'data'), # needed for backwards compatible file names: datacache/datamap
 				dataProvider, dataSplitter, partProcessor, psrc_repository)
 

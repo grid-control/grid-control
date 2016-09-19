@@ -201,9 +201,9 @@ class Plugin(object):
 	get_class_info_list = classmethod(get_class_info_list)
 
 	# Get an instance of a derived class by specifying the class name and constructor arguments
-	def createInstance(cls, cls_name, *args, **kwargs):
+	def create_instance(cls, cls_name, *args, **kwargs):
 		return InstanceFactory(cls_name, cls.getClass(cls_name), *args, **kwargs).create_instance_bound() # For uniform error output
-	createInstance = classmethod(createInstance)
+	create_instance = classmethod(create_instance)
 
 	def bind(cls, value, **kwargs):
 		for entry in value.split():

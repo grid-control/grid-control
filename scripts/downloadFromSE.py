@@ -390,7 +390,7 @@ def download_sequential(opts, workDir, jobList, incInfo, jobDB, token):
 def loop_download(opts, args):
 	# Init everything in each loop to pick up changes
 	(config, jobDB) = gcSupport.initGC(args)
-	token = Plugin.getClass('AccessToken').createInstance(opts.token, config, 'access')#, OSLayer.create(config))
+	token = Plugin.getClass('AccessToken').create_instance(opts.token, config, 'access')#, OSLayer.create(config))
 	workDir = config.getWorkPath()
 	jobList = jobDB.getJobs(ClassSelector(JobClass.SUCCESS))
 

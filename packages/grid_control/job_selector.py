@@ -155,7 +155,7 @@ class MultiJobSelector(JobSelector):
 			selectorType = utils.QM(term[0].isdigit(), 'id', 'state')
 			if ':' in term:
 				selectorType = term.split(':', 1)[0]
-			selector = JobSelector.createInstance(selectorType, term.split(':', 1)[-1], **kwargs)
+			selector = JobSelector.create_instance(selectorType, term.split(':', 1)[-1], **kwargs)
 			if negate:
 				return lambda jobNum, jobObj: not selector.__call__(jobNum, jobObj)
 			return selector.__call__

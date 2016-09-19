@@ -29,7 +29,7 @@ options = scriptOptions(parser)
 
 if options.opts.se:
 	if '<hypernews name>' in options.opts.lfn:
-		token = Plugin.getClass('AccessToken').createInstance('VomsProxy', getConfig(), 'token')
+		token = Plugin.getClass('AccessToken').create_instance('VomsProxy', getConfig(), 'token')
 		site_db = SiteDB()
 		hnName = site_db.dn_to_username(dn=token.getFQUsername())
 		if not hnName:

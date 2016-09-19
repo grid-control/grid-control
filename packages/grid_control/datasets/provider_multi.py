@@ -20,7 +20,7 @@ from python_compat import imap, reduce, set
 class MultiDatasetProvider(DataProvider):
 	def __init__(self, config, datasource_name, dataset_expr, dataset_nick, providerList):
 		DataProvider.__init__(self, config, datasource_name, dataset_expr, dataset_nick)
-		self._stats = DataProcessor.createInstance('SimpleStatsDataProcessor', config, 'dataset', None, self._log, 'Summary: Running over ')
+		self._stats = DataProcessor.create_instance('SimpleStatsDataProcessor', config, 'dataset', None, self._log, 'Summary: Running over ')
 		self._provider_list = providerList
 
 

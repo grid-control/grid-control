@@ -133,7 +133,7 @@ class SubSpaceParameterSource(ForwardingParameterSource):
 		try:
 			ParameterFactory = Plugin.getClass('ParameterFactory')
 			config = pconfig.get_config(viewClass = 'SimpleConfigView', addSections = [name])
-			return SubSpaceParameterSource(name, ParameterFactory.createInstance(factory, config), repository)
+			return SubSpaceParameterSource(name, ParameterFactory.create_instance(factory, config), repository)
 		except:
 			raise ParameterError('Unable to create subspace %r using factory %r' % (name, factory))
 	create_psrc = classmethod(create_psrc)

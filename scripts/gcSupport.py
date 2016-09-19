@@ -88,7 +88,7 @@ def initGC(args):
 		userSelector = None
 		if len(args) != 1:
 			userSelector = JobSelector.create(args[1])
-		return (config, Plugin.createInstance('TextFileJobDB', config, jobSelector = userSelector))
+		return (config, Plugin.create_instance('TextFileJobDB', config, jobSelector = userSelector))
 	sys.stderr.write('Syntax: %s <config file> [<job id>, ...]\n\n' % sys.argv[0])
 	sys.exit(os.EX_USAGE)
 

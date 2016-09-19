@@ -129,7 +129,7 @@ def create_placeholder_psrc(pa_old, pa_new, map_job_num2pnum, pspi_list_missing,
 		psp_list_missing.append(psp_missing)
 	meta_list_current = lmap(lambda key: key.value, pa_new.get_job_metadata())
 	meta_list_missing = lfilter(lambda key: key.value not in meta_list_current, pa_old.get_job_metadata())
-	return ParameterSource.createInstance('InternalParameterSource', psp_list_missing, meta_list_missing)
+	return ParameterSource.create_instance('InternalParameterSource', psp_list_missing, meta_list_missing)
 
 
 def diff_pspi_list(pa_old, pa_new, result_redo, result_disable):
@@ -246,7 +246,7 @@ class TrackedParameterAdapter(BasicParameterAdapter):
 		if not (result_redo or result_disable or size_change or psrc_hash_changed):
 			return ParameterSource.EmptyResyncResult()
 
-		pa_old = ParameterAdapter(None, ParameterSource.createInstance('GCDumpParameterSource', self._path_params))
+		pa_old = ParameterAdapter(None, ParameterSource.create_instance('GCDumpParameterSource', self._path_params))
 		pa_new = ParameterAdapter(None, self._psrc_raw)
 
 		(map_job_num2pnum, pspi_list_added, pspi_list_missing) = diff_pspi_list(pa_old, pa_new, result_redo, result_disable)
@@ -257,7 +257,7 @@ class TrackedParameterAdapter(BasicParameterAdapter):
 			extend_map_job_num2pnum(map_job_num2pnum, pa_old.get_job_len(), pspi_list_added)
 		if pspi_list_missing: # extend the parameter source by placeholders for the missing parameter space points
 			psrc_missing = create_placeholder_psrc(pa_old, pa_new, map_job_num2pnum, pspi_list_missing, result_disable)
-			self._psrc = ParameterSource.createInstance('ChainParameterSource', self._psrc_raw, psrc_missing)
+			self._psrc = ParameterSource.create_instance('ChainParameterSource', self._psrc_raw, psrc_missing)
 
 		self._map_job_num2pnum = map_job_num2pnum # Update Job2PID map
 		# Write resynced state

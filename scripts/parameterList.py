@@ -135,7 +135,7 @@ def setup_dataset(config, dataset):
 	partProcessor = config.getCompositePlugin('partition processor',
 		'TFCPartitionProcessor LocationPartitionProcessor MetaPartitionProcessor BasicPartitionProcessor',
 		'MultiPartitionProcessor', cls = 'PartitionProcessor', onChange = None, pargs = ('dataset',))
-	ParameterSource.createInstance('DataParameterSource', config.getWorkPath(), 'data',
+	ParameterSource.create_instance('DataParameterSource', config.getWorkPath(), 'data',
 		None, dataSplitter, partProcessor, repository)
 
 # Initialize ParameterFactory and ParameterSource
@@ -149,7 +149,7 @@ def get_psrc(opts, args):
 	adapter = 'BasicParameterAdapter'
 	if opts.persistent:
 		adapter = 'TrackedParameterAdapter'
-	return ParameterAdapter.createInstance(adapter, config, pm.get_source(repository))
+	return ParameterAdapter.create_instance(adapter, config, pm.get_source(repository))
 
 def get_parameters(opts, psource):
 	result = []

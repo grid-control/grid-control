@@ -27,7 +27,7 @@ class ScanProviderBase(DataProvider):
 		(self._ds_select, self._ds_name, self._ds_keys_user, self._ds_keys_guard) = self._setup(config, 'dataset')
 		(self._b_select, self._b_name, self._b_keys_user, self._b_keys_guard) = self._setup(config, 'block')
 		scanList = config.getList('scanner', sList) + ['NullScanner']
-		self._scanner = lmap(lambda cls: InfoScanner.createInstance(cls, config, datasource_name), scanList)
+		self._scanner = lmap(lambda cls: InfoScanner.create_instance(cls, config, datasource_name), scanList)
 
 
 	def _setup(self, config, prefix):

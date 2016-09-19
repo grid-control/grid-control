@@ -136,9 +136,9 @@ class SimpleParameterFactory(UserParameterFactory):
 		repeat = reduce(lambda a, b: a * b, ifilter(lambda expr: isinstance(expr, int), args), 1)
 		args = lfilter(lambda expr: not isinstance(expr, int), args)
 		if args:
-			result = ParameterSource.createInstance(cls_name, *args)
+			result = ParameterSource.create_instance(cls_name, *args)
 			if repeat > 1:
-				return ParameterSource.createInstance('RepeatParameterSource', result, repeat)
+				return ParameterSource.create_instance('RepeatParameterSource', result, repeat)
 			return result
 		elif repeat > 1:
 			return repeat
@@ -173,7 +173,7 @@ class SimpleParameterFactory(UserParameterFactory):
 			else:
 				psource_list.append(PSourceClass(*args))
 		# Optimize away unnecessary cross operations
-		return ParameterSource.createInstance('CrossParameterSource', *psource_list)
+		return ParameterSource.create_instance('CrossParameterSource', *psource_list)
 
 	def _get_source_user(self, pexpr, repository):
 		token_iter = tokenize(pexpr, lchain([self._precedence.keys(), list('()[]<>{}')]))
@@ -182,7 +182,7 @@ class SimpleParameterFactory(UserParameterFactory):
 		tree = tok2tree(token_list, self._precedence)
 		source = self._tree2expr(tree, repository)
 		for (PSourceClass, args) in self._psrc_list_nested:
-			source = PSourceClass.createInstance(PSourceClass.__name__, source, *args)
+			source = PSourceClass.create_instance(PSourceClass.__name__, source, *args)
 		return source
 
 	def _tree2expr(self, node, repository):

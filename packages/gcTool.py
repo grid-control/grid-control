@@ -101,7 +101,7 @@ class OptsConfigFiller(Plugin.getClass('ConfigFiller')):
 		if opts.continuous:
 			set_config_from_opt('workflow', 'duration', -1)
 		if opts.override:
-			Plugin.createInstance('StringConfigFiller', opts.override).fill(container)
+			Plugin.create_instance('StringConfigFiller', opts.override).fill(container)
 
 
 # create config instance

@@ -548,7 +548,7 @@ class Condor(BasicWMS):
 		# prepare commands appropriate for pool type
 		if self.remoteType == PoolType.LOCAL or self.remoteType == PoolType.SPOOL:
 			self.user=user
-			self.Pool=self.Pool=ProcessHandler.createInstance("LocalProcessHandler")
+			self.Pool=self.Pool=ProcessHandler.create_instance("LocalProcessHandler")
 			# local and remote use condor tools installed locally - get them
 			self.submitExec = utils.resolveInstallPath('condor_submit')
 			self.historyExec = utils.resolveInstallPath('condor_history')	# completed/failed jobs are stored outside the queue
@@ -565,9 +565,9 @@ class Condor(BasicWMS):
 			# ssh type instructions are passed to the remote host via regular ssh/gsissh
 			host="%s%s"%(utils.QM(user,"%s@" % user,""), sched)
 			if self.remoteType == PoolType.SSH:
-				self.Pool=ProcessHandler.createInstance("SSHProcessHandler", remoteHost = host, sshLink = config.getWorkPath(".ssh", self._name + host))
+				self.Pool=ProcessHandler.create_instance("SSHProcessHandler", remoteHost = host, sshLink = config.getWorkPath(".ssh", self._name + host))
 			else:
-				self.Pool=ProcessHandler.createInstance("GSISSHProcessHandler", remoteHost = host, sshLink = config.getWorkPath(".gsissh", self._name + host))
+				self.Pool=ProcessHandler.create_instance("GSISSHProcessHandler", remoteHost = host, sshLink = config.getWorkPath(".gsissh", self._name + host))
 			# ssh type instructions rely on commands being available on remote pool
 			self.submitExec = 'condor_submit'
 			self.historyExec = 'condor_history'

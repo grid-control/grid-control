@@ -337,4 +337,4 @@ class Grid(WMS): # redirector - used to avoid loading the whole grid module just
 	def __new__(cls, config, name):
 		gridWMS = 'GliteWMS'
 		grid_config = config.changeView(viewClass = 'TaggedConfigView', setClasses = [WMS.getClass(gridWMS)])
-		return WMS.createInstance(gridWMS, grid_config, name)
+		return WMS.create_instance(gridWMS, grid_config, name)
