@@ -196,9 +196,9 @@ class Plugin(object):
 		return cls._cls_cache[cls][cls_name]
 	getClass = classmethod(getClass)
 
-	def getClassList(cls):
+	def get_class_info_list(cls):
 		return Plugin._cls_map.get(cls.__name__.lower(), [])
-	getClassList = classmethod(getClassList)
+	get_class_info_list = classmethod(get_class_info_list)
 
 	# Get an instance of a derived class by specifying the class name and constructor arguments
 	def createInstance(cls, cls_name, *args, **kwargs):

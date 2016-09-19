@@ -116,7 +116,7 @@ def prettySize(size):
 
 def getPluginList(pluginName):
 	aliasDict = {}
-	for entry in Plugin.getClass(pluginName).getClassList():
+	for entry in Plugin.getClass(pluginName).get_class_info_list():
 		depth = entry.pop('depth', 0)
 		(alias, name) = entry.popitem()
 		aliasDict.setdefault(name, []).append((depth, alias))

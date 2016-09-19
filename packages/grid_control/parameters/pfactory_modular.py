@@ -31,7 +31,7 @@ class ModularParameterFactory(UserParameterFactory):
 					raise ParameterError('Error while creating %r with arguments %r' % (parameterClass.__name__, args))
 			return wrapper
 		user_functions = {}
-		for cls_info in ParameterSource.getClassList():
+		for cls_info in ParameterSource.get_class_info_list():
 			for cls_name in ifilter(lambda name: name != 'depth', cls_info.keys()):
 				user_functions[cls_name] = create_wrapper(cls_name)
 		try:
