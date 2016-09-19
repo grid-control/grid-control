@@ -51,9 +51,9 @@ def parse_frame(frame):
 	return _parse_helper(_parse_frame, frame)
 
 
-def parse_traceback(traceback):
+def _parse_traceback(traceback):
 	# Parse traceback information
-	def _parse_traceback(result, traceback):
+	def __parse_traceback(result, traceback):
 		while traceback:
 			result.append({'idx': len(result) + 1,
 				'file': os.path.abspath(traceback.tb_frame.f_code.co_filename),
@@ -61,7 +61,7 @@ def parse_traceback(traceback):
 				'fun': traceback.tb_frame.f_code.co_name,
 				'locals': dict(traceback.tb_frame.f_locals)})
 			traceback = traceback.tb_next
-	return _parse_helper(_parse_traceback, traceback)
+	return _parse_helper(__parse_traceback, traceback)
 
 
 def _parse_helper(fun, *args):
@@ -96,7 +96,7 @@ class ExceptionCollector(object):
 class NestedExceptionHelper(object):
 	def __init__(self, exception_value, exception_traceback):
 		self.nested = [exception_value]
-		self.traceback = parse_traceback(exception_traceback)
+		self.traceback = _parse_traceback(exception_traceback)
 
 
 class NestedException(Exception):
@@ -107,7 +107,7 @@ class NestedException(Exception):
 		cur_exception = get_current_exception()
 		if cur_exception:
 			self.nested = [cur_exception]
-			self.traceback = parse_traceback(_get_current_traceback())
+			self.traceback = _parse_traceback(_get_current_traceback())
 		Exception.__init__(self, *args, **kwargs)
 
 
