@@ -41,7 +41,7 @@ def create_plugin_file(package, selector):
 	def _write_cls_hierarchy(fp, data, level = 0):
 		if None in data:
 			cls = data.pop(None)
-			fp.write('%s * %s %s\n' % (' ' * level, cls.__module__, str.join(' ', cls.get_class_names())))
+			fp.write('%s * %s %s\n' % (' ' * level, cls.__module__, str.join(' ', cls.get_class_name_list())))
 			fp.write('\n')
 		key_order = []
 		for cls in data:
@@ -230,12 +230,12 @@ class Plugin(object):
 	get_class_list = classmethod(get_class_list)
 
 
-	def get_class_names(cls):
+	def get_class_name_list(cls):
 		for parent_cls in cls.__bases__:
 			if hasattr(parent_cls, 'alias') and (cls.alias == parent_cls.alias):
 				return [cls.__name__] # class aliases are not inherited
 		return [cls.__name__] + cls.alias
-	get_class_names = classmethod(get_class_names)
+	get_class_name_list = classmethod(get_class_name_list)
 
 
 	def iter_class_bases(cls, add_current_cls = True):
