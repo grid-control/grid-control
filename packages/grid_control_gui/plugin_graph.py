@@ -91,7 +91,7 @@ def getNodeParent(cls):
 
 
 def getNodeColor(instance, color_map):
-	cnum = color_map.setdefault(getNodeParent(instance.__class__), max(color_map.values() + [0]) + 1)
+	cnum = color_map.setdefault(getNodeParent(instance.__class__), max(list(color_map.values()) + [0]) + 1)
 	return '/set312/%d' % (cnum % 12 + 1)
 
 

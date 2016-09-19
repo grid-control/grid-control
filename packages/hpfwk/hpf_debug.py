@@ -39,17 +39,17 @@ def _collect_exception_infos(exception_type, exception_value, exception_tracebac
 	return (traceback, exception_info_list) # skipping top-level exception helper
 
 
-def _safe_repr(obj, truncate_len):
+def _safe_repr(obj, truncate_var_repr):
 	try:
 		repr_str = repr(obj)
 	except Exception:
 		return 'unable to display!'
-	if (truncate_len is None) or (len(repr_str) < truncate_len):
+	if (truncate_var_repr is None) or (len(repr_str) < truncate_var_repr):
 		return repr_str
-	return repr_str[:truncate_len] + ' ... [length:%d]' % len(repr_str)
+	return repr_str[:truncate_var_repr] + ' ... [length:%d]' % len(repr_str)
 
 
-def _format_variables(variable_dict, truncate_len):
+def _format_variables(variable_dict, truncate_var_repr):
 	# Function to log local and class variables
 	max_vn_len = 0
 	for vn in variable_dict:
@@ -58,7 +58,7 @@ def _format_variables(variable_dict, truncate_len):
 	def display(vn_list, var_dict, vn_prefix = ''):
 		vn_list.sort()
 		for vn in vn_list:
-			repr_str = _safe_repr(var_dict[vn], truncate_len)
+			repr_str = _safe_repr(var_dict[vn], truncate_var_repr)
 			if 'password' in vn:
 				repr_str = '<redacted>'
 			yield '\t\t%s%s = %s' % (vn_prefix, vn.ljust(max_vn_len), repr_str)
@@ -69,7 +69,7 @@ def _format_variables(variable_dict, truncate_len):
 		for line in display(list(variable_dict.keys()), variable_dict):
 			yield line
 	if class_instance is not None:
-		yield '\tClass variables (%s):' % _safe_repr(class_instance, truncate_len)
+		yield '\tClass variables (%s):' % _safe_repr(class_instance, truncate_var_repr)
 		if hasattr(class_instance, '__dict__'):
 			class_variable_dict = class_instance.__dict__
 		elif hasattr(class_instance, '__slots__'):
@@ -85,7 +85,7 @@ def _format_variables(variable_dict, truncate_len):
 		yield ''
 
 
-def _format_stack(frame_list, code_context = 0, show_variables = True, truncate_len = 200):
+def _format_stack(frame_list, code_context, truncate_var_repr):
 	# Function to log source code and variables from frames
 	import linecache
 	linecache.checkcache()
@@ -103,8 +103,8 @@ def _format_stack(frame_list, code_context = 0, show_variables = True, truncate_
 			else:
 				yield '\t  | %s' % get_source_code(frame['line'] + delta_line_num)
 		yield ''
-		if show_variables:
-			for line in _format_variables(frame['locals'], truncate_len):
+		if truncate_var_repr != -1:
+			for line in _format_variables(frame['locals'], truncate_var_repr):
 				yield line
 
 
@@ -137,8 +137,7 @@ def format_exception(exc_info, showcode_context = 0, show_variables = 0, showFil
 
 		# Code and variable listing
 		if showcode_context > 0:
-			stackInfo = _format_stack(traceback, code_context = showcode_context - 1,
-				show_variables = show_variables > 0, truncate_len = show_variables > 1)
+			stackInfo = _format_stack(traceback, code_context = showcode_context - 1, truncate_var_repr = show_variables)
 			msg_parts.append(str.join('\n', stackInfo))
 
 		# File stack with line information
@@ -175,7 +174,7 @@ def handle_dump_interrupt(sig, frame):
 		log.info('Stack of threads is not available!')
 	for (threadID, frame) in frames_by_threadID.items():
 		log.info('Stack of thread #%d:\n' % threadID + str.join('\n',
-			_format_stack(parse_frame(frame), code_context = 0, show_variables = False)))
+			_format_stack(parse_frame(frame), code_context = 0, truncate_var_repr = -1)))
 	return variables
 
 
