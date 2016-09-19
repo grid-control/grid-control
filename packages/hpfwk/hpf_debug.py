@@ -15,6 +15,69 @@
 import sys, logging, threading
 from hpfwk.hpf_exceptions import NestedException, NestedExceptionHelper, clear_current_exception, impl_detail, parse_frame
 
+def create_debug_console(variables):
+	import code
+	console = code.InteractiveConsole(variables)
+	console.push('import rlcompleter, readline')
+	console.push('readline.parse_and_bind("tab: complete")')
+	console.push('readline.set_completer(rlcompleter.Completer(globals()).complete)')
+	return console
+
+
+def format_exception(exc_info, showcode_context = 0, show_variables = 0, showFileStack = 0, exception_stack_mode = 1):
+	msg_parts = []
+
+	if exc_info not in [None, (None, None, None)]:
+		traceback, ex_info_list = _collect_exception_infos(*exc_info)
+
+		# Code and variable listing
+		if showcode_context > 0:
+			stackInfo = _format_stack(traceback, code_context = showcode_context - 1, truncate_var_repr = show_variables)
+			msg_parts.append(str.join('\n', stackInfo))
+
+		# File stack with line information
+		if showFileStack > 0:
+			msg_fstack = 'File stack:\n'
+			for tb in traceback:
+				msg_fstack += '%s %s %s (%s)\n' % (tb.get('exception_id', '') + '|%02d' % tb.get('idx', 0), tb['file'], tb['line'], tb['fun'])
+			msg_parts.append(msg_fstack)
+
+		# Exception message tree
+		if exception_stack_mode > 0:
+			msg_parts.append(_format_ex_tree(ex_info_list, exception_stack_mode))
+
+	return str.join('\n', msg_parts)
+
+
+def handle_debug_interrupt(sig = None, frame = None):
+	# Signal handler for debug session requests
+	create_debug_console(handle_dump_interrupt(sig, frame)).interact('debug mode enabled!')
+
+
+def handle_dump_interrupt(sig, frame):
+	# Signal handler for state dump requests
+	variables = {'_frame': frame}
+	if frame:
+		variables.update(frame.f_globals)
+		variables.update(frame.f_locals)
+	log = logging.getLogger('console.debug')
+	thread_list = threading.enumerate()
+	log.info('# active threads %d', len(thread_list))
+	thread_display = []
+	for thread in thread_list:
+		thread_display.append(repr(thread))
+	thread_display.sort()
+	for thread_repr in thread_display:
+		log.info(' - %s', thread_repr)
+	frames_by_threadID = impl_detail(sys, '_current_frames', args = (), default = {})
+	if not frames_by_threadID:
+		log.info('Stack of threads is not available!')
+	for (threadID, frame) in frames_by_threadID.items():
+		log.info('Stack of thread #%d:\n' % threadID + str.join('\n',
+			_format_stack(parse_frame(frame), code_context = 0, truncate_var_repr = -1)))
+	return variables
+
+
 def _collect_exception_infos(exception_type, exception_value, exception_traceback):
 	# Collect full traceback and exception context
 	exception_start = NestedExceptionHelper(exception_value, exception_traceback)
@@ -39,14 +102,48 @@ def _collect_exception_infos(exception_type, exception_value, exception_tracebac
 	return (traceback, exception_info_list) # skipping top-level exception helper
 
 
-def _safe_repr(obj, truncate_var_repr):
-	try:
-		repr_str = repr(obj)
-	except Exception:
-		return 'unable to display!'
-	if (truncate_var_repr is None) or (len(repr_str) < truncate_var_repr):
-		return repr_str
-	return repr_str[:truncate_var_repr] + ' ... [length:%d]' % len(repr_str)
+def _format_ex_tree(ex_info_list, exception_stack_mode = 2):
+	ex_msg_list = []
+	if exception_stack_mode == 1:
+		ex_info_list = ex_info_list[-2:]
+	for info in ex_info_list:
+		(exception_value, exDepth, _) = info
+		if exception_stack_mode == 1:
+			exDepth = 0
+		result = '%s%s: %s' % ('  ' * exDepth, exception_value.__class__.__name__, exception_value)
+		if (exception_stack_mode > 1) and hasattr(exception_value, 'args') and not isinstance(exception_value, NestedException):
+			if ((len(exception_value.args) == 1) and (str(exception_value.args[0]) not in str(exception_value))) or (len(exception_value.args) > 1):
+				try:
+					result += '\n%s%s  %s' % ('  ' * exDepth, len(exception_value.__class__.__name__) * ' ', exception_value.args)
+				except Exception:
+					clear_current_exception()
+		ex_msg_list.append(result)
+	if exception_stack_mode > 1:
+		return str.join('\n', ex_msg_list)
+	return str.join(' - ', ex_msg_list)
+
+
+def _format_stack(frame_list, code_context, truncate_var_repr):
+	# Function to log source code and variables from frames
+	import linecache
+	linecache.checkcache()
+	for frame in frame_list:
+		# Output relevant code fragment
+		exception_id = ''
+		if frame.get('exception_id') is not None:
+			exception_id = '%s-' % frame['exception_id']
+		yield 'Stack #%s%02d [%s:%d] %s' % (exception_id, frame['idx'], frame['file'], frame['line'], frame['fun'])
+		def get_source_code(line_num):
+			return linecache.getline(frame['file'], line_num).rstrip().replace('\t', '  ')
+		for delta_line_num in range(-code_context, code_context + 1):
+			if delta_line_num == 0:
+				yield '\t=>| %s' % get_source_code(frame['line'] + delta_line_num)
+			else:
+				yield '\t  | %s' % get_source_code(frame['line'] + delta_line_num)
+		yield ''
+		if truncate_var_repr != -1:
+			for line in _format_variables(frame['locals'], truncate_var_repr):
+				yield line
 
 
 def _format_variables(variable_dict, truncate_var_repr):
@@ -85,108 +182,11 @@ def _format_variables(variable_dict, truncate_var_repr):
 		yield ''
 
 
-def _format_stack(frame_list, code_context, truncate_var_repr):
-	# Function to log source code and variables from frames
-	import linecache
-	linecache.checkcache()
-	for frame in frame_list:
-		# Output relevant code fragment
-		exception_id = ''
-		if frame.get('exception_id') is not None:
-			exception_id = '%s-' % frame['exception_id']
-		yield 'Stack #%s%02d [%s:%d] %s' % (exception_id, frame['idx'], frame['file'], frame['line'], frame['fun'])
-		def get_source_code(line_num):
-			return linecache.getline(frame['file'], line_num).rstrip().replace('\t', '  ')
-		for delta_line_num in range(-code_context, code_context + 1):
-			if delta_line_num == 0:
-				yield '\t=>| %s' % get_source_code(frame['line'] + delta_line_num)
-			else:
-				yield '\t  | %s' % get_source_code(frame['line'] + delta_line_num)
-		yield ''
-		if truncate_var_repr != -1:
-			for line in _format_variables(frame['locals'], truncate_var_repr):
-				yield line
-
-
-def _format_ex_tree(ex_info_list, exception_stack_mode = 2):
-	ex_msg_list = []
-	if exception_stack_mode == 1:
-		ex_info_list = ex_info_list[-2:]
-	for info in ex_info_list:
-		(exception_value, exDepth, _) = info
-		if exception_stack_mode == 1:
-			exDepth = 0
-		result = '%s%s: %s' % ('  ' * exDepth, exception_value.__class__.__name__, exception_value)
-		if (exception_stack_mode > 1) and hasattr(exception_value, 'args') and not isinstance(exception_value, NestedException):
-			if ((len(exception_value.args) == 1) and (str(exception_value.args[0]) not in str(exception_value))) or (len(exception_value.args) > 1):
-				try:
-					result += '\n%s%s  %s' % ('  ' * exDepth, len(exception_value.__class__.__name__) * ' ', exception_value.args)
-				except Exception:
-					clear_current_exception()
-		ex_msg_list.append(result)
-	if exception_stack_mode > 1:
-		return str.join('\n', ex_msg_list)
-	return str.join(' - ', ex_msg_list)
-
-
-def format_exception(exc_info, showcode_context = 0, show_variables = 0, showFileStack = 0, exception_stack_mode = 1):
-	msg_parts = []
-
-	if exc_info not in [None, (None, None, None)]:
-		traceback, ex_info_list = _collect_exception_infos(*exc_info)
-
-		# Code and variable listing
-		if showcode_context > 0:
-			stackInfo = _format_stack(traceback, code_context = showcode_context - 1, truncate_var_repr = show_variables)
-			msg_parts.append(str.join('\n', stackInfo))
-
-		# File stack with line information
-		if showFileStack > 0:
-			msg_fstack = 'File stack:\n'
-			for tb in traceback:
-				msg_fstack += '%s %s %s (%s)\n' % (tb.get('exception_id', '') + '|%02d' % tb.get('idx', 0), tb['file'], tb['line'], tb['fun'])
-			msg_parts.append(msg_fstack)
-
-		# Exception message tree
-		if exception_stack_mode > 0:
-			msg_parts.append(_format_ex_tree(ex_info_list, exception_stack_mode))
-
-	return str.join('\n', msg_parts)
-
-
-def handle_dump_interrupt(sig, frame):
-	# Signal handler for state dump requests
-	variables = {'_frame': frame}
-	if frame:
-		variables.update(frame.f_globals)
-		variables.update(frame.f_locals)
-	log = logging.getLogger('console.debug')
-	thread_list = threading.enumerate()
-	log.info('# active threads %d', len(thread_list))
-	thread_display = []
-	for thread in thread_list:
-		thread_display.append(repr(thread))
-	thread_display.sort()
-	for thread_repr in thread_display:
-		log.info(' - %s', thread_repr)
-	frames_by_threadID = impl_detail(sys, '_current_frames', args = (), default = {})
-	if not frames_by_threadID:
-		log.info('Stack of threads is not available!')
-	for (threadID, frame) in frames_by_threadID.items():
-		log.info('Stack of thread #%d:\n' % threadID + str.join('\n',
-			_format_stack(parse_frame(frame), code_context = 0, truncate_var_repr = -1)))
-	return variables
-
-
-def create_debug_console(variables):
-	import code
-	console = code.InteractiveConsole(variables)
-	console.push('import rlcompleter, readline')
-	console.push('readline.parse_and_bind("tab: complete")')
-	console.push('readline.set_completer(rlcompleter.Completer(globals()).complete)')
-	return console
-
-
-def handle_debug_interrupt(sig = None, frame = None):
-	# Signal handler for debug session requests
-	create_debug_console(handle_dump_interrupt(sig, frame)).interact('debug mode enabled!')
+def _safe_repr(obj, truncate_var_repr):
+	try:
+		repr_str = repr(obj)
+	except Exception:
+		return 'unable to display!'
+	if (truncate_var_repr is None) or (len(repr_str) < truncate_var_repr):
+		return repr_str
+	return repr_str[:truncate_var_repr] + ' ... [length:%d]' % len(repr_str)

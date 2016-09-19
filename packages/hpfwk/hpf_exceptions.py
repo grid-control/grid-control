@@ -24,10 +24,6 @@ def get_current_exception():
 	return sys.exc_info()[1]
 
 
-def _get_current_traceback():
-	return sys.exc_info()[2]
-
-
 def impl_detail(module, name, args, default, fun = lambda x: x):
 	# access some python implementation detail with default
 	try:
@@ -51,6 +47,19 @@ def parse_frame(frame):
 	return _parse_helper(_parse_frame, frame)
 
 
+def _get_current_traceback():
+	return sys.exc_info()[2]
+
+
+def _parse_helper(fun, *args):
+	result = []
+	cwd = os.getcwd()
+	os.chdir(hpf_startup_directory)
+	fun(result, *args)
+	os.chdir(cwd)
+	return result
+
+
 def _parse_traceback(traceback):
 	# Parse traceback information
 	def __parse_traceback(result, traceback):
@@ -62,15 +71,6 @@ def _parse_traceback(traceback):
 				'locals': dict(traceback.tb_frame.f_locals)})
 			traceback = traceback.tb_next
 	return _parse_helper(__parse_traceback, traceback)
-
-
-def _parse_helper(fun, *args):
-	result = []
-	cwd = os.getcwd()
-	os.chdir(hpf_startup_directory)
-	fun(result, *args)
-	os.chdir(cwd)
-	return result
 
 
 class ExceptionCollector(object):
