@@ -34,7 +34,7 @@ def create_plugin_file(package, selector):
 					result.append(tmp)
 			return result
 
-	for cls in get_plugin_class_list(import_modules(os.path.abspath(package), selector)):
+	for cls in get_plugin_list(import_modules(os.path.abspath(package), selector)):
 		if cls.__module__.startswith(os.path.basename(package)):
 			fill_cls_dict(cls)
 	print cls
@@ -60,7 +60,7 @@ def create_plugin_file(package, selector):
 		return cls_dict
 
 
-def get_plugin_class_list(module_iterator):
+def get_plugin_list(module_iterator):
 	for module in module_iterator:
 		try:
 			cls_list = module.__all__
