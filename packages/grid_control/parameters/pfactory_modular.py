@@ -24,7 +24,7 @@ class ModularParameterFactory(UserParameterFactory):
 		# Wrap psource factory functions
 		def create_wrapper(cls_name):
 			def wrapper(*args):
-				parameterClass = ParameterSource.getClass(cls_name)
+				parameterClass = ParameterSource.get_class(cls_name)
 				try:
 					return parameterClass.create_psrc(self._parameter_config, repository, *args)
 				except Exception:

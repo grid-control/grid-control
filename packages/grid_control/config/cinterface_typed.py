@@ -112,7 +112,7 @@ class TypedConfigInterface(ConfigInterface):
 			cls = Plugin, tags = None, inherit = False, requirePlugin = True, singlePlugin = False,
 			desc = 'plugin factories', **kwargs):
 		if isinstance(cls, str):
-			cls = Plugin.getClass(cls)
+			cls = Plugin.get_class(cls)
 		def str2obj(value):
 			objList = list(cls.bind(value, config = self, inherit = inherit, tags = tags or []))
 			if singlePlugin and len(objList) > 1:

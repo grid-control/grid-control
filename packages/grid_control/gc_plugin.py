@@ -23,7 +23,7 @@ class ConfigurablePlugin(Plugin):
 	def bind(cls, value, **kwargs):
 		config = kwargs.pop('config')
 		for entry in value.split():
-			yield InstanceFactory(entry, cls.getClass(entry), config)
+			yield InstanceFactory(entry, cls.get_class(entry), config)
 	bind = classmethod(bind)
 
 
@@ -52,7 +52,7 @@ class NamedPlugin(ConfigurablePlugin):
 				(cls_name, instanceName) = tmp
 			elif len(tmp) == 1:
 				cls_name = tmp[0]
-			clsNew = cls.getClass(cls_name)
+			clsNew = cls.get_class(cls_name)
 			if not instanceName:
 				instanceName = clsNew.__name__.split('.')[-1]
 			cls_config = config.changeView(viewClass = 'TaggedConfigView',

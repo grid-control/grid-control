@@ -145,7 +145,7 @@ class SimpleParameterFactory(UserParameterFactory):
 		return NullParameterSource()
 
 	def _create_psrc_pspace(self, args, repository):
-		SubSpaceParameterSource = ParameterSource.getClass('SubSpaceParameterSource')
+		SubSpaceParameterSource = ParameterSource.get_class('SubSpaceParameterSource')
 		if len(args) == 1:
 			return SubSpaceParameterSource.create_psrc(self._parameter_config, repository, args[0])
 		elif len(args) == 3:
@@ -155,14 +155,14 @@ class SimpleParameterFactory(UserParameterFactory):
 
 	def _create_psrc_ref(self, arg, repository):
 		ref_type_default = 'dataset'
-		DataParameterSource = ParameterSource.getClass('DataParameterSource')
+		DataParameterSource = ParameterSource.get_class('DataParameterSource')
 		if 'dataset:' + arg not in repository:
 			ref_type_default = 'csv'
 		ref_type = self._parameter_config.get(arg, 'type', ref_type_default)
 		if ref_type == 'dataset':
 			return DataParameterSource.create_psrc(self._parameter_config, repository, arg)
 		elif ref_type == 'csv':
-			return ParameterSource.getClass('CSVParameterSource').create_psrc(self._parameter_config, repository, arg)
+			return ParameterSource.get_class('CSVParameterSource').create_psrc(self._parameter_config, repository, arg)
 		raise APIError('Unknown reference type: "%s"' % ref_type)
 
 	def _create_psrc_var(self, var_list, lookup_list): # create variable source

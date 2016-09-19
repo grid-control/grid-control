@@ -15,7 +15,7 @@
 from grid_control.datasets import DataProvider, DataSplitter
 from python_compat import imap
 
-class RunSplitter(DataSplitter.getClass('FileClassSplitter')):
+class RunSplitter(DataSplitter.get_class('FileClassSplitter')):
 	alias = ['runs']
 
 	def _configure_splitter(self, config):

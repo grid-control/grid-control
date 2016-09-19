@@ -116,7 +116,20 @@ def prettySize(size):
 
 def getPluginList(pluginName):
 	aliasDict = {}
-	for entry in Plugin.getClass(pluginName).get_class_info_list():
+	cls = Plugin.get_class(pluginName)
+	print cls
+	print cls._plugin_map['pbsgecommon']
+	print cls._plugin_map['gridengine']
+	print cls._plugin_map['oge']
+	print "-"*30
+	print cls._cls_bases['gridengine']
+	print cls._cls_bases['oge']
+	print "-"*30
+	print cls._cls_map['pbsgecommon']
+	print cls._cls_map['gridengine']
+	print cls._cls_map['oge']
+	print "="*30
+	for entry in cls.get_class_info_list():
 		depth = entry.pop('depth', 0)
 		(alias, name) = entry.popitem()
 		aliasDict.setdefault(name, []).append((depth, alias))

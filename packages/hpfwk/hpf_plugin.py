@@ -140,166 +140,6 @@ def _safe_import(root, module):
 	return result
 
 
-class Plugin(object):
-	# Abstract class taking care of dynamic class loading
-	alias = []
-	config_section_list = []
-
-	_plugin_map = {}
-	_cls_map = {}
-	_cls_cache = {}
-	_cls_bases = {}
-
-	def register_class(cls, module_name, cls_name, alias_list, base_cls_names):
-		cls_path = '%s.%s' % (module_name, cls_name)
-		cls_depth = len(base_cls_names)
-		for name in [cls_name] + alias_list:
-			cls_name_entry = cls._plugin_map.setdefault(name.lower(), [])
-			cls._cls_bases[name.lower()] = base_cls_names
-			if cls_path not in cls_name_entry:
-				if name != cls_name:
-					cls_depth = len(base_cls_names) + 1
-				cls_name_entry.append((-cls_depth, cls_path))
-			for base_cls_name in base_cls_names:
-				cls_base_entry = cls._cls_map.setdefault(base_cls_name.lower(), [])
-				tmp = {name: cls_name, 'depth': cls_depth}
-				if tmp not in cls_base_entry:
-					cls_base_entry.append(tmp)
-	register_class = classmethod(register_class)
-
-
-	def iter_class_bases(cls, add_current_cls = True):
-		if add_current_cls:
-			yield cls
-		for parent_cls in cls.__bases__:
-			if issubclass(parent_cls, Plugin):
-				for entry in parent_cls.iter_class_bases():
-					yield entry
-	iter_class_bases = classmethod(iter_class_bases)
-
-
-	def get_class_names(cls):
-		for parent_cls in cls.__bases__:
-			if hasattr(parent_cls, 'alias') and (cls.alias == parent_cls.alias):
-				return [cls.__name__] # class aliases are not inherited
-		return [cls.__name__] + cls.alias
-	get_class_names = classmethod(get_class_names)
-
-
-	def _get_class_from_modules(cls, ec, log, cls_name, cls_module_list, cls_bad_parents):
-		clsLoadedList = []
-		for clsModule in cls_module_list:
-			log.log(logging.DEBUG3, 'Searching for class %s:%s', clsModule.__name__, cls_name)
-			try:
-				clsLoadedList.append(getattr(clsModule, cls_name))
-			except Exception:
-				ec.collect(logging.DEBUG3, 'Unable to import class %s:%s', clsModule.__name__, cls_name)
-
-		for clsLoaded in clsLoadedList:
-			try:
-				if issubclass(clsLoaded, cls):
-					log.log(logging.DEBUG, 'Successfully loaded class %s', _get_fq_class_name(clsLoaded))
-					yield clsLoaded
-				cls_bad_parents.append(clsLoaded.__name__)
-				log.log(logging.DEBUG1, '%s is not of type %s!', _get_fq_class_name(clsLoaded), _get_fq_class_name(cls))
-			except Exception:
-				ec.collect()
-	_get_class_from_modules = classmethod(_get_class_from_modules)
-
-
-	def _get_module(cls, ec, log, cls_name):
-		cls_name_parts = cls_name.split('.')
-		cls_name = cls_name_parts[-1]
-		cls_module_name = str.join('.', cls_name_parts[:-1])
-		log.log(logging.DEBUG3, 'Importing module %s', cls_module_name)
-		old_sys_path = list(sys.path)
-		result = []
-		try:
-			result = [__import__(cls_module_name, {}, {}, [cls_name])]
-		except Exception:
-			ec.collect(logging.DEBUG3, 'Unable to import module %s', cls_module_name)
-		sys.path = old_sys_path
-		return result
-	_get_module = classmethod(_get_module)
-
-
-	def _get_class(cls, ec, log, cls_name, cls_processed, cls_bad_parents):
-		# resolve class name/alias to complete class path 'myplugin -> module.submodule.MyPlugin'
-		cls_search_list = [(0, cls_name)]
-		while cls_search_list:
-			_, cls_search_name = cls_search_list.pop()
-			if cls_search_name in cls_processed: # Prevent lookup circles
-				continue
-			cls_processed.append(cls_search_name)
-			cls_module_list = []
-			if '.' in cls_search_name: # module.submodule.class specification
-				cls_module_list.extend(cls._get_module(ec, log, cls_search_name))
-				cls_search_name = cls_search_name.split('.')[-1]
-			elif hasattr(sys.modules['__main__'], cls_search_name):
-				cls_module_list.append(sys.modules['__main__'])
-
-			for result in cls._get_class_from_modules(ec, log, cls_search_name, cls_module_list, cls_bad_parents):
-				yield result
-			cls_search_list.extend(cls._plugin_map.get(cls_search_name.lower(), []))
-			cls_search_list.sort() # sort by class inheritance depth
-	_get_class = classmethod(_get_class)
-
-
-	def _get_class_checked(cls, log, cls_name):
-		clsFound = []
-		cls_processed = []
-		cls_bad_parents = []
-		ec = ExceptionCollector(log)
-		for result in cls._get_class(ec, log, cls_name, cls_processed, cls_bad_parents):
-			if result not in clsFound:
-				clsFound.append(result)
-				yield result
-		if not clsFound:
-			msg = 'Unable to load %r of type %r\n' % (cls_name, _get_fq_class_name(cls))
-			if cls_processed:
-				msg += '\tsearched plugin names:\n\t\t%s\n' % str.join('\n\t\t', cls_processed)
-			if cls_bad_parents:
-				msg += '\tfound incompatible plugins:\n\t\t%s\n' % str.join('\n\t\t', cls_bad_parents)
-			ec.raise_any(PluginError(msg))
-			raise PluginError(msg)
-	_get_class_checked = classmethod(_get_class_checked)
-
-
-	def get_class_list(cls, cls_name):
-		log = logging.getLogger('classloader.%s' % cls.__name__.lower())
-		log.log(logging.DEBUG1, 'Loading all classes %s', cls_name)
-		return list(cls._get_class_checked(log, cls_name))
-	get_class_list = classmethod(get_class_list)
-
-
-	def getClass(cls, cls_name):
-		log = logging.getLogger('classloader.%s' % cls.__name__.lower())
-		log.log(logging.DEBUG2, 'Loading class %s', cls_name)
-		if cls_name not in cls._cls_cache.get(cls, {}):
-			for result in cls._get_class_checked(log, cls_name):
-				cls._cls_cache.setdefault(cls, {})[cls_name] = result
-				break # return only first class
-		return cls._cls_cache[cls][cls_name]
-	getClass = classmethod(getClass)
-
-
-	def get_class_info_list(cls):
-		return Plugin._cls_map.get(cls.__name__.lower(), [])
-	get_class_info_list = classmethod(get_class_info_list)
-
-
-	def create_instance(cls, cls_name, *args, **kwargs):
-		# Get an instance of a derived class by specifying the class name and constructor arguments
-		return InstanceFactory(cls_name, cls.getClass(cls_name), *args, **kwargs).create_instance_bound() # For uniform error output
-	create_instance = classmethod(create_instance)
-
-
-	def bind(cls, value, **kwargs):
-		for entry in value.split():
-			yield InstanceFactory(entry, cls.getClass(entry))
-	bind = classmethod(bind)
-
-
 class PluginError(NestedException):
 	pass
 
@@ -343,3 +183,163 @@ class InstanceFactory(object):
 		if add_ellipsis:
 			args_str_list.append('...')
 		return cls_name + '(%s)' % str.join(', ', args_str_list)
+class Plugin(object):
+	# Abstract class taking care of dynamic class loading
+	alias = []
+	config_section_list = []
+
+	_plugin_map = {}
+	_cls_map = {}
+	_cls_cache = {}
+	_cls_bases = {}
+
+	def bind(cls, value, **kwargs):
+		for entry in value.split():
+			yield InstanceFactory(entry, cls.get_class(entry))
+		bind = classmethod(bind)
+
+
+	def create_instance(cls, cls_name, *args, **kwargs):
+		# Get an instance of a derived class by specifying the class name and constructor arguments
+		return InstanceFactory(cls_name, cls.get_class(cls_name), *args, **kwargs).create_instance_bound() # For uniform error output
+		create_instance = classmethod(create_instance)
+
+
+	def get_class_info_list(cls):
+		return Plugin._cls_map.get(cls.__name__.lower(), [])
+		get_class_info_list = classmethod(get_class_info_list)
+
+
+	def get_class_list(cls, cls_name):
+		log = logging.getLogger('classloader.%s' % cls.__name__.lower())
+		log.log(logging.DEBUG1, 'Loading all classes %s', cls_name)
+		return list(cls._get_class_checked(log, cls_name))
+		get_class_list = classmethod(get_class_list)
+
+
+	def get_class_names(cls):
+		for parent_cls in cls.__bases__:
+			if hasattr(parent_cls, 'alias') and (cls.alias == parent_cls.alias):
+				return [cls.__name__] # class aliases are not inherited
+		return [cls.__name__] + cls.alias
+		get_class_names = classmethod(get_class_names)
+
+
+	def get_class(cls, cls_name):
+		log = logging.getLogger('classloader.%s' % cls.__name__.lower())
+		log.log(logging.DEBUG2, 'Loading class %s', cls_name)
+		if cls_name not in cls._cls_cache.get(cls, {}):
+			for result in cls._get_class_checked(log, cls_name):
+				cls._cls_cache.setdefault(cls, {})[cls_name] = result
+				break # return only first class
+		return cls._cls_cache[cls][cls_name]
+		get_class = classmethod(get_class)
+
+
+	def iter_class_bases(cls, add_current_cls = True):
+		if add_current_cls:
+			yield cls
+		for parent_cls in cls.__bases__:
+			if issubclass(parent_cls, Plugin):
+				for entry in parent_cls.iter_class_bases():
+					yield entry
+		iter_class_bases = classmethod(iter_class_bases)
+
+
+	def register_class(cls, module_name, cls_name, alias_list, base_cls_names):
+		cls_path = '%s.%s' % (module_name, cls_name)
+		cls_depth = len(base_cls_names)
+		for name in [cls_name] + alias_list:
+			cls_name_entry = cls._plugin_map.setdefault(name.lower(), [])
+			cls._cls_bases[name.lower()] = base_cls_names
+			if cls_path not in cls_name_entry:
+				if name != cls_name:
+					cls_depth = len(base_cls_names) + 1
+				cls_name_entry.append((-cls_depth, cls_path))
+			for base_cls_name in base_cls_names:
+				cls_base_entry = cls._cls_map.setdefault(base_cls_name.lower(), [])
+				tmp = {name: cls_name, 'depth': cls_depth}
+				if tmp not in cls_base_entry:
+					cls_base_entry.append(tmp)
+		register_class = classmethod(register_class)
+
+
+	def _get_class(cls, ec, log, cls_name, cls_processed, cls_bad_parents):
+		# resolve class name/alias to complete class path 'myplugin -> module.submodule.MyPlugin'
+		cls_search_list = [(0, cls_name)]
+		while cls_search_list:
+			_, cls_search_name = cls_search_list.pop()
+			if cls_search_name in cls_processed: # Prevent lookup circles
+				continue
+			cls_processed.append(cls_search_name)
+			cls_module_list = []
+			if '.' in cls_search_name: # module.submodule.class specification
+				cls_module_list.extend(cls._get_module(ec, log, cls_search_name))
+				cls_search_name = cls_search_name.split('.')[-1]
+			elif hasattr(sys.modules['__main__'], cls_search_name):
+				cls_module_list.append(sys.modules['__main__'])
+
+			for result in cls._get_class_from_modules(ec, log, cls_search_name, cls_module_list, cls_bad_parents):
+				yield result
+			cls_search_list.extend(cls._plugin_map.get(cls_search_name.lower(), []))
+			cls_search_list.sort() # sort by class inheritance depth
+		_get_class = classmethod(_get_class)
+
+
+	def _get_class_checked(cls, log, cls_name):
+		clsFound = []
+		cls_processed = []
+		cls_bad_parents = []
+		ec = ExceptionCollector(log)
+		for result in cls._get_class(ec, log, cls_name, cls_processed, cls_bad_parents):
+			if result not in clsFound:
+				clsFound.append(result)
+				yield result
+		if not clsFound:
+			msg = 'Unable to load %r of type %r\n' % (cls_name, _get_fq_class_name(cls))
+			if cls_processed:
+				msg += '\tsearched plugin names:\n\t\t%s\n' % str.join('\n\t\t', cls_processed)
+			if cls_bad_parents:
+				msg += '\tfound incompatible plugins:\n\t\t%s\n' % str.join('\n\t\t', cls_bad_parents)
+			ec.raise_any(PluginError(msg))
+			raise PluginError(msg)
+		_get_class_checked = classmethod(_get_class_checked)
+
+
+	def _get_class_from_modules(cls, ec, log, cls_name, cls_module_list, cls_bad_parents):
+		clsLoadedList = []
+		for clsModule in cls_module_list:
+			log.log(logging.DEBUG3, 'Searching for class %s:%s', clsModule.__name__, cls_name)
+			try:
+				clsLoadedList.append(getattr(clsModule, cls_name))
+			except Exception:
+				ec.collect(logging.DEBUG3, 'Unable to import class %s:%s', clsModule.__name__, cls_name)
+
+		for clsLoaded in clsLoadedList:
+			try:
+				if issubclass(clsLoaded, cls):
+					log.log(logging.DEBUG, 'Successfully loaded class %s', _get_fq_class_name(clsLoaded))
+					yield clsLoaded
+				cls_bad_parents.append(clsLoaded.__name__)
+				log.log(logging.DEBUG1, '%s is not of type %s!', _get_fq_class_name(clsLoaded), _get_fq_class_name(cls))
+			except Exception:
+				ec.collect()
+		_get_class_from_modules = classmethod(_get_class_from_modules)
+
+
+	def _get_module(cls, ec, log, cls_name):
+		cls_name_parts = cls_name.split('.')
+		cls_name = cls_name_parts[-1]
+		cls_module_name = str.join('.', cls_name_parts[:-1])
+		log.log(logging.DEBUG3, 'Importing module %s', cls_module_name)
+		old_sys_path = list(sys.path)
+		result = []
+		try:
+			result = [__import__(cls_module_name, {}, {}, [cls_name])]
+		except Exception:
+			ec.collect(logging.DEBUG3, 'Unable to import module %s', cls_module_name)
+		sys.path = old_sys_path
+		return result
+		_get_module = classmethod(_get_module)
+
+

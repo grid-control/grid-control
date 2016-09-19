@@ -214,7 +214,7 @@ class TrackedParameterAdapter(BasicParameterAdapter):
 			self._resync_state = self.resync(force = True)
 		elif do_init: # Write current state
 			self._write_job_num2pnum(self._path_job_num2pnum)
-			ParameterSource.getClass('GCDumpParameterSource').write(self._path_params,
+			ParameterSource.get_class('GCDumpParameterSource').write(self._path_params,
 				self.get_job_len(), self.get_job_metadata(), self.iter_jobs())
 		config.set('parameter hash', self._psrc_raw.get_psrc_hash())
 
@@ -262,7 +262,7 @@ class TrackedParameterAdapter(BasicParameterAdapter):
 		self._map_job_num2pnum = map_job_num2pnum # Update Job2PID map
 		# Write resynced state
 		self._write_job_num2pnum(self._path_job_num2pnum + '.tmp')
-		ParameterSource.getClass('GCDumpParameterSource').write(self._path_params + '.tmp',
+		ParameterSource.get_class('GCDumpParameterSource').write(self._path_params + '.tmp',
 			self.get_job_len(), self.get_job_metadata(), self.iter_jobs())
 		os.rename(self._path_job_num2pnum + '.tmp', self._path_job_num2pnum)
 		os.rename(self._path_params + '.tmp', self._path_params)

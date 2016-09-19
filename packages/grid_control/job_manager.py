@@ -57,7 +57,7 @@ class JobManager(NamedPlugin):
 		self._interactive_delete = config.isInteractive('delete jobs', True)
 		self._interactive_reset = config.isInteractive('reset jobs', True)
 		self._do_shuffle = config.getBool('shuffle', False, onChange = None)
-		self._reportClass = Report.getClass(config.get('abort report', 'LocationReport', onChange = None))
+		self._reportClass = Report.get_class(config.get('abort report', 'LocationReport', onChange = None))
 		self._show_blocker = True
 
 

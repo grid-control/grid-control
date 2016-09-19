@@ -66,7 +66,7 @@ class LFNPartitionProcessor(PartitionProcessor):
 				splitInfo[DataSplitter.FileList] = modify_filelist_for_srm(splitInfo[DataSplitter.FileList])
 
 
-class CMSSWPartitionProcessor(PartitionProcessor.getClass('BasicPartitionProcessor')):
+class CMSSWPartitionProcessor(PartitionProcessor.get_class('BasicPartitionProcessor')):
 	alias = ['cmsswpart']
 
 	def _format_file_list(self, fl):

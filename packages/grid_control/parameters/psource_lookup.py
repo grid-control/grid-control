@@ -72,11 +72,11 @@ def parse_lookup_factory_args(pconfig, output_vn_list, lookup_vn_list):
 	parameter_value = pconfig.get_parameter(output_vn.lstrip('!'))
 	if isinstance(parameter_value, list): # simple parameter source
 		if len(parameter_value) == 1:
-			return [(False, ParameterSource.getClass('ConstParameterSource'), [output_vn, parameter_value[0]])]
+			return [(False, ParameterSource.get_class('ConstParameterSource'), [output_vn, parameter_value[0]])]
 		else:
-			return [(False, ParameterSource.getClass('SimpleParameterSource'), [output_vn, parameter_value])]
+			return [(False, ParameterSource.get_class('SimpleParameterSource'), [output_vn, parameter_value])]
 	elif isinstance(parameter_value, tuple) and parameter_value[0] == 'format':
-		return [(False, ParameterSource.getClass('FormatterParameterSource'), parameter_value[1:])]
+		return [(False, ParameterSource.get_class('FormatterParameterSource'), parameter_value[1:])]
 
 	lookup_vn = None
 	if lookup_vn_list: # default lookup key

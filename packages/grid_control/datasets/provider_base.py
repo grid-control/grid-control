@@ -63,7 +63,7 @@ class DataProvider(ConfigurablePlugin):
 			elif len(temp) == 1:
 				dataset = temp[0]
 
-			clsNew = cls.getClass(provider)
+			clsNew = cls.get_class(provider)
 			bindValue = str.join(':', [nickname, provider, dataset])
 			instance_args.append([bindValue, clsNew, config, datasource_name, dataset, nickname])
 		for instance_arg in instance_args:

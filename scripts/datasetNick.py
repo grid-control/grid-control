@@ -31,7 +31,7 @@ def main(opts, args):
 	else:
 		toProcess = [datasetPath]
 
-	nProd = Plugin.getClass('NickNameProducer').create_instance(opts.producer, getConfig())
+	nProd = Plugin.get_class('NickNameProducer').create_instance(opts.producer, getConfig())
 	utils.printTabular(
 		[(0, 'Nickname'), (1, 'Dataset')],
 		lmap(lambda ds: {0: nProd.getName('', ds, None), 1: ds}, toProcess), 'll')

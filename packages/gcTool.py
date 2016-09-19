@@ -70,7 +70,7 @@ def parse_cmd_line(cmd_line_args):
 
 
 # Config filler which collects data from command line arguments
-class OptsConfigFiller(Plugin.getClass('ConfigFiller')):
+class OptsConfigFiller(Plugin.get_class('ConfigFiller')):
 	def __init__(self, cmd_line_args):
 		self._cmd_line_args = cmd_line_args
 

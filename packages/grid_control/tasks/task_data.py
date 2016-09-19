@@ -55,7 +55,7 @@ class DataTask(TaskModule):
 
 		if dataProvider is not None:
 			splitterName = config.get('%s splitter' % datasource_name, 'FileBoundarySplitter')
-			splitterClass = dataProvider.checkSplitter(DataSplitter.getClass(splitterName))
+			splitterClass = dataProvider.checkSplitter(DataSplitter.get_class(splitterName))
 			dataSplitter = splitterClass(config, datasource_name)
 
 			# Create and register dataset parameter source

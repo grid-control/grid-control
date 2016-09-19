@@ -95,7 +95,7 @@ def process_intervention(opts, psource):
 
 def save_parameters(psource, fn):
 	log.info('')
-	ParameterSource.getClass('GCDumpParameterSource').write(fn, psource)
+	ParameterSource.get_class('GCDumpParameterSource').write(fn, psource)
 	log.info('Parameter information saved to ./%s', fn)
 
 def setup_config(opts, args):

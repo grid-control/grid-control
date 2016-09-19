@@ -84,7 +84,7 @@ class HistoricalConfigView(ConfigView):
 		if not viewClass:
 			viewClass = self.__class__
 		elif isinstance(viewClass, str):
-			viewClass = ConfigView.getClass(viewClass)
+			viewClass = ConfigView.get_class(viewClass)
 		return viewClass(self.configName, self._oldContainer, self._curContainer, self, **kwargs)
 
 	def _getSection(self, specific):
