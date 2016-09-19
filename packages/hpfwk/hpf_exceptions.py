@@ -24,7 +24,7 @@ def get_current_exception():
 	return sys.exc_info()[1]
 
 
-def get_current_traceback():
+def _get_current_traceback():
 	return sys.exc_info()[2]
 
 
@@ -81,7 +81,7 @@ class ExceptionCollector(object):
 	def collect(self, *args, **kwargs):
 		if self._log and args:
 			self._log.log(*args, **kwargs)
-		self._exception_list.append(NestedExceptionHelper(get_current_exception(), get_current_traceback()))
+		self._exception_list.append(NestedExceptionHelper(get_current_exception(), _get_current_traceback()))
 		clear_current_exception()
 
 	def raise_any(self, value):
@@ -107,7 +107,7 @@ class NestedException(Exception):
 		cur_exception = get_current_exception()
 		if cur_exception:
 			self.nested = [cur_exception]
-			self.traceback = parse_traceback(get_current_traceback())
+			self.traceback = parse_traceback(_get_current_traceback())
 		Exception.__init__(self, *args, **kwargs)
 
 
