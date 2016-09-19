@@ -162,11 +162,11 @@ class TaskModule(NamedPlugin):
 		# Transient variables
 		transients = ['GC_DATE', 'GC_TIMESTAMP', 'GC_GUID'] # these variables are determined on the WN
 		# Alias vars: Eg. __MY_JOB__ will access $GC_JOB_ID - used mostly for compatibility
-		alias_list = {'DATE': 'GC_DATE', 'TIMESTAMP': 'GC_TIMESTAMP', 'GUID': 'GC_GUID',
+		var_alias_map = {'DATE': 'GC_DATE', 'TIMESTAMP': 'GC_TIMESTAMP', 'GUID': 'GC_GUID',
 			'MY_JOBID': 'GC_JOB_ID', 'MY_JOB': 'GC_JOB_ID', 'JOBID': 'GC_JOB_ID', 'GC_JOBID': 'GC_JOB_ID',
 			'CONF': 'GC_CONF', 'TASK_ID': 'GC_TASK_ID'}
 		varNames = self.getVarNames() + transients
-		alias.update(dict(izip(varNames, varNames))) # include reflexive mappings
+		var_alias_map.update(dict(izip(varNames, varNames))) # include reflexive mappings
 		return alias
 
 
