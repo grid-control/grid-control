@@ -118,7 +118,7 @@ class LimitedResyncParameterSource(ParameterSource):
 
 
 class NullParameterSource(ParameterSource):
-	alias = ['null']
+	alias_list = ['null']
 
 	def create_psrc(cls, pconfig, repository):
 		return cls()

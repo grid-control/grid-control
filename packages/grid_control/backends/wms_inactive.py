@@ -15,7 +15,7 @@
 from grid_control.backends import WMS
 
 class InactiveWMS(WMS):
-	alias = ['inactive']
+	alias_list = ['inactive']
 
 	def __init__(self, config, name):
 		WMS.__init__(self, config, name)

@@ -60,7 +60,7 @@ class MultiDataProcessor(DataProcessor):
 
 
 class NullDataProcessor(DataProcessor):
-	alias = ['null']
+	alias_list = ['null']
 
 	def __init__(self, config = None, datasource_name = None, on_change = None):
 		DataProcessor.__init__(self, config, datasource_name, on_change)

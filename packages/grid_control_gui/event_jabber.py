@@ -17,7 +17,7 @@ from grid_control.monitoring import Monitoring
 from hpfwk import clear_current_exception
 
 class JabberAlarm(Monitoring):
-	alias = ['jabber']
+	alias_list = ['jabber']
 	config_section_list = Monitoring.config_section_list + ['jabber']
 
 	def __init__(self, config, name, task):

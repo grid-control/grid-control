@@ -97,7 +97,7 @@ class MultiMonitor(MultiEventHandler, Monitoring):
 
 
 class ScriptMonitoring(Monitoring):
-	alias = ['scripts']
+	alias_list = ['scripts']
 	config_section_list = EventHandler.config_section_list + ['scripts']
 
 	def __init__(self, config, name, task):

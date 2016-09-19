@@ -71,7 +71,7 @@ class ForwardingParameterSource(ParameterSource):
 
 
 class RangeParameterSource(ForwardingParameterSource):
-	alias = ['range']
+	alias_list = ['range']
 
 	def __init__(self, psrc, posStart = None, posEnd = None):
 		ForwardingParameterSource.__init__(self, psrc)
@@ -118,7 +118,7 @@ class RangeParameterSource(ForwardingParameterSource):
 
 
 class SubSpaceParameterSource(ForwardingParameterSource):
-	alias = ['pspace']
+	alias_list = ['pspace']
 
 	def __init__(self, name, factory, repository):
 		(self._name, self._factory_name) = (name, factory.__class__.__name__)
@@ -246,21 +246,21 @@ class BaseZipParameterSource(MultiParameterSource): # Base class for psrc_list i
 
 
 class ZipLongParameterSource(BaseZipParameterSource):
-	alias = ['zip']
+	alias_list = ['zip']
 
 	def __init__(self, *psrc_list):
 		BaseZipParameterSource.__init__(self, max, *psrc_list)
 
 
 class ZipShortParameterSource(BaseZipParameterSource):
-	alias = ['szip']
+	alias_list = ['szip']
 
 	def __init__(self, *psrc_list):
 		BaseZipParameterSource.__init__(self, min, *psrc_list)
 
 
 class ChainParameterSource(MultiParameterSource):
-	alias = ['chain']
+	alias_list = ['chain']
 
 	def fill_parameter_content(self, pnum, result):
 		limit = 0
@@ -298,7 +298,7 @@ class ChainParameterSource(MultiParameterSource):
 
 
 class ErrorParameterSource(ChainParameterSource):
-	alias = ['variation']
+	alias_list = ['variation']
 
 	def __init__(self, *psrc_list):
 		psrc_list = strip_null_sources(psrc_list)
@@ -317,7 +317,7 @@ class ErrorParameterSource(ChainParameterSource):
 
 
 class CrossParameterSource(MultiParameterSource):
-	alias = ['cross']
+	alias_list = ['cross']
 
 	def __init__(self, *psrc_list):
 		MultiParameterSource.__init__(self, *simplify_nested_sources(CrossParameterSource, psrc_list))
@@ -352,7 +352,7 @@ class CrossParameterSource(MultiParameterSource):
 
 
 class RepeatParameterSource(MultiParameterSource):
-	alias = ['repeat']
+	alias_list = ['repeat']
 
 	def __init__(self, psrc, times):
 		self._psrc = psrc

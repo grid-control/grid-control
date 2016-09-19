@@ -83,12 +83,12 @@ def import_modules(root, selector, package = None):
 	else:
 		package = []
 
-	files = os.listdir(root)
-	__import__('random').shuffle(files)
-	for fn in files:
+	fn_list = os.listdir(root)
+	__import__('random').shuffle(fn_list)
+	for fn in fn_list:
 		if fn.endswith('.pyc'):
 			os.remove(os.path.join(root, fn))
-	for fn in files:
+	for fn in fn_list:
 		if not selector(os.path.join(root, fn)):
 			continue
 		if os.path.isdir(os.path.join(root, fn)):
@@ -100,29 +100,29 @@ def import_modules(root, selector, package = None):
 	sys.path = sys.path[1:]
 
 
-def init_hpf_plugins(base_path):
+def init_hpf_plugins(base_dn):
 	# Init plugin search paths
-	plugin_file = os.path.join(base_path, '.PLUGINS')
-	if os.path.exists(plugin_file):
-		__import__(os.path.basename(base_path)) # Trigger initialisation of module
-		base_cls_info = {}
-		for line in open(plugin_file):
+	plugin_fn = os.path.join(base_dn, '.PLUGINS')
+	if os.path.exists(plugin_fn):
+		__import__(os.path.basename(base_dn)) # Trigger initialisation of module
+		map_level2cls_name = {}
+		for line in open(plugin_fn):
 			if not line.strip():
 				continue
 			tmp = line.split(' * ')
 			module_info = tmp[1].split()
 			(module_name, cls_name) = (module_info[0], module_info[1])
-			base_cls_level = len(tmp[0])
-			base_cls_info[base_cls_level] = cls_name
-			for level in list(base_cls_info):
-				if level > base_cls_level:
-					base_cls_info.pop(level)
+			cls_level = len(tmp[0])
+			map_level2cls_name[cls_level] = cls_name
+			for level in list(map_level2cls_name):
+				if level > cls_level:
+					map_level2cls_name.pop(level)
+			level_cls_name_list = list(map_level2cls_name.items())
+			level_cls_name_list.sort()
 			base_cls_list = []
-			base_cls_info_list = list(base_cls_info.items())
-			base_cls_info_list.sort()
-			for (_, base_cls_name) in base_cls_info_list:
+			for (_, base_cls_name) in level_cls_name_list:
 				base_cls_list.append(base_cls_name)
-			Plugin.register_class(module_name, cls_name, module_info[2:], base_cls_list)
+			Plugin.register_class(module_name, cls_name, alias_list = module_info[2:], base_cls_names = base_cls_list)
 
 
 def _get_fq_class_name(cls):
@@ -183,9 +183,11 @@ class InstanceFactory(object):
 		if add_ellipsis:
 			args_str_list.append('...')
 		return cls_name + '(%s)' % str.join(', ', args_str_list)
+
+
 class Plugin(object):
 	# Abstract class taking care of dynamic class loading
-	alias = []
+	alias_list = []
 	config_section_list = []
 
 	_plugin_map = {}
@@ -196,33 +198,13 @@ class Plugin(object):
 	def bind(cls, value, **kwargs):
 		for entry in value.split():
 			yield InstanceFactory(entry, cls.get_class(entry))
-		bind = classmethod(bind)
+	bind = classmethod(bind)
 
 
 	def create_instance(cls, cls_name, *args, **kwargs):
 		# Get an instance of a derived class by specifying the class name and constructor arguments
 		return InstanceFactory(cls_name, cls.get_class(cls_name), *args, **kwargs).create_instance_bound() # For uniform error output
-		create_instance = classmethod(create_instance)
-
-
-	def get_class_info_list(cls):
-		return Plugin._cls_map.get(cls.__name__.lower(), [])
-		get_class_info_list = classmethod(get_class_info_list)
-
-
-	def get_class_list(cls, cls_name):
-		log = logging.getLogger('classloader.%s' % cls.__name__.lower())
-		log.log(logging.DEBUG1, 'Loading all classes %s', cls_name)
-		return list(cls._get_class_checked(log, cls_name))
-		get_class_list = classmethod(get_class_list)
-
-
-	def get_class_names(cls):
-		for parent_cls in cls.__bases__:
-			if hasattr(parent_cls, 'alias') and (cls.alias == parent_cls.alias):
-				return [cls.__name__] # class aliases are not inherited
-		return [cls.__name__] + cls.alias
-		get_class_names = classmethod(get_class_names)
+	create_instance = classmethod(create_instance)
 
 
 	def get_class(cls, cls_name):
@@ -233,7 +215,27 @@ class Plugin(object):
 				cls._cls_cache.setdefault(cls, {})[cls_name] = result
 				break # return only first class
 		return cls._cls_cache[cls][cls_name]
-		get_class = classmethod(get_class)
+	get_class = classmethod(get_class)
+
+
+	def get_class_info_list(cls):
+		return Plugin._cls_map.get(cls.__name__.lower(), [])
+	get_class_info_list = classmethod(get_class_info_list)
+
+
+	def get_class_list(cls, cls_name):
+		log = logging.getLogger('classloader.%s' % cls.__name__.lower())
+		log.log(logging.DEBUG1, 'Loading all classes %s', cls_name)
+		return list(cls._get_class_checked(log, cls_name))
+	get_class_list = classmethod(get_class_list)
+
+
+	def get_class_names(cls):
+		for parent_cls in cls.__bases__:
+			if hasattr(parent_cls, 'alias') and (cls.alias == parent_cls.alias):
+				return [cls.__name__] # class aliases are not inherited
+		return [cls.__name__] + cls.alias
+	get_class_names = classmethod(get_class_names)
 
 
 	def iter_class_bases(cls, add_current_cls = True):
@@ -243,7 +245,7 @@ class Plugin(object):
 			if issubclass(parent_cls, Plugin):
 				for entry in parent_cls.iter_class_bases():
 					yield entry
-		iter_class_bases = classmethod(iter_class_bases)
+	iter_class_bases = classmethod(iter_class_bases)
 
 
 	def register_class(cls, module_name, cls_name, alias_list, base_cls_names):
@@ -261,7 +263,7 @@ class Plugin(object):
 				tmp = {name: cls_name, 'depth': cls_depth}
 				if tmp not in cls_base_entry:
 					cls_base_entry.append(tmp)
-		register_class = classmethod(register_class)
+	register_class = classmethod(register_class)
 
 
 	def _get_class(cls, ec, log, cls_name, cls_processed, cls_bad_parents):
@@ -283,7 +285,7 @@ class Plugin(object):
 				yield result
 			cls_search_list.extend(cls._plugin_map.get(cls_search_name.lower(), []))
 			cls_search_list.sort() # sort by class inheritance depth
-		_get_class = classmethod(_get_class)
+	_get_class = classmethod(_get_class)
 
 
 	def _get_class_checked(cls, log, cls_name):
@@ -303,7 +305,7 @@ class Plugin(object):
 				msg += '\tfound incompatible plugins:\n\t\t%s\n' % str.join('\n\t\t', cls_bad_parents)
 			ec.raise_any(PluginError(msg))
 			raise PluginError(msg)
-		_get_class_checked = classmethod(_get_class_checked)
+	_get_class_checked = classmethod(_get_class_checked)
 
 
 	def _get_class_from_modules(cls, ec, log, cls_name, cls_module_list, cls_bad_parents):
@@ -324,7 +326,7 @@ class Plugin(object):
 				log.log(logging.DEBUG1, '%s is not of type %s!', _get_fq_class_name(clsLoaded), _get_fq_class_name(cls))
 			except Exception:
 				ec.collect()
-		_get_class_from_modules = classmethod(_get_class_from_modules)
+	_get_class_from_modules = classmethod(_get_class_from_modules)
 
 
 	def _get_module(cls, ec, log, cls_name):
@@ -340,6 +342,4 @@ class Plugin(object):
 			ec.collect(logging.DEBUG3, 'Unable to import module %s', cls_module_name)
 		sys.path = old_sys_path
 		return result
-		_get_module = classmethod(_get_module)
-
-
+	_get_module = classmethod(_get_module)

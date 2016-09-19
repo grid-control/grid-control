@@ -75,7 +75,7 @@ class CREAM_CancelJobs(CancelJobsWithProcessBlind):
 
 
 class CreamWMS(GridWMS):
-	alias = ['cream']
+	alias_list = ['cream']
 
 	def __init__(self, config, name):
 		cancelExecutor = CancelAndPurgeJobs(config, CREAM_CancelJobs(config), CREAM_PurgeJobs(config))

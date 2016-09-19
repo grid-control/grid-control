@@ -128,7 +128,7 @@ class GridEngine_Discover_Queues(BackendDiscovery):
 
 
 class GridEngine(PBSGECommon):
-	alias = ['SGE', 'UGE', 'OGE']
+	alias_list = ['SGE', 'UGE', 'OGE']
 	config_section_list = PBSGECommon.config_section_list + ['GridEngine'] + alias
 
 	def __init__(self, config, name):

@@ -69,7 +69,7 @@ class GCDumpParameterSource(ParameterSource): # Reader for grid-control dump fil
 
 
 class CSVParameterSource(InternalParameterSource): # Reader for CSV files
-	alias = ['csv']
+	alias_list = ['csv']
 
 	def __init__(self, fn, format = 'sniffed'):
 		(self._fn, self._format) = (fn, format)

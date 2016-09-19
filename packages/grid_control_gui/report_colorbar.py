@@ -62,7 +62,7 @@ class JobProgressBar(object):
 
 
 class ColorBarReport(Report):
-	alias = ['cbar']
+	alias_list = ['cbar']
 
 	def __init__(self, jobDB, task, jobs = None, configString = ''):
 		Report.__init__(self, jobDB, task, jobs, configString)

@@ -122,7 +122,7 @@ class LookupHelper(object):
 
 
 class SimpleLookupParameterSource(SingleParameterSource):
-	alias = ['lookup']
+	alias_list = ['lookup']
 
 	def __init__(self, output_vn, lookup_vn_list, lookup_matcher_list, lookup_dict, lookup_order):
 		self._lookup_vn_list = lookup_vn_list
@@ -153,7 +153,7 @@ class SimpleLookupParameterSource(SingleParameterSource):
 
 
 class SwitchingLookupParameterSource(SingleParameterSource):
-	alias = ['switch']
+	alias_list = ['switch']
 
 	def __init__(self, psrc, output_vn, lookup_vn_list, lookup_matcher_list, lookup_dict, lookup_order):
 		SingleParameterSource.__init__(self, output_vn, [])

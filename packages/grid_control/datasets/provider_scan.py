@@ -151,7 +151,7 @@ class ScanProviderBase(DataProvider):
 # Get dataset information from storage url
 # required format: <storage url>
 class ScanProvider(ScanProviderBase):
-	alias = ['scan']
+	alias_list = ['scan']
 
 	def __init__(self, config, datasource_name, dataset_expr, datasetNick = None, dataset_proc = None):
 		ds_config = config.changeView(viewClass = 'TaggedConfigView', addNames = [md5_hex(dataset_expr)])
@@ -172,14 +172,14 @@ class ScanProvider(ScanProviderBase):
 
 # This class is used to disentangle the TaskModule and GCProvider class - without any direct dependencies / imports
 class GCProviderSetup(Plugin):
-	alias = ['GCProviderSetup_TaskModule']
+	alias_list = ['GCProviderSetup_TaskModule']
 	scan_pipeline = ['JobInfoFromOutputDir', 'FilesFromJobInfo', 'MatchOnFilename', 'MatchDelimeter', 'DetermineEvents', 'AddFilePrefix']
 
 
 # Get dataset information just from grid-control instance
 # required format: <path to config file / workdir> [%<job selector]
 class GCProvider(ScanProviderBase):
-	alias = ['gc']
+	alias_list = ['gc']
 
 	def __init__(self, config, datasource_name, dataset_expr, datasetNick = None, dataset_proc = None):
 		ds_config = config.changeView(viewClass = 'TaggedConfigView', addNames = [md5_hex(dataset_expr)])

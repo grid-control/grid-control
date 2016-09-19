@@ -81,7 +81,7 @@ class CategoryBaseReport(Report):
 
 
 class ModuleReport(CategoryBaseReport):
-	alias = ['module']
+	alias_list = ['module']
 
 	def show_report(self, job_db):
 		(catStateDict, catDescDict, _) = CategoryBaseReport._getCategoryStateSummary(self, job_db)
@@ -226,7 +226,7 @@ class AdaptiveBaseReport(CategoryBaseReport):
 
 
 class GUIReport(AdaptiveBaseReport):
-	alias = ['modern']
+	alias_list = ['modern']
 
 	def __init__(self, jobDB, task, jobs = None, configString = ''):
 		(self.maxY, self.maxX) = Console(sys.stdout).getmaxyx()

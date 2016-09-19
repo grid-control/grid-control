@@ -20,7 +20,7 @@ from grid_control.utils.parsing import parseTime, parseType, strDict
 from python_compat import imap, lmap
 
 class KeyParameterSource(ParameterSource):
-	alias = ['key']
+	alias_list = ['key']
 
 	def __init__(self, *keys):
 		ParameterSource.__init__(self)
@@ -35,7 +35,7 @@ class KeyParameterSource(ParameterSource):
 
 
 class RequirementParameterSource(ParameterSource):
-	alias = ['req']
+	alias_list = ['req']
 
 	def __repr__(self):
 		return 'req()'
@@ -87,7 +87,7 @@ class SingleParameterSource(ImmutableParameterSource):
 
 
 class CollectParameterSource(SingleParameterSource): # Merge parameter values
-	alias = ['collect']
+	alias_list = ['collect']
 
 	def __init__(self, key, *vn_list):
 		SingleParameterSource.__init__(self, key, [key, vn_list])
@@ -103,7 +103,7 @@ class CollectParameterSource(SingleParameterSource): # Merge parameter values
 
 
 class ConstParameterSource(SingleParameterSource):
-	alias = ['const']
+	alias_list = ['const']
 
 	def __init__(self, key, value):
 		SingleParameterSource.__init__(self, key, [key, value])
@@ -126,7 +126,7 @@ class ConstParameterSource(SingleParameterSource):
 
 
 class CounterParameterSource(SingleParameterSource):
-	alias = ['counter']
+	alias_list = ['counter']
 
 	def __init__(self, key, seed):
 		SingleParameterSource.__init__(self, '!%s' % key.lstrip(), [key, seed])
@@ -143,7 +143,7 @@ class CounterParameterSource(SingleParameterSource):
 
 
 class FormatterParameterSource(SingleParameterSource):
-	alias = ['format']
+	alias_list = ['format']
 
 	def __init__(self, key, fmt, source, default = ''):
 		SingleParameterSource.__init__(self, '!%s' % key, [key, fmt, source, default])
@@ -162,7 +162,7 @@ class FormatterParameterSource(SingleParameterSource):
 
 
 class RNGParameterSource(SingleParameterSource):
-	alias = ['rng']
+	alias_list = ['rng']
 
 	def __init__(self, key = 'JOB_RANDOM', low = 1e6, high = 1e7-1):
 		SingleParameterSource.__init__(self, '!%s' % key.lstrip('!'), [key, low, high])
@@ -179,7 +179,7 @@ class RNGParameterSource(SingleParameterSource):
 
 
 class SimpleParameterSource(SingleParameterSource):
-	alias = ['var']
+	alias_list = ['var']
 
 	def __init__(self, key, values):
 		SingleParameterSource.__init__(self, key, [key, values])
@@ -205,7 +205,7 @@ class SimpleParameterSource(SingleParameterSource):
 
 
 class TransformParameterSource(SingleParameterSource):
-	alias = ['transform']
+	alias_list = ['transform']
 
 	def __init__(self, key, fmt, default = ''):
 		SingleParameterSource.__init__(self, '!%s' % key, [key, fmt, default])

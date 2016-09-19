@@ -18,7 +18,7 @@ from hpfwk import clear_current_exception
 from python_compat import identity, ifilter, lmap
 
 class PartitionEstimator(DataProcessor):
-	alias = ['estimate', 'SplitSettingEstimator']
+	alias_list = ['estimate', 'SplitSettingEstimator']
 
 	def __init__(self, config, datasource_name, on_change):
 		DataProcessor.__init__(self, config, datasource_name, on_change)

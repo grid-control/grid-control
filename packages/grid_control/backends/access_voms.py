@@ -18,7 +18,7 @@ from grid_control.backends.access_grid import GridAccessToken
 from grid_control.utils.parsing import parseTime
 
 class VomsAccessToken(GridAccessToken):
-	alias = ['voms', 'VomsProxy']
+	alias_list = ['voms', 'VomsProxy']
 
 	def __init__(self, config, name):
 		GridAccessToken.__init__(self, config, name, 'voms-proxy-info')

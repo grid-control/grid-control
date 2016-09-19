@@ -21,7 +21,7 @@ from grid_control.utils.activity import Activity
 from python_compat import md5_hex, set
 
 class DataParameterSource(LimitedResyncParameterSource):
-	alias = ['data']
+	alias_list = ['data']
 
 	def __init__(self, dn, ds_name, data_provider, data_splitter, data_proc, repository, keep_old = True):
 		LimitedResyncParameterSource.__init__(self)

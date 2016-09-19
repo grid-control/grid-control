@@ -30,7 +30,7 @@ class CMSSWDebugJobInfoProcessor(DebugJobInfoProcessor):
 
 
 class LFNPartitionProcessor(PartitionProcessor):
-	alias = ['lfnprefix']
+	alias_list = ['lfnprefix']
 
 	def __init__(self, config, datasource_name):
 		PartitionProcessor.__init__(self, config, datasource_name)
@@ -67,7 +67,7 @@ class LFNPartitionProcessor(PartitionProcessor):
 
 
 class CMSSWPartitionProcessor(PartitionProcessor.get_class('BasicPartitionProcessor')):
-	alias = ['cmsswpart']
+	alias_list = ['cmsswpart']
 
 	def _format_file_list(self, fl):
 		return str.join(', ', imap(lambda x: '"%s"' % x, fl))

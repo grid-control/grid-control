@@ -18,7 +18,7 @@ from python_compat import ifilter, sorted
 
 # Parameter factory which evaluates a parameter module string
 class ModularParameterFactory(UserParameterFactory):
-	alias = ['modular']
+	alias_list = ['modular']
 
 	def _get_source_user(self, pexpr, repository):
 		# Wrap psource factory functions

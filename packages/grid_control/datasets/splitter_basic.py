@@ -35,14 +35,14 @@ class FileLevelSplitter(DataSplitter):
 
 class BlockBoundarySplitter(FileLevelSplitter):
 	# Split only along block boundaries
-	alias = ['blocks']
+	alias_list = ['blocks']
 
 	def divide_blocks(self, block_iter):
 		return block_iter
 
 
 class FLSplitStacker(FileLevelSplitter):
-	alias = ['pipeline']
+	alias_list = ['pipeline']
 
 	def partition_blocks_raw(self, block_iter, event_first = 0):
 		for block in block_iter:
@@ -60,7 +60,7 @@ class FLSplitStacker(FileLevelSplitter):
 
 class FileBoundarySplitter(FileLevelSplitter):
 	# Split dataset along block boundaries into jobs with 'files per job' files
-	alias = ['files']
+	alias_list = ['files']
 
 	def divide_blocks(self, block_iter):
 		for block in block_iter:
@@ -78,7 +78,7 @@ class FileBoundarySplitter(FileLevelSplitter):
 class HybridSplitter(FileLevelSplitter):
 	# Split dataset along block and file boundaries into jobs with (mostly <=) 'events per job' events
 	# In case of file with #events > 'events per job', use just the single file (=> job has more events!)
-	alias = ['hybrid']
+	alias_list = ['hybrid']
 
 	def divide_blocks(self, block_iter):
 		for block in block_iter:

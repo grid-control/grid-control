@@ -21,7 +21,7 @@ from grid_control.utils.parsing import parseStr, strTimeShort
 from python_compat import imap, itemgetter, lmap, lzip, sorted
 
 class LocationHistoryReport(LocationReport):
-	alias = ['history']
+	alias_list = ['history']
 
 	def _add_details(self, reports, jobObj):
 		history = jobObj.history.items()
@@ -32,7 +32,7 @@ class LocationHistoryReport(LocationReport):
 
 
 class BackendReport(Report):
-	alias = ['backend']
+	alias_list = ['backend']
 
 	def __init__(self, jobDB, task, jobs = None, configString = ''):
 		Report.__init__(self, jobDB, task, jobs, configString)

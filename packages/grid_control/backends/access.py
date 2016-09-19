@@ -67,7 +67,7 @@ class MultiAccessToken(AccessToken):
 
 
 class TrivialAccessToken(AccessToken):
-	alias = ['trivial', 'TrivialProxy']
+	alias_list = ['trivial', 'TrivialProxy']
 
 	def getUsername(self):
 		for var in ('LOGNAME', 'USER', 'LNAME', 'USERNAME'):

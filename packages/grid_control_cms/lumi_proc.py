@@ -34,7 +34,7 @@ def removeRunLumi(value, idxRuns, idxLumi):
 
 
 class LumiDataProcessor(DataProcessor):
-	alias = ['lumi']
+	alias_list = ['lumi']
 
 	def __init__(self, config, datasource_name, onChange):
 		DataProcessor.__init__(self, config, datasource_name, onChange)

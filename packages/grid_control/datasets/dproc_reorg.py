@@ -19,14 +19,14 @@ from hpfwk import AbstractError
 DataProcessorMergeMode = makeEnum(['intersection', 'union', 'separate'])
 
 class MergeDataProcessor(DataProcessor):
-	alias = ['merge']
+	alias_list = ['merge']
 
 	def process(self, block_iter):
 		pass
 
 
 class SplitDataProcessor(DataProcessor):
-	alias = ['split']
+	alias_list = ['split']
 
 	def process_block(self, block):
 		raise AbstractError

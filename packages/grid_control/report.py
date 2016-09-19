@@ -47,7 +47,7 @@ class Report(Plugin):
 
 
 class NullReport(Report):
-	alias = ['null']
+	alias_list = ['null']
 
 	def show_report(self, job_db):
 		pass
@@ -66,7 +66,7 @@ class MultiReport(Report):
 
 
 class BasicReport(Report):
-	alias = ['basic']
+	alias_list = ['basic']
 
 	def _write_line(self, content, width = 65, newline = True):
 		content = content.ljust(width)
@@ -116,7 +116,7 @@ class BasicReport(Report):
 
 
 class LocationReport(Report):
-	alias = ['location']
+	alias_list = ['location']
 
 	def _add_details(self, reports, jobObj):
 		if jobObj.get('dest', 'N/A') != 'N/A':

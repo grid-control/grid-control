@@ -18,7 +18,7 @@ from grid_control.utils.parsing import strTime
 from python_compat import ifilter, imap
 
 class TimeReport(Report):
-	alias = ['time']
+	alias_list = ['time']
 
 	def __init__(self, jobDB, task, jobs = None, configString = ''):
 		Report.__init__(self, jobDB, task, jobs, configString)

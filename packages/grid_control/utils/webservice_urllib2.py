@@ -38,7 +38,7 @@ except Exception:
 
 
 class Urllib2Session(RestSession):
-	alias = ['urllib2']
+	alias_list = ['urllib2']
 
 	def request(self, mode, url, headers, params = None, data = None, cert = None):
 		request_fun = {RestSession.GET: lambda: 'GET', RestSession.PUT: lambda: 'PUT',

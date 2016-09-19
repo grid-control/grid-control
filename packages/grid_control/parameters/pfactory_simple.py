@@ -125,7 +125,7 @@ def tree2names(node): # return list of referenced variable names in tree
 
 
 class SimpleParameterFactory(UserParameterFactory):
-	alias = ['simple']
+	alias_list = ['simple']
 
 	def __init__(self, config):
 		UserParameterFactory.__init__(self, config)

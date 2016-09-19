@@ -20,7 +20,7 @@ from grid_control.utils.parsing import strGuid
 from hpfwk import clear_current_exception
 
 class DBSInfoProvider(GCProvider):
-	alias = ['dbsinfo']
+	alias_list = ['dbsinfo']
 
 	def __init__(self, config, datasource_name, dataset_expr, dataset_nick = None):
 		tmp = ['OutputDirsFromConfig', 'MetadataFromTask']
