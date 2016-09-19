@@ -66,6 +66,7 @@ class LocalPurgeJobs(CancelJobs):
 			try:
 				shutil.rmtree(path)
 			except Exception:
+				self._log.critical('Unable to delete directory %r: %r', path, os.listdir(path))
 				local_purge_lock.release()
 				raise BackendError('Sandbox for job %r could not be deleted', wmsID)
 			local_purge_lock.release()
