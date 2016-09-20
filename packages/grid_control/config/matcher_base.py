@@ -16,8 +16,8 @@ import re, fnmatch, logging
 from grid_control.config.config_entry import appendOption
 from grid_control.gc_plugin import ConfigurablePlugin
 from grid_control.utils import QM
-from grid_control.utils.data_structures import makeEnum
-from grid_control.utils.parsing import strDict
+from grid_control.utils.data_structures import make_enum
+from grid_control.utils.parsing import str_dict
 from hpfwk import AbstractError, Plugin
 from python_compat import lfilter, sorted, unspecified
 
@@ -205,7 +205,7 @@ class BlackWhiteMatcher(Matcher):
 		return result
 
 
-ListOrder = makeEnum(['source', 'matcher'])
+ListOrder = make_enum(['source', 'matcher'])
 
 class ListFilter(Plugin):
 	def __init__(self, selector, matcher, order, negate):
@@ -284,7 +284,7 @@ class DictLookup(Plugin):
 
 	def __repr__(self):
 		return '%s(values = {%s}, matcher = %r, only_first = %r, always_default = %r)' % (
-			self.__class__.__name__, strDict(self._values, self._order), self._matcher,
+			self.__class__.__name__, str_dict(self._values, self._order), self._matcher,
 			self._only_first, self._always_default)
 
 	def _lookup(self, value, is_selector):

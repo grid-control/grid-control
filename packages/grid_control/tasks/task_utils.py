@@ -46,5 +46,5 @@ class TaskExecutableWrapper:
 
 	def getSBInFiles(self):
 		if self._executableSend and self._executable:
-			return [utils.Result(pathAbs = self._executable, pathRel = os.path.basename(self._executable))]
+			return [utils.Result(path_abs = self._executable, path_rel = os.path.basename(self._executable))]
 		return []

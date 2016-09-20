@@ -18,7 +18,7 @@ from grid_control.config import create_config, triggerResync
 from grid_control.datasets.dproc_base import DataProcessor, NullDataProcessor
 from grid_control.gc_plugin import ConfigurablePlugin
 from grid_control.utils.activity import Activity
-from grid_control.utils.data_structures import makeEnum
+from grid_control.utils.data_structures import make_enum
 from hpfwk import AbstractError, InstanceFactory, NestedException
 from python_compat import StringBuffer, identity, ifilter, imap, irange, json, lmap, lrange, md5_hex, set, sort_inplace, sorted
 
@@ -237,7 +237,7 @@ class DataProvider(ConfigurablePlugin):
 
 	def saveToFile(path, dataBlocks, stripMetadata = False):
 		if os.path.dirname(path):
-			utils.ensureDirExists(os.path.dirname(path), 'dataset cache directory')
+			utils.ensure_dir_exists(os.path.dirname(path), 'dataset cache directory')
 		fp = open(path, 'w')
 		try:
 			for _ in DataProvider.saveToStream(fp, dataBlocks, stripMetadata):
@@ -274,7 +274,7 @@ class DataProvider(ConfigurablePlugin):
 				filesMatched.append((oldFile, newFile))
 
 			(filesAdded, filesMissing, filesMatched) = \
-				utils.DiffLists(oldBlock[DataProvider.FileList], newBlock[DataProvider.FileList], keyFiles, onMatchingFile, isSorted = True)
+				utils.get_list_difference(oldBlock[DataProvider.FileList], newBlock[DataProvider.FileList], keyFiles, onMatchingFile, is_sorted = True)
 			if filesAdded: # Create new block for added files in an existing block
 				tmpBlock = copy.copy(newBlock)
 				tmpBlock[DataProvider.FileList] = filesAdded
@@ -282,9 +282,9 @@ class DataProvider(ConfigurablePlugin):
 				blocksAdded.append(tmpBlock)
 			blocksMatching.append((oldBlock, newBlock, filesMissing, filesMatched))
 
-		return utils.DiffLists(oldBlocks, newBlocks, keyBlock, onMatchingBlock, isSorted = True)
+		return utils.get_list_difference(oldBlocks, newBlocks, keyBlock, onMatchingBlock, is_sorted = True)
 	resyncSources = staticmethod(resyncSources)
 
 # To uncover errors, the enums of DataProvider / DataSplitter do *NOT* match type wise
-makeEnum(['NEntries', 'BlockName', 'Dataset', 'Locations', 'URL', 'FileList',
+make_enum(['NEntries', 'BlockName', 'Dataset', 'Locations', 'URL', 'FileList',
 	'Nickname', 'Metadata', 'Provider', 'ResyncInfo'], DataProvider)

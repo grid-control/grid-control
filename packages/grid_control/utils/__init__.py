@@ -13,275 +13,31 @@
 # | limitations under the License.
 
 import os, sys, glob, stat, time, signal, fnmatch, logging, operator
-from grid_control.gc_exceptions import GCError, InstallationError, UserError
 from grid_control.utils.activity import Activity
 from grid_control.utils.data_structures import UniqueList
-from grid_control.utils.parsing import parseBool, parseType, strDict
+from grid_control.utils.parsing import parse_bool, parse_type, str_dict
 from grid_control.utils.process_base import LocalProcess
 from grid_control.utils.table import ColumnTable, ParseableTable, RowTable
 from grid_control.utils.thread_tools import TimeoutException, hang_protection
-from hpfwk import clear_current_exception
-from python_compat import exit_without_cleanup, get_user_input, identity, ifilter, imap, irange, lfilter, lmap, lru_cache, lzip, next, reduce, sorted, tarfile
+from hpfwk import NestedException, clear_current_exception
+from python_compat import exit_without_cleanup, get_user_input, identity, ifilter, imap, irange, lfilter, lmap, lru_cache, lzip, next, reduce, rsplit, sorted, tarfile  # pylint:disable=line-too-long
 
 
-def execWrapper(script, context = None):
-	if context is None:
-		context = dict()
-	exec(script, context) # pylint:disable=exec-used
-	return context
-
-def QM(cond, a, b):
-	if cond:
-		return a
-	return b
-
-def swap(a, b):
-	return (b, a)
-
-def safe_index(indexable, idx, default = None):
-	try:
-		return indexable.index(idx)
-	except Exception:
-		return default
-
-################################################################
-# Path helper functions
-
-cleanPath = lambda x: os.path.normpath(os.path.expandvars(os.path.expanduser(x.strip())))
-
-def getRootName(fn): # Return file name without extension
-	bn = os.path.basename(str(fn)).lstrip('.')
-	return QM('.' in bn, str.join('', bn.split('.')[:-1]), bn)
-
-def pathPKG(*args):
-	return cleanPath(os.path.join(os.environ['GC_PACKAGES_PATH'], *args))
-
-def pathShare(*args, **kw):
-	return pathPKG(kw.get('pkg', 'grid_control'), 'share', *args)
-
-def resolvePaths(path, searchPaths = None, mustExist = True, ErrorClass = GCError):
-	path = cleanPath(path) # replace $VAR, ~user, \ separators
-	result = []
-	if os.path.isabs(path):
-		result.extend(sorted(glob.glob(path))) # Resolve wildcards for existing files
-		if not result:
-			if mustExist:
-				raise ErrorClass('Could not find file "%s"' % path)
-			return [path] # Return non-existing, absolute path
-	else: # search relative path in search directories
-		searchPaths = searchPaths or []
-		for spath in UniqueList(searchPaths):
-			result.extend(sorted(glob.glob(cleanPath(os.path.join(spath, path)))))
-		if not result:
-			if mustExist:
-				raise ErrorClass('Could not find file "%s" in \n\t%s' % (path, str.join('\n\t', searchPaths)))
-			return [path] # Return non-existing, relative path
-	return result
-
-
-def resolvePath(path, searchPaths = None, mustExist = True, ErrorClass = GCError):
-	result = resolvePaths(path, searchPaths, mustExist, ErrorClass)
-	if len(result) > 1:
-		raise ErrorClass('Path "%s" matches multiple files:\n\t%s' % (path, str.join('\n\t', result)))
-	return result[0]
-
-
-def resolveInstallPath(path):
-	result = resolvePaths(path, UniqueList(os.environ['PATH'].split(os.pathsep)), True, InstallationError)
-	result_exe = lfilter(lambda fn: os.access(fn, os.X_OK), result) # filter executable files
-	if not result_exe:
-		raise InstallationError('Files matching %s:\n\t%s\nare not executable!' % (path, str.join('\n\t', result_exe)))
-	return result_exe[0]
-
-
-def ensureDirExists(dn, name = 'directory', ExceptionClass = GCError):
-	if not os.path.exists(dn):
-		try:
-			os.makedirs(dn)
-		except Exception:
-			raise ExceptionClass('Problem creating %s "%s"' % (name, dn))
-	return dn
-
-
-def freeSpace(dn, timeout = 5):
-	def freeSpace_int():
-		if os.path.exists(dn):
-			try:
-				stat_info = os.statvfs(dn)
-				return stat_info.f_bavail * stat_info.f_bsize / 1024**2
-			except Exception:
-				import ctypes
-				free_bytes = ctypes.c_ulonglong(0)
-				ctypes.windll.kernel32.GetDiskFreeSpaceExW(ctypes.c_wchar_p(dn), None, None, ctypes.pointer(free_bytes))
-				return free_bytes.value / 1024**2
-		return -1
-
-	try:
-		return hang_protection(freeSpace_int, timeout)
-	except TimeoutException:
-		sys.stderr.write(
-			'Unable to get free disk space for directory %s after waiting for %d sec!\n' % (dn, timeout) +
-			'The file system is probably hanging or corrupted - try to check the free disk space manually. ' +
-			'Refer to the documentation to disable checking the free disk space - at your own risk')
-		exit_without_cleanup(os.EX_OSERR)
-
-
-################################################################
-# Global state functions
-
-def globalSetupProxy(fun, default, new = None):
+def abort(new=None):
 	if new is not None:
-		fun.setting = new
+		abort.state = new
 	try:
-		return fun.setting
+		return abort.state
 	except Exception:
-		return default
+		return False
 
 
-def abort(new = None):
-	return globalSetupProxy(abort, False, new)
-
-
-################################################################
-# Dictionary tools
-
-class Result(object): # Use with caution! Compared with tuples: +25% accessing, 8x slower instantiation
-	def __init__(self, **kwargs):
-		self.__dict__ = kwargs
-	def __repr__(self):
-		return 'Result(%s)' % strDict(self.__dict__)
-
-
-def mergeDicts(dicts):
-	tmp = dict()
-	for x in dicts:
-		tmp.update(x)
-	return tmp
-
-
-def intersectDict(dictA, dictB):
-	for keyA in list(dictA.keys()):
-		if (keyA in dictB) and (dictA[keyA] != dictB[keyA]):
-			dictA.pop(keyA)
-
-
-def replaceDict(result, allVars, varMapping = None):
-	for (virtual, real) in (varMapping or lzip(allVars.keys(), allVars.keys())):
-		for delim in ['@', '__']:
-			result = result.replace(delim + virtual + delim, str(allVars.get(real, '')))
-	return result
-
-
-def filterDict(dictType, kF = lambda k: True, vF = lambda v: True):
-	def filterItems(k_v):
-		return kF(k_v[0]) and vF(k_v[1])
-	return dict(ifilter(filterItems, dictType.items()))
-
-
-class PersistentDict(dict):
-	def __init__(self, filename, delimeter = '=', lowerCaseKey = True):
-		dict.__init__(self)
-		self.fmt = DictFormat(delimeter)
-		self.filename = filename
-		keyParser = {None: QM(lowerCaseKey, lambda k: parseType(k.lower()), parseType)}
-		try:
-			self.update(self.fmt.parse(open(filename), keyParser = keyParser))
-		except Exception:
-			clear_current_exception()
-		self.olddict = self.items()
-
-	def get(self, key, default = None, autoUpdate = True):
-		value = dict.get(self, key, default)
-		if autoUpdate:
-			self.write({key: value})
-		return value
-
-	def write(self, newdict = None, update = True):
-		if not update:
-			self.clear()
-		self.update(newdict or {})
-		if dict(self.olddict) == dict(self.items()):
-			return
-		try:
-			if self.filename:
-				safeWrite(open(self.filename, 'w'), self.fmt.format(self))
-		except Exception:
-			raise GCError('Could not write to file %s' % self.filename)
-		self.olddict = self.items()
-
-
-################################################################
-# File IO helper
-
-def safeWrite(fp, content):
-	fp.writelines(content)
-	fp.truncate()
-	fp.close()
-
-
-def renameFile(old, new):
-	if os.path.exists(new):
-		os.unlink(new)
-	os.rename(old, new)
-
-
-def removeFiles(args):
-	for item in args:
-		try:
-			if os.path.isdir(item):
-				os.rmdir(item)
-			else:
-				os.unlink(item)
-		except Exception:
-			clear_current_exception()
-
-
-################################################################
-# String manipulation
-
-def optSplit(opt, delim, empty = ''):
-	""" Split option strings into fixed tuples
-	>>> optSplit('abc : ghi # def', ['#', ':'])
-	('abc', 'def', 'ghi')
-	>>> optSplit('abc:def', '::')
-	('abc', 'def', '')
-	"""
-	def getDelimeterPart(oldResult, prefix):
-		try:
-			tmp = oldResult[0].split(prefix)
-			new = tmp.pop(1)
-			try: # Find position of other delimeters in string
-				otherDelim = min(ifilter(lambda idx: idx >= 0, imap(new.find, delim)))
-				tmp[0] += new[otherDelim:]
-			except Exception:
-				otherDelim = None
-			return [str.join(prefix, tmp)] + oldResult[1:] + [new[:otherDelim]]
-		except Exception:
-			return oldResult + ['']
-	result = imap(str.strip, reduce(getDelimeterPart, delim, [opt]))
-	return tuple(imap(lambda x: QM(x == '', empty, x), result))
-
-################################################################
-
-class TwoSidedIterator(object):
-	def __init__(self, allInfo):
-		(self.allInfo, self.left, self.right) = (allInfo, 0, 0)
-	def forward(self):
-		while self.left + self.right < len(self.allInfo):
-			self.left += 1
-			yield self.allInfo[self.left - 1]
-	def backward(self):
-		while self.left + self.right < len(self.allInfo):
-			self.right += 1
-			yield self.allInfo[len(self.allInfo) - self.right]
-
-
-def accumulate(iterable, empty, doEmit, doAdd = lambda item, buffer: True, opAdd = operator.add):
+def accumulate(iterable, empty, do_emit, do_add=lambda item, buffer: True, add_fun=operator.add):
 	buf = empty
 	for item in iterable:
-		if doAdd(item, buf):
-			buf = opAdd(buf, item)
-		if doEmit(item, buf):
+		if do_add(item, buf):
+			buf = add_fun(buf, item)
+		if do_emit(item, buf):
 			if buf != empty:
 				yield buf
 			buf = empty
@@ -289,156 +45,24 @@ def accumulate(iterable, empty, doEmit, doAdd = lambda item, buffer: True, opAdd
 		yield buf
 
 
-def wrapList(value, length, delimLines = ',\n', delimEntries = ', '):
-	counter = lambda item, buffer: len(item) + sum(imap(len, buffer)) + 2*len(buffer) > length
-	wrapped = accumulate(value, [], counter, opAdd = lambda x, y: x + [y])
-	return str.join(delimLines, imap(lambda x: str.join(delimEntries, x), wrapped))
+def clean_path(value):
+	return os.path.normpath(os.path.expandvars(os.path.expanduser(value.strip())))
 
 
-def DiffLists(oldList, newList, keyFun, changedFkt, isSorted = False, key_fun_sort = None):
-	(listAdded, listMissing, listChanged) = ([], [], [])
-	if not isSorted:
-		(newList, oldList) = (sorted(newList, key = key_fun_sort or keyFun), sorted(oldList, key = key_fun_sort or keyFun))
-	(newIter, oldIter) = (iter(newList), iter(oldList))
-	(new, old) = (next(newIter, None), next(oldIter, None))
-	while True:
-		if (new is None) or (old is None):
-			break
-		keyNew = keyFun(new)
-		keyOld = keyFun(old)
-		if keyNew < keyOld: # new[npos] < old[opos]
-			listAdded.append(new)
-			new = next(newIter, None)
-		elif keyNew > keyOld: # new[npos] > old[opos]
-			listMissing.append(old)
-			old = next(oldIter, None)
-		else: # new[npos] == old[opos] according to *active* comparison
-			changedFkt(listAdded, listMissing, listChanged, old, new)
-			(new, old) = (next(newIter, None), next(oldIter, None))
-	while new is not None:
-		listAdded.append(new)
-		new = next(newIter, None)
-	while old is not None:
-		listMissing.append(old)
-		old = next(oldIter, None)
-	return (listAdded, listMissing, listChanged)
-
-
-def splitBlackWhiteList(bwfilter):
-	blacklist = lmap(lambda x: x[1:], ifilter(lambda x: x.startswith('-'), bwfilter or []))
-	whitelist = lfilter(lambda x: not x.startswith('-'), bwfilter or [])
-	return (blacklist, whitelist)
-
-
-class DictFormat(object):
-	# escapeString = escape '"', '$'
-	# types = preserve type information
-	def __init__(self, delimeter = '=', escapeString = False):
-		self.delimeter = delimeter
-		self.escapeString = escapeString
-
-	# Parse dictionary lists
-	def parse(self, lines, keyParser = None, valueParser = None):
-		keyParser = keyParser or {}
-		valueParser = valueParser or {}
-		defaultKeyParser = keyParser.get(None, lambda k: parseType(k.lower()))
-		defaultValueParser = valueParser.get(None, parseType)
-		data = {}
-		doAdd = False
-		currentline = ''
-		try:
-			lines = lines.splitlines()
-		except Exception:
-			clear_current_exception()
-		for line in lines:
-			try:
-				if not isinstance(line, str):
-					line = line.decode('utf-8')
-				if self.escapeString:
-					# Switch accumulate on/off when odd number of quotes found
-					if (line.count('"') - line.count('\\"')) % 2 == 1:
-						doAdd = not doAdd
-					currentline += line
-					if doAdd:
-						continue
-				else:
-					currentline = line
-				# split at first occurence of delimeter and strip spaces around
-				key_value_list = lmap(str.strip, currentline.split(self.delimeter, 1))
-				if len(key_value_list) == 2:
-					key, value = key_value_list
-					currentline = ''
-				else: # in case no delimeter was found
-					currentline = ''
-					continue
-				if self.escapeString:
-					value = value.strip('"').replace('\\"', '"').replace('\\$', '$')
-				key = keyParser.get(key, defaultKeyParser)(key)
-				data[key] = valueParser.get(key, defaultValueParser)(value) # do .encode('utf-8') ?
-			except Exception:
-				raise GCError('Invalid dict format in %s' % repr(line))
-		if doAdd:
-			raise GCError('Invalid dict format in %s' % repr(lines))
-		return data
-
-	# Format dictionary list
-	def format(self, entries, printNone = False, fkt = lambda x_y_z: x_y_z, format = '%s%s%s\n'):
-		result = []
-		for key in sorted(entries.keys()):
-			value = entries[key]
-			if value is None and not printNone:
-				continue
-			if self.escapeString and isinstance(value, str):
-				value = '"%s"' % str(value).replace('"', '\\"').replace('$', '\\$')
-				lines = value.splitlines()
-				result.append(format % fkt((key, self.delimeter, lines[0])))
-				result.extend(imap(lambda x: x + '\n', lines[1:]))
-			else:
-				result.append(format % fkt((key, self.delimeter, value)))
-		return result
-
-
-def matchFileName(fn, patList):
-	match = None
-	for p in patList:
-		if fnmatch.fnmatch(fn, p.lstrip('-')):
-			match = not p.startswith('-')
-	return match
-
-
-def matchFiles(pathRoot, pattern, pathRel = ''):
-	# Return (root, fn, state) - state: None == dir, True/False = (un)checked file, other = filehandle
-	yield (pathRoot, pathRel, None)
-	for name in imap(lambda x: os.path.join(pathRel, x), os.listdir(os.path.join(pathRoot, pathRel))):
-		match = matchFileName(name, pattern)
-		pathAbs = os.path.join(pathRoot, name)
-		if match is False:
-			continue
-		elif os.path.islink(pathAbs): # Not excluded symlinks
-			yield (pathAbs, name, True)
-		elif os.path.isdir(pathAbs): # Recurse into directories
-			if match is True: # (backwards compat: add parent directory - not needed?)
-				yield (pathAbs, name, True)
-			for result in matchFiles(pathRoot, QM(match is True, ['*'], pattern), name):
-				yield result
-		elif match is True: # Add matches
-			yield (pathAbs, name, True)
-
-
-def genTarball(outFile, fileList):
-	tar = tarfile.open(outFile, 'w:gz')
+def create_tarball(tar_path, match_info_list):
+	tar = tarfile.open(tar_path, 'w:gz')
 	activity = Activity('Generating tarball')
-	for (pathAbs, pathRel, pathStatus) in fileList:
-		if pathStatus is True: # Existing file
-			tar.add(pathAbs, pathRel, recursive = False)
-		elif pathStatus is False: # Existing file
-			if not os.path.exists(pathAbs):
-				raise UserError('File %s does not exist!' % pathRel)
-			tar.add(pathAbs, pathRel, recursive = False)
-		elif pathStatus is None: # Directory
-			activity.update('Generating tarball: %s' % pathRel)
-		else: # File handle
-			info, handle = pathStatus.getTarInfo()
+	for (path_abs, path_rel, path_status) in match_info_list:
+		if path_status is True:  # Existing file
+			tar.add(path_abs, path_rel, recursive=False)
+		elif path_status is False:  # Existing file
+			if not os.path.exists(path_abs):
+				raise PathError('File %s does not exist!' % path_rel)
+			tar.add(path_abs, path_rel, recursive=False)
+		elif path_status is None:  # Directory
+			activity.update('Generating tarball: %s' % path_rel)
+		else:  # File handle
+			info, handle = path_status.get_tar_info()
 			info.mtime = time.time()
 			info.mode = stat.S_IRUSR + stat.S_IWUSR + stat.S_IRGRP + stat.S_IROTH
 			if info.name.endswith('.sh') or info.name.endswith('.py'):
@@ -449,85 +73,45 @@ def genTarball(outFile, fileList):
 	tar.close()
 
 
-def getVersion():
+def disk_usage(dn, timeout=5):
+	def _disk_usage():
+		if os.path.exists(dn):
+			try:
+				stat_info = os.statvfs(dn)
+				return stat_info.f_bavail * stat_info.f_bsize / 1024**2
+			except Exception:
+				import ctypes
+				free_bytes = ctypes.c_ulonglong(0)
+				ctypes.windll.kernel32.GetDiskFreeSpaceExW(
+					ctypes.c_wchar_p(dn), None, None, ctypes.pointer(free_bytes))
+				return free_bytes.value / 1024**2
+		return -1
+
 	try:
-		proc_ver = LocalProcess('svnversion', '-c', pathPKG())
-		version = proc_ver.get_output(timeout = 10).strip()
-		if version != '':
-			assert(lfilter(str.isdigit, version))
-			proc_branch = LocalProcess('svn info', pathPKG())
-			if 'stable' in proc_branch.get_output(timeout = 10):
-				return '%s - stable' % version
-			return '%s - testing' % version
-	except Exception:
-		clear_current_exception()
-	return __import__('grid_control').__version__ + ' or later'
-getVersion = lru_cache(getVersion)
+		return hang_protection(_disk_usage, timeout)
+	except TimeoutException:
+		sys.stderr.write(
+			'Unable to get free disk space for directory %s after waiting for %d sec!\n' % (dn, timeout) +
+			'The file system is probably hanging or corrupted' +
+			' - try to check the free disk space manually. ' +
+			'Refer to the documentation to disable checking the free disk space - at your own risk')
+		exit_without_cleanup(os.EX_OSERR)
 
 
-def wait(timeout):
-	activity = Activity('Waiting', parent = 'root')
-	for remaining in irange(timeout, 0, -1):
-		if abort():
-			return False
-		if (remaining == timeout) or (remaining < 5) or (remaining % 5 == 0):
-			activity.update('Waiting for %d seconds' % remaining)
-		time.sleep(1)
-	activity.finish()
-	return True
-
-
-def printTabular(head, data, fmtString = '', fmt = None):
-	if printTabular.mode == 'parseable':
+def display_table(head, data, fmt_string='', fmt=None):
+	if display_table.mode == 'parseable':
 		return ParseableTable(head, data, '|')
-	elif printTabular.mode == 'longlist':
-		return RowTable(head, data, fmt, printTabular.wraplen)
-	return ColumnTable(head, data, fmtString, fmt, printTabular.wraplen)
-printTabular.wraplen = 100
-printTabular.mode = 'default'
-
-
-def getUserInput(text, default, choices, parser = identity):
-	while True:
-		handler = signal.signal(signal.SIGINT, signal.SIG_DFL)
-		try:
-			userinput = get_user_input('%s %s: ' % (text, '[%s]' % default))
-		except Exception:
-			sys.stdout.write('\n') # continue on next line
-			raise
-		signal.signal(signal.SIGINT, handler)
-		if userinput == '':
-			return parser(default)
-		if parser(userinput) is not None:
-			return parser(userinput)
-		valid = str.join(', ', imap(lambda x: '"%s"' % x, choices[:-1]))
-		logging.getLogger('console').critical('Invalid input! Answer with %s or "%s"', valid, choices[-1])
-
-
-def getUserBool(text, default):
-	return getUserInput(text, QM(default, 'yes', 'no'), ['yes', 'no'], parseBool)
+	elif display_table.mode == 'longlist':
+		return RowTable(head, data, fmt, display_table.wraplen)
+	return ColumnTable(head, data, fmt_string, fmt, display_table.wraplen)
+display_table.wraplen = 100
+display_table.mode = 'default'
 
 
 def deprecated(text):
-	sys.stderr.write('%s\n[DEPRECATED] %s\n' % (open(pathShare('fail.txt'), 'r').read(), text))
-	if not getUserBool('Do you want to continue?', False):
+	sys.stderr.write('%s\n[DEPRECATED] %s\n' % (open(path_share('fail.txt'), 'r').read(), text))
+	if not get_user_bool('Do you want to continue?', False):
 		sys.exit(os.EX_TEMPFAIL)
-
-
-def exitWithUsage(usage, msg = None, show_help = True):
-	sys.stderr.write('Syntax: %s\n%s' % (usage, QM(show_help, 'Use --help to get a list of options!\n', '')))
-	sys.stderr.write(QM(msg, '%s\n' % msg, ''))
-	sys.exit(os.EX_USAGE)
-
-
-def ping_host(host):
-	proc = LocalProcess('ping', '-Uqnc', 1, '-W', 1, host)
-	try:
-		tmp = proc.get_output(timeout = 1).splitlines()
-		assert(tmp[-1].endswith('ms'))
-		return float(tmp[-1].split('/')[-2]) / 1000.
-	except Exception:
-		return None
 
 
 def display_selection(log, items_before, items_after, message, formatter):
@@ -540,18 +124,456 @@ def display_selection(log, items_before, items_after, message, formatter):
 				log.log(logging.DEBUG1, '   %s', formatter(item))
 
 
-def filter_processors(processorList, id_fun = lambda proc: proc.__class__.__name__):
-	(result, processorIDs) = ([], [])
-	for proc in processorList:
-		if proc.enabled() and (id_fun(proc) not in processorIDs):
+def ensure_dir_exists(dn, name='directory', exception_type=PathError):
+	if not os.path.exists(dn):
+		try:
+			os.makedirs(dn)
+		except Exception:
+			raise exception_type('Problem creating %s "%s"' % (name, dn))
+	return dn
+
+
+def exec_wrapper(script, context=None):
+	if context is None:
+		context = dict()
+	exec(script, context)  # pylint:disable=exec-used
+	return context
+
+
+def exit_with_usage(usage, msg=None, show_help=True):
+	exit_msg = 'Syntax: %s\n' % usage
+	if show_help:
+		exit_msg += 'Use --help to get a list of options!\n'
+	if msg:
+		exit_msg += msg + '\n'
+	sys.stderr.write(exit_msg)
+	sys.exit(os.EX_USAGE)
+
+
+def filter_dict(mapping, key_filter=lambda k: True, value_filter=lambda v: True):
+	def _filter_items(k_v):
+		return key_filter(k_v[0]) and value_filter(k_v[1])
+	return dict(ifilter(_filter_items, mapping.items()))
+
+
+def filter_processors(processor_list, id_fun=lambda proc: proc.__class__.__name__):
+	(result, processor_id_list) = ([], [])
+	for proc in processor_list:
+		if proc.enabled() and (id_fun(proc) not in processor_id_list):
 			result.append(proc)
-			processorIDs.append(id_fun(proc))
+			processor_id_list.append(id_fun(proc))
 	return result
 
 
-def prune_processors(do_prune, processorList, log, message, formatter = None, id_fun = None):
+def get_file_name(fn):  # Return file name without extension
+	return rsplit(os.path.basename(str(fn)).lstrip('.'), '.', 1)[0]
+
+
+def get_list_difference(list_old, list_new, key_fun, on_matching_fun,
+		is_sorted=False, key_fun_sort=None):
+	(list_added, list_missing, list_matching) = ([], [], [])
+	if not is_sorted:
+		list_new = sorted(list_new, key=key_fun_sort or key_fun)
+		list_old = sorted(list_old, key=key_fun_sort or key_fun)
+	(iter_new, iter_old) = (iter(list_new), iter(list_old))
+	(new, old) = (next(iter_new, None), next(iter_old, None))
+	while True:
+		if (new is None) or (old is None):
+			break
+		key_new = key_fun(new)
+		key_old = key_fun(old)
+		if key_new < key_old:  # new[npos] < old[opos]
+			list_added.append(new)
+			new = next(iter_new, None)
+		elif key_new > key_old:  # new[npos] > old[opos]
+			list_missing.append(old)
+			old = next(iter_old, None)
+		else:  # new[npos] == old[opos] according to *active* comparison
+			on_matching_fun(list_added, list_missing, list_matching, old, new)
+			(new, old) = (next(iter_new, None), next(iter_old, None))
+	while new is not None:
+		list_added.append(new)
+		new = next(iter_new, None)
+	while old is not None:
+		list_missing.append(old)
+		old = next(iter_old, None)
+	return (list_added, list_missing, list_matching)
+
+
+def get_user_bool(text, default):
+	def _get_user_input(text, default, choices, parser=identity):
+		log = logging.getLogger('console')
+		while True:
+			handler = signal.signal(signal.SIGINT, signal.SIG_DFL)
+			try:
+				userinput = get_user_input('%s %s: ' % (text, '[%s]' % default))
+			except Exception:
+				sys.stdout.write('\n')  # continue on next line
+				raise
+			signal.signal(signal.SIGINT, handler)
+			if userinput == '':
+				return parser(default)
+			if parser(userinput) is not None:
+				return parser(userinput)
+			valid = str.join(', ', imap(lambda x: '"%s"' % x, choices[:-1]))
+			log.critical('Invalid input! Answer with %s or "%s"', valid, choices[-1])
+	return _get_user_input(text, QM(default, 'yes', 'no'), ['yes', 'no'], parse_bool)
+
+
+def get_version():
+	def _get_version():
+		try:
+			proc_ver = LocalProcess('svnversion', '-c', path_pkg())
+			version = proc_ver.get_output(timeout=10).strip()
+			if lfilter(str.isdigit, version):
+				proc_branch = LocalProcess('svn info', path_pkg())
+				if 'stable' in proc_branch.get_output(timeout=10):
+					return '%s - stable' % version
+				return '%s - testing' % version
+		except Exception:
+			clear_current_exception()
+		return __import__('grid_control').__version__ + ' or later'
+	if not hasattr(get_version, 'cache'):
+		get_version.cache = _get_version()
+	return get_version.cache
+
+
+def intersect_first_dict(dict1, dict2):
+	for key1 in list(dict1.keys()):
+		if (key1 in dict2) and (dict1[key1] != dict2[key1]):
+			dict1.pop(key1)
+
+
+def match_file_name(fn, pat_list):
+	match = None
+	for pat in pat_list:
+		if fnmatch.fnmatch(fn, pat.lstrip('-')):
+			match = not pat.startswith('-')
+	return match
+
+
+def match_files(path_root, pattern_list, path_rel=''):
+	# Return (root, fn, state) - state: None == dir, True/False = (un)checked file, other = filehandle
+	yield (path_root, path_rel, None)
+	file_list = os.listdir(os.path.join(path_root, path_rel))
+	for name in imap(lambda x: os.path.join(path_rel, x), file_list):
+		match = match_file_name(name, pattern_list)
+		path_abs = os.path.join(path_root, name)
+		if match is False:
+			continue
+		elif os.path.islink(path_abs):  # Not excluded symlinks
+			yield (path_abs, name, True)
+		elif os.path.isdir(path_abs):  # Recurse into directories
+			if match is True:  # (backwards compat: add parent directory - not needed?)
+				yield (path_abs, name, True)
+				for result in match_files(path_root, ['*'], name):
+					yield result
+			else:
+				for result in match_files(path_root, pattern_list, name):
+					yield result
+		elif match is True:  # Add matches
+			yield (path_abs, name, True)
+
+
+def merge_dict_list(dict_list):
+	tmp = dict()
+	for mapping in dict_list:
+		tmp.update(mapping)
+	return tmp
+
+
+def path_pkg(*args):
+	return clean_path(os.path.join(os.environ['GC_PACKAGES_PATH'], *args))
+
+
+def path_share(*args, **kw):
+	return path_pkg(kw.get('pkg', 'grid_control'), 'share', *args)
+
+
+def ping_host(host):
+	proc = LocalProcess('ping', '-Uqnc', 1, '-W', 1, host)
+	try:
+		tmp = proc.get_output(timeout=1).splitlines()
+		if tmp[-1].endswith('ms'):
+			return float(tmp[-1].split('/')[-2]) / 1000.
+	except Exception:
+		return None
+
+
+def prune_processors(do_prune, processor_list, log, message, formatter=None, id_fun=None):
 	def get_class_name(proc):
 		return proc.__class__.__name__
-	selected = filter_processors(processorList, id_fun or get_class_name)
-	display_selection(log, processorList, selected, message, formatter or get_class_name)
+	selected = filter_processors(processor_list, id_fun or get_class_name)
+	display_selection(log, processor_list, selected, message, formatter or get_class_name)
 	return selected
+
+
+def QM(cond, value1, value2):
+	if cond:
+		return value1
+	return value2
+
+
+def remove_files(args):
+	for item in args:
+		try:
+			if os.path.isdir(item):
+				os.rmdir(item)
+			else:
+				os.unlink(item)
+		except Exception:
+			clear_current_exception()
+
+
+def rename_file(old, new):
+	if os.path.exists(new):
+		os.unlink(new)
+	os.rename(old, new)
+
+
+def replace_with_dict(value, mapping_values, mapping_keys=None):
+	mapping_keys = mapping_keys or lzip(mapping_values.keys(), mapping_values.keys())
+	for (virtual, real) in mapping_keys:
+		for delim in ['@', '__']:
+			value = value.replace(delim + virtual + delim, str(mapping_values.get(real, '')))
+	return value
+
+
+def resolve_install_path(path):
+	os_path_list = UniqueList(os.environ['PATH'].split(os.pathsep))
+	result = resolve_paths(path, os_path_list, True, PathError)
+	result_exe = lfilter(lambda fn: os.access(fn, os.X_OK), result)  # filter executable files
+	if not result_exe:
+		raise PathError('Files matching %s:\n\t%s\nare not executable!' % (
+			path, str.join('\n\t', result_exe)))
+	return result_exe[0]
+
+
+def resolve_path(path, search_path_list=None, must_exist=True, exception_type=PathError):
+	result = resolve_paths(path, search_path_list, must_exist, exception_type)
+	if len(result) > 1:
+		raise exception_type('Path "%s" matches multiple files:\n\t%s' % (path, str.join('\n\t', result)))
+	return result[0]
+
+
+def resolve_paths(path, search_path_list=None, must_exist=True, exception_type=PathError):
+	path = clean_path(path)  # replace $VAR, ~user, \ separators
+	result = []
+	if os.path.isabs(path):
+		result.extend(sorted(glob.glob(path)))  # Resolve wildcards for existing files
+		if not result:
+			if must_exist:
+				raise exception_type('Could not find file "%s"' % path)
+			return [path]  # Return non-existing, absolute path
+	else:  # search relative path in search directories
+		search_path_list = search_path_list or []
+		for spath in UniqueList(search_path_list):
+			result.extend(sorted(glob.glob(clean_path(os.path.join(spath, path)))))
+		if not result:
+			if must_exist:
+				raise exception_type('Could not find file "%s" in \n\t%s' % (
+					path, str.join('\n\t', search_path_list)))
+			return [path]  # Return non-existing, relative path
+	return result
+
+
+def safe_index(indexable, idx, default=None):
+	try:
+		return indexable.index(idx)
+	except Exception:
+		return default
+
+
+def safe_write(fp, content):
+	fp.writelines(content)
+	fp.truncate()
+	fp.close()
+
+
+def split_blackwhite_list(bwfilter):
+	blacklist = lmap(lambda x: x[1:], ifilter(lambda x: x.startswith('-'), bwfilter or []))
+	whitelist = lfilter(lambda x: not x.startswith('-'), bwfilter or [])
+	return (blacklist, whitelist)
+
+
+def split_opt(opt, delim, empty=''):
+	""" Split option strings into fixed tuples
+	>>> split_opt('abc : ghi # def', ['#', ':'])
+	('abc', 'def', 'ghi')
+	>>> split_opt('abc:def', '::')
+	('abc', 'def', '')
+	"""
+	def get_delimeter_part(old_result, prefix):
+		try:
+			tmp = old_result[0].split(prefix)
+			new = tmp.pop(1)
+			try:  # Find position of other delimeters in string
+				other_delim = min(ifilter(lambda idx: idx >= 0, imap(new.find, delim)))
+				tmp[0] += new[other_delim:]
+			except Exception:
+				other_delim = None
+			return [str.join(prefix, tmp)] + old_result[1:] + [new[:other_delim]]
+		except Exception:
+			return old_result + ['']
+	result = imap(str.strip, reduce(get_delimeter_part, delim, [opt]))
+	return tuple(imap(lambda x: QM(x == '', empty, x), result))
+
+
+def swap(value1, value2):
+	return (value2, value1)
+
+
+def wait(timeout):
+	activity = Activity('Waiting', parent='root')
+	for remaining in irange(timeout, 0, -1):
+		if abort():
+			return False
+		if (remaining == timeout) or (remaining < 5) or (remaining % 5 == 0):
+			activity.update('Waiting for %d seconds' % remaining)
+		time.sleep(1)
+	activity.finish()
+	return True
+
+
+def wrap_list(value, length, delim_lines=',\n', delim_entries=', '):
+	def counter(item, buffer):
+		return len(item) + sum(imap(len, buffer)) + 2 * len(buffer) > length
+	wrapped = accumulate(value, [], counter, add_fun=lambda x, y: x + [y])
+	return str.join(delim_lines, imap(lambda x: str.join(delim_entries, x), wrapped))
+
+
+class GCIOError(NestedException):
+	pass
+
+
+class ParsingError(NestedException):
+	pass
+
+
+class PathError(NestedException):
+	pass
+
+
+class DictFormat(object):
+	# escape_strings = escape '"', '$'
+	# types = preserve type information
+	def __init__(self, delimeter='=', escape_strings=False):
+		self.delimeter = delimeter
+		self._escape_strings = escape_strings
+
+	# Parse dictionary lists
+	def parse(self, lines, key_parser=None, value_parser=None):
+		key_parser = key_parser or {}
+		value_parser = value_parser or {}
+		key_parser_default = key_parser.get(None, lambda k: parse_type(k.lower()))
+		value_parser_default = value_parser.get(None, parse_type)
+		data = {}
+		do_add = False
+		currentline = ''
+		try:
+			lines = lines.splitlines()
+		except Exception:
+			clear_current_exception()
+		for line in lines:
+			try:
+				if not isinstance(line, str):
+					line = line.decode('utf-8')
+				if self._escape_strings:
+					# Switch accumulate on/off when odd number of quotes found
+					if (line.count('"') - line.count('\\"')) % 2 == 1:
+						do_add = not do_add
+					currentline += line
+					if do_add:
+						continue
+				else:
+					currentline = line
+				# split at first occurence of delimeter and strip spaces around
+				key_value_list = currentline.split(self.delimeter, 1)
+				if len(key_value_list) == 2:
+					key, value = key_value_list
+					currentline = ''
+				else:  # in case no delimeter was found
+					currentline = ''
+					continue
+				if self._escape_strings:
+					value = value.strip().strip('"').replace('\\"', '"').replace('\\$', '$')
+				key = key_parser.get(key, key_parser_default)(key.strip())
+				# FIXME: it may better to do .encode('utf-8') here
+				data[key] = value_parser.get(key, value_parser_default)(value.strip())
+			except Exception:
+				raise ParsingError('Invalid dict format in %s' % repr(line))
+		if do_add:
+			raise ParsingError('Invalid dict format in %s' % repr(lines))
+		return data
+
+	# Format dictionary list
+	def format(self, entries, do_print_none=False, fkt=lambda x_y_z: x_y_z, format='%s%s%s\n'):
+		result = []
+		for key in sorted(entries.keys()):
+			value = entries[key]
+			if (value is None) and not do_print_none:
+				continue
+			if self._escape_strings and isinstance(value, str):
+				value = '"%s"' % str(value).replace('"', '\\"').replace('$', '\\$')
+				lines = value.splitlines()
+				result.append(format % fkt((key, self.delimeter, lines[0])))
+				result.extend(imap(lambda x: x + '\n', lines[1:]))
+			else:
+				result.append(format % fkt((key, self.delimeter, value)))
+		return result
+
+
+class Result(object):
+	# Use with caution! Compared with tuples: +25% accessing, 8x slower instantiation
+	def __init__(self, **kwargs):
+		self.__dict__ = kwargs
+
+	def __repr__(self):
+		return 'Result(%s)' % str_dict(self.__dict__)
+
+
+class TwoSidedIterator(object):
+	def __init__(self, _content):
+		(self.__content, self._left, self._right) = (_content, 0, 0)
+
+	def backward(self):
+		while self._left + self._right < len(self.__content):
+			self._right += 1
+			yield self.__content[len(self.__content) - self._right]
+
+	def forward(self):
+		while self._left + self._right < len(self.__content):
+			self._left += 1
+			yield self.__content[self._left - 1]
+
+
+class PersistentDict(dict):
+	def __init__(self, filename, delimeter='=', lowerCaseKey=True):
+		dict.__init__(self)
+		self.fmt = DictFormat(delimeter)
+		self.filename = filename
+		key_parser = {None: QM(lowerCaseKey, lambda k: parse_type(k.lower()), parse_type)}
+		try:
+			self.update(self.fmt.parse(open(filename), key_parser=key_parser))
+		except Exception:
+			clear_current_exception()
+		self.olddict = self.items()
+
+	def get(self, key, default=None, autoUpdate=True):
+		value = dict.get(self, key, default)
+		if autoUpdate:
+			self.write({key: value})
+		return value
+
+	def write(self, newdict=None, update=True):
+		if not update:
+			self.clear()
+		self.update(newdict or {})
+		if dict(self.olddict) == dict(self.items()):
+			return
+		try:
+			if self.filename:
+				safe_write(open(self.filename, 'w'), self.fmt.format(self))
+		except Exception:
+			raise GCIOError('Could not write to file %s' % self.filename)
+		self.olddict = self.items()

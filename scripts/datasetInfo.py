@@ -23,31 +23,31 @@ from python_compat import imap, itemgetter, izip, lmap, lzip, set, sort_inplace,
 
 usage = '%s [OPTIONS] <DBS dataset path> | <dataset cache file>' % sys.argv[0]
 parser = Options(usage)
-parser.addBool(None, 'l', 'list-datasets',  default = False, help = 'Show list of all datasets in query / file')
-parser.addBool(None, 'b', 'list-blocks',    default = False, help = 'Show list of blocks of the dataset(s)')
-parser.addBool(None, 'f', 'list-files',     default = False, help = 'Show list of all files grouped according to blocks')
-parser.addBool(None, 's', 'list-storage',   default = False, help = 'Show list of locations where data is stored')
-parser.addBool(None, 'm', 'metadata',       default = False, help = 'Get metadata infomation of dataset files')
-parser.addBool(None, 'M', 'block-metadata', default = False, help = 'Get common metadata infomation of dataset blocks')
-parser.addBool(None, 'O', 'ordered',        default = False, help = 'Sort dataset blocks and files')
-parser.addText(None, 'p', 'provider',       default = '',    help = 'Default dataset provider')
-parser.addText(None, 'C', 'settings',       default = '',    help = 'Specify config file as source of detailed dataset settings')
-parser.addText(None, 'S', 'save',           default = '',    help = 'Saves dataset information to specified file')
-parser.addBool(None, 'i', 'info',           default = False, help = 'Gives machine readable info of given dataset(s)')
-parser.addBool(None, 'c', 'config-entry',   default = False, help = 'Gives config file entries to run over given dataset(s)')
-parser.addBool(None, 'n', 'config-nick',    default = False, help = 'Use dataset path to derive nickname in case it it undefined')
-parser.addText(None, 'L', 'location',  default = 'hostname', help = 'Format of location information')
+parser.add_bool(None, 'l', 'list-datasets',  default = False, help = 'Show list of all datasets in query / file')
+parser.add_bool(None, 'b', 'list-blocks',    default = False, help = 'Show list of blocks of the dataset(s)')
+parser.add_bool(None, 'f', 'list-files',     default = False, help = 'Show list of all files grouped according to blocks')
+parser.add_bool(None, 's', 'list-storage',   default = False, help = 'Show list of locations where data is stored')
+parser.add_bool(None, 'm', 'metadata',       default = False, help = 'Get metadata infomation of dataset files')
+parser.add_bool(None, 'M', 'block-metadata', default = False, help = 'Get common metadata infomation of dataset blocks')
+parser.add_bool(None, 'O', 'ordered',        default = False, help = 'Sort dataset blocks and files')
+parser.add_text(None, 'p', 'provider',       default = '',    help = 'Default dataset provider')
+parser.add_text(None, 'C', 'settings',       default = '',    help = 'Specify config file as source of detailed dataset settings')
+parser.add_text(None, 'S', 'save',           default = '',    help = 'Saves dataset information to specified file')
+parser.add_bool(None, 'i', 'info',           default = False, help = 'Gives machine readable info of given dataset(s)')
+parser.add_bool(None, 'c', 'config-entry',   default = False, help = 'Gives config file entries to run over given dataset(s)')
+parser.add_bool(None, 'n', 'config-nick',    default = False, help = 'Use dataset path to derive nickname in case it it undefined')
+parser.add_text(None, 'L', 'location',  default = 'hostname', help = 'Format of location information')
 options = scriptOptions(parser)
 
 # we need exactly one positional argument (dataset path)
 if len(options.args) != 1:
-	utils.exitWithUsage(usage)
+	utils.exit_with_usage(usage)
 
 # Disable threaded queries
 def noThread(desc, fun, *args, **kargs):
 	fun(*args, **kargs)
 	return type('DummyThread', (), {'join': lambda self: None})()
-thread_tools.start_thread = noThread
+thread_tools.start_daemon = noThread
 
 def get_dataset_config(opts, args):
 	dataset = args[0].strip()
@@ -85,10 +85,10 @@ def list_datasets(blocks):
 		updateInfos(infosum)
 	head = [(DataProvider.Dataset, 'Dataset'), (DataProvider.NEntries, '#Events'),
 		(DataProvider.NBlocks, '#Blocks'), (DataProvider.NFiles, '#Files')]
-	utils.printTabular(head, lmap(lambda x: infos[x], order) + ['=', infosum])
+	utils.display_table(head, lmap(lambda x: infos[x], order) + ['=', infosum])
 
 def list_blocks(blocks, headerbase):
-	utils.printTabular(headerbase + [(DataProvider.BlockName, 'Block'), (DataProvider.NEntries, 'Events')], blocks)
+	utils.display_table(headerbase + [(DataProvider.BlockName, 'Block'), (DataProvider.NEntries, 'Events')], blocks)
 
 def list_files(datasets, blocks):
 	print('')
@@ -96,7 +96,7 @@ def list_files(datasets, blocks):
 		if len(datasets) > 1:
 			print('Dataset: %s' % block[DataProvider.Dataset])
 		print('Blockname: %s' % block[DataProvider.BlockName])
-		utils.printTabular([(DataProvider.URL, 'Filename'), (DataProvider.NEntries, 'Events')], block[DataProvider.FileList])
+		utils.display_table([(DataProvider.URL, 'Filename'), (DataProvider.NEntries, 'Events')], block[DataProvider.FileList])
 		print('')
 
 def print_metadata(src, maxlen):
@@ -130,7 +130,7 @@ def list_block_metadata(datasets, blocks):
 		mkdict = lambda x: dict(izip(block[DataProvider.Metadata], x[DataProvider.Metadata]))
 		metadata = utils.QM(block[DataProvider.FileList], mkdict(block[DataProvider.FileList][0]), {})
 		for fileInfo in block[DataProvider.FileList]:
-			utils.intersectDict(metadata, mkdict(fileInfo))
+			utils.intersect_first_dict(metadata, mkdict(fileInfo))
 		print_metadata(metadata.items(), max([0] + lmap(len, metadata.keys())))
 
 def list_storage(blocks, headerbase):

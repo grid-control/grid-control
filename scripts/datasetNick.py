@@ -19,12 +19,12 @@ from python_compat import lmap
 
 
 parser = Options(usage = '%s [OPTIONS] <DBS dataset path>')
-parser.addText(None, '', 'producer', default = 'SimpleNickNameProducer', help = 'Name of the nickname producer')
+parser.add_text(None, '', 'producer', default = 'SimpleNickNameProducer', help = 'Name of the nickname producer')
 options = scriptOptions(parser)
 
 def main(opts, args):
 	if not args:
-		utils.exitWithUsage('Dataset path not specified!')
+		utils.exit_with_usage('Dataset path not specified!')
 	datasetPath = args[0]
 	if '*' in datasetPath:
 		dbs3 = Plugin.create_instance('DBS3Provider', getConfig(), datasetPath, None)
@@ -33,7 +33,7 @@ def main(opts, args):
 		toProcess = [datasetPath]
 
 	nProd = Plugin.get_class('NickNameProducer').create_instance(opts.producer, getConfig())
-	utils.printTabular(
+	utils.display_table(
 		[(0, 'Nickname'), (1, 'Dataset')],
 		lmap(lambda ds: {0: nProd.getName('', ds, None), 1: ds}, toProcess), 'll')
 

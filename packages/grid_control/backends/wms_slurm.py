@@ -54,7 +54,7 @@ class SLURM(LocalWMS):
 
 	def __init__(self, config, name):
 		LocalWMS.__init__(self, config, name,
-			submitExec = utils.resolveInstallPath('sbatch'),
+			submitExec = utils.resolve_install_path('sbatch'),
 			checkExecutor = CheckJobsMissingState(config, SLURM_CheckJobs(config)),
 			cancelExecutor = CancelJobsWithProcessBlind(config, 'scancel', unknownID = 'not in queue !'))
 

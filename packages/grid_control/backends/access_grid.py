@@ -13,7 +13,7 @@
 # | limitations under the License.
 
 from grid_control.backends.access import AccessTokenError, TimedAccessToken
-from grid_control.utils import DictFormat, resolveInstallPath
+from grid_control.utils import DictFormat, resolve_install_path
 from grid_control.utils.process_base import LocalProcess
 from hpfwk import AbstractError
 from python_compat import identity
@@ -22,7 +22,7 @@ from python_compat import identity
 class GridAccessToken(TimedAccessToken):
 	def __init__(self, config, name, proxy_exec):
 		TimedAccessToken.__init__(self, config, name)
-		self._infoExec = resolveInstallPath(proxy_exec)
+		self._infoExec = resolve_install_path(proxy_exec)
 		self._proxyPath = config.get('proxy path', '')
 		self._ignoreWarning = config.getBool('ignore warnings', False, onChange = None)
 		self._cache = None

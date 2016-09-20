@@ -30,7 +30,7 @@ class StorageError(NestedException):
 ensurePrefix = lambda fn: utils.QM('://' in fn, fn, 'file:////%s' % os.path.abspath(fn).lstrip('/'))
 
 def se_runcmd(cmd, varDict, *urls):
-	runLib = utils.pathShare('gc-run.lib')
+	runLib = utils.path_share('gc-run.lib')
 	args = str.join(' ', imap(lambda x: '"%s"' % ensurePrefix(x).replace('dir://', 'file://'), urls))
 	varString = str.join(' ', imap(lambda x: 'export %s="%s";' % (x, varDict[x]), varDict))
 	return LocalProcess('/bin/bash', '-c', '. %s || exit 99; %s %s %s' % (runLib, varString, cmd, args))
@@ -69,7 +69,7 @@ class StorageManager(NamedPlugin):
 class LocalSBStorageManager(StorageManager):
 	def __init__(self, config, name, storage_type, storage_channel, storage_var_prefix):
 		StorageManager.__init__(self, config, name, storage_type, storage_channel, storage_var_prefix)
-		self._sandbox_path = config.getPath('%s path' % storage_type, config.getWorkPath('sandbox'), mustExist = False)
+		self._sandbox_path = config.getPath('%s path' % storage_type, config.getWorkPath('sandbox'), must_exist = False)
 
 	def doTransfer(self, listDescSourceTarget):
 		for (desc, source, target) in listDescSourceTarget:
@@ -122,5 +122,5 @@ class SEStorageManager(StorageManager):
 					self._log.info('Copy %s to SE %d failed', desc, idx + 1)
 					self._log.critical(proc.stderr.read(timeout = 0))
 					self._log.critical('Unable to copy %s! You can try to copy it manually.', desc)
-					if not utils.getUserBool('Is %s (%s) available on SE %s?' % (desc, source, sePath), False):
+					if not utils.get_user_bool('Is %s (%s) available on SE %s?' % (desc, source, sePath), False):
 						raise StorageError('%s is missing on SE %s!' % (desc, sePath))

@@ -21,7 +21,7 @@ from grid_control.backends.wms import BackendError, WMS
 from grid_control.backends.wms_pbsge import PBSGECommon
 from grid_control.config import ConfigError
 from grid_control.job_db import Job
-from grid_control.utils.parsing import parseTime
+from grid_control.utils.parsing import parse_time
 from grid_control.utils.process_base import LocalProcess
 from python_compat import any, imap, izip, lmap, set, sorted
 
@@ -29,7 +29,7 @@ from python_compat import any, imap, izip, lmap, set, sorted
 class GridEngine_CheckJobsProcessCreator(ProcessCreatorViaArguments):
 	def __init__(self, config):
 		ProcessCreatorViaArguments.__init__(self, config)
-		self._cmd = utils.resolveInstallPath('qstat')
+		self._cmd = utils.resolve_install_path('qstat')
 		self._user = config.get('user', os.environ.get('LOGNAME', ''), onChange = None)
 
 	def _arguments(self, wmsIDs):
@@ -89,7 +89,7 @@ class GridEngine_CheckJobs(CheckJobsWithProcess):
 class GridEngine_Discover_Nodes(BackendDiscovery):
 	def __init__(self, config):
 		BackendDiscovery.__init__(self, config)
-		self._configExec = utils.resolveInstallPath('qconf')
+		self._configExec = utils.resolve_install_path('qconf')
 
 	def discover(self):
 		nodes = set()
@@ -108,12 +108,12 @@ class GridEngine_Discover_Nodes(BackendDiscovery):
 class GridEngine_Discover_Queues(BackendDiscovery):
 	def __init__(self, config):
 		BackendDiscovery.__init__(self, config)
-		self._configExec = utils.resolveInstallPath('qconf')
+		self._configExec = utils.resolve_install_path('qconf')
 
 	def discover(self):
 		tags = ['h_vmem', 'h_cpu', 's_rt']
 		reqs = dict(izip(tags, [WMS.MEMORY, WMS.CPUTIME, WMS.WALLTIME]))
-		parser = dict(izip(tags, [int, parseTime, parseTime]))
+		parser = dict(izip(tags, [int, parse_time, parse_time]))
 
 		proc = LocalProcess(self._configExec, '-sql')
 		for queue in imap(str.strip, proc.stdout.iter(timeout = 10)):
@@ -141,7 +141,7 @@ class GridEngine(PBSGECommon):
 			nodesFinder = GridEngine_Discover_Nodes(config),
 			queuesFinder = GridEngine_Discover_Queues(config))
 		self._project = config.get('project name', '', onChange = None)
-		self._configExec = utils.resolveInstallPath('qconf')
+		self._configExec = utils.resolve_install_path('qconf')
 
 
 	def getSubmitArguments(self, jobNum, jobName, reqs, sandbox, stdout, stderr):

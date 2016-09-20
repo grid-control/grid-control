@@ -270,7 +270,7 @@ if __name__ == '__main__':
 			imported = set()
 			for iline in ifilter(lambda line: 'python_compat ' in line, tmp.splitlines()):
 				try:
-					imported.update(imap(str.strip, iline.split(None, 3)[3].split(',')))
+					imported.update(imap(lambda i: i.split()[0].strip(), iline.split(None, 3)[3].split(',')))
 				except Exception:
 					raise Exception('Unable to parse %r:%r' % (fn, iline))
 			if not needed and ('python_compat' in tmp):

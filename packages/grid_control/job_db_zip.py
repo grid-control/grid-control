@@ -14,7 +14,7 @@
 
 import os, zipfile
 from grid_control.job_db_text import TextFileJobDB
-from grid_control.utils import removeFiles
+from grid_control.utils import remove_files
 from grid_control.utils.activity import Activity
 from hpfwk import clear_current_exception
 from python_compat import imap
@@ -37,7 +37,7 @@ class ZippedJobDB(TextFileJobDB):
 				os.rename(self._dbFile, self._dbFile + '.broken')
 				os.rename(self._dbFile + '.tmp', self._dbFile)
 				tar = zipfile.ZipFile(self._dbFile, 'r', zipfile.ZIP_DEFLATED)
-				removeFiles([self._dbFile + '.broken'])
+				remove_files([self._dbFile + '.broken'])
 				brokenList = []
 				for idx, fnTarInfo in enumerate(tar.namelist()):
 					(jobNum, tid) = tuple(imap(lambda s: int(s[1:]), fnTarInfo.split('_', 1)))
@@ -94,7 +94,7 @@ class Migrate2ZippedJobDB(ZippedJobDB):
 				for jobNum in oldDB.getJobs():
 					self.commit(jobNum, oldDB.get(jobNum))
 			except Exception:
-				removeFiles([self._dbFile])
+				remove_files([self._dbFile])
 				raise
 			activity.finish()
 		ZippedJobDB.__init__(self, config, jobLimit, jobSelector)

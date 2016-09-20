@@ -54,7 +54,7 @@ class JMS(LocalWMS):
 
 	def __init__(self, config, name):
 		LocalWMS.__init__(self, config, name,
-			submitExec = utils.resolveInstallPath('job_submit'),
+			submitExec = utils.resolve_install_path('job_submit'),
 			checkExecutor = CheckJobsMissingState(config, JMS_CheckJobs(config)),
 			cancelExecutor = CancelJobsWithProcessBlind(config, 'job_cancel', unknownID = 'not in queue !'))
 

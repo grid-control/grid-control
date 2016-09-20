@@ -17,7 +17,10 @@ from python_compat import BytesBufferBase, bytes2str, imap, str2bytes, tarfile
 
 
 class SafeFile(object):
-	def __init__(self, fn, mode = 'r', keep_old = False):
+	def __del__(self):
+		self.close()
+
+	def __init__(self, fn, mode='r', keep_old=False):
 		assert(mode in ['r', 'w'])
 		(self._fn, self._fp, self._mode, self._keep_old) = (fn, None, mode, keep_old)
 		if self._mode == 'w':
@@ -25,19 +28,9 @@ class SafeFile(object):
 		else:
 			self._fp = open(self._fn, mode)
 
-	def readlines(self):
-		return self._fp.readlines()
-
-	def read(self):
-		return self._fp.read()
-
-	def write(self, value):
-		self._fp.write(value)
-		self._fp.truncate()
-
-	def writelines(self, value):
-		self._fp.writelines(value)
-		self._fp.truncate()
+	def __repr__(self):
+		return '%s(fn = %r, mode = %r, keep_old = %s, handle = %r)' % (
+			self.__class__.__name__, self._fn, self._mode, self._keep_old, self._fp)
 
 	def close(self):
 		if self._fp:
@@ -48,11 +41,36 @@ class SafeFile(object):
 				os.rename(self._fn + '.tmp', self._fn)
 			self._fp = None
 
-	def __del__(self):
-		self.close()
+	def read(self):
+		return self._fp.read()
 
-	def __repr__(self):
-		return '%s(fn = %r, mode = %r, keep_old = %s, handle = %r)' % (self.__class__.__name__, self._fn, self._mode, self._keep_old, self._fp)
+	def readlines(self):
+		return self._fp.readlines()
+
+	def write(self, value):
+		self._fp.write(value)
+		self._fp.truncate()
+
+	def writelines(self, value):
+		self._fp.writelines(value)
+		self._fp.truncate()
+
+
+class ZipFile(object):
+	def __init__(self, fn, mode):
+		self._fp = gzip.open(fn, mode)
+
+	def close(self):
+		return self._fp.close()
+
+	def readline(self):
+		return bytes2str(self._fp.readline())
+
+	def readlines(self):
+		return imap(bytes2str, self._fp.readlines())
+
+	def write(self, data):
+		self._fp.write(str2bytes(data))
 
 
 class VirtualFile(BytesBufferBase):
@@ -61,24 +79,7 @@ class VirtualFile(BytesBufferBase):
 		self.name = name
 		self.size = len(self.getvalue())
 
-	def getTarInfo(self):
+	def get_tar_info(self):
 		info = tarfile.TarInfo(self.name)
 		info.size = self.size
 		return (info, self)
-
-
-class ZipFile(object):
-	def __init__(self, fn, mode):
-		self._fp = gzip.open(fn, mode)
-
-	def write(self, data):
-		self._fp.write(str2bytes(data))
-
-	def readline(self):
-		return bytes2str(self._fp.readline())
-
-	def readlines(self):
-		return imap(bytes2str, self._fp.readlines())
-
-	def close(self):
-		return self._fp.close()

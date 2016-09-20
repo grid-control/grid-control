@@ -61,10 +61,10 @@ class changeInitNeeded(object):
 		log = logging.getLogger('config.onchange.%s' % self._option.lower())
 		if config.isInteractive(self._option, default = True):
 			msg = 'The option "%s" was changed from the old value:' % cur_entry.format_opt()
-			if utils.getUserBool(msg + ('\n\t> %s\nto the new value:' % obj2str(old_obj).lstrip()) +
+			if utils.get_user_bool(msg + ('\n\t> %s\nto the new value:' % obj2str(old_obj).lstrip()) +
 					('\n\t> %s\nDo you want to abort?' % obj2str(cur_obj).lstrip()), False):
 				raise ConfigError('Abort due to unintentional config change!')
-			if not utils.getUserBool('A partial reinitialization (same as --reinit %s) is needed to apply this change! Do you want to continue?' % self._option, True):
+			if not utils.get_user_bool('A partial reinitialization (same as --reinit %s) is needed to apply this change! Do you want to continue?' % self._option, True):
 				log.log(logging.INFO1, 'Using stored value %s for option %s', obj2str(old_obj), cur_entry.format_opt())
 				return old_obj
 		config.setState(True, 'init', detail = self._option)

@@ -30,8 +30,8 @@ local_purge_lock = GCLock()
 class SandboxHelper(object):
 	def __init__(self, config):
 		self._cache = []
-		self._path = config.getPath('sandbox path', config.getWorkPath('sandbox'), mustExist = False)
-		utils.ensureDirExists(self._path, 'sandbox base', BackendError)
+		self._path = config.getPath('sandbox path', config.getWorkPath('sandbox'), must_exist = False)
+		utils.ensure_dir_exists(self._path, 'sandbox base', BackendError)
 
 	def get_path(self):
 		return self._path
@@ -133,7 +133,7 @@ class LocalWMS(BasicWMS):
 		jobName = module.getDescription(jobNum).jobName
 		submit_args = shlex.split(self.submitOpts)
 		submit_args.extend(shlex.split(self.getSubmitArguments(jobNum, jobName, reqs, sandbox, stdout, stderr)))
-		submit_args.append(utils.pathShare('gc-local.sh'))
+		submit_args.append(utils.path_share('gc-local.sh'))
 		submit_args.extend(shlex.split(self.getJobArguments(jobNum, sandbox)))
 		proc = LocalProcess(self.submitExec, *submit_args)
 		retCode = proc.status(timeout = 20, terminate = True)
@@ -170,7 +170,7 @@ class LocalWMS(BasicWMS):
 
 			# Cleanup sandbox
 			outFiles = lchain(imap(lambda pat: glob.glob(os.path.join(path, pat)), self.outputFiles))
-			utils.removeFiles(ifilter(lambda x: x not in outFiles, imap(lambda fn: os.path.join(path, fn), os.listdir(path))))
+			utils.remove_files(ifilter(lambda x: x not in outFiles, imap(lambda fn: os.path.join(path, fn), os.listdir(path))))
 
 			yield (jobNum, path)
 		activity.finish()
@@ -216,7 +216,7 @@ class Local(WMS):
 		for cmd, wms in [('sacct', 'SLURM'), ('sgepasswd', 'OGE'), ('pbs-config', 'PBS'),
 				('qsub', 'OGE'), ('bsub', 'LSF'), ('job_slurm', 'JMS')]:
 			try:
-				utils.resolveInstallPath(cmd)
+				utils.resolve_install_path(cmd)
 			except Exception:
 				ec.collect()
 				continue

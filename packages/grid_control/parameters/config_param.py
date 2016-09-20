@@ -15,7 +15,7 @@
 import shlex
 from grid_control import utils
 from grid_control.config import ConfigError
-from grid_control.utils.parsing import parseDict, split_advanced, split_brackets
+from grid_control.utils.parsing import parse_dict, split_advanced, split_brackets
 from python_compat import imap, irange, lmap, lzip, unspecified
 
 
@@ -126,7 +126,7 @@ class ParameterConfig(object):
 
 	def _parse_dict(self, vn, dict_str, value_parser):
 		keytuple_delimeter = self.get(self._get_varexpr(vn), 'key delimeter', ',')
-		return parseDict(dict_str, value_parser, lambda k: parse_tuple(k, keytuple_delimeter))
+		return parse_dict(dict_str, value_parser, lambda k: parse_tuple(k, keytuple_delimeter))
 
 	def _parse_parameter(self, vn, value, parameter_type):
 		if parameter_type == 'verbatim':

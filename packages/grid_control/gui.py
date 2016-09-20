@@ -16,7 +16,7 @@ import sys, logging
 from grid_control.gc_plugin import ConfigurablePlugin
 from grid_control.report import Report
 from grid_control.utils.activity import Activity
-from grid_control.utils.parsing import strTimeShort
+from grid_control.utils.parsing import str_time_short
 from hpfwk import AbstractError
 
 
@@ -60,7 +60,7 @@ class SimpleActivityStream(object):
 		activity_message = None
 		if Activity.root:
 			for activity in Activity.root.get_children():
-				activity_message = activity.getMessage(truncate = 75)
+				activity_message = activity.get_message(truncate = 75)
 		if self._old_message is not None:
 			self._stream.write('\r%s\r' % (' ' * len(self._old_message)))
 		self._old_message = activity_message
@@ -85,7 +85,7 @@ class SimpleConsole(GUI):
 		if workflow.duration < 0:
 			self._log.info('Running in continuous mode. Press ^C to exit.')
 		elif workflow.duration > 0:
-			self._log.info('Running for %s', strTimeShort(workflow.duration))
+			self._log.info('Running for %s', str_time_short(workflow.duration))
 		if sys.stdout.isatty():
 			sys.stdout = SimpleActivityStream(sys.stdout, register_callback = True)
 			sys.stderr = SimpleActivityStream(sys.stderr)

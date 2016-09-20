@@ -22,7 +22,7 @@ from grid_control.backends.storage import StorageManager
 from grid_control.gc_plugin import NamedPlugin
 from grid_control.output_processor import JobResult
 from grid_control.utils.activity import Activity
-from grid_control.utils.data_structures import makeEnum
+from grid_control.utils.data_structures import make_enum
 from grid_control.utils.file_objects import SafeFile, VirtualFile
 from hpfwk import AbstractError, NestedException, clear_current_exception
 from python_compat import ichain, identity, imap, izip, lchain, lmap, set, sorted
@@ -31,7 +31,7 @@ from python_compat import ichain, identity, imap, izip, lchain, lmap, set, sorte
 class BackendError(NestedException):
 	pass
 
-BackendJobState = makeEnum([
+BackendJobState = make_enum([
 	'ABORTED',   # job was aborted by the WMS
 	'CANCELLED', # job was cancelled
 	'DONE',      # job is finished
@@ -95,7 +95,7 @@ class WMS(NamedPlugin):
 				raise BackendError('Multiple gcIDs map to the same wmsID!')
 			result[wmsID] = gcID
 		return result
-makeEnum(['WALLTIME', 'CPUTIME', 'MEMORY', 'CPUS', 'BACKEND', 'SITES', 'QUEUES', 'SOFTWARE', 'STORAGE'], WMS)
+make_enum(['WALLTIME', 'CPUTIME', 'MEMORY', 'CPUS', 'BACKEND', 'SITES', 'QUEUES', 'SOFTWARE', 'STORAGE'], WMS)
 
 
 class BasicWMS(WMS):
@@ -114,12 +114,12 @@ class BasicWMS(WMS):
 		self._runlib = config.getWorkPath('gc-run.lib')
 		if not os.path.exists(self._runlib):
 			fp = SafeFile(self._runlib, 'w')
-			content = SafeFile(utils.pathShare('gc-run.lib')).read()
+			content = SafeFile(utils.path_share('gc-run.lib')).read()
 			fp.write(content.replace('__GC_VERSION__', __import__('grid_control').__version__))
 			fp.close()
 		self._outputPath = config.getWorkPath('output')
 		self._filecachePath = config.getWorkPath('files')
-		utils.ensureDirExists(self._outputPath, 'output directory')
+		utils.ensure_dir_exists(self._outputPath, 'output directory')
 		self._failPath = config.getWorkPath('fail')
 
 		# Initialise access token and storage managers
@@ -165,9 +165,9 @@ class BasicWMS(WMS):
 		# Package sandbox tar file
 		self._log.log(logging.INFO1, 'Packing sandbox')
 		sandbox = self._getSandboxName(task)
-		utils.ensureDirExists(os.path.dirname(sandbox), 'sandbox directory')
+		utils.ensure_dir_exists(os.path.dirname(sandbox), 'sandbox directory')
 		if not os.path.exists(sandbox) or transferSB:
-			utils.genTarball(sandbox, convert(self._getSandboxFiles(task, monitor, [self.smSEIn, self.smSEOut])))
+			utils.create_tarball(sandbox, convert(self._getSandboxFiles(task, monitor, [self.smSEIn, self.smSEOut])))
 
 
 	def submitJobs(self, jobNumList, task):
@@ -263,7 +263,7 @@ class BasicWMS(WMS):
 
 			if os.path.exists(pathName):
 				# Preserve failed job
-				utils.ensureDirExists(self._failPath, 'failed output directory')
+				utils.ensure_dir_exists(self._failPath, 'failed output directory')
 				forceMove(pathName, os.path.join(self._failPath, os.path.basename(pathName)))
 
 			yield (inJobNum, -1, {}, None)
@@ -275,7 +275,7 @@ class BasicWMS(WMS):
 
 	def _getSandboxFilesIn(self, task):
 		return [
-			('GC Runtime', utils.pathShare('gc-run.sh'), 'gc-run.sh'),
+			('GC Runtime', utils.path_share('gc-run.sh'), 'gc-run.sh'),
 			('GC Runtime library', self._runlib, 'gc-run.lib'),
 			('GC Sandbox', self._getSandboxName(task), 'gc-sandbox.tar.gz'),
 		]
@@ -292,34 +292,34 @@ class BasicWMS(WMS):
 	def _getSandboxFiles(self, task, monitor, smList):
 		# Prepare all input files
 		depList = set(ichain(imap(lambda x: x.getDependencies(), [task] + smList)))
-		depPaths = lmap(lambda pkg: utils.pathShare('', pkg = pkg), os.listdir(utils.pathPKG()))
-		depFiles = lmap(lambda dep: utils.resolvePath('env.%s.sh' % dep, depPaths), depList)
-		taskEnv = utils.mergeDicts(imap(lambda x: x.getTaskConfig(), [monitor, task] + smList))
+		depPaths = lmap(lambda pkg: utils.path_share('', pkg = pkg), os.listdir(utils.path_pkg()))
+		depFiles = lmap(lambda dep: utils.resolve_path('env.%s.sh' % dep, depPaths), depList)
+		taskEnv = utils.merge_dict_list(imap(lambda x: x.getTaskConfig(), [monitor, task] + smList))
 		taskEnv.update({'GC_DEPFILES': str.join(' ', depList), 'GC_USERNAME': self._token.getUsername(),
 			'GC_WMS_NAME': self._name})
-		taskConfig = sorted(utils.DictFormat(escapeString = True).format(taskEnv, format = 'export %s%s%s\n'))
+		taskConfig = sorted(utils.DictFormat(escape_strings = True).format(taskEnv, format = 'export %s%s%s\n'))
 		varMappingDict = dict(izip(monitor.getTaskConfig().keys(), monitor.getTaskConfig().keys()))
 		varMappingDict.update(task.getVarMapping())
 		varMapping = sorted(utils.DictFormat(delimeter = ' ').format(varMappingDict, format = '%s%s%s\n'))
 		# Resolve wildcards in task input files
 		def getTaskFiles():
 			for f in task.getSBInFiles():
-				matched = glob.glob(f.pathAbs)
+				matched = glob.glob(f.path_abs)
 				if matched != []:
 					for match in matched:
 						yield match
 				else:
-					yield f.pathAbs
+					yield f.path_abs
 		return lchain([monitor.getFiles(), depFiles, getTaskFiles(),
 			[VirtualFile('_config.sh', taskConfig), VirtualFile('_varmap.dat', varMapping)]])
 
 
 	def _writeJobConfig(self, cfgPath, jobNum, task, extras):
 		try:
-			jobEnv = utils.mergeDicts([task.getJobConfig(jobNum), extras])
+			jobEnv = utils.merge_dict_list([task.getJobConfig(jobNum), extras])
 			jobEnv['GC_ARGS'] = task.getJobArguments(jobNum).strip()
-			content = utils.DictFormat(escapeString = True).format(jobEnv, format = 'export %s%s%s\n')
-			utils.safeWrite(open(cfgPath, 'w'), content)
+			content = utils.DictFormat(escape_strings = True).format(jobEnv, format = 'export %s%s%s\n')
+			utils.safe_write(open(cfgPath, 'w'), content)
 		except Exception:
 			raise BackendError('Could not write job config data to %s.' % cfgPath)
 

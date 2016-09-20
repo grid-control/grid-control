@@ -155,13 +155,13 @@ fi
 
 # If SRM path to dataset files given, copy them to working directory
 if [ -n "$DATASET_SRM_FILES" ]; then
-        echo "==========================="
-        echo
-        echo "Copy dataset files via SRM"
-        for DATASET_SRM_FILE in $DATASET_SRM_FILES; do
-                url_copy "$(dirname $DATASET_SRM_FILE)" "file:///$GC_SCRATCH" "$(basename $DATASET_SRM_FILE)"
-        done
-        echo
+	echo "==========================="
+	echo
+	echo "Copy dataset files via SRM"
+	for DATASET_SRM_FILE in $DATASET_SRM_FILES; do
+		url_copy "$(dirname $DATASET_SRM_FILE)" "file:///$GC_SCRATCH" "$(basename $DATASET_SRM_FILE)"
+	done
+	echo
 fi
 
 echo "==========================="
@@ -229,19 +229,19 @@ export LOG_MD5="$GC_LANDINGZONE/SE.log"
 
 # Remove dataset files copied via SRM, if available:
 if [ -n "$DATASET_SRM_FILES" ]; then
-        echo "==========================="
-        echo
-        echo "Remove dataset files copied via SRM"
-        echo "Change to scratch directory"
-        cd $GC_SCRATCH
-        for DATASET_SRM_FILE in $DATASET_SRM_FILES; do
-                echo "Removing $(basename $DATASET_SRM_FILE)"
-                rm "$(basename $DATASET_SRM_FILE)"
-        done
-        echo "Change back to start directory"
-        cd -
-        echo
-        checkdir "Scratch directory" "$GC_SCRATCH"
+	echo "==========================="
+	echo
+	echo "Remove dataset files copied via SRM"
+	echo "Change to scratch directory"
+	cd $GC_SCRATCH
+	for DATASET_SRM_FILE in $DATASET_SRM_FILES; do
+		echo "Removing $(basename $DATASET_SRM_FILE)"
+		rm "$(basename $DATASET_SRM_FILE)"
+	done
+	echo "Change back to start directory"
+	cd -
+	echo
+	checkdir "Scratch directory" "$GC_SCRATCH"
 fi
 
 

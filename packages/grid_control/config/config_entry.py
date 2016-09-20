@@ -12,7 +12,7 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-from grid_control.utils.parsing import strDict
+from grid_control.utils.parsing import str_dict
 from hpfwk import APIError, NestedException, clear_current_exception
 from python_compat import ichain, ifilter, imap, lfilter, lmap, set, sorted, unspecified
 
@@ -51,7 +51,7 @@ class ConfigEntry(object):
 		(self.value, self.opttype, self.accessed, self.used) = (value, opttype, accessed, used)
 
 	def __repr__(self):
-		return '%s(%s)' % (self.__class__.__name__, strDict(self.__dict__))
+		return '%s(%s)' % (self.__class__.__name__, str_dict(self.__dict__))
 
 	def format_opt(self):
 		if '!' in self.section:

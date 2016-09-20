@@ -18,7 +18,7 @@ from grid_control import utils
 from grid_control.config.config_entry import ConfigEntry, ConfigError
 from grid_control.utils.data_structures import UniqueList
 from grid_control.utils.file_objects import SafeFile
-from grid_control.utils.parsing import parseList
+from grid_control.utils.parsing import parse_list
 from grid_control.utils.thread_tools import TimeoutException, hang_protection
 from hpfwk import AbstractError, Plugin
 from python_compat import identity, imap, irange, itemgetter, lfilter, lmap, rsplit
@@ -61,9 +61,9 @@ class FileConfigFiller(ConfigFiller):
 			self._add_entry(container, 'global', 'plugin paths+', searchString, str.join(',', self._config_file_list))
 
 	def _fill_content_deep(self, config_file, search_paths, content_configfile):
-		log = logging.getLogger(('config.%s' % utils.getRootName(config_file)).rstrip('.').lower())
+		log = logging.getLogger(('config.%s' % utils.get_file_name(config_file)).rstrip('.').lower())
 		log.log(logging.INFO1, 'Reading config file %s', config_file)
-		config_file = utils.resolvePath(config_file, search_paths, ErrorClass = ConfigError)
+		config_file = utils.resolve_path(config_file, search_paths, exception_type = ConfigError)
 		config_file_lines = SafeFile(config_file).readlines()
 
 		# Single pass, non-recursive list retrieval
@@ -72,7 +72,7 @@ class FileConfigFiller(ConfigFiller):
 		def getFlatList(section, option):
 			for (opt, value, _) in tmp_content_configfile.get(section, []):
 				if opt == option:
-					for entry in parseList(value, None):
+					for entry in parse_list(value, None):
 						yield entry
 
 		newsearch_paths = [os.path.dirname(config_file)]
@@ -170,17 +170,17 @@ class DefaultFilesConfigFiller(FileConfigFiller):
 		log = logging.getLogger('config.default')
 		try:
 			host = hang_protection(resolve_hostname, timeout = 5)
-			host_config = lmap(lambda c: utils.pathPKG('../config/%s.conf' % host.split('.', c)[-1]), irange(host.count('.') + 1, -1, -1))
+			host_config = lmap(lambda c: utils.path_pkg('../config/%s.conf' % host.split('.', c)[-1]), irange(host.count('.') + 1, -1, -1))
 			log.log(logging.DEBUG1, 'Possible host config files: %s', str.join(', ', host_config))
 		except TimeoutException:
 			sys.stderr.write('System call to resolve hostname is hanging!\n')
 			sys.stderr.flush()
 			host_config = []
-		default_config = ['/etc/grid-control.conf', '~/.grid-control.conf', utils.pathPKG('../config/default.conf')]
+		default_config = ['/etc/grid-control.conf', '~/.grid-control.conf', utils.path_pkg('../config/default.conf')]
 		if os.environ.get('GC_CONFIG'):
 			default_config.append('$GC_CONFIG')
 		log.log(logging.DEBUG1, 'Possible default config files: %s', str.join(', ', default_config))
-		fqconfig_file_list = lmap(lambda p: utils.resolvePath(p, mustExist = False), host_config + default_config)
+		fqconfig_file_list = lmap(lambda p: utils.resolve_path(p, must_exist = False), host_config + default_config)
 		FileConfigFiller.__init__(self, lfilter(os.path.exists, fqconfig_file_list), add_search_path = False)
 
 
@@ -220,7 +220,7 @@ class PythonConfigFiller(DictConfigFiller):
 		for config_file in config_file_list:
 			fp = SafeFile(config_file)
 			try:
-				utils.execWrapper(fp.read(), {'Settings': Settings})
+				utils.exec_wrapper(fp.read(), {'Settings': Settings})
 			finally:
 				fp.close()
 		DictConfigFiller.__init__(self, Settings.getConfigDict())

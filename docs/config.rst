@@ -372,10 +372,10 @@ dataset options
     List of metadata keys that have configuration options to specify how metadata changes are handled by a dataset resync
   * ``resync mode <metadata key>`` = <enum: disable|complete|changed|ignore> (default: complete)
     Specify how changes in the given metadata key affect partitions during resync
+  * ``resync mode added`` = <enum: disable|complete|changed|ignore> (default: complete)
+    Sets the resync mode for new files
   * ``resync mode expand`` = <enum: disable|complete|changed|ignore> (default: changed)
     Sets the resync mode for expanded files
-  * ``resync mode new`` = <enum: disable|complete|changed|ignore> (default: complete)
-    Sets the resync mode for new files
   * ``resync mode removed`` = <enum: disable|complete|changed|ignore> (default: complete)
     Sets the resync mode for removed files
   * ``resync mode shrink`` = <enum: disable|complete|changed|ignore> (default: changed)

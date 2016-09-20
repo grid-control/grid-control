@@ -22,25 +22,25 @@ from python_compat import BytesBuffer, imap, lmap, lzip
 
 parser = Options()
 parser.section('back', 'Backend debugging', '%s [<backend specifier>] ...')
-parser.addBool('back', '', 'backend-list-nodes',     default=False, help='List backend nodes')
-parser.addBool('back', '', 'backend-list-queues',    default=False, help='List backend queues')
+parser.add_bool('back', '', 'backend-list-nodes',     default=False, help='List backend nodes')
+parser.add_bool('back', '', 'backend-list-queues',    default=False, help='List backend queues')
 
 parser.section('part', 'Dataset Partition debugging', '%s <path to partition file> ...')
-parser.addText('part', '', 'partition-list',         default=None,  help='Select dataset partition information to display')
-parser.addBool('part', '', 'partition-list-invalid', default=False, help='List invalidated dataset partitions')
-parser.addBool('part', '', 'partition-check',        default=None,  help='Check dataset partition in specified work directory')
+parser.add_text('part', '', 'partition-list',         default=None,  help='Select dataset partition information to display')
+parser.add_bool('part', '', 'partition-list-invalid', default=False, help='List invalidated dataset partitions')
+parser.add_bool('part', '', 'partition-check',        default=None,  help='Check dataset partition in specified work directory')
 
 parser.section('jobs', 'Jobs debugging', '%s <config file / job file> ... ')
-parser.addText('jobs', '', 'job-selector',           default='',    help='Display jobs matching selector')
-parser.addBool('jobs', '', 'job-reset-attempts',     default=False, help='Reset the attempt counter')
-parser.addText('jobs', '', 'job-force-state',        default='',    help='Force new job state')
-parser.addText('jobs', '', 'job-show-jdl',           default='',    help='Show JDL file if available')
+parser.add_text('jobs', '', 'job-selector',           default='',    help='Display jobs matching selector')
+parser.add_bool('jobs', '', 'job-reset-attempts',     default=False, help='Reset the attempt counter')
+parser.add_text('jobs', '', 'job-force-state',        default='',    help='Force new job state')
+parser.add_text('jobs', '', 'job-show-jdl',           default='',    help='Show JDL file if available')
 
 parser.section('data', 'Dataset debugging', '%s <dataset file> <dataset file> ...')
-parser.addText('data', '', 'dataset-show-diff',      default='',    help='Show difference between datasets')
-parser.addText('data', '', 'dataset-show-removed',   default='',    help='Find removed dataset blocks')
+parser.add_text('data', '', 'dataset-show-diff',      default='',    help='Show difference between datasets')
+parser.add_text('data', '', 'dataset-show-removed',   default='',    help='Find removed dataset blocks')
 
-parser.addText(None,  'd', 'logfile-decode',         default='',    help='Decode log files')
+parser.add_text(None,  'd', 'logfile-decode',         default='',    help='Decode log files')
 options = scriptOptions(parser)
 (opts, args) = (options.opts, options.args)
 
@@ -96,11 +96,11 @@ def partition_check(splitter):
 
 if (opts.partition_list is not None) or opts.partition_list_invalid or opts.partition_check:
 	if len(args) != 1:
-		utils.exitWithUsage(parser.usage('part'))
+		utils.exit_with_usage(parser.usage('part'))
 	splitter = DataSplitter.load_partitions_for_script(args[0])
 
 	if opts.partition_list_invalid:
-		utils.printTabular([(0, 'Job')], partition_invalid(splitter))
+		utils.display_table([(0, 'Job')], partition_invalid(splitter))
 
 	if opts.partition_list is not None:
 		if opts.partition_list in ('', 'all'):
@@ -110,7 +110,7 @@ if (opts.partition_list is not None) or opts.partition_list_invalid or opts.part
 		keyList = lmap(DataSplitter.str2enum, keyStrings)
 		if None in keyList:
 			logging.warning('Available keys: %r', DataSplitter.enumNames)
-		utils.printTabular([('partition_num', 'Job')] + lzip(keyList, keyStrings), partition_list(splitter, keyList))
+		utils.display_table([('partition_num', 'Job')] + lzip(keyList, keyStrings), partition_list(splitter, keyList))
 
 	if opts.partition_check:
 		logging.info('Checking %d jobs...', splitter.get_partition_len())
@@ -154,7 +154,7 @@ def jobs_show_jdl(jobDB, selected):
 
 if opts.job_selector or opts.job_reset_attempts or opts.job_force_state or opts.job_show_jdl:
 	if len(args) != 1:
-		utils.exitWithUsage(parser.usage('jobs'))
+		utils.exit_with_usage(parser.usage('jobs'))
 	config = getConfig(args[0])
 	# Initialise task module
 	taskName = config.get(['task', 'module'])
@@ -174,15 +174,15 @@ if opts.job_selector or opts.job_reset_attempts or opts.job_force_state or opts.
 
 if opts.dataset_show_diff:
 	if len(args) != 2:
-		utils.exitWithUsage('%s <dataset source 1> <dataset source 2>' % sys.argv[0])
+		utils.exit_with_usage('%s <dataset source 1> <dataset source 2>' % sys.argv[0])
 	a = DataProvider.create_instance('ListProvider', config, args[0], None)
 	b = DataProvider.create_instance('ListProvider', config, args[1], None)
 	(blocksAdded, blocksMissing, blocksChanged) = DataProvider.resyncSources(a.getBlocks(show_stats = False), b.getBlocks(show_stats = False))
-	utils.printTabular([(DataProvider.Dataset, 'Dataset'), (DataProvider.BlockName, 'Block')], blocksMissing)
+	utils.display_table([(DataProvider.Dataset, 'Dataset'), (DataProvider.BlockName, 'Block')], blocksMissing)
 
 if opts.dataset_show_removed:
 	if len(args) < 2:
-		utils.exitWithUsage('%s <dataset source 1> <dataset source 2> ... <dataset source N> ' % sys.argv[0])
+		utils.exit_with_usage('%s <dataset source 1> <dataset source 2> ... <dataset source N> ' % sys.argv[0])
 	removed = []
 	oldDP = DataProvider.create_instance('ListProvider', config, args[0], None)
 	for new in args[1:]:
@@ -193,7 +193,7 @@ if opts.dataset_show_removed:
 			tmp[-1] = new
 			removed.append(tmp)
 		oldDP = newDP
-	utils.printTabular([(DataProvider.Dataset, 'Dataset'), (DataProvider.BlockName, 'Block'), (-1, 'Removed in file')], removed)
+	utils.display_table([(DataProvider.Dataset, 'Dataset'), (DataProvider.BlockName, 'Block'), (-1, 'Removed in file')], removed)
 
 if opts.logfile_decode:
 	import base64, gzip

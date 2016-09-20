@@ -19,7 +19,7 @@ from grid_control.backends.backend_tools import BackendDiscovery, ProcessCreator
 from grid_control.backends.wms import BackendError, WMS
 from grid_control.backends.wms_pbsge import PBSGECommon
 from grid_control.job_db import Job
-from grid_control.utils.parsing import parseTime
+from grid_control.utils.parsing import parse_time
 from grid_control.utils.process_base import LocalProcess
 from python_compat import identity, ifilter, izip, lmap
 
@@ -53,7 +53,7 @@ class PBS_CheckJobs(CheckJobsWithProcess):
 class PBS_Discover_Nodes(BackendDiscovery):
 	def __init__(self, config):
 		BackendDiscovery.__init__(self, config)
-		self._exec = utils.resolveInstallPath('pbsnodes')
+		self._exec = utils.resolve_install_path('pbsnodes')
 
 	def discover(self):
 		proc = LocalProcess(self._exec)
@@ -68,12 +68,12 @@ class PBS_Discover_Nodes(BackendDiscovery):
 class PBS_Discover_Queues(BackendDiscovery):
 	def __init__(self, config):
 		BackendDiscovery.__init__(self, config)
-		self._exec = utils.resolveInstallPath('qstat')
+		self._exec = utils.resolve_install_path('qstat')
 
 	def discover(self):
 		active = False
 		keys = [WMS.MEMORY, WMS.CPUTIME, WMS.WALLTIME]
-		parser = dict(izip(keys, [int, parseTime, parseTime]))
+		parser = dict(izip(keys, [int, parse_time, parse_time]))
 		proc = LocalProcess(self._exec, '-q')
 		for line in proc.stdout.iter(timeout = 10):
 			if line.startswith('-'):

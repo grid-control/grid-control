@@ -15,7 +15,7 @@
 from grid_control.backends.broker_base import Broker
 from grid_control.backends.wms import WMS
 from grid_control.config import ListOrder
-from grid_control.utils.parsing import parseList
+from grid_control.utils.parsing import parse_list
 from python_compat import imap, lfilter, lmap, sorted
 
 
@@ -117,7 +117,7 @@ class StorageBroker(Broker):
 	def __init__(self, config, name, broker_prefix, itemName, discoverFun):
 		Broker.__init__(self, config, name, broker_prefix, itemName, discoverFun)
 		self._storageDict = config.getLookup('%s storage access' % broker_prefix, {}, onChange = None,
-			parser = lambda x: parseList(x, ' '), strfun = lambda x: str.join(' ', x))
+			parser = lambda x: parse_list(x, ' '), strfun = lambda x: str.join(' ', x))
 
 	def _broker(self, reqs, items):
 		result = Broker._broker(self, reqs, items)

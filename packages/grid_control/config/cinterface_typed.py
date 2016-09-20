@@ -18,8 +18,8 @@ from grid_control.config.cinterface_base import ConfigInterface
 from grid_control.config.config_entry import ConfigError, appendOption
 from grid_control.config.cview_base import SimpleConfigView
 from grid_control.config.matcher_base import DictLookup, ListFilter, ListOrder, Matcher
-from grid_control.utils.data_structures import makeEnum
-from grid_control.utils.parsing import parseBool, parseDict, parseList, parseTime, strDictLong, strTimeShort
+from grid_control.utils.data_structures import make_enum
+from grid_control.utils.parsing import parse_bool, parse_dict, parse_list, parse_time, str_dict_cfg, str_time_short
 from grid_control.utils.thread_tools import GCEvent
 from hpfwk import APIError, ExceptionCollector, Plugin
 from python_compat import any, get_user_input, identity, ifilter, imap, lmap, relpath, sorted, unspecified
@@ -40,7 +40,7 @@ class TypedConfigInterface(ConfigInterface):
 	# Handling boolean config options - feature: true and false are not the only valid expressions
 	def getBool(self, option, default = unspecified, **kwargs):
 		def str2obj(value):
-			result = parseBool(value)
+			result = parse_bool(value)
 			if result is None:
 				raise ConfigError('Valid boolean expressions are: "true", "false"')
 			return result
@@ -52,40 +52,40 @@ class TypedConfigInterface(ConfigInterface):
 	def getTime(self, option, default = unspecified, **kwargs):
 		def str2obj(value):
 			try:
-				return parseTime(value) # empty or negative values are mapped to -1
+				return parse_time(value) # empty or negative values are mapped to -1
 			except Exception:
 				raise ConfigError('Valid time expressions have the format: hh[:mm[:ss]]')
-		return self._getInternal('time', strTimeShort, str2obj, None, option, default, **kwargs)
+		return self._getInternal('time', str_time_short, str2obj, None, option, default, **kwargs)
 	def setTime(self, option, value, opttype = '=', source = None):
-		return self._setInternal('time', strTimeShort, option, value, opttype, source)
+		return self._setInternal('time', str_time_short, option, value, opttype, source)
 
 	# Returns a tuple with (<dictionary>, <keys>) - the keys are sorted by order of appearance
 	# Default key is accessed via key == None (None is never in keys!)
 	def getDict(self, option, default = unspecified, parser = identity, strfun = str, **kwargs):
-		obj2str = lambda value: strDictLong(value, parser, strfun)
-		str2obj = lambda value: parseDict(value, parser)
+		obj2str = lambda value: str_dict_cfg(value, parser, strfun)
+		str2obj = lambda value: parse_dict(value, parser)
 		def2obj = lambda value: (value, sorted(ifilter(lambda key: key is not None, value.keys())))
 		return self._getInternal('dictionary', obj2str, str2obj, def2obj, option, default, **kwargs)
 
 	# Get whitespace separated list (space, tab, newline)
 	def getList(self, option, default = unspecified, parseItem = identity, **kwargs):
 		obj2str = lambda value: '\n' + str.join('\n', imap(str, value))
-		str2obj = lambda value: lmap(parseItem, parseList(value, None))
+		str2obj = lambda value: lmap(parseItem, parse_list(value, None))
 		return self._getInternal('list', obj2str, str2obj, None, option, default, **kwargs)
 
 	# Resolve path
-	def resolvePath(self, value, mustExist, errorMsg):
+	def resolve_path(self, value, must_exist, errorMsg):
 		try:
-			return utils.resolvePath(value, self._config_view.config_vault.get('path:search', []), mustExist, ConfigError)
+			return utils.resolve_path(value, self._config_view.config_vault.get('path:search', []), must_exist, ConfigError)
 		except Exception:
 			raise ConfigError(errorMsg)
 
 	# Return resolved path (search paths given in config_vault['path:search'])
-	def getPath(self, option, default = unspecified, mustExist = True, relative = None, **kwargs):
+	def getPath(self, option, default = unspecified, must_exist = True, relative = None, **kwargs):
 		def parsePath(value):
 			if value == '':
 				return ''
-			return self.resolvePath(value, mustExist, 'Error resolving path %s' % value)
+			return self.resolve_path(value, must_exist, 'Error resolving path %s' % value)
 		obj2str = str.__str__
 		str2obj = parsePath
 		if relative:
@@ -94,18 +94,18 @@ class TypedConfigInterface(ConfigInterface):
 		return self._getInternal('path', obj2str, str2obj, None, option, default, **kwargs)
 
 	# Return multiple resolved paths (each line processed same as getPath)
-	def getPaths(self, option, default = unspecified, mustExist = True, **kwargs):
-		def patlist2pathlist(value, mustExist):
+	def getPaths(self, option, default = unspecified, must_exist = True, **kwargs):
+		def patlist2pathlist(value, must_exist):
 			ec = ExceptionCollector()
 			for pattern in value:
 				try:
-					for fn in utils.resolvePaths(pattern, self._config_view.config_vault.get('path:search', []), mustExist, ConfigError):
+					for fn in utils.resolve_paths(pattern, self._config_view.config_vault.get('path:search', []), must_exist, ConfigError):
 						yield fn
 				except Exception:
 					ec.collect()
 			ec.raise_any(ConfigError('Error resolving paths'))
 
-		str2obj = lambda value: list(patlist2pathlist(parseList(value, None), mustExist))
+		str2obj = lambda value: list(patlist2pathlist(parse_list(value, None), must_exist))
 		obj2str = lambda value: '\n' + str.join('\n', patlist2pathlist(value, False))
 		return self._getInternal('paths', obj2str, str2obj, None, option, default, **kwargs)
 
@@ -151,7 +151,7 @@ class TypedConfigInterface(ConfigInterface):
 			pargs = tuple([clsList] + list(pargs or [])), **kwargs)
 
 
-CommandType = makeEnum(['executable', 'command'])
+CommandType = make_enum(['executable', 'command'])
 
 
 class SimpleConfigInterface(TypedConfigInterface):
@@ -244,7 +244,7 @@ class SimpleConfigInterface(TypedConfigInterface):
 
 	def getChoiceYesNo(self, option, default = unspecified, **kwargs):
 		return self.getChoice(option, [True, False], default,
-			obj2str = {True: 'yes', False: 'no'}.get, str2obj = parseBool, **kwargs)
+			obj2str = {True: 'yes', False: 'no'}.get, str2obj = parse_bool, **kwargs)
 
 	def getEnum(self, option, enum, default = unspecified, subset = None, **kwargs):
 		choices = enum.enumValues

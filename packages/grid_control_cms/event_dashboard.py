@@ -15,9 +15,10 @@
 import os, time
 from grid_control.job_db import Job
 from grid_control.monitoring import Monitoring
-from grid_control.utils import filterDict, getVersion, mergeDicts, pathShare
+from grid_control.utils import filter_dict, get_version, merge_dict_list, path_share
 from grid_control.utils.thread_tools import GCThreadPool
 from grid_control_cms.DashboardAPI.DashboardAPI import DashboardAPI
+from python_compat import identity
 
 
 class DashBoard(Monitoring):
@@ -36,7 +37,7 @@ class DashBoard(Monitoring):
 
 
 	def getScript(self):
-		yield pathShare('mon.dashboard.sh', pkg = 'grid_control_cms')
+		yield path_share('mon.dashboard.sh', pkg = 'grid_control_cms')
 
 
 	def getTaskConfig(self):
@@ -46,9 +47,9 @@ class DashBoard(Monitoring):
 
 
 	def getFiles(self):
-		yield pathShare('mon.dashboard.sh', pkg = 'grid_control_cms')
+		yield path_share('mon.dashboard.sh', pkg = 'grid_control_cms')
 		for fn in ('DashboardAPI.py', 'Logger.py', 'apmon.py', 'report.py'):
-			yield pathShare('..', 'DashboardAPI', fn, pkg = 'grid_control_cms')
+			yield path_share('..', 'DashboardAPI', fn, pkg = 'grid_control_cms')
 
 
 	def _publish(self, jobObj, jobNum, taskId, usermsg):
@@ -56,14 +57,14 @@ class DashBoard(Monitoring):
 		dashId = '%s_%s' % (jobNum, rawId)
 		if 'http' not in jobObj.gcID:
 			dashId = '%s_https://%s:/%s' % (jobNum, backend, rawId)
-		msg = mergeDicts([{'taskId': taskId, 'jobId': dashId, 'sid': rawId}] + usermsg)
-		DashboardAPI(taskId, dashId).publish(**filterDict(msg, vF = lambda v: v is not None))
+		msg = merge_dict_list([{'taskId': taskId, 'jobId': dashId, 'sid': rawId}] + usermsg)
+		DashboardAPI(taskId, dashId).publish(**filter_dict(msg, value_filter = identity))
 
 
 	def _start_publish(self, jobObj, jobNum, desc, message):
 		taskId = self._task.substVars('dashboard task id', self._taskname, jobNum,
 			addDict = {'DATASETNICK': ''}).strip('_')
-		self._tp.start_thread('Notifying dashboard about %s of job %d' % (desc, jobNum),
+		self._tp.start_daemon('Notifying dashboard about %s of job %d' % (desc, jobNum),
 			self._publish, jobObj, jobNum, taskId, message)
 
 
@@ -73,7 +74,7 @@ class DashBoard(Monitoring):
 		jobInfo = self._task.getJobConfig(jobNum)
 		self._start_publish(jobObj, jobNum, 'submission', [{
 			'user': os.environ['LOGNAME'], 'GridName': '/CN=%s' % token.getUsername(), 'CMSUser': token.getUsername(),
-			'tool': 'grid-control', 'JSToolVersion': getVersion(),
+			'tool': 'grid-control', 'JSToolVersion': get_version(),
 			'SubmissionType':'direct', 'tool_ui': os.environ.get('HOSTNAME', ''),
 			'application': jobInfo.get('SCRAM_PROJECTVERSION', self._app),
 			'exe': jobInfo.get('CMSSW_EXEC', 'shellscript'), 'taskType': self._tasktype,

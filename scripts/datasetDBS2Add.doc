@@ -63,10 +63,10 @@ class DBSInfoProvider(datasets.GCProvider):
 		rawDS = '/%s/%s/%s' % (primary, processed, tier)
 		if None in (primary, processed, tier):
 			raise Exception('Invalid dataset name supplied: %r\nresulting in %s' % (self.nameDS, rawDS))
-		return utils.replaceDict(rawDS, data)
+		return utils.replace_with_dict(rawDS, data)
 
 	def generateBlockName(self, key, data):
-		return strGuid(key)
+		return str_guid(key)
 
 
 class XMLWriter: # xml.dom.minidom needs a lot of memory - could be replaced by something simpler...
@@ -114,7 +114,7 @@ def getDBSXML(opts, block, dsBlocks):
 
 	if block[DataProvider.Dataset].count('/') != 3:
 		raise Exception('Invalid dataset name: %s' % block[DataProvider.Dataset])
-	if block[DataProvider.BlockName] != strGuid(block[DataProvider.BlockName].replace('-', '')):
+	if block[DataProvider.BlockName] != str_guid(block[DataProvider.BlockName].replace('-', '')):
 		raise Exception('Invalid block name: %s' % block[DataProvider.BlockName])
 
 	dataType = set(getAllM(DBS.TYPE))
@@ -217,7 +217,7 @@ def createDBSXMLDumps(opts, allBlocks):
 	for idx, block in enumerate(allBlocks):
 		log = utils.ActivityLog(' * Creating DBS dump files - [%d / %d]' % (idx, len(allBlocks)))
 		fqBlock, dump = getDBSXML(opts, block, allBlocks)
-		xmlDSPath = os.path.join(opts.tmpDir, strGuid(md5(block[DataProvider.Dataset]).hexdigest()))
+		xmlDSPath = os.path.join(opts.tmpDir, str_guid(md5(block[DataProvider.Dataset]).hexdigest()))
 		if not os.path.exists(xmlDSPath):
 			os.makedirs(xmlDSPath)
 		xmlPath = os.path.join(xmlDSPath, block[DataProvider.BlockName])
@@ -396,7 +396,7 @@ try:
 
 	# 0) Get work directory, create dbs dump directory
 	if len(args) != 1:
-		utils.exitWithUsage(usage, 'Neither work directory nor config file specified!')
+		utils.exit_with_usage(usage, 'Neither work directory nor config file specified!')
 	if os.path.isdir(args[0]):
 		opts.workDir = os.path.abspath(os.path.normpath(args[0]))
 	else:
@@ -430,7 +430,7 @@ try:
 		oldBlocks = reduce(operator.add, map(lambda ds: DBSApiv2(config, None, ds, None).getBlocks(show_stats = False), dNames), [])
 		(blocksAdded, blocksMissing, blocksChanged) = DataProvider.resyncSources(oldBlocks, blocks)
 		if len(blocksMissing) or len(blocksChanged):
-			if not utils.getUserBool(' * WARNING: Block structure has changed! Continue?', False):
+			if not utils.get_user_bool(' * WARNING: Block structure has changed! Continue?', False):
 				sys.exit(os.EX_OK)
 		# Search for blocks which were partially added and generate "pseudo"-blocks with left over files
 		setOldBlocks = set(map(lambda x: x[DataProvider.BlockName], oldBlocks))
@@ -439,7 +439,7 @@ try:
 		if blockCollision and opts.closeBlock: # Block are closed and contents have changed
 			for block in blocksAdded:
 				if block[DataProvider.BlockName] in blockCollision:
-					block[DataProvider.BlockName] = strGuid(md5(str(time.time())).hexdigest())
+					block[DataProvider.BlockName] = str_guid(md5(str(time.time())).hexdigest())
 		blocks = blocksAdded
 
 	# 3) Display dataset properties
@@ -462,13 +462,13 @@ try:
 		if len(parents) > 0:
 			utils.vprint(' * The following parents will be needed at the target dbs instance:', -1)
 			utils.vprint(str.join('\n', map(lambda x: '   * %s' % x, parents)), -1)
-			if not (opts.batch or utils.getUserBool(' * Register these parents?', True)):
+			if not (opts.batch or utils.get_user_bool(' * Register these parents?', True)):
 				sys.exit(os.EX_OK)
 			for parent in parents:
 				registerParent(opts, parent)
 
 	# 6) Insert blocks into DBS
-	if opts.batch or utils.getUserBool(' * Start dataset import?', True):
+	if opts.batch or utils.get_user_bool(' * Start dataset import?', True):
 		fail = False
 		for (fqBlock, xmlBPath) in xmlFiles:
 			if not registerDataset(opts, fqBlock, xmlBPath):

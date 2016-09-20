@@ -34,11 +34,11 @@ except ImportError:
 import os, re, logging
 from grid_control.output_processor import JobInfoProcessor, JobResult
 from grid_control.report import Report
-from grid_control.utils.data_structures import makeEnum
+from grid_control.utils.data_structures import make_enum
 from python_compat import irange, izip
 
 
-JobResultEnum = makeEnum([
+JobResultEnum = make_enum([
 	"TIMESTAMP_WRAPPER_START",
 	"TIMESTAMP_DEPLOYMENT_START",
 	"TIMESTAMP_DEPLOYMENT_DONE",

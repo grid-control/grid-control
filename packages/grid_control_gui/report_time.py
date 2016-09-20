@@ -14,7 +14,7 @@
 
 import sys
 from grid_control.report import Report
-from grid_control.utils.parsing import strTime
+from grid_control.utils.parsing import str_time_long
 from python_compat import ifilter, imap
 
 
@@ -31,7 +31,7 @@ class TimeReport(Report):
 	def show_report(self, job_db):
 		job_runtimes = imap(lambda jobNum: job_db.getJobTransient(jobNum).get('runtime', 0), self._jobs)
 		cpuTime = sum(ifilter(lambda rt: rt > 0, job_runtimes))
-		msg = 'Consumed wall time: %-20s' % strTime(cpuTime)
+		msg = 'Consumed wall time: %-20s' % str_time_long(cpuTime)
 		msg += 'Estimated cost: $%.2f\n' % ((cpuTime / 60. / 60.) * self._dollar_per_hour)
 		sys.stdout.write(msg)
 		sys.stdout.flush()

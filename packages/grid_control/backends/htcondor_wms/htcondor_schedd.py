@@ -153,7 +153,7 @@ class HTCScheddBase(Plugin):
 	def _getBaseJDLData(self, task, queryArguments):
 		"""Create a sequence of default attributes for a submission JDL"""
 		jdlData = [
-			'+submitTool              = "GridControl (version %s)"' % utils.getVersion(),
+			'+submitTool              = "GridControl (version %s)"' % utils.get_version(),
 			'should_transfer_files    = YES',
 			'when_to_transfer_output  = ON_EXIT',
 			'periodic_remove          = (JobStatus == 5 && HoldReasonCode != 16)',
@@ -195,7 +195,7 @@ class HTCScheddBase(Plugin):
 		for reqType, reqValue in requirements:
 			# ('WALLTIME', 'CPUTIME', 'MEMORY', 'CPUS', 'BACKEND', 'SITES', 'QUEUES', 'SOFTWARE', 'STORAGE')
 			if reqType == WMS.SITES:
-				(wantSites, vetoSites) = utils.splitBlackWhiteList(reqValue[1])
+				(wantSites, vetoSites) = utils.split_blackwhite_list(reqValue[1])
 				if "+SITES" in poolRequMap:
 					jdlData.append( '%s = "%s"' % (
 						poolRequMap["+SITES"][0],
@@ -368,7 +368,7 @@ class HTCScheddLocal(HTCScheddCLIBase):
 
 	def _prepareSubmit(self, task, jobNumList, queryArguments):
 		jdlFilePath = os.path.join(self.parentPool.getSandboxPath(), 'htc-%s.schedd-%s.jdl' % (self.parentPool.wmsName,md5(self.getURI()).hexdigest()))
-		utils.safeWrite(open(jdlFilePath, 'w'),
+		utils.safe_write(open(jdlFilePath, 'w'),
 			lmap(lambda line: line + '\n', self._getJDLData(task, jobNumList, queryArguments)))
 		return jdlFilePath
 
@@ -524,7 +524,7 @@ class HTCScheddSSH(HTCScheddCLIBase):
 	def _prepareSubmit(self, task, jobNumList, queryArguments):
 		localJdlFilePath = os.path.join(self.parentPool.getSandboxPath(), 'htc-%s.schedd-%s.jdl' % (self.parentPool.wmsName,md5(self.getURI()).hexdigest()))
 		readyJobNumList  = self._stageSubmitFiles(task, jobNumList)
-		utils.safeWrite(open(localJdlFilePath, 'w'),
+		utils.safe_write(open(localJdlFilePath, 'w'),
 			lmap(lambda line: line + '\n', self._getJDLData(task, readyJobNumList, queryArguments)))
 		raise NotImplementedError('JDL must get moved to remote')
 		return jdlFilePath

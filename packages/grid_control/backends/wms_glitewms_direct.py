@@ -33,7 +33,7 @@ class GliteWMSDirect_CheckJobs(CheckJobs):
 		ec = ExceptionCollector()
 		for wmsID in wmsIDs:
 			try:
-				job_info = utils.filterDict(dict(self._status_fun(wmsID)), vF = lambda v: v not in ['', '0'])
+				job_info = utils.filter_dict(dict(self._status_fun(wmsID)), value_filter = lambda v: v not in ['', '0'])
 				job_info[CheckInfo.RAW_STATUS] = job_info.pop('status', '').lower()
 				if 'destination' in job_info:
 					try:

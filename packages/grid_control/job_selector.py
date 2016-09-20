@@ -16,7 +16,7 @@ import re, time, operator
 from grid_control import utils
 from grid_control.gc_exceptions import UserError
 from grid_control.job_db import Job
-from grid_control.utils.parsing import parseTime
+from grid_control.utils.parsing import parse_time
 from hpfwk import AbstractError, Plugin
 from python_compat import identity, imap, ismap, lfilter, lmap, reduce
 
@@ -52,7 +52,7 @@ class StuckSelector(JobSelector):
 	alias_list = ['stuck']
 
 	def __init__(self, arg, **kwargs):
-		self._time_threshold = parseTime(arg)
+		self._time_threshold = parse_time(arg)
 
 	def __call__(self, jobNum, jobObj):
 		return (jobObj.changed > 0) and (time.time() - jobObj.changed) > self._time_threshold

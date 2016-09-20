@@ -47,7 +47,7 @@ class LoggedProcess(object):
 		self.stderr.extend(self.proc.childerr.readlines())
 		return str.join('', self.stderr)
 
-	def getMessage(self):
+	def get_message(self):
 		return self.getOutput() + '\n' + self.getError()
 
 	def kill(self):
@@ -105,7 +105,7 @@ class LoggedProcess(object):
 					content = [value]
 				files.append(VirtualFile(os.path.join(entry, key), content))
 			for fileObj in files:
-				info, handle = fileObj.getTarInfo()
+				info, handle = fileObj.get_tar_info()
 				tar.addfile(info, handle)
 				handle.close()
 			tar.close()

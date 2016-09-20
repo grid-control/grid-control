@@ -16,7 +16,7 @@ import re, random
 from grid_control.backends import WMS
 from grid_control.config import ConfigError
 from grid_control.parameters.psource_base import ImmutableParameterSource, ParameterInfo, ParameterMetadata, ParameterSource
-from grid_control.utils.parsing import parseTime, parseType, strDict
+from grid_control.utils.parsing import parse_time, parse_type, str_dict
 from python_compat import imap, lmap
 
 
@@ -24,7 +24,7 @@ class InternalParameterSource(ImmutableParameterSource):
 	def __init__(self, values, metas):
 		(self._values, self._metas) = (values, metas)
 		self._keys = lmap(lambda pm: pm.get_value(), metas)
-		ImmutableParameterSource.__init__(self, (lmap(strDict, values), self._keys))
+		ImmutableParameterSource.__init__(self, (lmap(str_dict, values), self._keys))
 
 	def __repr__(self):
 		return '<internal:%s=%s>' % (str.join('|', self._keys), self.get_psrc_hash())
@@ -116,7 +116,7 @@ class FormatterParameterSource(SingleParameterSource):
 		return 'format(%r, %r, %r, %r)' % (self._key, self._fmt, self._source, self._default)
 
 	def fill_parameter_content(self, pNum, result):
-		src = parseType(str(result.get(self._source, self._default)))
+		src = parse_type(str(result.get(self._source, self._default)))
 		result[self._key] = self._fmt % src
 
 	def show_psrc(self):
@@ -178,7 +178,7 @@ class TransformParameterSource(SingleParameterSource):
 		return 'transform(%r, %r, %r)' % (self._key, self._fmt, self._default)
 
 	def fill_parameter_content(self, pNum, result):
-		tmp = dict(imap(lambda k_v: (str(k_v[0]), parseType(str(k_v[1]))), result.items()))
+		tmp = dict(imap(lambda k_v: (str(k_v[0]), parse_type(str(k_v[1]))), result.items()))
 		try:
 			result[self._key] = eval(self._fmt, tmp) # pylint:disable=eval-used
 		except Exception:
@@ -212,9 +212,9 @@ class RequirementParameterSource(ParameterSource):
 
 	def fill_parameter_content(self, pNum, result):
 		if 'WALLTIME' in result:
-			result[ParameterInfo.REQS].append((WMS.WALLTIME, parseTime(result.pop('WALLTIME'))))
+			result[ParameterInfo.REQS].append((WMS.WALLTIME, parse_time(result.pop('WALLTIME'))))
 		if 'CPUTIME' in result:
-			result[ParameterInfo.REQS].append((WMS.CPUTIME, parseTime(result.pop('CPUTIME'))))
+			result[ParameterInfo.REQS].append((WMS.CPUTIME, parse_time(result.pop('CPUTIME'))))
 		if 'MEMORY' in result:
 			result[ParameterInfo.REQS].append((WMS.MEMORY, int(result.pop('MEMORY'))))
 

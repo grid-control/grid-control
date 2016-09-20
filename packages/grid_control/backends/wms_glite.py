@@ -23,6 +23,6 @@ class Glite(GridWMS):
 			checkExecutor = Grid_CheckJobs(config, 'glite-job-status'),
 			cancelExecutor = Grid_CancelJobs(config, 'glite-job-cancel'))
 
-		self._submitExec = utils.resolveInstallPath('glite-job-submit')
-		self._outputExec = utils.resolveInstallPath('glite-job-output')
+		self._submitExec = utils.resolve_install_path('glite-job-submit')
+		self._outputExec = utils.resolve_install_path('glite-job-output')
 		self._submitParams.update({'-r': self._ce, '--config-vo': self._configVO })

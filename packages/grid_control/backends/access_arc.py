@@ -30,7 +30,7 @@ class ARCAccessToken(GridAccessToken):
 	def getAuthFiles(self):
 		return [self._getProxyInfo('proxy path')]
 
-	def _parseTime(self, time_str):
+	def _parse_time(self, time_str):
 		result = 0
 		entry_map = {'yea': 365 * 24 * 60 * 60, 'day': 24 * 60 * 60, 'hou': 60 * 60, 'min': 60, 'sec': 1}
 		tmp = time_str.split()
@@ -40,5 +40,5 @@ class ARCAccessToken(GridAccessToken):
 
 	def _getTimeleft(self, cached):
 		return min(
-			self._getProxyInfo('time left for proxy', self._parseTime, cached),
-			self._getProxyInfo('time left for ac', self._parseTime, cached))
+			self._getProxyInfo('time left for proxy', self._parse_time, cached),
+			self._getProxyInfo('time left for ac', self._parse_time, cached))

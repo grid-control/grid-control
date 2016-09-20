@@ -60,6 +60,7 @@ class EntriesCountDataProcessor(DataProcessor):
 	def process_block(self, block):
 		if self.enabled():
 			block[DataProvider.NEntries] = 0
+
 			def filter_events(fi):
 				if self._limit_entries == 0: # already got all requested events
 					return False

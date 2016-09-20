@@ -23,26 +23,26 @@ from python_compat import ifilter, imap, izip, lfilter, lmap, md5_hex, set, sort
 random.seed(0)
 
 parser = Options(usage = '%s [OPTIONS] <parameter definition>')
-parser.addAccu(None, 'c', 'collapse',           default = 0,     help = 'Do not collapse dataset infos in display')
-parser.addBool(None, 'a', 'active',             default = False, help = 'Show activity state')
-parser.addBool(None, 'd', 'disabled',           default = False, help = 'Show disabled parameter sets')
-parser.addBool(None, 'f', 'force-intervention', default = False, help = 'Simulate dataset intervention')
-parser.addBool(None, 'I', 'intervention',       default = False, help = 'Display intervention tasks')
-parser.addBool(None, 'l', 'list-parameters',    default = False, help = 'Display parameter list')
-parser.addBool(None, 'L', 'show-sources',       default = False, help = 'Show parameter sources')
-parser.addBool(None, 't', 'untracked',          default = False, help = 'Display untracked variables')
-parser.addBool(None, 'T', 'persistent',         default = False, help = 'Work with persistent paramters')
-parser.addList(None, 'p', 'parameter',          default = [],    help = 'Specify parameters')
-parser.addText(None, 'D', 'dataset',            default = '',    help = 'Add dataset splitting (use "True" to simulate a dataset)')
-parser.addText(None, 'j', 'job',                default = None,  help = 'Select job to display (used for unbounded parameter spaces)')
-parser.addText(None, 'F', 'factory',            default = None,  help = 'Select parameter source factory')
-parser.addText(None, 'o', 'output',             default = '',    help = 'Show only specified parameters')
-parser.addText(None, 'S', 'save',               default = '',    help = 'Saves information to specified file')
-parser.addText(None, 'V', 'visible',            default = '',    help = 'Set visible variables')
+parser.add_accu(None, 'c', 'collapse',           default = 0,     help = 'Do not collapse dataset infos in display')
+parser.add_bool(None, 'a', 'active',             default = False, help = 'Show activity state')
+parser.add_bool(None, 'd', 'disabled',           default = False, help = 'Show disabled parameter sets')
+parser.add_bool(None, 'f', 'force-intervention', default = False, help = 'Simulate dataset intervention')
+parser.add_bool(None, 'I', 'intervention',       default = False, help = 'Display intervention tasks')
+parser.add_bool(None, 'l', 'list-parameters',    default = False, help = 'Display parameter list')
+parser.add_bool(None, 'L', 'show-sources',       default = False, help = 'Show parameter sources')
+parser.add_bool(None, 't', 'untracked',          default = False, help = 'Display untracked variables')
+parser.add_bool(None, 'T', 'persistent',         default = False, help = 'Work with persistent paramters')
+parser.add_list(None, 'p', 'parameter',          default = [],    help = 'Specify parameters')
+parser.add_text(None, 'D', 'dataset',            default = '',    help = 'Add dataset splitting (use "True" to simulate a dataset)')
+parser.add_text(None, 'j', 'job',                default = None,  help = 'Select job to display (used for unbounded parameter spaces)')
+parser.add_text(None, 'F', 'factory',            default = None,  help = 'Select parameter source factory')
+parser.add_text(None, 'o', 'output',             default = '',    help = 'Show only specified parameters')
+parser.add_text(None, 'S', 'save',               default = '',    help = 'Saves information to specified file')
+parser.add_text(None, 'V', 'visible',            default = '',    help = 'Set visible variables')
 options = scriptOptions(parser)
 
 if len(options.args) != 1:
-	utils.exitWithUsage(parser.usage())
+	utils.exit_with_usage(parser.usage())
 
 log = logging.getLogger()
 
@@ -226,7 +226,7 @@ def list_parameters(opts, psource):
 	head.extend(sorted(izip(stored, stored)))
 	if opts.untracked:
 		head.extend(sorted(imap(lambda n: (n, '(%s)' % n), ifilter(lambda n: n not in ['GC_PARAM', 'GC_JOB_ID'], untracked))))
-	utils.printTabular(head, result)
+	utils.display_table(head, result)
 
 def main(opts, args):
 	psource = get_psrc(opts, args)

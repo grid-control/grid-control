@@ -40,10 +40,10 @@ class PartitionProcessor(ConfigurablePlugin):
 
 
 class MultiPartitionProcessor(PartitionProcessor):
-	def __init__(self, config, processorList, datasource_name):
+	def __init__(self, config, processor_list, datasource_name):
 		PartitionProcessor.__init__(self, config, datasource_name)
 		do_prune = config.getBool(['partition processor prune', '%s partition processor prune' % datasource_name], True, onChange = None)
-		self._processor_list = prune_processors(do_prune, processorList, self._log, 'Removed %d inactive partition processors!')
+		self._processor_list = prune_processors(do_prune, processor_list, self._log, 'Removed %d inactive partition processors!')
 
 	def get_needed_vn_list(self, splitter):
 		return lchain(imap(lambda p: p.get_needed_vn_list(splitter) or [], self._processor_list))

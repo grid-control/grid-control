@@ -60,7 +60,7 @@ class LSF(LocalWMS):
 
 	def __init__(self, config, name):
 		LocalWMS.__init__(self, config, name,
-			submitExec = utils.resolveInstallPath('bsub'),
+			submitExec = utils.resolve_install_path('bsub'),
 			cancelExecutor = LSF_CancelJobs(config),
 			checkExecutor = CheckJobsMissingState(config, LSF_CheckJobs(config)))
 

@@ -17,8 +17,9 @@ from grid_control import utils
 from grid_control.gc_plugin import ConfigurablePlugin
 from grid_control.parameters.psource_base import ParameterError, ParameterInfo, ParameterMetadata, ParameterSource
 from grid_control.utils.activity import Activity
+from grid_control.utils.data_structures import make_enum
 from grid_control.utils.file_objects import ZipFile
-from grid_control.utils.parsing import strTimeShort
+from grid_control.utils.parsing import str_time_short
 from hpfwk import APIError
 from python_compat import identity, ifilter, imap, irange, ismap, itemgetter, lfilter, lmap, md5, set, sort_inplace, sorted, str2bytes
 
@@ -47,7 +48,7 @@ class ParameterAdapter(ConfigurablePlugin):
 		result['GC_JOB_ID'] = job_num
 		result['GC_PARAM'] = pnum
 		self._psrc.fill_parameter_content(pnum, result)
-		return utils.filterDict(result, vF = lambda v: v != '')
+		return utils.filter_dict(result, value_filter = lambda x: x != '')
 
 	def get_job_len(self):
 		return self._psrc.get_parameter_len()
@@ -88,7 +89,7 @@ class ResyncParameterAdapter(ParameterAdapter):
 				raise ParameterError('Unable to resync parameters!')
 			self._psrc_hash = self._psrc.get_psrc_hash()
 			activity.finish()
-			self._log.log(logging.INFO, 'Finished resync of parameter source (%s)', strTimeShort(time.time() - t_start))
+			self._log.log(logging.INFO, 'Finished resync of parameter source (%s)', str_time_short(time.time() - t_start))
 		result = self._resync_state
 		self._resync_state = ParameterSource.EmptyResyncResult()
 		return result
@@ -115,14 +116,16 @@ class BasicParameterAdapter(ResyncParameterAdapter):
 
 # Parameter parameter adapter that tracks changes in the underlying parameter source
 
+TrackingInfo = make_enum(['ACTIVE', 'HASH', 'PNUM'], use_hash = False)
+
 def create_placeholder_psrc(pa_old, pa_new, map_job_num2pnum, pspi_list_missing, result_disable):
 	# Construct placeholder parameter source with missing parameter entries and intervention state
 	psp_list_missing = []
 	missing_pnum_start = pa_new.get_job_len()
-	sort_inplace(pspi_list_missing, key = itemgetter('GC_PARAM'))
+	sort_inplace(pspi_list_missing, key = itemgetter(TrackingInfo.PNUM))
 	for (idx, pspi_missing) in enumerate(pspi_list_missing):
-		map_job_num2pnum[pspi_missing['GC_PARAM']] = missing_pnum_start + idx
-		psp_missing = pa_old.get_job_content(missing_pnum_start + idx, pspi_missing['GC_PARAM'])
+		map_job_num2pnum[pspi_missing[TrackingInfo.PNUM]] = missing_pnum_start + idx
+		psp_missing = pa_old.get_job_content(missing_pnum_start + idx, pspi_missing[TrackingInfo.PNUM])
 		psp_missing.pop('GC_PARAM')
 		if psp_missing[ParameterInfo.ACTIVE]:
 			psp_missing[ParameterInfo.ACTIVE] = False
@@ -135,25 +138,25 @@ def create_placeholder_psrc(pa_old, pa_new, map_job_num2pnum, pspi_list_missing,
 
 def diff_pspi_list(pa_old, pa_new, result_redo, result_disable):
 	map_job_num2pnum = {}
-	def handle_same_psp(pspi_list_added, pspi_list_missing, pspi_list_same, pspi_old, pspi_new):
-		map_job_num2pnum[pspi_old['GC_PARAM']] = pspi_new['GC_PARAM']
-		if not pspi_old[ParameterInfo.ACTIVE] and pspi_new[ParameterInfo.ACTIVE]:
-			result_redo.add(pspi_new['GC_PARAM'])
-		if pspi_old[ParameterInfo.ACTIVE] and not pspi_new[ParameterInfo.ACTIVE]:
-			result_disable.add(pspi_new['GC_PARAM'])
+	def handle_same_pspi(pspi_list_added, pspi_list_missing, pspi_list_same, pspi_old, pspi_new):
+		map_job_num2pnum[pspi_old[TrackingInfo.PNUM]] = pspi_new[TrackingInfo.PNUM]
+		if not pspi_old[TrackingInfo.ACTIVE] and pspi_new[TrackingInfo.ACTIVE]:
+			result_redo.add(pspi_new[TrackingInfo.PNUM])
+		if pspi_old[TrackingInfo.ACTIVE] and not pspi_new[TrackingInfo.ACTIVE]:
+			result_disable.add(pspi_new[TrackingInfo.PNUM])
 	# pspi_list_changed is ignored, since it is already processed by the change handler above
-	(pspi_list_added, pspi_list_missing, _) = utils.DiffLists(
+	(pspi_list_added, pspi_list_missing, _) = utils.get_list_difference(
 		translate_pa2pspi_list(pa_old), translate_pa2pspi_list(pa_new),
-		itemgetter(ParameterInfo.HASH), handle_same_psp)
+		itemgetter(TrackingInfo.HASH), handle_same_pspi)
 	return (map_job_num2pnum, pspi_list_added, pspi_list_missing)
 
 
 def extend_map_job_num2pnum(map_job_num2pnum, job_num_start, pspi_list_added):
 	# assign sequential job numbers to the added parameter entries
-	sort_inplace(pspi_list_added, key = itemgetter('GC_PARAM'))
+	sort_inplace(pspi_list_added, key = itemgetter(TrackingInfo.PNUM))
 	for (pspi_idx, pspi_added) in enumerate(pspi_list_added):
-		if job_num_start + pspi_idx != pspi_added['GC_PARAM']:
-			map_job_num2pnum[job_num_start + pspi_idx] = pspi_added['GC_PARAM']
+		if job_num_start + pspi_idx != pspi_added[TrackingInfo.PNUM]:
+			map_job_num2pnum[job_num_start + pspi_idx] = pspi_added[TrackingInfo.PNUM]
 
 
 def translate_pa2pspi_list(pa): # Reduces parameter adapter output to essential information for diff - faster than keying
@@ -165,8 +168,7 @@ def translate_pa2pspi_list(pa): # Reduces parameter adapter output to essential 
 			if value:
 				hash_obj.update(str2bytes(key.value))
 				hash_obj.update(str2bytes(value))
-		return {ParameterInfo.HASH: hash_obj.hexdigest(), 'GC_PARAM': psp['GC_PARAM'],
-			ParameterInfo.ACTIVE: psp[ParameterInfo.ACTIVE]}
+		return (psp[ParameterInfo.ACTIVE], hash_obj.hexdigest(), psp['GC_PARAM'])
 	for psp in pa.iter_jobs():
 		yield translate_psp2pspi(psp)
 
@@ -176,7 +178,7 @@ class TrackedParameterAdapter(BasicParameterAdapter):
 		self._psrc_raw = source
 		BasicParameterAdapter.__init__(self, config, source)
 		self._map_job_num2pnum = {}
-		utils.ensureDirExists(config.getWorkPath(), 'parameter storage directory', ParameterError)
+		utils.ensure_dir_exists(config.getWorkPath(), 'parameter storage directory', ParameterError)
 		self._path_job_num2pnum = config.getWorkPath('params.map.gz')
 		self._path_params = config.getWorkPath('params.dat.gz')
 
@@ -187,7 +189,7 @@ class TrackedParameterAdapter(BasicParameterAdapter):
 			init_needed = True # Init needed if no parameter log exists
 		if init_requested and not init_needed and (source.get_parameter_len() is not None):
 			self._log.warning('Re-Initialization will overwrite the current mapping between jobs and parameter/dataset content! This can lead to invalid results!')
-			if utils.getUserBool('Do you want to perform a syncronization between the current mapping and the new one to avoid this?', True):
+			if utils.get_user_bool('Do you want to perform a syncronization between the current mapping and the new one to avoid this?', True):
 				init_requested = False
 		do_init = init_requested or init_needed
 

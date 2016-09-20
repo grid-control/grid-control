@@ -14,14 +14,14 @@
 
 import os, sys, time, logging, threading
 from grid_control.gc_exceptions import GCError, GCLogHandler
-from grid_control.utils.data_structures import UniqueList, makeEnum
+from grid_control.utils.data_structures import UniqueList, make_enum
 from grid_control.utils.file_objects import SafeFile, VirtualFile
 from grid_control.utils.thread_tools import GCLock
 from hpfwk import AbstractError, clear_current_exception, format_exception
 from python_compat import irange, lmap, set, sorted, tarfile
 
 
-LogLevelEnum = makeEnum(lmap(lambda level: logging.getLevelName(level).upper(), irange(51)), useHash = False)
+LogLevelEnum = make_enum(lmap(lambda level: logging.getLevelName(level).upper(), irange(51)), use_hash = False)
 
 class LogEveryNsec(logging.Filter):
 	def __init__(self, interval):
@@ -88,7 +88,7 @@ class ProcessArchiveHandler(logging.Handler):
 				if os.path.exists(value):
 					value = SafeFile(value).read()
 				fileObj = VirtualFile(os.path.join(entry, key), [value])
-				info, handle = fileObj.getTarInfo()
+				info, handle = fileObj.get_tar_info()
 				tar.addfile(info, handle)
 				handle.close()
 			tar.close()
@@ -271,7 +271,7 @@ def logging_create_handlers(config, logger_name):
 		elif handler_str == 'file':
 			handler = logging.FileHandler(config.get(logger_name + ' file', onChange = None), 'w')
 		elif handler_str == 'debug_file':
-			handler = GCLogHandler(config.getPaths(logger_name + ' debug file', get_debug_file_candidates(), onChange = None, mustExist = False), 'w')
+			handler = GCLogHandler(config.getPaths(logger_name + ' debug file', get_debug_file_candidates(), onChange = None, must_exist = False), 'w')
 		else:
 			raise Exception('Unknown handler %s for logger %s' % (handler_str, logger_name))
 		logger.addHandler(logging_configure_handler(config, logger_name, handler_str, handler))

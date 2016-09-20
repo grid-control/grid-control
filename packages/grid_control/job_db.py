@@ -14,7 +14,7 @@
 
 import time, logging
 from grid_control.gc_plugin import ConfigurablePlugin
-from grid_control.utils.data_structures import makeEnum
+from grid_control.utils.data_structures import make_enum
 from hpfwk import AbstractError, NestedException
 from python_compat import irange
 
@@ -57,7 +57,7 @@ class Job(object):
 		self.attempt = self.attempt + 1
 		self.submitted = time.time()
 
-makeEnum(['INIT', 'SUBMITTED', 'DISABLED', 'READY', 'WAITING', 'QUEUED', 'ABORTED',
+make_enum(['INIT', 'SUBMITTED', 'DISABLED', 'READY', 'WAITING', 'QUEUED', 'ABORTED',
 		'RUNNING', 'CANCEL', 'UNKNOWN', 'CANCELLED', 'DONE', 'FAILED', 'SUCCESS'], Job)
 
 

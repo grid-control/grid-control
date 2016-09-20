@@ -32,7 +32,7 @@ import time
 from grid_control.backends.logged_process import LoggedProcess
 from grid_control.backends.wms import BackendError
 from grid_control.gc_exceptions import InstallationError
-from grid_control.utils import ensureDirExists, resolveInstallPath
+from grid_control.utils import ensure_dir_exists, resolve_install_path
 from hpfwk import AbstractError, Plugin
 from python_compat import irange, lru_cache
 
@@ -252,17 +252,17 @@ class LocalProcessAdapter(ProcessAdapterInterface):
 
 	def _initInterfaces(self, **kwargs):
 		try:
-			copypath=resolveInstallPath("rsync")
+			copypath=resolve_install_path("rsync")
 			copynice=lambda **kwargs: "copy via rsync"
 		except InstallationError:
-			copypath=resolveInstallPath("cp")
+			copypath=resolve_install_path("cp")
 			copynice=lambda **kwargs: "copy via cp"
 		self._copy = CommandContainer(
 			copypath,
 			lambda **kwargs: "-r %s %s"  % (kwargs['source'], kwargs['destination']),
 			copynice)
 		self._delete = CommandContainer(
-			resolveInstallPath("rm"),
+			resolve_install_path("rm"),
 			lambda *kwargs : "-r " + kwargs['target'],
 			lambda **kwargs : "rm")
 
@@ -428,7 +428,7 @@ class SSHProcessAdapter(ProcessAdapterInterface):
 			return [ arg for arg in argList if arg ]
 		portArgs = lambda key : self._port and "-%s%s"%(key, self._port) or ""
 		self._exeWrapper = CommandContainer(
-			resolveInstallPath("ssh"),
+			resolve_install_path("ssh"),
 			lambda **kwargs: makeArgList(
 				self._getDefaultArgs(),
 				self._getValidSocketArgs(),
@@ -443,7 +443,7 @@ class SSHProcessAdapter(ProcessAdapterInterface):
 			lambda **kwargs: kwargs.get('args') and "Arguments: '%s'" % kwargs.get('args') or ''
 			)
 		self._copy = CommandContainer(
-			resolveInstallPath("scp"),
+			resolve_install_path("scp"),
 			lambda **kwargs: makeArgList(
 				self._getDefaultArgs(),
 				self._getValidSocketArgs(),
@@ -457,7 +457,7 @@ class SSHProcessAdapter(ProcessAdapterInterface):
 			lambda **kwargs: "Transfer: '%(source)' -> '%(destination)'" % kwargs,
 			)
 		self._delete = CommandContainer(
-			resolveInstallPath("ssh"),
+			resolve_install_path("ssh"),
 			lambda **kwargs: makeArgList(
 				self._getDefaultArgs(),
 				self._getValidSocketArgs(),
@@ -469,7 +469,7 @@ class SSHProcessAdapter(ProcessAdapterInterface):
 			lambda **kwargs: "Target: '%(target)s'" % kwargs,
 			)
 		self._socketWrapper = CommandContainer(
-			resolveInstallPath("ssh"),
+			resolve_install_path("ssh"),
 			lambda **kwargs: makeArgList(
 				self._getDefaultArgs(),
 				self._getCurrentSocketArgs(),
@@ -495,7 +495,7 @@ class SSHProcessAdapter(ProcessAdapterInterface):
 		# sockets should reside in secure, managed directory
 		if kwargs.get("socketDir","") and len(kwargs.get("socketDir")) < 105:
 			self._socketDir = kwargs.get("socketDir")
-			ensureDirExists(self._socketDir, name = "SSH connection socket container directory")
+			ensure_dir_exists(self._socketDir, name = "SSH connection socket container directory")
 		else:
 			self._socketDir = tempfile.mkdtemp()
 		self._log(logging.DEBUG1, 'Using socket directoy %s' % self._socketDir)
@@ -576,7 +576,7 @@ class GSISSHProcessAdapter(SSHProcessAdapter):
 		return "gsissh"
 	def _initInterfaces(self, **kwargs):
 		self._exeWrapper = CommandContainer(
-			resolveInstallPath("gsissh"),
+			resolve_install_path("gsissh"),
 			lambda **kwargs: "%(port)s %(sshargs)s %(socketArgs)s %(host)s %(payload)s"  % {
 				"port"       : (self._port and "-p"+self._port or ""),
 				"sshargs"    : self._getDefaultArgs(),
@@ -590,7 +590,7 @@ class GSISSHProcessAdapter(SSHProcessAdapter):
 				},
 			)
 		self._copy = CommandContainer(
-			resolveInstallPath("gsiscp"),
+			resolve_install_path("gsiscp"),
 			lambda **kwargs: "%(sshargs)s %(socketArgs)s -r %(port)s %(source)s %(port)s %(destination)s"  % {
 				"port"       : (self._port and "-P"+self._port or ""),
 				"sshargs"    : self._getDefaultArgs(),
@@ -601,7 +601,7 @@ class GSISSHProcessAdapter(SSHProcessAdapter):
 			lambda **kwargs: "gsiscp"
 			)
 		self._delete = CommandContainer(
-			resolveInstallPath("gsissh"),
+			resolve_install_path("gsissh"),
 			lambda **kwargs: "%(port)s %(sshargs)s %(socketArgs)s %(payload)s"  % {
 				"port"    : (self._port and "-p"+self._port or ""),
 				"sshargs" : self._getDefaultArgs(),
@@ -611,7 +611,7 @@ class GSISSHProcessAdapter(SSHProcessAdapter):
 			lambda **kwargs: "'rm' via gsissh"
 			)
 		self._socketWrapper = CommandContainer(
-			resolveInstallPath("gsissh"),
+			resolve_install_path("gsissh"),
 			lambda **kwargs: "%(port)s %(sshargs)s %(socketArgs)s %(host)s %(payload)s"  % {
 				"port"       : (self._port and "-p"+self._port or ""),
 				"sshargs"    : self._getDefaultArgs(),

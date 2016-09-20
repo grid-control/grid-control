@@ -85,8 +85,8 @@ class CreamWMS(GridWMS):
 
 		self._nJobsPerChunk = config.getInt('job chunk size', 10, onChange = None)
 
-		self._submitExec = utils.resolveInstallPath('glite-ce-job-submit')
-		self._outputExec = utils.resolveInstallPath('glite-ce-job-output')
+		self._submitExec = utils.resolve_install_path('glite-ce-job-submit')
+		self._outputExec = utils.resolve_install_path('glite-ce-job-output')
 		self._submitParams.update({'-r': self._ce, '--config-vo': self._configVO })
 
 		self._outputRegex = r'.*For JobID \[(?P<rawId>\S+)\] output will be stored in the dir (?P<outputDir>.*)$'
@@ -108,7 +108,7 @@ class CreamWMS(GridWMS):
 			if len(allIds) == 1:
 				# For single jobs create single subdir
 				basePath = os.path.join(basePath, md5(allIds[0][0]).hexdigest())
-			utils.ensureDirExists(basePath)
+			utils.ensure_dir_exists(basePath)
 		except Exception:
 			raise BackendError('Temporary path "%s" could not be created.' % basePath, BackendError)
 		
@@ -145,7 +145,7 @@ class CreamWMS(GridWMS):
 
 			if retCode != 0:
 				if 'Keyboard interrupt raised by user' in proc.stdout.read_log():
-					utils.removeFiles([log, basePath])
+					utils.remove_files([log, basePath])
 					raise StopIteration
 				else:
 					self._log.log_process(proc)
@@ -159,7 +159,7 @@ class CreamWMS(GridWMS):
 			yield (jobNum, None)
 
 		purgeLog = tempfile.mktemp('.log')
-		purgeProc = LocalProcess(utils.resolveInstallPath('glite-ce-job-purge'),
+		purgeProc = LocalProcess(utils.resolve_install_path('glite-ce-job-purge'),
 			'--noint', '--logfile', purgeLog, str.join(' ', done))
 		retCode = purgeProc.status(timeout = 60)
 		if retCode != 0:
@@ -167,4 +167,4 @@ class CreamWMS(GridWMS):
 				pass
 			else:
 				self._log.log_process(proc)
-		utils.removeFiles([log, purgeLog, basePath])
+		utils.remove_files([log, purgeLog, basePath])

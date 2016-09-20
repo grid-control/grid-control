@@ -59,7 +59,7 @@ class Host(LocalWMS):
 
 	def __init__(self, config, name):
 		LocalWMS.__init__(self, config, name,
-			submitExec = utils.pathShare('gc-host.sh'),
+			submitExec = utils.path_share('gc-host.sh'),
 			checkExecutor = CheckJobsMissingState(config, Host_CheckJobs(config)),
 			cancelExecutor = Host_CancelJobs(config))
 

@@ -16,7 +16,7 @@
 import os, sys, time, random, logging, gcSupport
 from gcSupport import ClassSelector, FileInfoProcessor, Job, JobClass, Options, Plugin
 from grid_control.backends.storage import se_copy, se_exists, se_mkdir, se_rm
-from grid_control.utils.thread_tools import GCLock, start_thread
+from grid_control.utils.thread_tools import GCLock, start_daemon
 from python_compat import imap, irange, lfilter, lmap, md5
 
 
@@ -42,7 +42,7 @@ def parse_cmd_line():
 	help_msg += '\n   can be resubmitted.'
 	parser = Options(usage = '%s [OPTIONS] <config file>' + help_msg)
 
-	def addBoolOpt(group, short_pair, option_base, help_base, default = False,
+	def add_boolOpt(group, short_pair, option_base, help_base, default = False,
 			option_prefix_pair = ('', 'no'), help_prefix_pair = ('', 'do not '), dest = None):
 		def create_opt(idx):
 			return str.join('-', option_prefix_pair[idx].split() + option_base.split())
@@ -51,23 +51,23 @@ def parse_cmd_line():
 			if (default and (idx == 0)) or ((not default) and (idx == 1)):
 				help_def = ' [Default]'
 			return help_prefix_pair[idx] + help_base + help_def
-		parser.addFlag(group, short_pair, (create_opt(0), create_opt(1)), default = default, dest = dest,
+		parser.add_flag(group, short_pair, (create_opt(0), create_opt(1)), default = default, dest = dest,
 			help_pair = (create_help(0), create_help(1)))
 
-	addBoolOpt(None, 'v ', 'verify-md5',        default = True,  help_base = 'MD5 verification of SE files',
+	add_boolOpt(None, 'v ', 'verify-md5',        default = True,  help_base = 'MD5 verification of SE files',
 		help_prefix_pair = ('enable ', 'disable '))
-	addBoolOpt(None, 'l ', 'loop',              default = False, help_base = 'loop over jobs until all files are successfully processed')
-	addBoolOpt(None, 'L ', 'infinite',          default = False, help_base = 'process jobs in an infinite loop')
-	addBoolOpt(None, '  ', 'shuffle',           default = False, help_base = 'shuffle download order')
-	addBoolOpt(None, '  ', '',                  default = False, help_base = 'files which are already on local disk',
+	add_boolOpt(None, 'l ', 'loop',              default = False, help_base = 'loop over jobs until all files are successfully processed')
+	add_boolOpt(None, 'L ', 'infinite',          default = False, help_base = 'process jobs in an infinite loop')
+	add_boolOpt(None, '  ', 'shuffle',           default = False, help_base = 'shuffle download order')
+	add_boolOpt(None, '  ', '',                  default = False, help_base = 'files which are already on local disk',
 		option_prefix_pair = ('skip-existing', 'overwrite'), help_prefix_pair = ('skip ', 'overwrite '), dest = 'skip_existing')
 
 	parser.section('jobs', 'Job state / flag handling')
-	addBoolOpt('jobs', '  ', 'mark-dl',         default = True,  help_base = 'mark sucessfully downloaded jobs as such')
-	addBoolOpt('jobs', '  ', 'mark-dl',         default = False, help_base = 'mark about sucessfully downloaded jobs',
+	add_boolOpt('jobs', '  ', 'mark-dl',         default = True,  help_base = 'mark sucessfully downloaded jobs as such')
+	add_boolOpt('jobs', '  ', 'mark-dl',         default = False, help_base = 'mark about sucessfully downloaded jobs',
 		option_prefix_pair = ('ignore', 'use'), help_prefix_pair = ('ignore ', 'use '), dest = 'mark_ignore_dl')
-	addBoolOpt('jobs', '  ', 'mark-fail',       default = True,  help_base = 'mark jobs failing verification as such')
-	addBoolOpt('jobs', '  ', 'mark-empty-fail', default = False, help_base = 'mark jobs without any files as failed')
+	add_boolOpt('jobs', '  ', 'mark-fail',       default = True,  help_base = 'mark jobs failing verification as such')
+	add_boolOpt('jobs', '  ', 'mark-empty-fail', default = False, help_base = 'mark jobs without any files as failed')
 
 	parser.section('file', 'Local / SE file handling')
 	for (option, help_base) in [
@@ -76,37 +76,37 @@ def parse_cmd_line():
 			('se-ok',      'files of successful jobs on SE'),
 			('se-fail',    'files of failed jobs on the SE'),
 		]:
-		addBoolOpt('file', '  ', option, default = False, help_base = help_base,
+		add_boolOpt('file', '  ', option, default = False, help_base = help_base,
 			option_prefix_pair = ('rm', 'keep'), help_prefix_pair = ('remove ', 'keep '))
 
-	parser.addText(None, 'o', 'output',    default = None,
+	parser.add_text(None, 'o', 'output',    default = None,
 		help = 'specify the local output directory')
-	parser.addText(None, 'T', 'token',     default = 'VomsProxy',
+	parser.add_text(None, 'T', 'token',     default = 'VomsProxy',
 		help = 'specify the access token used to determine ability to download - VomsProxy or TrivialAccessToken')
-	parser.addList(None, 'S', 'selectSE',  default = None,
+	parser.add_list(None, 'S', 'selectSE',  default = None,
 		help = 'specify the SE paths to process')
-	parser.addText(None, 'r', 'retry',
+	parser.add_text(None, 'r', 'retry',
 		help = 'how often should a transfer be attempted [Default: 0]')
-	parser.addText(None, 't', 'threads',   default = 0,
+	parser.add_text(None, 't', 'threads',   default = 0,
 		help = 'how many parallel download threads should be used to download files [Default: no multithreading]')
-	parser.addText(None, ' ', 'slowdown',  default = 2,
+	parser.add_text(None, ' ', 'slowdown',  default = 2,
 		help = 'specify time between downloads [Default: 2 sec]')
-	parser.addBool(None, ' ', 'show-host', default = False,
+	parser.add_bool(None, ' ', 'show-host', default = False,
 		help = 'show SE hostname during download')
 
 	parser.section('short', 'Shortcuts')
-	parser.addFSet('short', 'm', 'move',        help = 'Move files from SE - shorthand for:'.ljust(100) + '%s',
+	parser.add_fset('short', 'm', 'move',        help = 'Move files from SE - shorthand for:'.ljust(100) + '%s',
 		flag_set = '--verify-md5 --overwrite --mark-dl --use-mark-dl --mark-fail --rm-se-fail --rm-local-fail --rm-se-ok --keep-local-ok')
-	parser.addFSet('short', 'c', 'copy',        help = 'Copy files from SE - shorthand for:'.ljust(100) + '%s',
+	parser.add_fset('short', 'c', 'copy',        help = 'Copy files from SE - shorthand for:'.ljust(100) + '%s',
 		flag_set = '--verify-md5 --overwrite --mark-dl --use-mark-dl --mark-fail --rm-se-fail --rm-local-fail --keep-se-ok --keep-local-ok')
-	parser.addFSet('short', 'j', 'just-copy',   help = 'Just copy files from SE - shorthand for:'.ljust(100) + '%s',
+	parser.add_fset('short', 'j', 'just-copy',   help = 'Just copy files from SE - shorthand for:'.ljust(100) + '%s',
 		flag_set = '--verify-md5 --skip-existing --no-mark-dl --ignore-mark-dl --no-mark-fail --keep-se-fail --keep-local-fail --keep-se-ok --keep-local-ok')
-	parser.addFSet('short', 's', 'smart-copy',
+	parser.add_fset('short', 's', 'smart-copy',
 		help = 'Copy correct files from SE, but remember already downloaded files and delete corrupt files - shorthand for: '.ljust(100) + '%s',
 		flag_set = '--verify-md5 --mark-dl --mark-fail --rm-se-fail --rm-local-fail --keep-se-ok --keep-local-ok')
-	parser.addFSet('short', 'V', 'just-verify', help = 'Just verify files on SE - shorthand for:'.ljust(100) + '%s',
+	parser.add_fset('short', 'V', 'just-verify', help = 'Just verify files on SE - shorthand for:'.ljust(100) + '%s',
 		flag_set = '--verify-md5 --no-mark-dl --keep-se-fail --rm-local-fail --keep-se-ok --rm-local-ok --ignore-mark-dl')
-	parser.addFSet('short', 'D', 'just-delete', help = 'Just delete all finished files on SE - shorthand for:'.ljust(100) + '%s',
+	parser.add_fset('short', 'D', 'just-delete', help = 'Just delete all finished files on SE - shorthand for:'.ljust(100) + '%s',
 		flag_set = '--skip-existing --rm-se-fail --rm-se-ok --rm-local-fail --keep-local-ok --no-mark-dl --ignore-mark-dl')
 
 	return parser.parse()
@@ -143,7 +143,7 @@ def download_monitored(jobNum, output, fileIdx, checkPath, sourcePath, targetPat
 	copyAbortLock = GCLock()
 	monitorLock = GCLock()
 	monitorLock.acquire()
-	monitor = start_thread('Download monitor %s' % jobNum, transfer_monitor, output, fileIdx, checkPath, monitorLock, copyAbortLock)
+	monitor = start_daemon('Download monitor %s' % jobNum, transfer_monitor, output, fileIdx, checkPath, monitorLock, copyAbortLock)
 	result = -1
 	procCP = se_copy(sourcePath, targetPath, tmp = checkPath)
 	while True:
@@ -292,7 +292,7 @@ def download_multithreaded_main(opts, workDir, jobList, incInfo, jobDB, token, D
 		active = lfilter(lambda thread_display: thread_display[0].isAlive(), active)
 		while len(active) < int(opts.threads) and len(todo):
 			display = DisplayClass()
-			active.append((start_thread('Download %s' % todo[-1], download_job_output,
+			active.append((start_daemon('Download %s' % todo[-1], download_job_output,
 				opts, incInfo, workDir, jobDB, token, todo.pop(), display), display))
 		for (_, display) in active:
 			sys.stdout.write(str.join('\n', display.output))

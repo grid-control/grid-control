@@ -13,12 +13,12 @@
 # | limitations under the License.
 
 import time, logging
-from grid_control.utils.data_structures import makeEnum
+from grid_control.utils.data_structures import make_enum
 from hpfwk import AbstractError, NestedException, Plugin
 from python_compat import md5_hex, set
 
 
-ParameterInfo = makeEnum(['ACTIVE', 'HASH', 'REQS', 'FILES'])
+ParameterInfo = make_enum(['ACTIVE', 'HASH', 'REQS', 'FILES'])
 
 class ParameterError(NestedException):
 	pass

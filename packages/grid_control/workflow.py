@@ -98,7 +98,7 @@ class Workflow(NamedPlugin):
 			# Check free disk space
 			spaceLogger = logging.getLogger('workflow.space')
 			spaceLogger.addFilter(LogEveryNsec(interval = 5 * 60))
-			if (self._checkSpace > 0) and utils.freeSpace(self._workDir) < self._checkSpace:
+			if (self._checkSpace > 0) and utils.disk_usage(self._workDir) < self._checkSpace:
 				spaceLogger.warning('Not enough space left in working directory')
 			else:
 				for action in imap(str.lower, self._actionList):

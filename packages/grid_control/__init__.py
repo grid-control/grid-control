@@ -12,6 +12,9 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
+__version__ = '$Revision: 1941$'[11:-1]
+
+
 def initGC():
 	import os, sys
 	packages_base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -28,5 +31,3 @@ def initGC():
 	logging_defaults()
 
 initGC()
-
-__version__ = '$Revision: 1941$'[11:-1]

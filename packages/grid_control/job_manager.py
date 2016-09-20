@@ -21,7 +21,7 @@ from grid_control.job_selector import AndJobSelector, ClassSelector, JobSelector
 from grid_control.output_processor import TaskOutputProcessor
 from grid_control.report import Report
 from grid_control.utils.file_objects import SafeFile
-from grid_control.utils.parsing import strTime
+from grid_control.utils.parsing import str_time_long
 from python_compat import ifilter, imap, izip, lfilter, lmap, set, sorted
 
 
@@ -122,7 +122,7 @@ class JobManager(NamedPlugin):
 		elif (state in [Job.WAITING, Job.ABORTED, Job.DISABLED]) and jobObj.get('reason'):
 			jobStatus.append('(%s)' % jobObj.get('reason'))
 		elif (state == Job.SUCCESS) and (jobObj.get('runtime', None) is not None):
-			jobStatus.append('(runtime %s)' % strTime(jobObj.get('runtime') or 0))
+			jobStatus.append('(runtime %s)' % str_time_long(jobObj.get('runtime') or 0))
 		elif state == Job.FAILED:
 			msg = []
 			retCode = jobObj.get('retcode')
@@ -330,7 +330,7 @@ class JobManager(NamedPlugin):
 			return
 		if showJobs:
 			self._reportClass(self.jobDB, task, jobnum_list).show_report(self.jobDB)
-		if interactive and not utils.getUserBool('Do you really want to cancel these jobs?', True):
+		if interactive and not utils.get_user_bool('Do you really want to cancel these jobs?', True):
 			return
 
 		def mark_cancelled(jobNum):
@@ -351,7 +351,7 @@ class JobManager(NamedPlugin):
 			jobnum_list = list(gcID_jobnum_map.values())
 			self._log.warning('There was a problem with cancelling the following jobs:')
 			self._reportClass(self.jobDB, task, jobnum_list).show_report(self.jobDB)
-			if (not interactive) or utils.getUserBool('Do you want to mark them as cancelled?', True):
+			if (not interactive) or utils.get_user_bool('Do you want to mark them as cancelled?', True):
 				lmap(mark_cancelled, jobnum_list)
 		if interactive:
 			utils.wait(2)
@@ -370,7 +370,7 @@ class JobManager(NamedPlugin):
 		if jobs:
 			self._log.warning('Resetting the following jobs:')
 			self._reportClass(self.jobDB, task, jobs).show_report(self.jobDB)
-			if self._interactive_reset or utils.getUserBool('Are you sure you want to reset the state of these jobs?', False):
+			if self._interactive_reset or utils.get_user_bool('Are you sure you want to reset the state of these jobs?', False):
 				self.cancel(task, wms, self.jobDB.getJobs(ClassSelector(JobClass.PROCESSING), jobs), interactive = False, showJobs = False)
 				for jobNum in jobs:
 					self.jobDB.commit(jobNum, Job())

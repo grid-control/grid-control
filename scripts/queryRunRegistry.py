@@ -25,4 +25,4 @@ from grid_control_cms.lumi_tools import formatLumi, mergeLumi, parseLumiFromJSON
 server = ServerProxy('http://pccmsdqm04.cern.ch/runregistry/xmlrpc')
 data = server.DataExporter.export('RUNLUMISECTION', 'GLOBAL', 'json', {'groupName': 'Collisions10'})
 runs = parseLumiFromJSON(data)
-sys.stdout.write('lumi filter = %s\n' % utils.wrapList(formatLumi(mergeLumi(runs)), 60, ',\n\t'))
+sys.stdout.write('lumi filter = %s\n' % utils.wrap_list(formatLumi(mergeLumi(runs)), 60, ',\n\t'))

@@ -24,7 +24,7 @@ class TextFileJobDB(JobDB):
 	def __init__(self, config, jobLimit = -1, jobSelector = None):
 		JobDB.__init__(self, config, jobLimit, jobSelector)
 		self._dbPath = config.getWorkPath('jobs')
-		self._fmt = utils.DictFormat(escapeString = True)
+		self._fmt = utils.DictFormat(escape_strings = True)
 		try:
 			self._jobMap = self._readJobs(self._jobLimit)
 		except Exception:
@@ -88,7 +88,7 @@ class TextFileJobDB(JobDB):
 
 
 	def _readJobs(self, jobLimit):
-		utils.ensureDirExists(self._dbPath, 'job database directory', JobError)
+		utils.ensure_dir_exists(self._dbPath, 'job database directory', JobError)
 
 		candidates = []
 		for jobFile in fnmatch.filter(os.listdir(self._dbPath), 'job_*.txt'):

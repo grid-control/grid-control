@@ -16,8 +16,8 @@ import math, time
 from grid_control.config import ConfigError
 from grid_control.job_db import Job
 from grid_control.report import LocationReport, Report
-from grid_control.utils import printTabular
-from grid_control.utils.parsing import parseStr, strTimeShort
+from grid_control.utils import display_table
+from grid_control.utils.parsing import parse_str, str_time_short
 from python_compat import imap, itemgetter, lmap, lzip, sorted
 
 
@@ -52,7 +52,7 @@ class BackendReport(Report):
 		t_now = time.time()
 		for jobNum in self._jobs:
 			jobObj = job_db.getJobTransient(jobNum)
-			runtime = parseStr(jobObj.get('runtime'), int, 0)
+			runtime = parse_str(jobObj.get('runtime'), int, 0)
 			for attempt in jobObj.history:
 				if (attempt != jobObj.attempt) and not self._useHistory:
 					continue
@@ -129,8 +129,8 @@ class BackendReport(Report):
 			result_l3[''] = ['    %s' % label[2]] + label[3:]
 		for (state, cnt, time_mean, time_stddev, time_min, time_max) in self._get_entry_stats(stateMap, data):
 			result_l1[state] = cnt
-			result_l2[state] = '%s +/- %s' % (strTimeShort(time_mean), strTimeShort(time_stddev))
-			result_l3[state] = '%s ... %s' % (strTimeShort(time_min), strTimeShort(time_max))
+			result_l2[state] = '%s +/- %s' % (str_time_short(time_mean), str_time_short(time_stddev))
+			result_l3[state] = '%s ... %s' % (str_time_short(time_min), str_time_short(time_max))
 		yield result_l1
 		yield result_l2
 		yield result_l3
@@ -157,5 +157,5 @@ class BackendReport(Report):
 		stats = self._getHierachicalStats(job_db)
 		displayStates = lmap(itemgetter(1), self._stateMap)
 		header = [('', 'Category')] + lzip(displayStates, displayStates)
-		printTabular(header, transform(stats, [], len(self._idxList)),
-			fmtString = 'l' + 'c'*len(stateMap), fmt = {'': lambda x: str.join(' ', x)})
+		display_table(header, transform(stats, [], len(self._idxList)),
+			fmt_string = 'l' + 'c'*len(stateMap), fmt = {'': lambda x: str.join(' ', x)})

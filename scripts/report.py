@@ -18,11 +18,11 @@ from gcSupport import Activity, JobSelector, Options, displayPluginList, getConf
 
 
 parser = Options(usage = '%s [OPTIONS] <config file>')
-parser.addBool(None, 'L', 'report-list',  default = False, help = 'List available report classes')
-parser.addBool(None, 'T', 'use-task',     default = False, help = 'Forward task information to report')
-parser.addText(None, 'R', 'report',       default = 'GUIReport')
-parser.addText(None, 'J', 'job-selector', default = None)
-parser.addText(None, ' ', 'string',       default = '')
+parser.add_bool(None, 'L', 'report-list',  default = False, help = 'List available report classes')
+parser.add_bool(None, 'T', 'use-task',     default = False, help = 'Forward task information to report')
+parser.add_text(None, 'R', 'report',       default = 'GUIReport')
+parser.add_text(None, 'J', 'job-selector', default = None)
+parser.add_text(None, ' ', 'string',       default = '')
 options = scriptOptions(parser)
 
 if options.opts.report_list:
@@ -30,7 +30,7 @@ if options.opts.report_list:
 	displayPluginList(getPluginList('Report'))
 
 if len(options.args) != 1:
-	utils.exitWithUsage(parser.usage())
+	utils.exit_with_usage(parser.usage())
 
 def main(opts, args):
 	# try to open config file

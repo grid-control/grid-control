@@ -16,13 +16,13 @@ from grid_control.config import triggerResync
 from grid_control.datasets import DataProcessor, DataProvider, DataSplitter, DatasetError, PartitionProcessor
 from grid_control.parameters import ParameterMetadata
 from grid_control.utils import safe_index
-from grid_control.utils.data_structures import makeEnum
+from grid_control.utils.data_structures import make_enum
 from grid_control_cms.lumi_tools import filterLumiFilter, formatLumi, parseLumiFilter, selectLumi, selectRun, strLumi
 from python_compat import any, ichain, imap, izip, set
 
 
-LumiKeep = makeEnum(['RunLumi', 'Run', 'none'])
-LumiMode = makeEnum(['strict', 'weak'])
+LumiKeep = make_enum(['RunLumi', 'Run', 'none'])
+LumiMode = make_enum(['strict', 'weak'])
 
 def removeRunLumi(value, idxRuns, idxLumi):
 	if (idxRuns is not None) and (idxLumi is not None):

@@ -57,12 +57,12 @@ class ScanProviderBase(DataProvider):
 
 	def _generateDatasetName(self, key, data):
 		if 'SE_OUTPUT_BASE' in data:
-			return utils.replaceDict(self._ds_name or '/PRIVATE/@SE_OUTPUT_BASE@', data)
-		return utils.replaceDict(self._ds_name or ('/PRIVATE/Dataset_%s' % key), data)
+			return utils.replace_with_dict(self._ds_name or '/PRIVATE/@SE_OUTPUT_BASE@', data)
+		return utils.replace_with_dict(self._ds_name or ('/PRIVATE/Dataset_%s' % key), data)
 
 
 	def _generateBlockName(self, key, data):
-		return utils.replaceDict(self._b_name or key[:8], data)
+		return utils.replace_with_dict(self._b_name or key[:8], data)
 
 
 	def _getFilteredVarDict(self, varDict, varDictKeyComponents, hashKeys):
@@ -88,7 +88,7 @@ class ScanProviderBase(DataProvider):
 					self._log.warn('\t%s hash %s using:', tName, str.join('#', key))
 					for var, value in self._getFilteredVarDict(varDict, key, hashKeys).items():
 						self._log.warn('\t\t%s = %s', var, value)
-				if ask and not utils.getUserBool('Do you want to continue?', False):
+				if ask and not utils.get_user_bool('Do you want to continue?', False):
 					sys.exit(os.EX_OK)
 				ask = False
 
@@ -132,8 +132,8 @@ class ScanProviderBase(DataProvider):
 				if not self._b_select or (hashB in self._b_select):
 					fileInfo[1].update({'DS_KEY': hashDS, 'BLOCK_KEY': hashB})
 					protoBlocks.setdefault(hashDS, {}).setdefault(hashB, []).append(fileInfo)
-					utils.intersectDict(commonDS.setdefault(hashDS, dict(fileInfo[1])), fileInfo[1])
-					utils.intersectDict(commonB.setdefault(hashDS, {}).setdefault(hashB, dict(fileInfo[1])), fileInfo[1])
+					utils.intersect_first_dict(commonDS.setdefault(hashDS, dict(fileInfo[1])), fileInfo[1])
+					utils.intersect_first_dict(commonB.setdefault(hashDS, {}).setdefault(hashB, dict(fileInfo[1])), fileInfo[1])
 
 		# Generate names for blocks/datasets using common metadata
 		(hashNameDictDS, hashNameDictB) = ({}, {})
@@ -190,7 +190,7 @@ class GCProvider(ScanProviderBase):
 			dataset_expr = os.path.join(dataset_expr, 'work.conf')
 		else:
 			scan_pipeline = ['OutputDirsFromConfig', 'MetadataFromTask']
-			dataset_expr, selector = utils.optSplit(dataset_expr, '%')
+			dataset_expr, selector = utils.split_opt(dataset_expr, '%')
 			ds_config.set('source config', dataset_expr)
 			ds_config.set('source job selector', selector)
 		ext_config = create_config(dataset_expr)

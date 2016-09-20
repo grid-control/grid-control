@@ -16,7 +16,7 @@ import sys
 from grid_control import utils
 from grid_control.job_db import Job, JobClass
 from grid_control.report import Report
-from grid_control.utils.parsing import parseStr
+from grid_control.utils.parsing import parse_str
 from grid_control_gui.ansi import Console
 from grid_control_gui.report_colorbar import JobProgressBar
 from python_compat import ifilter, imap, irange, lfilter, lmap, set, sorted
@@ -98,8 +98,8 @@ class ModuleReport(CategoryBaseReport):
 			infos.append(tmp)
 
 		stateCatList = ['WAITING', 'RUNNING', 'FAILED', 'SUCCESS']
-		utils.printTabular(lmap(lambda x: (x, x), sorted(head) + stateCatList),
-			infos, 'c' * len(head), fmt = dict.fromkeys(stateCatList, lambda x: '%7d' % parseStr(x, int, 0)))
+		utils.display_table(lmap(lambda x: (x, x), sorted(head) + stateCatList),
+			infos, 'c' * len(head), fmt = dict.fromkeys(stateCatList, lambda x: '%7d' % parse_str(x, int, 0)))
 
 
 class AdaptiveBaseReport(CategoryBaseReport):

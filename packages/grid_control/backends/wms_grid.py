@@ -24,7 +24,7 @@ from grid_control.job_db import Job
 from grid_control.utils.activity import Activity
 from grid_control.utils.file_objects import SafeFile
 from grid_control.utils.process_base import LocalProcess
-from python_compat import ifilter, imap, lfilter, lmap, md5, parsedate, tarfile
+from python_compat import identity, ifilter, imap, lfilter, lmap, md5, parsedate, tarfile
 
 
 GridStatusMap = {
@@ -50,7 +50,7 @@ def jdlEscape(value):
 class Grid_ProcessCreator(ProcessCreatorViaStdin):
 	def __init__(self, config, cmd, args):
 		ProcessCreatorViaStdin.__init__(self, config)
-		(self._cmd, self._args) = (utils.resolveInstallPath(cmd), args)
+		(self._cmd, self._args) = (utils.resolve_install_path(cmd), args)
 
 	def _arguments(self):
 		return [self._cmd] + self._args
@@ -160,7 +160,7 @@ class GridWMS(BasicWMS):
 		# Warn about too large sandboxes
 		sbSizes = lmap(os.path.getsize, sbIn)
 		if sbSizes and (self._warnSBSize > 0) and (sum(sbSizes) > self._warnSBSize * 1024 * 1024):
-			if not utils.getUserBool('Sandbox is very large (%d bytes) and can cause issues with the WMS! Do you want to continue?' % sum(sbSizes), False):
+			if not utils.get_user_bool('Sandbox is very large (%d bytes) and can cause issues with the WMS! Do you want to continue?' % sum(sbSizes), False):
 				sys.exit(os.EX_OK)
 			self._warnSBSize = 0
 
@@ -183,7 +183,7 @@ class GridWMS(BasicWMS):
 	def writeWMSIds(self, ids):
 		try:
 			fd, jobs = tempfile.mkstemp('.jobids')
-			utils.safeWrite(os.fdopen(fd, 'w'), str.join('\n', self._getRawIDs(ids)))
+			utils.safe_write(os.fdopen(fd, 'w'), str.join('\n', self._getRawIDs(ids)))
 		except Exception:
 			raise BackendError('Could not write wms ids to %s.' % jobs)
 		return jobs
@@ -200,14 +200,14 @@ class GridWMS(BasicWMS):
 		fd, jdl = tempfile.mkstemp('.jdl')
 		try:
 			jdlData = self.makeJDL(jobNum, module)
-			utils.safeWrite(os.fdopen(fd, 'w'), jdlData)
+			utils.safe_write(os.fdopen(fd, 'w'), jdlData)
 		except Exception:
-			utils.removeFiles([jdl])
+			utils.remove_files([jdl])
 			raise BackendError('Could not write jdl data to %s.' % jdl)
 
 		try:
 			submitArgs = []
-			for key_value in utils.filterDict(self._submitParams, vF = lambda v: v).items():
+			for key_value in utils.filter_dict(self._submitParams, value_filter = identity).items():
 				submitArgs.extend(key_value)
 			submitArgs.append(jdl)
 
@@ -227,7 +227,7 @@ class GridWMS(BasicWMS):
 				else:
 					self._log.log_process(proc, files = {'jdl': SafeFile(jdl).read()})
 		finally:
-			utils.removeFiles([jdl])
+			utils.remove_files([jdl])
 		return (jobNum, utils.QM(gcID, self._createId(gcID), None), {'jdl': str.join('', jdlData)})
 
 
@@ -243,7 +243,7 @@ class GridWMS(BasicWMS):
 				tmpPath = os.path.join(basePath, md5(ids[0][0]).hexdigest())
 			else:
 				tmpPath = basePath
-			utils.ensureDirExists(tmpPath)
+			utils.ensure_dir_exists(tmpPath)
 		except Exception:
 			raise BackendError('Temporary path "%s" could not be created.' % tmpPath, BackendError)
 
@@ -277,7 +277,7 @@ class GridWMS(BasicWMS):
 
 		if retCode != 0:
 			if 'Keyboard interrupt raised by user' in proc.stderr.read(timeout = 0):
-				utils.removeFiles([jobs, basePath])
+				utils.remove_files([jobs, basePath])
 				raise StopIteration
 			else:
 				self._log.log_process(proc, files = {'jobs': SafeFile(jobs).read()})
@@ -289,4 +289,4 @@ class GridWMS(BasicWMS):
 		for jobNum in todo:
 			yield (jobNum, None)
 
-		utils.removeFiles([jobs, basePath])
+		utils.remove_files([jobs, basePath])

@@ -18,33 +18,33 @@ from gcSupport import Plugin, getConfig
 
 
 def addDatasetListOptions(parser):
-	parser.addText(None, 'd', 'dataset',           dest = 'dataset name pattern',  default = '',
+	parser.add_text(None, 'd', 'dataset',           dest = 'dataset name pattern',  default = '',
 		help = 'Name pattern of dataset')
-	parser.addText(None, 'b', 'block',             dest = 'block name pattern',    default = '',
+	parser.add_text(None, 'b', 'block',             dest = 'block name pattern',    default = '',
 		help = 'Name pattern of block')
-	parser.addText(None, 'o', 'output',            dest = 'output',                default = '',
+	parser.add_text(None, 'o', 'output',            dest = 'output',                default = '',
 		help = 'Output filename')
-	parser.addText(None, 'e', 'events',            dest = 'events default',        default = '-1',
+	parser.add_text(None, 'e', 'events',            dest = 'events default',        default = '-1',
 		help = 'Number of events in files')
-	parser.addText(None, 'E', 'events-cmd',        dest = 'events command',        default = '',
+	parser.add_text(None, 'E', 'events-cmd',        dest = 'events command',        default = '',
 		help = 'Application used to determine number of events in files')
-	parser.addBool(None, 'y', 'events-empty',      dest = 'events ignore empty',   default = True,
+	parser.add_bool(None, 'y', 'events-empty',      dest = 'events ignore empty',   default = True,
 		help = 'Keep empty files with zero events')
-	parser.addBool(None, 'k', 'keep-metadata',     dest = 'strip',                 default = True,
+	parser.add_bool(None, 'k', 'keep-metadata',     dest = 'strip',                 default = True,
 		help = 'Keep metadata in output')
-	parser.addBool(None, ' ', 'dump-config',       dest = 'dump config',           default = False,
+	parser.add_bool(None, ' ', 'dump-config',       dest = 'dump config',           default = False,
 		help = 'Dump config settings')
-	parser.addText(None, 's', 'selection',         dest = 'filename filter',       default = '*.root',
+	parser.add_text(None, 's', 'selection',         dest = 'filename filter',       default = '*.root',
 		help = 'File to include in dataset (Default: *.root)')
-	parser.addText(None, 'S', 'delimeter-select',  dest = 'delimeter match',       default = '',
+	parser.add_text(None, 'S', 'delimeter-select',  dest = 'delimeter match',       default = '',
 		help = '<delimeter>:<number of required delimeters>')
-	parser.addText(None, 'D', 'delimeter-dataset', dest = 'delimeter dataset key', default = '',
+	parser.add_text(None, 'D', 'delimeter-dataset', dest = 'delimeter dataset key', default = '',
 		help = 'Multi dataset mode - files are sorted into different datasets according to <delimeter>:<start>:<end>')
-	parser.addText(None, 'B', 'delimeter-block',   dest = 'delimeter block key',   default = '',
+	parser.add_text(None, 'B', 'delimeter-block',   dest = 'delimeter block key',   default = '',
 		help = 'Multi block mode - files are sorted into different blocks according to <delimeter>:<start>:<end>')
-	parser.addText(None, 'H', 'hash-dataset',      dest = 'dataset hash keys',     default = '',
+	parser.add_text(None, 'H', 'hash-dataset',      dest = 'dataset hash keys',     default = '',
 		help = 'Multi dataset mode - files are sorted into different datasets according to hash of variables')
-	parser.addText(None, ' ', 'hash-block',        dest = 'block hash keys',       default = '',
+	parser.add_text(None, ' ', 'hash-block',        dest = 'block hash keys',       default = '',
 		help = 'Multi block mode - files are sorted into different blocks according to hash of variables')
 
 

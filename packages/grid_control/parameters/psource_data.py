@@ -37,8 +37,8 @@ class DataParameterSource(LimitedResyncParameterSource):
 
 		# look for aborted resyncs - and try to restore old state if possible
 		if self._exists_data_path('cache.dat.resync') and self._exists_data_path('map.tar.resync'):
-			utils.renameFile(self._get_data_path('cache.dat.resync'), self._get_data_path('cache.dat'))
-			utils.renameFile(self._get_data_path('map.tar.resync'), self._get_data_path('map.tar'))
+			utils.rename_file(self._get_data_path('cache.dat.resync'), self._get_data_path('cache.dat'))
+			utils.rename_file(self._get_data_path('map.tar.resync'), self._get_data_path('map.tar'))
 		elif self._exists_data_path('cache.dat.resync') or self._exists_data_path('map.tar.resync'):
 			raise DatasetError('Found broken resync state')
 

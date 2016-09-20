@@ -17,7 +17,7 @@ from grid_control.parameters.psource_base import ParameterError, ParameterInfo, 
 from grid_control.parameters.psource_basic import InternalParameterSource
 from grid_control.utils.activity import Activity
 from grid_control.utils.file_objects import ZipFile
-from grid_control.utils.parsing import parseJSON, strDict
+from grid_control.utils.parsing import parse_json, str_dict
 from python_compat import ifilter, imap, izip, json, lfilter, lmap, sorted
 
 
@@ -37,7 +37,7 @@ class CSVParameterSource(InternalParameterSource): # Reader for CSV files
 		for entry in tmp:
 			entry.pop(None, None)
 			if None in entry.values():
-				raise ParameterError('Malformed entry in csv file %r: {%s}' % (fn, strDict(entry)))
+				raise ParameterError('Malformed entry in csv file %r: {%s}' % (fn, str_dict(entry)))
 
 		def cleanup_dict(d):
 			# strip all key value entries
@@ -69,11 +69,11 @@ class GCDumpParameterSource(ParameterSource): # Reader for grid-control dump fil
 			header = fp.readline().lstrip('#').strip()
 			self._keys = []
 			if header:
-				self._keys = parseJSON(header)
+				self._keys = parse_json(header)
 			def parse_line(line):
 				if not line.startswith('#'):
 					pNumStr, stored = lmap(str.strip, line.split('\t', 1))
-					return ('!' in pNumStr, int(pNumStr.rstrip('!')), lmap(parseJSON, stored.split('\t')))
+					return ('!' in pNumStr, int(pNumStr.rstrip('!')), lmap(parse_json, stored.split('\t')))
 			self._values = lmap(parse_line, fp.readlines())
 		finally:
 			fp.close()

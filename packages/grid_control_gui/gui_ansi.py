@@ -16,7 +16,7 @@ import re, sys, time, signal, threading
 from grid_control import utils
 from grid_control.gui import GUI
 from grid_control.utils.activity import Activity
-from grid_control.utils.thread_tools import GCLock, start_thread
+from grid_control.utils.thread_tools import GCLock, start_daemon
 from grid_control_gui.ansi import Console
 from python_compat import identity, ifilter, imap, itemgetter, lmap
 
@@ -115,11 +115,11 @@ class ANSIGUI(GUI):
 		self._reportHeight = self._report.getHeight()
 		self._console.erase()
 		self._console.setscrreg(min(self._reportHeight + self._statusHeight + 1, sizey), sizey)
-		utils.printTabular.wraplen = sizex - 5
+		utils.display_table.wraplen = sizex - 5
 		self._update_all()
 
 	def _schedule_update_layout(self, sig = None, frame = None):
-		start_thread('update layout', self._draw, self._update_layout) # using new thread to ensure RLock is free
+		start_daemon('update layout', self._draw, self._update_layout) # using new thread to ensure RLock is free
 
 	def _wait(self, timeout):
 		oldHandler = signal.signal(signal.SIGWINCH, self._schedule_update_layout)
@@ -139,7 +139,7 @@ class ANSIGUI(GUI):
 	def _update_status(self):
 		activity_message = None
 		for activity in Activity.root.get_children():
-			activity_message = activity.getMessage(truncate = 75)
+			activity_message = activity.get_message(truncate = 75)
 
 		self._console.move(self._reportHeight + 1, 0)
 		self._new_stdout.logged = False

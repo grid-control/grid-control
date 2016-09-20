@@ -15,8 +15,8 @@
 from grid_control.config import triggerResync
 from grid_control.datasets import DataProvider, DataSplitter, DatasetError
 from grid_control.datasets.splitter_basic import HybridSplitter
-from grid_control.utils import optSplit
-from grid_control.utils.data_structures import makeEnum
+from grid_control.utils import split_opt
+from grid_control.utils.data_structures import make_enum
 from grid_control.utils.thread_tools import start_thread
 from grid_control.utils.webservice import JSONRestClient
 from grid_control_cms.lumi_tools import parseLumiFilter, strLumi
@@ -24,7 +24,7 @@ from grid_control_cms.sitedb import SiteDB
 from python_compat import itemgetter, lfilter, sorted
 
 
-CMSLocationFormat = makeEnum(['hostname', 'siteDB', 'both'])
+CMSLocationFormat = make_enum(['hostname', 'siteDB', 'both'])
 
 # required format: <dataset path>[@<instance>][#<block>]
 class CMSBaseProvider(DataProvider):
@@ -48,7 +48,7 @@ class CMSBaseProvider(DataProvider):
 		self._pjrc = JSONRestClient(url = 'https://cmsweb.cern.ch/phedex/datasvc/json/prod/blockreplicas')
 		self._sitedb = SiteDB()
 
-		(self._datasetPath, self._datasetInstance, self._datasetBlock) = optSplit(dataset_expr, '@#')
+		(self._datasetPath, self._datasetInstance, self._datasetBlock) = split_opt(dataset_expr, '@#')
 		instance_default = config.get('dbs instance', '', onChange = self._changeTrigger)
 		self._datasetInstance = self._datasetInstance or instance_default
 		if not self._datasetInstance:

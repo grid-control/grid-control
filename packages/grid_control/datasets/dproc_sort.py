@@ -35,12 +35,14 @@ class SortingDataProcessor(DataProcessor):
 			map_dataset2block_list = {}
 			for block in block_iter:
 				map_dataset2block_list.setdefault(block[DataProvider.Dataset], []).append(block)
+
 			def iter_blocks_by_dataset():
 				for ds in sorted(map_dataset2block_list):
 					if self._sort_block:
 						sort_inplace(map_dataset2block_list[ds], key = itemgetter(DataProvider.BlockName))
 					for block in map_dataset2block_list[ds]:
 						yield block
+
 			block_iter = iter_blocks_by_dataset()
 		elif self._sort_block:
 			block_iter = sorted(block_iter, key = itemgetter(DataProvider.BlockName))

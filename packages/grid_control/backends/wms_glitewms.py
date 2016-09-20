@@ -17,7 +17,7 @@ from grid_control import utils
 from grid_control.backends.wms import BackendError
 from grid_control.backends.wms_grid import GridWMS, Grid_CancelJobs, Grid_CheckJobs
 from grid_control.utils.activity import Activity
-from grid_control.utils.parsing import parseStr
+from grid_control.utils.parsing import parse_str
 from grid_control.utils.process_base import LocalProcess
 from python_compat import md5_hex, sort_inplace
 
@@ -34,8 +34,8 @@ class DiscoverWMS_Lazy(object): # TODO: Move to broker infrastructure
 		(self.wms_ok, self.wms_all, self.pingDict, self.pos) = self.loadState()
 		self.wms_timeout = {}
 		self._full = config.getBool('wms discover full', True, onChange = None)
-		self._exeLCGInfoSites = utils.resolveInstallPath('lcg-infosites')
-		self._exeGliteWMSJobListMatch = utils.resolveInstallPath('glite-wms-job-list-match')
+		self._exeLCGInfoSites = utils.resolve_install_path('lcg-infosites')
+		self._exeGliteWMSJobListMatch = utils.resolve_install_path('glite-wms-job-list-match')
 
 	def loadState(self):
 		try:
@@ -44,8 +44,8 @@ class DiscoverWMS_Lazy(object): # TODO: Move to broker infrastructure
 			pingDict = {}
 			for wms in tmp:
 				isOK, ping, ping_time = tuple(tmp[wms].split(',', 2))
-				if utils.parseBool(isOK):
-					pingDict[wms] = (parseStr(ping, float), parseStr(ping_time, float, 0))
+				if utils.parse_bool(isOK):
+					pingDict[wms] = (parse_str(ping, float), parse_str(ping_time, float, 0))
 			return (pingDict.keys(), tmp.keys(), pingDict, 0)
 		except Exception:
 			return ([], [], {}, None)
@@ -71,7 +71,7 @@ class DiscoverWMS_Lazy(object): # TODO: Move to broker infrastructure
 		checkArgs = ['-a']
 		if endpoint:
 			checkArgs.extend(['-e', endpoint])
-		checkArgs.append(utils.pathShare('null.jdl'))
+		checkArgs.append(utils.path_share('null.jdl'))
 
 		proc = LocalProcess(self._exeGliteWMSJobListMatch, *checkArgs)
 		result = []
@@ -151,9 +151,9 @@ class GliteWMS(GridWMS):
 			checkExecutor = checkExecutor or Grid_CheckJobs(config, 'glite-wms-job-status'),
 			cancelExecutor = Grid_CancelJobs(config, 'glite-wms-job-cancel'))
 
-		self._delegateExec = utils.resolveInstallPath('glite-wms-job-delegate-proxy')
-		self._submitExec = utils.resolveInstallPath('glite-wms-job-submit')
-		self._outputExec = utils.resolveInstallPath('glite-wms-job-output')
+		self._delegateExec = utils.resolve_install_path('glite-wms-job-delegate-proxy')
+		self._submitExec = utils.resolve_install_path('glite-wms-job-submit')
+		self._outputExec = utils.resolve_install_path('glite-wms-job-output')
 		self._submitParams.update({'-r': self._ce, '--config': self._configVO})
 		self._useDelegate = config.getBool('try delegate', True, onChange = None)
 		self._forceDelegate = config.getBool('force delegate', False, onChange = None)

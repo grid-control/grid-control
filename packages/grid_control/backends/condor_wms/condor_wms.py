@@ -30,12 +30,12 @@ from grid_control.backends.wms import BackendError, BasicWMS, WMS
 from grid_control.backends.wms_condor import Condor_CancelJobs, Condor_CheckJobs
 from grid_control.backends.wms_local import LocalPurgeJobs, SandboxHelper
 from grid_control.utils.activity import Activity
-from grid_control.utils.data_structures import makeEnum
+from grid_control.utils.data_structures import make_enum
 from python_compat import imap, irange, lmap, lzip, md5, set
 
 
 # if the ssh stuff proves too hack'y: http://www.lag.net/paramiko/
-PoolType = makeEnum(['LOCAL','SPOOL','SSH','GSISSH'])
+PoolType = make_enum(['LOCAL','SPOOL','SSH','GSISSH'])
 
 
 class Condor(BasicWMS):
@@ -88,7 +88,7 @@ class Condor(BasicWMS):
 		self.poolReqs  = config.getDict('poolArgs req', {})[0]
 		self.poolQuery = config.getDict('poolArgs query', {})[0]
 		# Sandbox base path where individual job data is stored, staged and returned to
-		self.sandPath = config.getPath('sandbox path', config.getWorkPath('sandbox'), mustExist = False)
+		self.sandPath = config.getPath('sandbox path', config.getWorkPath('sandbox'), must_exist = False)
 		# history query is faster with split files - check if and how this is used
 		# default condor_history command works WITHOUT explicitly specified file
 		self.historyFile = None
@@ -141,7 +141,7 @@ class Condor(BasicWMS):
 # getSandbox: return path to sandbox for a specific job or basepath
 	def getSandboxPath(self, jobNum=''):
 		sandpath = os.path.join(self.sandPath, str(jobNum), '' )
-		return utils.ensureDirExists(sandpath, 'sandbox directory', BackendError)
+		return utils.ensure_dir_exists(sandpath, 'sandbox directory', BackendError)
 
 # getWorkdirPath: return path to condor output dir for a specific job or basepath
 	def getWorkdirPath(self, jobNum=''):
@@ -222,7 +222,7 @@ class Condor(BasicWMS):
 						if self.explainError(cleanupProcess, cleanupProcess.wait()):
 							return
 						cleanupProcess.logError(self.errorLog)
-						raise BackendError('Cleanup process %s returned: %s' % (cleanupProcess.cmd, cleanupProcess.getMessage()))
+						raise BackendError('Cleanup process %s returned: %s' % (cleanupProcess.cmd, cleanupProcess.get_message()))
 			except Exception:
 				self._log.warning('There might be some junk data left in: %s @ %s', self.getWorkdirPath(), self.Pool.getDomain())
 				raise BackendError('Unable to clean up remote working directory')
@@ -249,9 +249,9 @@ class Condor(BasicWMS):
 			self.debugOut("Writing temporary jdl to: "+jdlSubmitPath)
 			try:
 				data = self.makeJDLdata(jobNumList, module)
-				utils.safeWrite(os.fdopen(jdlDescriptor, 'w'), data)
+				utils.safe_write(os.fdopen(jdlDescriptor, 'w'), data)
 			except Exception:
-				utils.removeFiles([jdlFilePath])
+				utils.remove_files([jdlFilePath])
 				raise BackendError('Could not write jdl data to %s.' % jdlFilePath)
 
 			# create the _jobconfig.sh file containing the actual data
@@ -338,7 +338,7 @@ class Condor(BasicWMS):
 						self._log.error('Submitted %4d jobs of %4d expected', len(wmsJobIdList), len(jobNumList))
 						proc.logError(self.errorLog, jdl = jdlFilePath)
 			finally:
-				utils.removeFiles([jdlFilePath])
+				utils.remove_files([jdlFilePath])
 			self.debugOut("Done Submitting")
 
 			# yield the (jobNum, WMS ID, other data) of each job successively
@@ -366,7 +366,7 @@ class Condor(BasicWMS):
 					transferFiles.append(source)
 		if self.settings["jdl"]["Universe"].lower() == "docker":                
 			gcExec="./gc-run.sh"                                                
-			transferFiles.append(utils.pathShare('gc-run.sh'))
+			transferFiles.append(utils.path_share('gc-run.sh'))
 		return (gcExec, transferFiles)
 
 
@@ -454,8 +454,8 @@ class Condor(BasicWMS):
 		for reqType, reqValue in reqs:
 
 			if reqType == WMS.SITES:
-				(refuseSites, desireSites) = utils.splitBlackWhiteList(reqValue[1])
-				#(blacklist, whitelist) = utils.splitBlackWhiteList(reqValue[1])
+				(refuseSites, desireSites) = utils.split_blackwhite_list(reqValue[1])
+				#(blacklist, whitelist) = utils.split_blackwhite_list(reqValue[1])
 				## sites matching regular expression requirements
 				#refuseRegx=[ site for site in self._siteMap.keys()
 				# if True in [ re.search(bexpr.lower(),siteDescript.lower()) is not None for siteDescript in _siteMap[site] for bexpr in blacklist ] ]
@@ -552,11 +552,11 @@ class Condor(BasicWMS):
 			self.user=user
 			self.Pool=self.Pool=ProcessHandler.create_instance("LocalProcessHandler")
 			# local and remote use condor tools installed locally - get them
-			self.submitExec = utils.resolveInstallPath('condor_submit')
-			self.historyExec = utils.resolveInstallPath('condor_history')	# completed/failed jobs are stored outside the queue
-			self.cancelExec = utils.resolveInstallPath('condor_rm')
-			self.transferExec = utils.resolveInstallPath('condor_transfer_data')	# submission might spool to another schedd and need to fetch output
-			self.configValExec = utils.resolveInstallPath('condor_config_val')	# service is better when being able to adjust to pool settings
+			self.submitExec = utils.resolve_install_path('condor_submit')
+			self.historyExec = utils.resolve_install_path('condor_history')	# completed/failed jobs are stored outside the queue
+			self.cancelExec = utils.resolve_install_path('condor_rm')
+			self.transferExec = utils.resolve_install_path('condor_transfer_data')	# submission might spool to another schedd and need to fetch output
+			self.configValExec = utils.resolve_install_path('condor_config_val')	# service is better when being able to adjust to pool settings
 			if self.remoteType == PoolType.SPOOL:
 				# remote requires adding instructions for accessing remote pool
 				self.submitExec+= " %s %s" % (utils.QM(sched,"-remote %s"%sched,""),utils.QM(collector, "-pool %s"%collector, ""))

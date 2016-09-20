@@ -23,21 +23,21 @@ from python_compat import imap, irange, lmap, set, sorted
 
 parser = Options()
 parser.section('expr', 'Manipulate lumi filter expressions', '%s <lumi filter expression>')
-parser.addBool('expr', 'G', 'gc',            default = False, help = 'Output grid-control compatible lumi expression')
-parser.addBool('expr', 'J', 'json',          default = False, help = 'Output JSON file with lumi expression')
-parser.addBool('expr', 'F', 'full',          default = False, help = 'Output JSON file with full expression')
+parser.add_bool('expr', 'G', 'gc',            default = False, help = 'Output grid-control compatible lumi expression')
+parser.add_bool('expr', 'J', 'json',          default = False, help = 'Output JSON file with lumi expression')
+parser.add_bool('expr', 'F', 'full',          default = False, help = 'Output JSON file with full expression')
 
 parser.section('calc', 'Options which allow luminosity related calculations', '%s <config file>')
-parser.addText('calc', 'O', 'output-dir',    default = None,  help = 'Set output directory (default: work directory)')
-parser.addBool('calc', 'g', 'job-gc',        default = False, help = 'Output grid-control compatible lumi expression for processed lumi sections')
-parser.addBool('calc', 'j', 'job-json',      default = False, help = 'Output JSON file with processed lumi sections')
-parser.addBool('calc', 'e', 'job-events',    default = False, help = 'Get number of events processed')
-parser.addBool('calc', 'p', 'parameterized', default = False, help = 'Use output file name to categorize output (useful for parameterized tasks)')
-parser.addBool('calc', ' ', 'replace',   default = 'job_%d_', help = 'Pattern to replace for parameterized jobs (default: job_%%d_')
+parser.add_text('calc', 'O', 'output-dir',    default = None,  help = 'Set output directory (default: work directory)')
+parser.add_bool('calc', 'g', 'job-gc',        default = False, help = 'Output grid-control compatible lumi expression for processed lumi sections')
+parser.add_bool('calc', 'j', 'job-json',      default = False, help = 'Output JSON file with processed lumi sections')
+parser.add_bool('calc', 'e', 'job-events',    default = False, help = 'Get number of events processed')
+parser.add_bool('calc', 'p', 'parameterized', default = False, help = 'Use output file name to categorize output (useful for parameterized tasks)')
+parser.add_bool('calc', ' ', 'replace',   default = 'job_%d_', help = 'Pattern to replace for parameterized jobs (default: job_%%d_')
 options = scriptOptions(parser)
 
 def outputGC(lumis, stream = sys.stdout):
-	stream.write('%s\n' % utils.wrapList(formatLumi(lumis), 60, ',\n'))
+	stream.write('%s\n' % utils.wrap_list(formatLumi(lumis), 60, ',\n'))
 
 def outputJSON(lumis, stream = sys.stdout):
 	tmp = {}
@@ -146,7 +146,7 @@ def lumi_calc(opts, workDir, jobList, splitter):
 			if writeDict.get(sample, None):
 				sys.stdout.write('\n')
 				head = [(0, '          Output filename'), (1, 'Events')]
-				utils.printTabular(head, lmap(lambda pfn: {0: pfn, 1: writeDict[sample][pfn]}, writeDict[sample]))
+				utils.display_table(head, lmap(lambda pfn: {0: pfn, 1: writeDict[sample][pfn]}, writeDict[sample]))
 		if opts.job_json:
 			json_fn = os.path.join(opts.output_dir or workDir, 'processed_%s.json' % sample)
 			outputJSON(lumi_list, open(json_fn, 'w'))

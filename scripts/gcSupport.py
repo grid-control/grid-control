@@ -32,20 +32,20 @@ from python_compat import ifilter, imap, lmap, sorted, tarfile
 
 
 def scriptOptions(parser, args = None, arg_keys = None):
-	parser.addBool(None, ' ', 'parseable', default = False, help = 'Output tabular data in parseable format')
-	parser.addBool(None, ' ', 'pivot',     default = False, help = 'Output pivoted tabular data')
-	parser.addText(None, ' ', 'textwidth', default = 100,   help = 'Output tabular data with selected width')
-	parser.addAccu(None, 'v', 'verbose',   default = 0,     help = 'Increase verbosity')
-	parser.addList(None, ' ', 'logging',                    help = 'Increase verbosity')
+	parser.add_bool(None, ' ', 'parseable', default = False, help = 'Output tabular data in parseable format')
+	parser.add_bool(None, ' ', 'pivot',     default = False, help = 'Output pivoted tabular data')
+	parser.add_text(None, ' ', 'textwidth', default = 100,   help = 'Output tabular data with selected width')
+	parser.add_accu(None, 'v', 'verbose',   default = 0,     help = 'Increase verbosity')
+	parser.add_list(None, ' ', 'logging',                    help = 'Increase verbosity')
 	(opts, args, config_dict) = parser.parse(args, arg_keys)
 	logging.getLogger().setLevel(logging.DEFAULT - opts.verbose)
 	for (logger_name, logger_level) in parse_logging_args(opts.logging):
 		logging.getLogger(logger_name).setLevel(LogLevelEnum.str2enum(logger_level))
 	if opts.parseable:
-		utils.printTabular.mode = 'parseable'
+		utils.display_table.mode = 'parseable'
 	elif opts.pivot:
-		utils.printTabular.mode = 'longlist'
-	utils.printTabular.wraplen = int(opts.textwidth)
+		utils.display_table.mode = 'longlist'
+	utils.display_table.wraplen = int(opts.textwidth)
 	return utils.Result(opts = opts, args = args, config_dict = config_dict, parser = parser)
 
 
@@ -141,13 +141,13 @@ def getPluginList(pluginName):
 
 def displayPluginList(clsList):
 	header = [('Name', 'Name')]
-	fmtString = 'l'
+	fmt_string = 'l'
 	for entry in clsList:
 		if entry['Alias']:
 			header.append(('Alias', 'Alternate names'))
-			fmtString = 'rl'
+			fmt_string = 'rl'
 			break
-	utils.printTabular(header, sorted(clsList, key = lambda x: x['Name'].lower()), fmtString = fmtString)
+	utils.display_table(header, sorted(clsList, key = lambda x: x['Name'].lower()), fmt_string = fmt_string)
 
 __all__ = ['Activity', 'ClassSelector', 'displayPluginList', 'FileInfoProcessor', 'FileMutex',
 	'getCMSSWInfo', 'getConfig', 'getPluginList', 'initGC', 'Job', 'JobClass', 'JobInfoProcessor',

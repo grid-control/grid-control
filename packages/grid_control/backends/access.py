@@ -17,7 +17,7 @@
 import os, time, logging
 from grid_control.gc_exceptions import UserError
 from grid_control.gc_plugin import NamedPlugin
-from grid_control.utils.parsing import strTime
+from grid_control.utils.parsing import str_time_long
 from hpfwk import AbstractError, NestedException
 
 
@@ -99,12 +99,12 @@ class TimedAccessToken(AccessToken):
 	def can_submit(self, neededTime, canCurrentlySubmit):
 		if not self._checkTimeleft(self._lowerLimit):
 			raise UserError('Your access token (%s) only has %d seconds left! (Required are %s)' %
-				(self.getObjectName(), self._getTimeleft(cached = True), strTime(self._lowerLimit)))
+				(self.getObjectName(), self._getTimeleft(cached = True), str_time_long(self._lowerLimit)))
 		if self._ignoreTime or (neededTime < 0):
 			return True
 		if not self._checkTimeleft(self._lowerLimit + neededTime) and canCurrentlySubmit:
 			self._log.log_time(logging.WARNING, 'Access token (%s) lifetime (%s) does not meet the access and walltime (%s) requirements!',
-				self.getObjectName(), strTime(self._getTimeleft(cached = False)), strTime(self._lowerLimit + neededTime))
+				self.getObjectName(), str_time_long(self._getTimeleft(cached = False)), str_time_long(self._lowerLimit + neededTime))
 			self._log.log_time(logging.WARNING, 'Disabling job submission')
 			return False
 		return True
@@ -119,7 +119,7 @@ class TimedAccessToken(AccessToken):
 		if (delta > self._minQueryTime) or (timeleft < neededTime and delta > self._maxQueryTime):
 			self._lastUpdate = time.time()
 			timeleft = self._getTimeleft(cached = False)
-			self._log.log_time(logging.INFO, 'Time left for access token "%s": %s', self.getObjectName(), strTime(timeleft))
+			self._log.log_time(logging.INFO, 'Time left for access token "%s": %s', self.getObjectName(), str_time_long(timeleft))
 		return timeleft >= neededTime
 
 

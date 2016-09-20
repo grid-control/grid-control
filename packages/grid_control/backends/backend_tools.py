@@ -40,7 +40,7 @@ class ProcessCreatorViaArguments(ProcessCreator):
 class ProcessCreatorAppendArguments(ProcessCreatorViaArguments):
 	def __init__(self, config, cmd, args = None, fmt = identity):
 		ProcessCreatorViaArguments.__init__(self, config)
-		(self._cmd, self._args, self._fmt) = (utils.resolveInstallPath(cmd), args or [], fmt)
+		(self._cmd, self._args, self._fmt) = (utils.resolve_install_path(cmd), args or [], fmt)
 
 	def create_proc(self, wmsIDs):
 		return LocalProcess(*self._arguments(wmsIDs))

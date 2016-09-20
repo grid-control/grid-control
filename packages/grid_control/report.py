@@ -131,4 +131,4 @@ class LocationReport(Report):
 				continue
 			reports.append({0: jobNum, 1: Job.enum2str(jobObj.state), 2: jobObj.gcID})
 			self._add_details(reports, jobObj)
-		utils.printTabular(lzip(irange(3), ['Job', 'Status / Attempt', 'Id / Destination']), reports, 'rcl')
+		utils.display_table(lzip(irange(3), ['Job', 'Status / Attempt', 'Id / Destination']), reports, 'rcl')

@@ -27,27 +27,27 @@ from hpfwk import Plugin, handle_debug_interrupt, init_hpf_plugins
 # grid-control command line parser
 def parse_cmd_line(cmd_line_args):
 	parser = Options(usage = '%s [OPTIONS] <config file>', add_help_option = False)
-	parser.addBool(None, ' ', 'debug',         default = False)
-	parser.addBool(None, ' ', 'help-conf',     default = False)
-	parser.addBool(None, ' ', 'help-confmin',  default = False)
-	parser.addBool(None, 'c', 'continuous',    default = False)
-	parser.addBool(None, 'h', 'help',          default = False)
-	parser.addBool(None, 'i', 'init',          default = False)
-	parser.addBool(None, 'q', 'resync',        default = False)
-	parser.addBool(None, 's', 'no-submission', default = True,  dest = 'submission')
-	parser.addBool(None, 'G', 'gui',           default = False, dest = 'gui_ansi')
-	parser.addAccu(None, 'v', 'verbose')
-	parser.addList(None, 'l', 'logging')
-	parser.addList(None, 'o', 'override')
-	parser.addText(None, ' ', 'action')
-	parser.addText(None, 'd', 'delete')
-	parser.addText(None, 'J', 'job-selector')
-	parser.addText(None, 'm', 'max-retry')
-	parser.addText(None, ' ', 'reset')
+	parser.add_bool(None, ' ', 'debug',         default = False)
+	parser.add_bool(None, ' ', 'help-conf',     default = False)
+	parser.add_bool(None, ' ', 'help-confmin',  default = False)
+	parser.add_bool(None, 'c', 'continuous',    default = False)
+	parser.add_bool(None, 'h', 'help',          default = False)
+	parser.add_bool(None, 'i', 'init',          default = False)
+	parser.add_bool(None, 'q', 'resync',        default = False)
+	parser.add_bool(None, 's', 'no-submission', default = True,  dest = 'submission')
+	parser.add_bool(None, 'G', 'gui',           default = False, dest = 'gui_ansi')
+	parser.add_accu(None, 'v', 'verbose')
+	parser.add_list(None, 'l', 'logging')
+	parser.add_list(None, 'o', 'override')
+	parser.add_text(None, ' ', 'action')
+	parser.add_text(None, 'd', 'delete')
+	parser.add_text(None, 'J', 'job-selector')
+	parser.add_text(None, 'm', 'max-retry')
+	parser.add_text(None, ' ', 'reset')
 	# Deprecated options - refer to new report script instead
 	for (sopt, lopt) in [('-r', 'report'), ('-R', 'site-report'), ('-T', 'time-report'),
 			('-M', 'task-report'), ('-D', 'detail-report'), ('', 'help-vars')]:
-		parser.addBool(None, sopt, lopt, default = False, dest = 'old_report')
+		parser.add_bool(None, sopt, lopt, default = False, dest = 'old_report')
 
 	(opts, args, _) = parser.parse(args = cmd_line_args)
 	opts.gui = None
@@ -56,12 +56,12 @@ def parse_cmd_line(cmd_line_args):
 	opts.continuous = opts.continuous or None # either True or None
 	# Display help
 	if opts.help:
-		utils.exitWithUsage(parser.usage(), open(utils.pathShare('help.txt'), 'r').read(), show_help = False)
+		utils.exit_with_usage(parser.usage(), open(utils.path_share('help.txt'), 'r').read(), show_help = False)
 	# Require single config file argument
 	if len(args) == 0:
-		utils.exitWithUsage(parser.usage(), 'Config file not specified!')
+		utils.exit_with_usage(parser.usage(), 'Config file not specified!')
 	elif len(args) > 1:
-		utils.exitWithUsage(parser.usage(), 'Invalid command line arguments: %r' % cmd_line_args)
+		utils.exit_with_usage(parser.usage(), 'Invalid command line arguments: %r' % cmd_line_args)
 	# Warn about deprecated report options
 	if opts.old_report:
 		utils.deprecated('Please use the more versatile report tool in the scripts directory!')
@@ -144,7 +144,7 @@ def gc_create_workflow(config):
 			global_config.setState(True, 'init')
 		if global_config.getChoiceYesNo('workdir create', True,
 				interactive_msg = 'Do you want to create the working directory %s?' % global_config.getWorkPath()):
-			utils.ensureDirExists(global_config.getWorkPath(), 'work directory')
+			utils.ensure_dir_exists(global_config.getWorkPath(), 'work directory')
 	for package_paths in global_config.getPaths('package paths', []):
 		init_hpf_plugins(package_paths)
 
@@ -178,8 +178,8 @@ def gc_create_workflow(config):
 def run(args = None, intro = True):
 	# display the 'grid-control' logo and version
 	if intro and not os.environ.get('GC_DISABLE_INTRO'):
-		sys.stdout.write(SafeFile(utils.pathShare('logo.txt'), 'r').read())
-		sys.stdout.write('Revision: %s\n' % utils.getVersion())
+		sys.stdout.write(SafeFile(utils.path_share('logo.txt'), 'r').read())
+		sys.stdout.write('Revision: %s\n' % utils.get_version())
 	pyver = (sys.version_info[0], sys.version_info[1])
 	if pyver < (2, 3):
 		utils.deprecated('This python version (%d.%d) is not supported anymore!' % pyver)

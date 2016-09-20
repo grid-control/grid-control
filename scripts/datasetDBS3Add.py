@@ -151,55 +151,55 @@ def setup_parser():
 	parser = Options(usage = '%s [OPTIONS] <config file / work directory>')
 	parser.section('disc', 'Discovery options - ignored in case dbs input file is specified')
 	# options that are used as config settings for InfoScanners
-	parser.addText('disc', 'n', 'dataset-name-pattern', default = '',
+	parser.add_text('disc', 'n', 'dataset-name-pattern', default = '',
 		help = 'Specify dbs path name - Example: DataSet_@NICK@_@VAR@')
-	parser.addText('disc', 'H', 'dataset-hash-keys',    default = '',
+	parser.add_text('disc', 'H', 'dataset-hash-keys',    default = '',
 		help = 'Included additional variables in dataset hash calculation')
-	parser.addText('disc', 'J', 'source-job-selector',  default = '',
+	parser.add_text('disc', 'J', 'source-job-selector',  default = '',
 		help = 'Specify dataset(s) to process')
-	parser.addBool('disc', 'm', 'merge-parents',        default = False,
+	parser.add_bool('disc', 'm', 'merge-parents',        default = False,
 		help = 'Merge output files from different parent blocks into a single block [Default: Keep boundaries]')
-	parser.addText('disc', 'P', 'parent-source',        default = '',
+	parser.add_text('disc', 'P', 'parent-source',        default = '',
 		help = 'Override parent information source - to bootstrap a reprocessing on local files')
 	# options directly used by this script
-	parser.addText('disc', 'T', 'datatype',             default = None,
+	parser.add_text('disc', 'T', 'datatype',             default = None,
 		help = 'Supply dataset type in case cmssw report did not specify it - valid values: "mc" or "data"')
-	parser.addBool('disc', 'j', 'jobhash',              default = False,
+	parser.add_bool('disc', 'j', 'jobhash',              default = False,
 		help = 'Use hash of all config files in job for dataset key calculation')
-	parser.addBool('disc', 'u', 'unique-cfg',           default = False,
+	parser.add_bool('disc', 'u', 'unique-cfg',           default = False,
 		help = 'Circumvent edmConfigHash collisions so each dataset is stored with unique config information')
-	parser.addText('disc', 'G', 'globaltag',          default = 'crab2_tag',
+	parser.add_text('disc', 'G', 'globaltag',          default = 'crab2_tag',
 		help = 'Specify global tag')
 
 	parser.section('proc', 'Processing mode')
-	parser.addBool('proc', 'd', 'discovery',            default = False,
+	parser.add_bool('proc', 'd', 'discovery',            default = False,
 		help = 'Enable discovery mode - just collect file information and exit')
-	parser.addText('proc', ' ', 'tempdir',              default = '',
+	parser.add_text('proc', ' ', 'tempdir',              default = '',
 		help = 'Override temp directory')
-	parser.addBool('proc', 'i', 'no-import',            default = True, dest = 'do_import',
+	parser.add_bool('proc', 'i', 'no-import',            default = True, dest = 'do_import',
 		help = 'Disable import of new datasets into target DBS instance - only temporary json files are created')
-	parser.addBool('proc', 'I', 'incremental',          default = False,
+	parser.add_bool('proc', 'I', 'incremental',          default = False,
 		help = 'Skip import of existing files - Warning: this destroys coherent block structure!')
-	parser.addBool('proc', 'o', 'open-blocks',          default = True, dest = 'do_close_blocks',
+	parser.add_bool('proc', 'o', 'open-blocks',          default = True, dest = 'do_close_blocks',
 		help = 'Keep blocks open for addition of further files [Default: Close blocks]')
-#	parser.addBool('proc', 'b', 'batch',                default = False,
+#	parser.add_bool('proc', 'b', 'batch',                default = False,
 #		help = 'Enable non-interactive batch mode [Default: Interactive mode]')
 
 	parser.section('dbsi', 'DBS instance handling')
-	parser.addText('dbsi', 't', 'target-instance',      default = 'https://cmsweb.cern.ch/dbs/prod/phys03',
+	parser.add_text('dbsi', 't', 'target-instance',      default = 'https://cmsweb.cern.ch/dbs/prod/phys03',
 		help = 'Specify target dbs instance url')
-	parser.addText('dbsi', 's', 'source-instance',      default = 'https://cmsweb.cern.ch/dbs/prod/global',
+	parser.add_text('dbsi', 's', 'source-instance',      default = 'https://cmsweb.cern.ch/dbs/prod/global',
 		help = 'Specify source dbs instance url(s), where parent datasets are taken from')
 
-	parser.addText(None, 'F', 'input-file',         default = None,
+	parser.add_text(None, 'F', 'input-file',         default = None,
 		help = 'Specify dbs input file to use instead of scanning job output')
-	parser.addBool(None, 'c', 'continue-migration', default = False,
+	parser.add_bool(None, 'c', 'continue-migration', default = False,
 		help = 'Continue an already started migration')
-#	parser.addText(None, 'D', 'display-dataset',    default = None,
+#	parser.add_text(None, 'D', 'display-dataset',    default = None,
 #		help = 'Display information associated with dataset key(s) (accepts "all")')
-#	parser.addText(None, 'C', 'display-config',     default = None,
+#	parser.add_text(None, 'C', 'display-config',     default = None,
 #		help = 'Display information associated with config hash(es) (accepts "all")')
-#	parser.addText(None, 'k', 'dataset-key-select', default = '',
+#	parser.add_text(None, 'k', 'dataset-key-select', default = '',
 #		help = 'Specify dataset keys to process')
 
 	return scriptOptions(parser)
@@ -240,7 +240,7 @@ def filter_blocks(opts, blocks):
 #		oldBlocks = xreduce(xoperator.add, ximap(lambda ds: DBSApiv2(config, None, ds, None).getBlocks(show_stats = False), dNames), [])
 #		(blocksAdded, blocksMissing, blocksChanged) = DataProvider.resyncSources(oldBlocks, blocks)
 #		if len(blocksMissing) or len(blocksChanged):
-#			if not utils.getUserBool(' * WARNING: Block structure has changed! Continue?', False):
+#			if not utils.get_user_bool(' * WARNING: Block structure has changed! Continue?', False):
 #				sys.exit(os.EX_OK)
 		# Search for blocks which were partially added and generate "pseudo"-blocks with left over files
 #		setOldBlocks = set(ximap(lambda x: x[DataProvider.BlockName], oldBlocks))
@@ -249,7 +249,7 @@ def filter_blocks(opts, blocks):
 #		if blockCollision and opts.closeBlock: # Block are closed and contents have changed
 #			for block in blocksAdded:
 #				if block[DataProvider.BlockName] in blockCollision:
-#					block[DataProvider.BlockName] = strGuid(xmd5(str(time.time())).hexdigest())
+#					block[DataProvider.BlockName] = str_guid(xmd5(str(time.time())).hexdigest())
 #		blocks = blocksAdded
 
 
@@ -316,7 +316,7 @@ def main():
 	if options.opts.discovery:
 		options.config_dict['dataset name pattern'] = '@DS_KEY@'
 	if len(options.args) != 1:
-		utils.exitWithUsage(options.parser.usage(), 'Neither work directory nor config file specified!')
+		utils.exit_with_usage(options.parser.usage(), 'Neither work directory nor config file specified!')
 	# Lock file in case several instances of this program are running
 	mutex = FileMutex(os.path.join(options.opts.tempdir, 'datasetDBSAdd.lock'))
 	try:

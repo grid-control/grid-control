@@ -14,7 +14,7 @@
 
 from grid_control.job_selector import JobSelector
 from grid_control.report import Report
-from grid_control.utils import printTabular
+from grid_control.utils import display_table
 from python_compat import imap, lzip, set, sorted
 
 
@@ -39,4 +39,4 @@ class VariablesReport(Report):
 			entry.update(self._task.getTransientVars())
 			entry.update(jobConfig)
 			entries.append(entry)
-		printTabular(sorted(header + lzip(variables, variables)), entries)
+		display_table(sorted(header + lzip(variables, variables)), entries)

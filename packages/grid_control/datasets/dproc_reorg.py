@@ -13,11 +13,12 @@
 # | limitations under the License.
 
 from grid_control.datasets.dproc_base import DataProcessor
-from grid_control.utils.data_structures import makeEnum
+from grid_control.utils.data_structures import make_enum
 from hpfwk import AbstractError
 
 
-DataProcessorMergeMode = makeEnum(['intersection', 'union', 'separate'])
+DataProcessorMergeMode = make_enum(['intersection', 'union', 'separate'])
+
 
 class MergeDataProcessor(DataProcessor):
 	alias_list = ['merge']

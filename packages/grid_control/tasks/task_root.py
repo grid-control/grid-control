@@ -39,14 +39,14 @@ class ROOTTask(UserTask):
 
 		# Apply default handling from UserTask
 		UserTask.__init__(self, config, name)
-		self.updateErrorDict(utils.pathShare('gc-run.root.sh'))
+		self.updateErrorDict(utils.path_share('gc-run.root.sh'))
 
 		# Collect lib files needed by executable
 		self.libFiles = []
 
 
 	def getTaskConfig(self):
-		return utils.mergeDicts([UserTask.getTaskConfig(self), {'GC_ROOTSYS': self._rootpath}])
+		return utils.merge_dict_list([UserTask.getTaskConfig(self), {'GC_ROOTSYS': self._rootpath}])
 
 
 	def getCommand(self):
@@ -56,4 +56,4 @@ class ROOTTask(UserTask):
 
 	def getSBInFiles(self):
 		return UserTask.getSBInFiles(self) + self.libFiles + [
-			utils.Result(pathAbs = utils.pathShare('gc-run.root.sh'), pathRel = 'gc-run.root.sh')]
+			utils.Result(path_abs = utils.path_share('gc-run.root.sh'), path_rel = 'gc-run.root.sh')]

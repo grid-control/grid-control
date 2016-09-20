@@ -15,7 +15,7 @@
 import copy
 from grid_control.config import triggerResync
 from grid_control.datasets.provider_base import DataProvider, DatasetError
-from grid_control.utils.parsing import parseJSON, parseList
+from grid_control.utils.parsing import parse_json, parse_list
 from python_compat import sorted
 
 
@@ -43,7 +43,7 @@ class ConfigDataProvider(DataProvider):
 		if common_metadata:
 			fi[DataProvider.Metadata] = common_metadata
 		if len(tmp) == 2:
-			file_metadata = parseJSON(tmp[1])
+			file_metadata = parse_json(tmp[1])
 			if len(common_metadata) + len(file_metadata) > len(metadata_name_list):
 				raise DatasetError('Unable to set %d file metadata items with %d metadata keys (%d common metadata items)' %
 					(len(file_metadata), len(metadata_name_list), len(common_metadata)))
@@ -63,8 +63,8 @@ class ConfigDataProvider(DataProvider):
 
 
 	def _readBlockFromConfig(self, ds_config, dataset_expr, dataset_nick):
-		metadata_name_list = parseJSON(ds_config.get('metadata', '[]', onChange = None))
-		common_metadata = parseJSON(ds_config.get('metadata common', '[]', onChange = None))
+		metadata_name_list = parse_json(ds_config.get('metadata', '[]', onChange = None))
+		common_metadata = parse_json(ds_config.get('metadata common', '[]', onChange = None))
 		if len(common_metadata) > len(metadata_name_list):
 			raise DatasetError('Unable to set %d common metadata items with %d metadata keys' % (len(common_metadata), len(metadata_name_list)))
 		common_prefix = ds_config.get('prefix', '', onChange = None)
@@ -88,7 +88,7 @@ class ConfigDataProvider(DataProvider):
 		if has_events:
 			result[DataProvider.NEntries] = ds_config.getInt('events', -1, onChange = None)
 		if has_se_list:
-			result[DataProvider.Locations] = parseList(ds_config.get('se list', '', onChange = None), ',')
+			result[DataProvider.Locations] = parse_list(ds_config.get('se list', '', onChange = None), ',')
 		return result
 
 

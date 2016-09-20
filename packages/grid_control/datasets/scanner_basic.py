@@ -20,7 +20,7 @@ from grid_control.datasets.scanner_base import InfoScanner
 from grid_control.job_db import Job
 from grid_control.job_selector import JobSelector
 from grid_control.utils.activity import Activity
-from grid_control.utils.parsing import parseStr
+from grid_control.utils.parsing import parse_str
 from python_compat import identity, ifilter, imap, irange, izip, lfilter, lmap, set, sorted
 
 
@@ -99,7 +99,7 @@ class MetadataFromTask(InfoScanner):
 				tmp.update(objStore['GC_TASK'].getJobConfig(metadata['GC_JOBNUM']))
 			for (newKey, oldKey) in objStore['GC_TASK'].getVarMapping().items():
 				tmp[newKey] = tmp.get(oldKey)
-			metadata.update(utils.filterDict(tmp, kF = lambda k: k not in self._ignore_vars))
+			metadata.update(utils.filter_dict(tmp, key_filter = lambda k: k not in self._ignore_vars))
 		yield (path, metadata, events, seList, objStore)
 
 
@@ -111,13 +111,13 @@ class FilesFromLS(InfoScanner):
 		if ('://' in self._path) and self._recurse:
 			raise DatasetError('Recursion is not supported for URL: %s' % repr(self._path))
 		elif '://' not in self._path:
-			self._path = utils.cleanPath(self._path)
+			self._path = utils.clean_path(self._path)
 
 	def _iter_path(self):
 		if self._recurse:
 			for (root, _, files) in os.walk(self._path):
 				for fn in files:
-					yield utils.cleanPath(os.path.join(root, fn))
+					yield utils.clean_path(os.path.join(root, fn))
 		else:
 			from grid_control.backends.storage import se_ls
 			proc = se_ls(self._path)
@@ -216,14 +216,14 @@ class MatchDelimeter(InfoScanner):
 
 	def _setup(self, setup_key, setup_mod):
 		if setup_key:
-			(delim, ds, de) = utils.optSplit(setup_key, '::')
+			(delim, ds, de) = utils.split_opt(setup_key, '::')
 			modifier = identity
 			if setup_mod and (setup_mod.strip() != 'value'):
 				try:
 					modifier = eval('lambda value: ' + setup_mod) # pylint:disable=eval-used
 				except Exception:
 					raise ConfigError('Unable to parse delimeter modifier %r' % setup_mod)
-			return (delim, parseStr(ds, int), parseStr(de, int), modifier)
+			return (delim, parse_str(ds, int), parse_str(de, int), modifier)
 
 	def getGuards(self):
 		return (utils.QM(self._ds, ['DELIMETER_DS'], []), utils.QM(self._b, ['DELIMETER_B'], []))

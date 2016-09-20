@@ -19,7 +19,7 @@ from grid_control.datasets import DataProvider, DataSplitter, PartitionProcessor
 from grid_control.gc_exceptions import UserError
 from grid_control.parameters import ParameterSource
 from grid_control.tasks.task_base import TaskModule
-from grid_control.utils.parsing import strTime
+from grid_control.utils.parsing import str_time_long
 
 
 class DataTask(TaskModule):
@@ -73,7 +73,7 @@ class DataTask(TaskModule):
 			data_refresh = config.getTime('%s refresh' % datasource_name, -1, onChange = None)
 			if data_refresh >= 0:
 				data_refresh = max(data_refresh, dataProvider.queryLimit())
-				self._log.info('Dataset source will be queried every %s', strTime(data_refresh))
+				self._log.info('Dataset source will be queried every %s', str_time_long(data_refresh))
 			data_ps.resyncSetup(interval = data_refresh, force = config.getState('resync', detail = 'datasets'))
 			if dataSplitter.get_partition_len() == 0:
 				if data_refresh < 0:
@@ -84,5 +84,5 @@ class DataTask(TaskModule):
 
 	def getVarMapping(self):
 		if self._has_dataset: # create alias NICK for DATASETNICK
-			return utils.mergeDicts([TaskModule.getVarMapping(self), {'NICK': 'DATASETNICK'}])
+			return utils.merge_dict_list([TaskModule.getVarMapping(self), {'NICK': 'DATASETNICK'}])
 		return TaskModule.getVarMapping(self)

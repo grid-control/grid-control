@@ -14,7 +14,7 @@
 
 import os, time
 from grid_control.backends.access import AccessTokenError, RefreshableAccessToken
-from grid_control.utils import resolveInstallPath
+from grid_control.utils import resolve_install_path
 from grid_control.utils.process_base import LocalProcess
 from python_compat import imap, lmap, rsplit
 
@@ -24,8 +24,8 @@ class AFSAccessToken(RefreshableAccessToken):
 
 	def __init__(self, config, name):
 		RefreshableAccessToken.__init__(self, config, name)
-		self._kinitExec = resolveInstallPath('kinit')
-		self._klistExec = resolveInstallPath('klist')
+		self._kinitExec = resolve_install_path('kinit')
+		self._klistExec = resolve_install_path('klist')
 		self._cache = None
 		self._authFiles = dict(imap(lambda name: (name, config.getWorkPath('proxy.%s' % name)), ['KRB5CCNAME', 'KRBTKFILE']))
 		self._backupTickets(config)

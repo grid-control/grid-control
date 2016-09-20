@@ -18,7 +18,7 @@ from grid_control.config.cinterface_typed import SimpleConfigInterface
 from grid_control.config.config_entry import ConfigContainer, ConfigError
 from grid_control.config.cview_base import SimpleConfigView
 from grid_control.gc_exceptions import GCLogHandler
-from grid_control.utils import ensureDirExists, getRootName, resolvePath
+from grid_control.utils import ensure_dir_exists, get_file_name, resolve_path
 from grid_control.utils.data_structures import UniqueList
 from grid_control.utils.file_objects import SafeFile
 from python_compat import lfilter
@@ -29,7 +29,7 @@ class ConfigFactory(object):
 	def __init__(self, filler = None, config_file_path = None):
 		def get_name(prefix = ''):
 			if config_file_path:
-				return ('%s.%s' % (prefix, getRootName(config_file_path))).strip('.')
+				return ('%s.%s' % (prefix, get_file_name(config_file_path))).strip('.')
 			elif prefix:
 				return prefix
 			return 'unnamed'
@@ -39,8 +39,8 @@ class ConfigFactory(object):
 		except Exception:
 			raise ConfigError('The current directory does not exist!')
 		if config_file_path:
-			path_main = os.path.dirname(resolvePath(config_file_path,
-				searchPaths = [os.getcwd()], ErrorClass = ConfigError))
+			path_main = os.path.dirname(resolve_path(config_file_path,
+				search_path_list = [os.getcwd()], exception_type = ConfigError))
 
 		# Init config containers
 		self._container_cur = ConfigContainer('current')
@@ -58,8 +58,8 @@ class ConfigFactory(object):
 
 		# Determine work directory using config interface with "global" scope
 		tmp_config = SimpleConfigInterface(self._view.getView(setSections = ['global']))
-		work_dir_base = tmp_config.getPath('workdir base', path_main, mustExist = False)
-		path_work = tmp_config.getPath('workdir', os.path.join(work_dir_base, get_name('work')), mustExist = False)
+		work_dir_base = tmp_config.getPath('workdir base', path_main, must_exist = False)
+		path_work = tmp_config.getPath('workdir', os.path.join(work_dir_base, get_name('work')), must_exist = False)
 		self._view.config_vault['path:workdir'] = path_work # tmp_config still has undefinied
 		# Set dynamic plugin search path
 		sys.path.extend(tmp_config.getPaths('plugin paths', [os.getcwd()]))
@@ -101,7 +101,7 @@ class ConfigFactory(object):
 		for entry in unused:
 			log.log(logging.INFO1, '\t%s', entry.format(printSection = True))
 		if write_config or not os.path.exists(self._config_path_old):
-			ensureDirExists(os.path.dirname(self._config_path_old), 'config storage directory', ConfigError)
+			ensure_dir_exists(os.path.dirname(self._config_path_old), 'config storage directory', ConfigError)
 			# Write user friendly, flat config file and config file with saved settings
 			self._write_file(self._config_path_flat, printDefault = False, printUnused = False, printMinimal = True,
 				printWorkdir = True)

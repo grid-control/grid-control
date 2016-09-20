@@ -16,24 +16,23 @@ import os, sys
 from python_compat import exit_without_cleanup, irange
 
 
-def _safe_close(fd):
-	try:
-		os.close(fd)
-	except Exception:
-		pass
+def run_command(cmd, args, fd_map, env):  # run command by replacing the current process
+	def _safe_close(file_descriptor):
+		try:
+			os.close(file_descriptor)
+		except Exception:
+			pass
 
-
-def run_command(cmd, args, fd_map, env): # run command by replacing the current process
 	for fd_target, fd_source in fd_map.items():
-		os.dup2(fd_source, fd_target) # set stdin/stdout/stderr
+		os.dup2(fd_source, fd_target)  # set stdin/stdout/stderr
 	try:
 		fd_max = os.sysconf('SC_OPEN_MAX')
 	except Exception:
 		fd_max = 256
-	for fd in irange(3, fd_max): # close inherited file descriptors except for std{in/out/err}
-		_safe_close(fd)
+	for fd_open in irange(3, fd_max):  # close inherited file descriptors except for std{in/out/err}
+		_safe_close(fd_open)
 	try:
-		os.execve(cmd, args, env) # replace process - this command DOES NOT RETURN if successful!
+		os.execve(cmd, args, env)  # replace process - this command DOES NOT RETURN if successful!
 	except Exception:
 		pass
 	error_message_list = [
@@ -46,6 +45,6 @@ def run_command(cmd, args, fd_map, env): # run command by replacing the current 
 		'  exception: %s' % repr(sys.exc_info()[1]),
 	]
 	sys.stderr.write(str.join('\n', error_message_list))
-	for fd in [0, 1, 2]:
-		_safe_close(fd)
-	exit_without_cleanup(os.EX_OSERR) # exit forked process with OS error
+	for fd_std in [0, 1, 2]:
+		_safe_close(fd_std)
+	exit_without_cleanup(os.EX_OSERR)  # exit forked process with OS error

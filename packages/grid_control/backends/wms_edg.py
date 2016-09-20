@@ -34,6 +34,6 @@ class EuropeanDataGrid(GridWMS):
 			cancelExecutor = Grid_CancelJobs(config, 'edg-job-cancel'),
 			jdlWriter = EDGJDL())
 
-		self._submitExec = utils.resolveInstallPath('edg-job-submit')
-		self._outputExec = utils.resolveInstallPath('edg-job-get-output')
+		self._submitExec = utils.resolve_install_path('edg-job-submit')
+		self._outputExec = utils.resolve_install_path('edg-job-get-output')
 		self._submitParams.update({'-r': self._ce, '--config-vo': self._configVO })

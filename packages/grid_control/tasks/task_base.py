@@ -19,7 +19,7 @@ from grid_control.config import ConfigError, changeInitNeeded, validNoVar
 from grid_control.gc_plugin import ConfigurablePlugin, NamedPlugin
 from grid_control.parameters import ParameterAdapter, ParameterFactory, ParameterInfo
 from grid_control.utils.file_objects import SafeFile
-from grid_control.utils.parsing import strGuid
+from grid_control.utils.parsing import str_guid
 from hpfwk import AbstractError
 from time import strftime, time
 from python_compat import ichain, ifilter, imap, izip, lchain, lmap, lru_cache, md5_hex
@@ -94,7 +94,7 @@ class TaskModule(NamedPlugin):
 
 		# Get error messages from gc-run.lib comments
 		self.errorDict = {}
-		self.updateErrorDict(utils.pathShare('gc-run.lib'))
+		self.updateErrorDict(utils.path_share('gc-run.lib'))
 
 		# Init parameter source manager
 		psrc_repository = {}
@@ -125,7 +125,7 @@ class TaskModule(NamedPlugin):
 			'SE_MINFILESIZE': self.seMinSize,
 			# Sandbox
 			'SB_OUTPUT_FILES': str.join(' ', self.getSBOutFiles()),
-			'SB_INPUT_FILES': str.join(' ', imap(lambda x: x.pathRel, self.getSBInFiles())),
+			'SB_INPUT_FILES': str.join(' ', imap(lambda x: x.path_rel, self.getSBInFiles())),
 			# Runtime
 			'GC_JOBTIMEOUT': self.nodeTimeout,
 			'GC_RUNTIME': self.getCommand(),
@@ -136,9 +136,9 @@ class TaskModule(NamedPlugin):
 			'GC_TASK_CONF': self.taskConfigName,
 			'GC_TASK_DATE': self.taskDate,
 			'GC_TASK_ID': self.taskID,
-			'GC_VERSION': utils.getVersion(),
+			'GC_VERSION': utils.get_version(),
 		}
-		return utils.mergeDicts([taskConfig, self.taskVariables])
+		return utils.merge_dict_list([taskConfig, self.taskVariables])
 	getTaskConfig = lru_cache(getTaskConfig)
 
 
@@ -150,7 +150,7 @@ class TaskModule(NamedPlugin):
 
 	def getTransientVars(self):
 		return {'GC_DATE': strftime("%F"), 'GC_TIMESTAMP': strftime("%s"),
-			'GC_GUID': strGuid(str.join("", imap(lambda x: "%02x" % x, imap(random.randrange, [256]*16)))),
+			'GC_GUID': str_guid(str.join("", imap(lambda x: "%02x" % x, imap(random.randrange, [256]*16)))),
 			'RANDOM': str(random.randrange(0, 900000000))}
 
 
@@ -173,10 +173,10 @@ class TaskModule(NamedPlugin):
 
 	def substVars(self, name, inp, jobNum = None, addDict = None, check = True):
 		addDict = addDict or {}
-		allVars = utils.mergeDicts([addDict, self.getTaskConfig()])
+		allVars = utils.merge_dict_list([addDict, self.getTaskConfig()])
 		if jobNum is not None:
 			allVars.update(self.getJobConfig(jobNum))
-		subst = lambda x: utils.replaceDict(x, allVars, ichain([self.getVarMapping().items(), izip(addDict, addDict)]))
+		subst = lambda x: utils.replace_with_dict(x, allVars, ichain([self.getVarMapping().items(), izip(addDict, addDict)]))
 		result = subst(subst(str(inp)))
 		if check and self._varCheck.check(result):
 			raise ConfigError('%s references unknown variables: %s' % (name, result))
@@ -206,7 +206,7 @@ class TaskModule(NamedPlugin):
 
 	# Get files for input sandbox
 	def getSBInFiles(self):
-		return lmap(lambda fn: utils.Result(pathAbs = fn, pathRel = os.path.basename(fn)), self.sbInputFiles)
+		return lmap(lambda fn: utils.Result(path_abs = fn, path_rel = os.path.basename(fn)), self.sbInputFiles)
 
 
 	# Get files for output sandbox

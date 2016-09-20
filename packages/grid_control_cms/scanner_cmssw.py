@@ -69,7 +69,7 @@ class ObjectsFromCMSSW(InfoScanner):
 				self._stored_globaltag[cfgHash] = gtLines[-1].split(':')[1].strip()
 		if cfgHash not in self._stored_globaltag:
 			try:
-				cfgContentEnv = utils.execWrapper(cfgContent)
+				cfgContentEnv = utils.exec_wrapper(cfgContent)
 				self._stored_globaltag[cfgHash] = cfgContentEnv['process'].GlobalTag.globaltag.value()
 			except Exception:
 				self._stored_globaltag[cfgHash] = 'unknown:All'

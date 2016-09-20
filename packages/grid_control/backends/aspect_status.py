@@ -16,13 +16,13 @@ import logging
 from grid_control import utils
 from grid_control.backends.backend_tools import BackendError, BackendExecutor
 from grid_control.job_db import Job
-from grid_control.utils.data_structures import makeEnum
+from grid_control.utils.data_structures import make_enum
 from hpfwk import AbstractError
 from python_compat import set
 
 
-CheckInfo = makeEnum(['WMSID', 'RAW_STATUS', 'QUEUE', 'WN', 'SITE'])
-CheckStatus = makeEnum(['OK', 'ERROR'])
+CheckInfo = make_enum(['WMSID', 'RAW_STATUS', 'QUEUE', 'WN', 'SITE'])
+CheckStatus = make_enum(['OK', 'ERROR'])
 
 # TODO: Error Handler Plugins - logging, exception, errorcode - with abort / continue
 

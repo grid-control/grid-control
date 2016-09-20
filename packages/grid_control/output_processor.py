@@ -14,7 +14,7 @@
 
 import os, gzip, logging
 from grid_control.utils import DictFormat
-from grid_control.utils.data_structures import makeEnum
+from grid_control.utils.data_structures import make_enum
 from hpfwk import AbstractError, NestedException, Plugin, get_current_exception
 from python_compat import bytes2str, ifilter, izip
 
@@ -26,7 +26,7 @@ class OutputProcessor(Plugin):
 class JobResultError(NestedException):
 	pass
 
-JobResult = makeEnum(['JOBNUM', 'EXITCODE', 'RAW'])
+JobResult = make_enum(['JOBNUM', 'EXITCODE', 'RAW'])
 
 class JobInfoProcessor(OutputProcessor):
 	def __init__(self):
@@ -44,7 +44,7 @@ class JobInfoProcessor(OutputProcessor):
 				raise JobResultError('Unable to read job result file %r' % fn)
 			if not info_content:
 				raise JobResultError('Job result file %r is empty' % fn)
-			data = self._df.parse(info_content, keyParser = {None: str}) # impossible to fail
+			data = self._df.parse(info_content, key_parser = {None: str}) # impossible to fail
 			try:
 				jobNum = data.pop('JOBID')
 				exitCode = data.pop('EXITCODE')
@@ -107,7 +107,7 @@ class FileInfoProcessor(JobInfoProcessor):
 					fileData = fileData.strip('"')
 				result.setdefault(int(fileIdx), {})[FileInfoProcessor.str2enum(fileProperty)] = fileData
 			return list(result.values())
-makeEnum(['Hash', 'NameLocal', 'NameDest', 'Path'], FileInfoProcessor)
+make_enum(['Hash', 'NameLocal', 'NameDest', 'Path'], FileInfoProcessor)
 
 
 class TaskOutputProcessor(Plugin):

@@ -91,7 +91,7 @@ class MultiMonitor(MultiEventHandler, Monitoring):
 
 	def getTaskConfig(self):
 		tmp = Monitoring.getTaskConfig(self)
-		return utils.mergeDicts(lmap(lambda m: m.getTaskConfig(), self._handlers) + [tmp])
+		return utils.merge_dict_list(lmap(lambda m: m.getTaskConfig(), self._handlers) + [tmp])
 
 	def getFiles(self):
 		return lchain(lmap(lambda h: h.getFiles(), self._handlers) + [self.getScript()])
@@ -143,7 +143,7 @@ class ScriptMonitoring(Monitoring):
 
 	def _runInBackground(self, script, jobNum = None, jobObj = None, addDict = None):
 		if script != '':
-			self._tp.start_thread('Running monitoring script %s' % script,
+			self._tp.start_daemon('Running monitoring script %s' % script,
 				self._scriptThread, script, jobNum, jobObj, addDict)
 
 	# Called on job submission

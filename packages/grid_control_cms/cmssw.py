@@ -146,7 +146,7 @@ class SCRAMTask(DataTask):
 		try:
 			fp = open(fn, 'r')
 			try:
-				return utils.DictFormat().parse(fp, keyParser = {None: str})
+				return utils.DictFormat().parse(fp, key_parser = {None: str})
 			finally:
 				fp.close()
 		except Exception:
@@ -176,7 +176,7 @@ class CMSSW(SCRAMTask):
 		if self._projectArea:
 			self._oldReleaseTop = self._parse_scram_file(os.path.join(self._projectArea, '.SCRAM', self._scramArch, 'Environment')).get('RELEASETOP', None)
 
-		self.updateErrorDict(utils.pathShare('gc-run.cmssw.sh', pkg = 'grid_control_cms'))
+		self.updateErrorDict(utils.path_share('gc-run.cmssw.sh', pkg = 'grid_control_cms'))
 
 		self._projectAreaTarballSE = config.getBool(['se runtime', 'se project area'], True)
 		self._projectAreaTarball = config.getWorkPath('cmssw-project-area.tar.gz')
@@ -193,7 +193,7 @@ class CMSSW(SCRAMTask):
 		if not self._has_dataset:
 			self.eventsPerJob = config.get('events per job', '0') # this can be a variable like @USER_EVENTS@!
 			self._neededVars.add('MAX_EVENTS')
-		fragment = config.getPath('instrumentation fragment', utils.pathShare('fragmentForCMSSW.py', pkg = 'grid_control_cms'))
+		fragment = config.getPath('instrumentation fragment', utils.path_share('fragmentForCMSSW.py', pkg = 'grid_control_cms'))
 		self.configFiles = self._processConfigFiles(config, list(self._getConfigFiles(config)), fragment,
 			autoPrepare = config.getBool('instrumentation', True),
 			mustPrepare = self._has_dataset)
@@ -205,11 +205,11 @@ class CMSSW(SCRAMTask):
 		self.searchLoc = self._getCMSSWPaths(config)
 		if config.getState('init', detail = 'sandbox'):
 			if os.path.exists(self._projectAreaTarball):
-				if not utils.getUserBool('CMSSW tarball already exists! Do you want to regenerate it?', True):
+				if not utils.get_user_bool('CMSSW tarball already exists! Do you want to regenerate it?', True):
 					return
 			# Generate CMSSW tarball
 			if self._projectArea:
-				utils.genTarball(self._projectAreaTarball, utils.matchFiles(self._projectArea, self._projectAreaPattern))
+				utils.create_tarball(self._projectAreaTarball, utils.match_files(self._projectArea, self._projectAreaPattern))
 			if self._projectAreaTarballSE:
 				config.setState(True, 'init', detail = 'storage')
 
@@ -225,7 +225,7 @@ class CMSSW(SCRAMTask):
 		result = []
 		userPath = config.get(['cmssw dir', 'vo software dir'], '')
 		if userPath:
-			userPathLocal = os.path.abspath(utils.cleanPath(userPath))
+			userPathLocal = os.path.abspath(utils.clean_path(userPath))
 			if os.path.exists(userPathLocal):
 				userPath = userPathLocal
 		if userPath:
@@ -243,7 +243,7 @@ class CMSSW(SCRAMTask):
 
 	def _getConfigFiles(self, config):
 		cfgDefault = utils.QM(self.prolog.isActive() or self.epilog.isActive(), [], unspecified)
-		for cfgFile in config.getPaths('config file', cfgDefault, mustExist = False):
+		for cfgFile in config.getPaths('config file', cfgDefault, must_exist = False):
 			if not os.path.exists(cfgFile):
 				raise ConfigError('Config file %r not found.' % cfgFile)
 			yield cfgFile
@@ -301,14 +301,14 @@ class CMSSW(SCRAMTask):
 				3: isInstrumented, 4: doPrepare})
 
 		if cfgStatus:
-			utils.printTabular([(1, 'Config file'), (2, 'Work dir'), (3, 'Instrumented'), (4, 'Scheduled')], cfgStatus, 'lccc')
+			utils.display_table([(1, 'Config file'), (2, 'Work dir'), (3, 'Instrumented'), (4, 'Scheduled')], cfgStatus, 'lccc')
 		return cfgTodo
 
 
 	def _processConfigFiles(self, config, cfgFiles, fragment_path, autoPrepare, mustPrepare):
 		# process list of uninitialized config files
 		for (cfg, cfg_new, doPrepare) in self._cfgFindUninitialized(config, cfgFiles, autoPrepare, mustPrepare):
-			if doPrepare and (autoPrepare or utils.getUserBool('Do you want to prepare %s for running over the dataset?' % cfg, True)):
+			if doPrepare and (autoPrepare or utils.get_user_bool('Do you want to prepare %s for running over the dataset?' % cfg, True)):
 				self._cfgStore(cfg, cfg_new, fragment_path)
 			else:
 				self._cfgStore(cfg, cfg_new)
@@ -340,11 +340,11 @@ class CMSSW(SCRAMTask):
 		data['CMSSW_OLD_RELEASETOP'] = self._oldReleaseTop
 		if self.prolog.isActive():
 			data['CMSSW_PROLOG_EXEC'] = self.prolog.getCommand()
-			data['CMSSW_PROLOG_SB_IN_FILES'] = str.join(' ', imap(lambda x: x.pathRel, self.prolog.getSBInFiles()))
+			data['CMSSW_PROLOG_SB_IN_FILES'] = str.join(' ', imap(lambda x: x.path_rel, self.prolog.getSBInFiles()))
 			data['CMSSW_PROLOG_ARGS'] = self.prolog.getArguments()
 		if self.epilog.isActive():
 			data['CMSSW_EPILOG_EXEC'] = self.epilog.getCommand()
-			data['CMSSW_EPILOG_SB_IN_FILES'] = str.join(' ', imap(lambda x: x.pathRel, self.epilog.getSBInFiles()))
+			data['CMSSW_EPILOG_SB_IN_FILES'] = str.join(' ', imap(lambda x: x.path_rel, self.epilog.getSBInFiles()))
 			data['CMSSW_EPILOG_ARGS'] = self.epilog.getArguments()
 		return data
 
@@ -361,10 +361,10 @@ class CMSSW(SCRAMTask):
 	def getSBInFiles(self):
 		files = SCRAMTask.getSBInFiles(self) + self.prolog.getSBInFiles() + self.epilog.getSBInFiles()
 		for cfgFile in self.configFiles:
-			files.append(utils.Result(pathAbs = cfgFile, pathRel = os.path.basename(cfgFile)))
+			files.append(utils.Result(path_abs = cfgFile, path_rel = os.path.basename(cfgFile)))
 		if self._projectArea and not self._projectAreaTarballSE:
-			files.append(utils.Result(pathAbs = self._projectAreaTarball, pathRel = os.path.basename(self._projectAreaTarball)))
-		return files + [utils.Result(pathAbs = utils.pathShare('gc-run.cmssw.sh', pkg = 'grid_control_cms'), pathRel = 'gc-run.cmssw.sh')]
+			files.append(utils.Result(path_abs = self._projectAreaTarball, path_rel = os.path.basename(self._projectAreaTarball)))
+		return files + [utils.Result(path_abs = utils.path_share('gc-run.cmssw.sh', pkg = 'grid_control_cms'), path_rel = 'gc-run.cmssw.sh')]
 
 
 	# Get files for output sandbox

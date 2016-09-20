@@ -16,7 +16,7 @@ import os
 from grid_control import utils
 from grid_control.datasets.provider_base import DatasetError
 from grid_control.datasets.provider_scan import GCProvider
-from grid_control.utils.parsing import strGuid
+from grid_control.utils.parsing import str_guid
 from hpfwk import clear_current_exception
 
 
@@ -68,7 +68,7 @@ class DBSInfoProvider(GCProvider):
 		rawDS = '/%s/%s/%s' % (primary, processed, tier)
 		if None in (primary, processed, tier):
 			raise DatasetError('Invalid dataset name supplied: %r\nresulting in %s' % (self._ds_name, rawDS))
-		return utils.replaceDict(rawDS, data)
+		return utils.replace_with_dict(rawDS, data)
 
 	def _generateBlockName(self, key, data):
-		return strGuid(key)
+		return str_guid(key)

@@ -17,7 +17,7 @@ from grid_control import utils
 from grid_control.datasets.splitter_base import DataSplitter, DataSplitterIO, PartitionError
 from grid_control.utils.activity import Activity
 from grid_control.utils.file_objects import VirtualFile
-from grid_control.utils.parsing import parseBool, parseJSON, parseList
+from grid_control.utils.parsing import parse_bool, parse_json, parse_list
 from grid_control.utils.thread_tools import GCLock
 from hpfwk import clear_current_exception
 from python_compat import BytesBuffer, bytes2str, ifilter, imap, json, lfilter, lmap, tarfile
@@ -40,7 +40,7 @@ class BaseJobFileTarAdaptor(object):
 		self._tar = tarfile.open(path, 'r:')
 		(self._cacheKey, self._cacheTar) = (None, None)
 
-		metadata = self._fmt.parse(self._tar.extractfile('Metadata').readlines(), keyParser = {None: str})
+		metadata = self._fmt.parse(self._tar.extractfile('Metadata').readlines(), key_parser = {None: str})
 		self.maxJobs = metadata.pop('MaxJobs')
 		self.classname = metadata.pop('ClassName')
 		self.metadata = {'dataset': dict(ifilter(lambda k_v: not k_v[0].startswith('['), metadata.items()))}
@@ -49,10 +49,10 @@ class BaseJobFileTarAdaptor(object):
 		activity.finish()
 
 		self._parserMap = { None: str, DataSplitter.NEntries: int, DataSplitter.Skipped: int,
-			DataSplitter.DatasetID: int, DataSplitter.Invalid: parseBool,
-			DataSplitter.Locations: lambda x: parseList(x, ','),
-			DataSplitter.MetadataHeader: parseJSON,
-			DataSplitter.Metadata: lambda x: parseJSON(x.strip("'")) }
+			DataSplitter.DatasetID: int, DataSplitter.Invalid: parse_bool,
+			DataSplitter.Locations: lambda x: parse_list(x, ','),
+			DataSplitter.MetadataHeader: parse_json,
+			DataSplitter.Metadata: lambda x: parse_json(x.strip("'")) }
 
 
 class DataSplitterIOAuto(DataSplitterIO):
@@ -80,7 +80,7 @@ class DataSplitterIOBase(DataSplitterIO):
 		self._addToTar(subTarTuple[0], name, data)
 
 	def _addToTar(self, tar, name, data):
-		info, fileObj = VirtualFile(name, data).getTarInfo()
+		info, fileObj = VirtualFile(name, data).get_tar_info()
 		tar.addfile(info, fileObj)
 		fileObj.close()
 
@@ -145,7 +145,7 @@ class DataSplitterIO_V1(DataSplitterIOBase):
 					subTarFileObj = BytesBuffer(gzip.GzipFile(fileobj = subTarFileObj).read()) # 3-4x speedup for sequential access
 					self._cacheTar = tarfile.open(mode = 'r', fileobj = subTarFileObj)
 				data = self._fmt.parse(self._cacheTar.extractfile('%05d/info' % key).readlines(),
-					keyParser = {None: int}, valueParser = self._parserMap)
+					key_parser = {None: int}, value_parser = self._parserMap)
 				fileList = lmap(bytes2str, self._cacheTar.extractfile('%05d/list' % key).readlines())
 				if DataSplitter.CommonPrefix in data:
 					fileList = imap(lambda x: '%s/%s' % (data[DataSplitter.CommonPrefix], x), fileList)
@@ -198,7 +198,7 @@ class DataSplitterIO_V2(DataSplitterIOBase):
 					self._cacheTar = tarfile.open(mode = 'r', fileobj = subTarFileObj)
 				fullData = lmap(bytes2str, self._cacheTar.extractfile('%05d' % key).readlines())
 				data = self._fmt.parse(lfilter(lambda x: not x.startswith('='), fullData),
-					keyParser = {None: int}, valueParser = self._parserMap)
+					key_parser = {None: int}, value_parser = self._parserMap)
 				fileList = imap(lambda x: x[1:], ifilter(lambda x: x.startswith('='), fullData))
 				if DataSplitter.CommonPrefix in data:
 					fileList = imap(lambda x: '%s/%s' % (data[DataSplitter.CommonPrefix], x), fileList)

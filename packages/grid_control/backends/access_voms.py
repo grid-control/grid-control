@@ -15,7 +15,7 @@
 # Generic base class for authentication proxies GCSCF:
 
 from grid_control.backends.access_grid import GridAccessToken
-from grid_control.utils.parsing import parseTime
+from grid_control.utils.parsing import parse_time
 
 
 class VomsAccessToken(GridAccessToken):
@@ -33,4 +33,4 @@ class VomsAccessToken(GridAccessToken):
 		return [self._getProxyInfo('path')]
 
 	def _getTimeleft(self, cached):
-		return self._getProxyInfo('timeleft', parseTime, cached)
+		return self._getProxyInfo('timeleft', parse_time, cached)

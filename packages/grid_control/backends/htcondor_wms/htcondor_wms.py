@@ -89,7 +89,7 @@ class HTCondor(BasicWMS):
 		self._initLogger()
 		BasicWMS.__init__(self, config, name)
 		# setup the connection to pools and their interfaces
-		self._sandboxDir  = config.getPath('sandbox path', config.getWorkPath('sandbox.%s' % name), mustExist = False)
+		self._sandboxDir  = config.getPath('sandbox path', config.getWorkPath('sandbox.%s' % name), must_exist = False)
 		self._initPoolInterfaces(config)
 		self._jobSettings = {
 			"Universe" : config.get("universe", "vanilla"),
@@ -158,7 +158,7 @@ class HTCondor(BasicWMS):
 
 	def getSandboxPath(self, subdirToken=""):
 		sandpath = os.path.join(self._sandboxDir, str(subdirToken), '' )
-		return utils.ensureDirExists(sandpath, 'sandbox directory', BackendError)
+		return utils.ensure_dir_exists(sandpath, 'sandbox directory', BackendError)
 
 	# Primary backend actions
 	def submitJobs(self, jobNumList, task):

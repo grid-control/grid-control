@@ -14,13 +14,14 @@
 
 from grid_control.datasets.dproc_base import DataProcessor
 from grid_control.datasets.provider_base import DataProvider, DatasetError
-from grid_control.utils.data_structures import makeEnum
+from grid_control.utils.data_structures import make_enum
 from python_compat import imap, md5_hex, set
 
 
 # Enum to specify how to react to multiple occurences of something
-DatasetUniqueMode = makeEnum(['warn', 'abort', 'skip', 'ignore', 'record'])
-DatasetCheckMode = makeEnum(['warn', 'abort', 'ignore'])
+DatasetUniqueMode = make_enum(['warn', 'abort', 'skip', 'ignore', 'record'])
+DatasetCheckMode = make_enum(['warn', 'abort', 'ignore'])
+
 
 class DataChecker(DataProcessor):
 	def _handle_error(self, msg, mode):
@@ -68,17 +69,17 @@ class NickNameConsistencyProcessor(DataChecker):
 		return (self._check_consistency != DatasetCheckMode.ignore) or (self._check_collision != DatasetCheckMode.ignore)
 
 	def process_block(self, block): # Get nickname and check for collisions
-		blockDS = block[DataProvider.Dataset]
+		dataset_name = block[DataProvider.Dataset]
 		nick = block[DataProvider.Nickname]
 		# Check if nickname is used consistenly in all blocks of a datasets
 		if self._check_consistency != DatasetCheckMode.ignore:
-			if self._check_consistency_data.setdefault(blockDS, nick) != nick:
+			if self._check_consistency_data.setdefault(dataset_name, nick) != nick:
 				self._handle_error('Different blocks of dataset "%s" have different nicknames: ["%s", "%s"]' % (
-					blockDS, self._check_consistency_data[blockDS], nick), self._check_consistency)
+					dataset_name, self._check_consistency_data[dataset_name], nick), self._check_consistency)
 		if self._check_collision != DatasetCheckMode.ignore:
-			if self._check_collision_data.setdefault(nick, blockDS) != blockDS:
+			if self._check_collision_data.setdefault(nick, dataset_name) != dataset_name:
 				self._handle_error('Multiple datasets use the same nickname "%s": ["%s", "%s"]' % (
-					nick, self._check_collision_data[nick], blockDS), self._check_collision)
+					nick, self._check_collision_data[nick], dataset_name), self._check_collision)
 		return block
 
 

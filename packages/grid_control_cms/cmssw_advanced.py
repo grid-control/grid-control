@@ -16,7 +16,7 @@ import os
 from grid_control import utils
 from grid_control.config import ConfigError
 from grid_control.datasets import DataProvider
-from grid_control.utils.parsing import strDictLong
+from grid_control.utils.parsing import str_dict_cfg
 from grid_control_cms.cmssw import CMSSW
 from grid_control_cms.lumi_tools import formatLumi, parseLumiFilter, strLumi
 from python_compat import ichain, imap, lfilter, lmap, set, sorted
@@ -58,7 +58,7 @@ class CMSSW_Advanced(CMSSW):
 		# Mapping between nickname and lumi filter - only display - work is handled by the 'normal' lumi filter
 		config.set('lumi filter matcher', 'regex')
 		if 'nickname lumi filter' in config.getOptions():
-			config.set('lumi filter', strDictLong(config.getDict('nickname lumi filter', {}, onChange = None)))
+			config.set('lumi filter', str_dict_cfg(config.getDict('nickname lumi filter', {}, onChange = None)))
 		self._nmLumi = config.getLookup('lumi filter', {}, parser = parseLumiFilter, strfun = strLumi, onChange = None)
 		if not self._nmLumi.empty():
 			head.append((2, 'Lumi filter'))
@@ -82,7 +82,7 @@ class CMSSW_Advanced(CMSSW):
 				tmp[1] = str.join(', ', imap(os.path.basename, self._nmCfg.lookup(nick, '', is_selector = False)))
 				tmp[2] = formatLumiNice(self._nmLumi.lookup(nick, '', is_selector = False))
 				report.append(tmp)
-			utils.printTabular(head, report, 'cl')
+			utils.display_table(head, report, 'cl')
 
 
 	def getTaskConfig(self):

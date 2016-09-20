@@ -20,7 +20,7 @@ from grid_control.backends.wms_local import LocalWMS
 class PBSGECommon(LocalWMS):
 	def __init__(self, config, name, checkExecutor, cancelExecutor, nodesFinder, queuesFinder):
 		LocalWMS.__init__(self, config, name,
-			submitExec = utils.resolveInstallPath('qsub'),
+			submitExec = utils.resolve_install_path('qsub'),
 			checkExecutor = checkExecutor, cancelExecutor = cancelExecutor,
 			nodesFinder = nodesFinder, queuesFinder = queuesFinder)
 		self._shell = config.get('shell', '', onChange = None)
