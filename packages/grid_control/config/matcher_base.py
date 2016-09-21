@@ -51,7 +51,6 @@ def getCase(case, value):
 	return value
 
 
-# Matcher class
 class Matcher(ConfigurablePlugin):
 	def __init__(self, config, option_prefix, case_override = None, **kwargs):
 		ConfigurablePlugin.__init__(self, config)

@@ -19,7 +19,6 @@ from hpfwk import APIError
 from python_compat import identity, imap, lfilter, lmap, unspecified
 
 
-# Simple ConfigView implementation
 class TaggedConfigView(SimpleConfigView):
 	def __init__(self, name, oldContainer, curContainer, parent = None,
 			setSections = unspecified, addSections = None,

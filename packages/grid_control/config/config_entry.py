@@ -20,8 +20,8 @@ from python_compat import ichain, ifilter, imap, lfilter, lmap, set, sorted, uns
 class ConfigError(NestedException):
 	pass
 
-# return canonized section or option string
 def standardConfigForm(value):
+	# return canonized section or option string
 	if value is not None:
 		if not isinstance(value, list):
 			value = [value]
@@ -34,13 +34,20 @@ def appendOption(option, suffix):
 	return option.rstrip() + ' ' + suffix
 
 
-# Holder of config information
+def _norm_location(value):
+	value = value.lower().strip().replace('\t', ' ')
+	while '  ' in value:
+		value = value.replace('  ', ' ')
+	return value
+
+
 class ConfigEntry(object):
+	# Holder of config information
 	OptTypeDesc = {'?=': 'default', '+=': 'append', '^=': 'prepend', '-=': 'replace',
 		'=': 'override', '*=': 'finalize', '!=': 'modified'}
 
 	def __init__(self, section, option, value, opttype, source, order = None, accessed = False, used = False):
-		(self.section, self.option, self.source, self.order) = (section.lower(), option.lower(), source.lower(), order)
+		(self.section, self.option, self.source, self.order) = (_norm_location(section), _norm_location(option), source.lower(), order)
 		(self.value, self.opttype, self.accessed, self.used) = (value, opttype, accessed, used)
 
 	def __repr__(self):
@@ -142,8 +149,8 @@ class ConfigEntry(object):
 		return (result, used)
 	processEntriesRaw = classmethod(processEntriesRaw)
 
-	# called to simplify entries for a specific option *and* section - sorted by order
 	def simplifyEntries(cls, entryList):
+		# called to simplify entries for a specific option *and* section - sorted by order
 		(result_base, used) = cls.processEntries(entryList)
 		# Merge subsequent += and ^= entries
 		def mergeSubsequent(entries):

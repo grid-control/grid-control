@@ -34,8 +34,8 @@ class ConfigView(Plugin):
 	def iterContent(self):
 		raise AbstractError
 
-	# Return old and current merged config entries
 	def get(self, option_list, default_str, persistent):
+		# Return old and current merged config entries
 		raise AbstractError
 
 	def set(self, option, value, opttype, source):
@@ -74,8 +74,8 @@ class ConfigView(Plugin):
 				stream.write('\n')
 
 
-# Historical config view
 class HistoricalConfigView(ConfigView):
+	# Historical config view
 	def __init__(self, name, oldContainer, curContainer, parent = None):
 		ConfigView.__init__(self, name, parent)
 		self._oldContainer = oldContainer
@@ -152,8 +152,8 @@ class HistoricalConfigView(ConfigView):
 		defaultEntry_fallback = self._createEntry(option_list, defaultEntry.value, '?=', '<default fallback>', specific = True, reverse = False)
 		return (defaultEntry, defaultEntry_fallback)
 
-	# Return old and current merged config entries
 	def get(self, option_list, default_str, persistent):
+		# Return old and current merged config entries
 		oldEntry = None
 		if self._oldContainer.enabled: # If old container is enabled => return stored entry
 			oldEntry = ConfigEntry.combineEntries(self._matchEntries(self._oldContainer, option_list))
@@ -179,8 +179,8 @@ class HistoricalConfigView(ConfigView):
 		return entry
 
 
-# Simple ConfigView implementation
 class SimpleConfigView(HistoricalConfigView):
+	# Simple ConfigView implementation
 	def __init__(self, name, oldContainer, curContainer, parent = None,
 			setSections = unspecified, addSections = None):
 		HistoricalConfigView.__init__(self, name, oldContainer, curContainer, parent or self)
