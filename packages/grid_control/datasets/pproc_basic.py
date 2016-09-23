@@ -75,10 +75,10 @@ class LocationPartitionProcessor(PartitionProcessor):
 		self._disable = config.getBool(['partition location check', '%s partition location check' % datasource_name], True, onChange = None)
 
 	def enabled(self):
-		return self._filter.getSelector() or self._preference or self._reqs or self._disable
+		return self._filter.get_selector() or self._preference or self._reqs or self._disable
 
 	def process(self, pnum, partition_info, result):
-		locations = self._filter.filterList(partition_info.get(DataSplitter.Locations))
+		locations = self._filter.filter_list(partition_info.get(DataSplitter.Locations))
 		if self._preference:
 			if not locations: # [] or None
 				locations = self._preference

@@ -199,7 +199,7 @@ class SimpleConfigInterface(TypedConfigInterface):
 		matcherOpt = add_config_suffix(option, 'matcher')
 		matcherObj = self.getPlugin(matcherOpt, defaultMatcher, cls = Matcher, pargs = (matcherOpt,), pkwargs = kwargs)
 		filter_expr = self.get(option, default, str2obj = filterParser, obj2str = filterStr, **kwargs)
-		return matcherObj.matchWith(filter_expr)
+		return matcherObj.create_matcher(filter_expr)
 
 	def getFilter(self, option, default = unspecified, negate = False, filterParser = str, filterStr = str.__str__,
 			defaultMatcher = 'start', defaultFilter = 'strict', defaultOrder = ListOrder.source, **kwargs):

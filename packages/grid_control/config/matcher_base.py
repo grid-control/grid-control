@@ -40,12 +40,17 @@ class MatcherHolder(object):
 		return self.__class__.__name__ + '_ci(%s)' % repr(self._selector)
 
 
-def get_fixed_matcher_object(instance, matcher_class, selector, case):
+def _get_fixed_matcher_object(instance, matcher_class, selector, case):
 	matcher_class.__name__ = instance.__class__.__name__ + '_FixedSelector'
 	return matcher_class(selector, case)
 
 
-def get_case(case, value):
+def _get_fixed_matcher_object_case(instance, matcher_class, selector, case):
+	selector_case = _get_case(case, selector)
+	return _get_fixed_matcher_object(instance, matcher_class, selector_case, case)
+
+
+def _get_case(case, value):
 	if not case:
 		return value.lower()
 	return value
@@ -65,82 +70,83 @@ class Matcher(ConfigurablePlugin):
 	def get_positive_selector(self, selector):
 		raise AbstractError
 
-	def parseSelector(self, selector):
+	def parse_selector(self, selector):
 		return [selector]
 
 	def matcher(self, value, selector):
 		raise AbstractError
 
-	def matchWith(self, selector):
+	def create_matcher(self, selector):
 		matcher = self.matcher
 
 		class FunctionObject(MatcherHolder):
 			def match(self, value):
-				return matcher(value, get_case(self._case, self._selector))
-		return get_fixed_matcher_object(self, FunctionObject, selector, self._case)
+				return matcher(value, _get_case(self._case, self._selector))
+		return _get_fixed_matcher_object(self, FunctionObject, selector, self._case)
 
 	def __repr__(self):
 		return '%s(case sensitive = %r)' % (self.__class__.__name__, self._case)
 
 
 class BasicMatcher(Matcher):
-	def matchFunction(value, selector):
+	def match_function(value, selector):
 		raise AbstractError
-	matchFunction = staticmethod(matchFunction)
+	match_function = staticmethod(match_function)
 
 	def get_positive_selector(self, selector):
 		return [selector]
 
 	def matcher(self, value, selector):
-		bool_match_result = self.__class__.matchFunction(
-			get_case(self._case, value), get_case(self._case, selector))
+		bool_match_result = self.__class__.match_function(
+			_get_case(self._case, value), _get_case(self._case, selector))
 		return QM(bool_match_result, 1, -1)
 
-	def matchWith(self, selector):
-		matcher = self.__class__.matchFunction
+	def create_matcher(self, selector):
+		matcher = self.__class__.match_function
 
 		class FunctionObject(MatcherHolder):
 			def match(self, value):
-				return QM(matcher(get_case(self._case, value), self._selector), 1, -1)
-		return get_fixed_matcher_object(self, FunctionObject, get_case(self._case, selector), self._case)
+				return QM(matcher(_get_case(self._case, value), self._selector), 1, -1)
+		return _get_fixed_matcher_object_case(self, FunctionObject, selector, self._case)
 
 
 class StartMatcher(BasicMatcher):
 	alias_list = ['start']
-	matchFunction = str.startswith
+	match_function = str.startswith
 
 
 class EndMatcher(BasicMatcher):
 	alias_list = ['end']
-	matchFunction = str.endswith
+	match_function = str.endswith
 
 
 class EqualMatcher(BasicMatcher):
 	alias_list = ['equal']
-	matchFunction = str.__eq__
+	match_function = str.__eq__
+
+
+def _get_fun_from_expr(selector):
+	return eval('lambda value: (%s) == True' % selector)  # pylint:disable=eval-used
 
 
 class ExprMatcher(Matcher):
 	alias_list = ['expr', 'eval']
 
-	def getExpr(selector):
-		return eval('lambda value: (%s) == True' % selector)  # pylint:disable=eval-used
-	getExpr = staticmethod(getExpr)
-
 	def get_positive_selector(self, selector):
 		return None
 
 	def matcher(self, value, selector):
-		return QM(ExprMatcher.getExpr(get_case(self._case, selector))(get_case(self._case, value)), 1, -1)
+		match_fun = _get_fun_from_expr(_get_case(self._case, selector))
+		return QM(match_fun(_get_case(self._case, value)), 1, -1)
 
-	def matchWith(self, selector):
+	def create_matcher(self, selector):
 		class FunctionObject(MatcherHolder):
 			def init(self, selector_fixed):
-				self._matcher = ExprMatcher.getExpr(selector_fixed)
+				self._matcher = _get_fun_from_expr(selector_fixed)
 
 			def match(self, value):
-				return QM(self._matcher(get_case(self._case, value)), 1, -1)
-		return get_fixed_matcher_object(self, FunctionObject, get_case(self._case, selector), self._case)
+				return QM(self._matcher(_get_case(self._case, value)), 1, -1)
+		return _get_fixed_matcher_object_case(self, FunctionObject, selector, self._case)
 
 
 class RegExMatcher(Matcher):
@@ -154,18 +160,18 @@ class RegExMatcher(Matcher):
 		return None
 
 	def matcher(self, value, selector):
-		re_match = re.search(get_case(self._case_regex, selector), get_case(self._case, value))
+		re_match = re.search(_get_case(self._case_regex, selector), _get_case(self._case, value))
 		return QM(re_match is not None, 1, -1)
 
-	def matchWith(self, selector):
+	def create_matcher(self, selector):
 		class FunctionObject(MatcherHolder):
 			def init(self, selector_fixed):
 				self._regex = re.compile(selector_fixed)
 
 			def match(self, value):
-				return QM(self._regex.search(get_case(self._case, value)) is not None, 1, -1)
-		selector_case = get_case(self._case_regex, selector)
-		return get_fixed_matcher_object(self, FunctionObject, selector_case, self._case)
+				return QM(self._regex.search(_get_case(self._case, value)) is not None, 1, -1)
+		selector_case = _get_case(self._case_regex, selector)
+		return _get_fixed_matcher_object(self, FunctionObject, selector_case, self._case)
 
 
 class ShellStyleMatcher(RegExMatcher):
@@ -176,13 +182,13 @@ class ShellStyleMatcher(RegExMatcher):
 		self._case_regex = True
 
 	def _translate(self, selector):
-		return fnmatch.translate(get_case(self._case, selector))
+		return fnmatch.translate(_get_case(self._case, selector))
 
 	def matcher(self, value, selector):
 		return RegExMatcher.matcher(self, value, self._translate(selector))
 
-	def matchWith(self, selector):
-		return RegExMatcher.matchWith(self, self._translate(selector))
+	def create_matcher(self, selector):
+		return RegExMatcher.create_matcher(self, self._translate(selector))
 
 
 class BlackWhiteMatcher(Matcher):
@@ -190,24 +196,24 @@ class BlackWhiteMatcher(Matcher):
 
 	def __init__(self, config, option_prefix, case_override=None, **kwargs):
 		Matcher.__init__(self, config, option_prefix, case_override, **kwargs)
-		self._baseMatcher = config.getPlugin(add_config_suffix(option_prefix, 'mode'), 'start',
+		self._base_matcher = config.getPlugin(add_config_suffix(option_prefix, 'mode'), 'start',
 			cls=Matcher, pargs=(option_prefix, self._case), pkwargs=kwargs, **kwargs)
 
 	def __repr__(self):
-		return '%s(base matcher = %r)' % (self.__class__.__name__, self._baseMatcher)
+		return '%s(base matcher = %r)' % (self.__class__.__name__, self._base_matcher)
 
 	def get_positive_selector(self, selector):
 		return lfilter(lambda p: not p.startswith('-'), selector.split())
 
-	def parseSelector(self, selector):
+	def parse_selector(self, selector):
 		return selector.split()
 
 	def matcher(self, value, selector):
 		result = 0
 		for idx, subselector in enumerate(selector.split()):
-			if subselector.startswith('-') and (self._baseMatcher.matcher(value, subselector[1:]) > 0):
+			if subselector.startswith('-') and (self._base_matcher.matcher(value, subselector[1:]) > 0):
 				result = -(idx + 1)
-			elif self._baseMatcher.matcher(value, subselector) > 0:
+			elif self._base_matcher.matcher(value, subselector) > 0:
 				result = idx + 1
 			if self._log:
 				self._log.log(logging.DEBUG1, 'matching value %s against selector %s: %s',
@@ -220,37 +226,37 @@ ListOrder = make_enum(['source', 'matcher'])
 
 class ListFilter(Plugin):
 	def __init__(self, selector, matcher, order, negate):
-		(self._matcher, self._matchFunction) = (matcher, None)
+		(self._matcher, self._match_function) = (matcher, None)
 		(self._positive, self._selector, self._order, self._negate) = (None, None, order, negate)
 		if selector:
-			self._selector = matcher.parseSelector(selector)
+			self._selector = matcher.parse_selector(selector)
 			self._positive = matcher.get_positive_selector(selector)
-			matchObj = matcher.matchWith(selector)
+			match_obj = matcher.create_matcher(selector)
 			if negate:
 				def match_fun(item):
-					return -matchObj.match(item)
-				self._matchFunction = match_fun
+					return -match_obj.match(item)
+				self._match_function = match_fun
 			else:
-				self._matchFunction = matchObj.match
+				self._match_function = match_obj.match
 
-	def getSelector(self):
+	def get_selector(self):
 		return self._selector
 
-	def filterList(self, entries, key=None):
+	def filter_list(self, entries, key=None):
 		if entries is None:
 			return self._positive
-		if not self._matchFunction:
+		if not self._match_function:
 			return entries
 		if key is None:
-			matchFunction = self._matchFunction
+			match_function = self._match_function
 		else:
-			def matchFunction(item):
-				return self._matchFunction(key(item))
+			def match_function(item):
+				return self._match_function(key(item))
 		if self._order == ListOrder.matcher:
-			entries = sorted(entries, key=matchFunction)
-		return self._filterListImpl(entries, matchFunction)
+			entries = sorted(entries, key=match_function)
+		return self._filter_list(entries, match_function)
 
-	def _filterListImpl(self, entries, matchFunction):
+	def _filter_list(self, entries, match_function):
 		raise AbstractError
 
 	def __repr__(self):
@@ -261,25 +267,25 @@ class ListFilter(Plugin):
 class StrictListFilter(ListFilter):
 	alias_list = ['strict', 'require']
 
-	def _filterListImpl(self, entries, matchFunction):
-		return lfilter(lambda entry: matchFunction(entry) > 0, entries)
+	def _filter_list(self, entries, match_function):
+		return lfilter(lambda entry: match_function(entry) > 0, entries)
 
 
 class MediumListFilter(ListFilter):
 	alias_list = ['try_strict']
 
-	def _filterListImpl(self, entries, matchFunction):
-		strict_result = lfilter(lambda entry: matchFunction(entry) > 0, entries)
+	def _filter_list(self, entries, match_function):
+		strict_result = lfilter(lambda entry: match_function(entry) > 0, entries)
 		if strict_result:
 			return strict_result
-		return lfilter(lambda entry: matchFunction(entry) >= 0, entries)
+		return lfilter(lambda entry: match_function(entry) >= 0, entries)
 
 
 class WeakListFilter(ListFilter):
 	alias_list = ['weak', 'prefer']
 
-	def _filterListImpl(self, entries, matchFunction):
-		return lfilter(lambda entry: matchFunction(entry) >= 0, entries)
+	def _filter_list(self, entries, match_function):
+		return lfilter(lambda entry: match_function(entry) >= 0, entries)
 
 
 class DictLookup(Plugin):

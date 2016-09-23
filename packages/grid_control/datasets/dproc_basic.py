@@ -84,7 +84,7 @@ class LocationDataProcessor(DataProcessor):
 
 	def process_block(self, block):
 		if block[DataProvider.Locations] is not None:
-			sites = self._location_filter.filterList(block[DataProvider.Locations])
+			sites = self._location_filter.filter_list(block[DataProvider.Locations])
 			if (sites is not None) and (len(sites) == 0) and (len(block[DataProvider.FileList]) != 0):
 				if not len(block[DataProvider.Locations]):
 					self._log.warning('Block %s is not available at any site!', DataProvider.bName(block))
@@ -126,11 +126,11 @@ class URLDataProcessor(DataProcessor):
 			defaultMatcher = 'blackwhite', defaultFilter = 'weak', onChange = on_change)
 
 	def enabled(self):
-		return self._url_filter.getSelector() is not None
+		return self._url_filter.get_selector() is not None
 
 	def process_block(self, block):
 		if self.enabled():
-			block[DataProvider.FileList] = self._url_filter.filterList(block[DataProvider.FileList], itemgetter(DataProvider.URL))
+			block[DataProvider.FileList] = self._url_filter.filter_list(block[DataProvider.FileList], itemgetter(DataProvider.URL))
 		return block
 
 	def _parse_filter(self, config, value):

@@ -110,7 +110,7 @@ class CMSBaseProvider(DataProvider):
 
 		if not replica_infos:
 			return empty_with_warning('Dataset block %r has no replica information!', blockPath)
-		replica_infos_selected = self._phedex_filter.filterList(replica_infos, key = itemgetter(0))
+		replica_infos_selected = self._phedex_filter.filter_list(replica_infos, key = itemgetter(0))
 		if not replica_infos_selected:
 			return empty_with_warning('Dataset block %r is not available at the selected locations!\nAvailable locations: %s', blockPath,
 				str.join(', ', self._fmtLocations(replica_infos)))

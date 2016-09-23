@@ -39,11 +39,11 @@ class FilterBroker(Broker):
 		userFilter = config.getFilter(broker_prefix, '',
 			defaultMatcher = 'blackwhite', defaultFilter = 'try_strict',
 			defaultOrder = ListOrder.matcher)
-		self._itemsStart = userFilter.getSelector()
+		self._itemsStart = userFilter.get_selector()
 		if self._itemsStart:
 			self._discover(discoverFun)
 		if self._itemsDiscovered:
-			self._itemsStart = userFilter.filterList(self._itemsDiscovered)
+			self._itemsStart = userFilter.filter_list(self._itemsDiscovered)
 
 
 class CoverageBroker(Broker):
@@ -52,10 +52,10 @@ class CoverageBroker(Broker):
 		userFilter = config.getFilter(broker_prefix, '',
 			defaultMatcher = 'blackwhite', defaultFilter = 'try_strict',
 			defaultOrder = ListOrder.matcher)
-		self._itemsStart = userFilter.filterList(None)
+		self._itemsStart = userFilter.filter_list(None)
 		itemsDiscover = list(self._discover(discoverFun).keys())
 		if itemsDiscover:
-			self._itemsStart = userFilter.filterList(itemsDiscover)
+			self._itemsStart = userFilter.filter_list(itemsDiscover)
 		self._nIndex = 0
 
 	def _broker(self, reqs, items):
