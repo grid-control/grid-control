@@ -24,8 +24,8 @@ from grid_control.utils.file_objects import SafeFile
 from python_compat import lfilter
 
 
-# Main config interface
 class ConfigFactory(object):
+	# Main config interface
 	def __init__(self, filler = None, config_file_path = None):
 		def get_name(prefix = ''):
 			if config_file_path:

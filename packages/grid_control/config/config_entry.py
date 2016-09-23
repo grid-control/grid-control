@@ -21,6 +21,12 @@ class ConfigError(NestedException):
 	pass
 
 
+def add_config_suffix(option, suffix):
+	if isinstance(option, (list, tuple)):
+		return lmap(lambda x: add_config_suffix(x, suffix), option)
+	return option.rstrip() + ' ' + suffix
+
+
 def norm_config_locations(value):
 	# return canonized section or option string
 	if value is not None:
@@ -29,17 +35,76 @@ def norm_config_locations(value):
 		return lmap(_norm_config_location, value)
 
 
-def add_config_suffix(option, suffix):
-	if isinstance(option, (list, tuple)):
-		return lmap(lambda x: add_config_suffix(x, suffix), option)
-	return option.rstrip() + ' ' + suffix
+class ConfigContainer(object):
+	def __init__(self, name):
+		self.enabled = True
+		self._read_only = False
+		self._counter = 0
+		self._content = {}
+		self._content_default = {}
 
+	def append(self, entry):
+		if self._read_only:
+			raise APIError('Config container is read-only!')
+		self._counter += 1
+		entry.order = self._counter
+		self._content.setdefault(entry.option, []).append(entry)
 
-def _norm_config_location(value):
-	value = value.lower().strip().replace('\t', ' ')
-	while '  ' in value:
-		value = value.replace('  ', ' ')
-	return value
+	def get_default_entry(self, entry):
+		return self._content_default.get(entry.option, {}).get(entry.section)
+
+	def get_entry(self, option, filter_fun):
+		return ConfigEntry.combine_entries(self.iter_config_entries(option, filter_fun))
+
+	def get_options(self):
+		return sorted(set(ichain([self._content.keys(), self._content_default.keys()])))
+
+	def iter_config_entries(self, option, filter_fun):
+		source_list = [self._content.get(option, []), self._content_default.get(option, {}).values()]
+		return ifilter(filter_fun, ichain(source_list))
+
+	def resolve(self):
+		so_entries_dict = {}
+		for option in self._content:
+			for entry in self._content[option]:
+				so_entries_dict.setdefault(entry.section, {}).setdefault(entry.option, []).append(entry)
+		so_value_dict = {}
+		for section in so_entries_dict:
+			for option in so_entries_dict[section]:
+				result = ''
+				try:
+					(entry, _) = ConfigEntry.process_entries(so_entries_dict[section][option])
+					if entry:
+						result = entry.value
+				except ConfigError:  # eg. by '-=' without value
+					clear_current_exception()
+				so_value_dict.setdefault(section, {})[option] = result
+		for option in self._content:
+			for entry in self._content[option]:
+				subst_dict = dict(so_value_dict.get('default', {}))
+				subst_dict.update(so_value_dict.get('global', {}))
+				subst_dict.update(so_value_dict.get(entry.section, {}))
+				try:  # Protection for non-interpolation "%" in value
+					value = entry.value.replace('%', '\x01')  # protect %
+					value = value.replace('\x01(', '%(') % subst_dict  # perform substitution
+					value = value.replace('\x01', '%')  # unprotect %
+				except Exception:
+					raise ConfigError('Unable to interpolate value %r with %r' % (entry.value, subst_dict))
+				if entry.value != value:
+					entry.value = value
+					entry.source = entry.source + ' [interpolated]'
+
+	def set_default_entry(self, entry):
+		entry_cur = self.get_default_entry(entry)
+		if self._read_only and not entry_cur:
+			raise APIError('Config container is read-only!')
+		elif entry_cur and (entry_cur.value != entry.value):
+			raise APIError('Inconsistent default values! (%r != %r)' % (entry_cur.value, entry.value))
+		entry.order = 0
+		self._content_default.setdefault(entry.option, {}).setdefault(entry.section, entry)
+
+	def set_read_only(self):
+		self._read_only = True
 
 
 class ConfigEntry(object):
@@ -56,10 +121,12 @@ class ConfigEntry(object):
 	def __repr__(self):
 		return '%s(%s)' % (self.__class__.__name__, str_dict(self.__dict__))
 
-	def format_opt(self):
-		if '!' in self.section:
-			return '<%s> %s' % (self.section.replace('!', ''), self.option)
-		return '[%s] %s' % (self.section, self.option)
+	def combine_entries(cls, entry_iter):
+		(result, entry_list_used) = cls._process_and_mark_entries(entry_iter)
+		for entry in entry_list_used:
+			entry.used = True
+		return result
+	combine_entries = classmethod(combine_entries)
 
 	def format(self, print_section=False, print_default=False,
 			default=unspecified, source='', wraplen=33):
@@ -92,29 +159,10 @@ class ConfigEntry(object):
 			result += line + '\n'
 		return result.rstrip()
 
-	def _apply_modifiers(cls, entry, modifier_list):
-		def _create(base, value):
-			return cls(base.section, base.option, value, '=', '<processed>')
-		for modifier in modifier_list:
-			if modifier.opttype == '+=':
-				if entry:
-					entry = _create(entry, entry.value + '\n' + modifier.value)
-				else:
-					entry = _create(modifier, modifier.value)
-			elif modifier.opttype == '^=':
-				if entry:
-					entry = _create(entry, modifier.value + '\n' + entry.value)
-				else:
-					entry = _create(modifier, modifier.value)
-			elif modifier.opttype == '-=':
-				if modifier.value.strip() == '':  # without arguments: remove all entries up to this entry
-					entry = None
-				elif entry is not None:  # with arguments: remove string from current value
-					entry = _create(entry, entry.value.replace(modifier.value.strip(), ''))
-				else:
-					raise ConfigError('Unable to substract "%s" from non-existing value!' % modifier.format_opt())
-		return entry
-	_apply_modifiers = classmethod(_apply_modifiers)
+	def format_opt(self):
+		if '!' in self.section:
+			return '<%s> %s' % (self.section.replace('!', ''), self.option)
+		return '[%s] %s' % (self.section, self.option)
 
 	def process_entries(cls, entry_iter):
 		result = None
@@ -189,6 +237,30 @@ class ConfigEntry(object):
 		return result
 	simplify_entries = classmethod(simplify_entries)
 
+	def _apply_modifiers(cls, entry, modifier_list):
+		def _create(base, value):
+			return cls(base.section, base.option, value, '=', '<processed>')
+		for modifier in modifier_list:
+			if modifier.opttype == '+=':
+				if entry:
+					entry = _create(entry, entry.value + '\n' + modifier.value)
+				else:
+					entry = _create(modifier, modifier.value)
+			elif modifier.opttype == '^=':
+				if entry:
+					entry = _create(entry, modifier.value + '\n' + entry.value)
+				else:
+					entry = _create(modifier, modifier.value)
+			elif modifier.opttype == '-=':
+				if modifier.value.strip() == '':  # without arguments: remove all entries up to this entry
+					entry = None
+				elif entry is not None:  # with arguments: remove string from current value
+					entry = _create(entry, entry.value.replace(modifier.value.strip(), ''))
+				else:
+					raise ConfigError('Unable to substract "%s" from non-existing value!' % modifier.format_opt())
+		return entry
+	_apply_modifiers = classmethod(_apply_modifiers)
+
 	def _process_and_mark_entries(cls, entry_iter):
 		entry_list = list(entry_iter)
 		for entry in entry_list:
@@ -196,81 +268,9 @@ class ConfigEntry(object):
 		return cls.process_entries(entry_list)
 	_process_and_mark_entries = classmethod(_process_and_mark_entries)
 
-	def combine_entries(cls, entry_iter):
-		(result, entry_list_used) = cls._process_and_mark_entries(entry_iter)
-		for entry in entry_list_used:
-			entry.used = True
-		return result
-	combine_entries = classmethod(combine_entries)
 
-
-class ConfigContainer(object):
-	def __init__(self, name):
-		self.enabled = True
-		self._read_only = False
-		self._counter = 0
-		self._content = {}
-		self._content_default = {}
-
-	def resolve(self):
-		so_entries_dict = {}
-		for option in self._content:
-			for entry in self._content[option]:
-				so_entries_dict.setdefault(entry.section, {}).setdefault(entry.option, []).append(entry)
-		so_value_dict = {}
-		for section in so_entries_dict:
-			for option in so_entries_dict[section]:
-				result = ''
-				try:
-					(entry, _) = ConfigEntry.process_entries(so_entries_dict[section][option])
-					if entry:
-						result = entry.value
-				except ConfigError:  # eg. by '-=' without value
-					clear_current_exception()
-				so_value_dict.setdefault(section, {})[option] = result
-		for option in self._content:
-			for entry in self._content[option]:
-				subst_dict = dict(so_value_dict.get('default', {}))
-				subst_dict.update(so_value_dict.get('global', {}))
-				subst_dict.update(so_value_dict.get(entry.section, {}))
-				try:  # Protection for non-interpolation "%" in value
-					value = entry.value.replace('%', '\x01')  # protect %
-					value = value.replace('\x01(', '%(') % subst_dict  # perform substitution
-					value = value.replace('\x01', '%')  # unprotect %
-				except Exception:
-					raise ConfigError('Unable to interpolate value %r with %r' % (entry.value, subst_dict))
-				if entry.value != value:
-					entry.value = value
-					entry.source = entry.source + ' [interpolated]'
-
-	def set_read_only(self):
-		self._read_only = True
-
-	def getDefault(self, entry):
-		return self._content_default.get(entry.option, {}).get(entry.section)
-
-	def setDefault(self, entry):
-		curEntry = self.getDefault(entry)
-		if self._read_only and not curEntry:
-			raise APIError('Config container is read-only!')
-		elif curEntry and (curEntry.value != entry.value):
-			raise APIError('Inconsistent default values! (%r != %r)' % (curEntry.value, entry.value))
-		entry.order = 0
-		self._content_default.setdefault(entry.option, {}).setdefault(entry.section, entry)
-
-	def append(self, entry):
-		if self._read_only:
-			raise APIError('Config container is read-only!')
-		self._counter += 1
-		entry.order = self._counter
-		self._content.setdefault(entry.option, []).append(entry)
-
-	def getEntry(self, option, filterExpr):
-		return ConfigEntry.combine_entries(self.iter_config_entries(option, filterExpr))
-
-	def iter_config_entries(self, option, filterExpr):
-		source_list = [self._content.get(option, []), self._content_default.get(option, {}).values()]
-		return ifilter(filterExpr, ichain(source_list))
-
-	def get_options(self):
-		return sorted(set(ichain([self._content.keys(), self._content_default.keys()])))
+def _norm_config_location(value):
+	value = value.lower().strip().replace('\t', ' ')
+	while '  ' in value:
+		value = value.replace('  ', ' ')
+	return value

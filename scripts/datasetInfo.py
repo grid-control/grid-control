@@ -180,8 +180,8 @@ def list_config_entries(opts, blocks, provider):
 		info = infos[dsName]
 		providerName = sorted(provider.get_class_name_list(), key = len)[0]
 		nickname = info.get(DataProvider.Nickname, 'nick%d' % dsID).rjust(maxnick)
-		filterExpr = utils.QM(providerName == 'list', ' %% %s' % info[DataProvider.Dataset], '')
-		print('\t%s : %s : %s%s' % (nickname, providerName, provider.get_dataset_expr(), filterExpr))
+		filter_expr = utils.QM(providerName == 'list', ' %% %s' % info[DataProvider.Dataset], '')
+		print('\t%s : %s : %s%s' % (nickname, providerName, provider.get_dataset_expr(), filter_expr))
 
 def list_infos(blocks):
 	evSum = 0

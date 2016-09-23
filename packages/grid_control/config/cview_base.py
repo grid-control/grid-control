@@ -128,7 +128,7 @@ class HistoricalConfigView(ConfigView):
 
 	def _getEntry(self, option_list, defaultEntry, defaultEntry_fallback):
 		if not unspecified(defaultEntry.value):
-			self._curContainer.setDefault(defaultEntry)
+			self._curContainer.set_default_entry(defaultEntry)
 		# Assemble matching config entries and combine them
 		entries = self._matchEntries(self._curContainer, option_list)
 		if not unspecified(defaultEntry.value):
@@ -136,41 +136,40 @@ class HistoricalConfigView(ConfigView):
 		self._log.log(logging.DEBUG1, 'Used config entries:')
 		for entry in entries:
 			self._log.log(logging.DEBUG1, '  %s (%s | %s)', entry.format(print_section = True), entry.source, entry.order)
-		curEntry = ConfigEntry.combine_entries(entries)
+		entry_cur = ConfigEntry.combine_entries(entries)
 		# Ensure that fallback default value is stored in persistent storage
 		if defaultEntry_fallback.used and not unspecified(defaultEntry.value):
-			self._curContainer.setDefault(defaultEntry_fallback)
-		return curEntry
+			self._curContainer.set_default_entry(defaultEntry_fallback)
+		return entry_cur
 
-	def _getDefaultEntries(self, option_list, default_str, persistent, oldEntry):
-		if persistent and oldEntry:
-			default_str = oldEntry.value
+	def _getDefaultEntries(self, option_list, default_str, persistent, entry_old):
+		if persistent and entry_old:
+			default_str = entry_old.value
 		defaultEntry = self._createEntry(option_list, default_str, '?=', '<default>', specific = False, reverse = True)
-		if persistent and not oldEntry:
-			if self._curContainer.getDefault(defaultEntry):
-				defaultEntry = self._curContainer.getDefault(defaultEntry)
+		if persistent and not entry_old:
+			defaultEntry = self._curContainer.get_default_entry(defaultEntry) or defaultEntry
 		defaultEntry_fallback = self._createEntry(option_list, defaultEntry.value, '?=', '<default fallback>', specific = True, reverse = False)
 		return (defaultEntry, defaultEntry_fallback)
 
 	def get(self, option_list, default_str, persistent):
 		# Return old and current merged config entries
-		oldEntry = None
+		entry_old = None
 		if self._oldContainer.enabled: # If old container is enabled => return stored entry
-			oldEntry = ConfigEntry.combine_entries(self._matchEntries(self._oldContainer, option_list))
+			entry_old = ConfigEntry.combine_entries(self._matchEntries(self._oldContainer, option_list))
 		# Process current entry
-		(defaultEntry, defaultEntry_fallback) = self._getDefaultEntries(option_list, default_str, persistent, oldEntry)
-		curEntry = self._getEntry(option_list, defaultEntry, defaultEntry_fallback)
-		if curEntry is None:
+		(defaultEntry, defaultEntry_fallback) = self._getDefaultEntries(option_list, default_str, persistent, entry_old)
+		entry_cur = self._getEntry(option_list, defaultEntry, defaultEntry_fallback)
+		if entry_cur is None:
 			raise ConfigError('"[%s] %s" does not exist!' % (self._getSection(specific = False), option_list[-1]))
 		description = 'Using user supplied %s'
 		if persistent and defaultEntry.used:
 			description = 'Using persistent    %s'
 		elif defaultEntry.used:
 			description = 'Using default value %s'
-		elif '!' in curEntry.section:
+		elif '!' in entry_cur.section:
 			description = 'Using dynamic value %s'
-		self._log.log(logging.INFO2, description, curEntry.format(print_section = True))
-		return (oldEntry, curEntry)
+		self._log.log(logging.INFO2, description, entry_cur.format(print_section = True))
+		return (entry_old, entry_cur)
 
 	def set(self, option_list, value, opttype, source):
 		entry = self._createEntry(option_list, value, opttype, source, specific = True, reverse = True)

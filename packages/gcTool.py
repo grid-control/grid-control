@@ -76,7 +76,7 @@ class OptsConfigFiller(Plugin.get_class('ConfigFiller')):
 		self._cmd_line_args = cmd_line_args
 
 	def fill(self, container):
-		combined_entry = container.getEntry('cmdargs', lambda entry: entry.section == 'global')
+		combined_entry = container.get_entry('cmdargs', lambda entry: entry.section == 'global')
 		new_cmd_line = self._cmd_line_args
 		if combined_entry:
 			new_cmd_line = combined_entry.value.split() + self._cmd_line_args
