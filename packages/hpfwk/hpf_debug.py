@@ -25,27 +25,27 @@ def create_debug_console(variables):
 	return console
 
 
-def format_exception(exc_info, showcode_context = 0, show_variables = 0, showFileStack = 0, exception_stack_mode = 1):
+def format_exception(exc_info, show_code_context = 0, show_variables = 0, show_file_stack = 0, show_exception_stack = 1):
 	msg_parts = []
 
 	if exc_info not in [None, (None, None, None)]:
 		traceback, ex_info_list = _collect_exception_infos(*exc_info)
 
 		# Code and variable listing
-		if showcode_context > 0:
-			stackInfo = _format_stack(traceback, code_context = showcode_context - 1, truncate_var_repr = show_variables)
+		if show_code_context > 0:
+			stackInfo = _format_stack(traceback, code_context = show_code_context - 1, truncate_var_repr = show_variables)
 			msg_parts.append(str.join('\n', stackInfo))
 
 		# File stack with line information
-		if showFileStack > 0:
+		if show_file_stack > 0:
 			msg_fstack = 'File stack:\n'
 			for tb in traceback:
 				msg_fstack += '%s %s %s (%s)\n' % (tb.get('exception_id', '') + '|%02d' % tb.get('idx', 0), tb['file'], tb['line'], tb['fun'])
 			msg_parts.append(msg_fstack)
 
 		# Exception message tree
-		if exception_stack_mode > 0:
-			msg_parts.append(_format_ex_tree(ex_info_list, exception_stack_mode))
+		if show_exception_stack > 0:
+			msg_parts.append(_format_ex_tree(ex_info_list, show_exception_stack))
 
 	return str.join('\n', msg_parts)
 
@@ -103,23 +103,23 @@ def _collect_exception_infos(exception_type, exception_value, exception_tracebac
 	return (traceback, exception_info_list) # skipping top-level exception helper
 
 
-def _format_ex_tree(ex_info_list, exception_stack_mode = 2):
+def _format_ex_tree(ex_info_list, show_exception_stack = 2):
 	ex_msg_list = []
-	if exception_stack_mode == 1:
+	if show_exception_stack == 1:
 		ex_info_list = ex_info_list[-2:]
 	for info in ex_info_list:
 		(exception_value, exDepth, _) = info
-		if exception_stack_mode == 1:
+		if show_exception_stack == 1:
 			exDepth = 0
 		result = '%s%s: %s' % ('  ' * exDepth, exception_value.__class__.__name__, exception_value)
-		if (exception_stack_mode > 1) and hasattr(exception_value, 'args') and not isinstance(exception_value, NestedException):
+		if (show_exception_stack > 1) and hasattr(exception_value, 'args') and not isinstance(exception_value, NestedException):
 			if ((len(exception_value.args) == 1) and (str(exception_value.args[0]) not in str(exception_value))) or (len(exception_value.args) > 1):
 				try:
 					result += '\n%s%s  %s' % ('  ' * exDepth, len(exception_value.__class__.__name__) * ' ', exception_value.args)
 				except Exception:
 					clear_current_exception()
 		ex_msg_list.append(result)
-	if exception_stack_mode > 1:
+	if show_exception_stack > 1:
 		return str.join('\n', ex_msg_list)
 	return str.join(' - ', ex_msg_list)
 

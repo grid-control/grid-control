@@ -108,6 +108,18 @@ display_table.wraplen = 100
 display_table.mode = 'default'
 
 
+class GCIOError(NestedException):
+	pass
+
+
+class ParsingError(NestedException):
+	pass
+
+
+class PathError(NestedException):
+	pass
+
+
 def deprecated(text):
 	sys.stderr.write('%s\n[DEPRECATED] %s\n' % (open(path_share('fail.txt'), 'r').read(), text))
 	if not get_user_bool('Do you want to continue?', False):
@@ -440,18 +452,6 @@ def wrap_list(value, length, delim_lines=',\n', delim_entries=', '):
 		return len(item) + sum(imap(len, buffer)) + 2 * len(buffer) > length
 	wrapped = accumulate(value, [], counter, add_fun=lambda x, y: x + [y])
 	return str.join(delim_lines, imap(lambda x: str.join(delim_entries, x), wrapped))
-
-
-class GCIOError(NestedException):
-	pass
-
-
-class ParsingError(NestedException):
-	pass
-
-
-class PathError(NestedException):
-	pass
 
 
 class DictFormat(object):

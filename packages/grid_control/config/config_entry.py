@@ -20,21 +20,22 @@ from python_compat import ichain, ifilter, imap, lfilter, lmap, set, sorted, uns
 class ConfigError(NestedException):
 	pass
 
-def standardConfigForm(value):
+
+def norm_config_locations(value):
 	# return canonized section or option string
 	if value is not None:
 		if not isinstance(value, list):
 			value = [value]
-		return lmap(lambda x: str(x).strip().lower(), value)
+		return lmap(_norm_config_location, value)
 
 
-def appendOption(option, suffix):
+def add_config_suffix(option, suffix):
 	if isinstance(option, (list, tuple)):
-		return lmap(lambda x: appendOption(x, suffix), option)
+		return lmap(lambda x: add_config_suffix(x, suffix), option)
 	return option.rstrip() + ' ' + suffix
 
 
-def _norm_location(value):
+def _norm_config_location(value):
 	value = value.lower().strip().replace('\t', ' ')
 	while '  ' in value:
 		value = value.replace('  ', ' ')
@@ -46,8 +47,10 @@ class ConfigEntry(object):
 	OptTypeDesc = {'?=': 'default', '+=': 'append', '^=': 'prepend', '-=': 'replace',
 		'=': 'override', '*=': 'finalize', '!=': 'modified'}
 
-	def __init__(self, section, option, value, opttype, source, order = None, accessed = False, used = False):
-		(self.section, self.option, self.source, self.order) = (_norm_location(section), _norm_location(option), source.lower(), order)
+	def __init__(self, section, option, value, opttype, source,
+			order=None, accessed=False, used=False):
+		(self.section, self.option) = (_norm_config_location(section), _norm_config_location(option))
+		(self.source, self.order) = (source.lower(), order)
 		(self.value, self.opttype, self.accessed, self.used) = (value, opttype, accessed, used)
 
 	def __repr__(self):
@@ -58,10 +61,11 @@ class ConfigEntry(object):
 			return '<%s> %s' % (self.section.replace('!', ''), self.option)
 		return '[%s] %s' % (self.section, self.option)
 
-	def format(self, printSection = False, printDefault = False, default = unspecified, source = '', wraplen = 33):
-		if unspecified(self.value) or (not printDefault and (self.value == default)):
+	def format(self, print_section=False, print_default=False,
+			default=unspecified, source='', wraplen=33):
+		if unspecified(self.value) or (not print_default and (self.value == default)):
 			return ''
-		if printSection:
+		if print_section:
 			prefix = '[%s] %s' % (self.section, self.option)
 		else:
 			prefix = self.option
@@ -69,15 +73,15 @@ class ConfigEntry(object):
 
 		line_list = lfilter(lambda x: x != '', imap(str.strip, self.value.strip().splitlines()))
 		if not line_list:
-			line_list = [prefix] # just prefix - without trailing whitespace
+			line_list = [prefix]  # just prefix - without trailing whitespace
 		elif len(line_list) > 1:
-			line_list = [prefix] + line_list # prefix on first line - rest on other lines
+			line_list = [prefix] + line_list  # prefix on first line - rest on other lines
 		else:
-			line_list = [prefix + ' ' + line_list[0]] # everything on one line
+			line_list = [prefix + ' ' + line_list[0]]  # everything on one line
 
 		result = ''
 		for line in line_list:
-			if not result: # first line:
+			if not result:  # first line
 				if source and (len(line) >= wraplen):
 					result += '; source: ' + source + '\n'
 				elif source:
@@ -88,114 +92,116 @@ class ConfigEntry(object):
 			result += line + '\n'
 		return result.rstrip()
 
-	def _applyModifiers(cls, entry, modifierList):
-		def mkNew(base, value):
-			return ConfigEntry(base.section, base.option, value, '=', '<processed>')
-		for modifier in modifierList:
+	def _apply_modifiers(cls, entry, modifier_list):
+		def _create(base, value):
+			return cls(base.section, base.option, value, '=', '<processed>')
+		for modifier in modifier_list:
 			if modifier.opttype == '+=':
 				if entry:
-					entry = mkNew(entry, entry.value + '\n' + modifier.value)
+					entry = _create(entry, entry.value + '\n' + modifier.value)
 				else:
-					entry = mkNew(modifier, modifier.value)
+					entry = _create(modifier, modifier.value)
 			elif modifier.opttype == '^=':
 				if entry:
-					entry = mkNew(entry, modifier.value + '\n' + entry.value)
+					entry = _create(entry, modifier.value + '\n' + entry.value)
 				else:
-					entry = mkNew(modifier, modifier.value)
+					entry = _create(modifier, modifier.value)
 			elif modifier.opttype == '-=':
-				if modifier.value.strip() == '': # without arguments: remove all entries up to this entry
+				if modifier.value.strip() == '':  # without arguments: remove all entries up to this entry
 					entry = None
-				elif entry is not None: # with arguments: remove string from current value
-					entry = mkNew(entry, entry.value.replace(modifier.value.strip(), ''))
+				elif entry is not None:  # with arguments: remove string from current value
+					entry = _create(entry, entry.value.replace(modifier.value.strip(), ''))
 				else:
 					raise ConfigError('Unable to substract "%s" from non-existing value!' % modifier.format_opt())
 		return entry
-	_applyModifiers = classmethod(_applyModifiers)
+	_apply_modifiers = classmethod(_apply_modifiers)
 
-	def processEntriesRaw(cls, entryList):
+	def process_entries(cls, entry_iter):
 		result = None
-		used = []
-		modifierList = []
-		for entry in entryList:
-			if entry.opttype == '-=': # context sensitive option
-				if entry.value.strip() == '': # set-like option
-					used = [entry]
+		entry_list_used = []
+		modifier_list = []
+		for entry in entry_iter:
+			if entry.opttype == '-=':  # context sensitive option
+				if entry.value.strip() == '':  # set-like option
+					entry_list_used = [entry]
 					result = None
-					modifierList = []
+					modifier_list = []
 				else:
-					modifierList.append(entry)
-			if entry.opttype in ['+=', '^=']: # modifier options
-				modifierList.append(entry)
-			elif entry.opttype in ['*=', '!=', '?=', '=']: # set options:
-				if entry.opttype == '*=': # this option can not be changed by other config entries
+					modifier_list.append(entry)
+			if entry.opttype in ['+=', '^=']:  # modifier options
+				modifier_list.append(entry)
+			elif entry.opttype in ['*=', '!=', '?=', '=']:  # set options
+				if entry.opttype == '*=':  # this option can not be changed by other config entries
 					# TODO: notify that subsequent config options will be ignored
 					return (entry, [entry])
-				elif entry.opttype == '=': # set but don't apply collected modifiers - subsequent modifiers apply!
-					used = [entry]
+				elif entry.opttype == '=':  # set but don't apply collected modifiers
+					# subsequent modifiers apply!
+					entry_list_used = [entry]
 					result = entry
-					modifierList = []
-				elif entry.opttype == '?=': # Conditional set with applied modifiers
+					modifier_list = []
+				elif entry.opttype == '?=':  # Conditional set with applied modifiers
 					if not result:
-						used = [entry] + modifierList
-						result = cls._applyModifiers(entry, modifierList)
-						modifierList = []
-				elif entry.opttype == '!=': # set and apply collected modifiers
-					used = [entry] + modifierList
-					result = cls._applyModifiers(entry, modifierList)
-					modifierList = []
-		if modifierList: # apply remaining modifiers - result can be None
-			used.extend(modifierList)
-			result = cls._applyModifiers(result, modifierList)
-		return (result, used)
-	processEntriesRaw = classmethod(processEntriesRaw)
+						entry_list_used = [entry] + modifier_list
+						result = cls._apply_modifiers(entry, modifier_list)
+						modifier_list = []
+				elif entry.opttype == '!=':  # set and apply collected modifiers
+					entry_list_used = [entry] + modifier_list
+					result = cls._apply_modifiers(entry, modifier_list)
+					modifier_list = []
+		if modifier_list:  # apply remaining modifiers - result can be None
+			entry_list_used.extend(modifier_list)
+			result = cls._apply_modifiers(result, modifier_list)
+		return (result, entry_list_used)
+	process_entries = classmethod(process_entries)
 
-	def simplifyEntries(cls, entryList):
+	def simplify_entries(cls, entry_iter):
 		# called to simplify entries for a specific option *and* section - sorted by order
-		(result_base, used) = cls.processEntries(entryList)
+		(result_base, entry_list_used) = cls._process_and_mark_entries(entry_iter)
+
 		# Merge subsequent += and ^= entries
-		def mergeSubsequent(entries):
-			previousEntry = None
-			for entry in entries:
-				if previousEntry and (entry.opttype == previousEntry.opttype):
+		def merge_subsequent_entries(entry_iter):
+			prev_entry = None
+			for entry in entry_iter:
+				if prev_entry and (entry.opttype == prev_entry.opttype):
 					if entry.opttype == '+=':
-						entry.value = previousEntry.value + '\n' + entry.value
+						entry.value = prev_entry.value + '\n' + entry.value
 						entry.source = '<processed>'
 					elif entry.opttype == '^=':
-						entry.value = entry.value + '\n' + previousEntry.value
+						entry.value = entry.value + '\n' + prev_entry.value
 						entry.source = '<processed>'
 					else:
-						yield previousEntry
-				previousEntry = entry
-			if previousEntry:
-				yield previousEntry
+						yield prev_entry
+				prev_entry = entry
+			if prev_entry:
+				yield prev_entry
 
-		if used[0].opttype in ['*=', '!=', '?=', '=']:
-			result = [cls.combineEntries(used)]
+		if entry_list_used[0].opttype in ['*=', '!=', '?=', '=']:
+			result = [cls.combine_entries(entry_list_used)]
 		else:
-			result = list(mergeSubsequent(used))
+			result = list(merge_subsequent_entries(entry_list_used))
 
-		(result_simplified, used_simplified) = cls.processEntries(result)
-		assert(len(used_simplified) == len(result))
+		(result_simplified, used_simplified) = cls._process_and_mark_entries(result)
+		assert len(used_simplified) == len(result)
 		if result_simplified and result_base:
-			assert(result_simplified.value.strip() == result_base.value.strip())
+			assert result_simplified.value.strip() == result_base.value.strip()
 		else:
-			assert(result_simplified == result_base)
+			assert result_simplified == result_base
 		return result
-	simplifyEntries = classmethod(simplifyEntries)
+	simplify_entries = classmethod(simplify_entries)
 
-	def processEntries(cls, entryList):
-		entryList = list(entryList)
-		for entry in entryList:
+	def _process_and_mark_entries(cls, entry_iter):
+		entry_list = list(entry_iter)
+		for entry in entry_list:
 			entry.accessed = True
-		return cls.processEntriesRaw(entryList)
-	processEntries = classmethod(processEntries)
+		return cls.process_entries(entry_list)
+	_process_and_mark_entries = classmethod(_process_and_mark_entries)
 
-	def combineEntries(cls, entryList):
-		(result, used) = cls.processEntries(entryList)
-		for entry in used:
+	def combine_entries(cls, entry_iter):
+		(result, entry_list_used) = cls._process_and_mark_entries(entry_iter)
+		for entry in entry_list_used:
 			entry.used = True
 		return result
-	combineEntries = classmethod(combineEntries)
+	combine_entries = classmethod(combine_entries)
 
 
 class ConfigContainer(object):
@@ -216,10 +222,10 @@ class ConfigContainer(object):
 			for option in so_entries_dict[section]:
 				result = ''
 				try:
-					entry = ConfigEntry.processEntriesRaw(so_entries_dict[section][option])[0]
+					(entry, _) = ConfigEntry.process_entries(so_entries_dict[section][option])
 					if entry:
 						result = entry.value
-				except ConfigError: # eg. by '-=' without value
+				except ConfigError:  # eg. by '-=' without value
 					clear_current_exception()
 				so_value_dict.setdefault(section, {})[option] = result
 		for option in self._content:
@@ -227,15 +233,17 @@ class ConfigContainer(object):
 				subst_dict = dict(so_value_dict.get('default', {}))
 				subst_dict.update(so_value_dict.get('global', {}))
 				subst_dict.update(so_value_dict.get(entry.section, {}))
-				try: # Protection for non-interpolation "%" in value
-					value = (entry.value.replace('%', '\x01').replace('\x01(', '%(') % subst_dict).replace('\x01', '%')
+				try:  # Protection for non-interpolation "%" in value
+					value = entry.value.replace('%', '\x01')  # protect %
+					value = value.replace('\x01(', '%(') % subst_dict  # perform substitution
+					value = value.replace('\x01', '%')  # unprotect %
 				except Exception:
 					raise ConfigError('Unable to interpolate value %r with %r' % (entry.value, subst_dict))
 				if entry.value != value:
 					entry.value = value
 					entry.source = entry.source + ' [interpolated]'
 
-	def setReadOnly(self):
+	def set_read_only(self):
 		self._read_only = True
 
 	def getDefault(self, entry):
@@ -258,11 +266,11 @@ class ConfigContainer(object):
 		self._content.setdefault(entry.option, []).append(entry)
 
 	def getEntry(self, option, filterExpr):
-		return ConfigEntry.combineEntries(self.getEntries(option, filterExpr))
+		return ConfigEntry.combine_entries(self.iter_config_entries(option, filterExpr))
 
-	def getEntries(self, option, filterExpr):
-		entryChain = ichain([self._content.get(option, []), self._content_default.get(option, {}).values()])
-		return ifilter(filterExpr, entryChain)
+	def iter_config_entries(self, option, filterExpr):
+		source_list = [self._content.get(option, []), self._content_default.get(option, {}).values()]
+		return ifilter(filterExpr, ichain(source_list))
 
 	def get_options(self):
 		return sorted(set(ichain([self._content.keys(), self._content_default.keys()])))

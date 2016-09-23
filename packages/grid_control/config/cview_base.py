@@ -13,7 +13,7 @@
 # | limitations under the License.
 
 import logging
-from grid_control.config.config_entry import ConfigEntry, ConfigError, standardConfigForm
+from grid_control.config.config_entry import ConfigEntry, ConfigError, norm_config_locations
 from hpfwk import AbstractError, Plugin
 from python_compat import ichain, imap, lfilter, sorted, unspecified
 
@@ -44,14 +44,14 @@ class ConfigView(Plugin):
 	def _get_write_entries(self):
 		return self.iterContent()
 
-	def _prepare_write(self, entries = None, printState = False, printUnused = True, printDefault = True, printWorkdir = False):
+	def _prepare_write(self, entries = None, printState = False, printUnused = True, print_default = True, printWorkdir = False):
 		entries = entries or self._get_write_entries()
 		result = {}
 		for entry in entries:
 			if printWorkdir and entry.option == 'workdir':
 				result.setdefault(entry.section, {}).setdefault(entry.option, []).append(entry)
 			elif printUnused or entry.used:
-				if printDefault or not entry.source.startswith('<default'):
+				if print_default or not entry.source.startswith('<default'):
 					if printState or not entry.option.startswith('#'):
 						result.setdefault(entry.section, {}).setdefault(entry.option, []).append(entry)
 		return result
@@ -64,12 +64,12 @@ class ConfigView(Plugin):
 			for option in sorted(config[section]):
 				entryList = sorted(config[section][option], key = lambda e: e.order)
 				if printMinimal:
-					entryList = ConfigEntry.simplifyEntries(entryList)
+					entryList = ConfigEntry.simplify_entries(entryList)
 				for entry in entryList:
 					source = ''
 					if printSource:
 						source = entry.source
-					stream.write(entry.format(printSection = printTight, source = source) + '\n')
+					stream.write(entry.format(print_section = printTight, source = source) + '\n')
 			if not printTight:
 				stream.write('\n')
 
@@ -114,7 +114,7 @@ class HistoricalConfigView(ConfigView):
 		getOrderedEntryKey = lambda entry: (tuple(imap(removeNone, getFilteredSectionKey(entry))), entry.order)
 		for key in key_list:
 			(entries, entries_reverse) = ([], [])
-			for entry in container.getEntries(key, lambda x: getFilteredSectionKey(x) is not None):
+			for entry in container.iter_config_entries(key, lambda x: getFilteredSectionKey(x) is not None):
 				if entry.section.endswith('!'):
 					entries_reverse.append(entry)
 				else:
@@ -135,8 +135,8 @@ class HistoricalConfigView(ConfigView):
 			entries.append(defaultEntry_fallback)
 		self._log.log(logging.DEBUG1, 'Used config entries:')
 		for entry in entries:
-			self._log.log(logging.DEBUG1, '  %s (%s | %s)', entry.format(printSection = True), entry.source, entry.order)
-		curEntry = ConfigEntry.combineEntries(entries)
+			self._log.log(logging.DEBUG1, '  %s (%s | %s)', entry.format(print_section = True), entry.source, entry.order)
+		curEntry = ConfigEntry.combine_entries(entries)
 		# Ensure that fallback default value is stored in persistent storage
 		if defaultEntry_fallback.used and not unspecified(defaultEntry.value):
 			self._curContainer.setDefault(defaultEntry_fallback)
@@ -156,7 +156,7 @@ class HistoricalConfigView(ConfigView):
 		# Return old and current merged config entries
 		oldEntry = None
 		if self._oldContainer.enabled: # If old container is enabled => return stored entry
-			oldEntry = ConfigEntry.combineEntries(self._matchEntries(self._oldContainer, option_list))
+			oldEntry = ConfigEntry.combine_entries(self._matchEntries(self._oldContainer, option_list))
 		# Process current entry
 		(defaultEntry, defaultEntry_fallback) = self._getDefaultEntries(option_list, default_str, persistent, oldEntry)
 		curEntry = self._getEntry(option_list, defaultEntry, defaultEntry_fallback)
@@ -169,13 +169,13 @@ class HistoricalConfigView(ConfigView):
 			description = 'Using default value %s'
 		elif '!' in curEntry.section:
 			description = 'Using dynamic value %s'
-		self._log.log(logging.INFO2, description, curEntry.format(printSection = True))
+		self._log.log(logging.INFO2, description, curEntry.format(print_section = True))
 		return (oldEntry, curEntry)
 
 	def set(self, option_list, value, opttype, source):
 		entry = self._createEntry(option_list, value, opttype, source, specific = True, reverse = True)
 		self._curContainer.append(entry)
-		self._log.log(logging.INFO3, 'Setting option %s', entry.format(printSection = True))
+		self._log.log(logging.INFO3, 'Setting option %s', entry.format(print_section = True))
 		return entry
 
 
@@ -184,7 +184,7 @@ class SimpleConfigView(HistoricalConfigView):
 	def __init__(self, name, oldContainer, curContainer, parent = None,
 			setSections = unspecified, addSections = None):
 		HistoricalConfigView.__init__(self, name, oldContainer, curContainer, parent or self)
-		self._initVariable(parent or self, '_cfgSections', None, setSections, addSections, standardConfigForm)
+		self._initVariable(parent or self, '_cfgSections', None, setSections, addSections, norm_config_locations)
 
 	def _initVariable(self, parent, memberName, default, setValue, addValue, normValues, parseValue = lambda x: [x]):
 		def collect(value):

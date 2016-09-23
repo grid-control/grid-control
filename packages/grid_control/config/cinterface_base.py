@@ -14,7 +14,7 @@
 
 import os, inspect, logging
 from grid_control.config.chandlers_base import changeImpossible
-from grid_control.config.config_entry import ConfigEntry, ConfigError, standardConfigForm
+from grid_control.config.config_entry import ConfigEntry, ConfigError, norm_config_locations
 from hpfwk import APIError
 from python_compat import unspecified, when_unspecified
 
@@ -90,7 +90,7 @@ class ConfigInterface(object):
 				return obj
 			except Exception:
 				raise ConfigError('Unable to parse %s: %s' % (entry_desc + desc,
-					entry.format(printSection = True)))
+					entry.format(print_section = True)))
 		cur_obj = parseEntry(cur_entry)
 
 		# Notify about changes
@@ -107,7 +107,7 @@ class ConfigInterface(object):
 	def _getInternal(self, desc, obj2str, str2obj, def2obj, option, default_obj,
 			onChange = unspecified, onValid = unspecified, persistent = False):
 		# Make sure option is in a consistent format
-		option_list = standardConfigForm(option)
+		option_list = norm_config_locations(option)
 		try:
 			if self._log.isEnabledFor(logging.DEBUG2):
 				self._log.log(logging.DEBUG2, 'Config query from: %r', self._getCaller())
@@ -134,8 +134,8 @@ class ConfigInterface(object):
 				value = obj2str(set_obj)
 			except Exception:
 				raise APIError('Unable to get string representation of set value: %s' % repr(set_obj))
-			entry = self._config_view.set(standardConfigForm(option), value, opttype, source)
-			self._log.log(logging.INFO2, 'Setting %s %s %s ', desc, ConfigEntry.OptTypeDesc[opttype], entry.format(printSection = True))
+			entry = self._config_view.set(norm_config_locations(option), value, opttype, source)
+			self._log.log(logging.INFO2, 'Setting %s %s %s ', desc, ConfigEntry.OptTypeDesc[opttype], entry.format(print_section = True))
 			return entry
 		except Exception:
 			raise ConfigError('Unable to set %s %r to %r (source: %r)' % (desc, option, repr(set_obj), source))

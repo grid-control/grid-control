@@ -13,7 +13,7 @@
 # | limitations under the License.
 
 from grid_control import utils
-from grid_control.config import appendOption
+from grid_control.config import add_config_suffix
 from grid_control.gc_plugin import ConfigurablePlugin
 from grid_control.utils.process_base import LocalProcess
 from hpfwk import AbstractError, NestedException
@@ -101,8 +101,8 @@ class ForwardingExecutor(BackendExecutor):
 class ChunkedExecutor(ForwardingExecutor):
 	def __init__(self, config, option_prefix, executor, def_chunk_size = 5, def_chunk_interval = 5):
 		ForwardingExecutor.__init__(self, config, executor)
-		self._chunk_size = config.getInt(appendOption(option_prefix, 'chunk size'), def_chunk_size, onChange = None)
-		self._chunk_time = config.getInt(appendOption(option_prefix, 'chunk interval'), def_chunk_interval, onChange = None)
+		self._chunk_size = config.getInt(add_config_suffix(option_prefix, 'chunk size'), def_chunk_size, onChange = None)
+		self._chunk_time = config.getInt(add_config_suffix(option_prefix, 'chunk interval'), def_chunk_interval, onChange = None)
 
 	def execute(self, wmsIDs, *args, **kwargs):
 		do_wait = False

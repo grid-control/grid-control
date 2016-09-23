@@ -14,7 +14,7 @@
 
 import os, sys
 from grid_control import utils
-from grid_control.config import appendOption, create_config
+from grid_control.config import add_config_suffix, create_config
 from grid_control.datasets.provider_base import DataProvider
 from grid_control.datasets.scanner_base import InfoScanner
 from grid_control.utils.data_structures import UniqueList
@@ -32,10 +32,10 @@ class ScanProviderBase(DataProvider):
 
 
 	def _setup(self, config, prefix):
-		select = config.getList(appendOption(prefix, 'key select'), [])
-		name = config.get(appendOption(prefix, 'name pattern'), '')
-		kuser = config.getList(appendOption(prefix, 'hash keys'), [])
-		kguard = config.getList(appendOption(prefix, 'guard override'), [])
+		select = config.getList(add_config_suffix(prefix, 'key select'), [])
+		name = config.get(add_config_suffix(prefix, 'name pattern'), '')
+		kuser = config.getList(add_config_suffix(prefix, 'hash keys'), [])
+		kguard = config.getList(add_config_suffix(prefix, 'guard override'), [])
 		return (select, name, kuser, kguard)
 
 

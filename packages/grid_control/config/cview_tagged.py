@@ -12,7 +12,7 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-from grid_control.config.config_entry import standardConfigForm
+from grid_control.config.config_entry import norm_config_locations
 from grid_control.config.cview_base import SimpleConfigView
 from grid_control.utils import safe_index
 from hpfwk import APIError
@@ -31,8 +31,8 @@ class TaggedConfigView(SimpleConfigView):
 		SimpleConfigView.__init__(self, name, oldContainer, curContainer, parent,
 			setSections = setSections, addSections = addSections)
 
-		self._initVariable(parent, '_cfgClassSections', None, setClasses, addClasses, standardConfigForm, lambda x: x.config_section_list)
-		self._initVariable(parent, '_cfgNames', [], setNames, addNames, standardConfigForm)
+		self._initVariable(parent, '_cfgClassSections', None, setClasses, addClasses, norm_config_locations, lambda x: x.config_section_list)
+		self._initVariable(parent, '_cfgNames', [], setNames, addNames, norm_config_locations)
 		def makeTagTuple(t):
 			try:
 				tagName = t.tagName.lower()

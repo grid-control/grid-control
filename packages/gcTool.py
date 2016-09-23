@@ -160,7 +160,7 @@ def gc_create_workflow(config):
 
 	# Give config help
 	if help_cfg or help_scfg:
-		config.write(sys.stdout, printDefault = help_cfg, printUnused = False,
+		config.write(sys.stdout, print_default = help_cfg, printUnused = False,
 			printMinimal = help_scfg, printSource = help_cfg)
 		sys.exit(os.EX_OK)
 

@@ -15,7 +15,7 @@
 import os, sys, signal
 from grid_control import utils
 from grid_control.config.cinterface_base import ConfigInterface
-from grid_control.config.config_entry import ConfigError, appendOption
+from grid_control.config.config_entry import ConfigError, add_config_suffix
 from grid_control.config.cview_base import SimpleConfigView
 from grid_control.config.matcher_base import DictLookup, ListFilter, ListOrder, Matcher
 from grid_control.utils.data_structures import make_enum
@@ -146,7 +146,7 @@ class TypedConfigInterface(ConfigInterface):
 		elif not clsList: # requirePlugin == False
 			return None
 		if not option_compositor:
-			option_compositor = appendOption(option, 'manager')
+			option_compositor = add_config_suffix(option, 'manager')
 		return self.getPlugin(option_compositor, default_compositor, cls, tags, inherit,
 			pargs = tuple([clsList] + list(pargs or [])), **kwargs)
 
@@ -175,11 +175,11 @@ class SimpleConfigInterface(TypedConfigInterface):
 			viewClass = SimpleConfigView, setSections = ['interactive'])
 		if self._interactive_enabled is None:
 			self._interactive_enabled = config_interactive.getBool('default', True, onChange = None)
-		icfg = config_interactive.getBool(appendOption(option, 'interactive'), self._interactive_enabled and default, onChange = None)
+		icfg = config_interactive.getBool(add_config_suffix(option, 'interactive'), self._interactive_enabled and default, onChange = None)
 		return icfg and not user_option_exists
 
 	def getCommand(self, option, default = unspecified, **kwargs):
-		scriptType = self.getEnum(appendOption(option, 'type'), CommandType, CommandType.executable, **kwargs)
+		scriptType = self.getEnum(add_config_suffix(option, 'type'), CommandType, CommandType.executable, **kwargs)
 		if scriptType == CommandType.executable:
 			return self.getPath(option, default, **kwargs)
 		return os.path.expandvars(self.get(option, default, **kwargs))
@@ -189,25 +189,25 @@ class SimpleConfigInterface(TypedConfigInterface):
 		matcherArgs = {}
 		if 'onChange' in kwargs:
 			matcherArgs['onChange'] = kwargs['onChange']
-		matcherOpt = appendOption(option, 'matcher')
+		matcherOpt = add_config_suffix(option, 'matcher')
 		matcherObj = self.getPlugin(matcherOpt, defaultMatcher, cls = Matcher, pargs = (matcherOpt,), **matcherArgs)
 		(sourceDict, sourceOrder) = self.getDict(option, default, **kwargs)
 		return DictLookup(sourceDict, sourceOrder, matcherObj, single, includeDefault)
 
 	def getMatcher(self, option, default = unspecified, defaultMatcher = 'start', negate = False,
 			filterParser = str, filterStr = str.__str__, **kwargs):
-		matcherOpt = appendOption(option, 'matcher')
+		matcherOpt = add_config_suffix(option, 'matcher')
 		matcherObj = self.getPlugin(matcherOpt, defaultMatcher, cls = Matcher, pargs = (matcherOpt,), pkwargs = kwargs)
 		filterExpr = self.get(option, default, str2obj = filterParser, obj2str = filterStr, **kwargs)
 		return matcherObj.matchWith(filterExpr)
 
 	def getFilter(self, option, default = unspecified, negate = False, filterParser = str, filterStr = str.__str__,
 			defaultMatcher = 'start', defaultFilter = 'strict', defaultOrder = ListOrder.source, **kwargs):
-		matcherOpt = appendOption(option, 'matcher')
+		matcherOpt = add_config_suffix(option, 'matcher')
 		matcherObj = self.getPlugin(matcherOpt, defaultMatcher, cls = Matcher, pargs = (matcherOpt,), pkwargs = kwargs)
 		filterExpr = self.get(option, default, str2obj = filterParser, obj2str = filterStr, **kwargs)
-		filterOrder = self.getEnum(appendOption(option, 'order'), ListOrder, defaultOrder, **kwargs)
-		return self.getPlugin(appendOption(option, 'plugin'), defaultFilter, cls = ListFilter,
+		filterOrder = self.getEnum(add_config_suffix(option, 'order'), ListOrder, defaultOrder, **kwargs)
+		return self.getPlugin(add_config_suffix(option, 'plugin'), defaultFilter, cls = ListFilter,
 			pargs = (filterExpr, matcherObj, filterOrder, negate), **kwargs)
 
 	# Get state - bool stored in hidden "state" section - any given detail overrides global state

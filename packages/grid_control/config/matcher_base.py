@@ -13,7 +13,7 @@
 # | limitations under the License.
 
 import re, fnmatch, logging
-from grid_control.config.config_entry import appendOption
+from grid_control.config.config_entry import add_config_suffix
 from grid_control.gc_plugin import ConfigurablePlugin
 from grid_control.utils import QM
 from grid_control.utils.data_structures import make_enum
@@ -56,7 +56,7 @@ class Matcher(ConfigurablePlugin):
 		ConfigurablePlugin.__init__(self, config)
 		self._case = case_override
 		if case_override is None:
-			self._case = config.getBool(appendOption(option_prefix, 'case sensitive'), default = True, **kwargs)
+			self._case = config.getBool(add_config_suffix(option_prefix, 'case sensitive'), default = True, **kwargs)
 		self._log = logging.getLogger('matcher.%s' % option_prefix)
 		if not self._log.isEnabledFor(logging.DEBUG1):
 			self._log = None
@@ -181,7 +181,7 @@ class BlackWhiteMatcher(Matcher):
 
 	def __init__(self, config, option_prefix, case_override = None, **kwargs):
 		Matcher.__init__(self, config, option_prefix, case_override, **kwargs)
-		self._baseMatcher = config.getPlugin(appendOption(option_prefix, 'mode'), 'start',
+		self._baseMatcher = config.getPlugin(add_config_suffix(option_prefix, 'mode'), 'start',
 			cls = Matcher, pargs = (option_prefix, self._case), pkwargs = kwargs, **kwargs)
 
 	def __repr__(self):
