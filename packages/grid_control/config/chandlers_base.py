@@ -35,17 +35,17 @@ def change_impossible(config, old_obj, cur_obj, cur_entry, obj2str):
 
 class NoVarCheck(object):
 	# Validation handler to check for variables in string
-	def __call__(self, loc, obj):
-		if self.check(obj):
-			raise ConfigError('%s = %s may not contain variables.' % (loc, obj))
-		return obj
-
 	def __init__(self, config):
 		global_config = config.changeView(view_class='SimpleConfigView', setSections=['global'])
 		self.markers = global_config.getList('variable markers', ['@', '__'])
 		for marker in self.markers:
 			if marker not in ['@', '__']:
 				raise ConfigError('Variable marker %r is not supported!' % marker)
+
+	def __call__(self, loc, obj):
+		if self.check(obj):
+			raise ConfigError('%s = %s may not contain variables.' % (loc, obj))
+		return obj
 
 	def check(self, value):
 		for line in str(value).split('\n'):
@@ -56,6 +56,9 @@ class NoVarCheck(object):
 
 class TriggerInit(object):
 	# Change handler to trigger re-inits
+	def __init__(self, option):
+		self._option = option
+
 	def __call__(self, config, old_obj, cur_obj, cur_entry, obj2str):
 		log = logging.getLogger('config.onchange.%s' % self._option.lower())
 		if config.isInteractive(self._option, default=True):
@@ -72,11 +75,11 @@ class TriggerInit(object):
 		config.setState(True, 'init', detail='config')  # This will trigger a write of the new options
 		return cur_obj
 
-	def __init__(self, option):
-		self._option = option
-
 
 class TriggerResync(object):
+	def __init__(self, details):
+		self._details = details
+
 	def __call__(self, config, old_obj, cur_obj, cur_entry, obj2str):
 		log = logging.getLogger('config.changes')
 		log.info('The config option %r was changed', cur_entry.format_opt())
@@ -90,6 +93,3 @@ class TriggerResync(object):
 			log.info('The configuration was changed - triggering storage of new config options')
 			config.setState(True, 'init', detail='config')  # This will trigger a write of the new options
 		return cur_obj
-
-	def __init__(self, details):
-		self._details = details

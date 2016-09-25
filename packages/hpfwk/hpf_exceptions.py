@@ -57,7 +57,7 @@ class ExceptionCollector(object):
 	def collect(self, *args, **kwargs):
 		if self._log and args:
 			self._log.log(*args, **kwargs)
-		ex_helper = NestedExceptionHelper(get_current_exception(), _get_current_traceback())
+		ex_helper = ExceptionWrapper(get_current_exception(), _get_current_traceback())
 		self._exception_list.append(ex_helper)
 		clear_current_exception()
 
@@ -70,7 +70,7 @@ class ExceptionCollector(object):
 		raise value
 
 
-class NestedExceptionHelper(object):
+class ExceptionWrapper(object):
 	def __init__(self, exception_value, exception_traceback):
 		self.nested = [exception_value]
 		self.traceback = _parse_traceback(exception_traceback)
