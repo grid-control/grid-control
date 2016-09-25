@@ -12,11 +12,11 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-from grid_control.config.config_entry import norm_config_locations
+from grid_control.config.config_entry import norm_config_locations, ConfigError
 from grid_control.config.cview_base import SimpleConfigView
 from grid_control.utils import safe_index
 from hpfwk import APIError
-from python_compat import identity, imap, lfilter, lmap, unspecified
+from python_compat import identity, imap, lfilter, lmap, unspecified, itemgetter
 
 
 class TaggedConfigView(SimpleConfigView):
@@ -36,47 +36,52 @@ class TaggedConfigView(SimpleConfigView):
 		self._section_name_list = self._init_variable(parent, '_section_name_list', [],
 			setNames, addNames, norm_config_locations)
 
-		def makeTagTuple(t):
+		def get_tag_tuple(tag_obj):
 			try:
-				config_tag_name = t.config_tag_name.lower()
+				config_tag_name = tag_obj.config_tag_name.lower()
 			except Exception:
-				raise APIError('Class %r does not define a valid tag name!' % t.__class__.__name__)
-			return [(config_tag_name, t.getObjectName().lower())]
+				raise APIError('Class %r does not define a valid tag name!' % tag_obj.__class__.__name__)
+			return [(config_tag_name, tag_obj.getObjectName().lower())]
 		self._section_tag_list = self._init_variable(parent, '_section_tag_list', [],
-			setTags, addTags, identity, makeTagTuple)
-		self._section_tag_order = lmap(lambda config_tag_name_tagValue: config_tag_name_tagValue[0], self._section_tag_list)
+			setTags, addTags, identity, get_tag_tuple)
+		self._section_tag_order = lmap(itemgetter(0), self._section_tag_list)
 
 	def get_class_section_list(self):
 		return self._class_section_list
 
 	def __str__(self):
-		return '<%s(class = %r, sections = %r, names = %r, tags = %r)>' %\
-			(self.__class__.__name__, self._class_section_list, self._section_list, self._section_name_list, self._section_tag_list)
+		return '<%s(class = %r, sections = %r, names = %r, tags = %r)>' % (
+			self.__class__.__name__, self._class_section_list, self._section_list,
+			self._section_name_list, self._section_tag_list)
 
 	def _get_section_key(self, section):
 		tmp = section.split()
-		assert(len(tmp) > 0)
-		(curSection, curNames, curTags) = (tmp[0], [], {})
+		if not tmp:
+			raise ConfigError('Invalid config section %r' % section)
+		(cur_section, cur_name_list, cur_tag_map) = (tmp[0], [], {})
 		for token in tmp[1:]:
 			if ':' in token:
 				tag_entry = token.split(':')
-				assert(len(tag_entry) == 2)
-				curTags[tag_entry[0]] = tag_entry[1]
+				if len(tag_entry) != 2:
+					raise ConfigError('Invalid config tag in section %r' % section)
+				cur_tag_map[tag_entry[0]] = tag_entry[1]
 			elif token:
-				curNames.append(token)
+				cur_name_list.append(token)
 
-		idxClass = safe_index(self._class_section_list, curSection)
-		idxSection = safe_index(self._section_list, curSection)
+		class_section_idx = safe_index(self._class_section_list, cur_section)
+		section_idx = safe_index(self._section_list, cur_section)
 		if (not self._class_section_list) and (not self._section_list):
-			idxSection = 0
-		if (idxClass is not None) or (idxSection is not None):  # Section is selected by class or manually
-			idxNames = tuple(imap(lambda n: safe_index(self._section_name_list, n), curNames))
-			if None not in idxNames:  # All names in current section are selected
-				curTagNames = lfilter(lambda tn: tn in curTags, self._section_tag_order)
-				curTagNamesLeft = lfilter(lambda tn: tn not in self._section_tag_order, curTags)
-				idxTags = lmap(lambda tn: safe_index(self._section_tag_list, (tn, curTags[tn])), curTagNames)
-				if (None not in idxTags) and not curTagNamesLeft:
-					return (idxClass, idxSection, idxNames, idxTags)
+			section_idx = 0
+		if (class_section_idx is not None) or (section_idx is not None):
+			# Section is selected by class or manually
+			name_idx_tuple = tuple(imap(lambda n: safe_index(self._section_name_list, n), cur_name_list))
+			if None not in name_idx_tuple:  # All names in current section are selected
+				cur_tag_name_list = lfilter(lambda tn: tn in cur_tag_map, self._section_tag_order)
+				left_tag_name_list = lfilter(lambda tn: tn not in self._section_tag_order, cur_tag_map)
+				tag_tuple_list = imap(lambda tn: (tn, cur_tag_map[tn]), cur_tag_name_list)
+				tag_idx_tuple = tuple(imap(lambda tt: safe_index(self._section_tag_list, tt), tag_tuple_list))
+				if (None not in tag_idx_tuple) and not left_tag_name_list:
+					return (class_section_idx, section_idx, name_idx_tuple, tag_idx_tuple)
 
 	def _get_section(self, specific):
 		if specific:
