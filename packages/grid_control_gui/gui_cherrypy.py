@@ -51,9 +51,9 @@ class TabularHTML(object):
 		fmt = fmt or {}
 		lookupDict = lmap(lambda id_name: (id_name[0], fmt.get(id_name[0], str)), head)
 		headerList = lmap(lambda id_name: '<th>%s</th>' % id_name[1], head)
-		def entryList(entry):
+		def make_entry_list(entry):
 			return lmap(lambda id_fmt: '<td>%s</td>' % id_fmt[1](entry.get(id_fmt[0])), lookupDict)
-		rowList = [headerList] + lmap(entryList, data)
+		rowList = [headerList] + lmap(make_entry_list, data)
 		if not top:
 			rowList = lzip(*rowList)
 		rows = lmap(lambda row: '\t<tr>%s</tr>\n' % str.join('', row), rowList)

@@ -22,7 +22,7 @@ from python_compat import imap, lchain, lmap
 
 class EventHandler(NamedPlugin):
 	config_section_list = NamedPlugin.config_section_list + ['events']
-	tagName = 'event'
+	config_tag_name = 'event'
 
 	def __init__(self, config, name, task):
 		NamedPlugin.__init__(self, config, name)
@@ -72,7 +72,7 @@ class MultiEventHandler(EventHandler):
 
 # Monitoring base class with submodule support
 class Monitoring(EventHandler):
-	tagName = 'monitor'
+	config_tag_name = 'monitor'
 
 	# Script to call later on
 	def getScript(self):

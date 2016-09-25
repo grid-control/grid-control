@@ -27,7 +27,7 @@ class ConfigDataProvider(DataProvider):
 	def __init__(self, config, datasource_name, dataset_expr, dataset_nick = None, dataset_proc = None):
 		DataProvider.__init__(self, config, datasource_name, dataset_expr, dataset_nick, dataset_proc)
 
-		ds_config = config.changeView(viewClass = 'SimpleConfigView', setSections = ['datasource %s' % dataset_expr])
+		ds_config = config.changeView(view_class = 'SimpleConfigView', setSections = ['datasource %s' % dataset_expr])
 		self._block = self._readBlockFromConfig(ds_config, dataset_expr, dataset_nick)
 
 		def onChange(config, old_obj, cur_obj, cur_entry, obj2str):

@@ -26,7 +26,7 @@ class AccessTokenError(NestedException):
 
 class AccessToken(NamedPlugin):
 	config_section_list = NamedPlugin.config_section_list + ['proxy', 'access']
-	tagName = 'access'
+	config_tag_name = 'access'
 
 	def getUsername(self):
 		raise AbstractError

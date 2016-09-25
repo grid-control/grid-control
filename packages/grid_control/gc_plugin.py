@@ -30,11 +30,11 @@ class ConfigurablePlugin(Plugin):
 
 # NamedPlugin provides functionality to name plugin instances
 class NamedPlugin(ConfigurablePlugin):
-	tagName = None
+	config_tag_name = None
 
 	def __init__(self, config, name):
 		self._name = name
-		self._log = logging.getLogger('%s.%s' % (self.tagName.lower(), name.lower()))
+		self._log = logging.getLogger('%s.%s' % (self.config_tag_name.lower(), name.lower()))
 		ConfigurablePlugin.__init__(self, config)
 
 	def getObjectName(self):
@@ -56,7 +56,7 @@ class NamedPlugin(ConfigurablePlugin):
 			clsNew = cls.get_class(cls_name)
 			if not instanceName:
 				instanceName = clsNew.__name__.split('.')[-1]
-			cls_config = config.changeView(viewClass = 'TaggedConfigView',
+			cls_config = config.changeView(view_class = 'TaggedConfigView',
 				setClasses = [clsNew], setSections = None, setNames = [instanceName],
 				addTags = tags or [], inheritSections = inheritSections)
 			yield InstanceFactory(entry, clsNew, cls_config, instanceName)

@@ -155,7 +155,7 @@ class ScanProvider(ScanProviderBase):
 	alias_list = ['scan']
 
 	def __init__(self, config, datasource_name, dataset_expr, datasetNick = None, dataset_proc = None):
-		ds_config = config.changeView(viewClass = 'TaggedConfigView', addNames = [md5_hex(dataset_expr)])
+		ds_config = config.changeView(view_class = 'TaggedConfigView', addNames = [md5_hex(dataset_expr)])
 		basename = os.path.basename(dataset_expr)
 		firstScanner = 'FilesFromLS'
 		if '*' in basename:
@@ -183,7 +183,7 @@ class GCProvider(ScanProviderBase):
 	alias_list = ['gc']
 
 	def __init__(self, config, datasource_name, dataset_expr, datasetNick = None, dataset_proc = None):
-		ds_config = config.changeView(viewClass = 'TaggedConfigView', addNames = [md5_hex(dataset_expr)])
+		ds_config = config.changeView(view_class = 'TaggedConfigView', addNames = [md5_hex(dataset_expr)])
 		if os.path.isdir(dataset_expr):
 			scan_pipeline = ['OutputDirsFromWork']
 			ds_config.set('source directory', dataset_expr)

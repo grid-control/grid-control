@@ -53,7 +53,7 @@ def discoverDataset(providerName, config_dict):
 	DataProvider = Plugin.get_class('DataProvider')
 	provider = DataProvider.create_instance(providerName, config, 'dataset', config_dict['dataset'], None)
 	if config_dict['dump config'] == 'True':
-		config.write(sys.stdout, print_default = True, printMinimal = True)
+		config.write(sys.stdout, print_default = True, print_minimal = True)
 		return
 	stripMetadata = config_dict['strip'] == 'True'
 	if config_dict['output']:

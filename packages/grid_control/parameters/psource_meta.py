@@ -131,7 +131,7 @@ class SubSpaceParameterSource(ForwardingParameterSource):
 	def create_psrc(cls, pconfig, repository, name = 'subspace', factory = 'SimpleParameterFactory'): # pylint:disable=arguments-differ
 		try:
 			ParameterFactory = Plugin.get_class('ParameterFactory')
-			config = pconfig.get_config(viewClass = 'SimpleConfigView', addSections = [name])
+			config = pconfig.get_config(view_class = 'SimpleConfigView', addSections = [name])
 			return SubSpaceParameterSource(name, ParameterFactory.create_instance(factory, config), repository)
 		except:
 			raise ParameterError('Unable to create subspace %r using factory %r' % (name, factory))

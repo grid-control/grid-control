@@ -48,7 +48,7 @@ class CMSSW_Advanced(CMSSW):
 
 		# Mapping between nickname and constants - only display - work is handled by the 'normal' parameter factory
 		nmCName = config.getList('nickname constants', [], onChange = None)
-		param_config = config.changeView(viewClass = 'TaggedConfigView', setClasses = None, setNames = None, addSections = ['parameters'])
+		param_config = config.changeView(view_class = 'TaggedConfigView', setClasses = None, setNames = None, addSections = ['parameters'])
 		param_config.set('constants', str.join(' ', nmCName), '+=')
 		for cName in nmCName:
 			param_config.set(cName + ' matcher', 'regex')

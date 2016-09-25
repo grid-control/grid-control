@@ -50,7 +50,7 @@ class ConfigurableJobName(JobNamePlugin):
 
 class TaskModule(NamedPlugin):
 	config_section_list = NamedPlugin.config_section_list + ['task']
-	tagName = 'task'
+	config_tag_name = 'task'
 
 	# Read configuration options and init vars
 	def __init__(self, config, name):
@@ -59,7 +59,7 @@ class TaskModule(NamedPlugin):
 		self._varCheck = validNoVar(config)
 
 		# Task requirements
-		jobs_config = config.changeView(viewClass = 'TaggedConfigView', addSections = ['jobs'], addTags = [self]) # Move this into parameter manager?
+		jobs_config = config.changeView(view_class = 'TaggedConfigView', addSections = ['jobs'], addTags = [self]) # Move this into parameter manager?
 		self.wallTime = jobs_config.getTime('wall time', onChange = None)
 		self.cpuTime = jobs_config.getTime('cpu time', self.wallTime, onChange = None)
 		self.cpus = jobs_config.getInt('cpus', 1, onChange = None)
@@ -73,7 +73,7 @@ class TaskModule(NamedPlugin):
 		self._job_name_generator = config.getPlugin('job name generator', 'DefaultJobName', cls = JobNamePlugin)
 
 		# Storage setup
-		storage_config = config.changeView(viewClass = 'TaggedConfigView',
+		storage_config = config.changeView(view_class = 'TaggedConfigView',
 			setClasses = None, setNames = None, addSections = ['storage'], addTags = [self])
 		self.taskVariables = {
 			# Space limits

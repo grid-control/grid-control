@@ -68,8 +68,8 @@ def getNodeName(instance, node_names):
 def getNodeLabel(instance):
 	names = [instance.__class__.__name__, repr(instance)]
 	if hasattr(instance.__class__, 'alias_list'):
-		if hasattr(instance.__class__, 'tagName'):
-			names.extend(imap(lambda alias: '%s:%s' % (instance.tagName, alias), instance.__class__.alias_list))
+		if hasattr(instance.__class__, 'config_tag_name'):
+			names.extend(imap(lambda alias: '%s:%s' % (instance.config_tag_name, alias), instance.__class__.alias_list))
 		elif len(repr(instance)) > len(instance.__class__.__name__):
 			names.extend(instance.__class__.alias_list)
 	result = sorted(names, key = len)[0]

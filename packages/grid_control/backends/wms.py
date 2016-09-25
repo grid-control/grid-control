@@ -43,7 +43,7 @@ BackendJobState = make_enum([
 
 class WMS(NamedPlugin):
 	config_section_list = NamedPlugin.config_section_list + ['wms', 'backend']
-	tagName = 'wms'
+	config_tag_name = 'wms'
 
 	def __init__(self, config, name):
 		name = (name or self.__class__.__name__).upper().replace('.', '_')
@@ -337,5 +337,5 @@ class Grid(WMS): # redirector - used to avoid loading the whole grid module just
 
 	def __new__(cls, config, name):
 		gridWMS = 'GliteWMS'
-		grid_config = config.changeView(viewClass = 'TaggedConfigView', setClasses = [WMS.get_class(gridWMS)])
+		grid_config = config.changeView(view_class = 'TaggedConfigView', setClasses = [WMS.get_class(gridWMS)])
 		return WMS.create_instance(gridWMS, grid_config, name)

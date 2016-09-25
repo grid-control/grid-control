@@ -160,8 +160,8 @@ def gc_create_workflow(config):
 
 	# Give config help
 	if help_cfg or help_scfg:
-		config.write(sys.stdout, print_default = help_cfg, printUnused = False,
-			printMinimal = help_scfg, printSource = help_cfg)
+		config.write(sys.stdout, print_default = help_cfg, print_unused = False,
+			print_minimal = help_scfg, print_source = help_cfg)
 		sys.exit(os.EX_OK)
 
 	# Check if user requested deletion / reset of jobs

@@ -20,36 +20,40 @@ from python_compat import identity, imap, lfilter, lmap, unspecified
 
 
 class TaggedConfigView(SimpleConfigView):
-	def __init__(self, name, oldContainer, curContainer, parent = None,
-			setSections = unspecified, addSections = None,
-			setNames = unspecified, addNames = None,
-			setTags = unspecified, addTags = None,
-			setClasses = unspecified, addClasses = None, inheritSections = False):
+	def __init__(self, name, oldContainer, curContainer, parent=None,
+			setSections=unspecified, addSections=None,
+			setNames=unspecified, addNames=None,
+			setTags=unspecified, addTags=None,
+			setClasses=unspecified, addClasses=None, inheritSections=False):
 		parent = parent or self
 		if inheritSections and isinstance(parent, TaggedConfigView):
 			addSections = (parent.get_class_section_list() or []) + (addSections or [])
 		SimpleConfigView.__init__(self, name, oldContainer, curContainer, parent,
-			setSections = setSections, addSections = addSections)
+			setSections=setSections, addSections=addSections)
 
-		self._initVariable(parent, '_cfgClassSections', None, setClasses, addClasses, norm_config_locations, lambda x: x.config_section_list)
-		self._initVariable(parent, '_cfgNames', [], setNames, addNames, norm_config_locations)
+		self._class_section_list = self._init_variable(parent, '_class_section_list', None,
+			setClasses, addClasses, norm_config_locations, lambda x: x.config_section_list)
+		self._section_name_list = self._init_variable(parent, '_section_name_list', [],
+			setNames, addNames, norm_config_locations)
+
 		def makeTagTuple(t):
 			try:
-				tagName = t.tagName.lower()
+				config_tag_name = t.config_tag_name.lower()
 			except Exception:
 				raise APIError('Class %r does not define a valid tag name!' % t.__class__.__name__)
-			return [(tagName, t.getObjectName().lower())]
-		self._initVariable(parent, '_cfgTags', [], setTags, addTags, identity, makeTagTuple)
-		self._cfgTagsOrder = lmap(lambda tagName_tagValue: tagName_tagValue[0], self._cfgTags)
+			return [(config_tag_name, t.getObjectName().lower())]
+		self._section_tag_list = self._init_variable(parent, '_section_tag_list', [],
+			setTags, addTags, identity, makeTagTuple)
+		self._section_tag_order = lmap(lambda config_tag_name_tagValue: config_tag_name_tagValue[0], self._section_tag_list)
 
 	def get_class_section_list(self):
-		return self._cfgClassSections
+		return self._class_section_list
 
 	def __str__(self):
 		return '<%s(class = %r, sections = %r, names = %r, tags = %r)>' %\
-			(self.__class__.__name__, self._cfgClassSections, self._cfgSections, self._cfgNames, self._cfgTags)
+			(self.__class__.__name__, self._class_section_list, self._section_list, self._section_name_list, self._section_tag_list)
 
-	def _getSectionKey(self, section):
+	def _get_section_key(self, section):
 		tmp = section.split()
 		assert(len(tmp) > 0)
 		(curSection, curNames, curTags) = (tmp[0], [], {})
@@ -61,30 +65,30 @@ class TaggedConfigView(SimpleConfigView):
 			elif token:
 				curNames.append(token)
 
-		idxClass = safe_index(self._cfgClassSections, curSection)
-		idxSection = safe_index(self._cfgSections, curSection)
-		if (not self._cfgClassSections) and (not self._cfgSections):
+		idxClass = safe_index(self._class_section_list, curSection)
+		idxSection = safe_index(self._section_list, curSection)
+		if (not self._class_section_list) and (not self._section_list):
 			idxSection = 0
-		if (idxClass is not None) or (idxSection is not None): # Section is selected by class or manually
-			idxNames = tuple(imap(lambda n: safe_index(self._cfgNames, n), curNames))
-			if None not in idxNames: # All names in current section are selected
-				curTagNames = lfilter(lambda tn: tn in curTags, self._cfgTagsOrder)
-				curTagNamesLeft = lfilter(lambda tn: tn not in self._cfgTagsOrder, curTags)
-				idxTags = lmap(lambda tn: safe_index(self._cfgTags, (tn, curTags[tn])), curTagNames)
+		if (idxClass is not None) or (idxSection is not None):  # Section is selected by class or manually
+			idxNames = tuple(imap(lambda n: safe_index(self._section_name_list, n), curNames))
+			if None not in idxNames:  # All names in current section are selected
+				curTagNames = lfilter(lambda tn: tn in curTags, self._section_tag_order)
+				curTagNamesLeft = lfilter(lambda tn: tn not in self._section_tag_order, curTags)
+				idxTags = lmap(lambda tn: safe_index(self._section_tag_list, (tn, curTags[tn])), curTagNames)
 				if (None not in idxTags) and not curTagNamesLeft:
 					return (idxClass, idxSection, idxNames, idxTags)
 
-	def _getSection(self, specific):
+	def _get_section(self, specific):
 		if specific:
-			if self._cfgClassSections:
-				section = self._cfgClassSections[-1]
+			if self._class_section_list:
+				section = self._class_section_list[-1]
 			else:
-				section = SimpleConfigView._getSection(self, specific)
-			if self._cfgNames:
-				section += ' %s' % str.join(' ', self._cfgNames)
-			if self._cfgTags:
-				section += ' %s' % str.join(' ', imap(lambda t: '%s:%s' % t, self._cfgTags))
+				section = SimpleConfigView._get_section(self, specific)
+			if self._section_name_list:
+				section += ' %s' % str.join(' ', self._section_name_list)
+			if self._section_tag_list:
+				section += ' %s' % str.join(' ', imap(lambda t: '%s:%s' % t, self._section_tag_list))
 			return section
-		elif self._cfgClassSections:
-			return self._cfgClassSections[0]
-		return SimpleConfigView._getSection(self, specific)
+		elif self._class_section_list:
+			return self._class_section_list[0]
+		return SimpleConfigView._get_section(self, specific)

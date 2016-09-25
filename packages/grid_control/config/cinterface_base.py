@@ -25,19 +25,19 @@ class ConfigInterface(object):
 		self._config_view = configView
 		self._default_on_change = when_unspecified(default_on_change, changeImpossible)
 		self._default_on_valid = when_unspecified(default_on_valid, None)
-		self._log = logging.getLogger('config.%s' % self._config_view.configName.lower())
+		self._log = logging.getLogger('config.%s' % self._config_view.config_name.lower())
 
 	def __repr__(self):
 		return '<%s(view = %s)>' % (self.__class__.__name__, self._config_view)
 
 	def changeView(self, interfaceClass = None, default_on_change = unspecified, default_on_valid = unspecified, **kwargs):
 		interfaceClass = interfaceClass or self.__class__
-		return interfaceClass(self._config_view.getView(**kwargs),
+		return interfaceClass(self._config_view.get_view(**kwargs),
 			when_unspecified(default_on_change, self._default_on_change),
 			when_unspecified(default_on_valid, self._default_on_valid))
 
 	def getConfigName(self):
-		return self._config_view.configName
+		return self._config_view.config_name
 
 	def getWorkPath(self, *fnList):
 		return os.path.join(self._config_view.config_vault['path:workdir'], *fnList)
@@ -45,7 +45,7 @@ class ConfigInterface(object):
 	# Get all selected options
 	def getOptions(self):
 		result = []
-		for entry in self._config_view.iterContent():
+		for entry in self._config_view.iter_content():
 			if entry.option not in result:
 				result.append(entry.option)
 		return result

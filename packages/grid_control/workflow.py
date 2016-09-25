@@ -27,7 +27,7 @@ from python_compat import imap
 # Workflow class
 class Workflow(NamedPlugin):
 	config_section_list = NamedPlugin.config_section_list + ['global', 'workflow']
-	tagName = 'workflow'
+	config_tag_name = 'workflow'
 
 	def __init__(self, config, name, abort = None):
 		NamedPlugin.__init__(self, config, name)
@@ -53,7 +53,7 @@ class Workflow(NamedPlugin):
 			cls = WMS, tags = [self, self.task])
 
 		# Subsequent config calls also include section "jobs":
-		jobs_config = config.changeView(viewClass = 'TaggedConfigView',
+		jobs_config = config.changeView(view_class = 'TaggedConfigView',
 			addSections = ['jobs'], addTags = [self])
 
 		# Initialise monitoring module

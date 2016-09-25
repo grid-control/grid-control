@@ -22,7 +22,7 @@ from python_compat import identity, ifilter, imap, irange, lfilter, lmap, sorted
 
 
 class ParameterFactory(ConfigurablePlugin):
-	tagName = 'parameters'
+	config_tag_name = 'parameters'
 
 	def get_source(self, repository):
 		raise AbstractError
@@ -41,14 +41,14 @@ class BasicParameterFactory(ParameterFactory):
 		self._random_seeds = jobs_config.getList('seeds', seeds_new, persistent = True)
 
 		# Get constants from [constants <tags...>]
-		constants_config = config.changeView(viewClass = 'TaggedConfigView',
+		constants_config = config.changeView(view_class = 'TaggedConfigView',
 			setClasses = None, setSections = ['constants'], setNames = None)
 		constants_pconfig = ParameterConfig(constants_config)
 		for vn_const in ifilter(lambda opt: ' ' not in opt, constants_config.getOptions()):
 			constants_config.set('%s type' % vn_const, 'verbatim', '?=')
 			self._register_psrc(constants_pconfig, vn_const.upper())
 
-		param_config = config.changeView(viewClass = 'TaggedConfigView',
+		param_config = config.changeView(view_class = 'TaggedConfigView',
 			setClasses = None, addSections = ['parameters'], inheritSections = True)
 
 		# Get constants from [<Module>] constants

@@ -117,7 +117,7 @@ class URLDataProcessor(DataProcessor):
 
 	def __init__(self, config, datasource_name, on_change):
 		DataProcessor.__init__(self, config, datasource_name, on_change)
-		internal_config = config.changeView(viewClass = 'SimpleConfigView', setSections = ['dataprocessor'])
+		internal_config = config.changeView(view_class = 'SimpleConfigView', setSections = ['dataprocessor'])
 		internal_config.set('%s processor' % datasource_name, 'NullDataProcessor')
 		config.set('%s ignore urls matcher case sensitive' % datasource_name, 'False')
 		self._url_filter = config.getFilter(['%s ignore files' % datasource_name, '%s ignore urls' % datasource_name], '', negate = True,

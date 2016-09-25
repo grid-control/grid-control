@@ -172,7 +172,7 @@ class SimpleConfigInterface(TypedConfigInterface):
 			user_option_exists = option in self.getOptions()
 		# global switch to enable / disable interactive option queries
 		config_interactive = self.changeView(interfaceClass = TypedConfigInterface,
-			viewClass = SimpleConfigView, setSections = ['interactive'])
+			view_class = SimpleConfigView, setSections = ['interactive'])
 		if self._interactive_enabled is None:
 			self._interactive_enabled = config_interactive.getBool('default', True, onChange = None)
 		icfg = config_interactive.getBool(add_config_suffix(option, 'interactive'), self._interactive_enabled and default, onChange = None)
@@ -212,7 +212,7 @@ class SimpleConfigInterface(TypedConfigInterface):
 
 	# Get state - bool stored in hidden "state" section - any given detail overrides global state
 	def getState(self, statename, detail = '', default = False):
-		view = self.changeView(viewClass = SimpleConfigView, setSections = ['state'])
+		view = self.changeView(view_class = SimpleConfigView, setSections = ['state'])
 		state = view.getBool('#%s' % statename, default, onChange = None)
 		if detail:
 			state = view.getBool('#%s %s' % (statename, detail), state, onChange = None)
@@ -220,7 +220,7 @@ class SimpleConfigInterface(TypedConfigInterface):
 	# Set state - bool stored in hidden "state" section
 	def setState(self, value, statename, detail = ''):
 		option = ('#%s %s' % (statename, detail)).strip()
-		view = self.changeView(viewClass = SimpleConfigView, setSections = ['state'])
+		view = self.changeView(view_class = SimpleConfigView, setSections = ['state'])
 		return view.set(option, str(value), '=')
 
 	def getChoice(self, option, choices, default = unspecified,

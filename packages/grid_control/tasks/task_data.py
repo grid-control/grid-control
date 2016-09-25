@@ -28,14 +28,14 @@ class DataTask(TaskModule):
 
 		psrc_list = []
 		for datasource_name in config.getList('datasource names', ['dataset'], onChange = triggerResync(['datasets', 'parameters'])):
-			data_config = config.changeView(viewClass = 'TaggedConfigView', addSections = [datasource_name])
+			data_config = config.changeView(view_class = 'TaggedConfigView', addSections = [datasource_name])
 			psrc_data = self._create_datasource(data_config, datasource_name, psrc_repository)
 			if psrc_data is not None:
 				psrc_list.append(psrc_data)
 				self._has_dataset = True
-				tmp_config = data_config.changeView(viewClass = 'TaggedConfigView', setClasses = None, setNames = None, setTags = [], addSections = ['storage'])
+				tmp_config = data_config.changeView(view_class = 'TaggedConfigView', setClasses = None, setNames = None, setTags = [], addSections = ['storage'])
 				tmp_config.set('se output pattern', '@NICK@_job_@GC_JOB_ID@_@X@')
-				tmp_config = data_config.changeView(viewClass = 'TaggedConfigView', setClasses = None, setNames = None, setTags = [], addSections = ['parameters'])
+				tmp_config = data_config.changeView(view_class = 'TaggedConfigView', setClasses = None, setNames = None, setTags = [], addSections = ['parameters'])
 				tmp_config.set('default lookup', 'DATASETNICK')
 
 		self._has_dataset = (psrc_list != [])

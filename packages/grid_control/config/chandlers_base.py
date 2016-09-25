@@ -75,7 +75,7 @@ class changeInitNeeded(object):
 # Validation handler to check for variables in string
 class validNoVar(object):
 	def __init__(self, config):
-		global_config = config.changeView(viewClass = 'SimpleConfigView', setSections = ['global'])
+		global_config = config.changeView(view_class = 'SimpleConfigView', setSections = ['global'])
 		self.markers = global_config.getList('variable markers', ['@', '__'])
 		for marker in self.markers:
 			if marker not in ['@', '__']:

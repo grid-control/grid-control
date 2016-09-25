@@ -163,7 +163,7 @@ class CMSSW(SCRAMTask):
 		config.set('dataset processor', 'LumiDataProcessor', '+=')
 		config.set('partition processor', 'TFCPartitionProcessor LocationPartitionProcessor MetaPartitionProcessor ' +
 			'LFNPartitionProcessor LumiPartitionProcessor CMSSWPartitionProcessor')
-		dash_config = config.changeView(viewClass = 'SimpleConfigView', setSections = ['dashboard'])
+		dash_config = config.changeView(view_class = 'SimpleConfigView', setSections = ['dashboard'])
 		dash_config.set('application', 'cmsRun')
 
 		self._neededVars = set()

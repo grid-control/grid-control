@@ -18,7 +18,7 @@ from grid_control.gc_plugin import NamedPlugin
 
 class Broker(NamedPlugin):
 	config_section_list = NamedPlugin.config_section_list + ['broker']
-	tagName = 'broker'
+	config_tag_name = 'broker'
 
 	def __init__(self, config, name, broker_prefix, itemName, discoverFun):
 		NamedPlugin.__init__(self, config, name)

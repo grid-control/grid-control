@@ -47,7 +47,7 @@ def se_copy(src, dst, force = True, tmp = ''):
 
 class StorageManager(NamedPlugin):
 	config_section_list = NamedPlugin.config_section_list + ['storage']
-	tagName = 'storage'
+	config_tag_name = 'storage'
 
 	def __init__(self, config, name, storage_type, storage_channel, storage_var_prefix):
 		NamedPlugin.__init__(self, config, name)

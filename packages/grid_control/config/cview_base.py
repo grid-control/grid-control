@@ -19,203 +19,220 @@ from python_compat import ichain, imap, lfilter, sorted, unspecified
 
 
 class ConfigView(Plugin):
-	def __init__(self, name, parent = None):
+	def __init__(self, name, parent=None):
 		self.config_vault = {}
-		self.config_vault = (parent or self).config_vault # used shared config vault from parent if present
-		self.setConfigName(name)
-
-	def setConfigName(self, name):
-		self.configName = name
-		self._log = logging.getLogger('config.%s' % name.lower())
-
-	def getView(self, viewClass = None, **kwargs):
-		raise AbstractError
-
-	def iterContent(self):
-		raise AbstractError
+		# used shared config vault from parent if present
+		self.config_vault = (parent or self).config_vault
+		self.set_config_name(name)
 
 	def get(self, option_list, default_str, persistent):
 		# Return old and current merged config entries
+		raise AbstractError
+
+	def get_view(self, view_class=None, **kwargs):
+		raise AbstractError
+
+	def iter_content(self):
 		raise AbstractError
 
 	def set(self, option, value, opttype, source):
 		raise AbstractError
 
-	def _get_write_entries(self):
-		return self.iterContent()
+	def set_config_name(self, name):
+		self.config_name = name
+		self._log = logging.getLogger('config.%s' % name.lower())
 
-	def _prepare_write(self, entries = None, printState = False, printUnused = True, print_default = True, printWorkdir = False):
+	def write(self, stream, print_minimal=False, print_source=False, print_oneline=False, **kwarg):
+		config = self._prepare_write(**kwarg)
+		for section in sorted(config):
+			if not print_oneline:
+				stream.write('[%s]\n' % section)
+			for option in sorted(config[section]):
+				entry_list = sorted(config[section][option], key=lambda e: e.order)
+				if print_minimal:
+					entry_list = ConfigEntry.simplify_entries(entry_list)
+				for entry in entry_list:
+					source = ''
+					if print_source:
+						source = entry.source
+					stream.write(entry.format(print_section=print_oneline, source=source) + '\n')
+			if not print_oneline:
+				stream.write('\n')
+
+	def _get_write_entries(self):
+		return self.iter_content()
+
+	def _prepare_write(self, entries=None,
+			print_state=False, print_unused=True, print_default=True, print_workdir=False):
 		entries = entries or self._get_write_entries()
 		result = {}
 		for entry in entries:
-			if printWorkdir and entry.option == 'workdir':
+			if print_workdir and entry.option == 'workdir':
 				result.setdefault(entry.section, {}).setdefault(entry.option, []).append(entry)
-			elif printUnused or entry.used:
+			elif print_unused or entry.used:
 				if print_default or not entry.source.startswith('<default'):
-					if printState or not entry.option.startswith('#'):
+					if print_state or not entry.option.startswith('#'):
 						result.setdefault(entry.section, {}).setdefault(entry.option, []).append(entry)
 		return result
-
-	def write(self, stream, printMinimal = False, printSource = False, printTight = False, **kwarg):
-		config = self._prepare_write(**kwarg)
-		for section in sorted(config):
-			if not printTight:
-				stream.write('[%s]\n' % section)
-			for option in sorted(config[section]):
-				entryList = sorted(config[section][option], key = lambda e: e.order)
-				if printMinimal:
-					entryList = ConfigEntry.simplify_entries(entryList)
-				for entry in entryList:
-					source = ''
-					if printSource:
-						source = entry.source
-					stream.write(entry.format(print_section = printTight, source = source) + '\n')
-			if not printTight:
-				stream.write('\n')
 
 
 class HistoricalConfigView(ConfigView):
 	# Historical config view
-	def __init__(self, name, oldContainer, curContainer, parent = None):
+	def __init__(self, name, oldContainer, curContainer, parent=None):
 		ConfigView.__init__(self, name, parent)
-		self._oldContainer = oldContainer
-		self._curContainer = curContainer
-
-	def getView(self, viewClass = None, **kwargs):
-		if not viewClass:
-			viewClass = self.__class__
-		elif isinstance(viewClass, str):
-			viewClass = ConfigView.get_class(viewClass)
-		return viewClass(self.configName, self._oldContainer, self._curContainer, self, **kwargs)
-
-	def _getSection(self, specific):
-		raise AbstractError
-
-	def _getSectionKey(self, section):
-		raise AbstractError
-
-	def _createEntry(self, option_list, value, opttype, source, specific, reverse):
-		section = self._getSection(specific)
-		if reverse:
-			section += '!'
-		return ConfigEntry(section, option_list[-1], value, opttype, source)
-
-	def _matchEntries(self, container, option_list = None):
-		key_list = container.get_options()
-		if option_list is not None:
-			key_list = lfilter(lambda key: key in key_list, option_list)
-
-		result = []
-		getFilteredSectionKey = lambda entry: self._getSectionKey(entry.section.replace('!', '').strip())
-		def removeNone(key):
-			if key is None:
-				return -1
-			return key
-		getOrderedEntryKey = lambda entry: (tuple(imap(removeNone, getFilteredSectionKey(entry))), entry.order)
-		for key in key_list:
-			(entries, entries_reverse) = ([], [])
-			for entry in container.iter_config_entries(key, lambda x: getFilteredSectionKey(x) is not None):
-				if entry.section.endswith('!'):
-					entries_reverse.append(entry)
-				else:
-					entries.append(entry)
-			result.extend(sorted(entries_reverse, key = getOrderedEntryKey, reverse = True))
-			result.extend(sorted(entries, key = getOrderedEntryKey))
-		return result
-
-	def iterContent(self):
-		return self._matchEntries(self._curContainer)
-
-	def _getEntry(self, option_list, defaultEntry, defaultEntry_fallback):
-		if not unspecified(defaultEntry.value):
-			self._curContainer.set_default_entry(defaultEntry)
-		# Assemble matching config entries and combine them
-		entries = self._matchEntries(self._curContainer, option_list)
-		if not unspecified(defaultEntry.value):
-			entries.append(defaultEntry_fallback)
-		self._log.log(logging.DEBUG1, 'Used config entries:')
-		for entry in entries:
-			self._log.log(logging.DEBUG1, '  %s (%s | %s)', entry.format(print_section = True), entry.source, entry.order)
-		entry_cur = ConfigEntry.combine_entries(entries)
-		# Ensure that fallback default value is stored in persistent storage
-		if defaultEntry_fallback.used and not unspecified(defaultEntry.value):
-			self._curContainer.set_default_entry(defaultEntry_fallback)
-		return entry_cur
-
-	def _getDefaultEntries(self, option_list, default_str, persistent, entry_old):
-		if persistent and entry_old:
-			default_str = entry_old.value
-		defaultEntry = self._createEntry(option_list, default_str, '?=', '<default>', specific = False, reverse = True)
-		if persistent and not entry_old:
-			defaultEntry = self._curContainer.get_default_entry(defaultEntry) or defaultEntry
-		defaultEntry_fallback = self._createEntry(option_list, defaultEntry.value, '?=', '<default fallback>', specific = True, reverse = False)
-		return (defaultEntry, defaultEntry_fallback)
+		self._container_old = oldContainer
+		self._container_cur = curContainer
 
 	def get(self, option_list, default_str, persistent):
 		# Return old and current merged config entries
 		entry_old = None
-		if self._oldContainer.enabled: # If old container is enabled => return stored entry
-			entry_old = ConfigEntry.combine_entries(self._matchEntries(self._oldContainer, option_list))
+		if self._container_old.enabled:  # If old container is enabled => return stored entry
+			entry_old = ConfigEntry.combine_entries(self._match_entries(self._container_old, option_list))
 		# Process current entry
-		(defaultEntry, defaultEntry_fallback) = self._getDefaultEntries(option_list, default_str, persistent, entry_old)
-		entry_cur = self._getEntry(option_list, defaultEntry, defaultEntry_fallback)
+		(entry_default, entry_default_fallback) = self._get_default_entries(
+			option_list, default_str, persistent, entry_old)
+		entry_cur = self.get_entry(option_list, entry_default, entry_default_fallback)
 		if entry_cur is None:
-			raise ConfigError('"[%s] %s" does not exist!' % (self._getSection(specific = False), option_list[-1]))
+			raise ConfigError('"[%s] %s" does not exist!' % (
+				self._get_section(specific=False), option_list[-1]))
 		description = 'Using user supplied %s'
-		if persistent and defaultEntry.used:
+		if persistent and entry_default.used:
 			description = 'Using persistent    %s'
-		elif defaultEntry.used:
+		elif entry_default.used:
 			description = 'Using default value %s'
 		elif '!' in entry_cur.section:
 			description = 'Using dynamic value %s'
-		self._log.log(logging.INFO2, description, entry_cur.format(print_section = True))
+		self._log.log(logging.INFO2, description, entry_cur.format(print_section=True))
 		return (entry_old, entry_cur)
 
+	def get_entry(self, option_list, entry_default, entry_default_fallback):
+		if not unspecified(entry_default.value):
+			self._container_cur.set_default_entry(entry_default)
+		# Assemble matching config entries and combine them
+		entries = self._match_entries(self._container_cur, option_list)
+		if not unspecified(entry_default.value):
+			entries.append(entry_default_fallback)
+		self._log.log(logging.DEBUG1, 'Used config entries:')
+		for entry in entries:
+			self._log.log(logging.DEBUG1, '  %s (%s | %s)',
+				entry.format(print_section=True), entry.source, entry.order)
+		entry_cur = ConfigEntry.combine_entries(entries)
+		# Ensure that fallback default value is stored in persistent storage
+		if entry_default_fallback.used and not unspecified(entry_default.value):
+			self._container_cur.set_default_entry(entry_default_fallback)
+		return entry_cur
+
+	def get_view(self, view_class=None, **kwargs):
+		if not view_class:
+			view_class = self.__class__
+		elif isinstance(view_class, str):
+			view_class = ConfigView.get_class(view_class)
+		return view_class(self.config_name, self._container_old, self._container_cur, self, **kwargs)
+
+	def iter_content(self):
+		return self._match_entries(self._container_cur)
+
 	def set(self, option_list, value, opttype, source):
-		entry = self._createEntry(option_list, value, opttype, source, specific = True, reverse = True)
-		self._curContainer.append(entry)
-		self._log.log(logging.INFO3, 'Setting option %s', entry.format(print_section = True))
+		entry = self._create_entry(option_list, value, opttype, source, specific=True, reverse=True)
+		self._container_cur.append(entry)
+		self._log.log(logging.INFO3, 'Setting option %s', entry.format(print_section=True))
 		return entry
+
+	def _create_entry(self, option_list, value, opttype, source, specific, reverse):
+		section = self._get_section(specific)
+		if reverse:
+			section += '!'
+		return ConfigEntry(section, option_list[-1], value, opttype, source)
+
+	def _get_default_entries(self, option_list, default_str, persistent, entry_old):
+		if persistent and entry_old:
+			default_str = entry_old.value
+		entry_default = self._create_entry(option_list, default_str,
+			'?=', '<default>', specific=False, reverse=True)
+		if persistent and not entry_old:
+			entry_default = self._container_cur.get_default_entry(entry_default) or entry_default
+		entry_default_fallback = self._create_entry(option_list, entry_default.value,
+			'?=', '<default fallback>', specific=True, reverse=False)
+		return (entry_default, entry_default_fallback)
+
+	def _get_section(self, specific):
+		raise AbstractError
+
+	def _get_section_key(self, section):
+		raise AbstractError
+
+	def _match_entries(self, container, option_list=None):
+		key_list = container.get_options()
+		if option_list is not None:
+			key_list = lfilter(lambda key: key in key_list, option_list)
+
+		def get_entry_key_ordered(entry):
+			return (tuple(imap(remove_none, get_section_key_filtered(entry))), entry.order)
+
+		def get_section_key_filtered(entry):
+			return self._get_section_key(entry.section.replace('!', '').strip())
+
+		def remove_none(key):
+			if key is None:
+				return -1
+			return key
+
+		def select_sections(entry):
+			return get_section_key_filtered(entry) is not None
+
+		result = []
+		for key in key_list:
+			(entries, entries_reverse) = ([], [])
+			for entry in container.iter_config_entries(key, select_sections):
+				if entry.section.endswith('!'):
+					entries_reverse.append(entry)
+				else:
+					entries.append(entry)
+			result.extend(sorted(entries_reverse, key=get_entry_key_ordered, reverse=True))
+			result.extend(sorted(entries, key=get_entry_key_ordered))
+		return result
 
 
 class SimpleConfigView(HistoricalConfigView):
 	# Simple ConfigView implementation
-	def __init__(self, name, oldContainer, curContainer, parent = None,
-			setSections = unspecified, addSections = None):
+	def __init__(self, name, oldContainer, curContainer, parent=None,
+			setSections=unspecified, addSections=None):
 		HistoricalConfigView.__init__(self, name, oldContainer, curContainer, parent or self)
-		self._initVariable(parent or self, '_cfgSections', None, setSections, addSections, norm_config_locations)
-
-	def _initVariable(self, parent, memberName, default, setValue, addValue, normValues, parseValue = lambda x: [x]):
-		def collect(value):
-			return list(ichain(imap(parseValue, value)))
-		# Setting initial value of variable
-		result = default
-		if hasattr(parent, memberName): # get from parent if available
-			result = getattr(parent, memberName)
-		if setValue is None:
-			result = setValue
-		elif not unspecified(setValue):
-			result = normValues(list(collect(setValue)))
-		# Add to settings
-		if addValue and (result is not None):
-			result = result + normValues(list(collect(addValue)))
-		elif addValue:
-			result = normValues(list(collect(addValue)))
-		setattr(self, memberName, result)
-		return result
+		self._section_list = self._init_variable(parent or self, '_section_list', None,
+			setSections, addSections, norm_config_locations)
 
 	def __repr__(self):
-		return '<%s(sections = %r)>' % (self.__class__.__name__, self._cfgSections)
+		return '<%s(sections = %r)>' % (self.__class__.__name__, self._section_list)
 
-	def _getSectionKey(self, section):
-		if self._cfgSections is None:
-			return (section,)
-		if section in self._cfgSections:
-			return (self._cfgSections.index(section),)
-
-	def _getSection(self, specific):
-		if self._cfgSections and specific:
-			return self._cfgSections[-1]
-		elif self._cfgSections:
-			return self._cfgSections[0]
+	def _get_section(self, specific):
+		if self._section_list and specific:
+			return self._section_list[-1]
+		elif self._section_list:
+			return self._section_list[0]
 		return 'global'
+
+	def _get_section_key(self, section):
+		if self._section_list is None:
+			return (section,)
+		if section in self._section_list:
+			return (self._section_list.index(section),)
+
+	def _init_variable(self, parent, member_name, default,
+			set_value, add_value, norm_values, parse_value=lambda x: [x]):
+		def collect(value):
+			return list(ichain(imap(parse_value, value)))
+		# Setting initial value of variable
+		result = default
+		if hasattr(parent, member_name):  # get from parent if available
+			result = getattr(parent, member_name)
+		if set_value is None:
+			result = set_value
+		elif not unspecified(set_value):
+			result = norm_values(list(collect(set_value)))
+		# Add to settings
+		if add_value and (result is not None):
+			result = result + norm_values(list(collect(add_value)))
+		elif add_value:
+			result = norm_values(list(collect(add_value)))
+		setattr(self, member_name, result)
+		return result

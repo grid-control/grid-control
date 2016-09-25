@@ -27,7 +27,7 @@ from python_compat import ifilter, imap, izip, lfilter, lmap, set, sorted
 
 class JobManager(NamedPlugin):
 	config_section_list = NamedPlugin.config_section_list + ['jobs']
-	tagName = 'jobmgr'
+	config_tag_name = 'jobmgr'
 
 	def __init__(self, config, name, task, eventhandler):
 		NamedPlugin.__init__(self, config, name)

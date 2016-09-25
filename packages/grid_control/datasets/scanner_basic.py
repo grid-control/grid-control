@@ -36,7 +36,7 @@ class OutputDirsFromConfig(InfoScanner):
 		InfoScanner.__init__(self, config, datasource_name)
 		ext_config_fn = config.getPath('source config', onChange = triggerDataResync)
 		ext_config = create_config(ext_config_fn, useDefaultFiles = True).changeView(setSections = ['global'])
-		self._ext_work_dir = ext_config.getWorkPath()
+		self._ext_workdir = ext_config.getWorkPath()
 		logging.getLogger().disabled = True
 		self._ext_workflow = ext_config.getPlugin('workflow', 'Workflow:global', cls = 'Workflow', pargs = ('task',))
 		logging.getLogger().disabled = False
@@ -51,16 +51,16 @@ class OutputDirsFromConfig(InfoScanner):
 		for jobNum in self._selected:
 			activity.update('Reading job logs - [%d / %d]' % (jobNum, self._selected[-1]))
 			metadata['GC_JOBNUM'] = jobNum
-			objStore.update({'GC_TASK': self._ext_task, 'GC_WORKDIR': self._ext_work_dir})
-			yield (os.path.join(self._ext_work_dir, 'output', 'job_%d' % jobNum), metadata, events, seList, objStore)
+			objStore.update({'GC_TASK': self._ext_task, 'GC_WORKDIR': self._ext_workdir})
+			yield (os.path.join(self._ext_workdir, 'output', 'job_%d' % jobNum), metadata, events, seList, objStore)
 		activity.finish()
 
 
 class OutputDirsFromWork(InfoScanner):
 	def __init__(self, config, datasource_name):
 		InfoScanner.__init__(self, config, datasource_name)
-		self._ext_work_dir = config.getPath('source directory', onChange = triggerDataResync)
-		self._ext_output_dir = os.path.join(self._ext_work_dir, 'output')
+		self._ext_workdir = config.getPath('source directory', onChange = triggerDataResync)
+		self._ext_output_dir = os.path.join(self._ext_workdir, 'output')
 		if not os.path.isdir(self._ext_output_dir):
 			raise DatasetError('Unable to find task output directory %s' % repr(self._ext_output_dir))
 		self._selector = JobSelector.create(config.get('source job selector', '', onChange = triggerDataResync))
@@ -74,7 +74,7 @@ class OutputDirsFromWork(InfoScanner):
 				metadata['GC_JOBNUM'] = int(dirName.split('_')[1])
 			except Exception:
 				continue
-			objStore['GC_WORKDIR'] = self._ext_work_dir
+			objStore['GC_WORKDIR'] = self._ext_workdir
 			if self._selector and not self._selector(metadata['GC_JOBNUM'], None):
 				continue
 			yield (os.path.join(self._ext_output_dir, dirName), metadata, events, seList, objStore)
