@@ -12,6 +12,7 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
+
 def init_hpf_logging():
 	import logging
 
@@ -21,5 +22,5 @@ def init_hpf_logging():
 
 	# Register new log levels
 	for level_str in map_level_str2level:
-		setattr(logging, level_str.upper(), map_level_str2level[level_str]) # Add numerical constant
-		logging.addLevelName(map_level_str2level[level_str], level_str) # Register with logging module
+		setattr(logging, level_str.upper(), map_level_str2level[level_str])  # Add numerical constant
+		logging.addLevelName(map_level_str2level[level_str], level_str)  # Register with logging module

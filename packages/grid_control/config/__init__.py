@@ -12,14 +12,14 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-from grid_control.config.chandlers_base import changeImpossible, changeInitNeeded, triggerResync, validNoVar
+from grid_control.config.chandlers_base import change_impossible, TriggerInit, TriggerResync, NoVarCheck
 from grid_control.config.config_entry import ConfigError, add_config_suffix
 from grid_control.config.config_factory import create_config
 from grid_control.config.matcher_base import ListFilter, ListOrder, Matcher
 
 
-__all__ = ['add_config_suffix', 'changeImpossible', 'changeInitNeeded', 'ConfigError', 'create_config',
-	'ListFilter', 'ListOrder', 'Matcher', 'triggerResync', 'validNoVar']
+__all__ = ['add_config_suffix', 'change_impossible', 'TriggerInit', 'ConfigError', 'create_config',
+	'ListFilter', 'ListOrder', 'Matcher', 'TriggerResync', 'NoVarCheck']
 
 # At the lowest level, all config option values are represented by strings
 # which are encapsulated in the ConfigEntry class, which holds access and source

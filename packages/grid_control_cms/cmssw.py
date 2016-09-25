@@ -194,7 +194,7 @@ class CMSSW(SCRAMTask):
 			self.eventsPerJob = config.get('events per job', '0') # this can be a variable like @USER_EVENTS@!
 			self._neededVars.add('MAX_EVENTS')
 		fragment = config.getPath('instrumentation fragment', utils.path_share('fragmentForCMSSW.py', pkg = 'grid_control_cms'))
-		self.configFiles = self._processConfigFiles(config, list(self._getConfigFiles(config)), fragment,
+		self._config_file_list = self._processConfigFiles(config, list(self._getConfigFiles(config)), fragment,
 			autoPrepare = config.getBool('instrumentation', True),
 			mustPrepare = self._has_dataset)
 
@@ -336,7 +336,7 @@ class CMSSW(SCRAMTask):
 		data['SE_RUNTIME'] = utils.QM(self._projectAreaTarballSE, 'yes', 'no')
 		data['HAS_RUNTIME'] = utils.QM(self._projectArea, 'yes', 'no')
 		data['CMSSW_EXEC'] = 'cmsRun'
-		data['CMSSW_CONFIG'] = str.join(' ', imap(os.path.basename, self.configFiles))
+		data['CMSSW_CONFIG'] = str.join(' ', imap(os.path.basename, self._config_file_list))
 		data['CMSSW_OLD_RELEASETOP'] = self._oldReleaseTop
 		if self.prolog.isActive():
 			data['CMSSW_PROLOG_EXEC'] = self.prolog.getCommand()
@@ -360,7 +360,7 @@ class CMSSW(SCRAMTask):
 	# Get files for input sandbox
 	def getSBInFiles(self):
 		files = SCRAMTask.getSBInFiles(self) + self.prolog.getSBInFiles() + self.epilog.getSBInFiles()
-		for cfgFile in self.configFiles:
+		for cfgFile in self._config_file_list:
 			files.append(utils.Result(path_abs = cfgFile, path_rel = os.path.basename(cfgFile)))
 		if self._projectArea and not self._projectAreaTarballSE:
 			files.append(utils.Result(path_abs = self._projectAreaTarball, path_rel = os.path.basename(self._projectAreaTarball)))
@@ -369,7 +369,7 @@ class CMSSW(SCRAMTask):
 
 	# Get files for output sandbox
 	def getSBOutFiles(self):
-		if not self.configFiles:
+		if not self._config_file_list:
 			return SCRAMTask.getSBOutFiles(self)
 		return SCRAMTask.getSBOutFiles(self) + utils.QM(self.gzipOut, ['cmssw.log.gz'], []) + ['cmssw.dbs.tar.gz']
 

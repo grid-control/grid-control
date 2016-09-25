@@ -14,7 +14,7 @@
 
 import signal
 from grid_control import utils
-from grid_control.config import triggerResync
+from grid_control.config import TriggerResync
 from grid_control.datasets import DataProvider, DataSplitter, PartitionProcessor
 from grid_control.gc_exceptions import UserError
 from grid_control.parameters import ParameterSource
@@ -27,7 +27,7 @@ class DataTask(TaskModule):
 		TaskModule._setup_repository(self, config, psrc_repository)
 
 		psrc_list = []
-		for datasource_name in config.getList('datasource names', ['dataset'], onChange = triggerResync(['datasets', 'parameters'])):
+		for datasource_name in config.getList('datasource names', ['dataset'], onChange = TriggerResync(['datasets', 'parameters'])):
 			data_config = config.changeView(view_class = 'TaggedConfigView', addSections = [datasource_name])
 			psrc_data = self._create_datasource(data_config, datasource_name, psrc_repository)
 			if psrc_data is not None:
@@ -52,7 +52,7 @@ class DataTask(TaskModule):
 
 	def _create_datasource(self, config, datasource_name, psrc_repository):
 		dataProvider = config.getCompositePlugin(datasource_name, '', ':MultiDatasetProvider:',
-			cls = DataProvider, requirePlugin = False, onChange = triggerResync(['datasets', 'parameters']))
+			cls = DataProvider, requirePlugin = False, onChange = TriggerResync(['datasets', 'parameters']))
 
 		if dataProvider is not None:
 			splitterName = config.get('%s splitter' % datasource_name, 'FileBoundarySplitter')
@@ -62,7 +62,7 @@ class DataTask(TaskModule):
 			# Create and register dataset parameter source
 			partProcessor = config.getCompositePlugin(['partition processor', '%s partition processor' % datasource_name],
 				'TFCPartitionProcessor LocationPartitionProcessor MetaPartitionProcessor BasicPartitionProcessor',
-				'MultiPartitionProcessor', cls = PartitionProcessor, onChange = triggerResync(['parameters']),
+				'MultiPartitionProcessor', cls = PartitionProcessor, onChange = TriggerResync(['parameters']),
 				pargs = (datasource_name,))
 
 			data_ps = ParameterSource.create_instance('DataParameterSource', config.getWorkPath(),

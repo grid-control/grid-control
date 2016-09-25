@@ -46,13 +46,28 @@ class TaggedConfigView(SimpleConfigView):
 			setTags, addTags, identity, get_tag_tuple)
 		self._section_tag_order = lmap(itemgetter(0), self._section_tag_list)
 
-	def get_class_section_list(self):
-		return self._class_section_list
-
 	def __str__(self):
 		return '<%s(class = %r, sections = %r, names = %r, tags = %r)>' % (
 			self.__class__.__name__, self._class_section_list, self._section_list,
 			self._section_name_list, self._section_tag_list)
+
+	def get_class_section_list(self):
+		return self._class_section_list
+
+	def _get_section(self, specific):
+		if specific:
+			if self._class_section_list:
+				section = self._class_section_list[-1]
+			else:
+				section = SimpleConfigView._get_section(self, specific)
+			if self._section_name_list:
+				section += ' %s' % str.join(' ', self._section_name_list)
+			if self._section_tag_list:
+				section += ' %s' % str.join(' ', imap(lambda t: '%s:%s' % t, self._section_tag_list))
+			return section
+		elif self._class_section_list:
+			return self._class_section_list[0]
+		return SimpleConfigView._get_section(self, specific)
 
 	def _get_section_key(self, section):
 		tmp = section.split()
@@ -82,18 +97,3 @@ class TaggedConfigView(SimpleConfigView):
 				tag_idx_tuple = tuple(imap(lambda tt: safe_index(self._section_tag_list, tt), tag_tuple_list))
 				if (None not in tag_idx_tuple) and not left_tag_name_list:
 					return (class_section_idx, section_idx, name_idx_tuple, tag_idx_tuple)
-
-	def _get_section(self, specific):
-		if specific:
-			if self._class_section_list:
-				section = self._class_section_list[-1]
-			else:
-				section = SimpleConfigView._get_section(self, specific)
-			if self._section_name_list:
-				section += ' %s' % str.join(' ', self._section_name_list)
-			if self._section_tag_list:
-				section += ' %s' % str.join(' ', imap(lambda t: '%s:%s' % t, self._section_tag_list))
-			return section
-		elif self._class_section_list:
-			return self._class_section_list[0]
-		return SimpleConfigView._get_section(self, specific)

@@ -32,7 +32,7 @@ class ConfigView(Plugin):
 	def get_view(self, view_class=None, **kwargs):
 		raise AbstractError
 
-	def iter_content(self):
+	def iter_entries(self):
 		raise AbstractError
 
 	def set(self, option, value, opttype, source):
@@ -60,7 +60,7 @@ class ConfigView(Plugin):
 				stream.write('\n')
 
 	def _get_write_entries(self):
-		return self.iter_content()
+		return self.iter_entries()
 
 	def _prepare_write(self, entries=None,
 			print_state=False, print_unused=True, print_default=True, print_workdir=False):
@@ -129,7 +129,7 @@ class HistoricalConfigView(ConfigView):
 			view_class = ConfigView.get_class(view_class)
 		return view_class(self.config_name, self._container_old, self._container_cur, self, **kwargs)
 
-	def iter_content(self):
+	def iter_entries(self):
 		return self._match_entries(self._container_cur)
 
 	def set(self, option_list, value, opttype, source):

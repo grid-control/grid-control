@@ -62,7 +62,7 @@ def get_dataset_config(opts, args):
 	if opts.metadata or opts.block_metadata:
 		cfgSettings['lumi filter *'] = '-'
 		cfgSettings['keep lumi metadata *'] = 'True'
-	return getConfig(configFile = opts.settings, configDict = {'dataset': cfgSettings})
+	return getConfig(config_file = opts.settings, config_dict = {'dataset': cfgSettings})
 
 def list_datasets(blocks):
 	# Add some enums for consistent access to info dicts

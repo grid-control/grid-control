@@ -25,7 +25,7 @@ def create_debug_console(variables):
 	return console
 
 
-def format_exception(exc_info, show_code_context = 0, show_variables = 0, show_file_stack = 0, show_exception_stack = 1):
+def format_exception(exc_info, show_code_context=0, show_variables=0, show_file_stack=0, show_exception_stack=1):
 	msg_parts = []
 
 	if exc_info not in [None, (None, None, None)]:

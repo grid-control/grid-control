@@ -15,7 +15,7 @@
 import os, random, logging
 from grid_control import utils
 from grid_control.backends import WMS
-from grid_control.config import ConfigError, changeInitNeeded, validNoVar
+from grid_control.config import ConfigError, TriggerInit, NoVarCheck
 from grid_control.gc_plugin import ConfigurablePlugin, NamedPlugin
 from grid_control.parameters import ParameterAdapter, ParameterFactory, ParameterInfo
 from grid_control.utils.file_objects import SafeFile
@@ -55,8 +55,8 @@ class TaskModule(NamedPlugin):
 	# Read configuration options and init vars
 	def __init__(self, config, name):
 		NamedPlugin.__init__(self, config, name)
-		initSandbox = changeInitNeeded('sandbox')
-		self._varCheck = validNoVar(config)
+		initSandbox = TriggerInit('sandbox')
+		self._varCheck = NoVarCheck(config)
 
 		# Task requirements
 		jobs_config = config.changeView(view_class = 'TaggedConfigView', addSections = ['jobs'], addTags = [self]) # Move this into parameter manager?

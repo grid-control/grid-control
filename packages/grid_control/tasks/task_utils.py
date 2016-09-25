@@ -14,13 +14,13 @@
 
 import os
 from grid_control import utils
-from grid_control.config import changeInitNeeded
+from grid_control.config import TriggerInit
 from python_compat import unspecified
 
 
 class TaskExecutableWrapper:
 	def __init__(self, config, prefix = '', exeDefault = unspecified):
-		initSandbox = changeInitNeeded('sandbox')
+		initSandbox = TriggerInit('sandbox')
 		self._executableSend = config.getBool('%s send executable' % prefix, True, onChange = initSandbox)
 		if self._executableSend:
 			self._executable = config.getPath('%s executable' % prefix, exeDefault, onChange = initSandbox)

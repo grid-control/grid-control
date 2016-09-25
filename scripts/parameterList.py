@@ -101,10 +101,10 @@ def save_parameters(psource, fn):
 
 def setup_config(opts, args):
 	# Set config based on settings from config file or command line
-	configFile = None
+	config_file = None
 	if os.path.exists(args[0]):
-		configFile = args[0]
-	config = getConfig(configFile, section = 'global')
+		config_file = args[0]
+	config = getConfig(config_file, section = 'global')
 	if os.path.exists(config.getWorkPath('datamap.tar')):
 		opts.dataset = config.getWorkPath('datamap.tar')
 	config.changeView(setSections = ['jobs']).set('nseeds', '1', '?=')
@@ -117,7 +117,7 @@ def setup_config(opts, args):
 			log.info('\t%s: %s', k.strip(), v.strip())
 		log.info('')
 
-	if configFile is None:
+	if config_file is None:
 		configParameters.set('parameters', str.join(' ', args).replace('\\n', '\n'))
 		if opts.dataset:
 			configParameters.set('default lookup', 'DATASETNICK')

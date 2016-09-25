@@ -12,7 +12,7 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-from grid_control.config import triggerResync
+from grid_control.config import TriggerResync
 from grid_control.datasets import DataProvider, DataSplitter, DatasetError
 from grid_control.datasets.splitter_basic import HybridSplitter
 from grid_control.utils import split_opt
@@ -29,7 +29,7 @@ CMSLocationFormat = make_enum(['hostname', 'siteDB', 'both'])
 # required format: <dataset path>[@<instance>][#<block>]
 class CMSBaseProvider(DataProvider):
 	def __init__(self, config, datasource_name, dataset_expr, dataset_nick = None):
-		self._changeTrigger = triggerResync(['datasets', 'parameters'])
+		self._changeTrigger = TriggerResync(['datasets', 'parameters'])
 		self._lumi_filter = config.getLookup(['lumi filter', '%s lumi filter' % datasource_name],
 			default = {}, parser = parseLumiFilter, strfun = strLumi, onChange = self._changeTrigger)
 		if not self._lumi_filter.empty():

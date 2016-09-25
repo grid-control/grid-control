@@ -14,7 +14,7 @@
 
 import os, copy, logging
 from grid_control import utils
-from grid_control.config import create_config, triggerResync
+from grid_control.config import create_config, TriggerResync
 from grid_control.datasets.dproc_base import DataProcessor, NullDataProcessor
 from grid_control.gc_plugin import ConfigurablePlugin
 from grid_control.utils.activity import Activity
@@ -35,7 +35,7 @@ class DataProvider(ConfigurablePlugin):
 		(self._cache_block, self._cache_dataset) = (None, None)
 		self._dataset_query_interval = config.getTime('%s default query interval' % datasource_name, 60, onChange = None)
 
-		triggerDataResync = triggerResync(['datasets', 'parameters'])
+		triggerDataResync = TriggerResync(['datasets', 'parameters'])
 		self._stats = dataset_proc or DataProcessor.create_instance('SimpleStatsDataProcessor', config, datasource_name,
 			triggerDataResync, self._log, ' * Dataset %s:\n\tcontains ' % repr(dataset_nick or dataset_expr))
 		self._nick_producer = config.getPlugin(['nickname source', '%s nickname source' % datasource_name], 'SimpleNickNameProducer',
@@ -250,7 +250,7 @@ class DataProvider(ConfigurablePlugin):
 	# Load dataset information using ListProvider
 	def loadFromFile(path):
 		return DataProvider.create_instance('ListProvider', create_config(
-			configDict = {'dataset': {'dataset processor': 'NullDataProcessor'}}), 'dataset', path)
+			config_dict = {'dataset': {'dataset processor': 'NullDataProcessor'}}), 'dataset', path)
 	loadFromFile = staticmethod(loadFromFile)
 
 

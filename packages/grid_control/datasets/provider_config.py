@@ -13,7 +13,7 @@
 # | limitations under the License.
 
 import copy
-from grid_control.config import triggerResync
+from grid_control.config import TriggerResync
 from grid_control.datasets.provider_base import DataProvider, DatasetError
 from grid_control.utils.parsing import parse_json, parse_list
 from python_compat import sorted
@@ -32,7 +32,7 @@ class ConfigDataProvider(DataProvider):
 
 		def onChange(config, old_obj, cur_obj, cur_entry, obj2str):
 			self._log.critical('Dataset %r changed', dataset_expr)
-			return triggerResync(['datasets', 'parameters'])(config, old_obj, cur_obj, cur_entry, obj2str)
+			return TriggerResync(['datasets', 'parameters'])(config, old_obj, cur_obj, cur_entry, obj2str)
 		ds_config.get('%s hash' % datasource_name, self.get_hash(), persistent = True, onChange = onChange)
 
 

@@ -109,7 +109,7 @@ class OptsConfigFiller(Plugin.get_class('ConfigFiller')):
 def gc_create_config(cmd_line_args = None, **kwargs):
 	if cmd_line_args is not None:
 		(_, args) = parse_cmd_line(cmd_line_args)
-		kwargs.setdefault('configFile', args[0])
+		kwargs.setdefault('config_file', args[0])
 		kwargs.setdefault('additional', []).append(OptsConfigFiller(cmd_line_args))
 	return create_config(register = True, **kwargs)
 
@@ -187,7 +187,7 @@ def run(args = None, intro = True):
 
 	# main try... except block to catch exceptions and show error message
 	try:
-		config = gc_create_config(args or sys.argv[1:], useDefaultFiles = True)
+		config = gc_create_config(args or sys.argv[1:], use_default_files = True)
 		workflow = gc_create_workflow(config)
 		try:
 			sys.exit(workflow.run())

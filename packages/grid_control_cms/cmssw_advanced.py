@@ -94,6 +94,6 @@ class CMSSW_Advanced(CMSSW):
 
 	def getJobConfig(self, jobNum):
 		data = CMSSW.getJobConfig(self, jobNum)
-		configFiles = self._nmCfg.lookup(data.get('DATASETNICK'), [], is_selector = False)
-		data['CMSSW_CONFIG'] = str.join(' ', imap(os.path.basename, configFiles))
+		config_file_list = self._nmCfg.lookup(data.get('DATASETNICK'), [], is_selector = False)
+		data['CMSSW_CONFIG'] = str.join(' ', imap(os.path.basename, config_file_list))
 		return data

@@ -214,7 +214,7 @@ class GCThreadPool(object):
 		self._token_time = {}
 		self._token_desc = {}
 		self._log = logging.getLogger('thread_pool')
-		self._ex_collector = ExceptionCollector(self._log)
+		self._exc = ExceptionCollector(self._log)
 
 	def start_daemon(self, desc, fun, *args, **kwargs):
 		self._lock.acquire()
@@ -256,7 +256,7 @@ class GCThreadPool(object):
 		except Exception:
 			self._lock.acquire()
 			try:
-				self._ex_collector.collect(logging.ERROR, 'Exception in thread %r',
+				self._exc.collect(logging.ERROR, 'Exception in thread %r',
 					self._token_desc[token], exc_info=get_current_exception())
 			finally:
 				self._lock.release()

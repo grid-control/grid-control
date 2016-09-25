@@ -14,7 +14,7 @@
 
 import os, shutil
 from grid_control import utils
-from grid_control.config import ConfigError, validNoVar
+from grid_control.config import ConfigError, NoVarCheck
 from grid_control.gc_plugin import NamedPlugin
 from grid_control.utils.activity import Activity
 from grid_control.utils.process_base import LocalProcess
@@ -85,7 +85,7 @@ class SEStorageManager(StorageManager):
 		StorageManager.__init__(self, config, name, storage_type, storage_channel, storage_var_prefix)
 		normSEPath = lambda x: utils.QM(x[0] == '/', 'dir:///%s' % x.lstrip('/'), x)
 		self._storage_paths = config.getList(['%s path' % storage_type, '%s path' % storage_channel],
-			default = [], onValid = validNoVar(config), parseItem = normSEPath)
+			default = [], onValid = NoVarCheck(config), parseItem = normSEPath)
 		self._storage_files = config.getList('%s files' % storage_channel, [])
 		self._storage_pattern = config.get('%s pattern' % storage_channel, '@X@')
 		self._storage_timeout = config.getTime('%s timeout' % storage_channel, 2*60*60)

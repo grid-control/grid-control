@@ -18,8 +18,8 @@ from grid_control.config.config_entry import ConfigError
 from python_compat import imap, lfilter
 
 
-# Change handler to notify about impossible changes
-def changeImpossible(config, old_obj, cur_obj, cur_entry, obj2str):
+def change_impossible(config, old_obj, cur_obj, cur_entry, obj2str):
+	# Change handler to notify about impossible changes
 	old_str = obj2str(old_obj).strip()
 	new_str = obj2str(cur_obj).strip()
 	if old_str == new_str:
@@ -33,49 +33,15 @@ def changeImpossible(config, old_obj, cur_obj, cur_entry, obj2str):
 	raise ConfigError(msg)
 
 
-class triggerResync(object):
-	def __init__(self, details):
-		self._details = details
+class NoVarCheck(object):
+	# Validation handler to check for variables in string
+	def __call__(self, loc, obj):
+		if self.check(obj):
+			raise ConfigError('%s = %s may not contain variables.' % (loc, obj))
+		return obj
 
-	def __call__(self, config, old_obj, cur_obj, cur_entry, obj2str):
-		log = logging.getLogger('config.changes')
-		log.info('The config option %r was changed', cur_entry.format_opt())
-		needed_details = lfilter(lambda detail: not config.getState('resync', detail), self._details)
-		if not needed_details:
-			return cur_obj
-		log.info('Triggering resync of %s', str.join(', ', needed_details))
-		for detail in needed_details:
-			config.setState(True, 'resync', detail = detail)
-		if not config.getState('init', detail = 'config'):
-			log.info('The configuration was changed - triggering storage of new config options')
-			config.setState(True, 'init', detail = 'config') # This will trigger a write of the new options
-		return cur_obj
-
-
-# Change handler to trigger re-inits
-class changeInitNeeded(object):
-	def __init__(self, option):
-		self._option = option
-
-	def __call__(self, config, old_obj, cur_obj, cur_entry, obj2str):
-		log = logging.getLogger('config.onchange.%s' % self._option.lower())
-		if config.isInteractive(self._option, default = True):
-			msg = 'The option "%s" was changed from the old value:' % cur_entry.format_opt()
-			if utils.get_user_bool(msg + ('\n\t> %s\nto the new value:' % obj2str(old_obj).lstrip()) +
-					('\n\t> %s\nDo you want to abort?' % obj2str(cur_obj).lstrip()), False):
-				raise ConfigError('Abort due to unintentional config change!')
-			if not utils.get_user_bool('A partial reinitialization (same as --reinit %s) is needed to apply this change! Do you want to continue?' % self._option, True):
-				log.log(logging.INFO1, 'Using stored value %s for option %s', obj2str(old_obj), cur_entry.format_opt())
-				return old_obj
-		config.setState(True, 'init', detail = self._option)
-		config.setState(True, 'init', detail = 'config') # This will trigger a write of the new options
-		return cur_obj
-
-
-# Validation handler to check for variables in string
-class validNoVar(object):
 	def __init__(self, config):
-		global_config = config.changeView(view_class = 'SimpleConfigView', setSections = ['global'])
+		global_config = config.changeView(view_class='SimpleConfigView', setSections=['global'])
 		self.markers = global_config.getList('variable markers', ['@', '__'])
 		for marker in self.markers:
 			if marker not in ['@', '__']:
@@ -87,7 +53,43 @@ class validNoVar(object):
 				return True
 		return False
 
-	def __call__(self, loc, obj):
-		if self.check(obj):
-			raise ConfigError('%s = %s may not contain variables.' % (loc, obj))
-		return obj
+
+class TriggerInit(object):
+	# Change handler to trigger re-inits
+	def __call__(self, config, old_obj, cur_obj, cur_entry, obj2str):
+		log = logging.getLogger('config.onchange.%s' % self._option.lower())
+		if config.isInteractive(self._option, default=True):
+			msg = 'The option "%s" was changed from the old value:' % cur_entry.format_opt()
+			if utils.get_user_bool(msg + ('\n\t> %s\nto the new value:' % obj2str(old_obj).lstrip()) +
+					('\n\t> %s\nDo you want to abort?' % obj2str(cur_obj).lstrip()), False):
+				raise ConfigError('Abort due to unintentional config change!')
+			msg = 'A partial reinitialization (same as --reinit %s) is needed to apply this change!'
+			if not utils.get_user_bool((msg + ' Do you want to continue?') % self._option, True):
+				log.log(logging.INFO1, 'Using stored value %s for option %s',
+					obj2str(old_obj), cur_entry.format_opt())
+				return old_obj
+		config.setState(True, 'init', detail=self._option)
+		config.setState(True, 'init', detail='config')  # This will trigger a write of the new options
+		return cur_obj
+
+	def __init__(self, option):
+		self._option = option
+
+
+class TriggerResync(object):
+	def __call__(self, config, old_obj, cur_obj, cur_entry, obj2str):
+		log = logging.getLogger('config.changes')
+		log.info('The config option %r was changed', cur_entry.format_opt())
+		needed_details = lfilter(lambda detail: not config.getState('resync', detail), self._details)
+		if not needed_details:
+			return cur_obj
+		log.info('Triggering resync of %s', str.join(', ', needed_details))
+		for detail in needed_details:
+			config.setState(True, 'resync', detail=detail)
+		if not config.getState('init', detail='config'):
+			log.info('The configuration was changed - triggering storage of new config options')
+			config.setState(True, 'init', detail='config')  # This will trigger a write of the new options
+		return cur_obj
+
+	def __init__(self, details):
+		self._details = details

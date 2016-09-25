@@ -133,7 +133,7 @@ class DataSplitter(ConfigurablePlugin):
 					config.set(option, str(value))
 		# Create and setup splitter
 		if config is None:
-			config = create_config(configDict = partition_source.metadata)
+			config = create_config(config_dict = partition_source.metadata)
 		splitter = DataSplitter.create_instance(partition_source.classname, config, 'dataset')
 		splitter.set_state(partition_source, config_protocol)
 		return splitter

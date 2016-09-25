@@ -13,7 +13,7 @@
 # | limitations under the License.
 
 import os, inspect, logging
-from grid_control.config.chandlers_base import changeImpossible
+from grid_control.config.chandlers_base import change_impossible
 from grid_control.config.config_entry import ConfigEntry, ConfigError, norm_config_locations
 from hpfwk import APIError
 from python_compat import unspecified, when_unspecified
@@ -23,7 +23,7 @@ from python_compat import unspecified, when_unspecified
 class ConfigInterface(object):
 	def __init__(self, configView, default_on_change = unspecified, default_on_valid = unspecified):
 		self._config_view = configView
-		self._default_on_change = when_unspecified(default_on_change, changeImpossible)
+		self._default_on_change = when_unspecified(default_on_change, change_impossible)
 		self._default_on_valid = when_unspecified(default_on_valid, None)
 		self._log = logging.getLogger('config.%s' % self._config_view.config_name.lower())
 
@@ -45,7 +45,7 @@ class ConfigInterface(object):
 	# Get all selected options
 	def getOptions(self):
 		result = []
-		for entry in self._config_view.iter_content():
+		for entry in self._config_view.iter_entries():
 			if entry.option not in result:
 				result.append(entry.option)
 		return result

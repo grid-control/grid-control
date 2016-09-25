@@ -48,13 +48,13 @@ def make_enum(members=None, cls=None, use_hash=True):
 
 
 class UniqueList(object):
-	def __contains__(self, value):
-		return value in self._set
-
 	def __init__(self, values=None):
 		self._set = set()
 		self._list = list()
 		self.extend(values or [])
+
+	def __contains__(self, value):
+		return value in self._set
 
 	def __iter__(self):
 		return self._list.__iter__()

@@ -14,14 +14,14 @@
 
 import os, re, xml.dom.minidom
 from grid_control import utils
-from grid_control.config import triggerResync
+from grid_control.config import TriggerResync
 from grid_control.datasets import DatasetError
 from grid_control.datasets.provider_scan import GCProviderSetup
 from grid_control.datasets.scanner_base import InfoScanner
 from python_compat import all, bytes2str, ifilter, imap, lfilter, tarfile
 
 
-triggerDataResync = triggerResync(['datasets', 'parameters'])
+triggerDataResync = TriggerResync(['datasets', 'parameters'])
 
 class GCProviderSetup_CMSSW(GCProviderSetup):
 	scan_pipeline = ['ObjectsFromCMSSW', 'JobInfoFromOutputDir', 'FilesFromJobInfo',
@@ -46,9 +46,9 @@ def readList(base, container, items):
 class ObjectsFromCMSSW(InfoScanner):
 	def __init__(self, config, datasource_name):
 		InfoScanner.__init__(self, config, datasource_name)
-		self._import_parents = config.getBool('include parent infos', False, onChange = triggerResync(['datasets', 'parameters']))
+		self._import_parents = config.getBool('include parent infos', False, onChange = TriggerResync(['datasets', 'parameters']))
 		self._merge_key = 'CMSSW_CONFIG_FILE'
-		if config.getBool('merge config infos', True, onChange = triggerResync(['datasets', 'parameters'])):
+		if config.getBool('merge config infos', True, onChange = TriggerResync(['datasets', 'parameters'])):
 			self._merge_key = 'CMSSW_CONFIG_HASH'
 		self._stored_config = {}
 		self._stored_globaltag = {}
@@ -155,7 +155,7 @@ class ObjectsFromCMSSW(InfoScanner):
 class MetadataFromCMSSW(InfoScanner):
 	def __init__(self, config, datasource_name):
 		InfoScanner.__init__(self, config, datasource_name)
-		self._include_config = config.getBool('include config infos', False, onChange = triggerResync(['datasets', 'parameters']))
+		self._include_config = config.getBool('include config infos', False, onChange = TriggerResync(['datasets', 'parameters']))
 
 	def getEntries(self, path, metadata, events, seList, objStore):
 		cmssw_files_dict = objStore.get('CMSSW_FILES', {})
@@ -188,7 +188,7 @@ class SEListFromPath(InfoScanner):
 class LFNFromPath(InfoScanner):
 	def __init__(self, config, datasource_name):
 		InfoScanner.__init__(self, config, datasource_name)
-		self._strip_path = config.get('lfn marker', '/store/', onChange = triggerResync(['datasets', 'parameters']))
+		self._strip_path = config.get('lfn marker', '/store/', onChange = TriggerResync(['datasets', 'parameters']))
 
 	def getEntries(self, path, metadata, events, seList, objStore):
 		if self._strip_path and self._strip_path in path:

@@ -14,7 +14,7 @@
 
 import os, logging
 from grid_control import utils
-from grid_control.config import ConfigError, create_config, triggerResync
+from grid_control.config import ConfigError, create_config, TriggerResync
 from grid_control.datasets import DataProvider, DatasetError
 from grid_control.datasets.scanner_base import InfoScanner
 from grid_control.job_db import Job
@@ -28,14 +28,14 @@ class NullScanner(InfoScanner):
 	def getEntries(self, path, metadata, events, seList, objStore):
 		yield (path, metadata, events, seList, objStore)
 
-triggerDataResync = triggerResync(['datasets', 'parameters'])
+triggerDataResync = TriggerResync(['datasets', 'parameters'])
 
 class OutputDirsFromConfig(InfoScanner):
 	# Get output directories from external config file
 	def __init__(self, config, datasource_name):
 		InfoScanner.__init__(self, config, datasource_name)
 		ext_config_fn = config.getPath('source config', onChange = triggerDataResync)
-		ext_config = create_config(ext_config_fn, useDefaultFiles = True).changeView(setSections = ['global'])
+		ext_config = create_config(ext_config_fn, use_default_files = True).changeView(setSections = ['global'])
 		self._ext_workdir = ext_config.getWorkPath()
 		logging.getLogger().disabled = True
 		self._ext_workflow = ext_config.getPlugin('workflow', 'Workflow:global', cls = 'Workflow', pargs = ('task',))

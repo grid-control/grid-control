@@ -19,9 +19,6 @@ from python_compat import get_current_thread, get_thread_name, imap, rsplit, set
 
 
 class Activity(object):
-	def __del__(self):
-		self.finish()
-
 	def __init__(self, message=None, level=logging.INFO, name=None, parent=None):
 		self.name = name
 		(self._level, self._message, self._parent, self._children) = (level, None, None, [])
@@ -49,6 +46,9 @@ class Activity(object):
 			self.update(message)
 		if self._parent:
 			self._parent.add_child(self)
+
+	def __del__(self):
+		self.finish()
 
 	def __repr__(self):
 		pname = None

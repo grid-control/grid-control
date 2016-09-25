@@ -12,7 +12,7 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-from grid_control.config import triggerResync
+from grid_control.config import TriggerResync
 from grid_control.datasets import DataProcessor, DataProvider, DataSplitter, DatasetError, PartitionProcessor
 from grid_control.parameters import ParameterMetadata
 from grid_control.utils import safe_index
@@ -108,7 +108,7 @@ class LumiDataProcessor(DataProcessor):
 class LumiPartitionProcessor(PartitionProcessor):
 	def __init__(self, config, datasource_name):
 		PartitionProcessor.__init__(self, config, datasource_name)
-		changeTrigger = triggerResync(['datasets', 'parameters'])
+		changeTrigger = TriggerResync(['datasets', 'parameters'])
 		self._lumi_filter = config.getLookup(['lumi filter', '%s lumi filter' % datasource_name],
 			default = {}, parser = parseLumiFilter, strfun = strLumi, onChange = changeTrigger)
 

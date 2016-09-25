@@ -41,7 +41,7 @@ parser.add_option('-p', '--parents', dest='parents')
 (opts, args) = parser.parse_args()
 
 if opts.lumiranges:
-	dummyConfig = getConfig(configDict={'dummy': {'lumi filter': '-', 'dbs blacklist T1': False,
+	dummyConfig = getConfig(config_dict={'dummy': {'lumi filter': '-', 'dbs blacklist T1': False,
 		'remove empty blocks': False, 'remove empty files': False}})
 	provider = DataProvider.create(dummyConfig, 'dummy', opts.lumiranges, 'DBSApiv2')
 	blocks = provider.getBlocks(show_stats = False)

@@ -49,10 +49,10 @@ def scriptOptions(parser, args = None, arg_keys = None):
 	return utils.Result(opts = opts, args = args, config_dict = config_dict, parser = parser)
 
 
-def getConfig(configFile = None, configDict = None, section = None, additional = None):
-	if configDict and section:
-		configDict = {section: configDict}
-	config = create_config(configFile, configDict, useDefaultFiles = True, additional = additional)
+def getConfig(config_file = None, config_dict = None, section = None, additional = None):
+	if config_dict and section:
+		config_dict = {section: config_dict}
+	config = create_config(config_file, config_dict, use_default_files = True, additional = additional)
 	if section:
 		return config.changeView(addSections = [section])
 	return config

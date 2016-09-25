@@ -210,7 +210,7 @@ def discover_blocks(options):
 	if os.path.isdir(options.args[0]):
 		workDir = os.path.abspath(os.path.normpath(options.args[0]))
 	else:
-		workDir = getConfig(configFile = options.args[0]).getWorkPath()
+		workDir = getConfig(config_file = options.args[0]).getWorkPath()
 	if not options.opts.tempdir:
 		options.opts.tempdir = os.path.join(workDir, 'dbs')
 	if not os.path.exists(options.opts.tempdir):
@@ -220,7 +220,7 @@ def discover_blocks(options):
 	if options.opts.input_file:
 		provider = DataProvider.create_instance('ListProvider', getConfig(), options.opts.input_file, None)
 	else:
-		config = getConfig(configDict = {'dataset': options.config_dict})
+		config = getConfig(config_dict = {'dataset': options.config_dict})
 		provider = DataProvider.create_instance('DBSInfoProvider', config, options.args[0], None)
 
 	blocks = provider.getBlocks(show_stats = False)
@@ -236,7 +236,7 @@ def filter_blocks(opts, blocks):
 		# Query target DBS for all found datasets and perform dataset resync with "supposed" state
 #		dNames = set(ximap(lambda b: b[DataProvider.Dataset], blocks))
 #		dNames = xfilter(lambda ds: hasDataset(opts.dbsTarget, ds), dNames) - todo
-#		config = getConfig(configDict = {None: {'dbs instance': opts.dbsTarget}})
+#		config = getConfig(config_dict = {None: {'dbs instance': opts.dbsTarget}})
 #		oldBlocks = xreduce(xoperator.add, ximap(lambda ds: DBSApiv2(config, None, ds, None).getBlocks(show_stats = False), dNames), [])
 #		(blocksAdded, blocksMissing, blocksChanged) = DataProvider.resyncSources(oldBlocks, blocks)
 #		if len(blocksMissing) or len(blocksChanged):
