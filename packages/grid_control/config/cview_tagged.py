@@ -12,11 +12,11 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-from grid_control.config.config_entry import norm_config_locations, ConfigError
+from grid_control.config.config_entry import ConfigError, norm_config_locations
 from grid_control.config.cview_base import SimpleConfigView
 from grid_control.utils import safe_index
 from hpfwk import APIError
-from python_compat import identity, imap, lfilter, lmap, unspecified, itemgetter
+from python_compat import identity, imap, itemgetter, lfilter, lmap, unspecified
 
 
 class TaggedConfigView(SimpleConfigView):

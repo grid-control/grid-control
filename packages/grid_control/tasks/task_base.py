@@ -15,7 +15,7 @@
 import os, random, logging
 from grid_control import utils
 from grid_control.backends import WMS
-from grid_control.config import ConfigError, TriggerInit, NoVarCheck
+from grid_control.config import ConfigError, NoVarCheck, TriggerInit
 from grid_control.gc_plugin import ConfigurablePlugin, NamedPlugin
 from grid_control.parameters import ParameterAdapter, ParameterFactory, ParameterInfo
 from grid_control.utils.file_objects import SafeFile

@@ -58,7 +58,7 @@ class BasicParameterFactory(ParameterFactory):
 			self._register_psrc(task_pconfig, vn_const)
 
 		# Get global repeat value from 'parameters' section
-		self._repeat = param_config.getInt('repeat', 1, onChange = None)
+		self._repeat = param_config.getInt('repeat', -1, onChange = None)
 		self._req = param_config.getBool('translate requirements', True, onChange = None)
 		self._pfactory = param_config.getPlugin('parameter factory', 'SimpleParameterFactory', cls = ParameterFactory)
 

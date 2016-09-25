@@ -134,14 +134,15 @@ class SimpleParameterFactory(UserParameterFactory):
 		self._precedence = {'*': [], '+': ['*'], ',': ['*', '+']}
 
 	def _combine_psrc_list(self, cls_name, args):
-		repeat = reduce(lambda a, b: a * b, ifilter(lambda expr: isinstance(expr, int), args), 1)
-		args = lfilter(lambda expr: not isinstance(expr, int), args)
+		number_list = lfilter(lambda expr: isinstance(expr, int), args)
+		args = lfilter(lambda expr: not isinstance(expr, int), args) # remove numbers from args
+		repeat = reduce(lambda a, b: a * b, number_list, 1)
 		if args:
 			result = ParameterSource.create_instance(cls_name, *args)
-			if repeat > 1:
-				return ParameterSource.create_instance('RepeatParameterSource', result, repeat)
+			if number_list:
+				result = ParameterSource.create_instance('RepeatParameterSource', result, repeat)
 			return result
-		elif repeat > 1:
+		elif number_list:
 			return repeat
 		return NullParameterSource()
 

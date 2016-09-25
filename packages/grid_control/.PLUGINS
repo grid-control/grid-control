@@ -476,6 +476,8 @@
 
      * grid_control.parameters.psource_meta SubSpaceParameterSource pspace
 
+     * grid_control.parameters.psource_meta TruncateParameterSource truncate
+
     * grid_control.parameters.psource_file GCDumpParameterSource
 
     * grid_control.parameters.psource_base ImmutableParameterSource

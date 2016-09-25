@@ -20,7 +20,7 @@ from grid_control.utils.process_base import LocalProcess
 from grid_control.utils.table import ColumnTable, ParseableTable, RowTable
 from grid_control.utils.thread_tools import TimeoutException, hang_protection
 from hpfwk import NestedException, clear_current_exception
-from python_compat import exit_without_cleanup, get_user_input, identity, ifilter, imap, irange, lfilter, lmap, lru_cache, lzip, next, reduce, rsplit, sorted, tarfile  # pylint:disable=line-too-long
+from python_compat import exit_without_cleanup, get_user_input, identity, ifilter, imap, irange, lfilter, lmap, lzip, next, reduce, rsplit, sorted, tarfile
 
 
 def abort(new=None):

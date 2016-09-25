@@ -14,7 +14,7 @@
 
 import os, logging
 from grid_control import utils
-from grid_control.config import ConfigError, create_config, TriggerResync
+from grid_control.config import ConfigError, TriggerResync, create_config
 from grid_control.datasets import DataProvider, DatasetError
 from grid_control.datasets.scanner_base import InfoScanner
 from grid_control.job_db import Job

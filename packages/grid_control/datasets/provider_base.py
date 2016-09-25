@@ -14,7 +14,7 @@
 
 import os, copy, logging
 from grid_control import utils
-from grid_control.config import create_config, TriggerResync
+from grid_control.config import TriggerResync, create_config
 from grid_control.datasets.dproc_base import DataProcessor, NullDataProcessor
 from grid_control.gc_plugin import ConfigurablePlugin
 from grid_control.utils.activity import Activity
