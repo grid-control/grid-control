@@ -22,7 +22,7 @@ from python_compat import imap
 
 class ZippedJobDB(TextFileJobDB):
 	def __init__(self, config, jobLimit = -1, jobSelector = None):
-		self._dbFile = config.getWorkPath('jobs.zip')
+		self._dbFile = config.get_work_path('jobs.zip')
 		TextFileJobDB.__init__(self, config, jobLimit, jobSelector)
 
 	def _readJobs(self, jobLimit):
@@ -84,8 +84,8 @@ class ZippedJobDB(TextFileJobDB):
 
 class Migrate2ZippedJobDB(ZippedJobDB):
 	def __init__(self, config, jobLimit = -1, jobSelector = None):
-		dbPath = config.getWorkPath('jobs')
-		self._dbFile = config.getWorkPath('jobs.zip')
+		dbPath = config.get_work_path('jobs')
+		self._dbFile = config.get_work_path('jobs.zip')
 		if os.path.exists(dbPath) and os.path.isdir(dbPath) and not os.path.exists(self._dbFile):
 			activity = Activity('Converting job database')
 			self._serial = 0

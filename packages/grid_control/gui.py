@@ -23,9 +23,9 @@ from hpfwk import AbstractError
 class GUI(ConfigurablePlugin):
 	def __init__(self, config, workflow):
 		ConfigurablePlugin.__init__(self, config)
-		self._reportOpts = config.get('report options', '', onChange = None)
-		self._report = config.getCompositePlugin('report', 'BasicReport', 'MultiReport',
-			cls = Report, onChange = None, pargs = (workflow.jobManager.jobDB,
+		self._reportOpts = config.get('report options', '', on_change = None)
+		self._report = config.get_composited_plugin('report', 'BasicReport', 'MultiReport',
+			cls = Report, on_change = None, pargs = (workflow.jobManager.jobDB,
 			workflow.task), pkwargs = {'configString': self._reportOpts})
 
 	def displayWorkflow(self, workflow):

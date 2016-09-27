@@ -35,30 +35,30 @@ class JobManager(NamedPlugin):
 		self._log = logging.getLogger('jobs.manager')
 		self._error_dict = dict(task.errorDict)
 
-		self._njobs_limit = config.getInt('jobs', -1, onChange = None)
-		self._njobs_inflight = config.getInt('in flight', -1, onChange = None)
-		self._njobs_inqueue = config.getInt('in queue', -1, onChange = None)
+		self._njobs_limit = config.get_int('jobs', -1, on_change = None)
+		self._njobs_inflight = config.get_int('in flight', -1, on_change = None)
+		self._njobs_inqueue = config.get_int('in queue', -1, on_change = None)
 
-		self._chunks_enabled = config.getBool('chunks enabled', True, onChange = None)
-		self._chunks_submit = config.getInt('chunks submit', 100, onChange = None)
-		self._chunks_check = config.getInt('chunks check', 100, onChange = None)
-		self._chunks_retrieve = config.getInt('chunks retrieve', 100, onChange = None)
+		self._chunks_enabled = config.get_bool('chunks enabled', True, on_change = None)
+		self._chunks_submit = config.get_int('chunks submit', 100, on_change = None)
+		self._chunks_check = config.get_int('chunks check', 100, on_change = None)
+		self._chunks_retrieve = config.get_int('chunks retrieve', 100, on_change = None)
 
-		self._timeout_unknown = config.getTime('unknown timeout', -1, onChange = None)
-		self._timeout_queue = config.getTime('queue timeout', -1, onChange = None)
-		self._job_retries = config.getInt('max retry', -1, onChange = None)
+		self._timeout_unknown = config.get_time('unknown timeout', -1, on_change = None)
+		self._timeout_queue = config.get_time('queue timeout', -1, on_change = None)
+		self._job_retries = config.get_int('max retry', -1, on_change = None)
 
-		selected = JobSelector.create(config.get('selected', '', onChange = None), task = task)
-		self.jobDB = config.getPlugin('job database', 'TextFileJobDB',
-			cls = JobDB, pargs = (self._get_max_jobs(task), selected), onChange = None)
-		self._disabled_jobs_logfile = config.getWorkPath('disabled')
-		self._outputProcessor = config.getPlugin('output processor', 'SandboxProcessor',
+		selected = JobSelector.create(config.get('selected', '', on_change = None), task = task)
+		self.jobDB = config.get_plugin('job database', 'TextFileJobDB',
+			cls = JobDB, pargs = (self._get_max_jobs(task), selected), on_change = None)
+		self._disabled_jobs_logfile = config.get_work_path('disabled')
+		self._outputProcessor = config.get_plugin('output processor', 'SandboxProcessor',
 			cls = TaskOutputProcessor)
 
-		self._interactive_delete = config.isInteractive('delete jobs', True)
-		self._interactive_reset = config.isInteractive('reset jobs', True)
-		self._do_shuffle = config.getBool('shuffle', False, onChange = None)
-		self._reportClass = Report.get_class(config.get('abort report', 'LocationReport', onChange = None))
+		self._interactive_delete = config.is_interactive('delete jobs', True)
+		self._interactive_reset = config.is_interactive('reset jobs', True)
+		self._do_shuffle = config.get_bool('shuffle', False, on_change = None)
+		self._reportClass = Report.get_class(config.get('abort report', 'LocationReport', on_change = None))
 		self._show_blocker = True
 
 
@@ -378,7 +378,7 @@ class JobManager(NamedPlugin):
 
 	# Process changes of job states requested by task module
 	def _processIntervention(self, task, wms):
-		def resetState(jobs, newState):
+		def reset_state(jobs, newState):
 			jobSet = set(jobs)
 			for jobNum in jobs:
 				jobObj = self.jobDB.getJobPersistent(jobNum)
@@ -391,7 +391,7 @@ class JobManager(NamedPlugin):
 				output = (Job.enum2str(newState), str.join(', ', imap(str, jobSet)))
 				raise JobError('For the following jobs it was not possible to reset the state to %s:\n%s' % output)
 
-		(redo, disable, size_change) = task.getIntervention()
+		(redo, disable, size_change) = task.get_intervention()
 		if (not redo) and (not disable) and (not size_change):
 			return
 		self._log.log_time(logging.INFO, 'The task module has requested changes to the job database')
@@ -403,11 +403,11 @@ class JobManager(NamedPlugin):
 			applied_change = True
 		if redo:
 			self.cancel(task, wms, self.jobDB.getJobs(ClassSelector(JobClass.PROCESSING), redo), interactive = False, showJobs = True)
-			resetState(redo, Job.INIT)
+			reset_state(redo, Job.INIT)
 			applied_change = True
 		if disable:
 			self.cancel(task, wms, self.jobDB.getJobs(ClassSelector(JobClass.PROCESSING), disable), interactive = False, showJobs = True)
-			resetState(disable, Job.DISABLED)
+			reset_state(disable, Job.DISABLED)
 			applied_change = True
 		if applied_change:
 			self._log.log_time(logging.INFO, 'All requested changes are applied')
@@ -418,13 +418,13 @@ class SimpleJobManager(JobManager):
 		JobManager.__init__(self, config, name, task, eventhandler)
 
 		# Job defect heuristic (not persistent!) - remove jobs, which cause errors when doing status queries
-		self._defect_tries = config.getInt(['kick offender', 'defect tries'], 10, onChange = None)
+		self._defect_tries = config.get_int(['kick offender', 'defect tries'], 10, on_change = None)
 		(self._defect_counter, self._defect_raster) = ({}, 0)
 
 		# job verification heuristic - launch jobs in chunks of increasing size if enough jobs succeed
 		self._verify = False
-		self._verifyChunks = config.getList('verify chunks', [-1], onChange = None, parseItem = int)
-		self._verifyThresh = config.getList(['verify reqs', 'verify threshold'], [0.5], onChange = None, parseItem = float)
+		self._verifyChunks = config.get_list('verify chunks', [-1], on_change = None, parse_item = int)
+		self._verifyThresh = config.get_list(['verify reqs', 'verify threshold'], [0.5], on_change = None, parse_item = float)
 		if self._verifyChunks:
 			self._verify = True
 			self._verifyThresh += [self._verifyThresh[-1]] * (len(self._verifyChunks) - len(self._verifyThresh))

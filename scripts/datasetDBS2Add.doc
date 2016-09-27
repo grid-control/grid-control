@@ -29,15 +29,15 @@ class DBSInfoProvider(datasets.GCProvider):
 		config.set(section, 'parent keys', 'CMSSW_PARENT_LFN CMSSW_PARENT_PFN')
 		config.set(section, 'events key', 'CMSSW_EVENTS_WRITE')
 		datasets.GCProvider.__init__(self, config, section, datasetExpr, datasetNick, datasetID)
-		self.discovery = config.getBool(['dataset %s' % datasetNick, section], 'discovery', False)
+		self.discovery = config.get_bool(['dataset %s' % datasetNick, section], 'discovery', False)
 
 	def generateDatasetName(self, key, data):
 		if self.discovery:
 			return datasets.GCProvider.generateDatasetName(self, key, data)
 		if 'CMSSW_DATATIER' not in data:
 			raise Exception('Incompatible data tiers in dataset: %s' % data)
-		getPathComponents = lambda path: QM(path, tuple(path.strip('/').split('/')), ())
-		userPath = getPathComponents(self.nameDS)
+		get_pathComponents = lambda path: QM(path, tuple(path.strip('/').split('/')), ())
+		userPath = get_pathComponents(self.nameDS)
 
 		(primary, processed, tier) = (None, None, None)
 		# In case of a child dataset, use the parent infos to construct new path
@@ -46,7 +46,7 @@ class DBSInfoProvider(datasets.GCProvider):
 				(primary, processed, tier) = userPath
 			else:
 				try:
-					(primary, processed, tier) = getPathComponents(parent)
+					(primary, processed, tier) = get_pathComponents(parent)
 				except:
 					pass
 		if (primary == None) and (len(userPath) > 0):
@@ -300,14 +300,14 @@ def registerDataset(opts, fqBlock, xmlFile):
 		return True
 	except DbsException, e:
 		utils.eprint('   ! Could not import %s' % fqBlock)
-		errorMsg = e.getErrorMessage()
+		error_msg = e.getErrorMessage()
 		errorPath = xmlFile.replace('.xml', '.log')
-		for msg in errorMsg.splitlines():
+		for msg in error_msg.splitlines():
 			if str(msg) == '':
 				break
 			utils.eprint('   ! %s' % msg)
 		utils.eprint('   ! The complete error log can be found in:\n   ! %s' % errorPath)
-		open(errorPath, 'w').write(errorMsg)
+		open(errorPath, 'w').write(error_msg)
 
 
 try:
@@ -400,7 +400,7 @@ try:
 	if os.path.isdir(args[0]):
 		opts.workDir = os.path.abspath(os.path.normpath(args[0]))
 	else:
-		opts.workDir = Config(args[0]).getWorkPath()
+		opts.workDir = Config(args[0]).get_work_path()
 	opts.tmpDir = os.path.join(opts.workDir, 'dbs')
 	if not os.path.exists(opts.tmpDir):
 		os.mkdir(opts.tmpDir)

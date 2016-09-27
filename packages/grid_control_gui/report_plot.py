@@ -61,7 +61,7 @@ def extractJobTiming(jInfo, task):
 	jobNum = jInfo[JobResult.JOBNUM]
 
 	# intialize all with None
-	for key in JobResultEnum.enumNames:
+	for key in JobResultEnum.enum_name_list:
 		enumID = JobResultEnum.str2enum(key)
 		jobResult[enumID] = None
 
@@ -127,13 +127,13 @@ def getJobRuntime(jobInfo):
 
 # note: can return None if no event count could be
 # determined for the job
-def getEventCount(jobInfo):
+def get_eventCount(jobInfo):
 	return jobInfo[JobResultEnum.EVENT_COUNT]
 
 
-def getEventRate(jobInfo):
-	if (getPayloadRuntime(jobInfo) > 0) and (getEventCount(jobInfo) is not None):
-		return getEventCount(jobInfo) / (getPayloadRuntime(jobInfo) / 60.0)
+def get_eventRate(jobInfo):
+	if (getPayloadRuntime(jobInfo) > 0) and (get_eventCount(jobInfo) is not None):
+		return get_eventCount(jobInfo) / (getPayloadRuntime(jobInfo) / 60.0)
 	else:
 		return None
 
@@ -220,11 +220,11 @@ def getJobActiveAtTimeSpan(jobInfo, timeStart, timeEnd):
 			getJobCount)
 
 
-def getEventRateAtTimeSpan(jobInfo, timeStart, timeEnd):
+def get_eventRateAtTimeSpan(jobInfo, timeStart, timeEnd):
 	if getJobRuntime(jobInfo) > 0:
 		return getQuantityAtTimeSpan(jobInfo, timeStart, timeEnd,
 			lambda jinf: (jinf[JobResultEnum.TIMESTAMP_CMSSW_CMSRUN1_START], jinf[JobResultEnum.TIMESTAMP_CMSSW_CMSRUN1_DONE]),
-			getEventRate)
+			get_eventRate)
 
 
 def getCompleteRateAtTimeSpan(jobInfo, timeStart, timeEnd):
@@ -454,7 +454,7 @@ class PlotReport(Report):
 		minCmsswTime = None
 		maxCmsswTime = None
 
-		workdir = job_db.getWorkPath()
+		workdir = job_db.get_work_path()
 		for j in self._jobs:
 			try:
 				jInfo = JobInfoProcessor().process(os.path.join(workdir, 'output', 'job_%d' % j))
@@ -476,8 +476,8 @@ class PlotReport(Report):
 
 		self.produceHistogram(("payload_runtime", "Payload Runtime (min)", "Count"),
 			lambda x: getPayloadRuntime(x) / 60.0)
-		self.produceHistogram(("event_per_job", "Event per Job", "Count"), getEventCount)
-		self.produceHistogram(("event_rate", "Event Rate (Events/min)", "Count"), getEventRate)
+		self.produceHistogram(("event_per_job", "Event per Job", "Count"), get_eventCount)
+		self.produceHistogram(("event_rate", "Event Rate (Events/min)", "Count"), get_eventRate)
 		self.produceHistogram(("se_in_runtime", "SE In Runtime (s)", "Count"), getSeInRuntime)
 		self.produceHistogram(("se_in_size", "SE IN Size (MB)", "Count"), getSeInFilesize)
 		self.produceHistogram(("se_out_runtime", "SE OUT Runtime (s)", "Count"), getSeOutRuntime)
@@ -509,6 +509,6 @@ class PlotReport(Report):
 		# event rate
 		if (minCmsswTime is not None) and (maxCmsswTime is not None):
 			self.produceOverallGraph(("event_rate_total", "Time (s)", "Event Rate (Events/min)"),
-				(minCmsswTime, maxCmsswTime), getEventRateAtTimeSpan)
+				(minCmsswTime, maxCmsswTime), get_eventRateAtTimeSpan)
 		else:
 			log.info("Skipping event_rate_total")

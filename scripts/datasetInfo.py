@@ -206,7 +206,7 @@ def save_dataset(opts, provider):
 def get_dataset_info(opts, args):
 	config = get_dataset_config(opts, args)
 
-	provider = config.getPlugin('dataset', cls = DataProvider)
+	provider = config.get_plugin('dataset', cls = DataProvider)
 	blocks = provider.getBlocks(show_stats = False)
 	if len(blocks) == 0:
 		raise DatasetError('No blocks!')

@@ -28,7 +28,7 @@ class RandomBroker(Broker):
 class UserBroker(Broker):
 	def __init__(self, config, name, broker_prefix, itemName, discoverFun):
 		Broker.__init__(self, config, name, broker_prefix, itemName, discoverFun)
-		self._itemsStart = config.getList(broker_prefix, [], onChange = None)
+		self._itemsStart = config.get_list(broker_prefix, [], on_change = None)
 		if not self._itemsStart:
 			self._itemsStart = None
 
@@ -36,9 +36,9 @@ class UserBroker(Broker):
 class FilterBroker(Broker):
 	def __init__(self, config, name, broker_prefix, itemName, discoverFun):
 		Broker.__init__(self, config, name, broker_prefix, itemName, discoverFun)
-		userFilter = config.getFilter(broker_prefix, '',
-			defaultMatcher = 'blackwhite', defaultFilter = 'try_strict',
-			defaultOrder = ListOrder.matcher)
+		userFilter = config.get_filter(broker_prefix, '',
+			default_matcher = 'blackwhite', default_filter = 'try_strict',
+			default_order = ListOrder.matcher)
 		self._itemsStart = userFilter.get_selector()
 		if self._itemsStart:
 			self._discover(discoverFun)
@@ -49,9 +49,9 @@ class FilterBroker(Broker):
 class CoverageBroker(Broker):
 	def __init__(self, config, name, broker_prefix, itemName, discoverFun):
 		Broker.__init__(self, config, name, broker_prefix, itemName, discoverFun)
-		userFilter = config.getFilter(broker_prefix, '',
-			defaultMatcher = 'blackwhite', defaultFilter = 'try_strict',
-			defaultOrder = ListOrder.matcher)
+		userFilter = config.get_filter(broker_prefix, '',
+			default_matcher = 'blackwhite', default_filter = 'try_strict',
+			default_order = ListOrder.matcher)
 		self._itemsStart = userFilter.filter_list(None)
 		itemsDiscover = list(self._discover(discoverFun).keys())
 		if itemsDiscover:
@@ -116,7 +116,7 @@ class SimpleBroker(FilterBroker):
 class StorageBroker(Broker):
 	def __init__(self, config, name, broker_prefix, itemName, discoverFun):
 		Broker.__init__(self, config, name, broker_prefix, itemName, discoverFun)
-		self._storageDict = config.getLookup('%s storage access' % broker_prefix, {}, onChange = None,
+		self._storageDict = config.get_lookup('%s storage access' % broker_prefix, {}, on_change = None,
 			parser = lambda x: parse_list(x, ' '), strfun = lambda x: str.join(' ', x))
 
 	def _broker(self, reqs, items):

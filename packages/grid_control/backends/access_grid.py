@@ -24,7 +24,7 @@ class GridAccessToken(TimedAccessToken):
 		TimedAccessToken.__init__(self, config, name)
 		self._infoExec = resolve_install_path(proxy_exec)
 		self._proxyPath = config.get('proxy path', '')
-		self._ignoreWarning = config.getBool('ignore warnings', False, onChange = None)
+		self._ignoreWarning = config.get_bool('ignore warnings', False, on_change = None)
 		self._cache = None
 
 	def getUsername(self):

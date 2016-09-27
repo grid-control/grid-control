@@ -27,17 +27,17 @@ class ConfigDataProvider(DataProvider):
 	def __init__(self, config, datasource_name, dataset_expr, dataset_nick = None, dataset_proc = None):
 		DataProvider.__init__(self, config, datasource_name, dataset_expr, dataset_nick, dataset_proc)
 
-		ds_config = config.changeView(view_class = 'SimpleConfigView', setSections = ['datasource %s' % dataset_expr])
+		ds_config = config.change_view(view_class = 'SimpleConfigView', setSections = ['datasource %s' % dataset_expr])
 		self._block = self._readBlockFromConfig(ds_config, dataset_expr, dataset_nick)
 
-		def onChange(config, old_obj, cur_obj, cur_entry, obj2str):
+		def on_change(config, old_obj, cur_obj, cur_entry, obj2str):
 			self._log.critical('Dataset %r changed', dataset_expr)
 			return TriggerResync(['datasets', 'parameters'])(config, old_obj, cur_obj, cur_entry, obj2str)
-		ds_config.get('%s hash' % datasource_name, self.get_hash(), persistent = True, onChange = onChange)
+		ds_config.get('%s hash' % datasource_name, self.get_hash(), persistent = True, on_change = on_change)
 
 
 	def _readFileFromConfig(self, ds_config, url, metadata_name_list, common_metadata, common_prefix):
-		info = ds_config.get(url, onChange = None)
+		info = ds_config.get(url, on_change = None)
 		tmp = info.split(' ', 1)
 		fi = {DataProvider.URL: common_prefix + url, DataProvider.NEntries: int(tmp[0])}
 		if common_metadata:
@@ -56,22 +56,22 @@ class ConfigDataProvider(DataProvider):
 		if len(datasetNameParts) == 1:
 			datasetNameParts.append('0')
 		return {
-			DataProvider.Nickname: ds_config.get('nickname', dataset_nick or '', onChange = None),
+			DataProvider.Nickname: ds_config.get('nickname', dataset_nick or '', on_change = None),
 			DataProvider.Dataset: datasetNameParts[0],
 			DataProvider.BlockName: datasetNameParts[1],
 		}
 
 
 	def _readBlockFromConfig(self, ds_config, dataset_expr, dataset_nick):
-		metadata_name_list = parse_json(ds_config.get('metadata', '[]', onChange = None))
-		common_metadata = parse_json(ds_config.get('metadata common', '[]', onChange = None))
+		metadata_name_list = parse_json(ds_config.get('metadata', '[]', on_change = None))
+		common_metadata = parse_json(ds_config.get('metadata common', '[]', on_change = None))
 		if len(common_metadata) > len(metadata_name_list):
 			raise DatasetError('Unable to set %d common metadata items with %d metadata keys' % (len(common_metadata), len(metadata_name_list)))
-		common_prefix = ds_config.get('prefix', '', onChange = None)
+		common_prefix = ds_config.get('prefix', '', on_change = None)
 		file_list = []
 		has_events = False
 		has_se_list = False
-		for url in ds_config.getOptions():
+		for url in ds_config.get_option_list():
 			if url == 'se list':
 				has_se_list = True
 			elif url == 'events':
@@ -86,9 +86,9 @@ class ConfigDataProvider(DataProvider):
 		if metadata_name_list:
 			result[DataProvider.Metadata] = metadata_name_list
 		if has_events:
-			result[DataProvider.NEntries] = ds_config.getInt('events', -1, onChange = None)
+			result[DataProvider.NEntries] = ds_config.get_int('events', -1, on_change = None)
 		if has_se_list:
-			result[DataProvider.Locations] = parse_list(ds_config.get('se list', '', onChange = None), ',')
+			result[DataProvider.Locations] = parse_list(ds_config.get('se list', '', on_change = None), ',')
 		return result
 
 

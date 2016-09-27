@@ -27,15 +27,15 @@ class DataTask(TaskModule):
 		TaskModule._setup_repository(self, config, psrc_repository)
 
 		psrc_list = []
-		for datasource_name in config.getList('datasource names', ['dataset'], onChange = TriggerResync(['datasets', 'parameters'])):
-			data_config = config.changeView(view_class = 'TaggedConfigView', addSections = [datasource_name])
+		for datasource_name in config.get_list('datasource names', ['dataset'], on_change = TriggerResync(['datasets', 'parameters'])):
+			data_config = config.change_view(view_class = 'TaggedConfigView', addSections = [datasource_name])
 			psrc_data = self._create_datasource(data_config, datasource_name, psrc_repository)
 			if psrc_data is not None:
 				psrc_list.append(psrc_data)
 				self._has_dataset = True
-				tmp_config = data_config.changeView(view_class = 'TaggedConfigView', setClasses = None, setNames = None, setTags = [], addSections = ['storage'])
+				tmp_config = data_config.change_view(view_class = 'TaggedConfigView', setClasses = None, setNames = None, setTags = [], addSections = ['storage'])
 				tmp_config.set('se output pattern', '@NICK@_job_@GC_JOB_ID@_@X@')
-				tmp_config = data_config.changeView(view_class = 'TaggedConfigView', setClasses = None, setNames = None, setTags = [], addSections = ['parameters'])
+				tmp_config = data_config.change_view(view_class = 'TaggedConfigView', setClasses = None, setNames = None, setTags = [], addSections = ['parameters'])
 				tmp_config.set('default lookup', 'DATASETNICK')
 
 		self._has_dataset = (psrc_list != [])
@@ -47,12 +47,12 @@ class DataTask(TaskModule):
 				psrc.resyncSetup(force = True)
 		signal.signal(signal.SIGUSR2, externalRefresh)
 
-		config.setState(False, 'resync', detail = 'datasets')
+		config.set_state(False, 'resync', detail = 'datasets')
 
 
 	def _create_datasource(self, config, datasource_name, psrc_repository):
-		dataProvider = config.getCompositePlugin(datasource_name, '', ':MultiDatasetProvider:',
-			cls = DataProvider, requirePlugin = False, onChange = TriggerResync(['datasets', 'parameters']))
+		dataProvider = config.get_composited_plugin(datasource_name, '', ':MultiDatasetProvider:',
+			cls = DataProvider, require_plugin = False, on_change = TriggerResync(['datasets', 'parameters']))
 
 		if dataProvider is not None:
 			splitterName = config.get('%s splitter' % datasource_name, 'FileBoundarySplitter')
@@ -60,21 +60,21 @@ class DataTask(TaskModule):
 			dataSplitter = splitterClass(config, datasource_name)
 
 			# Create and register dataset parameter source
-			partProcessor = config.getCompositePlugin(['partition processor', '%s partition processor' % datasource_name],
+			partProcessor = config.get_composited_plugin(['partition processor', '%s partition processor' % datasource_name],
 				'TFCPartitionProcessor LocationPartitionProcessor MetaPartitionProcessor BasicPartitionProcessor',
-				'MultiPartitionProcessor', cls = PartitionProcessor, onChange = TriggerResync(['parameters']),
+				'MultiPartitionProcessor', cls = PartitionProcessor, on_change = TriggerResync(['parameters']),
 				pargs = (datasource_name,))
 
-			data_ps = ParameterSource.create_instance('DataParameterSource', config.getWorkPath(),
+			data_ps = ParameterSource.create_instance('DataParameterSource', config.get_work_path(),
 				datasource_name.replace('dataset', 'data'), # needed for backwards compatible file names: datacache/datamap
 				dataProvider, dataSplitter, partProcessor, psrc_repository)
 
 			# Select dataset refresh rate
-			data_refresh = config.getTime('%s refresh' % datasource_name, -1, onChange = None)
+			data_refresh = config.get_time('%s refresh' % datasource_name, -1, on_change = None)
 			if data_refresh >= 0:
 				data_refresh = max(data_refresh, dataProvider.queryLimit())
 				self._log.info('Dataset source will be queried every %s', str_time_long(data_refresh))
-			data_ps.resyncSetup(interval = data_refresh, force = config.getState('resync', detail = 'datasets'))
+			data_ps.resyncSetup(interval = data_refresh, force = config.get_state('resync', detail = 'datasets'))
 			if dataSplitter.get_partition_len() == 0:
 				if data_refresh < 0:
 					raise UserError('Currently used dataset does not provide jobs to process')

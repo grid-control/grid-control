@@ -178,12 +178,12 @@ class TrackedParameterAdapter(BasicParameterAdapter):
 		self._psrc_raw = source
 		BasicParameterAdapter.__init__(self, config, source)
 		self._map_job_num2pnum = {}
-		utils.ensure_dir_exists(config.getWorkPath(), 'parameter storage directory', ParameterError)
-		self._path_job_num2pnum = config.getWorkPath('params.map.gz')
-		self._path_params = config.getWorkPath('params.dat.gz')
+		utils.ensure_dir_exists(config.get_work_path(), 'parameter storage directory', ParameterError)
+		self._path_job_num2pnum = config.get_work_path('params.map.gz')
+		self._path_params = config.get_work_path('params.dat.gz')
 
 		# Find out if init should be performed - overrides resync_requested!
-		init_requested = config.getState('init', detail = 'parameters')
+		init_requested = config.get_state('init', detail = 'parameters')
 		init_needed = False
 		if not (os.path.exists(self._path_params) and os.path.exists(self._path_job_num2pnum)):
 			init_needed = True # Init needed if no parameter log exists
@@ -194,8 +194,8 @@ class TrackedParameterAdapter(BasicParameterAdapter):
 		do_init = init_requested or init_needed
 
 		# Find out if resync should be performed
-		resync_requested = config.getState('resync', detail = 'parameters')
-		config.setState(False, 'resync', detail = 'parameters')
+		resync_requested = config.get_state('resync', detail = 'parameters')
+		config.set_state(False, 'resync', detail = 'parameters')
 		resync_needed = False
 		psrc_hash = self._psrc_raw.get_psrc_hash()
 		self._psrc_hash_stored = config.get('parameter hash', psrc_hash, persistent = True)
@@ -204,7 +204,7 @@ class TrackedParameterAdapter(BasicParameterAdapter):
 			self._log.info('Parameter hash has changed')
 			self._log.debug('\told hash: %s', self._psrc_hash_stored)
 			self._log.debug('\tnew hash: %s', psrc_hash)
-			config.setState(True, 'init', detail = 'config')
+			config.set_state(True, 'init', detail = 'config')
 		do_resync = (resync_requested or resync_needed) and not do_init
 
 		if not (do_resync or do_init): # Reuse old mapping

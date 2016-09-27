@@ -34,7 +34,7 @@ class MultiWMS(WMS):
 			self._timing.waitOnIdle = max(self._timing.waitOnIdle, wmsT.waitOnIdle)
 			self._timing.waitBetweenSteps = max(self._timing.waitBetweenSteps, wmsT.waitBetweenSteps)
 
-		self._brokerWMS = config.getPlugin('wms broker', 'RandomBroker',
+		self._brokerWMS = config.get_plugin('wms broker', 'RandomBroker',
 			cls = Broker, inherit = True, tags = [self], pargs = ('wms', 'wms', self._wmsMap.keys))
 
 

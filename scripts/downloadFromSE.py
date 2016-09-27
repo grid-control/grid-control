@@ -139,13 +139,13 @@ def transfer_monitor(output, fileIdx, path, lock, abort):
 	lock.release()
 
 
-def download_monitored(jobNum, output, fileIdx, checkPath, sourcePath, targetPath):
+def download_monitored(jobNum, output, fileIdx, checkPath, sourcePath, target_path):
 	copyAbortLock = GCLock()
 	monitorLock = GCLock()
 	monitorLock.acquire()
 	monitor = start_daemon('Download monitor %s' % jobNum, transfer_monitor, output, fileIdx, checkPath, monitorLock, copyAbortLock)
 	result = -1
-	procCP = se_copy(sourcePath, targetPath, tmp = checkPath)
+	procCP = se_copy(sourcePath, target_path, tmp = checkPath)
 	while True:
 		if not copyAbortLock.acquire(False):
 			monitor.join()
@@ -392,7 +392,7 @@ def loop_download(opts, args):
 	# Init everything in each loop to pick up changes
 	(config, jobDB) = gcSupport.initGC(args)
 	token = Plugin.get_class('AccessToken').create_instance(opts.token, config, 'access')#, OSLayer.create(config))
-	workDir = config.getWorkPath()
+	workDir = config.get_work_path()
 	jobList = jobDB.getJobs(ClassSelector(JobClass.SUCCESS))
 
 	# Create SE output dir

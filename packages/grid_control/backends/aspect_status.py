@@ -57,8 +57,8 @@ class CheckJobsMissingState(CheckJobs):
 class CheckJobsWithProcess(CheckJobs):
 	def __init__(self, config, proc_factory, status_map = None):
 		CheckJobs.__init__(self, config)
-		self._timeout = config.getTime('check timeout', 60, onChange = None)
-		self._log_everything = config.getBool('check promiscuous', False, onChange = None)
+		self._timeout = config.get_time('check timeout', 60, on_change = None)
+		self._log_everything = config.get_bool('check promiscuous', False, on_change = None)
 		self._errormsg = 'Job status command returned with exit code %(proc_status)s'
 		(self._status, self._proc_factory, self._status_map) = (CheckStatus.OK, proc_factory, status_map or {})
 

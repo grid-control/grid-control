@@ -33,11 +33,11 @@ class CMSSW_Advanced(CMSSW):
 	config_section_list = CMSSW.config_section_list + ['CMSSW_Advanced']
 
 	def __init__(self, config, name):
-		self._name = name # needed for changeView calls before the constructor
+		self._name = name # needed for change_view calls before the constructor
 		head = [('DATASETNICK', 'Nickname')]
 
 		# Mapping between nickname and config files:
-		self._nmCfg = config.getLookup('nickname config', {}, defaultMatcher = 'regex',
+		self._nmCfg = config.get_lookup('nickname config', {}, default_matcher = 'regex',
 			parser = lambda x: lmap(str.strip, x.split(',')), strfun = lambda x: str.join(',', x))
 		if not self._nmCfg.empty():
 			allConfigFiles = sorted(set(ichain(self._nmCfg.get_values())))
@@ -47,8 +47,8 @@ class CMSSW_Advanced(CMSSW):
 			raise ConfigError("Please use 'nickname config' instead of 'config file'")
 
 		# Mapping between nickname and constants - only display - work is handled by the 'normal' parameter factory
-		nmCName = config.getList('nickname constants', [], onChange = None)
-		param_config = config.changeView(view_class = 'TaggedConfigView', setClasses = None, setNames = None, addSections = ['parameters'])
+		nmCName = config.get_list('nickname constants', [], on_change = None)
+		param_config = config.change_view(view_class = 'TaggedConfigView', setClasses = None, setNames = None, addSections = ['parameters'])
 		param_config.set('constants', str.join(' ', nmCName), '+=')
 		for cName in nmCName:
 			param_config.set(cName + ' matcher', 'regex')
@@ -57,14 +57,14 @@ class CMSSW_Advanced(CMSSW):
 
 		# Mapping between nickname and lumi filter - only display - work is handled by the 'normal' lumi filter
 		config.set('lumi filter matcher', 'regex')
-		if 'nickname lumi filter' in config.getOptions():
-			config.set('lumi filter', str_dict_cfg(config.getDict('nickname lumi filter', {}, onChange = None)))
-		self._nmLumi = config.getLookup('lumi filter', {}, parser = parseLumiFilter, strfun = strLumi, onChange = None)
+		if 'nickname lumi filter' in config.get_option_list():
+			config.set('lumi filter', str_dict_cfg(config.get_dict('nickname lumi filter', {}, on_change = None)))
+		self._nmLumi = config.get_lookup('lumi filter', {}, parser = parseLumiFilter, strfun = strLumi, on_change = None)
 		if not self._nmLumi.empty():
 			head.append((2, 'Lumi filter'))
 
 		CMSSW.__init__(self, config, name)
-		self._displaySetup(config.getWorkPath('datacache.dat'), head)
+		self._displaySetup(config.get_work_path('datacache.dat'), head)
 
 
 	def _displaySetup(self, dsPath, head):

@@ -34,15 +34,15 @@ class DBSInfoProvider(GCProvider):
 		config.set('parent keys', 'CMSSW_PARENT_LFN CMSSW_PARENT_PFN')
 		config.set('events key', 'CMSSW_EVENTS_WRITE')
 		GCProvider.__init__(self, config, datasource_name, dataset_expr, dataset_nick)
-		self._discovery = config.getBool('discovery', False)
+		self._discovery = config.get_bool('discovery', False)
 
 	def _generateDatasetName(self, key, data):
 		if self._discovery:
 			return GCProvider._generateDatasetName(self, key, data)
 		if 'CMSSW_DATATIER' not in data:
 			raise DatasetError('Incompatible data tiers in dataset: %s' % data)
-		getPathComponents = lambda path: utils.QM(path, tuple(path.strip('/').split('/')), ())
-		userPath = getPathComponents(self._ds_name)
+		get_pathComponents = lambda path: utils.QM(path, tuple(path.strip('/').split('/')), ())
+		userPath = get_pathComponents(self._ds_name)
 
 		(primary, processed, tier) = (None, None, None)
 		# In case of a child dataset, use the parent infos to construct new path
@@ -51,7 +51,7 @@ class DBSInfoProvider(GCProvider):
 				(primary, processed, tier) = userPath
 			else:
 				try:
-					(primary, processed, tier) = getPathComponents(parent)
+					(primary, processed, tier) = get_pathComponents(parent)
 				except Exception:
 					clear_current_exception()
 		if (primary is None) and (len(userPath) > 0):

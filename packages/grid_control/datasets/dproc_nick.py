@@ -37,7 +37,7 @@ class InlineNickNameProducer(NickNameProducer):
 
 	def __init__(self, config, datasource_name, on_change):
 		NickNameProducer.__init__(self, config, datasource_name, on_change)
-		self._expr = config.get(['nickname expr', '%s nickname expr' % datasource_name], 'current_nickname', onChange = on_change)
+		self._expr = config.get(['nickname expr', '%s nickname expr' % datasource_name], 'current_nickname', on_change = on_change)
 
 	def get_name(self, current_nickname, dataset, block):
 		return eval(self._expr, {'oldnick': current_nickname, 'current_nickname': current_nickname, # pylint:disable=eval-used
@@ -49,8 +49,8 @@ class SimpleNickNameProducer(NickNameProducer):
 
 	def __init__(self, config, datasource_name, on_change):
 		NickNameProducer.__init__(self, config, datasource_name, on_change)
-		self._full_name = config.getBool(['nickname full name', '%s nickname full name' % datasource_name],
-			True, onChange = on_change)
+		self._full_name = config.get_bool(['nickname full name', '%s nickname full name' % datasource_name],
+			True, on_change = on_change)
 
 	def get_name(self, current_nickname, dataset, block):
 		if current_nickname == '':

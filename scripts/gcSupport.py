@@ -54,7 +54,7 @@ def getConfig(config_file = None, config_dict = None, section = None, additional
 		config_dict = {section: config_dict}
 	config = create_config(config_file, config_dict, use_default_files = True, additional = additional)
 	if section:
-		return config.changeView(addSections = [section])
+		return config.change_view(addSections = [section])
 	return config
 
 
@@ -116,7 +116,7 @@ def prettySize(size):
 		else:
 			return str(round(size / float(lim / 2**10), 2)) + suf
 
-def getPluginList(pluginName):
+def get_pluginList(pluginName):
 	aliasDict = {}
 	cls = Plugin.get_class(pluginName)
 	for entry in cls.get_class_info_list():
@@ -150,5 +150,5 @@ def displayPluginList(clsList):
 	utils.display_table(header, sorted(clsList, key = lambda x: x['Name'].lower()), fmt_string = fmt_string)
 
 __all__ = ['Activity', 'ClassSelector', 'displayPluginList', 'FileInfoProcessor', 'FileMutex',
-	'getCMSSWInfo', 'getConfig', 'getPluginList', 'initGC', 'Job', 'JobClass', 'JobInfoProcessor',
+	'getCMSSWInfo', 'getConfig', 'get_pluginList', 'initGC', 'Job', 'JobClass', 'JobInfoProcessor',
 	'JobResult', 'JobSelector', 'Options', 'Plugin', 'scriptOptions', 'utils']

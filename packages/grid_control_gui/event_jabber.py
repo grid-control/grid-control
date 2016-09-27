@@ -23,9 +23,9 @@ class JabberAlarm(Monitoring):
 
 	def __init__(self, config, name, task):
 		Monitoring.__init__(self, config, name, task)
-		self._source_jid = config.get('source jid', onChange = None)
-		self._target_jid = config.get('target jid', onChange = None)
-		pwPath = config.getPath('source password file')
+		self._source_jid = config.get('source jid', on_change = None)
+		self._target_jid = config.get('target jid', on_change = None)
+		pwPath = config.get_path('source password file')
 		os.chmod(pwPath, stat.S_IRUSR)
 		# password in variable name removes it from debug log!
 		self._source_password = open(pwPath).read().strip()

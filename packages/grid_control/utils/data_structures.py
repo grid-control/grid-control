@@ -31,10 +31,10 @@ def make_enum(members=None, cls=None, use_hash=True):
 			return idx
 	values = lsmap(get_value, enumerate(members))
 
-	cls.enumNames = members
-	cls.enumValues = values
-	_map_name2value = dict(izip(imap(str.lower, cls.enumNames), cls.enumValues))
-	_map_value2name = dict(izip(cls.enumValues, cls.enumNames))
+	cls.enum_name_list = members
+	cls.enum_value_list = values
+	_map_name2value = dict(izip(imap(str.lower, cls.enum_name_list), cls.enum_value_list))
+	_map_value2name = dict(izip(cls.enum_value_list, cls.enum_name_list))
 	if len(_map_name2value) != len(_map_value2name):
 		raise APIError('Invalid enum definition!')
 
@@ -42,7 +42,7 @@ def make_enum(members=None, cls=None, use_hash=True):
 		return _map_name2value.get(value.lower(), *args)
 	cls.enum2str = _map_value2name.get
 	cls.str2enum = classmethod(str2enum)
-	for name, value in izip(cls.enumNames, cls.enumValues):
+	for name, value in izip(cls.enum_name_list, cls.enum_value_list):
 		setattr(cls, name, value)
 	return cls
 

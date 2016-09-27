@@ -37,11 +37,11 @@ class Workflow(NamedPlugin):
 		sys.stderr = SimpleActivityStream(sys.stderr)
 
 		# Workdir settings
-		self._workDir = config.getWorkPath()
-		self._checkSpace = config.getInt('workdir space', 10, onChange = None)
+		self._workDir = config.get_work_path()
+		self._checkSpace = config.get_int('workdir space', 10, on_change = None)
 
 		# Initialise task module
-		self.task = config.getPlugin(['module', 'task'], cls = TaskModule, tags = [self])
+		self.task = config.get_plugin(['module', 'task'], cls = TaskModule, tags = [self])
 		if abort == 'task':
 			return
 
@@ -49,19 +49,19 @@ class Workflow(NamedPlugin):
 		self._log.log(logging.INFO, 'Task started on: %s', self.task.taskDate)
 
 		# Initialise workload management interface
-		self.wms = config.getCompositePlugin('backend', 'grid', 'MultiWMS',
+		self.wms = config.get_composited_plugin('backend', 'grid', 'MultiWMS',
 			cls = WMS, tags = [self, self.task])
 
 		# Subsequent config calls also include section "jobs":
-		jobs_config = config.changeView(view_class = 'TaggedConfigView',
+		jobs_config = config.change_view(view_class = 'TaggedConfigView',
 			addSections = ['jobs'], addTags = [self])
 
 		# Initialise monitoring module
-		monitor = jobs_config.getCompositePlugin('monitor', 'scripts', 'MultiMonitor',
+		monitor = jobs_config.get_composited_plugin('monitor', 'scripts', 'MultiMonitor',
 			cls = Monitoring, tags = [self, self.task], pargs = (self.task,))
 
 		# Initialise job database
-		self.jobManager = jobs_config.getPlugin('job manager', 'SimpleJobManager',
+		self.jobManager = jobs_config.get_plugin('job manager', 'SimpleJobManager',
 			cls = JobManager, tags = [self, self.task, self.wms], pargs = (self.task, monitor))
 
 		if abort == 'jobmanager':
@@ -69,21 +69,21 @@ class Workflow(NamedPlugin):
 
 		# Prepare work package
 		self.wms.deployTask(self.task, monitor,
-			transferSE = config.getState('init', detail = 'storage'),
-			transferSB = config.getState('init', detail = 'sandbox'))
+			transferSE = config.get_state('init', detail = 'storage'),
+			transferSB = config.get_state('init', detail = 'sandbox'))
 
 		# Configure workflow settings
-		self._actionList = jobs_config.getList('action', ['check', 'retrieve', 'submit'], onChange = None)
+		self._actionList = jobs_config.get_list('action', ['check', 'retrieve', 'submit'], on_change = None)
 		self.duration = 0
-		if jobs_config.getBool('continuous', False, onChange = None): # legacy option
+		if jobs_config.get_bool('continuous', False, on_change = None): # legacy option
 			self.duration = -1
-		self.duration = jobs_config.getTime('duration', self.duration, onChange = None)
-		self._submitFlag = jobs_config.getBool('submission', True, onChange = None)
-		self._submitTime = jobs_config.getTime('submission time requirement', self.task.wallTime, onChange = None)
+		self.duration = jobs_config.get_time('duration', self.duration, on_change = None)
+		self._submitFlag = jobs_config.get_bool('submission', True, on_change = None)
+		self._submitTime = jobs_config.get_time('submission time requirement', self.task.wallTime, on_change = None)
 
 		# Initialise GUI
 		(sys.stdout, sys.stderr) = (sys.stdout.finish(), sys.stderr.finish())
-		self._gui = config.getPlugin('gui', 'SimpleConsole', cls = GUI, onChange = None, pargs = (self,))
+		self._gui = config.get_plugin('gui', 'SimpleConsole', cls = GUI, on_change = None, pargs = (self,))
 
 
 	# Job submission loop

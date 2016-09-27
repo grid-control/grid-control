@@ -24,13 +24,13 @@ class ROOTTask(UserTask):
 
 	def __init__(self, config, name):
 		# Determine ROOT path from previous settings / environment / config file
-		self._rootpath = config.get('root path', os.environ.get('ROOTSYS', ''), persistent = True, onChange = TriggerInit('sandbox'))
+		self._rootpath = config.get('root path', os.environ.get('ROOTSYS', ''), persistent = True, on_change = TriggerInit('sandbox'))
 		if not self._rootpath:
 			raise ConfigError('Either set environment variable "ROOTSYS" or set option "root path"!')
 		logging.getLogger('task').info('Using the following ROOT path: %s', self._rootpath)
 
 		# Special handling for executables bundled with ROOT
-		self._executable = config.get('executable', onChange = TriggerInit('sandbox'))
+		self._executable = config.get('executable', on_change = TriggerInit('sandbox'))
 		exeFull = os.path.join(self._rootpath, 'bin', self._executable.lstrip('/'))
 		self.builtIn = os.path.exists(exeFull)
 		if self.builtIn:
@@ -39,7 +39,7 @@ class ROOTTask(UserTask):
 
 		# Apply default handling from UserTask
 		UserTask.__init__(self, config, name)
-		self.updateErrorDict(utils.path_share('gc-run.root.sh'))
+		self.updateErrorDict(utils.get_path_share('gc-run.root.sh'))
 
 		# Collect lib files needed by executable
 		self.libFiles = []
@@ -49,11 +49,11 @@ class ROOTTask(UserTask):
 		return utils.merge_dict_list([UserTask.getTaskConfig(self), {'GC_ROOTSYS': self._rootpath}])
 
 
-	def getCommand(self):
+	def get_command(self):
 		cmd = './gc-run.root.sh %s $@ > job.stdout 2> job.stderr' % self._executable
 		return utils.QM(self.builtIn, '', 'chmod u+x %s; ' % self._executable) + cmd
 
 
 	def getSBInFiles(self):
 		return UserTask.getSBInFiles(self) + self.libFiles + [
-			utils.Result(path_abs = utils.path_share('gc-run.root.sh'), path_rel = 'gc-run.root.sh')]
+			utils.Result(path_abs = utils.get_path_share('gc-run.root.sh'), path_rel = 'gc-run.root.sh')]

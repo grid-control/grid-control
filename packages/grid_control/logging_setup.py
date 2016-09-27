@@ -242,12 +242,12 @@ def logging_configure_handler(config, logger_name, handler_str, handler):
 	def get_handler_option(postfix):
 		return ['%s %s' % (logger_name, postfix), '%s %s %s' % (logger_name, handler_str, postfix)]
 	fmt = GCFormatter(
-		details_lt = config.getEnum(get_handler_option('detail lower limit'), LogLevelEnum, logging.DEBUG, onChange = None),
-		details_gt = config.getEnum(get_handler_option('detail upper limit'), LogLevelEnum, logging.ERROR, onChange = None),
-		ex_context = config.getInt(get_handler_option('code context'), 2, onChange = None),
-		ex_vars = config.getInt(get_handler_option('variables'), 200, onChange = None),
-		ex_fstack = config.getInt(get_handler_option('file stack'), 1, onChange = None),
-		ex_tree = config.getInt(get_handler_option('tree'), 2, onChange = None))
+		details_lt = config.get_enum(get_handler_option('detail lower limit'), LogLevelEnum, logging.DEBUG, on_change = None),
+		details_gt = config.get_enum(get_handler_option('detail upper limit'), LogLevelEnum, logging.ERROR, on_change = None),
+		ex_context = config.get_int(get_handler_option('code context'), 2, on_change = None),
+		ex_vars = config.get_int(get_handler_option('variables'), 200, on_change = None),
+		ex_fstack = config.get_int(get_handler_option('file stack'), 1, on_change = None),
+		ex_tree = config.get_int(get_handler_option('tree'), 2, on_change = None))
 	handler.setFormatter(fmt)
 	return handler
 
@@ -256,7 +256,7 @@ def logging_configure_handler(config, logger_name, handler_str, handler):
 def logging_create_handlers(config, logger_name):
 	logger = logging.getLogger(logger_name.lower().replace('exception', 'abort').replace('root', ''))
 	# Setup handlers
-	handler_list = config.getList(logger_name + ' handler', [], onChange = None)
+	handler_list = config.get_list(logger_name + ' handler', [], on_change = None)
 	if handler_list: # remove any standard handlers:
 		for handler in list(logger.handlers):
 			logger.removeHandler(handler)
@@ -269,35 +269,35 @@ def logging_create_handlers(config, logger_name):
 		elif handler_str == 'stderr':
 			handler = StderrStreamHandler()
 		elif handler_str == 'file':
-			handler = logging.FileHandler(config.get(logger_name + ' file', onChange = None), 'w')
+			handler = logging.FileHandler(config.get(logger_name + ' file', on_change = None), 'w')
 		elif handler_str == 'debug_file':
-			handler = GCLogHandler(config.getPaths(logger_name + ' debug file', get_debug_file_candidates(), onChange = None, must_exist = False), 'w')
+			handler = GCLogHandler(config.get_path_list(logger_name + ' debug file', get_debug_file_candidates(), on_change = None, must_exist = False), 'w')
 		else:
 			raise Exception('Unknown handler %s for logger %s' % (handler_str, logger_name))
 		logger.addHandler(logging_configure_handler(config, logger_name, handler_str, handler))
 		logger.propagate = False
 	# Set propagate status
-	logger.propagate = config.getBool(logger_name + ' propagate', bool(logger.propagate), onChange = None)
+	logger.propagate = config.get_bool(logger_name + ' propagate', bool(logger.propagate), on_change = None)
 	# Set logging level
-	logger.setLevel(config.getEnum(logger_name + ' level', LogLevelEnum, logger.level, onChange = None))
+	logger.setLevel(config.get_enum(logger_name + ' level', LogLevelEnum, logger.level, on_change = None))
 
 
 # Apply configuration to logging setup
 def logging_setup(config):
-	if config.getBool('debug mode', False, onChange = None):
+	if config.get_bool('debug mode', False, on_change = None):
 		config.set('level', 'NOTSET', '?=')
 		config.set('detail lower limit', 'NOTSET', '?=')
 		config.set('detail upper limit', 'NOTSET', '?=')
 		config.set('abort handler', 'stdout debug_file', '?=')
-		config.setInt('abort code context', 2, '?=')
-		config.setInt('abort variables', 1000, '?=')
-		config.setInt('abort file stack', 2, '?=')
-		config.setInt('abort tree', 2, '?=')
-	display_logger = config.getBool('display logger', False, onChange = None)
+		config.set_int('abort code context', 2, '?=')
+		config.set_int('abort variables', 1000, '?=')
+		config.set_int('abort file stack', 2, '?=')
+		config.set_int('abort tree', 2, '?=')
+	display_logger = config.get_bool('display logger', False, on_change = None)
 
 	# Find logger names in options
 	logger_names = set()
-	for option in config.getOptions():
+	for option in config.get_option_list():
 		if option in ['debug mode', 'display logger']:
 			pass
 		elif option.count(' ') == 0:
@@ -309,7 +309,7 @@ def logging_setup(config):
 	for logger_name in logger_names:
 		logging_create_handlers(config, logger_name)
 
-	logging.getLogger().addHandler(ProcessArchiveHandler(config.getWorkPath('error.tar')))
+	logging.getLogger().addHandler(ProcessArchiveHandler(config.get_work_path('error.tar')))
 
 	if display_logger:
 		dump_log_setup(logging.WARNING)
@@ -319,7 +319,7 @@ def parse_logging_args(arg_list):
 	for entry in arg_list:
 		tmp = entry.replace(':', '=').split('=')
 		if len(tmp) == 1:
-			if tmp[0] in LogLevelEnum.enumNames:
+			if tmp[0] in LogLevelEnum.enum_name_list:
 				tmp.insert(0, '') # use root logger
 			else:
 				tmp.append('DEBUG') # default is to set debug level

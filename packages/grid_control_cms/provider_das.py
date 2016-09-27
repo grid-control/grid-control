@@ -35,7 +35,7 @@ class DASProvider(CMSBaseProvider):
 
 	def __init__(self, config, datasource_name, dataset_expr, dataset_nick = None):
 		CMSBaseProvider.__init__(self, config, datasource_name, dataset_expr, dataset_nick)
-		self._url = config.get('das instance', 'https://cmsweb.cern.ch/das/cache', onChange = self._changeTrigger)
+		self._url = config.get('das instance', 'https://cmsweb.cern.ch/das/cache', on_change = self._changeTrigger)
 		if self._datasetInstance.startswith('http'):
 			self._url = self._datasetInstance
 			self._datasetInstance = ''

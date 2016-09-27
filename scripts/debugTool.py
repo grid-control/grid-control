@@ -104,12 +104,12 @@ if (opts.partition_list is not None) or opts.partition_list_invalid or opts.part
 
 	if opts.partition_list is not None:
 		if opts.partition_list in ('', 'all'):
-			keyStrings = DataSplitter.enumNames
+			keyStrings = DataSplitter.enum_name_list
 		else:
 			keyStrings = opts.partition_list.split(',')
 		keyList = lmap(DataSplitter.str2enum, keyStrings)
 		if None in keyList:
-			logging.warning('Available keys: %r', DataSplitter.enumNames)
+			logging.warning('Available keys: %r', DataSplitter.enum_name_list)
 		utils.display_table([('partition_num', 'Job')] + lzip(keyList, keyStrings), partition_list(splitter, keyList))
 
 	if opts.partition_check:

@@ -27,9 +27,9 @@ class AFSAccessToken(RefreshableAccessToken):
 		self._kinitExec = resolve_install_path('kinit')
 		self._klistExec = resolve_install_path('klist')
 		self._cache = None
-		self._authFiles = dict(imap(lambda name: (name, config.getWorkPath('proxy.%s' % name)), ['KRB5CCNAME', 'KRBTKFILE']))
+		self._authFiles = dict(imap(lambda name: (name, config.get_work_path('proxy.%s' % name)), ['KRB5CCNAME', 'KRBTKFILE']))
 		self._backupTickets(config)
-		self._tickets = config.getList('tickets', [], onChange = None)
+		self._tickets = config.get_list('tickets', [], on_change = None)
 
 	def _backupTickets(self, config): # TODO: thread safety of os.environ changes / fix for remote backends
 		import stat, shutil
@@ -80,7 +80,7 @@ class AFSAccessToken(RefreshableAccessToken):
 		proc.status_raise(timeout = 0)
 		return self._cache
 
-	def _getTimeleft(self, cached):
+	def _get_timeleft(self, cached):
 		info = self._parseTickets(cached)['tickets']
 		time_current = time.time()
 		time_end = 0

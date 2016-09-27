@@ -26,16 +26,16 @@ from hpfwk import Plugin, handle_debug_interrupt, init_hpf_plugins
 
 # grid-control command line parser
 def parse_cmd_line(cmd_line_args):
-	parser = Options(usage = '%s [OPTIONS] <config file>', add_help_option = False)
-	parser.add_bool(None, ' ', 'debug',         default = False)
-	parser.add_bool(None, ' ', 'help-conf',     default = False)
-	parser.add_bool(None, ' ', 'help-confmin',  default = False)
-	parser.add_bool(None, 'c', 'continuous',    default = False)
-	parser.add_bool(None, 'h', 'help',          default = False)
-	parser.add_bool(None, 'i', 'init',          default = False)
-	parser.add_bool(None, 'q', 'resync',        default = False)
-	parser.add_bool(None, 's', 'no-submission', default = True,  dest = 'submission')
-	parser.add_bool(None, 'G', 'gui',           default = False, dest = 'gui_ansi')
+	parser = Options(usage='%s [OPTIONS] <config file>', add_help_option=False)
+	parser.add_bool(None, ' ', 'debug', default=False)
+	parser.add_bool(None, ' ', 'help-conf', default=False)
+	parser.add_bool(None, ' ', 'help-confmin', default=False)
+	parser.add_bool(None, 'c', 'continuous', default=False)
+	parser.add_bool(None, 'h', 'help', default=False)
+	parser.add_bool(None, 'i', 'init', default=False)
+	parser.add_bool(None, 'q', 'resync', default=False)
+	parser.add_bool(None, 's', 'no-submission', default=True, dest='submission')
+	parser.add_bool(None, 'G', 'gui', default=False, dest='gui_ansi')
 	parser.add_accu(None, 'v', 'verbose')
 	parser.add_list(None, 'l', 'logging')
 	parser.add_list(None, 'o', 'override')
@@ -47,16 +47,17 @@ def parse_cmd_line(cmd_line_args):
 	# Deprecated options - refer to new report script instead
 	for (sopt, lopt) in [('-r', 'report'), ('-R', 'site-report'), ('-T', 'time-report'),
 			('-M', 'task-report'), ('-D', 'detail-report'), ('', 'help-vars')]:
-		parser.add_bool(None, sopt, lopt, default = False, dest = 'old_report')
+		parser.add_bool(None, sopt, lopt, default=False, dest='old_report')
 
-	(opts, args, _) = parser.parse(args = cmd_line_args)
+	(opts, args, _) = parser.parse(args=cmd_line_args)
 	opts.gui = None
 	if opts.gui_ansi:
 		opts.gui = 'ANSIGUI'
-	opts.continuous = opts.continuous or None # either True or None
+	opts.continuous = opts.continuous or None  # either True or None
 	# Display help
 	if opts.help:
-		utils.exit_with_usage(parser.usage(), open(utils.path_share('help.txt'), 'r').read(), show_help = False)
+		utils.exit_with_usage(parser.usage(),
+			SafeFile(utils.get_path_share('help.txt'), 'r').read(), show_help=False)
 	# Require single config file argument
 	if len(args) == 0:
 		utils.exit_with_usage(parser.usage(), 'Config file not specified!')
@@ -81,16 +82,17 @@ class OptsConfigFiller(Plugin.get_class('ConfigFiller')):
 		if combined_entry:
 			new_cmd_line = combined_entry.value.split() + self._cmd_line_args
 		(opts, _) = parse_cmd_line(new_cmd_line)
+
 		def set_config_from_opt(section, option, value):
 			if value is not None:
 				self._add_entry(container, section, option, str(value), '<cmdline>')
 		cmd_line_config_map = {
-			'state!': { '#init': opts.init, '#resync': opts.resync,
-				'#display config': opts.help_conf, '#display minimal config': opts.help_confmin },
-			'action': { 'delete': opts.delete, 'reset': opts.reset },
-			'global': { 'gui': opts.gui, 'submission': opts.submission },
-			'jobs': { 'max retry': opts.max_retry, 'selected': opts.job_selector },
-			'logging': { 'debug mode': opts.debug },
+			'state!': {'#init': opts.init, '#resync': opts.resync,
+				'#display config': opts.help_conf, '#display minimal config': opts.help_confmin},
+			'action': {'delete': opts.delete, 'reset': opts.reset},
+			'global': {'gui': opts.gui, 'submission': opts.submission},
+			'jobs': {'max retry': opts.max_retry, 'selected': opts.job_selector},
+			'logging': {'debug mode': opts.debug},
 		}
 		for section in cmd_line_config_map:
 			for (option, value) in cmd_line_config_map[section].items():
@@ -106,24 +108,25 @@ class OptsConfigFiller(Plugin.get_class('ConfigFiller')):
 
 
 # create config instance
-def gc_create_config(cmd_line_args = None, **kwargs):
+def gc_create_config(cmd_line_args=None, **kwargs):
 	if cmd_line_args is not None:
 		(_, args) = parse_cmd_line(cmd_line_args)
 		kwargs.setdefault('config_file', args[0])
 		kwargs.setdefault('additional', []).append(OptsConfigFiller(cmd_line_args))
-	return create_config(register = True, **kwargs)
+	return create_config(register=True, **kwargs)
 
 
 # set up signal handler for interrupts
 def handle_abort_interrupt(signum, frame):
 	utils.abort(True)
-	handle_abort_interrupt.log = Activity('Quitting grid-control! (This can take a few seconds...)', parent = 'root')
+	handle_abort_interrupt.log = Activity('Quitting grid-control! (This can take a few seconds...)',
+		parent='root')
 	signal.signal(signum, signal.SIG_DFL)
 
 
 def get_actions(config):
-	action_delete = config.get('delete', '', onChange = None)
-	action_reset = config.get('reset', '', onChange = None)
+	action_delete = config.get('delete', '', on_change=None)
+	action_reset = config.get('reset', '', on_change=None)
 	return (action_delete, action_reset)
 
 
@@ -134,34 +137,36 @@ def gc_create_workflow(config):
 	signal.signal(signal.SIGINT, handle_abort_interrupt)
 
 	# Configure logging settings
-	logging_setup(config.changeView(setSections = ['logging']))
+	logging_setup(config.change_view(setSections=['logging']))
 
-	global_config = config.changeView(setSections = ['global'])
+	global_config = config.change_view(setSections=['global'])
 	# Check work dir validity (default work directory is the config file name)
-	if not os.path.exists(global_config.getWorkPath()):
-		if not global_config.getState('init'):
-			logging.getLogger('workflow').warning('Starting initialization of %s!', global_config.getWorkPath())
-			global_config.setState(True, 'init')
-		if global_config.getChoiceYesNo('workdir create', True,
-				interactive_msg = 'Do you want to create the working directory %s?' % global_config.getWorkPath()):
-			utils.ensure_dir_exists(global_config.getWorkPath(), 'work directory')
-	for package_paths in global_config.getPaths('package paths', []):
+	if not os.path.exists(global_config.get_work_path()):
+		if not global_config.get_state('init'):
+			log = logging.getLogger('workflow')
+			log.warning('Starting initialization of %s!', global_config.get_work_path())
+			global_config.set_state(True, 'init')
+		workdir_create_msg = 'Do you want to create the working directory %s?'
+		if global_config.get_choice_yes_no('workdir create', True,
+				interactive_msg=workdir_create_msg % global_config.get_work_path()):
+			utils.ensure_dir_exists(global_config.get_work_path(), 'work directory')
+	for package_paths in global_config.get_path_list('package paths', []):
 		init_hpf_plugins(package_paths)
 
 	# Query config settings before config is frozen
-	help_cfg = global_config.getState('display', detail = 'config')
-	help_scfg = global_config.getState('display', detail = 'minimal config')
+	help_cfg = global_config.get_state('display', detail='config')
+	help_scfg = global_config.get_state('display', detail='minimal config')
 
-	(action_delete, action_reset) = get_actions(config.changeView(setSections = ['action']))
+	(action_delete, action_reset) = get_actions(config.change_view(setSections=['action']))
 
 	# Create workflow and freeze config settings
-	workflow = global_config.getPlugin('workflow', 'Workflow:global', cls = 'Workflow')
-	config.factory.freeze(write_config = config.getState('init', detail = 'config'))
+	workflow = global_config.get_plugin('workflow', 'Workflow:global', cls='Workflow')
+	config.factory.freeze(write_config=config.get_state('init', detail='config'))
 
 	# Give config help
 	if help_cfg or help_scfg:
-		config.write(sys.stdout, print_default = help_cfg, print_unused = False,
-			print_minimal = help_scfg, print_source = help_cfg)
+		config.write(sys.stdout, print_default=help_cfg, print_unused=False,
+			print_minimal=help_scfg, print_source=help_cfg)
 		sys.exit(os.EX_OK)
 
 	# Check if user requested deletion / reset of jobs
@@ -175,26 +180,26 @@ def gc_create_workflow(config):
 	return workflow
 
 
-def run(args = None, intro = True):
+def run(args=None, intro=True):
 	# display the 'grid-control' logo and version
 	if intro and not os.environ.get('GC_DISABLE_INTRO'):
-		sys.stdout.write(SafeFile(utils.path_share('logo.txt'), 'r').read())
+		sys.stdout.write(SafeFile(utils.get_path_share('logo.txt'), 'r').read())
 		sys.stdout.write('Revision: %s\n' % utils.get_version())
 	pyver = (sys.version_info[0], sys.version_info[1])
 	if pyver < (2, 3):
 		utils.deprecated('This python version (%d.%d) is not supported anymore!' % pyver)
-	Activity.root = Activity('Running grid-control', name = 'root') # top level activity instance
+	Activity.root = Activity('Running grid-control', name='root')  # top level activity instance
 
 	# main try... except block to catch exceptions and show error message
 	try:
-		config = gc_create_config(args or sys.argv[1:], use_default_files = True)
+		config = gc_create_config(args or sys.argv[1:], use_default_files=True)
 		workflow = gc_create_workflow(config)
 		try:
 			sys.exit(workflow.run())
 		finally:
 			sys.stdout.write('\n')
-	except SystemExit: # avoid getting caught for Python < 2.5
+	except SystemExit:  # avoid getting caught for Python < 2.5
 		raise
-	except Exception: # coverage overrides sys.excepthook
+	except Exception:  # coverage overrides sys.excepthook
 		gc_excepthook(*sys.exc_info())
 		sys.exit(os.EX_SOFTWARE)

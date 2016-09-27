@@ -27,8 +27,8 @@ class UserTask(DataTask):
 		self._exeWrap = TaskExecutableWrapper(config)
 
 
-	def getCommand(self):
-		return '(%s) > job.stdout 2> job.stderr' % self._exeWrap.getCommand()
+	def get_command(self):
+		return '(%s) > job.stdout 2> job.stderr' % self._exeWrap.get_command()
 
 
 	def getJobArguments(self, jobNum):

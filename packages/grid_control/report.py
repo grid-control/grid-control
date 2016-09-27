@@ -82,11 +82,11 @@ class BasicReport(Report):
 		self._write_line('-' * 15, width)
 
 	def getHeight(self):
-		return 8 + int((len(Job.enumNames) + 1) / 2)
+		return 8 + int((len(Job.enum_name_list) + 1) / 2)
 
 	def show_report(self, job_db):
 		njobs_total = len(job_db)
-		summary = dict(imap(lambda x: (x, 0.0), Job.enumValues))
+		summary = dict(imap(lambda x: (x, 0.0), Job.enum_value_list))
 		for jobNum in self._jobs:
 			summary[job_db.getJobTransient(jobNum).state] += 1
 		makeSum = lambda *states: sum(imap(lambda z: summary[z], states))
@@ -106,7 +106,7 @@ class BasicReport(Report):
 			ignored_str = '(Jobs    IGNORED:%8d  %3d%%)' % (ignored, ignored / max(1, njobs_total) * 100.0)
 		self._write_line('Detailed Status Information:      ' + ignored_str)
 		tmp = []
-		for (sid, sname) in izip(Job.enumValues, Job.enumNames):
+		for (sid, sname) in izip(Job.enum_value_list, Job.enum_name_list):
 			tmp.append('Jobs  %9s:%8d  %3d%%' % tuple([sname] + makePer(sid)))
 			if len(tmp) == 2:
 				self._write_line(str.join('     ', tmp))

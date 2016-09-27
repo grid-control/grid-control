@@ -23,10 +23,10 @@ class PBSGECommon(LocalWMS):
 			submitExec = utils.resolve_install_path('qsub'),
 			checkExecutor = checkExecutor, cancelExecutor = cancelExecutor,
 			nodesFinder = nodesFinder, queuesFinder = queuesFinder)
-		self._shell = config.get('shell', '', onChange = None)
-		self._account = config.get('account', '', onChange = None)
-		self._delay = config.getBool('delay output', False, onChange = None)
-		self._softwareReqs = config.getLookup('software requirement map', {}, single = False, onChange = None)
+		self._shell = config.get('shell', '', on_change = None)
+		self._account = config.get('account', '', on_change = None)
+		self._delay = config.get_bool('delay output', False, on_change = None)
+		self._softwareReqs = config.get_lookup('software requirement map', {}, single = False, on_change = None)
 
 
 	def getJobArguments(self, jobNum, sandbox):

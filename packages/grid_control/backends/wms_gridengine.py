@@ -30,7 +30,7 @@ class GridEngine_CheckJobsProcessCreator(ProcessCreatorViaArguments):
 	def __init__(self, config):
 		ProcessCreatorViaArguments.__init__(self, config)
 		self._cmd = utils.resolve_install_path('qstat')
-		self._user = config.get('user', os.environ.get('LOGNAME', ''), onChange = None)
+		self._user = config.get('user', os.environ.get('LOGNAME', ''), on_change = None)
 
 	def _arguments(self, wmsIDs):
 		if not self._user:
@@ -140,7 +140,7 @@ class GridEngine(PBSGECommon):
 			checkExecutor = CheckJobsMissingState(config, GridEngine_CheckJobs(config)),
 			nodesFinder = GridEngine_Discover_Nodes(config),
 			queuesFinder = GridEngine_Discover_Queues(config))
-		self._project = config.get('project name', '', onChange = None)
+		self._project = config.get('project name', '', on_change = None)
 		self._configExec = utils.resolve_install_path('qconf')
 
 

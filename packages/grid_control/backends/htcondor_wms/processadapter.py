@@ -148,7 +148,7 @@ class ProcessAdapterInterface(Plugin):
 		if not path.startswith("/") and self._basepath:
 			abspath = self._basepath + "/" + abspath
 		return abspath
-	getDomainAbsPath = lru_cache(getDomainAbsPath)
+	getDomainAbsPath = lru_cache()(getDomainAbsPath)
 	def getGlobalAbsPath(self, path):
 		"""Translate any path to an absolute one in the executing GC domain"""
 		raise AbstractError
@@ -568,7 +568,7 @@ class SSHProcessAdapter(ProcessAdapterInterface):
 	def getGlobalAbsPath(self, path):
 		abspath = (self._user and self._user+"@" or "") + self._host + ":" + self.getDomainAbsPath(path)
 		return abspath
-	getGlobalAbsPath = lru_cache(getGlobalAbsPath)
+	getGlobalAbsPath = lru_cache()(getGlobalAbsPath)
 
 # Access via GSISSH
 class GSISSHProcessAdapter(SSHProcessAdapter):

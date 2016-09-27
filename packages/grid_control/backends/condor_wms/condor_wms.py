@@ -69,26 +69,26 @@ class Condor(BasicWMS):
 		Name:   %s
 		#############################
 
-		""" % (config.getConfigName(), self.taskID, name))
+		""" % (config.get_config_name(), self.taskID, name))
 		# finalize config state by reading values or setting to defaults
 		self.settings={
 			'jdl': {
 				'Universe' : config.get('Universe', 'vanilla'),
 				'NotifyEmail' : config.get('NotifyEmail', ''),
-				'ClassAdData' : config.getList('ClassAdData',[]),
-				'JDLData' : config.getList('JDLData',[])
+				'ClassAdData' : config.get_list('ClassAdData',[]),
+				'JDLData' : config.get_list('JDLData',[])
 				},
 			'pool' : {
-				'hosts' : config.getList('PoolHostList',[])
+				'hosts' : config.get_list('PoolHostList',[])
 				}
 			}
 		# prepare interfaces for local/remote/ssh pool access
 		self._initPoolInterfaces(config)
 		# load keys for condor pool ClassAds
-		self.poolReqs  = config.getDict('poolArgs req', {})[0]
-		self.poolQuery = config.getDict('poolArgs query', {})[0]
+		self.poolReqs  = config.get_dict('poolArgs req', {})[0]
+		self.poolQuery = config.get_dict('poolArgs query', {})[0]
 		# Sandbox base path where individual job data is stored, staged and returned to
-		self.sandPath = config.getPath('sandbox path', config.getWorkPath('sandbox'), must_exist = False)
+		self.sandPath = config.get_path('sandbox path', config.get_work_path('sandbox'), must_exist = False)
 		# history query is faster with split files - check if and how this is used
 		# default condor_history command works WITHOUT explicitly specified file
 		self.historyFile = None
@@ -97,7 +97,7 @@ class Condor(BasicWMS):
 			if not os.path.isfile(self.historyFile):
 				self.historyFile = None
 		# broker for selecting Sites
-		self.brokerSite = config.getPlugin('site broker', 'UserBroker', cls = Broker,
+		self.brokerSite = config.get_plugin('site broker', 'UserBroker', cls = Broker,
 			tags = [self], pargs = ('sites', 'sites', self.getSites))
 		self.debugFlush()
 
@@ -366,7 +366,7 @@ class Condor(BasicWMS):
 					transferFiles.append(source)
 		if self.settings["jdl"]["Universe"].lower() == "docker":                
 			gcExec="./gc-run.sh"                                                
-			transferFiles.append(utils.path_share('gc-run.sh'))
+			transferFiles.append(utils.get_path_share('gc-run.sh'))
 		return (gcExec, transferFiles)
 
 
@@ -537,7 +537,7 @@ class Condor(BasicWMS):
 # _initPoolInterfaces: prepare commands and interfaces according to selected submit type
 	def _initPoolInterfaces(self, config):
 		# check submissal type
-		self.remoteType = config.getEnum('remote Type', PoolType, PoolType.LOCAL)
+		self.remoteType = config.get_enum('remote Type', PoolType, PoolType.LOCAL)
 		self.debugOut("Selected pool type: %s" % PoolType.enum2str(self.remoteType))
 
 		# get remote destination features
@@ -567,9 +567,9 @@ class Condor(BasicWMS):
 			# ssh type instructions are passed to the remote host via regular ssh/gsissh
 			host="%s%s"%(utils.QM(user,"%s@" % user,""), sched)
 			if self.remoteType == PoolType.SSH:
-				self.Pool=ProcessHandler.create_instance("SSHProcessHandler", remoteHost = host, sshLink = config.getWorkPath(".ssh", self._name + host))
+				self.Pool=ProcessHandler.create_instance("SSHProcessHandler", remoteHost = host, sshLink = config.get_work_path(".ssh", self._name + host))
 			else:
-				self.Pool=ProcessHandler.create_instance("GSISSHProcessHandler", remoteHost = host, sshLink = config.getWorkPath(".gsissh", self._name + host))
+				self.Pool=ProcessHandler.create_instance("GSISSHProcessHandler", remoteHost = host, sshLink = config.get_work_path(".gsissh", self._name + host))
 			# ssh type instructions rely on commands being available on remote pool
 			self.submitExec = 'condor_submit'
 			self.historyExec = 'condor_history'

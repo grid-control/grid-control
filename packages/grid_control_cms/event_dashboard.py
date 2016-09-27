@@ -15,7 +15,7 @@
 import os, time
 from grid_control.job_db import Job
 from grid_control.monitoring import Monitoring
-from grid_control.utils import filter_dict, get_version, merge_dict_list, path_share
+from grid_control.utils import filter_dict, get_path_share, get_version, merge_dict_list
 from grid_control.utils.thread_tools import GCThreadPool
 from grid_control_cms.DashboardAPI.DashboardAPI import DashboardAPI
 from python_compat import identity
@@ -27,17 +27,17 @@ class DashBoard(Monitoring):
 	def __init__(self, config, name, task):
 		Monitoring.__init__(self, config, name, task)
 		jobDesc = task.getDescription(None) # TODO: use the other variables for monitoring
-		self._app = config.get('application', 'shellscript', onChange = None)
-		self._runningMax = config.getTime('dashboard timeout', 5, onChange = None)
-		self._tasktype = config.get('task', jobDesc.jobType or 'analysis', onChange = None)
-		self._taskname = config.get('task name', '@GC_TASK_ID@_@DATASETNICK@', onChange = None)
+		self._app = config.get('application', 'shellscript', on_change = None)
+		self._runningMax = config.get_time('dashboard timeout', 5, on_change = None)
+		self._tasktype = config.get('task', jobDesc.jobType or 'analysis', on_change = None)
+		self._taskname = config.get('task name', '@GC_TASK_ID@_@DATASETNICK@', on_change = None)
 		self._statusMap = {Job.DONE: 'DONE', Job.FAILED: 'DONE', Job.SUCCESS: 'DONE',
 			Job.RUNNING: 'RUNNING', Job.ABORTED: 'ABORTED', Job.CANCELLED: 'CANCELLED'}
 		self._tp = GCThreadPool()
 
 
 	def getScript(self):
-		yield path_share('mon.dashboard.sh', pkg = 'grid_control_cms')
+		yield get_path_share('mon.dashboard.sh', pkg = 'grid_control_cms')
 
 
 	def getTaskConfig(self):
@@ -47,9 +47,9 @@ class DashBoard(Monitoring):
 
 
 	def getFiles(self):
-		yield path_share('mon.dashboard.sh', pkg = 'grid_control_cms')
+		yield get_path_share('mon.dashboard.sh', pkg = 'grid_control_cms')
 		for fn in ('DashboardAPI.py', 'Logger.py', 'apmon.py', 'report.py'):
-			yield path_share('..', 'DashboardAPI', fn, pkg = 'grid_control_cms')
+			yield get_path_share('..', 'DashboardAPI', fn, pkg = 'grid_control_cms')
 
 
 	def _publish(self, jobObj, jobNum, taskId, usermsg):

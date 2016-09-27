@@ -12,6 +12,7 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
+import logging
 from grid_control.utils.parsing import str_dict
 from hpfwk import APIError, NestedException, clear_current_exception
 from python_compat import ichain, ifilter, imap, lfilter, lmap, set, sorted, unspecified
@@ -166,6 +167,7 @@ class ConfigEntry(object):
 
 	def process_entries(cls, entry_iter):
 		result = None
+		entry_iter = iter(entry_iter)
 		entry_list_used = []
 		modifier_list = []
 		for entry in entry_iter:
@@ -180,7 +182,10 @@ class ConfigEntry(object):
 				modifier_list.append(entry)
 			elif entry.opttype in ['*=', '!=', '?=', '=']:  # set options
 				if entry.opttype == '*=':  # this option can not be changed by other config entries
-					# TODO: notify that subsequent config options will be ignored
+					log = logging.getLogger('config')
+					log.debug('The following matching entries following %s are discarded:%s',
+						entry.format(print_section=True),
+						str.join('', imap(lambda e: '\n\t' + e.format(print_section=True), entry_iter)))
 					return (entry, [entry])
 				elif entry.opttype == '=':  # set but don't apply collected modifiers
 					# subsequent modifiers apply!

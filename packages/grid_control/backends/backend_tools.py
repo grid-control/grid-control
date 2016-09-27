@@ -101,8 +101,8 @@ class ForwardingExecutor(BackendExecutor):
 class ChunkedExecutor(ForwardingExecutor):
 	def __init__(self, config, option_prefix, executor, def_chunk_size = 5, def_chunk_interval = 5):
 		ForwardingExecutor.__init__(self, config, executor)
-		self._chunk_size = config.getInt(add_config_suffix(option_prefix, 'chunk size'), def_chunk_size, onChange = None)
-		self._chunk_time = config.getInt(add_config_suffix(option_prefix, 'chunk interval'), def_chunk_interval, onChange = None)
+		self._chunk_size = config.get_int(add_config_suffix(option_prefix, 'chunk size'), def_chunk_size, on_change = None)
+		self._chunk_time = config.get_int(add_config_suffix(option_prefix, 'chunk interval'), def_chunk_interval, on_change = None)
 
 	def execute(self, wmsIDs, *args, **kwargs):
 		do_wait = False

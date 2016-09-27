@@ -38,7 +38,7 @@ class ARCAccessToken(GridAccessToken):
 			result += entry_map[entry] * value
 		return result
 
-	def _getTimeleft(self, cached):
+	def _get_timeleft(self, cached):
 		return min(
 			self._getProxyInfo('time left for proxy', self._parse_time, cached),
 			self._getProxyInfo('time left for ac', self._parse_time, cached))

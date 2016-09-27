@@ -17,7 +17,7 @@ from grid_control.parameters.pfactory_base import UserParameterFactory
 from grid_control.parameters.psource_base import NullParameterSource, ParameterSource
 from grid_control.parameters.psource_lookup import parse_lookup_factory_args
 from hpfwk import APIError
-from python_compat import ifilter, imap, irange, lchain, lfilter, lmap, next, reduce
+from python_compat import imap, irange, lchain, lfilter, lmap, next, reduce
 
 
 def clear_operator_stack(operator_list, operator_stack, token_stack):

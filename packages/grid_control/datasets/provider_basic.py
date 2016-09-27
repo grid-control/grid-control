@@ -57,8 +57,8 @@ class ListProvider(DataProvider):
 
 	def __init__(self, config, datasource_name, dataset_expr, dataset_nick = None, dataset_proc = None):
 		DataProvider.__init__(self, config, datasource_name, dataset_expr, dataset_nick, dataset_proc)
-		self._common_prefix = max(self.enumValues) + 1
-		self._common_metadata = max(self.enumValues) + 2
+		self._common_prefix = max(self.enum_value_list) + 1
+		self._common_metadata = max(self.enum_value_list) + 2
 
 		self._handleEntry = {
 			'events': (DataProvider.NEntries, int, 'block entry counter'),

@@ -33,17 +33,17 @@ class DataProvider(ConfigurablePlugin):
 		self._log = logging.getLogger('%s.provider' % datasource_name)
 		(self._datasource_name, self._dataset_expr, self._dataset_nick) = (datasource_name, dataset_expr, dataset_nick)
 		(self._cache_block, self._cache_dataset) = (None, None)
-		self._dataset_query_interval = config.getTime('%s default query interval' % datasource_name, 60, onChange = None)
+		self._dataset_query_interval = config.get_time('%s default query interval' % datasource_name, 60, on_change = None)
 
 		triggerDataResync = TriggerResync(['datasets', 'parameters'])
 		self._stats = dataset_proc or DataProcessor.create_instance('SimpleStatsDataProcessor', config, datasource_name,
 			triggerDataResync, self._log, ' * Dataset %s:\n\tcontains ' % repr(dataset_nick or dataset_expr))
-		self._nick_producer = config.getPlugin(['nickname source', '%s nickname source' % datasource_name], 'SimpleNickNameProducer',
-			cls = DataProcessor, pargs = (datasource_name, triggerDataResync), onChange = triggerDataResync)
-		self._dataset_processor = dataset_proc or config.getCompositePlugin('%s processor' % datasource_name,
+		self._nick_producer = config.get_plugin(['nickname source', '%s nickname source' % datasource_name], 'SimpleNickNameProducer',
+			cls = DataProcessor, pargs = (datasource_name, triggerDataResync), on_change = triggerDataResync)
+		self._dataset_processor = dataset_proc or config.get_composited_plugin('%s processor' % datasource_name,
 			'NickNameConsistencyProcessor EntriesConsistencyDataProcessor URLDataProcessor URLCountDataProcessor ' +
 			'EntriesCountDataProcessor EmptyDataProcessor UniqueDataProcessor LocationDataProcessor', 'MultiDataProcessor',
-			cls = DataProcessor, pargs = (datasource_name, triggerDataResync), onChange = triggerDataResync)
+			cls = DataProcessor, pargs = (datasource_name, triggerDataResync), on_change = triggerDataResync)
 
 
 	def bind(cls, value, **kwargs):

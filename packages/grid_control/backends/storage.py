@@ -30,7 +30,7 @@ class StorageError(NestedException):
 ensurePrefix = lambda fn: utils.QM('://' in fn, fn, 'file:////%s' % os.path.abspath(fn).lstrip('/'))
 
 def se_runcmd(cmd, varDict, *urls):
-	runLib = utils.path_share('gc-run.lib')
+	runLib = utils.get_path_share('gc-run.lib')
 	args = str.join(' ', imap(lambda x: '"%s"' % ensurePrefix(x).replace('dir://', 'file://'), urls))
 	varString = str.join(' ', imap(lambda x: 'export %s="%s";' % (x, varDict[x]), varDict))
 	return LocalProcess('/bin/bash', '-c', '. %s || exit 99; %s %s %s' % (runLib, varString, cmd, args))
@@ -69,7 +69,7 @@ class StorageManager(NamedPlugin):
 class LocalSBStorageManager(StorageManager):
 	def __init__(self, config, name, storage_type, storage_channel, storage_var_prefix):
 		StorageManager.__init__(self, config, name, storage_type, storage_channel, storage_var_prefix)
-		self._sandbox_path = config.getPath('%s path' % storage_type, config.getWorkPath('sandbox'), must_exist = False)
+		self._sandbox_path = config.get_path('%s path' % storage_type, config.get_work_path('sandbox'), must_exist = False)
 
 	def doTransfer(self, listDescSourceTarget):
 		for (desc, source, target) in listDescSourceTarget:
@@ -84,12 +84,12 @@ class SEStorageManager(StorageManager):
 	def __init__(self, config, name, storage_type, storage_channel, storage_var_prefix):
 		StorageManager.__init__(self, config, name, storage_type, storage_channel, storage_var_prefix)
 		normSEPath = lambda x: utils.QM(x[0] == '/', 'dir:///%s' % x.lstrip('/'), x)
-		self._storage_paths = config.getList(['%s path' % storage_type, '%s path' % storage_channel],
-			default = [], onValid = NoVarCheck(config), parseItem = normSEPath)
-		self._storage_files = config.getList('%s files' % storage_channel, [])
+		self._storage_paths = config.get_list(['%s path' % storage_type, '%s path' % storage_channel],
+			default = [], on_valid = NoVarCheck(config), parse_item = normSEPath)
+		self._storage_files = config.get_list('%s files' % storage_channel, [])
 		self._storage_pattern = config.get('%s pattern' % storage_channel, '@X@')
-		self._storage_timeout = config.getTime('%s timeout' % storage_channel, 2*60*60)
-		self._storage_force = config.getBool('%s force' % storage_channel, True)
+		self._storage_timeout = config.get_time('%s timeout' % storage_channel, 2*60*60)
+		self._storage_force = config.get_bool('%s force' % storage_channel, True)
 
 	def addFiles(self, files):
 		self._storage_files.extend(files)

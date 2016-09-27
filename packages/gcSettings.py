@@ -14,13 +14,14 @@
 
 # This class is used by the grid-control python config file parser
 
+
 class Settings(object):
 	_config = {}
 
-	def __init__(self, section = None):
-		self._s = section
+	def __init__(self, section=None):
+		self._section = section
 
-	def section(self, section, name = '', **tags):
+	def section(self, section, name='', **tags):
 		section_parts = [section]
 		if name:
 			section_parts.append(name)
@@ -28,25 +29,25 @@ class Settings(object):
 			section_parts.append('%s:%s' % (key, tags[key]))
 		return Settings(str.join(' ', section_parts))
 
-	def set(self, name, value, override = False, append = False, force = False):
+	def set(self, name, value, override=False, append=False, force=False):
 		if isinstance(value, list):
 			value = str.join('\n\t', value)
 		mod = dict([(override, '?'), (append, '+'), (force, '*')]).get(True, '')
-		Settings._config.setdefault(self._s, []).append((name.replace('_', ' '), mod, value))
+		Settings._config.setdefault(self._section, []).append((name.replace('_', ' '), mod, value))
 
 	def __getattribute__(self, name):
-		if name in ['_s', 'section', 'set', 'getConfigDict']:
+		if name in ['_section', 'section', 'set', 'get_config_dict', 'getConfigDict']:
 			return object.__getattribute__(self, name)
 		return self.section(name)
 
 	def __setattr__(self, name, value):
-		if name == '_s':
+		if name == '_section':
 			return object.__setattr__(self, name, value)
 		return self.set(name, value)
 
 	def __str__(self):
 		result = []
-		sections = list(Settings._config.keys()) # manual sort for older python versions
+		sections = list(Settings._config.keys())  # manual sort for older python versions
 		sections.sort()
 		for section in sections:
 			result.append('[%s]' % section)
@@ -55,11 +56,12 @@ class Settings(object):
 			result.append('')
 		return str.join('\n', result)
 
-	def getConfigDict(cls):
+	def get_config_dict(cls):
 		result = {}
 		for section in Settings._config:
 			result[section] = {}
 			for (opt, mod, val) in Settings._config[section]:
 				result[section][opt + mod] = str(val)
 		return result
-	getConfigDict = classmethod(getConfigDict)
+	get_config_dict = classmethod(get_config_dict)
+	getConfigDict = classmethod(get_config_dict)

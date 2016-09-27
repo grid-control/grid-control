@@ -42,7 +42,7 @@ class PartitionProcessor(ConfigurablePlugin):
 class MultiPartitionProcessor(PartitionProcessor):
 	def __init__(self, config, processor_list, datasource_name):
 		PartitionProcessor.__init__(self, config, datasource_name)
-		do_prune = config.getBool(['partition processor prune', '%s partition processor prune' % datasource_name], True, onChange = None)
+		do_prune = config.get_bool(['partition processor prune', '%s partition processor prune' % datasource_name], True, on_change = None)
 		self._processor_list = prune_processors(do_prune, processor_list, self._log, 'Removed %d inactive partition processors!')
 
 	def get_needed_vn_list(self, splitter):

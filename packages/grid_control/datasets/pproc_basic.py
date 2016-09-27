@@ -24,10 +24,10 @@ class BasicPartitionProcessor(PartitionProcessor):
 
 	def __init__(self, config, datasource_name):
 		PartitionProcessor.__init__(self, config, datasource_name)
-		self._vn_file_names = config.get(['partition variable file names', '%s partition variable file names' % datasource_name], 'FILE_NAMES', onChange = None)
-		self._vn_max_events = config.get(['partition variable max events', '%s partition variable max events' % datasource_name], 'MAX_EVENTS', onChange = None)
-		self._vn_skip_events = config.get(['partition variable skip events', '%s partition variable skip events' % datasource_name], 'SKIP_EVENTS', onChange = None)
-		self._vn_prefix = config.get(['partition variable prefix', '%s partition variable prefix' % datasource_name], 'DATASET', onChange = None)
+		self._vn_file_names = config.get(['partition variable file names', '%s partition variable file names' % datasource_name], 'FILE_NAMES', on_change = None)
+		self._vn_max_events = config.get(['partition variable max events', '%s partition variable max events' % datasource_name], 'MAX_EVENTS', on_change = None)
+		self._vn_skip_events = config.get(['partition variable skip events', '%s partition variable skip events' % datasource_name], 'SKIP_EVENTS', on_change = None)
+		self._vn_prefix = config.get(['partition variable prefix', '%s partition variable prefix' % datasource_name], 'DATASET', on_change = None)
 
 	def get_needed_vn_list(self, splitter):
 		map_splitter_enum2vn = {
@@ -68,11 +68,11 @@ class LocationPartitionProcessor(PartitionProcessor):
 
 	def __init__(self, config, datasource_name):
 		PartitionProcessor.__init__(self, config, datasource_name)
-		self._filter = config.getFilter(['partition location filter', '%s partition location filter' % datasource_name],
-			default = '', onChange = None, defaultMatcher = 'blackwhite', defaultFilter = 'weak')
-		self._preference = config.getList(['partition location preference', '%s partition location preference' % datasource_name], [], onChange = None)
-		self._reqs = config.getBool(['partition location requirement', '%s partition location requirement' % datasource_name], True, onChange = None)
-		self._disable = config.getBool(['partition location check', '%s partition location check' % datasource_name], True, onChange = None)
+		self._filter = config.get_filter(['partition location filter', '%s partition location filter' % datasource_name],
+			default = '', on_change = None, default_matcher = 'blackwhite', default_filter = 'weak')
+		self._preference = config.get_list(['partition location preference', '%s partition location preference' % datasource_name], [], on_change = None)
+		self._reqs = config.get_bool(['partition location requirement', '%s partition location requirement' % datasource_name], True, on_change = None)
+		self._disable = config.get_bool(['partition location check', '%s partition location check' % datasource_name], True, on_change = None)
 
 	def enabled(self):
 		return self._filter.get_selector() or self._preference or self._reqs or self._disable
@@ -97,7 +97,7 @@ class MetaPartitionProcessor(PartitionProcessor):
 
 	def __init__(self, config, datasource_name):
 		PartitionProcessor.__init__(self, config, datasource_name)
-		self._metadata_list = config.getList(['partition metadata', '%s partition metadata' % datasource_name], [], onChange = None)
+		self._metadata_list = config.get_list(['partition metadata', '%s partition metadata' % datasource_name], [], on_change = None)
 
 	def enabled(self):
 		return self._metadata_list != []
@@ -123,12 +123,12 @@ class RequirementsPartitionProcessor(PartitionProcessor):
 
 	def __init__(self, config, datasource_name):
 		PartitionProcessor.__init__(self, config, datasource_name)
-		self._wt_offset = config.getFloat(['partition walltime offset', '%s partition walltime offset' % datasource_name], 0., onChange = None)
-		self._wt_factor = config.getFloat(['partition walltime factor', '%s partition walltime factor' % datasource_name], 0., onChange = None)
-		self._ct_offset = config.getFloat(['partition cputime offset', '%s partition cputime offset' % datasource_name], 0., onChange = None)
-		self._ct_factor = config.getFloat(['partition cputime factor', '%s partition cputime factor' % datasource_name], 0., onChange = None)
-		self._mem_offset = config.getFloat(['partition memory offset', '%s partition memory offset' % datasource_name], 0., onChange = None)
-		self._mem_factor = config.getFloat(['partition memory factor', '%s partition memory factor' % datasource_name], 0., onChange = None)
+		self._wt_offset = config.get_float(['partition walltime offset', '%s partition walltime offset' % datasource_name], 0., on_change = None)
+		self._wt_factor = config.get_float(['partition walltime factor', '%s partition walltime factor' % datasource_name], 0., on_change = None)
+		self._ct_offset = config.get_float(['partition cputime offset', '%s partition cputime offset' % datasource_name], 0., on_change = None)
+		self._ct_factor = config.get_float(['partition cputime factor', '%s partition cputime factor' % datasource_name], 0., on_change = None)
+		self._mem_offset = config.get_float(['partition memory offset', '%s partition memory offset' % datasource_name], 0., on_change = None)
+		self._mem_factor = config.get_float(['partition memory factor', '%s partition memory factor' % datasource_name], 0., on_change = None)
 
 	def enabled(self):
 		return any(imap(lambda x: x > 0, [self._wt_factor, self._ct_factor, self._mem_factor,
@@ -152,7 +152,7 @@ class TFCPartitionProcessor(PartitionProcessor):
 
 	def __init__(self, config, datasource_name):
 		PartitionProcessor.__init__(self, config, datasource_name)
-		self._tfc = config.getLookup(['partition tfc', '%s partition tfc' % datasource_name], {}, onChange = None)
+		self._tfc = config.get_lookup(['partition tfc', '%s partition tfc' % datasource_name], {}, on_change = None)
 
 	def enabled(self):
 		return not self._tfc.empty()

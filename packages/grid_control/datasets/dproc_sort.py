@@ -22,10 +22,10 @@ class SortingDataProcessor(DataProcessor):
 
 	def __init__(self, config, datasource_name, on_change):
 		DataProcessor.__init__(self, config, datasource_name, on_change)
-		self._sort_ds = config.getBool('%s sort' % datasource_name, False, onChange = on_change)
-		self._sort_block = config.getBool('%s block sort' % datasource_name, False, onChange = on_change)
-		self._sort_files = config.getBool('%s files sort' % datasource_name, False, onChange = on_change)
-		self._sort_location = config.getBool('%s location sort' % datasource_name, False, onChange = on_change)
+		self._sort_ds = config.get_bool('%s sort' % datasource_name, False, on_change = on_change)
+		self._sort_block = config.get_bool('%s block sort' % datasource_name, False, on_change = on_change)
+		self._sort_files = config.get_bool('%s files sort' % datasource_name, False, on_change = on_change)
+		self._sort_location = config.get_bool('%s location sort' % datasource_name, False, on_change = on_change)
 
 	def enabled(self):
 		return self._sort_ds or self._sort_block or self._sort_files or self._sort_location

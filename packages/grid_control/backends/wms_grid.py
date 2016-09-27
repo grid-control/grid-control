@@ -130,15 +130,15 @@ class GridWMS(BasicWMS):
 		config.set('access token', 'VomsProxy')
 		BasicWMS.__init__(self, config, name, checkExecutor = checkExecutor, cancelExecutor = cancelExecutor)
 
-		self.brokerSite = config.getPlugin('site broker', 'UserBroker',
+		self.brokerSite = config.get_plugin('site broker', 'UserBroker',
 			cls = Broker, tags = [self], pargs = ('sites', 'sites', self.getSites))
 		self.vo = config.get('vo', self._token.getGroup())
 
 		self._submitParams = {}
-		self._ce = config.get('ce', '', onChange = None)
-		self._configVO = config.getPath('config', '', onChange = None)
-		self._warnSBSize = config.getInt('warn sb size', 5, onChange = None)
-		self._jobPath = config.getWorkPath('jobs')
+		self._ce = config.get('ce', '', on_change = None)
+		self._configVO = config.get_path('config', '', on_change = None)
+		self._warnSBSize = config.get_int('warn sb size', 5, on_change = None)
+		self._jobPath = config.get_work_path('jobs')
 		self._jdl_writer = jdlWriter or JDLWriter()
 
 

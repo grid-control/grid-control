@@ -83,7 +83,7 @@ class CreamWMS(GridWMS):
 		GridWMS.__init__(self, config, name, checkExecutor = CREAM_CheckJobs(config),
 			cancelExecutor = ChunkedExecutor(config, 'cancel', cancelExecutor))
 
-		self._nJobsPerChunk = config.getInt('job chunk size', 10, onChange = None)
+		self._nJobsPerChunk = config.get_int('job chunk size', 10, on_change = None)
 
 		self._submitExec = utils.resolve_install_path('glite-ce-job-submit')
 		self._outputExec = utils.resolve_install_path('glite-ce-job-output')

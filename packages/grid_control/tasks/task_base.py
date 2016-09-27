@@ -42,7 +42,7 @@ class ConfigurableJobName(JobNamePlugin):
 
 	def __init__(self, config):
 		JobNamePlugin.__init__(self, config)
-		self._name = config.get('job name', '@GC_TASK_ID@.@GC_JOB_ID@', onChange = None)
+		self._name = config.get('job name', '@GC_TASK_ID@.@GC_JOB_ID@', on_change = None)
 
 	def getName(self, task, jobNum):
 		return task.substVars('job name', self._name, jobNum)
@@ -59,49 +59,49 @@ class TaskModule(NamedPlugin):
 		self._varCheck = NoVarCheck(config)
 
 		# Task requirements
-		jobs_config = config.changeView(view_class = 'TaggedConfigView', addSections = ['jobs'], addTags = [self]) # Move this into parameter manager?
-		self.wallTime = jobs_config.getTime('wall time', onChange = None)
-		self.cpuTime = jobs_config.getTime('cpu time', self.wallTime, onChange = None)
-		self.cpus = jobs_config.getInt('cpus', 1, onChange = None)
-		self.memory = jobs_config.getInt('memory', -1, onChange = None)
-		self.nodeTimeout = jobs_config.getTime('node timeout', -1, onChange = initSandbox)
+		jobs_config = config.change_view(view_class = 'TaggedConfigView', addSections = ['jobs'], addTags = [self]) # Move this into parameter manager?
+		self.wallTime = jobs_config.get_time('wall time', on_change = None)
+		self.cpuTime = jobs_config.get_time('cpu time', self.wallTime, on_change = None)
+		self.cpus = jobs_config.get_int('cpus', 1, on_change = None)
+		self.memory = jobs_config.get_int('memory', -1, on_change = None)
+		self.nodeTimeout = jobs_config.get_time('node timeout', -1, on_change = initSandbox)
 
 		# Compute / get task ID
 		self.taskID = config.get('task id', 'GC' + md5_hex(str(time()))[:12], persistent = True)
-		self.taskDate = config.get('task date', strftime('%Y-%m-%d'), persistent = True, onChange = initSandbox)
-		self.taskConfigName = config.getConfigName()
-		self._job_name_generator = config.getPlugin('job name generator', 'DefaultJobName', cls = JobNamePlugin)
+		self.taskDate = config.get('task date', strftime('%Y-%m-%d'), persistent = True, on_change = initSandbox)
+		self.taskConfigName = config.get_config_name()
+		self._job_name_generator = config.get_plugin('job name generator', 'DefaultJobName', cls = JobNamePlugin)
 
 		# Storage setup
-		storage_config = config.changeView(view_class = 'TaggedConfigView',
+		storage_config = config.change_view(view_class = 'TaggedConfigView',
 			setClasses = None, setNames = None, addSections = ['storage'], addTags = [self])
 		self.taskVariables = {
 			# Space limits
-			'SCRATCH_UL': storage_config.getInt('scratch space used', 5000, onChange = initSandbox),
-			'SCRATCH_LL': storage_config.getInt('scratch space left', 1, onChange = initSandbox),
-			'LANDINGZONE_UL': storage_config.getInt('landing zone space used', 100, onChange = initSandbox),
-			'LANDINGZONE_LL': storage_config.getInt('landing zone space left', 1, onChange = initSandbox),
+			'SCRATCH_UL': storage_config.get_int('scratch space used', 5000, on_change = initSandbox),
+			'SCRATCH_LL': storage_config.get_int('scratch space left', 1, on_change = initSandbox),
+			'LANDINGZONE_UL': storage_config.get_int('landing zone space used', 100, on_change = initSandbox),
+			'LANDINGZONE_LL': storage_config.get_int('landing zone space left', 1, on_change = initSandbox),
 		}
 		storage_config.set('se output pattern', 'job_@GC_JOB_ID@_@X@')
-		self.seMinSize = storage_config.getInt('se min size', -1, onChange = initSandbox)
+		self.seMinSize = storage_config.get_int('se min size', -1, on_change = initSandbox)
 
-		self.sbInputFiles = config.getPaths('input files', [], onChange = initSandbox)
-		self.sbOutputFiles = config.getList('output files', [], onChange = initSandbox)
-		self.gzipOut = config.getBool('gzip output', True, onChange = initSandbox)
+		self.sbInputFiles = config.get_path_list('input files', [], on_change = initSandbox)
+		self.sbOutputFiles = config.get_list('output files', [], on_change = initSandbox)
+		self.gzipOut = config.get_bool('gzip output', True, on_change = initSandbox)
 
-		self._subst_files = config.getList('subst files', [], onChange = initSandbox)
-		self.dependencies = lmap(str.lower, config.getList('depends', [], onChange = initSandbox))
+		self._subst_files = config.get_list('subst files', [], on_change = initSandbox)
+		self.dependencies = lmap(str.lower, config.get_list('depends', [], on_change = initSandbox))
 
 		# Get error messages from gc-run.lib comments
 		self.errorDict = {}
-		self.updateErrorDict(utils.path_share('gc-run.lib'))
+		self.updateErrorDict(utils.get_path_share('gc-run.lib'))
 
 		# Init parameter source manager
 		psrc_repository = {}
 		self._setup_repository(config, psrc_repository)
-		pfactory = config.getPlugin('internal parameter factory', 'BasicParameterFactory',
+		pfactory = config.get_plugin('internal parameter factory', 'BasicParameterFactory',
 			cls = ParameterFactory, tags = [self], inherit = True)
-		self.source = config.getPlugin('parameter adapter', 'TrackedParameterAdapter',
+		self.source = config.get_plugin('parameter adapter', 'TrackedParameterAdapter',
 			cls = ParameterAdapter, pargs = (pfactory.get_source(psrc_repository),))
 		self._log.log(logging.DEBUG3, 'Using parameter adapter %s', repr(self.source))
 
@@ -128,7 +128,7 @@ class TaskModule(NamedPlugin):
 			'SB_INPUT_FILES': str.join(' ', imap(lambda x: x.path_rel, self.getSBInFiles())),
 			# Runtime
 			'GC_JOBTIMEOUT': self.nodeTimeout,
-			'GC_RUNTIME': self.getCommand(),
+			'GC_RUNTIME': self.get_command(),
 			# Seeds and substitutions
 			'SUBST_FILES': str.join(' ', imap(os.path.basename, self.getSubstFiles())),
 			'GC_SUBST_OLD_STYLE': str('__' in self._varCheck.markers).lower(),
@@ -139,7 +139,7 @@ class TaskModule(NamedPlugin):
 			'GC_VERSION': utils.get_version(),
 		}
 		return utils.merge_dict_list([taskConfig, self.taskVariables])
-	getTaskConfig = lru_cache(getTaskConfig)
+	getTaskConfig = lru_cache()(getTaskConfig)
 
 
 	# Get job dependent environment variables
@@ -219,7 +219,7 @@ class TaskModule(NamedPlugin):
 		return list(self._subst_files)
 
 
-	def getCommand(self):
+	def get_command(self):
 		raise AbstractError
 
 
@@ -249,5 +249,5 @@ class TaskModule(NamedPlugin):
 
 
 	# Intervene in job management - return (redoJobs, disableJobs, size_change)
-	def getIntervention(self):
+	def get_intervention(self):
 		return self.source.resync()

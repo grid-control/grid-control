@@ -35,12 +35,12 @@ class LFNPartitionProcessor(PartitionProcessor):
 
 	def __init__(self, config, datasource_name):
 		PartitionProcessor.__init__(self, config, datasource_name)
-		lfnModifier = config.get(['partition lfn modifier', '%s partition lfn modifier' % datasource_name], '', onChange = None)
-		lfnModifierShortcuts = config.getDict(['partition lfn modifier dict', '%s partition lfn modifier dict' % datasource_name], {
+		lfnModifier = config.get(['partition lfn modifier', '%s partition lfn modifier' % datasource_name], '', on_change = None)
+		lfnModifierShortcuts = config.get_dict(['partition lfn modifier dict', '%s partition lfn modifier dict' % datasource_name], {
 			'<xrootd>': 'root://cms-xrd-global.cern.ch/',
 			'<xrootd:eu>': 'root://xrootd-cms.infn.it/',
 			'<xrootd:us>': 'root://cmsxrootd.fnal.gov/',
-		}, onChange = None)[0]
+		}, on_change = None)[0]
 		self._prefix = None
 		if lfnModifier == '/':
 			self._prefix = '/store/'
@@ -82,7 +82,7 @@ class SCRAMTask(DataTask):
 
 		# SCRAM settings
 		scramArchDefault = unspecified
-		scramProject = config.getList('scram project', [])
+		scramProject = config.get_list('scram project', [])
 		if scramProject: # manual scram setup
 			if len(scramProject) != 2:
 				raise ConfigError('%r needs exactly 2 arguments: <PROJECT> <VERSION>' % 'scram project')
@@ -91,12 +91,12 @@ class SCRAMTask(DataTask):
 			self._scramProject = scramProject[0]
 			self._scramProjectVersion = scramProject[1]
 			# ensure project area is not used
-			if 'project area' in config.getOptions():
+			if 'project area' in config.get_option_list():
 				raise ConfigError('Cannot specify both %r and %r' % ('scram project', 'project area'))
 
 		else: # scram setup used from project area
-			self._projectArea = config.getPath('project area')
-			self._projectAreaPattern = config.getList('area files', ['-.*', '-config', 'bin', 'lib', 'python', 'module',
+			self._projectArea = config.get_path('project area')
+			self._projectAreaPattern = config.get_list('area files', ['-.*', '-config', 'bin', 'lib', 'python', 'module',
 				'*/data', '*.xml', '*.sql', '*.db', '*.cf[if]', '*.py', '-*/.git', '-*/.svn', '-*/CVS', '-*/work.*']) + ['*.pcm'] # FIXME
 			self._log.info('Project area found in: %s', self._projectArea)
 
@@ -116,11 +116,11 @@ class SCRAMTask(DataTask):
 		self._scramArch = config.get('scram arch', scramArchDefault)
 
 		self._scramReqs = []
-		if config.getBool('scram arch requirements', True, onChange = None):
+		if config.get_bool('scram arch requirements', True, on_change = None):
 			self._scramReqs.append((WMS.SOFTWARE, 'VO-cms-%s' % self._scramArch))
-		if config.getBool('scram project requirements', False, onChange = None):
+		if config.get_bool('scram project requirements', False, on_change = None):
 			self._scramReqs.append((WMS.SOFTWARE, 'VO-cms-%s' % self._scramProject))
-		if config.getBool('scram project version requirements', False, onChange = None):
+		if config.get_bool('scram project version requirements', False, on_change = None):
 			self._scramReqs.append((WMS.SOFTWARE, 'VO-cms-%s' % self._scramProjectVersion))
 
 
@@ -163,7 +163,7 @@ class CMSSW(SCRAMTask):
 		config.set('dataset processor', 'LumiDataProcessor', '+=')
 		config.set('partition processor', 'TFCPartitionProcessor LocationPartitionProcessor MetaPartitionProcessor ' +
 			'LFNPartitionProcessor LumiPartitionProcessor CMSSWPartitionProcessor')
-		dash_config = config.changeView(view_class = 'SimpleConfigView', setSections = ['dashboard'])
+		dash_config = config.change_view(view_class = 'SimpleConfigView', setSections = ['dashboard'])
 		dash_config.set('application', 'cmsRun')
 
 		self._neededVars = set()
@@ -176,15 +176,15 @@ class CMSSW(SCRAMTask):
 		if self._projectArea:
 			self._oldReleaseTop = self._parse_scram_file(os.path.join(self._projectArea, '.SCRAM', self._scramArch, 'Environment')).get('RELEASETOP', None)
 
-		self.updateErrorDict(utils.path_share('gc-run.cmssw.sh', pkg = 'grid_control_cms'))
+		self.updateErrorDict(utils.get_path_share('gc-run.cmssw.sh', pkg = 'grid_control_cms'))
 
-		self._projectAreaTarballSE = config.getBool(['se runtime', 'se project area'], True)
-		self._projectAreaTarball = config.getWorkPath('cmssw-project-area.tar.gz')
+		self._projectAreaTarballSE = config.get_bool(['se runtime', 'se project area'], True)
+		self._projectAreaTarball = config.get_work_path('cmssw-project-area.tar.gz')
 
 		# Prolog / Epilog script support - warn about old syntax
 		self.prolog = TaskExecutableWrapper(config, 'prolog', '')
 		self.epilog = TaskExecutableWrapper(config, 'epilog', '')
-		if config.getPaths('executable', []) != []:
+		if config.get_path_list('executable', []) != []:
 			raise ConfigError('Prefix executable and argument options with either prolog or epilog!')
 		self.arguments = config.get('arguments', '')
 
@@ -193,17 +193,17 @@ class CMSSW(SCRAMTask):
 		if not self._has_dataset:
 			self.eventsPerJob = config.get('events per job', '0') # this can be a variable like @USER_EVENTS@!
 			self._neededVars.add('MAX_EVENTS')
-		fragment = config.getPath('instrumentation fragment', utils.path_share('fragmentForCMSSW.py', pkg = 'grid_control_cms'))
+		fragment = config.get_path('instrumentation fragment', utils.get_path_share('fragmentForCMSSW.py', pkg = 'grid_control_cms'))
 		self._config_file_list = self._processConfigFiles(config, list(self._getConfigFiles(config)), fragment,
-			autoPrepare = config.getBool('instrumentation', True),
+			autoPrepare = config.get_bool('instrumentation', True),
 			mustPrepare = self._has_dataset)
 
 		# Create project area tarball
 		if self._projectArea and not os.path.exists(self._projectAreaTarball):
-			config.setState(True, 'init', detail = 'sandbox')
+			config.set_state(True, 'init', detail = 'sandbox')
 		# Information about search order for software environment
 		self.searchLoc = self._getCMSSWPaths(config)
-		if config.getState('init', detail = 'sandbox'):
+		if config.get_state('init', detail = 'sandbox'):
 			if os.path.exists(self._projectAreaTarball):
 				if not utils.get_user_bool('CMSSW tarball already exists! Do you want to regenerate it?', True):
 					return
@@ -211,7 +211,7 @@ class CMSSW(SCRAMTask):
 			if self._projectArea:
 				utils.create_tarball(self._projectAreaTarball, utils.match_files(self._projectArea, self._projectAreaPattern))
 			if self._projectAreaTarballSE:
-				config.setState(True, 'init', detail = 'storage')
+				config.set_state(True, 'init', detail = 'storage')
 
 
 	def _create_datasource(self, config, name, psrc_repository):
@@ -243,7 +243,7 @@ class CMSSW(SCRAMTask):
 
 	def _getConfigFiles(self, config):
 		cfgDefault = utils.QM(self.prolog.isActive() or self.epilog.isActive(), [], unspecified)
-		for cfgFile in config.getPaths('config file', cfgDefault, must_exist = False):
+		for cfgFile in config.get_path_list('config file', cfgDefault, must_exist = False):
 			if not os.path.exists(cfgFile):
 				raise ConfigError('Config file %r not found.' % cfgFile)
 			yield cfgFile
@@ -285,7 +285,7 @@ class CMSSW(SCRAMTask):
 		cfgTodo = []
 		cfgStatus = []
 		for cfg in cfgFiles:
-			cfg_new = config.getWorkPath(os.path.basename(cfg))
+			cfg_new = config.get_work_path(os.path.basename(cfg))
 			cfg_new_exists = os.path.exists(cfg_new)
 			if cfg_new_exists:
 				isInstrumented = self._cfgIsInstrumented(cfg_new)
@@ -315,7 +315,7 @@ class CMSSW(SCRAMTask):
 
 		result = []
 		for cfg in cfgFiles:
-			cfg_new = config.getWorkPath(os.path.basename(cfg))
+			cfg_new = config.get_work_path(os.path.basename(cfg))
 			if not os.path.exists(cfg_new):
 				raise ConfigError('Config file %r was not copied to the work directory!' % cfg)
 			isInstrumented = self._cfgIsInstrumented(cfg_new)
@@ -339,11 +339,11 @@ class CMSSW(SCRAMTask):
 		data['CMSSW_CONFIG'] = str.join(' ', imap(os.path.basename, self._config_file_list))
 		data['CMSSW_OLD_RELEASETOP'] = self._oldReleaseTop
 		if self.prolog.isActive():
-			data['CMSSW_PROLOG_EXEC'] = self.prolog.getCommand()
+			data['CMSSW_PROLOG_EXEC'] = self.prolog.get_command()
 			data['CMSSW_PROLOG_SB_IN_FILES'] = str.join(' ', imap(lambda x: x.path_rel, self.prolog.getSBInFiles()))
 			data['CMSSW_PROLOG_ARGS'] = self.prolog.getArguments()
 		if self.epilog.isActive():
-			data['CMSSW_EPILOG_EXEC'] = self.epilog.getCommand()
+			data['CMSSW_EPILOG_EXEC'] = self.epilog.get_command()
 			data['CMSSW_EPILOG_SB_IN_FILES'] = str.join(' ', imap(lambda x: x.path_rel, self.epilog.getSBInFiles()))
 			data['CMSSW_EPILOG_ARGS'] = self.epilog.getArguments()
 		return data
@@ -364,7 +364,7 @@ class CMSSW(SCRAMTask):
 			files.append(utils.Result(path_abs = cfgFile, path_rel = os.path.basename(cfgFile)))
 		if self._projectArea and not self._projectAreaTarballSE:
 			files.append(utils.Result(path_abs = self._projectAreaTarball, path_rel = os.path.basename(self._projectAreaTarball)))
-		return files + [utils.Result(path_abs = utils.path_share('gc-run.cmssw.sh', pkg = 'grid_control_cms'), path_rel = 'gc-run.cmssw.sh')]
+		return files + [utils.Result(path_abs = utils.get_path_share('gc-run.cmssw.sh', pkg = 'grid_control_cms'), path_rel = 'gc-run.cmssw.sh')]
 
 
 	# Get files for output sandbox
@@ -374,7 +374,7 @@ class CMSSW(SCRAMTask):
 		return SCRAMTask.getSBOutFiles(self) + utils.QM(self.gzipOut, ['cmssw.log.gz'], []) + ['cmssw.dbs.tar.gz']
 
 
-	def getCommand(self):
+	def get_command(self):
 		return './gc-run.cmssw.sh $@'
 
 

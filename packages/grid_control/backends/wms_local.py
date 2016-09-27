@@ -30,7 +30,7 @@ local_purge_lock = GCLock()
 class SandboxHelper(object):
 	def __init__(self, config):
 		self._cache = []
-		self._path = config.getPath('sandbox path', config.getWorkPath('sandbox'), must_exist = False)
+		self._path = config.get_path('sandbox path', config.get_work_path('sandbox'), must_exist = False)
 		utils.ensure_dir_exists(self._path, 'sandbox base', BackendError)
 
 	def get_path(self):
@@ -80,8 +80,8 @@ class LocalWMS(BasicWMS):
 
 	def __init__(self, config, name, submitExec, checkExecutor, cancelExecutor, nodesFinder = None, queuesFinder = None):
 		config.set('broker', 'RandomBroker')
-		config.setInt('wait idle', 20)
-		config.setInt('wait work', 5)
+		config.set_int('wait idle', 20)
+		config.set_int('wait work', 5)
 		self.submitExec = submitExec
 		self._sandbox_helper = SandboxHelper(config)
 		BasicWMS.__init__(self, config, name, checkExecutor = checkExecutor,
@@ -91,7 +91,7 @@ class LocalWMS(BasicWMS):
 			if nodesFinder:
 				return lmap(lambda x: x['name'], self._nodes_finder.discover())
 
-		self.brokerSite = config.getPlugin('site broker', 'UserBroker', cls = Broker,
+		self.brokerSite = config.get_plugin('site broker', 'UserBroker', cls = Broker,
 			inherit = True, tags = [self], pargs = ('sites', 'sites', getNodes))
 
 		def getQueues():
@@ -101,12 +101,12 @@ class LocalWMS(BasicWMS):
 					result[entry.pop('name')] = entry
 				return result
 
-		self.brokerQueue = config.getPlugin('queue broker', 'UserBroker', cls = Broker,
+		self.brokerQueue = config.get_plugin('queue broker', 'UserBroker', cls = Broker,
 			inherit = True, tags = [self], pargs = ('queue', 'queues', getQueues))
 
-		self.scratchPath = config.getList('scratch path', ['TMPDIR', '/tmp'], onChange = True)
-		self.submitOpts = config.get('submit options', '', onChange = None)
-		self.memory = config.getInt('memory', -1, onChange = None)
+		self.scratchPath = config.get_list('scratch path', ['TMPDIR', '/tmp'], on_change = True)
+		self.submitOpts = config.get('submit options', '', on_change = None)
+		self.memory = config.get_int('memory', -1, on_change = None)
 
 
 	# Submit job and yield (jobNum, WMS ID, other data)
@@ -133,7 +133,7 @@ class LocalWMS(BasicWMS):
 		jobName = module.getDescription(jobNum).jobName
 		submit_args = shlex.split(self.submitOpts)
 		submit_args.extend(shlex.split(self.getSubmitArguments(jobNum, jobName, reqs, sandbox, stdout, stderr)))
-		submit_args.append(utils.path_share('gc-local.sh'))
+		submit_args.append(utils.get_path_share('gc-local.sh'))
 		submit_args.extend(shlex.split(self.getJobArguments(jobNum, sandbox)))
 		proc = LocalProcess(self.submitExec, *submit_args)
 		retCode = proc.status(timeout = 20, terminate = True)
@@ -207,7 +207,7 @@ class Local(WMS):
 				wmsCls = WMS.get_class(wms)
 			except Exception:
 				raise BackendError('Unable to load backend class %s' % repr(wms))
-			wms_config = config.changeView(view_class = 'TaggedConfigView', setClasses = [wmsCls])
+			wms_config = config.change_view(view_class = 'TaggedConfigView', setClasses = [wmsCls])
 			return WMS.create_instance(wms, wms_config, name)
 		wms = config.get('wms', '')
 		if wms:

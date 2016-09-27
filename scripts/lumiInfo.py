@@ -164,7 +164,7 @@ def main(opts, args):
 
 	if opts.job_json or opts.job_gc or opts.job_events:
 		(config, jobDB) = initGC(args)
-		workDir = config.getWorkPath()
+		workDir = config.get_work_path()
 		splitter = None
 		try:
 			splitter = DataSplitter.load_partitions_for_script(os.path.join(workDir, 'datamap.tar'))

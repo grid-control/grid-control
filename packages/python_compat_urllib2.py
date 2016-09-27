@@ -1458,7 +1458,7 @@ class CacheFTPHandler(FTPHandler):
         self.delay = 60
         self.max_conns = 16
 
-    def setTimeout(self, t):
+    def set_timeout(self, t):
         self.delay = t
 
     def setMaxConns(self, m):

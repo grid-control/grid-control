@@ -51,7 +51,7 @@ class DataProcessor(ConfigurablePlugin):
 class MultiDataProcessor(DataProcessor):
 	def __init__(self, config, processor_list, datasource_name, on_change):
 		DataProcessor.__init__(self, config, datasource_name, on_change)
-		do_prune = config.getBool('%s processor prune' % datasource_name, True, onChange = on_change)
+		do_prune = config.get_bool('%s processor prune' % datasource_name, True, on_change = on_change)
 		self._processor_list = prune_processors(do_prune, processor_list, self._log, 'Removed %d inactive dataset processors!')
 
 	def process(self, block_iter):

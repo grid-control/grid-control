@@ -30,26 +30,26 @@ CMSLocationFormat = make_enum(['hostname', 'siteDB', 'both'])
 class CMSBaseProvider(DataProvider):
 	def __init__(self, config, datasource_name, dataset_expr, dataset_nick = None):
 		self._changeTrigger = TriggerResync(['datasets', 'parameters'])
-		self._lumi_filter = config.getLookup(['lumi filter', '%s lumi filter' % datasource_name],
-			default = {}, parser = parseLumiFilter, strfun = strLumi, onChange = self._changeTrigger)
+		self._lumi_filter = config.get_lookup(['lumi filter', '%s lumi filter' % datasource_name],
+			default = {}, parser = parseLumiFilter, strfun = strLumi, on_change = self._changeTrigger)
 		if not self._lumi_filter.empty():
 			config.set('%s processor' % datasource_name, 'LumiDataProcessor', '+=')
 		DataProvider.__init__(self, config, datasource_name, dataset_expr, dataset_nick)
 		# LumiDataProcessor instantiated in DataProcessor.__ini__ will set lumi metadata as well
-		self._lumi_query = config.getBool(['lumi metadata', '%s lumi metadata' % datasource_name],
-			default = not self._lumi_filter.empty(), onChange = self._changeTrigger)
+		self._lumi_query = config.get_bool(['lumi metadata', '%s lumi metadata' % datasource_name],
+			default = not self._lumi_filter.empty(), on_change = self._changeTrigger)
 		config.set('phedex sites matcher mode', 'shell', '?=')
 		# PhEDex blacklist: 'T1_*_Disk nodes allow user jobs - other T1's dont!
-		self._phedex_filter = config.getFilter('phedex sites', '-* T1_*_Disk T2_* T3_*',
-			defaultMatcher = 'blackwhite', defaultFilter = 'strict', onChange = self._changeTrigger)
-		self._only_complete = config.getBool('only complete sites', True, onChange = self._changeTrigger)
-		self._only_valid = config.getBool('only valid', True, onChange = self._changeTrigger)
-		self._location_format = config.getEnum('location format', CMSLocationFormat, CMSLocationFormat.hostname, onChange = self._changeTrigger)
+		self._phedex_filter = config.get_filter('phedex sites', '-* T1_*_Disk T2_* T3_*',
+			default_matcher = 'blackwhite', default_filter = 'strict', on_change = self._changeTrigger)
+		self._only_complete = config.get_bool('only complete sites', True, on_change = self._changeTrigger)
+		self._only_valid = config.get_bool('only valid', True, on_change = self._changeTrigger)
+		self._location_format = config.get_enum('location format', CMSLocationFormat, CMSLocationFormat.hostname, on_change = self._changeTrigger)
 		self._pjrc = JSONRestClient(url = 'https://cmsweb.cern.ch/phedex/datasvc/json/prod/blockreplicas')
 		self._sitedb = SiteDB()
 
 		(self._datasetPath, self._datasetInstance, self._datasetBlock) = split_opt(dataset_expr, '@#')
-		instance_default = config.get('dbs instance', '', onChange = self._changeTrigger)
+		instance_default = config.get('dbs instance', '', on_change = self._changeTrigger)
 		self._datasetInstance = self._datasetInstance or instance_default
 		if not self._datasetInstance:
 			self._datasetInstance = 'prod/global'

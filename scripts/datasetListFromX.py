@@ -49,7 +49,7 @@ def addDatasetListOptions(parser):
 
 
 def discoverDataset(providerName, config_dict):
-	config = getConfig(config_dict = {'dataset': config_dict}).changeView(setSections = ['dataset'])
+	config = getConfig(config_dict = {'dataset': config_dict}).change_view(setSections = ['dataset'])
 	DataProvider = Plugin.get_class('DataProvider')
 	provider = DataProvider.create_instance(providerName, config, 'dataset', config_dict['dataset'], None)
 	if config_dict['dump config'] == 'True':

@@ -30,10 +30,10 @@ def choice_exp(sample, p = 0.5):
 
 class DiscoverWMS_Lazy(object): # TODO: Move to broker infrastructure
 	def __init__(self, config):
-		self.statePath = config.getWorkPath('glitewms.info')
+		self.statePath = config.get_work_path('glitewms.info')
 		(self.wms_ok, self.wms_all, self.pingDict, self.pos) = self.loadState()
 		self.wms_timeout = {}
-		self._full = config.getBool('wms discover full', True, onChange = None)
+		self._full = config.get_bool('wms discover full', True, on_change = None)
 		self._exeLCGInfoSites = utils.resolve_install_path('lcg-infosites')
 		self._exeGliteWMSJobListMatch = utils.resolve_install_path('glite-wms-job-list-match')
 
@@ -71,7 +71,7 @@ class DiscoverWMS_Lazy(object): # TODO: Move to broker infrastructure
 		checkArgs = ['-a']
 		if endpoint:
 			checkArgs.extend(['-e', endpoint])
-		checkArgs.append(utils.path_share('null.jdl'))
+		checkArgs.append(utils.get_path_share('null.jdl'))
 
 		proc = LocalProcess(self._exeGliteWMSJobListMatch, *checkArgs)
 		result = []
@@ -155,12 +155,12 @@ class GliteWMS(GridWMS):
 		self._submitExec = utils.resolve_install_path('glite-wms-job-submit')
 		self._outputExec = utils.resolve_install_path('glite-wms-job-output')
 		self._submitParams.update({'-r': self._ce, '--config': self._configVO})
-		self._useDelegate = config.getBool('try delegate', True, onChange = None)
-		self._forceDelegate = config.getBool('force delegate', False, onChange = None)
+		self._useDelegate = config.get_bool('try delegate', True, on_change = None)
+		self._forceDelegate = config.get_bool('force delegate', False, on_change = None)
 		self._discovery_module = None
-		if config.getBool('discover wms', True, onChange = None):
+		if config.get_bool('discover wms', True, on_change = None):
 			self._discovery_module = DiscoverWMS_Lazy(config)
-		self._discover_sites = config.getBool('discover sites', False, onChange = None)
+		self._discover_sites = config.get_bool('discover sites', False, on_change = None)
 
 
 	def getSites(self):

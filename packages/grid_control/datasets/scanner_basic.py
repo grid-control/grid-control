@@ -34,16 +34,16 @@ class OutputDirsFromConfig(InfoScanner):
 	# Get output directories from external config file
 	def __init__(self, config, datasource_name):
 		InfoScanner.__init__(self, config, datasource_name)
-		ext_config_fn = config.getPath('source config', onChange = triggerDataResync)
-		ext_config = create_config(ext_config_fn, use_default_files = True).changeView(setSections = ['global'])
-		self._ext_workdir = ext_config.getWorkPath()
+		ext_config_fn = config.get_path('source config', on_change = triggerDataResync)
+		ext_config = create_config(ext_config_fn, use_default_files = True).change_view(setSections = ['global'])
+		self._ext_workdir = ext_config.get_work_path()
 		logging.getLogger().disabled = True
-		self._ext_workflow = ext_config.getPlugin('workflow', 'Workflow:global', cls = 'Workflow', pargs = ('task',))
+		self._ext_workflow = ext_config.get_plugin('workflow', 'Workflow:global', cls = 'Workflow', pargs = ('task',))
 		logging.getLogger().disabled = False
 		self._ext_task = self._ext_workflow.task
-		selector = config.get('source job selector', '', onChange = triggerDataResync)
-		ext_job_db = ext_config.getPlugin('job database', 'TextFileJobDB', cls = 'JobDB',
-			pkwargs = {'jobSelector': lambda jobNum, jobObj: jobObj.state == Job.SUCCESS}, onChange = None)
+		selector = config.get('source job selector', '', on_change = triggerDataResync)
+		ext_job_db = ext_config.get_plugin('job database', 'TextFileJobDB', cls = 'JobDB',
+			pkwargs = {'jobSelector': lambda jobNum, jobObj: jobObj.state == Job.SUCCESS}, on_change = None)
 		self._selected = sorted(ext_job_db.getJobs(JobSelector.create(selector, task = self._ext_task)))
 
 	def getEntries(self, path, metadata, events, seList, objStore):
@@ -59,11 +59,11 @@ class OutputDirsFromConfig(InfoScanner):
 class OutputDirsFromWork(InfoScanner):
 	def __init__(self, config, datasource_name):
 		InfoScanner.__init__(self, config, datasource_name)
-		self._ext_workdir = config.getPath('source directory', onChange = triggerDataResync)
+		self._ext_workdir = config.get_path('source directory', on_change = triggerDataResync)
 		self._ext_output_dir = os.path.join(self._ext_workdir, 'output')
 		if not os.path.isdir(self._ext_output_dir):
 			raise DatasetError('Unable to find task output directory %s' % repr(self._ext_output_dir))
-		self._selector = JobSelector.create(config.get('source job selector', '', onChange = triggerDataResync))
+		self._selector = JobSelector.create(config.get('source job selector', '', on_change = triggerDataResync))
 
 	def getEntries(self, path, metadata, events, seList, objStore):
 		allDirs = lfilter(lambda fn: fn.startswith('job_'), os.listdir(self._ext_output_dir))
@@ -90,7 +90,7 @@ class MetadataFromTask(InfoScanner):
 			'SB_INPUT_FILES', 'SB_OUTPUT_FILES', 'SCRATCH_LL', 'SCRATCH_UL', 'SEEDS',
 			'SE_INPUT_FILES', 'SE_INPUT_PATH', 'SE_INPUT_PATTERN', 'SE_MINFILESIZE',
 			'SE_OUTPUT_FILES', 'SE_OUTPUT_PATH', 'SE_OUTPUT_PATTERN', 'SUBST_FILES']
-		self._ignore_vars = config.getList('ignore task vars', ignoreDef, onChange = triggerDataResync)
+		self._ignore_vars = config.get_list('ignore task vars', ignoreDef, on_change = triggerDataResync)
 
 	def getEntries(self, path, metadata, events, seList, objStore):
 		if 'GC_TASK' in objStore:
@@ -106,8 +106,8 @@ class MetadataFromTask(InfoScanner):
 class FilesFromLS(InfoScanner):
 	def __init__(self, config, datasource_name):
 		InfoScanner.__init__(self, config, datasource_name)
-		self._path = config.get('source directory', '.', onChange = triggerDataResync)
-		self._recurse = config.getBool('source recurse', False, onChange = triggerDataResync)
+		self._path = config.get('source directory', '.', on_change = triggerDataResync)
+		self._recurse = config.get_bool('source recurse', False, on_change = triggerDataResync)
 		if ('://' in self._path) and self._recurse:
 			raise DatasetError('Recursion is not supported for URL: %s' % repr(self._path))
 		elif '://' not in self._path:
@@ -171,7 +171,7 @@ class FilesFromJobInfo(InfoScanner):
 class FilesFromDataProvider(InfoScanner):
 	def __init__(self, config, datasource_name):
 		InfoScanner.__init__(self, config, datasource_name)
-		dsPath = config.get('source dataset path', onChange = triggerDataResync)
+		dsPath = config.get('source dataset path', on_change = triggerDataResync)
 		self._source = DataProvider.create_instance('ListProvider', config, 'source dataset', dsPath)
 
 	def getEntries(self, path, metadata, events, seList, objStore):
@@ -185,7 +185,7 @@ class FilesFromDataProvider(InfoScanner):
 class MatchOnFilename(InfoScanner):
 	def __init__(self, config, datasource_name):
 		InfoScanner.__init__(self, config, datasource_name)
-		self._match = config.getMatcher('filename filter', '*.root', defaultMatcher = 'shell', onChange = triggerDataResync)
+		self._match = config.get_matcher('filename filter', '*.root', default_matcher = 'shell', on_change = triggerDataResync)
 
 	def getEntries(self, path, metadata, events, seList, objStore):
 		if self._match.match(path) > 0:
@@ -195,7 +195,7 @@ class MatchOnFilename(InfoScanner):
 class AddFilePrefix(InfoScanner):
 	def __init__(self, config, datasource_name):
 		InfoScanner.__init__(self, config, datasource_name)
-		self._prefix = config.get('filename prefix', '', onChange = triggerDataResync)
+		self._prefix = config.get('filename prefix', '', on_change = triggerDataResync)
 
 	def getEntries(self, path, metadata, events, seList, objStore):
 		yield (self._prefix + path, metadata, events, seList, objStore)
@@ -204,13 +204,13 @@ class AddFilePrefix(InfoScanner):
 class MatchDelimeter(InfoScanner):
 	def __init__(self, config, datasource_name):
 		InfoScanner.__init__(self, config, datasource_name)
-		matchDelim = config.get('delimeter match', '', onChange = triggerDataResync)
+		matchDelim = config.get('delimeter match', '', on_change = triggerDataResync)
 		self._match_delim = matchDelim.split(':')
 
-		ds_key = config.get('delimeter dataset key', '', onChange = triggerDataResync)
-		ds_mod = config.get('delimeter dataset modifier', '', onChange = triggerDataResync)
-		b_key = config.get('delimeter block key', '', onChange = triggerDataResync)
-		b_mod = config.get('delimeter block modifier', '', onChange = triggerDataResync)
+		ds_key = config.get('delimeter dataset key', '', on_change = triggerDataResync)
+		ds_mod = config.get('delimeter dataset modifier', '', on_change = triggerDataResync)
+		b_key = config.get('delimeter block key', '', on_change = triggerDataResync)
+		b_mod = config.get('delimeter block modifier', '', on_change = triggerDataResync)
 		self._ds = self._setup(ds_key, ds_mod)
 		self._b = self._setup(b_key, b_mod)
 
@@ -247,10 +247,10 @@ class MatchDelimeter(InfoScanner):
 class ParentLookup(InfoScanner):
 	def __init__(self, config, datasource_name):
 		InfoScanner.__init__(self, config, datasource_name)
-		self._parent_source = config.get('parent source', '', onChange = triggerDataResync)
-		self._parent_keys = config.getList('parent keys', [], onChange = triggerDataResync)
-		self._parent_match_level = config.getInt('parent match level', 1, onChange = triggerDataResync)
-		self._parent_merge = config.getBool('merge parents', False, onChange = triggerDataResync)
+		self._parent_source = config.get('parent source', '', on_change = triggerDataResync)
+		self._parent_keys = config.get_list('parent keys', [], on_change = triggerDataResync)
+		self._parent_match_level = config.get_int('parent match level', 1, on_change = triggerDataResync)
+		self._parent_merge = config.get_bool('merge parents', False, on_change = triggerDataResync)
 		self._parent_lfn_map_cache = {}
 		self._empty_config = create_config()
 		self._read_parents(config, self._parent_source)
@@ -293,10 +293,10 @@ class ParentLookup(InfoScanner):
 class DetermineEvents(InfoScanner):
 	def __init__(self, config, datasource_name):
 		InfoScanner.__init__(self, config, datasource_name)
-		self._events_cmd = config.get('events command', '', onChange = triggerDataResync)
-		self._events_key = config.get('events key', '', onChange = triggerDataResync)
-		self._events_key_scale = config.getFloat('events per key value', 1., onChange = triggerDataResync)
-		self._events_default = config.getInt('events default', -1, onChange = triggerDataResync)
+		self._events_cmd = config.get('events command', '', on_change = triggerDataResync)
+		self._events_key = config.get('events key', '', on_change = triggerDataResync)
+		self._events_key_scale = config.get_float('events per key value', 1., on_change = triggerDataResync)
+		self._events_default = config.get_int('events default', -1, on_change = triggerDataResync)
 
 	def getEntries(self, path, metadata, events, seList, objStore):
 		if (events is None) or (events < 0):

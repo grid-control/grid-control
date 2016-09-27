@@ -32,5 +32,5 @@ class VomsAccessToken(GridAccessToken):
 	def getAuthFiles(self):
 		return [self._getProxyInfo('path')]
 
-	def _getTimeleft(self, cached):
+	def _get_timeleft(self, cached):
 		return self._getProxyInfo('timeleft', parse_time, cached)

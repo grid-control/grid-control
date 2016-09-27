@@ -1308,7 +1308,7 @@ BasicParameterFactory options
     Specify the parameter factory plugin that is used to generate the parameter space of the task
   * ``random variables`` = <list of values> (default: 'JOB_RANDOM')
     Specify list of variable names that will contain random values on the worker node
-  * ``repeat`` = <integer> (default: 1)
+  * ``repeat`` = <integer> (default: -1)
     Specify the number of jobs that each parameter space point spawns
   * ``seeds`` = <list of values> (default: Generate <nseeds> random seeds)
     Random seeds used in the job via @SEED_j@

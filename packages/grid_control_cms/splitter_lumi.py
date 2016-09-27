@@ -20,7 +20,7 @@ class RunSplitter(DataSplitter.get_class('FileClassSplitter')):
 	alias_list = ['runs']
 
 	def _configure_splitter(self, config):
-		self._run_range = self._query_config(config.getInt, 'run range', 1)
+		self._run_range = self._query_config(config.get_int, 'run range', 1)
 
 	def _get_fi_class(self, fi, block):
 		run_range = self._setup(self._run_range, block)

@@ -89,12 +89,12 @@ class HTCondor(BasicWMS):
 		self._initLogger()
 		BasicWMS.__init__(self, config, name)
 		# setup the connection to pools and their interfaces
-		self._sandboxDir  = config.getPath('sandbox path', config.getWorkPath('sandbox.%s' % name), must_exist = False)
+		self._sandboxDir  = config.get_path('sandbox path', config.get_work_path('sandbox.%s' % name), must_exist = False)
 		self._initPoolInterfaces(config)
 		self._jobSettings = {
 			"Universe" : config.get("universe", "vanilla"),
-			"ClassAd" : config.getList("append info", []),
-			"JDL" : config.getList("append opts", []),
+			"ClassAd" : config.get_list("append info", []),
+			"JDL" : config.get_list("append opts", []),
 			}
 
 	def _initLogger(cls):
@@ -107,7 +107,7 @@ class HTCondor(BasicWMS):
 		Establish adapters and connection details for pool and schedd
 		"""
 		poolConfig = {}
-		for poolConfigFileName in config.getList('poolConfig', [], onChange = None):
+		for poolConfigFileName in config.get_list('poolConfig', [], on_change = None):
 			try:
 				self._log(logging.DEBUG1,"Reading pool config '%s'"%poolConfigFileName)
 				confFile = open(poolConfigFileName, 'r')
@@ -118,7 +118,7 @@ class HTCondor(BasicWMS):
 		self._jobFeatureMap = poolConfig.get('jobFeatureMap',{})
 		self._queueQueryMap = poolConfig.get('queueQueryMap',{})
 		self._niceName      = poolConfig.get('NiceName', '<POOLNAME>')
-		cfgScheddURI = config.get('ScheddURI','', onChange = changeOnlyUnset)
+		cfgScheddURI = config.get('ScheddURI','', on_change = changeOnlyUnset)
 		if cfgScheddURI:
 			self._schedd = HTCScheddFactory(cfgScheddURI, parentPool=self)
 		else:
@@ -154,7 +154,7 @@ class HTCondor(BasicWMS):
 	# path functions shared with schedds
 	def getJobCfgPath(self, jobNum = "%d"):
 		cfgName = 'job_%s.var' % jobNum
-		return os.path.join(self.config.getWorkPath('jobs'), cfgName), cfgName
+		return os.path.join(self.config.get_work_path('jobs'), cfgName), cfgName
 
 	def getSandboxPath(self, subdirToken=""):
 		sandpath = os.path.join(self._sandboxDir, str(subdirToken), '' )

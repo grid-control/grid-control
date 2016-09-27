@@ -90,35 +90,35 @@ class TrivialAccessToken(AccessToken):
 class TimedAccessToken(AccessToken):
 	def __init__(self, config, name):
 		AccessToken.__init__(self, config, name)
-		self._lowerLimit = config.getTime('min lifetime', 300, onChange = None)
-		self._maxQueryTime = config.getTime(['max query time', 'urgent query time'],  5 * 60, onChange = None)
-		self._minQueryTime = config.getTime(['min query time', 'query time'], 30 * 60, onChange = None)
-		self._ignoreTime = config.getBool(['ignore walltime', 'ignore needed time'], False, onChange = None)
+		self._lowerLimit = config.get_time('min lifetime', 300, on_change = None)
+		self._maxQueryTime = config.get_time(['max query time', 'urgent query time'],  5 * 60, on_change = None)
+		self._minQueryTime = config.get_time(['min query time', 'query time'], 30 * 60, on_change = None)
+		self._ignoreTime = config.get_bool(['ignore walltime', 'ignore needed time'], False, on_change = None)
 		self._lastUpdate = 0
 
 	def can_submit(self, neededTime, canCurrentlySubmit):
 		if not self._checkTimeleft(self._lowerLimit):
 			raise UserError('Your access token (%s) only has %d seconds left! (Required are %s)' %
-				(self.getObjectName(), self._getTimeleft(cached = True), str_time_long(self._lowerLimit)))
+				(self.getObjectName(), self._get_timeleft(cached = True), str_time_long(self._lowerLimit)))
 		if self._ignoreTime or (neededTime < 0):
 			return True
 		if not self._checkTimeleft(self._lowerLimit + neededTime) and canCurrentlySubmit:
 			self._log.log_time(logging.WARNING, 'Access token (%s) lifetime (%s) does not meet the access and walltime (%s) requirements!',
-				self.getObjectName(), str_time_long(self._getTimeleft(cached = False)), str_time_long(self._lowerLimit + neededTime))
+				self.getObjectName(), str_time_long(self._get_timeleft(cached = False)), str_time_long(self._lowerLimit + neededTime))
 			self._log.log_time(logging.WARNING, 'Disabling job submission')
 			return False
 		return True
 
-	def _getTimeleft(self, cached):
+	def _get_timeleft(self, cached):
 		raise AbstractError
 
 	def _checkTimeleft(self, neededTime): # check for time left
 		delta = time.time() - self._lastUpdate
-		timeleft = max(0, self._getTimeleft(cached = True) - delta)
+		timeleft = max(0, self._get_timeleft(cached = True) - delta)
 		# recheck token => after > 30min have passed or when time is running out (max every 5 minutes)
 		if (delta > self._minQueryTime) or (timeleft < neededTime and delta > self._maxQueryTime):
 			self._lastUpdate = time.time()
-			timeleft = self._getTimeleft(cached = False)
+			timeleft = self._get_timeleft(cached = False)
 			self._log.log_time(logging.INFO, 'Time left for access token "%s": %s', self.getObjectName(), str_time_long(timeleft))
 		return timeleft >= neededTime
 
@@ -126,13 +126,13 @@ class TimedAccessToken(AccessToken):
 class RefreshableAccessToken(TimedAccessToken):
 	def __init__(self, config, name):
 		TimedAccessToken.__init__(self, config, name)
-		self._refresh = config.getTime('access refresh', 60*60, onChange = None)
+		self._refresh = config.get_time('access refresh', 60*60, on_change = None)
 
 	def _refreshAccessToken(self):
 		raise AbstractError
 
 	def _checkTimeleft(self, neededTime): # check for time left
-		if self._getTimeleft(True) < self._refresh:
+		if self._get_timeleft(True) < self._refresh:
 			self._refreshAccessToken()
-			self._getTimeleft(False)
+			self._get_timeleft(False)
 		return TimedAccessToken._checkTimeleft(self, neededTime)

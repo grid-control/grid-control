@@ -14,7 +14,7 @@
 # | limitations under the License.
 
 import sys
-from gcSupport import Activity, JobSelector, Options, displayPluginList, getConfig, getPluginList, scriptOptions, utils
+from gcSupport import Activity, JobSelector, Options, displayPluginList, getConfig, get_pluginList, scriptOptions, utils
 
 
 parser = Options(usage = '%s [OPTIONS] <config file>')
@@ -27,7 +27,7 @@ options = scriptOptions(parser)
 
 if options.opts.report_list:
 	sys.stderr.write('Available report classes:\n')
-	displayPluginList(getPluginList('Report'))
+	displayPluginList(get_pluginList('Report'))
 
 if len(options.args) != 1:
 	utils.exit_with_usage(parser.usage())
@@ -39,15 +39,15 @@ def main(opts, args):
 	# Initialise task module
 	task = None
 	if opts.use_task:
-		task = config.getPlugin('workflow', 'Workflow:global', cls = 'Workflow', pargs = ('task',)).task
+		task = config.get_plugin('workflow', 'Workflow:global', cls = 'Workflow', pargs = ('task',)).task
 
 	# Initialise job database
-	jobDB = config.getPlugin('job database', 'TextFileJobDB', cls = 'JobDB')
+	jobDB = config.get_plugin('job database', 'TextFileJobDB', cls = 'JobDB')
 	activity = Activity('Filtering job entries')
 	selected = jobDB.getJobs(JobSelector.create(opts.job_selector, task = task))
 	activity.finish()
 
-	report = config.getCompositePlugin('transient report', opts.report, 'MultiReport', cls = 'Report',
+	report = config.get_composited_plugin('transient report', opts.report, 'MultiReport', cls = 'Report',
 		pargs = (jobDB, task, selected, opts.string))
 	report.show_report(jobDB)
 

@@ -21,19 +21,19 @@ from python_compat import unspecified
 class TaskExecutableWrapper:
 	def __init__(self, config, prefix = '', exeDefault = unspecified):
 		initSandbox = TriggerInit('sandbox')
-		self._executableSend = config.getBool('%s send executable' % prefix, True, onChange = initSandbox)
+		self._executableSend = config.get_bool('%s send executable' % prefix, True, on_change = initSandbox)
 		if self._executableSend:
-			self._executable = config.getPath('%s executable' % prefix, exeDefault, onChange = initSandbox)
+			self._executable = config.get_path('%s executable' % prefix, exeDefault, on_change = initSandbox)
 		else:
-			self._executable = config.get('%s executable' % prefix, exeDefault, onChange = initSandbox)
-		self._arguments = config.get('%s arguments' % prefix, '', onChange = initSandbox)
+			self._executable = config.get('%s executable' % prefix, exeDefault, on_change = initSandbox)
+		self._arguments = config.get('%s arguments' % prefix, '', on_change = initSandbox)
 
 
 	def isActive(self):
 		return self._executable != ''
 
 
-	def getCommand(self):
+	def get_command(self):
 		if self._executableSend:
 			cmd = os.path.basename(self._executable)
 			return 'chmod u+x %s; ./%s $@' % (cmd, cmd)

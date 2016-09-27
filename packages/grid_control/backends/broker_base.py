@@ -23,8 +23,8 @@ class Broker(NamedPlugin):
 	def __init__(self, config, name, broker_prefix, itemName, discoverFun):
 		NamedPlugin.__init__(self, config, name)
 		(self._itemsStart, self._itemsDiscovered, self._itemName) = (None, False, itemName)
-		self._nEntries = config.getInt('%s entries' % broker_prefix, 0, onChange = None)
-		self._nRandom = config.getBool('%s randomize' % broker_prefix, False, onChange = None)
+		self._nEntries = config.get_int('%s entries' % broker_prefix, 0, on_change = None)
+		self._nRandom = config.get_bool('%s randomize' % broker_prefix, False, on_change = None)
 
 	def _discover(self, discoverFun, cached = True):
 		if not cached or (self._itemsDiscovered is False):

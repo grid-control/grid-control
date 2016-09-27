@@ -23,7 +23,7 @@ from python_compat import irange, sorted
 class TextFileJobDB(JobDB):
 	def __init__(self, config, jobLimit = -1, jobSelector = None):
 		JobDB.__init__(self, config, jobLimit, jobSelector)
-		self._dbPath = config.getWorkPath('jobs')
+		self._dbPath = config.get_work_path('jobs')
 		self._fmt = utils.DictFormat(escape_strings = True)
 		try:
 			self._jobMap = self._readJobs(self._jobLimit)

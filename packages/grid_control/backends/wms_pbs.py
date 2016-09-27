@@ -100,7 +100,7 @@ class PBS(PBSGECommon):
 			checkExecutor = CheckJobsMissingState(config, PBS_CheckJobs(config, self._fqid)))
 		self._nodes_finder = PBS_Discover_Nodes(config)
 		self._queues_finder = PBS_Discover_Queues(config)
-		self._server = config.get('server', '', onChange = None)
+		self._server = config.get('server', '', on_change = None)
 
 
 	def _fqid(self, wmsID):

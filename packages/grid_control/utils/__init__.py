@@ -121,7 +121,7 @@ class PathError(NestedException):
 
 
 def deprecated(text):
-	sys.stderr.write('%s\n[DEPRECATED] %s\n' % (open(path_share('fail.txt'), 'r').read(), text))
+	sys.stderr.write('%s\n[DEPRECATED] %s\n' % (open(get_path_share('fail.txt'), 'r').read(), text))
 	if not get_user_bool('Do you want to continue?', False):
 		sys.exit(os.EX_TEMPFAIL)
 
@@ -212,6 +212,14 @@ def get_list_difference(list_old, list_new, key_fun, on_matching_fun,
 	return (list_added, list_missing, list_matching)
 
 
+def get_path_pkg(*args):
+	return clean_path(os.path.join(os.environ['GC_PACKAGES_PATH'], *args))
+
+
+def get_path_share(*args, **kw):
+	return get_path_pkg(kw.get('pkg', 'grid_control'), 'share', *args)
+
+
 def get_user_bool(text, default):
 	def _get_user_input(text, default, choices, parser=identity):
 		log = logging.getLogger('console')
@@ -235,10 +243,10 @@ def get_user_bool(text, default):
 def get_version():
 	def _get_version():
 		try:
-			proc_ver = LocalProcess('svnversion', '-c', path_pkg())
+			proc_ver = LocalProcess('svnversion', '-c', get_path_pkg())
 			version = proc_ver.get_output(timeout=10).strip()
 			if lfilter(str.isdigit, version):
-				proc_branch = LocalProcess('svn info', path_pkg())
+				proc_branch = LocalProcess('svn info', get_path_pkg())
 				if 'stable' in proc_branch.get_output(timeout=10):
 					return '%s - stable' % version
 				return '%s - testing' % version
@@ -292,14 +300,6 @@ def merge_dict_list(dict_list):
 	for mapping in dict_list:
 		tmp.update(mapping)
 	return tmp
-
-
-def path_pkg(*args):
-	return clean_path(os.path.join(os.environ['GC_PACKAGES_PATH'], *args))
-
-
-def path_share(*args, **kw):
-	return path_pkg(kw.get('pkg', 'grid_control'), 'share', *args)
 
 
 def ping_host(host):
@@ -548,16 +548,16 @@ class TwoSidedIterator(object):
 
 
 class PersistentDict(dict):
-	def __init__(self, filename, delimeter='=', lowerCaseKey=True):
+	def __init__(self, filename, delimeter='=', lower_case_key=True):
 		dict.__init__(self)
-		self.fmt = DictFormat(delimeter)
-		self.filename = filename
-		key_parser = {None: QM(lowerCaseKey, lambda k: parse_type(k.lower()), parse_type)}
+		self._fmt = DictFormat(delimeter)
+		self._fn = filename
+		key_parser = {None: QM(lower_case_key, lambda k: parse_type(k.lower()), parse_type)}
 		try:
-			self.update(self.fmt.parse(open(filename), key_parser=key_parser))
+			self.update(self._fmt.parse(open(filename), key_parser=key_parser))
 		except Exception:
 			clear_current_exception()
-		self.olddict = self.items()
+		self._old_dict = self.items()
 
 	def get(self, key, default=None, autoUpdate=True):
 		value = dict.get(self, key, default)
@@ -569,11 +569,11 @@ class PersistentDict(dict):
 		if not update:
 			self.clear()
 		self.update(newdict or {})
-		if dict(self.olddict) == dict(self.items()):
+		if dict(self._old_dict) == dict(self.items()):
 			return
 		try:
-			if self.filename:
-				safe_write(open(self.filename, 'w'), self.fmt.format(self))
+			if self._fn:
+				safe_write(open(self._fn, 'w'), self._fmt.format(self))
 		except Exception:
-			raise GCIOError('Could not write to file %s' % self.filename)
-		self.olddict = self.items()
+			raise GCIOError('Could not write to file %s' % self._fn)
+		self._old_dict = self.items()

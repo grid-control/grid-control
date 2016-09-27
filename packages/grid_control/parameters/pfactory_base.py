@@ -34,33 +34,33 @@ class BasicParameterFactory(ParameterFactory):
 		(self._psrc_list_const, self._psrc_list_lookup, self._psrc_list_nested) = ([], [], [])
 
 		# Random number variables
-		jobs_config = config.changeView(addSections = ['jobs'])
-		self._random_variables = jobs_config.getList('random variables', ['JOB_RANDOM'], onChange = None)
-		nseeds = jobs_config.getInt('nseeds', 10)
+		jobs_config = config.change_view(addSections = ['jobs'])
+		self._random_variables = jobs_config.get_list('random variables', ['JOB_RANDOM'], on_change = None)
+		nseeds = jobs_config.get_int('nseeds', 10)
 		seeds_new = lmap(lambda x: str(random.randint(0, 10000000)), irange(nseeds))
-		self._random_seeds = jobs_config.getList('seeds', seeds_new, persistent = True)
+		self._random_seeds = jobs_config.get_list('seeds', seeds_new, persistent = True)
 
 		# Get constants from [constants <tags...>]
-		constants_config = config.changeView(view_class = 'TaggedConfigView',
+		constants_config = config.change_view(view_class = 'TaggedConfigView',
 			setClasses = None, setSections = ['constants'], setNames = None)
 		constants_pconfig = ParameterConfig(constants_config)
-		for vn_const in ifilter(lambda opt: ' ' not in opt, constants_config.getOptions()):
+		for vn_const in ifilter(lambda opt: ' ' not in opt, constants_config.get_option_list()):
 			constants_config.set('%s type' % vn_const, 'verbatim', '?=')
 			self._register_psrc(constants_pconfig, vn_const.upper())
 
-		param_config = config.changeView(view_class = 'TaggedConfigView',
+		param_config = config.change_view(view_class = 'TaggedConfigView',
 			setClasses = None, addSections = ['parameters'], inheritSections = True)
 
 		# Get constants from [<Module>] constants
 		task_pconfig = ParameterConfig(param_config)
-		for vn_const in param_config.getList('constants', []):
+		for vn_const in param_config.get_list('constants', []):
 			config.set('%s type' % vn_const, 'verbatim', '?=')
 			self._register_psrc(task_pconfig, vn_const)
 
 		# Get global repeat value from 'parameters' section
-		self._repeat = param_config.getInt('repeat', -1, onChange = None)
-		self._req = param_config.getBool('translate requirements', True, onChange = None)
-		self._pfactory = param_config.getPlugin('parameter factory', 'SimpleParameterFactory', cls = ParameterFactory)
+		self._repeat = param_config.get_int('repeat', -1, on_change = None)
+		self._req = param_config.get_bool('translate requirements', True, on_change = None)
+		self._pfactory = param_config.get_plugin('parameter factory', 'SimpleParameterFactory', cls = ParameterFactory)
 
 	def get_source(self, repository):
 		source_list = []
@@ -112,7 +112,7 @@ class UserParameterFactory(ParameterFactory):
 		ParameterFactory.__init__(self, config)
 		self._log = logging.getLogger('parameters.factory')
 		self._parameter_config = ParameterConfig(config)
-		self._pexpr = config.get('parameters', '', onChange = None)
+		self._pexpr = config.get('parameters', '', on_change = None)
 
 	def get_source(self, respository):
 		if not self._pexpr:

@@ -36,8 +36,8 @@ class EntriesConsistencyDataProcessor(DataChecker):
 
 	def __init__(self, config, datasource_name, on_change):
 		DataChecker.__init__(self, config, datasource_name, on_change)
-		self._mode = config.getEnum('%s check entry consistency' % datasource_name, DatasetCheckMode,
-			DatasetCheckMode.abort, onChange = on_change)
+		self._mode = config.get_enum('%s check entry consistency' % datasource_name, DatasetCheckMode,
+			DatasetCheckMode.abort, on_change = on_change)
 
 	def enabled(self):
 		return self._mode != DatasetCheckMode.ignore
@@ -57,12 +57,12 @@ class NickNameConsistencyProcessor(DataChecker):
 	def __init__(self, config, datasource_name, on_change):
 		DataChecker.__init__(self, config, datasource_name, on_change)
 		# Ensure the same nickname is used consistently in all blocks of a dataset
-		self._check_consistency = config.getEnum('%s check nickname consistency' % datasource_name, DatasetCheckMode,
-			DatasetCheckMode.abort, onChange = on_change)
+		self._check_consistency = config.get_enum('%s check nickname consistency' % datasource_name, DatasetCheckMode,
+			DatasetCheckMode.abort, on_change = on_change)
 		self._check_consistency_data = {}
 		# Check if two different datasets have the same nickname
-		self._check_collision = config.getEnum('%s check nickname collision' % datasource_name, DatasetCheckMode,
-			DatasetCheckMode.abort, onChange = on_change)
+		self._check_collision = config.get_enum('%s check nickname collision' % datasource_name, DatasetCheckMode,
+			DatasetCheckMode.abort, on_change = on_change)
 		self._check_collision_data = {}
 
 	def enabled(self):
@@ -88,8 +88,8 @@ class UniqueDataProcessor(DataChecker):
 
 	def __init__(self, config, datasource_name, on_change):
 		DataChecker.__init__(self, config, datasource_name, on_change)
-		self._check_url = config.getEnum('%s check unique url' % datasource_name, DatasetUniqueMode, DatasetUniqueMode.abort, onChange = on_change)
-		self._check_block = config.getEnum('%s check unique block' % datasource_name, DatasetUniqueMode, DatasetUniqueMode.abort, onChange = on_change)
+		self._check_url = config.get_enum('%s check unique url' % datasource_name, DatasetUniqueMode, DatasetUniqueMode.abort, on_change = on_change)
+		self._check_block = config.get_enum('%s check unique block' % datasource_name, DatasetUniqueMode, DatasetUniqueMode.abort, on_change = on_change)
 
 	def enabled(self):
 		return (self._check_url != DatasetUniqueMode.ignore) or (self._check_block != DatasetUniqueMode.ignore)

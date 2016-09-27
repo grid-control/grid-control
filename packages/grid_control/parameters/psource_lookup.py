@@ -52,7 +52,7 @@ def parse_lookup_create_args(pconfig, output_user, lookup_user_list):
 
 	# configure lookup dictionary
 	(lookup_dict, lookup_order) = pconfig.get_parameter(output_vn)
-	if not pconfig.getBool(output_vn, 'empty set', False):
+	if not pconfig.get_bool(output_vn, 'empty set', False):
 		for lookup_key in lookup_dict:
 			if len(lookup_dict[lookup_key]) == 0:
 				lookup_dict[lookup_key].append('')

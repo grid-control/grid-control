@@ -105,10 +105,10 @@ def setup_config(opts, args):
 	if os.path.exists(args[0]):
 		config_file = args[0]
 	config = getConfig(config_file, section = 'global')
-	if os.path.exists(config.getWorkPath('datamap.tar')):
-		opts.dataset = config.getWorkPath('datamap.tar')
-	config.changeView(setSections = ['jobs']).set('nseeds', '1', '?=')
-	configParameters = config.changeView(setSections = ['parameters'])
+	if os.path.exists(config.get_work_path('datamap.tar')):
+		opts.dataset = config.get_work_path('datamap.tar')
+	config.change_view(setSections = ['jobs']).set('nseeds', '1', '?=')
+	configParameters = config.change_view(setSections = ['parameters'])
 	if opts.parameter:
 		log.info('Provided options:')
 		for p in opts.parameter:
@@ -122,7 +122,7 @@ def setup_config(opts, args):
 		if opts.dataset:
 			configParameters.set('default lookup', 'DATASETNICK')
 		if opts.verbose > 2:
-			config.changeView(setSections = None).write(sys.stdout)
+			config.change_view(setSections = None).write(sys.stdout)
 	return config
 
 def setup_dataset(config, dataset):
@@ -132,11 +132,11 @@ def setup_dataset(config, dataset):
 	else:
 		dataSplitter = DataSplitter.load_partitions_for_script(dataset)
 
-	config = config.changeView(setSections = None)
-	partProcessor = config.getCompositePlugin('partition processor',
+	config = config.change_view(setSections = None)
+	partProcessor = config.get_composited_plugin('partition processor',
 		'TFCPartitionProcessor LocationPartitionProcessor MetaPartitionProcessor BasicPartitionProcessor',
-		'MultiPartitionProcessor', cls = 'PartitionProcessor', onChange = None, pargs = ('dataset',))
-	ParameterSource.create_instance('DataParameterSource', config.getWorkPath(), 'data',
+		'MultiPartitionProcessor', cls = 'PartitionProcessor', on_change = None, pargs = ('dataset',))
+	ParameterSource.create_instance('DataParameterSource', config.get_work_path(), 'data',
 		None, dataSplitter, partProcessor, repository)
 
 # Initialize ParameterFactory and ParameterSource
@@ -144,7 +144,7 @@ def get_psrc(opts, args):
 	config = setup_config(opts, args)
 	if opts.factory:
 		config.set('parameter factory', opts.factory)
-	pm = config.getPlugin('internal parameter factory', 'BasicParameterFactory', cls = 'ParameterFactory')
+	pm = config.get_plugin('internal parameter factory', 'BasicParameterFactory', cls = 'ParameterFactory')
 	if opts.dataset:
 		setup_dataset(config, opts.dataset)
 	adapter = 'BasicParameterAdapter'

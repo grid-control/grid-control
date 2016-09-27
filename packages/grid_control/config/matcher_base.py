@@ -48,7 +48,7 @@ class Matcher(ConfigurablePlugin):
 		ConfigurablePlugin.__init__(self, config)
 		self._case = case_override
 		if case_override is None:
-			self._case = config.getBool(add_config_suffix(option_prefix, 'case sensitive'),
+			self._case = config.get_bool(add_config_suffix(option_prefix, 'case sensitive'),
 				default=True, **kwargs)
 		self._log = logging.getLogger('matcher.%s' % option_prefix)
 		if not self._log.isEnabledFor(logging.DEBUG1):
@@ -117,7 +117,7 @@ class BlackWhiteMatcher(Matcher):
 
 	def __init__(self, config, option_prefix, case_override=None, **kwargs):
 		Matcher.__init__(self, config, option_prefix, case_override, **kwargs)
-		self._base_matcher = config.getPlugin(add_config_suffix(option_prefix, 'mode'), 'start',
+		self._base_matcher = config.get_plugin(add_config_suffix(option_prefix, 'mode'), 'start',
 			cls=Matcher, pargs=(option_prefix, self._case), pkwargs=kwargs, **kwargs)
 
 	def __repr__(self):

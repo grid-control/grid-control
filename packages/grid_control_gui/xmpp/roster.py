@@ -96,8 +96,8 @@ class Roster(PlugIn):
             if pres.getTag('show'): res['show']=pres.getShow()
             if pres.getTag('status'): res['status']=pres.getStatus()
             if pres.getTag('priority'): res['priority']=pres.getPriority()
-            if not pres.getTimestamp(): pres.setTimestamp()
-            res['timestamp']=pres.getTimestamp()
+            if not pres.get_timestamp(): pres.set_timestamp()
+            res['timestamp']=pres.get_timestamp()
         elif typ=='unavailable' and item['resources'].has_key(jid.getResource()): del item['resources'][jid.getResource()]
         # Need to handle type='error' also
 

@@ -48,10 +48,10 @@ class WMS(NamedPlugin):
 	def __init__(self, config, name):
 		name = (name or self.__class__.__name__).upper().replace('.', '_')
 		NamedPlugin.__init__(self, config, name)
-		self._wait_idle = config.getInt('wait idle', 60, onChange = None)
-		self._wait_work = config.getInt('wait work', 10, onChange = None)
-		self._job_parser = config.getPlugin('job parser', 'JobInfoProcessor',
-			cls = 'JobInfoProcessor', onChange = None)
+		self._wait_idle = config.get_int('wait idle', 60, on_change = None)
+		self._wait_work = config.get_int('wait work', 10, on_change = None)
+		self._job_parser = config.get_plugin('job parser', 'JobInfoProcessor',
+			cls = 'JobInfoProcessor', on_change = None)
 
 	def getTimings(self): # Return (waitIdle, wait)
 		return utils.Result(waitOnIdle = self._wait_idle, waitBetweenSteps = self._wait_work)
@@ -110,31 +110,31 @@ class BasicWMS(WMS):
 		else:
 			self._log.info('Using batch system: %s', self._name)
 
-		self.errorLog = config.getWorkPath('error.tar')
-		self._runlib = config.getWorkPath('gc-run.lib')
+		self.errorLog = config.get_work_path('error.tar')
+		self._runlib = config.get_work_path('gc-run.lib')
 		if not os.path.exists(self._runlib):
 			fp = SafeFile(self._runlib, 'w')
-			content = SafeFile(utils.path_share('gc-run.lib')).read()
+			content = SafeFile(utils.get_path_share('gc-run.lib')).read()
 			fp.write(content.replace('__GC_VERSION__', __import__('grid_control').__version__))
 			fp.close()
-		self._outputPath = config.getWorkPath('output')
-		self._filecachePath = config.getWorkPath('files')
+		self._outputPath = config.get_work_path('output')
+		self._filecachePath = config.get_work_path('files')
 		utils.ensure_dir_exists(self._outputPath, 'output directory')
-		self._failPath = config.getWorkPath('fail')
+		self._failPath = config.get_work_path('fail')
 
 		# Initialise access token and storage managers
 
 		# UI -> SE -> WN
-		self.smSEIn = config.getPlugin('se input manager', 'SEStorageManager', cls = StorageManager,
+		self.smSEIn = config.get_plugin('se input manager', 'SEStorageManager', cls = StorageManager,
 			tags = [self], pargs = ('se', 'se input', 'SE_INPUT'))
-		self.smSBIn = config.getPlugin('sb input manager', 'LocalSBStorageManager', cls = StorageManager,
+		self.smSBIn = config.get_plugin('sb input manager', 'LocalSBStorageManager', cls = StorageManager,
 			tags = [self], pargs = ('sandbox', 'sandbox', 'SB_INPUT'))
 		# UI <- SE <- WN
-		self.smSEOut = config.getPlugin('se output manager', 'SEStorageManager', cls = StorageManager,
+		self.smSEOut = config.get_plugin('se output manager', 'SEStorageManager', cls = StorageManager,
 			tags = [self], pargs = ('se', 'se output', 'SE_OUTPUT'))
 		self.smSBOut = None
 
-		self._token = config.getCompositePlugin(['proxy', 'access token'], 'TrivialAccessToken',
+		self._token = config.get_composited_plugin(['proxy', 'access token'], 'TrivialAccessToken',
 			'MultiAccessToken', cls = AccessToken, inherit = True, tags = [self])
 
 
@@ -196,7 +196,7 @@ class BasicWMS(WMS):
 	def checkJobs(self, gcIDs): # Check status and return (gcID, job_state, job_info) for active jobs
 		def fmt(value): # translate CheckInfo enum values in job_info dictionary
 			job_info = value[2] # get mutable job_info dictionary from the immutable tuple
-			for key in CheckInfo.enumValues:
+			for key in CheckInfo.enum_value_list:
 				if key in job_info:
 					job_info[CheckInfo.enum2str(key)] = job_info.pop(key)
 			return value
@@ -275,7 +275,7 @@ class BasicWMS(WMS):
 
 	def _getSandboxFilesIn(self, task):
 		return [
-			('GC Runtime', utils.path_share('gc-run.sh'), 'gc-run.sh'),
+			('GC Runtime', utils.get_path_share('gc-run.sh'), 'gc-run.sh'),
 			('GC Runtime library', self._runlib, 'gc-run.lib'),
 			('GC Sandbox', self._getSandboxName(task), 'gc-sandbox.tar.gz'),
 		]
@@ -292,7 +292,7 @@ class BasicWMS(WMS):
 	def _getSandboxFiles(self, task, monitor, smList):
 		# Prepare all input files
 		depList = set(ichain(imap(lambda x: x.getDependencies(), [task] + smList)))
-		depPaths = lmap(lambda pkg: utils.path_share('', pkg = pkg), os.listdir(utils.path_pkg()))
+		depPaths = lmap(lambda pkg: utils.get_path_share('', pkg = pkg), os.listdir(utils.get_path_pkg()))
 		depFiles = lmap(lambda dep: utils.resolve_path('env.%s.sh' % dep, depPaths), depList)
 		taskEnv = utils.merge_dict_list(imap(lambda x: x.getTaskConfig(), [monitor, task] + smList))
 		taskEnv.update({'GC_DEPFILES': str.join(' ', depList), 'GC_USERNAME': self._token.getUsername(),
@@ -337,5 +337,5 @@ class Grid(WMS): # redirector - used to avoid loading the whole grid module just
 
 	def __new__(cls, config, name):
 		gridWMS = 'GliteWMS'
-		grid_config = config.changeView(view_class = 'TaggedConfigView', setClasses = [WMS.get_class(gridWMS)])
+		grid_config = config.change_view(view_class = 'TaggedConfigView', setClasses = [WMS.get_class(gridWMS)])
 		return WMS.create_instance(gridWMS, grid_config, name)

@@ -85,7 +85,7 @@ class JobDB(ConfigurablePlugin):
 		ConfigurablePlugin.__init__(self, config)
 		self._log = logging.getLogger('jobs.db')
 		(self._jobLimit, self._alwaysSelector) = (jobLimit, jobSelector)
-		(self._defaultJob, self._workPath) = (Job(), config.getWorkPath())
+		(self._defaultJob, self._workPath) = (Job(), config.get_work_path())
 
 	def setJobLimit(self, value):
 		self._jobLimit = value
@@ -93,7 +93,7 @@ class JobDB(ConfigurablePlugin):
 	def __len__(self):
 		return self._jobLimit
 
-	def getWorkPath(self): # TODO: only used by report class
+	def get_work_path(self): # TODO: only used by report class
 		return self._workPath
 
 	def getJobsIter(self, jobSelector = None, subset = None):

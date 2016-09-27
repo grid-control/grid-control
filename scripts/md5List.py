@@ -22,7 +22,7 @@ def main():
 	jip = JobInfoProcessor()
 	fip = FileInfoProcessor()
 	(config, jobDB) = initGC(sys.argv[1:])
-	workDir = config.getWorkPath()
+	workDir = config.get_work_path()
 	for jobNum in sorted(jobDB.getJobs()):
 		if jip.process(os.path.join(workDir, 'output', 'job_%d' % jobNum))[JobResult.EXITCODE] == 0:
 			for fileInfo in fip.process(os.path.join(workDir, 'output', 'job_%d' % jobNum)):

@@ -56,7 +56,7 @@ class FLSplitStacker(FileLevelSplitter):
 
 	def _configure_splitter(self, config):
 		self._config = config
-		self._splitter_name_list = self._query_config(config.getList, 'splitter stack', ['BlockBoundarySplitter'])
+		self._splitter_name_list = self._query_config(config.get_list, 'splitter stack', ['BlockBoundarySplitter'])
 
 
 class FileBoundarySplitter(FileLevelSplitter):
@@ -73,7 +73,7 @@ class FileBoundarySplitter(FileLevelSplitter):
 				yield self._create_sub_block(block, fi_list)
 
 	def _configure_splitter(self, config):
-		self._files_per_job = self._query_config(config.getInt, 'files per job')
+		self._files_per_job = self._query_config(config.get_int, 'files per job')
 
 
 class HybridSplitter(FileLevelSplitter):
@@ -94,4 +94,4 @@ class HybridSplitter(FileLevelSplitter):
 			yield self._create_sub_block(block, fi_list)
 
 	def _configure_splitter(self, config):
-		self._events_per_job = self._query_config(config.getInt, 'events per job')
+		self._events_per_job = self._query_config(config.get_int, 'events per job')

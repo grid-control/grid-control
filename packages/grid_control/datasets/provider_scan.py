@@ -27,15 +27,15 @@ class ScanProviderBase(DataProvider):
 		DataProvider.__init__(self, config, datasource_name, dataset_expr, datasetNick, dataset_proc)
 		(self._ds_select, self._ds_name, self._ds_keys_user, self._ds_keys_guard) = self._setup(config, 'dataset')
 		(self._b_select, self._b_name, self._b_keys_user, self._b_keys_guard) = self._setup(config, 'block')
-		scanList = config.getList('scanner', sList) + ['NullScanner']
+		scanList = config.get_list('scanner', sList) + ['NullScanner']
 		self._scanner = lmap(lambda cls: InfoScanner.create_instance(cls, config, datasource_name), scanList)
 
 
 	def _setup(self, config, prefix):
-		select = config.getList(add_config_suffix(prefix, 'key select'), [])
+		select = config.get_list(add_config_suffix(prefix, 'key select'), [])
 		name = config.get(add_config_suffix(prefix, 'name pattern'), '')
-		kuser = config.getList(add_config_suffix(prefix, 'hash keys'), [])
-		kguard = config.getList(add_config_suffix(prefix, 'guard override'), [])
+		kuser = config.get_list(add_config_suffix(prefix, 'hash keys'), [])
+		kguard = config.get_list(add_config_suffix(prefix, 'guard override'), [])
 		return (select, name, kuser, kguard)
 
 
@@ -65,7 +65,7 @@ class ScanProviderBase(DataProvider):
 		return utils.replace_with_dict(self._b_name or key[:8], data)
 
 
-	def _getFilteredVarDict(self, varDict, varDictKeyComponents, hashKeys):
+	def _get_filteredVarDict(self, varDict, varDictKeyComponents, hashKeys):
 		tmp = varDict
 		for key_component in varDictKeyComponents:
 			tmp = tmp[key_component]
@@ -86,7 +86,7 @@ class ScanProviderBase(DataProvider):
 				self._log.warn('Multiple %s keys are mapped to the name %s!', tName, repr(name))
 				for key in sorted(key_list):
 					self._log.warn('\t%s hash %s using:', tName, str.join('#', key))
-					for var, value in self._getFilteredVarDict(varDict, key, hashKeys).items():
+					for var, value in self._get_filteredVarDict(varDict, key, hashKeys).items():
 						self._log.warn('\t\t%s = %s', var, value)
 				if ask and not utils.get_user_bool('Do you want to continue?', False):
 					sys.exit(os.EX_OK)
@@ -155,7 +155,7 @@ class ScanProvider(ScanProviderBase):
 	alias_list = ['scan']
 
 	def __init__(self, config, datasource_name, dataset_expr, datasetNick = None, dataset_proc = None):
-		ds_config = config.changeView(view_class = 'TaggedConfigView', addNames = [md5_hex(dataset_expr)])
+		ds_config = config.change_view(view_class = 'TaggedConfigView', addNames = [md5_hex(dataset_expr)])
 		basename = os.path.basename(dataset_expr)
 		firstScanner = 'FilesFromLS'
 		if '*' in basename:
@@ -183,7 +183,7 @@ class GCProvider(ScanProviderBase):
 	alias_list = ['gc']
 
 	def __init__(self, config, datasource_name, dataset_expr, datasetNick = None, dataset_proc = None):
-		ds_config = config.changeView(view_class = 'TaggedConfigView', addNames = [md5_hex(dataset_expr)])
+		ds_config = config.change_view(view_class = 'TaggedConfigView', addNames = [md5_hex(dataset_expr)])
 		if os.path.isdir(dataset_expr):
 			scan_pipeline = ['OutputDirsFromWork']
 			ds_config.set('source directory', dataset_expr)
@@ -194,9 +194,9 @@ class GCProvider(ScanProviderBase):
 			ds_config.set('source config', dataset_expr)
 			ds_config.set('source job selector', selector)
 		ext_config = create_config(dataset_expr)
-		ext_task_name = ext_config.changeView(setSections = ['global']).get(['module', 'task'])
+		ext_task_name = ext_config.change_view(setSections = ['global']).get(['module', 'task'])
 		if 'ParaMod' in ext_task_name: # handle old config files
-			ext_task_name = ext_config.changeView(setSections = ['ParaMod']).get('module')
+			ext_task_name = ext_config.change_view(setSections = ['ParaMod']).get('module')
 		ext_task_cls = Plugin.get_class(ext_task_name)
 		for ext_task_cls in Plugin.get_class(ext_task_name).iter_class_bases():
 			try:

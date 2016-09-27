@@ -31,7 +31,7 @@ class EventBoundarySplitter(DataSplitter):
 				yield self._finish_partition(block, proto_partition)
 
 	def _configure_splitter(self, config):
-		self._events_per_job = self._query_config(config.getInt, 'events per job')
+		self._events_per_job = self._query_config(config.get_int, 'events per job')
 
 	def _partition_block(self, fi_list, events_per_job, event_first):
 		event_next = event_first

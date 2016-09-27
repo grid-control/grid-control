@@ -23,8 +23,8 @@ class EmptyDataProcessor(DataProcessor):
 
 	def __init__(self, config, datasource_name, on_change):
 		DataProcessor.__init__(self, config, datasource_name, on_change)
-		self._empty_files = config.getBool('%s remove empty files' % datasource_name, True, onChange = on_change)
-		self._empty_block = config.getBool('%s remove empty blocks' % datasource_name, True, onChange = on_change)
+		self._empty_files = config.get_bool('%s remove empty files' % datasource_name, True, on_change = on_change)
+		self._empty_block = config.get_bool('%s remove empty blocks' % datasource_name, True, on_change = on_change)
 		(self._removed_files, self._removed_blocks) = (0, 0)
 
 	def enabled(self):
@@ -52,7 +52,7 @@ class EntriesCountDataProcessor(DataProcessor):
 
 	def __init__(self, config, datasource_name, on_change):
 		DataProcessor.__init__(self, config, datasource_name, on_change)
-		self._limit_entries = config.getInt(['%s limit events' % datasource_name, '%s limit entries' % datasource_name], -1, onChange = on_change)
+		self._limit_entries = config.get_int(['%s limit events' % datasource_name, '%s limit entries' % datasource_name], -1, on_change = on_change)
 
 	def enabled(self):
 		return self._limit_entries != -1
@@ -79,8 +79,8 @@ class LocationDataProcessor(DataProcessor):
 
 	def __init__(self, config, datasource_name, on_change):
 		DataProcessor.__init__(self, config, datasource_name, on_change)
-		self._location_filter = config.getFilter('%s location filter' % datasource_name, '',
-			defaultMatcher = 'blackwhite', defaultFilter = 'strict', onChange = on_change)
+		self._location_filter = config.get_filter('%s location filter' % datasource_name, '',
+			default_matcher = 'blackwhite', default_filter = 'strict', on_change = on_change)
 
 	def process_block(self, block):
 		if block[DataProvider.Locations] is not None:
@@ -99,7 +99,7 @@ class URLCountDataProcessor(DataProcessor):
 
 	def __init__(self, config, datasource_name, on_change):
 		DataProcessor.__init__(self, config, datasource_name, on_change)
-		self._limit_files = config.getInt(['%s limit files' % datasource_name, '%s limit urls' % datasource_name], -1, onChange = on_change)
+		self._limit_files = config.get_int(['%s limit files' % datasource_name, '%s limit urls' % datasource_name], -1, on_change = on_change)
 
 	def enabled(self):
 		return self._limit_files != -1
@@ -117,13 +117,13 @@ class URLDataProcessor(DataProcessor):
 
 	def __init__(self, config, datasource_name, on_change):
 		DataProcessor.__init__(self, config, datasource_name, on_change)
-		internal_config = config.changeView(view_class = 'SimpleConfigView', setSections = ['dataprocessor'])
+		internal_config = config.change_view(view_class = 'SimpleConfigView', setSections = ['dataprocessor'])
 		internal_config.set('%s processor' % datasource_name, 'NullDataProcessor')
 		config.set('%s ignore urls matcher case sensitive' % datasource_name, 'False')
-		self._url_filter = config.getFilter(['%s ignore files' % datasource_name, '%s ignore urls' % datasource_name], '', negate = True,
-			filterParser = lambda value: self._parse_filter(internal_config, value),
-			filterStr = lambda value: str.join('\n', value.split()),
-			defaultMatcher = 'blackwhite', defaultFilter = 'weak', onChange = on_change)
+		self._url_filter = config.get_filter(['%s ignore files' % datasource_name, '%s ignore urls' % datasource_name], '', negate = True,
+			filter_parser = lambda value: self._parse_filter(internal_config, value),
+			filter_str = lambda value: str.join('\n', value.split()),
+			default_matcher = 'blackwhite', default_filter = 'weak', on_change = on_change)
 
 	def enabled(self):
 		return self._url_filter.get_selector() is not None

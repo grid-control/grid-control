@@ -46,9 +46,9 @@ def readList(base, container, items):
 class ObjectsFromCMSSW(InfoScanner):
 	def __init__(self, config, datasource_name):
 		InfoScanner.__init__(self, config, datasource_name)
-		self._import_parents = config.getBool('include parent infos', False, onChange = TriggerResync(['datasets', 'parameters']))
+		self._import_parents = config.get_bool('include parent infos', False, on_change = TriggerResync(['datasets', 'parameters']))
 		self._merge_key = 'CMSSW_CONFIG_FILE'
-		if config.getBool('merge config infos', True, onChange = TriggerResync(['datasets', 'parameters'])):
+		if config.get_bool('merge config infos', True, on_change = TriggerResync(['datasets', 'parameters'])):
 			self._merge_key = 'CMSSW_CONFIG_HASH'
 		self._stored_config = {}
 		self._stored_globaltag = {}
@@ -155,7 +155,7 @@ class ObjectsFromCMSSW(InfoScanner):
 class MetadataFromCMSSW(InfoScanner):
 	def __init__(self, config, datasource_name):
 		InfoScanner.__init__(self, config, datasource_name)
-		self._include_config = config.getBool('include config infos', False, onChange = TriggerResync(['datasets', 'parameters']))
+		self._include_config = config.get_bool('include config infos', False, on_change = TriggerResync(['datasets', 'parameters']))
 
 	def getEntries(self, path, metadata, events, seList, objStore):
 		cmssw_files_dict = objStore.get('CMSSW_FILES', {})
@@ -188,7 +188,7 @@ class SEListFromPath(InfoScanner):
 class LFNFromPath(InfoScanner):
 	def __init__(self, config, datasource_name):
 		InfoScanner.__init__(self, config, datasource_name)
-		self._strip_path = config.get('lfn marker', '/store/', onChange = TriggerResync(['datasets', 'parameters']))
+		self._strip_path = config.get('lfn marker', '/store/', on_change = TriggerResync(['datasets', 'parameters']))
 
 	def getEntries(self, path, metadata, events, seList, objStore):
 		if self._strip_path and self._strip_path in path:

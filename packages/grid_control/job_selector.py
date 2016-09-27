@@ -119,9 +119,9 @@ class StateSelector(RegExSelector):
 	alias_list = ['state']
 
 	def __init__(self, arg, **kwargs):
-		predef = {'TODO': 'SUBMITTED,WAITING,READY,QUEUED,UNKNOWN', 'ALL': str.join(',', Job.enumNames)}
+		predef = {'TODO': 'SUBMITTED,WAITING,READY,QUEUED,UNKNOWN', 'ALL': str.join(',', Job.enum_name_list)}
 		RegExSelector.__init__(self, predef.get(arg.upper(), arg), None, lambda x: '^%s.*' % x.upper())
-		stateList = reduce(operator.add, imap(lambda x: lfilter(x.match, Job.enumNames), self._rxList))
+		stateList = reduce(operator.add, imap(lambda x: lfilter(x.match, Job.enum_name_list), self._rxList))
 		self._states = lmap(Job.str2enum, stateList)
 
 	def __call__(self, jobNum, jobObj):

@@ -75,12 +75,12 @@ class ConfigFactory(object):
 
 		# Determine work directory using config interface with "global" scope
 		tmp_config = SimpleConfigInterface(self._view.get_view(setSections=['global']))
-		workdir_base = tmp_config.getPath('workdir base', path_main, must_exist=False)
+		workdir_base = tmp_config.get_path('workdir base', path_main, must_exist=False)
 		workdir_default = os.path.join(workdir_base, get_name('work'))
-		workdir_path = tmp_config.getPath('workdir', workdir_default, must_exist=False)
+		workdir_path = tmp_config.get_path('workdir', workdir_default, must_exist=False)
 		self._view.config_vault['path:workdir'] = workdir_path  # tmp_config still has undefinied
 		# Set dynamic plugin search path
-		sys.path.extend(tmp_config.getPaths('plugin paths', [os.getcwd()]))
+		sys.path.extend(tmp_config.get_path_list('plugin paths', [os.getcwd()]))
 
 		# Determine and load stored config settings
 		self._config_path_min = os.path.join(workdir_path, 'current.conf')  # Minimal config file

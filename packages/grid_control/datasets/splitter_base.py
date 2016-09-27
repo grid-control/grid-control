@@ -80,19 +80,19 @@ class DataSplitter(ConfigurablePlugin):
 		self._datasource_name = datasource_name
 		self.set_state(partition_source=None, config_protocol={})
 		# Resync settings:
-		self._interactive = config.isInteractive(['partition resync', '%s partition resync' % datasource_name], False)
+		self._interactive = config.is_interactive(['partition resync', '%s partition resync' % datasource_name], False)
 		#   behaviour in case of event size changes
-		self._mode_removed = config.getEnum('resync mode removed', ResyncMode, ResyncMode.complete, subset = ResyncMode.noChanged)
-		self._mode_expanded = config.getEnum('resync mode expand', ResyncMode, ResyncMode.changed)
-		self._mode_shrunken = config.getEnum('resync mode shrink', ResyncMode, ResyncMode.changed)
-		self._mode_added = config.getEnum('resync mode added', ResyncMode, ResyncMode.complete, subset = [ResyncMode.complete, ResyncMode.ignore])
+		self._mode_removed = config.get_enum('resync mode removed', ResyncMode, ResyncMode.complete, subset = ResyncMode.noChanged)
+		self._mode_expanded = config.get_enum('resync mode expand', ResyncMode, ResyncMode.changed)
+		self._mode_shrunken = config.get_enum('resync mode shrink', ResyncMode, ResyncMode.changed)
+		self._mode_added = config.get_enum('resync mode added', ResyncMode, ResyncMode.complete, subset = [ResyncMode.complete, ResyncMode.ignore])
 		#   behaviour in case of metadata changes
 		self._metadata_resync_option = {}
-		for metadata_name in config.getList('resync metadata', [], onChange = None):
-			self._metadata_resync_option[metadata_name] = config.getEnum('resync mode %s' % metadata_name,
+		for metadata_name in config.get_list('resync metadata', [], on_change = None):
+			self._metadata_resync_option[metadata_name] = config.get_enum('resync mode %s' % metadata_name,
 				ResyncMode, ResyncMode.complete, subset = ResyncMode.noChanged)
 		#   behaviour in case of job changes - disable changed jobs, preserve job number of changed jobs or reorder
-		self._resync_order = config.getEnum('resync jobs', ResyncOrder, ResyncOrder.append)
+		self._resync_order = config.get_enum('resync jobs', ResyncOrder, ResyncOrder.append)
 		self._configure_splitter(config)
 
 		self._dp_ds_prop_list = []

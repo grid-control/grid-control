@@ -13,7 +13,7 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-from gcSupport import Options, displayPluginList, getPluginList, scriptOptions, utils
+from gcSupport import Options, displayPluginList, get_pluginList, scriptOptions, utils
 
 
 parser = Options(usage = '%s <BasePlugin>')
@@ -22,4 +22,4 @@ if not options.args:
 	utils.exit_with_usage(parser.usage())
 
 if __name__ == '__main__':
-	displayPluginList(getPluginList(options.args[0]))
+	displayPluginList(get_pluginList(options.args[0]))

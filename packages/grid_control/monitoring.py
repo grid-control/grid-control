@@ -103,13 +103,13 @@ class ScriptMonitoring(Monitoring):
 
 	def __init__(self, config, name, task):
 		Monitoring.__init__(self, config, name, task)
-		self._silent = config.getBool('silent', True, onChange = None)
-		self._evtSubmit = config.getCommand('on submit', '', onChange = None)
-		self._evtStatus = config.getCommand('on status', '', onChange = None)
-		self._evtOutput = config.getCommand('on output', '', onChange = None)
-		self._evtFinish = config.getCommand('on finish', '', onChange = None)
-		self._runningMax = config.getTime('script timeout', 5, onChange = None)
-		self._workPath = config.getWorkPath()
+		self._silent = config.get_bool('silent', True, on_change = None)
+		self._evtSubmit = config.get_command('on submit', '', on_change = None)
+		self._evtStatus = config.get_command('on status', '', on_change = None)
+		self._evtOutput = config.get_command('on output', '', on_change = None)
+		self._evtFinish = config.get_command('on finish', '', on_change = None)
+		self._runningMax = config.get_time('script timeout', 5, on_change = None)
+		self._workPath = config.get_work_path()
 		self._tp = GCThreadPool()
 
 	# Get both task and job config / state dicts

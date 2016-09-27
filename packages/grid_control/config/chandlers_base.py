@@ -18,26 +18,11 @@ from grid_control.config.config_entry import ConfigError
 from python_compat import imap, lfilter
 
 
-def change_impossible(config, old_obj, cur_obj, cur_entry, obj2str):
-	# Change handler to notify about impossible changes
-	old_str = obj2str(old_obj).strip()
-	new_str = obj2str(cur_obj).strip()
-	if old_str == new_str:
-		old_str = repr(old_obj)
-		new_str = repr(cur_obj)
-	msg = 'It is *not* possible to change "%s"' % cur_entry.format_opt()
-	if len(old_str) + len(new_str) > 40:
-		msg = '%s\n\tfrom: %r\n\t  to: %r' % (msg, old_str, new_str)
-	else:
-		msg = '%s from %r to %r' % (msg, old_str, new_str)
-	raise ConfigError(msg)
-
-
 class NoVarCheck(object):
 	# Validation handler to check for variables in string
 	def __init__(self, config):
-		global_config = config.changeView(view_class='SimpleConfigView', setSections=['global'])
-		self.markers = global_config.getList('variable markers', ['@', '__'])
+		global_config = config.change_view(view_class='SimpleConfigView', setSections=['global'])
+		self.markers = global_config.get_list('variable markers', ['@', '__'])
 		for marker in self.markers:
 			if marker not in ['@', '__']:
 				raise ConfigError('Variable marker %r is not supported!' % marker)
@@ -54,6 +39,22 @@ class NoVarCheck(object):
 		return False
 
 
+class TriggerAbort(object):
+	# Change handler to notify about impossible changes
+	def __call__(self, config, old_obj, cur_obj, cur_entry, obj2str):
+		old_str = obj2str(old_obj).strip()
+		new_str = obj2str(cur_obj).strip()
+		if old_str == new_str:
+			old_str = repr(old_obj)
+			new_str = repr(cur_obj)
+		msg = 'It is *not* possible to change "%s"' % cur_entry.format_opt()
+		if len(old_str) + len(new_str) > 40:
+			msg = '%s\n\tfrom: %r\n\t  to: %r' % (msg, old_str, new_str)
+		else:
+			msg = '%s from %r to %r' % (msg, old_str, new_str)
+		raise ConfigError(msg)
+
+
 class TriggerInit(object):
 	# Change handler to trigger re-inits
 	def __init__(self, option):
@@ -61,7 +62,7 @@ class TriggerInit(object):
 
 	def __call__(self, config, old_obj, cur_obj, cur_entry, obj2str):
 		log = logging.getLogger('config.onchange.%s' % self._option.lower())
-		if config.isInteractive(self._option, default=True):
+		if config.is_interactive(self._option, default=True):
 			msg = 'The option "%s" was changed from the old value:' % cur_entry.format_opt()
 			if utils.get_user_bool(msg + ('\n\t> %s\nto the new value:' % obj2str(old_obj).lstrip()) +
 					('\n\t> %s\nDo you want to abort?' % obj2str(cur_obj).lstrip()), False):
@@ -71,8 +72,8 @@ class TriggerInit(object):
 				log.log(logging.INFO1, 'Using stored value %s for option %s',
 					obj2str(old_obj), cur_entry.format_opt())
 				return old_obj
-		config.setState(True, 'init', detail=self._option)
-		config.setState(True, 'init', detail='config')  # This will trigger a write of the new options
+		config.set_state(True, 'init', detail=self._option)
+		config.set_state(True, 'init', detail='config')  # This will trigger a write of the new options
 		return cur_obj
 
 
@@ -83,13 +84,13 @@ class TriggerResync(object):
 	def __call__(self, config, old_obj, cur_obj, cur_entry, obj2str):
 		log = logging.getLogger('config.changes')
 		log.info('The config option %r was changed', cur_entry.format_opt())
-		needed_details = lfilter(lambda detail: not config.getState('resync', detail), self._details)
+		needed_details = lfilter(lambda detail: not config.get_state('resync', detail), self._details)
 		if not needed_details:
 			return cur_obj
 		log.info('Triggering resync of %s', str.join(', ', needed_details))
 		for detail in needed_details:
-			config.setState(True, 'resync', detail=detail)
-		if not config.getState('init', detail='config'):
+			config.set_state(True, 'resync', detail=detail)
+		if not config.get_state('init', detail='config'):
 			log.info('The configuration was changed - triggering storage of new config options')
-			config.setState(True, 'init', detail='config')  # This will trigger a write of the new options
+			config.set_state(True, 'init', detail='config')  # This will trigger a write of the new options
 		return cur_obj

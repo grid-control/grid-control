@@ -44,7 +44,7 @@ class UserMetadataSplitter(FileClassSplitter):
 	alias_list = ['metadata']
 
 	def _configure_splitter(self, config):
-		self._metadata_user_list = self._query_config(config.getList, 'split metadata', [])
+		self._metadata_user_list = self._query_config(config.get_list, 'split metadata', [])
 
 	def _get_fi_class(self, fi, block):
 		metadata_name_list = block.get(DataProvider.Metadata, [])

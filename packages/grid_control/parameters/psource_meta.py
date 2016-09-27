@@ -14,7 +14,7 @@
 
 from grid_control.parameters.psource_base import NullParameterSource, ParameterError, ParameterSource
 from hpfwk import AbstractError, Plugin
-from python_compat import all, ichain, imap, irange, izip, lchain, lfilter, lmap, md5_hex, reduce
+from python_compat import all, ichain, imap, irange, izip, lchain, lfilter, lmap, md5_hex, reduce, set
 
 
 def combine_resync_result(a, b, sc_fun = lambda x, y: x or y):

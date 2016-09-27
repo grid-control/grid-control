@@ -210,7 +210,7 @@ def discover_blocks(options):
 	if os.path.isdir(options.args[0]):
 		workDir = os.path.abspath(os.path.normpath(options.args[0]))
 	else:
-		workDir = getConfig(config_file = options.args[0]).getWorkPath()
+		workDir = getConfig(config_file = options.args[0]).get_work_path()
 	if not options.opts.tempdir:
 		options.opts.tempdir = os.path.join(workDir, 'dbs')
 	if not os.path.exists(options.opts.tempdir):

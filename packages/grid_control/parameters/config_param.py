@@ -73,13 +73,16 @@ def parse_tuple(t, delimeter):
 class ParameterConfig(object):
 	def __init__(self, config):
 		(self._config, self._changes) = (config, [])
-		(self._map_vn2varexpr, self._map_varexpr_suffix2opt) = parse_parameter_option_list(config.getOptions())
+		(self._map_vn2varexpr, self._map_varexpr_suffix2opt) = parse_parameter_option_list(config.get_option_list())
 
 	def get(self, varexpr, suffix = None, default = unspecified):
-		return self._config.get(self._get_opt(varexpr, suffix), default, onChange = self._on_change)
+		return self._config.get(self._get_opt(varexpr, suffix), default, on_change = self._on_change)
+
+	def get_bool(self, varexpr, suffix = None, default = unspecified): # needed for Matcher configuration
+		return self._config.get_bool(self._get_opt(varexpr, suffix), default, on_change = self._on_change)
 
 	def get_config(self, *args, **kwargs):
-		return self._config.changeView(*args, **kwargs)
+		return self._config.change_view(*args, **kwargs)
 
 	def get_parameter(self, vn):
 		varexpr = self._get_varexpr(vn)
@@ -99,9 +102,6 @@ class ParameterConfig(object):
 				return self._process_parameter_list(vn, self._parse_parameter(vn, value, parameter_type))
 			return self._handle_dict(vn, parameter_value, parse_value)
 
-	def getBool(self, varexpr, suffix = None, default = unspecified): # needed for Matcher configuration
-		return self._config.getBool(self._get_opt(varexpr, suffix), default, onChange = self._on_change)
-
 	def show_changes(self):
 		pass
 
@@ -116,7 +116,7 @@ class ParameterConfig(object):
 
 	def _handle_dict(self, vn, value, parse_value):
 		if '=>' in value:
-			if self.getBool(self._get_varexpr(vn), 'parse dict', True):
+			if self.get_bool(self._get_varexpr(vn), 'parse dict', True):
 				return self._parse_dict(vn, value, parse_value)
 		return parse_value(value)
 
