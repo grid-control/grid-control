@@ -468,6 +468,20 @@
 
      * grid_control.output_processor FileInfoProcessor
 
+   * grid_control.parameters.config_param ParameterParser
+
+    * grid_control.parameters.config_param ExprParameterParser expr eval
+
+    * grid_control.parameters.config_param FormatParameterParser format
+
+    * grid_control.parameters.config_param LinesParameterParser lines
+
+    * grid_control.parameters.config_param ShellParameterParser shell default
+
+    * grid_control.parameters.config_param SplitParameterParser split
+
+    * grid_control.parameters.config_param VerbatimParameterParser verbatim
+
    * grid_control.parameters.psource_base ParameterSource
 
     * grid_control.parameters.psource_meta ForwardingParameterSource

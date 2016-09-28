@@ -13,11 +13,11 @@
 # | limitations under the License.
 
 import os, sys, signal
-from grid_control import utils
 from grid_control.config.cinterface_base import ConfigInterface
 from grid_control.config.config_entry import ConfigError, add_config_suffix
 from grid_control.config.cview_base import SimpleConfigView
 from grid_control.config.matcher_base import DictLookup, ListFilter, ListOrder, Matcher
+from grid_control.utils import resolve_path, resolve_paths
 from grid_control.utils.data_structures import make_enum
 from grid_control.utils.parsing import parse_bool, parse_dict, parse_list, parse_time, str_dict_cfg, str_time_short
 from grid_control.utils.thread_tools import GCEvent
@@ -94,7 +94,7 @@ class TypedConfigInterface(ConfigInterface):
 			search_path_list = self._config_view.config_vault.get('path:search', [])
 			for pattern in value:
 				try:
-					for fn in utils.resolve_paths(pattern, search_path_list, must_exist, ConfigError):
+					for fn in resolve_paths(pattern, search_path_list, must_exist, ConfigError):
 						yield fn
 				except Exception:
 					exc.collect()
@@ -124,8 +124,8 @@ class TypedConfigInterface(ConfigInterface):
 	def resolve_path(self, value, must_exist, error_msg):
 		# Resolve path
 		try:
-			return utils.resolve_path(value,
-				self._config_view.config_vault.get('path:search', []), must_exist, ConfigError)
+			return resolve_path(value, self._config_view.config_vault.get('path:search', []),
+				must_exist, ConfigError)
 		except Exception:
 			raise ConfigError(error_msg)
 

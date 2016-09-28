@@ -22,14 +22,12 @@ def resolve_fun(*args):
 	for location in args:
 		if isinstance(location, str):
 			module_name_raw, member_name = location.split(':', 1)
-			member_name += '.'
 			for module_name in module_map.get(module_name_raw, [module_name_raw]):
 				try:
 					result = __import__(module_name, {}, {}, [module_name.split('.')[-1]])
-					while member_name:
-						member_name_parts = member_name.split('.', 1)
-						result = getattr(result, member_name_parts[0])
-						member_name = member_name_parts[1]
+					if member_name:
+						for member_name_part in member_name.split('.'):
+							result = getattr(result, member_name_part)
 				except Exception:
 					continue
 				_log.debug('using %s', location)

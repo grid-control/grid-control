@@ -23,6 +23,18 @@ from hpfwk import NestedException, clear_current_exception
 from python_compat import exit_without_cleanup, get_user_input, identity, ifilter, imap, irange, lfilter, lmap, lzip, next, reduce, rsplit, sorted, tarfile
 
 
+class GCIOError(NestedException):
+	pass
+
+
+class ParsingError(NestedException):
+	pass
+
+
+class PathError(NestedException):
+	pass
+
+
 def abort(new=None):
 	if new is not None:
 		abort.state = new
@@ -73,6 +85,12 @@ def create_tarball(tar_path, match_info_list):
 	tar.close()
 
 
+def deprecated(text):
+	sys.stderr.write('%s\n[DEPRECATED] %s\n' % (open(get_path_share('fail.txt'), 'r').read(), text))
+	if not get_user_bool('Do you want to continue?', False):
+		sys.exit(os.EX_TEMPFAIL)
+
+
 def disk_usage(dn, timeout=5):
 	def _disk_usage():
 		if os.path.exists(dn):
@@ -98,6 +116,16 @@ def disk_usage(dn, timeout=5):
 		exit_without_cleanup(os.EX_OSERR)
 
 
+def display_selection(log, items_before, items_after, message, formatter, log_level=logging.DEBUG1):
+	if len(items_before) != len(items_after):
+		log.log(logging.DEBUG, message, (len(items_before) - len(items_after)))
+		for item in items_before:
+			if item in items_after:
+				log.log(log_level, ' * %s', formatter(item))
+			else:
+				log.log(log_level, '   %s', formatter(item))
+
+
 def display_table(head, data, fmt_string='', fmt=None):
 	if display_table.mode == 'parseable':
 		return ParseableTable(head, data, '|')
@@ -106,34 +134,6 @@ def display_table(head, data, fmt_string='', fmt=None):
 	return ColumnTable(head, data, fmt_string, fmt, display_table.wraplen)
 display_table.wraplen = 100
 display_table.mode = 'default'
-
-
-class GCIOError(NestedException):
-	pass
-
-
-class ParsingError(NestedException):
-	pass
-
-
-class PathError(NestedException):
-	pass
-
-
-def deprecated(text):
-	sys.stderr.write('%s\n[DEPRECATED] %s\n' % (open(get_path_share('fail.txt'), 'r').read(), text))
-	if not get_user_bool('Do you want to continue?', False):
-		sys.exit(os.EX_TEMPFAIL)
-
-
-def display_selection(log, items_before, items_after, message, formatter):
-	if len(items_before) != len(items_after):
-		log.log(logging.DEBUG, message, (len(items_before) - len(items_after)))
-		for item in items_before:
-			if item in items_after:
-				log.log(logging.DEBUG1, ' * %s', formatter(item))
-			else:
-				log.log(logging.DEBUG1, '   %s', formatter(item))
 
 
 def ensure_dir_exists(dn, name='directory', exception_type=PathError):
